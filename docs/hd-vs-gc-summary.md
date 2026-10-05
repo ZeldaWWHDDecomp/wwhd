@@ -2,7 +2,8 @@
 
 Found while verifying the decompilation: every unit was compared with the GameCube decompilation
 (zeldaret/tww). This is a summary in our own words of 670 compared units. Statements marked
-"probably" are interpretations; everything else is what the code shows.
+"probably" are interpretations; everything else is what the code shows. The full list, one entry
+per unit, is in [hd-differences.md](hd-differences.md).
 
 | Category | Entries |
 |---|---:|
