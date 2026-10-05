@@ -44,5 +44,10 @@ bugs fixed in HD, and what was removed (Tingle Tuner, blob shadows, debug code).
 
 ## Legal
 
-This repository contains no game data, no assets and no keys. You need your own legally obtained
-copy of the game to use the port.
+This is an unofficial fan project. It is not affiliated with, endorsed by or sponsored by Nintendo.
+*The Legend of Zelda* and *The Wind Waker* are trademarks of Nintendo; they are used here only to
+name the game this project is about.
+
+This repository contains no game code, no game data, no assets and no keys. The documents here
+describe the game in our own words. You need your own legally obtained copy of the game to use the
+port.
