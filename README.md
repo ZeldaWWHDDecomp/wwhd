@@ -13,27 +13,36 @@ The GameCube decompilation ([zeldaret/tww](https://github.com/zeldaret/tww)) is 
 and reference; everything is checked against the HD game itself, so HD changes are found along the
 way (see [HD vs. GameCube](docs/hd-vs-gc-summary.md)).
 
-## Status (2026-10-05)
+## Status (2026-10-05, evening)
+
+**The game code is decompiled and verified.**
 
 | Area | Verified functions | Status |
 |---|---:|---|
-| Actors (enemies, NPCs, objects, bosses) | 14,441 | ~97% — practically complete |
-| Link (player actor) | 1,043 | complete |
-| Engine and systems (camera, collision, stages, events, save data, menus, effects, sound control, …) | 3,338 | ~50% — in progress |
-| **Game code in total** | **18,775 of 22,215** | **84.5%** |
+| Actors (enemies, NPCs, objects, bosses) | 14,581 | complete |
+| Link (player actor) | 1,046 | complete |
+| Engine and systems (camera, collision, stages, events, environment, weather, save data, menus, effects, …) | 4,954 | complete |
+| HD-only code (GamePad UI, resource and pack loading, input, software keyboard, text layout, Miiverse) | 1,307 | complete |
+| Zelda's own sound control | 180 | complete |
+| **Game code in total** | **22,068 of 22,215** | **99.3%** |
 
-The executable has 39,713 functions in total; the other ~17,500 are generic libraries (Nintendo's
-JSystem, sead, NW4F, the Cafe SDK and the C runtime). They are **not a goal** of this project: the
-port runs them as recompiled code, and they contain nothing specific to Wind Waker. A few library
-units that were already verified are kept (144 functions).
+The remaining 147 functions inside the game code are small helpers of Nintendo's sead library that the
+compiler copied into each unit (string classes, destructors, delegate thunks). They are library code
+and deliberately left out, like the ~17,500 functions of the generic libraries (JSystem, sead, NW4F,
+the Cafe SDK and the C runtime): the port runs those as recompiled code, and they contain nothing
+specific to Wind Waker. A few library units that were already verified are kept (494 functions).
 
-**In progress:** environment and lighting, weather and rain, resource management, model and animation
-helpers, text boxes, the HUD, the file select and save manager, Zelda's own sound control, and a
-range of smaller engine pieces. The last actor functions (single leftovers at the ends of units) are
-being finished.
+**Verified twice.** Besides the per-function test (10,000 generated inputs on two seeds, coverage,
+mutation testing), the whole decompiled game is run in place of the original: every decompiled
+function is swapped into the running game, and long scripted play sessions (Outset, Windfall,
+the dungeons, boss fights, sailing, the file select and saving) are compared step by step with the
+original — Link, camera, random numbers, sounds, every game object, the save data and the rendered
+picture. This found bugs the function tests could not see (for example grass and bushes drawn with
+wrong lighting data, or an insect effect in the Forbidden Woods), which were fixed and then covered
+by new checks. With all functions swapped in, the game boots and plays identically to the original.
 
-**How it is built:** one verified unit at a time, each claimed on a shared board so no two workers
-overlap, re-checked by a lead before it is merged.
+**Next:** more and longer gameplay sessions in that comparison (using real save files across the whole
+story), then a readable rewrite of the code in the style of the GameCube decompilation.
 
 ## HD vs. GameCube
 
