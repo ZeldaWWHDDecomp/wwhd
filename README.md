@@ -61,7 +61,7 @@ story), then a readable rewrite of the code in the style of the GameCube decompi
 
 ## HD vs. GameCube
 
-While verifying, every unit is compared with the GameCube version. 670 units have been compared so
+While verifying, every unit is compared with the GameCube version. 752 units have been compared so
 far; the differences are summarised in [docs/hd-vs-gc-summary.md](docs/hd-vs-gc-summary.md) — new HD
 features (Tingle Bottle, Swift Sail, Picto Box selfies, Hero Mode), gameplay changes, 64 GameCube
 bugs fixed in HD, and what was removed (Tingle Tuner, blob shadows, debug code). The full list, one
