@@ -1,0 +1,8 @@
+# Verification unit: d_a_obj_tousekiki (catapult on Tetra's ship)
+src wwhd_src/d/actor/d_a_obj_tousekiki.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025D5218 r4=4          # fopAcIt_Judge: the searched id on the stack
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 02527028 0 1              # dDemo_setDemoData

@@ -1,0 +1,85 @@
+src wwhd_src/d/actor/d_a_daiocta_eye.cpp
+stackfill periodic
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025D4604 0 1
+ret 020CB92C 0 1
+ret 025E8154 0 1
+ret 025E7CE0 0 1
+field * r3+0x3b0 u8 0,1
+field * r3+0x3b4 u8 0,1
+field * r3+0x3b8 u32 0,1,2
+field * r3+0x3a1 u8 0,1,2,3,4,127,128,255
+field * r3+0x2e4 u32 0,1,8,9
+field * r3+0x3c4 u32 0,0x51000000
+field * r3+0x650 u32 0,0x52000000
+field * 0x52000008 u16 0xe1,0x126
+field * 0x510000ac u32 0x53000000
+field * 0x5100002c u32 0x54000000
+field * 0x54000010 u32 0x55000000
+field * 0x54000004 u16 0,16
+# Follow callback constructor 025A5894 establishes this embedded object.
+field * r3+0x654 u32 0x100523c8
+field * r3+0x658 u32 0,0x56000000
+field * r3+0x664 u8 0,1
+field * r3+0x665 u8 0
+field * r3+0x666 u8 0
+field * r3+0x667 u8 0
+field * 0x5600005c u32 0
+field * 0x560001e4 u32 0
+field * 0x56000254 u32 0,1,64,65
+# Persistent initialized callback identity and emitter survive unrelated calls.
+stable 0x40000654 20
+stable 0x40100654 20
+stable 0x40200654 20
+stable 0x56000000 600
+real 025A5AC8
+callee 026066C4 r4=8
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 024F17D4 r3=12
+callee 025D5218 r4=4
+arg 0211E4F4 r3 0,0x57000000
+arg 0211E664 r3 0,0x57000000
+arg 0211E680 r3 0,0x40000000
+
+# Allocated actors and callback nodes have four-byte alignment. Keep several
+# distinct placements; all arithmetic/NaN dictionaries and mock epochs remain.
+arg! * r3 0x40000000,0x40100000,0x40200000
+arg! 0211E4F4 r3 0,0x57000000
+arg! 0211E664 r3 0,0x57000000
+arg! 0211E680 r3 0,0x40000000
+arg! 0211D7CC r4 0,0x52000000
+field 0211D7CC 0x52000008 u16 0,0x126
+ret 025D5218 0,0x52000000
+field 0211D8C8 0x52000008 u16 0xe1
+
+# Initialized node/model graph; real joint getter and matrix copy.
+real 027F7878
+arg! 0211D314 r4 0x56010000
+arg! 0211D314 r5 0x51000000
+arg! 0211D42C r3 0x56010000
+arg! 0211D42C r4 0,1
+field * 0x56010000 u32 0x56020000
+field * 0x56020004 u16 0,1,2
+field * 0x104b462c u32 0x51000000
+field * 0x510000b8 u32 0,0x40000000,0x40100000,0x40200000
+stable 0x56010000 4
+stable 0x56020004 2
+stable 0x104b462c 4
+stable 0x5100002c 4
+stable 0x510000ac 4
+stable 0x510000b8 4
+stable 0x54000010 4
+field 0211D65C r3+0x3c4 u32 0x51000000
+field 0211D8C8 r3+0x3c4 u32 0x51000000
+field 0211DB74 r3+0x3c4 u32 0x51000000
+field 0211DCAC r3+0x3c4 u32 0x51000000
+field 0211DEF0 r3+0x3c4 u32 0x51000000
+field 0211DFC4 r3+0x3c4 u32 0x51000000
+
+# SDK matrix copy:13 paired load/store instructions, no nested calls.
+real 028E90D4
+
+# Resource lookups receive a live, nonnull aligned manager singleton.
+field * 0x101F4F28 u32 0x58000000,0x59000000
+stable 0x101F4F28 4

@@ -1,0 +1,7 @@
+# Verification unit: d_a_alldie (switch when all room enemies are dead)
+src wwhd_src/d/actor/d_a_alldie.cpp
+
+ret 025D98E8 0 1                    # fopAcM_myRoomSearchEnemy: found / none
+ret 025BA0C0 0 1                    # dSv_info_c::isSwitch
+field 02048500 r3+0x3AC u8 0 3      # mAction
+field 0204846C r3+0x3AE s16 -2 2    # mTimer

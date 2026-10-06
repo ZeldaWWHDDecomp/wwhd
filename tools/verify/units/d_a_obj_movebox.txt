@@ -1,0 +1,65 @@
+src wwhd_src/d/actor/d_a_obj_movebox.cpp
+callee 026066C4 r4=8
+callee 025CB374 r6=12
+callee 025D5834 r5=12 r7=6 r8=12
+callee 028E8E64 r3=12 r4=out12
+field * r3+0x710 i32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+field * r3+0x765 u8 0,1
+field * r3+0x766 u8 0,1
+field * r3+0x714 u16 0,1,0x100,0xFFFF
+field * r3+0x5E8 i32 -1,0,1,22
+field * r3+0x704 i32 -1,0,1,22
+ret 02333CD8 0,1,255
+ret 02376F90 0,1,255
+ret 025BA0C0 0,1
+ret 025200D4 0x54000000
+field * 101F84DC u32 0x55000000
+src wwhd_src/d/actor/d_a_obj_movebox_static.cpp
+ret 0273AD10 0,0x57000000
+field * r3+0x764 u8 0,1
+field 0237A6D8 r3+0xB4 u32 0x1002D79C
+field 0237A6E8 r3+0xB4 u32 0x1002D79C
+arg! 02376314 r6 -1,0,1,5,21,23
+arg! 02376B14 r6 -1,0,1,5,21,23
+arg! 02376E74 r6 -1,0,1,5,21,23
+arg! 023765D0 r6 -1,0,1,5,21,23
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Constructor allocation and child/movement scene states.
+arg! 02376278 r3 0,0x40000000
+callee 025D54C4 r4=out4
+callee 023123D8 r3=out16 r4=12
+callee 028E9044 r3=48 r4=12 r5=out12
+field 02377764 r3+0x41C i32 0,1,2
+field 02377764 r3+0x7D0 u32 0xFFFFFFFF,0,1
+field 02377308 r4+0x41C i32 0,1,2
+field 02377308 r4+0x710 i32 0,1,7,10,11,12,13
+field 02377308 r5+0xE i16 0,0xA8
+field 02378AE8 r3+0x718 u32 0x56000000
+field 02378AE8 56000000 u16 0,1,2,3,4
+ret 025AAEB8 0x56000100
+fret 028E8DE8 0,0.0001,8,9,10
+field 0237A468 r3+0x2E4 u32 0,8
+ret 02520460 0,1,2,3,4,5
+ret 024F1D9C 0,1,4,5
+
+# Stale PrmAbstract matcher has no actor-pointer arg type; init_mtx takes an aligned Act_c.
+arg! 02377B5C r3 0x40000000
+
+observe 025E2DE0 104B4634 8
+
+# Ground supports: exclude floating moveboxes, retain other actors and the null case.
+ret 02008438 0,0x58000000
+field 02376314 58000008 i16 0,0x2B
+field 02376314 5800041C i32 0,1,2
+
+# Collision query and vector inputs are consumed by mocked callees.
+callee 02008974 r4=84
+callee 02008860 r4=108
+callee 028E8DE8 r3=12 r4=12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+# Push direction boundaries relative to home yaw.
+arg 023775DC r5 -24576,-8192,8191,8192,24575,24576
+arg 023775DC r6 0,1,2,3,8,9,10,11
+field 023775DC r3+0x2FA i16 0

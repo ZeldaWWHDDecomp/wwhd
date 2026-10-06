@@ -1,0 +1,20 @@
+# Verification unit: d_a_obj_msdan_sub (switch staircase step)
+src wwhd_src/d/actor/d_a_obj_msdan_sub.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025CB374 r6=12         # StartShock: cXyz copy
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+ret 0237C4B4 0,20,21,31   # PrmAbstract (size 0/1, objNo vs mCurObjNo)
+arg 0237C4B4 r4 0,1,8,31,32,33,63
+arg 0237C4B4 r5 0,1,8,16,31,32,33,63
+field * r3+0x3EC i32 0,1,16,20,21,22,31   # m2D4
+field * r3+0x3F0 i32 -1,0,1,19,20,21,22,30,31,32   # mCurObjNo
+field * r3+0x3FC u8 0 1       # m2E4
+field 0237BCB4 r3+0x3F4 f32 -265,-240,-127.5,-115,-102.5,0   # m2DC (boundaries for home.y 0, m2E0 0)
+field 0237BCB4 r3+0x3F8 f32 -20,-5,0,5,20   # m2E0
+field 0237BCB4 r3+0x2F0 f32 0,0,0,37.5   # home.pos.y
+field 0237BCB4 r3+0x3F0 i32 20,21,30,31   # Execute: mCurObjNo near the shock boundaries
+field 0237BCB4 r3+0x3FC u8 0,0,0,1          # m2E4
+stackfill                     # expose stores to the StartShock cXyz temporary

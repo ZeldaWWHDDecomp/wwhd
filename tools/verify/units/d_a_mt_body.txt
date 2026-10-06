@@ -1,0 +1,33 @@
+# Verification unit (part of d_a_mt): body control and the rolled-up movement
+src wwhd_src/d/actor/d_a_mt_body.cpp wwhd_src/d/actor/d_a_mt_pending.cpp
+
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 028E8F64 r4=12 r5=out12   # PSMTXMultVec
+callee 025A8D40 r5=12            # setSimple pos
+
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+callee 024F1AFC r3=0x6C       # dBgS_LinChk::Set
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 02008B4C r3=0x6C       # cBgS_LinChk::~cBgS_LinChk
+callee 02008FEC r3=255        # cBgS_LinChk::ct: constructor storage
+callee 0201ADE0 r4=out12      # cXyz::operator-
+ret 02008860 0 1              # LineCross
+callee 02008974 r4=0x54       # cBgS::GroundCross: the ground check
+callee 02008DAC r3=0x54       # ~cBgS_Chk
+callee 02008E0C r3=255        # cBgS_GndChk::cBgS_GndChk: constructor storage
+callee 0201AD78 r4=out12      # cXyz::operator+
+
+# mt_move_maru (F = 021DF238)
+field 021DF238 r3+0x571 u8 0,0,1,1,2                # mode: rolling, carried, waiting
+field 021DF238 r3+0x582 i16 0,0x45,0x46,0x46,0x47,0x50,0x64,0x64,0x65,0x6D,0x6E,0x70  # unroll counter
+field 021DF238 r3+0x1A16 u8 0 1
+field 021DF238 r3+0x464 u8 0,1,2
+field 021DF238 r3+0x466 i16 0,1,29,30,80
+field 021DF238 r3+0x370 f32 -5,0,0,2,5        # speedF
+field 021DF238 r3+0x374 f32 -5 0              # gravity
+field 021DF238 r3+0x340 f32 -120 10           # speed.y
+field 021DF238 r3+0x2E0 u32 0,0x2000          # actor_status: carried
+field 021DF238 r3+0xD8C u32 0,0x10,0x20,0x30  # acch: wall / ground hit
+field 021DF238 1047B648 f32 0,0,1             # REG0_F(14)
+field 021DF238 1047B63C f32 0,0,1             # REG0_F(11)
+field 021DF238 r3+0x572 i16 0 1

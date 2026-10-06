@@ -1,0 +1,116 @@
+# Verification unit: d_a_ki (Keese)
+src wwhd_src/d/actor/d_a_ki.cpp wwhd_src/d/actor/d_a_ki_exec.cpp wwhd_src/d/actor/d_a_ki_execute.cpp
+
+# stack objects passed to callees
+callee 026066C4 r4=8          # sead::SafeString key
+callee 024F1AFC r3=0x6C       # dBgS_LinChk
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 0219DBF8 r3=8
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D4604 0 1              # fopAc_IsActor
+ret 02008860 0 1              # cBgS::LineCross
+
+# ki_a_d_sub: a keese in its fight state
+field 021992DC r3+8 i16 214 216          # fpcNm_KI_e (0xD7)
+field 021992DC r3+0x489 u8 9 11         # mAction == ACT_ATTACK_MOVE_INDEX_e
+field 021992DC r3+0x48B i8 8 11         # mBehaviorType < 10
+# constructors: this == NULL allocates (edges of the range drawn often)
+arg 0219D3F4 r3 0 0x50000000
+arg 0219D368 r3 0 0xFFFFFF74            # hi: member address this+0x8C == 0
+ret 0273AD10 0 0x50000000               # operator new: NULL or storage
+# useHeapInit: the start stage name vs "GanonK" (play object pinned)
+ret 025200D4 0x54000000 0x54000000
+field 0219CF38 54005134 u32 0x47616E6F,0x47616E6E,0
+field 0219CF38 54005138 u32 0x6E4B0000,0x6E4B4100
+
+# ki_atack_move / daKi_Execute
+callee 0201ADE0 r4=out12     # cXyz::operator- result (output storage)
+callee 028E8DD0 r3=12         # PSVECSquareMag
+field 02199C48 r3+0x48B i8 0,1,2,3,4,10,5      # mBehaviorType
+field 02199C48 r3+0x4C0 i16 0,1                # mTimers[0..3]
+field 02199C48 r3+0x4C2 i16 0,1,10
+field 02199C48 r3+0x4C4 i16 0,1
+field 02199C48 r3+0x4C6 i16 0,1
+field 02199C48 r3+0x484 u8 0,1,2,3             # mParameters
+field 02199C48 r3+0x486 u8 0,255               # mKiPathIndex
+field 02199C48 r3+0xAB9 u8 0,0x80              # mDamageType
+field 02199C48 10464B2C i32 0 8                # ki_fight_count
+field 02199C48 1046004E i16 0 8                # l_kiHIO.m52
+field 02199C48 10460050 i16 0 8                # l_kiHIO.m54
+field 02199C48 10460044 f32 0 1                # l_kiHIO.m48
+fret 020198D8 0 1                              # cM_rndF (vs m48 * 0.5 / 1)
+
+# daKi_Execute (d_a_ki_execute.cpp)
+callee 025192A8 r4=0x1C       # cc_at_check: CcAtInfo
+callee 028E8D88 r3=12         # PSVECAdd
+ret 020402C8 0 0               # enemy_ice
+field 0219AAE8 r3+0x494 u8 0,0,1             # m2DC
+field 0219AAE8 r3+0x330 f32 0 0.1            # scale.x vs 0.04 after cLib_addCalc0
+field 0219AAE8 r3+0x48C u8 0,0,0,1,5         # m2D4
+field 0219AAE8 10464B4D u8 0,0,0,1           # l_kiHIO.m05
+field 0219AAE8 10464B4E u8 0,0,0,0,0,1       # l_kiHIO.m06
+field 0219AAE8 10464B4F u8 0,0,0,0,0,1       # l_kiHIO.m07
+field 0219AAE8 r3+0x489 u8 0,1,2,3,10,20,30,5   # mAction
+field 0219AAE8 r3+0x48D i8 0,0,0,1           # mCurrKiPathIndex
+field 0219AAE8 r3+0x48B i8 0,1,2,3,10,11,-1,4  # mBehaviorType
+field 0219AAE8 r3+0x4C0 i16 0,1,2,30,40,11        # mTimers
+field 0219AAE8 r3+0x4C2 i16 0,1,2
+field 0219AAE8 r3+0x4C4 i16 0,1,2
+field 0219AAE8 r3+0x4C6 i16 0,1,2
+field 0219AAE8 r3+0x4C8 i16 0,0,1,2,5            # m314
+field 0219AAE8 r3+0x4EC i8 0,1               # m338
+field 0219AAE8 r3+0x4E9 u8 0,1               # m335
+field 0219AAE8 r3+0x4E8 u8 0,1,2             # m334
+field 0219AAE8 r3+0x4EA u8 0,1,2             # m336
+field 0219AAE8 r3+0x4EB u8 0,1               # m337
+field 0219AAE8 r3+0xAB9 u8 0,0x80            # mDamageType
+field 0219AAE8 r3+0xAB8 u8 0,1               # m904
+field 0219AAE8 r3+0x6F4 u8 0,1               # m540
+field 0219AAE8 r3+0x4D6 i16 0,1,-20000,20000 # m322
+field 0219AAE8 r3+0x4D8 i16 0,1              # m324
+field 0219AAE8 r3+0x558 u32 0,0x10           # mAcch wall hit
+field 0219AAE8 r3+0x4D0 f32 0 120            # m31C
+field 0219AAE8 r3+0x3A1 i8 -10,-1,0,1        # health
+field 0219AAE8 r3+0xAD0 u32 0,0x58000000     # m91C
+field 0219AAE8 r3+0x340 f32 -100 30          # speed.y
+field 0219AAE8 r3+0x498 f32 0 3000           # mMaxAttackMoveDist300
+field 0219AAE8 r3+0x48E i8 -1,0,1,2,3        # m2D6
+field 0219AAE8 r3+0x48F i8 -1,1              # m2D7
+field 0219AAE8 r3+0x490 u32 0x59000000,0x59000000,0   # ppd
+field 0219AAE8 59000000 u16 0 4              # m_num
+field 0219AAE8 59000002 u16 0,0xFFFF         # m_nextID
+field 0219AAE8 59000005 u8 0,1               # closed
+field 0219AAE8 59000008 u32 0x5A000000,0x5A000000
+field 0219AAE8 5A000003 u8 0,6
+field 0219AAE8 5A000013 u8 0,6
+field 0219AAE8 5A000023 u8 0,6
+ret 025AAF88 0x59000000 0x59000000     # dPath_GetRoomPath
+ret 025162A4 0 1              # ChkTgHit
+ret 02516300 0x5B000000 0x5B000000   # GetTgHitObj
+field 0219AAE8 5B000010 u32 0,0x80000,0x100000,0x200,0x40000,0x200000,0x2,0x1,0x400
+ret 025192A8 0x5C000000 0x5C000000     # cc_at_check
+field 0219AAE8 5C000008 i16 0xF3,0xF4,0xF5,0
+field 0219AAE8 r3+0x718 u8 0,1               # mStts.mAtSpl
+fret 025D68EC 0 3000          # fopAcM_searchActorDistance
+fret 028F4384 0 400           # sqrt
+field 0219AAE8 54005134 u32 0x47616E6F,0x47616E6E
+field 0219AAE8 54005138 u32 0x6E4B0000,0x6E4B4100
+field 0219AAE8 101F84DC u32 0x5D000000 0x5D000000   # save info
+field 0219AAE8 5D000022 u16 0 20             # life
+field 0219AAE8 5D000033 u8 0 16              # max magic
+field 0219AAE8 5D000034 u8 0 16              # magic
+field 0219AAE8 5D000089 u8 0,5,10,20         # arrows
+# mutation gaps (my functions)
+field 02199748 r3+0xAE6 i16 0x14,0x15,0
+field 02199748 r3+0x48C u8 0,0,1
+field 02199C48 r3+0x489 u8 0,0,1,2,10
+ret 02008860 0 1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0219CF38 0x54005134 8 @stages,"Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki","Ki",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 0219AAE8 0x54005134 8 @stages,"Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep

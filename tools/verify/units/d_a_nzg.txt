@@ -1,0 +1,23 @@
+# Verification unit: d_a_nzg (rat hole)
+src wwhd_src/d/actor/d_a_nzg.cpp
+
+callee 026066C4 r4=8                      # sead::SafeString key
+ret 02520460 0 5                          # resLoad
+ret 025D63E8 0 1                          # entrySolidHeap
+ret 02516464 0 1                          # ChkCoHit
+ret 02515BBC 0,0x57000000                 # GetAc: null or an actor
+ret 025D5218 0,0x58000000                 # fopAcIt_Judge
+ret 025D5A20 0xFFFFFFFF,0,1,2,3           # createChild
+fret 02019788 0 1                         # cM_rnd
+fret 025D68EC 0 400                       # player distance
+fret 028F4384 60 100                      # sqrtf
+field 02311240 r3+0x3D7 u8 0 2            # m2BB
+field 02311240 r3+0x3D6 u8 0 3            # m2BA
+field 02311240 r3+0x3DE i16 0 1           # timer 0
+field 02311240 r3+0x3DA i16 0 2           # m2BE
+field 02311240 r3+0x3DC i16 0 2           # m2C0
+field 02311240 r3+0x3E8 f32 0 800         # m2CC
+field 02311240 r3+0x3F0 u32 0xFFFFFFFF,0x1234
+field 02311240 57000008 i16 0xC6,0x126,0x127,0xFF,0xDD,0x10
+field 0231175C r3+0xB0 u32 0,0xFF000000,0x0002FF0A,0x01010101,0x03000000
+callee 025D5A20 r8=6                       # createChild angle

@@ -1,0 +1,64 @@
+src wwhd_src/m_Do/m_Do_ext_line.cpp
+stackfill periodic
+callee 025E2B54 r3=48
+callee 025E95AC r3=16 r4=8
+callee 0274D458 r4=16
+callee 027FDA54 r5=48 r6=64
+callee 026124B0 r4=8 r5=8
+callee 02750250 r3=284
+callee 02750370 r3=284
+callee 0280037C r4=284
+arg! 025E8FA8 r4 0,1,2,3
+arg! 025E9B80 r4 0,1,2,3
+arg! 025E9B80 r5 0,1,2,3
+
+# Distinct bounded array storage: actual request max3*16/12, reserve256 per allocation.
+allocfixed 028EFFD0 256 56000000
+mockfield 0280068C r3+0 u32 0,1,2,3
+# Manager counts immutable during nonreentrant element cleanup/draw; callbacks receive elements.
+stable 56000100 4
+stable 5600010C 4
+stable 56000118 4
+arg! 025E91C8 r3 0,0x52000000
+field 025E91C8 52000008 u32 0,0x53000000
+field 025E91C8 53000000 u32 0,1,2,3
+field 025E91C8 53000008 u32 0,1,2,3
+field 025E91C8 53000010 u32 0,1,2,3
+field 025E91C8 5200013C u16 0,1,2,3
+arg! 025E99E0 r3 0,0x52000000
+field 025E99E0 52000008 u32 0,0x53000000
+field 025E99E0 53000000 u32 0,1,2,3
+field 025E99E0 53000008 u32 0,1,2,3
+field 025E99E0 53000010 u32 0,1,2,3
+field 025E99E0 5200013C u16 0,1,2,3
+arg! 025EA1A8 r3 0x52000000,0x52000000
+field 025EA1A8 52000008 u32 0,0x53000000
+field 025EA1A8 53000000 u32 0,1,2,3
+field 025EA1A8 53000008 u32 0,1,2,3
+field 025EA1A8 53000010 u32 0,1,2,3
+field 025EA1A8 5200013C u16 0,1,2,3
+stable 53000000 4
+stable 53000008 4
+stable 53000010 4
+stable 5200013C 2
+
+ret! 027FFCBC 0x58000000,0x58000000
+ret! 027B90AC -1,0,1,2,3
+field 025E9B80 58000004 u32 0x59000000
+field 025E9B80 58000008 u32 0,1,2,3
+field 025E9B80 5800000C u32 0x5A000000
+field 025E9B80 5900001C u32 0,1,2,3
+field 025E9B80 59000020 u32 0x5B000000
+field 025E91C8 53000004 u32 0,0x54000000
+field 025E91C8 5300000C u32 0,0x55000000
+field 025E99E0 53000004 u32 0,0x54000000
+field 025E99E0 5300000C u32 0,0x55000000
+ret! 02755FEC 0x59000000,0x59000000
+field 025E91C8 101F8B4C u32 0x5F000000
+# Nonresizing disjoint owned-array domain: manager callbacks receive entries, not owner slots.
+# Constructor installs the two independent allocation bases; later resource/bind callbacks do not replace them.
+arg! 025E9B80 r3 0x52000000,0x52000000
+stable 52000004 4
+stable 52000144 4
+stable 52000008 4
+stable 5200000C 4

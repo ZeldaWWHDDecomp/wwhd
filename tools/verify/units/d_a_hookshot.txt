@@ -1,0 +1,134 @@
+# Verification unit: d_a_hookshot (Hookshot)
+# All 31 owned entries include the three HD chain renderer functions.
+src wwhd_src/d/actor/d_a_hookshot.cpp
+
+callee 0201ADE0 r4=out12 r5=12  # cXyz::operator-
+callee 0201AD78 r4=out12 r5=12  # cXyz::operator+
+callee 0201AE48 r4=out12        # cXyz::operator*
+callee 028E8F64 r5=out12        # PSMTXMultVec
+callee 025A847C r6=12 r7=6 r8=12 stack=4         # dPa_control_c::set: setup, prm, env, scale2D on the stack
+callee 025CB374 r6=12           # StartShock: cXyz by value
+callee 0217674C r3=out48        # Mtx by value
+callee 021767EC r3=out16 r4=8   # GXColorS10 -> floats
+callee 0274D458 r3=out16 r4=16
+ret 025160DC 0 1                # ChkAtHit
+ret 02008860 0 1                # LineCross
+ret 024EF398 0 1                # ChkPolyHSStick
+ret 02008254 0 1                # ChkPolySafe
+ret 024EEABC 0 1                # ChkMoveBG
+ret 024EF0F4 0,11,12            # GetAttributeCode
+ret 020084C8 0,0x54500000       # GetTriPla
+ret 02515BBC 0,0x54200000       # GetAtHitAc
+ret 025D5218 0,0x54200000       # fopAcIt_Judge
+fret 028F4384 0 2200            # sqrtf
+field * 0x10474BE4 u32 0x54100000   # link player
+field * 0x10474BEC u32 0,0x54200000 # ship actor
+field * 0x54200314 f32 -100 100
+field * 0x54200318 f32 -100 100
+field * 0x5420031C f32 -100 100
+field * 0x542002E0 u32 0,0x00080000,0x00100000,0x00200000,0x10000000
+field * 0x54500004 f32 0,0.25,0.5,0.75,1
+field * 0x104741E4 u32 0x47616E6F,0x6B617A65,0x41414141,0x41616E6F,0x41617A65   # "Gano" / "kaze"
+field * 0x104741E8 u32 0x6E4B0000,0x42000000,0x41414141,0x6E4B5800,0x42580000   # "nK" / "B"
+field * r3+0xB0 u32 0 4         # mode (fopAcM_GetParam)
+field * r3+0xD4FC u8 0,1        # m2A0
+field * r3+0xD4FF u8 0,1        # m2A3
+field * r3+0xD502 u16 0x825F,0xC  # m2A6
+field * r3+0xD504 i32 -1,0,1,5,9,10,11,17,18,19,300   # mChainCnt
+field * r3+0xD774 u32 -1,0x54200004  # mCarryActorID
+field * r3+0xD7AA i16 -1,0,1    # PMF index
+field * r3+0xD7A8 i16 0         # PMF delta
+field * r3+0xD7AC u32 0x02179B98
+field * r3+0xD7AE i16 0,8       # PMF vtable offset
+field * r3+0x32A i16 0,100      # shape_angle.y
+field * 0x54200328 i16 0,100
+field 02176CE0 r3+0xD528 f32 -100 100
+field 02176CE0 r3+0x314 f32 -100 100
+stackfill periodic
+# shape draw: the user area points to a pinned hookshot with a small chain count
+field 021768B0 r3+0x18 u32 0x54600000
+field 021768B0 0x5460D504 i32 -1,0,1,2,3
+# procShot: the "kazeB" sand test (stage name, cross height, no hit, first shot)
+field 02178DDC 0x104741E4 u32 0x6B617A65,0x6B617A65,0x41414141,0x41617A65
+field 02178DDC 0x104741E8 u32 0x42000000,0x42000000,0x41414141,0x42580000
+field 02178DDC r3+0xD568 f32 0 2000
+field 02178DDC r3+0xD4FF u8 0,0,0,1
+arg 02179EC4 r3 0,0xFFFFFF8C,0x54700000
+
+src wwhd_src/d/actor/d_a_hookshot_shape.cpp
+
+# Restricted modeled cleanup fixtures; negative counts are robustness cases.
+# Stable headers constrain mock writes, not actual cleanup behavior.
+arg! 02177FD4 r3 0,0x54800000
+field 02177FD4 r3+0x564 s32 -1,0,1,2
+field 02177FD4 r3+0x9C s32 -1,0,1,2
+field 02177FD4 r3+0xA0 u32 0,0x54900000
+stable 54800564 4
+stable 5480009C 8
+field 02177FD4 54900004 s32 -1,0,1,2
+field 02177FD4 5490000C s32 -1,0,1,2
+field 02177FD4 54900008 u32 0,0x54A00000
+field 02177FD4 54900010 u32 0,0x54A01000
+field 02177FD4 54900018 s32 -1,0,1,2
+field 02177FD4 54900020 s32 -1,0,1,2
+field 02177FD4 5490001C u32 0,0x54A02000
+field 02177FD4 54900024 u32 0,0x54A03000
+stable 54900000 40
+
+# HD draw fixture: typed owned shape and bounded chain; shader/context values retain broad paths.
+arg! 021783F4 r3 0x54800000 0x54800000
+field 021783F4 r3+0x18 u32 0x54600000
+field 021783F4 5460D504 s32 -1,0,1,2,3
+callee 02750250 r3=255
+callee 02750370 r3=284
+callee 0280037C r4=284
+
+# Constructor's restricted mock contract: resource population is covered by a separate actual-helper companion.
+arg! 0217718C r3 0x54800000 0x54800000
+stable 54800098 12
+stable 5480054C 4
+# Immutable chain geometry counts are not rewritten by graphics calls.
+stable 101B7174 8
+callee 027B90AC r4=8
+callee 026124B0 r4=8 r5=8
+real 027FFCBC
+
+# Truthful PSVECAdd inputs expose chain-offset arithmetic.
+callee 028E8D88 r3=12 r4=12 r5=out12
+field 021768B0 54600328 u16 0,8192,16384
+field 021768B0 5460032A u16 0,8192,16384
+
+callee 028E8DD0 r3=12
+callee 028E90D4 r3=48 r4=out48
+
+# Actual singleton getter; initialized path is concrete, lazy-init nested closure remains modeled.
+real 025200D4
+field * 104753A8 u32 1
+stable 104753A8 4
+callee 025D5218 r4=4
+
+# Sensitivity domain: finite owned stage buffers include differing first byte and extended suffix.
+
+# Initialized finite-trig geometry fixture, supplied values; runtime BSS producer bit identity remains open.
+field 021789B4 5410032A u16 0
+field 021789B4 541003D0 u16 0
+field 021789B4 104A44F8 f32 0
+field 021789B4 104A44FC f32 1
+field 021789B4 541072F0 f32 -100 100
+field 021789B4 541072F4 f32 -100 100
+field 021789B4 541072F8 f32 -100 100
+
+# Restrict callback footprints away from owned player angles and supplied initialized trig pair.
+stable 5410032A 2
+stable 541003D0 2
+stable 104A44F8 8
+
+# Actual zero-fill wrapper forwards incoming r3 as destination, scalar address observable.
+callee 028F521C r3=0
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+ret 025200D4 0x4E000000 0x4E000000  # play object pinned so its stage name can be steered
+fieldstr 02177CB8 0x4E005134 8 @stages,"GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK"
+fieldstr 02178DDC 0x4E005134 8 @stages,"kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB","kazeB"

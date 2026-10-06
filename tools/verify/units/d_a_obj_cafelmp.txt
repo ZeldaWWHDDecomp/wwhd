@@ -1,0 +1,13 @@
+src wwhd_src/d/actor/d_a_obj_cafelmp.cpp
+stackfill
+callee 026066C4 r4=8
+ret 025E38E0 0,0x56000000
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+field * 101F4F28 u32 0x5A123400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3B4 u32 0,0x56000000
+field * r3+0x322 s16 -32768,-1,0,1,32766,32767
+observe 025E2DE0 104B4634 8
+arg! 0232FD7C r3 0,0x40000000
+arg! 0232FD98 r3 0,0x40000000

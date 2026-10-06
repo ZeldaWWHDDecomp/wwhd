@@ -1,0 +1,527 @@
+# Verification unit: d_a_player_main range #04 (02400B14..02419FEB), self-contained check.
+src wwhd_src/d/actor/d_a_player_main.cpp wwhd_src/d/actor/d_a_player_main_04.cpp wwhd_src/d/actor/d_a_player_main_04b.cpp
+
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+# checkOriginalHatAnimation: start stage "GTower" layer 9
+field 02402FFC 54005134 u32 0x47546F77,0x47546F77,0x47546F78
+field 02402FFC 54005138 u32 0x65720000,0x65720000,0x65720100
+field 02402FFC 5400513F u8 9,8
+field 02407178 r3+0x69B0 u16 0x103,0x101,0x100
+field 02407178 r3+0x65F0 i32 0xD8,0x5B,0x5C,0x10
+field 02407178 101F84DC u32 0x55000000
+field 02407178 5500002E u8 0x38,0x37
+field 02407178 54005CEA u8 2,1
+# phase_2: the HD system object (*0x101F8344 + 0x218); this == NULL for fopAcM_ct's NULL check
+field 02412884 101F8344 u32 0,0x56000000
+field 02412884 56000218 u32 0,0x56100000
+arg 02412884 r3 0,0x40000000
+field 02419F54 r3+0x5888 u16 0x35,0x36
+field 02412F68 r3+0x65F0 i32 0x11,0x10
+callee 0201ADE0 r4=out12
+callee 028E8DD0 r3=12
+field 02416230 r3+0x430 u32 0xE,0,1
+field 02416230 54005292 u8 0,1
+callee 02506964 r4=out2 r5=out2
+# procSubjectivity: crouch (mProcVar6) + R held + crawl start
+field 0241701C r3+0x69C0 i32 0,1
+field 0241701C r3+0x690E u8 0x40,0
+field 0241701C r3+0x6A08 f32 0.0 1.0
+field 0241701C r3+0x69B0 u16 0x100,0x101
+field 0241701C r3+0x65CC u32 0x57000000
+field 0241701C 5700000C f32 0.0 0.02
+field 0241701C r3+0x6A28 f32 -100.0 0.0
+field 0241701C r3+0x318 f32 0.0 10.0
+ret 02415FB0 0,1
+ret 02415EF0 0,0,1
+ret 023E4CD0 0,0,1
+ret 023E3358 0,1,2,3,4
+fret 02019788 0.0 1.0
+# procWait
+field 024177A8 r3+0x72A8 f32 0.0,0.0,1.0
+field 024177A8 r3+0x72B0 f32 0.0,0.0,1.0
+field 024177A8 r3+0x72B4 f32 0.0,10.0
+field 024177A8 r3+0x420 u16 0,1
+field 024177A8 r3+0x690D u8 0x20,0
+field 024177A8 r3+0x834 u32 0x10,0
+field 024177A8 r3+0x68DF u8 0,1
+field 024177A8 r3+0x5848 u16 0x126,0x11F,0x1D
+field 024177A8 r3+0x5888 u16 0xFFFF,0
+field 024177A8 101CEF1A u8 0,1
+field 024177A8 r3+0x69B4 i16 0,0,1
+field 024177A8 r3+0x69B6 i16 0,0,1
+field 024177A8 r3+0x69B8 i16 0,0,1
+field 024177A8 r3+0x6918 i16 1,2,0
+field 024177A8 r3+0x6916 i16 0,1
+field 024177A8 r3+0x430 u32 0x2A,0
+field 024177A8 r3+0x65D0 u16 0x234,0
+ret 023F14E0 0,0,1
+callee 028E8DE8 r3=12 r4=12
+field 02418B48 r3+0x780 f32 1000.0 2000.0
+field 02417D30 r3+0x780 f32 1000.0 2000.0
+field 02417D30 r3+0x65F0 i32 0x7F,0x7A,0x10
+field 02417D30 54005134 u32 0x47616E6F,0x47616E6F,0x47616E00
+field 02417D30 54005138 u32 0x6E4B0000,0x6E4B0000,0x6E4C0000
+field 024197A0 r3+0x6916 i16 1,2
+field 024197A0 r3+0x68DF u8 0,1
+field 024197A0 r3+0x6A14 f32 9.0 20.0
+# procMove: demo walk, the HD MajyuE / sea speed-up
+field 024198D4 r3+0x430 u32 2,0
+field 024198D4 r3+0x318 f32 1749.0 1756.0
+field 024198D4 r3+0x326 i8 0,1
+field 024198D4 54005134 u32 0x4D616A79,0x73656100,0x4D616A79
+field 024198D4 54005138 u32 0x75450000,0x75450000,0x75460000
+ret 02418E00 0,0,1
+ret 024197A0 0,0,1
+# setSpeedAndAngleNormal
+field 0241650C r3+0x6A08 f32 0.0 1.0
+field 0241650C r3+0x65F0 i32 6,0x18,5
+field 0241650C r3+0x6A70 u32 0,1
+field 0241650C r3+0x3CC f32 -1.0 1.0
+field 0241650C 54005292 u8 0,1
+# changeFrontWallTypeProc
+field 02418E00 r3+0x68D5 u8 3,4,5,6,7,8,9,0
+field 02418E00 r3+0x6A70 u32 0,2,0x40000
+field 02418E00 r3+0x3BC u32 0,0x2000000
+field 02418E00 r3+0x3C0 u32 0,8
+field 02418E00 r3+0x6994 i16 0,4,7,0xE
+field 02418E00 r3+0x6A08 f32 0.0 1.0
+field 02418E00 r3+0x318 f32 0.0 400.0
+field 02418E00 r3+0x7330 f32 0.0 100.0
+field 02418E00 r3+0x6A28 f32 0.0 500.0
+field 02418E00 r3+0x6A50 f32 0.0 400.0
+field 02415238 101CEF16 u16 0,1
+field 02412948 1047E6C8 i8 0,1
+arg 02412948 r4 -1,0,2,5,1
+callee 025602F0 r3=out4 r4=out4
+# swimTail execute: a terminating particle list (0, 1 or 2 links) that callees never rewrite
+field 02414E8C r4+0x1AC u32 0,0x42000000
+field 02414E8C 4200000C u32 0,0x42000100
+field 02414E8C 4200010C u32 0
+stable 410001AC 4
+stable 4200000C 4
+stable 4200010C 4
+field 02413E80 101CEF1B u8 0,0,2
+field 02413E80 101CEF1A u8 0,1
+field 02417388 54005B2C u32 0x40000000,0
+arg 02410888 r5 0,1,2,3
+ret 0273AD10 0,0x58000000,0x58001000,0xFFFFFFF4
+ret 025E3630 0,0x59000000
+# HD selfie pose (02415AF8 / 02415BA4)
+field 02415AF8 54005BB3 u8 0xB,0
+field 02415AF8 r3+0x690D u8 2,0
+field 02415AF8 r3+0x3B8 u32 0x80000,0
+field 02415AF8 54005CD8 u32 0x200000,0
+ret 02415AF8 0,0,1
+field 02415BA4 101F5088 u32 0x5A000000
+field 02415BA4 5A000124 u32 0,4,0x11,0x22,0x88,0x44,0x80,0x15,0x66
+field 02415BA4 54005CDC u32 0x100000,0
+field 02415A80 r3+0x4BE4 u8 1,0
+field 02415A80 r3+0x4B58 i32 0,1,2
+field 02415A80 r3+0x4B5C i32 0,2
+field 02415ABC r3+0x4BE4 u8 1,0
+field 02415ABC r3+0x4B58 i32 0,1,2
+field 02415ABC r3+0x4B5C i32 0,2
+callee 0201AE48 r4=out12
+callee 028E8F64 r5=out12
+arg 02407310 r5 0,5,100
+field 02407310 r3+0xA0 i32 60,0,5,-100
+callee 0201AD78 r4=out12
+field 024036E4 r3+0x834 u32 0x220,0x200,0x20
+field 024036E4 r3+0x65F0 i32 0xF,0x12,0x13,6
+field 024036E4 r3+0x6A70 u32 0x10,0
+field 024036E4 r3+0x8C8 f32 0.0 100.0
+field 024036E4 r3+0x8A0 f32 -10.0 10.0
+field 024036E4 r3+0x318 f32 0.0 50.0
+field 024036E4 r3+0x3DC f32 0.0 150.0
+ret 02008438 0,0x5B000000
+field 024036E4 5B000008 i16 0x59,0x58
+field 0240CBE0 101CEF16 u16 0,1
+field 0240CBE0 r3+0x8C8 f32 1000000000.0,0.0
+field 0240CBE0 r3+0x6878 u32 0,1
+field 0240CBE0 r3+0x6888 u32 0,1
+field 0240CAAC r3+0x3BC u32 0,0x80000
+field 0240CAAC r3+0x3B8 u32 0,0x80
+field 0240CAAC r3+0x6A70 u32 0,0x40000
+field 0240C0A8 r3+0x65F0 i32 0x53,0x52
+field 0240C0A8 r3+0x69AC i16 0,1
+field 0240C0A8 r3+0x6A44 f32 0.5 1.5
+field 0240C0A8 r3+0x5898 f32 0.0 1.0
+callee 025D9F70 r4=out4
+ret 025D9F70 0,1
+callee 0201B31C r4=out12
+field 0240584C 101F84DC u32 0x55000000
+field 0240584C 5500002F u8 0x3C,0x3B
+field 0240584C r3+0x6850 u32 0,0x5C000000
+field 0240584C r3+0x6844 u32 0,0x5C001000
+field 0240584C 54005CD8 u32 0,0x2000
+field 0240584C r3+0x3C0 u32 0,0x200000
+field 0240584C 1046D0FC u32 0,1
+field 0240584C 1046D100 u32 0,1
+ret 02515BBC 0,0x5D000000
+field 0240584C 5D000008 i16 0xD3,0xD2
+field 0240A0A4 r3+0x6A70 u32 0x01000000,0x00800000,0x800,0x20,0x40000,0x10,0x2000,0
+field 0240A0A4 r3+0x3B8 u32 0,0x10000,0x80
+field 0240A0A4 54005CD8 u32 0,0x2000
+field 0240A0A4 54005B3C u32 0,0x5E000000
+field 0240A0A4 5E000644 u32 0,1
+field 024038A0 r3+0x3B8 u32 0,0x2000000
+# setFootEffectType
+arg 02405CB4 r4 0x23,0x24,0x2022,0x2027,0x25,0x26
+arg 02405CB4 r6 0,1
+arg 02405CB4 r7 1,2,3,4,5,0
+field 02405CB4 r3+0x65F0 i32 0x56,0x55
+field 02405CB4 r3+0x3B8 u32 0,0x80,0x20000000
+field 02405CB4 r3+0x834 u32 0,0x20
+field 02405CB4 r3+0x6644 i32 -1,0x24,0x23
+field 02405CB4 r3+0x6690 i32 -1,0x24,0x23
+field 02405CB4 54005AF8 u32 0x5F000000
+field 02405CB4 5F000384 u32 4,0xA,0xB,0xC,0xE,0x10,0
+# setFootEffect
+field 02406480 r3+0x834 u32 0x20,0
+field 02406480 r3+0x3B8 u32 0,0x80000000
+field 02406480 r3+0x3C0 u32 0,0x10,0x410,0x810,0xC10,0x400
+field 02406480 r3+0x69D4 i32 0x13,4,0
+field 02406480 r3+0x6A28 f32 0.0 100.0
+field 02406480 r3+0x318 f32 0.0 100.0
+field 02406480 r3+0x6828 u32 0,0x60000000
+field 02406480 r3+0x68DA u8 0,1,2,3,4,5,6
+field 02406480 r3+0x65F0 i32 0xD8,0x5C,0x1E,6
+field 02406480 r3+0x69C0 i32 0,1
+field 02406480 54005AF8 u32 0x5F000000
+field 02406480 5F000384 u32 4,0xA,0xB,0xC,0xE,0x10,0
+field 02406480 54005134 u32 0x4164616E,0x4164616E,0x4164616F
+field 02406480 54005138 u32 0x6D616500,0x6D616500,0x6D616501
+ret 025A8770 -1,0x23,0x24,0x2022,0x25
+# setGrabItemPos
+field 0240A41C r3+0x65A4 u32 0,0x61000000
+field 0240A41C r3+0x65F0 i32 0x6E,0x6F,0x72,0x73,0x17,0xC5,6
+field 0240A41C r3+0x3B8 u32 0,0x400
+field 0240A41C r3+0x5848 u16 0x94,0
+field 0240A41C r3+0x6A70 u32 0,2
+field 0240A41C r3+0x68DF u8 0,1
+field 0240A41C 61000008 i16 0xD8,0xD7
+# setLightSaver
+field 0240C32C r3+0x69B0 u16 0x103,0x102
+field 0240C32C r3+0x3BC u32 0,0x8000,0x200000,0x208000
+field 0240C32C 101F84DC u32 0x55000000
+field 0240C32C 5500002E u8 0x38,0x39,0x3A,0x3E
+field 0240C32C 54005BB7 u8 0x1A,0
+field 0240C32C r3+0x69AC i16 0,1,0x1E
+field 0240C32C r3+0x686C u32 0,0x62000000
+field 0240C32C 1046D1C4 u32 0,1
+field 0240C32C 1046D1C8 u32 0,1
+ret 023D8F6C 0,0,1
+# setAuraEffect
+field 0240B7F4 r3+0x3BC u32 0,1
+field 0240B7F4 r3+0x699E i16 0,1,5
+field 0240B7F4 54005292 u8 0,1
+field 0240B7F4 r3+0xF8 u16 3,0
+field 0240B7F4 54005CD8 u32 0,0x10000
+field 0240B7F4 54005B3C u32 0,0x63000000
+# setWaterRipple
+field 0240AB88 r3+0x65F0 i32 0xB2,0x97,6
+field 0240AB88 54005CD8 u32 0,0x100000
+field 0240AB88 r3+0x691C i16 0,1
+field 0240AB88 r3+0x6A70 u32 0,0x2020,0x40000,0x20,0x42020
+field 0240AB88 r3+0x3B8 u32 0,0x80
+field 0240AB88 r3+0x6A28 f32 0.0 100.0
+field 0240AB88 r3+0x7778 f32 0.0 50.0
+field 0240AB88 r3+0x7784 f32 0.0 100.0
+field 0240AB88 r3+0x69D4 i32 0x13,0x17,0
+field 0240AB88 r3+0x69D8 i32 0x17,0
+field 0240AB88 r3+0x834 u32 0,0x20
+field 0240AB88 r3+0x2DC u8 0,1,0x21,0x20
+field 0240AB88 101D5FFC u32 0,0x64000000
+field 0240AB88 1047E6B8 u32 0x44656D6F,0x44656D6F,0x44656D70
+field 0240AB88 1047E6BC u32 0x30370000,0x30370000,0x30380000
+field 0240AB88 101D600C u32 0xA28,0xA29,0
+field 0240AB88 1046D1C0 u32 0,1
+field 0240AB88 r3+0x6698 u32 0,0x65000000
+field 0240AB88 65000238 f32 0.5,0.8,1.0
+field 0240AB88 r3+0x6818 u32 0,0x66000000
+field 0240AB88 r3+0x6912 u8 0,6,1
+field 0240AB88 101EA4E4 u8 0,1
+# setHatAngle
+field 024022D0 r3+0x3BC u32 0,8,0x800
+field 024022D0 r3+0x65F0 i32 0x93,6
+field 024022D0 r3+0x6A70 u32 0,0x10,0x40000
+field 024022D0 r3+0x3CC f32 -1.0 1.0
+callee 0257E1B8 r4=out12 r5=out4
+# setNeckAngle
+field 02400C4C 54005CDC u32 0,0,1,0x100000
+field 02400C4C 54005CD8 u32 0,0x10,0x10000,0x10010
+field 02400C4C r3+0x65F0 i32 2,0x8F,0x66,0x3C,0x3F,0x40,0xA4,0xBE,0x93,0xA0,0x74,0x73,4,6
+field 02400C4C r3+0x65D0 u16 0x208,0,0
+field 02400C4C r3+0x6A70 u32 0,0x80,0x08000000,0x08000080
+field 02400C4C 54005292 u8 0,1
+field 02400C4C r3+0x430 u32 0x39,1,2,3,4,5
+field 02400C4C r3+0x68DF u8 10,1,9,0
+field 02400C4C r3+0x69D0 i32 8,0
+field 02400C4C r3+0x3B4 u32 0x92,0
+field 02400C4C 54005B3C u32 0,0x68000000
+field 02400C4C 54005B38 u32 0,0x69000000
+field 02400C4C r3+0x5888 u16 0x64,0,0
+field 02400C4C r3+0x5868 u16 0x73,0
+field 02400C4C r3+0x5878 u16 0x73,0
+field 02400C4C r3+0x68D4 u8 0,1
+field 02400C4C r3+0x691A i16 0,0x3000,0x5000,-0x5000
+field 02400C4C r3+0x69F8 f32 0.0,0.5
+field 02400C4C r3+0x696C i16 0,0x800,-0x800,0x2000,-0x2000
+field 02400C4C r3+0x3BC u32 0,0x100,0x1000000
+field 02400C4C 101CEF1A u8 0,1
+field 02400C4C r3+0x65B0 u32 0,0x6A000000
+ret 023D69CC 0,0,1
+ret 02400B14 0,0,0,0,1
+ret 0252A068 0,1
+ret 024EC0A0 0,0,0x67000000
+ret 025D7C6C 0,0x68000000
+ret 0200FAAC 0,0x6000,0x6001,0x8000
+ret 024FA018 0,0x6B000000
+# 0240F564 swBlur ctor: the sampler/texture object comparison (equal -> only the image is taken over)
+arg 0240F564 r3 0x40000000
+field 0240F564 r3+0x12218 u32 0
+field 0240F564 r3+0x123B0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x1221C u32 0
+field 0240F564 r3+0x123B4 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x12220 u32 0
+field 0240F564 r3+0x123B8 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x12224 u32 0
+field 0240F564 r3+0x123BC u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x12228 u32 0
+field 0240F564 r3+0x123C0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x1222C u32 0
+field 0240F564 r3+0x123C4 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x1224C u32 0
+field 0240F564 r3+0x123E4 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x12248 u32 0
+field 0240F564 r3+0x123E0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 0240F564 r3+0x12230 u32 0
+field 0240F564 r3+0x123C8 u32 0,1
+# 0240FE40 daPy_lk_c ctor: the NULL this (operator new) path
+arg 0240FE40 r3 0,0x40000000
+# 024131D0 makeBgWait: start mode / scene mode / stage names / ground actor names
+field 024131D0 101F84DC u32 0x55000000
+field 024131D0 55001177 u8 0,1,2,3,4,5,6
+field 024131D0 r3+0xB0 u32 0x0000,0x1000,0x2000,0x4000,0x5000,0x7000,0x9000,0xD000,0xE000,0xF000,0x10C0,0x5080,0x2040,0x0080
+field 024131D0 r3+0x697E s16 0,0,1,2
+field 024131D0 5B000008 s16 0x124,0x44,0
+field 024131D0 54005134 u32 0x506A6176,0x53686970,0x53697265,0x53697265
+field 024131D0 54005138 u32 0x646F7500,0x44000000,0x6E000000,0x6E000000,0x6E000100
+field 024131D0 r3+0x326 s8 0,0,1
+field 024131D0 r3+0x31C f32 1500.0,1500.0,0.0
+field 024131D0 r3+0x314 f32 0.0,500.0,-500.0
+field 024131D0 r3+0x69E0 u32 0xFF,0xFF,0
+field 024131D0 r3+0x6A14 f32 10.0,20.0
+field 024131D0 r3+0x8A0 f32 -1000000000.0,0.0,0.0,0.0
+# 024142F0 swBlur draw: the blur point count (loops of count+1)
+field 024142F0 r3+0x9C u32 0xFFFFFFFF,0,1,2,7,30
+field 024142F0 r3+0xA4 u32 0,1,2
+stable 4000009C 4
+arg! 024142F0 r3 0x40000000
+# 02414834 sight packet draw: pinned this, lock-on flag, texture/sampler equality
+arg! 02414834 r3 0x40000000
+field 02414834 r3+5 u8 0,1
+field 02414834 r3+0x954 u32 0
+field 02414834 r3+0x958 u32 0
+field 02414834 r3+0x95C u32 0
+field 02414834 r3+0x960 u32 0
+field 02414834 r3+0x964 u32 0
+field 02414834 r3+0x968 u32 0
+field 02414834 r3+0x988 u32 0
+field 02414834 r3+0x984 u32 0
+field 02414834 r3+0x96C u32 0
+field 02414834 r3+0xAEC u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xAF0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xAF4 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xAF8 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xAFC u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB00 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB20 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB1C u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB04 u32 0,1
+field 02414834 r3+0xB7C u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB80 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB84 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB88 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB8C u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB90 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xBB0 u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xBAC u32 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+field 02414834 r3+0xB94 u32 0,1
+# 02415384 daPy_lk_c dtor: pinned this, the sight shape's material count (a loop bound reloaded after calls)
+arg 02415384 r3 0x40000000
+field 02415384 r3+0x5DFC u32 0,1,2,3
+stable 40005DFC 4
+# 02403C24 setItemModel: equip item, procs, sword/shield/bracelet selection, the HD demo stage name
+field 02403C24 r3+0x69B0 u16 0x101,0x10A,0x104,0x20,0x83,0x33,0x21,0x22,0x2F,0x34,0x103,0x58,0x102,0x50,0x27,0x0
+field 02403C24 r3+0x6594 u32 0,0x45000000,0x45000000
+field 02403C24 450000B0 u32 0,1,2,3,4,5,6
+field 02403C24 45000000 u32 0
+field 02403C24 r3+0x4814 f32 0.0,1.0
+field 02403C24 r3+0x4440 u32 0,0x46000000,0x46000000,0x46000000
+field 02403C24 r3+0x589C f32 5.0,10.0
+field 02403C24 r3+0x69EC s16 0,1,5
+field 02403C24 r3+0x65F0 s32 0x92,0x93,0x9A,0xB7,0xD8,0xA9,0x65,0x0,0x0
+field 02403C24 r3+0x4970 u32 0,0x47000000
+field 02403C24 r3+0x4974 u32 0,0x47100000
+field 02403C24 r3+0x44CC u32 0,0x48000000
+field 02403C24 r3+0x44D0 u32 0,0x49000000
+field 02403C24 r3+0x4908 u32 0,0x49100000
+field 02403C24 r3+0x6A44 f32 0.0,-5.0,100.0
+field 02403C24 101F84DC u32 0x55000000
+field 02403C24 5500002E u8 0xFF,0x38,0x3E,0x3A,0x39
+field 02403C24 5500002F u8 0x3C,0xFF,0x3B
+field 02403C24 55000030 u8 0x28,0
+field 02403C24 54005CEA u8 0,2
+field 02403C24 r3+0x420 u16 0,1
+field 02403C24 1047E6B8 u32 0x44656D6F
+field 02403C24 1047E6BC u32 0x35300000,0x35310000
+field 02403C24 r3+0x691A s16 1,0
+field 02403C24 r3+0x5848 u16 0x70,0x74,0x12E,0x135,0
+field 02403C24 r3+0x3B8 u32 0x02000000,0
+field 02403C24 r3+0xE0C f32 0.0,1.0
+field 02403C24 r3+0xF1C f32 0.0,1.0
+field 02403C24 r3+0xF80 u32 0,0x49200000
+field 02403C24 r3+0x4878 u32 0,0x49300000
+ret 027DF9B0 -1,0,3
+field 02403C24 460000AC u32 0x4A000000
+field 02403C24 4A00000C u32 0,5
+field 02403C24 4A000010 u32 0,0x4B000000
+# 024076CC setCollision: procs, mode/reset flags, sword, cut-turn emitters, fan wind, light reflection
+field 024076CC r3+0x65F0 s32 0x5B,0x1E,0x22,0x5E,0x5D,0x78,0x6D,0xD,0x97,0x55,0x56,0x42,0x63,0x92,0x53,0x4E,0x5C,0x4C,0xA4,0x93,0
+field 024076CC r3+0x6A70 u32 0x2000,0x01000000,8,0x80000000,0,0
+field 024076CC r3+0x3C0 u32 0,1,2,3,3,0x200000,0x200003
+field 024076CC r3+0x3BC u32 0x8000,0,1
+field 024076CC r3+0x4A78 u32 0,0x4E000000
+field 024076CC r3+0x69B0 u16 0x101,0
+field 024076CC r3+0x6594 u32 0,0x45000000
+field 024076CC 450000B0 u32 0,1,2,3,4,5
+field 024076CC 101F84DC u32 0x55000000
+field 024076CC 5500002E u8 0x38,0x3E,0x39
+field 024076CC 54005CEA u8 0,2
+field 024076CC r3+0x6734 u8 0xFF,0
+field 024076CC r3+0x691C s16 0,1
+field 024076CC r3+0x691A s16 0,1
+field 024076CC r3+0x6984 s16 0,1,5
+field 024076CC r3+0x698A s16 0,1
+field 024076CC r3+0x5574 f32 0.0,10.0
+field 024076CC r3+0x340 f32 -1.0,1.0
+field 024076CC r3+0x3B0 s16 0,1
+field 024076CC r3+0x73EC u32 0x4D000000
+field 024076CC 4D00009C s32 5,20
+ret 023D93DC 0,1
+ret 02407678 0,1
+ret 020084C8 0,0x4C000000
+field 024076CC 4C000004 f32 0.0,1.0
+# 0240CDD0 execute: heavy counter, procs, flags, play state, ground, events, items
+field 0240CDD0 r3+0x69EE s16 0,5,6
+field 0240CDD0 r3+0x65F0 s32 0xB2,0xB2,0xB2,0x85,0xA9,0xA5,0x76,0x7D,0xB0,0xB1,0xB2,0x2B,0x2D,0x2F,0xC1,0x86,0x90,0x66,0x93,0x42,0x63,0x92,0x0,0x0
+field 0240CDD0 101F84DC u32 0x55000000
+field 0240CDD0 5500002E u8 0xFF,0x38,0x39
+field 0240CDD0 54005B2C u32 0x40000000,0x40000000,0
+field 0240CDD0 54005CD8 u32 0,0x10000,0x01012000
+field 0240CDD0 54005CDC u32 0,0x200000,0x100000,0x88
+field 0240CDD0 54005292 u8 0,1
+field 0240CDD0 54005BBB u8 0x29,0x2A,0
+field 0240CDD0 54005BB7 u8 0,0x51
+field 0240CDD0 54005BB6 u8 0,1
+field 0240CDD0 54005CEA u8 0,2
+field 0240CDD0 r3+0x3B8 u32 0x02000000,0x80000000,0x20000,0x400000,0x100,0
+field 0240CDD0 r3+0x3BC u32 1,0x800,0x40800,0x40000000,0x100,0
+field 0240CDD0 r3+0x3C0 u32 0x00100000,0x08000000,0x10000000,0
+field 0240CDD0 r3+0x69B0 u16 0x101,0x25,0x103,0x33,0
+field 0240CDD0 r3+0xF8 u16 3,6,0
+field 0240CDD0 r3+0x68DE u8 8,0xC,0
+field 0240CDD0 r3+0x68E0 u8 2,3,0
+field 0240CDD0 r3+0x6972 s16 0,1
+field 0240CDD0 r3+0x65F6 s16 0,-1,1
+field 0240CDD0 r3+0x6A70 u32 0x40000,0x20,0x02000000,0x20000000,0x40000000,0x10400800,0
+field 0240CDD0 r3+0x8A0 f32 -1000000000.0,0.0,0.0
+field 0240CDD0 r3+0x834 u32 0x20,0
+field 0240CDD0 r3+0x69D4 s32 6,8,0
+field 0240CDD0 r3+0x69D0 s32 4,0
+field 0240CDD0 r3+0x318 f32 0.0,3000.0
+field 0240CDD0 r3+0x68DF u8 1,4,9,10,0
+field 0240CDD0 r3+0x6594 u32 0,0x45000000
+field 0240CDD0 450000B0 u32 2,0
+field 0240CDD0 101CEF14 s16 0,1,5
+field 0240CDD0 101CEF16 u16 0,1,2
+field 0240CDD0 r3+0x6A94 u32 0,0x4F000000
+field 0240CDD0 r3+0x69C4 u32 0,1
+# dBgS::GetAttributeCode: lava/void (6/8) reach checkLavaFace and the proc 0xB2 lava-surface branch; 0xB sand
+ret 024EF0F4 6,8,0xB,0,1
+# dBgS_Acch::CrrPos sets the ground-hit flag (acch+0x28 bit 0x20) that execute cleared just before
+mockfield 024F08A8 r3+0x28 u32 0x20,0,0x120,0x31,0xFFFFFFDF,0xFFFFFFFF
+# 02410BE8 playerInit: model data (joint list, material chains, texture list) at fixed addresses
+field 02410BE8 r3+0x444 u32 0x51000000
+field 02410BE8 51000004 u32 0x20,5
+field 02410BE8 51000008 u32 0x53000000
+field 02410BE8 51000030 u32 0x52000000,0
+field 02410BE8 52000000 u16 0,1,3,0x42
+field 02410BE8 51000034 u32 0x52100000,0
+field 02410BE8 53000224 u32 0x56000000,0
+field 02410BE8 53000010 u32 0x56000200,0
+field 02410BE8 56000004 u32 0x56000100,0
+field 02410BE8 56000104 u32 0
+field 02410BE8 5300025C u32 0x56000200,0
+field 02410BE8 56000204 u32 0x56000300,0
+field 02410BE8 56000304 u32 0x56000400,0
+field 02410BE8 56000404 u32 0x56000500,0
+field 02410BE8 56000504 u32 0
+field 02410BE8 56000300 u32 0x57000000
+field 02410BE8 56000400 u32 0x57000000
+field 02410BE8 56000500 u32 0x57000000
+field 02410BE8 56000000 u32 0x57000000
+field 02410BE8 56000100 u32 0x57000000
+field 02410BE8 56000200 u32 0x57000000
+field 02410BE8 57000004 u32 0x10
+field 02410BE8 57000014 u32 0x6579654C,0x6579654C,0x6D617975
+field 02410BE8 57000018 u32 0x64616D41,0x64616D42,0,0x4C64616D
+field 02410BE8 5700001C u32 0,0x41000000,0x42000000
+ret 027F3F94 0x58000000
+field 02410BE8 58000008 u16 0,2,5
+field 02410BE8 r3+0xB0 u32 0x0000,0x2000,0x6000,0x9000,0xA000,0xB000,0xC000,0xE000,0xF000,0x12000000
+field 02410BE8 101F84DC u32 0x55000000
+field 02410BE8 55001177 u8 0,4,5,6
+field 02410BE8 550001C0 u8 0,1
+field 02410BE8 r3+0x3BC u32 0,8
+# playerInit: texture names (JUTNameTab::getName) equal to "linktexS3TC" (0x10035D5C)
+ret 027ED1F0 0x10035D5C,0x10035D5C,0
+# playerInit: the steered model data (joint table, material chains, names) is never written by the
+# mocked callees (a clobbered chain link sends the material walk through random memory)
+stable 51000000 0x40
+stable 52000000 0x10
+stable 53000000 0x300
+stable 56000000 0x600
+stable 57000000 0x20
+# ---- coverage: uncovered blocks left (all explained; 10k inputs, seeds 1 and 7) ----
+# (a) inline sead::SafeString == / strcmp loops (ctr 0x40001): the bdnz fall-through after 262145 equal
+#     characters and the blocks only it reaches are infeasible: checkOriginalHatAnimation 02403100,
+#     setItemModel 02404BAC/02404BC8, setWaterRipple 0240AE0C/0240AE14, playerInit 02410F58..02411724
+#     (12 loops), makeBgWait 024134DC/0241357C/0241361C, procMove 02419A58/02419B94.
+# (b) procMove 02419A08/02419B48: the pointer-equality shortcut of SafeString == (stage name buffer is
+#     never the literal itself).
+# (c) "allocate when the member address is NULL" (this+off == 0) and new() == NULL paths of the
+#     constructors: daPy_sightPacket_ct 0240EEE8..0240F1AC (17), daPy_swBlur_ct 0240F5E8..0240F8D0 (17),
+#     daPy_lk_ct 0240FE90..024106A0 (8), createAnimeHeap 024109BC/024109CC/02410A8C/02410A9C, and
+#     createAnimeHeap 02410AD8 (this == NULL right after a store through this).
+# (d) GHS re-tests of a value already decided on the only path into the block (duplicated tails):
+#     setNeckAngle 02401BA0/02401BD0/02401C54/02401C90 (proc 0x8F after 0x66/other proc), 02401E7C (proc 0x93);
+#     setItemModel 02404480 (item 0x34 on the item-0x33 path), 02404A6C (sword byte 0x38 after it was 0xFF),
+#     02405480 (model type 2 enters through 024053D8 instead); setGrabItemPos 0240A7C8 (proc 0x6F),
+#     0240A920 (proc 0x72 on the proc != 0x72 path); setCollision 02409CD8 (r29 is 0 on the 02409740 path);
+#     playerInit 024127E4 (r4 < 10 after r4 >= 10 failed) and the copy loop 02412814/02412824 behind it,
+#     024126F8 (bit 8 tested right after it was set).
+# (e) data: procSelfieHD 02415E74 needs face 0x92 with keep == 0; the face table (10035064) has 0x92 only
+#     with keep == 1. setFootEffectType 02406268: effect 0x24 with r31 == 5 is turned into 0x2027 first.
+#     setAuraEffect 0240BEF0/0240BF78: loop exit from the idx 0/1 copies of the unrolled loop (idx 5 is last).
+# (f) execute 0240EA28: daPyRFlg0 bit 0x10000000 in 0x3C0 is cleared earlier in execute and only set again
+#     by the (mocked) proc callees in between; not reachable with mocked callees.
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02402FFC 0x54005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GTower\x01","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01","GToxer\x01"
+fieldstr 024198D4 0x54005134 8 @stages,"MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","MajyuF","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 024131D0 0x54005134 8 @stages,"PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","PjavD","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavdou","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","Pjavn","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","ShipD","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipdou","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","Shipn","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","SireD","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siredou","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren"

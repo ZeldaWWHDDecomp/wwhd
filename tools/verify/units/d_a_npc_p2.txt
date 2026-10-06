@@ -1,0 +1,125 @@
+# Verification unit: d_a_npc_p2 (Zuko, Niko, Mako: Tetra's pirates)
+src wwhd_src/d/actor/d_a_npc_p2.cpp wwhd_src/d/actor/d_a_npc_p2_exec.cpp wwhd_src/d/actor/d_a_npc_p2_cut.cpp wwhd_src/d/actor/d_a_npc_p2_act.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument on the stack
+callee 025D5218 r4=4          # fopAcIt_Judge(fn, &id)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+callee 0259DED0 r6=12         # dNpc_JntCtrl_c::lookAtTarget(.., &eye copy)
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 024F06B4 stack=1       # dBgS_Acch::Set
+callee 0201B31C r3=12 r4=out12  # cXyz::normalize(this, out)
+callee 0201AE48 r3=12 r4=out12  # cXyz::operator*(f32)
+callee 02587C88 r4=out12      # dLib_getPosFromMtx(mtx, out)
+callee 025881A4 r3=12         # dLib_checkPlayerInCircle(cXyz copy, r, h)
+# ---- callee result domains ----
+ret 025B8B94 0 1              # dSv_event_c::isEventBit
+ret 025BA0C0 0 1              # dSv_info_c::isSwitch
+ret 025D4604 0 1              # fopAc_IsActor
+ret 025D5218 0,0x58000000,0x58000000,0x58000000  # fopAcIt_Judge
+ret 0254487C 0,0x5E000000,0x5E000000  # getMySubstanceP
+ret 0254457C 0 1              # endCheckOld
+ret 025881A4 0 1              # dLib_checkPlayerInCircle
+ret 024EDFCC 0 1              # dAttention_c::LockonTruth
+ret 024EC8D0 0,0x40000000     # dAttention_c::ActionTarget
+ret 024EE464 0,0x40000000     # dAttention_c::LockonTarget
+ret 0211D2F8 0 1              # cLib_calcTimer<int>
+ret 02055B64 0 1              # cLib_calcTimer<s16>
+ret 02542D88 -1,0,1           # getMyStaffId
+ret 02542EDC -1 15            # getMyActIdx
+ret 025447C8 0 1              # getIsAddvance
+ret 025F795C 0xE,0xF,0x12,0x13,6  # message status
+ret 022B8E24 0x12,0xFF,0xE    # talk
+ret 0273AD10 0,0x56100000     # operator new (HIO constructors)
+ret 025E789C 0,1,1            # mDoExt_btpAnm::init
+ret 025E4F64 0,0x5B000000,0x5B000000  # mDoExt_McaMorf constructor
+ret 025E38E0 0,0x5A000000,0x5A000000,0x5A000000  # mDoExt_J3DModel__create
+ret 026066C4 0,0x5C000000,0x5C000000,0x5C000000  # getRes
+ret 02520460 4,4,0,5          # dComIfG_resLoad
+ret 025D63E8 0,1,1            # fopAcM_entrySolidHeap
+fret 028F4384 0 20            # sqrtf
+# play object: "Asoko" start stage, event mode, message animation attribute
+field * 54005134 u32 0x41736F6B,0x41736F6B,0x58736F6B
+field * 54005138 u32 0x6F000000,0x6F000000,0x6F6F0000
+field * 54005292 u8 0,1,1
+field * 54005BC5 u8 0 0x16
+# the searched actor (ship 0x39, rope 0x1BF, lift 0x2E, switch 0x1B)
+field * 58000008 i16 0x39,0x1BF,0x2E,0x1B,1
+# HIO constructors: NULL this
+arg 022BDD10 r3 0,0x56000000
+arg 022BDB70 r3 0,0x56000000
+# the actor
+field * r3+0x3AC u8 0,1,2
+field * r3+0x3AD u8 0,1,2
+field * r3+0x947 i8 0 0x17
+field * r3+0x94A i8 0 0x16
+field * r3+0x949 i8 0,1,2,3,4
+field * r3+0x97C i8 -1,0,1
+field * r3+0x97D i8 -1,0,1,2,3
+field * r3+0x51C u32 0,0x20,0x80,0x100,0xA0,0x120,0x1A0,0x1A0,0x1,0x21,0x81,0x101
+field * r3+0xF8 u16 0,1,2
+field * r3+0x93E i16 -1,0,1
+field * r3+0x93C i16 0,0,4
+field * r3+0x940 u32 0x022BD7FC,0x022BC544,0x5D000000
+field * r3+0x2E8 u32 0xFFFFFFFF,1
+field * 10467FDC u32 0xFFFFFFFF,1
+field * r3+0x89D u8 0,1
+field * r3+0x89C u8 0,1
+field * r3+0x8A4 u8 0,1
+field * r3+0x4D8 u8 0,1
+field * r3+0x44E u8 0,1
+field * r3+0x939 u8 0,1
+field * r3+0x8C2 u8 0,1
+field * r3+0x8C9 u8 0,1
+field * r3+0x938 u8 0,1
+# getMySubstanceP: cutSetAnmStart's name ("KYORO", "SURPRISE", "THINK", "NOD")
+field 022B85E4 5E000000 u32 0x4B594F52,0x53555250,0x5448494E,0x4E4F4400,0x41414141
+field 022B85E4 5E000004 u32 0x4F000000,0x52495345,0x4B000000
+field 022B85E4 5E000008 u32 0
+# next_msgStatus: the message number
+field 022B8C14 r4+0 u32 0x1B25,0x1B26,0x1B27,0x1B2F,0x1000,0x2000,0x1050,0xC96,0x1011,0x102F,0x1012,0x1031,0x1018,0x1020,0x1022,0x1023,0x1025,0x1026,0x1027,0x1B20,0x1B21,0x1B22,0x1B23,0x1B24,0x1B28,0x1B29,0x1B2A,0x1B2B,0x1B2C,0x1B2D,0x1B2E,0x1019,0x1024
+arg 022B8B24 r4 6,6,0x10,1
+# the morf (setAnm, cut procs, moccowait)
+field * r3+0x3B8 u32 0x5F000000
+field * 5F0000A7 u8 0,1
+field * 5F000098 f32 0,0,1
+field * 5F00009C f32 0,1,1,2
+# searchNearRope / searchNearLift: r3 the actor, r4 this
+field 022B7E24 r3+8 i16 0x1BF,0x1BF,0x2E
+field 022B922C r3+8 i16 0x2E,0x2E,0x1BF
+# nodeCallBack: timing, j3dSys model, its user area, the joint number, the static guards
+arg 022B5AEC r4 0,0,0,1
+field 022B5AEC 104B462C u32 0x5F100000
+field 022B5AEC 5F1000B8 u32 0x40000000,0x40000000,0
+ret 027F7878 0x5F200000 0x5F200000
+field 022B5AEC 5F200004 u16 4,2,1,4
+field 022B5AEC 104682E8 u32 0,1
+field 022B5AEC 104682EC u32 0,1
+field 022B89B8 r3+0x3AC u8 0,1,2,3
+# mutation-driven steering
+callee 02174F44 r4=12         # the rope's setActorHang(.., &hand position copy, angle)
+field 022B8B24 54005BC5 u8 18,18,19,7,0,0x15,6
+field 022B8B24 r3+0x947 i8 0xD,0xD,0x17,7,1
+field 022B8B24 r3+0x3AC u8 0,0,1,2
+ret 0200F93C 0,5376,5375,5377,-5376,-5377,100  # cLib_targetAngleY
+field 022BCA68 r3+0x322 i16 0,0,1
+field 022BCD60 r3+0x322 i16 0,0,1
+# _execute: the event cut's action and speed (RUN_WAIT / JUMP_TO_LIFT), the frame wrap, the run speed
+ret 0259F858 0 1              # dNpc_EventCut_c::cutProc
+field 022BB228 r3+0x488 i32 -1,2,4,1
+field 022BB228 r3+0x4C0 f32 0,10,11,5
+field 022BB228 r3+0x4EC f32 0,1,2
+field 022BB228 r3+0x947 i8 4,4,1,0x17
+field 022BB228 1047BCE8 f32 0,0,5
+field 022BB228 104682E0 f32 3
+field 022BB228 104682E4 f32 0.9,0.2
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 022B65B0 0x54005134 8 @stages,"Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Asokoo","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsoko","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo","Xsokoo"

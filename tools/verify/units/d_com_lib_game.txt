@@ -1,0 +1,3 @@
+src wwhd_src/d/d_com_lib_game.cpp
+# Full phase dispatcher plus qualified trailing per-TU SDK initializer.
+ret 0201A0AC 0 5

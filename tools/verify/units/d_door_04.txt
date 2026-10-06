@@ -1,0 +1,4 @@
+src wwhd_src/d/d_door_key.cpp
+
+# Resource lookup reads the real eight-byte SafeString (data and vtable);026066EC/F0 use its vtable and0260670C/18 its data.
+callee 026066C4 r4=8

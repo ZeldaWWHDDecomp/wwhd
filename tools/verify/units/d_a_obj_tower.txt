@@ -1,0 +1,24 @@
+src wwhd_src/d/actor/d_a_obj_tower.cpp
+callee 026066C4 r4=8
+callee 0200A030 r6=48
+callee 025626A4 r5=12
+observe 025E2DE0 104B4634 8
+real 028E90D4
+real 028E93CC
+callee 028E90D4 r3=48
+callee 025F1C28 r3=48
+real 025200D4
+field * 104753A8 u32 1
+field * 101F84DC u32 0x11000000
+field * 101F4F28 u32 0x11008000
+field * r3+0x3B4 u32 0,0x11010000
+field * r3+0x3B8 u32 0,0x11020000
+field * r3+0x3EC u8 0,1,2,255
+field * r3+0x2E4 u32 0,1,8,9,16,17,24,25
+field * r3+0xD u8 0,2,3,4,255
+field * r3+0x2DC u8 0,1,31,32,33,255
+field * 101D5FFC u32 0,0x11030000
+ret 02526E70 0x11040000 0x11040000
+field * 11040004 u16 0,1,2,3,4
+# Distinguish the adjacent-byte reload mutant on the returning assertion mock path.
+field 023A6938 101D6000 u8 0,1,255

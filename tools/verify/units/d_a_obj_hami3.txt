@@ -1,0 +1,24 @@
+src wwhd_src/d/actor/d_a_obj_hami3.cpp
+field 0234F564 r3+0x3f0 s32 -1 6
+field * r3+0xf8 u16 0 3
+ret 02520460 0 5
+ret 024F1D9C 0 5
+ret 025BA0C0 0 1
+ret 0234F8F8 0 255
+callee 025CB374 r6=12
+callee 026066C4 r4=8
+
+# Saturation endpoints plus s16 wrap-around, tested through mocked audio calls.
+field 0234F318 r3+0x3e0 s16 -32768,-32767,-1,0,1,255,256,257,16127,16128,16129,16383,16384,16385,32511,32512,32767
+field 0234F4AC r3+0x3e0 s16 -32768,-32767,-32513,-32512,-1,0,1,255,256,257,16128,16384,32767
+
+# Materialize live resource/save singleton pointers, including nonzero low bytes.
+field * 101F84DC u32 0x40010000,0x40020304,0x40056708
+field 0234EEBC 101F4F28 u32 0x40030000,0x40040504,0x40060808
+# dComIfGp_get() returns 1046F0B0; distinguish all four render-list words.
+field 0234F724 10474E20 u32 0x40011004,0x40022008
+field 0234F724 10474E24 u32 0x4003300c,0x40044010
+field 0234F724 10474E28 u32 0x40055014,0x40066018
+field 0234F724 10474E2C u32 0x4007701c,0x40088020
+# The model draw consumes the current draw-list pointers before they are restored.
+observe 025E2DE0 104B4634 8

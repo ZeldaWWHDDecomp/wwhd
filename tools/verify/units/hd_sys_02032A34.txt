@@ -1,0 +1,5 @@
+# hd_sys_02032A34: TUs 02032A34..02032D0B (screen-dimming switch, initialiser-only TU); HD-only
+src wwhd_src/hd/hd_sys_02032A34.cpp
+field * 102007F4 u32 0,1
+callee C0009060 r3=out4
+field 02032C6C 1018F270 u32 0x102007A4,0x12345678

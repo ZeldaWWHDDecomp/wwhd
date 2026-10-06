@@ -1,0 +1,37 @@
+# Verification unit: d_a_tornado (Ballad of Gales tornado)
+src wwhd_src/d/actor/d_a_tornado.cpp
+stackfill periodic
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0201B31C r4=out12      # cXyz::normalize (copy out)
+callee 0201AE48 r4=out12      # cXyz::operator*
+callee 0201AD78 r4=out12      # cXyz::operator+
+callee 025602F0 r3=out4 r4=out4   # dKy_get_seacolor
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025B8B94 0 1              # isEventBit
+ret 025E8508 0 1
+ret 025E7CE0 0 1
+ret 025E8154 0 1
+ret 026066C4 0,0x50000000,0x50000000,0x50000000
+ret 025E38E0 0,0x51000000,0x51000000,0x51000000
+ret 027F3F94 0x52000000
+field * 52000008 u16 0,1,2,3,12
+fret 028E8DD0 5.625e7 1e8     # PSVECSquareMag: edges are the two thresholds (10000^2, 7500^2)
+callee 028E8DD0 r3=12         # PSVECSquareMag reads the (x, 0, z) temporary
+callee 025E7CE0 stack=1       # btkAnm::init: 10th argument on the stack
+callee 025E8154 stack=1       # brkAnm::init: 10th argument on the stack
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7,0xFFFFFFFF
+field * r3+0xB0 u32 0,0,1,1,2,3
+field 024C8A58 r3+0x6B0 i16 0,1
+field 024C8A58 r3+0x6B2 i16 0,1,5
+field 024C8A58 r3+0x754 u32 0,0x53000000
+field 024C8A58 r3+0x758 u32 0,0x53000000
+field * 1046EA1C u32 0,1
+field * 1046EA20 u32 0,1
+field * 1046EA24 u32 0,1
+field * 1046EA28 u32 0,1
+arg 024C8640 r4 -1,0,1,2,5,10,11,11,12
+arg 024C8854 r5 0,0,1
+field 024C8894 r3+0xB0 u32 0,0,1

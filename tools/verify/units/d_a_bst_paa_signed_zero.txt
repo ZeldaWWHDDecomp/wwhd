@@ -1,0 +1,26 @@
+src wwhd_src/d/actor/d_a_bst_paa.cpp
+stackfill periodic
+# Finite initialized hand state3/timer27; no SDK event/pos_move/finish path.
+arg 020E888C r3 0x54000000 0x54000000
+field 020E888C r3+0x3D0 u8 1 1
+field 020E888C r3+0x130E i16 3 3
+field 020E888C r3+0x1330 i16 27 27
+field 020E888C r3+0x13CC u32 0 0
+field 020E888C r3+0x318 u32 0x80000000 0x80000000
+field 020E888C 1047B620 f32 -30 -30
+field 020E888C 104753A8 u8 1 1
+field 020E888C 10474BDC u32 0x59000000 0x59000000
+field 020E888C r3+0x328 i16 0 0
+field 020E888C r3+0x32A i16 0 0
+field 020E888C r3+0x32C i16 0 0
+field 020E888C r3+0x1350 i16 0 0
+field 020E888C r3+0x314 f32 0 0
+field 020E888C r3+0x31C f32 0 0
+field 020E888C r3+0x1310 f32 0 0
+field 020E888C r3+0x1318 f32 0 0
+field 020E888C r3+0x33C f32 0 0
+field 020E888C r3+0x344 f32 0 0
+field 020E888C r3+0x134C f32 0 0
+real 025200D4
+real 0200F428
+real 0200ED84

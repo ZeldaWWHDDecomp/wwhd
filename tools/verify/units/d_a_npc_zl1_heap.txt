@@ -1,0 +1,42 @@
+# Verification unit: d_a_npc_zl1 heap part (resources, heap, construction, statics)
+src wwhd_src/d/actor/d_a_npc_zl1_heap.cpp wwhd_src/d/actor/d_a_npc_zl1_pending.cpp
+callee 02606900 r4=8 r5=8     # dRes_control_c::getRes(SafeString* arc, SafeString* name)
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+# setBtp: mBtpAnm2's anm pinned, a few update materials
+field 023024F4 r3+0x948 u32 0x55000000 0x55000000
+field 023024F4 55000016 u16 0 4
+# the btp's material table: names "zelda_mouth" (the same pointer, or a copy at 0x55000400), or random
+field 023024F4 5500002C u32 0x100 0x100
+field 023024F4 55000138 u32 0xbb023bcc,0x2C8,0x10,0x7FC
+field 023024F4 55000154 u32 0xbb023bb0,0x2AC,0x10
+field 023024F4 55000400 u32 0x7A656C64 0x7A656C64
+field 023024F4 55000404 u32 0x615F6D6F 0x615F6D6F
+field 023024F4 55000408 u32 0x75746800,0x75746841
+stable 55000000 0x500
+# setMat: the btk's update material count (pinned anm, 0..3)
+field 023028A4 r3+0x864 u32 0x56000000 0x56000000
+field 023028A4 5600000C u32 0x56000100 0x56000100
+field 023028A4 56000114 u16 0 3
+stable 56000000 0x200
+# constructors: this == NULL (allocation), allocation failure
+arg 0230242C r3 0,0x31000000
+arg 0230A0EC r3 0,0x31000000
+arg 02303728 r3 0,0x31000000
+ret 0273AD10 0,0x31000000,0x32000000
+# search callbacks
+field 023035BC 10468B14 i32 18 21
+field 0230363C 10468B14 i32 18 21
+field 023035BC r3+8 i16 0x1A9,0x146,0
+field 0230363C r3+8 i16 0x1A9,0x146,0
+ret 025D4604 0 1
+# bodyCreateHeap
+field 02302B08 10468CD8 u32 0,1
+field 02302B08 10468CDC u32 0,1
+field 02302B08 10468CE0 u32 0,1
+ret 025E4F64 0,0x33000000
+ret 02302A90 0 1
+ret 027DF9B0 -1 3
+# bodyCreateHeap: the model data pinned so the material / joint counts are small (index == count)
+ret 02606900 0,0x57000000,0x57000000,0x57000000
+field 02302B08 5700000C u32 0 3
+field 02302B08 57000004 u32 0 3

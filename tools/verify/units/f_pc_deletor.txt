@@ -1,0 +1,17 @@
+# Full HD TU six entries; ToQueue is inlined, initializer attributed by adjacency.
+src wwhd_src/f_pc/f_pc_deletor.cpp
+stackfill periodic
+field 025DE040 r3+0xA u8 0,1,2
+field 025DE1B8 r3+0xC u8 0,1,3
+ret 025DD3B0 0,1,2
+ret 0201A71C 0,1
+ret 025DD258 0,1
+ret 025E012C 0,1
+ret 025DEBE0 0,1
+ret 025DEDA8 0,1
+ret 025DD354 0,1,2
+ret 025E0CBC 0,1,2
+ret 025DE564 0,1,2
+ret 025DE6C4 0,1
+ret 025DDCE4 0,1
+ret 025DD9E4 0,1,2

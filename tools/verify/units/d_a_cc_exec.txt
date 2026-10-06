@@ -1,0 +1,68 @@
+# Verification unit: d_a_cc_exec (ChuChu daCC_Execute; merged into d_a_cc later)
+src wwhd_src/d/actor/d_a_cc_exec.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 028E8F64 r4=12         # PSMTXMultVec input vector
+callee 025D99E8 r4=12         # fopAcM_createDisappear position
+
+ret 020402C8 0 1              # enemy_ice
+ret 025200D4 0x54000000 0x54000000   # play object pinned
+
+# state steering
+field 0210DD3C r3+0x3F9 u8 0 5                  # mColorType
+field 0210DD3C r3+0x3FC u8 0,1,2,3,4,0,1,2,3,4,5,6,7,8   # mCurrAction
+field 0210DD3C r3+0x3FD u8 0,1,2,3,4,5,6,7,8,9,10,11,0x14,0x15,0x16,0x1E,0x1F,0x20,0x21,0x22,0x23,0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x31,0x32,0x33,0x34,0x35,0x44
+field 0210DD3C r3+0x3F8 u8 0 4                  # mBehaviorType
+field 0210DD3C r3+0x3FE u8 0,1,2,3,4,9,5        # m2F6
+field 0210DD3C r3+0x3FF u8 0 3                  # m2F7
+field 0210DD3C r3+0x403 u8 0,3                  # m2FB
+field 0210DD3C r3+0x406 u8 0 3                  # m2FE
+field 0210DD3C r3+0x407 u8 0x18 0x1A            # m2FF
+field 0210DD3C r3+0x409 u8 0,1                  # m301
+field 0210DD3C r3+0x40C u8 0 3                  # m304
+field 0210DD3C r3+0x3A1 i8 -1 1                 # health
+field 0210DD3C r3+0x3A8 u8 0,0xFF               # stealItemBitNo
+field 0210DD3C r3+0x456 i16 0 2                 # m34E[0..6]
+field 0210DD3C r3+0x458 i16 0 2
+field 0210DD3C r3+0x45C i16 0 1
+field 0210DD3C r3+0x45E i16 0 2
+field 0210DD3C r3+0x460 i16 0 3
+field 0210DD3C r3+0x5EC u32 0,0x20,0x1000,0x1020   # mAcch flags
+field 0210DD3C r3+0x2E0 u32 0,0x2000            # actor_status (carry)
+field 0210DD3C r3+0x7F0 u32 0,1                 # mCyl Co SPrm
+field 0210DD3C r3+0x818 u32 0,1                 # mCyl GObjAt RPrm (shield hit)
+field 0210DD3C r3+0x428 i32 0x1C,0x1F,0x20,0    # m320
+field 0210DD3C r3+0x434 f32 -2 2                # m32C
+field 0210DD3C r3+0x370 f32 -1 1                # speedF
+field 0210DD3C r3+0x340 f32 -60,-55.5,-55,-54,0,1,1.5,2   # speed.y (clamp edges)
+field 0210DD3C r3+0x374 f32 0,0,-3,3,-0.5   # gravity
+field 0210DD3C r3+0x444 f32 0 500               # mNoticeRange
+field 0210DD3C r3+0x780 f32 20 22               # water height
+field 0210DD3C r3+0x318 f32 0 3                 # current.pos.y
+field 0210DD3C r3+0x474 u32 0,0x57000000        # m368 emitter
+field 0210DD3C r3+0x488 u32 0,0x57100000        # m37C emitter
+field 0210DD3C 101B3AFD u8 0 1                  # DEMO_RET_START_FLAG
+field 0210DD3C 1047BAD4 f32 0,0,1               # REG8_F(17)
+field 0210DD3C r3+0x3D0 u32 0x50000000 0x50000000   # m2B4
+field 0210DD3C 500000A7 u8 0 1
+field 0210DD3C 50000098 f32 0 1
+field 0210DD3C 5000009C f32 21 23
+field 0210DD3C r3+0x3F4 u32 0x51000000 0x51000000   # m2D8
+field 0210DD3C 510000A7 u8 0 1
+field 0210DD3C 51000098 f32 0 1
+field 0210DD3C r3+0x3D8 u32 0x52000000 0x52000000   # m2BC
+field 0210DD3C 520000A7 u8 0 1
+field 0210DD3C 52000098 f32 0 1
+field 0210DD3C 101F84DC u32 0x53000000 0x53000000   # save info
+field 0210DD3C 53000022 u16 3 6                 # life
+field 0210DD3C 53000034 u8 15 17                # magic
+field 0210DD3C 53000089 u8 9 11                 # arrows
+field 0210DD3C 54005AB0 u32 0,0x55000000        # particle manager
+ret 027F2BF8 0 1              # J3DFrameCtrl::checkPass
+ret 0210CC58 0 1              # shock_damage_check
+ret 0210CE9C 0 1              # body_atari_check
+ret 025A847C 0 0x56000000     # dPa_control_c::set: emitter or NULL
+fret 025D68EC 300 450         # player distance (vs 380 / mNoticeRange)
+fret 020198D8 0 1             # cM_rndF
+field 0210DD3C r3+0x462 i16 0 3

@@ -1,0 +1,39 @@
+# Verification unit: d_a_andsw0
+src wwhd_src/d/actor/d_a_andsw0.cpp
+
+ret 025D4604 0 1              # fopAc_IsActor
+ret 025BA0C0 0 1              # isSwitch
+ret 025B8B94 0 1              # isEventBit
+ret 025440C8 0 1              # endCheck
+# search callbacks: process name / param / count
+field 02050FF8 r3+0x8 s16 0xBD,0xB5,0
+field 02050FF8 r3+0xB3 u8 7,4,5,0x17
+field 02050FF8 10461414 s32 0,1,2,3,-1
+field 02051078 r3+0x8 s16 0xBD,0xB5,0
+field 02051078 r3+0xB3 u8 7,4,5,0x14
+field 02051078 10461414 s32 1,2,3
+field 020510F4 r3+0x8 s16 0xBD,0xB5,0
+field 020510F4 r3+0xB3 u8 7,4,5,0x15
+field 020510F4 10461414 s32 3,4,5,6
+field 02051174 r3+0x8 s16 0xBD,0xB5,0
+field 02051174 10461414 s32 5,6,7,8
+# Execute
+field 020511E4 r3+0x3BF s8 0,1,2,-1
+field 020511E4 r3+0x3BC s16 -1,0,5
+field 020511E4 r3+0xF8 u16 0,2
+field 020511E4 r3+0x3B5 u8 0xFF,0,1,2,3
+field 020511E4 r3+0x3B6 u8 0,1,2,3
+field 020511E4 r3+0x3B4 s8 0,1,10,20,21,30,-1,2
+field 020511E4 r3+0x3B8 u8 0,1,5
+field 020511E4 r3+0x3BA u16 0,1,2,65
+field 020511E4 10461434 u32 0,0x58000000
+field 020511E4 10461438 u32 0,0x58100000
+field 020511E4 1046143C u32 0,0x58200000
+field 020511E4 10461440 u32 0,0x58300000
+field 020511E4 10461444 u32 0,0x58400000
+field 020511E4 10461448 u32 0,0x58500000
+field 020511E4 1046144C u32 0,0x58600000
+# Create
+field 02051800 r3+0xB3 u8 0xFF,0,2
+field 02051800 r3+0xB2 u8 0,2,3
+field 02051800 r3+0xB1 u8 0xFF,0,4

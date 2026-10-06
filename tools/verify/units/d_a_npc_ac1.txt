@@ -1,0 +1,26 @@
+# Verification unit: d_a_npc_ac1
+src wwhd_src/d/actor/d_a_npc_ac1.cpp
+
+# stack objects passed to callees
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 02606900 r4=8 r5=8     # dRes_control_c::getRes(SafeString*, SafeString*)
+callee 021E3074 r4=8          # set_action(pointer to member, 8 bytes)
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(target, eye copy)
+
+# coverage steering
+field 021E3950 r3+0xF8 u16 0,1,2
+field 021E3950 r3+0x9E4 i8 0 3
+arg 021E45F4 r4 0,6,14
+field 021E45F4 r3+0x9EB i8 0 1
+ret 025200D4 0x54000000 0x54000000
+field 021E45F4 54005BC6 u8 254 255
+field 021E45F4 r3+0x9DF u8 254 255
+field 021E478C r4+0 u32 0x184C,0x184D,0x1850,0x1851,0x184E
+ret 025F795C 0x12 0x14
+field 021E4B38 r3+0x7CC u8 0 1
+# stack arguments (no usable GameCube signature for some HD callees)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument (entry) on the stack
+callee 025E4F64 stack=4       # mDoExt_McaMorf::mDoExt_McaMorf: 4 stack words
+callee 024F06B4 stack=1       # dBgS_Acch::Set: 9th argument on the stack
+callee 0259E08C stack=2       # dNpc_JntCtrl_c::setParam: 2 stack words

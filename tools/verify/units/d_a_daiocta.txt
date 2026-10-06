@@ -1,0 +1,106 @@
+# Verification unit: d_a_daiocta (Big Octo, body)
+src wwhd_src/d/actor/d_a_daiocta.cpp
+stackfill periodic
+
+# ---- callee facts ----
+callee 026066C4 r4=8                # dRes_control_c::getRes(SafeString*)
+callee 025E4F64 stack=4             # mDoExt_McaMorf::mDoExt_McaMorf
+callee 024F06B4 stack=1             # dBgS_Acch::Set
+callee 025D5A20 stack=1             # fopAcM_createChild
+callee 025E7CE0 stack=1             # mDoExt_btkAnm::init (HD: 9th argument)
+callee 025E8154 stack=1             # mDoExt_brkAnm::init (HD: 9th argument)
+callee 025877F8 stack=1 r9=0x90     # dLib_setAnm (HD: 9th argument); r9 = anm_prms[9] on the stack
+callee 025A847C stack=4             # dPa_control_c::set
+callee 0252012C stack=0             # dComIfGp_setNextStage
+callee 025D54C4 r4=out4             # fopAcM_SearchByID(id, &actor)
+callee 0201ADE0 r3=12 r4=out12 r5=12 # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12 # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 0201B12C r3=12 r4=out12      # cXyz::normZP
+callee 025CB374 r6=12               # StartShock: cXyz by value
+callee 025CB408 r6=12               # StartQuake: cXyz by value
+callee 025F20B0 r4=out0x30          # mDoMtx_inverseTranspose: output matrix
+callee 025602F0 r3=out4 r4=out4     # dKy_get_seacolor
+callee 02520630 r4=4 r5=4 r6=out2   # dComIfGp_getMapTrans
+callee 028E8F64 r4=12               # PSMTXMultVec: the cXyz input on the stack
+callee 025D5218 r4=2                # fopAcIt_Judge(fpcSch_JudgeByName 025E121C, &name): the s16 name on the stack
+ret 025200D4 0x54000000 0x54000000
+ret 025D54C4 0 1
+ret 02520460 0,4,5
+
+# ---- steering ----
+# _coHit: bomb actor, modes APPEAR..DAMAGE_BOMB
+field 02118958 r4+8 i16 0x126,0x126,0x125,0
+field 02118958 r3+0x688 i32 0,1,2,3,4,5
+ret 020CB92C 0,1
+# _nodeControl: the joint number (J3DNode -> J3DJoint at a pinned address)
+ret 027F7878 0x55000000 0x55000000
+field 021189D4 55000004 u16 0,5,6,7,8,9,10,11,19,20,21,29,30,31,35,36,37,40
+# createAwaHeap: 30 iterations of 4 allocations/inits succeed (failure 1 in 151 per call)
+ret 025E38E0 0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0x58000000,0
+ret 025E8508 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+ret 025E7CE0 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+ret 025E8154 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+# l_HIO (.bss): steer the fields the unit compares or loops over
+field * 1046395A i16 0,1,2,3,30
+field * 10463950 i16 0,1,30,60,-1
+field * 10463956 i16 0,0x1500,0x8000,-1
+field * 1046394B u8 0,1
+field * 1046394A u8 0,1
+field * 10463948 u8 0,1
+field * 10463949 u8 0,1
+field * 1046394C u8 0,1
+# setEffect: the effect names around the switch cases
+arg 0211A9A0 r4 0x81FD,0x81FE,0x81FF,0x8203,0x8205,0x8206,0x8207,0x8208,0x8209,0x820A,0x82CB,0x82CC,0x82CD,0x181FE,0
+field 0211A9A0 r3+0x25A0 u32 0,0x5A000000
+# setAnm: the animation index, the frame of a pinned morf, the brk parameter indices
+field 0211AB80 r3+0x6A8 u32 0x56000000
+field 0211AB80 5600009C f32 10,25,45,1,26,0,2
+field 0211AB80 r3+0x68C i8 0,3,6,1
+field 0211AB80 r3+0x68D i8 0,1,2,3,4,5,6,7,8
+field 0211AB80 r3+0x68E i8 0,1,2,3,4,5,6,7,8,-1
+# HIO / inline constructors: allocation when this == NULL
+arg 0211CD80 r3 0,0x56000000
+ret 0273AD10 0,0x57000000
+arg 0211D08C r3 0,0x56000000
+arg 0211D118 r3 0,0x56000000
+# modeDelete
+field 0211BFFC r3+0xF8 u16 2,2,0
+ret 02544830 0,0x1000D2B8,0x1000D2C0,0x1000D2C0,0x1000D2B8,0x1000D2B0,0x1000D3A8,0x1000D3B4,0x1000D3C0,0x1000D364,0x1000D3A8,0x1000D3B4,0x1000D3C0
+field 0211BFFC r3+0x6A8 u32 0x56000000
+field 0211BFFC 560000A7 u8 0,1
+field 0211BFFC 56000098 f32 0,1
+field 0211BFFC r3+0x2841 u8 0,1
+field 0211BFFC r3+0x690 u8 0xFF,1,5
+field 0211BFFC r3+0x698 u8 0,1,2
+field 0211BFFC 10463A24 f32 20,0,100
+field 0211BFFC r3+0x318 f32 -1000,0,1000
+field 0211BFFC r3+0x25B0 f32 0,0,1
+fret 028F4384 0 1900                # std_sqrtf: distances (modeAppear < 1900, modeDelete < 3 * HIO)
+ret 0254457C 0,1
+ret 025BA0C0 0,1
+ret 025D5218 0,0x57000000
+# modeDemo
+field 0211C59C r3+0xF8 u16 2,2,2,0
+field 0211C59C r3+0x6A8 u32 0x56000000
+field 0211C59C 5600009C f32 50,65,26,5,10,0,26.5
+field 0211C59C 560000A7 u8 0,1
+field 0211C59C 56000098 f32 0,1
+field 0211C59C 1047BD48 i16 0,0,0,1
+field 0211C59C r3+0x68D i8 0,2,8,8,6
+field 0211C59C r3+0x69C i32 0,1,2,60
+field 0211C59C r3+0x691 u8 0xFF,0,3
+ret 0200FAAC 0,0x100,0x1500,0x4000,0x8000
+# setRotEye: eye found at a pinned address (fopAcIt_Judge ret 0x57000000), |rnd - current| == minimum
+field 0211A1E8 r3+0x25F0 u8 1,1,0
+field 0211A1E8 570004C2 i16 0,0,5
+field 0211A1E8 570004C4 i16 0,0,5
+field 0211A1E8 570004C6 i16 0,0,5
+field 0211A1E8 570004C8 i16 100,-100,0,7
+field 0211A1E8 570004CA i16 100,-100,0,7
+field 0211A1E8 570004CC i16 100,-100,0,7
+fret 020198D8 -100 100              # cM_rndF
+# setEffect / modeAppear: the sea colour addition (clamp at 0xFF)
+field 0211A9A0 1046395C i16 0,1,-1,0x7F
+field 0211B7D8 1046395C i16 0,1,-1,0x7F
+field 0211C59C 1047BCD4 f32 0,10,-30,0.5        # REG12_F(1)

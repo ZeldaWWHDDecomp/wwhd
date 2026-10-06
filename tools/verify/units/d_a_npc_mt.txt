@@ -1,0 +1,119 @@
+# Carlov actor, initial implementation checkpoint; scope proof retained in build/npc-mt-scope.
+src wwhd_src/d/actor/d_a_npc_mt.cpp
+ret 025200D4 0x54000000 0x54000000
+ret 02720118 0x56000000 0x56000000
+field * 101F84DC u32 0x55000000 0x55000000
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025440C8 0,1
+ret 0259F858 0,1
+arg 022A0DFC r4 0,1
+arg 022A1F1C r3 0,1,2,3,4,5,6,7,255
+# Reach live dialogue and event states; no field is marked stable across mocked calls.
+ret 025B8B94 0,1
+ret 0254407C 0,1
+ret 022A10BC 0,0xE,0x12,0xFF
+ret 0229FE28 0,1,2,4,8,16,32,64,128
+ret 022A1F64 0,1
+ret 022A037C 0,1,2,6,11,12
+ret 025F795C 0,0xE,0xF,0x12,0x13
+ret 025BD64C 0,1,2,3,4,5,6,7
+ret 025BD600 0,1,2,0x5E,0x5F,0x85
+ret 022A1F1C 0,1,0x49,0x72,0x8C,0x88,0xCE
+field 022A0E84 r3+0xF8 u16 0,1,2
+field 022A0E84 r3+0x8B8 u8 0,1,2,3
+field 022A1270 r3+0x8BD u8 0,1,2,3
+field 022A2208 540052B2 u8 0,1
+field 022A2208 54005BEA u8 0,1
+field 022A2208 54005BE7 u8 0,1,2,3
+field 022A2208 54005BE6 u8 0,1,2,3,4,0x49,0x72,0x8C,0x88
+field 022A2208 540052B0 u8 0,1,2,3,4,5
+# Gallery exits use the seven actual stage names figureA..figureG.
+field 022A08D8 5400514C i8 0,1
+field 022A08D8 54005140 u32 0x66696775
+field 022A08D8 54005144 u32 0x72654100,0x72654200,0x72654300,0x72654400,0x72654500,0x72654600,0x72654700
+field 022A0B20 r3+0x440 u8 0,1
+field 022A0B20 r3+0x8B7 u8 0,1
+field 022A0B20 r3+0x8C7 u8 0,1
+field 022A0B20 r3+0x864 u32 0,1
+field 022A0B20 r3+0x8A2 i16 0,1,2
+field 022A0B20 r3+0x8C4 u8 0,1
+field 022A0B20 r3+0x8C5 u8 0,1
+field 022A0B20 r3+0x894 f32 0,20,200
+field 022A0B20 r3+0x8A4 i16 0,1000,32767
+arg 022A03AC r4 0,1,2,3
+field 022A03AC 54005BBB u8 0,0x23,0x26
+field 022A03AC 54005BBC u8 0,0x23,0x26
+field 022A03AC 54005BBD u8 0,0x23,0x26
+field 022A03AC 54005BBE u8 0,0x23,0x26
+ret 02720144 0x57000000 0x57000000
+field 022A03AC 573C030C u8 0,1
+callee 0259D54C r3=out12
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2
+callee 026067F4 r4=8
+
+# Additional source-valid boundaries identified by exact sensitivity; not executed until frozen census completes.
+ret 0229FEAC 0,1,132,133,134
+field 022A141C 54005BC5 u8 0,5,6,7,8,9,255
+field 022A1478 r3+0x440 u8 0,1,2
+field 022A1478 r3+0x441 u8 0,1,2
+field 022A1C4C r3+0x8B6 u8 0,1,2
+field 022A1C4C r3+0x8BA u8 0,1,2
+field 022A02B0 r4+0 u8 0,1,2,255
+field 022A02B0 r4+1 u8 0,1,8
+field 022A02B0 r4+2 i8 -1,0,1,2
+ret 0254487C 0,0x58000000
+field 022A0FA8 58000000 u32 0,1,2,0x364D
+
+field 022A1500 r3+0x8B8 u8 0,1,2,3
+field * 101F4F28 u32 0x59000000
+
+# Dialogue creation/sentinel/virtual dispatch and message-table branch fixtures.
+arg 022A10BC r4 0,1,2
+field 022A10BC r3+0x7C8 i32 -1,0,1
+field 022A10BC r3+0x7CC u8 0,1
+field * 101F4B5C u32 0x5B000000
+field 022A10BC r3+0xB4 u32 0x1001EB40
+ret 025F7DB0 -1,0,1
+field 022A1DF4 r3+0x888 u32 0,0x5A000000
+field 022A1DF4 5A000004 u32 0,1,2,0x364D
+
+# Complete typed cXyz stack-object observations from HD consumers.
+callee 022A0588 r5=12
+callee 020182E0 r4=12
+callee 0259DED0 r6=12
+field 022A0618 r3+0x314 f32 -200,0,100,400
+field 022A0618 r3+0x318 f32 -100,0,50,250
+field 022A0618 r3+0x31C f32 -300,0,150,500
+field 022A1708 r3+0x8C3 i8 0,1,2
+field 022A1708 r3+0x37C f32 -200,0,100,400
+field 022A1708 r3+0x380 f32 -100,0,50,250
+field 022A1708 r3+0x384 f32 -300,0,150,500
+
+field 022A1914 r3+0x314 f32 -200,0,100,400
+field 022A1914 r3+0x318 f32 -100,0,50,250
+field 022A1914 r3+0x31C f32 -300,0,150,500
+
+# Photo conversion sentinel and special-figure table selectors.
+ret 022A1F1C 0,1,0x49,0x5E,0x5F,0x72,0x88,0x8C,0xCE,0xCF,0xD0
+field 022A2208 54005BE6 u8 0,1,2,3,4,0x49,0x5E,0x5F,0x72,0x88,0x8C,0xCE,0xCF,0xD0
+
+# Exact 400-unit distance boundary uses the HD helper and sqrt implementation.
+real 0259D624 028F4384 028F605C 028F60F8
+field 022A0B20 54005B34 u32 0x5C000000
+field 022A0B20 r3+0x314 f32 0
+field 022A0B20 r3+0x318 f32 0
+field 022A0B20 r3+0x31C f32 0
+field 022A0B20 5C000314 f32 400
+field 022A0B20 5C000318 f32 0
+field 022A0B20 5C00031C f32 0
+field 022A0B20 r3+0x894 f32 2000
+field 022A0B20 r3+0x8A4 i16 32767
+
+# Coherent hysteresis/equality cases for a 400-unit +X displacement.
+field 022A0B20 r3+0x32A i16 0
+field 022A0B20 r3+0x894 f32 0,20,200,360,400,2000
+field 022A0B20 r3+0x8A4 i16 0,1000,14564,16384,32767
+
+# HD angle helpers calculate angle as well as distance from the actual positions.
+real 020195B0 02019578

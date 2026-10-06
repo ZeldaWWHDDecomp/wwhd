@@ -1,0 +1,51 @@
+src wwhd_src/d/actor/d_a_obj_swheavy.cpp
+callee 026066C4 r4=8
+ret 0200A030 0 1
+ret 02520460 0,4,5
+ret 025D63E8 0 1
+ret 025BA0C0 0 1
+ret 023951C0 0,1,2,3,4,7,255
+field * r3+0x2E4 u32 0,1,8,9
+field * r3+0x424 u32 0,1,2,3,4,7
+field * r3+0x428 u32 0,1,2,3
+observe 025E2DE0 104B4634 8
+arg! 023951C0 r4 0,1,3,8,31,32,33,63
+arg! 023951C0 r5 0,8,24,31,32,33,63
+field * 101F84DC u32 0x52000000
+ret 025200D4 0x53000000
+field 02393EC8 r5+0x2E0 u32 0,1,0x400,0x401
+field 02393EC8 r5+0xE i16 0,0xA8,0x1C5
+field 02393EC8 r5+0x3B8 u32 0,1,0x02000000,0x02000001
+field * r3+0x42C u8 0,1,255
+field * r3+0x430 u8 0,1,255
+field * r3+0x431 u8 0,1,255
+field * r3+0x436 u8 0,1,255
+field * r3+0x437 u8 0,1,255
+field * r3+0x42E i16 -1,0,1,2,3,4,5,14,15,16,32767
+field * r3+0x434 i16 -1,0,1,2,3,4,5,14,15,16,32767
+field * r3+0x44C i16 -1,0,1,2,32767
+field * r3+0x43C f32 -1,-0.05,-0.04,-0.03,0,0.9,1,1.01,1.02,1.05,2
+
+# Independent attribute bits and height-clamp boundary states from mutation review.
+field * 1002FD94 u32 0,1,2,3,4,8,12,15
+field * 1002FDB0 u32 0,1,2,3,4,8,12,15
+field * 1002FDCC u32 0,1,2,3,4,8,12,15
+field * 1002FDE8 u32 0,1,2,3,4,8,12,15
+field 02394730 r3+0x440 f32 -1,0,1
+field 02394730 r3+0x438 f32 0,1
+field 02394484 r3+0x3BC u32 0,0x54000000
+field 02394484 r3+0x3C0 u32 0,0x55000000
+field 02394484 54000000 u32 0,255,256,257
+field 02394484 55000000 u32 0,255,256,257
+
+# Verified after latest authoritative integration:31functions x10,000;196/196blocks.
+# Ownership ends0239528C; swlight callback02395290 is excluded.
+# Complete753-position generated audit:502compiled/251noncompiling,478initialkills.
+# All24 survivors replayed at10,000 with this final steering:14killed/10equivalent.
+# Equivalents: independent field resets or read/local initialization reorderings,
+# clamp comparisons at equality that store the same value, and local array12->13
+# enlargement with its extra element unused. No invalid local-OOB survivor here.
+# Supplementary14 meaningful helper mutants (skipped assertions/reloads/parameter or
+# transform calls, wrong room/message, swapped axes, matrix strides/final store)
+# all compiled and were rejected by whole-unit300-case tests on a passing baseline.
+# Total767positions:516compiled/506killed/10equivalent/251noncompiling. No real gap remains.

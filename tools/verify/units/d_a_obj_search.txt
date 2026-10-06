@@ -1,0 +1,157 @@
+src wwhd_src/d/actor/d_a_obj_search.cpp
+arg! 02389018 r4 0,1
+field 023899D8 r3+0x957 u8 0,1,255
+field 02389860 r3+0x957 u8 0,1,255
+field 023899EC r3+0x97C s32 0,1,255
+field 023899EC r3+0x3AC s32 0,7,8
+arg 023899EC r4 0,10,103,104
+ret 027F3F94 0x5A000000 0x5A000000
+field * 5A000008 u16 0,1,2,7,8,10
+arg 0238A5EC r4 0,10,11,102,103,104
+field 0238B75C r3+0x97C s32 0,255
+field 0238A1F0 r3+0x957 u8 0,255
+# Constructors allocate for a null this pointer.
+arg 02389524 r3 0,0x40000000
+arg 023896BC r3 0,0x40000000
+# Create controls, modes, and event branches.
+ret 02520460 0,1,4,5
+field 0238AAA0 r3+0x9F0 u8 0,2,3,4,5,6
+field 0238AAA0 r3+0xB0 u32 0,1,255,0xFF00,0x010000FF
+field 0238AAA0 r3+0x957 u8 0,255
+field 0238C834 r3+0x97C s32 0,255
+field 0238C834 r3+0xF8 u16 0,2
+field 0238CC18 r3+0xF8 u16 0,2
+field 0238D128 r3+0x950 s32 0,1
+field 0238CC18 r3+0x950 s32 0,1
+field 0238BF20 r3+0x9F0 u8 0,2,3,4
+field 0238BF20 r3+0x8C0 s32 0,13,14,15
+ret 02544830 0,0x1002F1C4,0x1002F208,0x1002F218,0x1002F234
+callee 025D5578 r4=out4
+# Hit-object profile and genuine distance/speed boundaries.
+ret 02515BBC 0,0x5B000000
+field * 5B000008 s16 0,168,169
+ret 025200D4 0x5C000000 0x5C000000
+field * 5C005B2C u32 0x5D000000
+field * 5D000370 f32 0,0.1,-0.1,1
+field * 5D0003CC f32 -1,0,1
+fret 028F4384 0 10000
+field 0238B838 r3+0x902 u8 0,10,11,102,103
+field 02389A24 r3+0x2D8 u16 0,1
+field 02389A24 r3+0x9F0 u8 0,6
+field 02389DC4 r3+0x9F0 u8 0,6
+# SearchByName's output domain includes small nonzero guest tokens. Exercise
+# state10 and its substates at token7, with independently steered timer values.
+field 0238D444 000003E1 s16 10
+field 0238D444 000003E3 s16 4,5,6,7,8,9
+field 0238D444 r3+0xA24 s32 0,1,2
+field 0238D444 r3+0xA20 s32 -1,0,1
+field 0238D444 r3+0xA10 s32 0,1,2
+field 0238D444 r3+0xA0E u8 0,1
+
+# Nonzero resource context and static storage make loads/clears observable.
+field * 101F4F28 u32 0x59000000
+field 0238DB54 1046BDB0 u32 1,0xFFFFFFFF
+field 0238DB54 1046BDB4 u32 1,0xFFFFFFFF
+field 0238DB54 1046BDB8 u32 1,0xFFFFFFFF
+field 0238DB54 1046BDBC u32 1,0xFFFFFFFF
+
+# Proven vector inputs; preserved frozen sweep remains unchanged.
+callee 028E8DD0 r3=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+stackfill periodic
+ret 0200F378 0,255,256,257
+field 0238BF20 1046BE08 s32 0,1
+field 0238BF20 1046BE0C s32 0,1
+field 0238BF20 1046BDC8 f32 1,2,3
+field 0238BF20 1046BDD4 f32 1,2,3
+# Vector math and the renderer's live vector/color inputs.
+callee 0201B12C r3=12 r4=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8F44 r3=12 r4=12
+callee 027386D4 r4=12 r5=12 r6=16
+field 0238CC18 1046BE10 s32 0,1
+field 0238CC18 1046BDE0 f32 1,2,3
+# Actual mode table has exactly eight direct records with vi=-1/adjustment0.
+arg! 0238A540 r4 0,1
+arg! 0238A540 r5 0,1,2,3,4,5,6,7
+field 0238A540 r3+0x3AC s32 0,1,2,3,4,5,6,7
+callee 026066C4 r4=8
+field * 101F84DC u32 0x5E000000
+field * 5E000044 f32 59,60,61,239,240,241
+field 0238D128 1046BE14 s32 0,1
+field 0238D128 1046BDE8 f32 1,2,3
+# Exact signed16 pitch boundaries for clamp-guard mutations.
+field 0238D128 1047BD48 s16 0
+field 0238D128 1047BD4A s16 0
+ret 020195B0 -32768,-10001,-10000,-9999,0,25999,26000,26001,32767
+# Actual callees between create's control dispatch and its duplicated tails
+# do not write control9F0; exclude that byte from generic mock epochs.
+arg! 0238AAA0 r3 0x40000000 0x40000000
+stable 400009F0 1
+callee 02588230 r3=12
+callee 025880B4 r3=12
+field 0238D444 1046BE18 s32 0,1
+field 0238D444 1046BDF4 f32 1,2,3
+
+# Vector scalar multiply reads xyz and copies xyz to its result object.
+callee 0201AE48 r3=12 r4=out12
+
+# Feasible control parameters and the concrete player class.
+field 0238AAA0 r3+0xB0 u32 0,1,255,0xFF00,0x010000FF,0x200,0x300,0x400,0x500,0x600
+field * 5D0000B4 u32 0x10037CF0
+
+# The callback marks matrix data dirty before and after its helper calls.
+# An explicit exit comparison diagnoses the final dirty-flag bytes even if
+# a mocked callee touched the region; actual helper-effect review remains required.
+arg! 0238918C r5 0x5F000000 0x5F000000
+field 0238918C 5F00002C u32 0x5F100000
+field 0238918C 5F100010 u32 0x5F200000
+final 0238918C 5F100004 2
+
+# Observe single dirty-flag writes in live, disjoint model storage.
+arg! 0238A0B8 r3 0x40000000 0x40000000
+field 0238A0B8 40000710 u32 0x5F000000
+field 0238A0B8 5F00002C u32 0x5F100000
+field 0238A0B8 5F100010 u32 0x5F200000
+field 0238A0B8 5F100004 u16 0,1,16
+final 0238A0B8 5F100004 2
+arg! 0238A154 r3 0x40000000 0x40000000
+field 0238A154 40000710 u32 0x5F000000
+field 0238A154 5F00002C u32 0x5F100000
+field 0238A154 5F100010 u32 0x5F200000
+field 0238A154 5F100004 u16 0,1,16
+final 0238A154 5F100004 2
+arg! 0238A7A4 r3 0x40000000 0x40000000
+field 0238A7A4 40000710 u32 0x5F000000
+field 0238A7A4 5F00002C u32 0x5F100000
+field 0238A7A4 5F100010 u32 0x5F200000
+field 0238A7A4 5F100004 u16 0,1,16
+final 0238A7A4 5F100004 2
+arg! 02389A24 r3 0x40000000 0x40000000
+field 02389A24 40000710 u32 0x5F000000
+field 02389A24 5F00002C u32 0x5F100000
+field 02389A24 5F100010 u32 0x5F200000
+field 02389A24 5F100004 u16 0,1,16
+final 02389A24 5F100004 2
+arg! 02389DC4 r3 0x40000000 0x40000000
+field 02389DC4 40000710 u32 0x5F000000
+field 02389DC4 5F00002C u32 0x5F100000
+field 02389DC4 5F100010 u32 0x5F200000
+field 02389DC4 5F100004 u16 0,1,16
+final 02389DC4 5F100004 2
+
+# Stack Line object is0x6C; query consumes its filters/geometry; Set2 consumes prior4C flags.
+callee 02008860 r4=108
+callee 024F1AFC r3=108 r4=12 r5=12
+
+# Actual SDK load/store extents; see search-sdk-pointer-proof.txt.
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E90D4 r3=48 r4=out48
+callee 028E8DE8 r3=12 r4=12
+callee 028E93CC r3=out48
+callee 0201B084 r3=12 r4=out12
+
+# Actual particle fourth stack argument and renderer input/output receiver count.
+callee 025A847C stack=4
+callee 027386D4 r3=24

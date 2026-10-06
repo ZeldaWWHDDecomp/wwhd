@@ -1,0 +1,4 @@
+# Verification unit: d_a_hitobj (short-lived water attack sphere)
+src wwhd_src/d/actor/d_a_hitobj.cpp
+
+field 02175150 r3+0x3B6 i16 -1,0,1,2,3

@@ -1,0 +1,83 @@
+src wwhd_src/d/actor/d_a_mgameboard.cpp
+# Generated HD argument shapes are unknown; align explicit alias domains.
+arg! * r3 0x40000000
+callee 026066C4 r4=8
+callee 025D5218 r4=2
+callee 025CB374 r6=12
+observe 025E2DE0 104B4634 8
+ret 026066C4 0,0x55000000
+ret 025E38E0 0,0x56000000,0x56001000,0x56002000,0x56003000,0x56004000,0x56005000,0x56006000,0x56007000,0x56008000,0x56009000,0x5600a000,0x5600b000,0x5600c000,0x5600d000,0x5600e000,0x5600f000,0x56010000,0x56011000,0x56012000,0x56013000,0x56014000,0x56015000,0x56016000,0x56017000,0x56018000,0x56019000,0x5601a000,0x5601b000,0x5601c000,0x5601d000,0x5601e000
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 025200D4 0x54000000,0x104AE8B0
+ret 025D5218 0,0x57000000
+ret 025E1B24 0,1
+ret 02007898 0,1
+ret 025BB470 -2,-1,0,1,2
+ret 0207A9A0 0,1
+field * 101F4F28 u32 0x5A123400
+field * 101F5088 u32 0x58000000
+field * 101F84DC u32 0x59000000
+# Screen pointer may overlap actor flags; retain reload/store ordering.
+field * 101F8344 u32 0x5B000000,0x400004E8,0x400004E9,0x400004EA
+field * 5B0001F8 u32 0x5C000000
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x584 s8 -1,0,1,6,7,8
+field * r3+0x585 s8 -1,0,1,6,7,8
+field * r3+0x614 u8 0,1,2,3
+field * r3+0x615 u8 0,1,24
+field * r3+0x69C s32 0,1,2,32
+field * r3+0x6A0 s32 0,1,2,20
+field * r3+0x6DC u32 0,1,2,3,4,5
+field * r3+0x6E0 u8 0,1
+field * r3+0x6E1 u8 0,1
+field * r3+0x6E2 u8 0,1
+field * r3+0x6E3 u8 0,1
+field * r3+0x6E4 u8 0,1,30
+field * 58000018 u32 0,1,0x00040000,0x00080000,0x00010000,0x00020000,0x00440000,0x00880000,0x00110000,0x00220000,0x00FF0000,0x00FF0001
+field * 58000020 u32 0,1,0x00040000,0x00080000,0x00010000,0x00020000,0x00440000,0x00880000,0x00110000,0x00220000
+field * 58000124 u32 0,1,0x00F00000,0x00F00001
+arg! 021C5BF4 r3 0,0x40000000
+arg! 021C5C10 r3 0,0x40000000
+stackfill
+# Reach every ship-size/render branch with valid minigame descriptors.
+field * r3+0x5E0 u8 0,1,2,3,4,5
+field * r3+0x5EF u8 0,1,2,3,4,5
+field * r3+0x5FE u8 0,1,2,3,4,5
+field * r3+0x48C u32 0,0x56000000
+field * r3+0x494 u32 0,0x56020000
+field * r3+0x49C u32 0,0x56030000
+field * r3+0x5E3 u8 0,1,7,8,9
+field * r3+0x5E4 u8 0,1,7,8,9
+field * r3+0x5F2 u8 0,1,7,8,9
+field * r3+0x5F3 u8 0,1,7,8,9
+field * r3+0x601 u8 0,1,7,8,9
+field * r3+0x602 u8 0,1,7,8,9
+field * r3+0x5E6 s8 -1,0,1
+field * r3+0x5F5 s8 -1,0,1
+field * r3+0x604 s8 -1,0,1
+
+# Explicit overlapping matrix output and actor model storage.
+field * r3+0x3B4 u32 0x56000000,0x40000300,0x1048D004
+field * r3+0x3B8 u32 0x56001000,0x40000300,0x1048D004
+
+# Capture the complete archive name including its terminator.
+callee 02520460 r4=9
+observe 02520460 101BA5E8 9
+field * 101BA5F0 u8 0,1,255
+field * 101BA5F1 u8 0,1,255
+# Distinct draw buffers expose accessor-offset errors.
+field * 54005D78 u32 0x51112233
+field * 54005D7C u32 0x52223344
+field * 54005D84 u32 0x53334455
+field * 54005D88 u32 0x54445566
+
+# Fourth descriptor catches off-by-one ship-render loops.
+field * r3+0x60D u8 0,2,3,4
+field * r3+0x610 u8 0,1,7,8
+field * r3+0x611 u8 0,1,7,8
+field * r3+0x613 s8 -1,0,1
+
+# Play-object buffer fields may overlap the written global pair.
+field * 104B4628 u32 0x67778899
+field * 104B462C u32 0x688899AA

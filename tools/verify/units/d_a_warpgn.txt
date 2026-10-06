@@ -1,0 +1,28 @@
+src wwhd_src/d/actor/d_a_warpgn.cpp
+stackfill periodic
+arg 024D9520 r4 -1,0,1,2,3,4,5
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+callee 0201ADE0 r4=out12
+ret 02542EDC -1,0,1,2,3,4,5
+ret 02542D88 -1,0,7
+field 024D9AE0 0x10474342 u8 0,1
+ret 025200D4 0x1046F0B0
+callee 025A847C stack=4 r5=0 r6=12 r7=6 r8=12 r10=20
+ret 027F3F8C 0x51000000
+field 024D92B4 0x51000024 u16 0,1,2
+callee 026066C4 r4=8   # dRes_control_c::getRes: sead::SafeString key (text + vtable) on the stack
+field * 0x101F4F28 u32 0x55000000,0x55123400   # dRes_control_c pointer (image value 0)
+field * 0x101F84DC u32 0x56000000,0x56123400   # save-info pointer (image value 0)
+callee 028E8DD0 r3=12  # PSVECSquareMag: the XZ vector on the stack
+field * 0x101D5FFC u32 0,0x57000000,0x57123400   # demo object pointer (null asserts)
+callee 0274D458 r3=out16 r4=16   # Color4f scale: output colour (stack), input colour compared
+callee 024D9200 r3=out16         # colorConvert: output Color4f on the stack
+field 024D9D3C r3+0x2DC u8 0,1,0x20,0x21,0xFF   # demoActorID: none / range edges
+ret 02526E70 0,0x58000000                      # dDemo_object_c::getActor: null or a demo actor
+field 024D9D3C 0x58000028 u32 0,1,2            # demo actor shape
+ret 0254407C 0,1                               # event manager: endCheck
+field 024D999C r3+0x3E0 s32 0,1,2              # eventState
+field 024D999C r3+0xF8 u16 0,1,2,2,3                # eventInfo command (2 = in event)
+callee 025E7CE0 stack=1   # mDoExt_btkAnm::init: 10th argument on the stack
+callee 025E8154 stack=1   # mDoExt_brkAnm::init: 10th argument on the stack

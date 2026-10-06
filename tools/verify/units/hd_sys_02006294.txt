@@ -1,0 +1,8 @@
+# hd_sys_02006294: TU 02006294..02006583 (root-task entry, HD state machine); HD-only
+src wwhd_src/hd/hd_sys_02006294.cpp
+field 020062E8 r5+0 u32 0xFFFFFFFF,0,5
+field 020063C0 r3+8 u32 0,0x6C000000
+arg 020063C0 r4 0,0x6D000000
+field 02006478 r3+8 u32 0,0x6C000000
+field 02006478 r3+4 u32 0,0x6D000000
+field 02006364 r3+8 u32 0,0x6C000000

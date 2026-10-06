@@ -1,0 +1,46 @@
+# Verification unit: d_a_mflft
+src wwhd_src/d/actor/d_a_mflft.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r4=out12      # MtxPosition: output
+callee 0201ADE0 r4=out12      # cXyz::operator-: result
+callee 0201AD78 r4=out12      # cXyz::operator+: result
+callee 0201AE48 r4=out12      # cXyz::operator*: result
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024EEA6C 0 1              # Regist
+ret 025BA0C0 0 1              # isSwitch
+ret 025162A4 0 1              # ChkTgHit
+ret 025EBA58 0 1              # lineMat init
+fret 02008974 -1000000000.0 100.0   # GroundCross (incl. -G_CM3D_F_INF)
+field 021C3AC0 r3+0xB3 u8 0,1,2,3,4,0xFF
+field 021C3AC0 r3+0xB0 u8 0,1,0xFF
+field 021C2748 r3+0x3B6 s16 0,1,2
+field 021C2748 r3+0x3EA s16 0,1
+field 021C2748 r3+0x3F0 s8 0 1
+field 021C2748 r3+0x3F1 s8 0 1
+field 021C2748 r3+0x3F2 s8 0 1
+field 021C2748 r3+0x811 s8 0,1,2
+field 021C2748 r3+0x9E0 s8 0,1,2,3,4
+field 021C2748 r3+0x812 s16 0 1
+field 021C2748 r3+0x808 s16 0,9,10
+field 021C2748 r3+0x80A s16 0,9,10
+field 021C2748 r3+0x80C s16 0,9,10
+field 021C2748 r3+0x80E s8 1,4,5
+field 021C2748 r3+0x80F s8 1,4,5
+field 021C2748 r3+0x810 s8 1,4,5
+field 021C2748 r3+0x3BD u8 0,0xFF
+field 021C2748 r3+0x340 f32 -100.0 10.0
+field 021C2748 r3+0x318 f32 0.0 200.0
+field 021C2748 r3+0x850 f32 0.0 100.0
+field 021C2304 r3+0x984 u32 0x56000000 0x56000000
+field 021C3ECC r3+0x3B6 s16 0 1
+field 021C3ECC r3+0x3EA s16 0 1
+field 021C3ECC r3+0x318 f32 0.0 400.0
+field 021C3ECC r4+0x4 f32 0.0 400.0
+# the line table (mLineMat +0x184) at a fixed address, so random line data cannot overlap it
+field 021C2748 r3+0x9D8 u32 0x58000000 0x58000000
+field 021C2748 1047B610 f32 -1.0 1.0     # REG0_F(0)
+callee 025CB374 r6=12         # StartShock: the cXyz copy
+callee 02518DB0 r3=out28      # at_power_check fills CcAtInfo (mpActor, mDamage)
+field 021C2748 r3+0x3BD u8 0,0xFF,0xFE

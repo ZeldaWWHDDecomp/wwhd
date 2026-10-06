@@ -1,0 +1,41 @@
+# hd_olv_02036E58: HD Miiverse bottle-spot manager TU (02036E58..02038497); HD-only
+src wwhd_src/hd/hd_olv_02036E58.cpp
+callee 026124B0 r4=8 r5=8
+callee 02759C28 r3=76
+callee 0201ADE0 r4=out12
+ret 02520C0C 0,1,1
+ret 02039A58 0,1,3,10,0xFFFFFFFF
+arg 02037230 r4 0,1,5,0x31,0x32
+arg 02037D64 r4 0,1,5,0x31,0x32
+field 02037230 r3+0x30B3 u8 0,1
+ret! 025200D4 0x51000000 0x51000000
+fret 02008974 -10 10
+field * 0x51005B2C u32 0,0x52000000,0x52000000
+field 02038158 r3+0x30B0 u8 0,1,1
+field 02038158 0x51005134 u8 0x73,0x73,0x74
+field 02038158 0x51005135 u8 0x65
+field 02038158 0x51005136 u8 0x61,0x61,0x62
+field 02038158 0x51005137 u8 0
+field 020378B4 0x10200A4C u32 0,1
+ret 0246B6A4 0,1
+ret 024EF7C0 0,1
+ret 02008860 0,0,0,0,0,1
+field * 0x1018F450 u32 0,0x53000000
+field * 0x1018F454 u32 0,0x54000000
+arg 0203835C r3 0x54000000,0x54100000
+# mutation follow-ups: compare the check objects (frame-faithful stack layout) at the BG calls
+callee 02008974 r4=84
+callee 02008DAC r3=84
+callee 02008860 r4=108
+callee 02008B4C r3=108
+callee 024F1AFC r3=108 r4=12 r5=12
+callee 028E8D88 r3=12 r4=12 r5=12
+callee 028E8DD0 r3=12
+callee 0201ADE0 r3=12 r5=12
+callee 024EF7C0 r4=0x4C
+stackfill periodic
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02038158 0x51005134 8 @stages,"sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb","teb"

@@ -1,0 +1,106 @@
+# Rat shopkeeper. Own range022A2838..022A6038 exclusive; actor profile0075,sizeCF8.
+src wwhd_src/d/actor/d_a_npc_nz.cpp
+callee 025D5218 r4=4
+ret 025200D4 0x54000000 0x54000000
+arg 022A3574 r4 0,1,2
+arg 022A3574 r5 0,1
+field 022A3574 r3+0x7E8 i32 0,1
+field 022A30A4 r3+8 i16 0,0xC6,0x126
+# Callee input objects: preserve outputs and compare values the real routine reads.
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 028E8F64 r4=12 r5=out12
+callee 028E8DD0 r3=12
+callee 028E8E64 r3=12 r4=out12
+callee 0259D54C r3=out12
+callee 0259DED0 r5=12 r6=12
+callee 025A847C r6=12 r7=6 r8=12
+# Coverage steering: rare branches reachable only with specific values.
+arg 022A5DEC r3 0
+ret 022A3C88 0,1
+alloc 0273AD10 r3 0x58000000
+ret 027F7878 0x57000000,0x57000100
+field 022A29D0 57000004 u16 9,0,8
+ret 0254487C 0x56000000,0
+field 022A59A0 56000000 u32 8,0,7
+# Mutation-driven: compare the particle manager passed to dPa_control_c::set; steer the bait search frame.
+callee 025A847C r3=0
+field 022A2EEC r3+0x800 u32 0x59000000
+field 022A2EEC 5900009C f32 5 8
+# Actor state dispatch, rendering, and animation boundaries.
+field * r3+0x7ED i8 0,6,8,9,10,11,12,15
+field * r3+0xA10 u8 0,1,2,3
+field * r3+0xA14 u8 0,1
+field * r3+0xA1E i16 -1,0,1,2
+field * r3+0xA21 u8 0,1
+field * r3+0xCF4 i16 -1,0,10,11,12,13,15,16,17,18,19,20
+field 022A400C r3+0xF8 u16 0,1,2
+field 022A34AC r3+0x7ED i8 0,1,15
+arg 022A34AC r4 0,1,6,15
+ret 02520460 0,4,5
+ret 025D63E8 0,1
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2,3,4,5,6,7
+ret 025447C8 0,1
+ret 025440C8 0,1
+ret 027F2BF8 0,1
+ret 0259F858 0,1
+ret 025F795C 0x10,0x11,0x12,0,6
+# Dialogue selection is produced by the four stock pairs in next_msgStatus.
+field 022A4CFC r4+0 u32 0x33F4,0x33F5,0x33F6,0x33F7,0x33F8,0x33F9,0x33FA,0x33FB,0x33FC,0x33FD,0x33FE,0x33FF,0x3400,0x3401,0x3402,0x3403,0x3404,0x3405,0x3406,0x3407,0x3408
+field 022A4CFC r3+0xA1C i16 0,1,2,3
+field * 101F4B5C u32 0x55000000
+field * 55000938 u32 0x33F6 0x3408
+field * 55000948 u32 0,1,2,3
+field * 101F84DC u32 0x56000000
+field * 56000024 u16 0,1,10,100,999
+field * 56000068 u8 0,0xFF
+field * 5600006A u8 0,0xFF
+field * 5600006B u8 0,0xFF
+field * 5600006C u8 0,0xFF
+field * 5600006D u8 0,0xFF
+field * 54005BA4 i16 -1,0,1,10,100
+field * r3+0xA20 u8 0xC,0xE,0x10,0x12,0x51,0x53,0x82,0x83
+ret 02520C0C 0,1
+ret 025B5C54 0,1
+ret 02550FC4 0,1
+ret 02550FDC 0,1
+ret 025B6E90 0,1
+ret 0254DA50 0,1
+# rndF/rndFX execute original scaling; nested rnd is an abstract scalar service.
+# The inclusive upper bound is the largest binary32 below one.
+real 020198D8
+real 02019918
+fret! 02019788 0 0.9999999403953552
+# Producer-shaped object fixtures for the rare search and container callbacks.
+arg 022A2D6C r4 0,1
+field * 54005BBB u8 0,0x82
+field * 54005BBC u8 0,0x82
+field 022A2EEC r4+8 i16 0,0xDD
+field 022A2EEC r4+0x3B4 u8 0,1
+field 022A3094 r3+8 i16 0,0xDD
+field 022A3094 r3+0x3B4 u8 0,1
+field 022A32B4 r3+8 i16 0,0xDD
+field 022A30F0 r3+8 i16 0,0x1C5,0x1C8
+field 022A30F0 r3+0x794 u32 0,2
+field 022A30F0 r3+0x728 u32 0,1
+arg 022A29D0 r5 0,1
+field 022A29D0 10467D2C u32 0,1
+field 022A3E74 r3+0x2E4 u32 0,8
+stackfill periodic
+# Capacity boundaries for purchase refusals.
+field * 56000089 u8 0,1,30
+field * 5600008F u8 0,1,30
+field * 5600008A u8 0,1,30
+field * 56000090 u8 0,1,30
+# Scatter callback producers pass an aligned bait pointer or null and valid NPC.
+# Initialized game positions are finite; the generated trig service uses finite angle0.
+arg! 022A32B4 r3 0,0x52000000
+arg! 022A32B4 r4 0x53000000 0x53000000
+field 022A32B4 r4+0x7DC f32 -100000 100000
+field 022A32B4 r4+0x7E0 f32 -100000 100000
+field 022A32B4 r4+0x7E4 f32 -100000 100000
+field 022A32B4 r4+0x322 u16 0 0
+field 022A32B4 104A44F8 f32 -1 1
+field 022A32B4 104A44FC f32 -1 1

@@ -1,0 +1,251 @@
+src wwhd_src/d/d_magma.cpp
+# Complete 42-root magma unit, 02588DF8..0258D8C4; preceding interpolation belongs to d_lib and following IsFloorNo to d_map.
+callee 028E8DE8 r3=12 r4=12
+arg 0258D790 r3 0,0x50000000
+arg 0258D81C r3 0,0x50000000
+ret 0273AD10 0,0x55000000
+# Finite room list states; downstream next links do not change in this call-free traversal.
+field 0258C488 r3 u32 0,0x58000000
+field 0258C488 58000BDC u32 0
+
+callee 02589B30 r3=out48 r4=48
+callee 028E91EC r3=48 r4=out48
+callee 028E90D4 r3=48 r4=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+
+# Finite readable path points; assertion branches retained through zero returns.
+ret 025AAF88 0,0x58000000
+field 02589F8C 58000000 u16 1,2,4
+field 02589F8C 58000008 u32 0,0x59000000
+fret! 020198D8 0,0.5,1,2
+
+arg 0258A1C4 r3 0,0x50000000
+arg 0258C4C0 r3 0,0x50000000
+field 0258A58C r3+4 s32 0,1,2
+field 0258A58C r3+8 u32 0,0x58000000
+field 0258A58C 58000004 s32 0,1,2
+field 0258A58C 5800000C s32 0,1,2
+field 0258A58C 58000018 s32 0,1,2
+field 0258A58C 58000020 s32 0,1,2
+field 0258CF50 r3+4 s32 0,1,2
+field 0258CF50 r3+0x4E4 s32 0,1,2
+field 0258CF50 r3+8 u32 0,0x58000000
+field 0258CF50 58000004 s32 0,1,2
+field 0258CF50 5800000C s32 0,1,2
+field 0258CF50 58000018 s32 0,1,2
+field 0258CF50 58000020 s32 0,1,2
+field 0258D370 r3+4 s32 0,1,2
+field 0258D370 r3+0x4E4 s32 0,1,2
+field 0258D370 r3+8 u32 0,0x58000000
+field 0258D370 58000004 s32 0,1,2
+field 0258D370 5800000C s32 0,1,2
+field 0258D370 58000018 s32 0,1,2
+field 0258D370 58000020 s32 0,1,2
+
+# Cleanup resource metadata belongs to caller-owned allocations; item dtors/free do not rewrite their count/table header.
+# Earlier development run stopped after these headers escaped bounds across mocked calls; no gate credit.
+stable 50000004 8
+stable 500004E4 8
+stable 58000000 40
+arg! 0258A58C r3 0,0x50000000
+arg! 0258CF50 r3 0,0x50000000
+arg! 0258D370 r3 0,0x50000000
+
+arg! 0258C7C8 r3 0x50000000
+stable 50005FB8 256
+stable 58000BDC 4
+field 0258C7C8 58000BDC u32 0
+field 0258C7C8 50005FB8 u32 0,0x58000000
+field 0258C7C8 50005FBC u32 0,0x58000000
+field 0258C7C8 50005FC0 u32 0
+field 0258C7C8 50005FC4 u32 0
+field 0258C7C8 50005FC8 u32 0
+field 0258C7C8 50005FCC u32 0
+field 0258C7C8 50005FD0 u32 0
+field 0258C7C8 50005FD4 u32 0
+field 0258C7C8 50005FD8 u32 0
+field 0258C7C8 50005FDC u32 0
+field 0258C7C8 50005FE0 u32 0
+field 0258C7C8 50005FE4 u32 0
+field 0258C7C8 50005FE8 u32 0
+field 0258C7C8 50005FEC u32 0
+field 0258C7C8 50005FF0 u32 0
+field 0258C7C8 50005FF4 u32 0
+field 0258C7C8 50005FF8 u32 0
+field 0258C7C8 50005FFC u32 0
+field 0258C7C8 50006000 u32 0
+field 0258C7C8 50006004 u32 0
+field 0258C7C8 50006008 u32 0
+field 0258C7C8 5000600C u32 0
+field 0258C7C8 50006010 u32 0
+field 0258C7C8 50006014 u32 0
+field 0258C7C8 50006018 u32 0
+field 0258C7C8 5000601C u32 0
+field 0258C7C8 50006020 u32 0
+field 0258C7C8 50006024 u32 0
+field 0258C7C8 50006028 u32 0
+field 0258C7C8 5000602C u32 0
+field 0258C7C8 50006030 u32 0
+field 0258C7C8 50006034 u32 0
+field 0258C7C8 50006038 u32 0
+field 0258C7C8 5000603C u32 0
+field 0258C7C8 50006040 u32 0
+field 0258C7C8 50006044 u32 0
+field 0258C7C8 50006048 u32 0
+field 0258C7C8 5000604C u32 0
+field 0258C7C8 50006050 u32 0
+field 0258C7C8 50006054 u32 0
+field 0258C7C8 50006058 u32 0
+field 0258C7C8 5000605C u32 0
+field 0258C7C8 50006060 u32 0
+field 0258C7C8 50006064 u32 0
+field 0258C7C8 50006068 u32 0
+field 0258C7C8 5000606C u32 0
+field 0258C7C8 50006070 u32 0
+field 0258C7C8 50006074 u32 0
+field 0258C7C8 50006078 u32 0
+field 0258C7C8 5000607C u32 0
+field 0258C7C8 50006080 u32 0
+field 0258C7C8 50006084 u32 0
+field 0258C7C8 50006088 u32 0
+field 0258C7C8 5000608C u32 0
+field 0258C7C8 50006090 u32 0
+field 0258C7C8 50006094 u32 0
+field 0258C7C8 50006098 u32 0
+field 0258C7C8 5000609C u32 0
+field 0258C7C8 500060A0 u32 0
+field 0258C7C8 500060A4 u32 0
+field 0258C7C8 500060A8 u32 0
+field 0258C7C8 500060AC u32 0
+field 0258C7C8 500060B0 u32 0
+field 0258C7C8 500060B4 u32 0,0x58000000
+
+arg! 0258C170 r3 0x50000000
+field 0258C170 r3+4 s32 0,1,2
+field 0258C170 r3+8 u32 0,0x58000000
+field 0258C170 r3+0x4EC s32 0,1,2
+stable 500004EC 8
+field 0258C170 58000004 s32 0,1,2
+field 0258C170 5800000C s32 0,1,2
+field 0258C170 58000018 s32 0,1,2
+field 0258C170 58000020 s32 0,1,2
+
+# Finite caller-owned graphics records; callees mutate payload, not array metadata.
+arg! 02589380 r3 0x50000000
+field 02589380 r3 u32 0,1,2
+field 02589380 r3+4 u32 2
+field 02589380 r3+8 u32 0x58000000
+field 02589380 r3+0x4B4 u32 0,1
+stable 50000000 12
+field 02589380 58000004 s32 0,1,2
+field 02589380 5800000C s32 0,1,2
+field 02589380 58000018 s32 0,1,2
+field 02589380 58000020 s32 0,1,2
+callee 027B90AC r4=8
+callee 026066C4 r4=8
+
+callee 02750250 r3=284
+callee 02750370 r3=284
+callee 0280037C r4=284
+
+arg! 0258B11C r3 0x50000000
+field 0258B11C r3 u32 0,1,2
+field 0258B11C r3+4 u32 2
+field 0258B11C r3+8 u32 0x58000000
+field 0258B11C r3+0x4B4 u32 0,1
+field 0258B11C 58000004 s32 0,1,2
+field 0258B11C 5800000C s32 0,1,2
+field 0258B11C 58000018 s32 0,1,2
+field 0258B11C 58000020 s32 0,1,2
+
+arg! 0258B830 r7 0,1,2
+arg 0258B830 r6 -1,0,1,31
+ret 0273ADAC 0,0x59000000
+callee 025F01D8 r3=4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+
+# Draw context mode is caller-owned render selection; cache/shader callees do not change it.
+stable 5100000C 4
+arg! 02588DF8 r3 0x50000000
+arg! 02588DF8 r4 0x51000000
+field 02588DF8 5100000C u32 0,1,2,3,4
+arg! 0258A880 r3 0x50000000
+arg! 0258A880 r4 0x51000000
+field 0258A880 5100000C u32 0,1,2,3,4
+
+# Initialized texture descriptors: equal cases and one differing first word; loaders construct coherent outputs.
+field 02589380 r3+0xBBC u32 0,1
+stable 50000BBC 4
+field 02589380 r3+0xBC0 u32 0
+stable 50000BC0 4
+field 02589380 r3+0xBC4 u32 0
+stable 50000BC4 4
+field 02589380 r3+0xBC8 u32 0
+stable 50000BC8 4
+field 02589380 r3+0xBCC u32 0
+stable 50000BCC 4
+field 02589380 r3+0xBD0 u32 0
+stable 50000BD0 4
+field 02589380 r3+0xBF0 u32 0
+stable 50000BF0 4
+field 02589380 r3+0xBEC u32 0
+stable 50000BEC 4
+field 02589380 r3+0xBD4 u32 0
+stable 50000BD4 4
+field 02589380 r3+0xA24 u32 0,1
+stable 50000A24 4
+field 02589380 r3+0xA28 u32 0
+stable 50000A28 4
+field 02589380 r3+0xA2C u32 0
+stable 50000A2C 4
+field 02589380 r3+0xA30 u32 0
+stable 50000A30 4
+field 02589380 r3+0xA34 u32 0
+stable 50000A34 4
+field 02589380 r3+0xA38 u32 0
+stable 50000A38 4
+field 02589380 r3+0xA58 u32 0
+stable 50000A58 4
+field 02589380 r3+0xA54 u32 0
+stable 50000A54 4
+field 02589380 r3+0xA3C u32 0
+stable 50000A3C 4
+field 0258B11C r3+0x99C u32 0,1
+stable 5000099C 4
+field 0258B11C r3+0x9A0 u32 0
+stable 500009A0 4
+field 0258B11C r3+0x9A4 u32 0
+stable 500009A4 4
+field 0258B11C r3+0x9A8 u32 0
+stable 500009A8 4
+field 0258B11C r3+0x9AC u32 0
+stable 500009AC 4
+field 0258B11C r3+0x9B0 u32 0
+stable 500009B0 4
+field 0258B11C r3+0x9D0 u32 0
+stable 500009D0 4
+field 0258B11C r3+0x9CC u32 0
+stable 500009CC 4
+field 0258B11C r3+0x9B4 u32 0
+stable 500009B4 4
+mockfield 02773798 r3+4 u32 0
+mockfield 02773798 r3+8 u32 0
+mockfield 02773798 r3+12 u32 0
+mockfield 02773798 r3+16 u32 0
+mockfield 02773798 r3+20 u32 0
+mockfield 02773798 r3+24 u32 0
+mockfield 02773798 r3+56 u32 0
+mockfield 02773798 r3+52 u32 0
+mockfield 02773798 r3+28 u32 0
+
+# Bounded room-name fixture exercises both named special rooms and an ordinary mismatch; game getter does not rewrite stage name.
+ret! 025200D4 0x55000000 0x55000000
+field 0258ACD4 55005134 u32 0x4D5F4472,0x58626F73,0x4F746865
+field 0258ACD4 55005138 u32 0x61674200,0x73300000,0x72000000
+stable 55005134 8
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0258ACD4 0x55005134 8 @stages,"M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_DragB","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drr","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","M_Drs0","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","OtheagB","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Other","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","Othes0","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","XbosagB","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xbosr","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0"

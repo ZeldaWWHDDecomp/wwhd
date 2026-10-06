@@ -1,0 +1,85 @@
+src wwhd_src/d/actor/d_a_obj_shmrgrd.cpp
+callee 025E1A40 r4=12
+field * r3+0x96c i32 0,1,2
+field * r3+0x972 u8 0,1,2,3
+field * r3+0x970 i16 -32768,-1,0,1,2,18,32767
+field * 101CCB54 u32 0,0x58000000
+field * 580003ac u32 0
+arg 02390008 r4 0,1,8,31,32
+arg 02390008 r5 0,1,8,31
+callee 0201ADE0 r4=out12 r5=12
+field * 101F84DC u32 0x54000000
+ret 02390008 0,1,255
+ret 025BA0C0 0,1
+field * 101CCB58 i32 0,1,2
+field * 5800096c i32 0,1,2
+callee 026066C4 r4=8
+ret 02520460 0,4,5
+callee 025A847C stack=4
+callee 02312548 r4=12
+arg 0238EA88 r4 0,1
+# Defensive allocator path and all damage modes.
+arg 0238E8DC r3 0,0x40000000
+ret 0273AD10 0,0x58000000
+ret 025200D4 0x55000000 0x55000000
+field * 55005b2c u32 0x56000000
+field * 560003ac u8 0,17,18,19,20
+ret 02516300 0x57000000 0x57000000
+ret 02515BBC 0,0x58000000
+field * 57000010 u32 0,65536
+field * 5800000e i16 0,168
+ret 0238F360 0,1
+ret 025162A4 0,1
+# Mock vector outputs are otherwise zero-filled scratch; populate valid finite witnesses.
+callee 028E8F64 r5=out12
+field * 58000314 f32 0,1,-1,10
+field * 5800031c f32 0,1,-1,10
+
+# Exact angle boundary witnesses for the original strict +/-0x2000 interval.
+field 0238F360 r4+0x32a i16 -8192,-8191,-1,0,1,8191,8192
+ret 0200F93C 0,8191,8192,-8191,-8192
+# Guest pointer alias witnesses preserve the two trig-table load/store dependencies.
+arg 0238FC50 r3 0x40000000,0x104A3B74
+arg 0238FC50 r4 0,8,32767,-32768,-1
+arg 0238FC50 f1 0.0 2.0
+# Complete PPC six-bit shift boundaries.
+arg 02390008 r4 0,1,8,31,32,33,63
+arg 02390008 r5 0,1,8,31,32,33,63
+# Vector output aliases the copied guest zero-vector words; loads must retain their store dependencies.
+arg 0238E84C r3 0x40000000,0x101FFBA4,0x101FFBAC
+
+# Full vector/quaternion inputs and deterministic mocked stack outputs.
+callee 028E8DD0 r3=12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 0238E84C r3=out12 r4=12
+callee 0201B47C r3=12
+callee 02312548 r3=out16 r4=12
+# quatM is static in HD: GHS moves r3 to r4 before its first call, so incoming r4 is not a quaternion.
+callee 025F25CC r3=16 r4=0
+stackfill periodic
+
+# Nonzero singleton and current/previous draw-list witnesses; the draw pointers are live at model submission.
+field * 101F4F28 u32 0x59000000
+field * 55005d70 u32 0x5a000000
+field * 55005d74 u32 0x5b000000
+field * 55005d78 u32 0x5c000000
+field * 55005d7c u32 0x5d000000
+observe 025E2DE0 104B4634 8
+
+# Verified all 40 functions at 10,000 cases each; full coverage 157/157 blocks.
+# Complete 1,707-variant audit: 972 rejected, 54 equivalent, 669 compiler-invalid,
+# 12 native-UB variants excluded (invalid local indexing/uninitialized locals).
+# Baseline and per-ID evidence: build/shmrgrd-final-audit.json and referenced logs.
+# Shared-helper changes used the whole unit; body changes used their isolated function.
+# Equivalent IDs below all survived exact 10,000-case reviews:
+# 57,72,80,103,105,118,119,120,141,142,143,265,293,296,391,392,536,539,589,590,782,787,1107,1108,1109,1110,1111,1112,1113,1114,1115,1588,1590,1595,1596,1603: Reorders independent loads or stores to disjoint fields; input values are captured before output writes and no intervening call observes the order.
+# 128: Changing >= to > at height-1 == 0 omits only a redundant assignment of height=1.
+# 223,250,1119,1585: Moves a read before a guard; the unused read changes neither calls, return value nor observable memory.
+# 266,695,1458,1468: Adds unused local-array capacity without changing any consumed element or valid access.
+# 538: Moves the zero-y write into an unused scratch path; the active path has the same vector before any call.
+# 599,600,651,652,653: Both constructor branches write identical vtable constants without intervening calls.
+# 609: Temporary owner shape vtable is overwritten before use. Actual callee 02018590 touches only its own offsets C,10,14, and does not read owner field r3-4.
+# 1117: Moves initialization of a native local Boolean across a call which cannot access it.
+# 1121: Moves top position -85 before a guard; the false path overwrites it with zero before a consumer and the true path keeps the same value.
+# ID 609 primary-callee evidence: build/shmrgrd-cyl-ctor.dis (02018590).

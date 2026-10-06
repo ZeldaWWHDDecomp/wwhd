@@ -1,0 +1,25 @@
+# Verification unit: d_a_warpf (boss warp light / Tower of the Gods and Earth/Wind Temple warps)
+src wwhd_src/d/actor/d_a_warpf.cpp
+
+# mStageNo indexes the 16-entry stage tables
+field * r3+0x3F8 i32 0,1,2,3,4,5,6,7,8,13,15
+# _create: stage info through the real stage-data vtable (+0x15C -> 025C5040), save table byte +9
+ret 025200D4 0x54000000 0x54000000
+field 024D6FB8 0x54005150 u32 0x10055DE0
+ret 025C5040 0x57000000 0x57000000
+callee 025C5040 r3=0
+field 024D6FB8 0x57000009 u8 0x00,0x06,0x08,0x0A,0x0C,0x0E,0x20
+ret 02520460 0,4,4,5
+ret 024D6EEC 4,4,5
+ret 025D63E8 0 1
+# heap: animation inits succeed or fail
+ret 025E8154 0 1
+ret 025E8508 0 1
+ret 025E7CE0 0 1
+# actWarpMode_1: the wind burst at timer 80
+field 024D7D38 r3+0x3E4 i32 0,1,80,81
+ret 025DAE00 0,0x58000000,0x58000100
+
+# 2026-10-05 (return-register class lint): get_angle_wind01 returns a csXyz in r3:r4 (HD small-struct ABI); the
+# candidate is declared u32 and sets r4 itself (z = 0, padding), which the harness now compares as the r3:r4 pair.
+retclass 024D7B6C

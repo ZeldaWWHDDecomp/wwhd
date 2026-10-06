@@ -1,0 +1,45 @@
+src wwhd_src/d/actor/d_a_obj_auzu.cpp
+stackfill periodic
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025BA0C0 0,1
+ret 025B8B94 0,1
+ret 02319870 0,1
+ret 0231A62C 0,1
+ret 025E7CE0 0,1
+ret 025D5218 0,0x56000000
+ret 025200D4 0x54000000 0x54000000
+field * r3+0x42C s32 0,1
+field * r3+0x430 f32 0,0.01,0.999,1
+field * r3+0x434 u8 0,1
+field * r3+0x435 u8 0,1
+field * r3+0x436 u8 0,1
+field * r3+0x438 u32 0,1,0xFFFFFFFF
+field * r3+0x2E4 u32 0,1,8,9
+field * 54005CD8 u32 0,0x10000
+field * 54005B3C u32 0,0x55000000
+field * 55000008 s16 0,0xA5
+fret 025D69AC 0 30000000
+arg! 0231A62C r4 0,1,8,31,32
+arg! 0231A62C r5 0,8,16,20,31,32
+arg! 023197A0 r4 0,1,8,31,32
+arg! 023197A0 r5 0,8,16,20,31,32
+callee 026066C4 r4=8
+callee 025E7CE0 stack=1
+callee 025D5218 r4=4
+callee 025D5834 r8=12
+callee 023197BC r3=out16
+callee 0274D458 r3=out16 r4=16
+# Bounded material list; the links stay intact across mocked calls.
+arg! 0231A2D0 r3 0,0x58000000
+arg! 0231A2D0 r4 0,1,127,255
+field * 58000004 u32 0,0x58001000
+field * 58001004 u32 0
+stable 58000004 4
+stable 58001004 4
+stable 54005B3C 4
+stable 55000008 2
+
+# Distinguish save-pointer alignment and exercise the absent-model cull-matrix path.
+field * 101F84DC u32 0x57000000
+field * r3+0x3B4 u32 0,0x59000000

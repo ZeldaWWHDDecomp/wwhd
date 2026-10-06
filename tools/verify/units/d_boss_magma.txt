@@ -1,0 +1,37 @@
+# Full retained TU024F6098..024F6DEC; previous noop6094 belongs preceding unit.
+src wwhd_src/d/d_boss_magma.cpp
+# Coherent finite mesh fixtures. Stable ownership counts/array pointers cannot grow
+# during teardown; payloads and all other heap/global fields retain mock clobbering.
+# Covers absent arrays, zero/multiple elements, both nested arrays and virtual cleanup.
+arg! 024F6664 r3 0,0x40000000
+field 024F6664 r3+0x4 s32 0,1,2
+field 024F6664 r3+0x8 u32 0,0x29000000
+field 024F6664 r3+0x4e4 s32 0,1,2
+field 024F6664 r3+0x4e8 u32 0x29100000
+arg! 024F6A28 r3 0,0x40000000
+field 024F6A28 r3+0x4 s32 0,1,2
+field 024F6A28 r3+0x8 u32 0,0x29000000
+field 024F6A28 r3+0x4e4 s32 0,1,2
+field 024F6A28 r3+0x4e8 u32 0x29100000
+stable 40000004 8
+stable 400004E4 8
+field * 29000004 s32 0,1,2
+field * 29000008 u32 0,0x29200000
+field * 2900000C s32 0,1,2
+field * 29000010 u32 0,0x29300000
+stable 29000004 16
+field * 29000018 s32 0,1,2
+field * 2900001C u32 0,0x29200000
+field * 29000020 s32 0,1,2
+field * 29000024 u32 0,0x29300000
+stable 29000018 16
+ret 025D4604 0,1
+field 024F6098 r3+8 s16 0,234
+field * 101D53E4 u32 0,0x28000000
+field * 280070C8 f32 -200,-150,-149,0,200
+field * 280070C0 f32 0,100,300,1000
+field * 280070CC u8 0,1
+ret 025DE508 0,0x28000000
+field 024F60E8 r3+0xD64 s16 -32768,-1,0,1,16384,32767
+field 024F60E8 r3+0xDCC u32 0x28010000
+field * 28010024 u32 0x024F637C

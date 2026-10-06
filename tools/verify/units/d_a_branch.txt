@@ -1,0 +1,15 @@
+# Verification unit: d_a_branch (Kwood branch) + d_a_branch_static (getJointMtx)
+src wwhd_src/d/actor/d_a_branch.cpp
+
+callee 026067F4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+field 020DEFB0 r3+0x3D4 u32 4 6
+field 020DF140 r3+0x3D4 u32 4 7
+field 020DF140 r3+0x2DC u8 0,1,0x20,0x21,0xFF
+field 020DF140 101D5FFC u32 0,0x58000000
+ret 02526E70 0,0x59000000
+field 020DF140 59000028 u32 4 7
+arg 020DF290 r5 -1 1
+arg 020DF290 r6 -1 1
+ret 027DF9B0 -2 2

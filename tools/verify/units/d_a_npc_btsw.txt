@@ -1,0 +1,143 @@
+# d_a_npc_btsw (Baito, mail-sorting game).
+src wwhd_src/d/actor/d_a_npc_btsw.cpp
+stackfill periodic
+# getNextNo(u8): callers pass a zero-extended byte (lbz); the box values 0..5 and the counter 0..3
+arg! 02217EE4 r3 0 255
+arg 02217EE4 r3 0,1,2,3,4,5
+field 02217EE4 101BD78D u8 0,1,2,3
+
+# the play object at a fixed address, so its fields can be steered
+ret 025200D4 0x54000000 0x54000000
+
+# _create: resLoad phases, heap and CreateInit results
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 02218D58 0,1
+field 02218FA4 r3+0x2E4 u32 0,8,9
+field 02218FA4 10466958 i8 -1,0,1
+
+# HIO constructor: allocation when this == NULL
+arg 0221C00C r3 0,0x56000000
+ret 0273AD10 0,0x57000000
+arg 022186EC r3 0,0x56000000
+
+# setAction (inline in checkOrder, CreateInit, talk01, dummy_event_action, shiwake_game_action,
+# getdemo_action): the current pointer to member {delta, index, function}
+field 02219210 r3+0xD5C i16 0,0,0,8
+field 02219210 r3+0xD5E i16 -1,-1,0,1,2
+field 02219210 r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 02219210 r3+0xF8 u16 0,1,2,3
+field 02219210 r3+0xD67 i8 0,1,2,3,4,5
+field 02218D58 r3+0xD5C i16 0,0,0,8
+field 02218D58 r3+0xD5E i16 -1,-1,0,1,2
+field 02218D58 r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 0221ACDC r3+0xD5C i16 0,0,0,8
+field 0221ACDC r3+0xD5E i16 -1,-1,0,1,2
+field 0221ACDC r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 0221B03C r3+0xD5C i16 0,0,0,8
+field 0221B03C r3+0xD5E i16 -1,-1,0,1,2
+field 0221B03C r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 0221B3A8 r3+0xD5C i16 0,0,0,8
+field 0221B3A8 r3+0xD5E i16 -1,-1,0,1,2
+field 0221B3A8 r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 0221BE68 r3+0xD5C i16 0,0,0,8
+field 0221BE68 r3+0xD5E i16 -1,-1,0,1,2
+field 0221BE68 r3+0xD60 u32 0x0221BE68,0x0221B03C,0x0221AF2C,0x0221B3A8
+field 02219618 r3+0xD5E i16 -1,0,1,2
+
+# action status (0, -1, ongoing values)
+field 0221AF2C r3+0xD6D i8 -1,0,1,2
+field 0221B03C r3+0xD6D i8 -1,0,1,2
+field 0221BE68 r3+0xD6D i8 -1,0,1,2
+field 0221B3A8 r3+0xD6D i8 -1,0,1,1,1,2,3
+field 0221AF2C r3+0xD6A i8 0,1,2,3
+ret 025440C8 0,1
+ret 0254457C 0,1
+ret 0259F858 0,1
+
+# next_msgStatus: the message numbers of the switch, the selection (message manager +0x948)
+field 0221A5C8 r4+0 u32 0x1A90,0x1A91,0x1A92,0x1A93,0x1A94,0x1A95,0x1A96,0x1A97,0x1A98,0x1A99,0x1A9A,0x1A9B,0x1AA0,0x1AA1,0x1AA2,0x1AA3,0x1AA4,0x1AA5,0x1AA6,0x1AA7,0x1AA8,0x1AA9,0x1AAA,0x1AAC,0x1AAD,0x1AAE,0x1AB4,0x1AB5,0x1AB6
+field 0221A5C8 101F4B5C u32 0x5A100000
+field 0221A5C8 5A100948 u32 0,1
+ret 025B8B94 0,1
+ret 02586D24 0,1
+ret 025B7D90 0,1
+ret 02586E1C 0,1
+ret 025B8BB0 0,1,2,3,4
+
+# talk01: talk XY / present end, message send button, the message numbers, talk() result
+field 0221ACDC r3+0x7C8 u32 0xFFFFFFFF,0
+field 0221ACDC 540052B0 u8 0,1,2,4,5
+field 0221ACDC 54005BD2 u8 0,1
+field 0221ACDC r3+0x7C0 u32 0x1A96,0x1AA9,0x1A97,0x1A9B,0x1A95
+ret 02544950 0,1
+ret 025A11EC 0x12,0x10,0x0F
+field 0221A840 540052B0 u8 0,1,2,4,5
+field 0221A840 r3+0xD54 u32 0xFFFFFFFF,0x1A9C
+
+# shiwake_game_action: timer, pad trigger words, cursor, mail pointers and procs
+field 0221B3A8 r3+0xF8 u16 0,2
+field 0221B3A8 r3+0xCF6 u8 0,1
+field 0221B3A8 54005CF0 u32 0,0x5C000000
+field 0221B3A8 5C000124 u8 0,1,2
+field 0221B3A8 54005CFC u32 0,6
+field 0221B3A8 10466986 i16 0,1,5
+field 0221B3A8 54005CF8 u32 0,1,100,1000,1000,1000
+field 0221B3A8 54005CF4 u32 0,1,100,1000
+field 0221B3A8 101F5088 u32 0x5D000000
+field 0221B3A8 5D000124 u32 0,0x00100000,0x00400000
+field 0221B3A8 5D000018 u32 0,0x00400000,0x00800000,0x00100000,0x00200000,0x00440000,0x00880000,0x00110000,0x00220000
+field 0221B3A8 5D000020 u32 0,0x00040000,0x00080000,0x00010000,0x00020000
+field 0221B3A8 r3+0xD44 i8 -1,0,1,2
+field 0221B3A8 r3+0xD45 i8 -1,0,1,2
+field 0221B3A8 r3+0xCD0 u8 0,1,2,2,2,2,3
+field 0221B3A8 r3+0xCC4 u32 0x5B000000
+field 0221B3A8 r3+0xCC8 u32 0x5B000000
+field 0221B3A8 r3+0xCCC u32 0x5B000000
+field 0221B3A8 5B000000 i16 0,0,0,1
+field 0221B3A8 5B000002 i16 -1,-1,-1,0,1
+field 0221B3A8 5B000004 u32 0x02219D88,0x02219D88,0x02219D88,0x02219B20,0x0221A1E0
+field 0221B3A8 54005CEC i16 -1,0,1,2,24,25,26
+field 0221B3A8 54005CEA u8 0,7
+ret 02007898 0,1
+ret 0221B300 0,1
+ret 025C6278 0,1
+field 0221B300 r3+0xCD0 u8 0,1,2,3
+field 0221B300 r3+0xCC4 u32 0x5B000000
+field 0221B300 r3+0xCC8 u32 0x5B000000
+field 0221B300 r3+0xCCC u32 0x5B000000
+field 0221B300 5B000000 i16 0,0,1
+field 0221B300 5B000002 i16 -1,-1,0,1
+field 0221B300 5B000004 u32 0x02219D88,0x02219B20,0x0221A1E0
+field 0221B254 54005CF8 u32 0,1,100,1000
+field 0221B254 54005CF4 u32 0,1,100,1000
+field 0221B254 r3+0xD48 u32 0,1,3333,10000,10001,20000
+
+# stack objects passed by pointer (compared at the call) and output storage (filled by mocks)
+callee 0221A49C r4=12
+callee 02219EA0 r4=12
+callee 02514F88 r4=12 r5=12
+callee 0259DED0 r5=12 r6=12
+callee 0200F93C r3=12 r4=12
+callee 0200F974 r3=12 r4=12
+callee 025BD31C r4=12
+callee 026067F4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 0201B47C r3=12
+callee 0259D54C r3=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E90D4 r3=48 r4=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+
+# chkAttention: angle and distance boundaries (|delta| == range, +0x71C with attention)
+field 0221A49C 10466978 i16 0,0x1000,0x2000
+field 0221A49C r3+0xD4C u8 0,1
+arg 0221A49C r5 0,0x1000
+ret 020195B0 -0x371C,-0x271C,-0x171C,-0x1000,0,0x1000,0x171C,0x271C,0x371C
+field 0221A49C 1046697C f32 0 300
+fret 028F4384 0 340
+# the HD minigame-state global is zero in the image: give it unaligned-sensitive nonzero values
+field 0221B3A8 101F8344 u32 0x55002000,0x5512345C

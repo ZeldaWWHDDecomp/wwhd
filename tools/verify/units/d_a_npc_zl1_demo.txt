@@ -1,0 +1,57 @@
+# Verification unit: d_a_npc_zl1 part "demo" (demo, _execute, lookBack, event cuts, darkness)
+src wwhd_src/d/actor/d_a_npc_zl1_demo.cpp wwhd_src/d/actor/d_a_npc_zl1_pending.cpp
+
+callee 0230741C r4=out12      # kyoroPos hidden result
+callee 02306A40 r4=out12      # set_LightPos hidden result
+callee 028E8F64 r4=12 r5=out12 # PSMTXMultVec
+callee 025CB374 r6=12         # StartShock(cXyz copy)
+# darkProc: start stage name (play+0x5134) "Hyrule" or not
+ret 025200D4 0x54000000 0x54000000
+field 02307A58 54005134 u32 0x48797275,0x48797200,0x53656100
+field 02307A58 54005138 u32 0x6C650000,0x6C650100
+field 02307A58 r3+0xA06 i8 -1 1
+callee 0259D54C r3=out12      # dNpc_playerEyePos hidden result
+callee 0259E2D4 r5=12 r6=12   # lookAtTarget_2(target, eye copy)
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+callee 0230634C r5=out4       # searchByID(id, &wasDeleted)
+# lookBack
+field 023075B0 r3+0xA99 i8 -1 6
+field 023075B0 r3+0xA95 i8 12 15
+# _execute
+field 02307D18 r3+0xA16 u8 0 1
+field 02307D18 r3+0x2DC u8 0 1
+field 02307D18 r3+0xA0D u8 0 1
+field 02307D18 r3+0xA19 u8 0 1
+field 02307D18 r3+0xA17 u8 0 1
+field 02307D18 r3+0xA1D u8 0 1
+field 02307D18 r3+0xA0E u8 0 1
+field 02307D18 r3+0xA0F u8 0 1
+field 02307D18 r3+0xF8 u16 0 2
+ret 02305778 0 1
+ret 02305FCC -1 1
+# demo
+callee 024F1914 r3=12          # dBgS_GetGndMtrlSndId_Func(cXyz copy)
+field 02305778 r3+0x2DC u8 0,1,5,0x20,0x21
+field 02305778 r3+0xA1D u8 0 1
+field 02305778 r3+0xA12 u8 0 1
+field 02305778 r3+0xA9B i8 5 7
+field 02305778 1047E6B8 u32 0x44656D6F
+field 02305778 1047E6BC u32 0x31370000,0x30350000,0x32330000,0x31380000
+field 02305778 101D600C u32 0x491,0x492,0x613,0x614,0x605,0x606,0xD65,0xD66,0xD70,0xD71
+field 02305778 r3+0x948 u32 0x57000000 0x57000000
+field 02305778 57000016 u16 0 3
+ret 027F3F8C 0x58000000 0x58000000   # material name table header (a stack-like mock pointer would read the scratch stack)
+# demo material loop: first material name "zelda_mouth" (or "zelda_mouti")
+field 02305778 5700002C u32 0x100
+field 02305778 57000138 u32 0x100,0xB9023F18
+field 02305778 57000238 u32 0x7A656C64
+field 02305778 5700023C u32 0x615F6D6F
+field 02305778 57000240 u32 0x75746800,0x75746900
+# event_proc: event index and end check
+field 023071C4 r3+0x9EC i16 0 4
+ret 025440C8 0 1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02307A58 0x54005134 8 @stages,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep

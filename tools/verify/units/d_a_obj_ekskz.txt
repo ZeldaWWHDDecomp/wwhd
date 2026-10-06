@@ -1,0 +1,26 @@
+# Verification unit: d_a_obj_ekskz (Gale Isle wind statue)
+src wwhd_src/d/actor/d_a_obj_ekskz.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 028EFFD0 r3=255        # __construct_array storage
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+ret 025162A4 0 1              # ChkTgHit
+ret 025E8508 0 1              # bckAnm::init
+ret 025E7CE0 0 1              # btkAnm::init
+ret 025E8154 0 1              # brkAnm::init
+arg 0233C3B8 r4 0,1,8,31,32,33,63
+arg 0233C3B8 r5 0,1,8,24,31,32,33,63
+field 0233BEC8 r3+0x6D4 u8 0 1          # m480 (broken)
+field 0233C0C8 r3+0x6D4 u8 0 1
+field 0233BEC8 r3+0x5F7 u8 0 1          # brk frame ctrl state (stop bit)
+field 0233BEC8 r3+0x5E8 f32 0,1         # brk rate
+field 0233B874 r3+0xD u8 2 4            # create result
+field 0233BCBC r3+0x6DC u32 0,0x56000000   # smoke[0] emitter
+field 0233BCBC r3+0x6FC u32 0,0x56001000   # smoke[1] emitter
+arg 0233B4A8 r3 0,0x57000000            # constructor: NULL allocates
+ret 0273AD10 0,0x57100000               # operator new
+callee 025E7CE0 stack=1       # mDoExt_btkAnm::init: 10th argument on the stack
+callee 025E8154 stack=1       # mDoExt_brkAnm::init: 10th argument on the stack
+callee 025A847C stack=4       # dPa_control_c::set: setup, prm, env, scale2D on the stack

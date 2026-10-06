@@ -1,0 +1,4 @@
+src wwhd_src/d/d_kankyo_rain_projection.cpp
+# Caller-owned40-byte output; mutable environment floats, no callee/clobber exemption.
+field * 104B46F0 f32 -100,0,0.5,1,100,inf,-inf,nan
+field * 104B46F4 f32 -100,0,0.5,1,100,inf,-inf,nan

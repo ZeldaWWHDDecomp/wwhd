@@ -1,0 +1,23 @@
+wwhd	name	hd_signature	note
+026066C4	dRes_control_c::getRes	(const sead::SafeString& arc, s32 index)	GameCube (const char*, long, dRes_info_c*, int): r6/r7 not passed
+025E1A40	mDoAud_seStart (JAIZelBasic::seStart wrapper)	(u32 id, cXyz* pos, u32 param, s8 reverb)	compare r3-r6 only
+020CB8D8	daBomb_c::prm_make	(static)	no this: compare only what the code reads
+023123C0	daObj::posMoveF_stream	(fopAc_ac_c*, cXyz*, cXyz*, f32, f32)	r3-r5, f1-f2 only (sets r6/r7/f3/f4 itself and tail-calls posMoveF_grade)
+026067F4	dRes_control_c::getIDRes	(const sead::SafeString& arc, s32 id)	GameCube adds r6/r7; requested by koym helper
+023D1EA4	pirate_flag_move (matched as get_cloth_anim_factor)	(fopAc_ac_c* actor)	HD pirate_flag_move with the cloth factor inlined; live-in r3 only
+023ABB10	daObjTry::Act_c::init_mtx (matched as PrmAbstract)	(this)	scale copy + tail set_mtx; reads r3 only
+023464B4	daObjFtree helper	(scalar)	reads r3 only
+02345C40	daObjFtree node helper	(node, phase)	reads r3/r4 only
+02346A40	daObjFtree waterReach (GC vector-helper signature mismatched)	(actor)	no GC vector pointers; compare what the code reads
+025F25CC	mDoMtx_stack_c::quatM	(static const Quaternion*)	static: reads r3 only (moves it to r4); units add r3=16
+025A847C	dPa_control_c::set (particle, HD)	(this, ?, u16 id r5, cXyz* pos r6, csXyz* angle r7 nullable, cXyz* scale r8 nullable, ?, callback* r10 in/out 20)	GC signature shifted; facts in callee_facts.tsv
+025E789C	mDoExt_btpAnm::init	(this, modelData, anm, s32, s32, f32, s16, s16, s32)	all arguments in r3-r10/f1; no incoming stack argument (frame 0x98, no loads at +0xA0)
+025E7CE0	mDoExt_btkAnm::init	(this, modelData, anm, s32, s32, f32, s16, s16, s32)	r3-r10/f1 only; no incoming stack argument
+025E8154	mDoExt_brkAnm::init	(this, modelData, anm, s32, s32, f32, s16, s16, s32)	r3-r10/f1 only; no incoming stack argument
+025E38E0	mDoExt_J3DModel__create	(modelData, u32 flags)	r3/r4 only; incoming r5 unused
+02491458	daSt ke_control	(this)	GC signature r4/r5 are overwritten before use in HD; compare only what the code reads (live-in)
+025269A8	daObjPirateship::getShipOffsetY	(static) (s16* angle, s16* speed, f32 scale)	no this: compare r3, r4, f1 only
+025CB4A8	vibration makebits	(static u32, s32, s32)	Actual HD helper reads incoming r3/r4/r5 only; matcher GC long expansion erroneously includes r6. Live-in analysis agrees: r3-r5.
+025CB77C	vibration randombit	(static s32, s32)	HD reads incoming r3/r4 only; GC long expansion incorrectly includes r5. Live-in analysis agrees: r3-r4.
+0258FD94	dMap_c::point2GridAndLocal	(static f32 x, f32 y, s8* gx, s8* gy, s16* lx, s16* ly)	HD reads integer inputs r3-r6 and f1/f2 only; r7 is defined before its conversion scratch use, no fifth output pointer.
+0258F978	dMap_c::setCollectPoint	(static eight integer inputs r3-r10, coordinates f1-f3)	HD saves r3-r10 and f1-f3; no caller-stack argument load. GC method signature adds a phantom ninth integer stack word.

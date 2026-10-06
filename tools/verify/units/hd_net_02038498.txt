@@ -1,0 +1,17 @@
+# hd_net_02038498: HD SpotPass manager TU (02038498..02038E23); HD-only
+src wwhd_src/hd/hd_net_02038498.cpp
+callee 02753004 r4=8
+callee 0275FBD8 r4=8
+callee 02038738 r4=4
+field * 0x1018F47C u32 0,0x4F000000
+field * 0x1018F480 u32 0,0x50000000
+arg 02038CBC r3 0x50000000,0x50100000
+arg 02038C7C r5 0,1,1,2
+field 0203899C r3+0x18 u32 0,0,1
+field 02038A3C r3+0x18 u32 0,0,1
+ret C0005398 0,0x80000000
+ret C00053C8 0,1
+ret C0005638 0,0,0x80000000
+ret C0005450 0,0,0,0x80000000
+# mutation follow-ups: non-zero globals
+field 02038A74 0x101F852C u32 0x55000000,0x55100000

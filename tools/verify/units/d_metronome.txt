@@ -1,0 +1,24 @@
+src wwhd_src/d/d_metronome.cpp
+field 0261D9E4 r3+0x164 u8 0,1,3,4,6,7,255
+field 0261DA70 r3+0x164 u8 0,1,3,4,6,7,255
+field 0261E5A8 r3+0x165 u8 0,1,3,4,6,7,255
+field 0261E638 r3+0x166 u8 0,1,3,4,6,7,255
+arg! 0261D968 r4 0,1,2,3,4,5,6,7
+arg! 0261D98C r4 0,1,2,3,4,5,6,7
+field 0261DCD0 r3+0x169 u8 0,1,255
+ret 0261DCD0 0,1,10,20,21,0xFFFFFFFF
+field 0261DE98 r3+0x164 u8 0,3,4,6,7
+field 0261E05C r3+0x164 u8 0,3,4,6,7
+callee 02704D2C r3=out12
+callee 025A847C r6=12
+callee 02443144 r4=out12
+callee 025F0EA4 r3=12 r4=out12
+# Demo score arrays have six notes and seven boundaries; beat count stays within their real capacity.
+arg! 0261E834 r3 0x58000000
+field 0261E834 r3+0x164 u8 0,3,4,6
+stable 58000164 1
+field 0261E834 r3+0x160 u32 0,1,2,3,4,5,6
+field 0261E834 r3+0x15C u32 0,1,2,10
+callee 025E1F68 r5=out4
+arg 0261EAC8 r3 0,0x58002000
+ret! 0273AD10 0,0x58003000

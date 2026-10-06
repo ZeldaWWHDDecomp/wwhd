@@ -1,0 +1,29 @@
+# Verification unit: d_a_obj_mmrr (Earth Temple light mirror)
+src wwhd_src/d/actor/d_a_obj_mmrr.cpp
+
+callee 026066C4 r4=8                # sead::SafeString key
+callee 025626A4 r5=12               # settingTevStruct pos
+callee 028E8F64 r4=12 r5=out12      # PSMTXMultVec
+callee 0201924C r4=12 r5=12 r6=12   # cM3dGTri::setPos
+callee 024F1AFC r3=0x6C r4=12 r5=12 # dBgS_LinChk::Set
+callee 02008860 r4=0x6C             # cBgS::LineCross
+callee 02008B4C r3=0x6C             # cBgS_LinChk::~cBgS_LinChk
+callee 02008FEC r3=out0x6C          # cBgS_LinChk::ct (mocked constructor)
+callee 020181FC r4=0x1C             # cM3dGCps::Set(cM3dGCpsS)
+callee 028E8DE8 r3=12 r4=12         # PSVECSquareDistance
+stackfill periodic
+
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # entrySolidHeap
+ret 02008860 0 1                    # LineCross
+ret 025162A4 0 1                    # ChkTgHit
+ret 0252A038 0 1                    # dDetect_c::chk_light
+ret 025E7CE0 0 1                    # btkAnm::init
+field * r3+0x2E4 u32 0,8
+field * r3+0x3B4 u32 0,0x11010000
+field * r3+0x3B8 u32 0,0x11020000
+field * r3+0xDD4 u8 0,1
+field * r3+0xDD5 u8 0,1
+field 02375644 r3+0xDD8 f32 0.9 1.0
+field 02374AFC r3+4 u32 0,0x11030000
+field 02374B14 r3+4 u32 0,0x11030000

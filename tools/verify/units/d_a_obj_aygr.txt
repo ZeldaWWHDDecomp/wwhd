@@ -1,0 +1,17 @@
+# Verification unit: d_a_obj_aygr (lookout tower with optional ladder)
+src wwhd_src/d/actor/d_a_obj_aygr.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 0231AE78 0,1,2,0x100      # PrmAbstract (u8 result tested)
+ret 0200A030 0 1              # cBgW::Set
+arg 0231AE78 r4 0,1,8,31,32,33,63
+arg 0231AE78 r5 0,1,8,16,31,32,33,63
+field 0231A648 r3+0x3AC u32 0,0x41000000      # mpBgW
+field 0231A648 r3+0x3F0 u32 0,0x41000100      # mpBgW2
+field 0231A648 0x41000000 u32 0,0xFF,0x100,0xFFFFFFFF   # dBgW registration ids
+field 0231A648 0x41000100 u32 0,0xFF,0x100,0xFFFFFFFF
+# init_mtx: aligned model pointers (per-word NaN payload tolerance)
+field 0231AB28 r3+0x3E8 u32 0,0x41000000,0x41000400
+field 0231AB28 r3+0x3EC u32 0,0x41000000,0x41000800

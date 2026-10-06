@@ -1,0 +1,53 @@
+#pragma once
+#include "f_op/f_op_actor.h"
+struct daObj_Pfall_c : fopAc_ac_c {
+  u8 _3AC[0x4C4 - 0x3AC];
+  be<s32> mMode, mTimer, mOpenStep;
+  be<s16> mOpenAngle;
+  u8 _4D2[2];
+  be<s32> mWaitTimer;
+  u8 mPhase[8];
+  gptr<u8> mpDoorLeft, mpBgLeft;
+  be<f32> mLeftMatrix[12];
+  gptr<u8> mpDoorRight, mpBgRight;
+  be<f32> mRightMatrix[12];
+  gptr<u8> mpRope;
+  be<f32> mRopeOffset;
+  gptr<u8> mpMorf;
+  u8 mLine[0x188];
+  be<s8> mBckIdx, mAnm, mOldAnm;
+  be<u8> mLaughed;
+  void set_mtx();
+  BOOL CreateHeap();
+  void CreateInit();
+  s32 _create();
+  BOOL _delete();
+  void mode_wait_init();
+  void cutWaitStart(s32);
+  void cutOpenStart(s32);
+  void cutHikuStart(s32);
+  void cutWaitProc(s32);
+  void cutOpenProc(s32);
+  void cutHikuProc(s32);
+  void cutProc();
+  void mode_proc_call();
+  void setAnm();
+  BOOL _execute();
+  void nz_draw();
+  BOOL _draw();
+  void mode_event_init();
+  void mode_wait();
+  void mode_event();
+};
+WWHD_OFFSET(daObj_Pfall_c, mAnm, 0x6E5);
+WWHD_SIZE(daObj_Pfall_c, 0x6E8);
+struct daObj_PfallHIO_c {
+  be<s8> mNo;
+  be<u8> mDebug, mRepeat;
+  u8 _3;
+  be<f32> mRopeLift;
+  be<s16> mWait;
+  u8 _A[2];
+  be<u32> mVtable;
+};
+WWHD_SIZE(daObj_PfallHIO_c, 0x10);

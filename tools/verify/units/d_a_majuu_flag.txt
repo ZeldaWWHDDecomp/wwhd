@@ -1,0 +1,131 @@
+src wwhd_src/d/actor/d_a_majuu_flag.cpp
+field 021B9244 r3+0x1A2E u8 0,1
+field 021B9824 r3+0x1E01 u8 0,1,2,3,4
+field 021B8CF4 r3+0x1E02 u8 0,1,2
+field 021B9730 0x101F4829 u8 0,1
+field 021B9730 r3+0x1E34 ptr 0,1
+field 021B9730 r3+0x1E38 ptr 0,1
+callee 028E9098 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E9044 r3=48 r4=12 r5=out12
+field 021B8520 r3+0x1E34 ptr 0,1
+field 021B8520 r3+0x1E38 ptr 0,1
+field 021B8520 0x10464F00 u8 0,1
+field 021B8520 r3+0x1E00 u8 0,4
+field 021B8520 r3+0x1E01 u8 0,1
+callee 028E8F64 r3=48 r4=12 r5=out12
+# pin `this` and keep loop bounds / array pointers stable (clobbered counts ran away: >10 GB)
+arg! 021BB270 r3 0x51000000
+stable 5100009C 8
+stable 51000A24 4
+stable 42000004 4                  # material[0] attribute counts (pointers stay clobberable: reloads after the destructor calls are checked)
+stable 4200000C 4
+stable 42000018 4                  # material[1]
+stable 42000020 4
+field 021BB270 r3+0xA24 s32 0,1,2
+field 021BB270 r3+0x9C s32 0,1,2
+arg! 021BB69C r3 0x52000000
+stable 52000448 8
+stable 52000DD0 4
+field 021BB69C r3+0xDD0 s32 0,1,2
+field 021BB69C r3+0x448 s32 0,1,2
+field 021BB270 r3+0xA0 u32 0x42000000
+field 021BB270 0x42000004 s32 0,1,2
+field 021BB270 0x4200000C s32 0,1,2
+field 021BB270 0x42000018 s32 0,1,2
+field 021BB270 0x42000020 s32 0,1,2
+field 021BB270 0x4200002C s32 0,1,2
+field 021BB270 0x42000034 s32 0,1,2
+field 021BB69C r3+0x44C u32 0x42000000
+field 021BB69C 0x42000004 s32 0,1,2
+field 021BB69C 0x4200000C s32 0,1,2
+field 021BB69C 0x42000018 s32 0,1,2
+field 021BB69C 0x42000020 s32 0,1,2
+field 021BB69C 0x4200002C s32 0,1,2
+field 021BB69C 0x42000034 s32 0,1,2
+
+arg! 021B8DA8 r5 0 20
+field 021B8DA8 r3+0x1A2E u8 0,1
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B1E4 r3=12 r4=out12
+callee 0200FCD8 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+field 021B89B4 r3+0x1A2E u8 0,1
+field 021B89B4 r3+0x9F4 u32 0,1
+callee 0274D458 r3=out16 r4=16
+field 021B92DC r3+0x1DDA u8 0,1
+callee 028E8E64 r3=12 r4=out12
+callee 028E8F44 r3=12 r4=12
+callee 0201AE48 r3=12 r4=out12
+field 021BA650 r3+0xB0 u32 0,2,3,4,0x01000000,0x010000FF,0x02000002,0x03000003
+field 021BA650 r3+0x2E4 u32 0,8
+field 021BA650 r3+0x1DDA u8 0,1
+ret 02520460 0,1,2,3,4,5
+field 021BAB14 r4+0xC s32 0,1,2,3,4
+field 021BAB14 r4+0x14 ptr 0,1
+field 021BAB14 r4+0x30 ptr 0,1
+field 021BAB14 r3+0x9F4 u32 0,1
+field 021BAB14 r3+0x9C u32 0,1,2,3,4
+callee 02750250 r3=out284
+callee 02750370 r3=284
+callee 02750684 r3=284
+callee 0280037C r4=284
+arg! 021B9C78 r3 0x53000000
+stable 53000098 12
+stable 530009F4 4                  # pairs.current (0xA4+0x950)
+stable 101B9310 4
+field 021B9C78 r3+0x98 u32 0,1,2
+field 021B9C78 r3+0x9C u32 0,1,2
+field 021B9C78 r3+0xA0 u32 0x42000000
+field 021B9C78 r3+0x9F4 u32 0,1
+field 021B9C78 0x42000004 s32 0,1,2
+field 021B9C78 0x4200000C s32 0,1,2
+field 021B9C78 0x42000018 s32 0,1,2
+field 021B9C78 0x42000020 s32 0,1,2
+field 021B9C78 0x4200002C s32 0,1,2
+field 021B9C78 0x42000034 s32 0,1,2
+ret 027B90AC -1,0,1
+callee 027B90AC r4=8
+callee 026124B0 r4=8 r5=8
+callee 026066C4 r4=8
+
+# packet constructor: GHS null checks of member placement-new (this+offset == 0) need a wrapped `this`
+arg 021B98B4 r3 0,0x50000000,0x50000000,0xFFFFFF64,0xFFFFFF5C,0xFFFFF55C,0xFFFFF3A4,0xFFFFF374,0xFFFFF344,0xFFFFF314,0xFFFFF2E4,0xFFFFF2B4,0xFFFFF284,0xFFFFF254,0xFFFFF224,0xFFFFF214,0xFFFFF204,0xFFFFF1F4,0xFFFFF1E4,0xFFFFF1D4
+# packet setup: texture words equal to the image words (the 'unchanged image' fast path of both textures)
+field 021B9C78 r3+0xF64 u32 0
+field 021B9C78 r3+0xE44 u32 0
+field 021B9C78 r3+0xF68 u32 0
+field 021B9C78 r3+0xE48 u32 0
+field 021B9C78 r3+0xF6C u32 0
+field 021B9C78 r3+0xE4C u32 0,0x01000000
+field 021B9C78 r3+0xF70 u32 0
+field 021B9C78 r3+0xE50 u32 0
+field 021B9C78 r3+0xF74 u32 0
+field 021B9C78 r3+0xE54 u32 0
+field 021B9C78 r3+0xF78 u32 0
+field 021B9C78 r3+0xE58 u32 0
+field 021B9C78 r3+0xF98 u32 0
+field 021B9C78 r3+0xE78 u32 0
+field 021B9C78 r3+0xF94 u32 0
+field 021B9C78 r3+0xE74 u32 0
+field 021B9C78 r3+0xF7C u32 0,1
+field 021B9C78 r3+0xE5C u32 0
+field 021B9C78 r3+0x10FC u32 0
+field 021B9C78 r3+0xED4 u32 0
+field 021B9C78 r3+0x1100 u32 0
+field 021B9C78 r3+0xED8 u32 0
+field 021B9C78 r3+0x1104 u32 0
+field 021B9C78 r3+0xEDC u32 0,0x01000000
+field 021B9C78 r3+0x1108 u32 0
+field 021B9C78 r3+0xEE0 u32 0
+field 021B9C78 r3+0x110C u32 0
+field 021B9C78 r3+0xEE4 u32 0
+field 021B9C78 r3+0x1110 u32 0
+field 021B9C78 r3+0xEE8 u32 0
+field 021B9C78 r3+0x1130 u32 0
+field 021B9C78 r3+0xF08 u32 0
+field 021B9C78 r3+0x112C u32 0
+field 021B9C78 r3+0xF04 u32 0
+field 021B9C78 r3+0x1114 u32 0,1
+field 021B9C78 r3+0xEEC u32 0

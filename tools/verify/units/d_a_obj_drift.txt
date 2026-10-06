@@ -1,0 +1,67 @@
+src wwhd_src/d/actor/d_a_obj_drift.cpp
+stackfill
+callee 02312548 r3=out16 r4=12
+callee 025F25CC r3=16
+callee 028E8F64 r5=out12
+callee 025F232C r4=out6
+field * 104696BC u32 0,1
+callee 026066C4 r4=8
+callee 02338638 r4=out12 r5=out6
+callee 025D5834 r5=12 r7=6
+callee 025D5218 r4=4
+ret 025E38E0 0,0x56000000
+ret 025D5218 0,0x58000000
+field * 101F4F28 u32 0x5A123400
+field * r3+0x558 s32 -1,0,1,2
+field * r3+0x58C u32 0,1,0xFFFFFFFF
+observe 025E2DE0 104B4634 8
+ret 025162A4 0,1
+fret 025D69AC 302499 302501
+field * r3+0x5B8 s16 -32768,-1,0,1,8191,8192,32767
+field * r3+0x32A s16 -32768,-1,0,1,8191,8192,32767
+field * r3+0x5F0 f32 9,10,11
+ret 02520460 0,1,4,5
+ret 024F1D9C 4,5
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+arg! 02339280 r3 0,0x40000000
+arg! 023392A8 r3 0,0x40000000
+callee 0201ADE0 r4=out12
+callee 028E91EC r4=out48
+callee 028E9044 r3=48 r4=12 r5=out12
+callee 028E8DD0 r3=12
+callee 025D9F70 r4=out4
+ret 028E91EC 0,1
+ret 025D9F70 0,1
+field * r5+0xE s16 0,168,169
+field * r3+0x590 s32 0,1
+field * r4+0x5B6 u8 0,1
+fret 028E8DD0 48399 129601
+fret 02019918 -32768 32768
+
+# Pure geometry leaves including nested subtraction (authoritative harness91859f7).
+real 028E91EC
+real 028E9044
+real 028E8DD0
+field 02338758 r4+0x55C f32 1 1
+field 02338758 r4+0x560 f32 0 0
+field 02338758 r4+0x564 f32 0 0
+field 02338758 r4+0x568 f32 0 0
+field 02338758 r4+0x56C f32 0 0
+field 02338758 r4+0x570 f32 1 1
+field 02338758 r4+0x574 f32 0 0
+field 02338758 r4+0x578 f32 0 0
+field 02338758 r4+0x57C f32 0 0
+field 02338758 r4+0x580 f32 0 0
+field 02338758 r4+0x584 f32 1 1
+field 02338758 r4+0x588 f32 0 0
+field 02338758 r4+0x314 f32 0 0
+field 02338758 r4+0x318 f32 0 0
+field 02338758 r4+0x31C f32 0 0
+field 02338758 r5+0x314 f32 0,100,219,220,221,359,360,361
+field 02338758 r5+0x318 f32 399,400,400.5,549,550,550.5
+field 02338758 r5+0x31C f32 0 0
+ret 025200D4 0x54000000 0x54000000
+field 02338758 54005CD8 u32 0,256
+
+real 0201ADE0
+real 028E8DAC

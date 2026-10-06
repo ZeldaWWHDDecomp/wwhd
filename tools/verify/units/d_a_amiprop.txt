@@ -1,0 +1,21 @@
+# Verification unit: d_a_amiprop (rotating mesh propeller)
+src wwhd_src/d/actor/d_a_amiprop.cpp
+stackfill periodic
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0,1,2            # entrySolidHeap
+ret 0200A030 0 1              # cBgW::Set
+ret 025BA0C0 0,1,2            # isSwitch
+ret 0200F378 0,1,-1,0x100     # cLib_addCalcAngleS remaining step
+ret 025E38E0 0,0x47000000     # J3DModel__create null or not
+ret 024F23F4 0,0x49000000     # new dBgW
+ret 026066C4 0,0x48000000     # getRes null or not
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7   # condition (INIT bit)
+field * r3+0xF4 u32 0,0x4A000000      # heap
+field * r3+0x3B4 u32 0,0x47000000     # mpModel
+field 02050D14 r3+0x55C s32 0,1,2     # unk_440 (previous switch state)
+field 02050D14 r3+0x560 u8 0,1        # unk_444
+field 02050D14 r3+0xB0 u32 0,0x100,0x200,0x1F00,0xF00,0x305   # type (bits 8..11)
+arg 02050F64 r4 0,1,2,3
+arg 02050F80 r4 0,1,2,3

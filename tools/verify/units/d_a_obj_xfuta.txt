@@ -1,0 +1,15 @@
+src wwhd_src/d/actor/d_a_obj_xfuta.cpp
+stackfill
+callee 026066C4 r4=8
+callee 028E90D4 r3=48 r4=out48
+callee 025626A4 r5=12
+ret 025E38E0 0,0x56000000
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+field * 101F4F28 u32 0x5A123400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3B4 u32 0,0x56000000
+field * 101D6010 s32 0,1,2,-1
+observe 025E2DE0 104B4634 8
+arg! 023BC364 r3 0,0x40000000
+arg! 023BC37C r3 0,0x40000000

@@ -1,0 +1,104 @@
+# Verification unit: d_a_item (+ d_a_item_static): field items (rupees, hearts, ...)
+src wwhd_src/d/actor/d_a_item.cpp
+src wwhd_src/d/actor/d_a_item_static.cpp
+src wwhd_src/d/actor/d_a_item_basecalls.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 025D5218 r4=2           # fopAcIt_Judge: the searched name (s16) on the stack
+ret 02551044 0 1               # isRupee
+ret 02550FDC 0 1               # isArrow
+ret 025510E8 0 1               # isHeart
+ret 025BA0C0 0 1               # isSwitch
+ret 025BA494 0 1               # isItem
+ret 025162A4 0 1               # ChkTgHit
+ret 0254457C 0 1               # endCheckOld
+ret 02551C18 0 1               # checkSpecialEffect
+ret 0217DDDC 0 1               # checkPlayerGet
+ret 02183098 0 1               # checkActionNow
+ret 021830E0 0 1               # checkControl
+ret 021831AC 0 1               # checkLock
+ret 021842D8 0 1               # chkDraw
+ret 0217E938 0 1               # checkItemDisappear
+ret 025200D4 0x54000000 0x54000000   # play object at a fixed address
+field * 54005292 u8 0 1        # event runCheck
+field * r3+0x74E u8 0,1,7,8,0x0B,0x0E,0x11,0x12,0x13,0x14,0x15,0x38,0x3B,0x3D,0x4B,0x77
+field * r3+0x781 u8 0 3        # mType
+field * r3+0x782 u8 0 0xF      # mAction
+field * r3+0x783 u8 0 0xFF     # mFlag
+field * r3+0x784 u8 0,1,2      # mMode
+field * r3+0x785 u8 0 0xC      # mItemStatus
+field * r3+0x786 u8 0 3        # mOnGroundTimer
+field * r3+0x79E u8 0 1        # HD action 0xF flag
+field * r3+0x74C i16 0 40      # m_get_timer
+field * r3+0x772 i16 -1 2      # mWaitTimer
+field * r3+0x774 i16 -1 2      # mDisappearTimer
+field * r3+0x776 i16 -1 2      # mSimpleExistTimer
+field * r3+0x75C u32 0xFF,0,5  # mSpawnSwitchNo
+field * r3+0x760 u32 0xFF,0,5  # mCollideSwitchNo
+field * r3+0x7A0 u32 0xFFFFFFFF,0x10000
+field * r3+0x2E8 u32 0xFFFFFFFF,0x10000
+field * r3+0x2E0 u32 0,0x4000,0x100000,0x104000
+field * r3+0xF8 u16 0,4        # eventInfo command
+arg 0218084C r4 -1,0,5         # setItemTimer: -1 sets FLAG_UNK10
+ret 025D5218 0x5F000000,0      # fopAcIt_Judge: a found actor at a fixed address
+field * 5F000008 i16 0x83,0x1B0,0xF0
+arg 0217E50C r5 0x5E000000,0x5F000000,0   # itemGetCallBack: the collided actor
+field 0217E50C 5E00000E i16 0xA5,0
+field 0217E50C 54005CD8 u32 0,0x10000
+field 0217E50C 54005B34 u32 0x5F000000,0x5E000000
+field 0217DE18 r3+0x74E u8 0,1,2,3,4,5,6,7,8,9,0xA,0xB,0xC,0xD,0xE,0xF,0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x1E,0x1F,0x20,0x34,0x37,0x38,0x3B,0x3D,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x81,0x82,0x83,0x84
+field 0217DE18 5F00074E u8 0x38,0x3B,0
+ret 025B7690 0 1               # isBeast
+ret 025B7768 0 1               # isBait
+callee 0201B31C r4=out12       # cXyz::normalize result
+callee 0201AE48 r4=out12       # cXyz::operator* result
+callee 0201ADE0 r4=out12       # cXyz::operator- result
+field 0218086C r3+0x74E u8 0 0x40
+field 02180AA4 r3+0x3FC u32 0x10,0
+field 02180D2C r3+0x74E u8 0x14,0x13
+fret 028F4384 0 3000000000     # std::sqrtf: up to above 2^31 (float->u32 conversion paths)
+real 028E8D88                  # PSVECAdd (pure): the HD throw simulation loops on its result
+field 02180DE4 r3+0x782 u8 0xD,0
+field 02180DE4 r3+0x3FC u32 0x80,0x20,0
+callee 02008E0C r3=255         # cBgS_GndChk ct storage
+callee 02008974 r4=0x54        # GroundCross: compare the check object
+callee 02008DAC r3=0x54        # ~cBgS_Chk
+ret 02529CE8 0 1               # chk_quake
+field 021815E8 r3+0x7EC u32 0x5D000000,0
+field 021815E8 5D000262 u8 0 8
+callee 024F1AFC r3=0x6C        # dBgS_LinChk::Set: compare the check object
+callee 02008B4C r3=0x6C        # ~cBgS_LinChk
+callee 02008FEC r3=255         # cBgS_LinChk ct storage
+ret 02008860 0 1               # LineCross
+callee 02037F80 r4=12          # HD: a position test (waterFloat)
+ret 02037F80 0 1
+ret 0246B6A4 0 1               # daSea_ChkArea
+ret 02551B90 0 1               # checkAppearEffect
+field * r3+0x787 u8 0 8        # HD 0x13 state
+field * r3+0x788 u8 0 2        # HD 0x13 timer
+field * r3+0x79C u8 0 1
+field * r3+0x79D u8 0 1
+field * r3+0x3FC u32 0,0x10,0x20,0x80,0x200,0x800,0x8A0,0xFFFFFFFF
+callee 0201A478 r3=255         # csXyz ct storage
+field 0217F93C r3+0x782 u8 0 0xE
+fret 020079B4 0 1              # stick value
+ret 0271FC5C 0 1               # HD: hero mode?
+ret 025D63E8 0 1               # entrySolidHeap
+ret 02520460 0 5               # resLoad
+field 021805CC r3+0x2E4 u32 0,8
+field 021805CC r3+0xB0 u32 0,0x7F00,0x4B,0x47F12,0xFFFFFFFF,0x13
+# _daItem_create: field item resources (filled at run time, zero in the image)
+field 021805CC 101E6A74 u32 0x100120D0,0
+field 021805CC 101E6C8C u32 0x100120D0,0
+field 021805CC 101E6CA8 u32 0x100120D0,0
+field 021805CC 101E72A8 u32 0x100120D0,0
+field 021805CC 101E8658 u32 0x100120D0,0
+# mutation-test steering
+real 028E8DD0                  # PSVECSquareMag (pure)
+callee 0201B31C r3=12          # cXyz::normalize: compare the input vector
+field 02182C80 r3+0x74E u8 0,7,0xB,0x10,0x13,0x14,0x15,0x16,0x1E,0x1F,0x20,0x34,0x35,0x36,0x37,0x38,0x3B,0x3D,0x44,0x45,0x4B,0x4C,9
+field 0218188C r3+0x74C i16 15,16,17,0
+field 0218086C r3+0x764 f32 1073741824.0,1073741760.0,-1073741824.0,50.0,0.0,1.0,25.0
+field 02180AA4 r3+0x74E u8 0x13,0x13,1
+field 02181C68 r3+0x374 f32 0.0,-3.0
+field 02181C68 r3+0x340 f32 -11.0,-10.0,-9.0,-6.0,0.0,6.0,10.0,11.0

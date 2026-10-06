@@ -1,0 +1,70 @@
+# Supplemental bounded list callback mutation witness: a legal r3-only callback
+# executes the actual tag removal helper on its own embedded request node.
+src wwhd_src/f_pc/f_pc_node_req_callback.cpp
+real 0201A868 0200FDF4 02019B48 02019C8C 02019C6C
+stackfill periodic
+ret 025DD868 0,1,2
+ret 025DE564 0,1,2
+ret 025E14A8 0xFFFFFFFF,0,1
+ret 025DDFA4 0,1,2
+ret 025DE1B8 0,1
+ret 0201A0AC 0,1,2,3,4,5,6
+ret 025E0488 0,1,2,3,4,5,6
+ret 025DFCAC 0,1
+ret 025E0538 0,1
+ret 025E05C4 0,1
+ret 025E04D0 0,1,2,3,4,5,6
+ret 025E06EC 0,1
+ret 025E0750 0,1
+ret 025E0798 0,0x55000000
+ret 02019430 0,0x55000000
+ret 025DED64 0x56000000 0x56000000
+arg 025E0840 r4 0,1,2,3
+arg 025E0A20 r3 0,1,2
+field * 101F3DA4 u32 0x51000000
+field * 51000008 u32 0x51000100
+field * 51000108 u32 0
+field * 5100000C u32 0x51000000
+field * 5100010C u32 0x51000100
+field * 5100003C u32 0x53000000
+field * 5100013C u32 0x53000000
+field * 53000000 u32 0x0201A868
+field * 53000004 u32 0,0x025E04D0
+field * 53000008 u32 0,0x025E04D0
+field * 5300000C u32 0x025E04D0
+field * 51000040 s32 0,1,2,3,4
+field * 51000140 s32 0,1,2,3,4
+field * 51000044 u32 0,1,2
+field * 51000144 u32 0,1,2
+field * 5100004C u32 0,1,2
+field * 5100014C u32 0,1,2
+field * 51000054 u32 0xFFFFFFFE,0,1,2
+field * 51000154 u32 0xFFFFFFFE,0,1,2
+field * 5600000C u32 0,1
+field * 56000018 u32 0x57000000
+field 025E0538 r3+0x3C u32 0,0x53000000
+field 025E05C4 r3+0x3C u32 0,0x53000000
+field 025E039C r3+0x3C u32 0x53000000
+field 025E0424 r3+0x48 u32 0,0x57000000
+field 025E06EC r3+4 u32 0,1,2
+field 025E0750 r3+4 u32 0,1,2
+stable 101F3DA4 12
+# Embedded create-tag nodes alias their own request; only navigation/target identities pinned.
+stable 51000008 8
+stable 51000108 8
+stable 5100003C 4
+stable 5100013C 4
+stable 53000000 16
+
+field * 101F3DA8 u32 0x51000100
+field * 101F3DAC u32 2
+field * 51000000 u32 0
+field * 51000004 u32 0x101F3DA4
+field * 51000100 u32 0x51000000
+field * 51000104 u32 0x101F3DA4
+field * 51000010 u8 1
+field * 51000110 u8 1
+stable 51000000 8
+stable 51000100 8
+stable 51000010 1
+stable 51000110 1

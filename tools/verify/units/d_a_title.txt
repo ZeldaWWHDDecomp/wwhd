@@ -1,0 +1,27 @@
+# Verification unit: d_a_title (title screen ship / logo manager)
+src wwhd_src/d/actor/d_a_title.cpp
+
+callee 026066C4 r4=8                   # sead::SafeString key
+field 024B7CFC r3+0x54 i32 28,29,30,31,32,198,199,200       # m018 (incremented: 30 = kira sound cue)
+field 024B7CFC r3+0x6C i32 0 1          # mEnterMode
+field 024B7CFC r3+0x64 i32 98 101       # m028
+field 024B7CFC r3+0x5C i32 0 1          # m020
+field 024B7CFC r3+0x278 i32 -2 2        # m098
+ret 0271F1EC 29 31                      # kirakira start frame
+ret 0271F1F4 30 33                      # kirakira end frame
+field 024B7CFC 0x101D5F49 u8 0 1        # daTitle_Kirakira_Sound_flag
+field 024B8670 r3+0x58 i32 0 2          # m01C
+field 024B8670 r3+0x6C i32 0 3          # mEnterMode
+field 024B87A4 0x101F5088 u32 0x56000000  # pad object
+field 024B87A4 0x56000018 u32 0,1,0x800,0x10000   # pad trigger bits
+field 024B8670 0x101F5088 u32 0x56000000
+field 024B8670 0x56000018 u32 0,1,0x800,0x10000
+# Execute: pin the proc so its enter mode can be steered
+field 024B87A4 r3+0x3B4 u32 0x57000000
+field 024B87A4 0x5700006C i32 0,1,2,3   # proc->mEnterMode
+field 024B87A4 r3+0x3B8 u8 0 1          # m29C
+ret 025DBE00 0 1                        # fopOvlpM_IsPeek
+ret 025DC86C 0 1                        # fopScnM_ChangeReq
+field * 0x101F8378 u32 0x58000000       # pad status object (byte +0x1C written)
+field 024B7CFC r3+0x274 f32 -2 2        # m094
+stackfill periodic                      # stack pos/angle stores

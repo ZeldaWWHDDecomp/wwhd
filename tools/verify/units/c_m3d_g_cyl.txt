@@ -1,0 +1,9 @@
+src wwhd_src/SSystem/SComponent/c_m3d_g_cyl.cpp
+callee 020182E0 r3=24 r4=12
+callee 020184DC r3=24
+callee 02018428 r3=24
+callee 02014E18 r3=24 r4=24 r5=out4
+callee 02013854 r3=24 r4=20 r5=out12 r6=out4
+# Explicit NaN arguments cover scalar setters' diagnostic paths.
+arg 02018428 f1 nan,-inf,inf,-1,0,1
+arg 020184DC f1 nan,-inf,inf,-1,0,1

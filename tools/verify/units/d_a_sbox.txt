@@ -1,0 +1,38 @@
+src wwhd_src/d/actor/d_a_sbox.cpp
+ret 025200D4 0x54000000 0x54000000
+field * r3+0x62A u16 0,1,2,4,8,16,32,63,65535
+field 0246A744 r3+0x5D4 s16 -32768,-1,0,35,36,155,156,179,180,181,32767
+field 0246A7E0 r3+0x5DC s16 -32768,-1,0,119,120,149,150,151,32767
+field 0246A8EC r3+0x628 s16 -32768,-1,0,154,155,156,32767
+ret 025447C8 0 1
+ret 0246A0D8 -1 3
+ret 02542D88 -1 3
+ret 025E742C 0 1
+ret 0246A744 0 1
+ret 0246A7E0 0 1
+ret 0246A8EC 0 1
+ret 0246AAE8 0 1
+field 0246AA0C r3+0x44C f32 35,36,37
+ret 02520460 0 5
+ret 025D63E8 0 1
+field 0246A8EC r3+0x5F4 f32 0,5.2,13,130,131
+field 0246A8EC r3+0x618 f32 0,4.8,12,120,121
+# Mutation-driven steering: flag combinations and fading-light thresholds.
+field 0246A56C r3+0x62A u16 0,2,18,19,63
+field 0246A8EC r3+0x5F4 f32 0,5.2,5.5,6.2,13,130,131
+field 0246A8EC r3+0x618 f32 0,4.8,5.0,5.8,12,120,121
+# HD SafeString has a string pointer plus a per-TU vtable pointer.
+callee 026066C4 r4=8
+# HD particle set has four stack arguments (GameCube only had three).
+callee 025A847C stack=4
+# Ensure temporary list-mask stores leave visible bytes when incorrectly shifted.
+field 02469DA4 104B4634 u32 0xABCDEF12 0xABCDEF12
+field 02469DA4 104B4638 u32 0x34567890 0x34567890
+field 02469DA4 54005D84 u32 0x11223344 0x11223344
+field 02469DA4 54005D88 u32 0x55667788 0x55667788
+# Texture animation initialization also takes a final HD stack argument.
+callee 025E7CE0 stack=1
+# demoProc blocks 8,11,12,15 are infeasible redundant redispatch tails:
+# action !=1 at block8, action==0 at blocks11/12, action==1 at block15.
+# Compare temporary draw-list globals at their consuming call.
+observe 025E2DE0 104B4634 8

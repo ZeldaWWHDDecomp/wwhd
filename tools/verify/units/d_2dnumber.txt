@@ -1,0 +1,5 @@
+# HUD picture objects range0204698C..020475B4; matcher labels tentative.
+src wwhd_src/d/d_2dnumber.cpp
+# Formatting caller provides the full16-byte buffer; subsequent texture calls read it.
+callee 028F17A8 r3=out16
+callee 027EFB68 r4=16

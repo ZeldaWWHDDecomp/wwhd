@@ -1,0 +1,23 @@
+# Verification unit: d_a_hys (eye switch)
+src wwhd_src/d/actor/d_a_hys.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+ret 026066C4 0,0x56000000     # getRes: null or a resource
+ret 025E38E0 0,0x56100000     # J3DModel create: null or a model
+ret 025E789C 0 1              # btpAnm init
+ret 025162A4 0 1              # ChkTgHit
+ret 02516300 0,0x57000000     # GetTgHitObj
+field 0217ADF8 0x57000010 u32 0,0x4000,0x40000,0x80000,0x100000,0x1000,0x200000,0xFFFFFFFF
+field 0217A8B4 r3+0x5C8 u32 0 1
+field 0217AD10 r3+0x5D0 u8 0,1,2,3,4,0xFF
+field 0217ADF8 r3+0x5D0 u8 0,1,2,0xFF
+field 0217AB18 r3+0x5D1 u8 0,1,2
+field 0217AB18 r3+0x3E8 u32 0,0x41000000
+field 0217AADC r3+0x5D1 u8 0 1
+field 0217A768 r3+0x5D1 u8 0 1
+field 0217A654 r3+0xB0 u32 0,0x100,0x1FF,0x2FF,0x12345
+# set_mtx copies: aligned model pointers (scale SNaN copies)
+field 0217A96C r3+0x3E8 u32 0x41000000,0x41000400

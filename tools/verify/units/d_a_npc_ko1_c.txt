@@ -1,0 +1,32 @@
+# Verification unit: d_a_npc_ko1 part C (Joel & Zill: animations, messages, path, particles)
+src wwhd_src/d/actor/d_a_npc_ko1_c.cpp
+
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator- (hidden result pointer r4)
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint (hidden result)
+callee 028E8F64 r4=12 r5=out12  # PSMTXMultVec
+callee 025A847C r6=12 r8=12   # dPa_control_c::set(pos, scale)
+
+# chg_anmAtr: message number and attribute
+field 02276EB8 r3+0x9B8 u32 0xFFFFFFFF,0xB03,0xB0A,0xB64,0xB65,0xB66,0xB02
+arg 02276EB8 r4 0 14
+field 02276EB8 r3+0xA0C u8 0 13
+# anmAtr: message status 6 / 0xE, two-person talk, tags
+arg 02276F58 r4 5,6,7,14
+field 02276F58 r3+0x7D8 u8 1 2
+field 02276F58 r3+0xA19 i8 0 1
+ret 025200D4 0x54000000 0x54000000
+field 02276F58 54005BC6 u8 254 255
+field 02276F58 54005C34 u32 0 2
+field 02276F58 r3+0xA0D u8 254 255
+# next_msgStatus: every message number of the table
+field 02277394 r4+0 u32 0xaf3,0xaf4,0xaf5,0xaf6,0xaf7,0xaf8,0xaf9,0xafa,0xafb,0xafc,0xafd,0xafe,0xaff,0xb00,0xb01,0xb02,0xb03,0xb04,0xb05,0xb06,0xb07,0xb08,0xb09,0xb0a,0xb0b,0xb0c,0xb0d,0xb58,0xb59,0xb5a,0xb5b,0xb5c,0xb5d,0xb5e,0xb5f,0xb60,0xb61,0xb62
+# mutation-driven steering
+stackfill
+fret 028F4384 279.5 280
+field 02277AB8 54005B34 u32 0x55000000,0x55000000
+field 02277AB8 55000318 f32 150 150
+field 02276F30 r3+0x9D0 i8 -1 2
+field 02276F30 r3+0xA0C u8 10 12

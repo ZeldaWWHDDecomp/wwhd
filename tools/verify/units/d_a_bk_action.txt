@@ -1,0 +1,100 @@
+# Verification unit (temporary, merged into d_a_bk): action functions
+src wwhd_src/d/actor/d_a_bk_action.cpp wwhd_src/d/actor/d_a_bk_pending.cpp
+
+callee 024F1AFC r3=0x6C
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 026066C4 r4=8
+callee 025D5218 r4=4         # fopAcIt_Judge: searched id
+ret 025D4604 0 1
+ret 025200D4 0x54000000 0x54000000
+
+field * r3+0x4A0 i16 -1 7          # dr.mMode
+ret 025B8B94 0 1                   # isEventBit
+ret 025BA0C0 0 1                   # isSwitch
+field 020A4B44 r3+0x418 i16 0,30,35,40,41,79,80,81,100      # d_mahi m0300[0]
+field 020A3704 r3+0x138D i8 0 1    # fail: m1234
+field 020A3704 r3+0x3D0 u8 3,4,10,0
+field 020A3704 r3+0x41C i16 999 1000
+field 020A3704 r3+0x3D4 u8 0 1     # m02B8
+field 020A3B18 r3+0x41E i16 0 1
+field 020A3B18 r3+0x3D4 u8 0 1
+field 020A4594 r3+0x3D3 u8 254 255 # m02B7
+field 020A4594 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A4594 50000098 f32 0 1
+field 020A4594 500000A7 u8 0 1
+field 020A3624 r3+0x135C i32 -1 1
+field 020A3624 r3+0x41A i16 0 1
+field 020A5354 r3+0x418 i16 0,15,33,51,69,87,1
+field 020A5354 r3+0x3D1 u8 0,10,255
+field 020A5354 r3+0x434 f32 0 600
+fret 020198D8 0 1                  # cM_rndF
+field 020A5354 54005B2C u32 0x55000000 0x55000000
+field 020A5354 55000318 f32 -300 300
+field 020A5354 r3+0x318 f32 0 0
+field 020A5B74 r3+0x418 i16 0 1
+field 020A5B74 r3+0xA14 u32 0,0x10,0x20,0x30
+field 020A5B74 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A5B74 50000098 f32 0 1
+field 020A5B74 500000A7 u8 0 1
+fret 025D68EC 200 250               # player distance (both thresholds are edges)
+field 020A47B4 r3+0xA14 u32 0,0x20
+field 020A47B4 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A47B4 50000098 f32 0 1
+field 020A47B4 500000A7 u8 0 1
+field 020A5674 r3+0xC88 i32 -1 1
+field 020A5674 r3+0x418 i16 0,1,32,33
+field 020A5674 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A5674 50000098 f32 0 1
+field 020A5674 500000A7 u8 0 1
+field 020A5674 r3+0x4A0 i16 0 3
+callee 0201ADE0 r4=out12           # cXyz::operator-: result storage
+callee 02008DAC r3=0x54            # cBgS_GndChk::~cBgS_GndChk
+callee 02008974 r4=0x54            # cBgS::GroundCross
+callee 02008E0C r3=255             # cBgS_GndChk::cBgS_GndChk: constructor storage
+callee 02008FEC r3=255             # cBgS_LinChk::ct
+callee 0200FCD8 r4=out12           # MtxPosition: output
+field 020A3048 r3+0x4A0 i16 9,10,11,12,13,14,15
+field 020A3048 1047B692 i16 -15 -13      # REG0_S(5): m0300[2] = 1
+field 020A3048 r3+0x41C i16 0 5
+field 020A3048 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A3048 50000098 f32 0 1
+field 020A3048 500000A7 u8 0 1
+field 020A3048 r3+0x41A i16 0 1
+field 020A4CD4 r3+0x4A0 i16 0,1,2,10,11,20,3
+field 020A4CD4 r3+0x418 i16 0 2
+field 020A4CD4 r3+0x3D0 u8 2 3
+field 020A4CD4 r3+0xA14 u32 0,0x20
+field 020A4CD4 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A4CD4 50000098 f32 0 1
+field 020A4CD4 500000A7 u8 0 1
+field 020A4CD4 r3+0x326 i8 0 1
+field 020A4CD4 54005134 u32 0x4D5F4E65,0x4D5F4E66   # stage name "M_Ne"...
+field 020A4CD4 54005138 u32 0x77443200 0x77443200   # "wD2\0"
+field 020A3CC8 r3+0x4A0 i16 -1,0,1,2,2,2,5,6,7
+field 020A3CC8 r3+0x1360 u32 0xFFFFFFFF,0x20,0x21
+ret 025D5218 0 0x56000000            # fopAcIt_Judge: null or a fixed actor (edges)
+field 020A3CC8 560002E0 u32 0,0x2000
+field 020A3CC8 r3+0x424 i16 0 1
+field 020A3CC8 r3+0x41A i16 0,1,13,14,23,24,25
+field 020A3CC8 r3+0x422 i16 0 1
+field 020A3CC8 r3+0x3EA i8 1 2
+field 020A3CC8 r3+0xA14 u32 0,0x10,0x20,0x30
+field 020A3CC8 r3+0x3D8 u32 0x50000000 0x50000000
+field 020A3CC8 50000098 f32 0 1
+field 020A3CC8 500000A7 u8 0 1
+field 020A3CC8 1046236E u8 0 1
+field 020A3CC8 54005B2C u32 0x55000000 0x55000000
+field 020A3CC8 550003CC f32 -1 1
+field 020A3CC8 r3+0x434 f32 299.99997,300,300.00003
+field 020A3CC8 10462390 f32 300,300
+field 020A3CC8 1047BA98 f32 -50,0                # REG8_F(2)
+field 020A3CC8 r3+0x4A2 i16 1 30                 # mAction (stores of 0 visible)
+field 020A3CC8 560000B0 u32 0,1
+fret 028F4384 100 900               # sqrtf (wepon_search 900 / REG8_F(2)+150 edges)
+field 020A3CC8 r3+0x3F1 u8 0x10 0x11        # m02D5 (stores of 0/1 visible)
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020A4CD4 0x54005134 8 @stages,"M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2","M_NfwD2"

@@ -1,0 +1,9 @@
+# Full HD range: four GC functions plus adjacent initializer025DEED4.
+# cTgIt callback adapters in early text belong c_tag_iter, not this TU.
+src wwhd_src/f_pc/f_pc_layer_iter.cpp
+callee 0201ABF0 r5=8
+callee 0201AC60 r5=8
+ret 025DEAA8 0,0x51000000
+ret 0201AC60 0,0x52000000
+field 025DEE58 0x51000008 u32 0,0x51000100
+field 025DEE58 0x51000108 u32 0

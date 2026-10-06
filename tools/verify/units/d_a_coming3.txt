@@ -1,0 +1,35 @@
+src wwhd_src/d/actor/d_a_coming3.cpp
+# Callee domain: real challenge ID is exactly zero or one.
+ret 02115694 0 1
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025D4604 0 1
+ret 025162A4 0 1
+ret 0246B6A4 0 1
+ret 024EF7C0 0 1
+ret 025D54C4 0 1
+callee 026066C4 r4=8
+callee 028E8F64 r4=12 r5=out12
+callee 028E8DE8 r3=12 r4=12
+callee 025D54C4 r4=out4
+callee 021150F4 r4=out4 r5=out4
+callee 025D5218 r4=8
+callee 020182E0 r4=12
+callee 0201A478 r3=out6
+callee 025D5834 r5=12 r7=6
+callee 025A847C r6=12 r8=12 stack=4
+field * r3+0x51c i32 0,1,2,3
+field * r3+0x55c i16 -1,0,1,2,3
+field 02115788 r3+0x594 i16 -1,0,1,2,30
+field 021156E4 r3+0x2da u8 0,1,2
+arg 02114BA8 r4 -1,0,1,2,3
+
+stackfill periodic
+# safety callback: boundary distance x*x+z*z == 200 (actor at (10,_,10), search position pinned at origin)
+field 021156E4 r4+0x0 u32 0x55000000
+field 021156E4 55000000 f32 0,-10
+field 021156E4 55000008 f32 0,-10
+field 021156E4 r3+0x314 f32 0,10,-10,20
+field 021156E4 r3+0x31C f32 0,10,-10
+# start_main: no barrel yet in most inputs, so the spawn parameters are compared
+field 02115788 r3+0x518 u32 0xffffffff,0xffffffff,7

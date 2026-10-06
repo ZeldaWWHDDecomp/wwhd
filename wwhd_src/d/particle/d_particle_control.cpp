@@ -1,0 +1,54 @@
+#include "d_particle_local.h"
+using namespace pa;
+s32 dPa_newSimple(void* control,u32 id,u32 group){WWHD_FUNC(0x025A7674,s32,control,id,group);u32 a=gabi::ea(control);u8 n=b(a+0x146);if(n>=25){gabi::call<void>(0xC0009EE8,p(0x10051D00));return 0;}u32 manager=w(0x1047B2D4);void* result=gabi::call<void*>(0x025A4E08,p(a+0x148+u32(n)*0x290),p(manager),id,group);if(!result)return 0;B(a+0x146,b(a+0x146)+1);return 1;}
+VERIFY(0x025A7674,dPa_newSimple);
+s32 dPa_readScene(void* control,u32 room,void* request){WWHD_FUNC(0x025A7D8C,s32,control,room,request);if(room==0xFF)return 0;u32 a=gabi::ea(control);u8 count=b(a+0x145);B(a+0x145,count+1);if(count){if(room==b(a+0x144))gabi::call<void>(0x0273AA24,p(0x10051EA0),u32(0x7B9),p(0x10051EB0));}else B(a+0x144,room);return 1;}
+VERIFY(0x025A7D8C,dPa_readScene);
+void dPa_createScene(void* control,void* data){WWHD_FUNC(0x025A7E18,void,control,data);u32 a=gabi::ea(control);s32 i=0;u32 item=a+0x148;while(i<b(a+0x147)){u32 manager=w(0x1047B2D4);gabi::call<void*>(0x025A4D48,p(item),p(manager));++i;item+=0x290;}if(data)gabi::call<void>(0x025A7C30,control,data);else W(a+0x134,0);}
+VERIFY(0x025A7E18,dPa_createScene);
+void dPa_calc2D(void* control){WWHD_FUNC(0x025A8148,void,control);for(u32 group=7;group<9;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x0282167C,p(manager),group);}}
+VERIFY(0x025A8148,dPa_calc2D);
+void dPa_calc3D(void* control){WWHD_FUNC(0x025A81A0,void,control);for(u32 group=0;group<7;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x0282167C,p(manager),group);}}
+VERIFY(0x025A81A0,dPa_calc3D);
+void dPa_calcMenu(void* control){WWHD_FUNC(0x025A81F8,void,control);for(u32 group=9;group<13;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x0282167C,p(manager),group);}}
+VERIFY(0x025A81F8,dPa_calcMenu);
+void dPa_runSubstep(void* control,void* info){WWHD_FUNC(0x025A8250,void,control,info);if(w(0x1047B2D4))for(u32 group=0;group<7;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x02821868,p(manager),info,u8(group));}}
+VERIFY(0x025A8250,dPa_runSubstep);
+void dPa_runSubstepAfter(void* control,void* info){WWHD_FUNC(0x025A82C4,void,control,info);if(w(0x1047B2D4))for(u32 group=0;group<7;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x028219A8,p(manager),info,u8(group));}}
+VERIFY(0x025A82C4,dPa_runSubstepAfter);
+void dPa_runDrawSubstep(void* control,void* info){WWHD_FUNC(0x025A8338,void,control,info);if(w(0x1047B2D4))for(u32 group=0;group<7;group++){u32 manager=w(0x1047B2D4);gabi::call<void>(0x02821AE8,p(manager),info,u8(group));}}
+VERIFY(0x025A8338,dPa_runDrawSubstep);
+void dPa_draw(void* control,void* info,u32 group){WWHD_FUNC(0x025A83AC,void,control,info,group);u32 a=gabi::ea(control),manager;
+ if(group==10){if(b(a+0x124))gabi::call<void>(0x02821D28,p(w(0x1047B2D4)));u32 effect=w(0x1018F450);if(effect){gabi::call<void>(0x020385CC,p(effect));manager=w(0x1047B2D4);}else manager=w(0x1047B2D4);}
+ else {if(group==0){u32 effect=w(0x1018F450);if(effect){gabi::call<void>(0x02038158,p(effect));gabi::call<void>(0x020385D0,p(w(0x1018F450)));}}manager=w(0x1047B2D4);}
+ if(manager){if(group<7){gabi::call<void>(0x0255F160);manager=w(0x1047B2D4);}gabi::call<void>(0x02821C28,p(manager),info,group);}}
+VERIFY(0x025A83AC,dPa_draw);
+s32 dPa_checkAttributeEffect(void* control,s32 code){WWHD_FUNC(0x025A8770,s32,control,code);if(code==19)return 35;if(code==4)return 36;if(code==27||code==15||code==5||code==10)return -1;return 0x2022;}
+VERIFY(0x025A8770,dPa_checkAttributeEffect);
+void* dPa_findSimple(void* control,u32 id){WWHD_FUNC(0x025A8D10,void*,control,id);u32 a=gabi::ea(control),n=b(a+0x146),item=a+0x148;for(u32 i=0;i<n;i++,item+=0x290)if(id==h(item+8))return p(item);return nullptr;}
+VERIFY(0x025A8D10,dPa_findSimple);
+s32 dPa_setSimple(void* control,u32 id,void* pos,u32 alpha,void* primary,void* environment,s32 flags){WWHD_FUNC(0x025A8D40,s32,control,id,pos,alpha,primary,environment,flags);void* callback=gabi::call<void*>(0x025A8D10,control,id);if(!callback)return 0;return gabi::call<s32>(0x025A4F7C,callback,pos,alpha,primary,environment,flags);}
+VERIFY(0x025A8D40,dPa_setSimple);
+void* dPa_setBombSmoke(void* control,u32 id,void* pos,void* rot,void* scale,u32 alpha){WWHD_FUNC(0x025A866C,void*,control,id,pos,rot,scale,alpha);void* e=gabi::call<void*>(0x025A847C,control,u32(3),id,pos,rot,scale,alpha,p(0x1047B2EC),s32(-1),nullptr,nullptr,nullptr);if(e)W(gabi::ea(e)+0x258,id==0x2009?0x00460501:0x00280478);return e;}
+VERIFY(0x025A866C,dPa_setBombSmoke);
+void* dPa_setNormalStripes(void* control,u32 id,void* pos,void* rot,void* scale,u32 alpha,u32 work){WWHD_FUNC(0x025A86F4,void*,control,id,pos,rot,scale,alpha,work);void* e=gabi::call<void*>(0x025A847C,control,u32(0),id,pos,rot,scale,alpha,p(0x1047B2D8),s32(-1),nullptr,nullptr,nullptr);if(e)W(gabi::ea(e)+0x258,work);return e;}
+VERIFY(0x025A86F4,dPa_setNormalStripes);
+void* dPa_set(void* control,u32 group,u32 id,void* pos,void* angle,void* scale,u32 alpha,void* callback){WWHD_FUNC(0x025A847C,void*,control,group,id,pos,angle,scale,alpha,callback);u32 sp=gabi::cpu->r[1];s32 info=s8(b(sp+11));void* primary=p(w(sp+12));void* environment=p(w(sp+16));void* globalScale=p(w(sp+20));u32 v=gabi::ea(pos);gabi::Local<Vec> localPos;u32 lp=gabi::ea(localPos.get());f32 y=f(v+4),x=f(v),z=f(v+8);F(lp+4,y);F(lp,x);F(lp+8,z);u32 resource=gabi::call<u32>(0x025A4D40,id);u32 manager=w(0x1047B2D4);void* result=gabi::call<void*>(0x02821448,p(manager),localPos.get(),id,group,resource,u32(0),u32(0));if(!result)return result;u32 e=gabi::ea(result);if(angle){u32 a=gabi::ea(angle);s16 ry=sh(a+2),rx=sh(a),rz=sh(a+4);gabi::call<void>(0x028245AC,rx,ry,rz,p(e+0x1F0));}if(scale){u32 s=gabi::ea(scale);f32 sz=f(s+8),sx=f(s),sy=f(s+4);F(e+0x220,sx);F(e+0x240,sz);F(e+0x224,sy);F(e+0x228,sz);F(e+0x23C,sy);F(e+0x238,sx);}B(e+0x247,alpha);if(callback){u32 cb=gabi::ea(callback);W(e+0x1E4,cb);u32 fn=w(w(cb)+0x3C);gabi::call_ptr<void>(fn,callback,result,pos,angle,s32(s8(info)));}else if(id&0x4000){gabi::call<void>(0x0281E440,result,u32(1));W(e+0x1E4,0x1047B2DC);}if(primary){u32 c=gabi::ea(primary);u8 green=b(c+1),blue=b(c+2),red=b(c);B(e+0x246,blue);B(e+0x245,green);B(e+0x244,red);}if(environment){u32 c=gabi::ea(environment);u8 green=b(c+1),blue=b(c+2),red=b(c);B(e+0x24A,blue);B(e+0x249,green);B(e+0x248,red);}if(gabi::call<s32>(0x025A3A98,id)){gabi::Local<Color> sea,foam;gabi::call<void>(0x025602F0,sea.get(),foam.get());u32 c=gabi::ea(sea.get());u8 green=b(c+1),red=b(c),blue=b(c+2);B(e+0x244,red);B(e+0x245,green);B(e+0x246,blue);red=b(c);green=b(c+1);blue=b(c+2);B(e+0x249,green);B(e+0x248,red);B(e+0x24A,blue);}if(globalScale){u32 s=gabi::ea(globalScale);f32 sx=f(s),sz=f(s+8),sy=f(s+4);F(e+0x240,sz);F(e+0x238,sx);F(e+0x23C,sy);}return result;}
+VERIFY(0x025A847C,dPa_set);
+void* dPa_setSimpleLandPoly(void* control,void* poly,void* pos,void* angle,void* tev,void* returnId,u32 flags,f32 sx,f32 sy,f32 sz){WWHD_FUNC(0x025A8BFC,void*,control,poly,pos,angle,tev,returnId,flags,sx,sy,sz);u32 play=gabi::ea(gabi::call<void*>(0x025200D4));if(!gabi::call<s32>(0x02008254,p(play+0x12A0),poly))return nullptr;play=gabi::ea(gabi::call<void*>(0x025200D4));s32 code=gabi::call<s32>(0x024EF0F4,p(play+0x12A0),poly);return gabi::call<void*>(0x025A87C0,control,code,pos,angle,tev,returnId,flags,sx,sy,sz);}
+VERIFY(0x025A8BFC,dPa_setSimpleLandPoly);
+struct DrawInfo {u8 bytes[80];};
+static void cameraSubstep(u32 address){u32 sys=w(0x101F95D0),count=w(sys+0x1020),table=w(sys+0x1024);if(count>1)table+=4;u32 view=w(table),flags=w(view+0x50),matrix;
+ if((flags&0x40)&&(flags&0x80))matrix=view+0x84;else{matrix=w(view+0x48);if(!matrix)matrix=0x104A2098;}
+ u32 camera;if(flags&0x1000)camera=w(view+0x164);else{camera=w(view+0x4C);if(!camera)camera=0x104A20FC;}if(!matrix||!camera)return;
+ if(!w(0x101FD9F0)){W(0x101FD9F0,1);W(0x101FDCD4,0x10051BEC);}u32 fn=w(w(camera+0x90)+12);if(!gabi::call_ptr<s32>(fn,p(camera),p(0x101FDCD4)))return;gabi::Local<DrawInfo> info;u32 a=gabi::ea(info.get());W(a+76,0);F(a+68,f(0x10051F10));F(a+72,f(0x10051F14));W(a,matrix);F(a+68,f(camera+0xC0));F(a+72,f(camera+0xAC));void* source=gabi::call<void*>(0x0274D83C,p(camera));gabi::call<void>(0x028E8970,source,p(a+4));u32 play=gabi::ea(gabi::call<void*>(0x025200D4));if(w(play+0x5AB0)){play=gabi::ea(gabi::call<void*>(0x025200D4));gabi::call<void>(address,p(w(play+0x5AB0)),info.get());}}
+void dPa_cameraSubstepAfter(){WWHD_FUNC(0x025A8D8C,void);cameraSubstep(0x025A82C4);}
+VERIFY(0x025A8D8C,dPa_cameraSubstepAfter);
+void dPa_cameraDrawSubstep(){WWHD_FUNC(0x025A8F08,void);cameraSubstep(0x025A8338);}
+VERIFY(0x025A8F08,dPa_cameraDrawSubstep);
+void* dPa_setSimpleLand(void* control,s32 code,void* pos,void* angle,void* tev,void* out,u32 flags,f32 landScale,f32 waterScale,f32 foamScale){WWHD_FUNC(0x025A87C0,void*,control,code,pos,angle,tev,out,flags,landScale,waterScale,foamScale);u32 o=gabi::ea(out),t=gabi::ea(tev);if(!tev||!out)gabi::call<void>(0x0273AA24,p(0x10051F00),u32(0x9BE),p(0x10051ED4));s32 effect=gabi::call<s32>(0x025A8770,control,code);W(o,effect);if(effect==-1)return nullptr;if(code==-1){struct Ground{u8 bytes[84];};gabi::Local<Ground> ground;u32 g=gabi::ea(ground.get()),v=gabi::ea(pos);gabi::call<void>(0x02008E0C,ground.get());f32 z=f(v+8),x=f(v),y=f(v+4);W(g,g+64);W(g+4,g+76);W(g+64,0x10051B0C);B(g+70,0);B(g+69,0);W(g+16,0x10051ADC);B(g+72,0);W(g+76,0x10051AFC);W(g+32,0x10051AEC);B(g+73,0);W(g+80,1);F(g+44,z);F(g+40,y+f(0x10051EC4));B(g+68,1);B(g+74,0);F(g+36,x);B(g+71,0);u32 bg=gabi::ea(gabi::call<void*>(0x025200D4));f32 height=gabi::call<f32>(0x02008974,p(bg+0x12A0),ground.get());if(height!=f(0x10051EC8)){bg=gabi::ea(gabi::call<void*>(0x025200D4));gabi::call<s32>(0x024EF0F4,p(bg+0x12A0),p(g+20));}W(g+32,0x10051AAC);W(g+64,0x10051ACC);W(g+76,0x10051A8C);gabi::call<void>(0x02008DAC,ground.get(),u32(0));effect=s32(w(o));}gabi::Local<Vec> scale;u32 s=gabi::ea(scale.get());void* emitter=nullptr;u32 group=0,id=u32(effect)&0xFFFF,alpha=255,callback=0,primary=0,env=0;gabi::Local<Color> c1,c2;bool spawn=false;
+ if(effect==0x23){if(flags&4){F(s,foamScale);F(s+4,foamScale);F(s+8,foamScale);gabi::call<void>(0x025602F0,c1.get(),c2.get());id=h(o+2);primary=gabi::ea(c1.get());group=(flags&16)?1:0;spawn=true;}}
+ else if(effect==0x24){if(flags&2){u32 c=gabi::ea(c1.get());B(c+2,sh(t+0x94));B(c+3,sh(t+0x96));B(c+1,sh(t+0x92));B(c,sh(t+0x90));F(s,waterScale);F(s+4,waterScale);F(s+8,waterScale);id=0x24;primary=c;env=t+0x98;group=(flags&16)?1:0;spawn=true;}}
+ else if(effect==0x2022){if(flags&8){effect=0x2027;W(o,effect);}if(flags&9){F(s,landScale);F(s+4,landScale);F(s+8,landScale);id=u32(effect)&0xFFFF;group=(flags&16)?3:2;alpha=128;callback=0x1047B284;spawn=true;}}
+ if(spawn)emitter=gabi::call<void*>(0x025A847C,control,group,id,pos,angle,scale.get(),alpha,p(callback),s32(-1),p(primary),p(env),p(0));if(emitter){u32 e=gabi::ea(emitter);F(e+0x34,f(0x10051ECC));F(e+0x58,f(0x10051ED0));W(e+0x5C,1);}return emitter;}
+VERIFY(0x025A87C0,dPa_setSimpleLand);

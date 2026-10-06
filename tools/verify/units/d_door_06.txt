@@ -1,0 +1,8 @@
+src wwhd_src/d/d_door_hkyo.cpp
+callee 026066C4 r4=8
+callee 025CB374 r6=12
+field 0252BEDC r3+0x10A s16 0x6A8,0x1BBD,0x1BC0,0x1BC1,0x1BC2,0x1BBF,0x1BC3,-1
+field 0252BEDC r3+0x108 u8 0,1,2,3,4
+ret 025F795C 6,14,18,0
+field 0252C574 101F84DC u32 0x54000000
+ret 027F0B04 0,1

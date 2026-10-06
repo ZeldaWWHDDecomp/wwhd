@@ -1,0 +1,20 @@
+# Iron Ball actual30-entry HD TU0217AFB8..0217C874; own wrappers reserve linkage below every guest local.
+src wwhd_src/d/actor/d_a_ib.cpp
+callee 026066C4 r4=8
+callee 025E742C r3=16
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 02008974 r4=0x54
+callee 025E7CE0 stack=0 # caller stores ninth word; HD callee never reads it
+callee 025E8154 stack=0 # caller stores ninth word; HD callee never reads it
+callee 024F06B4 stack=1
+ret 025E38E0 0,0x55000000
+ret 025E8508 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+field * r3+0x798 f32 0,44.99,45,89.99,90,135,136,-1
+stackfill periodic
+
+# All original owned direct callees execute under their matched current unit object.
+real 0217AFB8 0217B1F4 0217B1F8 0217B380 0217B46C 0217B5CC 0217B6F8 0217B788 0217B78C 0217B878 0217B87C 0217B8C0 0217B8C4 0217BB38 0217BC58 0217BE98 0217BF6C 0217C3C0 0217C444 0217C518 0217C51C 0217C554 0217C5CC 0217C688 0217C710 0217C7A4 0217C7C0 0217C7AC 0217C870 0217C7C8
+field * r3+0x938 u8 0,1
+ret 0200EA74 3,0x4B,0x20,0xFF

@@ -1,0 +1,22 @@
+# Full HD graphics-state TU17entries03C4..0943 incl inferred initializer.
+src wwhd_src/m_Do/m_Do_graphic.cpp
+stackfill periodic
+ret! 025200D4 0x55000000 0x55000000
+ret 027EC464 0,0x56000000,0x56001000
+ret 025E35BC 0,0x57000000
+field * 101F86B4 u32 0x58000000
+field * 58000440 u32 0x59000000
+field 025F06A8 101F4827 u8 0,1
+field 025F06A8 101F4810 f32 -1,0,0.5,1,2,nan
+field 025F06A8 101F4814 f32 -0.5,0,0.5,nan
+field 025F06A8 550062F1 u8 0,1,254,255
+field 025F0840 101F4822 s16 -32768,-1,0,1,32767
+ret 0200F564 0,1
+callee 028E90D4 r3=48 r4=out48
+# Nondefault existing colors/flags expose reset, byte offset and color-copy errors.
+field * 101F4825 u8 0,1,255
+field * 101F4827 u8 0,1,255
+field * 101F4829 u8 0,1,255
+field * 101D5E90 u32 0,0x12345678,0xFF0080FF
+field * 101F4818 u32 0x11335577,0xFFFFFFFF
+field * 101F481C u32 0x22446688,0xFFFFFFFF

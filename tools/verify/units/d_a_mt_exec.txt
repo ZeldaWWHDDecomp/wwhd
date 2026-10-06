@@ -1,0 +1,122 @@
+# Verification unit (part of d_a_mt): daMt_Execute (F = 021D87A0)
+src wwhd_src/d/actor/d_a_mt_exec.cpp wwhd_src/d/actor/d_a_mt_pending.cpp
+
+# stack objects passed to callees
+callee 024F1AFC r3=0x6C       # dBgS_LinChk::Set
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 02008B4C r3=0x6C       # cBgS_LinChk::~cBgS_LinChk
+callee 02008FEC r3=out0x6C     # cBgS_LinChk::ct: the mock initialises the object (the original reuses stack slots)
+callee 02008974 r4=0x54       # cBgS::GroundCross
+callee 02008DAC r3=0x54       # ~cBgS_GndChk
+callee 02008E0C r3=out0x54     # cBgS_GndChk::cBgS_GndChk: the mock initialises the object
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 028E8F64 r4=12 r5=out12   # PSMTXMultVec
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0201AD78 r4=out12      # cXyz::operator+
+callee 02518DB0 r3=out0x1C    # at_power_check: fills CcAtInfo
+callee 025192A8 r4=0x1C       # cc_at_check
+callee 025A8D40 r5=12         # setSimple pos
+callee 0255F554 r3=12         # dKy_SordFlush_set: position copy
+callee 025DAF3C r3=12         # fopKyM_createMpillar: position
+
+ret 025D4604 0 1              # fopAc_IsActor
+ret 02008860 0 1              # LineCross
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+field 021D87A0 54005B2C u32 0x55000000 0x55000000   # the player
+
+# ---- steering (F = 021D87A0) ----
+field 021D87A0 10465874 i8 0,0,0,0,0,0,0,1        # l_HIO.mNo: the action runs
+field 021D87A0 r3+0x3D5 u8 0,0,0,1                # death switch
+field 021D87A0 r3+0x2F0 f32 0 0                   # home.pos.y
+field 021D87A0 r3+0x318 f32 -6000,-5001,-100,-100,-100,0,0   # current.pos.y (fell out below home - 5000; at ground + 40)
+ret 020402C8 0,0,0,0,0,0,0,1                      # enemy_ice: frozen
+field 021D87A0 r3+0x3D7 u8 0,0,0,0,0,1            # hidden until a switch
+ret 025BA0C0 0 1                                  # isSwitch
+fret 02008974 -1000000000 -30                     # lava height (none = -1e9; edge -30 = pos.y 0 - 30)
+field 021D87A0 1047B644 f32 0,0,0,1               # REG0_F(13)
+field 021D87A0 r3+0x1A16 u8 0 1                   # in lava
+field 021D87A0 r3+0x340 f32 -150,-10,-6,-5,-4,0,0.5,1,2   # speed.y
+field 021D87A0 r3+0x580 i16 0,0,1,5               # eye blink timer
+field 021D87A0 r3+0x461 u8 0 1                    # btp on
+field 021D87A0 r3+0x460 u8 0,3,4                  # btp frame
+field 021D87A0 r3+0x462 u8 3 4                    # btp max frame
+field 021D87A0 r3+0x19F0 u8 0,0,1,9,10,12         # rubble
+field 021D87A0 r3+0x572 i16 0,0,1,2,5             # timers
+field 021D87A0 r3+0x574 i16 0,0,1,5
+field 021D87A0 r3+0x576 i16 0,1,2,5
+field 021D87A0 r3+0x578 i16 0,0,1,5
+field 021D87A0 r3+0x57A i16 0,0,1,5
+field 021D87A0 r3+0x1A18 i16 0 2
+field 021D87A0 r3+0x57C i16 0,0,0,0,1,5
+field 021D87A0 r3+0x57E i16 0,0,1,10
+field 021D87A0 r3+0x466 i16 0 2
+field 021D87A0 r3+0x5AA i16 0,0,0,1,30
+field 021D87A0 r3+0x5AC i16 0,1,14,15,16,20
+field 021D87A0 r3+0x582 i16 0,0,0,1,0x28,0x29,0x32,0x33,0x3C,0x3D,0x47,0x64,0x65,0x78,0x79,0x7A
+# states
+field 021D87A0 r3+0x570 u8 0,0,0,1,1,1,1,2,2,3,6,6,4
+field 021D87A0 r3+0x571 u8 0,0,0,1,1,1,10,15,0x11,0x14,0x14,0x17,5,0x20
+field 021D87A0 r3+0x400 u8 0,0,1,2,3
+field 021D87A0 r3+0x404 i32 0,39,40,41,98,99,100,101,129,130,131
+field 021D87A0 r3+0x408 i32 0,29,30,31,88,89,90,91,119,120,121
+# damage_check
+ret 025162A4 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1   # ChkTgHit (9 colliders tested: hits rare enough for the other states)
+ret 02516300 0x5C000000 0x5C000000                # GetTgHitObj: a fixed object
+field 021D87A0 5C000010 u32 0,0,0,0x100000,0x80000   # its At type (light / ice arrow)
+field 021D87A0 r3+0xD20 u8 0,0,1,2                # head collider mode
+field 021D87A0 r3+0x1A17 u8 0,1,2,3               # hit points of the head
+ret 025160DC 0 1                                  # ChkAtHit
+# mt_move
+field 021D87A0 r3+0x320 i16 -0x2000 0x2000        # angle.x
+field 021D87A0 r3+0x5AE i16 0 1
+field 021D87A0 r3+0x3D0 u8 0,0,0,1,10,11          # type
+field 021D87A0 r3+0x3D8 u8 0,1                    # path
+field 021D87A0 r3+0x3D1 u8 0 1
+field 021D87A0 r3+0x3DC u32 0x56000000 0x56000000 # ppd
+field 021D87A0 56000000 u16 2 4                   # m_num
+field 021D87A0 56000005 u8 0 1                    # closed
+field 021D87A0 56000008 u32 0x57000000 0x57000000 # points
+stable 56000000 0x10
+stable 57000000 0x100
+field 021D87A0 r3+0x3D9 i8 -1 4
+field 021D87A0 r3+0x3DA i8 -1 1
+fret 028F4384 0 200                               # sqrtf: path point distance vs 100
+field 021D87A0 r3+0x1A15 u8 0 1
+fret 025D68EC 0 1000                              # searchActorDistance
+field 021D87A0 10465894 f32 0 1000                # l_HIO.m24
+field 021D87A0 r3+0xD1C u8 0 1
+field 021D87A0 r3+0xD1D u8 0,0,1
+field 021D87A0 r3+0x588 i16 0,8,9,10
+field 021D87A0 r3+0xD10 i32 0 63
+field 021D87A0 104658F5 u8 0,0,1                  # l_HIO.m05
+# mt_fight
+field 021D87A0 101BADD0 u8 0 7                    # attack slot (array of 5)
+field 021D87A0 1046584C i32 0 6                   # fight count (mock search does not count)
+field 021D87A0 550003AC u8 0,0x10,0x10            # player proc
+ret 024EDFCC 0 1                                  # LockonTruth
+ret 024EC8D0 0,0x40000000                         # ActionTarget: this
+field 021D87A0 r3+0xD1E i16 0,4,5,9,10,14,19,20,24,25,26,27,34,40   # attack frame (incremented first)
+field 021D87A0 10465884 f32 0 1                   # l_HIO.m14
+fret 020198D8 0 1                                 # cM_rndF
+field 021D87A0 r3+0x1A14 i8 -1,0,0,1,2,3
+field 021D87A0 r3+0xD8C u32 0,0x20                # acch flags (ground)
+field 021D87A0 r3+0x374 f32 -1 2                  # gravity
+field 021D87A0 r3+0xDF8 f32 -300,-140,-140,-140,0  # ground height (cur.y - 40 = -140)
+# the attack timeline (l_HIO m30..m3E) against the attack frame mD1E
+field 021D87A0 104658A0 i16 5 5                   # m30: attack window start
+field 021D87A0 104658A2 i16 10 10                 # m32: attack window end
+field 021D87A0 104658A8 i16 20 20                 # m38: lunge target set
+field 021D87A0 104658AA i16 35 35                 # m3A: back to circling
+field 021D87A0 104658AC i16 15 15                 # m3C: bite animation
+field 021D87A0 104658AE i16 25 25                 # m3E: close animation
+field 021D87A0 1047B68E i16 0 1                   # REG0_S(3)
+field 021D87A0 1047B9F6 i16 0 1                   # REG6_S(7)
+# the trail is flat (mB10[8k].x) when the player is near
+field 021D87A0 r3+0xB10 i16 -0x1100 0x1000
+field 021D87A0 r3+0xB40 i16 -0x1000 0x1000
+field 021D87A0 r3+0xB70 i16 -0x1000 0x1000
+field 021D87A0 r3+0xBA0 i16 -0x1000 0x1000
+field 021D87A0 r3+0xBD0 i16 -0x1000 0x1000
+field 021D87A0 r3+0xC00 i16 -0x1000 0x1000
+field 021D87A0 r3+0xC30 i16 -0x1000 0x1000
+field 021D87A0 r3+0xC60 i16 -0x1000 0x1100

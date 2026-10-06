@@ -1,0 +1,187 @@
+# Verification unit: d_a_npc_md part "exec" (animation, collision, dispatch, execute/draw, first events)
+src wwhd_src/d/actor/d_a_npc_md_exec.cpp wwhd_src/d/actor/d_a_npc_md_pending.cpp
+
+# stack objects passed to callees
+callee 02285384 r4=8 r5=8     # setAction(&cur, &newFunc (by-value copy), arg)
+callee 022854CC r4=8 r5=2     # setNpcAction(&func copy, arg: s16 angle for hitNpcAction)
+callee 02288240 r4=8          # setPlayerAction(&func copy)
+# isFallAction / npcAction: action pointers to member
+field 02287684 r3+0x41FA i16 -1,0,1
+field 02287684 r3+0x41F8 i16 0,1
+field 02287684 r3+0x41FC u32 0x02293FA8,0x02291644,0
+field 02287684 r3+0x4202 i16 -1,0,1
+field 02287684 r3+0x4200 i16 0,1
+field 02287684 r3+0x4204 u32 0x02291644,0x02291764,0x02293FA8
+field 022887DC r3+0x4202 i16 -1,0,1,2
+field 022887DC r3+0x4220 i32 0x1F 0x21
+field 0228AB40 r4 u8 0 0x30
+arg 0228AB40 r4 0 0x30
+field 02288AB4 r4+0x262 u8 5 9
+field 0228A174 r4+0x262 u8 5 9
+field 0228A174 r3+8 u32 0xFF854767,0x7F812345,0x3F800000
+field 0228A174 r3+0xC u32 0xFF854767,0x7F812345,0x3F800000
+callee 02606900 r4=8 r5=8     # dRes_control_c::getRes(SafeString*, SafeString*)
+# dNpc_Md_setAnm: filename2 "" or not
+field 02286BC0 r7+0 u8 0,0x61
+field 0228729C r3+0x4252 u8 0 2
+ret 025E742C 0 1
+ret 0207A9A0 0 1
+# deletePiyoPiyo: short particle lists
+field 02286D18 r3+0x628 u32 0,0x30000000
+field 02286D18 300001AC u32 0,0x31000000
+field 02286D18 3100000C u32 0,0x32000000
+field 02286D18 3200000C u32 0
+# checkCommandTalk / checkOrder / eventOrder
+ret 025200D4 0x54000000 0x54000000
+field 02287DF0 r3+0xF8 u16 0 2
+field 02287DF0 540052B0 u8 0 5
+field 02287DF0 r3+0x424A i8 2 4
+field 022886FC r3+0xF8 u16 0 2
+field 022886FC 540052B0 u8 0 5
+field 022886FC r3+0x424A i8 0 4
+field 022888C4 r3+0x424A i8 -1 13
+field 022888C4 r3+0x4255 i8 0 9
+# playerAction / checkCollision / lookBack
+field 02288290 r3+0x41FA i16 -1,0,1
+field 02288290 r3+0x41F8 i16 0,1
+field 02288290 r3+0x41FC u32 0x02294984,0x02294160,0
+field 02288290 r3+0x464 u32 0,0x20
+field 02288290 r3+0x420C u32 0,0x8000
+field 02288290 r3+0x425C u8 0 1
+callee 025CB374 r6=12         # StartShock(vib, strength, flags, cXyz copy)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201B3C0 r3=12 r4=out12        # normalizeZP
+callee 0259DED0 r6=12                 # lookAtTarget(eye copy)
+callee 0259D54C r3=out12              # dNpc_playerEyePos hidden result
+field 02288544 r3+0x4254 u8 3 6
+ret 025162A4 0 1
+field 0228A524 r3+0xD1E u8 0 1
+# event actions
+field 0228A800 r3+0x4255 i8 -1 3
+field 0228A928 r3+0x4208 u32 0x19DD,0x19D6,0x5AC,0x19D9
+ret 0254487C 0,0x30000000
+field 0228A928 30000000 u32 0x19DD,0x19D6,0x5AC,0x19D9
+field 0228A6AC 30000000 u32 0 1
+ret 025B8B94 0 1
+field 0228AA7C 10467A34 u32 0xFFFFFFFF,0
+field 0228AA7C r3+0x4208 u32 0x5AC,0x19D6
+# setAnm: anmIdx 0..0x30 (l_anmPrm has 0x31 entries?), "ARRIVAL_GND"
+arg! 02286D7C r4 0 0x31
+ret 02542E94 0x1001DC8C,0x30000100,0x30000200
+field 02286D7C 30000100 u32 0x41525249
+field 02286D7C 30000104 u32 0x56414C5F
+field 02286D7C 30000108 u32 0x474E4400,0x474E4500
+field 02286D7C 30000200 u32 0x41525249,0
+field 02286D7C r3+0x4249 i8 0 0x26
+field 02286D7C r3+0x4253 u8 0 16
+field 02286D7C r3+0x4220 i32 0x11 0x22
+field 02286D7C r3+0x628 u32 0,0x30000000
+# animationPlay
+field 02287364 r3+0x420C u32 0,1,0x20000,0x20001
+field 02287364 r3+0x464 u32 0,0x20
+field 02287364 r3+0x4254 u8 3,7,0
+field 02287364 r3+0x4220 i32 0x16,0x17,0
+field 02287364 r3+0x425A u8 0 2
+field 02287364 r3+0x4249 i8 0xF,0x1B,0
+field 02287364 54005292 u8 0,1
+ret 027F2BF8 0 1
+ret 025445B8 0 1
+ret 0254457C 0 1
+arg 02287364 r3 0x20000000 0x20000000
+field 02287364 r3+0x618 u32 0x30000000
+field 02287364 300000A4 f32 -1 1
+field 02287364 300000A8 f32 0 20
+ret 021E1E78 0 9
+ret 02008254 0 1
+# lightHitCheck
+callee 028E9044 r4=12 r5=out12   # PSMTXMultVecSR
+callee 028E8F44 r3=12 r4=12      # PSVECDotProduct
+callee 028E8DD0 r3=12            # PSVECSquareMag
+callee 0201794C r3=12 r4=12 r5=12 r6=out12  # cM3d_lineVsPosSuisenCross
+callee 0252A038 r4=12            # chk_light
+ret 0252A038 0 1
+ret 025160DC 0 1
+field 02287754 r3+0x2E0 u32 0,0x2000
+field 02287754 r3+0x420C u32 0,0x800
+field 02287754 r3+0x4180 u32 0,0x30000000
+field 02287754 r3+0x4174 u32 0,0x30000000
+# setCollision
+callee 020182E0 r4=12          # cM3dGCyl::SetC
+callee 028E8F64 r4=12 r5=out12 # PSMTXMultVec
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 024F1AFC r4=12 r5=12    # dBgS_LinChk::Set
+callee 02018808 r4=12 r5=12    # SetStartEnd
+ret 02008860 0 1
+field 02287A74 r3+0x420C u32 0,0x1000,0x2000,0x3000
+field 02287A74 r3+0x2E0 u32 0,0x2000
+# eventProc
+field 02287EFC r3+0xF8 u16 1 3
+field 02287EFC r3+0x424A i8 0,0xC,1
+ret 02542D88 -1 1
+ret 02542EDC -1 0x15
+ret 025447C8 0 1
+ret 025440C8 0 1
+field 02287EFC r3+0x600 u32 0 3
+field 02287EFC r3+0x4255 i8 7 9
+# destructor
+field 0228A254 r3+0x3A78 u32 0,0x30000000
+field 0228A254 r3+0x3CCC u32 0,0x30000000
+field 0228A254 101CEF74 u32 0,0x20000000
+arg 0228A254 r3 0,0x20000000
+arg 0228A254 r4 0 1
+# draw
+callee 028E9108 r3=48 r4=48      # PSMTXConcat
+field 02289E2C r3+0x420C u32 0,1,0x1000,0x2000,0x2001
+field 02289E2C r3+0x2FE i8 -1 1
+field 02289E2C r3+0x4254 u8 6 7
+field 02289E2C 54005B3C u32 0,0x30000000
+field 02289E2C 30000644 u32 0,0x200000
+# execute
+callee 024EF968 r6=12            # MoveBgCrrPos(old.pos)
+callee 02445AA4 r4=12            # chkMoveBlock
+callee 025A8BFC r9=out4          # setSimpleLand(&out)
+field 02288B08 r3+0x420C u32 0,1,1,1,2,4,0x1000,0x8000,0x800,0x21
+field 02288B08 r3+0x4254 u8 4 7
+ret 024451B4 0 1
+ret 024452A0 0 1
+ret 02445950 0 1
+field 02288B08 r3+0x424D u8 0 1
+ret 024EEABC 0 1
+field 02288B08 r3+0x600 u32 0,0,0,1
+field 02288B08 r3+0x2E0 u32 0,0,0,0x2000,1,0x2001
+field 02288B08 r3+0x464 u32 0,0,0x20,0x1000,0x1020
+field 02288B08 r3+0x4D0 f32 -1000000000,0,10,0.0009,0.001,0.5,-30.1,-31
+field 02288B08 r3+0x604 u8 28 31
+ret 024EF0BC 3 4
+ret 02287684 0 1
+ret 02287EFC 0 1
+field 02288B08 54005B2C u32 0x20000000,0
+arg 02288B08 r3 0x20000000,0x20000000
+field 02288B08 54005B38 u32 0x20000000,0
+field 02288B08 r3+0x4220 i32 0x21 0x23
+field 02288B08 54005134 u32 0x4D5F4472,0
+field 02288B08 54005138 u32 0x61303900,0x61303800
+ret 022884D4 0 1
+ret 02445AA4 0 1
+field 02288B08 r3+0x4251 u8 0 1
+field 02288B08 r3+0x41FA i16 -1,0
+field 02288B08 r3+0x4202 i16 -1,0
+field 02288B08 r3+0x41F8 i16 0
+field 02288B08 r3+0x4200 i16 0
+field 02288B08 r3+0x4204 u32 0x0229310C,0x02292C48,0x0228EB88,0x0228EB88,0x0228EB88
+field 02288B08 r3+0x41FC u32 0x02293B5C,0
+# execute: wing tilt clamp boundaries, restart room path
+field 02288B08 r3+0x32A i16 0x2001,0x2000,-0x2001,0x5FFF,0x6000,-0x6000,-0x5FFF,0
+field 02288B08 r3+0x322 i16 0
+field 02288B08 r3+0x2FE i8 0
+field 02288B08 1047E8E8 u8 0,0x10
+field 02288B08 r3+0x318 f32 0,10,-5,5,-0.5,0,0
+field 02288B08 r3+0x340 f32 0,0.001,-1,5,-5
+field 02288B08 r3+0x378 f32 -5,0,5
+field 02288B08 r3+0x374 f32 -3,3
+field 02288B08 r3+0x5F8 f32 0,5,5.5,20,10
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02288B08 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra08","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","M_Dra09","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL"

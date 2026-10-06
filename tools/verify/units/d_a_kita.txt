@@ -1,0 +1,45 @@
+# Verification unit: d_a_kita (Forbidden Woods hanging flower platform)
+src wwhd_src/d/actor/d_a_kita.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025D5218 r4=4          # fopAcIt_Judge: searched id
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0201AD78 r4=out12      # cXyz::operator+
+callee 025A847C r6=12 r8=12   # dPa_control_c::set pos / scale
+callee 025CB374 r6=12         # StartShock pos
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 025162A4 0 1              # ChkTgHit
+ret 025D5218 0,0x58000000,0x58000000   # fopAcIt_Judge
+
+field * r3+0x3B6 i16 0,0,1,1,2
+field * r3+0x47C u8 0,1,2,2,3
+field * r4+0x3B6 i16 0,0,1,1,2
+field * r4+0x47C u8 0,1,2,2,3
+field 0219DF90 r3+0x434 u8 0,1,2,5
+field 0219DF90 r3+0x435 u8 0,1,2,5
+field 0219DF90 r3+0x436 u8 0,1,2,5
+field 0219DF90 r3+0x437 u8 0,1,2,5
+field 0219DF90 r3+0x492 i16 0,0,1,2
+field 0219DF90 r3+0x490 i16 0,0,1,20
+field 0219DF90 r3+0x494 u32 0,0,0x5A000000
+field 0219F05C r3+0xB0 u32 0,1,2,0xFF,0x100,0x101,0x1FF,0x200
+field 0219F05C r3+0x400 u8 0,1,2,3
+field 0219F05C r3+0x401 u8 0,1,2,3
+field 0219F05C r3+0x402 u8 0,1,2,3
+field 0219F05C r3+0x403 u8 0,1,2,3
+arg 0219DBFC r5 0,0x5B000000,0x5B000000
+field 0219DBFC 5B000008 i16 0xA8,0xA8,0xA9
+fret 02008974 -1000000000 100   # GroundCross (G_CM3D_F_INF miss)
+fret 025D68EC 0 700           # searchActorDistance (* 0.003 vs 1.0)
+field 0219DF90 r3+0x478 f32 -200 200
+
+# mutation gaps: ground checks compared at GroundCross; landing / fall-speed boundaries; debug registers
+callee 02008974 r4=84         # cBgS::GroundCross: the dBgS_GndChk (0x54)
+field 0219DF90 r3+0x340 f32 -145,-145,-144.99,-45,-45,-44.99,-45.01,0,-200
+field 0219DF90 1047B644 f32 0,1.5,-2
+field 0219DF90 1047B654 f32 0,1.5,-2
+field 0219DF90 1047B620 f32 0,1.5,-2
+field 0219DF90 1047B634 f32 0,1.5,-2

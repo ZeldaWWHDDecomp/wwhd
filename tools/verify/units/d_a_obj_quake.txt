@@ -1,0 +1,34 @@
+src wwhd_src/d/actor/d_a_obj_quake.cpp
+stackfill
+real 025200D4
+real 025C5040
+field * 104753A8 u32 1 1
+field * 10474200 u32 0x10055DE0 0x10055DE0
+field * 10474248 u32 0x58010000 0x58010000
+field * 5801000F u8 0,1,2,10,255
+field * 10474368 u16 0,4
+callee 025CB408 r6=12
+ret 025B7D90 0,1
+ret 025602CC 0,1,20,29,30,31,39,40,41,59,60,61
+ret 025602A8 0,1,2,255
+ret 02386B20 0,1,2,3,4
+ret 02386D20 0,1,2,255
+field * 101F84DC u32 0x5A223400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3BC u8 0,1,2,3
+field * r3+0x3BD u8 0,1
+field * r3+0x3AC f32 0,30,60,90
+field * r3+0x3B4 f32 0,2,4,6
+field * r3+0x3B8 f32 0,2,4,6
+field * 1046BD08 s8 -1,0,1,127
+field * 1046BD0C u32 0,1,2,0xFFFFFFFF
+field * 1046BD10 u8 0,1
+field * 1046BD11 u8 0,1
+field * 1046BD12 u8 0,1,3,255
+field * 1046BD13 u8 0,1,3,255
+field * 1046BD14 u8 0,1
+field * 1046BD15 u8 0,1
+field * 1046BD16 u8 0,1
+field * 1046BD17 u8 0,1
+arg! 023870BC r3 0,0x40000000
+arg! 023871DC r3 0,0x40000000

@@ -1,0 +1,41 @@
+src wwhd_src/d/hd_msg_text.cpp
+mockmove C0009988 r3 r4 r5
+# the text object at a pinned address with writable string buffers (sizes: normal, tiny, zero)
+arg! 025F6B18 r3 0x5C000000
+arg! 025F6C54 r3 0x5C000000
+arg! 025F6D70 r3 0x5C000000
+arg 025F6B18 r5 0,0x5C200000
+field * 5C00000C u32 0x5C100000
+field * 5C000014 u32 0x100,0x100,1
+field * 5C000120 u32 0x5C100800
+field * 5C000128 u32 0x100,0x100,1
+stable 5C00000C 4
+stable 5C000014 4
+stable 5C000120 4
+stable 5C000128 4
+# string arguments: SafeStrings with image text
+arg! 025F6D70 r4 0x5A100000
+arg! 025F6D70 r5 0x5A200000
+field * 5A100000 u32 0x100E09A0,0x100E09CC,0x100E0988,0x1010BF70,0x100E0958,0x1010407C,0x10044340,0x100441F0
+field * 5A100004 u32 0x100E0800
+field * 5A200000 u32 0x100E09A0,0x100E09CC,0x100E0988,0x1010BF70,0x100E0958,0x1010407C,0x10044340,0x100441F0
+field * 5A200004 u32 0x100E0800
+stable 5A100000 8
+stable 5A200000 8
+# beginDraw: the MSBT entry's tag byte
+arg 025F70CC r3 0x5C000000
+field 025F70CC 5C000118 u32 0xFFFFFFFF,0,1
+field 025F70CC 5C00022C u32 0,0x5C300000
+field 025F70CC 5C300001 u8 0xC,0xC,0
+# the "%05d" formatter writes 0..2 characters into the stack string's buffer (header +0xC)
+mockfield 02759C28 r3+12 u8 0x30,0x39,0
+mockfield 02759C28 r3+13 u8 0x31,0
+mockfield 02759C28 r3+14 u8 0
+# the system flags object (101F84DC, zero in the image) with its "no pictograph font" byte
+field 025F70CC 101F84DC u32 0x5C400000
+field 025F70CC 5C4001C0 u8 0,1
+# updateStyle: the message manager singleton (zero in the image) and the set's entry count
+field 025F704C 101F4AE8 u32 0x5C500000
+field 025F704C r3+8 u32 0x5C600000
+field 025F704C 5C600004 u32 0,1,2,0xFFFFFFFF
+stackfill periodic

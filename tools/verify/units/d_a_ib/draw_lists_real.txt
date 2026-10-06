@@ -1,0 +1,70 @@
+# Iron Ball actual30-entry HD TU0217AFB8..0217C874; own wrappers reserve linkage below every guest local.
+src wwhd_src/d/actor/d_a_ib.cpp
+callee 026066C4 r4=8
+callee 025E742C r3=16
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 02008974 r4=0x54
+callee 025E7CE0 stack=0 # caller stores ninth word; HD callee never reads it
+callee 025E8154 stack=0 # caller stores ninth word; HD callee never reads it
+callee 024F06B4 stack=1
+ret 025E38E0 0,0x55000000
+ret 025E8508 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+field * r3+0x798 f32 0,44.99,45,89.99,90,135,136,-1
+stackfill periodic
+
+# Finite typed one-packet model: actual entry callback vtable10010870->027F273C.
+# Real update/entry traverses one visible material and writes both live render-list matrix pointers.
+real 025E2DE0 027F4FE4 027F4F1C 027F273C
+arg! 0217B78C r3 0x50000000
+field * r3+0x71C u32 0x55000000
+ret 025200D4 0x54000000
+field * 54005D84 u32 0x5D000000
+field * 54005D88 u32 0x5D001000
+field * 54005D78 u32 0x5E000000
+field * 54005D7C u32 0x5E001000
+field * 55000128 u32 1
+field * 5500012C u32 0x5C000000
+field * 55000030 u32 0x5C003000
+field * 550000AC u32 0x57000000
+field * 5500002C u32 0x5B000000
+field * 5C000098 u32 0x5C001000
+field * 5C001000 u32 0x5C002000
+field * 5C00200C u16 0
+field * 5C002010 u16 0
+field * 5C003000 u32 0x5C004000
+field * 5C00400E u16 0
+field * 5700000C u32 1
+field * 57000010 u32 0x58000000
+field * 58000008 u32 0x59000000
+field * 59000004 u8 1
+field * 5C00000C u32 0x10010870
+field * 5C00009C u32 0x55000000
+field * 5C0000A0 u32 0,1
+field * 5B000004 u16 0
+field * 5B000010 u32 0x5A000000
+field * 5D00000C u32 0
+field * 5D00100C u32 0
+final 0217B78C 5D00001C 4
+final 0217B78C 5D00101C 4
+final 0217B78C 104B4634 8
+stable 5000071C 4
+stable 54005D78 16
+stable 55000128 8
+stable 55000030 4
+stable 550000AC 4
+stable 5500002C 4
+stable 5C000098 12
+stable 5C001000 4
+stable 5C00200C 6
+stable 5C003000 4
+stable 5C00400E 2
+stable 5700000C 8
+stable 58000008 4
+stable 59000004 1
+stable 5C00000C 4
+stable 5C00009C 8
+stable 5B000010 4
+stable 5D00000C 4
+stable 5D00100C 4

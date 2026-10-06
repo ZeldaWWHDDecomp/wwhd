@@ -1,0 +1,99 @@
+# Verification unit (temporary, merged into d_a_bk): daBk_Execute
+src wwhd_src/d/actor/d_a_bk_exec.cpp wwhd_src/d/actor/d_a_bk_pending.cpp
+
+callee 024F1AFC r3=0x6C     # dBgS_LinChk::Set
+callee 02008860 r4=0x6C     # cBgS::LineCross
+callee 02008B4C r3=0x6C     # ~cBgS_LinChk
+callee 02008974 r4=0x54     # cBgS::GroundCross: the ground check
+callee 02008DAC r3=0x54     # ~cBgS_Chk
+callee 025D5218 r4=4        # fopAcIt_Judge: searched id
+callee 0200FCD8 r4=out12    # MtxPosition: output
+callee 0201ADE0 r4=out12    # cXyz::operator-
+callee 0201AD78 r4=out12    # cXyz::operator+
+callee 02518DB0 r3=out0x1C  # at_power_check: fills CcAtInfo (out storage, so the mock writes it)
+callee 025192A8 r4=0x1C     # cc_at_check
+callee 0255F458 r3=12       # dKy_Sound_set: position copy
+callee 0251510C r4=12 r5=12 # dCamera_c::Reset: copies
+callee 02514F88 r4=12 r5=12 # dCamera_c::Set
+callee 025A847C r7=6        # particle angle
+
+ret 025D4604 0 1
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+
+# daBk_Execute steering (F = 0209BD1C)
+field 0209BD1C r3+0x3D0 u8 0,0,6,8,10           # mType
+field 0209BD1C r3+0x3D4 u8 0,0,0,1                # m02B8 (HD fall-out test)
+field 0209BD1C r3+0x2F0 f32 0 0                # home.pos.y
+field 0209BD1C r3+0x318 f32 -6000 0            # current.pos.y
+field 0209BD1C r3+0x137C i8 0,0,0,0,0,1            # m121C
+field 0209BD1C r3+0x3FB i8 0 2                 # m02DF (HD timer)
+ret 020402C8 0 0                               # enemy_ice
+field 0209BD1C r3+0x4A0 i16 -1 2               # dr.mMode
+field 0209BD1C r3+0x4A2 i16 0,4,10,11,15,18,19,31   # dr.mAction
+field 0209BD1C r3+0x418 i16 0,1,8,9,16,17           # m0300[0] (decremented first)
+field 0209BD1C r3+0x1372 i16 4 5               # m1212
+field 0209BD1C r3+0x1378 u32 0x56000000 0x56000000  # ppd
+field 0209BD1C 56000000 u16 0 4                # m_num
+field 0209BD1C 56000008 u32 0x56100000 0x56100000   # m_points
+field 0209BD1C 54005AF8 u32 0x5D000000 0x5D000000   # camera 0
+field 0209BD1C 54005B30 i8 0 0                 # player camera id
+field 0209BD1C 54005B2C u32 0x55000000 0x55000000   # player
+field 0209BD1C 550003AC u8 0,5,0x11            # player cut type
+fret 028F4384 900 1300                        # std::sqrtf (waki_set distances around the 1000..1200 window)
+fret 020198D8 0 1                              # cM_rndF
+field 0209BD1C 10462368 u8 0,0,1               # l_bkHIO.mNo..: m006 at +2 below
+field 0209BD1C 1046236A u8 0 1                 # l_bkHIO.m006
+field 0209BD1C 1046236B u8 0 1                 # l_bkHIO.m007
+ret 020078BC 0 1
+ret 02007738 0 1
+field 0209BD1C r3+0x3D3 u8 0xFF,0xFF,0xFF,0             # m02B7
+ret 025BA0C0 0 1                               # isSwitch
+field 0209BD1C r3+0x1374 i8 0 1                # m1214
+ret 025D5218 0x58000000 0x58000000                     # fopAcIt_Judge: none / the boko
+ret 020A0634 0x58000000 0x58000000
+field 0209BD1C 580002E0 u32 0,0x2000           # boko carry status
+field 0209BD1C 580003B4 u32 0,0x59000000       # boko model
+field 0209BD1C r3+0x3D6 u8 0,0,0,0xFF,1           # m02BA
+field 0209BD1C r3+0x3D1 u8 0x10,0xFF           # m02B5
+fret 025D68EC 0 300                            # player distance
+field 0209BD1C r3+0x426 i16 0 1                # m030E
+field 0209BD1C r3+0x370 f32 -20,-10,0,10,20            # speedF
+field 0209BD1C 58000370 f32 0,1,2               # boko speedF
+ret 025163BC 0x5A000000 0x5A000000                     # GetCoHitObj
+field 0209BD1C 5A000044 u32 0,0x5B000000
+field 0209BD1C 5B00000C u32 0,0x5C000000
+field 0209BD1C r3+0x3E4 i16 0 1                # m02C8
+field 0209BD1C r3+0x3E6 i16 0 1                # m02CA
+ret 025162A4 0 1                               # ChkTgHit
+ret 02516300 0x57000000 0x57000000             # GetTgHitObj
+field 0209BD1C 57000010 u32 0,0x80000,0x100000,0x200,0x40000
+field 0209BD1C r3+0x428 i16 0 1                # m0310
+field 0209BD1C r3+0xC90 i32 0 1                # m0B30
+field 0209BD1C r3+0xC94 i32 0,1,2              # m0B34
+field 0209BD1C r3+0xCDB i8 0 1                 # m0B7B
+field 0209BD1C 1046232C u8 0 1                 # another_hit
+field 0209BD1C r3+0x8F4 u32 0,0x10             # dr.m424
+field 0209BD1C r3+0x8F8 f32 20,25,26,30             # dr.m428
+field 0209BD1C r3+0x44E i16 0 2                # m0336
+field 0209BD1C r3+0x3A1 i8 -1 1                # health
+field 0209BD1C r3+0x138D i8 0,1,2,3,4,5,10,11,50,51,-1   # m1234
+field 0209BD1C r3+0x138E i16 5,10,11,30,34,35,45,50,55,56,60,61,70,150,151  # m1236
+field 0209BD1C r3+0xF8 u16 0,2                 # eventInfo command
+field 0209BD1C r3+0x3FA i8 0 1                 # m02DE
+ret 02041F94 0 31             # damage_reaction
+field 0209BD1C r3+0x424 i16 0 1                # m030C
+field 0209BD1C r3+0xA14 u32 0,0x20             # dr.mAcch flags
+field 0209BD1C r3+0x950 i16 0 1                # dr.m480
+fret 02008974 -1000000000 100                  # GroundCross
+ret 025A847C 0x5E000000 0x5E000000          # particle emitter at a fixed address
+ret 020195B0 0x1FFE 0x2002                    # cM_atan2s: the +-0x2000 slope clamps
+field 0209BD1C r3+0x1390 f32 -5000 5000        # m1238 (camera eye)
+field 0209BD1C r3+0x1394 f32 -5000 5000
+field 0209BD1C r3+0x1398 f32 -5000 5000
+field 0209BD1C r3+0x139C f32 -5000 5000        # m1244 (camera center)
+field 0209BD1C r3+0x13A0 f32 -5000 5000
+field 0209BD1C r3+0x13A4 f32 -5000 5000
+field 0209BD1C 1047B61C f32 0 0                # REG0_F(3), REG0_F(4): waki_set search radii
+field 0209BD1C 1047B620 f32 0 0
+field 0209BD1C r3+0x44A i16 0,0x4000,0x4001,-0x4000   # m0332 (damage direction)
+field 0209BD1C r3+0x322 i16 0,0,0x100           # current.angle.y

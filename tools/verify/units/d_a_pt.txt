@@ -1,0 +1,91 @@
+# Verification unit: d_a_pt (Miniblin)
+src wwhd_src/d/actor/d_a_pt.cpp wwhd_src/d/actor/d_a_pt_action.cpp
+
+ret 02520460 0 5                    # dComIfG_resLoad -> cPhs_State
+ret 025BA0C0 0 1                    # isSwitch
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 02008860 0 1                    # cBgS::LineCross
+ret 020402C8 0 1                    # enemy_ice
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+callee 024F1AFC r3=0x6C             # dBgS_LinChk::Set: the stack object
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008FEC r3=255
+callee 026066C4 r4=8                # getRes: SafeString key
+# constructors: also run the this == NULL (allocating) path
+arg 02446CF4 r3 0 0
+arg 02446C68 r3 0 0
+arg 02447138 r3 0 0
+ret 0273AD10 0 0x60000000           # operator new: NULL or an address
+callee 025E789C stack=1             # mDoExt_btpAnm::init (unnamed): compare its stack argument
+callee 025E8154 stack=1             # mDoExt_brkAnm::init (unnamed)
+# daPt_Execute
+field 02446374 r3+0x3EC i16 30 31   # mCounter: (counter+1) & 0x1F == 0
+field 02446374 r3+0x2F0 f32 0 0     # home.pos.y
+field 02446374 r3+0x318 f32 -3001 -2999   # current.pos.y (fell below -3000)
+field 02446374 r3+0x3D0 u8 0 1      # mBehaviorType
+field 02446374 r3+0x3D4 u8 0xFE 0xFF
+field 02446374 r3+0x3F2 i16 0 9     # mBlinkTimer
+field 02446374 1046D335 u8 0 1      # l_HIO.mbStop
+field 02446374 r3+0x3D5 i8 0 1
+field 02446374 r3+0x43E i8 0 1
+field 02446374 r3+0x43F i8 0 1
+field 02446374 r3+0x334 f32 0.8 1   # scale.y vs 0.9
+# daPt_Delete
+field 024468E4 r3+0x3D2 u8 6 8      # mRespawnDelay (7: keep the home angle)
+field 024468E4 r3+0x3D3 u8 0xFE 0xFF
+field 024468E4 r3+0x3D4 u8 0xFE 0xFF
+field 024468E4 r3+0x3D6 i8 0 1
+field 024468E4 r3+0xEE0 u8 0 1
+field 024468E4 101CEF78 u8 1 1      # hio_set (the store is observable)
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(src, dst out)
+callee 0201ADE0 r4=out12            # cXyz::operator-: result
+# action (d_a_pt_action.cpp)
+callee 025192A8 r4=0x1C             # cc_at_check: CcAtInfo
+callee 02008974 r4=0x54             # GroundCross: dBgS_GndChk
+callee 02008DAC r3=0x54
+callee 02008E0C r3=255
+field 02447300 r3+0x3EE i16 0,1,2,3,4,5,6     # mAction
+field 02447300 r3+0x3F0 i16 0,1,2,3,4,5,6,7,8,9,10,11,12,13   # mMode
+field 02447300 r3+0x420 i16 0 2               # mTimers
+field 02447300 r3+0x422 i16 0 1
+field 02447300 r3+0x424 i16 0 2
+field 02447300 r3+0x426 i16 0,0,0,1           # mDamageTimer
+field 02447300 r3+0x3F4 i16 0 1               # mInitialSpawnDelay
+field 02447300 r3+0x3D3 u8 0xFE 0xFF
+field 02447300 r3+0x3D4 u8 0xFE 0xFF
+field 02447300 r3+0x3D0 u8 0 1
+field 02447300 r3+0x3D5 i8 0 1
+field 02447300 r3+0x8D8 i8 0 2                # mSmokeType
+field 02447300 r3+0x3A1 i8 -1 1               # health
+field 02447300 r3+0x4A8 u32 0,0x10,0x20,0x30  # mAcch flags
+field 02447300 r3+0x42C f32 -110 -90          # mOldSpeedY
+field 02447300 r3+0x438 f32 0 0.2             # mKnockSpeed
+field 02447300 r3+0x340 f32 -125 10           # speed.y
+field 02447300 r3+0x320 i16 -0x2100 0x2100    # angle.x
+field 02447300 r3+0x318 f32 -100 100          # current.pos.y
+field 02447300 r3+0x3DC u32 0x50000000 0x50000000   # mpMorf
+field 02447300 5000009C f32 5 15              # frame
+field 02447300 50000098 f32 0 1               # rate
+field 02447300 500000A7 u8 0 1                # state
+field 02447300 r3+0x3D1 u8 0 10               # mNoticeRange
+ret 025DE508 0 1                              # fpcM_Search(esa_s_sub): none or a bait
+fret 025D68EC 0 800                           # player distance
+fret 025D6958 0 800                           # player distance XZ
+fret 02008974 -1000000000 100                 # GroundCross
+ret 0246B6A4 0 1                              # daSea_ChkArea
+fret 0246BA0C -100 100                        # calcWave
+fret 020198D8 0 1                             # cM_rndF
+ret 02446074 0xDCE 0xDCF                      # get_z_ang (0xDCF: none)
+ret 025162A4 0 1                              # ChkTgHit
+ret 025160DC 0 1                              # ChkAtHit
+ret 02516178 0x57000000 0x57000000      # GetAtHitObj
+field 02447300 57000044 u32 0,0x58000000      # its stts
+field 02447300 5800000C u32 0,0x59000000      # stts actor
+field 02447300 59000008 i16 0xA8,0xA9         # actor name (player)
+field 02447300 54005B2C u32 0x55000000 0x55000000   # player
+field 02447300 550003C0 u32 0,0x20000
+field 02447300 550003AC u8 0x10,0x11
+ret 02516300 0x5B000000 0x5B000000            # GetTgHitObj
+field 02447300 5B000010 u32 0,0x200,0x100000,0x40200,0x200000   # its At type
+ret 025200D4 0x54000000 0x54000000

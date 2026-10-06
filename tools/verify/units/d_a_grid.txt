@@ -1,0 +1,258 @@
+src wwhd_src/d/actor/d_a_grid.cpp
+stackfill periodic
+field * 104643AC i8 -1,0,1,127
+callee 028E8DAC r3=12 r4=12 r5=out12
+
+ret 025200D4 0x54000000 0x54000000
+field * 54005292 u8 0,1
+field * 54005D2C u8 0,1
+field * r3+0x1096 u8 0,1,5,50,127,250,255
+field * r3+0x334 f32 0,0.05,0.06,1
+field * 104643D8 u8 0,5,50,127,250,255
+field * 104643D9 u8 0,5,50,127,250,255
+field * 104643DC f32 0,1,900
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+arg 02165FA8 r3 0,0x50000000
+arg 02165FA8 r4 0,1,2,3
+arg 02166044 r3 0,0x50000000
+arg 02166044 r4 0,1,2,3
+arg 02166918 r3 0,0x50000000
+arg 02166918 r4 0,1,2,3
+
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B1E4 r3=12 r4=out12
+callee 0200FCD8 r3=12 r4=out12
+
+arg! 02162F7C r5 0,1,2,3,4,5,6
+arg! 02162F7C r6 0,1,2,3,4,5,6,7,8,9,10,11
+ret 0201B47C 0,1
+callee 0201B47C r3=12
+callee 028E8D88 r3=12 r4=12 r5=out12
+
+field * 101F4829 u8 0,1
+field * 1046438C u32 0x55000000
+
+ret 02520460 0,1,2,3,4,5
+field * r3+0x2E4 u32 0,8,0xFFFFFFFF
+callee 025D5218 r4=2
+arg! 021660A4 r3 0x50000000
+arg 021660A4 r4 0,1,2,3
+field 021660A4 r3+0x1650 i32 0,1,2
+stable 50001650 4
+field 021660A4 r3+0xCE0 i32 0,1,2
+stable 50000CE0 4
+field 021660A4 r3+0xCE4 u32 0,0x56000000
+stable 50000CE4 4
+arg! 021664DC r3 0x50000000
+arg 021664DC r4 0,1,2,3
+field 021664DC r3+0x1A0C i32 0,1,2
+stable 50001A0C 4
+field 021664DC r3+0x109C i32 0,1,2
+stable 5000109C 4
+field 021664DC r3+0x10A0 u32 0,0x56000000
+stable 500010A0 4
+field * 56000004 i32 0,1,2
+stable 56000004 4
+field * 5600000C i32 0,1,2
+stable 5600000C 4
+field * 56000018 i32 0,1,2
+stable 56000018 4
+field * 56000020 i32 0,1,2
+stable 56000020 4
+ret 02755FEC 0x57000000 0x57000000
+field * 5700000C u32 0x57010000
+field * 5701003C u32 0x0273AF40
+stable 5700000C 4
+stable 5701003C 4
+
+arg! 021625DC r3 0x50000000
+field 021625DC r3+0x1638 u32 0,1
+stable 50001638 4
+field 021625DC r3+0x20FC u8 0,1
+callee 021623C4 r3=out48 r4=48
+callee 02162464 r3=out16 r4=8
+callee 02162528 r3=out16 r4=4
+callee 0274D458 r3=out16 r4=16
+callee 0274D2AC r3=16
+
+field * 104643E0 u8 0,1
+field * r3+0x2B8C i16 -1,0,1,5,15,16
+field * r3+0x24C2 i16 -1,0,1,15
+field * r3+0x2B9C u8 0,1
+field * r3+0x2B80 f32 0,1
+
+arg! 02164534 r3 0x50000000,0x50000000,0x50000000,0
+# this == NULL: operator new hands out a clean block (first allocation of the run)
+alloc 0273AD10 r3 0x5B000000
+stable 5B000CDC 12
+field 02164534 r3+0xCDC u32 0,1,2,4
+field 02164534 r3+0xCE0 u32 4
+field 02164534 r3+0xCE4 u32 0x56000000
+stable 50000CDC 12
+stable 50001638 4
+field 02164534 r3+0x1638 u32 0,1
+field * 101B5E30 u32 172
+stable 101B5E30 4
+ret! 027B90AC -1,0,1
+ret 02756140 0x57000000 0x57000000
+field * 57010034 u32 0x02754F50
+stable 57010034 4
+
+callee 026124B0 r4=8 r5=8
+callee 02750250 r3=out240
+callee 0280037C r4=240
+callee 02750370 r3=240
+arg! 021655E4 r3 0x50000000
+arg! 021655E4 r4 0x58000000
+field 021655E4 r4+0xC i32 -1,0,1,2,3,4,5
+field 021655E4 r3+0xCE0 u32 4
+field 021655E4 r3+0xCE4 u32 0x56000000
+stable 50000CE0 8
+# renderPacket: stage name (play+0x5134) vs "Siren" (inline strcmp)
+field * 54005134 u8 0,83,83,83
+field * 54005135 u8 105,105,105,0
+field * 54005136 u8 114
+field * 54005137 u8 101
+field * 54005138 u8 110
+field * 54005139 u8 0,0,0,1
+stable 54005134 6
+field * 54005B34 u32 0x54100000
+stable 54005B34 4
+field * 54100326 i8 0,6,7,8
+stable 54100326 1
+
+# packetConstruct: texture-object equality checks (inlined compare of 9 words)
+field 02164534 r3+0x1A88 u32 0
+field 02164534 r3+0x1C20 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1A8C u32 0
+field 02164534 r3+0x1C24 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1A90 u32 0
+field 02164534 r3+0x1C28 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1A94 u32 0
+field 02164534 r3+0x1C2C u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1A98 u32 0
+field 02164534 r3+0x1C30 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1A9C u32 0
+field 02164534 r3+0x1C34 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1ABC u32 0
+field 02164534 r3+0x1C54 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1AB8 u32 0
+field 02164534 r3+0x1C50 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1AA0 u32 0
+field 02164534 r3+0x1C38 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CB0 u32 0
+field 02164534 r3+0x1E48 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CB4 u32 0
+field 02164534 r3+0x1E4C u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CB8 u32 0
+field 02164534 r3+0x1E50 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CBC u32 0
+field 02164534 r3+0x1E54 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CC0 u32 0
+field 02164534 r3+0x1E58 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CC4 u32 0
+field 02164534 r3+0x1E5C u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CE4 u32 0
+field 02164534 r3+0x1E7C u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CE0 u32 0
+field 02164534 r3+0x1E78 u32 0,0,0,0,0,0,0,1
+field 02164534 r3+0x1CC8 u32 0
+field 02164534 r3+0x1E60 u32 0,0,0,0,0,0,0,1
+# packetConstruct: shader-collection cache filled by the real producer 0280068C
+# (archive list -> selected entry -> program -> attribute count = n-1).
+real 0280068C
+real 028EFFD0
+ret! 027FFCBC 0x59000000 0x59000000
+field * 59000004 u32 0x59010000
+field * 59000008 u32 1,2
+field * 5900000C u32 0x59020000
+stable 59000004 12
+field * 5901001C u32 0,1,2
+field * 59010020 u32 0x59050000
+stable 5901001C 8
+field * 59020000 u32 0x59030000
+field * 5902001C u32 0
+field * 59020020 u8 0,1
+stable 59020000 36
+field * 59020024 u32 0x59030000
+field * 59020040 u32 0
+field * 59020044 u8 0,1
+stable 59020024 36
+field * 5903007C u32 0x59040000
+stable 5903007C 4
+field * 5904000C i32 0,1,2
+stable 5904000C 4
+# selection < 0 hands the producer a null entry: it still reads [0]->+0x7C->+0xC (a crash on hardware);
+# pin that low memory so the attribute count stays small.
+field * 00000000 u32 0
+field * 0000007C u32 0x59040000
+field * 0000001C u32 0
+stable 00000000 128
+nestedret 02756140 0x57000000
+nestedret 02754F50 0x5A000000
+stable 5A000000 60
+# collection n/array pairs left by the mocked element constructor: exercise the inlined release helper
+field * 5A000004 i32 0,1,2
+field * 5A000008 u32 0,0x5A100000
+field * 5A1000F0 u32 0x5A300000
+stable 5A1000F0 4
+field * 5A1001E4 u32 0x5A300000
+stable 5A1001E4 4
+field * 5A00000C i32 0,1,2
+field * 5A000010 u32 0,0x5A100800
+field * 5A1008F0 u32 0x5A300000
+stable 5A1008F0 4
+field * 5A1009E4 u32 0x5A300000
+stable 5A1009E4 4
+field * 5A000018 i32 0,1,2
+field * 5A00001C u32 0,0x5A101000
+field * 5A1010F0 u32 0x5A300000
+stable 5A1010F0 4
+field * 5A1011E4 u32 0x5A300000
+stable 5A1011E4 4
+field * 5A000020 i32 0,1,2
+field * 5A000024 u32 0,0x5A101800
+field * 5A1018F0 u32 0x5A300000
+stable 5A1018F0 4
+field * 5A1019E4 u32 0x5A300000
+stable 5A1019E4 4
+field * 5A00002C i32 0,1,2
+field * 5A000030 u32 0,0x5A102000
+field * 5A1020F0 u32 0x5A300000
+stable 5A1020F0 4
+field * 5A1021E4 u32 0x5A300000
+stable 5A1021E4 4
+field * 5A000034 i32 0,1,2
+field * 5A000038 u32 0,0x5A102800
+field * 5A1028F0 u32 0x5A300000
+stable 5A1028F0 4
+field * 5A1029E4 u32 0x5A300000
+stable 5A1029E4 4
+field * 5A30000C u32 0x027BF7E8
+stable 5A30000C 4
+# updateMaterial: same inlined texture-object compare (1ED4 vs 206C)
+field 021625DC r3+0x1ED8 u32 0
+field 021625DC r3+0x2070 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EDC u32 0
+field 021625DC r3+0x2074 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EE0 u32 0
+field 021625DC r3+0x2078 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EE4 u32 0
+field 021625DC r3+0x207C u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EE8 u32 0
+field 021625DC r3+0x2080 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EEC u32 0
+field 021625DC r3+0x2084 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1F0C u32 0
+field 021625DC r3+0x20A4 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1F08 u32 0
+field 021625DC r3+0x20A0 u32 0,0,0,0,0,0,0,1
+field 021625DC r3+0x1EF0 u32 0
+field 021625DC r3+0x2088 u32 0,0,0,0,0,0,0,1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021655E4 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","S","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01","Siren\x01"

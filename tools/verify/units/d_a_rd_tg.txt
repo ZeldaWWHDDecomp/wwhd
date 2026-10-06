@@ -1,0 +1,79 @@
+# Verification unit: d_a_rd, variant for checkTgHit (cc_at_check writes its CcAtInfo: covers the HD 0x69E8 re-arm); run with -only 0245C770
+src wwhd_src/d/actor/d_a_rd.cpp
+arg! 0245B050 r5 0 1                # setAnm: bool force (the original passes r5 on unmasked)
+# common state: mode, animation, ikari flag, morf
+field * r3+0x3C8 i32 0 11                # mMode
+field * r3+0x8AD i8 0 14                 # mAnmPrmIdx
+field * r3+0xF0C u8 0 1                  # mbIkari
+field * r3+0x3D0 i32 0 2                 # mWhichIdleAnm
+field * r3+0x3EC u32 0x50000000 0x50000000   # mpMorf
+field * 500000A7 u8 0 1
+field * 50000098 f32 0,1
+ret 025200D4 0x54000000 0x54000000      # play object at a fixed address
+field * 54005B34 u32 0x55000000 0x55000000   # link player
+field * 54005B2C u32 0x55000000 0x55000000   # player 0
+field * 54005292 u8 0 1
+field * 101F84DC u32 0x56000000 0x56000000   # save info
+field * 56000022 u16 0 1                 # life
+ret 025445B8 0 1                         # dEvent_manager_c::startCheckOld
+ret 0245D088 0 1                         # isLinkControl
+ret 0245C770 0 1                         # checkTgHit
+ret 0245D0C8 0 1                         # checkPlayerInAttack
+ret 0245D970 0 1                         # checkPlayerInCry
+ret 0211D2F8 0 2                         # cLib_calcTimer<int>
+ret 0207A9A0 0,0,1                       # cLib_calcTimer<u8>
+ret 025162A4 0 1                         # ChkTgHit
+ret 02588230 0 1                         # dLib_checkActorInFan
+ret 025880B4 0 1                         # dLib_checkActorInCircle
+# checkTgHit: hit object with an attack type
+ret 02516300 0,0x57000000,0x57000000,0x57000000
+field 0245C770 57000010 u32 2,2,2,2,2,2,0x400,0x800,0x4000000,0x10000000,0x20,0x40,0x80,0x200,0x400,0x800,0x4000,0x8000,0x10000,0x20000,0x40000,0x80000,0x100000,0x200000,0x800000,0x1000000,0x4000000,0x8000000,0x10000000,0x1
+field 0245C770 550003AC u8 0,4,5,6,9,0xA,0xB,0xC,0xD,0xE,0xF,0x10,0x11,0x12,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C   # player cut type (case edges)
+field 0245C770 r3+0xC72 i8 0 1           # mEnemyFire.mMode
+field 0245C770 r3+0x3E1 u8 0,1,7,8,0xE   # mHitType
+field 0245C770 550069E8 u8 0 1
+callee 025192A8 r4=out0x1C              # variant: the mock writes CcAtInfo (mResultingAttackType), inputs not compared
+# modeAttack
+field 0245E30C r3+0xF8 u16 2,0,1         # eventInfo command (demo accept = 2)
+field 0245E30C 550003BC u32 0,1
+field 0245E30C 5500699E i16 0,1
+field 0245E30C r3+0x520 u32 0,0x10       # mAcch wall hit
+field 0245E30C r3+0xF14 i32 -1 1
+field 0245E30C r3+0xF18 i32 -1 1
+field 0245E30C r3+0x4F4 i32 -1 2
+field 0245E30C 104806DC f32 0 0          # REG12_F(5)
+field 0245E30C 104806D0 f32 0 0          # REG12_F(2)
+fret 025D6958 20 50                      # fopAcM_searchActorDistanceXZ (modeAttack boundaries 20 and 50 as edges)
+fret 0200796C -1 1                       # stick X
+fret 02007990 -1 1                       # stick Y
+ret 02007898 0 1
+ret 020078BC 0 1
+ret 020078E8 0 1
+ret 02007914 0 1
+# _searchNearDeadRd: a dead ReDead nearby
+field 0245A194 r4+8 i16 0xE0,0xE0,0x10
+field 0245A194 r4+0x3C8 i32 3,3,0
+# daRd_HIO_c constructor: also with this == NULL (allocates)
+arg 0245EFE0 r3 0,0x5A000000
+# modeProc: also out-of-range modes (the table's virtual-PTMF path)
+field 0245ADB0 r3+0x3C8 i32 -20 40
+arg 0245ADB0 r4 0 1
+arg 0245ADB0 r5 0 11
+# modeCry: break-free counters (rd_breakFree)
+field 0245DD80 r3+0xF14 i32 -1 1
+field 0245DD80 r3+0xF18 i32 -1 1
+field 0245DD80 r3+0x4F4 i32 -1 2
+field 0245DD80 r3+0xF8 u16 2,0,1
+field 0245DD80 104806DC f32 0 0
+ret 0200FAAC 0,0x4F,0x50,0x51,0x1FF,0x200,0x201,0x4000   # cLib_distanceAngleS (the 0x50 and 0x200 boundaries)
+# rd_noticePlayer (modeWait, modeReturn): the player's speed against REG12_F(4) + 10
+field 0245D134 1047BCE0 f32 0 0
+field 0245D134 55000370 f32 10,10,9.5,11,0
+field 0245E964 1047BCE0 f32 0 0
+field 0245E964 55000370 f32 10,10,9.5,11,0
+field 0245C770 r3+0x3A1 i8 -1 1               # health (the <= 0 boundary)
+stackfill periodic                             # stack objects start non-zero (atInfo.pParticlePos store)
+callee 025F20B0 r4=out0x30                # mDoMtx_inverseTranspose: output matrix
+callee 025D54C4 r4=out4                  # fopAcM_SearchByID: output actor pointer
+callee 028E8F64 r4=12                    # PSMTXMultVec: input vector on the stack (compared)
+field 0245D9DC r3+0x370 f32 0.1,0.1,0,0.2   # modeMove: speedF against 0.1

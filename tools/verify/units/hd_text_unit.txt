@@ -1,0 +1,295 @@
+src wwhd_src/d/hd_text_unit.cpp
+src wwhd_src/d/hd_text_unit_line.cpp
+src wwhd_src/d/hd_text_unit_items.cpp
+src wwhd_src/d/hd_text_unit_proc.cpp
+mockmove C0009988 r3 r4 r5
+# the builder at a pinned address; its message text object (hd_msg_text layout) pinned too
+arg! * r3 0x5B000000
+field * 5B000000 u32 0x5C000000
+stable 5B000000 4
+# the target text (WBufferedSafeString) pinned with a short buffer content
+arg! * r4 0x5D000000
+field * 5D000000 u32 0x5D100000
+field * 5D000004 u32 0x100E0FC0
+field * 5D000008 u32 0x40,0x40,0x10,2,1
+stable 5D000000 0xC
+# insertion positions are small (most functions take the position in r5; functions with a
+# position pointer or a text in r5 override this below)
+arg * r5 -1,0,1,2,5,0x30
+# the system setting (language id) and the save info pointer (zero in the image)
+field * 101F4BAC u32 0x5F500000
+field * 5F500014 u32 0,1,2,3,5
+stable 5F500014 4
+field * 5D100000 u16 0x41,0x41,0x42,0
+field * 5D100002 u16 0x41,0x41,0x42,0
+field * 5D100004 u16 0x41,0x41,0x42,0
+field * 5D100006 u16 0x41,0x41,0x42,0
+field * 5D100008 u16 0x41,0x41,0x42,0
+field * 5D10000A u16 0x41,0x41,0x42,0
+field * 5D10000C u16 0x41,0x41,0x42,0
+field * 5D10000E u16 0x41,0x41,0x42,0
+field * 5D100010 u16 0x41,0x41,0x42,0
+field * 5D100012 u16 0x41,0x41,0x42,0
+field * 5D100014 u16 0x41,0x41,0x42,0
+field * 5D100016 u16 0x41,0x41,0x42,0
+field * 5D100018 u16 0x41,0x41,0x42,0
+field * 5D10001A u16 0x41,0x41,0x42,0
+field * 5D10001C u16 0x41,0x41,0x42,0
+field * 5D10001E u16 0x41,0x41,0x42,0
+field * 5D100020 u16 0
+field * 5C00022C u32 0,0x5C100000,0x5C100000
+field * 5C100001 u8 0,1,2,3,4,5,6,7,8,9,0xA,0xB,0xC,0xD,0xE
+field * 5C100002 u8 0,1
+field * 5C00011C u32 0,5,0x42,0x4B,0x266,0xEDD,0xEE2,0xEE3,0xFFFFFFF0
+field * 5C000640 u32 0,1,2,3
+field * 5C000644 u32 0,1,2,3,4,5,6
+field * 5C00064C u32 0xFFFFFFFF,0,1,2,3,0x14F
+field * 5C000650 u32 0xFFFFFFFF,0,1,2,3,0x14F
+field * 5C000654 u32 0xFFFFFFFF,0,1,2,3,0x14F
+field * 5C00065C u32 0xFFFFFFFF,0,1,2,3,0x14F
+field * 5C000648 u8 0,1
+field * 5C000658 u8 0,1
+field * 5C000659 u8 0,1
+field * 5C000696 u8 0,1
+field * 5C000697 u8 0,1
+field * 5C000698 u8 0,1
+field * 5C000699 u8 0,1
+field * 5C00069A u8 0,1
+field * 5C00069B u8 0,1
+field * 5C00069C u8 0,1
+field * 5C0008DC u8 0,1
+field * 5C000921 u8 0,1
+field * 5C000922 u8 0,1
+field * 5C000923 u8 0,1
+field * 5C000660 u32 0,1,2,3,5,8,12
+field * 5C000664 u32 0,1,2,3,5,8,12
+field * 5C000668 u32 0,1,2,3,5,8,12
+field * 5C00066C u32 0,1,2,3,5,8,12
+field * 5C000670 u32 0,1,2,3,5,8,12
+field * 5C0008F8 u32 0,1,7,123,99999
+field * 5C0008FC u32 0,1,7,123,99999
+field * 5C000900 u32 0,1,7,123,99999
+field * 5C000904 u32 0,1,7,123,99999
+field * 5C000908 u32 0,1,7,123,99999
+field * 5C000688 f32 0,1,100
+field * 5C0008EC f32 0,50,150
+field * 5C0008E0 f32 0.5,1,2
+field * 5C0008E4 f32 0.5,1,2
+field * 5C0008E8 f32 1,2
+field * 5C0006B8 u32 0,1,2,3
+field * 5C0006AC u32 0,1
+field * 5C0008D8 u32 0,1
+field * 5C00068C u32 0,0x5C400000
+field * 5C000690 u32 0x5C400000
+field * 5C0006C0 u32 0x5C210000
+field * 5C0006C4 u32 0x100E0FC0
+field * 5C0006C8 u32 0x80
+stable 5C0006C0 0xC
+field * 5C210000 u16 0x41,0x41,0
+field * 5C210002 u16 0x41,0x41,0
+field * 5C210004 u16 0x41,0x41,0
+field * 5C210006 u16 0x41,0x41,0
+field * 5C210008 u16 0x41,0x41,0
+field * 5C21000A u16 0x41,0x41,0
+field * 5C21000C u16 0x41,0x41,0
+field * 5C21000E u16 0x41,0x41,0
+field * 5C0007CC u32 0x5C310000
+field * 5C0007D0 u32 0x100E0FC0
+field * 5C0007D4 u32 0x80
+stable 5C0007CC 0xC
+field * 5C310000 u16 0x41,0x41,0
+field * 5C310002 u16 0x41,0x41,0
+field * 5C310004 u16 0x41,0x41,0
+field * 5C310006 u16 0x41,0x41,0
+field * 5C310008 u16 0x41,0x41,0
+field * 5C31000A u16 0x41,0x41,0
+field * 5C31000C u16 0x41,0x41,0
+field * 5C31000E u16 0x41,0x41,0
+field * 5C000120 u32 0x100E09A0
+field * 5C000124 u32 0x100E0F90
+stable 5C000640 0x10
+stable 5C000660 0x14
+# number digits / padding are small
+arg! 025FC708 r8 0,1,2,3,5,10,0x101
+arg! 025FC708 r9 0,1
+arg! 025FCB90 r7 0,1,2,3,5
+arg! 025FCB90 r8 0,1
+arg 025FC708 r6 0,1,7,10,12345,-5,0x7FFFFFFF,-2147483648
+# ---- coverage fixtures ----
+# digit counts of the unit texts (leading '0' placeholders)
+ret! 025FCDE0 0,1,2,3,4,5
+# tag ids per dispatcher
+field 025FB928 r6+4 u16 0,1,2,3,4,5,6,7,8,9,10,11,12,13
+field 026002E4 r6+4 u16 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45
+field 026005F8 r6+2 u16 0,1,2,3,4,5,6,7
+field 025FB10C r6+4 u16 0,1,2,3,4
+field 0260026C r6+4 u16 0x28,0x29,0x2A,0x2B,0x2C,0x2D
+field 0260026C r6+0xA u8 0,1
+# a crafted text buffer: characters, spaces, line breaks, tags (0x0E <group> <tag> <size>, 0x0F <group> <tag>)
+field * 5E100000 u16 0x41,0x0E,0x0F,0x0A,0x20,0x41,0
+field * 5E100002 u16 0,1,2,3
+field * 5E100004 u16 0,1,9,0xA,0xC
+field * 5E100006 u16 0,2,4
+field * 5E100008 u16 0x41,0x0E,0x0F,0x0A,0x20,0
+field * 5E10000A u16 0,1,3
+field * 5E10000C u16 9,0xA,1
+field * 5E10000E u16 0,2
+field * 5E100010 u16 0x41,0x0E,0x0A,0x20,0
+field * 5E100012 u16 0,1
+field * 5E100014 u16 9,0xA
+field * 5E100016 u16 0
+field * 5E100018 u16 0x41,0x0F,0x20,0
+field * 5E10001A u16 1,2
+field * 5E10001C u16 0xA,9
+field * 5E10001E u16 0
+field * 5E100020 u16 0x41,0
+field * 5E100022 u16 0
+field * 5E100024 u16 0
+stable 5E100000 0x30
+arg! 02600760 r4 0x5E100000
+arg! 02600C48 r5 0x5E100000
+arg! 02601564 r6 0x5E100000
+arg! 02601060 r6 0x5E100000
+arg! 025FD22C r6 0x5E100000
+arg! 025FD46C r6 0x5E100000
+arg! 026017F0 r5 0x5E100000
+arg 025FB9BC r4 0x5E100000
+arg 025FB9BC r5 -1,0,1,2
+arg 025FB9BC r6 0,1,2,4,6,8,12
+# position words passed by pointer
+arg! 02600660 r5 0x5E400010
+arg! 025FD22C r5 0x5E400010
+arg! 02601060 r5 0x5E400010
+arg! 02601564 r5 0x5E400010
+arg! 026014C8 r5 0x5E400010
+field * 5E400010 u32 0,1,3,7
+stable 5E400010 4
+# pictograph headers
+arg! 02600660 r6 0x5E400020
+field * 5E400022 u16 3,3,0
+field * 5E400025 u8 0,1,0x20
+stable 5E400020 8
+# tag processor results
+ret 026005F8 0xFFFFFFFF,0xFFFFFFFF,0,1,3
+# single characters by pointer
+arg! 025FAA1C r4 0x5E400000
+arg! 025FC184 r4 0x5E400000
+arg! 025FC1F4 r6 0x5E400000
+field * 5E400000 u16 0,0x41,0x61,0x7A,0x7B,0xE0,0xE7,0x1F5
+arg 025FC154 r4 0x41,0x61,0x20,0xFF10,0x2018,0x2019
+# wide strings with leading zeros
+arg! 025FCDE0 r4 0x5E500000
+field * 5E500000 u32 0x5E510000,0
+field * 5E500004 u32 0x100E0FC0
+stable 5E500000 8
+field * 5E510000 u16 0x30,0x30,0x41,0x20,0
+field * 5E510002 u16 0x30,0x41,0
+field * 5E510004 u16 0x30,0x41,0
+field * 5E510006 u16 0x30,0x41,0
+field * 5E510008 u16 0
+# unit labels and their texts
+arg! 025FCE5C r6 0x5E600000
+field * 5E600000 u32 0x100E1320,0x100E09A0
+field * 5E600004 u32 0x100E0F90
+stable 5E600000 8
+arg! 025FF738 r7 0x5E600000
+ret 025F4CFC 0,0x5E700000,0x5E700000
+field * 5E700004 u32 0,1,3,0x7FFFFFFF
+stable 5E700004 4
+ret 0273A1CC 0,1,2,0xFFFFFFFF
+ret 0273A2E8 0,0x5E510000,0x5E520000
+field * 5E520000 u16 0x20
+field * 5E520002 u16 0,0x41
+field * 5E520004 u16 0
+# message lookups of putMessageById: the result object gets a set and a label index
+arg 025FD550 r6 0,5,0x1234
+mockfield 025F50E8 r4+8 u32 0,0x5E700000,0x5E700000
+mockfield 025F50E8 r4+0x118 u32 0,1,2,0xFFFFFFFF
+# project palette
+ret 025F4BC0 0x5E300000
+field * 5E300004 u32 0,10,40
+field * 5E300008 u32 0x5E310000
+stable 5E300004 8
+arg 025FAEC4 r7 0,1,2,3
+field 025FAEC4 r6+8 u16 0,1,2,8,9
+# builder constructor: also the allocating path
+arg! 025FA8FC r3 0,0x5B100000
+# character map entries
+arg 025FC154 r4 0x8340,0x8341,0x8347,0x41,0x20
+# message state 8 (one line break in the ruby base)
+field * 5C000000 u32 6,8,0xA
+# sound tag: the "no position" sound 8; room number byte
+field 0260046C r4+4 u16 8,8,1,0x10
+field * 1047E6C8 u8 0,0,1,0xFF
+# copyPaneStyle: holder -> layout -> pane "T_TypeOfJob_00" of the checked type, its font and colours
+arg! 025FB5D4 r6 0x5E200000
+field 025FB5D4 5E200124 u32 0x5E210000
+field 025FB5D4 5E21000C u32 0,0x5E220000,0x5E220000
+field 025FB5D4 5E220008 u32 0x5E230000
+field 025FB5D4 5E23005C u32 0x02FF005C
+ret! 02FF005C 0,0x5E240000,0x5E240000
+field 025FB5D4 5E240008 u32 0x5E250000
+field 025FB5D4 5E250014 u32 0x02FF0014
+ret! 02FF0014 0,0x101FD8F8,0x5E260000,0x5E260000
+field 025FB5D4 5E260000 u32 0,0x101FD8F8
+field 025FB5D4 101FD89C u32 0,1
+field 025FB5D4 101FD888 u32 0,1
+ret 02878098 0x5E270000
+ret 025F36B8 0x5E270000,0x5E280000,0
+field 025FB5D4 5E270004 u32 0x5E290000
+field 025FB5D4 5E29001C u32 0x02FF001C
+field 025FB5D4 5E290024 u32 0x02FF0024
+ret! 02FF001C 1,8,24,32
+ret! 02FF0024 1,8,24,32
+field 025FB5D4 5E2400B8 f32 0.5,1,2
+field 025FB5D4 5E2400BC f32 0.5,1,2
+stable 5E200124 4
+stable 5E21000C 4
+stable 5E220008 4
+stable 5E23005C 4
+stable 5E240008 4
+stable 5E250014 4
+stable 5E260000 4
+stable 5E270004 4
+stable 5E29001C 4
+stable 5E290024 4
+# the TU's static WSafeStrings (outside the image): first use or already initialised
+field * 1048DC04 u32 0,1
+field * 1048D958 u32 0x100E135C
+field * 1048D95C u32 0x100E0FC0
+field * 1048DBF4 u32 0,1
+field * 1048D888 u32 0x100E1300
+field * 1048D88C u32 0x100E0FC0
+field * 1048DC2C u32 0,1
+field * 1048DAB4 u32 0x100E142C
+field * 1048DAB8 u32 0x100E0FC0
+field * 1048DABC u32 0x100E1424
+field * 1048DAC0 u32 0x100E0FC0
+# putMessageById: the static set-name string (size word kept by mocks) on first use or initialised
+field * 1048DC08 u32 0,1
+stable 1048DA9C 4
+# timer frames around the minute/second boundaries
+arg 025FE38C r6 0,1,29,30,1799,1800,1830,3599,3600,5430,-1800,100000
+# putNumber's digit strings: ten pinned SafeStrings over the image's ASCII digits
+arg! 025FC708 r7 0x5E800000
+field 025FC708 5E800000 u32 0x100E130C
+field 025FC708 5E800004 u32 0x100E0F90
+field 025FC708 5E800008 u32 0x100E130E
+field 025FC708 5E80000C u32 0x100E0F90
+field 025FC708 5E800010 u32 0x100E1310
+field 025FC708 5E800014 u32 0x100E0F90
+field 025FC708 5E800018 u32 0x100E1312
+field 025FC708 5E80001C u32 0x100E0F90
+field 025FC708 5E800020 u32 0x100E1314
+field 025FC708 5E800024 u32 0x100E0F90
+field 025FC708 5E800028 u32 0x100E1316
+field 025FC708 5E80002C u32 0x100E0F90
+field 025FC708 5E800030 u32 0x100E1318
+field 025FC708 5E800034 u32 0x100E0F90
+field 025FC708 5E800038 u32 0x100E131A
+field 025FC708 5E80003C u32 0x100E0F90
+field 025FC708 5E800040 u32 0x100E131C
+field 025FC708 5E800044 u32 0x100E0F90
+field 025FC708 5E800048 u32 0x100E131E
+field 025FC708 5E80004C u32 0x100E0F90
+stable 5E800000 0x50

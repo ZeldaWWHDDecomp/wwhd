@@ -1,0 +1,19 @@
+# Verification unit (fork, merged into d_a_npc_ji1 later): _create, CreateInit, _execute, _delete, HIO, sinit, dtors
+src wwhd_src/d/actor/d_a_npc_ji1_exec.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 025B8B94 0 1                    # isEventBit
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 0273AD10 0 0x60000000           # operator new
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0201ADE0 r4=out12            # cXyz::operator- result
+callee 0201AE48 r4=out12            # cXyz::operator* result
+callee 028E9044 r5=out12            # PSMTXMultVecSR output
+arg 0225CC44 r3 0,0x40000000
+# _execute: harpoon state, animation (spear frame, cry), AtHit window
+field 0224B268 r3+0xFAC u8 0,1,1,2
+field 0224B268 r3+0xF8C i32 0x13,0x14,0x17,0x17,0x18,0,0xC,0xD,5
+field 0224B268 r3+0x654 f32 -1 70
+field 0224B268 r3+0x5DC f32 0 31
+field 0224B268 r3+0xE64 u8 0,0,1,10

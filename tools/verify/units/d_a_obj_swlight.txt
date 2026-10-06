@@ -1,0 +1,52 @@
+src wwhd_src/d/actor/d_a_obj_swlight.cpp
+field * r3+0x1124 i16 -1,0,1,20
+ret 023969A0 0,1,254,255
+ret 02520460 0 5
+ret 025D63E8 0 1
+
+# Immutable topology of bounded generated J3D model/material graphs.
+arg! 02395D54 r3 0,0x50010000,0x50020000
+arg! 02395D54 r4 0,1,254,255
+arg! 02395ED4 r3 0x50000000
+field 02395ED4 r3+0x3B4 u32 0x51000000
+field * 510000AC u32 0x51100000
+field * 51100004 u32 0,1,4,5,6
+field * 51100008 u32 0x51200000
+stable 500003B4 4
+stable 510000AC 4
+stable 51100004 8
+field * 50010004 u32 0,0x50020000
+field * 50020004 u32 0
+stable 50010004 4
+stable 50020004 4
+callee 023951DC r3=out16 r4=4
+callee 0274D458 r3=out16 r4=16
+field * 51200010 u32 0,0x50010000,0x50020000
+stable 51200010 4
+field * 5120002C u32 0,0x50010000,0x50020000
+stable 5120002C 4
+field * 51200048 u32 0,0x50010000,0x50020000
+stable 51200048 4
+field * 51200064 u32 0,0x50010000,0x50020000
+stable 51200064 4
+field * 51200080 u32 0,0x50010000,0x50020000
+stable 51200080 4
+field * 5120009C u32 0,0x50010000,0x50020000
+stable 5120009C 4
+arg 023969A0 r4 0,1,8,31,32,33,63
+arg 023969A0 r5 0,1,8,16,31,32,33,63
+callee 025E7CE0 stack=1
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 0201924C r4=12 r5=12 r6=12
+
+# Nonzero scratch initialization catches omitted vector/color stores.
+stackfill
+
+# Rendering consumes the draw-list globals before this actor restores them.
+observe 025E2DE0 104B4634 8
+
+# getRes dereferences SafeString vtable+4 before lookup.
+callee 026066C4 r4=8
+
+# Initialized save singleton: image BSS otherwise leaves shifted reads zero.
+field * 101F84DC u32 0x52000000

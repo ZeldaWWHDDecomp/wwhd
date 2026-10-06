@@ -1,0 +1,242 @@
+# Canonical final initialized-native actor verification; cold arbitrary static reinvocation and overlapping helper outputs are outside actual callsite scope.
+# Complete audited HD TU: 41 entries 0211321C..02114A77; profile size5CC.
+# Two virtual PTMF tails are unreachable through the five checked ROM direct descriptors.
+src wwhd_src/d/actor/d_a_coming2.cpp
+arg 0211321C r4 0,1,14,19
+field * 0x104753A8 u32 1
+real 025200D4
+# Actual initialized play singleton; player presence remains variable input.
+field * 0x10474BDC u32 0,0x47000000
+field * 0x101F84DC u32 0x45000000
+field * 0x10474D88 u32 0,0x10000
+arg 02113304 r4 -1,0,1,2,3,4,5
+arg 021136D8 r4 0,1,14,19
+arg 02113754 r4 0,1,14,19
+field * r3+0x3BC s16 -1,0,1,14,15,19
+field * r3+0x586 s16 -1,0,1,2,3,4,5
+field * r3+0x3B2 s16 0,1,2
+field * r3+0x3BE s16 -1,0,1,600
+field * r3+0x3C0 s16 -1,0,1,59,60,61
+field * r3+0x584 s16 -1,0,1,179,180,181
+field * r3+0x3B8 f32 0,35,36,100
+field * r3+0x3C4 u32 -1,1,2,3,4
+field * r3+0x564 u32 -1,1,2,3,4
+field * r3+0x574 u32 -1,1,2,3,4
+field 021141AC r3+0x2DA u8 0,1,2,3
+ret 025D4604 0 1
+ret 025D54C4 0 1 2
+ret 025B8BB0 0 1 2 3
+ret 025D5834 -1 1 2
+callee 025D54C4 r4=out4
+callee 025D5218 r4=4
+callee 02113AE8 r4=out4 r5=12
+callee 02113AB0 r4=12
+callee 021139AC r4=12
+callee 02114250 r3=12
+callee 021141AC r4=8
+callee 02113E50 r4=out12 r5=out4 r6=out4 r7=out1
+callee 028E93CC r3=out48
+callee 025F1C28 r3=48
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 0201A478 r3=out6
+callee 025D5834 r5=12 r7=6
+callee 024F1AFC r4=12 r5=12
+
+# Actual initialized native actor/search/save/matrix/RNG chains; see scope receipts.
+real 025D5218
+real 020100BC
+real 02019DE8
+real 0201AA08
+real 025E1234
+real 025D4604
+real 025DD258
+real 021141AC
+real 02113F18
+real 02113FBC
+real 021140E0
+real 021144B4
+real 02114604
+field * 0x101F3328 u32 0x46000000
+field * 0x101F3330 u32 2
+field * 0x46000008 u32 0x46000100
+field * 0x4600000C u32 0x43000000
+field * 0x46000108 u32 0
+field * 0x4600010C u32 0x44000000
+field * 0x43000004 u32 1
+field * 0x44000004 u32 2
+field * 0x430000C4 u32 123
+field * 0x440000C4 u32 123
+field * 0x101F3080 u32 123
+field * r3+0xC4 u32 123
+field * 0x430002DA u8 2
+field * 0x440002DA u8 2
+field * 0x43000314 f32 0
+field * 0x4300031C f32 0
+field * 0x44000314 f32 100
+field * 0x4400031C f32 0
+field 02114250 r3+0 f32 0,10,14,15,100
+field 02114250 r3+8 f32 0,10
+field 021141AC r4+0 u32 0x48000000
+field 021141AC r4+4 s32 1
+field 021141AC r3+0x314 f32 0,10,14,15,100
+field 021141AC r3+0x31C f32 0,10
+field 021141AC 0x48000000 f32 0
+field 021141AC 0x48000008 f32 0
+field * r3+0x2E8 u32 -1,1,2
+
+# Exact native save-register leaf effects; actual7EFF selects byte+7E.
+real 025B8BB0
+real 025B8AF4
+field * 0x450006C2 u8 0,1,2,3
+
+# Actual finite sea-coordinate boundary and adjoining representable unit values.
+field 02113AB0 r4+0 f32 -349001,-349000,-348999,0,348999,349000,349001
+field 02113AB0 r4+8 f32 -349001,-349000,-348999,0,348999,349000,349001
+
+real 02113304
+
+# Numerical sea/depth boundary diagnostic, initialized checker native domain.
+ret! 0246B6A4 0 1
+fret! 0246BA0C 0 0
+fret! 02008974 -101 -100
+field * 0x10462E6C u32 0,1
+
+# Typed live play/player/ship fields at lifecycle branch boundaries.
+field * 0x10474D88 u32 0,1,0x10000,0x10001
+field * 0x47000326 s8 0,1,2
+field * r3+0x3B1 s8 -1,0,1,2
+field * 0x10474342 u8 0
+field * 0x43000704 u32 0,0x01000000
+field * 0x4300070C u32 0
+field * 0x44000704 u32 0,0x01000000
+field * 0x4400070C u32 0
+
+# Actual owned internal actor call chains.
+real 02113680
+real 021136D8
+real 02113D2C
+real 02113DA8
+real 02113754
+real 02113888
+real 02113F5C
+real 021133BC
+real 02113478
+real 02113AB0
+real 02113E50
+real 02113FD4
+real 02114250
+real 021138E0
+real 02114820
+real 021148B4
+real 0211492C
+real 021149A4
+real 02114A1C
+real 021134F8
+real 021139AC
+real 02113AE8
+real 021144C4
+real 02114630
+real 02114298
+real 0211321C
+real 02113254
+real 02113288
+real 021132F4
+real 02114808
+real 0211480C
+real 02114814
+real 02114818
+real 02114A70
+
+real 025D54C4
+
+real 020198D8
+real 02019788
+field * 0x101FF9D4 u32 1,2,100
+field * 0x101FF9D8 u32 1,2,100
+field * 0x101FF9DC u32 1,2,100
+
+real 028E93CC
+real 025F1C28
+real 025F1884
+real 028E9108
+real 028E90D4
+real 028E8F64
+
+real 028EAB2C
+real 028ED6F8
+real 028EF3E0
+real 028EF3FC
+real 028F026C
+field 02114820 0x101FCC44 s32 1
+field 02114820 0x101FCCBC s32 1
+
+# Fresh base construction and native fixed water-check construction.
+real 025D4ED0
+real 025DD5F0
+real 0253E948
+field 021133BC r3+0x3AA u8 0
+real 024F22DC
+real 024F2104
+real 02008B60
+field * 0x10462E68 u32 0,1
+field * 0x10462E08 f32 0
+
+# Native finite coordinate speed square-root.
+real 028F4384
+real 028F605C
+real 028F60F8
+
+# Actual clear lifecycle all active slots contain valid live or empty IDs.
+field * r3+0x3C4 u32 -1,1,2,3,4
+field * r3+0x3D8 u32 -1,1,2,3,4
+field * r3+0x3EC u32 -1,1,2,3,4
+field * r3+0x400 u32 -1,1,2,3,4
+field * r3+0x414 u32 -1,1,2,3,4
+field * r3+0x428 u32 -1,1,2,3,4
+field * r3+0x43C u32 -1,1,2,3,4
+field * r3+0x450 u32 -1,1,2,3,4
+field * r3+0x464 u32 -1,1,2,3,4
+field * r3+0x478 u32 -1,1,2,3,4
+field * r3+0x48C u32 -1,1,2,3,4
+field * r3+0x4A0 u32 -1,1,2,3,4
+field * r3+0x4B4 u32 -1,1,2,3,4
+field * r3+0x4C8 u32 -1,1,2,3,4
+field * r3+0x4DC u32 -1,1,2,3,4
+
+field 02114630 r3+0x5C0 f32 -349001,-349000,0,1000,348999,349000,349001
+field 02114630 r3+0x5C4 f32 0
+field 02114630 r3+0x5C8 f32 1000
+field 02114630 r3+0x3B2 s16 0,1,2
+field 02114630 r3+0x3BC s16 -1,0,1,5,9,14,15,19
+
+# Native pending-ID list proof and initialized local rotation/vector writes.
+real 025DD868
+real 025DD714
+real 025DD84C
+field * 0x101F39A4 u32 0
+field * 0x101F39AC u32 0
+real 0201A478
+real 024F1AFC
+real 0200909C
+real 02018808
+
+# Producer-consistent pending3 node, counter5; liveIDs1/2 and absent4 lookup boundaries.
+field * 0x101F39A4 u32 0x4A000000
+field * 0x101F39A8 u32 0x4A000000
+field * 0x101F39AC u32 1
+field * 0x4A000004 u32 0
+field * 0x4A000008 u32 0
+field * 0x4A00000C u32 0x4A000000
+field * 0x4A00003C u32 3
+field * 0x101F390C u32 5
+field * 0x43000592 u8 0,1,2
+field * 0x44000592 u8 0,1,2
+field 02113754 r3+0x3C8 s16 -1,0,1,600
+field 02113754 r3+0x3CA u8 0,1,2
+field 02113754 r3+0x3DC s16 -1,0,1,600
+field 02113754 r3+0x3DE u8 0,1,2
+field 02113754 r3+0x4E0 s16 -1,0,1,600
+field 02113754 r3+0x4E2 u8 0,1,2
+field 02113754 r3+0x544 s16 -1,0,1,600
+field 02113754 r3+0x546 u8 0,1,2

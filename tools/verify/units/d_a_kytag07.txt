@@ -1,0 +1,24 @@
+# Verification unit: d_a_kytag07 (Tower of the Gods / Hyrule weather tag)
+src wwhd_src/d/actor/d_a_kytag07.cpp
+
+ret 025200D4 0x54000000 0x54000000        # play object at a fixed address
+ret 02555D0C 0x56000000 0x56000000        # env light at a fixed address
+ret 025445B8 0 1                          # startCheckOld
+field 021B100C 54005292 u8 0 1            # event run check
+field 021B100C 54005134 u32 0x47546F77,0x47546F78   # "GTow" or not
+field 021B100C 54005138 u32 0x65720000,0x65720001   # "er\0"
+field 021B100C r3+0xB3 u8 0 2             # mode
+field 021B100C 101D600C u32 2599,2600,2601,2602,2603,2801,3000,4718,4719,4720,9000
+field 021B100C 101F84DC u32 0x59000000 0x59000000   # save info
+field 021B100C 59000044 f32 0,59.5,60,60.5,200,314.5,315,315.5,400   # time
+field 021B100C 56000A40 i32 248 251       # mRainCount
+field 021B100C 56000A80 i32 0,29,30,31    # mMoyaCount
+field 021B100C 56000AB4 i32 0 1           # thunder mode
+field 021B1350 54005134 u32 0x47546F77,0x47546F78
+field 021B1350 54005138 u32 0x65720000,0x65720001
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021B100C 0x54005134 8 @stages,"ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","ACK","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before"
+fieldstr 021B1350 0x54005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer","GToxer"

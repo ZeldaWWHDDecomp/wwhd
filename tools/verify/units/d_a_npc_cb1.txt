@@ -1,0 +1,232 @@
+# Verification unit: d_a_npc_cb1 (Makar, the Korok cellist)
+src wwhd_src/d/actor/d_a_npc_cb1.cpp wwhd_src/d/actor/d_a_npc_cb1_exec.cpp wwhd_src/d/actor/d_a_npc_cb1_act.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+stackfill
+# merged unit-wide facts (parts used different picks)
+fret 028F4384 -0.0,0,1e-7,5,-2,100     # std::sqrtf (signed zero for fsel; P1/P3)
+fret 020079B4 0,0.5,1,5,10             # CPad_GET_STICK_VALUE (P2/P3)
+
+# ---- part 1: create, heap, callbacks, init, draw, destructor, HIO (d_a_npc_cb1.cpp) ----
+
+arg 02226B9C r3 0,0x40000000
+ret 0273AD10 0,0x57000000             # operator new
+arg 02221774 r3 0,0x40000000
+field 02221894 r3+0xACC i16 0,1
+field 02221894 r3+0xACE i16 -1,0,1
+field 02221894 r3+0xAD0 u32 0x02223048,0x022244A0,0x02223694,0x02223049
+field 02221894 54005B34 u32 0x55000000
+field 02221894 550065F0 u32 0x6F,0x70,0x71,0x72,0x73
+field 02221774 r3+0xF4 u32 0,0x56000000
+field 02221774 r3+0x610 u32 0,0x56100000
+field 02221774 101CEF74 u32 0,0x40000000
+callee 0221F140 r4=8 r5=8     # setAction(&cur, &newFunc copy, arg)
+callee 0221F2C4 r4=8          # setNpcAction(&func copy)
+field 022213BC 101BDC2A u16 0,0x10,0x20,0x40,0x30,0x60
+field 022213BC r3+0x2E0 u32 0,0x2000,0xFFFFDFFF
+field 022213BC r3+0x2FE i8 -1,0,1
+field 022213BC 1047E8E8 u8 0,0x10
+field 022213BC 1047EB14 u8 0,0x10
+field 022213BC 54005B3C u32 0,0x58000000
+field 022213BC 58000644 u32 0,0x200000
+field 022213BC r3+0x620 u32 0,0x59000000
+field 022213BC r3+0x624 u32 0,0x5A000000
+field 022213BC r3+0xAE4 i8 0,2,4
+ret 0221FC6C 0,1
+field 0221ED08 101BDC2A u16 0,0x20,0x40,0x60
+field 0221ED08 54005B3C u32 0,0x58000000
+field 0221ED08 r3+0x620 u32 0,0x59000000
+field 0221ED08 r3+0x624 u32 0,0x5A000000
+field 0221F3C0 r3+0xB0 u32 0,1,2,3,4,5,6
+ret 02520A84 0,1
+ret 0221F314 0,1
+ret 025B8B94 0,1
+field 0221F700 r3+0x2E4 u32 0,8,0xFFFFFFF7
+field 0221F700 r3+0xB0 u32 0,1,2,3,4,5,6
+ret 02520C0C 0,1
+ret 02520460 2,4
+ret 025D63E8 0,1
+ret 0221F3C0 0,1
+field 0221F700 101F84DC u32 0x5B000000
+field 0221F700 5B0001DB u8 0,1
+field 0221F700 54005B38 u32 0,0x40000000
+field 0221F700 10018CD0 u32 0x0222709C
+field 0221F700 54005134 u32 0x73656100,0x73656101,0x73650000,0x00000000,0x74656100
+field 0221F700 r3+0x610 u32 0x56100000
+field 0221F700 56100090 u32 0,0x56200000
+arg 0221E08C r4 0,1
+field 0221E08C 104B462C u32 0x5C000000
+field 0221E08C 5C0000B8 u32 0,0x40000000
+field 0221E08C 10466B84 u32 0,1,0x100
+field 0221E08C 10466B88 u32 0,1,0x100
+field 0221E08C 40000AE1 u8 0xFF,0,0xFE
+arg 0221E5BC r4 0,1
+field 0221E5BC 104B462C u32 0x5C000000
+field 0221E5BC 5C0000B8 u32 0,0x40000000
+arg 0221E23C r4 0,1
+field 0221E23C 104B462C u32 0x5C000000
+field 0221E23C 5C0000B8 u32 0,0x40000000
+field 0221E23C 10466B8C u32 0,1,0x100
+field 0221E23C 10466B90 u32 0,1,0x100
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator*
+callee 02017374 r3=12 r4=12 r5=out48  # cM3d_UpMtx_Base
+field 0221E6E4 101BDC2A u16 0,0x10
+ret 026066C4 0,0x5D000000,0x5D000000,0x5D000000
+ret 025E4F64 0,0x5E000000,0x5E000000
+field 0221E6E4 5E000090 u32 0,0x5F000000,0x5F000000
+ret 025E38E0 0,0x60000000,0x60000000,0x60000000,0x60000000
+ret 027DF9B0 -1,0,3,0x7F
+ret 025E8508 0,1,1
+field 0221E6E4 5D000004 u32 0,4,0x100
+
+# ---- part 2: execute, movement, talk (d_a_npc_cb1_exec.cpp) ----
+
+field * 101BDC2A u16 0,0x2,0x10,0x20,0x40,0x50,0x80,0x100,0x110,0x1FF
+callee 025A8BFC r8=out4        # setSimpleLand: int* result (uninitialised local)
+callee 0259D54C r3=out12       # dNpc_playerEyePos: hidden result
+callee 0257E1B8 r3=12 r4=out12 r5=out4  # dKyw_get_AllWind_vec(pos, vec*, power*)
+
+# steering (play pinned at 0x54000000; this at 0x40000000)
+field * 54005B2C u32 0x40000000,0x12340000      # dComIfGp_getPlayer(0) == this
+field * 54005292 u8 0,1                          # dComIfGp_event_runCheck()
+field * 540052B0 u8 0,1,2,5                      # talk XY
+field * r3+0xF8 u16 0,1,2,3                      # eventInfo.mCommand
+field * r3+0xAE5 i8 -1,0,1,3,5,6,7               # m8DD
+field * r3+0xAF8 i8 0,1,2,3,4,-1                 # m8F0
+field * r3+0x464 u32 0,0x10,0x20,0x30            # mAcch.m_flags
+field * 101BDC28 i16 0,1,5,500                   # m_flyingTimer
+ret 02055B64 0,1                                  # cLib_calcTimer<s16>
+ret 02220288 0,1                                  # eventProc (stub in execute)
+ret 025162A4 0,1                                  # ChkTgHit
+# playAnm: KazeBoss with field_0x04 == 0x18 (anmTblData[17])
+field 02220024 r3+0xAE4 i8 17,7,0
+field 02220024 r3+0xB0 u32 5,0
+# setMessageAnimation: the act name is "WAIT"
+ret 025447EC 0x10018FB0,0
+# chkJumpFlyPlayerAction
+field 02221B68 r3+0xAC6 i16 -1,0
+field 02221B68 r3+0xAC4 i16 0,1
+field 02221B68 r3+0xAC8 u32 0x02225464,0x0222555C,0
+# next_msgStatus
+field 02221CF8 r4+0 u32 0x5AC,0x1520,0x1519,0x151D,0x1523,0x14C2,0x14C3,0x151E,0x1521,0x14C4,0x1000
+# waitNpcAction
+field 02223048 r3+0xAE4 i8 0x14,0
+field 02223048 r3+0xAE9 i8 0,1
+# initTalk / execTalk
+field 02223308 10466B28 u32 0xFFFFFFFF,0
+field 02223308 r3+0xAD4 u32 0x5AC,0x1519
+ret 025F795C 0xE,0xF,0x15,6,0x12,0
+field 02223380 r3+0xAD4 u32 0x5AC,0x1519
+field 02223380 54005BD3 u8 0,1
+arg 02223380 r4 0,1
+# flyAction
+arg 022222D0 r4 0,1
+arg 022222D0 r6 0,1
+field 022222D0 r3+0xADF i8 0,1                   # m8D7
+field 022222D0 r3+0xAE4 i8 4,6,0                 # m8DC
+field 022222D0 r3+0xB00 i16 0,1,400,20000        # m8F8
+field 022222D0 r3+0xAFE i16 0,100                # m8F6
+field 022222D0 r3+0xAE8 u8 0,1                   # m8E0
+field 022222D0 10466C6A i16 400                  # HIO field_0xD2
+field 022222D0 10466C66 i16 15                   # HIO field_0xCE
+field 022222D0 10466C64 i16 100                  # HIO field_0xCC
+# execute
+field 0222091C 54005B38 u32 0x40000000,0         # dComIfGp_getCb1Player()
+ret 024451B4 0,1                                  # check_initialRoom
+ret 024EEB2C 0,1                                  # ChkMoveBG_NoDABg
+ret 024452A0 0,1                                  # check_moveStop
+ret 02445950 0,1                                  # checkNowPosMove
+ret 024EF0BC 4,0                                  # GetGroundCode
+ret 02007840 0,1                                  # CPad R / START
+ret 02516300 0,0x40000100                         # GetTgHitObj
+field 0222091C r3+0xB0 u32 5,4,0
+field 0222091C r3+0x604 u8 0,0x1D,0x1E
+field 0222091C r3+0x4D0 f32 -1000000000,0
+field 0222091C r3+0xB04 f32 -500,0
+field 0222091C r3+0xACE i16 -1,0
+field 0222091C r3+0xACC i16 0
+field 0222091C r3+0xAD0 u32 0x0222487C,0x02223A88,0
+field 0222091C r3+0x2FE i8 0
+field 0222091C 1047E8E8 u8 0,0x10
+field 0222091C r3+0x600 u32 0,1
+field 0222091C 54005BB8 u8 7,0
+field 0222091C r3+0x605 u8 0,1
+# mutation-steering
+callee 028E8DD0 r3=12                             # PSVECSquareMag: the vector is compared
+field 02220288 r3+0x600 u32 3,2,0                # m4E4: event accept + return link
+field 02220288 r3+0xAEB i8 1,0                   # m8E3
+ret 025440C8 1,0                                  # evmng endCheck
+field 02223694 r3+0x370 f32 0,1,-1               # speedF == 0 boundary
+field 02223694 r3+0x2E0 u32 0,0x2000             # carry bit
+ret 024EE090 0x41000000,0                         # getActionBtnB
+field 02222EF4 41000008 u32 3,1,2                 # list type
+field 02222EF4 r3+0x600 u32 0,1
+ret 024EBA14 0x42000000,0                         # getActor
+field 02222EF4 4200039C u32 0x10000000,0
+ret 02007898 1,0                                  # TRIG_A
+callee 022205DC r4=8                              # setPlayerAction(&pmf copy)
+field 0222091C r3+0xB04 f32 -400,-500,0          # m8FC boundary
+
+# ---- part 3: routes, actions, events (d_a_npc_cb1_act.cpp) ----
+
+callee 0200F9D4 r3=out12 r4=12 r6=12  # cLib_offsetPos
+callee 0200F93C r3=12 r4=12           # cLib_targetAngleY
+callee 0201B080 r3=12 r4=out12 r5=12  # cXyz::outprod
+callee 024F1AFC r4=12 r5=12           # dBgS_LinChk::Set
+callee 02223E64 r4=12                 # routeAngCheck(normal)
+callee 02008860 r4=0x6C               # cBgS::LineCross
+callee 02008FEC r3=out0x6C            # cBgS_LinChk::ct: constructor storage
+callee 02008E0C r3=out0x54            # cBgS_GndChk::ct: constructor storage
+callee 02008974 r4=0x54               # cBgS::GroundCross
+ret 02008860 0 1                      # LineCross
+callee 0200FA40 r3=out12 r4=12 r6=12  # cLib_offsetPos (door action)
+callee 0222403C r4=2                  # routeCheck(dist, &angle)
+callee 0259DED0 r4=2 r5=12 r6=12      # dNpc_JntCtrl_c::lookAtTarget(&y, target, eye copy)
+callee 022220FC r5=out12              # calcStickPos(angle, &pos out)
+
+# steering
+ret 0254487C 0,0x40100000             # getMySubstanceP: null or a steered value at 0x40100000
+ret 0253EE04 0,0x40200000             # convPId (talk partner): null or an actor
+arg 02224AC0 r4 0,0                   # jumpNpcAction(NULL)
+arg 02225464 r4 0,0                   # jumpPlayerAction(NULL)
+field 02225798 101BDC2A u16 0,0x10,0xFFEF
+field 02225890 40100000 u32 0x1520,0x1521
+field 022259B8 40100000 u32 0x6F6E0000,0x6F666600,0x6F6E6E00,0x6F660000,0x6F000000,0x6F666666
+field 022261FC 101BDC2A u16 0,4,8,0xC,0xFFFF,0xFFF3
+field 022265AC 101BDC2A u16 0,0x20,0xFFFF,0xFFDF
+field 02226A88 40100000 u32 0xFFFFFFFE,0xFFFFFFFF,0
+field 02226A88 r3+0xAD4 u32 0x1526,0x1525
+callee 02008B4C r3=0x6C               # ~cBgS_LinChk: the destroyed check (vtables stored inline)
+callee 02008DAC r3=0x54               # ~cBgS_Chk: the destroyed ground check
+ret 0200FAAC 0,0x1FFF,0x2000,0x2001,0x3FFF,0x4000,0x4001,0x5FFF,0x6000,0x6001,0x8000  # cLib_distanceAngleS: thresholds
+fret 025D69AC 0,159999.98,160000,160000.02,1000000  # fopAcM_searchActorDistanceXZ2: SQUARE(400) edge
+field 022244A0 10466BD4 f32 0,5,-0.0  # l_HIO.mMaxWalkSpeed
+field 022244A0 54005B2C u32 0x40300000  # the player
+field 022244A0 40300318 f32 100,-100,0,99.99999
+field 022244A0 r3+0x318 f32 0
+field 022250AC 10466C20 f32 1         # l_HIO.mStickWalkSpeedScale
+field 022250AC 10466BD8 f32 5         # l_HIO.mMinWalkSpeed
+field 022250AC r3+0x370 f32 0         # speedF
+field 022244A0 r3+0xAF8 i8 1,1,0,-1          # m8F0: running
+field 022244A0 r3+0x3BC u32 2,2,0,1       # the NPC call command (1: other bits only)
+field 022244A0 r3+0xAE9 i8 0,0,1,-1          # m8E1
+field 022244A0 403000F8 u16 0,0,3         # player eventInfo: no door command
+field 022244A0 403003C0 u32 0,0,0x10000         # player: no attention lock
+field 022244A0 54005CD8 u32 0,0,0x100         # player status 0
+field 022244A0 10466BCC f32 0,0,300         # l_HIO.mPlayerChaseDistance
+field 022244A0 10466BD0 f32 1         # l_HIO.mChaseDistScale
+ret 0222403C 0,1                      # routeCheck
+field 022259B8 101BDC2A u16 0,0x40,0xFFFF,0xFFBF  # m_status (.data: 0 unless steered)
+field 02224CFC 101BDC2A u16 0,0x40,0xFFFF
+field 022244A0 101BDC2A u16 0,0x80,0xFFFF
+field 022264E4 101BDC2A u16 0,0x20,0xFFFF,0xFFDF
+arg 0221FEFC r4 -1,0,1,2,0x17          # initAnm index (0 is the >= 0 edge)
+arg 0221FEFC r5 0,1                     # initAnm morf flag
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0221F700 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","Cb","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea"

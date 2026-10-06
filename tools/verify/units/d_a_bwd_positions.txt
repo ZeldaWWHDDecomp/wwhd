@@ -1,0 +1,248 @@
+# Verification unit: d_a_bwd (Molgera)
+src wwhd_src/d/actor/d_a_bwd.cpp wwhd_src/d/actor/d_a_bwd_end.cpp wwhd_src/d/actor/d_a_bwd_move.cpp wwhd_src/d/actor/d_a_bwd_camera.cpp wwhd_src/d/actor/d_a_bwd_execute.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+ret 025200D4 0x54000000 0x54000000   # play object at a fixed address
+ret 025D4604 0 1               # fopAc_IsActor
+# ko_s_sub / ko_delete_sub: fpcNm_BWDS_e (0xDA), ko_count vs l_HIO.m26
+field 020F9A28 r3+8 i16 0xD9 0xDB
+field 020F9AA0 r3+8 i16 0xD9 0xDB
+field 020F9A28 10462A58 i32 0 6
+field 020F9A28 10462A8A i16 0 6
+# constructors: NULL allocates
+arg 020FDE40 r3 0,0x50000000
+arg 020FE7BC r3 0,0x58000000
+ret 0273AD10 0,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000,0x59000000   # operator new
+# Create / useHeapInit
+ret 02520460 4,4,4,0,5                # dComIfG_resLoad
+ret 025D63E8 0,1,1,1                  # fopAcM_entrySolidHeap
+ret 024EEA6C 0,0,0,0,0,0,1            # dBgS::Regist
+field 020FE0B4 10192F24 u8 0 1        # hio_set
+ret 025B9100 0 1                      # isDungeonItem
+field 020FE0B4 54005134 u8 0x57 0x59  # start stage name 'X'
+ret 025E7CE0 0,1,1,1,1,1,1,1   # btkAnm::init
+ret 025E8154 1,1   # brkAnm::init
+ret 025E38E0 0x5A000000,0x5A000000   # mDoExt_J3DModel__create (unsteered 1/8 gives NULL)
+ret 025E4F64 0,0x5B000000,0x5B000000,0x5B000000,0x5B000000,0x5B000000,0x5B000000,0x5B000000   # mDoExt_McaMorf::mDoExt_McaMorf
+field 020FD6F8 5B000090 u32 0,0x5C000000,0x5C000000,0x5C000000,0x5C000000,0x5C000000,0x5C000000   # morf model
+ret 024F23F4 0,0x5D000000,0x5D000000,0x5D000000,0x5D000000,0x5D000000     # dBgW::dBgW
+ret 0200A030 0,0,0,0,0,0,0,0,0,0,1      # cBgW::Set
+ret 026066C4 0,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000,0x5E000000   # getRes (assert on NULL)
+# stack objects
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition: input compared, output filled
+callee 028E8D88 r3=12 r4=12      # PSVECAdd
+callee 024F1AFC r3=0x6C          # dBgS_LinChk::Set
+callee 02008860 r4=0x6C          # cBgS::LineCross
+callee 02008B4C r3=0x6C          # cBgS_LinChk::~cBgS_LinChk
+callee 02008FEC r3=255           # cBgS_LinChk::ct: constructor storage
+# fly_pos_move
+ret 02008860 0 1                 # LineCross
+field 020F9F80 r3+0x1B74 i16 0,0,1    # m18FC
+field 020F9F80 r3+0x3D58 i16 0,1      # m3AE0[0]
+field 020F9F80 r3+0x3D5A i16 0,1      # m3AE0[1]
+field 020F9F80 r3+0x3E96 i16 0,1      # m3C1E
+field 020F9F80 1047B68A i16 -0x2000 0x2000   # REG0_S(1): the bank clamp
+# end
+callee 02008974 r4=0x54          # cBgS::GroundCross: the ground check
+callee 02008DAC r3=0x54          # cBgS_Chk::~cBgS_Chk
+callee 02008E0C r3=255           # cBgS_GndChk::cBgS_GndChk: constructor storage
+callee 0201ADE0 r3=12 r4=out12 r5=12         # cXyz::operator-
+callee 028E8DD0 r3=12            # PSVECSquareMag
+callee 0201A478 r3=6
+field 020FEA30 r3+0x1B34 i16 0,1,2,3,4,5,23,7       # m18B0
+field 020FEA30 r3+0x1B50 i16 0,0,1,20,30          # m18CC[0]
+field 020FEA30 r3+0x1B52 i16 0,1                  # m18CC[1]
+field 020FEA30 r3+0x1B30 i16 0,1,4               # m18AC
+field 020FEA30 r3+0x580 i32 0,5,19,20             # m0414
+field 020FEA30 r3+0x3E9C i8 0,1,19,20             # m3C24
+field 020FEA30 r3+0x3E98 i16 0x95,0x96,0x97       # m3C20
+field 020FEA30 r3+0x3D64 i16 0,1                  # m3AEC
+field 020FEA30 r3+0x3BE0 u32 0,0x5F000000         # m3968
+field 020FEA30 r3+0x1E38 u32 0xFFFFFFFF,5         # m1BC0
+field 020FEA30 54005134 u8 0x57 0x59              # start stage name 'X'
+field 020FEA30 r3+0x3DC u32 0x5B000000 0x5B000000 # head morf
+field 020FEA30 5B0000A7 u8 0 1                    # morf state (stop)
+field 020FEA30 5B000098 f32 0,1                   # morf rate
+field 020FEA30 5B00009C f32 29,30,30.5,50,1       # morf frame
+field 020FEA30 r3+0x4E0 f32 0,0.5,1
+field 020FEA30 r3+0x4E4 f32 0,0.5,1
+field 020FEA30 r3+0x4E8 f32 0.49,0.5,1
+fret 02008974 -1000000000 100                     # GroundCross: no ground edge
+fret 028F4384 0 1000                              # sqrtf vs 500
+
+# HD particle set has an extra leading group argument: id is r5, position r6, angle r7, scale r8.
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+
+field 020FF80C r3+0x1B32 i16 0,1,2,3,4,5,6,7,8,9,10,11,12,13
+field 020FF80C r3+0x1B34 i16 -10,0,1,2,3,4,5,6,7,8,9,10,20
+field 020FF80C r3+0x1B50 i16 0,1,20,30,60,120
+field 020FF80C r3+0x1B52 i16 0,1,20,30,60,120
+
+# Camera phases and timing boundaries, using HD field offsets.
+field 02101F30 r3+0x3E96 i16 0,1,2,3,50,51,52,53,60,99,100,101,102,103,104,105,106,150
+field 02101F30 r3+0x3E98 i16 0,15,20,30,44,50,53,58,60,70,83,85,90,110,120,150,399,400,520,550,551,680
+field 02101F30 r3+0x3E9A i16 0,30,40,50,100,170,550,640,700,750,760,1460
+field 02101F30 r3+0xF8 i16 0,2
+field 02101F30 r3+0x3E9C i8 0,1,2,3,19
+
+callee 0251510C r4=12 r5=12
+
+callee 0201AD78 r3=12 r4=out12 r5=12
+
+field 020FF80C r3+0x1B30 i16 0,29,30,49,50,199,200,219,220,599,600,655,659,660
+field 020FF80C r3+0x3D5C i16 0,1
+field 020FF80C r3+0x3D5E i16 0,1
+field 020FF80C r3+0x3D60 i16 0,1
+field 020FF80C r3+0x3D62 i16 0,1
+field 020FF80C r3+0x1E2D i8 0,1,2,3,4
+field 020FF80C 10462A88 i16 0,1,2,3,4
+field 020FF80C 10462A8A i16 0,1,6
+
+# Target camera timing boundaries and alternate ending-stage music.
+field 02101F30 1047B68E i16 0
+field 02101F30 1047B690 i16 0
+field 02101F30 1047BC2A i16 0
+field 02101F30 1047BC2C i16 0
+field 02101F30 54005134 u8 0x57 0x58 0x59
+field 02101F30 1047BC2E i16 0
+# Movement animation-frame branch boundaries; canonical mocked-call domain.
+field 020FF80C r3+0x3DC u32 0x5B000000
+field 020FF80C 5B0000A7 u8 0 1
+field 020FF80C 5B000098 f32 0,1
+field 020FF80C 5B00009C f32 0,1,16,17,19,20,26,27,28,29,30,31,39,40,41,48,49,50,51,72,73,74
+
+stable 400003DC 4
+stable 5B000098 16
+
+# Bounded warm singleton and finite coordinate/math companion.
+real 025200D4 0201ADE0 028E8DAC 028E8DD0 028F4384 028F605C 028F60F8
+field 020FF80C 104753A8 u32 1
+stable 104753A8 4
+field 020FF80C 10474BDC u32 0x57000000
+stable 10474BDC 4
+field 020FF80C 570000B4 u32 0x10037CF0
+stable 570000B4 4
+field 020FF80C 57000314 f32 0
+field 020FF80C 57000318 f32 5000
+field 020FF80C 5700031C f32 0
+field 020FF80C 5700037C f32 0
+field 020FF80C 57000380 f32 5000
+field 020FF80C 57000384 f32 0
+stable 57000314 12
+stable 5700037C 12
+field 020FF80C r3+0x314 f32 0
+field 020FF80C r3+0x318 f32 4000,5000,6000
+field 020FF80C r3+0x31C f32 0
+stable 40000314 12
+field 020FF80C r3+0x3BCC f32 0
+field 020FF80C r3+0x3BD0 f32 5000
+field 020FF80C r3+0x3BD4 f32 0
+stable 40003BCC 12
+field 020FF80C r3+0x1B38 f32 0
+field 020FF80C r3+0x1B3C f32 4000,5000,6000
+field 020FF80C r3+0x1B40 f32 0
+stable 40001B38 12
+field 020FF80C 10462A8C f32 5000
+field 020FF80C 10462A58 i32 0,1,6
+stable 10462A58 4
+stable 10462A5C 52
+stable 1047B608 2816
+stable 104A44F8 65536
+field 020FF80C 1047B610 f32 0
+field 020FF80C 1047B614 f32 0
+field 020FF80C 1047B618 f32 0
+field 020FF80C 1047B61C f32 0
+field 020FF80C 1047B620 f32 0
+field 020FF80C 1047B624 f32 0
+field 020FF80C 1047B628 f32 0
+field 020FF80C 1047B62C f32 0
+field 020FF80C 1047B630 f32 0
+field 020FF80C 1047B634 f32 0
+field 020FF80C 1047B638 f32 0
+field 020FF80C 1047B63C f32 0
+field 020FF80C 1047B640 f32 0
+field 020FF80C 1047B644 f32 0
+field 020FF80C 1047B648 f32 0
+field 020FF80C 1047B64C f32 0
+field 020FF80C 1047B650 f32 0
+field 020FF80C 1047B654 f32 0
+field 020FF80C 1047B658 f32 0
+field 020FF80C 1047B65C f32 0
+field 020FF80C 1047B688 i16 0
+field 020FF80C 1047B68A i16 0
+field 020FF80C 1047B68C i16 0
+field 020FF80C 1047B68E i16 0
+field 020FF80C 1047B690 i16 0
+field 020FF80C 1047B692 i16 0
+field 020FF80C 1047B694 i16 0
+field 020FF80C 1047B696 i16 0
+field 020FF80C 1047B698 i16 0
+field 020FF80C 1047B69A i16 0
+field 020FF80C 1047B69C i16 0
+field 020FF80C 1047B69E i16 0
+field 020FF80C 1047B6A0 i16 0
+field 020FF80C 1047B6A2 i16 0
+field 020FF80C 1047B6A4 i16 0
+field 020FF80C 1047B6A6 i16 0
+field 020FF80C 1047B6A8 i16 0
+field 020FF80C 1047B6AA i16 0
+field 020FF80C 1047B6AC i16 0
+field 020FF80C 1047B6AE i16 0
+field 020FF80C 1047BBB0 f32 0
+field 020FF80C 1047BBB4 f32 0
+field 020FF80C 1047BBB8 f32 0
+field 020FF80C 1047BBBC f32 0
+field 020FF80C 1047BBC0 f32 0
+field 020FF80C 1047BBC4 f32 0
+field 020FF80C 1047BBC8 f32 0
+field 020FF80C 1047BBCC f32 0
+field 020FF80C 1047BBD0 f32 0
+field 020FF80C 1047BBD4 f32 0
+field 020FF80C 1047BBD8 f32 0
+field 020FF80C 1047BBDC f32 0
+field 020FF80C 1047BBE0 f32 0
+field 020FF80C 1047BBE4 f32 0
+field 020FF80C 1047BBE8 f32 0
+field 020FF80C 1047BBEC f32 0
+field 020FF80C 1047BBF0 f32 0
+field 020FF80C 1047BBF4 f32 0
+field 020FF80C 1047BBF8 f32 0
+field 020FF80C 1047BBFC f32 0
+field 020FF80C 1047BC28 i16 0
+field 020FF80C 1047BC2A i16 0
+field 020FF80C 1047BC2C i16 0
+field 020FF80C 1047BC2E i16 0
+field 020FF80C 1047BC30 i16 0
+field 020FF80C 1047BC32 i16 0
+field 020FF80C 1047BC34 i16 0
+field 020FF80C 1047BC36 i16 0
+field 020FF80C 1047BC38 i16 0
+field 020FF80C 1047BC3A i16 0
+field 020FF80C 1047BC3C i16 0
+field 020FF80C 1047BC3E i16 0
+field 020FF80C 1047BC40 i16 0
+field 020FF80C 1047BC42 i16 0
+field 020FF80C 1047BC44 i16 0
+field 020FF80C 1047BC46 i16 0
+field 020FF80C 1047BC48 i16 0
+field 020FF80C 1047BC4A i16 0
+field 020FF80C 1047BC4C i16 0
+field 020FF80C 1047BC4E i16 0
+field 020FF80C r3+0x3E9C i8 0,1,2
+field 020FF80C 5B000090 u32 0x5A000000
+field 020FF80C 5A0000AC u32 0x5D000000
+stable 5B000090 4
+stable 5A0000AC 4
+
+# Concrete Link virtual setter/throw callback consume incoming r4 vector12.
+callee 02443A28 r4=12
+callee 02443CE0 r4=12
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020FE0B4 0x54005134 8 @stages,"Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","Bwds","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y"
+fieldstr 020FEA30 0x54005134 8 @stages,"B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y","Y"
+fieldstr 020FF80C 0x54005134 8 @stages
+fieldstr 02101F30 0x54005134 8 @stages,"CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","W","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"
+fieldstr 020FA614 0x54005134 8 @stages,"Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Boss03","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","Bwd","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","C4","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","WindBoss","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","Yslvg00","er","er","er","er","er","er","er","er","er","er","er","er","er","er","er","er","er","p","p","p","p","p","p","p","p","p","p","p","p","p","p","p","p","p","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw"

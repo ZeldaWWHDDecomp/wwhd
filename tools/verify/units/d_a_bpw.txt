@@ -1,0 +1,226 @@
+# Jalhalla (big Poe boss). HD profile allocates 0xE9C (constructor 020D60C8). Layout: GameCube + 0x11C.
+src wwhd_src/d/actor/d_a_bpw.cpp
+
+# stack objects: color conversion buffers, MtxPosition / PSVECAdd vectors, archive keys
+callee 020D1280 r3=out16
+callee 0274D458 r3=out16 r4=16
+callee 0200FCD8 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=255
+callee 026066C4 r4=8
+callee 025D5218 r4=4
+
+# action_damage: action state, hit type, kankyou state, timers, flags
+field 020D72BC r3+0x562 i16 0x50,0x51,0x51,0x52,0x52,0x53,0x53,0x54,0x54,0x55,0x55,0x5A,0x5B,0x5C,100,0x65,0x65,0x56,0x57,0x58,0x59,0x5D,0x5E,0x5F,0x60,0x61,0x62,0x63,0
+field 020D72BC r3+0x4FB u8 0,10,10,11,11,1
+field 020D72BC r3+0x507 u8 0,1,2,3,4
+field 020D72BC r3+0x574 i16 0,0,1
+field 020D72BC r3+0x57C i16 0,0,1
+field 020D72BC r3+0x4FD u8 0,1
+field 020D72BC r3+0x59A i16 0,100,253,254,255,300
+field 020D72BC r3+0x568 i16 -1,0,1,2,3,4
+field 020D72BC r3+0x514 u32 0xC,0x2A,0,0x10
+field 020D72BC r3+0x56A i16 0,0,1
+field 020D72BC r3+0x56C i16 0,1,1,2
+field 020D72BC r3+0x80C u32 0,0x20
+field 020D72BC r3+0x7B4 u32 0,2
+field 020D72BC r3+0x2E0 u32 0,0x2000
+field 020D72BC r3+0x3A1 i8 -1,0,1,3,15
+field 020D72BC 1047BB0E i16 0,1
+ret 024EF0F4 0,9,9,1
+
+# action_start_demo: demo state, timers, REG20 step registers, animation index
+field 020DB380 r3+0x562 i16 200,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF,0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0
+field 020DB380 r3+0xF8 u16 0,2,2
+field 020DB380 r3+0x56A i16 0,0,1
+field 020DB380 r3+0x56C i16 0,0,1
+field 020DB380 r3+0x56E i16 0,1
+field 020DB380 r3+0x514 u32 9,0x1F,0x1F,0x20,0
+field 020DB380 r3+0x580 i16 0,1
+field 020DB380 r3+0x57E i16 0,14,15
+field 020DB380 r3+0x674 u32 0,0x30000000
+field 020DB380 1047C1CA i16 0,1
+field 020DB380 1047C1C8 i16 0,1
+
+# daBPW_Execute: type, actions, states, line check object, vibration mode
+callee 02008FEC r3=255
+callee 024F1AFC r3=0x6C
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02018D40 r4=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 025CB374 r6=12
+field 020D3464 r3+0x4F8 u8 0,1,1,1,2,2,2,2,3,3,4
+field 020D3464 r3+0x560 i16 0,0,0,1,1,1,2
+field 020D3464 r3+0x562 i16 0,1,2,3,4,5,6,10,11,12,0x13,0x14,0x15,0x16,0x17,0x18
+field 020D3464 r3+0x57E i16 0,1,2,3
+field 020D3464 r3+0x500 u8 0,0,1
+field 020D3464 r3+0x503 u8 0,0,1
+field 020D3464 r3+0x504 u8 0,1,2,3,4
+field 020D3464 r3+0x56A i16 0,0,1,10,11
+field 020D3464 r3+0x56C i16 0,0,1,0x100
+field 020D3464 r3+0x57A i16 0,1,1,2
+field 020D3464 r3+0x580 i16 0,0,1
+field 020D3464 r3+0x59A i16 0,1
+field 020D3464 r3+0x80C u32 0,0x10,0x20,0x30
+field 020D3464 r3+0x6EC u32 0,0x31000000
+field 020D3464 r3+0x688 u32 0,0x31000000
+field 020D3464 r3+0x6B0 u32 0,0x31000000
+field 020D3464 r3+0x6C4 u32 0,0x31000000
+field 020D3464 r3+0x524 i16 0,1,2,3,50
+
+# body_execute (020DC704): REG8_S(2), body action, states
+callee 02824890 r3=48 r4=12 r5=12 r6=12
+field 020DC704 1047BB0C i16 0,0,0,1
+field 020DC704 r3+0x560 i16 0,0,0,0,1,1,1,1,2,2,2,2,3,4,0x14,5
+field 020DC704 r3+0x562 i16 0,1,2,3,3,3,4,5,6,7,8,9,0x2C,0x30,10,11,12,13,14,0x14,0x15,0x28,0x29,0x2A,0x2B,0x32,0x33,0x34,0x35,0x3C,0x3D,0x3E,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x4F,0x50
+field 020DC704 r3+0x56A i16 0,0,1
+field 020DC704 r3+0x56C i16 0,0,1
+field 020DC704 r3+0x56E i16 0,0,1
+field 020DC704 r3+0x512 i16 0,1,2,3
+field 020DC704 r3+0x514 u32 5,0x19,0x1D,0x23,0x25,0x28,0x2A,0x2B,0
+field 020DC704 r3+0x501 u8 0,0,1
+field 020DC704 r3+0x4FC u8 0,0,0,1
+field 020DC704 r3+0x4FD u8 0,0,1
+field 020DC704 r3+0x4FE u8 0,1,1,2
+field 020DC704 r3+0x505 u8 0,0,1
+field 020DC704 r3+0x57E i16 0,0,1
+field 020DC704 r3+0x59A i16 0,1,2,0x94,0x95,0x96
+field 020DC704 r3+0x80C u32 0,0x20
+field 020DC704 r3+0x660 u32 0,0x31000000
+field 020DC704 r3+0x64C u32 0,0x31000000
+field 020DC704 r3+0x62C u32 0,0x31000000
+field 020DC704 10192534 u8 0,1
+field 020DC704 1047BB10 i16 0,0,1
+field 020DC704 1047BD5A i16 0,0,1
+
+# action_bunri_dousa: separation / end demo states
+field 020D8564 r3+0x562 i16 0x77,0x88,0x88,0x6F,0x6E,0x6F,0x6F,0x70,0x71,0x72,0x72,0x73,0x74,0x75,0x76,0x78,0x79,0x7A,0x7B,0x7C,0x7D,0x7E,0x7F,0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89
+field 020D8564 r3+0x512 i16 0,1,2
+field 020D8564 r3+0x3A1 i8 -1,0,1,3,5,6,10,11,15
+field 020D8564 r3+0x3A0 i8 0,1,3,15
+field 020D8564 r3+0x56A i16 0,0,1,2
+field 020D8564 r3+0x56C i16 0,0,1,2
+field 020D8564 r3+0x56E i16 0,0,1
+field 020D8564 r3+0x572 i16 0,1
+field 020D8564 r3+0x57C i16 0,1,1
+field 020D8564 r3+0xF8 u16 0,2,2
+field 020D8564 r3+0x505 u8 0,0,1
+field 020D8564 r3+0x514 u32 9,0x1B,0
+field 020D8564 r3+0x580 i16 0,1
+field 020D8564 r3+0x57E i16 0,1,2,15
+field 020D8564 r3+0x590 i16 0,1
+field 020D8564 r3+0x59A i16 0,0xFD,0xFE,0xFF
+field 020D8564 1047C1CA i16 0,1
+field 020D8564 1047C1C8 i16 0,1
+field 020D8564 1047BB54 f32 0,0,1
+field 020D8564 1047BB50 f32 0,0,1
+# bunri 0x6F: m3F6 > 2 reads an uninitialised register in the original (GameCube: uninitialised
+# hpAmountToEndPhaseAt) -> infeasible; keep m3F6 (this = 0x40000000) in 0..2 across clobbering.
+stable 40000512 2
+
+# play object / player fixtures (as d_a_pw): play at 0x54000000, player at 0x55000000
+ret 025200D4 0x54000000 0x54000000
+field * 54005B2C u32 0x55000000 0x55000000
+field * 550003AC u8 0,5,6,7,10,11,12,13,14,16,17,17,18,21,22,23,25,27,28,30,31,32
+field * 550003BC u32 0,0x100
+# body_atari_check: hit, hit object at 0x57000000 with an attack type
+ret 025162A4 0,1,1,1
+ret 02516300 0,0x57000000,0x57000000,0x57000000
+field 020D6D98 57000010 u32 2,0x400,0x800,0x4000000,0x10000000,0x8000,0x200000,0x800000,0x40,0x80,0x1000000,0x10000,0x20,0x80000,0x100000,0x1,0x4,0x2000
+field 020D6D98 r3+0x4FC u8 0,1,1,1
+field 020D6D98 r3+0x562 i16 0x53,0x53,0x53,0
+field 020D6D98 r3+0x560 i16 0,3
+stable 57000010 4
+# constructor: this == NULL allocates
+arg 020D60C8 r3 0,0x30000000,0x30000000
+# body_nodeCallBack: joint info at 0x58000000 (index at +4)
+ret 027F7878 0x58000000 0x58000000
+field 020D0C04 58000004 u16 0,1,2,3,0x1C,0x1D,0x1E,0x1F,0x25,0x26
+field 020D0DF0 58000004 u16 0,1,2
+# noroi_check: press trigger (anm 0x1C/0x1D/0x2A/0x2B) and confuse hit on the player
+field 020D2058 r3+0x514 u32 0x1C,0x1D,0x2A,0x2B,0x1B,0x2C,0
+field 020D2058 r3+0x512 i16 0,1,1,2
+field 020D2058 r3+0x502 u8 0,0,1
+field 020D2058 r3+0x560 i16 0,1,2,2
+field 020D2058 r3+0x562 i16 0,5,6,10,11,12,13,14
+field 020D2058 r3+0x568 i16 0,1,2,3
+field 020D2058 r3+0x570 i16 0,0,1
+ret 02515BBC 0,0x55000000,0x55000000,0x30000000
+ret 025160DC 0,1,1,1
+# skull_search_sub: Bl (0xCF) with health, count below/at the limit
+field 020D2A48 r3+8 i16 0xCF,0xCF,0xCF,1
+field 020D2A48 r3+0x3A1 i8 -1,0,1,5
+field 020D2A48 1046275C u32 0,5,99,100
+ret 025D4604 0,1,1,1
+# search_get_skull: mode, attack state 0x35, angle window
+arg 020D2AD4 r4 0,1,2,3
+field 020D2AD4 r3+0x562 i16 0,0x35
+field 020D2AD4 1046275C u32 0,1,2
+ret 0200FAAC 0,100,21999,22000,30000
+# kantera_calc: default timer values
+field 020D30EC r3+0x568 i16 -1,0,1,2,3,4,5
+field 020D30EC r3+0x560 i16 0,0x14
+# daBPW_Create: types, phase, heap, boss flags, stage name, REG0_S(9), parent
+field 020D6268 r3+0xB0 u32 0,1,2,3,0x100,0x101,0x102,0x1FF,0xFF,0xFFFF,0xFF02
+field 020D6268 r3+0x2E4 u32 0,8
+field 020D6268 r3+0x2E8 u32 0xFFFFFFFF,0x56000000
+field 020D6268 54005134 u8 0x58,0x41
+field 020D6268 1047B69A i16 0,0,1
+field 020D6268 r3+0x3A1 i8 1,5,15
+ret 02520460 0,4,4,4,4,5
+ret 025D63E8 0,1,1,1
+ret 025B9100 0,0,0,1
+# Execute: kantera hit types (hammer + sound switch), fire-1 plane normal, tori player checks
+field 020D3464 57000010 u32 0x10000,0x10000,2,0x400,0x800,0x4000000,0x10000000,0x40,0x80,0x2000,0x1000000,0x20,0x8000
+ret 020084C8 0,0x59000000,0x59000000
+field 020D3464 59000004 f32 1,1,0.5
+stable 59000004 4
+field 020D3464 550003B0 i16 0,0,1
+field 020D3464 550003C0 u32 0,0x02000000
+field 020D3464 54005CDC u32 0,0x2000
+ret 0252A038 0,0,1
+# bunri: stage name 'X', countdown 9
+field 020D8564 54005134 u8 0x58,0x41
+# body_execute: dousa random/distance, karada timer
+fret 02019788 0 1
+fret 028F4384 0 2000
+field 020DC704 r3+0x568 i16 0,0,1
+
+# mutation follow-up: camera Reset/Set vectors are compared; timers with a nonzero high byte
+# (separates 0x56A from an unaligned 0x56B read); fire-hit flag set; tori scale boundary
+callee 0251510C r4=12 r5=12
+callee 02514F88 r4=12 r5=12
+field 020DC704 r3+0x56A i16 0,0,1,0x100
+field 020DC704 10192534 u8 0,1,1
+ret 025D5218 0,0x3F800000,0x3F800000
+field 020D3464 r3+0x330 f32 0.1,0.05,0.5
+
+# mutation follow-up: flamethrower-01 emitter free; collision flag bit 0 set; REG8_F(0)/(1)
+# (separates the two HIO slots in the body press speed)
+field 020D3464 r3+0x69C u32 0,0x31000000
+field 020D3464 r3+0x80C u32 0,0x1,0x10,0x20,0x21,0x30
+field 020DC704 1047BA90 f32 0,0,1
+field 020DC704 1047BA94 f32 0,0,2
+# stackfill: the line-check object's poly info (+0x14/+0x16) must not read as zero, else the
+# GetTriPla argument order is not checked (it was swapped and fixed)
+stackfill periodic
+
+# Uncovered blocks, all infeasible:
+# - Execute 020D3464 blocks 88, 94, 108 (020D3B7C/3BAC/3C58): inlined fopAcM_seStart null checks of
+#   `this` in the lantern hit-sound switch (this is never NULL).
+# - Execute block 233 (020D53AC): GHS switch dispatch tail on the type byte +0x4F8; reached only
+#   with a value > 3 that is then compared with 0 again.
+# - action_bunri_dousa 020D8564 block 132 (020D92E4): case 0x75 end, "state >= 0x78" test of the
+#   shared function tail; next_att_wait_check has just set the state to 0 or 10 in the game
+#   (with the callee mocked, seed 7 reaches it, as it does its hp <= 5 twin, block 128).
+# - action_bunri_dousa block 306 (020DB074): case 0x87 falls into 0x88 right after setting timer 9
+#   to 0, so the "timer 9 == 1" test of the duplicated case-0x88 head cannot hold.
+# - body_execute 020DC704 block 296 (020DE8EC): tests m3E5 (+0x501) != 0 right after
+#   next_status_clear cleared it (noroi_check does not write it).
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020D6268 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","Bpw","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"
+fieldstr 020D3464 0x54005134 8 @stages,"DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l","l"
+fieldstr 020D8564 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d"

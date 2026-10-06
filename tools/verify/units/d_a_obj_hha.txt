@@ -1,0 +1,57 @@
+src wwhd_src/d/actor/d_a_obj_hha.cpp
+stackfill periodic
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8F44 r3=12 r4=12
+callee 025CB374 r6=12
+callee 02353BFC r4=12 r5=6 r6=12
+ret 026066C4 0,0x40020304,0x40040508
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 025A847C stack=4
+callee 025E7CE0 stack=1
+ret 025E38E0 0,0x40020304,0x40040508
+ret 025E7CE0 0 1
+ret 025E8508 0 1
+callee 024F15A4 r3=12 r4=out80
+callee 02008B4C r3=64
+callee 020182E0 r4=12
+callee 02018D40 r4=12
+ret 024F15A4 0 1
+ret 025BA0C0 0 1
+ret 02353AE8 0 1
+ret 02353B7C 0 1
+ret 02354050 0 1
+callee 02353924 r3=out12
+field * r3+0xb70 u8 0,1,15
+field * r3+0xb72 s16 -1,0,1,2
+ret 02520460 0,4,5
+ret 025D63E8 0 1
+field * r3+0xb7e u8 0 3
+field * r3+0xb82 u8 0 3
+field * r3+0xb7c u16 0,1,10,11,14,15,16,34,35,36,90
+field * r3+0x60c u8 0 1
+field * r3+0xb83 u8 0 1
+field * r3+0xb2a u8 0 1
+field * r3+0xf8 u16 0,1,2
+ret 0254407C 0 1
+ret 025440C8 0 1
+arg 02353924 r3 0,0x40020304,0x40040508
+ret 0273AD10 0,0x40020304,0x40040508
+arg 02354EE0 r3 0,0x40020304,0x40040508
+
+# Nonzero singleton identities and varying current water level.
+field * 101F4F28 u32 0x40010304,0x40020508
+field * 101F84DC u32 0x4003060c,0x40040504
+field * 101D5F28 f32 0 1
+field 02354EE0 r3+0xb0 u32 0,0x100,0xf00,0x1000
+
+# Nonzero writable static-initialization storage.
+field 02355EC8 10469E64 u32 0x11111111,0x44444444
+field 02355EC8 10469E68 u32 0x11111111,0x44444444
+field 02355EC8 10469E6C u32 0x11111111,0x44444444
+field 02355EC8 10469E70 u32 0x11111111,0x44444444
+field 02355EC8 10469E58 f32 4 8
+field 02355EC8 10469E5C f32 4 8

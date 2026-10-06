@@ -1,0 +1,103 @@
+# Verification unit: d_a_npc_ba1 (Link's grandmother)
+src wwhd_src/d/actor/d_a_npc_ba1.cpp
+
+# stack objects passed to callees
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 021EECEC r4=8          # set_action(pointer to member, 8 bytes)
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+
+ret 021EE714 0 1              # XyCheck_cB -> bool
+ret 021EE9B0 0 1              # setBtp -> bool
+# anmAtr: message status 6 / 0xE, m819, tag info
+arg 021F15B8 r4 5 15
+field 021F15B8 r3+0x989 i8 0 1
+ret 025200D4 0x54000000 0x54000000
+field 021F15B8 54005BC6 u8 254 255
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 02543714 r4=12         # dEvent_manager_c::setGoal(&pos)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator- (hidden result pointer r4)
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(target, eye copy)
+# lookBack / eMove_MOV_POS_
+field 021F0B18 r3+0x985 i8 -1 4         # mLookBackState
+field 021F0B18 r3+0x3B6 u8 0 1          # m_jnt.mbTrn
+field 021F04DC r3+0x950 i16 0 1         # mEvTimer
+field 021F04DC r3+0x934 f32 -1.5 1.5    # mEyeOffset
+fret 028F4384 3.5 4                     # sqrt: around 4.0 (edges 3.5, 4.0)
+# event_proc / next_msgStatus / getMsg
+field 021F0D58 r3+0x94E i16 0 3          # mEventIdx
+field 021F17EC 101F4B5C u32 0x56000000 0x56000000   # message manager
+field 021F17EC 56000948 u32 0 2          # mSelectNum
+arg 021F1714 f1 0 180                    # chk_drct degrees
+field 021F1B70 r3+0x962 u8 2 3           # m7F2
+# action functions
+field 021F2818 r3+0x988 i8 -1 4
+field 021F2980 r3+0x988 i8 -1 4
+field 021F2A4C r3+0x988 i8 -1 4
+field 021F2B08 r3+0x988 i8 -1 4
+field 021F2A30 r3+0x988 i8 -1 10
+field 021F2818 r3+0x983 i8 0 8
+field 021F2980 r3+0x983 i8 1 4
+field 021F2A4C r3+0x983 i8 3 6
+field 021F2B08 r3+0x983 i8 1 7
+field 021F1F0C r3+0x982 i8 0 4
+field 021F2040 r3+0x982 i8 0 4
+field 021F24B8 r3+0x982 i8 0 4
+field 021F26D4 r3+0x982 i8 0 4
+field 021F217C r3+0x981 i8 3 5
+field 021F217C r3+0x7C0 u32 0x7e4,0x7e6,0x7e8,0x7ec,0x7f0,0x800,0x801,0x7e5
+ret 025F795C 0x12 0x14
+# demo
+field 021EF978 r3+0x2DC u8 0 0x22
+field 021EF978 r3+0x97B u8 0 1
+field 021EF978 101D600C u32 0x149,0x14A,0x180,0x181
+# _execute / _create
+field 021F1064 r3+0x970 u8 0 1
+field 021F1064 r3+0x964 u8 0 1
+field 021F1064 r3+0x2DC u8 0 1
+field 021F1064 r3+0x966 u8 0 1
+field 021F1064 r3+0x965 u8 0 1
+field 021F1064 r3+0x97B u8 0 1
+field 021F1064 r3+0x96E u8 0 1
+field 021F1064 r3+0x96D u8 0 1
+field 021F1064 r3+0x86A i16 -1 1
+ret 021EFC5C -1 1
+ret 021EF978 0 1
+ret 02520460 0 5
+ret 021EECBC 0 1
+ret 021EF4BC 0 1
+ret 025D63E8 0 1
+field 021EF6AC r3+0x2E4 u32 0 8
+field 021F0F78 r3+0x982 i8 0 5
+field 021F0F78 r3+0x987 i8 2 3
+# coverage steering
+field 021F17EC r4+0 u32 0x7EB,0x7EF,0x7F3,0x7F4,0x7F6,0x7FA,0x7FB,0x7FC,0x7FD,0x7FF,0x7F0,0x7F9
+field 021EE4AC r3+8 i16 0x167,0x168
+field 021EE4AC 10465CC8 i32 18 21
+field 021EF4BC r3+0x987 i8 -1 5
+field 021EF978 1047E6B8 u32 0x44656D6F,0x44656D6E,0x45656D6F
+field 021EF978 1047E6BC u32 0x30310000,0x30320000
+# mutation-driven steering
+field 021EF978 101D5FFC u32 0,0x57000000
+field 021EECEC r3+0x86A i16 -1,0,1
+field 021EECEC r4+2 i16 -1,0,1
+field 021EECEC r3+0x868 i16 0,4
+field 021EECEC r4+0 i16 0,4
+field 021EECEC r3+0x86C u32 0x021F2818,0x021F2980
+field 021EECEC r4+4 u32 0x021F2818,0x021F2980
+arg 021F01B8 r4 0,0x5A000000
+arg 021F0188 r4 0,0x5A000000
+ret 021F0694 0 1
+ret 021F0838 0x58000000 0x58000000
+field 021F086C 580008AC u8 4 5
+field 021F086C r3+0x950 i16 0 1
+field 021F17AC r3+0x93C i16 0 1
+field 021F17AC r3+0x3AE i16 0 1
+field 021F17AC r3+0x93E i16 0 1
+field 021F17AC r3+0x3B2 i16 0 1
+field 021F17AC r3+0x940 i16 0 1
+field 021F17AC r3+0x322 i16 0 1
+ret 0254487C 0x59000000 0x59000000
+field 021F01EC 59000000 u32 0 11

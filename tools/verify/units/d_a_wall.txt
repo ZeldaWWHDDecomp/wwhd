@@ -1,0 +1,30 @@
+src wwhd_src/d/actor/d_a_wall.cpp wwhd_src/d/actor/d_a_wall_static.cpp
+stackfill periodic
+field * r3+0x6FC u8 0,1,2,3,255
+field * r3+0x6C8 u8 0,1
+field * r3+0x6F4 u8 0,1,9,10,11,254,255
+field * r3+0x6F8 s32 -1,0,1,254,255
+field * r3+0x2E4 u32 0,1,2,4,8,9,0x10,0xFFFFFFF7,0xFFFFFFFF
+field 024D40AC r3+0xB0 u32 0,1,2,255,256,257,512,513,768,0xFFFFFFFF
+ret 02520460 0,1,2,3,4,5
+ret 025BA0C0 0,1
+ret 025D63E8 0,1
+ret 0200A030 0,1
+ret 025162A4 0,1
+ret 0200F5C8 0,1
+ret 025200D4 0x54000000 0x54000000
+callee 026066C4 r4=8
+callee 028E8F64 r4=12 r5=out12
+callee 0201924C r4=12 r5=12 r6=12
+callee 025A847C r6=12 r7=6
+# Type is fixed at actor creation. Particle callbacks must preserve this field.
+arg! 024D43B4 r3 0x40000000 0x40000000
+stable 400006FC 1
+# Resource-control and save-info globals: pin them to distinct non-zero pointers so a wrong
+# global address shows up in callee arguments (mutation survivors 0x101F4F28+1 / 0x101F84DC+1).
+field * 101F4F28 u32 0x56000000 0x56000000
+field * 101F84DC u32 0x56010000 0x56010000
+# Mutation: equivalent survivors: set_tri/set_effect StackPayload bounds and
+# loop bounds (writes land in the payload slack), independent load/call swaps, set_mtx host
+# temp bound; CreateHeap 0x11000022 flag (HD mDoExt_J3DModel__create never reads r5);
+# execute vtable branch (the mode table at 10041FC4 only has slot -1 entries: infeasible).

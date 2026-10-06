@@ -1,0 +1,11 @@
+# Verification unit: d_a_komore (foliage light shafts)
+src wwhd_src/d/actor/d_a_komore.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # fopAcM_entrySolidHeap
+ret 025E7CE0 0 1              # mDoExt_btkAnm::init
+ret 026066C4 0,0x56000000     # getRes: NULL or data
+ret 025E38E0 0,0x57000000     # J3DModel create
+field 021A6C88 r3+0x3B4 u32 0,0x57000000   # mpModel
+callee 025E7CE0 stack=1        # mDoExt_btkAnm::init: 9th argument (int) on the stack (callee unnamed, no GameCube signature)

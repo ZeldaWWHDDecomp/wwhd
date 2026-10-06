@@ -1,0 +1,72 @@
+# Verification unit: d_a_fm (Floormaster), part C (fork fmC): 02147408..0214996C
+src wwhd_src/d/actor/d_a_fm_c.cpp
+# common state (all functions of this part are daFm_c members: r3 = this)
+field * r3+0x3E1 i8 0 14                 # mAnmPrmIdx
+field * r3+0x7E8 u32 0x57000000,0x57000000,0x57000000,0   # mpActorTarget
+field * 57000008 i16 0x126,0x1C5,0x16F,0x14E,0x1C5,0     # target process name (bomb, pot, Medli, Makar)
+field * r3+0x57C u32 0x50000000 0x50000000   # mpMorf
+field * 500000A7 u8 0 1
+field * 50000098 f32 0,1
+field * 5000009C f32 10,15,25,40,9,41,30,0   # morf frame
+field * r3+0xF8 u16 2,2,0                # eventInfo command (demo accept = 2)
+field * r3+0x3EC i32 0 3                 # field_0x2D0 (type)
+field * r3+0x3F8 i32 0 2                 # field_0x2DC
+field * r3+0x400 u8 0 1                  # field_0x2E4
+field * r3+0x3E3 u8 0xFF,1               # field_0x2C7 (scls number)
+field * r3+0x3E4 i16 0xFF,1              # field_0x2C8 (restart point)
+field * r3+0x800 i32 0 1                 # field_0x684
+field * r3+0x7C8 i32 0 1                 # field_0x64C
+field * r3+0x3A1 i8 -1 1                 # health
+field * r3+0x55C f32 0.015,0.02,0        # field_0x3E0 (hole scale)
+field * 10463E19 u8 0 1                  # l_HIO.field_0x00D
+ret 025200D4 0x54000000 0x54000000      # play object at a fixed address
+field * 54005B34 u32 0x55000000 0x55000000   # link player
+field * 54005B2C u32 0x55000000 0x55000000   # player 0
+field * 54005292 u8 0 1                  # event run flag
+ret 02141280 0 1                         # isLink
+ret 02142BC4 0 1                         # isNpc
+ret 02145070 0 1                         # checkTgHit
+ret 0211D2F8 0 2                         # cLib_calcTimer<int>
+ret 02142450 0 1                         # setHoleScale
+ret 0254457C 0 1                         # endCheckOld
+ret 021467D8 0 1                         # isGrab
+ret 0214472C 0 1                         # isGrabFoot
+ret 0214594C 0 1                         # checkPlayerGrabBomb
+ret 021446EC 0 1                         # isLinkControl
+ret 02048038 0 7                         # daObj::PrmAbstract (pot type)
+ret 0200FAAC 0,0x4FF,0x500,0x501,0x1000,0x7000   # cLib_distanceAngleS
+# getMyNowCutName: the cut names the demos compare with
+ret 02544830 0,0x1000F904,0x1000F90C,0x1000F924,0x1000F978,0x1000F9B8,0x1000F9C8,0x1000F9D0,0x1000F9D8,0x1000F9C0,0x1000F9E0,0x1000F8FC
+# modeParalysis / modeBikubiku: the timer against l_HIO
+field 021496C8 10463F28 i16 100,100,0
+field 021496C8 r3+0x7CC i32 80,79,81,40,39,41,60,0,1
+field 02149818 r3+0x7CC i32 0 2
+# modeThrow: the throw frame (l_HIO.field_0x0FC) and the drop speed clamp
+field 02147408 10463F08 f32 10,10,15
+field 02147408 r3+0xB50 f32 1500,1500,1500,-1,0,1000,2000
+field 02147408 1047BD04 f32 0,0,-1000
+field * r3+0x578 u8 0 1                  # field_0x3FC (grab demo: Link or NPC)
+field 021487F8 r3+0x3E1 i8 10,10,0,6     # modeGrabFootDemo: anm 10 (grab foot)
+# modeGrab: the pull-power range l_HIO.field_0x110 .. 0x114
+field 02147BE0 10463F1C f32 20,20,50
+field 02147BE0 10463F20 f32 50,50,20
+field 021482F0 r3+0x3E1 i8 6,6,0           # modeGrabDemo: anm 6 (pull in)
+stackfill periodic                       # stack objects start non-zero (chasePos target, player position)
+callee 0200F62C r4=12                    # cLib_chasePos: target vector on the stack (compared)
+# player virtuals at fixed addresses so their stack arguments can be compared
+field * 550000B4 u32 0x58000000 0x58000000   # link vtable
+field * 5800011C u32 0x02443C0C 0x02443C0C   # slot 0x11C: daPy_lk_c::setPlayerPosAndAngle (real address, so the fact below applies)
+callee 02443C0C r4=12                    # setPlayerPosAndAngle: position (stack object in modePlayerStartDemo)
+field 02149208 1047BCD0 f32 0,3          # REG12_F(0)
+field 02149208 1047BCD4 f32 0,7          # REG12_F(1)
+field 02149208 1047BCD8 f32 0,5          # REG12_F(2)
+# modeThrow: reach the bomb/pot release often (frame = throw frame, target bomb or pot, drop speed scale)
+field 02147408 5000009C f32 10,10,10,0
+field 02147408 57000008 i16 0x126,0x1C5,0x1C5,0x16F
+field 02147408 10463F00 f32 10,10,0
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021482F0 0x54005134 8 @stages
+fieldstr 021487F8 0x54005134 8 @stages,"Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster","Fmaster"

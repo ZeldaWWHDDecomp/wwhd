@@ -1,0 +1,15 @@
+# Verification unit: d_a_tori_flag (small red flag)
+src wwhd_src/d/actor/d_a_tori_flag.cpp
+stackfill periodic
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025162A4 0,1
+callee 026066C4 r4=8
+callee 020182E0 r4=12
+callee 0201AD78 r5=12 r4=out12
+callee 0257E34C r3=out12 r4=12
+callee 0200F164 r3=12 r4=12
+callee 028E8DD0 r3=12
+callee 0251E7A8 r4=12
+callee 0251B638 r4=48
+arg 024C7C00 r3 0,0x50000000

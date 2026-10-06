@@ -1,0 +1,44 @@
+src wwhd_src/d/actor/d_a_boko.cpp
+field * r3+0xB0 u32 0,1,2,3,4,5
+field * r3+0x430 u8 0,1,2,3,4,5,6
+field * r3+0x431 u8 0,1
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E90D4 r3=48 r4=out48
+callee 028E93CC r3=out48
+callee 025E1B34 r3=0
+stackfill periodic
+callee 0201AD78 r3=12 r4=out12 r5=12
+arg 020C1F58 r3 0,0x40000000
+arg 020C3FD8 r3 0,0x40000000
+arg 020C3ED4 r3 0,0x40000000
+arg 020C3EE8 r3 0,0x40000000
+arg 020C3F60 r3 0,0x40000000
+callee 026066C4 r4=8
+callee 025E8154 stack=1
+ret 025E38E0 0,0x55000000
+ret 025E9B80 0,1
+ret 025E8154 0,1
+field 020C2188 r3+0xB0 u32 0,1,2,3,4,5,6,7,8
+field 020C2188 r3+0x2E4 u32 0,1,8,9
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+callee 024F06B4 stack=1
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+
+# Slow stationary spin and moving treasure-box contact, both valid weapon states.
+field 020C2C90 r3+0x370 f32 0 1
+field 020C2C90 r3+0x328 i16 -1,0,1
+field 020C2C90 r3+0x43A i16 0,1,-1
+field 020C2C90 r3+0x433 u8 0,1,2,3,8
+field 020C2C90 56000008 i16 0x124
+ret 02008438 0,0x56000000
+
+# Initialized resource singleton; distinguish aligned and unaligned address reads.
+field * 0x101F4F28 u32 0x55000000
+
+ret 0200FAAC 0x3FFF,0x4000,0x4001
+field 020C2188 r3+0x3B4 u32 0x55010000
+field 020C2188 0x550100AC u32 0x55020000
+field 020C2188 0x55020004 u32 1,2,3
+field 020C2188 0x55020008 u32 0x55030000

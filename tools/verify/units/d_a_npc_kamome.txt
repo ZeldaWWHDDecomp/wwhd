@@ -1,0 +1,84 @@
+# Verification unit: d_a_npc_kamome (Hyoi seagull, player-controlled)
+src wwhd_src/d/actor/d_a_npc_kamome.cpp wwhd_src/d/actor/d_a_npc_kamome_exec.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 0200FCD8 r3=12 r4=out12  # MtxPosition
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0225DDF0 r4=8 r5=8     # setAction(&cur, &newFunc copy, arg)
+callee 0225DF38 r4=8          # setPlayerAction(&func copy)
+callee 0225E0B8 r4=8          # setNpcAction(&func copy)
+callee 0225FD54 r4=2 r5=2     # getStickAngY(&y, &z)
+ret 025200D4 0x54000000 0x54000000
+stackfill
+callee 028E8F64 r5=out12      # PSMTXMultVec (out)
+callee 028E9044 r5=out12      # PSMTXMultVecSR (out)
+ret! 0225FEA4 -0x8000 0x7FFF  # getAngleX: s16 result (sign-extended; the width analysis misses it)
+
+# steering: stage "sea" (play pinned at 0x54000000, start stage name at +0x5134), rooms 41 / 44
+field 0225FABC 54005134 u32 0x73656100,0x41424300
+field 0225FABC r3+0x326 i8 41,0
+field 0225FABC 104674BC u32 0,1
+fret 028F4384 0 1300
+field 0225FABC r3+0x330 f32 0,1300,3000
+field 0225FEA4 54005134 u32 0x73656100,0x41424300
+field 0225FEA4 r3+0x326 i8 44,0
+field 0225FEA4 r3+0x318 f32 2050,2150,2100,2049.5,2150.5,2050.5
+field 0225FEA4 r3+0x314 f32 -195759.5,-195760,-195260,-194760.5
+field 0225FEA4 r3+0x31C f32 313671,313171.5
+field 0225FEA4 r3+0xB80 f32 2050,0
+field 0225FEA4 r3+0xB7C f32 2150,100000
+field 0225FEA4 1047C04C f32 0,0.5
+field 0225FEA4 1047C050 f32 0,0.25
+field 0225D0D4 101BEC50 i16 0,1      # l_demo_start_chk_cnt
+field 0225D0D4 101BEC52 i16 0,1
+field 0225D6B4 r3+0xF8 u16 1,2       # eventInfo.mCommand
+field 0225D6B4 540052B0 u8 0,1,4,5   # talk XY
+field 0225D6B4 r3+0xBA6 i8 6,-1,0
+field 0225E1E0 54005B2C u32 0x40000000,0x12340000   # player 0 == this
+field 0225F064 101BEC48 u32 0,0x40000000,0x12340000   # l_act
+ret 0225EE74 0,1                      # init
+field 0225F314 101BEC48 u32 0,0x40000000
+arg 022609E0 r3 0,0x40000000
+arg 02260A9C r3 0,0x40000000
+ret 0273AD10 0,0x57000000             # operator new
+# execute
+field 0225E598 54005B2C u32 0x40000000,0x12340000
+field 0225E598 1047B688 i16 0,1       # REG0_S(0)
+ret 02445950 0,1                      # checkNowPosMove
+field 0225E598 r3+0xBCA u8 0,1        # mHidden
+field 0225E598 r3+0x600 u32 0,1,2,3   # m4E4
+field 0225E598 r3+0xB70 u32 0,8,0x10,0x18
+field 0225E598 54005134 u32 0x73656100,0x41424300
+field 0225E598 r3+0x326 i8 44,0
+field 0225E598 r3+0x314 f32 -200700 -200200
+field 0225E598 r3+0x318 f32 3500,3530,3440,3537,3937,3700,3480
+field 0225E598 r3+0x31C f32 321700 322200
+field 0225E598 1047BBD8 f32 0,0,50
+field 0225E598 1047BBDC f32 1100,0,50
+fret 02008974 3540 3540               # GroundCross (boundaries below)
+field 0225E598 1047C058 f32 0,0
+field 0225E598 1047C05C f32 0,0
+field 0225E598 1047C060 f32 0,0
+field 0225E598 1047C064 f32 0,0
+arg 0225F314 r3 0x40000000,0
+callee 028E8D88 r3=12 r4=12 r5=out12   # PSVECAdd (inputs compared)
+callee 028E8DD0 r3=12                  # PSVECSquareMag
+field 022608A4 101D5F45 u8 0,1         # m_hyoi_kamome
+field 022608A4 r3+0xBA9 i8 -1,0,1      # mActionStatus
+field 0225E108 101D5F45 u8 0,1
+field 02260510 101D5F45 u8 0,1
+field 02260510 r3+0xBA9 i8 -1,0,1
+field 0225E108 r3+0xB62 i16 0,-1,1     # mCurrNpcActionFunc.i (0: none)
+field 0225DF88 r3+0xB6A i16 0,-1,1     # mCurrPlayerActionFunc.i
+field 02260510 r3+0xB78 i32 0,1,2      # mAnmIdx
+field 02260510 r3+0xBA5 i8 0,1         # mReachedAnimEnd
+field 02260510 r3+0xB9E i16 0,1        # mFlapTimer
+field 02260510 r3+0xB92 i16 0,1        # mLockAngleXTimer
+ret 02055B64 0,1,2                     # cLib_calcTimer<s16>
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0225FABC 0x54005134 8 @stages,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 0225FEA4 0x54005134 8 @stages,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 0225E598 0x54005134 8 @stages,"OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep

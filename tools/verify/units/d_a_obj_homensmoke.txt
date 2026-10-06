@@ -1,0 +1,12 @@
+# Verification unit: d_a_obj_homensmoke (smoke and rubble of a destroyed wall)
+src wwhd_src/d/actor/d_a_obj_homensmoke.cpp
+
+ret 02349DFC 0 3              # daObj::PrmAbstract<int>
+field 02359BE0 r3+0x2E8 u32 0xFFFFFFFF,0x1234
+ret 025D5218 0,0x56000000     # fopAcIt_Judge
+field 0235A004 r3+0x408 u32 0 1
+field 0235A004 r3+0x3E4 s32 0 2
+field 0235A004 10469FDC u32 0 1
+field 0235A004 10469FE0 u32 0 1
+ret 025A847C 0,0x57000000
+field 02359FC8 r3+0x3EC u32 0,0x58000000

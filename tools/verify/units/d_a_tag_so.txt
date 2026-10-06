@@ -1,0 +1,9 @@
+# Verification unit: d_a_tag_so
+src wwhd_src/d/actor/d_a_tag_so.cpp
+
+field 024B2A30 r3+0xB1 u8 0,1,2,254,255
+field 024B2B10 r3+0x3B4 u8 0 2
+field 024B2B10 101FDA50 u32 0 1
+field 024B2B10 101FDAC4 u32 0 1
+field 024B2C3C 1046E65D u8 0 1
+mockmove C000A848 r3 r4 r5     # memcpy really copies (colour statics)

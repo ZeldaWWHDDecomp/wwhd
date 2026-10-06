@@ -1,0 +1,7 @@
+src wwhd_src/m_Do/m_Do_printf.cpp
+stackfill periodic
+callee C000A1D8 r4=12
+field 025F2710 1048D539 u8 0,1,255
+field 025F27E8 1048D53A u8 0,1,255
+# Generated entry SP=7EFFF000: observe entire saved variadic register area.
+observe C000A1D8 7EFFEF98 96

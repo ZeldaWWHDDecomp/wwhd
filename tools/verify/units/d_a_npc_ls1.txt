@@ -1,0 +1,129 @@
+# Verification unit: d_a_npc_ls1 (Aryll)
+src wwhd_src/d/actor/d_a_npc_ls1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0227EFF4 r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 02543714 r4=12         # dEvent_manager_c::setGoal(&pos)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+ret 0254487C 0x59000000 0x59000000
+field 02280720 59000000 u32 0,1,2,4,8,7,0xF
+field 02280A1C r3+0x9EC i16 0 3
+field 02281004 r3+0xA20 i8 0 5
+field 022808F4 r3+0xA1A i8 -1 4
+field 022816A4 r3+0xA1C u8 0,1,10,11,12,13,14,255
+field 02281758 r3+0xA1B u8 0,1,3,5,7
+arg 02281758 r4 0 18
+field 022818EC r3+0xA1B u8 0 17
+field 022818EC r3+0xA00 i8 0 1
+field 022818EC r3+0x9EE i16 0 1
+field 022818EC r3+0xA1F i8 3,4,5,10,11
+arg 02281C14 r4 5 15
+field 02281C14 r3+0xA27 i8 0 1
+ret 025200D4 0x54000000 0x54000000
+field 02281C14 54005BC6 u8 254 255
+callee 025D54C4 r4=4
+field 02281CDC r4+0 u32 0xBB9,0xBBA,0xBBB,0xBBC,0xBBD,0xBBE,0xBC5,0xBDA,0xBC0
+field 02281DA4 54005BBB u8 0x1F,0x20
+field 02281DA4 54005BBC u8 0x1F,0x20
+field 02281DA4 54005BBD u8 0x1F,0x20
+callee 025F0C48 r3=12 r4=out12   # mDoLib_project
+callee 0201B47C r3=12            # cXyz::normalizeRS
+callee 028E8E64 r3=12 r4=12      # PSVECScale
+callee 028E8D88 r3=12 r4=12 r5=12  # PSVECAdd
+callee 0228210C r5=12
+# telescope_proc
+callee 02280BEC r5=out4
+callee 02282380 r4=12
+callee 022824B0 r4=12
+ret 02280BEC 0x58000000 0x58000000
+field 022825A0 54005BB3 u8 0,0xA,0xD,0x12,0x11
+field 022825A0 54005CD8 u32 0,0x00200000
+field 022825A0 54005C21 u8 0 1
+field 022825A0 r3+0xA03 u8 0 5
+field 022825A0 r3+0x9E0 u32 0,0xBC1,0xBCB,0xBCA
+field 022825A0 580009F0 u8 0 1
+callee 02282290 r4=out12
+field 02282A60 r3+0xA20 i8 1 4
+field 02282A60 r3+0xA1F i8 0 1
+field 02282B54 r3+0xA0F u8 0 1
+field 02282B54 r3+0xA20 i8 0 4
+field 02282B54 r3+0xA03 u8 0 5
+field 02282B54 r3+0x972 i16 0 0
+field 02282B54 r3+0x322 i16 0 1
+field 02282D94 r3+0xA0F u8 0 1
+field 02282EB0 r3+0xA0F u8 0 1
+field 02282F6C r3+0x7C0 u32 0xBC4,0xBC6,0xBC5
+ret 025F795C 0x12 0x14
+field 02283038 r3+0xA26 i8 -1 4
+field 02283038 r3+0xA21 i8 0 6
+callee 0259E2D4 r5=12 r6=12
+field 02280C40 r3+0xA23 i8 -1 5
+field 0227FFEC r3+0xF8 u16 0 3
+field 0227FFEC r3+0xA20 i8 0 4
+field 0227FFEC r3+0x9EC i16 0 3
+callee 024F1914 r3=12
+field 022801BC r3+0x2DC u8 0 0x22
+field 022801BC r3+0xA11 u8 0 1
+field 022801BC r3+0xA25 i8 2 3
+field 022801BC 101D5FFC u32 0,0x57000000
+ret 02526E70 0x5B000000 0x5B000000
+field 022801BC 5B000004 u16 0,0x10,0x50
+field 022801BC 5B000028 u32 0 2
+field 02281074 r3+0xA0D u8 0 1
+field 02281074 r3+0xA0A u8 0 1
+field 02281074 r3+0x2DC u8 0 1
+field 02281074 r3+0xA04 u8 0 1
+field 02281074 r3+0xA25 i8 0 1
+field 02281074 r3+0xA0B u8 0 1
+field 02281074 r3+0xA11 u8 0 1
+field 02281074 r3+0x8F6 i16 -1 1
+field 02281074 54005292 u8 0 1
+ret 02280508 -1 1
+ret 022801BC 0 1
+field 02281318 r3+0xA0A u8 0 1
+field 02281318 r3+0xA0C u8 0 1
+field 02281318 104679C0 u8 0 1
+callee 026066C4 r4=8
+# bodyCreateHeap
+field 0227E3BC r3+0xA25 i8 3 4
+ret 027ED1F0 0x5C000000 0x5C000000
+field 0227E3BC 5C000000 u32 0x6C73626F,0x6C73626E
+field 0227E3BC 5C000004 u32 0x64793031,0x64793032
+field 0227E3BC 5C000008 u8 0 0
+ret 026067F4 0x5D000000 0x5D000000
+field 0227E3BC 5D000030 u32 0x5E000000 0x5E000000
+field 0227E3BC 5E000000 u16 0 3
+field 0227E3BC 5D000034 u32 0x5F000000 0x5F000000
+ret 0227E344 0 1
+ret 025E4F64 0x60000000 0x60000000
+ret 02520460 0 5
+ret 0227EE98 0 1
+ret 0227F9A8 0 1
+ret 025D63E8 0 1
+# setMat: material count from the btk (keep the loop short)
+field 0227E160 r3+0x86C u32 0x61000000 0x61000000
+field 0227E160 6100000C u32 0x62000000 0x62000000
+field 0227E160 62000014 u16 0 3
+ret 0273AD10 0 0x63000000
+arg 0227ED68 r3 0,0x64000000
+arg 0227EDE8 r3 0,0x64000000
+arg 0227EE40 r3 0,0x64000000
+field 0227ED68 64000008 i16 0x145,0x146
+field 0227EDE8 64000008 i16 0xC1,0xC2
+field 0227EE40 64000008 i16 0xC1,0xC2
+field 0227ED68 10467960 i32 19 21
+field 0227F9A8 r3+0xA25 i8 -1 5
+field 0227EE98 r3+0xA24 i8 -1 1
+arg 0227EE98 r4 0 5
+field 02281758 r3+0xA1B u8 0,1,3,5,7,16,17
+arg 0227DFF0 r3 0,0x65000000
+ret 0227F120 0 1
+ret 0227F178 0 1
+ret 0227F1B8 0 1
+ret 0227F1BC 0 1
+ret 0227F1C0 0 1
+arg! 02282290 r5 0 1   # the only callers (d_a_npc_ls1.cpp, 2 sites) pass 0 or 1; an out-of-range index reads past the 2-entry table (original UB) — no escape

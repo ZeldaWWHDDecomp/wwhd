@@ -1,0 +1,17 @@
+src wwhd_src/m_Do/m_Do_ext_morf2.cpp
+stackfill periodic
+callee 027E06E0 r3=20
+callee 027E063C r4=20
+callee 0260702C r4=8
+# Actual resource SafeString table and real empty assurance; distinct Md comparison fixture.
+real 025EE5EC
+field 025E5D54 r4+0x10 u32 0x10058704
+field 025E5D54 r4+0xC u32 0x55000000,0x10058A10
+field 025E5D54 55000000 u8 0,0x4D
+field 025E5D54 55000001 u8 0x64
+field 025E5D54 55000002 u8 0
+ret! 027F3F94 0x54000000,0x54000000
+field 025E6188 54000008 u16 0,1,2,3
+field 025E6220 54000008 u16 0,1,2,3
+# Immutable bounded model-resource joint count; all otherclobbers active.
+stable 54000008 2

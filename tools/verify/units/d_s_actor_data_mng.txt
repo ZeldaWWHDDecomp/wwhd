@@ -1,0 +1,13 @@
+src wwhd_src/d/d_s_actor_data_mng.cpp
+ret 0273AD10 0,268435456
+arg 025ABA58 r3 0,268435456
+arg 025ABC48 r3 0,268435456
+arg! 025ABAF4 r5 0 16
+arg! 025ABAF4 r7 0 16
+ret 0200E814 -1,0,1,2
+ret 025ABCFC 0,1
+callee 025ABCFC r5=out4 r6=out4
+field 025ABCFC r3+0 s32 -1,0,1,2,3
+field 025ABD4C r4+0 s32 -1,0,1,2,3
+
+# Strict finite resource-table counts: unrestricted u32 counts are billions of relocations, outside the bounded loaded-table fixture.

@@ -1,0 +1,16 @@
+# hd_sys_02035B88: TU 02035B88..02035FD7 (GameTask dtor, root task factory, HOME button menu controller); HD-only
+src wwhd_src/hd/hd_sys_02035B88.cpp
+arg 02035B88 r3 0,0x65000000
+field * 101FD598 u32 0,1
+field * 101FD594 u32 0,1,0x01000000
+arg 02035BF8 r4 0x101FD97C,0x101FD980,0x12345678
+field 02035C74 r3+0 u32 0x66000000
+field 02035C74 66000014 u32 0,1,2
+ret 0273B050 0,0x67000000
+arg 02035CC8 r3 0,0x65000000
+arg 02035D1C r3 0,0x65000000
+ret 02035D70 0,1
+field * 10200988 u32 0,1
+arg 02035ED4 r4 0,1,0x100,0x12345678
+# mutation follow-up: non-zero error-viewer global (zero in the image .bss)
+field * 1018F2BC u32 0x70000000

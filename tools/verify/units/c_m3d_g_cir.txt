@@ -1,0 +1,2 @@
+src wwhd_src/SSystem/SComponent/c_m3d_g_cir.cpp
+callee 0201083C r3=out16 # base position constructor writes 16-byte base

@@ -1,0 +1,41 @@
+# Full8 HD envsound entriesFCB4..303B3 incl wrappers and inferredinitializer.
+src wwhd_src/d/d_envse.cpp
+stackfill periodic
+ret! 025200D4 0x55000000 0x55000000
+ret! 025C11DC 0,0x56000000
+field * 56000000 u32 0x56001000
+field * 560011BC u32 0x60000200
+ret! 60000200 0,0x57000000
+callee 60000200 r3=4
+field * 57000000 u32 0,1,2
+field * 57000004 u32 0x57001000
+field * 55005B30 u8 0
+field * 55005AF8 u32 0x58000000
+field * 57001017 u8 0,1,2,3,4,5
+field * 57001033 u8 0,1,2,3,4,5
+ret! 025AAF88 0,0x59000000
+ret! 025AB070 0 0
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 028E8DE8 r3=12 r4=12
+callee 0252FCBC r3=out12 r4=12 r5=12
+callee 0201883C r3=out24 r4=12 r5=12
+pointee 0201883C r3=28
+callee 02010AE4 r3=28 r4=12 r5=out12 r6=out4
+ret 02010AE4 0,1
+field 0252FCBC r5+0 u16 1,2,3
+field 0252FCBC r5+8 u32 0x59001000
+field 0252FEB8 r3+0xFC u32 0,1,98,99
+# Distance floats use normal generated callee returns, including NaNs.
+
+# Typed loaded room vtable and stage sound/path records are read-only during
+# environment/audio queries; generic mock calls cannot change their lengths.
+# Mutable actor/game state remains clobbered. Bounds are actual prepared records.
+arg! 0252FCBC r5 0x59000000 0x59000000
+field * 59000000 u16 1,2,3
+field * 59000008 u32 0x59001000
+stable 56000000 4
+stable 560011BC 4
+stable 57000000 8
+stable 57001000 56
+stable 59000000 12
+stable 59001000 64

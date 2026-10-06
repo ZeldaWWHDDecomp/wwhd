@@ -1,0 +1,7 @@
+# Full contiguous14entries025CCAE8..025CD26Cexclusive, previousemptyCAE4excluded.
+src wwhd_src/d/d_wind_arrow.cpp
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 026066C4 r4=8
+# Nonexclusive renderer mode byte exercises both display-list selection branches.
+field 025CCAE8 101F4829 u8 0,1

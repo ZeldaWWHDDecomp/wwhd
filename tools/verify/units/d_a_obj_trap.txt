@@ -1,0 +1,81 @@
+# Full HD TU 023A6AF8–023A87E8: 29 functions, including local statics/destructors.
+src wwhd_src/d/actor/d_a_obj_trap.cpp
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025D4604 0 1
+ret 02008860 0 1
+ret 0200F764 0 1
+ret 0201B47C 0 1
+ret 0201AF98 0 1
+ret 0201AFD8 0 1
+ret 023A7EA4 0 1
+ret 023A7DE0 0 1
+ret 025E742C 0 1
+field * r3+0x603 u8 0 4
+field * r3+0x602 u8 0 1
+field * r3+0x604 u8 0 1
+field * r3+0x600 u8 0 1
+field * 0x1046C688 u32 0 1
+field * 0x1046C68C u32 0 1
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E9044 r3=48 r4=12 r5=out12
+callee 0201AF98 r3=12 r4=12
+callee 0201AFD8 r3=12 r4=12
+callee 024F1AFC r4=12 r5=12
+callee 023A752C r4=12
+callee 023A71FC r4=out12
+callee 023A760C r4=out12 r5=12
+callee 02312D6C r3=12 r4=12
+callee 020182E0 r4=12
+# Fixed block identities supplement the unrestricted pointer domain of other calls.
+ret 02008438 0,0x52000000,0x52000000
+field 023A760C 0x52000008 s16 0x2b,0x2b,0x2b,0
+field 023A760C 0x5200041c u32 0,1,1,1
+field 023A760C 0x5200074c u32 0 3
+ret 023A752C 0 1
+field 023A7FC0 r3+0x5f4 s16 -1,0,1,2,32767
+field 023A7FC0 r3+0x5f6 u16 0,0,1,2,16
+field 023A7FC0 r3+0x5fc u16 0,0,1,2,6
+# Preserve scratch-stack outputs and the query singleton across the calls that consume them.
+observe 028F026C 1046C5B0 108
+observe 028F026C 1046C61C 108
+observe 02008860 1046C5B0 108
+observe 02008860 1046C61C 108
+stackfill periodic
+field * 0x101F4F28 u32 0,0x53000000,0x53123400,0x53005678
+# 025E7CE0 consumes r3-r10/f1; its unused ninth stack slot is excluded.
+# Pure difference/matrix helpers make exact lateral/longitudinal boundaries observable.
+real 0201ADE0
+real 028E8DAC
+real 025F1884
+real 028E8F64
+arg! 023A752C r3 0x40000000 0x40000000
+arg! 023A752C r4 0x41000000 0x41000000
+field 023A752C r3+0x314 f32 0 0
+field 023A752C r3+0x318 f32 0 0
+field 023A752C r3+0x31c f32 0 0
+field 023A752C r3+0x5b4 f32 1 1
+field 023A752C r3+0x5b8 f32 0 0
+field 023A752C r3+0x5bc f32 0 0
+field 023A752C r3+0x5f0 f32 0,150,400
+field 023A752C r4+0 f32 -1,0,1,149,150,151,299,300,301,549,550,551
+field 023A752C r4+4 f32 0 0
+field 023A752C r4+8 f32 -226,-225,-224,0,224,225,226
+field 023A752C 0x104A84F8 f32 1 1
+field 023A752C 0x104A84FC f32 0 0
+
+# Initialization and background status boundaries retain every mode domain above.
+field 023A6E70 r3+0xb0 u32 0x00000f00,0x00000000,0x00000100,0x00000200,0x00000300,0x00000e00
+ret 025AAF88 0,0x58000000,0x58000000
+field 023A6E70 0x58000008 u32 0,0x58000100,0x58000100
+field * r3+0x610 u32 0,0x55000000,0x55000000
+field * 0x55000000 u32 0,255,256,257,4294967295
+field * r3+0xf4 u32 0,0x56000000,0x56000000

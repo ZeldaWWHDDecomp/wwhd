@@ -1,0 +1,16 @@
+# Verification unit: d_a_tag_kk1
+src wwhd_src/d/actor/d_a_tag_kk1.cpp
+
+field 024ACAC0 r3+0x8 s16 0x19F,0x19E,0x1A0,0     # process name
+field * 1046E568 s8 -1,0,1,-128,127                # l_HIO.mNo
+field 024ACC98 1046E574 u8 0,1                     # l_HIO.prm.field_0x10
+field 024ACC98 101FDA48 u32 0,1                    # static guard
+ret 025200D4 0x54000000 0x54000000
+field 024ACBC0 54005B2C u32 0x55000000 0x55000000  # player pointer
+field 024ACBC0 1046E56C f32 300.0 400.0
+field 024ACBC0 1046E570 f32 0.0,30.0,60.0
+fret 028F4384 300.0 400.0
+field 024ACBC0 55000318 f32 0.0,30.0,60.0,-30.0
+field 024ACBC0 r3+0x318 f32 0.0,30.0
+field 024ACBC0 5500032A s16 0,0x1000,0xFFF,-0x1000,-0xFFF,0x7FFF,-0x8000
+field 024ACBC0 r3+0x322 s16 0,1,-1

@@ -1,0 +1,10 @@
+# Verification unit: d_a_swtdoor (Forsaken Fortress tower window doors)
+src wwhd_src/d/actor/d_a_swtdoor.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # fopAcM_entrySolidHeap
+ret 025BA0C0 0 1              # isSwitch
+field 024A3DB0 r3+0x2F0 f32 -310,-300,-290,0
+field 024A4034 r3+0xB3 u8 0,1,254,255
+field 024A4034 r3+0x3B4 u32 0,0x50000000

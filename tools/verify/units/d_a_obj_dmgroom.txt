@@ -1,0 +1,17 @@
+# Verification unit: d_a_obj_dmgroom (damaged room demo object)
+src wwhd_src/d/actor/d_a_obj_dmgroom.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025E8154 stack=1       # mDoExt_brkAnm::init: entry on the stack
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E8154 0 1              # brkAnm::init
+ret 025E38E0 0,0x47000000     # J3DModel__create null or not
+ret 026066C4 0,0x48000000     # getRes null or not
+ret 02526E70 0,0x5B000000     # demo actor
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7   # condition (INIT bit)
+field * r3+0x2DC u8 0,1,0x20,0x21,0xFF # demoActorID
+field * 101D5FFC u32 0,0x5A000000     # demo object
+field * 5B000004 u16 0,0x40,0xFFBF,0xFFFF  # demo actor enable flags
+arg 02334B74 r4 0,1,2,3
+arg 02334B90 r4 0,1,2,3

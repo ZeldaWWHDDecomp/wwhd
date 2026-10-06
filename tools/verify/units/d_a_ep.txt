@@ -1,0 +1,89 @@
+# Verification unit: d_a_ep (torches)
+src wwhd_src/d/actor/d_a_ep.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12 # MtxPosition
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 028E8D88 r3=12 r4=12   # PSVECAdd
+callee 024F1AFC r3=0x6C r4=12 r5=12   # dBgS_LinChk::Set
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 02008974 r4=0x54       # cBgS::GroundCross
+callee 02018D40 r4=12         # cM3dGSph::SetC
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 026066C4 0,0x56000000     # getRes: null or a resource
+ret 025E38E0 0,0x56100000     # J3DModel create
+ret 025200D4 0x54000000 0x54000000   # play object pinned
+ret 025162A4 0 1              # ChkTgHit
+ret 02516300 0,0x57000000     # GetTgHitObj
+ret 025BA0C0 0 1              # isSwitch
+ret 025447C8 0 1              # getIsAddvance
+ret 02542EDC 0,1,2            # getMyActIdx
+ret 0254457C 0 1              # endCheckOld
+ret 02544044 0,0x58000000     # getEventData
+ret 02542D88 -1,0,1           # getMyStaffId
+ret 02008860 0 1              # LineCross
+ret 025D6B70 0 1              # checkCullingBox
+ret 025A847C 0,0x58100000     # particle set
+fret 02008974 -1000000000.0,0.0,500.0  # GroundCross
+fret 028E8DD0 0.0,12249999.0,12250000.0,12250001.0,20000000.0,89999.0,90000.0  # PSVECSquareMag edges
+fret 020198D8 0.0 1.0         # cM_rndF
+field * 1047B68C s16 0,1      # REG0_S(2)
+field * 1047B68E s16 0,1      # REG0_S(3)
+field * 1047B696 s16 0,1      # REG0_S(7)
+# hit object, its stts and actor
+field * 57000010 u32 0,0x200000,0x400000,0x1
+field * 57000044 u32 0,0x57100000
+field * 5710000C u32 0,0x57200000
+field * 57200008 s16 0xEE,0
+# stage: name "sea", HD flag, stage info
+field * 54005134 u32 0x73656100,0x73656101,0x74000000
+field * 1047E6C8 u8 1,0
+field * 54005150 u32 0x59000000
+field * 5900015C u32 0x02000000
+ret 02000000 0,0x59100000
+field * 5910000C u32 0x10000,0x40000,0x20000,0
+# player position for the sea checks
+field * 54005B2C u32 0x55000000
+field * 55000314 f32 -290001.0,-290000.0,-289999.0,-300000.0,-280000.0
+field * 55000318 f32 299.0,300.0,300.5,301.0,0.0,400.0
+field * 5500031C f32 -297501.0,-297500.0,-297499.0,-290000.0
+# ep fields
+field * r3+0x624 u8 0,3,1,2
+field * r3+0x61E u8 0,1
+field * r3+0x908 u8 0,1
+field * r3+0x946 u8 0,1,2
+field * r3+0x982 u8 0,1,2
+field * r3+0x947 u8 0,1
+field * r3+0x983 u8 0,1
+field 0212DBFC r3+0x5EC s32 0,3,4,10,1,5
+field 0212DBFC r3+0x628 u8 0,1,2
+field 0212DBFC r3+0x904 s32 -1,0,1
+field 0212DBFC r3+0x8F8 s16 0,1,2,40,41
+field 0212DBFC r3+0x614 s16 0,1
+field 0212DBFC r3+0x616 s16 0,1
+field 0212DBFC r3+0x61A s16 0,1,2,9999,10000
+field 0212DBFC r3+0x625 u8 0xFF,0,1
+field 0212DBFC r3+0x626 u8 0xFF,0,1
+field 0212DBFC r3+0x627 u8 0xFF,0,1
+field 0212DBFC r3+0x62C u32 0,0x58200000
+field 0212DBFC r3+0xB4C u8 0x0F,0x1F,0
+field 0212DBFC r3+0x5F8 f32 0.0 1.0
+field 0212DBFC r3+0x318 f32 499.0,500.0,1900.0,1900.5,1925.0,2350.5,2750.5,1950.0,2350.0,2375.0,2400.0,2750.0,2775.0,2800.0,3000.0
+field 0212DB44 r3+0x904 s32 -1,0,1
+field 0212F5CC r3+0x902 s8 0,1
+field 0212FAF4 r3+0xB0 u32 0x000000C0,0xFFFFFFFF,0x01FFFF03,0x00000000,0xFF0000FF,0x00000001
+arg 0212F878 r3 0,0x40000000   # ctor: this == NULL allocates
+ret 0273AD10 0,0x5A000000      # operator new
+callee 025A8D40 r5=12         # setSimple: the position
+callee 025A847C r6=12 r8=12   # particle set: position, scale
+fret 028F4384 299.0,300.0,301.0,0.0,600.0   # sqrtf edges
+field 0212DBFC r3+0xF8 u16 0,2   # eventInfo command (demo accept)
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0212DBFC 0x54005134 8 @stages,"SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","SHOKUDAI","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep

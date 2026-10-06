@@ -1,0 +1,481 @@
+# Verification unit: d_camera (follow camera dCamera_c), engine code
+src wwhd_src/d/d_camera.cpp
+src wwhd_src/d/d_camera_mode.cpp
+src wwhd_src/d/d_camera_util.cpp
+src wwhd_src/d/d_camera_bg.cpp
+src wwhd_src/d/d_camera_proc.cpp
+src wwhd_src/d/d_camera_run.cpp
+src wwhd_src/d/d_camera_stubs.cpp
+src wwhd_src/d/d_camera_engine.cpp
+src wwhd_src/d/d_camera_subject.cpp
+src wwhd_src/d/d_camera_follow.cpp
+src wwhd_src/d/d_camera_lockon.cpp
+src wwhd_src/d/d_camera_engine2.cpp
+src wwhd_src/d/d_camera_talk.cpp
+
+stackfill periodic
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 020072E0 r4=12                 # cSGlobe::Val(const cXyz&)
+callee 0201B084 r3=12 r4=out12        # cXyz::norm
+callee 0200658C r3=out2               # cSAngle(s16)
+callee 02006644 r3=out2 r4=2          # cSAngle(const cSAngle&)
+ret 025200D4 0x54000000 0x54000000
+# small setters
+field 02514EB8 r3+0x528 i32 0xFF,0xFF,0
+arg 02514EB8 r4 0xFF,1
+ret 024FA90C 0 1                      # onTypeChange
+field 025052BC r3+0x130 u32 5,6
+arg 025052BC r4 5,-1,7
+# heightOf
+arg 024F8EF0 r4 0,0x5A000000
+field 024F8EF0 r4+8 i16 0xA8,0xA8,0
+# camera type names (types[] at 10049350, 63 entries of 0x40)
+field * r3+0x51C i32 0 62
+arg 024FA170 r4 0x10049350,0x10049510,0x1004A2D0,0x10049390
+ret 02520708 0,0x5D000000
+ret 02520770 0,0x5E000000
+field 024FA208 5D000000 i32 0,1,2
+field 024FA208 5D000004 u32 0x10049510,0x10049350
+field 024FA208 5E000000 i32 0,1,5
+arg 024FA208 r4 0,1,-1
+arg 024FA208 r5 -1,0,3
+# styles (dCamParam style table at 1004487C, 145 entries; algorithm at +4)
+arg 024FB334 r4 0,1,25,44,2,29,26,4,19,28,47
+arg 024FB334 r5 0,1,25,44,2,29,26,4,19,28,47,9,6,52,63,34
+field 024FB334 r3+0x224 u8 0,1
+arg 024FA79C r4 0,1,3,12,14
+arg 024FA79C r5 0,1,7,12,4
+# out slots of struct-returning helpers
+callee 024F8F30 r4=out2               # directionOf
+callee 024F8F3C r4=out12              # attentionPos
+callee 024F8D5C r4=out12              # positionOf
+callee 024FC0B0 r4=out12              # eyePos
+callee 02006894 r3=2 r4=out2 r5=2     # cSAngle::operator+
+callee 020068B0 r3=2 r4=out2 r5=2     # cSAngle::operator-
+callee 02006838 r3=2                  # cSAngle::Cos
+callee 02006814 r3=2                  # cSAngle::Sin
+callee 02007324 r3=out8 r4=12         # cSGlobe(const cXyz&)
+callee 020073AC r3=8 r4=out12         # cSGlobe::Xyz
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator*
+# defaultTriming
+field 024FBF9C r3+0x604 i32 -1,-1,-1,0,2
+field 024FBF9C r3+0x128 u32 0x5A000000,0x5A000000,0
+field 024FBF9C 5A000008 i16 0xA8,0xA8,0
+field 024FBF9C r3+0x13C i32 0 13
+ret 024EF88C 0 1                      # dBgS::SphChk
+arg 024FCCE0 r4 0,0x5B000000
+ret 0273AD10 0,0x5C000000,0x5C000000  # operator new
+arg 0250242C r4 0x5B000000,0x5B000000,0
+arg 0250242C r5 0x5A000000,0x5A000000,0
+arg 02514D00 r4 0x5B000000,0x5B000000,0
+arg 02514D00 r5 0x5A000000,0x5A000000,0
+arg 02508804 r4 0x5B000000,0x5B000000,0
+arg 02508804 r5 0x5A000000,0x5A000000,0
+arg 02508804 r6 0x59000000,0x59000000,0
+field 024F8DB4 1046EFB0 u32 0,1
+field 024F8DB4 1046EFB4 u32 0,1
+field 024FF8A0 r3+0x600 i32 0 5
+field 024FF8A0 101D6010 i32 0,1
+field 024FF6C0 r3+0x8B4 i32 7,3
+field 024FF6C0 r3+0x51C i32 3,7
+callee 024FE3D8 r4=out2 r5=2          # getDMCAngle
+callee 020066C0 r3=out2               # cSAngle(f32)
+callee 0200693C r3=2 r4=out2          # cSAngle::operator*(f32)
+callee 020068E0 r3=2 r4=2             # cSAngle::operator-=
+callee 020068CC r3=2 r4=2             # cSAngle::operator+=
+callee 024FB930 r4=out2               # forwardCheckAngle
+# Run
+field 024FE3E8 r3+0x534 i32 0,1,2
+field 024FE3E8 r3+0x540 f32 -1,0,1
+field 024FE3E8 r3+0x514 i32 0 144
+field 024FE3E8 r3+0x13C i32 0 19
+ret 024FA410 0 62                     # nextType
+ret 024FA9C8 0 19                     # nextMode
+ret 024FA79C 0,1                      # onModeChange
+ret 024FC0A8 0,1                      # demoCamera
+callee 02006644 r3=out2 r4=2          # cSAngle(const cSAngle&)
+callee 020084C8 r4=0 r5=0             # cBgS::GetTriPla(bg index, poly index)
+field 0250252C 54005CD8 u32 0,0x20,0x40,0x60
+field 0250252C r3+0x124 i32 0
+ret 024FB4E8 0,1                      # lineBGCheck
+callee 0201B31C r3=12 r4=out12        # cXyz::normalize (in place, copy out)
+callee 02006880 r3=2 r4=out2          # cSAngle::operator-()
+callee 0200685C r3=2                  # cSAngle::Tan
+callee 028E8DAC r3=12 r4=12           # PSVECSubtract
+callee 025F1EAC r3=out48 r4=12 r5=12 r6=12  # mDoMtx_lookAt
+callee 028E8F64 r3=48 r4=12 r5=out12  # PSMTXMultVec
+callee 020065FC r3=out2               # cSAngle()
+# nextType
+field 024FA410 r3+0xE4 i32 0xFF,0x1FF,0,1
+field 024FA410 r3+0x528 i32 0xFF,0xFF,3
+field 024FA410 r3+0x354 i32 0,1,3,0x11,5,-1,100
+field 024FA410 r3+0x518 u8 0,0,1
+field 024FA410 r3+0x35C i32 -1,0
+field 024FA410 101D5F45 u8 0,0,0,1
+field 024FA410 54005CD8 u32 0,0x100000,0x1000000,0x10000
+field 024FA410 54005CDC u32 0,0x20,0x80
+field 024FA410 r3+0x124 i32 0
+field 024FA410 r3+0x514 i32 0 144
+ret 024FA170 0,3,7,37,38,62,0xFF       # GetCameraTypeFromCameraName
+ret 024FA208 0,3,7,37,62,0xFF          # GetCameraTypeFromMapToolID
+field 024FA410 r3+0x8CC i32 2,7
+field 024FA410 r3+0x8C0 i32 37,7
+field 024FA410 r3+0x8B4 i32 3,7
+arg 024FA410 r4 3,7,37,38,62
+field 024FA410 540052E4 i32 0,0,0,1
+field 024FA410 r3+0x510 u32 0,0,0x20000000
+field 024FA410 r3+0x524 i32 7
+field 024FA410 r3+0x360 i32 0xFF,0xFF,0x1FF,0
+# nextMode
+arg 024FA9C8 r4 0 20
+field 024FA9C8 r3+0x124 i32 0
+field 024FA9C8 54005CD8 u32 0,0,0x200000,0x80000000,0x800000,0x2000,0x1000,0x80000,0x20,0x1,0x2,0x400000,0x4000000,0x100000,0x400000
+field 024FA9C8 54005CDC u32 0,0,0,8,0x10,4,2,0x80000,1
+field 024FA9C8 101F5088 u32 0x5E000000
+field 024FA9C8 5E000018 u32 0,0x40
+field 024FA9C8 54005824 u32 0,0,0x20000000
+ret 024EDFCC 0,0,1                     # dAttention_c::LockonTruth
+field 024FA9C8 r3+0x130 i32 -1,-1,5
+field 024FA9C8 r3+0x134 u32 0,0x5A000000
+field 024FA9C8 5A000008 i16 0x16F,0xA8
+field 024FA9C8 r3+0x128 u32 0x59000000,0
+field 024FA9C8 59000008 i16 0xA8,0
+field 024FA9C8 r3+0x12C u32 0,0x5A000000
+field 024FA9C8 101D5F3F u8 0,0,1
+field 024FA9C8 540052E4 i32 0,0,0,1
+field 024FA9C8 r3+0x144 i32 0,1
+field 024FA9C8 r3+0x19F u8 0,1
+field 024FA9C8 r3+0x188 i32 0,1
+field 024FA9C8 r3+0x510 u32 0,0x4000000,0x80000000
+field 024FA9C8 r3+0x178 f32 0,0.005,0.5,1
+field 024FA9C8 r3+0x160 f32 0,0.6
+arg 02501B8C r3 0x5B000000,0x5B000000,0
+callee 028F521C r3=255                # memzero (value-initialised storage)
+callee 02007248 r3=out8 r4=2 r5=2     # cSGlobe(f32, const cSAngle&, const cSAngle&)
+callee 02006804 r3=2                  # cSAngle::Inv
+# initialize: stage name at play+0x5134 (is_current_map)
+field 02500984 54005134 u32 0x73656100,0x6B617A65,0x4D5F4461,0x47616E6F,0x47546F77,0x41736F6B,0x41627368,0x50536869,0x4F627368,0x415F756D
+field 02500984 54005138 u32 0,0x42000000,0x69000000,0x6E4B0000,0x65720000,0x6F000000,0x69700000,0x70000000,0x6F700000,0x696B7A00
+stable 54005134 8
+ret 02500918 0,1                      # Chtyp
+callee 02007068 r3=out8               # cSGlobe(f32, s16, s16)
+callee 020069A0 r3=2                  # cSAngle::operator*=(f32)
+callee 024FB608 r4=12 r5=12 r6=out12  # lineBGCheck(cXyz*, cXyz*, cXyz* cross, u32)
+ret 024FB608 0,1
+# eventCamera
+callee 02530998 r4=out12              # getEvStringData(out, name, default)
+field 024FF164 r3+0x118 i32 0,0,1
+field 024FF164 r3+0x11C i32 0,0,1
+field 024FF164 r3+0x510 u32 0,0,0x20000000
+field 024FF164 540052E4 i32 0,1,1,1
+ret 02542D88 -1,0,1,2                 # getMyStaffId
+ret 02542EDC -1,0,1,2,5,27,28         # getMyActIdx
+field 024FF164 r3+0x414 i32 -1,0,3,27,28
+field 024FF164 r3+0x41C i32 0,1,2,3,4,5
+field 024FF164 r3+0x610 u8 0,1
+ret 02530998 0,1
+# hdAdjustNear / store: stage info through a pinned vtable
+field 024F8184 54005150 u32 0x5C100000
+field 024F8184 5C10015C u32 0x02001000
+ret 02001000 0x5D100000 0x5D100000
+field 024F8184 5D10000C u32 0x00050000,0x00070000,0,0x00010000
+field 024F8184 54005134 u32 0x48797275,0x48797275,0x73656100
+field 024F8184 54005138 u32 0x6C650000,0
+field 024F8184 1047E6B8 u32 0x44656D6F,0x44656D6F,0
+field 024F8184 1047E6BC u32 0x30370000,0
+field 024F8184 r4+0 f32 1,3,5,10,12
+field 024F8184 r3+0x20 f32 500,1000,1500,8000,9000
+# store
+field 024F8430 54005150 u32 0x5C100000
+field 024F8430 5C10015C u32 0x02001000
+field 024F8430 1047E6B8 u32 0x44656D6F,0x44656D6F,0
+field 024F8430 1047E6BC u32 0x34360000,0
+field 024F8430 101D600C i32 0x36E,0x36E,5
+field 024F8430 101D5530 i32 0x36E,0
+field 024F8430 1046EFA8 u32 0,1
+field 024F8430 1046EFAC u32 0,1
+ret 025283F8 0,0x5E200000,0x5E200000  # dDemo getActiveCamera
+field 024F8430 5E200004 u8 0,0xFF,0x40,0x10,0x20,0x80,4
+# checkGroundInfo
+ret 02008438 0,0x5A100000,0x5A100000  # cBgS::GetActorPointer
+field 024F9044 5A100008 i16 0x39,0
+ret 024EF340 0xFF,0xFF,3              # GetRoomCamId
+ret 024EEABC 0,1                      # ChkMoveBG
+field 024F9044 r3+0x320 u8 0,1
+# bumpCheck
+callee 02006720 r3=2                  # cSAngle::Degree
+callee 02007178 r3=out8 r4=8          # cSGlobe(const cSGlobe&)
+callee 02006A3C r3=out4               # cDegree(f32)
+callee 028E8D4C r3=12 r4=12 r5=out12  # PSVECCrossProduct
+callee 02017AEC r5=12 r6=out12        # cM3d_2PlaneLinePosNearPos
+callee 024FCCE0 r4=out12 r5=12        # compWallMargin(ret, center, radius)
+field 024FD11C r3+0x128 u32 0x5A200000,0x5A200000,0
+field 024FD11C 5A200008 i16 0xA8,0xA8,0
+field 024FD11C 5A2000B4 u32 0x5A300000
+field 024FD11C 5A3000BC u32 0x02001100
+ret 02001100 0xFFFFFFFF,5,5            # getGrabActorID (pinned vtable slot)
+ret 025D5218 0,0x5A400000,0x5A400000  # fopAcIt_Judge
+field 024FD11C 5A400008 i16 0x1C5,0x16F,0x1CA,5
+ret 02048038 0 16                     # daObj::PrmAbstract
+ret 020084C8 0,0x5A500000,0x5A500000  # cBgS::GetTriPla
+field 024FD11C 101D554C i32 0,2,3,4,5
+arg 024FD11C r4 0x7F,0x3F,0x20,0x30,0x38,0x48,0x10,0
+ret 02017AEC 0,1                      # cM3d_2PlaneLinePosNearPos
+ret 024FCBE8 0,1                      # lineBGCheck(cXyz*, cXyz*, u32)
+field 024FD11C r3+0x510 u32 0,0x2000,0x4000,0x8,0x2008
+field 024FD11C r3+0x368 i32 0,1
+field 024FD11C r3+0x8A8 u32 0x5A600000
+field 024FD11C 5A600004 u32 1,10,0,4
+# engines
+callee 02006908 r3=2 r4=out2          # cSAngle::operator-(s16)
+callee 020068F4 r3=2 r4=out2          # cSAngle::operator+(s16)
+callee 02006FE4 r3=8                  # cSGlobe::Val(f32, s16, s16)
+field 0251485C 101D5F20 u32 0,0x5A700000,0x5A700000
+arg 0251485C r4 0 144
+callee 02006584 r3=out2               # cSAngle::Val(s16)
+callee 02018780 r3=255 r4=12 r5=12    # cM3dGLin(start, end)
+callee 02010AE4 r4=12 r5=out12 r6=out4  # cM3d_Len3dSqPntAndSegLine
+arg 0250C77C r4 0 144
+field 0250C77C r3+0x5EC i32 0xFF,0,0,1
+field 0250C77C r3+0x11C i32 0,0,1,5
+field 0250C77C r3+0x100 u8 0,0,1
+field 0250C77C r3+0x5D6 u8 0xFF,40
+field 0250C77C r3+0x5D7 u8 0xFF,0,5
+field 0250C77C r3+0x534 i32 0,1
+ret 02010AE4 0,1
+callee 0201AF1C r3=12 r4=out12 r5=12  # cXyz::operator*(const cXyz&)
+callee 0201AFD8 r3=12 r4=12           # cXyz::operator!=
+arg 0250CC80 r4 0,2,3,64,1,25
+field 0250CC80 r3+0x5EC i32 0xFF,0,1
+field 0250CC80 r3+0x11C i32 0,0,1,5
+field 0250CC80 r3+0x100 u8 0,0,1
+field 0250CC80 r3+0x5D6 u8 0xFF,40
+field 0250CC80 r3+0x5D7 u8 0xFF,0,5
+field 0250CC80 r3+0x224 u8 0,1
+ret 0201AFD8 0,1
+callee 020065EC r3=out2 r5=2          # cSAngle operator-(s16, const cSAngle&)
+callee 020071E0 r3=8 r4=2 r5=2        # cSGlobe::Val(f32, const cSAngle&, const cSAngle&)
+callee 02006638 r3=out2 r4=2          # cSAngle::Val(const cSAngle&)
+arg 02511200 r4 0,19,20,51,28
+field 02511200 r3+0x108 i32 0,0,1,5,9
+field 02511200 r3+0x100 u8 0,0,1
+field 02511200 r3+0x5EC i32 0xFF,0
+field 02511200 r3+0x5D6 u8 0xFF,1
+field 02511200 r3+0x1B2 u8 0,1
+field 02511200 r3+0x38C i32 0,1
+field 02511200 r3+0x39C u8 0,1
+field 02511200 r3+0x39D u8 0,1
+field 02511200 r3+0x224 u8 0,1
+field 02511200 54005CD8 u32 0,0x8000000
+field 02511200 r3+0x124 i32 0
+# hookshotCamera
+arg 02511B5C r4 0,28
+field 02511B5C r3+0x11C i32 0,0,1,9
+field 02511B5C r3+0x128 u32 0x5A200000
+field 02511B5C 5A2000B4 u32 0x5A300000
+field 02511B5C 5A3000AC u32 0x02001200
+ret 02001200 0xFFFFFFFF,5,5
+field 02511B5C r3+0x39C u8 0,1
+field 02511B5C r3+0x321 u8 0,1
+# CalcSubjectAngle
+callee 020065DC r3=out2 r5=2          # cSAngle operator+(s16, const cSAngle&)
+callee 02618604 r3=out36              # gyro orientation (Matrix33)
+callee 02515788 r3=out12 r4=36        # Matrix33 row
+field 02506964 r3+0x37C u32 0x5355424A,0x5355424A,0
+field 02506964 r3+0x380 u8 0,1
+field 02506964 r3+0x100 u8 1,1,0
+field 02506964 r3+0x384 i32 0,25,53
+field 02506964 540052E4 i32 0,0,1
+field 02506964 54005CEA u8 8,0
+field 02506964 54005CD8 u32 0,0,0x8000000,0x40000,0x2000
+field 02506964 54005CDC u32 0,0x100000
+field 02506964 r3+0x124 i32 0
+field 02506964 101F5088 u32 0x5E300000
+field 02506964 5E300138 f32 0,0.05,0.5,1,-1
+field 02506964 5E30013C f32 0,0.05,0.5,-0.5
+field 02506964 r3+0x128 u32 0x5A200000,0x5A200000,0x5A800000
+field 02506964 5A200008 i16 0xA8,0
+# followCamera
+callee 02006694 r3=2                  # cSAngle::Val(f32)
+field 025028B8 101BDC2D u8 0,0,1      # daNpc_Cb1_c flying
+field 025028B8 101D5F3E u8 0,0,1      # daNpc_Md_c flying
+field 025028B8 101D5F45 u8 0,0,1      # daNpc_kam_c::m_hyoi_kamome
+field 025028B8 1047B688 i16 0,1       # REG
+field 025028B8 r3+0x8DB u8 0,1
+field 025028B8 r3+0x8DC u8 0,1
+# lockonCamera
+callee 025CB374 r6=12                 # dVibration_c::StartShock(vib, 2, 0x10, cXyz*)
+callee 024F7400 r4=4                  # dCamParam_c::DefaultRadius(f32*)
+callee 024F7878 r4=2                  # dCamSetup_c::CheckLatitudeRange(s16*)
+callee 02007100 r3=255                # cSGlobe()
+callee 025D5218 r4=2                  # fopAcIt_Judge(fn, &key): s16 name or u32 id (first half compared)
+ret 025051BC 0,1                      # lineBGCheckBack
+ret 025050E4 0,1                      # pointInSight
+ret 024F7400 0,1
+ret 024F7878 0,1
+ret 024F748C 0,0x1000,0x6800          # LockonLongitude
+field 025052E8 r3+0x12C u32 0,0x5A900000,0x5A900000
+field 025052E8 5A900008 i16 0xEE,0
+field 025052E8 r3+0x128 u32 0x5A200000,0x5A200000,0
+field 025052E8 5A200008 i16 0xA8,0xA8,0
+field 025052E8 5A2000B4 u32 0x5A300000
+field 025052E8 5A3000B4 u32 0x02001300
+ret 02001300 0xFFFFFFFF,5,5           # getThrowBoomerangID (pinned vtable slot)
+field 025052E8 r3+0x8D8 u8 0,1
+field 025052E8 r3+0x108 u32 0,0,1,5
+field 025052E8 r3+0x11C u32 0,1,5,20
+field 025052E8 r3+0x7F4 i32 10,0
+field 025052E8 54005824 u32 0,0,8,0x20
+field 025052E8 r3+0x130 i32 -1,5
+field 025052E8 r3+0x364 u8 0,1
+field 025052E8 r3+0x124 i32 0
+field 025052E8 r3+0x321 u8 0,1
+arg 025052E8 r4 0 144
+# subjectCamera
+callee 02506964 r4=out2 r5=out2       # CalcSubjectAngle
+callee 024F79BC r3=out12 r4=12 r5=2   # dCamMath::xyzRotateX
+callee 024F7A40 r3=out12 r4=12 r5=2   # dCamMath::xyzRotateY
+arg 025071FC r4 0 144
+field 025071FC r3+0x124 i32 0
+field 025071FC 54005CDC u32 0,0,0x100000,8,0x100008
+field 025071FC 54005CD8 u32 0,0x2000,0x200000,0x8000000,0x202000
+field 025071FC r3+0x108 u32 0,0,1,3,4,6,9
+field 025071FC r3+0x100 u8 0,1,1
+field 025071FC 54005CEA u8 3,0,0
+field 025071FC 54005BCF u8 0,0,1
+field 025071FC 54005B40 f32 1,2,3,0.5,2.5
+field 025071FC r3+0x3C4 i32 0,1,2
+field 025071FC r3+0x381 u8 0,1
+field 025071FC r3+0x3C0 u8 0,1
+field 025071FC r3+0x3C8 i32 0,1,2
+field 025071FC r3+0x510 u32 0,0x2000000
+field 025071FC r3+0x130 i32 -1,5
+field 025071FC r3+0x12C u32 0,0x5A900000
+field 025071FC r3+0x128 u32 0x5A200000,0x5A200000,0
+field 025071FC 5A200008 i16 0xA8,0
+field 025071FC 101F5088 u32 0x5E300000
+field 025071FC 5E300018 u32 0,0x40
+field 025071FC r3+0x15C f32 -0.5,0,0.5
+field 025071FC r3+0x174 f32 -0.8,-0.5,0,0.5
+field 025071FC r3+0x390 f32 0,0.5,1,0.3,-0.1
+# vomitCamera
+callee 020067AC r3=2                  # cSAngle::Norm
+arg 02513518 r4 0 144
+field 02513518 r3+0x124 i32 0
+field 02513518 r3+0x11C u32 0,0,1,5
+field 02513518 r3+0x100 u8 0,1,1
+field 02513518 r3+0x510 u32 0,0x8000
+field 02513518 54005CD8 u32 0,0x80,0x80000000,0x80000080
+# shieldCamera
+arg 02513E98 r4 0 144
+field 02513E98 r3+0x124 i32 0
+field 02513E98 r3+0x11C u32 0,0,1,5
+field 02513E98 r3+0x100 u8 0,1,1
+field 02513E98 r3+0x128 u32 0x5A200000,0x5A200000,0
+field 02513E98 5A200008 i16 0xA8,0x16F,0
+# hungCamera
+callee 024F7AEC r3=out12 r4=2 r5=12 r6=12  # dCamMath::xyzProjPosOnYZ
+callee 0200F93C r3=12 r4=12           # cLib_targetAngleY
+arg 0250EF98 r4 0 144
+field 0250EF98 r3+0x124 i32 0
+field 0250EF98 r3+0x11C u32 0,0,1,5
+field 0250EF98 r3+0x100 u8 0,1,1
+field 0250EF98 r3+0x390 i32 0,3,12
+field 0250EF98 54005CD8 u32 0,0x80,0x100,0x80000000,0x80000080,0x80000100
+field 0250EF98 r3+0x170 f32 -0.9,-0.3,0,0.5,0.9
+field 0250EF98 r3+0x174 f32 -0.9,-0.3,0,0.5,0.9
+# tornadoCamera
+arg 025121E8 r4 0 144
+field 025121E8 r3+0x124 i32 0
+field 025121E8 r3+0x11C u32 0,0,1,7,19,39
+field 025121E8 r3+0x100 u8 0,1,1
+field 025121E8 r3+0x38C i32 0,1,2
+field 025121E8 54005CD8 u32 0,0x1000000,0x10000
+field 025121E8 54005CDC u32 0,2,0x80
+field 025121E8 1046EFC0 u32 0,1
+field 025121E8 1046EFC4 u32 0,1
+field 025121E8 r3+0x174 f32 -0.5,0,0.5
+field 025121E8 r3+0x510 u32 0,0x8000
+# manualCamera
+callee 024F7DF4 r3=4                  # limited_range_addition(f32*, ...)
+callee 0200F5C8 r3=4                  # cLib_chaseF(f32*, target, step)
+callee 028E8F44 r3=12 r4=12           # PSVECDotProduct
+arg 0250FDC8 r4 0 144
+field 0250FDC8 r3+0x124 i32 0
+field 0250FDC8 r3+0x11C u32 0,0,1,5
+field 0250FDC8 r3+0x510 u32 0,0x1000
+field 0250FDC8 r3+0x12C u32 0,0x5A900000
+field 0250FDC8 r3+0x8D4 u8 0,0,1
+field 0250FDC8 r3+0x8D8 u8 0,1
+field 0250FDC8 r3+0x8D9 u8 0,1
+field 0250FDC8 r3+0x398 f32 0,0.5,1,1.5,-0.5
+field 0250FDC8 54005CD8 u32 0,0x8000000,0x2000000,0x100,0x800000,0x8100100
+field 0250FDC8 54005CDC u32 0,0x40000,0x20000,0x40,0x20,0x10000
+field 0250FDC8 r3+0x174 f32 -0.9,-0.3,0,0.5,0.9
+field 0250FDC8 r3+0x170 f32 -0.9,-0.3,0,0.005,0.5,0.95
+field 0250FDC8 101BDC2D u8 0,0,1
+field 0250FDC8 101D5F3E u8 0,0,1
+ret 024F7DF4 0,1
+# towerCamera
+arg 0250B30C r4 0 144
+field 0250B30C r3+0x124 i32 0
+field 0250B30C r3+0x108 u32 0,0,1,5
+field 0250B30C r3+0x100 u8 0,1,1
+field 0250B30C r3+0x5EC i32 0xFF,0
+field 0250B30C r3+0x38C i32 0,10,0x50
+field 0250B30C 101BDC2D u8 0,0,1
+field 0250B30C 101D5F3E u8 0,0,1
+field 0250B30C r3+0x13C i32 0,1
+# rideCamera
+arg 0250D4E8 r4 0 144
+field 0250D4E8 r3+0x124 i32 0
+field 0250D4E8 r3+0x11C u32 0,0,1,19,39
+field 0250D4E8 r3+0x100 u8 0,1,1
+field 0250D4E8 r3+0x38C i32 0,1,2
+field 0250D4E8 54005CD8 u32 0,0x1000000,0x10000
+field 0250D4E8 54005CDC u32 0,2,4,0x80,0x404,6
+field 0250D4E8 1046EFB8 u32 0,1
+field 0250D4E8 1046EFBC u32 0,1
+field 0250D4E8 r3+0x510 u32 0,0x8000,0x100000
+field 0250D4E8 5A400644 u32 0,0x80000000
+field 0250D4E8 54005D2C u8 0,1
+field 0250D4E8 r3+0x23C f32 -20,0,5,20
+field 0250D4E8 r3+0x240 f32 0,2.5
+field 0250D4E8 r3+0x389 u8 0,1
+field 0250D4E8 r3+0x318 u8 0,1
+field 0250D4E8 r3+0x514 i32 110,111,111,5
+# talktoCamera
+callee 02530634 r4=out4               # getEvIntData(out, name, default)
+callee 025187D8 r4=12 r5=12           # dCcS::ChkCamera(a, b, r, a1, a2)
+ret 025187D8 0,0,1
+ret 02530CB4 0x5A200000,0x5A900000,0  # getEvActor
+arg 02508A60 r4 0 144
+field 02508A60 r3+0x11C u32 0,0,1,5
+field 02508A60 r3+0x100 u8 0,1
+field 02508A60 r3+0x128 u32 0x5A200000,0x5A200000,0
+field 02508A60 r3+0x12C u32 0x5A900000,0x5A900000,0x5A200000,0
+field 02508A60 5A900008 i16 0xA5,0xB6,0
+field 02508A60 540052E4 i32 0,0,1
+ret 025023C4 0,0,0,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,5,40  # HD talk shot type
+ret 02502364 0,0,0x5A900000,0x5A200000  # HD talk table entry
+field 02508A60 r3+0x3B4 i32 0,0,1,-1
+field 02508A60 r3+0x3C0 i32 0,0,1,5
+field 02508A60 r3+0x3EC u32 0x5A900000,0
+field 02508A60 r3+0x3F0 s16 0,1
+callee 02508804 r4=out12 r7=12        # relationalPos(ret, a1, a2, ofs, scale)
+# mutation gaps
+field 025023C4 54005C30 i32 0,1,10,11,12,-1
+field 025023C4 54005C34 i32 0,1,10,11,12,-1
+callee 02008974 r4=84                 # cBgS::GroundCross(gnd chk): compare the check object
+callee 024FB4E8 r6=108                # lineBGCheck(start, end, dBgS_CamLinChk*): compare the check object
+field 024FFC40 r3+0xF4 f32 0,3.8146973e-06,-3.8146973e-06,0.5
+field 024FFC40 r3+0xF8 f32 0,3.8146973e-06,-3.8146973e-06,0.5
+field 024FFC40 r3+0xFC f32 0,3.8146973e-06,-3.8146973e-06,0.5
+callee 02008DAC r3=84                 # ~cBgS_GndChk: compare the check object being destroyed
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02500984 0x54005134 8 @stages,"A_um","A_um","A_um","A_umB","A_umB","A_umB","A_umer","A_umer","A_umer","A_umi","A_umi","A_umi","A_umikz","A_umikz","A_umikz","A_umip","A_umip","A_umip","A_umnK","A_umnK","A_umnK","A_umo","A_umo","A_umo","A_umop","A_umop","A_umop","A_ump","A_ump","A_ump","Absh","Absh","Absh","AbshB","AbshB","AbshB","Absher","Absher","Absher","Abshi","Abshi","Abshi","Abshikz","Abshikz","Abshikz","Abship","Abship","Abship","AbshnK","AbshnK","AbshnK","Absho","Absho","Absho","Abshop","Abshop","Abshop","Abshp","Abshp","Abshp","Asok","Asok","Asok","AsokB","AsokB","AsokB","Asoker","Asoker","Asoker","Asoki","Asoki","Asoki","Asokikz","Asokikz","Asokikz","Asokip","Asokip","Asokip","AsoknK","AsoknK","AsoknK","Asoko","Asoko","Asoko","Asokop","Asokop","Asokop","Asokp","Asokp","Asokp","Boat","Boat","Boat","Event","Event","Event","Field","Field","Field","GTow","GTow","GTow","GTowB","GTowB","GTowB","GTower","GTower","GTower","GTowi","GTowi","GTowi","GTowikz","GTowikz","GTowikz","GTowip","GTowip","GTowip","GTownK","GTownK","GTownK","GTowo","GTowo","GTowo","GTowop","GTowop","GTowop","GTowp","GTowp","GTowp","Gano","Gano","Gano","GanoB","GanoB","GanoB","Ganoer","Ganoer","Ganoer","Ganoi","Ganoi","Ganoi","Ganoikz","Ganoikz","Ganoikz","Ganoip","Ganoip","Ganoip","GanonK","GanonK","GanonK","Ganoo","Ganoo","Ganoo","Ganoop","Ganoop","Ganoop","Ganop","Ganop","Ganop","Keep","Keep","Keep","M_Da","M_Da","M_Da","M_DaB","M_DaB","M_DaB","M_Daer","M_Daer","M_Daer","M_Dai","M_Dai","M_Dai","M_Daikz","M_Daikz","M_Daikz","M_Daip","M_Daip","M_Daip","M_DanK","M_DanK","M_DanK","M_Dao","M_Dao","M_Dao","M_Daop","M_Daop","M_Daop","M_Dap","M_Dap","M_Dap","Obsh","Obsh","Obsh","ObshB","ObshB","ObshB","Obsher","Obsher","Obsher","Obshi","Obshi","Obshi","Obshikz","Obshikz","Obshikz","Obship","Obship","Obship","ObshnK","ObshnK","ObshnK","Obsho","Obsho","Obsho","Obshop","Obshop","Obshop","Obshp","Obshp","Obshp","PShi","PShi","PShi","PShiB","PShiB","PShiB","PShier","PShier","PShier","PShii","PShii","PShii","PShiikz","PShiikz","PShiikz","PShiip","PShiip","PShiip","PShinK","PShinK","PShinK","PShio","PShio","PShio","PShiop","PShiop","PShiop","PShip","PShip","PShip","Restrict","Restrict","Restrict","Subject","Subject","Subject","Water","Water","Water","kaze","kaze","kaze","kazeB","kazeB","kazeB","kazeer","kazeer","kazeer","kazei","kazei","kazei","kazeikz","kazeikz","kazeikz","kazeip","kazeip","kazeip","kazenK","kazenK","kazenK","kazeo","kazeo","kazeo","kazeop","kazeop","kazeop","kazep","kazep","kazep","sea","sea","sea"
+fieldstr 024F8184 0x54005134 8 @stages,"Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Demo07","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

@@ -1,0 +1,263 @@
+# d_stage (dStage_*): TU 025C1004..<025C527C (d_spline_path's __sinit 025C0F70 before it; sinit 025C4684; virtual set/get copies 025C4734..025C51BC and an HD dump 025C51C0 after it; d_throwstone follows)
+src wwhd_src/d/d_stage.cpp
+ret! 025200D4 0x54000000 0x54000000
+# chkPlayerId: the stage / room data objects with a pinned vtable, getPlayer -> a short player list
+field * 54005150 u32 0x55000000
+ret! 025C11DC 0x57000000 0x57000000
+field * 57000000 u32 0x55000000
+field * 55000044 u32 0x025C4F10
+ret! 025C4F10 0x56000000,0x56000000,0
+field * 56000000 u32 0,1,2,3,0x80000000
+field * 56000004 u32 0x56000100
+field * 5600011D u8 0,1,2
+field * 5600013D u8 0,1,2
+field * 5600015D u8 0,1,2
+arg 025C123C r3 0,1,2,0x100
+arg 025C123C r4 -1,-1,0,63,64,-5
+stable 56000000 0x200
+stable 55000000 0x100
+stable 57000000 0x10
+stable 54005150 4
+# searchName: names from the table (first, a middle one, the last), a miss
+arg 025C109C r3 0x101EBFDC,0x101EC2C4,0x101EC2C8,0x101EE5BC,0x10055318
+# getName: process names with -1 / numbered arguments, a missing name
+arg 025C10E8 r3 435,300,301,453,43,0,0xFFFF
+arg 025C10E8 r4 0,1,2,5,-1,15
+src wwhd_src/d/d_stage_2.cpp
+# playerInit: no player yet, the start point (-2 ikada, -3 turn restart, -1 room restart, a player id)
+callee 028E8F64 r3=48 r4=12 r5=out12  # PSMTXMultVec
+callee 0246C5C8 r3=12                 # daSea_execute(pos)
+field 025C1384 54005B2C u32 0,0,0,0,1
+field 025C1384 5400513C u16 0xFFFE,0xFFFE,0xFFFD,0xFFFF,0,1,2
+field 025C1384 54005D17 u8 0,1,2
+field * 101F84DC u32 0x5A000000
+field 025C1384 5A00116C u32 0,0,0x12345,0xFFFFFFC5
+ret 025DC80C 0x5B000000,0x5B000000,0
+field 025C1384 5B000008 u16 7,7,8
+arg! 025C1384 r4 0x59000000
+field 025C1384 59000004 u32 0,1,2,3
+field 025C1384 59000008 u32 0x59000100
+field 025C1384 5900011D u8 0,1,2
+field 025C1384 5900013D u8 0,1,2
+field 025C1384 5900015D u8 0,1,2
+field 025C1384 59000108 u32 0,0x1000,0x2000,0x2005,0x3F
+field 025C1384 59000128 u32 0,0x1000,0x2000,0x2005,0x3F
+arg! 025C1384 r6 0x58000000,0x58000000,0x58000000,0
+stable 58000000 0x200
+field 025C1384 58000000 u32 0,1,2,3
+field 025C1384 58000004 u32 0x41435452,0x41435430,0x41435462,0x12345678
+field 025C1384 58000008 u32 0,1,2,3
+field 025C1384 5800000C u32 0x58000100
+field 025C1384 58000010 u32 0x41435452,0x41435430,0x41435462,0x12345678
+field 025C1384 58000014 u32 0,1,2,3
+field 025C1384 58000018 u32 0x58000100
+field 025C1384 5800001C u32 0x41435452,0x41435430,0x41435462,0x12345678
+field 025C1384 58000020 u32 0,1,2,3
+field 025C1384 58000024 u32 0x58000100
+field 025C1384 58000100 u32 0x696B6164,0x696B6164,0x696B6164,0x41414141
+field 025C1384 58000104 u32 0x615F6800,0x615F7500,0x61530000,0x615F6801,0x615F7600
+field 025C1384 58000108 u32 0,0x40000,0x80000,0xFFFFFFFF
+field 025C1384 58000120 u32 0x696B6164,0x696B6164,0x41414141
+field 025C1384 58000124 u32 0x615F6800,0x615F7500,0x61530000,0x61540000
+field 025C1384 58000128 u32 0,0x40000,0x80000
+field 025C1384 58000140 u32 0x696B6164
+field 025C1384 58000144 u32 0x61530000
+field 025C1384 58000148 u32 0,0x40000,0x80000
+ret 0246B6A4 0,1
+# chunk handlers: the entry counts
+arg 025C1CD4 r5 0,0,1,5
+arg 025C1DBC r5 0,0,1,5
+stable 59000000 0x200
+src wwhd_src/d/d_stage_3.cpp
+# chunk handlers: a pinned chunk (count, entries) and a pinned dStage_dt_c with a pinned vtable
+arg! 025C1F00 r4 0x5C000000
+arg! 025C1FE0 r4 0x5C000000
+arg! 025C20B0 r4 0x5C000000
+arg! 025C21B8 r4 0x5C000000
+arg! 025C2298 r4 0x5C000000
+arg! 025C2814 r4 0x5C000000
+arg! 025C2950 r4 0x5C000000
+arg! 025C29C8 r4 0x5C000000
+arg! 025C2A20 r4 0x5C000000
+arg! 025C2B48 r4 0x5C000000
+stable 5C000000 0x400
+field * 5C000004 u32 0,1,2,3,0x1F,0x20,0x3F,0x40,0x80000000
+field * 5C000008 u32 0x5C000100
+arg 025C1E44 r3 0x5D000000
+arg 025C1F00 r3 0x5D000000
+arg 025C1FE0 r3 0x5D000000
+arg 025C21B8 r3 0x5D000000
+arg 025C2298 r3 0x5D000000
+arg 025C2814 r3 0x5D000000
+arg 025C2A20 r3 0x5D000000
+stable 5D000000 4
+stable 5E000000 0x300
+field * 5D000000 u32 0x5E000000
+field * 5E000014 u32 0x025C4770
+field * 5E00015C u32 0x025C4BD8
+field * 5E00017C u32 0x025C4D00
+field * 5E00019C u32 0x025C4D10
+ret 025C4BD8 0x5F000000,0x5F000000,0
+field * 5F00000C u32 0x30000,0x60000,0,0x10000,0x70000
+ret 025BA6A4 0,1
+ret 025D5600 0x61000000,0x61000000,0
+# GetReverbStage: count and index
+arg 025C2150 r3 0x5C000004
+arg 025C2150 r4 -1,0,1,2,3,4
+# setShipPos / shipInfoInit: the stage name ("GanonM", "sea"), the restart ship, the ids
+field * 54005134 u32 0x47616E6F,0x73656100,0x73656161
+field * 54005138 u32 0x6E4D0000,0x6E4D0100
+field * 5A0012AC u32 0,1
+ret 025B8B94 0,1
+ret 025D5218 0x60000000,0x60000000,0
+ret 02520584 0x60000100,0x60000100,0
+arg 025C23E0 r3 0xFF,0x80,0,1
+arg 025C23E0 r4 0xFF,11,0,3
+field 025C2608 54005D14 u8 0xFF,0x80,0,1
+field 025C2608 54005D15 u8 0xFF,11,0,3
+ret 025C23E0 0,1
+field 025C23E0 5400513C u16 0xFFFD,0xFFFD,0xFFFF,0
+ret 02019430 0x62000000,0x62000000,0
+src wwhd_src/d/d_stage_4.cpp
+# decode / offsetToPtr / loaders: a pinned stage file (chunk count, nodes carrying the tables' tags)
+arg! 025C2BC0 r3 0x63000000,0x63000000,0x63000000,0
+arg 025C2BC0 r5 0x101EBCC0,0x101EBE58,0x101EBF60,0x101EBAD4,0x101EBB10,0x101EBB7C
+arg! 025C2BC0 r6 0,1,3,7,0x16,0x22,-1,2
+arg! 025C2C70 r3 0x63000000
+arg! 025C2CA4 r3 0x63000000,0x63000000,0
+arg 025C2CA4 r4 0x5D000000,0x5D000000,0
+arg! 025C2D4C r3 0x63000000
+arg! 025C2DA8 r3 0x63000000
+arg! 025C2DFC r3 0x63000000
+arg! 025C2E8C r3 0x63000000
+stable 63000000 0x100
+field * 63000000 u32 0,1,2,3,5
+field * 63000004 u32 0x32444D41,0x41435430,0x41435452,0x43414D52,0x444F4F52,0x4C424E4B,0x4D454D41,0x504C5952,0x5254424C,0x53434C53,0x53484950,0x53544147,0x54474452,0x54524530,0x54524553,0x12345678
+field * 63000010 u32 0x32444D41,0x41435430,0x41435452,0x43414D52,0x444F4F52,0x4C424E4B,0x4D454D41,0x504C5952,0x5254424C,0x53434C53,0x53484950,0x53544147,0x54474452,0x54524530,0x54524553,0x12345678
+field * 6300001C u32 0x32444D41,0x41435430,0x41435452,0x43414D52,0x444F4F52,0x4C424E4B,0x4D454D41,0x504C5952,0x5254424C,0x53434C53,0x53484950,0x53544147,0x54474452,0x54524530,0x54524553,0x12345678
+field * 63000028 u32 0x32444D41,0x41435430,0x41435452,0x43414D52,0x444F4F52,0x4C424E4B,0x4D454D41,0x504C5952,0x5254424C,0x53434C53,0x53484950,0x53544147,0x54474452,0x54524530,0x54524553,0x12345678
+field * 63000034 u32 0x32444D41,0x41435430,0x41435452,0x43414D52,0x444F4F52,0x4C424E4B,0x4D454D41,0x504C5952,0x5254424C,0x53434C53,0x53484950,0x53544147,0x54474452,0x54524530,0x54524553,0x12345678
+field * 6300000C u32 0,0x100,0x20
+field * 63000018 u32 0,0x100,0x20
+field * 63000024 u32 0,0x100,0x20
+field * 63000030 u32 0,0x100,0x20
+field * 6300003C u32 0,0x100,0x20
+ret 025250C0 0,1,5,11
+# create: the stage resource, the start room, the stage name (GTower, Hyrule, other)
+ret 0252447C 0x63000000,0x63000000,0
+field 025C3094 5400513E u8 0xFF,0,1,63
+field 025C3094 54005134 u32 0x47546F77,0x48797275,0x47616E6F
+field 025C3094 54005138 u32 0x65720000,0x6C650000,0x6E4D0000
+stable 54005134 0x10
+field 025C2FA4 5400513C u16 0xFFFF,0,1
+# loadRoom: room count, a pinned room list (index | 0x80 bg flag), the room status flags
+arg! 025C34AC r4 -1,0,1,2,3,5
+arg! 025C34AC r5 0x65000000
+field 025C34AC 65000000 u8 0,1,2,0x80,0x81,0x3F,0xC2
+field 025C34AC 65000001 u8 0,1,2,0x80,0x81,0x3F,0xC2
+field 025C34AC 65000002 u8 0,1,2,0x80,0x81,0x3F,0xC2
+field 025C34AC 65000003 u8 0,1,2,0x80,0x81,0x3F,0xC2
+field 025C34AC 65000004 u8 0,1,2,0x80,0x81,0x3F,0xC2
+# getMapInfo2: a pinned room data object, its vtable's getMapInfoBase answers a pinned list
+arg! 025C40E0 r3 0x64000000
+arg 025C40E0 r4 0,1,2,3,0x100
+stable 64000000 0x400
+field 025C40E0 64000000 u32 0x64000100
+field 025C40E0 6400018C u32 0x025C4D18
+ret! 025C4D18 0x64000200,0x64000200,0
+field 025C40E0 64000200 u32 0,1,2,4,0x80000000
+field 025C40E0 64000204 u32 0x64000300,0x64000300,0
+field 025C40E0 64000335 u8 0,1,2,3
+field 025C40E0 6400036D u8 0,1,2,3
+field 025C40E0 640003A5 u8 0,1,2,3
+field 025C40E0 640003DD u8 0,1,2,3
+# loadRoom: the 64 room status flags (bit 1 loaded, 2/4 busy only in a few rooms)
+field 025C34AC 1047E8E8 u8 0,1,0x11,0,1,2,4,0x81
+field 025C34AC 1047EB14 u8 0,1,0x10,0,0x81
+field 025C34AC 1047ED40 u8 0,1,0x10,0,0x81
+field 025C34AC 1047EF6C u8 0,1,0x10,0,0x81
+field 025C34AC 1047F198 u8 0,0x10,0x40,0,8
+field 025C34AC 1047F3C4 u8 0,1,0x11,0,1,2,4,0x81
+field 025C34AC 1047F5F0 u8 0,0x10,0x40,0,8
+field 025C34AC 1047F81C u8 0,0x10,0x40,0,8
+field 025C34AC 1047FA48 u8 0,0x10,0x40,0,8
+field 025C34AC 1047FC74 u8 0,0x10,0x40,0,8
+field 025C34AC 1047FEA0 u8 0,0x10,0x40,0,8
+field 025C34AC 104800CC u8 0,0x10,0x40,0,8
+field 025C34AC 104802F8 u8 0,0x10,0x40,0,8
+field 025C34AC 10480524 u8 0,0x10,0x40,0,8
+field 025C34AC 10480750 u8 0,0x10,0x40,0,8
+field 025C34AC 1048097C u8 0,0x10,0x40,0,8
+field 025C34AC 10480BA8 u8 0,0x10,0x40,0,8
+field 025C34AC 10480DD4 u8 0,0x10,0x40,0,8
+field 025C34AC 10481000 u8 0,0x10,0x40,0,8
+field 025C34AC 1048122C u8 0,0x10,0x40,0,8
+field 025C34AC 10481458 u8 0,0x10,0x40,0,8
+field 025C34AC 10481684 u8 0,0x10,0x40,0,8
+field 025C34AC 104818B0 u8 0,0x10,0x40,0,8
+field 025C34AC 10481ADC u8 0,0x10,0x40,0,8
+field 025C34AC 10481D08 u8 0,0x10,0x40,0,8
+field 025C34AC 10481F34 u8 0,0x10,0x40,0,8
+field 025C34AC 10482160 u8 0,0x10,0x40,0,8
+field 025C34AC 1048238C u8 0,0x10,0x40,0,8
+field 025C34AC 104825B8 u8 0,0x10,0x40,0,8
+field 025C34AC 104827E4 u8 0,0x10,0x40,0,8
+field 025C34AC 10482A10 u8 0,0x10,0x40,0,8
+field 025C34AC 10482C3C u8 0,0x10,0x40,0,8
+field 025C34AC 10482E68 u8 0,0x10,0x40,0,8
+field 025C34AC 10483094 u8 0,0x10,0x40,0,8
+field 025C34AC 104832C0 u8 0,0x10,0x40,0,8
+field 025C34AC 104834EC u8 0,0x10,0x40,0,8
+field 025C34AC 10483718 u8 0,0x10,0x40,0,8
+field 025C34AC 10483944 u8 0,0x10,0x40,0,8
+field 025C34AC 10483B70 u8 0,0x10,0x40,0,8
+field 025C34AC 10483D9C u8 0,0x10,0x40,0,8
+field 025C34AC 10483FC8 u8 0,0x10,0x40,0,8
+field 025C34AC 104841F4 u8 0,0x10,0x40,0,8
+field 025C34AC 10484420 u8 0,0x10,0x40,0,8
+field 025C34AC 1048464C u8 0,0x10,0x40,0,8
+field 025C34AC 10484878 u8 0,0x10,0x40,0,8
+field 025C34AC 10484AA4 u8 0,0x10,0x40,0,8
+field 025C34AC 10484CD0 u8 0,0x10,0x40,0,8
+field 025C34AC 10484EFC u8 0,0x10,0x40,0,8
+field 025C34AC 10485128 u8 0,0x10,0x40,0,8
+field 025C34AC 10485354 u8 0,0x10,0x40,0,8
+field 025C34AC 10485580 u8 0,0x10,0x40,0,8
+field 025C34AC 104857AC u8 0,0x10,0x40,0,8
+field 025C34AC 104859D8 u8 0,0x10,0x40,0,8
+field 025C34AC 10485C04 u8 0,0x10,0x40,0,8
+field 025C34AC 10485E30 u8 0,0x10,0x40,0,8
+field 025C34AC 1048605C u8 0,0x10,0x40,0,8
+field 025C34AC 10486288 u8 0,0x10,0x40,0,8
+field 025C34AC 104864B4 u8 0,0x10,0x40,0,8
+field 025C34AC 104866E0 u8 0,0x10,0x40,0,8
+field 025C34AC 1048690C u8 0,0x10,0x40,0,8
+field 025C34AC 10486B38 u8 0,0x10,0x40,0,8
+field 025C34AC 10486D64 u8 0,0x10,0x40,0,8
+field 025C34AC 10486F90 u8 0,0x10,0x40,0,8
+field 025C34AC 104871BC u8 0,0x10,0,2,4,1,0x81
+# changeSceneExitId: the exit ids with special handling, the "Asoko" stage name
+ret 024EECC8 0x3E,0x3B,0x3D,0x3C,0x3C,1,0x3F
+field 025C38B8 54005134 u32 0x41736F6B,0x41736F6B,0x47616E6F
+field 025C38B8 54005138 u32 0x6F000000,0x6F000000,0x6F010000
+field 025C38B8 54005D16 u8 0,1,63,64,0xFF
+src wwhd_src/d/d_stage_5.cpp
+# mutation-test facts: the bzero thunk forwards r3 to memset; the room loader's crash-dump context
+# (16 bytes: base 8, data, stage) is compared at its destructor, its constructor storage is not an input
+callee 028F521C r3=0
+callee 02034434 r3=255
+callee 02034538 r3=16
+# turnRestart: the hour boundaries (6, 18, 24)
+ret 02556C34 4,5,6,17,18,23,24
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 025C1384 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","ikada_h","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"
+fieldstr 025C23E0 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"
+fieldstr 025C2608 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"
+fieldstr 025C3094 0x54005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTowle","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","GTownM","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganoer","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","Ganole","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyruer","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","HyrunM","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage"
+fieldstr 025C38B8 0x54005134 8 @stages,"A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Abship","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Asoko\x01","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","Ganoo\x01","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","Obshop","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 025C3D68 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"
+fieldstr 025C3DE4 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"
+fieldstr 025C3ED0 0x54005134 8 @stages,"GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","GanonM\x01","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01","seaanM\x01"

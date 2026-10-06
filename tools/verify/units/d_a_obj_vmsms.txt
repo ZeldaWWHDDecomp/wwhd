@@ -1,0 +1,18 @@
+src wwhd_src/d/actor/d_a_obj_vmsms.cpp
+callee 026066C4 r4=8
+ret 026066C4 0,0x55000000
+ret 025E38E0 0,0x56000000
+ret 025B8B94 0,1
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 025200D4 0x54000000
+ret 025445B8 0,1
+field * 54005292 u8 0,1
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3AC u32 0,0x56000000
+arg! 023B3B20 r3 0,0x40000000
+arg! 023B3B34 r3 0,0x40000000
+stackfill
+# Distinguish byte-offset changes in the two singleton pointer loads.
+field * 101F4F28 u32 0x5A123400
+field * 101F84DC u32 0x5B234500

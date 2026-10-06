@@ -1,0 +1,74 @@
+#pragma once
+#include "d/d_cc_d.h"
+#include "f_op/f_op_actor.h"
+// Warp-pot WWHD layout: the animation controller and Acch/Cir differ from GC.
+struct WarptFollow_HD {
+  be<u32> mVtable;
+  gptr<u8> mEmitter;
+  u8 _8[12];
+};
+struct daObj_Warpt_c : fopAc_ac_c {
+  be<s32> mMode;
+  u8 _3B0[4];
+  be<s32> m298, m29C, m2A0, m2A4, m2A8, m2AC, m2B0, m2B4, m2B8, m2BC, m2C0;
+  be<u8> m2C4, m2C5, m2C6;
+  u8 _3E3;
+  u8 mPhase[8];
+  gptr<u8> mpBodyModel, mpLidModel1, mpBodyBgW1;
+  be<f32> m2DC[12];
+  gptr<u8> mpBodyBgW2;
+  be<f32> m310[12];
+  gptr<u8> mpLidBgW;
+  be<f32> m344[12];
+  gptr<u8> mpLidModel2;
+  u8 mLidBrk[0x78];
+  dCcD_Stts mStts;
+  u8 mCyl1[0x130], mCyl2[0x130];
+  u8 mAcch[0x1C4], mAcchCir[0x40];
+  cXyz m830;
+  be<s32> m83C;
+  be<s8> m840;
+  u8 _9BD[3];
+  WarptFollow_HD m844, m858;
+  be<u32> m86C, m870;
+  u8 isHuta();
+  bool isSp();
+  bool isOtherHuta();
+  bool isRealHuta();
+  bool createHutaHeap();
+  bool createBodyHeap();
+  BOOL createHeap();
+  void ride(fopAc_ac_c *);
+  void onWarpBit(u8);
+  bool isWarpBit(u8);
+  void getArg();
+  void initCollision();
+  void setCollision();
+  void setMtx();
+  void createInit();
+  s32 create();
+  BOOL remove();
+  void breakHuta(s32);
+  void checkHitSE();
+  BOOL execute();
+  BOOL draw();
+  void modeProc(s32, s32);
+  void modeOpenInit();
+  void modeOpen();
+  void modeCloseInit();
+  void modeClose();
+  void openHuta();
+  void modeBreakFireInit();
+  void modeBreakFire();
+  void warp(s32);
+  bool spWarp();
+  bool normalWarp();
+  void modeEventWarp();
+  void modeEventOpen();
+};
+WWHD_OFFSET(daObj_Warpt_c, mLidBrk, 0x494);
+WWHD_OFFSET(daObj_Warpt_c, mStts, 0x50C);
+WWHD_OFFSET(daObj_Warpt_c, mAcch, 0x7A8);
+WWHD_OFFSET(daObj_Warpt_c, m830, 0x9AC);
+WWHD_OFFSET(daObj_Warpt_c, m844, 0x9C0);
+WWHD_SIZE(daObj_Warpt_c, 0x9F0);

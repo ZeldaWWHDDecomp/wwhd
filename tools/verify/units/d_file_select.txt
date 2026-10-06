@@ -1,0 +1,101 @@
+src wwhd_src/d/d_file_select.cpp
+# Constructor storage is the real 0x2D8-byte screen; successful and failed allocation paths.
+arg 026D1634 r3 0,0x58002000
+ret! 0273AD10 0,0x58003000
+field 026CCB8C r3+0x2C u32 0,1,2,3
+field 026CCB8C r3+0x28 u32 0,1,2,0xFFFFFFFF,0x80000000
+callee 0200EE00 r3=12 r4=12
+callee 0200F564 r3=out2
+# Native SDK event constructors allocate 0x28 bytes; independent stack event objects have that full size.
+callee 020013C0 r3=out40 r4=40
+callee 02001338 r3=out40
+callee 02001FF4 r4=40
+callee 02001490 r3=40
+# The SDK name wrapper passed by deleteButtons occupies two words.
+callee 026F5E80 r4=8
+# Transition modes are the thirteen initialized native modes; others consume uninitialized stack vectors.
+arg! 026CC22C r5 0,1,2,3,4,5,6,7,8,9,10,11,12
+arg! 026CC22C r6 0,1,2,3,4,5,6,7,8,9,10,11,12
+arg 026CC22C r4 0,1,2,3,4,5,255,0xFFFFFFFF
+arg 026CC22C r10 0,1,2,10,255,65535,0x80000000,0xFFFFFFFF
+callee 026CC1CC r3=out48 r5=12 r6=12
+# Draw ownership header remains finite and intact across panel callbacks; panel contents remain clobberable.
+arg! 026D2148 r3 0x58002000
+field 026D2148 58002048 u32 0,1,2,3,5,6,7,8,9,10
+field 026D2148 5800204C u32 0x58003000
+stable 58002048 8
+
+# Valid UI states and completion results steer concrete baseline coverage gaps.
+field * 101F4FF0 u32 0,0x58004000
+ret 026CD0F4 0,0x56,0x57,0x58,0x59,0x5A,0x5B,0x5C
+ret 026CCC94 0,1
+ret 026F6340 0,1
+ret 02005840 0,1
+field 026CD740 r3+0x270 u32 0,1,2,3,4
+field 026CD740 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CD740 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CED0C r3+0x270 u32 0,1,2,3,4
+field 026CED0C r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CED0C r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CF264 r3+0x270 u32 0,1,2,3,4
+field 026CF264 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CF264 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CF660 r3+0x270 u32 0,1,2,3,4
+field 026CF660 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CF660 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CFB74 r3+0x270 u32 0,1,2,3,4
+field 026CFB74 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CFB74 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CFFB4 r3+0x270 u32 0,1,2,3,4
+field 026CFFB4 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CFFB4 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D0608 r3+0x270 u32 0,1,2,3,4
+field 026D0608 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D0608 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D0D84 r3+0x270 u32 0,1,2,3,4
+field 026D0D84 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D0D84 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D100C r3+0x270 u32 0,1,2,3,4
+field 026D100C r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D100C r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D12B0 r3+0x270 u32 0,1,2,3,4
+field 026D12B0 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026D12B0 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CE118 r3+0x270 u32 0,1,2,3,4
+field 026CE118 r3+0x274 u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CE118 r3+0x26C u32 0,1,2,0xFFFFFFFF,0x80000000
+field 026CD200 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026CE728 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026CF068 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026CFA2C r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026CFB74 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026D0130 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026D0608 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026D100C r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+field 026CFFB4 r3+0x48 u32 0,1,2,3,4,5,6,7,8,9,10
+# These native inline text setters read the wrapper's first pointer word only; caller wrappers remain eight bytes.
+callee 026F6524 r4=4
+callee 026F2540 r4=4
+callee 026D1C7C r5=12
+
+# Stored copy/delete slot indices: ordinary slots plus wrapping/malformed edges.
+field 026CFA2C r3+0x1C4 u32 0,1,2,3,4,0xFFFFFFFF
+field 026CFA2C r3+0x1C8 u32 0,1,2,3,4,0xFFFFFFFF
+field 026CFB74 r3+0x1C4 u32 0,1,2,3,4,0xFFFFFFFF
+field 026CFB74 r3+0x1C8 u32 0,1,2,3,4,0xFFFFFFFF
+field 026D0130 r3+0x1C4 u32 0,1,2,3,4,0xFFFFFFFF
+field 026D0130 r3+0x1C8 u32 0,1,2,3,4,0xFFFFFFFF
+field 026D0130 r3+0x1D4 u32 6,7,8,0,3,10,0xFFFFFFFF
+field 026D0A20 r3+0x1D4 u32 6,7,8,0,3,10,0xFFFFFFFF
+
+# Mutation42 exposed an unsteered save-data singleton; neighboring byte addresses must differ.
+field 026CD8E4 101F84DC u32 0x58006000,0x58007000,0x12345678,0xFFFFFFFF
+
+# game test 2026-10-05 (empty save slots): fsCreate keeps the original's frame (gabi::NativeFrame);
+# its whole footprint is compared over random-filled stack.
+stackfill
+footprint 026D1D14 0x90
+footprint 026D2474 0x38
+footprint 026D3858 0
+footprint 026D3898 0
+footprint 026D38D8 0

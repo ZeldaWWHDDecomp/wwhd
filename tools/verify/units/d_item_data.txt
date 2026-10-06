@@ -1,0 +1,10 @@
+src wwhd_src/d/d_item_data.cpp
+# Explicit last valid index and writable table payload distinguish the range boundary.
+arg 02551B90 r3 0,127,128,129,255
+field 02551B90 101E8C74 u16 0,1,0x8466,65535
+# The getter intentionally reloads after assertion dispatch. Exercise that dependency
+# with a synthetic robustness mock write into the special-effect slot (index zero).
+# This tests the call-boundary dependency; it does not assert a native assertion write.
+arg 02551C48 r3 0,1,128
+mockfield 0273AA24 r3+0x199bca u16 0,1,0x1234,65535
+field 02551C48 101E8A76 u16 0x8466 0x8466

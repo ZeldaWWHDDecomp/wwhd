@@ -1,0 +1,28 @@
+src wwhd_src/d/actor/d_a_npc_jb1.cpp
+# Actor-local steering, with valid animation table selectors.
+arg! 0224876C r4 0,1
+field 02248814 r3+0xD4A s8 0,1
+field 0224885C r3+0xD46 u8 0
+field 02248128 r3+0xF8 u16 0,1,2
+field * r3+0xD49 s8 0,1,2
+field 02248A0C r3+0xD4E s8 0,1,2,3,9
+arg! 02248894 r4 0,6,14
+arg! 02248874 r4 0,1,255
+ret 024EDFCC 0,1
+callee 022478EC r4=8
+callee 026067F4 r4=8
+callee 028E8F64 r3=48 r4=12 r5=out12
+field 02247F64 r3+0x2E4 u32 0,8
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 022478D8 0,1
+ret 02247E84 0,1
+arg! 022478EC r4 0x55000000 0x55000000
+field 022478EC 0x55000000 s16 0,4,-4
+field 022478EC 0x55000002 s16 -1,0,1
+field 022478EC r3+0xC8E s16 -1,0,1
+field 02248A0C r3+0xD4A s8 0,1
+# 2026-10-05: 45/45 x10k seeds 1/7, 210/210 blocks. Mutation sample (seeds 1+2, 213 compiled,
+# 205 killed, 8 survivors) all equivalent: 4 swaps of independent loads/pure address computations
+# (02248128, 02247AC4, 02247B7C x2), 4 offset/literal mutants in 0224769C that
+# read neighbouring bytes of the constant .rodata default record at 0x1016E414 (equal bytes).

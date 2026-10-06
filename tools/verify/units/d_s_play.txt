@@ -1,0 +1,212 @@
+# d_s_play (dScnPly): 025AF2A4..025B37EC (sinit 025B34A4; per-TU inline copies after it; d_s_room follows)
+src wwhd_src/d/d_s_play.cpp
+src wwhd_src/d/d_s_play_2.cpp
+src wwhd_src/d/d_s_play_3.cpp
+src wwhd_src/d/d_s_play_4.cpp
+src wwhd_src/d/d_s_play_5.cpp
+src wwhd_src/d/d_s_play_6.cpp
+src wwhd_src/d/d_s_play_7.cpp
+src wwhd_src/d/d_s_play_8.cpp
+stackfill periodic
+ret! 025200D4 0x54000000 0x54000000
+callee 025F7DB0 r5=12                 # fopMsgM_messageSet(mgr, msg, &pos)
+# isPause: the HD systems present, and equal results of the two virtual calls (same target)
+field * 101F8344 u32 0,0x65000000
+field * 101F83D0 u32 0,0x66000000
+ret 02006478 0x67000000
+field 025AF2A4 67000008 u32 0x68000000
+field 025AF2A4 68000014 u32 0x025AF208
+field 025AF2A4 1049F670 u32 0x68000000,0x69000000
+field 025AF2A4 1049F69C u32 0x68000000,0x69000000
+field 025AF2A4 69000014 u32 0x025AF3D4
+ret 025AF208 7,8
+ret 027172E4 0,1
+ret 02717114 0,1
+ret 02717120 0,1
+field * 101EACB7 u8 0,3,0xFF
+# messageProc: the groups that keep their number, a pending message
+field 025AF738 r3+0xA u16 99,98,89,5,0xFFFF
+field 025AF738 r3+0x10 u32 0xFFFFFFFF,0xFFFFFFFF,3
+field 025AF738 r3+5 u8 0,1
+ret 025F795C 0xE,0x12,0
+# Execute: BGM set, the scene mode, the wind flag
+field * 101F4706 u8 0,1
+field 025B0314 r3+0xB64 u32 0,1,2,3,4
+field 025B0314 r3+0xB60 u8 0,1
+callee 025B376C r3=8                  # (SafeString assure, empty)
+callee 027564DC r5=8                  # HD heap create(size, ?, &name, ...)
+# phase_5: the preload entries (image table) and load results
+field 025B2F90 101EACB4 u8 0,1,2,3,0xFF
+ret 02520460 4,4,0,1
+# phase_compleate: the "sea" stage
+field 025B3114 54005134 u32 0x73656100,0x73656161,0x73650000
+# constructors allocate when this == NULL
+arg 025B0F2C r3 0,0x52000000
+arg 025B31F8 r3 0,0x52000000
+arg 025B326C r3 0,0x52000000
+arg 025B32FC r3 0,0x52000000
+arg 025B33B8 r3 0,0x52000000
+arg 025B3438 r3 0,0x52000000
+ret 0273AD10 0,0x53000000,0x53000000
+field 025B2F90 100530E0 u8 5,0x24,0x23,0
+field 025B2F90 100530DC u32 0x101EA940,0x101EA940,0
+# phase_00: SafeString pair, the duplicated word pair
+callee 026124B0 r4=8 r5=8
+callee 0276B710 r4=4 r5=4
+# phase_00: stream buffer busy, the play scene (name 7), reset
+ret 025E20F0 0,0,1
+field 025B0FB4 r3+8 u16 7,7,8
+field * 101F4974 u32 0x6C000000
+field * 6C000000 u32 0,1
+field 025B0FB4 1018F484 u8 0,1
+callee 025B3614 r3=255                # FixedSafeString<8>(fmt, ...) constructor storage
+# phase_0: wave status, event bit, same / other LkD index
+ret 025E18D0 0,0,1
+ret 025B8B94 0,1
+field 025B1418 54005AC8 u8 0,1,0xFF
+ret 02523A04 1,1,0
+callee 0260524C r4=8                  # resource lookup by SafeString name
+# phase_2: sync result, scene 8, the stage names (ocean stages, ENDumi, sea_E, GanonK)
+ret 02523D08 0,0,1,0xFFFFFFFF
+field 025B168C r3+8 u16 8,7
+# (the pick index is shared by the two words: aligned lists spell sea, ENDumi, sea_E, sea_T, ADMumi, A_umikz, GanonK, other)
+field 025B168C 54005134 u32 0x73656100,0x454E4475,0x7365615F,0x7365615F,0x41444D75,0x415F756D,0x47616E6F,0x58787878
+field 025B168C 54005138 u32 0x00000000,0x6D690000,0x45000000,0x54000000,0x6D690000,0x696B7A00,0x6E4B0000,0x00000000
+ret 026FBB8C 0,1
+ret 027DF9B0 0xFFFFFFFF,0,3
+# phase_2: the shadow-cloud configuration compare (+0x7A4.. against +0xAD4..), the view list
+field 025B168C r3+0x7A4 u32 0x01000001
+field 025B168C r3+0xAD4 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7A8 u32 0x01000001
+field 025B168C r3+0xAD8 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7AC u32 0x01000001
+field 025B168C r3+0xADC u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7B0 u32 0x01000001
+field 025B168C r3+0xAE0 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7B4 u32 0x01000001
+field 025B168C r3+0xAE4 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7B8 u32 0x01000001
+field 025B168C r3+0xAE8 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7D8 u32 0x01000001
+field 025B168C r3+0xB08 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7D4 u32 0x01000001
+field 025B168C r3+0xB04 u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C r3+0x7BC u32 0x01000001
+field 025B168C r3+0xAEC u32 0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x01000001,0x02000002
+field 025B168C 101F95D0 u32 0x6D000000
+field 025B168C 6D001020 u32 0,1,2
+# mutation gaps: pad triggers off, the msg HIO flags, Execute's table bounds
+ret 02007814 0,0,1
+ret 02007764 0,0,1
+ret 02007790 0,0,1
+ret 020077E8 0,0,1
+ret 020077BC 0,0,1
+ret 020078BC 0,0,1
+field 025AF444 r3+6 u8 0,1
+field 025AF444 r3+7 u8 0
+field 025B0314 r3+0x1DC u32 0,1,5
+field 025B0314 r3+0x1E4 u32 0,1,5
+field 025B0314 104A145C u32 0x6E000000
+field 025B0314 6E000000 u16 0,3,7
+# phase_4: the stage names (GTower, Xboss, Hyrule/Hyroom/kenroom, X..., preload stages), layer 8, flags
+field 025B1FF8 54005134 u32 0x47546F77,0x58626F73,0x48797275,0x4879726F,0x6B656E72,0x73656100,0x53697265,0x58797A00
+field 025B1FF8 54005138 u32 0x65720000,0x73300000,0x73330000,0x6C650000,0x6F6D0000,0x6F6F6D00,0x00000000,0x6E000000
+field 025B1FF8 5400513F u8 8,0
+field 025B1FF8 101EACB5 u8 1,0
+field 025B1FF8 r3+0xB64 u32 0,1,2,3,4
+field 025B1FF8 101F8350 u8 0,1
+ret 025B5D40 0,1
+ret 025B8B94 0,1
+field 025B1FF8 r3+8 u16 7,8
+# Delete: the HD system wait, Xboss stages, preload entries, scene mode
+field 025B0630 1018F47C u32 0,0x6F000000
+field 025B0630 6F000018 u32 0,1
+field 025B0630 6F00001C u32 0x6F000100
+field 025B0630 6F000180 u32 2,3,4
+field 025B0630 54005134 u32 0x58626F73,0x47616E6F
+field 025B0630 54005138 u32 0x73300000,0x73310000,0x73320000,0x73330000,0x6E4B0000
+field 025B0630 101EACB4 u8 0,1,0xFF
+field 025B0630 r3+0xB64 u32 0,1,2,3,4
+field 025B0630 101F8350 u8 0,1
+field 025B0630 101F95D0 u32 0x6D000000
+field 025B0630 6D001020 u32 0,1,2
+# Draw: the view matrix, the next stage (sea_E, ENDING, sea, Obombh, ENDumi), wipes, day/night, HD systems
+callee 0276C9B4 r4=48
+field 025AF8A0 54005140 u32 0x7365615F,0x454E4449,0x73656100,0x4F626F6D,0x454E4475,0x58787800
+field 025AF8A0 54005144 u32 0x45000000,0x4E470000,0x00000000,0x62680000,0x6D690000
+field 025AF8A0 5400514D u8 0,1,2,4,7,8,9,10,11,12
+field 025AF8A0 5400514C u8 0,1,1
+field 025AF8A0 r3+8 u16 7,7,8
+ret 025DBE00 0,0,1
+ret 025202F8 0,0,1
+ret 02556C34 5,6,17,18
+ret 02556BC0 0,0,1
+field 025AF8A0 101F83D0 u32 0,0x66000000,0x66000000
+ret 02006478 0x67000000
+field 025AF8A0 67000008 u32 0x68000000
+field 025AF8A0 68000014 u32 0x025AF208
+field 025AF8A0 1049F69C u32 0x68000000,0x69000000
+field 025AF8A0 1049F670 u32 0x68000000,0x69000000
+field 025AF8A0 69000014 u32 0x025AF3D4
+ret 025AF208 7,8
+field 025AF8A0 54005AB8 u32 0,0,1
+field 025AF8A0 54005ABC u32 0,0,1
+field 025AF8A0 54005AC0 u32 0,0,1
+field 025AF8A0 54005AC4 u32 0,0,1
+ret 0256C8BC 0,1
+field 025AF8A0 54005B34 u32 0,0x70000000
+ret 02443664 0,1
+ret 025DA7AC 0,0x71000000
+ret 025DA7D0 0,0,0x71000100
+ret 025986BC 0,0,1
+ret 025AF2A4 0,0,1
+field 025AF8A0 r3+0xB64 u32 0,2
+callee 02759C10 r5=12                 # formatV(this, fmt, &va_list)
+# mutation gaps (2): global HD system pointers (bss), the clock, this == NULL, table bounds
+field * 101F8268 u32 0x72000000
+field * 101F83FC u32 0x72000100
+field * 101F7274 u32 0x72000200
+field * 101F8710 u32 0x72000300
+field * 101F84DC u32 0x73000000
+field * 6C000004 u32 0x01020304
+ret C0009C80 0x74000000
+field 025B1FF8 74000000 u32 0x0EE6B280
+arg 025B0FB4 r3 0,0x40000000,0x40000000
+arg 025B1FF8 r3 0,0x40000000,0x40000000
+field 025B1FF8 101EACB6 u8 0,5
+field 025B1FF8 101EACB4 u8 0xFF,3
+field 025B0FB4 104A145C u32 0x6E000000
+field 025B0FB4 6E000000 u16 0,3
+field 025B0FB4 r3+0x1DC u32 0,3,4
+field 025B0FB4 r3+0x1E4 u32 0,3,4
+field * 101F4F28 u32 0x75000000
+callee 02759C28 r3=44                 # FixedSafeString<32>::format(this, fmt, ...)
+field * 101F4827 u8 0,1
+field * 101F4822 u16 0,7
+field * 101F8B18 u32 0x76000000
+
+# phase_00: the scene-entry tables (sys = this+0x1D4: counts +8/+0x10, entries +0xC, objects +0x14), filled by the scene-system
+# calls (0276C3F8 ... 0276B710(sys, ...)), point to a real object whose secondary vtable (+0x58) is the shipped one at 0x10160030;
+# its slot +0x44 is checkDerivedRuntimeTypeInfo 0276D8E4 (type 101FDD14, base 101FDCD0; reads only r4). Unsteered, the clobbered
+# tables led to random code reading the caller's leftover r5 (gen seed 1006173). The last mock before the lookup writes them.
+mockfield 0276B710 r3+8 u32 0,3,4
+mockfield 0276B710 r3+0xC u32 0x6F400000
+mockfield 0276B710 r3+0x10 u32 0,3,4
+mockfield 0276B710 r3+0x14 u32 0x6F500000
+field 025B0FB4 6F400000 u32 0,1
+field 025B0FB4 6F40000C u32 0,1,0x00010001
+field 025B0FB4 6F500000 u32 0,0x6F600000
+field 025B0FB4 6F500004 u32 0,0x6F600000
+field 025B0FB4 6F600058 u32 0x10160030
+stable 6F400000 0x10
+stable 6F500000 8
+stable 6F600058 4
+real 0276D8E4
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 025B3114 0x54005134 8 @stages,"se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa","seaa"
+fieldstr 025B1590 0x54005134 8 @stages,"Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage","Stage"
+fieldstr 025B168C 0x54005134 8 @stages,"ADMu","ADMu","ADMu","ADMu","ADMuE","ADMuE","ADMuE","ADMuE","ADMuT","ADMuT","ADMuT","ADMuT","ADMuikz","ADMuikz","ADMuikz","ADMuikz","ADMumi","ADMumi","ADMumi","ADMumi","ADMunK","ADMunK","ADMunK","ADMunK","A_um","A_um","A_um","A_um","A_umE","A_umE","A_umE","A_umE","A_umT","A_umT","A_umT","A_umT","A_umikz","A_umikz","A_umikz","A_umikz","A_ummi","A_ummi","A_ummi","A_ummi","A_umnK","A_umnK","A_umnK","A_umnK","ENDu","ENDu","ENDu","ENDu","ENDuE","ENDuE","ENDuE","ENDuE","ENDuT","ENDuT","ENDuT","ENDuT","ENDuikz","ENDuikz","ENDuikz","ENDuikz","ENDumi","ENDumi","ENDumi","ENDumi","ENDunK","ENDunK","ENDunK","ENDunK","Gano","Gano","Gano","Gano","GanoE","GanoE","GanoE","GanoE","GanoT","GanoT","GanoT","GanoT","Ganoikz","Ganoikz","Ganoikz","Ganoikz","Ganomi","Ganomi","Ganomi","Ganomi","GanonK","GanonK","GanonK","GanonK","Stage","Stage","Stage","Stage","Xxxx","Xxxx","Xxxx","Xxxx","XxxxE","XxxxE","XxxxE","XxxxE","XxxxT","XxxxT","XxxxT","XxxxT","Xxxxikz","Xxxxikz","Xxxxikz","Xxxxikz","Xxxxmi","Xxxxmi","Xxxxmi","Xxxxmi","XxxxnK","XxxxnK","XxxxnK","XxxxnK","sea","sea","sea","sea","sea_","sea_","sea_","sea_","sea_E","sea_E","sea_E","sea_E","sea_T","sea_T","sea_T","sea_T","sea_ikz","sea_ikz","sea_ikz","sea_ikz","sea_mi","sea_mi","sea_mi","sea_mi","sea_nK","sea_nK","sea_nK","sea_nK"
+fieldstr 025B1FF8 0x54005134 8 @stages,"GTow","GTow","GTow","GTower","GTower","GTower","GTowle","GTowle","GTowle","GTown","GTown","GTown","GTowom","GTowom","GTowom","GTowoom","GTowoom","GTowoom","GTows0","GTows0","GTows0","GTows3","GTows3","GTows3","Hyro","Hyro","Hyro","Hyroer","Hyroer","Hyroer","Hyrole","Hyrole","Hyrole","Hyron","Hyron","Hyron","Hyroom","Hyroom","Hyroom","Hyrooom","Hyrooom","Hyrooom","Hyros0","Hyros0","Hyros0","Hyros3","Hyros3","Hyros3","Hyru","Hyru","Hyru","Hyruer","Hyruer","Hyruer","Hyrule","Hyrule","Hyrule","Hyrun","Hyrun","Hyrun","Hyruom","Hyruom","Hyruom","Hyruoom","Hyruoom","Hyruoom","Hyrus0","Hyrus0","Hyrus0","Hyrus3","Hyrus3","Hyrus3","Particle","Particle","Particle","Sire","Sire","Sire","Sireer","Sireer","Sireer","Sirele","Sirele","Sirele","Siren","Siren","Siren","Sireom","Sireom","Sireom","Sireoom","Sireoom","Sireoom","Sires0","Sires0","Sires0","Sires3","Sires3","Sires3","Xbos","Xbos","Xbos","Xboser","Xboser","Xboser","Xbosle","Xbosle","Xbosle","Xbosn","Xbosn","Xbosn","Xbosom","Xbosom","Xbosom","Xbosoom","Xbosoom","Xbosoom","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss3","Xboss3","Xboss3","Xyz","Xyz","Xyz","kenr","kenr","kenr","kenrer","kenrer","kenrer","kenrle","kenrle","kenrle","kenrn","kenrn","kenrn","kenrom","kenrom","kenrom","kenroom","kenroom","kenroom","kenrs0","kenrs0","kenrs0","kenrs3","kenrs3","kenrs3","sea","sea","sea"
+fieldstr 025B0630 0x54005134 8 @stages,"GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos0","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos1","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos2","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","Ganos3","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","XbosnK","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

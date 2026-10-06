@@ -1,0 +1,37 @@
+src wwhd_src/d/actor/d_a_npc_mk_static.cpp
+stackfill periodic
+callee 0259E778 r4=out12
+callee 0259D624 r5=out4 r6=out2
+callee 0201ADE0 r4=out12
+callee 020109FC r3=out4 r4=out4 r5=out4
+ret 0259E838 0,1
+ret 0259F0F8 0,1
+ret 020109FC 0,1
+ret 025B8B94 0,1
+field 0229B164 r3+0 u8 0,1,2,3,4,5,255
+field * r3+0xD u8 0,1
+field * r3+0xE u8 0,1,2,10,255
+fret 028F4384 0 1000
+fret 0259EFE0 0 100
+ret 025200D4 0x54000000 0x54000000
+field * 0x54005B34 u32 0x55000000
+ret 02515BBC 0,0x55000000,0x56000000
+# Actual PSVECSquareMag reads all three components of its Vec input.
+callee 028E8DD0 r3=12
+# Actual GroundCross receives the full embedded dBgS_GndChk (0x54 bytes).
+callee 02008974 r4=84
+field * r3+0 u8 0,1,2,3,4,5,255
+field * r3+8 u16 0,1,2,3,4,5,32767,65535
+field * r3+0xA u16 0,1,2,3,4,5,32767,65535
+arg 0229A8EC r6 0,1,2,3,128,255
+arg 0229AA38 r6 0,1,2,3,128,255
+arg 0229AB24 r6 0,1,2,3,128,255
+arg 0229AB78 r6 0,1,2,3,128,255
+# X/Z projection reads through +8 on each cXyz input (Y is not consumed).
+callee 0259D624 r3=12 r4=12
+field * 0x101F84DC u32 0x58000000
+# Ground query's actual nonallocating stack construction and flag-zero cleanup.
+real 02008E0C
+real 02008B60
+real 02008DAC
+real 02008B4C

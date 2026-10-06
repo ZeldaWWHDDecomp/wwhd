@@ -1,0 +1,114 @@
+# Verification unit: d_a_npc_tc (Tingle, Ankle, David Jr., Knuckle): main functions
+src wwhd_src/d/actor/d_a_npc_tc.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+ret 025D4604 0 1
+# anmAtr: message status, attribute latch, attribute index
+arg 022EB970 r4 6,14,5
+field 022EB970 r3+0x7E0 u32 0 1
+field 022EB970 54005BC5 u8 0 17
+field 022EB970 r3+0x96D i8 0,4,16
+# searchTower: Smplbg actors of type 0
+field 022E7814 r4+8 i16 0x56,0x55,0
+field 022E7814 r4+0xB0 u32 0,0x100,1,0xFFFFFF00
+arg 022ED4A4 r3 0,0x60000000
+ret 0273AD10 0,0x61000000
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+ret 02520460 0,4,5
+ret 025D63E8 0 1
+ret 02520864 0 1
+ret 025B8B94 0 1
+# calcMove: walking, event-cut move speed and cut index
+field 022EBB90 r3+0x96D i8 5,5,5,0
+field 022EBB90 r3+0x428 f32 0,0,1.5,3
+field 022EBB90 r3+0x3F0 u32 2,4,1,0
+field 022EBB90 r3+0x370 f32 0 4
+# setTower / startTower: types, animation, tower stop flag
+field 022E8E64 r3+0x970 u8 0 4
+field 022E8E64 r3+0x96D i8 19,20,1
+field 022EBFB8 r3+0x970 u8 0 4
+# status functions
+ret 025A11EC 0x12,0x12,0,0xE
+ret 0254457C 0 1
+ret 025881A4 0 1
+field 022EBF00 r3+0x970 u8 0 4
+field 022EC0EC r3+0x970 u8 0 4
+field 022EC174 r3+0x96D i8 6,6,1
+field 022EC174 r3+0x966 u8 0 1
+field 022EC2C0 r3+0x96D i8 7,8,9
+field 022EC2C0 r3+0x967 u8 0 2
+field 022ECBB4 r3+0x7F4 u32 0xCA 0xCC
+field 022EC384 r3+0x478 u32 0,0x10,0x30
+field 022EC384 r3+0x95D u8 0 1
+field 022EC384 r3+0x95C u8 0 1
+field 022EC384 r3+0x965 u8 0 1
+field 022EC384 r3+0x370 f32 0,0,1
+field 022EC62C r3+0x478 u32 0,0x10,0x30
+field 022EC62C r3+0x95D u8 0 1
+field 022EC62C r3+0x95C u8 0 1
+field 022EC62C r3+0x965 u8 0 1
+field 022EC62C r3+0x370 f32 0,0,1
+callee 0201ADE0 r4=out12      # cXyz::operator-(result, other)
+callee 025881A4 r3=12         # dLib_checkPlayerInCircle(center copy)
+callee 028E8DD0 r3=12         # PSVECSquareMag(&v)
+fret 028F4384 0 10
+field 022EC7E8 r3+0x370 f32 0,0,1
+field 022EC984 r3+0x906 i16 -20 20
+field 022EC984 r3+0x322 i16 -20 20
+field 022EC984 r3+0x340 f32 -1,0,0,1
+field 022EC984 r3+0x478 u32 0,0x20
+field 022EC984 r3+0x318 f32 0,1
+field 022EC984 r3+0x924 f32 0,1
+callee 022EA648 r4=12         # chkAttention(cXyz copy, s16)
+field 022ED17C r3+0x7F0 i8 -1 1
+field 022ED17C r3+0x7E7 i8 -1 13
+field 022ECF4C r3+0x7F0 i8 -1 1
+field 022ECF4C r3+0x7E7 i8 -1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r5=12 r6=12   # lookAtTarget (target, eye copy)
+field 022EBC48 r3+0x7E7 i8 0 9
+field 022EBC48 r3+0x970 u8 0 4
+field 022EBC48 r3+0x96D i8 19,20,1
+field 022EBC48 r3+0x440 u8 0 1
+field 022EBC48 r3+0x95C u8 0 1
+field 022EBC48 r3+0x3B6 u8 0 1
+field 022EBC48 r3+0x442 i16 0,0,0x400
+# createInit: types, current action (pointer to member at 0x7E8)
+field 022E87DC r3+0x970 u8 0,1,2,3,4,5
+field 022E87DC r3+0x7E8 i16 0,0,0,4
+field 022E87DC r3+0x7EA i16 -1,-1,0,1
+field 022E87DC r3+0x7EC u32 0x022ED17C,0x022ECF4C,0x02000000
+field 022E87DC r3+0x7EE i16 0xB4
+# _draw: debug flags, static guards
+field 022EA464 r3+0x970 u8 0 4
+field 022EA464 10468816 u8 0 1
+field 022EA464 10468828 u8 0 1
+field 022EA464 101FDA50 u32 0 1
+field 022EA464 101FDAC0 u32 0 1
+field 022EA464 101FDA48 u32 0 1
+# _execute
+field 022EA140 r3+0x970 u8 0 4
+field 022EA140 r3+0x7E7 i8 1,8,11,3
+field 022EA140 r3+0x478 u32 0,0x20
+field 022EA140 r3+0x7E8 i16 0,0,4
+field 022EA140 r3+0x7EA i16 -1,-1,1
+field 022EA140 r3+0x7EE i16 0xB4
+field 022EA140 r3+0x3F0 u32 0xFFFFFFFF,0,1,2,4
+field 022EA140 r3+0x428 f32 0,0,1
+ret 0259F858 0 1
+field 022EA140 54005292 u8 0 1
+# setAnm: animation parameter table on the stack (0x180), animation states, frames
+callee 02587A0C r9=0x180      # dLib_bcks_setAnm(..., a_anm_prm_tbl, ...)
+callee 025A847C r6=12 r8=12   # dPa_control_c::set (stack position / scale)
+field 022E7E70 r3+0x96D i8 22,23,11,6,1,4
+field 022E7E70 r3+0x96E i8 6,1,4
+field 022E7E70 r3+0x96C i8 14,7,11,9,10,0
+field 022E7E70 r3+0x7E4 u8 0,2,3,4
+field 022E7E70 r3+0x7E5 u8 0,1,2,3
+field 022E7E70 r3+0x7E6 u8 0,3,4,5
+field 022E7E70 r3+0x970 u8 0,1,2,3
+field 022E7E70 r3+0x44C u32 0x58000000,0x58000000,0x58000000,0x59000000
+field 022E7E70 580000A7 u8 0,2
+field 022E7E70 5800009C f32 1,1,88,143,178,0,12,24,1.5
+ret 0200FAAC 0x5FF,0x600,0x601,0,0x8000

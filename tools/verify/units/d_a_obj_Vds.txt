@@ -1,0 +1,76 @@
+# Complete HD TU: 36 entries 023AEE1C..023B057B; profile101CD84C size574.
+# The four unvisited blocks are three impossible virtual PTMF tails (two-slot direct tables,
+# checked selectors) and onInit failure after actual setAnimation always returns1.
+# Renderer0273862C forwards position/color to027B1548, which reads12/16 bytes.
+# Color helper023AFE48 writes16 bytes after reading8; dKy_plight_cut reads ID at+1C.
+# BRK025E8154 reads no incoming stack words: unused integer words are not annotated.
+# Real Judge/list/search/ID/type chain models callback ID writes and read-only ID lookups.
+# The pinned two-actor list has distinct IDs1/2, valid actor type123, switch kind30 and zero
+# angles; this exercises the >=0 equality boundary using real callback and lookup behavior.
+# Singleton guard1 fixtures select actual initialized play/light getters.
+# Background IDs255/256/257 exercise actual <256 bound. Fields and scratch are input fixtures.
+src wwhd_src/d/actor/d_a_obj_Vds.cpp
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025BA0C0 0 1
+ret 025440C8 0 1
+ret 025E8154 0 1
+arg 023AF404 r4 -1,0,1,2
+field * r3+0x4F4 u32 0,1,2
+field * r3+0x4F8 u32 0,1,2,3
+field * r3+0x50E s16 0,1,2
+field 023AF888 r4+0x8 s16 30
+field 023AF888 r3+0x4FC s32 -1,0,1
+field 023AF888 r3+0x500 s32 -1,0,1
+field * r3+0x504 f32 0,0.5,1,2
+field * r3+0x508 f32 0,0.5,1,2
+callee 026066C4 r4=8
+callee 025D5218 r4=4
+field * 0x101F4F28 u32 0x41000000
+field * 0x101F84DC u32 0x42000000
+
+callee 0273862C r3=0 r4=12 r5=16
+callee 023AFE48 r3=out16 r4=8
+callee 0255A374 r3=32
+stackfill periodic
+real 025200D4
+real 02555D0C
+field * 0x104753A8 u32 1
+field * 0x104773B4 u32 1
+real 025D5218
+real 020100BC
+real 02019DE8
+real 0201AA08
+real 023AF924
+real 023AF888
+real 025E1234
+real 025D4604
+real 025DD258
+field * 0x101F3328 u32 0x46000000
+field * 0x101F3330 u32 2
+field * 0x46000008 u32 0x46000100
+field * 0x4600000C u32 0x43000000
+field * 0x46000108 u32 0
+field * 0x4600010C u32 0x44000000
+field * 0x43000004 u32 1
+field * 0x44000004 u32 2
+field * 0x43000008 s16 30
+field * 0x44000008 s16 30
+field 023AF888 r4+0xC4 u32 123,124
+field * 0x101F3080 u32 123
+field * 0x430000C4 u32 123
+field * 0x440000C4 u32 123
+field * r3+0x32A s16 0
+field * 0x4300032A s16 0
+field * 0x4400032A s16 0
+field * r3+0x4EC u32 0,0x45000000
+field * 0x45000000 u32 255,256,257
+
+# Valid steady-state IDs produced by the real prior search; include missing IDs for offMain.
+field 023AFA08 r3+0x4FC s32 1,2
+field 023AFA08 r3+0x500 s32 1,2
+field 023B0280 r3+0x4FC s32 -1,1,2
+field 023B0280 r3+0x500 s32 -1,1,2
+
+# Actual0273862C incoming this is read/written at+10; initialized handler global is non-null.
+field * 0x101F8A20 u32 0x47000000

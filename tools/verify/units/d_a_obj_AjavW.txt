@@ -1,0 +1,18 @@
+# Verification unit: d_a_obj_AjavW (water in Jabun's cave)
+src wwhd_src/d/actor/d_a_obj_AjavW.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025E7CE0 stack=1       # btkAnm::init: 9th argument on the stack
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0,1,2            # entrySolidHeap
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 025E7CE0 0 1              # btkAnm::init
+ret 025E38E0 0,0x47000000     # J3DModel__create null or not
+ret 026066C4 0,0x48000000,0x48000100  # getRes null or not
+ret 024F2478 0,0x49000000     # dBgW_NewSet
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7   # condition (INIT bit)
+field * r3+0xF4 u32 0,0x4A000000      # heap
+field * r3+0x42C u32 0,0x4B000000     # mpBgW
+field * 4B000000 u32 0,0xFF,0x100,0xFFFFFFFF  # dBgW id (ChkUsed)
+arg 023163F0 r4 0,1,2,3
+arg 02316404 r4 0,1,2,3

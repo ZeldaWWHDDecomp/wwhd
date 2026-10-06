@@ -1,0 +1,9 @@
+# Complete contiguous HD utilities range025F0A1C..025F12F8 exclusive.
+src wwhd_src/m_Do/m_Do_lib.cpp
+callee 025F0A1C r3=out16 r4=4
+callee 0274D458 r3=out16 r4=16
+# Rectangle constructor writes16-byte bounds plus8-byte disposer: real size24.
+callee 0274F424 r3=out24
+callee 0274CB50 r4=out8 r5=12 r7=24
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 025F0C48 r3=12 r4=out12

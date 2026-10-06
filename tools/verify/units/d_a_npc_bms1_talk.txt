@@ -1,0 +1,70 @@
+# Verification unit: d_a_npc_bms1 part talk (Bomb-Master Cannon): orders, messages, shop, actions, event cuts
+src wwhd_src/d/actor/d_a_npc_bms1_talk.cpp wwhd_src/d/actor/d_a_npc_bms1_pending.cpp
+
+callee 0201ADE0 r3=12 r4=out12      # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201B47C r3=12               # cXyz::normalizeRS
+callee 028E8F44 r3=12 r4=12         # PSVECDotProduct
+callee 0220AEFC r4=12               # chkAttention(position copy)
+callee 0259DED0 r6=12               # lookAtTarget: eye position copy
+callee 0259D54C r3=out12            # dNpc_playerEyePos
+callee 025BCC7C r4=12               # Item_ZoomUp(pos)
+callee 025BCFA8 r4=out12            # getSelectItemPos
+callee 025BD0EC r4=out12            # getSelectItemBasePos
+callee 025BD31C r4=12               # ShopCursor_c::setPos
+callee 025CB374 r6=12               # StartShock(cXyz)
+ret 025200D4 0x54000000 0x54000000  # play
+ret 0254DA50 0 1                    # checkItemGet
+ret 025B8B94 0 1                    # isEventBit
+ret 020078BC 0 1                    # pad trigger
+ret 0220AFB4 0xE,0xF,0x10       # next_msgStatus
+# the HD message manager, pinned
+field * 101F4B5C u32 0x55000000,0x55000000,0x55000000
+ret 025F795C 0,1,2,6,0xE,0xF,0x12   # message status
+ret 025F7DB0 0xFFFFFFFF,1           # fopMsgM_messageSet: process id
+# checkOrder / setAction: the event command, the order, the current action
+field 0220A36C r3+0xF8 u16 0,1,2,3
+field 0220A36C r3+0xA03 i8 0,1,2,3,4
+field * r3+0x960 i16 0,0,1
+field * r3+0x962 i16 0,-1,-1,1
+field * r3+0x964 u32 0x0220BDCC,0x0220BF90,0x0220C7CC,0x02000000
+# setAnmFromMsgTag
+field 0220ABEC 54005BC5 u8 0,1,2,3,4,5,6,7,0xFF
+field 0220ABEC r3+0xA06 i8 0,0,1
+field 0220ABEC r3+0xA01 i8 3,4,5,6
+field 0220ABEC r3+0xA02 i8 0,1,2
+ret 027F2BF8 0 1                    # J3DFrameCtrl::checkPass
+# next_msgStatus
+field 0220AFB4 r4+0 u32 0x2774 0x2791
+arg 0220AFB4 r5 0,0x50000000
+field * 54005BD3 u8 0,0,1
+field * 54005BD2 u8 0,1
+field * 55000948 u32 0,0,1
+field * 55000922 u8 0,1
+ret 025BBA1C 0,0,1,4,5,0x20,0x21,0x24        # dShop_BoughtErrorStatus
+ret 0201B47C 0 1                    # normalizeRS
+ret 025BB698 0 1                    # dShop_now_triggercheck
+field * r3+0x9B8 i16 -1,0,1
+field * r3+0x918 i8 0,1
+# talk
+field 0220B6C4 r3+0xA09 i8 0,1,2,3,-1
+field * 10466618 u32 0xFFFFFFFF,5
+field 0220B6C4 55000938 u32 0x2776,0x2783,0x2788,0x2775,0x2790
+ret 0220836C 0 1
+ret 02208334 0 1
+# talk01
+ret 0220B6C4 0x12,8,0xE,0xFF
+field 0220BCD8 r3+0x9FC u32 0x58000000
+field 0220BCD8 580000B4 u8 0,1
+# evn_talk_init / evn_talk / privateCut
+ret 0254487C 0,0x56000000
+field * 56000000 u32 0x2791,0x2790
+field 0220C394 r3+0x94C u32 0x1DCA,0x1DC4,0x5,0x7
+field 0220C394 r3+0x954 u32 0x7,0x5
+field 0220C394 r3+0xA0B u8 0x49,0x4A,0x4B
+ret 02542D88 -1,0,1                 # getMyStaffId
+ret 02542EDC -1,0,1,2,3,4           # getMyActIdx
+ret 025447C8 0 1                    # getIsAddvance
+ret 0220C394 0 1                    # evn_talk
+ret 0254457C 0 1                    # endCheckOld

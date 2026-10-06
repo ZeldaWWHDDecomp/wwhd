@@ -1,0 +1,53 @@
+# Verification unit (fork, merged into d_a_npc_ji1 later): event functions, initPos, createItem, particles
+src wwhd_src/d/actor/d_a_npc_ji1_event.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 025B8B94 0 1                    # isEventBit
+ret 025447C8 0 1                    # getIsAddvance
+ret 025440C8 0 1                    # endCheck
+callee 0201ADE0 r4=out12            # cXyz::operator- output
+callee 025CB374 r6=12               # StartShock: cXyz by value
+callee 0255F554 r3=12               # dKy_SordFlush_set: cXyz by value
+callee 0201A478 r3=out6             # csXyz::csXyz storage
+# initPosObject: a tsubo in pos_init mode 2
+field 022542A0 r3+8 i16 0x1C5,0x1C5,0x1C5,0x1C4
+field 022542A0 r3+0x794 i32 2,2,2,1
+# evn_talk_init: the MsgNo/EndMsgNo integers, previous action
+ret 0254487C 0,0x5C000000,0x5C000000,0x5C000000
+field 022583A4 5C000000 u32 0x9A4,0x9A1,0x9B7,0x9B7,0x100
+field 022583A4 r3+0xE5C i32 2,2,0
+field 022583A4 r3+0xFA5 u8 7,7,0
+field 022583A4 r3+0x3DC i16 0,0,0,1
+field 022583A4 r3+0x3DE i16 -1,-1,-1,0
+field 022583A4 r3+0x3E0 u32 0x02250D54,0x02255908,0x02255909
+# evn_talk / evn_continue_talk: message statuses and numbers
+ret 025F795C 0xE,0xF,0x10,0x12,2,6,0
+field 02258CB0 10467228 u32 0xFFFFFFFF,0,0,0
+field 02259178 10467228 u32 0xFFFFFFFF,0,0,0
+ret 025F7DB0 0xFFFFFFFF,1,2
+field 02258CB0 r3+0x3C8 u32 0x9BA,0x95A,0x100
+field 02259178 r3+0x3C8 u32 0x9BA,0x95A,0x100
+field 02258CB0 r3+0xFA8 u32 0x9BA,0x95A,0x100
+field 02259178 r3+0xFA8 u32 0x9BA,0x95A,0x100
+# evn_RollAtControl
+field 02258E6C 104673C0 u32 0,0,1
+field 02258E6C r3+0xE54 i32 0xA,0xA,0,1,-1
+field 02258E6C r3+0xF8C i32 0x19,0x19,0x19,0
+field 02258E6C r3+0x43C u32 0x5D000000
+field 02258E6C 5D00009C f32 0 20
+ret 027F2BF8 0 1                    # J3DFrameCtrl::checkPass
+field 02258E6C r3+0xF90 i32 0,1,2,3
+# privateCut / eventAction: staff and action indexes
+ret 02542D88 -1,0,1,2
+ret 02542EDC -1,0,1,2,3,4,5,6,7,8,9,10,11,12,13
+field 022596CC r3+0xEA0 i8 0,0,1,1,-1
+field 022596CC r3+0xEAC u32 0,1,0x11
+field 022596CC r3+0x3CC i16 0,0,0,4
+field 022596CC r3+0x3CE i16 -1,-1,0,1,2
+field 022596CC r3+0x3D0 u32 0x02250A1C,0x02254434
+field 022596CC r3+0x3DC i16 0,0,0,4
+field 022596CC r3+0x3DE i16 -1,-1,0,1,2
+field 022596CC r3+0x3E0 u32 0x02250A1C,0x02254434
+# setHitParticle: the default scale (no scale passed)
+arg 02255358 r4 0,0,0x40001000
+callee 025A847C r6=12 r7=6 r8=12    # dPa_control_c::set: pos, angle (csXyz), scale

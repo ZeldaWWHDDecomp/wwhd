@@ -1,0 +1,2 @@
+# Native f_pc_load: static initializer only; GC dynamic loader APIs absent from HD.
+src wwhd_src/f_pc/f_pc_load.cpp

@@ -1,0 +1,84 @@
+# Rain weather/renderer TU; implementation in progress, not a full-unit gate yet.
+src wwhd_src/d/d_kankyo_rain_wave_move.cpp
+stackfill periodic
+callee 02563E48 r3=24 r4=out12
+callee 02563F0C r3=12 r4=12 r5=out12
+callee 02563DD8 r3=out40
+callee 0256401C r4=out12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 025F1018 r3=12 r4=out12 r5=40
+callee 028E8DE8 r3=12 r4=12
+callee 026124B0 r4=8 r5=8
+callee 025F01D8 r3=out4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0251694C r3=out20
+callee 025170D8 r4=12 r5=out4 r6=out20
+callee 025BD71C r3=out52
+callee 025BEF3C r3=52 r4=12
+callee 025BEB90 r3=52
+callee 025BEB4C r3=52
+# Complete84-byte derived ground query and80-byte HD roof check objects.
+callee 02008E0C r3=out64
+callee 024EE7AC r3=out80
+callee 024EF6E8 r4=80
+callee 02008974 r4=84
+callee 02008DAC r3=64
+callee 02008B4C r3=64
+
+callee 028E91EC r3=48 r4=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0257015C r3=out16 r4=4
+callee 027FC500 r4=16
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Ordinary boundary steering retains one-in-eight unsteered argument samples.
+arg 0256401C f2 0,-20,1
+arg 0256F084 r4 0,9,1,-1
+# 0256401C block2 (025640EC) is unreachable: entry height!=0 selects that arm;
+# its only callee02563E48 writes f0..f13, so preserved f30height/f31zero cannot become equal.
+
+callee 025602F0 r3=out4 r4=out4
+callee 02582518 r5=4 r6=4
+
+callee 0257DB28 r3=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+
+callee 0201A478 r3=out6
+
+callee 0257E128 r3=out12 r4=12
+
+# Eight-byte terminated owned stage name; SafeString termination target is native blr.
+real 0257770C
+callee 0257770C r3=8
+ret! 02555D0C 0x52000000,0x52000000
+ret! 025200D4 0x53000000,0x53000000
+ret! 0257DAA8 0x58000000,0x58000000
+field 0256A448 52000AA0 u32 0x55000000
+field 0256A448 53005AF8 u32 0x54000000
+field 0256A448 53005B2C u32 0x56000000
+field 0256A448 53005FA4 u32 0,0x57000000
+field 0256A448 520009F8 s16 0,1,2,3
+field 0256A448 520009FA u8 0,1
+field 0256A448 1047E6C8 s8 -1
+field 0256A448 53005134 u32 0x415F756D,0x4F707562,0x4F726963,0x4F6A686F,0x4C696E6B,0x4F6E6F62,0x4E616D65,0x4F6D6173,0x41444D75
+field 0256A448 53005138 u32 0x696B7A00,0,0x68680000,0x75733200,0x524D0000,0x75746100,0x616F0000,0x6D690000
+# All names terminate within eight bytes. Roots/counts are nonreentrant/nonresizing.
+stable 53005134 8
+stable 52000AA0 4
+stable 53005AF8 4
+stable 53005B2C 4
+stable 53005FA4 4
+stable 520009F8 2
+field 0256A448 5300513B u8 0
+# Saved wind has its own valid owned save object; helper queries do not replace it.
+field 0256A448 101F84DC u32 0x59000000
+field 0256A448 5900004A s16 -1,0,1
+field 0256A448 5900004C s16 -1,0,1
+stable 101F84DC 4
+# Include every shoreline taper interval in the square-root mock's result domain.
+fret 028F4384 0 12000

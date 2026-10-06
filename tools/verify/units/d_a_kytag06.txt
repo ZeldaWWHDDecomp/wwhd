@@ -1,0 +1,12 @@
+# Verification unit: d_a_kytag06 (rain/thunder event tag)
+src wwhd_src/d/actor/d_a_kytag06.cpp
+
+ret 025200D4 0x54000000 0x54000000        # play object at a fixed address
+ret 02555D0C 0x56000000 0x56000000        # env light at a fixed address
+ret 025445B8 0 1                          # startCheckOld
+ret 025B7D90 0 1                          # isSymbol
+field 021B0D44 54005292 u8 0 1            # event run check
+field 021B0D44 101F84DC u32 0x59000000 0x59000000   # save info
+field 021B0D44 59000044 f32 0,89.5,90,90.5,200,344.5,345,345.5,400   # time
+field 021B0D44 r3+0x3B0 f32 0 1           # field_0x294
+field 021B0D44 56000A40 i32 0 260         # mRainCount

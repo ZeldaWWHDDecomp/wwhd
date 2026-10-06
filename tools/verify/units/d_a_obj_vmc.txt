@@ -1,0 +1,75 @@
+src wwhd_src/d/actor/d_a_obj_vmc.cpp
+stackfill periodic
+ret 025200D4 0x54000000 0x54000000
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025BA0C0 0 1
+ret 025E8508 0 1
+ret 0200A030 0 1
+ret 024EEA6C 0 1
+ret 02516464 0 1
+ret 025162A4 0 1
+field * 101F84DC u32 0x55000000 0x55000000
+field * 101F4F28 u32 0x55010000 0x55010000
+field * r3+0x6CC u32 0,1,2,3,4,0xFFFFFFFF
+field * r3+0x6D0 u32 0,8,9,10,38,39,40,0xFFFFFFFF
+field * r3+0x6D4 u8 0 1
+field * r3+0x6D5 u8 0 1
+field * r3+0x6D6 u8 0 1
+field * r3+0x6C8 u8 0 1
+field * r3+0x3D3 u8 0 1
+field * r3+0x45F u8 0 1
+field * r3+0x2E4 u32 0,8
+field * r3+0x3C4 f32 0.0,0.75,1.0,-1.0
+field * r3+0x450 f32 0.0,0.75,1.0,-1.0
+callee 026066C4 r4=8
+callee 025A847C r6=12 r7=6 stack=4
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 020182E0 r4=12
+arg 023B3450 r4 0,1,8,31,32,33,63,64,-1
+arg 023B3450 r5 0,1,8,31,32,33,63,64,-1
+# Rare actor identity paths and null-preserving pointer chains.
+field 023B2EF4 54005B34 u32 0x57000000 0x57000000
+field 023B2EF4 54005B38 u32 0,0x57010000
+field 023B2EF4 54005B2C u32 0,0x57020000
+field 023B2EF4 57010008 s16 0,0x14E
+field 023B2EF4 57020008 s16 0,0x14E
+ret 02516300 0,0x58000000
+field 023B2D50 58000044 u32 0,0x58100000
+field 023B2D50 5810000C u32 0,0x58200000
+field 023B2D50 58200008 s16 0,0xA9
+# Subtraction is pure and initializes the output vector; test vertical edges explicitly.
+real 0201ADE0
+field 023B2EF4 57000318 f32 -501.0,-500.0,-499.0,-490.0,-489.0,0.0,489.0,490.0,499.0,500.0,501.0
+field 023B2EF4 r3+0x318 f32 0.0,0.0,0.0,1.0,-1.0
+fret 028F4384 99 111
+
+# Distinct matrix words expose source/stride/copy gaps hidden by zero RPX storage.
+field * 1048D0CC f32 1.0 1.0
+field * 1048D0D0 f32 2.0 2.0
+field * 1048D0D4 f32 3.0 3.0
+field * 1048D0D8 f32 4.0 4.0
+field * 1048D0DC f32 5.0 5.0
+field * 1048D0E0 f32 6.0 6.0
+field * 1048D0E4 f32 7.0 7.0
+field * 1048D0E8 f32 8.0 8.0
+field * 1048D0EC f32 9.0 9.0
+field * 1048D0F0 f32 10.0 10.0
+field * 1048D0F4 f32 11.0 11.0
+field * 1048D0F8 f32 12.0 12.0
+# Cross-field overlap makes the second scale loads observable.
+field 023B26C8 r3+0x3BC u32 0x40000270,0x40000274,0x40000278,0x55020000
+field 023B2928 r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+
+field 023B2EF4 57010008 s16 0,0x14E,0x14F
+field 023B2EF4 57020008 s16 0,0x14E,0x14F
+
+real 028E8DAC
+
+field 023B2578 r3+0x3BC u32 0x4000024C,0x40000250,0x55020000
+
+field 023B2EF4 57000314 f32 1.0,2.0
+field 023B2EF4 5700031C f32 3.0,4.0
+field 023B2EF4 r3+0x314 f32 0.0 0.0
+field 023B2EF4 r3+0x31C f32 0.0 0.0

@@ -1,0 +1,18 @@
+# Verification unit: d_a_wbird (Wind's Requiem wind direction demo)
+src wwhd_src/d/actor/d_a_wbird.cpp
+stackfill periodic
+callee 02007324 r3=out8 r4=12
+callee 02006644 r3=out2 r4=2
+callee 02006908 r3=2 r4=out2
+callee 020068CC r3=2 r4=2
+callee 020068E0 r3=2 r4=2
+callee 02006838 r3=2
+callee 02006814 r3=2
+ret 025440C8 0,1
+field 024DE958 r3+0x3B8 u8 0,1,2,3,4
+field 024DE55C r3+0x3BA i16 -1,0,9,10,11,12,32767
+field 024DE768 r3+0x3BA i16 -1,0,1,20,21,30,31,32,100
+field * r3+0x3B9 u8 0,1
+ret 025200D4 0x54000000 0x54000000
+field * 54005BD0 u8 0,1,2
+field * 54005CD8 u32 0,0x10000

@@ -1,0 +1,2 @@
+src wwhd_src/SSystem/SComponent/c_sxyz.cpp
+callee 0201A478 r3=out6

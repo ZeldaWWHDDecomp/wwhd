@@ -1,0 +1,45 @@
+src wwhd_src/d/actor/d_a_obj_jump.cpp
+field * r3+0x3EC s32 0 1
+field 02366268 r4+0x3EC s32 0 1
+field * r3+0x3F4 s32 0 5
+ret 02520460 0 5
+ret 024F1D9C 4,5
+ret 02366CE4 0 1
+callee 026066C4 r4=8
+observe 025E2DE0 104B4634 8
+stackfill
+
+# HD joint callback scales spring joint 1 and compensating joint 2.
+arg 02365DD8 r4 0,1
+ret 027F7878 0x54000000 0x54000000
+field 02365DD8 54000004 u16 0,1,2,3
+field 02365DD8 104B462C u32 0x55000000
+field 02365DD8 550000B8 u32 0x56000000
+field 02365DD8 560003EC s32 0 1
+
+# Player profile, heavy-boots bit, null rider, and speed boundary.
+arg 02366268 r5 0,0x57000000
+field 02366268 r5+0xE s16 0,168,169
+field 02366268 r5+0x3B8 u32 0,1,0x02000000,0x02000001
+field 02366268 r5+0x370 f32 -1,0,2,3
+
+# Saturation and event pulses use independent byte counters.
+field 0236642C r3+0x408 u8 0 1
+field 0236642C r3+0x40D u8 0 1
+field 0236642C r3+0x410 u8 0 1
+field 0236642C r3+0x40B u8 0,3,4,5,254,255
+field 0236642C r3+0x40C u8 0,3,4,5,254,255
+field 0236642C r3+0x40F u8 0,4,5,6,254,255
+field 0236642C r3+0x413 u8 0,3,4,5,254,255
+field 0236642C r3+0x414 u8 0,3,4,5,254,255
+ret 025200D4 0x58000000 0x58000000
+field 0236642C 58005CD8 u32 0,0x100,0x101
+
+# Resource controller is initialized during normal actor creation.
+field * 101F4F28 u32 0x59000000
+
+# Exercise the static initializer's explicit reset writes from nonzero storage.
+field 02366BD4 1046A328 u32 1
+field 02366BD4 1046A32C u32 2
+field 02366BD4 1046A330 u32 3
+field 02366BD4 1046A334 u32 4

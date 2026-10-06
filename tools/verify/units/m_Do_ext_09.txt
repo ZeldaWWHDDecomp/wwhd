@@ -1,0 +1,6 @@
+src wwhd_src/m_Do/m_Do_ext_more_anm.cpp
+stackfill periodic
+callee 027DEFB8 r3=64
+callee 027DEE5C r4=64
+callee 02750250 r3=284
+callee 02750370 r3=284

@@ -1,0 +1,30 @@
+# Verification unit: JAIZelInst (Wind Waker conducting sounds), 02029E5C..0202ABA3
+src wwhd_src/JAZelAudio/JAIZelInst.cpp
+field * r3+7 u8 3,4,6,5
+field * r3+6 u8 0,1,2,5,6
+field * r3+0x30 u8 0,1
+arg 0202A040 r4 0,1,2,3,4
+arg 0202A14C f1 -2,-0.7071,-0.5,0,0.3,0.7071,1,2
+arg 0202A1B8 r4 0,1,2,3,4,5,6
+arg 0202A1B8 r5 0,1,4,5,0xFFFFFFFF
+arg 0202A3B4 r4 0,1,2,5,6
+arg 0202A3B4 r5 0,1,2,3,4,5
+arg 0202A87C r4 0,1,4
+arg 0202A8F0 r4 0,7,8
+arg 0202A970 r4 0,7,8
+arg 0202A9C8 r4 0,1,2,3,4,5,6,7
+arg 0202AA5C r4 0,1,2,3,4,5,6,7
+arg 0202AA5C r5 0,1,3,5,6,7
+ret 0202A970 3,4,6,5
+arg 02029E5C r3 0,0x40000000
+ret 0273AD10 0,0x31000000
+field 0202A77C r3+0x20 u32 0,0x30000000
+field 0202A77C r3+0x24 u32 0,0x30000000
+field 0202A77C r3+0x28 u32 0,0x30000000
+field 0202A77C r3+0x2C u32 0,0x30000000
+field 0202A3B4 r3+0 u8 0,1,2,3,4
+field 0202A3B4 r3+1 u8 0,1,2,3,4
+field 0202A3B4 r3+2 u8 0,1,2,3,4
+field 0202A3B4 r3+3 u8 0,1,2,3,4
+field 0202A3B4 r3+4 u8 0,1,2,3,4
+field 0202A3B4 r3+5 u8 0,1,2,3,4

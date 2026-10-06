@@ -1,0 +1,51 @@
+# Verification unit (temporary, fork; merged into d_a_npc_ji1 later): messages
+src wwhd_src/d/actor/d_a_npc_ji1_msg.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 025B8B94 0 1                    # isEventBit
+ret 025B8BB0 0,1,2,2,2,1,3,4              # getEventReg
+callee 0201ADE0 r4=out12            # cXyz::operator- result
+callee 025CB374 r6=12               # StartShock: cXyz by value
+ret 0224DA74 15,16                  # next_msgStatus: MSG_CONTINUES / MSG_ENDS
+# next_msgStatus: message number, selection, crest count
+field 0224DA74 r3+0x3C8 u32 0x94D 0x9C1
+field 0224DA74 101F4B5C u32 0x5D000000,0x5D000000
+field 0224DA74 5D000948 i32 0,1,2
+field * 101F84DC u32 0x5E000000,0x5E000000,0x5E000000,0
+field * 5E0000BF u8 9,10,11
+# actions: state, message id, manager status
+ret 025200D4 0x54000000 0x54000000  # play
+field * 540052B0 u8 0,1,4,5         # talk type (chkTalkXY)
+ret 02544950 0 1                    # ChkPresentEnd
+ret 025440C8 0 1                    # endCheck
+ret 02542D88 -1,0,1                 # getMyStaffId
+ret 0224F628 0 1                    # MoveToPlayer
+ret 027F2BF8 0 1                    # checkPass
+ret 025F795C 0xE,0xF,0x12,0x13      # message status
+ret 025F7DB0 0,-1,5                 # messageSet
+field * r3+0xEA0 i8 0,1,2,-1
+field * 10467228 u32 0xFFFFFFFF,0xFFFFFFFF,7
+field 0225268C r3+0x3C8 u32 0x963,0x98A,0x94E,0x967,0x9AB,0x9AD,0x9B4,0x995,0x9C0,0x123
+field 02252FD0 r3+0x3C8 u32 0x969,0x969,0x969,0x123
+field 02254A64 r3+0x3C8 u32 0x969,0x969,0x969,0x123
+field * r3+0xF8 u16 2,2,1
+field * r3+0xF98 i32 -1,0,1,2,3,4,5,6
+field * r3+0xEB8 i32 1,3,0
+field * r3+0xF8C i32 0x16,7,0x16,7,1
+field * r3+0x43C u32 0x5C000000,0x5C000000
+field * 5C00009C f32 0 40
+field * 5C0000A2 i16 10,20,30
+field * 104673A0 f32 0 40          # l_HIO field_0xB4
+# PTMFs: mAction, field_0x2BC
+field * r3+0x3CC i16 0,0,0,4
+field * r3+0x3CE i16 -1,-1,-1,0,1
+field * r3+0x3D0 u32 0x02257C9C,0x02250D54,0x02250A1C,0x02255908,0x02300000
+field * r3+0x3D4 i16 0,0,0,4
+field * r3+0x3D6 i16 -1,-1,-1,0,1
+field * r3+0x3D8 u32 0x02257C9C,0x02250D54,0x02250A1C,0x02255908,0x02300000
+field 02252FD0 r3+0xEA0 i8 2,2,0,0,1,-1
+field 02254A64 r3+0xEA0 i8 2,2,2,0,1,-1
+field 02252FD0 10467228 u32 7,7,0xFFFFFFFF
+field 02254A64 10467228 u32 7,7,0xFFFFFFFF
+
+callee 028E8DD0 r3=12               # PSVECSquareMag: the XZ vector

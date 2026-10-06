@@ -1,0 +1,61 @@
+# Verification unit: d_a_arrow (Link's arrows)
+src wwhd_src/d/actor/d_a_arrow.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 025D54C4 r4=out4        # fopAcM_SearchByID(id, &actor)
+callee 025D5218 r4=4           # fopAcIt_Judge: searched id
+ret 025D63E8 0 1               # entrySolidHeap
+field * r3+0x71D u8 0,1,2,3
+field * r3+0x3AC u8 0 1
+field * r3+0x79E u8 0,1,2,3
+field * r3+0x7A4 u8 0 1
+field * r3+0x2E4 u32 0,8
+field * r3+0xB0 u32 0,1,2
+field * 101D5F43 u8 0,1,2,3,4
+field * 101D5F43 u8 0,1,2,3,4
+ret 025200D4 0x54000000 0x54000000
+field * 54005CEA u8 0,8
+stackfill periodic
+# coverage steering (procMove: hit actor kinds, BG attributes, procWater check)
+ret 02515BBC 0,0x56000000,0x56000000
+field * 56000008 s16 0xa8,0xf3,0xf4,0xf5,0x10
+ret 024EF0F4 0,3,9,0xf,0x13,0x14,0x15,0x16
+field 02054040 r3+0x7AA s16 -1,0,1
+field 02054040 r3+0x7A8 s16 0,4
+field 02054040 r3+0x7AC u32 0x02055734,0
+field * 1018FDE8 s16 0,3,4,5
+ret 02052738 0 1
+ret 025D5928 0,0x45000000
+ret 025538E4 -3,-2,-1,0,1,5
+# ShieldReflect: the lock-on target must equal the found Ganondorf (out word is often a small int)
+callee 025D5578 r4=out4
+ret 025D5578 0 1
+ret 024EDFCC 0 1
+ret 024EC8D0 1,2,3
+# checkCreater: the out actor is often a small int (2, 4) -> its profile name at 0xA / 0xC
+field 0205238C 0000000A s16 0xd2,0
+field 0205238C 0000000C s16 0xd2,0
+# arrowShooting: stage name "GanonK" (or a prefix of it)
+field 02053814 54005134 u32 0x47616E6F,0x47000000,0
+field 02053814 54005138 u32 0x6E4B0000,0x6E4C0000
+stable 54005134 8
+# mutation gaps: water entry and the Puppet Ganon light-arrow hit
+field 020532B8 r3+0x7B1 u8 0,0,0,1
+ret 02443208 0,1,1,2
+callee 025D5A20 r6=12 r8=6
+field 02054040 r3+0x71D u8 3,3,0,1,2
+callee 028E8DD0 r3=12          # PSVECSquareMag: compare the vector
+field 02054040 56000008 s16 0xf3,0xf4,0xf5,0xa8,0x10
+field 02054040 r3+0x50C u32 0,1
+field 02054040 r3+0x818 u8 0,0,1
+ret 025160DC 0,1,1
+field 02054040 r3+0x780 u8 0,0,1
+# cXyz operators: r4 is the result (filled by the mock), r3/r5 operands compared
+callee 0201AD78 r3=12 r4=out12 r5=12   # cXyz::operator+
+callee 0201ADE0 r3=12 r4=out12 r5=12   # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12         # cXyz::operator*(f32)
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02053814 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","G","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL"

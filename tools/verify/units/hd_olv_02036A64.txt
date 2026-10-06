@@ -1,0 +1,13 @@
+# hd_olv_02036A64: HD JPEG encoder TU (02036A64..02036E57); HD-only
+src wwhd_src/hd/hd_olv_02036A64.cpp
+nolivein 02036A64
+field 02036A64 r3+4 u32 0,0x41000000
+field 02036A64 r3+8 u16 0,4,0xFFF8
+field 02036A64 r3+10 u16 0,0xFFFF,1,2,3
+field 02036A64 r3+14 u16 0,4,8
+callee 02753004 r4=8
+callee 0284DEF8 r3=12 r4=out4
+callee 0284BBB4 r4=0 r6=12 r10=out4
+mockfield 0284BBB4 r10+0 u32 0x100,0x50000,0x50001,0x80000
+ret 0284DEF8 0,0,1
+ret 0284BBB4 0,0,0,1

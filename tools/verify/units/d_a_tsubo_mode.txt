@@ -1,0 +1,49 @@
+# Verification unit: d_a_tsubo part C (modes, tensor, effects)
+src wwhd_src/d/actor/d_a_tsubo_mode.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 028E9044 r5=out12      # PSMTXMultVecSR output
+callee 0201ADE0 r4=out12      # cXyz::operator- result
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0200658C r3=out2       # cSAngle(s16) on the stack
+
+ret 025D4604 0 1
+field * r3+0x790 i32 0 15     # mType
+callee 024CED64 r4=out4 r5=out4 r6=out4   # calc_drop_param outputs
+callee 024CFB20 r4=out4 r5=out4 r6=out4   # calc_afl_param outputs
+callee 0201AE48 r4=out12      # cXyz::operator* result
+# harness workaround (daObj:: namespace functions parsed as methods): the extra register is
+# output-only, so a stack address on both sides compares equal
+callee 023123C0 r6=out0
+callee 023121C4 r8=out0
+callee 02312968 r5=out0
+# mode_appear: spec 4 (PrmAbstract result) and the timer edges
+field 024CEB50 r3+0x91E i16 0x47,0xE,0xF,0xD,0x1,0x2,0x10,0
+ret 02048038 0,1,4,4,5,6,0x3F,2,3
+callee 025A847C r6=12 r8=12   # dPa_control_c::set pos / scale
+callee 0200E240 r4=0x130
+# _execute: the culling skip chain
+field 024CE71C r3+0x79E u8 0,0,0,1
+field 024CE71C r3+0x794 i32 2,2,2,0,3,4,5,6
+field 024CE71C r3+0x3E4 u32 0x20,0x20,0x20,0xA0,0
+field 024CE71C r3+0x2E4 u32 4,4,0
+field 024CE71C r3+0x91C i16 0,0,1
+field 024CE71C r3+0x79F u8 0,0,1,2
+ret 025D6CE8 0 1
+# mutation gaps
+field 024CFB20 r3+0x618 f32 -1000000000,-1000000000,0,100
+field 024CED64 r3+0x618 f32 -1000000000,-1000000000,0,100
+field 024CFB20 r3+0x614 f32 -1000000000,-50,50
+field 024CED64 r3+0x614 f32 -1000000000,-50,50
+field 024CE204 r3+0x794 i32 3,3,3,2
+field 024CE204 r3+0x3E4 u32 0x20,0x20,0
+# calc_*_param boundaries: pos.y 0, levels at 0 / -roof (type 1: roof 100) / just inside
+field 024CED64 r3+0x790 i32 1,1,0,5,9
+field 024CFB20 r3+0x790 i32 1,1,0,5,9
+field 024CED64 r3+0x318 f32 0,0,0,7,0.5,-0.25
+field 024CFB20 r3+0x318 f32 0,0,0,7,0.5,-0.25
+field 024CED64 r3+0x61C f32 0
+field 024CED64 r3+0x618 f32 -1000000000,-1000000000,0,100,0.5,40,60
+field 024CFB20 r3+0x618 f32 -1000000000,-1000000000,0,100,0.5,40,60
+field 024CED64 r3+0x614 f32 -1000000000,0,100,0.5,40,-50
+field 024CFB20 r3+0x614 f32 -1000000000,0,100,0.5,40,-50

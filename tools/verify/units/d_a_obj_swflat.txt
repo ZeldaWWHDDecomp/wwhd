@@ -1,0 +1,54 @@
+src wwhd_src/d/actor/d_a_obj_swflat.cpp
+callee 026066C4 r4=8
+ret 02520460 0 5
+ret 024F1D9C 0,4,5
+ret 025E8154 0 1
+field * r3+0x2E4 u32 0,1,8,9,4294967295
+field * 1046BF4C i8 -1,0,1
+field * 1046BF50 i32 0,1,2
+field * 101F84DC u32 0x52000000 0x52000000
+ret 025200D4 0x53000000 0x53000000
+observe 025E2DE0 104B4634 8
+arg! 02392864 r4 0,1,2,8,32,33,63
+arg! 02392864 r5 0,8,16,31,32,33,63
+ret 02392864 0,1,2,3,255
+ret 025BA0C0 0 1
+field * r3+0x578 u8 0,1,2,3
+field * r3+0x57B u8 0,1,254,255
+field * r3+0x57C u8 0,1,254,255
+field * 1046BF61 u8 0,1
+callee 025A847C stack=4
+ret 02516464 0 1
+ret 02515BBC 0,0x54000000
+field * 5400000E i16 0,0xA8,0x1C5
+field * 540002E0 u32 0,0x400
+field * r3+0x570 i16 -1,0,1,5,6,10,30,35,36
+field * r3+0x572 i16 -1,0,1,5,30
+field * r3+0x574 i16 -1,0,1,2,3,30
+field * r3+0x576 i16 -1,0,1,30
+field * r3+0x579 u8 0,1,255
+field * r3+0x57A u8 0,1,255
+field * r3+0x57D u8 0,25,50,225,250,255
+field * r3+0x57E u8 0,25,50,225,250,255
+field * r3+0x57F u8 0,1,255
+field * r3+0x580 u8 0,1,2,3,255
+field * r3+0xF8 u16 0,2,3
+field * 1046BF60 u8 0,1
+field * 1046BF5C i16 0,1,2,30
+field * 1046BF5E i16 0,1,2,30
+
+# Mutation closure: BRK init stack word and emitter-null event startup.
+callee 025E8154 stack=1
+field * r3+0x55C u32 0,0x55000000
+field * r3+0x560 u32 0,0x56000000
+
+# Verified: 21 functions x10,000.
+# Official coverage 158/159; Execute block61 is the rare statue/new-emitter/type0 lock path.
+# Supplemental 10,000-case replay pins active emitter=0, initial locked=0/eventstate=0,
+# contact result=1/contact actor=0x54000000/status=0x400/type=0xA8, PrmAbstract result=0.
+# It reaches block61 and passes all21; combined coverage159/159.
+# Full752-position audit:480 compiled/272 noncompiling;460 initially killed at300 cases.
+# All20 initial survivors replayed at10,000 on this final spec:10 more killed.
+# Nine meaningful survivors are equivalent overwritten stores or independent reads/stores.
+# One excluded invalid mutant extends a 12-element local read loop to13, writing past
+# values[12] solely for an unused extra read eliminated by the compiler. No real gap remains.

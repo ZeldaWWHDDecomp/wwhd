@@ -1,0 +1,20 @@
+src wwhd_src/d/actor/d_a_obj_ohatch.cpp
+stackfill
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025BA0C0 0,1,2
+ret 0237FCBC 0,1,254,255
+ret 024EEA6C 0,1
+ret 02544044 0,0x54000000
+ret 02542D88 -1,0,1
+ret 02544830 0x1002DF94,0x1002DF9C
+field * r3+0x3B8 s32 0,1,255
+field 0237F2EC r3+0x2E4 u32 0,1,8,9
+field * r3+0x404 s32 -2147483648,0,122879,122880,122881,131072,2147483647
+field * r3+0x408 s16 -32768,-1,0,63,64,65,1024,32767
+# Positive hinge angles test sine-table quantization boundaries.
+field * r3+0x3F4 s16 -32768,-16385,-16384,-16383,-1,0,16384,16388,32764,32767
+arg! 0237FCBC r4 0,1,8,31,32
+arg! 0237FCBC r5 0,8,31,32
+callee 026066C4 r4=8
+callee 025CB374 r6=12

@@ -1,0 +1,39 @@
+# Verification unit: d_a_npc_bms1 part heap (Bomb-Master Cannon): node callbacks, CreateHeap, create, set_mtx, execute, draw
+src wwhd_src/d/actor/d_a_npc_bms1_heap.cpp wwhd_src/d/actor/d_a_npc_bms1_pending.cpp
+
+callee 026066C4 r4=8                # dRes_control_c::getRes(SafeString*)
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition
+callee 028E8F64 r5=out12            # PSMTXMultVec(m, in, &out)
+callee 028E90D4 r4=out48            # PSMTXCopy(src, dst)
+callee 0201ADE0 r3=12 r4=out12      # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 023127F8 r3=out16 r4=12 r5=12   # daObj::quat_rotVec
+callee 028E9BC0 r4=16               # C_QUATSlerp
+callee 028E8DAC r3=12 r4=12         # PSVECSubtract
+callee 028E8F44 r3=12               # PSVECDotProduct
+callee 025BEBB8 r5=12               # dSnap_RegistFig(pos)
+callee 0259E08C stack=2             # dNpc_JntCtrl_c::setParam: 8th, 9th arguments on the stack
+callee 025E4F64 stack=4             # mDoExt_McaMorf::mDoExt_McaMorf
+callee 024F06B4 stack=1             # dBgS_Acch::Set
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02520460 0,4,5                  # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 0254DA50 0 1                    # checkItemGet
+ret 025B8B94 0 1                    # isEventBit
+arg 02209DB4 r3 0,0x40000000         # _create: the constructor's this == NULL test
+ret 022098D0 0 1                    # CreateInit (always TRUE in the real code)
+# node callbacks: pin the model, the actor and the joint so the head/backbone/hair branches are hit
+field 022083A4 104B462C u32 0x57000000
+field 022083A4 570000B8 u32 0x40000000,0x40000000,0
+field 022083A4 40000848 i8 0,1
+field 022083A4 40000849 i8 1,2
+ret 027F7878 0x58000000 0x58000000
+field 022083A4 58000004 u16 0,1,2
+field 02208634 104B462C u32 0x57000000
+field 02208634 570000B8 u32 0x40000000,0x40000000,0
+field 02208634 4000084A i8 0,1
+field 02208634 4000084B i8 1,2
+field 02208634 58000004 u16 0,1,2
+callee 028E9108 r4=48               # PSMTXConcat(stack, rot, stack): the rotation matrix
+field 02208634 104666A4 f32 0.00005 0.00005
+fret 028E8F44 -20000 20000          # PSVECDotProduct: stretch 1 - k*dot around the 0.5/1.5 clamps

@@ -1,0 +1,97 @@
+src wwhd_src/d/actor/d_a_canon.cpp
+stackfill
+arg! 0210A31C r6 0,1,2,3,4,5
+ret 0210A31C 1 1
+fret 020198D8 0 7.99
+callee 026066C4 r4=8
+callee 0210A0B8 r4=out12
+callee 0210A1EC r4=out12
+callee 025D5A20 stack=1 r6=12
+arg! 0210A1EC r6 -32768 32767
+callee 025D5834 r5=12
+field * r3+0x3AE i16 -1,0,1
+field * r3+0x3AC i16 0,4
+field * r3+0x3B0 u32 0x0210B228,0x0210AAD4
+field * r3+0x76E i16 -1,0,1,30,60
+field * r3+0x774 i16 0,1,5,10
+field * r3+0x772 i16 0,1,4,5
+field * r3+0x2E4 u32 0,8
+ret 02520460 0,1,4,5
+ret 025D4604 0,1
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 025A866C r4=0 r5=12 r6=6 r7=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 028E90D4 r3=48 r4=out48
+callee 020182E0 r4=12
+callee 025CB374 r6=12
+real 026066C4 0201ADE0 0201AD78 0201AE48 020182E0
+real 028E8DAC 028E8D88 028E8E64
+arg 0210A0B8 r4 0,0x57000000
+arg 0210A1EC r4 0,0x57000000
+arg 02109054 r4 0,1
+field * 101D5F24 u32 0,0x56000000
+field 02109174 r3+8 i16 0,457
+field 02109174 r3+0x2E8 u32 0xFFFFFFFF,0,1
+field 02109174 r4+4 u32 0xFFFFFFFF,0,1
+ret 025160DC 0,1
+ret 02515BBC 0,0x57000000
+field 0210AF64 5700000E i16 0,457
+ret 02047358 1,1,1,1,1,1,1,0
+ret 02046A68 0,0,0,0,0,0,1,1
+# Cylinder geometry assertions require finite projectile positions. Exercise the
+# flight root with real vector/endpoint arithmetic and a bounded live trajectory.
+real 0210A1EC 028E8DD0 028F4384
+real 028F605C 028F60F8
+real 020472CC 0204698C 0252CCBC 028F521C
+fret 0246BA0C -100 100
+field 0210B228 r3+0x314 f32 -1000 1000
+field 0210B228 r3+0x318 f32 -1000 1000
+field 0210B228 r3+0x31C f32 -1000 1000
+field 0210B228 r3+0x72C f32 -1000 1000
+field 0210B228 r3+0x730 f32 -1000 1000
+field 0210B228 r3+0x734 f32 -1000 1000
+field 0210B228 r3+0x2F8 i16 8192
+field 0210B228 r3+0x328 i16 8192
+field 0210B228 r3+0x32A i16 0
+field 0210B228 r3+0x76A i16 0,1,64
+field 0210B228 r3+0x76C i16 64
+field 0210B228 1047BBD8 f32 0
+field 0210B228 104A44F8 f32 0
+field 0210B228 104A44FC f32 1
+field 0210B228 104A64F8 f32 0.70710677
+field 0210B228 104A64FC f32 0.70710677
+# Distinct actor address limits these immutable trajectory regions to the flight
+# companion. Its callees only read them; root writes remain fully compared.
+arg! 0210B228 r3 0x57000000
+stable 57000314 12
+stable 57000328 6
+stable 570002F8 6
+stable 5700072C 12
+stable 57000738 12
+stable 57000744 12
+stable 5700076A 4
+stable 104A44F8 8
+stable 104A64F8 8
+stable 1047BBD8 4
+# Actual joystick accessors return lfs-rounded values, not arbitrary mock f64s.
+real 0200796C 02007990
+field 0210A4A4 101F5088 u32 0x58000000
+field 0210A4A4 58000130 f32 -1 1
+field 0210A4A4 58000134 f32 -1 1
+stable 101F5088 4
+stable 58000130 8
+# Actual wave calculation in a room without an active sea returns room height.
+# These globals are read-only along all of this actor's selected call paths.
+real 0246BA0C 0246B6A4 0246B630
+field * 1046D8B0 u32 0x59000000
+field * 59000220 u8 0
+field * 101D01A0 f32 -100 100
+stable 1046D8B0 4
+stable 59000220 1
+stable 101D01A0 4
+arg 0210B7EC r3 0,0x40000000
+arg 0210B7EC r4 0,1,2,3
+real 0210B870

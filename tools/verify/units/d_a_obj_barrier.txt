@@ -1,0 +1,90 @@
+src wwhd_src/d/actor/d_a_obj_barrier.cpp
+callee 026066C4 r4=8
+callee 024F2478 r5=48
+callee 025E7CE0 stack=1
+callee 025E8154 stack=1
+
+# Three-short constructor: execute the actual leaf for initialized angle data.
+real 0201A478
+callee 025A847C stack=4 r5=0 r6=12 r7=6 r8=12
+
+# The initialized play singleton is a bounded, actual accessor.
+real 025200D4
+field * 104753A8 u32 1
+field * 10474BDC u32 0x11000000
+field * 110003AC u8 0,1,2,10,11
+field * 10474C5C u16 0,1
+field * 101F84DC u32 0x11010000
+field * 1101002E u8 0,0x3E
+field * r3+0xDF4 s32 0,1
+field * r3+0xDFC s32 0,1,2,3,-1
+field * r3+0xDF0 u8 0,1
+field * r3+0xF8 u16 0,2
+# Dummy texture has a real bounded resource list; null models still get tested elsewhere.
+arg! 02322518 r4 0,1,2,3
+field 02322518 r3+4 u32 0x11020000
+field 02322518 r3+8 u32 0x11020000
+field 02322518 r3+12 u32 0x11020000
+field 02322518 r3+16 u32 0x11020000
+field 02322518 110200AC u32 0x11021000
+field 02322518 11021030 u32 0,0x11022000
+field 02322518 11022000 u16 0,1,2,33,65
+field 02322518 11022004 u32 0x11023000
+# Include missing names, matching names, and distinct archive names.
+ret 027ED1F0 0,0x10026130,0x10026024,0x11060000
+
+callee 0201ADE0 r3=12 r4=out12 r5=12
+
+field 02322518 00000000 u16 0
+field 02323000 r3+0x62C u32 0,0x41000000
+field 02323000 r3+0x630 u32 0,0x41000000
+field 02323000 r3+0x634 u32 0,0x41000000
+field 02323000 r3+0x638 u32 0,0x41000000
+arg! 02323000 r4 0x41000000
+field 0232302C r3 u32 0,1,3,7,15
+field 0232302C r3+0x18 f32 -2,-1,0,1,30,100
+field 0232302C r3+0x8C f32 -2,-1,0,1,30,100
+field 0232302C r3+0x100 f32 -2,-1,0,1,30,100
+field 0232302C r3+0x174 f32 -2,-1,0,1,30,100
+ret 02515BBC 0,0x11000000
+ret 02520460 0,4,5
+ret 025E38E0 0,0x11030000,0x11030000,0x11030000,0x11030000,0x11030000,0x11030000,0x11030000
+
+# Valid J3DModel objects are aligned, distinct allocations. Unaligned synthetic
+# models can overlap stores and expose host lfs/stfs NaN-copy optimization.
+field 02322B48 r3+4 u32 0x11030100
+field 02322B48 r3+8 u32 0x11030200
+field 02322B48 r3+12 u32 0x11030300
+field 02322B48 r3+16 u32 0x11030400
+# Retain failures while reaching all four successful animation initializations.
+ret 025E7CE0 0,1,1,1,1,1,1,1
+ret 025E8508 0,1,1,1,1,1,1,1
+ret 025E8154 0,1,1,1,1,1,1,1
+
+# Initialized resource controller: distinguish this singleton from neighboring BSS.
+field * 101F4F28 u32 0x11040000
+
+# Renderer consumes the active list before this function restores its caller list.
+observe 025E2DE0 104B4634 8
+# Make static initialization stores observable as well as their final zero values.
+field 02323E34 10469288 u32 0,1,0xFFFF
+field 02323E34 1046928C u32 0,1,0xFFFF
+field 02323E34 10469290 u32 0,1,0xFFFF
+field 02323E34 10469294 u32 0,1,0xFFFF
+
+# HD birth takes two by-value cXyz values through hidden pointers.
+callee 0232302C r5=12 r6=12
+# The square-magnitude input is an initialized Vec of three floats.
+callee 028E8DD0 r3=12
+
+# Scratch padding uses equal bytes at equally aligned PPC/host locals.
+stackfill periodic
+# Initialize the texture resource singleton rather than indistinguishable BSS.
+field 02322518 101F9968 u32 0x11050000
+# A fifth array element is outside hitActor[4] and must never be consulted.
+field 02323000 r3+0x63C u32 0x41000000
+
+# Near-match texture name differs only in its first byte.
+field 02322518 11060000 u32 0x585F6475
+field 02322518 11060004 u32 0x6D6D7900
+stable 11060000 8

@@ -1,0 +1,9 @@
+src wwhd_src/d/actor/d_a_obj_pbco.cpp
+stackfill
+callee 026066C4 r4=8
+ret 025B8B94 0,1
+ret 0254DA50 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+field * 101F4F28 u32 0x54020000,0x54030000
+field * 101F84DC u32 0x54000000,0x54010000

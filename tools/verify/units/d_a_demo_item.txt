@@ -1,0 +1,24 @@
+# Verification unit: d_a_demo_item (cutscene item)
+src wwhd_src/d/actor/d_a_demo_item.cpp
+
+callee 025A847C stack=4 r7=6     # dPa_control_c::set: setup, prm, env, scale2D on the stack; angle
+callee 028E8F64 r4=12 r5=out12   # PSMTXMultVec
+callee 028E8D88 r3=12 r4=12 r5=out12  # PSVECAdd
+ret 02520460 0 5                 # resLoad
+ret 025D63E8 0 1                 # entrySolidHeap
+ret 021842D8 0 1                 # chkDraw
+ret 0218433C 0 1                 # chkDead
+ret 02550FC4 0 1                 # isBomb
+field * r3+0x76D u8 0,1,2,4,8,0x0E,0x09,0x0A,0x0C
+field * r3+0x74E u8 0,1,0x08,0x1F,0x15,0x31,0x33,0x4E,0x4F,0x55,0x60,0x61,0x07
+field * r3+0x748 i32 28 32
+field * r3+0xB0 u32 0,0x10000,0x20000,0x40000,0x80000,0x0E0000,0x15,0x07,0x07,0x10007
+field * r3+0x2E4 u32 0,8
+field * 10463B58 u32 0 1          # offset_tbl guard
+stackfill periodic
+field 021233CC r3+0x750 u32 0,0,0,0x30000000
+field 021233CC r3+0x754 u32 0,0,0,0x30000000
+field 021233CC r3+0x758 u32 0,0,0,0x30000000
+field 021233CC r3+0x75C u32 0,0,0,0x30000000
+field 021231F8 101E4778 i16 -1,0,5    # item 7's bmd index (getBmdIdx == -1 fallback)
+field 021231F8 101E4770 u32 0,0x10000000,0x10000000   # item 7's arc name (the image has no .data relocations)

@@ -1,0 +1,53 @@
+# Complete collision-data TU including local geometry, deleting destructors and init.
+src wwhd_src/SSystem/SComponent/c_cc_d.cpp
+callee 028E8DAC r3=12 r4=12 r5=255
+callee 028E8F44 r3=12 r4=12
+callee 028E8E64 r3=12 r4=255
+callee 028E8D88 r3=12 r4=12 r5=255
+callee 02017E74 r4=12
+callee 02017D08 r4=12 r5=12
+callee 02016CE8 r3=32 r4=56 r5=255
+callee 020159EC r5=255
+callee 02015CF0 r5=255
+callee 020168D4 r5=255
+field 0200B8CC r3+0x1C u8 0 1
+field 0200B8CC r3+0x28 u8 0 1
+field 0200B8CC r3+0x34 u8 0 1
+field 0200B8CC r3+0x0 f32 -20 20
+field 0200B8CC r3+0x4 f32 -20 20
+field 0200B8CC r3+0x8 f32 -20 20
+field 0200B8CC r3+0x24 f32 0,0.5,1,2
+field 0200B8CC r3+0x30 f32 0,0.5,1,2
+field 0200B8CC r3+0x3C f32 0,0.5,1,2
+field 0200B8CC r5+0x0 f32 -20 20
+field 0200B8CC r5+0x4 f32 -20 20
+field 0200B8CC r5+0x8 f32 -20 20
+field 0200B8CC r5+0xC f32 -20 20
+field 0200B8CC r5+0x10 f32 -20 20
+field 0200B8CC r5+0x14 f32 -20 20
+field 0200BAC0 r3+0x1C u8 0 1
+field 0200BAC0 r3+0x28 u8 0 1
+field 0200BAC0 r3+0x34 u8 0 1
+field 0200BAC0 r3+0x0 f32 -20 20
+field 0200BAC0 r3+0x4 f32 -20 20
+field 0200BAC0 r3+0x8 f32 -20 20
+field 0200BAC0 r3+0x24 f32 0,0.5,1,2
+field 0200BAC0 r3+0x30 f32 0,0.5,1,2
+field 0200BAC0 r3+0x3C f32 0,0.5,1,2
+field 0200BAC0 r5+0x0 f32 -20 20
+field 0200BAC0 r5+0x4 f32 -20 20
+field 0200BAC0 r5+0x8 f32 -20 20
+field 0200BAC0 r5+0xC f32 -20 20
+field 0200BAC0 r5+0x10 f32 -20 20
+field 0200BAC0 r5+0x14 f32 -20 20
+arg 0200B8CC r6 0 1
+# Nonexclusive real vtables exercise resolved callee live-ins alongside stock mock targets.
+field 0200BDD0 r3+0x18 u32 0x10001530
+field 0200C124 r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200C20C r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200C548 r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200C63C r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200C79C r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200C7EC r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200CA18 r4+0x1C u32 0x10001678,0x10001738,0x1004B258
+field 0200CA68 r4+0x1C u32 0x10001678,0x10001738,0x1004B258

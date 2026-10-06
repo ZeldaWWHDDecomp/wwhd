@@ -1,0 +1,80 @@
+# Verification unit: d_a_bb (Kargaroc)
+src wwhd_src/d/actor/d_a_bb.cpp wwhd_src/d/actor/d_a_bb_pending.cpp
+
+# stack objects passed to callees
+callee 024F1AFC r3=0x6C     # dBgS_LinChk::Set: the line check
+callee 02008860 r4=0x6C     # cBgS::LineCross
+callee 02008B4C r3=0x6C     # cBgS_LinChk::~cBgS_LinChk
+callee 026066C4 r4=8        # getRes: SafeString
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition: input compared, output filled
+
+ret 025D4604 0 1            # fopAc_IsActor
+ret 02008860 0 1            # LineCross
+ret 02520460 0 5            # dComIfG_resLoad
+
+# path_check: ppd none or a fixed path with few points
+field 0205E14C r3+0x4D4 u32 0,0x56000000
+field 0205E14C 56000000 u16 0 6                # m_num
+field 0205E14C 56000008 u32 0x57000000 0x57000000  # m_points
+stable 56000000 0x10
+stable 57000000 0x1000
+stable 400004D4 4                              # this->ppd
+field 0205E14C r3+0x4D3 i8 -2 3                # unk_35F
+fret 028F4384 0 400                            # sqrtf vs fDist
+
+# nodeCallBack: a fixed joint, joint numbers around the special cases
+arg 0205D078 r4 0 1
+ret 027F7878 0x59000000 0x59000000       # J3DNode -> J3DJoint
+field 0205D078 59000004 u16 0,3,8,11,21,0x16,0x17,0x18,0x1D,0x1E,0x1F,0x30
+field 0205D078 104B462C u32 0x5A000000 0x5A000000   # j3dSys model
+field 0205D078 5A0000B8 u32 0,0x5B000000,0x5B000000 # user area (actor)
+
+# s_a_d_sub / search_esa
+field 0205DB74 1046158C i32 98 101       # esa_check_count < 100
+field 0205DB74 r3+8 i16 0xDC 0xDE        # fpcNm_ESA_e
+field 0205DB74 r3+0x3B4 u8 0 1           # field_0x298
+
+# bb_player_view_check
+field 0205DFC0 104615B2 u8 0,0,0,1       # l_bbHIO.unk_06
+field 0205DFC0 r3+0x44F u8 0,5,0xFF,0xFF # unk_2D9
+field 0205DFC0 r3+0x453 u8 3,4,7         # unk_2DD
+ret 025200D4 0x54000000 0x54000000       # play object at a fixed address
+field 0205DFC0 54005B2C u32 0x55000000 0x55000000   # player
+field 0205DFC0 r3+0x4B0 f32 0 3000       # unk_33C (distance)
+field 0205DFC0 10461614 f32 0 3000       # l_bbHIO.unk_68 (distance limit)
+field 0205DFC0 10461618 f32 0 3000       # unk_6C
+field 0205DFC0 55000318 f32 -100 100     # player y
+field 0205DFC0 r3+0x380 f32 -100 100     # eyePos.y
+field 0205DFC0 10461620 f32 0 200        # unk_74 (height window)
+field 0205DFC0 10461624 f32 0 200        # unk_78
+field 0205DFC0 1046161C i16 0 0x7000     # unk_70 (angle window)
+field 0205DFC0 1046161E i16 0 0x7000     # unk_72
+
+# daBb_Create
+ret 02520460 4,4,4,0,5                   # dComIfG_resLoad: mostly complete
+field 02061DEC r3+0xB3 u8 0,3,4,5,6      # param byte 0 (unk_2D8 / mode)
+field 02061DEC r3+0xB2 u8 0,0xFF         # param byte 1
+field 02061DEC r3+0xB1 u8 0,0xFF,0xFF    # path index
+field 02061DEC r3+0xB0 u8 0,0xFF         # param byte 3
+field 02061DEC r3+0x2FD u8 0,1,0xFF      # home.angle.z low byte (switch)
+ret 025D63E8 0,1,1,1                     # fopAcM_entrySolidHeap
+ret 025AAF88 0,0x56000000,0x56000000     # dPath_GetRoomPath
+
+# damage_check
+callee 02518DB0 r3=out0x1C               # at_power_check: fills CcAtInfo (out storage, so the mock writes it)
+callee 025192A8 r4=0x1C                  # cc_at_check
+callee 0255F458 r3=12                    # dKy_Sound_set: position copy
+callee 025A847C r8=12                    # particle scale
+ret 025162A4 0,1                         # ChkTgHit
+field 0206432C r3+0x4B4 i16 0,0,1        # unk_340
+ret 02516300 0x58000000 0x58000000       # GetTgHitObj: a fixed hit object
+field 0206432C 58000010 u32 0,0x80000,0x100000,0x200,0x40000,0x1
+field 0206432C r3+0x453 u8 3,0           # unk_2DD
+field 0206432C 104615B0 u8 0,0,1         # l_bbHIO.unk_04
+field 0206432C r3+0x3A1 i8 -1 2          # health
+
+# pl_name_check: the name around fpcNm 0xC3, null actor sometimes
+field 0205EA08 r3+8 i16 0xC2 0xC4
+arg 0205EA08 r3 0,0x40000000
+# tex_anm_set: unk_2CC starts non-zero (the reset store is observable)
+field 0205D964 r3+0x448 u8 1 5

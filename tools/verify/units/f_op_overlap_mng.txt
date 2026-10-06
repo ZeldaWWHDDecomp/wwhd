@@ -1,0 +1,7 @@
+# Entire HD range025DBD24..025DC04C; static initializer attribution qualified.
+src wwhd_src/f_op/f_op_overlap_mng.cpp
+field * 0x101F36CC u32 0,0x51000000
+field * 0x51000004 u16 0,1,2,3
+field 025DBDC4 r3+0xC8 u8 0,1,2,3,0x42,0x82,0xC2,0xFF
+ret 025DC418 0,1,2,3,4,5,6,7
+ret 025DC488 0,1,2

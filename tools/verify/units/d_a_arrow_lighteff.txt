@@ -1,0 +1,29 @@
+# Verification unit: d_a_arrow_lighteff (elemental arrow glow)
+src wwhd_src/d/actor/d_a_arrow_lighteff.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025E7CE0 stack=1       # mDoExt_btkAnm::init: 9th argument on the stack
+callee 025E8154 stack=1       # mDoExt_brkAnm::init: entry on the stack
+callee 025A847C stack=4       # dPa_control_c::set: setup, prm, env, scale2D on the stack
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E7CE0 0 1              # btkAnm::init
+ret 025E8154 0 1              # brkAnm::init
+field * r3+0xB0 u32 0,1,2,3,4
+field * r3+0x4C4 u8 0,1,2,3,4  # type
+field * r3+0x4C5 u8 0 1
+field * r3+0x4C6 u8 0 1
+field * r3+0x4C8 u32 0,1,2,3
+field * r3+0x4CC u32 0,1,2,3
+field * r3+0x4C0 i32 57 62
+field * r3+0x2E8 u32 0xFFFFFFFF,1,2
+field * r3+0x2E4 u32 0,8
+field * r3+0x4BC f32 0 10
+stackfill periodic
+# the arrow (fopAcM_SearchByID): null or a fixed actor whose fields are steered
+ret 025D5218 0,0x55000000,0x55000000,0x55000000
+field * 550000B0 u32 0,1,1,2,3      # arrow parameter (state)
+field * 550007FC u8 0,0,0,1         # arrow field_0x6e4
+field * 550003AC u8 0 1             # isSetByZelda
+field * 101F4829 u8 0 1             # isMonotone
+field * r3+0x3CC f32 18 21          # scale z
+field * r3+0x3C4 f32 0.4 0.6        # scale x

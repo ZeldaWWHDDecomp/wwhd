@@ -1,0 +1,70 @@
+# Verification unit: d_a_bwds (Molgera larva)
+src wwhd_src/d/actor/d_a_bwds.cpp wwhd_src/d/actor/d_a_bwds_exec.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+ret 025200D4 0x54000000 0x54000000   # play object at a fixed address
+field * r3+0x608 i32 0 13      # m04F0 (body segments gone; loop bound 13 - m04F0)
+# daBwds_Execute: action / mode / timers
+field 0210602C r3+0x412 i16 0,1,2,5,3      # m02F6 action
+field 0210602C r3+0x414 i16 -10,0,1,2,3,4,5,6   # m02F8 mode
+field 0210602C r3+0x430 i16 0 1            # m0314[0..2] timers
+field 0210602C r3+0x432 i16 0 1
+field 0210602C r3+0x434 i16 0 1
+field 0210602C r3+0x43A i16 0 1            # m031E
+field 0210602C r3+0x417 i8 0 1             # m02FB
+field 0210602C r3+0x60C i8 0 1             # m04F4
+field 0210602C r3+0x60D i8 0 2             # m04F5
+field 0210602C r3+0x3A1 i8 -1 2            # health
+field 0210602C r3+0x2E0 u32 0,0x100000     # actor_status (hook carry)
+field 0210602C r3+0x314 f32 50000 100000 # current.pos.x (easy_bg_check2 radius)
+field 0210602C r3+0x1934 i8 -1 2           # m181C
+field 0210602C r3+0x1935 i8 0 1            # m181D
+field 0210602C r3+0x1936 i8 0 1            # m181E
+field 0210602C r3+0x19AC i8 0,1,60,61
+field 0210602C r3+0x19AD i8 0,1,60,61
+field 0210602C 10462C45 u8 0 1             # l_HIO.m005
+field 0210602C 1047B698 i16 -2 2           # REG0_S(8)
+ret 025162A4 0,0,0,0,0,0,1                 # ChkTgHit: mostly no hit
+fret 02008974 -1000000000 850        # GroundCross (edges: no ground, 850 limit)
+field 0210602C 1047B690 i16 -10,0,1    # REG0_S(4) (fail: timer 0 at once)
+field 0210602C r3+0x31C f32 -10 10        # current.pos.z
+real 028E8DD0                     # PSVECSquareMag (pure, leaf)
+# constructors / Create / useHeapInit
+arg 02108DDC r3 0,0x58000000          # HIO ctor: allocate or in place
+ret 0273AD10 0,0x59000000,0x59000000,0x59000000             # operator new
+ret 02520460 4,4,0,5                  # dComIfG_resLoad
+ret 025D63E8 0 1                      # fopAcM_entrySolidHeap
+field 02108BF0 101B3874 u8 0 1        # hio_set
+field 02108BF0 r3+0xB3 u8 0x22 0x24   # param low byte (0x23: m02F8 = -10)
+ret 025E7CE0 0,1,1,1                      # btkAnm::init
+ret 025E8154 0,1,1,1                      # brkAnm::init
+ret 025E38E0 0,0x5A000000,0x5A000000,0x5A000000,0x5A000000,0x5A000000,0x5A000000,0x5A000000   # mDoExt_J3DModel__create
+ret 025E4F64 0,0x5B000000,0x5B000000,0x5B000000   # mDoExt_McaMorf::mDoExt_McaMorf
+field 021087FC 5B000090 u32 0,0x5C000000,0x5C000000,0x5C000000   # morf model
+callee 02008974 r4=0x54            # dBgS_GndChk on the stack: compare its contents
+field 0210602C r3+0x318 f32 0,1      # current.pos.y vs m1804.y / old.pos.y boundaries
+field 0210602C r3+0x304 f32 0,1      # old.pos.y
+field 0210602C r3+0x1920 f32 0,1     # m1804.y
+field 0210602C r3+0x43C f32 0.01,0.02,0  # m0320 vs 0.01
+field 0210602C r3+0x340 f32 -1,0,1  # speed.y vs 0
+field 0210602C 1047B610 f32 -2 2
+field 0210602C 1047B614 f32 -2 2
+field 0210602C 1047B618 f32 -2 2
+field 0210602C 1047B61C f32 -2 2
+field 0210602C 1047B620 f32 -2 2
+field 0210602C 1047B624 f32 -2 2
+field 0210602C 1047B628 f32 -2 2
+field 0210602C 1047B62C f32 -2 2
+field 0210602C 1047B630 f32 -2 2
+field 0210602C 1047B634 f32 -2 2
+field 0210602C 1047B638 f32 -2 2
+field 0210602C 1047B63C f32 -2 2
+field 0210602C 1047B640 f32 -2 2
+field 0210602C 1047B644 f32 -2 2
+field 0210602C 1047B648 f32 -2 2
+field 0210602C 1047B64C f32 -2 2
+field 0210602C 1047B650 f32 -2 2
+field 0210602C 1047B654 f32 -2 2
+field 0210602C 1047B658 f32 -2 2
+field 0210602C 1047B65C f32 -2 2
+field 0210602C 1047B660 f32 -2 2

@@ -1,0 +1,21 @@
+# Verification unit: d_a_spc_item01 (special event items)
+src wwhd_src/d/actor/d_a_spc_item01.cpp
+src wwhd_src/d/actor/d_a_item_basecalls.cpp
+stackfill periodic
+
+ret 02551044 0 1               # isRupee
+ret 02551B90 0 1               # checkAppearEffect
+ret 025B8B94 0 1               # isEventBit
+ret 02520460 0 5               # dComIfG_resLoad
+ret 025D63E8 0 1               # fopAcM_entrySolidHeap
+field * r3+0x74E u8 0x1F,0x3B,0x48,0x01,0x02,0x20,0x47,0x49,0x3A,0x3C
+field * r3+0xB0 u32 0x0000001F,0x0000003B,0x00000148,0x00FFFF01,0x00000020
+field * r3+0x756 u8 0 2
+field * r3+0x758 u16 0 3
+field * r3+0x3FC u32 0,0x80,0xFFFFFF7F
+field * r3+0x330 f32 -1,0,0.5,1,1.5,2
+field * r3+0x340 f32 -1,0,1
+# arc names in d_item_data are filled at run time (0 in the image)
+field * 101E6DD8 u32 0x10001F80,0
+field * 101E70E8 u32 0x10003B80,0
+field * 101E7254 u32 0x10004880,0

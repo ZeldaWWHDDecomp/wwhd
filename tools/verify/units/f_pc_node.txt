@@ -1,0 +1,9 @@
+# Full HD f_pc_node TU 025DFFA8..025E032F, nine functions including initializer.
+src wwhd_src/f_pc/f_pc_node.cpp
+field 025DFFB0 r3+0x1AC u8 0 1
+field 025E01FC r3+0xC u8 0 1
+field 025E012C 0x101F3D64 s32 0 2
+ret 025DD258 0 1
+ret 025DEA6C 0 1
+ret 025DEA30 0 1
+ret 025DFCD4 0 2

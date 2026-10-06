@@ -1,0 +1,54 @@
+# Verification unit: d_a_npc_kk1 part A (Mila, poor, Windfall)
+src wwhd_src/d/actor/d_a_npc_kk1_a.cpp wwhd_src/d/actor/d_a_npc_kk1_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0226B704 r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0226B984 r4=12         # setBikon(cXyz copy)
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint (hidden result)
+callee 0226B5B4 r3=out12      # getPathPoint (output)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 025A847C r6=12 r7=6    # dPa_control_c::set(pos, angle)
+callee 02008974 r4=0x54       # cBgS::GroundCross(gndChk)
+callee 02008E0C r3=255        # cBgS_GndChk ctor storage
+callee 025D54C4 r4=out4       # fopAcM_SearchByID(id, &out)
+ret 025200D4 0x54000000 0x54000000
+# searchActor_SWC00
+ret 025D4604 0 1
+field 0226B4A8 r3+8 i16 0x12A,0x12A,0
+field 0226B4A8 r3+0xB0 u32 0x00000005,0x00010005,0x00000007
+field 0226B4A8 r4+0x925 u8 5,7
+field 0226B4A8 1046766C i32 0 0x14
+# checkCommandTalk / checkOrder
+field 0226C7A0 r3+0xF8 u16 0,1,2
+field 0226C7A0 r3+0xAC2 i8 5,0
+field 0226C7A0 r3+0x914 i16 0,1
+field 0226C7DC r3+0xF8 u16 0,1,2
+field 0226C7DC r3+0xAC7 i8 0,1,2,3,4
+field 0226C7DC r3+0x8FC i16 0 7
+ret 0254407C 0 1
+ret 0226C7A0 0 1
+arg 0226CB44 r4 0,1,2,3,4,5,6,7,8,-1
+# getPathPoint: point 0x11 is moved
+field 0226B5B4 r4+5 u8 0x11,0x10
+# play_animation: Bikon effects
+field 0226BB5C r3+0xAC6 i8 8,9,0
+ret 027F2BF8 0 1
+# play_eff_anm / demo / play_btp_anm: frame boundaries
+field 0226BA48 r3+0xAAC i16 28,29,30,0
+field 0226BA48 r3+0xAAE i16 0 8
+field 0226BA48 r3+0xAB0 i16 0 8
+field 0226C8D8 r3+0x860 u8 0 8
+field 0226C8D8 r3+0x2DC u8 0,1,0x20,0x21
+field 0226C8D8 101D5FFC u32 0,0x60000000
+field 0226B8E4 r3+0x860 u8 0 8
+callee 02008DAC r3=0x54       # cBgS_Chk::~cBgS_Chk(gndChk)
+# demo: a btp whose getFrameMax (vtable slot +0x14) is a steerable mock
+field 0226C8D8 r3+0x7FC u32 0x60001000,0x60001000,0
+field 0226C8D8 60001004 u32 0x60002000
+field 0226C8D8 60002014 u32 0x0226AE24
+ret 0226AE24 0 8
+# createInit: reach the ground check
+ret 0226B830 0 1
+field 0226BFD0 r3+0xACC i8 0,0,1
+field 0226BFD0 r3+0xB0 u32 0x00FF0000,0x00010500

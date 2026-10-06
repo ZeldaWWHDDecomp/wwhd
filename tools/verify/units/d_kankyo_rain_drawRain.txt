@@ -1,0 +1,183 @@
+# Rain weather/renderer TU; implementation in progress, not a full-unit gate yet.
+src wwhd_src/d/d_kankyo_rain_drawRain.cpp
+stackfill periodic
+callee 02563E48 r3=24 r4=out12
+callee 02563F0C r3=12 r4=12 r5=out12
+callee 02563DD8 r3=out40
+callee 0256401C r4=out12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 025F1018 r3=12 r4=out12 r5=40
+callee 028E8DE8 r3=12 r4=12
+callee 026124B0 r4=8 r5=8
+callee 025F01D8 r3=out4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0251694C r3=out20
+callee 025170D8 r4=12 r5=out4 r6=out20
+callee 025BD71C r3=out52
+callee 025BEF3C r3=52 r4=12
+callee 025BEB90 r3=52
+callee 025BEB4C r3=52
+# Complete84-byte derived ground query and80-byte HD roof check objects.
+callee 02008E0C r3=out64
+callee 024EE7AC r3=out80
+callee 024EF6E8 r4=80
+callee 02008974 r4=84
+callee 02008DAC r3=64
+callee 02008B4C r3=64
+
+callee 028E91EC r3=48 r4=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0257015C r3=out16 r4=4
+callee 027FC500 r4=16
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Ordinary boundary steering retains one-in-eight unsteered argument samples.
+arg 0256401C f2 0,-20,1
+arg 0256F084 r4 0,9,1,-1
+# 0256401C block2 (025640EC) is unreachable: entry height!=0 selects that arm;
+# its only callee02563E48 writes f0..f13, so preserved f30height/f31zero cannot become equal.
+
+callee 025602F0 r3=out4 r4=out4
+callee 02582518 r5=4 r6=4
+
+callee 0257DB28 r3=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+
+ret! 02555D0C 0x50000000 0x50000000
+ret! 025200D4 0x51000000 0x51000000
+field 025712A8 50000A44 u32 0x52000000
+field 025712A8 50000A4C u32 0,1
+field 025712A8 51005AF8 u32 0x53000000
+field 025712A8 51005FA4 u32 0,0x54000000
+field 025712A8 52003758 u16 0,1,2,65535
+stable 52003758 2
+field 025712A8 52003D44 u32 0,1
+stable 52003D44 4
+field 025712A8 5200389C u32 0x56000000
+stable 5200389C 4
+field 025712A8 52003AF0 u32 0x56000100
+stable 52003AF0 4
+field 025712A8 52004204 u32 0,1
+stable 52004204 4
+field 025712A8 52003D5C u32 0x56000200
+stable 52003D5C 4
+field 025712A8 52003FB0 u32 0x56000300
+stable 52003FB0 4
+field 025712A8 520046C4 u32 0,1
+stable 520046C4 4
+field 025712A8 5200421C u32 0x56000400
+stable 5200421C 4
+field 025712A8 52004470 u32 0x56000500
+stable 52004470 4
+field 025712A8 52004B84 u32 0,1
+stable 52004B84 4
+field 025712A8 520046DC u32 0x56000600
+stable 520046DC 4
+field 025712A8 52004930 u32 0x56000700
+stable 52004930 4
+field 025712A8 52005044 u32 0,1
+stable 52005044 4
+field 025712A8 52004B9C u32 0x56000800
+stable 52004B9C 4
+field 025712A8 52004DF0 u32 0x56000900
+stable 52004DF0 4
+field 025712A8 52005504 u32 0,1
+stable 52005504 4
+field 025712A8 5200505C u32 0x56000A00
+stable 5200505C 4
+field 025712A8 520052B0 u32 0x56000B00
+stable 520052B0 4
+field 025712A8 520059C4 u32 0,1
+stable 520059C4 4
+field 025712A8 5200551C u32 0x56000C00
+stable 5200551C 4
+field 025712A8 52005770 u32 0x56000D00
+stable 52005770 4
+field 025712A8 52005E84 u32 0,1
+stable 52005E84 4
+field 025712A8 520059DC u32 0x56000E00
+stable 520059DC 4
+field 025712A8 52005C30 u32 0x56000F00
+stable 52005C30 4
+
+# Immutable valid packet/camera/view roots; mutable payloads and callbacks remain active.
+stable 50000A44 4
+stable 51005AF8 4
+stable 51005FA4 4
+
+callee 027B5E94 r3=324 r4=0 r5=0
+field 025712A8 520039E0 u32 0x56000000
+stable 520039E0 4
+field 025712A8 520039EC u32 80
+stable 520039EC 4
+field 025712A8 52003C34 u32 0x56000100
+stable 52003C34 4
+field 025712A8 52003C40 u32 80
+stable 52003C40 4
+field 025712A8 52003EA0 u32 0x56000200
+stable 52003EA0 4
+field 025712A8 52003EAC u32 80
+stable 52003EAC 4
+field 025712A8 520040F4 u32 0x56000300
+stable 520040F4 4
+field 025712A8 52004100 u32 80
+stable 52004100 4
+field 025712A8 52004360 u32 0x56000400
+stable 52004360 4
+field 025712A8 5200436C u32 80
+stable 5200436C 4
+field 025712A8 520045B4 u32 0x56000500
+stable 520045B4 4
+field 025712A8 520045C0 u32 80
+stable 520045C0 4
+field 025712A8 52004820 u32 0x56000600
+stable 52004820 4
+field 025712A8 5200482C u32 80
+stable 5200482C 4
+field 025712A8 52004A74 u32 0x56000700
+stable 52004A74 4
+field 025712A8 52004A80 u32 80
+stable 52004A80 4
+field 025712A8 52004CE0 u32 0x56000800
+stable 52004CE0 4
+field 025712A8 52004CEC u32 80
+stable 52004CEC 4
+field 025712A8 52004F34 u32 0x56000900
+stable 52004F34 4
+field 025712A8 52004F40 u32 80
+stable 52004F40 4
+field 025712A8 520051A0 u32 0x56000A00
+stable 520051A0 4
+field 025712A8 520051AC u32 80
+stable 520051AC 4
+field 025712A8 520053F4 u32 0x56000B00
+stable 520053F4 4
+field 025712A8 52005400 u32 80
+stable 52005400 4
+field 025712A8 52005660 u32 0x56000C00
+stable 52005660 4
+field 025712A8 5200566C u32 80
+stable 5200566C 4
+field 025712A8 520058B4 u32 0x56000D00
+stable 520058B4 4
+field 025712A8 520058C0 u32 80
+stable 520058C0 4
+field 025712A8 52005B20 u32 0x56000E00
+stable 52005B20 4
+field 025712A8 52005B2C u32 80
+stable 52005B2C 4
+field 025712A8 52005D74 u32 0x56000F00
+stable 52005D74 4
+field 025712A8 52005D80 u32 80
+stable 52005D80 4
+
+# Mutation survivor (drop of the first ratio clamp): needs sqrt(distance)/1500 > 1 with a finite
+# positive particle alpha, so 7*alpha*(1-ratio) truncates below zero.
+fret 028F4384 -1,0,749,1499,1500,1501,3000,30000,1e30,inf,nan
+field 025712A8 520000C8 f32 0,0.25,1,2,50
+field 025712A8 52000100 f32 0,0.25,1,2,50

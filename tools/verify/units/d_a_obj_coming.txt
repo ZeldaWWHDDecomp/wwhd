@@ -1,0 +1,138 @@
+src wwhd_src/d/actor/d_a_obj_coming.cpp
+stackfill periodic
+ret 02332D84 0,1,2,3,4,7,255
+ret 025200D4 0x54000000 0x54000000
+ret 025BA0C0 0 1
+ret 025D4604 0 1
+ret 0246B6A4 0 1
+ret 024EF7C0 0 1
+ret 02008860 0 1
+ret 02331F48 0 1
+ret 02331F64 0 1
+ret 0233211C 0 1
+ret 023322EC 0 1
+ret 02332468 0 1
+ret 023325C4 0 1
+ret 025D54C4 0 1
+fret 02019788 0 1
+fret 020198D8 0 16
+fret 02019918 -8192 8192
+fret 02331E50 -1000000000 1000
+fret 02008974 -1000000000 900
+field * 0x10469518 u32 0 1
+field * 0x54005B3C u32 0,0x55000000,0x55000000
+field * r3+0x2E4 u32 0 8
+field * r3+0x3AC u32 0 0
+field * r4+4 s32 -2147483648,-1,0,1,40,2147483647
+field * r4+8 u32 0,1,0xFFFFFFFF
+field * r3+8 s16 0,0xA5,0xA8
+field * r4+0x18 f32 -101,-100,0,20
+callee 028E8DE8 r3=12 r4=12
+callee 028E8F64 r4=12 r5=out12
+callee 025D54C4 r4=out4
+callee 02332024 r5=out12
+callee 02332468 r4=32
+callee 023325C4 r4=out24
+callee 025D5834 r5=12 r7=6
+callee 0200F93C r3=12 r4=12
+callee 02331E50 r3=12
+# Exercise direct and virtual GHS member callbacks plus final deletion condition.
+field 02331C94 r3+0x3B0 u32 0,1,2
+field 02331C94 r3+0x3BC u32 0,1,2
+field 02331C94 r3+0x3C8 u32 0,1,2
+field 02331C94 r3+0x3D4 u32 0,1,2
+field 02331C94 r3+0x3E0 u32 0,1,2
+field 02331C94 r3+0x3B8 u32 0,0xFFFFFFFF
+field 02331C94 r3+0x3C4 u32 0,0xFFFFFFFF
+field 02331C94 r3+0x3D0 u32 0,0xFFFFFFFF
+field 02331C94 r3+0x3DC u32 0,0xFFFFFFFF
+field 02331C94 r3+0x3E8 u32 0,0xFFFFFFFF
+field 02331C94 0x10026E82 s16 0 0
+field 02331C94 0x10026E86 s16 0xB4 0xB4
+field 02331C94 r3+0xB4 u32 0x56000000 0x56000000
+field 02331C94 0x56000004 u32 0x02332960 0x02332960
+# Nonzero constructor/static metadata and scratch observations.
+field 02332A18 0x104694B8 u32 0x12345678 0x12345678
+field 02332A18 0x1046951C u32 0x12345678 0x12345678
+field 02332A18 0x10469570 u32 0x12345678 0x12345678
+arg 02331B98 r3 0,0x40000000,0x40000000
+arg 02332D84 r4 0,1,2,4,8,31,32,33,63,64,0xFFFFFFFF
+arg 02332D84 r5 0,1,6,16,24,28,31,32,33,63,64,0xFFFFFFFF
+
+# Equality and active-save domains discovered by exhaustive survivor audit.
+field * 0x101F84DC u32 0,0x55006000,0x55006000
+fret 028F4384 0 10000
+field 02331F64 r3+0x330 f32 0,1,2
+
+# Known generated SearchByID heap outputs, profile metadata exercises assertion bypass.
+# SearchByID generated seed 1000040 output 309E2DC0
+field * 0x309E2DC8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000079 output 3040B120
+field * 0x3040B128 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000112 output 30ABCF80
+field * 0x30ABCF88 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000124 output 30A20560
+field * 0x30A20568 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000128 output 302A2570
+field * 0x302A2578 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000146 output 30748740
+field * 0x30748748 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000168 output 309A9790
+field * 0x309A9798 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000169 output 30FF5930
+field * 0x30FF5938 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000182 output 30269CA0
+field * 0x30269CA8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000184 output 306BA610
+field * 0x306BA618 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000186 output 30E610C0
+field * 0x30E610C8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000234 output 30131780
+field * 0x30131788 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000254 output 300FB5F0
+field * 0x300FB5F8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000260 output 30F7F8F0
+field * 0x30F7F8F8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000262 output 304B0400
+field * 0x304B0408 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000269 output 30461560
+field * 0x30461568 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000278 output 30D60810
+field * 0x30D60818 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000292 output 30005090
+field * 0x30005098 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000302 output 30B391A0
+field * 0x30B391A8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000307 output 30657BA0
+field * 0x30657BA8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000319 output 303E3FE0
+field * 0x303E3FE8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000336 output 30F39DB0
+field * 0x30F39DB8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000339 output 3052B700
+field * 0x3052B708 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000387 output 303FA2D0
+field * 0x303FA2D8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000416 output 30D953A0
+field * 0x30D953A8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000429 output 30708600
+field * 0x30708608 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000455 output 300EAF50
+field * 0x300EAF58 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000476 output 3003B3C0
+field * 0x3003B3C8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000492 output 30DB5E90
+field * 0x30DB5E98 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000498 output 30997D00
+field * 0x30997D08 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000509 output 3069E0B0
+field * 0x3069E0B8 s16 0x1C9 0x1C9
+# SearchByID generated seed 1000572 output 307B8410
+field * 0x307B8418 s16 0x1C9 0x1C9
+
+# 2026-10-06 (post-check seed 1, 1/10000 "call #2 028F3090: r5"): with clobbering, a mocked mode function rewrote the
+# actor's type word (+0x3AC, set once at create and never written by the mode functions), so the next loop iteration
+# indexed far past the 3-entry mode table 10026E70 and called a random function that reads the original's leftover r5.
+# Pin `this` and keep the type word stable (its steered value 0 stays in force across calls).
+arg! 02331C94 r3 0x40000000
+stable 400003AC 4

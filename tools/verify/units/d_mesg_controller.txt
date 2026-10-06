@@ -1,0 +1,4 @@
+# Proven control vtable subset; full message-scene boundary/API ownership pending.
+src wwhd_src/d/d_mesg_controller.cpp
+# Nonexclusive null/existing-object constructor paths retain stock generated cases.
+arg 025F7424 r3 0,0x58000100

@@ -1,0 +1,109 @@
+src wwhd_src/d/actor/d_a_warphr.cpp wwhd_src/d/actor/d_a_warphr_companions.cpp
+stackfill periodic
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 025A847C r6=12 r7=6 stack=4
+callee 028E93CC r3=out48
+callee 028E90D4 r3=48 r4=out48
+callee 025E7CE0 stack=1
+callee 025E8154 stack=1
+callee 025626A4 r5=12 r6=456
+callee 02562F5C r5=456
+callee 02543714 r4=12
+callee 025E1A40 r4=12
+callee 0200F93C r3=12 r4=12
+ret 025200D4 0x54000000 0x54000000
+field * 54005292 u8 0,1
+field * 54005CD8 u32 0,0x10000
+field * 54005B2C u32 0x55000000
+field * 54005B3C u32 0,0x55001000
+field * 54005134 u32 0x48797275,0x4D69736D,0x58797275,0
+field * 54005138 u32 0x6C650000,0
+field * 5400513F s8 0,8
+field * r3+0xF8 u16 0,1,2
+field * r3+0x2DC u8 0,1,2,32,33
+field * r3+0x40C s32 0,1,2
+field * r3+0x400 u8 0,1
+field * r3+0x414 s16 -1,0,1,17
+field * 101D6008 u32 0,548,549,550
+field * 1046EB8C u32 0,1
+field * 101F4829 u8 0,1
+ret! 02542EDC -1,0,1,2,3,4
+ret 02542D88 -1,0,1,7
+ret 025447C8 0,1
+ret 0254407C 0,1
+ret 025440C8 0,1
+ret 025445B8 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+ret 02520A84 0,1
+ret 025B8B94 0,1
+ret 024DACC0 0,1
+ret 024DAC5C 0,1,2
+arg 024DADD0 r4 -1,0,1,2,3
+arg 024DBAB4 r3 0,0x40000000
+arg 024DBAB4 r4 0,1,2,3
+fret 028F4384 499 501
+
+# Initialized event manager: five immutable direct member descriptors.
+stable 101D3108 80
+# SafeString assureTermination virtual is an actual empty function.
+real 024DBB30
+# Constant RPX .rodata string and SafeString vtable are never writable by game code.
+stable 10042760 7
+stable 10042648 24
+
+# Resource and save singleton pointers are nonzero initialized objects.
+field * 101F4F28 u32 0x57010000,0x57020000
+field * 101F84DC u32 0x58010000,0x58020000
+
+# Initialized demo-manager pointer exposes byte-shifted global loads.
+field * 101D5FFC u32 0,0x59010000,0x59020000
+# Finite demo shapeIds exercise both meaningful animation modes.
+ret 02526E70 0,0x5A010000
+field * 5A010028 u32 0,1,2
+
+observe 025E2DE0 104B4634 8
+
+arg 024DBADC r3 0,0x40000000
+arg 024DBADC r4 0,1,2,3
+
+# Event action tables: also exercise the virtual member-pointer dispatch (slot >= 0).
+field * 101D310A s16 -1,0,1
+field * 101D3112 s16 -1,0,1
+field * 101D311A s16 -1,0,1
+field * 101D3122 s16 -1,0,1
+field * 101D312A s16 -1,0,1
+field * 101D3132 s16 -1,0,1
+field * 101D313A s16 -1,0,1
+field * 101D3142 s16 -1,0,1
+field * 101D314A s16 -1,0,1
+field * 101D3152 s16 -1,0,1
+
+# Demo camera getter: compare the demo-manager pointer it receives.
+callee 025283F8 r3=0
+# Monotone rate globals start nonzero so the 16-bit stores are observable byte by byte.
+field * 101F4820 u32 0,0x11223344
+field * 101F4824 u32 0,0x55667788
+# Event action tables: nonzero this-adjustment deltas (the image entries are all 0).
+field * 101D3108 s16 0,8
+field * 101D3110 s16 0,8
+field * 101D3118 s16 0,8
+field * 101D3120 s16 0,8
+field * 101D3128 s16 0,8
+field * 101D3130 s16 0,8
+field * 101D3138 s16 0,8
+field * 101D3140 s16 0,8
+field * 101D3148 s16 0,8
+field * 101D3150 s16 0,8
+# 024DAA1C draw: original reads uninitialized stack on the camera==null path (UB, also in the GameCube
+# source); candidate yields zeros. The harness starts both sides' stack slots with the same bytes, so
+# this run compares equal; in the game the original's mProjectionMatrix comes from stale stack bytes.
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 024DB310 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyru","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","Xyrule","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out"

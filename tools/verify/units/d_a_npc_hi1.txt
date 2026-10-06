@@ -1,0 +1,80 @@
+# Verification unit: d_a_npc_hi1 (King of Hyrule)
+src wwhd_src/d/actor/d_a_npc_hi1.cpp
+
+# stack objects passed to callees
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0223C6C0 r4=8          # set_action(pointer to member, 8 bytes)
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+callee 0223D394 r5=out4       # searchByID(id, &res)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259E2D4 r5=12 r6=12   # lookAtTarget_2(target, eye copy)
+callee 0259D8BC r4=12         # dNpc_chkAttn(pos copy)
+ret 025200D4 0x54000000 0x54000000
+# checkOrder / anmAtr / talk_1 / lookBack
+field 0223CE7C r3+0xF8 u16 0,1,2,3
+field 0223CE7C r3+0x991 i8 -1 4
+arg 0223DD28 r4 6,14,5
+field 0223DD28 r3+0x998 i8 0 1
+field 0223DD28 r3+0x98D u8 0,1,0xFF
+field 0223DD28 54005BC6 u8 0,1,0xFF
+field 0223E12C r3+0x7CC u8 0 1
+ret 025F795C 0x12 0x14
+field 0223D3E8 r3+0x994 i8 -1 5
+ret 0223D394 0,0x58000000
+# stack arguments (facts from d_a_npc_ac1)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument (entry) on the stack
+callee 025E7CE0 stack=1       # mDoExt_btkAnm::init: 10th argument on the stack
+callee 025E4F64 stack=4       # mDoExt_McaMorf::mDoExt_McaMorf: 4 stack words
+callee 024F06B4 stack=1       # dBgS_Acch::Set: 9th argument on the stack
+callee 0259E08C stack=2       # dNpc_JntCtrl_c::setParam: 2 stack words
+# reviewed return facts: setBtp/setBtk return (init(...) != 0) as 0/1 (addic/subfe)
+callee 0223C0BC retu=1
+callee 0223C1B4 retu=1
+# boundary steering
+arg 0223C0BC r4 -1 2
+arg 0223C1B4 r4 -1 2
+field 0223CF54 101D5FFC u32 0,0x57000000
+field 0223CF54 r3+0x2DC u8 0,1,0x20,0x21
+field 0223CF54 r3+0x98A u8 0,1,2
+field 0223CF54 r3+0x8D8 u8 0,1,2,0xFE,0xFF
+field 0223CF54 r3+0x860 u8 0,1,2,0xFE,0xFF
+field 0223C82C r3+0x98E i8 0,1
+field 0223C82C r3+0x8D8 u8 0,1,2,0xFE,0xFF
+field 0223C8CC r3+0x860 u8 0,1,2,0xFE,0xFF
+field 0223DEA0 r3+0x958 i16 0 1
+field 0223DEA0 r3+0x95A i16 0 1
+field 0223DEA0 r3+0x95C i16 0 1
+field 0223DEA0 r3+0x322 i16 0 1
+field 0223DEA0 r3+0x3AE i16 0 1
+field 0223DEA0 r3+0x3B2 i16 0 1
+arg 0223DD0C r4 0,1,2,3,0xFF
+field 0223DD0C r3+0x98C u8 0,1,2,0xFF
+arg 0223DF68 r4 0,1,2,3
+field 0223E204 r3+0x997 i8 0,1,2,3,4,9
+field 0223E204 r3+0x992 i8 0,1,2,3
+field 0223DB2C r3+0x990 i8 -1,0,1,2
+field 0223C65C r3+0x995 i8 -1,0,1
+field 0223C9D4 r3+0x960 i32 0,1
+arg 0223C9D4 r4 0,1
+field 0223DFB4 r3+0x989 u8 0,1
+field 0223DFB4 r3+0x987 u8 0,1
+field 0223DFB4 r3+0x986 u8 0,1
+field 0223DFB4 r3+0x902 i16 0 1
+field 0223DFB4 r3+0x322 i16 0 1
+field 0223D6EC r3+0x985 u8 0,1
+field 0223D6EC r3+0x982 u8 0,1
+field 0223D6EC r3+0x2DC u8 0,1
+field 0223D6EC r3+0x980 u8 0,1
+field 0223D6EC r3+0x983 u8 0,1
+field 0223D6EC r3+0x98A u8 0,1
+field 0223D6EC 54005292 u8 0,1
+field 0223D6EC r3+0xF8 u16 0,1,2
+field 0223D9C0 r3+0x982 u8 0,1
+field 0223D9C0 r3+0x984 u8 0,1
+field 0223D9C0 10467188 u8 0,1
+field 0223D9C0 101FDA50 u32 0,1
+field 0223D9C0 101FDAC0 u32 0,1
+field 0223D67C r3+0x991 i8 -1 4
+field 0223CCC4 r3+0x2E4 u32 0,8
+field 0223CB30 r3+0x996 i8 0,1

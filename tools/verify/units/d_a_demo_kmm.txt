@@ -1,0 +1,22 @@
+# Verification unit: d_a_demo_kmm (cutscene seagull)
+src wwhd_src/d/actor/d_a_demo_kmm.cpp
+
+callee 026067F4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E4F64 0,0x10000000,0x10000100  # McaMorf create
+ret 02527028 0 1              # dDemo_setDemoData
+field * r3+0x2E4 u32 0,8      # actor_condition INIT
+field * 1047B7AE i16 0,0,1    # HD draw switch
+field * 101D600C u32 0,999,1000,1001,0xFFFFFFFF
+field * 101FDA54 u32 0,1
+field * 101FDA5C u32 0,1
+field * 101FDA64 u32 0,1
+field * 101FDA6C u32 0,1
+field * 1047E6B8 u8 0x44,0x44,0
+field * 1047E6B9 u8 0x65,0x65,0x66
+field * 1047E6BA u8 0x6D
+field * 1047E6BB u8 0x6F
+field * 1047E6BC u8 0x30
+field * 1047E6BD u8 0x38,0x38,0x37
+field * 1047E6BE u8 0,0,1

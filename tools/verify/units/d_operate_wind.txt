@@ -1,0 +1,40 @@
+src wwhd_src/d/d_operate_wind.cpp
+ret 0273AD10 0,268435456
+ret 02005840 0,1
+arg 0264D4BC r3 0,268435456
+
+callee 02704D2C r3=out12
+callee 0287F05C r4=8
+ret 02617AE4 0,1
+ret 0287F05C 0,1
+ret 0264D8C8 0,1
+ret 0264D9B0 0,1
+ret 0264DA70 0,1
+field 0264DB10 r3+0x8C u32 0,1,2
+
+arg 0264E0E8 r3 0,268435456
+ret 0273B050 0,268435456
+callee 0271F738 r4=4 r5=4
+
+# Optional UI state manager with coherent boolean completion flags.
+field * 101F8344 u32 268435456 268435456
+stable 101F8344 4
+field * 100001C8 u32 268443648 268443648
+stable 100001C8 4
+field * 10002052 u8 0,1
+field * 10002053 u8 0,1
+field * 10002054 u8 0,1
+field 0264D554 r3+0x96 u16 0,1,2
+field 0264DD5C r3+0x9B u8 0,1
+field 0264DAD4 r3+0x9D u8 0,1
+field 0264DAD4 r3+0x9C u8 0,1
+field 0264DAD4 r3+0x9F u8 0,1
+field 0264D8C8 r3+0x9B u8 0,1
+
+# Populated gamepad singleton and coherent control-bit fixture.
+field * 101F5088 u32 268447744 268447744
+stable 101F5088 4
+field * 10003024 u32 0,1
+field * 10003124 u32 0,32768,4456448,8912896,15728640
+field * 10003018 u32 0,4456448,8912896,15728640
+field * 10003020 u32 0,4456448,8912896,15728640

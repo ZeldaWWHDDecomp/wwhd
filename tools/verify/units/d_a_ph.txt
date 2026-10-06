@@ -1,0 +1,125 @@
+# Verification unit: d_a_ph (Peahat / Seahat)
+src wwhd_src/d/actor/d_a_ph.cpp
+
+ret 02520460 0 5                    # dComIfG_resLoad -> cPhs_State
+ret 025BA0C0 0 1                    # isSwitch
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 02008860 0 1                    # cBgS::LineCross
+ret 020402C8 0 1                    # enemy_ice
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+callee 024F1AFC r3=0x6C             # dBgS_LinChk::Set: the stack object
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008FEC r3=255
+callee 026066C4 r4=8                # getRes: SafeString key
+# constructors: also run the this == NULL (allocating) path
+arg 023CF44C r3 0 0
+arg 023CF3C0 r3 0 0
+ret 0273AD10 0 0x60000000           # operator new: NULL or an address
+field * r3+0x45A u8 0 1             # mType
+arg 023CA258 r4 0 5
+# hajiki_check: hit object types (single bits), hit flags
+ret 025162A4 0 1
+ret 02516300 0x57000000 0x57000000
+field 023CAFB0 57000010 u32 0,2,0x800,0x400,0x40,0x80,0x1000000,0x200000,0x200002,0x8
+field 023CAFB0 r3+0x9D8 u32 0 1
+field 023CAFB0 r3+0x8A8 u32 0 1
+# sea_water_check
+arg 023CB4C0 r4 0 3
+ret 0246B6A4 0 1                    # daSea_ChkArea
+field 023CB4C0 r3+0x528 u32 0,0x1000
+field 023CB4C0 r3+0x45D u8 0 1      # m0341 in water
+field 023CB4C0 r3+0x45B u8 1 2
+field 023CB4C0 r3+0x462 i16 2 4
+field 023CB4C0 r3+0x374 f32 0 0
+# useHeapInit: joint count small
+field 023CEF6C 58000008 u16 0 3
+ret 027F3F94 0x58000000 0x58000000
+ret 025E8A48 0 1
+# daPH_Create
+field 023CF600 r3+0xB3 u8 0,1,255
+field 023CF600 1047BB1A i16 0 1          # REG8_S(9)
+field 023CF600 r3+0x2E4 u32 0,8
+field 023CF600 r3+0xB1 u8 0,255
+field 023CF600 r3+0xB2 u8 0,255
+field 023CF600 r3+0x528 u32 0,0x20
+# body_atari_check
+callee 025192A8 r4=0x1C             # cc_at_check: CcAtInfo
+field 023CA5AC r3+0x488 i16 0 0
+ret 02516300 0x57000000 0x57000000
+field 023CA5AC 57000010 u32 0,1,2,0x20,0x40,0x200,0x800,0x1000,0x4000,0x8000,0x10000,0x20000,0x40000,0x80000,0x100000,0x200000,0x400000,0x8000000,0x10000000,8
+ret 025200D4 0x54000000 0x54000000
+field 023CA5AC 54005B2C u32 0x55000000 0x55000000
+field 023CA5AC 550003AC u8 0 0x22
+field 023CA5AC r3+0x418 f32 0 1
+field 023CA5AC r3+0x498 f32 0 1
+field 023CA5AC r3+0x45B u8 1 2
+field 023CA5AC r3+0x490 i32 0x1B 0x1C
+field 023CA5AC r3+0x3A9 i8 -1 1
+field 023CA5AC r3+0x460 i8 -1 1
+field 023CA5AC r3+0x3A1 i8 -1 1
+field 023CA5AC r3+0x45C u8 2 8
+# ph_wind_move
+field 023CFDF0 r3+0x462 i16 0x31,0x32,0x33,0x34,0x35,0x36,0x37
+ret 023CB4C0 0 2                    # sea_water_check
+ret 023CA5AC 0 1                    # body_atari_check
+field 023CFDF0 r3+0x45C u8 1 3
+field 023CFDF0 r3+0x528 u32 0,0x20
+field 023CFDF0 r3+0x418 f32 0 1
+field 023CFDF0 r3+0x482 i16 0 1
+field 023CFDF0 r3+0x490 i32 0x1D 0x1E
+field 023CFDF0 r3+0x370 f32 0 0.4
+fret 02019788 0 1                   # cM_rnd
+field 023CFDF0 r3+0x3D8 u32 0x50000000 0x50000000
+field 023CFDF0 500000A7 u8 0 1
+field 023CFDF0 50000098 f32 0 1
+field 023CFDF0 r3+0x340 f32 0 1
+# ph_water_move
+field 023D051C r3+0x462 i16 59,60,61,69,70,71,72
+field 023D051C r3+0x480 i16 0 1
+field 023D051C r3+0x484 i16 0 1
+field 023D051C r3+0x482 i16 0 1
+field 023D051C r3+0x418 f32 0 1
+ret 023CB368 0 1                    # ph_hani_check
+# daPH_Execute
+field 023CC070 r3+0x45B u8 0,1,2,3,4,5,6,7
+field 023CC070 r3+0x45A u8 0 1
+field 023CC070 r3+0x462 i16 0,1,2,3,4,5,6,7,8,9,10,11,20,21,22,23,24,25,26,27,30,31,32,33,34,35,36,37,40,41,42,43,44,45,46,47,48,49,50
+field 023CC070 r3+0x480 i16 0 1
+field 023CC070 r3+0x482 i16 0 1
+field 023CC070 r3+0x484 i16 0 1
+field 023CC070 r3+0x3A1 i8 -1 1
+field 023CC070 r3+0x45C u8 0,2,3,6,7
+field 023CC070 r3+0x45D u8 0 1
+field 023CC070 r3+0x45E u8 0 1
+field 023CC070 r3+0x498 f32 0,0,1
+field 023CC070 r3+0x418 f32 0,1,1
+field 023CC070 r3+0x528 u32 0,0x20
+field 023CC070 r3+0x3D8 u32 0x50000000 0x50000000
+field 023CC070 500000A7 u8 0 1
+field 023CC070 50000098 f32 0,0,1
+field 023CC070 5000009C f32 0 10
+field 023CC070 r3+0x3D4 u32 0x51000000 0x51000000
+field 023CC070 510000A7 u8 0 1
+field 023CC070 51000098 f32 0,0,1
+field 023CC070 54005CD8 u32 0,0x10000
+field 023CC070 1047BB0E i16 0,0,0,1
+field 023CC070 1047BA90 f32 0,0,0,1
+field 023CC070 1047BA94 f32 0,0,0,1
+field 023CC070 r3+0x490 i32 0x1B,0x1C,0x1D,0x1E
+field 023CC070 r3+0x48E i16 -1 2
+field 023CC070 r3+0x46C i16 0 1
+field 023CC070 r3+0x47A i16 0 3
+field 023CC070 r3+0x370 f32 0,0.05,0.5,4,10,30
+field 023CC070 r3+0x334 f32 0,0.05,1
+field 023CC070 r3+0x340 f32 -30,0,10
+ret 023CB2E0 0 1                    # ph_wall_hit_check
+ret 023CAFB0 0 1                    # hajiki_check
+ret 027F2BF8 0 1                    # checkPass
+fret 025D68EC 0 400                 # searchActorDistance
+fret 028F4384 0 400                 # sqrtf
+# mutation-test gaps: stack vectors passed to MtxPosition / PSVECAdd are compared
+callee 0200FCD8 r3=12 r4=255
+callee 028E8D88 r3=12
+field 023C9E58 r3+0x456 i16 -4097,-4096,-4095,4095,4096,4097,0,0x6000
+ret 0200FAAC 0xFFF,0x1000,0x1001,0x1FFF,0x2000,0x2001,0,0x7000

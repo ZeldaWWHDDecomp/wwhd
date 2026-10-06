@@ -1,0 +1,16 @@
+# Verification unit: d_a_kaji
+src wwhd_src/d/actor/d_a_kaji.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025D5218 r4=4          # fopAcIt_Judge: the searched id on the stack
+callee 028E8F64 r4=12 r5=out12 # PSMTXMultVec(m, &in, &out)
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 026066C4 0,0x56000000     # getRes: null or a resource
+ret 025E4F64 0,0x57000000     # McaMorf ctor: null or a morf
+field 0218506C r3+0x2E8 u32 0xFFFFFFFF,1,0x1234   # parentActorID (-1 edge)
+field 021853D8 10464884 u32 0x58000000,0          # l_p_ship
+field 021853D8 580003E4 u8 0 1                    # ship m2CC
+field 02185244 10464884 u32 0x58000000
+field 02185244 580003E8 u32 0,0x59000000          # ship model: null or a model
+stackfill                     # exposes a dropped zero store to the offset vector

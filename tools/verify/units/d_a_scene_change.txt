@@ -1,0 +1,2 @@
+# Verification unit: d_a_scene_change (scene change marker)
+src wwhd_src/d/actor/d_a_scene_change.cpp

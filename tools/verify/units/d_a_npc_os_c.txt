@@ -1,0 +1,28 @@
+# Verification unit: d_a_npc_os part C (fork osC): 022AE504..022B01A4
+src wwhd_src/d/actor/d_a_npc_os_c.cpp
+ret 025200D4 0x54000000 0x54000000      # play object at a fixed address
+field * 54005B34 u32 0x55000000 0x55000000   # link player
+field * 54005B2C u32 0x55000000 0x55000000   # player 0
+field * r3+0x919 i8 0,1,2,-1             # field_0x7A9 (action phase)
+field * r3+0x2DD i8 0 2                  # argument
+arg 022AE504 r3 0x5A000000,0x5A000000,0x5B000000
+field 022AE504 54005B38 u32 0x5A000000,0
+field 022AE504 r3+0x3BC u32 0,0x40,0x42,2
+arg 022AE980 r4 0,0,1
+arg 022AEF70 r4 0,0,1
+ret 0200FAAC 0,0x7FF,0x800,0x801,0x3FFF,0x4000,0x4001,0x8000   # cLib_distanceAngleS
+callee 0201B080 r4=out12                 # cXyz::outprod(this, result, b)
+ret 022A9E0C 0 1                         # wakeupCheck
+ret 022A9EAC 0 1                         # finishCheck
+arg 022AE834 r3 0x5A000000,0x5A000000,0x5B000000
+field 022AE834 54005B38 u32 0x5A000000,0
+field 022AF8D4 10467EE4 f32 0,0.001,10
+field 022AF8D4 10467EE8 f32 0,0.001,10
+# stack line/ground checks: compare the objects (ctor storage not compared)
+callee 02008E0C r3=255                   # cBgS_GndChk::cBgS_GndChk
+callee 02008974 r4=0x54                  # cBgS::GroundCross
+callee 02008DAC r3=0x54                  # cBgS_GndChk::~cBgS_GndChk
+callee 02008FEC r3=255                   # cBgS_LinChk::ct
+callee 024F1AFC r3=0x6C r4=12 r5=12      # dBgS_LinChk::Set
+callee 02008B4C r3=0x6C                  # cBgS_LinChk::~cBgS_LinChk
+callee 022AF3AC r4=12 r5=12              # routeWallCheck(start, end)

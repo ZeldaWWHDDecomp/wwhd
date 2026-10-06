@@ -1,0 +1,7 @@
+### f_pc_load — retained HD initializer
+
+The GameCube unit implements fpcLd_Use, fpcLd_IsLoaded, fpcLd_Free, and fpcLd_Load through cDyl_IsLinked, cDyl_Unlink, and cDyl_LinkASync. Those dynamic actor-module loader calls are absent from the corresponding HD creation paths: fpcFCtRq_Request025DE884 creates the process directly and fpcSCtRq_phase_CreateProcess025E12E0 calls fpcBs_Create without a prior dynamic-load phase or an unlink on its failure path.
+
+The HD unit therefore contains no reconstructed loader/cache API. Its retained entry is the SDK/math static initializer025DF870..025DF900. Attribution is inferred from the native unit sequence: line creation025DF468 and initializer025DF4B4; line iteration025DF548/025DF5C0 and initializer025DF600; line tags025DF694..025DF7A8 and initializer025DF7DC; the lone initializer025DF870; then process manager methods beginning025DF904. This initializer attribution is a TU-adjacency qualification, not a symbol-map assertion.
+
+The candidate reproduces all six registration/math stores and five direct SDK calls in their native order and passes the exact guest argument addresses. There are no indirect calls, local objects passed to callees, source-side fixture restrictions, or shared changes. Verification covers stock generated reference contracts with the SDK callees mocked; no dynamic loading implementation, native cache correctness, or gameplay claim is implied by the initializer result.

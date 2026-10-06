@@ -1,0 +1,161 @@
+src wwhd_src/d/d_map.cpp
+# GC stage/resource arrays have bounded counts in generated cases.
+field 0258DB6C r3 s32 0,1,2,3
+# Genuine stage/room virtual getters; all indirect argument checking stays enabled.
+ret! 025200D4 0x58000000 0x58000000
+field * 58005150 u32 0x10055D50
+ret! 025C11DC 0,0x58006000
+field * 58006000 u32 0x10055B90
+ret! 025C4DCC 0,0x5A000000
+ret! 025C5040 0,0x5A000000
+field * 5A000000 s32 0,1,2,3
+field * 5A000004 u32 0x5A001000
+ret! 025C4F88 0x5B000000 0x5B000000
+field * 5B00000C u32 0,0x10000,0x30000,0x50000,0x60000,0x70000
+ret! 025C5090 0,0x5C000000
+field * 5C000000 s32 -1,0,1,2,3
+field * 5C000004 u32 0x5C001000
+field 0258DA64 r3 u32 0x10055D50
+# Coherent finite room-list fixture, with empty and active entries.
+field 0258EC18 r3+4 u32 0,0x5D000000
+field 0258EC18 5D000000 u8 0,1
+field 0258EC18 5D000010 s32 0,1,2
+field 0258EC18 5D000124 u32 0,0x5D000200
+field 0258EC18 5D000200 u8 0,1
+field 0258EC18 5D000210 s32 0,1,2
+field 0258EC18 5D000324 u32 0
+arg 0258EC18 r4 0,1,2,3
+callee 0258EC18 r5=out4
+arg 0258D8C8 r3 -1,0,122,123,124,131,132,133
+arg! 0258E5A8 r4 0,122,123,124,128,131,132,133,255
+
+# The next-node leaf follows the finite room list instead of inventing cyclic mocked pointers.
+real 0258ED18
+field * 10477794 u32 0,0x5D000000
+field * 5D000010 s32 0,1,2
+field * 5D000124 u32 0,0x5D000200
+field * 5D000210 s32 0,1,2
+field * 5D000324 u32 0
+# Resource-name objects each contain their string pointer and destructor vtable (8 bytes).
+pointee 026124B0 r4=8 r5=8
+pointee 0258E1E8 r7=4 r8=4 r9=4 r10=4
+callee 02590208 r4=out1 r5=out1
+callee 0258FD94 r3=out1 r4=out1 r5=out2 r6=out2
+
+# Parsed resource headers, entries and getter vtables are immutable in these generated fixtures.
+# Their bounded counts must not turn into arbitrary loop bounds after opaque getter calls.
+stable 58005150 4
+stable 58006000 4
+stable 5A000000 8
+stable 5A001000 64
+stable 5B000000 32
+stable 5C000000 8
+stable 5C001000 64
+stable 10477794 4
+stable 5D000124 4
+stable 5D000324 4
+# The opaque image query can set each output and the room's display flags coherently.
+arg! 0258E7A4 r3 0x5E000000
+callee 0258E1E8 r7=out4 r8=out4 r9=out4 r10=out4
+mockfield 0258E1E8 r7 u32 0,0x5F000000
+mockfield 0258E1E8 r8 u32 0,0x5F000100
+mockfield 0258E1E8 r9 u32 0,0x5F000200
+mockfield 0258E1E8 r10 u32 0,0x5F000300
+mockglobal 0258E1E8 5E000001 u8 0,1,2,3
+
+# The three-instruction floor predicate bounds floor searches to the genuine ten-floor domain.
+real 0258D8C8
+
+# Archive records have relative resource offsets and bounded inert platform record counts.
+ret! 027E2DC0 0x61000000 0x61000000
+field * 6100004C s32 0,16,-16
+stable 6100004C 4
+ret! 027DFA24 0x60000000 0x60000000
+field * 60000000 s32 0,16,-16
+field * 60000010 s32 -1,0,1,2,3
+field * 5FFFFFF0 s32 -1,0,1,2,3
+stable 60000000 32
+stable 5FFFFFF0 4
+arg 0258E1E8 r5 122,123,124,128,131,132,133
+arg 0258E1E8 r6 0,1
+arg 0258F978 r3 0,1,3,20,21,22
+field 0258F978 1047A95C u8 0,1,63,64
+
+# Floor selection may succeed or fail; valid cases expose all image-installation branches.
+arg! 0258E7A4 r4 0,122,123,124,128,132,133,255
+ret! 0258E5A8 123,124,128,132,255
+# Empty, matching and missing room searches through a coherent finite list.
+arg 0258F08C r3 -1,0,1,2,3
+stable 5D000010 4
+stable 5D000210 4
+field 0258F1D8 1047E6C8 s8 -1,0,1,2
+arg 0258F1D8 r3 -1,0,1,2,3
+# Current-room bounds are valid storage; its presence and map availability vary.
+field 0258F234 101E9FFC u32 0,0x5D000000
+field 0258F234 5D000001 u8 0,1,2,3
+field 0258F234 5D000128 u32 0,0x5F000300
+stable 5D000128 4
+field 0258F5D8 101E9FFC u32 0x5D000000
+field 0258F5D8 5D000001 u8 0,2,3
+field 0258F5D8 5D000128 u32 0,0x5F000300
+
+# checkFloor traverses the same finite room-list contract as exists/selectRoom.
+arg! 0258ED34 r3 0x62100000
+field 0258ED34 62100004 u32 0,0x5D000000
+stable 62100004 4
+field * 5D000000 u8 0,1
+field * 5D000200 u8 0,1
+
+# This getter is a pure load of the immutable stage object's map-table pointer.
+# Repeated calls must agree; independent null/non-null mocks invent a second-call null dereference.
+real 025C5090
+field * 580051AC u32 0,0x5C000000
+stable 580051AC 4
+
+# Actor adapters receive reviewed point-kind categories and a possibly matching attention target.
+field 0259029C 101E9FFC u32 0,0x5D000000
+field 0259029C r3+0x2E0 u32 0,4,11,12,13,14,15,17,18,19,20,31
+field 0259029C 58005CD8 u32 0,0x10000
+mockfield 02590208 r4 u8 0,1,2,4,17,19,20
+mockfield 02590208 r5 u8 0,1,9
+ret! 024EC8D0 0,0x40000000
+ret! 024EDFCC 0,1
+# Arrive-grid logic runs in and outside event mode on an explicit sea-stage name.
+field 02590004 58005292 u8 0,1
+field 02590004 58005134 u32 0x73656100
+stable 58005134 4
+mockfield 0258FD94 r3 s8 -4,-3,0,3,4
+mockfield 0258FD94 r4 s8 -4,-3,0,3,4
+field 02590488 1047E6C8 s8 -1,0,1
+field 02590488 101E9FFC u32 0,0x5D000000
+arg 02590488 r3 -1,0,1,2,3,20,21,22
+
+# Original room map-info virtual getter (+0x7C); resource images include dimensional boundaries.
+ret! 025C40E0 0,0x5F000300
+ret! 0252447C 0,0x5F000000,0x5F000100,0x5F000200
+field * 5F000002 u16 0,8,127,128,136
+field * 5F000004 u16 0,8,480,481
+field * 5F000102 u16 0,8,127,128,136
+field * 5F000104 u16 0,8,480,481
+field * 5F000202 u16 0,8,127,128,136
+field * 5F000204 u16 0,8,480,481
+stable 5F000000 8
+stable 5F000100 8
+stable 5F000200 8
+field 0258FAD0 101E9FFC u32 0,0x5D000000
+field 0258FAD0 5D000001 u8 0,1,2,3
+field 0258FAD0 5D00000C u8 123,128,132
+field 0258FAD0 5D000128 u32 0,0x5F000300
+arg 0258FAD0 r3 -1,0,1,2,63,64
+field 0258FAD0 1047A960 u8 0,1
+field 0258FAD0 1047A96C u8 123,128,132
+
+# Exercise next(list,null) and point insertion for a matching/missing current room.
+arg 0258ED18 r4 0,0x5D000000,0x5D000200
+field 0258F978 101E9FFC u32 0,0x5D000000
+arg 0258F978 r5 -1,0,1,2,3
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02590004 0x58005134 8 @stages,"sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

@@ -1,0 +1,44 @@
+src wwhd_src/d/d_menu_save_storage.cpp
+
+# Nonzero manager/menu singletons and existing disposer ownership paths.
+field * 101F84DC u32 0,0x58010000
+field * 101F8344 u32 0,0x58040000
+field * 58040218 u32 0,0x58041000
+field * 1018F2BC u32 0,0x58042000
+field 02722980 580101C0 u8 0,1,2
+arg 02725228 r3 0,0x58050000
+field 02725228 101F8530 u32 0,0x58050000
+field 02725228 101F852C u32 0,0x58051000
+# Real FileDevice open/read/write effects; stack file storage is60bytes, count4bytes.
+mockfield 02741CFC r4+0x10 u32 0,1
+mockfield 02741CFC r4+0x14 u32 0,0x58060000
+mockfield 027414CC r4+0 u32 0,1,4,8,12,16,18,20,0x174,0x6A4,0x1FBC,0x50000
+mockfield 02741558 r4+0 u32 0,1,4,8,12,16,18,20,0x174,0x6A4,0x1FBC,0x50000
+ret 027414CC 0,1,1,1
+ret 02741558 0,1,1,1
+# Empty stage-header checksum results, plus ordinary failures, exercise the12-header continuation.
+ret 0272581C 0 0
+ret 02725B44 0 0
+# Rare late progress states need mostly-unset event flags.
+ret 025B8B94 0,0,0,0,0,0,0,1
+ret 025B7E00 0,7,8
+ret 025B7D90 0,0,0,0,0,0,0,1
+ret 02520C0C 0,0,0,0,0,0,0,1
+ret 025B5D40 0,0,0,0,0,0,0,1
+ret 025B7A2C 0,0,0,0,0,0,0,1
+# Scene name remains a valid terminated boss name across the SaveMgr operation.
+ret 025200D4 0x58020000 0x58020000
+field 02721D48 58025134 u32 0x58626F73
+field 02721D48 58025138 u32 0x73300000,0x73310000,0x73320000,0x73330000,0x73000000
+stable 58025134 8
+
+# Event-bit index boundaries and already-failed write-open state.
+arg 02722BD8 r4 0,1,7,8,15,16,31,63,127,133,134
+ret 025B8BB0 0,1,2,4,8,16,32,64,128,255
+arg 02722894 r3 0x58070000
+field 02722894 58070024 u32 0,0xFFFFFFFD
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02721D48 0x58025134 8 @stages,"0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3"

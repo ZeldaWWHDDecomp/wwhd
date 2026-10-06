@@ -1,0 +1,10 @@
+# Verification unit: d_a_obj_Vteng (Puppet Ganon curtains, intro cutscene)
+src wwhd_src/d/actor/d_a_obj_Vteng.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 02527028 0,1,1,2          # dDemo_setDemoData
+ret 026066C4 0,0x50000000,0x50000000,0x50000000
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7,0xFFFFFFFF

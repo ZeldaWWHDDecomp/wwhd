@@ -1,0 +1,19 @@
+# Verification unit: d_a_kytag05 (wind cycle tag)
+src wwhd_src/d/actor/d_a_kytag05.cpp
+
+ret 025200D4 0x54000000 0x54000000        # play object at a fixed address
+ret 02555D0C 0x56000000 0x56000000        # env light at a fixed address
+ret 025445B8 0 1                          # startCheckOld
+ret 025B7D90 0 1                          # isSymbol
+field 021B0710 56000A2D u8 0,1,2,255      # mEvtWindSet
+field 021B0710 54005292 u8 0 1            # event run check
+field 021B0710 101D6008 u32 0x180 0x220   # demo frame
+field 021B0710 r3+0x3AC u8 0 9            # mIndex
+field 021B0710 r3+0x3B0 i32 -1 151        # mTimer
+field 021B0710 54005AF8 u32 0x57000000 0x57000000   # camera
+field 021B0710 54005B2C u32 0x58000000 0x58000000   # player
+field 021B0710 570000E4 f32 -5000,-4085.5,-4085,-3108.5,-3108,-1412.5,-1412,0,1445,1445.5,1970,1970.5,2100,2100.5,3000    # camera eye z
+field 021B0710 570000DC f32 0,520,520.5,1000       # camera eye x
+field 021B0710 5800031C f32 -5000,-4085.5,-4085,-3108.5,-3108,-1412.5,-1412,0,1445,1445.5,1970,1970.5,2100,2100.5,3000    # player z
+field 021B0710 58000314 f32 0,520,520.5,1000       # player x
+fret 02578348 0 3e7                       # wind pow

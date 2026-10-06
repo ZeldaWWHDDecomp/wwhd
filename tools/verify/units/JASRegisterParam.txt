@@ -1,0 +1,4 @@
+src wwhd_src/JSystem/JASRegisterParam.cpp
+# Inherit includes self and partial-overlap cases to preserve store/read order.
+arg! 02845840 r3 0x54000000
+arg! 02845840 r4 0x54000000,0x54000002,0x54000004,0x53FFFFFE,0x53FFFFFC,0x55000000

@@ -1,0 +1,19 @@
+src wwhd_src/f_pc/f_pc_executor.cpp
+# SearchByID's local key is exactly one u32; the ID judge reads four bytes.
+callee 025DE508 r4=4
+callee 025DEE58 r4=4
+ret 025DE50C 0,0x57000000
+ret 025DE508 0,0x57000000
+ret 025E0B20 0,1,2
+ret 025DF6C8 0,1,2
+ret 0201A71C 0,1,2
+ret 025DD258 0,1,2
+ret 025DF084 0,1,2
+ret 025DEF68 0,1,2
+field 025DE58C r3+0xC u8 0,1,2,3
+field 025DE5F4 r3+0x2C u32 0x56000000
+field 025DE5F4 5600000C u32 0,1
+field 025DE5F4 56000018 u32 0x57000000
+
+# Retain random IDs while drawing reserved-ID boundaries often.
+arg 025DE50C r3 0,1,0xFFFFFFFD,0xFFFFFFFE,0xFFFFFFFF

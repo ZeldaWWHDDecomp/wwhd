@@ -1,0 +1,22 @@
+src wwhd_src/d/hd_font_mgr.cpp
+# loadFonts: the font object (0286ED48 result) and the archive (026123FC result) are pinned objects
+# whose vtables are pinned tables of distinct mock targets 02FF0000+slot
+ret! 0286ED48 0x5A000000,0x5A000000,0x5A000000,0
+# a null font reads its vtable from address 4: pinned to the same table
+field 025F33A4 00000004 u32 0x5A100000
+stable 00000004 4
+ret 026123FC 0x5B000000,0x5B000000,0
+field 025F33A4 5A000004 u32 0x5A100000
+field 025F33A4 5A100074 u32 0x02FF0074
+field 025F33A4 5A10001C u32 0x02FF001C
+field 025F33A4 5A100024 u32 0x02FF0024
+field 025F33A4 5A1000EC u32 0x02FF00EC
+field 025F33A4 5B000010 u32 0x5B100000
+field 025F33A4 5B10003C u32 0x02FF003C
+stable 5A000004 4
+stable 5A100000 0x100
+stable 5B000010 4
+stable 5B100000 0x40
+# dtor: the object is (sometimes) the registered disposer holder
+arg 025F3758 r3 0x5C000000
+field 025F3758 101F4A54 u32 0x5C000000,0

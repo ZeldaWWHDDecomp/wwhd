@@ -1,0 +1,24 @@
+# Verification unit: d_a_sk2 (swaying lily-pad lift)
+src wwhd_src/d/actor/d_a_sk2.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 02606900 r4=8 r5=8     # getRes by name: two SafeString keys
+callee 0200FCD8 r4=out12      # MtxPosition
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025BA0C0 0 1              # isSwitch
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 024F49E8 0 1              # dBgWDeform::Set
+ret 025EDD64 0 1              # cvtx init
+ret 027F2BF8 0 1              # checkPass
+arg 02489098 r4 0,1
+field 02489290 r3+0x3D6 s16 0,1,2,3,4,-1
+field 02489290 r3+0x3D8 s16 0,1,2
+field 02489290 r3+0x3D0 u8 0,1
+field 02489A00 r3+0xB0 u8 0,1,0xFF
+field 02489A00 r3+0xB2 u8 0,1,35,36,0xFF
+field 02489A00 r3+0xB3 u8 0,1,0xFF
+stackfill                     # the zero offset written to the MtxPosition input is observable
+callee 0200FCD8 r3=12 r4=out12
+ret 027F7878 0x63000000 0x63000000   # J3DNode -> J3DJoint: a fixed joint
+field 02489098 63000004 u16 2,3,4,5  # joint number around the last driven joint (3)

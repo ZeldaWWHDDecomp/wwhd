@@ -1,0 +1,17 @@
+# Four retained HD main entries1658..181B; periodic checker1654 belongs machine.
+src wwhd_src/m_Do/m_Do_main.cpp
+stackfill periodic
+# Actual getter returns staticplay1046F0B0; pass to02520020.
+ret! 025200D4 0x1046F0B0 0x1046F0B0
+ret 025E2FBC 0,0x54000000
+ret 02756170 1,0x53000000,0x53001000
+field * 101F8B4C u32 0x56000000
+field * 101F4974 u32 0,0x12345678
+field * 101F48C0 u8 0,1,255
+field * 1048D07C u8 0,1,255
+field * 1048D090 u32 0,0x12345678
+field * 1048D094 u32 0,0x12345678
+field * 1048D098 u32 0,0x12345678
+field * 1048D09C u32 0,0x12345678,0xFFFFFFFF
+field 025F172C 1048D0A8 u32 0,1,6,254,0xFFFFFFFE,0xFFFFFFFF
+field 025F172C 1048D0AC u8 0,1,2,7,255

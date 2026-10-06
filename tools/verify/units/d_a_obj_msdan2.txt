@@ -1,0 +1,9 @@
+# Verification unit: d_a_obj_msdan2 (step row spawner + "Msdan2" event)
+src wwhd_src/d/actor/d_a_obj_msdan2.cpp
+
+ret 025BA0C0 0 1                    # dSv_info_c::isSwitch
+ret 025440C8 0 1                    # dEvent_manager_c::endCheck
+field 0237B53C r3+0x3B8 u32 0 4     # mMode
+field 0237B53C r3+0xF8 u16 0,1,2,3  # eventInfo.mCommand
+arg 0237B744 r4 0,1,8,31,32,33,63
+arg 0237B744 r5 0,1,8,24,31,32,33,63

@@ -1,0 +1,49 @@
+# hd_sys_0203E9EC: HD RootTask TU (0203E9EC..0203F8CB); HD-only
+src wwhd_src/hd/hd_sys_0203E9EC.cpp
+# stack objects (SafeString names, task construct arguments, heap configs)
+callee 02748B98 r3=out128 r4=8
+callee 02748CFC r3=out128 r4=8
+mockfield 02748B98 r3+0x58 u32 0,1,2,3
+mockfield 02748CFC r3+0x58 u32 0,1,2,3
+callee 02749ECC r4=128
+callee 02753004 r4=8
+callee 02754B38 r4=8
+callee 0273EFF8 r4=8 r6=8
+callee 02741770 r5=8
+callee 02750940 r5=8
+callee 02612E64 r4=8 r5=8
+callee 026124B0 r4=8 r5=8
+callee 0275D6CC r5=8
+callee 0275DB94 r4=44
+callee 027B5534 r3=255
+callee 027B56D0 r3=320
+callee 0278D258 r3=255
+callee 0278D294 r3=4
+callee 02005C38 r5=8 r6=8
+# guards unset / set
+field * 0x104612B8 u32 0,1
+field * 0x101FD598 u32 0,1
+field * 0x101FD59C u32 0,1
+field * 0x101FD71C u32 0,1
+field * 0x101FD6F4 u32 0,1
+# mutation follow-ups: random scratch stack (stores of zero into stack objects); non-zero manager globals
+stackfill periodic
+field * 0x101F8B08 u32 0x30000000,0x30100000
+field * 0x101F8B28 u32 0x31000000,0x31100000
+field * 0x101F5088 u32 0x32000000,0x32100000
+field * 0x101F4F7C u32 0x33000000,0x33100000
+field * 0x101F4F28 u32 0x34000000,0x34100000
+field * 0x101F7274 u32 0x35000000,0x35100000
+field * 0x101F852C u32 0x36000000,0x36100000
+field * 0x1018F3F4 u32 0x37000000,0x37100000
+field * 0x1018C404 u32 0x38000000,0x38100000
+field * 0x101F8B68 u32 0x39000000,0x39100000
+field * 0x101F8BA8 u32 0x3A000000,0x3A100000
+field * 0x104612E0 u32 0x3B000000,0x3B100000
+
+# frame-exact (2026-10-06, pool flag follow-up): stack objects at the original's frame offsets (FrameLocal), callees at the
+# original's sp; RootTask_prepare's lower callees left different stale stack bytes that the wave-bank parser 02813150
+# copies into every TWaveHandle (TWaveInfo bytes +2/+3)
+footprint 0203EA88 0x198
+footprint 0203EE2C 0x220
+footprint 0203F670 0x1A8

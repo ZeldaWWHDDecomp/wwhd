@@ -1,0 +1,23 @@
+src wwhd_src/d/actor/d_a_obj_doguu_demo.cpp
+callee 026066C4 r4=8
+ret 025E38E0 0,0x56000000
+ret 024F23F4 0,0x57000000
+ret 0200A030 0,1
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 025200D4 0x54000000
+field * r3+0x2E4 u32 0,8
+field * r3+0x3EC u8 0,1
+field * r3+0xF4 u32 0,0x58000000
+field * r3+0x2DC u8 0,1,32,33
+ret 02526E70 0,0x58000000
+field * 58000004 u16 0,16
+field * 101D5FFC u32 0,0x58010000
+arg! 023377B4 r3 0,0x40000000
+arg! 02337798 r3 0,0x40000000
+observe 025E2DE0 104B4634 8
+stackfill
+# Distinguish byte-offset mutations in singleton loads.
+field * 101F4F28 u32 0x5A123400
+# Actor condition bit0 is independent of the constructed flag.
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF

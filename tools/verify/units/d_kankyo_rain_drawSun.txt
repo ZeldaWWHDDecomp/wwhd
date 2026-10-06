@@ -1,0 +1,108 @@
+# Rain weather/renderer TU; implementation in progress, not a full-unit gate yet.
+src wwhd_src/d/d_kankyo_rain_drawSun.cpp
+stackfill periodic
+callee 02563E48 r3=24 r4=out12
+callee 02563F0C r3=12 r4=12 r5=out12
+callee 02563DD8 r3=out40
+callee 0256401C r4=out12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 025F1018 r3=12 r4=out12 r5=40
+callee 028E8DE8 r3=12 r4=12
+callee 026124B0 r4=8 r5=8
+callee 025F01D8 r3=out4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0251694C r3=out20
+callee 025170D8 r4=12 r5=out4 r6=out20
+callee 025BD71C r3=out52
+callee 025BEF3C r3=52 r4=12
+callee 025BEB90 r3=52
+callee 025BEB4C r3=52
+# Complete84-byte derived ground query and80-byte HD roof check objects.
+callee 02008E0C r3=out64
+callee 024EE7AC r3=out80
+callee 024EF6E8 r4=80
+callee 02008974 r4=84
+callee 02008DAC r3=64
+callee 02008B4C r3=64
+
+callee 028E91EC r3=48 r4=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0257015C r3=out16 r4=4
+callee 027FC500 r4=16
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Ordinary boundary steering retains one-in-eight unsteered argument samples.
+arg 0256401C f2 0,-20,1
+arg 0256F084 r4 0,9,1,-1
+# 0256401C block2 (025640EC) is unreachable: entry height!=0 selects that arm;
+# its only callee02563E48 writes f0..f13, so preserved f30height/f31zero cannot become equal.
+
+callee 025602F0 r3=out4 r4=out4
+callee 02582518 r5=4 r6=4
+
+callee 0257DB28 r3=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+
+callee 0201A478 r3=out6
+
+callee 0257E128 r3=out12 r4=12
+
+
+real 0257770C
+callee 0257770C r3=8
+callee 0256F084 r3=12
+callee 0257E8C0 r5=4 r6=4
+ret! 02555D0C 0x50000000 0x50000000
+ret! 025200D4 0x51000000 0x51000000
+ret! 02554288 0 6
+field 0256F1C4 50000A34 u32 0x52000000
+field 0256F1C4 50000A38 u32 0x53000000
+field 0256F1C4 51005AF8 u32 0x54000000
+field 0256F1C4 51005FA4 u32 0,0x55000000
+field 0256F1C4 51005134 u32 0x4E616D65,0x4E616D66
+field 0256F1C4 51005138 u32 0
+field 0256F1C4 50000020 s16 0,1
+field 0256F1C4 101F84DC u32 0x56000000
+field 0256F1C4 56000044 f32 0,180,200
+field 0256F1C4 50001020 f32 100,105,150,285,300
+field 0256F1C4 520000CC f32 0,0.5,1
+field 0256F1C4 520000D0 f32 0,0.5,1
+stable 50000A34 4
+stable 50000A38 4
+stable 51005AF8 4
+stable 51005FA4 4
+stable 51005134 8
+stable 101F84DC 4
+field 0256F1C4 52000598 u32 0,1
+stable 52000598 4
+field 0256F1C4 520000F0 u32 0x57000000
+stable 520000F0 4
+field 0256F1C4 52000344 u32 0x57001000
+stable 52000344 4
+field 0256F1C4 52000A58 u32 0,1
+stable 52000A58 4
+field 0256F1C4 520005B0 u32 0x57010000
+stable 520005B0 4
+field 0256F1C4 52000804 u32 0x57011000
+stable 52000804 4
+field 0256F1C4 52000F18 u32 0,1
+stable 52000F18 4
+field 0256F1C4 52000A70 u32 0x57020000
+stable 52000A70 4
+field 0256F1C4 52000CC4 u32 0x57021000
+stable 52000CC4 4
+field 0256F1C4 520013D8 u32 0,1
+stable 520013D8 4
+field 0256F1C4 52000F30 u32 0x57030000
+stable 52000F30 4
+field 0256F1C4 52001184 u32 0x57031000
+stable 52001184 4
+# Nonresizing owned double buffers, aligned32, real608-byte expanded quad output.
+# Geometry helpers may change payload/flags; roots/selection are stable in this domain.
+# Actual survivor7 absent-view timer boundary5, mutable timer otherwise.
+field 0256F1C4 520000C4 u8 0,4,5,6

@@ -1,0 +1,12 @@
+src wwhd_src/d/hd_res_model.cpp
+# 027E2DC0 (ResFile cast) is the identity: the loaded file sits at a pinned address with up to 4 models
+# (also the null file: its model count at 0x50); the count is reread after calls, so it is kept stable
+arg! 02602BC8 r3 0x59000000
+arg! 02602ED8 r3 0x59000000
+ret! 026124F4 0x58000000,0x58000000,0x58000000,0
+field * 58000050 u16 0,1,2,3,4
+stable 58000050 2
+field * 00000050 u16 0,1,2
+stable 00000050 2
+# the model file pointer at +0x14 is reread in the shader loop; mocks must not move it
+stable 59000014 4

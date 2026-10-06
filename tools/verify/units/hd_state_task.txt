@@ -1,0 +1,11 @@
+src wwhd_src/d/hd_state_task.cpp
+# the 'updt' message; the registered disposer
+arg 025F9BC4 r5 0x75706474,0x75706475,0
+arg 025F9C28 r3 0x5C000000
+field 025F9C28 101F4BDC u32 0x5C000000,0
+# start(): the thread parameter block (0x30 bytes) and the message (0xC) are compared whole; the
+# shared-data size word is an output
+callee 028B2B64 r4=0x30
+callee 028B239C r4=0xC
+callee C0009C58 r6=out4
+stackfill periodic

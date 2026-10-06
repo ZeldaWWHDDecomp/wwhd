@@ -1,0 +1,68 @@
+# Verification unit: d_a_mo2 daMo2_Execute (fork; merged into d_a_mo2 later)
+src wwhd_src/d/actor/d_a_mo2_exec.cpp
+
+callee 026066C4 r4=8
+callee 025D5218 r4=4                # fopAcIt_Judge: the searched id on the stack
+callee 0200FCD8 r4=out12            # MtxPosition output
+callee 02008DAC r3=0x54             # dBgS_GndChk destructor
+callee 02008974 r4=0x54             # GroundCross
+callee 02008E0C r3=255              # cBgS_GndChk ct storage
+callee 02518DB0 r3=out0x1C          # at_power_check: fills the CcAtInfo
+callee 025192A8 r4=0x1C             # cc_at_check
+callee 0255F458 r3=12               # dKy_Sound_set: cXyz by value
+callee 02514F88 r4=12 r5=12         # dCamera_c::Set: cXyz by value
+callee 025CB374 r6=12               # StartShock: cXyz by value
+ret 025D4604 0 1
+ret 020402C8 0,0,0,1                # enemy_ice
+ret 02041F94 0,0,1,2,5,10,0x14,0x15,0x1E,3
+ret 020078BC 0 1
+ret 02007738 0 1
+ret 025B8B94 0 1
+ret 025B7A2C 0,0,0,1
+ret 025BA0C0 0 1
+ret 025162A4 0,0,1                  # ChkTgHit
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+field 021C9B1C 54005B2C u32 0x55000000 0x55000000   # player
+field 021C9B1C 550003AC u8 0,5                      # getCutType
+field 021C9B1C 550003CC f32 -1 1                    # grab wear
+field 021C9B1C r3+0x3DC u8 0,0,0,1                  # mDeathSwitch
+field 021C9B1C r3+0x2E4F u8 0,0,0,1                 # m2A4B
+field 021C9B1C r3+0x2E50 i16 0,0,1,0x1F,2           # m2A4C
+field 021C9B1C r3+0x2E4C i16 0,1,2                  # m2A48
+field 021C9B1C r3+0x2E4E u8 0,1                     # m2A4A
+field 021C9B1C 104654E2 u8 0,0,1                    # l_mo2HIO.m006
+field 021C9B1C r3+0x3DD u8 0,0,0,2                  # m02C1
+field 021C9B1C r3+0x858 i16 0,0,0,1                 # m05B4
+field 021C9B1C r3+0x3D8 u8 0,1,1,5                  # mMode
+field 021C9B1C 101BA692 u8 0 1                      # rouya_mode
+field 021C9B1C r3+0x2E21 i8 0,1,3,4,10,0x32,0x33,-1 # m2A1D
+field 021C9B1C r3+0x2E22 i16 0x95 0x97              # m2A1E
+field 021C9B1C r3+0x2E20 i8 0 1                     # m2A1C
+field 021C9B1C r3+0xF8 u16 0,2
+field 021C9B1C r3+0x898 i16 0,1,2,10,30             # m05F0
+field 021C9B1C 10465500 i16 1 3                     # l_mo2HIO.m024
+field 021C9B1C r3+0x89A u8 0,1,2,3,4,5              # m05F2
+field 021C9B1C r3+0x1002 u8 0 1                     # m712
+field 021C9B1C r3+0x8C2 i16 0,4,8,10,11,0x12,0x17,0x1E,0x1F,0x28   # mAction
+field 021C9B1C r3+0x84A i16 0 1                     # m05A4[1]
+field 021C9B1C r3+0x10B0 i8 0 1
+field 021C9B1C r3+0x10B1 i8 0,0,1,2
+field 021C9B1C r3+0x10B2 i8 0,2
+field 021C9B1C r3+0x10B3 i8 0 1
+field 021C9B1C r3+0x2D60 u32 -1,0x56000000
+field 021C9B1C r3+0x882 i16 0 2                     # m05DA
+field 021C9B1C r3+0xE34 u32 0,0x20
+field 021C9B1C r3+0xD70 i16 0 1                     # m480
+field 021C9B1C r3+0x2D4C i16 -1,0,1,2,199,200,201   # m2944
+field 021C9B1C r3+0x2D4E i16 0 3
+field 021C9B1C r3+0x2D52 i16 0 3
+field 021C9B1C r3+0x2D56 i16 0 1
+field 021C9B1C r3+0x45C i16 0 1                     # m02E0
+field 021C9B1C r3+0x459 u8 0 1                      # m02DD
+field 021C9B1C r3+0x856 i16 0 1                     # m05B2
+field 021C9B1C r3+0x3A1 i8 -1 1                     # health
+field 021C9B1C r3+0xD14 u32 0,0,1                   # m424
+field 021C9B1C r3+0x2D59 i8 0 1                     # m2951
+field 021C9B1C r3+0x2E0C i8 0 0
+fret 02008974 -1000000000 -999999999
+ret 020195B0 -0x2002,-0x2001,-0x2000,0x2000,0x2001,0x2002,0,0x4000   # cM_atan2s: clamp edges

@@ -1,0 +1,20 @@
+# HD025DF904..025DFCA8, twelveentries incl adjacent initializer.
+src wwhd_src/f_pc/f_pc_manager.cpp
+stackfill periodic
+ret! 025200D4 0x55000000 0x55000000
+field 025DF948 55005AC9 u8 0,1
+field 025DF948 55005AF4 u8 0,1,2,3
+field 025DF948 55005AF8 u32 0,0x56000000
+field 025DF948 55005B2C u32 0,0x56000000
+field 025DF948 55005B60 u32 0,0x56000000
+field 025DF948 55005B94 u32 0,0x56000000
+field 025DF948 101F8344 u32 0,0x57000000
+ret 025E0EE4 0,1
+ret 025DDCEC 0,1
+arg! 025DF948 r3 0,0x60000100
+arg! 025DF948 r4 0,0x60000100
+ret 025DEAC0 0,0x58000000
+ret 025DD780 0,0x59000000
+
+# Opaque no-argument callback may replace/clear the optional graphics singleton.
+mockglobal 60000100 101F8344 u32 0,0x57000000,0x57001000

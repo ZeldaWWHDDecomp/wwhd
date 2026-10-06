@@ -1,0 +1,7 @@
+src wwhd_src/f_op/f_op_camera.cpp
+ret 025986BC 0,1
+ret 025AF2A4 0,1
+ret 025DFCCC 0,1,2
+ret 025DFCD4 0,1,2
+ret 025DFCDC 0,1,2,3,4,5
+field 025DA520 r3+0xC u8 0,1,2

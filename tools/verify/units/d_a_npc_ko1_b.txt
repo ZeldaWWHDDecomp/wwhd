@@ -1,0 +1,118 @@
+# Verification unit: d_a_npc_ko1 part B (Joel & Zill)
+src wwhd_src/d/actor/d_a_npc_ko1_b.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 022742C0 r4=8          # set_action(pointer to member, 8 bytes)
+field 022753EC r3+0xA18 i8 0 2
+field 022753EC r3+0xA17 i8 -1 8
+field 02275504 r3+0xF8 u16 0 3
+field 02275504 r3+0xA12 i8 -1 3
+field 02276578 r3+0xA12 i8 -1 3
+field 02275358 104677B0 i32 0 2
+field 022757E4 r3+0xA0A i8 -1 1
+ret 02542EDC -1 1
+ret 025447C8 0 1
+ret 0259F858 0 1
+arg 022757E4 r4 -1 3
+# lookBack / route checks
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(target, eye copy)
+callee 0201B080 r3=12 r4=out12 r5=12  # cXyz::outprod
+field 022758B8 r3+0xA15 i8 -1 4
+field 022758B8 r3+0x3B6 u8 0 1
+field 022758B8 r3+0xA16 i8 0 1
+ret 020084C8 0,0x5A000000
+ret 0200FAAC 0x3FF0 0x4010
+arg 02275D90 r4 0x5B000000,0x5B000000
+field 02275D90 r3+0x98C f32 0.99 1.0
+field 02275F60 r3+0xA08 i8 2 4
+field 02275F60 r3+0x478 u32 0,0x10
+ret 02008860 0 1
+fret 02275B80 -10 110
+# movement
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 02275F60 r4=2          # routeCheck(f32, s16*)
+callee 0259E838 r4=12         # chkPointPass(cXyz copy)
+field 02276028 r3+0xA13 i8 3,4,0xB,0x18,5
+ret 02275F60 0 1
+ret 02055B64 0 1
+field 02276028 r3+0xA16 i8 0 1
+field 02276028 r3+0x9D4 u8 0 1
+field 022762AC r3+0xA16 i8 0 1
+field 022761AC r3+0x8AC u32 0,0x5C000000
+field 022761AC 5C000005 u8 0 1
+field 022761AC r3+0x9AC f32 40 60
+ret 0259E838 0 1
+ret 0259ED58 0 1
+ret 022761AC 0 3
+field 022763A8 r3+0xA08 i8 -1 5
+field 022763A8 r3+0xA16 i8 0 1
+field 022763A8 r3+0x9DB u8 0 1
+field 022763A8 r3+0x9DC u8 0 1
+field 022763A8 r3+0x478 u32 0,0x20
+field 022763A8 r3+0x370 f32 0 3
+# setMtx / demo
+field 02274A7C r3+0x9E7 u8 0 1
+field 02274A7C r3+0x478 u32 0,0x20
+field 02274A7C r3+0xA0F i8 3 5
+field 02274A7C r3+0x9D5 u8 0 3
+field 02274A7C r3+0x81C u32 0,0x5D000000
+field 02274A7C r3+0x820 u32 0,0x5E000000
+ret 027F2BF8 0 1
+field 02275544 r3+0x2DC u8 0,1,0x20,0x21
+field 02275544 r3+0x9E7 u8 0 1
+field 02275544 101D5FFC u32 0,0x57000000
+field 02275544 r3+0x828 u32 0,0x5F000000
+ret 02527828 0,0x60000000
+ret 025E789C 0 1
+# _draw
+field 0227684C r3+0x9D7 u8 0 1
+field 0227684C r3+0x9DA u8 0 1
+field 0227684C r3+0xA16 i8 -1 3
+field 0227684C r3+0x81C u32 0,0x5D000000
+field 0227684C r3+0x820 u32 0,0x5E000000
+field 0227684C 101FDA50 u32 0 1
+field 0227684C 101FDAC0 u32 0 1
+field 0227684C 101FDA48 u32 0 1
+field 0227684C 101FDA44 u32 0 1
+# _execute
+field 022765B0 r3+0x9DE u8 0 1
+field 022765B0 r3+0x9D7 u8 0 1
+field 022765B0 r3+0x2DC u8 0 1
+field 022765B0 r3+0xA16 i8 0 1
+field 022765B0 r3+0x9D9 u8 0 1
+field 022765B0 r3+0x9D8 u8 0 1
+field 022765B0 r3+0x9E7 u8 0 1
+field 022765B0 r3+0xF8 u16 0 2
+field 022765B0 r3+0x8A6 i16 -1 1
+ret 02275544 0 1
+ret 022756F8 -1 1
+fret 028F4384 40 3010
+# createInit / _create
+field 02274E28 r3+0xA16 i8 -1 2
+field 02274E28 r3+0xA17 i8 -1 9
+field 02274E28 r3+0xB0 u32 0x00FF0000,0x00010000,0
+field 02274E28 r3+0x8AC u32 0,0x5C000000
+ret 022743EC 0 1
+ret 02274498 0 1
+ret 0227452C 0 1
+ret 022745B4 0 1
+ret 02274658 0 1
+ret 022746E8 0 1
+ret 02274778 0 1
+ret 02274808 0 1
+ret 022748B0 0 1
+field 02275180 r3+0x2E4 u32 0,8
+ret 02520460 0 5
+ret 02274250 0 1
+ret 025D63E8 0 1
+ret 02274E28 0 1
+field 02275180 r3+0xA16 i8 0 1
+# compare the stack check objects (mutation-driven)
+callee 02008974 r4=0x54       # cBgS::GroundCross(dBgS_GndChk*)
+callee 02008DAC r3=0x54       # cBgS_Chk dtor (GndChk)
+callee 024F1AFC r3=0x6C       # dBgS_LinChk::Set
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 02008B4C r3=0x6C       # cBgS_LinChk dtor

@@ -1,0 +1,74 @@
+# Official40x10k300/316;16 actual dead blocks documented in build/tide-review.txt.
+# Full1283 mutation review:731 meaningful kills104 equivalents448 invalid0 unresolved.
+# Exact108 final reviews:4 sensitivity kills104 equivalents;7 helper perturbations killed; O1 control green.
+# Full actual40-function TU023A0418..023A2153.
+src wwhd_src/d/actor/d_a_obj_tide.cpp
+real 023A2138
+callee 026066C4 r4=8
+callee 025E8154 stack=1
+callee 025E7CE0 stack=1
+callee 025A847C stack=4
+observe 025E2DE0 104B4634 8
+stackfill periodic
+field * r3+0x400 s32 0 5
+field * r3+0x404 s32 0 3
+field * r3+0xB0 u32 0x00000000,0x00010000,0x00020000,0x00030000,0x00040000,0x00050000,0x01030000,0xFF030000
+field * r3+0xB4 u32 0x10030FD8
+# Type is immutable to all resource/model/mode callees; own writes still checked.
+stable 40000400 4
+field * 101F84DC u32 0x11000000
+field * 101F4F28 u32 0x11010000
+ret 025200D4 0x11020000 0x11020000
+field * 11025292 u8 0,1
+field * 11025AB0 u32 0x11030000
+field * 101D5F28 f32 0,0.5,1
+field * 101D5F2C u32 0 7
+ret 02520460 0,4,5
+ret 024F1D9C 0,4,5
+ret 026066C4 0,0x11040000
+ret 025E38E0 0,0x11050000
+ret 0273AD10 0,0x11060000
+field * r3+0x3E8 u32 0x11050000
+field * r3+0x3EC u32 0,0x11061000
+field * r3+0x3F0 u32 0,0x11062000
+field * r3+0x3F4 u32 0,0x11063000
+field * r3+0x3F8 u32 0,0x11064000
+field * r3+0x3FC u32 0,0x11065000
+field * r3+0x40C s16 -1,0,1,2,59,60,90
+field * r3+0x40E u8 0 3
+field * r3+0x40F u8 0,1
+field * r3+0x410 u8 0,1
+field * r3+0x411 u8 0,1
+field * r3+0x412 u8 0,1
+field * r3+0x413 u8 0,1
+field * r3+0x414 s32 -1,0,1
+field * r3+0x418 s32 -1,0,1
+field * r3+0x41C s32 -1,0,1
+field * r3+0x420 u8 0,1
+field * r3+0x421 u8 0,1
+field * r3+0x422 u8 0,1
+field * r3+0x423 u8 0,1
+field * r3+0x424 s32 -1,0,1,300
+# Exact audio completion boundary and BRK/BTK checkPass gates.
+field 023A19AC r3+0x2F0 f32 0,-2923.5
+field 023A19AC r3+0x318 f32 0,2923.5,0.01,-0.01
+field 023A1D68 1106200C s16 0,1,400
+field 023A1D68 1106300C s16 0,1,400
+ret 027F2BF8 0,1
+
+# Exercise missing demo-manager diagnostic and actual flag/state gates.
+field 023A13F4 r3+0x2DC u8 0,1,32,33
+field 023A13F4 101D5FFC u32 0,0x11070000
+ret 02526E70 0,0x11071000
+field 023A13F4 11071004 u16 0,1
+field 023A13F4 1107104C u8 0,1
+
+# Direct Create null-model cull-matrix fallback boundary.
+field 023A0DCC r3+0x3E8 u32 0,0x11050000
+
+# Exact movement abs-difference threshold plus ordinary target direction.
+field 023A1258 r3+0x318 f32 0,0.1,-0.1
+arg 023A1258 f1 0,0.1,-0.1,1,-1
+
+# Neighbor dynamic demo singleton101D6000 is independently allocated/cleared.
+field 023A13F4 101D6000 u32 0,0x11080000

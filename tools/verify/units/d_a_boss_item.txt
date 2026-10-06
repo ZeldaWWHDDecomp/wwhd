@@ -1,0 +1,5 @@
+# Verification unit: d_a_boss_item (heart container drop for defeated bosses)
+src wwhd_src/d/actor/d_a_boss_item.cpp
+
+ret 02520A84 0 1   # dComIfGs_isStageBossEnemy
+ret 02520B88 0 1   # dComIfGs_isStageLife

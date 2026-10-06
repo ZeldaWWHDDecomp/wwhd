@@ -1,0 +1,32 @@
+# Verification unit: d_a_ssk (stone tentacle)
+src wwhd_src/d/actor/d_a_ssk.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+ret 02520460 0 5               # resLoad
+ret 025D63E8 0 1               # entrySolidHeap
+ret 025BA0C0 0 1               # isSwitch
+ret 025162A4 0 1               # ChkTgHit
+ret 02516300 0,0x57000000,0x57000000   # GetTgHitObj: a pinned hit object
+field * 57000010 u32 0,2,0x40,0x80,0x400,0x800,0x2000,0x4000,0x10000,0x40000,0x80000,0x100000,0x1000000,0x4000000,0x8000000,0x10000000,0x20000000,0x40000000,1,0x20
+stable 57000000 0x100
+ret 0200FAAC 0,0xFFF,0x1000,0x1001,0x8000   # cLib_distanceAngleS
+ret 025E4F64 0,0x58000000,0x58000000        # McaMorf: a pinned morf
+field * 58000090 u32 0,0x58100000,0x58100000
+ret 027F3F94 0x59000000 0x59000000          # joint tree: a short joint count
+field * 59000008 u16 0 4
+stable 59000000 0x100
+ret 02552B60 0,0x5A000000                   # JntHit_create
+# nodeCallBack: joint numbers around 5
+field 0248D880 r3+4 u16 0,1,4,5,6
+# Execute: states and flags
+field 0248DC20 r3+0x3D4 i16 0,0,0,1
+field 0248DC20 r3+0x3D6 i16 0,1,2,3,10,10,4,5,9,11,-1
+field 0248DC20 r3+0x3D0 u8 0,1,1,0xFF
+field 0248DC20 r3+0x3D2 u8 0xFF,0xFF,5
+field 0248DC20 r3+0x3D3 u8 0,1
+field 0248DC20 r3+0x3D8 i16 0,0,0,1,5,-1
+field 0248DC20 r3+0x7E0 u8 0,1
+field * r3+0x42C f32 0,0.005,0.01,0.011,0.98,0.99,0.995,1
+field * r3+0x334 f32 0,0.005,0.01,0.011,0.98,0.99,0.995,1
+# Create: parameters (m2B4 byte, m2B5 radius, m2B6 switch)
+field 0248E770 r3+0xB0 u32 0x00000000,0x000000FF,0x0000FF01,0xFF00FF00,0x05000A01,0xFF0000FF,0x0500FFFF

@@ -1,0 +1,19 @@
+src wwhd_src/d/d_ovlp_fade2.cpp
+ret 0273AD10 0,268435456
+arg 025A1E1C r3 0,268435456
+ret 0220CCB4 0,1,2
+ret 025DBDC4 0,1
+ret 02728CB8 0,1
+field 025A1BD0 r3+0x11C u8 0,1
+field 025A1F20 r3+0x11C u8 0,1
+field 025A21F0 r3+0x11E u8 0,1
+field 025A1FB4 r3+0x11D s8 -12,-1,0,1,15
+callee 0272CAE0 r4=408 r5=48
+pointee 027BE2B0 r3=408
+field 025A1F20 101F4829 u8 0,1
+# Actual mutation-survivor steering: initialized singleton pointers and fade crossing boundary.
+field * 101F9968 u32 268435456,268435712
+field * 101F86B4 u32 268436480,268436736
+field 025A1FB4 r3+0x110 s16 1,0,-1,16383
+field 025A1FB4 r3+0x112 s16 8192,0,-1,100
+mockfield 0200F8D0 r3+0 s16 8192,0,-1,100

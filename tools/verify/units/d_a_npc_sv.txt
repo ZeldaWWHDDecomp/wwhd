@@ -1,0 +1,51 @@
+# Verification unit: d_a_npc_sv (Salvage Corp. members)
+src wwhd_src/d/actor/d_a_npc_sv.cpp
+
+callee 026067F4 r4=8                # getIDRes: SafeString key
+callee 025D54C4 r4=out4             # fopAcM_SearchByID(id, &actor)
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2  # dNpc_calc_DisXZ_AngY(copy, copy, &dist, &angle)
+callee 0259D54C r3=out12            # dNpc_playerEyePos: result
+callee 0259DED0 r5=12 r6=12         # lookAtTarget (target copy, eye copy)
+callee 028E8F64 r4=12 r5=out12      # PSMTXMultVec(m, in, out)
+callee 022E5638 r5=12               # setCollision: position copy
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+
+# constructor: allocation when this == NULL
+arg 022E50CC r3 0,0,0x40000000
+ret 0273AD10 0,0x60000000           # operator new
+# checkOrder / eventOrder: event command, order
+field 022E5D94 r3+0xF8 u16 0,1,1,2
+field 022E5D94 r3+0x84C u8 0 3
+field 022E688C r3+0x84C u8 0 3
+# talk2: message process id, flag, message status
+field 022E61A8 r3+0x7C8 u32 0xFFFFFFFF,0xFFFFFFFF,5
+field 022E61A8 r3+0x7CC u8 0,1,1
+ret 025F795C 0xE,0xF,0x12,0x10,0xE
+ret 025F7DB0 0xFFFFFFFF,0,5
+# executeTalk / eventMesSet: talk2's status
+ret 022E61A8 0x12,0xFF,0xE
+# eventAttention: timer, the Sv0 actor's message animation, npc number
+field 022E6394 r3+0x83E i16 0,1,1,2
+field 022E6394 r3+0x84F u8 0 2
+ret 025D9F38 0,0x5E000000,0x5E000000
+field 022E6394 5E00085B u8 0 7
+# privateCut: staff id, act index, advance
+ret 02542D88 0xFFFFFFFF,0,1
+ret 02542EDC 0xFFFFFFFF,0,1,2,3,4,5,0x80
+ret 025447C8 0 1
+# executeWait: npc number, angle equal to ship angle +- 0x4000
+field 022E6F04 r3+0x84F u8 0,0,1
+field 022E6F04 r3+0x322 i16 0x4000,-0x4000,0x4000,0
+field 022E6F04 r3+0x859 u8 0,1,1
+field 022E6F04 r3+0x85C u8 0,1,1
+# chkAttention: boundaries talkDist > dist, lookAngle > |angle - shape_angle.y| (out values often 0)
+field 022E5A24 r3+0x824 f32 0,0,0,100
+field 022E5A24 r3+0x83A i16 0,0,0x1000
+field 022E5A24 r3+0x32A i16 0,0,0x100
+field 022E5A24 r3+0x84B u8 0,0,1
+field 022E5A24 r3+0x440 u8 0,0,1
+# _execute: npc 0 with the ship animation (5) takes the ship's frame
+field 022E6BD4 r3+0x84F u8 0,0,1
+field 022E6BD4 r3+0x851 u8 5,5,0

@@ -1,0 +1,7 @@
+src wwhd_src/SSystem/SComponent/c_m3d_g_cps.cpp
+callee 02018808 r3=24 r4=12 r5=12
+callee 0201883C r3=24 r4=12 r5=12
+arg 02018150 r3 0,0x40000000
+ret 0273AD10 0,0x50000000
+arg 0201819C r3 0,0x40000000
+arg 0201819C r4 0,1,2,3

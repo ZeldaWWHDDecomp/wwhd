@@ -1,0 +1,10 @@
+# Verification unit: d_a_obj_smplbg (Tingle Tower head)
+src wwhd_src/d/actor/d_a_obj_smplbg.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 022ED834 -2 2             # prm_get_type (signed compare with 1)
+ret 026066C4 0,0x56000000     # getRes: null or a model data
+ret 025E38E0 0,0x56100000     # J3DModel create: null or a model
+field 02390458 r3+0x3F0 u8 0 1

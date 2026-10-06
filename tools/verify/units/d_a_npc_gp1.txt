@@ -1,0 +1,54 @@
+# Verification unit: d_a_npc_gp1 (Maggie's father, rich)
+src wwhd_src/d/actor/d_a_npc_gp1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 02238B5C r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(target, eye copy)
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint
+callee 0259E838 r4=12         # dNpc_PathRun_c::chkPointPass(cXyz by value)
+callee 025D54C4 r4=out4       # fopAcM_SearchByID(id, &actor)
+callee 025D8AB0 r3=12         # fopAcM_fastCreateItem(pos)
+ret 025200D4 0x54000000 0x54000000
+ret 025F795C 2,6,0x12,0x13
+ret 025B8B94 0 1
+# searchActor_Bm
+field 02238460 r3+8 i16 0x149,0x14A
+field 02238460 10467098 i32 0,5,0x13,0x14
+# ctrl_WAITanm / partner_srch / checkOrder
+field 02238F4C r3+0x97E i8 0,4,1
+field 022395E8 r3+0x985 i8 0,1,2
+field 022395E8 r3+0x980 i8 1,3
+field 0223967C r3+0xF8 u16 0,1,2,3
+field 0223967C r3+0x97F i8 0,1,2,3
+# create_rupee
+field 0223A7DC r3+0x960 i16 0,1,2,3
+# anmAtr
+arg 0223AC3C r4 6,14,0
+field 0223AC3C r3+0x986 i8 0 1
+field 0223AC3C 54005BC6 u8 0,1,0xFF
+field 0223AC3C r3+0x97C u8 0,1,0xFF
+# next_msgStatus
+field 0223AEAC r4+0 u32 0x1e14,0x1e15,0x1e16,0x1e17,0x1e18,0x1e19,0x1e1a,0x1e1b,0x1e1c,0x1e1d,0x1e1e,0x1e1f,0x1e20,0x1e21,0x1e22,0x1e23,0x1e24,0x1e25,0x1e26,0x1e27,0x1e28,0x1e29,0x1e2a,0x1e2b,0x1e2f,0x1e30,0x1e31,0x1ee6,0x1ee7
+field 0223AEAC r3+0x95E i16 0,5,6,15,16,17
+# getMsg_GP1_0 / talk_1
+field 0223B08C r3+0x967 u8 0x45,0xFF,0x44
+field 0223B08C r3+0x966 i8 0 1
+ret 025B8BB0 0,9,10,11
+field 0223B47C r3+0x7C0 u32 0x1E17,0x1E18,0x1E1C,0x1E22,0x1E23,0x1E24,0x1E25,0x1E2A,0x1E2B,0x1E2C,0x1E2D,0x1E2E
+field 0223B47C r3+0x7CC u8 0 1
+field 0223B47C r3+0x96D u8 0 1
+field 0223B47C r3+0x95E i16 0,1,100
+# wait_action1
+field 0223B9F8 r3+0x985 i8 0,1,2,3,4
+field 0223B9F8 r3+0x980 i8 0,1,2,3,4,5,6
+ret 025D8AB0 0,0x58000000,0x58001000
+# save info pinned: the byte at +0xBC (compared with 20)
+field 0223AEAC 101F84DC u32 0x55000000
+field 0223AEAC 550000BC u8 0,5,0x13,0x14,0x15
+field 0223B08C 101F84DC u32 0x55000000
+field 0223B08C 550000BC u8 0,5,0x13,0x14,0x15

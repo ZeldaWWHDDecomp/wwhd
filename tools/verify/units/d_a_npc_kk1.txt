@@ -1,0 +1,2 @@
+# Verification unit: d_a_npc_kk1 (Mila, poor, Windfall): profile wrappers
+src wwhd_src/d/actor/d_a_npc_kk1.cpp wwhd_src/d/actor/d_a_npc_kk1_pending.cpp

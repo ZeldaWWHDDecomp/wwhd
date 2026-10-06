@@ -1,0 +1,56 @@
+src wwhd_src/d/actor/d_a_obj_warpt.cpp
+stackfill
+field * r3+0x3D0 i32 -1,0,1,2,3,4,5
+field * r3+0x3D4 i32 0,1,2,3,4,5
+field * r3+0x3C8 i32 -1,0,1,255
+field * r3+0x3D8 i32 -1,0,1,255
+field * r3+0x3E2 u8 0,1,255
+ret 023B9864 0,1
+ret 023B985C 0,1,255
+ret 023B9884 0,1
+ret 023B98F4 0,1
+ret 023B9F1C 0,1
+ret 025BA0C0 0,1
+ret 0211D2F8 0,1
+field * 101F84DC u32 0x54000000,0x54010000
+callee 020182E0 r4=12
+
+arg! 023B9CB0 r4 0,1,2,-1
+arg! 023B9CB0 r5 0,1,2,3,4
+field 023B9CB0 r3+0x3AC i32 0,1,2,3,4
+
+arg! 023BB1FC r3 0x40000000
+callee 023BB1FC r3=4
+
+field * r3+0x3AC i32 0,1,2,3,4
+observe 025E2DE0 104B4634 8
+
+# Player and event states; all addresses stay within generated guest arenas.
+field 023B9D5C r4+0x8 i16 168,0
+field 023B9D5C 1046CA02 u8 0,1
+ret 025881A4 0,1
+ret 02516300 0,0x56000000
+field * 56000010 u32 0,2,8,0x20,0x400,0x800,0x4000,0x8000,0x10000,0x40000,0x80000,0x100000,0x1000000,0x4000000,0x8000000,0x10000000,0x20000000
+field 023BB820 r3+0xF8 u16 0,2
+ret 02544830 0,0x10033764,0x10033790,0x100337A0
+ret 0254457C 0,1
+ret 023BB6A4 0,1
+ret 023BB7AC 0,1
+field 023BB9F8 r3+0xF8 u16 0,2
+
+arg 023BB64C r4 -1,0,1,254,255,256
+arg 023BAA28 r4 -1,0,1,2
+
+# HD particle helper reads four caller stack slots despite unused this register.
+callee 025A847C stack=4
+
+callee 026066C4 r4=8
+callee 025881A4 r3=12
+
+ret 025200D4 0x54000000,0x54010000
+field * 54005B2C u32 0x55000000,0x55010000
+field * 54015B2C u32 0x55000000,0x55010000
+field * 550003AC u8 0,1,8,9,10
+field * 550103AC u8 0,1,8,9,10
+
+field * 101F4F28 u32 0x54020000,0x54030000

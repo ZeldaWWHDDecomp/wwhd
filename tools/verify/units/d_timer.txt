@@ -1,0 +1,20 @@
+src wwhd_src/d/d_timer.cpp
+# Timer states/modes and countdown edges; objects stay clobberable across calls.
+field * r3+0x124 u8 0,1,2,3,4,5,6,7
+field * r3+0x122 u8 0,1,2
+field * r3+0x123 u8 0,1,2
+field * r3+0x120 s16 -1,0,1,2
+field * r3+0x114 u32 0,1,2,3,4,7
+field * r3+0x118 s32 -1,0,1,2,120
+field * r3+0x11C u32 0,1,2,6
+ret 025200D4 0x65000000
+field * 0x65005CFC s32 -1,0,2,3,7
+field * 0x65005CD8 u32 0,0x20000000
+field * 0x65005292 u8 0,1,2
+ret 025986BC 0,1
+ret 025AF2A4 0,1
+field 025C5EB8 r3+0xAC u32 0,0x60000000
+field 025C5EB8 0x6000001C u32 0,2,3,7
+field 025C5960 r3+0x12C u32 0,1,2,12
+# Alarm tables are finite shipped arrays ending in negative threshold.
+stable 101EE750 0xD0

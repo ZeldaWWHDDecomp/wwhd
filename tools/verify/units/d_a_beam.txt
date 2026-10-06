@@ -1,0 +1,55 @@
+src wwhd_src/d/actor/d_a_beam.cpp
+callee 026066C4 r4=8
+callee 025A847C stack=4
+stackfill periodic
+ret 025200D4 0x11030000,0x11030000
+ret 0273AD10 0,0x11010000
+ret 025D4604 0,1
+ret 025BA0C0 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+field * r3+0x844 s16 0,1,2
+field * r3+0x8E0 u32 0,0x11020000
+field * r3+0x8DC u32 0,0x11021000
+field * r3+0x718 f32 -1,0,0.4,1,4,5,6
+field * r3+0x798 f32 -1,0,1,3,4,5
+field * r3+0x8E8 s32 0,1,254,255
+field 02074C98 r5+0x8 s16 0xA8,0xCB,0
+field 02074E90 r5+0x8 s16 0xA8,0xCB,0
+field 02075078 r5+0x8 s16 0xA8,0xCB,0
+field 02074C98 r3+0x668 u8 0,1
+field 02074E90 r3+0x668 u8 0,1
+field 02074C98 r3+0x2E8 u32 0,1,0xFFFFFFFF
+field 02075078 r3+0x2E8 u32 0,1,0xFFFFFFFF
+field 02074C98 r5+0x4 u32 0,1,0xFFFFFFFF
+field 02075078 r5+0x4 u32 0,1,0xFFFFFFFF
+field 02075078 r4+0x54 u32 0,1
+field 02075988 r3+0x66E s16 0,-1,1
+field 02075988 r3+0x66C s16 0
+field 02075988 r3+0x658 u8 0,1
+field 02075988 r3+0x8D4 u32 0,1,0xFFFFFFFF
+ret 02008860 0,1
+ret 0201B47C 0,1
+ret 02076084 0,1
+ret 0200F378 -1025,-1024,-1023,0,1023,1024,1025
+callee 02076084 r4=out6
+callee 025D5218 r4=4
+
+# Observe the vectors actually read by pure guest helpers; output storage is mutable.
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 028E8F44 r3=12 r4=12
+callee 0201B47C r3=12
+callee 02312548 r4=12
+field * 11035B2C u32 0x11040000
+field * 11035AB0 u32 0x11050000
+# Projection and search boundary return domains.
+fret 028E8F44 0 500
+fret 028F4384 0 500
+field 02076084 1104031C f32 0,1,149,150,249,250,251
+field 02076084 r3+0x318 f32 0,1,249,250,251
+field 02075384 r3+0x2E8 u32 0xFFFFFFFF,0
+field 02075384 r3+0xB0 u32 0,1,2,3,0xFF0000
+field * 101F4F28 u32 0,0x11060000
+
+field * 101F84DC u32 0x11070000

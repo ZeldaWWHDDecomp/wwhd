@@ -1,0 +1,174 @@
+src wwhd_src/d/d_kankyo_wether.cpp
+ret 02555D0C 0x50000000 0x50000000
+ret 0257DAA8 0x51000000 0x51000000
+field * 0x101F84DC u32 0x52000000 0x52000000
+field * 0x50000A88 u8 0 100
+field 0257D1B8 r3+0x24 u32 0 31
+# Vector helpers consume/write the complete 12-byte vector.
+callee 0201AE48 r3=12 r4=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0257DE68 r3=12 r4=out12 r5=out4
+ret 0273AD10 0,0x53000000
+
+callee 0257963C r3=out16 r4=4
+callee 0201B12C r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 0201AFD8 r3=12 r4=12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 028E8DE8 r3=12 r4=12
+
+callee 025F01D8 r3=out4
+callee 025F02D0 r3=4
+callee 025F0270 r3=4
+callee 026124B0 r4=8 r5=8
+
+callee 0274D458 r3=out16 r4=16
+callee 027FC500 r4=16
+callee 027FC650 r4=16
+
+callee 027B90AC r4=8
+callee 027BE6B8 r3=out144
+callee 02773798 r3=out144
+callee 027FE500 r5=144
+
+# Valid fixed game object; draw stage steering covers Name and nonmatching stage.
+ret 025200D4 0x54000000 0x54000000
+field 0257CE00 0x54005134 u32 0,0x4E616D65
+field 0257CE00 0x54005138 u8 0 0
+
+field 02581060 r3+0xCC s16 0,1,2,2000
+arg 02581060 r4 0,1,7
+field 02581060 r3+0x49A608 s8 0,1,7
+field 02581060 r3+0xD4 u8 0,1
+
+# Render-state constructor allocates 0x11C and writes its vtable at +0x118.
+callee 02750250 r3=out284
+callee 02750370 r3=284
+callee 0257E93C r3=out48 r4=48
+callee 027FDA54 r5=48
+
+field 025817B0 0x50000A68 s32 0,1,2,1000
+field 025817B0 r3+0xBC3C u8 0,1
+callee 027FDA54 r6=64
+
+# Packet owns30 particles; keep generated loop counts within its actual capacity.
+arg! 025820F4 r4 -1,0,1,30
+
+field 02581C34 0x50000A74 s32 -1,0,1,300
+field 02581C34 r3+0x5E70 u8 0,1
+field 02581C34 r3+0x5F9C u8 0,1
+
+field 02582650 0x500009F8 s16 -1,0,1,300
+field 02582650 r3+0x9DB90 u8 0,1
+field 02582650 r4+0xC u32 0,2
+
+field 02583678 0x50000A7C u8 0,1,2,3,255
+field 02583678 0x50000A7D u8 0,1,2
+field 02583678 0x50000A80 u32 0,1
+field 02583678 0x5000109E u8 0,1
+field 02583678 0x54005134 u32 0,0x4D5F4E65,0x415F6D6F
+field 02583678 0x54005138 u32 0,0x77443200,0x72690000
+
+field 0257F804 r3+0x3758 s16 -1,0,1,250
+field 0257F804 r3+0x379D u8 0,1
+
+field 0257FB4C 0x50000A40 s32 -1,0,2,500
+
+field 02580870 r3+0x3760 s16 -1,0,1,250
+
+arg! 02580B98 r4 -1,0,1,4000,4001
+arg 02580B98 r5 0,1,4000
+
+callee 02582BB8 r3=out8
+callee 02582C08 r3=8 r4=8
+callee 02582CE8 r3=8
+
+# Weather lifecycle state-machine and zero/nonzero count steering.
+field 0257ACAC 0x50000A30 u8 0,1,2,3,255
+field 0257ACAC 0x50000A3C u8 0,1,2,3,255
+field 0257ACAC 0x50000A48 u8 0,1,2,3,255
+field 0257ACAC 0x50000A54 u8 0,1,2,3,255
+field 0257ACAC 0x50000A64 u8 0,1,2,3,255
+field 0257ACAC 0x50000A70 u8 0,1,2,3,255
+field 0257ACAC 0x50000A40 s32 0,1,250,500
+field 0257ACAC 0x50000A4C s32 0,1,250,500
+field 0257ACAC 0x50000A58 s32 0,1,250,500
+field 0257ACAC 0x50000A68 s32 0,1,250,500
+field 0257ACAC 0x50000A74 s32 0,1,250,500
+field 0257ACAC 0x5000109E u8 0,1
+field 0257ACAC 0x54005ACA u16 0,1
+field 0257ACAC 0x54005134 u32 0,0x4E616D65
+field 0257ACAC 0x54005138 u8 0 0
+
+# Reachable stage names and state edges for the weather control functions.
+field 0257ACAC 0x54005134 u32 0x4e616d65,0x48797275,0x47616e6f,0x47546f77,0x4d5f4472,0x4d5f4461,0x4164616e,0x73656100,0x41444d75
+field 0257ACAC 0x54005138 u32 0x0,0x6c650000,0x6e4b0000,0x65720000,0x61674200,0x69000000,0x6d616500,0x0,0x6d690000
+field 0257ACAC 0x5400513C u8 0 0
+field 0257C5B0 0x54005134 u32 0x4e616d65,0x48797275,0x47616e6f,0x47546f77,0x4d5f4472,0x4d5f4461,0x4164616e,0x73656100,0x41444d75
+field 0257C5B0 0x54005138 u32 0x0,0x6c650000,0x6e4b0000,0x65720000,0x61674200,0x69000000,0x6d616500,0x0,0x6d690000
+field 0257C5B0 0x5400513C u8 0 0
+field 0257D398 0x54005134 u32 0x4e616d65,0x48797275,0x47616e6f,0x47546f77,0x4d5f4472,0x4d5f4461,0x4164616e,0x73656100,0x41444d75
+field 0257D398 0x54005138 u32 0x0,0x6c650000,0x6e4b0000,0x65720000,0x61674200,0x69000000,0x6d616500,0x0,0x6d690000
+field 0257D398 0x5400513C u8 0 0
+field 0257CE00 0x54005134 u32 0x4e616d65,0x48797275,0x47616e6f,0x47546f77,0x4d5f4472,0x4d5f4461,0x4164616e,0x73656100,0x41444d75
+field 0257CE00 0x54005138 u32 0x0,0x6c650000,0x6e4b0000,0x65720000,0x61674200,0x69000000,0x6d616500,0x0,0x6d690000
+field 0257CE00 0x5400513C u8 0 0
+field 02580318 0x54005134 u32 0x4e616d65,0x48797275,0x47616e6f,0x47546f77,0x4d5f4472,0x4d5f4461,0x4164616e,0x73656100,0x41444d75
+field 02580318 0x54005138 u32 0x0,0x6c650000,0x6e4b0000,0x65720000,0x61674200,0x69000000,0x6d616500,0x0,0x6d690000
+field 02580318 0x5400513C u8 0 0
+field 0257C5B0 0x50000A88 u8 0,1,99
+field 0257C5B0 0x54005ACA u16 0,1
+field 0257C5B0 0x5000109E u8 0,1
+field 0257C5B0 0x10477598 u32 0,1
+field 0257C5B0 0x5000108C u8 0,1,2
+field 0257C5B0 0x5000108D u8 0,1,2
+field 0257C5B0 0x50000FC8 f32 0,0.5,1
+field 0257C5B0 0x1047E6C8 s8 -1,9
+field 0257D398 0x50000A08 u32 0,0x55000000
+field 0257D398 0x1047E6C8 s8 -1,0,9
+field 0257D398 0x50000A2D u8 0,1,2,255
+field 0257D398 0x50000A2C u8 0,1
+field 0257D398 0x5000109C u8 0,1
+
+field 0257836C 0x54005134 u32 0,0x47546F77
+field 0257836C 0x54005138 u32 0,0x65720000
+field 0257836C 0x5400513C u8 0 0
+field 0257836C 0x1047E6C8 s8 -1,0,9
+field 0257836C 0x50000AA4 u8 0,1
+field 0257836C 0x50000AB0 u8 0,1
+
+# Physically valid wind strength includes the housi activation threshold edges.
+fret 02578348 0 1
+field 02583678 0x5400513C u8 0 0
+
+# Day clock spans one360-unit cycle, including star-brightness transition ranges.
+fret 02560E08 0 360
+
+field 0257ACAC 0x50001092 u8 0,1
+
+# Lead-reviewed GX2DrawIndexedEx scalars; r6 remains the index-data pointer.
+callee C0006178 r3=0 r4=0 r5=0 r7=0 r8=0
+
+# Large precipitation packet is a9.2MB allocated object, aligned32 and disjoint from the callee stack.
+# Raw generated pointer7007167 put a texture at odd7EFFEE41 inside the active stack, outside that domain.
+arg! 02580B98 r3 0x55000000,0x58000000
+
+# Render callbacks do not replace the outer packet's material allocation.
+field 02580B98 r3+0x3768 u32 0x59000000,0x5A000000
+stable 55003768 4
+stable 58003768 4
+# Texture invalidation027FB678 writes +48/+4C and submits +54; it preserves the constructed class vtable(+C).
+# Keep that ROM vtable coherent after the mock; random-clobber fields outside this pointer remain enabled.
+mockfield 027FB678 r3+0xC u32 0x1016EFE4
+
+# the wind-vector getters allocate their 12-byte result when the destination is null.
+arg 0257E128 r3 0,0x5C000000,0x5C000100
+arg 0257E34C r3 0,0x5C000000,0x5C000100
+
+# mutation follow-up: wind_init's "no saved wind angle" arm needs both saved angles == -1.
+field 02577B5C 101F84DC u32 0x5D000000
+field 02577B5C 5D00004A u16 0xFFFF,0,0x4000
+field 02577B5C 5D00004C u16 0xFFFF,0,0x8000
+# mutation follow-up: cM_atan2s results on both sides of every wind-direction sector boundary
+# of dKyw_get_windsdir (heading = -(angle+0x4000); sectors at 0x1000+0x2000k and 0xFFFF).
+ret 020195B0 -28672,-28671,-20480,-20479,-16384,-16383,-16382,-12288,-12287,-4096,-4095,0,4096,4097,12288,12289,20480,20481,28672,28673

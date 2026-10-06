@@ -1,0 +1,41 @@
+# Verification unit: d_a_sitem (enemy item on a chain)
+src wwhd_src/d/actor/d_a_sitem.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 028EFFD0 r3=255        # __construct_array storage
+callee 0200FCD8 r4=out12      # MtxPosition
+callee 024F06B4 stack=1       # dBgS_Acch::Set: 9th argument on the stack
+callee 025A847C stack=4       # dPa_control_c::set: setup, prm, env, scale2D on the stack
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E38E0 0,0x57000000     # J3DModel create
+ret 025E9B80 0 1              # lineMat init
+arg 02487FE0 r3 0,0x57100000  # constructor: NULL allocates
+ret 0273AD10 0,0x57200000     # operator new
+field 02486390 r3+0x3DC s16 0 7     # mode
+field 02486390 r3+0x424 f32 0,0.1,0.2
+field 024865CC r3+0x3D4 u8 0 3      # type
+field 024865CC r3+0x37C u32 0       # (eyePos null check uses the address)
+field 024880E0 r3+0xB0 u32 0xFF0004FF,0x000003FF,0x0000FF05,0xFFFF0000,0x12340201,0xFF000300
+field 02487F00 r3+0x3D4 u8 0 2
+# daSitem_Execute
+field 024867D0 r3+0x3DC s16 0,1,2,3,5,6       # mode
+field 024867D0 r3+0x3DE s16 0,1,39,40,41      # timer 0
+field 024867D0 r3+0x3E0 s16 0,1,2             # timer 1
+field 024867D0 r3+0x3E2 s16 0,1               # timer 2 (hit cooldown)
+field 024867D0 r3+0x3D5 u8 0 3                # size
+field 024867D0 r3+0x340 f32 -100,-88,-87,-1,0,1,3,5 # speed.y
+field 024867D0 r3+0xE80 f32 0,1,1.5,100,101,149,151,200  # wind push
+field 024867D0 r3+0x10C0 u8 0 1
+field 024867D0 r3+0x1090 u32 0,0x56000000
+field 024867D0 r3+0x10A4 u32 0,0x56000100
+fret 02008974 -1000000000 100      # GroundCross (-1e9: no ground)
+field 024867D0 r3+0x3E8 f32 0,30,100,131
+ret 025162A4 0 1                     # ChkTgHit
+ret 02516464 0 1                     # ChkCoHit
+ret 02516300 0,0x56100000            # GetTgHitObj
+field 024867D0 56100010 u32 0,0x08000000,0x00000800
+callee 02518DB0 r3=out28             # at_power_check fills the CcAtInfo
+callee 02008974 r4=84                # GroundCross: compare the dBgS_GndChk
+callee 02008DAC r3=84                # ~cBgS_Chk on the GndChk
+callee 025A847C r8=12                # particle scale

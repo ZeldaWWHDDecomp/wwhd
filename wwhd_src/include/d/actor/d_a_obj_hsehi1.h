@@ -1,0 +1,45 @@
+#pragma once
+#include "bindings.h"
+struct HshMember_l { be<s16> adjust,index; be<u32> target; };
+struct daObj_hsh_c : fopAc_ac_c {
+    request_of_phase_process_class mPhase;
+    gptr<J3DModel> mpModel;
+    dBgS_ObjAcch mObjAcch;
+    dBgS_AcchCir mAcchCir;
+    gptr<void> mpEmitter;
+    Mtx34 mMtx;
+    gptr<dBgW> mpBgW;
+    u8 unknown[12];
+    u8 mPolyInfo[16];
+    HshMember_l mAction;
+    be<u32> mFlags,mMsgNo;
+    be<s32> mSwitchNo;
+    be<u32> mPrmMsgNo;
+    be<s8> mOrder,mEventSelector;
+    u8 unknown62A;
+    be<s8> mActionMode;
+    be<u8> mAttentionLatch,mAppearDeleteTimer;
+    u8 pad[2];
+    be<s16> r0,r1,r2,r3;
+    u8 unknown638[4];
+    be<f32> value;
+    u8 unknown640[4];
+    be<s16> mEventId[2];
+    s16 XyCheckCB(s32); s16 XyEventCB(s32);
+    void particle_set(u16); void particle_set(gptr<void>*,u16); void emitterDelete(gptr<void>*);
+    void setAttention(bool); void onOffDraw(); void offOffDraw(); void drawStop(); void drawStart(); void setBaseMtx();
+    s32 createHeap(); s32 create(); s32 init(); s32 execute(); s32 draw();
+    void action(void*); s32 setAction(HshMember_l*,void*); s32 waitAction(void*); s32 talkAction(void*); s32 offAction(void*); s32 deleteAction(void*);
+    void eventOrder(); void checkOrder(); s32 checkCommandTalk(); bool chkAttention(cXyz*,s16); s32 eventProc(); void eventEnd();
+    void initialDefault(s32); s32 actionDefault(s32);
+    void initialLinkDispEvent(s32); void initialMsgSetEvent(s32); s32 actionMsgSetEvent(s32); s32 actionMessageEvent(s32); s32 actionTactEvent(s32);
+    void initialJudgeEvent(s32); void initialAppearEvent(s32); s32 actionAppearEvent(s32); void initialDeleteEvent(s32); s32 actionDeleteEvent(s32);
+    s32 talk_init(); s32 talk(s32); u32 getMsg(); u32 next_msgStatus(be<u32>*);
+    static void dt(daObj_hsh_c*,s32);
+};
+WWHD_OFFSET(daObj_hsh_c,mObjAcch,0x3B8);
+WWHD_OFFSET(daObj_hsh_c,mAcchCir,0x57C);
+WWHD_OFFSET(daObj_hsh_c,mAction,0x610);
+WWHD_OFFSET(daObj_hsh_c,mFlags,0x618);
+WWHD_OFFSET(daObj_hsh_c,mEventId,0x644);
+WWHD_SIZE(daObj_hsh_c,0x648);

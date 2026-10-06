@@ -1,0 +1,8 @@
+# Verification unit: d_a_obj_gong
+src wwhd_src/d/actor/d_a_obj_gong.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 026066C4 0,0x56000000     # getRes: null or a resource
+ret 025E4F64 0,0x57000000     # McaMorf ctor: null or a morf

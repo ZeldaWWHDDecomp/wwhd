@@ -1,0 +1,11 @@
+# Exclusive ten omitted HD HUD head functions.
+src wwhd_src/d/d_meter_head.cpp
+# Scalar native easing args; no pointers or omitted target reads.
+callee 025DB6F4 r3=0 r4=0 r5=0
+field 0259174C r3 u16 0,7,8,9,10,65535
+field 0259174C r4 u16 0,1,5,6,7,32767,32768,65535
+field 025917FC r3 u16 0,7,8,9,10,65535
+field 025917FC r4 u16 0,1,5,6,7,32767,32768,65535
+arg 02591718 r4 0,1,2,128,255,256,4294967295
+arg 0259172C r4 0,1,2,128,255,256,4294967295
+arg 0259173C r4 0,1,2,128,255,256,4294967295

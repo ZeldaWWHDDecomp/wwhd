@@ -1,0 +1,32 @@
+# Verification unit: d_a_esa (All-Purpose Bait)
+src wwhd_src/d/actor/d_a_esa.cpp
+
+callee 026066C4 r4=8                        # sead::SafeString key
+callee 0201ADE0 r4=out12                    # cXyz::operator-
+callee 0201AD78 r4=out12                    # cXyz::operator+
+callee 0201AE48 r4=out12                    # cXyz::operator*
+callee 0200FCD8 r3=12 r4=out12              # MtxPosition
+ret 025D63E8 0 1                            # fopAcM_entrySolidHeap
+field 021300C4 r3+0x3BC i8 -1,0,1,2,3,4,5   # mActionState
+field 021300C4 r3+0x3BD i8 0,1,2,3          # mState
+field 021300C4 r3+0x3C4 u32 0,0x57000000    # ripple emitter
+field 021300C4 r3+0x3DC i16 0,1,2           # mTimer[0]
+field 021300C4 r3+0x3B4 u8 0,0x23           # field_0x298
+field 021300C4 r3+0x370 f32 0 0.4           # speedF (vs 0.1)
+field 021300C4 r3+0x340 f32 -10 10          # speed.y
+field 021300C4 r3+0x330 f32 0 0.1           # scale.x (vs 0.05)
+field 021300C4 10463C9C u32 0 1             # ripple_scale guard
+ret 0246B6A4 0 1                            # daSea_ChkArea
+ret 02008860 0 1                            # cBgS::LineCross
+ret 025445B8 0 1                            # startCheckOld
+fret 028F4384 0 2                           # sqrt (vs 1.0)
+fret 020198D8 0 1                           # cM_rndF
+fret 02008974 -10 10                        # GroundCross
+fret 0246BA0C -10 10                        # calcWave
+fret 024F17D4 -10 10                        # water height
+field 021300C4 r3+0x318 f32 -10 10          # pos.y
+field 02130E30 r3+0xB0 u32 0,1,2,3,0x80,0xFF,0x100,0x101,0x3FF
+callee 02008974 r4=84                       # cBgS::GroundCross: compare the dBgS_GndChk (0x54) on the stack
+field 021300C4 1047C038 f32 -1 1            # REG18_F(2..4): small tuning values
+field 021300C4 1047C03C f32 -1 1
+field 021300C4 1047C040 f32 -1 1

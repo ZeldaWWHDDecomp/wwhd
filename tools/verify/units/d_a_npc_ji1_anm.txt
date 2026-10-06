@@ -1,0 +1,18 @@
+# Verification unit (temporary, fork; merged into d_a_npc_ji1 later): setAnm, setAnimFromMsgNo
+src wwhd_src/d/actor/d_a_npc_ji1_anm.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+callee 026066C4 r4=8                # getRes: SafeString key
+# setAnm: the animation number
+arg 0224DFF0 r4 0 27
+field 0224DFF0 r3+0xF8C i32 0 26
+arg 0224DFF0 r5 0,0,1
+field 0224DFF0 r3+0xFAC u8 0,1
+field 0224DFF0 r3+0x658 u32 0,0x60000000
+# setAnimFromMsgNo: the current message number
+field 02251A8C 101F4B5C u32 0x5E000000,0x5E000000
+field 02251A8C 5E000938 u32 0x9B1,0x961,0x986,0x962,0x9AF,0x9B3,0x9B4,0x963,0x964,0x975,0x9AE,0x9AE,0x9B9,0x9B9,0x9B9,0x965,0x960,0x985,0x9B0,0x9B2,0x9B5,0x9BA,0x9AD,0x976,0x9C0
+field 02251A8C r3+0xFAC u8 0,1
+field 02251A8C r3+0xF8C i32 0x15,0x16,0x16,0x17,0x17,0
+field 02251A8C r3+0x658 u32 0,0x60000000
+ret 025F795C 0xE,0xE,0,0xF
+ret 027F2BF8 0 1                    # checkPass

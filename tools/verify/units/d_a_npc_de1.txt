@@ -1,0 +1,65 @@
+# Verification unit: d_a_npc_de1 (Great Deku Tree)
+src wwhd_src/d/actor/d_a_npc_de1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 02606900 r4=8 r5=8     # dRes_control_c::getRes(arc, name)
+stackfill
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0222B990 r5=out4 r6=out4  # anmResID(num, &bck, &sound)
+ret 025200D4 0x54000000 0x54000000
+ret 025B8B94 0 1              # dSv_event_c::isEventBit
+ret 02520A84 0 1              # isStageBossEnemy
+ret 025B7D90 0 1              # isSymbol
+# next_msgStatus
+field 0222C544 r4+0 u32 0x139C 0x13D4
+field 0222C544 101F4B5C u32 0x43000000 0x43000000
+field 0222C544 43000948 u32 0,1,2
+ret 025D4604 0 1              # fopAc_IsActor
+ret 025445B8 0 1              # evmng startCheckOld
+ret 025F795C 0x13 0x14        # message status
+ret 02520460 0,4,4            # dComIfG_resLoad
+ret 025D63E8 0 1              # fopAcM_entrySolidHeap
+ret 0222AC84 0 1              # decideType
+ret 0222B300 0 1              # createInit
+ret 0222AF38 0,0,0,0x43000000  # searchByID (wait05 needs all ten null)
+# searchActor_leafLift
+field 0222A8FC r3+8 i16 0x78,0x74
+field 0222A8FC 10466D08 i32 0,1,98,99,100,101
+# decideType / _create
+field 0222AC84 r3+8 i16 0x74,0x78
+field 0222B4B8 10466D1C i32 -1,0,1
+field 0222B4B8 r3+0x2E4 u32 0,8
+# checkOrder
+field 0222B6E8 r3+0xF8 u16 0,1,2,3
+field 0222B6E8 r3+0x931 i8 0,1,2,3,4,5,6
+# anmResID
+arg 0222B990 r4 0,3,6,7,8
+# anmAtr
+arg 0222C488 r4 6,14,0
+field 0222C488 r3+0x937 i8 0 1
+field 0222C488 54005BC6 u8 0,1,0xFF
+field 0222C488 r3+0x92F u8 0,1,0xFF
+# wait05
+field 0222CE8C r3+0x931 i8 0,5
+# talk02
+field 0222CF78 r3+0x7CC u8 0 1
+arg 0222B990 r5 0,0x43000100,0x43000100
+arg 0222B990 r6 0,0x43000200,0x43000200
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0222AD00 r4=8          # set_action(pointer to member, 8 bytes)
+# demo: demo actor id in range, demo object present or not
+field 0222B878 r3+0x2DC u8 0,1,0x20,0x21
+field 0222B878 101D5FFC u32 0,0x60000000
+# event_action
+field 0222BEB0 r3+0x92D i8 0,1,2,3,5,6,-1
+field 0222BEB0 r3+0x8B6 i16 0,9,10,11
+field 0222B878 101D6000 u8 0x11,0x22
+# set_action: the old action really runs (wait_action1 reads mActPhase = -1)
+real 0222CFF8
+field 0222AD00 r3+0x7F0 i16 0,0,4
+field 0222AD00 r3+0x7F2 i16 -1,-1,0,1
+field 0222AD00 r3+0x7F4 u32 0x0222CFF8,0x0222CFF8,0x0222D0A4
+field 0222AD00 r4+0 i16 0,0,4
+field 0222AD00 r4+2 i16 -1,-1,0,1
+field 0222AD00 r4+4 u32 0x0222CFF8,0x0222D0A4

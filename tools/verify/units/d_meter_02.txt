@@ -1,0 +1,76 @@
+# Exclusive12-entry trailing HD HUD range02599584..<0259CF48; twelve semantic bodies.
+src wwhd_src/d/d_meter_02.cpp
+# fopAcIt_Judge invokes025E121C, which reads only the s16 actor name.
+callee 025D5218 r4=2
+# Real play/save/stage objects; actual stage virtual getter reads r3 only.
+ret 025200D4 0x58020000 0x58020000
+field * 58025150 u32 0x10055DE0
+ret 025C5040 0x58040000 0x58040000
+field * 101F84DC u32 0x58010000
+field * 5804000C u32 0,0x30000
+field * 58040009 u8 0,6,8,10,12
+field * 5804000A u16 0,1,2,3
+field * r3+0x3008 u32 0,0x8,0x18,0x20,0x40,0x80,0x100,0x400,0x4000,0x8000,0x10000,0x20000,0x40000,0x800000,0x1000000
+field * 58025292 u8 0,1
+field * 580252A6 u16 0,1,8,0x20,0x40,0x80,0x100,0x200
+field * 58025CEA u8 0,1,2,3,6,8
+field * 58025BE8 u8 0,2
+field * 101EA069 u8 0,1
+field * 101EA06A u8 0,1,2
+field * 101EA067 u8 0,1,2
+field * 101EA073 u8 0,4
+field * 101EA06C u8 0,1
+field * 1047B09F u8 0,3,4,7,10,11
+field * 58025134 u32 0,0x4F6A686F,0x58626F73,0x41626573,0x4F746B75
+field * 58025138 u32 0,0x75730000,0x73300000,0x73310000,0x73320000,0x73330000,0x736F0000,0x72610000
+stable 58025134 8
+field 02599584 58025BBB u8 0,53,54,89,130
+field 02599584 58025BBC u8 0,53,54,89,130
+field 02599584 58025BBD u8 0,53,54,89,130
+field 02599584 r3+0x3025 u8 0,53,54,89,130
+field 02599584 r3+0x3026 u8 0,53,54,89,130
+field 02599584 r3+0x3027 u8 0,53,54,89,130
+field 02599584 r3+0x235A s16 -1,0,58,59,60,118,119,120
+field 02599584 r3+0x2392 s16 -1,0,58,59,60,118,119,120
+field 02599584 r3+0x23CA s16 -1,0,58,59,60,118,119,120
+field * r3+0x302A u8 0,4,8,12,15
+field * 101EA052 s16 0,1,4,5,6
+field * 101EA060 s16 0,1,4,5,6
+field * 101EA054 s16 0,1,2,3,4
+field * 101EA062 s16 0,1,2,3,4,5
+field * 101EA064 s16 0,1,3,4,5,6
+field * 101EA058 s16 -1,0,2,3,4,5,6
+field * 101EA05A s16 -1,0,2,3,4,5,6
+field * 101EA05C s16 -1,0,2,3,4,5,6
+# Real twelve-byte particle position and four stack arguments.
+callee 025A847C r6=12 stack=4
+# Player constructor10037CF0+AC=02444E38 reads only r3 (load+6590).
+field * 58025B2C u32 0x58070000
+field * 580700B4 u32 0x10037CF0
+field * 58025B38 u32 0x58060000
+ret 025D5218 0,0x58060000
+ret 024EC8D0 0x58060000 0x58060000
+field * 58060008 s16 0,0xEA,0xEB,0xEE,0xD3,0xD9,0xF0,0xF3,0xF4,0xF5,0xF6
+field * 580603A0 s8 -1,0,1,10,100
+field * 580603A1 s8 -1,0,1,10,100
+field * 580602DA u8 0,2
+field * 580600B0 u32 0,1,15
+field 0259B698 r3+0xFE2 s16 0,1
+field 0259B698 r3+0x301C u8 0,1,16,32
+field 0259B698 58010033 u8 0,1,16,32
+field 0259B698 58010034 u8 0,1,16,32
+field 0259B698 r3+0x301A u16 0,625,1250,1875,2500
+field 0259B698 r3+0xF60 f32 0,1,2
+field 0259B698 58025B64 s16 -1,0,1
+field 0259B698 58025B60 s16 -1,0,1
+field 0259C454 101EA075 u8 0,1
+field 0259CEA0 58025BEC u8 0,1
+field 0259CEA0 r3+0x3040 u16 0,89,98,99
+field 0259CEA0 r3+0x303C u32 0xFFFFFFFF,0
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0259C0EC 0x58025134 8 @stages,"","","","","Abes","Abes","Abes","Abes","Abesra","Abesra","Abesra","Abesra","Abess0","Abess0","Abess0","Abess0","Abess1","Abess1","Abess1","Abess1","Abess2","Abess2","Abess2","Abess2","Abess3","Abess3","Abess3","Abess3","Abesso","Abesso","Abesso","Abesso","Abesus","Abesus","Abesus","Abesus","Ojho","Ojho","Ojho","Ojho","Ojhora","Ojhora","Ojhora","Ojhora","Ojhos0","Ojhos0","Ojhos0","Ojhos0","Ojhos1","Ojhos1","Ojhos1","Ojhos1","Ojhos2","Ojhos2","Ojhos2","Ojhos2","Ojhos3","Ojhos3","Ojhos3","Ojhos3","Ojhoso","Ojhoso","Ojhoso","Ojhoso","Ojhous","Ojhous","Ojhous","Ojhous","Otku","Otku","Otku","Otku","Otkura","Otkura","Otkura","Otkura","Otkus0","Otkus0","Otkus0","Otkus0","Otkus1","Otkus1","Otkus1","Otkus1","Otkus2","Otkus2","Otkus2","Otkus2","Otkus3","Otkus3","Otkus3","Otkus3","Otkuso","Otkuso","Otkuso","Otkuso","Otkuus","Otkuus","Otkuus","Otkuus","Xbos","Xbos","Xbos","Xbos","Xbosra","Xbosra","Xbosra","Xbosra","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xbosso","Xbosso","Xbosso","Xbosso","Xbosus","Xbosus","Xbosus","Xbosus"
+fieldstr 0259B698 0x58025134 8 @stages,"","","","","Abes","Abes","Abes","Abes","Abesra","Abesra","Abesra","Abesra","Abess0","Abess0","Abess0","Abess0","Abess1","Abess1","Abess1","Abess1","Abess2","Abess2","Abess2","Abess2","Abess3","Abess3","Abess3","Abess3","Abesso","Abesso","Abesso","Abesso","Abesus","Abesus","Abesus","Abesus","Ojho","Ojho","Ojho","Ojho","Ojhora","Ojhora","Ojhora","Ojhora","Ojhos0","Ojhos0","Ojhos0","Ojhos0","Ojhos1","Ojhos1","Ojhos1","Ojhos1","Ojhos2","Ojhos2","Ojhos2","Ojhos2","Ojhos3","Ojhos3","Ojhos3","Ojhos3","Ojhoso","Ojhoso","Ojhoso","Ojhoso","Ojhous","Ojhous","Ojhous","Ojhous","Otku","Otku","Otku","Otku","Otkura","Otkura","Otkura","Otkura","Otkus0","Otkus0","Otkus0","Otkus0","Otkus1","Otkus1","Otkus1","Otkus1","Otkus2","Otkus2","Otkus2","Otkus2","Otkus3","Otkus3","Otkus3","Otkus3","Otkuso","Otkuso","Otkuso","Otkuso","Otkuus","Otkuus","Otkuus","Otkuus","Xbos","Xbos","Xbos","Xbos","Xbosra","Xbosra","Xbosra","Xbosra","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xbosso","Xbosso","Xbosso","Xbosso","Xbosus","Xbosus","Xbosus","Xbosus"
+fieldstr 0259ACD4 0x58025134 8 @stages,"","","","","Abes","Abes","Abes","Abes","Abesra","Abesra","Abesra","Abesra","Abess0","Abess0","Abess0","Abess0","Abess1","Abess1","Abess1","Abess1","Abess2","Abess2","Abess2","Abess2","Abess3","Abess3","Abess3","Abess3","Abesso","Abesso","Abesso","Abesso","Abesus","Abesus","Abesus","Abesus","Ojho","Ojho","Ojho","Ojho","Ojhora","Ojhora","Ojhora","Ojhora","Ojhos0","Ojhos0","Ojhos0","Ojhos0","Ojhos1","Ojhos1","Ojhos1","Ojhos1","Ojhos2","Ojhos2","Ojhos2","Ojhos2","Ojhos3","Ojhos3","Ojhos3","Ojhos3","Ojhoso","Ojhoso","Ojhoso","Ojhoso","Ojhous","Ojhous","Ojhous","Ojhous","Otku","Otku","Otku","Otku","Otkura","Otkura","Otkura","Otkura","Otkus0","Otkus0","Otkus0","Otkus0","Otkus1","Otkus1","Otkus1","Otkus1","Otkus2","Otkus2","Otkus2","Otkus2","Otkus3","Otkus3","Otkus3","Otkus3","Otkuso","Otkuso","Otkuso","Otkuso","Otkuus","Otkuus","Otkuus","Otkuus","Xbos","Xbos","Xbos","Xbos","Xbosra","Xbosra","Xbosra","Xbosra","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xbosso","Xbosso","Xbosso","Xbosso","Xbosus","Xbosus","Xbosus","Xbosus"

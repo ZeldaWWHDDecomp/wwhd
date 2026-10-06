@@ -1,0 +1,92 @@
+# Mozo: actual 32-entry HD actor boundary 021D3DF0..021D6270.
+src wwhd_src/d/actor/d_a_mozo.cpp
+callee 026066C4 r4=8
+callee 025E742C r3=16
+callee 027F2BF8 r3=16
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 023127F8 r3=out16 r4=12 r5=12
+callee 028E90D4 r3=48 r4=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E9BC0 r3=16 r4=16 r5=out16
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 028E8F44 r3=12 r4=12
+callee 0201B47C r3=12
+callee 02018808 r4=12 r5=12
+callee 025E7CE0 stack=0
+callee 025E8154 stack=0
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+field 021D4538 0x101BACB4 u8 0,1,2,3
+field 021D4538 r3+0xF8 u16 0,1,2,3
+field 021D4538 r3+0x54F u8 0,1
+arg 021D483C r4 0,1,2,3,4,5,0xFFFFFFFF
+arg 021D6070 r3 0,0x54000000
+ret 0273AD10 0,0x55000000
+stackfill periodic
+# --- steering for mutation input gaps ---
+# beam child actors: fopAcM_SearchByID -> two pinned beam actors (profile 0xE8), fopAc_IsActor 0/1
+ret 025D5218 0,0x56000000,0x56100000
+ret 025D4604 0,1
+arg 021D524C r4 0xFFFFFFFF,0,1
+field 021D524C 0x5600000E s16 0xE8,0xE8,0xE7
+field 021D524C 0x5610000E s16 0xE8,0xE8,0xE7
+field 021D551C 0x5600000E s16 0xE8,0xE8,0xE7
+field 021D551C 0x5610000E s16 0xE8,0xE8,0xE7
+field 021D551C 0x56000844 s16 0,1
+field 021D551C 0x56100844 s16 0,1
+field 021D551C 0x56000718 f32 0,4,5,6
+field 021D551C 0x56100718 f32 0,4,5,6
+field 021D5E08 0x5600000E s16 0xE8,0xE8,0xE7
+field 021D5E08 0x5610000E s16 0xE8,0xE8,0xE7
+field 021D5E08 0x56000844 s16 0,1
+field 021D5E08 0x56100844 s16 0,1
+field 021D5E08 0x56000718 f32 0,4,5,6
+field 021D5E08 0x56100718 f32 0,4,5,6
+field 021D5E08 0x56000798 f32 0,3,4,5
+field 021D5E08 0x56100798 f32 0,3,4,5
+field 021D5E08 r3+0x54E u8 0,1,2
+field 021D5E08 r3+0x540 f32 0.99,1
+field 021D5E08 r3+0x3C4 f32 0,1,2
+field 021D5E08 r3+0x440 f32 0,1,2
+field 021D5E08 r3+0x3BC u32 0x56200000
+field 021D5E08 0x5620009C f32 24,25,26
+# fire: frame against the end-frame threshold (end - 50)
+field 021D593C r3+0x3BC u32 0x56200000
+field 021D593C 0x562000A2 s16 80,100
+field 021D593C 0x5620009C f32 29,30,31,50,51
+field 021D593C r3+0x544 s32 1,3,4
+# joint callback: pinned model/actor chain, type 0/1/2, timing 0/1, init guards
+field 021D3DF0 0x104B462C u32 0x56400000
+field 021D3DF0 0x564000B8 u32 0x56500000
+field 021D3DF0 0x5650054E u8 0,1,2
+arg 021D3DF0 r4 0,1
+field 021D3DF0 0x10465770 u32 0,1
+field 021D3DF0 0x10465774 u32 0,1
+field 021D3DF0 0x10465778 u32 0,1
+field 021D3DF0 0x1046577C u32 0,1
+field 021D3DF0 0x10465780 u32 0,1
+field 021D3DF0 0x10465784 u32 0,1
+# checkRange: pinned HIO child blocks with the real defaults
+field 021D5030 0x104657EC u32 0x56600000
+field 021D5030 0x104657F0 u32 0x56600000
+field 021D5030 0x56600000 f32 1000
+field 021D5030 0x56600004 f32 1200
+field 021D5030 0x56600008 s16 0x2000
+field 021D5030 0x5660000A s16 0x2800
+field 021D5E08 0x560008E0 u32 0,0x56800000
+field 021D5E08 0x561008E0 u32 0,0x56900000
+field 021D551C 0x560008E0 u32 0,0x56800000
+field 021D551C 0x561008E0 u32 0,0x56900000
+# getBeamActor as a mocked callee of beam/towait: the two pinned beam actors (or none)
+ret 021D524C 0,0x56000000,0x56100000
+# checkRange: distance / forward / angle results around the HIO limits
+fret 028F4384 0 2400
+fret 028E8F44 0 400
+ret 0200FAAC 0 0x3000
+arg 021D5030 r4 0,1
+ret 025200D4 0x54000000
+field 021D5030 0x54005B2C u32 0x56700000
+field 021D5030 0x567003CC f32 -1,0,1

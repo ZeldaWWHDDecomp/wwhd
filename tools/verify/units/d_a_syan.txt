@@ -1,0 +1,28 @@
+# Verification unit: d_a_syan
+src wwhd_src/d/actor/d_a_syan.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r4=out12      # MtxPosition: output
+ret 02520460 0 5              # resLoad
+arg 024A4298 r4 0,1
+ret 027F7878 0x57000000 0x57000000   # J3DNode -> joint: a fixed joint
+field 024A4298 57000004 u16 0,1,2,3,4,5,6
+field 024A5224 r3+0x3BC u32 0 3
+field 024A45E0 r3+0x3BC u32 0,1,2,3
+field 024A45E0 r3+0x3F0 s16 0,1,-1
+field 024A45E0 r3+0x6A8 s16 0,1,2
+field 024A45E0 r3+0x6AA s16 0,1,2
+field 024A45E0 r3+0x6B4 s16 0,1,2
+field 024A45E0 r3+0x6B6 s16 0,1,2
+field 024A45E0 r3+0x6C0 s16 0,1,2
+field 024A45E0 r3+0x6C2 s16 0,1,2
+field 024A45E0 r3+0x6CC u8 0,1
+field 024A45E0 r3+0x6CD u8 0,1
+field 024A45E0 1046E218 u32 0,1
+field 024A45E0 1047B61C f32 0.0 0.0     # REG0_F(3)
+field 024A45E0 1047B640 f32 0.0 0.0     # REG0_F(12)
+field 024A45E0 1047B644 f32 0.0 0.0     # REG0_F(13)
+field 024A45E0 r3+0x51C f32 -100.0 100.0
+field 024A45E0 r3+0x564 f32 -100.0 100.0
+field 024A45E0 r3+0x524 f32 -100.0 100.0
+field 024A45E0 r3+0x56C f32 -100.0 100.0

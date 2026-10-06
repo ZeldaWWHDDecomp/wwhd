@@ -1,0 +1,19 @@
+src wwhd_src/d/hd_text_tag.cpp
+# tag ids / groups
+field 025FA3CC r5+4 u16 0xC,0xB,0
+field 025FA348 r5+4 u16 1,2,3
+field 025FA4CC r6+2 u16 0,1,2,3
+field 025FA140 r5+8 u16 0xFFFF,0,4
+field 025FA140 r5+6 u16 4,6,8
+# fontTag: fonts at a pinned address whose vtable is a pinned table of mock targets (random fonts
+# would reach real code through their vtables); the font manager singleton (zero in the image)
+ret! 025F36B8 0x5A000000,0x5A000000,0
+field 025FA140 r4+0x28 u32 0x5A000000,0
+field 025FA140 r3+0xC u32 0x5A000000,0
+field 025FA140 5A000004 u32 0x5A100000
+field 025FA140 5A10001C u32 0x02FF001C
+field 025FA140 5A100024 u32 0x02FF0024
+stable 5A000004 4
+stable 5A100000 0x30
+field * 101F4A50 u32 0x5F400000
+stackfill periodic

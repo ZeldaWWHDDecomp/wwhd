@@ -1,0 +1,14 @@
+src wwhd_src/d/actor/d_a_obj_vmsdz.cpp
+stackfill
+callee 026066C4 r4=8
+ret 026066C4 0,0x57000000
+ret 025E38E0 0,0x56000000
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+field * 101F4F28 u32 0x5A123400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3AC u32 0,0x56000000
+observe 025E2DE0 104B4634 8
+arg! 023B3538 r3 0,0x40000000
+arg! 023B376C r3 0,0x40000000
+arg! 023B3780 r3 0,0x40000000

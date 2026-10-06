@@ -1,0 +1,54 @@
+# Verification unit: d_a_npc_os part A: 022AB6DC..022AD218
+src wwhd_src/d/actor/d_a_npc_os_a.cpp
+callee 022AA630 r4=8 r5=8     # setAction(&cur, &newFunc copy, arg)
+callee 022AA778 r4=8          # setNpcAction(&func copy)
+callee 022ABAC8 r4=8          # setPlayerAction(&func copy)
+ret 025200D4 0x54000000 0x54000000      # play object at a fixed address
+field * 54005B34 u32 0x55000000 0x55000000   # link player
+field * 54005B2C u32 0x55000000 0x55000000   # player 0
+field * 54005292 u8 0 1
+field * r3+0x915 i8 -1,0x11,0x12,0,2,7,0x10
+arg! 022ABF04 r4 0 0xFFFF
+field * 101F84DC u32 0x56000000 0x56000000   # save info
+ret 025BA0C0 0 1                         # isSwitch
+ret 025B8B94 0 1                         # isEventBit
+field * r3+0x326 i8 7,7,6,0
+field * r3+0x2DD i8 0 3                  # argument
+# eventProc
+field 022AB6DC r3+0xF8 u16 2,2,0,1
+field 022AB6DC r3+0x915 i8 -1,0,2,8,9,0xA,0xF,0x10,0x11
+field 022AB6DC r3+0x600 u32 0,1,2,3
+field 022AB6DC r3+0x91A i8 0,1,5,15
+field 022AB6DC 550000F8 u16 3,0
+ret 025445B8 0 1                         # startCheckOld
+ret 0254457C 0 1                         # endCheckOld
+ret 022AB5A4 -1,0,1                      # getMyStaffId
+ret 022AB670 0 1                         # checkCommandTalk
+ret 02542EDC -1,0,1,2,3,4,5,6,7,8,9,10,11   # getMyActIdx
+ret 025447C8 0 1                         # getIsAddvance
+ret 025440C8 0 1                         # endCheck
+field 022AD138 r3+0x2FE i8 -1,0,1
+field 022AD138 r3+0x326 i8 0 3
+ret 022A9EAC 0 1                         # finishCheck
+# execute
+arg 022AC1DC r3 0x5A000000,0x5A000000,0x5B000000
+field 022AC1DC 54005B38 u32 0x5A000000,0
+field 022AC1DC 54005B2C u32 0x5A000000,0x55000000
+field 022AC1DC r3+0x8EA i16 -1,-1,0,3
+field 022AC1DC r3+0x8E8 i16 0,0,1
+field 022AC1DC r3+0x8EC u32 0x022AECD4,0x022AF8D4,0x022AEF70,0
+field 022AC1DC r3+0x8E2 i16 -1,-1,0,3
+field 022AC1DC r3+0x8E0 i16 0,0,1
+field 022AC1DC r3+0x8E4 u32 0x022AFF94,0
+field 022AC1DC r3+0x464 u32 0,0x20,0x1000,0x1020,1,0x21
+field 022AC1DC r3+0x604 u8 0,29,30,31
+field 022AC1DC r3+0x600 u32 0,1,2,3
+field 022AC1DC r3+0x8F4 u32 0,1,2,3,8,9,0xC,4
+ret 025D9F38 0,0x57000000,0x57000000      # fopAcM_searchFromName
+ret 025DD868 0,0,1                        # fpcM_IsCreating
+ret 024451B4 0,1,1                        # check_initialRoom
+ret 024452A0 0,0,1                        # check_moveStop
+ret 02445950 0 1                          # checkNowPosMove
+ret 022AB6DC 0 1                          # eventProc
+ret 022ABBF8 0 1                          # returnLinkCheck
+ret 024EF0BC 0,4                          # GetGroundCode

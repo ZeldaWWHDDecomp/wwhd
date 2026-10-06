@@ -1,0 +1,28 @@
+# Recovery fairy: HD profile ID 0x168, actor size 0x8C0.
+src wwhd_src/d/actor/d_a_npc_fa1.cpp
+stackfill periodic
+callee 0201ADE0 r4=out12
+callee 028E8DD0 r3=12
+field 022347E4 r3+0x8A4 u16 0,1,2,0xFFFF
+arg 02232FE4 r3 0,0x40000000
+arg 02233030 r3 0,0x40000000
+arg 02235250 r3 0,0x40000000
+arg 022352C4 r3 0,0x40000000
+arg 02235350 r3 0,0x40000000
+arg 02233BE8 r4 0,1,2,0xFFFF
+field 02233BE8 r3+0x6 u16 0,1,2,0xFFFF
+field 022346FC r3+0x8AC u8 0,5,6
+callee 026066C4 r4=8
+callee 025E4F64 stack=4
+callee 025A847C stack=4
+field 0223350C r3+0xB0 u32 0,1,2,3,4,5,6,255
+field 02233854 r3+0x2E4 u32 0,8
+field 02233A0C r3+0x8AC u8 0,1,2,3,4,5,6,7,8
+field 02233F40 r3+0xF8 u16 0,6
+callee 0201AD78 r4=out12
+field 02234078 r3+0x8AE u8 0,1,2,3
+field 02234078 r3+0x8AF u8 0,1,2,255
+field 02234078 r3+0x8A4 u16 0,1,2,65535
+field 022344EC r3+0x8AE u8 0,1,2
+field 02234894 r3+0x8AE u8 0,1
+field 02234A60 r3+0x8AE u8 0,1

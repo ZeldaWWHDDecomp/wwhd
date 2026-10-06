@@ -1,0 +1,43 @@
+# Verification unit: d_a_npc_co1 part A (Prince Komali: heap, animation, create, matrices)
+src wwhd_src/d/actor/d_a_npc_co1_a.cpp wwhd_src/d/actor/d_a_npc_co1_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 02227C48 r4=8          # set_action(pointer to member, 8 bytes)
+ret 025200D4 0x54000000 0x54000000
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 02227C48 r4=8          # set_action (own address, pointer to member)
+ret 025200D4 0x54000000 0x54000000
+# checkOrder: event command, order index, order kind
+field 02228728 r3+0xF8 u16 0 2
+field 02228728 r3+0x9C8 i16 0 3
+field 02228728 r3+0xA30 i8 0 3
+ret 0254407C 0 1
+# mutation-driven steering
+# set_action: equal / differing pointers to member
+field 02227C48 r3+0x8EE i16 -1,0,1
+field 02227C48 r4+2 i16 -1,0,1
+field 02227C48 r3+0x8EC i16 0,4
+field 02227C48 r4+0 i16 0,4
+field 02227C48 r3+0x8F0 u32 0x0222A568,0x0222A0AC
+field 02227C48 r4+4 u32 0x0222A568,0x0222A0AC
+# setMtx: animation number cases, in-demo flag
+field 02228014 r3+0xA2D i8 4,8,0,11
+field 02228014 r3+0x9EF u8 0,0,0,1
+# demo: demo actor id, demo object, demo btp data
+field 02228848 r3+0x2DC u8 0,0,1,2,0x20,0x21
+field 02228848 101D5FFC u32 0,0x57000000
+ret 02527828 0,0x5A000000
+ret 025E789C 0 1
+# setMtx: body frame around 15 and m9A4, glow range around the 0.001 floor
+field 02228014 r3+0x44C u32 0x5B000000,0x5B000000,0x5B000000
+field 02228014 5B00009C f32 15,14,16,15
+field 02228014 r3+0x9A4 f32 15,14.5,16
+field 02228014 10466CDC f32 0,0.001,0.002
+field 02228014 10466CE0 f32 0,0.001
+field 02228848 r3+0x9EF u8 0,1,2
+# stack arguments (facts from d_a_npc_ac1)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument (entry) on the stack
+callee 025E4F64 stack=4       # mDoExt_McaMorf::mDoExt_McaMorf: 4 stack words
+callee 024F06B4 stack=1       # dBgS_Acch::Set: 9th argument on the stack
+callee 0259E08C stack=2       # dNpc_JntCtrl_c::setParam: 2 stack words
+field 02228848 101D6000 u32 0x55000000,0x00000055

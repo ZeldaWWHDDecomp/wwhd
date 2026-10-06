@@ -1,0 +1,107 @@
+# Full TU inventory75HD0259D24C..025A1797; implementation in progress.
+src wwhd_src/d/d_npc.cpp
+stackfill periodic
+callee 026067F4 r4=8
+callee 026066C4 r4=8
+callee 02606900 r4=8 r5=8
+callee 0200FCD8 r3=12 r4=out12
+ret 0273AD10 0,57000000
+ret 025B8B94 0,1
+ret 025B7840 0,1
+ret 025B7570 0,1
+field * 101F4F28 u32 0x59000000
+field * 101F84DC u32 0x59010000
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 028F521C r3=out8 r4=0
+pointee 028F521C r3=8
+# Normal joint axis selects yaw/pitch, not an arbitrary object displacement.
+arg 0259DB6C r5 0,1
+arg 0259DDA0 r7 0,1
+callee 0259DB48 r4=out2
+pointee 0259DB48 r4=2
+callee 0200F474 r3=4
+callee 0200F378 r3=2
+field * r3+0xA u8 0,1
+field * r3+0xB u8 0,1
+field * r3+0xC u8 0,1
+arg 0259E0C8 r5 0,1
+arg 0259E0C8 r6 0,1
+ret 0259DB6C 0,1
+ret 0259DDA0 0,1
+ret 0259EB1C 0,1
+ret 0259EC0C 0,1
+ret 0259EBA4 0,1
+ret 0259EC94 0,1
+# Loaded path pointers and small normal path counts for leaf index helpers.
+field 0259EB1C r3+0x0 u32 0,0x59020000
+field 0259EB60 r3+0x0 u32 0,0x59020000
+field 0259EBA4 r3+0x0 u32 0,0x59020000
+field 0259EC0C r3+0x0 u32 0,0x59020000
+field 0259EC50 r3+0x0 u32 0,0x59020000
+field 0259EC94 r3+0x0 u32 0,0x59020000
+field * 59020000 u16 0,1,2,255
+field * 59020005 u8 0,1
+field * r3+0x5 u8 0,1,2,254,255
+field * r3+0x6 u8 0,1
+field 0259F36C r3+0x8 s16 0,4,256,-1
+field 0259F36C r3+0xA s16 -1,0,1
+field 0259F36C r3+0xC u32 0x0259F448,0x0259F5A4
+field 0259F514 r3+0x8 s16 0,4,256,-1
+field 0259F514 r3+0xA s16 -1,0,1
+field 0259F514 r3+0xC u32 0x0259F448,0x0259F5A4
+# Direct/virtual normal head callback receiver layout; actual callbacks consume angles.
+field 0259F67C r3+0x8 s16 0
+field 0259F67C r3+0xA s16 -1,0,1
+field 0259F67C r3+0xC u32 0x0259F448,0x0259F5A4
+field 0259F67C r3+0xE s16 0
+field 0259F67C r3+0x0 u32 0x59030000
+field * 5903000C u32 0x0259F448,0x0259F5A4
+# getMyActIdx receives seven actual action names; valid results are -1 or0..6.
+ret! 02542EDC -1,0,1,2,3,4,5,6
+ret 02542D88 -1,0,1
+ret 025447C8 0,1
+ret 0254487C 0,0x59040000
+ret 0211D2F8 0,1
+ret 025A11EC 0,2,6,16,18
+field 025A1388 r3+0x52 u8 0,1
+field 025A11EC r3+0xB4 u32 0x10051858
+field 025A11EC r3+0x7C8 u32 -1,0,1
+field 025A11EC r3+0x7CC u8 0,1
+arg 025A11EC r4 0,1
+ret 025F7DB0 -1,0,1
+ret 025F795C 0,2,6,14,15,18,255
+field * 101F4B5C u32 0x59050000
+# maxPoint returns the low byte of the normal u16 count; generated values remain in0..255.
+ret! 0259EDB8 0,1,2,4,255
+callee 0259E778 r4=out12
+pointee 0259E778 r4=12
+callee 0200F93C r3=12 r4=12
+field 0259E838 r3+0x0 u32 0,0x59020000
+field 0259E838 r3+0x5 u8 0,1,2
+field 0259E838 59020000 u16 3
+field 0259E838 59020008 u32 0x59060000
+ret 025C109C 0,0x59070000
+field 0259FD08 r4+0x24 u32 0,1
+field 0259FD08 r3+0x2D8 u16 0,1
+field 0259FD08 r3+0xE s16 0,1
+field 0259FD08 r3+0x2DD s8 0,1
+field * 59070008 s16 0,1
+field * 5907000A s8 0,1
+
+# Actual vector addition outputs and joint distribution stack objects.
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0259E104 r5=out2 r6=out2
+callee 0259E1DC r5=out2 r6=out2
+pointee 0201AD78 r4=12
+pointee 0259E104 r5=2 r6=2
+pointee 0259E1DC r5=2 r6=2
+
+pointee 0259D54C r3=12
+callee 0259D54C r3=out12
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+ret 025200D4 0x4E000000 0x4E000000  # play object pinned so its stage name can be steered
+fieldstr 025A02DC 0x4E005134 8 @stages,"NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","NoTurn","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","Pnezumi","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","SetId","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed","Speed"

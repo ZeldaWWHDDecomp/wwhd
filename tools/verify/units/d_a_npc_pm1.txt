@@ -1,0 +1,36 @@
+# Verification unit: d_a_npc_pm1 (Maggie, poor)
+src wwhd_src/d/actor/d_a_npc_pm1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 022D1378 r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r6=12         # lookAtTarget (eye copy)
+callee 022D0EF8 r5=out4       # BtpNum2ResID
+callee 022D2250 r5=out4 r6=out4  # anmResID
+ret 025200D4 0x54000000 0x54000000
+field 022D1350 r3+8 i16 0x162,0x161,0
+ret 02520460 0,4,5
+ret 025D63E8 0 1
+ret 022D174C 0 1
+ret 022D1350 0 1
+arg 022D2250 r4 0 2
+arg 022D2250 r5 0,0x60000000
+arg 022D2250 r6 0,0x60000004
+arg 022D24D4 r4 6,14,5
+field 022D24D4 r3+0x942 i8 0 1
+field 022D24D4 r3+0x938 u8 0,1,0xFF
+field 022D24D4 54005BC6 u8 0,1,0xFF
+field 022D1A5C r3+0xF8 u16 0,1,2,3
+field 022D1A5C r3+0x93B i8 0,1,2,3
+field 022D275C r3+0x7CC u8 0 1
+ret 025F795C 0x12 0x14
+field 022D1378 r3+0x864 i16 0,1
+field 022D1378 r3+0x866 i16 0,-1,1
+field 022D1378 r3+0x868 u32 0x022D27DC,0x02272EF0
+field 022D1378 r4+0 i16 0,1
+field 022D1378 r4+2 i16 0,-1,1
+field 022D1378 r4+4 u32 0x022D27DC,0x02272EF0
+field 022D1CF4 r3+0x93E i8 0,1,2,3,4
+field 022D1CF4 r3+0x3B6 u8 0 1
+field 022D1F70 r3+0xF8 u16 0,1,2

@@ -1,0 +1,15 @@
+# Verification unit: d_a_tag_ghostship (Ghost Ship clear event tag)
+src wwhd_src/d/actor/d_a_tag_ghostship.cpp
+
+ret 0254457C 0 1              # endCheckOld
+ret 02544830 0,0x1003F1D0,0x1003F1D0,0x1003F1CC,0x1003F198   # getMyNowCutName: NULL, "WARAIGOE", "" , "sea"
+ret 025B8BB0 0,2,3,3,4,0x80,0xFF   # getEventReg
+ret 0273AD10 0,0x58000000,0x58000000
+field 024A86A8 r3+0x3AC u32 0,1
+arg 024A86A8 r4 0,1,1,2
+arg! 024A86A8 r5 0,1
+field 024A8754 r3+0x3AC u32 0,1
+field * r3+0xF8 u16 0,2,2,3
+field * 1046E2C5 u8 0,0,1
+field * r3+0xB0 u32 0,0xFF00,0xFF12,0x1234,0x0100,0xFE80
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7,0xFFFFFFFF

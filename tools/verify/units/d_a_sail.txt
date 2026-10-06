@@ -1,0 +1,140 @@
+# Verification unit: d_a_sail (pirate ship's sail)
+src wwhd_src/d/actor/d_a_sail.cpp
+
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02520460 0 5                    # resLoad
+ret 025D63E8 0 1                    # entrySolidHeap
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0201ADE0 r3=12 r4=out12 r5=12   # cXyz::operator-
+callee 0201B080 r3=12 r4=out12 r5=12   # cXyz::outprod
+callee 0201B1E4 r3=12 r4=out12         # cXyz::normZC
+callee 028E8D88 r3=12 r4=12 r5=out12   # PSVECAdd
+callee 0200FCD8 r3=12 r4=out12         # MtxPosition
+callee 0255F5FC r3=out12 r4=out12      # dKy_FirstlightVec_get (HD: result, scratch)
+callee 02463348 r3=8                   # SafeString::assureTerminationImpl_
+callee 0274D458 r4=16                  # colour * intensity: colour
+callee 027FDA54 r5=48                  # uniform view matrix (sead::Matrix34 copy)
+callee 028E90D4 r3=48                  # PSMTXCopy(sead matrix on the stack)
+callee 0245F420 r3=out48               # Mtx -> sead::Matrix34
+callee 0245F4C0 r3=out16               # GXColorS10 -> float colour
+callee 027B90AC r4=8                   # program lookup: SafeString key
+# the draw state object on the stack (0xF0 bytes)
+callee 0280037C r4=0xF0
+callee 02750370 r3=0xF0
+callee 02750684 r3=0xF0
+callee 02750250 r3=255
+# packet constructor: `this` pinned (NULL too); the program count it zeroes stays stable (the
+# mocked list setup 0280068C cannot fill it), so the per-program loop is not reached
+arg! 024616AC r3 0,0x40000000,0x40000000,0x40000000
+stable 40000098 0xC
+# operator new (NULL this): the same pinned address or NULL, always (ret!): an unsteered result (1 call in 8
+# under `ret`) gave the constructor a random object whose inlined array loops then walked random memory to the
+# 20M-access budget with clobbering (~800k pages, ~5M calls, minutes and ~17 GB per side, "aborted on both
+# sides", i.e. never compared)
+ret! 0273AD10 0,0x40000000,0x40000000
+# destructors: the program list {count, entries} pinned at 0x58000000 (entries {prog, n, attrs, n2, attrs2})
+field 02462AC4 r3+0x9C u32 0 3
+field 02462AC4 r3+0xA0 u32 0,0x58000000,0x58000000
+field 02462AC4 r3+0xA0C u32 0 3
+field 02462EF0 r3+0x458 u32 0 3
+field 02462EF0 r3+0x45C u32 0,0x58000000,0x58000000
+field 02462EF0 r3+0xDC8 u32 0 3
+arg! 02462AC4 r3 0,0x40000000,0x40000000,0x40000000
+arg! 02462EF0 r3 0,0x40000000,0x40000000,0x40000000
+stable 4000009C 0x8
+stable 40000A0C 0x4
+stable 40000458 0x8
+stable 40000DC8 0x4
+field * 58000004 i32 0,0,1,2,3
+field * 5800000C i32 0,0,1,2,3
+field * 58000018 i32 0,0,1,2,3
+field * 58000020 i32 0,0,1,2,3
+field * 5800002C i32 0,0,1,2,3
+field * 58000034 i32 0,0,1,2,3
+stable 58000000 0x40
+# draw: the pass of the context (0..2 handled, others fall through)
+field 02462364 r4+0xC i32 0,1,2,3,-1,5
+field 02462364 r3+0x9C u32 0,1,2,4
+# update: texture not loaded yet; the texture fields equal to the sampler's (copy path)
+field 0245F638 r3+0x1290 u8 0,0,1
+field 0245F638 r3+0x10FC u32 0,0,0,1
+field 0245F638 r3+0xED4 u32 0,0,0,1
+field 0245F638 r3+0x1100 u32 0,0,0,1
+field 0245F638 r3+0xED8 u32 0,0,0,1
+field 0245F638 r3+0x1104 u32 0,0,0,1
+field 0245F638 r3+0xEDC u32 0,0,0,1
+field 0245F638 r3+0x1108 u32 0,0,0,1
+field 0245F638 r3+0xEE0 u32 0,0,0,1
+field 0245F638 r3+0x110C u32 0,0,0,1
+field 0245F638 r3+0xEE4 u32 0,0,0,1
+field 0245F638 r3+0x1110 u32 0,0,0,1
+field 0245F638 r3+0xEE8 u32 0,0,0,1
+field 0245F638 r3+0x1130 u32 0,0,0,1
+field 0245F638 r3+0xF08 u32 0,0,0,1
+field 0245F638 r3+0x112C u32 0,0,0,1
+field 0245F638 r3+0xF04 u32 0,0,0,1
+field 0245F638 r3+0x1114 u32 0,0,0,1
+field 0245F638 r3+0xEEC u32 0,0,0,1
+field 0245F638 r3+0x2EBE u8 0 1
+# sail_move: the furl speed sign, the demo actor, "Demo46" (stage name at 1047E6B8)
+field 02460678 r3+0x3288 f32 -0.02 0.02
+field 02460678 r3+0x3284 f32 -0.1 1.1
+field 02460678 r3+0x2DC u8 0,1,0x20,0x21
+field 02460678 1046D78E u8 0,1,2
+field 02460678 1046D790 u8 0,1
+field 02460678 54005292 u8 0,1,1
+ret 02526E70 0,0x5C000000,0x5C000000
+field 02460678 5C000004 u16 0,0x40
+field 02460678 5C000030 f32 -10 110
+field 02460678 1047E6B8 u8 68,68,68,0x41
+field 02460678 1047E6B9 u8 101,101,101,0x41
+field 02460678 1047E6BA u8 109,109,109,0x41
+field 02460678 1047E6BB u8 111,111,111,0x41
+field 02460678 1047E6BC u8 52,52,52,0x41
+field 02460678 1047E6BD u8 54,54,54,0x41
+field 02460678 1047E6BE u8 0,0,0,0x41
+# Create: HIO not yet registered; the ship found or not
+field 02462194 1046D78C i8 -1,0
+ret 025D5218 0,0x5D000000,0x5D000000
+field 02462194 5D0003E6 u8 0,1
+# packet ctor program list: the list setup 0280068C fills {count, capacity, entries} at P+0x98 in the
+# game; its generated mock now writes a small count/capacity and the fixed entry table at 0x58000000 (the
+# destructors' fixture), so the per-program loop runs on steered inputs (it ran only on the old unsteered packets that
+# walked random memory). The entries' object arrays are null or a fixed array whose elements' vtable destructor slot
+# is the real element destructor 027BF7E8, not a random vtable.
+mockfield 0280068C r3+0 u32 0,1,2
+mockfield 0280068C r3+4 u32 0,1,2
+mockfield 0280068C r3+8 u32 0x58000000
+field * 58000008 u32 0,0x58100000
+field * 58000010 u32 0,0x58100000
+field * 5800001C u32 0,0x58100000
+field * 58000024 u32 0,0x58100000
+field * 58000030 u32 0,0x58100000
+field * 58000038 u32 0,0x58100000
+field * 581000F0 u32 0x58200000
+field * 581001E4 u32 0x58200000
+field * 5820000C u32 0x027BF7E8
+stable 581000F0 4
+stable 581001E4 4
+stable 5820000C 4
+# packet ctor: the two shader states (+0xE40, +0xF60) equal (copy path) about a third of the time
+field 024616AC r3+0xE44 u32 0 0
+field 024616AC r3+0xF64 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE48 u32 0 0
+field 024616AC r3+0xF68 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE4C u32 0 0
+field 024616AC r3+0xF6C u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE50 u32 0 0
+field 024616AC r3+0xF70 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE54 u32 0 0
+field 024616AC r3+0xF74 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE58 u32 0 0
+field 024616AC r3+0xF78 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE78 u32 0 0
+field 024616AC r3+0xF98 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE74 u32 0 0
+field 024616AC r3+0xF94 u32 0,0,0,0,0,0,0,0,0,0,0,1
+field 024616AC r3+0xE5C u32 0 0
+field 024616AC r3+0xF7C u32 0,0,0,0,0,0,0,0,0,0,0,1
+stable 40000E40 0x40
+stable 40000F60 0x40

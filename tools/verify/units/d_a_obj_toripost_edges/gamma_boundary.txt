@@ -1,0 +1,88 @@
+src wwhd_src/d/actor/d_a_obj_toripost.cpp
+stackfill
+ret 025200D4 0x54000000 0x54000000
+field * 101F84DC u32 0x55000000 0x55000000
+field * 101F4B5C u32 0x56000000 0x56000000
+field * 101F4F28 u32 0x57000000 0x57000000
+field * r3+0x7EC u32 0x58000000 0x58000000
+field * 58000090 u32 0,0x59000000
+field * r3+0x7DC u32 0,1,2,3,4
+field * r3+0x7E0 s8 -1,0,1,2
+field * r3+0x7E1 s8 1,2,3,4,5
+field * r3+0xA00 u8 0,1,2
+field * r3+0xA01 u8 0,1
+field * r3+0xA02 u8 0,1
+field * r3+0xA03 u8 0,1
+field * r3+0xA04 s32 0,1,2,3,6,7,8,9,10,11,12,13
+field * r3+0xA0C u8 0,1
+field * r3+0xA0D u8 0,1
+field * r3+0xA0E u8 0,0x98,0x99,0x9A,0x9B,0xFF
+field * r3+0xA0F s8 -1,0,1,2,3
+field * r3+0xF8 u16 0,1,2,3
+field * r3+0x2E4 u32 0,2,4,6,8,10,12,14
+field * 540052B0 u8 0,1,2,3,4,5,255
+field * 54005292 u8 0,1
+field * 54005B2C u32 0x5A000000 0x5A000000
+field * 5A0000B4 u32 0x10037C78 0x10037C78
+field * 56000948 u32 0,1,2
+field * 55000024 u16 0,4,5,9,10,19,20,200,201,9999
+field * 55000032 u8 0,1,2,3
+ret 025B7D90 0,1
+ret 02520C0C 0,1
+ret 02586ED0 0,1
+ret 02520A84 0,1
+ret 025B8B94 0,1
+ret 02586DC8 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 0254487C 0,0x5B000000
+ret 025A11EC 0,5,14,15,16,18
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2,3
+ret 025447C8 0,1
+ret 0259F858 0,1
+ret 025162A4 0,1
+ret 02544950 0,1
+ret 0211D2F8 0,1,2
+ret 0254457C 0,1
+ret 02556D14 0,1
+callee 026066C4 r4=8
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+arg! 023A40E0 r4 0,1,2
+arg! 023A40E0 r5 0,1,2,3,4
+arg! 023A3DD0 r4 1,2,3,4,5
+arg! 023A5BFC r3 0,0x55000000
+arg! 023A5BDC r3 0,0x55000000
+arg! 023A5AB4 r3 0,0x55000000
+arg! 023A5238 r3 0,1,127,128,254,255,256,0xFFFFFFFF
+field 023A55BC r4+0 u32 0xCE5,0xCE6,0xCE7,0xCE8,0xCE9,0xCEA,0xCEB,0xCEC,0xCED,0xCEE,0xCEF,0xCF0,0xCF1,0xCF2,0xCF3,0xCF4,0xCF5,0xCF6,0xCF7,0xCF8
+field * r3+0x7C0 u32 0xCE9,0xCEA,0xCF0,0xCF1,0xCF7,0xCF8,0x1AAF,0xCF9,0xCFA,0xCFB,0xCFC,0xCFD,0x805,0xDB6,0x1148,0xF76,0x19A6,0xF77
+field * r3+0x9F4 s32 -1,0,1,2,10,30
+field * r3+0x9F8 s32 -1,0,1,2,10,30
+field * r3+0x9FC s32 -1,0,1,2,9,10
+field * 58000098 f32 nan,inf,-inf,-0,0,1
+field * 5800009C f32 nan,inf,-inf,-0,0,1,2
+field * 580000A7 u8 0,1,2,3
+field * 1046C533 u8 0,1
+field * 101FDA50 u32 0,1
+fret 025D6958 0 600
+fret 02444D60 -1 1
+# Exact HD safe-string and event substance alternatives.
+field * 54005134 u32 0x73656100,0x73656101,0
+field * 5B000000 u32 0x48414B49,0
+field * 5B000004 u32 0x44415355 0x44415355
+field * 5B000008 u32 0 0
+# These are actual HD callee inputs: ctor uses three caller stack words;
+# matrix copy/vector transform read all 48 matrix bytes (paired-single loads).
+callee 025E4F64 stack=3
+callee 02587A0C stack=1
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+# Stage identity is immutable during a frame; assureTermination does not change it.
+stable 54005134 8
+# Player virtual slot +0x9C = 02444D60 in real vtable10037C78; lfs f1,+0x8A0(r3).
+
+# Caller word4 is loaded into r20 solely for025E38E0 incomingr5, ignored by actual HD callee.
+
+# Include negative zero and the first f32 above the upper clamp threshold.
+fret 028F4560 -0 1.0000001192092896

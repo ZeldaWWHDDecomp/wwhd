@@ -1,0 +1,95 @@
+# Verification unit: d_a_obj_mknjd (Earth God's Lyric / Wind God's Aria statues)
+src wwhd_src/d/actor/d_a_obj_mknjd.cpp
+
+callee 026066C4 r4=8            # getRes: SafeString key
+callee 025A847C stack=4         # dPa_control_c::set: setup, prm, env, scale2D on the stack
+callee 025CB374 r6=12           # StartShock: cXyz by value
+callee 0201ADE0 r4=out12 r5=12  # cXyz::operator-
+ret 02520460 0 5                # resLoad
+ret 024F1D9C 0 5                # MoveBGCreate
+ret 025BA0C0 0 1                # isSwitch
+ret 0254DA50 0 1                # checkItemGet
+ret 02374AE0 0 1                # PrmAbstract
+arg 02374AE0 r4 0,1,8,31,32,33,63
+arg 02374AE0 r5 0,1,8,16,31,32,33,63
+field * r3+0xD u8 2,3,4         # create result
+field * r3+0x556 u8 0,1,2       # m043E
+stackfill periodic
+# joint trees: pin 027F3F94's result so the joint count can be steered (loops over all joints)
+ret 027F3F94 0x54100000 0x54100000
+field * 0x54100008 u16 0 4
+# play object pinned: status words, event flags, stage name
+ret 025200D4 0x54000000 0x54000000
+field * 0x54005CDC u32 0,1,2,3
+field * 0x540052B0 u8 0,1,4,5
+field * 0x54005292 u8 0,1
+field * 0x54005BD3 u8 0,1
+field * 0x1047E6C8 u8 0,12,13
+field 02373EA8 0x54005134 u32 0x6B617A65,0x6B617A00,0x41414141
+field 02373EA8 0x54005138 u8 0,0x41
+field 02373A30 0x54005134 u32 0x456B617A,0x45646169,0x41414141
+field 02373A30 0x54005138 u32 0x65000000,0x63686900,0x41414141
+# events / cuts / messages
+ret 02542D88 -1,0,1             # getMyStaffId
+ret 02542EDC -1 9               # getMyActIdx
+ret 025447C8 0 1                # getIsAddvance
+ret 0254407C 0 1                # startCheck
+ret 025440C8 0 1                # endCheck
+ret 025F795C 0x0E,0x12,0x10,0x15  # message status
+ret 025F7DB0 -1,0,3             # messageSet
+ret 02373360 0x12,0x15,0xFF     # talk
+ret 023734B4 0 1                # break
+ret 020195B0 -32768,-16385,-16384,0,16384,16385,32767  # cM_atan2s
+fret 028F4384 0 1600            # sqrtf
+ret 027DF9B0 -1 3               # JUTNameTab::getIndex
+field * r3+0x557 u8 0,1,2,3,4,5,6,7,8,9,10,11,12,13   # m043F
+field * r3+0x556 u8 0,1,2       # m043E
+field * r3+0x555 u8 0,1,2       # m043D
+field * r3+0x554 u8 0,1,255     # alpha
+field * r3+0xF8 u16 0,1,2       # event command
+field * r3+0x54A u16 0,1,2,3    # m0432
+field * r3+0x54C u16 0,1,2,3    # m0434
+field * r3+0x610 i32 -1,0,5     # mMsgPID
+field * r3+0x614 u8 0,1         # msg found
+field * r3+0x618 i32 0,1        # m0500
+field * r3+0x61C u8 0,1         # m0504
+field * r3+0x5FC i8 -1 9        # mActionIdx
+field 023734B4 r3+0x550 i32 0,1,29,58,59,60,100,158,159,160,170,178,179,200,254
+# CreateHeap: joint names ("Hahen1"/"Hahen2") through a pinned joint
+ret 027F7878 0x54300000 0x54300000
+field 023728DC 0x54300000 u32 4
+field 023728DC 0x54300004 u32 0x48616865,0x41414141
+field 023728DC 0x54300008 u32 0x6E310000,0x6E320000
+field 0237253C 0x54300004 u16 0,1,2,20,21
+# Draw: a pinned main model / model data / joint nodes / material chain (bounded loops)
+field 023747BC r3+0x540 u32 0x54400000
+field 023747BC 0x544000AC u32 0x54500000
+field 023747BC 0x54500004 u32 0,1,2
+field 023747BC 0x54500008 u32 0x54600000
+field 023747BC 0x54600010 u32 0,0x54700000
+field 023747BC 0x5460002C u32 0,0x54700100
+field 023747BC 0x54700004 u32 0,0x54700100
+field 023747BC 0x54700104 u32 0
+# manage_friend_draw: Medli's extra model pointer
+field 023730B4 0x54200628 u32 0,0x54210000
+ret 025D5218 0,0x54200000       # fopAcIt_Judge
+# the pinned joint/material structures are not rewritten by callees (bounded loops)
+stable 0x54100000 0x10
+stable 0x54500000 0x10
+stable 0x54600000 0x40
+stable 0x54700000 0x110
+stable 0x54400000 0x100
+arg 023730B4 r3 0,1,2
+# Draw: a pinned actor whose model pointer callees do not rewrite
+arg! 023747BC r3 0x54800000
+stable 0x54800540 4
+# mutation gaps: the +-0x4000 angle boundary and the "kaze" room-12 test
+field 02373EA8 r3+0x322 i16 0,0,1
+field 02373EA8 0x54005138 u8 0,0,0x41
+callee 028E8DD0 r3=12           # PSVECSquareMag: the vector is compared (mutation gap)
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02373A30 0x54005134 8 @stages,"AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAAAAA","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAchi","AAAAe","AAAAe","AAAAe","AAAAe","AAAAe","AAAAe","AAAAe","AAAAe","AAAAe","BREAK","BREAK","BREAK","BREAK","BREAK","BREAK","BREAK","BREAK","BREAK","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","EdaiAAAA","Edaichi","Edaichi","Edaichi","Edaichi","Edaichi","Edaichi","Edaichi","Edaichi","Edaichi","Edaie","Edaie","Edaie","Edaie","Edaie","Edaie","Edaie","Edaie","Edaie","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","EkazAAAA","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekazchi","Ekaze","Ekaze","Ekaze","Ekaze","Ekaze","Ekaze","Ekaze","Ekaze","Ekaze","INPUT","INPUT","INPUT","INPUT","INPUT","INPUT","INPUT","INPUT","INPUT","MknjD","MknjD","MknjD","MknjD","MknjD","MknjD","MknjD","MknjD","MknjD","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETANGLE","SETGOAL","SETGOAL","SETGOAL","SETGOAL","SETGOAL","SETGOAL","SETGOAL","SETGOAL","SETGOAL","WAIT","WAIT","WAIT","WAIT","WAIT","WAIT","WAIT","WAIT","WAIT"
+fieldstr 02373EA8 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","AAAA","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaz","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze","kaze"

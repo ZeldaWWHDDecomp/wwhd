@@ -1,0 +1,57 @@
+/* Rito postbox, WWHD guest layout. */
+#pragma once
+#include "d/d_npc.h"
+struct daObjTpost_c : fopNpc_npc_c {
+  be<u32> mCurMode;
+  be<s8> mBckIdx, mAnmPrmIdx, mOldAnmPrmIdx;
+  u8 _7E3;
+  request_of_phase_process_class mPhase;
+  gptr<mDoExt_McaMorf> mMorf;
+  dBgS_ObjAcch mAcch;
+  dBgS_AcchCir mWall;
+  be<s32> mTalkTimer, mPresentTimer, mSurpriseTimer;
+  be<u8> mPayType, mReceivePending, mSpitPending, mNextLetter;
+  be<s32> mNumReadable;
+  be<u32> mLetterOrdinal;
+  be<u8> mTalkPending, mTalkXYPending, mPreItem;
+  be<s8> mEventIdx;
+  BOOL createHeap();
+  void setAnm(s32, BOOL);
+  void setMtx();
+  u32 checkSendPrice();
+  void modeProc(s32, s32);
+  void createInit();
+  s32 create();
+  BOOL remove();
+  s32 getReadableLetterNum();
+  void checkOrder();
+  void setAttention();
+  void cutSetAnmStart(s32);
+  void cutDispLetterStart(s32);
+  void cutPresentProc(s32);
+  void cutSetAnmProc(s32);
+  void cutDispLetterProc(s32);
+  void cutProc();
+  void eventOrder();
+  BOOL execute();
+  BOOL draw();
+  void modeWaitInit();
+  BOOL checkTalk();
+  void modeWait();
+  void modeTalkInit();
+  void modeTalk();
+  void modeTalkXYInit();
+  void modeTalkXY();
+  void modeReceiveInit();
+  void modeReceive();
+  void modeReceiveDemo();
+  void deliverLetter();
+  s16 getReceiveLetterNum();
+  u32 getMsgXY();
+  u32 getMsgNormal();
+  u32 getMsg();
+  u16 nextMsg(be<u32> *);
+};
+WWHD_OFFSET(daObjTpost_c, mMorf, 0x7EC);
+WWHD_OFFSET(daObjTpost_c, mNumReadable, 0xA04);
+WWHD_SIZE(daObjTpost_c, 0xA10);

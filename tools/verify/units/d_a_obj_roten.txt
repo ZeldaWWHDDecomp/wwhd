@@ -1,0 +1,18 @@
+src wwhd_src/d/actor/d_a_obj_roten.cpp
+callee 026066C4 r4=8
+stackfill
+field * r3+0x3EC u8 0,1,2
+field * r3+0x3ED u8 0,1,255
+field * 101F4F28 u32 0x54000000,0x54010000
+field * 101F84DC u32 0x55000000,0x55010000
+field 02388B50 r3+0xB0 u32 0,0x1000000,0x2000000,0xFF000000
+ret 025B7840 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+arg! 02388DB0 r3 0,0x40000000
+arg! 02388EAC r3 0,0x40000000
+arg! 02388EC8 r3 0,0x40000000
+# The resource-phase object and base constructor do not include mType. The queried
+# save inventory is disjoint; CreateHeap leaves the actor's type unchanged.
+arg! 02388B50 r3 0x40000000
+stable 400003EC 1

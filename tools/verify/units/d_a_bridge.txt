@@ -1,0 +1,138 @@
+# Verification unit: d_a_bridge (rope bridge)
+src wwhd_src/d/actor/d_a_bridge.cpp wwhd_src/d/actor/d_a_bridge_draw.cpp wwhd_src/d/actor/d_a_bridge_exec.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0200FCD8 r3=12 r4=out12        # MtxPosition
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 025A847C r7=6          # particle set: angle
+ret 02520460 0,4,4,4,5        # resLoad (mostly complete)
+ret 025D63E8 0,1,1,1          # entrySolidHeap
+ret 025E38E0 0,0x10000000,0x10000100  # model create
+ret 025EBA58 0 1              # lineMat init
+ret 024F5A18 0,0x10002000,0x10002000  # new dBgWSv
+ret 024F5A78 0,0,1            # dBgWSv::Set
+ret 024EEA6C 0,0,1            # dBgS::Regist
+ret 025D4604 0 1              # fopAc_IsActor
+ret 020CB648 0 3              # getBombRestTime
+ret 025AAF88 0,0x10003000,0x10003000  # dPath_GetRoomPath
+field * r3+0x2E4 u32 0,8      # actor_condition INIT
+stackfill periodic
+
+# ride_call_back (020DF908): r4 = the bridge, r5 = the rider
+field 020DF908 r4+0x544 i8 0 12
+field 020DF908 r4+0x540 u8 0,1,4,5
+field 020DF908 r5+8 i16 0xA8,0xBC,0xBD,0x126,0x10
+field 020DF908 r5+0x3B8 u32 0,0x02000000
+field 020DF908 r5+0x3C0 u32 0,0x00020000
+arg 020DF908 r5 0,0x10010000,0x10010000,0x10010000,0x10010000,0x10010000,0x10010000
+
+# s_a_b_sub
+field 020E115C r3+8 i16 0x59,0x59,0x58
+field 020E115C r3+0x540 u8 0,2,0x82,3
+arg 020E115C r3 0,0x10010000,0x10010000,0x10010000
+arg 020E115C r4 0x10010000,0x10020000
+
+# IsDelete / CreateHeap / Create: the plank count
+field 020E37C4 r3+0x544 i8 -1 4
+field 020E3890 r3+0x544 i8 -1 6
+field 020E3890 r3+0x540 u8 0,1,4,8,9,0xC
+field 020E3890 10002094 u32 0x10004000
+field 020E3890 10004000 i32 0 3
+field 020E4098 r3+0xB0 u32 0x00FF0000,0x00000001,0x000000FF,0x00010002,0x00020001,0x00030009
+field 020E4098 10003008 u32 0x10005000
+field 020E4098 r3+0x550 u32 0,0x10002000
+# CreateHeap: the vertex loop count must not be clobbered (actor pinned, its mpBgW and the dBgWSv stable)
+arg! 020E3890 r3 0x10100000
+stable 10100550 4
+stable 10002000 0x100
+stable 10004000 4
+# constructors: this == NULL allocates
+arg 020E3E24 r3 0,0x10010000
+arg 020E3FE8 r3 0,0x10010000
+arg 020E450C r3 0,0x10010000
+ret 0273AD10 0,0x10030000,0x10030000
+# Create: path points (home, end) so that the plank count spans 0..21
+field 020E4098 10005004 f32 0 0
+field 020E4098 10005008 f32 0 0
+field 020E4098 1000500C f32 0 0
+field 020E4098 10005014 f32 0,500,811,881,1093,1163,1200,1300,1301,1500,3712,3790,5000
+field 020E4098 10005018 f32 0,0,0,10
+field 020E4098 1000501C f32 0 0
+field 020E3890 10002090 u32 0x10008000   # vertex table (away from the count)
+
+# daBridge_Execute (020E11E8): the actor pinned, its counts and the BG vertex table stable
+callee 02518DB0 r3=out0x1C    # at_power_check
+callee 025CB374 r6=12         # StartShock: cXyz
+field 020E11E8 r3+0x544 i8 0 13   # plank count
+arg! 020E11E8 r3 0x10100000
+stable 10100550 4
+stable 1010056C 4
+stable 10100544 4
+stable 10002000 0x100
+stable 10004000 4
+field 020E11E8 r3+0x550 u32 0x10002000
+field 020E11E8 10002090 u32 0x10008000
+field 020E11E8 10002094 u32 0x10004000
+field 020E11E8 10004000 i32 0 12
+field 020E11E8 r3+0x56C i32 0 6
+field 020E11E8 r3+0x3B4 i16 0,1,2,3,3,3,3,4,5,6,-1
+field 020E11E8 r3+0x545 i8 0 6
+field 020E11E8 r3+0x540 u8 0,1,2,4,8,9,0xA
+ret 025200D4 0x54000000 0x54000000   # play object
+field 020E11E8 54005292 u8 0,0,1          # event running
+field 020E11E8 54005B2C u32 0x55000000    # player
+field 020E11E8 550003B8 u32 0,0x02000000
+field 020E11E8 r3+0x5A4 i8 0,0,2          # m033C
+field 020E11E8 r3+0x570 i32 0,90,99,100,101,110
+field 020E11E8 10100C14 u8 0,4,5,6,7,4
+field 020E11E8 10100BAC i16 0,0,5,12
+field 020E11E8 10100BAE i16 0,0,5,12
+field 020E11E8 10100C24 i16 0,-1,3
+field 020E11E8 10100BCC i16 0,0,1,5
+field 020E11E8 10100BCE i16 0,0,1,5
+field 020E11E8 10100BD0 u32 0,0x10200000
+field 020E11E8 10100BD4 u32 0,0x10200000
+field 020E11E8 10101294 u8 0,4,5,6,7,4
+field 020E11E8 1010122C i16 0,0,5,12
+field 020E11E8 1010122E i16 0,0,5,12
+field 020E11E8 101012A4 i16 0,-1,3
+field 020E11E8 1010124C i16 0,0,1,5
+field 020E11E8 1010124E i16 0,0,1,5
+field 020E11E8 10101250 u32 0,0x10200000
+field 020E11E8 10101254 u32 0,0x10200000
+field 020E11E8 10101914 u8 0,4,5,6,7,4
+field 020E11E8 101018AC i16 0,0,5,12
+field 020E11E8 101018AE i16 0,0,5,12
+field 020E11E8 10101924 i16 0,-1,3
+field 020E11E8 101018CC i16 0,0,1,5
+field 020E11E8 101018CE i16 0,0,1,5
+field 020E11E8 101018D0 u32 0,0x10200000
+field 020E11E8 101018D4 u32 0,0x10200000
+field 020E11E8 10101F94 u8 0,4,5,6,7,4
+field 020E11E8 10101F2C i16 0,0,5,12
+field 020E11E8 10101F2E i16 0,0,5,12
+field 020E11E8 10101FA4 i16 0,-1,3
+field 020E11E8 10101F4C i16 0,0,1,5
+field 020E11E8 10101F4E i16 0,0,1,5
+field 020E11E8 10101F50 u32 0,0x10200000
+field 020E11E8 10101F54 u32 0,0x10200000
+field 020E11E8 10100C00 f32 -260 0
+field 020E11E8 10101280 f32 -260 0
+field 020E11E8 10101900 f32 -260 0
+field 020E11E8 10101F80 f32 -260 0
+# line tables: valid, distinct pointers (a null table aliases the segment stores with the pointers)
+field 020E11E8 r3+0x53C u32 0x10310000
+field 020E11E8 10100900 u32 0x10320000
+field 020E11E8 10100F80 u32 0x10321000
+field 020E11E8 10101600 u32 0x10322000
+field 020E11E8 10101C80 u32 0x10323000
+field 020E11E8 10102300 u32 0x10324000
+field 020E11E8 10102980 u32 0x10325000
+field 020E11E8 10103000 u32 0x10326000
+field 020E11E8 10103680 u32 0x10327000
+field 020E11E8 10103D00 u32 0x10328000
+field 020E11E8 10104380 u32 0x10329000
+field 020E11E8 10104A00 u32 0x1032a000
+field 020E11E8 10105080 u32 0x1032b000
+field 020E11E8 10105700 u32 0x1032c000

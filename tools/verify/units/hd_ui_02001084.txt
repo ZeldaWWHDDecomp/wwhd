@@ -1,0 +1,3 @@
+# hd_ui_02001084: TUs 02001084..020015C7 (event box, input-state holder, event record, initialiser-only TU); HD-only
+src wwhd_src/hd/hd_ui_02001084.cpp
+arg 020013C0 r4 0xFFFFFFF8,0x64000000

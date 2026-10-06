@@ -1,0 +1,20 @@
+# Verification unit: d_a_fan (wind fan, moving BG)
+src wwhd_src/d/actor/d_a_fan.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 025E7CE0 stack=1        # mDoExt_btkAnm::init: 9th argument on the stack
+callee 028E8F64 r5=out12       # PSMTXMultVec: output
+ret 02520460 0 5               # resLoad
+ret 024F1D9C 0 5               # MoveBGCreate
+ret 026066C4 0,0x56000000      # getRes: null or not
+ret 025E38E0 0,0x57000000      # J3DModel create: null or not
+ret 025E7CE0 0,1               # btk init
+ret 025E8508 0,1               # bck init
+ret 025BA0C0 0,1               # isSwitch
+ret 027DF9B0 -1,0,1,2,5        # JUTNameTab::getIndex
+ret 025DAC50 0,0x58000000      # fopKyM_SearchByID
+field * r3+0x614 u8 0,1,2      # mType
+field 0213284C r3+0x614 u8 0,1,2,3,4,5,6,7,0x40,0xFF   # mType (out of range: table reads give speed 0 -> inf/NaN len)
+field * r3+0x7C0 u32 0xFFFFFFFF,0,1,7  # mWindSePId
+field 0213284C r3+0x636 i16 -0x2000 0x2000   # mFanSpeed
+arg 02131FF8 r4 0,1            # calcTiming

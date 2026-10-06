@@ -1,0 +1,24 @@
+# Full13HD2514..29C3;methodtable101EA338;initializerqualifiedadjacency.
+src wwhd_src/d/d_ovlp_fade3.cpp
+stackfill periodic
+ret! 025200D4 0x55000000 0x55000000
+ret! 0273AD10 0,0x57000000
+ret 025DBDC4 0,1
+field * 101F9968 u32 0x58000000
+field * 101F86B4 u32 0x59000000
+field 025A26D8 r3+0x1BC u8 0,1
+field 025A28B0 r3+0x1BC u8 0,1
+field * 101D616C u8 0,1
+field * 101D6160 f32 0,1,-1
+arg! 025A25F0 r3 0,0x52000000
+arg! 025A2514 r3 0x52000000 0x52000000
+field * 52000000 u32 0x53000000
+field * 53000004 u32 0x60000200
+field * 5300000C u32 0x60000300
+field * 520000D0 s16 0
+field * 520000D2 s16 -1,0,1
+field * 520000D4 u32 0x60000100
+field * 520000D6 s16 0
+callee 60000000 r3=4
+callee 60000200 r3=4
+callee 60000300 r3=4

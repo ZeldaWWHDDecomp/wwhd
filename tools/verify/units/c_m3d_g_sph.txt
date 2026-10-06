@@ -1,0 +1,5 @@
+src wwhd_src/SSystem/SComponent/c_m3d_g_sph.cpp
+callee 02018D40 r4=12
+callee 02013854 r6=out4
+# Explicit NaN and range boundaries exercise SetR diagnostics.
+arg 02018C8C f1 nan,-inf,inf,-1e32,1e32,0,1

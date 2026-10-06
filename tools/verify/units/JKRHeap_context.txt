@@ -1,0 +1,9 @@
+src wwhd_src/JSystem/JKernel/JKRHeap_context.cpp
+# Initialized module manager and distinct thread key expose wrong-global/offset mutations.
+field * 101F8B94 u32 0x55000000
+field * 55000024 u32 1,7,31
+field * 101F8B4C u32 0,0x55001000,0x55002000
+ret C0009CC8 0x56000000,0x56000100
+field * 56000070 u32 0,0x57000000,0x57000100
+field * 56000170 u32 0,0x57000000,0x57000100
+arg 02756170 r4 0,0x57000000,0x57000100

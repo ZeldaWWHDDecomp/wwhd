@@ -1,0 +1,9 @@
+# Verification unit: d_a_tag_kb_item
+src wwhd_src/d/actor/d_a_tag_kb_item.cpp
+
+ret 025BA494 0 1              # isItem
+ret 025BA0C0 0 1              # isSwitch
+field 024AB9BC r3+0x3B8 s32 0x1F,0x1E,0x20,0,-1   # mItemBitNo (CreateInit is mocked)
+field 024AB9BC r3+0x3C0 s32 0xFF,0xFE,0x100,0,1   # mSwBitNo
+field 024ABAA0 r3+0x3BC u8 0xFF,0x00,0x01
+field 024ABAA0 r3+0x3C0 s32 0xFF,0,1,0x100

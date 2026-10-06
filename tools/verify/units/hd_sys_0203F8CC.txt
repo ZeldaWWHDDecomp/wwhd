@@ -1,0 +1,23 @@
+# hd_sys_0203F8CC: in-block part of the HD SystemTask TU (0203F8CC..0203FFFF); HD-only
+src wwhd_src/hd/hd_sys_0203F8CC.cpp
+callee 02748B98 r3=out128 r4=8
+callee 02749ECC r4=128
+callee 02753004 r4=8
+# the constructed task-arg's heap index (+0x58) is small: the 0x2800 store lands inside the object
+mockfield 02748B98 r3+0x58 u32 0,1,2,3,4
+# type-check guards unset / set; debug-draw global off / on
+field * 0x101FD598 u32 0,1
+field * 0x101FD6D0 u32 0,1
+field * 0x101FD720 u32 0,1
+field * 0x101FD594 u32 0,1
+field * 0x101FD2E0 u32 0,1
+field * 0x101F8B10 u32 0,1
+field * 0x1018F5A8 u32 0,0x20000000
+arg 0203F9D0 r4 0x101FD9DC,0x101FD980,0,0x10006448
+arg 0203FA48 r4 0x101FD9E0,0x101FD994,0,0x10006438
+# mutation follow-ups: non-zero singleton globals in prepare (their image values are zero)
+field 0203FD18 0x1018C404 u32 0x23000000,0x23100000
+field 0203FD18 0x101F4BD8 u32 0x24000000,0x24100000
+field 0203FD18 0x101F8378 u32 0x25000000,0x25100000
+field 0203FD18 0x101F4BAC u32 0x26000000,0x26100000
+field 0203FD18 0x101F4B5C u32 0x27000000,0x27100000

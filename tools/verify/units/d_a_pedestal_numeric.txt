@@ -1,0 +1,60 @@
+src wwhd_src/d/actor/d_a_pedestal.cpp
+stackfill
+ret 025200D4 0x54000000
+field * 101F4F28 u32 0x55000000
+field * 101F84DC u32 0x55001000
+field * 54005292 u8 0,1
+field * 54005AB0 u32 0x55002000
+field * r3+0x2DD s8 -1,0,1,2,3
+field * r3+0x2E4 u32 0,2,4,6,8,10,12,14
+field * r3+0xB0 u32 0,1,2
+field * r3+0x3B4 u32 0x56000000
+field * 560000AC u32 0x56001000
+field * r3+0x460 u32 0x57000000
+field * r3+0x468 u32 0,0x58000000
+field * r3+0x476 s16 0,-1
+field * r3+0x474 s16 0
+field * r3+0x478 u32 0x023C9530
+field * r3+0x484 s8 -1,0,1
+field * r3+0x485 u8 0,1,2
+field * r3+0x340 f32 -5,0,5
+field * r3+0x47C f32 -100,0,100
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025E8154 0,1
+ret 025E38E0 0,0x56000000
+ret 024F23F4 0,0x57000000
+ret 0200A030 0,1
+ret 025B8B94 0,1
+ret 02542D88 -1,0,1,2
+ret 02542EDC -1,0,1,2,3
+ret 025447C8 0,1
+ret 025D9F38 0,0x59000000
+ret 0254487C 0,0x59001000
+field * 59001000 f32 -5,0,5
+arg! 023C85F8 r4 0,1,2,3
+arg! 023C85F8 r5 0,1
+arg! 023C8FBC r4 0x100342EC
+field 023C84E4 r3+4 u32 0,0x58000000
+field 023C84E4 r3+8 u32 0,0x59002000
+field 023C84E4 r3+12 u32 0,0x59003000
+field 023C853C r3+4 u32 0,0x58000000
+callee 026066C4 r4=8
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+observe 028E90D4 1048D0CC 48
+observe 025E2DE0 104B4634 8
+arg! 023C8578 r4 0,1,0x826D,65535
+field * 560000AC u32 0x56001000
+field 023C84E4 r4+0x262 u8 0,6,7,255
+# A true mocked wakeup result requires a nonnegative 0..2 character argument.
+field 023C8A50 r3+0x2DD s8 0,1,2,3
+
+# Explicit IEEE classes alongside the finite primary domain.
+field 023C93AC r3+0x340 f32 nan,inf,-inf,-0,0,-1,1,-0.5,0.5
+field 023C93AC r3+0x318 f32 nan,inf,-inf,-0,0,-1,1,-0.5,0.5
+field 023C93AC r3+0x47C f32 nan,inf,-inf,-0,0,-1,1,-0.5,0.5
+field 023C92DC 59001000 f32 nan,inf,-inf,-0,0,-1,1,-0.5,0.5
+field 023C92DC r3+0x318 f32 nan,inf,-inf,-0,0,-1,1,-0.5,0.5
+
+# GHS passes a complete eight-byte member-function descriptor.
+callee 023C8FBC r4=8

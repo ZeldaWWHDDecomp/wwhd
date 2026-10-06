@@ -1,0 +1,17 @@
+# Verification unit: d_a_switem (item-dropping hit trigger)
+src wwhd_src/d/actor/d_a_switem.cpp
+
+callee 025D5218 r4=4          # fopAcIt_Judge: the searched id on the stack
+ret 025162A4 0 1              # ChkTgHit
+ret 025BA494 0 1              # isItem
+ret 02551044 0 0              # isRupee: mostly false (loops run to the end); random otherwise
+ret 024A271C 0 1              # isRupeeInAllCreateTable
+ret 025D8120 -1 3             # fopAcM_createItemFromTable: proc id (-1 = none)
+field 024A27B4 r3+0x524 u8 0,1,2,3,4,5,6,255   # mAtTypeTrigger (pick list)
+field 024A27B4 r3+0x525 u8 0 1       # mSpawnedItem
+field 024A2534 r3+0xB1 u8 0x3F 0x40  # itemBitNo 0x7F edge (param bits 14..20)
+field 024A271C 54005D24 u32 0 0x56000000   # item table: null or a fixed table
+ret 025200D4 0x54000000 0x54000000
+arg 024A271C r4 0x1F 0x3F         # tbl around the 0x20..0x3E window
+ret 02516300 0x57000000 0x57000000  # GetTgHitObj: a fixed object
+field 024A27B4 57000010 u32 0,2,0x20,0x40,0x80,0x400,0x4000,0x8000,0x10000,0x40000,0x80000,0x100000,0x1000000,0x4000000,0x8   # At type: single bits

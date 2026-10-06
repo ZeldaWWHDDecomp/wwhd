@@ -1,0 +1,2 @@
+# Verification unit: fifteen sinit-only HD TUs (header __sinit only)
+src wwhd_src/misc/sinit_only_tus.cpp

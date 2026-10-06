@@ -1,0 +1,176 @@
+# Iron Ball actual30-entry HD TU0217AFB8..0217C874; own wrappers reserve linkage below every guest local.
+src wwhd_src/d/actor/d_a_ib.cpp
+callee 026066C4 r4=8
+callee 025E742C r3=16
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 02008974 r4=0x54
+callee 025E7CE0 stack=0 # caller stores ninth word; HD callee never reads it
+callee 025E8154 stack=0 # caller stores ninth word; HD callee never reads it
+callee 024F06B4 stack=1
+ret 025E38E0 0,0x55000000
+ret 025E8508 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+field * r3+0x798 f32 0,44.99,45,89.99,90,135,136,-1
+stackfill periodic
+
+
+# Five-packet graph matching original ib FMDL shape/material counts; typed disjoint live allocations.
+real 025E2DE0 027F4FE4 027F4F1C 027F273C 027F0DA8 027F1508
+arg! 0217B78C r3 0x50000000
+field * r3+0x71C u32 0x55000000
+ret 025200D4 0x54000000
+field * 54005D84 u32 0x5d000000
+stable 54005D84 4
+field * 54005D88 u32 0x5d001000
+stable 54005D88 4
+field * 54005D78 u32 0x5e000000
+stable 54005D78 4
+field * 54005D7C u32 0x5e001000
+stable 54005D7C 4
+field * 55000028 u16 0x5
+stable 55000028 2
+field * 55000128 u32 0x5
+stable 55000128 4
+field * 5500012C u32 0x5c000000
+stable 5500012C 4
+field * 55000030 u32 0x5c003000
+stable 55000030 4
+field * 550000AC u32 0x57000000
+stable 550000AC 4
+field * 5500002C u32 0x5b000000
+stable 5500002C 4
+field * 5700000C u32 5
+stable 5700000C 4
+field * 57000010 u32 0x58000000
+stable 57000010 4
+field * 5C000098 u32 0x5c001000
+stable 5C000098 4
+field * 5C00000C u32 0x1016e324
+stable 5C00000C 4
+field * 5C00009C u32 0x55000000
+stable 5C00009C 4
+field * 5C0000A0 u32 0,1
+stable 5C0000A0 4
+field * 5C001000 u32 0x5c002000
+stable 5C001000 4
+field * 5C00200C u16 0
+stable 5C00200C 2
+field * 5C002010 u16 0
+stable 5C002010 2
+field * 5C003000 u32 0x5c004000
+stable 5C003000 4
+field * 5C00400E u16 0
+stable 5C00400E 2
+field * 58000008 u32 0x59000000
+stable 58000008 4
+field * 59000004 u8 1
+stable 59000004 1
+field * 5C000144 u32 0x5c001004
+stable 5C000144 4
+field * 5C0000B8 u32 0x1016e324
+stable 5C0000B8 4
+field * 5C000148 u32 0x55000000
+stable 5C000148 4
+field * 5C00014C u32 0,1
+stable 5C00014C 4
+field * 5C001004 u32 0x5c002020
+stable 5C001004 4
+field * 5C00202C u16 1
+stable 5C00202C 2
+field * 5C002030 u16 1
+stable 5C002030 2
+field * 5C003030 u32 0x5c004020
+stable 5C003030 4
+field * 5C00402E u16 1
+stable 5C00402E 2
+field * 580003A4 u32 0x59000010
+stable 580003A4 4
+field * 59000014 u8 1
+stable 59000014 1
+field * 5C0001F0 u32 0x5c001008
+stable 5C0001F0 4
+field * 5C000164 u32 0x1016e324
+stable 5C000164 4
+field * 5C0001F4 u32 0x55000000
+stable 5C0001F4 4
+field * 5C0001F8 u32 0,1
+stable 5C0001F8 4
+field * 5C001008 u32 0x5c002040
+stable 5C001008 4
+field * 5C00204C u16 2
+stable 5C00204C 2
+field * 5C002050 u16 2
+stable 5C002050 2
+field * 5C003060 u32 0x5c004040
+stable 5C003060 4
+field * 5C00404E u16 2
+stable 5C00404E 2
+field * 58000740 u32 0x59000020
+stable 58000740 4
+field * 59000024 u8 1
+stable 59000024 1
+field * 5C00029C u32 0x5c00100c
+stable 5C00029C 4
+field * 5C000210 u32 0x1016e324
+stable 5C000210 4
+field * 5C0002A0 u32 0x55000000
+stable 5C0002A0 4
+field * 5C0002A4 u32 0,1
+stable 5C0002A4 4
+field * 5C00100C u32 0x5c002060
+stable 5C00100C 4
+field * 5C00206C u16 3
+stable 5C00206C 2
+field * 5C002070 u16 3
+stable 5C002070 2
+field * 5C003090 u32 0x5c004060
+stable 5C003090 4
+field * 5C00406E u16 3
+stable 5C00406E 2
+field * 58000ADC u32 0x59000030
+stable 58000ADC 4
+field * 59000034 u8 1
+stable 59000034 1
+field * 5C000348 u32 0x5c001010
+stable 5C000348 4
+field * 5C0002BC u32 0x1016e324
+stable 5C0002BC 4
+field * 5C00034C u32 0x55000000
+stable 5C00034C 4
+field * 5C000350 u32 0,1
+stable 5C000350 4
+field * 5C001010 u32 0x5c002080
+stable 5C001010 4
+field * 5C00208C u16 4
+stable 5C00208C 2
+field * 5C002090 u16 4
+stable 5C002090 2
+field * 5C0030C0 u32 0x5c004080
+stable 5C0030C0 4
+field * 5C00408E u16 4
+stable 5C00408E 2
+field * 58000E78 u32 0x59000040
+stable 58000E78 4
+field * 59000044 u8 1
+stable 59000044 1
+field * 5B000004 u16 0
+stable 5B000004 2
+field * 5B000010 u32 0x5A000000
+stable 5B000010 4
+field * 5D00000C u32 0
+stable 5D00000C 4
+field * 5D000004 u32 0x5d010000
+stable 5D000004 4
+field * 5D010000 u32 0
+final 0217B78C 5D00001C 4
+final 0217B78C 5D010000 4
+field * 5D00100C u32 0
+stable 5D00100C 4
+field * 5D001004 u32 0x5d011000
+stable 5D001004 4
+field * 5D011000 u32 0
+final 0217B78C 5D00101C 4
+final 0217B78C 5D011000 4
+final 0217B78C 104B4634 8
+stable 5000071C 4

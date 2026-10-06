@@ -1,0 +1,42 @@
+src wwhd_src/d/actor/d_a_obj_light.cpp
+stackfill
+callee 026066C4 r4=8
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 020182E0 r4=12
+callee 025A847C r8=12 stack=4
+observe 025E2DE0 104B4634 8
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 02556D14 0 2
+ret 025B8B94 0 1
+ret 025162A4 0 1
+ret 0236BC48 0 1
+ret 0236BE5C 0 1
+ret 0252695C 0 1
+ret 025440C8 0 1
+field * 101F84DC u32 0,0x54000000,0x54000100
+field * r3+0x3F6 s16 -32768,-1,0,1,2,9,10,74,75,76,78,79,80,32767
+field * r3+0x3F8 s16 0,1,2
+field * r3+0x3FA s16 -32768,-1,0,1,2,20,32767
+field * r3+0x5BA s16 -1,0,1,2,3
+field * r3+0x56C u32 0,0x55000000
+field 0236BAE0 r3+0xF8 u16 0,1,2,3
+field 0236AF68 1046A4CC u32 0,1
+field 0236C040 101D5F4A u8 0,1
+arg 0236B6AC r4 0,1,2,-1
+ret 0236B33C 0 1
+field 0236BC48 r3+0x5B8 s16 -1,0,1,2,32767
+arg 0236BC48 r4 -1,0,1,2,32767
+arg 0236C204 r3 0,0x54000000
+arg 0236C21C r3 0,0x54000000
+
+# The shared light-list flag can already be set when deletion clears it.
+field 0236BA5C 101D5F4A u8 0,1
+field 0236BA5C 101D5F4B u8 0,1
+
+# Full TU audit: 26 HD entries through C288/C28C; next unit starts C290.
+# Final latest-shared baseline: all 26 entries x 10k, coverage150/152.
+# set_mtx blocks5/B14C and8/B218 are impossible early loop exits (remaining2/1).
+# Full752 mutations:591compiled/567killed/24survivorlabels.
+# Exact duplicate-label contexts40:16kills at10k/17equivalent/7noncompiling.
+# Seven front-helper target/argument probes killed10k; no unresolved gaps.

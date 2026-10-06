@@ -1,0 +1,94 @@
+# d_a_npc_btsw2 (traveling merchant Btsw2): all 33 functions verified (10,000 inputs, seeds 1 and 7).
+src wwhd_src/d/actor/d_a_npc_btsw2.cpp
+stackfill periodic
+field 0221CFBC r3+0xF8 u16 0,1,2,3
+field 0221CFBC r3+0x8B6 i8 -1,0,1,2,3
+field 0221CFFC r3+0x8B6 i8 -1,0,1,2,3
+field 0221DC90 r3+0x892 u8 0,1
+field 0221CE9C r3+0xF4 u32 0,0x54000000
+field 0221CE9C r3+0x44C u32 0,0x55000000
+ret 025B8B94 0,1
+ret 02556D14 0,1
+arg 0221DFD0 r4 0,1,2,3
+
+arg 0221DFEC r4 0,1,2,3
+field 0221D410 r3+0x8B5 i8 -1,0,1,4,6,7,8
+field 0221D410 r3+0x8B7 i8 0,1,2
+arg 0221D410 r4 0,1,2,4,6,7,8
+ret 025A11EC 0x10,0x12,0x14
+field 0221DCB4 r3+0x8B2 i16 -1,0,1
+ret 025200D4 0x54000000 0x54000000
+field 0221D5FC 54005BC5 u8 0,1,6,7,255
+field 0221D5FC r3+0x8B5 i8 0,4,6
+ret 027F2BF8 0,1
+
+arg 0221D4D0 r5 -32768,-8192,0,8192,32767
+field 0221D4D0 r3+0x891 u8 0,1
+fret 028F4384 0 300
+ret 020195B0 -32768,-10000,-8192,-1,0,1,8192,10000,32767
+# condition bit 0 next to the 0x08 init bit: kills a mask 8->9 mutant
+field 0221CD78 r3+0x2E4 u32 0,1,8,9
+ret 025B8BB0 0,3
+ret 0254DA50 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 0221CAEC 0,1
+
+arg 0221DE30 r3 0,0x56000000
+ret 0273AD10 0,0x57000000
+
+ret 0259F858 0,1
+field 0221D034 r3+0x89E i16 -1,0,1
+field 0221D034 r3+0x89C i16 0
+field 0221D034 r3+0x8A0 u32 0x0221DD2C
+field 0221D214 r3+0x865 i8 0,1,2,3
+field 0221D214 r3+0x866 i8 0,1,2,3
+
+field 0221DAD8 r3+0x8B7 i8 0,1,2,3,-1
+field 0221DAD8 r3+0x891 u8 0,1
+field 0221DD2C r3+0x8BA i8 -1,0,1,2
+field 0221DD2C r3+0x8B7 i8 0,1,2,3
+callee 0259D54C r3=out12
+callee 0200F93C r3=12 r4=12
+callee 0259DED0 r5=12 r6=12
+callee 0221D4D0 r4=12
+ret 02055B64 0,1
+field 0221CEF8 r3+0x864 u8 0,1,2,10,254,255
+
+field 0221CAEC r3+0x89E i16 -1,0,1
+# old action dispatch: this-adjustment 0x8B0 points the old action's receiver at
+# actor+0x8B0..0x8BB, so the ending status (-1 at 0x8BA) is compared at the call
+field 0221CAEC r3+0x89C i16 0,0x8B0
+callee 0221DC90 r3=12
+field 0221CAEC r3+0x8A0 u32 0x0221DD2C,0x0221DC90
+ret 025AAF88 0,0x58000000
+
+callee 026066C4 r4=8
+ret 026066C4 0,0x56000000
+ret 025E4F64 0,0x57000000
+ret 025E38E0 0,0x58000000
+ret 025E789C 0,1
+ret 0221C68C 0,1
+arg 0221C68C r4 0,1
+ret 027DF9B0 -1,0,1,2
+
+arg 0221C39C r4 0,1
+field 0221C39C 10466B20 u32 0,1
+field 0221C39C 10466B24 u32 0,1
+field 0221D72C r3+0x8B2 i16 -1,0,1,2
+field 0221D72C r3+0x8B5 i8 0,7,8
+field 0221D72C r3+0x8AE i16 -1,0,1,2
+field 0221D72C r3+0x8A6 u8 0,1
+ret 0201B47C 0,1
+ret 0200FAAC 0,15,16,100
+callee 028E90D4 r3=48 r4=out48
+callee 028E8F64 r4=12 r5=out12
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B47C r3=12
+callee 028E8F44 r3=12 r4=12
+callee 028E8DD0 r3=12
+
+# the save-info pointer global is zero in the image: give it unaligned-sensitive nonzero values
+field 0221D6B4 101F84DC u32 0x55002000,0x5512345C
+field 0221CD78 101F84DC u32 0x55002000,0x5512345C

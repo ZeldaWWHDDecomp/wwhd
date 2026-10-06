@@ -1,0 +1,29 @@
+# Verification unit: d_a_shop_item (+ d_a_shop_item_static): shop display items
+src wwhd_src/d/actor/d_a_shop_item.cpp
+src wwhd_src/d/actor/d_a_item_basecalls.cpp
+stackfill periodic
+
+callee 026066C4 r4=8           # sead::SafeString key
+ret 025510A8 0 1               # isUseClothPacket
+ret 02550FC4 0 1               # isBomb
+ret 02550FAC 0 1               # isDaizaItem
+ret 02520460 0 5               # dComIfG_resLoad
+ret 025D63E8 0 1               # fopAcM_entrySolidHeap
+ret 021842D8 0 1               # chkDraw
+field * r3+0x74E u8 0x15,0x31,0x33,0x8B,0x8C,0x8E,0x8F,0x90,0x91,0x92,0x95,0x96,0x97,0x98,0,1,0xFE
+field * r3+0xB0 u32 0x0000,0x0100,0x0200,0x0300,0x00FF,0x01FE,0x0291,0x008F,0x0015,0x0195,0x0033
+ret 024834AC -1,0,4            # getShopBmdIdx: -1 = no model
+# set_mtx: indices past the 4-entry local array read the saved GPRs / caller frame
+field 02483508 r3+0x75C u8 0 7
+# arc names in d_item_data are filled at run time (0 in the image): give some items distinct names
+field * 101E4698 u32 0x10000100,0x10000100,0
+field * 101E6A90 u32 0x10000180,0x10000180,0
+field * 101E4968 u32 0x10001500,0x10001500,0
+field * 101E6CC0 u32 0x10001580,0x10001580,0
+field * 101E5A24 u32 0x10008c00,0x10008c00,0
+field * 101E79C4 u32 0x10008c80,0x10008c80,0
+field * 101E5B68 u32 0x10009500,0x10009500,0
+field * 101E7AC0 u32 0x10009580,0x10009580,0
+field * 101E4DA0 u32 0x10003300,0x10003300,0
+field * 101E7008 u32 0x10003380,0x10003380,0
+ret 02483450 0,0x10000100,0x10000180   # getShopArcname: NULL arc name

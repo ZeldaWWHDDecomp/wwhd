@@ -1,0 +1,33 @@
+src wwhd_src/m_Do/m_Do_ext_tail.cpp
+stackfill periodic
+callee 028E8F64 r3=48 r4=12 r5=out12
+arg! 025EDBC0 r3 0x52000000,0x52000000
+arg! 025EDC88 r3 0x52000000,0x52000000
+field 025EDBC0 52000098 u32 0,0x53000000
+field 025EDC88 52000098 u32 0x53000000
+field * 53000000 u32 0,0x54000000
+field * 54000000 u32 0,0x55000000
+field * 55000000 u32 0
+# Initialized acyclic material links; rendering/clear callbacks do not replace owned list links.
+stable 52000098 4
+stable 53000000 4
+stable 54000000 4
+stable 55000000 4
+arg! 025EDE0C r3 0x56000000,0x56000000
+arg! 025EDE0C r4 0x57000000,0x57000000
+field 025EDE0C 56000000 u32 0x58000000
+field 025EDE0C 56000004 u32 0x59000000
+field 025EDE0C 58000000 u32 0,1,2,3
+field 025EDE0C 5700002C u32 0x5A000000
+field 025EDE0C 5A000006 u8 1,2,3,4
+# Count/input/output roots are constructor-owned, bounded and nonresizing; no callback reentry.
+stable 56000000 8
+stable 58000000 4
+arg! 025EE084 r3 0,0x52000000
+field 025EE084 52000018 u32 0,1,2,3
+field 025EE084 5200001C u32 0,0x53000000
+stable 52000018 4
+stable 5200001C 4
+# The initialized heap manager global is a valid pointer, not the all-zero startup image.
+field 025EE084 101F8B4C u32 0x5F000000
+stable 101F8B4C 4

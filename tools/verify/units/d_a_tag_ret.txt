@@ -1,0 +1,7 @@
+# Verification unit: d_a_tag_ret (Deku Leaf return tag)
+src wwhd_src/d/actor/d_a_tag_ret.cpp
+
+ret 0254DA50 0 1              # checkItemGet
+ret 02516464 0 1              # ChkCoHit
+arg 024B2A14 r4 0,1,8,31,32,33,63
+arg 024B2A14 r5 0,1,8,24,31,32,33,63

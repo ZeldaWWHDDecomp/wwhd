@@ -1,0 +1,45 @@
+# Verification unit: d_a_npc_zl1 part "draw" (node callbacks, animation, effects, setMtx, _draw)
+src wwhd_src/d/actor/d_a_npc_zl1_draw.cpp wwhd_src/d/actor/d_a_npc_zl1_pending.cpp
+
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 025A8BFC r8=out4       # dPa_control_c::setSimpleLand: attribute code output
+ret 025A8BFC 0,0x40000000
+callee 0201A478 r3=out6       # csXyz::csXyz (stack temporary)
+ret 024EF0F4 0x12,0x13,0x14   # GetAttributeCode
+ret 027F2BF8 0 1              # checkPass
+field 02304A6C r3+0xA95 i8 0xA,0xB,0xC
+callee 025D54C4 r4=out4       # fopAcM_SearchByID(id, &actor)
+callee 0230A308 r3=8          # SafeString::assureTerminationImpl_
+ret 025DD868 0 1              # fpcM_IsCreating
+ret 025D54C4 0 1              # fopAcM_SearchByID
+field 02304C98 r3+0x968 u32 0,1,0xFFFFFFFF
+field 02304C98 1047E6B8 u32 0x44656D6F,0x44656D6E
+field 02304C98 1047E6BC u32 0x33370000,0x33380000
+callee 02008FEC r3=255        # cBgS_LinChk::ct: constructor storage
+callee 024EE7AC r3=255        # dBgS_RoofChk::dBgS_RoofChk: constructor storage
+callee 024F1AFC r3=0x6C r4=12 r5=12   # dBgS_LinChk::Set
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 024EF6E8 r4=0x4C       # dBgS::RoofChk
+callee 02008B4C r3=0x3C       # dBgS_Chk destructor (LinChk +0, RoofChk +0x10)
+ret 02008860 0 1
+fret 024EF6E8 60 100
+callee 028E90D4 r4=out48      # PSMTXCopy (stack destination in _draw)
+callee 025BEBB8 r5=12         # dSnap_RegistFig(type, actor, &pos, ...)
+field 02308090 r3+0xA16 u8 0 0
+field 02308090 r3+0xA18 u8 0 0
+field 02308090 10468C44 u8 0 1
+field 02308090 r3+0xA9B i8 2 4
+# _draw: a finite mesh list for mJoint1 (two materials), pinned
+field 02308090 r3+0xAA0 u32 0x58000000,0x58000000
+field 02308090 58000010 u32 0x58000100,0x58000200,0
+field 02308090 58000100 u32 0x58000400,0x58000400
+field 02308090 58000104 u32 0x58000200,0
+field 02308090 58000108 u32 0x58000800,0x58000800
+field 02308090 58000200 u32 0x58000500,0x58000500
+field 02308090 58000204 u32 0,0
+field 02308090 58000208 u32 0x58000900,0x58000900
+field 02308090 5800040C u16 0 3
+field 02308090 5800050C u16 0 3
+field 02308090 r3+0xB0C i32 0 3
+field 02308090 r3+0xB10 i32 0 3
+stable 58000000 0x1000          # the pinned mesh list is not clobbered by callees

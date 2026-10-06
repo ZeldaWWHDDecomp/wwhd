@@ -1,0 +1,17 @@
+src wwhd_src/f_pc/f_pc_create_iter.cpp
+# Stack filters hold two or three guest words, exactly8/12bytes.
+callee 020100A0 r5=8
+callee 020100BC r5=8
+callee 025DD714 r4=12
+# Coherent layer identities cover callback acceptance and rejection.
+arg! 025DD750 r3 0x50000000
+arg! 025DD750 r4 0x60000000
+field 025DD750 r3+0xC u32 0x70000000
+field 025DD750 0x70000044 u32 0x71000000
+field 025DD750 0x7100000C u32 0,1,2
+field 025DD750 r4+0 u32 0,1,2
+field 025DD750 r4+4 u32 0x60000100
+
+# native frames (2026-10-06): filter at sp+8 of the 0x18 frame, callees at the original's sp
+footprint 025DD6D8 0x18
+footprint 025DD714 0x18

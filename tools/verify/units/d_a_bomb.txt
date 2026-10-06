@@ -1,0 +1,129 @@
+src wwhd_src/d/actor/d_a_bomb.cpp
+ret 020CB8F0 0 9
+ret 020C4260 0 1
+ret 020C6C64 0 1
+ret 020C6CC4 0 1
+ret 020C5EF8 0 1
+ret 020C6E3C 0 1
+field * r3+0xA7C i16 -1,0,1,2,120
+field * r3+0x8E0 u8 0 1
+field * r3+0x8E1 u8 0 1
+field * r3+0xB03 u8 0 1
+field * r3+0x8D4 f32 -1000000000,0,100
+field * r3+0x8D8 f32 -1000000000,0,100
+field * r3+0x710 f32 -1000000000,0,100
+ret 020CB92C 0 1
+ret 025200D4 0x54000000 0x54000000
+field * r3+0xA72 u8 0 1
+field * r3+0x8DC f32 -1000000000,0,100
+observe 025E2DE0 104B4634 8
+ret 02838148 0 1
+field * r3+0xB01 u8 0 1
+field * r3+0xB4C i32 0 2
+field * r3+0x5C8 i32 0 2
+field * 54005B34 u32 0x55000000
+field * 550044DE i16 0,10,120,135
+field * r3+0x448 u32 0x57000000
+field * 57000004 u32 0x58000000
+ret 025162A4 0 1
+ret 02516464 0 1
+ret 02516300 0,0x56000000
+field * 56000010 u32 0,0x20,0x200000,0x200020
+field * r3+0xB04 u8 0 1
+ret 0246B6A4 0 1
+fret 0246BA0C -1000 1000
+field * r3+0x6A4 u32 0,16,32,48,128,512,4096
+ret 020C7A98 0 1
+ret 020C7AEC 0 1
+ret 020C7AF4 0 1
+ret 020C7EB0 0 1
+ret 020CB9E4 0 1
+ret 020C6D38 0 1
+ret 020C7090 0 1
+ret 020C7118 0 1
+field * r3+0x2E0 u32 0,0x2000
+field * r3+0xB05 u8 0 1
+field * r3+0xA80 i16 -1,0,1,2,30
+field * r3+0xA73 u8 0 1
+field * r3+0x368 u32 0,0x56000000
+ret 020084C8 0,0x57000000
+fret 028E8DD0 0 1
+field * 54005B2C u32 0x55000000
+field * r3+0xB00 u8 0 1
+field * r3+0xB06 u8 0 1
+field * r3+0xA74 u8 0 1
+field * r3+0xA70 u8 0 1
+field * r3+0x3AE i16 -1,0,1
+field * r3+0x3AC i16 0 0
+field * r3+0x3B0 u32 0x020C7358
+field * r3+0xA60 u32 0,0x58000000
+field * r3+0xA6C u32 0,0x59000000
+field * 5500690C u8 0 3
+field * 104626A4 u32 0 1
+callee 025CB374 r6=12
+callee 025A847C stack=4
+field * r3+0xB02 u8 0 1
+field * r3+0x8E2 u8 0 1
+field * r3+0x7F2 u16 0,255,256,65535
+field * r3+0x766 u16 0,255,256,65535
+callee 0201AE48 r4=out12
+callee 0201AD78 r4=out12
+callee 0200CB7C r5=out12
+field 020C480C 5600003C u32 0x58000000
+field 020C480C 5800002C u32 0x0200CD04
+ret 0200CD04 0x57000000 0x57000000
+field 020C480C 5700001C u32 0x59000000
+field 020C480C 5900009C u32 0x0200CB7C
+ret 0200CB7C 0 1
+ret 02515BBC 0,0x5A000000
+field * 5A00000E i16 0,168
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0 1
+field * r3+0x2E4 u32 0,8
+arg 020C5660 r3 0,0x40000000
+ret 0273AD10 0,0x5A000000
+
+arg! 020C6C04 r4 0x51000000
+field 020C6C04 r4+0x1AC u32 0,0x56000000
+field 020C6C04 r4+0x262 u8 0,6,7,255
+field 020C6C04 56000000 u32 0x57000000
+field 020C6C04 5600000C u32 0
+arg! 020C6860 r4 0x51000000
+field 020C6860 r4+0x262 u8 0,6,7,255
+fret 028F4384 0 100
+ret 0281DCB8 0,0x57000000
+
+callee 026066C4 r4=8
+callee 025E8154 stack=1
+ret 025E8508 0 1
+ret 025E8154 0 1
+ret 025E38E0 0,0x58000000
+field 020C74A0 r3+0xAF8 u8 0,1,2
+field 020C74A0 r3+0xA7E i16 0,1,2
+
+field 020C51E0 54005134 u32 0,0x47616E6F
+field 020C51E0 54005138 u32 0x6E4B0000
+
+callee 025A866C r4=0 r5=12 r6=6 r7=12
+callee 02008974 r4=84
+field 020C51E0 101F4F28 u32 0x56000000
+field 020C480C 5A00032A i16 0,1,16384,32767
+ret 020195B0 0,8192,16384,24576
+field 020C789C r3+0xA7C i16 30
+field 020C5EF8 r3+0x318 f32 50
+fret 02008974 0 0
+callee 025D9F70 r4=out4
+
+callee 028E8DD0 r3=12
+callee 028E8DE8 r3=12 r4=12
+callee 028E8E64 r3=12 r4=out12
+
+# Expose ground-filter initialization that a zero scratch stack hides.
+stackfill periodic
+# Lead periodic support officially verified: 73 functions x10000; GroundCross
+# 84-byte input snapshot kills the missing mbLinkThrough initialization mutant.
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020C51E0 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link"

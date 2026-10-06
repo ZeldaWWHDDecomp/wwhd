@@ -1,0 +1,17 @@
+# Verification unit: d_a_lamp (wall lamp)
+src wwhd_src/d/actor/d_a_lamp.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition: input cXyz, output cXyz
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # fopAcM_entrySolidHeap
+ret 025CB66C 0 1              # CheckQuake
+ret 025D9DA0 395 405          # otoCheck around 400
+ret 025162A4 0 1              # ChkTgHit
+field 021B15F8 r3+0x3B4 u8 0 1          # mParameters
+field 021B15F8 r3+0x548 i8 0 2          # mOto
+field 021B15F8 r3+0x550 i8 0,1,10,11,12,40   # mHitTimeoutLeft
+field 021B15F8 r3+0x3D0 u8 0 1          # mParticleInit
+field 021B15F8 r3+0x3C0 u32 0,0x57000000     # mPa.mpEmitter
+field 021B15F8 10464DD0 u32 0 1         # fire_scale guard
+ret 02516300 0 1                         # GetTgHitObj null or not

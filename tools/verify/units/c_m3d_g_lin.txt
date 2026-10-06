@@ -1,0 +1,5 @@
+src wwhd_src/SSystem/SComponent/c_m3d_g_lin.cpp
+# cM3dGLin (0x1C bytes, vtable at 0x18); GHS ctor allocates when this==0
+arg 02018780 r3 0,0x52000000
+ret 0273AD10 0,0x53000000
+callee 028E8E64 r4=out12

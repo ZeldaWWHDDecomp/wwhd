@@ -1,0 +1,36 @@
+src wwhd_src/d/actor/d_a_icelift.cpp
+field * r3+0x634 u8 0,1
+field 0217C874 r5+8 s16 0,168
+field * r3+0x65e u8 0,1,255
+field * r3+0x661 u8 0,1,2,3,4
+field * r3+0x5f0 u8 0,1
+field * r3+0x5f1 u8 0,1
+field * r3+0x62c s32 0,1,2,120,121
+field * r3+0x670 u32 0,1,255
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 0200A030 0,1
+ret 0201B47C 0,1
+ret 0201AFD8 0,1
+ret 025BA0C0 0,1
+fret 0200ECD4 0 1
+fret 028F4384 0 50
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B12C r3=12 r4=out12
+callee 0201AFD8 r3=12 r4=12
+callee 028E8DD0 r3=12
+callee 0201B47C r3=12
+callee 028E9BC0 r3=16 r4=16 r5=out16
+callee 025F25CC r3=16
+observe 025E2DE0 104B4634 8
+stackfill periodic
+
+# initialized resource singleton exposes shifted-pointer loads
+field * 101F4F28 u32 0x5A123400
+field * 101F4F2C u32 0x5B567800
+
+# initialized save singleton exposes shifted-pointer loads
+field * 101F84DC u32 0x5C345600
+field * 101F84E0 u32 0x5D789A00

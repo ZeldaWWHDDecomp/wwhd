@@ -1,0 +1,28 @@
+src wwhd_src/d/actor/d_a_obj_hbrf1.cpp
+callee 026066C4 r4=8
+ret 02520460 0,4,5
+ret 024F1D9C 0,4,5
+ret 02351BF4 0,1,2,255
+ret 025BA0C0 0 1
+ret 025B8B94 0 1
+field * r3+0x3f0 i32 0,1,2,3,4,5,6,7,8,-1
+field * r3+0xf8 u16 0,1,2,3
+field * r3+0x3f8 i32 -2147483648,-1,0,1,2,30,2147483647
+field * r3+0x3fc u8 0,1,2
+field * 0x101F84DC u32 0x54000000
+arg 02351BF4 r4 0,1,8,31,32,33,63
+arg 02351BF4 r5 0,8,16,31,32,33,63
+
+# Exercise the defensive constructor guard at a low guest address.
+arg 02350DBC r3 1,0x55000000
+
+# Validated: 28 functions x 10,000 inputs; 117/117 basic blocks.
+# Audit: 376 generated variants + 4 manual bit/shift probes.
+# 307 compiled, 302 killed, 73 compiler rejections, 5 equivalent survivors.
+# Exact seed-1 IDs (all rechecked at 10k):
+# 53 Create: mode store / Y store are independent.
+# 67 Create: home-to-eye copy / event-index store are independent.
+# 200 Mthd_Create: condition read / vtable store are disjoint.
+# 204 Create: event-index / event-active stores are disjoint.
+# 333 init_mtx: model-pointer / scale-vector reads have no intervening call or write.
+# Per-variant outcomes and exact source slices retained under build/hbrf1-*.

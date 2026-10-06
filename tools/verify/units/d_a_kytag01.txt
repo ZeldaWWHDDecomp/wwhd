@@ -1,0 +1,22 @@
+# Verification unit: d_a_kytag01 (wave influence tag)
+src wwhd_src/d/actor/d_a_kytag01.cpp
+
+ret 025200D4 0x54000000 0x54000000        # play object at a fixed address
+ret 02555D0C 0x56000000 0x56000000        # env light at a fixed address
+field 021AF4B8 560009F8 i16 0 1           # mWaveCount
+field 021AF4B8 54005134 u32 0x4D616A79,0x4D5F4E65,0x41414141   # "Majy" / "M_Ne" / other
+field 021AF4B8 54005138 u32 0x75450000,0x77443200,0x75450001
+field 021AF4B8 56000AEC u32 0,0x57000000
+field 021AF4B8 56000AF0 u32 0,0x57000000
+field 021AF4B8 56000B10 u32 0,0x57000000
+field 021AF4B8 r3+0x330 f32 0 1
+field 021AF4B8 r3+0x338 f32 0 1
+field 021AF44C 56000AEC u32 0,0x400003AC
+field 021AF44C 56000AF0 u32 0,0x400003AC
+field 021AF44C 56000B10 u32 0,0x400003AC
+field 021AF44C 56000B14 u32 0,0x400003AC
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021AF4B8 0x54005134 8 @stages,"AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAuE","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","AAAAwD2","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NeuE","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajyuE","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2","MajywD2"

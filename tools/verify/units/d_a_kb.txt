@@ -1,0 +1,183 @@
+# Verification unit: d_a_kb (pig)
+src wwhd_src/d/actor/d_a_kb.cpp wwhd_src/d/actor/d_a_kb_move.cpp wwhd_src/d/actor/d_a_kb_exec.cpp
+
+ret 02520460 0 5                    # dComIfG_resLoad -> cPhs_State
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 02008860 0 1                    # cBgS::LineCross
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+callee 024F1AFC r3=0x6C             # dBgS_LinChk::Set: the stack object
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008FEC r3=255
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(src, dst out)
+ret 0273AD10 0 0x60000000           # operator new: NULL or an address
+ret 021901D4 -32768 32767           # way_check -> s16 (sign-extended)
+# esa_search_sub / item_tag_search
+field 0218EC90 r3+8 i16 0xDD,0xDD,0xDD,0xDE
+field 0218EC90 r3+0x3B4 u8 0 1
+field 0218EC90 r3+0x3BD i8 0 1
+field 0218EC90 r3+0x318 f32 -50 50
+field 0218EC90 r4+0x318 f32 -50 50
+field 0218EEB4 r3+8 i16 0x1A1,0x1A1,0x1A1,0x1A2
+field 0218EEB4 r3+0x318 f32 -50 50
+field 0218EEB4 r4+0x318 f32 -50 50
+fret 025D6958 0 800                 # fopAcM_searchActorDistanceXZ
+ret 0200FAAC 0x5000,0x55EF,0x55F0,0x6000,0x8000,0xFF,0x100,0x4000,0x4001,0   # cLib_distanceAngleS (int 0..0x8000)
+# nodeCallBack: the joint number
+ret 027F7878 0x58000000 0x58000000
+field 0218F98C 58000004 u16 11,12,12
+arg 0218F98C r4 0 1
+# target_set
+arg 02190400 r4 0,1,2,3,4
+# money_drop
+field 021907F4 1047BB10 i16 0,0,1           # REG8_S(4)
+fret 02019788 0 1                           # cM_rnd
+ret 025D8AB0 0,0x5C000000                   # fopAcM_fastCreateItem
+# constructor: also the allocating path
+arg 02193AC4 r3 0 0
+# daKb_Create
+field 02193E48 r3+0x2E4 u32 0,1,8,9
+field 02193E48 r3+0xB1 u8 0,5,0xFF          # path
+field 02193E48 r3+0xB2 u8 0,1,2,3,0xFF      # mbCanBeBigPig
+field 02193E48 r3+0xB3 u8 0,1,2,8,0x12,0x18,0x23,0x31,0xFF
+field 02193E48 r3+0x326 i8 11,11,44,44,0     # room
+ret 025200D4 0x54000000 0x54000000          # play
+field 02193E48 54005134 u32 0x73656100,0x73656100,0x73656100,0x73656200,0   # "sea"
+ret 025B8BB0 0,1,2,3,4,5,6,7,0x17           # getEventReg
+field 02193E48 1047BB18 i16 0,0,1           # REG8_S(8)
+field 02193E48 1047BB1A i16 0,0,1           # REG8_S(9)
+ret 025B8B94 0 1                            # isEventBit
+ret 025AAF88 0,0x5A000000,0x5A000000        # dPath_GetRoomPath
+field 02193E48 5A000000 u16 0,1,2,5,5,5
+field 02193E48 5A000008 u32 0x5B000000,0x5B000000
+fret 020198D8 0 5                           # cM_rndF
+fret 02008974 -1000000000 100               # GroundCross
+callee 02008974 r4=0x54
+callee 02008DAC r3=0x54
+callee 02008E0C r3=255
+field 02193E48 r3+0x749 u8 0 1
+field 02193E48 r3+0x748 u8 0,8
+# speed_pos_set: getGrabMissActor (player vtable +0x44) returns this or another actor
+arg 02194654 r3 0x40000000 0x40000000
+field 02194654 54005B2C u32 0x55000000,0x55000000
+field 02194654 550000B4 u32 0x56000000,0x56000000
+field 02194654 56000044 u32 0x02196238,0x02196238
+ret 02196238 0x40000000,0x41000000
+field 02194654 r3+0x753 u8 0 1
+field 02194654 r3+0x2E0 u32 0,0x2000
+# attack_move
+field 021947AC r3+0x768 i16 0x1E,0x1F,0x20,0x21,0x22,0x23,0x24,0x24,0x24,0x19
+field 021947AC r3+0x8BC i32 0x16,0
+field 021947AC r3+0x748 u8 0,8
+field 021947AC r3+0x9FC u32 0,0x10,0x20,0x30
+field 021947AC r3+0x328 i16 -0x300 0x300
+field 021947AC r3+0x32C i16 -0x300 0x300
+field 021947AC r3+0x370 f32 -1 15
+field 021947AC r3+0x772 i16 0,0,1
+field 021947AC r3+0xC28 u32 0,1
+field 021947AC r3+0x744 u32 0x50000000,0x50000000
+field 021947AC 500000A7 u8 0 1
+field 021947AC 50000098 f32 0 1
+field 021947AC 54005B2C u32 0x55000000,0x55000000
+ret 025160DC 0 1                            # ChkAtHit
+ret 02515BBC 0,0x55000000,0x56000000        # GetAc
+ret 027F2BF8 0 1                            # checkPass
+ret 0218F380 0 1                            # swim_mode_change_check
+# esa_demo_move
+field 0219509C r3+0x768 i16 0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,0x2F,0x2F,0x30,0x31,0x27
+field 0219509C r3+0x8BC i32 0x18,0
+field 0219509C r3+0x748 u8 0,8
+field 0219509C r3+0xF8 u16 0,2,2
+field 0219509C r3+0x9FC u32 0,0x10
+field 0219509C r3+0x76E i16 0,0,1,0x23
+field 0219509C r3+0x792 i16 1,2
+field 0219509C r3+0x820 u32 0xFFFFFFFF,0x5D000000
+field 0219509C r3+0x751 u8 0 1
+field 0219509C r3+0x2FC i16 0,1
+field 0219509C r3+0x74F u8 0 1
+field 0219509C r3+0x752 u8 0 1
+field 0219509C r3+0xA68 f32 -1000000000,-1000000000,0,10
+field 0219509C r3+0x808 f32 -34 -28
+field 0219509C 1047BCFC f32 0 0       # REG12_F(11)
+field 0219509C r3+0x340 f32 -5 5
+field 0219509C r3+0x318 f32 0 30
+field 0219509C r3+0x744 u32 0x50000000,0x50000000
+field 0219509C 500000A7 u8 0 1
+field 0219509C 50000098 f32 0 1
+ret 024EF09C 0,4,5,5                 # GetSpecialCode
+ret 024EF0F4 0,1,4,0xB,0x13           # GetAttributeCode
+fret 028F4384 0 300                   # std_sqrtf
+callee 02514F88 r4=12 r5=12           # dCamera_c::Set: cXyz by value
+callee 0251510C r4=12 r5=12           # dCamera_c::Reset
+ret 025DE508 0,0x5E000000             # fpcM_Search
+# daKb_Execute
+callee 025192A8 r4=0x1C                     # cc_at_check: CcAtInfo
+callee 0201ADE0 r4=out12                    # cXyz::operator-
+callee 02008570 r5=out12 r6=out12 r7=out12  # cBgS::GetTriPnt
+field 02190CE0 r3+0x766 i16 0,0,0,0,1,1,1,1,2,2,2,3,3,4,5
+field 02190CE0 r3+0x768 i16 0,1,2,3,3,3,4,5,5,5,6,7,0xA,0xB,0xB,0xB,0xC,0xC,0xC,0xD,0xE,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x21,0x23,0x24,0x24,0x25
+field 02190CE0 r3+0x76E i16 0,0,1,0x23
+field 02190CE0 r3+0x770 i16 0,0,1
+field 02190CE0 r3+0x772 i16 0,0,1
+field 02190CE0 r3+0x774 i16 0,0,1
+field 02190CE0 r3+0x776 i16 0,0,1
+field 02190CE0 r3+0x778 i16 0,0,1
+field 02190CE0 r3+0x77A i16 0,0,1
+field 02190CE0 r3+0x77C i16 0,0,1
+field 02190CE0 r3+0x74B u8 0 1
+field 02190CE0 101B7FA0 u8 0 1
+field 02190CE0 101F84DC u32 0x5F000000,0x5F000000
+field 02190CE0 5F00002E u8 0xFF,0
+field 02190CE0 r3+0x3A1 i8 -1,0,1,10
+ret 02190708 0,0,1                          # esa_demo_check
+fret 025D68EC 0 500                         # fopAcM_searchActorDistance
+field 02190CE0 54005CD8 u32 0,0x08000000
+field 02190CE0 54005B2C u32 0x55000000,0x55000000
+field 02190CE0 54005134 u32 0x73656100,0x73656100,0
+field 02190CE0 54005292 u8 0 1
+field 02190CE0 55000318 f32 -200 200
+field 02190CE0 550003C0 u32 0,0x400
+field 02190CE0 r3+0x74A u8 0,2,2,3,4,4
+field 02190CE0 r3+0x74D u8 0 1
+field 02190CE0 r3+0x74C u8 0 1
+field 02190CE0 r3+0x814 f32 0,300,300
+field 02190CE0 r3+0x798 f32 0,0,5
+field 02190CE0 r3+0x79C f32 0,0,5
+field 02190CE0 r3+0x7A0 f32 0,0,5
+field 02190CE0 r3+0x748 u8 0,8
+field 02190CE0 r3+0x753 u8 0,0,1
+field 02190CE0 r3+0x370 f32 -1,0,0.1,3,3.1,5,12,13
+field 02190CE0 r3+0x7FC f32 0,3,12
+field 02190CE0 r3+0x78C i16 0,0,1,3,4
+field 02190CE0 r3+0x744 u32 0x50000000,0x50000000
+field 02190CE0 500000A7 u8 0 1
+field 02190CE0 50000098 f32 0 1
+field 02190CE0 r3+0x2E0 u32 0,0x2000
+field 02190CE0 r3+0x9FC u32 0,0x10,0x20,0x30,0x800,0x820
+field 02190CE0 r3+0xA68 f32 -1000000000,0,10
+field 02190CE0 r3+0xB90 f32 -10 10
+field 02190CE0 r3+0x318 f32 -10 10
+field 02190CE0 r3+0x804 f32 0,0,1
+field 02190CE0 r3+0x780 i16 3,4
+field 02190CE0 r3+0x792 i16 0,0,1,2,3
+field 02190CE0 r3+0x810 f32 0 1
+field 02190CE0 r3+0x788 i16 0,1
+field 02190CE0 r3+0x77E i16 0,1
+field 02190CE0 r3+0x326 i8 44,44,0
+field 02190CE0 r3+0x340 f32 -1,0,0,5
+field 02190CE0 r3+0x782 i16 0,0,1,3
+field 02190CE0 r3+0x81C f32 0,0,2
+field 02190CE0 r3+0x8E0 u32 0,0x60000000
+field 02190CE0 r3+0x948 u32 0,0x61000000
+field 02190CE0 r3+0x95C u32 0,0x61000000
+field 02190CE0 r3+0x790 i16 9,10,11
+field 02190CE0 r3+0xB98 f32 -20 20
+field 02190CE0 r3+0xBA0 f32 -20 20
+ret 02556D14 0 1                            # dKy_daynight_check
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02193E48 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","Kb","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb","seb"
+fieldstr 02190CE0 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","d","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

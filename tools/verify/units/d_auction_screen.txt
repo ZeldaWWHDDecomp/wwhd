@@ -1,0 +1,7 @@
+src wwhd_src/d/d_auction_screen.cpp
+# Initialized HD auction controller chain; raw boot image contains zero global.
+field * 101F8344 u32 0x20000000
+field * 200001F4 u32 0x21000000
+field * 21000065 u8 0 255
+field * 21000067 u8 0 255
+field * 2100006A u8 0 255

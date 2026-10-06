@@ -1,0 +1,38 @@
+# hd_ui_020015C8: TUs 020015C8..020021FB (widget base, GamePad pointer, touch widget, UI event queue); HD-only
+src wwhd_src/hd/hd_ui_020015C8.cpp
+# widget serial counter: wrap to 0
+field 020015C8 1018C178 u32 0,1,0xFFFFFFFF,0x1234
+# reachable inline null checks of member addresses
+arg 02001790 r3 0,0xFFFFFE64,0x65000000
+arg 02001A00 r3 0,0xFFFFFFC8,0x65000000
+arg 02001CB0 r3 0,0xFFFFFFFC,0x65000000
+arg 02001BE4 r4 0,1,7,8,9,0xFFFFFFFF
+arg 02001C00 r4 0,1,7,8,9,0xFFFFFFFF
+field 02001BC0 r3+0x1C u32 0,1,2
+field 02001BD0 r3+0x1C u32 0,1,2
+arg 02001924 f3 0,0,1,-2
+arg 02001924 f4 0,0,1,-2
+# queue walks: pinned queue at 60000000, list header at 60000004 (next +8), ring of up to two boxes, small box arrays
+arg! 0200209C r3 0x60000000
+arg! 02001FF4 r3 0x60000000
+field * 60000008 u32 0x60000004,0x60000100,0x60000200
+field * 60000104 u32 0x60000004,0x60000200
+field * 60000204 u32 0x60000004
+field * 60000130 u32 0,1
+field * 60000230 u32 0,0x60000004
+field * 60000014 u32 0,1,2,3
+stable 60000008 4
+stable 60000104 4
+stable 60000204 4
+stable 60000014 4
+field 02001FF4 60000010 u32 0,0x61000000
+field 02001FF4 6100000C u32 0,1
+field 02001FF4 61000044 u32 0,1
+field 02001FF4 6100007C u32 0,1
+field 02001E80 r3+0 u32 0
+ret 0273B494 0,0x62000000
+field 02001E80 62000030 u32 0,1
+field 02001F44 r4+0x30 u32 0,0x63000000
+# mutation follow-ups: the point handed to the pane hit test is 8 bytes; the byte after the serial counter
+callee 0287F05C r4=8
+field 020015C8 1018C17C u8 0,0x55

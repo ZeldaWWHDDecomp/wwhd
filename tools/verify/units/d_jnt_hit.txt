@@ -1,0 +1,45 @@
+src wwhd_src/d/d_jnt_hit.cpp
+field 02552930 r3+0x18 s16 -1,0,1,2,3
+ret! 0273AD10 0,0x55000000
+ret! 0273ADAC 0,0x56000000,0x56001000,0x56002000
+ret! 028EFFD0 0,0x57000000
+ret! 025528D8 0,0x55000000
+ret 02552930 0,1
+
+# Valid bounded search-data count; pin object apart from allocator storage across mocks.
+arg! 02552930 r3 0x58000000
+arg 025528D8 r3 0,0x58000000
+arg 02552BE8 r3 0,0x58001000
+
+# Search fixtures are valid, nonempty bounded arrays; count/input tables do not change in geometric SDK calls.
+arg! 025538E4 r3 0x58000000
+field 025538E4 r3+0x18 s16 1,2,3
+stable 58000018 2
+field 025538E4 r3+0x10 u32 0x58100000
+field 025538E4 r3+0x14 u32 0x58200000
+field 025538E4 r3+0x0C u32 0x58300000
+field 025538E4 r3+0x08 u32 0x58400000
+field 025538E4 58100000 s16 0,1,2,3,4,5,6,7,8,9
+field 025538E4 58100002 s16 0,1,2,3,4,5,6,7,8,9
+field 025538E4 58100004 s16 0,1,2,3,4,5,6,7,8,9
+stable 58100000 6
+field 025538E4 58200000 s16 -1,0,1,2
+field 025538E4 58200002 s16 -1,0,1,2
+field 025538E4 58200004 s16 -1,0,1,2
+stable 58200000 6
+
+# Actual vector and matrix pointee footprints; output mocks supply full real-size storage.
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8F44 r3=12 r4=12
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E90D4 r3=48 r4=out48
+callee 028E91EC r3=48 r4=out48
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B12C r3=12 r4=out12
+callee 0201B3C0 r3=12 r4=out12
+callee 0201B47C r3=12

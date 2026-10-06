@@ -1,0 +1,158 @@
+# Verification unit: d_a_pz (Princess Zelda, Ganon's Tower)
+src wwhd_src/d/actor/d_a_pz.cpp wwhd_src/d/actor/d_a_pz_init.cpp wwhd_src/d/actor/d_a_pz_anm.cpp wwhd_src/d/actor/d_a_pz_mode.cpp wwhd_src/d/actor/d_a_pz_exec.cpp
+
+# stack objects passed to callees
+callee 028E8F64 r4=12 r5=out12  # PSMTXMultVec(m, &in, &out)
+callee 025D5578 r4=out4         # fopAcM_SearchByName(name, &actor)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator- (hidden result pointer r4)
+callee 028E8DD0 r3=12           # PSVECSquareMag
+callee 0200F93C r3=12 r4=12     # cLib_targetAngleY
+callee 0259D54C r3=out12        # dNpc_playerEyePos
+callee 0259DED0 r6=12           # dNpc_JntCtrl_c::lookAtTarget(.., &eye, ..)
+callee 026066C4 r4=8            # dRes_control_c::getRes(SafeString*)
+callee 02587A0C r9=240         # dLib_bcks_setAnm(.., anm_prm[15] on the stack, ..)
+callee 025D54C4 r4=out4         # fopAcM_SearchByID(id, &actor)
+callee 025A8BFC r8=out4         # dPa_control_c::setSimpleLand(.., int* out, 7)
+callee 0255F554 r3=12           # dKy_SordFlush_set(&pos, 0)
+callee 028E8D88 r3=12 r4=12 r5=out12  # PSVECAdd
+callee 02588230 r3=12           # dLib_checkActorInFan(&pos, ..)
+# loop counts behind pointers (btp entries, btk materials, model materials): keep them small
+field 024514FC r3+0x1380 u32 0x5A000000 0x5A000000
+field 0245323C r3+0x1380 u32 0x5A000000 0x5A000000
+field 02454114 r3+0x1380 u32 0x5A000000 0x5A000000
+field * 5A000016 u16 0 5
+field 024514FC r3+0x12A0 u32 0x5B000000 0x5B000000
+field * 5B00000C u32 0x5B000100 0x5B000100
+field * 5B000114 u16 0 4
+ret! 027F3F8C 0x5C000000 0x5C000000
+field * 5C000024 u16 0 24
+# the btp/btk pointers are read after mocked calls: a fixed `this` whose pointer fields are not clobbered
+arg! 024514FC r3 0x40000000 0x40000000
+arg! 0245323C r3 0x40000000 0x40000000
+arg! 02454114 r3 0x40000000 0x40000000
+stable 40001380 4
+stable 400012A0 4
+stable 5A000000 0x200
+stable 5B000000 0x200
+stable 5C000000 0x30
+# ---- coverage steering ----
+ret 0273AD10 0,0x41000000        # operator new: also the failure path
+arg 024514A4 r3 0,0x40000000
+arg 02458C04 r3 0,0x40000000
+arg 024521E0 r3 0,0x40000000
+arg 0245226C r3 0,0x40000000
+ret 025200D4 0x54000000 0x54000000  # play object pinned
+# _create: resLoad, INIT flag, argument byte, "kenroom" start stage, event bit, heap
+ret 02520460 0,1,4,5
+field 02452B44 r3+0x2E4 u32 0,8
+field 02452B44 r3+0xB0 u32 0,0x100,0xFF00
+field 02452B44 54005134 u32 0x6B656E72,0x41414141
+field 02452B44 54005138 u32 0x6F6F6D00
+ret 025B8B94 0,1
+ret 025D63E8 0,1
+# bodyCreateInit: "GTower"; material indices below/above the count
+field 0245260C 54005134 u32 0x47546F77,0x41414141
+field 0245260C 54005138 u32 0x65720000
+# ground attribute, emitters, timers
+ret 024EF0F4 0x13,0x17,0
+field * r3+0x478 u32 0,0x20,0x10
+field 02452D98 r3+0x810 u32 0,0x41000000
+field 024530DC r3+0x7FC u32 0,0x41000000
+ret 0211D2F8 0,1
+ret 025A8BFC 0,0x41000000
+# setAnmRunSpeed / modeDown: animation number and the body morf's frame / state
+field 02454978 r3+0x7EB i8 3,3,0
+field 02457718 r3+0x7EB i8 7,8,9
+field 02454978 r3+0x44C u32 0x5D000000
+field 02457718 r3+0x44C u32 0x5D000000
+field * 5D00009C f32 7,14,1,2,3,0
+field * 5D0000A7 u8 0,1
+field * 5D000098 f32 0,1
+field * 5D0000B0 f32 1,0
+field * 1047BCF8 f32 0,0,1
+field 02457718 r3+0xADC s32 0 2
+field 02457718 r3+0x858 u8 0,1
+# modeWait: event data, staff id, cut names
+ret 02544044 0,1
+ret 02542D88 -1,0,1
+ret 02544830 0x10038C34,0x10038C3C,0x10038C2C
+field 0245588C r3+0x1197 u8 0 10
+field 0245588C r3+0xB5A i8 0,1
+# checkTgHit: hit timer, hit, hit object type, hitting actor, player action, life
+ret 0207A9A0 0,0,1
+ret 025162A4 0,1,1
+ret 02516300 0,0x5E000000,0x5E000000
+field * 5E000010 u32 1,2,0x20,0x40,0x80,0x400,0x800,0x4000,0x8000,0x10000,0x40000,0x80000,0x100000,0x200000,0x1000000,0x4000000,0x8000000,0x10000000
+ret 02515BBC 0,0x5F000000
+field * 5F000008 i16 0x1D8,0xF6,0
+field * 5F000780 u8 0,1
+field * 5F0003AC u8 0,1
+field 02455CFC 54005B2C u32 0x5F100000
+field * 5F1003AC u8 0 0x1C
+field 02455CFC 101F84DC u32 0x5F200000
+field * 5F200022 u16 11 13
+field 02455CFC r3+0x878 i32 0 4
+field 02455CFC r3+0x86C i32 0 4
+field * 1046D536 i16 0 3
+field * 1046D53A i16 0 3
+fret 020198D8 0 100
+# talk / messages
+ret 025A11EC 0x12,0
+field 02458A74 r4+0 u32 0x3563,0x3564,0
+ret 025D5578 0,1
+arg 02458B34 r4 6,14,0
+field 02458B34 r3+0x7E4 i32 0,1
+field 02458B34 54005BC5 u8 0,1,2
+# btp entry names: point some at the mouth / shadow literals (pointer-equal SafeStrings) or other text
+field 024514FC 5A00002C i32 0x100
+field 024514FC 5A000138 u32 0xB60385EC,0xB60385F8,0xB6038608,0xB6038BC8,0x0
+field 024514FC 5A000154 u32 0xB60385D0,0xB60385DC,0xB60385EC,0xB6038BAC,0x0
+field 024514FC 5A000170 u32 0xB60385B4,0xB60385C0,0xB60385D0,0xB6038B90,0x0
+field 0245323C 5A00002C i32 0x100
+field 0245323C 5A000138 u32 0xB603882C,0xB6038838,0xB6038848,0xB6038BC8,0x0
+field 0245323C 5A000154 u32 0xB6038810,0xB603881C,0xB603882C,0xB6038BAC,0x0
+field 0245323C 5A000170 u32 0xB60387F4,0xB6038800,0xB6038810,0xB6038B90,0x0
+field 02454114 5A00002C i32 0x100
+field 02454114 5A000138 u32 0xB60388F4,0xB6038900,0xB6038910,0xB6038BC8,0x0
+field 02454114 5A000154 u32 0xB60388D8,0xB60388E4,0xB60388F4,0xB6038BAC,0x0
+field 02454114 5A000170 u32 0xB60388BC,0xB60388C8,0xB60388D8,0xB6038B90,0x0
+# _execute: the "Ganondorf near, call Link" check
+field 02454B7C r3+0x11B4 i32 0,0,1
+field 02454B7C r3+0xADC i32 0,1,2
+field 02454B7C r3+0x11B0 u8 0,0,1
+field 02454B7C r3+0x7DC i32 0,1,2,3,4,5,6,9
+fret 025D6958 0 2000
+field 02454B7C 1046D554 f32 0 2000
+field 02454B7C 1046D558 f32 0 2000
+field 02454B7C 1046D55C f32 0 2000
+# setAnm: animation numbers around the bow range
+field 02454654 r3+0x7EB i8 1,3,4,5,6,7,9
+field 02454654 r3+0x7EC i8 1,3,4,5,6,7,9
+arg 02454654 r4 4,5,6,7,9,15
+ret 027DF9B0 -1,0,1,2,5
+fret 028F4384 0 400
+field 024563D4 r3+0xB4C i32 1,-1
+stackfill
+field 024563D4 r3+0xADC i32 0,1,2
+field 024563D4 r3+0x1195 u8 0,1
+field 024563D4 1046D4F4 f32 0 400
+field 024563D4 1046D4F8 f32 0 400
+field 024563D4 1046D4FC f32 0 400
+field 024563D4 1046D489 u8 0,0,1
+
+# demo: the btp resource (mBtpAnm+0x10, actor+0x12BC) is a native animation wrapper (vtable 0x1016E95C at +4, as in d_a_demo00).
+# Its getFrameMax slot +0x14 is 027F7B00 (reads only r3: wrapper+8 -> raw +0x12). Unsteered, the slot resolved to random code that
+# read the caller's leftover r5 (gen seed 7003562), which the real this-only virtual never does.
+field 0245323C r3+0x12BC u32 0,0x5D100000
+field 0245323C 5D100004 u32 0x1016E95C
+field 0245323C 5D100008 u32 0x5D900000
+field 0245323C 5D900012 u16 0,1,2,0x7F,0xFF,0x100,0x7FFF,0x8000
+stable 5D100004 8
+stable 5D900012 2
+stable 400012BC 4
+real 027F7B00
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02452B44 0x54005134 8 @stages,"AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","AAAAoom","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","Pz","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom"
+fieldstr 0245260C 0x54005134 8 @stages,"AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","AAAAer","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK","PZ_TALK"

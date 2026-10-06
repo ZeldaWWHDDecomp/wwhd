@@ -1,0 +1,14 @@
+# Verification unit: d_a_tag_attention (attention tag)
+src wwhd_src/d/actor/d_a_tag_attention.cpp
+
+ret 025BA0C0 0 1                    # dSv_info_c::isSwitch
+ret 024A5920 0 3                    # PrmAbstract (type 0..3)
+arg 024A5920 r4 0,1,2,8,31,32,33,63
+arg 024A5920 r5 0,1,8,24,31,32,33,63
+field 024A5598 r3+0x2DD s8 0 1      # argument: sphere / box
+field 024A5598 r3+0x322 s16 -2 2    # current.angle.y (0 and not 0)
+fret 028F4384 99 101                # sqrt distance vs scale.x*100 (100 and 101 boundaries)
+field 024A5598 r3+0x330 f32 0,0.5,0.995,1,1.005
+field 024A5598 r3+0x334 f32 0,0.5,0.995,1,1.005
+field 024A5598 r3+0x338 f32 0,0.5,0.995,1,1.005
+callee 0201ADE0 r4=out12            # cXyz::operator-

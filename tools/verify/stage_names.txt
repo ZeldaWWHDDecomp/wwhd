@@ -1,0 +1,132 @@
+# Real WWHD stage names (129): the <name>_Stage.szs archives in content/Common/Stage.
+# `fieldstr FUNC ADDR @stages` picks one of these per input. Names marked * do not occur as a
+# NUL-terminated string in cking.rpx (no code names them literally; they are still loadable stages).
+A_mori
+A_nami *
+A_umikz
+Abesso
+Abship
+Adanmae
+ADMumi
+Asoko
+Atorizk
+Cave01
+Cave02
+Cave03
+Cave04
+Cave05
+Cave06
+Cave07
+Cave08 *
+Cave09
+Cave10
+Cave11
+Comori
+DmSpot0 *
+E3ROOP *
+Ebesso *
+Edaichi
+Ekaze
+ENDumi
+Fairy01
+Fairy02
+Fairy03
+Fairy04
+Fairy05
+Fairy06
+figureA
+figureB
+figureC
+figureD
+figureE
+figureF
+figureG
+GanonA
+GanonB
+GanonC
+GanonD
+GanonE
+GanonJ
+GanonK
+GanonL
+GanonM
+GanonN
+GTower
+Hyroom
+Hyrule
+I_SubAN *
+ITest61 *
+ITest62
+ITest63
+Kaisen
+kazan *
+kaze
+kazeB
+kazeMB
+kenroom
+kinBOSS
+kindan
+kinMB
+LinkRM
+LinkUG
+M_Dai
+M_DaiB
+M_DaiMB
+M_Dra09
+M_DragB
+M_NewD2
+M2ganon
+M2tower
+ma2room
+ma3room
+majroom
+MajyuE
+MiniHyo
+MiniKaz
+Mjtower
+Msmoke *
+Mukao *
+Nitiyou
+Obombh
+Obshop
+Ocean
+Ocmera
+Ocrogh
+Ojhous
+Ojhous2
+Omasao
+Omori
+Onobuta
+Opub
+Orichh
+Otkura
+Pdrgsh
+Pfigure
+Pjavdou
+Pnezumi
+PShip
+PShip2 *
+PShip3 *
+sea_E
+sea_T
+ShipD
+Siren
+SirenB
+SirenMB
+SubD42
+SubD43
+SubD44 *
+SubD51 *
+SubD71
+TF_01
+TF_02
+TF_03
+TF_04
+TF_06
+tincle *
+TyuTyu
+WarpD
+Xboss0
+Xboss1
+Xboss2
+Xboss3

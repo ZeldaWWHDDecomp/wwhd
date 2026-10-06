@@ -1,0 +1,100 @@
+# Verification unit: d_a_npc_kf1 (Mila's father, rich: the pot shop)
+src wwhd_src/d/actor/d_a_npc_kf1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 02261920 r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12 r5=out12  # PSMTXMultVec(m, &in, &out)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259E2D4 r5=12 r6=12   # lookAtTarget_2(target, eye copy)
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint
+callee 0259E838 r4=12         # dNpc_PathRun_c::chkPointPass
+callee 025D54C4 r4=out4       # fopAcM_SearchByID(id, &actor)
+callee 022625C8 r5=out4       # searchByID(id, &isDeleted)
+callee 022632A4 r4=12         # create_rupee(cXyz copy)
+callee 025CB374 r6=12         # StartShock(cXyz by value)
+callee 02543714 r4=12         # setGoal
+callee 0201A478 r3=255        # csXyz::csXyz
+ret 025200D4 0x54000000 0x54000000
+ret 025F795C 0x12 0x14
+ret 025B8B94 0 1
+ret 02556D14 0 1
+ret 025D4604 0 1
+ret 0254407C 0 1
+ret 025440C8 0 1
+ret 025447C8 0 1
+ret 0259F858 0 1
+fret 020198D8 0 31.99
+arg! 022632A4 r5 0 4
+field 022632A4 101FF558 i32 0 1000
+# searchActor_Tsubo
+field 0226177C r3+8 i16 0x1C5,0
+ret 02048038 0xE,0
+field 0226177C 104674C0 i32 0 25
+# cut_init_RUPEE_SET
+field 02262E10 r3+0x95C i16 8,0
+# cut_init_TLK_MSG: the event data pointer is pinned
+ret 0254487C 0,0x55000000
+field 02263008 55000000 u32 0x1C2D,0x1C2F,0x1C30,0x1C39,0x1C31
+# next_msgStatus: message numbers, the selected answer
+field 02264984 r4+0 u32 0x1C20,0x1C21,0x1C22,0x1C23,0x1C24,0x1C25,0x1C26,0x1C27,0x1C28,0x1C29,0x1C2A,0x1C2B,0x1C2C,0x1C2D,0x1C2E,0x1C2F,0x1C30,0x1C31,0x1C32,0x1C33,0x1C34,0x1C35,0x1C36,0x1C37,0x1C38
+field 02264984 101F4B5C u32 0x55100000
+field 02264984 55100948 u32 0,1,2
+# anmAtr / chngAnmAtr
+arg 022648C4 r4 6,14,0
+field 022648C4 r3+0x96E i8 0 1
+field 022648C4 54005BC6 u8 0,1,0xFF
+field 022648C4 r3+0x964 u8 0,1,0xFF
+field 022647F4 r3+0x7C0 u32 0x1C2E,0
+arg 022647F4 r4 0 12
+# talk_1 / cut_move_TLK_MSG / cut_move_TSUBO_ATN
+field 022651E0 r3+0x7CC u8 0 1
+field 022651E0 r3+0x7C0 u32 0x1C2B,0
+ret 025A11EC 0x12,2,6,0
+field 022639E0 r3+0x8FE i16 0 5
+ret 025D8E6C 0,0x40200000      # fopAcM_createItemForKP2
+field 022639E0 r3+0x8FC i16 0x15,0x14,1,0
+ret 02542EDC -1 14             # getMyActIdx
+# mutation gaps
+callee 025D8E6C r3=12           # fopAcM_createItemForKP2(pos, ...)
+field 022623CC 101D5FFC u32 0,0x40300000
+field 022623CC r3+0x800 u32 0x55200000
+field 022623CC 55200004 u32 0x55200100
+field 022623CC 55200114 u32 0x0220DEA0
+ret 0220DEA0 0 6
+field 022623CC r3+0x864 u8 0 6
+field 02261AD0 r3+0x800 u32 0x55200000
+field 02261AD0 55200004 u32 0x55200100
+field 02261AD0 55200114 u32 0x0220DEA0
+field 02261AD0 r3+0x864 u8 0 6
+ret 022625C8 0,0x40400000      # searchByID
+field 02263FF0 r3+0x96A i8 0 5
+field 022622D0 r3+0xF8 u16 0 3
+field 022622D0 r3+0x967 i8 0 4
+field 02263008 r3+0x95E i16 0 3
+field 02263008 r3+0x960 u16 0 31
+field 02264984 r3+0x95E i16 0 3
+field 02264984 r3+0x960 u16 0 31
+field 02264FC4 r3+0x967 i8 0 4
+field 02264EC0 r3+0x967 i8 0 4
+ret 0200F93C 0x2000,0x2001,0xFFFFE000,0xFFFFDFFF,0x1FFF,0,0x4000
+field 02262D08 r3+0x322 i16 0,1,-1
+ret 022623CC 0 1                # demo
+arg 022635C4 r4 0 2
+arg 022635C4 r5 0 1
+field 02264FC4 r3+0x878 u32 0x55300000,0
+field 02264FC4 55300005 u8 1,0
+field 02264FC4 r3+0x370 f32 0 3
+field 02264FC4 1046750C f32 0 1
+field 02264FC4 10467510 f32 0 3
+field 022623CC r3+0x2DC u8 0 0x21
+field 022623CC r3+0x91E u8 0 1
+stable 55200000 512
+# set_action: equal / different pointers to member
+field 02261920 r3+0x868 i16 0,1
+field 02261920 r3+0x86A i16 0,-1,1
+field 02261920 r3+0x86C u32 0x022652F0,0x022652F4
+field 02261920 r4+0 i16 0,1
+field 02261920 r4+2 i16 0,-1,1
+field 02261920 r4+4 u32 0x022652F0,0x022652F4
+field 02264EC0 r3+0x966 i8 8 10

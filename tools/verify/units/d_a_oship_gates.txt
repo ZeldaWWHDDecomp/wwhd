@@ -1,0 +1,94 @@
+src wwhd_src/d/actor/d_a_oship.cpp
+stackfill periodic
+ret 025200D4 0x55000000 0x55000000
+field * 55005292 u8 0,1
+ret 0273AD10 0,0x57000000
+
+# Nullable allocated bomb and collision hit objects, with typed hit flag steering.
+ret 02516300 0,0x58000000
+field 023C714C 58000010 u32 0,32
+field 023C714C r3+0x5C0 s32 0,1,2,3
+field 023C714C r3+0x3A1 u8 0,1,2,3,127
+field 023C714C 1046CB4D u8 0,1
+ret 0211D2F8 0,1
+
+# Judge forwards an opaque argument; the real selected callback defines its extent.
+real 025D5218 020100BC 02019DE8 0201AA08 025E121C 025E1234
+callee 025D5218 r4=255
+callee 025E121C r4=2
+callee 025E1234 r4=4
+# A bounded one-node actor list; node and actor remain disjoint from live Oship.
+field * 101F3328 u32 0x59000000
+field * 101F3330 s32 0,1
+field * 59000008 u32 0
+field * 5900000C u32 0x59001000
+field * 59001008 s16 0,0x191
+field * 59001004 u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+stable 101F3328 12
+stable 59000000 32
+stable 59001000 16
+ret 025D5928 0,0x57000000
+
+# Both matching and mismatching ID halves are exercised by the real ID leaf.
+field 023C68B8 r3+0xE6C u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C78D0 r3+0xE6C u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C68B8 r3+0xE70 u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C68B8 r3+0xE74 u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C68B8 r3+0xE78 u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C68B8 r3+0xE7C u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+field 023C68B8 r3+0xE80 u32 0,0x12340000,0x00001234,0x12341234,0xFFFFFFFF
+
+# Actual SDK footprints: SafeString has pointer plus vtable; PSMTXMultVec
+# reads a 3x4 matrix and XYZ input and writes only the XYZ output.
+callee 026066C4 r4=8
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Close observed survivor gaps: actual vector input/output extents and
+# a nonnull resource-controller token at its aligned singleton slot.
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B47C r3=12
+callee 020182E0 r4=12
+field 023C5320 101F4F28 u32 0x56000000
+
+# Supplemental: initialized Create parameter/savedata gates and exact numeric boundaries.
+ret 02520460 4 4
+ret 025BA0C0 0,1
+ret 025B8308 0,1
+ret 025D63E8 0,1
+field 023C6220 r3+0x2E4 u32 8
+field 023C6220 r3+0xB0 u32 0xFF000F00,0xFF00F000,0xFF000000,0xFF007700
+field 023C6220 r3+0x2F8 s16 255
+field * 101F84DC u32 0x5A000000
+field * 5A0001C1 u8 0,7,15
+stable 101F84DC 4
+stable 5A000000 0x1000
+# Speed2 equals the actual readonly cutoff at100341F4.
+field 023C760C r3+0xE90 s32 -1
+field 023C760C r3+0x3CF u8 255
+field 023C760C r3+0x370 f32 2
+field 023C760C r3+0xEA8 u8 0
+field 023C760C 1046CB4E u8 0
+field 023C68B8 r3+0x370 f32 2,3
+ret 023C714C 0 0
+ret 023C56D0 0,1
+# A settled sink with the integer angle exactly at the limit256.
+ret 0200F378 0,256,257
+fret 025871F8 0 0
+fret 0200ECD4 0 0
+
+# Additional equality cases for sink tolerance and wave distance.
+fret 0200ECD4 0 500
+fret 025D6958 18000 18000
+field 023C78D0 r3+0xF8 u16 2
+field 023C78D0 r3+0x3D2 u8 0,255
+ret 0254457C 0,1
+
+# fastCreate reads the9th argument from caller stack and consumes XYZ/rotation inputs.
+callee 025D5928 r5=12 r7=6 r8=12 stack=1
+
+
+# Create consumes fields after the mocked GetArg boundary; valid map or sentinel.
+field 023C6220 r3+0x3CD u8 255
+field 023C6220 r3+0x3CE u8 255
+field 023C6220 r3+0x3D0 u8 0,7,15
+field 023C6220 r3+0x3D1 u8 15

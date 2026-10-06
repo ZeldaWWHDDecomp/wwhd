@@ -1,0 +1,45 @@
+src wwhd_src/d/actor/d_a_obj_volcano.cpp
+stackfill
+ret 02520460 0,1,2,3,4,5
+ret 024F1D9C 0,4,5
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+ret 025BA0C0 0,1
+ret 025162A4 0,1
+ret 02516300 0,0x56000000
+field * 56000010 u32 0,0x80000
+field * r3+0x2E4 u32 0,1,8,9
+field * r3+0x3AC u32 0,0x57000000
+field * 57000000 u32 0,255,256,65535
+field * r3+0xF8 u16 0,1,2,3
+field * r3+0x720 s32 -1,0,8,9,10,149,150,2147483647
+field * r3+0x72C u8 0,1
+field * r3+0x738 u32 0,1,2,3,4,5,6,7,8,0xFFFFFFFF
+field * r3+0x730 f32 nan,inf,-inf,-0,0,0.5,1
+field * r3+0x410 u32 0,0x59000000
+# Model allocations are aligned; retain null paths and unrestricted float payloads.
+field * r3+0x488 u32 0,0x59001000
+field 023B5734 r3+0xB4 u32 0x100330B0
+field 023B5744 r3+0xB4 u32 0x100330B0
+ret 025200D4 0x54000000 0x54000000
+ret 025440C8 0,1
+field * 101F84DC u32 0x55000000
+field * 5500115C s16 0,2
+field * 55001148 s8 0,1
+field * r3+0x326 s8 0,1
+arg! 023B587C r4 0,1,8,31,32
+arg! 023B587C r5 0,8,31,32
+callee 026066C4 r4=8
+callee 025A847C stack=4
+callee 023B3B94 r3=out16
+callee 0274D458 r3=out16 r4=16
+observe 025E2DE0 104B4634 8
+arg! 023B5414 r3 0,0x58000000
+arg! 023B5414 r4 0,1,127,255
+field * 58000004 u32 0,0x58001000
+field * 58001004 u32 0
+stable 58000004 4
+stable 58001004 4
+
+# Actual PSMTXCopy reads the complete matrix at this global input.
+observe 028E90D4 1048D0CC 48

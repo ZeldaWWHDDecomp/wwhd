@@ -1,0 +1,9 @@
+src wwhd_src/SSystem/SComponent/c_malloc.cpp
+# Coherent initialized heap with explicitly supplied allocator/free arguments.
+field * 1018CA3C u32 0x50000000
+field * 5000000C u32 0x51000000
+field * 51000034 u32 0x60000100
+field * 5100003C u32 0x60000200
+arg 02019430 r3 -16,-1,0,1,4,16,32
+arg 02019430 r4 0,1,4,64,4096,0xFFFFFFFF
+arg 0201945C r3 0,0x40000000

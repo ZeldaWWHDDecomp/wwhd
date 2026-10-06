@@ -1,0 +1,77 @@
+src wwhd_src/d/actor/d_a_warphr.cpp
+stackfill periodic
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 025A847C r6=12 r7=6 stack=4
+callee 028E93CC r3=out48
+callee 028E90D4 r3=48 r4=out48
+callee 025E7CE0 stack=1
+callee 025E8154 stack=1
+callee 025626A4 r5=12 r6=456
+callee 02562F5C r5=456
+callee 02543714 r4=12
+callee 025E1A40 r4=12
+callee 0200F93C r3=12 r4=12
+ret 025200D4 0x54000000 0x54000000
+field * 54005292 u8 0,1
+field * 54005CD8 u32 0,0x10000
+field * 54005B2C u32 0x55000000
+field * 54005B3C u32 0,0x55001000
+field * 54005134 u32 0x48797275,0x4D69736D,0
+field * 54005138 u32 0x6C650000,0
+field * 5400513F s8 0,8
+field * r3+0xF8 u16 0,1,2
+field * r3+0x2DC u8 0,1,2,32,33
+field * r3+0x40C s32 0,1,2
+field * r3+0x400 u8 0,1
+field * r3+0x414 s16 -1,0,1,17
+field * 101D6008 u32 0,548,549,550
+field * 1046EB8C u32 0,1
+field * 101F4829 u8 0,1
+ret! 02542EDC -1,0,1,2,3,4
+ret 02542D88 -1,0,1,7
+ret 025447C8 0,1
+ret 0254407C 0,1
+ret 025440C8 0,1
+ret 025445B8 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+ret 02520A84 0,1
+ret 025B8B94 0,1
+ret 024DACC0 0,1
+ret 024DAC5C 0,1,2
+arg 024DADD0 r4 -1,0,1,2,3
+arg 024DBAB4 r3 0,0x40000000
+arg 024DBAB4 r4 0,1,2,3
+
+# Initialized event manager: five immutable direct member descriptors.
+stable 101D3108 80
+# SafeString assureTermination virtual is an actual empty function.
+real 024DBB30
+# Constant RPX .rodata string and SafeString vtable are never writable by game code.
+stable 10042760 7
+stable 10042648 24
+
+# Scoped finite real-math caller: nonnull output slots, positive250000 and warmPlay.
+real 0201ADE0 028E8DAC 028E8DD0 028F4384 028F605C 028F60F8 025200D4
+field * 104753A8 u32 1
+field * 10474BDC u32 0x55000000
+field * 10474BEC u32 0x56000000
+field * 10474D88 u32 0x10000
+field 024DACC0 r3+0x314 f32 0
+field 024DACC0 r3+0x318 f32 0
+field 024DACC0 r3+0x31C f32 0
+field * 55000314 f32 0
+field * 55000318 f32 0
+field * 5500031C f32 0
+field * 56000314 f32 300
+field * 56000318 f32 0
+field * 5600031C f32 400
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 024DB310 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyru","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mism","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","Mismle","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out","warp_out"

@@ -1,0 +1,14 @@
+# Verification unit: d_a_tag_waterlevel
+src wwhd_src/d/actor/d_a_tag_waterlevel.cpp
+
+ret 025200D4 0x54000000 0x54000000   # play object at a fixed address
+ret 024B3DC4 0,1,2,0xFF              # prm_get_sch
+ret 025602A8 0,1,2,0x101,0xFF        # dKy_get_schbit
+field * r3+0x2E4 u32 0,8
+field * 101D5F2C u32 0,1,2,3,0xFFFFFFFF   # M_state
+field * 101D5F28 f32 0,0.005,0.05,0.5,0.95,0.995,1,0.3,-0.1,1.1   # M_now (boundaries)
+field * r3+0x3AC f32 0,0.01,0.009999999776482582,-0.01,0.03,0.007   # field_0x290 (clamp edges)
+field * r3+0x3B0 i32 0,1,2,3
+field * 54005292 u8 0,1
+field * 540052B8 u16 0,2,0xFFFD,0xFFFF
+arg! 024B3D68 r3 0,0x40000000

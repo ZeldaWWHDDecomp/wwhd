@@ -1,0 +1,65 @@
+# hd_sys_02032D0C: TU 02032D0C..0203400B (cking::system::ErrorViewerTask); HD-only
+src wwhd_src/hd/hd_sys_02032D0C.cpp
+arg 02032DF0 r3 0,0xFFFFFF20,0xFFFFFF10,0xFFFFFEE0,0xFFFFFED0,0xFFFFFE74,0x65000000
+field * 1018F2BC u32 0,0x66000000
+field 02032FE8 r3+0x39C u32 0,1,5,6
+field 02033DF4 r3+0x39C u32 0,1,2,3,4,5,6
+# error ring buffer: small counts, capacity 64, head around the wrap
+field * r3+0x190 s32 64,2
+field * r3+0x194 s32 0,1,63,64
+field * r3+0x198 s32 -1,0,1,2,64
+field * r3+0x3A0 u32 0,0x192DB5,0x170AD5,0x192D50,0x195460,0x12345
+field * r3+0x3A4 u32 0,1,0x01000000
+field * r3+0x3B4 u32 0,1,2
+field * r3+0x3B8 u32 0,11,12
+field * r3+0x3AC u32 0,1,2
+field * r3+0x1ABC u32 0,0x67000000
+ret 02618498 0,1
+ret 026184AC 0,1
+ret 02617F14 0,1
+ret 02617AE4 0,1
+ret 02617FCC 0,1
+ret 020334C8 0,0,0x1234
+ret 0286CA30 0,1,2,3
+ret 0286CB6C 0x1E5D7C,0x14,0xB,0xC,0x10,0x15,0x99
+ret 0286CB5C 0,2,3,4
+ret 02033AEC 0,1
+ret 02033844 0,1
+ret 0203389C 0,1
+ret 02033900 0,1
+ret 02033954 0,1
+field 020333B4 r3+0 u32 0
+ret 02034130 0x68000000,0x68000000
+ret 02034200 0x69000000,0x69000000
+field * 68001118 u32 0,1
+field * 6800201C s32 -1,0,1
+field * 68002020 u32 0xFFFFFFFF,0
+field * 69000AD4 s32 -1,0,1
+field * 69000AD8 u32 0xFFFFFFFF,0
+field 0203389C 101F5088 u32 0x6A000000,0x6A000000
+field 0203389C 6A0001D0 u32 0,1
+arg 02033AEC r4 0x14,0x15,0xB,0xC,0x10,0x11
+field * 101F95D0 u32 0x6B000000,0x6B000000
+field * 6B001020 u32 0,12,13,14
+field 0203315C 101F4BAC u32 0x6C000000,0x6C000000
+field 0203315C 6C000014 u32 0,5,6,7,8,10,11
+field 02033118 101F4BAC u32 0x6C000000,0x6C000000
+field 02033118 6C000010 u32 0,1,2,3,4
+field 02033844 r4+0 u32 0x192DB5,0
+field 0203389C r4+0 u32 0x170AD5,0
+field 02033844 101F5088 u32 0x6A000000
+# mutation follow-ups: stack objects handed to the erreula / sysapp / FS calls (whole objects compared),
+# the memset thunk's destination (its tail call into the import hides r3 from the live-in analysis)
+callee 0286CB2C r3=44
+callee 0286C5F8 r3=16
+callee 0286CA50 r3=192
+callee 0286CB7C r3=12
+callee 02033844 r4=8
+callee 0203389C r4=8
+callee 02033900 r4=8
+callee 02033954 r4=8
+callee C000AA40 r3=12
+callee C000AA28 r3=12
+callee 02753004 r4=8
+callee 028F521C r3=0
+stackfill periodic

@@ -1,0 +1,136 @@
+# Verification unit: d_a_oq (Octorok)
+src wwhd_src/d/actor/d_a_oq.cpp wwhd_src/d/actor/d_a_oq_exec.cpp
+
+ret 02520460 0 5                    # dComIfG_resLoad -> cPhs_State
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 02008860 0 1                    # cBgS::LineCross
+ret 020402C8 0 1                    # enemy_ice
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+callee 024F1AFC r3=0x6C             # dBgS_LinChk::Set: the stack object
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008FEC r3=255
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(src, dst out)
+ret 0273AD10 0 0x60000000           # operator new: NULL or an address
+arg 023C3D0C r3 0 0
+arg 023C3C80 r3 0 0
+# nodeCallBack: the joint number
+ret 027F7878 0x58000000 0x58000000
+field 023C003C 58000004 u16 6,7,8
+arg 023C003C r4 0 1
+# mType
+field 023C024C r3+0x3DC u8 0,1,2,3,4,5,6
+field 023C039C r3+0x3DC u8 0,1,2,3,4,5,6
+field 023C039C r3+0xBB2 i16 0x14,0x15
+field 023C1080 r3+0x3DC u8 0,1,2,3,4,5,6
+field 023C1080 r3+0x3E3 u8 0 1
+field 023C1080 r3+0x514 u32 0,0x1000
+field 023C1080 r3+0x318 f32 -50,0,20,40,40.5,50
+fret 0246BA0C 0 0                   # daSea_calcWave (0: the surface boundaries are reachable)
+ret 0246B6A4 0 1                    # daSea_ChkArea
+field 023C1080 r3+0x6A8 f32 0,0,5
+field 023C0FDC r3+0x514 u32 0,0x1000
+field 023C38AC r3+0x3DC u8 0,1,2,3,4,5,6
+field 023C3928 r3+0x3DC u8 0,1,2,3,4,5,6
+field 023C3928 58000008 u16 0 3
+ret 027F3F94 0x58000000 0x58000000
+ret 025E8A48 0 1
+ret 02552B60 0,0x59000000
+ret 025E8154 0 1
+field 023C4830 r3+0x3DC u8 0,1,2,3,4,5,6
+# body_atari_check
+callee 025192A8 r4=0x1C             # cc_at_check: CcAtInfo
+ret 025200D4 0x54000000 0x54000000  # play
+field 023C064C 54005B2C u32 0x55000000,0x55000000
+field 023C064C 54005B3C u32 0x56000000,0
+field 023C064C r3+0x3DC u8 0,1,4,5
+field 023C064C r3+0x420 i32 0x12,0x12,0x13,0
+field 023C064C r3+0x3E0 u8 0,0xA,0xB
+field 023C064C r3+0x3D0 u32 0x50000000,0x50000000
+field 023C064C 500000A7 u8 0 1
+field 023C064C 50000098 f32 0 1
+ret 025160DC 0 1                    # ChkAtHit
+ret 02515BBC 0,0x55000000,0x56000000,0x57000000   # GetAc
+ret 025162A4 0,1,1                  # ChkTgHit
+ret 02516300 0,0x5B000000,0x5B000000   # GetTgHitObj
+field 023C064C 5B000010 u32 2,2,0x20,0x40,0x80,0x200,0x4000,0x10000,0x40000,0x80000,0x100000,0x200000,0x8000000,1
+field 023C064C 550003AC u8 0,4,5,0xA,0xB,0xC,0xD,0xE,0x10,0x11,0x14,0x15,0x16,0x17,0x18,0x19,0x1B,0x1C,0x1E,0x1F,0x20
+field 023C064C r3+0x3A9 i8 0 1
+# action_wakidasi
+field 023C49B4 r3+0x404 i16 0,0,16,17
+field 023C49B4 1047BA90 f32 0 0     # REG8_F(0)
+field 023C49B4 r3+0x3E0 u8 0x31,0x32,0x33,0x34,0x34,0x35,0x35,0x36
+fret 025D68EC 0 3000                # fopAcM_searchActorDistance
+field 023C49B4 r3+0x430 f32 1000 1000
+field 023C49B4 r3+0x3E6 i16 0,0,1
+field 023C49B4 r3+0x3E8 i16 0,0,1
+field 023C49B4 r3+0x402 i16 0,1,2
+field 023C49B4 r3+0x408 u32 0xFFFFFFFF,0x5C000000
+field 023C49B4 r3+0x40C u32 0xFFFFFFFF,0x5C000000
+field 023C49B4 r3+0x410 u32 0xFFFFFFFF,0x5C000000
+field 023C49B4 r3+0x414 u32 0xFFFFFFFF,0x5C000000
+field 023C49B4 r3+0x418 u32 0xFFFFFFFF,0x5C000000
+field 023C49B4 r3+0x41C u32 0xFFFFFFFF,0x5C000000
+ret 025D5218 0,0x5D000000           # fopAcIt_Judge
+ret 025D5A20 0xFFFFFFFF,0x100,0x101 # fopAcM_createChild
+fret 028F4384 0 2000                # std_sqrtf
+# daOQ_Create
+field 023C3EC8 r3+0x2E4 u32 0,1,8,9
+field 023C3EC8 r3+0xB3 u8 0,1,2,3,4,5,6,0xFF
+field 023C3EC8 r3+0xB2 u8 0,1,2,0xFF
+field 023C3EC8 r3+0xB1 u8 0,1,0xFF
+ret 02520A84 0,0,1                  # dComIfGs_isStageBossEnemy
+field 023C3EC8 r3+0x326 i8 0x29,0x29,0
+field 023C3EC8 54005134 u32 0x73656100,0x73656100,0
+field 023C3EC8 r3+0x2E8 u32 0xFFFFFFFF,1
+field 023C3EC8 1047BB1A i16 0,0,1    # REG8_S(9)
+# daOQ_Execute
+callee 0201ADE0 r4=out12
+field 023C1380 r3+0x3DC u8 0,0,1,1,4,4,5,5,6,6,2,3
+field 023C1380 r3+0x3DF u8 0xA,0xA,0xA,0xB,0xB,0xB,0x14,0x14,0x1E,0x1E,0x64,0
+field 023C1380 r3+0x3E0 u8 0,1,2,3,3,3,0xA,0xB,5,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x13,0x1E,0x1F,0x20,0x21,0x22,0x27,0x28,0x29,0x29,0x2A,0x2B
+field 023C1380 r3+0x3E6 i16 0,0,1
+field 023C1380 r3+0x3EE i16 0,1
+field 023C1380 r3+0x3F0 i16 0,1
+field 023C1380 r3+0x3DE u8 0,1
+field 023C1380 r3+0x3E3 u8 0,1
+field 023C1380 r3+0x3E4 u8 0,0,1
+field 023C1380 r3+0x3E5 u8 0,0,1
+field 023C1380 r3+0x3F2 i16 0,1
+field 023C1380 r3+0x3FC i16 0,1
+fret 025D68EC 0 6000                # fopAcM_searchActorDistance
+field 023C1380 r3+0x514 u32 0,0x10,0x20,0x30,0x1000,0x1000
+field 023C1380 r3+0x5A8 f32 1000000000,100,200
+field 023C1380 54005B2C u32 0x55000000,0x55000000
+field 023C1380 55000318 f32 -10 10
+field 023C1380 r3+0x318 f32 -200 200
+field 023C1380 r3+0x420 i32 7,0xC,0x11,0x12,0x14,0
+field 023C1380 r3+0x3D0 u32 0x50000000,0x50000000
+field 023C1380 500000A7 u8 0 1
+field 023C1380 50000098 f32 0 1
+ret 027F2BF8 0 1                    # checkPass
+field 023C1380 1047BB12 i16 0,0,1   # REG8_S(5)
+ret 025D5928 0,0x5E000000           # fopAcM_fastCreate
+field 023C1380 54005CD8 u32 0,0x10000
+ret 023C1080 0 1                    # sea_water_check
+ret 023C064C 0 1                    # body_atari_check
+ret 025162A4 0,1,1                  # ChkTgHit
+field 023C1380 5B000010 u32 2,0x20
+field 023C1380 r3+0xACC u32 0,1
+field 023C1380 r3+8 i16 0xE3
+field 023C1380 57000008 i16 0xE3,0
+field 023C1380 570003DC u8 6,0
+field 023C1380 r3+0x434 f32 0,88.5,89
+ret 02556D14 0 1                    # dKy_daynight_check
+field 023C1380 r3+0x488 u32 0,0x60000000
+ret 025B8BB0 0,0x10,0xFE,0xFF       # getEventReg
+field 023C1380 r3+0x440 u32 0xFFFFFFFF,0x5C000000
+field 023C1380 r3+0x43C f32 -700 0
+callee 025A847C r6=12 r7=6 r8=12       # dPa_control_c::set(grp, id, pos, angle, scale, ...): the GameCube overload maps the pointers to other types
+callee 023C0FDC r4=12               # shibuki_set: cXyz by value
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 023C3EC8 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oq","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","Oqw","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

@@ -1,0 +1,28 @@
+# Verification unit: d_a_obj_ladder (drop-down ladder)
+src wwhd_src/d/actor/d_a_obj_ladder.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 028E8F64 r5=out12       # PSMTXMultVec: output
+callee 02008974 r4=0x54        # cBgS::GroundCross(dBgS_ObjGndChk)
+callee 025CB374 r6=12          # StartShock: cXyz copy
+ret 02520460 0 5               # resLoad
+ret 024F1D9C 0 5               # MoveBGCreate
+ret 02369CEC 0 5               # PrmAbstract (type 0..4)
+ret 025BA0C0 0 1               # isSwitch
+ret 025440C8 0 1               # endCheck
+ret 02544044 0 1               # getEventData (null or not)
+arg 02369CEC r4 0,1,3,8,31,32,33
+arg 02369CEC r5 0,8,16,31,32,63
+field * r3+0x3EC i32 0 4       # mType
+field 02369638 r3+0x3F0 i32 0 4         # mMode
+field 023695C8 r3+0x45E u8 0 1          # unk346
+field 02369830 r3+0xF8 u16 0,1,2,3      # eventInfo.mCommand
+field 02369934 r3+0x3F4 i16 -1 2        # mVibTimer
+field 023699A0 r3+0x3F6 i16 -2 4        # unk2DE
+field 023699A0 r3+0x318 f32 -10 10      # current.pos.y
+field 023699A0 r3+0x3F8 f32 -10 10      # mGndY
+# 023693A8 is named as a static PrmAbstract(actor*, ...) by the matcher (wrong): `this` was drawn as a
+# raw word; give it an actor pointer like the other methods (this = -1 wraps around address 0)
+arg 023693A8 r3 0x40000000
+# Create: prm_get_swSave() == 0xFF
+ret 02369CEC 0,1,2,3,4,255

@@ -1,0 +1,16 @@
+# Verification unit: d_a_swc00 (switch trigger cylinder)
+src wwhd_src/d/actor/d_a_swc00.cpp
+
+ret 025BA0C0 0 1                    # dSv_info_c::isSwitch
+# daSwc00_Execute: hit the comparison boundaries (shared range edges)
+field 024A0F20 r3+0xB2 u8 0 255     # sw2 (0xFF: no enable switch)
+field 024A0F20 r3+0xB1 u8 0 3       # type bits
+field 024A0F20 101D5F45 u8 0 1      # HD flag
+fret 025D69AC 0 4                   # player distance XZ^2 (vs scale.x)
+field 024A0F20 r3+0x330 f32 0 4     # scale.x
+field 024A0F20 r3+0x334 f32 -50 50  # scale.y
+field 024A0F20 r3+0x318 f32 0 0     # current.pos.y
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+field 024A0F20 54005B2C u32 0x55000000 0x55000000   # player
+field 024A0F20 55000318 f32 -100 50 # player current.pos.y
+field 024A106C r3+0xB1 u8 0 3

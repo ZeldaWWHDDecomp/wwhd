@@ -1,0 +1,76 @@
+src wwhd_src/d/actor/d_a_tag_hint.cpp
+stackfill periodic
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+real 025200D4 024AA59C 02444E48 025F795C 025F74D0
+field * 104753A8 u32 1
+stable 104753A8 4
+field * 10474BE4 u32 0x55000000
+field * 101F84DC u32 0x56000000
+ret 024A8BC0 0,1
+ret 024A8F70 0,1,255
+ret 024A8F7C 0,1,255
+ret 024A8F88 0,1,65535
+ret 024A8F90 0 63
+ret 024A8F9C 0,1
+field 024A8C84 r3+0xE s16 0,43
+field * r3+0x3CC f32 0,0.15,0.175,0.2,0.5,0.5750000476837158,0.949999988079071,1
+field * r3+0x3C4 f32 0,1,10000
+field * r3+0x3C8 f32 0,100
+callee 025D5218 r4=4
+callee 025F7DB0 r5=12
+callee 024F1AFC r3=112 r4=12 r5=12
+callee 02008860 r4=112
+ret 025BA0C0 0,1
+ret 025B8B94 0,1
+ret 025B9100 0,1
+ret 02520C0C 0,1
+ret 024A8FD0 0,1
+ret 024A9284 0,1
+ret 024A9930 0,1
+ret 024A996C 0,1
+ret 024A95B8 0,1,2,3
+ret 025447C8 0,1
+ret 02542EDC -1,0,1,2,3,4,5
+ret 024A9E68 0,14,18,255
+ret 025F7DB0 -1,0,1
+ret 02008860 0,1
+field * 101F4B5C u32 0x57000000
+field * 10474BDC u32 0x55000000
+field * 550000B4 u32 0x10037CF0
+field * r3+0x3B0 s8 -1,0,1,2,3
+field * r3+0x3BC s16 -1,0,1,600
+field * r3+0x3BE u8 0,1,2,3,4,255
+field * r3+0x3BF u8 0,1
+field * r3+0x3C2 u16 0,1,2,3
+field * r3+0xF8 u16 0,1
+field * 1046E2E4 s32 -1,0,1
+field * 101D5F4C u8 0,1
+field * 1047E6C8 s8 0,1
+field * r3+0x326 s8 0,1
+# Valid stage string branches: Hyrule versus a different NUL-terminated name.
+field 024A8D2C 104741E4 u32 0x48797275,0x54797275,0x4F757473
+field 024A8D2C 104741E8 u32 0x6C650000,0x65740000
+arg 024AA548 r3 0,0x40000000
+arg 024AA548 r4 0,1,2,3,-1
+
+# Actual typed player virtual targets, warm singleton state only.
+callee 02444E50 r3=0
+callee 02443880 r3=0
+ret 02444E50 0,1
+field * 550065A0 s32 -1,0,1
+field * 10474C62 u8 0,14,15,18,19,255
+ret 025B8BB0 0,2,3,4
+field * 56000068 u8 0,255
+field * 56000069 u8 0,1
+field * 10474342 u8 0,1
+src wwhd_src/d/actor/d_a_tag_hint_helpers.cpp
+arg 024AA534 r3 0,0x40000000
+arg 024AA534 r4 0,1,2,3,-1
+real 02008B4C
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+ret 025200D4 0x4E000000 0x4E000000  # play object pinned so its stage name can be steered
+fieldstr 024A8D2C 0x4E005134 8 @stages

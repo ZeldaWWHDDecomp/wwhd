@@ -1,0 +1,97 @@
+src wwhd_src/d/actor/d_a_auction.cpp
+
+# Constructor supports supplied storage and null allocation.
+arg 02058EF4 r3 0,0x20000000
+# Item table rows include the equipped trading-item check.
+field 0205A608 r3+0 s16 0x77,0,0x78
+field 0205A608 r3+6 u16 0,1,0x100
+field 0205A608 0x101F84DC u32 0x21000000
+field 0205A608 0x2100005D u8 0x77,0,0x78
+
+# Exercise event-order enumerators without suppressing unsteered inputs.
+field 0205A724 r3+0x939 u8 0,1,2,3
+field 0205A724 r3+0x950 s8 0,1,2,3,4,5,6,7,-1
+field 02059380 r3+0xF8 u16 0,2,3
+field 02059380 r3+0x950 s8 0,3,4,5,6,7
+arg 020598BC r5 0,1,-1
+# Include the message-specific sound branch through mapped result storage.
+ret 0254487C 0,0x22000000
+field 020594BC 0x22000000 u32 0,0x1CF4,0x1CF5
+
+# Fragment call sites pass these actual twelve-byte vectors.
+callee 0200EE00 r3=12 r4=12
+callee 025A847C r6=12
+callee 025CB374 r6=12
+
+# Event fragment non-forced field and argument coverage steering.
+arg 0205C1CC r4 0,1,7
+field 0205C014 r3+0x945 u8 1,29,20
+field 0205C014 r3+0x94C u8 0,2,0x20,0x22
+field 0205C014 r3+0x904 u32 0x1D3A,0x1D4B,0x339D,0x33A8,0
+field 0205C014 25005BD2 u8 0,1
+field 0205C4B4 r3+0x91A s16 0,1,-1
+field 0205C248 r3+0x940 u8 0,1,7
+field 0205C248 r3+0x92C u8 0,11,12
+field 0205C248 r3+0x92D u8 0,11,12
+field 0205AF48 r3+0x91E s16 0,1,-1
+field 0205AF48 r3+0x94C u8 0,1,2,0x20,0x27
+field 0205AF48 r3+0x93E u8 0,0xFF
+field 0205AF48 r3+0x948 u8 0,1
+field 0205AF48 r3+0x946 u8 0,1
+field 0205AF48 r3+0x916 s16 0,100,105,110,120,130,140,150,170,190,200,250,450,500,990,1000
+field 0205AF48 r3+0x8DC f32 0,100,101
+field 0205AF48 r3+0x8E0 f32 0,100,101
+field 0205B9C0 r3+0x91E s16 0,1,-1
+field 0205B9C0 r3+0x94C u8 0,2,0x20
+field 0205B9C0 r3+0x93E u8 0,0xFF
+field 0205B9C0 r3+0x948 u8 0,1
+field 0205B9C0 r3+0x946 u8 0,1
+field 0205B9C0 r3+0x916 s16 0,100,150,200,999
+field 0205B9C0 r3+0x8DC f32 0,100,101
+field 0205B9C0 r3+0x8E0 f32 0,100,101
+field 0205C55C r4+0 u32 0x1CF2,0x1CF4,0x1CF7,0x1CF9,0x1CFA,0x1CFC,0x1D1A,0x1D1F,0x1D24,0x1D20,0x1D48,0x1D05,0x1D1C,0x1D07,0x1D1D,0x1D08,0x1CF3,0x1CFB,0x1D09,0x1D1E,0x1D3C,0x1D3D,0x1D3F,0x1D49,0x1D4B,0x1D4C,0x339F,0x33A2,0x33A5,0x33A8,0x33A9
+field 0205C55C r3+0x93A u8 0,2
+field 0205C55C r3+0x944 u8 0,3,4
+field 0205C55C r3+0x93F u8 0,1
+field 0205C55C r3+0x916 s16 0,100,150,200,999
+field 0205C55C 25005BA2 s16 0,100,999
+field 0205C55C 101F84DC u32 0x26000000
+field 0205C55C 26000024 u16 0,1000
+
+# getRand(n) == 0 selects the bidder taunt messages (eventMainKai 0x916 <= 100/150/200 tiers).
+ret 02058E88 0,0,1,2
+# Pin the play object (most draws) so the steered 25005BA2/25005BD2 fields are what the code reads.
+ret 025200D4 0x25000000,0x25000000,0x25000000
+# Mutation gaps: the 12-entry item-kind table check (kind == 12 boundary) in next_msgStatus.
+ret 025B8BB0 0,5,11,12,0x10C
+field 0205C55C r3+0x93C u8 0,1,6
+field 0205C55C r3+0x92C u8 0,11,12
+field 0205C55C r3+0x92D u8 0,11,12
+field 0205C55C r3+0x932 u8 0,11,12
+# eventMove reads the controller through the global at 101F8344 (zero in the image): give it a real pointer.
+field 0205A428 101F8344 u32 0x27000000
+field 0205A428 270001F4 u32 0x27000100
+# cM_rndF(range) returns [0, range) in game; small results keep bids in the 100/150/200 message tiers.
+fret 020198D8 0 3
+field 0205AF48 r3+0x93C u8 0,1
+field 0205AF48 r3+0x92C u8 0,5,11,12
+field 0205AF48 r3+0x92D u8 0,5,11,12
+# Auction timer (pinned play object): remaining time below/above the 30 s, 60 s and taunt thresholds.
+field 0205AF48 25005CF4 u32 0
+field 0205AF48 25005CF8 u32 0,300,899,900,901,1799,1800,1801,5000
+# Controller polls (cancel / bid button) are 0/1 predicates; mostly not pressed.
+ret 020078BC 0,0,0,1
+ret 02007898 0,0,1
+# 10 s threshold of the closing message in next_msgStatus ((end-start)*1000/30 vs 10000).
+field 0205C55C 25005CF4 u32 0
+field 0205C55C 25005CF8 u32 0,299,300,301,5000
+# eventMainUri: selected bidder kind (12-entry table boundary).
+field 0205B9C0 r3+0x93F u8 0,1
+field 0205B9C0 r3+0x92C u8 0,5,11,12
+field 0205B9C0 r3+0x92D u8 0,5,11,12
+# Bidders 2..6 wait gauges at/above the 100.0 bid limit.
+field 0205AF48 r3+0x8E4 f32 0,100,101
+field 0205AF48 r3+0x8E8 f32 0,100,101
+field 0205AF48 r3+0x8EC f32 0,100,101
+field 0205AF48 r3+0x8F0 f32 0,100,101
+field 0205AF48 r3+0x8F4 f32 0,100,101

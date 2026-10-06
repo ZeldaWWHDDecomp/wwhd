@@ -1,0 +1,9 @@
+# hd_snd_020302E4: TUs 020302E4..020306EF (HD sound archive, HD sound heap object); HD-only
+src wwhd_src/hd/hd_snd_020302E4.cpp
+field * 101FD634 u32 0,1
+field * 101FD2D8 u32 0,1
+arg 020302E4 r4 0x101FD950,0x101FD954,0x12345678
+# mutation follow-up: the heap setting object built on the stack (ctor fills it, the first word is then cleared)
+callee 02765EF0 r3=out40
+callee 02766F1C r4=40
+stackfill periodic

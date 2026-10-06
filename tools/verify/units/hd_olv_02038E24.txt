@@ -1,0 +1,41 @@
+# hd_olv_02038E24: HD Miiverse comment manager TU (02038E24..0203B61F); HD-only
+src wwhd_src/hd/hd_olv_02038E24.cpp
+# GHS delegate thunk: r6..r8 hold the decoded member pointer (scratch); only r3..r5 are passed
+nolivein 02038E24
+field 02038E24 r3+4 u32 0,0x41000000
+field 02038E24 r3+8 u16 0,4,0xFFF8
+field 02038E24 r3+10 u16 0,0xFFFF,1,2,3
+field 02038E24 r3+14 u16 0,4,8
+callee 02753004 r4=8
+callee 0286D938 r3=out4
+callee 02039240 r4=8
+# rotation: a shifted-in entry becomes valid (else the original loops until the budget)
+mockfield 02039004 r3+0x25B u8 1
+mockfield 02039004 r3+0x3C4 u8 0x41
+ret 025F9B68 1,2
+field * 0x1018F4B4 u32 0,1
+field * 0x1018F4AC u32 0,0x49000000
+field * 0x1018F4B0 u32 0,0x4A000000
+arg 0203B0B4 r3 0x4A000000,0x4A100000
+ret! 025200D4 0x4B000000 0x4B000000
+field 0203A984 0x4B005150 u32 0x4C000000
+field 0203A984 0x4C00015C u32 0x0203E220
+field 0203A984 0x4B005134 u8 65,65,65
+field 0203A984 0x4B005135 u8 95,115,120
+field 0203A984 0x4B005136 u8 117,111,117
+field 0203A984 0x4B005137 u8 109,107,109
+field 0203A984 0x4B005138 u8 105,111,105
+field 0203A984 0x4B005139 u8 107,0,107
+field 0203A984 0x4B00513A u8 122,0,122
+field 0203A984 0x4B00513B u8 0,0,0
+field 0203A984 0x101F8344 u32 0x4D000000
+field 0203A984 0x4D000218 u32 0x4E000000
+field 0203A984 0x4E00003E u8 0x2B,0,0,5
+# mutation follow-ups: the message manager global and the sleep span
+field 0203A984 0x101F4AE8 u32 0x56000000,0x56100000
+callee 02760C3C r3=8
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0203A984 0x4B005134 8 @stages,"A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umi","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umik","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umo","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umok","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","A_umokz","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko"

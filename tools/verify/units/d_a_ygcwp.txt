@@ -1,0 +1,23 @@
+# Actual HD18 entries [024E9D04,024EA58C); prioractor destructor/virtual excluded.
+src wwhd_src/d/actor/d_a_ygcwp.cpp
+ret 026066C4 0,0x55010000
+ret 025E38E0 0,0x55020000
+ret 025E8154 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025B8B94 0,1
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2
+ret 025447C8 0,1
+ret 0254487C 0,0x55030000
+ret 025200D4 0x54000000
+field * 0x54005B2C u32 0x54100000
+field * 0x101F4F28 u32 0x54200000
+field * 0x101F84DC u32 0x54300000
+field * r3+0x4B0 s32 -1,0,1,2
+field * r3+0x4AC s32 -1,0,1,2
+field * 0x55030000 s32 -1,0,1,2
+callee 026066C4 r4=8
+callee 025A847C r6=12 r8=12 stack=4
+callee 028E93CC r3=out48
+callee 025F1B48 r3=out48

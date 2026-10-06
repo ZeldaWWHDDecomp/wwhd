@@ -1,0 +1,34 @@
+# Verification unit: d_a_ff (firefly, not collectable)
+src wwhd_src/d/actor/d_a_ff.cpp
+
+callee 026066C4 r4=8                        # sead::SafeString key
+callee 0201AD78 r4=out12                    # cXyz::operator+
+callee 0200FCD8 r3=12 r4=out12              # MtxPosition
+callee 02008974 r4=84                       # cBgS::GroundCross: the dBgS_GndChk (0x54) on the stack
+callee 025E8154 stack=1                     # mDoExt_brkAnm::init: 9th argument on the stack (no GameCube signature)
+ret 02520460 0 5                            # dComIfG_resLoad
+ret 025D63E8 0 1                            # fopAcM_entrySolidHeap
+ret 025162A4 0 1                            # ChkTgHit
+ret 025E8154 0 1                            # brk init
+ret 026066C4 0,0x56000000                   # getRes
+ret 025E38E0 0,0x57000000                   # model create
+ret 0273AD10 0,0x58000000                   # operator new
+ret 025E80D0 0,0x58000000                   # brk ctor
+field 02133070 r3+0x430 i8 -1,0,1,2,3,4,5   # mMode
+field 02133070 r3+0x424 i16 0,1,2           # mTimers
+field 02133070 r3+0x426 i16 0,1,2
+field 02133070 r3+0x428 i16 0,1,2
+field 02133070 r3+0x42A i16 0,1,2
+field 02133070 r3+0x42C i16 0,1,2
+field 02133070 r3+0x3C5 u8 0,1              # mbNoUseGroundY
+fret 028F4384 0 500                         # sqrt (vs 250)
+fret 020198D8 0 1                           # cM_rndF
+fret 02008974 -20 20                        # GroundCross
+field 02133070 r3+0x318 f32 -20 40          # pos.y vs ground
+field 02133070 r3+0x3D4 f32 -20 20          # mVelImpulse.y
+field 02133070 1047BD60 f32 0 1             # REG13_F(0..3)
+field 02133070 1047BD64 f32 0 1
+field 02133070 1047BD68 f32 0 1
+field 02133070 1047BD6C f32 0 1
+field 02132F3C r3+0x3E8 f32 0 0.02          # mScale vs 0.01
+field 02133D80 r3+0xB0 u32 0,1,2,3,0x100,0x101,0x1FF

@@ -1,0 +1,27 @@
+# Exclusive20-entry HD HUD prefix0259188C..<0259359C.
+src wwhd_src/d/d_meter_00.cpp
+arg 02591A64 r4 0,1,3,4,5
+
+arg 025931A8 r3 -1,0,49,50,199,200,201
+
+# HUD item types and independent flag arms; actual stage-data vtable/getter contract.
+arg 02592144 r4 0,31,32,33,34,35,36,37,38,39,42,44,45,47,48,49,53,54,69,70,71,72,73,74,75,80,81,82,83,84,85,86,87,88,89,120,130,131,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158
+field 02592144 r3+0x3008 u32 0,2,0x80,0x400,0x1000,0x20000
+ret 025200D4 0x58020000 0x58020000
+field * 58025150 u32 0x10055DE0
+ret 025C5040 0x58040000 0x58040000
+field * 5804000C u32 0,0x30000
+field * 58040009 u8 6,8,12,14
+field * 58025CEA u8 0,1
+field * 101F84DC u32 0x58010000
+field * 101EBFD8 u8 0,1
+field * 58010044 f32 -1,0,0.5,1,20,40,128
+# Valid terminated scene names used by the bounded SafeString comparisons.
+field 02592144 58025134 u32 0x58626F73,0x4F6A686F,0x4F746B75,0x41626573,0
+field 02592144 58025138 u32 0x73300000,0x73310000,0x73320000,0x73330000,0x75730000,0x72610000,0x736F0000
+stable 58025134 8
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02592144 0x58025134 8 @stages,"","","","","","Abesra","Abesra","Abesra","Abesra","Abesra","Abess0","Abess0","Abess0","Abess0","Abess0","Abess1","Abess1","Abess1","Abess1","Abess1","Abess2","Abess2","Abess2","Abess2","Abess2","Abess3","Abess3","Abess3","Abess3","Abess3","Abesso","Abesso","Abesso","Abesso","Abesso","Abesus","Abesus","Abesus","Abesus","Abesus","Ojhora","Ojhora","Ojhora","Ojhora","Ojhora","Ojhos0","Ojhos0","Ojhos0","Ojhos0","Ojhos0","Ojhos1","Ojhos1","Ojhos1","Ojhos1","Ojhos1","Ojhos2","Ojhos2","Ojhos2","Ojhos2","Ojhos2","Ojhos3","Ojhos3","Ojhos3","Ojhos3","Ojhos3","Ojhoso","Ojhoso","Ojhoso","Ojhoso","Ojhoso","Ojhous","Ojhous","Ojhous","Ojhous","Ojhous","Otkura","Otkura","Otkura","Otkura","Otkura","Otkus0","Otkus0","Otkus0","Otkus0","Otkus0","Otkus1","Otkus1","Otkus1","Otkus1","Otkus1","Otkus2","Otkus2","Otkus2","Otkus2","Otkus2","Otkus3","Otkus3","Otkus3","Otkus3","Otkus3","Otkuso","Otkuso","Otkuso","Otkuso","Otkuso","Otkuus","Otkuus","Otkuus","Otkuus","Otkuus","Xbosra","Xbosra","Xbosra","Xbosra","Xbosra","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xbosso","Xbosso","Xbosso","Xbosso","Xbosso","Xbosus","Xbosus","Xbosus","Xbosus","Xbosus"

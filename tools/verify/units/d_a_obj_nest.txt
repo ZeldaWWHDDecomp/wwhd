@@ -1,0 +1,13 @@
+# Verification unit: d_a_obj_nest (Kargaroc nest)
+src wwhd_src/d/actor/d_a_obj_nest.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+fret 025D69AC 9990 10010      # searchActorDistanceXZ2 around 100^2
+fret 028F4384 99 101          # |vib| around 100
+field 0237EB74 r3+0x3EC f32 0,49,50,51,-10
+field 0237EB74 r3+0x3F0 f32 0,99,100,101,-10
+field 0237EB74 r3+0x3F4 f32 0,49,50,51,-10
+arg 0237EB74 f1 -0.01 0.2
+field 0237EBD0 r5+0x370 f32 0,29,30,31,-5

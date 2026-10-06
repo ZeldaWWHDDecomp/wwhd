@@ -1,0 +1,2 @@
+# Verification unit: JAIZel data TUs (five sinit-only TUs: 02029CA0, 02029D34, 02029DC8, 0202ABA4, 0202AC38)
+src wwhd_src/JAZelAudio/JAIZel_data.cpp

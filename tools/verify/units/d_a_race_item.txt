@@ -1,0 +1,38 @@
+src wwhd_src/d/actor/d_a_race_item.cpp
+src wwhd_src/d/actor/d_a_race_item_static.cpp
+field * r3+0x758 u8 0 2
+field * r3+0x759 u8 0 1
+field * r3+0x754 u32 0 5
+field * r3+0x74E u8 0 31
+field * r3+0x744 u32 0 127
+field * r3+0x2E4 u32 0 8
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025BA494 0 1
+ret 02516464 0 1
+ret 025162A4 0 1
+ret 0245A000 0 1
+# Pin mocked objects to steer meaningful hit types and rupee saturation.
+ret 025200D4 0x41000000 0x41000000
+field 02459C08 41005CEC s16 -201,-100,-50,-20,-10,-5,-1,0,1,100,32767
+ret 02516300 0,0x42000000
+field 02459230 42000010 u32 0,0x40,0x8000
+field 02459230 r3+0x2E0 u32 0,0x100000
+# Boundary inputs required by arithmetic and threshold mutation survivors.
+field 02459230 100121CC s16 -32768,-16,-8,-4,-2,-1,0,1,2,4,8,16,32767
+field 02459230 r3+0x750 s32 -1,0,1,13
+# Virtual hookshot setter: register facts need dynamic callee override support in the harness.
+callee 024439D4 r5=12
+field 02459230 41005B2C u32 0x43000000 0x43000000
+field 02459230 430000B4 u32 0x44000000 0x44000000
+field 02459230 4400010C u32 0x024439D4 0x024439D4
+# Ocean deletion comparisons need exact zero-difference and small positive differences.
+fret 0246BA0C 0 2
+
+# Unreachable original blocks: Execute 3 (integer dispatch tail), Execute 36
+# (fallthrough after setting flag bit1 then testing it), raceItemGet 5 (dispatch tail).
+# No recordings: barrel-race minigame actor not in the opening/Outset pier session.
+# Signed-zero clamp mutation: player headY=-15 gives headTop+15 == +0.
+field 02459230 41005B34 u32 0x45000000 0x45000000
+field 02459230 450003DC f32 -15,0,15
+field 02459230 r3+0x318 f32 -5001,-5000,-4999,-15,-0,0,1,2,15,30

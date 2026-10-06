@@ -1,0 +1,28 @@
+# Verification unit: d_a_bita (Gohma fight wooden platforms)
+src wwhd_src/d/actor/d_a_bita.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 0201ADE0 r4=out12      # cXyz::operator-
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 025D4604 0 1              # fopAc_IsActor
+ret 025162A4 0 1              # ChkTgHit
+ret 0200A030 0 1              # cBgW::Set
+ret 025E8154 0 1              # brkAnm::init
+
+field * r3+0x3C4 u8 0,0,1,1,2
+field * r3+0x3C5 u8 0,1,1,2
+field 020982D8 r3+0x3C2 u8 0,19,20,59,60,87,88,89,90,200
+field 02098150 r3+0x3C2 u8 0,59,60,61
+field * r3+0x3C0 u8 0,1,2,0xFF
+field 02098970 r3+0xB0 u32 0,0x1,0xFF,0x100,0x201,0x302,0x4FF,0xFF01
+
+# mutation gaps: btd (0x101913AC) and its m6E16, the hit object's At type, the camera distance
+field 02098970 101913AC u32 0,0x59000000
+field 020982D8 101913AC u32 0,0x59000000,0x59000000,0x59000000
+field 020982D8 5900705A i16 99,100,100,0,200,-1
+ret 02516300 0x57000000,0x57000000,0
+field 020982D8 57000010 u32 0x200,0x200,0x100,0x201
+fret 028F4384 1499 1501

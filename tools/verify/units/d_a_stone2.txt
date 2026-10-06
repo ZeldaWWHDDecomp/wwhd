@@ -1,0 +1,73 @@
+src wwhd_src/d/actor/d_a_stone2.cpp
+field * r3+0x75C s32 0 7
+field * r3+0x760 s32 0 3
+field * r3+0x764 s32 0 2
+ret 025BA0C0 0 1
+ret 025440C8 0 1
+callee 026066C4 r4=8
+callee 0255F458 r3=12
+callee 024F06B4 stack=1
+callee 025A847C stack=4
+arg 0249E1AC r3 0,0x40000000
+ret 0273AD10 0,0x58000000
+ret 024A0B14 0,1,2,3,4,5,6,7,255
+field 0249FFE0 r3+0x76C s16 -1,0,1,2
+field 0249FFE0 r3+0x75C s32 0,3,4
+ret 02544044 0 1
+field 0249F3D0 r3+0x760 s32 0,1,2,3
+field 0249F3D0 r3+0x764 s32 0,1,2
+field 0249F3D0 r3+0x784 u8 0,1
+field 0249F3D0 r3+0x7C0 u8 0,1
+field 0249F3D0 r3+0x7B0 u8 0,1
+
+# Reach the complete phase state and background registration boundary.
+ret 02520460 0 5
+field 0249F19C r3+0x3AC u32 0x54000000 0x54000000
+field 0249F19C 54000000 u32 0xFF,0x100,0x101
+
+# Reach both lift-smoke states and compare singleton identity as raw registers.
+field 0249FA68 r3+0x7C1 u8 0,1
+callee 025BA0C0 r3=0
+callee 025B9E38 r3=0
+callee 026066C4 r3=0 r4=8
+
+# The real lighting constructor clears 0x72 words before reading defaults.
+real 0255FFF4
+real 028F5914
+callee 025A847C r3=0
+
+# Runtime singleton globals are populated pointers, not the zero-initialized image.
+field * 101F84DC u32 0x55000000 0x55000000
+field * 101F4F28 u32 0x56000000 0x56000000
+
+# A warm play object keeps the actual getter on its initialized return path.
+real 025200D4
+field * 104753A8 u32 1 1
+stable 104753A8 4
+# Distinct populated background and normal draw buffers.
+field * 10474E20 u32 0x57000000 0x57000000
+field * 10474E24 u32 0x58000000 0x58000000
+field * 10474E28 u32 0x59000000 0x59000000
+field * 10474E2C u32 0x5A000000 0x5A000000
+stable 10474E20 16
+observe 025E2DE0 104B4634 8
+
+# Actual lighting writes nonzero color components consumed by lift smoke.
+real 025626A4
+ret 02555D0C 0x5C000000 0x5C000000
+nestedret 02555D0C 0x5C000000
+field * 5C000F48 s16 64 64
+field * 5C000F4A s16 128 128
+field * 5C000F4C s16 192 192
+stable 5C000F48 6
+
+# csXyz initialization is an actual six-byte constructor.
+real 0201A478
+stackfill periodic
+
+# Uncovered blocks, all infeasible:
+# - demo_proc_call 0249F2D4 and mode_proc_call 0249F454: virtual-PTMF dispatch; every entry of the
+#   static tables 1003E630/1003E648 has slot -1 (non-virtual).
+# - mode_proc_call fall-through into 0249F480 and set_mtx fall-through into 0249E7C8: GHS duplicated
+#   tails (reached only from the virtual path / the non-dropping path with dropping set).
+# - Execute fall-through into 0249F76C: damage_bg_proc (0249F174) always returns FALSE.

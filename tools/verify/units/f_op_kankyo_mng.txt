@@ -1,0 +1,6 @@
+src wwhd_src/f_op/f_op_kankyo_mng.cpp
+ret 02019430 0,0x55000000
+ret 025DAC58 0,0x55000000
+ret 025DACB8 0,0x55000000
+arg 025DACB8 r4 0,0x40001000
+arg 025DACB8 r5 0,0x40002000

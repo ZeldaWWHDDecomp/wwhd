@@ -1,0 +1,121 @@
+wwhd	matcher_name	evidence	correction	found_by	note
+02555D0C	dScnKy_env_light_c::setLightTevColorType	graph	dKy_getEnvlight (HD accessor of the function-local g_env_light, 0x10475A68)	pilot (kamome/mtoge)	setLightTevColorType is 02562F5C (unnamed)
+0273AA24	JUTAssertion::getSDevice	graph	JUT_ASSERT failure handler (file, line, message)	pilot (mtoge CreateHeap)	reads r3 r4 r5
+022D30F4	daNpcRoten_c::setAnm	graph	daNpcRoten_c constructor (allocates 0xB40 when this == NULL, stores the class vtables)	sizes.py	suspect
+025E7C6C	mDoExt_btkAnm::init	graph	mDoExt_btkAnm::mDoExt_btkAnm (constructor, r3 only; real init is 025E7CE0)	verification	confirmed
+025E80D0	mDoExt_brkAnm::init	tu	mDoExt_brkAnm::mDoExt_brkAnm (constructor; real init is 025E8154)	sizes.py	confirmed
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+error?):	cLib_getRndValue<i>	dup-file	not in d_a_npc_aj1.cpp (outside its address range)	tu.py	suspect
+02515A70	dBgS_Acch::~dBgS_Acch	?	dCcD_Cyl::~dCcD_Cyl (called on actor mCyl in swc00/switem destructors)	verification	
+023693A8	daObj::PrmAbstract<daObjLadder::Act_c::Prm_e>	dup-file	daObjLadder::Act_c::init_mtx (PrmAbstract is 02369CEC, unnamed)	verification	
+023693D4	-	-	daObjLadder::Act_c::mode_wait_init (unnamed)	verification	identification
+0236979C	-	-	daObjLadder::Act_c::mode_demoreq_init (unnamed)	verification	identification
+02369810	-	-	daObjLadder::Act_c::mode_vib_init (unnamed)	verification	identification
+025E7CE0	-	-	mDoExt_btkAnm::init (unnamed)	verification	identification
+025E789C	?	-	mDoExt_btpAnm::init (per ki helper)	verification	
+025E7820	?	-	mDoExt_btpAnm::mDoExt_btpAnm (per ki helper)	verification	
+02515AE8	-	-	dCcD_Sph::~dCcD_Sph (unnamed)	verification	identification
+027F3F94	__nw	graph	J3DModelData joint-tree getter	verification	
+025EB8B8	mDoExt_3DlineMat1_c::draw	?	mDoExt_3DlineMat1_c destructor	verification	
+0259138C	dMat_ice_c::entryDL	?	mDoExt_invisibleModel::entryDL	verification	
+0230F86C	-	-	fopAcM_SearchByID (out-of-line copy in d_a_nz)	verification	identification
+025E1AA4	-	-	mDoAud_monsSeStart	verification	identification
+024472EC	-	-	sead::SafeString deleting destructor (per TU; also 0230F8A8, 023CFDDC)	verification	identification
+025E8154	-	-	mDoExt_brkAnm::init	verification	identification
+027F9F0C	dComIfGd_setSimpleShadow2	?	HD material colour-block accessor (r3 = &mat->flags, r4 = slot), not setSimpleShadow2	verification	
+021991AC	-	-	ki nodeCallBack (unnamed)	verification	identification
+021992DC	-	-	ki_a_d_sub (unnamed)	verification	identification
+02199364	-	-	ki_check (unnamed)	verification	identification
+021115A4	-	-	__sinit_d_a_cc_cpp	verification	identification
+02111638	-	-	fopAcM_seStart (out-of-line copy in d_a_cc)	verification	identification
+021CD5B4	mo2HIO_c::mo2HIO_c	?	__sinit_d_a_mo2_cpp (HIO ctor inlined)	verification	
+021C872C	search_wepon	?	daMo2_wepon_view_check (search_wepon inlined)	verification	
+021D0A14	fight	?	Mo2_move (jyunkai/fight_run/fight/yari_hit_check inlined)	verification	
+024EC8D0	dAttention_c::ActionTarget	graph	dAttention_c::LockonTarget(idx) (swapped with 024EE464)	verification	confirmed
+0209AB64	search_wepon	?	daBk_wepon_view_check (search_wepon inlined)	verification	
+020A0364	bkHIO_c::bkHIO_c	?	__sinit_d_a_bk_cpp	verification	
+020A47A4	-	-	carry (bk)	verification	identification
+020A0634	-	-	fopAcM_SearchByID (out-of-line copy, bk)	verification	identification
+020A0670	-	-	fopAcM_monsSeStart (out-of-line copy, bk)	verification	identification
+02041F94	dr_damage_anime	?	called where GameCube calls damage_reaction	verification	suspect
+0200796C	-	-	CPad stick X getter	verification	identification
+0219463C	-	-	kb_eye_tex_anm (btpAnm play)	verification	identification
+02194644	-	-	cLib_offBit<u32> (out of line)	verification	identification
+02526560	-	-	daTagKbItem_c::kb_dig	verification	identification
+020CB8D8	daBomb_c::prm_make	?	static (the harness treated it as a member and compared r6)	verification	signature
+02377B5C	daObj::PrmAbstract<daObjMovebox::Act_c::Prm_e>	dup-file	daObjMovebox::Act_c::init_mtx(this) (scale copy, tail set_mtx; reads r3 only)	verification	confirmed
+0217E5A4	daItem_c::checkPlayerGet	?	_daItem_draw (real checkPlayerGet is 0217DDDC)	verification	
+0217EDAC	daItem_c::execWaitGetDemoDirection	?	HD helper orderItemEvent (real one is 0217EEAC)	verification	
+02180AA4	daItem_c::Reflect	?	daItem_c::checkWall (Reflect inlined)	verification	
+025A1458	cDyl_LinkASync	?	fopNpc_npc_c::fopNpc_npc_c (allocates 0x7DC)	verification	
+0259F740	-	-	dNpc_EventCut_c::dNpc_EventCut_c (allocates 0x6C)	verification	identification
+021F0838	cLib_calcTimer<s>	?	daNpc_Ba1_c::searchByID	verification	
+02280BEC	cLib_getRndValue<i>	dup-file	daNpc_Ls1_c::searchByID(id, int*)	verification	
+024EE464	dAttention_c::LockonTarget	?	ActionTarget (swapped with 024EC8D0)	verification	
+02282380	daNpc_Ls1_c::chkTelescope	?	chkTelescope_sph (real chkTelescope is 022824B0)	verification	
+025F795C	fopMsgM_SearchByID	?	HD message manager getMesgStatus (u8 status)	verification	
+024CBDE8	daObj::PrmAbstract<daTsubo::Act_c::Prm_e>	?	daTsubo::Act_c::set_senv	verification	
+0225A2F4	daNpc_Ji1_c::teachSubActionJumpInit	?	battleSubActionJumpInit (swapped with 022552E4)	verification	
+022552E4	daNpc_Ji1_c::battleSubActionJumpInit	?	teachSubActionJumpInit (swapped with 0225A2F4)	verification	
+02258CB0	daNpc_Ji1_c::evn_continue_talk	?	evn_talk (swapped with 02259178)	verification	
+02259178	daNpc_Ji1_c::evn_talk	?	evn_continue_talk (swapped with 02258CB0)	verification	
+0224A2B4	-	-	daNpc_Ji1_c CheckCreateHeap	verification	identification
+022A8B14	cLib_calcTimer<s> (d_a_npc_ac1)	?	daNpc_Ob1_c::searchByID	verification	
+022770F0	cLib_calcTimer<s> (d_a_npc_ac1)	?	daNpc_Ko1_c::searchByID	verification	
+0226CC2C	cLib_getRndValue<i> (d_a_npc_aj1)	dup-file	daNpc_Kk1_c::searchByID (splits the kk1 range in tu.py)	verification	
+022D43B0	-	-	daNpcRoten_c::setAnm (real one)	verification	identification
+022D4064	daDitem_c::setOffsetPos	?	daNpcRoten_c::eventOnPlrInit	verification	
+0230634C	cLib_getRndValue<i> (d_a_npc_aj1)	dup-file	daNpc_Zl1_c::searchByID (splits the zl1 range in tu.py)	verification	
+02236ED4	cLib_getRndValue<i> (d_a_npc_aj1)	dup-file	daNpc_Gk1_c::searchByID(fpc_ProcID, int* o_err)	verification	
+022C9D4C	cLib_getRndValue<i> (d_a_npc_aj1)	dup-file	daNpc_Pf1_c::searchByID(fpc_ProcID, int* o_err)	verification	
+022625C8	cLib_getRndValue<i> (d_a_npc_aj1)	dup-file	daNpc_Kf1_c::searchByID(fpc_ProcID, int* o_err)	verification	
+02239508	cLib_calcTimer<s> (d_a_npc_ac1)	dup-file	daNpc_Gp1_c::searchByID(fpc_ProcID)	verification	
+02542E94	dummy1	graph	dEvent_manager_c::getRunEventName (returns the running event name)	verification	
+021FE2C4	cLib_calcTimer<s> (d_a_npc_ac1)	dup-file	daNpc_Bm1_c::searchByID (splits the bm1 range in tu.py; unit starts 021FA778)	verification	
+0228A174	emitterTrace	graph	daNpc_Md_followEcallBack_c::execute (real emitterTrace is 02288AB4)	verification	
+0232D1F8	daObjBuoyflag::Act_c::_create	graph	Mthd_Create with _create inlined	verification	
+021FD0A0	daNpc_Bm1_c::delPrtcl_Flyaway	graph	delPrtcl_Land0 (real delPrtcl_Flyaway is 021FCEE4)	verification	
+025A15A8	fopNpc_npc_c::anmAtr (d_a_auction.cpp)	graph	shared fopNpc_npc_c::anmAtr (vtable +0x24), not auction code	verification	
+022E7588	nodeCallBack (d_a_npc_tc)	range	start of the d_a_npc_tc unit	verification	
+024EF398	dBgS::GetPolyId2	graph	dBgS::ChkPolyHSStick(cBgS_PolyInfo&) (r3 r4 only; returns attribute word & 0x10)	verification	confirmed
+025E1B34	mDoAud_seDeleteObject	signature	HD signature differs from the GameCube member signature (compare only registers the code reads)	verification	
+021418D0	daFm_c::checkPlayerGrabBomb	graph	daFm_c::setAnm(s8, bool) (real checkPlayerGrabBomb is 0214594C)	verification	
+02141930	daFm_c::isGrabPos	graph	daFm_c::createInit (real isGrabPos is 02145F90)	verification	
+024EF218	dBgS::ChkPolyHSStick	graph	dBgS::GetPolyId2 (tail callers GetCamMoveBG/GetRoomPathId pass masks; reads info word 2)	d_bg_s	swapped with 024EF398
+02454520	daPz_c::setEyeBtp	graph	daPz_c::setEyeBtk (inits mBtkAnm 0x1238 via 025E7CE0); real setEyeBtp is unnamed 02454114	d_a_pz	
+02450C68	(d_a_pz)	graph	belongs to d_a_pw, not d_a_pz	d_a_pz	
+02450D7C	(d_a_pz)	graph	belongs to d_a_pw, not d_a_pz	d_a_pz	
+02216064	daNpc_Bs1_c::shopMsgCheck	graph	daNpc_Bs1_c::shopStickMoveMsgCheck (swapped with 022160EC)	d_a_npc_bs1	
+022160EC	daNpc_Bs1_c::shopStickMoveMsgCheck	graph	daNpc_Bs1_c::shopMsgCheck (swapped with 02216064)	d_a_npc_bs1	
+0249EE10	daObj::PrmAbstract<daStone2::Act_c::Prm_e>	graph	daStone2::Act_c::set_senv(int,int) (calls 0255F458 dKy_Sound_set); real PrmAbstract is 024A0B14	d_a_stone2	
+0249E3A0	daStone2::Act_c::Mthd_Create	graph	create-phase body; static Mthd_Create wrapper is 024A0994	d_a_stone2	
+024A0A68	dBgS_MoveBgActor::IsDelete (d_a_fan.cpp)	graph	stone2 TU copy of IsDelete (vtable slot 1003EA68)	d_a_stone2	
+020F6004	(btd) damage	graph	GameCube btd move() with wait/attack/damage inlined	d_a_btd	
+020F0EB4	hahen_set_s	graph	hahen_set(btd_class*, s8) with hahen_set_s inlined	d_a_btd	
+02515980	dCcD_GObjInf::~dCcD_GObjInf	graph	dCcD_Cps::~dCcD_Cps (stores cM3dGCps vtable at +0x130; real GObjInf dtor is 02515908)	d_cc_d	
+025161D8	dCcD_GObjInf::GetTgHitGObj (dup)	graph	dCcD_GObjInf::GetAtHitGObj (calls GetAtHitObj 02516178)	d_cc_d	
+0200E6D0	cCcS::ChkNoHitGAtTg (d_cc_s.cpp)	dup-file	name right, file wrong: c_cc_s copy (d_cc_s's own copy is 02518A78)	d_cc_s	
+024F8184	(d_camera)	graph	HD-only near-plane adjustment	d_camera	
+02502364	(d_camera)	graph	HD-only talk table entry	d_camera	
+025023C4	(d_camera)	graph	HD-only talk table shot type	d_camera	
+025021A4	(unnamed)	graph	camera_create (phase handler 02525FE4, l_method 101D55C0)	d_camera	
+02508A58	?	graph	dCamera_c::positionPntOf	d_camera	
+0250D4D0	?	graph	dCamera_c::SetBlureScale	d_camera	
+024EE464	dAttention_c::LockonTarget	graph	dAttention_c::ActionTarget (swapped with 024EC8D0)	d_attention	
+025D475C	CHECK_VEC3_RANGE	graph	fopAc_Execute	f_op_actor	
+025D6174	dRes_info_c::setRes	graph	HD fopAcM_entrySolidHeap_(actor, cb, size, parentHeap), called by 025D63E8	f_op_actor_mng	
+02587688	dLib_btkInit	graph	dLib_brkInit (swapped with dLib_btkInit)	d_a_daiocta	
+025E121C	(unnamed)	graph	fpcSch_JudgeForPName	d_a_daiocta	
+02168938	(unnamed)	graph	daGy_c::modeProcCall	d_a_gy	
+02169268	(unnamed)	graph	daGy_c::drawDebug	d_a_gy	
+02169B68	(unnamed)	graph	daGy_c::modeAttackInit	d_a_gy	
+0216A674	(unnamed)	graph	daGy_c::modeWithAttackInit	d_a_gy	
+0259138C	dMat_ice_c::entryDL	graph	mDoExt_invisibleModel::entryDL	d_a_gy	
+021B92DC	get_cloth_anim_factor	strings	majuu_flag_move(daMajuu_Flag_c*) (get_cloth_anim_factor and get_cloth_anim_sub_factor inlined; reads only r3, calls dKyw_get_wind_vec, toggles the vertex buffer index 0x1DDA)	d_a_majuu_flag	confirmed: r5 at the call from daMajuu_Flag_Create is a loop constant, not an argument
+0273B264	dRes_control_c::getResInfoLoaded	callgraph-legacy	CRC-32 of a byte string (data r3, length r4; table 1049FBA0, lazily built by 0273B200), used as the HD resource-name hash	d_resorce	reads r3 r4 only

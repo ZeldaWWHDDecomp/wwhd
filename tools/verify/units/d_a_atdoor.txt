@@ -1,0 +1,17 @@
+# Verification unit: d_a_atdoor (Tower of the Gods jail door)
+src wwhd_src/d/actor/d_a_atdoor.cpp
+stackfill periodic
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025BA0C0 0 1              # isSwitch
+ret 024EEA6C 0 1              # dBgS::Regist
+ret 0200A030 0 1              # cBgW::Set
+ret 025D63E8 0 1              # entrySolidHeap
+# execute: mAction indexes the 5-entry action table
+field 0205834C r3+0x3BC u8 0 4
+# getSwbit 0xFF vs switch
+field 0205842C r3+0xB3 u8 0,1,0xFE,0xFF
+# door angle around the 0 / 0x4000 clamps
+field 020581D0 r3+0x3BE s16 0x3FF,0x400,0x401,0,0x800,-5
+field 0205828C r3+0x3BE s16 0x3BFF,0x3C00,0x3C01,0x4000,0,0x7F00

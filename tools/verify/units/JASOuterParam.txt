@@ -1,0 +1,5 @@
+src wwhd_src/JSystem/JAudio/JASOuterParam.cpp
+arg! 02816BE0 r3 0,0x50000000
+ret! 0273AD10 0,0x51000000
+arg! 02816CA4 r4 0,1,2,3,4,8,16,32,64,128,255,256,0xffffffff
+# Full register remains observable: do not truncate flags/index without native instructions.

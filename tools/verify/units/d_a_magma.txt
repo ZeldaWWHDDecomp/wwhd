@@ -1,0 +1,5 @@
+# Verification unit: d_a_magma (magma floor)
+src wwhd_src/d/actor/d_a_magma.cpp
+
+ret 02520460 0 5                          # resLoad
+ret 02524C10 0 1                          # createMagma

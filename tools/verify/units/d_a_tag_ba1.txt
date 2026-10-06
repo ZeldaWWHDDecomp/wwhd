@@ -1,0 +1,17 @@
+# Verification unit: d_a_tag_ba1 (grandma fairy-bottle tag)
+src wwhd_src/d/actor/d_a_tag_ba1.cpp
+
+ret 025B8B94 0 1               # isEventBit
+ret 02542D88 -1 1              # getMyStaffId
+ret 025440C8 0 1               # endCheck
+ret 025200D4 0x54000000 0x54000000
+field * 54005292 u8 0 1        # event runCheck
+field * r3+0xF8 u16 0 2        # eventInfo command
+field 024A5B60 r3+0x3AE i16 0 0  # mEventIdx
+field * 1046E248 i32 -1 1      # l_HIO.mRefCount
+arg 024A593C r4 0 2            # item button
+field 024A593C 54005BBB u8 0x56 0x58
+field 024A593C 54005BBC u8 0x56 0x58
+field 024A593C 54005BBD u8 0x56 0x58
+arg 024A5C28 r3 0,0x58000000
+ret 0273AD10 0,0x59000000      # operator new

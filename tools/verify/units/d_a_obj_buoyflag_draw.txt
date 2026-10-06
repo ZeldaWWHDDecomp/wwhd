@@ -1,0 +1,139 @@
+# Verification unit: d_a_obj_buoyflag part draw: HD drawing (vertex upload, uniforms, texture, draw)
+src wwhd_src/d/actor/d_a_obj_buoyflag_draw.cpp wwhd_src/d/actor/d_a_obj_buoyflag_pending.cpp
+
+ret 025200D4 0x54000000 0x54000000  # play
+callee 026066C4 r4=8                   # getRes: SafeString key
+callee 0274D458 r3=out16 r4=16         # colour * intensity: result, colour
+callee 027FDA54 r5=48                  # uniform view matrix (sead::Matrix34 copy)
+callee 028E90D4 r3=48                  # PSMTXCopy(sead matrix on the stack)
+callee 0232B318 r3=out48               # Mtx -> sead::Matrix34
+callee 0232B560 r3=out16               # GXColorS10 -> float colour
+# load_texture: not loaded yet; the texture fields equal to the sampler's (copy path)
+field 0232B3B8 r3+0x2C60 u8 0,0,1
+field 0232B3B8 r3+0x2ACC u32 0,0,0,1
+field 0232B3B8 r3+0x2A3C u32 0,0,0,1
+field 0232B3B8 r3+0x2AD0 u32 0,0,0,1
+field 0232B3B8 r3+0x2A40 u32 0,0,0,1
+field 0232B3B8 r3+0x2AD4 u32 0,0,0,1
+field 0232B3B8 r3+0x2A44 u32 0,0,0,1
+field 0232B3B8 r3+0x2AD8 u32 0,0,0,1
+field 0232B3B8 r3+0x2A48 u32 0,0,0,1
+field 0232B3B8 r3+0x2ADC u32 0,0,0,1
+field 0232B3B8 r3+0x2A4C u32 0,0,0,1
+field 0232B3B8 r3+0x2AE0 u32 0,0,0,1
+field 0232B3B8 r3+0x2A50 u32 0,0,0,1
+field 0232B3B8 r3+0x2B00 u32 0,0,0,1
+field 0232B3B8 r3+0x2A70 u32 0,0,0,1
+field 0232B3B8 r3+0x2AFC u32 0,0,0,1
+field 0232B3B8 r3+0x2A6C u32 0,0,0,1
+field 0232B3B8 r3+0x2AE4 u32 0,0,0,1
+field 0232B3B8 r3+0x2A54 u32 0,0,0,1
+# gpu_init: SafeString keys (program name; archive / file names)
+callee 027B90AC r4=8
+callee 026124B0 r4=8 r5=8
+# gpu_init: the program list {count, n, entries} pinned at 0x58000000 (entries {prog, n, attrs, n2, attrs2})
+field 0232BDC0 r3+0xD18 u32 0 3
+field 0232BDC0 r3+0xD1C u32 0 3
+field 0232BDC0 r3+0xD20 u32 0x58000000 0x58000000
+field 0232C670 r3+0x1F10 u32 0 3
+field 0232C670 r3+0x1F14 u32 0 3
+field 0232C670 r3+0x1F18 u32 0x58000000 0x58000000
+field * 58000004 i32 0,0,1,2,3
+field * 5800000C i32 0,0,1,2,3
+field * 58000018 i32 0,0,1,2,3
+field * 58000020 i32 0,0,1,2,3
+field * 5800002C i32 0,0,1,2,3
+field * 58000034 i32 0,0,1,2,3
+stable 58000000 0x40
+# gpu_init: `this` pinned so that the list counts can be kept stable (callees never rewrite them)
+arg! 0232BDC0 r3 0x40000000
+arg! 0232C670 r3 0x40000000
+stable 40000D18 0xC
+stable 40001F10 0xC
+# gpu_init: texture fields equal to the sampler's (copy path of the texture binding)
+field 0232BDC0 r3+0x1BE4 u32 0,0,0,1
+field 0232BDC0 r3+0x1AC4 u32 0,0,0,1
+field 0232BDC0 r3+0x1BE8 u32 0,0,0,1
+field 0232BDC0 r3+0x1AC8 u32 0,0,0,1
+field 0232BDC0 r3+0x1BEC u32 0,0,0,1
+field 0232BDC0 r3+0x1ACC u32 0,0,0,1
+field 0232BDC0 r3+0x1BF0 u32 0,0,0,1
+field 0232BDC0 r3+0x1AD0 u32 0,0,0,1
+field 0232BDC0 r3+0x1BF4 u32 0,0,0,1
+field 0232BDC0 r3+0x1AD4 u32 0,0,0,1
+field 0232BDC0 r3+0x1BF8 u32 0,0,0,1
+field 0232BDC0 r3+0x1AD8 u32 0,0,0,1
+field 0232BDC0 r3+0x1C18 u32 0,0,0,1
+field 0232BDC0 r3+0x1AF8 u32 0,0,0,1
+field 0232BDC0 r3+0x1C14 u32 0,0,0,1
+field 0232BDC0 r3+0x1AF4 u32 0,0,0,1
+field 0232BDC0 r3+0x1BFC u32 0,0,0,1
+field 0232BDC0 r3+0x1ADC u32 0,0,0,1
+field 0232BDC0 r3+0x1D7C u32 0,0,0,1
+field 0232BDC0 r3+0x1B54 u32 0,0,0,1
+field 0232BDC0 r3+0x1D80 u32 0,0,0,1
+field 0232BDC0 r3+0x1B58 u32 0,0,0,1
+field 0232BDC0 r3+0x1D84 u32 0,0,0,1
+field 0232BDC0 r3+0x1B5C u32 0,0,0,1
+field 0232BDC0 r3+0x1D88 u32 0,0,0,1
+field 0232BDC0 r3+0x1B60 u32 0,0,0,1
+field 0232BDC0 r3+0x1D8C u32 0,0,0,1
+field 0232BDC0 r3+0x1B64 u32 0,0,0,1
+field 0232BDC0 r3+0x1D90 u32 0,0,0,1
+field 0232BDC0 r3+0x1B68 u32 0,0,0,1
+field 0232BDC0 r3+0x1DB0 u32 0,0,0,1
+field 0232BDC0 r3+0x1B88 u32 0,0,0,1
+field 0232BDC0 r3+0x1DAC u32 0,0,0,1
+field 0232BDC0 r3+0x1B84 u32 0,0,0,1
+field 0232BDC0 r3+0x1D94 u32 0,0,0,1
+field 0232BDC0 r3+0x1B6C u32 0,0,0,1
+field 0232C670 r3+0x28A4 u32 0,0,0,1
+field 0232C670 r3+0x2814 u32 0,0,0,1
+field 0232C670 r3+0x28A8 u32 0,0,0,1
+field 0232C670 r3+0x2818 u32 0,0,0,1
+field 0232C670 r3+0x28AC u32 0,0,0,1
+field 0232C670 r3+0x281C u32 0,0,0,1
+field 0232C670 r3+0x28B0 u32 0,0,0,1
+field 0232C670 r3+0x2820 u32 0,0,0,1
+field 0232C670 r3+0x28B4 u32 0,0,0,1
+field 0232C670 r3+0x2824 u32 0,0,0,1
+field 0232C670 r3+0x28B8 u32 0,0,0,1
+field 0232C670 r3+0x2828 u32 0,0,0,1
+field 0232C670 r3+0x28D8 u32 0,0,0,1
+field 0232C670 r3+0x2848 u32 0,0,0,1
+field 0232C670 r3+0x28D4 u32 0,0,0,1
+field 0232C670 r3+0x2844 u32 0,0,0,1
+field 0232C670 r3+0x28BC u32 0,0,0,1
+field 0232C670 r3+0x282C u32 0,0,0,1
+# destructors: the program lists {count, entries} pinned at 0x58000000 (as for gpu_init)
+field 0232DDB4 r3+0xD1C u32 0 3
+field 0232DDB4 r3+0xD20 u32 0,0x58000000,0x58000000
+field 0232DDB4 r3+0x1F14 u32 0 3
+field 0232DDB4 r3+0x1F18 u32 0,0x58000000,0x58000000
+field 0232DDB4 r3+0x16A4 u32 0 3
+field 0232DDB4 r3+0x23F4 u32 0 3
+field 0232E608 r3+0x123C u32 0 3
+field 0232E608 r3+0x1240 u32 0,0x58000000,0x58000000
+field 0232E608 r3+0x2434 u32 0 3
+field 0232E608 r3+0x2438 u32 0,0x58000000,0x58000000
+field 0232E608 r3+0x1BC4 u32 0 3
+field 0232E608 r3+0x2914 u32 0 3
+arg! 0232DDB4 r3 0,0x40000000,0x40000000,0x40000000
+arg! 0232E608 r3 0,0x40000000,0x40000000,0x40000000
+stable 40000D1C 0x8
+stable 40001F14 0x8
+stable 400016A4 0x4
+stable 400023F4 0x4
+stable 4000123C 0x8
+stable 40002434 0x8
+stable 40001BC4 0x4
+stable 40002914 0x4
+# draw_hata / draw_hasi: the draw pass of the context (0..2 handled, others fall through)
+field 02328FD4 r4+0xC i32 0,1,2,3,-1,5
+field 023296B0 r4+0xC i32 0,1,2,3,-1,5
+field 02328FD4 r3+0xD1C u32 0,1,2,4
+field 023296B0 r3+0x1F14 u32 0,1,2,4
+# the draw state object on the stack (0xF0 bytes): compared at the calls that use it
+callee 0280037C r4=0xF0
+callee 02750370 r3=0xF0
+callee 02750250 r3=255

@@ -1,0 +1,31 @@
+# Iron Ball actual30-entry HD TU0217AFB8..0217C874; own wrappers reserve linkage below every guest local.
+src wwhd_src/d/actor/d_a_ib.cpp
+callee 026066C4 r4=8
+callee 025E742C r3=16
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 02008974 r4=0x54
+callee 025E7CE0 stack=0 # caller stores ninth word; HD callee never reads it
+callee 025E8154 stack=0 # caller stores ninth word; HD callee never reads it
+callee 024F06B4 stack=1
+ret 025E38E0 0,0x55000000
+ret 025E8508 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+field * r3+0x798 f32 0,44.99,45,89.99,90,135,136,-1
+stackfill periodic
+
+# Synthetic member-pointer ABI, beyond actual two direct table entries.
+arg! 0217B8C4 r3 0x50000000
+field 0217B8C4 r3+0x938 u8 0
+field 0217B8C4 10011B04 s16 -4,0,4
+field 0217B8C4 10011B06 s16 0,1,2
+field 0217B8C4 10011B0A s16 32
+field 0217B8C4 r3+0x1C u32 0x5F000000
+field 0217B8C4 r3+0x20 u32 0x5F000000
+field 0217B8C4 r3+0x24 u32 0x5F000000
+field 0217B8C4 5F000004 u32 0x0217C7C0
+field 0217B8C4 5F00000C u32 0x0217C7C0
+field 0217B8C4 5F000014 u32 0x0217C7C0
+stable 5F000004 4
+stable 5F00000C 4
+stable 5F000014 4

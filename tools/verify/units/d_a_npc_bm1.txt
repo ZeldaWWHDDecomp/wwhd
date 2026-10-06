@@ -1,0 +1,223 @@
+# Verification unit: d_a_npc_bm1 (generic Ritos), part A (021FA778 .. 021FFFFC)
+src wwhd_src/d/actor/d_a_npc_bm1.cpp wwhd_src/d/actor/d_a_npc_bm1_pending.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+callee 028E8F64 r4=12 r5=out12         # PSMTXMultVec(m, &in, &out)
+# searchActor_*: l_check_wrk, names, specific types
+field 021FA778 104661D0 i32 18 21
+field 021FA7F8 104661D0 i32 18 21
+field 021FA878 104661D0 i32 18 21
+field 021FA908 104661D0 i32 18 21
+field 021FA778 r3+8 i16 0x1AA,0x1A9
+field 021FA7F8 r3+8 i16 0x165,0x164
+field 021FA878 r3+8 i16 0x147,0x146
+field 021FA908 r3+8 i16 0x147,0x146
+field 021FA878 r3+0xA76 i8 5 6
+field 021FA908 r3+0xA76 i8 5 6
+# node callbacks: joint numbers
+field 021FA998 r3+0x888 i8 0 3
+field 021FA998 r3+0x889 i8 0 3
+field 021FA998 r3+0x88A i8 0 3
+field 021FA998 r3+0x88B i8 0 3
+field 021FABC0 r3+0x894 i8 0 3
+field 021FABC0 r3+0x895 i8 0 3
+field 021FABC0 r3+0x896 i8 0 3
+field 021FABC0 r3+0x897 i8 0 3
+field 021FADE8 r3+0x7E8 i8 0 3
+field 021FADE8 r3+0x7E9 i8 0 3
+field 021FADE8 r3+0x7EA i8 0 3
+field 021FADE8 r3+0x7EB i8 0 3
+field 021FADE8 r3+0x7EC i8 0 3
+callee 02606900 r4=8 r5=8     # dRes_control_c::getRes(SafeString* arc, SafeString* name)
+# create_*: types, morf results
+field 021FB010 r3+0xA75 i8 0 7
+field 021FBA3C r3+0xA75 i8 0 7
+field 021FBD80 r3+0xA75 i8 0 11
+field 021FB354 r3+0xA76 i8 0 15
+field 021FB4C4 r3+0xA76 i8 0 15
+ret 025E4F64 0,0x5A000000
+field * 5A000090 u32 0,0x5B000000
+ret 027DF9B0 -1 3
+ret 025E38E0 0,0x5C000000
+ret 02606900 0,0x5D000000
+ret 021FB010 0,0x5E000000
+ret 021FB354 0,0x5E000000
+ret 021FB798 0,0x5E000000
+ret 021FBA3C 0,0x5E000000
+ret 021FB78C 0 1
+ret 021FBD80 0 1
+ret 025E789C 0 2
+field 021FB4C4 101BC5F0 u32 0x10017228,0x10017234,0x10017264
+ret 027F3F8C 0x5F000000 0x5F000000
+field 021FB5B8 5F000004 u32 0xB101729C,0xB10172A8,0xB1017224
+callee 021FC758 r4=8          # set_action(pointer to member, 8 bytes)
+# decideType: process names, params
+field 021FC36C r3+8 i16 0x145,0x146,0x147,0x148,0x149,0x14A,0x14B
+arg 021FC36C r4 0 5
+arg 021FC36C r5 0 4
+# chk_appCnd
+field 021FC5DC r3+0xA77 i8 0 5
+ret 025B7D90 0 1
+ret 025B8B94 0 1
+ret 02556D14 0 2
+ret 025B7840 0 1
+# set_action
+field 021FC758 r3+0x89E i16 -1,0,1
+field 021FC758 r4+2 i16 -1,0,1
+field 021FC758 r3+0x89C i16 0,4
+field 021FC758 r4+0 i16 0,4
+field 021FC758 r3+0x8A0 u32 0x022039E0,0x02203BAC
+field 021FC758 r4+4 u32 0x022039E0,0x02203BAC
+field 021FCD4C r3+0x904 u32 0,0x60000000
+# particles
+field 021FCF54 r3+0xA6E i8 10 12
+field 021FD110 r3+0xA6E i8 12 14
+ret 027F2BF8 0 1
+ret 025A847C 0,0x61000000
+field 021FCEE4 r3+0xA48 u32 0,0x62000000
+field 021FCEE4 r3+0xA4C u32 0,0x63000000
+field 021FD0A0 r3+0xA50 u32 0,0x62000000
+field 021FD0A0 r3+0xA54 u32 0,0x63000000
+field 021FD25C r3+0xA58 u32 0,0x62000000
+field 021FD25C r3+0xA5C u32 0,0x63000000
+field 021FD30C r3+0xA60 u32 0,0x62000000
+field 021FD30C r3+0xA64 u32 0,0x63000000
+field 021FD3BC r3+0xA00 u32 0 1
+arg 021FD3BC r4 0 1
+field 021FD3BC r3+0xA75 i8 1 10
+field 021FCE10 r3+0xA6D i8 0 1
+ret 02055B64 0 1
+# setMtx
+field 021FD41C r3+0xA07 u8 0 1
+field 021FD41C r3+0xA08 u8 0 1
+field 021FD41C r3+0x9F5 u8 0 1
+field 021FD41C r3+0xA6E i8 3 5
+field 021FD41C r3+0x7F0 u32 0,0x64000000
+field 021FD41C r3+0x7F4 u32 0,0x64000000
+field 021FD41C r3+0x7F8 u32 0,0x64000000
+field 021FD41C r3+0x7FC u32 0,0x64000000
+# createInit / _create / _delete
+ret 021FC5DC 0 1
+field 021FDB44 r3+0xB1 u8 0xFF,0,3
+field 021FDB44 r3+0x904 u32 0,0x60000000
+field 021FDB44 r3+0xA76 i8 -1 16
+field 021FDB44 r3+0x9F5 u8 0 1
+ret 021FC884 0 1
+ret 021FC910 0 1
+ret 021FC950 0 1
+ret 021FC9CC 0 1
+ret 021FCA68 0 1
+ret 021FCB00 0 1
+ret 021FCB4C 0 1
+ret 021FCB50 0 1
+ret 021FCB90 0 1
+ret 021FCB94 0 1
+ret 021FCBD4 0 1
+ret 021FCC14 0 1
+ret 021FCCB0 0 1
+ret 021FCD4C 0 1
+ret 021FCDAC 0 1
+ret 021FCDB0 0 1
+ret 021FC36C 0 1
+ret 021FDB44 0 1
+ret 02520460 0 5
+ret 025D63E8 0 1
+field 021FDF08 r3+0x2E4 u32 0 8
+field 021FDF08 r3+0xA76 i8 0 1
+field 021FE17C r3+0xF4 u32 0,0x65000000
+field 021FE17C r3+0x44C u32 0,0x66000000
+field 021FE17C r3+0x800 u32 0,0x66000000
+field 021FE17C r3+0x884 u32 0,0x66000000
+field 021FE17C r3+0x890 u32 0,0x66000000
+field 021FE0BC r3+0xA58 u32 0,0x62000000
+field 021FE0BC r3+0xA5C u32 0,0x63000000
+field 021FE10C r3+0xA60 u32 0,0x62000000
+field 021FE10C r3+0xA64 u32 0,0x63000000
+# partner search, checkOrder, demo
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+field 021FE218 104661D0 i32 0 1
+field 021FE218 10466590 u32 0,0x67000000
+field 021FE2F8 r3+0xA78 i8 0 2
+field 021FE2F8 r3+0xA76 i8 1,5,6,11,0
+ret 021FE218 0 1
+ret 021FE2C4 0,0x67000000
+field 021FE408 r3+0xF8 u16 0 3
+field 021FE408 r3+0x9DA i16 2 3
+field 021FE408 r3+0xA71 i8 0 3
+ret 0254407C 0 1
+field 021FE4DC r3+0x2DC u8 0,1,0x20,0x21
+field 021FE4DC r3+0xA07 u8 0 1
+field 021FE4DC 101D5FFC u32 0,0x57000000
+field 021FE4DC r3+0x804 u32 0,0x58000000
+ret 02526E70 0,0x59000000
+ret 02527828 0,0x5A000000
+field 021FE710 r3+0x904 u32 0,0x60000000
+ret 0259E744 0,0x60000000
+arg 021FE774 r4 -1 2
+field 021FE774 r3+0xA6D i8 -1 2
+# anm names, setAnm_anm, setAnm_NUM
+arg 021FE794 r4 0 21
+arg 021FE808 r4 0 21
+arg 021FE87C r4 0 21
+field 021FEAB4 r4+0x10 i32 0 2
+field 021FEAB4 r4+0 i8 1 4
+field 021FEAB4 r3+0xA6E i8 1 4
+arg! 021FECF4 r4 0 22
+arg 021FECF4 r5 0 1
+arg 021FED60 r4 0,0x68000000
+field 021FED60 68000000 i32 -1,0,22,23
+# eInit_*
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint (hidden result)
+callee 02543714 r4=12         # dEvent_manager_c::setGoal(&pos)
+callee 021FF0CC r4=out12      # eInit_calcRelativPos (hidden result)
+field 021FED7C r3+0x904 u32 0,0x60000000
+arg 021FED7C r4 0,0x68000000
+arg 021FED7C r6 0,0x69000000
+arg 021FED7C r7 0,0x6A000000
+field 021FED7C 68000000 i32 0 2
+ret 0259EDB8 0 8
+field 021FEEB0 r3+0x9F9 u8 0 1
+arg 021FEECC r4 0,0x68000000
+field 021FEECC 68000000 i32 0 6
+field 021FEECC r3+0xA75 i8 1 10
+arg 021FF0CC r4 0,0x6B000000
+arg 021FF0CC r5 0,0x69000000
+arg 021FF0CC r6 0,0x6A000000
+ret 0273AD10 0,0x6C000000
+arg 021FF210 r4 0,0x68000000
+field 021FF210 68000000 i32 0 2
+arg 021FF2B8 r4 0,0x68000000
+field 021FF2B8 68000000 i32 0 3
+arg 021FF2F8 r4 0,0x68000000
+field 021FF2F8 68000000 i32 0 2
+arg 021FF328 r4 0,0x68000000
+arg 021FF344 r4 0,0x68000000
+field 021FF344 68000000 i32 0 7
+arg 021FF344 r7 0,0x69000000
+arg 021FF344 r8 0,0x6A000000
+arg 021FF344 r9 0,0x6B000000
+field 021FF344 r3+0x904 u32 0,0x60000000
+arg 021FF5D0 r4 0,0x68000000
+field 021FF5D0 68000000 i32 0 3
+arg 021FF5D0 r7 0,0x69000000
+arg 021FF5D0 r9 0,0x6B000000
+field 021FF5D0 r3+0x904 u32 0,0x60000000
+field 021FF5D0 r3+0xA75 i8 1 10
+# event_actionInit / event_action / privateCut
+ret 0254487C 0,0x59000000
+field 021FF888 59000000 i32 4,0x10,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,-1
+field 021FFC84 r3+0xA68 i8 0 1
+field 021FFCA8 r3+0x9DC i16 -1 1
+field 021FFCA8 r3+0x3B6 u8 0 2
+field 021FFD64 r3+0xA6A i8 0x15 0x1C
+field 021FFDCC r3+0x9EA i8 0 1
+field 021FFDCC r3+0x9F5 u8 0 1
+arg 021FFED0 r4 -1 2
+ret 02542EDC -1 2
+ret 025447C8 0 1
+ret 021FFD64 0 1
+ret 021FFDCC 0 1
+stackfill                     # stack objects start with random bytes (closes zeroed-local mutants)

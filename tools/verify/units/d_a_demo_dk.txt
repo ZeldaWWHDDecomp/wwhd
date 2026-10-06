@@ -1,0 +1,15 @@
+# Verification unit: d_a_demo_dk (demo DK idle model)
+src wwhd_src/d/actor/d_a_demo_dk.cpp
+
+callee 026066C4 r4=8                      # sead::SafeString key
+ret 02520460 0 5                          # resLoad
+ret 025D63E8 0 1                          # entrySolidHeap
+fret 02019788 0 0.2                       # cM_rnd
+arg 02122980 r6 -1 5                      # sound index
+field 02122AA8 r3+0x3D2 u8 0 2            # mode
+field 02122AA8 r3+0x3D4 u32 0x57000000 0x57000000   # morf
+field 02122AA8 570000A7 u8 0 3            # frame ctrl state
+field 02122AA8 57000098 f32 0,1           # rate
+field 02122AA8 r3+0x3DC i16 -1 2
+field 02122E78 r3+0x3D4 u32 0x57000000 0x57000000
+field 02122E78 57000090 u32 0,0x58000000

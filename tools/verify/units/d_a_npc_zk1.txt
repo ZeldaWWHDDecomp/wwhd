@@ -1,0 +1,37 @@
+# Verification unit: d_a_npc_zk1 (Zuko, Rito postman)
+src wwhd_src/d/actor/d_a_npc_zk1.cpp
+
+# stack objects passed to callees
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0230018C r4=8          # set_action(pointer to member, 8 bytes)
+callee 025D54C4 r4=4          # fopAcM_SearchByID(id, &actor)
+callee 02300DB8 r5=out4       # searchByID(id, &res)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259E2D4 r5=12 r6=12   # lookAtTarget_2(target, eye copy)
+callee 0259D8BC r4=12         # dNpc_chkAttn(pos copy)
+ret 025200D4 0x54000000 0x54000000
+# checkOrder / anmAtr / next_msgStatus / talk_1 / lookBack
+field 02300964 r3+0xF8 u16 0,1,2,3
+field 02300964 r3+0x91A i8 -1 4
+arg 023016C4 r4 6,14,5
+field 023016C4 r3+0x921 i8 0 1
+field 023016C4 r3+0x917 u8 0,1,0xFF
+field 023016C4 54005BC6 u8 0,1,0xFF
+field 02301794 r4+0 u32 0x17A1,0x17A2,0x17A3,0x17A4,0x17A5,0x17A6,0x17A7,0x17A8,0x17A9,0x17AA,0x17AB,0x17AC,0x17AD,0x17AE
+field 02301D34 r3+0x7CC u8 0 1
+ret 025F795C 0x12 0x14
+field 02301D34 r3+0x7C0 u32 0x17A6,0x17AB,0x17A5,0x17AD,0x17AE,0x17AF,0x17B0,0x17B1,0x17B2
+field 02300E0C r3+0x91D i8 -1 5
+ret 02300DB8 0,0x58000000
+# mutation-driven steering
+arg 022FFCE4 r4 -1 2
+field 02300A3C 101D5FFC u32 0,0x57000000
+field 02300A3C r3+0x2DC u8 0,1,0x20,0x21
+field 02300A3C r3+0x914 u8 0,1,2
+field 02300A3C r3+0x860 u8 0,1,2,0xFE,0xFF
+# stack arguments (facts from d_a_npc_ac1)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument (entry) on the stack
+callee 025E4F64 stack=4       # mDoExt_McaMorf::mDoExt_McaMorf: 4 stack words
+callee 024F06B4 stack=1       # dBgS_Acch::Set: 9th argument on the stack
+callee 0259E08C stack=2       # dNpc_JntCtrl_c::setParam: 2 stack words

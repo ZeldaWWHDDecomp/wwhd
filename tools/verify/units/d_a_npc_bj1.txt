@@ -1,0 +1,497 @@
+# Verification unit: d_a_npc_bj1 (the Koroks of the Forest Haven)
+src wwhd_src/d/actor/d_a_npc_bj1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+stackfill
+ret 027F7878 0x42000000       # J3DNode -> J3DJoint
+callee 028E8F64 r4=12 r5=out12 # PSMTXMultVec: input12; output-only12
+field 021F3244 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+ret 026067F4 0,0x5D000000,0x5D000000,0x5D000000      # getIDRes
+ret 025E4F64 0,0x5E000000,0x5E000000                 # McaMorf
+ret 027DF9B0 -1,0,3,0x7F                             # JUTNameTab::getIndex
+field 021F374C r3+0x9C4 i8 0,1,2,3,4,5,6,7,8
+ret 025E38E0 0,0x60000000,0x60000000,0x60000000    # J3DModel create
+ret 021F3244 0,0x61000000                            # create_Anm
+ret 021F3564 0,0x62000000                            # create_prp_Anm
+ret 021F374C 0,1                                     # create_itm_Mdl
+ret 027F3F94 0x63000000                              # joint tree: count at +8
+field 021F39FC 63000008 u16 0,1,3,6
+field 021F39FC r3+0x7E4 i8 0,1,2
+field 021F39FC r3+0x7E5 i8 0,1,2
+field 021F39FC r3+0x7E7 i8 0,1,2
+field 021F39FC r3+0x7FC i8 0,1,2
+field 021F39FC r3+0x7FD i8 0,1,2
+field 021F3C28 r3+0x8 i16 0x14F,0x150,0x151,0x152,0x153,0x154,0x155,0x156,0x157,0x158,0x159
+arg 021F3C28 r4 0,1,2
+
+# Animation attribute transitions and table-index boundaries.
+arg 021F4544 r4 -1,0,1,2,3,10,11,2147483647
+arg 021F7F40 r4 0,1,5,6,7,8,9,10,11,255
+field 021F7F40 r3+0x9BD u8 0,5,6,7,10,11,255
+field 021F7F5C r3+0x9BD u8 0,5,6,7,8,9,10,11,255
+field 021F7F5C r3+0x94C u8 0,1,127,128,255
+
+arg 021F5D68 r4 0,0x57000000
+field 021F5D68 57000000 f32 -1,0,0.5,1
+arg 021F597C r4 0,0x57000000
+field 021F597C 57000000 u32 0,1,32767,32768,65535,65536,4294967295
+
+field 021F7F28 r3+0x9BD u8 0,1,5,6,7,8,9,10,11,127,128,255
+field 021F7EEC r3+0x9C1 u8 0,1,2,3,10,11,127,128,254,255
+
+arg 021F5EA4 r4 0,0x57000000
+arg 021F5EA4 r5 0,0x57000010
+field 021F5EA4 57000000 i32 -1,0,1,2,3
+field 021F5EA4 57000010 u32 0,1,2,255
+ret 0259E744 0,0x58000000
+ret 025AB070 0,0x58000020
+ret 0259EDB8 0,1,2,4
+
+# Message selection observes both false and nonzero event flags.
+ret 025B8B94 0,1,-1
+
+arg 021F5D78 r4 0,0x57000000
+arg 021F5D78 r5 0,0x57000010
+arg 021F5D78 r6 0,0x57000020
+arg 021F5D78 r7 0,0x57000030
+field 021F5D78 57000000 f32 -1,0,1
+field 021F5D78 57000010 f32 -1,0,1
+field 021F5D78 57000020 f32 -1,0,1
+field 021F5D78 57000030 i32 -1,0,1,32768
+arg 021F5E48 r4 0,0x57000000
+arg 021F5E48 r5 0,0x57000010
+field 021F5E48 57000000 f32 -1,0,1
+field 021F5E48 57000010 f32 -1,0,1
+arg 021F60AC r4 0,0x57000000
+arg 021F60AC r5 0,0x57000010
+field 021F60AC 57000000 i32 -1,0,1,10,11,127,128,255
+field 021F60AC 57000010 f32 -1,0,1
+# Point-output existing callee interface requires12 readable/comparable result bytes:
+callee 0259E778 r4=out12
+
+field 021F4344 r3+0x99C u32 0,0x57000000
+field 021F4344 r3+0x9A0 u32 0,0x57000000,0x57000400
+field 021F4344 57000254 u32 0,1,2,4294967295
+field 021F4344 57000654 u32 0,1,2,4294967295
+field 021F8190 r3+0x932 i16 -32768,-1,0,1,32767
+field 021F8190 r3+0x3B2 i16 -32768,-1,0,1,32767
+field 021F8190 r3+0x930 i16 -32768,-1,0,1,32767
+field 021F8190 r3+0x3AE i16 -32768,-1,0,1,32767
+arg 021F81C0 r4 0,0x57000000
+field 021F81C0 r3+0x9C5 u8 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,127,128,255
+field 021F81C0 57000000 u8 0,85,255
+
+# Existing global ret directive 025B8B94 0,1,-1 already exercises both outcomes.
+field 021F89A4 r3+0x95B u8 0,1,127,128,255
+# Nonzero m95B returns 13FB without singleton read or event call.
+
+# Existing 025B8B94 0,1,-1 steering retained.
+ret 0257E5D4 -1,0,1,7,8
+ret 025B7D90 0,1,-1
+ret 021F82C0 0,1,-1
+ret 025B8BB0 0,1,127,128,255,256,2147483648,4294967295
+field 021F8AF8 r3+0x952 u8 0,1,128,255
+field 021F8AF8 r3+0x953 u8 0,1,128,255
+field 021F8AF8 r3+0x94E u8 0,69,70,71,127,128,254,255
+# Existing 025200D4 fixed guest player pointer retained. Corog writes its +5BA0 u16.
+
+ret 0200F93C -32768,-4097,-4096,-1,0,1,4096,4097,32767
+field 021F5C78 r3+0x8CA i16 -32768,-4096,0,4096,32767
+field 021F5C78 54005B2C u32 0x57000000
+field 021F5C78 57000314 f32 -1,0,1
+field 021F5C78 57000318 f32 -1,0,1
+field 021F5C78 5700031C f32 -1,0,1
+callee 0200F93C r3=12 r4=12
+callee 02543714 r4=12
+# Existing PSMTXMultVec r4=12 input remains; output r5 requires out12 semantics,
+# not incoming-content comparison; reuse owner-supported output metadata only.
+
+field 021F8F8C r3+0x9C5 u8 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,127,128,255
+ret 02542D88 -1,0,1,2,2147483647
+ret 0254407C 0,1,-1
+field 021F5568 r3+0xF8 u16 0,1,2,3,65535
+field 021F5568 r3+0x93C i16 -1,0,1,2,3
+field 021F5568 r3+0x9C0 u8 0,1,2,3,127,128,255
+field 021F7828 r3+0x9C0 u8 0,1,2,3,4,5,6,127,128,255
+field 021F7828 r3+0x9C5 u8 0,11,12,13,128,255
+# Indexed reads use guest byte addresses, not host array indexing. No new masks/stables.
+
+arg 021F4468 r4 0x57000000
+field 021F4468 r3+0x9BF u8 0,1,6,7,8,127,128,255
+field 021F4468 57000000 i8 -128,-1,0,1,6,7,8,127
+field 021F4468 57000004 f32 -1,0,0.5,1
+field 021F4468 57000008 f32 -1,0,0.5,1
+field 021F4468 5700000C i32 -1,0,1,2
+arg 021F70C0 r4 -128,-1,0,1,2,3,127
+field 021F70C0 r3+0x7F8 u32 0x58000000
+field 021F70C0 r3+0x326 i8 -128,-1,0,1,127
+# Existing getIDRes and event/item flag return steering retained.
+
+callee 021F3DC4 r4=8 # set_action reads two action words
+
+ret 025B7D90 0,1,2,-1
+ret 025B8B94 0,1,2,-1
+ret 021F3DC4 0,1,2,-1 # Caller result must remain normalized gate, not setter result.
+# Saved global 101F84DC must point to valid mapped object spanning +644.
+# talk_1 event-bit path: the game-info pointer is a live non-null object (image BSS is 0)
+field 021F98C4 101F84DC u32 0x5D100000
+
+arg 021F919C r4 -128,-1,0,1,2,3,4,5,6,7,127
+field 021F919C r3+0x9C1 u8 0,1,2,127,128,255
+field 021F919C r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8
+field 021F919C r3+0x9C5 u8 0,3,4,5,128,255
+ret 021F58D8 0,0x59000000
+field 021F919C 590003D6 u8 0,1,127,128,255
+# set_action (GHS pointer-to-member descriptors {i16 delta, i16 index, u32 func | i16 voffset at +6}):
+# index -1 = direct call through the u32, index 0/1 = virtual slot via the vtable at this+delta+voffset,
+# old index 0 = null descriptor. The u32 values are real in-unit functions (wait_action1/2) AND, read as
+# a voffset (their low half read as i16: -0x5E04/-0x5D48, plus delta 4) from the pinned `this`, point to
+# a mapped vtable fixture, so every combination of the independent lists below is a valid dispatch
+# (direct, virtual or null).
+arg! 021F3DC4 r3 0x5A008000
+arg! 021F3DC4 r4 0x59000000
+arg 021F3DC4 r5 0,0x59002000
+field 021F3DC4 5A0021FC u32 0x59001000
+field 021F3DC4 5A002200 u32 0x59001000
+field 021F3DC4 5A0022B8 u32 0x59001000
+field 021F3DC4 5A0022BC u32 0x59001000
+field 021F3DC4 59001004 u32 0x021FA1FC
+field 021F3DC4 5900100C u32 0x021FA2B8
+field 021F3DC4 r3+0x80C i16 0,4
+field 021F3DC4 r3+0x80E i16 -1,0,1
+field 021F3DC4 r3+0x810 u32 0x21fa1fc,0x21fa2b8
+field 021F3DC4 59000000 i16 0,4
+field 021F3DC4 59000002 i16 -1,0,1
+field 021F3DC4 59000004 u32 0x21fa1fc,0x21fa2b8
+
+ret 021F8078 0,1,-1
+ret 021F80F8 0,1,-1
+ret 02055B64 0,1,-1
+ret 025B5D40 0,1,-1
+field 021F9358 r3+0x9C0 u8 0,1,2,3,4,127,128,255
+field 021F9358 r3+0x965 u8 0,1,128,255
+field 021F9358 r3+0x964 u8 0,1,128,255
+field 021F9424 r3+0x9C0 u8 0,1,2,3,4,127,128,255
+field 021F9424 r3+0x965 u8 0,1,128,255
+field 021F9424 r3+0x964 u8 0,1,128,255
+field 021F94FC r3+0x9C0 u8 0,1,2,3,4,127,128,255
+field 021F94FC r3+0x965 u8 0,1,128,255
+field 021F94FC r3+0x964 u8 0,1,128,255
+field 021F960C r3+0x9C0 u8 0,1,2,3,4,127,128,255
+field 021F960C r3+0x965 u8 0,1,128,255
+field 021F960C r3+0x964 u8 0,1,128,255
+field 021F94FC r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8
+
+callee 02520630 r4=out4 r5=out4 r6=out2
+ret 02520630 0,1,2,-1
+callee 025A847C r6=12 r7=6 stack=4
+callee 028249B0 r3=48 r4=out12 r5=out12
+callee 021F81C0 r4=out1
+ret 021F81C0 0,1
+ret 025B8BB0 0,1,2,4,8,16,32,64,128,255,256,0xFFFFFFFF
+arg 021F82C0 r4 0,1,255,256,65535
+arg 021F8314 r4 0,1,255,256,65535
+# Actual getMaskInf writes one byte only on success; failure never reads private mask.
+# Generic callee mock must initialize output on success; keep actual output binding if available.
+field 021F414C r3+0x326 i8 -128,-1,0,1,127
+field 021F4558 r3+0x326 i8 -128,-1,0,1,127
+field 021F4394 r3+0x326 i8 -128,-1,0,1,127
+field 021F4864 r3+0x99C u32 0,0x57000000
+field 021F4864 r3+0x9A0 u32 0,0x57000400
+field 021F4864 r3+0x44C u32 0x58000000
+field 021F4864 58000090 u32 0x58100000
+field 021F4864 5810002C u32 0x58200000
+field 021F4864 58200010 u32 0x58300000
+field 021F4864 58200004 u16 0,1,16,65535
+field 021F4864 r3+0x7E6 i8 0,1,2
+field 021F4864 r3+0x7E7 i8 0,1,2
+
+ret 025200D4 0x54000000
+field 021F8078 540052B0 u8 0,1,2,3,4,5,127,128,255
+field 021F8078 540052B1 u8 0,1,127,128,255
+ret 02544950 0,1,2,-1
+
+field 021F4D48 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9,127
+field 021F4D48 r3+0x9C5 i8 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+field 021F4D48 r3+0xB0 u32 0x00000000,0x00010000,0x00FE0000,0x00FF0000
+ret 021F3EF0 0,1,2,-1
+ret 021F3F8C 0,1,2,-1
+ret 021F4038 0,1,2,-1
+ret 021F40D4 0,1,2,-1
+ret 021F42B0 0,1,2,-1
+# Event table lookup precedes post-call unsigned range check; invalid eventType needs valid mapped guest lookup before steering.
+# Existing path call mock must cover null/non-null844 side effect. Do not waive untouched null-path branch.
+# Source port uses guest table reads; no host-local array bound assumption introduced.
+
+arg 021F8384 r4 0x57000000
+field 021F8384 57000000 u32 0x13EC 0x149D
+ret 025B5C54 0,1,2,-1
+field 021F8384 r3+0x950 u8 0,1,255
+field 021F8384 r3+0x951 u8 0,1,255
+# Saved object+BD count steering0,3,4,255 needs actual existing mapped saved pointer.
+# Message pointer valid4B; preserve actor alias cases when existing fixture supports them.
+
+ret 021F8190 0,1
+ret 025F795C 0,18,19,20
+field 021F98C4 r3+0x7CC u8 0,1,128,255
+# every message id of the talk_1 switch (+ neighbours/default)
+field 021F98C4 r3+0x7C0 u32 0x0,0x13EC,0x13EE,0x13EF,0x13F0,0x13F2,0x13F3,0x13F4,0x13F5,0x13F6,0x13F7,0x13F8,0x13F9,0x13FA,0x13FD,0x13FE,0x13FF,0x1403,0x1404,0x1405,0x1407,0x1408,0x1409,0x140A,0x140B,0x140C,0x140D,0x140E,0x140F,0x1410,0x1411,0x1412,0x1413,0x1414,0x141C,0x141D,0x141E,0x1425,0x1426,0x1427,0x1428,0x1429,0x142A,0x142B,0x142C,0x142E,0x142F,0x1430,0x1431,0x1432,0x1433,0x1450,0x1482,0x1483,0x1484,0x1485,0x1486,0x1488,0x1489,0x148A,0x1492,0x1493,0x1494,0x149C,0x149D,0x149E,0xFFFFFFFF
+field 021F98C4 r3+0x9C2 i8 -128,-1,0,1,2,3,4,5,6,127
+# Existing player025200D4 fixedpointer retained; branch1429 writes guest player+5B72 u16.
+
+field 021F9844 r3+0x9B8 u8 0,1,2,127,128,255
+field 021F9844 r3+0x370 f32 -2,-1,-0.99,-0.5,0,0.5,0.99,1,2
+field 021FA138 r3+0x9BA u8 0,1,2,127,128,255
+field 021FA138 r3+0x849 u8 0,1,2,127,128,255
+arg 021F9114 r4 0,1,2,127,128,254,255
+field 021F9114 r3+0x844 u32 0,0x59000000
+ret 0259EDB8 0,1,2,127,128,255,256
+# Existing callee0259E778 r4=out12 metadata retained; do not redeclare as input12.
+
+ret 024EDFCC 0,1,2,-1
+ret 024EC8D0 0,0x51000000,0x52000000
+ret 024EE464 0,0x51000000,0x52000000
+# Selected target must include exact current actor EA via existing identity steering, not guessed0x51000000.
+arg 021F9114 r4 0,1,2,127,254,255
+field 021F9114 r3+0x844 u32 0,0x57000000
+ret 0259EDB8 0,1,2,127,254,255,256
+callee 0259E778 r4=out12
+# Output-only12 contract already owner-checked in MOV; do not compare uninitialized incoming bytes.
+
+ret 027F2BF8 0,1,2,-1
+field 021F6818 r3+0x94C i8 -128,-1,0,1,127
+field 021F6874 r3+0x9BA i8 -128,-1,0,1,127
+field 021F6874 r3+0x95A u8 0,1,255
+field 021F6874 r3+0x849 u8 0,1,127,255
+callee 0259E778 r4=out12
+field 021F68F8 r3+0x9BC i8 -128,-1,0,1,2,3,4,5,6,7,8,9,127
+ret 021F6504 0,1,2,-1
+ret 021F6558 0,1,2,-1
+ret 021F65A4 0,1,2,-1
+ret 021F6818 0,1,2,-1
+ret 021F6874 0,1,2,-1
+# Valid morf+98/path receiver needed; output-only12 contract reused from owner-checked MOV.
+
+arg 021F7FB0 r4 0,1,6,14,65535
+field 021F7FB0 r3+0x9C7 i8 -128,-1,0,1,127
+field 021F7FB0 r3+0x9BE u8 0,1,10,255
+field 021F7FB0 54005BC5 u8 0,1,6,10,255
+field 021F7FB0 54005BC6 u8 0,1,10,255
+
+arg 021F6980 r4 -1,0,1,2,255,2147483647
+ret 02542EDC -1,0,1,127,128,255,256
+ret 025447C8 0,1,2,-1
+ret 021F68F8 0,1,2,-1
+# getMyStaffName-like string pointer101BBE9C is actual image; use existing string metadata if required.
+# Need owner fixture side effects for6114/447C8 writes to9BB if comparing callback reload branches.
+
+field 021F7944 r3+0x80C i16 0
+field 021F7944 r3+0x80E i16 -1
+field 021F7944 r3+0x810 u32 0x021FA1FC
+field 021F7944 r3+0x9C4 i8 0 8
+ret 021F563C 0,1
+ret 021F7270 0,1
+ret 021F5714 -1,0,1
+field 021F7944 54005292 u8 0,1
+field 021F7944 r3+0x95E u8 0,1
+field 021F7944 r3+0x954 u8 0,1
+field 021F7944 r3+0x2DC u8 0,1
+field 021F7944 r3+0x95C u8 0,1
+field 021F7944 r3+0x967 u8 0,1
+field 021F7944 r3+0x956 u8 0,1
+field 021F53D8 r3+0xF4 u32 0,0x58000000
+field 021F53D8 r3+0x44C u32 0,0x58000000
+field 021F53D8 r3+0x7F8 u32 0,0x58000000
+field 021F7C74 r3+0x44C u32 0x58000000
+field 021F7C74 58000090 u32 0x58100000
+field 021F7C74 r3+0x7F8 u32 0x58000000
+field 021F7C74 r3+0x9C4 i8 0 8
+field 021F7C74 r3+0x954 u8 0,1
+field 021F7C74 r3+0x955 u8 0,1
+field 021F7C74 r3+0x95C u8 0,1
+field 021F7C74 101FDA50 u32 0,1
+field 021F7C74 101FDAC0 u32 0,1
+field 021F7C74 101FDA48 u32 0,1
+field 021F7C74 101FDA44 u32 0,1
+
+arg 021F594C r4 0,0x57000000
+field 021F594C 57000000 u32 0,1,2,4294967295
+arg 021F594C r5 -32768,-1,0,1,32767
+arg 021F4914 r4 0,1
+field 021F4914 r3+0x9C4 i8 0 8
+field 021F4914 r3+0x960 u32 0,1,4294967295
+
+field 021F5220 r3+0x2E4 u32 0,1,8,9,4294967295
+field 021F5220 r3+0xB3 u8 0,1,2,127,128,255
+field 021F5220 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8
+field 021F5220 r3+0x44C u32 0x59000000
+field 021F5220 59000090 u32 0,0x59001000
+ret 02520460 -1,0,1,2,3,4,5
+ret 021F3C28 0,1
+ret 025D63E8 0,1
+ret 021F4D48 0,1
+# Heap callback argument exact021F3C24 already declared own CheckCreateHeap target.
+
+ret 021F908C 0,1,2,-1
+field 021FA1FC r3+0x9C6 i8 -128,-1,0,1,2,3,4,127
+field 021FA1FC r3+0x9C1 i8 -128,-1,0,1,2,3,4,5,6,7,8,9,127
+field 021FA2B8 r3+0x9C6 i8 -128,-1,0,1,2,3,4,127
+field 021FA2B8 r3+0x9C1 i8 -128,-1,0,1,2,3,4,5,6,7,8,9,127
+field 021FA398 r3+0x9C6 i8 -128,-1,0,1,2,3,4,127
+field 021FA398 r3+0x9C1 i8 -128,-1,0,1,2,3,4,5,6,7,8,9,127
+field 021FA478 r3+0x9C6 i8 -128,-1,0,1,2,3,4,127
+field 021FA478 r3+0x9C1 i8 -128,-1,0,1,2,3,4,5,6,7,8,9,127
+ret 021F9358 0,1,2,-1
+ret 021F9424 0,1,2,-1
+ret 021F94FC 0,1,2,-1
+ret 021F960C 0,1,2,-1
+ret 021F9728 0,1,2,-1
+ret 021F9844 0,1,2,-1
+ret 021F98C4 0,1,2,-1
+ret 021FA138 0,1,2,-1
+# Incomingr4 ignored. State capturedafterattentioncall; initializer maychangephase before reload/increment.
+ # Existing callbacks remain owner mocks unless actualbinding enabled.
+
+callee 028E90D4 r3=48 r4=out48
+arg 021F4974 r4 0,1
+field 021F4628 r3+0x44C u32 0x58000000
+field 021F4628 r3+0x7F8 u32 0x58400000
+field 021F4628 58000090 u32 0x58100000
+field 021F4628 5810002C u32 0x58200000
+field 021F4628 58200010 u32 0x58300000
+field 021F4628 58400090 u32 0x58500000
+field 021F4628 5850002C u32 0x58600000
+field 021F4628 58600010 u32 0x58700000
+field 021F4628 r3+0x7FC i8 0,1,2
+field 021F4628 r3+0x7E4 i8 0,1,2
+field 021F4628 r3+0x7E6 i8 0,1,2
+field 021F4628 r3+0x7E7 i8 0,1,2
+field 021F4798 r3+0x44C u32 0x58000000
+field 021F4798 r3+0x7F8 u32 0x58400000
+field 021F4798 58000090 u32 0x58100000
+field 021F4798 5810002C u32 0x58200000
+field 021F4798 58200010 u32 0x58300000
+field 021F4798 58400090 u32 0x58500000
+field 021F4798 5850002C u32 0x58600000
+field 021F4798 58600010 u32 0x58700000
+field 021F4798 r3+0x7FC i8 0,1,2
+field 021F4798 r3+0x7E4 i8 0,1,2
+field 021F4798 r3+0x7E6 i8 0,1,2
+field 021F4798 r3+0x7E7 i8 0,1,2
+field 021F4974 r3+0x44C u32 0x58000000
+field 021F4974 r3+0x7F8 u32 0x58400000
+field 021F4974 58000090 u32 0x58100000
+field 021F4974 5810002C u32 0x58200000
+field 021F4974 58200010 u32 0x58300000
+field 021F4974 58400090 u32 0x58500000
+field 021F4974 5850002C u32 0x58600000
+field 021F4974 58600010 u32 0x58700000
+field 021F4974 r3+0x7FC i8 0,1,2
+field 021F4974 r3+0x7E4 i8 0,1,2
+field 021F4974 r3+0x7E6 i8 0,1,2
+field 021F4974 r3+0x7E7 i8 0,1,2
+field 021F4628 r3+0x9BF i8 0,4,7,11
+field 021F4628 r3+0x9B9 i8 0,1,-1
+field 021F4628 r3+0x94C i8 0,1,-1
+field 021F4628 r3+0x998 u32 0,0x57000000
+field 021F4628 r3+0x340 f32 -1,0,1
+field 021F4628 5800009C f32 -1,0,1,10,100
+field 021F4628 580000A2 i16 -32768,-1,0,1,32767
+field 021F4974 r3+0x967 u8 0,1
+field 021F4974 r3+0x95D u8 0,1
+field 021F4974 r3+0x7EC u32 0,0x58800000
+field 021F4974 r3+0x7F0 u32 0,0x58900000
+field 021F4974 r3+0x7E8 u32 0x58A00000
+
+field 021F54FC r3+0x9C6 i8 -1,0,1,2,4
+field 021F54FC r3+0x9C5 i8 -1,0,1,4,5
+ret 021F5450 0,1
+field 021F7604 r3+0x9B9 i8 -1,0,1,2
+field 021F7604 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+
+field 021F563C r3+0x2DC u8 0,1,2,31,32,33,255
+field 021F563C r3+0x967 u8 0,1,2,255
+field 021F78B0 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+field 021F6E20 r3+0x9B8 i8 -1,0,1,2,3
+field 021F6E20 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+
+callee 021F5794 r4=out12 r5=12 r6=6
+field 021F7684 r3+0x95A u8 0,1,2
+field 021F7684 r3+0x9B9 i8 -1,0,1,2,3
+field 021F7684 r3+0x9BA i8 -1,0,1,2
+field 021F7684 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+field 021F7684 r3+0x478 u32 0,0x20,0xFFFFFFFF
+ret 021F6F40 0,1,2,3
+ret 0273AD10 0,0x66000000
+
+field 021F6CC4 r3+0x93C i16 -1,0,1,2,3
+ret 025440C8 0,1
+ret 0259F858 0,1
+field 021F9728 r3+0x9B8 i8 -1,0,1,2
+field 021F9728 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+ret 02055B64 0,1
+ret 025D8E6C 0,0x67000000,0x67001000,0x67002000,0x67003000
+# Review callee footprints: seed creation args include input position12/angles6/scale12.
+
+callee 025D8E6C r3=12 r6=6 r7=12
+
+# Native0201A478 writes all6 anglebytes;0201ADE0 writes12 destinationbytes, inputs r3/r5.
+callee 0201A478 r3=out6
+callee 0201ADE0 r3=12 r4=out12 r5=12
+
+field 021F6A54 r3+0x9C3 i8 -1,0,1,2,3,4
+field 021F6A54 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+field 021F6A54 r3+0x3B6 u8 0,1,2
+ret 0259E838 0,1
+ret 0259ED58 0,1
+# Existing pointer/fixture defaults must cover +844path,+5flags and output guest vectors.
+
+# Native0259D54C writes all12 destinationbytes before caller consumes vector.
+callee 0259D54C r3=out12
+
+callee 021F590C r4=4
+field 021F590C r4+0 u32 0,1,2,3,0xFFFFFFFF
+field 021F65A4 r3+0x9B9 i8 -128,-1,0,1,2,127
+
+callee 025D54C4 r4=out4
+field 021F6504 r3+0x940 i16 -32768,-1,0,1,32767
+field 021F6558 r3+0x940 i16 -32768,-1,0,1,32767
+field 021F6504 r3+0x3B6 u8 0,1,2,255
+field 021F6558 r3+0x95A u8 0,1,2,255
+ret 021F58D8 0,0x67000000
+
+field 021F5998 r4+0 u32 0,1,2,3,4,5,6,7,8,0xFFFFFFFF
+field 021F7270 r3+0x9B8 i8 -1,0,1,2,3,4,5,6,7,8
+field 021F7270 r3+0x959 u8 0,1,2
+field 021F7270 r3+0x9C4 i8 -1,0,1,2,3,4,5,6,7,8,9
+ret 0254487C 0,0x68000000
+field 021F6114 68000000 u32 0,1,2,3,4,5,6,7,8,9,10,255
+
+ret 0273AD10 0,0x69000000
+arg 021FA6C4 r4 0,1,2,3,0xFFFFFFFF
+arg 021FA6D8 r4 0,1,2,3,0xFFFFFFFF
+# Review nullable rootstorage and destructor subobject writable footprints.
+# Actual memcpy_g imported boundary remains observable, no local copy substitution.
+
+arg 021FA534 r3 0,0x69000000
+arg 021FA574 r3 0,0x69000000
+arg 021FA6C4 r3 0,0x69000000
+arg 021FA6D8 r3 0,0x69000000
+
+# coverage steering: searchActor_Jb registration path (profile 0xD5 actor with +3D4 set, list not full)
+field 021F2D78 r3+0x8 i16 0xD5,0xD4,0xD6,0
+field 021F2D78 r3+0x3D4 u8 0,1,255
+field 021F2D78 10465D78 i32 0,1,19,20,21
+# eInit_calcRelativPos: null destination allocates a new 12-byte vector (operator new 0 / non-null)
+arg 021F5794 r4 0,0x5B000000
+arg 021F5794 r5 0,0x5B000100
+# Uncovered, infeasible: create_itm_Mdl block 2 (needs table A[type] < 0 and table B[type] >= 0, true only
+# for type 9; charDecide yields -1..8), _execute block 26 (float >= 2^31 after a clamp to [0,100]),
+# _draw block 19 (second test of the same static guard just set to 1).
+# Mutation: whole unit 146 compiled / 123 killed / 23 survived; after the talk_1 message-id
+# and game-info steering, talk_1 alone (n=10000) 66/56/10. All survivors classified equivalent: switch case
+# lines swapped, swapped independent loads/stores or host-local flags, `row + 0`, dead default (types 0..16
+# all handled), extra unused read, store moved across endEvent (which writes only +9BD / player+52B8), reloads
+# of pointers no callee changes (morf +44C, game info 101F84DC, demo manager after the assert call 0273AA24),
+# and _execute's >= 2^31 branch / _draw's second guard test (infeasible, see above).

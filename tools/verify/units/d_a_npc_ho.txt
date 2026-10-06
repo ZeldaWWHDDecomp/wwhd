@@ -1,0 +1,61 @@
+# Verification unit: d_a_npc_ho (Mrs. Marie, Windfall teacher)
+src wwhd_src/d/actor/d_a_npc_ho.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 0200FCD8 r3=12 r4=out12  # MtxPosition
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r6=12         # lookAtTarget (eye copy)
+callee 020182E0 r4=12         # cM3dGCyl::SetC (center copy)
+ret 025200D4 0x54000000 0x54000000
+ret 025B8B94 0 1              # dSv_event_c::isEventBit
+ret 02556D14 0 1              # dKy_daynight_check
+ret 02556BC0 0 1              # dKy_checkEventNightStop
+ret 025B8BB0 0,1,0x27,0x28,0x62,0x63,0x64  # dSv_event_c::getEventReg
+# next_msg_sub0
+field 0223F8E4 r3+0x803 u8 0 1
+arg 0223F8E4 r4 0x2711,0x2712,0x2713
+# next_msgStatus
+field 0223FAB8 r4+0 u32 0x2711 0x275E
+field 0223FAB8 r3+0x803 u8 0 2
+ret 025B8BB0 0,1,0x27,0x28,0x62,0x63,0x64
+field * 101F84DC u32 0x55000000,0x55000000
+field * 550000C3 u8 0,1,2,3,4,5,6,0x13,0x14,0x15
+# msgPushButton
+field 0223FF20 r3+0x7FC u32 0x2711 0x272C
+# getMsg
+field 0223FFB4 r3+0x81B i8 0 5
+field 0223FFB4 540052B1 u8 0x1F,0x1F,0x1F,0
+# talk
+field 022401E8 r3+0x81F i8 -1 2
+field 022401E8 104671AC u32 0xFFFFFFFF,5
+ret 025F795C 0xE,0xF,0x12,0x13
+field 022401E8 r3+0x7FC u32 0x273B,0x273E,0x274D,0x2755,0x2712
+ret 02007898 0 1
+ret 020078BC 0 1
+# talk01 / talk03
+ret 022401E8 0x12,0x12,0xFF,0xE
+field 02240844 r3+0x806 u8 0xFF,4
+field 022406E4 r3+0x800 u16 0 0x3F
+# _create
+arg 0223ED9C r3 0,0x5A000000
+ret 02520460 0,4,5
+field 0223ED9C r3+8 i16 0x16E,0x16E,0
+field 0223ED9C r3+0x2E4 u32 0,8
+ret 025D63E8 0 1
+ret 0223EB98 0 1
+# mutation-driven steering
+field 0223EB98 r3+0x81D u8 0,0,1
+field 0223EB98 r3+0x810 i16 0,0,1
+field 0223EB98 r3+0x812 i16 -1,-1,0,1
+field 0223EB98 r3+0x814 u32 0x02240B18,0x02240B18,0x0223F11C
+arg 0223FF58 r4 3,4,5,6,0xFF
+field 0223FF58 r3+0x804 u8 4,5,6
+field 0223E47C r3+0x7F7 u8 0xFE,0xFF,1
+field 0223E47C 104B462C u32 0x60000000,0x60000000
+field 0223E47C 600000B8 u32 0x61000000,0
+field 0223E47C 610007F7 u8 0xFE,0xFF,1
+field 0223F2D0 r3+0x819 i8 2,3,4
+field 0223F2D0 r3+0x805 u8 0,1,2,3
+ret 025E535C 0 1
+field 0223F2D0 r3+0x7F6 i8 0,1
+stackfill

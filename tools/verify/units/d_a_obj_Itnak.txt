@@ -1,0 +1,16 @@
+# Verification unit: d_a_obj_Itnak (unused Darknut statue)
+src wwhd_src/d/actor/d_a_obj_Itnak.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0255F458 r3=12         # dKy_Sound_set: cXyz by value
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025162A4 0 1              # ChkTgHit
+ret 023657FC 0 1              # set_co_se
+ret 025BA0C0 0 1              # isSwitch
+field 02365728 r3+0x82C s32 0,1,2,-1
+field 02365728 r3+0x830 s32 0,1,2
+field 023658C4 r3+0x830 s32 0,1,2
+field 02365AD0 r3+0x830 s32 0,1,2
+callee 028E8F64 r4=12 r5=out12   # PSMTXMultVec: input vector compared, output filled
+field 02365418 r3+0x2E4 u32 0,8  # actor_condition: INIT bit clear/set (constructor path)

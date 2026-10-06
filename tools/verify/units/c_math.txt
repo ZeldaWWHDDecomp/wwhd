@@ -1,0 +1,4 @@
+src wwhd_src/SSystem/SComponent/c_math.cpp
+# Include equal-magnitude quadrant boundaries while retaining unsteered inputs.
+arg 020195B0 f1 -2,-1,0,1,2
+arg 020195B0 f2 -2,-1,0,1,2

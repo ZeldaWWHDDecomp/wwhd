@@ -1,0 +1,13 @@
+src wwhd_src/f_op/f_op_scene_req.cpp
+ret 025DBE64 0,1,2
+ret 025DBE38 0,1,2
+ret 025DBE1C 0,1,2
+ret 02019F74 0,1,2,3
+ret 025DBF3C 0,1
+arg 025DCE04 r7 0,1,32767
+ret 025E0840 0,268435456
+ret 025DBE80 0,268439552
+field 025DCE04 0x101F37E0 u32 0,1
+field 025DCCE0 r3+0x40 u32 0,1
+field 025DCD68 r4+0x64 u32 0,1
+field 025DCDB8 r3+0x64 u32 0,1

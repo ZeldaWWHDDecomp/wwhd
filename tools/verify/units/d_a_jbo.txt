@@ -1,0 +1,24 @@
+# Verification unit: d_a_jbo (Baba Bud)
+src wwhd_src/d/actor/d_a_jbo.cpp
+
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(src, dst out)
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 02516464 0 1                    # ChkCoHit
+ret 025B8B94 0 1                    # isEventBit
+# nodeCallBack: the joint number (9 = J_JH_ME_E)
+ret 027F7878 0x58000000 0x58000000
+field 021843F4 58000004 u16 9,9,8
+arg 021843F4 r4 0 1
+# Execute: mode, type, frames
+field 021846B8 r3+0x3D4 u8 0,1,2,3,3
+field 021846B8 r3+0x3D7 u8 0,0,0,1
+field 021846B8 r3+0x3D8 u8 0,1,2,3
+field 021846B8 r3+0x3DA i16 0,1,1,2,70
+field 021846B8 54005CD8 u32 0,0x80,0x80000000,0x80000080
+ret 025200D4 0x54000000 0x54000000
+field 0218448C r3+0x3DE i16 0,0,1,200
+field 02184BE8 r3+0xB3 u8 0,1,2,3,0xFF
+field 02184BE8 1047BB1A i16 0,0,0,1
+field 02184BE8 r3+0x2E4 u32 0,8

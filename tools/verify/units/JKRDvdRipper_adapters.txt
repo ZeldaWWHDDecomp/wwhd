@@ -1,0 +1,28 @@
+src wwhd_src/JKRDvdRipper_adapters.cpp
+# Bounded native DVD buffers and output lengths; SDK calls do not overwrite private stream state.
+stable 104A2380 56
+field * 101F9730 u8 0 1
+field * 101F974C u32 64 128
+field * 101F9750 u8 0 1
+arg! 027EAE70 r3 0x22000000
+arg! 027EAE70 r4 0x24000000
+arg! 027EAE70 r5 32 256
+arg! 027EAE70 r6 1 256
+arg! 027EAE70 r7 0,1,2,16,128
+arg! 027EAE70 r8 0,32
+arg! 027EAE70 r9 0,0x26000000
+ret! 027EC0B4 0,0x28000000,0x29000000
+ret! 0284B6EC -3,-1,0,32
+ret! 028428FC 0,1,2,3,4
+mockfield 0284B6EC r4+0 u32 0x59617A30,0x59617930,0x59617A31,0x59627A30,0
+mockfield 0284B6EC r4+4 u32 1,2,16,32,128,256
+mockfield 0284B6EC r4+16 u8 0,128,255
+mockmove C000A848 r3 r4 r5
+
+# Supplemental loader ownership and allocation-failure paths.
+arg! 027EB5F4 r4 0,0x24000000
+arg! 027EB5F4 r5 0,1,2
+arg! 027EB5F4 r6 0,1,32,128
+arg! 027EB5F4 r8 0,1,2
+arg! 027EB5F4 r9 0,32
+ret! 027EC0D8 0,0x2A000000,0x2B000000

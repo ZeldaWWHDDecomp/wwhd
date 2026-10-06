@@ -1,0 +1,72 @@
+# Temporary unit: d_a_bk Bk_move (merged into d_a_bk.txt later)
+src wwhd_src/d/actor/d_a_bk_move.cpp wwhd_src/d/actor/d_a_bk_pending.cpp
+
+callee 026066C4 r4=8        # getRes: SafeString
+callee 028E8DD0 r3=12       # PSVECSquareMag
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+callee 0201ADE0 r4=out12    # cXyz::operator-
+ret 025D4604 0 1
+ret 025200D4 0x54000000 0x54000000
+
+# Bk_move steering
+field 020A5EF4 r3+0x4A0 i16 -101,-100,-99,-20,-19,-18,-1,0,1,2,3,-1,0,1,2,3,-1,0,1,2,3,4,10,11,20,50,51,52,53,54,60,1,2,2,3,5,30,-5   # dr.mMode (weighted)
+field 020A5EF4 r3+0x4A2 i16 0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,3,3,3,3,3,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32   # dr.mAction (weighted)
+field 020A5EF4 r3+0x95A i16 0,0,0,1,2   # dr.m48A
+field 020A5EF4 r3+0x958 i16 0 1         # dr.m488
+field 020A5EF4 r3+0x138C i8 0 2         # m122C
+field 020A5EF4 r3+0x3D0 u8 0,0,0,0,0,4,6,9,10   # mType
+field 020A5EF4 r3+0xC90 i32 0 1         # m0B30
+field 020A5EF4 r3+0x1353 u8 0 1         # m11F3
+field 020A5EF4 r3+0x1374 i8 0 1         # m1214
+field 020A5EF4 r3+0x137F i8 0 1         # m121F
+field 020A5EF4 r3+0x1375 i8 0 1         # m1215
+field 020A5EF4 r3+0x1376 i8 -1 4        # m1216
+field 020A5EF4 r3+0x1377 i8 -1 1        # m1217
+field 020A5EF4 r3+0x1378 u32 0x51000000 0x51000000   # ppd
+field 020A5EF4 51000000 u16 1 5         # m_num
+field 020A5EF4 51000002 u16 0xFFFE 0xFFFF  # m_nextID
+field 020A5EF4 51000005 u8 0 1          # m_closed
+field 020A5EF4 51000008 u32 0x52000000 0x52000000
+field 020A5EF4 52000003 u8 2 3          # point args
+field 020A5EF4 52000013 u8 2 3
+field 020A5EF4 52000023 u8 2 3
+field 020A5EF4 52000033 u8 2 3
+field 020A5EF4 52000043 u8 2 3
+field 020A5EF4 r3+0x41A i16 0,0,1,9,10,25,26,30   # m0300[1]
+field 020A5EF4 r3+0x41C i16 0 1         # m0300[2]
+field 020A5EF4 r3+0x41E i16 0,0,1,20,40 # m0300[3]
+field 020A5EF4 r3+0x420 i16 0 1         # m0300[4]
+field 020A5EF4 r3+0x1372 i16 0 20       # m1212
+field 020A5EF4 r3+0x422 i16 0 1         # m030A
+field 020A5EF4 r3+0x3D8 u32 0x50000000 0x50000000   # mpMorf
+field 020A5EF4 5000009C f32 3,11,25,53,0   # frame
+field 020A5EF4 50000098 f32 0,0,1,0.5   # rate
+field 020A5EF4 500000A7 u8 0 1          # state
+field 020A5EF4 r3+0xA14 u32 0,0x10,0x20,0x30   # dr.mAcch flags
+field 020A5EF4 r3+0x948 f32 -50,-40,-39.5,0,39.5,40,40.5,50   # dr.m478 (|x| > 40)
+field 020A5EF4 r3+0x340 f32 -60,-50.5,-50,0   # speed.y (< -50)
+field 020A5EF4 r3+0x3FA i8 0 1          # m02DE
+field 020A5EF4 r3+0x3F8 u8 0 1          # m02DC
+field 020A5EF4 r3+0x3D1 u8 0,10,255     # m02B5
+field 020A5EF4 r3+0x137E i8 2 3         # m121E
+field 020A5EF4 r3+0x1384 i16 -1 1       # m1224
+field 020A5EF4 r3+0x1388 i16 -1 1       # m1228
+field 020A5EF4 r3+0x138A i16 -1 1       # m122A
+field 020A5EF4 r3+0x136C i32 0 1        # m120C
+field 020A5EF4 r3+0x1370 u8 0 2         # m1210
+field 020A5EF4 r3+0x1380 u32 0,0x56000000   # mpSearchLight
+field 020A5EF4 1046232D i8 0 1          # search_sp
+field 020A5EF4 1046238C f32 500 500     # HIO m028
+field 020A5EF4 104623B8 f32 50 50       # HIO m054
+field 020A5EF4 104623B0 f32 12 12       # HIO m04C
+field 020A5EF4 104623B4 f32 60 60       # HIO m050
+fret 028F4384 0 800                     # std_sqrtf
+fret 020198D8 0 1                       # cM_rndF
+ret 025D9DA0 0 1                        # fopAcM_otoCheck
+ret 0209B05C 0 1                        # daBk_player_view_check
+ret 0209AE40 0 1                        # daBk_bomb_view_check
+ret 0209AB64 0 1                        # daBk_wepon_view_check
+ret 0209A29C 0 1                        # ground_4_check
+ret 025160DC 0 1                        # ChkAtHit
+ret 025DE508 0 1                        # fpcM_Search (0 = none)
+ret 025AAF88 0 1                        # dPath_GetRoomPath (0 = assert path)

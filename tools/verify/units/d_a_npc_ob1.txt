@@ -1,0 +1,61 @@
+# Verification unit: d_a_npc_ob1 (Rose, Outset)
+src wwhd_src/d/actor/d_a_npc_ob1.cpp
+
+callee 026067F4 r4=8                # getIDRes: SafeString key
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 0273AD10 0 0x60000000           # operator new
+callee 025D54C4 r4=out4             # fopAcM_SearchByID(id, &actor)
+callee 0259DED0 r6=12               # lookAtTarget: eye position copy
+callee 0259E838 r4=12               # chkPointPass: position copy
+callee 0259E778 r4=out12            # getPoint: result
+callee 0259D54C r3=out12            # dNpc_playerEyePos: result
+callee 0201ADE0 r4=out12            # cXyz::operator-
+callee 0200F93C r4=12               # cLib_targetAngleY(pos, copy)
+ret 025200D4 0x54000000 0x54000000  # play
+ret 025F795C 0,0x13,0x13,2,6        # fopMsgM_SearchByID: message status
+# searchActor_Kb: pig count, PROC_KB, the pig's bit
+field 022A6038 10467D30 i32 0,5,19,20,21
+field 022A6038 r3+8 i16 0xDC,0xDC,0xDC,0xDD
+field 022A6038 r3+0x74D u8 0,1,0x40
+# chg_anmAtr: the message number
+field 022A8178 r3+0x93C u32 0xFFFFFFFF,0xAFB,0xAFC,0xAFD,0xAFE,0xAFF,0xB02,0xB04,0xB05,0xB06,0xB07,0xB09,0xB0B,0xB0C,0xB0D,0xB0E,0xB5C,0xB5D,0xB61,0xB63,0xB64,0xB65,0xB66,0xB03,0xB08,0xB60
+arg 022A8178 r4 0,3,6,7,8,0xFF
+# anmAtr / manzai: this is the talk partner (play+0x5C30 list)
+arg 022A82E0 r3 0x40000000
+arg 022A9610 r3 0x40000000
+field 022A82E0 54005C34 i32 1,1,2
+field 022A82E0 54005C38 u32 0x40000000,0x40000000,0
+field 022A9610 54005C34 i32 1,1,2
+field 022A9610 54005C38 u32 0x40000000,0x40000000,0
+field 022A82E0 r3+0x7D8 u8 0,2,2,3
+arg 022A82E0 r4 6,6,0xE,0,7
+field 022A82E0 r3+0x97B i8 0,0,1
+field 022A82E0 54005BC6 u8 0xFF,0,1,2
+field 022A82E0 r3+0x971 u8 0,1,0xFF
+field 022A9610 r3+0x7D8 u8 0,1,2,2,3
+field 022A9610 r3+0x970 u8 0xFF,0,3
+# next_msgStatus: the message number
+field 022A8498 r4+0 u32 0xA8C 0xAAF
+# talk_1
+field 022A93A8 r3+0x974 i8 0,0,2,1,3
+field 022A93A8 r3+0x7CC u8 0,1,1
+field 022A93A8 r3+0x95D u8 0,1
+field 022A93A8 r3+0x7C8 u32 0xFFFFFFFF,0xFFFFFFFF,5
+field 022A93A8 r3+0x95A i8 0,0,1
+field 022A93A8 r3+0x7C0 u32 0xA8E,0xAA7,0xAA8,0xAA9,0xAAC,0xAAD,0
+field 022A93A8 r3+0x95C u8 0,1
+field 022A93A8 r3+0x979 i8 0,0,1
+# wait_action1/2: the step and the state
+field 022A9730 r3+0x97A i8 0,1,1,1,3,4,-1
+field 022A9730 r3+0x975 i8 0 7
+field 022A9824 r3+0x97A i8 0,1,1,1,3,4,-1
+field 022A9824 r3+0x975 i8 0 7
+# setStt: the state (block 5 of 022A8DCC is a dead fallthrough of the GHS switch)
+arg 022A8DCC r4 -1 8
+field 022A71A4 r3+0xF8 u16 0,1,1,2,2,3
+field 022A71A4 r3+0x974 i8 0,1,2,3
+callee 028E8DD0 r3=12               # PSVECSquareMag: the vector
+field 022A8244 r3+0x970 u8 3,3,6,6,0,7
+field 022A8244 r3+0x954 i8 0,1,1

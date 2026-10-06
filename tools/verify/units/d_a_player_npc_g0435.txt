@@ -1,0 +1,101 @@
+# SOURCE-ONLY PROPOSED UNIT; no build, comparison, coverage or acceptance result.
+# Install cpp/header together into owned actor directories before using this src path.
+src wwhd_src/d/actor/d_a_player_npc.cpp
+
+# Broad ordinary mocks retain default epoch clobbering and documented escape cases.
+# Equal endpoints are intentional: a single-valued ret directive is ignored.
+ret 025200D4 0x54000000 0x54000000
+field * 101F84DC u32 0x53000000 0x53000000
+field * 101F8344 u32 0,0x59000000
+field * 59000218 u32 0,0x5A000000
+ret 0273AD10 0,0x50000000
+ret 024EF0BC 0,4
+ret 024EF130 -1,0,1,2
+ret 02542D88 -1,0,1
+
+# Caller-created Local packet: all 0x28 bytes remain input-observed.
+# This does not execute the judge callback or establish the actual iterator effects.
+callee 025D5218 r4=40
+
+# Native vector subtraction uses r4 as hidden result storage.
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 028E8F44 r3=12 r4=12
+# normalizeZP reads AND writes r3. Input observation retained; out12 on r3 would
+# suppress required inputs. Ordinary mock controls do not emulate actual r3 writes.
+callee 0201B3C0 r3=12 r4=out12
+callee 0201B080 r3=12 r4=out12 r5=12
+# pos2camera forwards input XYZ to native matrix multiply and returns output XYZ.
+callee 025F1108 r3=12 r4=out12
+# Home-position and save-position pointees passed by owned roots.
+callee 0200F9D4 r3=12 r4=12 r6=12
+callee 025B9834 r5=12
+callee 025B8880 r5=12
+
+# Initial steering, not stability declarations or complete path coverage recipes.
+arg 024450B4 r3 0,0x50000000
+arg 0244513C r3 0,0x50000000
+arg 0244513C r4 0,1,2,3
+arg 02444F74 r3 0,0x50000000
+arg 02444F74 r4 0x51000000 0x51000000
+field 02444F74 r3+0x8 s16 0,43,32767
+field 02444F74 r4+0x0 s16 0,43,32767
+field 02444F74 r4+0x1C f32 0 300
+field 02444F74 r4+0x20 f32 0 300
+arg 02445018 r4 0,43,32767
+arg 02445018 r5 0,0x51000000
+arg 02445018 f1 0 300
+field 024451B4 r3+0x2FE s8 -1,0,1
+field 024451B4 r3+0x4D0 f32 -1000000000,0,100
+field 024452A0 r3+0x326 s8 -1,0,1
+field 024452A0 r3+0x604 u8 0,29,30,31
+field * 1047E8E8 u8 0,16
+field * 1047EB14 u8 0,16
+field * 1047E6BC u8 0,16
+field * 54005B2C u32 0x55000000 0x55000000
+field * 550000F8 u16 0,1,3
+field * 53001149 s8 -1,0,1,2
+field * 5300114A s8 -1,0,1
+field * 5300114C s16 -1,0,1
+arg 02445398 r4 -1,0,1,2
+arg 02445438 r4 -1,0,1,2
+arg 02445518 r4 -1,0,1,2
+arg 02445518 r5 -1,0,1,2
+arg 02445784 r4 -1,0,1,2
+arg 0244586C r4 -1,0,1,2
+arg 0244586C r5 0,1
+field 0244586C 54005B38 u32 0,0x56000000
+field * 1046D330 u32 0,1
+field 02445950 54005292 u8 0,1
+field 02445950 r3+0xF8 u16 0,1,3
+field 02445950 r3+0x600 u32 0,1,2,3
+field 02445950 r3+0x2E0 u32 0,2048
+field 02445A00 r3+0x605 u8 0,1,255
+field 02445A00 101FF560 u32 0,1,31,32
+arg 02445AA4 r4 0,0x51000000
+ret 02445018 0,0x52000000
+
+# OPEN: stageVirtual slots44/54/16C need separately authenticated class/producer
+# fixtures and bounded count recipes. No invented fixed virtual targets supplied.
+# OPEN: broad float-return mocks exercise ordering; actual magnitude/normalization
+# producer closure is not established by these isolated controls.
+
+# Entry ABI: signed narrow parameters must be sign-extended by EABI callers.
+# Unnamed HD roots have no typed generator signature (xxxxxxxxxxx); constrain
+# only those entry registers to their complete legal signed domains.
+arg! 02445018 r4 -32768 32767
+arg! 02445398 r4 -128 127
+arg! 02445438 r4 -128 127
+arg! 02445518 r4 -32768 32767
+arg! 02445518 r5 -128 127
+arg! 02445784 r4 -128 127
+arg! 0244586C r4 -128 127
+
+# Directed overlapping readable-storage sensitivity case; no game lifecycle claim.
+arg! 02445398 r3 0x53000E50 0x53000E50
+arg! 02445398 r4 1 1
+field 02445398 53001149 s8 1 1
+field 02445398 5300114C s16 -1 -1
+field 02445398 53001150 u32 0x12345678 0x12345678
+field 02445398 53001154 u32 0x87654321 0x87654321
+field 02445398 53001158 u32 0x11223344 0x11223344

@@ -1,0 +1,10 @@
+src wwhd_src/f_op/f_op_overlap_req.cpp
+field 025DC164 r3+6 u16 0 2
+field 025DC164 r3 u8 0 255
+field 025DC344 r3+4 u16 0 2
+ret 025DF944 0 2
+ret 0201A308 0 1
+ret 025DD868 0 1
+ret 02019F74 0 5
+# Actual sampled boundary survivors require the largest accepted peek-time.
+arg 025DC334 r4 32766 32768

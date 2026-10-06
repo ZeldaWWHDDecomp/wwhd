@@ -1,0 +1,53 @@
+# hd_snd_0202EE08: TUs 0202EE08..020302E3 (two initialiser-only TUs, HD sound player); HD-only
+src wwhd_src/hd/hd_snd_0202EE08.cpp
+arg 0202F048 r3 0,0xFFFFFE00,0x65000000
+field * 101FD8C8 u32 0,1
+field * 101FD694 u32 0,1
+field 0202F2B8 101F8AE8 u32 0,0x66000000
+field 0202F2B8 r3+0xAD4 s32 0,1
+ret 0202F2B8 0,10,30,31,100,199,200,255
+ret 0202DB6C 0,0x67000000
+ret 02762C88 0,1,2
+# player-count loops: few players; the player's sound list (stable, 0..2 sounds)
+arg! 0202FA80 r3 0x60000000
+arg! 0202FBA8 r3 0x60000000
+arg! 0202FD40 r3 0x60000000
+arg! 0202FEF4 r3 0x60000000
+field * 6000001C u32 0,1,2
+stable 6000001C 4
+ret! 02893CE8 0x73000000,0x73000000
+field * 73000004 u32 0x73000004,0x73000100
+field * 73000100 u32 0x73000004,0x73000200
+field * 73000200 u32 0x73000004
+stable 73000004 4
+stable 73000100 4
+stable 73000200 4
+field 0202F41C r3+0x1C u32 0,1
+field 0202F41C r3+0x1F4 u8 0,1
+field 0202F41C r3+0x1F6 u8 0,1
+field 0202F41C r3+0x1F7 u8 0,1
+field 0202F41C r3+0x1F8 u8 0,1
+field 0202F41C r3+0x1FC u32 0,1,2
+field 0202F994 r3+0x1C u32 0,1
+field 0202F9E8 r3+0x1C u32 0,1
+field 0202FB98 r3+0x200 u32 0,1
+field 0202FC28 r3+0x200 u32 0,1
+# stop-by-id matching: keys and excluded handles
+field * 1018EDA4 u32 0,0x1234
+field * 1018EDA8 u32 0,0x55
+field * 1018EDAC u32 0,0x66
+field * 1018EDB0 u32 0,0x55
+field * 1018EDB4 u32 0,0x66
+field * 1018EDBF u8 0,1
+field 0202FC44 r3+0 u32 0,0x74000000
+field 0202FE78 r3+0 u32 0,0x74000000
+field * 74000268 u32 0x75000000
+field * 75000000 u32 0,0x1234
+field * 75000004 u32 0,0x55,0x66,0x77
+field * 740000FC u32 0,1
+# PLAYER_DRC_TV name comparison: the archive returns the same name, another name or the same pointer
+ret 0202DC64 0x100045AC,0x10004558,0x76000000
+field 0202FA80 76000000 u32 0x504C4159,0x41424300
+stable 76000000 8
+# the per-sound matcher may report a hit through 1018EDBE
+mockglobal 0202FC44 1018EDBE u8 0,0,1

@@ -1,0 +1,139 @@
+src wwhd_src/d/actor/d_a_boomerang.cpp
+arg! 020CC2EC r4 0 5
+field 020CC020 r3+0x26271 u8 0 5
+ret 0273AD10 0,0x58000000
+field 020CC328 r3+0x26271 u8 0 5
+field 020CC328 r3+0x264C2 s16 -1,0,1
+field 020CC2EC r3+0xF4 u8 0,24,25,26,255
+field 020CEB00 r3+0x26271 u8 0 5
+field 020CEB00 r3+0x26272 u8 0 5
+arg! 020CBB70 r5 0 4
+callee 025F1084 r3=out24
+callee 025F1018 r4=out12 r5=24
+field 020CBE34 r3+0x26271 u8 0 5
+field 020CBE34 r3+0x26272 u8 0 5
+
+callee C00060E0 r3=0 r4=0
+callee C0006900 r3=0 r4=0 r5=0
+callee C0006A38 r3=0 r4=0 r5=0
+callee C00068A8 r3=0 r4=0 r5=0
+callee C0006178 r3=0 r4=0 r5=0 r6=0 r7=0 r8=0
+
+field 020CFE74 r3+0x23ADC s32 0 1
+
+field 020D02FC r3+0x25B30 s32 0 1
+field 020D02FC r3+0x9A0 s32 0 1
+field 020D02FC r3+0xDBC s32 0 1
+field 020D02FC r3+0x11D8 s32 0 1
+field 020D02FC r3+0x15F4 s32 0 1
+field 020D02FC r3+0x1A10 s32 0 1
+
+field 020CDF78 r3+0x98 s32 -2 58   # trail segments: procWait steps 58,53,...,3,-2
+
+# Constructed render resources: finite counts, disjoint privately owned buffers.
+arg! 020D02FC r3 0x40000000 0x40000000
+arg! 020CFE74 r3 0x50000000 0x50000000
+arg! 020CDF78 r3 0x60000000 0x60000000
+stable 40025B30 4
+stable 400009A0 4
+stable 40000DBC 4
+stable 400011D8 4
+stable 400015F4 4
+stable 40001A10 4
+stable 50023ADC 4
+stable 60000098 4
+
+# Actual zero-clear wrapper forwards destination r3 and count r4.
+callee 028F521C r3=0 r4=0
+
+# ---- coverage steering ----
+# play object at a fixed address (1 input in 8 keeps a random pointer)
+ret 025200D4 0x54000000 0x54000000
+# start stage name vs "GanonK": first byte decides, byte 5 = 0 gives a late mismatch
+field 020CECF0 54005134 u8 0x47,0x48
+field 020CECF0 54005135 u8 0x61
+field 020CECF0 54005136 u8 0x6E
+field 020CECF0 54005137 u8 0x6F
+field 020CECF0 54005138 u8 0x6E
+field 020CECF0 54005139 u8 0x4B,0x4B,0x00
+field 020CECF0 5400513A u8 0
+# start stage name vs "GanonK": first byte decides, byte 5 = 0 gives a late mismatch
+field 020CC468 54005134 u8 0x47,0x48
+field 020CC468 54005135 u8 0x61
+field 020CC468 54005136 u8 0x6E
+field 020CC468 54005137 u8 0x6F
+field 020CC468 54005138 u8 0x6E
+field 020CC468 54005139 u8 0x4B,0x4B,0x00
+field 020CC468 5400513A u8 0
+field 020CECF0 54005CD8 u32 0,0x10000   # ship ride status bit
+# procWait rock-line branch: player, camera mode 0xB, player proc 0x80/0x8B, sight draw flag
+field 020CF4CC 54005B34 u32 0x56000000
+field 020CF4CC 560065F0 u32 0x80,0x8B,0x7F
+field 020CF4CC 560058EC u8 0,1
+ret 024F8044 0x5A000000 0x5A000000
+field 020CF4CC 5A00013C u32 0xB,0xB,0xA
+# setSight: null position
+arg 020CBB70 r4 0,0x70001000
+# rockLineCallback: target matches a lock slot, current lock index in range
+arg 020CC13C r4 0,0x70000000
+field 020CC13C r3+0x26272 u8 0 4
+field 020CC13C r3+0x26258 u32 0,0x70000000,0x70002000
+field 020CC13C r3+0x2625C u32 0,0x70000000,0x70002000
+field 020CC13C r3+0x26260 u32 0,0x70000000,0x70002000
+field 020CC13C r3+0x26264 u32 0,0x70000000,0x70002000
+field 020CC13C r3+0x26268 u32 0,0x70000000,0x70002000
+# texture cache compare (new texture == cached texture): equal/unequal per word
+field 020CC5EC r3+0x1A80 u32 0,0,0,1
+field 020CC5EC r3+0x1B10 u32 0,0,0,1
+field 020CC5EC r3+0x1A84 u32 0,0,0,1
+field 020CC5EC r3+0x1B14 u32 0,0,0,1
+field 020CC5EC r3+0x1A88 u32 0,0,0,1
+field 020CC5EC r3+0x1B18 u32 0,0,0,1
+field 020CC5EC r3+0x1A8C u32 0,0,0,1
+field 020CC5EC r3+0x1B1C u32 0,0,0,1
+field 020CC5EC r3+0x1A90 u32 0,0,0,1
+field 020CC5EC r3+0x1B20 u32 0,0,0,1
+field 020CC5EC r3+0x1A94 u32 0,0,0,1
+field 020CC5EC r3+0x1B24 u32 0,0,0,1
+field 020CC5EC r3+0x1AB4 u32 0,0,0,1
+field 020CC5EC r3+0x1B44 u32 0,0,0,1
+field 020CC5EC r3+0x1AB0 u32 0,0,0,1
+field 020CC5EC r3+0x1B40 u32 0,0,0,1
+field 020CC5EC r3+0x1A98 u32 0,0,0,1
+field 020CC5EC r3+0x1B28 u32 0,0,0,1
+field 020CCA50 r3+0x240B4 u32 0,0,0,1
+field 020CCA50 r3+0x23F1C u32 0,0,0,1
+field 020CCA50 r3+0x240B8 u32 0,0,0,1
+field 020CCA50 r3+0x23F20 u32 0,0,0,1
+field 020CCA50 r3+0x240BC u32 0,0,0,1
+field 020CCA50 r3+0x23F24 u32 0,0,0,1
+field 020CCA50 r3+0x240C0 u32 0,0,0,1
+field 020CCA50 r3+0x23F28 u32 0,0,0,1
+field 020CCA50 r3+0x240C4 u32 0,0,0,1
+field 020CCA50 r3+0x23F2C u32 0,0,0,1
+field 020CCA50 r3+0x240C8 u32 0,0,0,1
+field 020CCA50 r3+0x23F30 u32 0,0,0,1
+field 020CCA50 r3+0x240E8 u32 0,0,0,1
+field 020CCA50 r3+0x23F50 u32 0,0,0,1
+field 020CCA50 r3+0x240E4 u32 0,0,0,1
+field 020CCA50 r3+0x23F4C u32 0,0,0,1
+field 020CCA50 r3+0x240CC u32 0,0,0,1
+field 020CCA50 r3+0x23F34 u32 0,0,0,1
+# ---- mutation-gap steering ----
+# draw state object (0x11C bytes on the stack): compare/fill it whole
+callee 02750250 r3=out284
+callee 02750370 r3=284
+# cM3dGLin-style set(start, end): both points are cXyz
+callee 020181B0 r4=12 r5=12
+# setLockActor: null target (id 0xFFFFFFFF)
+arg 020CC020 r4 0,0x70000000
+# procMove steering-angle limit: free flight (mThirdPerson 0) and the factor == 18 boundary (distance == speed)
+field 020CEE10 r3+0x26273 u8 0,1
+fret 028F4384 0 60
+field 020CEE10 r3+0x370 f32 60,30
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020CECF0 0x54005134 8 @stages,"Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK"
+fieldstr 020CC468 0x54005134 8 @stages,"Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","Ganon","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","Hanon","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK","HanonK"

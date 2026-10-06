@@ -1,0 +1,58 @@
+src wwhd_src/d/actor/d_a_stone.cpp
+field * r3+0x78C s32 0 7
+stackfill
+
+# 0201AE48 copies three words to its r4 result; see saved disassembly.
+callee 0201AE48 r4=out12
+callee 026066C4 r4=8
+callee 0201A478 r3=out6
+callee 025A847C stack=4
+field * r3+0x790 s32 0 3
+
+# Drive loaded/failed model creation and actor phases explicitly.
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 0249AB20 0,1
+ret 0249E190 0,1,2,3,4,5,6,7,255
+# Bound repeated actor-side vtable dispatch to the four HD mode entries.
+field * 101F4F28 u32 0x59000000
+ret 025200D4 0x58000000 0x58000000
+# Sea-stage equality and finite nonzero stage culling distance.
+field 0249B2C4 58005134 u32 0x73656100,0x73656300,0x6E6F6E00,0x78656100
+field 0249B2C4 58005150 u32 0x10055C20
+ret 025C4DCC 0x5B000000 0x5B000000
+field 0249B2C4 5B000012 u16 0,1,2,1000
+# Ground fall threshold and landing history.
+field 0249CE6C r3+0x3E0 u32 0,1,0x20,0x21,0x80,0x81,0xA0,0x10,0x11,0x200,0x201,0x210,0x230
+field 0249CE6C r3+0x7A4 f32 0,100,200,1000
+field 0249CE6C r3+0x318 f32 0,100,200,1000
+field 0249CE6C r3+0x795 s8 -1,0,1,20
+field 0249CE6C r3+0x794 u8 0,1
+
+# HD player vtable10037CF0+BC points02444E48, which loads its grab ID at65A0.
+arg 0249DBC8 r3 0x40000000 0x40000000
+field 0249DBC8 r3+0x4 u32 4242
+field 0249DBC8 r3+0x2E0 u32 0,1,0x10000,0x2000,0x2001,0x12000,0x12001
+field 0249DBC8 r3+0x7A9 u8 0,1
+field 0249DBC8 58005B2C u32 0x5C000000
+field 0249DBC8 5C0000B4 u32 0x10037CF0
+field 0249DBC8 5C0065A0 u32 4242
+field 0249DBC8 5C0003C0 u32 0,1,0x8000,0x8001
+real 02444E48
+# Finite water equalities: bottom equals surface, and two surfaces tie.
+field 0249CB98 r3+0x318 f32 -15,0,15,30
+field 0249CB98 r3+0x574 f32 15,30,45
+field 0249CB98 r3+0x3E0 u32 0,1,0x1000,0x1001
+ret 0246B6A4 0,1
+fret 0246BA0C 15 15
+
+# HD 0255F458 copies the position words at r3+0,+4,+8.
+callee 0255F458 r3=12
+
+# A non-null initialized save singleton distinguishes shifted pointer loads.
+field * 101F84DC u32 0x5D000000
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0249B2C4 0x58005134 8 @stages,"Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","non","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","sec","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea","xea"

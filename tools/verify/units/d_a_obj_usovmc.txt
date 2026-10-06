@@ -1,0 +1,6 @@
+# Verification unit: d_a_obj_usovmc
+src wwhd_src/d/actor/d_a_obj_usovmc.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate

@@ -1,0 +1,12 @@
+src wwhd_src/SSystem/SComponent/c_node.cpp
+# Finite acyclic list chains; exercise empty, singleton and two/three-node paths.
+arg * r3 0,0x40000000
+field * r3+0 u32 0,0x41000000
+field * r3+8 u32 0,0x41000000
+field * 41000000 u32 0,0x42000000
+field * 41000008 u32 0,0x42000000
+field * 42000000 u32 0
+field * 42000008 u32 0
+arg 02019AFC r4 -1,0,1,2,3,4
+arg 02019B94 r4 0,0x40000000,0x41000000,0x42000000
+arg 02019C0C r4 0,0x40000000,0x41000000,0x42000000

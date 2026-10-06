@@ -1,0 +1,40 @@
+src wwhd_src/d/actor/d_a_obj_htetu1.cpp
+ret 02520460 0 5
+ret 025BA0C0 0 1
+ret 025D63E8 0 1
+ret 025440C8 0 1
+field * r3+0x3E2 u8 0 2
+field * r3+0x3DE u8 0 2
+field * r3+0x3E4 s16 -1 3
+field * r3+0x3DC u16 0 3
+callee 024F22DC r3=out80
+callee 024F15A4 r3=12 r4=80
+# SafeString input includes its virtual-method table.
+callee 026066C4 r4=8
+field * 0x101F4F28 u32 0x41000000
+field * 0x101F84DC u32 0x42000000
+# Particle set reads four incoming stack words (SP+8 through SP+14).
+callee 025A847C stack=4
+# follow callback vtable slot +44 is end(this).
+callee 025A5AC8 r3=0
+field 0235C9C8 r3+0x3EC u32 0x100523C8
+field 0235C9C8 r3+0x418 u32 0x100523C8
+field 0235CDF0 r3+0x3EC u32 0x100523C8
+field 0235CDF0 r3+0x418 u32 0x100523C8
+field 0235CDF0 r3+0xF8 u16 0,2,3
+field 0235C7E8 r3+0x2E4 u32 0,1,8,9
+
+real 0201AE48
+real 028E8E64
+callee 025CB408 r6=12
+stackfill periodic
+field * 0x101FFBC0 f32 0
+field * 0x101FFBC4 f32 1
+field * 0x101FFBC8 f32 0
+fret 0235CBC4 1400 1400
+field 0235CCCC r3+0x318 f32 -1,0,1
+field 0235CDF0 r3+0x318 f32 -1,0,1,5
+field 0235CDF0 r3+0x3D4 f32 -1,0,1
+
+# BaseY is initialized to (0,1,0) by 0201B528 and remains immutable.
+stable 101FFBC0 12

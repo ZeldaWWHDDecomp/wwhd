@@ -1,0 +1,18 @@
+# m_Do_ext#01:025E2AF8..025E38DC; model data objects and static j3dSys view are separate allocations. Arbitrary aliasing is outside this declared object domain.
+src wwhd_src/m_Do/m_Do_ext_heap_model.cpp
+stackfill periodic
+ret 027EC23C 0,0x534C4944
+callee 025E2B54 r3=out48 r4=48
+callee 028E8970 r3=64 r4=out64
+callee 02755478 r4=8
+ret 027EC23C 0,0x534C4944,0x554E4954
+arg 025E33A8 r3 0,0xFFFFFFFF,4,0x100
+arg 025E3678 r3 0,0x52000000
+field 025E3678 101F4754 u32 0x52000000
+field 025E3678 101F4758 u32 0,4,32
+observe 027F55FC 104B45F8 48
+observe 027F55FC 104B470C 64
+arg 025E2BF4 r4 0,0x53000000
+field 025E2BF4 53000050 u32 0,0x40,0x80,0xC0,0x1000
+field 025E2BF4 53000048 u32 0,0x54000000
+field 025E33A8 101F47B8 u8 0,1

@@ -1,0 +1,53 @@
+# Verification unit: d_a_npc_ds1 (Doc Bandam, Windfall potion shop): create/heap/execute/draw part
+src wwhd_src/d/actor/d_a_npc_ds1.cpp wwhd_src/d/actor/d_a_npc_ds1_pending.cpp
+
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0200FCD8 r4=out12            # MtxPosition: result
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02520460 0,4,4,5                # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 0273AD10 0,0x60000000           # operator new
+ret 025B8B94 0 1                    # dSv_event_c::isEventBit
+# the action PTMF (setAction inline): {delta, idx, fn}
+field * r3+0x9AC i16 0,0,0,4
+field * r3+0x9AE i16 -1,-1,-1,0,1
+field * r3+0x9B0 u32 0x022311F4,0x022312F8,0x022328E4,0x0223164C
+field * r3+0xA4F i8 0,1,2,3,4,5,6,7
+field * r3+0xF8 u16 0,1,2,3
+field * r3+0xA50 i32 0,2,3,4
+field * r3+0xA5E i8 0,0,0,1
+# XyEventCB: the selected item and the chu jelly counts
+arg 0222D3FC r4 0,1,2,3
+field 0222D3FC 54005BBB u8 0x48,0x49,0x4A,0x4B,0x4C
+field 0222D3FC 54005BBC u8 0x48,0x49,0x4A,0x4B,0x4C
+field 0222D3FC 54005BBD u8 0x48,0x49,0x4A,0x4B,0x4C
+field 0222D3FC 54005BBE u8 0x48,0x49,0x4A,0x4B,0x4C
+field * 101F84DC u32 0x56000000
+field 0222D3FC 560000C0 u8 9,10,14,15
+field 0222D3FC 560000C1 u8 9,10,14,15
+field 0222D3FC 560000C2 u8 9,10,14,15
+arg 0222D37C r3 0x48,0x49,0x4A,0x4B,0x4C
+arg 0222D958 r3 0x1DC0,0x1DD0,0x1DD1,0x1DDA,0x1DDB,0
+# checkOrder: talk XY / pre item
+field 0222EBEC 540052B0 u8 0,1,4,5
+# setAnm / setTexAnm: indices
+arg 0222F9C0 r4 -1,0,4,5,6,9,10
+field 0222F9C0 r3+0xA4D i8 -1,0,4,6
+arg 0222FA9C r4 -1,0,1,2
+field 0222FA9C r3+0xA4C i8 -1,0,1,2
+# _create: the INIT condition
+field 0222E8F0 r3+0x2E4 u32 0,8
+field 0222E8F0 10466F34 i32 -1,0,1
+field 0222EA54 10466F34 i32 -1,0,1
+arg 0222DF78 r3 0,0x40000000
+arg 02232B9C r3 0,0x40000000
+arg 02232B24 r3 0,0x40000000
+# nodeCallBack_Ds: the model (j3dSys), its user area (the actor), the joint numbers
+field 0222D6C4 104B462C u32 0x57000000
+field 0222D6C4 570000B8 u32 0x58000000,0x58000000,0
+ret 027F7878 0x59000000 0x59000000
+field 0222D6C4 59000004 u16 0,1,2,3
+field 0222D6C4 580007AC i8 0,1
+field 0222D6C4 580007AD i8 1,2
+field 0222D6C4 580008CF u8 0,1,0xFE,0xFF
+ret 027DF9B0 -1,0,1,5                # JUTNameTab::getIndex

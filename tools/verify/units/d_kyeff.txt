@@ -1,0 +1,51 @@
+src wwhd_src/d/d_kyeff.cpp
+stackfill periodic
+arg 02586260 r3 0,0x52000000
+arg 02586294 r3 0,0x52000000
+arg 02585AE4 f1 0,0.5,1,-1,2
+arg 02585B34 f3 0,0.5,1,-1,2
+ret 025200D4 0x52000000 0x52000000
+ret 02555D0C 0x53000000 0x53000000
+field * 52005134 u32 0x41746f72,0x4c696e6b,0x4e616d65,0x4f626f6d,0x4f63726f,0x4f6a686f,0x4f6d6173,0x4f6d6f72,0x4f6e6f62,0x4f707562,0x4f726963,0x4f746865
+field * 52005138 u32 0x0,0x524d0000,0x616f0000,0x62680000,0x67680000,0x68680000,0x69000000,0x697a6b00,0x72000000,0x75733200,0x75746100
+field * 52005AF8 u32 0x54000000
+field * 52005150 u32 0x10055DE0
+ret 025C5040 0x56000000 0x56000000
+field * 5600000C u32 0,0x20000,0x70000,0x10000
+ret 02556BC0 0,1
+ret 02563A1C 0x57000000 0x57000000
+ret 025639F8 0x58000000 0x58000000
+field * 53001020 f32 0,150,359.99,360,400,2147483648,4294967296,1e10
+field * 53000010 u32 0x57000000
+field * 5300000C u32 0x58000000
+field * 57000000 f32 0,150,360
+field * 57000004 f32 0,150,360
+field * 57000008 u8 0,1,2
+field * 57000009 u8 0,1,2
+field * 5200513C u32 0
+field * 5700000C f32 0,150,360
+field * 57000010 f32 0,150,360
+field * 57000018 f32 0,150,360
+field * 5700001C f32 0,150,360
+field * 57000024 f32 0,150,360
+field * 57000028 f32 0,150,360
+field * 57000030 f32 0,150,360
+field * 57000034 f32 0,150,360
+field * 5700003C f32 0,150,360
+field * 57000040 f32 0,150,360
+field * 57000048 f32 0,150,360
+field * 5700004C f32 0,150,360
+field * 57000054 f32 0,150,360
+field * 57000058 f32 0,150,360
+field * 57000060 f32 0,150,360
+field * 57000064 f32 0,150,360
+field * 5700006C f32 0,150,360
+field * 57000070 f32 0,150,360
+field * 57000078 f32 0,150,360
+field * 5700007C f32 0,150,360
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02585B40 0x52005134 8 @stages,"0","0","0","Ator","Ator","Ator","AtorRM","AtorRM","AtorRM","Atorao","Atorao","Atorao","Atorbh","Atorbh","Atorbh","Atorgh","Atorgh","Atorgh","Atorhh","Atorhh","Atorhh","Atori","Atori","Atori","Atorizk","Atorizk","Atorizk","Atorr","Atorr","Atorr","Atorus2","Atorus2","Atorus2","Atoruta","Atoruta","Atoruta","Link","Link","Link","LinkRM","LinkRM","LinkRM","Linkao","Linkao","Linkao","Linkbh","Linkbh","Linkbh","Linkgh","Linkgh","Linkgh","Linkhh","Linkhh","Linkhh","Linki","Linki","Linki","Linkizk","Linkizk","Linkizk","Linkr","Linkr","Linkr","Linkus2","Linkus2","Linkus2","Linkuta","Linkuta","Linkuta","Name","Name","Name","NameRM","NameRM","NameRM","Nameao","Nameao","Nameao","Namebh","Namebh","Namebh","Namegh","Namegh","Namegh","Namehh","Namehh","Namehh","Namei","Namei","Namei","Nameizk","Nameizk","Nameizk","Namer","Namer","Namer","Nameus2","Nameus2","Nameus2","Nameuta","Nameuta","Nameuta","Obom","Obom","Obom","ObomRM","ObomRM","ObomRM","Obomao","Obomao","Obomao","Obombh","Obombh","Obombh","Obomgh","Obomgh","Obomgh","Obomhh","Obomhh","Obomhh","Obomi","Obomi","Obomi","Obomizk","Obomizk","Obomizk","Obomr","Obomr","Obomr","Obomus2","Obomus2","Obomus2","Obomuta","Obomuta","Obomuta","Ocro","Ocro","Ocro","OcroRM","OcroRM","OcroRM","Ocroao","Ocroao","Ocroao","Ocrobh","Ocrobh","Ocrobh","Ocrogh","Ocrogh","Ocrogh","Ocrohh","Ocrohh","Ocrohh","Ocroi","Ocroi","Ocroi","Ocroizk","Ocroizk","Ocroizk","Ocror","Ocror","Ocror","Ocrous2","Ocrous2","Ocrous2","Ocrouta","Ocrouta","Ocrouta","Ojho","Ojho","Ojho","OjhoRM","OjhoRM","OjhoRM","Ojhoao","Ojhoao","Ojhoao","Ojhobh","Ojhobh","Ojhobh","Ojhogh","Ojhogh","Ojhogh","Ojhohh","Ojhohh","Ojhohh","Ojhoi","Ojhoi","Ojhoi","Ojhoizk","Ojhoizk","Ojhoizk","Ojhor","Ojhor","Ojhor","Ojhous2","Ojhous2","Ojhous2","Ojhouta","Ojhouta","Ojhouta","Omas","Omas","Omas","OmasRM","OmasRM","OmasRM","Omasao","Omasao","Omasao","Omasbh","Omasbh","Omasbh","Omasgh","Omasgh","Omasgh","Omashh","Omashh","Omashh","Omasi","Omasi","Omasi","Omasizk","Omasizk","Omasizk","Omasr","Omasr","Omasr","Omasus2","Omasus2","Omasus2","Omasuta","Omasuta","Omasuta","Omor","Omor","Omor","OmorRM","OmorRM","OmorRM","Omorao","Omorao","Omorao","Omorbh","Omorbh","Omorbh","Omorgh","Omorgh","Omorgh","Omorhh","Omorhh","Omorhh","Omori","Omori","Omori","Omorizk","Omorizk","Omorizk","Omorr","Omorr","Omorr","Omorus2","Omorus2","Omorus2","Omoruta","Omoruta","Omoruta","Onob","Onob","Onob","OnobRM","OnobRM","OnobRM","Onobao","Onobao","Onobao","Onobbh","Onobbh","Onobbh","Onobgh","Onobgh","Onobgh","Onobhh","Onobhh","Onobhh","Onobi","Onobi","Onobi","Onobizk","Onobizk","Onobizk","Onobr","Onobr","Onobr","Onobus2","Onobus2","Onobus2","Onobuta","Onobuta","Onobuta","Opub","Opub","Opub","OpubRM","OpubRM","OpubRM","Opubao","Opubao","Opubao","Opubbh","Opubbh","Opubbh","Opubgh","Opubgh","Opubgh","Opubhh","Opubhh","Opubhh","Opubi","Opubi","Opubi","Opubizk","Opubizk","Opubizk","Opubr","Opubr","Opubr","Opubus2","Opubus2","Opubus2","Opubuta","Opubuta","Opubuta","Oric","Oric","Oric","OricRM","OricRM","OricRM","Oricao","Oricao","Oricao","Oricbh","Oricbh","Oricbh","Oricgh","Oricgh","Oricgh","Orichh","Orichh","Orichh","Orici","Orici","Orici","Oricizk","Oricizk","Oricizk","Oricr","Oricr","Oricr","Oricus2","Oricus2","Oricus2","Oricuta","Oricuta","Oricuta","Othe","Othe","Othe","OtheRM","OtheRM","OtheRM","Otheao","Otheao","Otheao","Othebh","Othebh","Othebh","Othegh","Othegh","Othegh","Othehh","Othehh","Othehh","Othei","Othei","Othei","Otheizk","Otheizk","Otheizk","Other","Other","Other","Otheus2","Otheus2","Otheus2","Otheuta","Otheuta","Otheuta"
+fieldstr 02586294 0x52005134 8 @stages,"Ator","Ator","Ator","AtorRM","AtorRM","AtorRM","Atorao","Atorao","Atorao","Atorbh","Atorbh","Atorbh","Atorgh","Atorgh","Atorgh","Atorhh","Atorhh","Atorhh","Atori","Atori","Atori","Atorizk","Atorizk","Atorizk","Atorr","Atorr","Atorr","Atorus2","Atorus2","Atorus2","Atoruta","Atoruta","Atoruta","Link","Link","Link","LinkRM","LinkRM","LinkRM","Linkao","Linkao","Linkao","Linkbh","Linkbh","Linkbh","Linkgh","Linkgh","Linkgh","Linkhh","Linkhh","Linkhh","Linki","Linki","Linki","Linkizk","Linkizk","Linkizk","Linkr","Linkr","Linkr","Linkus2","Linkus2","Linkus2","Linkuta","Linkuta","Linkuta","Name","Name","Name","NameRM","NameRM","NameRM","Nameao","Nameao","Nameao","Namebh","Namebh","Namebh","Namegh","Namegh","Namegh","Namehh","Namehh","Namehh","Namei","Namei","Namei","Nameizk","Nameizk","Nameizk","Namer","Namer","Namer","Nameus2","Nameus2","Nameus2","Nameuta","Nameuta","Nameuta","Obom","Obom","Obom","ObomRM","ObomRM","ObomRM","Obomao","Obomao","Obomao","Obombh","Obombh","Obombh","Obomgh","Obomgh","Obomgh","Obomhh","Obomhh","Obomhh","Obomi","Obomi","Obomi","Obomizk","Obomizk","Obomizk","Obomr","Obomr","Obomr","Obomus2","Obomus2","Obomus2","Obomuta","Obomuta","Obomuta","Ocro","Ocro","Ocro","OcroRM","OcroRM","OcroRM","Ocroao","Ocroao","Ocroao","Ocrobh","Ocrobh","Ocrobh","Ocrogh","Ocrogh","Ocrogh","Ocrohh","Ocrohh","Ocrohh","Ocroi","Ocroi","Ocroi","Ocroizk","Ocroizk","Ocroizk","Ocror","Ocror","Ocror","Ocrous2","Ocrous2","Ocrous2","Ocrouta","Ocrouta","Ocrouta","Ojho","Ojho","Ojho","OjhoRM","OjhoRM","OjhoRM","Ojhoao","Ojhoao","Ojhoao","Ojhobh","Ojhobh","Ojhobh","Ojhogh","Ojhogh","Ojhogh","Ojhohh","Ojhohh","Ojhohh","Ojhoi","Ojhoi","Ojhoi","Ojhoizk","Ojhoizk","Ojhoizk","Ojhor","Ojhor","Ojhor","Ojhous2","Ojhous2","Ojhous2","Ojhouta","Ojhouta","Ojhouta","Omas","Omas","Omas","OmasRM","OmasRM","OmasRM","Omasao","Omasao","Omasao","Omasbh","Omasbh","Omasbh","Omasgh","Omasgh","Omasgh","Omashh","Omashh","Omashh","Omasi","Omasi","Omasi","Omasizk","Omasizk","Omasizk","Omasr","Omasr","Omasr","Omasus2","Omasus2","Omasus2","Omasuta","Omasuta","Omasuta","Omor","Omor","Omor","OmorRM","OmorRM","OmorRM","Omorao","Omorao","Omorao","Omorbh","Omorbh","Omorbh","Omorgh","Omorgh","Omorgh","Omorhh","Omorhh","Omorhh","Omori","Omori","Omori","Omorizk","Omorizk","Omorizk","Omorr","Omorr","Omorr","Omorus2","Omorus2","Omorus2","Omoruta","Omoruta","Omoruta","Onob","Onob","Onob","OnobRM","OnobRM","OnobRM","Onobao","Onobao","Onobao","Onobbh","Onobbh","Onobbh","Onobgh","Onobgh","Onobgh","Onobhh","Onobhh","Onobhh","Onobi","Onobi","Onobi","Onobizk","Onobizk","Onobizk","Onobr","Onobr","Onobr","Onobus2","Onobus2","Onobus2","Onobuta","Onobuta","Onobuta","Opub","Opub","Opub","OpubRM","OpubRM","OpubRM","Opubao","Opubao","Opubao","Opubbh","Opubbh","Opubbh","Opubgh","Opubgh","Opubgh","Opubhh","Opubhh","Opubhh","Opubi","Opubi","Opubi","Opubizk","Opubizk","Opubizk","Opubr","Opubr","Opubr","Opubus2","Opubus2","Opubus2","Opubuta","Opubuta","Opubuta","Oric","Oric","Oric","OricRM","OricRM","OricRM","Oricao","Oricao","Oricao","Oricbh","Oricbh","Oricbh","Oricgh","Oricgh","Oricgh","Orichh","Orichh","Orichh","Orici","Orici","Orici","Oricizk","Oricizk","Oricizk","Oricr","Oricr","Oricr","Oricus2","Oricus2","Oricus2","Oricuta","Oricuta","Oricuta","Othe","Othe","Othe","OtheRM","OtheRM","OtheRM","Otheao","Otheao","Otheao","Othebh","Othebh","Othebh","Othegh","Othegh","Othegh","Othehh","Othehh","Othehh","Othei","Othei","Othei","Otheizk","Otheizk","Otheizk","Other","Other","Other","Otheus2","Otheus2","Otheus2","Otheuta","Otheuta","Otheuta"

@@ -1,0 +1,7 @@
+# Verification unit: d_a_tag_evsw (event bit -> switch)
+src wwhd_src/d/actor/d_a_tag_evsw.cpp
+
+ret 025B8B94 0 1                    # dSv_event_c::isEventBit
+ret 024A85BC 0 2                    # PrmAbstract (type 1 vs other)
+arg 024A85BC r4 0,1,2,8,16,31,32,33,63
+arg 024A85BC r5 0,1,8,24,31,32,33,63

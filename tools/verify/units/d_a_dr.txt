@@ -1,0 +1,31 @@
+# Verification unit: d_a_dr (Valoo, overworld)
+src wwhd_src/d/actor/d_a_dr.cpp
+
+callee 026066C4 r4=8                # getRes: SafeString key
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(src, dst out)
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # fopAcM_entrySolidHeap
+ret 02520A84 0 1                    # isStageBossEnemy
+ret 025CB66C 0 1                    # CheckQuake
+ret 0273AD10 0,0x60000000           # operator new
+# anm_init
+arg 02129DB4 r6 -1,5,7
+field 02129DB4 r3+0x3DC i32 0xB,0xC,0xD,0xE
+arg 02129DB4 r4 0xB,0xC,0xD,0xE
+# Execute (inlined move)
+field 0212A00C r3+0x3D4 u8 0,1,2,3,10,11,12,13
+field 0212A00C r3+0x3D6 i16 0,0,1,2
+field 0212A00C r3+0x3D8 i16 0,0,1,2
+field 0212A00C r3+0x3DA i16 0,0,1,2
+field 0212A00C r3+0x3E0 u32 0,0x5A000000
+field 0212A00C r3+0x3E4 i8 0,0,1
+field 0212A00C r3+0x3E5 i8 0,0,1
+field 0212A00C r3+0x3D0 u32 0x50000000,0x50000000
+field 0212A00C 500000A7 u8 0,1
+field 0212A00C 50000098 f32 0,0,1
+field 0212A00C 5000009C f32 14.5,15,15.5,34,34.9,0
+field 0212A00C 10463C04 u8 0,0,1
+fret 020198D8 0 1                   # cM_rndF
+field 0212A830 10463BFC i8 -1,0,1
+field 0212A6E4 10463BFC i8 -1,0,1
+arg 0212A92C r3 0,0x40000000

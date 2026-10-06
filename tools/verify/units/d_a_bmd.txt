@@ -1,0 +1,158 @@
+# Verification unit: d_a_bmd (Kalle Demos)
+src wwhd_src/d/actor/d_a_bmd.cpp wwhd_src/d/actor/d_a_bmd_move.cpp wwhd_src/d/actor/d_a_bmd_camera.cpp wwhd_src/d/actor/d_a_bmd_exec.cpp
+
+callee 026066C4 r4=8                # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D63E8 0 1                    # entrySolidHeap
+ret 024EEA6C 0,0,0,0,0,0,0,1        # dBgS::Regist
+ret 025B9100 0 1                    # isDungeonItem
+ret 02520C0C 0 1                    # checkGetItem
+ret 025AF2A4 0 1                    # dScnPly isPause
+ret 025E4F64 0,0x10000000,0x10000000,0x10000000,0x10000000,0x10000000,0x10000000,0x10000000   # McaMorf
+ret 024F23F4 0,0x11000000,0x11000000,0x11000000,0x11000000,0x11000000,0x11000000,0x11000000   # dBgW
+ret 0273AD10 0,0x12000000,0x12000000,0x12000000,0x12000000,0x12000000,0x12000000   # operator new
+ret 025E80D0 0,0x13000000,0x13000000,0x13000000,0x13000000,0x13000000              # brkAnm ct
+ret 025E7C6C 0,0x13800000,0x13800000,0x13800000,0x13800000              # btkAnm ct
+ret 025E8154 0,1,1,1,1,1,1,1                # brk init
+ret 025E7CE0 0,1,1,1,1,1,1                # btk init
+ret 025E38E0 0,0x14000000,0x14000000,0x14000000,0x14000000,0x14000000   # J3DModel create
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+field * 54005134 u8 0x58,0x41       # start stage name[0]
+field * r3+0x2E4 u32 0,8            # actor_condition INIT
+field 020B11E4 10000090 u32 0,0x15000000,0x15000000,0x15000000,0x15000000,0x15000000,0x15000000   # morf model
+field 020B11E4 15000000 u8 0 0                         # model contents (stable)
+field 020B11E4 150000AC u32 0x16000000 0x16000000      # model data
+field 020B11E4 16000004 u32 0 3                        # joint nodes
+stable 15000000 0x100
+stable 10000000 0x100
+arg 020B17EC r3 0,0x40000000
+arg 020B1CB4 r3 0,0x40000000
+field 020AEA94 r4+0x426 i16 0,3,3,1     # m304
+field 020AEA94 r5+8 i16 0xA8,0xA8,1     # rider's process name (player 0xA8)
+field 020AE30C r3+0xC92 i16 -1,0,1,2,150   # mB72 blur
+field 020AE30C r3+0x428 i16 0,99,100,109,110 # m306
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 028E8D88 r3=12 r4=12          # PSVECAdd
+
+# ---- move (F = 020B1DE4): modes, sub-states, timers, counters, the body morf at a fixed address
+field 020B1DE4 r3+0x422 i16 0,1,2,3,5,10,11,4
+field 020B1DE4 r3+0x424 i16 -1,0,1,2,3,4,5,6
+field 020B1DE4 r3+0x42A i16 0,0,1,0x1E,0x1F
+field 020B1DE4 r3+0x42C i16 0,1
+field 020B1DE4 r3+0x42E i16 0,1
+field 020B1DE4 r3+0x430 i16 0,1,2
+field 020B1DE4 r3+0x434 i16 0,1,2
+field 020B1DE4 r3+0x451 i8 0,0,1,5,-1
+field 020B1DE4 r3+0x454 i16 0,1
+field 020B1DE4 r3+0xA62 i8 0,1
+field 020B1DE4 r3+0xC96 i16 0,0x78,0x82,0x83,0x95,0x96,0xB1,0xBE,0xD2,0xF9,0xFA,0x168,0x1A3,0x1A4,300,0x17C,0x1C2,0x230,0x276
+field 020B1DE4 r3+0xC98 i16 0,0x50,0x55
+field 020B1DE4 r3+0x318 f32 -10 10
+field 020B1DE4 r3+0x448 f32 -10 10
+field 020B1DE4 r3+0x340 f32 -40 20
+field 020B1DE4 r3+0x3D0 u32 0x5D000000 0x5D000000
+field 020B1DE4 5D00009C f32 9,10,14,15,16,22,23,25,26,27,30,31
+field 020B1DE4 5D000098 f32 0,1
+field 020B1DE4 5D0000A7 u8 0,1
+field 020B1DE4 104624A4 f32 0 1
+fret 025D68EC 0 2000                # searchActorDistance
+fret 025D6958 0 600                 # searchActorDistanceXZ
+fret 028F4384 0 2000                # sqrtf
+fret 020198D8 0 1                   # cM_rndF
+# debug registers (REGn_F / REGn_S) mostly zero
+field * 1047B614 f32 0,0,0,1
+field * 1047B618 f32 0,0,0,1
+field * 1047B630 f32 0,0,0,1
+field * 1047B63C f32 0,0,0,1
+field * 1047B640 f32 0,0,0,1
+field * 1047B654 f32 0,0,0,1
+field * 1047B658 f32 0,0,0,1
+field * 1047BAB0 f32 0,0,0,1
+field * 1047BBB0 f32 0,0,0,1
+field * 1047BFA0 f32 0,0,0,1
+field * 1047BFA4 f32 0,0,0,1
+field * 1047BFA8 f32 0,0,0,1
+field * 1047B68A i16 0,0,0,1
+field * 1047B68C i16 0,0,0,1
+field * 1047B68E i16 0,0,0,1
+field * 1047B690 i16 0,0,0,1
+field * 1047B692 i16 0,0,0,1
+field * 1047B694 i16 0,0,0,1
+field * 1047B696 i16 0,0,0,1
+field * 1047B69A i16 0,0,0,1
+
+# ---- demo_camera (F = 020B3BF8)
+callee 02514FE8 r4=12 r5=12         # dCamera_c::Set(center, eye): copies
+callee 0251510C r4=12 r5=12         # dCamera_c::Reset(center, eye): copies
+callee 0201A478 r3=out6             # csXyz::csXyz
+field 020B3BF8 r3+0xC94 i16 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,50,100,101,102,103,150,151
+field 020B3BF8 r3+0xF8 u16 0,2,2
+field 020B3BF8 r3+0xC98 i16 0,4,5,6,0x13,0x14,0x15,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1E,0x1E,0x1F,0x27,0x28,0x29,0x37,0x37,0x54,0x55,0x63,0x64,0x95,0x96,0x96,0xD1,0xD2,0x159,0x15A,0x15A,0x15B,0x168,0x13F,0x140,0x140,0x141
+field 020B3BF8 r3+0xC96 i16 0,0x3C,0x3D,0x24E,800
+field 020B3BF8 r3+0x3DC u32 0x5D000000 0x5D000000
+field 020B3BF8 5D000098 f32 0,1
+field 020B3BF8 5D0000A7 u8 0,1
+field 020B3BF8 r3+0xA48 f32 -10 30
+field 020B3BF8 r3+0x448 f32 -10 10
+field 020B3BF8 r3+0x318 f32 -300 400
+
+# ---- daBmd_Execute (F = 020AEBCC): core states, effects, Makar, camera type
+field 020AEBCC r3+0x428 i16 0,1,2,100,101,102,103,104,105,110,111,99,106
+field 020AEBCC r3+0x426 i16 0,1,3
+field 020AEBCC r3+0x432 i16 0,0,1
+field 020AEBCC r3+0x3A1 i8 -1,0,1,5
+field 020AEBCC r3+0x3E0 u32 0x5E000000 0x5E000000
+field 020AEBCC 5E00009C f32 13,14,15,17,18,19,36,37,38
+field 020AEBCC 5E000098 f32 0,1
+field 020AEBCC 5E0000A7 u8 0,1
+field 020AEBCC r3+0x3E4 u32 0x5F000000 0x5F000000
+field 020AEBCC 5F00009C f32 5,6,7
+field 020AEBCC r3+0x3F8 i8 0,1,2,3,4,5,6,7,10,-1
+field 020AEBCC r3+0x430 i16 0,1
+field 020AEBCC r3+0x42C i16 0,1,0x10,0x11
+field 020AEBCC r3+0x42E i16 0,1,2
+field 020AEBCC r3+0xA3C f32 -300 300
+field 020AEBCC r3+0xA48 f32 -20 20
+field 020AEBCC r3+0x448 f32 -10 10
+field 020AEBCC r3+0x318 f32 0 200
+field 020AEBCC r3+0xA60 i16 -1,0,1
+field 020AEBCC r3+0x436 i16 0,0,1
+field 020AEBCC r3+0x422 i16 0,3,10
+field 020AEBCC r3+0xA24 i16 0,1
+field 020AEBCC r3+0xC90 u8 0,1
+field 020AEBCC r3+0xC91 i8 0,1,2
+field 020AEBCC r3+0xD00 u8 0,1,2,3
+field 020AEBCC r3+0xCF8 f32 0 2000
+field 020AEBCC r3+0xB9C u32 0,0x60000000
+field 020AEBCC r3+0xBA0 u32 0,0x60000000
+field 020AEBCC r3+0xBA4 u32 0,0x60000000
+field 020AEBCC r3+0xBA8 i16 0,1,2
+field 020AEBCC r3+0xBAA i16 0,1,2
+field 020AEBCC r3+0xBAC i16 0,1,2
+field 020AEBCC 54005B2C u32 0x56000000 0x56000000
+field 020AEBCC 560003BC u32 0,0x20000
+ret 025162A4 0 1                    # ChkTgHit
+ret 025192A8 0,0x57000000           # cc_at_check
+fret 028F4384 0 600                 # sqrtf
+
+# ---- mutation-test steering
+stackfill periodic                  # stack temporaries start non-zero (dropped zero stores)
+# core_nodeCallBack: joint numbers around the special cases (0 KUBI1, 5 SITAAGO, 7 TOSAKA1)
+arg 020AE138 r4 0 1
+ret 027F7878 0x59000000 0x59000000
+field 020AE138 59000004 u16 0,1,4,5,6,7,8
+field 020AE138 104B462C u32 0x5A000000 0x5A000000
+field 020AE138 5A0000B8 u32 0,0x5B000000,0x5B000000
+# Draw: the copied tevStr passed to settingTevStruct is compared
+callee 025626A4 r6=0x1C8
+# demo_camera: counter values per state, drawn more often
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 020B1918 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"
+fieldstr 020B1DE4 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","Ap","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"
+fieldstr 020B3BF8 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","Demo42","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"
+fieldstr 020AEBCC 0x54005134 8 @stages,"A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","B4","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Bmd","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","Boss02","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Dungeon","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Field","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","X","X","X","X","X","X","X","X","X","X","X","X","X","X","X"

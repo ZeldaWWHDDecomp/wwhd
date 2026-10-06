@@ -1,0 +1,155 @@
+# Verification unit: d_a_npc_bmsw (Koboli, Rito mail sorter)
+src wwhd_src/d/actor/d_a_npc_bmsw.cpp wwhd_src/d/actor/d_a_npc_bmsw_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+arg 02211C80 r3 0,0x60000000
+ret 0273AD10 0,0x61000000
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator- (hidden result pointer r4)
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator* (hidden result pointer r4)
+callee 0201B47C r3=12                 # cXyz::normalizeRS
+callee 028E8D88 r3=12 r4=12 r5=out12  # PSVECAdd
+callee 028E8F64 r4=12 r5=out12        # PSMTXMultVec(m, &in, &out)
+callee 0200EE00 r3=12 r4=12           # cLib_addCalcPos(pos, target)
+callee 0200F164 r3=12 r4=12           # cLib_addCalcPos2(pos, target)
+callee 02514F88 r4=12 r5=12           # dCamera_c::Set(center, eye)
+callee 025CB374 r6=12                 # dVibration_c::StartShock(pos)
+arg! 0220D57C r3 0 255                # previous_no (callers pass a lbz value)
+# next_msgStatus / getMsg / anmAtr
+field 0220FE68 101F4B5C u32 0x56000000 0x56000000   # message manager
+field 0220FE68 56000948 u32 0 2                     # mSelectNum
+field 0220FE68 54005CEC i16 13 22                   # mini game rupees
+ret 02520A84 0 1
+ret 025B8B94 0 1
+ret 025B8BB0 0 4
+field 022102CC r3+0xD64 u32 0xFFFFFFFF,0xFFFFFFFF,0x1A30
+field 022103D4 54005BC5 u8 5,6,9,14,0
+field 0220FD3C r3+0xD5C u8 0 1
+# lookBack / wait01 / talk01 / wait_action / setGameGetRupee
+callee 0259D54C r3=out12              # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r5=12 r6=12           # lookAtTarget(target, eye copy)
+callee 025D5218 r4=4                  # fopAcIt_Judge(fpcSch_JudgeByID, &id)
+callee 0220FD3C r4=12                 # chkAttention(cXyz copy)
+field 022104A4 r3+0xD7A i8 0 3
+field 022104A4 r3+0xD5C u8 0 1
+field 022104A4 r3+0xD80 u32 0xFFFFFFFF,0,0x1234
+field 022104A4 r3+0x3B6 u8 0 1
+field 0221068C r3+0xD5D u8 0 1
+field 0221068C r3+0xD5C u8 0 1
+field 0221068C r3+0xD76 i8 -1 2
+field 0221068C r3+0xD75 i8 4 7
+ret 027F2BF8 0 1
+ret 025A11EC 0x12,0x12,0,0xE
+field 02210804 54005BD2 u8 0 2
+field 02210804 r3+0x7C0 u32 0x1A30 0x1A70
+field 02210804 r3+0xD6E i16 -1,0,1
+field 02210804 r3+0xD6C i16 0,4
+field 02210804 r3+0xD70 u32 0x02210F60,0x02210AC0
+field 02210AC0 r3+0xD7D i8 -1 2
+field 02210AC0 r3+0xD7A i8 0 3
+field 02210AC0 1047E6B8 u32 0x44656D6F,0x44656D6E
+field 02210AC0 1047E6BC u32 0x31300000,0x30310000
+ret 0220FD3C 0 1
+arg 02210E74 r4 0,9,10,14,15,19,20,24,25,30,-5
+# joint callbacks: j3dSys.mModel, user area, joint numbers
+arg 0220CCD4 r4 0,1
+field 0220CCD4 104B462C u32 0x57000000 0x57000000
+field 0220CCD4 570000B8 u32 0,0x58000000,0x58000000,0x58000000
+field 0220CCD4 104667F0 u32 0 1
+field 0220CCD4 104667F4 u32 0 1
+ret 027F7878 0x59000000 0x59000000
+field 0220CCD4 59000004 u16 0 5
+field 0220CCD4 580007E2 i8 0 5
+field 0220CCD4 580003B4 i8 0 5
+field 0220CCD4 580003B5 i8 0 5
+field 0220CCD4 580007E1 i8 0 5
+field 0220CCD4 580007E0 i8 0 5
+arg 0220D134 r4 0,1
+field 0220D134 104B462C u32 0x57000000 0x57000000
+field 0220D134 570000B8 u32 0,0x58000000,0x58000000,0x58000000
+field 0220D134 104667F8 u32 0 1
+field 0220D134 59000004 u16 0 3
+field 0220D134 580007DD i8 0 3
+field 0220D134 580007DC i8 0 3
+# set_mtx / CreateInit / _create / _execute / _draw
+field 0220E340 r3+0xD75 i8 4 7
+field 0220E6E8 r3+0xD6E i16 -1,0,1
+field 0220E6E8 r3+0xD6C i16 0,4
+field 0220E6E8 r3+0xD70 u32 0x02210AC0,0x02210F60
+arg 0220E9D8 r3 0,0x60000000
+field 0220E9D8 r3+0x2E4 u32 0 8
+ret 02520460 0,4,5
+ret 025D63E8 0 1
+field 0220E9D8 10466708 i8 -1 0
+ret 0220E6E8 0 1
+field 0220F06C r3+0xD75 i8 4 7
+field 0220F06C r3+0xD07 u8 0 1
+field 0220F06C 10466726 u8 0 1
+field 0220F06C 101FDA50 u32 0 1
+field 0220F06C 101FDAC0 u32 0 1
+ret 0259F858 0 1
+# CreateHeap
+ret 026067F4 0,0x5A000000,0x5A000000,0x5A000000,0x5A000000
+ret 025E4F64 0,0x5B000000,0x5B000000,0x5B000000
+field 0220D98C 5B000090 u32 0,0x5C000000,0x5C000000
+ret 027DF9B0 -1,0,1,2,3
+ret 025E38E0 0,0x5D000000,0x5D000000,0x5D000000,0x5D000000
+ret 0220D320 0 1
+ret 027F3F94 0x5E000000 0x5E000000
+field 0220D98C 5E000008 u16 0 4
+ret 0220D884 0,1,1,1
+ret 025BBD7C 0,0x5F000000,0x5F000000
+# constructor / destructor
+arg 0220E0D4 r3 0,0x60000000
+arg 02211F5C r3 0,0x60000000
+arg 02211F5C r4 0 1
+callee 0220E0D4 r3=255
+# shiwake_game_action
+callee 0220F744 r4=12                 # ThrowInit(cXyz copy)
+field 02210F60 104667FC u32 0 1
+field 02210F60 10466800 u32 0 1
+field 02210F60 r3+0xD7D i8 -1 3
+field 02210F60 r3+0xF8 u16 0,2,2
+field 02210F60 r3+0xD06 u8 0 1
+field 02210F60 54005CF0 u32 0,0x55000000,0x55000000
+field 02210F60 54005CFC u32 6,6,5
+field 02210F60 1046673A i16 0,0,5
+field 02210F60 54005CF8 u32 0 3
+field 02210F60 54005CF4 u32 0 3
+field 02210F60 101F5088 u32 0x56000000 0x56000000
+field 02210F60 56000018 u32 0,0x00440000,0x00880000,0x00110000,0x00220000,0x00660000,0x00990000,0x00F00000
+field 02210F60 56000020 u32 0,0,0x00100000
+field 02210F60 56000124 u32 0,0,0x00100000
+field 02210F60 r3+0xD54 i8 -1 1
+field 02210F60 r3+0xD55 i8 0 1
+field 02210F60 r3+0xCE0 u8 0 2
+field 02210F60 55000124 u8 0,1
+ret 02007898 0 1
+ret 02210DCC 0 1
+ret 025C6278 0 1
+ret 025440C8 0 1
+field 02210F60 54005CEA u8 6 7
+field 02210F60 54005CEC i16 0,1,2,9,10,19,20,24,25,30
+field 02210F60 r3+0xCD4 u32 0x57000000 0x57000000
+field 02210F60 r3+0xCD8 u32 0x57000000 0x57000000
+field 02210F60 r3+0xCDC u32 0x57000000 0x57000000
+field 02210F60 57000000 i16 0,0,1
+field 02210F60 57000002 i16 -1,-1,0,2
+field 02210F60 57000004 u32 0x0220F62C,0x0220F62C,0x0220F3C4
+ret 025B8BB0 0,1,2,3,4
+# mutation-driven steering
+field 0220FE68 r4+0 u32 0x1A2D 0x1A6F
+field 0220FE68 54005CEC i16 14,15,19,20
+fret 020198D8 0 6
+field 0220D57C 101BD4B1 u8 0 3
+field 02210F60 r3+0xD7D i8 0,0,1,2,3,-1
+ret 025B8BB0 0,1,2,3,3,4
+ret 025B8B94 1,1,0
+field 02210F60 54005CEC i16 0,1,2,9,10,19,20,24,25,26,30
+field 02210F60 104666EE i16 0,0,1
+# end-of-game messages: reach status 3 with the timer gone more often
+field 02210F60 r3+0xD7D i8 3,3,3,0,1,2,-1
+field 02210F60 54005CF0 u32 0,0,0x55000000
+field 02210F60 54005CF8 u32 0,0,1
+field 02210F60 54005CF4 u32 0,1
+ret 025440C8 1,1,0

@@ -1,0 +1,14 @@
+# Verification unit: d_a_obj_monument (Esekh tablet)
+src wwhd_src/d/actor/d_a_obj_monument.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025BA0C0 0 1              # isSwitch
+ret 0200A030 0 1              # cBgW::Set
+arg 0237625C r4 0,1,8,31,32,33,63
+arg 0237625C r5 0,1,8,16,31,32,33,63
+field 02375C64 r3+0x3B8 i32 0 1                 # mType (L_attr index)
+field 02375FF4 r3+0x3BC u32 0,0x41000000        # mpBgW
+field 02375FF4 0x41000000 u32 0,0xFF,0x100,0xFFFFFFFF   # dBgW registration id
+field 02375EE0 r3+0x3B4 u32 0,0x41000000,0x41000400     # init_mtx: aligned model pointer (NaN payload tolerance)

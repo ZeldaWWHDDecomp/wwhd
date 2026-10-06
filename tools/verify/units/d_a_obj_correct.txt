@@ -1,0 +1,74 @@
+# Owned TU: 33 functions, 02332DA0 through 02333CD8; DemoBarrel starts 02333CF4.
+# Verification: all 33 x 10,000; full 152/152 blocks; stackfill periodic opt-in.
+# Audit: 584 positions (569 generated + 15 helper/constants), 376 compiled,
+# 349 killed, 27 reviewed equivalent, 208 noncompiling; no invalid-OOB exclusions.
+# Exact supplements: null ID sentinel; distance 1600; height +/-60;
+# angle +/-16384; player height/facing reload after mocked call clobbers.
+# Their original baselines pass 10,000. Stable routing metadata is used only
+# in the supplemental clobber context; height/facing remain clobberable.
+# Main pointer pin needs two endpoints; float return steering accepts ranges.
+src wwhd_src/d/actor/d_a_obj_correct.cpp
+stackfill periodic
+field * r3+0x3B8 s32 0 7
+field * r4+0x3B8 s32 0 7
+field * r3+0x3B0 s32 0 1
+field * r3+0x3B4 s32 0 2
+field * r3+0xF8 u16 0,1,2,3,65535
+field * r3+8 s16 0,43,458
+field * 0x101F84DC u32 0x54000000,0x55000000
+ret 02333CA0 0,1,4,5,7,8,255
+ret 02333CBC 0,1,2,3,4,5,6,7,8,255
+ret 02333CD8 0,1,255
+ret 025D4604 0 1
+ret 025DD868 0 1
+ret 025BA0C0 0 1
+ret 02544044 0,0x54000000
+ret 025440C8 0 1
+ret 025D5218 0,0x54000000
+ret 0233305C 0,0x55000000
+ret 023331BC 0,0x56000000
+fret 028E8DE8 0 40000
+arg 023330AC r5 0 12
+arg 023330AC f1 0,1,9,16,100,2500,2601
+arg 023331BC r5 0 12
+arg 023331BC f1 0,1,9,100,2500
+arg 023331BC f2 0,1,100,2601,3600,5000
+arg 02333CA0 r4 0 32
+arg 02333CA0 r5 0 32
+arg 02333CBC r4 0 32
+arg 02333CBC r5 0 32
+arg 02333CD8 r4 0 32
+arg 02333CD8 r5 0 32
+callee 028E8DE8 r3=12 r4=12
+callee 025D5218 r4=4
+
+# Pin a player and its virtual getter for the full placement-demo path.
+ret 025200D4 0x58000000 0x58000000
+field 02333968 0x58005B2C u32 0x59000000
+field 02333968 0x590003C0 u32 0,0x400000,0x400001,1,2,0x800000
+field 02333968 0x590000B4 u32 0x5A000000
+field 02333968 0x5A0000BC u32 0x025D4604
+ret 025D4604 0,1,-1
+field 02333968 0x59000318 f32 0,59.5,60,60.5,-59.5,-60,-60.5
+field 02333968 r3+0x318 f32 0
+field 02333968 0x5900032A s16 -32768,-16385,-16384,-16383,0,16383,16384,16385,32767
+ret 025D6894 0,1,-1,16384,-16384,32767,-32768
+field 02332F6C 0x10027102 s16 -1,0
+field 02332F6C 0x1002710A s16 -1,0
+field 02332F6C 0x10027112 s16 -1,0
+field 02332F6C 0x1002711A s16 -1,0
+field 02332F6C 0x10027122 s16 -1,0
+# Increase placement-demo density and use independent nonzero X/Z inputs.
+field 02333968 r3+0x3B8 s32 4,5
+field 02333968 r3+0x314 f32 -13,3,123
+field 02333968 r3+0x31C f32 -27,7,245
+field 02333968 0x59000314 f32 -11,5,127
+field 02333968 0x5900031C f32 -23,9,249
+
+field 02333324 r4+0x3C0 f32 0,1,9,16,100,2500,2601,3600,5000,40000
+
+# Null actor branches require explicit pointer arguments, beyond block coverage.
+arg 02333324 r3 0,0x56000000
+arg 0233356C r3 0,0x56000000
+arg 02333624 r3 0,0x56000000
+arg 0233305C r3 0,0x56000000

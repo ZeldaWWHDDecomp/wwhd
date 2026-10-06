@@ -1,0 +1,216 @@
+# Bounded initialized verification domain: exact owned inventory is 18 entries.
+src wwhd_src/d/actor/d_a_obj.cpp
+# Actual caller spans; initialized modeled inputs follow. No execution credit.
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 02017B6C r3=12 r4=12 r5=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E8F44 r3=12 r4=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201AEAC r3=12 r4=out12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B47C r3=12
+callee 028E8DD0 r3=12
+callee 028E9B14 r3=out16 r4=12
+callee 0257DE68 r3=12 r4=out12 r5=out4
+callee 025AB184 r3=16 r4=out12 r5=out4
+callee 024EF0F4 r4=16
+callee 024EF130 r4=16
+callee 025D6800 r3=0x37C r4=12
+callee 025D5834 r5=12 r8=12
+callee 0251638C r3=0xF8
+callee 02515BBC r3=0x24
+callee 02516300 r3=0xF8
+callee 025E1A40 r4=12
+# Actual utility arguments; inherited anonymous-namespace phantom register masks
+# are reported separately and cannot be narrowed with unit pointer facts.
+callee 02311AB8 r3=out12 r4=0x37C r5=12
+callee 02311B94 r3=out12 r4=0x37C r5=12 r6=12 r7=12
+callee 023121C4 r3=0x37C r4=12 r5=12 r6=12 r7=12
+callee 02312B88 r3=12 r4=12 r5=0x1C8
+callee 02312D6C r3=12 r4=12
+callee 028F026C r3=12
+callee 028ED6F8 r3=1
+callee 028EAB2C r3=1
+# Static header storage begins uninitialized; the owned startup entry writes its
+# 16-byte header and pi bounds. Library constructors/registration remain mocked.
+field 02312F24 10468ED4 u32 0,1,0xFFFFFFFF
+field 02312F24 10468ED8 u32 0,1,0xFFFFFFFF
+field 02312F24 10468EDC u32 0,1,0xFFFFFFFF
+field 02312F24 10468EE0 u32 0,1,0xFFFFFFFF
+field 02312F24 10468EC8 f32 -100 100
+field 02312F24 10468ECC f32 -100 100
+# HD particle signature: controller, group, ID, position, angles, scale, alpha,
+# callback; stack words are signed room, two colors, and final scalar.
+callee 025A847C r3=0 r6=12 r7=6 r8=12 stack=4
+ret! 0201B47C 0,1
+ret! 025AB184 0,1
+ret 02515BBC 0,0x57000000
+ret 02516300 0,0x58000000
+ret 025A847C 0,0x59000000
+
+
+
+# BEGIN initialized finite modeled fixture; no native allocation/lifecycle claim.
+arg! 02311AB8 r3 0x40000000
+arg! 02311AB8 r4 0x41000000
+arg! 02311AB8 r5 0x42000000
+arg! 02311AB8 f1 -2 2
+arg! 02311AB8 f2 -2 2
+arg! 02311B94 r3 0x40000000
+arg! 02311B94 r4 0x41000000
+arg! 02311B94 r5 0,0x42000000
+arg! 02311B94 r6 0x43000000
+arg! 02311B94 r7 0,0x44000000
+arg! 02311B94 f1 -2 2
+arg! 02311B94 f2 -2 2
+arg! 02311CD8 r3 0x40000000
+arg! 02311CD8 r4 0,0x41000000
+arg! 02311CD8 f1 -2 2
+arg! 02311F80 r3 0x40000000
+arg! 02311F80 f1 -2 2
+arg! 023120B4 r3 0x40000000
+arg! 023120B4 f1 -2 2
+arg! 023121C4 r3 0x40000000
+arg! 023121C4 r4 0,0x41000000
+arg! 023121C4 r5 0x42000000
+arg! 023121C4 r6 0,0x43000000
+arg! 023121C4 r7 0,0x44000000
+arg! 023121C4 f1 -2 2
+arg! 023121C4 f2 -2 2
+arg! 023121C4 f3 0 0.95
+arg! 023121C4 f4 0 1
+arg! 023123C0 r3 0x40000000
+arg! 023123C0 r4 0,0x41000000
+arg! 023123C0 r5 0x42000000
+arg! 023123C0 f1 -2 2
+arg! 023123C0 f2 -2 2
+arg! 023123D8 r3 0x40000000
+arg! 023123D8 r4 0x41000000
+arg! 02312548 r3 0x40000000
+arg! 02312548 r4 0x41000000
+arg! 023126A0 r3 0x40000000
+arg! 023126A0 r4 0x41000000
+arg! 023127F8 r3 0x40000000
+arg! 023127F8 r4 0x41000000
+arg! 023127F8 r5 0x42000000
+arg! 02312968 r3 0x40000000
+arg! 02312968 r4 0,0x41000000
+arg! 023129C4 r3 0x40000000
+arg! 023129C4 r4 -1,0,3
+arg! 023129C4 r5 0x42000000
+arg! 023129C4 r6 0,1,255,256,4294967295
+arg! 02312B88 r3 0x40000000
+arg! 02312B88 r4 0x41000000
+arg! 02312B88 r5 0x42000000
+arg! 02312C8C r3 0x40000000
+arg! 02312C8C r4 0x41000000
+arg! 02312D6C r3 0x40000000
+arg! 02312D6C r4 0x41000000
+arg! 02312E54 r3 0x40000000
+arg! 02312E54 r4 0x41000000
+field * 40000000 f32 -100 100
+field * 40000004 f32 -100 100
+field * 40000008 f32 -100 100
+field * 41000000 f32 -100 100
+field * 41000004 f32 -100 100
+field * 41000008 f32 -100 100
+field * 42000000 f32 -100 100
+field * 42000004 f32 -100 100
+field * 42000008 f32 -100 100
+field * 43000000 f32 -100 100
+field * 43000004 f32 -100 100
+field * 43000008 f32 -100 100
+field * 44000000 f32 -100 100
+field * 44000004 f32 -100 100
+field * 44000008 f32 -100 100
+field * 10476464 f32 -100 100
+field * 10476468 f32 -100 100
+field * 1047646C f32 -100 100
+field * 40000314 f32 -100 100
+field * 40000318 f32 -100 100
+field * 4000031C f32 -100 100
+field * 4000033C f32 -100 100
+field * 40000340 f32 -100 100
+field * 40000344 f32 -100 100
+field * 40000370 f32 -100 100
+field * 40000374 f32 -100 100
+field * 40000378 f32 -100 100
+field * 40000322 u16 0,16384,32768,49152
+field * 41000314 f32 -100 100
+field * 41000318 f32 -100 100
+field * 4100031C f32 -100 100
+field * 4100033C f32 -100 100
+field * 41000340 f32 -100 100
+field * 41000344 f32 -100 100
+field * 41000370 f32 -100 100
+field * 41000374 f32 -100 100
+field * 41000378 f32 -100 100
+field * 41000322 u16 0,16384,32768,49152
+field * 104A44F8 f32 0
+field * 104A44FC f32 1
+stable 104A44F8 8
+field * 104A84F8 f32 1
+field * 104A84FC f32 0
+stable 104A84F8 8
+field * 104AC4F8 f32 0
+field * 104AC4FC f32 -1
+stable 104AC4F8 8
+field * 104B04F8 f32 -1
+field * 104B04FC f32 0
+stable 104B04F8 8
+ret! 025200D4 0x1046F0B0,0x1046F0B0
+field * 104753A8 u32 1
+# Initialized getter path only; lazy singleton construction excluded.
+field * 10474B60 u32 0x55000000
+stable 10474B60 4
+ret! 0257DAA8 0x10476464,0x10476464
+field * 104773B4 u32 1
+field * 10476480 f32 0 1
+fret! 02578348 0 1
+field * 10468EFC u32 0,1
+field * 10468F00 u32 0,1
+field * 10468EE4 f32 -100 100
+field * 10468EE8 f32 -100 100
+field * 10468EEC f32 -100 100
+field * 10468EF0 f32 -100 100
+field * 10468EF4 f32 -100 100
+field * 10468EF8 f32 -100 100
+ret! 02515BBC 0,0x57000000
+ret! 02516300 0,0x58000000
+ret! 0251638C 0,1,4,5
+field * 5700000E i16 0,168
+field * 58000010 u32 0,0x10000,0x1C4000,0x8000
+field * 101F84DC u32 0x56000000
+stable 101F84DC 4
+field * 5600002E u8 0,57,58,62
+ret! 025A847C 0,0x59000000
+ret! 024EF0F4 0,4,5,10,15,19,27,4294967295
+ret! 024EF130 -1,0,127,128,255
+# Exact dCcD_Cyl shape dispatch; center leaf returns receiver+20 (cylinder+118).
+real 0200C794
+callee 0200C794 r3=0x38
+field 02312C8C 41000114 u32 0x1004B160
+field 02312E54 41000114 u32 0x1004B160
+stable 41000114 4
+field 02312C8C 410000C0 f32 -100 100
+field 02312C8C 410000C4 f32 -100 100
+field 02312C8C 410000C8 f32 -100 100
+field 02312C8C 410000CC f32 -100 100
+field 02312C8C 410000D0 f32 -100 100
+field 02312C8C 410000D4 f32 -100 100
+field 02312C8C 41000118 f32 -100 100
+field 02312C8C 4100011C f32 -100 100
+field 02312C8C 41000120 f32 -100 100
+field 02312E54 410000C0 f32 -100 100
+field 02312E54 410000C4 f32 -100 100
+field 02312E54 410000C8 f32 -100 100
+field 02312E54 410000CC f32 -100 100
+field 02312E54 410000D0 f32 -100 100
+field 02312E54 410000D4 f32 -100 100
+field 02312E54 41000118 f32 -100 100
+field 02312E54 4100011C f32 -100 100
+field 02312E54 41000120 f32 -100 100
+# END initialized finite modeled fixture

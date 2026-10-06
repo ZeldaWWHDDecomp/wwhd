@@ -1,0 +1,33 @@
+src wwhd_src/d/actor/d_a_btd_damage.cpp
+# Typed supplied fresh cylinder hit object; preserve complete AttackInfo inputs.
+callee 02518DB0 r3=28
+real 02518DB0
+real 02518B28
+real 025157AC
+real 02516090
+ret! 025200D4 0x54000000 0x54000000
+ret! 02516300 0x55000000 0x55000000
+ret 025162A4 0,1
+field 020F4D80 54005B2C u32 0x58000000
+field 020F4D80 580003AC u8 0,1,2,3,4,5,6,7,8,9
+field 020F4D80 580003AD u8 0,1
+field 020F4D80 5500003C u32 0x1004B108
+field 020F4D80 55000044 u32 0x56000000
+field 020F4D80 5600000C u32 0x57000000
+field 020F4D80 57000008 s16 0xFA,0xA8
+field 020F4D80 55000010 u32 0,0x100,0x200000,0x20000,0x10000
+field 020F4D80 55000014 u8 0,1,2,4
+field 020F4D80 5500006F u8 0
+field 020F4D80 r3+0x41E u8 0,1,2
+field 020F4D80 r3+0x408 u8 0,1
+field 020F4D80 r3+0x41C s16 0,1
+field 020F4D80 r3+0x40C s16 0,2
+field 020F4D80 r3+0x3A1 u8 0,1,2,4,127,255
+field 020F4D80 104629FE u8 0,1
+
+# Direct nonfatal type1 branch threshold steering; ordinary epochs retained.
+field 020F4D80 10462A06 s16 100,32767
+field 020F4D80 r3+0x5FAD u8 0,1,2
+
+# Particle set: setup, prm, env, scale2D on the stack.
+callee 025A847C stack=4

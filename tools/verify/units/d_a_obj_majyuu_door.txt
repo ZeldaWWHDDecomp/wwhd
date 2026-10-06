@@ -1,0 +1,38 @@
+src wwhd_src/d/actor/d_a_obj_majyuu_door.cpp
+ret 02520460 0 5
+ret 025200D4 0x54000000 0x54000000
+ret 025BA0C0 0 1
+ret 0211D2F8 0,1,2
+field * r3+0x3AC s32 0,1,2
+field * r3+0x3E8 u8 0,1,254,255
+field * r3+0x3E4 s32 -1,0,1,39,40,41,50
+field * 0x101F4F28 u32 0,0x55005000,0x55005000
+field * 0x101F84DC u32 0,0x55006000,0x55006000
+field * r3+0x3C4 u32 0x55000000 0x55000000
+field * 0x55000044 u32 0x025A5F88 0x025A5F88
+stable 55000000 48
+field * 0x1046A50C u8 0 1
+field * 0x1046A52C u32 0 1
+field * 0x101FDC10 u32 0 1
+field 0236F750 0x101FDC24 u32 0 0
+field 0236F750 0x101FDC28 u32 0x000000B4 0x000000B4
+field 0236F750 r3+0xB4 u32 0x55000100 0x55000100
+field 0236F750 0x55000104 u32 0x0236FCD8 0x0236FCD8
+mockmove C000A848 r3 r4 r5
+callee 026066C4 r4=8
+callee 020182E0 r4=12
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+callee 024F17D4 r3=12
+stackfill periodic
+field 0236F390 r5+8 s16 0,0x125,0x126,0x127
+# Exercise initialized trig entries, not only the pre-runtime zero table.
+field 0236F8A0 r3+0x322 u16 0,7,8,0x3FFF,0x4000,0xFFFF
+field 0236F8A0 0x104A44F8 f32 -1 1
+field 0236F8A0 0x104A44FC f32 -1 1
+field 0236F8A0 0x104A4500 f32 -1 1
+field 0236F8A0 0x104A4504 f32 -1 1
+# Distinguish live timer/color boundaries while both scratch and callees may change state.
+field 0236FD28 r3+0x3C8 u32 0,0x56000000,0x56000000
+field 0236F9F4 r3+0x3C8 u32 0,0x56000000,0x56000000
+arg 0236FDB8 r3 0,0x40000000,0x40000000
+arg 0236FEB4 r3 0,0x40000000,0x40000000,-280

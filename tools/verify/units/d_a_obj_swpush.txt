@@ -1,0 +1,59 @@
+src wwhd_src/d/actor/d_a_obj_swpush.cpp
+# Actual pure parameter accessor correlates bit widths and results.
+real 02399090
+ret 025BA0C0 0 1
+ret 02544044 0 1
+ret 025440C8 0 1
+ret 02396B14 0 1
+callee 025CB374 r6=12
+field * r3+0x46c i32 0,1,2,3,4
+field * r3+0x474 i32 0,1,2,3,4
+field * r3+0xf8 u16 0,1,2,3
+field * r3+0x484 u8 0,1
+field * r3+0x485 u8 0,1
+field * r3+0x48a u8 0,1
+field * r3+0x48b u8 0,1
+field * r3+0x480 u8 0,1,2
+field * r3+0x481 u8 0,1
+field * r3+0x4b0 i16 -1,0,1,30
+field * r3+0x478 i16 -32768,-1,0,1,2,10
+field * r3+0x482 i16 -32768,-1,0,1,2,3,4,5,6,12,13,14,15,16,32767
+field * r3+0x488 i16 -32768,-1,0,1,2,3,4,5,6,12,13,14,15,16,32767
+field * r3+0x490 f32 -1,-0.05,-0.03,0,0.1,0.9,1,1.03,1.05,2
+arg 02399090 r4 0,1,3,8,31,32,33,63
+arg 02399090 r5 0,8,16,31,32,63
+callee 026066C4 r4=8
+# Constructors/setters do not write all56 bytes; avoid fabricated full outputs.
+callee 02019040 r3=0
+callee 0201924C r3=0 r4=12 r5=12 r6=12
+callee 0201204C r3=56 r4=12
+callee 028E8F64 r4=12 r5=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+ret 023969BC 0,4,5
+ret 025D63E8 0 1
+ret 024EEA6C 0 1
+ret 0201204C 0 1
+field 0239705C r4+0x46c i32 0,1,2,3,4
+field 0239705C r4+0x481 u8 0,1
+field 0239705C r5+0x2e0 u32 0,1,1024,1025,134218752,134218753
+field 0239705C r5+0xe i16 0,168
+field 0239705C r5+0x3b8 u32 0,1,33554432,33554433
+
+# HD callback timing is r4; enter the model-joint update path.
+arg 02396BC8 r4 0,1,2
+# Complete both resource-load phases.
+ret 02520460 0,4,5
+field 02398014 r3+0x470 i32 0,1,2,3
+# Explicit guest-address null check in inlined HD constructor.
+arg 023975B0 r3 0,0x40000000
+
+# Observe draw-list state at the model consumer.
+observe 025E2DE0 104B4634 8
+
+# Exercise height clamp neighborhoods with controlled spring inputs.
+field 02397E70 r3+0x48c f32 -0.05,-0.03,0,1,1.03,1.05
+field 02397E70 r3+0x494 f32 -1,0,0.01,1
+field 02397E70 r3+0x4a0 i16 -1,0,1,2,32767
+
+# Runtime save-info singleton pointer, initialized after image load.
+field * 0x101f84dc u32 0x54000000,0x54010000

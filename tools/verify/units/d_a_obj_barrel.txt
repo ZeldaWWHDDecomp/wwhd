@@ -1,0 +1,118 @@
+# HD Barrel: 49 functions, exact TU 0231C2AC through 0231E66C; barrel2 excluded.
+# Official harness 7335638: all49 functions pass10000 comparisons.
+# General + high-wind suites cover259/262 original blocks; remaining3 are
+# exhausted string-loop caps unreachable for the fixed, short stage literals.
+# Focused player suite also passes49x10000 and rejects four cosine variants.
+# Full1499-variant audit:993 rejected,404 compiler-invalid,101 equivalent,
+# one mock-only cull-store-order difference (actual025D6768 cannot touch348).
+# Durable per-ID evidence: build/barrel-final-audit.json; no-clobber diagnostic
+# supports that single actual-callee proof; canonical comparisons retain clobber.
+src wwhd_src/d/actor/d_a_obj_barrel.cpp
+field * r3+0x728 i32 0,1,2,3,4,5,6,7
+field * r3+0x3E0 u32 0,32,128,2048,2208
+field * r3+0x730 i32 -1,0,1,2,5,12,20
+field * r3+0x73F u8 0,1
+field * r3+0x73D i8 -1,0,1,20
+field * r3+0x2E4 u32 0,8
+callee 026066C4 r4=8
+callee 025DAE64 r3=12
+callee 0255F458 r3=12
+arg 0231E654 r4 0,1,3,31,32,33,63
+arg 0231E654 r5 0,1,28,31,32,33,63
+stackfill
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+field * 104691FC u32 0,1
+field 0231D128 r3+0x52E u16 0,255,256,65535
+field 0231D128 r3+0x4A2 u16 0,255,256,65535
+field * r3+0x73C u8 0,1
+field * r3+0x2E0 u32 0,8192,1048576,1056768
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 023121C4 r4=12 r5=12 r6=12 r7=12
+callee 023123C0 r4=12 r5=12
+callee 028E8E64 r3=12 r4=out12
+field 0231D724 r3+0x728 i32 0,1,2,3,4,5,6
+field * 101F84DC u32 0,0x50000000
+callee 0201AE48 r3=12 r4=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 020182E0 r4=12
+ret 02520460 0,4,5
+ret 025D63E8 0,1
+ret 02516300 0,0x50000000
+field 0231CD50 r3+0x5DC u8 0,1,2,3
+field * r3+0x73E u8 0,1
+field * r3+0xB0 u32 0,0x10000000,0x70000000
+# Deterministic ordinary object and collision paths.
+ret 025200D4 0x58000000 0x58000000
+ret 020084C8 0,0x57000000
+field * 57000000 f32 0,0.001,-0.001,0.01
+field * 57000008 f32 0,0.001,-0.001,0.01
+field 0231DD40 r3+0x32C i16 0,4096,4097,16384
+field 0231D944 r3+0x2E4 u32 0,4
+field 0231CD50 50000010 u32 0,0x200000,0x10028
+field 0231CD50 50000000 u32 0,4
+field 0231CD50 5000003C u32 0x57004000
+field 0231CD50 5700402C u32 0x0200CD04
+ret 0200CD04 0x57001000 0x57001000
+field 0231CD50 5700101C u32 0x57002000
+field 0231CD50 5700209C u32 0x0200C8CC
+ret 0200C8CC 0,1
+callee 0200C8CC r4=12 r5=out12
+ret 02515BBC 0,0x57003000
+field 0231CD50 5700300E i16 0,168
+field 0231CD50 r3+0x32C i16 0,16384
+# Separate stage buffer: sea or prefixes differing before the NUL.
+field 0231C674 58005134 u8 115
+field 0231C674 58005135 u8 101
+field 0231C674 58005136 u8 97
+field 0231C674 58005137 u8 0,88
+field 0231C674 58005138 u8 66
+# Carry can match either known stage; independently sampled bytes also exercise mismatches.
+field 0231D3BC 58005134 u8 109,77
+field 0231D3BC 58005135 u8 97
+field 0231D3BC 58005136 u8 106
+field 0231D3BC 58005137 u8 114,121
+field 0231D3BC 58005138 u8 111,117
+field 0231D3BC 58005139 u8 111,69
+field 0231D3BC 5800513A u8 109,0
+field 0231D3BC 5800513B u8 0,88
+field 0231D3BC 5800513C u8 66
+# Include the original pointer-equality fast path for the sea stage literal.
+ret 025200D4 0x58000000,0x100204E0
+# Infeasible coverage: create block16 and carry blocks5/11 exhaust the 0x40001-byte
+# comparison cap, but each compared literal terminates within eight bytes.
+# Exact-review strengthening: preserve zero and nonzero resource-controller pointer cases.
+field * 101F4F28 u32 0,0x59000000
+# Static-initialization stores must also clear nonzero preexisting global state.
+field 0231E504 104691EC u32 0,0x12345678
+field 0231E504 104691F0 u32 0,0x12345678
+field 0231E504 104691F4 u32 0,0x12345678
+field 0231E504 104691F8 u32 0,0x12345678
+# Exact summed-height thresholds, including the sinkdown equality at y=0,height=150.
+field * r3+0x318 f32 -50,0,50,100,150
+field * r3+0x574 f32 0,50,100,150,200,250
+field * r3+0x734 f32 0,150,200,250,300
+# Rolling direction boundary at exactly2.5 units.
+fret 028F4384 2.5 5
+fret 028E8DD0 6.25 25
+# Adjacent status/condition/parameter bits distinguish changed masks.
+field * r3+0x2E0 u32 0,1,8192,8193,1048576,1048577,1056768,1056769
+field * r3+0x2E4 u32 0,1,4,8,9
+field 0231D944 r3+0x2E4 u32 0,1,4,5
+field * r3+0xB0 u32 0,1,7,0x10000000,0x70000000,0x7FFFFFFF,0xFFFFFFFF
+# Real trigonometric-table entries distinguish small angle-index shifts.
+ret 020195B0 0,8,16,-1,-32768
+field * 104A44FC f32 1
+field * 104A4504 f32 0.25
+field * 104A450C f32 -0.25
+field 0231CD50 5700332A i16 0,8,16
+field * r3+0x32C i16 0,8,16,4096,4097,16384,32767
+# Wind ratio and clamp equalities; rolling root endpoints remain explicit above.
+fret 028E8DD0 0.01 31684
+field * r3+0x3E0 u32 0,1,32,33,128,129,2048,2049,2208,2209
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0231D3BC 0x58005134 8 @stages,"MajroE","MajroE","MajroE","MajroEm","MajroEm","MajroEm","MajroEmX","MajroEmX","MajroEmX","Majroo","Majroo","Majroo","Majroom","Majroom","Majroom","MajroomX","MajroomX","MajroomX","MajruE","MajruE","MajruE","MajruEm","MajruEm","MajruEm","MajruEmX","MajruEmX","MajruEmX","Majruo","Majruo","Majruo","Majruom","Majruom","Majruom","MajruomX","MajruomX","MajruomX","MajyoE","MajyoE","MajyoE","MajyoEm","MajyoEm","MajyoEm","MajyoEmX","MajyoEmX","MajyoEmX","Majyoo","Majyoo","Majyoo","Majyoom","Majyoom","Majyoom","MajyoomX","MajyoomX","MajyoomX","MajyuE","MajyuE","MajyuE","MajyuEm","MajyuEm","MajyuEm","MajyuEmX","MajyuEmX","MajyuEmX","Majyuo","Majyuo","Majyuo","Majyuom","Majyuom","Majyuom","MajyuomX","MajyuomX","MajyuomX","_GOAL","_GOAL","_GOAL","majroE","majroE","majroE","majroEm","majroEm","majroEm","majroEmX","majroEmX","majroEmX","majroo","majroo","majroo","majroom","majroom","majroom","majroomX","majroomX","majroomX","majruE","majruE","majruE","majruEm","majruEm","majruEm","majruEmX","majruEmX","majruEmX","majruo","majruo","majruo","majruom","majruom","majruom","majruomX","majruomX","majruomX","majyoE","majyoE","majyoE","majyoEm","majyoEm","majyoEm","majyoEmX","majyoEmX","majyoEmX","majyoo","majyoo","majyoo","majyoom","majyoom","majyoom","majyoomX","majyoomX","majyoomX","majyuE","majyuE","majyuE","majyuEm","majyuEm","majyuEm","majyuEmX","majyuEmX","majyuEmX","majyuo","majyuo","majyuo","majyuom","majyuom","majyuom","majyuomX","majyuomX","majyuomX"
+fieldstr 0231C674 0x58005134 8 @stages,"Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","Ktaru_01","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","OAL","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB","seaXB"

@@ -1,0 +1,70 @@
+# Verification unit: d_a_npc_ds1 part talk (Doc Bandam): messages, talk, look-back, wait action
+src wwhd_src/d/actor/d_a_npc_ds1_talk.cpp wwhd_src/d/actor/d_a_npc_ds1_pending.cpp
+
+ret 025200D4 0x54000000 0x54000000  # play
+field * 101F84DC u32 0x56000000     # save info
+field * 101F4B5C u32 0x55000000     # message manager
+callee 0201ADE0 r4=out12 r3=12 r5=12   # cXyz::operator-
+callee 0201AE48 r4=out12 r3=12         # cXyz::operator*
+callee 0201AD78 r4=out12 r3=12 r5=12   # cXyz::operator+
+callee 0201B47C r3=12                  # normalizeRS
+callee 028E8F44 r3=12 r4=12            # PSVECDotProduct
+callee 0259D54C r3=out12               # dNpc_playerEyePos
+callee 0259DED0 r5=12 r6=12            # lookAtTarget (target, eye copy)
+callee 025BD0EC r4=out12               # getSelectItemPos
+callee 025BCFA8 r4=out12               # getSelectItemBasePos
+callee 025BD31C r4=12                  # ShopCursor setPos
+callee 025BCC7C r4=12                  # Item_ZoomUp
+callee 0222FDBC r4=12                  # chkAttention: position copy
+ret 025B8B94 0 1
+ret 020078BC 0 1
+ret 025B5C54 0 1
+ret 0254DA50 0 1
+ret 02544950 0 1
+ret 0222D37C 0 1
+ret 0222D958 0 1
+ret 025BB698 0 1
+ret 0201B47C 0 1
+ret 027F2BF8 0 1
+ret 025F795C 0,1,8,0xE,0xF,0x12,0x13
+ret 022308E0 0,8,0x12,0xFF
+ret 025F7DB0 0xFFFFFFFF,1
+ret 025BBA1C 0,1,8,0x10,0x20,0x30,0x40
+field * r3+0x9AC i16 0,0,0,4
+field * r3+0x9AE i16 -1,-1,-1,0,1
+field * r3+0x9B0 u32 0x022311F4,0x022312F8,0x022328E4,0x0223164C
+field * r3+0x9B6 i16 0,0,-1,1
+field * r3+0xA4F i8 0,1,2,3,4
+field * r3+0xA5E i8 0
+field * r3+0xA5C i8 0,1,2,3,-1
+field * r3+0xA60 i8 0,1,-1
+field * r3+0xA61 i8 0,1,2,3,-1
+field * r3+0xA63 u8 0x48,0x49,0x4A,0x4B,0x4C
+field * r3+0xA4D i8 0,1,3,9,2
+field * r3+0xA4E i8 0,1,4,5
+field * r3+0xA04 i16 -1,-1,0,1
+field * r3+0xA42 i16 0,1
+field * r3+0x8A8 i8 0,1
+field * r3+0x8D0 u8 0,1
+field * r3+0x8D1 u8 0,1
+field * r3+0x8CF u8 0,1,2,3
+field * r3+0x826 u8 0,1
+field * r3+0x998 u32 0x1DB4,0x1DC0,0x1DC4,0x1DCA,0x1DCB,0x1DCC,0x1DCD,0x1DD1,0x1DD4,0x1DD6,0x1DD7,0x1DB1
+field * 54005BC5 u8 0,1,2,3,4,5,6,0xFF
+field * 54005BD2 u8 0,1
+field * 54005BD3 u8 0,1
+field * 540052B0 u8 0,1,4,5
+field * 10466EE0 i32 -1,-1,1
+field * 55000922 u8 0,1
+field * 55000948 u32 0,1
+field * 55000938 u32 0x1DC0,0x1DD1,0x1DD3,0x1DD4,0x1DB1,0x1DD7
+field * 560000C0 u8 4,5,9,10,14,15
+field * 560000C1 u8 4,5,9,10,14,15
+field * 560000C2 u8 4,5,9,10,14,15
+field 0222FECC r4+0 u32 0x1DB0,0x1DB1,0x1DB4,0x1DB9,0x1DBA,0x1DC0,0x1DC1,0x1DC3,0x1DC3,0x1DC3,0x1DC4,0x1DC8,0x1DC8,0x1DC8,0x1DCB,0x1DCF,0x1DD1,0x1DD4,0x1DD4,0x1DD4,0x1DD7,0x1DDB,0x1DDC
+arg 02230ADC r4 0,1,0x100
+field 0222FECC 54005BD3 u8 0,0,1
+field 0222FECC 55000948 u32 0,0,1
+field 0222FECC 560000C0 u8 4,5,9,10
+field 0222FECC 560000C1 u8 4,5,14,15
+field 0222FECC 560000C2 u8 4,5,14,15

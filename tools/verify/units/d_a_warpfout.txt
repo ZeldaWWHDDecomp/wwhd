@@ -1,0 +1,21 @@
+src wwhd_src/d/actor/d_a_warpfout.cpp
+field * r3+0x2E4 u32 0,1,2,4,8,9,255,0xFFFFFFFF
+field * r3+0x3B0 s32 -1,0,1,4,5
+field * r3+0x3B4 s32 -1,0,1,4
+field * r3+0xF8 u16 0,1,2
+ret 02542D88 -1,0,1,4
+ret 02542EDC -1,0,1,2,3,4
+ret 025447C8 0,1
+ret 0211D2F8 0,1,4
+field * 0x54005292 u8 0,1
+ret 025200D4 0x54000000
+callee 024D8480 r4=12
+callee 025A847C r6=12 r7=6 stack=4
+stackfill periodic
+
+arg! * r3 0x40000000
+arg! 024D8808 r3 0,0x40000000
+
+# 2026-10-05 (return-register class lint): warpfoutEffectAngle returns a csXyz in r3:r4 (HD small-struct ABI); the
+# candidate is declared u32 and sets r4 itself from the same stack word, which the harness now compares as the r3:r4 pair.
+retclass 024D8420

@@ -1,0 +1,9 @@
+src wwhd_src/d/hd_swkbd_mgr.cpp
+callee 0286CD7C r3=16
+callee C00075D0 r4=out16 r5=16
+field * 101F4BAC u32 0x5E100000
+field * 5E100010 u32 1,2,4
+field * 5E100014 u32 0,1,2,3,4,5,6
+# disposer of the registered singleton: the argument is the registered disposer in most inputs
+arg 0261A030 r3 0x5F000000
+field 0261A030 101F50DC u32 0x5F000000,0x5F000000,0

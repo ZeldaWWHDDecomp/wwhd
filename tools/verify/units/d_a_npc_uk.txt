@@ -1,0 +1,108 @@
+# Verification unit: d_a_npc_uk (Jin, Jan & Jun-Roberto, the Killer Bees of Windfall)
+src wwhd_src/d/actor/d_a_npc_uk.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 0200FCD8 r3=12 r4=out12  # MtxPosition
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r6=12         # lookAtTarget (eye copy)
+callee 020182E0 r4=12         # cM3dGCyl::SetC (center copy)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+ret 025200D4 0x54000000 0x54000000
+stackfill
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2  # dNpc_calc_DisXZ_AngY (copies; dist, angle out)
+callee 025CB374 r6=12         # StartShock: cXyz by value
+callee 025A847C r6=12 r7=6 r8=12 stack=4  # dPa_control_c::set
+callee 028E8DD0 r3=12         # PSVECSquareMag
+
+# ---- steering ----
+ret 022F0B68 0,1,2,3            # getShapeType
+ret 022F1060 0,1,2,3            # getType
+ret 02520460 0,4,5              # dComIfG_resLoad: cPhs_COMPLEATE_e is 4 here
+ret 025D63E8 0,1                # fopAcM_entrySolidHeap
+ret 022F1150 0,1                # init
+ret 022F2ADC 0xE,0x12,0xFE,0xFF # talk
+ret 0229B54C 0,1                # daNpc_Mk_Static_c::chkGameSet
+ret 025447C8 0,1                # dEvent_manager_c::getIsAddvance
+ret 0229B768 0,1                # daNpc_Mk_Static_c::chkPointPass
+ret 0229B164 0,1,2,3,4,5        # daNpc_Mk_Static_c::runAwayProc
+ret 025F795C 0xE,0xF,0x12,0x10  # message manager status
+ret 022F28B4 0xF,0x10           # next_msgStatus
+ret 022F2CD4 0,1,2,3,4,5        # getLookBackMode
+ret 022F43DC 0,1,2,3,4,5,6,7,8,9,10  # nextVisitMode
+# the partner (Mk) actor at a pinned address: mode at +0x818
+ret 025D5218 0,0x55000000,0x55000000      # fopAcIt_Judge (fopAcM_SearchByID)
+ret 025D9F38 0,0x55000000,0x55000000      # fopAcM_searchFromName("Mk")
+field * 55000818 u8 0,2,4,5,6,7,8,9
+# event substances (Pos / Timer / MsgNo / Angle) at a pinned address
+ret 0254487C 0,0x55100000,0x55100000,0x55100000
+field * 55100000 u32 0,1,2,0x69
+ret 025A847C 0,0x54004000       # dPa_control_c::set
+
+field 022F193C r3+0x8 i16 0x170,0x171
+field 022F193C r3+0x2E4 u32 0,8
+field 022F1150 r3+0x833 i8 0,1,2,3
+field 022F1150 r3+0x818 i16 0,1
+field 022F1150 r3+0x81A i16 -1,0,1
+field 022F1150 r3+0x81C u32 0x022F5DB0,0x022F5E90,0x022F6058,0x022F6360
+arg 022F1DE4 r4 -1,0,4,6,11
+field 022F1DE4 r3+0x821 i8 -1,4,10,11
+field 022F28B4 r4+0 u32 0x26BF,0x26C0,0x26C1,0x26C3,0x26D8
+field 022F2ADC r3+0x835 i8 -1,0,1,2
+field 022F2ADC 10468920 u32 0xFFFFFFFF,0
+field 022F2ADC r3+0x800 u16 0,0x80,0x400
+field 022F2CD4 r3+0x804 u32 1,0xFFFFFFFF
+field 022F2CD4 r3+0x82D i8 0,2
+field 022F2CD4 r3+0x82F u8 2,4,6,7,8,9
+field 022F2CD4 r3+0x800 u16 0,0x4,0x20,0x40
+field 022F2E18 r3+0x804 u32 1,0xFFFFFFFF
+field 022F2E18 r3+0x7B2 u8 0,1
+field 022F3664 r3+0x828 i32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+field 022F3664 r3+0x821 i8 0,4
+field 022F3664 r3+0x800 u16 0,2,0x200
+field 022F3664 r3+0x7F6 i8 0,1
+field 022F3664 r3+0x858 i16 -1,0,1,2
+field 022F3664 1046894C u32 0,1
+field 022F43DC r3+0x804 u32 1,0xFFFFFFFF
+field 022F43DC r3+0x82F u8 0,2,3,4,5,6,7,8,9,10
+field 022F43DC r3+0x830 u8 0,1
+field 022F43DC r3+0x831 u8 0,1
+arg 022F4B44 r4 0,1,2,3,4,5,6,7,8,9,10,11
+field 022F4B44 r3+0x82F u8 0,2,8,9
+field 022F4F28 r3+0x82F u8 0,1,2,3,4,5,6,7,8,9,10,11
+field 022F4F28 r3+0x832 u8 0,0x2C,0x2D
+field 022F515C r3+0x800 u16 0,1
+field 022F515C r3+0x821 i8 0,3,4
+field 022F515C r3+0x82F u8 2,6,7
+field 022F515C r3+0x804 u32 1,0xFFFFFFFF
+field 022F515C r3+0x82C u8 0,1
+field 022F588C r3+0x864 u8 0,1,2,3,4,5,6
+field 022F588C r3+0x821 i8 4,5
+field 022F5AE8 r3+0x864 u8 0,1,2,3
+field 022F5AE8 r3+0x821 i8 0,4
+fret 020198D8 0 1                # cM_rndF
+field 022F5E90 r3+0x834 i8 -1,0,1
+field 022F5E90 r3+0x833 i8 0,1,2
+field 022F5E90 r3+0x818 i16 0,1
+field 022F5E90 r3+0x81A i16 -1,0,1
+field 022F5E90 r3+0x81C u32 0x022F6360,0x022F5E90
+field 022F6058 r3+0x834 i8 -1,0,1
+field 022F6058 r3+0x82D i8 0,1,2,3,4,5,6,13,14
+field 022F6058 r3+0x818 i16 0,1
+field 022F6058 r3+0x81A i16 -1,0,1
+field 022F6058 r3+0x81C u32 0x022F5E90,0x022F6360
+field 022F6360 r3+0x834 i8 -1,0,1
+field 022F6360 r3+0x82D i8 -1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
+field 022F6360 r3+0x818 i16 0,1
+field 022F6360 r3+0x81A i16 -1,0,1
+field 022F6360 r3+0x81C u32 0x022F5E90,0x022F6360
+# mutation input gaps
+field 022F1F98 r3+0x370 f32 2.0 15.0       # speedF around the play-rate clamps
+field 022F293C r3+0x82D i8 0,3,4
+field 022F293C r3+0x833 i8 0,1,2
+ret 0200F93C 0,0x3A98,-0x3A98,0x3A97,-0x3A97,0x4650,-0x4650,-0x1388   # cLib_targetAngleY
+field 022F53E0 r3+0x322 i16 0
+ret 025D6894 0,0x1800,0x1801,0x2AAA,0x2AAB,-0x2AAA,-0x2AAB,0x37FF,0x3800   # fopAcM_searchActorAngleY
+field * 5500032A i16 0
+field * 54005B34 u32 0,0x55000000
+arg 022F53E0 r4 0,0x3A98,0x4650
+arg 022F53E0 r5 0,-0x3A98,-0x1388,-0x4650

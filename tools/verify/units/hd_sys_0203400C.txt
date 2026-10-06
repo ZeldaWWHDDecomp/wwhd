@@ -1,0 +1,58 @@
+# hd_sys_0203400C: TU 0203400C..02034B13 (exception dump manager, panic, delegate invokers); HD-only
+src wwhd_src/hd/hd_sys_0203400C.cpp
+field * 101FD598 u32 0,1
+field * 101FD594 u32 0,1
+field * 101FD698 u32 0,1
+field * 101FD694 u32 0,1
+field * 102008D4 u32 0,1
+arg 0203400C r4 0x101FD97C,0x101FD980,0x12345678
+# delegates: null object / zero index / plain function / vtable slot
+field 02034084 r3+4 u32 0,0x64000000
+field 020340D8 r3+4 u32 0,0x64000000
+field 02034084 r3+0xA s16 0,-1,1,3
+field 020340D8 r3+0xA s16 0,-1,1,3
+# offset list at +0xCC (offset 0x20): pinned receiver, ring of 0..2 nodes, stable links; one vtable
+arg! 02034130 r3 0x60000000
+arg! 02034200 r3 0x60000000
+field * 600000D8 u32 0x20
+field * 600000D0 u32 0x600000CC,0x60000320,0x60000420
+field * 60000324 u32 0x600000CC,0x60000420
+field * 60000424 u32 0x600000CC
+field * 60000310 u32 0x6A000000
+field * 60000410 u32 0x6A000000
+field * 6A00000C u32 0x02752A84
+ret 02752A84 0,1
+stable 600000D8 4
+stable 600000D0 4
+stable 60000324 4
+stable 60000424 4
+stable 60000310 4
+stable 60000410 4
+stable 6A00000C 4
+# dump entry list (singly linked, head +0): 0..2 entries
+arg! 02034494 r3 0x61000000
+arg 02034494 r4 0x61000100,0x61000200,0x61000300
+field * 61000000 u32 0,0x61000100,0x61000200
+field * 61000100 u32 0,0x61000200
+field * 61000200 u32 0
+arg! 020346DC r3 0x62000000
+field * 62000000 u32 0,0x62000100,0x62000200
+field * 62000100 u32 0,0x62000200
+field * 62000200 u32 0
+stable 62000000 4
+stable 62000100 4
+stable 62000200 4
+ret 027601C4 0,1
+arg 020342D0 r3 0,0xFFFFFFF0,0x65000000
+arg 02034434 r3 0,0x65000000
+arg 02034538 r3 0,0x65000000
+arg 02034620 r3 0,0xFFFFFFF0,0x65000000
+field 02034620 r3+0x48 u8 0,1
+field 02034620 r3+0x2C u32 0,0x63000000
+arg 02034884 r3 0,0xFFFFFFCC,0x65000000
+callee 0286DB50 r4=12
+stackfill periodic
+# mutation follow-up: the variadic frames (generated entry sp 7EFFF000) are observed at the vprintf call:
+# 02034598's va_list + register save area (frame 7EFFEF88: +8..+0x78) and 02034974's
+# (frame 7EFFEF70: va_list +8, save area +0x18, the va_list copy +0x78, saved registers +0x84)
+observe 0286DB50 7EFFEF78 136

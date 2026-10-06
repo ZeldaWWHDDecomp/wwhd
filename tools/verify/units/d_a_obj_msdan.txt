@@ -1,0 +1,13 @@
+# Verification unit: d_a_obj_msdan (staircase spawner)
+src wwhd_src/d/actor/d_a_obj_msdan.cpp
+
+callee 025D5834 r5=12 r7=6    # fopAcM_create: pos, angle
+ret 02520460 0 5              # resLoad
+ret 025BA0C0 0 1              # isSwitch
+ret 025440C8 0 1              # endCheck
+ret 0237B360 0,0,1,1,2,0xFF   # PrmAbstract
+arg 0237B360 r4 0,1,8,31,32,33,63
+arg 0237B360 r5 0,1,8,24,31,32,33,63
+field * r3+0x3B8 u32 0,1,2,3,4 # mState
+field * r3+0x3B4 i16 -1,-1,0,5 # mEventIdx
+field * r3+0xF8 u16 0,2        # event command

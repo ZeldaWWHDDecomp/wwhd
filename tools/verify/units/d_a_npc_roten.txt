@@ -1,0 +1,53 @@
+# Verification unit: d_a_npc_roten (Traveling Merchants)
+src wwhd_src/d/actor/d_a_npc_roten.cpp wwhd_src/d/actor/d_a_npc_roten_exec.cpp
+
+callee 026067F4 r4=8             # dRes_control_c::getIDRes(SafeString*)
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2  # dNpc_calc_DisXZ_AngY(copy, copy, &dist, &angle)
+callee 0259D54C r3=out12         # dNpc_playerEyePos
+callee 0259DED0 r6=12            # lookAtTarget (eye copy)
+callee 0259E778 r4=out12         # dNpc_PathRun_c::getPoint
+callee 0259E838 r4=12            # chkPointPass(copy)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 025D54C4 r4=out4          # fopAcM_SearchByID(id, &actor)
+callee 020182E0 r4=12            # cM3dGCyl::SetC
+callee 02018D40 r4=12            # cM3dGSph::SetC
+ret 025200D4 0x54000000 0x54000000
+
+# u8 arguments the code uses unmasked (callers pass bytes)
+arg! 022D43B0 r4 0 9
+arg! 022D32FC r4 0 255
+arg! 022D62EC r4 0x80 0xB0
+arg! 022D3314 r4 0x90 0x98
+
+# event order states, talk results, message flags
+field 022D3EA0 r3+0xF8 u16 0,1,2
+field 022D3EA0 r3+0xB2B u8 0,1,2,3,4,5,6
+field 022D3EA0 r3+0xB28 u8 0 1
+ret 0254407C 0 1
+ret 025A11EC 0x12,0x0E,0x10
+# eventMesSetInit: MsgNo integer
+ret 0254487C 0,0x56000000
+field 022D40A4 56000000 u32 0,1,0xA,0x14,0x15,0x63,7
+# privateCut: hand-over animation (9C0 7/8) and its frame
+field 022D4828 r3+0xB34 u8 7,8,0
+field 022D4828 r3+0x44C u32 0x57000000
+field 022D4828 57000098 f32 0 100
+field 022D4828 5700009C f32 0 100
+
+# stack objects start with random bytes (exposes missing stores to Locals)
+stackfill
+# merchant number (0..2 in the game)
+field * r3+0xB31 u8 0,1,2
+ret 025B8BB0 0 5
+field 022D6304 r3+0xB26 u16 0,1,8,9,0x10,0x20,0x38,0xFFFF
+# next_msgStatus: message list, selected answer, rupees
+field 022D60DC r3+0xB00 u32 0,0x58000000
+field 022D60DC 58000004 u32 0,1,2,2,2,2,3,0x2900
+field 022D60DC 101F4B5C u32 0x59000000
+field 022D60DC 59000948 u32 0 1
+field 022D60DC 101F84DC u32 0x5A000000
+field 022D60DC 5A000024 u16 0,10,20
+field 022D60DC 54005BA4 i16 0,10,20,-1
+field 022D6304 540052B0 u8 0,1,2,5
+arg 022D60DC r4 0x5B000000,0x5B000000
+field 022D60DC 5B000000 u32 0x293D,0x29A1,0x2A05,0x1234,0x1234,0x1234,0x1234,0x1234

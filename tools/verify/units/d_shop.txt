@@ -1,0 +1,82 @@
+src wwhd_src/d/d_shop.cpp
+stackfill periodic
+field 025BCF44 r3+0x40 i16 -1,0,1,2,9
+field 025BCF44 r3+0x28 u8 0,1,2
+field 025BCF44 r3+0x29 u8 0,1,2
+field 025BCCA4 r3+0x40 i16 -1,0,1,2,8
+field 025BCE04 r3+0x40 i16 -1,0,1,2,8
+arg! 025BC810 r4 -1,0,1,2,3,8
+# Valid shop item storage has8slots; preserve negative/empty/count boundary cases.
+field * r3+0x40 i16 -1,0,1,2,3,8
+field * r3+0x42 i16 0,1,2,8
+ret 025200D4 0x52000000 0x52000000
+field * 52005AF8 u32 0,0x54000000
+field * 52005B30 i8 0,1
+field * 52005B2C u32 0x55000000
+field * 101F84DC u32 0x56000000
+arg 025BB974 r3 130,131,140,16,17,18,11,12,13,14,0
+field * 56000089 u8 0,30,99
+field * 5600008F u8 0,30,99
+field * 5600008A u8 0,30,99
+field * 56000090 u8 0,30,99
+ret 025B6E90 0,1
+arg 025BBC54 r3 0,0x53000000
+arg 025BBDF0 r3 0,0x53000000
+arg 025BC760 r3 0,0x53000000
+ret 0273AD10 0,0x57000000
+ret 025E8154 0,1
+arg 025BBA1C r3 0x53000000
+arg 025BBA1C r4 0,1
+arg 025BBA1C r5 -1,0,1,99,100,101,999
+field 025BBA1C r3 i16 0
+field 025BBA1C r3+0x24 u32 0x58000000
+field 025BBA1C 58000000 u32 0x59000000
+field 025BBA1C 59000000 u32 0x5A000000
+field 025BBA1C 5A000000 u32 130,131,39,16,11,0
+field 025BBA1C 5A000007 u8 0,39,130
+field 025BBA1C 5A000008 u32 39,0,130
+field 025BBA1C 5A00000C u8 0,1,2,4,8,16,32,63
+field * 56000024 u16 0,99,100,101,1000
+field * 56000068 u8 0,39,255
+field * 5600006A u8 0,255
+field * 5600006B u8 0,255
+field * 5600006C u8 0,255
+field * 5600006D u8 0,255
+ret 02520C0C 0,1
+ret 025B5C54 0,1
+ret 025BB974 0,1
+arg 025BB698 r4 0x53000000
+arg 025BB698 r6 0,0x025BD22C
+field 025BB698 101F4B5C u32 0x5B000000
+field 025BB698 5B000922 u8 0,1
+field 025BB698 5B000924 u32 0,1
+ret 025F795C 7,14,15,0
+field 025BB698 53000000 i16 -1,0,1,2
+field 025BB698 53000024 u32 0x58000000
+field 025BB698 53000042 i16 0,1,2,8
+ret 025BB5FC -1,0,1,2
+ret 02588A0C 0,1
+ret 02588A7C 0,1
+ret 02588AEC 0,1
+ret 02588B5C 0,1
+ret 020077BC 0,1
+ret 020077E8 0,1
+ret 02007764 0,1
+ret 02007790 0,1
+field * r3+0x28 u8 0,1,2
+field * r3+0x29 u8 0,1,2
+field * r3+0x3C i16 0,1
+field * r3+0x4C i16 -1,0,1
+field * r3+0x4E i16 0,1,2
+field * r3+0xA4 i16 -1,0,1,15
+field * r3+0xB4 u8 0,1
+ret 025B8B94 0,1
+arg 025BB5FC r3 0,1,2,3
+field 025BB5FC r4 i16 -1,0,1,2
+field 025BB5FC r4+0x42 i16 0,1,2,8
+field 025BB5FC r4+4 u32 0,0xFFFFFFFF
+field 025BB5FC r4+8 u32 0,0xFFFFFFFF
+field 025BB5FC r4+12 u32 0,0xFFFFFFFF
+# Cursor drawing temporarily selects render lists. Observe at the draw boundary,
+# before the final restoration can hide an incorrect temporary list selection.
+observe 025E2DE0 104B4634 8

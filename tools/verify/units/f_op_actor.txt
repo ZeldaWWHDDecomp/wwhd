@@ -1,0 +1,24 @@
+# f_op_actor (fopAc): 025D4604..025D51D8 (sinit 025D5148 at the end; f_op_actor_iter follows at 025D51DC)
+src wwhd_src/f_op/f_op_actor.cpp
+stackfill periodic
+ret! 025200D4 0x54000000 0x54000000
+# constructor: this == NULL allocates
+arg 025D4ED0 r3 0,0x52000000
+# Create: no append (prm null) or a pinned prm
+field 025D4C70 r3+0xAC u32 0,0x53000000
+# Execute: enemy group 2, a player 15000 above / below, NOPAUSE status
+field 025D475C r3+0x2DA u8 2,2,0
+field 025D475C 54005B34 u32 0,0x55000000,0x55000000
+field 025D475C 55000318 u32 0,0x466A6000,0xC69C4000
+field 025D475C r3+0x318 u32 0xC66A6000,0xC66A6200,0,0x7FC00000,0x46000000,0xC6EA6000
+field 025D475C r3+0x314 u32 0x7FC00000,0x7F800000,0x3F800000,0xC2C80000,0x00000000
+field * 101F3084 u32 0,0x10,0x80,0xFFFFFFFF
+# Create: the phase result 4 (complete) queues the draw tag
+ret 025DFCDC 0,1,2,4,5
+# IsActor: null process
+arg 025D4604 r3 0,0x52000000
+# Delete: no demo object (assert, then reloaded)
+field 025D4B4C 101D5FFC u32 0,0x56000000
+ret 025DFCD4 0,1,2                    # fpcMtd_Delete
+field 025D4B4C r3+0x2DC u8 0,1,0x20,0x21
+field 025D4B4C 101D6000 u32 0x12345678

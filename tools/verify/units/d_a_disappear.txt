@@ -1,0 +1,8 @@
+# Verification unit: d_a_disappear (enemy death puff)
+src wwhd_src/d/actor/d_a_disappear.cpp
+
+field 0212451C r3+0x3B8 i16 0 2           # timer
+field 0212451C r3+0x3A1 i8 -1 14          # drop type
+field 0212462C r3+0xB0 u32 0,1,2,3,4,5,10,13,14,0xFFFFFFFF,0x00FF0A00
+callee 025A847C r6=12 r8=12                # particle set pos/scale
+callee 025A86F4 r5=12 r7=12                # setNormalStripes pos/scale

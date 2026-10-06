@@ -1,0 +1,63 @@
+# Verification unit: d_a_vrbox2 (sky box)
+src wwhd_src/d/actor/d_a_vrbox2.cpp
+
+ret 025D63E8 0 1              # entrySolidHeap
+callee 0274D458 r3=out16 r4=16   # Color4f scale: output colour, input colour compared
+callee 02563F64 r5=out12      # dKyr_get_vectle_calc: output vector
+field 024D1C44 r3+0 f32 -3 3  # texScrollCheck: bounded (large values loop for ever in the original too)
+
+# play object pinned: start stage name (play+0x5134), stage data (play+0x5150), view (play+0x5FA4)
+ret 025200D4 0x54000000 0x54000000
+stable 54005134 8
+field 024D3248 54005134 u32 0x4E616D65,0x4C696E6B,0x4F726963,0x4F6A686F,0x4F6D6173,0x4F6E6F62,0x4D5F4472
+field 024D3248 54005138 u32 0x00000000,0x524D0000,0x68680000,0x75733200,0x616F0000,0x75746100,0x61674200
+field 024D1D44 54005134 u32 0x415F6D6F,0x7365615F,0x4D5F4E65,0x53697265,0x4C696E6B
+field 024D1D44 54005138 u32 0x72690000,0x45000000,0x77443200,0x6E000000,0x00000000
+# Execute: stage info through the stage data's vtable (slot 0x15C) -> a fixed object
+field 024D3248 54005150 u32 0x58000000 0x58000000
+field 024D3248 5800015C u32 0x02000000 0x02000000
+ret 02000000 0x59000000 0x59000000
+field 024D3248 5900000C u32 0x00020000,0x00000000,0x00010000,0x00070000
+# save info: tact wind angles (-1 = unset)
+field 024D3248 101F84DC u32 0x5A000000 0x5A000000
+field 024D3248 5A00004A s16 -1,0,0x1234
+field 024D3248 5A00004C s16 -1,0,0x2345
+# Draw: env light pinned, the sky colours zero or not
+ret 02555D0C 0x5B000000 0x5B000000
+field 024D1D44 5B000BA0 u8 0,0,0,7,9
+field 024D1D44 5B000BA1 u8 0,0,0,7,9
+field 024D1D44 5B000BA2 u8 0,0,0,7,9
+field 024D1D44 5B000B90 u8 0,0,0,7,9
+field 024D1D44 5B000B91 u8 0,0,0,7,9
+field 024D1D44 5B000B92 u8 0,0,0,7,9
+field 024D1D44 5B000B98 u8 0,0,0,7,9
+field 024D1D44 5B000B99 u8 0,0,0,7,9
+field 024D1D44 5B000B9A u8 0,0,0,7,9
+field 024D1D44 1047E6C8 s8 -1,0,1
+field 024D1D44 54005FA4 u32 0,0x5D000000,0x5D000000
+field 024D1D44 5D0000D4 f32 30,60,60.001,90
+field 024D1D44 r3+0x3C8 f32 -0.01 0.01
+ret 027DF9B0 -1 3
+# the sky layer: manager -> layer list -> layer flags / saved camera
+field 024D1D44 101F95D0 u32 0x5E000000 0x5E000000
+field 024D1D44 5E001020 u32 0,1,2
+field 024D1D44 5E001024 u32 0x5E100000 0x5E100000
+field 024D1D44 5E100000 u32 0,0x5F000000,0x5F000000
+field 024D1D44 5E100004 u32 0,0x5F200000,0x5F200000
+field 024D1D44 5F000050 u32 0,0x1000
+field 024D1D44 5F00004C u32 0,0x5F100000
+# HD colour registers and texture SRTs at fixed addresses (null-based writes alias with later
+# pointer reads, where NaN payload quieting differs between float stores)
+ret 027F9F0C 0x61000000 0x61000000
+ret 027FA7F8 0,0x62000000,0x62000100
+callee 024D3BD0 r3=8          # assureTerminationImpl_: the SafeString compared
+callee 02738A6C r3=196        # sky projection destructor: the projection compared
+field 024D3248 5B000A26 s16 0,1,9,0x2345
+field 024D1D44 5F200050 u32 0,0x1000
+field 024D1D44 5F20004C u32 0,0x5F100000
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 024D1D44 0x54005134 8 @stages,"A_mo","A_mo","A_mo","A_mo","A_mo","A_moE","A_moE","A_moE","A_moE","A_moE","A_mon","A_mon","A_mon","A_mon","A_mon","A_mori","A_mori","A_mori","A_mori","A_mori","A_mowD2","A_mowD2","A_mowD2","A_mowD2","A_mowD2","EAR","EAR","EAR","EAR","EAR","Link","Link","Link","Link","Link","LinkE","LinkE","LinkE","LinkE","LinkE","Linkn","Linkn","Linkn","Linkn","Linkn","Linkri","Linkri","Linkri","Linkri","Linkri","LinkwD2","LinkwD2","LinkwD2","LinkwD2","LinkwD2","M_Ne","M_Ne","M_Ne","M_Ne","M_Ne","M_NeE","M_NeE","M_NeE","M_NeE","M_NeE","M_Nen","M_Nen","M_Nen","M_Nen","M_Nen","M_Neri","M_Neri","M_Neri","M_Neri","M_Neri","M_NewD2","M_NewD2","M_NewD2","M_NewD2","M_NewD2","R","R","R","R","R","SURE","SURE","SURE","SURE","SURE","Sire","Sire","Sire","Sire","Sire","SireE","SireE","SireE","SireE","SireE","Siren","Siren","Siren","Siren","Siren","Sireri","Sireri","Sireri","Sireri","Sireri","SirewD2","SirewD2","SirewD2","SirewD2","SirewD2","sea_","sea_","sea_","sea_","sea_","sea_E","sea_E","sea_E","sea_E","sea_E","sea_n","sea_n","sea_n","sea_n","sea_n","sea_ri","sea_ri","sea_ri","sea_ri","sea_ri","sea_wD2","sea_wD2","sea_wD2","sea_wD2","sea_wD2"
+fieldstr 024D3248 0x54005134 8 @stages,"Link","Link","Link","LinkRM","LinkRM","LinkRM","LinkagB","LinkagB","LinkagB","Linkao","Linkao","Linkao","Linkhh","Linkhh","Linkhh","Linkus2","Linkus2","Linkus2","Linkuta","Linkuta","Linkuta","M_Dr","M_Dr","M_Dr","M_DrRM","M_DrRM","M_DrRM","M_DragB","M_DragB","M_DragB","M_Drao","M_Drao","M_Drao","M_Drhh","M_Drhh","M_Drhh","M_Drus2","M_Drus2","M_Drus2","M_Druta","M_Druta","M_Druta","Name","Name","Name","NameRM","NameRM","NameRM","NameagB","NameagB","NameagB","Nameao","Nameao","Nameao","Namehh","Namehh","Namehh","Nameus2","Nameus2","Nameus2","Nameuta","Nameuta","Nameuta","Ojho","Ojho","Ojho","OjhoRM","OjhoRM","OjhoRM","OjhoagB","OjhoagB","OjhoagB","Ojhoao","Ojhoao","Ojhoao","Ojhohh","Ojhohh","Ojhohh","Ojhous2","Ojhous2","Ojhous2","Ojhouta","Ojhouta","Ojhouta","Omas","Omas","Omas","OmasRM","OmasRM","OmasRM","OmasagB","OmasagB","OmasagB","Omasao","Omasao","Omasao","Omashh","Omashh","Omashh","Omasus2","Omasus2","Omasus2","Omasuta","Omasuta","Omasuta","Onob","Onob","Onob","OnobRM","OnobRM","OnobRM","OnobagB","OnobagB","OnobagB","Onobao","Onobao","Onobao","Onobhh","Onobhh","Onobhh","Onobus2","Onobus2","Onobus2","Onobuta","Onobuta","Onobuta","Oric","Oric","Oric","OricRM","OricRM","OricRM","OricagB","OricagB","OricagB","Oricao","Oricao","Oricao","Orichh","Orichh","Orichh","Oricus2","Oricus2","Oricus2","Oricuta","Oricuta","Oricuta","R","R","R"

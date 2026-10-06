@@ -1,0 +1,117 @@
+# Verification unit: d_a_mo2 Mo2_move (021D0A14; jyunkai, fight_run, fight, yari_hit_check inlined)
+src wwhd_src/d/actor/d_a_mo2_move.cpp
+
+callee 026066C4 r4=8
+callee 024F1AFC r3=0x6C
+callee 02008B4C r3=0x6C
+callee 025D5218 r4=4
+callee 0200FCD8 r4=out12
+callee 0201ADE0 r4=out12
+callee 0201AD78 r4=out12
+ret 02008860 0 1
+ret 025D4604 0 1
+# steering
+field 021D0A14 r3+0x8C0 i16 -100,-100,-10,-9,-1,0,1,1,2,2,3,4,5,6,7,8,9
+field 021D0A14 r3+0x8C2 i16 0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,6,7,8,9,10,11,12,13,14,17,18,20,21,23,30,31,31,40,1,2,3,15,16,19,22,24,25,26,27,28,29,32,33,34,35,36,37,38,39
+field 021D0A14 r3+0xD7A i16 0,0,0,0,0,1,2
+field 021D0A14 r3+0xD78 i16 0,0,1
+field 021D0A14 r3+0x2E10 i16 0,0,1
+field 021D0A14 r3+0x2E0F i8 0,0,1,2
+field 021D0A14 r3+0x3E0 u32 0x50000000 0x50000000
+field 021D0A14 500000A7 u8 0 1
+field 021D0A14 50000098 f32 0 1
+field 021D0A14 5000009C f32 2,3,11,25,0x35,15
+field 021D0A14 r3+0x10B0 i8 0,1
+field 021D0A14 r3+0x2D4B u8 0,1
+field 021D0A14 r3+0x2D70 i8 0,1
+field 021D0A14 r3+0x2D74 u32 0x51000000 0x51000000
+field 021D0A14 51000000 u16 0 4
+field 021D0A14 51000002 u16 0,0xFFFF
+field 021D0A14 51000005 u8 0 1
+field 021D0A14 51000008 u32 0x52000000 0x52000000
+field 021D0A14 52000003 u8 3,7,8,0
+field 021D0A14 52000013 u8 3,7,8,0
+field 021D0A14 52000023 u8 3,7,8,0
+field 021D0A14 r3+0x2D71 i8 -1 4
+field 021D0A14 r3+0x2D72 i8 -1,1
+field 021D0A14 r3+0x84A i16 0,0,1,0x18,0x1f
+field 021D0A14 r3+0x84C i16 0 1
+field 021D0A14 r3+0x852 i16 0 1
+field 021D0A14 r3+0x854 i16 0,0,1,2
+field 021D0A14 r3+0x850 i16 0 1
+field 021D0A14 r3+0x85A i16 0 1
+field 021D0A14 r3+0x85E i16 0,0,1,3
+field 021D0A14 r3+0x860 i16 0 1
+field 021D0A14 r3+0x862 u8 0 2
+field 021D0A14 r3+0x863 u8 0,2,4,8
+field 021D0A14 r3+0x2D6C i32 0,1,0x15
+field 021D0A14 r3+0x3D8 u8 0 1
+field 021D0A14 r3+0x3DA u8 0,0xFF
+field 021D0A14 r3+0x2E20 i8 0 1
+field 021D0A14 r3+0x844 i32 0xD 0xF
+field 021D0A14 101BA692 u8 0 1
+field 021D0A14 104654A4 i8 0 0
+# fight
+field 021D0A14 r3+0x2468 i32 0 5
+field 021D0A14 r3+0x246C i32 0 2
+field 021D0A14 r3+0x2486 i8 -1 1
+field 021D0A14 r3+0x2484 i16 0,0,1
+field 021D0A14 r3+0x2470 f32 0 40
+field 021D0A14 r3+0x2474 f32 0 20
+field 021D0A14 r3+0x2478 f32 20 60
+field 021D0A14 r3+0x247C f32 0 40
+field 021D0A14 r3+0x2480 f32 0 40
+field 021D0A14 r3+0x2D48 u8 0,1
+field 021D0A14 r3+0x2D49 u8 0,1
+field 021D0A14 r3+0x2D4A u8 0,1
+field 021D0A14 r3+0x838 i32 0,1
+field 021D0A14 r3+0x2D5C u32 -1,0x56000000
+field 021D0A14 104655B4 i16 10 12
+field 021D0A14 104655B6 i16 1 2
+field 021D0A14 104655B8 i16 1 2
+field 021D0A14 104655BA i16 1 2
+field 021D0A14 104655E4 i16 10 12
+field 021D0A14 104655E6 i16 1 2
+field 021D0A14 104655E8 i16 1 2
+field 021D0A14 104655EA i16 1 2
+ret 025160DC 0 1
+ret 02516178 0,0x57000000
+field 021D0A14 57000044 u32 0,0x58000000
+field 021D0A14 5800000C u32 0,0x59000000
+field 021D0A14 59000008 i16 0xA8,0xBC,0x10
+ret 02516464 0 1
+ret 025200D4 0x54000000 0x54000000
+field 021D0A14 54005B2C u32 0x55000000 0x55000000
+field 021D0A14 550003AC u8 0 1
+ret 02518B28 0 0xFFFF
+ret 024EDFCC 0 1
+ret 024EC8D0 0,0x40000000
+ret 021C8C14 0 1
+ret 021C8A38 0 1
+ret 021C8DD4 0 1
+ret 021C872C 0 1
+ret 021C89FC 0 1
+ret 021C7EDC 0,0,1,2,4,8
+ret 025D9DA0 0,0,0,1
+fret 028F4384 0 1500
+fret 025D68EC 400 600
+fret 020198D8 0 1
+fret 0200796C -0.2 0.2
+field 021D0A14 54005134 u32 0x48797275,0x48797275,0
+field 021D0A14 54005138 u32 0x6C650000 0x6C650000
+field 021D0A14 1046552C f32 100 500
+field 021D0A14 10465530 f32 100 500
+field 021D0A14 1046550C f32 0 1500
+field 021D0A14 10465510 f32 0 1500
+field 021D0A14 10465508 f32 0 1500
+field 021D0A14 10465550 i16 0 1
+field 021D0A14 10465554 f32 0 100
+field 021D0A14 1047C0A8 i16 0 0
+field 021D0A14 r3+0x340 f32 -60 -40
+field 021D0A14 r3+0xD68 f32 30 50
+field 021D0A14 r3+0xE34 u32 0,0x20,0x80,0x10
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021D0A14 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict","rict"

@@ -1,0 +1,62 @@
+# Verification unit: d_a_kanban (cuttable sign)
+src wwhd_src/d/actor/d_a_kanban.cpp wwhd_src/d/actor/d_a_kanban_exec.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025D5218 r4=4          # fopAcIt_Judge: searched id
+callee 025DAE64 r3=12         # fopKyM_createWpillar pos
+callee 025A847C r6=12 r8=12   # dPa_control_c::set pos / scale
+
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025D4604 0 1              # fopAc_IsActor
+ret 0246B6A4 0 1              # daSea_ChkArea
+
+# bom_search_sub: process names, a nearly full target list
+field 0218AAF4 r3+8 i16 0x125 0x128
+field 0218AAF4 10464A6C i32 8 11
+# cut_point_check: the cut direction m2C4 indexes cut_parts_arg_data (5 rows)
+field 0218AD44 r3+0x3E0 i16 0,0,1,2,3,4
+field 0218AD44 r3+0x3DE i16 0,0,1,4,5,0x10,0x11,0x14
+field 0218AD44 r3+0x3B0 u32 0,1,0x7FE,0x100,0x7FF,0x2A5
+
+# daKanban_Execute (d_a_kanban_exec.cpp)
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition
+field 0218B234 r3+0x3DA i16 0,0,0,1,2,100,101,102,3
+field 0218B234 r3+0x3DC i16 10,10,10,10,10,11,12,13,14,15,16,17,18,19,20,21,22,9,30,31,32,33,34,40,41,42,0x6e,0x6f,0x70,0x71,0x72,0x78,0x73,0x82,0x83,0x84,0x85,0x86,0x8c,0x8d
+field 0218B234 r3+0x3CE i16 0,0,1,2
+field 0218B234 r3+0x3D0 i16 0,0,1,2
+field 0218B234 r3+0x3D6 i16 0,0,1,2
+field 0218B234 r3+0xF8 u16 0,1
+field 0218B234 101B7CB8 u32 0xFFFFFFFF,1
+field 0218B234 r3+0x3DE i16 0,0,8,0x10,0x18
+field 0218B234 r3+0x3B0 u32 1,0x7FE,0x100,0x7FF,0
+field 0218B234 r3+0x3B4 u8 0,1,2,3
+field 0218B234 r3+0x3E0 i16 0,1,1,2
+field 0218B234 r3+0x494 u32 0,0x10,0x20,0x30
+ret 025162A4 0 1              # ChkTgHit
+ret 025F795C 0x12,0x12,0x11   # message status
+ret 0218A6F8 0,0,1            # sea_water_check
+ret 0218AB94 0 1              # shock_damage_check
+ret 0218B00C 0 1              # ret_keisan_move
+ret 0200FAAC 0xFE 0x102       # cLib_distanceAngleS (vs 0x100)
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+field 0218B234 54005B2C u32 0x55000000 0x55000000   # player
+field 0218B234 550003AC u8 0,0,0x11,0x11,1,2,3,0x12,0x2C,0x30
+field 0218B234 550000B4 u32 0x56000000 0x56000000   # player vtable
+field 0218B234 5600002C u32 0x02400000 0x02400000   # getTactMusic
+ret 02400000 0,4,4,4,1
+field 0218B234 54005CDC u32 0 1
+field 0218B234 54005B30 i8 0 1
+field 0218B234 54005B00 u32 0,4
+field 0218B234 54005B34 u32 0,4
+ret 02516300 0,0x57000000,0x57000000   # GetTgHitObj
+field 0218B234 57000010 u32 2,0x10000,4
+ret 025D5218 0,0x58000000,0x58000000   # fopAcIt_Judge: the mother sign
+field 0218B234 580003B6 u8 0,2
+field 0218B234 580003B7 u8 0,1,2
+
+# mutation gaps
+field 0218CA20 r3+0x2E8 u32 0xFFFFFFFF,0xFFFFFFFF,0,5        # parentActorID (fopAcM_GetLinkId)
+field 0218CA20 r3+0xB0 u32 0,0x00100000,0x7FE00000          # parameters: parts mask
+field 0218AD44 r3+0x32A i16 0                                 # shape_angle.y: the angle difference is -searchAngle
+ret 025D6894 0x6000,0x6001,0x5FFF,-0x6000,-0x6001,0x2000,0x2001,-0x2001,-0x2000,0,-0x7FFF

@@ -1,0 +1,187 @@
+src wwhd_src/d/actor/d_a_obj_ice.cpp
+callee 026066C4 r4=8
+callee 024F2478 r5=48
+callee 025A847C stack=4 r6=12 r7=6 r8=12
+callee 028E9E88 r3=12 r4=12 r5=out12
+callee 028E9684 r3=out48 r4=12 r5=12 r6=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 0274D458 r3=out16 r4=16
+callee 027FA3F4 r3=out4
+real 0235D460
+real 0201A478
+observe 025E2DE0 104B4634 8
+field * r3+0x3B4 u32 0x11010000
+field * r3+0x524 u32 0,0x11020000
+field * r3+0xF4 u32 0,0x11030000
+field * 11020000 u32 0,255,256,257
+field * 1101002A u16 0,1,2,3
+field * 110100AC u32 0x11040000
+field * 11010034 u32 0x11050000
+field * r3+0x2E4 u32 0,1,8,9
+field * r3+0xC u8 0,1
+field * r3+0x560 u8 0,1,2
+field * r3+0xB0 u32 0,1,254,255,256
+field * r3+0x558 s16 0
+field * r3+0x55A s16 -1
+field * r3+0x55C u32 0x0235E6C4,0x0235E820
+field * 101F84DC u32 0x11000000
+field * 101F4F28 u32 0x11008000
+field * 101FDBD4 u32 0,1
+ret 027F3F94 0x11041000 0x11041000
+field * 11041008 u16 0
+# Real blob-header accessor avoids synthetic cyclic joint lists.
+real 027F3F94
+field * 11040000 u32 0x11042000
+field * 1104200C u32 4
+field * 11042018 u16 0,1,2
+callee 0235D460 r3=out16 r4=4
+
+# Initialized play singleton and immutable model resource graph.
+real 025200D4
+field * 104753A8 u32 1
+arg! 0235E0D0 r3 0x11060000
+stable 110603B4 4
+stable 11010000 176
+stable 11040000 32
+stable 11042000 32
+
+# Shader metadata uses a valid bounded resource table.
+real 027FA974
+ret 027DF9B0 0 0
+ret 027FA678 0x11073000 0x11073000
+field * 11070034 s32 0,0xFCC
+field * 11071002 u16 0
+field * 11071004 s32 -1,0,1
+field * 1107100C u16 0,1
+field * 11071018 s32 -1,0,1
+field * 11072000 u32 9,10,11,12
+field * 11073000 u32 0,1
+stable 11070000 64
+stable 11071000 40
+stable 11072000 4
+field * 11050000 u32 0x11070000
+field * 1105000C u32 0x11074000
+field * 11050028 u32 0x11072000
+stable 11050000 4
+stable 1105000C 4
+stable 11050028 4
+field * 1105003C u32 0x11070000
+field * 11050048 u32 0x11074000
+field * 11050064 u32 0x11072000
+stable 1105003C 4
+stable 11050048 4
+stable 11050064 4
+field * 11050078 u32 0x11070000
+field * 11050084 u32 0x11074000
+field * 110500A0 u32 0x11072000
+stable 11050078 4
+stable 11050084 4
+stable 110500A0 4
+
+# Bounded linked material, color block and uniform output.
+field * 11040004 u32 0,1,2
+field * 11040008 u32 0x11075000
+field * 11075010 u32 0,0x11075100
+field * 11075104 u32 0,0x12000000
+field * 11075108 u32 0x00010000
+field * 11075118 u32 0x11077000
+field * 11077004 u32 0x11078000
+field * 1107804C u32 0x027F7604
+field * 1107803C u32 0x027F75EC
+ret 027F9F0C 0x11079000 0x11079000
+stable 11075000 32
+stable 11075104 4
+stable 11075108 4
+stable 11075118 4
+stable 11077004 4
+stable 11078000 80
+
+# Geometric interior and named HD fire attack types.
+arg! 0235D774 r3 0x11060000
+arg! 0235D774 r4 0x11081000
+ret 02516300 0,0x11080000
+field 0235D774 11080010 u32 0x20,0x200,0x20000,0x40000,0
+field 0235D774 r3+0x194 f32 0
+field 0235D774 r3+0x198 f32 0
+field 0235D774 r3+0x19C f32 0
+field 0235D774 r4+0xCC f32 0
+field 0235D774 r4+0xD0 f32 0
+field 0235D774 r4+0xD4 f32 0
+field 0235D774 r3+0x330 f32 1
+field 0235D774 r3+0x334 f32 1
+field 0235D774 r3+0x338 f32 1
+field 0235D774 r3+0x564 f32 0.0001 1
+field 0235D774 r3+0x568 f32 1
+field 0235D774 1046A068 f32 40
+field 0235D774 1046A06C f32 65
+field 0235D774 1046A070 f32 75
+field 0235D774 1046A074 f32 120
+field 0235D774 1046A078 f32 90
+field 0235D774 1046A07C f32 60
+
+# Constructor allocation branches at exact guest address wrap.
+arg 0235DB5C r3 0,0x11060000,0xFFFFFA88,0xFFFFFA58
+
+# Actual matrix read/write extents; mock outputs populate scratch transforms.
+callee 028E90D4 r3=48 r4=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E945C r3=out48
+
+# Shared bit extraction is a pure in-TU helper.
+real 0235EAE4
+
+# Second joint has a distinct material to exercise count/stride boundaries.
+field * 1107502C u32 0x12000000
+stable 11075020 32
+field * 11075204 u32 0
+field * 11075208 u32 0x11076100
+field * 11075218 u32 0x11077000
+stable 11075204 4
+stable 11075208 4
+stable 11075218 4
+
+# Exact outer-shell and shrunken-width boundaries.
+field 0235D774 r3+0x32A s16 0
+field 0235D774 r4+0xCC f32 0,40,65,75
+field 0235D774 r3+0x564 f32 0.0001,0.1,0.1009,1
+field 0235D774 104A44F8 f32 0
+field 0235D774 104A44FC f32 1
+stable 104A44F8 8
+
+# Empty variable-table offset and invalid-link boundary domain.
+field * 00000002 u16 0
+field * 00000004 s32 -1,0
+field * 0000000C u16 0,1
+
+# Matrix leaf operations write heap-owned transforms, so execute actual helpers.
+real 028E90D4
+real 028E9108
+real 028E945C
+
+# Null-model branch and emitter aliasing test domains.
+field 0235DB5C r3+0x3B4 u32 0,0x11010000
+field 0235DB5C 0000002A u16 0
+arg! 0235E6C4 r3 0x11060000
+field 0235E6C4 r3+0x574 s32 0,1,2
+field 0235E6C4 r3+0x330 f32 1
+field 0235E6C4 r3+0x334 f32 2
+field 0235E6C4 r3+0x338 f32 3
+ret 025A847C 0,0x1106010C,0x11060110
+
+# Actual HD Tev constant-color getter and setter are leaf operations.
+real 027F7604
+real 027F75EC
+callee 027F75EC r5=4
+
+# Bounded second material exposes wrong list and joint strides without runaway junk lists.
+field * 11075030 u8 0
+field * 12000004 u32 0
+field * 12000008 u32 0x00020000
+field * 12000018 u32 0x11077000
+stable 12000004 4
+stable 12000008 4
+stable 12000018 4
+
+# Global 027FA3F4 r5=0 fact declares the HD konst-color index argument.
+# Official generated integer mask is 0x38 (r3 output, r4 material, r5 index).

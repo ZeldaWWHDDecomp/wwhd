@@ -1,0 +1,41 @@
+# Verification unit: d_a_kt
+src wwhd_src/d/actor/d_a_kt.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0200FCD8 r4=out12      # MtxPosition: output
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 020077BC 0 1              # CPad trig left
+field 021AC30C r3+0xB0 s32 -1,0,1,3,999,1000,1001
+field 021AB148 r3+0x41C s8 0,0,0,1,2,8,9,10,11,20,3,-1
+field 021AB148 r3+0x414 s16 0,1,2,10
+field 021AB148 r3+0x416 s16 0,1,2
+field 021AB148 r3+0x418 s16 0,0,1
+field 021AB148 r3+0x41E u8 0 1
+field 021AB148 r3+0xB0 s32 1000,999
+field 021AB148 r3+0x3C0 f32 -10.0 10.0
+field 021AB148 r3+0x3C4 f32 -10.0 10.0
+fret 02008974 -1000000000.0 0.0   # GroundCross (incl. -G_CM3D_F_INF)
+fret 028F4384 0.0 2000.0
+field 021AB148 r3+0x318 f32 -5.0 5.0
+field 021AB148 r3+0x3BC f32 -5.0 5.0
+field 021AB148 r3+0x3F4 f32 -5.0 5.0
+# debug registers mostly zero: thresholds become the GameCube constants
+field 021AB148 1047B610 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B614 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B618 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B61C f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B620 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B624 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B628 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B62C f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B630 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B634 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B638 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B63C f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B640 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B644 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B648 f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B64C f32 0.0,0.0,0.0,1.0
+field 021AB148 1047B650 f32 0.0,0.0,0.0,1.0
+stackfill

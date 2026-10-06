@@ -1,0 +1,19 @@
+# Verification unit: d_a_att (Puppet Ganon attention/hit target)
+src wwhd_src/d/actor/d_a_att.cpp
+
+ret 025D4604 0 1                                # fopAc_IsActor
+field 02058764 r3+0x8 i16 0xF2,0xF3,0xF4        # process name
+field 020587B4 r3+0x3D1 u8 0,1,2,6,7,8,100,101   # m2B5
+field 020587B4 r3+0x66C i8 -1,0,1,2             # m550
+ret 025162A4 0 1                                # ChkTgHit
+ret 025DE508 0,0x56000000                       # fpcM_Search: boss null or at a fixed address
+field 020587B4 56000000 u8 0 0
+field 020587B4 560003D5 i8 0,0,1
+field 020587B4 56014EB4 i16 0,0,1
+field 020587B4 56014EB8 i16 0,0,1
+field 02058B38 r3+0xB3 u8 0,5,9,10,11,100,101
+# part 0 / part 7 fields (m2B5 0 or 7): m2D0 clear, m2EC around the 1.0 boundary
+field 020587B4 56012EF0 u8 0,0,1
+field 020587B4 56012F0C f32 0.5,1.0,1.0,1.5
+field 020587B4 56014444 u8 0,0,1
+field 020587B4 56014460 f32 0.5,1.0,1.0,1.5

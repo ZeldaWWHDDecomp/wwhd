@@ -1,0 +1,14 @@
+# hd_sys_0203E1D0: HD ProfileTask TU with its leading companions (0203E1D0..0203E583); HD-only
+src wwhd_src/hd/hd_sys_0203E1D0.cpp
+field * 0x1018F538 u32 0,0x20000000
+field 0203E504 0x101FD598 u32 0,1
+field 0203E504 0x101FD594 u32 0,1
+arg 0203E504 r4 0x101FD97C,0x101FD980,0,0x10006204
+# delegate: object null / set; member index 0 / negative / positive (small)
+field 0203E284 r3+4 u32 0,0x41000000
+field 0203E284 r3+8 u16 0,4,0xFFF8
+field 0203E284 r3+10 u16 0,0xFFFF,1,2,3
+field 0203E284 r3+14 u16 0,4,8
+# GHS delegate thunk: r6..r8 hold the decoded member pointer (scratch), only r3..r5 are passed; the
+# resolved random target's live-in r6.. is a false positive
+nolivein 0203E284

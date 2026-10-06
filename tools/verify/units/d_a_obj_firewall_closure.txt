@@ -1,0 +1,76 @@
+src wwhd_src/d/actor/d_a_obj_firewall.cpp
+ret 025200D4 0x54000000
+field * r3+0x6ed u8 0,1
+field * r3+0x6ec u8 0,1
+field * r3+0x68a u8 0,1
+field * r3+0x5ab u8 0,1
+field * r3+0x59c f32 0,1
+field * r3+0x688 s16 -1,0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025B8B94 0,1
+field 02341EA4 r3+0x682 s16 -1,0,1
+field 02341EA4 r3+0x680 s16 0,1
+field 02341EA4 r3+0x684 u32 0x02342c88,0x02342c04,0x02342b6c,0x02342878
+callee 026066C4 r4=8
+callee 0201ADE0 r4=out12
+callee 028E8DD0 r3=12
+callee 020182E0 r4=12
+callee 0201A478 r3=out6
+callee 025A847C r6=12 r7=6
+ret 02544830 0x10028b5c,0x10028b74,0x10028b94
+ret 02542D88 -1,0,1
+ret 02544044 0,1
+field 0234268C r3+0x6f4 u32 0,1,2
+field 023421F8 0x10469b88 s32 3584
+ret 020195B0 0,3583,3584,6656,32767,32768,65535
+# HD TU audit: 36 functions 02341614..02342FC0, constructor at leading margin included.
+# Exclude 0234157C/023415F4/023415F8: Figure destructor/virtual/parameter tail.
+# Exclude 02342FC4 onward: Flame resource/model code with separate vtable/strings.
+# Collision 023423B8 is infeasible with quarter-wave cos in [0,1]: inset=100+115*cos != -1.
+
+# Actual actor pointers are at least4-byte aligned (u32/float fields and actor allocator).
+# Invalid unaligned synthetic actor plus post-store partial-word mock clobber turns
+# tolerated NaN payload differences into final non-NaN byte differences; no payload-specific source code.
+# Only pointer alignment is constrained; all fields, NaNs and clobber epochs remain broad.
+arg! 023419A0 r3 0x53000000,0x53000800,0x53001000,0x54000000,0x56004000
+
+# Companion: nonzero global controller detects byte-shifted address loads.
+field * 0x101f4f28 u32 0x57000000,0x58000000
+# Companion: middle light strength distinguishes the 0.5 < strength <= 1 color path.
+field 02341EA4 r3+0x67c f32 0,0.5,0.75,1,1.5
+
+callee 025A847C stack=4
+
+# Event cuts: match every legitimate name and compare near matches differing at byte0.
+ret 02544830 0x101c93f8,0x101c9404,0x101c9410,0x10028b5c,0x10028b74,0x59000000,0x59001000
+stable 0x101c93f8 0x20
+stable 0x59000000 9
+stable 0x59001000 7
+field * 0x59000000 u8 49
+field * 0x59000001 u8 53
+field * 0x59000002 u8 48
+field * 0x59000003 u8 115
+field * 0x59000004 u8 109
+field * 0x59000005 u8 105
+field * 0x59000006 u8 108
+field * 0x59000007 u8 101
+field * 0x59000008 u8 0
+field * 0x59001000 u8 88
+field * 0x59001001 u8 117
+field * 0x59001002 u8 114
+field * 0x59001003 u8 110
+field * 0x59001004 u8 85
+field * 0x59001005 u8 112
+field * 0x59001006 u8 0
+# Meaningful stack initialization observations; same periodic bytes at aligned local slots.
+stackfill periodic
+# Nonzero singleton globals expose byte-shifted pointer-load mutations.
+field * 0x101f84dc u32 0x58000000,0x5a000000
+field * 0x54005ab0 u32 0x5b000000,0x5c000000
+
+# Initialized JMath quarter-wave cosine representatives for collision steering.
+field 023421F8 0x104a44fc f32 1
+field 023421F8 0x104a6dfc f32 0.53499761988709726
+field 023421F8 0x104a84f4 f32 0.00076699031874284641
+field 023421F8 0x104a84fc f32 6.123233995736766e-17

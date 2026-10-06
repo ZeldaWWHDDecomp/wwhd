@@ -1,0 +1,106 @@
+src wwhd_src/c/c_damagereaction.cpp
+stackfill periodic
+ret 025200D4 0x55000000 0x55000000
+callee 025A847C stack=4 r6=12 r7=6 r8=12
+arg 02043B98 r3 0,0x56000000
+arg 02043C04 r3 0,0x56000000
+arg 0204698C r3 0,0x56000000
+ret 0273AD10 0,0x57000000
+field 02041C30 r3+0x58 u32 0,0x58000000
+field 02041C30 r3+0x5C u32 0,0x58000100
+ret 02008860 0,1
+callee 0200FCD8 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 024F1AFC r3=108 r4=12 r5=12
+field 02041570 r3+0x6 s8 0,1,2,-1
+field 02041570 r3+0x4 s16 0,1,10,100
+field 02041570 r3+0x8 s16 0,1,10,100
+field 02041570 r3+0x10 s8 -1,0,1
+callee 028E90D4 r3=48 r4=out48
+callee 02018D40 r4=12
+# 028F521C forwards incoming r3 to memset as destination and incoming r4 as size.
+# This TU invokes it only with size8; the import tail call otherwise hides r3 live-in.
+callee 028F521C r3=out8
+# HD ice states, expiration boundaries and ground shatter thresholds.
+field 020402C8 r3+0x6 s8 0,1,2,70,90
+field 020402C8 r3+0xD s8 0,1,2,3,4
+field 020402C8 r3+0xC s8 0,1,2
+field 020402C8 r3+0xE s16 -2,-1,0,1,20,21,23,50,100
+field 020402C8 r3+0x10 s16 0,1,40
+field 020402C8 r3+0x21C u32 0,0x10,0x20,0x800
+field 020402C8 r3+0x1C f32 -100,-10,0,10
+
+# Poes suppress the light-shrink item drop; exercise the exact HD profile210 boundary.
+field 020402C8 r3+0 u32 0x56000000
+field 020402C8 56000008 u16 209,210,211
+
+# Full damage handler states and hang/recovery boundaries.
+field 02041F94 r3+0x0 u32 0x56000000
+field 02041F94 r3+0x4 s16 -101,-100,-99,0,1,10
+field 02041F94 r3+0x6 s16 0,5,11,15,18,19,20,21,22
+field 02041F94 r3+0x8 s16 1,2,3
+field 02041F94 r3+0x4BC s16 0,1,2
+field 02041F94 r3+0x740 u8 0,1
+field 02041F94 r3+0x741 u8 0,1
+field 02041F94 r3+0x744 u8 0,1,2,3,4,5,6
+field 02041F94 r3+0x752 s16 0,1,2
+field 02041F94 r3+0x7E6 s16 0,1
+field 02041F94 r3+0x7EA u8 0,1
+field 02041F94 r3+0x718 f32 0,10,100
+field 02041F94 r3+0x720 f32 0,300,301,1000
+field 02041F94 r3+0x754 f32 0,10,100
+field 02041F94 r3+0x458 u32 0,0x10,0x40
+field 02041F94 r3+0x4CE s16 0,1,2
+field 02041F94 r3+0x4D2 s16 0,1
+field 02041F94 r3+0x454 f32 0,1,2
+field 02043F34 r3+0x0 u32 0x56000000
+field 02043F34 r3+0x4 s16 -101,-100,-99,0,1,10
+field 02043F34 r3+0x6 s16 0,5,11,15,18,19,20,21,22
+field 02043F34 r3+0x8 s16 1,2,3
+field 02043F34 r3+0x4BC s16 0,1,2
+field 02043F34 r3+0x740 u8 0,1
+field 02043F34 r3+0x741 u8 0,1
+field 02043F34 r3+0x744 u8 0,1,2,3,4,5,6
+field 02043F34 r3+0x752 s16 0,1,2
+field 02043F34 r3+0x7E6 s16 0,1
+field 02043F34 r3+0x7EA u8 0,1
+field 02043F34 r3+0x718 f32 0,10,100
+field 02043F34 r3+0x720 f32 0,300,301,1000
+field 02043F34 r3+0x754 f32 0,10,100
+field 02043F34 r3+0x458 u32 0,0x10,0x40
+field 02043F34 r3+0x4CE s16 0,1,2
+field 02043F34 r3+0x4D2 s16 0,1
+field 02043F34 r3+0x454 f32 0,1,2
+field * 56000318 f32 0,100,1000
+field * 56000340 f32 -101,-100,0,60
+field * 560003A1 s8 -128,0,1,100
+
+# Reaction animation modes, joint contact states and global pause paths.
+field 02041F94 r3+0x4BE s16 0,1,2,3,4
+field 02041F94 r3+0x4AC f32 -40,-1,0,1,40
+field 02041F94 r3+0x4B0 s32 0,1,5
+field 02041F94 r3+0x4A8 f32 0,0.01,0.1,1,1000
+field 02041F94 r3+0x4F0 s16 0,1,100
+field 02041F94 r3+0x742 u8 0,7,8,15,255
+field 02041F94 r3+0x400 s32 0,1,2
+field 02041F94 r3+0x404 s32 0,1,2
+field 02041F94 r3+0x408 s32 0,1,2
+field 02041F94 r3+0x40C s32 0,1,2
+field 02041F94 r3+0x410 s32 0,1,2
+field 02041F94 r3+0x414 s32 0,1,2
+field 02041F94 r3+0x418 s32 0,1,2
+field 02041F94 r3+0x41C s32 0,1,2
+field 02041F94 r3+0x420 s32 0,1,2
+field 02041F94 r3+0x424 s32 0,1,2
+field 02041F94 r3+0x428 s32 0,1,2
+field 02041F94 r3+0x42C s32 0,1,2
+field 02041F94 r3+0x430 s32 0,1,2
+field 02041F94 r3+0x434 s32 0,1,2
+field * 1018F5AC u8 0,1
+
+# kado returns only0,1,2 (the hit-both result3 is normalized to0).
+ret 02041D10 0,1,2
+
+# Signed angle return boundaries target animation clamps.
+ret 020195B0 -32768,-20001,-10000,0,10000,20001,32767

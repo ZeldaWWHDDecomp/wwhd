@@ -1,0 +1,127 @@
+src wwhd_src/d/actor/d_a_obj_hsehi1.cpp
+callee 026066C4 r4=8
+callee 025A847C stack=4
+callee 0235A960 r4=8
+field * r3+0x2dd i8 -1,0,1
+field * r3+0x618 u32 0,1,2,4,8,15
+field * r3+0x628 i8 -1,0,1,2,3,4,5
+field * r3+0x629 i8 -1,0,1
+field * r3+0x62b i8 -1,0,1,2,3
+field * r3+0xf8 u16 0,1,2,3
+field * 0x101F84DC u32 0x54000000
+ret 025200D4 0x55000000 0x55000000
+field * 0x550052b0 u8 0,1,2,3,4,5
+field * 0x10469fe4 u32 -1,0,1
+real 028F040C
+callee 0235C018 r4=12
+field 0235B48C 58000000 u32 0x40504c41
+field 0235B48C 58000004 u32 0x59455200
+field 0235B48C 58000010 u32 0x6f6e0000
+field 0235B48C 58000014 u32 0
+field 0235B48C 58000020 u32 0x6f666600
+field 0235B48C 58000024 u32 0
+field 0235B48C 58000030 u32 0x41424300
+field 0235B48C 58000034 u32 0
+arg 0235B924 r4 0,1,2
+field * r3+0x61c u32 0,0x5b3,0x1901
+field 0235B8EC r4+0 u32 0,0xef3,0x1901,1
+ret 0207A9A0 0,1,30
+ret 02520460 0,4,5
+field * 1046A004 i8 -1,0,1
+field 0235B7F4 58000000 u32 0,0x5b3,0x1901
+field 0235B7F4 58000010 u32 0,0x5b3,0x1901
+field 0235B7F4 58000020 u32 0,0x5b3,0x1901
+field 0235B7F4 58000030 u32 0,0x5b3,0x1901
+ret 0235AEF8 0,1
+# String equality's slow tails (B588/B6CC/B7CC) duplicate its word-equal fast paths;
+# equal terminated strings always reach the fast path, so three blocks are infeasible.
+
+# Additional order boundary values from mutation49.
+field * r3+0x628 i8 -128,-14,-1,0,1,2,3,4,5,6,7,127
+
+# Emitter flag cell aliases the supplied pointer; preserve reload semantics even for unaligned guest addresses.
+arg 0235B2B4 r4 0x58000255,0x58000400
+field 0235B2B4 58000255 u32 0x58000001
+field 0235B2B4 58000400 u32 0,0x58000300
+
+# Combined flag bits expose initialJudgeEvent mask widening.
+field * r3+0x618 u32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0xffffffff
+
+# Returned emitter flags can alias the output pointer cell.
+ret 025A847C 0,0x58000000
+arg 0235BCB4 r4 0x58000254,0x58000400
+# Explicit equal/non-equal GHS descriptors and pre-callback actor-state snapshots.
+field 0235A960 r3+0x610 i16 0,4
+field 0235A960 r3+0x612 i16 -1,0,1
+field 0235A960 r3+0x614 u32 0x0235C144,0x0235C27C
+field 0235A960 r4+0 i16 0,4
+field 0235A960 r4+2 i16 -1,0,1
+field 0235A960 r4+4 u32 0x0235C144,0x0235C27C
+# First message status is narrowed to u16; the second status comparison uses full r3.
+ret 025F795C 6,14,15,18,21,0x1000e,0x1000f,0x10012,0x10015,0xffff000e,0xffff0012
+# Exact angular hysteresis boundary at0x71C, and finite distance witnesses.
+field 0235C018 r3+0x62c u8 0,1
+arg 0235C018 r5 0,1819,1820,1821,32767,-32768
+ret 020195B0 0,1819,1820,1821,32767,32768,65535
+field 0235C018 1046A014 i16 0,1820,2000,-1
+field 0235C018 1046A008 f32 100 100
+fret 028F4384 0 200
+# These HD bindings consume cXyz inputs.
+callee 025E1A40 r4=12
+callee 025F7DB0 r5=12
+# Forty-byte string exposes moving the original buffer within the scratch stack.
+stable 58000040 44
+field 0235B48C 58000040 u32 0x41414141
+field 0235B48C 58000044 u32 0x41414141
+field 0235B48C 58000048 u32 0x41414141
+field 0235B48C 5800004c u32 0x41414141
+field 0235B48C 58000050 u32 0x41414141
+field 0235B48C 58000054 u32 0x41414141
+field 0235B48C 58000058 u32 0x41414141
+field 0235B48C 5800005c u32 0x41414141
+field 0235B48C 58000060 u32 0x41414141
+field 0235B48C 58000064 u32 0x41414141
+field 0235B48C 58000068 u32 0
+# The live message-manager global is nonzero; zero BSS masked an address mutation.
+field * 101F4B5C u32 0x59000000
+stable 101F4B5C 4
+
+# Explicit partial event-name prefixes exercise each byte-comparison path.
+ret 0254487C 0,0x58000000,0x58000010,0x58000020,0x58000030,0x58000040,0x58000080,0x58000090,0x580000a0,0x580000b0,0x580000c0,0x580000d0,0x580000e0
+stable 58000080 112
+field 0235B48C 58000080 u32 0x40585858
+field 0235B48C 58000084 u32 0x00000000
+field 0235B48C 58000090 u32 0x40505858
+field 0235B48C 58000094 u32 0x00000000
+field 0235B48C 580000a0 u32 0x40504c58
+field 0235B48C 580000a4 u32 0x00000000
+field 0235B48C 580000b0 u32 0x40504c41
+field 0235B48C 580000b4 u32 0x59455258
+field 0235B48C 580000b8 u32 0x00000000
+field 0235B48C 580000c0 u32 0x6f585858
+field 0235B48C 580000c4 u32 0x00000000
+field 0235B48C 580000d0 u32 0x6f665858
+field 0235B48C 580000d4 u32 0x00000000
+field 0235B48C 580000e0 u32 0x6f666658
+field 0235B48C 580000e4 u32 0x00000000
+
+# The shared pointee-size table is uint8; observe canonical actor action state directly.
+observe 0235C144 40000610 48
+observe 0235C27C 40000610 48
+# Audit: 57 functions x 10,000 inputs, 332 / 335 blocks; three duplicate string-equality tails infeasible.
+# All 1,341 point variants audited: 804 compiled, 537 invalid; 787 rejected, 17 equivalent.
+# Equivalent IDs: 261,328,330,332,394,486,504,623,646,657,697,752,910,1176,1177,1179,1180,
+# Each confirmed at 10,000 inputs. Independent reads/stores/pure calculations; integer abs zero,
+# redundant status test; identical rounded f32 literal; mutually exclusive on/off effects.
+
+# 2026-10-06 (post-check seed 1, 1/10000 "call #1 0201016C: r6"): the game's action descriptors (1002AD90..A8) are
+# all non-virtual (index -1); the steered index 1 takes the virtual-PMF path, whose vtable (at base + the s16 offset in
+# the target word's low half: 0xC144 / 0xC27C) was random memory, so the bctrl resolved to arbitrary listed functions
+# that read r5..r10 (here 0201016C reads r6, the original's leftover adjust). Give that path a vtable whose slot 1 is a
+# real action function (r3/r4 only), so the virtual branch stays covered with realistic targets.
+field 0235A960 r3+0xFFFFC144 u32 0x5A000000
+field 0235A960 r3+0xFFFFC148 u32 0x5A000000
+field 0235A960 r3+0xFFFFC27C u32 0x5A000000
+field 0235A960 r3+0xFFFFC280 u32 0x5A000000
+field 0235A960 0x5A00000C u32 0x0235C144
+stable 5A000000 16

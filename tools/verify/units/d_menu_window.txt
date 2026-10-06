@@ -1,0 +1,28 @@
+src wwhd_src/d/d_menu_window.cpp
+# Scene frame and event branches are independently observable.
+ret! 025200D4 0x50000000 0x50000000
+ret! 025445B8 0 1
+field 026C9CE4 50005292 u8 0 1
+field 026C9CE4 101D600C u32 199,200,201,349,350,351,2899,2900,2901,3049,3050,3051
+field 026C9E0C 101D6010 u32 0,1,2
+arg! 026C9A8C r3 0,0x50010000
+# Native PlaceName vtable tests real callback live-in contracts.
+field 026C9850 r3+0x4 u32 0x10101908 0x10101908
+field 026C9978 r3+0x4 u32 0x10101908 0x10101908
+field 026C99F0 r3+0x4 u32 0x10101908 0x10101908
+field 026C9B10 r3+0x4 u32 0x10101908 0x10101908
+field 026C9C90 r3+0x4 u32 0x10101908 0x10101908
+field 026C9E54 r3+0x4 u32 0x10101908 0x10101908
+field 026C9E70 r3+0x4 u32 0x10101908 0x10101908
+# Native class and StateProcessor vptrs are immutable across its layout/update methods.
+arg! 026C9B10 r3 0x50010000 0x50010000
+field 026C9B10 50010004 u32 0x10101908 0x10101908
+field 026C9B10 50010018 u32 0x50010008 0x50010008
+field 026C9B10 50010008 u32 0x1010A484 0x1010A484
+stable 50010004 4
+stable 50010008 4
+stable 50010018 4
+# StateProcessor virtual lookup yields the native StateID header shape.
+ret! 026FA284 0x50020000 0x50020000
+field 026C9B10 50020000 u32 0x1010169C 0x1010169C
+stable 50020000 4

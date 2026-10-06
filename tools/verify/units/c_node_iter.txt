@@ -1,0 +1,15 @@
+src wwhd_src/SSystem/SComponent/c_node_iter.cpp
+# Exact GC Method/Judge behavior between c_node initializer and c_phase Reset.
+# Finite acyclic callback iteration: first node link can change across callback
+# epochs (already cached by reference); subsequent links remain finite.
+arg! 02019D50 r3 0,0x50000000
+arg! 02019DE8 r3 0,0x50000000
+arg! 02019D50 r4 0x60000100
+arg! 02019DE8 r4 0x60000100
+callee 60000100 r3=12
+ret 60000100 0,1,2,0x50000400
+field * 0x50000008 u32 0,0x50000100,0x50000200
+field * 0x50000108 u32 0,0x50000200
+field * 0x50000208 u32 0
+stable 50000108 4
+stable 50000208 4

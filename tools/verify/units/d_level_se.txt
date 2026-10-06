@@ -1,0 +1,6 @@
+src wwhd_src/d/d_level_se.cpp
+# Every sound flag priority, signed reverb, and null/non-null lifecycle branch.
+field 02586F8C r3+0x101 u8 0,1,4,5,8,9,12,255
+field 02586F8C r3+0x100 s8 -128,-1,0,1,127
+arg 02587000 r3 0,0x50000000
+arg 02587048 r3 0,0x50000000

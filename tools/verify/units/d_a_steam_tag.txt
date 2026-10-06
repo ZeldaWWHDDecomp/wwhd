@@ -1,0 +1,22 @@
+# Verification unit: d_a_steam_tag (steam vent tag)
+src wwhd_src/d/actor/d_a_steam_tag.cpp
+# Create: start stage "Adanmae" (play pinned; the name at play+0x5134), room 0, Din's Pearl
+ret 025200D4 0x54000000 0x54000000
+field 0249A78C 54005134 u32 0x4164616E,0x4164616F
+field 0249A78C 54005138 u32 0x6D616500,0x6D616501
+field 0249A78C r3+0x326 s8 0 1
+ret 0254DA50 0 1
+# Execute: timers at their edges, the emitter at a fixed address (particle count, HD flag byte)
+field 0249A390 r3+0x3B2 s16 -1 2
+field 0249A390 r3+0x3B4 s16 -1 2
+field 0249A390 r3+0x3AC u32 0,0x56000000
+ret 025A847C 0,0x56000000
+ret 0249A278 0 1
+field 0249A390 560001B4 s32 0 1
+field 0249A390 560001C0 s32 0 1
+field 0249A390 56000262 u8 6,7
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0249A78C 0x54005134 8 @stages,"Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adanmae\x01","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01","Adaomae\x01"

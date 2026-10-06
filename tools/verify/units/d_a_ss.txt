@@ -1,0 +1,115 @@
+# Verification unit: d_a_ss (enemy with ten line tentacles)
+src wwhd_src/d/actor/d_a_ss.cpp
+
+callee 026066C4 r4=8                # sead::SafeString key
+ret 02520460 0 5                    # resLoad
+ret 025BA0C0 0 1                    # isSwitch
+ret 025D63E8 0 1                    # entrySolidHeap
+ret 025E9B80 0 1                    # lineMat0 init
+field 0248D434 r3+0xB3 u8 0,1,2,3,0xFF   # param >> 24 (switch)
+field 0248D434 r3+0xB2 u8 0 4       # kind
+field 0248AC00 r3+0x3E0 s16 48 52   # mode vs 50
+arg 0248AAC0 r4 0 1
+# daSs_Execute: output-only stack objects
+callee 0200FCD8 r4=out12            # MtxPosition(src, dst)
+callee 0201ADE0 r4=out12            # cXyz::operator-
+callee 0201AD78 r4=out12            # cXyz::operator+
+callee 0201AE48 r4=out12            # cXyz::operator*
+# daSs_Execute steering
+field 0248ADE8 r3+0x3E0 s16 -1 51   # mMode
+field 0248ADE8 r3+0x3E2 s16 0,10,11,20,21,30,31                                # mPrevMode
+field 0248ADE8 r3+0x3D8 u8 0,1,2      # mType
+field 0248ADE8 r3+0x3D9 u8 0,3        # mKind
+field 0248ADE8 r3+0x3D0 s8 0,1        # m3D0
+field 0248ADE8 r3+0x3DA u8 0,5        # mSwNo
+field 0248ADE8 r3+0x3E4 s16 0,1,0x45,0x46  # mTimer[0]
+field 0248ADE8 r3+0x3E6 s16 0,1,2      # mTimer[1]
+field 0248ADE8 r3+0x3EC s16 0,1        # mDamageTimer
+field 0248ADE8 r3+0x3F4 s8 0,1,20      # m3F4
+field 0248ADE8 r3+0x3A1 s8 0,1,2       # health
+field 0248ADE8 r3+0x3D4 u32 0x56000000 0x56000000   # mpMorf (pinned)
+field 0248ADE8 560000A7 u8 0 1         # morf frame state (stop bit)
+field 0248ADE8 56000098 f32 0,1        # morf rate
+field 0248ADE8 r3+0x3F8 u8 0,1,2,3      # hand[0].mMode
+field 0248ADE8 r3+0x42E s16 0,1,2   # hand[0].mHoldTimer
+field 0248ADE8 r3+0x430 s16 0,1,2   # hand[0].mLandTimer
+field 0248ADE8 r3+0x432 s8 0,1,5,9,10   # hand[0].mLen
+field 0248ADE8 r3+0x433 s8 0,1   # hand[0].mBurn
+field 0248ADE8 r3+0x414 f32 -400 10   # hand[0].mSpeed.y
+field 0248ADE8 r3+0x400 f32 -50 50   # hand[0].mPos.y
+field 0248ADE8 r3+0x984 u8 0,1,2,3      # hand[1].mMode
+field 0248ADE8 r3+0x9BA s16 0,1,2   # hand[1].mHoldTimer
+field 0248ADE8 r3+0x9BC s16 0,1,2   # hand[1].mLandTimer
+field 0248ADE8 r3+0x9BE s8 0,1,5,9,10   # hand[1].mLen
+field 0248ADE8 r3+0x9BF s8 0,1   # hand[1].mBurn
+field 0248ADE8 r3+0x9A0 f32 -400 10   # hand[1].mSpeed.y
+field 0248ADE8 r3+0x98C f32 -50 50   # hand[1].mPos.y
+field 0248ADE8 r3+0xF10 u8 0,1,2,3      # hand[2].mMode
+field 0248ADE8 r3+0xF46 s16 0,1,2   # hand[2].mHoldTimer
+field 0248ADE8 r3+0xF48 s16 0,1,2   # hand[2].mLandTimer
+field 0248ADE8 r3+0xF4A s8 0,1,5,9,10   # hand[2].mLen
+field 0248ADE8 r3+0xF4B s8 0,1   # hand[2].mBurn
+field 0248ADE8 r3+0xF2C f32 -400 10   # hand[2].mSpeed.y
+field 0248ADE8 r3+0xF18 f32 -50 50   # hand[2].mPos.y
+field 0248ADE8 r3+0x149C u8 0,1,2,3      # hand[3].mMode
+field 0248ADE8 r3+0x14D2 s16 0,1,2   # hand[3].mHoldTimer
+field 0248ADE8 r3+0x14D4 s16 0,1,2   # hand[3].mLandTimer
+field 0248ADE8 r3+0x14D6 s8 0,1,5,9,10   # hand[3].mLen
+field 0248ADE8 r3+0x14D7 s8 0,1   # hand[3].mBurn
+field 0248ADE8 r3+0x14B8 f32 -400 10   # hand[3].mSpeed.y
+field 0248ADE8 r3+0x14A4 f32 -50 50   # hand[3].mPos.y
+field 0248ADE8 r3+0x1A28 u8 0,1,2,3      # hand[4].mMode
+field 0248ADE8 r3+0x1A5E s16 0,1,2   # hand[4].mHoldTimer
+field 0248ADE8 r3+0x1A60 s16 0,1,2   # hand[4].mLandTimer
+field 0248ADE8 r3+0x1A62 s8 0,1,5,9,10   # hand[4].mLen
+field 0248ADE8 r3+0x1A63 s8 0,1   # hand[4].mBurn
+field 0248ADE8 r3+0x1A44 f32 -400 10   # hand[4].mSpeed.y
+field 0248ADE8 r3+0x1A30 f32 -50 50   # hand[4].mPos.y
+field 0248ADE8 r3+0x1FB4 u8 0,1,2,3      # hand[5].mMode
+field 0248ADE8 r3+0x1FEA s16 0,1,2   # hand[5].mHoldTimer
+field 0248ADE8 r3+0x1FEC s16 0,1,2   # hand[5].mLandTimer
+field 0248ADE8 r3+0x1FEE s8 0,1,5,9,10   # hand[5].mLen
+field 0248ADE8 r3+0x1FEF s8 0,1   # hand[5].mBurn
+field 0248ADE8 r3+0x1FD0 f32 -400 10   # hand[5].mSpeed.y
+field 0248ADE8 r3+0x1FBC f32 -50 50   # hand[5].mPos.y
+field 0248ADE8 r3+0x2540 u8 0,1,2,3      # hand[6].mMode
+field 0248ADE8 r3+0x2576 s16 0,1,2   # hand[6].mHoldTimer
+field 0248ADE8 r3+0x2578 s16 0,1,2   # hand[6].mLandTimer
+field 0248ADE8 r3+0x257A s8 0,1,5,9,10   # hand[6].mLen
+field 0248ADE8 r3+0x257B s8 0,1   # hand[6].mBurn
+field 0248ADE8 r3+0x255C f32 -400 10   # hand[6].mSpeed.y
+field 0248ADE8 r3+0x2548 f32 -50 50   # hand[6].mPos.y
+field 0248ADE8 r3+0x2ACC u8 0,1,2,3      # hand[7].mMode
+field 0248ADE8 r3+0x2B02 s16 0,1,2   # hand[7].mHoldTimer
+field 0248ADE8 r3+0x2B04 s16 0,1,2   # hand[7].mLandTimer
+field 0248ADE8 r3+0x2B06 s8 0,1,5,9,10   # hand[7].mLen
+field 0248ADE8 r3+0x2B07 s8 0,1   # hand[7].mBurn
+field 0248ADE8 r3+0x2AE8 f32 -400 10   # hand[7].mSpeed.y
+field 0248ADE8 r3+0x2AD4 f32 -50 50   # hand[7].mPos.y
+field 0248ADE8 r3+0x3058 u8 0,1,2,3      # hand[8].mMode
+field 0248ADE8 r3+0x308E s16 0,1,2   # hand[8].mHoldTimer
+field 0248ADE8 r3+0x3090 s16 0,1,2   # hand[8].mLandTimer
+field 0248ADE8 r3+0x3092 s8 0,1,5,9,10   # hand[8].mLen
+field 0248ADE8 r3+0x3093 s8 0,1   # hand[8].mBurn
+field 0248ADE8 r3+0x3074 f32 -400 10   # hand[8].mSpeed.y
+field 0248ADE8 r3+0x3060 f32 -50 50   # hand[8].mPos.y
+field 0248ADE8 r3+0x35E4 u8 0,1,2,3      # hand[9].mMode
+field 0248ADE8 r3+0x361A s16 0,1,2   # hand[9].mHoldTimer
+field 0248ADE8 r3+0x361C s16 0,1,2   # hand[9].mLandTimer
+field 0248ADE8 r3+0x361E s8 0,1,5,9,10   # hand[9].mLen
+field 0248ADE8 r3+0x361F s8 0,1   # hand[9].mBurn
+field 0248ADE8 r3+0x3600 f32 -400 10   # hand[9].mSpeed.y
+field 0248ADE8 r3+0x35EC f32 -50 50   # hand[9].mPos.y
+ret 025162A4 0 1                   # ChkTgHit
+ret 02008860 0 1                   # LineCross
+fret 02008974 -60 60               # GroundCross
+fret 025D68EC 0 2000               # searchActorDistance
+fret 020198D8 0 1                  # cM_rndF
+callee 02518DB0 r3=out28           # at_power_check fills the CcAtInfo (attack type)
+field 0248ADE8 1047B696 s16 0 3      # REG0_S(7): death-sparkle stride (negative strides run past the line buffers)
+callee 02008974 r4=84               # cBgS::GroundCross: compare the stack dBgS_GndChk (0x54)
+callee 025A847C r8=12               # dPa_control_c::set: compare the stack scale
+# nodeCallBack: pin the joint so its number (u16 at +4) can be steered to the hooked joint 1
+ret 027F7878 0x57000000 0x57000000
+field 0248AAC0 57000004 u16 0 2
+callee 02008DAC r3=84               # GndChk destructor: compare the stack object's vtables

@@ -1,0 +1,285 @@
+# d_com_inf_game (dComIfG_inf_c / dComIfG_play_c and the dComIfG*/dComIfGp*/dComIfGs* helpers):
+# TU 0251FD14..02525C94 (the function-less unit's sinit 0251FC80 before it; own sinit 02525A48
+# followed by the per-TU inline copies 02525ADC..02525C80; the next unit starts at 02525C94)
+src wwhd_src/d/d_com_inf_game.cpp
+src wwhd_src/d/d_com_inf_game_2.cpp
+stackfill periodic
+ret! 025200D4 0x54000000 0x54000000
+field * 101F84DC u32 0x55000000
+mockmove C000A848 r3 r4 r5            # memcpy (import)
+callee 025B50DC r4=8                  # dSv_player_return_place_c::set(name[8], room, point)
+callee 0260CBB4 r4=8                  # SafeString arguments
+callee 0260F414 r4=8
+callee 0260E500 r4=8
+callee 02525C34 r3=8
+# constructors allocate when this == NULL
+arg 0251FD94 r3 0,0x52000000,0xFFFFB850,0xFFFFB6B0
+arg 02520030 r3 0,0x52000000
+ret 0273AD10 0,0x53000000
+field 025200D4 104753A8 u32 0,1
+# the stage data object (gi + 0x5150) and its virtuals, through fake vtable slots
+field * 54005150 u32 0x5A000000
+field * 5A000064 u32 0x0200658C
+field * 5A00015C u32 0x0254487C
+field * 5A00016C u32 0x020066C0
+field * 5A00020C u32 0x02006478
+field * 5A000074 u32 0x0200B708
+ret 0254487C 0x5B000000 0x5B000000
+field * 5B00000C u32 0,0x10000,0x20000,0x30000,0x60000,0x70000,0x80000
+field * 5B000009 u8 0,6,8,0xC,0xE,0x12,0x14,0x16,0x1A,0x1C
+ret 020066C0 0,0x5C000000
+field * 5C000000 u32 0,1,5,100
+field * 5C000004 u32 0,0x5C100000
+ret! 02006478 0,0x5D000000
+field * 5D000000 u32 0,1,3
+field * 5D000004 u32 0x5D100000
+field * 5D10000A u8 0,1,2
+field * 5D100016 u8 0,1,2
+field * 5D100022 u8 0,1,2
+arg 02520630 r3 0,1,2
+ret 0200B708 0,0x5E000000
+# room status data and its ship list
+ret! 025C11DC 0,0x5F000000
+field * 5F000000 u32 0x5F100000
+field * 5F1001FC u32 0x0201A33C
+ret! 0201A33C 0,0x5F200000
+field * 5F200000 u32 0xFFFFFFFF,0,1,3
+field * 5F200004 u32 0,0x5F300000
+field * 5F30000E u8 0,1,2
+field * 5F30001E u8 0,1,2
+field * 5F30002E u8 0,1,2
+arg 02520584 r4 0,1,2,0xFF
+# stage numbers vs the current stage
+arg 025207D8 r3 0,3,4,6,7
+arg 02520864 r3 0,3,4,6,7
+arg 025208F8 r3 0,3,4,6,7
+arg 0252097C r3 0,3,4,6,7
+arg 02520A00 r3 0,3,4,6,7
+arg 02520A84 r3 0,3,4,6,7
+arg 02520B08 r3 0,3,4,6,7
+arg 02520B88 r3 0,3,4,6,7
+# resources and phases
+field * 101F4974 u32 0x56000000
+field * 56000000 u32 0,1
+arg 02520460 r3 0x57000000
+arg 025204C8 r3 0x57000000
+field * 57000004 u32 0,1,2,3
+ret 0260CBB4 0,1
+ret 0260F414 -1,0,1
+ret 025203D8 -1,0,1
+ret 02520354 0,1
+# events, player, ship
+ret 025B8B94 0,1
+ret 025C3FEC 0,1
+field * 54005B34 u32 0,0x58000000
+field * 54005B3C u32 0,0x58100000
+field * 580003BC u32 0,1,0x8000,0x8001
+field * 58000326 u8 0xFF,0,4,0xD,0x17,0x29,0x2D,0x2C
+field * 580069E7 u8 0,1,0xFF
+# items: specials, bow/bombs, beasts, defaults
+arg 02520C0C r3 0x42,0x43,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,0x70,0x71,0x72,0x20,0x30,0xBF,0xFE,0xFF,0x44
+arg 02520FE4 r3 0x1F,0x27,0x31,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,0x70,0x71,0x72,0x20,0x30,0xBF,0xFE,0xFF
+ret 025B7B10 0,1
+ret 025B7C50 0,1
+ret 025B7D90 0,1
+ret 025B7A2C 0,1
+ret 025B7F68 0,1
+field * 5500005C u8 0x20,0x30,0x27
+field * 55000066 u8 0x20,0x30,0x27
+field * 550000A0 u8 0x20,0x30,0x31
+field * 550000AA u8 0x20,0x30,0x1F
+field * 5500002E u8 0x20,0x30,0x38
+field * 55000068 u8 0,0x27
+field * 55000069 u8 0,0x31
+field * 55000096 u8 0x45,0x48,0x1F
+field * 5500009B u8 0x4B,0x46,0x1F
+# start stage name: "PShip", "Xboss0".."Xboss3"
+field * 54005134 u32 0x50536869,0x58626F73,0x73656100,0x415F6D6F,0x41736F6B,0x48797275,0x4879726F,0x6B656E72,0x4D32746F,0x47616E6F,0x47546F77,0x4D5F4E65,0x53697265,0x6D613272
+field * 54005138 u32 0x70000000,0x73300000,0x73310000,0x73320000,0x73330000,0x72690000,0x6F000000,0x6C650000,0x6F6D0000,0x6F6F6D00,0x77657200,0x6E4B0000,0x77443200,0x6E000000,0x65720000
+field * 5500020C u8 0x20,0
+field * 5500027C u8 0x20,0
+field * 550002EC u8 0x20,0
+field * 5500035C u8 0x20,0
+field * 550001F4 u8 0x20,0
+field * 55000264 u8 0x20,0
+field * 550002D4 u8 0x20,0
+field * 55000344 u8 0x20,0
+field * 54005CD0 u8 0,1,4
+# setSelectEquip
+arg 02522398 r3 0,1,2,3,4
+arg 02522398 r4 0x38,0x39,0x3A,0x3B,0x3C,0x3E,0x28,0x27,0xFF
+# mesh scene list positions
+# list counts read after the virtual getter: not clobbered (loop bounds)
+stable 5F200000 8
+stable 5D000000 8
+stable 5F000000 4
+stable 5F1001FC 4
+stable 5A000000 0x220
+stable 5F300000 0x40
+stable 5D100000 0x30
+stable 54005150 4
+# part 2: SafeString objects passed by pointer (top picks of the compared literals, unit vtable)
+arg 02522F6C r3 0x60000000
+arg 02523318 r3 0x60000000
+arg 0252349C r3 0x60000000
+field * 60000000 u32 0x1004BAC0,0x1004BB44,0x1004BAF0,0x1004BB10,0x60000100
+field * 60000100 u32 0x53746167,0x5374616E
+field * 60000104 u32 0x65000000,0x65660000
+stable 60000100 8
+field * 60000004 u32 0x1004B8C0
+arg 02522F6C r4 0x61000000
+arg 02523318 r4 0x61000000
+arg 0252349C r4 0x61000000
+arg 02523730 r3 0x61000000
+arg 02523E9C r3 0x61000000
+field * 61000000 u32 0x1004BAD8,0x1004BAB8,0x1004BAE0,0x1004BAC8,0x1004BAD0,0x1004BAF8,0x1004BB08,0x1004BB10,0x1004BAC0,0x61000100,0x61000100,0x61000100
+field * 61000100 u32 0x41444D75,0x415F756D,0x454E4475,0x7365615F,0x4D5F4E65,0x53697265
+field * 61000104 u32 0x6D690000,0x696B7A00,0x54000000,0x45000000,0x77443200,0x6E000000
+stable 61000100 8
+field * 61000004 u32 0x1004B8C0
+stable 60000000 8
+stable 61000000 8
+ret 02522F6C 0,1
+ret 02523318 0,1
+ret 0252349C 0,1
+# getLayerNo
+arg 025250C0 r3 0x2C,0xB,1,5
+field * 5400513F u8 0xFF,0x80,0,2
+ret 02556BC0 0,1
+ret 02556C34 0,5,6,12,17,18,23
+ret 025B7E00 8,3
+# projection matrix
+field * 54005FA4 u32 0,0x62000000
+field * 101F95D0 u32 0x63000000
+field * 63001020 u32 0,1,2
+field * 63001024 u32 0x63100000
+field * 63100000 u32 0,0x64000000
+field * 63100004 u32 0,0x64000000
+field * 6400000C u32 0x64100000
+field * 64100014 u32 0x0201A0AC
+ret 0201A0AC 0,1
+field * 64000050 u32 0,0x1000,0x40,0xC0,0x1040,0x10C0,0x80
+field * 6400004C u32 0,0x65000000
+field * 64000048 u32 0,0x66000000
+field * 101FD9AC u32 0,1
+stable 63001020 8
+stable 63100000 8
+stable 6400000C 4
+stable 64100014 4
+stable 64000048 12
+callee 02525C94 r3=out64
+# packets (this + 0x4810..0x4824), constructors, heap guards
+field * 101F4F54 u32 0x69000000
+field 02524C10 r3+0x4814 u32 0,0x68000000
+field 02524C50 r3+0x4814 u32 0,0x68000000
+field 02524CA0 r3+0x4814 u32 0,0x68000000
+field 02524CB0 r3+0x4814 u32 0,0x68000000
+field 02524CC0 r3+0x4818 u32 0,0x68000000
+field 02524D3C r3+0x4818 u32 0,0x68000000
+field 02524DA0 r3+0x4818 u32 0,0x68000000
+field 02524DB0 r3+0x4818 u32 0,0x68000000
+field 02524DC0 r3+0x481C u32 0,0x68000000
+field 02524E3C r3+0x481C u32 0,0x68000000
+field 02524EA0 r3+0x481C u32 0,0x68000000
+field 02524EB0 r3+0x481C u32 0,0x68000000
+field 02524EC0 r3+0x4820 u32 0,0x68000000
+field 02524F3C r3+0x4820 u32 0,0x68000000
+field 02524FA0 r3+0x4820 u32 0,0x68000000
+field 02524FB0 r3+0x4820 u32 0,0x68000000
+field 02524FC0 r3+0x4824 u32 0,0x68000000
+field 0252503C r3+0x4824 u32 0,0x68000000
+field 025250A0 r3+0x4824 u32 0,0x68000000
+field 025250B0 r3+0x4824 u32 0,0x68000000
+ret 0254ACD8 0,0x6A000000
+ret 025C7A1C 0,0x6A000000
+ret 025CF20C 0,0x6A000000
+ret 02545A2C 0,0x6A000000
+ret 025A7398 0,0x6A000000
+callee 025F01D8 r3=255
+callee 025F02D0 r3=4
+callee 025F0270 r3=4
+# destructors / inline copies
+arg 025247B8 r3 0,0x52000000
+arg 025247B8 r4 0,1
+arg 02525BD4 r3 0,0x52000000
+arg 02525BD4 r4 0,1
+arg 02525B6C r3 0,0x52000000
+arg 02525B6C r4 0,1
+arg 02525B3C r3 0,0x52000000
+arg 02525B3C r4 0,1
+arg 02525B58 r3 0,0x52000000
+arg 02525B58 r4 0,1
+arg 02525BC0 r3 0,0x52000000
+arg 02525BC0 r4 0,1
+arg 02525C38 r3 0,0x52000000
+arg 02525C38 r4 0,1
+arg 02525C6C r3 0,0x52000000
+arg 02525C6C r4 0,1
+arg 02525C80 r3 0,0x52000000
+arg 02525C80 r4 0,1
+arg 02525ADC r3 0,0x52000000
+# itemInit: the password buffer, its size
+arg! 025248BC r3 0x6C000000
+field 025248BC 6C004950 u32 0x6B000000
+field 025248BC 6C004958 u32 1,0x11,0x20
+stable 6C004958 4
+ret 02520C0C 0,1
+mockmove C0009988 r3 r4 r5            # OSBlockMove (import)
+# stack objects passed to the resource helpers: compare the whole SafeString / FixedSafeString<32>
+callee 02759C28 r3=44                 # SafeString::format into a FixedSafeString<32>
+callee 02522F6C r3=44 r4=44
+callee 02523318 r3=44 r4=44
+callee 0252349C r3=44 r4=44
+callee 02523730 r3=44
+callee 02523E9C r3=44
+callee 0260D618 r4=8 r5=8
+callee 0260E8A8 r4=8 r5=8
+callee 0260E0DC r4=8 r5=8
+callee 0260EEE8 r4=8 r5=8
+callee 0260F4CC r4=44 r5=8
+callee 02606BEC r4=8 r5=44 r6=8
+callee 02521678 r3=12                 # dComIfGd_getMeshSceneList(const Vec&)
+callee 028F0164 r7=0                  # __destroy_arr reads r7
+# per-function name steering: the recollection stages, the start-stage cases, getLayerNo's names
+field 025224A4 54005134 u32 0x58626F73
+field 025224A4 54005138 u32 0x73300000,0x73310000,0x73320000,0x73330000,0x73340000
+field 025224A4 550001F4 u8 0x20,0x20,0
+field 025224A4 55000264 u8 0x20,0x20,0
+field 025224A4 550002D4 u8 0x20,0x20,0
+field 025224A4 55000344 u8 0x20,0x20,0
+field 025217F8 54005134 u32 0x50536869,0x73656100
+field 025217F8 54005138 u32 0x70000000,0x5F540000
+field 025250C0 54005138 u32 0x72690000,0x6F000000,0x6C650000,0x6F6D0000,0x6F6F6D00,0x77657200,0x6E4B0000,0x65720000
+callee 02759C28 r3=44 r5=0            # SafeString::format: also compare the vararg (archive name)
+field 025217F8 5B000009 u8 0x14,0x14,0x16,0x18,0x1A,0x12,0x06,0x08
+field 025217F8 5B00000C u32 0,0x20000,0x10000,0x70000,0x40000,0x30000
+callee 028F521C r3=0                  # memzero(p, n): p is passed on to memset (the live-in analysis misses it)
+# getMeshSceneList: positions inside and outside the 14x14 sea grid
+arg 02521678 r3 0x5C200000
+field * 5C200000 f32 -400000.0,-350000.0,-349999.0,0.0,299999.0,350000.0,1000000.0
+field * 5C200008 f32 -400000.0,-350000.0,-349999.0,0.0,299999.0,350000.0,1000000.0
+# stage archive names: "ma2room" (event 0x1820 switches to ma3room)
+field 02523A04 54005134 u32 0x6D613272,0x73656100
+field 02523A04 54005138 u32 0x6F6F6D00
+field 02524180 54005134 u32 0x6D613272,0x73656100
+field 02524180 54005138 u32 0x6F6F6D00
+field 02523D08 54005134 u32 0x6D613272,0x73656100
+field 02523D08 54005138 u32 0x6F6F6D00
+field 0252447C 54005134 u32 0x6D613272,0x73656100
+field 0252447C 54005138 u32 0x6F6F6D00
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 025217F8 0x54005134 8 @stages,"DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","DELETE","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","OPEN","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShi_T","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","PShip","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 025224A4 0x54005134 8 @stages,"Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4","Xboss4"
+fieldstr 02523A04 0x54005134 8 @stages,"Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 02523D08 0x54005134 8 @stages,"ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 02524180 0x54005134 8 @stages,"Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","Room0","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 0252447C 0x54005134 8 @stages,"ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma2room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","ma3room","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 025250C0 0x54005134 8 @stages,"A_moer","A_moer","A_moer","A_mole","A_mole","A_mole","A_monK","A_monK","A_monK","A_moo","A_moo","A_moo","A_moom","A_moom","A_moom","A_mooom","A_mooom","A_mooom","A_mori","A_mori","A_mori","A_mower","A_mower","A_mower","Asoker","Asoker","Asoker","Asokle","Asokle","Asokle","AsoknK","AsoknK","AsoknK","Asoko","Asoko","Asoko","Asokom","Asokom","Asokom","Asokoom","Asokoom","Asokoom","Asokri","Asokri","Asokri","Asokwer","Asokwer","Asokwer","GTower","GTower","GTower","GTowle","GTowle","GTowle","GTownK","GTownK","GTownK","GTowo","GTowo","GTowo","GTowom","GTowom","GTowom","GTowoom","GTowoom","GTowoom","GTowri","GTowri","GTowri","GTowwer","GTowwer","GTowwer","Ganoer","Ganoer","Ganoer","Ganole","Ganole","Ganole","GanonK","GanonK","GanonK","Ganoo","Ganoo","Ganoo","Ganoom","Ganoom","Ganoom","Ganooom","Ganooom","Ganooom","Ganori","Ganori","Ganori","Ganower","Ganower","Ganower","Hyroer","Hyroer","Hyroer","Hyrole","Hyrole","Hyrole","HyronK","HyronK","HyronK","Hyroo","Hyroo","Hyroo","Hyroom","Hyroom","Hyroom","Hyrooom","Hyrooom","Hyrooom","Hyrori","Hyrori","Hyrori","Hyrower","Hyrower","Hyrower","Hyruer","Hyruer","Hyruer","Hyrule","Hyrule","Hyrule","HyrunK","HyrunK","HyrunK","Hyruo","Hyruo","Hyruo","Hyruom","Hyruom","Hyruom","Hyruoom","Hyruoom","Hyruoom","Hyruri","Hyruri","Hyruri","Hyruwer","Hyruwer","Hyruwer","M2toer","M2toer","M2toer","M2tole","M2tole","M2tole","M2tonK","M2tonK","M2tonK","M2too","M2too","M2too","M2toom","M2toom","M2toom","M2tooom","M2tooom","M2tooom","M2tori","M2tori","M2tori","M2tower","M2tower","M2tower","M_Neer","M_Neer","M_Neer","M_Nele","M_Nele","M_Nele","M_NenK","M_NenK","M_NenK","M_Neo","M_Neo","M_Neo","M_Neom","M_Neom","M_Neom","M_Neoom","M_Neoom","M_Neoom","M_Neri","M_Neri","M_Neri","M_Newer","M_Newer","M_Newer","PShier","PShier","PShier","PShile","PShile","PShile","PShinK","PShinK","PShinK","PShio","PShio","PShio","PShiom","PShiom","PShiom","PShioom","PShioom","PShioom","PShiri","PShiri","PShiri","PShiwer","PShiwer","PShiwer","Sireer","Sireer","Sireer","Sirele","Sirele","Sirele","SirenK","SirenK","SirenK","Sireo","Sireo","Sireo","Sireom","Sireom","Sireom","Sireoom","Sireoom","Sireoom","Sireri","Sireri","Sireri","Sirewer","Sirewer","Sirewer","Xboser","Xboser","Xboser","Xbosle","Xbosle","Xbosle","XbosnK","XbosnK","XbosnK","Xboso","Xboso","Xboso","Xbosom","Xbosom","Xbosom","Xbosoom","Xbosoom","Xbosoom","Xbosri","Xbosri","Xbosri","Xboswer","Xboswer","Xboswer","kenrer","kenrer","kenrer","kenrle","kenrle","kenrle","kenrnK","kenrnK","kenrnK","kenro","kenro","kenro","kenrom","kenrom","kenrom","kenroom","kenroom","kenroom","kenrri","kenrri","kenrri","kenrwer","kenrwer","kenrwer","ma2rer","ma2rer","ma2rer","ma2rle","ma2rle","ma2rle","ma2rnK","ma2rnK","ma2rnK","ma2ro","ma2ro","ma2ro","ma2rom","ma2rom","ma2rom","ma2room","ma2room","ma2room","ma2rri","ma2rri","ma2rri","ma2rwer","ma2rwer","ma2rwer","sea","sea","sea"
+# 02525C94: word-aligned matrices (an unaligned generated pointer splits float words, so
+# the NaN-payload tolerance for the row-3 lfs/stfs copy no longer lines up); aliasing pairs included
+arg! 02525C94 r3 0x60000000,0x61000000,0x62000000
+arg! 02525C94 r4 0x61000000,0x61000010
+arg! 02525C94 r5 0x62000000,0x60000000,0x62000004

@@ -1,0 +1,5 @@
+src wwhd_src/f_op/f_op_scene_mng.cpp
+callee 025DC73C r4=4
+ret 025DCE04 -1,0,1,2
+ret 025DCF0C 0,1
+field 025DC964 0x101F3794 u32 0,1,4294967295

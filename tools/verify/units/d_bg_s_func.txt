@@ -1,0 +1,15 @@
+src wwhd_src/d/d_bg_s_func.cpp
+# Five helpers plus adjacent initializer024F1A68; exact header attribution qualified.
+callee 02008E0C r3=64
+callee 02008974 r4=84
+callee 02008DAC r3=84
+callee 024EF130 r4=20
+callee 024EECAC r4=20
+callee 0200A3FC r4=4 r5=4
+fret 02008974 -1000000000 10
+ret 024EF130 0,1,63,64
+ret 024EF7C0 0,1
+ret 0246B6A4 0,1
+field 024F15A4 0x1047E8F4 u32 0,0x51000000
+field 024F15A4 0x1047EB20 u32 0,0x51000000
+field 024F15A4 0x104871C8 u32 0,0x51000000

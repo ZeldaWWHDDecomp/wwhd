@@ -1,0 +1,200 @@
+# Verification unit: d_a_player_main range #07 (0242DAC8..0243F057), self-contained check.
+src wwhd_src/d/actor/d_a_player_main.cpp wwhd_src/d/actor/d_a_player_main_07.cpp
+
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+callee 0201ADE0 r4=out12
+# HD setRatio: the joint count of the upper blend table (loop bound)
+ret! 027E0174 0,1,2,3
+callee 0201AE48 r4=out12
+callee 0201AD78 r4=out12
+# HD per-joint ratio loops (mAnmRatioUpper[1]/[2].setRatio): `this` pinned, the counts stable and small
+arg! 0243B50C r3 0x40000000,0x40000000
+arg! 0243B74C r3 0x40000000,0x40000000
+stable 40005830 4
+stable 40005840 4
+field 0243B50C r3+0x5830 i32 0,1,2,3,-1
+field 0243B50C r3+0x5840 i32 0,1,2,3,-1
+field 0243B74C r3+0x5830 i32 0,1,2,3,-1
+field 0243B74C r3+0x5840 i32 0,1,2,3,-1
+# procHammerFrontSwing: the sword blur loop (count at mpSwBlur + 0x9C): `this` pinned, the blur pinned, the count small
+arg! 0243CA98 r3 0x40000000,0x40000000
+field 0243CA98 r3+0x73EC u32 0x50000000,0x50000000
+stable 400073EC 4
+stable 5000009C 4
+field 0243CA98 5000009C i32 0,1,2,3,4,-1
+# procTactWait: the ratio loops (counts at +0x5830/+0x5840)
+arg! 0243A094 r3 0x40000000,0x40000000
+field 0243A094 r3+0x5830 i32 0,1,2,3,-1
+field 0243A094 r3+0x5840 i32 0,1,2,3,-1
+# stage-name compares (dComIfGp_getStartStageName() at play+0x5134): "ADMumi" / "Asoko" / other
+field 02435580 54005134 u32 0x41444D75,0x41736F6B,0x41444D75,0x41736F6B,0x47546F77
+field 02435580 54005138 u32 0x6D690000,0x6F000000
+field 02433E8C 54005134 u32 0x41444D75,0x47546F77
+field 02433E8C 54005138 u32 0x6D690000
+field 0243B200 54005CFC i32 3,3,0
+# procBottleDrink: the under animation id (+0x5848) and the bottle item (+0x69B0), the frame rate
+field 0243D838 r3+0x5848 u16 0x2C,0x2B,0x2C,0x2B,0xB7
+field 0243D838 r3+0x69B0 u16 0x50,0x51,0x52,0x54,0x55,0x56
+field 0243D838 r3+0x5898 f32 0.0,0.5,1.0
+# procBottleOpen: animation id, bottle item (fairy/water/forest water/bugs...), proc variables, demo mode
+field 0243DBFC r3+0x5848 u16 0x30,0x30,0x31
+field 0243DBFC r3+0x69B0 u16 0x56,0x57,0x58,0x59,0x50
+field 0243DBFC r3+0x6916 s16 0,0,1,-1
+field 0243DBFC r3+0x691A s16 0,1
+field 0243DBFC r3+0x691E s16 0,1
+field 0243DBFC r3+0x420 u16 5,0
+field 0243DBFC r3+0x5898 f32 0.0,1.0
+field 0243DBFC 540052B0 u8 1,2
+# procBottleSwing: catch state, the caught item (play+0x52B1), stage "Omori", proc variables
+field 0243E634 r3+0x69C0 u32 0,0,1
+field 0243E634 r3+0x69C4 u32 0,1
+field 0243E634 r3+0xF8 u16 6,6,0
+field 0243E634 r3+0x691A s16 0,1
+field 0243E634 r3+0x5898 f32 0.0,1.0
+field 0243E634 540052B1 u8 0x56,0x56,0x57,0x58
+field 0243E634 54005134 u32 0x4F6D6F72,0x4F6D6F72,0x41736F6B
+field 0243E634 54005138 u32 0x69000000
+# getReadyItem: the empty bottle (procBottleSwing catch) and the boomerang (procBoomerangSubject, HD)
+ret 023EAA80 0x50,0x2D,0x50,0x2D,0x51
+# procHammerFrontSwing: frame rate/frame, the hammer item id (+0x65F0), the sword top height
+field 0243CA98 r3+0x5898 f32 0.0,1.0
+field 0243CA98 r3+0x589C f32 0.5,2.0
+field 0243CA98 r3+0x6916 s16 0,1
+field 0243CA98 r3+0x65F0 u32 0x53,0x53,0x52
+field 0243CA98 r3+0x3E8 f32 -100.0,0.0,100.0
+# cBgS::GroundCross: "no ground" (-1e9) is an edge of the range
+fret 02008974 -1000000000.0 1000.0
+# changeShipEndProc: long checkSetItemTrigger chains (mostly "no"), the ship pinned (play+0x5B3C), item/proc ids, B/do statuses
+ret 023E9AF4 0,0,0,0,0,0,0,0,0,1
+field 024316EC 54005B3C u32 0x48000000,0x48000000,0x48000000,0
+stable 54005B3C 4
+field 024316EC 48000644 u32 0,1
+field 024316EC 48000637 u8 0,1
+field 024316EC 48000704 u32 0,0,1
+field 024316EC 4800070C u32 0,0,1
+field 024316EC 48000370 f32 0.0,3.0,10.0
+field 024316EC r3+0x65F0 u32 0x89,0x8A,0x8B,0x8C,0x8D,0x88
+field 024316EC r3+0x69B0 u16 0x2D,0x2D,0x50
+field 024316EC r3+0x5848 u16 0x8A,0x8B,0x8C,0x89
+field 024316EC r3+0x690D u8 0,1,2,3
+field 024316EC 54005CEA u8 0,1
+field 024316EC 54005BB7 u8 0,0x14,0x41,0x42
+field 024316EC 54005BB6 u8 0,8,0x1D
+field 024316EC 101F84DC u32 0x46000000
+field 024316EC 4600005D u8 0x77,0x78
+# procShipPaddle: changeShipEndProc mostly "no", the ship pinned, proc variable, stick, statuses
+ret 024316EC 0,0,0,1
+fret 02019788 0.0 1.0
+field 02432378 54005B3C u32 0x48000000
+field 02432378 48000704 u32 0,0,1
+field 02432378 4800070C u32 0,0,1
+field 02432378 48000370 f32 0.0,3.0,10.0
+field 02432378 r3+0x6916 s16 -2,-1,0,1
+field 02432378 r3+0x6A08 f32 0.0,0.1
+field 02432378 r3+0x5898 f32 0.0,1.0
+field 02432378 54005292 u8 0,1
+field 02432378 54005BB7 u8 0,0x1D
+field 02432378 54005BB6 u8 0,1
+# procShipBoomerang: the upper animation id (+0x5888), the boomerang item, attention lock
+field 02432B28 r3+0x5888 u16 0x33,0x34,0x35,0x35
+field 02432B28 r3+0x69B0 u16 0x2D,0x2D,0x2D,0x50
+field 02432B28 r3+0x659C u32 0,0,1
+field 02432B28 r3+0x65B0 u32 0,1
+ret 024EDFCC 0,1
+# procShipCrane: the ship pinned (crane state +0x63A, crane timers +0x682/+0x686, flags +0x644), proc state, mode flag 0x100
+field 02433570 54005B3C u32 0x48000000,0x48000000,0x48000000,0
+field 02433570 48000686 s16 0,1,0x14,0xFA,0x100
+field 02433570 48000682 s16 0,1,-1
+field 02433570 4800063A u8 0,2
+field 02433570 48000644 u32 0,0x40000
+field 02433570 r3+0x6A70 u32 0,0x100
+field 02433570 r3+0x691A s16 0,1
+field 02433570 r3+0x69C0 u32 0,1,2,3
+field 02433570 r3+0x69C4 u32 0,1,2,3
+field 02433570 r3+0x5888 u16 0xFFFF,0x30
+field 02433570 r3+0x5898 f32 0.0,1.0
+field 02433570 54005BB7 u8 0,1
+field 02433570 10475638 i32 -1,0
+ret 025B4CB8 0,1
+# changeCutReverseProc: the hit polygon's plane pinned (normal y), sword/hammer item, hit material bits, attribute code, particle result
+ret 020084C8 0x4A000000,0x4A000000,0x4A000000,0
+field 0243829C 4A000004 f32 0.0,0.6,0.9
+field 0243829C r3+0x69B0 u16 0x33,0x34,0x35
+field 0243829C r3+0x65F0 u32 0x53,0x5B,0x52
+field 0243829C r3+0x7B2C u32 0x80,0x1000000,0x10000,0x10
+field 0243829C r3+0x3B8 u32 0,0x40,0x10000000,0x10000040
+ret 024EF0F4 2,3,0x14,0
+ret 025A847C 0,0x4C000000
+# setSpeedAndAngleSwim: the proc id (+0x65F0), stick, speed, direction results
+field 0242ECFC r3+0x65F0 u32 0x35,0x34
+field 0242ECFC r3+0x6A08 f32 0.0,0.1,1.0
+field 0242ECFC r3+0x6A14 f32 0.0,10.0
+ret 023E4E18 0,1,2,3
+ret 023E3398 0,1,2,3
+# changeSwimOutProc: the proc id (swim move 0x37), the HD swim flag (+0x68D4), the wall polygon plane (pinned GetTriPla result), heights
+field 0242F254 r3+0x65F0 u32 0x37,0x36
+field 0242F254 r3+0x68D4 u8 0,1
+field 0242F254 r3+0x3B8 u32 0,0x80
+field 0242F254 4A000004 f32 0.0,0.6
+field 0242F254 r3+0x6A28 f32 0.0,100.0
+field 0242F254 r3+0x8A0 f32 0.0,50.0
+# grab procs: the grabbed actor pinned (mActorKeepGrab at +0x65A4) with its profile name, the grab animations (0x95/0x96), demo mode 0x38
+field 0242DAC8 r3+0x65A4 u32 0x4E000000,0x4E000000,0
+field 0242DAC8 4E000008 s16 0x1CF,0x126,0x127
+field 0242DAC8 r3+0x5898 f32 0.0,1.0
+field 0242E010 r3+0x65A4 u32 0x4E000000,0x4E000000,0
+field 0242E010 4E000008 s16 0x1CF,0x126,0x127
+field 0242DCE0 r3+0x5888 u16 0x95,0x96,0x90
+field 0242E604 r3+0x5888 u16 0x95,0x96,0x90
+field 0242E604 r3+0x5848 u16 0x95,0x96,0x90
+field 0242E264 r3+0x430 u32 0x38,0
+# ship item inits: re-entry with the same proc (+0x65F0), demo mode 0x44
+field 02430EC0 r3+0x65F0 u32 0x90,0x8F
+field 024311FC r3+0x65F0 u32 0x8D,0x8C
+field 024311FC r3+0x430 u32 0x44,0
+field 02431404 r3+0x65F0 u32 0x8B,0x8C
+field 0243155C r3+0x65F0 u32 0x8C,0x8B
+# procShipBow / procRopeSubject / procBoomerangSubject: upper animation ids, sight counter
+field 0243333C r3+0x5888 u16 0x36,0x35
+field 0243333C r3+0x6594 u32 0,0,1
+field 0243333C r3+0x69C0 u32 0,1
+field 024350A0 r3+0x58EE u8 0x19,0x18,0
+field 024376D8 r3+0x5888 u16 0x35,0x34
+field 0243333C r3+0x430 u32 0x44,0
+# procShipScope: the pad-state singleton pinned (button bits at +0x124 pick the selfie face)
+field 024327A4 101F5088 u32 0x47000000
+field 024327A4 47000124 u32 0x80,0x84,0x4,0x10,0
+# cut reverse / fan swing: the HD weapon state (+0x69D4 == 0xF), moving ground, stage "Adanmae"
+field 02438128 r3+0x69D4 u32 0xF,0xF,0
+field 024386C4 r3+0x69D4 u32 0xF,0xF,0
+ret 024EEABC 0,1
+field 024386C4 54005134 u32 0x4164616E,0x4164616E,0x41736F6B
+field 024386C4 54005138 u32 0x6D616500
+# procTactPlay: the message lookup (none / status 0x12), HD field +0x68AC
+ret 025F795C 0,0x12,0x12,1
+field 0243AC64 r3+0x68AC u32 0,1
+# procTactPlayOriginal / setHammerQuake / procBottleGet_init / procSwimMove
+field 0243B74C r3+0x691C s16 0,1
+arg 0243BFC8 r6 -1,-1,0,1
+field 0243E534 r3+0x69B0 u16 0x59,0x59,0x56
+field 0243E534 r3+0x4440 u32 0,0x4F000000
+field 0242F70C r3+0x68D4 u8 0,1
+# procTactWait: the tact state (+0x69C0: song result -5..-1, 6, 7), the beat counters
+field 0243A094 r3+0x69C0 i32 -5,-4,-3,-2,-1,0,6,7
+field 0243A094 r3+0x69C4 i32 0,1,-1
+field 0243A094 r3+0x691E s16 4,5,0
+field 0243A094 r3+0x6918 s16 0,1,-1
+# mutation follow-up: boundary values (procFanGlide m34E0 clamp, procRopeSwing swing angles, procHammerSideSwing frame window)
+field 02438E78 r3+0x6928 s16 0x2000,0x2001,0
+field 02435580 r3+0x69FC f32 1.0,0.5
+field 02435580 r3+0x6A04 f32 2.0,-2.0,1.0,0.0
+field 02435580 r3+0x6A00 f32 2.0,-2.0,1.0,0.0
+field 0243C61C r3+0x589C f32 25.0,25.5,36.0,30.0,10.0,40.0,55.0,60.0
+field 0243C61C r3+0x5898 f32 0.0,1.0,1.0
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02433E8C 0x54005134 8 @stages,"ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi"
+fieldstr 02435580 0x54005134 8 @stages,"ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","ADMuo","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asokmi","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowmi","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo","GTowo"

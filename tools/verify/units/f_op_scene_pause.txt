@@ -1,0 +1,8 @@
+src wwhd_src/f_op/f_op_scene_pause.cpp
+# Valid scene/layer link with absent or existing parent; mock pause flags cover both bits.
+field 025DCAC4 r3+0x2C u32 0x60000000
+field 025DCAC4 0x60000018 u32 0,0x61000000
+ret 025DE564 0,1,2
+ret 025DFB1C 0,1,2
+arg 025DCAC4 r3 0,0x50000000
+arg 025DCA64 r3 0,0x50000000

@@ -1,0 +1,122 @@
+src wwhd_src/d/d_drawlist.cpp
+stackfill periodic
+callee 028E8F64 r3=48 r4=12 r5=out12
+ret 0273AD10 0,0x58000000
+arg! 0252F480 r4 0x58000000
+arg! 0252F480 r5 0x58000000,0x58000004,0x58000008,0x5800000C
+callee 027F2B68 r3=48 r4=12
+callee 02759C10 r5=12
+callee 0252C8B4 r4=8
+callee 026066C4 r4=8
+callee 027B90AC r4=8
+callee 0201ADE0 r4=out12
+callee 02563F64 r5=out12
+callee 028E9E88 r3=12 r4=12 r5=out12
+callee 028E9684 r3=out48 r6=12
+callee 027FA974 r5=out4
+# Ordinary finite material collections; avoid treating arbitrary u16 garbage as a live table.
+field 0252CA4C r5+0x2A u16 0,1,2,3,8
+ret 027FA974 0,0x58000000
+mockfield 027FA974 r5+0 u32 0,1
+field 0252CA4C 58000000 u32 0,10
+field 0252CA4C r5+0x34 u32 0x59000000
+field 0252CA4C 5B000034 u32 4
+field 0252CA4C 5B000044 u16 0,1
+field 0252CA4C 5B000058 u16 0,1
+field 0252CA4C 59000000 u32 0x5B000000
+field 0252CA4C 5900000C u32 0x5C000000
+field 0252CA4C 5900003C u32 0x5B000000
+field 0252CA4C 59000048 u32 0x5C000000
+field 0252CA4C 59000078 u32 0x5B000000
+field 0252CA4C 59000084 u32 0x5C000000
+field 0252CA4C 590000B4 u32 0x5B000000
+field 0252CA4C 590000C0 u32 0x5C000000
+field 0252CA4C 590000F0 u32 0x5B000000
+field 0252CA4C 590000FC u32 0x5C000000
+field 0252CA4C 5900012C u32 0x5B000000
+field 0252CA4C 59000138 u32 0x5C000000
+field 0252CA4C 59000168 u32 0x5B000000
+field 0252CA4C 59000174 u32 0x5C000000
+field 0252CA4C 590001A4 u32 0x5B000000
+field 0252CA4C 590001B0 u32 0x5C000000
+callee 02750250 r3=out284
+callee 02750370 r3=284
+
+# Depth-peek texture descriptor and the format-58 scalar helper responses.
+field 0252E388 101F95D0 u32 0x60000000
+field 0252E388 60001020 u32 0,1,2
+field 0252E388 60001024 u32 0x60002000
+field 0252E388 60002000 u32 0x61000000
+field 0252E388 60002004 u32 0x61000000
+field 0252E388 61006B3C u32 58
+field 0252E388 61006B44 u32 16,32,640
+field 0252E388 61006B48 u32 16,32,480
+field 0252E388 61006BB4 u8 0,16
+field 0252E388 61006BB5 u8 0,16
+field 0252E388 61006B64 u32 0x62000000
+field 0252E388 r3+0 u8 0,1,2,8
+ret 027BFF40 4
+ret 027BFF54 1
+ret 027BFF80 0
+ret 027BFF68 32
+ret 027BFF9C 0,5
+callee 02759A48 r3=0
+ret 02759A48 0,0x3F000000,0x3F800000
+callee 0252FA2C r3=out76 r4=8 r5=0 r6=0 r7=0 r8=0 r9=0 r10=0
+
+# Exercise the disabled, lower-clamp, interior, and upper-clamp fade paths.
+field 0252F5A0 101D616C u8 0,1
+field 0252F5A0 101D6160 f32 -1,0,0.5,1,2
+field 0252F5A0 101D6164 f32 -1,0,0.5,1,2
+# Draw entry only processes mirror pass two.
+field 0252D2A0 r4+12 u32 0,1,2
+
+# Owned nonresizing material collection: callbacks may mutate material contents,
+# but cannot replace its allocation or resize the collection during traversal.
+arg! 0252CA4C r5 0x54000000
+stable 5400002A 2
+stable 54000034 4
+
+# Initialized equal texture descriptors exercise comparison suffixes.
+arg! 0252D6E8 r4 0,0x58000000
+field 0252D2A0 101FD7BC u32 0,1
+ret 027F81A4 0,0x58000000
+field 0252D6E8 r3+0x2588 u32 0
+field 0252D6E8 r3+0x2618 u32 0
+field 0252D2A0 r3+0x2948 u32 0
+field 0252D2A0 58000004 u32 0
+field 0252D6E8 r3+0x258c u32 0
+field 0252D6E8 r3+0x261c u32 0
+field 0252D2A0 r3+0x294c u32 0
+field 0252D2A0 58000008 u32 0
+field 0252D6E8 r3+0x2590 u32 0
+field 0252D6E8 r3+0x2620 u32 0
+field 0252D2A0 r3+0x2950 u32 0
+field 0252D2A0 5800000C u32 0
+field 0252D6E8 r3+0x2594 u32 0
+field 0252D6E8 r3+0x2624 u32 0
+field 0252D2A0 r3+0x2954 u32 0
+field 0252D2A0 58000010 u32 0
+field 0252D6E8 r3+0x2598 u32 0
+field 0252D6E8 r3+0x2628 u32 0
+field 0252D2A0 r3+0x2958 u32 0
+field 0252D2A0 58000014 u32 0
+field 0252D6E8 r3+0x259c u32 0
+field 0252D6E8 r3+0x262c u32 0
+field 0252D2A0 r3+0x295c u32 0
+field 0252D2A0 58000018 u32 0
+field 0252D6E8 r3+0x25bc u32 0
+field 0252D6E8 r3+0x264c u32 0
+field 0252D2A0 r3+0x297c u32 0
+field 0252D2A0 58000038 u32 0
+field 0252D6E8 r3+0x25b8 u32 0
+field 0252D6E8 r3+0x2648 u32 0
+field 0252D2A0 r3+0x2978 u32 0
+field 0252D2A0 58000034 u32 0
+field 0252D6E8 r3+0x25a0 u32 0
+field 0252D6E8 r3+0x2630 u32 0
+field 0252D2A0 r3+0x2960 u32 0
+field 0252D2A0 5800001C u32 0
+
+# Zero-fill wrapper tailcalls memset, whose destination r3 is live.
+callee 028F521C r3=0 r4=0

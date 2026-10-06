@@ -1,0 +1,209 @@
+src wwhd_src/d/actor/d_a_dai.cpp
+stackfill periodic
+callee 026066C4 r4=8
+ret 026066C4 0,0x54001000
+ret 025E38E0 0,0x54002000
+ret 025200D4 0x54010000
+ret 02555D0C 0x54020000
+ret 02550FAC 0,1
+ret 025B8BB0 0,1,255
+arg! 02115DDC r3 0x54000000
+field 02115DDC r3+0x7EC u32 0x54002000
+arg! 02115E78 r3 0x54000000
+field 02115E78 r3+0x7EC u32 0x54002000
+arg! 02115E7C r3 0x54000000
+field 02115E7C r3+0x7EC u32 0x54002000
+arg! 02115F1C r3 0x54000000
+field 02115F1C r3+0x7EC u32 0x54002000
+arg! 02115F20 r3 0x54000000
+field 02115F20 r3+0x7EC u32 0x54002000
+arg! 02115F78 r3 0x54000000
+field 02115F78 r3+0x7EC u32 0x54002000
+arg! 02115F7C r3 0x54000000
+field 02115F7C r3+0x7EC u32 0x54002000
+arg! 021163C0 r3 0x54000000
+field 021163C0 r3+0x7EC u32 0x54002000
+arg! 0211640C r3 0x54000000
+field 0211640C r3+0x7EC u32 0x54002000
+arg! 02116410 r3 0x54000000
+field 02116410 r3+0x7EC u32 0x54002000
+arg! 0211646C r3 0x54000000
+field 0211646C r3+0x7EC u32 0x54002000
+arg! 02116750 r3 0x54000000
+field 02116750 r3+0x7EC u32 0x54002000
+arg! 02116A50 r3 0x54000000
+field 02116A50 r3+0x7EC u32 0x54002000
+arg! 02116B0C r3 0x54000000
+field 02116B0C r3+0x7EC u32 0x54002000
+
+arg! 02116054 r3 0x54000000
+field 02116054 r3+0x7EC u32 0x54002000
+arg! 02116258 r3 0x54000000
+field 02116258 r3+0x7EC u32 0x54002000
+arg! 021163BC r3 0x54000000
+field 021163BC r3+0x7EC u32 0x54002000
+arg! 02116470 r3 0x54000000
+field 02116470 r3+0x7EC u32 0x54002000
+arg! 02116648 r3 0x54000000
+field 02116648 r3+0x7EC u32 0x54002000
+arg! 0211676C r3 0x54000000
+field 0211676C r3+0x7EC u32 0x54002000
+arg! 021167CC r3 0x54000000
+field 021167CC r3+0x7EC u32 0x54002000
+arg! 021167D0 r3 0x54000000
+field 021167D0 r3+0x7EC u32 0x54002000
+arg! 02116848 r3 0x54000000
+field 02116848 r3+0x7EC u32 0x54002000
+arg! 02116A3C r3 0x54000000
+field 02116A3C r3+0x7EC u32 0x54002000
+arg! 02116A58 r3 0x54000000
+field 02116A58 r3+0x7EC u32 0x54002000
+real 02444E48
+callee 02444E48 r3=26020
+callee 025D5218 r4=4
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 0200F93C r3=12 r4=12
+callee 020182E0 r4=12
+ret 0254DA50 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025D5928 0,0x54040000
+ret 025B75A4 0,1
+ret 02550F38 0,1,2,3,4
+ret 025D5218 0,0x54040000
+ret 0254407C 0,1
+ret 025440C8 0,1
+ret 025A11EC 0,17,18,19
+ret 0200FAAC 0,11999,12000,12001
+fret 028F4384 0,99,100,101
+field * 101F84DC u32 0x54050000
+field * 101F4B5C u32 0x54060000
+field * 54060948 u32 0,1
+field * 10474BDC u32 0x54030000
+field * 10474360 u8 0,1,2,3,4,5
+field * 540300B4 u32 0x10037CF0
+field * 540365A0 u32 0,1,0xFFFFFFFF
+field * 54000318 f32 0,9,10,11
+field * 54030318 f32 0,9,10,11
+field * 54000965 u8 0,1,2,3
+field * 54000964 u8 0,1
+field * 54000968 u32 0,1,0xFFFFFFFF
+field * 540000F8 u16 0,1,2
+field * 540002E4 u32 0,2,4,6,8,10,12,14
+arg! 02116848 r4 0x54070000
+field 02116848 54070000 u32 0xF0D,0xF11,0xF12,0xF13,0
+arg! 02115E7C r4 0,1,2
+arg! 02115F1C r4 0,1,2
+arg! 02115F20 r4 0,1,2
+arg! 02115F78 r4 0,1,2
+arg! 02116A3C r3 0,0x54000000
+arg! 02116A58 r3 0,0x54000000
+arg! 02116A3C r4 0,1,2,3,-1
+arg! 02116A58 r4 0,1,2,3,-1
+callee 025F1C28 r3=48
+callee 028E93CC r3=out48
+callee 025D5928 stack=1
+field * 1048D04C f32 -inf,0,1,1.0000001192092896,2,5000,inf,nan
+
+# Full nested pure geometry, with truthful leaf inputs observed at opaque endpoints.
+real 0201ADE0
+real 028E8DAC
+real 028E8DD0
+real 0200F93C
+real 0200FAAC
+real 028E93CC
+real 025F1C28
+real 025F1884
+real 028E9108
+real 020182E0
+real 02115DDC
+real 02115E7C
+real 02115F20
+real 02115F7C
+real 02116054
+real 02116258
+real 021163C0
+real 02116410
+real 02116470
+real 02116648
+real 02116750
+real 0211676C
+field * 54000314 f32 -101,-100,-99,0,99,100,101
+field * 54000318 f32 -11,-10,-9,0,9,10,11
+field * 5400031C f32 -101,-100,-99,0,99,100,101
+field * 54030314 f32 -101,-100,-99,0,99,100,101
+field * 54030318 f32 -11,-10,-9,0,9,10,11
+field * 5403031C f32 -101,-100,-99,0,99,100,101
+field * 54000322 u16 0,16384,32768,49152
+field * 104A44F8 f32 0
+field * 104A44FC f32 1
+field * 104A84F8 f32 1
+field * 104A84FC f32 0
+field * 104AC4F8 f32 0
+field * 104AC4FC f32 -1
+field * 104B04F8 f32 -1
+field * 104B04FC f32 0
+callee 028E8DAC r3=12 r4=12 r5=out12
+callee 028E9108 r3=48 r4=48 r5=out48
+
+# Resource-control instance is allocated; getRes reads its tree root at +0x14.
+field * 101F4F28 u32 0x54080000
+callee 026066C4 r3=24
+
+# Runtime-valid resource tree and allocated actor pool; all nested callbacks run for real.
+real 026066C4
+real 02116B0C
+real 0273B264
+real 0273B200
+real 0260ACC8
+real 026066A0
+real 025D5218
+real 020100BC
+real 02019DE8
+real 0201AA08
+real 025E1234
+field * 54080014 u32 0x54090000
+field * 54090000 u32 0
+field * 54090004 u32 0
+field * 5409000C u32 0x986d381b
+field * 54090018 u32 0x540A0000
+field * 540A0084 u32 18
+field * 540A0060 u32 0x540B0000
+field * 540B0044 u32 0x54001000
+field * 101F8AE5 u8 0
+field * 101F3328 u32 0x540C0000
+field * 101F332C u32 0x540C0000
+field * 101F3330 i32 1
+field * 540C0008 u32 0
+field * 540C000C u32 0x54040000
+field * 54040004 u32 1
+
+# Active player type remains fixed during these calls; no constructor/destructor touches it.
+stable 540300B4 4
+
+# The one-node allocation graph and assigned ID are immutable during read-only lookup.
+# Deletion occurs after the final lookup; no subsequent unit read observes this graph.
+stable 101F3328 12
+stable 540C0000 16
+stable 54040004 4
+# Loaded archive tree remains present throughout this resource lookup.
+stable 54080014 4
+stable 54090000 32
+stable 540A0060 4
+stable 540A0084 4
+stable 540B0044 4
+
+# Initialized real play/light services also remain truthful inside real actor calls.
+real 025200D4
+real 02555D0C
+field * 104753A8 u32 1
+field * 104773B4 u32 1
+stable 104753A8 4
+stable 104773B4 4
+stable 10474BDC 4
+
+# Pedestal save-label index lies in the first four supported allocation slots.
+field * 540000B0 u32 0,1,2,3
+# Matrix setup callees preserve the current yaw; the four cardinal sin/cos entries are valid.
+stable 54000322 2

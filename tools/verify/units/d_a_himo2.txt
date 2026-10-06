@@ -1,0 +1,118 @@
+# Verification unit: d_a_himo2 (Grappling Hook rope)
+src wwhd_src/d/actor/d_a_himo2.cpp
+src wwhd_src/d/actor/d_a_himo2_move.cpp
+stackfill periodic
+ret 025D4604 0,1
+field 0216DD3C r3+0x8 i16 0xFA,0xFB,0
+field 0216DDDC r3+0x8 i16 0xDF,0xFA
+field 0216DE2C r3+0x8 i16 0xEA,0xFA
+field 0216DD3C r4+0x281C u8 0,1,98,99,100,101,255
+field 0216DE7C r3+0x3BE i16 0,1
+field 0216DE7C r3+0x2BCC u32 0,0x10,0x20,0x200,0x8,0x230
+ret 024EF0F4 0,1,2,3,4
+ret 024F0F98 0,1
+callee 024F0F98 r4=16
+callee 024EECAC r4=16
+callee 024EF0F4 r4=16
+callee 025A847C r7=6
+callee 0255F458 r3=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 026066C4 r4=8
+ret 025EBA58 0,1
+ret 025D63E8 0,1
+ret 025200D4 0x54000000 0x54000000
+field 0216E9E0 54005134 u32 0x47616E6F,0x47616E6F,0
+field 0216E9E0 54005138 u32 0x6E4B0000,0x6E4C0000
+# setTargetPos (search_target inlined)
+callee 0200FCD8 r3=12 r4=out12
+field 0216EEB8 r3+0x281C u8 0,1,2,3,99,100,101
+field 0216EEB8 54005134 u32 0x41444D75,0x41444D75,0
+field 0216EEB8 54005138 u32 0x6D690000,0x6D6A0000
+# Execute
+callee 02008974 r4=0x54
+callee 02008DAC r3=0x54
+callee 028E90D4 r3=48 r4=out48
+field 0216E194 r3+0x3E8 i32 -1,0,1,2,40,52,53,54,60,96,97,98,99,100
+field 0216E194 r3+0x3F8 i32 0,1,2,3,4,9,10,-1
+field 0216E194 10464678 u32 0,1
+field 0216E194 1046467C u32 0,1
+# the actor is at 0x40000000 in generated inputs; keep the segment count m02CC out of clobbering
+# (a clobbered count makes the original and the candidate run up to the access budget)
+stable 400003E8 4
+# Draw
+callee 0200FCD8 r3=12 r4=out12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8D88 r3=12 r4=12 r5=out12
+field 0216CA5C r3+0x2B09 i8 -1,0,1,2,3,4
+field 0216CA5C r3+0x3BA i16 0,0,0,1
+field 0216CA5C r3+0x3F8 i32 0,1,9,10,11
+field 0216CA5C r3+0x2B08 i8 0,1,2,3
+field 0216CA5C r3+0x3E8 i32 0,50,95,96,97,98,99
+field 0216CA5C r3+0x21D4 i32 0
+field 0216CA5C r3+0x2AEC i32 0,1,10,49,60
+# the line materials' position arrays at aligned addresses (the NaN-payload tolerance is per aligned word)
+field 0216CA5C r3+0x21D0 u32 0x5A000000,0x5A000000
+field 0216CA5C 5A000000 u32 0x5A100000,0x5A100000
+field 0216CA5C r3+0x2384 u32 0x5A200000,0x5A200000
+field 0216CA5C 5A200000 u32 0x5A300000,0x5A300000
+field 0216CA5C 5A200010 u32 0x5A310000,0x5A310000
+field 0216CA5C 5A200020 u32 0x5A320000,0x5A320000
+field 0216CA5C 5A200030 u32 0x5A330000,0x5A330000
+field 0216CA5C 5A200040 u32 0x5A340000,0x5A340000
+field 0216CA5C r3+0x2510 u32 0x5A400000,0x5A400000
+field 0216CA5C 5A400000 u32 0x5A500000,0x5A500000
+stable 400021D0 4
+stable 40002384 4
+stable 40002510 4
+stable 5A000000 4
+stable 5A200000 0x44
+stable 5A400000 4
+# new_himo2_move
+field * 54005B30 i8 0,1
+field 0216F7FC r3+0x3F8 i32 0,1,2,3,4,5,8,9,10,11,6,12
+field 0216F7FC r3+0x2B09 i8 -1,0,1,2,3,4,5,6,7,8,9,10
+field 0216F7FC r3+0xB0 u32 0,1,2,3,4
+callee 0200FCD8 r3=12 r4=out12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 028E8DD0 r3=12
+callee 0200F164 r3=12 r4=12
+callee 025D5218 r4=4
+callee 0251510C r4=12 r5=12
+callee 02514FE8 r4=12 r5=12
+callee 024F1AFC r3=0x6C r4=12 r5=12
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+# timers / sequences
+field 0216F7FC r3+0x3B8 i16 0,1,2,3,11,30,31,0x3A,0x6F,100,41,121,151,171,201,211,1000
+field 0216F7FC 1047B68C i16 0,0,0,1
+field 0216F7FC 1047B690 i16 0,0,0,1
+field 0216F7FC 1047B698 i16 0,0,0,1
+field 0216F7FC r3+0xF8 u16 2,2,0
+field 0216F7FC r3+0x2B4C i8 0,1
+# the hooked target (m217C) at a fixed address: body (0x10) or plain kui, type 3
+field 0216F7FC r3+0x267C u32 0x5C000000,0x5C000000,0
+field 0216F7FC 5C0000B0 u32 0,0x10,3,0x13
+field 0216F7FC 5C000338 f32 0.5,1.0,1.5
+field 0216F7FC 5C000334 f32 0.5,1.0,1.5
+field 0216F7FC r3+0x2AEC i32 0,1,12,13,14,25,26,27,38,39,40,48,49,50,399,400
+field 0216F7FC r3+0x2AF4 f32 0,1,19,20,21,40,60
+field 0216F7FC r3+0x2AE4 f32 -144,-144,-146
+field 0216F7FC r3+0x2AFA i16 0,8999,9000,9001
+field 0216F7FC 1046467C u32 0x5D000000,0x5D000000,0
+field 0216F7FC 10464678 u32 0x5E000000,0x5E000000,0
+# fopAcM_SearchByID result: a Big Octo-ish actor (name 0xBD) sometimes
+ret 025D5218 0,0x5B000000,0x5B000000
+field 0216F7FC 5B000008 i16 0xBD,0xBD,0xFA
+field 0216F7FC r3+0x3E8 i32 -5,0,1,2,50,96,98
+field 0216F7FC 5D0005D6 i16 10,10,0
+field 0216F7FC 5C000008 i16 0xFA,0xFA,0xBD
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0216E9E0 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","Always","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonK","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link","Link"
+fieldstr 0216EEB8 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumi","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj","ADMumj"
+fieldstr 0216F7FC 0x54005134 8 @stages,"C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","C0","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","CH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","DH","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag"

@@ -1,0 +1,94 @@
+src wwhd_src/d/actor/d_a_bomb2.cpp
+ret 025200D4 0x54000000 0x54000000
+field * r3+0x934 i32 -1,0,1,2,30,31,120
+field * r3+0x71D u8 0,1
+field * r3+0x88C i32 0,1,2,3
+field * r3+0x938 i32 0,1,2
+field * r3+0x50 u8 0,1,2
+field * r3+0x0C u32 0,0x56000000
+field * r3+0x14 u32 0,0x57000000
+ret 020CAB6C 0 1
+ret 020CAC88 0 1
+ret 020C82F4 0 1
+ret 0273AD10 0,0x58000000
+arg 020C84D8 r3 0,0x40000000
+
+arg! 020C894C r4 0x51000000
+field 020C894C r4+0x1AC u32 0,0x56000000
+field 020C894C r4+0x262 u8 0,6,7,255
+field 020C894C 56000000 u32 0x57000000
+field 020C894C 5600000C u32 0
+arg! 020C8564 r4 0x51000000
+field 020C8564 r4+0x262 u8 0,6,7,255
+fret 028F4384 0 100
+# createParticle returns null or a real (aligned) particle: strict, so no input gets an arbitrary near-null
+# pointer like 5 whose overlapping, partly clobbered float stores defeat the NaN-payload tolerance (020C8564 seed 7)
+ret! 0281DCB8 0,0x57000000
+callee 028E8DD0 r3=12
+callee 028E8DE8 r3=12 r4=12
+
+ret 0246B6A4 0 1
+fret 0246BA0C -1000 1000
+field * r3+0x550 f32 -1000000000,0,100
+field * r3+0x4E4 u32 0,16,32,128,512,4096
+field * r3+0x93E u8 0,1
+field * r3+0x93F u8 0,1
+observe 025E2DE0 104B4634 8
+ret 020C9F18 0 1
+
+callee 026066C4 r4=8
+callee 025E8154 stack=1
+callee 025A847C stack=4
+callee 025A866C r4=0 r5=12 r6=6 r7=12
+callee 025CB374 r6=12
+field * r3+0x940 u8 0,1
+ret 025E8508 0 1
+ret 025E8154 0 1
+
+callee 025D9F70 r4=out4
+callee 02312548 r3=out16 r4=12
+callee 028E8C78 r3=out48 r4=16
+arg 020CB500 r3 0,0x40000000
+field * r3+0x890 s32 -1,0,1,2,100
+ret 025D9F70 0 1
+
+ret 020CB5E0 0 1 2 3
+ret 02520460 0 1 4 5
+ret 025D63E8 0 1
+field * r3+0x2E4 u32 0,8
+field * r3+0x93C u8 0,1
+
+field * r3+0x93D u8 0,1
+field * r3+0x941 u8 0,1
+ret 025162A4 0 1
+ret 02516464 0 1
+ret 02516300 0,0x58000000
+field * 58000010 u32 0,32,2097152
+ret 020CAD3C 0 1
+ret 020CAD94 0 1
+ret 020CAD98 0 1
+field * r3+0x2E0 u32 0,8192
+
+callee 028E8E64 r3=12 r4=out12
+callee 0201AE48 r3=12 r4=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+field * r3+0x4E4 u32 0,16,32,48,128,512,4096
+# Real dCcD_Sph vtable and cCcD_SphAttr normal-vector output.
+field 020C9674 5800003C u32 0x1004B200
+callee 0251684C r3=0
+ret 0251684C 0x580000F8 0x580000F8
+field 020C9674 58000114 u32 0x1004B258
+callee 0200CB7C r4=12 r5=out12
+ret 0200CB7C 0 1
+ret 02515BBC 0,0x59000000
+field 020C9674 5900000E u16 0,168
+field 020C9674 5900032A u16 0,32768
+ret 020195B0 0 0
+# Exact animation/landing/carry-bit boundaries identified by survivor replay.
+field 020C9CBC r3+0x934 i32 134,135,136,137
+arg 020CA7C0 f1 -32.5,-30,-40,0
+field 020C9A6C r3+0x2E0 u32 0,1,8192,8193
+fret 028F4384 25 26
+
+# Exercise uninitialized scratch storage on both implementations.
+stackfill

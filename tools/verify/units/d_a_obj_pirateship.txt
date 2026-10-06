@@ -1,0 +1,92 @@
+src wwhd_src/d/actor/d_a_obj_pirateship.cpp
+callee 025A847C stack=4
+callee 025E7CE0 stack=1
+field * r3+0x3E4 u8 0,1,2
+field * r3+0x3E6 u8 0,1
+field * r3+0x2DC u8 0,1,32,33
+ret 0201B47C 0 1
+ret 0200F62C 0 1
+observe 025E2DE0 104B4634 8
+callee 0201ADE0 r4=255
+callee 026066C4 r4=8
+callee 02606900 r4=8 r5=12
+callee 025D5A20 stack=1
+real 0201ADE0
+callee 028E8F64 r5=255
+callee 02606900 r5=8
+real 028E8DAC
+real 028E8F64
+real 0201A478
+callee 025602F0 r3=255 r4=255
+real 025602F0
+real 0274D458
+callee 0274D458 r3=255 r4=16
+# Actual game-info singleton, with its one-time constructor already complete.
+real 025200D4
+field * 104753A8 u32 1 1
+field 02384A78 104741E4 u32 0x415F756D 0x415F756D
+field 02384A78 104741E8 u32 0x696B7A00 0x696B7A00
+field * r3+0xB0 u32 0,1,0x10000,0xFF0000,0x1000000,0x2000000,0x3000000,0x4000000,0x5000000,0x100,0x200
+field * r3+0x3E5 u8 0,1
+ret 02520460 0 5
+ret 025B8B94 0 1
+ret 02384974 0 1
+field * 104741EC i16 0,18,19
+
+field 023852E0 104741E4 u32 0x73656100 0x73656100
+field 023852E0 r3+0xB0 u32 0x02FF0000,0x04FF0000,0x03FF0000,0x05FF0000,0x00FF0000,0x01FF0000,0,1,0x2000000,0x4000000
+
+real 02008E0C
+callee 0201ADE0 r3=12 r5=12
+callee 0201B47C r3=12
+callee 028E8F64 r3=48 r4=12
+callee 025E19CC r4=12
+callee 02008974 r4=84
+callee 024EF130 r4=12
+callee 02008DAC r3=84
+
+# Nonzero engine/save/demo pointers expose shifted-global mutants.
+field * 101F4F28 u32 0x11008000 0x11008000
+field * 101F84DC u32 0x11000000 0x11000000
+field * 101D5FFC u32 0,0x11020000
+# HD draw suppresses the animated sea plane in Demo37.
+field 02384FB4 1047E6B8 u32 0,0x44656D6F
+field 02384FB4 1047E6BC u32 0x33370000 0x33370000
+field 02385B70 r3+0x4BE i16 -16385,-16384,-16383,16383,16384,16385
+field 02385B70 1046BC90 i16 250 250
+field 02385B70 1046BC92 i16 500 500
+field 023852E0 1046BC90 i16 250 250
+field 023852E0 1046BC92 i16 500 500
+field 02384C2C r3+0x68C u32 0,0x11010000
+field 02384C2C 11010262 u8 0,6,7,8
+
+field 02384FB4 1047E6B8 u32 0,0x44656D6F,0x45656D6F
+field 02384A78 104741E4 u32 0x415F756D,0x425F756D
+field 023852E0 104741E4 u32 0x73656100,0x74656100
+ret 024EF130 0 65
+
+# Actual HD material-color setter at the vtable's +0x24 slot.
+callee 027F75B0 r5=8
+real 027F75B0
+real 027F9F0C
+field 02384FB4 r3+0x3FC u32 0x11040000 0x11040000
+field 02384FB4 110400AC u32 0x11041000 0x11041000
+field 02384FB4 11041010 u32 0x11042000 0x11042000
+field 02384FB4 11042018 u32 0x11043000 0x11043000
+field 02384FB4 11043004 u32 0x1016E72C 0x1016E72C
+
+# Equally aligned PPC and source stack objects share padding poison bytes.
+stackfill periodic
+
+# SetWave: the tail emitter is a heap object (4-aligned). A random unaligned pointer made the six
+# overlapping stfs of one float defeat the per-word NaN-payload tolerance (seed 7 input 7000937:
+# a signalling-NaN scale; the generated code writes the first copy raw, the later ones quieted).
+# leftover-actor-functions 2026-10-05.
+field 02384C2C r3+0x688 u32 0,0x11030000
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+ret 025200D4 0x4E000000 0x4E000000  # play object pinned so its stage name can be steered
+fieldstr 02384A78 0x4E005134 8 @stages
+fieldstr 023852E0 0x4E005134 8 @stages

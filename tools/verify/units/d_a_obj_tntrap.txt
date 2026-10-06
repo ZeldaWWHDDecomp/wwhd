@@ -1,0 +1,75 @@
+# Full actual38-function TU023A2598..023A3CC3, HD0xF04.
+src wwhd_src/d/actor/d_a_obj_tntrap.cpp
+real 023A3CA8
+callee 026066C4 r4=8
+callee 025A847C stack=4
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201924C r3=0 r4=12 r5=12 r6=12
+stackfill periodic
+# Actual action and emitter/triangle group index domains.
+arg! 023A2A5C r4 0 6
+arg! 023A2958 r4 0 1
+arg! 023A2CEC r4 0 1
+arg! 023A2FA4 r4 0 1
+field * r3+0x3B4 u32 0 5
+field * r3+0xED0 u32 0x0000FFFF
+field * r3+0xED4 u32 0x023A3458,0x023A34EC,0x023A3710,0x023A37D0,0x023A3894,0x023A3978,0x023A3A50
+field * r3+0xED8 u32 0,1,2,3,4,5,6
+field * r3+0xEDC u8 0,1
+field * r3+0xEE0 u32 0,1,255
+field * r3+0xEE4 u32 0,1,255
+field * r3+0xEE8 u32 0,1
+field * r3+0xEEC u32 0 3
+field * r3+0xEF0 s16 -1,0,1,300
+field * r3+0xEF8 u8 0,1
+field * r3+0xEF9 u8 0,1
+field * r3+0xEFC f32 0,180,-180
+field * r3+0xF00 f32 0,180,-180
+field * r3+0xEA8 u32 0,0x11060000
+field * r3+0xEAC u32 0,0x11061000
+field * r3+0xEB0 u32 0,0x11062000
+field * r3+0xEB4 u32 0,0x11063000
+field * r3+0xEB8 u32 0,0x11064000
+field * r3+0xEBC u32 0,0x11065000
+field * r3+0xEC0 u32 0,0x11066000
+field * r3+0xEC4 u32 0,0x11067000
+field * r3+0xEC8 u32 0,0x11068000
+field * r3+0xECC u32 0,0x11069000
+field * r3+0xE74 u32 0,0x110A0000
+field * 110A0000 u32 0,1,255,256
+field * r3+0xF4 u32 0,1
+field * r3+0xC u8 0,1
+field * r3+0xF8 u16 0,2
+field * r3+0xB0 u32 0x00000000,0x000001FF,0x00010000,0x00020000,0x00040000,0x00060000,0x0000FFFF
+field * 101F84DC u32 0x11010000
+field * 101F4F28 u32 0x11020000
+ret 025200D4 0x11000000 0x11000000
+field * 11005B2C u32 0,0x11030000
+field * 11005B3C u32 0,0x11040000
+field * 11005AB0 u32 0x11050000
+ret 02520460 0,4,5
+ret 025D63E8 0,1
+ret 024EEA6C 0,1
+ret 025B8B94 0,1
+ret 025BA0C0 0,1
+ret 025B7E00 0,8
+ret 02543F10 -1,0,1
+ret 02542D88 -1,0,1
+ret 02544830 0x10031208,0x10031210,0x10031200
+ret 02544044 0,0x110B0000
+ret 025440C8 0,1
+fret 028F4384 0 1000
+
+
+# Type2 event branch requires action1; break correlated generic field draws.
+field 023A319C r3+0xED8 u32 1
+
+# Add to own unit only after terminal frozen sweep, backed by actual disassemblies.
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E90D4 r3=48 r4=out48
+callee 028E93CC r3=out48
+callee 025F19F8 r3=48
+callee 028E8DD0 r3=12
+
+# Independent switch sentinel parameter bit combinations.
+field 023A2598 r3+0xB0 u32 0x00000000,0x000001FF,0x00010000,0x00020000,0x00040000,0x00060000,0x0000FFFF,0x000200FF,0x000400FF,0x0000FF00,0x000000FF

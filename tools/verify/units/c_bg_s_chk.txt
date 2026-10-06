@@ -1,0 +1,5 @@
+src wwhd_src/SSystem/SComponent/c_bg_s_chk.cpp
+field 02008BB8 r3+8 u32 0,1,2,4294967295
+field 02008BB8 r3+0xC u8 0,1,2,255
+arg 02008BB8 r4 0,1,2,4294967295
+ret 0273AD10 0,0x55000000

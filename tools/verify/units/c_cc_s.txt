@@ -1,0 +1,54 @@
+src wwhd_src/SSystem/SComponent/c_cc_s.cpp
+arg 0200E138 r3 0,0x52000000
+ret 0273AD10 0,0x53000000
+field * r3+0x2800 s32 0,1,2,3
+field * r3+0x2804 s32 0,1,2,3
+field * r3+0x2808 s32 0,1,2,3
+field * r3+0x280c s32 0,1,2,3
+callee 02017DAC r3=out28
+callee 02017E98 r3=28 r4=28
+callee 0200B7D4 r4=28
+callee 028E8D88 r3=12 r4=12 r5=out12
+# Bounded, non-reentrant collision list domain; callbacks do not register/remove entries.
+arg! * r3 0x52000000
+stable 0x52002800 16
+# Constructor separately covers allocation failure and supplied storage.
+arg! 0200E138 r3 0,0x52000000
+# Count stability is a declared callback contract, not arbitrary callback/list-mutation coverage:
+# object/status clear callbacks receive no registry manager and do not change its counts.
+# Position correction: all three weight classes, both correction modes, shared actor/no status.
+arg! 0200D84C r4 0x54000000
+arg! 0200D84C r6 0x55000000
+field 0200D84C r4+0x2c u32 0,0x80,0x100
+field 0200D84C r6+0x2c u32 0,0x80,0x100
+field 0200D84C r4+0x44 u32 0,0x58000000
+field 0200D84C r6+0x44 u32 0,0x59000000
+field 0200D84C 0x5800000c u32 0,0x5a000000
+field 0200D84C 0x5900000c u32 0,0x5a000000,0x5b000000
+field 0200D84C 0x58000014 u8 0,1,42,254,255
+field 0200D84C 0x59000014 u8 0,1,42,254,255
+
+# Valid concrete sphere virtual entries; finite object-list fixture with real output length.
+field 0200D684 r3+0x2808 s32 3
+field 0200D684 r3+0x1000 u32 0x54000000
+field 0200D684 r3+0x1004 u32 0x55000000
+field 0200D684 r3+0x1008 u32 0x54000000
+field 0200D684 0x5400002c u32 1
+field 0200D684 0x5500002c u32 1
+field 0200D684 0x5400003c u32 0x5c000000
+field 0200D684 0x5500003c u32 0x5c000000
+field 0200D684 0x5c00002c u32 0x0251684c
+field 0200D684 0x5600001c u32 0x5d000000
+field 0200D684 0x5700001c u32 0x5d000000
+field 0200D684 0x5d00004c u32 0x0200ca84
+field 0200D684 0x5d00008c u32 0x0200ca10
+stable 0x5c000000 0x100
+stable 0x5d000000 0x100
+ret! 0251684C 0x56000000,0x57000000
+ret! 0200B71C 1
+ret! 0200D490 0
+ret! 0200CA84 0,1
+callee 0200CA84 r5=out4
+
+# Exercise exact sqrt-result zero-test boundary while retaining unsteered return cases.
+fret 028F4384 0 0.000003814697265625

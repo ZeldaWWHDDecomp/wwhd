@@ -1,0 +1,83 @@
+src wwhd_src/d/actor/d_a_knob00.cpp
+field * r3+0x5A4 u8 0,1,2,3,4,5,6,7,8,9,10,11,255
+field * r3+0x5AB u8 0,1,2,3,4,5,6,255
+field * r3+0x3BC u8 0,1,255
+field * r3+0x3E2 u8 0,7,8,9,11
+field * r3+0xF8 u16 0,3
+ret 0252AE04 0 1
+ret 02556D14 0 1
+ret 0252A684 0 18
+ret 025440C8 0 1
+ret 021A3FB8 0 1
+field * r3+0x2FC i16 0,0x6A6,0x6A7,0x6A8,0x6A9,0x6AA,-1
+ret 025B8B94 0 1
+ret 025B7D90 0 1
+ret 024EEA6C 0 1
+ret 025D4604 0 1
+callee 025D5218 r4=4
+ret 0252B0FC 0 1
+ret 021A3430 0 7
+ret 021A3940 0 1
+ret 02520C0C 0 1
+ret 025E8508 0 1
+ret 025E742C 0 1
+ret 027F2BF8 0 1
+callee 026066C4 r4=8
+arg 021A3AA0 r4 0,1,2,3
+arg 021A3BF8 r4 0,12,13,14,15
+ret 02520C0C 0 1
+ret 021A3940 0 1
+ret 021A4A94 0 1
+ret 021A4B04 0 1
+ret 021A3430 0,1,4,5,6,7
+ret 0252AA2C 0,1,4,5,6
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 0252AC98 0 3
+ret 021A4FFC 0 1
+field * r3+0x2E4 u32 0,8
+field * r3+0x326 i8 -1,0,1
+ret 025447C8 0 1
+ret 0252BEDC 0 1
+ret 021A45C8 -1 5
+field * r3+0x5A8 i16 -1,0,1,10
+field * r3+0x5AA u8 0,1,2,3,10
+ret 025200D4 0x11000000 0x11000000
+field * 11005BDC u8 0,1,2
+ret 0200A030 0 1
+field 021A45C8 11005BF0 u32 0x12000000 0x12000000
+field 021A45C8 12000000 u16 0,0x61
+field 021A45C8 12000002 u16 0,0x61
+field 021A45C8 12000004 u16 0,0x61
+field 021A45C8 12000006 u16 0,0x61
+field 021A45C8 12000008 u16 0 0
+callee C0009988 r3=255
+callee 025F8A08 r4=255
+
+ret 025D5218 0,0x11001000
+field * 11001008 i16 0,0x39
+field * 110013E4 u8 0,1,255
+field * r3+0x5AA u8 0,1,2,3,4,10,255
+field * 11005B2C u32 0x12001000 0x12001000
+field * 120010B4 u32 0x10037CF0 0x10037CF0
+callee 02443A28 r4=12
+
+field * 101F84DC u32 0x13000000 0x13000000
+
+# Observe explicit scratch-buffer initialization.
+stackfill
+
+# Registered-background threshold, including equality at 0x100.
+field 021A3FB8 r3+0x594 u32 0x14000000 0x14000000
+field 021A3FB8 14000000 u32 0,255,256,257
+# Singleton pointer changes must be visible at message lookup.
+field 021A45C8 101F4B5C u32 0x15000000 0x15000000
+
+# Wide-string virtual terminator reads the descriptor and capacity.
+callee 021A56EC r3=12
+# Expose the fade-duration store when its previous value is nonzero.
+field 021A3BF8 101F4810 f32 1 2
+
+# Truthful variable-length copy and bounded UTF-16 lookup effects.
+mockmove C0009988 r3 r4 r5
+mockutf16 025F8A08 r4 16

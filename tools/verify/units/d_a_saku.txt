@@ -1,0 +1,56 @@
+# d_a_saku (brown wooden barricade): all 36 functions verified (10,000 inputs, seeds 1 and 7).
+# Mutation (full, n=1000): 98 compiled, 84 killed, 14 survivors, all equivalent: 11 swaps of
+#   independent loads/stores, setMtx store-order table choice (same values), 2 local array sizes,
+#   redundant reload of heaps[half][1] (no callee writes it).
+# Uncovered: 02464C34 block 4 = GHS duplicated tail (half==0 re-test after the half!=0 path), infeasible.
+src wwhd_src/d/actor/d_a_saku.cpp
+arg! 024638F8 r4 0,1
+arg! 02463A88 r4 0,1
+arg! 02463A88 r5 0,1
+arg! 02463B54 r4 0,1
+arg! 02463B54 r5 0,1
+arg! 02463C04 r4 0,1
+field * r3+0x1014 s32 0,1,2,3
+field * r3+0x1018 s32 0,1,2,3
+arg! 02465138 r4 0,1
+field * r3+0xFFC s32 -1,0,1,50
+field * r3+0x1000 s32 -1,0,1,50
+arg! 024646A4 r4 0,1
+arg! 024646A4 r5 0,1
+arg! 02464F0C r4 0,1
+arg! 0246505C r4 0,1
+field * r3+0xFD8 s32 0,1,9,10,11,1999,2000
+field * r3+0xFDC s32 0,1,9,10,11,1999,2000
+field * r3+0x100C u8 0,1,2
+field * r3+0x100D u8 0,1,2
+arg! 02464C34 r4 0,1
+field * r3+0x1010 u8 0,1
+arg! 0246379C r4 0,1,2
+arg! 0246379C r5 0,1
+arg! 0246379C r6 0,1
+arg! 02463998 r4 0,1,2,3,4
+arg! 02463998 r5 0,1
+arg! 02463998 r6 0,1
+field * r3+0x1008 s32 0,1,90
+arg! 024644DC r4 0,1
+observe 025E2DE0 104B4634 8
+ret 027F3F8C 0x56000000 0x56000000
+field * 56000024 u16 0,1,2,3
+arg! 02464D30 r4 0,1
+arg! 02464114 r3 0x40000000
+ret 02520460 4,4,4,0,5   # resLoad: mostly complete so the heap/model creation path runs
+ret 025E3630 0,0x57000000,0x57000000   # mDoExt_createSolidHeapFromGameToCurrent
+ret 02463A88 0,1,1
+ret 025BA0C0 0 1
+field * r3+0x2E4 u32 0,8
+field * r3+0xB0 u32 0,1,16,17,0x010100,0x010111
+arg! 02464980 r4 0,1
+field * 1046D7C7 u8 0,1
+ret 025162A4 0 1
+ret 02516300 0,0x53000000
+field * 53000010 u32 0,2,0x20,0x200,0x40000,0x10000,0x04000000,0x10000000,0xFFFFFFFF
+ret 026066C4 0,0x54000000
+field * 101F84DC u32 0x53400000 0x53400000   # save info pointer: nonzero so a misaddressed reload is visible
+real 02463C04   # CreateDummyHeap runs for real inside create: its loadModel store is re-zeroed by the caller
+real 0246379C
+ret 025E38E0 0,0x58000000

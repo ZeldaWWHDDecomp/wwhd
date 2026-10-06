@@ -1,0 +1,51 @@
+src wwhd_src/d/actor/d_a_obj_vyasi.cpp
+stackfill periodic
+field * 101F4F28 u32 0x40010304,0x40020508
+field * 101F84DC u32 0x4003060c,0x40040504
+field * r3+0x1ae0 s32 0 6
+field * r3+0x1adc u32 0,1,0x100,0x10000,0x1000000,0xffffffff
+field * r3+0x65c s16 0 2
+field * r3+0x61c f32 0 1
+field * r3+0x1aec f32 0 1
+arg 023B7528 r4 -1 5
+arg 023B775C r4 0 1
+ret 023B8FDC 0 1
+ret 023B7528 0 1
+ret 025BA0C0 0 1
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025162A4 0 1
+callee 026066C4 r4=8
+callee 025E4F64 stack=4
+callee 025D5218 r4=2
+callee 0255F458 r3=12
+callee 0200FCD8 r4=out12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 028E8B48 r3=16 r4=16 r5=out16
+callee 028E9BC0 r3=16 r4=16 r5=out16
+callee 028E90D4 r3=48 r4=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 0201A554 r3=6 r4=6
+callee 02018D40 r4=12
+observe 025E54D8 104B4634 8
+
+# J3D joint metadata contract: valid index within the fourteen-joint palm.
+real 027F7878
+field 023B775C r3+0 u32 0x54000000
+field 023B775C 54000004 u16 0 13
+callee 020181FC r4=28
+
+# Both supported animation-pointer cases, including null failure.
+arg 023B8FDC r4 0,0x40020304,0x40040508
+
+# Non-null csXyz construction is a pure six-byte write; retain its real local effects.
+real 0201A478
+# Finite physical wind/random domains, while retaining the harness's unsteered cases.
+fret 02578348 0 1
+fret 02019918 -256 256
+fret 020198D8 0 2000
+fret 028F4384 0 3500
+
+# Preserve real capsule radius consumption and actor bounds writes.
+real 020181FC 025D674C

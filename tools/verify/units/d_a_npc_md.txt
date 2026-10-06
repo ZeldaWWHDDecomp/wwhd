@@ -1,0 +1,85 @@
+# Verification unit: d_a_npc_md (Medli), main file (player actions, HIO, compiler-generated)
+src wwhd_src/d/actor/d_a_npc_md.cpp wwhd_src/d/actor/d_a_npc_md_pending.cpp
+
+# stack objects passed to callees
+callee 02285384 r4=8 r5=8     # setAction(&cur, &newFunc (by-value copy), arg)
+callee 022854CC r4=8 r5=4     # setNpcAction(&func copy, &arg)
+callee 02288240 r4=8          # setPlayerAction(&func copy)
+callee 0201B080 r3=12 r4=out12 r5=12  # cXyz::outprod (hidden result r4)
+# action status
+field * r3+0x424E i8 -1 4
+callee 0228DAF4 r4=12         # chkAttention(cXyz copy, ...)
+callee 0228E8D8 r4=4          # NpcCall(int*)
+field * r3+0x4254 u8 0 8      # mType
+ret 02055B64 0 2              # cLib_calcTimer
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(outY, &target, eye copy)
+field 022921B4 r3+0x4246 i8 0 1
+field 022921B4 r3+0x318 f32 14000 15000
+callee 02008974 r4=84         # cBgS::GroundCross(&gndChk)
+callee 02008860 r4=108        # cBgS::LineCross(&linChk)
+callee 024F1AFC r3=108        # dBgS_LinChk::Set
+callee 02008DAC r3=84         # cBgS_Chk dtor
+callee 02008B4C r3=108        # cBgS_LinChk dtor
+callee 02008E0C r3=255        # cBgS_GndChk ct
+callee 02008FEC r3=255        # cBgS_LinChk ct
+field 0229249C r3+0x734 u32 0,2,6
+field * r3+0x464 u32 0,0x20,0xFFFFFFDF,0xFFFFFFFF   # mAcch flags (GROUND_HIT 0x20)
+field * r3+0x4246 i8 0 1      # m312A (animation end)
+field 0229310C 10467C64 u32 0,1
+callee 025CB374 r6=12         # dVibration_c::StartShock(vib, strength, flags, cXyz copy)
+field * r3+0x420C u32 0,1,0x17,0xFFFFFFFF,0x12345678
+callee 0228E6CC r5=out12      # calcStickPos(angle, &out)
+callee 02288240 r5=4          # setPlayerAction(&fn, &f32 arg)
+ret 0228E804 0 1              # flyCheck
+ret 0228E6CC -1 1             # calcStickPos
+fret 02292650 -1 1            # checkWallJump
+ret 0228E8AC 0 1              # mirrorCancelCheck
+ret 024EDFCC 0 1              # LockonTruth
+fret 020079B4 0 1             # stick value
+callee 022928A8 r4=2          # routeCheck(f, &angle)
+field 02293500 r3+0x4220 i32 0x11,0x16,0x17,0x20,0
+field 02293500 r3+0x425B i8 -1 1
+field 02293500 r3+0x4262 i16 0 2
+field 02293500 r3+0x4D0 f32 -40 10
+field 02293500 r3+0x318 f32 0 0
+ret 022928A8 0 1
+callee 0229278C r4=12 r5=12   # routeWallCheck(&a, &b, &angle)
+field 022928A8 r3+0x4D0 f32 -200 100
+field 022928A8 r3+0x318 f32 0 0
+arg 022928A8 f1 300000 400000
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result)
+field 02292C48 r3+0x4220 i32 0x11,0x16,0x17,0x20,0
+field 02292C48 r3+0x4D0 f32 -40 10
+field 02292C48 r3+0x318 f32 0 0
+ret 025200D4 0x54000000 0x54000000
+field 02292C48 54005B2C u32 0x55000000,0x55000000
+field 02292C48 550000F8 u16 0 4
+field 02292C48 54005CD8 u32 0,0x100,0x10000000
+field 02292C48 550003C0 u32 0,0x10000
+fret 025D69AC 0 200000
+field 02292C48 10467B54 f32 100 300
+ret 0200FAAC 0,0x2000,0x2001,0x4000,0x4001,0x7FFF   # cLib_distanceAngleS boundaries
+ret 0207A9A0 0 1
+ret 02007898 0 1              # trig A
+ret 020078BC 0 1              # trig B
+ret 025B8B94 0 1              # isEventBit
+field 02294160 101D5F38 i16 0 400
+field 02294160 r3+0x4260 i16 0 2
+field 02294160 r3+0x4220 i32 0x2e,7,0
+field 02294160 r3+0x426C f32 -10 10
+field 02294160 r3+0x318 f32 -10 10
+field 02294160 r3+0x328 i16 -0x7000 0x7000
+field 02294160 r3+0x32A i16 0x6000,-0x6000,0x5FFF,-0x5FFF,0x2000,-0x2000,0x2001,-0x2001,0x1FFF,0,0x7000
+field 02294160 r3+0x322 i16 0,0
+arg 02294CD0 r3 0,0x56000000
+arg 02294D50 r3 0,0x56000000
+arg 02294DA8 r3 0,0x56000000
+arg 02294DFC r3 0,0x56000000
+arg 02294EA0 r3 0,0x56000000
+arg 02294F64 r3 0,0x56000000
+ret 0273AD10 0,0x57000000     # operator new
+field 02293FA8 r3+0x426C f32 999,1000,1001,900
+field 02293FA8 10467C40 f32 1000,1000
+field 02293FA8 r3+0x318 f32 0 0
+field 02294984 r3+0x4236 i16 1 100
+field 02294984 10467B94 f32 0.5,0.5

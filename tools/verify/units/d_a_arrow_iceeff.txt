@@ -1,0 +1,20 @@
+# Verification unit: d_a_arrow_iceeff (ice arrow effect)
+src wwhd_src/d/actor/d_a_arrow_iceeff.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 025D5218 r4=4           # fopAcIt_Judge: searched id
+callee 025D9F70 r4=out4        # fopAcM_getWaterY
+callee 025A847C r6=12 r7=6 r8=12   # dPa_control_c::set pos / angle / scale
+ret 025D63E8 0 1               # entrySolidHeap
+ret 025E8508 0 1               # bckAnm::init
+ret 025D5218 0,0x56000000,0x56000000   # the parent arrow
+field * 560000B0 u32 0,4,4,5
+ret 025A847C 0,0x57000000      # emitter
+# kind, counters and the frame clamp (btk pinned, frame max around the frame)
+field * r3+0xBD0 i32 0,0,1
+field * r3+0xBC8 i32 0,1,29,30,31,0x22,0x23,0x27,0x28,59,60,61,299,300
+field * r3+0xBCC f32 0,1,9,10,11,nan
+field * r3+0xB38 u32 0x58000000 0x58000000
+field * 5800000A i16 0,10,11,12
+field * r3+0xBD4 u8 0,1
+stackfill                      # the angle temporary's zero stores are visible

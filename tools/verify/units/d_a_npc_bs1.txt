@@ -1,0 +1,151 @@
+# Verification unit: d_a_npc_bs1 (Beedle, boat shop)
+src wwhd_src/d/actor/d_a_npc_bs1.cpp wwhd_src/d/actor/d_a_npc_bs1_msg.cpp
+# ---- core functions ----
+
+callee 026066C4 r4=8                # dRes_control_c::getRes(SafeString*)
+callee 025E789C stack=1             # mDoExt_btpAnm::init: 10th argument on the stack
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition
+callee 0201ADE0 r3=12 r4=out12      # cXyz::operator-
+callee 028E8F44 r3=12 r4=12         # PSVECDotProduct
+callee 025E4F64 stack=4             # mDoExt_McaMorf::mDoExt_McaMorf
+callee 024F06B4 stack=1             # dBgS_Acch::Set
+ret 025200D4 0x54000000 0x54000000
+ret 0273AD10 0 0x60000000           # operator new
+stackfill periodic
+callee 0259D54C r3=out12            # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r6=12               # dNpc_JntCtrl_c::lookAtTarget(.., &pos copy)
+callee 0201B47C r3=12               # cXyz::normalizeRS
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 025BD0EC r4=out12            # ShopItems_c::getSelectItemBasePos
+callee 025BCFA8 r4=out12            # ShopItems_c::getSelectItemPos
+callee 025BD31C r4=12               # ShopCursor_c::setPos
+callee 022147AC r4=12               # chkAttention(cXyz copy)
+callee 0259E08C stack=2             # dNpc_JntCtrl_c::setParam
+callee 025BEBB8 r5=12               # dSnap_RegistFig(pos)
+callee 025D87E4 r5=6                # fopAcM_createShopItem(.., &angle)
+ret 0273AD10 0,0x60000000           # operator new (NULL or a block)
+ret 02542D88 -1,0,1,2               # dComIfGp_evmng_getMyStaffId
+ret 02542EDC -1,0,1,2,3,4,5,6,7     # getMyActIdx
+ret 025447C8 0 1                    # getIsAddvance
+ret 025440C8 0 1                    # endCheck
+ret 025F795C 0xE,0xF,0x12,2,6       # message status
+ret 02216154 0x12,8,0               # talk()
+ret 025B8B94 0 1                    # isEventBit
+ret 02520C0C 0 1                    # dComIfGs_checkGetItem
+ret 02550FC4 0 1                    # isBomb
+ret 02550FDC 0 1                    # isArrow
+# action pointer to member (setAction paths)
+field * r3+0x8EA i16 -1,-1,0,1
+field * r3+0x8E8 i16 0,0,4
+field * r3+0x8EC u32 0x0221709C,0x02217258,0x02217368,0x5D000000
+# XyEventCB: the selected item of the button
+arg 02212008 r4 0,1,2
+field 02212008 54005BBB u8 0x9D,0x9E,0
+field 02212008 54005BBC u8 0x9D,0x9E,0
+field 02212008 54005BBD u8 0x9D,0x9E,0
+field 02212008 r3+0x99E i8 0,0,1
+# getBuyItemMax: item, cost, wallet
+arg 022124F0 r4 0x1F,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0
+arg 022124F0 r3 1,2,3,7,10,100,0,-1
+field 022124F0 101F84DC u32 0x55000000
+field 022124F0 55000032 u8 0,1,2,3
+field 022124F0 55000024 u16 0 5000
+# checkOrder / eventOrder
+field 022139EC r3+0xF8 u16 0,1,2,3
+field 022139EC r3+0x996 i8 0,1,2,3,4
+field 022139EC 540052B0 u8 0,1,2,3,4,5
+field 02213D00 r3+0x996 i8 0,1,2,3,4
+# message checks
+arg 02216064 r4 0xF3E,0xF41,0xF42,0xF44,0xF45,0xF62,0xF63,0xF66,0xF67,0xF68,0xF6E,0xF6F,0x2F47,0x2F49,0x2F4A,0x2F4C,0x2F4D,0x2F6B,0x2F71,0x2F72,0x2F73,0x2F76,0x2F77,0x2F78
+arg 022160EC r4 0xF3E,0xF41,0xF42,0xF54,0xF55,0xF62,0xF63,0xF66,0xF67,0xF6E,0xF6F,0x2F47,0x2F49,0x2F4A,0x2F53,0x2F54,0x2F6A,0x2F6B,0x2F78,0x2F79
+field 02216064 r3+0x99E i8 0,1
+field 022160EC r3+0x99E i8 0,1
+# HIO constructors: NULL this
+arg 022176B4 r3 0,0x56000000
+arg 0221763C r3 0,0x56000000
+# lookBack / wait / talk modes
+field 022163B0 r3+0x99C i8 0,1,2
+field 022163B0 r3+0x8F2 i16 0,1
+field 022163B0 r3+0x940 i16 -1,0,1
+field 02217258 r3+0x99C i8 0,1,2
+field 02217258 r3+0x9A0 i8 -1,0,1
+field 0221709C r3+0x9A0 i8 -1,0,1
+field 02217368 r3+0x9A0 i8 -1,0,1
+field 02217368 r3+0x99E i8 0,1
+# CreateInit / createShopList / _create: type and shop index
+field 02213060 r3+0x99E i8 0,1,2
+field 02213060 r3+0xB3 u8 0xFF,0,1,2,3,4,5,6
+field 02212BA0 r3+0x99E i8 0,1
+field 02212BA0 r3+0x99F i8 3,4,5,6
+field 02213610 r3+0xB0 u32 0,0x100000,0x200000,0x00F00000
+ret 02520460 4,4,4,0,5               # dComIfG_resLoad
+ret 025D63E8 0,1,1,1                 # fopAcM_entrySolidHeap
+field 02213610 1046687C i32 -1,0,1
+field 022169F8 10466858 u32 0xFFFFFFFF,1
+# ---- message functions ----
+
+callee 0201ADE0 r3=12 r4=out12      # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201B47C r3=12               # cXyz::normalizeRS
+callee 025BCC7C r4=12               # Item_ZoomUp(pos)
+ret 025200D4 0x54000000 0x54000000  # play
+ret 0254DA50 0 1                    # checkItemGet
+ret 025B8B94 0 1                    # isEventBit
+ret 020078BC 0 1                    # pad trigger
+ret 02214858 0xE,0xF,0x10           # next_msgStatus
+field * 101F4B5C u32 0x55000000,0x55000000,0x55000000
+ret 025F795C 0,1,2,6,0xE,0xF,0x12   # message status
+ret 025F7DB0 0xFFFFFFFF,1           # messageSet: process id
+ret 027F2BF8 0 1                    # J3DFrameCtrl::checkPass
+ret 0201B47C 0 1                    # normalizeRS
+ret 025BB698 0 1                    # dShop_now_triggercheck
+ret 025BCF44 0 1                    # isSoldOutItemAll
+ret 02550FF4 0 1                    # isEmono
+ret 02520C0C 0 1                    # checkGetItem
+ret 0221572C 0 1                    # isSellBomb
+ret 02544950 0 1                    # ChkPresentEnd
+ret 022160EC 0 1
+ret 02216064 0 1
+ret 025BBA1C 0,0,1,2,4,0x10,0x20,0x21,0x24  # dShop_BoughtErrorStatus
+ret 025BD22C 0x2C,0x50,7,0xE1,0x31   # getSelectItemNo
+ret 025B8BB0 0,0,0,1,2,3,4,5,6,7,9,10,29,30,31,59,60,61,0xFE,0xFF,8   # getEventReg
+ret 022124F0 0,1,2                  # getBuyItemMax
+fret 020198D8 0 4                   # cM_rndF
+field * 54005BD3 u8 0,0,1
+field * 54005BD2 u8 0,1
+field * 55000948 u32 0,0,1
+field * 55000922 u8 0,1
+field * 540052B0 u8 0,1,4,5
+field * 540052B1 u8 0x1F,0x45,0x46,0x47,0x48,0x49,0x4B,0x4C,0x9D,0x9E,0x50
+# setAnmFromMsgTag
+field 02214388 54005BC5 u8 0,1,2,3,4,5,6,7,8,9,10,11,0xFF
+field 02214388 r3+0x995 i8 2,4,6,8,9,0
+# next_msgStatus: the message numbers it handles
+arg 02214858 r4 0x50000100,0x50000200,0x50000400,0x50000400
+field 02214858 50000400 u32 0xF78,0xFD4,0xF7A,0xFA0,0xF7B,0xFD2,0xF7C,0xF84,0xF89,0xF8E,0xF93,0xF98,0xF9D,0xFD3,0xF3E,0xF63,0xF42,0x2F6C,0xF45,0xF68,0xF4C,0xF4E,0x2F4D,0x2F73,0x2F6B,0x2F47
+field 02214858 50000100 u32 0xF3C 0xFDA
+field 02214858 50000200 u32 0x2F44 0x2F7A
+arg 02214858 r5 0,0x50000300
+field 02214858 r3+0x99E i8 0,1
+field * r3+0x940 i16 -1,0,1,2
+field 02214858 101F84DC u32 0x53000000
+field 02214858 53000032 u8 0,1,2
+# getMsg
+field 022157C8 r3+0x8B8 u32 0,0,0,0xF3D
+field 022157C8 r3+0x99E i8 0,1,1
+field 022157C8 r3+0x9A2 i8 0,1
+field 022157C8 r3+0x9A3 i8 0,0,1
+field 022157C8 r3+0x9A4 i8 0,1,2
+# shop_talk / talk
+field * r3+0x880 i8 0,1
+field 02215F2C r3+0x8B0 u32 0xF3F,0xF3E
+field 02216154 r3+0x9A1 i8 0,1,2,3,4,-1
+field * 10466858 u32 0xFFFFFFFF,5
+field 02216154 55000938 u32 0xF3E,0x2F47,0xF42,0xF60
+field * r3+0x97E i16 0,1
+field 02214858 101D5F48 u8 0,1,5,10
+ret 025BD260 0xF45,0x2F4D             # getSelectItemShowMsg
+field 02213060 r3+0x8E8 i16 0,0x100,4   # CreateInit: the action delta store
+# 02217988: empty SafeString virtual (vtable slot +0x14) added 2026-10-04; no steering needed

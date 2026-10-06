@@ -1,0 +1,9 @@
+# Verification unit: d_a_agbsw0 (HD: reduced bomb-hit switch, no GBA code)
+src wwhd_src/d/actor/d_a_agbsw0.cpp
+
+ret 025BA0C0 0 1              # dSv_info_c::isSwitch
+ret 025162A4 0 1              # ChkTgHit
+field 02048054 r3+0xB0 u32 0x00FF0000,0x00120000,0xFFFFFFFF,0x12345678   # parameters: sw0 unset / set
+field 02048154 r3+0xB0 u32 0x00FF0000,0x00120000,0xFFFFFFFF,0x12345678
+field 02048054 r3+0x3AC u32 0,1,2,30,0x80000000,0xFFFFFFFF   # mTimer
+field 02048154 r3+0x2E4 u32 0,8,0xFFFFFFF7,0xFFFFFFFF   # actor_condition: INIT bit

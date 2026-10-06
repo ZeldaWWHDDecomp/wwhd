@@ -1,0 +1,67 @@
+# Medli/Makar event trigger, complete HD TU including HIO/static tail.
+src wwhd_src/d/actor/d_a_tag_md_cb.cpp
+callee 024AEFA0 r4=8
+callee 025CB374 r6=12
+field * r3+0x2DD s8 -1,0,1,2,3,4,5,6,7,8,9,10,11,12
+field * r3+0x3BC u32 0,1,2,3,4,127,254,255
+field * r3+0x3CC s8 -1,0,1,2,3,4,5,6,7
+field * r3+0x3CD s8 -1,0,1,2,3,4,5,6
+field * r3+0x3CE s8 -1,0,1,2
+field * r3+0x3AE s16 -1,0,1,2
+field * r3+0xF8 u16 0,1,2,3
+ret 025B8B94 0 1
+ret 025BA0C0 0 1
+ret 025B7A2C 0 1
+ret 02520C0C 0 1
+ret 02542EDC -1 5
+ret 025447C8 0 1
+ret 025440C8 0 1
+ret 024AEA28 0 1
+ret 024AE748 0 1
+ret 024AE968 0 1
+ret 024AF18C 0 1
+ret 024AF468 0 1
+ret 024AE6E8 0 1
+ret 02055B64 -1 2
+ret 025F795C 6,14,15,18,19,21
+field 024AF9E4 r4+0 u32 0,0x19F0,0x19F1,0x19F2,0x19F3,0x19F4,0x19F5,0x1530,0x1531,0x1533,0x1534,0x1535
+# Exercise the HD sound/vibration branch for substance and fallback message sources.
+field 024AF844 r3+0x3B4 u32 0,0x19F3,0x1531
+ret 0254487C 0x0,0x81080000
+field 024AF844 0x81080000 u32 0,0x19F3,0x1531
+# Pin the play singleton and Medli/Makar virtual objects without executing their methods.
+ret 025200D4 0x81000000 0x81000000
+field * 0x81005B38 u32 0,0x81010000
+field * 0x81010008 s16 0,0x16F,0x14E
+field * 0x810100B4 u32 0x81020000 0x81020000
+field * 0x8102014C u32 0x02445D60 0x02445D60
+field * 0x81020154 u32 0x02445D70 0x02445D70
+field * 0x81010326 s8 -1,0,1,2
+field 024AEA28 r3+0x326 s8 -1,0,1,2
+field * 0x810102E0 u32 0,1,0x2000,0x2001,0xFFFFFFFF
+field * 0x8101420C u32 0,1,0x800,0x801,0xFFFFFFFF
+field * 0x101BDC2A u16 0,1
+field * 0x101D1D94 s32 -1,0,1,2
+field * 0x1046E5A8 s8 -1,0,1
+
+ret 024AF9E4 15,16
+field * 0x101F4B5C u32 0x81050000 0x81050000
+
+# Finite squared-distance gate edges for kind 2.
+fret 025D69AC 250000 250001
+
+# Finite radial equality at 500 squared, with vertical predicates strictly inside.
+arg! 024AE968 r4 0x81080000 0x81080000
+field 024AE968 r3+0x330 f32 500 500
+field 024AE968 r3+0x334 f32 10 10
+field 024AE968 r3+0x318 f32 0 0
+field 024AE968 r4+0x318 f32 0 0
+
+# Valid save singleton: changes in source address must select different receiver bytes.
+field * 0x101F84DC u32 0x81030000 0x81030000
+
+# Exercise explicit retail null-entry constructor/destructor conventions.
+arg 024AF5D0 r3 0,0x40000000
+arg 024AF74C r3 0,0x40000000
+arg 024AFF08 r3 0,0x40000000
+field 024AF5D0 r3+0xB0 u32 0,8

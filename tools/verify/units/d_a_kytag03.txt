@@ -1,0 +1,22 @@
+# Verification unit: d_a_kytag03 (contrast switch tag / M_door model)
+src wwhd_src/d/actor/d_a_kytag03.cpp
+
+callee 026066C4 r4=8                      # sead::SafeString key
+callee 0201AE48 r4=out12                  # cXyz::operator* result
+callee 0201AD78 r4=out12                  # cXyz::operator+ result
+ret 025200D4 0x54000000 0x54000000        # play object at a fixed address
+ret 025BA0C0 0 1                          # isSwitch
+ret 02560704 0 1                          # dKy_contrast_flg_get
+ret 02520460 0 5                          # resLoad
+ret 025D63E8 0 1                          # entrySolidHeap
+field 021AFE8C 54005292 u8 0 1            # event run check
+field 021AFE8C 540052B8 u16 0 3           # event flags
+field 021AFE8C 1047E6C8 i8 0 1            # stay room
+field 021AFE8C r3+0x1C9 i8 0 1            # tevStr room
+field 021AFE8C r3+0x3BD u8 0,1,255        # switch
+field 021AFE8C r3+0x3BE u8 0 1
+field 021AFE8C r3+0x3BF u8 0 1
+field 021AFE8C r3+0x3C0 u8 0 1
+field 021AFE18 r3+0x3BF u8 0 1
+field 021AFD48 101F4F28 u32 0x5A000000 0x5A000000
+callee 0201AE48 r3=12                      # cXyz::operator* input

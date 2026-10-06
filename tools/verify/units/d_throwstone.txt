@@ -1,0 +1,15 @@
+src wwhd_src/d/d_throwstone.cpp
+# Six named functions, tail heap callback5310, mathinit566C, vtable destructor
+# 1005604C+0C->571C, and qualified adjacent empty initializer5770.
+callee 026066C4 r4=8
+ret 026066C4 0,0x54000000
+ret 025E38E0 0,0x55000000
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 02527028 0,1
+ret 025B8B94 0,1
+arg 025C5314 r3 0,0x51000000
+arg 025C571C r3 0,0x51000000
+# Actual sample66: runtime save singleton is initialized to a canonical object,
+# distinguishing a one-byte-shifted pointer read from its static zero contents.
+field 025C55E8 0x101F84DC u32 0x54000000

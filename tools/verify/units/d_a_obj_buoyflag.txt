@@ -1,0 +1,11 @@
+# Verification unit: d_a_obj_buoyflag (buoy flag): actor methods, create, small helpers
+src wwhd_src/d/actor/d_a_obj_buoyflag.cpp wwhd_src/d/actor/d_a_obj_buoyflag_pending.cpp
+
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02520460 0 5               # resLoad
+callee 028E8D88 r3=12 r4=12 r5=out12   # PSVECAdd
+callee 028E9044 r4=12 r5=out12         # PSMTXMultVecSR
+callee 0201864C r4=12                  # cM3dGCyl::Set(center)
+# NULL this, and this values whose inline sub-object addresses wrap to NULL (GHS allocates them then)
+arg 0232D1F8 r3 0,0x40000000,0x40000000,-4668,-4676,-7236,-9268,-9276,-10644,-7676,-7724,-7772,-7820,-7868,-7916,-7964,-8012,-8060,-8076,-8092,-8108,-8124,-8140,-11084,-11132,-11180,-11228,-11276,-11324,-11372,-11420,-11468,-11484,-11500,-11516,-11532,-11548
+field 0232D1F8 r3+0x2E4 u32 0,0,0,8

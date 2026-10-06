@@ -1,0 +1,150 @@
+src wwhd_src/d/d_cloth_packet.cpp
+
+# Finite texture descriptor fields exercise matching prefixes and each mismatch branch.
+arg! 0251E830 r3 0x54000000
+field 0251E830 0x540005f4 u32 0,1
+field 0251E830 0x54000924 u32 0,1
+field 0251E830 0x540005f8 u32 0,1
+field 0251E830 0x54000928 u32 0,1
+field 0251E830 0x540005fc u32 0,1
+field 0251E830 0x5400092c u32 0,1
+field 0251E830 0x54000600 u32 0,1
+field 0251E830 0x54000930 u32 0,1
+field 0251E830 0x54000604 u32 0,1
+field 0251E830 0x54000934 u32 0,1
+field 0251E830 0x54000608 u32 0,1
+field 0251E830 0x54000938 u32 0,1
+field 0251E830 0x54000628 u32 0,1
+field 0251E830 0x54000958 u32 0,1
+field 0251E830 0x54000624 u32 0,1
+field 0251E830 0x54000954 u32 0,1
+field 0251E830 0x5400060c u32 0,1
+field 0251E830 0x5400093c u32 0,1
+
+# Material instance array is finite across SDK mock calls.
+arg! 0251E964 r3 0x54000000
+field 0251E964 0x540001C4 u32 0,1,2
+field 0251E964 0x540001C8 u32 0,1,2
+stable 0x540001C4 8
+
+arg! 0251EB70 r3 0x54000000
+field 0251EB70 0x540001C4 u32 0,1,2
+field 0251EB70 0x540001C8 u32 0,1,2
+
+# Finite allocated grid; dimensions include zero and single-vertex degeneracy.
+arg! 0251CEC8 r3 0x54000000
+field 0251CEC8 0x54000098 u32 0,1,2,3
+field 0251CEC8 0x5400009C u32 0,1,2,3
+
+# Simulation grid allocation remains finite across SDK vector callbacks.
+arg! 0251D4EC r3 0x54000000
+field 0251D4EC 0x54000098 u32 0,1,2,3
+field 0251D4EC 0x5400009C u32 0,1,2,3
+stable 0x54000098 8
+
+# Finite vertex grids preserve their allocation dimensions across vector calls.
+arg! 0251C968 r3 0x54000000
+field 0251C968 0x54000098 u32 0,1,2,3
+field 0251C968 0x5400009C u32 0,1,2,3
+
+# Resource arrays have finite valid counts throughout destruction.
+arg! 0251C558 r3 0,0x54000000
+field 0251C558 0x540001D0 u32 0x55000000,0x55000000
+field 0251C558 0x540001CC u32 0,0x56000000
+field 0251C558 0x540001C8 u32 0,1,2
+stable 0x540001C8 8
+field 0251C558 0x55000000 u32 0,1,2
+field 0251C558 0x55000008 u32 0,1,2
+field 0251C558 0x55000010 u32 0,1,2
+stable 0x55000000 28
+field 0251C558 0x56000004 u32 0,1,2
+field 0251C558 0x5600000C u32 0,1,2
+field 0251C558 0x56000018 u32 0,1,2
+field 0251C558 0x56000020 u32 0,1,2
+stable 0x56000000 40
+
+# Allocated vertex pools and finite grid dimensions for buffer updates.
+arg! 0251D864 r3 0x54000000
+field 0251D864 0x54000098 u32 0,1,2,3
+field 0251D864 0x5400009C u32 0,1,2,3
+field 0251D864 0x540001D0 u32 0x55000000
+field 0251D864 0x5500001C u32 0,1
+field 0251D864 0x55000000 u32 0,1,2,4
+field 0251D864 0x55000004 u32 0x56000000
+field 0251D864 0x56000000 u32 0,1,2,6
+field 0251D864 0x56000004 u32 0x5A000000
+field 0251D864 0x56000250 u32 0,1,2,6
+field 0251D864 0x56000254 u32 0x5A001000
+field 0251D864 0x560004A0 u32 0,1,2,6
+field 0251D864 0x560004A4 u32 0x5A002000
+field 0251D864 0x560006F0 u32 0,1,2,6
+field 0251D864 0x560006F4 u32 0x5A003000
+field 0251D864 0x55000008 u32 0,1,2,4
+field 0251D864 0x5500000C u32 0x56001000
+field 0251D864 0x56001000 u32 0,1,2,6
+field 0251D864 0x56001004 u32 0x5A010000
+field 0251D864 0x56001250 u32 0,1,2,6
+field 0251D864 0x56001254 u32 0x5A011000
+field 0251D864 0x560014A0 u32 0,1,2,6
+field 0251D864 0x560014A4 u32 0x5A012000
+field 0251D864 0x560016F0 u32 0,1,2,6
+field 0251D864 0x560016F4 u32 0x5A013000
+field 0251D864 0x540000B0 u32 0x57000000
+field 0251D864 0x540000B4 u32 0x57001000
+field 0251D864 0x540000B8 u32 0x57002000
+field 0251D864 0x540000BC u32 0x57003000
+field 0251D864 0x540000C0 u32 0x57004000
+field 0251D864 0x540000C4 u32 0x57005000
+
+# Finite material draw grid; renderer state real size 0x120.
+arg! 0251E1D8 r3 0x54000000
+arg! 0251E1D8 r4 0x55000000
+field 0251E1D8 0x54000098 u32 0,1,2,3
+field 0251E1D8 0x5400009C u32 0,1,2,3
+field 0251E1D8 0x5500000C u32 0,1,2,3,4
+
+# Concrete sample survivors exposed incomplete pointee observations: full real Vec/Mtx sizes.
+callee 028E90D4 r3=48 r4=out48
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B12C r3=12 r4=out12
+callee 0251B590 r3=12 r4=12 r5=12
+arg! 0251D128 r4 0,0x54001000
+# Matrix copy mock supplies a complete matrix; every component is visible at the next copy.
+mockfield 028E90D4 r4+0x0 f32 1,2,3
+mockfield 028E90D4 r4+0x4 f32 1,2,3
+mockfield 028E90D4 r4+0x8 f32 1,2,3
+mockfield 028E90D4 r4+0xC f32 1,2,3
+mockfield 028E90D4 r4+0x10 f32 1,2,3
+mockfield 028E90D4 r4+0x14 f32 1,2,3
+mockfield 028E90D4 r4+0x18 f32 1,2,3
+mockfield 028E90D4 r4+0x1C f32 1,2,3
+mockfield 028E90D4 r4+0x20 f32 1,2,3
+mockfield 028E90D4 r4+0x24 f32 1,2,3
+mockfield 028E90D4 r4+0x28 f32 1,2,3
+mockfield 028E90D4 r4+0x2C f32 1,2,3
+# Coherent texture SDK output, not suppression of callee writes.
+mockfield 027BDF7C r3+0x4 u32 0 0
+mockfield 02773798 r3+0x4 u32 0,1
+mockfield 027BDF7C r3+0x8 u32 0 0
+mockfield 02773798 r3+0x8 u32 0,1
+mockfield 027BDF7C r3+0xC u32 0 0
+mockfield 02773798 r3+0xC u32 0,1
+mockfield 027BDF7C r3+0x10 u32 0 0
+mockfield 02773798 r3+0x10 u32 0,1
+mockfield 027BDF7C r3+0x14 u32 0 0
+mockfield 02773798 r3+0x14 u32 0,1
+mockfield 027BDF7C r3+0x18 u32 0 0
+mockfield 02773798 r3+0x18 u32 0,1
+mockfield 027BDF7C r3+0x38 u32 0 0
+mockfield 02773798 r3+0x38 u32 0,1
+mockfield 027BDF7C r3+0x34 u32 0 0
+mockfield 02773798 r3+0x34 u32 0,1
+mockfield 027BDF7C r3+0x1C u32 0 0
+mockfield 02773798 r3+0x1C u32 0,1
+# memset thunk forwards r3 to the imported target; local live-in alone misses this tail argument.
+callee 028F521C r3=out1
+arg! 0251B560 r3 0x54000000
+arg! 0251B560 r4 0,1
+arg! 0251B560 r5 0,1,2
+field 0251B560 0x5400009C u32 1,2,3

@@ -1,0 +1,7 @@
+src wwhd_src/f_pc/f_pc_fstcreate_req.cpp
+# Callback contract takes process and user-data only. Use actual targets with compatible live-ins.
+field 025DE820 r3+0x48 u32 0,0x025E0B20,0x025DF2C0,0x025DE87C
+# Creation routines return null or valid guest storage; exercise both successful allocation paths.
+ret! 025DDAD4 0,0x55000000
+ret! 025DD414 0,0x56000000
+ret 025DD538 0,1,2,3,4,5

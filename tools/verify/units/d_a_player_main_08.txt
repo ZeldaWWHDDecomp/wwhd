@@ -1,0 +1,121 @@
+# Verification unit: d_a_player_main range #08 (0243F058..02444F20, the end of the TU), self-contained check.
+src wwhd_src/d/actor/d_a_player_main.cpp wwhd_src/d/actor/d_a_player_main_08.cpp
+
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+# demo type 5 (checkSpecialDemoMode), talk button, proc variables
+field 0243F4DC r3+0x420 u16 5,0,4
+field 0243F4DC 540052B0 u8 1,2,3
+field 0243F670 r3+0x420 u16 5,0,4
+field 0243F670 r3+0x6916 i16 -1,0,1,2
+field 0243F670 r3+0x5898 f32 0.0,-0.0,0.005,-0.005,0.01,-0.01,1.0
+field 0243F4DC r3+0x5898 f32 0.0,0.005,0.01,1.0
+ret 027F2BF8 0,1
+ret 025D5928 0,0x42000000
+callee 025D5928 stack=1
+# do status (play + 0x5BB7): dActStts_PARRY_e
+field * 54005BB7 u8 0x1A,0,0x1B
+# returnBoomerang: the conditions in order
+field 02442ED8 r3+0x69B0 u16 0x100,0x100,0x2D
+field 02442ED8 54005B2C u32 0x40000000,0x40000000,0
+field 02442ED8 54005292 u8 0,0,1
+field 02442ED8 r3+0x420 u16 0,0,5
+field 02442ED8 r3+0x5888 u16 0xFFFF,0x64,0x10
+field 02442ED8 r3+0x6A70 u32 0,0x10,0x800
+field 02442ED8 r3+0x65F0 i32 0x8B,0x8A
+# 024449E8: `this` pinned, the counted array's count small and stable across the mocked calls
+arg! 024449E8 r3 0x40000000,0x40000000,0x40000000,0
+field 024449E8 40011DD8 i32 0,1,2,3,-1
+stable 40011DD8 8
+# accessors: mCurProc and proc variables
+field 0244307C r3+0x65F0 i32 0x9B,0x9A
+field 0244307C r3+0x6916 i16 0,1
+field 024430C0 r3+0x65F0 i32 0x9A,0x9B
+field 0244311C r3+0x65F0 i32 0x9A,0x9B
+field 0244311C r3+0x6918 i16 -1,0,1
+field 024431AC r3+0x65F0 i32 0x9A,0x9B
+field 024431AC r3+0x69C0 i32 -1,0
+field 024431AC r3+0x6918 i16 -1,0,1
+field 024431E0 r3+0x65F0 i32 0x9B,0x9A
+field 024431E0 r3+0x6920 i16 0,1
+field 0244363C r3+0x65F0 i32 0x59,0x58
+field 0244363C r3+0x6916 i16 -1,0,1
+field 02443664 r3+0x65F0 i32 0xB2,0xB1
+field 02443664 r3+0x69F8 f32 0.37,0.38,0.39
+field 02443694 r3+0x65F0 i32 0x9A,0x9B
+field 02443694 r3+0x6A04 f32 1.0,0.0,-0.0,-50.0,-100.0,-101.0
+field 024436D8 r3+0x65F0 i32 0x9B,0x9A,0x9C
+field 02443704 r3+0x65F0 i32 0x6E,0x70,0x6F
+field 02444F20 r3+0x65F0 i32 0x55,0x54
+field 02444F20 r3+0x69C0 i32 0,1
+field 02444DBC r3+0x65F0 i32 0x36,0x35
+# getTactTopPos, hookshot accessors
+field 02443144 r3+0x69B0 u16 0x22,0x23
+ret 028E8F64 0,0
+callee 028E8F64 r5=out12
+field 024435FC r3+0x69B0 u16 0x2F,0x30
+field 024435FC r3+0x6594 u32 0x41000000,0
+field 024435FC 410000B0 u32 0,2,3,4
+field 024439D4 r3+0x69B0 u16 0x2F,0x30
+field 024439D4 r3+0x6594 u32 0x41000000,0
+field 024439D4 4100D774 u32 0x1234,0x1235
+arg 024439D4 r4 0x1234,0x1236
+# changeTextureAnime: run check, the cached indices
+field 02443DA0 54005292 u8 1,1,0
+arg 02443DA0 r6 -1,-1,3
+arg 02443DA0 r4 0x10,0x11
+arg 02443DA0 r5 0x20,0x21
+field 02443DA0 r3+0x65D4 u16 0x10,0x12
+field 02443DA0 r3+0x65D6 u16 0xFFFE,0
+field 02443DA0 r3+0x65E4 u16 0x20,0x22
+field 02443DA0 r3+0x65E6 u16 0xFFFE,0
+# setPlayerPosAndAngle: run check / scope type
+field 02443A28 54005292 u8 0,1
+field 02443A28 54005BCF u8 0,1
+field 02443B14 54005292 u8 0,1
+field 02443C0C 54005292 u8 0,1
+# sword procs
+field 02440B38 r3+0x589C f32 10.0,12.0,18.0,19.0,26.0
+field 02441450 r3+0x5898 f32 0.0,0.005,1.0
+field 02441450 r3+0x589C f32 16.0,22.0,26.0,32.0,33.0
+field 02441104 r3+0x5898 f32 0.0,0.005,1.0
+field 02441104 r3+0x691A i16 0,1,2
+field 02441104 r3+0x691C i16 0x71,0x70
+field 02441104 r3+0x6934 i16 0,1,0x4000,0x4001,-1,-0x4000,-0x4001
+field 02441104 r3+0x68E0 u8 0,1
+field 02441DC0 r3+0x5898 f32 0.0,0.005,1.0
+field 02441DC0 r3+0x430 i32 0x2B,0x2A
+field 02441DC0 54005292 u8 0,1
+field 02441DC0 r3+0x6916 i16 -1,0,1,2
+field 02442190 r3+0x69B0 u16 0x101,0x103,0x100
+field 02442190 r3+0x581C u32 0,0x41000000
+ret 025B8B94 0,1
+field 02442190 54005CEA u8 0,2,6
+field 0244240C 101CEF16 u16 0,1
+field 02442470 r3+0x6916 i16 -1,0,1,2
+field 02442470 r3+0x68D4 u8 0,1,2,3
+field 02442470 r3+0x69B0 u16 0x101,0x103
+field 02442470 101CEF16 u16 0,1
+ret 023E3358 0,1,2,3
+ret 023E4CD0 0,0,1
+field 02442990 54005292 u8 0,1
+field 02442990 r3+0x69B0 u16 0x100,0x33,0x103
+ret 023DBC24 0,1
+field 02443208 1046D290 u32 0,1
+field 02443208 1046D294 u32 0,1
+field 02443208 1046D298 u32 0,1
+arg 02443208 r4 0,1
+arg 02443208 r5 0,1
+arg 024443E4 r3 0,0x41000000
+ret 0273AD10 0,0x42000000
+# mutation follow-up (input gaps)
+callee 0201AD78 r4=out12
+callee 0201AE48 r4=out12
+field 02441750 r3+0x6734 u8 0x80,0x80,0
+field 02440B38 r3+0x5898 f32 0.0,0.01,0.0099,1.0
+field 02442878 r3+0x5898 f32 0.0,0.01,1.0
+field 02442878 r3+0x589C f32 11.0,11.5,12.0,13.0
+field 02444DBC r3+0x6A70 u32 0,1,2,3,0x40000
+field 0244240C r3+0x690E u8 0,1,2,3
+field 02441750 r3+0x5898 f32 1.0,1.0,0.0,0.01
+field 02441750 r3+0x589C f32 2.0,3.0,17.0,17.5,18.0,18.5,21.0,22.0

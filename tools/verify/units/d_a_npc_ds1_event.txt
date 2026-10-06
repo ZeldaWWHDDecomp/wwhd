@@ -1,0 +1,37 @@
+# Verification unit: d_a_npc_ds1 event part (Doc Bandam): event cuts and event actions
+src wwhd_src/d/actor/d_a_npc_ds1_event.cpp wwhd_src/d/actor/d_a_npc_ds1_pending.cpp
+
+callee 0201ADE0 r4=out12            # cXyz::operator-: result
+callee 028E8DD0 r3=12               # PSVECSquareMag: the vector
+ret 025200D4 0x54000000 0x54000000  # play
+ret 02542D88 -1,0,1,2               # getMyStaffId
+ret 02542EDC -1,0,1,2,3,4,5,6,7,8,9,10  # getMyActIdx
+ret 025447C8 0 1                    # getIsAddvance
+ret 025440C8 0 1                    # endCheck
+ret 027F2BF8 0 1                    # J3DFrameCtrl::checkPass
+ret 025F795C 0,2,6,0xE,0xF,0x12     # message status
+ret 025F7DB0 -1,5                   # fopMsgM_messageSet
+ret 025D7DEC -1,7                   # createItemForPresentDemo
+ret 0222D37C 0 1                    # checkCreateDrugChuchu
+# action status, item, messages, the action PTMF
+field * r3+0xA60 i8 0,0,1,-1
+field * r3+0x9A8 u8 0xFF,0xFF,0x30
+field * r3+0xA63 u8 0x49,0x4A,0x4B,0
+field * r3+0x998 u32 0x1DCA,0x1DC4,0x1DC5
+field * r3+0x9A0 u32 0x1DCA,0x1DC4,0x1DC5
+field * r3+0xA50 i32 0,1,2,3,4
+field * r3+0x9AE i16 -1,-1,0,1
+field * r3+0x9AC i16 0,0,4
+field * r3+0x9B0 u32 0x022311F4,0x022311F4,0x022328E4
+field * 10466EE0 i32 -1,-1,5
+# evn_setAnm_init / evn_Anm
+field * r3+0xA4D i8 6,6,8,0
+field * r3+0xA4E i8 0,1,2,-1
+field * r3+0x8D8 u32 0,0,0x60000000
+field * r3+0x8DC u32 0,0,0x60001000
+field * 10466F88 u32 0 1
+field * 10466F8C u32 0 1
+field * 60000262 u8 0,7,9
+field * 60001262 u8 0,7,9
+callee 025CB374 r6=12               # StartShock: the cXyz (by value)
+stackfill

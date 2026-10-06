@@ -1,0 +1,752 @@
+/* Native HD PlaceName screen and retained menu event helper. */
+#include "wwhd.h"
+u32 place_026C97E4(u32 a3,u32 a4) {
+WWHD_FUNC(0x026C97E4,u32,a3,a4);
+u32 v0=0,v3=a3,v4=a4,v12=0,v30=0,v31=0;
+bool equal=false;
+v31 = v4;
+v30 = v3; equal=v30==0;
+if (equal) { goto L_026C9838; }
+v0 = 0u + 0x10100000u;
+v3 = v30;
+{ uint64_t t = (uint64_t)v0 + 0x00001A18u; v0 = (uint32_t)t; }
+v12 = 0u + 0x10100000u;
+gabi::store<u32>(v30 + 0x0000002Cu, v0);
+v12 = v12 + 0x00001A28u;
+v4 = 0u + 0x00000000u;
+gabi::store<u32>(v30 + 0x00000030u, v12);
+v3=gabi::call<u32>(0x026F88F0,v3,v4);
+v0 = v31 & 0x00000001u; equal=v0==0;
+if (equal) { goto L_026C9838; }
+v3 = v30;
+v3=gabi::call<u32>(0x0273AF40,v3);
+L_026C9838: ;
+return v3;
+return v3;
+}
+VERIFY(0x026C97E4,place_026C97E4);
+u32 place_026C9850(u32 a3) {
+WWHD_FUNC(0x026C9850,u32,a3);
+u32 v0=0,v3=a3,v4=0,v12=0,v31=0;
+bool equal=false;u32 count=0;
+v31 = v3;
+v3=gabi::call<u32>(0x025200D4);
+v0 = gabi::load<u8>(v3 + 0x00005BE2u);
+equal=((int32_t)v0)==(2);
+if (!equal) { goto L_026C9884; }
+v4 = 0u + 0x104A0000u;
+v3 = v31 + 0x00000018u;
+v4 = v4 + 0xFFFFA138u;
+v3=gabi::call<u32>(0x020063C0,v3,v4);
+L_026C9884: ;
+v12 = gabi::load<u32>(v31 + 0x00000004u);
+v0 = gabi::load<u32>(v12 + 0x0000008Cu);
+count = v0;
+v3 = v31;
+v3=gabi::call_ptr<u32>(count,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C9850,place_026C9850);
+u32 place_026C98AC(u32 a3) {
+WWHD_FUNC(0x026C98AC,u32,a3);
+gabi::Local<u8[48]> frame;
+u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=0,v5=0,v7=0,v8=0,v9=0,v12=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
+f64 q1=0;
+bool less=false;
+v30 = v3;
+v3=gabi::call<u32>(0x025200D4);
+v0 = gabi::load<u8>(v3 + 0x00005BE1u);
+less=(v0)<(0x0013u);
+if (less) { goto L_026C98D4; }
+v0 = 0u + 0x00000000u;
+L_026C98D4: ;
+v25 = 0u + 0x00000000u;
+v28 = 0u + 0x104A0000u;
+v29 = v30 + 0x00000050u;
+v27 = 0u + 0x10100000u;
+v31 = rotl32(v0, 3) & 0xFFFFFFF8u;
+v26 = v29;
+v28 = v28 + 0xFFFFA070u;
+v27 = v27 + 0x0000163Cu;
+goto L_026C9900;
+L_026C98F8: ;
+less=(v25)<(0x0002u);
+if (!less) { goto L_026C9908; }
+L_026C9900: ;
+v9 = v26;
+goto L_026C990C;
+L_026C9908: ;
+v9 = v29;
+L_026C990C: ;
+v7 = gabi::load<u32>(v30 + 0x00000044u);
+v8 = gabi::load<u32>(v7 + 0x00000004u);
+v0 = gabi::load<u32>(v8 + 0x0000001Cu);
+gabi::store<u32>(v1+0x0C,v27);
+gabi::store<u32>(v1+0x08,v0);
+v5 = v28 + v31;
+v3 = gabi::load<u32>(v9 + 0x00000000u);
+v4 = v1 + 0x00000008u;
+v3=gabi::call<u32>(0x027045B0,v3,v4,v5);
+v25 = v25 + 0x00000001u;
+less=((int32_t)v25)<(2);
+v26 = v26 + 0x00000004u;
+if (less) { goto L_026C98F8; }
+v5 = gabi::load<u32>(v30 + 0x00000044u);
+v12 = 0u + 0x10100000u;
+q1=gabi::load<f32>(v12 + 0x000016E8u);
+v4 = 0u + 0x00000000u;
+v3 = gabi::load<u32>(v5 + 0x000000D4u);
+v5 = 0u + 0x00000001u;
+v3=gabi::call<u32>(0x020053E4,v3,v4,v5,q1);
+v0 = 0u + 0x00000001u;
+gabi::store<u8>(v30 + 0x00000058u, v0);
+return v3;
+return v3;
+}
+VERIFY(0x026C98AC,place_026C98AC);
+u32 place_026C9978(u32 a3) {
+WWHD_FUNC(0x026C9978,u32,a3);
+u32 v0=0,v3=a3,v4=0,v12=0,v31=0;
+bool equal=false;u32 count=0;
+v31 = v3;
+v3=gabi::call<u32>(0x025200D4);
+v0 = gabi::load<u8>(v3 + 0x00005BE2u);
+equal=((int32_t)v0)==(1);
+if (!equal) { goto L_026C99AC; }
+v4 = 0u + 0x104A0000u;
+v3 = v31 + 0x00000018u;
+v4 = v4 + 0xFFFFA168u;
+v3=gabi::call<u32>(0x020063C0,v3,v4);
+L_026C99AC: ;
+v12 = gabi::load<u32>(v31 + 0x00000004u);
+v0 = gabi::load<u32>(v12 + 0x0000008Cu);
+count = v0;
+v3 = v31;
+v3=gabi::call_ptr<u32>(count,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C9978,place_026C9978);
+u32 place_026C99D4(u32 a3) {
+WWHD_FUNC(0x026C99D4,u32,a3);
+u32 v3=a3,v4=0,v5=0,v12=0;
+f64 q1=0;
+
+v12 = 0u + 0x10100000u;
+q1=gabi::load<f32>(v12 + 0x000016E8u);
+v12 = gabi::load<u32>(v3 + 0x00000044u);
+v4 = 0u + 0x00000001u;
+v3 = gabi::load<u32>(v12 + 0x000000D4u);
+v5 = v4;
+v3=gabi::call<u32>(0x020053E4,v3,v4,v5,q1);
+return v3;
+return v3;
+}
+VERIFY(0x026C99D4,place_026C99D4);
+u32 place_026C99F0(u32 a3) {
+WWHD_FUNC(0x026C99F0,u32,a3);
+u32 v0=0,v3=a3,v4=0,v11=0,v12=0,v31=0;
+bool equal=false;u32 count=0;
+v31 = v3;
+v11 = gabi::load<u32>(v31 + 0x00000044u);
+v3 = gabi::load<u32>(v11 + 0x000000D4u);
+v4 = 0u + 0x00000001u;
+v3=gabi::call<u32>(0x02005840,v3,v4);
+equal=((int32_t)v3)==(0);
+if (equal) { goto L_026C9A2C; }
+v4 = 0u + 0x104A0000u;
+v3 = v31 + 0x00000018u;
+v4 = v4 + 0xFFFFA108u;
+v3=gabi::call<u32>(0x020063C0,v3,v4);
+L_026C9A2C: ;
+v12 = gabi::load<u32>(v31 + 0x00000004u);
+v0 = gabi::load<u32>(v12 + 0x0000008Cu);
+count = v0;
+v3 = v31;
+v3=gabi::call_ptr<u32>(count,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C99F0,place_026C99F0);
+u32 place_026C9A54(u32 a3) {
+WWHD_FUNC(0x026C9A54,u32,a3);
+u32 v3=a3,v12=0,v31=0;
+
+v31 = v3;
+v3=gabi::call<u32>(0x025200D4);
+v12 = 0u + 0x00000000u;
+gabi::store<u8>(v3 + 0x00005BE2u, v12);
+gabi::store<u8>(v31 + 0x00000058u, v12);
+return v3;
+return v3;
+}
+VERIFY(0x026C9A54,place_026C9A54);
+u32 place_026C9A8C(u32 a3) {
+WWHD_FUNC(0x026C9A8C,u32,a3);
+u32 v0=0,v3=a3,v10=0,v11=0,v12=0,v31=0;
+bool equal=false;
+v31 = v3; equal=v31==0;
+if (!equal) { goto L_026C9AB4; }
+v3 = 0u + 0x0000005Cu;
+v3=gabi::call<u32>(0x0273AD10,v3);
+v31 = v3; equal=v31==0;
+if (equal) { goto L_026C9AF8; }
+L_026C9AB4: ;
+v3 = v31;
+v3=gabi::call<u32>(0x026F89E8,v3);
+v0 = 0u + 0x10100000u;
+v11 = 0u + 0x10100000u;
+{ uint64_t t = (uint64_t)v0 + 0x00001908u; v0 = (uint32_t)t; }
+v11 = v11 + 0x00001A28u;
+gabi::store<u32>(v31 + 0x00000004u, v0);
+v10 = 0u + 0x10100000u;
+gabi::store<u32>(v31 + 0x00000030u, v11);
+v10 = v10 + 0x00001A18u;
+{ uint64_t t = (uint64_t)v31 + 0x00000050u; v12 = (uint32_t)t; } equal=v12==0;
+gabi::store<u32>(v31 + 0x0000002Cu, v10);
+if (!equal) { goto L_026C9AF0; }
+v3 = 0u + 0x00000008u;
+v3=gabi::call<u32>(0x0273AD10,v3);
+L_026C9AF0: ;
+v0 = 0u + 0x00000000u;
+gabi::store<u8>(v31 + 0x00000058u, v0);
+L_026C9AF8: ;
+v3 = v31;
+return v3;
+return v3;
+}
+VERIFY(0x026C9A8C,place_026C9A8C);
+u32 place_026C9B10(u32 a3,u32 a4,u32 a5,u32 a6) {
+WWHD_FUNC(0x026C9B10,u32,a3,a4,a5,a6);
+u32 v0=0,v3=a3,v4=a4,v5=a5,v6=a6,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v22=0,v23=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
+f64 q1=0;
+bool less=false,equal=false;u32 count=0;
+v30 = v5;
+v31 = v6;
+v29 = v4;
+v4 = 0u + 0x104A0000u;
+v4 = v4 + 0xFFFFA01Cu;
+v5 = 0u + 0x00000001u;
+v22 = v3;
+v3=gabi::call<u32>(0x026F90D8,v3,v4,v5);
+v7 = gabi::load<u32>(v22 + 0x00000004u);
+v0 = gabi::load<u32>(v7 + 0x0000007Cu);
+v4 = 0u + 0x104A0000u;
+count = v0;
+v5 = gabi::load<u32>(v22 + 0x00000034u);
+v7 = v30;
+v6 = v29;
+v4 = v4 + 0xFFFFA198u;
+v3 = v22;
+v8 = v31;
+v3=gabi::call_ptr<u32>(count,v3,v4,v5,v6,v7,v8);
+less=((int32_t)v3)<(0);equal=((int32_t)v3)==(0);
+if (!equal) { goto L_026C9B8C; }
+v3 = 0u + 0x00000000u;
+return v3;
+L_026C9B8C: ;
+v10 = gabi::load<u32>(v22 + 0x00000044u);
+v31 = v22 + 0x00000050u;
+v30 = 0u + 0x104A0000u;
+v24 = 0u + 0x00000000u;
+v12 = gabi::load<u32>(v10 + 0x00000004u);
+v29 = v31;
+v30 = v30 + 0xFFFFA060u;
+v28 = v24;
+v23 = gabi::load<u32>(v12 + 0x0000000Cu);
+goto L_026C9BBC;
+L_026C9BB4: ;
+less=(v24)<(0x0002u);equal=(v24)==(0x0002u);
+if (!less) { goto L_026C9BC8; }
+L_026C9BBC: ;
+v25 = v29;
+v27 = v28;
+goto L_026C9BCC;
+L_026C9BC8: ;
+v25 = v31;
+L_026C9BCC: ;
+v3 = v30 + v27;
+v9 = gabi::load<u32>(v3 + 0x00000004u);
+v0 = gabi::load<u32>(v9 + 0x00000014u);
+count = v0;
+v26 = gabi::load<u32>(v23 + 0x00000008u);
+v3=gabi::call_ptr<u32>(count,v3);
+v0 = gabi::load<u32>(v26 + 0x0000005Cu);
+count = v0;
+v4 = gabi::load<u32>(v30 + v27);
+v3 = v23;
+v5 = 0u + 0x00000001u;
+v3=gabi::call_ptr<u32>(count,v3,v4,v5);
+v24 = v24 + 0x00000001u;
+v28 = v28 + 0x00000008u;
+v27 = v27 + 0x00000008u;
+less=((int32_t)v24)<(2);equal=((int32_t)v24)==(2);
+gabi::store<u32>(v25 + 0x00000000u, v3);
+v29 = v29 + 0x00000004u;
+if (less) { goto L_026C9BB4; }
+v12 = 0u + 0x10100000u;
+v10 = gabi::load<u32>(v22 + 0x00000044u);
+q1=gabi::load<f32>(v12 + 0x000016ECu);
+v4 = 0u + 0x00000000u;
+v3 = gabi::load<u32>(v10 + 0x000000D4u);
+v5 = 0u + 0x00000001u;
+v3=gabi::call<u32>(0x0200552C,v3,v4,v5,q1);
+v8 = gabi::load<u32>(v22 + 0x00000004u);
+v0 = gabi::load<u32>(v8 + 0x0000008Cu);
+count = v0;
+v3 = v22;
+v3=gabi::call_ptr<u32>(count,v3);
+v3 = gabi::load<u32>(v22 + 0x00000018u);
+v11 = gabi::load<u32>(v3 + 0x00000000u);
+v0 = gabi::load<u32>(v11 + 0x00000014u);
+v4 = 0u + 0x104A0000u;
+count = v0;
+v4 = v4 + 0xFFFFA108u;
+v3=gabi::call_ptr<u32>(count,v3,v4);
+gabi::store<u32>(v22 + 0x00000020u, v3);
+v5 = gabi::load<u32>(v3 + 0x00000000u);
+v6 = gabi::load<u32>(v5 + 0x0000001Cu);
+count = v6;
+v3=gabi::call_ptr<u32>(count,v3);
+v3 = 0u + 0x00000001u;
+return v3;
+return v3;
+}
+VERIFY(0x026C9B10,place_026C9B10);
+u32 place_026C9C90(u32 a3) {
+WWHD_FUNC(0x026C9C90,u32,a3);
+u32 v0=0,v3=a3,v12=0,v31=0;
+u32 count=0;
+v12 = gabi::load<u32>(v3 + 0x00000004u);
+v0 = gabi::load<u32>(v12 + 0x000000ACu);
+count = v0;
+v31 = v3;
+v3=gabi::call_ptr<u32>(count,v3);
+v12 = gabi::load<u32>(v31 + 0x00000004u);
+v0 = gabi::load<u32>(v12 + 0x00000084u);
+count = v0;
+v3 = v31;
+v3=gabi::call_ptr<u32>(count,v3);
+v3 = v31;
+v3=gabi::call<u32>(0x026F91F8,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C9C90,place_026C9C90);
+u32 place_026C9CE4() {
+WWHD_FUNC(0x026C9CE4,u32);
+u32 v0=0,v3=0,v4=0,v12=0,v31=0;
+bool equal=false;
+v3=gabi::call<u32>(0x025200D4);
+v12 = gabi::load<u8>(v3 + 0x00005292u);
+equal=((int32_t)v12)==(0);
+if (equal) { goto L_026C9DF8; }
+v3=gabi::call<u32>(0x025200D4);
+v4 = 0u + 0x10100000u;
+v3 = v3 + 0x000052C4u;
+v4 = v4 + 0x000016F0u;
+v3=gabi::call<u32>(0x025445B8,v3,v4);
+equal=((int32_t)v3)==(0);
+v31 = 0u + 0x101D0000u;
+if (equal) { goto L_026C9D94; }
+v0 = gabi::load<u32>(v31 + 0x0000600Cu);
+equal=((int32_t)v0)==(200);
+if (!equal) { goto L_026C9D6C; }
+v3=gabi::call<u32>(0x025200D4);
+v12 = 0u + 0x00000000u;
+v0 = 0u + 0x00000002u;
+gabi::store<u8>(v3 + 0x00005BE1u, v12);
+v12 = 0u + 0x10200000u;
+gabi::store<u8>(v3 + 0x00005BE2u, v0);
+v12 = gabi::load<u32>(v12 + 0xFFFF84DCu);
+v4 = 0u + 0x00003510u;
+v3 = v12 + 0x00000644u;
+v3=gabi::call<u32>(0x025B8B68,v3,v4);
+return v3;
+L_026C9D6C: ;
+equal=((int32_t)v0)==(350);
+if (!equal) { goto L_026C9DF8; }
+v3=gabi::call<u32>(0x025200D4);
+v0 = 0u + 0x00000001u;
+gabi::store<u8>(v3 + 0x00005BE2u, v0);
+return v3;
+L_026C9D94: ;
+v3=gabi::call<u32>(0x025200D4);
+v4 = 0u + 0x10100000u;
+v3 = v3 + 0x000052C4u;
+v4 = v4 + 0x000016F8u;
+v3=gabi::call<u32>(0x025445B8,v3,v4);
+equal=((int32_t)v3)==(0);
+if (equal) { goto L_026C9DF8; }
+v0 = gabi::load<u32>(v31 + 0x0000600Cu);
+equal=((int32_t)v0)==(2900);
+if (!equal) { goto L_026C9DE4; }
+v3=gabi::call<u32>(0x025200D4);
+v0 = 0u + 0x00000001u;
+v12 = 0u + 0x00000002u;
+gabi::store<u8>(v3 + 0x00005BE1u, v0);
+gabi::store<u8>(v3 + 0x00005BE2u, v12);
+return v3;
+L_026C9DE4: ;
+equal=((int32_t)v0)==(3050);
+if (!equal) { goto L_026C9DF8; }
+v3=gabi::call<u32>(0x025200D4);
+v0 = 0u + 0x00000001u;
+gabi::store<u8>(v3 + 0x00005BE2u, v0);
+L_026C9DF8: ;
+return v3;
+return v3;
+}
+VERIFY(0x026C9CE4,place_026C9CE4);
+u32 place_026C9E0C(u32 a3) {
+WWHD_FUNC(0x026C9E0C,u32,a3);
+u32 v3=a3,v12=0,v31=0;
+bool equal=false;
+v31 = v3;
+v12 = 0u + 0x101D0000u;
+v12 = gabi::load<u32>(v12 + 0x00006010u);
+equal=((int32_t)v12)==(1);
+if (!equal) { goto L_026C9E38; }
+v3 = v31;
+v3=gabi::call<u32>(0x026C9CE4);
+L_026C9E38: ;
+v3 = v31 + 0x00000018u;
+v3=gabi::call<u32>(0x02006364,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C9E0C,place_026C9E0C);
+u32 place_026C9E54(u32 a3) {
+WWHD_FUNC(0x026C9E54,u32,a3);
+u32 v0=0,v3=a3,v11=0,v12=0;
+bool equal=false;u32 count=0;
+v12 = gabi::load<u8>(v3 + 0x00000058u);
+equal=((int32_t)v12)==(0);
+if (equal) { return v3; }
+v11 = gabi::load<u32>(v3 + 0x00000004u);
+v0 = gabi::load<u32>(v11 + 0x0000009Cu);
+count = v0;
+v3=gabi::call_ptr<u32>(count,v3);
+return v3;
+return v3;
+}
+VERIFY(0x026C9E54,place_026C9E54);
+u32 place_026C9E70(u32 a3,u32 a4,u32 a5,u32 a6,u32 a7,u32 a8) {
+WWHD_FUNC(0x026C9E70,u32,a3,a4,a5,a6,a7,a8);
+u32 v0=0,v3=a3,v4=a4,v5=a5,v6=a6,v7=a7,v8=a8,v9=0,v10=0,v11=0,v12=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
+bool equal=false;u32 count=0;
+v26 = v3;
+v27 = v4;
+v28 = v5;
+v30 = v7;
+v31 = v8;
+v29 = v6;
+v12 = 0u + 0x10190000u;
+v12 = gabi::load<u32>(v12 + 0xFFFFC404u);
+v3 = 0u + 0x00000110u;
+v4 = gabi::load<u32>(v12 + 0x00000010u);
+v5 = 0u + 0x00000004u;
+v3=gabi::call<u32>(0x0273B050,v3,v4,v5);
+equal=((int32_t)v3)==(0);
+if (equal) { goto L_026C9EBC; }
+v3=gabi::call<u32>(0x026FADB0,v3);
+L_026C9EBC: ;
+equal=((int32_t)v3)==(0);
+gabi::store<u32>(v26 + 0x00000044u, v3);
+if (!equal) { goto L_026C9EE0; }
+v3 = 0u + 0x00000000u;
+return v3;
+L_026C9EE0: ;
+v12 = gabi::load<u32>(v3 + 0x000000E0u);
+v0 = gabi::load<u32>(v12 + 0x00000014u);
+v8 = 0u + 0x00000002u;
+count = v0;
+v7 = v30;
+v10 = v31;
+v9 = v8;
+v5 = v28;
+v6 = v29;
+v4 = v27;
+v3=gabi::call_ptr<u32>(count,v3,v4,v5,v6,v7,v8,v9,v10);
+v30 = 0u + 0x104A0000u;
+v29 = 0u + 0x10100000u;
+v24 = 0u + 0x00000000u;
+v30 = v30 + 0xFFFFA040u;
+v27 = v24;
+v29 = v29 + 0x00001630u;
+v31 = 0u + 0x104A0000u;
+v28 = v27;
+v31 = v31 + 0xFFFFA050u;
+v25 = 0u + 0x00000002u;
+L_026C9F34: ;
+v11 = gabi::load<u32>(v26 + 0x00000044u);
+v0 = gabi::load<u32>(v29 + v27);
+v4 = v24;
+v3 = gabi::load<u32>(v11 + 0x000000D4u);
+v0 = rotl32(v0, 3) & 0xFFFFFFF8u;
+v5 = v31 + v28;
+v6 = v30 + v0;
+v3=gabi::call<u32>(0x02004E04,v3,v4,v5,v6);
+v27 = v27 + 0x00000004u;
+{ uint64_t t = (uint64_t)v25 + 0xFFFFFFFFu; v25 = (uint32_t)t; } equal=v25==0;
+v24 = v24 + 0x00000001u;
+v28 = v28 + 0x00000008u;
+if (!equal) { goto L_026C9F34; }
+v10 = gabi::load<u32>(v26 + 0x00000004u);
+v0 = gabi::load<u32>(v10 + 0x0000008Cu);
+count = v0;
+v3 = v26;
+v3=gabi::call_ptr<u32>(count,v3);
+v3 = 0u + 0x00000001u;
+return v3;
+return v3;
+}
+VERIFY(0x026C9E70,place_026C9E70);
+u32 place_026C9F94() {
+WWHD_FUNC(0x026C9F94,u32);
+u32 v0=0,v3=0,v4=0,v5=0,v6=0,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v31=0;
+f64 q0=0,q13=0;
+bool equal=false;
+v7 = 0u + 0x104A0000u;
+v31 = 0u + 0x00000000u;
+v7 = v7 + 0xFFFFA030u;
+gabi::store<u32>(v7 + 0x0000000Cu, v31);
+gabi::store<u32>(v7 + 0x00000008u, v31);
+v3 = 0u + 0x101F0000u;
+gabi::store<u32>(v7 + 0x00000004u, v31);
+v3 = v3 + 0x00006950u;
+gabi::store<u32>(v7 + 0x00000000u, v31);
+v3=gabi::call<u32>(0x028F026C,v3);
+v9 = 0u + 0x10100000u;
+q13=gabi::load<f32>(v9 + 0x00001708u);
+v8 = 0u + 0x10100000u;
+v3 = 0u + 0x104A0000u;
+v7 = 0u + 0x104A0000u;
+q0=gabi::load<f32>(v8 + 0x0000170Cu);
+v6 = 0u + 0x104A0000u;
+{ uint32_t ea = v7 + 0xFFFFA024u; gabi::store<f32>(ea, q13); }
+v3 = v3 + 0xFFFFA02Cu;
+{ uint32_t ea = v6 + 0xFFFFA028u; gabi::store<f32>(ea, q0); }
+v3=gabi::call<u32>(0x028ED6F8,v3);
+v3 = 0u + 0x101F0000u;
+v3 = v3 + 0x0000695Cu;
+v3=gabi::call<u32>(0x028F026C,v3);
+v3 = 0u + 0x104A0000u;
+v3 = v3 + 0xFFFFA02Du;
+v3=gabi::call<u32>(0x028EAB2C,v3);
+v3 = 0u + 0x101F0000u;
+v3 = v3 + 0x00006968u;
+v3=gabi::call<u32>(0x028F026C,v3);
+v11 = 0u + 0x104A0000u;
+v6 = 0u + 0x10100000u;
+v11 = v11 + 0xFFFFA050u;
+v6 = v6 + 0x0000163Cu;
+v5 = 0u + 0x10100000u;
+gabi::store<u32>(v11 + 0x00000004u, v6);
+v5 = v5 + 0x00001710u;
+v12 = 0u + 0x104A0000u;
+gabi::store<u32>(v11 + 0x00000000u, v5);
+v12 = v12 + 0xFFFFA040u;
+v10 = 0u + 0x10100000u;
+gabi::store<u32>(v11 + 0x0000000Cu, v6);
+v10 = v10 + 0x00001730u;
+gabi::store<u32>(v12 + 0x00000004u, v6);
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v12 + 0x00000000u, v10);
+{ uint64_t t = (uint64_t)v0 + 0x000018A4u; v0 = (uint32_t)t; }
+v7 = 0u + 0x10100000u;
+gabi::store<u32>(v12 + 0x0000000Cu, v6);
+v5 = 0u + 0x104A0000u;
+v7 = v7 + 0x00001718u;
+gabi::store<u32>(v12 + 0x00000008u, v0);
+v5 = v5 + 0xFFFFA070u;
+v8 = 0u + 0x10100000u;
+gabi::store<u32>(v11 + 0x00000008u, v7);
+v8 = v8 + 0x0000173Cu;
+gabi::store<u32>(v5 + 0x00000004u, v6);
+v9 = 0u + 0x104A0000u;
+gabi::store<u32>(v5 + 0x00000000u, v8);
+v10 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x0000000Cu, v6);
+v10 = v10 + 0x00001750u;
+v12 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000008u, v10);
+v9 = v9 + 0xFFFFA060u;
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000014u, v6);
+v12 = v12 + 0x00001764u;
+{ uint64_t t = (uint64_t)v0 + 0x000018B0u; v0 = (uint32_t)t; }
+gabi::store<u32>(v9 + 0x00000004u, v6);
+v10 = 0u + 0x104A0000u;
+v7 = 0u + 0x10100000u;
+gabi::store<u32>(v9 + 0x00000000u, v0);
+gabi::store<u32>(v5 + 0x00000010u, v12);
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x0000001Cu, v6);
+{ uint64_t t = (uint64_t)v0 + 0x00001778u; v0 = (uint32_t)t; }
+v11 = 0u + 0x10100000u;
+gabi::store<u32>(v9 + 0x0000000Cu, v6);
+v11 = v11 + 0x000018C0u;
+gabi::store<u32>(v5 + 0x00000018u, v0);
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v9 + 0x00000008u, v11);
+{ uint64_t t = (uint64_t)v0 + 0x0000178Cu; v0 = (uint32_t)t; }
+v12 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000024u, v6);
+v12 = v12 + 0x000017A0u;
+gabi::store<u32>(v5 + 0x00000020u, v0);
+v11 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x0000002Cu, v6);
+v10 = v10 + 0xFFFFA01Cu;
+gabi::store<u32>(v5 + 0x00000028u, v12);
+v7 = v7 + 0x000017B4u;
+gabi::store<u32>(v5 + 0x00000034u, v6);
+v11 = v11 + 0x000017C8u;
+gabi::store<u32>(v5 + 0x00000030u, v7);
+gabi::store<u32>(v10 + 0x00000004u, v6);
+gabi::store<u32>(v5 + 0x0000003Cu, v6);
+v12 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000038u, v11);
+v12 = v12 + 0x000017DCu;
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000044u, v6);
+{ uint64_t t = (uint64_t)v0 + 0x00001840u; v0 = (uint32_t)t; }
+gabi::store<u32>(v5 + 0x00000040u, v12);
+v7 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x0000004Cu, v6);
+v7 = v7 + 0x000017F0u;
+v9 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000048u, v7);
+v9 = v9 + 0x00001804u;
+gabi::store<u32>(v5 + 0x00000054u, v6);
+v11 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000050u, v9);
+v11 = v11 + 0x00001818u;
+gabi::store<u32>(v5 + 0x0000005Cu, v6);
+gabi::store<u32>(v5 + 0x00000058u, v11);
+v11 = 0u + 0x10200000u;
+gabi::store<u32>(v5 + 0x00000064u, v6);
+v12 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000060u, v8);
+v12 = v12 + 0x0000182Cu;
+gabi::store<u32>(v5 + 0x0000006Cu, v6);
+gabi::store<u32>(v5 + 0x00000068u, v12);
+v8 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000074u, v6);
+v8 = v8 + 0x00001854u;
+gabi::store<u32>(v5 + 0x00000070u, v0);
+v9 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x0000007Cu, v6);
+v9 = v9 + 0x00001868u;
+gabi::store<u32>(v5 + 0x00000078u, v8);
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000084u, v6);
+{ uint64_t t = (uint64_t)v0 + 0x0000187Cu; v0 = (uint32_t)t; }
+gabi::store<u32>(v5 + 0x00000080u, v9);
+v12 = 0u + 0x10200000u;
+v7 = 0u + 0x104A0000u;
+gabi::store<u32>(v5 + 0x0000008Cu, v6);
+v7 = v7 + 0xFFFFA198u;
+{ uint32_t ea = v12 + 0xFFFFD8E4u; v9 = gabi::load<u32>(ea); v12 = ea; }
+v8 = 0u + 0x104A0000u;
+gabi::store<u32>(v5 + 0x00000088u, v0);
+v0 = 0u + 0x10100000u;
+gabi::store<u32>(v5 + 0x00000094u, v6);
+{ uint64_t t = (uint64_t)v0 + 0x000018D0u; v0 = (uint32_t)t; }
+gabi::store<u32>(v7 + 0x00000004u, v6);
+v6 = 0u + 0x10100000u;
+gabi::store<u32>(v10 + 0x00000000u, v0);
+v6 = v6 + 0x00001890u;
+equal=((int32_t)v9)==(0);
+gabi::store<u32>(v7 + 0x00000000u, v0);
+v8 = v8 + 0xFFFFA108u;
+gabi::store<u32>(v5 + 0x00000090u, v6);
+if (equal) { goto L_026CA218; }
+v9 = gabi::load<u32>(v11 + 0xFFFFDD50u);
+goto L_026CA224;
+L_026CA218: ;
+v10 = 0u + 0x00000001u;
+v9 = 0u + 0x00000000u;
+gabi::store<u32>(v12 + 0x00000000u, v10);
+L_026CA224: ;
+gabi::store<u16>(v8 + 0x0000000Cu, v31);
+v0 = 0u + 0x00000019u;
+v5 = 0u + 0x0000001Au;
+gabi::store<u16>(v8 + 0x0000000Eu, v0);
+v12 = 0u + 0x10100000u;
+gabi::store<u16>(v8 + 0x00000014u, v31);
+v9 = v9 + 0x00000001u;
+gabi::store<u16>(v8 + 0x00000016u, v5);
+v12 = v12 + 0x000018E0u;
+gabi::store<u32>(v8 + 0x00000000u, v9);
+v6 = 0u + 0x0000001Cu;
+gabi::store<u32>(v8 + 0x00000004u, v12);
+v0 = 0u + 0x10100000u;
+v4 = 0u + 0x00000004u;
+gabi::store<u16>(v8 + 0x0000001Cu, v31);
+gabi::store<u32>(v8 + 0x00000010u, v4);
+v9 = v9 + 0x00000001u;
+gabi::store<u32>(v8 + 0x00000018u, v4);
+v7 = 0u + 0x0000001Bu;
+gabi::store<u32>(v8 + 0x00000020u, v4);
+v10 = 0u + 0x104A0000u;
+gabi::store<u16>(v8 + 0x0000001Eu, v7);
+v10 = v10 + 0xFFFFA138u;
+gabi::store<u16>(v8 + 0x00000024u, v31);
+{ uint64_t t = (uint64_t)v0 + 0x00001720u; v0 = (uint32_t)t; }
+gabi::store<u32>(v10 + 0x00000000u, v9);
+gabi::store<u32>(v10 + 0x00000004u, v0);
+gabi::store<u32>(v10 + 0x00000010u, v4);
+v0 = 0u + 0x0000001Du;
+gabi::store<u16>(v10 + 0x0000000Cu, v31);
+gabi::store<u16>(v10 + 0x0000000Eu, v6);
+gabi::store<u16>(v10 + 0x00000014u, v31);
+gabi::store<u16>(v10 + 0x00000016u, v0);
+gabi::store<u32>(v10 + 0x00000018u, v4);
+v6 = 0u + 0x10100000u;
+gabi::store<u32>(v10 + 0x00000020u, v4);
+v6 = v6 + 0x0000169Cu;
+gabi::store<u32>(v10 + 0x00000028u, v31);
+v5 = 0u + 0x10200000u;
+gabi::store<u32>(v10 + 0x00000008u, v6);
+v5 = v5 + 0xFFFFF32Cu;
+gabi::store<u32>(v8 + 0x00000028u, v31);
+v12 = 0u + 0x104A0000u;
+gabi::store<u16>(v10 + 0x0000001Cu, v31);
+v9 = v9 + 0x00000001u;
+gabi::store<u16>(v8 + 0x00000026u, v31);
+v12 = v12 + 0xFFFFA168u;
+gabi::store<u32>(v8 + 0x00000008u, v6);
+gabi::store<u32>(v8 + 0x0000002Cu, v5);
+v0 = 0u + 0x0000001Eu;
+gabi::store<u32>(v11 + 0xFFFFDD50u, v9);
+v11 = 0u + 0x10100000u;
+gabi::store<u16>(v10 + 0x0000001Eu, v0);
+v11 = v11 + 0x000018F0u;
+gabi::store<u16>(v12 + 0x0000000Cu, v31);
+gabi::store<u16>(v10 + 0x00000024u, v31);
+v7 = 0u + 0x0000001Fu;
+gabi::store<u16>(v10 + 0x00000026u, v31);
+gabi::store<u32>(v12 + 0x00000000u, v9);
+v0 = 0u + 0x00000020u;
+gabi::store<u16>(v12 + 0x0000000Eu, v7);
+gabi::store<u32>(v12 + 0x00000004u, v11);
+gabi::store<u32>(v12 + 0x00000010u, v4);
+gabi::store<u32>(v12 + 0x00000018u, v4);
+gabi::store<u32>(v12 + 0x00000020u, v4);
+gabi::store<u32>(v12 + 0x00000028u, v31);
+gabi::store<u32>(v12 + 0x00000008u, v6);
+gabi::store<u32>(v10 + 0x0000002Cu, v5);
+gabi::store<u16>(v12 + 0x00000014u, v31);
+gabi::store<u16>(v12 + 0x00000016u, v0);
+v8 = 0u + 0x00000021u;
+gabi::store<u16>(v12 + 0x0000001Cu, v31);
+gabi::store<u16>(v12 + 0x0000001Eu, v8);
+gabi::store<u16>(v12 + 0x00000024u, v31);
+gabi::store<u16>(v12 + 0x00000026u, v31);
+gabi::store<u32>(v12 + 0x0000002Cu, v5);
+return v3;
+return v3;
+}
+VERIFY(0x026C9F94,place_026C9F94);

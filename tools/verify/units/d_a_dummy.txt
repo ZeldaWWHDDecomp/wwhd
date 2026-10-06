@@ -1,0 +1,4 @@
+# Verification unit: d_a_dummy (dummy actor)
+src wwhd_src/d/actor/d_a_dummy.cpp
+
+ret 025D63E8 0 1              # entrySolidHeap

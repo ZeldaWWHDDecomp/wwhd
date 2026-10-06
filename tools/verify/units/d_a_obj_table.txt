@@ -1,0 +1,9 @@
+# Verification unit: d_a_obj_table
+src wwhd_src/d/actor/d_a_obj_table.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 023996D8 0 2              # prm_get_mdl
+arg 023996D8 r4 0,1,8,31,32,33,63
+arg 023996D8 r5 0,1,8,24,31,32,33,63

@@ -1,0 +1,6 @@
+# Complete contiguous10entries02585098..02585AC0exclusive; matcherDelete5334 is heap helper.
+src wwhd_src/d/d_ky_thunder.cpp
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 028E90D4 r3=48 r4=out48
+callee 026066C4 r4=8
+callee 02563F64 r3=12 r4=12 r5=out12

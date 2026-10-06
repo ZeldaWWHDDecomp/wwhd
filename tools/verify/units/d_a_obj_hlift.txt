@@ -1,0 +1,48 @@
+# Full owned TU02356090–02357208:24core +11wrappers/header helpers.
+# Includes physically local IsDelete023571A8 (matcher wrongly assigns fan).
+# Verified35x10000,118/118blocks. Full739generated +7constant probes:
+# 501compiled,452killed,49equivalent,245noncompiling.
+# Exact10000 replays kill8sample survivors with singleton/liveID/height steering.
+# Remaining43swaps preserve independent allocated-actor/model/global storage;
+# reload78/635 has no intervening call/write to its field,82 preserves singleton
+# identity (RPX globals are not epoch-clobbered).97/102repeat identicalmodel2
+# scale stores;276 only enlarges a localarray with an unused13th element.
+# No invalid local-OOB survivor excluded.
+src wwhd_src/d/actor/d_a_obj_hlift.cpp
+field * r3+0x3F0 s32 0 7
+field * r3+0x3F4 s32 0 1
+field * r3+0x3F8 s32 0 4
+field * r3+0x3FC s32 1,3,5
+field * r3+0x400 s16 -1,0,1,9,10
+field * r3+0x40C s16 -1,0,1,5
+field * r3+0x40E u8 0,1,2,255
+field * 0x101C9F80 s32 0 4
+ret 02520460 0 5
+ret 024F1D9C 0 5
+ret 025BA0C0 0 1
+ret 025440C8 0 1
+ret 02544044 0,0x54000000
+ret 0200F5C8 0 1
+ret 02357208 0 7
+callee 026066C4 r4=8
+observe 025E2DE0 0x104B4634 8
+arg 02357208 r4 0 32
+arg 02357208 r5 0 32
+field 02357040 r3+0xF8 u16 0,1,2,3,65535
+field 023567D0 r3+4 u32 0 1
+field 023567D0 0x101C9F7C u32 0 1
+field 023567D0 0x101C9F84 u8 0,1,2,255
+stackfill periodic
+# Independent singleton pointers expose address arithmetic mutations.
+field * 0x101F84DC u32 0x54000000,0x55000000
+field * 0x101F4F28 u32 0x56000000,0x57000000
+# Exact 50-unit acceleration/deceleration boundaries and distance minus50.
+field 02356BD0 r3+0x2F0 f32 0
+field 02356BD0 r3+0x318 f32 -1,0,1,49.5,50,50.5,74.5,75,75.5,199.5,200,200.5,324.5,325,325.5,449.5,450,450.5,574.5,575,575.5,699.5,700,700.5,824.5,825,825.5,949.5,950,950.5
+field 02356EE0 r3+0x2F0 f32 0
+field 02356EE0 r3+0x318 f32 -1,0,1,49.5,50,50.5,74.5,75,75.5,199.5,200,200.5,324.5,325,325.5,449.5,450,450.5,574.5,575,575.5,699.5,700,700.5,824.5,825,825.5,949.5,950,950.5
+# Controller deletion must change a non-sentinel ID, not rewrite an existing-1.
+field 023569DC r3+4 u32 0,1,2,4294967295
+field 023569DC 0x101C9F7C u32 0,1,2,4294967295
+field 023564F4 r3+4 u32 0,1,2,4294967295
+field 023564F4 0x101C9F7C u32 0,1,2,4294967295

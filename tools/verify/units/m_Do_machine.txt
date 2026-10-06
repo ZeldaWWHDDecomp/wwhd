@@ -1,0 +1,9 @@
+src wwhd_src/m_Do/m_Do_machine.cpp
+# Heap-creation failure and initialized-setting branches are valid startup outcomes.
+ret 025E30DC 0,0x21000000
+ret 025E31B4 0,0x22000000
+ret 025E2E94 0,0x23000000
+ret 025E3004 0,0x24000000
+field 025F12F8 0x101F9B18 u8 0,1
+field 025F12F8 0x101F9AF8 u32 0,1
+field 025F12F8 0x101F48C0 s8 0,1

@@ -1,0 +1,2 @@
+# Verification unit: d_a_spotbox
+src wwhd_src/d/actor/d_a_spotbox.cpp

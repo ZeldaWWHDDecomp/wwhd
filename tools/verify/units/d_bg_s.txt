@@ -1,0 +1,22 @@
+# d_bg_s (dBgS): 024EE638..<024EFD08 (d_bg_s_acch follows at 024EFD08). 024EE58C/024EE620/024EE634 (the d_attention TU's
+# __sinit and SafeString inline copies) are also verified here, so each address is verified once.
+src wwhd_src/d/d_bg_s.cpp
+stackfill periodic
+callee 028E91EC r4=out48          # PSMTXInverse
+callee 028E8F64 r3=48 r4=12 r5=out12  # PSMTXMultVec
+callee 0200A3BC r4=out12          # cBgW::GetTrans
+callee 028E8D88 r3=12 r4=12 r5=12 # PSVECAdd
+ret! 025200D4 0x54000000 0x54000000
+field 024EF5CC r4+0x84 i32 -1 4      # m_tbl_size: CalcWallRR loop
+arg 024EEA6C r5 0,0x52000000          # Regist: actor may be null
+ret 0200839C 0xFFFF,0,3,0x1FFFF       # GetGrpToRoomId: none / room
+arg 024EEA6C r4 0,0x53000000          # Regist: bgw may be null
+# mutation gaps: hits are rare (otherwise the ClearPi stores are always overwritten)
+ret 0200AB4C 0 0                      # cBgW::LineCheckGrpRp
+ret 024F3924 0 0                      # dBgW::RoofChkGrpRp
+ret 024F42BC 0 0                      # dBgW::SphChkGrpRp
+ret 024F3DD4 0 0                      # dBgW::SplGrpChkGrpRp
+ret 020082C0 -1,0,1,5                 # cBgS::GetTriGrp: none / group
+field 024EEEB8 r4+0 u16 0xFFFF,0,7    # GetPolyColor: ChkSetInf
+field 024EEEB8 r4+2 u16 0x100,0,3
+field 024EECE8 r4+2 u16 0,1,255,0x300      # GetGrpRoomInfId: valid bg index

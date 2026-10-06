@@ -1,0 +1,20 @@
+# Verification unit: d_a_tag_etc (Medli camera / event tag)
+src wwhd_src/d/actor/d_a_tag_etc.cpp
+
+field 024A6304 r3+0x3AC u8 0 4          # mAction (5-entry table)
+field * r3+0xB0 u32 0,0x100,0x200,0xF00,0x1000000,0xFFFFFFFF   # params: type2 0 / non-0
+field * r3+0x3B0 u32 0,1,0xFFFFFFFF    # mMedliPID (-1: no search)
+field * r3+0x3B6 i16 -1 2              # field_0x29A
+field * r3+0xF8 u16 0,1,2,3            # eventInfo.mCommand
+ret 02542D88 -1 1                      # getMyStaffId
+ret 02543F10 -1 1                      # getEventIdx
+ret 025440C8 0 1                       # endCheck
+ret 024A5D90 0,1,15                    # getType2
+ret 024A6030 0 1                       # rangeCheck
+ret 024A6104 0 1                       # otherCheck
+field 024A6030 r3+0x330 f32 1,2        # scale.x (-> 100/200)
+fret 028F4384 100 200                   # std_sqrtf: hits dist == scale.x*100
+field 024A6030 r3+0x334 f32 -2 2       # scale.y
+callee 0201ADE0 r4=out12               # cXyz::operator-
+callee 028E8DD0 r3=12                  # PSVECSquareMag: compare the xz vector
+stackfill periodic                     # the xz vector's y = 0 store

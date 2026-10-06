@@ -1,0 +1,184 @@
+# Verification unit: d_a_bk (Bokoblin)
+src wwhd_src/d/actor/d_a_bk.cpp wwhd_src/d/actor/d_a_bk_pending.cpp
+
+# stack objects passed to callees
+callee 024F1AFC r3=0x6C     # dBgS_LinChk::Set: the line check
+callee 02008860 r4=0x6C     # cBgS::LineCross
+callee 02008B4C r3=0x6C     # cBgS_LinChk::~cBgS_LinChk
+callee 026066C4 r4=8        # getRes: SafeString
+
+ret 025D4604 0 1            # fopAc_IsActor
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+
+# anm_init
+field 02098DA4 r3+0x4A2 i16 18 20       # dr.mAction == 19
+arg 02098DA4 r4 0x45 0x48               # OTISOU1/2
+arg 02098DA4 r6 -1 1                    # soundFileIdx sign
+# s_w_sub / s_b_sub
+field 0209A624 r3+8 i16 0x1CE 0x1D0     # fpcNm_BOKO_e
+field 0209A624 r3+0xB0 u32 3 5          # param 4 (moblin spear)
+field 0209A624 r3+0x2E0 u32 0,0x2000    # carry status
+field 0209A624 10462320 i32 9 10        # target_info_count
+field 0209A6AC r3+8 i16 0x125 0x127     # fpcNm_BOMB_e
+field 0209A6AC r3+0xB0 u32 0 1
+field 0209A6AC 10462320 i32 9 10
+# player checks
+field 0209AE7C 1046232D i8 0 1          # search_sp
+field 0209AE7C r3+0x3D0 u8 9 10         # mType 0xA
+field 0209AE7C r3+0xBE3 u8 0 1          # dr.m713
+field 0209AE7C 54005B2C u32 0x55000000 0x55000000
+field 0209AE7C 55000370 f32 -0.2 0.2    # player speedF
+field 0209AE7C 550003CC f32 -1 1        # grab wear
+ret 02008860 0 1                        # LineCross
+field 0209B05C 1046232D i8 0 1
+field 0209B05C r3+0x3D0 u8 9 10
+field 0209B05C 54005B2C u32 0x55000000 0x55000000
+# ken_s_sub / s_s_sub / s_s2_sub
+field 0209B67C r3+8 i16 0xFE 0x100      # fpcNm_ITEM_e
+field 0209B67C r3+0x74E u8 0x3C 0x3E    # dItemNo_DROPPED_SWORD_e
+field 0209B6D8 r3+8 i16 0x41 0x43       # fpcNm_OBJ_SEARCH_e
+fret 028F4384 0 1200                    # sqrtf (vs 600)
+callee 0201ADE0 r4=out12               # cXyz::operator-: result storage
+field 0209BA78 r3+8 i16 0x41 0x43
+field 0209BA78 1046BE20 u8 0 1          # daObj_Search find flag
+# way_pos_check / ground_4_check / other_bg_check
+callee 02008DAC r3=0x54     # cBgS_GndChk::~cBgS_GndChk
+callee 02008974 r4=0x54     # cBgS::GroundCross
+callee 02008E0C r3=255      # cBgS_GndChk::cBgS_GndChk: constructor storage
+callee 02008FEC r3=255      # cBgS_LinChk::ct: constructor storage
+arg! 0209A29C r4 0 4        # ground_4_check: count
+callee 0200FCD8 r3=12 r4=out12   # MtxPosition: input compared, output filled
+# path_check
+field 0209B354 r3+0x1378 u32 0,0x56000000      # ppd: none or a fixed path
+field 0209B354 56000000 u16 0 6                # m_num
+stable 56000000 0x10                           # path header: stage data, no callee writes it
+stable 57000000 0x1000                         # path points: stage data
+stable 40001378 4                              # this->ppd (generated this = 0x40000000): set at create, no callee writes it
+field 0209B354 56000008 u32 0x57000000 0x57000000  # m_points
+field 0209B354 r3+0xC90 i32 0 1                # m0B30
+field 0209B354 r3+0x1353 u8 0 1                # m11F3
+field 0209B354 r3+0x3D0 u8 3,4,5,6,10          # mType
+field 0209B354 r3+0x1377 i8 -3 3               # m1217
+arg 0209B354 r4 0 1
+# smoke_set_s
+ret 024EF0F4 0 12                    # GetAttributeCode
+field 02098EEC r3+0x467 u8 0 1       # m034F
+# nodeCallBack / nodeCallBack_P: joint numbers mostly in range
+arg 020991CC r4 0 1
+arg 02099584 r4 0 1
+ret 027F7878 0x59000000 0x59000000       # J3DNode -> J3DJoint: a fixed joint
+field 020991CC 59000004 u16 0,3,9,0x12,0x12,0x12,0x13,0x33,0x34,0x35,0x20,0x2B   # jntNo (joint_check: 0x12 head, 0x13 ago, 0x33 out of table range)
+field 02099584 59000004 u16 0,5,0x0A,0x23,0x23,0x2B,0x2B,0x10,0x34,0x35   # jntNo (0x23 KUBI, 0x2B MUNE, 0x0A/0x05 SIPPO3/4)
+field 020991CC 104B462C u32 0x5A000000 0x5A000000   # j3dSys model
+field 02099584 104B462C u32 0x5A000000 0x5A000000
+field 020991CC 5A0000B8 u32 0,0x5B000000 # user area (actor)
+field 02099584 5A0000B8 u32 0,0x5B000000
+field 020991CC 1046236D u8 0 1           # l_bkHIO.m009
+# ground_smoke_set
+field 020A070C r3+0x464 i16 0 6          # m034C
+field 020A070C 10462370 i16 2 4          # l_bkHIO.m00C
+field 020A070C r3+0x466 u8 0 5           # m034E
+field 020A070C r3+0x410 i32 0 1          # m02F8 & 1
+field 020A070C r3+0xBE2 u8 0 1           # dr.m712
+# daBk_Draw
+field 0209971C r3+0x3D3 u8 0,1,0xFF       # m02B7
+field 0209971C r3+0x3D0 u8 5 8            # mType
+field 0209971C r3+0x3D6 u8 0,0,0,1        # m02BA
+field 0209971C r3+0x137C i8 0,0,0,1       # m121C
+field 0209971C r3+0x3FA i8 0,0,0,1        # m02DE
+field 0209971C r3+0x13CA i16 19 21        # mEnemyIce.mFreezeTimer
+field 0209971C r3+0x408 i32 0 1           # m02F0
+field 0209971C 1047B9EE i16 0 1           # REG6_S(3)
+field 0209971C r3+0x40C i32 0 1           # m02F4
+field 0209971C r3+0x400 u32 0x5C000000 0x5C000000  # m02E8 model
+field 0209971C 5C0000AC u32 0x5D000000 0x5D000000  # its model data
+field 0209971C 5D000004 u32 0 4           # joint count (buffer)
+ret 027F3F94 0x5E000000 0x5E000000       # joint table
+field 0209971C 5E000008 u16 0 4           # joint num
+field 0209971C 10462369 u8 0,0,1          # l_bkHIO.m005
+ret 027DF9B0 -1 3                         # material index
+ret 025BA0C0 0 1                          # isSwitch
+# useHeapInit
+field 0209F220 r3+0x3F8 u8 0 1            # m02DC
+field 0209F220 r3+0x3F0 u8 0 1            # m02D4
+field 0209F220 r3+0x3F1 u8 0,0x40         # m02D5
+ret 026066C4 0 0x60000000                 # getRes: null or a resource
+ret 025E4F64 0 0x61000000                 # McaMorf: null or a morf
+field 0209F220 61000090 u32 0,0x62000000  # its model
+field 0209F220 620000AC u32 0x63000000 0x63000000  # model data
+field 0209F220 63000004 u32 0 0x40        # joint buffer count
+field 0209F220 5E000008 u16 0 0x36        # joint num
+ret 0273AD10 0 0x64000000                 # operator new
+ret 025E7820 0 0x64000000                 # btpAnm ctor
+ret 025E789C 0 1                          # btpAnm init
+ret 025E38E0 0 0x65000000                 # J3DModel create
+ret 02552B60 0 0x66000000                 # JntHit_create
+# out-of-line copies, constructors
+arg 020A0634 r3 -1 1                      # id (-1: none)
+callee 025D5218 r4=4                      # fopAcIt_Judge: the searched id
+arg 020A06F8 r4 0 1
+# daBk_Create
+field 0209F918 r3+0x2E4 u32 0,8            # INIT condition
+ret 02520460 3 4                           # resLoad: mostly COMPLEATE
+field 0209F918 r3+0xB1 u8 0,0xFF,0xFF,0xFF   # m02B6 (path)
+field 0209F918 r3+0xB0 u8 0,1,0xFF         # m02B7
+field 0209F918 r3+0x324 i16 0,0,1,0xFF     # angle.z -> m02B8
+ret 025BA0C0 0 1                           # isSwitch
+ret 025D63E8 0 1                           # entrySolidHeap
+field 0209F918 10191468 u8 0 1             # hio_set
+ret 025AAF88 0 1                           # path (0: none)
+field 0209F918 54005134 u32 0x49546573,0x47616E6F,0x415F6D6F   # start stage name: "ITes" "Gano" "A_mo"
+field 0209F918 54005138 u32 0x74363300,0x6E4A0000,0x72690000   # "t63" "nJ" "ri"
+field 0209F918 r3+0x3D8 u32 0,0x68000000,0x68000000,0x68000000,0x68000000   # mpMorf
+field 0209F918 68000090 u32 0,0x69000000,0x69000000,0x69000000,0x69000000   # its model
+# search_bomb / daBk_wepon_view_check: a few fixed targets
+field 0209A728 r3+0x1368 u16 0,0x200      # m1208 bomb flag
+field 0209A728 10462320 i32 0 3           # target_info_count after the search
+field 0209A728 10462330 u32 0x6A000000 0x6A000000
+field 0209A728 10462334 u32 0x6B000000 0x6B000000
+field 0209A728 10462338 u32 0x6C000000 0x6C000000
+field 0209A728 6A000318 f32 -100 100      # target y (vs eye y, m038)
+field 0209A728 6B000318 f32 -100 100
+field 0209A728 r3+0x380 f32 0 0           # eyePos.y
+field 0209A728 1046239C f32 0 100         # l_bkHIO.m038
+field 0209A728 r3+0x434 f32 0 600         # mPlayerDistance
+arg 0209A728 r4 0 1
+field 0209AB64 r3+0x3F8 u8 0,0,1          # m02DC
+field 0209AB64 r3+0x3E8 i16 0,0,1         # m02CC
+field 0209AB64 10462320 i32 0 3
+field 0209AB64 10462330 u32 0x6A000000 0x6A000000
+field 0209AB64 10462334 u32 0x6B000000 0x6B000000
+field 0209AB64 10462338 u32 0x6C000000 0x6C000000
+field 0209AB64 6A000318 f32 -100 100
+field 0209AB64 6B000318 f32 -100 100
+field 0209AB64 r3+0x380 f32 0 0
+field 0209AB64 1046239C f32 0 100
+field 0209AB64 6A000004 u32 0,0xFFFFFFFF,5 # target proc id
+ret 0209A4BC 0 1                          # daBk_other_bg_check
+field 0209A728 104623A0 f32 1e30,0.5      # l_bkHIO.m03C (vs the mocked MtxPosition output)
+field 0209A728 104623A4 f32 1e30,0.5      # m040
+field 0209A728 104623AC f32 -1e30,0.5     # m048
+field 0209A728 104623A8 f32 1e30,-1e30    # m044
+field 0209AB64 104623A0 f32 1e30,0.5
+field 0209AB64 104623A4 f32 1e30,0.5
+field 0209AB64 104623AC f32 -1e30,0.5
+field 0209AB64 104623A8 f32 1e30,-1e30
+arg 0209F74C r3 0,0x40000000             # this: null (allocates) or an object
+arg 0209F6C0 r3 0,0x40000000
+arg 020A896C r3 0,0x40000000
+arg 020A896C r4 0 1
+callee 020A8A98 r3=8                      # SafeString (material name key)
+field 02098EEC 1047B650 f32 -1 1          # REG0_F(16)
+field 0209971C 1047BA94 f32 -10 10        # REG8_F(1)
+field 0209971C 1047BA98 f32 -10 10        # REG8_F(2)
+field 0209971C 1047BB14 i16 -100 100      # REG8_S(6)
+field 0209971C 1047BB16 i16 -100 100      # REG8_S(7)
+field 0209971C 54005D84 u32 0x10000 0x7FFFFFFF   # draw lists (distinct words)
+field 0209971C 54005D88 u32 0x10000 0x7FFFFFFF
+field 0209F918 r3+0xB3 u8 2,3,4,5,6,7,9,0xA,0xB,0xF,0x16,0x27,0x45,0x84,0xC8   # type/flags
+arg! 0209A728 r4 0 1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0209F918 0x54005134 8 @stages,"A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_monJ","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mori","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","A_mot63","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bk","Bz","Bz","Bz","Bz","Bz","Bz","Bz","Bz","Bz","Bz","Bz","Bz","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","GanonJ","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganori","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","Ganot63","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesnJ","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITesri","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63","ITest63"

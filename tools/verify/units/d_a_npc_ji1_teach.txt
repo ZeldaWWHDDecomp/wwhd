@@ -1,0 +1,44 @@
+# Verification unit (fork, merged into d_a_npc_ji1 later): teachAction and its helpers
+src wwhd_src/d/actor/d_a_npc_ji1_teach.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 025B8B94 0 1                    # isEventBit
+ret 027F2BF8 0 1                    # checkPass
+callee 0201ADE0 r4=out12            # cXyz::operator- (result)
+callee 0201AE48 r4=out12            # cXyz::operator* (result)
+callee 0201AD78 r4=out12            # cXyz::operator+ (result)
+callee 028E8DD0 r3=12               # PSVECSquareMag
+callee 0200F164 r4=12               # cLib_addCalcPos2 target
+callee 0200EF78 r4=12               # cLib_addCalcPosXZ target
+callee 025CB374 r6=12               # StartShock: cXyz by value
+# teachMove: checkAction(speakBadAction), the charge check
+field 0224EF14 r3+0x3CE i16 -1,-1,0,1
+field 0224EF14 r3+0x3CC i16 0,0,0,4
+field 0224EF14 r3+0x3D0 u32 0x02254A64,0x02254A64,0x02250A1C
+field 0224EF14 r3+0xF98 i32 3,3,0,4
+# teachAction
+ret 02255100 0 1                    # checkCutType
+ret 025162A4 0 1                    # ChkTgHit
+ret 0224EF14 0 1                    # teachMove
+ret 02248F58 0,0,0,1                # plRoomOutCheck
+field 02255908 r3+0xEA0 i8 1,1,1,0,-1
+field 02255908 r3+0xE48 u32 0,1,6,8,9,0xA,0xF,0x10,2
+field 02255908 r3+0xF8C i32 0,5,6,7,0xA,0xB,0xA,0xB
+field 02255908 r3+0xEB4 u32 1,9,0xA
+field 02255908 r3+0xF98 i32 0,1,2,3,4,5,6
+field 02255908 r3+0xF94 i32 0,1,1
+field 02255908 r3+0xEB8 i32 0,0,1,2,3
+field 02255908 r3+0xF5C i32 0,0,0,1,2,3
+field 02255908 r3+0xEC0 i32 0,1,2,2,2,3
+field 02255908 r3+0xEBC i32 0,0,0,1
+field 02255908 r3+0xE54 i32 -1,0,5
+field 02255908 r3+0x3CE i16 -1,-1,-1,0,1
+field 02255908 r3+0x3CC i16 0,0,0,4
+field 02255908 r3+0x3D0 u32 0x022596CC,0x02253EE8,0x02252FD0,0x02254A64,0x02250A1C
+field 02255908 r3+0x43C u32 0x56000000
+field 02255908 5600009C f32 0 40
+field 02255908 560000A2 i16 0 40
+field 02255908 10467244 u8 0,1
+ret 025200D4 0x54000000 0x54000000  # play pinned: the player at 0x55000000
+field * 54005B2C u32 0x55000000
+field 02255908 550003B8 u32 0,0,0x40   # player getCutAtFlg

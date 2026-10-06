@@ -1,0 +1,119 @@
+# Verification unit: d_a_npc_mk (Ivan, Outset hide-and-seek)
+src wwhd_src/d/actor/d_a_npc_mk.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 0200FCD8 r3=12 r4=out12  # MtxPosition
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r6=12         # lookAtTarget (eye copy)
+callee 020182E0 r4=12         # cM3dGCyl::SetC (center copy)
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2  # dNpc_calc_DisXZ_AngY
+ret 025200D4 0x54000000 0x54000000
+ret 025B8B94 0 1              # dSv_event_c::isEventBit
+ret 02520C0C 0 1              # dComIfGs_checkGetItem
+stackfill
+# --- steering ---
+# pointer-to-member action function (setAction inline): i, d, f
+field 02295C30 r3+0x822 i16 -1,-1,-1,0,1
+field 02295C30 r3+0x820 i16 0,0,0,4
+field 02295C30 r3+0x824 u32 0x02299F8C,0x0229A17C,0x0229A3C8,0x02299EAC
+field 02295C30 r3+0x837 i8 0,1,2,3
+field 02299D00 r3+0x822 i16 -1,-1,-1,0,1
+field 02299D00 r3+0x820 i16 0,0,0,4
+field 02299D00 r3+0x824 u32 0x02299F8C,0x0229A17C,0x0229A3C8
+field 02299F8C r3+0x822 i16 -1,-1,-1,0,1
+field 02299F8C r3+0x820 i16 0,0,0,4
+field 02299F8C r3+0x824 u32 0x02299F8C,0x0229A17C,0x0229A3C8
+field 02299F8C r3+0x837 i8 0,1,2,2,3
+field 02299F8C r3+0x838 i8 -1,0,1,1,1
+field 0229A3C8 r3+0x822 i16 -1,-1,-1,0,1
+field 0229A3C8 r3+0x820 i16 0,0,0,4
+field 0229A3C8 r3+0x824 u32 0x02299F8C,0x0229A17C,0x0229A3C8
+field 0229A3C8 r3+0x835 i8 0,2,4,5,6,7,8,9,10,11,12,13,13,13,14
+field 0229A3C8 r3+0x838 i8 -1,0,1,1,1
+field 0229A17C r3+0x835 i8 0,1,2,3,4,5,6,7,8,9,10,11,12,13
+field 0229A17C r3+0x838 i8 -1,0,1,1,1
+field 02299EAC r3+0x835 i8 0,1,2
+field 02299EAC r3+0x838 i8 -1,0,1,1,1
+field 02296A9C r3+0x822 i16 -1,-1,0,1
+# _create
+arg 022964F8 r3 0,0x5A000000
+ret 02520460 0,4,4,5
+field 022964F8 r3+8 i16 0xAA,0xAA,0
+field 022964F8 r3+0x2E4 u32 0,8
+ret 02295C18 0,1,2,3
+ret 025D63E8 0 1
+ret 02295C30 0 1
+# setAnm
+arg 022968D4 r4 -1,0,5,5,7,11
+field 022968D4 r3+0x829 i8 -1,0,5,11,11
+# next_msgStatus
+field 02297210 r4+0 u32 0x26BB 0x26DA
+field 02297210 r3+0x7FF u8 0 1
+# getMsg / talk
+field 022972C8 r3+0x835 i8 0,3,9,10,11,12,13
+field 022972C8 r3+0x837 i8 0,1,2,3
+field 022974AC r3+0x7F8 u32 0x26C9,0x26CA,0x26CA
+field 022974CC r3+0x839 i8 -1,0,1,2,2
+field 022974CC 10467C68 u32 0xFFFFFFFF,5,5
+ret 025F795C 0xE,0xF,0x12,0x13
+# getLookBackMode / lookBack
+field 022976A0 r3+0x7FC u16 0 0x7FF
+field 022976A0 r3+0x81C u16 0,0,1
+field 022976A0 r3+0x829 i8 0,4,7,8
+field 022976A0 r3+0x835 i8 0,3,3
+field 022976A0 r3+0x818 u8 3,4,5
+ret 022976A0 0,1,2,3,4
+# nextVisitMode / visit01
+field 02297990 r3+0x818 u8 0 10
+field 02297990 r3+0x81C u16 0,0,1,2
+field 02297990 r3+0x81A u8 0,0,1
+field 02297990 r3+0x819 u8 0,0,1
+ret 0259F220 0 1
+fret 028E8DD0 22500 160000   # edges: the RUN_LINK and WALK_PATH thresholds
+field 022995C4 r3+0x829 i8 3,4,5,5
+field 022995C4 r3+0x818 u8 3,4,5,5,6
+# talk01 / talk02 / demoProc talk
+ret 022974CC 0x12,0x12,0xFE,0xFF,0xE
+ret 0229B54C 0 1
+# demoProc
+field 022987B0 r3+0x830 i32 -1 17
+ret 025447C8 0 1
+field 022987B0 r3+0x829 i8 0,5,11
+field 022987B0 r3+0x85C i16 -1,0,1,2
+field 022987B0 r3+0x7FC u16 0 0x7FF
+field 022987B0 r3+0x7F2 i8 0,1
+ret 025D7DEC -1,5
+ret 0200F378 0,0,1
+# mutation-driven steering
+# nodeCallBack: j3dSys model -> user area (this) pinned; joint number vs head/backbone joints
+arg 022955EC r4 0,0,0,1
+field 022955EC 104B462C u32 0x60000000,0x60000000
+field 022955EC 600000B8 u32 0x61000000,0x61000000,0
+ret 027F7878 0x62000000
+field 022955EC 62000004 u16 0,1,2,3
+field 022955EC 610007AC i8 -1,0,1
+field 022955EC 610007AD i8 -1,1,2
+field 022955EC 610007F3 u8 0,0xFE,0xFF
+# visitInit
+arg 02297D78 r4 0 10
+field 02297D78 r3+0x818 u8 0,5,6,6
+# runawayInit / runaway
+field 0229814C r3+0x86C u8 0 6
+field 0229814C r3+0x829 i8 5,6,6
+field 02299A80 r3+0x86C u8 0 4
+ret 0229B164 0 4
+field 02299A80 r3+0x829 i8 4,5,5
+# visit01: Link's facing angle vs Ivan
+field 022995C4 54005B34 u32 0x55000000
+field 022995C4 5500032A i16 0
+ret 025D6894 0x1800,0x1801,0xE800,0xE7FF,0,0x8000
+# _execute: animation switch, the jitanda random pick, the HD walk/run animation rate (speedF thresholds 2.5 / 12.5)
+field 02296A9C r3+0x829 i8 0,4,5,7,8
+ret 025E535C 0 1
+fret 02019788 0.4 0.5
+field 02296A9C r3+0x370 f32 0,2.5,3,10,12.5,15,30
+# Coverage gaps (documented): demoProc blocks 95/97/107/109/112 are the `temp` (case 5 talk) tails after the
+# second switch's cases 1, 10, 9, 16 and default: temp is set only by the first switch's case 5, so these need
+# mEventAction to change between the two switches (only when a callee rewrites it; generated inputs reach a
+# few under clobbering).

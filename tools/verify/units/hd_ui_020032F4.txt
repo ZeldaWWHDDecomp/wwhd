@@ -1,0 +1,33 @@
+# hd_ui_020032F4: TUs 020032F4..02003C57 (list visitor, named animation entry, lyt-derived objects, lyt adaptor); HD-only
+src wwhd_src/hd/hd_ui_020032F4.cpp
+# visitAll: a pinned list {count, data} with a stable count and array pointer
+arg! 02003350 r4 0x60000000
+field 02003350 60000000 u32 0,1,2,3
+field 02003350 60000008 u32 0x60000100
+stable 60000000 12
+arg 020034A0 r3 0,0xFFFFFFF8,0x65000000
+field * 101FD914 u32 0,1
+field * 101FD890 u32 0,1
+field * 101FD888 u32 0,1
+arg 02003A10 r4 0,1,0x1234
+# mutation follow-ups: the visitor's virtual answers mostly true (pinned visitor + vtable slot to a mocked predicate)
+arg! 02003350 r3 0x61000000
+field 02003350 61000004 u32 0x62000000
+field 02003350 6200001C u32 0x02003498
+ret 02003498 1,1,1,0
+stable 61000004 4
+stable 6200001C 4
+# animation entry names: empty, short and longer than the 32-byte buffer
+field 020034A0 r5+0 u32 0x6F000000,0x6F000010,0x6F000040
+field 020034A0 6F000000 u32 0x41424300
+field 020034A0 6F000040 u32 0
+field 020034A0 6F000010 u32 0x41424344
+field 020034A0 6F000014 u32 0x45464748
+field 020034A0 6F000018 u32 0x494A4B4C
+field 020034A0 6F00001C u32 0x4D4E4F50
+field 020034A0 6F000020 u32 0x51525354
+field 020034A0 6F000024 u32 0x55565758
+field 020034A0 6F000028 u32 0x595A6162
+field 020034A0 6F00002C u32 0x63646566
+field 020034A0 6F000030 u32 0x67686900
+stable 6F000000 0x44

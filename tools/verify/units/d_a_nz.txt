@@ -1,0 +1,156 @@
+# Verification unit: d_a_nz (Rat)
+src wwhd_src/d/actor/d_a_nz.cpp
+
+ret 02520460 0 5                    # dComIfG_resLoad
+ret 025D4604 0 1                    # fopAc_IsActor
+ret 02008860 0 1                    # LineCross
+callee 024F1AFC r3=0x6C             # dBgS_LinChk::Set
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008FEC r3=255
+callee 02008974 r4=0x54             # GroundCross
+callee 02008DAC r3=0x54
+callee 02008E0C r3=255
+callee 026066C4 r4=8
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition
+callee 025192A8 r4=0x1C             # cc_at_check
+callee 0201A478 r3=out6             # csXyz::csXyz
+callee 025D5218 r4=4                # fopAcIt_Judge: id
+arg 0230F190 r3 0 0
+arg 0230F104 r3 0 0
+arg 0230F750 r3 0 0
+ret 0273AD10 0 0x60000000
+ret 025200D4 0x54000000 0x54000000
+field * 54005B2C u32 0x55000000 0x55000000   # player
+# node callbacks: model with a user area at a fixed address
+field * 104B462C u32 0x56000000 0x56000000   # j3dSys.mModel
+field 0230A30C 560000B8 u32 0,0x57000000
+field 0230A964 560000B8 u32 0,0x57000000
+
+ret 027F7878 0x58000000 0x58000000           # J3DNode_toJoint
+field 0230A964 58000004 u16 0x11,0x12
+field 0230A30C 58000004 u16 8,9
+# item_poi / s_a_d_sub / s_ana_sub: actor names
+field 0230B108 5F000008 i16 0x126,0xFF
+field 0230B108 r3+0x3E0 u32 0,0xFFFFFFFF
+field 0230B108 r3+0x3D1 u8 0 1
+ret 021831AC 0 1                             # daItem_c::checkLock
+ret 020CB678 0 1                             # getBombCheck_Flag
+field 0230B230 r3+8 i16 0x126,0xFF,0xC7
+field 0230B230 r3+0xB0 u32 0 1
+field 0230B230 r3+0x370 f32 0 0
+field 0230B230 10468CE4 i32 98 101
+field 0230B6CC r3+8 i16 0xC7,0xC8
+# search_get_obj: the found list
+field 0230B320 10468D1C u32 0x5A000000 0x5A000000
+field 0230B320 5A000008 i16 0x126,0xFF
+fret 028F4384 0 120                          # std_sqrtf
+# body_atari_check
+ret 025162A4 0 1                             # ChkTgHit
+ret 02516300 0x5B000000 0x5B000000
+field 0230BA9C 5B000010 u32 0x200,0x40000,0x80000,0x100000,0x8000,0x88000,0x2
+field 0230BA9C r3+0x3DE u8 0 1
+field 0230BA9C r3+0x320 i16 0 1
+field 0230BA9C r3+0x324 i16 0 1
+field 0230BA9C 550003C0 u32 0,0x20000
+field 0230EDD0 r3+0xF4 u32 0,0x100
+field 0230EE58 r3+0x3D1 u8 0 1
+ret 025D63E8 0 1                             # entrySolidHeap
+field 0230F32C r3+0xB0 u32 0,0xFF,0x100,0xFFFF,0x101,0xFF00
+field 0230F32C r3+0x2E8 u32 0,0xFFFFFFFF
+# naraku_water_check
+field 0230F8BC r3+0x930 f32 -1000000000 0
+ret 02008254 0 1
+ret 024EF0BC 3 5
+ret 024EEE30 0 1
+field 0230F8BC r3+0x3EE i16 98 101
+field 0230F8BC r3+0x318 f32 -501 -499
+field 0230F8BC 1047BB0E i16 0,0,0,1
+field 0230F8BC r3+0x370 f32 0,0,1
+field 0230F8BC r3+0x340 f32 0,0,1
+field 0230F8BC r3+0x3DF u8 0 1
+field 0230F8BC r3+0x3F8 i16 0 1
+field 0230F8BC r3+0x818 u32 0,0x5C000000
+field 0230F8BC r3+0x84C u32 0,0x5C000000
+field 0230F8BC r3+0x320 i16 -0x501 0x501
+callee 025602F0 r3=out4 r4=out4      # dKy_get_seacolor outputs
+# daNZ_Draw
+field 0230AE30 r3+0xBEE i16 19 22
+callee 023111D4 r3=8
+ret 027DF9B0 -1 3                            # JUTNameTab::getIndex
+# nz5_move
+field 0230FD90 r3+0x3D9 u8 0x31 0x3F
+field 0230FD90 r3+0x8C4 u32 0,0x20
+field 0230FD90 r3+0x3DE u8 0,0,1
+field 0230FD90 r3+0x3DC u8 0 7
+field 0230FD90 r3+0x3F2 i16 0 1
+field 0230FD90 r3+0x3D1 u8 0 1
+field 0230FD90 r3+0x3D4 u32 0x50000000 0x50000000
+field 0230FD90 500000A7 u8 0 1
+field 0230FD90 50000098 f32 0,0,1
+ret 0230AC30 0 1                             # rakka_line_check
+ret 027F2BF8 0 1                             # checkPass
+# nz6_move
+field 02310544 r3+0x3D9 u8 0x45 0x4F
+field 02310544 r3+0x3DC u8 0 1
+field 02310544 r3+0x3E0 u32 0,0xFFFFFFFF
+field 02310544 r3+0x3E4 u32 0,0xFFFFFFFF,0x5D000000
+field 02310544 r3+0x3F2 i16 0 1
+field 02310544 r3+0x3F0 i16 0 1
+field 02310544 r3+0x400 i32 59990 60010
+field 02310544 r3+0x404 i32 0x14 0x16
+field 02310544 r3+0x8C4 u32 0,0x10,0x20,0x30
+field 02310544 r3+0x330 f32 0.85 1
+field 02310544 r3+0x3D4 u32 0x50000000 0x50000000
+field 02310544 500000A7 u8 0 1
+field 02310544 50000098 f32 0,0,1
+field 02310544 5F000008 i16 0x126,0xFF
+ret 025D5834 -1 3                            # fopAcM_create
+ret 020CB648 25 35                           # getBombRestTime
+ret 0230BD24 0 1                             # nezumi_move
+ret 0200FAAC 0x0F00 0x2B00                   # cLib_distanceAngleS
+fret 025D68EC 0 1300                         # searchActorDistance (40, 400, 500, 1200)
+fret 025D6958 0 1300                         # searchActorDistanceXZ (60, 400, 700, 1200)
+ret 0230BA9C 0 2                             # body_atari_check
+# daNZ_Execute
+field 0230BEF4 r3+0x3D8 u8 0,1,2,3,4,5,6
+field 0230BEF4 r3+0x3D9 u8 0,1,2,3,4,5,6,7,8,0xA,0xB,0xC,0xD,0x13,0x14,0x15,0x16,0x17,0x18,0x1E,0x1F,0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A,0x4E
+field 0230BEF4 r3+0x3F0 i16 0 1
+field 0230BEF4 r3+0x3F2 i16 0 1
+field 0230BEF4 r3+0x3F4 i16 0 1
+field 0230BEF4 r3+0x3F6 i16 0 1
+field 0230BEF4 r3+0x3E8 i16 0 2
+field 0230BEF4 r3+0x3EC i16 0x1E 0x20
+field 0230BEF4 r3+0x548 u8 0 1
+field 0230BEF4 r3+0x547 u8 0 1
+field 0230BEF4 r3+0x3DD u8 0 1
+field 0230BEF4 r3+0x3DA u8 9 11
+field 0230BEF4 r3+0x3D1 u8 0 1
+field 0230BEF4 r3+0x3E0 u32 0,0xFFFFFFFF
+field 0230BEF4 r3+0x3E4 u32 0,0xFFFFFFFF,0x5E000000
+field 0230BEF4 r3+0x2E8 u32 0 1
+field 0230BEF4 r3+0x320 i16 0,0,0,0x1000,-0x1000,0xFFF,0x7F81,-0x7FFF,0x2000
+field 0230BEF4 r3+0x324 i16 -1 1
+field 0230BEF4 r3+0x8C4 u32 0,0x10,0x20,0x30
+field 0230BEF4 r3+0x330 f32 0.1 1.1
+field 0230BEF4 r3+0x438 f32 0,0,1
+field 0230BEF4 r3+0x440 f32 0,0,1
+field 0230BEF4 r3+0x3D4 u32 0x50000000 0x50000000
+field 0230BEF4 500000A7 u8 0 1
+field 0230BEF4 50000098 f32 0,0,1
+field 0230BEF4 5000009C f32 9 11
+field 0230BEF4 55000318 f32 -500 500
+field 0230BEF4 101F84DC u32 0x53000000 0x53000000
+field 0230BEF4 53000024 u16 0,49,50,99,100,299,300,499,500,1000
+ret 020402C8 0 1                             # enemy_ice
+ret 025160DC 0 1                             # ChkAtHit
+ret 02515BBC 0x54FFFFFF 0x55000000           # GetAc: the player or another actor (1 in 8 unsteered)
+fret 02019788 0 1                            # cM_rnd
+callee 0201AD78 r4=out12                     # cXyz::operator+
+callee 025D8870 r3=12                        # fopAcM_createItem: pos
+field 0230BEF4 r3+0x318 f32 -200 1000
+field 0230BEF4 r3+0xAF0 u32 0 1
+ret 025D5218 0x5F000000 0x5F000000           # fopAcIt_Judge: a fixed actor
+field 0230BEF4 5F000008 i16 0x126,0xFF,0xC7
+field 0230BEF4 5F0003DA i16 0 1
+ret 02516464 0 0                             # ChkCoHit: mostly no

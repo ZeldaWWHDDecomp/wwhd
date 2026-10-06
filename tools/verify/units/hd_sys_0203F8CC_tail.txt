@@ -1,0 +1,15 @@
+# Verification unit: tail of the HD SystemTask TU hd_sys_0203F8CC past 0x02040000 (0204007C..020402C7)
+src wwhd_src/hd_sys/hd_sys_0203F8CC_tail.cpp
+
+# forwarding thunk: the global is null or set
+field 0204007C 0x101F4BD8 u32 0,0,0x20000000,0x20001000
+# type check: guards unset/set, the queried type = each static object or something else
+field 020401A8 0x101FD598 u32 0,1,0x80000000,0x100
+field 020401A8 0x101FD594 u32 0,1,0x80000000,0x100
+arg 020401A8 r4 0x101FD97C,0x101FD980,0x101FD980,0,0x100067DC
+# factories: allocation fails / succeeds; small heap index
+ret 0273B050 0,0x21000000,0x21002000
+field 02040220 r3+0 u32 0x22000000
+field 02040274 r3+0 u32 0x22000000
+field 02040220 0x22000014 u32 0,1,2,3
+field 02040274 0x22000014 u32 0,1,2,3

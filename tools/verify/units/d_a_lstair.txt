@@ -1,0 +1,20 @@
+src wwhd_src/d/actor/d_a_lstair.cpp
+field * r3+0x650 s32 0 255
+field * r3+0x65A u8 0 1
+field * r3+0x65B u8 0 1
+field * r3+0x659 s8 -2 2
+field * r3+0x654 u16 0 2
+field * r3+0xF8 u16 0 2
+ret 025BA0C0 0 1
+ret 025D98E8 0 1
+ret 025440C8 0 1
+ret 0254407C 0 1
+ret 0207A9A0 0 1
+ret 02520460 0 5
+ret 025D63E8 0 1
+arg 021B6A84 r4 0 3
+arg 021B6AA0 r4 0 3
+callee 025A847C stack=4 # actual fourth stack word is the optional particle scale vector
+callee 026066C4 r4=8 # SafeString string pointer and dispatch vtable
+callee 028E8F64 r4=12 r5=out12 # consumes input vector; writes exactly 12 output bytes
+observe 025E2DE0 0x104B4634 8 # model rendering consumes the selected display-list pointers

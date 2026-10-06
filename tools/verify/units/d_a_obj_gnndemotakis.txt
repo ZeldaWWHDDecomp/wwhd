@@ -1,0 +1,32 @@
+src wwhd_src/d/actor/d_a_obj_gnndemotakis.cpp
+stackfill
+callee 026066C4 r4=8
+ret 025E38E0 0,0x56000000
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 025E7CE0 0,1
+field * 101F4F28 u32 0x5A123400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3AC u32 0,0x56000000
+field * r3+0xB0 u32 0,1,14,15,16,17,31,0xFFFFFFFF
+field * r3+0x42C i32 -1,0,1,2
+field * r3+0x3C0 i16 -32768,-1,0,1,32767
+arg! 0234BE44 r3 0,0x40000000
+arg! 0234BE58 r3 0,0x40000000
+# Coherent live play singleton and embedded stage string, with mismatches retained.
+ret 025200D4 0x58000000 0x58000000
+field * 58005134 u8 71,71,88
+field * 58005135 u8 84
+field * 58005136 u8 111
+field * 58005137 u8 119
+field * 58005138 u8 101
+field * 58005139 u8 114
+field * 5800513A u8 0
+field * 58005292 u8 0,1,255
+ret 025445B8 0,1
+field * 101D600C u32 0,4568,4569,4570,4718,4719,4720,0xFFFFFFFF
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0234BB78 0x58005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","XTower","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before","g2before"

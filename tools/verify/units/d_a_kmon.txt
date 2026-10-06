@@ -1,0 +1,23 @@
+# Verification unit: d_a_kmon (bell, Orca's talk target)
+src wwhd_src/d/actor/d_a_kmon.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E38E0 0,0x10000000,0x10000100  # model create
+ret 025E7CE0 0 1              # btk init
+ret 025E8508 0 1              # bck init
+ret 025B8B94 0 1              # isEventBit
+field * r3+0x2E4 u32 0,8      # actor_condition INIT
+field * r3+0x2E8 u32 0xFFFFFFFF,1,2
+field * r3+0xF8 u16 0,1,1,2   # event command
+fret 028F4384 250 350         # sqrtf: distance around 300
+field * r3+0x318 f32 150 250  # current.pos.y around 200
+# the Ji1 (mpJi1) at a fixed address: its action PTMF
+field * r3+0x6BC u32 0x50000000
+field * 500003CC i16 0,0,0,4
+field * 500003CE i16 -1,-1,0,1,2
+field * 500003D0 u32 0x022596CC,0x022596CC,0x02250A1C
+stackfill periodic

@@ -1,0 +1,46 @@
+#include "gabi.h"
+using namespace gabi;
+namespace rain_wave {
+static f32 lf(u32 p){return load<f32>(p);} static void sf(u32 p,f32 v){store<f32>(p,v);}
+static f32 dist(u32 a,u32 b){call(0x028E8DE8,at<void>(a),at<void>(b));return call<f32>(0x028F4384);}
+static void pos(u32 out,u32 p){sf(out,fadds_ppc(lf(p+0xC),lf(p)));sf(out+4,fadds_ppc(lf(p+0x10),lf(p+4)));sf(out+8,fadds_ppc(lf(p+0x14),lf(p+8)));}
+// Each SafeString is its real eight-byte object. Keep both termination calls
+// and capture the first pointer before the second object's termination call.
+static bool stage(u32 name,u32 a,u32 b){store<u32>(a,name);store<u32>(a+4,0x1004F3AC);u32 game=call<u32>(0x025200D4);store<u32>(b,game+0x5134);store<u32>(b+4,0x1004F3AC);call_ptr(load<u32>(load<u32>(a+4)+0x14),at<void>(a));call_ptr(load<u32>(load<u32>(a+4)+0x14),at<void>(a));u32 first=load<u32>(a);call_ptr(load<u32>(load<u32>(b+4)+0x14),at<void>(b));u32 second=load<u32>(b);if(first==second)return true;for(u32 i=0;i<0x40001;i++){u8 x=load<u8>(first+i),y=load<u8>(second+i);if(x!=y)return false;if(!x)return true;}return false;}
+void move(){WWHD_FUNC(0x0256A448,void);
+ u32 env0=call<u32>(0x02555D0C);f32 zero=lf(0x1004F528),sea=zero;Local<u8[392]> work;u32 s=ea(work.get()),wind=s+0x60,eye=s+0x34,point=s+0xC,scratch=s+0x18,finalpos=s+0x40,direction=s+0x6C,normal=s+0x130,doublePos=s+0x140;
+ call(0x0257DB28,at<void>(wind));u32 env=call<u32>(0x02555D0C),packet=load<u32>(env+0xAA0),game=call<u32>(0x025200D4),camera=load<u32>(game+0x5AF8);game=call<u32>(0x025200D4);s32 room=load<s8>(0x1047E6C8);u32 player=load<u32>(game+0x5B2C);
+ if(room>=0){game=call<u32>(0x025200D4);u32 roomData=call<u32>(0x025C11DC,at<void>(game+0x51CC),room),target=load<u32>(load<u32>(roomData)+0x1DC);u32 info=call_ptr<u32>(target,at<void>(roomData),target);if(info)sea=lf(info+4);}
+ if(stage(0x1004F878,s+0x58,s+0xD0))sea=lf(0x1004F558);
+ else if(stage(0x1004F890,s+0x80,s+0xE0))sea=lf(0x1004F848);
+ else if(stage(0x1004F898,s+0x88,s+0xE8))sea=lf(0x1004F84C);
+ else if(stage(0x1004F880,s+0x90,s+0xF0))sea=lf(0x1004F5C8);
+ else if(stage(0x1004F8A0,s+0x98,s+0xF8))sea=lf(0x1004F5C8);
+ else if(stage(0x1004F888,s+0xA0,s+0x100))sea=lf(0x1004F5C8);
+ game=call<u32>(0x025200D4);if(!load<u32>(game+0x5FA4))return;
+ game=call<u32>(0x025200D4);u32 view=load<u32>(game+0x5FA4);call(0x028E91EC,at<void>(view+0x1E4),at<void>(s+0x158));env=call<u32>(0x02555D0C);call(0x0256401C,at<void>(camera),at<void>(eye),lf(env+0x9DC),zero);
+ u32 windptr=call<u32>(0x0257DAA8);f32 power=call<f32>(0x02578348),wz=lf(windptr+8),wx=lf(windptr),wy=lf(windptr+4),side=lf(0x1004F740);
+ if(!stage(0x1004F8A8,s+0x58,s+0xD8)){game=call<u32>(0x025200D4);u32 info=call_ptr<u32>(load<u32>(load<u32>(game+0x5150)+0x15C),at<void>(game+0x5150));if(((load<u32>(info+0xC)>>16)&7)==2){s32 stageY=0;
+  if(stage(0x1004F8A0,s+0xA8,s+0x108))stageY=0x4000;else if(stage(0x1004F898,s+0xB0,s+0x110))stageY=-0x4000;else if(stage(0x1004F880,s+0xB8,s+0x118))stageY=0x7FFF;else if(stage(0x1004F8B0,s+0xC0,s+0x120))stageY=-0x4000;else if(stage(0x1004F888,s+0xC8,s+0x128))stageY=0x4000;
+  u32 save=load<u32>(0x101F84DC);s32 ax,ay;if(load<s16>(save+0x4A)==-1&&load<s16>(save+0x4C)==-1){ax=0;ay=stageY;}else{env=call<u32>(0x02555D0C);ax=load<u16>(env+0xA24);env=call<u32>(0x02555D0C);ay=(s16)(load<s16>(env+0xA26)+stageY);}u32 tx=0x104A44F8+(((u32)ax&0xFFFF)>>3)*8,ty=0x104A44F8+(((u32)ay&0xFFFF)>>3)*8;wx=fmuls_ppc(lf(tx+4),lf(ty+4));wy=lf(tx);wz=fmuls_ppc(lf(tx+4),lf(ty));sf(wind,fmuls_ppc(wx,side));sf(wind+4,fmuls_ppc(wy,side));sf(wind+8,fmuls_ppc(wz,side));power=side;
+ }}
+ store<f64>(doublePos,(f64)fsubs_ppc(lf(camera+0xE8),lf(camera+0xDC)));store<f64>(doublePos+8,load<f64>(0x1004F530));store<f64>(doublePos+16,(f64)fsubs_ppc(lf(camera+0xF0),lf(camera+0xE4)));call(0x02563E48,at<void>(doublePos),at<void>(normal));f32 cross=call<f32>(0x02010CFC,zero,zero,-wx,-wz,lf(normal),lf(normal+8));sf(packet+0x4244,cross);f32 one=lf(0x1004F550),dot=fmadds(wx,lf(normal),fmuls_ppc(wz,lf(normal+8)));sf(packet+0x4240,fmuls_ppc(fmuls_ppc(fmuls_ppc(fsubs_ppc(one,std::fabs(dot)),power),fsubs_ppc(one,std::fabs(wy))),fmuls_ppc(std::fabs(cross),side)));
+ env=call<u32>(0x02555D0C);s32 count=load<s16>(env+0x9F8);if(count<=0)return;f32 half=lf(0x1004F57C),alphaFactor=lf(0x1004F854),bias=lf(0x1004F554),gain=lf(0x1004F858);sf(s+8,lf(0x1004F58C));
+ for(s32 i=0;i<count;i++){u32 p=packet+0xA0+(u32)i*0x38;env=call<u32>(0x02555D0C);u8 state=load<u8>(p+0x34);if(load<u8>(env+0x9FA)){store<u8>(p+0x34,0);state=0;}
+  if(state==0){sf(p+0xC,lf(eye));sf(p+0x10,sea);sf(p+0x14,lf(eye+8));env=call<u32>(0x02555D0C);sf(p,call<f32>(0x02019918,lf(env+0x9E0)));sf(p+4,zero);env=call<u32>(0x02555D0C);sf(p+8,call<f32>(0x02019918,lf(env+0x9E0)));sf(p+0x24,call<f32>(0x020198D8,lf(0x1004F748)));sf(p+0x28,zero);f32 random=call<f32>(0x020198D8,lf(0x1004F59C));sf(p+0x2C,one);store<u16>(p+0x32,(u16)ftoi(random));u32 held=call<u32>(0x02555D0C);env=call<u32>(0x02555D0C);random=call<f32>(0x020198D8,fsubs_ppc(one,lf(env+0x9E8)));f32 scale=fadds_ppc(lf(held+0x9E8),random);sf(p+0x1C,scale);sf(p+0x18,scale);f32 rate=fmadds(lf(0x1004F590),fsubs_ppc(one,scale),lf(0x1004F734));env=call<u32>(0x02555D0C);sf(p+0x20,fmuls_ppc(rate,lf(env+0x9EC)));store<u16>(p+0x30,0);store<u8>(p+0x34,load<u8>(p+0x34)+1);state=1;}
+  if(state==1||state==2){env=call<u32>(0x02555D0C);f32 strength=lf(p+0x2C),speedEnv=lf(env+0x9D8),windx=lf(wind),speed=lf(p+0x18),alpha=lf(p+0x28);f32 motion=fmuls_ppc(fmuls_ppc(fmuls_ppc(windx,speedEnv),speed),fmadds(strength,half,half)),af=fmadds(alpha,alphaFactor,bias);sf(p,fmadds(motion,af,lf(p)));
+   env=call<u32>(0x02555D0C);strength=lf(p+0x2C);speedEnv=lf(env+0x9D8);f32 windz=lf(wind+8);speed=lf(p+0x18);alpha=lf(p+0x28);motion=fmuls_ppc(fmuls_ppc(fmuls_ppc(windz,speedEnv),speed),fmadds(strength,half,half));af=fmadds(alpha,alphaFactor,bias);f32 z=fmadds(motion,af,lf(p+8)),counterSpeed=lf(p+0x20),counter=lf(p+0x24);sf(p+8,z);sf(p+0x24,fadds_ppc(counter,counterSpeed));pos(point,p);f32 d=dist(point,eye);env=call<u32>(0x02555D0C);
+   if(d>lf(env+0x9E0)){sf(p+0xC,lf(eye));sf(p+0x14,lf(eye+8));d=dist(point,eye);env=call<u32>(0x02555D0C);if(d>fadds_ppc(lf(env+0x9E0),lf(0x1004F874))){env=call<u32>(0x02555D0C);sf(p,call<f32>(0x02019918,lf(env+0x9E0)));env=call<u32>(0x02555D0C);sf(p+8,call<f32>(0x02019918,lf(env+0x9E0)));}else{call(0x02563F0C,at<void>(point),at<void>(eye),at<void>(direction));env=call<u32>(0x02555D0C);sf(p,fmuls_ppc(lf(direction),lf(env+0x9E0)));env=call<u32>(0x02555D0C);sf(p+8,fmuls_ppc(lf(direction+8),lf(env+0x9E0)));}sf(p+0x28,zero);}
+   pos(point,p);sf(p+0x2C,one);for(u32 j=0;j<10;j++){u32 influence=load<u32>(env0+0xAEC+j*4);if(!influence)continue;sf(influence+4,lf(point+4));influence=load<u32>(env0+0xAEC+j*4);d=dist(point,influence);influence=load<u32>(env0+0xAEC+j*4);f32 outer=lf(influence+0xC),inner=lf(influence+0x10);if(d<outer){if(d<inner){sf(p+0x2C,zero);break;}f32 range=fsubs_ppc(outer,inner);if(range>zero){f32 ratio=fsubs_ppc(d,inner)/range;if(lf(p+0x2C)>ratio)sf(p+0x2C,ratio);}else sf(p+0x2C,zero);}}
+   env=call<u32>(0x02555D0C);if(lf(env+0x9F4)>zero){store<u32>(scratch,load<u32>(camera+0xDC));store<u32>(scratch+4,load<u32>(camera+0xE0));store<u32>(scratch+8,load<u32>(camera+0xE4));sf(scratch+4,lf(point+4));d=dist(point,scratch);u32 held=call<u32>(0x02555D0C);env=call<u32>(0x02555D0C);f32 inner=fmuls_ppc(lf(held+0x9F4),fmuls_ppc(lf(env+0x9E0),lf(0x1004F744))),range=fsubs_ppc(fadds_ppc(inner,lf(0x1004F720)),inner);if(range>zero){f32 ratio=fsubs_ppc(d,inner)/range;if(lf(p+0x2C)>ratio)sf(p+0x2C,ratio);}else sf(p+0x2C,zero);}
+   store<u32>(scratch,load<u32>(player+0x314));store<u32>(scratch+4,load<u32>(player+0x318));store<u32>(scratch+8,load<u32>(player+0x31C));sf(scratch+4,lf(point+4));d=dist(point,scratch);if(d<lf(0x1004F540)){if(d<lf(0x1004F52C))sf(p+0x2C,zero);else sf(p+0x2C,fmuls_ppc(lf(p+0x2C),fsubs_ppc(d,lf(0x1004F52C))/lf(0x1004F538)));}
+   if(stage(0x1004F8B8,s+0x24,s+0x2C)){sf(s+0x4C,lf(0x1004F870));sf(s+0x50,lf(0x1004F86C));sf(s+0x54,lf(0x1004F868));sf(s,zero);sf(s+4,lf(0x1004F860));sf(scratch,lf(s+0x4C));sf(scratch+4,lf(point+4));sf(scratch+8,lf(s+0x54));d=dist(point,scratch);if(d<lf(0x1004F850)){if(d<lf(0x1004F7E8))sf(p+0x2C,zero);else sf(p+0x2C,fmuls_ppc(lf(p+0x2C),fsubs_ppc(d,lf(0x1004F7E8))/lf(0x1004F540)));}
+    sf(scratch,zero);sf(scratch+4,lf(point+4));sf(scratch+8,lf(s));d=dist(point,scratch);if(d<lf(0x1004F85C)){if(d<lf(0x1004F614))sf(p+0x2C,zero);else sf(p+0x2C,fmuls_ppc(lf(p+0x2C),fsubs_ppc(d,lf(0x1004F614))/lf(0x1004F7E8)));}
+    sf(scratch,lf(0x1004F864));sf(scratch+4,lf(point+4));sf(scratch+8,lf(s+4));d=dist(point,scratch);if(d<lf(0x1004F614)){if(d<lf(0x1004F850))sf(p+0x2C,zero);else sf(p+0x2C,fmuls_ppc(lf(p+0x2C),fsubs_ppc(d,lf(0x1004F850))/lf(0x1004F7E8)));}
+   }
+  }else if(state==3)store<u8>(p+0x34,0);
+  pos(finalpos,p);f32 d=dist(finalpos,camera+0xDC);if(!(d>=0))d=zero;env=call<u32>(0x02555D0C);f32 radius=lf(env+0x9DC),alpha=fsubs_ppc(one,d/fadds_ppc(radius,radius)),angle=lf(p+0x24);alpha=fmuls_ppc(alpha,gain);f32 sine=call<f32>(0x028F43F8,angle);alpha=fmuls_ppc(alpha,sine);if(alpha>one)alpha=one;else if(!(alpha>=0))alpha=zero;call(0x0200ECD4,at<void>(p+0x28),alpha,half,half,lf(s+8));sf(p+0x10,sea);env=call<u32>(0x02555D0C);count=load<s16>(env+0x9F8);
+ }
+}
+}
+VERIFY(0x0256A448,rain_wave::move);

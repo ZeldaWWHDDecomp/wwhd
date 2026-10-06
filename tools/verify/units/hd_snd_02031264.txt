@@ -1,0 +1,11 @@
+# hd_snd_02031264: TUs 02031264..02031A97 (HD BGM/JAudio controller, SE player wrapper); HD-only
+src wwhd_src/hd/hd_snd_02031264.cpp
+arg 020312CC r3 0,0xFFFFFF9C,0x65000000
+field * 101F9FF4 u32 0,0x66000000
+field 0203151C r3+0x44 f32 0,0,1,0.5
+field 020315CC r3+0x10 u8 0,1
+field 020315CC r3+0x68 s32 -1,0,1,2
+field 020315CC r3+0x64 u32 0,1
+field 020315CC r3+0xC u32 0,0x67000000
+field 020315CC 67000030 u8 0,1
+field 020314C4 r3+0x10 u8 0,1

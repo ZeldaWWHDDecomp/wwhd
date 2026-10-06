@@ -1,0 +1,65 @@
+src wwhd_src/d/actor/d_a_obj_barrel2.cpp
+field * r3+0x52c u32 0 3
+field 02320968 r3+0x528 u32 0 8
+field 0231FD50 r3+0x528 u32 0 10
+field 023210E0 r3+0x528 u32 0 8
+callee 025D54C4 r4=out4
+arg 02322374 r4 0,1,8,31,32,33,63
+arg 02322374 r5 0,1,8,24,31,32,33,63
+# HD particle set includes a leading draw type argument absent in GC matcher signature.
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+callee 023123D8 r3=out16 r4=12
+callee 0201AE48 r4=out12
+callee 0201B080 r4=out12
+callee 0201B3C0 r4=out12
+callee 0201B31C r4=out12
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 02322374 0 3
+callee 0201A478 r3=out6
+callee 026066C4 r4=8
+# Globals in BSS need explicit null and live actor branches.
+field * 101C7F30 u32 0,0x50000000
+field 0231E84C r5+0xE i16 0,0xA5
+field 0231E84C r5+0x370 f32 0,25,26,100
+field 0231E84C r3+0x589 u8 0,1
+field 0231E84C r3+0x52C u32 0,1,2,3
+field * r3+0x52C u32 0,1,2,3,4,0xFFFFFFFF
+field 02320AD4 r3+0x528 i32 0,1,2,3,4,5,6,7,8
+field 02320AD4 r3+0x58C i32 0,1,2,3
+field 02320AD4 r3+0x590 u8 0,1
+field 02320AD4 r3+0x591 u8 0,1
+field 02320AD4 r3+0x584 u8 0,1
+field 0232101C r3+0x528 i32 0,1,2,3
+field 0232101C r3+0x590 u8 0,1
+field 0232101C r3+0x591 u8 0,1
+field 0232101C r3+0x586 i16 0,1
+field 0232101C r3+0x2E4 u32 0,4
+field 023213F8 r3+0x588 u8 0,1
+field 02321D54 r3+0x580 i32 -1,0,1,2,30
+ret 02516300 0,0x50000000
+callee 025A866C r5=12 r6=6 r7=12
+# Mutation-discovered pointee facts: complete vectors and matrix/quaternion inputs.
+callee 0245A028 r4=12
+callee 0201B080 r3=12 r5=12
+callee 0201AE48 r3=12
+callee 028E8F44 r3=12 r4=12
+callee 028E9044 r3=48 r4=12 r5=out12
+callee 025F25CC r3=16
+
+# Exact comparison boundaries from RPX attributes.
+field 02320AD4 r3+0x578 f32 0,90000
+fret 028E8F44 0 160000
+fret 025D69AC 0 490000
+field 02321B74 r3+0x56C f32 -338,-250
+field 02321B74 r3+0x570 f32 5,0
+
+# HD brk init passes one argument beyond r3-r10.
+callee 025E8154 stack=1
+
+# Compare the sway inputs at the water-helper call. Nested real mocks omit output writes,
+# so running this stateful helper would consume uninitialized output stack storage.
+
+stackfill
+arg! 0231F350 r3 0x40000000
+observe 0231EA58 40000548 16

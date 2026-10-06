@@ -1,0 +1,27 @@
+src wwhd_src/d/actor/d_a_obj_otble.cpp
+callee 026066C4 r4=8
+callee 024F06B4 stack=1
+observe 025E2DE0 104B4634 8
+field * r3+0x3B0 s32 0,1
+field * r3+0x2E4 u32 0,8,16,24
+field * 101FDC40 u32 0,1
+field * r3+0xB0 u32 0,1,2,255,256
+# Materialize actual matrix results, so actor/model matrix copies are meaningful.
+real 028E93CC
+real 025F1C28
+real 028E90D4
+# Valid heap structures and full input/output snapshots.
+field * r3+0x3AC u32 0x11010000,0
+field * r3+0x3BC u32 0x11020000,0
+field * 11020000 u32 0,255,256,257
+field * 101F4F28 u32 0x11030000
+real 025200D4
+field * 104753A8 u32 1
+callee 024F08A8 r3=255
+callee 024F06B4 r4=12 r5=12 r9=12
+callee 0200A030 r6=48
+callee 024F43DC r3=255
+callee 025D6870 r3=255
+callee 025626A4 r5=12
+callee 025D63E8 r3=255
+callee 028E90D4 r3=48

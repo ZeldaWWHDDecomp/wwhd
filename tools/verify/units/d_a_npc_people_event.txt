@@ -1,0 +1,38 @@
+# Verification unit (temporary, merged into d_a_npc_people): event order/cut functions, message-tag animations
+src wwhd_src/d/actor/d_a_npc_people_event.cpp wwhd_src/d/actor/d_a_npc_people_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0259D624 r3=12 r4=12   # dNpc_calc_DisXZ_AngY(cXyz copies)
+callee 025154C4 r4=12         # dCamera_c::SetExtendedPosition(&pos)
+callee 02560BCC r3=out12      # dKy_get_moon_pos (hidden result)
+callee 0256099C r3=out12      # dKy_get_orion_pos
+callee 02560AB4 r3=out12      # dKy_get_hokuto_pos
+
+# coverage steering
+ret 022C1BBC 0,0x12,0x11       # talk2: message status (0x12 box closed)
+ret 022C1FD8 0,0x12            # talk3
+ret 025B8B94 0 1               # dSv_event_c::isEventBit
+ret 02520C0C 0 1               # dComIfGs_checkGetItem
+ret 0254487C 0,0x59000000      # getMySubstanceP: null or a steered integer
+field 022C0BF8 59000000 u32 1,0x358C,0x3594,0x359A,0x1234
+field 022C0BF8 r3+0x7C0 u32 0x358C,0x358D
+field 022C1384 59000000 u32 0,1,2
+ret 025200D4 0x54000000 0x54000000
+field 022C1384 54005BE6 u8 4,5
+field 022C045C r3+0xF8 u16 0,1,2
+field 022C045C r3+0x905 u8 0,9,0x13,0xFF
+field 022C045C r3+0x901 u8 0,1,2,3,7,8,9,0xB,0xC,0xD,0xF
+field 022C045C r3+0x8FC u8 0 1
+arg 022C8570 r4 -1 10
+arg 022C85DC r4 -1 10
+# mutation-driven steering
+field 022C1B24 54005BC5 u8 0x32,0x33,0,1,2
+field 022C0840 r3+0x905 u8 0,3,4,6,8,9,0xB,0xE,0x10,0x11,0x12
+field 022C0840 r3+0x8CC u32 0,1,0x100000,0x100001
+field 022C0840 r3+0x8F2 u16 0,8,0x8000,0x8008
+field 022C2A04 r3+0x901 u8 0,1,2,3,7,8,9,0xA,0xB,0xC,0xD,0xF
+field 022C2A04 r3+0x8F2 u16 0,1,0x8000,0x8001
+field 022C2458 r3+0x905 u8 2,3,4,5
+field 022C2458 r3+0x909 u8 0,1,2,3
+ret 022BFF78 0 7               # getRand(8)
+field 022C0BF8 r3+0x8CC u32 0,0x800

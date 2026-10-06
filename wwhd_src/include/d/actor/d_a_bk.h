@@ -1,0 +1,441 @@
+/* bk_class (Bokoblin), WWHD layout. 
+ *
+ * GameCube -> WWHD (size 0x1848 -> 0x19A4, constructor 0209F74C):
+ * - +0x11C up to m02DE (fopEn_enemy_c as assumed in f_op_actor.h: mPhase at 0x3C8);
+ * - mShadowId/0x2E4 (GameCube 0x2E0..0x2E8) shrank by 4 (HD shadows): +0x118 from m02E8;
+ * - HD: a dPa_followEcallBack (0x14) after m0350, at 0x488;
+ * - damagereaction (c_damagereaction) grew by 0x34 (its joint arrays have 21 entries, m3D0 15):
+ *   +0x160 from m0B2C;
+ * - the padding before m1260 shrank by 8: +0x158 for m1260, mEnemyIce, mEnemyFire;
+ * - enemyfire grew by 4 (LIGHT_INFLUENCE 0x24): +0x15C for mpJntHit.
+ * Offsets from the verified functions. */
+#pragma once
+#include "bindings.h"
+
+/* ---- shared classes, local layouts (SHARED-CANDIDATE) ---- */
+
+/* dPa_smokeEcallBack (0x20) / dPa_followEcallBack (0x14): vtable at +0 (JPACallBackBase has no
+ * members); remove() is the virtual at +0x44 */
+struct dPa_smokeEcallBack_l {
+    /* 0x00 */ be<u32> __vtbl;
+    /* 0x04 */ u8 _04[0x20 - 0x04];
+};
+WWHD_SIZE(dPa_smokeEcallBack_l, 0x20);
+struct dPa_followEcallBack_l {
+    /* 0x00 */ be<u32> __vtbl;
+    /* 0x04 */ u8 _04[0x14 - 0x04];
+};
+WWHD_SIZE(dPa_followEcallBack_l, 0x14);
+
+/* damagereaction (c_damagereaction), HD: the joint arrays have 21 entries (GameCube 20) and
+ * m3D0 has 15 (GameCube 14), so everything from m408 on is +0x34 (size 0x7F0). */
+struct damagereaction_l {
+    /* 0x000 */ gptr<fopEn_enemy_c> mpEnemy;
+    /* 0x004 */ be<s16> mMode;
+    /* 0x006 */ be<s16> mAction;
+    /* 0x008 */ be<s16> mEnemyType;
+    /* 0x00A */ u8 m00A[2];
+    /* 0x00C */ be<s32> mTimer;
+    /* 0x010 */ csXyz m010[21];
+    /* 0x08E */ csXyz m088[21];
+    /* 0x10C */ cXyz m100[21];
+    /* 0x208 */ cXyz m1F0[21];
+    /* 0x304 */ cXyz m2E0[21];
+    /* 0x400 */ be<s32> m3D0[15];
+    /* 0x43C */ be<s32> m408;          /* GameCube 0x408 */
+    /* 0x440 */ be<s32> m40C;
+    /* 0x444 */ be<s32> m410;
+    /* 0x448 */ be<s32> m414;
+    /* 0x44C */ be<s32> m418;
+    /* 0x450 */ u8 m41C[4];
+    /* 0x454 */ be<s32> m420;
+    /* 0x458 */ be<s32> m424;
+    /* 0x45C */ be<f32> m428;
+    /* 0x460 */ cXyz m42C;
+    /* 0x46C */ be<s32> m438;
+    /* 0x470 */ u8 m43C[4];
+    /* 0x474 */ be<s16> m440;
+    /* 0x476 */ be<s16> m442;
+    /* 0x478 */ be<s16> m444;
+    /* 0x47A */ be<s16> m446;
+    /* 0x47C */ be<s16> m448;
+    /* 0x47E */ u8 m44A[2];
+    /* 0x480 */ cXyz m44C;
+    /* 0x48C */ cXyz m458;
+    /* 0x498 */ u8 m464[4];
+    /* 0x49C */ be<f32> m468;
+    /* 0x4A0 */ be<f32> m46C;
+    /* 0x4A4 */ be<f32> m470;
+    /* 0x4A8 */ be<f32> m474;
+    /* 0x4AC */ be<f32> m478;
+    /* 0x4B0 */ be<s32> m47C;
+    /* 0x4B4 */ be<s16> m480;
+    /* 0x4B6 */ be<s16> m482;
+    /* 0x4B8 */ be<s16> m484;
+    /* 0x4BA */ be<s16> m486;
+    /* 0x4BC */ be<s16> m488;
+    /* 0x4BE */ be<s16> m48A;
+    /* 0x4C0 */ csXyz m48C;
+    /* 0x4C6 */ be<s16> m492;
+    /* 0x4C8 */ be<s16> m494;
+    /* 0x4CA */ be<s16> m496;
+    /* 0x4CC */ be<s16> m498;
+    /* 0x4CE */ be<s16> m49A;
+    /* 0x4D0 */ be<s16> m49C;
+    /* 0x4D2 */ be<s16> m49E;
+    /* 0x4D4 */ be<s16> m4A0;
+    /* 0x4D6 */ be<s16> m4A2;
+    /* 0x4D8 */ be<s16> m4A4;
+    /* 0x4DA */ be<s16> m4A6;
+    /* 0x4DC */ be<s16> m4A8;
+    /* 0x4DE */ be<s16> m4AA;
+    /* 0x4E0 */ be<s16> m4AC;
+    /* 0x4E2 */ be<s16> m4AE;
+    /* 0x4E4 */ be<s16> m4B0;
+    /* 0x4E6 */ be<s16> m4B2;
+    /* 0x4E8 */ be<s16> m4B4;
+    /* 0x4EA */ be<s16> m4B6;
+    /* 0x4EC */ be<s16> m4B8;
+    /* 0x4EE */ be<s16> m4BA;
+    /* 0x4F0 */ be<s16> m4BC;
+    /* 0x4F2 */ be<s16> m4BE;
+    /* 0x4F4 */ be<s16> m4C0;
+    /* 0x4F6 */ u8 m4C2[6];
+    /* 0x4FC */ be<s16> m4C8[3];
+    /* 0x502 */ be<s16> mInvincibleTimer;
+    /* 0x504 */ be<s16> m4D0;
+    /* 0x506 */ u8 m4D2[2];
+    /* 0x508 */ be<f32> m4D4;
+    /* 0x50C */ u8 m4D8[4];
+    /* 0x510 */ dBgS_AcchCir mAcchCir;   /* GameCube 0x4DC */
+    /* 0x550 */ dBgS_ObjAcch mAcch;      /* GameCube 0x51C */
+    /* 0x714 */ be<s32> m6E0;
+    /* 0x718 */ be<f32> mSpawnY;
+    /* 0x71C */ cXyz m6E8;
+    /* 0x728 */ cXyz m6F4[2];
+    /* 0x740 */ be<u8> m70C;
+    /* 0x741 */ be<u8> m70D;
+    /* 0x742 */ be<u8> m70E;
+    /* 0x743 */ u8 m70F;
+    /* 0x744 */ be<u8> m710;
+    /* 0x745 */ be<u8> m711;
+    /* 0x746 */ be<u8> m712;
+    /* 0x747 */ be<u8> m713;
+    /* 0x748 */ gptr<fopAc_ac_c> m714;
+    /* 0x74C */ be<s16> m718;
+    /* 0x74E */ be<s16> m71A;
+    /* 0x750 */ u8 m71C[2];
+    /* 0x752 */ be<s16> m71E;
+    /* 0x754 */ be<f32> mMaxFallDistance;
+    /* 0x758 */ dCcD_Stts mStts;         /* GameCube 0x724 */
+    /* 0x794 */ cXyz mParticlePos;
+    /* 0x7A0 */ csXyz mParticleAngle;
+    /* 0x7A6 */ u8 m772[2];
+    /* 0x7A8 */ dPa_smokeEcallBack_l mParticleCallBack;
+    /* 0x7C8 */ be<s16> m794;
+    /* 0x7CA */ u8 m796[2];
+    /* 0x7CC */ be<f32> m798;
+    /* 0x7D0 */ gptr<cXyz> m79C;
+    /* 0x7D4 */ cXyz m7A0;
+    /* 0x7E0 */ csXyz m7AC;
+    /* 0x7E6 */ be<s16> m7B2;
+    /* 0x7E8 */ be<s16> m7B4;
+    /* 0x7EA */ be<u8> m7B6;
+    /* 0x7EB */ u8 m7B7;
+    /* 0x7EC */ be<u32> m7B8;
+};
+WWHD_OFFSET(damagereaction_l, m100, 0x10C);
+WWHD_OFFSET(damagereaction_l, mAcchCir, 0x510);
+WWHD_OFFSET(damagereaction_l, mSpawnY, 0x718);
+WWHD_OFFSET(damagereaction_l, m713, 0x747);
+WWHD_OFFSET(damagereaction_l, mStts, 0x758);
+WWHD_OFFSET(damagereaction_l, mParticleCallBack, 0x7A8);
+WWHD_SIZE(damagereaction_l, 0x7F0);
+
+/* enemyice (unchanged size 0x3B8) */
+struct enemyice_l {
+    /* 0x000 */ gptr<fopAc_ac_c> mpActor;
+    /* 0x004 */ be<s16> mFreezeDuration;
+    /* 0x006 */ be<s8> mLightShrinkTimer;
+    /* 0x007 */ u8 m007;
+    /* 0x008 */ be<f32> mYOffset;
+    /* 0x00C */ be<s8> m00C;
+    /* 0x00D */ be<s8> mMode;
+    /* 0x00E */ be<s16> mFreezeTimer;
+    /* 0x010 */ be<s16> mMoveDelayTimer;
+    /* 0x012 */ be<s16> mAngleY;
+    /* 0x014 */ be<s16> mAngularVelY;
+    /* 0x016 */ u8 m016[2];
+    /* 0x018 */ cXyz mSpeed;
+    /* 0x024 */ be<f32> mSpeedF;
+    /* 0x028 */ be<f32> m028;
+    /* 0x02C */ be<f32> m02C;
+    /* 0x030 */ dCcD_Stts mStts;
+    /* 0x06C */ dCcD_Cyl mCyl;
+    /* 0x19C */ be<f32> mCylHeight;
+    /* 0x1A0 */ be<f32> mWallRadius;
+    /* 0x1A4 */ be<f32> mScaleXZ;
+    /* 0x1A8 */ be<f32> mScaleY;
+    /* 0x1AC */ be<f32> mParticleScale;
+    /* 0x1B0 */ be<u8> m1B0;
+    /* 0x1B1 */ be<u8> mDeathSwitch;
+    /* 0x1B2 */ u8 m1B2[2];
+    /* 0x1B4 */ dBgS_AcchCir mBgAcchCir;
+    /* 0x1F4 */ dBgS_ObjAcch mBgAcch;
+};
+WWHD_SIZE(enemyice_l, 0x3B8);
+
+/* enemyfire, HD 0x22C (constructor 0209F6C0; LIGHT_INFLUENCE grew by 4) */
+struct enemyfire_l {
+    /* 0x000 */ gptr<fopAc_ac_c> mpActor;
+    /* 0x004 */ be<s16> mFireDuration;
+    /* 0x006 */ be<s8> mMode;
+    /* 0x007 */ u8 m007;
+    /* 0x008 */ be<s16> mFireTimer;
+    /* 0x00A */ u8 m00A[2];
+    /* 0x00C */ gptr<mDoExt_McaMorf> mpMcaMorf;
+    /* 0x010 */ be<s8> mFlameJntIdxs[10];
+    /* 0x01A */ u8 m01A[2];
+    /* 0x01C */ be<f32> mParticleScale[10];
+    /* 0x044 */ be<s16> mFlameTimers[10];
+    /* 0x058 */ be<u32> mpFlameEmitters[10];
+    /* 0x080 */ cXyz mPrevPos;
+    /* 0x08C */ cXyz mDirection;
+    /* 0x098 */ be<f32> mFlameScaleY;
+    /* 0x09C */ u8 m09C;
+    /* 0x09D */ be<u8> mHitboxFlameIdx;
+    /* 0x09E */ u8 m09E[2];
+    /* 0x0A0 */ dCcD_Stts mStts;
+    /* 0x0DC */ dCcD_Sph mSph;
+    /* 0x208 */ u8 mLight[0x24];         /* LIGHT_INFLUENCE (HD 0x24; +0x20 = 1.0f) */
+};
+WWHD_SIZE(enemyfire_l, 0x22C);
+
+WWHD_OPAQUE(br_s);
+WWHD_OPAQUE(JntHit_c);
+WWHD_OPAQUE(daObj_Search_Act_c);
+
+struct bk_class : fopEn_enemy_c {
+    /* 0x3C8 */ request_of_phase_process_class mPhase;
+    /* 0x3D0 */ be<u8> mType;
+    /* 0x3D1 */ be<u8> m02B5;
+    /* 0x3D2 */ be<u8> m02B6;
+    /* 0x3D3 */ be<u8> m02B7;
+    /* 0x3D4 */ be<u8> m02B8;
+    /* 0x3D5 */ be<u8> m02B9;
+    /* 0x3D6 */ be<u8> m02BA;
+    /* 0x3D7 */ u8 m02BB;
+    /* 0x3D8 */ gptr<mDoExt_McaMorf> mpMorf;
+    /* 0x3DC */ u8 m02C0[4];
+    /* 0x3E0 */ gptr<mDoExt_btpAnm> m02C4;
+    /* 0x3E4 */ be<s16> m02C8;
+    /* 0x3E6 */ be<s16> m02CA;
+    /* 0x3E8 */ be<s16> m02CC;
+    /* 0x3EA */ be<s8> m02CE;
+    /* 0x3EB */ u8 m02CF;
+    /* 0x3EC */ gptr<J3DModel> m02D0;
+    /* 0x3F0 */ be<u8> m02D4;
+    /* 0x3F1 */ be<u8> m02D5;
+    /* 0x3F2 */ u8 m02D6[2];
+    /* 0x3F4 */ gptr<J3DModel> m02D8;
+    /* 0x3F8 */ be<u8> m02DC;
+    /* 0x3F9 */ be<u8> m02DD;
+    /* 0x3FA */ be<s8> m02DE;
+    /* 0x3FB */ be<u8> m02DF;            /* HD */
+    /* 0x3FC */ u8 m02E0[4];             /* GameCube mShadowId + 4: HD 4 bytes, unused */
+    /* 0x400 */ gptr<J3DModel> m02E8;
+    /* 0x404 */ be<f32> m02EC;
+    /* 0x408 */ be<s32> m02F0;
+    /* 0x40C */ be<s32> m02F4;
+    /* 0x410 */ be<s32> m02F8;
+    /* 0x414 */ be<s32> m02FC;
+    /* 0x418 */ be<s16> m0300[5];
+    /* 0x422 */ be<s16> m030A;
+    /* 0x424 */ be<s16> m030C;
+    /* 0x426 */ be<s16> m030E;
+    /* 0x428 */ be<s16> m0310;
+    /* 0x42A */ u8 m0312[2];
+    /* 0x42C */ be<s16> m0314;
+    /* 0x42E */ be<s16> m0316;
+    /* 0x430 */ be<u8> m0318;
+    /* 0x431 */ u8 m0319[3];
+    /* 0x434 */ be<f32> mPlayerDistance;
+    /* 0x438 */ cXyz m0320;
+    /* 0x444 */ u8 m032C[4];
+    /* 0x448 */ be<s16> m0330;
+    /* 0x44A */ be<s16> m0332;
+    /* 0x44C */ be<s16> m0334;
+    /* 0x44E */ be<s16> m0336;
+    /* 0x450 */ cXyz m0338;
+    /* 0x45C */ csXyz m0344;
+    /* 0x462 */ be<s16> m034A;
+    /* 0x464 */ be<s16> m034C;
+    /* 0x466 */ be<u8> m034E;
+    /* 0x467 */ be<u8> m034F;
+    /* 0x468 */ dPa_smokeEcallBack_l m0350;
+    /* 0x488 */ dPa_followEcallBack_l mHdFollowCb;  /* HD */
+    /* 0x49C */ damagereaction_l dr;
+    /* 0xC8C */ gptr<br_s> m0B2C;
+    /* 0xC90 */ be<s32> m0B30;
+    /* 0xC94 */ be<s32> m0B34;
+    /* 0xC98 */ u8 m0B38[0xC];
+    /* 0xCA4 */ cXyz m0B44[2];
+    /* 0xCBC */ be<s32> m0B5C;
+    /* 0xCC0 */ be<s32> m0B60;
+    /* 0xCC4 */ be<f32> m0B64;
+    /* 0xCC8 */ be<f32> m0B68;
+    /* 0xCCC */ be<f32> m0B6C;
+    /* 0xCD0 */ be<f32> m0B70;
+    /* 0xCD4 */ be<f32> m0B74;
+    /* 0xCD8 */ be<s16> m0B78;
+    /* 0xCDA */ be<s8> m0B7A;
+    /* 0xCDB */ be<s8> m0B7B;
+    /* 0xCDC */ u8 m0B7C[0xC];
+    /* 0xCE8 */ dCcD_Cyl m0B88;
+    /* 0xE18 */ dCcD_Cyl m0CB8;
+    /* 0xF48 */ dCcD_Sph m0DE8;
+    /* 0x1074 */ dCcD_Sph m0F14;
+    /* 0x11A0 */ dCcD_Sph m1040;
+    /* 0x12CC */ cXyz m116C;
+    /* 0x12D8 */ cXyz m1178;
+    /* 0x12E4 */ u8 m1184[0xC];
+    /* 0x12F0 */ cXyz m1190;
+    /* 0x12FC */ cXyz m119C;
+    /* 0x1308 */ cXyz m11A8;
+    /* 0x1314 */ u8 m11B4[0xC];
+    /* 0x1320 */ cXyz m11C0;
+    /* 0x132C */ cXyz m11CC;
+    /* 0x1338 */ cXyz m11D8;
+    /* 0x1344 */ cXyz m11E4;
+    /* 0x1350 */ be<u8> m11F0;
+    /* 0x1351 */ be<u8> m11F1;
+    /* 0x1352 */ be<u8> m11F2;
+    /* 0x1353 */ be<u8> m11F3;
+    /* 0x1354 */ be<s16> m11F4;
+    /* 0x1356 */ u8 m11F6[2];
+    /* 0x1358 */ gptr<fopAc_ac_c> m11F8;
+    /* 0x135C */ be<u32> m11FC;
+    /* 0x1360 */ be<u32> m1200;
+    /* 0x1364 */ be<u32> m1204;
+    /* 0x1368 */ be<u16> m1208;
+    /* 0x136A */ u8 m120A[2];
+    /* 0x136C */ be<s32> m120C;
+    /* 0x1370 */ be<u8> m1210;
+    /* 0x1371 */ u8 m1211;
+    /* 0x1372 */ be<s16> m1212;
+    /* 0x1374 */ be<s8> m1214;
+    /* 0x1375 */ be<s8> m1215;
+    /* 0x1376 */ be<s8> m1216;
+    /* 0x1377 */ be<s8> m1217;
+    /* 0x1378 */ gptr<dPath> ppd;
+    /* 0x137C */ be<s8> m121C;
+    /* 0x137D */ be<u8> m121D;
+    /* 0x137E */ be<s8> m121E;
+    /* 0x137F */ be<s8> m121F;
+    /* 0x1380 */ gptr<daObj_Search_Act_c> mpSearchLight;
+    /* 0x1384 */ be<s16> m1224;
+    /* 0x1386 */ u8 m1226[2];
+    /* 0x1388 */ be<s16> m1228;
+    /* 0x138A */ be<s16> m122A;
+    /* 0x138C */ be<s8> m122C;
+    /* 0x138D */ be<s8> m1234;           /* HD: packed after m122C (fail, demo_camera) */
+    /* 0x138E */ be<s16> m1236;
+    /* HD: no m1230 (J3DMaterialTable*, GameCube 0x1230) */
+    /* 0x1390 */ cXyz m1238;             /* demo_camera stores */
+    /* 0x139C */ cXyz m1244;
+    /* 0x13A8 */ u8 m1250[0x10];
+    /* 0x13B8 */ be<f32> m1260;
+    /* 0x13BC */ enemyice_l mEnemyIce;
+    /* 0x1774 */ enemyfire_l mEnemyFire;
+    /* 0x19A0 */ gptr<JntHit_c> mpJntHit;
+};
+WWHD_OFFSET(bk_class, mPhase, 0x3C8);
+WWHD_OFFSET(bk_class, mpMorf, 0x3D8);
+WWHD_OFFSET(bk_class, m02E8, 0x400);
+WWHD_OFFSET(bk_class, m0338, 0x450);
+WWHD_OFFSET(bk_class, m0350, 0x468);
+WWHD_OFFSET(bk_class, dr, 0x49C);
+WWHD_OFFSET(bk_class, m0B30, 0xC90);
+WWHD_OFFSET(bk_class, m0B88, 0xCE8);
+WWHD_OFFSET(bk_class, m1040, 0x11A0);
+WWHD_OFFSET(bk_class, m116C, 0x12CC);
+WWHD_OFFSET(bk_class, m11F8, 0x1358);
+WWHD_OFFSET(bk_class, ppd, 0x1378);
+WWHD_OFFSET(bk_class, m1234, 0x138D);
+WWHD_OFFSET(bk_class, m1238, 0x1390);
+WWHD_OFFSET(bk_class, m1260, 0x13B8);
+WWHD_OFFSET(bk_class, mEnemyIce, 0x13BC);
+WWHD_OFFSET(bk_class, mEnemyFire, 0x1774);
+WWHD_OFFSET(bk_class, mpJntHit, 0x19A0);
+WWHD_SIZE(bk_class, 0x19A4);
+
+/* bkHIO_c, HD: the vtable pointer follows the members (0x108), so every GameCube offset is -4.
+ * l_bkHIO is at 0x10462368. */
+struct bkHIO_c {
+    /* 0x000 */ be<s8> mNo;
+    /* 0x001 */ be<u8> m005;
+    /* 0x002 */ be<u8> m006;
+    /* 0x003 */ be<u8> m007;
+    /* 0x004 */ be<u8> m008;
+    /* 0x005 */ be<u8> m009;
+    /* 0x006 */ be<u8> m00A;
+    /* 0x007 */ u8 m00B;
+    /* 0x008 */ be<s16> m00C;
+    /* 0x00A */ u8 m00E[2];
+    /* 0x00C */ be<f32> m010;
+    /* 0x010 */ be<f32> m014;
+    /* 0x014 */ be<f32> m018;
+    /* 0x018 */ be<f32> m01C;
+    /* 0x01C */ be<f32> m020;
+    /* 0x020 */ be<f32> m024;
+    /* 0x024 */ be<f32> m028;
+    /* 0x028 */ be<f32> m02C;
+    /* 0x02C */ be<f32> m030;
+    /* 0x030 */ be<s16> m034;
+    /* 0x032 */ u8 m036[2];
+    /* 0x034 */ be<f32> m038;
+    /* 0x038 */ be<f32> m03C;
+    /* 0x03C */ be<f32> m040;
+    /* 0x040 */ be<f32> m044;
+    /* 0x044 */ be<f32> m048;
+    /* 0x048 */ be<f32> m04C;
+    /* 0x04C */ be<f32> m050;
+    /* 0x050 */ be<f32> m054;
+    /* 0x054 */ be<f32> m058;
+    /* 0x058 */ be<f32> m05C;
+    /* 0x05C */ be<f32> m060;
+    /* 0x060 */ be<f32> m064;
+    /* 0x064 */ be<f32> m068;
+    /* 0x068 */ be<f32> m06C;
+    /* 0x06C */ be<f32> m070;
+    /* 0x070 */ be<f32> m074;
+    /* 0x074 */ be<s16> m078;
+    /* 0x076 */ u8 m07A[2];
+    /* 0x078 */ be<f32> m07C;
+    /* 0x07C */ be<f32> m080;
+    /* 0x080 */ be<f32> m084;
+    /* 0x084 */ be<f32> m088;
+    /* 0x088 */ be<s16> m08C;
+    /* 0x08A */ be<s16> m08E;
+    /* 0x08C */ be<f32> m090;
+    /* 0x090 */ be<f32> m094;
+    /* 0x094 */ be<f32> m098;
+    /* 0x098 */ be<f32> m09C;
+    /* 0x09C */ be<s16> m0A0;
+    /* 0x09E */ be<s16> m0A2;
+    /* 0x0A0 */ be<s16> m0A4;
+    /* 0x0A2 */ be<s16> m0A6;
+    /* 0x0A4 */ be<f32> m0A8[10];
+    /* 0x0CC */ be<s16> m0D0;
+    /* 0x0CE */ be<s16> m0D2;
+    /* 0x0D0 */ be<s16> m0D4;
+    /* 0x0D2 */ be<s16> m0D6;
+    /* 0x0D4 */ be<f32> m0D8[10];
+    /* 0x0FC */ be<f32> m100;
+    /* 0x100 */ be<s16> m104;
+    /* 0x102 */ be<s16> m106;
+    /* 0x104 */ be<s16> m108;
+    /* 0x106 */ be<s16> m10A;
+    /* 0x108 */ be<u32> __vtbl;
+};
+WWHD_SIZE(bkHIO_c, 0x10C);

@@ -1,0 +1,53 @@
+src wwhd_src/d/actor/d_a_obj_gryw00.cpp
+stackfill periodic
+callee 026066C4 r4=8
+callee 025A847C stack=4
+ret 026066C4 0,0x54001000,0x54002000
+ret 025E38E0 0,0x54003000
+ret 025E7CE0 0 1
+ret 025E8508 0 1
+ret 02520460 0 5
+ret 024F1D9C 0 5
+ret 025BA0C0 0,1,2
+ret 0234D390 0,1,254,255
+ret 027F2BF8 0 1
+field * 101F4F28 u32 0,0x54001000
+field * r3+0x2E4 u32 0,1,8,9
+field * r3+0x51C i32 0,1,254,255
+field * r3+0x520 i16 0
+field * r3+0x522 i16 0
+field * r3+0x524 u32 0xB4
+field * r3+0x528 i32 0 1
+field * r3+0x52C f32 -0.0,0,5,510,511,nan
+field * r3+0x530 f32 -0.0,0,5,510,nan
+field * r3+0x534 f32 -0.0,0,1,1.6777408123,nan
+field * r3+0x538 f32 -10,-0.0,0,1,nan
+field * r3+0x53C f32 -10,-0.0,0,1,nan
+field * r3+0x540 f32 -0.1052631587,-0.0,0,1,nan
+field * r3+0x548 i32 0,1,2
+field * r3+0x54C i32 -1,0,1,2,310
+field * r3+0x550 u32 0,0x54010000
+field * r3+0x554 u32 0,0x54011000
+field * 54010262 u8 0,6,7,8
+field * 54011262 u8 0,6,7,8
+field * r3+0x558 i32 -1,0,1,2,100
+field * r3+0x41C f32 -0.0,0,1,nan
+field * r3+0x42B u8 0,1,2,3
+field * r3+0xB4 u32 0x54008000
+field * 54008004 u32 0x0234D260
+field * 5400802C u32 0x0234CDE4
+field * 5400803C u32 0x0234D324
+arg 0234C420 r3 0,0x40000000
+arg 0234D310 r3 0,0x40000000
+arg 0234D310 r4 0,1,2,3
+arg 0234D32C r3 0,0x40000000
+arg 0234D32C r4 0,1,2,3
+arg 0234D390 r4 0 64
+arg 0234D390 r5 0 64
+
+# PTMF direct and virtual representations share the final word.
+# Virtual fixture: index0, actor+0xB4 vtable, slot4 high-water action.
+arg! 0234CC24 r3 0x40000000
+stable 40000520 8
+stable 400000B4 4
+stable 54008000 64

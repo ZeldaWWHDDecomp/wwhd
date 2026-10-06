@@ -1,0 +1,75 @@
+# Rain weather/renderer TU; implementation in progress, not a full-unit gate yet.
+src wwhd_src/d/d_kankyo_rain_cloudShadowMove.cpp
+stackfill periodic
+callee 02563E48 r3=24 r4=out12
+callee 02563F0C r3=12 r4=12 r5=out12
+callee 02563DD8 r3=out40
+callee 0256401C r4=out12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 025F1018 r3=12 r4=out12 r5=40
+callee 028E8DE8 r3=12 r4=12
+callee 026124B0 r4=8 r5=8
+callee 025F01D8 r3=out4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0251694C r3=out20
+callee 025170D8 r4=12 r5=out4 r6=out20
+callee 025BD71C r3=out52
+callee 025BEF3C r3=52 r4=12
+callee 025BEB90 r3=52
+callee 025BEB4C r3=52
+# Complete84-byte derived ground query and80-byte HD roof check objects.
+callee 02008E0C r3=out64
+callee 024EE7AC r3=out80
+callee 024EF6E8 r4=80
+callee 02008974 r4=84
+callee 02008DAC r3=64
+callee 02008B4C r3=64
+
+callee 028E91EC r3=48 r4=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0257015C r3=out16 r4=4
+callee 027FC500 r4=16
+callee 028E8F64 r3=48 r4=12 r5=out12
+
+# Ordinary boundary steering retains one-in-eight unsteered argument samples.
+arg 0256401C f2 0,-20,1
+arg 0256F084 r4 0,9,1,-1
+# 0256401C block2 (025640EC) is unreachable: entry height!=0 selects that arm;
+# its only callee02563E48 writes f0..f13, so preserved f30height/f31zero cannot become equal.
+
+callee 025602F0 r3=out4 r4=out4
+callee 02582518 r5=4 r6=4
+
+callee 0257DB28 r3=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+
+callee 0201A478 r3=out6
+
+callee 0257E128 r3=out12 r4=12
+
+ret! 02555D0C 0x50000000 0x50000000
+ret! 025200D4 0x51000000 0x51000000
+field 0256BB6C 50000A84 u32 0x52000000
+stable 50000A84 4
+field 0256BB6C 51005AF8 u32 0x53000000
+stable 51005AF8 4
+field 0256BB6C 51005FA4 u32 0,0x54000000
+stable 51005FA4 4
+field 0256BB6C 50000A80 u32 0,1,2
+field 0256BB6C 5200009C u32 0,1,2
+stable 5200009C 4
+field 0256BB6C 50000A7D u8 0,1,2,3,4
+field 0256BB6C 520000A0 u8 0,1,2,3,4
+field 0256BB6C 520000EC u8 0,1,2,3,4
+fret 028F4384 0 3000
+
+mockglobal 02555D0C 50000A7D u8 0,1,2,3,4
+mockglobal 02555D0C 50000A80 u32 0,1,2
+field 0256BB6C 51005134 u32 0x4164616e,0x4d5f4472,0x6b617a65
+field 0256BB6C 51005138 u32 0x0,0x61674200,0x6d616500
+stable 51005134 8

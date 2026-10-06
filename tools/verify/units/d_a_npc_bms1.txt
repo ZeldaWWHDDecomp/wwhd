@@ -1,0 +1,13 @@
+# Verification unit: d_a_npc_bms1 (Bomb-Master Cannon, Windfall bomb shop): small functions, HIO, statics
+src wwhd_src/d/actor/d_a_npc_bms1.cpp wwhd_src/d/actor/d_a_npc_bms1_pending.cpp
+
+callee 026066C4 r4=8                # dRes_control_c::getRes(SafeString*)
+callee 025E789C stack=1             # mDoExt_btpAnm::init: 10th argument on the stack
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition
+ret 0273AD10 0 0x60000000           # operator new
+arg 02208334 r3 0x2775,0x2776,0x2783,0x2788,0x2790,0x2791,0x277A,0x2781,0x2782,0
+arg 0220836C r3 0x2775,0x2776,0x2783,0x2788,0x278A,0x278B,0x277A,0x277C,0x277D,0
+arg 0220CA14 r3 0,0x50000000
+arg 0220C994 r3 0,0x50000000
+arg 0220AB80 r4 -1,0,1,5
+field 0220AB80 r3+0xA01 i8 -1,0,1

@@ -1,0 +1,338 @@
+src wwhd_src/d/actor/d_a_goal_flag.cpp
+field 0215D304 r3+0x2a88 s32 0 4
+ret 025E9B80 0,1
+ret 025AAF88 0,0x56000000
+field 0215DD94 0x56000003 u8 0,1,255
+ret 0273AD10 0,0x57000000
+field 0215DE4C r3+0x2a88 s32 0 4
+field 0215DE4C r3+0x2a78 s32 0 5
+field 0215DE4C r3+0x2a7c s32 0 5
+field 0215DE4C r3+0x2a80 s32 0 5
+field 0215DE4C r3+0x2a84 s32 0 5
+field 0215F748 r3+0x2fae s16 -1,0,1,2
+fret 028E8F44 -10 10
+fret 028F4384 0 20
+field 02160618 r3+0x2a5c f32 -10 10
+ret 025200D4 0x54000000 0x54000000
+ret 02542D88 -1,0,1
+ret 0254457C 0,1
+ret 025DE50C 0,0x57000000
+ret 025C6278 0,1
+ret 02007898 0,1
+ret 020078BC 0,1
+ret 02007940 0,1
+field 021607D4 r3+0x2a64 u8 0,1,2
+field 02160C50 r3+0x2a60 s16 2,3
+field 02160C50 r3+0x2a62 s16 0,149,150,151,32767
+field 02160C50 0x10464184 s32 150
+field 021607D4 0x101F8344 u32 0x55000000
+field 021607D4 0x55000204 u32 0,0x58000000
+field 021607D4 0x58000051 u8 0,1
+ret 02160788 0,1,2
+field 0215F3B4 0x54005cea u8 0,1
+field 0215F3B4 0x54005cee u8 0,1,2
+arg 0215E154 r8 0 8
+arg 0215E154 r9 0 4
+callee 0215D26C r3=12 r4=12 r5=12
+field 0215F4D0 r3+0x2a88 s32 0 5
+field 0215F4D0 r3+0x2a78 s32 0 5
+field 0215F4D0 r3+0x2a7c s32 0 5
+field 0215F4D0 r3+0x2a80 s32 0 5
+field 0215F4D0 r3+0x2a84 s32 0 5
+field 0215F4D0 r3+0x2a88 s32 0 4
+ret 02160618 -1,0,1
+ret 025C5814 -1,0,1,100
+field 02160954 r3+0x2a60 s16 0,1,2,3
+field 02160954 r3+0x2fb4 u8 0,1
+field 02160954 r3+0xf8 u16 0,2
+field 02160954 0x54005cec s16 0,1,149,150,151
+field 02160954 0x10464180 s32 150
+field 02160954 0x101F8344 u32 0x55000000
+field 02160954 0x55000200 u32 0,0x58000000
+field 02160954 0x550001fc u32 0,0x59000000
+arg 0215E520 r5 0 8
+arg 0215E520 r6 0 4
+arg 0215E154 r4 0,0x41000000
+field 0215FE9C r3+0x2a88 s32 0 4
+arg 0215DFB4 r4 0 1
+field 02161028 r3+0xa10 s32 0 3
+field 02161028 r3+0xa0 s32 0 3
+field 02161454 r3+0xdbc s32 0 3
+field 02161454 r3+0x44c s32 0 3
+ret 027B90AC -1,0,1
+field 0215D3C4 r3+0x9c u32 0 3
+ret 02520460 0,1,4,5
+ret 0215DD94 0,1
+ret 025D63E8 0,1
+field 0215EDF8 r3+0xb0 u32 0,0xff0000,0x10000,0x10001
+field 0215EDF8 0x54005134 u8 0,79
+field 0215EDF8 0x54005135 u8 99
+field 0215EDF8 0x54005136 u8 101
+field 0215EDF8 0x54005137 u8 97
+field 0215EDF8 0x54005138 u8 110
+field 0215EDF8 0x54005139 u8 0
+field 0215EDF8 0x5400513c s16 0,1
+
+# Texture compare fixture: preserve matching material descriptions through mocks.
+arg! 0215DFB4 r3 0x600003ac
+ret 026066C4 0,0x6a000000
+field 0215DFB4 0x60001314 u32 0
+stable 0x60001314 4
+field 0215DFB4 0x60001318 u32 0
+stable 0x60001318 4
+field 0215DFB4 0x6000131c u32 0
+stable 0x6000131c 4
+field 0215DFB4 0x60001320 u32 0
+stable 0x60001320 4
+field 0215DFB4 0x60001324 u32 0
+stable 0x60001324 4
+field 0215DFB4 0x60001328 u32 0
+stable 0x60001328 4
+field 0215DFB4 0x60001348 u32 0
+stable 0x60001348 4
+field 0215DFB4 0x60001344 u32 0
+stable 0x60001344 4
+field 0215DFB4 0x6000132c u32 0,1
+stable 0x6000132c 4
+field 0215DFB4 0x600011f4 u32 0
+stable 0x600011f4 4
+field 0215DFB4 0x600011f8 u32 0
+stable 0x600011f8 4
+field 0215DFB4 0x600011fc u32 0
+stable 0x600011fc 4
+field 0215DFB4 0x60001200 u32 0
+stable 0x60001200 4
+field 0215DFB4 0x60001204 u32 0
+stable 0x60001204 4
+field 0215DFB4 0x60001208 u32 0
+stable 0x60001208 4
+field 0215DFB4 0x60001228 u32 0
+stable 0x60001228 4
+field 0215DFB4 0x60001224 u32 0
+stable 0x60001224 4
+field 0215DFB4 0x6000120c u32 0
+stable 0x6000120c 4
+
+# Explicit actual read extents exposed by mutation survivors.
+callee 028E8DD0 r3=12
+callee 02750370 r3=280
+# Immutable stage identity survives unrelated mock epochs; callback is empty.
+real 021618CC
+stable 0x54005134 10
+
+# Constructor null and guest-address-wrap branches, explicit PPC sparse-memory inputs.
+arg 0215D9D4 r3 0,0x600003ac,0xffffff60,0xffffff58,0xfffff570,0xfffff3b8,0xfffff388,0xfffff358,0xfffff328,0xfffff2f8,0xfffff2c8,0xfffff298,0xfffff268,0xfffff238,0xfffff228,0xfffff218,0xfffff208,0xfffff1f8,0xfffff1e8
+
+# Exercise update material equality and first-resource-load branches.
+arg! 0215F9E4 r3 0x600003ac
+field 0215F9E4 r3+0x1294 u8 0,1
+field 0215F9E4 0x600014ac u32 0
+stable 0x600014ac 4
+field 0215F9E4 0x600014b0 u32 0
+stable 0x600014b0 4
+field 0215F9E4 0x600014b4 u32 0
+stable 0x600014b4 4
+field 0215F9E4 0x600014b8 u32 0
+stable 0x600014b8 4
+field 0215F9E4 0x600014bc u32 0
+stable 0x600014bc 4
+field 0215F9E4 0x600014c0 u32 0
+stable 0x600014c0 4
+field 0215F9E4 0x600014e0 u32 0
+stable 0x600014e0 4
+field 0215F9E4 0x600014dc u32 0
+stable 0x600014dc 4
+field 0215F9E4 0x600014c4 u32 0,1
+stable 0x600014c4 4
+field 0215F9E4 0x60001284 u32 0
+stable 0x60001284 4
+field 0215F9E4 0x60001288 u32 0
+stable 0x60001288 4
+field 0215F9E4 0x6000128c u32 0
+stable 0x6000128c 4
+field 0215F9E4 0x60001290 u32 0
+stable 0x60001290 4
+field 0215F9E4 0x60001294 u32 0
+stable 0x60001294 4
+field 0215F9E4 0x60001298 u32 0
+stable 0x60001298 4
+field 0215F9E4 0x600012b8 u32 0
+stable 0x600012b8 4
+field 0215F9E4 0x600012b4 u32 0
+stable 0x600012b4 4
+field 0215F9E4 0x6000129c u32 0
+stable 0x6000129c 4
+field 0215F9E4 r3+0x9f8 u32 0,1
+stable 0x60000da4 4
+
+# GHS hidden result pointers: real HD vector arithmetic consumes r3 and writes r4.
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201AE48 r3=12 r4=out12
+callee 0201B12C r3=12 r4=out12
+callee 028E8F44 r3=12 r4=12
+callee 028E8E64 r3=12 r4=out12
+
+# Lifecycle (packet Init / packet dtor / actor dtor): pinned this, bounded stable counts and
+# fixed child regions; without them the count loops walk random arrays (multi-GB runs).
+arg! 0215D3C4 r3 0x600003ac
+arg! 02161028 r3 0x600003ac
+arg! 02161454 r3 0x60000000
+field 0215D3C4 0x60000448 u32 0,1,2
+field 0215D3C4 0x6000044c u32 0,1,2
+field 0215D3C4 0x60000450 u32 0x62000000
+field 0215D3C4 0x60000dbc s32 0,1,2
+field 0215D3C4 0x60000dc0 u32 0,0x61000000
+field 0215D3C4 0x62000004 s32 0,1,2
+field 0215D3C4 0x62000008 u32 0,0x63000000
+field 0215D3C4 0x6200000c s32 0,1,2
+field 0215D3C4 0x62000010 u32 0,0x64000000
+field 0215D3C4 0x630000f0 u32 0x10169dbc
+field 0215D3C4 0x630001e4 u32 0x10169dbc
+field 0215D3C4 0x640000f0 u32 0x10169dbc
+field 0215D3C4 0x640001e4 u32 0x10169dbc
+field 0215D3C4 0x62000018 s32 0,1,2
+field 0215D3C4 0x6200001c u32 0,0x63001000
+field 0215D3C4 0x62000020 s32 0,1,2
+field 0215D3C4 0x62000024 u32 0,0x64001000
+field 0215D3C4 0x630010f0 u32 0x10169dbc
+field 0215D3C4 0x630011e4 u32 0x10169dbc
+field 0215D3C4 0x640010f0 u32 0x10169dbc
+field 0215D3C4 0x640011e4 u32 0x10169dbc
+field 0215D3C4 0x6200002c s32 0,1,2
+field 0215D3C4 0x62000030 u32 0,0x63002000
+field 0215D3C4 0x62000034 s32 0,1,2
+field 0215D3C4 0x62000038 u32 0,0x64002000
+field 0215D3C4 0x630020f0 u32 0x10169dbc
+field 0215D3C4 0x630021e4 u32 0x10169dbc
+field 0215D3C4 0x640020f0 u32 0x10169dbc
+field 0215D3C4 0x640021e4 u32 0x10169dbc
+field 02161028 0x60000448 u32 0,1,2
+field 02161028 0x6000044c u32 0,1,2
+field 02161028 0x60000450 u32 0,0x62000000
+field 02161028 0x60000dbc s32 0,1,2
+field 02161028 0x60000dc0 u32 0,0x61000000
+field 02161028 0x62000004 s32 0,1,2
+field 02161028 0x62000008 u32 0,0x63000000
+field 02161028 0x6200000c s32 0,1,2
+field 02161028 0x62000010 u32 0,0x64000000
+field 02161028 0x630000f0 u32 0x10169dbc
+field 02161028 0x630001e4 u32 0x10169dbc
+field 02161028 0x640000f0 u32 0x10169dbc
+field 02161028 0x640001e4 u32 0x10169dbc
+field 02161028 0x62000018 s32 0,1,2
+field 02161028 0x6200001c u32 0,0x63001000
+field 02161028 0x62000020 s32 0,1,2
+field 02161028 0x62000024 u32 0,0x64001000
+field 02161028 0x630010f0 u32 0x10169dbc
+field 02161028 0x630011e4 u32 0x10169dbc
+field 02161028 0x640010f0 u32 0x10169dbc
+field 02161028 0x640011e4 u32 0x10169dbc
+field 02161028 0x6200002c s32 0,1,2
+field 02161028 0x62000030 u32 0,0x63002000
+field 02161028 0x62000034 s32 0,1,2
+field 02161028 0x62000038 u32 0,0x64002000
+field 02161028 0x630020f0 u32 0x10169dbc
+field 02161028 0x630021e4 u32 0x10169dbc
+field 02161028 0x640020f0 u32 0x10169dbc
+field 02161028 0x640021e4 u32 0x10169dbc
+field 02161454 0x60000448 u32 0,1,2
+field 02161454 0x6000044c u32 0,1,2
+field 02161454 0x60000450 u32 0,0x62000000
+field 02161454 0x60000dbc s32 0,1,2
+field 02161454 0x60000dc0 u32 0,0x61000000
+field 02161454 0x62000004 s32 0,1,2
+field 02161454 0x62000008 u32 0,0x63000000
+field 02161454 0x6200000c s32 0,1,2
+field 02161454 0x62000010 u32 0,0x64000000
+field 02161454 0x630000f0 u32 0x10169dbc
+field 02161454 0x630001e4 u32 0x10169dbc
+field 02161454 0x640000f0 u32 0x10169dbc
+field 02161454 0x640001e4 u32 0x10169dbc
+field 02161454 0x62000018 s32 0,1,2
+field 02161454 0x6200001c u32 0,0x63001000
+field 02161454 0x62000020 s32 0,1,2
+field 02161454 0x62000024 u32 0,0x64001000
+field 02161454 0x630010f0 u32 0x10169dbc
+field 02161454 0x630011e4 u32 0x10169dbc
+field 02161454 0x640010f0 u32 0x10169dbc
+field 02161454 0x640011e4 u32 0x10169dbc
+field 02161454 0x6200002c s32 0,1,2
+field 02161454 0x62000030 u32 0,0x63002000
+field 02161454 0x62000034 s32 0,1,2
+field 02161454 0x62000038 u32 0,0x64002000
+field 02161454 0x630020f0 u32 0x10169dbc
+field 02161454 0x630021e4 u32 0x10169dbc
+field 02161454 0x640020f0 u32 0x10169dbc
+field 02161454 0x640021e4 u32 0x10169dbc
+stable 0x60000448 12
+stable 0x60000dbc 8
+stable 0x62000000 20
+stable 0x630000f0 4
+stable 0x630001e4 4
+stable 0x640000f0 4
+stable 0x640001e4 4
+stable 0x62000014 20
+stable 0x630010f0 4
+stable 0x630011e4 4
+stable 0x640010f0 4
+stable 0x640011e4 4
+stable 0x62000028 20
+stable 0x630020f0 4
+stable 0x630021e4 4
+stable 0x640020f0 4
+stable 0x640021e4 4
+
+# packetDraw: material descriptors with absent uniform slots (-1) in the pass binder.
+arg 02160018 r3 0x600003ac
+field 02160018 0x6000044c u32 1,2,4
+field 02160018 0x60000450 u32 0x62000000
+field 02160018 0x62000000 u32 0x6a000000
+field 02160018 0x6a00000c u32 0,1
+field 02160018 0x6a000010 u32 0x6b000000
+field 02160018 0x6b00000c s16 -1,-1,0,3
+field 02160018 0x6b00000e s16 -1,-1,0,3
+field 02160018 0x6b000010 s16 -1,-1,0,3
+stable 0x62000000 4
+stable 0x6a00000c 8
+stable 0x6b00000c 6
+field 02160018 0x62000014 u32 0x6a000100
+field 02160018 0x6a00010c u32 0,1
+field 02160018 0x6a000110 u32 0x6b000100
+field 02160018 0x6b00010c s16 -1,-1,0,3
+field 02160018 0x6b00010e s16 -1,-1,0,3
+field 02160018 0x6b000110 s16 -1,-1,0,3
+stable 0x62000014 4
+stable 0x6a00010c 8
+stable 0x6b00010c 6
+field 02160018 0x62000028 u32 0x6a000200
+field 02160018 0x6a00020c u32 0,1
+field 02160018 0x6a000210 u32 0x6b000200
+field 02160018 0x6b00020c s16 -1,-1,0,3
+field 02160018 0x6b00020e s16 -1,-1,0,3
+field 02160018 0x6b000210 s16 -1,-1,0,3
+stable 0x62000028 4
+stable 0x6a00020c 8
+stable 0x6b00020c 6
+field 02160018 0x6200003c u32 0x6a000300
+field 02160018 0x6a00030c u32 0,1
+field 02160018 0x6a000310 u32 0x6b000300
+field 02160018 0x6b00030c s16 -1,-1,0,3
+field 02160018 0x6b00030e s16 -1,-1,0,3
+field 02160018 0x6b000310 s16 -1,-1,0,3
+stable 0x6200003c 4
+stable 0x6a00030c 8
+stable 0x6b00030c 6
+field 02160018 r4+0xc s32 0,1,2,3,5
+
+# Mutation gap: PSVECAdd runs for real so flag_move's accumulation inputs count.
+real 028E8D88
+# Stack objects passed by pointer: SafeString name (8 bytes) and the cloth factor output.
+callee 027B90AC r4=8
+callee 026066C4 r4=8
+callee 0215E154 r4=out12
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0215EDF8 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Cloth","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Gflag","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Ocean","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag","Tgflag"

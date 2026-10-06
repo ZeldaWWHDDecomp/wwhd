@@ -1,0 +1,36 @@
+src wwhd_src/d/actor/d_a_obj_gtaki.cpp
+ret 02520460 0 5
+ret 025200D4 0x54000000 0x54000000
+# Bounded texture table with exact-match, mismatch and null-name paths.
+field 0234D3AC r3+0x3B4 u32 0x55000000 0x55000000
+field 0234D3AC 0x550000AC u32 0x55001000 0x55001000
+field 0234D3AC 0x55001030 u32 0,0x55002000,0x55002000
+field 0234D3AC 0x55001034 u32 0,0x55003000,0x55003000
+field 0234D3AC 0x55002000 u16 0,1,2,32,33,64,65,66,96,97,130,131
+field 0234D3AC 0 u16 0 0
+field 0234D3AC 0x55002004 u32 0x55004000,0x55004000,0x55001FE8,0x55001FF8,0x55001FF9
+ret 027ED1F0 0,0x10029AE4,0x10029B34
+callee 026066C4 r4=8
+callee 020182E0 r4=12
+# Observe the rendering lists consumed by model drawing before they are restored.
+observe 025E2DE0 104B4634 8
+# HD callers pass additional stack arguments not inferred from matcher signatures.
+callee 025A847C stack=4
+callee 025E7CE0 stack=1
+# Initialized singleton pointers (the static image precedes runtime initialization).
+field * 0x101F4F28 u32 0,0x55005000,0x55005000
+field * 0x101F9968 u32 0,0x55006000,0x55006000
+# Emitter/actor overlap detects reloads after stores, beyond independent-pointer tests.
+arg 0234DAA0 r3 0x40000000
+ret 025A847C 0,0x56000000,0x40000108,0x4000010C
+stackfill periodic
+# Texture table may overlap its owner's pointer: preserve a bounded count in this fixture.
+# Header is at generated entrySP-72; its word24 becomes the count after the 36-byte copy.
+field 0234D3AC 0x7EFFEFD0 u32 0x00010000 0x00010000
+# Keep overlapping table pointers intact through the header copy, then let relocation mutate them.
+field 0234D3AC 0x7EFFEFC4 u32 0x55001FF8 0x55001FF8
+field 0234D3AC 0x7EFFEFC0 u32 0x00010000 0x00010000
+field 0234D3AC 0x7EFFEFD4 u32 0x55001FE8 0x55001FE8
+# Partial pointer overlap exercises the final table-pointer reload as well.
+field 0234D3AC 0x7EFFEFC3 u32 0x55001FF9 0x55001FF9
+field 0234D3AC 0x7EFFEFBF u8 0 0

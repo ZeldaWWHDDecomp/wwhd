@@ -1,0 +1,138 @@
+# d_bg_w (dBgW): 024F23F4..<024F49E8 (__sinit 024F4944 and the MatrixCrrPos copy 024F49D8 after the functions; d_bg_w_deform follows)
+src wwhd_src/d/d_bg_w.cpp
+stackfill periodic
+callee 02018AE4 r5=out4               # cM3dGPla::getCrossY
+callee 020109FC r3=out4 r4=out4 r5=out4   # cM3d_Len2dSqPntAndSegLine
+callee 02010284 r4=out4 r5=out4       # cM2d_CrossCirLin
+callee 02019040 r3=255                # cM3dGTri::cM3dGTri: constructor storage
+callee 024F1204 r4=12                 # dBgS_Acch::GetWallAddY(Vec&, int)
+arg 024F23F4 r3 0,0x52000000          # constructor: this == NULL allocates
+ret 0273AD10 0,0x53000000             # operator new may fail
+# rwg chains: pinned, acyclic (a random chain may cycle)
+arg! 024F25D4 r5 0,1,2,3,0x80000001   # 0x80000001: the full register (asserts on a negative index; idx*8 wraps into the chain)
+arg! 024F35B4 r4 0,1,2,3,0x80000001   # 0x80000001: the full register (asserts on a negative index; idx*8 wraps into the chain)
+arg! 024F3A60 r4 0,1,2,3,0x80000001   # 0x80000001: the full register (asserts on a negative index; idx*8 wraps into the chain)
+arg! 024F3F10 r4 0,1,2,3,0x80000001   # 0x80000001: the full register (asserts on a negative index; idx*8 wraps into the chain)
+field * r3+0x8C u32 0x51000000
+field * 51000000 u16 1,2,0xFFFF
+field * 51000008 u16 2,3,0xFFFF
+field * 51000010 u16 3,0xFFFF
+field * 51000018 u16 0xFFFF
+stable 51000000 0x20
+field 024F25D4 r4+0x84 i32 -1 4       # m_tbl_size
+# group sibling chains: pinned, acyclic
+field 024F3498 r3+0x94 u32 0x51100000
+field 024F3924 r3+0x94 u32 0x51100000
+field 024F3DD4 r3+0x94 u32 0x51100000
+field 024F42BC r3+0x94 u32 0x51100000
+field * 51100024 u32 0x51200000
+arg! 024F3498 r5 0,3
+arg! 024F3924 r5 0,3
+arg! 024F3DD4 r5 0,3
+arg! 024F42BC r6 0,3
+field * 51200026 u16 3,2,1,0xFFFF
+field * 51200028 u16 0,1,2,3,0xFFFF
+field * 5120002E u16 0,5,0xFFFF
+field * 5120005A u16 3,2,0xFFFF
+field * 5120005C u16 0,1,2,3,0xFFFF
+field * 51200062 u16 0,5,0xFFFF
+field * 5120008E u16 3,0xFFFF
+field * 51200090 u16 0,1,2,3,0xFFFF
+field * 51200096 u16 0,5,0xFFFF
+field * 512000C2 u16 0xFFFF
+field * 512000C4 u16 0,1,2,3,0xFFFF
+field * 512000CA u16 0,5,0xFFFF
+stable 51200000 0xD0
+stable 40000094 4                     # pm_bgd of the pinned this (r3 = 0x40000000)
+stable 51100024 4
+# ChangeAttributeCodeByPathPntNo: small info table (m_ti_num is reloaded after each call)
+field 024F43EC r3+0x94 u32 0,0x51300000,0x51300000,0x51300000
+field 024F43EC 51300028 i32 -1 4
+stable 51300028 4
+# pm_pos aligned and stable: an unaligned position overlapping other words mixes NaN payload bytes of the float
+# stores (harness tolerance is per aligned float word)
+field 024F25D4 r4+0x2C u32 0x50100000,0x50100100,0x50100200
+stable 4100002C 4
+# mutation gaps: RwgWallCorrect mesh fixture (pinned tables, small value sets so that equal operands / hits occur)
+field 024F25D4 r3+0x88 u32 0x50500000
+field 024F25D4 r3+0x90 u32 0x50200000
+field 024F25D4 r3+0x94 u32 0x51100000
+field 024F25D4 5110000C u32 0x50300000
+field 024F25D4 r4+0x88 u32 0x50400000
+field 024F25D4 r4+0x34 u32 0,0x50100300
+field 024F25D4 50100304 f32 0,1
+fret 024F1204 0 1                     # GetWallAddY
+fret 020109E8 0.008 2                 # cM3d_Len2dSq (lower edge with wall_rr 0.016: |spE - spDC| == 0.008 exactly)
+fret 028F4384 0 2                     # sqrtf
+field 024F2514 r6+0 u32 0x7FC00000,0,0x3F800000,0xFF800001   # positionWallCorrect: NaN x (z reloaded after the assert)
+arg 024F44C4 r5 0,0x52000000          # ChkPolyThrough: null pass check
+field 024F25D4 50100000 f32 0,1,-1
+field 024F25D4 50100004 f32 0,1,-1
+field 024F25D4 50100008 f32 0,1,-1
+field 024F25D4 50100100 f32 0,1,-1
+field 024F25D4 50100104 f32 0,1,-1
+field 024F25D4 50100108 f32 0,1,-1
+field 024F25D4 50100200 f32 0,1,-1
+field 024F25D4 50100204 f32 0,1,-1
+field 024F25D4 50100208 f32 0,1,-1
+field 024F25D4 50500000 f32 0,1,-1,0.6
+field 024F25D4 50500008 f32 0,1,-1,0.8
+field 024F25D4 50500018 f32 0,1,-1,0.6
+field 024F25D4 50500020 f32 0,1,-1,0.8
+field 024F25D4 50500030 f32 0,1,-1,0.6
+field 024F25D4 50500038 f32 0,1,-1,0.8
+field 024F25D4 50500048 f32 0,1,-1,0.6
+field 024F25D4 50500050 f32 0,1,-1,0.8
+field 024F25D4 50300000 u16 0,1,2,3
+field 024F25D4 50300002 u16 0,1,2,3
+field 024F25D4 50300004 u16 0,1,2,3
+field 024F25D4 5030000A u16 0,1,2,3
+field 024F25D4 5030000C u16 0,1,2,3
+field 024F25D4 5030000E u16 0,1,2,3
+field 024F25D4 50300014 u16 0,1,2,3
+field 024F25D4 50300016 u16 0,1,2,3
+field 024F25D4 50300018 u16 0,1,2,3
+field 024F25D4 5030001E u16 0,1,2,3
+field 024F25D4 50300020 u16 0,1,2,3
+field 024F25D4 50300022 u16 0,1,2,3
+field 024F25D4 50200000 f32 0,1,-1,2
+field 024F25D4 50200004 f32 0,0,1,-1
+field 024F25D4 50200008 f32 0,1,-1,2
+field 024F25D4 5020000C f32 0,1,-1,2
+field 024F25D4 50200010 f32 0,0,1,-1
+field 024F25D4 50200014 f32 0,1,-1,2
+field 024F25D4 50200018 f32 0,1,-1,2
+field 024F25D4 5020001C f32 0,0,1,-1
+field 024F25D4 50200020 f32 0,1,-1,2
+field 024F25D4 50200024 f32 0,1,-1,2
+field 024F25D4 50200028 f32 0,0,1,-1
+field 024F25D4 5020002C f32 0,1,-1,2
+field 024F25D4 50400010 u32 4,4,0
+field 024F25D4 50400028 f32 0,0.016,1,4
+field 024F25D4 50400030 f32 0,1
+field 024F25D4 50400034 f32 0,1,2
+field 024F25D4 50400038 f32 0,0,1
+field 024F25D4 50400050 u32 4,4,0
+field 024F25D4 50400068 f32 0,0.016,1,4
+field 024F25D4 50400070 f32 0,1
+field 024F25D4 50400074 f32 0,1,2
+field 024F25D4 50400078 f32 0,0,1
+field 024F25D4 50400090 u32 4,4,0
+field 024F25D4 504000A8 f32 0,0.016,1,4
+field 024F25D4 504000B0 f32 0,1
+field 024F25D4 504000B4 f32 0,1,2
+field 024F25D4 504000B8 f32 0,0,1
+field 024F25D4 504000D0 u32 4,4,0
+field 024F25D4 504000E8 f32 0,0.016,1,4
+field 024F25D4 504000F0 f32 0,1
+field 024F25D4 504000F4 f32 0,1,2
+field 024F25D4 504000F8 f32 0,0,1
+field 024F25D4 50400110 u32 4,4,0
+field 024F25D4 50400128 f32 0,0.016,1,4
+field 024F25D4 50400130 f32 0,1
+field 024F25D4 50400134 f32 0,1,2
+field 024F25D4 50400138 f32 0,0,1
+stable 50200000 0x30
+stable 50300000 0x28
+stable 50400000 0x140
+stable 50500000 0x60

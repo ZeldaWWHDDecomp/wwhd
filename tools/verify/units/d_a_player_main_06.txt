@@ -1,0 +1,67 @@
+# Verification unit: d_a_player_main range #06 (02423D10..0242DAC7), self-contained check.
+# The same facts are in d_a_player_main.txt (section "#06").
+src wwhd_src/d/actor/d_a_player_main.cpp wwhd_src/d/actor/d_a_player_main_06.cpp
+
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+callee 0201ADE0 r4=out12
+field 024265A0 r3+0x69C0 i32 0,1,2,3,4
+field 024265A0 1018F510 u8 0,1
+field 024265A0 1047C7FA i16 0,1
+field 0242705C r3+0x69C0 i32 0,1,2,3
+callee 0201AE48 r4=out12
+callee 0242A478 r4=out12
+callee 0242A4CC r5=out12
+callee 023E33AC r6=out12
+callee 0201AD78 r4=out12
+callee 0242B9E0 r6=out12 r7=out12 r8=out2 r9=out2
+callee 020109FC r3=out4 r4=out4 r5=out4
+callee 02415FB0 r6=out12
+callee 028E8F64 r5=out12
+callee 028E9044 r5=out12
+field 02426964 r3+0x5840 i32 0,1,2,3,-1
+field 02426964 r3+0x69C0 i32 3,4,5,6,7,2
+field 02426964 r3+0x69F8 f32 6.0 18.0
+# dProcHDBottleThrow: `this` pinned so that the loop count (+0x5840) can be kept stable across mocked calls
+arg! 02426964 r3 0x40000000,0x40000000
+stable 40005840 4
+# mCurProc: the "already in this proc" early returns
+field 02423F08 r3+0x65F0 i32 0xC4,0xC3
+field 02424070 r3+0x65F0 i32 0xC5,0xC4
+field 02424434 r3+0x65F0 i32 0xC7,0xC6
+field 02424724 r3+0x65F0 i32 0xC8,0xC7
+field 02424B9C r3+0x65F0 i32 0xCB,0xCA
+field 02425048 r3+0x65F0 i32 0xCE,0xCD
+field 0242510C r3+0x65F0 i32 0xCF,0xCE
+field 024259D8 r3+0x65F0 i32 0xD4,0xD3
+field 02425E98 r3+0x65F0 i32 0xD7,0xD6
+field 0242A8E4 r3+0x65F0 i32 0x13,0x14
+field 02428AEC r3+0x65F0 i32 0x27,0x2D
+field 02429408 r3+0x65F0 i32 0x3E,0x3F,0x40,0x41
+field 02424F1C r3+0x65E0 u16 0x181,0x182,0x183
+field 024255EC r3+0x5848 u16 0x30,0x31
+field 024255EC 540052B0 u8 1,2,3
+ret 025D7CC4 0,0x41000000
+ret 025D5928 0,0x42000000
+# mutation follow-up (input gaps)
+field 02424D14 r3+0x65F0 i32 0xCC,0xCB
+callee 025D5928 stack=1
+callee 028E8F64 r4=12 r5=out12
+callee 028E9044 r4=12 r5=out12
+field 0242D8DC r3+0x65A4 u32 0x43000000,0x43000000
+field 0242D8DC 43000008 i16 0x1C7,0x1C6
+field 024291FC r3+0x6930 i16 0x7000,0x7001,0x1000,0xFFF,-0x1000,-0xFFF,0
+field 024291FC r3+0x32A i16 0
+field 02427DA0 r3+0x6930 i16 0x78E4,0x78E5,0x71C,0x71B,-0x71C,-0x71B,0
+field 02427DA0 r3+0x32A i16 0
+field 0242B648 r3+0x5898 f32 0.0,-0.0,0.005,-0.005,0.5,-0.5
+field 0242AFB8 r3+0x6A08 f32 0.05,0.06,0.5,1.0
+field 0242AFB8 r3+0x6A14 f32 0.001,-0.001,0.002,4.0
+ret 023E33AC 0,0x43100000
+callee 028E8E10 r3=12
+callee 028E8DD0 r3=12
+callee 0251510C r4=12 r5=12
+callee 02514F50 r4=12 r5=12
+field 0242AFB8 r3+0x8A0 f32 -1000000000.0,0.0,0.0,0.0
+ret 023E3398 0,1,2,3
+ret 0242A6B4 0,0,0,1,-1

@@ -1,0 +1,18 @@
+# Verification unit: d_a_toge (Wind Temple floor spikes)
+src wwhd_src/d/actor/d_a_toge.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 020182E0 r4=12         # cM3dGCyl::SetC: the centre
+ret 02520460 0 5              # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025BA0C0 0 1              # isSwitch
+ret 0207A9A0 0 2              # cLib_calcTimer<u8>
+fret 0200ECD4 0 1            # cLib_addCalc: remaining distance (0 often)
+# toge_move / _execute: event state 0..5, switch 0xFF (wind tag) or a real switch
+field * r3+0x5A0 u8 0 5
+field * r3+0x5A1 u8 0,1
+field * r3+0x58C f32 -1,0,1
+field 024C77F0 r3+0x594 i32 0xFF,0xFF,3
+field 024C77F0 r3+0x59C u32 0xFFFFFFFF,0x12
+ret 025D5218 0,0x57000000,0x57000000
+field 024C77F0 570006F0 f32 -1,0,1

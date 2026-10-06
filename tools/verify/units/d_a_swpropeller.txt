@@ -1,0 +1,29 @@
+# Verification unit: d_a_swpropeller (propeller switch)
+src wwhd_src/d/actor/d_a_swpropeller.cpp
+stackfill periodic
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 026066C4 0,0x56000000     # getRes: null or a model data
+ret 025E38E0 0,0x56100000     # J3DModel create: null or a model
+ret 027DF9B0 -2 3             # JUTNameTab::getIndex
+ret 0200F378 -2 2             # cLib_addCalcAngleS remainder
+ret 025162A4 0 1              # ChkTgHit
+ret 02516300 0,0x57000000     # GetTgHitObj
+field 024A31E4 0x57000010 u32 0,0x200000,0x400,0x10000,0x2,0x10000000,0x1000,0x20000,0xE20100,0xFFFFFFFF
+field 024A31E4 r3+0x768 u8 0 1
+field 024A31E4 r3+0x769 u8 0,1,2
+field 024A31E4 r3+0x76A u8 0 1
+field 024A31E4 r3+0x760 i16 0,1,-1,0x35,-0x35,0x36,-0x159,0x7FFF,-0x8000
+field 024A31E4 r3+0x75E i16 0,0x1000,0x300,-1,0x7FFF,-0x8000
+field 024A2F84 r3+0xB0 u32 0,0x100,0x1FF,0x200,0xF00,0x12345
+field 024A2F84 r3+0x769 u8 0 1
+field 024A2B2C r3+0x769 u8 0 1
+field 024A3144 r3+0x769 u8 0 1
+arg 024A2C04 r4 0,1,2
+field 024A2C04 0x104B462C u32 0x58000000
+field 024A2C04 0x580000B8 u32 0,0x59000000
+# set_mtx: aligned model pointers (scale SNaN copies)
+field 024A2D38 r3+0x3B4 u32 0x41000000,0x41000400
+field 024A2E10 r3+0x3B4 u32 0,0x41000000

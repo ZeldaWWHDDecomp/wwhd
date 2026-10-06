@@ -1,0 +1,54 @@
+# Six owned entries025AB3F8..<025AB7C4; preceding2D0/364 excluded.
+src wwhd_src/d/d_point_wind.cpp
+stackfill periodic
+real 025AB7C0
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 0201AE48 r3=12 r4=out12
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0200ECD4 r3=4
+callee 028E8DE8 r3=12 r4=12
+callee 0257DE5C r3=44
+callee 0257D1B8 r3=44
+ret! 025200D4 0x54000000 0x54000000
+fret! 028E8DE8 0 100000
+fret! 028F4384 0 1000
+stable 54005134 4
+arg! 025AB3F8 r3 0x51000000 0x51000000
+arg! 025AB454 r3 0x51000000 0x51000000
+arg! 025AB710 r3 0x51000000 0x51000000
+arg! 025AB3F8 r4 0x52000000 0x52000000
+field 025AB454 51000000 u32 0x52000000
+field 025AB454 54005134 u32 0x73656100,0x666F6F00,0x00000000,0x73650000
+field 025AB454 10052558 u32 0x73656100
+field 025AB454 10052544 u32 0x025AB7C0
+field 025AB454 1047E6C8 i8 -1,0,3,4,5
+arg! 025AB7AC r3 0,0x51000000
+arg! 025AB7AC r4 0,1,2,3
+arg! 025AB7C0 r3 0x51000000 0x51000000
+field 025AB3F8 52000000 f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 52000004 f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 52000008 f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 5200000C f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 52000010 f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 52000014 f32 -100,-10,-1,0,1,10,100
+field 025AB3F8 52000018 f32 0,0.5,1,10,100
+field 025AB454 52000000 f32 -100,-10,-1,0,1,10,100
+field 025AB454 52000004 f32 -100,-10,-1,0,1,10,100
+field 025AB454 52000008 f32 -100,-10,-1,0,1,10,100
+field 025AB454 5200000C f32 -100,-10,-1,0,1,10,100
+field 025AB454 52000010 f32 -100,-10,-1,0,1,10,100
+field 025AB454 52000014 f32 -100,-10,-1,0,1,10,100
+field 025AB454 52000018 f32 0,0.5,1,10,100
+field 025AB454 51000004 f32 -100,-1,0,1,100
+field 025AB454 51000008 f32 -100,-1,0,1,100
+field 025AB454 5100000C f32 -100,-1,0,1,100
+field 025AB454 51000010 f32 -100,-1,0,1,100
+field 025AB454 51000014 f32 -100,-1,0,1,100
+field 025AB454 51000018 f32 -100,-1,0,1,100
+field 025AB454 5100001C f32 0,0.5,1,10,100
+field 025AB710 51000028 i32 -1,0,1,15
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 025AB454 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","foo","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

@@ -1,0 +1,48 @@
+# hd_sys_02034B14: TU 02034B14..02035443 (ProcUI game framework); HD-only
+src wwhd_src/hd/hd_sys_02034B14.cpp
+field 02034B14 r3+4 u32 0,0x64000000
+field 02034B14 r3+0xA s16 0,-1,1,3
+arg 02034B68 r3 0,0x65000000
+field 02034B68 r3+0x38 u8 0,1
+field 02034B68 r3+0x1C u32 0,0x63000000
+arg 02034C10 r3 0,0xFFFFFC7C,0x65000000
+field * 101FD598 u32 0,1
+field * 101FD718 u32 0,1
+field * 101FD648 u32 0,1
+field 02034CC8 101F8AE8 u32 0x66000000
+field 02034CC8 660000DC s32 0,1,5,6,7
+field 02034CC8 660000E0 s32 0,6,8
+field 02034FFC 101F8DC0 u32 0,0x67000000
+field 02034FFC r3+0x1C u32 0,0x68000000
+field 020350C4 r3+0x38C u8 0,1
+field 020350C4 r3+0x28 u32 0,1,2
+field 020350C4 r3+0x380 u32 0,1,2,3
+ret C0007880 0,1,2,3
+ret C00053C0 0,1
+ret 02617AE4 0,1
+field 020350C4 101F8BA8 u32 0,0x69000000
+field 020350C4 69000014 u32 0,0x6A000000
+field 020350C4 101F4FF0 u32 0,0x6B000000
+field 020350C4 101F50D8 u32 0,0x6B100000
+field 020350C4 1018F504 u32 0,0x6B200000
+field 020352AC r3+0x28 u32 0,1
+field 020352AC r3+0x18 u32 0x6C000000
+# the frame loop ends when the root task reports done (+0xB4), written by the per-frame calls
+mockfield 0274A5EC r3+0xB4 u32 0,1
+callee 02748CFC r4=8
+callee 02749ECC r4=128
+callee 02760C3C r3=8
+arg 0203542C r3 0,0x65000000
+stackfill periodic
+# mutation follow-up: non-zero singleton globals (zero in the image's .bss, so a mis-addressed load of
+# them went unnoticed), and ProcUIShutdown may change the manager global read after it
+field * 101F8B18 u32 0x6D000000
+field * 101F5088 u32 0x6E000000
+mockglobal C00078B8 101F8BA8 u32 0,0x69000000
+
+# cross-build save states (2026-10-06): the chain call of the main loop is frame-exact (LR, r14..r31,
+# f14..f31, the whole frame) and the epilogue reloads the saved registers
+framexact 02034F8C 02034FD8
+framexact 02034FFC 02035090
+# mutation follow-up (2026-10-06): non-zero 101F86E8 (procFrame passes it twice after the chain call)
+field * 101F86E8 u32 0x6F000000

@@ -1,0 +1,48 @@
+# Full HD fade4 inventory under reconstruction; no verification credit yet.
+src wwhd_src/d/d_ovlp_fade4.cpp
+stackfill periodic
+ret! 025200D4 0x55000000 0x55000000
+ret! 0273AD10 0,0x57000000
+ret 02055B64 0,1
+ret 025DBDC4 0,1
+ret! 027F29D4 0x56000000 0x56000000
+field * 101F9968 u32 0x58000000
+field * 101F86B4 u32 0x59000000
+field * 101F8710 u32 0x5A000000
+arg! 025A2B88 r3 0,0x52000000
+arg! 025A2C3C r3 0,0x52000000
+arg! 025A2D24 r3 0,0x52000000
+arg! 025A29C4 r3 0x52000000 0x52000000
+arg! 025A2A34 r3 0x52000000 0x52000000
+field * 52000000 u32 0x53000000
+field * 53000004 u32 0x60000200
+field * 5300000C u32 0x60000100
+field * 520000D0 s16 0
+field * 520000D2 s16 -1,0,1
+field * 520000D4 u32 0x60000100
+field * 520000D6 s16 0
+field * 520000D8 s16 0
+field * 520000DA s16 0,1,-1
+field * 520000DC u32 0x60000100,0x025A36D8
+field * 520000DE s16 0
+callee 60000100 r3=4
+callee 60000200 r3=4
+# Native draw texture is bound by0272CF9C->027BE53C->027BE494;
+# dirty bit4 invokes027BE340, which consumes filter words150/154/158.
+callee 0272CF9C r4=408
+field 025A3014 r3+0x348 u8 0,1
+field 025A3098 r3+0x36C u32 0,44,45,46,0xFFFFFFFF
+field 025A3098 r3+0x34C s16 0,1
+field 025A3224 r3+0x36C u32 0,1,45
+field 025A3224 r3+0x368 u8 0,1
+field 025A32E8 r3+0x34C s16 -1,0,1,10
+field 025A332C r3+0xDA s16 0,-1
+field 025A332C r3+0xD8 s16 0,1
+field 025A332C r3+0xDC u32 0,0x025A36D8
+field 025A332C r3+0x348 u8 0,1
+field 025A2EC0 r3+4 f32 0,0.125,0.5,1,2,-1
+field 025A2EC0 r3+8 u8 0,1
+field * 55005AC9 u8 0,1
+# Actual tail import memset consumes r3; size varies across calls.
+callee 028F521C r3=0 r4=0
+pointee 027BE114 r3=408

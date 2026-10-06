@@ -1,0 +1,13 @@
+src wwhd_src/d/d_detect.cpp
+field 02529DE8 r3+8 s16 468 470
+field 02529DE8 r3+0x420 u8 0 1
+field 02529DE8 r3+0x3BC s32 0 2
+ret 025D4604 0 1
+callee 028E8DE8 r3=12 r4=12
+callee 028E8DD0 r3=12
+callee 028E8F64 r3=48 r4=12 r5=12
+# Actual sampled uninitialized-coordinate omissions need nonzero stack and transform outputs.
+stackfill periodic
+mockfield 028E8F64 r5+0 f32 -1000,-50,0,50,1000
+mockfield 028E8F64 r5+4 f32 -1000,0,100,101,1000
+mockfield 028E8F64 r5+8 f32 -1000,-50,0,50,1000

@@ -1,0 +1,79 @@
+# d_event (dEvt_control_c, dEvt_info_c): TU 0253E948..<02540508 (d_ev_camera's __sinit 0253E89C and SafeString copies before it; sinit 02540474 at the end; d_event_data follows)
+src wwhd_src/d/d_event.cpp
+ret! 025200D4 0x54000000 0x54000000
+callee 028F521C r3=255                # memzero
+callee 0253EC0C stack=1               # order: eventInfoIdx on the stack
+# order queue walks (checkChange, changeProc, checkStart, order, photoCheck): `this` pinned in a
+# zero .rodata block (unsteered inputs then see an empty queue), acyclic next links, not clobbered
+arg! 0253F0B0 r3 0x10059500
+arg! 0253F434 r3 0x10059500
+arg! 0253FD1C r3 0x10059500
+arg! 0253EC0C r3 0x10059500
+arg! 02540024 r3 0x10059500
+field * 100595C0 u8 0,1,2,3,8
+field * 100595C1 u8 0,1,2,3
+field * 10059514 u8 0xFF,0xFF,2
+field * 1005952C u8 0xFF,0xFF,2,0
+field * 10059544 u8 0xFF,0xFF,3
+field * 1005955C u8 0xFF,0xFF,4
+field * 10059574 u8 0xFF,0xFF,5
+field * 1005958C u8 0xFF,0xFF,6
+field * 100595A4 u8 0xFF,0xFF,7
+field * 100595BC u8 0xFF
+field 0253FD1C 10059500 u16 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
+field 0253FD1C 10059518 u16 0,2,6,9,10,11,12,13,15
+field 0253FD1C 10059530 u16 0,2,6,9,10,11,12,13,15
+field 0253FD1C 10059548 u16 0,2,6,9,10,11,12,13,15
+field 0253F0B0 10059500 u16 13,0,1,12
+field 0253F434 10059500 u16 13,0,1,12
+field 02540024 10059500 u16 5,6,7,8,9
+field 0253F0B0 10059518 u16 13,0,1,12
+field 0253F434 10059518 u16 13,0,1,12
+field 02540024 10059518 u16 5,6,7,8,9
+field 0253F0B0 10059530 u16 13,0,1,12
+field 0253F434 10059530 u16 13,0,1,12
+field 02540024 10059530 u16 5,6,7,8,9
+field 0253F0B0 10059548 u16 13,0,1,12
+field 0253F434 10059548 u16 13,0,1,12
+field 02540024 10059548 u16 5,6,7,8,9
+stable 10059500 0xF4
+# constructors allocate when this == NULL
+arg 0253E948 r3 0,0x52000000
+arg 0253EAB8 r3 0,0x52000000
+ret 0273AD10 0,0x53000000,0x53000000
+arg 0253E9B0 r4 0,0x55000000
+# order: priorities (1 at the head refuses), the HD gate play+0x5BAC
+arg 0253EC0C r5 1,2,3,4,5
+field * 10059512 u16 1,2,3,5
+field * 1005952A u16 1,2,3,5
+field * 10059542 u16 1,2,3,5
+field * 1005955A u16 2,3,5
+field * 54005BAC u16 0,1
+# door (treasure 0xB), talk XY (item buttons 6/7/9/default), selected items
+field 0253F648 r4+0 u16 0xB,1
+field 0253F8FC r4+0 u16 6,7,8,9
+field * 54005BBB u8 0xFF,0x23,0x26,1
+field * 54005BBC u8 0xFF,0x23,0x26,1
+field * 54005BBD u8 0xFF,0x23,0x26,1
+field * 54005BBE u8 0xFF,0x23,0x26,1
+# photoCheck(): the first order's actors and their flags, the picture status
+field 02540024 1005950C u32 0x55000000,0
+field 02540024 10059508 u32 0x56000000,0,0
+field * 5500039C u32 0x01000000,0
+field * 550000FA u16 1,0,0x41
+field * 560000FA u16 1,0,0x41
+field * 54005BE8 u8 0,1,2
+# moveApproval: the partners are the actor
+arg 02540158 r4 0x57000000
+ret 0253EE04 0x57000000,0,0x58000000
+# moveApproval: event mode, actor status bits, the event flag 0x80, demo mode
+field * 54005292 u8 0,1,2,3
+field 02540158 r4+0x2E0 u32 0x04000000,0x4000,0x2000,0x8000,0x40,0x800,0,1,0x04002000,0x04004000,0x04000040,0x4001
+field 02540158 r3+0xC2 u8 0,1,2,3
+field 02540158 r3+0xE8 u16 0,0x80
+field * 101D6010 u32 0,1
+# photoCheck(): a null actor 1 (its condition word then read at 0xFA)
+field 02540024 000000FA u16 1,0
+arg 0253F124 r4 0,0x55000000
+field 02540024 101F84DC u32 0x5A000000
+field 02540024 55FFFF06 u16 0

@@ -1,0 +1,55 @@
+# hd_ui_02004A3C: TU 02004A3C..02005977 (HD layout animation set); HD-only
+src wwhd_src/hd/hd_ui_02004A3C.cpp
+field * 101FD938 u32 0,1
+field * 101FD88C u32 0,1
+field * 101FD888 u32 0,1
+arg 02004AC0 r3 0,0xFFFFFFFC,0xFFFFFFF4,0x65000000
+# init: small counts; pinned set with stable counts for the clearing loops
+arg! 02004B70 r5 -1,0,1,3
+arg! 02004B70 r6 -1,0,1,3
+arg! 02004B70 r3 0x60000000
+stable 60000004 4
+stable 6000000C 4
+field 02004B70 60000004 s32 0,1,2
+field 02004B70 6000000C s32 0,1,2
+# fini: pinned set, small stable count
+arg! 02004CAC r3 0x62000000
+field 02004CAC 62000004 s32 0,1,3,-1,-2
+field 02004CAC 62000008 u32 0,0x62000100
+field 02004CAC 62000100 u32 0,0x61000000
+field 02004CAC 62000104 u32 0,0x61000000
+field 02004CAC 62000010 u32 0,0x62000200
+field 02004CAC 6200000C u32 0,1,0x7F000001
+stable 62000004 4
+# indices around the array bounds
+arg * r4 0,1,2,3,7
+arg * r5 0,1,2,3,7
+field 02004E04 r3+4 u32 0,1,2,4
+field 02004F50 r3+4 u32 0,1,2,4
+field 0200506C r3+4 u32 0,1,2,4
+field 020051C4 r3+4 u32 0,1,2,4
+field 020051C4 r3+0xC u32 0,1,2,4
+field 02005334 r3+0xC u32 0,1,2,4
+field 020053E4 r3+4 u32 0,1,2,4
+field 020053E4 r3+0xC u32 0,1,2,4
+field 02005488 r3+4 u32 0,1,2,4
+field 02005488 r3+0xC u32 0,1,2,4
+field 0200552C r3+4 u32 0,1,2,4
+field 0200552C r3+0xC u32 0,1,2,4
+field 020055E0 r3+4 u32 0,1,2,4
+field 020055E0 r3+0xC u32 0,1,2,4
+field 02005674 r3+4 u32 0,1,2,4
+field 02005674 r3+0xC u32 0,1,2,4
+field 02005708 r3+4 u32 0,1,2,4
+field 02005708 r3+0xC u32 0,1,2,4
+field 0200579C r3+4 u32 0,1,2,4
+field 0200579C r3+0xC u32 0,1,2,4
+field 02005840 r3+4 u32 0,1,2,4
+field 0200588C r3+4 u32 0,1,2,4
+# the UI lock object pointer (image value 0): non-zero, so a misaddressed read differs
+field * 101F8B18 u32 0x76000000,0x76100000
+# bindRange: few iterations
+arg! 0200506C r7 0,1,2,3
+# the frame controller's virtual +0x24 (start/stop, this + bool) resolves to a random real function in generated
+# inputs; seed 7000000+8062 hit one that reads r5 (left over from the SafeArray index arithmetic): false positive
+nolivein 020051C4

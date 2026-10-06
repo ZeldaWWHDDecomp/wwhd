@@ -1,0 +1,14 @@
+# Verification unit: d_a_obj_rflw (Rito flower)
+src wwhd_src/d/actor/d_a_obj_rflw.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r4=out12      # cXyz::operator-
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E38E0 0,0x10000000,0x10000100  # model create
+ret 027DF9B0 -2 3             # JUTNameTab::getIndex
+ret 02516464 0 1              # ChkCoHit
+field * r3+0x2E4 u32 0,8      # actor_condition INIT
+field * r3+0x528 i16 0x37,0x38,0x39,0,6,7,8,0xFF,0x100,0x101,-1 # mHitTimer (boundaries)
+field * r3+0x52C u8 0,0,1     # swinging
+arg 02387A74 r4 0,0,0,1

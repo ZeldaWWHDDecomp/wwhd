@@ -1,0 +1,116 @@
+# Qualified HD SaveMgr, all four owned range claims. SDK callbacks mocked.
+src wwhd_src/d/d_menu_save_bootstrap.cpp
+
+# Actual nonzero game-state and mapped game accessor; selection/index edges.
+field 02720E34 101F84DC u32 0x58010000
+ret 025200D4 0x58020000 0x58020000
+field 02720E34 58010029 u8 0,1,2,14,21,24,31,32,36,43,44,48,55,56,255
+field 02720E34 5801002A u8 0,1,2,14,21,24,31,32,36,43,44,48,55,56,255
+field 02720E34 5801002B u8 0,1,2,14,21,24,31,32,36,43,44,48,55,56,255
+field 02720E34 5801002C u8 0,1,2,14,21,24,31,32,36,43,44,48,55,56,255
+field 02720E34 5801002D u8 0,1,2,14,21,24,31,32,36,43,44,48,55,56,255
+field 02720E34 58025BBB u8 0,39,53
+field 02720E34 58025BBC u8 0,39,53
+field 02720E34 58025BBD u8 0,39,53
+# Missing selected items and populated items both exercise clearing.
+field 02720E34 5801005C u8 0,255
+field 02720E34 5801005D u8 0,255
+field 02720E34 5801005E u8 0,255
+field 02720E34 5801005F u8 0,255
+field 02720E34 58010060 u8 0,255
+field 02720E34 58010061 u8 0,255
+field 02720E34 58010062 u8 0,255
+field 02720E34 58010063 u8 0,255
+field 02720E34 58010064 u8 0,255
+field 02720E34 58010065 u8 0,255
+field 02720E34 58010066 u8 0,255
+field 02720E34 58010067 u8 0,255
+field 02720E34 58010068 u8 0,255
+field 02720E34 58010069 u8 0,255
+field 02720E34 5801006A u8 0,255
+field 02720E34 5801006B u8 0,255
+field 02720E34 5801006C u8 0,255
+field 02720E34 5801006D u8 0,255
+field 02720E34 5801006E u8 0,255
+field 02720E34 5801006F u8 0,255
+field 02720E34 58010070 u8 0,255
+field 02720E34 58010096 u8 0,255
+field 02720E34 58010097 u8 0,255
+field 02720E34 58010098 u8 0,255
+field 02720E34 58010099 u8 0,255
+field 02720E34 5801009A u8 0,255
+field 02720E34 5801009B u8 0,255
+field 02720E34 5801009C u8 0,255
+field 02720E34 5801009D u8 0,255
+field 02720E34 5801009E u8 0,255
+field 02720E34 5801009F u8 0,255
+field 02720E34 580100A0 u8 0,255
+field 02720E34 580100A1 u8 0,255
+field 02720E34 580100A2 u8 0,255
+field 02720E34 580100A3 u8 0,255
+field 02720E34 580100A4 u8 0,255
+field 02720E34 580100A5 u8 0,255
+field 02720E34 580100A6 u8 0,255
+field 02720E34 580100A7 u8 0,255
+field 02720E34 580100A8 u8 0,255
+field 02720E34 580100A9 u8 0,255
+field 02720E34 580100AA u8 0,255
+field 02720E34 580100AB u8 0,255
+field 02720E34 580100AC u8 0,255
+field 02720E34 580100AD u8 0,255
+# Existing manager bypasses allocation.
+field 02720A5C 101F852C u32 0,0x58030000
+
+src wwhd_src/d/d_menu_save_card.cpp
+arg! 02721AC4 r5 0,1,16,128,512,2700
+
+# Nonzero game-state singleton exposes shifted-address mutation survivors.
+field * 101F84DC u32 0,0x58010000
+
+src wwhd_src/d/d_menu_save_storage.cpp
+
+# Nonzero manager/menu singletons and existing disposer ownership paths.
+field * 101F84DC u32 0,0x58010000
+field * 101F8344 u32 0,0x58040000
+field * 58040218 u32 0,0x58041000
+field * 1018F2BC u32 0,0x58042000
+field 02722980 580101C0 u8 0,1,2
+arg 02725228 r3 0,0x58050000
+field 02725228 101F8530 u32 0,0x58050000
+field 02725228 101F852C u32 0,0x58051000
+# Real FileDevice open/read/write effects; stack file storage is60bytes, count4bytes.
+mockfield 02741CFC r4+0x10 u32 0,1
+mockfield 02741CFC r4+0x14 u32 0,0x58060000
+mockfield 027414CC r4+0 u32 0,1,4,8,12,16,18,20,0x174,0x6A4,0x1FBC,0x50000
+mockfield 02741558 r4+0 u32 0,1,4,8,12,16,18,20,0x174,0x6A4,0x1FBC,0x50000
+ret 027414CC 0,1,1,1
+ret 02741558 0,1,1,1
+# Empty stage-header checksum results, plus ordinary failures, exercise the12-header continuation.
+ret 0272581C 0 0
+ret 02725B44 0 0
+# Rare late progress states need mostly-unset event flags.
+ret 025B8B94 0,0,0,0,0,0,0,1
+ret 025B7E00 0,7,8
+ret 025B7D90 0,0,0,0,0,0,0,1
+ret 02520C0C 0,0,0,0,0,0,0,1
+ret 025B5D40 0,0,0,0,0,0,0,1
+ret 025B7A2C 0,0,0,0,0,0,0,1
+# Scene name remains a valid terminated boss name across the SaveMgr operation.
+ret 025200D4 0x58020000 0x58020000
+field 02721D48 58025134 u32 0x58626F73
+field 02721D48 58025138 u32 0x73300000,0x73310000,0x73320000,0x73330000,0x73000000
+stable 58025134 8
+
+# Event-bit index boundaries and already-failed write-open state.
+arg 02722BD8 r4 0,1,7,8,15,16,31,63,127,133,134
+ret 025B8BB0 0,1,2,4,8,16,32,64,128,255
+arg 02722894 r3 0x58070000
+field 02722894 58070024 u32 0,0xFFFFFFFD
+
+# Qualified eight trailing compiler/vtable helpers, actual SaveMgr vtables confirm entries.
+src wwhd_src/d/d_menu_save_compiler.cpp
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02721D48 0x58025134 8 @stages,"0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3"

@@ -1,0 +1,32 @@
+src wwhd_src/m_Do/m_Do_ext_old_frame.cpp
+stackfill periodic
+arg! 025E410C r3 0x52000000
+field 025E410C 52000078 s32 0,1,2,3
+field 025E410C 52000092 u16 0,1,2,3
+# Fixed animation resource counts in non-resizing evaluation domain.
+stable 52000078 4
+stable 52000092 2
+callee 025EE5F0 r3=out16 r4=48
+callee 027ED3AC r3=16 r4=16 r5=out16
+arg! 025E46B4 r3 0x52000000
+field 025E46B4 52000092 u16 0,1,2,3
+stable 52000092 2
+mockfield 025EE5F0 r3+0x0 f32 0,1
+mockfield 025EE5F0 r3+0x4 f32 0,1
+mockfield 025EE5F0 r3+0x8 f32 0,1
+mockfield 025EE5F0 r3+0xC f32 0,1
+field 025E410C 5200008C u32 0x53000000
+field 025E410C 53000004 f32 0,1
+field 025E410C 53000008 f32 0,1
+field 025E410C 5300000C f32 0,1
+field 025E410C 5300003C f32 0,1
+field 025E410C 53000040 f32 0,1
+field 025E410C 53000044 f32 0,1
+field 025E410C 53000074 f32 0,1
+field 025E410C 53000078 f32 0,1
+field 025E410C 5300007C f32 0,1
+#027E0834 dispatch table1016C700 points to027E89FC/027E8C4C etc, which read r4 (e.g027E8A0C lhz4(r4)).
+callee 027E0834 r4=0
+# Known-valid transform callback02233BE8 reads/writes J3DTransformInfo r5+0xC; real payload32 bytes.
+field 025E410C 520000B0 u32 0x02233BE8
+callee 02233BE8 r5=32

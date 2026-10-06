@@ -1,0 +1,505 @@
+# Verification unit: d_a_ship (King of Red Lions)
+src wwhd_src/d/actor/d_a_ship.cpp wwhd_src/d/actor/d_a_ship_exec.cpp wwhd_src/d/actor/d_a_ship_tail.cpp wwhd_src/d/actor/d_a_ship_create.cpp wwhd_src/d/actor/d_a_ship_pending.cpp
+
+ret 025200D4 0x54000000 0x54000000       # play object at a fixed address
+ret 0246B6A4 0 1                         # daSea_ChkArea
+
+# bodyJointCallBack: the special joints, the mast animation, Link looking down from the boat
+arg 02471298 r4 0,4,5,6,7,10
+field 02471298 r3+0x67A u16 0xA,0xB,0
+field 02471298 54005B34 u32 0,0x55000000,0x55000000
+field 02471298 54005CD8 u32 0x10000,0,0xFFFFFFFF
+field 02471298 550003D0 i16 -0x2000,-0x1000,-0xFFF,0
+arg 0247187C r4 0 1
+arg 02471AAC r4 0 1
+arg 02471BF4 r4 0 1
+arg 02471C50 r4 0 1
+arg 02471E54 r4 0 1
+field 0247187C 104B462C u32 0x5A000000 0x5A000000   # j3dSys model
+field 0247187C 5A0000B8 u32 0,0x5B000000,0x5B000000 # user area (actor)
+field 02471C2C r3+0x404 u32 0,0x56000000
+
+# checkSirenInside: "Siren" as the start stage, Link's room around 7
+field 02471E94 54005134 u32 0x53697265,0x53697265,0x5365615F
+field 02471E94 54005138 u16 0x6E00,0x6E00,0x6E41
+field 02471E94 54005B34 u32 0x55000000 0x55000000
+field 02471E94 55000326 i8 5 9
+
+# getMaxWaterY: the -1e9 "no water" marker
+field 0247204C r3+0x6DC f32 -1000000000,-1000000000,0,100
+
+# draw
+ret 02471E94 0,0,0,1                     # checkSirenInside
+ret 027DF9B0 -1 3                        # JUTNameTab::getIndex
+ret 027FA7F8 0,0x5C000000,0x5C000000     # texture SRT of the material
+ret 027FA678 0,0x5D000000                # texture matrix slot
+field 0247255C r3+0x3BC u32 0,0x5E000000,0x5E000000
+field 0247255C r3+0x3C0 u32 0,0x5F000000,0x5F000000
+field 0247255C r3+0x637 u8 0,1,2,3
+field 0247255C r3+0x686 i16 0 3
+field 0247255C 54005292 u8 0,0,1
+field 0247255C 54005B34 u32 0x55000000 0x55000000
+field 0247255C 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 0247255C 54005CD8 u32 0x10000,0x10000,0
+field 0247255C 54005B00 u32 0,0x22,2,0x20
+field 0247255C r3+0xD190 u32 0x0000FFFF,0x0000FFFF,0x00010000,0xFFFF
+field 0247255C r3+0xD194 u32 0x0247F0D0,0x0247F0D0,0x0247E670
+
+# drawShadow (HD)
+callee 0274D458 r3=out16 r4=16           # colour op: output, input colour
+callee 025602F0 r3=out4 r4=out4          # dKy_get_seacolor
+field 024720D0 1046DDA0 u32 0,1,1
+field 024720D0 r3+0x630 u8 0,0,1,10,255
+field 02471FB0 r3+0x98 u32 0,0x56000000,0x56000000,0x56000000
+field 02471FB0 r3+0x9C u32 0,0x57000000,0x57000000,0x57000000
+field 02471FB0 r3+0xA0 u32 0,0x58000000,0x58000000,0x58000000
+
+# messages: save flags, mostly false so the long chains are walked
+ret 025B5D40 0,1,1,1,1,1,1,1                     # isItem
+ret 025B7D90 0,0,0,0,0,0,1                     # isSymbol
+ret 025B7B10 0,0,0,0,0,0,0,1                     # isTact
+ret 02520C0C 0,1                         # checkGetItem
+ret 024731BC 0,0,0,0,0,0,1                     # checkForceMessage
+field 02473454 54005CD8 u32 0,0,0,0x10000
+field 02473454 54005134 u32 0x47616E6F,0x47616E6F,0x47616E6F,0x48797275,0x48797275,0x6B656E72,0x58626F73,0x47546F77,0x4879726F   # "Hyru" "Gano" "kenr" "Xbos" "GTow" "Hyro"
+# second word of the stage name: GanonA..N, Xboss0..3, GTower, Hyrule, Hyroom, kenroom
+field 02473454 54005138 u32 0x6E410000,0x6E420000,0x6E430000,0x6E440000,0x6E450000,0x6E4E0000,0x6E4D0000,0x6E4C0000,0x6E4A0000,0x6E4B0000,0x73300000,0x73310000,0x73320000,0x73330000,0x65720000,0x6C650000,0x6F6D0000,0x6F6F6D00
+field 024731BC 1020002E u8 0,0x39,0x3A,0x3E
+field 02473454 1020002E u8 0,0,0,0,0,0,0,0,0,0,0,0x39
+field * 101F84DC u32 0x10200000 0x10200000   # save data at a fixed address
+# setNextMessage: message numbers as high byte (0x05, 0x06, 0x0D, 0x16) x low byte (every low byte of a
+# number the function tests); a single list would exceed the 255-character pick limit
+field 02481038 r3+0x648 u16 0,0
+field 02481038 r3+0x64A u8 5,5,5,6,6,13,22,22
+field 02481038 r3+0x64B u8 16,7,8,9,10,33,34,35,36,54,69,70,71,72,73,74,75,76,77,78,79,80,81,90,91,92,120,121,123,130,131,132,133,135,136,137,140,220,221,222,223,224,225,226,227,228,234,235,236,237,238,239,244,245,246,247,248,249
+field 02481038 10200068 u8 0,0xFF
+ret 025B7E00 0,0,1,7,8                   # getTriforceNum
+
+# talk
+ret 025F795C 0xE,0x12,0,0x12             # message status
+ret 02481038 0 1                         # setNextMessage
+field 02481630 r3+0x718 u32 0xFFFFFFFF,0
+field 02481630 54005B30 i8 0 1
+field 02481630 54005B00 u32 4,0
+field 02481630 r3+0x417 u8 0,2
+field 02481630 r3+0x672 u16 0xC,0xD
+field 02481630 54005CD8 u32 0x10000,0
+field 0247309C 54005CD8 u32 0x10000,0
+fret 028F4384 0 400                      # sqrtf: distances around the 1/30/120 thresholds
+field 02481874 r3+0x662 i16 -1 2
+field 024753BC 54005B34 u32 0,0x55000000,0x55000000
+field 024753BC 55000430 u32 0x44,0
+field 024753BC r3+0x1490 u32 0,0x800
+# setYPos
+field 024754D8 r3+0x635 u8 0,1,12,13,14,15,16
+field 024754D8 r3+0x63A u8 0,0xB
+field 024754D8 r3+0x644 u32 0,0x10,0x11,0x2000011,0x1
+field 024754D8 r3+0x340 f32 -30 10
+# checkOutRange: a path of 0..5 points at a fixed address, the next path NULL or itself
+field 02474A98 r3+0x634 u8 0,1,0xFF
+ret 025AAF88 0,0x56000000,0x56000000,0x56000000      # dPath_GetRoomPath
+ret 025AB070 0,0,0x56000000                          # dPath_GetNextRoomPath
+field 02474A98 56000000 u16 0 5
+field 02474A98 56000008 u32 0x57000000 0x57000000
+field 02474A98 54005CEA u8 0,1
+field 02474A98 r3+0x314 f32 -200 200
+field 02474A98 r3+0x31C f32 -200 200
+# setCrashData / checkNextMode
+field 0247D880 r3+0x69E i16 0,0,1
+field 0247D880 54005292 u8 0,0,1
+field 0247D880 54005B34 u32 0x55000000 0x55000000
+field 0247D880 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 0247D880 550003BC u32 0,0,1
+field 0247D880 5500699E i16 0,0,1
+field 0247D880 r3+0x704 u32 0,0,1
+field 0247D880 r3+0x70C u32 0,0,1
+field 0247D880 r3+0x644 u32 0,4
+field 0247DD90 r3+0x644 u32 0,0,4
+field 0247DD90 54005CD8 u32 0x10000,0x10000,0
+field 0247DD90 54005292 u8 0,0,1
+field 0247DD90 r3+0x636 u8 0,1,2,5,9,10,14,16
+ret 025162A4 0,0,1                       # ChkTgHit
+ret 02516360 0,0x58000000                # GetTgHitGObj
+field 0247DD90 58000010 u32 0x200000,0x200000,0x8
+ret 0247D880 0 1                         # setCrashData
+# setPart*
+arg 0247BB24 r4 0,1,2,3
+arg 0247BC44 r4 0,1,2,3
+field 0247BB24 r3+0x637 u8 0,1,2,3
+field 0247BA38 r3+0x637 u8 0,1,2,3
+field 0247BC44 r3+0x637 u8 0,1,2,3
+field 0247BC44 r3+0x67A u16 0xA,0xB
+# setSelfMove / checkFrontObstacle
+arg 0247E2B4 r4 0,1
+field 0247E2B4 r3+0x644 u32 0,0,1
+field 0247E2B4 54005CD8 u32 0,0,0x2000
+field 0247E2B4 54005292 u8 0,0,1
+field 0247E2B4 54005B34 u32 0x55000000 0x55000000
+field 0247E2B4 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 0247E2B4 r3+0x6C4 f32 0 100
+field 0247E2B4 r3+0x370 f32 0 100
+field 0247E2B4 54005BB6 u8 0x13,0
+field 0247E2B4 r3+0x1490 u32 0,0x10
+field 0247E2B4 r3+0x6B0 i32 0 4
+field 0247E2B4 r3+0x1378 u32 0,2
+ret 0247E0D0 0 1
+ret 020076E0 0 1
+field 0247E0D0 54005CEA u8 0,0,1
+field 0247E0D0 1046DDE8 u32 0,1,1
+fret 028F4384 0 400
+# simple procs
+field 0247E670 r3+0x636 u8 0,2,3,13,16
+field 0247E77C r3+0x636 u8 0,2,4
+field 0247E77C r3+0x635 u8 3,4
+field 0247E77C 54005CD8 u32 0,0x10000,0x1000000
+field 0247FE54 r3+0x636 u8 0,6
+field 0247FE54 r3+0x635 u8 5,6
+field 0247FE54 r3+0x654 i16 0x7FF 0x801
+field 0247FE54 54005B34 u32 0x55000000 0x55000000
+field 0247FE54 550065F0 u32 0x90,0
+field 0247C300 r3+0x67A u16 0xA,0xB
+field 0247DB84 r3+0x67A u16 0xA,0xB
+field 0247BEFC r3+0x67A u16 0xA,0xB
+field 0247BEFC r3+0x644 u32 0,0x2000
+# procPaddleMove / procSteerMove
+ret 0247DD90 0,0,0,1                     # checkNextMode
+field 0247EEE8 54005CD8 u32 0,0,0x1000
+field 0247EEE8 54005CDC u32 0,0,8
+field 0247EEE8 54005292 u8 0,0,1
+field 0247E854 r3+0x644 u32 0,0,0x200,0x1
+field 0247E854 r3+0x67A u16 0xB,0xB,0xA
+field 0247E854 r3+0x637 u8 1,1,0,2
+field 0247E854 r3+0x63D u8 0,1
+field 0247E854 54005D2C u8 0,1
+field 0247E854 r3+0x6FC u32 0,0x58000000
+field 0247E854 54005292 u8 0,0,1
+field 0247E854 54005B34 u32 0x55000000 0x55000000
+field 0247E854 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 0247E854 r3+0x6E0 f32 20 40
+field 0247E854 r3+0x704 u32 0,0,1
+field 0247E854 r3+0x70C u32 0,0,1
+field 0247E854 r3+0x6C4 f32 0 100
+field 0247E854 r3+0x370 f32 0 100
+ret 0257DB04 0x59000000 0x59000000       # wind power pointer
+field 0247E854 59000000 f32 0 1
+ret 027F2BF8 0 1                         # checkPass
+ret 02007D4C 0 1
+# cannon
+field 0247F024 r3+0x637 u8 2,0
+field 0247F0D0 54005292 u8 0,0,1
+field 0247F0D0 54005B34 u32 0x55000000 0x55000000
+field 0247F0D0 54005B2C u32 0x55000000,0x55000000,0x56000000
+ret 024EDFCC 0,1                         # LockonTruth
+ret 024EE058 0,0x58000000                # GetLockonList
+ret 024EBA14 0,0x59000000                # getActor
+field 0247F0D0 54005824 u32 0,0x20000000
+field 0247F0D0 r3+0x67E i16 0x1500 0x4100
+field 0247F0D0 r3+0x662 i16 -1 2
+field 0247F0D0 54005BB7 u8 0x3F,0x3F,0
+field 0247F0D0 54005BBB u8 0x31,0
+field 0247F0D0 54005BBC u8 0x31,0
+field 0247F0D0 54005BBD u8 0x31,0
+field 0247F0D0 1020008A u8 0,1
+ret 027200D0 0x5A000000 0x5A000000
+field 0247F0D0 5A000002 u8 0,1
+ret 0200FAAC 0,0x7F,0x80,0x100           # cLib_distanceAngleS
+# crane
+field 0247F618 r3+0x637 u8 3,0
+field 0247F618 r3+0x686 i16 18 20
+field 0247F7CC 54005292 u8 0,0,1
+field 0247F7CC 54005B34 u32 0x55000000 0x55000000
+field 0247F7CC 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 0247F7CC r3+0x680 u32 0x30003000,0x30003000,0xD000D000,0x10003000
+field 0247F7CC r3+0x370 f32 -5 5
+field 0247F7CC 54005BBB u8 0x25,0
+field 0247F7CC 54005BBC u8 0x25,0
+field 0247F7CC 54005BBD u8 0x25,0
+field 0247F7CC r3+0x686 i16 18,20,22,123,125,127
+field 0247F7CC r3+0x63C u8 0,1
+field 0247F7CC r3+0x6D0 f32 0 1
+field 0247F7CC r3+0x68C i16 -0x8000 0x7FFF
+ret 02007CDC 0,0,1                       # R lock
+field 02475030 r3+0xD190 u32 0x0000FFFF,0x0000FFFF,0x00010000
+field 02475030 r3+0xD194 u32 0x0247FBC4,0x0247F7CC
+field 0247FBC4 r3+0xD130 u32 0,0x58000000
+field 0247FBC4 r3+0x68E i16 -0x600 0x600
+field 0247FBC4 r3+0x686 i16 20 22
+field 0247FBC4 54005292 u8 0,1
+field 0247FBC4 54005B34 u32 0x55000000 0x55000000
+field 0247FBC4 550000B4 u32 0x5B000000 0x5B000000
+# tool / zev demo
+field 0247FF54 r3+0x2DC u8 0,1,0x20,0x21
+field 0247FF54 101D5FFC u32 0,0x58000000,0x58000000
+ret 02526E70 0,0x59000000,0x59000000
+field 0247FF54 59000004 u16 0,2,8,10
+field 024800A8 r3+0x640 i32 -1,0,0,0
+field 024800A8 r3+0x63A u8 0,1,3,4,5,6,7,8,10,11,12
+field 024800A8 r3+0x639 u8 0,1,4
+ret 0254487C 0,0x5A000000                # getMySubstanceP
+field 024800A8 5A000000 u32 0,1,2,3,0xC0000000,0xBF800000,0x42000000
+ret 0253EE04 0,0x55000000                # convPId
+ret 02544900 0x5B000000 0x5B000000       # getGoal
+field 024800A8 54005B34 u32 0x55000000 0x55000000
+field 024800A8 r3+0x6C4 f32 0 100
+field 024800A8 r3+0x370 f32 0 100
+field 024800A8 r3+0x340 f32 -20 20
+field 024800A8 r3+0x374 f32 -3 3
+field 024800A8 r3+0x644 u32 0,0x8000,0x80000,0x10000
+# tornado / whirl
+ret 025D5218 0,0x58000000,0x58000000     # fopAcIt_Judge
+field 02472C04 r3+0x700 u32 0xFFFFFFFF,1,1
+field 02472F14 r3+0x708 u32 0xFFFFFFFF,1,1
+field 02472C04 580003B4 u32 0,0x59000000
+field 02481C94 r3+0x704 u32 0x58000000 0x58000000
+field 02481C94 580003B4 u32 0,0x59000000
+field 02481C94 r3+0x662 i16 0 11
+field 02481C94 r3+0x68E i16 0,0,1
+field 02481C94 r3+0x318 f32 -6000 6000
+field 02481C94 58000318 f32 -2000 2000
+field 02472C04 r3+0x644 u32 0,0x1000
+field 02472F14 r3+0x644 u32 0,0x1000
+ret 0244300C 0 1
+fret 0200EF78 0 20                       # cLib_addCalcPosXZ
+field 024827D4 r3+0x70C u32 0,0x58000000
+field 024827D4 r3+0x662 i16 0,1
+field 024827D4 r3+0x6D8 f32 -500 1500
+field 024827D4 r3+0x318 f32 -500 1500
+# warp / throw
+callee 025602F0 r3=out4 r4=out4
+field 02481FAC r3+0x714 u32 0xFFFFFFFF,1,1
+field 02482438 r3+0x714 u32 0xFFFFFFFF,1,1
+field 02481FAC r3+0x662 i16 0,0,1
+field 02481FAC r3+0x644 u32 0,8
+field 02481FAC 580003B4 u32 0,0x59000000
+field 02482438 580003B4 u32 0,0x59000000
+field 02481FAC 58000744 f32 0 1.6
+field 02482438 58000744 f32 0 1.6
+field 02481FAC r3+0x68E i16 0x300 0x500
+field 02482438 r3+0x68E i16 0xF00 0x1C25
+field 02482438 r3+0x662 i16 0,1,2
+ret 025DD868 0,0,1                       # fpcM_IsCreating
+ret 0200F564 0 1                         # cLib_chaseS
+field 02482438 r3+0x318 f32 4000 6000
+field 02482438 r3+0x6D8 f32 0 0
+field 02482970 r3+0x662 i16 0,1,44
+field 02482970 r3+0x318 f32 -10 10
+field 02482970 r3+0x6D8 f32 -10 10
+# setRoomInfo / incRopeCnt
+field 024752F4 r3+0x14FC f32 -1000000000,-1000000000,0
+field 02476204 r3+0x5A8 u32 0x58000000 0x58000000
+field 02476204 58000000 u32 0x59000000 0x59000000
+field 02476204 r3+0x686 i16 0 130
+arg! 02476204 r4 -4,-2,-1,2,10,150
+arg! 02476204 r5 0,20
+field 02476188 r3+0x67A u16 0xA,0xB
+# setHeadAnm
+field 02475DA8 54005292 u8 0,0,1
+field 02475DA8 r3+0x640 i32 -1,-1,0
+ret 025445B8 0,0,0,1                     # startCheckOld
+field 02475DA8 54005CD8 u32 0x10000,0x10000,0,0x11000
+field 02475DA8 54005CDC u32 0,0,8
+field 02475DA8 r3+0x635 u8 0,9
+field 02475DA8 r3+0x69C u16 5,6,7,8,0xE,0
+field 02475DA8 101FF560 u32 0x1FF,0x3FF,0
+field 02475DA8 r3+0x644 u32 0,0x40000000
+# setRopePos
+field 024763B0 r3+0x5A8 u32 0x58000000 0x58000000
+field 024763B0 58000000 u32 0x59000000 0x59000000
+field 024763B0 r3+0x686 i16 0,1,2,3,20,21
+field 024763B0 r3+0xD190 u32 0x0000FFFF,0x0000FFFF,0x00010000
+field 024763B0 r3+0xD194 u32 0x0247FBC4,0x0247F7CC
+field 024763B0 r3+0x644 u32 0,0x10000000
+field 024763B0 r3+0x67A u16 0xA,0xB
+field 024763B0 r3+0xD130 u32 0,0x5A000000
+field 024763B0 r3+0xD16C u32 0,0x5A000000
+field 024763B0 r3+0xD180 u32 0,0x5A000000
+field 024763B0 r3+0x638 u8 0,0,1
+field 024763B0 r3+0x635 u8 0,11
+field 024763B0 1046DDB4 u32 0,1,1
+# setEffectData
+field 02477278 r3+0x644 u32 0,1,0x80,0x81
+field 02477278 r3+0x6E0 f32 -30 30
+field 02477278 r3+0x370 f32 -30 30
+field 02477278 r3+0xD0BC u32 0,0x58000000
+field 02477278 r3+0xD058 u32 0,0x58000000
+field 02477278 r3+0xD0D8 u32 0,0x58000000
+field 02477278 r3+0xD128 u32 0,0x58000000
+field 02477278 1046DDB8 u32 0,1,1
+field 02477278 1046DDBC u32 0,1,1
+stable 40000686 2                        # mRopeCnt: loop counts (rope segments)
+# HD sight helpers, shadow rate
+field 0247700C r3+0xA0 u32 0,0x58000000,0x58000000
+field 02477088 r3+0x1B4C i16 -1 2
+
+# execute: the talk message, the whirlpool room, the crane mast, the cannon (firing, sight), modes
+field 02477A24 r3+0x648 u32 0x1682,0,0
+field 02477A24 r3+0x326 i8 44,44,0
+field 02477A24 1020008A u8 0,0,5
+field 02477A24 r3+0x637 u8 0,1,2,2,2,3,3
+field 02477A24 r3+0x67A u16 0xA,0xA,0
+field 02477A24 r3+0x662 i16 30,30,0,5
+field 02477A24 r3+0x635 u8 0,3,7,8,8,9,11,14
+field 02477A24 r3+0xD192 i16 -1,-1,-1,0
+field 02477A24 r3+0xD190 i16 0,0,0,4
+field 02477A24 r3+0xD194 u32 0x0247F0D0,0x0247F0D0,0x0247F7CC,0x0247FBC4,0x0247E670
+field 02477A24 54005292 u8 0,0,0,1
+field 02477A24 54005B34 u32 0x55000000 0x55000000
+field 02477A24 54005B2C u32 0x55000000,0x55000000,0x56000000
+field 02477A24 1020002E u8 0,0x39
+field 02477A24 101D0348 f32 0,7.5,7.9
+ret 025D5928 0,0x5A000000                # fopAcM_fastCreate
+ret 02516464 0,0,0,1   # ChkCoHit
+ret 02515BBC 0,0x5B000000                # GetAc
+field 02477A24 5B00000E i16 0xE1,0xE2,0xD1,0
+ret 02008860 0,0,0,1   # cBgS::LineCross
+fret 0246BA0C -1000000 1000                # daSea_calcWave: far below the sight trajectory
+
+# HD sea_E texture replacement: the stage, the texture names, a small texture table
+field 0247AF98 54005134 u32 0x7365615F,0x7365615F,0x5365615F
+field 0247AF98 54005138 u16 0x4500,0x4500,0x4600
+field 0247AF98 r3+0x30 u32 0x5A000000 0x5A000000
+field 0247AF98 5A000000 u16 0,1,3,6,70,130
+field 0247AF98 5A000004 u32 0x5B000000 0x5B000000
+ret 027ED1F0 0x1003A5E8,0x1003A5F4,0x1003A600,0x1003A5D4,0x1003A5DC,0x5D100000,0x5D100010   # JUTNameTab::getName
+ret 02606900 0x5C000000 0x5C000000      # getRes by name
+
+# create: phases, the heap, models with joints, the ending sea's Demo46 wait, start modes, stages
+ret 02520460 4,4,4,0,5                   # dComIfG_resLoad
+ret 025D63E8 0,1,1,1                     # fopAcM_entrySolidHeap
+ret 025D5834 0xFFFFFFFF,1,2,3            # fopAcM_create
+ret 026065A8 0,1                         # Demo46 resource ready
+ret 027F3F94 0x5E000000 0x5E000000       # joint tree
+field 0247C358 r3+0x2E4 u32 0,0,8
+field 0247C358 r3+0xB0 u32 0x100,0,0x1FF
+field 0247C358 5E000008 u16 0,3,12,12
+field 0247C358 54005134 u32 0x7365615F,0x48797275,0x4F636561,0x5365615F
+field 0247C358 54005138 u32 0x45000000,0x6C650000,0x6E000000,0x45000000
+field 0247C358 r3+0x3B4 u32 0x5A000000 0x5A000000
+field 0247C358 r3+0x3B8 u32 0x5A100000 0x5A100000
+field 0247C358 5A000090 u32 0x5B000000 0x5B000000
+field 0247C358 5A100090 u32 0x5B100000 0x5B100000
+field 0247C358 5B0000AC u32 0x5C000000 0x5C000000
+field 0247C358 5B1000AC u32 0x5C100000 0x5C100000
+field 0247C358 5C000004 u32 0,3,12,12
+field 0247C358 5C100004 u32 0,3,12,12
+field 0247C358 r3+0x418 u32 0x5B200000 0x5B200000
+field 0247C358 r3+0x41C u32 0x5B300000 0x5B300000
+field 0247C358 5B2000AC u32 0x5C200000 0x5C200000
+field 0247C358 5B3000AC u32 0x5C300000 0x5C300000
+field 0247C358 5C200004 u32 0,1,2,3
+field 0247C358 5C300004 u32 0,1,2,3
+field 0247C358 5C00000C u32 0,5,0x7FFFFFFF
+field 0247C358 5C000010 u32 0,0x5D000000,0x5D000000
+field 0247C358 r3+0x636 u8 0,2,13,16,1
+field 0247C358 r3+0x635 u8 0,13,16
+callee 0247204C r4=out12                  # getMaxWaterY: the water position (written)
+
+# mutation gaps
+# checkNextMode: a wind-type hit object at address 1 tells "no hit object" (0) from a non-null one
+field 0247DD90 00000011 u32 0x200000,0
+# compared pointees and stack arguments of common callees (as in other units)
+callee 025A847C r6=12 r7=6 r8=12 stack=4    # dPa_control_c::set: pos, angle, scale; setup..scale2D on the stack
+callee 026066C4 r4=8                        # getRes(arc SafeString, index)
+callee 02606900 r4=8 r5=8                   # getRes(arc SafeString, name SafeString)
+callee 025E4F64 stack=4                     # mDoExt_McaMorf ctor: the stack arguments
+callee 028E8F64 r3=48 r4=12 r5=out12        # PSMTXMultVec
+callee 028E9044 r3=48 r4=12 r5=out12        # PSMTXMultVecSR
+callee 0201ADE0 r3=12 r4=out12 r5=12        # cXyz::operator-
+callee 028E8DD0 r3=12                       # PSVECSquareMag
+# setNextMessage: every message number of the "no follow-up" list and its range edges
+# bodyJointCallBack: mast animation frames that put the scale between its clamps
+field 02471298 r3+0x3B4 u32 0x5A000000 0x5A000000
+field 02471298 5A00009C f32 0,10,15,20,30
+field 02471298 5A0000A2 i16 30,30,20
+callee 0201AE48 r3=12 r4=out12              # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12        # cXyz::operator+
+
+# event flags: dSv_event_c::isEventBit runs for real on the pinned save data (0x10200000 + 0x644 + byte);
+# each flag byte the unit tests is mostly clear, sometimes one bit or all bits
+real 025B8B94
+field * 1020064D u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020064E u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200653 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020065A u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020065C u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020065D u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200662 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200663 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200665 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020066E u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020066F u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200670 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200671 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200672 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200673 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200674 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200676 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200677 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020067C u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020067D u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 1020067E u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200681 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200682 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200683 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+field * 10200684 u8 0,0,0,0,0,0,0,0,1,2,4,8,16,32,64,128,255
+# setInitMessage: each flag byte of the long else-if chain is clear most of the time and otherwise has exactly one
+# of the bits the chain tests (about 1 in 20 per bit), so every branch is reached; the tail bytes vary more
+field 02473454 1020065A u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x20
+field 02473454 10200662 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x40
+field 02473454 10200663 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x02,0x04,0x04,0x04
+field 02473454 10200665 u8 0,0,0,0,0,0x10
+field 02473454 10200670 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x02,0x01
+field 02473454 10200671 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x08,0x10
+field 02473454 10200672 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x02,0x04
+field 02473454 10200673 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x20
+field 02473454 10200674 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x40
+field 02473454 10200677 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x80
+field 02473454 1020067C u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10
+field 02473454 1020067D u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10
+field 02473454 1020067E u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x02
+field 02473454 10200681 u8 0,0,0,0,0,0x02
+field 02473454 10200682 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x10,0x01,0x11,0x11
+field 02473454 10200683 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x80
+field 02473454 10200684 u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x04
+field 02473454 1020064D u8 0,0,0,2,8,0x0A
+field 02473454 1020064E u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x02,0x03,0x08,0x0C,0x20,0x80,0x10,0x01,0x04
+field 02473454 1020065D u8 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x40,0x80,0x80,0x80
+field 02473454 1020066E u8 0,0,1,2,8,3,0x0A
+field 02473454 1020066F u8 0,0x80
+field 02475DA8 10200671 u8 0,0x02,0x02,0xFF
+# setNextMessage: the message manager and its selected answer
+field 02481038 101F4B5C u32 0x5D000000 0x5D000000
+field 02481038 5D000948 u32 0,1,2
+# setInitMessage: the stage type (virtual getStagInfo of the stage data at play+0x5150): dungeon or not
+field 02473454 54005150 u32 0x5E000000 0x5E000000
+field 02473454 5E000000 u32 0x5E100000 0x5E100000
+field 02473454 5E10015C u32 0x02000000 0x02000000
+ret 02000000 0x5F000000 0x5F000000
+field 02473454 5F00000C u32 0x10000,0x70000,0x10000
+# sea_E textures: names equal by content (not by pointer): "fn_head1" and "fn_main1x"
+field 0247AF98 5D100000 u32 0x666E5F68 0x666E5F68
+field 0247AF98 5D100004 u32 0x65616431 0x65616431
+field 0247AF98 5D100008 u8 0 0
+field 0247AF98 5D100010 u32 0x666E5F6D 0x666E5F6D
+field 0247AF98 5D100014 u32 0x61696E31 0x61696E31
+field 0247AF98 5D100018 u8 0,0x78
+# create: the event gate (0F80) mostly open, a null body model sometimes, the resource control pointer
+field 0247C358 10200653 u8 0x80,0x80,0x80,0
+field 0247C358 5A000090 u32 0x5B000000,0x5B000000,0
+field 0247C358 101F4F28 u32 0x5E200000 0x5E200000
+callee 026065A8 r4=8                        # Demo46 readiness: the arc SafeString
+callee 02514F50 r4=12 r5=12                 # camera set (center, eye)
+callee 028E8DAC r3=12 r4=12 r5=out12        # PSVECSubtract
+callee 028E8D88 r3=12 r4=12 r5=out12        # PSVECAdd
+callee 028E8E64 r3=12 r4=out12              # PSVECScale
+callee 025CB374 r6=12                       # dVibration_c::StartShock: direction
+field 0247AF98 101F4F28 u32 0x5E200000 0x5E200000
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02471E94 0x54005134 8 @stages,"EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 02473454 0x54005134 8 @stages,"EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","GanonA","GanonA","GanonA","GanonA","GanonA","GanonA","GanonA","GanonA","GanonB","GanonB","GanonB","GanonB","GanonB","GanonB","GanonB","GanonB","GanonC","GanonC","GanonC","GanonC","GanonC","GanonC","GanonC","GanonC","GanonD","GanonD","GanonD","GanonD","GanonD","GanonD","GanonD","GanonD","GanonE","GanonE","GanonE","GanonE","GanonE","GanonE","GanonE","GanonE","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonL","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonM","GanonN","GanonN","GanonN","GanonN","GanonN","GanonN","GanonN","GanonN","Hyroom","Hyroom","Hyroom","Hyroom","Hyroom","Hyroom","Hyroom","Hyroom","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","R","R","R","R","R","R","R","R","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss0","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss1","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss2","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","Xboss3","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom","kenroom",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 024827D4 0x54005134 8 @stages
+fieldstr 0247AF98 0x54005134 8 @stages,"R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","fn_head1","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep
+fieldstr 0247C358 0x54005134 8 @stages,"EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","Hyrule","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","Ship","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E","sea_E",@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep,@keep

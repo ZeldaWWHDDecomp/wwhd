@@ -1,0 +1,25 @@
+# Verification unit: d_a_obj_mkiek (light-vanishing wall)
+src wwhd_src/d/actor/d_a_obj_mkiek.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025E8154 stack=1       # mDoExt_brkAnm::init: entry on the stack
+callee 025A847C stack=4       # dPa_control_c::set: setup, prm, env, scale2D on the stack
+callee 025CB374 r6=12         # StartShock: cXyz by value
+callee 0201AD78 r4=out12 r5=12  # cXyz::operator+
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025E8154 0 1              # brkAnm::init
+ret 025BA0C0 0 1              # isSwitch
+ret 0252A038 0 1              # chk_light
+ret 025162A4 0 1              # ChkTgHit
+ret 023722C8 0 1              # PrmAbstract
+arg 023722C8 r4 0,1,8,31,32,33,63
+arg 023722C8 r5 0,1,8,24,31,32,33,63
+field * r3+0x5D4 u32 0,1,2,3   # mState
+field * r3+0x5D8 i32 0,18,19,20,21   # m460
+field * r3+0xF8 u16 0,2        # event command
+field * r3+0x5D0 u8 0 1        # m458
+field 02371E6C r3+0x3FF u8 0,1,2,3     # frame ctrl state
+field 02371E6C r3+0x3F0 f32 0,0,1,-1   # frame ctrl rate
+field * r3+0xD u8 2,3,4        # create result
+stackfill

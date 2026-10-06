@@ -1,0 +1,32 @@
+# Verification unit: d_a_fgmahou (Phantom Ganon energy ball)
+src wwhd_src/d/actor/d_a_fgmahou.cpp
+
+callee 026066C4 r4=8                 # sead::SafeString key
+callee 0201ADE0 r4=out12             # cXyz::operator-
+callee 0200FCD8 r3=12 r4=out12       # MtxPosition
+ret 02520460 0 5                     # dComIfG_resLoad
+ret 025D63E8 0 1                     # fopAcM_entrySolidHeap
+ret 025D4604 0 1                     # fopAc_IsActor
+ret 025160DC 0,1,1                   # ChkAtHit
+ret 025162A4 0 1                     # ChkTgHit
+ret 025DE508 0,0x56000000            # fpcM_Search
+ret 02516178 0,0x57000000            # GetAtHitObj
+field 0213D594 57000044 u32 0,0x57100000,0x57100000
+field 0213D594 5710000C u32 0,0x57200000,0x57200000
+field 0213D594 57200008 i16 0xA7,0xA8,0xA8
+field 0213D544 r3+0x8 i16 0xF0,0xF1,0xF2
+field 0213D594 r3+0x3E2 i16 -1,0,0,1,1,2,2,3,5,5,6,6,7,8,10,11
+field 0213D594 r3+0x3F6 i16 0,0,0,1
+field 0213D594 r3+0x3F8 i16 0,0,0,1
+field 0213D594 r3+0x89C i8 0,0,0,0,1,2,0x32,0x33
+field 0213D594 r3+0x3FC i16 0,1,7,8,9
+field 0213D594 r3+0x3D0 u8 0 7
+field 0213D594 r3+0x46C u32 0,0,0,0x10,0x20,0x200,0x8
+fret 025D68EC 4900,5000,5000,5100     # player distance
+fret 028F4384 0,499.99997,500,500,500.00003,1000   # sqrtf (distance to the target vs 500)
+field 0213D594 1047B654 f32 0 0      # REG0_F(17)
+field 0213D594 1047B61C f32 -3 3     # REG0_F(3)
+field 0213D594 1047B630 f32 -8000 0  # REG0_F(8)
+field 0213D594 1047B694 i16 -10 10
+field 0213D594 1047B68C i16 -3 3     # REG0_S(2): loop count
+field 0213D594 560008BC u32 0          # fganon m68B word: start from 0 so the store is visible

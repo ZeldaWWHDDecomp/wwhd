@@ -1,0 +1,124 @@
+# Actual HD18 entries [024E9D04,024EA58C); prioractor destructor/virtual excluded.
+src wwhd_src/d/actor/d_a_ygcwp.cpp
+ret 026066C4 0,0x55010000
+ret 025E38E0 0,0x55020000
+ret 025E8154 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025B8B94 0,1
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2
+ret 025447C8 0,1
+ret 0254487C 0,0x55030000
+ret 025200D4 0x1046F0B0
+field * 0x10474BDC u32 0x54100000
+field * 0x101F4F28 u32 0x54200000
+field * 0x101F84DC u32 0x54300000
+field * r3+0x4B0 s32 -1,0,1,2
+field * r3+0x4AC s32 -1,0,1,2
+field * 0x55030000 s32 -1,0,1,2
+callee 026066C4 r4=8
+callee 025A847C r6=12 r8=12 stack=4
+callee 028E93CC r3=out48
+callee 025F1B48 r3=out48
+
+# Boundary/float companion; primary frozen spec unchanged.
+stackfill periodic
+field 024EA1DC r3+0x4AC s32 -2147483648,-1,0,1,2147483647
+field 024E9E6C r3+0x330 u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+field 024E9E6C r3+0x334 u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+field 024E9E6C r3+0x338 u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+field 024E9E6C r3+0x314 u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+field 024E9E6C r3+0x318 u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+field 024E9E6C r3+0x31C u32 0,2147483648,2139095040,4286578688,2143289344,1,8388607
+
+# Initialized SafeString with defined eight-byte storage for empty virtual.
+arg! 024EA580 r3 0x56040000
+field 024EA580 0x56040000 u32 0x10043010
+field 024EA580 0x56040004 u32 0x10042F54
+
+# Initialized play singleton; getter never writes actor storage on this valid warm path.
+real 025200D4
+field * 0x104753A8 u32 1
+stable 0x104753A8 4
+stable 0x10474BDC 4
+
+# Constructed active event with one portal staff and a Timer integer datum.
+real 02542D88 02542EDC 0254487C 02543944 025439E0 02542E94 02542EAC
+field * 0x10474342 u8 1
+field * 0x104741FC u8 0
+field * 0x10474374 u32 0x55043000
+field * 0x55043004 u32 1
+field * 0x10474378 u32 0x55044000
+field * 0x550440A4 u32 2
+field * 0x5504407C u32 1
+field * 0x5504402C u32 0
+field * 0x1047437C u32 0x55040000
+field * 0x55040000 u32 0x59676377
+field * 0x55040004 u32 0x70000000
+field * 0x55040020 u32 0
+field * 0x5504002C u32 0
+field * 0x55040038 u32 0
+field * 0x5504003C s32 0,1,2
+field * 0x55040047 u8 1
+field * 0x10474380 u32 0x55041000
+field * 0x55041038 u32 0
+field * 0x10474384 u32 0x55042000
+field * 0x55042000 u32 0x54696D65
+field * 0x55042004 u32 0x72000000
+field * 0x55042024 u32 3
+field * 0x55042028 u32 0
+field * 0x5504202C u32 1
+field * 0x55042030 s32 -1
+field * 0x1047438C u32 0x55030000
+field * r3+0x4A8 s32 -1,0
+stable 0x10474342 1
+stable 0x104741FC 1
+stable 0x10474374 28
+stable 0x55043004 4
+stable 0x5504402C 4
+stable 0x5504407C 4
+stable 0x550440A4 4
+stable 0x55040000 8
+stable 0x55040020 4
+stable 0x5504002C 4
+stable 0x55040038 8
+stable 0x55040047 1
+stable 0x55041038 4
+stable 0x55042000 8
+stable 0x55042024 16
+
+# Callee receiver ownership: play/query helpers cannot write actor staff/room/timer.
+arg! 024EA174 r3 0x56000000
+arg! 024EA1DC r3 0x56000000
+stable 0x560004A8 8
+stable 0x56000326 1
+
+# Actual nested timer writes only actor.timer after read-only script lookup.
+real 024EA174
+
+# Oct04 bounded disjoint live actor/model construction and initialized environment.
+arg! * r3 0x56000000
+field * 560003AC u32 0x55020000
+stable 560003AC 4
+field * 104773B4 u32 1
+stable 104773B4 4
+real 02555D0C
+real 028EFFD0 028EFE58 028F61E4 028F623C 025E80D0 027F2BC0 027DA984 027DA7E4
+real 024E9E6C 028E93CC 025F1B48 025F1884 025F18EC 025F181C 028E9108
+# Actual particle engine with resource-miss path; distinct actor and manager.
+real 024EA10C 025A847C 025A4D40 02821448 02826EF8
+field * 1047B2D4 u32 0x58004000
+stable 1047B2D4 4
+field * 58004030 u32 0x58005000
+field * 58004034 u32 0x58005000
+stable 58004030 8
+field * 58005004 u32 0x58006000
+stable 58005000 12
+field * 58006000 u32 0
+stable 58006000 12
+arg! 024EA580 r3 0x56040000
+
+# Complete shared save/restore tail chains, rather than mock their fallthrough fragments.
+real 028F61E8 028F61EC 028F61F0 028F61F4 028F61F8 028F61FC 028F6200
+real 028F6240 028F6244 028F6248 028F624C 028F6250 028F6254 028F6258

@@ -1,0 +1,28 @@
+# Verification unit: d_a_wind_tag (wind column tag)
+src wwhd_src/d/actor/d_a_wind_tag.cpp
+
+field * r3+0x6EC u8 0 1                # mType (2-entry tables)
+callee 026066C4 r4=8                   # sead::SafeString key
+# HD "sea" material colour loops (CreateHeap, _draw)
+ret 025200D4 0x54000000 0x54000000     # play object at a fixed address
+field 024DEE3C 0x54005134 u32 0x73656100,0x73650000,0x00000000   # stage name "sea" / "se" / ""
+field 024DFBB4 0x54005134 u32 0x73656100,0x73650000,0x00000000
+ret 025E38E0 0x58000000,0              # mDoExt_J3DModel__create
+field 024DFBB4 r3+0x544 u32 0x58000000 # mpModel
+field * 0x5800002A u16 0 3             # material count
+field * 0x580000AC u32 0x59000000      # model data
+field * 0x5900000C u32 0 3             # material count (data)
+field * 0x59000010 u32 0x5A000000      # material array
+ret 025E7CE0 0 1                       # btk init
+ret 025E8508 0 1                       # bck init
+field 024DFBB4 r3+0x8EE u8 0 1         # mbDraw
+stable 0x58000000 0x100                # model: callees never rewrite the material count
+stable 0x59000000 0x20                 # model data
+stable 0x54005134 8                    # stage name
+stackfill periodic
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 024DEE3C 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","TREASURE","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Yaflw00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","Ybgaf00","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"
+fieldstr 024DFBB4 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","EAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","_APPEAR","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea"

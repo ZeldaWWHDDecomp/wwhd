@@ -1,0 +1,3 @@
+# hd_sinit_02035FD8: TU 02035FD8..02036083 (initialiser-only); HD-only
+src wwhd_src/hd/hd_sinit_02035FD8.cpp
+arg 0203606C r3 0,0x65000000

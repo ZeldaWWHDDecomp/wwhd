@@ -1,0 +1,5 @@
+src wwhd_src/d/d_menu_save_card.cpp
+arg! 02721AC4 r5 0,1,16,128,512,2700
+
+# Nonzero game-state singleton exposes shifted-address mutation survivors.
+field * 101F84DC u32 0,0x58010000

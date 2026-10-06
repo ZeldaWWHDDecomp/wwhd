@@ -1,0 +1,62 @@
+# hd_ui_02003C58: TUs 02003C58..02004A3B (HD layout object / pane builder, lyt wrapper); HD-only
+src wwhd_src/hd/hd_ui_02003C58.cpp
+field * 101FD92C u32 0,1
+field * 101FD8C0 u32 0,1
+field * 101FD888 u32 0,1
+field * 101FD8C4 u32 0,1
+field * 101FD894 u32 0,1
+arg 02003CDC r3 0,0xFFFFFFC4,0x65000000
+arg 02003D84 r3 0,0xFFFFFFC4,0x65000000
+# destructor: pinned layout with a small, stable child count
+arg! 02003E1C r3 0,0x60000000
+field 02003E1C 6000003C s32 0,1,3,-1
+field 02003E1C 60000044 u32 0x60000100
+field 02003E1C 60000104 u32 0
+stable 6000003C 4
+stable 60000044 4
+arg 02003EE8 r4 0x626E6431,0x70696331,0x70727431,0x74787431,0x776E6431,0x62000000,0x7A000000,0x70727430
+field 020042A4 r3+0x40 s32 0,1,4
+# group member lists returned by the lyt group lookup: empty or two nodes, stable links
+ret! 02874820 0x71000000,0x71000000
+field 020042D0 7100000C u32 0x7100000C,0x71000100
+field 020042D0 71000100 u32 0x71000200
+field 020042D0 71000200 u32 0x7100000C
+stable 7100000C 4
+stable 71000100 4
+stable 71000200 4
+# part binder: pinned resource with a few part entries; names equal, different or identical pointers
+arg! 02004490 r4 0x72000000
+field 02004490 72000008 u32 0x73000000
+field 02004490 7300000E u16 0,1,2
+field 02004490 73000010 u32 0x100
+field 02004490 73000100 u32 0x200,0x300,0x1000080
+field 02004490 73000104 u32 0x300
+stable 72000008 4
+stable 7300000E 2
+stable 73000010 4
+stable 73000100 8
+arg! 02004490 r5 0x74000000
+field 02004490 74000080 u32 0x41423031
+field 02004490 74000084 u32 0
+field 02004490 73000200 u32 0x41423031,0x41423032
+field 02004490 73000204 u32 0
+field 02004490 73000300 u32 0x41423031
+field 02004490 73000304 u32 0
+field 02004490 7300021D u8 0,1
+field 02004490 7300031D u8 0,1
+stable 74000080 8
+stable 73000200 8
+stable 73000300 8
+stable 7300021D 1
+stable 7300031D 1
+# the formatter fills the part-name buffer (chars at +0xC): empty, one char, longer names
+mockfield 02759C28 r3+0xC u32 0,0x01000000,0x41000000,0x41423000,0x41424344
+# buildPane: the resource accessor's data word, the lyt allocator
+callee 028727E8 r3=out20
+ret 0287F3DC 0,0x75000000
+# the pane constructors receive the copied 0x34-byte build-argument block (r6)
+callee 020048D0 r6=52
+callee 02002698 r6=52
+callee 020037D0 r6=52
+callee 020021FC r6=52
+callee 02003AEC r6=52

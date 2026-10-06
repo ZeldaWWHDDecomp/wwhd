@@ -1,0 +1,25 @@
+# Verification unit (fork, merged into d_a_npc_ji1 later): startspeak/endspeak/rei/plmove actions
+src wwhd_src/d/actor/d_a_npc_ji1_speak.cpp wwhd_src/d/actor/d_a_npc_ji1_pending.cpp
+
+ret 025B8B94 0 1                    # isEventBit
+ret 025B8BB0 0,1,2,3,0,1,2,3,4      # getEventReg
+ret 025F795C 0xE,0xF,0x11,0x12,0x12,0x12,0x13,0   # message status
+ret 025F7DB0 0xFFFFFFFF,1,2         # messageSet
+ret 025440C8 0 1                    # endCheck
+ret 0254407C 0 1                    # startCheck
+ret 02542D88 -1,0,1                 # getMyStaffId
+ret 022513D8 0,1,2,3,4              # getEventActionNo
+ret 027F2BF8 0 1                    # checkPass
+field * r3+0xEA0 i8 0,0,1,2,2,2,2,2,-1
+field * r3+0xF8 u16 0,2,2
+field * 10467228 u32 0xFFFFFFFF,5,5
+field * r3+0x3C8 u32 0x969,0x969,0x969,0x98C,0x98E,0x990,0x992,0x994,0x98B,0x98D,0x98F,0x991,0x993,0x995,0x996
+field * r3+0xF8C i32 0xB,0xB,0xC,0xC,0xD,0
+field * r3+0xF98 i32 0,0,3
+field * r3+0xFA3 u8 0,0,1
+field * r3+0x3CE i16 -1,-1,0,1
+field * r3+0x3CC i16 0,0,0,4
+# the morf: frame and end frame (plmove: frame window end-14 .. 5)
+field * r3+0x43C u32 0x58000000,0x58000000
+field * 5800009C f32 0,4,5,5.5,6,20,24,25,26,27,40
+field * 580000A2 i16 40,40,20

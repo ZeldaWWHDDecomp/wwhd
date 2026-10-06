@@ -1,0 +1,27 @@
+# hd_ui_02005978: TUs 02005978..02006293 (layout child, UI graphics singleton, application entry); HD-only
+src wwhd_src/hd/hd_ui_02005978.cpp
+arg 02005978 r3 0,0xFFFFFFF8,0xFFFFFFEC,0x65000000
+field 02005B90 1018C404 u32 0,0x66000000
+field 02005D1C 1018C408 u32 0,0x67000000
+arg 02005D1C r3 0,0x67000000,0x68000000
+ret C0009790 0x69000000,0x69000000
+field 02005EA8 69000000 u32 0x45585048,0
+field * 104A030C u32 0,1
+# mutation follow-ups: whole stack objects at the framework / heap / run calls; non-zero globals
+callee 02034C10 r4=44
+callee 0274B40C r7=8 r8=8
+callee 02753004 r4=8
+callee 02748B98 r4=8
+field * 104A01DC u32 0x11111111,0x10203040
+field * 104A01E0 u32 0x22222222,0x50607080
+field * 104A01E4 u32 0x33333333,0x0A0B0C0D
+field * 104A01E8 u32 0x44444444,0x01020304
+field * 101F8B18 u32 0x76000000,0x76100000
+field 02005D1C 1018C404 u32 0x6A000000,0x6A100000
+
+# native frames (2026-10-06): the original's frame layout, callee sp and frame bytes
+footprint 02005EA8 0x118
+
+# cross-build save states (2026-10-06): the run call (main loop) is frame-exact (LR, r14..r31, f14..f31,
+# the whole frame) and the epilogue reloads the saved registers
+framexact 02005EA8 020061C4

@@ -1,0 +1,62 @@
+# Verification unit: JAIZelAtmos (Zelda ambient sound positions), 0201C0E8..0201D413
+src wwhd_src/JAZelAudio/JAIZelAtmos.cpp
+
+# loops over the position lists re-read their counts after mocked calls: pin `this` and keep the counts stable
+arg! 0201C524 r3 0x50000000
+arg! 0201CDA0 r3 0x50000000
+arg! 0201D1AC r3 0x50000000
+stable 50001BF0 4
+stable 50001E40 4
+stable 50001F30 4
+field 0201C524 r3+0x1BF0 u32 0,1,2,3,5,0xFFFFFFFF
+field 0201CDA0 r3+0x1E40 u32 0,1,2,3,0xFFFFFFFF
+field 0201D1AC r3+0x1F30 u32 0,1,2,3,0xFFFFFFFF
+
+# null positions
+arg 0201C360 r4 0,0x30000000
+arg 0201C4C4 r4 0,0x30000000
+arg 0201CC50 r4 0,0x30000000
+arg 0201D14C r4 0,0x30000000
+field 0201C4C4 r3+0x1BF0 u32 0,1,62,63,64
+field 0201CC50 r3+0x1E40 u32 0,1,62,63,64
+field 0201D14C r3+0x1F30 u32 0,1,2,3
+fret 028F4384 0 3000
+fret 02804718 0 1000
+# seaEnvSePlay: state flags, camera-around points (0x28B = 0x14), type 8
+field 0201C524 r3+0x268 u8 0,0,0,1
+field 0201C524 r3+0x274 u8 0,0,0,1
+field 0201C524 r3+0x271 u8 0,0,0,1
+field 0201C524 r3+0x276 u8 0,0,0,1
+field 0201C524 r3+0x28B u8 0x14,0x13
+field 0201C524 r3+0x30 u8 0,1
+arg 0201C524 r4 0,7,8,9
+ret 0201DB08 0,1
+# seaShoreSE: types, the stage name "Demo08" (literal 10003814) at 1047E6B8, the demo flag 101D6010
+arg 0201CA10 r4 0,1,2,3
+arg 0201CA10 r6 0,1
+field 0201CA10 r3+0x271 u8 0,0,0,1
+field 0201CA10 r3+0x276 u8 0,0,0,1
+field 0201CA10 r3+0x29D u8 0,1,1
+field 0201CA10 r3+0x30 u8 0,0,1
+field 0201CA10 r3+0xA8 f32 0,0,1
+field 0201CA10 1047E6B8 u32 0x44656D6F,0x44656D6F,0x41656D6F
+field 0201CA10 1047E6BC u32 0x30380000,0x30390000,0x30380041,0x30384100,0x30384142
+field 0201CA10 101D6010 u32 0,1
+# riverSePlay / waterfallSePlay / rainPlay
+arg 0201CDA0 r4 0,1,2,3,4,5,6,7
+field 0201CDA0 r3+0x268 u8 0,0,0,1
+field 0201CDA0 r3+0x271 u8 0,0,0,1
+field 0201CDA0 r3+0x276 u8 0,0,0,1
+field 0201CDA0 r3+0x288 u32 0x18,0x17
+field 0201CDA0 r3+0x1E44 u8 0,1
+arg 0201CF54 r4 0,1,2,3,4
+field 0201CF54 r3+0x294 u32 0x39,0x38
+field 0201CF54 r3+0x277 u8 0,0,1
+field 0201CF54 r3+0x1F08 u32 0,14,15,16
+ret 020233C8 0,1
+arg 0201D1AC r4 0,1,2
+field 0201D1AC r3+0x294 u32 0x5C,0x5B
+# stack objects start with random bytes (the camera-around points); PSMTXMultVec writes its output
+stackfill
+callee 028E8F64 r3=48 r4=12 r5=out12
+field 0201CA10 1047E6C0 u32 0,0x41000000

@@ -1,0 +1,13 @@
+# Verification unit: d_a_lwood (normal tree)
+src wwhd_src/d/actor/d_a_lwood.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E38E0 0,0x10000000,0x10000100  # model create
+ret 024F2478 0,0x10001000,0x10001100  # dBgW_NewSet
+ret 027DF9B0 -2 3             # JUTNameTab::getIndex
+field * r3+0x2E4 u32 0,8      # actor_condition INIT
+field * r3+0xF4 u32 0,0x10002000   # heap
+field * 101F4829 u8 0,0,1     # isMonotone
+arg 021B6C34 r4 0,0,0,1

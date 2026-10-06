@@ -1,0 +1,66 @@
+#pragma once
+#include "f_op/f_op_actor.h"
+struct IliftQuat { be<f32> x,y,z,w; };
+struct daIlift_c : fopAc_ac_c {
+    request_of_phase_process_class phase;
+    be<u32> modelPtr, bgPtr;
+    be<f32> bgMatrix[12];
+    u8 acch[0x1C4];
+    u8 acchCircle[0x40];
+    be<u8> riderPresent, riderPrevious;
+    be<s16> waveAngle, waveTarget;
+    u8 _5f6[2];
+    IliftQuat targetQuat, currentQuat;
+    cXyz riderOffset;
+    be<f32> waveDecay;
+    be<u32> frameCount;
+    be<s32> waveTime;
+    u8 _630[4];
+    be<u8> type;
+    u8 _635[3];
+    cXyz targetPoint, previousPoint;
+    be<u32> pathPtr;
+    be<f32> targetSpeed, moveSpeed;
+    be<u16> moveTimer;
+    be<u8> pathIndex;
+    be<s8> pointIndex, pointDirection;
+    be<u8> moveState;
+    u8 _662[6];
+    be<f32> riderRadius;
+    u8 _66c[4];
+    be<u32> switchIndex;
+    cXyz previousPlayerPosition;
+};
+WWHD_OFFSET(daIlift_c, modelPtr, 0x3B4);
+WWHD_OFFSET(daIlift_c, acch, 0x3EC);
+WWHD_OFFSET(daIlift_c, riderPresent, 0x5F0);
+WWHD_OFFSET(daIlift_c, targetQuat, 0x5F8);
+WWHD_OFFSET(daIlift_c, riderOffset, 0x618);
+WWHD_OFFSET(daIlift_c, type, 0x634);
+WWHD_OFFSET(daIlift_c, pathPtr, 0x650);
+WWHD_OFFSET(daIlift_c, riderRadius, 0x668);
+WWHD_SIZE(daIlift_c, 0x680);
+
+/* HD member accesses and profile101B7940 prove these offsets. */
+WWHD_OFFSET(daIlift_c, phase, 0x3AC);
+WWHD_OFFSET(daIlift_c, bgPtr, 0x3B8);
+WWHD_OFFSET(daIlift_c, bgMatrix, 0x3BC);
+WWHD_OFFSET(daIlift_c, acchCircle, 0x5B0);
+WWHD_OFFSET(daIlift_c, riderPrevious, 0x5F1);
+WWHD_OFFSET(daIlift_c, waveAngle, 0x5F2);
+WWHD_OFFSET(daIlift_c, waveTarget, 0x5F4);
+WWHD_OFFSET(daIlift_c, currentQuat, 0x608);
+WWHD_OFFSET(daIlift_c, waveDecay, 0x624);
+WWHD_OFFSET(daIlift_c, frameCount, 0x628);
+WWHD_OFFSET(daIlift_c, waveTime, 0x62C);
+WWHD_OFFSET(daIlift_c, targetPoint, 0x638);
+WWHD_OFFSET(daIlift_c, previousPoint, 0x644);
+WWHD_OFFSET(daIlift_c, targetSpeed, 0x654);
+WWHD_OFFSET(daIlift_c, moveSpeed, 0x658);
+WWHD_OFFSET(daIlift_c, moveTimer, 0x65C);
+WWHD_OFFSET(daIlift_c, pathIndex, 0x65E);
+WWHD_OFFSET(daIlift_c, pointIndex, 0x65F);
+WWHD_OFFSET(daIlift_c, pointDirection, 0x660);
+WWHD_OFFSET(daIlift_c, moveState, 0x661);
+WWHD_OFFSET(daIlift_c, switchIndex, 0x670);
+WWHD_OFFSET(daIlift_c, previousPlayerPosition, 0x674);

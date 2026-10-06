@@ -1,0 +1,24 @@
+src wwhd_src/d/d_vibration.cpp
+# Staged inventory: complete unit roots being reconstructed.
+# Valid initialized vibration domains; positive bit-pattern periods terminate.
+arg! 025CB4A8 r4 1,2,4,8,16,31,32
+arg! 025CB4A8 r5 0,1,2,8,16,31,32
+arg 025CB878 r4 1,2,4,8,16,31,32
+arg 025CB878 r5 0,1,2,31,32,33,64,900
+arg 025CC0CC r3 0,0x50000000
+ret 0273AD10 0,0x55000000
+field 025CB66C r3+0x24 s32 -1,0,1,11
+field 025CB66C r3+0x60 s32 -1,0,1,11
+field 025CB898 0x101F5088 u32 0x50000000
+field 025CB898 0x500001D0 u32 0,1
+arg! 025CB77C r3 0,1,2,4,8,16
+arg 025CB77C r4 1,2,8,16,32
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201B084 r3=12 r4=out12
+callee 02515298 r5=4 r7=12
+# Target actual fixture gaps from S08/S26/S54; retain other generated inputs.
+field 025CB4E0 r4+0 u16 0,1,8,16,24,32,33,65535
+field 025CB6D4 r3+0x48 s32 -1,0,1,25
+field 025CB6D4 r3+0x60 s32 -1,0,1,11
+field 025CBB90 r3+0x20 s32 -99,-2,-1,0,1,2,31
+field 025CBB90 r3+0x44 s32 -99,-2,-1,0,1,2,31

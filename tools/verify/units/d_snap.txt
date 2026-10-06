@@ -1,0 +1,170 @@
+src wwhd_src/d/d_snap.cpp
+ret 0273AD10 0,268435456
+arg 025BD71C r3 0,268435456
+arg 025BD7B4 r3 0,268435456
+callee 0274F5F0 r3=out24
+callee 0274CB50 r4=out8 r5=12 r7=24
+callee 028E8DAC r5=out12
+ret 025BDC6C 0,2
+ret 025BDC54 0,1
+field 025BE268 r3+0x1B u8 0,1
+field 025BE268 r3+0x1C s16 -32768,0,1,32767
+field 025C019C r3+0x9C s32 0 63
+ret 025BF1C8 0,1
+ret 025C019C -1,0,1,2
+ret 025BF1DC 0,1
+arg 025BD814 r3 0,268435456
+field 025BE31C r3+0x98 s32 72,73,74,206,207,208
+ret 025BE268 0,1
+callee 025BD71C r3=out52
+callee 025BEF7C r3=out48 r4=48
+callee 027509C8 r4=48
+callee 02750A00 r4=16 r5=16
+callee 02750A24 r4=16 r5=16
+callee 028E8D88 r5=out12
+# Fixed-size loaded registration table63entries; opaque judges do not resize it.
+arg! 025BE480 r3 0x10000000 0x10000000
+arg! 025BE664 r3 0x10000000 0x10000000
+field * 1000009C s32 0,1,2,63
+stable 1000009C 4
+field 025BE99C r3+0x9C s32 0,1,62,63,64
+callee 025BE908 retu=32
+ret! 027F81A4 268443648 268443648
+field * 10002008 s32 0 4
+field * 1000200C s32 0 4
+field * 10002078 u8 0 4
+field * 10002079 u8 0 4
+stable 10002000 128
+callee 027BF244 r4=out16
+mockfield 027BF244 r4+12 u32 0,4,248,252,4294967295
+fret 025BDC78 0 1000
+
+# Strict loaded snapshot texture fixture: dimensions0..4 and fixed resource pointer; arbitrary random pointers permit billions of pixel iterations.
+callee 025BD670 r4=out12
+field 025BDC78 r3+0x1B u8 0,1
+field 025BDC78 r3+0x19 u8 0,1,4
+ret 0273B050 0,268435456,268435712
+callee 027A7558 r3=out4
+pointee 0274FDBC r3=116
+pointee 0274FEB0 r3=116
+callee 0272C898 r4=408 r5=24 r6=8 r7=8
+callee 0272C6C0 r4=408 r5=24 r6=8 r7=8
+callee 027AAD8C r3=408 r4=48
+callee 0274F964 r3=24
+callee 0274F53C r3=out24
+
+# Debug draw matrix and constructor layouts; finite registered-object array.
+callee 0274EAF0 r3=out212 r4=64
+callee 0274E910 r4=64
+callee 028E8970 r4=out64
+arg! 025BFDC0 r3 0x10000000 0x10000000
+
+# Stable optional post-process object fixture; SDK rendering mocks do not replace this object.
+arg! 025BF250 r3 0x10000000 0x10000000
+field * 10000F8C u32 0,268447744
+field * 10000F90 u32 0,268447744
+stable 10000F8C 8
+field * 100038BC u8 0,1
+field * 100031D4 s32 -1,0,1
+field * 100031D0 u32 0,268448000
+field * 10003A20 u8 0,1
+field * 1000355C u32 0,268448000
+stable 100038BC 1
+stable 100031D4 4
+stable 100031D0 4
+stable 10003A20 1
+stable 1000355C 4
+field * 101F8B28 u32 0,268447744
+
+# Coherent texture descriptor metadata, with independently varied dimensions.
+field * 10002004 u32 0 0
+mockfield 027BDF7C r3+4 u32 0 0
+field * 10002010 u32 0 0
+mockfield 027BDF7C r3+16 u32 0 0
+field * 10002014 u32 0 0
+mockfield 027BDF7C r3+20 u32 0 0
+field * 10002018 u32 0 0
+mockfield 027BDF7C r3+24 u32 0 0
+field * 10002038 u32 0 0
+mockfield 027BDF7C r3+56 u32 0 0
+field * 10002034 u32 0 0
+mockfield 027BDF7C r3+52 u32 0 0
+field * 1000201C u32 0 0
+mockfield 027BDF7C r3+28 u32 0,1
+mockfield 027BDF7C r3+8 s32 0 4
+mockfield 027BDF7C r3+12 s32 0 4
+mockfield 027BDF7C r3+120 u8 0 4
+mockfield 027BDF7C r3+121 u8 0 4
+mockfield 027BE114 r3+8 s32 0 4
+mockfield 027BE114 r3+12 s32 0 4
+mockfield 027BE114 r3+120 u8 0 4
+mockfield 027BE114 r3+121 u8 0 4
+
+field * 100000B8 u8 0,1,2,3,10,11,72,208
+field * 100000F4 u8 0,1,2,3,10,11,72,208
+
+# Figure judge can return a figure id while setting ratio/culling failure flags.
+ret 025BE31C 0,73,207
+mockfield 025BE31C r3+3948 u8 0,1,2,3
+
+arg 025BEB90 r5 0,268443648
+
+# Texture descriptor differs only in byte52: exercises final metadata comparison.
+arg 025C0848 r3 0x10005000 0x10005000
+arg 025C0848 r4 0x10006000 0x10006000
+field 025C0848 r3+4 u32 0 0
+field 025C0848 r4+4 u32 0 0
+field 025C0848 r3+8 u32 0 0
+field 025C0848 r4+8 u32 0 0
+field 025C0848 r3+12 u32 0 0
+field 025C0848 r4+12 u32 0 0
+field 025C0848 r3+16 u32 0 0
+field 025C0848 r4+16 u32 0 0
+field 025C0848 r3+20 u32 0 0
+field 025C0848 r4+20 u32 0 0
+field 025C0848 r3+24 u32 0 0
+field 025C0848 r4+24 u32 0 0
+field 025C0848 r3+56 u32 0 0
+field 025C0848 r4+56 u32 0 0
+field 025C0848 r3+28 u32 0,1
+field 025C0848 r4+28 u32 0 0
+field 025C0848 r3+52 u32 0,16777216
+field 025C0848 r4+52 u32 0 0
+arg 025C09D8 r3 0x10005000 0x10005000
+arg 025C09D8 r4 0x10006000 0x10006000
+field 025C09D8 r3+4 u32 0 0
+field 025C09D8 r4+4 u32 0 0
+field 025C09D8 r3+8 u32 0 0
+field 025C09D8 r4+8 u32 0 0
+field 025C09D8 r3+12 u32 0 0
+field 025C09D8 r4+12 u32 0 0
+field 025C09D8 r3+16 u32 0 0
+field 025C09D8 r4+16 u32 0 0
+field 025C09D8 r3+20 u32 0 0
+field 025C09D8 r4+20 u32 0 0
+field 025C09D8 r3+24 u32 0 0
+field 025C09D8 r4+24 u32 0 0
+field 025C09D8 r3+56 u32 0 0
+field 025C09D8 r4+56 u32 0 0
+field 025C09D8 r3+28 u32 0,1
+field 025C09D8 r4+28 u32 0 0
+field 025C09D8 r3+52 u32 0,16777216
+field 025C09D8 r4+52 u32 0 0
+
+# Exact registration replacement boundary; distance call does not mutate object photo id.
+arg 025BE99C r4 0x10007000 0x10007000
+field * 10007018 u8 71,72,73
+stable 10007018 1
+fret 028E8DE8 1e30 1e30
+
+# Concrete singleton and alias fixture for actual sample survivors.
+field * 101F86E8 u32 268447744 268447744
+field 025BFDC0 r3+0xF80 u32 268439360,268439372,268439348,268443648
+stable 10000F80 4
+arg 025BE99C r3 0x10000000 0x10000000
+field 025BE99C r3+0xB8 u8 72 72
+field 025BE99C r3+0xD4 f32 1e38 1e38
+
+field 025BFDC0 r3+0xF88 u32 268439432,268443648
+stable 10000F88 4
+callee 025155D8 r3=out12

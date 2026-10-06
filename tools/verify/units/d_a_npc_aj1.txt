@@ -1,0 +1,44 @@
+# Verification unit: d_a_npc_aj1 (Sturgeon)
+src wwhd_src/d/actor/d_a_npc_aj1.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 021E7900 r4=8          # set_action(pointer to member, 8 bytes)
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0259DED0 r5=12 r6=12   # lookAtTarget(target, eye copy)
+callee 021EA570 r5=12         # chk_areaIN(cXyz by value)
+callee 025CB374 r6=12         # StartShock(cXyz by value)
+ret 025200D4 0x54000000 0x54000000
+ret 025F795C 0x12 0x14
+ret 025A11EC 0x11 0x13
+ret 025B8B94 0 1
+ret 02556D14 0 1
+# anmAtr
+arg 021E9E08 r4 6,14,0
+field 021E9E08 r3+0x931 i8 0 1
+field 021E9E08 54005BC6 u8 0,1,0xFF
+field 021E9E08 r3+0x927 u8 0,1,0xFF
+# next_msgStatus
+field 021E9EC8 r4+0 u32 0x9c5,0x9c6,0x9c7,0x9c8,0x9c9,0x9ca,0x9cb,0x9cc,0x9cd,0x9ce,0x9cf,0x9d0,0x9d1,0x9d2,0x9d3,0x9d4,0x9d5,0x9d6,0x9d7,0x9d8,0x9d9,0x9da,0x9db,0x9dc,0x9dd
+# talk_1
+field 021EAA68 r3+0x7C0 u32 0x9C8,0x9D0,0x9D1,0x9D2,0x9D3,0x9D4,0x9D6,0x9D7,0x9D8,0x9DA,0x9DB,0x9DD,0x9DE
+# wait_action2: stage "Ojhous2"
+field 021EACEC r3+0x930 i8 0 4
+field 021EACEC r3+0x92F i8 0 2
+field 021EACEC 54005134 u32 0x4F6A686F,0x4F6A686E
+field 021EACEC 54005138 u32 0x75733200,0x75733300
+field 021EAA68 r3+0x92C i8 0 4
+field 021EA6DC r3+0x929 i8 7 9
+stackfill
+# checkOrder
+field 021E8378 r3+0xF8 u16 0 3
+field 021E8378 r3+0x92A i8 0 3
+ret 0254407C 0 1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 021EACEC 0x54005134 8 @stages,"Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus2","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhnus3","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous2","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3","Ojhous3"

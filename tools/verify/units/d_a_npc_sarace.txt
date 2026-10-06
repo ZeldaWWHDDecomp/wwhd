@@ -1,0 +1,82 @@
+# d_a_npc_sarace (Loot, boating course): all functions written from the WWHD code (GameCube stubs)
+src wwhd_src/d/actor/d_a_npc_sarace.cpp
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+# nodeCallBack: static vector guard
+field 022DBA64 1046868C u32 0,1
+# _create
+field 022DC65C 10468620 i8 -1,0,1
+ret 025D63E8 0,1
+ret 02520460 0,4,5
+ret 022DC3C8 0,1
+field 022DC65C r3+0x2E4 u32 0,8
+arg 022DC65C r3 0,0x40000000
+# CreateInit
+field 022DC3C8 5400513C i16 0,1,2
+field 022DC3C8 5400513E i8 0,0x30,0x31
+field 022DC3C8 101D5F1C i32 0,1,3
+field 022DC3C8 r3+0x8A6 i16 -1,0,1,2
+field 022DC3C8 r3+0x8A4 i16 0,0,8
+field 022DC3C8 r3+0x8A8 u32 0x022DD750,0x022DD844
+# setAnm
+arg 022DC2C0 r4 0 2
+field 022DC2C0 r3+0x8AD i8 -1,0,1,2
+# _delete
+field 022DC77C 10468620 i8 -1,0,1
+# playTexPatternAnm
+ret 02055B64 0,1
+# checkOrder
+field 022DC8AC r3+0xF8 u16 0,1,2,3
+field 022DC8AC r3+0x8AE i8 0,1,2,3
+field 022DC8AC r3+0x8A6 i16 -1,0,1,2
+field 022DC8AC r3+0x8A4 i16 0,0,8
+field 022DC8AC r3+0x8A8 u32 0x022DD844,0x022DD750
+# eventOrder
+field 022DCA3C r3+0x8AE i8 0,1,2,3,4
+# _execute
+field 022DCA94 r3+0x8A6 i16 -1,0,1,2
+# chkAttention
+field 022DCCD0 r3+0x898 u8 0,1
+# next_msgStatus
+field 022DCDFC r4+0 u32 0xFA1,0xFA2,0xFA3,0xFA4,0xFA5,0xFA6,0xFA7,0xFA8,0xFA9,0xFAA,0xFAB,0xFAC,0xFAD,0xFAE,0xFAF,0xFB0,0xFB1,0xFB2,0xFB3,0xFB4,0xFB5,0xFB6,0xFB7,0xFB8,0xFB9,0xFA0
+field 022DCDFC 101F4B5C u32 0x55000000 0x55000000
+field 022DCDFC 55000948 i32 0,1,2,3
+field 022DCDFC 101F84DC u32 0x58000000 0x58000000
+field 022DCDFC 58000024 u16 0,29,30,31,65535
+ret 025B8B94 0,1
+# getMsg
+field 022DCFC8 r3+0x894 u32 0,0xFB4,0xFA7,0xFB4
+field 022DCFC8 101D5F1C i32 0,1,2,3
+# anmAtr
+field 022DD0B0 54005BC5 u8 0,1,2,3,255
+# lookBack
+field 022DD188 r3+0x8AF i8 -1,0,1,2,3
+field 022DD188 r3+0x898 u8 0,1
+field 022DD188 r3+0x3B6 u8 0,1
+# wait01
+field 022DD35C r3+0x899 u8 0,1
+field 022DD35C r3+0x8AE i8 0,1,2
+# talk01
+ret 025A11EC 0,6,0x12
+field 022DD390 r3+0x7C0 u32 0xFA4,0xFB0,0xFB6,0xFA1
+field 022DD390 10468690 u32 0,1
+field 022DD390 54005BD2 u8 0,1,2
+ret 025B8BB0 0,11,12,13,200
+field 022DD390 r3+0x8A6 i16 -1,0,1,2
+field 022DD390 r3+0x8A4 i16 0,0,8
+field 022DD390 r3+0x8A8 u32 0x022DD728,0x022DD750
+# actions
+field 022DD728 r3+0x8B2 i8 -1,0,1
+field 022DD750 r3+0x8B2 i8 -1,0,1
+field 022DD750 r3+0x8AF i8 0,1,2,3
+field 022DD844 r3+0x8B2 i8 -1,0,1
+ret 0254407C 0,1
+ret 0254457C 0,1
+field 022DD844 r3+0x8A6 i16 -1,0,1,2
+field 022DD844 r3+0x8A4 i16 0,0,8
+field 022DD844 r3+0x8A8 u32 0x022DD750,0x022DD844
+field 022DD844 r3+0x7E8 u32 0xFFFFFFFF,1
+field 022DD844 r3+0x7EC u32 0xFFFFFFFF,2
+# HIO constructor
+arg 022DDA2C r3 0,0x40000000
+ret 0273AD10 0,0x57000000

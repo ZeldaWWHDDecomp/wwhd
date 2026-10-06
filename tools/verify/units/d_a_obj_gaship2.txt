@@ -1,0 +1,19 @@
+src wwhd_src/d/actor/d_a_obj_gaship2.cpp
+stackfill
+callee 026066C4 r4=8
+ret 025E38E0 0,0x56000000
+ret 02520460 0,1,4,5
+field * 101F4F28 u32 0x5A123400
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x3B4 u32 0,0x56000000
+field * r3+0x322 s16 -32768,-1,0,1,32766,32767
+observe 025E2DE0 104B4634 8
+arg! 0234AE48 r3 0,0x40000000
+arg! 0234AE60 r3 0,0x40000000
+callee 028E90D4 r3=48 r4=out48
+real 028E90D4
+field * r3+0x3B8 u32 0,0x57000000
+field * r3+0xF4 u32 0,0x59000000
+field * 57000000 u32 0,1,255,256,257,0xFFFFFFFF
+ret 024F23F4 0,0x57000000
+ret 0200A030 0,1

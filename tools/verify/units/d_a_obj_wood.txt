@@ -1,0 +1,4 @@
+# Verification unit: d_a_obj_wood (tree unit for the dWood packet)
+src wwhd_src/d/actor/d_a_obj_wood.cpp
+
+ret 02524EC0 0,0x56000000   # dComIfGp_createWood: NULL or a packet

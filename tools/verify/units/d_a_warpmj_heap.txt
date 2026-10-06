@@ -1,0 +1,57 @@
+# Actual HD TU: 33 functions [024DCE1C,024DE334).
+# 024DE2D8 belongs to initWait (101D325C); 024DE2DC vtable10042940.
+# SafeString vtable100428F4 +0x14 references empty024DE330; prior024DCDC4/024DCE18 excluded.
+src wwhd_src/d/actor/d_a_warpmj.cpp wwhd_src/d/actor/d_a_warpmj_static.cpp
+ret 02520460 0,1,2,3,4,5
+ret 025B8B94 0,1
+ret 025D63E8 0,1
+ret 025E8508 0,1
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+ret 0246B6A4 0,1
+ret 024DDA98 0,1
+ret 0254407C 0,1
+ret 025440C8 0,1
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2
+ret 025447C8 0,1
+ret 025200D4 0x54000000
+field * 0x54005292 u8 0,1
+field * 0x54005CD8 u32 0,65536
+field * r3+0xF8 u16 0,1,2
+field * r3+0x3D4 s32 0,1,2
+field * r3+0x2DC u8 0,1,32,33
+# Material count pinned and bounded; object accesses remain clobber-enabled.
+ret 027F3F8C 0x54100000
+field 024DD820 0x54100024 u16 0,1,2,3
+callee 026066C4 r4=8
+callee 0201ADE0 r4=out12 r5=12
+callee 024DD2E0 r4=12
+callee 0274D458 r3=out16 r4=16
+callee 024DD76C r3=out16 r4=4
+callee 028E93CC r3=out48
+callee 028E8DD0 r3=12
+callee 025A847C r6=12 stack=4
+
+# Actual initialized save object pointer; avoids zero-image alignment false equivalence.
+field * 0x101F84DC u32 0x54200000
+# Actual HD virtual register inputs and setter color pointee.
+callee 027F7604 r3=0 r4=0
+callee 027F75EC r3=0 r4=0 r5=4
+# Demo singleton and actor states cover live-pointer and null/error paths.
+field 024DDE90 0x101D5FFC u32 0,0x54400000
+ret 02526E70 0,0x54300000
+field 024DDE90 0x54300028 s32 0,1,2
+
+# Ownership companion: actor and independently allocated animation/model objects.
+arg! 024DCE1C r3 0x56000000
+ret 026066C4 0,0x55010000
+ret 025E38E0 0,0x55020000
+ret 0273AD10 0,0x55030000
+ret 025E7C6C 0,0x55040000
+ret 025E80D0 0,0x55050000
+field 024DCE1C 0x101F4F28 u32 0x5505F000
+
+# Actual brk initialization writes its separate animator/frame-controller objects.
+# No actor pointer is passed and resource-duration virtuals are pure metadata getters.
+stable 0x560003BC 4

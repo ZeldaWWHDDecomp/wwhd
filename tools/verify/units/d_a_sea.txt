@@ -1,0 +1,138 @@
+# Verification unit: d_a_sea (sea surface)
+src wwhd_src/d/actor/d_a_sea.cpp
+
+# play object pinned; stage data's vtable -> fixed slots: getMulti (+0x20C) -> 0x02000100, getStagInfo (+0x15C) -> 0x02000000
+ret! 025200D4 0x54000000 0x54000000
+field * 54005150 u32 0x58000000 0x58000000
+field * 5800020C u32 0x02000100 0x02000100
+field * 5800015C u32 0x02000000 0x02000000
+ret 02000000 0x59800000 0x59800000
+field * 5980000C u32 0x00070000,0x00000000,0x00010000,0x00060000,0x00070000
+# get_wave_max: multi info {count, entries}; bounded count (a random count walks gigabytes of memory)
+ret! 02000100 0,0x59000000,0x59000000,0x59000000
+stable 59000000 8
+stable 54005150 4
+stable 58000000 0x400
+field * 59000000 s32 0 6
+field * 59000004 u32 0x59100000 0x59100000
+field * 5910000A u8 0,1,2,3
+field * 59100016 u8 0,1,2,3
+field * 59100022 u8 0,1,2,3
+field * 5910002E u8 0,1,2,3
+field * 5910003A u8 0,1,2,3
+field * 59100046 u8 0,1,2,3
+arg 0246B264 r3 0 3
+
+# shader uniforms (0246C7C8): Color4f operators (out = a * s / a - b / a + b), sea colours, matrices
+callee 0274D458 r3=out16 r4=16
+callee 0274D380 r3=out16 r4=16 r5=16
+callee 0274D314 r3=out16 r4=16 r5=16
+callee 025602F0 r3=out3 r4=out3
+callee 0246C714 r3=out16 r4=4
+callee 027FBB58 r5=16 r6=16
+callee 027FDA54 r5=48 r6=64
+callee 026066C4 r4=8                # SafeString key
+callee 027B90AC r4=8                # shader program lookup: SafeString key
+# operator new: null or a block. No address-space-wrapping blocks: no allocator returns them, and the
+# constructors of createBuffers' 0x4C0/0x2EA8 buffer sets placed there write into the attribute list at 0
+# (count 0x00030303 / 0x81000000 -> billions of loop iterations, tens of GB). The GHS null checks of inlined
+# sub-object addresses (create's 12 member allocations, createBuffers' list+4) therefore stay uncovered: dead code
+ret! 0273AD10 0x0,0x56000000,0x56000000
+
+# 0246CDC4 GPU buffers: `this` pinned so the attribute-list pointer (this+0x278), reloaded after the
+# mocked list init, stays the list; the list at 0 (operator new failed) or at the fixed blocks
+# (count stored 0 by the code) keeps a small count; its entries (0x14 bytes) at 0x5D000000
+arg! 0246CDC4 r3 0x5C000000
+stable 5C000278 4
+stable 56000000 0x10
+field 0246CDC4 00000000 u32 0 3
+field 0246CDC4 00000004 u32 0 3
+field 0246CDC4 00000008 u32 0x5D000000 0x5D000000
+stable 00000000 0x10
+stable 5D000000 0x40
+field 0246CDC4 5D000004 s32 0 2
+field 0246CDC4 5D00000C s32 0 2
+field 0246CDC4 5D000008 u32 0,0x5E000000
+field 0246CDC4 5D000010 u32 0,0x5E100000
+field 0246CDC4 5D000018 s32 0 2
+field 0246CDC4 5D000020 s32 0 2
+field 0246CDC4 5D00001C u32 0,0x5E200000
+field 0246CDC4 5D000024 u32 0,0x5E300000
+field 0246CDC4 5D00002C s32 0 2
+field 0246CDC4 5D000034 s32 0 2
+field 0246CDC4 5D000030 u32 0,0x5E400000
+field 0246CDC4 5D000038 u32 0,0x5E500000
+
+# 0246E25C sea draw: GX2 state object (0x11C) built on the stack, polygon-offset object (0x14)
+callee 02750250 r3=out284
+callee 02750370 r3=284
+callee 027E1A0C r3=20
+callee 027E1A08 r3=20
+real 027E1A30
+real 027E1A44
+# skirt: draw extents around the 9x9 grid area, the step 1046DC7C (225000 in the game; positive),
+# pass 1 or 2
+field 0246E25C r3+0x1FC f32 -500000 100000
+field 0246E25C r3+0x200 f32 -500000 100000
+field 0246E25C r3+0x204 f32 -100000 500000
+field 0246E25C r3+0x208 f32 -100000 500000
+field 0246E25C 1046DC7C s32 225000,225000,150000,300000
+stable 1046DC7C 4
+field 0246E25C r4+0xC u32 1,2,2,2,0
+# `this` pinned so the draw extents (reloaded after GPU calls) are not clobbered into huge loop counts
+arg! 0246E25C r3 0x5C100000
+stable 5C1001FC 0x10
+# the skirt's shared index buffer (mode, type, pointer) and the grid's: plausible values, not stack addresses
+field 0246E25C 104B4A84 u32 0x5D800000 0x5D800000
+field 0246E25C 104B4A88 u32 4 6
+field 0246E25C 104B4A8C u32 0 1
+field 0246E25C r3+0x234 u32 4 6
+field 0246E25C r3+0x23C u32 0x5D900000 0x5D900000
+stable 104B4A84 12
+stable 5C100234 0x10
+# 0246CDC4: the GPU heap's allocator (heap 02756140 -> vtable slot +0x34 at a fixed fake address) returns
+# null, small or block addresses: with operator new's wrapped "sub-object" blocks an entry's buffer
+# word can alias the attribute-list count at 0, and a random pointer there loops for billions
+ret! 02756140 0x5F000000 0x5F000000
+field 0246CDC4 5F00000C u32 0x5F100000 0x5F100000
+field 0246CDC4 5F100034 u32 0x02000200 0x02000200
+stable 5F000000 0x10
+stable 5F100030 8
+ret! 02000200 0,1,2,3   # small nonzero values stand for allocated blocks (nothing is written through them here)
+# a null buffer set (operator new failed) is still set up through address 0: its first element copies the
+# buffer word at 0x250 into 0, which is also the count of a null attribute list: kept small
+field 0246CDC4 00000250 u32 0 3
+stable 00000250 4
+# operator new[] (0x8200-byte index buffer, 64 strips of 65 x 2 indices): a fixed block. Unmocked, its random
+# result scattered the index fill over random pages each input (tens of GB at 10k inputs)
+ret! 0273ADAC 0x5B000000 0x5B000000
+# its pointer (this+0x24C) is reloaded after many calls: kept stable, else the callee model re-randomises it
+stable 5C00024C 4
+# the nine buffer-set pointers (this+0x250..0x270) are reloaded after GPU calls that never write them: kept
+# stable, else a clobbered pointer places a set at a random (unaligned, near-0) address and its setup writes
+# into the attribute list at 0
+stable 5C000250 0x24
+
+# coverage: SetCullStopFlag ("A_umikz" stage test; the culling rectangle from the real GetArea/calcMinMax
+# mostly the centre cell 4, the player position around it); constructors with this == NULL;
+# daSea_Draw in "Siren" room 18
+real 0246B808
+real 0246B2EC
+field 0246BEA4 54005134 u32 0x415F756D,0x415F756D,0x53697265,0
+field 0246BEA4 54005138 u32 0x696B7A00,0x696B7A01
+ret 0246B51C 0,0,1
+field 0246BEA4 r3+0x128 s32 4,4,4,0,8
+field 0246BEA4 r3+0x12C s32 4,4,4,0,8
+field 0246BEA4 r3+0x11C f32 -60000 60000
+field 0246BEA4 r3+0x124 f32 -60000 60000
+arg 0246B33C r3 0,0x40000000
+arg 0246B3AC r3 0,0x40000000
+field 0246CAEC 54005134 u32 0x53697265,0x53697265,0x415F756D,0
+field 0246CAEC 54005138 u32 0x6E000000,0x6E000100
+field 0246CAEC 1047E6C8 s8 0x12,0x12,0
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 0246BEA4 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","A_umikz\x01","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01","Sireikz\x01"
+fieldstr 0246CAEC 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","A_umn","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren"

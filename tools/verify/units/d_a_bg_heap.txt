@@ -1,0 +1,40 @@
+# Verification unit: d_a_bg_heap (daBg_c::createHeap of d_a_bg)
+src wwhd_src/d/actor/d_a_bg_heap.cpp
+
+stackfill periodic
+callee 0207A858 r3=255              # SafeString constructor: storage
+callee 0207A8A8 r3=8 r4=8           # SafeString operator==
+callee 0207A988 r3=8                # SafeString destructor
+# the play object: one of the stage-name literals minus 0x5134 (start stage name == that literal: the
+# pointer-equality path of each compare), or a fixed object whose name bytes are steered
+# (ret pick lists are read into a 255-char buffer: long lists are split over several lines, which append)
+ret 025200D4 0x10003750,0x10003758,0x10003760,0x10003768,0x10003770,0x10003778,0x10003780,0x10003788,0x10003790,0x10003798,0x100037A0,0x100037A8,0x100037B0,0x100037B8,0x100037C0,0x100037C8,0x100037D0,0x100037D8,0x100037DC,0x100037E4
+ret 025200D4 0x100037EC,0x100037F4,0x100037FC,0x10003804,0x1000380C,0x10003814,0x1000381C,0x10003824,0x1000382C,0x10003834,0x1000383C,0x10003844,0x1000384C,0x10003854,0x1000385C,0x10003864,0x1000386C,0x10003874,0x1000387C,0x10003884
+ret 025200D4 0x1000388C,0x10003894,0x54000000,0x54000000,0x54000000,0x54000000,0x54000000,0x54000000
+field * 54005134 u8 0x46,0x48,0x4F,0x4B
+field * 54005135 u8 0x61,0x79,0x6D
+field * 54005136 u8 0x69,0x72,0x6F
+field * 54005137 u8 0x72,0x75,0x72
+field * 54005138 u8 0x79,0x6C,0x69
+field * 54005139 u8 0x30,0x65,0
+field * 5400513A u8 0x34,0
+field * 5400513B u8 0
+ret 0252447C 0,0x11100000,0x11100000,0x11100000,0x11100000,0x11100000,0x11100000,0x11100000   # dComIfG_getStageRes
+ret 027F3F8C 0x11200000 0x11200000                # material table
+field * 11200024 u16 0,1,2,3
+field * 1110000C u32 0,1,2,3
+field * r3+0xB0 u32 0,0,0,0,0,0,0,0,1,2,3,4,5,9,10,11,13,16,44,0xFFFFFFFF
+ret 0273AD10 0x11300000 0x11300000   # operator new
+ret 024F23F4 0,0x11400000,0x11400000,0x11400000              # new dBgW
+ret 0200A030 0,0,0,1                                  # cBgW::Set
+ret 02077E74 1 1                                  # btkAnm create
+ret 02077F20 1 1                                  # brkAnm create
+ret 025E38E0 0x11500000 0x11500000              # J3DModel create
+field * 101FDA38 u32 0,1
+field * 101FDA3C u32 0,1
+field * 101FDA40 u32 0,1
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02077FCC 0x54005134 8 @stages,"Adanmae","Adanmae","Adanmae","Atorizk","Atorizk","Atorizk","Edaichi","Edaichi","Edaichi","Ekaze","Ekaze","Ekaze","Fairi","Fairi","Fairi","Fairi0","Fairi0","Fairi0","Fairi04","Fairi04","Fairi04","Fairie","Fairie","Fairie","Fairie4","Fairie4","Fairie4","Fairl","Fairl","Fairl","Fairl0","Fairl0","Fairl0","Fairl04","Fairl04","Fairl04","Fairle","Fairle","Fairle","Fairle4","Fairle4","Fairle4","Fairy","Fairy","Fairy","Fairy0","Fairy0","Fairy0","Fairy02","Fairy02","Fairy02","Fairy03","Fairy03","Fairy03","Fairy04","Fairy04","Fairy04","Fairy05","Fairy05","Fairy05","Fairy06","Fairy06","Fairy06","Fairye","Fairye","Fairye","Fairye4","Fairye4","Fairye4","Faiui","Faiui","Faiui","Faiui0","Faiui0","Faiui0","Faiui04","Faiui04","Faiui04","Faiuie","Faiuie","Faiuie","Faiuie4","Faiuie4","Faiuie4","Faiul","Faiul","Faiul","Faiul0","Faiul0","Faiul0","Faiul04","Faiul04","Faiul04","Faiule","Faiule","Faiule","Faiule4","Faiule4","Faiule4","Faiuy","Faiuy","Faiuy","Faiuy0","Faiuy0","Faiuy0","Faiuy04","Faiuy04","Faiuy04","Faiuye","Faiuye","Faiuye","Faiuye4","Faiuye4","Faiuye4","Farrl0","Farrl0","Farrl0","Farrl04","Farrl04","Farrl04","Farrle","Farrle","Farrle","Farrle4","Farrle4","Farrle4","Farry","Farry","Farry","Farry0","Farry0","Farry0","Farry04","Farry04","Farry04","Farrye","Farrye","Farrye","Farrye4","Farrye4","Farrye4","GTower","GTower","GTower","GanonA","GanonA","GanonA","GanonJ","GanonJ","GanonJ","Hyrule","Hyrule","Hyrule","Kaisen","Kaisen","Kaisen","LinkRM","LinkRM","LinkRM","LinkUG","LinkUG","LinkUG","M_NewD2","M_NewD2","M_NewD2","MajyuE","MajyuE","MajyuE","Mjtower","Mjtower","Mjtower","Nitiyou","Nitiyou","Nitiyou","Obombh","Obombh","Obombh","Obshop","Obshop","Obshop","Ocmera","Ocmera","Ocmera","Ocrogh","Ocrogh","Ocrogh","Ojhous2","Ojhous2","Ojhous2","Omasao","Omasao","Omasao","Omori","Omori","Omori","Onobuta","Onobuta","Onobuta","Orichh","Orichh","Orichh","Otkura","Otkura","Otkura","Pdrgsh","Pdrgsh","Pdrgsh","Pjavdou","Pjavdou","Pjavdou","Pnezumi","Pnezumi","Pnezumi","ShipD","ShipD","ShipD","Siren","Siren","Siren","kinMB","kinMB","kinMB","kindan","kindan","kindan","ma3room","ma3room","ma3room","sea","sea","sea"

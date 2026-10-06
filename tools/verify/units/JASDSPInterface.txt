@@ -1,0 +1,25 @@
+src wwhd_src/JSystem/JAudio/JASDSPInterface.cpp
+stackfill periodic
+arg! 02816158 r5 0,1,2,4,8,16
+# Halfword table copies bounded to allocated coefficient arrays; preserve0/1 boundaries.
+field * r3+0x58 u16 0,1,2
+field * r3+0x10A u16 0,1,2
+arg 0281608C r4 0,1,32766,32767,32768,65535,0xFFFFFFFF
+arg 02816120 r4 0,19,20,21,23,24,25,31,32,51,52,53,63
+field 02815EEC r4 u8 0,1,2,3,4,5,6,7
+field 02815EEC r4+0x12 u16 0,1,2
+field 02815EEC r4+0x14 u32 0,1,10,100,0xFFFFFFFF
+field 02815EEC r4+0x18 u32 0,1,10,100,0xFFFFFFFF
+field 02815EEC r4+0x1C u32 0,1,10,100,0xFFFFFFFF
+arg 02815EEC r6 0,1,2,10,99,100,101,0x80000000
+arg 02816254 r3 0,1,2,3
+arg! 02816254 r4 0,0x53000000
+arg! 02816254 r5 0,0x54000000
+field 02816254 5400000C u32 0,1,2,8
+field * 101F9F8C u8 0,1
+
+# FX enable must already be cleared when the filter copy is called.
+field * 101F9F6C u32 0x55000000
+observe 02816158 55000000 128
+# Imported memset consumes destination, fill byte, and byte count.
+callee C000A858 r3=0 r4=0 r5=0

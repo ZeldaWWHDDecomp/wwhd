@@ -1,0 +1,10 @@
+# d_cc_d (dCcD_*): 025157AC..02516854 (the sinit closes the unit; d_cc_mass_s follows at 025168E8)
+src wwhd_src/d/d_cc_d.cpp
+stackfill periodic
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+ret 0273AD10 0,0x53000000             # operator new may fail
+arg 025157AC r3 0,0x52000000          # dCcD_GetGObjInf: asserts on null
+arg 02515DA0 r3 0,0x52000000          # constructors: this == NULL allocates
+arg 02515FB8 r3 0,0x52000000
+arg 02515F14 r6 0,0x52000000          # Stts::Init: actor may be null
+field 02515F14 r6+0x326 u8 0xFF,0,3   # room number -1 / room

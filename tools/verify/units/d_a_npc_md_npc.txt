@@ -1,0 +1,103 @@
+# Verification unit: d_a_npc_md part "npc" (NPC action functions waitNpcAction .. land03NpcAction, windProc)
+src wwhd_src/d/actor/d_a_npc_md_npc.cpp wwhd_src/d/actor/d_a_npc_md_pending.cpp
+
+# stack objects passed to callees
+callee 02285384 r4=8 r5=8     # setAction(&cur, &newFunc (by-value copy), arg)
+callee 022854CC r4=8          # setNpcAction(&func copy)
+callee 02288240 r4=8          # setPlayerAction(&func copy)
+
+# action state
+field * r3+0x424E i8 -1 4
+field * r3+0x4246 i8 0 1      # m312A (animation end flag)
+callee 0228DAF4 r4=12         # chkAttention(cXyz copy)
+ret 025B8B94 0 1              # dSv_event_c::isEventBit
+# harpWait
+field 0228F424 r3+0x4262 i16 0,1,2,12,13
+field 0228F424 r3+0x4254 u8 5 7
+field 0228F424 r3+0x4220 i32 0x15 0x18
+ret 027F2BF8 0 1
+# sqwait01
+field 02290358 r3+0x4254 u8 2 6
+callee 025CB374 r6=12         # StartShock(cXyz copy)
+ret 0228C4D0 -1 1             # wallHitCheck -> -1 / AcchCir index
+field 02291764 r3+0x4254 u8 4 6
+ret 0228EACC 0 1              # chkAdanmaeDemoOrder
+callee 0201ADE0 r3=12 r4=out12 r5=12   # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12   # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12         # cXyz::operator*
+callee 0201B3C0 r3=12 r4=out12         # cXyz::normalizeZP (in place, result slot r4)
+callee 0257E1B8 r3=12 r4=out12 r5=out4 # dKyw_get_AllWind_vec
+callee 028E8DD0 r3=12                  # PSVECSquareMag
+callee 0228A1C0 r4=out24               # emitterDelete(JPABaseEmitter*[6])
+# throw / gliding / windProc
+field 02291094 r3+0x620 u32 0x52000000 0x52000000
+field 02291094 5200009C f32 0,23,24,22
+ret 02290CF8 -1 2
+field 02291304 r3+0x4264 i16 0 1
+field 02291304 r3+0x4268 i16 -1 2
+field 02291304 r3+0x4266 i16 0 3
+field 02291304 r3+0x4254 u8 0 2
+field 02290CF8 r3+0x420C u32 0 0x1F
+field 02290CF8 104601C6 u8 0 1
+field 02290CF8 104601C7 u8 0 1
+ret 025162A4 0 1
+field 02290CF8 r3+0x4264 i16 0 1
+# talk / shipTalk
+field 0228F610 r3+0x4254 u8 0 4
+ret 0228EB50 0 1              # XYTalkCheck
+ret 0228AA7C 0 1              # talk_init
+ret 0228B1B8 0 1              # talk
+field 0228F610 r3+0x618 u32 0x52000000 0x52000000
+field 0228FA44 r3+0x618 u32 0x52000000 0x52000000
+field * 520000B4 f32 0,1,0.5,2
+# ship / mwait
+callee 0259DED0 r6=12         # lookAtTarget(eye copy)
+ret 025200D4 0x54000000 0x54000000
+field 0228FD20 54005B3C u32 0,0x53000000
+field 0228FD20 53000370 f32 0,0.001,0.0005,1
+field 0228FD20 54005CD8 u32 0,0x10000
+field 0228FD20 r3+0x4220 i32 0x22 0x24
+field 0228FF5C r3+0x420C u32 0,0x8000
+field 0228FF5C r3+0x3BC u32 0,2
+fret 025D6924 0 40000
+field 0228FF5C 10467B58 f32 100 100
+field 0228FF5C 10467B54 f32 50 50
+ret 0228DFF8 0 1              # lookBackWaist
+# waitNpcAction
+callee 0228E8D8 r4=4          # NpcCall(int*)
+field 0228EB88 r3+0x4254 u8 0 7
+field 0228EB88 r3+0x4220 i32 0,0x11,0x12,0x13,0x16,0x17,0x1E,0x21,0x28,0x29,5
+
+field 0228EB88 r3+0x424A i8 0 1
+field 0228EB88 54005B34 u32 0x53000000,0x53000100
+field 0228EB88 54005B2C u32 0x53000000
+field 0228EB88 54005CD8 u32 0,0x800000
+
+field 0228EB88 10467B5C f32 100 100
+field 0228EB88 53000318 f32 50,-50,0,49,-49,100
+field 0228EB88 r3+0x318 f32 0 0
+field 0228EB88 10467B4C f32 50 50
+field 0228EB88 10467B50 f32 -50 -50
+ret 0228DD60 0 1              # chkArea
+ret 02055B64 0 2              # cLib_calcTimer
+ret 025BA0C0 0 1              # isSwitch
+# carryNpcAction
+field 022904DC r3+0x420C u32 0,0x800,0x801,1
+field 022904DC r3+0x2E0 u32 0,0x2000
+ret 024430A4 -1,0,1,29,30,40   # checkAutoJumpFlying
+field 022904DC r3+0x4220 i32 4,5,0
+field 022904DC r3+0x618 u32 0x52000000
+field 022904DC 520000A4 f32 0,1
+field 022904DC 520000AE i16 0 30
+field 022904DC 54005B2C u32 0x53000000
+field 022904DC 53000370 f32 0,0,1
+field 022904DC r3+0x370 f32 -1,0,1
+field 022904DC 530000B4 u32 0x51000000
+field 022904DC 510000A4 u32 0x022955DC   # player vtable slot getBaseAnimeFrame -> a mocked target
+fret 022955DC 0 40
+# mutation gaps: null / non-null action argument, distance boundaries
+arg 02291764 r4 0,0x40001000
+arg 022919D4 r4 0,0x40001000
+arg 02291BE4 r4 0,0x40001000
+fret 025D69AC 0 10000
+field 0228EB88 r3+0x4249 i8 0xE,0x12,0x13,0x1A,0x25,0x14,-1,0,1,2,3

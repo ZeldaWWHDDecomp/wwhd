@@ -1,0 +1,7 @@
+src wwhd_src/f_op/f_op_kankyo.cpp
+field 025DAAE4 r3+0xC u8 0 1
+field 025DA9BC r3+8 s16 20 25
+ret 025AF2A4 0 1
+ret 025986BC 0 1
+ret 025DFCCC 0 2
+ret 025DFCDC 0 5

@@ -1,0 +1,25 @@
+src wwhd_src/d/actor/d_a_obj_hami2.cpp
+ret 025200D4 0x54000000 0x54000000
+ret 02520460 0 5
+ret 024F1D9C 0 5
+ret 025BA0C0 0 1
+ret 027DF9B0 -1 4
+ret 0200A030 0 1
+callee 026066C4 r4=8
+callee 025CB374 r6=12
+field * r3+0x424 u32 0 7
+field * r3+0xF8 u16 0 3
+field * r3+0x3E0 s16 -32768 32767
+arg 0234DF78 r4 0,0,1,2
+arg 0234EC5C r4 0,1,8,16,31,32,33,63,64,-1
+arg 0234EC5C r5 0,1,8,16,31,32,33,63,64,-1
+# Mutable singleton inputs must differ from the zero-filled RPX image.
+field * 101F84DC u32 0x55000000 0x55000000
+field * 101F4F28 u32 0x55010000 0x55010000
+field * 1018C7B0 u32 0x55020000 0x55020000
+# Observe the temporary opaque draw-list state consumed by modelUpdateDL.
+observe 025E2DE0 104B4634 8
+# Open/close landing boundaries, including signed wraparound.
+field * r3+0x3E0 s16 -32768,-32512,-1,0,1,255,256,257,16127,16128,16129,16383,16384,32511,32512,32767
+
+stackfill periodic

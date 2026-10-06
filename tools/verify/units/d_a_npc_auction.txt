@@ -1,0 +1,475 @@
+src wwhd_src/d/actor/d_a_npc_auction.cpp
+stackfill periodic
+# All callers pass fpcSch_JudgeForPName (025E121C), which reads one s16 at r4.
+# This avoids comparing unrelated caller-frame bytes following the process ID.
+callee 025D5218 r4=2
+
+# Typed auction actor states and 12 stock costume parameter records.
+field 021EB750 r3+0x8AC u8 0 7
+field 021EB870 r3+0x8AC u8 0 7
+field 021EBB90 r3+0x8AC u8 0 7
+field 021EBBB0 r3+0x8AC u8 0 7
+field 021EBBB8 r3+0x8AC u8 0 7
+field 021EBC78 r3+0x8AC u8 0 7
+field 021EC200 r3+0x8AC u8 0 7
+field 021EB74C r3+0x8AC u8 0 7
+field 021EE404 r3+0x8AC u8 0 7
+field 021EB76C r3+0x8AC u8 0 7
+field 021EE40C r3+0x8AC u8 0 7
+field 021EB318 r3+0x8AC u8 0 7
+field 021EBBBC r3+0x8AC u8 0 7
+field 021EB450 r3+0x8AC u8 0 7
+field 021EBC7C r3+0x8AC u8 0 7
+field 021EBD5C r3+0x8AC u8 0 7
+field 021EBF80 r3+0x8AC u8 0 7
+field 021EC014 r3+0x8AC u8 0 7
+field 021EC084 r3+0x8AC u8 0 7
+field 021EC0E8 r3+0x8AC u8 0 7
+field 021EC1A8 r3+0x8AC u8 0 7
+field 021EC20C r3+0x8AC u8 0 7
+field 021EC288 r3+0x8AC u8 0 7
+field 021EC360 r3+0x8AC u8 0 7
+field 021EC3AC r3+0x8AC u8 0 7
+field 021EC6F4 r3+0x8AC u8 0 7
+field 021EC878 r3+0x8AC u8 0 7
+field 021ECD6C r3+0x8AC u8 0 7
+field 021ECDF0 r3+0x8AC u8 0 7
+field 021ECE9C r3+0x8AC u8 0 7
+field 021EC724 r3+0x8AC u8 0 7
+field 021EC400 r3+0x8AC u8 0 7
+field 021EC93C r3+0x8AC u8 0 7
+field 021ECB68 r3+0x8AC u8 0 7
+field 021ED81C r3+0x8AC u8 0 7
+field 021EDBF8 r3+0x8AC u8 0 7
+field 021ED964 r3+0x8AC u8 0 7
+field 021EB8DC r3+0x8AC u8 0 7
+field 021ED628 r3+0x8AC u8 0 7
+field 021ED31C r3+0x8AC u8 0 7
+field 021ECF4C r3+0x8AC u8 0 7
+field 021EB750 r3+0x8AD u8 0 11
+field 021EB870 r3+0x8AD u8 0 11
+field 021EBB90 r3+0x8AD u8 0 11
+field 021EBBB0 r3+0x8AD u8 0 11
+field 021EBBB8 r3+0x8AD u8 0 11
+field 021EBC78 r3+0x8AD u8 0 11
+field 021EC200 r3+0x8AD u8 0 11
+field 021EB74C r3+0x8AD u8 0 11
+field 021EE404 r3+0x8AD u8 0 11
+field 021EB76C r3+0x8AD u8 0 11
+field 021EE40C r3+0x8AD u8 0 11
+field 021EB318 r3+0x8AD u8 0 11
+field 021EBBBC r3+0x8AD u8 0 11
+field 021EB450 r3+0x8AD u8 0 11
+field 021EBC7C r3+0x8AD u8 0 11
+field 021EBD5C r3+0x8AD u8 0 11
+field 021EBF80 r3+0x8AD u8 0 11
+field 021EC014 r3+0x8AD u8 0 11
+field 021EC084 r3+0x8AD u8 0 11
+field 021EC0E8 r3+0x8AD u8 0 11
+field 021EC1A8 r3+0x8AD u8 0 11
+field 021EC20C r3+0x8AD u8 0 11
+field 021EC288 r3+0x8AD u8 0 11
+field 021EC360 r3+0x8AD u8 0 11
+field 021EC3AC r3+0x8AD u8 0 11
+field 021EC6F4 r3+0x8AD u8 0 11
+field 021EC878 r3+0x8AD u8 0 11
+field 021ECD6C r3+0x8AD u8 0 11
+field 021ECDF0 r3+0x8AD u8 0 11
+field 021ECE9C r3+0x8AD u8 0 11
+field 021EC724 r3+0x8AD u8 0 11
+field 021EC400 r3+0x8AD u8 0 11
+field 021EC93C r3+0x8AD u8 0 11
+field 021ECB68 r3+0x8AD u8 0 11
+field 021ED81C r3+0x8AD u8 0 11
+field 021EDBF8 r3+0x8AD u8 0 11
+field 021ED964 r3+0x8AD u8 0 11
+field 021EB8DC r3+0x8AD u8 0 11
+field 021ED628 r3+0x8AD u8 0 11
+field 021ED31C r3+0x8AD u8 0 11
+field 021ECF4C r3+0x8AD u8 0 11
+field 021EB750 r3+0x8A8 u8 0,1
+field 021EB870 r3+0x8A8 u8 0,1
+field 021EBB90 r3+0x8A8 u8 0,1
+field 021EBBB0 r3+0x8A8 u8 0,1
+field 021EBBB8 r3+0x8A8 u8 0,1
+field 021EBC78 r3+0x8A8 u8 0,1
+field 021EC200 r3+0x8A8 u8 0,1
+field 021EB74C r3+0x8A8 u8 0,1
+field 021EE404 r3+0x8A8 u8 0,1
+field 021EB76C r3+0x8A8 u8 0,1
+field 021EE40C r3+0x8A8 u8 0,1
+field 021EB318 r3+0x8A8 u8 0,1
+field 021EBBBC r3+0x8A8 u8 0,1
+field 021EB450 r3+0x8A8 u8 0,1
+field 021EBC7C r3+0x8A8 u8 0,1
+field 021EBD5C r3+0x8A8 u8 0,1
+field 021EBF80 r3+0x8A8 u8 0,1
+field 021EC014 r3+0x8A8 u8 0,1
+field 021EC084 r3+0x8A8 u8 0,1
+field 021EC0E8 r3+0x8A8 u8 0,1
+field 021EC1A8 r3+0x8A8 u8 0,1
+field 021EC20C r3+0x8A8 u8 0,1
+field 021EC288 r3+0x8A8 u8 0,1
+field 021EC360 r3+0x8A8 u8 0,1
+field 021EC3AC r3+0x8A8 u8 0,1
+field 021EC6F4 r3+0x8A8 u8 0,1
+field 021EC878 r3+0x8A8 u8 0,1
+field 021ECD6C r3+0x8A8 u8 0,1
+field 021ECDF0 r3+0x8A8 u8 0,1
+field 021ECE9C r3+0x8A8 u8 0,1
+field 021EC724 r3+0x8A8 u8 0,1
+field 021EC400 r3+0x8A8 u8 0,1
+field 021EC93C r3+0x8A8 u8 0,1
+field 021ECB68 r3+0x8A8 u8 0,1
+field 021ED81C r3+0x8A8 u8 0,1
+field 021EDBF8 r3+0x8A8 u8 0,1
+field 021ED964 r3+0x8A8 u8 0,1
+field 021EB8DC r3+0x8A8 u8 0,1
+field 021ED628 r3+0x8A8 u8 0,1
+field 021ED31C r3+0x8A8 u8 0,1
+field 021ECF4C r3+0x8A8 u8 0,1
+field 021EB750 r3+0x8A9 u8 0,1
+field 021EB870 r3+0x8A9 u8 0,1
+field 021EBB90 r3+0x8A9 u8 0,1
+field 021EBBB0 r3+0x8A9 u8 0,1
+field 021EBBB8 r3+0x8A9 u8 0,1
+field 021EBC78 r3+0x8A9 u8 0,1
+field 021EC200 r3+0x8A9 u8 0,1
+field 021EB74C r3+0x8A9 u8 0,1
+field 021EE404 r3+0x8A9 u8 0,1
+field 021EB76C r3+0x8A9 u8 0,1
+field 021EE40C r3+0x8A9 u8 0,1
+field 021EB318 r3+0x8A9 u8 0,1
+field 021EBBBC r3+0x8A9 u8 0,1
+field 021EB450 r3+0x8A9 u8 0,1
+field 021EBC7C r3+0x8A9 u8 0,1
+field 021EBD5C r3+0x8A9 u8 0,1
+field 021EBF80 r3+0x8A9 u8 0,1
+field 021EC014 r3+0x8A9 u8 0,1
+field 021EC084 r3+0x8A9 u8 0,1
+field 021EC0E8 r3+0x8A9 u8 0,1
+field 021EC1A8 r3+0x8A9 u8 0,1
+field 021EC20C r3+0x8A9 u8 0,1
+field 021EC288 r3+0x8A9 u8 0,1
+field 021EC360 r3+0x8A9 u8 0,1
+field 021EC3AC r3+0x8A9 u8 0,1
+field 021EC6F4 r3+0x8A9 u8 0,1
+field 021EC878 r3+0x8A9 u8 0,1
+field 021ECD6C r3+0x8A9 u8 0,1
+field 021ECDF0 r3+0x8A9 u8 0,1
+field 021ECE9C r3+0x8A9 u8 0,1
+field 021EC724 r3+0x8A9 u8 0,1
+field 021EC400 r3+0x8A9 u8 0,1
+field 021EC93C r3+0x8A9 u8 0,1
+field 021ECB68 r3+0x8A9 u8 0,1
+field 021ED81C r3+0x8A9 u8 0,1
+field 021EDBF8 r3+0x8A9 u8 0,1
+field 021ED964 r3+0x8A9 u8 0,1
+field 021EB8DC r3+0x8A9 u8 0,1
+field 021ED628 r3+0x8A9 u8 0,1
+field 021ED31C r3+0x8A9 u8 0,1
+field 021ECF4C r3+0x8A9 u8 0,1
+field 021EB750 r3+0x8AA u8 0,1,2
+field 021EB870 r3+0x8AA u8 0,1,2
+field 021EBB90 r3+0x8AA u8 0,1,2
+field 021EBBB0 r3+0x8AA u8 0,1,2
+field 021EBBB8 r3+0x8AA u8 0,1,2
+field 021EBC78 r3+0x8AA u8 0,1,2
+field 021EC200 r3+0x8AA u8 0,1,2
+field 021EB74C r3+0x8AA u8 0,1,2
+field 021EE404 r3+0x8AA u8 0,1,2
+field 021EB76C r3+0x8AA u8 0,1,2
+field 021EE40C r3+0x8AA u8 0,1,2
+field 021EB318 r3+0x8AA u8 0,1,2
+field 021EBBBC r3+0x8AA u8 0,1,2
+field 021EB450 r3+0x8AA u8 0,1,2
+field 021EBC7C r3+0x8AA u8 0,1,2
+field 021EBD5C r3+0x8AA u8 0,1,2
+field 021EBF80 r3+0x8AA u8 0,1,2
+field 021EC014 r3+0x8AA u8 0,1,2
+field 021EC084 r3+0x8AA u8 0,1,2
+field 021EC0E8 r3+0x8AA u8 0,1,2
+field 021EC1A8 r3+0x8AA u8 0,1,2
+field 021EC20C r3+0x8AA u8 0,1,2
+field 021EC288 r3+0x8AA u8 0,1,2
+field 021EC360 r3+0x8AA u8 0,1,2
+field 021EC3AC r3+0x8AA u8 0,1,2
+field 021EC6F4 r3+0x8AA u8 0,1,2
+field 021EC878 r3+0x8AA u8 0,1,2
+field 021ECD6C r3+0x8AA u8 0,1,2
+field 021ECDF0 r3+0x8AA u8 0,1,2
+field 021ECE9C r3+0x8AA u8 0,1,2
+field 021EC724 r3+0x8AA u8 0,1,2
+field 021EC400 r3+0x8AA u8 0,1,2
+field 021EC93C r3+0x8AA u8 0,1,2
+field 021ECB68 r3+0x8AA u8 0,1,2
+field 021ED81C r3+0x8AA u8 0,1,2
+field 021EDBF8 r3+0x8AA u8 0,1,2
+field 021ED964 r3+0x8AA u8 0,1,2
+field 021EB8DC r3+0x8AA u8 0,1,2
+field 021ED628 r3+0x8AA u8 0,1,2
+field 021ED31C r3+0x8AA u8 0,1,2
+field 021ECF4C r3+0x8AA u8 0,1,2
+field 021EB750 r3+0x8B0 u8 0,1
+field 021EB870 r3+0x8B0 u8 0,1
+field 021EBB90 r3+0x8B0 u8 0,1
+field 021EBBB0 r3+0x8B0 u8 0,1
+field 021EBBB8 r3+0x8B0 u8 0,1
+field 021EBC78 r3+0x8B0 u8 0,1
+field 021EC200 r3+0x8B0 u8 0,1
+field 021EB74C r3+0x8B0 u8 0,1
+field 021EE404 r3+0x8B0 u8 0,1
+field 021EB76C r3+0x8B0 u8 0,1
+field 021EE40C r3+0x8B0 u8 0,1
+field 021EB318 r3+0x8B0 u8 0,1
+field 021EBBBC r3+0x8B0 u8 0,1
+field 021EB450 r3+0x8B0 u8 0,1
+field 021EBC7C r3+0x8B0 u8 0,1
+field 021EBD5C r3+0x8B0 u8 0,1
+field 021EBF80 r3+0x8B0 u8 0,1
+field 021EC014 r3+0x8B0 u8 0,1
+field 021EC084 r3+0x8B0 u8 0,1
+field 021EC0E8 r3+0x8B0 u8 0,1
+field 021EC1A8 r3+0x8B0 u8 0,1
+field 021EC20C r3+0x8B0 u8 0,1
+field 021EC288 r3+0x8B0 u8 0,1
+field 021EC360 r3+0x8B0 u8 0,1
+field 021EC3AC r3+0x8B0 u8 0,1
+field 021EC6F4 r3+0x8B0 u8 0,1
+field 021EC878 r3+0x8B0 u8 0,1
+field 021ECD6C r3+0x8B0 u8 0,1
+field 021ECDF0 r3+0x8B0 u8 0,1
+field 021ECE9C r3+0x8B0 u8 0,1
+field 021EC724 r3+0x8B0 u8 0,1
+field 021EC400 r3+0x8B0 u8 0,1
+field 021EC93C r3+0x8B0 u8 0,1
+field 021ECB68 r3+0x8B0 u8 0,1
+field 021ED81C r3+0x8B0 u8 0,1
+field 021EDBF8 r3+0x8B0 u8 0,1
+field 021ED964 r3+0x8B0 u8 0,1
+field 021EB8DC r3+0x8B0 u8 0,1
+field 021ED628 r3+0x8B0 u8 0,1
+field 021ED31C r3+0x8B0 u8 0,1
+field 021ECF4C r3+0x8B0 u8 0,1
+field 021EB750 r3+0x8B1 u8 0,1,2
+field 021EB870 r3+0x8B1 u8 0,1,2
+field 021EBB90 r3+0x8B1 u8 0,1,2
+field 021EBBB0 r3+0x8B1 u8 0,1,2
+field 021EBBB8 r3+0x8B1 u8 0,1,2
+field 021EBC78 r3+0x8B1 u8 0,1,2
+field 021EC200 r3+0x8B1 u8 0,1,2
+field 021EB74C r3+0x8B1 u8 0,1,2
+field 021EE404 r3+0x8B1 u8 0,1,2
+field 021EB76C r3+0x8B1 u8 0,1,2
+field 021EE40C r3+0x8B1 u8 0,1,2
+field 021EB318 r3+0x8B1 u8 0,1,2
+field 021EBBBC r3+0x8B1 u8 0,1,2
+field 021EB450 r3+0x8B1 u8 0,1,2
+field 021EBC7C r3+0x8B1 u8 0,1,2
+field 021EBD5C r3+0x8B1 u8 0,1,2
+field 021EBF80 r3+0x8B1 u8 0,1,2
+field 021EC014 r3+0x8B1 u8 0,1,2
+field 021EC084 r3+0x8B1 u8 0,1,2
+field 021EC0E8 r3+0x8B1 u8 0,1,2
+field 021EC1A8 r3+0x8B1 u8 0,1,2
+field 021EC20C r3+0x8B1 u8 0,1,2
+field 021EC288 r3+0x8B1 u8 0,1,2
+field 021EC360 r3+0x8B1 u8 0,1,2
+field 021EC3AC r3+0x8B1 u8 0,1,2
+field 021EC6F4 r3+0x8B1 u8 0,1,2
+field 021EC878 r3+0x8B1 u8 0,1,2
+field 021ECD6C r3+0x8B1 u8 0,1,2
+field 021ECDF0 r3+0x8B1 u8 0,1,2
+field 021ECE9C r3+0x8B1 u8 0,1,2
+field 021EC724 r3+0x8B1 u8 0,1,2
+field 021EC400 r3+0x8B1 u8 0,1,2
+field 021EC93C r3+0x8B1 u8 0,1,2
+field 021ECB68 r3+0x8B1 u8 0,1,2
+field 021ED81C r3+0x8B1 u8 0,1,2
+field 021EDBF8 r3+0x8B1 u8 0,1,2
+field 021ED964 r3+0x8B1 u8 0,1,2
+field 021EB8DC r3+0x8B1 u8 0,1,2
+field 021ED628 r3+0x8B1 u8 0,1,2
+field 021ED31C r3+0x8B1 u8 0,1,2
+field 021ECF4C r3+0x8B1 u8 0,1,2
+field 021EB750 r3+0x8B5 u8 0,1
+field 021EB870 r3+0x8B5 u8 0,1
+field 021EBB90 r3+0x8B5 u8 0,1
+field 021EBBB0 r3+0x8B5 u8 0,1
+field 021EBBB8 r3+0x8B5 u8 0,1
+field 021EBC78 r3+0x8B5 u8 0,1
+field 021EC200 r3+0x8B5 u8 0,1
+field 021EB74C r3+0x8B5 u8 0,1
+field 021EE404 r3+0x8B5 u8 0,1
+field 021EB76C r3+0x8B5 u8 0,1
+field 021EE40C r3+0x8B5 u8 0,1
+field 021EB318 r3+0x8B5 u8 0,1
+field 021EBBBC r3+0x8B5 u8 0,1
+field 021EB450 r3+0x8B5 u8 0,1
+field 021EBC7C r3+0x8B5 u8 0,1
+field 021EBD5C r3+0x8B5 u8 0,1
+field 021EBF80 r3+0x8B5 u8 0,1
+field 021EC014 r3+0x8B5 u8 0,1
+field 021EC084 r3+0x8B5 u8 0,1
+field 021EC0E8 r3+0x8B5 u8 0,1
+field 021EC1A8 r3+0x8B5 u8 0,1
+field 021EC20C r3+0x8B5 u8 0,1
+field 021EC288 r3+0x8B5 u8 0,1
+field 021EC360 r3+0x8B5 u8 0,1
+field 021EC3AC r3+0x8B5 u8 0,1
+field 021EC6F4 r3+0x8B5 u8 0,1
+field 021EC878 r3+0x8B5 u8 0,1
+field 021ECD6C r3+0x8B5 u8 0,1
+field 021ECDF0 r3+0x8B5 u8 0,1
+field 021ECE9C r3+0x8B5 u8 0,1
+field 021EC724 r3+0x8B5 u8 0,1
+field 021EC400 r3+0x8B5 u8 0,1
+field 021EC93C r3+0x8B5 u8 0,1
+field 021ECB68 r3+0x8B5 u8 0,1
+field 021ED81C r3+0x8B5 u8 0,1
+field 021EDBF8 r3+0x8B5 u8 0,1
+field 021ED964 r3+0x8B5 u8 0,1
+field 021EB8DC r3+0x8B5 u8 0,1
+field 021ED628 r3+0x8B5 u8 0,1
+field 021ED31C r3+0x8B5 u8 0,1
+field 021ECF4C r3+0x8B5 u8 0,1
+field 021EB750 r3+0xF8 u16 0,1,2
+field 021EB870 r3+0xF8 u16 0,1,2
+field 021EBB90 r3+0xF8 u16 0,1,2
+field 021EBBB0 r3+0xF8 u16 0,1,2
+field 021EBBB8 r3+0xF8 u16 0,1,2
+field 021EBC78 r3+0xF8 u16 0,1,2
+field 021EC200 r3+0xF8 u16 0,1,2
+field 021EB74C r3+0xF8 u16 0,1,2
+field 021EE404 r3+0xF8 u16 0,1,2
+field 021EB76C r3+0xF8 u16 0,1,2
+field 021EE40C r3+0xF8 u16 0,1,2
+field 021EB318 r3+0xF8 u16 0,1,2
+field 021EBBBC r3+0xF8 u16 0,1,2
+field 021EB450 r3+0xF8 u16 0,1,2
+field 021EBC7C r3+0xF8 u16 0,1,2
+field 021EBD5C r3+0xF8 u16 0,1,2
+field 021EBF80 r3+0xF8 u16 0,1,2
+field 021EC014 r3+0xF8 u16 0,1,2
+field 021EC084 r3+0xF8 u16 0,1,2
+field 021EC0E8 r3+0xF8 u16 0,1,2
+field 021EC1A8 r3+0xF8 u16 0,1,2
+field 021EC20C r3+0xF8 u16 0,1,2
+field 021EC288 r3+0xF8 u16 0,1,2
+field 021EC360 r3+0xF8 u16 0,1,2
+field 021EC3AC r3+0xF8 u16 0,1,2
+field 021EC6F4 r3+0xF8 u16 0,1,2
+field 021EC878 r3+0xF8 u16 0,1,2
+field 021ECD6C r3+0xF8 u16 0,1,2
+field 021ECDF0 r3+0xF8 u16 0,1,2
+field 021ECE9C r3+0xF8 u16 0,1,2
+field 021EC724 r3+0xF8 u16 0,1,2
+field 021EC400 r3+0xF8 u16 0,1,2
+field 021EC93C r3+0xF8 u16 0,1,2
+field 021ECB68 r3+0xF8 u16 0,1,2
+field 021ED81C r3+0xF8 u16 0,1,2
+field 021EDBF8 r3+0xF8 u16 0,1,2
+field 021ED964 r3+0xF8 u16 0,1,2
+field 021EB8DC r3+0xF8 u16 0,1,2
+field 021ED628 r3+0xF8 u16 0,1,2
+field 021ED31C r3+0xF8 u16 0,1,2
+field 021ECF4C r3+0xF8 u16 0,1,2
+ret 025A11EC 0x12,0xF,0x10,0
+ret 025B8B94 0,1
+ret 025447C8 0,1
+ret 0254457C 0,1
+ret 0259F858 0,1
+ret 025D5578 0,1
+ret 02542EDC -1,0,1,2
+
+# Every switch entry in next_msgStatus, plus adjacent/default IDs.
+field 021ED964 r4+0 u32 0x1D34,0x1D35,0x1D36,0x1D37,0x1D38,0x27D9,0x27DA,0x27DB,0x27DC,0x27DD,0x27DE,0x27DF,0x27E0,0x27E1,0x27E2,0x27E3,0x27E4,0x27E5,0x27E6,0x27E7,0x27E8,0x27E9,0x27EA,0x27EB,0x27EC,0x27ED,0x27EE,0x27EF,0x27F0
+
+# Valid initialized emitter with a finite disjoint particle list: empty, one, or two nodes.
+# clrEmitter has no calls; no stable-field exclusion is required.
+field 021EC3AC r3+0x870 u32 0,0x54000000
+field 021EC3AC 0x540001AC u32 0,0x54001000
+field 021EC3AC 0x54001000 u32 0x54002000 0x54002000
+field 021EC3AC 0x5400100C u32 0,0x54001100
+field 021EC3AC 0x54001100 u32 0x54002100 0x54002100
+field 021EC3AC 0x5400110C u32 0 0
+
+# Execute actual initialized play getter; cold singleton initialization is outside this fixture.
+# Guard remains initialized; the real warm path only reads it and returns fixed storage 1046F0B0.
+real 025200D4
+field * 104753A8 u32 1 1
+stable 104753A8 4
+field * 101F84DC u32 0x56000000 0x56000000
+field * 101F4B5C u32 0x57000000 0x57000000
+field * 57000948 u32 0,1
+# Auction scene selections/item IDs in the actual play object.
+field * 10474360 u8 0,1,2,3,4,5
+field * 10474361 u8 0,150,151
+field * 10474368 u16 0,8
+field * 10474342 u8 0,1
+field * 10474C75 u8 0,1,2,3,4,5,6,7,255
+
+# Execute actual SearchByName output publication and random-range conversion.
+# The mocked judge supplies a typed auction-manager pointer (or no match).
+real 025D5578 021EB870 020198D8
+ret! 025D5218 0,0x58000000
+ret 025DD868 0,1
+fret! 02019788 0 1
+field 021EB8DC r3+0x2DD s8 0 7
+field * 58000934 u8 255,2,4
+field * 58000935 u8 255,5,8
+field * 5800093C u8 0 7
+field * 5800093F u8 0,1
+field * 58000924 u8 0,1,2,3,4,5,6,7,8
+field * 58000850 u32 0xFFFFFFFF,0
+field * 58000925 u8 0,1,2,3,4,5,6,7,8
+field * 58000854 u32 0xFFFFFFFF,0
+field * 58000926 u8 0,1,2,3,4,5,6,7,8
+field * 58000858 u32 0xFFFFFFFF,0
+field * 58000927 u8 0,1,2,3,4,5,6,7,8
+field * 5800085C u32 0xFFFFFFFF,0
+field * 58000928 u8 0,1,2,3,4,5,6,7,8
+field * 58000860 u32 0xFFFFFFFF,0
+field * 58000929 u8 0,1,2,3,4,5,6,7,8
+field * 58000864 u32 0xFFFFFFFF,0
+field * 5800092A u8 0,1,2,3,4,5,6,7,8
+field * 58000868 u32 0xFFFFFFFF,0
+field * 5800092B u8 0,1,2,3,4,5,6,7,8
+field * 5800086C u32 0xFFFFFFFF,0
+
+# memzero wrapper (r3 dst, r4 count) on actor storage: compare the destination
+# pointer and count as plain values (mutation 0x7E4->0x7E5 survived otherwise).
+callee 028F521C r3=0 r4=0
+# getIDRes reads the two-word SafeString name at r4: compare its 8 bytes
+# (dropping the name vtable store survived otherwise).
+callee 026067F4 r3=0 r4=8
+# setReserveItemEmpty(this): compare the bag pointer as a value (+0x96 -> -0x96 survived).
+callee 025B7270 r3=0
+# mDoExt_J3DModel__create flags are plain values (0x15020022 -> ...23 survived).
+callee 025E38E0 r4=0 r5=0
+# dNpc_playerEyePos writes a cXyz through r3; dNpc_calc_DisXZ_AngY writes the
+# distance (f32, r5) and the angle (s16, r6): output-only storage the mocks fill
+# (swapping the eye call and its copy survived otherwise).
+callee 0259D54C r3=out12
+callee 0259D624 r5=out4 r6=out2
+# eventMain: the manager's speaking-NPC index and gesture flags (pinned manager
+# 0x58000000), and single/mixed bits of the actor's gesture-done mask 0x8B3.
+field 021EC400 58000941 u8 0,1,7
+field 021EC400 5800094C u8 0,1,4,8,16,32,5,0x30
+field 021EC400 r3+0x8B3 u8 0,1,4,8,0x10,0x20,0x40,0x7F,0xFF
+# lookBack: the talk-target flag 0x440 selects the player-tracking branch only when 0.
+field 021ECF4C r3+0x440 u8 0,1
+# lookBack: per-costume HIO look angle limit (+0x1C, s16; HIO block 0x10465A58, 0x34 per costume):
+# around the fixed 0x4000 frontal limit so the side-glance branch is reached.
+field 021ECF4C 10465A74 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465AA8 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465ADC s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465B10 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465B44 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465B78 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465BAC s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465BE0 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465C14 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465C48 s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465C7C s16 0,0x3000,0x4000,0x6000,0x7FFF
+field 021ECF4C 10465CB0 s16 0,0x3000,0x4000,0x6000,0x7FFF

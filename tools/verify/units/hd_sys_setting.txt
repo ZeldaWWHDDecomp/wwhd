@@ -1,0 +1,7 @@
+src wwhd_src/d/hd_sys_setting.cpp
+ret 0286D620 -3,0,1
+field 025F9448 r3+0x14 u32 0,1,2,3,5,6
+arg 025F9530 r3 0x5C000000
+field 025F9530 101F4BB0 u32 0x5C000000,0
+# the save info pointer (zero in the image)
+field 025F9448 101F84DC u32 0x5C400000

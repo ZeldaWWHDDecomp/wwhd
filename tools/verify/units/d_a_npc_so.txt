@@ -1,0 +1,141 @@
+# Verification unit: d_a_npc_so (the Fishman)
+src wwhd_src/d/actor/d_a_npc_so.cpp wwhd_src/d/actor/d_a_npc_so_mode.cpp wwhd_src/d/actor/d_a_npc_so_cut.cpp
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+ret 025200D4 0x54000000 0x54000000
+stackfill
+# merged unit-wide fact (the parts used different picks)
+fret 028F4384 -1,0,5,10,15,20,50,100,149.5,150,150.5,200,250,400,700,1000,1e30  # std::sqrtf (distance edges of all parts)
+
+# ---- part 1: create, heap, node control, orders, execute, HIO (d_a_npc_so.cpp) ----
+
+arg 022DE6D4 r4 -1,0,1,2,3,4,5,6,7      # setAnm(s8): callers pass a sign-extended byte (the code compares the whole register with 6)
+field 022DE6D4 r3+0x7EB i8 3,5,0,4      # mAnmPrmIdx
+ret 025B8B94 0,1                        # dSv_event_c::isEventBit
+ret 02520A84 0,1                        # dComIfGs_isStageBossEnemy
+ret 025B7A2C 0,1                        # dSv_player_collect_c::isCollect
+ret 02520460 2,4                        # dComIfG_resLoad
+ret 025D63E8 0,1                        # fopAcM_entrySolidHeap
+field 022DE884 54005134 u32 0x73656100,0x73656101,0x73650000,0x00000000,0x74656100   # start stage "sea"
+field 022DE884 10021B8C u32 0x022DDC74  # SafeString vtable slot 0x14 (assureTermination): a no-op
+field 022DE884 r3+0x326 i8 0xD,4,0      # current.roomNo
+field 022DE884 r3+0x964 u32 0x56100000  # mpMorf
+field 022DE884 56100090 u32 0,0x56200000  # mpMorf->mpModel
+field 022DED84 54005134 u32 0x73656100,0x73656101,0x73650000,0x00000000,0x74656100
+field 022DED84 10021B8C u32 0x022DDC74
+field 022DED84 r3+0x326 i8 0x1A,0
+field 022DED84 r3+0x2E4 u32 0,8,0xFFFFFFF7
+arg 022DDC78 r4 0,0x41000000            # _searchEsa(actor)
+field 022DDC78 41000008 i16 0xDD,0x23   # fpcM_GetName
+field 022DDC78 410003B4 u8 0,1          # esa eaten flag
+arg 022DDF9C r4 0,0x41000000            # _searchMinigameTagSo(actor)
+field 022DDF9C 41000008 i16 0x23,0xDD
+field 022DDF9C 410003B4 u8 1,0          # isMinigame()
+arg 022DDF20 r4 0,0x41000000            # _searchTagSo(actor)
+field 022DDF20 41000008 i16 0x23,0xDD
+field 022DDF20 410003B4 u8 0,1
+ret 027F7878 0x42000000                 # J3DNode -> J3DJoint
+field 022DDCB0 42000004 u16 0,1,11      # getJntNo()
+field 022DDCB0 r3+0x3B4 i8 11           # head joint
+field 022DDCB0 r3+0x3B5 i8 1            # backbone joint
+arg 022DDCB0 r5 0x43000000              # pModel
+field 022DDCB0 r3+0x964 u32 0x44000000  # mpMorf
+field 022DDCB0 44000090 u32 0x43000000,0x43000100  # mpMorf->mpModel: the main model or the second morf's
+callee 0259D54C r3=out12                # dNpc_playerEyePos: hidden result
+callee 0259DED0 r4=2 r5=12 r6=12        # lookAtTarget(&y, target, eye copy)
+field 022DF3F0 r3+0xF8 u16 0,1,2,3
+field 022DF3F0 r3+0xCE8 u8 0,1,2,3
+field 022DF46C r3+0xCE8 u8 0,1,2,3,4,5,6,7,8,9,10
+field 022DF46C 1047BD5A i16 0,1
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 028E8DD0 r3=12                 # PSVECSquareMag: the vector is compared
+field 022DF60C r3+0x7EB i8 2,2,2,1
+arg 022E48B4 r3 0,0x40000000          # HIO ctor: allocate or construct in place
+ret 0273AD10 0,0x57000000             # operator new
+arg 022E4BB8 r3 0,0x40000000
+arg 022E4B84 r3 0,0x40000000
+field 022DF060 r3+0x7E4 i32 0,1,15            # m6CC (0xF: Triforce chart scale)
+field 022DF6EC r3+0x7E4 i32 0,1,5,15          # m6CC
+field 022DF6EC r3+0xBF4 f32 0,0,100           # mA7C (0: search the tag)
+field 022DF6EC r3+0xD53 u8 0,1                # mBDB
+ret 0211D2F8 0,1                              # cLib_calcTimer<int>
+arg 022DE004 r4 0,1,2                         # XyCheckCB button
+field 022DE004 54005BBB u8 0x82,0x83,0x81     # select item X
+field 022DE004 54005BBC u8 0x82,0x83,0x81     # select item Y
+field 022DE004 54005BBD u8 0x82,0x83,0x81     # select item Z
+field 022DE004 54005CD8 u32 0x10000,0         # player status 0: ship ride
+ret 025D5218 0,0,0x42000000                   # fopAcIt_Judge (esa search)
+
+# ---- part 2: draw, modes, hit check, messages (d_a_npc_so_mode.cpp) ----
+
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+# steering
+ret 025A11EC 0,0x12,0xE               # fopNpc_npc_c::talk
+ret 025162A4 0,1                      # ChkTgHit
+ret 02516300 0,0x40400000             # GetTgHitObj
+field 022E160C 40400010 u32 0x4000,0,0x4001   # hit object's AtType
+ret 02689174 0,1                      # HD map: isSaveArriveGrid
+ret 025B7E00 8,7                      # getTriforceNum
+field 022E179C r4+0 u32 0x32D5,0x633,0x32CA,0x32CB,0x32CC,0x32CD,0x32CE,0x32CF,0x32D0,0x32D1,0x32D2,0x32D3,0x32D4,0x32D6,0x32D7,0x32D8,0x32D9,0x32DA,0x32DB,0x32DC,0x32DD,0x32DE,0x32DF,0x32E0,0x32E1,0x32E2,0x1234
+field 022E179C r3+0x7E8 i16 0x32D5     # m6D0
+field 022E179C r3+0xD50 u8 0,1         # mBD8
+field 022E179C r3+0x326 i8 0xD,0xC     # room
+field 022E179C 54005134 u32 0x73656100,0x73656101  # start stage "sea"
+field 022E179C 104686FB u8 0,1         # l_HIO m2F
+field 022E179C 104686FC u8 0,1         # l_HIO m30
+field 022E179C r3+0xD26 u8 0,1         # mBAE
+field 022E179C 101F84DC u32 0x41000000 # save
+field 022E179C 41000068 u8 0xFF,0      # bow slot
+field 022E179C 54005CF0 u32 0,1        # timer
+field 022E179C 101F4B5C u32 0x42000000 # message manager
+field 022E179C 42000948 u32 0,1        # select number
+field 022E1CA8 r3+0xC84 u8 0,1         # mB0C
+field 022E1CA8 104686FA u8 0,1         # l_HIO m2E
+field 022E1CA8 r3+0xCF4 i32 0,1,2,9,10,11  # mB7C
+field 022E1CA8 r3+0xD51 u8 0,1         # mBD9
+field 022E1CA8 r3+0xD50 u8 0,1         # mBD8
+field 022E1CA8 r3+0x326 i8 0xD,0xC
+field 022E1CA8 54005134 u32 0x73656100,0x73656101
+field 022E140C 1047BD5A i16 0,1        # REG12_S(9)
+field 022E06A4 54005B3C u32 0x43000000,0  # ship
+field 022E06A4 43000370 f32 9.5,10,10.5,11  # ship speedF edge
+field 022E03A4 54005B3C u32 0x43000000,0
+field 022E03A4 43000370 f32 9.5,10,10.5,11
+
+# ---- part 3: event cuts, mini-game camera (d_a_npc_so_cut.cpp) ----
+
+callee 0200F93C r3=12 r4=12           # cLib_targetAngleY
+ret 0254487C 0,0x100222D0,0x100222D8,0x100222E0,0x100222E8,0x100222C0  # getMySubstanceP: null or a name string
+callee 025871F8 r3=12                 # dLib_getWaterY(pos, acch)
+callee 0200F164 r3=12 r4=12           # cLib_addCalcPos2(pos, target, ...)
+callee 0251510C r4=12 r5=12          # dCamera_c::Reset(center, eye)
+callee 02514F50 r4=12 r5=12          # dCamera_c::Set(center, eye)
+callee 0200F764 r3=12 r4=12          # cLib_chasePosXZ(pos, target, speed)
+ret 0200F764 0,1                     # cLib_chasePosXZ
+callee 028E8F64 r4=12 r5=out12      # PSMTXMultVec(m, in, out)
+callee 028E8D88 r3=12 r4=12 r5=out12 # PSVECAdd(a, b, out)
+callee 02018D40 r4=12                # cM3dGSph::SetC(center)
+field 022E3484 r3+0xCEC i32 0,1,2,3,4,5,6,7,7,7,7,8,-1   # mB74 (the mini-game step)
+field 022E3484 r3+0xCF0 i32 0,8,9,10,11            # mB78 (arrows shot)
+field 022E3484 r3+0xCF8 i32 0,8,9,10               # mB80 (jumps)
+field 022E3484 r3+0xCF4 i32 0,0,9,10,11              # mB7C (hits)
+field 022E3484 r3+0xCFC u8 0,1                     # mB84
+field 022E3484 r3+0x7F0 i32 0,1                    # m6D8
+ret 022E160C 0,1                                   # checkTgHit
+callee 0200FCD8 r3=12 r4=out12      # MtxPosition(in, out)
+callee 024832E0 r4=12                # daShip_c::initStartPos(pos, angle)
+fret 025871F8 0,50,100,-50             # dLib_getWaterY: equal to the steered heights
+field 022E3484 r3+0x318 f32 0,100,150  # current.pos.y (landing / sphere edges)
+field 022E20EC r3+0x318 f32 0,100      # current.pos.y (landing edge)
+field 022E2C5C r3+0xD34 i32 0,1,2,3    # mBBC (the map-open jump step)
+stable 40000318 4                      # current.pos.y: not clobbered (landing edge y == water)
+field 022E2830 1047BCEC f32 0,0,5      # REG12_F(7)
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 022DE884 0x54005134 8 @stages,"","","","","","","","","","","","","","","","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","NpcSo","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Ub3","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","Uw2","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","_GOAL","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea"
+fieldstr 022DED84 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","So","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","se","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea","tea"
+fieldstr 022E179C 0x54005134 8 @stages,"sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01"
+fieldstr 022E1CA8 0x54005134 8 @stages,"sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01","sea\x01"

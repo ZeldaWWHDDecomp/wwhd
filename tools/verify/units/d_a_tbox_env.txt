@@ -1,0 +1,35 @@
+src wwhd_src/d/actor/d_a_tbox_env.cpp
+# Texture/name graph keeps loops bounded; include real dummy-name matches.
+ret 026066C4 0x49000000 0x49000000
+field 024B4858 49000030 u32 0,0x4A000000
+field 024B4858 49000034 u32 0,0x4B000000
+field 024B4858 4A000000 u16 0,1,2,3
+ret 027ED1F0 0,0x1003FECC
+# Called name lookup/graphics constructors do not mutate retained model headers.
+stable 49000000 56
+stable 4A000000 32
+field 024B4858 4A000004 u32 0x4C000000 0x4C000000
+# Cover both 64-bit halves of the texture-use bit set.
+field 024B4858 4A000000 u16 0,1,2,3,64,65,66
+# getRes invokes SafeString's virtual methods, so both words are inputs.
+callee 026066C4 r4=8
+field * 101F4F28 u32 0x53000000 0x53000000
+field * 101F9968 u32 0x54000000 0x54000000
+field 024B4858 4A000018 u32 0,1,2,0x80000000,0xFFFFFFFF
+field 024B4858 4A00001C u32 0,1,2,0x80000000,0xFFFFFFFF
+
+# Constructed texture dimensions are nonzero output data.
+ret 02773680 0x56000000 0x56000000
+field 024B4858 56000008 u32 64,128,256
+field 024B4858 5600000C u32 32,64,128
+
+# Prior stack bytes in partially initialized ResTIMG escape into the texture.
+field 024B4858 r1+0xFFFFFFB8 u32 0x12345678 0x12345678
+field 024B4858 r1+0xFFFFFFBC u32 0x13355779 0x13355779
+field 024B4858 r1+0xFFFFFFC0 u32 0x1436587A 0x1436587A
+field 024B4858 r1+0xFFFFFFC4 u32 0x1537597B 0x1537597B
+field 024B4858 r1+0xFFFFFFC8 u32 0x16385A7C 0x16385A7C
+field 024B4858 r1+0xFFFFFFCC u32 0x17395B7D 0x17395B7D
+field 024B4858 r1+0xFFFFFFD0 u32 0x183A5C7E 0x183A5C7E
+field 024B4858 r1+0xFFFFFFD4 u32 0x193B5D7F 0x193B5D7F
+field 024B4858 r1+0xFFFFFFD8 u32 0x1A3C5E80 0x1A3C5E80

@@ -1,0 +1,88 @@
+src wwhd_src/d/d_seafightgame.cpp
+arg 025BB0E0 r4 -1 8
+arg 025BB0E0 r5 -1 8
+arg 025BB0E0 r6 -1 5
+arg 025BB0E0 r7 0,1
+arg! 025BB198 r4 0 3
+arg! 025BB198 r5 0 4
+fret! 020198D8 0 7
+arg 025BB358 r5 0,1,2,3,4
+field 025BB198 r3+0x0 u8 0 0
+field 025BB198 r3+0x1 u8 0 0
+field 025BB198 r3+0x2 u8 0 0
+field 025BB198 r3+0x3 u8 0 0
+field 025BB198 r3+0x4 u8 0 0
+field 025BB198 r3+0x5 u8 0 0
+field 025BB198 r3+0x6 u8 0 0
+field 025BB198 r3+0x7 u8 0 0
+field 025BB198 r3+0x8 u8 0 0
+field 025BB198 r3+0x9 u8 0 0
+field 025BB198 r3+0xa u8 0 0
+field 025BB198 r3+0xb u8 0 0
+field 025BB198 r3+0xc u8 0 0
+field 025BB198 r3+0xd u8 0 0
+field 025BB198 r3+0xe u8 0 0
+field 025BB198 r3+0xf u8 0 0
+field 025BB198 r3+0x10 u8 0 0
+field 025BB198 r3+0x11 u8 0 0
+field 025BB198 r3+0x12 u8 0 0
+field 025BB198 r3+0x13 u8 0 0
+field 025BB198 r3+0x14 u8 0 0
+field 025BB198 r3+0x15 u8 0 0
+field 025BB198 r3+0x16 u8 0 0
+field 025BB198 r3+0x17 u8 0 0
+field 025BB198 r3+0x18 u8 0 0
+field 025BB198 r3+0x19 u8 0 0
+field 025BB198 r3+0x1a u8 0 0
+field 025BB198 r3+0x1b u8 0 0
+field 025BB198 r3+0x1c u8 0 0
+field 025BB198 r3+0x1d u8 0 0
+field 025BB198 r3+0x1e u8 0 0
+field 025BB198 r3+0x1f u8 0 0
+field 025BB198 r3+0x20 u8 0 0
+field 025BB198 r3+0x21 u8 0 0
+field 025BB198 r3+0x22 u8 0 0
+field 025BB198 r3+0x23 u8 0 0
+field 025BB198 r3+0x24 u8 0 0
+field 025BB198 r3+0x25 u8 0 0
+field 025BB198 r3+0x26 u8 0 0
+field 025BB198 r3+0x27 u8 0 0
+field 025BB198 r3+0x28 u8 0 0
+field 025BB198 r3+0x29 u8 0 0
+field 025BB198 r3+0x2a u8 0 0
+field 025BB198 r3+0x2b u8 0 0
+field 025BB198 r3+0x2c u8 0 0
+field 025BB198 r3+0x2d u8 0 0
+field 025BB198 r3+0x2e u8 0 0
+field 025BB198 r3+0x2f u8 0 0
+field 025BB198 r3+0x30 u8 0 0
+field 025BB198 r3+0x31 u8 0 0
+field 025BB198 r3+0x32 u8 0 0
+field 025BB198 r3+0x33 u8 0 0
+field 025BB198 r3+0x34 u8 0 0
+field 025BB198 r3+0x35 u8 0 0
+field 025BB198 r3+0x36 u8 0 0
+field 025BB198 r3+0x37 u8 0 0
+field 025BB198 r3+0x38 u8 0 0
+field 025BB198 r3+0x39 u8 0 0
+field 025BB198 r3+0x3a u8 0 0
+field 025BB198 r3+0x3b u8 0 0
+field 025BB198 r3+0x3c u8 0 0
+field 025BB198 r3+0x3d u8 0 0
+field 025BB198 r3+0x3e u8 0 0
+field 025BB198 r3+0x3f u8 0 0
+arg 025BB470 r4 0 7
+arg 025BB470 r5 0 7
+# Pin ordinary coordinates often enough to reach every attack outcome and sinking.
+arg 025BB470 r4 0,7
+arg 025BB470 r5 0,7
+field 025BB470 r3+0 u8 0,1,100,101,102,103,104,105,106,255
+field 025BB470 r3+0x49 u8 0,1,2,255
+field 025BB470 r3+0x58 u8 0,1,2,255
+field 025BB470 r3+0x67 u8 0,1,2,255
+field 025BB470 r3+0x76 u8 0,1,2,255
+# Distinguish horizontal boundary cells and free value100 from occupied value101.
+arg 025BB0E0 r4 0,7,8
+arg 025BB0E0 r5 0,7,8
+arg 025BB0E0 r6 0,1,2,4
+field 025BB0E0 r3+0x38 u8 0,100,101

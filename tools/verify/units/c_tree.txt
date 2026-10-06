@@ -1,0 +1,4 @@
+src wwhd_src/SSystem/SComponent/c_tree.cpp
+# Four exact GameCube tree operations and immediate per-TU compiler initializer.
+# Keep constructor loop finite; both skipped and multiple-list cases included.
+arg! 0201AB04 r5 -1,0,1,2,3,5,16

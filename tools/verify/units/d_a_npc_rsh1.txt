@@ -1,0 +1,217 @@
+# Verification unit: d_a_npc_rsh1 (Zunari, Windfall merchant)
+src wwhd_src/d/actor/d_a_npc_rsh1.cpp wwhd_src/d/actor/d_a_npc_rsh1_move.cpp wwhd_src/d/actor/d_a_npc_rsh1_event.cpp wwhd_src/d/actor/d_a_npc_rsh1_msg.cpp
+# ---- core functions ----
+
+callee 026066C4 r4=8          # dRes_control_c::getRes(SafeString*)
+callee 025E789C stack=1       # mDoExt_btpAnm::init: 10th argument on the stack
+callee 025E4F64 stack=4       # mDoExt_McaMorf::mDoExt_McaMorf
+callee 024F06B4 stack=1       # dBgS_Acch::Set
+callee 0259E08C stack=2       # dNpc_JntCtrl_c::setParam
+callee 0200FCD8 r3=12 r4=out12  # MtxPosition(&in, &out)
+ret 025200D4 0x54000000 0x54000000
+stackfill periodic
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201B080 r3=12 r4=out12 r5=12  # cXyz::outprod
+callee 028E8F44 r3=12 r4=12   # PSVECDotProduct
+callee 025D87E4 r5=6          # fopAcM_createShopItem(pos, item, &angle, room, ...)
+# setAction paths: current action kind and target
+field 022D75E8 r3+0x922 i16 -1,0,1
+field 022D75E8 r3+0x920 i16 0,0,4
+field 022D75E8 r3+0x924 u32 0x022DA748,0x022DB674,0x022DA818
+field 022D75E8 r3+0xAC6 i8 0,1
+field 022D75E8 r3+0x8FC i32 -1,0,1,3
+callee 0200F93C r3=12 r4=12   # cLib_targetAngleY
+# checkOrder / eventOrder
+field 022D7D4C r3+0xF8 u16 0,1,2
+field 022D7D4C r3+0xAC3 i8 0,1,2,3,4,5
+field 022D7D4C r3+0x922 i16 -1,0,1
+field 022D7D4C r3+0x920 i16 0,0,4
+field 022D7D4C r3+0x924 u32 0x022DB4A4,0x022DA818,0x022DA748
+ret 0200F93C -12288 12288
+field 022D808C r3+0xAC3 i8 0,1,2,3,4,5,6
+field 022D808C r3+0x8FC i32 -1,-1,0
+field 022D808C 104684C8 u32 0,1
+callee 0259D54C r3=out12      # dNpc_playerEyePos (hidden result pointer)
+callee 0259DED0 r6=12         # dNpc_JntCtrl_c::lookAtTarget(.., &eye copy)
+callee 0201B47C r3=12         # cXyz::normalizeRS
+callee 0201AE48 r3=12 r4=out12  # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 025BD0EC r4=out12      # ShopItems_c::getSelectItemBasePos
+callee 025BCFA8 r4=out12      # ShopItems_c::getSelectItemPos
+callee 025BD31C r4=12         # ShopCursor_c::setPos
+# lookBack
+field 022D83A8 r3+0xAC4 i8 0,1,2,3
+field 022D83A8 r3+0x8E4 u8 0,1
+field 022D83A8 r3+0x7B6 u8 0,1
+field 022D83A8 r3+0x978 u32 0,0x5A000000,0x5A000000
+field 022D83A8 5A000000 i16 -1,0,1
+field 022D83A8 r3+0x92A i16 -1,0,1
+field 022D83A8 r3+0x928 i16 0,0,4
+field 022D83A8 r3+0x92C u32 0x025BC38C,0
+callee 028E8DD0 r3=12         # PSVECSquareMag
+# setCollision / _execute
+field 022D8738 r3+0x922 i16 -1,0,1
+field 022D8738 r3+0x920 i16 0,0,4
+field 022D8738 r3+0x924 u32 0x022DAA78,0x022DA748
+field 022D8854 r3+0x922 i16 -1,0,1
+field 022D8854 r3+0x978 u32 0,0x5A000000
+fret 028F4384 0 6000
+callee 0200F764 r4=12         # cLib_chasePosXZ(&pos, &target, step)
+# setAnmFromMsgTag / chkAttention / shopPosMove
+field 022D8B7C 54005BC5 u8 0,1,2,3,4,5,6,7,0xFF
+field 022D8B7C r3+0xAC1 i8 4,4,0,-1
+field 022D8B7C r3+0xAC2 i8 0,1,2,3
+ret 027F2BF8 0 1              # J3DFrameCtrl::checkPass
+field 022D8D44 r3+0x8E4 u8 0,1
+field 022D8E84 r3+0x8FC i32 -1,0,1,2,3
+callee 028E8DAC r3=12 r4=12 r5=out12  # PSVECSubtract(a, b, out)
+# getAimShopPosIdx / pathMove
+field 022D9E04 r3+0x900 i32 -1,0,1,2,4
+stable 40000900 4             # getAimShopPosIdx: the loop count (this = 0x40000000) is never clobbered
+arg 022D9F74 r4 0,0x5B000000
+field 022D9F74 5B000000 i32 0,1,2,3,4
+field 022D9F74 r3+0x878 i8 0,1,2,3
+field 022D9F74 r3+0x8B8 i8 0,1,2,3
+field 022D9F74 r3+0x8B9 i8 0,1,2,3
+field 022D9F74 r3+0x8BA i8 0,1,2,3
+field 022D9F74 r3+0x8FC i32 -1,0,1,2
+field 022D9F74 r3+0x874 u32 0x5C000000
+field 022D9F74 5C000008 u32 0x5D000000
+field 022D9F74 5D000003 u8 0xFF,0,1,2,3
+field 022D9F74 5D000013 u8 0xFF,0,1,2,3
+field 022D9F74 5D000023 u8 0xFF,0,1,2,3
+field 022D9F74 5D000033 u8 0xFF,0,1,2,3
+field 022D9F74 5CFFFFF3 u8 0xFF,0,1,2,3
+field 022D9F74 5CFFFFE3 u8 0xFF,0,1,2,3
+ret 0200F764 0 1              # cLib_chasePosXZ
+# wait01 / talk01 / wait_action / getdemo_action
+field 022DA1C4 r3+0x8E5 u8 0,0,1
+field 022DA1C4 r3+0x8E4 u8 0,1
+field 022DA1C4 r3+0xAC3 i8 0,3,3
+ret 02516464 0 1              # dCcD_GObjInf::ChkCoHit
+ret 02515BBC 0,0x5E000000,0x5E000000  # GetCoHitAc
+field 022DA1C4 5E000008 i16 0xA8,0xA8,1
+ret 022D737C 0 1              # checkCreateInShopPlayer
+field 022DA1C4 r3+0x922 i16 -1,0,1
+field 022DA1C4 r3+0x924 u32 0x022DB674,0x022DA748
+ret 022D9F74 0 1              # pathMove
+fret 028F4384 0 6000
+ret 022D9C18 0x12,0x12,8,8,0xE  # talk
+field 022DA4C4 r3+0x8EC u32 0x2856,0x288E,0x285F,0x2883,0x2883,0x286B,0x1
+field 022DA4C4 r3+0x907 u8 0,1,1
+field 022DA4C4 r3+0x922 i16 -1,0,1
+field 022DA4C4 r3+0x924 u32 0x022DAA78,0x022DA748
+ret 022D68B8 0 1              # shopMsgCheck
+field 022DA4C4 r3+0xABC u32 0x5F000000
+field 022DA4C4 5F0000B4 u8 0,1
+field 022DA748 r3+0xAC8 i8 -1,0,1,1
+field 022DA748 r3+0xAC4 i8 0,1,2,3
+field 022DA818 r3+0xAC8 i8 -1,0,1,1
+field 022DA818 r3+0xACB u8 0x8C,0x78,0x2A,0xFF
+ret 025D7DEC 0xFFFFFFFF,1
+ret 0254457C 0 1              # endCheckOld
+field 022DA818 r3+0x922 i16 -1,0,1
+field 022DA818 r3+0x924 u32 0x022DA748,0x022DA818
+# event cuts / actions
+ret 0254487C 0,0x60000000,0x60000000
+field 022DAF30 60000000 u32 0,1,0x2863
+field 022DAFD8 60000000 u32 0,1,0x2863
+field 022DB03C 60000000 i32 0,1,4,6
+field 022DB0A8 60000000 i32 0,1,1,2
+field 022DB12C 104684BC u32 0xFFFFFFFF,0xFFFFFFFF,5
+ret 025F7DB0 0xFFFFFFFF,3
+ret 025F795C 0xE,0xF,0x12,2,6,6,1
+field 022DB12C r3+0x8EC u32 1,2,3
+field 022DB12C r3+0x8F8 u32 1,2,3
+ret 022D8F58 0xF,0xE,0x10
+ret 02542D88 -1,0,1
+ret 02542EDC -1,0,1,2,3,4
+ret 025447C8 0 1
+ret 022DB12C 0 1
+ret 022DB29C 0 1
+ret 0200FAAC 0,0xFF,0x100,0x2000
+field 022DB4A4 r3+0xAC8 i8 -1,0,1,1
+ret 025440C8 0 1
+field 022DB4A4 r3+0x2E0 u32 0,0x4000,0xFFFFFFFF
+field 022DB4A4 r3+0x922 i16 -1,0,1
+field 022DB4A4 r3+0x920 i16 0,0,4
+field 022DB4A4 r3+0x924 u32 0x022DA748,0x022DA818
+field 022DB674 r3+0xAC8 i8 -1,0,1
+arg 022DB9A4 r3 0,0x61000000
+arg 022DB9A4 r4 0,1,2,3
+arg 022DB9B8 r3 0,0x61000000
+arg 022DB9B8 r4 0,1,2,3
+# ---- message functions ----
+
+callee 0201ADE0 r3=12 r4=out12      # cXyz::operator-
+callee 0201AE48 r3=12 r4=out12      # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201B47C r3=12               # cXyz::normalizeRS
+callee 025BCC7C r4=12               # Item_ZoomUp(pos)
+callee 025BC1B0 r5=12 r6=12         # rsh_talk_cam_action_init(ctr copy, eye copy)
+callee 0200F93C r3=12 r4=12         # cLib_targetAngleY
+callee 0200EE00 r3=12 r4=12         # cLib_addCalcPos
+callee 028E8DD0 r3=12               # PSVECSquareMag
+callee 022D9F74 r4=4                # pathMove(&idx)
+ret 025200D4 0x54000000 0x54000000  # play
+ret 0254DA50 0 1                    # checkItemGet
+ret 02520C0C 0 1                    # dComIfGs_checkGetItem
+ret 025B8B94 0 1                    # isEventBit
+ret 025B7570 0,0,0,0,0,0,0,0,0,0,0,1    # checkReserveItem (mostly 0: fewer than 3 in the bag)
+ret 020078BC 0 1                    # pad trigger
+ret 0271F954 0 1                    # HD flag check
+ret 022D8F58 0xE,0xF,0x10           # next_msgStatus
+ret 022D6828 0,1,2,3,7,8            # countShop
+ret 022D68F0 0 1
+ret 022D68B8 0 1
+ret 022D8E84 0 1                    # shopPosMove
+ret 022D9F74 0 1                    # pathMove
+ret 0201B47C 0 1                    # normalizeRS
+ret 025BB698 0 1                    # dShop_now_triggercheck
+ret 025BBA1C 0,0,1,4,5,0x20,0x21,0x24  # dShop_BoughtErrorStatus
+field * 101F4B5C u32 0x55000000,0x55000000,0x55000000
+ret 025F795C 0,1,2,6,0xE,0xF,0x12   # message status
+ret 025F7DB0 0xFFFFFFFF,1           # messageSet: process id
+field * 54005BD3 u8 0,0,1
+field * 54005BD2 u8 0,1,1
+field * 55000948 u32 0,0,1
+field * 55000922 u8 0,1
+# next_msgStatus
+field 022D8F58 r4+0 u32 0x283C 0x2897   # 92 values: a range size that is a multiple of 7 never draws some values
+arg 022D8F58 r5 0,0x50000000
+field 022D8F58 r3+0x978 u32 0,0x56000000,0x56000000
+field 022D8F58 54005BA4 i16 0,1,100,-1
+# getMsg
+field 022D94B8 r3+0x8F4 u32 0,0,0,0x2845
+field 022D94B8 r3+0x8FC i32 -1,-1,0
+# talk / shop_talk / normal_talk
+field * r3+0x978 u32 0,0x56000000,0x56000000
+field * r3+0xABC u32 0x57000000
+field 022D9C18 r3+0xAC9 i8 0,1,2,3,2,3,-1
+field * 104684BC u32 0xFFFFFFFF,5
+field * 55000938 u32 0x2863,0x2846,0x2848,0x2847,0x2892,0x288D,0x2888,0x2851,0x2855,0x2895,0x2860,0x2890,0x285A,0x285B,0x285E,0x285F,0x2887
+field 022D96E4 r3+0x92A i16 0,-1,-1,1
+field 022D96E4 r3+0x928 i16 0,0,1
+field 022D96E4 r3+0x92C u32 0x025BBF4C,0x025BBF4C,0
+field 022D96E4 1046860C u32 0,1
+field 022D96E4 10468610 u32 0,1
+field * r3+0x8BD i8 0,1
+# pl_shop_out_action
+field 022DAA78 r3+0xAC8 i8 0,1,-1
+field 022DAA78 101D5F45 u8 0,0,1
+field 022DAA78 r3+0x922 i16 -1,-1,0,1
+field 022DAA78 r3+0x920 i16 0,0,4
+field 022DAA78 r3+0x924 u32 0x022DA748,0x022DAA78
+fret 0200EE00 1 0             # cLib_addCalcPos: the 1.0 boundary (edge) and below
+fret 028F4384 1 1.5           # sqrtf: the 1.0 boundary (edge) and just above; unsteered draws give the rest
+# message range checks: the range edges
+arg 022D68B8 r3 0x2862,0x2863,0x2864,0x2867,0x2868,0x286A,0x286B,0x286C,0x2882,0x2883,0x2884,0x2885
+arg 022D68F0 r3 0x2862,0x2863,0x2864,0x286A,0x286B,0x286C,0x2881,0x2882,0x2883
+# setTexAnm / setAnm: the current index (-1 forces a reload)
+field 022D8380 r3+0x958 i8 -1,0,1
+arg 022D8380 r4 0,1
+field 022D8B20 r3+0x959 i8 -1,0,1
+arg 022D8B20 r4 0,1
+# HIO constructor: NULL this (allocates; allocation may fail)
+arg 022DB690 r3 0,0x56000000
+ret 0273AD10 0,0x56100000

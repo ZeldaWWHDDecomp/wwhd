@@ -1,0 +1,42 @@
+# Verification unit: d_a_npc_ko1 part D2 (talk/manzai/neru, action functions, TU tail)
+src wwhd_src/d/actor/d_a_npc_ko1_d2.cpp
+
+# talk_1: message status, message numbers, conversation state
+ret 025F795C 0x12 0x14
+field 02279BC0 r3+0x7CC u8 0 1
+field 02279BC0 r3+0x7D8 u8 0,2
+field 02279BC0 r3+0x7C8 u32 0xFFFFFFFF,0
+field 02279BC0 r3+0x7C0 u32 0xAF1,0xAFF,0xB06,0xB55,0xB57,0xB62,0xB64,0xB00,0xAF0
+field 02279BC0 r3+0xA17 i8 0 8
+callee 025F7DB0 r5=12         # messageSet(mgr, no, &pos)
+# manzai: the talk actor list (play + 0x5C34 index, + 0x5C38 actors) holds this
+ret 025200D4 0x54000000 0x54000000
+arg 02279FC0 r3 0x57000000,0x57000000
+field 02279FC0 54005C34 u32 0 1
+field 02279FC0 54005C38 u32 0x57000000,0x58000000
+field 02279FC0 r3+0x7D8 u8 1 4
+field 02279FC0 r3+0xA0C u8 254 255
+field 02279FC0 r3+0xA17 i8 0 7
+# talk_2: partner count
+field 02279EF8 r3+0x92C u8 0 3
+# action functions: phase mA18, status mA13
+field 0227A374 r3+0xA18 i8 -1 4
+field 0227A4DC r3+0xA18 i8 -1 4
+field 0227A60C r3+0xA18 i8 -1 4
+field 0227A750 r3+0xA18 i8 -1 4
+field 0227A830 r3+0xA18 i8 -1 4
+field 0227A8C8 r3+0xA18 i8 -1 4
+field 0227A9C0 r3+0xA18 i8 -1 4
+field 0227AB28 r3+0xA18 i8 -1 4
+field 0227AC08 r3+0xA18 i8 -1 4
+field 0227A374 r3+0xA13 i8 -1 12
+field 0227A4DC r3+0xA13 i8 2,3,4,0x10,0x11,0x12,0x13,0x14,0x15,0x16
+field 0227A60C r3+0xA13 i8 2,3,4,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B
+field 0227A750 r3+0xA13 i8 2,3,0x14,0x15,0x1C,0x1D
+field 0227A830 r3+0xA13 i8 0x1B,0x1C
+field 0227A8C8 r3+0xA13 i8 -1 4
+field 0227A9C0 r3+0xA13 i8 -1 0x18
+field 0227AB28 r3+0xA13 i8 2,3,0x14,0x15,0x1C,0x1D
+field 0227AC08 r3+0xA13 i8 0x1A,0x1B
+# neru
+field 0227A1C8 r3+0x9D5 u8 0 3

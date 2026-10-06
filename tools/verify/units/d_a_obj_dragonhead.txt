@@ -1,0 +1,39 @@
+src wwhd_src/d/actor/d_a_obj_dragonhead.cpp
+stackfill
+callee 026066C4 r4=8
+ret 025E38E0 0,0x56000000
+ret 024F23F4 0,0x57000000
+ret 0200A030 0,1
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 025200D4 0x54000000 0x54000000
+ret 025BA0C0 0,1
+ret 024EEA6C 0,1
+ret 020087EC 0,1
+ret 025162A4 0,1
+ret 02516300 0,0x59000000
+field * 59000010 u32 0,0x40000,0xFFFFFFFF
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF
+field * r3+0x528 u8 0,1,2
+field * r3+0x521 u8 0,1
+field * r3+0x520 u8 0,1,2,3,252,253,254,255
+field * r3+0xF4 u32 0,0x58000000
+field * 101F4F28 u32 0x5A123400
+field * 101F84DC u32 0x5A223400
+arg! 0233823C r3 0,0x40000000
+arg! 02338220 r3 0,0x40000000
+observe 025E2DE0 104B4634 8
+ret 027F3F8C 0x58000000 0x58000000
+field * 58000024 u16 0,1,2
+stable 58000024 2
+callee 0274D458 r3=out16 r4=16
+# Immutable actor/model resource topology for the material loop.
+real 027F3F8C
+arg! 02337DCC r3 0x40000000
+field 02337DCC r3+0x3B4 u32 0x59000000
+field 02337DCC 590000AC u32 0x59010000
+field 02337DCC 59010000 u32 0x58000000
+stable 400003B4 4
+stable 590000AC 4
+stable 59010000 4
+callee 02337D18 r3=out16

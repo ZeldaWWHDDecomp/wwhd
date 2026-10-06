@@ -1,0 +1,6 @@
+# Verification unit: d_a_obj_pbka (Bomb Shop ceiling fan)
+src wwhd_src/d/actor/d_a_obj_pbka.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap

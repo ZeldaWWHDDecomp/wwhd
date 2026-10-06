@@ -1,0 +1,30 @@
+src wwhd_src/d/actor/d_a_kytag02.cpp
+
+# Live nonnull actor entries; deleting destructor also accepts null.
+arg! 021AFBC8 r3 0x51000000 0x51000000
+field 021AFBC8 0x510002E4 u32 0,8
+arg! 021AFCF4 r3 0,0x51000000
+arg! 021AFCF4 r4 0,1,2,3
+
+# Bounded initialized path graph; two nodes and four points each.
+arg! 021AF984 r3 0x51000000 0x51000000
+ret! 025200D4 0x54000000 0x54000000
+ret! 02555D0C 0x55000000 0x55000000
+ret! 025AB070 0x52000100 0x52000100
+field 021AF984 0x510003AC u32 0,0x52000000
+field 021AF984 0x54005B2C u32 0x53000000 0x53000000
+field 021AF984 0x52000000 u16 4 4
+field 021AF984 0x52000002 u16 0,0xFFFF
+field 021AF984 0x52000008 u32 0x52100000 0x52100000
+field 021AF984 0x52000100 u16 4 4
+field 021AF984 0x52000102 u16 0xFFFF 0xFFFF
+field 021AF984 0x52000108 u32 0x52100100 0x52100100
+stable 0x52000000 0x10
+stable 0x52000100 0x10
+fret! 028F4384 0 1000000000
+callee 02563F64 r3=12 r4=12 r5=out12
+stackfill periodic
+
+# Preserve the graph roots across modeled singleton lookup callbacks.
+stable 0x510003AC 4
+stable 0x54005B2C 4

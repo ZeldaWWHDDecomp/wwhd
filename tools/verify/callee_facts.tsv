@@ -1,0 +1,27 @@
+# Global callee facts: defaults for every unit (unit-file `callee` lines for the same key win).
+# Syntax as in unit files: ADDR key=value ...  (rN=SIZE compares N's pointee; stack=N compares N stack words)
+# Each line was found by helpers' mutation testing (an argument the harness did not compare).
+025E4F64 stack=4   # mDoExt_McaMorf constructor: stack arguments
+024F06B4 stack=1   # dBgS_Acch::Set: 9th argument (shape angle) on the stack
+0259E08C stack=2   # dNpc_JntCtrl_c::setParam: stack arguments
+025CB374 r6=12     # dVibration_c::StartShock: cXyz copy in r6
+027FA3F4 r5=0      # GXSetTevKColor-style (out RGBA8*, material*, s32 konst index): r5 is forwarded to konst%d
+025A847C r3=0 r6=12 r7=6 r8=12 stack=4   # r3=0: compare the dPa_control_c this; particle set: pos, nullable angles, nullable scale; stack=4: setup, prm, env, scale2D (only stack pointees are compared); r10 callback: add `r10=20` in the unit if it is a stack object
+028E8DE8 r3=12 r4=12  # PSVECSquareDistance reads both vectors
+02346A40 retu=1    # daObjFtree waterReach returns 0/1 (epilogue masks bit 0 then XORs 1)
+028E8DD0 r3=12   # PSVECSquareMag: compare the vector
+027DEE5C r4=64   # HD animation-object init (btk): reads/writes a 0x40-byte setup record (game test 2026-10-04: a 0x1C Local was too small)
+027E09B8 r4=64   # HD animation-object init (btp): same 0x40-byte setup record
+028F521C r3=0   # bzero/memclr thunk: tail-calls memset, livein misses r3
+C0006178 r3=0 r4=0 r5=0 r7=0 r8=0   # GX2DrawIndexedEx import (mode, count, indexType, indexData r6, vertexOffset, instanceCount): scalars that fall in the stack range must not be compared as pointers
+027DEFB8 r3=64   # HD animation-object size query (btk/brk/bpk): reads the setup record and fills +0x14..+0x3C through 027DED78 (game test 2026-10-05: 28-byte Locals; unit lines with the small size had hidden it)
+027E0AF0 r3=64   # same size query for btp (027E08D0)
+027E06E0 r3=20   # HD transform-animation size query: fills +4..+0x14 through 027E0610 (game test 2026-10-05: 12-byte Locals)
+027E063C r4=20   # HD transform-animation init: same 0x14-byte record (027E0610 when +4 is 0)
+027DFCCC r3=48   # HD joint-animation size query: fills +0x10..+0x30 through 027DFA98 (game test 2026-10-05: 24-byte Local)
+027DFB70 r4=48   # HD joint-animation init: same 0x30-byte record
+02704D2C r3=out12   # HD position getter: writes a 12-byte vector through r3 (output only; Local sweep 2026-10-05: d_operate_wind had an 8-byte Local and an out8 unit line)
+025192A8 r4=0x1C   # cc_at_check: CcAtInfo, written up to +0x18 (stack guard sweep 2026-10-05: d_a_fganon used 0x18-byte Locals; units declared 4/0x18)
+0255FFF4 r3=out456   # dKy_tevstr_init clears 0x72 words = 0x1C8 bytes and sets them (game-test d_grass ShaderBuild bug); out: generated mocks fill the light state (tev-output facts 2026-10-05: a zero-filled state hid wrong-offset reads)
+025626A4 r6=inout456   # settingTevStruct: dKy_tevstr_c (0x1C8), read and updated; inout: compared at the call, then filled by generated mocks (tev-output facts 2026-10-05)
+0255FAF0 r3=456   # dKy_GfFog_tevstr_set: reads the fog fields of dKy_tevstr_c (+0xA0..+0xAF), writes nothing through r3

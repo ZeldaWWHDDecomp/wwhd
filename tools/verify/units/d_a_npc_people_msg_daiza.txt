@@ -1,0 +1,10 @@
+# Verification unit (part): d_a_npc_people_msg again, with getEventReg answers for chkDaiza's
+# "all six pedestals in one state" paths (generated mocks answer each call independently, so the
+# main unit's answer list cannot reach them). Run with -n 40000.
+src wwhd_src/d/actor/d_a_npc_people_msg.cpp wwhd_src/d/actor/d_a_npc_people_pending.cpp
+
+callee 026067F4 r4=8
+callee 0259D624 r3=12 r4=12 r5=out4
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+ret 025B8BB0 0x8C,0x90,0x94

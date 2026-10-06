@@ -1,0 +1,28 @@
+src wwhd_src/d/actor/d_a_deku_item.cpp
+stackfill periodic
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025BA494 0 1
+ret 025B8B94 0 1
+ret 025E8508 0 1
+ret 02516464 0 1
+ret 025445B8 0 1
+ret 0254457C 0 1
+ret 025D7E88 0xffffffff,0x50000000
+field * r3+0x840 u32 0 3
+field * r3+0x844 u32 0,1,2
+field * r3+0x850 u32 0,0x53000000
+field * r3+0xf8 u16 0,2,3
+field * r3+0x2e4 u32 0,8,0xffffffff
+field * 0x53000262 u8 0,6,7,255
+callee 026066C4 r4=8
+callee 025A847C r5=0 r6=12 r7=6 r8=12 stack=4
+callee 020182E0 r4=12
+arg 0211F264 r3 0,0x40000000
+arg 0211F244 r3 0,0x40000000
+
+# Preserve flag-bit1 andinitializedcontroller/save witnesses found in exactmutations.
+field 0211EA7C r3+0x2e4 u32 0,1,8,9,0xffffffff
+field * 0x101F84DC u32 0,0x56000000,0x56123400
+field * 0x101F4F28 u32 0,0x57000000,0x57123400
+# Onlyvirtual mode branch is impossible: fourimmutable direct descriptors have slotFFFF.

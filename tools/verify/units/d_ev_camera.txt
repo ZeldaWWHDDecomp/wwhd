@@ -1,0 +1,325 @@
+# d_ev_camera (dCamera_c event camera): TU 025303B4..0253E948 (d_envse's sinit 02530320 before it;
+# own sinit 0253E89C followed by the inline copies 0253E930/0253E944; d_event starts at 0253E948)
+src wwhd_src/d/d_ev_camera.cpp
+src wwhd_src/d/d_ev_camera_2.cpp
+src wwhd_src/d/d_ev_camera_3.cpp
+src wwhd_src/d/d_ev_camera_4.cpp
+src wwhd_src/d/d_ev_camera_5.cpp
+src wwhd_src/d/d_ev_camera_6.cpp
+src wwhd_src/d/d_ev_camera_7.cpp
+src wwhd_src/d/d_ev_camera_8.cpp
+src wwhd_src/d/d_ev_camera_9.cpp
+src wwhd_src/d/d_ev_camera_10.cpp
+src wwhd_src/d/d_ev_camera_11.cpp
+stackfill periodic
+ret! 025200D4 0x54000000 0x54000000
+# cXyz / cSAngle / cSGlobe out-of-line helpers (as in d_camera)
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12  # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12        # cXyz::operator*
+callee 0201B31C r3=12 r4=out12        # cXyz::normalize
+callee 020072E0 r4=12                 # cSGlobe::Val(const cXyz&)
+callee 02530998 r4=out16              # getEvStringData(out, name, default)
+real 028F5C88                         # __va_arg
+# debug parameters vs the event manager
+field * r3+0x510 u32 0,0x20000000,0x20000001,1
+ret! 025448CC 0,1,1,3,5                      # getMySubstanceNum
+ret! 0254487C 0,0x5A000000,0x5A000100,0x5A000200             # getMySubstanceP
+ret 025303B4 -1,0,3,7                 # searchEventArgData
+# getEvActor: the event string ("@PLAYER", "@STARTER", "@PARTNER", "@TALKPARTNER", "@TARGET", "@ITEM", "Link", other)
+ret 02530538 0,0x5B000000
+field * 5B000000 u32 0x40504C41,0x40535441,0x40504152,0x4054414C,0x40544152,0x40495445,0x4C696E6B,0x41424344
+callee 0250242C r4=out12 r6=12        # relationalPos(ret, actor, offset)
+callee 020073AC r3=8 r4=out12         # cSGlobe::Xyz
+callee 028E8D88 r3=12 r4=12           # PSVECAdd
+callee 025D5218 r4=4                  # fopAcIt_Judge(judge, &id)
+callee 0200658C r3=out2               # cSAngle(s16)
+callee 0253086C r6=12                 # getEvXyzData default (stack copy)
+# fixedPositionEvCamera
+field 02531010 r3+0x11C u32 0,0,1,5,100
+field 02531010 104758A8 u32 0,1
+ret 02530CB4 0,0x5C000000,0x5C000000
+ret 02530B84 0,0x5C100000
+field * 5C000004 u32 0xFFFFFFFF,7
+field 02531010 r3+0x3C4 u8 0x2D,0x6F
+field 02531010 r3+0x3C0 u32 0xFFFFFFFF,7
+field 02531010 r3+0x37C u8 0,1
+field 02531010 r3+0x37D u8 0,1
+field 02531010 r3+0x3C8 u32 0,1,6,200
+ret 025D5218 0,0x5D000000
+callee 024F8D5C r4=out12              # positionOf(ret, actor)
+callee 024F8F3C r4=out12              # attentionPos(ret, actor)
+callee 024F8F30 r4=out2               # directionOf(ret, actor)
+callee 02007324 r3=out8 r4=12         # cSGlobe(const cXyz&)
+callee 020068B0 r3=2 r4=out2 r5=2     # cSAngle::operator-
+callee 024FCBE8 r4=12 r5=12           # lineBGCheck(start, end, flags)
+callee 02530634 r4=out4               # getEvIntData(out, name, default)
+# fixedFrameEvCamera: RelUseMask characters, the actor, cSAngle::_0
+field 025314BC r3+0x11C u32 0,0,1,5,100
+field 025314BC r3+0x3A4 u8 0x6F,0x6E,0x70,0x74,0x78
+field 025314BC r3+0x3A5 u8 0x6F,0x72,0x6E,0x70,0x74,0x78
+field 025314BC r3+0x37C u8 0,1
+field 025314BC r3+0x3AC u8 0,1
+field 025314BC r3+0x3A8 u32 0,1,6,200
+field 025314BC r3+0x80 u32 0,1
+field * 101FF354 s16 0
+ret 024FCBE8 0,1
+# save/load slots: getEvIntData runs for real, the event manager's value at 5A000000
+real 02530634
+field * 5A000000 u32 0,1,9,9,0xFFFFFFFF,5,200
+# style: the engine table (by the style's algorithm)
+ret 024F732C 0,1,2,5,0x20
+# getEvActor2: getEvStringData and strcpy run for real; event strings at 5A000100
+real 02530998
+real 028F040C
+field * 5A000004 u32 0
+field * 5A000100 u32 0x40504C41,0x40535441,0x40504152,0x4054414C,0x40544152,0x40495445,0x4C696E6B,0x41424344
+field * 5A000104 u32 0
+arg 02530CB4 r5 0x5A000100
+arg 0253E70C r6 0,0x5A000100
+arg 0253E70C r8 0,0x5A000100
+arg 0253E70C r10 0,0x5A000100
+arg! 02530998 r4 0x5B100000
+arg! 02530998 r6 0x5A000100
+field 02530998 r3+0x438 u32 0x5A000100
+field 02530998 r3+0x44C u32 0x5A000100
+field 02530998 r3+0x460 u32 0x5A000100
+field 02530998 r3+0x474 u32 0x5A000100
+field 02530998 r3+0x488 u32 0x5A000100
+field 02530998 r3+0x49C u32 0x5A000100
+field 02530998 r3+0x4B0 u32 0x5A000100
+field 02530998 r3+0x4C4 u32 0x5A000100
+field * 5A000200 u32 0x6F6F0000,0x6F6E0000,0x6F720000,0x6F700000,0x6F740000,0x6E6F0000,0x6E6E0000,0x706F0000,0x70700000,0x746F0000,0x74740000,0x78780000,0x6E720000,0x74720000
+# maptoolIdEvCamera: the stage event camera list
+field 02535830 r3+0x108 u32 0,0,1,0x1E,0xFFFFFFFF
+field 02535830 r3+0x4C8 u32 0,0x5E000000
+field 02535830 r3+0x11C u32 0,5,30,31,0xFFFFFFFF
+field * 5E000010 u8 0,1,3
+field * 5E000011 u8 0xFF,0,3
+field * 5E000012 u8 0xFF,0,1,2,3,0x80,0x40,0xC3
+field * 5E000014 u8 0xFF,0,4
+ret 024FA208 0xFF,0,1,5
+ret 02540348 0,0x5E000000
+ret 025403D4 0,0x5E000000
+field * 54005150 u32 0x5A100000
+field * 5A1001CC u32 0x0201A33C
+ret 0201A33C 0,0x5E100000
+field * 5E100000 u32 0,1,3
+field * 5E100004 u32 0x5E000000
+stable 54005150 4
+stable 5A1001CC 4
+stable 5E100000 8
+# tactEvCamera
+field 0253754C r3+0x11C u32 0,1
+field 0253754C r3+0x7C u32 0,2
+field 0253754C r3+0x37C u32 0,1
+# fixedFrames / bSpline
+callee 025187D8 r4=12 r5=12           # dCcS::ChkCamera(a, b, r, actor1, actor2)
+callee 025C0E38 r4=out12              # d2DBSplinePath::Calc(cXyz* out, cXyz* points)
+field 0253A268 r3+0x11C u32 0,0,1,5
+field 0253A268 r3+0x3AC u8 0x6F,0x78
+field 0253A268 r3+0x3AD u8 0x6F,0x78
+ret 025187D8 0,1
+field 0253A704 r3+0x11C u32 0,0,1
+field 0253A704 r3+0x4D8 u32 3,0
+ret 025C0C80 0,1
+ret 02530418 0,1
+# stokerEvCamera
+callee 02007100 r3=out8               # cSGlobe()
+callee 020068F4 r3=2 r4=out2          # cSAngle::operator+(s16)
+callee 020072E0 r3=8 r4=12            # cSGlobe::Val(const cXyz&)
+field 0253B7E4 r3+0x11C u32 0,0,1,5
+field 0253B7E4 r3+0x37C u8 0,1
+field 0253B7E4 r3+0x37D u8 0,1
+field 0253B7E4 r3+0x3A4 u32 0,0x5C000000
+field 0253B7E4 r3+0x3A8 u32 0,0x5C000000
+field 0253B7E4 r3+0x3A8 u32 0,0x5C000000
+field 0253B7E4 r3+0x3AC u32 0xFFFFFFFF,7
+field 0253B7E4 r3+0x3B0 u32 0xFFFFFFFF,7
+callee 028F5C88 r3=12                 # __va_arg: compare the whole va_list
+field 02535830 5A000000 u32 0,1,2,0xFFFFFFFF
+# getItemEvCamera: the state machine
+callee 020065FC r3=out2               # cSAngle()
+callee 0200693C r3=2 r4=out2          # cSAngle::operator*(f32)
+callee 020068CC r3=2 r4=2             # cSAngle::operator+=
+callee 020071E0 r3=8 r4=2 r5=2        # cSGlobe::Val(f32, const cSAngle&, const cSAngle&)
+field 025351A0 r3+0x11C u32 0,1,1,1
+field 025351A0 r3+0x37C u32 0,1,0xA,0xB,0xC,0x63,5,0xD
+field 025351A0 r3+0x39C u32 0,1,5
+field 025351A0 r3+0x380 u32 0,1,5,27
+field 025351A0 r3+0x124 u32 0
+field 025351A0 54005CD8 u32 0,0x10000
+# turnToActorEvCamera
+callee 020066C0 r3=out2               # cSAngle(f32)
+callee 02006894 r3=2 r4=out2 r5=2     # cSAngle::operator+
+field 02536404 r3+0x11C u32 0,0,1,5,20
+field 02536404 104758B4 u32 0,1
+field 02536404 r3+0x3A8 u32 0,1,20
+# restorePosEvCamera
+field 02534964 r3+0x11C u32 0,0,1,5
+field 02534964 104758B0 u32 0,1
+field 02534964 r3+0x3BC u32 0,1,2,3,4
+field 02534964 r3+0x3A0 u32 0,1,30
+field 02534964 r3+0x3E4 u32 0,1
+field 02534964 r3+0x39C f32 0.0,750.0,1000000.0
+field 02534964 r3+0x3A4 f32 0.0,1500.0,1000000.0
+ret 025050E4 0,1,2
+# tornadoWarpEvCamera
+callee 02514D00 r4=out12 r6=12 r7=2   # relationalPos(ret, actor, offset, cSAngle)
+callee 024F7A40 r3=out12 r4=12 r5=2   # dCamMath::xyzRotateY
+callee 02006644 r3=out2 r4=2          # cSAngle(const cSAngle&)
+callee 020065EC r3=out2 r5=2          # cSAngle operator-(s16, const cSAngle&)
+callee 020068E0 r3=2 r4=2             # cSAngle::operator-=
+field 025383D0 r3+0x11C u32 0,1,1
+field 025383D0 r3+0x37C u32 0,1,2,3,4
+field 025383D0 r3+0x380 u32 1,2,100,200
+field 025383D0 r3+0x8DA u8 0,1
+# twoActor0EvCamera
+callee 02006720 r3=2                  # cSAngle::Degree
+callee 02508804 r4=out12 r7=12        # relationalPos(ret, actor1, actor2, offset, ratio)
+field 0253B168 r3+0x11C u32 0,0,1
+field 0253B168 104758B8 u32 0,1
+field 0253B168 r3+0x3B0 f32 -0.1,0.0,0.5,1.0,2.0
+field 0253B168 r3+0x384 u32 0xFFFFFFFF,7,7
+field 0253B168 r3+0x388 u32 0xFFFFFFFF,7,7
+# possessedEvCamera
+callee 024FC0B0 r4=out12              # eyePos(ret, actor)
+callee 025F0C48 r3=12 r4=out8         # mDoLib_project
+callee 0253072C r4=out4               # getEvFloatData(out, name, default)
+field 0253A998 r3+0x11C u32 0,1,1
+field 0253A998 r3+0x37C u32 0,1,0x63,5
+field 0253A998 r3+0x380 u32 0,1
+field 0253A998 r3+0x39C u32 0,1,2
+field 0253A998 r3+0x388 u32 1,2,10
+# gameOverEvCamera
+field 02535AA4 r3+0x11C u32 0,1,1,1
+field 02535AA4 r3+0x37C u32 0,1,2,3,4,5,6,0x32,0x33,0x34,0x35
+field 02535AA4 r3+0x380 u32 0,0x1E,0x82,0xA0,7
+field 02535AA4 r3+0x124 u32 0
+field 02535AA4 54005CD8 u32 0,0x10000,0x100000,0x110000
+field * 101FF35C s16 0x8000
+# useItem0EvCamera: states, item type (0..6), counters
+field 02538DB4 r3+0x11C u32 0,1,1,1
+field 02538DB4 r3+0x37C u32 0,1,2,0xA,0x63,5
+field 02538DB4 r3+0x384 u32 0,1,2,3,4,5,6
+field 02538DB4 r3+0x398 u32 0,1,5
+field 02538DB4 r3+0x39C u32 0,1,5,30,45,60
+field 02538DB4 r3+0x380 u32 1,5,40
+field 02538DB4 r3+0x7C u32 0,1,8
+field 02538DB4 r3+0x124 u32 0
+field 02538DB4 54005CD8 u32 0,0x10000
+# useItem1EvCamera
+field 0253986C r3+0x11C u32 0,1,1,1
+field 0253986C r3+0x37C u32 0,1,2,0xA,0x63,5
+field 0253986C r3+0x384 u32 0,1,2,3,4,5,6
+field 0253986C r3+0x398 u32 0,1,5
+field 0253986C r3+0x39C u32 0,1,5,30
+field 0253986C r3+0x380 u32 1,5,40
+field 0253986C r3+0x7C u32 0,1,8
+# rollingEvCamera
+field 025369BC r3+0x11C u32 0,0,1,5,100
+field 025369BC r3+0x37C u8 0,1
+field 025369BC r3+0x37D u8 0,1
+field 025369BC r3+0x3BC u8 0x6F,0x6E,0x70,0x78
+field 025369BC r3+0x3BD u8 0x6F,0x72,0x6E,0x70,0x78
+field 025369BC r3+0x3C4 u32 0,1,2,3
+field 025369BC r3+0x3B8 u32 0,0x5C000000
+field 025369BC r3+0x3C0 u32 0,1,6,200
+field 025369BC r3+0x80 u32 0,1
+# windDirectionEvCamera
+callee 02007178 r3=out8 r4=8          # cSGlobe(const cSGlobe&)
+callee 02018780 r3=255 r4=12 r5=12    # cM3dGLin(start, end)
+callee 02010AE4 r4=12 r5=out12 r6=out4  # cM3d_Len3dSqPntAndSegLine
+callee 024FC0B0 r4=out12              # eyePos(ret, actor)
+callee 025CB374 r6=12                 # dVibration_c::StartShock(strength, flags, cXyz*)
+ret 02010AE4 0,1
+ret 0257E560 0,1
+field 0253775C r3+0x11C u32 0,0,1,5
+field 0253775C r3+0x37C u32 0,1,2,3,4,0xA,0xB,0xC,0xD,0xE,0xF,0x63,0x10
+field 0253775C r3+0x380 s32 -1,0,8,9,0x28,0x29
+field 0253775C r3+0x3CC s32 0,8,0x1C,0x28
+field 0253775C r3+0x3D4 u32 0,1,2
+field 0253775C r3+0x124 u32 0
+field 0253775C 54005CD8 u32 0,0x10000
+# uniformTransEvCamera
+callee 02007248 r3=out8 r4=2 r5=2     # cSGlobe(f32, const cSAngle&, const cSAngle&)
+callee 024FB608 r4=12 r5=12 r6=out12  # lineBGCheck(cXyz*, cXyz*, cXyz* cross, u32)
+callee 024F7A40 r3=out12 r4=12 r5=2   # dCamMath::xyzRotateY
+callee 0200EE00 r3=12 r4=12           # cLib_addCalcPos(pos, target)
+ret 024FB608 0,1
+ret 02543F10 -1,0,1,255               # getEventIdx
+ret 02544044 0,0x58000000             # getEventData
+field 02531D20 580000A4 u32 0,2,2
+field 02531D20 54005CD8 u32 0,0x10000,0x10000
+field 02531D20 5A000200 u32 0x6E6E6E6E,0x6F6E7070,0x6E2D6E72,0x2D6E7070,0x72727272,0x6F6F6E6E,0x2D2D6F6F
+field 02531D20 5A000204 u32 0
+field 02531D20 54005B34 u32 0,0x5C000000
+field 02531D20 54005134 u32 0x41736F6B,0x41736F6B,0x42
+field 02531D20 54005138 u32 0x6F000000,0x6F000000,0x6F620000
+field 02531D20 r3+0x400 u32 0x104,0x104,0
+field 02531D20 r3+0x11C u32 0,0,0,1,5,100
+field 02531D20 r3+0x3C4 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 02531D20 r3+0x3C5 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 02531D20 r3+0x3C6 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 02531D20 r3+0x3C7 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 02531D20 r3+0x3BC u32 0,0x5C000000
+field 02531D20 r3+0x3C0 u32 0xFFFFFFFF,7,7,7
+field 02531D20 r3+0x3CC u32 0,1,6,200
+field 02531D20 r3+0x3D0 u32 0,1,2,3
+field 02531D20 r3+0x3E0 u8 0,1
+field 02531D20 r3+0x3E4 u32 0,1
+field 02531D20 r3+0x3A4 f32 0.0,-2000.0
+field 02531D20 r3+0x80 u32 0,1
+# uniformBrakeEvCamera
+field 0253BC1C r3+0x11C u32 0,0,0,1,5,100
+field 0253BC1C r3+0x3C4 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253BC1C r3+0x3C5 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253BC1C r3+0x3C6 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253BC1C r3+0x3C7 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253BC1C r3+0x3BC u32 0,0x5C000000
+field 0253BC1C r3+0x3C0 u32 0xFFFFFFFF,7,7,7
+field 0253BC1C r3+0x3CC u32 0,1,6,10,200
+field 0253BC1C r3+0x3D4 u32 0,1,3,6,40
+field 0253BC1C r3+0x3D8 u32 0,1,3,6,40
+field 0253BC1C r3+0x3DC u32 0,1,2
+field 0253BC1C r3+0x3E0 u32 0,1,2,3
+field 0253BC1C r3+0x3F4 u8 0,1
+field 0253BC1C r3+0x80 u32 0,1
+field 0253BC1C 5A000200 u32 0x6E6E6E6E,0x6F6E7070,0x6E2D6E72,0x2D6E7070,0x72727272,0x6F6F6E6E,0x2D2D6F6F
+field 0253BC1C 5A000204 u32 0
+# uniformAcceleEvCamera
+field 0253D1A4 r3+0x11C u32 0,0,0,1,5,100
+field 0253D1A4 r3+0x3C4 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253D1A4 r3+0x3C5 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253D1A4 r3+0x3C6 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253D1A4 r3+0x3C7 u8 0x74,0x63,0x2D,0x6E,0x70,0x72,0x6F
+field 0253D1A4 r3+0x3BC u32 0,0x5C000000
+field 0253D1A4 r3+0x3C0 u32 0xFFFFFFFF,7,7,7
+field 0253D1A4 r3+0x3CC u32 0,1,6,10,200
+field 0253D1A4 r3+0x3D4 u32 0,1,3,6,40
+field 0253D1A4 r3+0x3D8 u32 0,1,3,6,40
+field 0253D1A4 r3+0x3DC u32 0,1,2
+field 0253D1A4 r3+0x3E0 u32 0,1,2,3
+field 0253D1A4 r3+0x3F4 u8 0,1
+field 0253D1A4 r3+0x80 u32 0,1
+field 0253D1A4 5A000200 u32 0x6E6E6E6E,0x6F6E7070,0x6E2D6E72,0x2D6E7070,0x72727272,0x6F6F6E6E,0x2D2D6F6F
+field 0253D1A4 5A000204 u32 0
+# watchActorEvCamera
+callee 02006694 r3=2                  # cSAngle::Val(f32)
+field 02533450 r3+0x11C u32 0,0,0,1,5,100
+field 02533450 104758AC u32 0,1
+field 02533450 r3+0x3D0 u32 0,1,2,3,4
+field 02533450 r3+0x3B4 u32 0xFFFFFFFF,7,7,7
+field 02533450 r3+0x3B0 u32 0,0x5C000000,0x5C000000
+field 02533450 5C00000C u32 0x012C,0x012D,0x0131,0x0130,0x0073,0x0010,0x0010
+field 02533450 r3+0x398 u32 0,1,6,200
+field 02533450 r3+0x3A0 u32 0,1,6,200
+field 02533450 r3+0x3AC f32 0.0,0.0,20.0
+field 02533450 r3+0x3A8 f32 0.0,400.0
+field 02533450 r3+0x3C8 f32 0.0,400.0,410.0
+fret 02006720 -200 200                # cSAngle::Degree: mostly outside watchActor's 70-degree window
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02531D20 0x54005134 8 @stages,"","","","","","","","","","","","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asoko","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","Asokob","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","BSpCurve","Bank","Bank","Bank","Bank","Bank","Bank","Bank","Bank","Bank","Bank","Bank","Center","Center","Center","Center","Center","Center","Center","Center","Center","Center","Center","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Cushion","Eye","Eye","Eye","Eye","Eye","Eye","Eye","Eye","Eye","Eye","Eye","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","Fovy","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","RelActor","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","StartEye","Timer","Timer","Timer","Timer","Timer","Timer","Timer","Timer","Timer","Timer","Timer"

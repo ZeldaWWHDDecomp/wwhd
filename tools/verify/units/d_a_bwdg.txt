@@ -1,0 +1,131 @@
+# Verification unit: d_a_bwdg (Molgera sand floor)
+src wwhd_src/d/actor/d_a_bwdg.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r4=out12      # cXyz::operator- result
+callee 0200FCD8 r4=out12      # MtxPosition output
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024F5870 0 1              # dBgWHf::Set
+ret 025D4604 0 1              # fopAc_IsActor
+ret 024F5800 0,0x56000000     # new dBgWHf
+ret! 0273AD10 0,0x56100000    # operator new: null or the fixed block, always (an unsteered result gave the packet ctor a random object)
+ret 025DE508 0,0x56200000     # fpcM_Search: none or the boss
+field 0210439C r3+8 s16 0xD9,0xD8,0
+field 021043EC 10462C04 u32 0,0x56300000
+field 021043EC 56000090 u32 0,1
+field 02104EA0 56000090 u32 0,1
+arg 02103FA4 r3 0x58000000 0x58000000
+arg 02103FA4 r4 0,1
+field 02103FA4 10462C30 u32 0 1
+fret 028F4384 2900 3100
+# packet destructors: small counts for the sead buffers
+field 02105608 r3+0x191B0 s32 -1 3
+field 02105608 r3+0x18CE8 s32 -1 3
+field 02105608 r3+0x18CEC u32 0,0x59000000
+field * 59000004 s32 0 2
+field * 5900000C s32 0 2
+field * 59000018 s32 0 2
+field * 59000020 s32 0 2
+field 021059E8 r3+0x1D794 s32 -1 3
+field 021059E8 r3+0x1D2CC s32 -1 3
+field 021059E8 r3+0x1D2D0 u32 0,0x59000000
+field * 5900002C s32 0 2
+field * 59000034 s32 0 2
+# prepare: the index-table count (global) and a fixed packet / buffer
+field 02103B30 101930F0 u32 0 3
+arg! 02103B30 r3 0x5A000000 0x5A000000   # always: an unsteered packet can point its vertex buffer at .rodata, which dcbz then zeroes (the original reads its int->float constant from there)
+field 02103B30 5A019198 s32 0,1
+callee 027FDA54 r5=48         # view matrix copy on the stack
+callee 0274D458 r4=16         # colour in
+callee 0274D458 r3=out16
+# packet draw: draw mode, a fixed packet
+field 0210508C r4+0xC s32 -1,0,1,2,3,4
+callee 02750250 r3=out240     # draw state init (stack object)
+callee 0280037C r4=240
+callee 02750370 r3=240
+# packet constructor: sead buffer count small, shader lookup
+field 021045E8 r3+0x18CE4 u32 0 2
+field 021045E8 r3+0x18CE8 u32 0 3
+callee 027B90AC r4=8          # SafeString key
+callee 026124B0 r4=8
+callee 026124B0 r5=8
+ret 027B90AC -1 2
+field 021045E8 r3+0x18CEC u32 0x59000000,0x59000000,0
+# ctor: the two shader states equal (copy path) about a third of the time
+field 021045E8 r3+0x195E8 u32 0 0
+field 021045E8 r3+0x19780 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x195EC u32 0 0
+field 021045E8 r3+0x19784 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x195F0 u32 0 0
+field 021045E8 r3+0x19788 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x195F4 u32 0 0
+field 021045E8 r3+0x1978C u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x195F8 u32 0 0
+field 021045E8 r3+0x19790 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x195FC u32 0 0
+field 021045E8 r3+0x19794 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x19600 u32 0 0
+field 021045E8 r3+0x19798 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x19618 u32 0 0
+field 021045E8 r3+0x197B0 u32 0,0,0,0,0,0,0,1
+field 021045E8 r3+0x1961C u32 0 0
+field 021045E8 r3+0x197B4 u32 0,0,0,0,0,0,0,1
+# HD packet ctor/dtors: fixed objects so the loop counts (reloaded after mocked calls) can stay stable
+# `this` always one of {null, the steered object} (arg!): an unsteered `this` (1 input in 8 under `arg`) let the
+# inlined array loops re-read count and base after every mocked call and, with clobbering, walk random memory to
+# the 20M-access budget (~1M pages, ~5M calls, minutes and up to ~39 GB per side, then "aborted on both sides",
+# i.e. never compared)
+arg! 021045E8 r3 0,0x5C000000,0x5C000000,0x5C000000
+arg! 02105608 r3 0,0x5D000000,0x5D000000,0x5D000000
+arg! 021059E8 r3 0,0x5E000000,0x5E000000,0x5E000000
+stable 59000000 0x40
+stable 5C018CE4 0x10
+stable 56118CE4 0x10    # the packet allocated by the ctor for a null `this`: its buffer counts
+stable 5D018CE4 0x10
+stable 5D0191B0 4
+stable 5E01D2C8 0x10
+stable 5E01D794 4
+# prepare: the vertex buffers dcbz clears 0x41000 bytes; keep them away from .rodata (the original reads
+# its int->float conversion constants from memory after the clear)
+field 02103B30 5A018CF0 u32 0x5B000000,0x5B100000,0xFFFFF000
+field 02103B30 5A018F44 u32 0x5B000000,0x5B100000,0xFFFFF000
+# packet ctor program list: the list setup 0280068C fills {count, capacity, entries} at B =
+# packet+0x18CE4 in the game; its generated mock now writes a small count/capacity and a fixed entry table, so
+# the per-program loop (free the old object arrays, allocate two new ones, bind them) runs on steered inputs
+# instead of only on the old unsteered `this` inputs that walked random memory
+mockfield 0280068C r3+0 u32 0,1,2
+mockfield 0280068C r3+4 u32 0,1,2
+mockfield 0280068C r3+8 u32 0x5F000000
+field 021045E8 5F000004 u32 0,1,2
+field 021045E8 5F000008 u32 0,0x5F100000
+field 021045E8 5F00000C u32 0,1,2
+field 021045E8 5F000010 u32 0,0x5F200000
+field 021045E8 5F000018 u32 0,1,2
+field 021045E8 5F00001C u32 0,0x5F100000
+field 021045E8 5F000020 u32 0,1,2
+field 021045E8 5F000024 u32 0,0x5F200000
+field 021045E8 5F1000F0 u32 0x5F300000
+field 021045E8 5F1001E4 u32 0x5F300000
+field 021045E8 5F2000F0 u32 0x5F300000
+field 021045E8 5F2001E4 u32 0x5F300000
+stable 5F000000 0x28
+stable 5F1000F0 4
+stable 5F1001E4 4
+stable 5F2000F0 4
+stable 5F2001E4 4
+# packet buffer entries at 0x59000000: their object arrays are null or a fixed array whose elements'
+# vtable destructor slot is the real element destructor 027BF7E8, instead of random vtables that resolved to arbitrary
+# functions (seed 7 input 7004558: a random target 028780A0 whose live-ins include r5, a dead register of this vcall)
+field * 59000008 u32 0,0x59100000
+field * 59000010 u32 0,0x59100000
+field * 5900001C u32 0,0x59100000
+field * 59000024 u32 0,0x59100000
+field * 59000030 u32 0,0x59100000
+field * 59000038 u32 0,0x59100000
+field * 591000F0 u32 0x59200000
+field * 591001E4 u32 0x59200000
+field * 5920000C u32 0x027BF7E8
+stable 591000F0 4
+stable 591001E4 4
+stable 5920000C 4

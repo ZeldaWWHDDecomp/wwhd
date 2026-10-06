@@ -1,0 +1,5 @@
+src wwhd_src/SSystem/SStandard/s_basic.cpp
+# byte counts: 0, 1 (no store), odd/even small sizes, a larger block; value edges
+arg! 0201B664 r4 0,1,2,3,4,7,8,64,65,0x400
+arg 0201B664 r5 0,1,-1,0x7FFF,-0x8000,0x12345
+arg! 0201B680 r4 0,1,2,3,4,7,8,64,65,0x400

@@ -1,0 +1,66 @@
+# Verification unit: d_a_bgn2 (Puppet Ganon, phase 2)
+src wwhd_src/d/actor/d_a_bgn2.cpp wwhd_src/d/actor/d_a_bgn2_exec.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 024F1AFC r3=0x6C       # dBgS_LinChk::Set: the line check
+callee 02008860 r4=0x6C       # cBgS::LineCross
+callee 02008B4C r3=0x6C       # cBgS_LinChk::~cBgS_LinChk
+callee 02008FEC r3=255        # cBgS_LinChk::ct: constructor storage
+
+ret 025D4604 0 1              # fopAc_IsActor
+ret 02008860 0 1              # LineCross
+ret 02520460 0,4,4,4,5          # dComIfG_resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025200D4 0x54000000 0x54000000  # play object at a fixed address
+
+# gr_check: water ground
+ret 024EF0F4 0x13,0x13,0,1    # dBgS::GetAttributeCode
+# ki_c_sub: fpcNm_KI_e (0xD7 in HD)
+field 0208B648 r3+8 i16 0xD6 0xD8
+# HIO constructor: NULL allocates
+arg 0208F7C8 r3 0,0x50000000
+ret 0273AD10 0,0x50000000,0x50000000
+
+# daBgn2_Execute (F = 0208B6A4)
+ret 025DE508 0,0x56000000,0x56000000,0x56000000,0x56000000,0x56000000,0x56000000,0x56000000   # fpcM_Search: bgn / bgn3
+field 0208B6A4 560003D5 i8 1,1,1,1,1,0          # bgn->m02B5
+field 0208B6A4 10462055 u8 0,0,0,0,0,1          # l_HIO.m05 (move)
+field 0208B6A4 10462056 u8 0,0,0,0,3            # l_HIO.m06 (health)
+field 0208B6A4 r3+0x602 i16 0,1,1,2,2,3,4,5,6,6,10
+field 0208B6A4 r3+0x604 i16 0,1,2,3,4,5,6
+field 0208B6A4 r3+0x3A1 i8 0,1,2,3
+field 0208B6A4 r3+0x620 i16 0,1,2,3,11,12,0x32,0x33,0x34      # m0330[0] (decremented first)
+field 0208B6A4 r3+0x316C f32 0.98,0.99,0.995,1.0
+field 0208B6A4 r3+0x318 f32 0,279,280,281,1490,1491,3001,3003
+field 0208B6A4 10462058 f32 280
+field 0208B6A4 1046205C f32 3000
+field 0208B6A4 r3+0x62A i16 0,0,0,1
+field 0208B6A4 r3+0x62C i16 0,0,1
+field 0208B6A4 r3+0x305A i16 0,0,1,20,21,100,101
+field 0208B6A4 r3+0x33BC i8 0,1
+field 0208B6A4 r3+0x33BE i16 0,1
+field 0208B6A4 10462080 i16 0,20
+field 0208B6A4 1047B688 i16 0,0,0,-20,5          # REG0_S(0)
+field 0208B6A4 r3+0x484 u32 0x57000000
+field 0208B6A4 570000A7 u8 0,1
+field 0208B6A4 57000098 f32 0,1
+field 0208B6A4 5700009C f32 0,3,5,6,7,20,21
+field 0208B6A4 r3+0x340 f32 -10,0,10,300
+field 0208B6A4 r3+0x33B4 u32 0,0x5A000000
+field 0208B6A4 r3+0x33B8 u32 0,0x5A000000
+ret 025162A4 0,0,0,0,0,1                          # ChkTgHit
+callee 02518DB0 r3=out0x1C                       # at_power_check fills the info (attack type)
+fret 028F4384 0 1000                              # sqrtf
+fret 020198D8 0 1                                 # cM_rndF
+field 0208B6A4 r3+0x3170 i16 -3000,-100,0,100,3000   # m2E80
+
+callee 0201ADE0 r4=out12      # cXyz::operator-: result
+# useHeapInit: every resource and model is created, so the last steps are reached
+ret 025E4F64 0,0x5B000000,0x5B000000,0x5B000000,0x5B000000
+field 0208EEA4 5B000090 u32 0,0x5C000000,0x5C000000,0x5C000000
+ret 025E38E0 0,0x5D000000,0x5D000000,0x5D000000,0x5D000000,0x5D000000
+ret 025E80D0 0x5E000000
+ret 025E8154 0,1,1,1,1
+ret 025EBA58 0,1,1
+# daBgn2_Create: the HIO child is created once
+field 0208F218 10191040 u8 0,0,1

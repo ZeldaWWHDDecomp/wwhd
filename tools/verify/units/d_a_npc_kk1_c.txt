@@ -1,0 +1,61 @@
+# Verification unit: d_a_npc_kk1 part C (Mila, poor): anm attributes, messages, checks, actions
+src wwhd_src/d/actor/d_a_npc_kk1_c.cpp wwhd_src/d/actor/d_a_npc_kk1_pending.cpp
+
+callee 0226CC2C r5=out4       # searchByID(id, int* notFound)
+callee 0226B5B4 r3=out12      # path point (hidden result)
+callee 0259D54C r3=out12      # dNpc_playerEyePos
+callee 0201ADE0 r3=12 r4=out12 r5=12  # cXyz::operator-
+callee 028E8F64 r4=12 r5=out12  # PSMTXMultVec
+callee 0226F908 r4=12         # chk_areaIN(f32, cXyz by value)
+ret 025200D4 0x54000000 0x54000000
+ret 02055B64 0 1              # cLib_calcTimer
+ret 0226FABC 0 1              # startEvent_check
+ret 0226D83C 0 1              # event_move
+ret 0226F654 0 1              # chk_talk
+ret 0226FC1C 0 1              # chk_attn
+ret 025F795C 0x12 0x14        # message status
+# chngAnmAtr / anmAtr
+field 0226EFB4 r3+0x7C0 u32 0x1CAC,0x1CAB
+arg 0226EFB4 r4 0 14
+arg 0226F170 r4 6,14,5
+field 0226F170 r3+0xACE i8 0 1
+field 0226F170 54005BC6 u8 0xFF,1,2
+field 0226F170 r3+0xAC4 u8 1,2
+# next_msgStatus
+field 0226F230 r4+0 u32 0x1C84 0x1CAB
+field 0226F230 101F4B5C u32 0x55000000,0x55000000
+field 0226F230 55000948 u32 0,1,2
+field 0226F230 r3+0x91E i16 0 3
+# createTama
+ret 025D5928 0,0x56000000
+# CMT
+field 022706E4 r3+0x914 i16 0,1
+field 022706E4 r3+0xAC7 i8 0 4
+field 022706E4 r3+0x91A i16 -32768,0
+field 022706E4 r3+0x322 i16 0,1
+ret 0200F93C 0,1,0x17FF,0x1800,-0x1800,0x4000,0x3FFF,0x4AAA,0x4AAB,-0x4AAB
+field 02270918 r3+0x914 i16 0,1
+field 02270918 r3+0xAC7 i8 0 4
+field 02270918 r3+0x933 u8 0 1
+field 02270570 r3+0xAC7 i8 0 4
+field 02270AE0 r3+0xAC2 i8 0,1,4,5,2
+field 02270AE0 r3+0xAC7 i8 0 4
+field 02270AE0 r3+0xAC6 i8 0 2
+# talk_1 / wait_action1
+field 02270F28 r3+0x7C0 u32 0x1CA9,0x1CAB,0x1CAC,0
+field 02270F28 r3+0x912 i16 0,1,2
+field 02270F28 r3+0x7CC u8 0 1
+field 02271084 r3+0xACD i8 0,1,2,4,-1
+field 02271084 r3+0xAC8 i8 0 8
+stackfill
+callee 028E8DD0 r3=12         # PSVECSquareMag(&xz)
+field 0226F908 r3+0x322 i16 0,1
+field 0226FE78 r3+0x322 i16 0,1
+field 02270DA8 r3+0x322 i16 0,1
+field 0226FE78 r3+0xAC6 i8 0xB,0
+field 0226FE78 r3+0x922 i8 0 1
+field 0226FE78 r3+0x926 u8 0 1
+field 0226FE78 r3+0x927 u8 0 1
+field 022700E0 104676D8 f32 1.0,2.0
+field 022700E0 r3+0x370 f32 0.5,0.25,1.0
+real 0201A478               # csXyz::csXyz (pure)

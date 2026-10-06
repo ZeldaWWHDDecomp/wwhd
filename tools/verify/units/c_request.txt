@@ -1,0 +1,4 @@
+src wwhd_src/SSystem/SComponent/c_request.cpp
+field 0201A308 r3+0x0 u8 0 255
+arg 0201A33C r4 0 255
+arg 0201A34C r4 0 255

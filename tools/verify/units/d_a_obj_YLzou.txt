@@ -1,0 +1,95 @@
+src wwhd_src/d/actor/d_a_obj_YLzou.cpp
+field * r3+0x400 i32 0,1
+field * r3+0x404 i32 0,1,2,3
+field * r3+0x3F4 i32 0 14
+field * r3+0x3F8 i32 0,1,255
+field * r3+0x3FC i16 -1,0,1
+field * r3+0x478 u8 0,1,2
+field * r3+0x479 u8 0,1,2
+field * r3+0x47C i32 0,1,2,3
+field * r3+0x480 i32 0,1,2,3
+field * 101F84DC u32 0x54000000
+field * 101F4F28 u32 0x59000000
+arg 023BDE2C r4 0 14
+arg 023BF0C8 r4 0,1,8,31,32,33,63
+arg 023BF0C8 r5 0,1,8,31,32,33,63
+ret 025B8B94 0,1
+ret 025BA0C0 0,1
+ret 025B7E00 0,7,8,9
+ret 02520460 0,4,5
+ret 025D63E8 0,1
+ret 024EEA6C 0,1
+callee 026066C4 r4=8
+callee 025A847C stack=4
+callee 025E1A40 r4=12
+callee 025CB408 r6=12
+callee 025CB374 r6=12
+callee 028E90D4 r3=48 r4=out48
+stackfill periodic
+# Cut-name byte loops need their actual matching strings, as well as mismatches.
+ret 02544830 0x10033BD0,0x10033BE8,0x10033B80
+ret 02542D88 -1,0,1
+ret 02544044 0,0x58000000
+# Start-state deeper paths and model-vector inputs.
+callee 025F19F8 r3=48
+callee 025F1C28 r3=48
+field * r3+0xF8 u16 0,1,2
+
+# ChkUsed boundary in both deletion and execution.
+field * r3+0x3B8 u32 0,0x58000000
+field * 58000000 u32 0,255,256,257
+
+# Matching cut names in separate event-owned buffers, with different bytes after NUL.
+ret 02544830 0x57000000,0x57001000
+field * 57000000 u8 86
+field * 57000001 u8 105
+field * 57000002 u8 98
+field * 57000003 u8 114
+field * 57000004 u8 97
+field * 57000005 u8 116
+field * 57000006 u8 101
+field * 57000007 u8 0
+field * 57000008 u8 66
+field * 57001000 u8 77
+field * 57001001 u8 111
+field * 57001002 u8 118
+field * 57001003 u8 101
+field * 57001004 u8 0
+field * 57001005 u8 66
+
+# Prefix-sharing mismatches must not be accepted as exact cut names.
+ret 02544830 0x57002000,0x57003000
+field * 57002000 u8 86
+field * 57002001 u8 105
+field * 57002002 u8 98
+field * 57002003 u8 114
+field * 57002004 u8 97
+field * 57002005 u8 116
+field * 57002006 u8 101
+field * 57002007 u8 88
+field * 57002008 u8 0
+field * 57003000 u8 77
+field * 57003001 u8 111
+field * 57003002 u8 118
+field * 57003003 u8 101
+field * 57003004 u8 88
+field * 57003005 u8 0
+
+# Official7335638: all48 functions pass10,000 cases;191/193 blocks.
+# 023BDADC blocks4,5 are infeasible: r31=0 and never reassigned; its shared
+# duplicated tail always selects offEventBit. The moved path uses a separate tail.
+# Complete1517 audit:834 rejected,63 equivalent,601 compiler-invalid,19 native-UB
+# exclusions (uninitialized action/target locals, matrix bounds/initialization,
+# or native shifts by32). All95 final reviews pass their adjudication on7335638.
+# Full per-ID evidence and archived old ABI: build/YLzou-final-audit.json.
+# Equivalent survivors, each exact10k, grouped by concrete reason:
+# 110,129,132: Save singleton pointer reads move across actual read-only callees. isEventBit only loads; getTriforceNum calls isTriforce with valid0..7 indices, so its assertion cannot execute and it only loads. See YLzou-save-reader-proof.dis.
+# 123,124,125,126,127,128,130,131,133,134,135,136,220,223,224,252,317,318,319,321,323,324,349,435,612,613,689,690,741,743,861,879,920,921,922,983,1025,1174,1216,1258,1361,1362,1363,1489,1490: Reorders independent scalar loads, local calculations or stores to disjoint fields. All consumed values are unchanged, and no observable call moves across a dependent memory access.
+# 137: Moves a singleton pointer read across a store to a separate actor field, with no intervening call.
+# 139,142,884,1371: Adds unused guest-local capacity. Callees consume only the original8 or12 bytes; allocation rounds to the same16-byte slot, and the extra element is never accessed.
+# 250,251: Reorders actor writes with reads of the separate read-only action table; no call intervenes, so values and final stores are unchanged.
+# 322: Moves an actor scale read across the local model-matrix snapshot copy; valid actor and separate model storage are disjoint, with no guest call between them.
+# 723,725,1157,1199: Changing the clamp comparison at equality only assigns the identical bound value before the same final store.
+# 726: At the height-minus0.1 zero boundary, exact f32 subtraction yields positive zero; <= only adds a redundant positive-zero assignment. Nearby nonzero differences cannot underflow around0.1.
+# 1330: Changes unused incoming r8 for __destroy_arr. Actual028F0164 overwrites r8 with r7 before any use; see YLzou-destroy-array.dis.
+# 1380: Native matrix snapshot capacity12 becomes13; only indices0..11 are initialized and used, and its address is never passed to guest code.

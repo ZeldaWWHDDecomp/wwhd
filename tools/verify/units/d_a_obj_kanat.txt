@@ -1,0 +1,13 @@
+# Verification unit: d_a_obj_kanat
+src wwhd_src/d/actor/d_a_obj_kanat.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+arg 02367420 r4 0,1,8,31,32,33,63
+arg 02367420 r5 0,1,8,24,31,32,33,63
+field 02366E30 r3+0xD u8 0,3,4,5
+field 023670A0 r3+0x40C u8 0 1
+field 023670A0 r3+0x3FC u8 0 3
+field 02367218 r3+0x40D u8 0 1

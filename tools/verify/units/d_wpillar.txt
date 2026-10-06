@@ -1,0 +1,21 @@
+src wwhd_src/d/d_wpillar.cpp
+callee 025D9F70 r3=12 r4=out4
+callee 0274D458 r3=out16 r4=16
+ret! 027F3F8C 0x55000000 0x55000000
+field * 0x55000024 u16 0 2
+field 025D24B0 r3+0xF8 s32 0 1
+stable 0x55000024 2
+callee 026066C4 r4=8
+callee 027FA160 r3=out8
+callee 02008974 r4=84
+ret! 025E38E0 0x56000000 0x56000000
+field * 0x5600002A u16 0 2
+stable 0x5600002A 2
+arg! 025D2EB0 r3 0x53000000
+field 025D2EB0 r3+0xF8 s32 0 1
+field 025D2EB0 r3+0xFC u32 0x56000000
+stable 0x530000FC 4
+ret! 027F3F94 0x55000100 0x55000100
+field * 0x55000108 u16 1 3
+stable 0x55000108 2
+stackfill periodic

@@ -1,0 +1,8 @@
+# Salvatore (cannon minigame). All functions written from the WWHD code.
+src wwhd_src/d/actor/d_a_npc_kg2.cpp
+ret 025200D4 0x54000000 0x54000000
+callee 026066C4 r4=8
+callee 0259D54C r3=out12
+callee 0259DED0 r5=12 r6=12
+callee 028E8F64 r4=12
+callee 022698A4 r4=12

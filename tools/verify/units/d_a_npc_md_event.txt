@@ -1,0 +1,122 @@
+# Verification unit: d_a_npc_md part "event" (event cuts, messages, movement helpers; 0228AB60..0228EB87)
+src wwhd_src/d/actor/d_a_npc_md_event.cpp wwhd_src/d/actor/d_a_npc_md_pending.cpp
+
+real 028F040C                 # strcpy (pure)
+# event data (dEvent_manager_c::getMySubstanceP): NULL or a steerable block at 0x58000000
+ret 0254487C 0,0x58000000,0x58000000,0x58000010,0x58000020,0x58000030
+# initialOnetimeEvent: "WATASU" or another name
+field 0228CD40 58000000 u32 0x57415441,0x57415400,0x41414141
+field 0228CD40 58000004 u32 0x53550000,0x53560000
+# actions: current anm (m3104), anm end flag (m312A)
+field * r3+0x4220 i32 0x19,0x1A,0,9
+field * r3+0x4246 i8 0 1
+# isTagCheckOK: npc action {d, i, f}
+field 0228D950 r3+0x4200 i16 0 1
+field 0228D950 r3+0x4202 i16 -1 0
+field 0228D950 r3+0x4204 u32 0x0228EB88,0x02292C48,0x022904DC,0
+ret 025200D4 0x54000000 0x54000000
+field 0228D950 54005B34 u32 0x55000000,0x55000000
+field 0228D950 550065F0 i32 0x6F,0x70,0x71,0x72
+# chkAdanmaeDemoOrder: type Adanmae, cam tag in, ground height around 600..700
+field 0228EACC r3+0x4254 u8 1,2
+field 0228EACC r3+0x420C u32 0x20,0,0x21
+field 0228EACC r3+0x4D0 f32 590 710
+# initialEndEvent: EndMode
+field 0228B418 58000000 i32 -2,-1,0,2,3,1
+field 0228B418 r3+0x4208 u32 0x19DE,0x19DD
+field 0228B418 r3+0x420C u32 0,0x80,0x81
+# actionTactEvent: prm0 vs the tact song
+field 0228CB88 58000000 i32 -1,0,1,2
+ret 0228B1B8 0 1               # talk -> BOOL
+field 0228CB88 r3+0x420C u32 0,0x200,0x400,0x600
+# talk: message status, anime attribute, cancel button
+ret 025F795C 0x6,0xE,0xF,0x12,0x15,0x10
+field 0228B1B8 54005BC5 u8 0x14,0x13,0x2C,0x2D,0
+field 0228B1B8 54005BD3 u8 0 1
+field 0228B1B8 r3+0x420C u32 0,0x400,0x1000,0x200
+field 0228B1B8 r3+0x2E0 u32 0,0x2000
+field 0228B1B8 r3+0x4208 u32 0x5AC,0x1234
+field 0228B1B8 r3+0x4256 u8 0 1
+ret 0228AB40 -1 3              # getAnmType
+# next_msgStatus: every case value (and neighbours), select number
+arg 0228AB60 r4 0x58000000,0x58000004,0x58000008,0x5800000C,0x58000010
+field 0228AB60 58000000 u32 0x5AC,0x17D7,0x17DA,0x17DE,0x17E2,0x17E6,0x17EA,0x17EE,0x17F2,0x17F7,0x17FB,0x17FF,0x19C8,0x19CC,0x19D0,0x19D4,0x19D8,0x19DC,0x19E0,0x19E4,0x19E8,0x19F8,0x19FC,0x1A00
+field 0228AB60 58000004 u32 0x17D5,0x17D8,0x17DB,0x17DF,0x17E3,0x17E7,0x17EB,0x17EF,0x17F3,0x17F8,0x17FC,0x1800,0x19C9,0x19CD,0x19D1,0x19D5,0x19D9,0x19DD,0x19E1,0x19E5,0x19F5,0x19F9,0x19FD,0x1A01
+field 0228AB60 58000008 u32 0x1805,0x17D9,0x17DC,0x17E0,0x17E4,0x17E8,0x17EC,0x17F0,0x17F4,0x17F9,0x17FD,0x1801,0x19CA,0x19CE,0x19D2,0x19D6,0x19DA,0x19DE,0x19E2,0x19E6,0x19F6,0x19FA,0x19FE,0x1A02
+field 0228AB60 5800000C u32 0x17D6,0x1802,0x17DD,0x17E1,0x17E5,0x17E9,0x17ED,0x17F1,0x17F5,0x17FA,0x17FE,0x1803,0x19CB,0x19CF,0x19D3,0x19D7,0x19DB,0x19DF,0x19E3,0x19E7,0x19F7,0x19FB,0x19FF,0x1A03
+field 0228AB60 58000010 u32 0x17F6,0x1804,0x17F2,0x19E9,0x19EA,0x19EB,0x19EC,0x19ED,0x19EE,0x19EF,0x19F0,0x19F1,0x19F2,0x19F3,0x19F4
+field 0228AB60 101F4B5C u32 0x56000000 0x56000000
+field 0228AB60 56000948 u32 0 2
+# getMsg: type, status bits, talk counter
+field 0228DDEC r3+0x4254 u8 0,1,2,3,4,5,6
+field 0228DDEC r3+0x420C u32 0,0x40,0x100,0x10100,0x1000
+field 0228DDEC r3+0x4249 i8 0x10,0
+field 0228DDEC r3+0x4258 u8 0,1,2
+ret 025B8B94 0 1                # dSv_event_c::isEventBit -> BOOL
+field 0228DDEC 101D5F40 u8 0 1
+# initialQuake: "Start"/"Stop"/other
+callee 025CB408 r6=12           # StartQuake(cXyz copy)
+field 0228CE84 58000000 u32 0x53746172,0x53746F70,0x53746100
+field 0228CE84 58000004 u32 0x74000000,0x00000000,0x74410000
+# setMessageAnimation: carry, event running, staff id, act name "WAIT"
+field 0228DA10 r3+0x2E0 u32 0,0x2000
+field 0228DA10 54005292 u8 0 1
+ret 02542D88 -1,0,1
+ret 025447EC 0,0x58000000
+field 0228DA10 58000000 u32 0x57414954,0x57414900
+field 0228DA10 58000004 u32 0,0x41000000
+# chkAttention: link near pos; HIO limits (l_HIO at 0x10467A90)
+field 0228DAF4 r3+0x420C u32 0,0x1000
+field 0228DAF4 r3+0x4254 u8 2,3
+field 0228DAF4 r3+0x4248 u8 0 1
+field 0228DAF4 r4+0 f32 -50 50
+field 0228DAF4 r4+4 f32 -50 50
+field 0228DAF4 r4+8 f32 -50 50
+field 0228DAF4 54005B34 u32 0x55000000,0x55000000
+field 0228DAF4 55000314 f32 -150 150
+field 0228DAF4 55000318 f32 -100 100
+field 0228DAF4 5500031C f32 -150 150
+field 0228DAF4 10467B3C f32 50 200
+field 0228DAF4 10467B4C f32 0 40
+field 0228DAF4 10467B50 f32 -40 0
+field 0228DAF4 10467B38 i16 0 0x8000
+fret 028F4384 0 300
+# lookBack(cXyz*, int, int)
+callee 0259DED0 r5=12 r6=12     # lookAtTarget(&outY, target, eye copy, ...)
+field 0228D208 r3+0xD1E u8 0 1
+# actionTurnEvent: Target "@PLAYER" or other, Type 2
+field 0228D32C 58000000 u32 0x40504C41,0x2,0x41424300
+field 0228D32C 58000004 u32 0x59455200,0x2,0x00000000
+# actionLookDown
+callee 028E8F64 r5=out12        # PSMTXMultVec(m, &in, &out)
+callee 028E8D88 r3=12 r4=12     # PSVECAdd(a, b, out)
+# actionWalkEvent / actionDashEvent
+callee 0201ADE0 r3=12 r4=out12 r5=12   # cXyz::operator- (hidden result r4)
+callee 028E8DD0 r3=12                  # PSVECSquareMag
+field 0228C50C r3+0xD1E u8 0 1
+field 0228C898 r3+0xD1E u8 0 1
+# initialSetAnmEvent: play speed sign
+field 0228D564 58000000 f32 -2 2
+# lookBackWaist: HD option byte, m310C around 0.9
+field 0228DFF8 r3+0x4228 f32 0.8 1.2
+ret 027200D0 0x57000000 0x57000000
+field 0228DFF8 57000002 u8 0 1
+ret 0200F378 -2,0,0,0,5
+# initialMovePosEvent: event data block at 0x58000000 (strings / floats), dBgS_GndChk on the stack
+callee 02008974 r4=0x54         # cBgS::GroundCross(&gndChk)
+callee 02008DAC r3=0x54         # cBgS_Chk::~cBgS_Chk(&gndChk, 0)
+field 0228B68C 58000000 u32 0x40504C41
+field 0228B68C 58000004 u32 0x59455200,0x59455201
+field 0228B68C 58000010 u32 0x4C494E4B
+field 0228B68C 58000014 u32 0x5F444953
+field 0228B68C 58000018 u32 0x54000000
+field 0228B68C 58000020 u32 0x44495354,0x44495300
+field 0228B68C 58000024 u32 0
+field 0228B68C 58000030 u32 0x57414954,0x6F6E0000,0x6F666600,0x6F660000
+field 0228B68C 58000034 u32 0
+field 0228B68C 54005B34 u32 0x55000000,0x55000000,0
+ret 02542E94 0x1001DE64,0x58000040,0x58000050
+field 0228B68C 58000040 u32 0x41525249
+field 0228B68C 58000044 u32 0x56414C5F
+field 0228B68C 58000048 u32 0x474E4400
+fret 02008974 -1000000000 100

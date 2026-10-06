@@ -1,0 +1,15 @@
+# Verification unit: d_a_mmusic (Makar's music)
+src wwhd_src/d/actor/d_a_mmusic.cpp
+
+ret 025D63E8 0 1              # entrySolidHeap
+ret 02520A84 0 1              # isStageBossEnemy
+ret 025B8B94 0 1              # isEventBit
+ret 02520C0C 0 1              # checkGetItem
+ret 025E1FCC 0 1              # mDoAud_checkCbPracticePlay
+ret 025D6CE8 0,1,2            # fopAcM_cullingCheck
+fret 020198D8 0 1             # cM_rndF(1.0)
+field * r3+0x3B4 i32 0,1,2    # field_0x298
+field * r3+0x3B8 i32 0,1,2    # field_0x29c
+field 021C612C r3+0x3BC u32 0,0x41000000   # mpEmitter
+field 021C6008 r3+0x3F0 i16 -2 3            # mTimer
+arg 021C6008 r4 0,1,2                        # cull

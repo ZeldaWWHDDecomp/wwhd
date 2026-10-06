@@ -1,0 +1,17 @@
+# Verification unit: d_a_obj_buoyflag part calc: the cloth simulation
+src wwhd_src/d/actor/d_a_obj_buoyflag_calc.cpp wwhd_src/d/actor/d_a_obj_buoyflag_pending.cpp
+
+ret 025200D4 0x54000000 0x54000000  # play
+callee 028E8D88 r3=12 r4=12 r5=out12   # PSVECAdd
+callee 028E8E64 r3=12 r4=out12         # PSVECScale
+callee 028E8DD0 r3=12                  # PSVECSquareMag
+callee 028E8F44 r3=12 r4=12            # PSVECDotProduct
+callee 028E9044 r4=12 r5=out12         # PSMTXMultVecSR
+callee 0201ADE0 r3=12 r4=out12 r5=12   # cXyz::operator-
+callee 0201AD78 r3=12 r4=out12 r5=12   # cXyz::operator+
+callee 0201AE48 r3=12 r4=out12         # cXyz::operator*
+callee 0201AEAC r3=12 r4=out12         # cXyz::operator/
+callee 0201B080 r3=12 r4=out12 r5=12   # cXyz::outprod
+callee 0201B47C r3=12                  # cXyz::normalizeRS
+callee 0201B31C r3=12 r4=out12         # cXyz::normalize (result unused)
+callee 0257E34C r3=out12 r4=12         # dKyw_get_AllWind_vecpow

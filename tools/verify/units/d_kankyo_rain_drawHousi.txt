@@ -1,0 +1,137 @@
+src wwhd_src/d/d_kankyo_rain_drawHousi.cpp
+stackfill periodic
+callee 02563E48 r3=24 r4=out12
+callee 02563F0C r3=12 r4=12 r5=out12
+callee 02563DD8 r3=out40
+callee 0256401C r4=out12
+callee 02563F64 r3=12 r4=12 r5=out12
+callee 025F1018 r3=12 r4=out12 r5=40
+callee 028E8DE8 r3=12 r4=12
+callee 026124B0 r4=8 r5=8
+callee 025F01D8 r3=out4
+callee 025F0270 r3=4
+callee 025F02D0 r3=4
+callee 026066C4 r4=8
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0251694C r3=out20
+callee 025170D8 r4=12 r5=out4 r6=out20
+callee 025BD71C r3=out52
+callee 025BEF3C r3=52 r4=12
+callee 025BEB90 r3=52
+callee 025BEB4C r3=52
+callee 02008E0C r3=out64
+callee 024EE7AC r3=out80
+callee 024EF6E8 r4=80
+callee 02008974 r4=84
+callee 02008DAC r3=64
+callee 02008B4C r3=64
+callee 028E91EC r3=48 r4=out48
+callee 028E98C0 r3=out48
+callee 028E9108 r3=48 r4=48 r5=out48
+callee 0257015C r3=out16 r4=4
+callee 027FC500 r4=16
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 025602F0 r3=out4 r4=out4
+callee 02582518 r5=4 r6=4
+callee 0257DB28 r3=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+callee 0201A478 r3=out6
+callee 0257E128 r3=out12 r4=12
+callee 027389F8 r3=out196
+callee 02750250 r3=out284
+callee 0274D458 r3=out16 r4=16
+callee 0274D380 r3=out16 r4=16 r5=16
+callee 0274D314 r3=out16 r4=16 r5=16
+callee 02575ACC r3=out48 r4=48
+callee 028E8970 r3=64 r4=out64
+callee C00060E0 r3=0 r4=0
+callee C0006900 r3=0 r4=0 r5=0
+callee C0006A38 r3=0 r4=0 r5=0
+callee C00068A8 r3=0 r4=0 r5=0
+callee C0006178 r3=0 r4=0 r5=0 r6=0 r7=0 r8=0
+callee 027505B4 r3=284
+callee 027505DC r3=284
+callee 02750520 r3=284
+callee 02750534 r3=284
+callee 0274E04C r3=196
+callee 0274D83C r3=196
+callee 02738AC0 r3=196 r4=8
+callee 02738A6C r3=196
+callee 02563F68 r3=244 r4=out12
+callee 027B5E94 r3=324 r4=0 r5=0
+
+# Initialized nonreentrant roots and bounded native counts; payload/callback clobber active.
+ret! 02555D0C 0x54000000 0x54000000
+ret! 025200D4 0x56000000 0x56000000
+field 025727BC 0x54000A78 u32 0x55000000
+stable 0x54000A78 4
+field * 0x56005FA4 u32 0,0x57000000
+stable 0x56005FA4 4
+field * 0x56005AF8 u32 0x58000000
+stable 0x56005AF8 4
+field * 0x56005B2C u32 0x59000000
+stable 0x56005B2C 4
+field * 0x59000318 f32 -100,0,100,200
+field * 0x570000D4 f32 0,1,100,200,1000
+field * 0x54000A7D u8 0,3,4,5
+field 025727BC 0x55005E68 s16 -1,0,1,2
+stable 0x55005E68 2
+field * 0x55006574 u32 0,1
+stable 0x55006574 4
+field * 0x550060CC u32 0x70000000
+stable 0x550060CC 4
+field * 0x55006210 u32 0x70000000
+stable 0x55006210 4
+field * 0x5500621C u32 0x50
+stable 0x5500621C 4
+field * 0x55006320 u32 0x70000400
+stable 0x55006320 4
+field * 0x55006464 u32 0x70000400
+stable 0x55006464 4
+field * 0x55006470 u32 0x50
+stable 0x55006470 4
+field * 0x55006A34 u32 0,1
+stable 0x55006A34 4
+field * 0x5500658C u32 0x70000800
+stable 0x5500658C 4
+field * 0x550066D0 u32 0x70000800
+stable 0x550066D0 4
+field * 0x550066DC u32 0x50
+stable 0x550066DC 4
+field * 0x550067E0 u32 0x70000C00
+stable 0x550067E0 4
+field * 0x55006924 u32 0x70000C00
+stable 0x55006924 4
+field * 0x55006930 u32 0x50
+stable 0x55006930 4
+field * 0x5505F674 u32 0,1
+stable 0x5505F674 4
+field * 0x5505F1CC u32 0x70001000
+stable 0x5505F1CC 4
+field * 0x5505F310 u32 0x70001000
+stable 0x5505F310 4
+field * 0x5505F31C u32 0x50
+stable 0x5505F31C 4
+field * 0x5505F420 u32 0x70001400
+stable 0x5505F420 4
+field * 0x5505F564 u32 0x70001400
+stable 0x5505F564 4
+field * 0x5505F570 u32 0x50
+stable 0x5505F570 4
+field * 0x5505FB34 u32 0,1
+stable 0x5505FB34 4
+field * 0x5505F68C u32 0x70001800
+stable 0x5505F68C 4
+field * 0x5505F7D0 u32 0x70001800
+stable 0x5505F7D0 4
+field * 0x5505F7DC u32 0x50
+stable 0x5505F7DC 4
+field * 0x5505F8E0 u32 0x70001C00
+stable 0x5505F8E0 4
+field * 0x5505FA24 u32 0x70001C00
+stable 0x5505FA24 4
+field * 0x5505FA30 u32 0x50
+stable 0x5505FA30 4
+field * 0x550000DC f32 -1,0,0.5,1
+field * 0x5500012C f32 -1,0,0.5,1

@@ -1,0 +1,42 @@
+# Verification unit: d_a_kokiie (Forbidden Woods hanging flower house)
+src wwhd_src/d/actor/d_a_kokiie.cpp
+
+callee 026066C4 r4=8                          # sead::SafeString key
+callee 0201AD78 r4=out12                      # cXyz::operator+
+callee 0200FCD8 r3=12 r4=out12                # MtxPosition
+ret 02520460 0 5                              # dComIfG_resLoad
+ret 025D63E8 0 1                              # fopAcM_entrySolidHeap
+ret 024EEA6C 0 1                              # dBgS::Regist
+ret 025BA0C0 0 1                              # isSwitch
+ret 02520C0C 0 1                              # checkGetItem
+ret 025D5218 0,0x58000000                     # fopAcIt_Judge: shand or none
+field 021A652C r3+0xB0 u32 0,1,2,3,4,0xFF,0x010000FF,0xFF000001,0xFF0000FF
+field 021A652C r3+0x404 u8 0 3                # m2E8[]
+field 021A652C r3+0x405 u8 0 3
+field 021A652C r3+0x406 u8 0 3
+field 021A652C r3+0x407 u8 0 3
+field 021A652C r3+0x408 u8 0 3
+field 021A57A0 r3+0x3B6 i16 -1,0,1,2          # m29A
+field 021A57A0 r3+0x448 u8 0 2                # m32C[]
+field 021A57A0 r3+0x449 u8 0 2
+field 021A57A0 r3+0x44A u8 0 2
+field 021A57A0 r3+0x44B u8 0 2
+field 021A57A0 r3+0x44C u8 0 2
+field 021A57A0 r3+0x494 i16 -1,0,1,2,3        # m378
+field 021A57A0 r3+0x496 i16 0,10,0x1B,0x32,0x33,0x40,100,0x96   # m37A
+field 021A57A0 r3+0x3BE u8 0,0xFF             # m2A2
+field 021A57A0 r3+0xF8 u16 0,2                # eventInfo command
+field 021A57A0 r3+0x340 f32 -40 10            # speed.y
+field 021A57A0 r3+0x318 f32 1300 1500         # pos.y vs m374
+field 021A57A0 1047B610 u32 0 0               # REG0_F(0..)
+field 021A57A0 1047B634 f32 0 0               # REG0_F(9)
+field 021A57A0 1047B688 u32 0 0               # REG0_S(0..1)
+field 021A57A0 1047B68C u32 0 0               # REG0_S(2..3)
+field 021A57A0 1047B690 u32 0 0               # REG0_S(4..5)
+field 021A57A0 1047BD4C u32 0 0               # REG12_S(2..3)
+field 021A57A0 1047BD50 u32 0 0               # REG12_S(4..5)
+callee 025A847C r6=12                         # dPa_control_c::set: compare the position
+callee 02514FE8 r4=12 r5=12                   # dCamera_c::Set(center, eye): by-value copies
+callee 0251510C r4=12 r5=12                   # dCamera_c::Reset(center, eye): by-value copies
+stackfill
+field 021A652C r3+0x409 u8 0,1,5              # the byte after m2E8[5] (exposes a 6th loop iteration)

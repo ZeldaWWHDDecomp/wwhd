@@ -1,0 +1,156 @@
+src wwhd_src/d/actor/d_a_st.cpp
+stackfill periodic
+field * 0x101F4F28 u32 0,0x56000000,0x56123400
+field * r3+0x3D8 u32 0,0x51000000
+field * r3+0x3DC u32 0,0x52000000
+field * r3+0x2010 s8 0,1,2,3
+field * r3+0x3E8 s8 0,1,2
+callee 026066C4 r4=8
+arg 024961A4 r3 0,0x40000000
+arg 0249A0FC r3 0,0x40000000
+arg 0249A110 r3 0,0x40000000
+arg 0249A0B0 r3 0,0x40000000
+arg 02495AD0 r3 0,0x40000000
+arg 0249A124 r3 0,0x40000000
+ret 0273AD10 0,0x50000000
+ret 02520460 0 5
+ret 025D63E8 0 1
+ret 025E4F64 0,0x51000000,0x52000000
+ret 025E9B80 0 1
+ret 025BA0C0 0 1
+field * 0x51000090 u32 0,0x53000000
+field * 0x52000090 u32 0,0x54000000
+field * 0x101F84DC u32 0,0x57000000,0x57123400
+field * r3+0x2E4 u32 0,8,0xffffffff
+field * r3+0x3E0 s16 -1,0,1,2,3,4,5,6,7,10,11,20,35,100
+field * r3+0x3E2 s16 0,5,15,16,29,30,31,32,33
+field * r3+0x408 s16 0,1,2,10,20
+field * r3+0x40A s16 0,1,4,5,20
+field * r3+0x414 s16 0,1,2,499
+field * r3+0x2024 s16 0,1,100
+field * r3+0xFEE s8 0,24,25,26
+field * r3+0x2018 s8 0,1,10
+field * 0x5100009C f32 0,10,30,32
+field * 0x5200009C f32 0,10,30,32
+field * 0x51000098 f32 0,1
+field * 0x52000098 f32 0,1
+field * 0x510000A7 u8 0,1
+field * 0x520000A7 u8 0,1
+callee 025A847C r6=12 r7=6 r8=12 stack=4
+arg 024925B8 r4 0 25
+field 024925B8 r3+0x21F6 s8 0,1
+field 024925B8 r3+0xFEF s8 0,1,2,10,11,20
+field 024925B8 r3+0x2020 s8 0,1,2
+
+# Exercise every valid part index and physical state.
+field 024925B8 r3+0xFF4 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0xFF5 s8 0,1
+field 024925B8 r3+0x1030 s8 0,1,2,4,5
+field 024925B8 r3+0x1060 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1061 s8 0,1
+field 024925B8 r3+0x109C s8 0,1,2,4,5
+field 024925B8 r3+0x10CC s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x10CD s8 0,1
+field 024925B8 r3+0x1108 s8 0,1,2,4,5
+field 024925B8 r3+0x1138 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1139 s8 0,1
+field 024925B8 r3+0x1174 s8 0,1,2,4,5
+field 024925B8 r3+0x11A4 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x11A5 s8 0,1
+field 024925B8 r3+0x11E0 s8 0,1,2,4,5
+field 024925B8 r3+0x1210 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1211 s8 0,1
+field 024925B8 r3+0x124C s8 0,1,2,4,5
+field 024925B8 r3+0x127C s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x127D s8 0,1
+field 024925B8 r3+0x12B8 s8 0,1,2,4,5
+field 024925B8 r3+0x12E8 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x12E9 s8 0,1
+field 024925B8 r3+0x1324 s8 0,1,2,4,5
+field 024925B8 r3+0x1354 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1355 s8 0,1
+field 024925B8 r3+0x1390 s8 0,1,2,4,5
+field 024925B8 r3+0x13C0 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x13C1 s8 0,1
+field 024925B8 r3+0x13FC s8 0,1,2,4,5
+field 024925B8 r3+0x142C s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x142D s8 0,1
+field 024925B8 r3+0x1468 s8 0,1,2,4,5
+field 024925B8 r3+0x1498 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1499 s8 0,1
+field 024925B8 r3+0x14D4 s8 0,1,2,4,5
+field 024925B8 r3+0x1504 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1505 s8 0,1
+field 024925B8 r3+0x1540 s8 0,1,2,4,5
+field 024925B8 r3+0x1570 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1571 s8 0,1
+field 024925B8 r3+0x15AC s8 0,1,2,4,5
+field 024925B8 r3+0x15DC s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x15DD s8 0,1
+field 024925B8 r3+0x1618 s8 0,1,2,4,5
+field 024925B8 r3+0x1648 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1649 s8 0,1
+field 024925B8 r3+0x1684 s8 0,1,2,4,5
+field 024925B8 r3+0x16B4 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x16B5 s8 0,1
+field 024925B8 r3+0x16F0 s8 0,1,2,4,5
+field 024925B8 r3+0x1720 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1721 s8 0,1
+field 024925B8 r3+0x175C s8 0,1,2,4,5
+field 024925B8 r3+0x178C s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x178D s8 0,1
+field 024925B8 r3+0x17C8 s8 0,1,2,4,5
+field 024925B8 r3+0x17F8 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x17F9 s8 0,1
+field 024925B8 r3+0x1834 s8 0,1,2,4,5
+field 024925B8 r3+0x1864 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1865 s8 0,1
+field 024925B8 r3+0x18A0 s8 0,1,2,4,5
+field 024925B8 r3+0x18D0 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x18D1 s8 0,1
+field 024925B8 r3+0x190C s8 0,1,2,4,5
+field 024925B8 r3+0x193C s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x193D s8 0,1
+field 024925B8 r3+0x1978 s8 0,1,2,4,5
+field 024925B8 r3+0x19A8 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x19A9 s8 0,1
+field 024925B8 r3+0x19E4 s8 0,1,2,4,5
+field 024925B8 r3+0x1A14 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1A15 s8 0,1
+field 024925B8 r3+0x1A50 s8 0,1,2,4,5
+field 024925B8 r3+0x1A80 s8 0,1,2,5,6,7,8,10,11
+field 024925B8 r3+0x1A81 s8 0,1
+field 024925B8 r3+0x1ABC s8 0,1,2,4,5
+
+field 024972A4 r3+0x3E4 s8 0,1,2,3,5,6,7,8,10,11,12,15,16,17,18,25,26,27,28,100,101
+
+# Complete Execute paths: signed counters, ordinary/deletion/frozen states.
+field 02493FB0 r3+0x20CD s8 0,0,0,1,2,-1
+field 02493FB0 r3+0x416 s8 0,0,0,1
+field 02493FB0 r3+0x25AC s8 0,1,2,5
+field 02493FB0 r3+0x412 s16 0,1,2,5
+field 02493FB0 r3+0x21C8 s16 0,1,9,10,11,23
+field 02493FB0 r3+0x21CA s8 0,1,2
+field 02493FB0 r3+0x21CB s8 0,1,2
+field 02493FB0 r3+0x21B0 s8 0,1,2
+field 02493FB0 r3+0x21A8 s16 0,1,2,15
+field 02493FB0 r3+0x201C u32 0xFFF,0xFFFFFFFF,0x12345
+ret 020402C8 0,0,0,1
+ret 025162A4 0,0,0,1
+callee 025192A8 r4=28
+callee 02518DB0 r3=28
+
+# Fight substate/frame/spin boundaries from the actual merged body.
+field 024972A4 r3+0x3E0 s16 -1,0,1,2,3,4,5,6,7,10,11,20,35,50,51,52,53,100,101
+field 024972A4 r3+0x424 f32 -1,-0.91,-0.5,-0.05,0,0.01,0.05,0.5,0.9,1
+field 024972A4 r3+0x408 s16 0,0,1,2,8,16,32,40,50
+field 024972A4 r3+0x3D5 s8 -1,0,1,2
+field 024972A4 r3+0x2018 s8 0,10
+field 024972A4 0x5100009C f32 0,1,6,10,11,15,21,24,31
+
+# Lead-approved Delete reset global input steering (2026-10-04).
+field 024957B4 0x101D0E78 u8 0,1
+field 024957B4 0x101D0E79 u8 0,1
+
+# PSVECSquareMag reads all three vector components; retain stack-input comparisons.
+callee 028E8DD0 r3=12

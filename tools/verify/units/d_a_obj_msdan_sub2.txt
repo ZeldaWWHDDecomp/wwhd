@@ -1,0 +1,15 @@
+# Verification unit: d_a_obj_msdan_sub2 (switch-driven sliding block)
+src wwhd_src/d/actor/d_a_obj_msdan_sub2.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 025CB374 r6=12         # StartShock: cXyz copy
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+ret 0237CE6C 0,1,2,3,15,16    # PrmAbstract (objNo vs mCurObjNo)
+arg 0237CE6C r4 0,1,8,31,32,33,63
+arg 0237CE6C r5 0,1,8,16,31,32,33,63
+field * r3+0x3EC i32 -1,0,1,2,3,15,16,17   # mCurObjNo
+field 0237C9C0 r3+0x3F0 f32 -20,0,570,580,590,600,1000   # mDist
+field 0237C9C0 r3+0x3F4 f32 -20,-10,0,10,20               # mSpeed
+stackfill                     # expose stores to the StartShock cXyz temporary

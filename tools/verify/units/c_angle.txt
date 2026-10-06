@@ -1,0 +1,7 @@
+# c_angle complete HD TU, signed angle + degree + polar/globe + initializer.
+src wwhd_src/SSystem/SComponent/c_angle.cpp
+# cAngle::Adjust<float> emitted after this TU initializer. Finite positive period,
+# values within four turns; excludes reversed/zero period and infinity nontermination.
+arg! 020074FC f1 -1440,-720,-180,-90,-1,0,1,90,180,720,1440
+arg! 020074FC f2 -180 -90
+arg! 020074FC f3 90 180

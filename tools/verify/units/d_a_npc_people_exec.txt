@@ -1,0 +1,62 @@
+# Verification unit (temporary, merged into d_a_npc_people): _execute and the move procedures
+src wwhd_src/d/actor/d_a_npc_people_exec.cpp wwhd_src/d/actor/d_a_npc_people_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint (hidden result pointer)
+callee 0259D624 r3=12 r4=12 r5=out4 r6=out2   # dNpc_calc_DisXZ_AngY(cXyz, cXyz, f32*, s16*)
+callee 0259E838 r4=12         # dNpc_PathRun_c::chkPointPass(cXyz copy)
+callee 0201ADE0 r3=12 r4=out12  # cXyz::operator-
+callee 028E8DD0 r3=12         # PSVECSquareMag
+callee 028E8F64 r4=12         # PSMTXMultVec(m, &in, &out)
+callee 028E8D88 r3=12 r4=12   # PSVECAdd
+callee 022BF480 r5=12         # setCollision(cyl, cXyz copy)
+
+# _execute
+field 022C305C r3+0x905 u8 3,4,0xB,0xE,0x10,0x11,0x12,0
+field 022C305C r3+0x90F u8 0 1            # mbIsNight
+field 022C305C r3+0x909 u8 0 3            # mAnmFlag
+field 022C305C r3+0x908 u8 0 4            # m794
+field 022C305C r3+0x907 u8 0 3            # m793
+field 022C305C r3+0x915 u8 0 1            # m7A1
+field 022C305C r3+0x903 u8 0 14           # m78F (moveProc index)
+field 022C305C r3+0x910 u8 0 1            # m79C
+field 022C305C r3+0xF8 u16 0 2            # eventInfo.mCommand
+ret 022BFF78 0 8                          # getRand
+ret 022BE784 0 1                          # getPrmArg0
+ret 02520C0C 0 1                          # dComIfGs_checkGetItem
+fret 028F4384 150 2500                    # sqrt (UG weight / distances)
+# executeWait (UM3 telescope)
+ret 025200D4 0x54000000 0x54000000
+field 022C4074 r3+0x905 u8 0xB,0xB,0xB,0xB,0x10,0x11,0x12,0
+field 022C4074 r3+0x90F u8 1,1,1,0
+field 022C4074 r3+0x8FD u8 1,1,1,0          # m789
+field 022C4074 r3+0x8FE u8 0 1            # m78A
+field 022C4074 r3+0x8E2 i16 0 2           # m76E
+field 022C4074 r3+0x8CC u32 0,1,0x101,0x201,0x100,0x200,0x400,0x1000,0x700,0x80000001
+field 022C4074 54005CD8 u32 0,0x00200000,0x00200000
+field 022C4074 54005BB2 u8 0 1
+field 022C4074 54005BCF u8 0 2
+ret 025B8B94 0 1                          # isEventBit
+ret 02560944 0 1
+ret 02560A60 0 1
+ret 02560B78 0 1
+# executeTalk
+ret 022C1BBC 0x10,0x12                    # talk2
+field 022C4404 r3+0x8F2 u16 0,1,2,4,8,0x10,0x20,0x40,0x41
+field 022C4404 r3+0x905 u8 2 5
+field 022C4404 r3+0x8CC u32 0,0x100000
+field 022C4404 54005292 u8 0 1
+field 022C4404 540052B0 u8 0 5
+# executeCommon
+field 022C3AC4 r3+0x8FF u8 0 1            # m78B
+field 022C3AC4 r3+0x900 u8 0 1            # mNoTalk
+field 022C3AC4 r3+0x905 u8 0x11,0x12,1,0
+field 022C3AC4 r3+0xF8 u16 0 2
+field 022C3AC4 r3+0x8CC u32 0,0x10,0x30,0x4000,0x20000
+field 022C3AC4 r3+0x8FC u8 0 2            # mTalk
+field 022C3AC4 r3+0x910 u8 0 1            # m79C
+field 022C3AC4 r3+0x903 u8 0,1,0xD
+# _execute: walking play speed clamp (speedF * l_npc_dat.field_0x44 around 0.5)
+field 022C305C r3+0x8A0 u32 0x5A000000,0x5A000000,0
+field 022C305C 5A000044 f32 0.25 2
+field 022C305C r3+0x370 f32 0.25 2

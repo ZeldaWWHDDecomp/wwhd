@@ -1,0 +1,5 @@
+src wwhd_src/JSystem/JAudio/JAIGlobalParameter.cpp
+stackfill periodic
+arg 02804508 r3 -1,0,1,2,3,255
+arg 02804598 r3 0,1,2,3,0x80000000,0xFFFFFFFF
+arg 028045C8 r3 0,1,30,255,256,0x80000000,0xFFFFFFFF

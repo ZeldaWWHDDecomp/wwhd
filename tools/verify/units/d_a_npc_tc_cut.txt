@@ -1,0 +1,20 @@
+# Verification unit: d_a_npc_tc_cut (Tingle & co.: event cuts, monument checks)
+src wwhd_src/d/actor/d_a_npc_tc_cut.cpp
+
+ret 025200D4 0x54000000 0x54000000
+# dEvent_manager_c::getMySubstanceP: NULL, "GET" (rodata), or a steered integer
+ret 0254487C 0,0x10022A04,0x54100000,0x54100000
+field * 54100000 i32 0,1,2,3
+stable 54100000 4
+# dPa_control_c::set(pa, grp, id, pos, angle, scale, ...): pos and scale are compared
+callee 025A847C r6=12 r8=12
+# mAnmPrmIdx: the jump states; morf stop flag / rate
+field * r3+0x96D i8 1,6,7,8,9,10,15
+field * r3+0x44C u32 0x54400000
+field * 544000A7 u8 0,1
+field * 54400098 f32 0 1
+field 022E93D4 r3+0x340 f32 -1 1
+ret 022E95A8 0 6
+ret 022E9668 0 9
+ret 022ED850 0 2
+field * r3+0x970 u8 0,1,2

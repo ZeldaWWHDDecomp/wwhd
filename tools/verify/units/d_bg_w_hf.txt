@@ -1,0 +1,51 @@
+src wwhd_src/d/d_bg_w_hf.cpp
+# Finite geometry counts, fixed object/data pointers keep loops bounded across mock calls.
+arg! 024F4B0C r3 0x54000000
+arg! 024F4D04 r3 0x54000000
+arg! 024F4E78 r3 0x54000000
+arg! 024F4F24 r3 0x54000000
+field * 0x54000090 u32 0,0x54001000
+field * 0x54000094 u32 0x54002000
+field * 0x540000CC s32 0,1,2
+field * 0x540000D0 s32 0,1,2
+field * 0x54002000 s32 0,1,2,3
+field * 0x54002008 s32 0,1,2,3
+field * 0x5400200C u32 0x54003000
+field * 0x54002010 s32 0,1,2
+field * 0x54002014 u32 0x54004000
+field * 0x54004000 u16 0,1
+field * 0x54004002 u16 0,1,2
+stable 0x540000CC 8
+stable 0x54000094 4
+stable 0x54002000 0x28
+stable 0x54004000 4
+arg! 024F4E78 r4 -1,0,1,2,3
+arg! 024F4F24 r4 -1,0,1,2
+ret 0200A030 0,1
+ret 0273ADAC 0,0x55000000
+ret 0273AD10 0,0x55000100
+
+arg! 024F50B8 r3 0x54000000
+arg! 024F5528 r3 0x54000000
+arg! 024F5684 r3 0x54000000
+arg! 024F50B8 r4 -1,0,1,2
+arg! 024F5528 r4 0,1
+field * 0x54002018 s32 0,1,2
+field * 0x5400201C u32 0x54005000
+field * 0x54002020 s32 0,1,2
+field * 0x54002024 u32 0x54006000
+field * 0x54006024 u16 0,0xFFFF
+field * 0x54006026 u16 0xFFFF
+field * 0x54006028 u16 0xFFFF,1
+field * 0x5400602E u16 0,0xFFFF
+field * 0x5400605A u16 0xFFFF
+field * 0x54006058 u16 0,0xFFFF
+field * 0x540000A4 u32 0,1,0xFFFF
+stable 0x54006026 2
+stable 0x5400605A 2
+field * 0x5400605C u16 0xFFFF
+field * 0x54006062 u16 0,0xFFFF
+
+# Group traversal models a finite two-group acyclic hierarchy across calls.
+stable 0x54006028 2
+stable 0x5400605C 2

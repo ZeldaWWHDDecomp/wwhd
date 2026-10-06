@@ -1,0 +1,76 @@
+# Verification unit: d_a_bg (room background models)
+src wwhd_src/d/actor/d_a_bg.cpp
+
+stackfill periodic
+ret 025D63E8 0 1                    # entrySolidHeap
+ret 024EEA6C 0 1                    # dBgS::Regist
+ret 02520630 0 1                    # dComIfGp_getMapTrans
+ret 025E7CE0 0 1                    # btkAnm::init
+ret 025E8154 0 1                    # brkAnm::init
+ret 025E7C6C 0,0x11050000           # new mDoExt_btkAnm
+ret 025E80D0 0,0x11060000           # new mDoExt_brkAnm
+ret 0207A9A0 0 2                    # cLib_calcTimer
+ret 0273AD10 0,0x11070000           # operator new
+callee 02520630 r4=out4 r5=out4 r6=out2  # getMapTrans outputs
+ret 025200D4 0x54000000,0x54000000,0x54000000,0x54000000,0x54000000,0x54000000,0x1000372C,0x10003730,0x10003730,0x10003730  # play: fixed, or "sea"/"Omori" literal - 0x5134 (pointer-equal names)
+field * 54005134 u8 0x73,0x4F,0x47,0x48   # stage name[0]: 's', 'O', 'G', 'H'
+field * 54005135 u8 0x65,0x6D,0
+field * 54005136 u8 0x61,0x6F,0
+field * 54005137 u8 0,0x72
+field * 54005138 u8 0,0x69
+field * 54005139 u8 0
+field * r3+0x2E4 u32 0,8
+field * r3+0x3B4 u32 0,0x11010000
+field * r3+0x3B8 u32 0,0x11020000
+field * r3+0x3BC u32 0,0x11030000
+field * r3+0x3C4 u8 0,1
+field * r3+0x3C8 u32 0,0x11010000
+field * r3+0x3CC u32 0,0x11020000
+field * r3+0x3D0 u32 0,0x11030000
+field * r3+0x3D8 u8 0,1
+field * r3+0x3DC u32 0,0x11010000
+field * r3+0x3E0 u32 0,0x11020000
+field * r3+0x3E4 u32 0,0x11030000
+field * r3+0x3EC u8 0,1
+field * r3+0x3F0 u32 0,0x11010000
+field * r3+0x3F4 u32 0,0x11020000
+field * r3+0x3F8 u32 0,0x11030000
+field * r3+0x400 u8 0,1
+field * r3+0x404 u32 0,0x11040000
+field * r3+0x408 u8 0,0,1,2
+field * r3+0xB0 u32 0,1,2,15,63
+field * r3+0xF4 u32 0,0x11080000
+field * 101F4829 u8 0,1
+field 0207A05C r3+4 u8 0,1,2
+field 0207A2E4 r3+0 u32 0x11090000
+# btkAnm entry: pin the material name table so the "SC_01" prefix test is reached
+field 0207A2E4 11090068 u32 0x110A0000
+field 0207A2E4 110A000C u32 0x110B0000
+field 0207A2E4 110B002C u32 0,0x100,0x100,0x100
+field 0207A2E4 110B013C u32 0,0x100,0x100,0x100
+field 0207A2E4 110B023C u8 0x53,0x53,0x41
+field 0207A2E4 110B023D u8 0x43,0x43,0x41
+field 0207A2E4 110B023E u8 0x5F,0x5F,0x41
+field 0207A2E4 110B023F u8 0x30,0x30,0x41
+field 0207A2E4 110B0240 u8 0x31,0x31,0x41
+# room control status flags (0x1047E6CC + room * 0x22C + 0x21C) of the steered rooms
+field * 1047E8E8 u8 0,4,5,0x14,0x10
+field * 1047EB14 u8 0,4,5,0x14,0x10
+field * 1047ED40 u8 0,4,5,0x14,0x10
+field * 1048097C u8 0,4,5,0x14,0x10
+field * 104871BC u8 0,4,5,0x14,0x10
+# 2026-10-05: draw's btk/brk entryFrame calls the HD frame-mapping function at curve+0x10 (anm+0x10 / anm+0x20 ->
+# curve) with r3 = curve+0x14 and the frame/start/end in f1..f3. In the game it is one of the two key-animator time
+# mappers, 027DA9E8 (loop) or 027DAAA0 (clamp), whose live-in GPR mask is 0 (runtime/src/interp_fx.cpp names them).
+# When the generated pointer resolves to an unrelated real function that reads r4 (default seed: 1000235 -> 026005F8, a
+# switch on r6; 1000211 -> 020A06F8, a dtor), the indirect-call live-in check compares r4, which in the original only
+# holds the stale brk frame-destination pointer (lwz r4,0x10(r21) at 02079EAC, stored through at 02079EB0) and in the
+# candidate whatever the compiler left. Same class as d_a_player_main_01's 023DA4BC r6. Pinning the pointer chain
+# does not help (fields are applied only to a share of the inputs). Documented false positive:
+nolivein 02079D08
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 02079D08 0x54005134 8 @stages,"O","O","O","O","O","Oe","Oe","Oe","Oe","Oe","Oea","Oea","Oea","Oea","Oea","Oear","Oear","Oear","Oear","Oear","Oeari","Oeari","Oeari","Oeari","Oeari","Oeo","Oeo","Oeo","Oeo","Oeo","Oeor","Oeor","Oeor","Oeor","Oeor","Oeori","Oeori","Oeori","Oeori","Oeori","Om","Om","Om","Om","Om","Oma","Oma","Oma","Oma","Oma","Omar","Omar","Omar","Omar","Omar","Omari","Omari","Omari","Omari","Omari","Omo","Omo","Omo","Omo","Omo","Omor","Omor","Omor","Omor","Omor","Omori","Omori","Omori","Omori","Omori","s","s","s","s","s","se","se","se","se","se","sea","sea","sea","sea","sea","sear","sear","sear","sear","sear","seari","seari","seari","seari","seari","seo","seo","seo","seo","seo","seor","seor","seor","seor","seor","seori","seori","seori","seori","seori","sm","sm","sm","sm","sm","sma","sma","sma","sma","sma","smar","smar","smar","smar","smar","smari","smari","smari","smari","smari","smo","smo","smo","smo","smo","smor","smor","smor","smor","smor","smori","smori","smori","smori","smori"
+fieldstr 0207A0E0 0x54005134 8 @stages,"O","O","O","O","O","Oe","Oe","Oe","Oe","Oe","Oea","Oea","Oea","Oea","Oea","Oear","Oear","Oear","Oear","Oear","Oeari","Oeari","Oeari","Oeari","Oeari","Oeo","Oeo","Oeo","Oeo","Oeo","Oeor","Oeor","Oeor","Oeor","Oeor","Oeori","Oeori","Oeori","Oeori","Oeori","Om","Om","Om","Om","Om","Oma","Oma","Oma","Oma","Oma","Omar","Omar","Omar","Omar","Omar","Omari","Omari","Omari","Omari","Omari","Omo","Omo","Omo","Omo","Omo","Omor","Omor","Omor","Omor","Omor","Omori","Omori","Omori","Omori","Omori","s","s","s","s","s","se","se","se","se","se","sea","sea","sea","sea","sea","sear","sear","sear","sear","sear","seari","seari","seari","seari","seari","seo","seo","seo","seo","seo","seor","seor","seor","seor","seor","seori","seori","seori","seori","seori","sm","sm","sm","sm","sm","sma","sma","sma","sma","sma","smar","smar","smar","smar","smar","smari","smari","smari","smari","smari","smo","smo","smo","smo","smo","smor","smor","smor","smor","smor","smori","smori","smori","smori","smori"

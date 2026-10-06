@@ -1,0 +1,8 @@
+# hd_sys_0203E584: HD root-heap TU (0203E584..0203E9EB); HD-only
+src wwhd_src/hd/hd_sys_0203E584.cpp
+callee 0203E5F4 r3=out52
+callee 0203E67C r4=8
+callee 02753004 r4=8
+stackfill periodic
+field 0203E67C 0x104A030C u32 0,1
+field 0203E67C 0x104A0314 u32 0x40000000,0x40100000

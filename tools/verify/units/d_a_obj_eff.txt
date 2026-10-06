@@ -1,0 +1,45 @@
+# Full actual53-function TU0233A258..0233B49F; B4A0 belongs Ekskz.
+src wwhd_src/d/actor/d_a_obj_eff.cpp
+real 0233B484
+# Actual particle call has setup/prm/env/scale2D: four outgoing stack words.
+callee 025A847C stack=4
+stackfill periodic
+# Six real descriptors are direct(slot=-1); five virtual-path blocks impossible.
+field * r3+0x3AC s32 0 5
+field * r3+0xB0 u32 0,1,2,3,4,5
+field * r3+0x3B0 u32 0,0x11010000
+field * 11010000 u32 0x10027BF4
+field * 11010010 u8 0,1
+ret 0273AD10 0,0x11010000
+ret 025A847C 0,0x11020000
+ret 025D63E8 0,1
+ret 0233A858 0,1
+ret 025200D4 0x11030000
+field * 11035AB0 u32 0x11040000
+field * 10469774 u32 0,1
+field * 10469778 u32 0,1
+field * 1046977C u32 0,1
+field * 10469780 u32 0,1
+field * 10469784 u32 0,1
+field * 104697A0 u32 0,1
+arg! 0233A258 r3 0,0x11000000
+arg! 0233A35C r3 0,0x11000000
+arg! 0233A460 r3 0,0x11000000
+arg! 0233A564 r3 0,0x11000000
+arg! 0233A5BC r3 0,0x11000000
+arg! 0233A6C0 r3 0,0x11000000
+arg! 0233A2C4 r3 0x11000000
+field 0233A2C4 r3+0x20 s32 -1,0,1,2,49,50,51,60
+field 0233A2C4 r3+0x0 u32 0x10027BF4
+arg! 0233A3C8 r3 0x11000000
+field 0233A3C8 r3+0x20 s32 -1,0,1,2,49,50,51,60
+field 0233A3C8 r3+0x0 u32 0x10027BF4
+arg! 0233A4CC r3 0x11000000
+field 0233A4CC r3+0x20 s32 -1,0,1,2,49,50,51,60
+field 0233A4CC r3+0x0 u32 0x10027BF4
+arg! 0233A628 r3 0x11000000
+field 0233A628 r3+0x20 s32 -1,0,1,2,49,50,51,60
+field 0233A628 r3+0x0 u32 0x10027BF4
+arg! 0233A72C r3 0x11000000
+field 0233A72C r3+0x20 s32 -1,0,1,2,49,50,51,60
+field 0233A72C r3+0x0 u32 0x10027BF4

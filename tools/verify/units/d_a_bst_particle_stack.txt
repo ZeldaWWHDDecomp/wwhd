@@ -1,0 +1,129 @@
+src wwhd_src/d/actor/d_a_bst_camera.cpp
+src wwhd_src/d/actor/d_a_bst_move.cpp
+src wwhd_src/d/actor/d_a_bst.cpp
+src wwhd_src/d/actor/d_a_bst_harai.cpp
+src wwhd_src/d/actor/d_a_bst_hana.cpp
+src wwhd_src/d/actor/d_a_bst_kumi.cpp
+src wwhd_src/d/actor/d_a_bst_paa.cpp
+src wwhd_src/d/actor/d_a_bst_beam.cpp
+src wwhd_src/d/actor/d_a_bst_execute.cpp
+stackfill periodic
+field 020E46A0 1046298C u32 0,0xFFFFFFFF
+ret 025F7DB0 0,1,0xFFFFFFFF
+arg 020E474C r4 0,1,255
+arg 020E4790 r4 0,1,255
+arg 020E8718 r3 0,0x54000000
+ret 0273AD10 0,0x55000000
+arg 020E8878 r3 0,0x54000000
+arg 020E8878 r4 0,1,2,3
+arg 020F01C8 r3 0,0x54000000
+arg 020F01C8 r4 0,1,2,3
+field 020E471C 101F4B5C u32 0,0xFFFFFFEC,0x54000000
+arg 020E47D0 r6 -1,0,1
+callee 026066C4 r4=8
+arg 020E48F8 r4 0,1
+ret 027F7878 0x56000000 0x56000000
+field 020E48F8 56000004 u16 0,9,10,11,12,13
+arg 020E4CD0 r4 0,1
+callee 0201ADE0 r4=out12
+callee 0200FCD8 r3=12 r4=out12
+callee 025D5218 r4=4
+field 020E7190 r3+0x3D0 u8 0,1,2
+field 020E7190 r3+0x3331 u8 0,1
+arg 020E4EA4 r5 0,1
+callee 025A847C r6=12 r7=6 r8=12
+arg 020E78C4 r3 0,0x54000000
+field 020EB174 r3+0x130E i16 0,1,2,3,10,11
+field 020EB174 r3+0x3D0 u8 0,1,2
+field 020EB174 r3+0x1336 i16 0,1
+field 020E9AA0 r3+0x3D0 u8 0,1,2
+field 020E9AA0 r3+0x130E i16 -1,0,1,2,3,4
+field 020E9AA0 r3+0x1330 i16 0,1,2
+callee 028E8DD0 r3=12
+callee 024F1AFC r3=0x6C r4=12 r5=12
+callee 02008860 r4=0x6C
+callee 02008B4C r3=0x6C
+callee 02008974 r4=0x54
+callee 025CB374 r6=12
+field 020EDC8C r3+0x718 i8 0,1,2
+field 020E4A64 r3+0x3D0 u8 0,1,2
+field 020E4A64 r3+0x30CC i16 -1,0,1,2
+field 020E4A64 104629B8 u32 0,1
+field 020E7278 r3+0x3D0 u8 0,1,2
+ret 027F3F94 0x56000000 0x56000000
+field 020E7278 56000008 u16 0,9,13
+ret 025E4F64 0,0x57000000
+field 020E7278 57000090 u32 0,0x57001000
+ret 025E38E0 0,0x58000000
+ret 025E7C6C 0,0x58001000
+ret 025E80D0 0,0x58002000
+ret 025E7CE0 0,1
+ret 025E8154 0,1
+field 020EACE0 r3+0x130E i16 -1,0,1,2
+field 020EACE0 r3+0x3D4 u32 0x57000000 0x57000000
+field 020EACE0 5700009C f32 25,26,27
+field 020EACE0 101F84DC u32 0x59000000 0x59000000
+field 020EACE0 59000089 u8 0,1
+field 020EA6B4 r3+0x133A i16 0,1
+field 020EA6B4 r3+0x133C i16 0,1
+field 020EA6B4 r3+0x3D0 u8 0,1,2
+field 020EA6B4 r3+0x3108 i8 0,1,8
+ret 025162A4 0,1
+ret 020E4E48 0,1
+callee 025192A8 r4=0x1C
+callee 0255F554 r3=12
+field 020E7DC0 r3+0x2E4 u32 0,8
+field 020E7DC0 r3+0xB0 u32 0,1,2
+field 020E7DC0 10192910 u8 0,1
+ret 02520460 0,4,5
+ret 025D63E8 0,1
+ret 025B9100 0,1
+field 020E90F0 r3+0x130E i16 -1,0,1,2,3,4,5
+field 020E90F0 r3+0x3D0 u8 0,1,2
+field 020E90F0 r3+0x1330 i16 0,1,2
+field 020E90F0 r3+0x13CC u32 0,0x10
+callee 0201AD78 r4=out12
+field 020E888C r3+0x130E i16 -1,0,1,2,3,4
+field 020E888C r3+0x1330 i16 0,27,28,29
+field 020E888C r3+0x3D0 u8 0,1,2
+callee 028E8108 r3=12 r4=12 r5=out12
+field 020E9F08 r3+0x130E i16 -1,0,1,2,3,4
+field 020E9F08 r3+0x1330 i16 0,1,4,45
+field 020E9F08 r3+0x3A1 i8 -1,0,1,2,3,4
+field 020E54A0 r3+0x3D0 u8 0,1,2
+field 020E54A0 10462981 u8 0,1
+field 020E54A0 r3+0x30CE i8 0,1
+field 020E54A0 r3+0x30B0 i8 -1,0,1,2,10,11,12
+field 020E54A0 r3+0x3108 i8 -1,0,1,2,3,4,5,6,7,8
+field 020E54A0 r3+0x130A i16 0,1,6,7,14,22
+field 020E54A0 r3+0x30B2 i16 0,1
+field 020E54A0 r3+0x30B4 i16 0,1
+field 020E54A0 r3+0x30B6 i16 0,1
+callee 020182E0 r4=12
+callee 02018D40 r4=12
+
+field 020EB4BC r3+0x130A i16 0,1,2,5,6,7,8,10,11,12,13,14,20,22,-1
+field 020EB4BC r3+0x130E i16 0,1,2,3,4,5,6,7,-1
+field 020EB4BC r3+0x3D0 u8 0,1,2
+field 020EB4BC r3+0x1330 i16 0,1,30,100
+field 020EB4BC r3+0x133C i16 0,1,10
+field 020EB4BC r3+0x13CC u32 0,16
+
+# Camera state machine boundaries; broad pointer graph remains adversarial.
+field 020EE200 r3+0x30CE i8 -1,0,1,2,10,11,12,13,14,15,50,51,52,53,54,55,56,57
+field 020EE200 r3+0x30D0 i16 0,20,22,30,50,59,60,65,90,120,150,169,170,180,200,240,250,260,290,300,310,350,370,410,430,520,540,630,660
+field 020EE200 r3+0x30D2 i8 0,1
+field 020EE200 r3+0x30B0 i8 0,2,10,11,12
+callee 02514FE8 r4=12 r5=12
+callee 0200F164 r3=out12 r4=12
+callee 028E90D4 r3=48 r4=out48
+
+# Real animator constructors preserve the owned allocation pointer.
+real 025E7C6C
+real 025E80D0
+
+# Player virtual slot +114: RPX vtable10037CF0, ctor0240FE88.
+callee 02443A28 r4=12
+
+# Actual025A847C frame48 consumes four incoming stack words.
+callee 025A847C stack=4

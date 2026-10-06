@@ -1,0 +1,4 @@
+src wwhd_src/JSystem/J3DUClipper.cpp
+# SDK vector and matrix arguments have their actual pointee sizes.
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E8EF0 r3=12 r4=out12

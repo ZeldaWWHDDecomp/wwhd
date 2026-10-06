@@ -1,0 +1,68 @@
+# Verification unit: d_a_npc_people (Windfall townspeople), main part
+src wwhd_src/d/actor/d_a_npc_people.cpp wwhd_src/d/actor/d_a_npc_people_pending.cpp
+
+callee 026067F4 r4=8          # dRes_control_c::getIDRes(SafeString*)
+callee 0259E778 r4=out12      # dNpc_PathRun_c::getPoint (hidden result pointer)
+ret 025200D4 0x54000000 0x54000000   # play object pinned
+arg 022BE7CC r3 0,0x5A000000         # constructor: allocate / in place
+field 022BF330 r3+0x905 u8 2 5
+field 022BF330 54005BE6 u8 4 6
+field 022BEB7C r3+0x905 u8 6 0x14
+field 022BEB7C r3+0x907 u8 2 5
+arg 022BEB7C r4 0 2
+field 022BEB7C r3+0x8B8 f32 -1 1
+field 022BED70 r3+0x904 u32 0x00100001,0x000F0001,0x000B0005,0x00100000,0x000F0002,0x000B0001,0x00050001
+field 022BED70 r4+0 u8 0,1,0xFF
+field 022BED70 r4+2 i8 -1 1
+field 022BED70 r3+0x8D4 i32 0 1
+field 022BEEDC r3+0x905 u8 4,5,8,0xB,0x12,0x13,0x14
+field 022BEEDC r3+0x8FD u8 0 1
+field 022BEEDC r3+0x90F u8 0 1
+field 022BEEDC r3+0x907 u8 0 2
+ret 02520C0C 0 1                     # dComIfGs_checkGetItem
+field 022BF05C r3+0x905 u8 0 17
+field 022BF220 r3+0x905 u8 0 17
+ret 025B8B94 0 1                      # dSv_event_c::isEventBit
+ret 022BEFF4 0 1                      # isPhoto
+field 022BF05C 54005BBB u8 0x1F,0x45,0x23
+field 022BF05C 54005BBC u8 0x1F,0x45,0x23
+field 022BF05C 54005BBD u8 0x1F,0x45,0x23
+field 022BF220 54005BBB u8 0x1F,0x45,0x23
+field 022BF220 54005BBC u8 0x1F,0x45,0x23
+field 022BF220 54005BBD u8 0x1F,0x45,0x23
+arg 022BF05C r4 0 2
+arg 022BF220 r4 0 2
+# _draw
+callee 025BD71C r3=255                # dSnap_Obj::dSnap_Obj storage
+callee 025BEB90 r3=0x34
+callee 025BEB5C r3=0x34 r4=12
+callee 025BEB4C r3=0x34
+callee 028E8D88 r3=12 r4=12 r5=12     # PSVECAdd
+field 022C36D4 r3+0x905 u8 0 18
+field 022C36D4 r3+0x91A u8 0,1,2,5,0xFF
+# phase_1
+field 022BE8C0 r3+0x905 u8 6,8,10,17,18,0,19
+field 022BE8C0 r3+0x2E4 u32 0,8
+ret 022BE784 0,1,2,0xFF
+ret 02554288 4 7
+ret 025B8BB0 0 7
+field 022BE8C0 54005134 u32 0x4F636D65,0x4F636D66
+field 022BE8C0 54005138 u32 0x72610000,0x72610041
+field 022BE8C0 5400513C i16 0 2
+# createInit
+field 022BF510 r3+0x905 u8 0 19
+ret 022BEB50 0,3,0xFF
+ret 022BE784 0 1
+ret 025D9F38 0,0x5B000000
+field 022BF510 r3+0x2EC f32 -1984.5 -1983
+callee 022BF480 r5=12                 # setCollision: center (cXyz by value)
+# mutation-driven steering
+field 022BF510 r3+0x4E4 f32 -1000000000,0,5   # mObjAcch ground height (G_CM3D_F_INF: no ground)
+ret 027F3F94 0x5E000000 0x5E000000            # joint tree header (createHeap)
+field 022BE334 5E000008 u16 0 3               # joint count
+field 022BE334 r3+0x3B4 i8 0 3
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 022BE8C0 0x54005134 8 @stages,"Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmera","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra","Ocmfra"

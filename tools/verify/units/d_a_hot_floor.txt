@@ -1,0 +1,9 @@
+# Verification unit: d_a_hot_floor (heat-floor particles)
+src wwhd_src/d/actor/d_a_hot_floor.cpp
+
+callee 025A847C r6=12          # dPa_control_c::set pos
+callee 028E8F64 r4=12 r5=out12 # PSMTXMultVec
+# execute: the spawn flag, the parameter bits and the timer around 20 / 0.4
+field 0217A380 r3+0x4B8 u8 0,0,1
+field 0217A380 r3+0xB0 u32 0,1,2,3
+field 0217A380 r3+0x434 f32 -1,0,0.4,0.41,19.99,20,30,nan

@@ -1,0 +1,18 @@
+# Everything derived from the game stays on your machine.
+build/
+game/
+tww/
+*.rpx
+*.rpl
+*.wux
+*.wud
+*.key
+*.bin
+*.tap
+tools/verify/recordings/
+tools/recomp/hooks_tap.txt
+
+# Python / editors
+__pycache__/
+*.pyc
+.DS_Store

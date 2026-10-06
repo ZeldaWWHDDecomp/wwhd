@@ -1,0 +1,2 @@
+# Qualified eight trailing compiler/vtable helpers, actual SaveMgr vtables confirm entries.
+src wwhd_src/d/d_menu_save_compiler.cpp

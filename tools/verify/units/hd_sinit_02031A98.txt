@@ -1,0 +1,2 @@
+# hd_sinit_02031A98: 27 initialiser-only TUs 02031A98..02032A33; HD-only
+src wwhd_src/hd/hd_sinit_02031A98.cpp

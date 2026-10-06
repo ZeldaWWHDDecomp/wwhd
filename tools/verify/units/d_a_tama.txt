@@ -1,0 +1,18 @@
+# Verification unit: d_a_tama (NPC projectile)
+src wwhd_src/d/actor/d_a_tama.cpp
+
+fret 025D6958 0 200                  # distance XZ vs mDis
+field 024B3F7C r3+0x71C f32 0 200
+field 024B3F7C r3+0x3AC u32 0,1,0xFFFFFFFF
+field 024B3F7C r3+0x3D8 u32 0,0,0,0x10,0x20,0x30
+ret 02516464 0,1,1                   # ChkCoHit
+ret 025D5218 0,0x57000000,0x57000000,0x57000000            # partner (fopAcIt_Judge)
+ret 025163BC 0,0x56000000,0x56000000,0x56000000                       # GetCoHitObj
+field 024B3F7C 56000044 u32 0,0x56100000,0x56100000,0x56100000        # hit obj's stts
+field 024B3F7C 5610000C u32 0,0x57000000,0x57000000,0x59000000,0x59000000   # stts actor (partner or other)
+field 024B3F7C 59000008 i16 0xA8,0x1            # other's proc name (PLAYER)
+field 024B3F7C r3+0x318 f32 0 0                 # own pos.y
+field 024B3F7C 57000318 f32 -400,400,0,100,-450,450            # partner pos.y (vs 400)
+field 024B3F7C 58000318 f32 -500 500
+field 024B3F7C r3+0x320 i16 0 0
+field 024B3F7C r3+0x370 f32 0 10

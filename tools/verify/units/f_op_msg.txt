@@ -1,0 +1,5 @@
+src wwhd_src/f_op/f_op_msg.cpp
+field 025DB150 r3+0xC u8 0 1
+ret 025AF2A4 0 1
+ret 025DFCCC 0 2
+ret 025DFCDC 0 5

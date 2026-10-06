@@ -1,0 +1,34 @@
+# Verification unit: d_a_npc_os part B (fork osB): 022AD218..022AE504
+src wwhd_src/d/actor/d_a_npc_os_b.cpp
+callee 022AA778 r4=8                     # setNpcAction(&func copy, arg)
+arg! 022ADA3C r4 0 7                     # setAnm_brkAnm: table index
+ret 025F795C 6,0xE,0xE,0xF,0x12,0x15,0   # message status
+field 022ADC3C r4+0 u32 0,0xEF4,1
+field 022ADBCC 10467DF0 u32 0xFFFFFFFF,1
+field 022ADF24 r3+0x8E2 i16 -1,-1,0,3
+field 022ADF24 r3+0x8E0 i16 0,0,1
+field 022ADF24 r3+0x8E4 u32 0x022AFCE0,0x022AFF94,0
+field 022ADF24 r3+0x8EA i16 -1,-1,0,3
+field 022ADF24 r3+0x8E8 i16 0,0,1
+field 022ADF24 r3+0x8EC u32 0x022AEF70,0
+field 022ADF24 r3+0x464 u32 0,0x20
+field 022ADFCC r3+0x8EA i16 -1,-1,0,3
+field 022ADFCC r3+0x8E8 i16 0,0,1
+field 022ADFCC r3+0x8EC u32 0x022AECD4,0
+field 022ADD6C r3+0x326 i8 7,7,6
+callee 0259D54C r3=out12                 # dNpc_playerEyePos (hidden result)
+callee 0259DED0 r5=12 r6=12              # lookAtTarget: target and eye copies compared
+ret 024EE058 0,0,0x57000000              # GetLockonList
+ret 024EE020 0,0x57000000                # GetActionList
+ret 024EDFCC 0 1                         # LockonTruth
+arg 022AE1D4 r4 0,0,1
+# chkAttention boundaries: atan2s result and max angle/dist equal
+ret 020195B0 0,0x1000,-0x1000,0x2000
+field 022AE014 10467E90 i16 0x1000,0x1000,0x2000
+fret 028F4384 0 400                      # std_sqrtf
+field 022AE014 10467E94 f32 0,200,400
+field 022AE014 r3+0x914 u8 0 1
+arg 022AE014 r5 0,0
+arg 022AD598 r3 0x5A000000,0x5A000000,0x5B000000
+field 022AD598 54005B38 u32 0x5A000000,0
+ret 025200D4 0x54000000 0x54000000      # play object at a fixed address

@@ -1,0 +1,7 @@
+# Verification unit: d_a_swattack (switch set by an attack type)
+src wwhd_src/d/actor/d_a_swattack.cpp
+
+ret 025162A4 0 1              # ChkTgHit
+field 024A0CBC r3+0x524 u8 0,1,2,3,4,5,6,255   # mAtType (pick list)
+ret 02516300 0,0x57000000     # GetTgHitObj: null or a fixed object
+field 024A0CBC 57000010 u32 0,1,2,0x20,0x40,0x80,0x400,0x4000,0x8000,0x10000,0x40000,0x80000,0x100000,0x1000000,0x4000000,0x8   # At type: single bits

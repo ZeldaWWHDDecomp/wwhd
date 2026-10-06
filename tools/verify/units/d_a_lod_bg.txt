@@ -1,0 +1,28 @@
+# Full25-function HD TU021B43BC..021B5A33, profile101B9090 size3F8.
+src wwhd_src/d/actor/d_a_lod_bg.cpp
+stackfill periodic
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 021B4528 r3=out16 r4=4
+callee 0274D458 r3=out16 r4=16
+field * r3+0xB0 u32 0,1,11,13,26,49
+field * r3+0x3AC ptr nonnull
+field * r3+0x3B0 u32 0x10013FEC
+field * r3+0x3B4 u32 32
+field * r3+0x3D8 u32 0x0000FFFF
+field * r3+0x3DC u32 0x021B5010,0x021B5224,0x021B5340
+field * r3+0x3F4 u8 0,1,127,255
+field * r3+0x3F5 u8 0,1
+field * r3+0x3F6 u8 0,1
+# Bounded material count, independently retains zero and positive paths.
+ret 027F3F8C 0x11010000 0x11010000
+field * 11010024 u16 0,1,2
+# Constructor supports null this and allocator failure/success explicitly.
+arg! 021B4D80 r3 0,0x40000000
+ret 0273AD10 0,0x11020000
+ret 02523D08 -1,0,1,1                 # stage resource sync state: error (-1) / waiting / done
+# the LOD distance thresholds hit exactly (sqrt result 199300 + 700 == 100000 + 100000)
+fret 028F4384 0 199300
+field 021B5340 r3+0x338 f32 100000,100000,0,5e5
+field 021B5340 r3+0x330 f32 100000,100000,0,5e5
+field 021B5340 r3+0xF4 u32 0,1,1

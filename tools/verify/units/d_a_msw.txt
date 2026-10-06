@@ -1,0 +1,25 @@
+# Verification unit: d_a_msw (swinging chain platform)
+src wwhd_src/d/actor/d_a_msw.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 0200FCD8 r3=12 r4=out12 # MtxPosition
+callee 0201ADE0 r4=out12       # cXyz::operator-
+callee 0201AD78 r4=out12       # cXyz::operator+
+callee 025A847C r8=12          # dPa_control_c::set scale
+ret 02520460 0 5               # resLoad
+ret 025D63E8 0 1               # entrySolidHeap
+ret 024EEA6C 0 1               # dBgS::Regist
+ret 025162A4 0 1               # ChkTgHit
+ret 0200A030 0 2               # cBgW::Set
+# Create: the size parameter (0..3, 0xFF)
+field 021D6F48 r3+0xB0 u32 0,1,2,3,4,0xFF,0x1FF
+field 021D6F48 r3+0x3BC u8 0,1,2,3,4
+# Execute / Draw: chain hit timers and the drop counter
+field * r3+0x958 i16 0,0,1,9,10,11
+field * r3+0x95A i16 0,0,1,9,10,11
+field * r3+0x95C i16 0,0,1,9,10,11
+field * r3+0x95E i16 0,0,1,9,10,11
+field 021D6880 r3+0x960 i16 0,1,2,10
+# ride_call_back: distances around 10 and the current maxima
+arg 021D6270 r4 0x50000000 0x50000000
+arg 021D6270 r5 0x51000000 0x51000000

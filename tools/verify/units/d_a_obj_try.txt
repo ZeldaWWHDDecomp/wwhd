@@ -1,0 +1,49 @@
+src wwhd_src/d/actor/d_a_obj_try.cpp
+stackfill periodic
+callee 0255F458 r3=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 028E8DE8 r3=12 r4=12
+callee 025CB374 r6=12
+callee 026066C4 r4=8
+callee 023ADCD8 r4=out4 r5=out4 r6=out4
+callee 024F15A4 r3=12 r4=out80
+field * 0x101F84DC u32 0x54000000
+field * 0x101F4F28 u32 0x55000000
+field * r3+0x7A0 u32 0,1,2,3,4,5,6,7,8,9,10,11,12,13
+field * r3+0x7CC u8 0,1
+field 023AB4BC r3+0x8 s16 0,458
+ret 025D4604 0,1
+ret 02333CBC 0,1,2,3,4,5,6,7,8,9,10,11,12,13,255
+arg 023AB4BC r3 0,0x40000000
+arg 023AB4BC r4 0x40000000,0x41000000
+callee 025A847C stack=4 r5=0 r6=12 r7=6 r8=12 r10=20
+field 023AD758 r3+0x2E0 u32 0,128
+field 023AD758 r3+0x2E4 u32 0,4
+ret 025D6CE8 0,1
+field 023AD358 0x101CD760 u8 0,1
+field 023AD358 0x101CD761 u8 0,1
+field 023AD358 r3+0x7A4 u32 0,1,2,3,4,5
+field 023AD758 r3+0x7B1 u8 0,1
+field 023AD758 r3+0x7A4 u32 1
+field 023AD758 r3+0x458 u32 0,32,128,160
+real 023ADA30
+real 023ADFE4
+arg! 023AB584 r3 0x40000000
+arg! 023ABB10 r3 0x40000000
+arg! 023AB89C r3 0x40000000
+arg! 023AC1EC r3 0x40000000
+arg! 023AC5B8 r3 0x40000000
+arg! 023AC7E8 r3 0x40000000
+arg! 023AC9D0 r3 0x40000000
+arg! 023AD0E0 r3 0x40000000
+arg! 023AD980 r3 0x40000000
+arg! 023AE2D4 r3 0x40000000
+arg! 023AE788 r3 0x40000000
+arg! 023AE78C r3 0x40000000
+arg! 023AE790 r3 0x40000000
+arg! 023AE794 r3 0x40000000
+
+# Compare actor status at the original position/correction call boundaries.
+observe 025D6870 400002E0 4
+observe 024F08A8 400002E0 4

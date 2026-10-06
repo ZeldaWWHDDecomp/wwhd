@@ -1,0 +1,41 @@
+# Verification unit: d_a_tsubo part B (damage, water/lava, bound): merged into d_a_tsubo later
+src wwhd_src/d/actor/d_a_tsubo_dmg.cpp
+
+callee 0201A478 r3=255           # csXyz::csXyz storage
+callee 025D8120 r8=6             # createItemFromTable: angle
+callee 0201AE48 r3=12 r4=out12   # cXyz::operator*
+callee 0201AD78 r3=12 r4=out12 r5=12   # cXyz::operator+
+callee 025DAE64 r3=12            # fopKyM_createWpillar pos
+callee 025DAF3C r3=12            # fopKyM_createMpillar pos
+callee 028E9F74 r5=out12         # C_VECReflect dst
+
+ret 02048038 0 0x3F              # daObj::PrmAbstract
+
+# common state
+field * r3+0x790 i32 0,1,2,3,4,5,6,7,7,8,9,10,12,13,14,15,16,-1   # mType
+field * r3+0x794 i32 0,1,2,2,3,4,5,5,6,7                         # m678
+field * r3+0x79D i8 0,0,1,-1                                     # m681
+field * r3+0x79C u8 0,0,1                                        # m680
+field * r3+0x91C i16 0,1,2,-1                                    # m800
+field * r3+0x818 f32 -100 100                                    # m6FC
+field * r3+0x318 f32 -100 100                                    # current.pos.y
+ret 02048038 0,1,2,3,4,5,6,0x3F,1                                # daObj::PrmAbstract
+ret 024CCB44 0,1                                                 # chk_sink_water
+ret 024CCB4C 0,1                                                 # chk_sink_lava
+ret 024CD170 0,1                                                 # chk_sinkdown_water
+ret 024CC52C 0,1                                                 # damage_tg_acc
+# the Tg hit actor is the player, facing the wind / hit normal
+ret 02515BBC 0,0x50000000,0x50000000                             # GetAc
+field * 5000000E i16 0xA8,0xA8,0xA7
+field * 5000032A i16 0,0,0x4000,0x8000
+ret 020195B0 0,0x1000,0x3000                                     # cM_atan2s
+ret 02516300 0,0x51000000,0x51000000                             # GetTgHitObj
+field * 51000010 u32 0x2,0x8,0x20,0x8000,0x10000,0x200000,0x200000,0x14003C82,0
+# mutation gaps
+arg 024CC004 r4 -1,0,1,2,3,7,9,15,16,17          # damaged: the item action (clamped to 0..15)
+# damage_bg_proc_directly: boundaries (roof vs pos.y + roofH(100) - 10, vs ground; m6FC - pos.y vs m38 200/500)
+field 024CDAB4 r3+0x478 f32 90,89.5,0,-5,5,-1000
+field 024CDAB4 r3+0x450 f32 90,0,-5,-1000
+field 024CDAB4 r3+0x318 f32 0,0,-300
+field 024CDAB4 r3+0x818 f32 200,500,0,1000
+field 024CDAB4 r3+0x790 i32 7,7,2,3,0

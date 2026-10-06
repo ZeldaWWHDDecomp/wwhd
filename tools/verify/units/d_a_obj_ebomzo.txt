@@ -1,0 +1,21 @@
+# Verification unit: d_a_obj_ebomzo (bird statue knocked over by bombs)
+src wwhd_src/d/actor/d_a_obj_ebomzo.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0201AD78 r4=out12      # cXyz::operator+
+ret 02520460 0 5              # resLoad
+ret 024F1D9C 0 5              # MoveBGCreate
+ret 025BA0C0 0 1              # isSwitch
+ret 025162A4 0 1              # ChkTgHit
+fret 028F4384 99 101          # sqrtf (vs 100)
+arg 0233A23C r4 0,1,8,31,32,33,63
+arg 0233A23C r5 0,1,8,24,31,32,33,63
+field 02339EE8 r3+0x554 u32 0 3
+field 02339C38 r3+0x55C u32 0,0x56000000
+ret 025A847C 0,0x56000000
+field 02339DA8 r3+0x55C u32 0,0x56000000
+field 02339DA8 r3+0x558 s16 7,8,9,0x100,-0x100
+field 02339DA8 r3+0x320 s16 0x3FF6,0x3FF7,0x3FF8,0x3F00
+callee 0201AD78 r5=12         # offset (compared)
+callee 025CB374 r6=12         # StartShock direction (compared)

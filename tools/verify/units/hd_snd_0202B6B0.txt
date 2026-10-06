@@ -1,0 +1,12 @@
+# hd_snd_0202B6B0: TUs 0202B6B0..0202BD3B (HD sound archive accessor, HD sound system container); HD-only
+src wwhd_src/hd/hd_snd_0202B6B0.cpp
+field 0202B71C 101FD6E0 u32 0,1
+ret 0275DB94 0,0x6E000000
+arg 0202B828 r4 0,0x12345,0x400003FF,0x80000001,0xC0000002,0x000FF000
+arg 0202B8EC r4 0,0x800,0x12345,0x80000001
+field 0202B87C r3+0xC u32 0,0x6F000000
+# mutation follow-ups: the whole load argument; a non-zero resource-manager pointer; bank results at the stream boundary
+callee 0275DB94 r4=44
+field * 101F8B68 u32 0x77000000,0x77100000
+ret 0202B828 0,5,0xF,0x10,0x11,-1
+stackfill

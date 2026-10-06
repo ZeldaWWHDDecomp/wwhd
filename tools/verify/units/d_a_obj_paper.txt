@@ -1,0 +1,20 @@
+src wwhd_src/d/actor/d_a_obj_paper.cpp
+stackfill
+field * r3+0x530 i32 0,1,2
+field * r3+0x528 i32 0,1,2,3
+field * r3+0x524 u8 0,1,255
+field * r3+0x52C i32 -1,0,1
+field * r3+0xF8 u16 0,1,2
+callee 026066C4 r4=8
+callee 0255F458 r3=12
+callee 020182E0 r4=12
+ret 025162A4 0,1
+ret 025F795C 0,17,18,19
+ret 025F7DB0 -1,0,1
+
+ret 02381ED8 0,1,2
+field * 101F4F28 u32 0x54020000,0x54030000
+
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+field * 101F4B5C u32 0x55020000,0x55030000

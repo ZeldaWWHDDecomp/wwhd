@@ -1,0 +1,5 @@
+# f_op_actor_iter (fopAcIt): 025D51DC..025D52E4 (sinit 025D5254 at the end)
+src wwhd_src/f_op/f_op_actor_iter.cpp
+stackfill periodic
+callee 020100A0 r5=8                  # cLsIt_Method(list, fn, &method_filter)
+callee 020100BC r5=8                  # cLsIt_Judge(list, fn, &judge_filter)

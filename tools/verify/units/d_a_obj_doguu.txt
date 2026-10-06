@@ -1,0 +1,70 @@
+src wwhd_src/d/actor/d_a_obj_doguu.cpp
+field * r3+0xB80 i32 0,1,2
+field * r3+0xB9C i8 -1,0,1,4,8
+field 02336FC4 r4+0 u32 3821,3822,3823,3824,3825,3826
+ret 02336824 0,1,2,3
+ret 025B8B94 0,1
+ret 0254487C 0,0x55000000
+ret 025200D4 0x54000000
+callee 025CB4E0 r7=12
+callee 026066C4 r4=8
+callee 025E8154 stack=1
+ret 025E8154 0,1
+ret 025E8508 0,1
+ret 025E38E0 0,0x56000000
+arg! 02334FD8 r3 0,0x40000000
+arg! 0233710C r3 0,0x40000000
+arg! 023370F0 r3 0,0x40000000
+ret 0273AD10 0,0x57000000
+ret 02542D88 -1,0,1,2
+ret 02542EDC -1,0,1,2,3,4,5,6,7,8,9
+ret 025447C8 0,1
+ret 025A11EC 0,15,16,18
+field * r3+0xBB0 i32 0,38,39,40,78,79,80,158,159,160,198,199,200,201
+field * r3+0xBAC i32 0,1,2
+callee 025A847C stack=4
+field * r3+0x2DD i8 -1,0,1,2,3
+field * r3+0x2E4 u32 0,8
+ret 02520460 0,1,4,5
+ret 025D63E8 0,1
+ret 0254DA50 0,1
+field * r3+0xB98 i32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+field * r3+0xB8C u8 0,1
+field * r3+0xB8D u8 0,1
+field * r3+0xB8E u8 0,1
+field * r3+0xB8F u8 0,1,2
+field * r3+0xF8 u16 0,1,2
+field * r3+0x2DC u8 0,1,32,33
+ret 02516464 0,1
+ret 025163BC 0,0x57000000
+field * 57000044 u32 0,0x57000100
+field * 5700010C u32 0,0x57000200
+field * 57000208 i16 0,0xA8
+ret 025440C8 0,1
+ret 02526E70 0,0x58000000
+field * 58000004 u16 0,2,8,16,64,90
+field 02335CA4 r3+0x7E8 u32 0x59000000
+field 02335CA4 r3+0x7EC u32 0x59010000
+field 02335CA4 5900002A u16 0,1,2
+field 02335CA4 5901002A u16 0,1,2
+field 02335CA4 101FDB9C u32 0,1
+ret 027FA974 0,0x59100000
+field 02335CA4 59100000 u32 0,9,10,11
+callee 027FA974 r5=out4
+callee 0201ADE0 r4=out12
+callee 02563F64 r5=out12
+callee 028E9E88 r3=12 r4=12 r5=out12
+callee 028E9684 r3=out48 r4=12 r5=12 r6=12
+callee 028E9108 r3=48 r4=48 r5=out48
+# Draw topology: immutable two-material model counts and actor-owned model links.
+# Keep mutable material dirty bits, animation fields and gameplay state clobberable.
+arg! 02335CA4 r3 0x40000000
+stable 400007E8 8
+stable 5900002A 2
+stable 5901002A 2
+# Poison local input storage and give global singleton loads a nonzero byte pattern.
+stackfill
+field * 101F4F28 u32 0x5A123400
+field * 101D5FFC u32 0,0x58010000
+# Actor flags can carry bit0 independently of the constructed bit8.
+field * r3+0x2E4 u32 0,1,8,9,0xFFFFFFFF

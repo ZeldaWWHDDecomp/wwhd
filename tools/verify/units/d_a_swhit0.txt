@@ -1,0 +1,47 @@
+# Verification unit: d_a_swhit0 (crystal switch)
+src wwhd_src/d/actor/d_a_swhit0.cpp
+
+callee 026066C4 r4=8           # sead::SafeString key
+callee 0274D458 r3=out12 r4=16 # HD colour conversion: output, input
+ret 025D63E8 0 1               # entrySolidHeap
+ret 025E8508 0 1               # bckAnm::init
+ret 025E7CE0 0 1               # btkAnm::init
+ret 0207A9A0 0 2               # cLib_calcTimer
+ret 025162A4 0 1               # ChkTgHit
+ret 025BA0C0 0 1               # isSwitch
+ret 025447C8 0 1               # getIsAddvance
+ret 02542EDC 0 2               # getMyActIdx
+ret 025440C8 0 1               # endCheck
+ret 024A1800 0,1,2,3,4         # getType
+ret 024A1C48 0,1,0xFF,0x100    # getTimer
+ret 024A180C 0 1               # checkHit
+field * r3+0x749 u8 0 6        # mState
+field * r3+0x74A u8 0 1        # mTimer
+field * r3+0x74C i16 -1 1      # mOnTimer
+field * r3+0x74E u16 0 3       # mFlags
+field * r3+0x74B u8 0 1        # mRetType
+field * r3+0xF8 u16 0,2        # eventInfo command
+field * r3+0x2F8 i16 0,1,-1,20000,20001,-20000,-20001
+field * r3+0xB1 u8 0 0x1F      # type / timer bits
+field * 101FDC9C u32 0 1       # l_color guard
+ret 025200D4 0x54000000 0x54000000
+field * 54005292 u8 0 1        # event runCheck
+ret 027F3F8C 0x56000000 0x56000000
+field * 56000024 u16 0 2       # material count
+field 024A1C48 r3+0xB0 u32 0x0FF00000,0x00500000,0,0xFFFFFFFF
+callee 025E7CE0 stack=1        # btkAnm::init: 9th argument on the stack (no GameCube signature)
+# Draw: a model with a known material table
+field 024A13FC r3+0x3AC u32 0x58000000
+field 024A13FC 580000AC u32 0x59000000
+field 024A13FC 5900000C u32 0,1,2
+field 024A13FC 101FEB24 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB28 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB2C u32 0 0x7FFF7FFF
+field 024A13FC 101FEB30 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB34 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB38 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB3C u32 0 0x7FFF7FFF
+field 024A13FC 101FEB40 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB44 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB48 u32 0 0x7FFF7FFF
+field 024A13FC 101FEB4C u32 0 0x7FFF7FFF

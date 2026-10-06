@@ -1,0 +1,51 @@
+# Verification unit: d_a_klft (Forbidden Woods lift)
+src wwhd_src/d/actor/d_a_klft.cpp
+
+callee 026066C4 r4=8          # sead::SafeString key
+callee 0201ADE0 r4=out12      # cXyz::operator-
+callee 0201AD78 r4=out12      # cXyz::operator+
+callee 0201AE48 r4=out12      # cXyz::operator*
+callee 0200FCD8 r4=out12      # MtxPosition output
+ret 02520460 4,4,4,0,1,5      # resLoad: mostly complete
+ret 025D63E8 0 1              # entrySolidHeap
+ret 024EEA6C 0,0,0,1          # dBgS::Regist
+ret 025BA0C0 0 1              # isSwitch
+ret 025162A4 0 1              # ChkTgHit
+ret 025EBA58 0 1              # 3DlineMat init
+ret 025AAF88 0x56000000,0x56000000,0  # dPath_GetRoomPath
+ret 025E38E0 0,0x56100000     # J3DModel create
+ret 024F23F4 0,0x56200000     # new dBgW
+ret 027F3F94 0x56300000 0x56300000  # joint tree
+field * 56300008 u16 0 5
+field 021A0E60 r3+0xB1 u8 0xFF,0,1,2   # path id (param bits 16..23)
+field 021A0E60 r3+0xB3 u8 0,1,2,3,4,0xFF   # type
+field 021A0E60 r3+0x324 s16 0,1,0xFF,0x1FF
+field 021A0AF4 r3+0x3DF u8 0 1
+field 021A0AF4 r3+0x628 f32 40 60
+field 0219FBFC r3+0x61A s16 0,1,0x28,0x29,2
+field 0219FBFC r3+0xC54 s16 0 2
+field 0219FBFC r3+0x62C f32 -0.1 0.1
+field 0219FBFC r3+0x628 f32 10 90
+field 0219FBFC r3+0x61C f32 0 5
+field 0219FBFC r3+0x3F8 f32 -20,-10,-9.5,0,9.5,10,20
+field 0219FBFC r3+0x400 f32 -20,-10,-9.5,0,9.5,10,20
+field 0219FBFC r3+0x404 f32 -300,-100,-50,0,50,100,100.5,300
+field 0219FBFC r3+0x40C f32 -300,-100,-50,0,50,100,100.5,300
+field 0219FBFC 1047B618 f32 0,0,1   # REG0_F(2)
+field 0219F608 r4+0x3EC f32 0 30
+field 0219F608 r4+0x3F4 f32 0 30
+field 0219F608 r4+0x62C f32 -0.001 0.001
+fret 0200796C -0.2 0.2
+fret 02007990 -0.2 0.2
+field 0219F608 r5+8 s16 0xA8,0xA7
+field 0219F8A4 104B462C u32 0,0x57000000
+field 0219F9C0 104B462C u32 0,0x57000000
+field * 570000B8 u32 0,0x58000000
+arg 0219F8A4 r4 0,1
+arg 0219F9C0 r4 0,1
+stackfill                     # locals start non-zero: catches dropped zero stores
+callee 0201AE48 r3=12         # cXyz::operator*: compare the operand
+callee 0201AD78 r3=12
+callee 0201AD78 r5=12
+callee 0201ADE0 r3=12
+callee 0201ADE0 r5=12

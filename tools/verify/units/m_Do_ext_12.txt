@@ -1,0 +1,74 @@
+src wwhd_src/m_Do/m_Do_ext_line_update.cpp
+stackfill periodic
+callee 0201AD78 r3=12 r4=out12 r5=12
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 0201B084 r3=12 r4=out12
+callee 0201AE48 r3=12 r4=out12
+callee 028E8DD0 r3=12
+callee 028E8E64 r3=12 r4=out12
+callee 028E8D88 r3=12 r4=12 r5=out12
+arg! 025EA548 r3 0x52000000,0x52000000
+arg! 025EAF58 r3 0x52000000,0x52000000
+arg! 025EA548 r4 0,1,2,3,4,5,6
+arg! 025EAF58 r4 0,1,2,3,4,5,6
+arg! 025EA548 r6 0,1,2,3,4
+# Bounded nonresizing disjoint owned line arrays installed by the preceding constructors.
+# Vector helpers receive Vec12, not the manager counts or owner base slots, and do not resize/reenter.
+field * 5200013C u16 0,1,2,3
+field * 5200013E u16 2,3,4,5
+field * 52000144 u32 0x53000000
+stable 5200013C 2
+stable 5200013E 2
+stable 52000140 2
+stable 52000144 4
+field * 53000000 u32 0x54000000
+stable 53000000 4
+field * 53000004 u32 0x54500000
+stable 53000004 4
+field * 53000008 u32 0x55000000
+stable 53000008 4
+field * 5500001C u32 0,1
+stable 5500001C 4
+field * 55000004 u32 0x56000000
+stable 55000004 4
+field * 5500000C u32 0x56000000
+stable 5500000C 4
+field * 56000000 u32 0,1,2,3,4,5,6,7,8,9,10
+stable 56000000 4
+field * 56000004 u32 0x57000000
+stable 56000004 4
+field * 53000010 u32 0x54000100
+stable 53000010 4
+field * 53000014 u32 0x54500100
+stable 53000014 4
+field * 53000018 u32 0x55000100
+stable 53000018 4
+field * 5500011C u32 0,1
+stable 5500011C 4
+field * 55000104 u32 0x56000100
+stable 55000104 4
+field * 5500010C u32 0x56000100
+stable 5500010C 4
+field * 56000100 u32 0,1,2,3,4,5,6,7,8,9,10
+stable 56000100 4
+field * 56000104 u32 0x57001000
+stable 56000104 4
+field * 53000020 u32 0x54000200
+stable 53000020 4
+field * 53000024 u32 0x54500200
+stable 53000024 4
+field * 53000028 u32 0x55000200
+stable 53000028 4
+field * 5500021C u32 0,1
+stable 5500021C 4
+field * 55000204 u32 0x56000200
+stable 55000204 4
+field * 5500020C u32 0x56000200
+stable 5500020C 4
+field * 56000200 u32 0,1,2,3,4,5,6,7,8,9,10
+stable 56000200 4
+field * 56000204 u32 0x57002000
+stable 56000204 4
+# Selector1C is stable under vector helpers but finalization is a known writer: real34-instruction callee flips it.
+real 027FF1D8

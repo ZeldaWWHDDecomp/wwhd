@@ -1,0 +1,38 @@
+src wwhd_src/JSystem/JSupport/JSUList.cpp
+# Native 12-byte list/16-byte link layout; finite list destructor fixture.
+arg 027EC50C r3 0,0x40000000
+ret 0273AD10 0,0x50000000
+arg! 027EC68C r3 0,0x40000000
+field 027EC68C r3+0 u32 0x41000000
+field 027EC68C r3+8 u32 0,1,2,3
+field * 4100000C u32 0x41000100
+field * 4100010C u32 0x41000200
+field * 4100020C u32 0
+# Lists may be empty, one-element or multi-element; membership and all removal branches.
+field 027EC560 r3+0 u32 0x41000000,0x42000000
+field 027EC560 r3+4 u32 0x41000000,0x43000000
+field 027EC560 r3+8 u32 0,1,2,3
+field 027EC560 r4+4 u32 0,0x40000000
+field 027EC560 r4+8 u32 0x42000000
+field 027EC560 r4+12 u32 0x43000000
+field 027EC6F4 r3+8 u32 0,1,2
+field 027EC778 r3+8 u32 0,1,2
+field 027EC6F4 r4+4 u32 0,0x44000000
+field 027EC778 r4+4 u32 0,0x44000000
+ret 027EC560 0,1,2
+arg 027EC7FC r4 0,0x41000000,0x42000000
+field 027EC7FC r3+0 u32 0x41000000
+field 027EC7FC r4+4 u32 0,0x40000000
+field 027EC7FC r5+4 u32 0,0x44000000
+arg 027EC62C r3 0,0x40000000
+field 027EC62C r3+4 u32 0,0x44000000
+# Pin most generated list/link inputs to exercise membership, head and tail cases;
+# ordinary arg steering keeps the unsteered eighth for alias/address stress.
+arg 027EC560 r3 0x40000000
+arg 027EC560 r4 0x41000000
+arg 027EC6F4 r3 0x40000000
+arg 027EC6F4 r4 0x41000000
+arg 027EC778 r3 0x40000000
+arg 027EC778 r4 0x41000000
+arg 027EC7FC r3 0x40000000
+arg 027EC7FC r5 0x43000000

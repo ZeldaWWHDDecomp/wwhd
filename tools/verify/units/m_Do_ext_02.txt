@@ -1,0 +1,15 @@
+src wwhd_src/m_Do/m_Do_ext_animation.cpp
+stackfill periodic
+arg! 025E3BCC r4 0,1,2,3
+arg! 025E3BCC r5 0x53000000
+field 025E3BCC 53000008 s32 0,1,2,3
+field 025E3BCC 53000018 s32 0,1,2,3
+field 025E3BCC 53000028 s32 0,1,2,3
+callee 027DFCCC r3=48
+callee 027DFB70 r4=48
+# Table descriptor counts are immutable resources in this constructor domain; callbacks may mutate other data.
+stable 53000008 4
+stable 53000018 4
+stable 53000028 4
+callee 027E06E0 r3=20
+callee 027E063C r4=20

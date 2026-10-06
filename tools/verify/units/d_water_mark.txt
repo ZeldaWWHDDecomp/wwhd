@@ -1,0 +1,8 @@
+# Complete contiguous10entries025CC200..025CCAE8exclusive.
+src wwhd_src/d/d_water_mark.cpp
+callee 02838148 r5=12
+callee 028E8DD0 r3=12
+callee 026066C4 r4=8
+# Nonexclusive delayed-effect states and ring boundaries close actual create gaps.
+field 025CC5D0 r3+0xF8 u32 0,1,2,3,0x12340002
+field 025CC5D0 101F133E s16 -1,0,19,20,39,40

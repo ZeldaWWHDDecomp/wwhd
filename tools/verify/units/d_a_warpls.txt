@@ -1,0 +1,70 @@
+src wwhd_src/d/actor/d_a_warpls.cpp
+stackfill periodic
+callee 026066C4 r4=8
+callee 0201ADE0 r3=12 r4=out12 r5=12
+callee 028E8DD0 r3=12
+callee 025A847C r6=12 r7=6
+callee 028E93CC r3=out48
+callee 025E8154 stack=1
+callee 025626A4 r5=12 r6=456
+callee 02562F5C r5=456
+callee 02543714 r4=12
+callee 025E1A40 r4=12
+field * r3+0x3D8 u8 0,1
+field * r3+0x3D9 u8 0,1,2
+field * r3+0x3CC s32 0,1,2,3
+field * r3+0x3D0 u8 0,1
+field * r3+0x3D1 u8 0,1
+field * r3+0x3DA u8 0,1
+field * r3+0x3D4 s16 -1,0,1,17
+field * r3+0x3C4 s32 0,1,255
+field * r3+0x3D3 s8 -1,0,1,10
+field * r3+0xF8 u16 0,2,3
+ret 025200D4 0x54000000 0x54000000
+field * 54005B34 u32 0x55000000
+field * 54005B2C u32 0x55000000,0x55001000
+field * 54005134 u32 0x53697265,0x58697265,0
+field * 54005138 u32 0x6E000000,0
+ret 025BA0C0 0,1,255,256
+ret 0254407C 0,1
+ret 025440C8 0,1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0,1
+ret 025E8154 0,1
+ret 025E8508 0,1
+ret 024DBDB0 0,1
+ret 024DC660 0,1
+field 024DC3B8 r3+0xB0 u32 0,0x10000000,0x20000000
+
+# The event selector is a bounded actor configuration byte; event-manager calls do not write it.
+field 024DBE68 r3+0x326 s8 7,17
+stable 400003D9 1
+
+# Nonzero static state makes all initializer stores observable.
+field 024DCD14 1046EB9C u32 0x31415926,0xA5A55A5A
+field 024DCD14 1046EBA0 u32 0x31415926,0xA5A55A5A
+field 024DCD14 1046EBA4 u32 0x31415926,0xA5A55A5A
+field 024DCD14 1046EBA8 u32 0x31415926,0xA5A55A5A
+field 024DCD14 1046EB90 f32 -19 19
+field 024DCD14 1046EB94 f32 -19 19
+field * 101F4F28 u32 0x56010000,0x56020000
+field * 101F84DC u32 0x57010000,0x57020000
+arg 024DCDA8 r3 0,0x40000000
+arg 024DCDC4 r3 0,0x40000000
+# Physical warp radius boundary witnesses retain both mock clobber modes.
+field 024DBDB0 r3+0x330 f32 1,2
+field 024DC660 r3+0x330 f32 1,2
+fret 028F4384 112.5 113.5
+# Audited SafeString no-op and pure cull-box stores retain their real behavior.
+real 024DCE18 025D674C
+
+# HD particle setter reads the four caller stack words at old SP+8..+20.
+callee 025A847C stack=4
+
+# Audited pure construction/matrix helpers preserve their real nested memory effects.
+real 027F2BC0 027DA984 027DA7E4 028E93CC
+
+# Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:
+# @stages, plus the function's short string literals and the earlier stage-buffer picks, weighted to
+# about half of the inputs
+fieldstr 024DBE68 0x54005134 8 @stages,"","","","","","","","","","","","","","","","","","","","","","","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","R","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Sire","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Siren","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xire","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren","Xiren"

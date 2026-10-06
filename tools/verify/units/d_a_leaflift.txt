@@ -1,0 +1,56 @@
+src wwhd_src/d/actor/d_a_leaflift.cpp
+stackfill periodic
+field * r3+0x2E4 u32 0,1,8,9
+field * r3+0x558 u8 0 1
+field * r3+0x559 u8 0 1
+field * r3+0x55A u8 0 1
+field * r3+0x55B u8 0,1,2,30,255
+field * r3+0x584 u8 0 1
+field * r3+0x585 u8 0 1
+field * r3+0x5B8 s32 0,199,200,201
+field * r3+0x5BC u32 0,0x55000000
+field * r3+0x5C0 u32 0,0x56000000
+field * r3+0x5C4 u32 0,0x57000000
+field * r3+0x5C8 u32 0,0x58000000
+field * r3+0xB0 u32 0,1,2,15
+field 021B3028 r5+8 s16 0,168,169
+field 021B3028 r4+0x559 u8 0 1
+arg 021B3380 r4 0 1
+arg 021B4004 r3 0,0x59000000
+arg 021B4004 r4 0,1,2,3,-1
+arg 021B4020 r3 0,0x59000000
+arg 021B4020 r4 0,1,2,3,-1
+ret 02520460 0,1,2,3,4,5
+ret 025D63E8 0 1
+ret 026066C4 0,0x51000000
+ret 025E38E0 0,0x52000000
+ret 024F23F4 0,0x53000000
+ret 0200A030 0,1,2,-1
+ret 027DF9B0 -1,0,1,2,32767
+ret 0201B47C 0 1
+fret 0200ECD4 0 10
+fret 024F1478 -1000000000 100
+fret 025D6958 270 540
+ret 025200D4 0x5A000000 0x5A000000
+field * 0x5A005B2C u32 0x5B000000
+field * 0x104B462C u32 0x5C000000
+field 021B3380 0x5C0000B8 u32 0,0x5D000000
+callee 026066C4 r4=8
+callee 0201ADE0 r4=out12
+callee 0201B080 r3=12 r4=out12 r5=12
+callee 028E8F64 r4=12 r5=out12
+callee 028E8DD0 r3=12
+callee 028E9BC0 r3=16 r4=16 r5=out16
+callee 025602F0 r3=out4 r4=out4
+callee 025A847C r5=0 r6=12 r7=6 r8=12 r9=0 stack=4
+
+# Real model entry dispatch reaches packet027F273C, which reads both draw buffers.
+observe 025E2E5C 104B4634 8
+field * 0x5A005D70 u32 0x60000000
+field * 0x5A005D74 u32 0x61000000
+field * 0x5A005D78 u32 0x62000000
+field * 0x5A005D7C u32 0x63000000
+arg 021B3028 r5 0,0x64000000
+field 021B3028 0x64000008 s16 0,168,169
+
+callee 025F25CC r3=16

@@ -1,0 +1,19 @@
+# Contiguous10 HD startup/phase entries025ABFD4..025AC790exclusive.
+src wwhd_src/d/d_s_logo.cpp
+callee 026124B0 r4=8 r5=8
+callee 02753004 r4=8
+callee 026066C4 r4=8
+# Nonexclusive initialization/readiness branches absent in the stock image state.
+field 025AC214 1018F450 u32 0,1
+field 025AC214 101F4F54 u32 0,1
+field 025AC214 101F50D8 u32 0,1
+field 025AC214 101F4704 u8 0,1
+# Resource synchronization includes the negative error result.
+ret 025203D8 -1,0,1
+# Explicit phase-manager fixture exercises pending/-2 state branches.
+field 025AC620 101F852C u32 0x58000100
+field 025AC620 5800011C u32 0,1,2
+field 025AC620 58000120 u32 0,0xFFFFFFFE,0xFFFFFFFF
+# Actual singleton constructors publish these globals; detect reload-address survivors.
+mockglobal 0203B88C 1018F504 u32 0x58000600
+mockglobal 02036EEC 1018F450 u32 0x58000700

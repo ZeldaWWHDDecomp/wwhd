@@ -1,0 +1,21 @@
+# Verification unit: d_a_obj_demo_barrel (Forsaken Fortress escape barrel, demo)
+src wwhd_src/d/actor/d_a_obj_demo_barrel.cpp
+
+callee 026067F4 r4=8          # sead::SafeString key (getIDRes)
+callee 024F1478 r3=12         # dBgS_ObjGndChk_Wtr_Func: position
+ret 02520460 0 5              # resLoad
+ret 025D63E8 0 1              # entrySolidHeap
+ret 025E4F64 0,0x47000000     # McaMorf ctor null or not
+field * 47000090 u32 0,0x48000000     # morf->mpModel
+ret 025A847C 0,0x49000000     # particle set: emitter null or not
+ret 02526E70 0,0x5B000000     # demo actor
+field * 101D5FFC u32 0,0x5A000000     # demo object
+field * 5B000004 u16 0,1,0xFFFE,0xFFFF  # demo actor enable flags
+field * 5B00004C i32 0,1,2,3          # demo prm id
+field * 10469614 u32 0 1              # em_scl guard
+field * r3+0x2E4 u32 0,8,0xFFFFFFF7   # condition (INIT bit)
+field * r3+0x2DC u8 0,1,0x20,0x21,0xFF # demoActorID
+field * r3+0x3F8 i16 0,1,2            # m2DC
+field * r3+0x3FA i16 0,1              # m2DE
+arg 02334594 r4 0,1,2,3
+arg 023345B0 r4 0,1,2,3
