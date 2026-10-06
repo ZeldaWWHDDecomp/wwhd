@@ -12,6 +12,8 @@ Categories: **Gameplay** (behaviour players can notice), **Graphics** (rendering
 **Fix** (GameCube bug or crash fixed in HD), **Structure** (layout, signatures, code moved/removed),
 **Removed** (features absent in HD), **HD-only** (code with no GameCube counterpart).
 
+**Snapshot:** 2026-10-06, 752 units compared.
+
 ## Entry format
 
 ```
@@ -298,7 +300,7 @@ Categories: **Gameplay** (behaviour players can notice), **Graphics** (rendering
 - Structure: the skinned collision of the tree (a deforming background mesh whose vertices follow the animated model each frame) and the leaf-lift handling (up to ten lifts following branch joints, searched by process name) are present in HD; no gameplay change was established.
 - HD-only: the demo accessor checks the demo actor index range and asserts that the demo object exists before looking the actor up (probably a debug-build check inlined from the HD demo header).
 
-### d_a_npc_nz (rat shopkeeper of the hidden rat-hole shops) — verified by Claude:h5, 2026-10-04 (source by Codex b62d)
+### d_a_npc_nz (rat shopkeeper of the hidden rat-hole shops) — verified by Claude:h5, 2026-10-04 (source by Codex)
 - Graphics: the draw no longer unlocks the first material packet or draws the root joint separately; it looks the three body materials up by name (HD sead strings) instead of by index, hides/shows them around a single HD draw call for the remaining materials, and switches the opaque/translucent draw lists by writing the play object's list pointers directly. The tail line material is much larger (0x188 bytes instead of 0x3C) and is handed to the sorted 3D-line packet chosen by a virtual query on the material.
 - Structure: shop logic (offer selection, price/bottle/bomb/arrow/bait checks, direct item get vs. hand-over event) matches the GameCube version; the shop dialogue reads the shared HD message manager instead of the actor's current message process.
 - Structure: layout shift +0x118 up to the smoke callback, then +0x264 after the tail line material; class size 0xCF8. The HIO object keeps its vtable at the end (0x28 bytes).
@@ -1235,7 +1237,7 @@ Codex-verified units have shallower entries (their sources carry few HD notes); 
 - Removed: The GameCube symbol list includes separate tell_agb_attack and tell_agb_sink hooks, with no separate counterparts in the complete HD actor unit. This is probably related to removing Tingle Tuner communication; inlining could also obscure individual hooks.
 - Comparison limit: The available GameCube behavior bodies and actor member layout are incomplete, so this comparison does not establish other gameplay changes or a complete actor-size difference.
 
-### d_a_obj_canon (Great Sea enemy cannon) — Codex a7f3, 36 functions verified
+### d_a_obj_canon (Great Sea enemy cannon) — Codex, 36 functions verified
 
 - Fix: firing checks whether the bomb actor was created. If creation fails, HD skips the bomb setup, recoil and firing sound; the GameCube source assumes a bomb was returned.
 - Graphics: the joint callback and muzzle-position calculation obtain animation matrices through a model matrix buffer and mark that buffer dirty. The GameCube model stores and accesses the joint matrices directly. This is probably part of the HD model pipeline.
@@ -1603,7 +1605,7 @@ Structure: The reconstructed HD tag finds pottery partners through the process-l
 
 Graphics: The HD portal uses two BRK controllers and a particle effect for its scripted transition. Structure: Controller construction uses shared register-save/restore routines; those routines must be included when testing the actual constructor chain. Fix: The reconstruction preserves parameter normalization and animation-controller updates in the portal event path. Broader GameCube differences remain unconfirmed; the original GameCube source supplied names and layout guidance.
 
-### d_point_wind (capsule-driven point wind) — Codex fresh1003, 2026-10-04
+### d_point_wind (capsule-driven point wind) — Codex, 2026-10-04
 
 - **Structure:** Preserves the HD reference layout for the capsule pointer and wind influence, including position, direction, radius, strength, registration index and constant-wind flag. The local routines calculate the influence and register it with the environment manager.
 - **Gameplay:** Stage-name handling and capsule distance calculations follow the HD reference. No new GameCube-to-HD gameplay difference was established by this review.
@@ -1773,7 +1775,7 @@ Graphics: The HD portal uses two BRK controllers and a particle effect for its s
 - Structure: members shift with the larger HD base actor (model pointer 0x298 -> 0x3B4, class size 0x5C0); animation objects are created through out-of-line helpers instead of inline constructors; resource lookups take a string object; the particle-set call no longer uses the manager pointer it is passed; the model-create call ignores its third (display-list flags) argument in HD.
 - Structure: the demo-object lookup asserts when the demo manager is missing.
 
-### d_a_tag_light (projected light tag) — verified by Codex:separate1003, 2026-10-04
+### d_a_tag_light (projected light tag) — verified by Codex, 2026-10-04
 
 - Structure: the actor fields shift by +0x11C relative to the GameCube layout; the model pointer, type, alpha, projection matrix and volume scale retain their relative positions.
 - Graphics: after updating material alpha, HD converts the material colour to normalized floating-point RGBA, converts RGB to linear colour and updates the renderer material parameters. The GameCube helper only changes shape visibility and the byte alpha.
@@ -3024,11 +3026,12 @@ Qualification: Twenty-one HD routines are verified against the local reference. 
 - HD-only: picking up a heart piece also increments a counter in an HD statistics block of the save; picking up a dungeon map also sets a flag in another HD object (probably so the map screen can announce it).
 - Structure: the 61 identical sea-chart pickup handlers call one compiler-merged helper; the empty handlers and the "no check" get checks are grouped at the end of the unit. Everything else keeps the GameCube order and logic (inventory offsets shifted for the HD save layout).
 
-### d_mesg — controller subunit
+### d_mesg (message core, routing, state and controller) — verified by Codex, 2026-10-05
 
+- Structure: the HD message block manages message-state queries, message and scope routing, renderer selection, tagged UTF-16 expansion and linked text buffers. Routing formats bounded numeric keys and passes complete native string descriptors; state handling expands tagged text and updates scope and pane state. Several helpers carry older f_op_msg_mng labels, but in HD they belong to d_mesg. The apparent SearchByID helper reads the game's message-state byte without an input id. Whether this is still the same translation unit as on GameCube is not proven.
 - Structure: The verified HD control object allocates 0x74 bytes, initializes its HD control vtable and delegates base construction and destruction to the HD message SDK. Its destructor is confirmed by that control vtable despite the matcher attributing it to the demo unit. The separate mode setter writes a byte through the HD game singleton.
 - Structure: The supplied GameCube constructor’s four zero line lengths, zero counters, font-size defaults from the message configuration, cleared flags and 486-unit text-box width retain their roles in the HD constructor. No gameplay change is established by these three functions.
-- Qualification: Only the control constructor, mode setter and destructor are verified here. The broader message block and candidate message-manager aliases remain a separate ownership-routing dependency; native text presentation is outside the mocked-call gate.
+- Qualification: native text presentation is outside the mocked-call checks.
 
 ### d_com_lib_game — common phase dispatcher
 
@@ -3102,7 +3105,7 @@ Qualification: The Dolby-center setter consumes the full incoming integer regist
 - **Fix:** Guest vector copies preserve signaling-NaN bits and the original alias-sensitive write order; host float copying was insufficient. Address-passed locals match the HD constructor and resource request sizes.
 - **Validation:** Every entry passes 10,000 generated inputs at seeds 1 and 7. Thirteen remaining coverage blocks are a dominated count fallback, abnormal embedded-pointer wraparound allocation paths and bounded string-comparison exhaustion; ordinary shipped names terminate long before the bound. The bounded mutation sample closes at 108 detected differences and three explained equivalents, with eleven compile failures excluded. No broad SDK or external observer equivalence proof is claimed.
 
-### d_a_bst (Gohdan: head, hands and their pedestals) — verified by Claude:h4, 2026-10-05 (source taken over from Codex discover1003)
+### d_a_bst (Gohdan: head, hands and their pedestals) — verified by Claude:h4, 2026-10-05 (source taken over from Codex)
 - Graphics: Draw no longer copies the animated joints into a separate shadow model and submits no real-time shadow for it; it also sets the light/TEV colour type twice per model and calls an extra HD lighting step (probably part of the HD lighting and shadow pipeline).
 - Graphics: the intro camera's first shot (cutscene state 10) aims at a point about 1000 units to the side of and 400 units below the head, adjusted by two new tuning values, instead of 250 units below the head; probably a reframing for the HD/widescreen view.
 - Structure: in the defeat camera the eye tuning offsets are added after subtracting the fixed shot offsets (GameCube subtracts them); with zero tuning values this changes nothing.
@@ -3177,18 +3180,22 @@ Graphics: the HD cloth packet uses GX2 vertex buffers and shader uniforms, maint
 
 **Graphics / Structure:** HD leaves the older framebuffer capture and game-over drawing entries empty. Creation initializes the death counter and transition timers without building the former GC drawing objects. Execution uses the current UI window and HD animation calls to coordinate game-over choices and play/save state. The background alpha setter updates play storage. Adjacent empty entries and SDK initializer retain an attribution qualification.
 
-### d_meter HUD middle range (Codex Demo00 team, 2026-10-05)
-
-**Structure:** The GameCube source separates status checks from the per-frame HUD execution routine. The corresponding HD entry identified by the legacy status-check label also performs the frame dispatch and pane transitions, so that label alone understates its scope. Pane-member positions differ between the two layouts. The verified range also includes resource setup, teardown, drawing, transition counters and probably HUD tuning-object constructors; the unnamed static helpers remain attributed by their bounded range. This finding covers the middle HUD slice, not the whole HUD translation unit.
-
+### d_meter (HUD) — verified by Codex and Claude, 2026-10-05
+- Structure (head helpers): small HD helpers update visibility and menu bytes and test, set or clear byte flags; the fade-out and fade-in helpers step through their states with an easing towards a six-step boundary.
+- Structure (prefix range): twenty entries initialize and animate the heart and magic panes, load selected-item textures, and derive item alpha decisions from HUD flags and current scene names. The unnamed entry labels remain qualified rather than asserting exact GameCube names.
+- Gameplay (prefix range): recollection state and the named boss/interior scenes affect which item indicators remain visible. The reconstruction keeps this HD behaviour; a gameplay difference from GameCube is not established.
+- Structure (middle range): The GameCube source separates status checks from the per-frame HUD execution routine. The corresponding HD entry identified by the legacy status-check label also performs the frame dispatch and pane transitions, so that label alone understates its scope. Pane-member positions differ between the two layouts. The verified range also includes resource setup, teardown, drawing, transition counters and probably HUD tuning-object constructors; the unnamed static helpers remain attributed by their bounded range. This finding covers the middle HUD slice, not the whole HUD translation unit.
+- Structure (trailing controllers): twelve entries update item pulses and particle positions, action indicators, lock-on health displays, magic and currency gauges, pane alpha and photo state. The item and magic controllers keep separate pending and displayed counts; bow animation uses a shared leading timer with per-slot pulse panes; resource strings are eight-byte SafeString objects. These are observations of the HD implementation, not established GameCube differences.
+- Structure (tail): five HD-local generated entries (0259CF60..0259D1B4): a factory that allocates a 0xC4-byte HUD object with its HD vtable, three deleting destructors and an empty virtual.
 ### d_vib_pattern — vibration patterns (2026-10-05)
 
 Structure: all 76 motor/camera shock and quake pattern records retain the GameCube values and eight-byte format in HD. The native shock and quake consumers identify the four tables. This data-only TU adds no callable function.
 
+### d_flower (flowers: HD packet and cutting) — verified by Codex, 2026-10-05
 
 The HD Flower packet keeps 200 data records, 72 animation records and 64 room lists, and uses HD shader, vertex buffer, texture and GX2 draw paths alongside the original flower collision/cutting updates. The complete bounded inventory comprises the 23 functions at 02544AA4..02549118 and 23 constructors, buffer/resource helpers and weak destructors at 025491AC..02549998. The allocating packet constructor requires 0x1C654 bytes; lighting locals require 0x1C8 bytes and draw state locals require 0x11C bytes, as established directly from their HD constructors. The shared-header initializer at 02549118 is included without claiming HD-only identity. 025499A0 begins a separate small state machine and is excluded from this bounded packet inventory.
 
-All 46 functions pass 10,000 generated cases at seeds 1 and 7. Whole-unit logs precede only the GroundCross observer expansion from 64 to 84 bytes; source and input fixtures are unchanged, and final 10,000-case ground_y companions at both seeds pass with the full 84-byte object. Coverage is 760/800 blocks (95%); named gaps are recorded separately. The bounded 80-variant sample closes with 37 clean comparison detections, 39 compile-invalid exclusions and four source-equivalent survivors, each explained individually. Development hangs and incomplete attempts remain recorded as excluded history. No merge blocker remains; the lead must perform its integration check and merge.
+All 46 functions pass 10,000 generated cases at seeds 1 and 7. Whole-unit logs precede only the GroundCross observer expansion from 64 to 84 bytes; source and input fixtures are unchanged, and final 10,000-case ground_y companions at both seeds pass with the full 84-byte object. Coverage is 760/800 blocks (95%); named gaps are recorded separately. The bounded 80-variant sample closes with 37 clean comparison detections, 39 compile-invalid exclusions and four source-equivalent survivors, each explained individually. Development hangs and incomplete attempts remain recorded as excluded history.
 
 
 
@@ -3200,9 +3207,11 @@ HD differences: Channel records expand from the GC20byte layout to28bytes. Callb
 
 Qualification: The lone legacy alloc match at028159F8 is a behavioral association; its actual HD body performs pool initialization. Native entry/behavior inventory governs this reconstruction, rather than asserting all nineteen GC methods survived with their original signatures.
 
-### s_basic (Primary63972a, 2026-10-04T23:23:00.059925+00:00)
+### s_basic (memory fill helpers) — verified by Codex, 2026-10-04; Claude:h4, 2026-10-05
 
-Exact HD RPX words identify `sBs_FillArea_s` at0201B664 (seven instructions) and `sBs_ClearArea` at0201B680 (two instructions). The fill uses unsigned `byteCount >> 1` and writes the low16 bits as sequential halfwords; zero/one byte writes nothing, and an odd trailing byte stays untouched. ClearArea sets the fill argument to zero and tail-calls the owned pure helper. This preserves the GC s_basic shape; it is not an odd-length memset.
+- Structure: unchanged apart from the standard per-unit static initialiser; the fill-with-halfword and clear helpers behave as on GameCube.
+
+Exact HD RPX words identify `sBs_FillArea_s` at0201B664 (seven instructions) and `sBs_ClearArea` at0201B680 (two instructions). The fill halves the unsigned byte count and writes the low16 bits as sequential halfwords; zero/one byte writes nothing, and an odd trailing byte stays untouched. ClearArea sets the fill argument to zero and tail-calls the owned pure helper. This preserves the GC s_basic shape; it is not an odd-length memset.
 
 Fresh standardO2/exactFP controls passed both functions at10,000 inputs for seeds1/7, with all5 original blocks covered. The fixed all14 eligible syntactic recipes yielded seven normal paired target-only differences, one independent-local-initialization swap proposed as scoped source equivalent, and six compile-invalid recipes; root QA remains pending. Mutation pilots use1,000 inputs per seed. Valid nonzero514byte buffer/count0..513 fixture boundaries retain zero/one/even/odd sizes and signedfill extremes; native storage/allocation premises are explicit. Historical Warp actor allocation/lifecycle obligations and all existing review STOPs remain unchanged.
 
@@ -3218,7 +3227,7 @@ Structure: the HD Morf2 controller holds two animations and transfers the curren
 
 ### d_auction_screen — qualified controller flag adapter subset
 
-HD auction actor callers identify six flag adapters0261BC08..BC97 using controller `[101F8344]->+1F4`, with talk/slot/gauge flags at +65/+67/+6A. GC global flags and fopMsg screen creation differ. This handoff covers those six adapters only; full legacy screen class/native TU boundary remains unresolved and SDK destructorBC98 excluded. Initialized controller-chain tests pass10k seeds1/7 with6/6coverage; bounded31sample12 actual differences19compile-invalid0survivors. Initial boot-image zeros masked a shifted-global load; strengthened fixture detects it, with history retained. Expanded SDK mapping deferred. Evidence: `verify-archive/d_auction_screen/`.
+HD auction actor callers identify six flag adapters0261BC08..BC97 using a controller object reached through a global pointer, with talk/slot/gauge flags at +65/+67/+6A. GC global flags and fopMsg screen creation differ. This handoff covers those six adapters only; full legacy screen class/native TU boundary remains unresolved and SDK destructorBC98 excluded. Initialized controller-chain tests pass10k seeds1/7 with6/6coverage; bounded31sample12 actual differences19compile-invalid0survivors. Initial boot-image zeros masked a shifted-global load; strengthened fixture detects it, with history retained. Expanded SDK mapping deferred. Evidence: `verify-archive/d_auction_screen/`.
 
 
 ### d_map — 2026-10-05
@@ -3265,6 +3274,7 @@ Smoke rendering builds either a billboard or a six-vertex surface, while ripple,
 
 The inventory includes 133 functions, direct lighting helpers, weak callbacks identified through virtual tables, primary initialization, and the adjacent math-header initializer, whose translation-unit attribution is an inference. Every function passes 10,000 generated inputs at seeds 1 and 7; coverage reaches 966 of 982 blocks. Remaining gaps are redundant null or fallback branches and large unsigned count conversions outside bounded initialized list fixtures. NaN transport and operand-order corrections model reference behavior; they do not establish a game bug.
 
+### J2DOrthoGraph (orthographic 2D graphics context) — verified by Codex, 2026-10-05
 
 The HD orthographic graphics context retains the 0xD4-byte object layout, rectangle scaling and six-parameter orthographic projection setup. Its look-at operation initializes the position matrix, while its setPort delegates context setup and fills the projection matrix; unlike the GameCube routine shown in the reference source, this native setPort does not itself issue a GXSetProjection call. The bounded HD inventory contains six routines, including the adjacent static initialization routine with placement-based attribution. The GameCube drawing convenience wrappers and extra constructor/setOrtho methods were not established in this HD cluster and are not claimed as removed. Verification covers 11 of 12 blocks; the remaining constructor branch requires an invalid wrapping embedded address.
 
@@ -3385,3 +3395,347 @@ Graphics: the HD invisible-model controller builds packets for individual joints
 - Structure: HD gives the "static" companion files of the mini-game board, the tri-box object and the boat their own static initializers; the board's one also sets two pairs of distance constants (probably draw or culling ranges).
 - Graphics: the salvage chest's shadow particle callback, when attached to an emitter, now also looks up a dedicated "salvage" shader program (loading it on first use) and assigns it to the emitter — HD-only, probably for the HD water shadow look.
 - Gameplay: the boat's start-position reset (used by other actors' cutscenes) matches GameCube; HD stops two of its effect callbacks through their virtual end call instead of a direct one.
+
+### JAIZelAtmos (Zelda ambient sound positions: sea, shore, river, waterfall, rain) — verified by Claude:h3, 2026-10-05
+- Structure: the GameCube decompilation has only placeholders for this unit, so the comparison is limited to what the HD code shows; the position lists keep their GameCube roles (sea surface points, river points, waterfall points, window points for rain) at HD-shifted offsets (+0x70 relative to the GameCube fields).
+- Gameplay (HD code, probably as on the GameCube): the sea ambience mixes three layered loops (left, right, surround) from the loudest registered sea point; it is attenuated by a third while a mute flag is set and by 30% while one particular stream plays, and in one scene state four points around the camera are added automatically.
+- Gameplay: a sea point list that overflows keeps 63 entries; a river list that overflows is reset to 47 entries (a fixed count, probably a leftover), and river points further than three times the sound distance are ignored; waterfalls further than four times the distance are not registered.
+- Gameplay: the shore sound is quieter (half volume) in stage "Demo08" while a global demo state is 1, and two thirds otherwise unless a level value is set.
+- HD-only: rain without window positions plays a different heavy-rain sound in scene 0x5C; waterfalls in scene 0x39 use their own sound; stream checks go through an HD sound manager.
+- Structure: each sound unit carries its own SafeString vtable copy (deleting destructor 0201D3FC and an empty function 0201D410) used by the inlined stage-name comparison.
+
+### d_file_select (save-data selection screen) — verified by Codex, 2026-10-05
+- Structure: the HD save-data selection screen coordinates slot selection, copying, deletion and name-entry progress through linked UI states. Panel navigation links, transition vectors and alpha rates are kept separately from the save manager, and event handling builds complete SDK event objects before dispatch.
+- Qualification: the reconstruction follows the HD screen layout and callback signatures; that this is still the same translation unit as the GameCube d_file_select is not proven.
+
+### d_kankyo_wether (weather packets, wind, renderer resources) — verified by Codex and Claude:h6, 2026-10-05
+- Graphics / Structure: HD weather packets own GPU geometry, texture state and shader resources for sun glare, rain, snow, mist, floating particles, clouds and waves. Their constructors set up these resources and their destructors release arrays and renderer objects; the corresponding GameCube packet destructors are empty.
+- HD-only: additional packet setup and draw routines build and bind indexed geometry and shader uniforms, so the HD unit has far more functions than the matched GameCube weather functions (163 functions, 025776F8..02585098, verified as one set).
+- Graphics: the precipitation renderer re-initialises its texture descriptors every frame and only rebinds a texture when the new descriptor differs from the cached one; otherwise it only refreshes the image pointer and size.
+- Structure: weather updates read environment and game state through accessors, and resource lookups use temporary string objects. The sun, precipitation, star, mist and wave state machines still select effects from stage names, weather counts and time of day; wind direction is still reported in eight compass sectors, and the global wind falls back to the room's wind table and stage-specific strengths when no custom wind is set (as on GameCube).
+
+### d_a_boomerang (Boomerang: flight, lock-on sight, blur trail) — verified by Claude:h6, 2026-10-05
+- Graphics: the lock-on sight and the motion-blur trail are rebuilt for the Wii U GPU. Instead of GameCube display-list packets, each holds native vertex/uniform buffers and draws with GX2 calls: two trail rings of 60 segment pairs, plus sight quads with their own texture, which is re-copied only when the cached texture descriptor changed. This makes the actor about 0x264C8 bytes, and all GameCube fields after the model pointer move accordingly.
+- Graphics: no blob shadow is set while the boomerang flies (HD uses real shadows). The draw instead hands the model to a Link-side list (023D9340), probably so the boomerang takes part in Link's HD shadow/lighting pass.
+- HD-only: on the "GanonK" stage, createHeap also initialises an extra helper object at +0x26194 (0207FD38). Its role is unknown, probably related to the special lighting of that stage.
+- HD-only: the first procMove call sets a global flag (0x1046273C). Its consumer is unknown.
+- Structure: the throw logic, flight steering, lock handling, fly range (2500, or 5000 on the ship and in GanonK), rock-line callback and water-effect call match the GameCube. Execute dispatches the proc through a stored member-function pointer, as in the GameCube.
+
+### m_Do_ext#11 — line and material helpers (Codex, 2026-10-05)
+- Structure: the twelve HD functions at 025E8FA8..025EA544 allocate and release line buffers, normalize signed colour components, and configure and draw line materials. Material setup captures the colour components before writing aliased destinations, and the draw state stays in the same 284-byte local across iterations. These observations describe the HD implementation; they do not establish a specific GameCube difference.
+
+### d_drawlist (draw queues, mirror packets and depth readback) — verified by Codex, 2026-10-05
+- Structure: the HD unit contains 52 entries for draw queues, depth sorting, mirror materials and textures, depth readback, and formatted diagnostic text. Mirror texture binding compares descriptor fields before updating or rebinding the texture. Projected depth selects one of 256 sort buckets, with a strict lower-bound comparison. These are HD observations, not established GameCube differences.
+
+### d_resorce (resource archive control) — verified by Claude:h7, 2026-10-05 (from Codex's reconstruction)
+- Structure: the resource bookkeeping is rebuilt around name hashes: archive and resource names are hashed with a CRC-32
+  (0273B264) and kept in balanced search trees keyed by that hash, instead of the GameCube's fixed-size info arrays searched
+  by name.
+- Structure: names are sead safe-string objects (bounded length) rather than plain C strings; resource files are found by
+  name suffix and loaded through HD model/animation/material factories.
+- HD-only: per-archive heap selection: dedicated heaps for named special archives and for object archives, chosen by
+  name and by the free size of each heap, created and destroyed by the control object.
+- HD-only: an "extra resources" table per archive (resource names containing a marker substring are registered under
+  their hash), and table-driven resource loading by archive-name hash.
+- Structure: matcher error: 0273B264 is the CRC-32 helper, not dRes_control_c::getResInfoLoaded.
+
+### m_Do_ext#12 — line ribbon updates (Codex, 2026-10-05)
+- Structure: the two HD update routines at 025EA548..025EB828 build ribbon vertex pairs from positions and either a scalar taper or per-point byte widths. They clamp the requested point count to capacity, form camera-facing normals, and keep the previous normal on the degenerate path. Both finish the line models and update lighting materials. These describe the HD implementation, not an established GameCube change.
+
+### hd_ui_02000020 (HD UI input-event receiver) — verified by Claude:h7, 2026-10-05
+- HD-only: GamePad UI input receiver (no GameCube counterpart): keeps a list of touch targets, hit-tests the touch point against them, turns touch on/hold/off and button triggers into queued UI events and dispatches the input state to per-button virtual handlers.
+
+### hd_ui_02001084 (HD UI event record and helpers) — verified by Claude:h7, 2026-10-05
+- HD-only: small GamePad UI support classes: the UI event record (kind, id, 32-byte payload), a holder that publishes the current input state globally, and a fixed short spin delay.
+
+### hd_ui_020015C8 (HD UI widgets, pointer and event queue) — verified by Claude:h7, 2026-10-05
+- HD-only: GamePad UI framework pieces: a widget base with a global serial number, the touch-pointer object that maps raw touch coordinates to screen coordinates (centre and scale from the screen size), touch widgets that hit-test a layout pane, and a fixed-size UI event queue allocated from a heap.
+
+### hd_ui_020021FC (HD layout screen framework) — verified by Claude:h7, 2026-10-05
+- HD-only: the GamePad/TV 2D layout screen wrapper: loads an NW4F layout (.bflyt) by name through a resource accessor, looks up its panes and animations by name into tables, and draws/releases it; plus small layout-object wrappers and a holder that attaches child objects after a sead type check.
+
+### m_Do_ext#13 — textured line materials (Codex, 2026-10-05)
+- Structure: the seven HD functions at 025EB82C..025EDBBC extend the base line material with texture state, colour, lighting and line ownership. The update routines accumulate texture distance across segments and fill texture coordinates alongside ribbon positions, tangents and normals. Draw routing includes a second shader path and selects a render-state field by draw mode. These describe HD behaviour without asserting a particular GameCube difference.
+
+### hd_ui_020032F4 (HD UI layout helpers) — verified by Claude:h7, 2026-10-05
+- HD-only: layout animation entries (named, with a playback rate, started looping or one-shot depending on the animation resource), a generic list visitor and thin wrappers around NW4F layout objects, with sead run-time type information.
+
+### m_Do_ext#14 — material sorting and weighted positions (Codex, 2026-10-05)
+- Structure: the final fifteen HD entries at 025EDBC0..025EE17C manage material sort lists, weighted-position buffers, registration globals and array cleanup. Weight calculation preserves the model flag around pose updates, uses the original bone-index sequence, and accumulates transformed positions into twelve-byte outputs. These observations do not establish a specific GameCube difference.
+
+### JAIZelInst (Wind Waker conducting sounds: metronome, beat judging, melodies) — verified by Claude:h3, 2026-10-05
+- Structure: the HD object is 0x34 bytes instead of the GameCube's 0x4C; the stick/arm-swing state at the start of the GameCube object (0x00..0x17) is gone and every later field moves down by 0x18.
+- Gameplay (HD change): conducting no longer reads the control stick for melodies; the GameCube stick functions are an empty member (0202A034) and a stub that always returns "no melody" (0202A038). Melodies are judged only from the beat positions (judge/metronomePlay, unchanged in behaviour).
+- Gameplay (as on the GameCube): the three beat setups (3/4, 6/4 and 4/4), the volume scaling and clamping, the eight melody patterns and the c-stick-position-to-note tables keep their GameCube contents.
+- Structure: sound effects go through JAIZelBasic::seStart with the HD extra parameters (volume as the 2nd float, -1 for the unused ones).
+
+### JAIZelSound (distance volume / pan / surround of Zelda sound effects) — verified by Claude:h3, 2026-10-05
+- Structure: JAIZelSound stays a 0x48-byte JAISound subclass with its vtable at +0x44 (10003F28); the constructor and deleting destructor are its own (0202ACCC / 0202B65C).
+- Gameplay (HD change): setSeDistanceVolume uses a new inverse-distance volume curve (0202AF70, HD-only: full volume within a near radius, then falling off with distance, silenced below a floor) for a handful of sound ids (0x48DA, 0x590A, 0x69DF, 0x6A36; 0x6238 and 0x7047 at half volume with a smaller radius; 0x701D, a sea/ambient sound, uses a wide curve except in scene state 0x12). All other sounds keep the GameCube distance curve.
+- Gameplay (HD change): sounds with the 0x01000000 sw-bit never go below one third volume.
+- Gameplay (as on the GameCube): setDistanceVolumeCommon with the camera index 4 takes the nearest of the audio cameras; the distance modes scale the range by powers of two; setSeDistanceDolby maps the depth to the surround range (front/behind maxima, centre value).
+- Structure: setSeDistancePan (0202B354) is unnamed by the matcher.
+
+### JAIZel data TUs (JAIZelCharVoiceTable / JAIZelParam / JAIZelScene and two more table TUs) — verified by Claude:h3, 2026-10-05
+- Structure: HD has five table-only sound-control TUs (GameCube: JAIZelCharVoiceTable, JAIZelParam, JAIZelScene); three sit between JAIZelBasic and JAIZelInst, two between JAIZelInst and JAIZelSound. Their only code is the common header static initializer each JAIZel TU carries; HD therefore has two table TUs more than the GameCube file list (contents not compared, tables only).
+
+### hd_ui_02003C58 (HD UI layout object) — verified by Claude:h7, 2026-10-05
+- HD-only: the HD UI's NW4F layout subclass: it replaces the pane factory so picture/text/window/bounding/parts panes are created as HD wrapper classes, builds parts layouts sharing one resource accessor, and binds numbered parts by name (a part named like "Name00" is matched by its base name and the index).
+
+### hd_text_ruby (HD message tag processor: ruby, font, scale and colour tags) — verified by Claude:h4, 2026-10-05
+- HD-only: the HD message renderer handles inline tags itself instead of the GameCube JMessage control codes: a ruby tag draws the small reading text centred above its base characters with a second text writer (scaled down, never wider than the base text), font tags switch between the message fonts, scale tags change the character scale and restore it afterwards, and colour tags assemble an RGBA colour from the tag parameters.
+- Structure: tags are records inside the UTF-16 message text (group, tag number, parameter size, parameters); the processor keeps a small saved state (scale and font) so an end tag can restore the writer.
+
+### hd_text_writer (HD message tag processor object and text splitting) — verified by Claude:h4, 2026-10-05
+- HD-only: the tag processor object that the HD message windows give to the NW4F text writer; it combines the message-unit tag state with the ruby/font state, forwards rectangle calculation for both, and resets them per message.
+- HD-only: helpers that walk UTF-16 message text skipping embedded tag records, to count characters, find line breaks and cut a message into pieces by line.
+
+### hd_res_model (HD model resource: bfres + per-model shader archives) — verified by Claude:h4, 2026-10-05
+- HD-only: a resource object that loads a Wii U bfres model file and, for every model it contains, the matching shader archive (.sharcfb) from the same archive; it binds textures from a second resource when asked and releases the shader archives in its destructor. GameCube models (J3D bmd/bdl) have no such per-model shader step.
+
+### hd_res_load_task (HD asynchronous resource loading task) — verified by Claude:h4, 2026-10-05
+- HD-only: a sead task that queues archive/resource load requests in ring buffers, loads them one at a time on its own heap, keeps a reference count per resource name and frees resources when the count drops; GameCube loads archives through dRes_control_c and the mDoDvdThd commands instead.
+- HD-only: start-up loads of the permanent packs (permanent 3D data, the first permanent archive, particles, program textures, JPEG data) and the message/font resource managers are driven from here.
+- Structure: names are hashed with sead's CRC32 helper for the reference-count map.
+
+### hd_res_mgr (HD resource manager: archives by name, packs, loader threads) — verified by Claude:h4, 2026-10-05
+- HD-only: a singleton manager that keeps every loaded archive in a name-keyed map, loads object and stage archives (from loose files or from per-language permanent packs), scans packs to register the files they contain, and runs the loading on two loader threads guarded by a critical section.
+- Structure: GameCube resolves archives per stage through dRes_control_c tables; HD adds this extra layer between the game's resource calls and the file system, with packs mapped by name hash.
+
+### hd_input_eventmgr (UI input event manager: touch and pointer dispatch) — verified by Claude:h4, 2026-10-05
+- HD-only: the GamePad UI event manager: it keeps a list of UI receivers, hit-tests touch and pointer positions against them, tracks focus, grab and hover, sends press/release/drag/flick events, and continues a released drag with inertia that slows down by a friction factor until it stops.
+- HD-only: it switches between touch, pointer and button input modes and remembers the last mode change so the UI can show the right cursor.
+
+### hd_input_misc (HD UI receiver hit tests and GamePad orientation reader) — verified by Claude:h4, 2026-10-05
+- HD-only: the standard UI receiver tests a touch against its pane's rectangle transformed by the pane's global matrix, and measures distances between panes.
+- HD-only: a small reader copies the GamePad orientation (a 3x3 matrix from the controller state) into an output vector when the controller reports valid motion data.
+
+### hd_input_ctrl (HD controller manager and pointer controller) — verified by Claude:h4, 2026-10-05
+- HD-only: the controller manager decides between TV-only, GamePad and both-screen modes, owns the pointer controller (touch/stick cursor position and calibration) and the swipe cursor, and keeps the GamePad orientation with a calibration matrix that can be reset.
+- HD-only: the pointer controller merges button bits of the active controller into its own held/triggered bit set (GameCube reads only the pad).
+
+### hd_swkbd_mgr (UI input software keyboard manager) — verified by Claude:h4, 2026-10-05
+- HD-only: wraps the Wii U software keyboard used for entering names: it creates both keyboard layouts in its own work memory, copies the controller state into the keyboard each frame, opens the input form with the current text and limits, and returns the entered UTF-16 text when the player confirms.
+
+### hd_input_cursor (HD swipe/stick direction detector) — verified by Claude:h4, 2026-10-05
+- HD-only: keeps the last five touch positions, sums their movement into a cursor vector (clamped to unit length, continued with inertia for a few frames and drawn back to the centre when released) and reports one of four directions once the vector is long enough.
+
+### hd_screen_arrow (HD arrow-type icon screen) — verified by Claude:h4, 2026-10-05
+- HD-only: a 2D layout screen showing the current arrow type (normal, fire, ice, light) with a looping element particle on the icon; when the arrow type changes it plays a change animation and moves the old and new particles with their panes.
+- Graphics: GameCube draws the arrow icon in the item HUD without particles; HD attaches a 2D particle per arrow element.
+
+### hd_screen_auction_rupy (HD auction rupee meter and bid counter) — verified by Claude:h4, 2026-10-05
+- HD-only: the auction screen shows a rupee meter (filled up to 100) and a three-digit counter that counts towards the current bid in steps of 1, 10 or 100 depending on the distance, with a short delay between steps, a counting sound per step and an end sound.
+- Graphics: the counter digits roll (see hd_screen_auction_number) instead of switching instantly.
+
+### hd_screen_auction_number (HD auction counter digit) — verified by Claude:h4, 2026-10-05
+- HD-only: each counter digit is its own small screen that rolls from the old to the new digit over three frames per step, upwards or downwards, wrapping between 9 and 0.
+
+### JAIZelBasic (Zelda's sound control: sound effects, bgm, streams, events) — verified by Claude:h3, 2026-10-05
+- Structure: the HD object is 0x21F4 bytes (vtable 10003A08, singleton at 101FFC78). Fields 0x20..0xAC move +0x10 against the GameCube, the sound-effect tables grow from 24 to 32 slots, the state block from 0x1F8 moves +0x70, and HD adds allocation records for the JAIZelSound arrays (+0x20E8, 16 entries) and handles for an extra sound group (+0x20B0).
+- Structure: seStart and bgmStart take extra parameters in HD (seStart: pitch, volume, pan, surround and a flag; talkOut gets its fade time as a parameter). Streams are handled by an HD sound manager; checkStreamPlaying/checkPlayingStreamBgmFlag ask it instead of the JAudio stream.
+- Gameplay (HD change): a new instance limiter (0201D670) stops a playing copy of a sound effect at the same position, or the highest-priority copy once a per-sound maximum is reached, and blocks a new copy near an equal-or-higher-priority one.
+- Gameplay (HD change): bgm ids 0x80000105..0x80000152 are variants (track mute sets 1..3, and for one bgm a different tempo) of base bgms; starting a variant of the bgm already playing only switches its track mutes/tempo instead of restarting it. One room (scene 0x12, room 0x29) fades its bgm in by distance from a fixed point.
+- Gameplay (HD change): the low-health alarm can be switched off by an HD option (save option object +0x12C0); setLinkHp changes the battle bgm with low health; bgmNowBattle starts a sea battle bgm on the sea; cbPracticePlay plays a different tune in scene 0x39; charVoicePlay skips a voice already playing; startIsleBgm keeps the sub bgm; scene 0x2D silences a few sound effects (e.g. 0x7051) in seStart.
+- Gameplay (HD change): a "no camera" position far outside the world is recognised in getCameraInfo; HD checks that all 20 static waves are loaded (020278E8) before some starts.
+- Structure (matcher errors): 02027168 (named check1stDynamicWave) is bgmStreamPrepare, 0202796C is probably check1stDynamicWave; 020233C8 (named checkPlayingStreamBgmFlag) is an HD stream check with an id; 025E1D08 (named JAIZelBasic) is the m_Do_audio shim mDoAud_bgmSetSwordUsing whose real method is 02028FE0. Many methods are unnamed by the matcher.
+
+### hd_ui_02004A3C (HD layout animation set) — verified by Claude:h7, 2026-10-05
+- HD-only: per-screen layout animation sets: named NW4F animations bound into slots (by name, by pane group or as a numbered range) and attached to active channels; starting a channel stops what played there; queries for finished/stopped animations.
+
+### m_Re_controller_pad (HD controller rumble patterns) — verified by Claude:h4, 2026-10-05
+- Structure: HD-only TU named after the Twilight Princess Wii file m_Re_controller_pad.cpp (assert strings); it replaces the GameCube m_Do_controller_pad rumble path. Four pattern players (one per pad) step through a bit pattern once per frame; a pattern resource is a 16-bit length followed by the bits.
+- HD-only: when the GamePad is the rumble target, the whole pattern is handed to the GamePad motor call at the start of each run instead of being stepped bit by bit, and only the first player is used.
+- Gameplay: probably a quirk — in the per-frame stepping path every bit is sent to controller channel 0 whatever the player index, and an idle player (no pattern) ends the update loop, so later players are not stepped in that frame.
+- Structure: two initialiser-only TUs that follow it (header static objects only) are filed with this unit.
+
+### hd_ui_02005978 (HD application entry and UI graphics) — verified by Claude:h7, 2026-10-05
+- HD-only: the Wii U application entry: system and heap initialisation (checks the MEM2 expanded heap), creates the sead Cafe game framework and a graphics-system heap, sizes the screen from the system's TV/GamePad resolutions and runs the root task; plus the UI graphics singleton that owns the NW4F layout graphics resource, font and draw info, and a small layout child object.
+
+### hd_sys_02006294 (HD state machine) — verified by Claude:h7, 2026-10-05
+- HD-only: a generic state machine used across the HD code (UI screens and many actors' HD additions): states are objects created by the owner's factory, with enter/update/leave hooks and an exit result kept for the next state; the application's root-task entry also lives here.
+
+### hd_snd_0202B6B0 (HD sound system container) — verified by Claude:h7, 2026-10-05
+- HD-only: the HD sound layer's container and archive table: six sound sub-systems created together on one heap, and a table that maps the game's sound ids (bank in the upper bits, index in the lower 10 bits) to entries of the NW4F sound data, loaded through the HD resource manager.
+
+### hd_snd_0202BD3C (HD sound manager) — verified by Claude:h7, 2026-10-05
+- HD-only: the HD sound manager singleton: owns the sound-system container and the NW4F sound-archive player and wires the player's sub-systems, plus a small sound-handle wrapper whose operations do nothing without a handle.
+
+### m_Do_ext — blend dispatch, heap scopes and tail helpers (Codex and Claude:h3, 2026-10-05)
+- Structure: the HD blend entry attributed to mDoExt_MtxCalcAnmBlendTbl reads packed 48-byte animation records and accumulates weighted quaternion-derived rotation, translation and scale into 56-byte output records. Its pointer arguments differ from the GameCube method signature, so the name records attribution rather than signature equivalence.
+- Structure: the HD animation dispatch has separate packed Euler-to-matrix, quaternion-blend and Euler-to-quaternion paths using the same 48-byte source and 56-byte destination records; game packet virtuals forward cup drawing, return material IDs, clean up nested line arrays and release line objects.
+- Structure: game heap scope wrappers keep the current-heap restoration and destruction order; start-up initializes separate byte objects and game globals.
+- Structure: two array-element constructors used by the line-material setup and this TU's copy of the SafeString termination hook are emitted out of line in HD.
+- Structure: the rotation-matrix-to-quaternion conversion used by the animation blending (old-frame and morf2 calculations) is a separate function in HD (probably the sead quaternion helper); it picks the largest component and uses the hardware reciprocal-square-root estimate with one refinement step.
+
+### hd_snd_0202C27C (HD JAudio to NW4F sound bridge) — verified by Claude:h7, 2026-10-05
+- HD-only: the bridge that plays the GameCube JAudio sound requests through the Wii U NW4F sound system: a JAudio sound's name is converted to its NW4F counterpart and looked up in the NW4F archive; some sounds are filtered (certain system sounds, Link's voice set during game-over handling, some demo sound ids, a few stage-specific streams); finished NW4F sounds are recycled each frame.
+- Gameplay: probably two stage-specific stream substitutions (sound ids 0x5800 in Demo23 and 0x588D in Demo45 under a scene flag) replace the GameCube streams.
+
+### hd_snd_0202DAD0 (HD sound path strings) — verified by Claude:h7, 2026-10-05
+- HD-only: accessors for the NW4F sound player objects, and five sound path strings assembled at start-up from fixed string pieces (sead string copy/append).
+
+### hd_snd_0202EE08 (HD sound player) — verified by Claude:h7, 2026-10-05
+- HD-only: the Wii U sound player: ten named NW4F players (system SE, sequence BGM, stream BGM and sub-BGM, menu UI, GamePad-only, GamePad game, GamePad TV, item, controller) whose TV and GamePad volumes are set every frame from master faders and the current screen mode; the controller speaker gets a volume that fades with a distance value; pause/resume of all players, stop-all with exceptions, and dedicated stream handles for the Demo45 stream, the ending, the epilogue and the staff roll.
+
+### hd_snd_020302E4 (HD sound archive) — verified by Claude:h7, 2026-10-05
+- HD-only: the HD NW4F sound archive object (path, sizes, sound groups loaded by name: the static group and the BGM/wave group) and the sound heap object.
+
+### hd_snd_020306F0 (HD sound interface) — verified by Claude:h7, 2026-10-05
+- HD-only: the sound functions the HD game code calls: play UI sound effects by name, fade TV/GamePad output when the game mode or screen mode changes (TV only, GamePad only, both), menu-in/out ducking through the GameCube sound manager, the HD-only streams (Demo45, ending, epilogue, staff roll), and pause/resume of all sound.
+
+### hd_snd_02031264 (HD BGM / JAudio controller) — verified by Claude:h7, 2026-10-05
+- HD-only: the controller that runs the GameCube JAudio sound manager (JAIZelBasic) inside the HD sound system: it creates and initialises it, drives its frame, feeds TV/GamePad output volumes to NW4F every frame, and can play a delayed system SE; plus the SE player used for HD UI sounds.
+
+### hd_sinit_02031A98 (initialiser-only HD TUs) — verified by Claude:h7, 2026-10-05
+- HD-only: 27 translation units that contain no code besides the common header static initialiser; probably HD data tables.
+
+### hd_sys_0203F8CC (HD system task) — verified by Claude:h3, 2026-10-05
+- HD-only: the game's system task (one instance): at start-up it wires the font and message managers, creates two expanded heaps for the system managers, runs the game's main initialisation and then starts two child tasks (probably the error-viewer task and the game task) through the sead task manager; when a debug-draw switch is set it also prepares full-screen viewports.
+- HD-only: the part of the unit past 0x02040000 holds a forwarding thunk, the TU's header static initializer, two destructors and an empty virtual of the system task's classes, a sead runtime-type check with two lazily initialised type-info objects, and two sead task factories that allocate the task object from the current heap of the construction argument and run its constructor.
+
+### sinit_only_tus (fifteen initializer-only translation units) — verified by Claude:h3, 2026-10-05
+- Structure: fifteen HD translation units contain no code except the common header static initializer (a zeroed object, a constant pair and two one-byte objects, each registered for destruction). They sit between TUs that already have their own initializer (around d_bg_s_lin_chk, d_cam_param x3, d_com_inf_game, d_event_data, d_grass, d_meter, d_path, d_s_open, f_op_view x2, f_pc_creator, f_pc_method_tag, m_Do_graphic); probably data-only TUs or TUs whose functions were all inlined into their callers.
+
+### small-gap tails of merged units (h3 sweep) — verified by Claude:h3, 2026-10-05
+- Structure: the remaining unverified functions next to merged units were their compiler-generated or trivial parts: header static initializers (d_bg_s_acch second initializer, d_item_data, d_kankyo_data, d_material, d_tree, d_wpillar, f_pc_executor, m_Do_mtx), per-TU copies of the sead SafeString / FixedSafeString destructors and termination hooks (d_a_salvage_tbox, d_kyeff, d_material, d_s_menu, d_s_room, d_throwstone, m_Do_graphic), and the HD virtual deleting destructor of the salvage chest actor.
+- Structure: d_a_salvage_tbox's actWaitGetItem and actWaitDummy return TRUE as on GameCube; fopCamM_Management, fopCamM_Init and fopScnM_Init stay empty as on GameCube.
+- Structure: the door base constructor (dDoor_info_c) is emitted out of line in HD (0x3EC bytes, HD vtable) and called by the door actors' create functions.
+- HD-only: m_Do_mtx's initializer also sets up the matrix stack and an HD quaternion stack object; m_Do_graphic has an HD graphics interface table with empty entries (probably the blanking hooks) and two empty graphics hooks called by the scene phases; the periodic heap check called from the main loop every N frames is empty (probably mDoMch_HeapCheckAll compiled out of the retail build).
+
+### hd_sys_02032A34 (HD screen dimming) — verified by Claude:h7, 2026-10-05
+- HD-only: keeps the Wii U screen-dimming (burn-in protection) setting in sync with the system setting and switches it on/off for the game.
+
+### hd_sys_02032D0C (HD error viewer) — verified by Claude:h7, 2026-10-05
+- HD-only: the Wii U error viewer task: watches for disc-read, storage and file-system errors, queues error codes, shows them with the system error viewer using the GamePad/controller input, pauses sound and vibration meanwhile, offers jumps to the account or system settings, and resumes once the error is resolved.
+
+### hd_font_mgr (HD font resource manager) — verified by Claude:h4, 2026-10-05
+- HD-only: replaces the GameCube JUTResFont/ROM font setup. Seven fonts are loaded as BFFNT files from per-font archives (main, message, ruby, Zelda, pictograph, a large main font) plus the Cafe system font, which is taken from a system object instead of being loaded.
+- HD-only: each font gets an alternate (fallback) character, and its glyph cell width/height are cached per font with a per-font scale (initially 1.0); the fonts are registered with the layout system under their file names.
+- Structure: singleton with a sead disposer; archive and file names come from two function-local static string tables.
+
+### hd_sys_0203E9EC (HD root task) — verified by Claude:h3, 2026-10-05
+- HD-only: the game's root task: configures the Wii U controllers (Wii Remote/Pro Controller support), opens the four content archives and combines them, mounts the save and account storage, creates the large manager heaps (sound, save, Miiverse, picture, UI graphics with the built-in font/layout shaders, file loading), then starts the resource, sound and GPU child tasks and afterwards the system and profile tasks.
+
+### hd_sys_0203E584 (HD root heaps) — verified by Claude:h3, 2026-10-05
+- HD-only: thirteen fixed-size memory pools carved from the Wii U root heap at start-up (sound, save data, Miiverse, picture/Tingle Bottle, resources, graphics and other system areas), with accessors used by the system and root tasks.
+
+### hd_sys_0203E1D0 (HD profile task) — verified by Claude:h3, 2026-10-05
+- HD-only: a small single-instance "profile" task started by the root task next to the system task (probably the performance/profiling overlay hook; it only forwards to the generic task update), plus shared helpers placed in front of it: the destructor of the Miiverse operation manager's table of 50 downloaded-post records and a generic callback (delegate) invoker.
+
+### hd_sys_02035444 (HD task factory) — verified by Claude:h7, 2026-10-05
+- HD-only: the factory that creates one of the Wii U framework's root tasks; no gameplay effect.
+
+### hd_sinit_02035FD8 (initialiser-only TU) — verified by Claude:h7, 2026-10-05
+- HD-only header statics; no behaviour.
+
+### hd_text_conv (HD button-glyph codes in messages) — verified by Claude:h4, 2026-10-05
+- HD-only: message control characters are mapped to private-use glyph codes of the HD fonts; the glyphs for the button/stick placeholders are chosen from two variant sets by values kept in the HD message manager, probably the controller type in use (GamePad / Pro Controller layouts).
+
+### hd_sys_0203400C (HD exception handler / panic console) — verified by Claude:h7, 2026-10-05
+- HD-only: installs a handler for crashes (DSI/ISI/program exceptions) that prints registered debug dumps to the console, and a panic(file, line, message) report; no effect on normal gameplay.
+
+### hd_sys_02034B14 (HD ProcUI game framework) — verified by Claude:h7, 2026-10-05
+- HD-only: the Wii U application framework: ProcUI (HOME menu / background / exit) handling, re-enabling TV and GamePad output on returning to the foreground, the main frame loop and the clean shutdown.
+
+### hd_sys_020355A4 (HD GameTask) — verified by Claude:h7, 2026-10-05
+- HD-only: the game's top-level Wii U task: creates the input/UI managers, counts HOME/system button holds, and runs the per-frame subsystem updates around the (GameCube-derived) game scene.
+
+### hd_sys_02035B88 (HD HOME button menu) — verified by Claude:h7, 2026-10-05
+- HD-only: allows or blocks the Wii U HOME button menu, and saves/restores the screen-dimming setting when the game goes to the background.
+
+### hd_msg_res_mgr (HD message resource manager) — verified by Claude:h4, 2026-10-05
+- HD-only: replaces the GameCube BMG message archives. Messages are MSBT files grouped in message sets listed by an MSBP project; each set is loaded per language from per-region/per-language message archives (the language chosen from the system setting).
+- HD-only: lookups go by set name and label; labels that start with a digit (numeric message ids) are searched in the numbered message sets; a reverse lookup finds the numeric id of a message by its attribute id; a separate set holds unit and ruby strings.
+- HD-only: layout text boxes can carry a "copy" tag that redirects the box to the label of another text pane, either in the same layout or in another layout.
+- Structure: singleton with a sead disposer; up to 256 message sets.
+
+### hd_msg_text (HD message text state) — verified by Claude:h4, 2026-10-05
+- HD-only: the per-message text state used while laying out and drawing a message: set name and label (a message number is turned into a five-digit label), the MSBT entry, a sound position, up to five line ends and widths, font and scale state, flags for waits, choices and ruby.
+- HD-only: entries of one message kind are drawn with the pictograph font unless a system flag disables it; the message's text style comes from the MSBT attribute through the project's style table.
+- Structure: several restart/clear variants that keep the message but reset the layout or font state.
+
+### hd_sys_setting (HD system setting) — verified by Claude:h4, 2026-10-05
+- HD-only: a console setting read at start-up (three accepted values; anything else is treated as the first; a failed read leaves the setting marked unavailable), mirrored into a save-options byte. The message manager uses the value as its language id, so it is probably the console language/region setting.
+- Structure: singleton with a sead disposer.
+
+### hd_olv_0203B620 (HD Miiverse operation manager) — verified by Claude:h3, 2026-10-05
+- HD-only: the Miiverse network side of the Tingle Bottle: connects to the network and initialises Miiverse on a worker thread, posts a bottle message (optionally with a Picto Box/album screenshot) through the system post applet, sends "Yeah!" empathy, opens the Miiverse portal, periodically (every 5 minutes) downloads posts into bottles (requires the Tingle Bottle item), and reports errors to the error viewer.
+
+### hd_olv_02038E24 (HD Miiverse comment manager) — verified by Claude:h3, 2026-10-05
+- HD-only: holds the Tingle Bottle Miiverse messages: up to 10 shown and 10 downloaded posts (name, topic, text or handwritten memo texture, screenshot data, counts), rotates downloaded bottles into the shown set, tracks new comments for the notification badge, picks the Miiverse topic of the current place from the stage, and hands the texts to the message system.
+
+### hd_net_02038498 (HD SpotPass manager) — verified by Claude:h3, 2026-10-05
+- HD-only: registers the game's SpotPass background-download task on a worker thread, filling the task settings from 21 save-derived values, and re-registers it when it already exists.
+
+### hd_olv_02036E58 (HD Miiverse bottle spots) — verified by Claude:h3, 2026-10-05
+- HD-only: places the floating Miiverse bottles: per island room a list of fixed spots read from the game archive (a random quarter of them, limited by the number of downloaded posts), and on the open sea a random position around Link inside his current sea square that has no ground below and is clear of obstacles; a debug view shows the placed bottles.
+
+### hd_olv_02036A64 (HD JPEG encoder) — verified by Claude:h3, 2026-10-05
+- HD-only: wraps the system JPEG encoder for Miiverse screenshots (800x450 at full quality by default) and halves the quality until the picture fits the Miiverse size limit.
+
+### hd_olv_02036084 (HD JPEG encode manager) — verified by Claude:h3, 2026-10-05
+- HD-only: a worker thread that either stores a picture into the save's picture album or decodes a downloaded Miiverse screenshot (JPEG) into a texture for display in the bottle message.
+
+### hd_state_task (HD shared-font loading task) — verified by Claude:h4, 2026-10-05
+- HD-only: a background task with its own worker thread and message queue (states Wait, InProgress, Finish). It reads the console's shared data (probably the shared system font) and is driven by an update message; the main loop only steps it while the worker is idle. The font manager takes its Cafe system font from this object.
+- Structure: singleton with a sead disposer; three state ids built by the static initialiser.
+
+### hd_text_tag (HD message tag processor base) — verified by Claude:h4, 2026-10-05
+- HD-only: tag handling while drawing message text with the HD fonts: a font tag switches the font (a special value returns to the previous one) and sets the writer scale so that the text has the requested size in percent of the font's cell; a scale tag scales the saved scale by a percentage; an absolute scale tag; a pictograph tag advances the line by the pictograph glyph's width.
+- Structure: a small tag-state object (saved scale and font) shared with the ruby text processor (hd_text_ruby).
+
+### c_* leftovers (SComponent link-order gaps 0200752C..0201A3E4) — verified by Claude:h7, 2026-10-05
+- Structure: HD links one translation unit per SComponent header in name order, so several header-only units that have no source file on GameCube exist as real units in HD. Most contain nothing but a static initializer for shared header statics (18 such units, mostly unnamed; by position probably c_API, c_bg_s_poly_info, c_bg_s_shdw_draw and c_rnd among them).
+- Structure: c_m3d_g_lin is a real HD unit (02018780..0201890C): the line-segment class's constructor, both start/end setters, the end setter and the interpolated-position helper are emitted out of line there instead of being inlined everywhere as on GameCube. The 2D circle class probably has its own unit (c_m2d_g_cir) holding its default constructor.
+- HD-only: an unnamed unit between c_list_iter and c_m2d holds a small three-word class and builds one zeroed static instance of it at start-up.
+
+### c_m3d_g_cps (capsule geometry class) — verified by Codex, 2026-10-05
+- Structure: on GameCube the capsule class is header-only (all of its methods are inline); HD has a real translation unit for it (02018150..0201824C), like c_m3d_g_lin: the constructor, the deleting destructor, both Set variants (from start/end/radius and from a capsule shape record), the copy from another capsule and the usual header static initializer are emitted out of line.
+- Structure: the HD constructor also sets the radius from a constant, where the GameCube constructor is empty; the class keeps its 0x20-byte size, with the vtable at 0x18 and the radius at 0x1C.
+
+### hd_text_unit (HD message text builder) — verified by Claude:h4, 2026-10-05
+- HD-only: replaces the GameCube message control-code handling. The MSBT text with its tags is expanded into the text-box string: font, colour (palette rows chosen by the message kind), scale and pane-style tags are re-emitted as layout tags; wait, input-wait, speed, choice, ruby and capital-letter tags set the message state; sound tags play at the message's sound position with the room's reverb.
+- HD-only: inserted values are written as text: the player's name (a default name when empty), numbers in ASCII or full-width digits with padding, counters with a singular or plural unit label and optional ruby (sword-game blows, letters, rupees, pendants, bombs, seeds, necklaces, Chu jelly, feathers, crests and others), times as minutes and seconds with a per-language layout, and whole messages inserted by number.
+- HD-only: line breaking against the box's line limit (with an extra line for a few specific messages), removal of the breaks between lines, and a character replacement table for one font; a "line start" tag is inserted once the first visible character is reached.
+- Gameplay: probably the same visible text as the GameCube for the same messages; the singular/plural units and the time layout per language are new in HD.
+- Structure: the counters' unit and ruby labels are function-local static strings registered for destruction at exit (the 23 destroy helpers at the start of the TU).
+
+### d_kankyo_rain (weather: rain, snow, ash, spores, poison mist, clouds, stars, sun/moon, lens flare, waves, thunder) — verified by Claude:h6 and Codex, 2026-10-05
+- Structure: the whole translation unit (48 functions, 02563DD8..025776F8) is verified as one set. It has an extra HD-only projection helper at its head (it copies a constant parameter template, replaces two values with current environment values and hands the result to the rain renderers) and keeps its own out-of-line colour, gamma and matrix-copy helpers.
+- Graphics: every weather renderer (rain streaks, spray, poison mist, spores, ash/snow, stars, waves, cloud shadows, sky clouds, sun/moon and lens flare) builds compact quads in double-buffered GPU vertex buffers with a per-particle material/uniform block, instead of sending immediate-mode vertices as on GameCube; the buffers are cleared one cache line at a time before each quad is written. Colours go through a float conversion (and a gamma step for some) before upload.
+- Graphics: HD spray uses a slightly different blue and offsets the camera's vertical direction before fading; the spore renderer runs a second, darkened pass that fades particles around the player's height; cloud-shadow drawing packs only the emitted quads.
+- Graphics: the sky-cloud renderer (02575B6C) always runs a single pass with three texture layers; the GameCube pass that depended on sun visibility or on aiming the Picto Box is never selected. Each layer keeps 100 particles.
+- Graphics: lens flare: HD prepares sixteen triangular flare rays and nine textured quads in packet-owned buffers, where the GameCube draws eight flare quads and a separate sixteen-part fan directly through GX; colours, scales, materials and view transforms come from the weather packets instead of the old function arguments, with a shaped distance fade.
+- Graphics: sun and moon are built as expanded quads in separate double buffers with two colour/size passes each; the moon is oriented by camera-relative angles with weekday texture selection, and the sun size includes the lens-distance falloff.
+- Graphics: in one special stage, airborne ash is drawn as four offset copies (the GameCube uses eight) with separate faded ground reflections and a smaller single copy for settled particles; other stages use snow-style quads.
+- Gameplay: the poison-mist room table differs from GameCube: pattern 0 requests 600 particles and pattern 3 requests 700, pattern 2 has a horizontal radius of 1600, and pattern 3 has a different base height and size; the room selector can be overridden by an environment byte. The mist's circular fade uses a fifth power of the normalised radius where the GameCube uses the sixteenth, so the mist edge probably looks softer.
+- Fix: the poison mist's negative-z wrap now writes the z coordinate (GameCube wrote x).
+- Gameplay: sky-cloud motion (0256DDF8) skips the interior wind remapping in the stage "Name", applies the "Siren" sea-level override in rooms 17 and 18 (GameCube: room 17 only; the HD value is +14101 where the GameCube source has -14101, effect not checked), adds an HD-only height override of 48000 for the "ADMumi" stage and advances a cloud-packet value by 100 each update; its initialization falls straight through into wrap and motion handling in the same update.
+- Structure: cloud-shadow motion (0256BB6C): state 0 falls through from initialization into movement, whereas the GameCube case ends with a break; the fade stores alpha directly instead of easing it, and the size reads the current view's field and caps its ratio at 1. No visual or gameplay effect is inferred.
+- Structure: the wind entry also contains the seabird update (thirty line slots and two bird slots); its line speed depends on the camera displacement, and custom wind changes the spawn range, vertical offset and phase advance. Trigonometry uses an interleaved sine/cosine table.
+- Structure: the volcanic-ash mover keeps drifting ash and the settling-particle update in one entry (fifty settling slots visited in reverse) with a per-particle rotation phase and a distance fade; the drifting-spore (housi) mover uses 80-byte records, a separate packet fade and a combination of global wind, three sine phases and decaying point-wind velocity.
+- Structure: the wave mover contains sea-level handling for six stage cases, interior wind-angle overrides and three shoreline exclusion regions.
+- Structure: lens-flare motion copies the sun position into three initial slots and advances six further positions; snow setup selects stage-specific heap, archive and shader resources; thunder keeps near and far flash states, and its flash colour is kept as three 16-bit channels. Camera-relative weather placement uses explicit fused multiply-adds, which the reconstruction keeps.
+
+### d_scope (telescope message process) — verified by Claude:h4, 2026-10-05
+- Removed: the GameCube telescope screen (scope overlay, button icons, wipe animation, message panes and their processing) is gone from this unit; the process profile only keeps five constant methods (create reports complete, the others report success). Probably the HD telescope (GamePad/gyro, see d_a_npc_ls1) is drawn by other code.
+- Structure: the unit is only those five methods plus the standard per-unit static initialiser.
+
+### d_cc_uty (collision attack utilities) — verified by Claude, 2026-10-05
+- Structure: the HD unit (02518B28..02519814) holds the player cut-bit lookup, the normal attack sound lookup, two defence-sound wrappers, attack power classification, hit handling and the TU initializer. The GameCube critical-sound lookup has no separate HD function; its selection is inlined into hit handling.
+- Structure: the attack record keeps the GameCube field positions and 0x1C-byte size; player state is read through the play singleton, and actor fields use HD offsets. Attack classification still distinguishes water, wind, fire, hammer, sword, bomb, rope, boomerang, arrow and the remaining actor-specific cases.
+- Gameplay: hit handling has an additional damage subtraction when Link's cut type is the turn/roll type and a player byte (+0x69E8) is set; this condition is absent from the GameCube source (purpose not established).
+- Structure: the normal sound lookup asserts on a missing collision-info result and then returns the default sound.
+- Graphics: the hit particles go through the HD particle controller, keeping both particle ids and their arguments.
+
+### d_wood (tree and bush helper) — verified by Claude, 2026-10-05
+- Graphics: rendering differs substantially from GameCube. HD builds fixed arrays of units, animations and room membership, manages double-buffered vertex storage with separate normal and fading instances, and binds shaders, uniform blocks, texture transforms and indexed draws through the HD graphics APIs instead of GameCube display lists.
+- Structure: animation state, unit placement, ground checks, collision responses, room membership and the packet update keep their GameCube roles. The HD unit has 52 functions, including the initializer and the inline graphics constructors and cleanup companions referenced by the packet arrays; the HD lighting object is larger and has embedded components.
+
+### d_a_lod_bg (distant island models, LOD) — verified by Claude:h4, 2026-10-05 (from Codex's reconstruction)
+- Structure: the GameCube actor mounts the shared LOD archive itself through a DVD command, copies the model binaries into its own expanded heap and builds solid heaps per model; HD loads the LOD models through the normal resource system by archive name (load request, sync, delete) and keeps the name in a sead string object; the shared local heap and the DVD mount state are gone.
+- Graphics: distant island models switch on and off at once (alpha 0 or 255) instead of fading in and out by 16 per frame as on GameCube.
+- Graphics: both distance limits are 100,000 units larger than on GameCube, and the show/hide distance is measured from the camera position (as in the European GameCube version), so the distant island models stay visible much further out (probably for the HD draw distance).
+- Gameplay: besides Windfall's lighthouse beams and the Forsaken Fortress second model, HD also gives Dragon Roost Island a second distant model, loaded until a story event flag (0x3908) is set and drawn with its own lighting.
+- Graphics: the draw also converts the material colour to floating point and writes it into the HD material's colour block.
