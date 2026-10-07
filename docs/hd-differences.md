@@ -3187,6 +3187,15 @@ Graphics: the HD cloth packet uses GX2 vertex buffers and shader uniforms, maint
 - Structure (middle range): The GameCube source separates status checks from the per-frame HUD execution routine. The corresponding HD entry identified by the legacy status-check label also performs the frame dispatch and pane transitions, so that label alone understates its scope. Pane-member positions differ between the two layouts. The verified range also includes resource setup, teardown, drawing, transition counters and probably HUD tuning-object constructors; the unnamed static helpers remain attributed by their bounded range. This finding covers the middle HUD slice, not the whole HUD translation unit.
 - Structure (trailing controllers): twelve entries update item pulses and particle positions, action indicators, lock-on health displays, magic and currency gauges, pane alpha and photo state. The item and magic controllers keep separate pending and displayed counts; bow animation uses a shared leading timer with per-slot pulse panes; resource strings are eight-byte SafeString objects. These are observations of the HD implementation, not established GameCube differences.
 - Structure (tail): five HD-local generated entries (0259CF60..0259D1B4): a factory that allocates a 0xC4-byte HUD object with its HD vtable, three deleting destructors and an empty virtual.
+
+### d_meter — HUD head helpers
+HD HUD head helpers update visibility and menu bytes and test, set or clear byte flags. Fade-out changes state 8 to 9, starts at counter 1 and returns one; fade-in changes state 0 to 7, starts at counter 0 and returns zero. Their running states ease toward a six-step boundary, reload the signed counter after the easing call, and advance to their terminal states.
+
+### d_meter — TU-local tail entries
+The five HD entries 0259CF60, 0259CFB4, 0259D10C, 0259D160 and 0259D1B4 complete the HUD tail. The factory uses a supplied object or requests 0xC4 bytes, calls the base constructor, then installs the HD vtable at 0x1004CBD8. Allocation failure returns null. The three deleting destructors call the base destructor with deletion disabled and free the original object only when the caller flags have bit 0 set. The final virtual is empty.
+
+These are HD TU-local generated entries rather than a wider SDK reconstruction. The qualified scope has no indirect calls or caller-local pointer objects; the two destructor arguments and allocation size are explicit, and clobbering remains active.
+
 ### d_vib_pattern — vibration patterns (2026-10-05)
 
 Structure: all 76 motor/camera shock and quake pattern records retain the GameCube values and eight-byte format in HD. The native shock and quake consumers identify the four tables. This data-only TU adds no callable function.
@@ -3717,6 +3726,68 @@ Graphics: the HD invisible-model controller builds packets for individual joints
 - Structure: the volcanic-ash mover keeps drifting ash and the settling-particle update in one entry (fifty settling slots visited in reverse) with a per-particle rotation phase and a distance fade; the drifting-spore (housi) mover uses 80-byte records, a separate packet fade and a combination of global wind, three sine phases and decaying point-wind velocity.
 - Structure: the wave mover contains sea-level handling for six stage cases, interior wind-angle overrides and three shoreline exclusion regions.
 - Structure: lens-flare motion copies the sun position into three initial slots and advances six further positions; snow setup selects stage-specific heap, archive and shader resources; thunder keeps near and far flash states, and its flash colour is kept as three 16-bit channels. Camera-relative weather placement uses explicit fused multiply-adds, which the reconstruction keeps.
+
+### d_kankyo_rain wind entry — wind lines and seabirds
+The HD wind entry also contains the seabird update. Its default line speed is 80 plus 96 times the camera displacement factor, with square-root displacement divided by 100 and capped at 1. Defaults use 2000 for the spawn range, vertical offset and phase advance; custom wind changes those controls, including phase advance 150. Thirty line slots and two bird slots retain their separate state transitions, ground queries, particle translation and fading. Trigonometric samples come from an interleaved sine/cosine table indexed by the unsigned angle shifted by three. These HD observations qualify the old GameCube structure used for orientation.
+
+The single entry passes 10000 generated inputs at seeds 1 and 7 with clobber-active packet controls, covering 142/148 blocks. Four gaps are impossible signed-angle fraction branches; the other two require static/current string aliasing or exhaustion of a terminated short name. The bounded mutation sample has 25 detected changes and one equivalent clamp boundary; 32 compile failures and two invalid variants receive no detection credit. Native rendered particle/resource behavior remains qualified.
+
+### d_kankyo_rain kazanbai movement — volcanic ash
+- Structure: HD keeps both drifting ash and the settling-particle update in one native entry. The settling loop initializes a signed countdown to 49 and visits fifty slots in reverse order.
+- Graphics: Ash uses a separate per-particle rotation phase and a distance-based fade; settling particles retain their own position and size updates. These follow the native HD body rather than assumed GameCube offsets.
+- Structure: The HD ground query occupies 84 bytes, and direction normalization uses a 24-byte double-precision temporary alongside separate 12-byte float vectors.
+
+### d_kankyo_rain housi movement — drifting weather particles
+- Structure: HD stores these particles in 80-byte records with a separate packet fade and signed active count; the native loop walks active records backwards. Its stack contains an 84-byte derived ground query alongside separate 12-byte vectors.
+- Graphics: Movement combines global wind, three sine phases and decaying point-wind velocity. Recentring uses a random box beyond the outer distance threshold and a direction shell nearer it; a wrapping 16-bit phase controls the fade target.
+- Structure: This single native entry was reconstructed from HD call and load order. No additional gameplay difference from GameCube is claimed from the structural comparison.
+
+### d_kankyo_rain cloud movement (2026-10-05)
+At HD 0256BB6C, native cloud state 0 falls through from initialization 0256BF54 into movement 0256BF58, whereas the matching GC cloud_shadow_move case 0 ends with a break. The HD tail computes the distance fade and stores alpha directly at 0256C7FC; the GC tail calls cLib_addCalc for alpha. HD size also reads the current view field +0xD4 at 0256C690 and caps its ratio at 1 before multiplying the size. These are confirmed source/instruction differences; no visual or gameplay effect is inferred.
+
+### d_kankyo_rain cloud motion — vrkumo_move
+The single HD entry 0256DDF8..<0256EF7C updates 100 cloud slots in the weather packet. The GC structure remains recognizable, but HD initialization immediately falls through to radial-wrap and motion handling in the same update. Its interleaved SinCos lookups quantize unsigned 16-bit angles by shifting three bits; the LinkRM offset is 0x4000, and saved yaw values at the 7→8 bucket boundary matter.
+
+HD uses sead SafeString virtual calls before bounded stage comparisons. It bypasses interior wind remapping in Name, applies the Siren height override in rooms 17 and 18, and adds an ADMumi height override of 48000. The Siren override constant is positive 14101 in HD. HD also advances the cloud-packet scalar at 0x11D4 by 100 each update. Its radial opacity interpolation and position updates use explicit fused operations; preserving multiply/load order matters with mocked clobbering and NaNs.
+
+The standalone reconstruction preserves all 8-byte strings and 12-byte vectors inside a 228-byte caller scratch frame. The actual empty SafeString virtual, stage-info getter and room-file getter receive complete live arguments. This entry covers the cloud motion only, not the neighboring wave initializer.
+
+### d_kankyo_rain wave movement — sea surface particles
+- Structure: The HD entry contains sea-level handling for six stage cases, interior wind-angle overrides and three shoreline exclusion regions. The native workspace includes 12-byte float vectors, a 24-byte double-precision direction temporary, 48-byte matrices and 8-byte string objects.
+- Graphics: Wave placement retains stage-dependent wind direction and shoreline strength tapering. These controls were matched to the native HD entry; no additional gameplay difference is inferred from GameCube structure alone.
+
+### d_kankyo_rain lens-flare drawing — HD packet geometry
+- Graphics: HD prepares sixteen triangular flare rays and nine textured quads in packet-owned vertex buffers. The GameCube implementation draws eight flare quads and a separate sixteen-part fan directly through GX.
+- Structure: The HD entry consumes positions from its second argument; it obtains colors, scales, materials and view transforms from the weather packets. The older matrix, color and image arguments are not read by this native entry.
+- Graphics: HD uses a shaped distance fade, color conversion into sixteen-byte material values, separate sprite color/size tables and alternating vertex-buffer selectors. Cache clearing and flushing happen around the populated buffers before packet submission.
+- Structure: Local vectors, matrices, projected-position data and color outputs fit within a 404-byte live workspace; register-save spill space is excluded.
+
+### d_kankyo_rain sun drawing — sun and moon quads
+- Graphics: HD builds expanded sun and moon quads in separate packet-owned double buffers, with two color/size passes for each. Geometry and texture coordinates are prepared before a dedicated submission helper. The GameCube implementation draws directly through GX.
+- Structure: The native HD entry retains only the supplied position from the older signature; view matrices, fog colors, materials and texture selection come from the environment and weather packets.
+- Graphics: Moon orientation uses camera-relative spherical angles, weekday texture selection and a mirrored second-half cycle. The sun size includes the lens-distance falloff and visibility contribution.
+- Structure: HD uses a 308-byte live workspace with distinct float vectors, matrices, string objects and four-byte colors; each expanded quad occupies 608 bytes.
+
+### d_kankyo_rain poison motion — poison_move
+The single HD entry 0256CA54..<0256DC04 retains the five room-specific poison patterns and 1,000-slot packet, but its table differs from GC: pattern 0 requests 600 particles and pattern 3 requests 700; pattern 2 has horizontal radius 1600, while pattern 3 uses base y=-1790 and size 110. The current-room selector can be overridden by the environment byte at 0x10A3 when it differs from 0xFF.
+
+HD circular opacity uses a fifth power of normalized radius, whereas the GC source repeatedly squares it to the sixteenth power. HD also corrects the general negative-z wrap to write z; the GC source writes x in that arm. The packet phase advances by 1.3 and wraps at 719. Point-wind acceleration and swirl use fused arithmetic and reload affected particle size after circular distance calls, preserving changes that callees may make.
+
+The separate reconstruction retains the native 600/700/1000 requests and the full 420-byte caller scratch frame, including five 48-byte pattern records and all 12-byte vector inputs/outputs. The point-wind call receives a full 12-byte output and 12-byte input. This entry covers the poison motion only, not the neighboring poison initializer.
+
+### d_kankyo_rain — ash drawing
+HD uses four offset copies for airborne ash in the special stage, with separate faded ground reflections and a smaller single copy for settled particles. The GC reference uses eight copies. Other stages use snow-style quads with packet-owned material channels and caller-flipped double buffers. HD emits compact 80-byte quads and retains a 464-byte caller workspace.
+
+### d_kankyo_rain cloud drawing — drawVrkumo
+The HD cloud renderer 02575B6C fixes its pass counter to 1 and executes a single pass with three texture layers. The GC source can select pass 0 when the projected sun is visible or the camera is aiming the pictograph box, then executes through pass 1. HD uses per-particle materials, shader uniform blocks and double-buffered 80-byte compact quads; the GC source submits immediate GX geometry. The HD packet retains 100 particles per layer and flushes 300 slots in each of two geometry groups after rendering.
+
+The reconstruction keeps the full 0x4C8-byte caller frame, including 196-byte view and 284-byte render-state objects, and supplies complete native import arguments. Its active-clobber fixture preserves only owned root/selector/buffer metadata; payloads and callee outputs remain mutable.
+
+### d_kankyo_rain — spray, poison, housi and shadow quads
+These HD weather renderers populate four 20-byte vertices in packet-owned double buffers, convert colors into material data and flip the geometry selector after flushing. Housi drawing retains two passes and clears 300 visibility flags per pass, while its second pass fades particles around player height. Cloud-shadow drawing packs only emitted quads and submits their count.
+
+### d_kankyo_rain — lens motion, snow setup and thunder
+HD lens-flare motion copies the sun position into three initial slots and advances six further positions with alternating spacing. Snow setup selects stage-specific heap, archive and shader resources, allocates the native packet and initializes 250 state bytes. Thunder movement keeps near and far flash states, reloads mutable state around callbacks and preserves the exact counter-ten and intensity-one transitions.
 
 ### d_scope (telescope message process) — verified, 2026-10-05
 - Removed: the GameCube telescope screen (scope overlay, button icons, wipe animation, message panes and their processing) is gone from this unit; the process profile only keeps five constant methods (create reports complete, the others report success). Probably the HD telescope (GamePad/gyro, see d_a_npc_ls1) is drawn by other code.
