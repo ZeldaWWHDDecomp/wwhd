@@ -81,7 +81,7 @@ git clone https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp port
 git -C port checkout df2cf51bd6d02e0b310d46a5da062693bac7314f
 
 # 2. this repository, copied over the port (replaces the port's older tools/verify)
-git clone https://github.com/ZeldaWWHDRecomp/ZeldaWWHDDecomp decomp
+git clone https://github.com/ZeldaWWHDDecomp/wwhd decomp
 rm -rf port/tools/verify
 cp -R decomp/wwhd_src port/wwhd_src
 cp -R decomp/tools/verify port/tools/verify
