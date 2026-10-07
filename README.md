@@ -69,7 +69,7 @@ No commercial use: there are no donations, sponsorships or paid builds of any ki
 
 The harness runs inside a checkout of the port, which provides the recompiler, the runtime headers
 and the game-extraction tool. This release was verified against **ZeldaWWHDRecomp commit
-`5482ee2551413e2807360c8fe942f0f830f1d456`** (v0.2.3). The port's own `tools/verify/` at that commit is
+`df2cf51bd6d02e0b310d46a5da062693bac7314f`** (v0.2.3). The port's own `tools/verify/` at that commit is
 an older copy of the harness; this repository's version replaces it.
 
 Requirements: Python 3, clang/clang++ with C++20, and what the port's README lists for extracting the
@@ -78,7 +78,7 @@ game (its "Requirements" section). Building the port itself is only needed for r
 ```sh
 # 1. the port at the tested commit
 git clone https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp port
-git -C port checkout 5482ee2551413e2807360c8fe942f0f830f1d456
+git -C port checkout df2cf51bd6d02e0b310d46a5da062693bac7314f
 
 # 2. this repository, copied over the port (replaces the port's older tools/verify)
 git clone https://github.com/ZeldaWWHDRecomp/ZeldaWWHDDecomp decomp
