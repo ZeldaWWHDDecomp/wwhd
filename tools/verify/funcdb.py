@@ -66,6 +66,15 @@ class GenIndex:
 def load_names(build):
     """address -> (demangled name, file, evidence), address -> GameCube mangled symbol"""
     names, gc = {}, {}
+    # Both tables are required: without wwhd_to_gc.tsv the GameCube signatures are missing, so argument and return
+    # widths silently fall back to full words and units fail (or pass) for the wrong reason (seen as d_a_kamome
+    # anm_init 295/1000 with a build/ symlink pointing at a missing file). Fail loudly instead.
+    for req in ("names.tsv", "wwhd_to_gc.tsv"):
+        if not os.path.exists(os.path.join(build, req)):
+            raise SystemExit("funcdb: %s is missing (or a dangling symlink). It is written by "
+                             "`python3 tools/decomp/match.py game/code/cking.rpx tww build/names.tsv` (together with "
+                             "wwhd_to_gc.tsv, coverage.tsv and regions.tsv), or copy/symlink an existing build/ "
+                             "directory." % os.path.join(build, req))
     p = os.path.join(build, "names.tsv")
     if os.path.exists(p):
         for line in open(p):

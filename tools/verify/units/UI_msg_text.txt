@@ -1,0 +1,158 @@
+src wwhd_src/d/hd_msg_window_base.cpp
+# Coherent window/message/input objects; finite typing budget avoids unbounded original loops.
+arg! * r3 536870912 536870912
+field * r3+0x118 u32 536879104 536879104
+field * r3+0x50 u32 0,1,2,3
+field * r3+0x54 u32 0,1,2,3
+field * r3+0x94 f32 0,0.25,0.75,1,1.5,4,16
+field * 2000222C u32 0,536887296
+field * 20004002 u8 0,1
+field * 200026AC s32 -1,0,1,2,30
+field * 101F4B5C u32 536895488 536895488
+field * 20006980 f32 0,0.25,1,4,16
+stable 101F4B5C 4
+
+field * r3+0x110 u8 0,1
+field * r3+0x111 u8 0,1
+field * r3+0x90 s32 -1,0,1,334,335,336
+field * r3+0xE8 u32 0,1,8,9,10,4294967295
+field * r3+0x98 s32 -1,0,1,334,335
+field * r3+0x9C s32 -1,0,1,334,335
+field * r3+0xA0 s32 -1,0,1,334,335
+field * r3+0xBC s32 -1,0,1,334,335
+field * r3+0xC0 s32 -1,0,1,334,335
+field * r3+0xC4 s32 -1,0,1,334,335
+field * r3+0xC8 s32 -1,0,1,334,335
+field * r3+0xE4 s32 -1,0,1,334,335
+field * r3+0xF4 s32 -1,0,1,2,3
+field * r3+0x54 u32 0,1,2,3,65536,131072,1048576,2097152,3145728
+field * 20002000 u32 0,7,10,14,21
+field * 20002658 u8 0,1
+field * 20002697 u8 0,1
+field * 20002698 u8 0,1
+field * 200026B4 s32 -1,0,1,2,30
+field * 200026B8 u32 0,1,2,16777216
+field * 20002650 u32 0,1
+field * 2000290D u8 0,1
+field * 2000290E u8 0,1
+ret 026FCB00 0,1,2,4,16
+ret 026FCEC8 0,1
+ret 0265233C 0,1
+ret! 025200D4 536903680 536903680
+field * 2000DBB6 u8 0,39
+field * 2000DC20 u8 0,1
+# Reviewed HD call arguments; make status core/enum and SE ID explicit.
+callee 025F74D0 r3=0 r4=0
+callee 025E1988 r3=0
+# The input predicate is pure, so preserve real input flags through the call.
+real 026FCEC8
+# Immutable stop tables configured before these updates.
+stable 20000098 80
+field * r3+0x98 s32 -2147483648,-1,0,1,2147483647
+field * r3+0x9C s32 -2147483648,-1,0,1,2147483647
+field * r3+0xA0 s32 -2147483648,-1,0,1,2147483647
+field * r3+0xBC s32 -2147483648,-1,0,1,2147483647
+field * 200026B8 u32 0,1,2,16777216
+field * 200026B7 u8 0,1
+field * 2000DBB7 u8 0,39,40
+# Misaligned singleton mutant must resolve to finite speed, rather than hang.
+field * 101F4B60 u8 0 0
+field * 00600980 f32 0 0
+# Render/status calls do not own the message wait timers or the window selection.
+# Preserve these values across opaque mocks while still comparing this unit's writes.
+stable 200026B4 4
+stable 200000F4 4
+# The play message-mode byte is read-only in these states (writes target other bytes).
+stable 2000DBB6 2
+field * r3+0xF8 u8 1 1
+
+# Live base-class vtable: slot +434 is text rebuild 026FF834.
+field * r3+0x4 u32 269529312 269529312
+stable 20000004 4
+stable 20000118 4
+stable 2000222C 4
+ret 02700958 0,1
+# Text rebuilding may decode wait tags. Supply coherent post-call message flags,
+# rather than letting unrelated random byte patterns hide neighboring-byte reads.
+mockglobal 026FF834 20002000 u32 0,7,10,14,21
+mockglobal 026FF834 20002658 u8 0,1
+mockglobal 026FF834 200026B8 u32 0,1,2
+mockglobal 026FF834 20002650 u32 0,1
+mockglobal 026FF834 20002697 u8 0,1
+mockglobal 026FF834 20002698 u8 0,1
+mockglobal 026FF834 20002699 u8 0,1
+mockglobal 025F74D0 20002697 u8 0,1
+mockglobal 025F74D0 20002698 u8 0,1
+mockglobal 025F74D0 20002699 u8 0,1
+
+# --- appended from UI_msg_base_b.txt: steering for the 13 hd_msg_window_base.cpp functions UI_msg_base_b added to this shared source ---
+
+
+# Additional functions share the existing text unit; its ten entries are regression controls.
+arg! 026FDEC0 r4 0x20010000
+arg! 026FDEE8 r4 0x20011000
+arg! 026FDEE8 r5 0x20012000
+arg! 026FDFE0 r4 0x20011000
+field * 20010000 s32 -1,0,1,2,3,2147483647,-2147483648
+field * 20011000 s16 -32768,-1,0,1,9,10,11,99,100,101,32767
+field * 20012000 u32 0,1,2,3,4,4294967295
+field 026FDEE8 r3+0xF4 u32 0,1,2,3
+field 026FDFE0 r3+0xF4 u32 0,1,2,3
+field * r3+0x5C u32 0,1452,7418
+field * r3+0x7C u32 0x20014000
+field * 20014044 u8 0 255
+field * 2000290F u8 0,1
+field * 20002910 u32 0,1,2
+field * 2000211C u32 0,1,2
+field * r3+0x8C s32 -2147483648,-1,0,1,2,2147483647
+field * 2000DB30 s8 -1,0,1,2,127,-128
+field * 2000DB62 s16 -1,0,1,2,32
+field * r3+0x50 u32 0,1,2,32,255
+field * r3+0x54 u32 0,1,2,3,65536,131072,1048576,2097152,3145728,32,4294967295
+field * 101F84DC u32 0x20016000
+field * 20016033 u8 0,1,2,32,255
+field * 1047B074 u32 0,262144
+ret 025DBB40 0,1
+# Part scheduling inputs: small live arrays, finite timelines and configuration enums.
+arg! 026F48A4 f1 0 8
+arg! 026F48A4 f2 0 8
+field * r3+0xCF4 u32 0x20020000
+field * r3+0xCF8 u32 0x20021000
+field * r3+0xD00 s32 0,1,2,3,4,5,6
+field * r3+0xD04 s32 -1,0,1,2,4
+field * r3+0xD08 s32 0,1,2,3,4
+field * r3+0xD0C s32 1,2,4,16
+field * r3+0xD10 u8 0,1
+field * r3+0xD14 u32 0,0x20022000
+field * r3+0xCFC f32 0,0.5,1,2,4
+field * 2002004C s32 -1,0,1,2,4,8388608
+field * 20020050 s32 0,1,2
+field * 20020054 u32 0,1,2,3,4
+field * 20020058 u32 0,1,2,3,4
+field * 2002005D u8 0,1
+field * 20020060 u32 0,1
+field * 20020068 u32 0x20023000
+field * 20023000 u32 0x20022000
+field * 20022024 f32 0,1,2
+field * 2002202C u32 0,1,2,3
+field * 20022014 u32 0x20024000
+field * 200240AC u32 0x02872BC4
+stable 20024000 256
+stable 20000CF4 8
+stable 20020000 112
+stable 20023000 4
+stable 20022014 4
+# Item callback cannot resize the configured item list during this traversal.
+stable 20000D00 4
+fret! 020198D8 0 4
+field * 20021000 s32 -1,0,1,2,3
+field * 20021004 s32 -1,0,1,2,3
+field * 20021008 s32 -1,0,1,2,3
+field * 2002100C s32 -1,0,1,2,3
+field * 20021010 s32 -1,0,1,2,3
+field * 20021014 s32 -1,0,1,2,3
+ret 026F48A4 0,1
+callee 026FE070 r4=4
+
+# Positive duration with high middle byte distinguishes signed misaligned reads.
+# Both Animator flag bits vary independently.

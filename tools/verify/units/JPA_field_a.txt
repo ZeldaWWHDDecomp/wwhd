@@ -1,0 +1,39 @@
+src wwhd_src/JSystem/JParticle/JPA_field_a.cpp
+# Pure matrix operation writes a 12-byte vector output.
+callee 028E8F64 r3=48 r4=12 r5=out12
+# Keep vector paths, flag combinations and velocity destinations well represented.
+field * r4+0x90 u16 0,1,2,3,4,5,6,7,8,16,32,64,96,120,256,258,511,65535
+field 02822B54 r4+0x94 u8 0,1,2,3,255
+field 02822B54 r5+0xCC u32 0,4
+# Exact fade-in boundary with both unconstrained and explicit rate values.
+arg 02822AC0 f1 0.0,0.5,1.0
+field 02822AC0 r4+0x80 f32 0.0,0.5,1.0
+field 02822AC0 r4+0x88 f32 0.0,0.25,2.0
+field 02822AC0 r4+0x4C f32 0.0,0.25,1.0,2.0
+# 2^-9 squared is the exact normalization threshold 2^-18.
+field 02823334 r4+0x20 f32 0.0,0.001953125,1.0,3.0
+field 02823334 r4+0x24 f32 0.0,1.0,3.0
+field 02823334 r4+0x28 f32 0.0,1.0,3.0
+field 02823334 r5+0x1C f32 0.0,1.0,3.0
+field 02823334 r5+0x20 f32 0.0,1.0,3.0
+field 02823334 r5+0x24 f32 0.0,1.0,3.0
+field 02823334 r5+0x28 f32 0.0,1.0,3.0
+field 02823334 r5+0x2C f32 0.0,1.0,3.0
+field 02823334 r5+0x30 f32 0.0,1.0,3.0
+# Air cone mixes unit-axis and off-axis cases; threshold1.5 detects reciprocal scale.
+# Normal field/fret escape retains unconstrained generated values.
+fret 028F37F0 1.0,1.0,1.0,0.5,2.0
+field 02822EC0 r4+0x20 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x24 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x28 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x38 f32 1.0,1.0,1.0,1.0,0.0,3.0
+field 02822EC0 r4+0x3C f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x40 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x2C f32 0.5,1.0,1.5,2.0,3.0
+field 02822EC0 r5+0x1C f32 1.0,1.0,1.0,1.0,0.0,3.0
+field 02822EC0 r5+0x20 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r5+0x24 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r5+0x28 f32 1.0,1.0,1.0,1.0,0.0,3.0
+field 02822EC0 r5+0x2C f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r5+0x30 f32 0.0,0.0,0.0,0.0,1.0,3.0
+field 02822EC0 r4+0x6C f32 0.0,1.0,3.0

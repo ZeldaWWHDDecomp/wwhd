@@ -1,0 +1,30 @@
+src wwhd_src/JSystem/JParticle/JPA_calcvis_b.cpp
+# Bounded contexts and immutable vtable identities; object fields still clobber.
+arg! * r4 0x51000000 0x51000000
+arg! * r5 0x52000000 0x52000000
+field * 0x5100000C u32 0x53000000 0x53000000
+field * 0x51000010 u32 0x54000000 0x54000000
+field * 0x51000014 u32 0x55000000 0x55000000
+field * 0x51000020 u32 0x56000000 0x56000000
+field * 0x5100002C u32 0x57000000 0x57000000
+stable 0x51000000 0x30
+field * 0x54000000 u32 0x1017B36C 0x1017B36C
+field * 0x55000000 u32 0x1017AD90 0x1017AD90
+stable 0x54000000 4
+stable 0x55000000 4
+field * 0x53000194 f32 -32,-1,0,1,2,3,7,15,30,31,32,33,255,256
+field * r5+0x78 f32 -32 256
+field * r5+0x80 f32 -1,0,0.25,0.5,0.75,1,2
+field * r5+0xB0 f32 -2 2
+field * r5+0xAC f32 -2 2
+ret! 0284B2C4 2 32
+ret! 0284B2DC 0 31
+fret 028481F8 0,0.5,1
+fret 02848204 0,0.5,1
+fret 02848210 0 1
+fret 0284821C 0 1
+fret 02848264 -2 2
+fret 0284826C -2 2
+fret 02848238 -2 2
+fret 02848244 -2 2
+fret 02848250 -2 2

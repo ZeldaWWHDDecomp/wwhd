@@ -1,0 +1,3 @@
+# Exactly the unit's 18 addresses; getter names confirmed
+# from the binary data offsets and the GHS dynamics/key vtable slot order.
+src wwhd_src/JSystem/JParticle/JPA_blocks_a.cpp

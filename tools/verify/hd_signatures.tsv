@@ -21,3 +21,4 @@ wwhd	name	hd_signature	note
 025CB77C	vibration randombit	(static s32, s32)	HD reads incoming r3/r4 only; GC long expansion incorrectly includes r5. Live-in analysis agrees: r3-r4.
 0258FD94	dMap_c::point2GridAndLocal	(static f32 x, f32 y, s8* gx, s8* gy, s16* lx, s16* ly)	HD reads integer inputs r3-r6 and f1/f2 only; r7 is defined before its conversion scratch use, no fifth output pointer.
 0258F978	dMap_c::setCollectPoint	(static eight integer inputs r3-r10, coordinates f1-f3)	HD saves r3-r10 and f1-f3; no caller-stack argument load. GC method signature adds a phantom ninth integer stack word.
+02839C28	JStudio::math::getTransformation_SRxyzT	(Mtx out, const Vec* scale, const Vec* rot, const Vec* trans)	namespace function, no this: the GC matcher treats JStudio::math as a class and adds a phantom r7; reads r3-r6 only (livein 0x78)

@@ -1,0 +1,50 @@
+src wwhd_src/JSystem/JStudio/JST_timeline.cpp
+# Parser output records: exact 16-byte HD layout, source parser holds a 4-byte raw pointer.
+callee 0283C9C4 r3=4 r4=out16
+callee 0283CA0C r3=4 r4=out16
+mockfield 0283C9C4 r4+0 u8 0,1,2,3,4,128,255
+mockfield 0283C9C4 r4+4 u32 0,1,2,3,0x800000,0xFFFFFF,0x010001,0x020002,0x030004
+mockfield 0283C9C4 r4+8 u32 0x53000000,0x53000020
+mockfield 0283C9C4 r4+12 u32 0x53000010
+mockfield 0283CA0C r4+0 u32 0,1,2,3,128,129,130,256,0xFFFFFFFF
+mockfield 0283CA0C r4+12 u32 0x53000010
+# Bounded array, zero through three entries, retaining all age boundary inputs.
+arg! 0283A48C r3 0x50000000
+field 0283A48C 50000000 u32 0x51000000
+field 0283A48C 50000004 u32 0,1,2,3
+# Bounded JGadget sentinel list with zero, one or two objects.
+arg! 0283D514 r3 0x50000000
+field 0283D514 50000010 u32 0x50000010,0x51000008
+field 0283D514 51000008 u32 0x50000010,0x51000108
+field 0283D514 51000108 u32 0x50000010
+stable 50000010 4
+stable 51000008 4
+stable 51000108 4
+# Finite object forward paths; the opaque sequence step consumes the next record.
+arg! 0283CF90 r3 0x52000000
+arg! 0283CF90 r4 0,1,2,4,16
+field 0283CF90 52000010 u32 0,0x54000000
+field 0283CF90 54000050 s32 -1,0,1
+field 0283CF90 52000018 u16 0,1,32768,65535
+field 0283CF90 5200001A u8 0,1
+field 0283CF90 5200001C s32 -1,0,1
+field 0283CF90 52000024 u32 0,0x53000000
+field 0283CF90 52000028 u32 0,1,2,4,16
+field 0283CF90 5200002C u32 0,1,2,4,8
+stable 52000010 32
+stable 54000050 4
+mockfield 0283CDE0 r3+0x24 u32 0
+mockfield 0283CDE0 r3+0x28 u32 0,1,2,4
+arg 0283CD24 r4 0,1,2,3,128,129,130,255,256
+arg 0283CCBC r4 0,1,2,3,4,255
+# The mapped update wrapper has no GC signature. Running its reference body
+# exposes forwarded f1 through the real update_time result in value memory.
+real 02839D38
+field 0283A48C 51000008 u32 0,0x02839DB4,0x02839DA0,0x02839DF4
+field 0283A48C 5100001C u32 0,0x02839DB4,0x02839DA0,0x02839DF4
+field 0283A48C 51000030 u32 0,0x02839DB4,0x02839DA0,0x02839DF4
+field 02839D38 r3+8 u32 0,0x02839DB4,0x02839DA0,0x02839DF4
+# Exercise significant high wait bytes, including consume-exactly boundaries.
+arg! 0283CF90 r4 0,1,2,4,16,0x01000000,0x01000001,0xFFFFFFFF
+field 0283CF90 52000028 u32 0,1,2,4,16,0x01000000,0x01000001
+real 02839DB4

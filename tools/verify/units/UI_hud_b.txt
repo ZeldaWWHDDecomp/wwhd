@@ -1,0 +1,46 @@
+src wwhd_src/d/hd_screen_shortcut.cpp
+src wwhd_src/d/hd_screen_swim_time.cpp
+src wwhd_src/d/hd_screen_telescope.cpp
+# The real scaling wrapper preserves cM_rndF's valid [0,limit) result domain.
+real 020198D8
+fret! 02019788 0 0.9999999403953552
+ret! 025200D4 0x31000000 0x31000000
+field * 0x31005b4c s32 -1,0,1,2,4,5,10,20
+field * 0x31005b50 s32 -1,0,1,2,4,5,10,20
+field * 0x31005bb0 u8 0,1
+field * 0x31005b2c u32 0x32000000
+arg! 026E6774 r3 0x30000000
+arg! 026E6970 r3 0x30000000
+arg! 026E6BF8 r3 0x30000000
+arg! 026E8050 r3 0x30000000
+arg! 026E83C4 r3 0x30000000
+field * 0x30000044 u32 0x33000000
+field * 0x330000d4 u32 0x34000000
+field * 0x30000004 u32 0x35000000
+field * 0x3500008c u32 0x028484C0
+field 026E6774 r3+0x8c s32 -1,0,1,2,3,4,9,10,19,20,39,40,2147483647
+field 026E6774 r3+0x90 s32 -1,0,1,2,10,20
+field 026E6774 r3+0x94 s32 -1,0,1,2,3
+field 026E6774 r3+0xa7 u8 0,1
+field 026E6970 r3+0x98 u32 0,0,0,1,2,10,4294967295
+field 026E8050 r3+0x5c s32 -1,0,3,4,5,6,8,9,10,2147483647
+field 026E83C4 r3+0x5c s32 -1,0,3,4,5,6,8,9,10,2147483647
+stable 0x30000004 4
+stable 0x3500008c 4
+stable 0x30000044 4
+stable 0x330000d4 4
+stable 0x30000050 24
+field 026E6970 r3+0xa0 u8 0,1
+field 026E6970 r3+0x50 u32 0,0x36000000
+field 026E6970 r3+0xa1 u8 0,1
+field 026E6970 r3+0x54 u32 0,0x36001000
+field 026E6970 r3+0xa2 u8 0,1
+field 026E6970 r3+0x58 u32 0,0x36002000
+field 026E6970 r3+0xa3 u8 0,1
+field 026E6970 r3+0x5c u32 0,0x36003000
+field 026E6970 r3+0xa4 u8 0,1
+field 026E6970 r3+0x60 u32 0,0x36004000
+field 026E6970 r3+0xa5 u8 0,1
+field 026E6970 r3+0x64 u32 0,0x36005000
+# Distinguish the first signed blink-period guard at its negative boundary.
+field 026E6774 r3+0x8c s32 -2,-1,0,1,2,3,4,9,10,19,20,39,40,2147483647

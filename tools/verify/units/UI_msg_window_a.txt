@@ -1,0 +1,48 @@
+src wwhd_src/d/hd_screen_msg_only.cpp
+src wwhd_src/d/hd_screen_msg_window_main.cpp
+# Live distinct window/message/core/text fixtures; dispatch metadata remains immutable.
+arg! * r3 0x30000000
+field * r3+0x4 u32 0x31000000
+stable 31000000 1280
+field * 31000434 u32 0x026FCEC8
+field * 31000444 u32 0x026FCEC8
+field * 310004A4 u32 0x026FCEC8
+field * 310004B4 u32 0x026FCEC8
+field * 310004D4 u32 0x026FCEC8
+field * r3+0x118 u32 0x32000000
+field * r3+0xB0 u32 0x32000000
+field * 101F4B5C u32 0x33000000
+field * 3200022C u32 0,0x34000000
+field * 34000002 u8 0,1
+field * 33000980 f32 0,0.25,0.5,1,2,4
+field * r3+0x94 f32 0,0.25,0.5,0.75,1,1.5
+field * r3+0x50 u32 0 3
+field * r3+0x54 u32 0 3
+field * 320006AC s32 -1,0,1,2,10
+field * 320006B4 s32 -1,0,1,2,10
+field * 32000000 u32 0,7,10,14
+field * 32000658 u8 0,1
+field * 32000697 u8 0,1
+field * 32000698 u8 0,1
+field * 33000928 u8 0,1
+field * r3+0x90 s32 0,1,333,334,335,336
+field * r3+0xE8 u32 0,1,8,9,10,4294967295
+field * r3+0xA4 u32 0,1,8,9,10,4294967295
+ret! 025200D4 0x35000000
+field * 35005BBA u8 0,39,40
+field * 35005C20 u8 0,1
+ret 026FF668 0 1
+ret 026FCEC8 0 1
+# The typing loop needs a bounded speed after a callback too; metadata pointers must survive calls.
+stable 101F4B5C 4
+stable 30000004 4
+stable 30000118 4
+stable 300000B0 4
+stable 33000980 4
+stable 3200022C 4
+# Close-state manager singleton is live, rather than the image's uninitialised null.
+field * 101D5FE8 u32 0x36000000
+stable 101D5FE8 4
+# Accessor returns a coherent current message kind; vary the neighbouring byte independently.
+mockglobal 025200D4 35005BBA u8 0,39,40
+mockglobal 025200D4 35005BBB u8 0,39,40
