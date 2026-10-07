@@ -23,8 +23,8 @@ the way (see [HD vs. GameCube](#hd-vs-gamecube)).
 
 | Path | Contents |
 |---|---|
-| `wwhd_src/` | the decompiled source: 22,562 verified functions in 1,032 source files, plus 294 headers with the WWHD structure layouts and bindings |
-| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`) and the 1,078 unit specifications (`units/`: which source files form a unit, input steering) |
+| `wwhd_src/` | the decompiled source: 22,846 verified functions in 1,076 source files, plus 298 headers with the WWHD structure layouts and bindings |
+| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`) and the 1,100 unit specifications (`units/`: which source files form a unit, input steering) |
 | `tools/decomp/` | the function-name matcher against zeldaret/tww (the same as in the port) |
 | `tools/true60/` | name-based surveys used by the port's 60 fps work (the same as in the port) |
 | `docs/` | HD vs. GameCube differences, unit notes, review notes, matcher findings |
@@ -44,12 +44,17 @@ verified, only together with the recompiled game that the port builds from your 
 | HD-only code (GamePad UI, resource and pack loading, input, software keyboard, text layout, Miiverse) | 1,307 |
 | Zelda's own sound control | 180 |
 | **Game code** | **22,068 of 22,215 (99.3%)** |
-| Library units verified along the way (JSystem, sead, SDK adapters) | 494 |
+| HD UI per-step code outside that count (HUD, GamePad map screens, minigame HUD, message windows, UI parts) | 127 |
+| Library units verified along the way (JSystem including JParticle and JStudio, nw::lyt, sead, SDK adapters) | 651 |
 
 The 147 game-code functions left out are small helpers of Nintendo's sead library that the compiler
 copied into each unit (string classes, destructors, delegate thunks). Like the ~17,500 functions of the
 generic libraries (JSystem, sead, NW4F, the Cafe SDK, the C runtime), they run as recompiled code in
 the port and contain nothing specific to Wind Waker.
+
+Added since the first release: the JParticle calculation side (emitter, particle, fields, block getters,
+calc visitors), the JStudio timeline and adaptors, the nw::lyt animation frame step (157 library
+functions), and 127 per-step functions of the HD UI screens (284 functions in 22 units).
 
 ## Disclaimer
 
@@ -151,8 +156,8 @@ in place of the originals; that build setup is not part of this release.
 
 ## HD vs. GameCube
 
-While verifying, every unit is compared with the GameCube version. 752 units have been compared;
-the differences are summarised in [docs/hd-vs-gc-summary.md](docs/hd-vs-gc-summary.md) — new HD
+While verifying, every unit is compared with the GameCube version. 774 units have been compared;
+the differences of the first 752 are summarised in [docs/hd-vs-gc-summary.md](docs/hd-vs-gc-summary.md) — new HD
 features (Tingle Bottle, Swift Sail, Picto Box selfies, Hero Mode), gameplay changes, 64 GameCube
 bugs fixed in HD, and what was removed (Tingle Tuner, blob shadows, debug code). The full list, one
 entry per unit, is in [docs/hd-differences.md](docs/hd-differences.md); a few longer unit write-ups
