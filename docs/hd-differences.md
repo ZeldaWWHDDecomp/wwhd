@@ -12,7 +12,7 @@ Categories: **Gameplay** (behaviour players can notice), **Graphics** (rendering
 **Fix** (GameCube bug or crash fixed in HD), **Structure** (layout, signatures, code moved/removed),
 **Removed** (features absent in HD), **HD-only** (code with no GameCube counterpart).
 
-**Snapshot:** 2026-10-06, 752 units compared.
+**Snapshot:** 2026-10-07, 774 units compared.
 
 ## Entry format
 
@@ -3739,3 +3739,109 @@ Graphics: the HD invisible-model controller builds packets for individual joints
 - Graphics: both distance limits are 100,000 units larger than on GameCube, and the show/hide distance is measured from the camera position (as in the European GameCube version), so the distant island models stay visible much further out (probably for the HD draw distance).
 - Gameplay: besides Windfall's lighthouse beams and the Forsaken Fortress second model, HD also gives Dragon Roost Island a second distant model, loaded until a story event flag (0x3908) is set and drawn with its own lighting.
 - Graphics: the draw also converts the material colour to floating point and writes it into the HD material's colour block.
+
+### JPA_blocks_b (dynamics archive scalar getters) — 2026-10-07
+- Structure: the 16 scoped getters retain the GameCube archive-data layout and the pointer at object offset +4. The HD linker order differs, so the initial scoping names were shifted; identities were confirmed using vtable 1017B5E8 and the binary field loads.
+- Types: HD start-frame and lifetime getters sign-extend their signed 16-bit fields into r3; the CC0 GameCube header declares unsigned return types for those two getters. The reconstruction preserves the full HD return register. Scalar float getters retain the same fields. No 60 Hz behavior changes.
+
+### JPA_blocks_a (key and dynamics block getters) — 2026-10-07
+- Structure: the scoped key and dynamics getters keep the GameCube JPA1 resource layout and behavior. The key block stores a resource pointer and a separate key-data pointer; dynamics reads flags, emitter vectors, volume properties, and initial velocities from the resource data.
+- Structure: HD emits dynamics getter bodies in a different address order from the virtual declaration order. The vtable confirms that the apparent volume/frame getter addresses in the initial scope table were partly misidentified; this is an identification correction, not a behavior change. Vector getters read all components before writing the output, preserving overlapping-source behavior and floating-point bit patterns. No timing or 60 Hz changes were made.
+
+### JPA_field_b (vortex, convection, random, drag, spin and manager walks) — 2026-10-07
+- Structure: field-data members shift down four bytes from the GameCube header (base-field pointer at +0, velocity at +0x14, work vectors at +0x20/+0x2C/+0x38, status at +0x90). The list node stays at data+4; manager walks use the node next pointer at +0xC. Vtable entries have eight-byte strides.
+- Calculation: the scoped fields keep the GameCube algorithms, including thresholded normalization and the emitter-owned LCG at +0x1EC. HD scalar instructions fuse multiply-add/subtract operations, which the reconstruction preserves. Matrix helpers remain calls to the original functions. No 60 Hz conversion.
+- Verification domain: live field and particle allocations are aligned and distinct. Finite list topology and dispatch metadata remain stable across opaque calls, while mutable data and particles still clobber. Normal NaN tolerance applies; early unaligned random pointers exposed payload differences across partial words and are retained as a qualification.
+
+### JPA_emitter_calc (emitter calculation and volume sampling) — 2026-10-07
+
+Structure / HD-only: WWHD retains the GameCube JPA1 emitter and volume-sampling design, including its private random stream. Emitter calculation adds separate deletion and particle-clear countdowns, and termination waits two passes after an empty emitter becomes eligible for deletion. The larger circle and sphere methods still implement the corresponding fixed-interval subdivision and density shaping. This unit preserves the original per-pass behavior; no 60 Hz conversion is included.
+
+### JPA_particle (particle initialization, motion and lists) — 2026-10-07
+
+Structure / HD-only: the motion prefix retains the GameCube JPA1 layout and algorithms. HD adds an owning emitter pointer and GPU bookkeeping after the old particle prefix. Initialization clears GPU counters, delay and hidden state, optionally obtains a slot for selected shape types, then performs GPU setup, the initialization callback and GPU updates in that order. Deleting an individual particle marks it hidden and delays its release for two calculation passes; a separate HD helper releases its fourteen GPU buffers and returns it to the vacant list. Bulk deletion additionally drains two deferred pointer vectors and updates emitter countdown flags. The emitter-owned random stream, fused arithmetic and thresholded normalization remain unchanged in behavior; no 60 Hz conversion is included.
+
+
+### JST_timeline (2026-10-07)
+
+Structure: the scoped HD JStudio timeline retains the GameCube sequence, wait, suspension and reserved-paragraph behaviour. The object control/flag/sequence/wait/status fields are four bytes earlier; the HD object virtual table pointer is at +0x30 and the adaptor pointer at +0x34. Control list links embed the object at node minus eight. Value records remain 20 bytes; age advances with unsigned saturation, and value evaluation uses the control’s f64 seconds-per-frame at +0x58. The larger sequence-dispatch body preserves the template operations, including signed 24-bit offsets and reserved data/ID payload forwarding. No 60 Hz conversion was made. All 11 functions pass 10k seeds 1/7 with 100/100 blocks.
+
+### JPA_calcvis_b (alpha, texture animation and child fades) — 2026-10-07
+
+Structure / Graphics: these eleven visitors retain the GameCube JPA1 algorithms. Particle draw parameters are inline at particle +0x8C. The five scoped texture visitors are emitter overloads: they use emitter tick and update the draw object, while alpha and child fades update particle parameters. HD preserves integer-age wrapping and table-based sine lookup, with scalar fused arithmetic and eight-byte virtual entries. No 60 Hz conversion is included. Verification uses aligned distinct live objects and stable getter dispatch metadata; mutable particle data remain subject to opaque-call changes.
+
+### JPA_calcvis_a (scale and colour visitors) — 2026-10-07
+
+- **Structure:** The HD draw context carries the clipboard pointer that the GameCube template accesses through a static. Scale ramps, speed scaling, repeat/reverse timing and emitter colour-frame selection preserve the template behaviour; emitter draw-colour storage uses different offsets.
+- **Structure:** Binary and visitor-table checks identify 028363DC as the emitter draw callback visitor, and 02836F20/02836F7C as the emitter colour overloads. Their tentative scoping labels were misleading; the exact requested addresses remain unchanged.
+- **Structure:** The longer unsigned repeat conversion handles the upper half of the unsigned integer range explicitly. This is a compiler conversion sequence, with no observed extra gameplay rule.
+- **Verification:** All19 functions pass10000 generated inputs at seeds1/7,45/45blocks. Bounded400 mutation sample:144detected,30equivalent within live-object/getter identity assumptions,226compile-invalid; no open survivors. No60Hz changes.
+
+### LYT_animframe (Animator and Layout frame stepping) — 2026-10-07
+
+HD-only / Structure: GameCube used J2D, so these two NintendoWare functions have no GameCube implementation template. Binary reconstruction shows frame and speed fields at +0xC/+0x24, a play-mode field at +0x28 and per-update event flags at +0x2C. Each update clears the three event bits, advances once, then clamps, wraps once or reflects once at an endpoint. Layout walks its animator list before visiting parts through virtual calls. Existing per-pass behavior is preserved, including zero-speed and unordered comparisons; no 60 Hz conversion is included.
+
+
+### JST_adaptors (2026-10-07)
+
+Structure: all twelve scoped sound, particle and JStage adaptor functions retain the GameCube update/fade operations. HD expands float-to-unsigned fade durations into explicit conversions around 2^31, including the original unordered-comparison behaviour; sound prepare support is an inline high-ID-bit test. The particle callback updates the HD emitter translation, rotation matrix, duplicated scale, colours and draw status fields, including the group-dependent Y sign and parent-node matrix path. Actor, camera and light updates use HD virtual slots and the control transform matrix at +0x98. Game-side setters/getter are used only as verification mock targets, not new decompiled scope. All12 pass10k seeds1/7,98/98blocks; mutation204detected/24scoped-equivalent/172compile-invalid/no timeouts. No60Hz conversion.
+
+### JPA_math_drawcalc (math helpers and draw initialization) — 2026-10-07
+
+Structure / Graphics: the scoped math, rotation, color inheritance and visitor calculations retain the GameCube JPA1 algorithms. The HD draw context and visitor arrays use different offsets. Both initialization functions add texture-descriptor caching: they compare selected descriptor fields, copy the descriptor when needed or refresh its image fields, then cache the texture index and emitter generation. Extra textures use separate slots. The previously unidentified 0282DDE4 helper binds resource texture-state fields and resets related cached state; it is called by both initializers. Its original symbol name is unknown. Emitter RNG order, fused arithmetic, integer wrapping and unordered-comparison behavior are preserved; no 60 Hz conversion is included.
+
+
+### UI_minigame_hud (2026-10-07)
+
+HD-only / Structure: these eight screen functions have no GameCube implementation template. Battleship and Cannon reveal array entries, falling back to the first slot when the requested index is outside the stored count; Battleship also refreshes its display after advancing the second counter. BoatRace keeps its unsigned timers and plays sounds at roll counter values zero and twenty, with the latter gated by mode two. RupySwordCounter approaches the game target one unit per call and caps upward motion at 999. The two display helpers construct short wide-character formatting buffers on the original frame offsets. All operations retain their original per-call behavior; no 60 Hz conversion is included.
+
+### JPA_field_a (base, gravity, air, magnet and Newton fields) — 2026-10-07
+
+Structure / Calculation: the scoped fields retain GameCube JPA1 fade, velocity accumulation, gravity, cone-limited air, magnet and Newton algorithms. HD field-data members shift down four bytes; flags sit at +0x90 and velocity selection at +0x94. The gravity calc entry is a four-byte tail branch to the base velocity calculation. Scalar fused operations, strict normalization thresholds, unordered comparisons and bit-preserving vector copies are retained. Matrix transformation remains an external helper. No 60 Hz changes are included. The reconstruction was finished with fresh verification and stronger mixed-axis air-cone steering. Survivor equivalence claims assume ordinary distinct live field, particle and emitter-info storage; scratch-stack footprint is not claimed.
+
+### UI_msg_text — HD message-window typing and wait states (2026-10-07)
+
+HD-only: these ten functions belong to the replacement message-window system, with a fractional character accumulator, held-button acceleration, a show-all trigger and separate pause and wait timers. Stop-point array access falls back to element zero for an out-of-range index. Wait completion is tested before the timer decrement, preserving the original one-step boundary. Two functions initially described as frame-cue states are the two-choice and three-choice selection updates: their comparison against 39 tests a message-mode byte, and their sounds follow selection changes or confirmation. The scope contains no GameCube counterpart and makes no timing conversion.
+
+
+### UI_hud_a (2026-10-07)
+
+HD-only / Structure: eleven binary-reconstructed functions cover prompt timing, two sparkle slots, heart display updates, and two boss-eye animation timers. CommandA changes state on the call after its timer reaches zero; CommandGuide changes state on the decrement-to-zero call and records its two flags. ControlWindOK copies a 40-byte input event before testing its byte timer and completion flag. DungeonKey chooses one inactive sparkle slot, then clears slots whose animation ended. HeartAll separately approaches the saved heart count with an eight-call delay and the saved capacity by one per call, updating the selected heart index with the original unsigned arithmetic. Boss-eye timers re-arm using bounded random ranges. No GameCube template applies to these screen functions, and no 60 Hz changes are included. Verification covers100/111blocks; the eleven uncovered blocks are fixed-loop or range-excluded gaps.
+
+### UI_hud_b (Shortcut, SwimTime and Telescope) — 2026-10-07
+
+HD-only / Structure: these screen functions have no GameCube implementation template. Shortcut handlers advance a40-byte entry cursor; one advances three entries. SwimTime combines meter blink pacing, six random flash panes and a global remaining-time value at play+0x5B4C. The screen’s +0x44 member is a layout pointer. Telescope advances signed counters and changes states at threshold5/10, updating message status bytes. Scanner labels describing equality cues or a play+0x48AC counter omitted those distinctions. Original arithmetic, random calls, state/sound ordering and per-pass behavior are preserved; no60Hz conversion is included. Verification names nine unreachable RNG/fallback or contradictory empty coverage edges under the bounded random postcondition.
+
+### HD map icon updates (UI_map_icons, 2026-10-07)
+
+These twelve functions belong to the HD GamePad map icon implementation; no GameCube template was used. Binary inspection identifies a two-dimensional distance-limited chase helper, a viewport bounds predicate, signed grid-cell matching and cell-relative coordinate helpers, and two paired pane translation/visibility updates. The byte at pane offset 0x44 contains visibility and transform flags, rather than a frame counter. The two map-coordinate variants read distinct cell and position slots. This changes the preliminary scanner descriptions; no frame-rate conversion was made. Both10k seeds pass all83blocks; mutation fixtures cover exact distance thresholds and map bounds.
+
+### UI_msg_window_a (2026-10-07)
+
+HD-only MsgOnly and second MsgWindowMain per-step states (12 scoped entries), reconstructed
+from the binary without SDK sources. The inline typing rate/pause/show-all and state/wait
+logic remain at original30Hz behaviour. MsgOnly and Main use different message/index/progress
+field offsets. 026B80F8 advances the stop index at+A4 and copies message color; sound-kind39
+selects sound0x880 rather than being a frame cue. Both10k seeds pass;103/105blocks with two
+dominated compiler tails. Mutation400 resolved185 detected/12 scoped equivalents,
+201 compile-invalid/2 nonterminating excluded. No60Hz conversion.
+
+
+### UI_msg_scroll_seq (2026-10-07)
+
+HD-only / Structure: these twelve replacement-screen functions have no GameCube template. The keyboard helper computes cursor geometry from pane position and half-width/height with an inset; it does not smooth a previous position. MsgWindowScroll selects up to three lines, uses slot zero for out-of-range text/pane indices, and moves its scroll offset by ten units per call with line-boundary adjustments. Its opening and closing states drive the message alpha and status. SequenceWindow initiates save/load operations, waits while the manager is busy, and gates completion with the original timer; the observed comparisons against two and three are manager states, not frame cues. BtnSequence advances a forty-byte entry cursor. Original per-call behaviour is preserved; no60Hz conversion. Four fallback/empty coverage blocks are unreachable.
+
+
+### UI_gamepad_map (2026-10-07)
+
+HD-only: these fourteen functions belong to the replacement GamePad map screens and have no GameCube template. Binary inspection identifies MapAreaNow's apparent repeated float steps as a seven-by-seven grid rebuild: it computes unscaled and pane-scaled cell rectangles and attaches resource indices. Its discovery function rebuilds the count of discovered cells. LinkPos similarly constructs marker positions from pane dimensions, rather than approaching an old position. The shared map-display helper approaches a two-dimensional target with a proportional step bounded by maximum and minimum distances, and returns the remaining distance. Its inlined square root keeps the reciprocal estimate in double precision and rounds the second multiply operand as PowerPC does.
+
+DungeonMap clamps its pane rectangle to the output dimensions and handles touch dragging or stick scrolling. Map_00's position helper calls the approach helper using temporary vectors, then copies the target vector into the selected cell; that original choice is retained. MenuMap's draw state retains its animation counters, sound cues and completion checks. Only original per-call behavior is reconstructed here; the later timing conversion remains separate. Fixtures use valid panes and distinct grid cells; the grid owner's pointer array and geometry/resource metadata are stable because its setup helpers only write cell metadata. The six uncovered blocks are fixed-loop index fallbacks.
+
+### UI_msg_base_b (2026-10-07) — HD-only message and UI part steps
+
+The message base uses signed 16-bit numeric selection steps of one, ten or one hundred, wait timers, stop-point events and one-shot input transitions. Message mode 39 and layout identifiers 1452/7418 are identifiers rather than frame cues. The UI-part scheduler supports sequential, reversed, centre-out, paired and indexed item orders, with fixed, quadratic or random delays. Its single-item virtual call resolves to the nw::lyt Animator start method. The small wait screens decrement signed timers; the progress display moves its shown value by one toward the play value and separately tracks the save-derived target. These are HD-only screen paths without a GameCube implementation template. Original timing and behavior are preserved; no 60 Hz conversion is included.
+
+### UI_msg_event (event-window melody and typing states) — 2026-10-07
+
+HD-only / Structure: these sixteen functions have no GameCube implementation template. Two helpers clamp melody and pane-table indices; three wrappers dispatch through the pane array with its slot-zero fallback. EventFrame initialization builds cumulative beat lengths, and its updates age shown beats and compare player notes with melody data. Completion compares the last completed beat index, rather than its animation age, against the expected sequence length. Input debounce, sounds, message status and typing progress retain the original call ordering. The short wait uses signed threshold five; the close-wait decrement belongs to an external object, and stop-point advancement copies the packed message color into its pane. These binary findings refine the preliminary scanner descriptions. No60Hz conversion is included; six coverage edges are unreachable.
