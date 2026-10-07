@@ -1,16 +1,16 @@
 # Wind Waker HD vs. GameCube — summary of the differences
 
 Found while verifying the decompilation: every unit was compared with the GameCube decompilation
-(zeldaret/tww). This is a summary in our own words of 752 compared units (snapshot 2026-10-06).
+(zeldaret/tww). This is a summary in our own words of all 774 compared units (snapshot 2026-10-07).
 Statements marked "probably" are interpretations; everything else is what the code shows. The full
 list, one entry per unit, is in [hd-differences.md](hd-differences.md).
 
 | Category | Entries |
 |---|---:|
-| Structure (layout, compiler output, code split differently) | 665 |
+| Structure (layout, compiler output, code split differently) | 694 |
 | Gameplay | 271 |
-| Graphics | 255 |
-| HD-only (code with no GameCube counterpart) | 150 |
+| Graphics | 264 |
+| HD-only (code with no GameCube counterpart) | 160 |
 | Fixes (GameCube bugs fixed in HD) | 65 |
 | Removed | 46 |
 
@@ -118,3 +118,74 @@ Princess Zelda, GPU vertex buffers instead of GameCube display lists for cloth, 
 the boomerang's trail and every weather effect (rain, snow, ash, mist, clouds, sun, moon and lens
 flare, whose geometry also changed), and replacement textures in a few places. Distant islands
 switch on and off at once instead of fading.
+
+Weather in detail: the HD weather packets own their GPU geometry, textures and shaders and release
+them in their destructors (the GameCube packet destructors are empty). The sky clouds always render in
+a single pass with three texture layers; the GameCube pass that depended on sun visibility or on
+aiming the Picto Box is never selected. The lens flare is sixteen triangular rays plus nine textured
+quads instead of eight quads plus a sixteen-part fan, and the sun and moon are expanded quads in
+double buffers with two colour/size passes each. Airborne volcanic ash is drawn as four offset copies
+instead of eight. In the cloud motion, the "Siren" height override applies to rooms 17 and 18
+(GameCube: room 17 only) with the opposite sign (effect not checked), and the "ADMumi" stage gets an
+extra height override; cloud shadows set their alpha directly instead of easing it. The precipitation
+renderer only rebinds a texture when its descriptor has changed.
+
+## HD screens: HUD, GamePad map and message windows
+
+Apart from the HUD unit, the per-step code of the HD 2D screens is HD-only and has no GameCube
+template; it was reconstructed from the binary alone. It keeps the original per-call (30 Hz) timing;
+none of it contains a 60 Hz conversion.
+
+- **HUD:** in the HUD unit (d_meter), the function at the place of the GameCube status check also runs
+  the per-frame HUD dispatch and pane transitions; the unit keeps separate pending and displayed
+  counts for items and magic, and decides which item icons stay visible from HUD flags, the current
+  scene and the recollection state. Its fade helpers ease towards a six-step boundary. Further screen
+  code handles button prompts, key sparkles, the hearts (the shown count follows the saved one after
+  an eight-call delay, the shown capacity follows the saved one by one per call), boss-eye animations,
+  shortcuts, the swim timer (meter blinking and six random flash panes) and the telescope counters.
+- **GamePad map:** the area map is rebuilt as a seven-by-seven grid of cells with resource indices and
+  a count of discovered cells, and Link's marker is placed from the pane dimensions. A shared helper
+  moves towards a target with a proportional step bounded by a minimum and a maximum distance. The
+  dungeon map is dragged by touch or scrolled with the stick; map icons use a distance-limited chase,
+  a viewport bounds check and grid-cell matching.
+- **Minigame HUD:** Battleship and the cannon game reveal entries from arrays, the boat race plays
+  sounds at fixed roll-counter values, and the rupee/sword counter moves towards its target by one
+  unit per call, capped at 999.
+- **Message windows and text typing:** a fractional character accumulator types the text, holding a
+  button speeds it up, and there are a show-all trigger and separate pause and wait timers. The
+  windows also cover two- and three-choice selections, a scroll window that moves by ten units per
+  call over up to three lines, numeric input in steps of one, ten or one hundred, the melody window
+  that compares the player's notes with the melody beat by beat, and the save/load window that waits
+  while the save manager is busy. Out-of-range indices fall back to the first slot.
+
+## Engine libraries
+
+- **JParticle (particle system):** the GameCube JPA1 algorithms are kept: the fields (gravity, air,
+  magnet, Newton, vortex, convection, random, drag, spin), emitter volume sampling with its private
+  random stream, the scale, colour, alpha and texture visitors and the resource block getters. Field
+  data sits four bytes lower and the draw context uses other offsets. New in HD: each particle has an
+  owning emitter pointer and GPU bookkeeping, and its initialisation clears the GPU counters and then
+  runs GPU setup, the initialisation callback and a GPU update. Deletion takes two steps: a deleted
+  particle is first hidden and only released two calculation passes later, when an HD helper frees its
+  fourteen GPU buffers and returns it to the free list; emitters get separate deletion and
+  particle-clear countdowns, and an empty emitter is terminated two passes after it becomes eligible
+  for deletion. Draw initialisation caches texture descriptors and only copies a descriptor when
+  selected fields differ (otherwise it just refreshes the image fields); extra textures have their own
+  slots.
+- **JStudio (cutscene engine):** the timeline keeps its sequence, wait and suspension behaviour, with
+  the object fields four bytes earlier. The adaptors keep their sound, particle and stage update and
+  fade operations, but the fade durations are converted from float to unsigned with explicit handling
+  around 2^31; the particle adaptor writes the HD emitter's translation, rotation matrix, scale,
+  colours and draw status, and actor, camera and light updates go through HD virtual slots.
+- **NintendoWare layout (nw::lyt) instead of J2D:** the HD 2D screens are NW4F layouts. An animator
+  advances its frame once per update, clears its three event bits and then clamps, wraps once or
+  reflects at an end; a layout walks its animator list before its parts. The HD layout subclass
+  creates its panes as HD wrapper classes, and a UI-part scheduler starts the animations of a group of
+  items in sequential, reversed, centre-out, paired or indexed order with fixed, quadratic or random
+  delays.
+- **Model and animation helpers (m_Do_ext):** animation blending reads packed 48-byte records and
+  writes 56-byte results, with separate Euler-to-matrix, quaternion-blend and Euler-to-quaternion
+  paths; the matrix-to-quaternion conversion is a separate function that uses the hardware
+  reciprocal-square-root estimate. Line ribbons (with a taper or per-point widths and camera-facing
+  normals) are drawn through line materials; textured lines use a second shader path.
+- None of these library units shows a 60 Hz timing change; they keep the original per-pass behaviour.
