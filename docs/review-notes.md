@@ -90,7 +90,7 @@ undefined behaviour the candidates cannot reproduce, and harness artefacts. One 
 
 ## 7. Inferred TU attribution: m_Do_DVDError (025E2114) and m_Do_Reset (025F295C)
 
-- **Where**: two standalone static initializers verified with the player-npc unit.
+- **Where**: two standalone static initializers (units m_Do_DVDError and m_Do_Reset).
 - **Assumed / unproven** (2026-10-04): the TU names come from HD adjacency only (025E2114 follows the
   m_Do_audio companions 025E20F0/20F8/2100; 025F295C follows the printf initializer 025F28C8 and precedes vibration
   025F29F0). Behaviour is verified; only the file names are inferred.
