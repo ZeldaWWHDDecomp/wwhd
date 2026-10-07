@@ -165,6 +165,11 @@ decompilation).
 
 ## License
 
-> **TODO — License: to be decided by the maintainer.**
+The decompiled source code, the verification tools and the documentation in this repository are
+released under [CC0 1.0 Universal](LICENSE) (public domain dedication), like the GameCube
+decompilation of The Wind Waker ([zeldaret/tww](https://github.com/zeldaret/tww)) and other zeldaret
+projects.
 
-Until a license is chosen, no license is granted: all rights are reserved by the contributors.
+CC0 covers only the contents of this repository. It does not cover the game itself or any Nintendo
+data, which are not included here: you need your own legally obtained copy of the game. The port
+runtime this repository builds against has its own license (see the port repository).
