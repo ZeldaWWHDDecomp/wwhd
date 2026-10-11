@@ -146,7 +146,7 @@ fret 02560E08 0 360
 
 field 0257ACAC 0x50001092 u8 0,1
 
-# Lead-reviewed GX2DrawIndexedEx scalars; r6 remains the index-data pointer.
+# Reviewed GX2DrawIndexedEx scalars; r6 remains the index-data pointer.
 callee C0006178 r3=0 r4=0 r5=0 r7=0 r8=0
 
 # Large precipitation packet is a9.2MB allocated object, aligned32 and disjoint from the callee stack.

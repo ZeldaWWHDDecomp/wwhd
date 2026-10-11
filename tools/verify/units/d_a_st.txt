@@ -148,7 +148,7 @@ field 024972A4 r3+0x3D5 s8 -1,0,1,2
 field 024972A4 r3+0x2018 s8 0,10
 field 024972A4 0x5100009C f32 0,1,6,10,11,15,21,24,31
 
-# Lead-approved Delete reset global input steering (2026-10-04).
+# Approved: Delete reset global input steering (2026-10-04).
 field 024957B4 0x101D0E78 u8 0,1
 field 024957B4 0x101D0E79 u8 0,1
 

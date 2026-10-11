@@ -120,7 +120,7 @@ callee 028E8E64 r3=12 r4=out12
 
 # Expose ground-filter initialization that a zero scratch stack hides.
 stackfill periodic
-# Lead periodic support officially verified: 73 functions x10000; GroundCross
+# Periodic support verified: 73 functions x10000; GroundCross
 # 84-byte input snapshot kills the missing mbLinkThrough initialization mutant.
 
 # Real stage names at the play object's start stage name (play+0x5134) for the functions that read it:

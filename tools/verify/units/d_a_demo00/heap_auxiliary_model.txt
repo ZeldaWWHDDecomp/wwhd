@@ -112,7 +112,7 @@ field 02120248 0x65000004 u32 0x1016E72C
 # Relative offsets resolve to bounded current image strings; no callback preservation.
 field 0211F35C 0x5E000004 u32 0x100,0xB200D81C,0xB200D7B4,0xB200D7C0
 
-# Lead accepted draw-buffer snapshots at updateDL entry (2026-10-04).
+# Accepted draw-buffer snapshots at updateDL entry (2026-10-04).
 observe 025E2DE0 104B4634 8
 observe 025E54D8 104B4634 8
 

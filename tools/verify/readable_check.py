@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Acceptance check for a readability rewrite.
 
-usage: readable_check.py TARGET... [--ref REF] [-n 10000] [--seeds 1,7] [--no-baseline]
+usage: readable_check.py TARGET... --ref REF [-n 10000] [--seeds 1,7] [--no-baseline]
                          [--allow-spec-change] [--keep] [--static-only]
 
 TARGET: a unit name (tools/verify/units/<unit>.txt), or a source file (wwhd_src/...cpp). Every unit
@@ -183,7 +183,8 @@ def ref_export(sha):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("targets", nargs="+")
-    ap.add_argument("--ref", default=os.environ.get("READABLE_REF", "decomp-actors"))
+    ap.add_argument("--ref", default=os.environ.get("READABLE_REF"), required="READABLE_REF" not in os.environ,
+                    help="git ref of the original (pre-readability) sources to compare against (or READABLE_REF)")
     ap.add_argument("-n", type=int, default=10000)
     ap.add_argument("--seeds", default="1,7")
     ap.add_argument("--no-baseline", action="store_true", help="skip the coverage comparison with REF")
@@ -238,7 +239,7 @@ def main():
         path = "tools/verify/units/%s.txt" % s
         rtext = ref_file(ref_sha, path)
         if rtext is None:
-            problems.append("%s: spec not in %s (new spec: lead review)" % (s, a.ref))
+            problems.append("%s: spec not in %s (new spec: review it before accepting)" % (s, a.ref))
             continue
         if rtext != texts[s] and renames and map_spec(rtext, renames) == texts[s]:
             print("spec ok (src renamed per readable_renames.tsv): %s" % s)
@@ -247,7 +248,7 @@ def main():
             if a.allow_spec_change:
                 print("NOTE " + msg + " (allowed; list the change in the review note)")
             else:
-                problems.append(msg + " (rerun with --allow-spec-change; the lead reviews spec changes)")
+                problems.append(msg + " (rerun with --allow-spec-change after reviewing the spec change)")
         missing = [f for f in spec_srcs(texts[s]) if not os.path.exists(os.path.join(ROOT, f))]
         if missing:
             problems.append("%s: source missing in HEAD: %s%s" % (s, " ".join(missing), " (renamed? map it in readable_renames.tsv and update the src line)"
@@ -324,7 +325,7 @@ def main():
     print("readable_check: %s  %s  %d specs, %d function runs ok of %d (n=%d, seeds %s), coverage %d/%d%s%s" % (
         verdict, head + ("+dirty" if dirty else ""), len(chosen), totals["ok"], totals["funcs"], a.n, a.seeds,
         totals["cov"], totals["nb"], (" (ref %d)" % totals["refcov"]) if refroot else " (no baseline)",
-        "" if not dirty else "  [uncommitted changes: commit, then re-run for the board evidence]"))
+        "" if not dirty else "  [uncommitted changes: commit, then re-run for a clean result]"))
     sys.exit(0 if not problems else 1)
 
 

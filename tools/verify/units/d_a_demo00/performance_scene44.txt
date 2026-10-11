@@ -119,6 +119,6 @@ field 021219B8 r3+0x3D8 u32 3
 field 021219B8 0x1047E6BC u32 0x34340000
 field 021219B8 r4+4 u16 0x40,0x44
 
-# Lead accepted draw-buffer snapshots at updateDL entry (2026-10-04).
+# Accepted draw-buffer snapshots at updateDL entry (2026-10-04).
 observe 025E2DE0 104B4634 8
 observe 025E54D8 104B4634 8

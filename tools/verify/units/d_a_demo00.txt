@@ -117,6 +117,6 @@ field 02120248 0x65000004 u32 0x1016E72C
 # about half of the inputs
 ret 025200D4 0x4E000000 0x4E000000  # play object pinned so its stage name can be steered
 fieldstr 0212070C 0x4E005134 8 @stages,"GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","GTower","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji","ji"
-# Lead accepted draw-buffer snapshots at updateDL entry (2026-10-04).
+# Accepted draw-buffer snapshots at updateDL entry (2026-10-04).
 observe 025E2DE0 104B4634 8
 observe 025E54D8 104B4634 8

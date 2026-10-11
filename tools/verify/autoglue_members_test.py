@@ -119,11 +119,11 @@ def run_cases(tmp):
 
     def want(s, why):
         if s not in out:
-            fails.append("T-02 %s: missing `%s`" % (why, s))
+            fails.append("case 02: %s: missing `%s`" % (why, s))
 
     def never(s, why):
         if s in out:
-            fails.append("T-02 %s: unexpected `%s`" % (why, s))
+            fails.append("case 02: %s: unexpected `%s`" % (why, s))
 
     want("WWHD_GLUE_FUNC(0x02019424, void, heap);", "static init: no this")
     want("WWHD_GLUE_FUNC(0x02019430, void*, alignment, size);", "static memalignB: no this")
@@ -134,23 +134,23 @@ def run_cases(tmp):
     want("gabi::call<int>(0x02019600, wwhd_p0)", "static ext binding: no this")
     want("gabi::call<void>(0x0201945C, this, wwhd_p0)", "member ext binding keeps this")
     never("VERIFY(0x02019424, &cMl::init)", "static as member pointer")
-    want("WWHD_GLUE_FUNC(0x0201060C, void, this, &p0, &p1);", "T-03 reference parameters as addresses")
-    want("WWHD_GLUE_FUNC(0x02010630, f32, this, &p, n, wwhd_p2);", "T-03 const reference, value, pointer")
-    want("gabi::call<void>(0x02019700, this, &out, &wwhd_p1)", "T-03 ext reference parameters as addresses")
+    want("WWHD_GLUE_FUNC(0x0201060C, void, this, &p0, &p1);", "case 03: reference parameters as addresses")
+    want("WWHD_GLUE_FUNC(0x02010630, f32, this, &p, n, wwhd_p2);", "case 03: const reference, value, pointer")
+    want("gabi::call<void>(0x02019700, this, &out, &wwhd_p1)", "case 03: ext reference parameters as addresses")
     want("static gabi::HostFn wwhd_ext_fn_0207FE14((const void*)static_cast<BOOL (*)(fopAc_ac_c* a_this)>(&useHeapInit), 0x0207FE14);",
-         "T-07 callback passed by name")
-    never("wwhd_ext_fn_0207FE20", "T-07 ext without the flag")
-    want("BOOL useHeapInit(fopAc_ac_c* a_this) { return gabi::call<BOOL>(0x0207FE14, a_this); }", "T-07 binding itself")
+         "case 07: callback passed by name")
+    never("wwhd_ext_fn_0207FE20", "case 07: ext without the flag")
+    want("BOOL useHeapInit(fopAc_ac_c* a_this) { return gabi::call<BOOL>(0x0207FE14, a_this); }", "case 07: binding itself")
     want('VERIFY_NAMED(0x0245A028, static_cast<void (daRaceItem_c::*)(cXyz*)>(&daRaceItem_c::set_mtx), "&daRaceItem_c::set_mtx(cXyz*)");',
-         "T-11 overload declared in the class")
+         "case 11: overload declared in the class")
     want('VERIFY_NAMED(0x0245A100, static_cast<BOOL (daRaceItem_c::*)(int) const>(&daRaceItem_c::Delete), "&daRaceItem_c::Delete(int) const");',
-         "T-11 const overload")
-    want('VERIFY_NAMED(0x0245A300, static_cast<int (*)(int, int)>(&cnt), "cnt(int, int)");', "T-11 free overload marked twice")
-    want("static gabi::HostFn wwhd_fn_0245A200((const void*)static_cast<int (*)(int)>(&cnt), 0x0245A200);", "T-11 HostFn of an overload")
-    want("VERIFY(0x02019500, &cMl::member);", "T-11 single declaration stays plain")
+         "case 11: const overload")
+    want('VERIFY_NAMED(0x0245A300, static_cast<int (*)(int, int)>(&cnt), "cnt(int, int)");', "case 11: free overload marked twice")
+    want("static gabi::HostFn wwhd_fn_0245A200((const void*)static_cast<int (*)(int)>(&cnt), 0x0245A200);", "case 11: HostFn of an overload")
+    want("VERIFY(0x02019500, &cMl::member);", "case 11: single declaration stays plain")
     statics = autoglue.static_members("cMl", SRC_STATIC, "wwhd_src/t/cml.cpp")
     if statics != {"init", "memalignB", "twice"}:
-        fails.append("T-02 static_members: %r" % sorted(statics))
+        fails.append("case 02: static_members: %r" % sorted(statics))
     return fails, 21
 
 
@@ -185,20 +185,20 @@ def enum_cases(tmp):
     for name, want in cases:
         got = r(name)
         if got != want:
-            fails.append("T-12 resolve %s: want %r got %r" % (name, want, got))
+            fails.append("case 12: resolve %s: want %r got %r" % (name, want, got))
     try:
         r("DUP")
-        fails.append("T-12 ambiguous DUP not reported")
+        fails.append("case 12: ambiguous DUP not reported")
     except autoglue.GlueError:
         pass
     for leaf, size, want in [("leaves_particle::ID_AK_SN_FALLENLEAFFAN00", 2, b"\x82\x2f"),
                              ("(u16)daX_c::PROC_A + 1", 2, b"\x00\x08"), ("0x10", 1, b"\x10")]:
         got = autoglue.encode_leaf(leaf, "int", size, None, {}, None, r)
         if got != want:
-            fails.append("T-12 encode %s: want %r got %r" % (leaf, want, got))
+            fails.append("case 12: encode %s: want %r got %r" % (leaf, want, got))
     try:
         autoglue.encode_leaf("UNKNOWN_ID", "int", 2, None, {}, None, r)
-        fails.append("T-12 unknown name not reported")
+        fails.append("case 12: unknown name not reported")
     except autoglue.GlueError:
         pass
     return fails, len(cases) + 5

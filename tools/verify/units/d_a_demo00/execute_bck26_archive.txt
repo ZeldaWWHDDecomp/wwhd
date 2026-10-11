@@ -128,7 +128,7 @@ field 02120CBC r3+0x3AC s16 0
 field 02120CBC r3+0x3AE s16 -1
 field 02120CBC r3+0x3B0 u32 0x021219B8
 
-# Lead accepted draw-buffer snapshots at updateDL entry (2026-10-04).
+# Accepted draw-buffer snapshots at updateDL entry (2026-10-04).
 observe 025E2DE0 104B4634 8
 observe 025E54D8 104B4634 8
 

@@ -128,6 +128,6 @@ field 0211F35C 0x5E000104 u32 0x626C6163
 field 0211F35C 0x5E000108 u32 0x6B5F706C
 field 0211F35C 0x5E00010C u32 0x616E6500
 
-# Lead accepted draw-buffer snapshots at updateDL entry (2026-10-04).
+# Accepted draw-buffer snapshots at updateDL entry (2026-10-04).
 observe 025E2DE0 104B4634 8
 observe 025E54D8 104B4634 8
