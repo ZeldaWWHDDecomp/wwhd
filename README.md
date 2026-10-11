@@ -19,12 +19,16 @@ The GameCube decompilation [zeldaret/tww](https://github.com/zeldaret/tww) is th
 names and structure; everything is checked against the HD game itself, so HD changes are found along
 the way (see [HD vs. GameCube](#hd-vs-gamecube)).
 
+The source is written in the readable style of zeldaret/tww: real classes and members, named fields
+and constants, structured control flow and descriptive names (see
+[docs/readability-style.md](docs/readability-style.md)).
+
 ## What is in this repository
 
 | Path | Contents |
 |---|---|
-| `wwhd_src/` | the decompiled source: 22,846 verified functions in 1,076 source files, plus 298 headers with the WWHD structure layouts and bindings |
-| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`) and the 1,100 unit specifications (`units/`: which source files form a unit, input steering) |
+| `wwhd_src/` | the decompiled source: 22,846 verified functions in 1,076 source files, plus 1,021 headers with the WWHD classes, structure layouts and bindings |
+| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`), the readability checks (`readable_check.py`, `readable_lint.py`), the model-data extraction (`assets.py`, `assets.txt`) and the 1,100 unit specifications (`units/`: which source files form a unit, input steering) |
 | `tools/decomp/` | the function-name matcher against zeldaret/tww (the same as in the port) |
 | `tools/true60/` | name-based surveys used by the port's 60 fps work (the same as in the port) |
 | `docs/` | HD vs. GameCube differences, unit notes, review notes, matcher findings |
@@ -36,25 +40,32 @@ verified, only together with the recompiled game that the port builds from your 
 
 ### Status
 
+The game has 39,713 functions (`cking.rpx`, USA). **22,846 of them are decompiled and verified**:
+
 | Area | Verified functions |
 |---|---:|
 | Actors (enemies, NPCs, objects, bosses) | 14,581 |
 | Link (player actor) | 1,046 |
 | Engine and systems (camera, collision, stages, events, environment, weather, save data, menus, effects, …) | 4,954 |
-| HD-only code (GamePad UI, resource and pack loading, input, software keyboard, text layout, Miiverse) | 1,307 |
+| HD-only code (resource and pack loading, input, software keyboard, text layout, parts of the HD UI) | 1,434 |
 | Zelda's own sound control | 180 |
-| **Game code** | **22,068 of 22,215 (99.3%)** |
-| HD UI per-step code outside that count (HUD, GamePad map screens, minigame HUD, message windows, UI parts) | 127 |
 | Library units verified along the way (JSystem including JParticle and JStudio, nw::lyt, sead, SDK adapters) | 651 |
 
-The 147 game-code functions left out are small helpers of Nintendo's sead library that the compiler
-copied into each unit (string classes, destructors, delegate thunks). Like the ~17,500 functions of the
-generic libraries (JSystem, sead, NW4F, the Cafe SDK, the C runtime), they run as recompiled code in
-the port and contain nothing specific to Wind Waker.
+- **The game code that comes from the GameCube version is complete:** 22,068 of its 22,215
+  functions (99.3%). The rest are small per-unit copies of library helpers.
+- **The HD-only game code is in progress.** Most of the new HD code (the sea chart and dungeon map,
+  pause menus, HUD, GamePad screens, Picto Box, Miiverse, title and ending, minigames) is about
+  5,400 further functions. They are being decompiled now, in the same readable style and with the
+  same verification.
+- **Not planned for now:** the generic libraries (sead, agl, NW4F, most of JSystem, the Cafe SDK and
+  the C runtime, about 11,400 functions). They run as recompiled code in the port and contain
+  nothing specific to Wind Waker.
 
-Added since the first release: the JParticle calculation side (emitter, particle, fields, block getters,
-calc visitors), the JStudio timeline and adaptors, the nw::lyt animation frame step (157 library
-functions), and 127 per-step functions of the HD UI screens (284 functions in 22 units).
+**Readability pass (October 2026).** The whole decompilation was rewritten from a form close to the
+machine code into the tww style. Every rewritten unit was checked against the version before it
+(same results on 10,000 inputs on two seeds, coverage not lower), and at the end the complete tree
+was verified once more: all 1,100 unit specifications, 29,929 function runs per seed on seeds 1 and
+7, all passing, with coverage identical to the version before the rewrite.
 
 ## Disclaimer
 
@@ -63,10 +74,15 @@ sponsored by Nintendo**. *The Legend of Zelda* and *The Wind Waker* are trademar
 trademarks belong to their respective owners and are used here only to name the game this project
 is about.
 
-This repository contains **no game code (no machine code, no recompiled code), no assets, no game
-data and no keys**. The recompiled original, the RPX image, function names derived from the game and
-recorded inputs are all produced locally from your own copy and stay on your machine (they are
-git-ignored). You need your own legally obtained copy of the game to build or verify anything.
+This repository contains **no game code (no machine code, no recompiled code), no game assets
+(models, textures, sounds, text) and no keys**. Like zeldaret/tww, the source contains the small data
+tables the code itself uses (for example math tables and animation or parameter tables); model data
+that the renderer consumes (vertex positions, texture coordinates, display lists) is not included but
+generated from your own copy at build time (`tools/verify/assets.py`, the same approach as tww's
+asset extraction). The recompiled original, the RPX image, the generated model data, function names
+derived from the game and recorded inputs are all produced locally from your own copy and stay on
+your machine (they are git-ignored). You need your own legally obtained copy of the game to build
+or verify anything.
 
 No commercial use: there are no donations, sponsorships or paid builds of any kind.
 
@@ -107,8 +123,9 @@ python3 tools/verify/mutate.py d_a_kamome --n 1000 --max 200   # mutation test o
 ```
 
 The first run of `verify.py` also writes `build/verify/image.bin` (the RPX sections, which the
-harness reads for constants and vtables), `build/verify/livein.tsv` and `build/verify/frames.tsv`; all
-of it is derived from your game and stays in `build/`. The output is one line per function:
+harness reads for constants and vtables), `build/verify/livein.tsv`, `build/verify/frames.tsv` and the
+generated model-data headers in `build/verify/include/assets/` (from `tools/verify/assets.txt`); all of
+it is derived from your game and stays in `build/`. The output is one line per function:
 
 ```
 addr      function                         generated   recorded coverage  first difference
