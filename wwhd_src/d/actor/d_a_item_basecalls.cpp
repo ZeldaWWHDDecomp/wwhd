@@ -1,18 +1,15 @@
-/**
- * d_a_item_basecalls.cpp (WWHD)
- * daItemBase_c methods as guest calls, for the d_a_item verification unit (the verified
- * implementations are in d_a_itembase*.cpp, unit d_a_itembase).
- *
- */
+// Item-base methods imported by field, special-event and shop item actors.
+// Implementations belong to d_a_itembase; this unit only binds their guest calls.
 #include "d/actor/d_a_itembase.h"
 
-/* (not WWHD_FUNC by name: these are not verified here, and mutate.py must not mutate them) */
-#define GUEST_CALL(addr, ...) WWHD_FUNC(addr, __VA_ARGS__)
-
-BOOL daItemBase_c::DeleteBase(const char* resName) { GUEST_CALL(0x02183788, BOOL, this, resName); return FALSE; }
-void daItemBase_c::animPlay(f32 a, f32 b, f32 c, f32 d, f32 e) { GUEST_CALL(0x021837B0, void, this, a, b, c, d, e); }
-void daItemBase_c::hide() { GUEST_CALL(0x021842B8, void, this); }
-void daItemBase_c::show() { GUEST_CALL(0x021842C8, void, this); }
-bool daItemBase_c::chkDraw() { GUEST_CALL(0x021842D8, bool, this); return false; }
-void daItemBase_c::changeDraw() { GUEST_CALL(0x021842E4, void, this); }
-void daItemBase_c::setLoadError() { GUEST_CALL(0x02184350, void, this); }
+// HD: retain the original guest ABI, including all five animation speeds.
+// No verified function registrations belong to this binding translation unit.
+/* WWHD glue
+ext 02183788 BOOL daItemBase_c::DeleteBase(const char* resName)
+ext 021837B0 void daItemBase_c::animPlay(f32 brk1Speed, f32 brk2Speed, f32 btk1Speed, f32 btk2Speed, f32 bckSpeed)
+ext 021842B8 void daItemBase_c::hide()
+ext 021842C8 void daItemBase_c::show()
+ext 021842D8 bool daItemBase_c::chkDraw()
+ext 021842E4 void daItemBase_c::changeDraw()
+ext 02184350 void daItemBase_c::setLoadError()
+*/

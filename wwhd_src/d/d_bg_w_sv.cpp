@@ -1,190 +1,235 @@
-#include "gabi.h"
+/** Saved-vertex world collision correction. */
+#include "d/d_bg_w_sv.h"
+#include <cmath>
 
-u32 dBgWSv_Construct(u32 self) {
-    WWHD_FUNC(0x024F5A18, u32, self);
-    if (!self) self = gabi::call<u32>(0x0273AD10, 0xC4);
-    if (self) {
-        gabi::call<void>(0x024F23F4, self);
-        gmem_st32(self + 0xC0, 0);
-        gmem_st32(self + 4, 0x100445D0);
-        gmem_st32(self + 0xBC, 0);
+static const f32 normalEpsilon = 0.000003814697265625f;
+static const f32 weightMin = 0.0f;
+static const f32 weightMax = 1.0f;
+static const u32 headerPiMinBits = 0xC0490FDB;
+static const u32 headerPiMaxBits = 0x40490FDB;
+// HD: saved-vertex world vtable copy.
+enum : u32 { savedVertexVtable = 0x100445D0 };
+
+/* 024F5A18 */
+// HD: GHS allocation and explicit vtable/flag initialization.
+static dBgWSv *dBgWSv__ct(dBgWSv *object) {
+    if (object == NULL)
+        object = (dBgWSv *)operator_new(sizeof(dBgWSv));
+    if (object != NULL) {
+        constructBaseWorld(object);
+        object->mBackVtx = NULL;
+        object->__vtbl = savedVertexVtable;
+        object->mSvFlag = 0;
     }
-    return self;
+    return object;
 }
-VERIFY(0x024F5A18, dBgWSv_Construct);
 
-BOOL dBgWSv_Set(u32 self, u32 data, u32 flags) {
-    WWHD_FUNC(0x024F5A78, BOOL, self, data, flags);
-    if (gabi::call<BOOL>(0x0200A030, self, data, 0x63, 0)) return 1;
-    gmem_st32(self + 0xBC, flags);
-    if (flags & 1) return 0;
-    u32 collision = gmem_ld32(self + 0x94);
-    u32 vertices = gabi::call<u32>(0x0273ADAC, gmem_ld32(collision) * 12);
-    gmem_st32(self + 0xC0, vertices);
-    return vertices == 0;
+/* 024F5A78 */
+BOOL dBgWSv::Set(BgSvData *data, u32 flags) {
+    if (SetBaseBackground(this, data, MOVE_BG_e | NO_CALC_VTX_e | GLOBAL_e | UNK40_e, NULL))
+        return 1;
+    mSvFlag = flags;
+    if (flags & NO_CRR_POS)
+        return 0;
+    BgSvData *collision = pm_bgd.get();
+    cXyz *vertices = (cXyz *)operator_new_array((u32)collision->m_v_num * sizeof(cXyz));
+    mBackVtx = vertices;
+    return vertices == NULL;
 }
-VERIFY(0x024F5A78, dBgWSv_Set);
 
-void dBgWSv_CopyBackVtx(u32 self) {
-    WWHD_FUNC(0x024F5B08, void, self);
-    u32 dest = gmem_ld32(self + 0xC0);
-    if (!dest) return;
-    u32 source = gmem_ld32(self + 0x90);
-    if (!source) return;
-    u32 collision = gmem_ld32(self + 0x94);
-    if ((s32)gmem_ld32(collision) <= 0) return;
+/* 024F5B08 */
+void dBgWSv::CopyBackVtx() {
+    cXyz *dest = mBackVtx.get();
+    if (dest == NULL)
+        return;
+    cXyz *source = pm_vtx_tbl.get();
+    if (source == NULL)
+        return;
+    BgSvData *collision = pm_bgd.get();
+    if ((s32)collision->m_v_num <= 0)
+        return;
     u32 index = 0;
-    u32 offset = 0;
     while (true) {
-        u32 x = gmem_ld32(source + offset);
-        u32 input = source + offset;
-        dest += offset;
-        gmem_st32(dest, x);
-        gmem_st32(dest + 4, gmem_ld32(input + 4));
-        gmem_st32(dest + 8, gmem_ld32(input + 8));
-        collision = gmem_ld32(self + 0x94);
+        dest[index].copy(source[index]);
+        collision = pm_bgd.get();
         ++index;
-        s32 count = (s32)gmem_ld32(collision);
-        offset += 12;
-        if ((s32)index >= count) return;
-        source = gmem_ld32(self + 0x90);
-        dest = gmem_ld32(self + 0xC0);
+        s32 count = collision->m_v_num;
+        if ((s32)index >= count)
+            return;
+        source = pm_vtx_tbl.get();
+        dest = mBackVtx.get();
     }
 }
-VERIFY(0x024F5B08, dBgWSv_CopyBackVtx);
 
-BOOL dBgWSv_CrrPosWork(u32 self, u32 pos, u32 v0, u32 v1, u32 v2) {
-    WWHD_FUNC(0x024F5B78, BOOL, self, pos, v0, v1, v2);
-    u32 o0 = v0 * 12, o1 = v1 * 12, o2 = v2 * 12;
-    u32 back = gmem_ld32(self + 0xC0);
-    f32 z0 = gabi::load<f32>(back + o0 + 8);
-    f32 x0 = gabi::load<f32>(back + o0);
-    f32 bz = gabi::load<f32>(back + o1 + 8) - z0;
-    f32 bx = gabi::load<f32>(back + o1) - x0;
-    f32 cx = gabi::load<f32>(back + o2) - x0;
-    f32 cz = gabi::load<f32>(back + o2 + 8) - z0;
-    f32 epsilon = gabi::load<f32>(0x100030B8);
-    if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon) return 1;
+/* 024F5B78 */
+// HD: preserve fused arithmetic and pointer reloads when pos aliases the vertex-table field.
+BOOL dBgWSv::CrrPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
+    cXyz *back = mBackVtx.get();
+    f32 z0 = (f32)back[v0].z;
+    f32 x0 = (f32)back[v0].x;
+    f32 bz = (f32)back[v1].z - z0;
+    f32 bx = (f32)back[v1].x - x0;
+    f32 cx = (f32)back[v2].x - x0;
+    f32 cz = (f32)back[v2].z - z0;
+    f32 epsilon = normalEpsilon;
+    if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon)
+        return 1;
     f32 ratioC = cx / cz;
     f32 denB = gabi::fnmsubs(ratioC, bz, bx);
     f32 ratioB = bx / bz;
     f32 denC = gabi::fnmsubs(ratioB, cz, cx);
-    if (std::fabs(denB) < epsilon || std::fabs(denC) < epsilon) return 1;
-    f32 px = gabi::load<f32>(pos) - x0;
-    gabi::store<f32>(pos, px);
-    back = gmem_ld32(self + 0xC0);
-    f32 pz = gabi::load<f32>(pos + 8) - gabi::load<f32>(back + o0 + 8);
+    if (std::fabs(denB) < epsilon || std::fabs(denC) < epsilon)
+        return 1;
+    f32 px = (f32)pos->x - x0;
+    pos->x = px;
+    back = mBackVtx.get();
+    f32 pz = (f32)pos->z - (f32)back[v0].z;
     f32 numC = gabi::fnmsubs(ratioB, pz, px);
-    gabi::store<f32>(pos + 8, pz);
+    pos->z = pz;
     f32 numB = gabi::fnmsubs(ratioC, pz, px);
-    u32 current = gmem_ld32(self + 0x90);
+    cXyz *current = pm_vtx_tbl.get();
     f32 wC = numC / denC;
-    f32 ax = gabi::load<f32>(current + o0);
-    f32 tx = gabi::load<f32>(current + o2);
+    f32 ax = (f32)current[v0].x;
+    f32 tx = (f32)current[v2].x;
     f32 wB = numB / denB;
-    f32 sx = gabi::load<f32>(current + o1);
-    f32 az = gabi::load<f32>(current + o0 + 8);
-    f32 sz = gabi::load<f32>(current + o1 + 8);
-    f32 tz = gabi::load<f32>(current + o2 + 8);
+    f32 sx = (f32)current[v1].x;
+    f32 az = (f32)current[v0].z;
+    f32 sz = (f32)current[v1].z;
+    f32 tz = (f32)current[v2].z;
     f32 dxB = sx - ax, dzB = sz - az;
     f32 dxC = tx - ax, dzC = tz - az;
     f32 resultX = gabi::fmadds(wB, dxB, wC * dxC);
     f32 resultZ = gabi::fmadds(wB, dzB, wC * dzC);
-    gabi::store<f32>(pos, resultX);
-    gabi::store<f32>(pos + 8, resultZ);
-    current = gmem_ld32(self + 0x90);
-    gabi::store<f32>(pos, resultX + gabi::load<f32>(current + o0));
-    current = gmem_ld32(self + 0x90);
-    gabi::store<f32>(pos + 8, resultZ + gabi::load<f32>(current + o0 + 8));
+    pos->x = resultX;
+    pos->z = resultZ;
+    current = pm_vtx_tbl.get();
+    pos->x = resultX + (f32)current[v0].x;
+    current = pm_vtx_tbl.get();
+    pos->z = resultZ + (f32)current[v0].z;
     return 0;
 }
-VERIFY(0x024F5B78, dBgWSv_CrrPosWork);
 
-void dBgWSv_CrrPos(u32 self, u32 poly, u32 user, u32 accept, u32 pos, u32 angle, u32 shape) {
-    WWHD_FUNC(0x024F5CBC, void, self, poly, user, accept, pos, angle, shape);
-    if ((gmem_ld32(self + 0xBC) & 1) || !accept) return;
-    u32 index = gmem_ld16(poly);
-    u32 collision = gmem_ld32(self + 0x94);
-    u32 triangle = gmem_ld32(collision + 12) + index * 10;
-    u32 v0 = gmem_ld16(triangle), v1 = gmem_ld16(triangle + 2), v2 = gmem_ld16(triangle + 4);
-    if (!gabi::call<BOOL>(0x024F5B78, self, pos, v0, v1, v2)) return;
-    if (!gabi::call<BOOL>(0x024F5B78, self, pos, v1, v2, v0)) return;
-    gabi::call<BOOL>(0x024F5B78, self, pos, v2, v0, v1);
+/* 024F5CBC */
+void dBgWSv::CrrPos(BgSvPolyInfo *poly, void *user, u32 accept, cXyz *pos, csXyz *angle,
+                    csXyz *shape) {
+    if (((u32)mSvFlag & NO_CRR_POS) || !accept)
+        return;
+    u32 index = poly->mPolyIndex;
+    BgSvData *collision = pm_bgd.get();
+    BgSvTri *triangle = &collision->m_t_tbl[index];
+    u32 v0 = triangle->vtx0, v1 = triangle->vtx1, v2 = triangle->vtx2;
+    if (!CrrPosWork(pos, v0, v1, v2))
+        return;
+    if (!CrrPosWork(pos, v1, v2, v0))
+        return;
+    CrrPosWork(pos, v2, v0, v1);
 }
-VERIFY(0x024F5CBC, dBgWSv_CrrPos);
 
-BOOL dBgWSv_TransPosWork(u32 self, u32 pos, u32 v0, u32 v1, u32 v2) {
-    WWHD_FUNC(0x024F5D84, BOOL, self, pos, v0, v1, v2);
-    u32 o0 = v0 * 12, o1 = v1 * 12, o2 = v2 * 12;
-    u32 back = gmem_ld32(self + 0xC0);
-    f32 x0 = gabi::load<f32>(back + o0), z0 = gabi::load<f32>(back + o0 + 8);
-    f32 bz = gabi::load<f32>(back + o1 + 8) - z0;
-    f32 bx = gabi::load<f32>(back + o1) - x0;
-    f32 cx = gabi::load<f32>(back + o2) - x0;
-    f32 cz = gabi::load<f32>(back + o2 + 8) - z0;
-    f32 epsilon = gabi::load<f32>(0x100030B8);
-    if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon) return 1;
+/* 024F5D84 */
+// HD: preserve fused interpolation and each position store before reloading the table.
+BOOL dBgWSv::TransPosWork(cXyz *pos, u32 v0, u32 v1, u32 v2) {
+    cXyz *back = mBackVtx.get();
+    f32 x0 = (f32)back[v0].x, z0 = (f32)back[v0].z;
+    f32 bz = (f32)back[v1].z - z0;
+    f32 bx = (f32)back[v1].x - x0;
+    f32 cx = (f32)back[v2].x - x0;
+    f32 cz = (f32)back[v2].z - z0;
+    f32 epsilon = normalEpsilon;
+    if (std::fabs(bz) < epsilon || std::fabs(cz) < epsilon)
+        return 1;
     f32 ratioC = cx / cz;
     f32 denB = gabi::fnmsubs(ratioC, bz, bx);
     f32 ratioB = bx / bz;
     f32 denC = gabi::fnmsubs(ratioB, cz, cx);
-    if (std::fabs(denB) < epsilon || std::fabs(denC) < epsilon) return 1;
-    f32 px = gabi::load<f32>(pos) - x0, pz = gabi::load<f32>(pos + 8) - z0;
+    if (std::fabs(denB) < epsilon || std::fabs(denC) < epsilon)
+        return 1;
+    f32 px = (f32)pos->x - x0, pz = (f32)pos->z - z0;
     f32 wB = gabi::fnmsubs(ratioC, pz, px) / denB;
     f32 wC = gabi::fnmsubs(ratioB, pz, px) / denC;
-    f32 zero = gabi::load<f32>(0x100445BC), one = gabi::load<f32>(0x100445C0);
-    if (wB < zero || wB > one || wC < zero || wC > one) return 1;
-    u32 current = gmem_ld32(self + 0x90);
-    f32 ax = gabi::load<f32>(current + o0), bxNew = gabi::load<f32>(current + o1) - ax;
-    f32 ay = gabi::load<f32>(current + o0 + 4), byNew = gabi::load<f32>(current + o1 + 4) - ay;
-    f32 az = gabi::load<f32>(current + o0 + 8), bzNew = gabi::load<f32>(current + o1 + 8) - az;
-    f32 cxNew = gabi::load<f32>(current + o2) - ax;
-    f32 cyNew = gabi::load<f32>(current + o2 + 4) - ay;
-    f32 czNew = gabi::load<f32>(current + o2 + 8) - az;
+    f32 zero = weightMin, one = weightMax;
+    if (wB < zero || wB > one || wC < zero || wC > one)
+        return 1;
+    cXyz *current = pm_vtx_tbl.get();
+    f32 ax = (f32)current[v0].x, bxNew = (f32)current[v1].x - ax;
+    f32 ay = (f32)current[v0].y, byNew = (f32)current[v1].y - ay;
+    f32 az = (f32)current[v0].z, bzNew = (f32)current[v1].z - az;
+    f32 cxNew = (f32)current[v2].x - ax;
+    f32 cyNew = (f32)current[v2].y - ay;
+    f32 czNew = (f32)current[v2].z - az;
     f32 resultX = gabi::fmadds(wB, bxNew, wC * cxNew);
     f32 resultY = gabi::fmadds(wB, byNew, wC * cyNew);
     f32 resultZ = gabi::fmadds(wB, bzNew, wC * czNew);
-    gabi::store<f32>(pos, resultX);
-    gabi::store<f32>(pos + 4, resultY);
-    gabi::store<f32>(pos + 8, resultZ);
-    current = gmem_ld32(self + 0x90);
-    gabi::store<f32>(pos, resultX + gabi::load<f32>(current + o0));
-    current = gmem_ld32(self + 0x90);
-    gabi::store<f32>(pos + 4, resultY + gabi::load<f32>(current + o0 + 4));
-    current = gmem_ld32(self + 0x90);
-    gabi::store<f32>(pos + 8, resultZ + gabi::load<f32>(current + o0 + 8));
+    pos->x = resultX;
+    pos->y = resultY;
+    pos->z = resultZ;
+    current = pm_vtx_tbl.get();
+    pos->x = resultX + (f32)current[v0].x;
+    current = pm_vtx_tbl.get();
+    pos->y = resultY + (f32)current[v0].y;
+    current = pm_vtx_tbl.get();
+    pos->z = resultZ + (f32)current[v0].z;
     return 0;
 }
-VERIFY(0x024F5D84, dBgWSv_TransPosWork);
 
-void dBgWSv_TransPos(u32 self, u32 poly, u32 user, u32 accept, u32 pos, u32 angle, u32 shape) {
-    WWHD_FUNC(0x024F5F38, void, self, poly, user, accept, pos, angle, shape);
-    if ((gmem_ld32(self + 0xBC) & 1) || !accept) return;
-    u32 index = gmem_ld16(poly);
-    u32 collision = gmem_ld32(self + 0x94);
-    u32 triangle = gmem_ld32(collision + 12) + index * 10;
-    u32 v0 = gmem_ld16(triangle), v1 = gmem_ld16(triangle + 2), v2 = gmem_ld16(triangle + 4);
-    if (!gabi::call<BOOL>(0x024F5D84, self, pos, v0, v1, v2)) return;
-    if (!gabi::call<BOOL>(0x024F5D84, self, pos, v1, v2, v0)) return;
-    gabi::call<BOOL>(0x024F5D84, self, pos, v2, v0, v1);
+/* 024F5F38 */
+void dBgWSv::TransPos(BgSvPolyInfo *poly, void *user, u32 accept, cXyz *pos, csXyz *angle,
+                      csXyz *shape) {
+    if (((u32)mSvFlag & NO_CRR_POS) || !accept)
+        return;
+    u32 index = poly->mPolyIndex;
+    BgSvData *collision = pm_bgd.get();
+    BgSvTri *triangle = &collision->m_t_tbl[index];
+    u32 v0 = triangle->vtx0, v1 = triangle->vtx1, v2 = triangle->vtx2;
+    if (!TransPosWork(pos, v0, v1, v2))
+        return;
+    if (!TransPosWork(pos, v1, v2, v0))
+        return;
+    TransPosWork(pos, v2, v0, v1);
 }
-VERIFY(0x024F5F38, dBgWSv_TransPos);
 
-void dBgWSv_StaticInit() {
-    WWHD_FUNC(0x024F6000, void);
-    gmem_st32(0x1046EE38, 0); gmem_st32(0x1046EE30, 0);
-    gmem_st32(0x1046EE3C, 0); gmem_st32(0x1046EE34, 0);
-    gabi::call<void>(0x028F026C, 0x101D53C0u);
-    u32 lower = gmem_ld32(0x100445C8), upper = gmem_ld32(0x100445CC);
-    gmem_stf32(0x1046EE24, lower); gmem_stf32(0x1046EE28, upper);
-    gabi::call<void>(0x028ED6F8, 0x1046EE2Cu);
-    gabi::call<void>(0x028F026C, 0x101D53CCu);
-    gabi::call<void>(0x028EAB2C, 0x1046EE2Du);
-    gabi::call<void>(0x028F026C, 0x101D53D8u);
+// HD: compiler-generated initialization of this translation unit's header statics.
+struct HeaderStatics {
+    be<u32> piMinBits, piMaxBits;
+    u8 byteObject, flagObject, padding[2];
+};
+struct HeaderZeroObject {
+    be<u32> words[4];
+};
+#define headerStatics (*gabi::at<HeaderStatics>(0x1046EE24))
+#define headerZeroObject (*gabi::at<HeaderZeroObject>(0x1046EE30))
+/* 024F6000 */
+static void __sinit_d_bg_w_sv_cpp() {
+    headerZeroObject.words[2] = 0;
+    headerZeroObject.words[0] = 0;
+    headerZeroObject.words[3] = 0;
+    headerZeroObject.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x101D53C0));
+    u32 lower = headerPiMinBits, upper = headerPiMaxBits;
+    headerStatics.piMinBits = lower;
+    headerStatics.piMaxBits = upper;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x101D53CC));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x101D53D8));
 }
-VERIFY(0x024F6000, dBgWSv_StaticInit);
 
-void dBgWSv_MatrixCrrPos(u32 self, u32 poly, u32 user, u32 accept, u32 pos, u32 angle, u32 shape) {
-    WWHD_FUNC(0x024F6094, void, self, poly, user, accept, pos, angle, shape);
+/* 024F6094 */
+// HD: the emitted base virtual method is empty.
+void dBgWSv::MatrixCrrPos(BgSvPolyInfo *poly, void *user, u32 accept, cXyz *pos, csXyz *angle,
+                          csXyz *shape) {
 }
-VERIFY(0x024F6094, dBgWSv_MatrixCrrPos);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data normalEpsilon 100030B8
+data weightMin 100445BC
+data weightMax 100445C0
+data headerPiMinBits 100445C8
+data headerPiMaxBits 100445CC
+ext 0273AD10 void* operator_new(u32)
+ext 0273ADAC void* operator_new_array(u32)
+ext 024F23F4 void constructBaseWorld(dBgWSv*)
+ext 0200A030 BOOL SetBaseBackground(dBgWSv*,BgSvData*,u32,void*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

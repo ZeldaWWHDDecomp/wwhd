@@ -7,33 +7,16 @@
  */
 #include "d/actor/d_a_npc_p1.h"
 
+using namespace p1_cpp;
+
 /* daKaji_c (d_a_kaji.h): mpMorf at +0x3B8 (HD) */
-static inline mDoExt_McaMorf* p1_kajiMorf(fopAc_ac_c* kaji) {
-    return gabi::at<mDoExt_McaMorf>(gabi::load<u32>(gabi::ea(kaji) + 0x3B8));
-}
 
 /* daKaji_c::setAnm(int, f32) (inline). "Kaji" at 0x1001F874. The `frame >= 0.0f` test is
  * compiled as bge / !blt (branch if not less), so a NaN frame is stored too. */
-static inline void p1_kajiSetAnm(fopAc_ac_c* kaji, s32 i_anm, f32 frame) {
-    s32 bckIdx, basIdx;
-    switch ((u32)i_anm) {
-    case 0: bckIdx = 0xE; basIdx = 8; break; /* KJ_WAIT */
-    case 1: bckIdx = 0xC; basIdx = 6; break; /* KJ_OMO */
-    case 2: bckIdx = 0xD; basIdx = 7; break; /* KJ_TORI */
-    case 3: bckIdx = 0xB; basIdx = 5; break; /* KJ_ANG */
-    default: return;
-    }
-    J3DAnmTransform* bck = (J3DAnmTransform*)p1_getRes(0x1001F874, bckIdx);
-    void* bas = p1_getRes(0x1001F874, basIdx);
-    p1_kajiMorf(kaji)->setAnm(bck, 2 /* EMode_LOOP */, 0.0f, 1.0f, 0.0f, -1.0f, bas);
-    if (!(frame < 0.0f)) {
-        p1_kajiMorf(kaji)->setFrame(frame);
-    }
-}
 
 /* 022B2830 */
 BOOL daNpc_P1_c::kaji_anm() {
-    WWHD_FUNC(0x022B2830, BOOL, this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (m671 != 0) {
         if (mAnmNum == 0xA || mAnmNum == 0xB) {
             if (p1_checkEnd(mpMorf, 1.0f)) {
@@ -94,14 +77,13 @@ BOOL daNpc_P1_c::kaji_anm() {
     }
     return FALSE;
 }
-VERIFY(0x022B2830, &daNpc_P1_c::kaji_anm);
 
 /* 022B2E70 */
 BOOL daNpc_P1_c::lookBack() {
-    WWHD_FUNC(0x022B2E70, BOOL, this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     BOOL o_retval = FALSE;
     /* (player->current.pos - current.pos).absXZ(): the x/z of the difference go through FPRs */
-    fopAc_ac_c* player = gabi::at<fopAc_ac_c>(gabi::load<u32>(dComIfGp_ea() + 0x5B2C)); /* dComIfGp_getPlayer(0) */
+    fopAc_ac_c* player = dComIfGp_getPlayer(0); /* dComIfGp_getPlayer(0) */
     gabi::Local<cXyz> posdiff;
     cXyz_mi(&player->current.pos, posdiff.get(), &current.pos);
     gabi::Local<cXyz> xz;
@@ -126,7 +108,7 @@ BOOL daNpc_P1_c::lookBack() {
         }
     } else if (mbAttentionFlag != 0) {
         /* mEventCut6B0.getAttnPos() (+0x54), copied through FPRs */
-        cXyz* attn = gabi::at<cXyz>(gabi::ea(&mEventCut6B0) + 0x54);
+        cXyz* attn = &mEventCut6B0.mPos;
         dstPos->x = attn->x;
         dstPos->y = attn->y;
         dstPos->z = attn->z;
@@ -155,8 +137,9 @@ BOOL daNpc_P1_c::lookBack() {
     srcpos->x = current.pos.x;
     srcpos->y = current.pos.y + 190.0f;
     srcpos->z = current.pos.z;
-    gabi::call(0x0259DED0, &m_jnt, &current.angle.y, dstPos_p, srcpos.get(), (s32)current.angle.y,
-               (s32)(s16)mMaxLookVel, (u32)look_at_target); /* dNpc_JntCtrl_c::lookAtTarget */
+    p1LookAtTarget(&m_jnt, &current.angle.y, dstPos_p, srcpos.get(), (s32)current.angle.y,
+                   (s32)(s16)mMaxLookVel, (u32)look_at_target); /* dNpc_JntCtrl_c::lookAtTarget */
     return o_retval;
 }
-VERIFY(0x022B2E70, &daNpc_P1_c::lookBack);
+
+/* WWHD glue */

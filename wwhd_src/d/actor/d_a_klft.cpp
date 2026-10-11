@@ -8,145 +8,29 @@
  * written from the WWHD code (cking.rpx) and verified against it. Names follow the GameCube
  * symbols; field names are descriptive guesses (GameCube offsets unknown).
  */
-#include "bindings.h"
+#include "d/actor/d_a_klft.h"
 
-#define M_arcname_del STR(0x10013094)  /* "Klft" (Delete) */
-#define M_arcname_heap STR(0x1001309C) /* "Klft" (CallbackCreateHeap) */
-#define M_arcname_crt STR(0x100130DC)  /* "Klft" (Create) */
-#define SAFESTRING_VTBL 0x10012FCC
-#define KLFT_VTBL 0x10012FF4           /* HD: klft_class vtable */
-#define AAB_VTBL 0x10012FE4            /* this TU's cM3dGAab vtable */
-#define utiwa_sph_src gabi::at<dCcD_SrcSph>(0x101B8448)
-#define p_co_cyl_src gabi::at<dCcD_SrcCyl>(0x101B8488)
-#define l_himo_color gabi::at<GXColor>(0x101B8424)
-/* file statics */
-#define wind_vec_ea 0x10464BC4   /* cXyz* */
-#define wind_power_ea 0x10464BC8 /* f32* */
-#define wind_angle_ea 0x10464BD4 /* s16 */
+static const char* l_arcName = "Klft";
+static constexpr u32 l_aabVtable = 0x10012FE4;
+enum Resource {
+    RES_LIFT_MODEL = 5,
+    RES_ANCHOR_MODEL = 6,
+    RES_LIFT_COLLISION = 9,
+    RES_ROPE_TEXTURE = 12,
+};
+static GXColor l_himo_color = {150, 150, 150, 255};
+static KlftSphereSource utiwa_sph_src = {0, 0, 0, 0, 0, 0, 5, 0x200000, 3,    0,    0,    0,     0,
+                                         0, 0, 0, 0, 0, 0, 2, 0,        0.0f, 0.0f, 0.0f, 250.0f};
+static KlftCylinderSource p_co_cyl_src = {0,   0, 0, 0,    0,    0,    0,     0xff1dfebf, 15,
+                                          121, 0, 0, 0,    0,    0,    6,     0,          0,
+                                          0,   1, 0, 0.0f, 0.0f, 0.0f, 40.0f, 60.0f};
+
+const gc_tu_data gc_tu = {.safeString = 0x10012FCC};
 
 enum { PROC_PLAYER = 0xA8 };
 
-struct mDoExt_3DlineMat1_l {
-    /* 0x000 */ u8 _000[0x130];
-    /* 0x130 */ be<u32> __vtbl;
-    /* 0x134 */ u8 _134[0x184 - 0x134];
-    /* 0x184 */ be<u32> mpLines; /* {cXyz* pos; u8* size; ...} */
-};
-
-struct klft_class : fopAc_ac_c {
-    /* 0x3AC */ request_of_phase_process_class mPhs;
-    /* 0x3B4 */ be<s16> mCounter;
-    /* 0x3B6 */ u8 _3B6[2];
-    /* 0x3B8 */ gptr<J3DModel> mpModel;
-    /* 0x3BC */ gptr<mDoExt_McaMorf> mpMorf[2];   /* rope anchors */
-    /* 0x3C4 */ cXyz mHimoTop[2];                 /* path points 2 and 3 */
-    /* 0x3DC */ be<s16> mAnchorRotY;
-    /* 0x3DE */ be<u8> mType;
-    /* 0x3DF */ be<u8> mSwitchNo;
-    /* 0x3E0 */ cXyz mSway;
-    /* 0x3EC */ be<f32> mSwayX;
-    /* 0x3F0 */ u8 _3F0[4];
-    /* 0x3F4 */ be<f32> mSwayZ;
-    /* 0x3F8 */ be<f32> mSwayXTarget;
-    /* 0x3FC */ u8 _3FC[4];
-    /* 0x400 */ be<f32> mSwayZTarget;
-    /* 0x404 */ be<f32> mRotXTarget;
-    /* 0x408 */ u8 _408[4];
-    /* 0x40C */ be<f32> mRotZTarget;
-    /* 0x410 */ be<f32> mRotX;
-    /* 0x414 */ u8 _414[4];
-    /* 0x418 */ be<f32> mRotZ;
-    /* 0x41C */ csXyz mShakeAngle;
-    /* 0x422 */ u8 _422[6];
-    /* 0x428 */ Mtx34 mBgMtx;
-    /* 0x458 */ gptr<dBgW> mpBgW;
-    /* 0x45C */ mDoExt_3DlineMat1_l mLineMat;
-    /* 0x5E4 */ cXyz mPathP0;
-    /* 0x5F0 */ cXyz mPathP1;
-    /* 0x5FC */ cXyz mPathDir;
-    /* 0x608 */ cXyz mCenter;
-    /* 0x614 */ be<s16> mTiltDir;
-    /* 0x616 */ be<s16> mTilt;
-    /* 0x618 */ be<s16> mWheelRot;
-    /* 0x61A */ be<s16> mHitTimer;
-    /* 0x61C */ be<f32> mWheelSe;
-    /* 0x620 */ be<f32> mSink;
-    /* 0x624 */ be<f32> mSinkTarget;
-    /* 0x628 */ be<f32> mPos;       /* 20..80 along the path */
-    /* 0x62C */ be<f32> mSpeed;
-    /* 0x630 */ be<f32> mSpeedTarget;
-    /* 0x634 */ dCcD_Stts mStts;
-    /* 0x670 */ dCcD_Sph mSph;      /* Deku Leaf wind target */
-    /* 0x79C */ dCcD_Cyl mCoCyl[2];
-    /* 0x9FC */ dCcD_Sph mWindSph[2];
-    /* 0xC54 */ be<s16> mRideTimer;
-    /* 0xC56 */ u8 _C56[2];
-};
-WWHD_OFFSET(klft_class, mLineMat, 0x45C);
-WWHD_OFFSET(klft_class, mStts, 0x634);
-WWHD_OFFSET(klft_class, mWindSph, 0x9FC);
-WWHD_OFFSET(klft_class, mRideTimer, 0xC54);
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* J3D (HD): model user area +0xB8, matrix block +0x2C (flags +4, matrices +0x10) */
-static inline u32 j3dSys_model() { return gabi::load<u32>(0x104B462C); }
-static inline Mtx34* getAnmMtx_l(u32 model, s32 jntNo) {
-    u32 blk = gabi::load<u32>(model + 0x2C);
-    gabi::store<u16>(blk + 4, (u16)(gabi::load<u16>(blk + 4) | 0x10)); /* HD: marks the joint matrices dirty */
-    return gabi::at<Mtx34>(gabi::load<u32>(blk + 0x10) + jntNo * 0x30);
-}
-/* 027F3F94 (matcher: __nw): J3DModelData joint tree; joint count (u16) at +8 */
-static inline u16 J3DModelData_getJointNum_l(u32 d) { return gabi::load<u16>(gabi::call<u32>(0x027F3F94, d) + 8); }
-static inline void J3DModelData_setJointCallBack_l(u32 data, u32 i, u32 cb) {
-    u32 n = gabi::load<u32>(data + 4);
-    u32 p = gabi::load<u32>(data + 8);
-    if (i < n) p += i * 0x1C;
-    gabi::store<u32>(p + 8, cb);
-}
-static inline void mDoMtx_XrotS_l(Mtx34* m, s16 x) { gabi::call(0x025F18EC, m, x); }
-/* 0200796C / 02007990: CPad main stick X / Y of a port (f1) */
-static inline f32 CPad_GET_STICK_POS_X(u32 port) { return gabi::call<f32>(0x0200796C, port); }
-static inline f32 CPad_GET_STICK_POS_Y(u32 port) { return gabi::call<f32>(0x02007990, port); }
-static inline f32 std_fabsf(f32 x) { return std::fabs(x); }
-/* 02518CC8 def_se_set(actor, hit obj, material) */
-static inline void def_se_set(fopAc_ac_c* a, void* obj, u32 p) { gabi::call(0x02518CC8, a, obj, p); }
-static inline cXyz* dKyw_get_wind_vec() { return gabi::call<cXyz*>(0x0257DAA8); }
-static inline u32 dKyw_get_wind_power() { return gabi::call<u32>(0x0257DB04); }
-static inline s16 cM_rad2s(f32 r) { return gabi::call<s16>(0x02019510, r); }
-/* 0201A4DC csXyz::operator+(const csXyz&) const: the result comes back in r3:r4 (x<<16|y, z<<16) */
-static inline void csXyz_pl(const csXyz* a, const csXyz* b, csXyz* out) {
-    u32 r3 = gabi::call<u32>(0x0201A4DC, a, b);
-    u32 r4 = gabi::cpu->r[4];
-    out->x = (s16)(r3 >> 16);
-    out->y = (s16)(r3 & 0xFFFF);
-    out->z = (s16)(r4 >> 16);
-}
-/* fopAcM_seStart on current.pos (HD inline: null checks on the actor and the position) */
-static inline void klft_seStartCurrent(fopAc_ac_c* a, u32 id, u32 prm) {
-    if (a != nullptr && gabi::ea(&a->current.pos) != 0)
-        mDoAud_seStart(id, &a->current.pos, prm, dComIfGp_getReverb(a->current.roomNo));
-}
-/* mDoExt_3DlineMat1_c (HD): constructor 025EB82C, init 025EBA58, update 025ED1BC, destructor
- * 025EB8B8 (the matcher names it draw); dComIfGd_set3DlineMat: sort packets at play+0x5FB4 */
-static inline BOOL mDoExt_3DlineMat1_init(mDoExt_3DlineMat1_l* l, u16 a, u16 b, void* tex, s32 c) {
-    return gabi::call<BOOL>(0x025EBA58, l, a, b, tex, c);
-}
-static inline void mDoExt_3DlineMat1_update(mDoExt_3DlineMat1_l* l, u16 segs, GXColor* color, dKy_tevstr_c* tev) {
-    gabi::call(0x025ED1BC, l, segs, color, tev);
-}
-static inline void dComIfGd_set3DlineMat(mDoExt_3DlineMat1_l* l) {
-    u32 pkt = dComIfGp_ea() + 0x5FB4;
-    s32 id = gabi::call_ptr<s32>(gabi::load<u32>(l->__vtbl + 0x14), l); /* getMaterialID() */
-    gabi::call(0x025EDD04, pkt + id * 0x9C, l);
-}
-static inline void __construct_array(void* p, s32 n, u32 size, u32 ctor) { gabi::call(0x028EFFD0, p, n, size, ctor); }
-static inline void __destroy_arr(void* p, s32 n, u32 size, u32 dtor) { gabi::call(0x028F0164, p, n, size, dtor, 0, 0); }
-static inline void dCcD_Sph_ct_l(void* p) { gabi::call(0x025166F0, p); }
-static inline f32 REG0F(int i) { return REG_F(0, i); }
-
 /* 0219F608 */
 static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_actor, fopAc_ac_c* rider) {
-    WWHD_FUNC(0x0219F608, void, bgw, i_actor, rider);
     klft_class* i_this = (klft_class*)i_actor;
     gabi::Local<cXyz> tmp;
     gabi::Local<cXyz> arg;
@@ -177,74 +61,71 @@ static void ride_call_back(dBgW* bgw, fopAc_ac_c* i_actor, fopAc_ac_c* rider) {
     if (std_fabsf(sx) + std_fabsf(sy) > 0.1f || std_fabsf(i_this->mSpeed) > 0.0001f) {
         f32 dz = std_fabsf(now->z - old->z) * (REG0F(4) + 100.0f);
         if (dz > REG0F(6) + 200.0f) {
-            i_this->mRotXTarget = dz;
+            i_this->mRotTarget.x = dz;
         }
         f32 dx = std_fabsf(now->x - old->x) * (REG0F(4) + 100.0f);
         if (dx > REG0F(6) + 200.0f) {
-            i_this->mRotZTarget = dx;
+            i_this->mRotTarget.z = dx;
         }
         f32 k = REG0F(8) + 2.0f;
         dx = std_fabsf(now->x - old->x) * k;
-        if (dx > 10.0f && i_this->mSwayX < dx) {
-            i_this->mSwayXTarget = dx;
+        if (dx > 10.0f && i_this->mSwayAmplitude.x < dx) {
+            i_this->mSwayTarget.x = dx;
         }
         dz = std_fabsf(now->z - old->z) * (REG0F(8) + 2.0f);
-        if (dz > 10.0f && i_this->mSwayZ < dz) {
-            i_this->mSwayZTarget = dz;
+        if (dz > 10.0f && i_this->mSwayAmplitude.z < dz) {
+            i_this->mSwayTarget.z = dz;
         }
     }
 }
-VERIFY(0x0219F608, ride_call_back);
 
-/* 0219F8A4: joint 1 of the lift model (the wheel) turns with mWheelRot */
+// HD: joint 1 of the lift model (the wheel) turns with mWheelRot
+/* 0219F8A4 */
 static BOOL nodeCallBack_main(J3DNode* node, int calcTiming) {
-    WWHD_FUNC(0x0219F8A4, BOOL, node, calcTiming);
     if (calcTiming == 0) {
         J3DJoint* joint = J3DNode_toJoint(node);
-        u32 model = j3dSys_model();
-        klft_class* i_this = gabi::at<klft_class>(gabi::load<u32>(model + 0xB8));
-        s32 jntNo = gabi::load<u16>(gabi::ea(joint) + 4);
+        J3DModel* model = j3dSys.getModel();
+        klft_class* i_this = static_cast<klft_class*>(model->getUserArea());
+        s32 jntNo = reinterpret_cast<KlftJointView*>(joint)->mJntNo;
         if (i_this != nullptr && jntNo == 1) {
-            PSMTXCopy(getAnmMtx_l(model, 1), calc_mtx());
+            PSMTXCopy(model->getAnmMtx(1), calc_mtx());
             mDoMtx_XrotM(calc_mtx(), i_this->mWheelRot);
-            Mtx34* dst = getAnmMtx_l(model, 1);
+            Mtx34* dst = model->getAnmMtx(1);
             mtx_copy(dst, calc_mtx());
-            PSMTXCopy(calc_mtx(), gabi::at<Mtx34>(0x104B4868));
+            PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
         }
     }
     return TRUE;
 }
-VERIFY(0x0219F8A4, nodeCallBack_main);
 
-/* 0219F9C0: joint 3 of the rope anchors turns with mAnchorRotY */
+// HD: joint 3 of the rope anchors turns with mAnchorRotY
+/* 0219F9C0 */
 static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
-    WWHD_FUNC(0x0219F9C0, BOOL, node, calcTiming);
     if (calcTiming == 0) {
         J3DJoint* joint = J3DNode_toJoint(node);
-        u32 model = j3dSys_model();
-        klft_class* i_this = gabi::at<klft_class>(gabi::load<u32>(model + 0xB8));
-        s32 jntNo = gabi::load<u16>(gabi::ea(joint) + 4);
+        J3DModel* model = j3dSys.getModel();
+        klft_class* i_this = static_cast<klft_class*>(model->getUserArea());
+        s32 jntNo = reinterpret_cast<KlftJointView*>(joint)->mJntNo;
         if (i_this != nullptr) {
-            PSMTXCopy(getAnmMtx_l(model, jntNo), calc_mtx());
+            PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
             mDoMtx_YrotM(calc_mtx(), i_this->mAnchorRotY);
-            Mtx34* dst = getAnmMtx_l(model, jntNo);
+            Mtx34* dst = model->getAnmMtx(jntNo);
             mtx_copy(dst, calc_mtx());
-            PSMTXCopy(calc_mtx(), gabi::at<Mtx34>(0x104B4868));
+            PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
         }
     }
     return TRUE;
 }
-VERIFY(0x0219F9C0, nodeCallBack);
 
-/* 0219FAE4: himo_Draw inlined */
+// HD: himo_Draw inlined
+/* 0219FAE4 */
 static BOOL daKlft_Draw(klft_class* i_this) {
-    WWHD_FUNC(0x0219FAE4, BOOL, i_this);
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), i_this->mpModel, &i_this->tevStr);
     dComIfGd_setListBG();
     mDoExt_modelUpdateDL(i_this->mpModel);
     dComIfGd_setList();
-    mDoExt_3DlineMat1_update(&i_this->mLineMat, 0x14, l_himo_color, &i_this->tevStr);
+    klftUpdateRopeMaterial(&i_this->mLineMat, 0x14, &l_himo_color, &i_this->tevStr);
     dComIfGd_set3DlineMat(&i_this->mLineMat);
     for (int i = 0; i < 2; i++) {
         mDoExt_McaMorf* morf = i_this->mpMorf[i];
@@ -254,11 +135,10 @@ static BOOL daKlft_Draw(klft_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x0219FAE4, daKlft_Draw);
 
-/* 0219FBFC: klft_move and himo_move inlined */
+// HD: klft_move and himo_move inlined
+/* 0219FBFC */
 static BOOL daKlft_Execute(klft_class* i_this) {
-    WWHD_FUNC(0x0219FBFC, BOOL, i_this);
     dComIfGp_get();
     if (i_this->mHitTimer != 0) {
         i_this->mHitTimer = (s16)(i_this->mHitTimer - 1);
@@ -267,9 +147,9 @@ static BOOL daKlft_Execute(klft_class* i_this) {
         i_this->mRideTimer = (s16)(i_this->mRideTimer - 1);
     }
     cXyz* wind_vec = dKyw_get_wind_vec();
-    gabi::store<u32>(wind_vec_ea, gabi::ea(wind_vec));
-    gabi::store<s16>(wind_angle_ea, cM_atan2s(wind_vec->x, wind_vec->z));
-    gabi::store<u32>(wind_power_ea, dKyw_get_wind_power());
+    klftGlobals().mpWind = wind_vec;
+    klftGlobals().mWindAngle = cM_atan2s(wind_vec->x, wind_vec->z);
+    klftGlobals().mWindPower = dKyw_get_wind_power();
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     i_this->mCounter = (s16)(i_this->mCounter + 1);
@@ -285,7 +165,8 @@ static BOOL daKlft_Execute(klft_class* i_this) {
         ang = (s16)(player->shape_angle.y + 0x8000);
         pow = 0.5f;
     }
-    if (i_this->mSph.ChkTgHit() || i_this->mWindSph[0].ChkTgHit() || i_this->mWindSph[1].ChkTgHit()) {
+    if (i_this->mSph.ChkTgHit() || i_this->mWindSph[0].ChkTgHit() ||
+        i_this->mWindSph[1].ChkTgHit()) {
         gabi::Local<cXyz> v;
         gabi::Local<cXyz> out;
         if (i_this->mSph.ChkTgHit()) {
@@ -308,13 +189,13 @@ static BOOL daKlft_Execute(klft_class* i_this) {
         v->z = 0.0f;
         v->y = 0.0f;
         v->x = (REG0F(15) + 500.0f) * pow;
-        MtxPosition(v.get(), (cXyz*)&i_this->mRotXTarget);
+        MtxPosition(v.get(), &i_this->mRotTarget);
         i_this->mHitTimer = (s16)(REG0_S(5) + 0x3C);
         mDoMtx_YrotS(calc_mtx(), ang);
         v->x = 0.0f;
         v->y = 0.0f;
         v->z = (REG0F(16) + 20.0f) * pow;
-        MtxPosition(v.get(), (cXyz*)&i_this->mSwayXTarget);
+        MtxPosition(v.get(), &i_this->mSwayTarget);
     }
     if (i_this->mHitTimer == 0x28) {
         klft_seStartCurrent(i_this, 0x3821, 0);
@@ -344,7 +225,8 @@ static BOOL daKlft_Execute(klft_class* i_this) {
             vol = 100;
         }
         for (int i = 0; i < 2; i++) {
-            mDoAud_seStart(0x61B1, &i_this->mHimoTop[i], vol, dComIfGp_getReverb(i_this->current.roomNo));
+            mDoAud_seStart(0x61B1, &i_this->mHimoTop[i], vol,
+                           dComIfGp_getReverb(i_this->current.roomNo));
         }
         f32 se = i_this->mWheelSe + std_fabsf(i_this->mSpeed);
         i_this->mWheelSe = se;
@@ -364,53 +246,54 @@ static BOOL daKlft_Execute(klft_class* i_this) {
     cLib_addCalcAngleS2(&i_this->current.angle.z, 0, 10, 0x200);
 
     s32 t = i_this->mCounter;
-    f32 rx = i_this->mRotX;
+    f32 rx = i_this->mRotAmplitude.x;
     i_this->mShakeAngle.x = (s16)gabi::ftoi(cM_ssin(t * 0x5DC) * rx);
-    f32 rz = i_this->mRotZ;
+    f32 rz = i_this->mRotAmplitude.z;
     i_this->mShakeAngle.z = (s16)gabi::ftoi(cM_ssin(t * 0x514) * rz);
 
     if (i_this->mHitTimer != 0) {
-        cLib_addCalc2(&i_this->mRotX, i_this->mRotXTarget, 1.0f, 10.0f);
-    } else if (std_fabsf(i_this->mRotXTarget) > REG0F(2) + 100.0f) {
-        cLib_addCalc2(&i_this->mRotX, i_this->mRotXTarget, 1.0f, REG0F(4) + 10.0f);
+        cLib_addCalc2(&i_this->mRotAmplitude.x, i_this->mRotTarget.x, 1.0f, 10.0f);
+    } else if (std_fabsf(i_this->mRotTarget.x) > REG0F(2) + 100.0f) {
+        cLib_addCalc2(&i_this->mRotAmplitude.x, i_this->mRotTarget.x, 1.0f, REG0F(4) + 10.0f);
     } else {
-        cLib_addCalc2(&i_this->mRotX, i_this->mRotXTarget, 1.0f, REG0F(3) + 2.0f);
+        cLib_addCalc2(&i_this->mRotAmplitude.x, i_this->mRotTarget.x, 1.0f, REG0F(3) + 2.0f);
     }
     if (i_this->mHitTimer != 0) {
-        cLib_addCalc2(&i_this->mRotZ, i_this->mRotZTarget, 1.0f, 40.0f);
-    } else if (std_fabsf(i_this->mRotZTarget) > REG0F(2) + 100.0f) {
-        cLib_addCalc2(&i_this->mRotZ, i_this->mRotZTarget, 1.0f, REG0F(4) + 10.0f);
+        cLib_addCalc2(&i_this->mRotAmplitude.z, i_this->mRotTarget.z, 1.0f, 40.0f);
+    } else if (std_fabsf(i_this->mRotTarget.z) > REG0F(2) + 100.0f) {
+        cLib_addCalc2(&i_this->mRotAmplitude.z, i_this->mRotTarget.z, 1.0f, REG0F(4) + 10.0f);
     } else {
-        cLib_addCalc2(&i_this->mRotZ, i_this->mRotZTarget, 1.0f, REG0F(3) + 2.0f);
+        cLib_addCalc2(&i_this->mRotAmplitude.z, i_this->mRotTarget.z, 1.0f, REG0F(3) + 2.0f);
     }
     f32 pos = i_this->mPos;
     if (i_this->mHitTimer == 0) {
-        i_this->mRotZTarget = 0.0f;
-        i_this->mRotXTarget = 0.0f;
+        i_this->mRotTarget.z = 0.0f;
+        i_this->mRotTarget.x = 0.0f;
     }
 
     s16 sa = cM_rad2s(pos * 0.01f * 3.1415927f);
     t = i_this->mCounter;
     f32 s = cM_ssin(sa);
-    i_this->mSway.x = cM_ssin(t * 0x2EE) * i_this->mSwayX * s;
-    i_this->mSway.z = cM_ssin(t * 0x384) * i_this->mSwayZ * s;
-    i_this->mSway.y = cM_ssin(t * 0x5DC) * (i_this->mSwayX + i_this->mSwayZ) * (REG0F(1) + 1.0f) * s;
+    i_this->mSway.x = cM_ssin(t * 0x2EE) * i_this->mSwayAmplitude.x * s;
+    i_this->mSway.z = cM_ssin(t * 0x384) * i_this->mSwayAmplitude.z * s;
+    i_this->mSway.y = cM_ssin(t * 0x5DC) * (i_this->mSwayAmplitude.x + i_this->mSwayAmplitude.z) *
+                      (REG0F(1) + 1.0f) * s;
 
     if (i_this->mHitTimer != 0) {
-        cLib_addCalc2(&i_this->mSwayX, i_this->mSwayXTarget, 1.0f, 10.0f);
+        cLib_addCalc2(&i_this->mSwayAmplitude.x, i_this->mSwayTarget.x, 1.0f, 10.0f);
     } else {
-        cLib_addCalc2(&i_this->mSwayX, i_this->mSwayXTarget, 1.0f,
-                      (10.0f - std_fabsf(i_this->mSwayXTarget) >= 0.0f) ? 0.25f : 1.2f);
+        cLib_addCalc2(&i_this->mSwayAmplitude.x, i_this->mSwayTarget.x, 1.0f,
+                      (10.0f - std_fabsf(i_this->mSwayTarget.x) >= 0.0f) ? 0.25f : 1.2f);
     }
     if (i_this->mHitTimer != 0) {
-        cLib_addCalc2(&i_this->mSwayZ, i_this->mSwayZTarget, 1.0f, 10.0f);
+        cLib_addCalc2(&i_this->mSwayAmplitude.z, i_this->mSwayTarget.z, 1.0f, 10.0f);
     } else {
-        cLib_addCalc2(&i_this->mSwayZ, i_this->mSwayZTarget, 1.0f,
-                      (10.0f - std_fabsf(i_this->mSwayZTarget) >= 0.0f) ? 0.25f : 1.2f);
+        cLib_addCalc2(&i_this->mSwayAmplitude.z, i_this->mSwayTarget.z, 1.0f,
+                      (10.0f - std_fabsf(i_this->mSwayTarget.z) >= 0.0f) ? 0.25f : 1.2f);
     }
     if (i_this->mHitTimer == 0) {
-        i_this->mSwayXTarget = 0.0f;
-        i_this->mSwayZTarget = 0.0f;
+        i_this->mSwayTarget.x = 0.0f;
+        i_this->mSwayTarget.z = 0.0f;
     }
 
     csXyz_pl(&i_this->current.angle, &i_this->mShakeAngle, &i_this->shape_angle);
@@ -437,9 +320,9 @@ static BOOL daKlft_Execute(klft_class* i_this) {
 
     /* himo_move */
     {
-        u32 lines = i_this->mLineMat.mpLines;
-        u32 size_p = gabi::load<u32>(lines + 4);
-        u32 pos_p = gabi::load<u32>(lines + 0);
+        KlftLine* lines = klftLine(&i_this->mLineMat);
+        be<u8>* sizes = lines->mpSize;
+        cXyz* positions = lines->mpPos;
         gabi::Local<cXyz> d;
         gabi::Local<cXyz> d0;
         gabi::Local<cXyz> d1;
@@ -467,11 +350,11 @@ static BOOL daKlft_Execute(klft_class* i_this) {
             }
             cXyz_ml(dir, m.get(), f);
             cXyz_pl(base, r.get(), m.get());
-            cXyz* pt = gabi::at<cXyz>(pos_p + 0xC * k);
+            cXyz* pt = &positions[k];
             pt->copy(*r.get());
             s16 sa2 = cM_rad2s(f * 3.1415927f);
             pt->y = gabi::fmadds(cM_ssin(sa2), REG0F(7) + -20.0f, pt->y);
-            gabi::store<u8>(size_p + k, 8);
+            sizes[k] = 8;
         }
     }
 
@@ -484,7 +367,7 @@ static BOOL daKlft_Execute(klft_class* i_this) {
     mDoMtx_ZrotM(calc_mtx(), i_this->shape_angle.z);
     {
         Mtx34* src = calc_mtx();
-        J3DModel_setBaseTRMtx(i_this->mpModel, src);
+        i_this->mpModel->setBaseTRMtx(src);
     }
     PSMTXCopy(calc_mtx(), &i_this->mBgMtx);
     MtxTrans(0.0f, REG0F(7) - 400.0f, 0.0f, 1);
@@ -509,28 +392,23 @@ static BOOL daKlft_Execute(klft_class* i_this) {
         dComIfG_Ccsp_Set(&i_this->mCoCyl[i]);
     }
     dBgW_Move(i_this->mpBgW);
-    i_this->mAnchorRotY = (s16)(i_this->mAnchorRotY + (s16)gabi::ftoi(i_this->mSpeed * (REG0F(8) + 8000.0f)));
+    i_this->mAnchorRotY =
+        (s16)(i_this->mAnchorRotY + (s16)gabi::ftoi(i_this->mSpeed * (REG0F(8) + 8000.0f)));
     for (int i = 0; i < 2; i++) {
         MtxTrans(i_this->mHimoTop[i].x, i_this->mHimoTop[i].y, i_this->mHimoTop[i].z, 0);
         mDoExt_McaMorf* morf = i_this->mpMorf[i];
         Mtx34* src = calc_mtx();
-        J3DModel_setBaseTRMtx(morf->mpModel, src);
+        morf->mpModel->setBaseTRMtx(src);
     }
     return TRUE;
 }
-VERIFY(0x0219FBFC, daKlft_Execute);
 
 /* 021A0AEC */
-static BOOL daKlft_IsDelete(klft_class*) {
-    WWHD_FUNC(0x021A0AEC, BOOL, (u32)0);
-    return TRUE;
-}
-VERIFY(0x021A0AEC, daKlft_IsDelete);
+static BOOL daKlft_IsDelete(klft_class*) { return TRUE; }
 
 /* 021A0AF4 */
 static BOOL daKlft_Delete(klft_class* i_this) {
-    WWHD_FUNC(0x021A0AF4, BOOL, i_this);
-    dComIfG_resDelete(&i_this->mPhs, M_arcname_del);
+    dComIfG_resDelete(&i_this->mPhs, l_arcName);
     if (i_this->heap) {
         cBgS_Release(dComIfG_Bgsp(), i_this->mpBgW);
     }
@@ -545,77 +423,75 @@ static BOOL daKlft_Delete(klft_class* i_this) {
     } else {
         /* harness workaround: the matcher's GameCube signature (a JAIZelBasic member) makes the
          * harness compare r4, which 025E1B34 does not read; here r4 still holds sw (0) */
-        gabi::call(0x025E1B34, &i_this->mHimoTop[0], (u32)sw);
+        klftDeleteSoundObject(&i_this->mHimoTop[0], sw);
     }
     mDoAud_seDeleteObject(&i_this->mHimoTop[1]);
     return TRUE;
 }
-VERIFY(0x021A0AF4, daKlft_Delete);
 
 /* 021A0BB0 */
 static BOOL CallbackCreateHeap(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x021A0BB0, BOOL, i_actor);
     klft_class* i_this = (klft_class*)i_actor;
-    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname_heap, 5, SAFESTRING_VTBL);
+    J3DModelData* modelData =
+        (J3DModelData*)dComIfG_getObjectRes(l_arcName, RES_LIFT_MODEL, gc_tu.safeString);
     J3DModel* model = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     i_this->mpModel = model;
     if (model == nullptr) {
         return FALSE;
     }
-    gabi::store<u32>(gabi::ea(model) + 0xB8, gabi::ea(i_this)); /* setUserArea */
-    for (u16 i = 0; i < J3DModelData_getJointNum_l(gabi::ea(modelData)); i++) {
+    model->setUserArea(reinterpret_cast<uintptr_t>(i_this));
+    for (u16 i = 0; i < modelData->getJointNum(); i++) {
         if (i == 1) {
-            J3DModelData_setJointCallBack_l(gabi::ea(modelData), i, 0x0219F8A4 /* nodeCallBack_main */);
+            modelData->getJointNodePointer(i)->setCallBack(nodeCallBack_main);
         }
     }
     i_this->mpBgW = new_dBgW();
     if (i_this->mpBgW == nullptr) /* JUT_ASSERT(0x344, actor->pm_bgw != NULL) */
-        JUT_ASSERT_fail(STR(0x100130A4), 0x344, STR(0x100130B4));
-    cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes(M_arcname_heap, 9, SAFESTRING_VTBL);
+        JUT_ASSERT_fail("d_a_klft.cpp", 0x344, "actor->pm_bgw != (0)");
+    cBgD_t* dzb = (cBgD_t*)dComIfG_getObjectRes(l_arcName, RES_LIFT_COLLISION, gc_tu.safeString);
     cBgW_Set(i_this->mpBgW, dzb, cBgW_MOVE_BG_e, &i_this->mBgMtx);
-    gabi::store<u32>(gabi::ea(i_this->mpBgW) + 0xA8, 0x024EE658); /* SetCrrFunc(dBgS_MoveBGProc_Trans) */
-    gabi::store<u32>(gabi::ea(i_this->mpBgW) + 0xB0, 0x0219F608); /* SetRideCallback(ride_call_back) */
-    void* tex = dComIfG_getObjectRes(M_arcname_heap, 0xC, SAFESTRING_VTBL);
+    klftBackground(i_this->mpBgW)->mCrrFunc = 0x024EE658; // dBgS_MoveBGProc_Trans
+    klftBackground(i_this->mpBgW)->mRideCallback.v = gabi::guest_fn((const void*)ride_call_back);
+    void* tex = dComIfG_getObjectRes(l_arcName, RES_ROPE_TEXTURE, gc_tu.safeString);
     if (!mDoExt_3DlineMat1_init(&i_this->mLineMat, 1, 0x14, tex, 1)) {
         return FALSE;
     }
     for (int k = 0; k < 2; k++) {
-        J3DModelData* data = (J3DModelData*)dComIfG_getObjectRes(M_arcname_heap, 6, SAFESTRING_VTBL);
-        mDoExt_McaMorf* morf =
-            mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr, nullptr, 2, 1.0f, 0, -1, 0, nullptr, 0, 0x11020203);
+        J3DModelData* data =
+            (J3DModelData*)dComIfG_getObjectRes(l_arcName, RES_ANCHOR_MODEL, gc_tu.safeString);
+        mDoExt_McaMorf* morf = mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr, nullptr, 2,
+                                                      1.0f, 0, -1, 0, nullptr, 0, 0x11020203);
         i_this->mpMorf[k] = morf;
-        u32 m = gabi::ea(morf->mpModel.get());
-        gabi::store<u32>(m + 0xB8, gabi::ea(i_this));
-        for (u16 i = 0; i < J3DModelData_getJointNum_l(gabi::load<u32>(m + 0xAC)); i++) {
+        J3DModel* anchorModel = morf->mpModel;
+        anchorModel->setUserArea(reinterpret_cast<uintptr_t>(i_this));
+        for (u16 i = 0; i < anchorModel->getModelData()->getJointNum(); i++) {
             if (i == 3) {
-                J3DModelData_setJointCallBack_l(gabi::load<u32>(m + 0xAC), i, 0x0219F9C0 /* nodeCallBack */);
+                anchorModel->getModelData()->getJointNodePointer(i)->setCallBack(nodeCallBack);
             }
         }
     }
     return TRUE;
 }
-VERIFY(0x021A0BB0, CallbackCreateHeap);
 
 /* 021A0E60 */
 static cPhs_State daKlft_Create(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x021A0E60, cPhs_State, i_actor);
     klft_class* i_this = (klft_class*)i_actor;
     dComIfGp_get();
     /* fopAcM_ct(i_this, klft_class) */
     if (!fopAcM_CheckCondition(i_this, fopAcCnd_INIT_e)) {
         if (i_this != nullptr) {
             fopAc_ac_c_ct(i_this);
-            i_this->__vtbl = KLFT_VTBL;
-            gabi::call(0x025EB82C, &i_this->mLineMat); /* mDoExt_3DlineMat1_c::mDoExt_3DlineMat1_c */
+            i_this->__vtbl = klft_class::__vt;
+            __ct(&i_this->mLineMat);
             dCcD_Stts_ct(&i_this->mStts);
-            dCcD_Sph_ct_l(&i_this->mSph);
-            __construct_array(i_this->mCoCyl, 2, 0x130, 0x021A1448);
-            __construct_array(i_this->mWindSph, 2, 0x12C, 0x025166F0);
+            klftConstructSphere(&i_this->mSph);
+            klftConstructArray(i_this->mCoCyl, 2, 0x130, 0x021A1448);
+            klftConstructArray(i_this->mWindSph, 2, 0x12C, 0x025166F0);
         }
         fopAcM_OnCondition(i_this, fopAcCnd_INIT_e);
     }
 
-    cPhs_State phase_state = dComIfG_resLoad(&i_this->mPhs, M_arcname_crt);
+    cPhs_State phase_state = dComIfG_resLoad(&i_this->mPhs, l_arcName);
     if (phase_state != cPhs_COMPLEATE_e) {
         return phase_state;
     }
@@ -636,7 +512,7 @@ static cPhs_State daKlft_Create(fopAc_ac_c* i_actor) {
         i_this->mType = 0;
     }
 
-    if (!fopAcM_entrySolidHeap(i_this, 0x021A0BB0 /* CallbackCreateHeap */, 0x10000)) {
+    if (!fopAcM_entrySolidHeap(i_this, CallbackCreateHeap, 0x10000)) {
         return cPhs_ERROR_e;
     }
     if (i_this->mpBgW != nullptr && dBgS_Regist(dComIfG_Bgsp(), i_this->mpBgW, i_this)) {
@@ -649,9 +525,9 @@ static cPhs_State daKlft_Create(fopAc_ac_c* i_actor) {
     if (path == nullptr) {
         return cPhs_ERROR_e;
     }
-    u32 pnt = gabi::load<u32>(gabi::ea(path) + 8); /* m_points: dPnt {u8 ...; cXyz m_position at +4}, 0x10 each */
-    i_this->mPathP0.set(gabi::load<f32>(pnt + 0x04), gabi::load<f32>(pnt + 0x08), gabi::load<f32>(pnt + 0x0C));
-    i_this->mPathP1.set(gabi::load<f32>(pnt + 0x14), gabi::load<f32>(pnt + 0x18), gabi::load<f32>(pnt + 0x1C));
+    KlftPathPoint* points = reinterpret_cast<KlftPath*>(path)->m_points;
+    i_this->mPathP0.set(points[0].m_position.x, points[0].m_position.y, points[0].m_position.z);
+    i_this->mPathP1.set(points[1].m_position.x, points[1].m_position.y, points[1].m_position.z);
     {
         gabi::Local<cXyz> d;
         cXyz_mi(&i_this->mPathP1, d.get(), &i_this->mPathP0);
@@ -659,94 +535,108 @@ static cPhs_State daKlft_Create(fopAc_ac_c* i_actor) {
         i_this->current.angle.y = (s16)(cM_atan2s(d->x, d->z) + 0x8000);
         i_this->mPathDir.copy(*d.get());
     }
-    i_this->mHimoTop[0].set(gabi::load<f32>(pnt + 0x24), gabi::load<f32>(pnt + 0x28), gabi::load<f32>(pnt + 0x2C));
-    i_this->mHimoTop[1].set(gabi::load<f32>(pnt + 0x34), gabi::load<f32>(pnt + 0x38), gabi::load<f32>(pnt + 0x3C));
+    i_this->mHimoTop[0].set(points[2].m_position.x, points[2].m_position.y, points[2].m_position.z);
+    i_this->mHimoTop[1].set(points[3].m_position.x, points[3].m_position.y, points[3].m_position.z);
 
     f32 s;
     switch (i_this->mType) {
-    case 1: s = 0.9f; break;
-    case 2: s = 0.8f; break;
-    case 3: s = 0.7f; break;
-    default: s = 1.0f; break;
+    case 1:
+        s = 0.9f;
+        break;
+    case 2:
+        s = 0.8f;
+        break;
+    case 3:
+        s = 0.7f;
+        break;
+    default:
+        s = 1.0f;
+        break;
     }
     i_this->scale.x = s;
     i_this->scale.y = 1.0f;
     i_this->scale.z = s;
     {
-        u32 m = gabi::ea(i_this->mpModel.get());
-        gabi::store<f32>(m + 0xC0, 1.0f);
-        gabi::store<f32>(m + 0xC4, s);
-        gabi::store<f32>(m + 0xBC, s);
+        J3DModel* model = i_this->mpModel;
+        model->mBaseScale.y = 1.0f;
+        model->mBaseScale.z = s;
+        model->mBaseScale.x = s;
     }
     i_this->mStts.Init(0xFF, 0xFF, i_this);
-    i_this->mSph.Set(utiwa_sph_src);
+    i_this->mSph.Set(reinterpret_cast<const dCcD_SrcSph*>(&utiwa_sph_src));
     i_this->mSph.SetStts(&i_this->mStts);
     for (int i = 0; i < 2; i++) {
-        i_this->mWindSph[i].Set(utiwa_sph_src);
+        i_this->mWindSph[i].Set(reinterpret_cast<const dCcD_SrcSph*>(&utiwa_sph_src));
         i_this->mWindSph[i].SetStts(&i_this->mStts);
         i_this->mWindSph[i].SetR(REG_F(0, 11) + 130.0f);
-        i_this->mCoCyl[i].Set(p_co_cyl_src);
+        i_this->mCoCyl[i].Set(reinterpret_cast<const dCcD_SrcCyl*>(&p_co_cyl_src));
         i_this->mCoCyl[i].SetStts(&i_this->mStts);
     }
     daKlft_Execute(i_this);
     return phase_state;
 }
-VERIFY(0x021A0E60, daKlft_Create);
 
 /* 021A13A0 */
 static void __sinit_d_a_klft_cpp() {
-    WWHD_FUNC(0x021A13A0, void, (u32)0);
     /* the header statics in a different order: floats at 0x10464BCC, objects at +0xA/+0xB */
-    for (int i = 0; i < 4; i++) gabi::store<u32>(0x10464BD8 + 4 * i, 0);
+    for (auto& value : klftGlobals().mZeroState)
+        value = 0;
     __register_global_object(0x101B84CC);
-    gabi::store<f32>(0x10464BCC, -3.1415927f);
-    gabi::store<f32>(0x10464BD0, 3.1415927f);
-    gabi::call(0x028ED6F8, 0x10464BD6);
+    klftGlobals().mNegativePi = -3.1415927f;
+    klftGlobals().mPi = 3.1415927f;
+    klftMathInit(&klftGlobals().mMathInit);
     __register_global_object(0x101B84D8);
-    gabi::call(0x028EAB2C, 0x10464BD7);
+    klftRandomInit(&klftGlobals().mRandomInit);
     __register_global_object(0x101B84E4);
 }
-VERIFY(0x021A13A0, __sinit_d_a_klft_cpp);
 
-/* 021A1434: sead::SafeString deleting destructor (this TU's vtable slot) */
+// HD: sead::SafeString deleting destructor (this TU's vtable slot)
+/* 021A1434 */
 static void SafeString_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x021A1434, void, p, flags);
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x021A1434, SafeString_dt);
 
-/* 021A158C: sead::SafeString::assureTerminationImpl_ (this TU's copy, empty) */
-static void SafeString_assureTerminationImpl(void*) {
-    WWHD_FUNC(0x021A158C, void, (u32)0);
-}
-VERIFY(0x021A158C, SafeString_assureTerminationImpl);
+// HD: sead::SafeString::assureTerminationImpl_ (this TU's copy, empty)
+/* 021A158C */
+static void SafeString_assureTerminationImpl(void*) {}
 
-/* 021A1448: dCcD_Cyl::dCcD_Cyl (this TU's copy for __construct_array; allocates when NULL) */
+// HD: dCcD_Cyl::dCcD_Cyl (this TU's copy for klftConstructArray; allocates when NULL)
+/* 021A1448 */
 static dCcD_Cyl* dCcD_Cyl_ct_tu(dCcD_Cyl* p) {
-    WWHD_FUNC(0x021A1448, dCcD_Cyl*, p);
     if (p == nullptr) {
         p = (dCcD_Cyl*)operator_new(0x130);
         if (p == nullptr)
             return nullptr;
     }
-    dCcD_Cyl_ct(p, AAB_VTBL);
+    dCcD_Cyl_ct(p, l_aabVtable);
     return p;
 }
-VERIFY(0x021A1448, dCcD_Cyl_ct_tu);
 
-/* 021A14D4: klft_class deleting destructor (HD virtual) */
+// HD: klft_class deleting destructor (HD virtual)
+/* 021A14D4 */
 static void klft_class_dt(klft_class* i_this, s32 flags) {
-    WWHD_FUNC(0x021A14D4, void, i_this, flags);
     if (i_this != nullptr) {
-        __destroy_arr(i_this->mWindSph, 2, 0x12C, 0x02515AE8); /* dCcD_Sph::~dCcD_Sph */
-        __destroy_arr(i_this->mCoCyl, 2, 0x130, 0x02515A70);   /* dCcD_Cyl::~dCcD_Cyl */
-        gabi::call(0x02515AE8, &i_this->mSph, 2);
+        klftDestroyArray(i_this->mWindSph, 2, 0x12C, 0x02515AE8); /* dCcD_Sph::~dCcD_Sph */
+        klftDestroyArray(i_this->mCoCyl, 2, 0x130, 0x02515A70);   /* dCcD_Cyl::~dCcD_Cyl */
+        klftSphereDestruct(&i_this->mSph);
         dCcD_Stts_dt(&i_this->mStts, 2);
-        gabi::call(0x025EB8B8, &i_this->mLineMat, 2); /* ~mDoExt_3DlineMat1_c (matcher: draw) */
-        gabi::call(0x025D50BC, i_this, 0);            /* fopAc_ac_c::~fopAc_ac_c */
+        __dt(&i_this->mLineMat);
+        __dt(i_this);
         if (flags & 1)
             operator_delete(i_this);
     }
 }
-VERIFY(0x021A14D4, klft_class_dt);
+
+// clang-format off
+/* WWHD glue
+data l_himo_color 101B8424
+data utiwa_sph_src 101B8448
+data p_co_cyl_src 101B8488
+str 10013094 "Klft" in 021A0AF4
+str 1001309C "Klft" in 021A0BB0
+str 100130DC "Klft" in 021A0E60
+str 100130A4 "d_a_klft.cpp" in 021A0BB0
+str 100130B4 "actor->pm_bgw != (0)" in 021A0BB0
+*/
+// clang-format on

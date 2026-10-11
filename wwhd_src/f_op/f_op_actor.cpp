@@ -1,319 +1,345 @@
-/* f_op_actor: actor process methods (fopAc), WWHD. 
- *
- * Translation unit 025D4604..025D51D8: fopAc_IsActor, Draw, Execute, IsDelete, Delete, Create,
- * the fopAc_ac_c constructor and destructor, and the unit's __sinit (025D5148, header statics).
- * f_ap_game ends with its __sinit at 025D4564 before it; f_op_actor_iter follows at 025D51DC.
- * Ported from the GameCube f_op_actor.cpp (release build); the constructor, destructor and
- * __sinit are written from the WWHD code.
- *
- * Layout (HD, fopAc_ac_c 0x3AC): actor_type +0xC4, actor_tag +0xC8, draw_tag +0xDC, sub_method
- * +0xF0, C++ vtable +0xB4, eventInfo +0xF8 (mCommand +0xFA), tevStr +0x110 (three copies of a
- * 0x44-byte light block at +0x110/+0x1D0/+0x254 initialised by the constructor), status +0x2E0,
- * condition +0x2E4, attention distances +0x388, position +0x390. HD-only: a u8 construction
- * state at +0x3AA (0 raw, 1 constructed, 2 destroyed) that Delete uses to run the virtual
- * destructor. Condition bits: 2 NOEXEC, 4 NODRAW (GameCube 0x10). */
-#include "bindings.h"
+/* Actor process lifecycle, tww names and verified WWHD behavior. Local only.
+ */
+// HD: keep the pre-existing generic binding separate from this unit's typed definition.
+#define fopAc_IsActor fopAc_IsActorBindingHD
+#include "f_op/f_op_actor_readable.h"
+#undef fopAc_IsActor
 
-namespace f_op_actor_cpp {
+using ActorType = be<s32>;
+using ActorStatus = be<u32>;
+using StayRoom = be<s8>;
+using DemoObject = gptr<dDemo_object_c>;
+static ActorType g_fopAc_type;
+// HD: a TU view of the GameCube fopAc_ac_c::stopStatus static, without changing the shared class.
+static ActorStatus stopStatus;
+static StayRoom mStayNo;
+static DemoObject m_object;
+static const fopAc_lightBlockHD l_defaultLight;
+static fopAc_vtableHD l_actorVtable;
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void JUT_ASSERT_l(u32 file, s32 line, u32 msg) { gabi::call(0x0273AA24, file, line, msg); }
-static inline BOOL fpcBs_Is_JustOfType_l(s32 a, s32 b) { return gabi::call<BOOL>(0x025DD258, a, b); }
-static inline s32 fpcBs_MakeOfType_l(u32 p) { return gabi::call<s32>(0x025DD268, p); }
-static inline BOOL dMenu_flag_l() { return gabi::call<BOOL>(0x025986BC); }
-static inline BOOL dScnPly_isPause_l() { return gabi::call<BOOL>(0x025AF2A4); } /* HD: d_s_play */
-static inline s32 dEvt_control_moveApproval_l(u32 ev, u32 a) { return gabi::call<s32>(0x02540158, ev, a); }
-static inline BOOL fopAcM_cullingCheck_l(u32 a) { return gabi::call<BOOL>(0x025D6CE8, a); }
-static inline s32 fpcLf_DrawMethod_l(u32 m, u32 a) { return gabi::call<s32>(0x025DF2C0, m, a); }
-static inline s32 fpcMtd_Execute_l(u32 m, u32 a) { return gabi::call<s32>(0x025DFCC4, m, a); }
-static inline s32 fpcMtd_IsDelete_l(u32 m, u32 a) { return gabi::call<s32>(0x025DFCCC, m, a); }
-static inline s32 fpcMtd_Delete_l(u32 m, u32 a) { return gabi::call<s32>(0x025DFCD4, m, a); }
-static inline s32 fpcMtd_Create_l(u32 m, u32 a) { return gabi::call<s32>(0x025DFCDC, m, a); }
-static inline void dMap_drawActorPointMiniMap_l(u32 a) { gabi::call(0x0259029C, a); }
-static inline BOOL fopAcM_delete_l(u32 a) { return gabi::call<BOOL>(0x025D57E0, a); }
-static inline void fopAcTg_Init_l(u32 tag, u32 a) { gabi::call(0x025DA30C, tag, a); }
-static inline void fopAcTg_ToActorQ_l(u32 tag) { gabi::call(0x025DA2F8, tag); }
-static inline void fopAcTg_ActorQTo_l(u32 tag) { gabi::call(0x025DA308, tag); }
-static inline void fopDwTg_Init_l(u32 tag, u32 a) { gabi::call(0x025DA888, tag, a); }
-static inline void fopDwTg_ToDrawQ_l(u32 tag, s32 prio) { gabi::call(0x025DA874, tag, prio); }
-static inline void fopDwTg_DrawQTo_l(u32 tag) { gabi::call(0x025DA884, tag); }
-static inline s32 fpcM_DrawPriority_l(u32 a) { return gabi::call<s32>(0x025DF2B8, a); }
-static inline void fopAcM_DeleteHeap_l(u32 a) { gabi::call(0x025D6134, a); }
-static inline u32 dDemo_object_getActor_l(u32 obj, u8 id) { return gabi::call<u32>(0x02526E70, obj, id); }
-static inline void dDemo_actor_setActor_l(u32 da, u32 a) { gabi::call(0x025277D8, da, a); }
-static inline void mDoAud_seDeleteObject_l(u32 pos) { gabi::call(0x025E1B34, pos); }
-static inline void dKy_tevstr_init_l(u32 tev, s8 room, u8 c) { gabi::call(0x0255FFF4, tev, room, c); }
-static inline u32 operator_new_l(u32 size) { return gabi::call<u32>(0x0273AD10, size); }
-static inline void operator_delete_l(u32 p) { gabi::call(0x0273AF40, p); }
-static inline void base_process_ct_l(u32 p) { gabi::call(0x025DD5F0, p); }        /* leafdraw base constructor */
-static inline void base_process_dt_l(u32 p, s32 f) { gabi::call(0x025DD630, p, f); }
-static inline void dEvt_info_c_ct_l(u32 p) { gabi::call(0x0253E948, p); }
-
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u16 ld16(u32 a) { return gabi::load<u16>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-
-static constexpr u32 g_fopAc_type = 0x101F3080;
-static constexpr u32 stopStatus = 0x101F3084;       /* fopAc_ac_c::stopStatus */
-static constexpr u32 stayNo = 0x1047E6C8;           /* dStage_roomControl_c::mStayNo (s8) */
-static constexpr u32 FILE_STR = 0x10056E7C;         /* "f_op_actor.cpp" */
-
-enum {
-    ST_NOPAUSE = 0x20000, ST_NOCULLEXEC = 0x80, ST_CULL = 0x100, ST_NODRAW = 0x01000000,
-    ST_SHOWMAP = 0x20, ST_NOFALLDEL = 0x04000000,
-    CND_NOEXEC = 2, CND_NODRAW = 4,
-};
-
-/* 025D4604: HD: null-safe */
-static BOOL fopAc_IsActor(u32 pProc) {
-    WWHD_FUNC(0x025D4604, BOOL, pProc);
-    BOOL ret = FALSE;
-    if (pProc != 0 && fpcBs_Is_JustOfType_l(ld(g_fopAc_type), ld(pProc + 0xC4)) != 0) ret = TRUE;
-    return ret;
+/* 025D4604 */
+BOOL fopAc_IsActor(fopAc_ac_c* pProc) {
+    // HD: unlike the GameCube release, the actor check accepts a null process.
+    return pProc && fpcBs_Is_JustOfType(g_fopAc_type, pProc->actor_type) ? TRUE : FALSE;
 }
-VERIFY(0x025D4604, fopAc_IsActor);
 
 /* 025D4654 */
-static s32 fopAc_Draw(u32 actor) {
-    WWHD_FUNC(0x025D4654, s32, actor);
-    s32 ret = 1;
-    if (!dMenu_flag_l()) {
-        s32 moveApproval = dEvt_control_moveApproval_l(dComIfGp_ea() + 0x51D0, actor);
+s32 fopAc_Draw(fopAc_ac_c* actor) {
+    s32 ret = TRUE;
+    if (!dMenu_flag()) {
+        s32 moveApproval = dComIfGp_event_moveApproval(actor);
         bool draw;
-        if (moveApproval == 2) {
-            draw = !(ld(actor + 0x2E0) & ST_NODRAW);
+        if (moveApproval == dEvtMove_FORCE_e) {
+            draw = !(actor->actor_status & fopAcStts_NODRAW_e);
         } else {
-            u32 s = ld(actor + 0x2E0);
-            if (s & ld(stopStatus)) draw = false;
-            else if ((s & ST_CULL) && fopAcM_cullingCheck_l(actor)) draw = false;
-            else draw = !(ld(actor + 0x2E0) & ST_NODRAW);
+            u32 status = actor->actor_status;
+            if (status & stopStatus)
+                draw = false;
+            else if ((status & fopAcStts_CULL_e) && fopAcM_cullingCheck(actor))
+                draw = false;
+            else
+                draw = !(actor->actor_status & fopAcStts_NODRAW_e);
         }
-        u32 s;
+        u32 status;
         if (draw) {
-            st(actor + 0x2E4, ld(actor + 0x2E4) & ~CND_NODRAW);
-            ret = fpcLf_DrawMethod_l(ld(actor + 0xF0), actor);
-            s = ld(actor + 0x2E0) & ~ST_NODRAW;
-            st(actor + 0x2E0, s);
+            actor->actor_condition &= ~u32(fopAcCnd_NODRAW_e);
+            ret = fpcLf_DrawMethod(gabi::at<leafdraw_method_class>(actor->sub_method), actor);
+            status = actor->actor_status & ~u32(fopAcStts_NODRAW_e);
+            actor->actor_status = status;
         } else {
-            u32 cnd = ld(actor + 0x2E4);
-            s = ld(actor + 0x2E0) & ~ST_NODRAW;
-            st(actor + 0x2E4, cnd | CND_NODRAW);
-            st(actor + 0x2E0, s);
+            u32 condition = actor->actor_condition;
+            status = actor->actor_status & ~u32(fopAcStts_NODRAW_e);
+            actor->actor_condition = condition | fopAcCnd_NODRAW_e;
+            actor->actor_status = status;
         }
-        if ((s8)ld8(stayNo) >= 0 && (s & ST_SHOWMAP)) dMap_drawActorPointMiniMap_l(actor);
+        if (mStayNo >= 0 && (status & fopAcStts_SHOWMAP_e))
+            dMap_drawActorPointMiniMap(actor);
     }
     return ret;
 }
-VERIFY(0x025D4654, fopAc_Draw);
 
-static inline bool isnan_bits(u32 a) { return (u32)(ld(a) << 1) > 0xFF000000u; }
+static bool positionIsNaN(u32 bits) { return u32(bits << 1) > 0xFF000000u; }
 
-/* the release asserts on current.pos (GameCube JUT_ASSERT !isnan + CHECK_VEC3_RANGE) */
-static void assert_pos(u32 actor, s32 l0, s32 lr) {
-    if (isnan_bits(actor + 0x314)) JUT_ASSERT_l(FILE_STR, l0, 0x10056E8C);
-    if (isnan_bits(actor + 0x318)) JUT_ASSERT_l(FILE_STR, l0 + 1, 0x10056EE8);
-    if (isnan_bits(actor + 0x31C)) JUT_ASSERT_l(FILE_STR, l0 + 2, 0x10056F44);
+/* inlined into fopAc_Execute */
+static void checkPosition(fopAc_ac_c* actor, s32 line, s32 rangeLine) {
+    // HD: the assertion uses integer NaN tests before its ordered float range checks.
+    auto* words = reinterpret_cast<fopAc_vectorWordsHD*>(&actor->current.pos);
+    if (positionIsNaN(words->position[0]))
+        JUTAssertion_showAssert("f_op_actor.cpp", line, "!isnan(actor->current.pos.x)");
+    if (positionIsNaN(words->position[1]))
+        JUTAssertion_showAssert("f_op_actor.cpp", line + 1, "!isnan(actor->current.pos.y)");
+    if (positionIsNaN(words->position[2]))
+        JUTAssertion_showAssert("f_op_actor.cpp", line + 2, "!isnan(actor->current.pos.z)");
     const f32 lo = -1.0e32f, hi = 1.0e32f;
-    f32 x = ldf(actor + 0x314);
+    f32 x = actor->current.pos.x;
     bool ok = lo < x && x < hi;
     if (ok) {
-        f32 y = ldf(actor + 0x318);
+        f32 y = actor->current.pos.y;
         ok = lo < y && y < hi;
         if (ok) {
-            f32 z = ldf(actor + 0x31C);
+            f32 z = actor->current.pos.z;
             ok = lo < z && z < hi;
         }
     }
-    if (!ok) JUT_ASSERT_l(FILE_STR, lr, 0x10056FA0);
+    if (!ok)
+        JUTAssertion_showAssert(
+            "f_op_actor.cpp", rangeLine,
+            "-1.0e32f < actor->current.pos.x && actor->current.pos.x < 1.0e32f && -1.0e32f < "
+            "actor->current.pos.y && actor->current.pos.y < 1.0e32f && -1.0e32f < "
+            "actor->current.pos.z && actor->current.pos.z < 1.0e32f");
 }
 
-/* 025D475C (matcher: CHECK_VEC3_RANGE) HD: an enemy (group 2) that falls 15000 below the player is deleted */
-static BOOL fopAc_Execute(u32 actor) {
-    WWHD_FUNC(0x025D475C, BOOL, actor);
+/* 025D475C */
+BOOL fopAc_Execute(fopAc_ac_c* actor) {
     BOOL ret = TRUE;
-    assert_pos(actor, 0x2A4, 0x2A8);
-    if (!(ld(actor + 0x2E0) & ST_NOPAUSE)) {
-        if (dMenu_flag_l()) return ret;
-        if (dScnPly_isPause_l()) return ret;
+    checkPosition(actor, 0x2A4, 0x2A8);
+    if (!(actor->actor_status & fopAcStts_NOPAUSE_e)) {
+        if (dMenu_flag())
+            return ret;
+        if (dScnPly_ply_c::isPause())
+            return ret;
     }
-    st16(actor + 0xFA, 0); /* eventInfo.beforeProc() */
-    s32 moveApproval = dEvt_control_moveApproval_l(dComIfGp_ea() + 0x51D0, actor);
+    actor->eventInfo.mCondition = 0;
+    s32 moveApproval = dComIfGp_event_moveApproval(actor);
     bool exec;
-    if (moveApproval == 2) {
+    if (moveApproval == dEvtMove_FORCE_e)
         exec = true;
-    } else if (moveApproval == 0 || (ld(actor + 0x2E0) & ld(stopStatus))) {
+    else if (moveApproval == dEvtMove_NOMOVE_e || (actor->actor_status & stopStatus))
         exec = false;
-    } else if (ld(actor + 0x2E0) & ST_NOCULLEXEC) {
-        exec = !(ld(actor + 0x2E4) & CND_NODRAW);
-    } else {
+    else if (actor->actor_status & fopAcStts_NOCULLEXEC_e)
+        exec = !(actor->actor_condition & fopAcCnd_NODRAW_e);
+    else
         exec = true;
-    }
     if (exec) {
-        for (u32 i = 0; i < 0x14; i += 4) st(actor + 0x300 + i, ld(actor + 0x314 + i)); /* old = current */
-        st(actor + 0x2E4, ld(actor + 0x2E4) & ~CND_NOEXEC);
-        ret = fpcMtd_Execute_l(ld(actor + 0xF0), actor);
-        if (ld8(actor + 0x2DA) == 2 && !(ld(actor + 0x2E0) & ST_NOFALLDEL)) {
-            u32 player = ld(dComIfGp_ea() + 0x5B34);
-            if (player != 0 && ldf(actor + 0x318) < ldf(player + 0x318) - 15000.0f) fopAcM_delete_l(actor);
+        // HD: old = current is a five-word copy, including the room byte and final padding.
+        auto* old = reinterpret_cast<fopAc_placeWordsHD*>(&actor->old);
+        auto* current = reinterpret_cast<fopAc_placeWordsHD*>(&actor->current);
+        for (u32 i = 0; i < 3; ++i)
+            old->position[i] = current->position[i];
+        for (u32 i = 0; i < 2; ++i)
+            old->angleAndRoom[i] = current->angleAndRoom[i];
+        actor->actor_condition &= ~u32(fopAcCnd_NOEXEC_e);
+        ret = fpcMtd_Execute(gabi::at<process_method_class>(actor->sub_method), actor);
+        // HD: enemies below the player by 15000 are deleted, unless the BOSS status suppresses it.
+        if (actor->group == fopAc_ENEMY_e && !(actor->actor_status & fopAcStts_BOSS_e)) {
+            auto* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            fopAc_ac_c* player = game->play.mpPlayerPtr[0];
+            if (player && actor->current.pos.y < player->current.pos.y - 15000.0f)
+                fopAcM_delete(actor);
         }
     } else {
-        st(actor + 0x2E4, ld(actor + 0x2E4) | CND_NOEXEC);
+        actor->actor_condition |= fopAcCnd_NOEXEC_e;
     }
-    assert_pos(actor, 0x2EA, 0x2EE);
+    checkPosition(actor, 0x2EA, 0x2EE);
     return ret;
 }
-VERIFY(0x025D475C, fopAc_Execute);
 
 /* 025D4AF8 */
-static s32 fopAc_IsDelete(u32 actor) {
-    WWHD_FUNC(0x025D4AF8, s32, actor);
-    s32 ret = fpcMtd_IsDelete_l(ld(actor + 0xF0), actor);
-    if (ret == 1) fopDwTg_DrawQTo_l(actor + 0xDC);
+s32 fopAc_IsDelete(fopAc_ac_c* actor) {
+    s32 ret = fpcMtd_IsDelete(gabi::at<process_method_class>(actor->sub_method), actor);
+    if (ret == TRUE)
+        fopDwTg_DrawQTo(&actor->draw_tag);
     return ret;
 }
-VERIFY(0x025D4AF8, fopAc_IsDelete);
 
-/* 025D4B4C: HD: runs the virtual destructor of a constructed actor */
-static s32 fopAc_Delete(u32 actor) {
-    WWHD_FUNC(0x025D4B4C, s32, actor);
-    if (ld8(actor + 0x3AA) != 1) JUT_ASSERT_l(0x1005706C, 0x376, 0x1005707C);
-    s32 ret = fpcMtd_Delete_l(ld(actor + 0xF0), actor);
-    if (ret == 1) {
-        if (ld8(actor + 0x3AA) == 1) gabi::call_ptr(ld(ld(actor + 0xB4) + 0xC), actor, 2);
-        fopAcTg_ActorQTo_l(actor + 0xC8);
-        fopDwTg_DrawQTo_l(actor + 0xDC);
-        fopAcM_DeleteHeap_l(actor);
-        u8 id = ld8(actor + 0x2DC);
-        if (id != 0 && id <= 0x20) {
-            u32 demo = ld(0x101D5FFC);
-            if (demo == 0) {
-                JUT_ASSERT_l(0x10056E64, 0x23A, 0x10056E54);
-                demo = ld(0x101D5FFC);
-            }
-            u32 da = dDemo_object_getActor_l(demo, id);
-            if (da != 0) dDemo_actor_setActor_l(da, 0);
+/* 025D4B4C */
+s32 fopAc_Delete(fopAc_ac_c* actor) {
+    // HD: constructed actors run their virtual destructor before removal from the queues.
+    JUT_ASSERT(0x376, actor->mHdConstructState == CONSTRUCTED_e);
+    s32 ret = fpcMtd_Delete(gabi::at<process_method_class>(actor->sub_method), actor);
+    if (ret == TRUE) {
+        if (actor->mHdConstructState == CONSTRUCTED_e) {
+            auto* vtable = gabi::at<fopAc_vtableHD>(actor->__vtbl);
+            gabi::call_ptr(vtable->mDestructor, actor, 2);
         }
-        mDoAud_seDeleteObject_l(actor + 0x37C);
-        mDoAud_seDeleteObject_l(actor + 0x314);
+        fopAcTg_ActorQTo(&actor->actor_tag);
+        fopDwTg_DrawQTo(&actor->draw_tag);
+        fopAcM_DeleteHeap(actor);
+        u8 id = actor->demoActorID;
+        if (id != 0 && id <= 0x20) {
+            dDemo_object_c* demo = m_object;
+            if (!demo) {
+                JUTAssertion_showAssert("d_demo.h", 0x23A, "m_object != (0)");
+                demo = m_object;
+            }
+            dDemo_actor_c* pDemoActor = demo->getActor(id);
+            if (pDemoActor)
+                pDemoActor->setActor(nullptr);
+        }
+        mDoAud_seDeleteObject(&actor->eyePos);
+        mDoAud_seDeleteObject(&actor->current.pos);
     }
     return ret;
 }
-VERIFY(0x025D4B4C, fopAc_Delete);
 
 /* 025D4C70 */
-static s32 fopAc_Create(u32 actor) {
-    WWHD_FUNC(0x025D4C70, s32, actor);
-    if (ld8(actor + 0xC) == 0) { /* fpcM_IsFirstCreating */
-        u32 profile = ld(actor + 0x10);
-        st(actor + 0xC4, fpcBs_MakeOfType_l(g_fopAc_type));
-        st(actor + 0xF0, ld(profile + 0x24));
-        fopAcTg_Init_l(actor + 0xC8, actor);
-        fopAcTg_ToActorQ_l(actor + 0xC8);
-        fopDwTg_Init_l(actor + 0xDC, actor);
-        st(actor + 0x2E0, ld(profile + 0x28));
-        st8(actor + 0x2DA, ld8(profile + 0x2C));
-        st8(actor + 0x2DB, ld8(profile + 0x2D));
-        u32 prm = ld(actor + 0xAC);
-        if (prm != 0) {
-            st(actor + 0xB0, ld(prm + 0x0));
-            st(actor + 0x2EC, ld(prm + 0x4));
-            st(actor + 0x2F0, ld(prm + 0x8));
-            st(actor + 0x2F4, ld(prm + 0xC));
-            st16(actor + 0x2F8, ld16(prm + 0x10));
-            st16(actor + 0x2FA, ld16(prm + 0x12));
-            st16(actor + 0x2FC, ld16(prm + 0x14));
-            st16(actor + 0x328, ld16(prm + 0x10));
-            st16(actor + 0x32A, ld16(prm + 0x12));
-            st16(actor + 0x32C, ld16(prm + 0x14));
-            st(actor + 0x2E8, ld(prm + 0x1C));
-            st8(actor + 0x2DD, ld8(prm + 0x20));
-            st8(actor + 0x2DE, ld8(prm + 0x1B));
-            f32 sx = (f32)ld8(prm + 0x18), sy = (f32)ld8(prm + 0x19), sz = (f32)ld8(prm + 0x1A);
-            stf(actor + 0x330, sx * 0.1f);
-            stf(actor + 0x334, sy * 0.1f);
-            stf(actor + 0x338, sz * 0.1f);
-            st16(actor + 0x2D8, ld16(prm + 0x16));
-            st8(actor + 0x2FE, ld8(prm + 0x21));
+s32 fopAc_Create(fopAc_ac_c* actor) {
+    if (actor->mInitState == 0) {
+        auto* profile = reinterpret_cast<actor_process_profile_definition*>(actor->mpProf.get());
+        actor->actor_type = fpcBs_MakeOfType(&g_fopAc_type);
+        actor->sub_method = profile->sub_method;
+        fopAcTg_Init(&actor->actor_tag, actor);
+        fopAcTg_ToActorQ(&actor->actor_tag);
+        fopDwTg_Init(&actor->draw_tag, actor);
+        actor->actor_status = profile->status;
+        actor->group = profile->group;
+        actor->cullType = profile->cullType;
+        auto* prm = static_cast<fopAcM_prm_class*>(actor->mpUserData.get());
+        if (prm) {
+            actor->mParameters = prm->base.parameters;
+            actor->home.pos = prm->base.position;
+            actor->home.angle = prm->base.angle;
+            actor->shape_angle = prm->base.angle;
+            actor->parentActorID = prm->parent_id;
+            actor->argument = prm->argument;
+            actor->gbaName = prm->gbaName;
+            f32 sx = prm->scale.x, sy = prm->scale.y, sz = prm->scale.z;
+            actor->scale.set(sx * 0.1f, sy * 0.1f, sz * 0.1f);
+            actor->setID = prm->base.setID;
+            actor->home.roomNo = prm->room_no;
         }
-        u32 px = ld(actor + 0x2EC), py = ld(actor + 0x2F0), pz = ld(actor + 0x2F4);
-        u32 a0 = ld(actor + 0x2F8), a1 = ld(actor + 0x2FC);
-        st(actor + 0x300, px); st(actor + 0x304, py); st(actor + 0x308, pz); /* old = home */
-        st(actor + 0x30C, a0); st(actor + 0x310, a1);
-        st(actor + 0x314, px); st(actor + 0x318, py); st(actor + 0x31C, pz); /* current = home */
-        st(actor + 0x320, a0); st(actor + 0x324, a1);
-        st(actor + 0x37C, px); st(actor + 0x380, py); st(actor + 0x384, pz); /* eyePos */
-        stf(actor + 0x378, -100.0f);
-        static const u8 dist[8] = {1, 2, 3, 7, 8, 16, 16, 15};
-        for (int i = 0; i < 8; i++) st8(actor + 0x388 + i, dist[i]);
-        st(actor + 0x390, px); st(actor + 0x394, py); st(actor + 0x398, pz); /* attention position */
-        dKy_tevstr_init_l(actor + 0x110, (s8)ld8(actor + 0x2FE), 0xFF);
+        // HD: snapshot all five home words before the old/current/eye/attention copies.
+        auto* home = reinterpret_cast<fopAc_placeWordsHD*>(&actor->home);
+        u32 px = home->position[0], py = home->position[1], pz = home->position[2];
+        u32 angleXY = home->angleAndRoom[0], angleZRoom = home->angleAndRoom[1];
+        auto* old = reinterpret_cast<fopAc_placeWordsHD*>(&actor->old);
+        old->position[0] = px;
+        old->position[1] = py;
+        old->position[2] = pz;
+        old->angleAndRoom[0] = angleXY;
+        old->angleAndRoom[1] = angleZRoom;
+        auto* current = reinterpret_cast<fopAc_placeWordsHD*>(&actor->current);
+        current->position[0] = px;
+        current->position[1] = py;
+        current->position[2] = pz;
+        current->angleAndRoom[0] = angleXY;
+        current->angleAndRoom[1] = angleZRoom;
+        auto* eye = reinterpret_cast<fopAc_vectorWordsHD*>(&actor->eyePos);
+        eye->position[0] = px;
+        eye->position[1] = py;
+        eye->position[2] = pz;
+        actor->maxFallSpeed = -100.0f;
+        actor->attention_info.distances[fopAc_Attn_TYPE_MISC_e] = 1;
+        actor->attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 2;
+        actor->attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 3;
+        actor->attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 7;
+        actor->attention_info.distances[fopAc_Attn_TYPE_CARRY_e] = 8;
+        actor->attention_info.distances[fopAc_Attn_TYPE_DOOR_e] = 16;
+        actor->attention_info.distances[fopAc_Attn_TYPE_TREASURE_e] = 16;
+        actor->attention_info.distances[fopAc_Attn_TYPE_SHIP_e] = 15;
+        auto* attention = reinterpret_cast<fopAc_vectorWordsHD*>(&actor->attention_info.position);
+        attention->position[0] = px;
+        attention->position[1] = py;
+        attention->position[2] = pz;
+        dKy_tevstr_init(&actor->tevStr, actor->home.roomNo, 0xFF);
     }
-    s32 status = fpcMtd_Create_l(ld(actor + 0xF0), actor);
-    if (status == 4) {
-        s32 priority = fpcM_DrawPriority_l(actor);
-        fopDwTg_ToDrawQ_l(actor + 0xDC, priority);
+    s32 status = fpcMtd_Create(gabi::at<process_method_class>(actor->sub_method), actor);
+    if (status == cPhs_COMPLEATE_e) {
+        s32 priority = fpcM_DrawPriority(actor);
+        fopDwTg_ToDrawQ(&actor->draw_tag, priority);
     }
     return status;
 }
-VERIFY(0x025D4C70, fopAc_Create);
 
-/* 025D4ED0: fopAc_ac_c::fopAc_ac_c (HD: allocates when this == NULL; construction state +0x3AA) */
-static u32 fopAc_ac_c_ct(u32 self) {
-    WWHD_FUNC(0x025D4ED0, u32, self);
-    if (self == 0) {
-        self = operator_new_l(0x3AC);
-        if (self == 0) return self;
+// HD: compiler-generated constructor/destructor and common-header initialization.
+/* 025D4ED0 */
+u32 fopAc_ac_c__ct(fopAc_ac_c* self) {
+    if (!self) {
+        self = static_cast<fopAc_ac_c*>(operator_new(sizeof(fopAc_ac_c)));
+        if (!self)
+            return 0;
     }
-    base_process_ct_l(self);
-    st(self + 0xB4, 0x10057138);
-    dEvt_info_c_ct_l(self + 0xF8);
-    /* three copies of the default light block (0x44 bytes at 1016E414) in tevStr */
-    const u32 T = 0x1016E414;
+    fopAc_baseProcessCtorHD(self);
+    self->__vtbl = gabi::ea(&l_actorVtable);
+    dEvt_info_c_ctorHD(&self->eventInfo);
+    // HD: read the entire default block before writing any light, including possible aliases.
     f32 f[6];
-    for (int i = 0; i < 6; i++) f[i] = ldf(T + 4 * i);
+    for (u32 i = 0; i < 6; ++i)
+        f[i] = l_defaultLight.positionAndDirection[i];
     u8 b[4];
-    for (int i = 0; i < 4; i++) b[i] = ld8(T + 0x18 + i);
+    for (u32 i = 0; i < 4; ++i)
+        b[i] = l_defaultLight.color[i];
     u16 h[4];
-    for (int i = 0; i < 4; i++) h[i] = ld16(T + 0x1C + 2 * i);
+    for (u32 i = 0; i < 4; ++i)
+        h[i] = l_defaultLight.packedParameters[i];
     f32 g[8];
-    for (int i = 0; i < 8; i++) g[i] = ldf(T + 0x24 + 4 * i);
-    static const u32 base[3] = {0x110, 0x1D0, 0x254};
-    for (int k = 0; k < 3; k++) {
-        u32 p = self + base[k];
-        for (int i = 0; i < 6; i++) stf(p + 4 * i, f[i]);
-        for (int i = 0; i < 4; i++) st8(p + 0x18 + i, b[i]);
-        for (int i = 0; i < 4; i++) st16(p + 0x1C + 2 * i, h[i]);
-        for (int i = 0; i < 8; i++) stf(p + 0x24 + 4 * i, g[i]);
+    for (u32 i = 0; i < 8; ++i)
+        g[i] = l_defaultLight.factors[i];
+    auto* tev = reinterpret_cast<fopAc_tevInitHD*>(&self->tevStr);
+    for (u32 k = 0; k < 3; ++k) {
+        auto* light = k == 0 ? &tev->mLightObj.mDefault : &tev->mHdLightParam[k - 1].mDefault;
+        for (u32 i = 0; i < 6; ++i)
+            light->positionAndDirection[i] = f[i];
+        for (u32 i = 0; i < 4; ++i)
+            light->color[i] = b[i];
+        for (u32 i = 0; i < 4; ++i)
+            light->packedParameters[i] = h[i];
+        for (u32 i = 0; i < 8; ++i)
+            light->factors[i] = g[i];
     }
-    if (ld8(self + 0x3AA) != 0) JUT_ASSERT_l(0x100570E4, 0x14F, 0x100570C4);
-    st8(self + 0x3AA, 1);
-    return self;
+    JUT_ASSERT(0x14F, self->mHdConstructState == CLEARED_e);
+    self->mHdConstructState = CONSTRUCTED_e;
+    return gabi::ea(self);
 }
-VERIFY(0x025D4ED0, fopAc_ac_c_ct);
 
-/* 025D50BC: fopAc_ac_c::~fopAc_ac_c */
-static void fopAc_ac_c_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x025D50BC, void, self, flags);
-    if (self == 0) return;
-    u8 state = ld8(self + 0x3AA);
-    st(self + 0xB4, 0x10057138);
-    if (state != 1) JUT_ASSERT_l(0x10057118, 0x157, 0x100570F4);
-    st8(self + 0x3AA, 2);
-    base_process_dt_l(self, 0);
-    if (flags & 1) operator_delete_l(self);
+/* 025D50BC */
+void fopAc_ac_c__dt(fopAc_ac_c* self, s32 flags) {
+    if (!self)
+        return;
+    u8 state = self->mHdConstructState;
+    self->__vtbl = gabi::ea(&l_actorVtable);
+    JUT_ASSERT(0x157, state == CONSTRUCTED_e);
+    self->mHdConstructState = DESTROYED_e;
+    fopAc_baseProcessDtorHD(self, 0);
+    if (flags & 1)
+        operator_delete(self);
 }
-VERIFY(0x025D50BC, fopAc_ac_c_dt);
 
 /* 025D5148 */
-static void __sinit_f_op_actor_cpp() {
-    WWHD_FUNC(0x025D5148, void, (u32)0);
-    sinit_header_statics(0x10487424, 0x101F305C);
-}
-VERIFY(0x025D5148, __sinit_f_op_actor_cpp);
+static void __sinit_f_op_actor_cpp() { sinit_header_statics(0x10487424, 0x101F305C); }
 
-} // namespace f_op_actor_cpp
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+data g_fopAc_type 101F3080
+data stopStatus 101F3084
+data mStayNo 1047E6C8
+data m_object 101D5FFC
+data l_defaultLight 1016E414
+data l_actorVtable 10057138
+str 10056E7C "f_op_actor.cpp" in 025D475C
+str 1005706C "f_op_actor.cpp" in 025D4B4C
+str 100570E4 "f_op_actor.cpp" in 025D4ED0
+str 10057118 "f_op_actor.cpp" in 025D50BC
+str 10056E8C "!isnan(actor->current.pos.x)" renamed
+str 10056EE8 "!isnan(actor->current.pos.y)" renamed
+str 10056F44 "!isnan(actor->current.pos.z)" renamed
+str 10056FA0
+str 1005707C "actor->mHdConstructState == CONSTRUCTED_e" renamed
+str 10056E64 "d_demo.h"
+str 10056E54 "m_object != (0)"
+str 100570C4 "self->mHdConstructState == CLEARED_e" renamed
+str 100570F4 "state == CONSTRUCTED_e" renamed
+ext 025DD258 BOOL fpcBs_Is_JustOfType(int, int)
+ext 025DD268 s32 fpcBs_MakeOfType(be<s32>*)
+ext 025986BC BOOL dMenu_flag()
+ext 025AF2A4 BOOL dScnPly_isPauseHD()
+ext 02540158 s32 dEvt_control_moveApprovalHD(dEvt_control_c*, fopAc_ac_c*)
+ext 025D6CE8 BOOL fopAcM_cullingCheck(fopAc_ac_c*)
+ext 025DF2C0 s32 fpcLf_DrawMethod(leafdraw_method_class*, fopAc_ac_c*)
+ext 0259029C void dMap_drawActorPointMiniMap(fopAc_ac_c*)
+ext 025DA30C u32 fopAcTg_Init(create_tag_class*, void*)
+ext 025DA2F8 u32 fopAcTg_ToActorQ(create_tag_class*)
+ext 025DA308 u32 fopAcTg_ActorQTo(create_tag_class*)
+ext 025DA888 bool fopDwTg_Init(create_tag_class*, void*)
+ext 025DA874 u32 fopDwTg_ToDrawQ(create_tag_class*, s32)
+ext 025DA884 void fopDwTg_DrawQTo(create_tag_class*)
+ext 025DF2B8 s32 fpcM_DrawPriority(fopAc_ac_c*)
+ext 025D6134 void fopAcM_DeleteHeap(fopAc_ac_c*)
+ext 02526E70 dDemo_actor_c* fopAc_demoGetActorHD(dDemo_object_c*, u8)
+ext 025277D8 void fopAc_demoSetActorHD(dDemo_actor_c*, fopAc_ac_c*)
+ext 0255FFF4 void dKy_tevstr_init(dKy_tevstr_c*, s8, u8)
+ext 025DD5F0 void fopAc_baseProcessCtorHD(base_process_class*)
+ext 025DD630 void fopAc_baseProcessDtorHD(base_process_class*, s32)
+ext 0253E948 void dEvt_info_c_ctorHD(dEvt_info_c*)
+*/
+// clang-format on

@@ -1,171 +1,155 @@
-/* hd_text_tag: HD message tag processor base (font, scale and pictograph tags), WWHD.
- * HD-only code (no GameCube source): written from the WWHD
- * code. Range 025FA0F0..025FA5BF (static initialiser 025FA52C). hd_text_ruby (02601B60..) derives
- * from it.
+/**
+ * hd_text_tag.cpp
+ * HD - message tag processing: font, scale and pictograph tags (hd_text_ruby derives from it)
  *
- * TagState (0x10): +0 u8 scale saved, +4/+8 f32 saved writer scale x/y, +0xC saved font.
- * Tag record: +2 u16 group, +4 u16 tag, +5 u8 (group 3: pictograph code), +6 u16 parameter size,
- * +8.. parameters (font id or scale percent, scale x/y percent at +0xA/+0xC; group 1 tag 0xC:
- * +0x10/+0x12 scale percent). Writer (nw4f TextWriter-like): +8 cursor x, +0xC/+0x10 scale,
- * +0x28 font. Font manager 101F4A50 (hd_font_mgr): font 4 is the pictograph font.
+ * WWHD (cking.rpx), HD-only code (no GameCube source), written in the style of the GameCube
+ * decompilation and verified function by function against the recompiled original (tools/verify,
+ * unit hd_text_tag). Each function is marked with its WWHD address; the glue block at the end lists
+ * this translation unit's data (tools/verify/autoglue.py).
  */
-#include "gabi.h"
-using namespace gabi;
 
-namespace hd_text_tag {
+#include "d/hd_text_tag.h"
 
-static f32 pct(u32 v) { return f32(f64(v)) / load<f32>(0x100E0F68); } /* u16 percent / 100 */
-static f32 s32f(u32 v) { return f32(f64(s32(v))); }
-
-/* 025FA0F0: TagState constructor */
-u32 stateCtor(u32 p) {
-    WWHD_FUNC(0x025FA0F0, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x10u);
-        if (!p) return 0;
+/* 025FA0F0 */
+// hdTextTagState_c::hdTextTagState_c() (GHS: allocates when called with NULL)
+static hdTextTagState_c* hdTextTagState_c__ct(hdTextTagState_c* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdTextTagState_c*)operator_new(sizeof(hdTextTagState_c));
+        if (i_this == NULL) {
+            return NULL;
+        }
     }
-    const f32 one = load<f32>(0x100E0F60);
-    store<u8>(p, 0);
-    store<f32>(p + 8, one);
-    store<u32>(p + 0xC, 0);
-    store<f32>(p + 4, one);
-    return p;
+    i_this->mScaleSaved = false;
+    i_this->mSavedScaleY = 1.0f;
+    i_this->mpSavedFont = NULL;
+    i_this->mSavedScaleX = 1.0f;
+    return i_this;
 }
-VERIFY(0x025FA0F0, stateCtor);
 
-/* 025FA140: font tag: switches the writer's font (0xFFFF: back to the saved one) and sets the scale
- * that gives the requested size in percent of the font's cell */
-u32 fontTag(u32 st, u32 writer, u32 tag) {
-    WWHD_FUNC(0x025FA140, u32, st, writer, tag);
-    const u32 id = load<u16>(tag + 8);
-    u32 f;
-    if (id == 0xFFFF) {
-        f = load<u32>(st + 0xC);
-        if (!f) {
-            f = load<u32>(writer + 0x28);
-            if (!f) return 0;
+/* 025FA140 */
+// font tag: switch the writer's font (0xFFFF: back to the saved one) and scale it to the requested size
+static BOOL hdTextTag_setFont(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextTag_c* i_tag) {
+    u16 fontNo = i_tag->mParam;
+    nw::font::Font* font;
+    if (fontNo == 0xFFFF) {
+        font = i_state->mpSavedFont;
+        if (font == NULL) {
+            font = i_writer->mpFont;
+            if (font == NULL) {
+                return FALSE;
+            }
         }
     } else {
-        f = call<u32>(0x025F36B8, load<u32>(0x101F4A50), id);
-        store<u32>(st + 0xC, load<u32>(writer + 0x28));
-        if (!f) return 0;
+        font = hdFontMgr_c::get()->getFont(fontNo);
+        i_state->mpSavedFont = i_writer->mpFont;
+        if (font == NULL) {
+            return FALSE;
+        }
     }
-    store<u32>(writer + 0x28, f);
-    if (load<u16>(tag + 6) < 6) return 0;
-    const u32 vt = load<u32>(f + 4);
-    f32 sx = pct(load<u16>(tag + 0xA));
-    const f32 sy = pct(load<u16>(tag + 0xC));
-    sx = sx / s32f(call_ptr<u32>(load<u32>(vt + 0x1C), f));
-    const f32 h = s32f(call_ptr<u32>(load<u32>(load<u32>(f + 4) + 0x24), f));
-    const f32 y = sy / h;
-    store<f32>(writer + 0xC, sx);
-    store<f32>(writer + 0x10, y);
-    return 0;
-}
-VERIFY(0x025FA140, fontTag);
+    i_writer->mpFont = font;
 
-/* 025FA2CC: scale tag: scales the saved writer scale by a percentage */
-u32 scaleTag(u32 st, u32 writer, u32 tag) {
-    WWHD_FUNC(0x025FA2CC, u32, st, writer, tag);
-    if (!load<u8>(st)) {
-        const f32 x = load<f32>(writer + 0xC);
-        store<f32>(st + 4, x);
-        const f32 y = load<f32>(writer + 0x10);
-        store<u8>(st, 1);
-        store<f32>(st + 8, y);
+    if (i_tag->mParamSize < 6) {
+        return FALSE;
     }
-    const f32 s = pct(load<u16>(tag + 8));
-    const f32 y = load<f32>(st + 8), x = load<f32>(st + 4);
-    store<f32>(writer + 0xC, fmuls_ppc(x, s));
-    store<f32>(writer + 0x10, fmuls_ppc(y, s));
-    return 1;
+    f32 scaleX = i_tag->mFontScaleX / 100.0f;
+    f32 scaleY = i_tag->mFontScaleY / 100.0f;
+    scaleX = scaleX / font->getWidth();
+    f32 height = font->getHeight();
+    i_writer->mScaleX = scaleX;
+    i_writer->mScaleY = scaleY / height;
+    return FALSE;
 }
-VERIFY(0x025FA2CC, scaleTag);
 
-/* 025FA348: tag group 0 (1 font, 2 scale) */
-u32 group0(u32 st, u32 writer, u32 tag) {
-    WWHD_FUNC(0x025FA348, u32, st, writer, tag);
-    const u32 t = load<u16>(tag + 4);
-    if (t == 1) return fontTag(st, writer, tag);
-    if (t == 2) return scaleTag(st, writer, tag);
-    return 1;
+/* 025FA2CC */
+// scale tag: scale the writer relative to its scale before the first scale tag
+static BOOL hdTextTag_scale(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextTag_c* i_tag) {
+    if (!i_state->mScaleSaved) {
+        i_state->mSavedScaleX = i_writer->mScaleX;
+        f32 y = i_writer->mScaleY;
+        i_state->mScaleSaved = true;
+        i_state->mSavedScaleY = y;
+    }
+    f32 scale = i_tag->mParam / 100.0f;
+    f32 savedY = i_state->mSavedScaleY;
+    f32 savedX = i_state->mSavedScaleX;
+    i_writer->mScaleX = gabi::fmuls_ppc(savedX, scale);
+    i_writer->mScaleY = gabi::fmuls_ppc(savedY, scale);
+    return TRUE;
 }
-VERIFY(0x025FA348, group0);
 
-/* 025FA36C: absolute scale (percent x/y) */
-u32 setScale(u32 st, u32 writer, u32 tag) {
-    WWHD_FUNC(0x025FA36C, u32, st, writer, tag);
-    const f32 x = pct(load<u16>(tag + 0x10));
-    const f32 y = pct(load<u16>(tag + 0x12));
-    store<f32>(writer + 0xC, x);
-    store<f32>(writer + 0x10, y);
-    return 1;
+/* 025FA348 */
+static BOOL hdTextTag_procFontGroup(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextTag_c* i_tag) {
+    switch (i_tag->mTag) {
+    case hdTextTag_c::TAG_FONT_e:
+        return hdTextTag_setFont(i_state, i_writer, i_tag);
+    case hdTextTag_c::TAG_SCALE_e:
+        return hdTextTag_scale(i_state, i_writer, i_tag);
+    default:
+        return TRUE;
+    }
 }
-VERIFY(0x025FA36C, setScale);
 
-/* 025FA3CC: tag group 1 (0xC: absolute scale) */
-u32 group1(u32 st, u32 writer, u32 tag) {
-    WWHD_FUNC(0x025FA3CC, u32, st, writer, tag);
-    if (load<u16>(tag + 4) == 0xC) setScale(st, writer, tag);
-    return 1;
+/* 025FA36C */
+static BOOL hdTextTag_setScale(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextTag_c* i_tag) {
+    f32 scaleX = i_tag->mScaleX / 100.0f;
+    f32 scaleY = i_tag->mScaleY / 100.0f;
+    i_writer->mScaleX = scaleX;
+    i_writer->mScaleY = scaleY;
+    return TRUE;
 }
-VERIFY(0x025FA3CC, group1);
 
-/* 025FA3FC: pictograph tag: advances the line by the pictograph glyph's width */
-u32 pictTag(u32 st, u32 writer, u32 ctx, u32 tag) {
-    WWHD_FUNC(0x025FA3FC, u32, st, writer, ctx, tag);
-    const u32 f = call<u32>(0x025F36B8, load<u32>(0x101F4A50), 4u);
-    const u32 code = call<u32>(0x025F90C8, load<u32>(0x101F4A50) + 0x2C, u32(load<u8>(tag + 5)));
-    Local<u8[0x18]> G;
-    call<void>(0x0286EBEC, G.a);
-    call_ptr<void>(load<u32>(load<u32>(f + 4) + 0x8C), f, G.a, code);
-    const f32 w = f32(f64(load<u8>(G.a + 6)));
-    const f32 x = fmadds(w, load<f32>(ctx + 0xC), load<f32>(ctx + 0x14));
-    store<f32>(ctx + 0x14, x);
-    store<f32>(writer + 8, x);
-    return 1;
+/* 025FA3CC */
+static BOOL hdTextTag_procLayoutGroup(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextTag_c* i_tag) {
+    if (i_tag->mTag == hdTextTag_c::TAG_ABS_SCALE_e) {
+        hdTextTag_setScale(i_state, i_writer, i_tag);
+    }
+    return TRUE;
 }
-VERIFY(0x025FA3FC, pictTag);
 
-/* 025FA4CC: tag dispatch by group (0, 1, 3) */
-u32 dispatch(u32 st, u32 writer, u32 ctxp, u32 tag) {
-    WWHD_FUNC(0x025FA4CC, u32, st, writer, ctxp, tag);
-    const u32 g = load<u16>(tag + 2);
-    const u32 ctx = load<u32>(ctxp);
-    if (g < 1) return group0(st, ctx, tag);
-    if (g == 1) return group1(st, ctx, tag);
-    if (g == 3) return pictTag(st, writer, ctx, tag);
-    return 1;
+/* 025FA3FC */
+// pictograph tag: advance the line by the pictograph glyph's width
+static BOOL hdTextTag_putPict(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextWriter_c* i_ctxWriter, hdTextTag_c* i_tag) {
+    nw::font::Font* font = hdFontMgr_c::get()->getFont(HD_FONT_PICT_e);
+    u32 code = hdFontMgr_c::get()->mTextConv.convert(i_tag->mPictNo);
+    nw::font::Glyph glyph;
+    Font_getGlyph(font, &glyph, code);
+    f32 width = glyph.mCharWidth;
+    f32 x = fmadds(width, i_ctxWriter->mScaleX, i_ctxWriter->mCursorX);
+    i_ctxWriter->mCursorX = x;
+    i_writer->mLineX = x;
+    return TRUE;
 }
-VERIFY(0x025FA4CC, dispatch);
 
-/* 025FA50C: TagState reset */
-void stateReset(u32 p) {
-    WWHD_FUNC(0x025FA50C, void, p);
-    const f32 one = load<f32>(0x100E0F60);
-    store<u8>(p, 0);
-    store<f32>(p + 4, one);
-    store<u32>(p + 0xC, 0);
-    store<f32>(p + 8, one);
+/* 025FA4CC */
+// dispatch by tag group
+static BOOL hdTextTag_process(hdTextTagState_c* i_state, hdTextWriter_c* i_writer, hdTextPrintContext_c* i_ctx, hdTextTag_c* i_tag) {
+    u16 group = i_tag->mGroup;
+    hdTextWriter_c* ctxWriter = i_ctx->mpWriter;
+    if (group < hdTextTag_c::GROUP_LAYOUT_e) {
+        return hdTextTag_procFontGroup(i_state, ctxWriter, i_tag);
+    } else if (group == hdTextTag_c::GROUP_LAYOUT_e) {
+        return hdTextTag_procLayoutGroup(i_state, ctxWriter, i_tag);
+    } else if (group == hdTextTag_c::GROUP_PICT_e) {
+        return hdTextTag_putPict(i_state, i_writer, ctxWriter, i_tag);
+    }
+    return TRUE;
 }
-VERIFY(0x025FA50C, stateReset);
 
-void staticInit() {
-    WWHD_FUNC(0x025FA52C, void);
-    const u32 b = 0x1048D870;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F4BE0u);
-    const f32 lo = load<f32>(0x100E0F80), hi = load<f32>(0x100E0F84);
-    store<f32>(0x1048D864, lo);
-    store<f32>(0x1048D868, hi);
-    call<void>(0x028ED6F8, 0x1048D86Cu);
-    call<void>(0x028F026C, 0x101F4BECu);
-    call<void>(0x028EAB2C, 0x1048D86Du);
-    call<void>(0x028F026C, 0x101F4BF8u);
+/* 025FA50C */
+static void hdTextTagState_c__reset(hdTextTagState_c* i_this) {
+    i_this->mScaleSaved = false;
+    i_this->mSavedScaleX = 1.0f;
+    i_this->mpSavedFont = NULL;
+    i_this->mSavedScaleY = 1.0f;
 }
-VERIFY(0x025FA52C, staticInit);
 
-} // namespace hd_text_tag
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 025FA52C */
+// __sinit_hd_text_tag_cpp: the common header statics (the pi pair copied from .rodata)
+static void __sinit_hd_text_tag_cpp() {
+    sinit_header_statics_rodata(0x1048D864, 0x101F4BE0, 0x1048D870, 0x100E0F80);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

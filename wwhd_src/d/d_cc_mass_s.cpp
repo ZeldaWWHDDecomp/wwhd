@@ -1,422 +1,445 @@
-/* HD collision mass manager, 025168E8..02517588. GC layout and behavior;
- * HD Chk guards optional hit-info before clearing and null object/GObjInf
- * pointers before getter/attack work. */
-#include "gabi.h"
+/* Collision mass manager and camera capsule tests, verified against WWHD. */
+#include "d/d_cc_mass_s.h"
 #include <cmath>
-using namespace gabi;
-namespace mass {
-static u32 ld(u32 p) { return load<u32>(p); }
-static void st(u32 p, u32 v) { store<u32>(p, v); }
-static u8 byte(u32 p) { return load<u8>(p); }
-static void sb(u32 p, u32 v) { store<u8>(p, (u8)v); }
-static f32 fl(u32 p) { return load<f32>(p); }
-static void sf(u32 p, f32 v) { store<f32>(p, v); }
-static void *ptr(u32 p) { return at<void>(p); }
-// Address-passed stack objects keep the complete HD callee layout.
-struct Aab {
-  u8 bytes[0x1c];
-};
-struct Divide {
-  u8 bytes[8];
-};
-static_assert(sizeof(Aab) == 0x1c && sizeof(Divide) == 8);
-struct Vec {
-  be<f32> x, y, z;
-};
-static u32 shape(u32 obj) {
-  return call_ptr<u32>(ld(ld(obj + 0x3c) + 0x2c), ptr(obj));
+static f32 l_zero = 0.0;
+static f32 l_negativeInfinity = -1000000000.0;
+static f32 l_replaceChance = 0.5;
+static f32 l_one = 1.0;
+static f32 l_infinity = 1000000000.0;
+static f32 l_cameraHeightMargin = 20.0;
+static f32 l_zeroTolerance = 3.814697265625e-06;
+static MassObjectVtable* objectVtable(u32 address) {
+    return gabi::at<MassObjectVtable>(address);
 }
-static void assertion(u32 line, u32 text) {
-  call<void>(0x0273AA24, ptr(0x1004B350), line, ptr(text));
+static MassShapeVtable* shapeVtable(u32 address) {
+    return gabi::at<MassShapeVtable>(address);
 }
-} // namespace mass
-using namespace mass;
-void *mass_obj_ctor(void *p) {
-  WWHD_FUNC(0x025168E8, void *, p);
-  u32 a = ea(p);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x18);
-  if (a) {
-    st(a + 8, 0);
-    sb(a + 4, 0);
-    st(a + 0x14, 0x1004B30C);
-    st(a, 0);
-    call<void>(0x0200B6C0, ptr(a + 0xc));
-  }
-  return ptr(a);
+// HD: virtual shape lookup and explicit live-in register setup are part of the guest ABI.
+static MassShape* shape(MassCollisionObj* obj) {
+    return gabi::call_ptr<MassShape*>(objectVtable(obj->__vtbl)->GetShapeAttr, obj);
 }
-VERIFY(0x025168E8, mass_obj_ctor);
-void *mass_hit_ctor(void *p) {
-  WWHD_FUNC(0x0251694C, void *, p);
-  u32 a = ea(p);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x14);
-  if (a) {
-    st(a + 0x10, 0x1004B31C);
-    st(a, 0);
-    st(a + 4, 0);
-    sf(a + 0xc, fl(0x1004B33C));
-    st(a + 8, 0);
-  }
-  return ptr(a);
+// HD: allocating constructor adapters retain their used r3 result and null allocation behavior.
+/* 025168E8 */
+void* dCcMassS_Obj_constructor(void* p) {
+    dCcMassS_Obj* a = (dCcMassS_Obj*)p;
+    if (!a)
+        a = (dCcMassS_Obj*)operator_new(0x18);
+    if (a) {
+        a->mpCallback = 0;
+        a->mPriority = 0;
+        a->__vtbl = 0x1004B30C;
+        a->mpObj = 0;
+        massDivideCtor(&a->mDivideInfo);
+    }
+    return a;
 }
-VERIFY(0x0251694C, mass_hit_ctor);
-void mass_clear(void *p) {
-  WWHD_FUNC(0x025169A8, void, p);
-  u32 a = ea(p);
-  st(a + 0x40, 0);
-  st(a + 0xbc, 0);
-  for (u32 i = 0; i < 5; i++) {
-    u32 o = a + 0x44 + 24 * i;
-    st(o, 0);
-    sb(o + 4, 5);
-    st(o + 8, 0);
-    st(o + 0xc, 0);
-  }
-  for (u32 i = 0; i < 2; i++) {
-    u32 o = a + 0xc0 + 24 * i;
-    st(o, 0);
-    sb(o + 4, 5);
-    st(o + 8, 0);
-    st(o + 0xc, 0);
-  }
-  f32 z = fl(0x1004B33C);
-  call<void>(0x020184DC, ptr(a + 0x110), z);
-  call<void>(0x02018428, ptr(a + 0x110), z);
-  sb(a + 0x128, 0);
-  sb(a + 0x129, 4);
+/* 0251694C */
+void* dCcMassS_HitInf_constructor(void* p) {
+    dCcMassS_HitInf* a = (dCcMassS_HitInf*)p;
+    if (!a)
+        a = (dCcMassS_HitInf*)operator_new(0x14);
+    if (a) {
+        a->__vtbl = 0x1004B31C;
+        a->mpArea = 0;
+        a->mpAtObj = 0;
+        a->mCoHitLen = l_zero;
+        a->mpCoObj = 0;
+    }
+    return a;
 }
-VERIFY(0x025169A8, mass_clear);
-void mass_ct(void *p) {
-  WWHD_FUNC(0x02516A78, void, p);
-  u32 a = ea(p);
-  f32 z = fl(0x1004B33C), n = fl(0x1004B340);
-  st(a + 0x12c, 0);
-  sf(a + 0x144, z);
-  sf(a + 0x148, n);
-  st(a + 0x130, 0);
-  sf(a + 0x14c, z);
-  sf(a + 0x13c, z);
-  sf(a + 0x134, z);
-  sf(a + 0x138, n);
-  call<void>(0x025169A8, p);
-}
-VERIFY(0x02516A78, mass_ct);
-void *mass_ctor(void *p) {
-  WWHD_FUNC(0x02516AB0, void *, p);
-  u32 a = ea(p);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x1a0);
-  if (a) {
-    st(a + 0x19c, 0x1004B32C);
-    call<void>(0x0200B750, ptr(a));
-    st(a + 0x40, 0);
-    call<void>(0x028EFFD0, ptr(a + 0x44), 5, 0x18, ptr(0x025168E8));
-    st(a + 0xbc, 0);
-    call<void>(0x028EFFD0, ptr(a + 0xc0), 2, 0x18, ptr(0x025168E8));
-    st(a + 0x108, 0x1004B2FC);
-    st(a + 0x10c, 0x100015A8);
-    call<void>(0x02018590, ptr(a + 0x110));
-    sb(a + 0x129, 0);
-    st(a + 0x130, 0);
-    st(a + 0x124, 0x100017D8);
-    sb(a + 0x128, 0);
-    st(a + 0x10c, 0x10001738);
-    st(a + 0x12c, 0);
-    call<void>(0x028F521C, ptr(a + 0x134), 12);
-    f32 z = fl(0x1004B33C);
-    sf(a + 0x140, z);
-    call<void>(0x028F521C, ptr(a + 0x144), 12);
-    st(a + 0x170, 0x100015A8);
-    st(a + 0x16c, 0x1004B2FC);
-    sf(a + 0x150, z);
-    call<void>(0x02018150, ptr(a + 0x174));
-    st(a + 0x170, 0x10001678);
-    st(a + 0x18c, 0x10001718);
-    call<void>(0x0200B6C0, ptr(a + 0x194));
-    call<void>(0x02516A78, ptr(a));
-  }
-  return ptr(a);
-}
-VERIFY(0x02516AB0, mass_ctor);
-void mass_set(void *p, void *obj, u32 priority) {
-  WWHD_FUNC(0x02516C14, void, p, obj, priority);
-  u32 a = ea(p), o;
-  s32 count = (s32)ld(a + 0x40);
-  if (count >= 5) {
+/* 025169A8 */
+void dCcMassS_MngNative::Clear() {
+    mMassObjCount = 0;
+    mMassAreaCount = 0;
     for (u32 i = 0; i < 5; i++) {
-      o = a + 0x44 + 24 * i;
-      s32 old = byte(o + 4);
-      if (old > (s32)priority ||
-          (old == (s32)priority &&
-           call<f32>(0x020198D8, fl(0x1004B348)) < fl(0x1004B344))) {
-        sb(o + 4, priority);
-        st(o, ea(obj));
-        st(o + 8, 0);
-        return;
-      }
+        dCcMassS_Obj* o = &mMassObjs[i];
+        o->mpObj = 0;
+        o->mPriority = 5;
+        o->mpCallback = 0;
+        o->mDivideInfo.mRangeBits = 0;
     }
-  } else {
-    o = a + 0x44 + (u32)count * 24;
-    st(o, ea(obj));
-    sb(o + 4, priority);
-    st(o + 8, 0);
-    st(a + 0x40, ld(a + 0x40) + 1);
-  }
-}
-VERIFY(0x02516C14, mass_set);
-void mass_area_set(void *p, void *obj, u32 priority, void *cb) {
-  WWHD_FUNC(0x02516D48, void, p, obj, priority, cb);
-  u32 a = ea(p), o;
-  s32 count = (s32)ld(a + 0xbc);
-  if (count >= 2) {
     for (u32 i = 0; i < 2; i++) {
-      o = a + 0xc0 + 24 * i;
-      if (byte(o + 4) > priority) {
-        sb(o + 4, priority);
-        st(o + 8, ea(cb));
-        st(o, ea(obj));
-        return;
-      }
+        dCcMassS_Obj* o = &mMassAreas[i];
+        o->mpObj = 0;
+        o->mPriority = 5;
+        o->mpCallback = 0;
+        o->mDivideInfo.mRangeBits = 0;
     }
-  } else {
-    o = a + 0xc0 + (u32)count * 24;
-    st(o, ea(obj));
-    sb(o + 4, priority);
-    st(o + 8, ea(cb));
-    st(a + 0xbc, ld(a + 0xbc) + 1);
-  }
+    f32 z = l_zero;
+    massSetRadius(&mCylAttr.mCyl, z);
+    massSetHeight(&mCylAttr.mCyl, z);
+    field_0x128 = 0;
+    mResultCamBit = 4;
 }
-VERIFY(0x02516D48, mass_area_set);
-void mass_cam_set(void *p, void *cps) {
-  WWHD_FUNC(0x02516DB4, void, p, cps);
-  u32 a = ea(p);
-  call<void>(0x02018240, ptr(a + 0x174), cps);
-  st(a + 0x130, 0);
-  st(a + 0x12c, ld(a + 0x12c) | 1);
+/* 02516A78 */
+void dCcMassS_MngNative::Ct() {
+    f32 z = l_zero, n = l_negativeInfinity;
+    mFlag = 0;
+    mCamBottomPos.x = z;
+    mCamBottomPos.y = n;
+    mResultCam = 0;
+    mCamBottomPos.z = z;
+    mCamTopPos.z = z;
+    mCamTopPos.x = z;
+    mCamTopPos.y = n;
+    massClearEntry(this);
 }
-VERIFY(0x02516DB4, mass_cam_set);
-u32 mass_cam_result(void *p) {
-  WWHD_FUNC(0x02516DF8, u32, p);
-  return ld(ea(p) + 0x130);
-}
-VERIFY(0x02516DF8, mass_cam_result);
-void mass_cam_top(void *p, void *out) {
-  WWHD_FUNC(0x02516E00, void, p, out);
-  u32 a = ea(p), b = ea(out);
-  st(b, ld(a + 0x134));
-  st(b + 4, ld(a + 0x138));
-  st(b + 8, ld(a + 0x13c));
-}
-VERIFY(0x02516E00, mass_cam_top);
-void mass_prepare(void *p) {
-  WWHD_FUNC(0x02516E1C, void, p);
-  u32 a = ea(p);
-  // Dispatch preserves HD argument-register setup as well as the receiver.
-  // Targets may consume live-in r4; no nolivein exemption is used.
-  Local<Aab> area;
-  st(ea(area.get()) + 0x18, 0x1004B2FC);
-  call<void>(0x02017DAC, area.get());
-  for (u32 group = 0; group < 2; group++) {
-    u32 base = a + (group ? 0xc0 : 0x44), count = a + (group ? 0xbc : 0x40);
-    if (!group)
-      cpu->r[4] = base + ld(count) * 24;
-    for (u32 o = base; o < base + ld(count) * 24; o += 24) {
-      u32 obj = ld(o);
-      if (!obj)
-        assertion(group ? 0x69 : 0x5d, group ? 0x1004B36C : 0x1004B360);
-      u32 v = ld(obj + 0x3c), target = ld(v + 0x2c);
-      if (!group) {
-        cpu->r[5] = v;
-        cpu->r[6] = target;
-      } else {
-        cpu->r[10] = v;
-      }
-      u32 s = call_ptr<u32>(target, ptr(obj));
-      u32 sv = ld(s + 0x1c), calc = ld(sv + 0x94);
-      if (!group) {
-        cpu->r[7] = sv;
-        cpu->r[8] = calc;
-      } else
-        cpu->r[4] = sv;
-      call_ptr<void>(calc, ptr(s));
-      call<void>(0x02017E98, area.get(), ptr(s));
+/* 02516AB0 */
+void* dCcMassS_MngNative_constructor(void* p) {
+    dCcMassS_MngNative* a = (dCcMassS_MngNative*)p;
+    if (!a)
+        a = (dCcMassS_MngNative*)operator_new(0x1a0);
+    if (a) {
+        a->__vtbl = 0x1004B32C;
+        massDivideAreaCtor(&a->mDivideArea);
+        a->mMassObjCount = 0;
+        massArrayCtor(a->mMassObjs, 5, 0x18, dCcMassS_Obj_constructor);
+        a->mMassAreaCount = 0;
+        massArrayCtor(a->mMassAreas, 2, 0x18, dCcMassS_Obj_constructor);
+        a->mCylAttr.mShape.mAab.__vtbl = 0x1004B2FC;
+        a->mCylAttr.mShape.__vtbl = 0x100015A8;
+        massCylinderCtor(&a->mCylAttr.mCyl);
+        a->mResultCamBit = 0;
+        a->mResultCam = 0;
+        a->mCylAttr.mCyl.__vtbl = 0x100017D8;
+        a->field_0x128 = 0;
+        a->mCylAttr.mShape.__vtbl = 0x10001738;
+        a->mFlag = 0;
+        massZeroMemory(&a->mCamTopPos, 12);
+        f32 z = l_zero;
+        a->mCamTopDist = z;
+        massZeroMemory(&a->mCamBottomPos, 12);
+        a->mCpsAttr.mShape.__vtbl = 0x100015A8;
+        a->mCpsAttr.mShape.mAab.__vtbl = 0x1004B2FC;
+        a->mCamBottomDist = z;
+        massCapsuleCtor(&a->mCpsAttr.mCps);
+        a->mCpsAttr.mShape.__vtbl = 0x10001678;
+        a->mCpsAttr.mCps.__vtbl = 0x10001718;
+        massDivideCtor(&a->mDivideInfo);
+        massCtEntry(a);
     }
-  }
-  if (ld(a + 0x12c) & 1) {
-    call<void>(0x0200C2D8, ptr(a + 0x154));
-    call<void>(0x02017E98, area.get(), ptr(a + 0x154));
-  }
-  call<void>(0x0200B7D4, p, area.get());
-  for (u32 group = 0; group < 2; group++) {
-    u32 base = a + (group ? 0xc0 : 0x44), count = a + (group ? 0xbc : 0x40);
-    for (u32 o = base; o < base + ld(count) * 24; o += 24) {
-      u32 obj = ld(o);
-      if (!obj)
-        assertion(group ? 0x88 : 0x7d, group ? 0x1004B36C : 0x1004B360);
-      u32 v = ld(obj + 0x3c), target = ld(v + 0x2c);
-      if (group) {
-        cpu->r[4] = v;
-        cpu->r[5] = target;
-      } else
-        cpu->r[6] = v;
-      u32 s = call_ptr<u32>(target, ptr(obj));
-      call<void>(0x0200B8CC, p, ptr(o + 0xc), ptr(s), 0);
-    }
-  }
-  if (ld(a + 0x12c) & 1)
-    call<void>(0x0200B8CC, p, ptr(a + 0x194), ptr(a + 0x154), 0);
-  f32 z = fl(0x1004B33C), n = fl(0x1004B340), d = fl(0x1004B34C);
-  sf(a + 0x148, n);
-  sf(a + 0x13c, z);
-  sf(a + 0x144, z);
-  sf(a + 0x134, z);
-  sf(a + 0x140, d);
-  sf(a + 0x138, n);
-  sf(a + 0x150, d);
-  sf(a + 0x14c, z);
+    return a;
 }
-VERIFY(0x02516E1C, mass_prepare);
-u32 mass_chk(void *p, void *pos, void *actor, void *hit) {
-  WWHD_FUNC(0x025170D8, u32, p, pos, actor, hit);
-  u32 a = ea(p), h = ea(hit), result = 0;
-  Local<Divide> divide;
-  Local<Vec> move;
-  Local<f32> len, areaLen, camLen;
-  Local<Vec> top, atHit;
-  call<void>(0x0200B6C0, divide.get());
-  st(ea(actor), 0);
-  call<void>(0x020182E0, ptr(a + 0x110), pos);
-  call<void>(0x0200C864, ptr(a + 0xf0));
-  call<void>(0x0200BAC0, p, divide.get(), ptr(a + 0xf0));
-  f32 z = fl(0x1004B33C);
-  if (h) {
-    st(h + 4, 0);
-    st(h + 8, 0);
-    st(h, 0);
-    sf(h + 0xc, z);
-  }
-  if (byte(a + 0x128) & 8) {
-    u32 base = a + 0xc0;
-    for (u32 o = base; o < base + ld(a + 0xbc) * 24; o += 24) {
-      if (!call<s32>(0x0200B71C, ptr(o + 0xc), divide.get()))
-        continue;
-      u32 obj = ld(o);
-      if (!obj)
-        call<void>(0x0273AA24, ptr(0x1004B380), 0xd0, ptr(0x1004B390));
-      u32 s = shape(obj);
-      if (!(ld(obj + 0x2c) & 1) ||
-          !call<s32>(0x0200C7EC, ptr(a + 0xf0), ptr(s), areaLen.get()))
-        continue;
-      result |= 4;
-      st(ea(actor), ld(ld(obj + 0x44) + 0xc));
-      if (h)
-        st(h, obj);
-      u32 cb = ld(o + 8);
-      if (cb)
-        call_ptr<void>(cb, ptr(ld(ld(obj + 0x44) + 0xc)), pos,
-                       (u32)byte(a + 0x129));
-    }
-  }
-  {
-    u32 base = a + 0x44;
-    for (u32 o = base; o < base + ld(a + 0x40) * 24; o += 24) {
-      if (!call<s32>(0x0200B71C, ptr(o + 0xc), divide.get()))
-        continue;
-      u32 obj = ld(o);
-      if (!obj) {
-        call<void>(0x0273AA24, ptr(0x1004B380), 0xf6, ptr(0x1004B390));
-        continue;
-      }
-      u32 g = call_ptr<u32>(ld(ld(obj + 0x3c) + 0x1c), ptr(obj)),
-          s = call_ptr<u32>(ld(ld(obj + 0x3c) + 0x2c), ptr(obj),
-                            ptr(ld(obj + 0x3c)),
-                            ptr(ld(ld(obj + 0x3c) + 0x2c)));
-      if (g && (ld(obj) & 1) && !(ld(g + 0x50) & 8) &&
-          call<s32>(0x0200C79C, ptr(a + 0xf0), ptr(s), atHit.get()) &&
-          (byte(a + 0x128) & 1)) {
-        st(ea(actor), ld(ld(obj + 0x44) + 0xc));
-        result |= 1;
-        if (h)
-          st(h + 4, obj);
-      }
-      if (!(ld(obj + 0x2c) & 1) ||
-          !call<s32>(0x0200C7EC, ptr(a + 0xf0), ptr(s), len.get()) ||
-          !(byte(a + 0x128) & 2))
-        continue;
-      u32 act = ld(ld(obj + 0x44) + 0xc);
-      st(ea(actor), act);
-      result |= 2;
-      if (byte(a + 0x128) & 0x10) {
-        call<void>(0x028E8DAC, ptr(act + 0x314), pos, move.get());
-        move->y = z;
-        f32 mag = call<f32>(0x028E8E10, move.get());
-        if (std::fabs(mag) < fl(0x100030B8)) {
-          move->x = fl(0x1004B348);
-          call<void>(0x0200BE28, ptr(ld(obj + 0x44)), (f32)move->x,
-                     (f32)move->y, (f32)move->z);
-        } else {
-          f32 scale = (f32)((f64)fl(ea(len.get())) / (f64)mag);
-          call<void>(0x028E8E64, move.get(), move.get(), scale);
-          call<void>(0x0200BE28, ptr(ld(obj + 0x44)), (f32)move->x,
-                     (f32)move->y, (f32)move->z);
+/* 02516C14 */
+void dCcMassS_MngNative::Set(MassCollisionObj* obj, u32 priority) {
+    dCcMassS_Obj* o;
+    s32 count = (s32)mMassObjCount;
+    if (count >= 5) {
+        for (u32 i = 0; i < 5; i++) {
+            o = &mMassObjs[i];
+            s32 old = o->mPriority;
+            if (old > (s32)priority ||
+                (old == (s32)priority && massRandom(l_one) < l_replaceChance)) {
+                o->mPriority = priority;
+                o->mpObj = obj;
+                o->mpCallback = 0;
+                return;
+            }
         }
-      }
-      if (h) {
-        st(h + 8, obj);
-        sf(h + 0xc, fl(ea(len.get())));
-      }
+    } else {
+        o = &mMassObjs[(u32)count];
+        o->mpObj = obj;
+        o->mPriority = priority;
+        o->mpCallback = 0;
+        mMassObjCount = mMassObjCount + 1;
     }
-  }
-  if ((ld(a + 0x12c) & 1) &&
-      call<s32>(0x0200B71C, ptr(a + 0x194), divide.get()) &&
-      call<s32>(0x0200C808, ptr(a + 0xf0), ptr(a + 0x154), camLen.get())) {
-    u32 shift = (u32)byte(a + 0x129) + 1;
-    u32 bit = (shift & 0x20) ? 0 : 1u << (shift & 31);
-    u32 cam = ld(a + 0x130) | 1 | bit;
-    st(a + 0x130, cam);
-    if (cam & 0xa) {
-      f32 y = fadds_ppc(fl(ea(pos) + 4), fl(a + 0x120));
-      f32 raised = fadds_ppc(y, fl(0x1004B37C));
-      top->x = fl(ea(pos));
-      top->y = y;
-      top->z = fl(ea(pos) + 8);
-      if (fl(a + 0x138) < raised) {
-        f32 dist = call<f32>(0x028E8DE8, top.get(), ptr(a + 0x174));
-        if (fl(a + 0x140) > dist) {
-          st(a + 0x138, ld(ea(top.get()) + 4));
-          st(a + 0x13c, ld(ea(top.get()) + 8));
-          st(a + 0x134, ld(ea(top.get())));
-          sf(a + 0x140, dist);
+}
+/* 02516D48 */
+void dCcMassS_MngNative::SetAreaChk(MassCollisionObj* obj, u32 priority, void* cb) {
+    dCcMassS_Obj* o;
+    s32 count = (s32)mMassAreaCount;
+    if (count >= 2) {
+        for (u32 i = 0; i < 2; i++) {
+            o = &mMassAreas[i];
+            if (o->mPriority > priority) {
+                o->mPriority = priority;
+                o->mpCallback = gabi::ea(cb);
+                o->mpObj = obj;
+                return;
+            }
         }
-      }
-      if (fl(a + 0x148) < raised) {
-        f32 dist = call<f32>(0x028E8DE8, top.get(), ptr(a + 0x180));
-        if (fl(a + 0x150) > dist) {
-          st(a + 0x148, ld(ea(top.get()) + 4));
-          st(a + 0x14c, ld(ea(top.get()) + 8));
-          st(a + 0x144, ld(ea(top.get())));
-          sf(a + 0x150, dist);
-        }
-      }
+    } else {
+        o = &mMassAreas[(u32)count];
+        o->mpObj = obj;
+        o->mPriority = priority;
+        o->mpCallback = gabi::ea(cb);
+        mMassAreaCount = mMassAreaCount + 1;
     }
-  }
-  call<void>(0x0200B708, divide.get(), 2);
-  return result;
 }
-VERIFY(0x025170D8, mass_chk);
-void mass_sinit() {
-  WWHD_FUNC(0x02517588, void);
-  st(0x1046EFF8, 0);
-  st(0x1046EFF0, 0);
-  st(0x1046EFFC, 0);
-  st(0x1046EFF4, 0);
-  call<void>(0x028F026C, ptr(0x101D573C));
-  sf(0x1046EFE4, fl(0x1004B3A0));
-  sf(0x1046EFE8, fl(0x1004B3A4));
-  call<void>(0x028ED6F8, ptr(0x1046EFEC));
-  call<void>(0x028F026C, ptr(0x101D5748));
-  call<void>(0x028EAB2C, ptr(0x1046EFED));
-  call<void>(0x028F026C, ptr(0x101D5754));
+/* 02516DB4 */
+void dCcMassS_MngNative::SetCam(void* cps) {
+    massSetCapsule(&mCpsAttr.mCps, cps);
+    mResultCam = 0;
+    mFlag = mFlag | massFlag::CAMERA_ENABLED;
 }
-VERIFY(0x02517588, mass_sinit);
+/* 02516DF8 */
+u32 dCcMassS_MngNative::GetResultCam() {
+    return mResultCam;
+}
+/* 02516E00 */
+void dCcMassS_MngNative::GetCamTopPos(cXyz* out) {
+
+    *out = mCamTopPos;
+}
+/* 02516E1C */
+void dCcMassS_MngNative::Prepare() {
+    // Dispatch preserves HD argument-register setup as well as the receiver.
+    // Targets may consume live-in r4; no nolivein exemption is used.
+    gabi::Local<MassAab> area;
+    area->__vtbl = 0x1004B2FC;
+    massClearAab(area.get());
+    for (u32 group = 0; group < 2; group++) {
+        dCcMassS_Obj* base = group ? mMassAreas : mMassObjs;
+        be<s32>* count = group ? &mMassAreaCount : &mMassObjCount;
+        if (!group)
+            gabi::cpu->r[4] = gabi::ea(base + (u32)*count);
+        // GHS compares wrapping 32-bit guest addresses, including after callbacks alter counts.
+        for (u32 cursor = gabi::ea(base);
+             cursor < u32(gabi::ea(base) + (u32)*count * sizeof(dCcMassS_Obj));
+             cursor += sizeof(dCcMassS_Obj)) {
+            dCcMassS_Obj* o = gabi::at<dCcMassS_Obj>(cursor);
+            MassCollisionObj* obj = o->mpObj;
+            if (!obj)
+                massAssert("d_cc_mass_s.cpp", group ? 0x69 : 0x5d,
+                           group ? "parea != (0)" : "pobj != (0)");
+            u32 v = obj->__vtbl, target = objectVtable(v)->GetShapeAttr;
+            if (!group) {
+                gabi::cpu->r[5] = v;
+                gabi::cpu->r[6] = target;
+            } else {
+                gabi::cpu->r[10] = v;
+            }
+            MassShape* s = gabi::call_ptr<MassShape*>(target, obj);
+            u32 sv = s->__vtbl, calc = shapeVtable(sv)->CalcAabBox;
+            if (!group) {
+                gabi::cpu->r[7] = sv;
+                gabi::cpu->r[8] = calc;
+            } else
+                gabi::cpu->r[4] = sv;
+            gabi::call_ptr<void>(calc, s);
+            massExpandAab(area.get(), s);
+        }
+    }
+    if (mFlag & massFlag::CAMERA_ENABLED) {
+        massCalcCapsuleAab(&mCpsAttr);
+        massExpandAab(area.get(), &mCpsAttr);
+    }
+    massSetArea(this, area.get());
+    for (u32 group = 0; group < 2; group++) {
+        dCcMassS_Obj* base = group ? mMassAreas : mMassObjs;
+        be<s32>* count = group ? &mMassAreaCount : &mMassObjCount;
+        // GHS compares wrapping 32-bit guest addresses, including after callbacks alter counts.
+        for (u32 cursor = gabi::ea(base);
+             cursor < u32(gabi::ea(base) + (u32)*count * sizeof(dCcMassS_Obj));
+             cursor += sizeof(dCcMassS_Obj)) {
+            dCcMassS_Obj* o = gabi::at<dCcMassS_Obj>(cursor);
+            MassCollisionObj* obj = o->mpObj;
+            if (!obj)
+                massAssert("d_cc_mass_s.cpp", group ? 0x88 : 0x7d,
+                           group ? "parea != (0)" : "pobj != (0)");
+            u32 v = obj->__vtbl, target = objectVtable(v)->GetShapeAttr;
+            if (group) {
+                gabi::cpu->r[4] = v;
+                gabi::cpu->r[5] = target;
+            } else
+                gabi::cpu->r[6] = v;
+            MassShape* s = gabi::call_ptr<MassShape*>(target, obj);
+            massCalcDivideInfo(this, &o->mDivideInfo, s, 0);
+        }
+    }
+    if (mFlag & massFlag::CAMERA_ENABLED)
+        massCalcDivideInfo(this, &mDivideInfo, &mCpsAttr, 0);
+    f32 z = l_zero, n = l_negativeInfinity, d = l_infinity;
+    mCamBottomPos.y = n;
+    mCamTopPos.z = z;
+    mCamBottomPos.x = z;
+    mCamTopPos.x = z;
+    mCamTopDist = d;
+    mCamTopPos.y = n;
+    mCamBottomDist = d;
+    mCamBottomPos.z = z;
+}
+// HD: optional hit information, null objects and null GObjInf are guarded before use.
+/* 025170D8 */
+u32 dCcMassS_MngNative::Chk(cXyz* pos, gptr<fopAc_ac_c>* actor, dCcMassS_HitInf* hit) {
+    dCcMassS_HitInf* h = hit;
+    u32 result = 0;
+    gabi::Local<MassDivideInfo> divide;
+    gabi::Local<cXyz> move;
+    gabi::Local<be<f32>> len, areaLen, camLen;
+    gabi::Local<cXyz> top, atHit;
+    massDivideCtor(divide.get());
+    *actor = (fopAc_ac_c*)nullptr;
+    massSetCenter(&mCylAttr.mCyl, pos);
+    massCalcCylinderAab(&mCylAttr);
+    massCalcDivideOverArea(this, divide.get(), &mCylAttr);
+    f32 z = l_zero;
+    if (h) {
+        h->mpAtObj = 0;
+        h->mpCoObj = 0;
+        h->mpArea = 0;
+        h->mCoHitLen = z;
+    }
+    if (field_0x128 & massFlag::AREA) {
+        dCcMassS_Obj* base = mMassAreas;
+        // GHS compares wrapping 32-bit guest addresses, including after callbacks alter counts.
+        for (u32 cursor = gabi::ea(base);
+             cursor < u32(gabi::ea(base) + (u32)mMassAreaCount * sizeof(dCcMassS_Obj));
+             cursor += sizeof(dCcMassS_Obj)) {
+            dCcMassS_Obj* o = gabi::at<dCcMassS_Obj>(cursor);
+            if (!massDivideChk(&o->mDivideInfo, divide.get()))
+                continue;
+            MassCollisionObj* obj = o->mpObj;
+            if (!obj)
+                massAssert("d_cc_mass_s.cpp", 0xd0, "pobj != (0)");
+            MassShape* s = shape(obj);
+            if (!(obj->mCoSPrm & massFlag::COLLIDER_SET) ||
+                !massCrossCo(&mCylAttr, s, areaLen.get()))
+                continue;
+            result |= massFlag::RESULT_AREA;
+            *actor = obj->mStts->mp_actor;
+            if (h)
+                h->mpArea = obj;
+            u32 cb = o->mpCallback;
+            if (cb)
+                gabi::call_ptr<void>(cb, obj->mStts->mp_actor.get(), pos, (u32)mResultCamBit);
+        }
+    }
+    {
+        dCcMassS_Obj* base = mMassObjs;
+        // GHS compares wrapping 32-bit guest addresses, including after callbacks alter counts.
+        for (u32 cursor = gabi::ea(base);
+             cursor < u32(gabi::ea(base) + (u32)mMassObjCount * sizeof(dCcMassS_Obj));
+             cursor += sizeof(dCcMassS_Obj)) {
+            dCcMassS_Obj* o = gabi::at<dCcMassS_Obj>(cursor);
+            if (!massDivideChk(&o->mDivideInfo, divide.get()))
+                continue;
+            MassCollisionObj* obj = o->mpObj;
+            if (!obj) {
+                massAssert("d_cc_mass_s.cpp", 0xf6, "pobj != (0)");
+                continue;
+            }
+            MassGObjInf* g =
+                gabi::call_ptr<MassGObjInf*>(objectVtable(obj->__vtbl)->GetGObjInf, obj);
+            MassShape* s = gabi::call_ptr<MassShape*>(
+                objectVtable(obj->__vtbl)->GetShapeAttr, obj, gabi::at<void>(obj->__vtbl),
+                gabi::at<void>(objectVtable(obj->__vtbl)->GetShapeAttr));
+            if (g && (obj->mAtSPrm & massFlag::COLLIDER_SET) &&
+                !(g->mAtSPrm & massFlag::AT_NO_MASS) && massCrossAtTg(&mCylAttr, s, atHit.get()) &&
+                (field_0x128 & massFlag::ATTACK)) {
+                *actor = obj->mStts->mp_actor;
+                result |= massFlag::RESULT_ATTACK;
+                if (h)
+                    h->mpAtObj = obj;
+            }
+            if (!(obj->mCoSPrm & massFlag::COLLIDER_SET) || !massCrossCo(&mCylAttr, s, len.get()) ||
+                !(field_0x128 & massFlag::COLLISION))
+                continue;
+            fopAc_ac_c* act = obj->mStts->mp_actor;
+            *actor = act;
+            result |= massFlag::RESULT_COLLISION;
+            if (field_0x128 & massFlag::MOVE) {
+                massVecSubtract(&act->current.pos, pos, move.get());
+                move->y = z;
+                f32 mag = massVecMag(move.get());
+                if (std::fabs(mag) < l_zeroTolerance) {
+                    move->x = l_one;
+                    massPlusCcMove(obj->mStts.get(), (f32)move->x, (f32)move->y, (f32)move->z);
+                } else {
+                    f32 scale = (f32)((f64)(f32)*len.get() / (f64)mag);
+                    massVecScale(move.get(), move.get(), scale);
+                    massPlusCcMove(obj->mStts.get(), (f32)move->x, (f32)move->y, (f32)move->z);
+                }
+            }
+            if (h) {
+                h->mpCoObj = obj;
+                h->mCoHitLen = (f32)*len.get();
+            }
+        }
+    }
+    if ((mFlag & massFlag::CAMERA_ENABLED) && massDivideChk(&mDivideInfo, divide.get()) &&
+        massCrossCapsule(&mCylAttr, &mCpsAttr, camLen.get())) {
+        u32 shift = (u32)mResultCamBit + 1;
+        u32 bit = (shift & 0x20) ? 0 : 1u << (shift & 31);
+        u32 cam = mResultCam | 1 | bit;
+        mResultCam = cam;
+        if (cam & 0xa) {
+            f32 y = gabi::fadds_ppc((f32)pos->y, mCylAttr.mCyl.mHeight);
+            f32 raised = gabi::fadds_ppc(y, l_cameraHeightMargin);
+            top->x = (f32)pos->x;
+            top->y = y;
+            top->z = (f32)pos->z;
+            if (mCamTopPos.y < raised) {
+                f32 dist = massSquareDistance(top.get(), &mCpsAttr.mCps.mStart);
+                if (mCamTopDist > dist) {
+                    // GHS preserves payload bits and stores y, z, x in this order.
+                    ((be<u32>*)&mCamTopPos)[1] = ((be<u32>*)top.get())[1];
+                    ((be<u32>*)&mCamTopPos)[2] = ((be<u32>*)top.get())[2];
+                    ((be<u32>*)&mCamTopPos)[0] = ((be<u32>*)top.get())[0];
+                    mCamTopDist = dist;
+                }
+            }
+            if (mCamBottomPos.y < raised) {
+                f32 dist = massSquareDistance(top.get(), &mCpsAttr.mCps.mEnd);
+                if (mCamBottomDist > dist) {
+                    ((be<u32>*)&mCamBottomPos)[1] = ((be<u32>*)top.get())[1];
+                    ((be<u32>*)&mCamBottomPos)[2] = ((be<u32>*)top.get())[2];
+                    ((be<u32>*)&mCamBottomPos)[0] = ((be<u32>*)top.get())[0];
+                    mCamBottomDist = dist;
+                }
+            }
+        }
+    }
+    massDivideDtor(divide.get(), 2);
+    return result;
+}
+// HD: compiler-generated header statics.
+/* 02517588 */
+void __sinit_d_cc_mass_s_cpp() {
+    sinit_header_statics_rodata(0x1046EFE4, 0x101D573C, 0x1046EFF0, 0x1004B3A0);
+}
+/* WWHD glue
+data l_zero 1004B33C
+data l_negativeInfinity 1004B340
+data l_replaceChance 1004B344
+data l_one 1004B348
+data l_infinity 1004B34C
+data l_cameraHeightMargin 1004B37C
+data l_zeroTolerance 100030B8
+ext 0200B6C0 void massDivideCtor(MassDivideInfo* p)
+ext 020184DC void massSetRadius(MassCylinder* p,f32 value)
+ext 02018428 void massSetHeight(MassCylinder* p,f32 value)
+ext 0200B750 void massDivideAreaCtor(MassDivideArea* p)
+ext 028EFFD0 void massArrayCtor(dCcMassS_Obj* p,u32 count,u32 size,MassConstructor ctor)
+ext 02018590 void massCylinderCtor(MassCylinder* p)
+ext 028F521C void massZeroMemory(void* p,u32 size)
+ext 02018150 void massCapsuleCtor(MassCapsule* p)
+ext 020198D8 f32 massRandom(f32 scale)
+ext 02018240 void massSetCapsule(MassCapsule* p,void* cps)
+ext 02017DAC void massClearAab(MassAab* p)
+ext 02017E98 void massExpandAab(MassAab* p,void* box)
+ext 0200C2D8 void massCalcCapsuleAab(MassCpsAttr* p)
+ext 0200B7D4 void massSetArea(dCcMassS_MngNative* p,MassAab* box)
+ext 0200B8CC void massCalcDivideInfo(dCcMassS_MngNative* p,MassDivideInfo* info,void* shape,u32 flag)
+ext 020182E0 void massSetCenter(MassCylinder* p,cXyz* pos)
+ext 0200C864 void massCalcCylinderAab(MassCylAttr* p)
+ext 0200BAC0 void massCalcDivideOverArea(dCcMassS_MngNative* p,MassDivideInfo* info,MassCylAttr* attr)
+ext 0200B71C s32 massDivideChk(MassDivideInfo* a,MassDivideInfo* b)
+ext 0200C7EC s32 massCrossCo(MassCylAttr* attr,MassShape* shape,be<f32>* distance)
+ext 0200C79C s32 massCrossAtTg(MassCylAttr* attr,MassShape* shape,cXyz* hit)
+ext 028E8DAC void massVecSubtract(cXyz* a,cXyz* b,cXyz* out)
+ext 028E8E10 f32 massVecMag(cXyz* v)
+ext 0200BE28 void massPlusCcMove(MassStatus* p,f32 x,f32 y,f32 z)
+ext 028E8E64 void massVecScale(cXyz* in,cXyz* out,f32 scale)
+ext 0200C808 s32 massCrossCapsule(MassCylAttr* cyl,MassCpsAttr* cps,be<f32>* distance)
+ext 028E8DE8 f32 massSquareDistance(cXyz* a,cXyz* b)
+ext 0200B708 void massDivideDtor(MassDivideInfo* p,s32 flags)
+ext 0273AA24 void massAssert(const char* file,u32 line,const char* text)
+ext 025169A8 void massClearEntry(dCcMassS_MngNative* p)
+ext 02516A78 void massCtEntry(dCcMassS_MngNative* p)
+str 1004B350 "d_cc_mass_s.cpp" in 02516E1C
+str 1004B380 "d_cc_mass_s.cpp" in 025170D8
+str 1004B360 "pobj != (0)" in 02516E1C
+str 1004B390 "pobj != (0)" in 025170D8
+str 1004B36C "parea != (0)"
+*/

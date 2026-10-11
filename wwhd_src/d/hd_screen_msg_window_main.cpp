@@ -1,115 +1,122 @@
-/* HD MsgWindowMain_00 second TU per-step states, binary-derived.
- * Original 30 Hz behaviour; UI_msg_window_a only. */
-#include "gabi.h"
+#include "d/hd_msg_window_a.h"
 using namespace gabi;
-namespace hd_screen_msg_window_main {
-static void change(u32 self, u32 state) { call<void>(0x020063C0, self + 0x18, state); }
-static void refresh(u32 self) {
-    u32 pane = load<u32>(self + 0x64);
-    u32 message = load<u32>(self + 0xB0);
-    call<void>(0x0270477C, pane, message);
+static HdMessageCorePointer l_MainCore;
+static u8 l_MainWaitIcon;
+static HdMessageState l_MainNextStopState;
+static HdMessageState l_MainAdvanceState;
+extern void hdMessageMainSetMode(HdMessageMain*,u32);
+extern void hdMessageMainUpdateText(HdMessageMain*);
+
+static void change(HdMessageMain* self, HdMessageState* state) { hdMessageChangeState(&self->mState, state); }
+static void refresh(HdMessageMain* self) {
+    HdMessagePane* pane = self->mPane;
+    HdMessageData* message = self->mMessage;
+    hdMessageRefresh(pane, message);
 }
 static void sound() {
-    u32 play = call<u32>(0x025200D4);
-    call<void>(0x025E1988, load<u8>(play + 0x5BBA) == 39 ? 0x880u : 0x80Bu);
+    HdMessagePlay* play = hdMessageGetPlay();
+    hdMessageSound(play->mKind == 39 ? 0x880u : 0x80Bu);
 }
 
-void advanceUpdate(u32 self) {
-    WWHD_FUNC(0x026B7D8C, void, self);
-    u32 flags = load<u32>(self + 0x54);
-    u32 core = load<u32>(0x101F4B5C);
-    if ((flags & 3) || load<u8>(core + 0x928)) {
-        call<void>(0x025F74D0, core, 14u);
+/* 026B7D8C */
+void hdMessageMainAdvanceUpdate(HdMessageMain* self) {
+    u32 flags = self->mInputFlags;
+    HdMessageCore* core = l_MainCore.mCore;
+    if ((flags & 3) || core->mSkip) {
+        hdMessageSetMode(core, 14u);
         sound();
-        u32 n = load<u32>(self + 0x78) + 1;
-        store<u32>(self + 0x78, n);
-        store<u8>(call<u32>(0x025200D4) + 0x5BD2, u8(n));
-        store<u8>(0x1047B09E, 0);
-        change(self, 0x10498A40);
+        u32 n = self->mAdvanceCount + 1;
+        self->mAdvanceCount = n;
+        hdMessageGetPlay()->mAdvanceCount = u8(n);
+        l_MainWaitIcon = 0;
+        change(self, &l_MainAdvanceState);
     } else {
         refresh(self);
-        store<u8>(0x1047B09E, 4);
+        l_MainWaitIcon = 4;
     }
 }
-VERIFY(0x026B7D8C, advanceUpdate);
 
-void waitUpdate(u32 self) {
-    WWHD_FUNC(0x026B7E70, void, self);
-    u32 message = load<u32>(self + 0xB0);
-    if (load<u32>(message + 0x6B4) == 0 || load<u8>(load<u32>(0x101F4B5C) + 0x928)) {
-        store<u8>(message + 0x697, 0);
-        change(self, 0x10498A40);
+/* 026B7E70 */
+void hdMessageMainWaitUpdate(HdMessageMain* self) {
+    HdMessageData* message = self->mMessage;
+    if (message->mWaitTimer == 0 || l_MainCore.mCore->mSkip) {
+        message->mWait = 0;
+        change(self, &l_MainAdvanceState);
     } else {
-        s32 timer = load<s32>(message + 0x6B4);
-        store<u32>(message + 0x6B4, timer > 0 ? u32(timer) - 1 : 0);
-        u32 msg = load<u32>(self + 0xB0);
-        u32 pane = load<u32>(self + 0x64);
-        call<void>(0x0270477C, pane, msg);
+        s32 timer = message->mWaitTimer;
+        message->mWaitTimer = timer > 0 ? u32(timer) - 1 : 0;
+        HdMessageData* msg = self->mMessage;
+        HdMessagePane* pane = self->mPane;
+        hdMessageRefresh(pane, msg);
     }
 }
-VERIFY(0x026B7E70, waitUpdate);
 
-void waitInputUpdate(u32 self) {
-    WWHD_FUNC(0x026B7ED4, void, self);
-    u32 message = load<u32>(self + 0xB0);
-    if (load<u32>(message + 0x6B4) == 0 || load<u8>(load<u32>(0x101F4B5C) + 0x928)) {
-        store<u8>(message + 0x698, 0);
-        store<u8>(0x1047B09E, 0);
-        u32 n = load<u32>(self + 0x78) + 1;
-        store<u32>(self + 0x78, n);
-        store<u8>(call<u32>(0x025200D4) + 0x5BD2, u8(n));
-        change(self, 0x10498A40);
-    } else if (load<u32>(self + 0x54) & 1) {
-        store<u8>(message + 0x698, 0);
+/* 026B7ED4 */
+void hdMessageMainWaitInputUpdate(HdMessageMain* self) {
+    HdMessageData* message = self->mMessage;
+    if (message->mWaitTimer == 0 || l_MainCore.mCore->mSkip) {
+        message->mWaitInput = 0;
+        l_MainWaitIcon = 0;
+        u32 n = self->mAdvanceCount + 1;
+        self->mAdvanceCount = n;
+        hdMessageGetPlay()->mAdvanceCount = u8(n);
+        change(self, &l_MainAdvanceState);
+    } else if (self->mInputFlags & 1) {
+        message->mWaitInput = 0;
         sound();
-        u32 n = load<u32>(self + 0x78) + 1;
-        store<u32>(self + 0x78, n);
-        store<u8>(call<u32>(0x025200D4) + 0x5BD2, u8(n));
-        store<u8>(0x1047B09E, 0);
-        change(self, 0x10498A40);
+        u32 n = self->mAdvanceCount + 1;
+        self->mAdvanceCount = n;
+        hdMessageGetPlay()->mAdvanceCount = u8(n);
+        l_MainWaitIcon = 0;
+        change(self, &l_MainAdvanceState);
     } else {
-        s32 timer = load<s32>(message + 0x6B4);
-        store<u32>(message + 0x6B4, timer > 0 ? load<u32>(message + 0x6B4) - 1 : 0);
-        u32 msg = load<u32>(self + 0xB0);
-        u32 pane = load<u32>(self + 0x64);
-        call<void>(0x0270477C, pane, msg);
-        store<u8>(0x1047B09E, 4);
+        s32 timer = message->mWaitTimer;
+        message->mWaitTimer = timer > 0 ? message->mWaitTimer - 1 : 0;
+        HdMessageData* msg = self->mMessage;
+        HdMessagePane* pane = self->mPane;
+        hdMessageRefresh(pane, msg);
+        l_MainWaitIcon = 4;
     }
 }
-VERIFY(0x026B7ED4, waitInputUpdate);
 
-void nextStopUpdate(u32 self) {
-    WWHD_FUNC(0x026B80F8, void, self);
-    call<void>(0x026B7920, self, 2u);
-    u32 next = load<u32>(self + 0xA4) + 1;
-    u32 message = load<u32>(self + 0xB0);
-    store<u32>(self + 0xA4, next);
-    u32 color = load<u32>(message + 0x91D);
-    u32 pane = load<u32>(self + 0x64);
-    store<u32>(pane + 0xAC, color);
-    store<u32>(pane + 0xB0, color);
-    call<void>(0x026B7830, self);
+/* 026B80F8 */
+void hdMessageMainNextStopUpdate(HdMessageMain* self) {
+    hdMessageMainSetMode(self, 2u);
+    u32 next = self->mStopIndex + 1;
+    HdMessageData* message = self->mMessage;
+    self->mStopIndex = next;
+    u32 color = message->mColor;
+    HdMessagePane* pane = self->mPane;
+    pane->mColor1 = color;
+    pane->mColor2 = color;
+    hdMessageMainUpdateText(self);
 }
-VERIFY(0x026B80F8, nextStopUpdate);
 
-void stopUpdate(u32 self) {
-    WWHD_FUNC(0x026B81CC, void, self);
-    if (load<u32>(self + 0x54) & 3) {
-        u32 n = load<u32>(self + 0x78) + 1;
-        store<u32>(self + 0x78, n);
-        store<u8>(call<u32>(0x025200D4) + 0x5BD2, u8(n));
-        store<u8>(0x1047B09E, 2);
-        u32 next = load<u32>(self + 0xA4) + 1;
-        u32 stop = self + 0x7C + (next < 10 ? next * 4 : 0);
-        if (load<s32>(stop) >= 0) change(self, 0x104989B0);
+/* 026B81CC */
+void hdMessageMainStopUpdate(HdMessageMain* self) {
+    if (self->mInputFlags & 3) {
+        u32 n = self->mAdvanceCount + 1;
+        self->mAdvanceCount = n;
+        hdMessageGetPlay()->mAdvanceCount = u8(n);
+        l_MainWaitIcon = 2;
+        u32 next = self->mStopIndex + 1;
+        // HD: an out-of-range stop index selects the first slot.
+        be<s32>* stop = &self->mStops[next<10?next:0];
+        if ((s32)*stop >= 0) change(self, &l_MainNextStopState);
         else {
-            call<void>(0x025F74D0, load<u32>(0x101F4B5C), 14u);
-            change(self, 0x10498A40);
+            hdMessageSetMode(l_MainCore.mCore, 14u);
+            change(self, &l_MainAdvanceState);
         }
     } else {
         refresh(self);
-        store<u8>(0x1047B09E, 1);
+        l_MainWaitIcon = 1;
     }
 }
-VERIFY(0x026B81CC, stopUpdate);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_MainCore 101F4B5C
+data l_MainWaitIcon 1047B09E
+data l_MainNextStopState 104989B0
+data l_MainAdvanceState 10498A40
+ext 026B7920 void hdMessageMainSetMode(HdMessageMain*,u32)
+ext 026B7830 void hdMessageMainUpdateText(HdMessageMain*)
+*/

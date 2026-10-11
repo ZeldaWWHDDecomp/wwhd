@@ -1,1088 +1,1460 @@
-#include "gabi.h"
-struct GrassVector { u8 data[12]; };
-struct GrassColor { u8 data[16]; };
-struct GrassMatrix { u8 data[48]; };
-struct GrassGround { u8 data[84]; };
-u32 Grass_DataConstruct(u32 self) {
-    WWHD_FUNC(0x0254A0DC, u32, self);
-    if (!self) { self = gabi::call<u32>(0x0273AD10, 0x44); if (!self) return 0; }
-    gmem_st8(self + 3, 0); gmem_st8(self + 2, 0); gmem_st8(self, 0); gmem_st8(self + 1, 0);
-    gabi::call<void>(0x028F521C, self + 16, 48);
-    gmem_st32(self + 0x40, 0); gmem_st8(self, 0);
-    return self;
-}
-VERIFY(0x0254A0DC, Grass_DataConstruct);
-s32 Grass_NewAnm(u32 self) {
-    WWHD_FUNC(0x0254A14C, s32, self);
-    u32 data = self + 0x190CC;
-    for (s32 i = 8; i < 104; ++i, data += 0x38) {
-        if (!gmem_ld8(data)) { gmem_st8(data, 1); gmem_st16(data + 4, 0); gmem_st16(data + 2, 0); return i; }
-    }
-    return -1;
-}
-VERIFY(0x0254A14C, Grass_NewAnm);
-void Grass_RoomNewData(u32 self, u32 data) {
-    WWHD_FUNC(0x0254AC40, void, self, data);
-    gmem_st32(data + 0x40, gmem_ld32(self)); gmem_st32(self, data);
-}
-VERIFY(0x0254AC40, Grass_RoomNewData);
-void Grass_RoomDeleteData(u32 self) {
-    WWHD_FUNC(0x0254AC50, void, self);
-    u32 data = gmem_ld32(self);
-    while (data) {
-        gmem_st8(data, 0);
-        u32 current = gmem_ld32(self);
-        gabi::call<void>(0x025E1B34, current + 4);
-        current = gmem_ld32(self);
-        data = gmem_ld32(current + 0x40); gmem_st32(self, data);
-    }
-}
-VERIFY(0x0254AC50, Grass_RoomDeleteData);
-void Grass_SetAnm(u32 self, u32 index, s32 angle) {
-    WWHD_FUNC(0x0254ACB4, void, self, index, angle);
-    u32 data = self + 0x18F0C + index * 0x38;
-    gmem_st8(data, 1); gmem_st16(data + 4, 0); gmem_st16(data + 2, angle);
-}
-VERIFY(0x0254ACB4, Grass_SetAnm);
-void Grass_MatrixCopy(u32 dest, u32 source) {
-    WWHD_FUNC(0x0254C934, void, dest, source);
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i) values[i] = gabi::load<f32>(source + i * 4);
-    for (u32 i = 0; i < 12; ++i) gabi::store<f32>(dest + i * 4, values[i]);
-}
-VERIFY(0x0254C934, Grass_MatrixCopy);
-void Grass_ColorToFloat(u32 dest, u32 source) {
-    WWHD_FUNC(0x0254C9D4, void, dest, source);
-    f32 r=(f32)gabi::load<s16>(source), b=(f32)gabi::load<s16>(source+4);
-    f32 g=(f32)gabi::load<s16>(source+2), a=(f32)gabi::load<s16>(source+6);
-    f32 denominator=gabi::load<f32>(0x1004E344);
-    gabi::store<f32>(dest,r/denominator);gabi::store<f32>(dest+4,g/denominator);
-    gabi::store<f32>(dest+8,b/denominator);gabi::store<f32>(dest+12,a/denominator);
-}
-VERIFY(0x0254C9D4, Grass_ColorToFloat);
-void Grass_StaticInit() {
-    WWHD_FUNC(0x0254D3F4, void);
-    gmem_st32(0x104759A4,0);gmem_st32(0x1047599C,0);gmem_st32(0x104759A8,0);gmem_st32(0x104759A0,0);
-    gabi::call<void>(0x028F026C,0x101E3A50);
-    f32 lower=gabi::load<f32>(0x1004E380),upper=gabi::load<f32>(0x1004E384);
-    gabi::store<f32>(0x10475988,lower);gabi::store<f32>(0x1047598C,upper);
-    gabi::call<void>(0x028ED6F8,0x10475998);gabi::call<void>(0x028F026C,0x101E3A5C);
-    gabi::call<void>(0x028EAB2C,0x10475999);gabi::call<void>(0x028F026C,0x101E3A68);
-}
-VERIFY(0x0254D3F4, Grass_StaticInit);
-void grass_InlineDelete(u32 self, u32 flags) {
-    WWHD_FUNC(0x0254D488, void, self, flags);
-    if (self && (flags & 1)) gabi::call<void>(0x0273AF40, self);
-}
-VERIFY(0x0254D488, grass_InlineDelete);
+/** Grass: animation, collision and rendering packets.
+ * GameCube names/layout with the verified WWHD shader/resource additions.
+ * Every original function and caller workspace
+ */
+#include "d/d_grass.h"
+using namespace GrassHD;
+// HD: Resource helpers for the GX2 grass rendering path.
 
-u32 grass_InlinePacketCtor(u32 self) {
-    WWHD_FUNC(0x0254D570, u32, self);
-    if (!self) self = gabi::call<u32>(0x0273AD10, 0xA8);
-    if (self) {
-        gabi::call<void>(0x027FB40C, self);
-        gmem_st32(self + 12, 0x1016EF84);
-        gabi::call<void>(0x028F521C, self + 0x74, 0x34);
-        if (self + 0x74 == 0) gabi::call<u32>(0x0273AD10, 0x30);
-    }
-    return self;
+static void grass_StringValidate(String *string) {
+    u32 table = (u32)string->mVtable;
+    gabi::call_ptr<void>((u32)at<DispatchTable>(table)->mpAssureTermination, string);
 }
-VERIFY(0x0254D570, grass_InlinePacketCtor);
 
-u32 grass_InlineColorCtor(u32 self) {
-    WWHD_FUNC(0x0254D5E0, u32, self);
-    return self ? self : gabi::call<u32>(0x0273AD10, 0x10);
+static void grass_ReleaseAllocation(u32 owner, u32 offset) {
+    u32 allocation = (u32)(at<ShapePair>(owner + offset - 4)->mpShapes);
+    u32 heap = GrassHD::SDK::Heap_findContaining((u32)(*at<be<u32>>(Data::heapManager)), allocation);
+    u32 table = (u32)(at<Heap>(heap)->mVtable);
+    gabi::call_ptr<void>((u32)at<DispatchTable>(table)->mpFree, heap,
+                         (u32)(at<ShapePair>(owner + offset - 4)->mpShapes));
 }
-VERIFY(0x0254D5E0, grass_InlineColorCtor);
 
-u32 grass_InlineResourceCtor(u32 self) {
-    WWHD_FUNC(0x0254D514, u32, self);
-    if (!self) self = gabi::call<u32>(0x0273AD10, 0x254);
-    if (self) {
-        gabi::call<void>(0x027B5BD8, self + 4);
-        gabi::call<void>(0x027BF734, self + 0x158);
-        gmem_st32(self + 0x250, 0);
-        gmem_st32(self + 0x24C, 0);
-    }
-    return self;
-}
-VERIFY(0x0254D514, grass_InlineResourceCtor);
-
-void grass_InlineResourceDtor(u32 self, u32 flags) {
-    WWHD_FUNC(0x0254D93C, void, self, flags);
-    if (self) {
-        gabi::call<void>(0x027BF880, self + 0x158, 2);
-        gabi::call<void>(0x027B5CBC, self + 4, 2);
-        if (flags & 1) gabi::call<void>(0x0273AF40, self);
-    }
-}
-VERIFY(0x0254D93C, grass_InlineResourceDtor);
-
-void grass_InlinePacketDtor(u32 self, u32 flags) {
-    WWHD_FUNC(0x0254D894, void, self, flags);
-    if (self) {
-        gabi::call<void>(0x027FB528, self, 0);
-        if (flags & 1) gabi::call<void>(0x0273AF40, self);
-    }
-}
-VERIFY(0x0254D894, grass_InlinePacketDtor);
-
-void grass_InlineEmpty0(u32 self) { WWHD_FUNC(0x0254D99C, void, self); }
-VERIFY(0x0254D99C, grass_InlineEmpty0);
-void grass_InlineEmpty1(u32 self) { WWHD_FUNC(0x0254D9A0, void, self); }
-VERIFY(0x0254D9A0, grass_InlineEmpty1);
-void grass_ShaderPacketDtor(u32 self, u32 flags) {
-    WWHD_FUNC(0x0254D8E8, void, self, flags);
-    if (self) {
-        gabi::call<void>(0x027FB528, self, 0);
-        if (flags & 1) gabi::call<void>(0x0273AF40, self);
-    }
-}
-VERIFY(0x0254D8E8, grass_ShaderPacketDtor);
-
-u32 Grass_AnmConstruct(u32 self) {
-    WWHD_FUNC(0x0254D49C, u32, self);
-    if (!self) self = gabi::call<u32>(0x0273AD10, 56);
-    if (self) gmem_st8(self, 0);
-    return self;
-}
-VERIFY(0x0254D49C, Grass_AnmConstruct);
-u32 Grass_RoomConstruct(u32 self) {
-    WWHD_FUNC(0x0254D4D8, u32, self);
-    if (!self) self = gabi::call<u32>(0x0273AD10, 4);
-    if (self) gmem_st32(self, 0);
-    return self;
-}
-VERIFY(0x0254D4D8, Grass_RoomConstruct);
-u32 Grass_ShaderPacketConstruct(u32 self) {
-    WWHD_FUNC(0x0254D60C, u32, self);
-    if (!self) { self = gabi::call<u32>(0x0273AD10, 0x364); if (!self) return 0; }
-    gabi::call<void>(0x027FB40C, self);
-    gmem_st32(self + 12, 0x1016EFB4);
-    gabi::call<void>(0x028F521C, self + 0x74, 0x2F0);
-    f32 zero=gabi::load<f32>(0x10145180),one=gabi::load<f32>(0x1014517C);
-    gabi::store<f32>(self + 0x74, zero);
-    gabi::store<f32>(self + 0x78, zero);
-    gabi::store<f32>(self + 0x7c, zero);
-    gabi::store<f32>(self + 0x84, zero);
-    gabi::store<f32>(self + 0xa0, one);
-    gabi::store<f32>(self + 0xac, zero);
-    gabi::store<f32>(self + 0x90, one);
-    gabi::store<f32>(self + 0x8c, zero);
-    gabi::store<f32>(self + 0xdc, zero);
-    gabi::store<f32>(self + 0xfc, zero);
-    gabi::store<f32>(self + 0xcc, zero);
-    gabi::store<f32>(self + 0xf0, one);
-    gabi::store<f32>(self + 0xa4, zero);
-    gabi::store<f32>(self + 0xc8, zero);
-    gabi::store<f32>(self + 0xf8, zero);
-    gabi::store<f32>(self + 0xe8, zero);
-    gabi::store<f32>(self + 0xb8, zero);
-    gabi::store<f32>(self + 0x94, zero);
-    gabi::store<f32>(self + 0xa8, zero);
-    gabi::store<f32>(self + 0xb0, one);
-    gabi::store<f32>(self + 0x98, zero);
-    gabi::store<f32>(self + 0xbc, zero);
-    gabi::store<f32>(self + 0x88, zero);
-    gabi::store<f32>(self + 0xe4, zero);
-    gabi::store<f32>(self + 0xec, zero);
-    gabi::store<f32>(self + 0x100, one);
-    gabi::store<f32>(self + 0xd0, one);
-    gabi::store<f32>(self + 0xe0, one);
-    gabi::store<f32>(self + 0xd8, zero);
-    gabi::store<f32>(self + 0xc4, zero);
-    gabi::store<f32>(self + 0xf4, zero);
-    gabi::store<f32>(self + 0x9c, zero);
-    gabi::store<f32>(self + 0xd4, zero);
-    gabi::store<f32>(self + 0x80, one);
-    gabi::store<f32>(self + 0xb4, zero);
-    gabi::store<f32>(self + 0xc0, one);
-    gabi::store<f32>(self + 0x104, zero);
-    gabi::store<f32>(self + 0x108, zero);
-    gabi::store<f32>(self + 0x10c, zero);
-    gabi::store<f32>(self + 0x110, one);
-    gabi::store<f32>(self + 0x114, zero);
-    gabi::store<f32>(self + 0x118, zero);
-    gabi::store<f32>(self + 0x11c, zero);
-    gabi::store<f32>(self + 0x120, one);
-    for (u32 off : {0x124u,0x144u,0x164u}) gabi::call<void>(0x028EFFD0,self+off,2,16,0x0254D5E0);
-    for (u32 off=0x184;off<=0x2D4;off+=0x30) if (!(self+off)) gabi::call<void>(0x0273AD10,0x30);
-    for (u32 off=0x304;off<=0x354;off+=0x10) if (!(self+off)) gabi::call<void>(0x0273AD10,0x10);
-    return self;
-}
-VERIFY(0x0254D60C, Grass_ShaderPacketConstruct);
-
-struct GrassString { u8 data[8]; };
-static void grass_StringValidate(GrassString* string) {
-    u32 table=gmem_ld32(gabi::ea(string)+4);
-    gabi::call_ptr<void>(gmem_ld32(table+20), string);
-}
-void Grass_SetBatta(u32 pos,u32 color) {
-    WWHD_FUNC(0x02549D38,void,pos,color);
-    gabi::Local<GrassString> stage,prefix,boss,other;
-    bool spawn=false;
-    if (gabi::call<u32>(0x0256019C)) return;
-    u32 play=gabi::call<u32>(0x025200D4);
-    if (gmem_ld8(play+0x5292)) return;
-    play=gabi::call<u32>(0x025200D4);
-    gmem_st32(stage.a+4,0x1004E1F4);gmem_st32(prefix.a+4,0x1004E1F4);
-    gmem_st32(stage.a,play+0x5134);gmem_st32(prefix.a,0x1004E260);
-    gabi::call<void>(0x0254D9A0,stage.get());
-    grass_StringValidate(stage.get());
-    u32 left=gmem_ld32(stage.a);
-    grass_StringValidate(prefix.get());
-    u32 right=gmem_ld32(prefix.a);
-    if (left==right) return;
-    bool different=false;
-    for (u32 i=0;i<3;++i) { /* "kin" stage prefix: the original advances both cursors (r9 stage, r12 "kin" 0x1004E260; ctr=3) */
-        u8 a=gmem_ld8(left),b=gmem_ld8(right);
-        if (!a) { if (!b) return; different=true;break; }
-        if (!b || a!=b) { different=true;break; }
-        ++left;++right;
-    }
-    if (!different) return;
-    gmem_st32(boss.a+4,0x1004E1F4);gmem_st32(boss.a,0x1004E264);
-    play=gabi::call<u32>(0x025200D4);
-    gmem_st32(other.a+4,0x1004E1F4);gmem_st32(other.a,play+0x5134);
-    grass_StringValidate(boss.get());grass_StringValidate(boss.get());
-    left=gmem_ld32(boss.a);
-    grass_StringValidate(other.get());right=gmem_ld32(other.a);
-    if (left==right) return;
-    left=gmem_ld32(boss.a);right=gmem_ld32(other.a);
-    for (u32 i=0;i<0x40001;++i) {
-        u8 a=gmem_ld8(left),b=gmem_ld8(right);
-        if (a!=b) break;
-        if (!a) return;
-        ++left;++right;
-    }
-    f32 random=gabi::call<f32>(0x02019788);
-    f32 threshold=gabi::load<f32>(0x1004E25C);
-    if (random>threshold) spawn=true;
-    if (!spawn) return;
-    play=gabi::call<u32>(0x025200D4);
-    gabi::call<void>(0x025A847C,gmem_ld32(play+0x5AB0),0,0x453,pos,0,0,255,0,-1,color,color,0);
-}
-VERIFY(0x02549D38,Grass_SetBatta);
-f32 Grass_CheckGroundY(u32 pos) {
-    WWHD_FUNC(0x02549F4C,f32,pos);
-    gabi::Local<GrassGround> ground;
-    gabi::call<void>(0x02008E0C,ground.get());
-    f32 y=gabi::load<f32>(pos+4),x=gabi::load<f32>(pos);
-    gmem_st8(ground.a+0x44,0);gmem_st32(ground.a+0x4C,0x1004E23C);
-    f32 lift=gabi::load<f32>(0x1004E26C);
-    gmem_st32(ground.a+0x20,0x1004E22C);gmem_st8(ground.a+0x49,0);
-    y+=lift;gmem_st32(ground.a+0x50,1);gmem_st8(ground.a+0x45,0);
-    gabi::store<f32>(ground.a+0x28,y);gabi::store<f32>(pos+4,y);
-    gmem_st32(ground.a+0x10,0x1004E21C);gabi::store<f32>(ground.a+0x24,x);
-    gmem_st8(ground.a+0x4A,0);gmem_st32(ground.a+4,ground.a+0x4C);
-    gmem_st8(ground.a+0x47,0);gmem_st8(ground.a+0x48,0);
-    gmem_st32(ground.a+0x40,0x1004E24C);
-    f32 z=gabi::load<f32>(pos+8);
-    gmem_st8(ground.a+0x46,0);gmem_st32(ground.a,ground.a+0x40);
-    gabi::store<f32>(ground.a+0x2C,z);
-    u32 play=gabi::call<u32>(0x025200D4);
-    f32 height=gabi::call<f32>(0x02008974,play+0x12A0,ground.get());
-    y=gabi::load<f32>(pos+4)-lift;
-    gmem_st32(ground.a+0x40,0x1004E24C);gmem_st32(ground.a+0x20,0x1004E22C);
-    f32 limit=gabi::load<f32>(0x1004E270);
-    gmem_st32(ground.a+0x4C,0x1004E20C);gabi::store<f32>(pos+4,y);
-    bool valid=height>limit;
-    gabi::call<void>(0x02008DAC,ground.get(),0);
-    return valid?height:y;
-}
-VERIFY(0x02549F4C,Grass_CheckGroundY);
-
-void Grass_SetData(u32 self,u32 data,u32 index,u32 pos,u32 room,u32 item) {
-    WWHD_FUNC(0x0254D19C,void,self,data,index,pos,room,item);
-    bool immediate=gabi::call<u32>(0x025DBE00)!=0;
-    f32 height;
-    if (immediate) { height=gabi::call<f32>(0x02549F4C,pos);gmem_st8(data,2); }
-    else { height=gabi::load<f32>(pos+4);gmem_st8(data,1); }
-    f32 maximum=gabi::load<f32>(0x1004E350);
-    gmem_st8(data+1,2);
-    f32 random=gabi::call<f32>(0x020198D8,maximum);
-    gmem_st8(data+2,(u8)gabi::ftoi(random));
-    f32 x=gabi::load<f32>(pos),z=gabi::load<f32>(pos+8);
-    gabi::store<f32>(data+4,x);gabi::store<f32>(data+8,height);
-    gmem_st8(data+3,item);gabi::store<f32>(data+12,z);
-    gabi::call<void>(0x0254AC40,self+0x1A5CC+room*4,data);
-    gmem_st16(self+0x98,index);
-}
-VERIFY(0x0254D19C,Grass_SetData);
-u32 Grass_NewData(u32 self,u32 pos,u32 room,u32 item) {
-    WWHD_FUNC(0x0254D2D4,u32,self,pos,room,item);
-    if (room>=64) gabi::call<void>(0x0273AA24,0x1004E354,0xB00,0x1004E360);
-    u32 start=gmem_ld16(self+0x98),data=self+0x9C+start*0x44;
-    for (u32 index=start;index<1500;++index,data+=0x44) {
-        if (!gmem_ld8(data)) {
-            gabi::call<void>(0x0254D19C,self,data,index,pos,room,item);return data;
+static void grass_ReleaseResources(u32 base) {
+    for (u32 i = 0; i < 2; ++i) {
+        u32 resource = base + i * 0x4A8;
+        GrassHD::SDK::Shape_clear(resource + 0x158);
+        at<Resource>(resource)->mpBuffer = 0;
+        if ((u32)(at<Resource>(resource)->mpAllocation)) {
+            grass_ReleaseAllocation(resource, 0x250);
+            at<Resource>(resource)->mAlignment = 0;
+            at<Resource>(resource)->mpAllocation = 0;
+        }
+        GrassHD::SDK::Shape_clear(resource + 0x3AC);
+        at<Resource>(resource + 0x254)->mpBuffer = 0;
+        if ((u32)(at<Resource>(resource + 0x254)->mpAllocation)) {
+            grass_ReleaseAllocation(resource, 0x4A4);
+            at<Resource>(resource + 0x254)->mAlignment = 0;
+            at<Resource>(resource + 0x254)->mpAllocation = 0;
         }
     }
-    data=self+0x9C;
-    for (u32 index=0;index<start;++index,data+=0x44) {
-        if (!gmem_ld8(data)) {
-            gabi::call<void>(0x0254D19C,self,data,index,pos,room,item);return data;
+    at<Resources>(base)->mCount = 0;
+}
+
+static u32 grass_Collection(u32 self, u32 pass) {
+    u32 collection = (u32)(at<dGrass_packet_c>(self)->mMaterials.mpItems);
+    if (pass < (u32)(at<dGrass_packet_c>(self)->mMaterials.mCapacity))
+        collection += pass * 20;
+    return collection;
+}
+
+static u32 grass_HeapAlloc(u32 size, u32 alignment) {
+    u32 heap = GrassHD::SDK::Heap_getCurrent((u32)(*at<be<u32>>(Data::heapManager)));
+    return gabi::call_ptr<u32>((u32)at<DispatchTable>((u32)at<Heap>(heap)->mVtable)->mpAlloc, heap, size,
+                               alignment);
+}
+
+static void grass_ClearShapes(u32 item) {
+    at<ShapeCollection>(item)->mpMaterial = 0;
+    for (u32 offset = 8; offset <= 16; offset += 8) {
+        u32 array = (u32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes);
+        if (!array)
+            continue;
+        for (s32 i = 0; i < (s32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount); ++i) {
+            u32 child = array + (u32)i * 0xF4;
+            gabi::call_ptr<void>((u32)at<DispatchTable>((u32)at<Shape>(child)->mVtable)->mpDelete, child, 2);
+            array = (u32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes);
+        }
+        grass_ReleaseAllocation(item, offset);
+        at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount = 0;
+        at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes = 0;
+    }
+}
+
+static void grass_ClearVertexBuffer(u32 buffer) {
+    u32 end = buffer + 0xC00;
+    for (u32 address = buffer; address < end; address += 32) {
+        for (u32 i = 0; i < 32; i += 4)
+            at<CacheLine>(address & ~31u)->mWords[i / 4] = 0;
+    }
+}
+
+static void grass_PopulateVertices(u32 buffer, u32 countAddress, u32 positions, u32 normals, u32 colors,
+                                   u32 texcoords) {
+    for (u32 i = 0; i < (u32)*at<be<u32>>(countAddress); ++i) {
+        for (u32 j = 0; j < 3; ++j)
+            at<Vertex>(buffer)[i].mPosition[j] = (u32)at<FloatVectorWords>(positions)[i + 1].mWords[j];
+        for (u32 j = 0; j < 3; ++j)
+            at<Vertex>(buffer)[i].mNormal[j] = (u32)at<FloatVectorWords>(normals)[i + 1].mWords[j];
+        for (u32 j = 0; j < 4; ++j)
+            at<Vertex>(buffer)[i].mColor[j] = (u32)at<ColorWords>(colors)[i + 1].mWords[j];
+        for (u32 j = 0; j < 2; ++j)
+            at<Vertex>(buffer)[i].mTexCoord[j] = (u32)at<TexCoordWords>(texcoords)[i + 1].mWords[j];
+    }
+}
+
+/* 02549D38 */
+void setBatta(u32 pos, u32 color) {
+
+    gabi::Local<String> stage, prefix, boss, other;
+    bool spawn = false;
+    if (GrassHD::SDK::dKy_rain_check())
+        return;
+    u32 play = GrassHD::SDK::dComIfGp_get();
+    if ((u8)(at<Play>(play)->mEventRunning))
+        return;
+    play = GrassHD::SDK::dComIfGp_get();
+    at<String>(stage.a)->mVtable = Data::safeStringVtable;
+    at<String>(prefix.a)->mVtable = Data::safeStringVtable;
+    at<String>(stage.a)->mpString = play + 0x5134;
+    at<String>(prefix.a)->mpString = Data::stageKin;
+    GrassHD::SDK::SafeString_assureTermination(stage.get());
+    grass_StringValidate(stage.get());
+    u32 left = (u32)(at<String>(stage.a)->mpString);
+    grass_StringValidate(prefix.get());
+    u32 right = (u32)(at<String>(prefix.a)->mpString);
+    if (left == right)
+        return;
+    bool different = false;
+    for (u32 i = 0; i < 3; ++i) { /* "kin" stage prefix: the original advances both cursors (r9 stage, r12
+                                     "kin" Data::stageKin; ctr=3) */
+        u8 a = (u8)(*at<be<u8>>(left)), b = (u8)(*at<be<u8>>(right));
+        if (!a) {
+            if (!b)
+                return;
+            different = true;
+            break;
+        }
+        if (!b || a != b) {
+            different = true;
+            break;
+        }
+        ++left;
+        ++right;
+    }
+    if (!different)
+        return;
+    at<String>(boss.a)->mVtable = Data::safeStringVtable;
+    at<String>(boss.a)->mpString = Data::stageXboss;
+    play = GrassHD::SDK::dComIfGp_get();
+    at<String>(other.a)->mVtable = Data::safeStringVtable;
+    at<String>(other.a)->mpString = play + 0x5134;
+    grass_StringValidate(boss.get());
+    grass_StringValidate(boss.get());
+    left = (u32)(at<String>(boss.a)->mpString);
+    grass_StringValidate(other.get());
+    right = (u32)(at<String>(other.a)->mpString);
+    if (left == right)
+        return;
+    left = (u32)(at<String>(boss.a)->mpString);
+    right = (u32)(at<String>(other.a)->mpString);
+    for (u32 i = 0; i < 0x40001; ++i) {
+        u8 a = (u8)(*at<be<u8>>(left)), b = (u8)(*at<be<u8>>(right));
+        if (a != b)
+            break;
+        if (!a)
+            return;
+        ++left;
+        ++right;
+    }
+    f32 random = GrassHD::SDK::cM_rnd();
+    f32 threshold = (f32)(*at<be<f32>>(Data::battaProbability));
+    if (random > threshold)
+        spawn = true;
+    if (!spawn)
+        return;
+    play = GrassHD::SDK::dComIfGp_get();
+    GrassHD::SDK::ParticleControl_set((u32)(at<Play>(play)->mpParticle), 0, 0x453, pos, 0, 0, 255, 0, -1,
+                                      color, color, 0);
+}
+
+/* 0254A198 */
+void GrassHD::dGrass_data_c::WorkCo(u32 actor, u32 mode, s32 room) {
+    u32 self = gabi::ea(this);
+
+    gabi::Local<Vector> delta, position;
+    gabi::Local<ParticleParams> parameters;
+    f32 x = (f32)(mPos.x) - (f32)(at<Actor>(actor)->mCurrentPos.x);
+    f32 z = (f32)(mPos.z) - (f32)(at<Actor>(actor)->mCurrentPos.z);
+    f32 zero = (f32)(*at<be<f32>>(Data::zero));
+    at<Vector>(delta.a)->y = zero;
+    at<Vector>(delta.a)->x = x;
+    at<Vector>(delta.a)->z = z;
+    f32 squared = GrassHD::SDK::PSVECSquareMag(delta.get());
+    if (squared > (f32)(*at<be<f32>>(Data::contactDistanceSquared)))
+        return;
+    u32 angle = GrassHD::SDK::cM_atan2s(x, z);
+    f32 distance = GrassHD::SDK::sqrtf(squared);
+    s32 index = (s8)(mAnimIdx);
+    if (index < 8) {
+        f32 speed = (f32)(at<Actor>(actor)->mSpeedF), threshold = (f32)(*at<be<f32>>(Data::runSpeed));
+        if (speed > threshold) {
+            f32 y = (f32)(mPos.y), pz = (f32)(mPos.z);
+            f32 lift = (f32)(*at<be<f32>>(Data::runParticleLift)), px = (f32)(mPos.x);
+            at<Vector>(position.a)->z = pz;
+            at<Vector>(position.a)->x = px;
+            at<Vector>(position.a)->y = y + lift;
+            GrassHD::SDK::dComIfGp_get();
+            u32 color = Data::roomControl + (u32)room * 0x22C + 0xEC;
+            u32 play = GrassHD::SDK::dComIfGp_get();
+            u32 packet = (u32)(at<Play>(play)->mpGrassPacket);
+            u32 particle = (u16)(at<dGrass_packet_c>(packet)->mCoParticle);
+            play = GrassHD::SDK::dComIfGp_get();
+            GrassHD::SDK::ParticleControl_setSimple((u32)(at<Play>(play)->mpParticle), particle,
+                                                    position.get(), 255, color, color, 1);
+            play = GrassHD::SDK::dComIfGp_get();
+            u32 background = play + 0x12A0;
+            play = GrassHD::SDK::dComIfGp_get();
+            packet = (u32)(at<Play>(play)->mpGrassPacket);
+            u32 emitter =
+                GrassHD::SDK::ParticleControl_getEmitter((u32)(at<Background>(background)->mpParticle),
+                                                         (u16)(at<dGrass_packet_c>(packet)->mCoParticle));
+            if (emitter) {
+                u32 target = (u32)(at<Emitter>(emitter)->mpEmitter);
+                if (target) {
+                    at<ParticleParams>(parameters.a)->mpEmptyString = Data::emptyString;
+                    at<ParticleParams>(parameters.a)->mVtable = Data::safeStringVtable;
+                    at<ParticleParams>(parameters.a)->mEnable = 1;
+                    at<ParticleParams>(parameters.a)->mFlags[1] = 0;
+                    f32 one = (f32)(*at<be<f32>>(Data::one));
+                    at<ParticleParams>(parameters.a)->mFlags[0] = 0;
+                    at<ParticleParams>(parameters.a)->mColorWords[0] = one;
+                    at<ParticleParams>(parameters.a)->mFlags[2] = 0;
+                    at<ParticleParams>(parameters.a)->mColorWords[3] = one;
+                    at<ParticleParams>(parameters.a)->mColorWords[1] = one;
+                    at<ParticleParams>(parameters.a)->mColorWords[2] = one;
+                    play = GrassHD::SDK::dComIfGp_get();
+                    u32 control = (u32)(at<Play>(play)->mpParticle);
+                    for (u32 i = 0; i < 4; ++i)
+                        at<ParticleParams>(parameters.a)->mColorWords[i] =
+                            (u32)at<ParticleControl>(control)->mColorWords[i];
+                    GrassHD::SDK::Emitter_setColor(target, parameters.get());
+                }
+            }
+            GrassHD::SDK::setBatta(self + 4, color);
+        }
+        u32 play = GrassHD::SDK::dComIfGp_get();
+        s32 fresh = GrassHD::SDK::dGrass_packet_c__newAnm((u32)(at<Play>(play)->mpGrassPacket));
+        if (fresh < 0)
+            return;
+        mAnimIdx = fresh;
+    }
+    u32 play = GrassHD::SDK::dComIfGp_get();
+    index = (s8)(mAnimIdx);
+    u32 packet = (u32)(at<Play>(play)->mpGrassPacket);
+    f32 radius = (f32)(*at<be<f32>>(Data::bendRadius));
+    u32 animation = packet + 0x18F0C + (u32)index * 0x38;
+    at<dGrass_anm_c>(animation)->mRotY = angle;
+    u32 bend = GrassHD::SDK::cM_atan2s(radius - distance, radius);
+    at<dGrass_anm_c>(animation)->mRotX = bend;
+    at<dGrass_anm_c>(animation)->mState = 2;
+}
+
+/* 0254A458 */
+void GrassHD::dGrass_data_c::WorkAt_NoCutAnim(u32 actor, u32 mode, s32 room, u32 hit, u32 object) {
+    u32 self = gabi::ea(this);
+
+    gabi::Local<Vector> velocity, horizontal;
+    u32 info = GrassHD::SDK::dCcD_GetGObjInf(object);
+    f32 x = (f32)(at<HitObjectInfo>(info)->mAtVec.x);
+    at<Vector>(velocity.a)->x = x;
+    f32 y = (f32)(at<HitObjectInfo>(info)->mAtVec.y);
+    at<Vector>(velocity.a)->y = y;
+    f32 z = (f32)(at<HitObjectInfo>(info)->mAtVec.z), zero = (f32)(*at<be<f32>>(Data::zero));
+    at<Vector>(horizontal.a)->y = zero;
+    at<Vector>(horizontal.a)->z = z;
+    at<Vector>(horizontal.a)->x = x;
+    at<Vector>(velocity.a)->z = z;
+    f32 magnitude = GrassHD::SDK::PSVECSquareMag(horizontal.get());
+    f32 epsilon = (f32)(*at<be<f32>>(Data::epsilon));
+    if (fabsf(magnitude) < epsilon) {
+        u32 table = (u32)(at<CollisionObject>(object)->mVtable);
+        u32 shape = gabi::call_ptr<u32>((u32)at<DispatchTable>(table)->mpGetShape, object);
+        table = (u32)(at<CollisionShape>(shape)->mVtable);
+        if (gabi::call_ptr<u32>((u32)at<DispatchTable>(table)->mpGetNormal, shape, self + 4,
+                                velocity.get())) {
+            f32 scale = (f32)(*at<be<f32>>(Data::normalScale));
+            GrassHD::SDK::PSVECScale(velocity.get(), velocity.get(), scale);
+            x = (f32)(at<Vector>(velocity.a)->x);
+            z = (f32)(at<Vector>(velocity.a)->z);
+            at<Vector>(horizontal.a)->x = x;
+            at<Vector>(horizontal.a)->y = zero;
+            at<Vector>(horizontal.a)->z = z;
+        } else {
+            f32 ax = (f32)(at<Actor>(actor)->mCurrentPos.x), px = (f32)(mPos.x),
+                az = (f32)(at<Actor>(actor)->mCurrentPos.z);
+            x = px - ax;
+            y = (f32)(mPos.y) - (f32)(at<Actor>(actor)->mCurrentPos.y);
+            z = (f32)(mPos.z) - az;
+            at<Vector>(horizontal.a)->x = x;
+            at<Vector>(horizontal.a)->y = zero;
+            at<Vector>(velocity.a)->y = y;
+            at<Vector>(horizontal.a)->z = z;
+            at<Vector>(velocity.a)->x = x;
+            at<Vector>(velocity.a)->z = z;
+        }
+        magnitude = GrassHD::SDK::PSVECSquareMag(horizontal.get());
+        if (fabsf(magnitude) < epsilon)
+            return;
+    }
+    s32 angle = GrassHD::SDK::cM_atan2s((f32)(at<Vector>(velocity.a)->x), (f32)(at<Vector>(velocity.a)->z));
+    s32 index = (s8)(mAnimIdx);
+    u32 play = GrassHD::SDK::dComIfGp_get(), packet = (u32)(at<Play>(play)->mpGrassPacket);
+    if (index < 8) {
+        s32 fresh = GrassHD::SDK::dGrass_packet_c__newAnm(packet);
+        if (fresh < 0)
+            return;
+        mAnimIdx = fresh;
+        play = GrassHD::SDK::dComIfGp_get();
+        packet = (u32)(at<Play>(play)->mpGrassPacket);
+    }
+    index = (s8)(mAnimIdx);
+    f32 weight = (f32)(*at<be<f32>>(Data::randomBendRange)), bias = (f32)(*at<be<f32>>(Data::randomBendBias));
+    u32 animation = packet + 0x18F0C + (u32)index * 0x38;
+    f32 random = GrassHD::SDK::cM_rnd();
+    f32 factor = gabi::fmadds(random, weight, bias);
+    u32 horizontalAngle = gabi::ftoi(gabi::fmuls_ppc((f32)angle, factor));
+    f32 radius = (f32)(*at<be<f32>>(Data::bendRadius));
+    at<dGrass_anm_c>(animation)->mRotY = horizontalAngle;
+    s32 bend = GrassHD::SDK::cM_atan2s(magnitude, radius);
+    random = GrassHD::SDK::cM_rnd();
+    factor = gabi::fmadds(random, weight, bias);
+    u32 verticalAngle = gabi::ftoi(gabi::fmuls_ppc((f32)bend, factor));
+    at<dGrass_anm_c>(animation)->mState = 2;
+    at<dGrass_anm_c>(animation)->mRotX = verticalAngle;
+}
+
+/* 0254A7C8 */
+void GrassHD::dGrass_data_c::WorkAt(u32 actor, u32 mode, s32 room, u32 hit) {
+    u32 self = gabi::ea(this);
+
+    gabi::Local<Vector> position;
+    gabi::Local<ParticleParams> parameters;
+    u32 object = (u32)(at<HitInfo>(hit)->mpAtHitObj);
+    if (object && ((u32)(at<CollisionObject>(object)->mAtType) & 0x3CC000)) {
+        GrassHD::SDK::dGrass_data_c__WorkAt_NoCutAnim(self, actor, mode, room, hit, object);
+        return;
+    }
+    s32 index = (s8)(mAnimIdx);
+    if (index >= 8) {
+        u32 play = GrassHD::SDK::dComIfGp_get();
+        index = (s8)(mAnimIdx);
+        u32 packet = (u32)(at<Play>(play)->mpGrassPacket);
+        at<dGrass_packet_c>(packet)->mGrassAnm[(u32)index].mState = 0;
+    }
+    mAnimIdx = -1;
+    if (!(u32)(*at<be<u32>>(Data::angleGuard))) {
+        *at<be<u32>>(Data::angleGuard) = 1;
+        GrassHD::SDK::csXyz__csXyz(Data::cutAngle, 0, 0, 0);
+    }
+    f32 x = (f32)(mPos.x), y = (f32)(mPos.y), lift = (f32)(*at<be<f32>>(Data::cutParticleLift));
+    at<Vector>(position.a)->x = x;
+    f32 z = (f32)(mPos.z);
+    at<Vector>(position.a)->z = z;
+    at<Vector>(position.a)->y = y + lift;
+    GrassHD::SDK::dComIfGp_get();
+    u32 color = Data::roomControl + (u32)room * 0x22C + 0xEC;
+    u32 play = GrassHD::SDK::dComIfGp_get(), packet = (u32)(at<Play>(play)->mpGrassPacket);
+    u32 particle = (u16)(at<dGrass_packet_c>(packet)->mAtParticle);
+    play = GrassHD::SDK::dComIfGp_get();
+    GrassHD::SDK::ParticleControl_setSimple((u32)(at<Play>(play)->mpParticle), particle, position.get(), 255,
+                                            color, color, 1);
+    play = GrassHD::SDK::dComIfGp_get();
+    u32 background = play + 0x12A0;
+    play = GrassHD::SDK::dComIfGp_get();
+    packet = (u32)(at<Play>(play)->mpGrassPacket);
+    u32 emitter = GrassHD::SDK::ParticleControl_getEmitter((u32)(at<Background>(background)->mpParticle),
+                                                           (u16)(at<dGrass_packet_c>(packet)->mAtParticle));
+    if (emitter) {
+        u32 target = (u32)(at<Emitter>(emitter)->mpEmitter);
+        if (target) {
+            at<ParticleParams>(parameters.a)->mFlags[0] = 0;
+            at<ParticleParams>(parameters.a)->mFlags[2] = 0;
+            f32 one = (f32)(*at<be<f32>>(Data::one));
+            at<ParticleParams>(parameters.a)->mFlags[1] = 0;
+            at<ParticleParams>(parameters.a)->mColorWords[0] = one;
+            at<ParticleParams>(parameters.a)->mColorWords[1] = one;
+            at<ParticleParams>(parameters.a)->mpEmptyString = Data::emptyString;
+            at<ParticleParams>(parameters.a)->mVtable = Data::safeStringVtable;
+            at<ParticleParams>(parameters.a)->mColorWords[2] = one;
+            at<ParticleParams>(parameters.a)->mColorWords[3] = one;
+            at<ParticleParams>(parameters.a)->mEnable = 1;
+            play = GrassHD::SDK::dComIfGp_get();
+            u32 control = (u32)(at<Play>(play)->mpParticle);
+            for (u32 i = 0; i < 4; ++i)
+                at<ParticleParams>(parameters.a)->mColorWords[i] =
+                    (u32)at<ParticleControl>(control)->mColorWords[i];
+            GrassHD::SDK::Emitter_setColor(target, parameters.get());
+        }
+    }
+    GrassHD::SDK::setBatta(self + 4, color);
+    s32 item = (s8)(mItemIdx);
+    if (item >= 0)
+        GrassHD::SDK::fopAcM_createItemFromTable(self + 4, item, -1, room, 0, 0, 1, 0);
+    if (!(u8)(*at<be<u8>>(Data::cutSoundFlag))) {
+        *at<be<u8>>(Data::cutSoundFlag) = 1;
+        u32 reverb = GrassHD::SDK::dComIfGp_getReverb(room);
+        GrassHD::SDK::mDoAud_seStart(0x282C, self + 4, 0, reverb);
+    }
+}
+
+/* 0254AA3C */
+void GrassHD::dGrass_data_c::hitCheck(s32 room) {
+    u32 self = gabi::ea(this);
+
+    gabi::Local<HitInfo> hit;
+    gabi::Local<be<u32>> actor;
+    GrassHD::SDK::HitInfo_construct(hit.get());
+    u32 play = GrassHD::SDK::dComIfGp_get();
+    u32 result = GrassHD::SDK::dCcMassS_Mng__Chk(play + 0x4EF8, self + 4, actor.get(), hit.get());
+    bool attack = false;
+    if (result & 1) {
+        u32 other = (u32)(*actor.get());
+        if (other && (s16)(at<Actor>(other)->mProcName) != 0x1C5 &&
+            (s16)(at<Actor>(other)->mProcName) != 0x1C6)
+            attack = true;
+    }
+    u32 contact = result & 2;
+    if (!contact && !attack) {
+        s32 index = (s8)(mAnimIdx);
+        if (index < 8)
+            return;
+        play = GrassHD::SDK::dComIfGp_get();
+        index = (s8)(mAnimIdx);
+        u32 packet = (u32)(at<Play>(play)->mpGrassPacket), animation = packet + 0x18F0C + (u32)index * 0x38;
+        u32 rotation = (u16)(at<dGrass_anm_c>(animation)->mRotY);
+        s32 target = (s16)(rotation & 0xE000);
+        u32 baseIndex = rotation >> 13;
+        play = GrassHD::SDK::dComIfGp_get();
+        packet = (u32)(at<Play>(play)->mpGrassPacket);
+        u32 base = packet + 0x18F0C + baseIndex * 0x38;
+        if ((u8)(at<dGrass_anm_c>(animation)->mState) == 2) {
+            u32 reverb = GrassHD::SDK::dComIfGp_getReverb(room);
+            GrassHD::SDK::mDoAud_seStart(0x3814, self + 4, 0, reverb);
+            at<dGrass_anm_c>(animation)->mState = 1;
+        }
+        if (GrassHD::SDK::cLib_addCalcAngleS(animation + 4, (s32)(s16)(at<dGrass_anm_c>(base)->mRotX), 16,
+                                             4000, 100))
+            return;
+        if (!GrassHD::SDK::cLib_chaseAngleS(animation + 2, target, 800))
+            return;
+        play = GrassHD::SDK::dComIfGp_get();
+        index = (s8)(mAnimIdx);
+        packet = (u32)(at<Play>(play)->mpGrassPacket);
+        at<dGrass_packet_c>(packet)->mGrassAnm[(u32)index].mState = 0;
+        mAnimIdx = (u16)(at<dGrass_anm_c>(animation)->mRotY) >> 13;
+    } else {
+        if (!(u32)(*actor.get()))
+            GrassHD::SDK::JUTAssertion__getSDevice(Data::hitAssertFile, 0x80F, Data::hitAssertCondition);
+        if (contact)
+            GrassHD::SDK::dGrass_data_c__WorkCo(self, (u32)(*actor.get()), result, room);
+        if (attack)
+            GrassHD::SDK::dGrass_data_c__WorkAt(self, (u32)(*actor.get()), result, room, hit.get());
+    }
+}
+
+/* 0254AC40 */
+void GrassHD::dGrass_room_c::newData(u32 data) {
+    at<dGrass_data_c>(data)->mpNextData = (u32)(mpData);
+    mpData = data;
+}
+
+/* 0254AC50 */
+void GrassHD::dGrass_room_c::deleteData() {
+    u32 data = (u32)(mpData);
+    while (data) {
+        at<dGrass_data_c>(data)->mState = 0;
+        u32 current = (u32)(mpData);
+        GrassHD::SDK::JAIZelBasic__seDeleteObject(current + 4);
+        current = (u32)(mpData);
+        data = (u32)(at<dGrass_data_c>(current)->mpNextData);
+        mpData = data;
+    }
+}
+
+/* 0254ACD8 */
+// HD: Constructor thunks retain nullable allocation and original store/callback order.
+u32 dGrass_packet_c__ct(u32 self) {
+
+    if (!self) {
+        self = GrassHD::SDK::operator_new(0x66408);
+        if (!self)
+            return 0;
+    }
+    GrassHD::SDK::Packet_construct(self);
+    at<dGrass_packet_c>(self)->mVtable = Data::grassPacketVtable;
+    GrassHD::SDK::constructArray(gabi::ea(&at<dGrass_packet_c>(self)->mGrassData[0]), 1500, 0x44,
+                                 Target::dGrass_data_c__ct);
+    GrassHD::SDK::constructArray(gabi::ea(&at<dGrass_packet_c>(self)->mGrassAnm[0]), 104, 0x38,
+                                 Target::dGrass_anm_c__ct);
+    GrassHD::SDK::constructArray(gabi::ea(&at<dGrass_packet_c>(self)->mGrassRoom[0]), 64, 4,
+                                 Target::dGrass_room_c__ct);
+    u32 collection = gabi::ea(&at<dGrass_packet_c>(self)->mMaterials),
+        resources = gabi::ea(&at<dGrass_packet_c>(self)->mResources);
+    at<MaterialCollection>(collection)->mCount = 0;
+    u32 pair = collection + 4;
+    if (!pair)
+        pair = GrassHD::SDK::operator_new(8);
+    if (pair) {
+        at<ShapePair>(pair)->mpShapes = 0;
+        at<ShapePair>(pair)->mCount = 0;
+    }
+    u32 resourceStorage = resources;
+    if (!resourceStorage)
+        resourceStorage = GrassHD::SDK::operator_new(0x968);
+    if (resourceStorage) {
+        GrassHD::SDK::constructArray(resourceStorage, 4, 0x254, Target::Resource_create);
+        at<Resources>(resourceStorage)->mSelected = 0;
+        at<Resources>(resourceStorage)->mCount = 0;
+        at<Resources>(resourceStorage)->mVertexStride = 48;
+        at<Resources>(resourceStorage)->mReady = 0;
+        at<Resources>(resourceStorage)->mVertexFormat = 0;
+        for (u32 i = 0; i < 2; ++i)
+            for (u32 j = 0; j < 2; ++j)
+                at<Resources>(resourceStorage)->mBuffer[i + j * 2].mpBuffer = 0;
+    }
+    GrassHD::SDK::ModelBinding_construct(gabi::ea(&at<dGrass_packet_c>(self)->mModelBinding));
+    GrassHD::SDK::constructArray(gabi::ea(&at<dGrass_packet_c>(self)->mModelPackets[0]), 1500, 0xA8,
+                                 Target::ModelPacket_create);
+    GrassHD::SDK::constructArray(gabi::ea(&at<dGrass_packet_c>(self)->mShaderPackets[0]), 64, 0x364,
+                                 Target::ShaderPacket_create);
+    GrassHD::SDK::IndexBuffer_construct(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[0]));
+    GrassHD::SDK::IndexBuffer_construct(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[1]));
+    GrassHD::SDK::Texture_construct(gabi::ea(&at<dGrass_packet_c>(self)->mTexture));
+    GrassHD::SDK::TextureInfo_construct(gabi::ea(&at<dGrass_packet_c>(self)->mTextureInfo));
+    for (u32 i = 0; i < 1500; ++i)
+        at<dGrass_packet_c>(self)->mGrassData[i].mState = 0;
+    at<dGrass_packet_c>(self)->mNextIdx = 0;
+    for (u32 i = 0; i < 104; ++i)
+        at<dGrass_packet_c>(self)->mGrassAnm[i].mState = 0;
+    for (u32 i = 0; i < 8; ++i)
+        GrassHD::SDK::GrassPacket_setAnm(self, i, (s32)(s16)(i * 0x2000));
+    gabi::Local<String> name, archiveName, resourceName, stage, prefix, boss, other;
+    at<String>(name.a)->mpString = Data::modelResourceName;
+    at<String>(name.a)->mVtable = Data::safeStringVtable;
+    u32 archive = GrassHD::SDK::Archive_get();
+    s32 index = GrassHD::SDK::Directory_find((u32)(at<Archive>(archive)->mpDirectory), name.get());
+    u32 entry = 0;
+    if (index >= 0) {
+        u32 count = (u32)(at<Archive>(archive)->mCount), entries = (u32)(at<Archive>(archive)->mpEntries);
+        u32 record = entries + ((u32)index < count ? (u32)index * 36 : 0);
+        if (!(u8)(at<ArchiveEntry>(record)->mLoaded)) {
+            u32 directory = (u32)(at<Archive>(archive)->mpDirectory), source = 0;
+            if ((u32)index < (u32)(at<Directory>(directory)->mCount))
+                source = (u32)(at<Directory>(directory)->mpEntries) + (u32)index * 0x84;
+            GrassHD::SDK::ArchiveEntry_load(record, source, 0);
+            count = (u32)(at<Archive>(archive)->mCount);
+            entries = (u32)(at<Archive>(archive)->mpEntries);
+        }
+        entry = entries + ((u32)index < count ? (u32)index * 36 : 0);
+    }
+    GrassHD::SDK::MaterialCollection_build(collection, entry, 0);
+    at<Resources>(resources)->mVertexFormat = 0x1013;
+    at<Resources>(resources)->mpVertexLayout = Data::vertexLayout;
+    for (u32 outer = 0; outer < 2; ++outer) {
+        for (u32 inner = 0; inner < 2; ++inner) {
+            u32 resource = resources + outer * 0x254 + inner * 0x4A8;
+            u32 buffer = (u32)(at<Resource>(resource)->mpBuffer);
+            if (!buffer) {
+                u32 allocated = grass_HeapAlloc(0xC00, 64);
+                if (allocated) {
+                    at<Resource>(resource)->mpAllocation = allocated;
+                    at<Resource>(resource)->mAlignment = 64;
+                }
+                buffer = (u32)(at<Resource>(resource)->mpAllocation);
+                at<Resource>(resource)->mpBuffer = buffer;
+            }
+            GrassHD::SDK::VertexBuffer_bind(resource + 4, buffer, 64, resources + 0x954);
+        }
+    }
+    at<Resources>(resources)->mCount = 0;
+    at<Resources>(resources)->mReady = 1;
+    for (u32 i = 0; i < (u32)(at<MaterialCollection>(collection)->mCount); ++i) {
+        u32 item = (u32)(at<MaterialCollection>(collection)->mpItems);
+        if (i < (u32)(at<MaterialCollection>(collection)->mCapacity))
+            item += i * 20;
+        u32 material = (u32)(at<ShapeCollection>(item)->mpMaterial);
+        grass_ClearShapes(item);
+        at<ShapeCollection>(item)->mpMaterial = material;
+        for (u32 offset = 8; offset <= 16; offset += 8) {
+            u32 shapes = grass_HeapAlloc(0x1E8, 4);
+            for (u32 j = 0; j < 2; ++j) {
+                u32 shape = shapes + j * 0xF4;
+                if (shape)
+                    GrassHD::SDK::Shape_construct(shape);
+            }
+            if (shapes) {
+                at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes = shapes;
+                at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount = 2;
+            }
+        }
+        for (u32 outer = 0; outer < 2; ++outer)
+            for (u32 inner = 0; inner < 2; ++inner) {
+                u32 owner = item + 4 + outer * 8;
+                u32 shape = (u32)(at<ShapePair>(owner)->mpShapes);
+                if (inner < (u32)(at<ShapePair>(owner)->mCount))
+                    shape += inner * 0xF4;
+                GrassHD::SDK::Shape_build(material, shape, resources + 4 + outer * 0x254 + inner * 0x4A8,
+                                          resources + 0x954, 0);
+            }
+    }
+    GrassHD::SDK::ModelBinding_setFlags(gabi::ea(&at<dGrass_packet_c>(self)->mModelBinding), 1, 0);
+    for (u32 i = 0; i < 64; ++i)
+        GrassHD::SDK::ModelPacket_setKind(gabi::ea(&at<dGrass_packet_c>(self)->mShaderPackets[i]), 0);
+    for (u32 i = 0; i < 1500; ++i)
+        GrassHD::SDK::ModelPacket_setKind(gabi::ea(&at<dGrass_packet_c>(self)->mModelPackets[i]), 0);
+    at<String>(archiveName.a)->mpString = Data::textureArchiveName;
+    at<String>(archiveName.a)->mVtable = Data::safeStringVtable;
+    at<String>(resourceName.a)->mpString = Data::textureResourceName;
+    at<String>(resourceName.a)->mVtable = Data::safeStringVtable;
+    u32 texture = GrassHD::SDK::ResourceManager_getTexture((u32)(*at<be<u32>>(Data::resourceManager)),
+                                                           archiveName.get(), resourceName.get(), 0);
+    u32 play = GrassHD::SDK::dComIfGp_get();
+    at<String>(stage.a)->mpString = play + 0x5134;
+    at<String>(stage.a)->mVtable = Data::safeStringVtable;
+    at<String>(prefix.a)->mpString = Data::resourceStageKin;
+    at<String>(prefix.a)->mVtable = Data::safeStringVtable;
+    GrassHD::SDK::SafeString_assureTermination(stage.get());
+    grass_StringValidate(stage.get());
+    u32 left = (u32)(at<String>(stage.a)->mpString);
+    grass_StringValidate(prefix.get());
+    u32 right = (u32)(at<String>(prefix.a)->mpString);
+    bool alternate = left == right;
+    if (!alternate) {
+        alternate = true;
+        left = (u32)(at<String>(stage.a)->mpString);
+        for (u32 i = 0; i < 3; ++i, ++left, ++right) {
+            u32 a = (u8)(*at<be<u8>>(left)), b = (u8)(*at<be<u8>>(right));
+            if (!a || !b) {
+                alternate = a == b;
+                break;
+            }
+            if (a != b) {
+                alternate = false;
+                break;
+            }
+        }
+    }
+    if (!alternate) {
+        at<String>(boss.a)->mpString = Data::resourceStageXboss;
+        at<String>(boss.a)->mVtable = Data::safeStringVtable;
+        play = GrassHD::SDK::dComIfGp_get();
+        at<String>(other.a)->mpString = play + 0x5134;
+        at<String>(other.a)->mVtable = Data::safeStringVtable;
+        grass_StringValidate(boss.get());
+        grass_StringValidate(boss.get());
+        left = (u32)(at<String>(boss.a)->mpString);
+        grass_StringValidate(other.get());
+        right = (u32)(at<String>(other.a)->mpString);
+        alternate = left == right;
+        if (!alternate) {
+            left = (u32)(at<String>(boss.a)->mpString);
+            alternate = true;
+            for (u32 i = 0; i < 0x40001; ++i, ++left, ++right) {
+                u32 a = (u8)(*at<be<u8>>(left)), b = (u8)(*at<be<u8>>(right));
+                if (a != b) {
+                    alternate = false;
+                    break;
+                }
+                if (!a)
+                    break;
+                if (i == 0x40000)
+                    alternate = false;
+            }
+        }
+    }
+    u32 indices = gabi::ea(&at<dGrass_packet_c>(self)->mIndices[0]);
+    GrassHD::SDK::IndexBuffer_set(
+        indices, alternate ? Data::forestIndices : Data::grassIndices, 4,
+        (u32)*at<be<u32>>(alternate ? Data::grassPositions : Data::grassIndexCount));
+    at<IndexBuffer>(indices)->mpIndices = 4;
+    for (u32 kind = 0; kind < 2; ++kind) {
+        u32 selected = resources + (u32)(at<Resources>(resources)->mSelected) * 0x254;
+        u32 buffer = (u32)(at<Resource>(selected + kind * sizeof(Resource) * 2)->mpBuffer);
+        grass_ClearVertexBuffer(buffer);
+        selected = resources + (u32)(at<Resources>(resources)->mSelected) * 0x254;
+        buffer = (u32)(at<Resource>(selected + kind * sizeof(Resource) * 2)->mpBuffer);
+        if (alternate) {
+            if (!kind)
+                grass_PopulateVertices(buffer, Data::forestVertexCount, Data::forestPositions,
+                                       Data::forestNormals, Data::forestColors, Data::forestTexCoords);
+            else
+                grass_PopulateVertices(buffer, Data::forestCutVertexCount, Data::forestCutPositions,
+                                       Data::forestCutNormals, Data::forestCutColors,
+                                       Data::forestCutTexCoords);
+        } else {
+            if (!kind)
+                grass_PopulateVertices(buffer, Data::grassVertexCount, Data::grassPositions,
+                                       Data::grassNormals, Data::grassColors, Data::grassTexCoords);
+            else
+                grass_PopulateVertices(buffer, Data::cutVertexCount, Data::cutPositions, Data::cutNormals,
+                                       Data::cutColors, Data::cutTexCoords);
+        }
+    }
+    u32 original = (u32)(at<Resources>(resources)->mSelected), destination = resources + (!original) * 0x254;
+    for (u32 kind = 0; kind < 2; ++kind, destination += 0x4A8) {
+        u32 selected = resources + (original + kind * 2) * 0x254;
+        for (u32 i = 0; i < 64; ++i) {
+            u32 source = (u32)(at<Resource>(selected)->mpBuffer),
+                target = (u32)(at<Resource>(destination)->mpBuffer);
+            for (u32 j = 0; j < 12; ++j)
+                *reinterpret_cast<be<u32> *>(&at<Matrix>(target)[i].m[j]) =
+                    *reinterpret_cast<be<u32> *>(&at<Matrix>(source)[i].m[j]);
+        }
+        original = (u32)(at<Resources>(resources)->mSelected);
+    }
+    u32 selected = resources + (u32)(at<Resources>(resources)->mSelected) * 0x254 + 4;
+    for (u32 i = 0; i < 2; ++i)
+        GrassHD::SDK::VertexBuffer_invalidate(
+            selected + i * 0x4A8, 0, (u32)at<VertexBuffer>(selected + i * sizeof(Resource) * 2)->mBufferSize);
+    at<Resources>(resources)->mSelected = !(u32)(at<Resources>(resources)->mSelected);
+    GrassHD::SDK::DrawLock_lock((u32)(*at<be<u32>>(Data::drawLock)));
+    u32 textureInfo = gabi::ea(&at<dGrass_packet_c>(self)->mTextureInfo);
+    GrassHD::SDK::TextureInfo_load(textureInfo, texture,
+                                   alternate ? Data::forestTextureName : Data::grassTextureName);
+    GrassHD::SDK::DrawLock_unlock((u32)(*at<be<u32>>(Data::drawLock)));
+    at<dGrass_packet_c>(self)->mCoParticle = alternate ? 0x8222 : 0x3DB;
+    at<dGrass_packet_c>(self)->mAtParticle = alternate ? 0x8221 : 0x3DA;
+    GrassHD::SDK::IndexBuffer_set(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[1]), Data::cutIndices, 4,
+                                  (u32)(*at<be<u32>>(Data::cutIndexCount)));
+    at<dGrass_packet_c>(self)->mIndices[1].mpIndices = 4;
+    u32 target = gabi::ea(&at<dGrass_packet_c>(self)->mTexture);
+    bool equal = true;
+    const u32 fields[] = {4, 8, 12, 16, 20, 24, 56, 52, 28};
+    for (u32 offset : fields)
+        if ((u32)(at<Texture>(target)->mWords[(offset) / 4]) !=
+            (u32)(at<TextureInfo>(textureInfo)->mWords[(offset) / 4])) {
+            equal = false;
+            break;
+        }
+    if (!equal)
+        GrassHD::SDK::Texture_assign(target, textureInfo);
+    else {
+        u32 first = (u32)(at<TextureInfo>(textureInfo)->mWords[(40) / 4]),
+            second = (u32)(at<TextureInfo>(textureInfo)->mWords[(48) / 4]);
+        at<Texture>(target)->mWords[10] = first;
+        at<Texture>(target)->mFlags = (u8)(at<Texture>(target)->mFlags) | 2;
+        at<Texture>(target)->mWords[55] = second;
+        at<Texture>(target)->mWords[12] = second;
+        at<Texture>(target)->mWords[53] = first;
+    }
+    at<Texture>(target)->mWords[88] = 1;
+    at<Texture>(target)->mWords[87] = 1;
+    at<Texture>(target)->mWords[89] = 1;
+    if (!equal)
+        at<Texture>(target)->mFlags = (u8)(at<Texture>(target)->mFlags) | 2;
+    return self;
+}
+
+/* 0254D4D8 */
+u32 dGrass_room_c__ct(u32 self) {
+
+    if (!self)
+        self = GrassHD::SDK::operator_new(4);
+    if (self)
+        at<dGrass_room_c>(self)->mpData = 0;
+    return self;
+}
+
+/* 0254D49C */
+u32 dGrass_anm_c__ct(u32 self) {
+
+    if (!self)
+        self = GrassHD::SDK::operator_new(56);
+    if (self)
+        at<dGrass_anm_c>(self)->mState = 0;
+    return self;
+}
+
+/* 0254A0DC */
+u32 dGrass_data_c__ct(u32 self) {
+
+    if (!self) {
+        self = GrassHD::SDK::operator_new(0x44);
+        if (!self)
+            return 0;
+    }
+    at<dGrass_data_c>(self)->mItemIdx = 0;
+    at<dGrass_data_c>(self)->mAnimIdx = 0;
+    at<dGrass_data_c>(self)->mState = 0;
+    at<dGrass_data_c>(self)->mInitFlags = 0;
+    GrassHD::SDK::clearMemory(self + 16, 48);
+    at<dGrass_data_c>(self)->mpNextData = 0;
+    at<dGrass_data_c>(self)->mState = 0;
+    return self;
+}
+
+/* 0254C120 */
+void GrassHD::dGrass_packet_c::draw(u32 state) {
+    u32 self = gabi::ea(this);
+
+    u32 pass = (u32)(at<RenderContext>(state)->mPass), material = 0;
+    if ((s32)pass < 4)
+        material = (u32)at<ShapeCollection>(grass_Collection(self, pass))->mpMaterial;
+    u32 cache = GrassHD::SDK::ShaderCache_get(Data::shaderContext);
+    u32 model = (u32)(at<Material>(material)->mpModel);
+    if (model != (u32)(at<ShaderCache>(cache)->mpModel)) {
+        u32 flag = (u8)(at<Model>(model)->mFlags), previous = (u32)(at<ShaderCache>(cache)->mpShader);
+        if (flag & 2) {
+            at<Model>(model)->mFlags = flag & ~2u;
+            GrassHD::SDK::Model_update(model, 0);
+        }
+        u32 shader = (u32)at<ShaderResource>((u32)at<Model>(model)->mpShaderResource)->mpShader;
+        if (previous != shader)
+            GrassHD::SDK::Shader_bind(shader);
+        u32 size = (u32)(at<Model>(model)->mDisplayListSize);
+        if (size)
+            GrassHD::SDK::GX2CallDisplayList((u32)(at<Model>(model)->mpDisplayList), size);
+        else
+            GrassHD::SDK::Model_draw(model);
+        at<ShaderCache>(cache)->mpShader = shader;
+        at<ShaderCache>(cache)->mpModel = model;
+    }
+    pass = (u32)(at<RenderContext>(state)->mPass);
+    bool bind = pass == 0 ? (u32)(at<RenderContext>(state)->mpModelBinding) != 0 : (pass == 1 || pass == 2);
+    if (bind) {
+        u32 data = pass == 0
+                       ? (u32)at<ModelBinding>((u32)at<RenderContext>(state)->mpModelBinding)->mpRenderer
+                       : (u32)(mModelBinding.mpRenderer);
+        u32 block = data + 16 + (u32)(at<UniformData>(data)->mBlockIndex) * 28;
+        u32 info =
+            (u32)(at<Material>(material)->mShaderCount) ? (u32)(at<Material>(material)->mpShaderInfo) : 0;
+        s32 vertex = (s16)(at<ShaderInfo>(info)->mVertexBlock),
+            pixel = (s16)(at<ShaderInfo>(info)->mPixelBlock),
+            geometry = (s16)(at<ShaderInfo>(info)->mGeometryBlock);
+        u32 buffer = (u32)(at<UniformBlock>(block)->mpBuffer), size = (u32)(at<UniformBlock>(block)->mSize);
+        if (vertex != -1 || pixel != -1 || geometry != -1) {
+            if (pixel != -1)
+                GrassHD::SDK::GX2SetPixelUniformBlock(pixel, buffer, size);
+            if (vertex != -1)
+                GrassHD::SDK::GX2SetVertexUniformBlock(vertex, buffer, size);
+            if (geometry != -1)
+                GrassHD::SDK::GX2SetGeometryUniformBlock(geometry, buffer, size);
+        }
+    }
+    if (pass == 2) {
+        u32 object = (u32)(at<RenderContext>(state)->mpCallback);
+        if (object)
+            gabi::call_ptr<void>((u32)at<DispatchTable>((u32)at<ModelPacket>(object)->mVtable)->mpGetShape,
+                                 object, material);
+        GrassHD::SDK::RenderContext_apply(state, material);
+    }
+    u32 attribute =
+        (u32)(at<Material>(material)->mAttributeCount) ? (u32)(at<Material>(material)->mpAttributeInfo) : 0;
+    GrassHD::SDK::Texture_bind(gabi::ea(&mTexture), attribute + 4, 0, 0);
+    gabi::Local<RenderState> render;
+    GrassHD::SDK::RenderState_construct(render.get());
+    u32 mode = (u32)(at<RenderState>(render.a)->mRasterMode);
+    at<RenderState>(render.a)->mDepthBias = (f32)(*at<be<f32>>(Data::depthBias));
+    at<RenderState>(render.a)->mBlendMode = 2;
+    at<RenderState>(render.a)->mDepthEnable = 1;
+    at<RenderState>(render.a)->mDepthFunc = 4;
+    at<RenderState>(render.a)->mRasterMode = (((mode & 0xFFFFFFF0) + 7) & 0xFFFFFF0F) + 16;
+    GrassHD::SDK::RenderState_bind((u32)(at<RenderContext>(state)->mPass), render.get());
+    GrassHD::SDK::RenderState_apply(render.get());
+    u32 packetOffset = 0;
+    for (u32 room = 0; room < 64; ++room) {
+        u32 data = (u32)(mGrassRoom[room].mpData);
+        if (data && (u32)(at<RenderContext>(state)->mPass)) {
+            u32 packet = gabi::ea(&mShaderPackets[0]) + room * 0x364;
+            gabi::call_ptr<void>((u32)at<DispatchTable>((u32)at<ModelPacket>(packet)->mVtable)->mpGetShape,
+                                 packet, material);
+        }
+        s32 kind = -1;
+        while (data) {
+            if (!((u8)at<dGrass_data_c>(data)->mInitFlags & 2)) {
+                u32 packet = gabi::ea(&mModelPackets[0]) + packetOffset;
+                gabi::call_ptr<void>(
+                    (u32)at<DispatchTable>((u32)at<ModelPacket>(packet)->mVtable)->mpGetShape, packet,
+                    material);
+                packetOffset += 0xA8;
+                bool animated = (s8)at<dGrass_data_c>(data)->mAnimIdx >= 0;
+                s32 nextKind = animated ? 0 : 1;
+                if (kind != nextKind) {
+                    u32 collection = grass_Collection(self, (u32)(at<RenderContext>(state)->mPass));
+                    if (!(u32)(mResources.mSelected))
+                        collection += 8;
+                    u32 shape = (u32)(at<MaterialCollection>(collection)->mpItems);
+                    if (!animated && (u32)(at<MaterialCollection>(collection)->mCapacity) > 1)
+                        shape += 0xF4;
+                    GrassHD::SDK::Shape_bind(shape);
+                    kind = nextKind;
+                }
+                u32 indices = gabi::ea(&mIndices[0]) + (animated ? 0 : 24);
+                u32 count = (u32)(at<IndexBuffer>(indices)->mCount);
+                if (count)
+                    GrassHD::SDK::GX2DrawIndexedEx((u32)(at<IndexBuffer>(indices)->mpIndices), count,
+                                                   (u32)(at<IndexBuffer>(indices)->mPrimitive),
+                                                   (u32)(at<IndexBuffer>(indices)->mIndexType), 0, 1);
+            }
+            data = (u32)at<dGrass_data_c>(data)->mpNextData;
+        }
+    }
+    GrassHD::SDK::RenderState_apply(Data::defaultRenderState);
+}
+
+/* 0254C6C4 */
+void GrassHD::dGrass_packet_c::calc() {
+
+    float wind = (f32)(*at<be<f32>>(Data::zero));
+    bool enabled = true;
+    if ((u8)(*at<be<u8>>(Data::monotone))) {
+        gabi::Local<String> named, stage;
+        at<String>(named.a)->mpString = Data::stageHyrule;
+        at<String>(named.a)->mVtable = Data::safeStringVtable;
+        u32 play = GrassHD::SDK::dComIfGp_get();
+        at<String>(stage.a)->mpString = play + 0x5134;
+        at<String>(stage.a)->mVtable = Data::safeStringVtable;
+        grass_StringValidate(named.get());
+        grass_StringValidate(named.get());
+        u32 left = (u32)(at<String>(named.a)->mpString);
+        grass_StringValidate(stage.get());
+        u32 right = (u32)(at<String>(stage.a)->mpString);
+        if (left == right)
+            enabled = false;
+        else {
+            left = (u32)(at<String>(named.a)->mpString);
+            for (u32 count = 0; count < 0x40001; ++count, ++left, ++right) {
+                u32 a = (u8)(*at<be<u8>>(left)), b = (u8)(*at<be<u8>>(right));
+                if (a != b)
+                    break;
+                if (!a) {
+                    enabled = false;
+                    break;
+                }
+            }
+        }
+    }
+    if (enabled) {
+        wind = (f32)(*at<be<f32>>(Data::windScale));
+        float power = GrassHD::SDK::dKyw_get_wind_pow();
+        wind = gabi::fmadds(wind, power, wind);
+        float maximum = (f32)(*at<be<f32>>(Data::maxWind));
+        if (wind - maximum >= 0)
+            wind = maximum;
+    }
+    for (u32 i = 0; i < 8; ++i) {
+        u32 time = (u32)(*at<be<u32>>(Data::counterTimer)) + i * 250;
+        u16 angle = (u16)gabi::ftoi(gabi::fmuls_ppc((float)time, wind));
+        float cosine = (f32)at<SinCos>(Data::sincosTable)[(u32)angle >> 3].mCos;
+        mGrassAnm[i].mRotX = (u16)gabi::ftoi(gabi::fmadds(wind, cosine, wind));
+    }
+    s32 room = (s8)(*at<be<s8>>(Data::stayRoomNo));
+    u32 data = (u32)mGrassRoom[(u32)room].mpData;
+    if (!data)
+        return;
+    *at<be<u8>>(Data::cutSoundFlag) = 0;
+    u32 play = GrassHD::SDK::dComIfGp_get(), attribute = play + 0x26A4, mass = play + 0x4EF8;
+    GrassHD::SDK::cM3dGCyl__SetR(play + 0x5008, (f32)(*at<be<f32>>(Data::bendRadius)));
+    GrassHD::SDK::cM3dGCyl__SetH(mass + 0x110, (f32)(*at<be<f32>>(Data::massHeight)));
+    at<MassAttribute>(attribute)->mType = 11;
+    at<MassAttribute>(attribute)->mRoom = 0;
+    do {
+        if (!((u8)(at<dGrass_data_c>(data)->mInitFlags) & 2) && (s8)(at<dGrass_data_c>(data)->mAnimIdx) >= 0)
+            GrassHD::SDK::dGrass_data_c__hitCheck(data, room);
+        data = (u32)(at<dGrass_data_c>(data)->mpNextData);
+    } while (data);
+}
+
+/* 02549F4C */
+f32 checkGroundY(u32 pos) {
+
+    gabi::Local<Ground> ground;
+    GrassHD::SDK::cBgS_GndChk__cBgS_GndChk(ground.get());
+    f32 y = (f32)(at<Vector>(pos)->y), x = (f32)(at<Vector>(pos)->x);
+    ground->mFlags[0] = 0;
+    ground->mInterfaceVtable = Data::groundInterfaceVtable;
+    f32 lift = (f32)(*at<be<f32>>(Data::groundLift));
+    ground->mCheckVtable = Data::groundCheckVtable;
+    ground->mFlags[5] = 0;
+    y += lift;
+    ground->mMask = 1;
+    ground->mFlags[1] = 0;
+    ground->mPos.y = y;
+    at<Vector>(pos)->y = y;
+    ground->mPolyVtable = Data::groundPolyVtable;
+    ground->mPos.x = x;
+    ground->mFlags[6] = 0;
+    ground->mpInterface = ground.a + 0x4C;
+    ground->mFlags[3] = 0;
+    ground->mFlags[4] = 0;
+    ground->mObjectVtable = Data::groundVtable;
+    f32 z = (f32)(at<Vector>(pos)->z);
+    ground->mFlags[2] = 0;
+    ground->mVtable = ground.a + 0x40;
+    ground->mPos.z = z;
+    u32 play = GrassHD::SDK::dComIfGp_get();
+    f32 height = GrassHD::SDK::cBgS__GroundCross(play + 0x12A0, ground.get());
+    y = (f32)(at<Vector>(pos)->y) - lift;
+    ground->mObjectVtable = Data::groundVtable;
+    ground->mCheckVtable = Data::groundCheckVtable;
+    f32 limit = (f32)(*at<be<f32>>(Data::groundLimit));
+    ground->mInterfaceVtable = Data::groundBaseVtable;
+    at<Vector>(pos)->y = y;
+    bool valid = height > limit;
+    GrassHD::SDK::cBgS_Chk___cBgS_Chk(ground.get(), 0);
+    return valid ? height : y;
+}
+
+/* 0254CF78 */
+void GrassHD::dGrass_packet_c::update() {
+    u32 self = gabi::ea(this);
+
+    const u32 matrix = Data::matrixStack;
+    for (u32 i = 0; i < 104; ++i) {
+        u32 animation = gabi::ea(&mGrassAnm[0]) + i * 0x38;
+        GrassHD::SDK::mDoMtx_YrotS(matrix, (s32)(s16)(at<dGrass_anm_c>(animation)->mRotY));
+        GrassHD::SDK::mDoMtx_XrotM(matrix, (s32)(s16)(at<dGrass_anm_c>(animation)->mRotX));
+        GrassHD::SDK::mDoMtx_YrotM(matrix, (s32)(s16) - (s16)(at<dGrass_anm_c>(animation)->mRotY));
+        GrassHD::SDK::PSMTXCopy(matrix, animation + 8);
+    }
+    const u32 clipper = Data::clipper;
+    float scale = (f32)(*at<be<f32>>(Data::originalFar));
+    at<Clipper>(clipper)->mFar = gabi::fmuls_ppc(scale, (f32)(*at<be<f32>>(Data::farScale)));
+    GrassHD::SDK::J3DUClipper__calcViewFrustum(clipper);
+    float radius = (f32)(*at<be<f32>>(Data::clipRadius));
+    u32 corrected = 0;
+    for (u32 i = 0; i < 1500; ++i) {
+        u32 data = gabi::ea(&mGrassData[0]) + i * 0x44;
+        u32 state = (u8)(at<dGrass_data_c>(data)->mState);
+        if (!state)
+            continue;
+        if (state == 1 && corrected < 30) {
+            float height = GrassHD::SDK::checkGroundY(data + 4);
+            at<dGrass_data_c>(data)->mPos.y = height;
+            ++corrected;
+            at<dGrass_data_c>(data)->mState = 2;
+        }
+        gabi::Local<Vector> position;
+        for (u32 j = 0; j < 3; ++j)
+            at<FloatVectorWords>(position.a)->mWords[j] = (u32)at<dGrass_data_c>(data)->mPosWords[j];
+        u32 clipped = GrassHD::SDK::J3DUClipper__clip(clipper, Data::viewMatrix, position.get(), radius);
+        u32 flags = (u8)(at<dGrass_data_c>(data)->mInitFlags);
+        if (clipped) {
+            at<dGrass_data_c>(data)->mInitFlags = flags | 2;
+            continue;
+        }
+        s32 index = (s8)(at<dGrass_data_c>(data)->mAnimIdx);
+        at<dGrass_data_c>(data)->mInitFlags = flags & 0xFD;
+        float x = (f32)(at<dGrass_data_c>(data)->mPos.x);
+        if (index >= 0) {
+            u32 animation = gabi::ea(&mGrassAnm[0]) + (u32)index * 0x38;
+            at<dGrass_anm_c>(animation)->mAnimMtx.m[3] = x;
+            *reinterpret_cast<be<u32> *>(&at<dGrass_anm_c>(animation)->mAnimMtx.m[7]) =
+                (u32)(*reinterpret_cast<be<u32> *>(&at<dGrass_data_c>(data)->mPos.y));
+            *reinterpret_cast<be<u32> *>(&at<dGrass_anm_c>(animation)->mAnimMtx.m[11]) =
+                (u32)(*reinterpret_cast<be<u32> *>(&at<dGrass_data_c>(data)->mPos.z));
+            GrassHD::SDK::PSMTXCopy(animation + 8, data + 16);
+        } else {
+            GrassHD::SDK::PSMTXTrans(data + 16, x, (f32)(at<dGrass_data_c>(data)->mPos.y),
+                                     (f32)(at<dGrass_data_c>(data)->mPos.z));
+            GrassHD::SDK::mDoMtx_YrotM(data + 16, (s32)(s16)(i * 0xDCF));
+        }
+    }
+    // The PPC load/store restores the original bits, including signaling NaN payloads.
+    // HD: Restore the exact saved word, including non-finite float encodings.
+    *reinterpret_cast<be<u32> *>(&at<Clipper>(clipper)->mFar) = (u32)*at<be<u32>>(Data::originalFar);
+    GrassHD::SDK::J3DUClipper__calcViewFrustum(clipper);
+    GrassHD::SDK::J3DDrawBuffer__entryImm((u32)(*at<be<u32>>(Data::opaqueDrawBuffer)), self, 0);
+    GrassHD::SDK::buildShaders(self);
+}
+
+/* 0254D19C */
+void GrassHD::dGrass_packet_c::setData(u32 data, u32 index, u32 pos, u32 room, u32 item) {
+
+    bool immediate = GrassHD::SDK::fopOvlpM_IsPeek() != 0;
+    f32 height;
+    if (immediate) {
+        height = GrassHD::SDK::checkGroundY(pos);
+        at<dGrass_data_c>(data)->mState = 2;
+    } else {
+        height = (f32)(at<Vector>(pos)->y);
+        at<dGrass_data_c>(data)->mState = 1;
+    }
+    f32 maximum = (f32)(*at<be<f32>>(Data::baseAnimationCount));
+    at<dGrass_data_c>(data)->mInitFlags = 2;
+    f32 random = GrassHD::SDK::cM_rndF(maximum);
+    at<dGrass_data_c>(data)->mAnimIdx = (u8)gabi::ftoi(random);
+    f32 x = (f32)(at<Vector>(pos)->x), z = (f32)(at<Vector>(pos)->z);
+    at<dGrass_data_c>(data)->mPos.x = x;
+    at<dGrass_data_c>(data)->mPos.y = height;
+    at<dGrass_data_c>(data)->mItemIdx = item;
+    at<dGrass_data_c>(data)->mPos.z = z;
+    GrassHD::SDK::dGrass_room_c__newData(gabi::ea(&mGrassRoom[room]), data);
+    mNextIdx = index;
+}
+
+/* 0254D2D4 */
+u32 GrassHD::dGrass_packet_c::newData(u32 pos, u32 room, u32 item) {
+    u32 self = gabi::ea(this);
+
+    if (room >= 64)
+        GrassHD::SDK::JUTAssertion__getSDevice(Data::allocationAssertFile, 0xB00,
+                                               Data::allocationAssertCondition);
+    u32 start = (u16)(mNextIdx), data = gabi::ea(&mGrassData[start]);
+    for (u32 index = start; index < 1500; ++index, data += 0x44) {
+        if (!(u8)(at<dGrass_data_c>(data)->mState)) {
+            GrassHD::SDK::dGrass_packet_c__setData(self, data, index, pos, room, item);
+            return data;
+        }
+    }
+    data = gabi::ea(&mGrassData[0]);
+    for (u32 index = 0; index < start; ++index, data += 0x44) {
+        if (!(u8)(at<dGrass_data_c>(data)->mState)) {
+            GrassHD::SDK::dGrass_packet_c__setData(self, data, index, pos, room, item);
+            return data;
         }
     }
     return 0;
 }
-VERIFY(0x0254D2D4,Grass_NewData);
-struct GrassParticleParams { u8 data[28]; };
-void Grass_WorkCo(u32 self,u32 actor,u32 mode,s32 room) {
-    WWHD_FUNC(0x0254A198,void,self,actor,mode,room);
-    gabi::Local<GrassVector> delta,position;
-    gabi::Local<GrassParticleParams> parameters;
-    f32 x=gabi::load<f32>(self+4)-gabi::load<f32>(actor+0x314);
-    f32 z=gabi::load<f32>(self+12)-gabi::load<f32>(actor+0x31C);
-    f32 zero=gabi::load<f32>(0x1004E274);
-    gabi::store<f32>(delta.a+4,zero);gabi::store<f32>(delta.a,x);gabi::store<f32>(delta.a+8,z);
-    f32 squared=gabi::call<f32>(0x028E8DD0,delta.get());
-    if (squared>gabi::load<f32>(0x1004E278)) return;
-    u32 angle=gabi::call<u32>(0x020195B0,x,z);
-    f32 distance=gabi::call<f32>(0x028F4384,squared);
-    s32 index=gabi::load<s8>(self+2);
-    if (index<8) {
-        f32 speed=gabi::load<f32>(actor+0x370),threshold=gabi::load<f32>(0x1004E27C);
-        if (speed>threshold) {
-            f32 y=gabi::load<f32>(self+8),pz=gabi::load<f32>(self+12);
-            f32 lift=gabi::load<f32>(0x1004E280),px=gabi::load<f32>(self+4);
-            gabi::store<f32>(position.a+8,pz);gabi::store<f32>(position.a,px);gabi::store<f32>(position.a+4,y+lift);
-            gabi::call<void>(0x025200D4);
-            u32 color=0x1047E6CC+(u32)room*0x22C+0xEC;
-            u32 play=gabi::call<u32>(0x025200D4);
-            u32 packet=gmem_ld32(play+0x5AB8);
-            u32 particle=gmem_ld16(packet+0x1A6CC);
-            play=gabi::call<u32>(0x025200D4);
-            gabi::call<void>(0x025A8D40,gmem_ld32(play+0x5AB0),particle,position.get(),255,color,color,1);
-            play=gabi::call<u32>(0x025200D4);
-            u32 background=play+0x12A0;
-            play=gabi::call<u32>(0x025200D4);
-            packet=gmem_ld32(play+0x5AB8);
-            u32 emitter=gabi::call<u32>(0x025A8D10,gmem_ld32(background+0x4810),gmem_ld16(packet+0x1A6CC));
-            if (emitter) {
-                u32 target=gmem_ld32(emitter+4);
-                if (target) {
-                    gmem_st32(parameters.a,0x10000160);gmem_st32(parameters.a+4,0x1004E1F4);
-                    gmem_st8(parameters.a+24,1);gmem_st8(parameters.a+26,0);
-                    f32 one=gabi::load<f32>(0x1004E284);
-                    gmem_st8(parameters.a+25,0);gabi::store<f32>(parameters.a+8,one);
-                    gmem_st8(parameters.a+27,0);gabi::store<f32>(parameters.a+20,one);
-                    gabi::store<f32>(parameters.a+12,one);gabi::store<f32>(parameters.a+16,one);
-                    play=gabi::call<u32>(0x025200D4);
-                    u32 control=gmem_ld32(play+0x5AB0);
-                    for (u32 i=0;i<4;++i) gmem_st32(parameters.a+8+i*4,gmem_ld32(control+8+i*4));
-                    gabi::call<void>(0x0281E5A8,target,parameters.get());
-                }
-            }
-            gabi::call<void>(0x02549D38,self+4,color);
-        }
-        u32 play=gabi::call<u32>(0x025200D4);
-        s32 fresh=gabi::call<s32>(0x0254A14C,gmem_ld32(play+0x5AB8));
-        if (fresh<0) return;
-        gmem_st8(self+2,fresh);
-    }
-    u32 play=gabi::call<u32>(0x025200D4);
-    index=gabi::load<s8>(self+2);
-    u32 packet=gmem_ld32(play+0x5AB8);
-    f32 radius=gabi::load<f32>(0x1004E288);
-    u32 animation=packet+0x18F0C+(u32)index*0x38;
-    gmem_st16(animation+2,angle);
-    u32 bend=gabi::call<u32>(0x020195B0,radius-distance,radius);
-    gmem_st16(animation+4,bend);gmem_st8(animation,2);
-}
-VERIFY(0x0254A198,Grass_WorkCo);
-void Grass_WorkAtNoCut(u32 self,u32 actor,u32 mode,s32 room,u32 hit,u32 object) {
-    WWHD_FUNC(0x0254A458,void,self,actor,mode,room,hit,object);
-    gabi::Local<GrassVector> velocity,horizontal;
-    u32 info=gabi::call<u32>(0x025157AC,object);
-    f32 x=gabi::load<f32>(info+0x7C);gabi::store<f32>(velocity.a,x);
-    f32 y=gabi::load<f32>(info+0x80);gabi::store<f32>(velocity.a+4,y);
-    f32 z=gabi::load<f32>(info+0x84),zero=gabi::load<f32>(0x1004E274);
-    gabi::store<f32>(horizontal.a+4,zero);gabi::store<f32>(horizontal.a+8,z);
-    gabi::store<f32>(horizontal.a,x);gabi::store<f32>(velocity.a+8,z);
-    f32 magnitude=gabi::call<f32>(0x028E8DD0,horizontal.get());
-    f32 epsilon=gabi::load<f32>(0x100030B8);
-    if (fabsf(magnitude)<epsilon) {
-        u32 table=gmem_ld32(object+0x3C);
-        u32 shape=gabi::call_ptr<u32>(gmem_ld32(table+0x2C),object);
-        table=gmem_ld32(shape+0x1C);
-        if (gabi::call_ptr<u32>(gmem_ld32(table+0x9C),shape,self+4,velocity.get())) {
-            f32 scale=gabi::load<f32>(0x1004E28C);
-            gabi::call<void>(0x028E8E64,velocity.get(),velocity.get(),scale);
-            x=gabi::load<f32>(velocity.a);z=gabi::load<f32>(velocity.a+8);
-            gabi::store<f32>(horizontal.a,x);gabi::store<f32>(horizontal.a+4,zero);gabi::store<f32>(horizontal.a+8,z);
-        } else {
-            f32 ax=gabi::load<f32>(actor+0x314),px=gabi::load<f32>(self+4),az=gabi::load<f32>(actor+0x31C);
-            x=px-ax;y=gabi::load<f32>(self+8)-gabi::load<f32>(actor+0x318);
-            z=gabi::load<f32>(self+12)-az;
-            gabi::store<f32>(horizontal.a,x);gabi::store<f32>(horizontal.a+4,zero);
-            gabi::store<f32>(velocity.a+4,y);gabi::store<f32>(horizontal.a+8,z);
-            gabi::store<f32>(velocity.a,x);gabi::store<f32>(velocity.a+8,z);
-        }
-        magnitude=gabi::call<f32>(0x028E8DD0,horizontal.get());
-        if (fabsf(magnitude)<epsilon) return;
-    }
-    s32 angle=gabi::call<s32>(0x020195B0,gabi::load<f32>(velocity.a),gabi::load<f32>(velocity.a+8));
-    s32 index=gabi::load<s8>(self+2);
-    u32 play=gabi::call<u32>(0x025200D4),packet=gmem_ld32(play+0x5AB8);
-    if (index<8) {
-        s32 fresh=gabi::call<s32>(0x0254A14C,packet);
-        if (fresh<0) return;
-        gmem_st8(self+2,fresh);
-        play=gabi::call<u32>(0x025200D4);
-        packet=gmem_ld32(play+0x5AB8);
-    }
-    index=gabi::load<s8>(self+2);
-    f32 weight=gabi::load<f32>(0x1004E290),bias=gabi::load<f32>(0x1004E294);
-    u32 animation=packet+0x18F0C+(u32)index*0x38;
-    f32 random=gabi::call<f32>(0x02019788);
-    f32 factor=gabi::fmadds(random,weight,bias);
-    u32 horizontalAngle=gabi::ftoi(gabi::fmuls_ppc((f32)angle,factor));
-    f32 radius=gabi::load<f32>(0x1004E288);
-    gmem_st16(animation+2,horizontalAngle);
-    s32 bend=gabi::call<s32>(0x020195B0,magnitude,radius);
-    random=gabi::call<f32>(0x02019788);
-    factor=gabi::fmadds(random,weight,bias);
-    u32 verticalAngle=gabi::ftoi(gabi::fmuls_ppc((f32)bend,factor));
-    gmem_st8(animation,2);gmem_st16(animation+4,verticalAngle);
-}
-VERIFY(0x0254A458,Grass_WorkAtNoCut);
 
-void Grass_WorkAt(u32 self,u32 actor,u32 mode,s32 room,u32 hit) {
-    WWHD_FUNC(0x0254A7C8,void,self,actor,mode,room,hit);
-    gabi::Local<GrassVector> position;
-    gabi::Local<GrassParticleParams> parameters;
-    u32 object=gmem_ld32(hit+4);
-    if (object && (gmem_ld32(object+16)&0x3CC000)) {
-        gabi::call<void>(0x0254A458,self,actor,mode,room,hit,object);return;
-    }
-    s32 index=gabi::load<s8>(self+2);
-    if (index>=8) {
-        u32 play=gabi::call<u32>(0x025200D4);
-        index=gabi::load<s8>(self+2);
-        u32 packet=gmem_ld32(play+0x5AB8);
-        gmem_st8(packet+0x18F0C+(u32)index*0x38,0);
-    }
-    gmem_st8(self+2,255);
-    if (!gmem_ld32(0x104759AC)) {
-        gmem_st32(0x104759AC,1);
-        gabi::call<void>(0x0201A478,0x10475990,0,0,0);
-    }
-    f32 x=gabi::load<f32>(self+4),y=gabi::load<f32>(self+8),lift=gabi::load<f32>(0x1004E2A0);
-    gabi::store<f32>(position.a,x);
-    f32 z=gabi::load<f32>(self+12);
-    gabi::store<f32>(position.a+8,z);gabi::store<f32>(position.a+4,y+lift);
-    gabi::call<void>(0x025200D4);
-    u32 color=0x1047E6CC+(u32)room*0x22C+0xEC;
-    u32 play=gabi::call<u32>(0x025200D4),packet=gmem_ld32(play+0x5AB8);
-    u32 particle=gmem_ld16(packet+0x1A6CE);
-    play=gabi::call<u32>(0x025200D4);
-    gabi::call<void>(0x025A8D40,gmem_ld32(play+0x5AB0),particle,position.get(),255,color,color,1);
-    play=gabi::call<u32>(0x025200D4);
-    u32 background=play+0x12A0;
-    play=gabi::call<u32>(0x025200D4);packet=gmem_ld32(play+0x5AB8);
-    u32 emitter=gabi::call<u32>(0x025A8D10,gmem_ld32(background+0x4810),gmem_ld16(packet+0x1A6CE));
-    if (emitter) {
-        u32 target=gmem_ld32(emitter+4);
-        if (target) {
-            gmem_st8(parameters.a+25,0);gmem_st8(parameters.a+27,0);
-            f32 one=gabi::load<f32>(0x1004E284);
-            gmem_st8(parameters.a+26,0);gabi::store<f32>(parameters.a+8,one);
-            gabi::store<f32>(parameters.a+12,one);
-            gmem_st32(parameters.a,0x10000160);gmem_st32(parameters.a+4,0x1004E1F4);
-            gabi::store<f32>(parameters.a+16,one);gabi::store<f32>(parameters.a+20,one);gmem_st8(parameters.a+24,1);
-            play=gabi::call<u32>(0x025200D4);
-            u32 control=gmem_ld32(play+0x5AB0);
-            for (u32 i=0;i<4;++i) gmem_st32(parameters.a+8+i*4,gmem_ld32(control+8+i*4));
-            gabi::call<void>(0x0281E5A8,target,parameters.get());
-        }
-    }
-    gabi::call<void>(0x02549D38,self+4,color);
-    s32 item=gabi::load<s8>(self+3);
-    if (item>=0) gabi::call<void>(0x025D8120,self+4,item,-1,room,0,0,1,0);
-    if (!gmem_ld8(0x101E1D60)) {
-        gmem_st8(0x101E1D60,1);
-        u32 reverb=gabi::call<u32>(0x02520540,room);
-        gabi::call<void>(0x025E1A40,0x282C,self+4,0,reverb);
-    }
-}
-VERIFY(0x0254A7C8,Grass_WorkAt);
-struct GrassHitInfo { u8 data[20]; };
-void Grass_HitCheck(u32 self,s32 room) {
-    WWHD_FUNC(0x0254AA3C,void,self,room);
-    gabi::Local<GrassHitInfo> hit;
-    gabi::Local<u32> actor;
-    gabi::call<void>(0x0251694C,hit.get());
-    u32 play=gabi::call<u32>(0x025200D4);
-    u32 result=gabi::call<u32>(0x025170D8,play+0x4EF8,self+4,actor.get(),hit.get());
-    bool attack=false;
-    if (result&1) {
-        u32 other=gmem_ld32(actor.a);
-        if (other && gabi::load<s16>(other+8)!=0x1C5 && gabi::load<s16>(other+8)!=0x1C6) attack=true;
-    }
-    u32 contact=result&2;
-    if (!contact && !attack) {
-        s32 index=gabi::load<s8>(self+2);
-        if (index<8) return;
-        play=gabi::call<u32>(0x025200D4);
-        index=gabi::load<s8>(self+2);
-        u32 packet=gmem_ld32(play+0x5AB8),animation=packet+0x18F0C+(u32)index*0x38;
-        u32 rotation=gmem_ld16(animation+2);
-        s32 target=(s16)(rotation&0xE000);
-        u32 baseIndex=rotation>>13;
-        play=gabi::call<u32>(0x025200D4);
-        packet=gmem_ld32(play+0x5AB8);
-        u32 base=packet+0x18F0C+baseIndex*0x38;
-        if (gmem_ld8(animation)==2) {
-            u32 reverb=gabi::call<u32>(0x02520540,room);
-            gabi::call<void>(0x025E1A40,0x3814,self+4,0,reverb);
-            gmem_st8(animation,1);
-        }
-        if (gabi::call<u32>(0x0200F378,animation+4,(s32)gabi::load<s16>(base+4),16,4000,100)) return;
-        if (!gabi::call<u32>(0x0200F8D0,animation+2,target,800)) return;
-        play=gabi::call<u32>(0x025200D4);
-        index=gabi::load<s8>(self+2);packet=gmem_ld32(play+0x5AB8);
-        gmem_st8(packet+0x18F0C+(u32)index*0x38,0);
-        gmem_st8(self+2,gmem_ld16(animation+2)>>13);
-    } else {
-        if (!gmem_ld32(actor.a)) gabi::call<void>(0x0273AA24,0x1004E2A4,0x80F,0x1004E2B0);
-        if (contact) gabi::call<void>(0x0254A198,self,gmem_ld32(actor.a),result,room);
-        if (attack) gabi::call<void>(0x0254A7C8,self,gmem_ld32(actor.a),result,room,hit.get());
-    }
-}
-VERIFY(0x0254AA3C,Grass_HitCheck);
+/* 0254A14C */
+s32 GrassHD::dGrass_packet_c::newAnm() {
 
-void Grass_Calc(u32 self) {
-    WWHD_FUNC(0x0254C6C4, void, self);
-    float wind=gabi::load<float>(0x1004E274);
-    bool enabled=true;
-    if(gmem_ld8(0x101F4829)) {
-        gabi::Local<GrassString> named,stage;
-        gmem_st32(named.a,0x1004E33C);gmem_st32(named.a+4,0x1004E1F4);
-        u32 play=gabi::call<u32>(0x025200D4);
-        gmem_st32(stage.a,play+0x5134);gmem_st32(stage.a+4,0x1004E1F4);
-        grass_StringValidate(named.get());grass_StringValidate(named.get());
-        u32 left=gmem_ld32(named.a);
-        grass_StringValidate(stage.get());u32 right=gmem_ld32(stage.a);
-        if(left==right) enabled=false;
-        else {
-            left=gmem_ld32(named.a);
-            for(u32 count=0;count<0x40001;++count,++left,++right) {
-                u32 a=gmem_ld8(left),b=gmem_ld8(right);
-                if(a!=b) break;
-                if(!a) {enabled=false;break;}
-            }
+    u32 data = gabi::ea(&mGrassAnm[8]);
+    for (s32 i = 8; i < 104; ++i, data += 0x38) {
+        if (!(u8)(at<dGrass_anm_c>(data)->mState)) {
+            at<dGrass_anm_c>(data)->mState = 1;
+            at<dGrass_anm_c>(data)->mRotX = 0;
+            at<dGrass_anm_c>(data)->mRotY = 0;
+            return i;
         }
     }
-    if(enabled) {
-        wind=gabi::load<float>(0x1004E324);
-        float power=gabi::call<float>(0x02578348);
-        wind=gabi::fmadds(wind,power,wind);
-        float maximum=gabi::load<float>(0x1004E328);
-        if(wind-maximum>=0) wind=maximum;
-    }
-    for(u32 i=0;i<8;++i) {
-        u32 time=gmem_ld32(0x101FF560)+i*250;
-        u16 angle=(u16)gabi::ftoi(gabi::fmuls_ppc((float)time,wind));
-        float cosine=gabi::load<float>(0x104A44F8+((u32)angle>>3)*8+4);
-        gmem_st16(self+0x18F0C+i*0x38+4,(u16)gabi::ftoi(gabi::fmadds(wind,cosine,wind)));
-    }
-    s32 room=gabi::load<s8>(0x1047E6C8);
-    u32 data=gmem_ld32(self+0x1A5CC+(u32)room*4);
-    if(!data) return;
-    gmem_st8(0x101E1D60,0);
-    u32 play=gabi::call<u32>(0x025200D4),attribute=play+0x26A4,mass=play+0x4EF8;
-    gabi::call<void>(0x020184DC,play+0x5008,gabi::load<float>(0x1004E288));
-    gabi::call<void>(0x02018428,mass+0x110,gabi::load<float>(0x1004E338));
-    gmem_st8(attribute+0x297C,11);gmem_st8(attribute+0x297D,0);
-    do {
-        if(!(gmem_ld8(data+1)&2) && gabi::load<s8>(data+2)>=0) gabi::call<void>(0x0254AA3C,data,room);
-        data=gmem_ld32(data+0x40);
-    } while(data);
+    return -1;
 }
-VERIFY(0x0254C6C4,Grass_Calc);
 
-void Grass_Update(u32 self) {
-    WWHD_FUNC(0x0254CF78,void,self);
-    const u32 matrix=0x1048D0CC;
-    for(u32 i=0;i<104;++i) {
-        u32 animation=self+0x18F0C+i*0x38;
-        gabi::call<void>(0x025F1884,matrix,(s32)gabi::load<s16>(animation+2));
-        gabi::call<void>(0x025F1BF4,matrix,(s32)gabi::load<s16>(animation+4));
-        gabi::call<void>(0x025F1C28,matrix,(s32)(s16)-gabi::load<s16>(animation+2));
-        gabi::call<void>(0x028E90D4,matrix,animation+8);
-    }
-    const u32 clipper=0x1048CFF0;
-    float scale=gabi::load<float>(0x1048D04C);
-    gabi::store<float>(clipper+0x54,gabi::fmuls_ppc(scale,gabi::load<float>(0x1004E348)));
-    gabi::call<void>(0x0283801C,clipper);
-    float radius=gabi::load<float>(0x1004E34C);
-    u32 corrected=0;
-    for(u32 i=0;i<1500;++i) {
-        u32 data=self+0x9C+i*0x44;
-        u32 state=gmem_ld8(data);
-        if(!state) continue;
-        if(state==1 && corrected<30) {
-            float height=gabi::call<float>(0x02549F4C,data+4);
-            gabi::store<float>(data+8,height);++corrected;gmem_st8(data,2);
-        }
-        gabi::Local<GrassVector> position;
-        for(u32 j=0;j<3;++j) gmem_st32(position.a+j*4,gmem_ld32(data+4+j*4));
-        u32 clipped=gabi::call<u32>(0x02838148,clipper,0x104B45F8,position.get(),radius);
-        u32 flags=gmem_ld8(data+1);
-        if(clipped) {gmem_st8(data+1,flags|2);continue;}
-        s32 index=gabi::load<s8>(data+2);
-        gmem_st8(data+1,flags&0xFD);
-        float x=gabi::load<float>(data+4);
-        if(index>=0) {
-            u32 animation=self+0x18F0C+(u32)index*0x38;
-            gabi::store<float>(animation+0x14,x);
-            gmem_st32(animation+0x24,gmem_ld32(data+8));
-            gmem_st32(animation+0x34,gmem_ld32(data+12));
-            gabi::call<void>(0x028E90D4,animation+8,data+16);
-        } else {
-            gabi::call<void>(0x028E93CC,data+16,x,gabi::load<float>(data+8),gabi::load<float>(data+12));
-            gabi::call<void>(0x025F1C28,data+16,(s32)(s16)(i*0xDCF));
-        }
-    }
-    // The PPC load/store restores the original bits, including signaling NaN payloads.
-    gmem_st32(clipper+0x54,gmem_ld32(0x1048D04C));
-    gabi::call<void>(0x0283801C,clipper);
-    gabi::call<void>(0x027F0E04,gmem_ld32(0x104B4634),self,0);
-    gabi::call<void>(0x0254CA98,self);
-}
-VERIFY(0x0254CF78,Grass_Update);
+/* 0254ACB4 */
+void GrassHD::dGrass_packet_c::setAnm(u32 index, s32 angle) {
 
-static void grass_ReleaseAllocation(u32 owner,u32 offset) {
-    u32 allocation=gmem_ld32(owner+offset);
-    u32 heap=gabi::call<u32>(0x02755FEC,gmem_ld32(0x101F8B4C),allocation);
-    u32 table=gmem_ld32(heap+12);
-    gabi::call_ptr<void>(gmem_ld32(table+0x3C),heap,gmem_ld32(owner+offset));
+    u32 data = gabi::ea(&mGrassAnm[index]);
+    at<dGrass_anm_c>(data)->mState = 1;
+    at<dGrass_anm_c>(data)->mRotX = 0;
+    at<dGrass_anm_c>(data)->mRotY = angle;
 }
-static void grass_ReleaseResources(u32 base) {
-    for(u32 i=0;i<2;++i) {
-        u32 resource=base+i*0x4A8;
-        gabi::call<void>(0x027BF7E8,resource+0x158);
-        gmem_st32(resource,0);
-        if(gmem_ld32(resource+0x250)) {
-            grass_ReleaseAllocation(resource,0x250);
-            gmem_st32(resource+0x24C,0);gmem_st32(resource+0x250,0);
-        }
-        gabi::call<void>(0x027BF7E8,resource+0x3AC);
-        gmem_st32(resource+0x254,0);
-        if(gmem_ld32(resource+0x4A4)) {
-            grass_ReleaseAllocation(resource,0x4A4);
-            gmem_st32(resource+0x4A0,0);gmem_st32(resource+0x4A4,0);
-        }
-    }
-    gmem_st32(base+0x960,0);
-}
-void Grass_PacketDtor(u32 self,u32 flags) {
-    WWHD_FUNC(0x0254BD34,void,self,flags);
-    if(!self) return;
-    u32 resources=self+0x1A6DC,collection=self+0x1A6D0;
-    gmem_st32(self+12,0x1004E398);
-    grass_ReleaseResources(resources);
-    gabi::call<void>(0x027BE2B0,self+0x661E0,2);
-    gabi::call<void>(0x027B54A0,self+0x661C8,2);
-    gabi::call<void>(0x027B54A0,self+0x661B0,2);
-    gabi::call<void>(0x028F0164,self+0x588B0,64,0x364,0x0254D894,0,0);
-    gabi::call<void>(0x028F0164,self+0x1B050,1500,0xA8,0x0254D8E8,0,0);
-    gabi::call<void>(0x027FD764,self+0x1B044,2);
-    if(resources) {
-        grass_ReleaseResources(resources);
-        gabi::call<void>(0x028F0164,resources,4,0x254,0x0254D93C,0,0);
-    }
-    u32 array=gmem_ld32(collection+8);
-    if(array) {
-        s32 count=gabi::load<s32>(collection+4);
-        for(s32 i=0;i<count;++i) {
-            u32 item=array+(u32)i*20;
-            if(item) {
-                gmem_st32(item,0);
-                for(u32 offset=8;offset<=16;offset+=8) {
-                    u32 children=gmem_ld32(item+offset);
-                    if(!children) continue;
-                    s32 size=gabi::load<s32>(item+offset-4);
-                    for(s32 j=0;j<size;++j) {
-                        u32 child=children+(u32)j*0xF4;
-                        u32 table=gmem_ld32(child+0xF0);
-                        gabi::call_ptr<void>(gmem_ld32(table+12),child,2);
-                        size=gabi::load<s32>(item+offset-4);
-                        children=gmem_ld32(item+offset);
-                    }
-                    grass_ReleaseAllocation(item,offset);
-                    gmem_st32(item+offset-4,0);gmem_st32(item+offset,0);
-                }
-                count=gabi::load<s32>(collection+4);array=gmem_ld32(collection+8);
-            }
-        }
-        grass_ReleaseAllocation(collection,8);
-        gmem_st32(collection+4,0);gmem_st32(collection+8,0);
-    }
-    gabi::call<void>(0x027F13DC,self,0);
-    if(flags&1) gabi::call<void>(0x0273AF40,self);
-}
-VERIFY(0x0254BD34,Grass_PacketDtor);
 
-// HD dKy_tevstr_c is 0x1C8 bytes: dKy_tevstr_init (0255FFF4) first clears 0x72 words of it.
-struct GrassTev { u8 data[0x1C8]; };
-// The original 0x2A8-byte frame (offsets from the frame base r1, entry SP - 0x2A8): PSMTXCopy matrix at +0x10,
-// light state at +0x40, colours at +0x208/+0x218/+0x228, view matrix at +0x238. Same layout here, so
-// recorded callee outputs land in the same objects. The struct starts at r1+8 (entry SP - 0x2A0).
-struct GrassShaderFrame {
-    u8 conversion[8];      // r1+0x08: int-to-float scratch (unused here)
-    GrassMatrix matrix;    // r1+0x10
-    GrassTev tev;          // r1+0x40
-    GrassColor color;      // r1+0x208
-    GrassColor scaled0;    // r1+0x218
-    GrassColor scaled1;    // r1+0x228
-    GrassMatrix view;      // r1+0x238
-    u8 pad[0x2A0 - 0x260]; // to the frame top (saved registers)
-};
-static_assert(sizeof(GrassShaderFrame)==0x2A0,"Grass_ShaderBuild frame");
-void Grass_ShaderBuild(u32 self) {
-    WWHD_FUNC(0x0254CA98,void,self);
-    gabi::Local<GrassShaderFrame> frame;
-    struct Slot {u32 a; u32 get() const {return a;}};
-    const u32 base=frame.a-8;   // the original r1
-    Slot view{base+0x238},matrix{base+0x10},tev{base+0x40},color{base+0x208},scaled0{base+0x218},scaled1{base+0x228};
-    s32 room=(s8)gmem_ld8(0x1047E6C8);
-    gabi::call<void>(0x0254C934,view.get(),0x104B45F8);
-    // Light template 0x1016E414 (0x44 bytes) into the state and its two light objects (+0xC0, +0x144), all fields.
-    for(u32 i=0;i<=0x40;i+=4) gmem_st32(tev.a+i,gmem_ld32(0x1016E414+i));
-    for(u32 i=0;i<=0x40;i+=4) {
-        gmem_st32(tev.a+0xC0+i,gmem_ld32(tev.a+i));
-        gmem_st32(tev.a+0x144+i,gmem_ld32(tev.a+i));
-    }
-    u32 environment=gabi::call<u32>(0x02555D0C);
-    if(gmem_ld8(environment+0x10A3)!=255) {
-        environment=gabi::call<u32>(0x02555D0C);room=(s8)gmem_ld8(environment+0x10A3);
-    }
-    gabi::call<void>(0x0255FFF4,tev.get(),room,255);
-    environment=gabi::call<u32>(0x02555D0C);
-    gabi::call<void>(0x025626A4,environment,1,0,tev.get());
-    gabi::call<void>(0x0255FAF0,tev.get());
-    u32 shared=self+0x1B044;
-    u32 model=gmem_ld32(0x104B4708);
-    gabi::call<void>(0x027FDA54,shared,0,view.get(),0x104B470C,model+0x240);
-    u32 renderer=gmem_ld32(shared+4);
-    gabi::call<void>(0x0254C9D4,color.get(),tev.a+0x90);
-    gabi::call<void>(0x0274D458,scaled0.get(),color.get(),gabi::load<float>(tev.a+0x28));
-    for(u32 i=0;i<4;++i) gmem_st32(renderer+0x1C4+i*4,gmem_ld32(scaled0.a+i*4));
-    renderer=gmem_ld32(shared+4);
-    gabi::call<void>(0x0254C9D4,color.get(),tev.a+0x160);
-    gabi::call<void>(0x0274D458,scaled1.get(),color.get(),gabi::load<float>(tev.a+0x16C));
-    for(u32 i=0;i<4;++i) gmem_st32(renderer+0x1D4+i*4,gmem_ld32(scaled1.a+i*4));
-    gabi::call<void>(0x027FE010,shared);
-    float denominator=gabi::load<float>(0x1004E344);
-    u32 shaderOffset=0,packetOffset=0;
-    for(u32 roomIndex=0;roomIndex<64;++roomIndex,shaderOffset+=0x364) {
-        u32 data=gmem_ld32(self+0x1A5CC+roomIndex*4);
-        if(!data) continue;
-        u32 shader=self+0x588B0+shaderOffset;
-        for(u32 j=0;j<4;++j) gabi::store<float>(shader+0xB4+j*4,(float)gabi::load<s16>(tev.a+0x90+j*2)/denominator);
-        for(u32 j=0;j<4;++j) gabi::store<float>(shader+0xC4+j*4,(float)gmem_ld8(tev.a+0x98+j)/denominator);
-        gabi::call<void>(0x0274D2AC,shader+0xC4,gabi::load<float>(tev.a+0x24));
-        renderer=gmem_ld32(shared+4);
-        for(u32 j=0;j<4;++j) gmem_st32(shader+0x94+j*4,gmem_ld32(renderer+0x1C4+j*4));
-        gabi::call<void>(0x027FB678,shader);
-        do {
-            if(!(gmem_ld8(data+1)&2)) {
-                for(u32 j=0;j<12;++j) gmem_st32(matrix.a+j*4,gmem_ld32(data+16+j*4));
-                u32 packet=self+0x1B050+packetOffset;
-                gabi::call<void>(0x028E90D4,matrix.get(),packet+0x74);
-                gabi::call<void>(0x027FB678,packet);
-                packetOffset+=0xA8;
-            }
-            data=gmem_ld32(data+0x40);
-        } while(data);
-    }
-}
-VERIFY(0x0254CA98,Grass_ShaderBuild);
+// HD: Compiler-generated and template code of this translation unit.
 
-struct GrassRenderState {u8 data[0x11C];};
-static u32 grass_Collection(u32 self,u32 pass) {
-    u32 collection=gmem_ld32(self+0x1A6D8);
-    if(pass<gmem_ld32(self+0x1A6D4)) collection+=pass*20;
-    return collection;
+/* 0254C934 */
+void copyMatrix(u32 dest, u32 source) {
+
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = (f32)(at<Matrix>(source)->m[i]);
+    for (u32 i = 0; i < 12; ++i)
+        at<Matrix>(dest)->m[i] = values[i];
 }
-void Grass_Draw(u32 self,u32 state) {
-    WWHD_FUNC(0x0254C120,void,self,state);
-    u32 pass=gmem_ld32(state+12),material=0;
-    if((s32)pass<4) material=gmem_ld32(grass_Collection(self,pass));
-    u32 cache=gabi::call<u32>(0x027F29D4,0x104B45C0);
-    u32 model=gmem_ld32(material);
-    if(model!=gmem_ld32(cache+4)) {
-        u32 flag=gmem_ld8(model),previous=gmem_ld32(cache);
-        if(flag&2) {gmem_st8(model,flag&~2u);gabi::call<void>(0x027BB9E0,model,0);}
-        u32 shader=gmem_ld32(gmem_ld32(model+0x7C)+0x28);
-        if(previous!=shader) gabi::call<void>(0x027B9F68,shader);
-        u32 size=gmem_ld32(model+12);
-        if(size) gabi::call<void>(0xC00060E0,gmem_ld32(model+4),size);
-        else gabi::call<void>(0x027BB7CC,model);
-        gmem_st32(cache,shader);gmem_st32(cache+4,model);
-    }
-    pass=gmem_ld32(state+12);
-    bool bind=pass==0?gmem_ld32(state+20)!=0:(pass==1 || pass==2);
-    if(bind) {
-        u32 data=pass==0?gmem_ld32(gmem_ld32(state+20)+4):gmem_ld32(self+0x1B048);
-        u32 block=data+16+gmem_ld32(data+0x4C)*28;
-        u32 info=gmem_ld32(material+12)?gmem_ld32(material+16):0;
-        s32 vertex=gabi::load<s16>(info+12),pixel=gabi::load<s16>(info+14),geometry=gabi::load<s16>(info+16);
-        u32 buffer=gmem_ld32(block+12),size=gmem_ld32(block+4);
-        if(vertex!=-1 || pixel!=-1 || geometry!=-1) {
-            if(pixel!=-1) gabi::call<void>(0xC0006900,pixel,buffer,size);
-            if(vertex!=-1) gabi::call<void>(0xC0006A38,vertex,buffer,size);
-            if(geometry!=-1) gabi::call<void>(0xC00068A8,geometry,buffer,size);
-        }
-    }
-    if(pass==2) {
-        u32 object=gmem_ld32(state+0x30);
-        if(object) gabi::call_ptr<void>(gmem_ld32(gmem_ld32(object+12)+0x2C),object,material);
-        gabi::call<void>(0x027FFE54,state,material);
-    }
-    u32 attribute=gmem_ld32(material+20)?gmem_ld32(material+24):0;
-    gabi::call<void>(0x027BE53C,self+0x661E0,attribute+4,0,0);
-    gabi::Local<GrassRenderState> render;
-    gabi::call<void>(0x02750250,render.get());
-    u32 mode=gmem_ld32(render.a+0xEC);
-    gabi::store<float>(render.a+0xE8,gabi::load<float>(0x1004E320));
-    gmem_st32(render.a+12,2);gmem_st8(render.a+0xE0,1);gmem_st32(render.a+0xE4,4);
-    gmem_st32(render.a+0xEC,(((mode&0xFFFFFFF0)+7)&0xFFFFFF0F)+16);
-    gabi::call<void>(0x0280037C,gmem_ld32(state+12),render.get());
-    gabi::call<void>(0x02750370,render.get());
-    u32 packetOffset=0;
-    for(u32 room=0;room<64;++room) {
-        u32 data=gmem_ld32(self+0x1A5CC+room*4);
-        if(data && gmem_ld32(state+12)) {
-            u32 packet=self+0x588B0+room*0x364;
-            gabi::call_ptr<void>(gmem_ld32(gmem_ld32(packet+12)+0x2C),packet,material);
-        }
-        s32 kind=-1;
-        while(data) {
-            if(!(gmem_ld8(data+1)&2)) {
-                u32 packet=self+0x1B050+packetOffset;
-                gabi::call_ptr<void>(gmem_ld32(gmem_ld32(packet+12)+0x2C),packet,material);
-                packetOffset+=0xA8;
-                bool animated=gabi::load<s8>(data+2)>=0;
-                s32 nextKind=animated?0:1;
-                if(kind!=nextKind) {
-                    u32 collection=grass_Collection(self,gmem_ld32(state+12));
-                    if(!gmem_ld32(self+0x1B02C)) collection+=8;
-                    u32 shape=gmem_ld32(collection+8);
-                    if(!animated && gmem_ld32(collection+4)>1) shape+=0xF4;
-                    gabi::call<void>(0x027BFE5C,shape);kind=nextKind;
-                }
-                u32 indices=self+0x661B0+(animated?0:24);
-                u32 count=gmem_ld32(indices+12);
-                if(count) gabi::call<void>(0xC0006178,gmem_ld32(indices+4),count,gmem_ld32(indices),gmem_ld32(indices+8),0,1);
-            }
-            data=gmem_ld32(data+0x40);
-        }
-    }
-    gabi::call<void>(0x02750370,0x104B474C);
+
+/* 0254C9D4 */
+void colorToFloat(u32 dest, u32 source) {
+
+    f32 r = (f32)(s16)(at<ColorS>(source)->mChannel[0]), b = (f32)(s16)(at<ColorS>(source)->mChannel[2]);
+    f32 g = (f32)(s16)(at<ColorS>(source)->mChannel[1]), a = (f32)(s16)(at<ColorS>(source)->mChannel[3]);
+    f32 denominator = (f32)(*at<be<f32>>(Data::colorRange));
+    at<ColorF>(dest)->mChannel[0] = r / denominator;
+    at<ColorF>(dest)->mChannel[1] = g / denominator;
+    at<ColorF>(dest)->mChannel[2] = b / denominator;
+    at<ColorF>(dest)->mChannel[3] = a / denominator;
 }
-VERIFY(0x0254C120,Grass_Draw);
-static u32 grass_HeapAlloc(u32 size,u32 alignment) {
-    u32 heap=gabi::call<u32>(0x02756140,gmem_ld32(0x101F8B4C));
-    return gabi::call_ptr<u32>(gmem_ld32(gmem_ld32(heap+12)+0x34),heap,size,alignment);
+
+/* 0254D3F4 */
+void __sinit_d_grass_cpp() {
+
+    *at<be<u32>>(Data::zeroVectorX) = 0;
+    *at<be<u32>>(Data::zeroAngleX) = 0;
+    *at<be<u32>>(Data::zeroVectorY) = 0;
+    *at<be<u32>>(Data::zeroAngleY) = 0;
+    GrassHD::SDK::Vector_staticInit(Data::vectorStatic);
+    f32 lower = (f32)(*at<be<f32>>(Data::piLower)), upper = (f32)(*at<be<f32>>(Data::piUpper));
+    *at<be<f32>>(Data::piPair) = lower;
+    *at<be<f32>>(Data::piPairUpper) = upper;
+    GrassHD::SDK::Angle_staticInit(Data::byteStatic);
+    GrassHD::SDK::Vector_staticInit(Data::angleStatic);
+    GrassHD::SDK::ShortVector_staticInit(Data::shortStatic);
+    GrassHD::SDK::Vector_staticInit(Data::shortVectorStatic);
 }
-static void grass_ClearShapes(u32 item) {
-    gmem_st32(item,0);
-    for(u32 offset=8;offset<=16;offset+=8) {
-        u32 array=gmem_ld32(item+offset);
-        if(!array) continue;
-        for(s32 i=0;i<gabi::load<s32>(item+offset-4);++i) {
-            u32 child=array+(u32)i*0xF4;
-            gabi::call_ptr<void>(gmem_ld32(gmem_ld32(child+0xF0)+12),child,2);
-            array=gmem_ld32(item+offset);
-        }
-        grass_ReleaseAllocation(item,offset);
-        gmem_st32(item+offset-4,0);gmem_st32(item+offset,0);
-    }
+
+/* 0254D488 */
+void SafeString_delete(u32 self, u32 flags) {
+
+    if (self && (flags & 1))
+        GrassHD::SDK::operator_delete(self);
 }
-static void grass_ClearVertexBuffer(u32 buffer) {
-    u32 end=buffer+0xC00;
-    for(u32 address=buffer;address<end;address+=32) {
-        for(u32 i=0;i<32;i+=4) gmem_st32((address&~31u)+i,0);
+
+/* 0254D570 */
+u32 ModelPacket_create(u32 self) {
+
+    if (!self)
+        self = GrassHD::SDK::operator_new(0xA8);
+    if (self) {
+        GrassHD::SDK::ModelPacket_construct(self);
+        at<ModelPacket>(self)->mVtable = Data::modelPacketVtable;
+        GrassHD::SDK::clearMemory(self + 0x74, 0x34);
+        if (self + 0x74 == 0)
+            GrassHD::SDK::operator_new(0x30);
     }
-}
-static void grass_PopulateVertices(u32 buffer,u32 countAddress,u32 positions,u32 normals,u32 colors,u32 texcoords) {
-    for(u32 i=0;i<gmem_ld32(countAddress);++i) {
-        for(u32 j=0;j<3;++j) gmem_st32(buffer+i*48+j*4,gmem_ld32(positions+(i+1)*12+j*4));
-        for(u32 j=0;j<3;++j) gmem_st32(buffer+i*48+12+j*4,gmem_ld32(normals+(i+1)*12+j*4));
-        for(u32 j=0;j<4;++j) gmem_st32(buffer+i*48+32+j*4,gmem_ld32(colors+(i+1)*16+j*4));
-        for(u32 j=0;j<2;++j) gmem_st32(buffer+i*48+24+j*4,gmem_ld32(texcoords+(i+1)*8+j*4));
-    }
-}
-u32 Grass_PacketCtor(u32 self) {
-    WWHD_FUNC(0x0254ACD8,u32,self);
-    if(!self) {self=gabi::call<u32>(0x0273AD10,0x66408);if(!self)return 0;}
-    gabi::call<void>(0x027F1278,self);
-    gmem_st32(self+12,0x1004E398);
-    gabi::call<void>(0x028EFFD0,self+0x9C,1500,0x44,0x0254A0DC);
-    gabi::call<void>(0x028EFFD0,self+0x18F0C,104,0x38,0x0254D49C);
-    gabi::call<void>(0x028EFFD0,self+0x1A5CC,64,4,0x0254D4D8);
-    u32 collection=self+0x1A6D0,resources=self+0x1A6DC;
-    gmem_st32(collection,0);
-    u32 pair=collection+4;
-    if(!pair) pair=gabi::call<u32>(0x0273AD10,8);
-    if(pair) {gmem_st32(pair+4,0);gmem_st32(pair,0);}
-    u32 resourceStorage=resources;
-    if(!resourceStorage) resourceStorage=gabi::call<u32>(0x0273AD10,0x968);
-    if(resourceStorage) {
-        gabi::call<void>(0x028EFFD0,resourceStorage,4,0x254,0x0254D514);
-        gmem_st32(resourceStorage+0x950,0);gmem_st32(resourceStorage+0x960,0);
-        gmem_st32(resourceStorage+0x958,48);gmem_st8(resourceStorage+0x964,0);gmem_st32(resourceStorage+0x954,0);
-        for(u32 i=0;i<2;++i) for(u32 j=0;j<2;++j) gmem_st32(resourceStorage+i*0x254+j*0x4A8,0);
-    }
-    gabi::call<void>(0x027FD6F4,self+0x1B044);
-    gabi::call<void>(0x028EFFD0,self+0x1B050,1500,0xA8,0x0254D570);
-    gabi::call<void>(0x028EFFD0,self+0x588B0,64,0x364,0x0254D60C);
-    gabi::call<void>(0x027B5430,self+0x661B0);
-    gabi::call<void>(0x027B5430,self+0x661C8);
-    gabi::call<void>(0x027BDF7C,self+0x661E0);
-    gabi::call<void>(0x027BE6B8,self+0x66378);
-    for(u32 i=0;i<1500;++i) gmem_st8(self+0x9C+i*0x44,0);
-    gmem_st16(self+0x98,0);
-    for(u32 i=0;i<104;++i) gmem_st8(self+0x18F0C+i*0x38,0);
-    for(u32 i=0;i<8;++i) gabi::call<void>(0x0254ACB4,self,i,(s32)(s16)(i*0x2000));
-    gabi::Local<GrassString> name,archiveName,resourceName,stage,prefix,boss,other;
-    gmem_st32(name.a,0x1004E2EC);gmem_st32(name.a+4,0x1004E1F4);
-    u32 archive=gabi::call<u32>(0x027FFCBC);
-    s32 index=gabi::call<s32>(0x027B90AC,gmem_ld32(archive+4),name.get());
-    u32 entry=0;
-    if(index>=0) {
-        u32 count=gmem_ld32(archive+8),entries=gmem_ld32(archive+12);
-        u32 record=entries+((u32)index<count?(u32)index*36:0);
-        if(!gmem_ld8(record+32)) {
-            u32 directory=gmem_ld32(archive+4),source=0;
-            if((u32)index<gmem_ld32(directory+28)) source=gmem_ld32(directory+32)+(u32)index*0x84;
-            gabi::call<void>(0x02800B0C,record,source,0);
-            count=gmem_ld32(archive+8);entries=gmem_ld32(archive+12);
-        }
-        entry=entries+((u32)index<count?(u32)index*36:0);
-    }
-    gabi::call<void>(0x0280068C,collection,entry,0);
-    gmem_st32(resources+0x954,0x1013);gmem_st32(resources+0x95C,0x1004E388);
-    for(u32 outer=0;outer<2;++outer) {
-        for(u32 inner=0;inner<2;++inner) {
-            u32 resource=resources+outer*0x254+inner*0x4A8;
-            u32 buffer=gmem_ld32(resource);
-            if(!buffer) {
-                u32 allocated=grass_HeapAlloc(0xC00,64);
-                if(allocated) {gmem_st32(resource+0x250,allocated);gmem_st32(resource+0x24C,64);}
-                buffer=gmem_ld32(resource+0x250);gmem_st32(resource,buffer);
-            }
-            gabi::call<void>(0x027FF478,resource+4,buffer,64,resources+0x954);
-        }
-    }
-    gmem_st32(resources+0x960,0);gmem_st8(resources+0x964,1);
-    for(u32 i=0;i<gmem_ld32(collection);++i) {
-        u32 item=gmem_ld32(collection+8);
-        if(i<gmem_ld32(collection+4)) item+=i*20;
-        u32 material=gmem_ld32(item);
-        grass_ClearShapes(item);gmem_st32(item,material);
-        for(u32 offset=8;offset<=16;offset+=8) {
-            u32 shapes=grass_HeapAlloc(0x1E8,4);
-            for(u32 j=0;j<2;++j) {u32 shape=shapes+j*0xF4;if(shape)gabi::call<void>(0x027BF734,shape);}
-            if(shapes) {gmem_st32(item+offset,shapes);gmem_st32(item+offset-4,2);}
-        }
-        for(u32 outer=0;outer<2;++outer) for(u32 inner=0;inner<2;++inner) {
-            u32 owner=item+4+outer*8;
-            u32 shape=gmem_ld32(owner+4);
-            if(inner<gmem_ld32(owner)) shape+=inner*0xF4;
-            gabi::call<void>(0x027FF530,material,shape,resources+4+outer*0x254+inner*0x4A8,resources+0x954,0);
-        }
-    }
-    gabi::call<void>(0x027FD838,self+0x1B044,1,0);
-    for(u32 i=0;i<64;++i) gabi::call<void>(0x027FB5D4,self+0x588B0+i*0x364,0);
-    for(u32 i=0;i<1500;++i) gabi::call<void>(0x027FB5D4,self+0x1B050+i*0xA8,0);
-    gmem_st32(archiveName.a,0x1004E2F8);gmem_st32(archiveName.a+4,0x1004E1F4);
-    gmem_st32(resourceName.a,0x1004E308);gmem_st32(resourceName.a+4,0x1004E1F4);
-    u32 texture=gabi::call<u32>(0x026124B0,gmem_ld32(0x101F4F7C),archiveName.get(),resourceName.get(),0);
-    u32 play=gabi::call<u32>(0x025200D4);
-    gmem_st32(stage.a,play+0x5134);gmem_st32(stage.a+4,0x1004E1F4);
-    gmem_st32(prefix.a,0x1004E2C4);gmem_st32(prefix.a+4,0x1004E1F4);
-    gabi::call<void>(0x0254D9A0,stage.get());
-    grass_StringValidate(stage.get());u32 left=gmem_ld32(stage.a);
-    grass_StringValidate(prefix.get());u32 right=gmem_ld32(prefix.a);
-    bool alternate=left==right;
-    if(!alternate) {
-        alternate=true;left=gmem_ld32(stage.a);
-        for(u32 i=0;i<3;++i,++left,++right) {
-            u32 a=gmem_ld8(left),b=gmem_ld8(right);
-            if(!a || !b) {alternate=a==b;break;}
-            if(a!=b) {alternate=false;break;}
-        }
-    }
-    if(!alternate) {
-        gmem_st32(boss.a,0x1004E2C8);gmem_st32(boss.a+4,0x1004E1F4);
-        play=gabi::call<u32>(0x025200D4);
-        gmem_st32(other.a,play+0x5134);gmem_st32(other.a+4,0x1004E1F4);
-        grass_StringValidate(boss.get());grass_StringValidate(boss.get());left=gmem_ld32(boss.a);
-        grass_StringValidate(other.get());right=gmem_ld32(other.a);
-        alternate=left==right;
-        if(!alternate) {
-            left=gmem_ld32(boss.a);alternate=true;
-            for(u32 i=0;i<0x40001;++i,++left,++right) {
-                u32 a=gmem_ld8(left),b=gmem_ld8(right);
-                if(a!=b) {alternate=false;break;}
-                if(!a) break;
-                if(i==0x40000) alternate=false;
-            }
-        }
-    }
-    u32 indices=self+0x661B0;
-    gabi::call<void>(0x027B54E0,indices,alternate?0x101E31F8:0x101E2214,4,gmem_ld32(alternate?0x101E1D58:0x101E1D48));
-    gmem_st32(indices+4,4);
-    for(u32 kind=0;kind<2;++kind) {
-        u32 selected=resources+gmem_ld32(resources+0x950)*0x254;
-        u32 buffer=gmem_ld32(selected+kind*0x4A8);
-        grass_ClearVertexBuffer(buffer);
-        selected=resources+gmem_ld32(resources+0x950)*0x254;
-        buffer=gmem_ld32(selected+kind*0x4A8);
-        if(alternate) {
-            if(!kind) grass_PopulateVertices(buffer,0x101E1D54,0x101E264C,0x101E2934,0x101E2C18,0x101E3000);
-            else grass_PopulateVertices(buffer,0x101E1D5C,0x101E32C4,0x101E34A4,0x101E3680,0x101E3908);
-        } else {
-            if(!kind) grass_PopulateVertices(buffer,0x101E1D44,0x101E1D58,0x101E1E84,0x101E1FAC,0x101E2144);
-            else grass_PopulateVertices(buffer,0x101E1D4C,0x101E22E0,0x101E23A0,0x101E245C,0x101E2564);
-        }
-    }
-    u32 original=gmem_ld32(resources+0x950),destination=resources+(!original)*0x254;
-    for(u32 kind=0;kind<2;++kind,destination+=0x4A8) {
-        u32 selected=resources+(original+kind*2)*0x254;
-        for(u32 i=0;i<64;++i) {
-            u32 source=gmem_ld32(selected),target=gmem_ld32(destination);
-            for(u32 j=0;j<12;++j) gmem_st32(target+i*48+j*4,gmem_ld32(source+i*48+j*4));
-        }
-        original=gmem_ld32(resources+0x950);
-    }
-    u32 selected=resources+gmem_ld32(resources+0x950)*0x254+4;
-    for(u32 i=0;i<2;++i) gabi::call<void>(0x027B5E94,selected+i*0x4A8,0,gmem_ld32(selected+i*0x4A8+0x14C));
-    gmem_st32(resources+0x950,!gmem_ld32(resources+0x950));
-    gabi::call<void>(0x0274FBF8,gmem_ld32(0x101F8B18));
-    u32 textureInfo=self+0x66378;
-    gabi::call<void>(0x02773870,textureInfo,texture,alternate?0x1004E2D0:0x1004E2DC);
-    gabi::call<void>(0x0274FCCC,gmem_ld32(0x101F8B18));
-    gmem_st16(self+0x1A6CC,alternate?0x8222:0x3DB);gmem_st16(self+0x1A6CE,alternate?0x8221:0x3DA);
-    gabi::call<void>(0x027B54E0,self+0x661C8,0x101E25EC,4,gmem_ld32(0x101E1D50));
-    gmem_st32(self+0x661CC,4);
-    u32 target=self+0x661E0;
-    bool equal=true;
-    const u32 fields[]={4,8,12,16,20,24,56,52,28};
-    for(u32 offset:fields) if(gmem_ld32(target+offset)!=gmem_ld32(textureInfo+offset)) {equal=false;break;}
-    if(!equal) gabi::call<void>(0x027BDEB4,target,textureInfo);
-    else {
-        u32 first=gmem_ld32(textureInfo+40),second=gmem_ld32(textureInfo+48);
-        gmem_st32(target+40,first);gmem_st8(target+0x190,gmem_ld8(target+0x190)|2);
-        gmem_st32(target+0xDC,second);gmem_st32(target+48,second);
-        gmem_st32(target+0xD4,first);
-    }
-    gmem_st32(target+0x160,1);gmem_st32(target+0x15C,1);gmem_st32(target+0x164,1);
-    if(!equal)gmem_st8(target+0x190,gmem_ld8(target+0x190)|2);
     return self;
 }
-VERIFY(0x0254ACD8,Grass_PacketCtor);
+
+/* 0254D5E0 */
+u32 ColorF_construct(u32 self) { return self ? self : GrassHD::SDK::operator_new(0x10); }
+
+/* 0254D514 */
+u32 Resource_create(u32 self) {
+
+    if (!self)
+        self = GrassHD::SDK::operator_new(0x254);
+    if (self) {
+        GrassHD::SDK::VertexBuffer_construct(self + 4);
+        GrassHD::SDK::Shape_construct(self + 0x158);
+        at<Resource>(self)->mpAllocation = 0;
+        at<Resource>(self)->mAlignment = 0;
+    }
+    return self;
+}
+
+/* 0254D93C */
+void Resource_delete(u32 self, u32 flags) {
+
+    if (self) {
+        GrassHD::SDK::Shape_destruct(self + 0x158, 2);
+        GrassHD::SDK::VertexBuffer_destruct(self + 4, 2);
+        if (flags & 1)
+            GrassHD::SDK::operator_delete(self);
+    }
+}
+
+/* 0254D894 */
+void ModelPacket_delete(u32 self, u32 flags) {
+
+    if (self) {
+        GrassHD::SDK::ModelPacket_destruct(self, 0);
+        if (flags & 1)
+            GrassHD::SDK::operator_delete(self);
+    }
+}
+
+/* 0254D99C */
+void SafeString_assureTerminationImpl(u32 self) {}
+
+/* 0254D9A0 */
+void SafeString_assureTermination(u32 self) {}
+
+/* 0254D8E8 */
+void ShaderPacket_delete(u32 self, u32 flags) {
+
+    if (self) {
+        GrassHD::SDK::ModelPacket_destruct(self, 0);
+        if (flags & 1)
+            GrassHD::SDK::operator_delete(self);
+    }
+}
+
+/* 0254D60C */
+u32 ShaderPacket_create(u32 self) {
+
+    if (!self) {
+        self = GrassHD::SDK::operator_new(0x364);
+        if (!self)
+            return 0;
+    }
+    GrassHD::SDK::ModelPacket_construct(self);
+    at<ShaderPacket>(self)->mVtable = Data::shaderPacketVtable;
+    GrassHD::SDK::clearMemory(self + 0x74, 0x2F0);
+    f32 zero = (f32)(*at<be<f32>>(Data::shaderZero)), one = (f32)(*at<be<f32>>(Data::shaderOne));
+    at<ShaderPacket>(self)->mInitialValues[0] = zero;
+    at<ShaderPacket>(self)->mInitialValues[1] = zero;
+    at<ShaderPacket>(self)->mInitialValues[2] = zero;
+    at<ShaderPacket>(self)->mInitialValues[4] = zero;
+    at<ShaderPacket>(self)->mInitialValues[11] = one;
+    at<ShaderPacket>(self)->mInitialValues[14] = zero;
+    at<ShaderPacket>(self)->mInitialValues[7] = one;
+    at<ShaderPacket>(self)->mInitialValues[6] = zero;
+    at<ShaderPacket>(self)->mInitialValues[26] = zero;
+    at<ShaderPacket>(self)->mInitialValues[34] = zero;
+    at<ShaderPacket>(self)->mInitialValues[22] = zero;
+    at<ShaderPacket>(self)->mInitialValues[31] = one;
+    at<ShaderPacket>(self)->mInitialValues[12] = zero;
+    at<ShaderPacket>(self)->mInitialValues[21] = zero;
+    at<ShaderPacket>(self)->mInitialValues[33] = zero;
+    at<ShaderPacket>(self)->mInitialValues[29] = zero;
+    at<ShaderPacket>(self)->mInitialValues[17] = zero;
+    at<ShaderPacket>(self)->mInitialValues[8] = zero;
+    at<ShaderPacket>(self)->mInitialValues[13] = zero;
+    at<ShaderPacket>(self)->mInitialValues[15] = one;
+    at<ShaderPacket>(self)->mInitialValues[9] = zero;
+    at<ShaderPacket>(self)->mInitialValues[18] = zero;
+    at<ShaderPacket>(self)->mInitialValues[5] = zero;
+    at<ShaderPacket>(self)->mInitialValues[28] = zero;
+    at<ShaderPacket>(self)->mInitialValues[30] = zero;
+    at<ShaderPacket>(self)->mInitialValues[35] = one;
+    at<ShaderPacket>(self)->mInitialValues[23] = one;
+    at<ShaderPacket>(self)->mInitialValues[27] = one;
+    at<ShaderPacket>(self)->mInitialValues[25] = zero;
+    at<ShaderPacket>(self)->mInitialValues[20] = zero;
+    at<ShaderPacket>(self)->mInitialValues[32] = zero;
+    at<ShaderPacket>(self)->mInitialValues[10] = zero;
+    at<ShaderPacket>(self)->mInitialValues[24] = zero;
+    at<ShaderPacket>(self)->mInitialValues[3] = one;
+    at<ShaderPacket>(self)->mInitialValues[16] = zero;
+    at<ShaderPacket>(self)->mInitialValues[19] = one;
+    at<ShaderPacket>(self)->mInitialValues[36] = zero;
+    at<ShaderPacket>(self)->mInitialValues[37] = zero;
+    at<ShaderPacket>(self)->mInitialValues[38] = zero;
+    at<ShaderPacket>(self)->mInitialValues[39] = one;
+    at<ShaderPacket>(self)->mInitialValues[40] = zero;
+    at<ShaderPacket>(self)->mInitialValues[41] = zero;
+    at<ShaderPacket>(self)->mInitialValues[42] = zero;
+    at<ShaderPacket>(self)->mInitialValues[43] = one;
+    for (u32 off : {0x124u, 0x144u, 0x164u})
+        GrassHD::SDK::constructArray(self + off, 2, 16, Target::ColorF_construct);
+    for (u32 off = 0x184; off <= 0x2D4; off += 0x30)
+        if (!(self + off))
+            GrassHD::SDK::operator_new(0x30);
+    for (u32 off = 0x304; off <= 0x354; off += 0x10)
+        if (!(self + off))
+            GrassHD::SDK::operator_new(0x10);
+    return self;
+}
+
+/* 0254BD34 */
+void dGrass_packet_c__dt(u32 self, u32 flags) {
+
+    if (!self)
+        return;
+    u32 resources = gabi::ea(&at<dGrass_packet_c>(self)->mResources),
+        collection = gabi::ea(&at<dGrass_packet_c>(self)->mMaterials);
+    at<dGrass_packet_c>(self)->mVtable = Data::grassPacketVtable;
+    grass_ReleaseResources(resources);
+    GrassHD::SDK::Texture_destruct(gabi::ea(&at<dGrass_packet_c>(self)->mTexture), 2);
+    GrassHD::SDK::IndexBuffer_destruct(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[1]), 2);
+    GrassHD::SDK::IndexBuffer_destruct(gabi::ea(&at<dGrass_packet_c>(self)->mIndices[0]), 2);
+    GrassHD::SDK::destroyArray(gabi::ea(&at<dGrass_packet_c>(self)->mShaderPackets[0]), 64, 0x364,
+                               Target::ModelPacket_delete, 0, 0);
+    GrassHD::SDK::destroyArray(gabi::ea(&at<dGrass_packet_c>(self)->mModelPackets[0]), 1500, 0xA8,
+                               Target::ShaderPacket_delete, 0, 0);
+    GrassHD::SDK::ModelBinding_destruct(gabi::ea(&at<dGrass_packet_c>(self)->mModelBinding), 2);
+    if (resources) {
+        grass_ReleaseResources(resources);
+        GrassHD::SDK::destroyArray(resources, 4, 0x254, Target::Resource_delete, 0, 0);
+    }
+    u32 array = (u32)(at<MaterialCollection>(collection)->mpItems);
+    if (array) {
+        s32 count = (s32)(at<MaterialCollection>(collection)->mCapacity);
+        for (s32 i = 0; i < count; ++i) {
+            u32 item = array + (u32)i * 20;
+            if (item) {
+                at<ShapeCollection>(item)->mpMaterial = 0;
+                for (u32 offset = 8; offset <= 16; offset += 8) {
+                    u32 children = (u32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes);
+                    if (!children)
+                        continue;
+                    s32 size = (s32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount);
+                    for (s32 j = 0; j < size; ++j) {
+                        u32 child = children + (u32)j * 0xF4;
+                        u32 table = (u32)(at<Shape>(child)->mVtable);
+                        gabi::call_ptr<void>((u32)at<DispatchTable>(table)->mpDelete, child, 2);
+                        size = (s32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount);
+                        children = (u32)(at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes);
+                    }
+                    grass_ReleaseAllocation(item, offset);
+                    at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mCount = 0;
+                    at<ShapeCollection>(item)->mShape[(offset - 8) / 8].mpShapes = 0;
+                }
+                count = (s32)(at<MaterialCollection>(collection)->mCapacity);
+                array = (u32)(at<MaterialCollection>(collection)->mpItems);
+            }
+        }
+        grass_ReleaseAllocation(collection, 8);
+        at<MaterialCollection>(collection)->mCapacity = 0;
+        at<MaterialCollection>(collection)->mpItems = 0;
+    }
+    GrassHD::SDK::Packet_destruct(self, 0);
+    if (flags & 1)
+        GrassHD::SDK::operator_delete(self);
+}
+
+// HD dKy_tevstr_c is 0x1C8 bytes: dKy_tevstr_init (0255FFF4) first clears 0x72 words of it.
+// The original 0x2A8-byte frame (offsets from the frame base r1, entry SP - 0x2A8): PSMTXCopy matrix at
+// +0x10, light state at +0x40, colours at +0x208/+0x218/+0x228, view matrix at +0x238. Same layout here, so
+// recorded callee outputs land in the same objects. The struct starts at r1+8 (entry SP - 0x2A0).
+/* 0254CA98 */
+// HD: GX2 shader and uniform preparation replaces the GameCube material display lists.
+void GrassHD::dGrass_packet_c::buildShaders() {
+
+    gabi::Local<ShaderFrame> frame;
+    struct Slot {
+        u32 a;
+        u32 get() const { return a; }
+    };
+    const u32 base = frame.a - 8; // the original r1
+    Slot view{base + 0x238}, matrix{base + 0x10}, tev{base + 0x40}, color{base + 0x208},
+        scaled0{base + 0x218}, scaled1{base + 0x228};
+    s32 room = (s8)(u8)(*at<be<u8>>(Data::stayRoomNo));
+    GrassHD::SDK::copyMatrix(view.get(), Data::viewMatrix);
+    // Light template Data::lightTemplate (0x44 bytes) into the state and its two light objects (+0xC0,
+    // +0x144), all fields.
+    for (u32 i = 0; i <= 0x40; i += 4)
+        at<LightState>(tev.a)->mWords[(i) / 4] = (u32)at<LightState>(Data::lightTemplate)->mWords[i / 4];
+    for (u32 i = 0; i <= 0x40; i += 4) {
+        at<LightState>(tev.a)->mWords[(0xC0 + i) / 4] = (u32)(at<LightState>(tev.a)->mWords[(i) / 4]);
+        at<LightState>(tev.a)->mWords[(0x144 + i) / 4] = (u32)(at<LightState>(tev.a)->mWords[(i) / 4]);
+    }
+    u32 environment = GrassHD::SDK::dKy_getEnvlight();
+    if ((u8)(at<Environment>(environment)->mRoomNo) != 255) {
+        environment = GrassHD::SDK::dKy_getEnvlight();
+        room = (s8)(u8)(at<Environment>(environment)->mRoomNo);
+    }
+    GrassHD::SDK::dKy_tevstr_init(tev.get(), room, 255);
+    environment = GrassHD::SDK::dKy_getEnvlight();
+    GrassHD::SDK::dScnKy_env_light_c__settingTevStruct(environment, 1, 0, tev.get());
+    GrassHD::SDK::dKy_setLight(tev.get());
+    u32 shared = gabi::ea(&mModelBinding);
+    u32 model = (u32)(*at<be<u32>>(Data::renderModel));
+    GrassHD::SDK::ModelBinding_build(shared, 0, view.get(), Data::renderView, model + 0x240);
+    u32 renderer = (u32)(at<ModelBinding>(shared)->mpRenderer);
+    GrassHD::SDK::colorToFloat(color.get(), tev.a + 0x90);
+    GrassHD::SDK::ColorF_scale(scaled0.get(), color.get(), (f32)at<LightScales>(tev.a)->mDiffuseScale);
+    for (u32 i = 0; i < 4; ++i)
+        at<Renderer>(renderer)->mColor0[i] =
+            (u32)(*reinterpret_cast<be<u32> *>(&at<ColorF>(scaled0.a)->mChannel[i]));
+    renderer = (u32)(at<ModelBinding>(shared)->mpRenderer);
+    GrassHD::SDK::colorToFloat(color.get(), tev.a + 0x160);
+    GrassHD::SDK::ColorF_scale(scaled1.get(), color.get(), (f32)at<LightScales>(tev.a)->mColorScale);
+    for (u32 i = 0; i < 4; ++i)
+        at<Renderer>(renderer)->mColor1[i] =
+            (u32)(*reinterpret_cast<be<u32> *>(&at<ColorF>(scaled1.a)->mChannel[i]));
+    GrassHD::SDK::ModelBinding_apply(shared);
+    float denominator = (f32)(*at<be<f32>>(Data::colorRange));
+    u32 shaderOffset = 0, packetOffset = 0;
+    for (u32 roomIndex = 0; roomIndex < 64; ++roomIndex, shaderOffset += 0x364) {
+        u32 data = (u32)(mGrassRoom[roomIndex].mpData);
+        if (!data)
+            continue;
+        u32 shader = gabi::ea(&mShaderPackets[0]) + shaderOffset;
+        for (u32 j = 0; j < 4; ++j)
+            at<ShaderPacket>(shader)->mInitialValues[16 + j] =
+                (float)(s16)at<ColorS>(tev.a + 0x90)->mChannel[j] / denominator;
+        for (u32 j = 0; j < 4; ++j)
+            at<ShaderPacket>(shader)->mInitialValues[20 + j] =
+                (float)(u8)at<be<u8>>(tev.a + 0x98)[j] / denominator;
+        GrassHD::SDK::ColorF_scaleInPlace(shader + 0xC4, (f32)at<LightScales>(tev.a)->mAmbientScale);
+        renderer = (u32)(at<ModelBinding>(shared)->mpRenderer);
+        for (u32 j = 0; j < 4; ++j)
+            *reinterpret_cast<be<u32> *>(&at<ShaderPacket>(shader)->mInitialValues[8 + j]) =
+                (u32)at<Renderer>(renderer)->mColor0[j];
+        GrassHD::SDK::ModelPacket_update(shader);
+        do {
+            if (!((u8)(at<dGrass_data_c>(data)->mInitFlags) & 2)) {
+                for (u32 j = 0; j < 12; ++j)
+                    *reinterpret_cast<be<u32> *>(&at<Matrix>(matrix.a)->m[j]) =
+                        *reinterpret_cast<be<u32> *>(&at<dGrass_data_c>(data)->mModelMtx.m[j]);
+                u32 packet = gabi::ea(&mModelPackets[0]) + packetOffset;
+                GrassHD::SDK::PSMTXCopy(matrix.get(), packet + 0x74);
+                GrassHD::SDK::ModelPacket_update(packet);
+                packetOffset += 0xA8;
+            }
+            data = (u32)(at<dGrass_data_c>(data)->mpNextData);
+        } while (data);
+    }
+}
+
+/* WWHD glue (tools/verify/autoglue.py): unit-local named HD data views */

@@ -1,45 +1,41 @@
-#include "gabi.h"
-using namespace gabi;
+/** Draw queue tags. WWHD, verified unit f_op_draw_tag. */
+#include "f_op/f_op_draw_tag.h"
 
-u32 fopDwTg_ToDrawQ_hd(void* tag, s32 priority) {
-    WWHD_FUNC(0x025DA874, u32, tag, priority);
-    return call<u32>(0x0201A770, at<void>(0x101F33DC), priority, tag);
+static node_lists_tree_class g_fopDwTg_Queue;
+static draw_list_table drawLists;
+
+/* 025DA874 */
+u32 fopDwTg_ToDrawQ(create_tag_class* i_createTag, s32 i_priority) {
+    return cTg_AdditionToTree(&g_fopDwTg_Queue, i_priority, i_createTag);
 }
-VERIFY(0x025DA874, fopDwTg_ToDrawQ_hd);
 
-void fopDwTg_DrawQTo_hd(void* tag) {
-    WWHD_FUNC(0x025DA884, void, tag);
-    call<void>(0x0201A724, tag);
+/* 025DA884 */
+void fopDwTg_DrawQTo(create_tag_class* i_createTag) {
+    cTg_SingleCutFromTree(i_createTag);
 }
-VERIFY(0x025DA884, fopDwTg_DrawQTo_hd);
 
-bool fopDwTg_Init_hd(void* tag, void* process) {
-    WWHD_FUNC(0x025DA888, bool, tag, process);
-    call<void>(0x0201A918, tag, process);
+/* 025DA888 */
+bool fopDwTg_Init(create_tag_class* i_createTag, void* i_process) {
+    cTg_Create(i_createTag, i_process);
     return true;
 }
-VERIFY(0x025DA888, fopDwTg_Init_hd);
 
-void fopDwTg_CreateQueue_hd() {
-    WWHD_FUNC(0x025DA8AC, void);
-    call<void>(0x0201AB04, at<void>(0x101F33DC), at<void>(0x104875AC), 1000);
+/* 025DA8AC */
+void fopDwTg_CreateQueue() {
+    cTr_Create(&g_fopDwTg_Queue, drawLists.lists, 1000);
 }
-VERIFY(0x025DA8AC, fopDwTg_CreateQueue_hd);
 
-void f_op_draw_tag_sinit_hd() {
-    WWHD_FUNC(0x025DA8C4, void);
-    store<u32>(0x104875A4, 0);
-    store<u32>(0x1048759C, 0);
-    store<u32>(0x104875A8, 0);
-    store<u32>(0x104875A0, 0);
-    call<void>(0x028F026C, at<void>(0x101F33B8));
-    f32 a = load<f32>(0x10057994);
-    f32 b = load<f32>(0x10057998);
-    store<f32>(0x10487590, a);
-    store<f32>(0x10487594, b);
-    call<void>(0x028ED6F8, at<void>(0x10487598));
-    call<void>(0x028F026C, at<void>(0x101F33C4));
-    call<void>(0x028EAB2C, at<void>(0x10487599));
-    call<void>(0x028F026C, at<void>(0x101F33D0));
+/* 025DA8C4 */
+// HD: this translation unit's header statics and destructor registrations.
+static void __sinit_f_op_draw_tag_cpp() {
+    sinit_header_statics_rodata(0x10487590, 0x101F33B8, 0x1048759C, 0x10057994);
 }
-VERIFY(0x025DA8C4, f_op_draw_tag_sinit_hd);
+
+/* WWHD glue (tools/verify/autoglue.py): shared draw queue and external tag operations
+data g_fopDwTg_Queue 101F33DC
+data drawLists 104875AC
+ext 0201A770 u32 cTg_AdditionToTree(node_lists_tree_class*, s32, create_tag_class*)
+ext 0201A724 void cTg_SingleCutFromTree(create_tag_class*)
+ext 0201A918 void cTg_Create(create_tag_class*, void*)
+ext 0201AB04 void cTr_Create(node_lists_tree_class*, node_list_class*, s32)
+*/

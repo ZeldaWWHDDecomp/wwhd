@@ -6,472 +6,424 @@
  * (zeldaret/tww src/d/actor/d_a_npc_os.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_npc_os_local.h"
+#include "d/actor/d_a_npc_os_a.h"
 
-#define OS_L_HIO 0x10467E44u
+static OsSmokeLightingHD m_smoke_tevstr;
+static OsWaterScaleStaticsHD l_waterScales;
+static OsActionDescriptorsHD l_actionDescriptors;
+static OsEventActionsHD event_init_tbl;
+static OsEventActionsHD event_action_tbl;
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* functions of the other parts (by address) */
-static inline BOOL os_setAction(daNpc_Os_c* t, ProcFunc_l* cur, ProcFunc_l* f, void* p) { return gabi::call<BOOL>(0x022AA630, t, cur, f, p); }
-static inline void os_setNpcAction(daNpc_Os_c* t, ProcFunc_l* f, void* p) { gabi::call(0x022AA778, t, f, p); }
-static inline void os_pmf_npc(daNpc_Os_c* t, u32 pmf, void* arg) {
+static inline void Os_setNpcActionHD(daNpc_Os_c* t, const ProcFunc_l* pmf, void* arg) {
     gabi::Local<ProcFunc_l> fn;
-    md_pmf_load(fn, pmf);
-    os_setNpcAction(t, fn, arg);
+    Os_copyActionHD(fn, pmf);
+    t->setNpcAction(fn, arg);
 }
 
-/* 022ABAC8 */
-void daNpc_Os_c::setPlayerAction(ProcFunc_l* actionFunc, void* arg) {
-    WWHD_FUNC(0x022ABAC8, void, this, actionFunc, arg);
-    mNpcAction.d = 0;
-    mNpcAction.i = 0;
-    mNpcAction.f = 0;
-    gabi::Local<ProcFunc_l> fn; /* by-value copy */
-    md_pmf_load(fn, gabi::ea(actionFunc));
-    os_setAction(this, &mPlayerAction, fn, arg);
-}
-VERIFY(0x022ABAC8, &daNpc_Os_c::setPlayerAction);
+// HD: blob shadows are removed.
 
-/* 022ABB18 */
-void daNpc_Os_c::playerAction(void* param_1) {
-    WWHD_FUNC(0x022ABB18, void, this, param_1);
-    if (mPlayerAction.i == 0) { /* !mPlayerAction */
-        speedF = 0.0f;
-        gabi::Local<ProcFunc_l> fn;
-        md_pmf_load(fn, 0x1001F268); /* &daNpc_Os_c::waitPlayerAction */
-        setPlayerAction(fn, nullptr);
-    }
-    gabi::store<u8>(dComIfGp_ea() + 0x5BB8, 7);    /* dComIfGp_setRStatusForce(dActStts_RETURN_e) */
-    gabi::store<u8>(dComIfGp_ea() + 0x5BB7, 0x3E); /* dComIfGp_setDoStatus(dActStts_HIDDEN_e) */
-    gabi::store<u8>(dComIfGp_ea() + 0x5BB6, 0x3E); /* dComIfGp_setAStatus(dActStts_HIDDEN_e) */
-    md_pmf_call<BOOL>(this, &mPlayerAction, param_1);
+// HD: lighting assignment retains each original copy width and order.
+static inline void os_copy_tevstr(daNpc_Os_c* self) {
+    const auto* source = reinterpret_cast<const OsSmokeLightingHD*>(&self->tevStr);
+    m_smoke_tevstr.mLight.mPosition.x = (f32)source->mLight.mPosition.x;
+    m_smoke_tevstr.mLight.mPosition.y = (f32)source->mLight.mPosition.y;
+    m_smoke_tevstr.mLight.mPosition.z = (f32)source->mLight.mPosition.z;
+    m_smoke_tevstr.mLight.mDirection.x = (f32)source->mLight.mDirection.x;
+    m_smoke_tevstr.mLight.mDirection.y = (f32)source->mLight.mDirection.y;
+    m_smoke_tevstr.mLight.mDirection.z = (f32)source->mLight.mDirection.z;
+    m_smoke_tevstr.mLight.mColor.r = (u8)source->mLight.mColor.r;
+    m_smoke_tevstr.mLight.mColor.g = (u8)source->mLight.mColor.g;
+    m_smoke_tevstr.mLight.mColor.b = (u8)source->mLight.mColor.b;
+    m_smoke_tevstr.mLight.mColor.a = (u8)source->mLight.mColor.a;
+    m_smoke_tevstr.mLight.mColorS10.r = (u16)source->mLight.mColorS10.r;
+    m_smoke_tevstr.mLight.mColorS10.g = (u16)source->mLight.mColorS10.g;
+    m_smoke_tevstr.mLight.mColorS10.b = (u16)source->mLight.mColorS10.b;
+    m_smoke_tevstr.mLight.mColorS10.a = (u16)source->mLight.mColorS10.a;
+    m_smoke_tevstr.mLight.mCosAtten[0] = (f32)source->mLight.mCosAtten[0];
+    m_smoke_tevstr.mLight.mCosAtten[1] = (f32)source->mLight.mCosAtten[1];
+    m_smoke_tevstr.mLight.mCosAtten[2] = (f32)source->mLight.mCosAtten[2];
+    m_smoke_tevstr.mLight.mDistAtten[0] = (f32)source->mLight.mDistAtten[0];
+    m_smoke_tevstr.mLight.mDistAtten[1] = (f32)source->mLight.mDistAtten[1];
+    m_smoke_tevstr.mLight.mDistAtten[2] = (f32)source->mLight.mDistAtten[2];
+    m_smoke_tevstr.mLight.mCutoff = (f32)source->mLight.mCutoff;
+    m_smoke_tevstr.mLight.mReferenceBrightness = (f32)source->mLight.mReferenceBrightness;
+    m_smoke_tevstr.mLightPosWorld.x = (u32)source->mLightPosWorld.x;
+    m_smoke_tevstr.mLightPosWorld.y = (u32)source->mLightPosWorld.y;
+    m_smoke_tevstr.mLightPosWorld.z = (u32)source->mLightPosWorld.z;
+    m_smoke_tevstr.mColorC0.r = (u16)source->mColorC0.r;
+    m_smoke_tevstr.mColorC0.g = (u16)source->mColorC0.g;
+    m_smoke_tevstr.mColorC0.b = (u16)source->mColorC0.b;
+    m_smoke_tevstr.mColorC0.a = (u16)source->mColorC0.a;
+    m_smoke_tevstr.mColorK0 = (u32)source->mColorK0;
+    m_smoke_tevstr.mColorK1 = (u32)source->mColorK1;
+    m_smoke_tevstr.mFogColor.r = (u16)source->mFogColor.r;
+    m_smoke_tevstr.mFogColor.g = (u16)source->mFogColor.g;
+    m_smoke_tevstr.mFogColor.b = (u16)source->mFogColor.b;
+    m_smoke_tevstr.mFogColor.a = (u16)source->mFogColor.a;
+    m_smoke_tevstr.mFogStartZ = (f32)source->mFogStartZ;
+    m_smoke_tevstr.mFogEndZ = (f32)source->mFogEndZ;
+    m_smoke_tevstr.mColpatBlend = (f32)source->mColpatBlend;
+    m_smoke_tevstr.mInitTimer = (u8)source->mInitTimer;
+    m_smoke_tevstr.mEnvrIdxCurr = (u8)source->mEnvrIdxCurr;
+    m_smoke_tevstr.mEnvrIdxPrev = (u8)source->mEnvrIdxPrev;
+    m_smoke_tevstr.mColpatCurr = (u8)source->mColpatCurr;
+    m_smoke_tevstr.mColpatPrev = (u8)source->mColpatPrev;
+    m_smoke_tevstr.mRoomNo = (u8)source->mRoomNo;
+    m_smoke_tevstr.mEnvrIdxOverride = (u8)source->mEnvrIdxOverride;
+    m_smoke_tevstr.mLightMode = (u8)source->mLightMode;
+    m_smoke_tevstr.mInitType = (u8)source->mInitType;
+    m_smoke_tevstr.mCachedLight.mPosition.x = (f32)source->mCachedLight.mPosition.x;
+    m_smoke_tevstr.mCachedLight.mPosition.y = (f32)source->mCachedLight.mPosition.y;
+    m_smoke_tevstr.mCachedLight.mPosition.z = (f32)source->mCachedLight.mPosition.z;
+    m_smoke_tevstr.mCachedLight.mDirection.x = (f32)source->mCachedLight.mDirection.x;
+    m_smoke_tevstr.mCachedLight.mDirection.y = (f32)source->mCachedLight.mDirection.y;
+    m_smoke_tevstr.mCachedLight.mDirection.z = (f32)source->mCachedLight.mDirection.z;
+    m_smoke_tevstr.mCachedLight.mColor.r = (u8)source->mCachedLight.mColor.r;
+    m_smoke_tevstr.mCachedLight.mColor.g = (u8)source->mCachedLight.mColor.g;
+    m_smoke_tevstr.mCachedLight.mColor.b = (u8)source->mCachedLight.mColor.b;
+    m_smoke_tevstr.mCachedLight.mColor.a = (u8)source->mCachedLight.mColor.a;
+    m_smoke_tevstr.mCachedLight.mColorS10.r = (u16)source->mCachedLight.mColorS10.r;
+    m_smoke_tevstr.mCachedLight.mColorS10.g = (u16)source->mCachedLight.mColorS10.g;
+    m_smoke_tevstr.mCachedLight.mColorS10.b = (u16)source->mCachedLight.mColorS10.b;
+    m_smoke_tevstr.mCachedLight.mColorS10.a = (u16)source->mCachedLight.mColorS10.a;
+    m_smoke_tevstr.mCachedLight.mCosAtten[0] = (f32)source->mCachedLight.mCosAtten[0];
+    m_smoke_tevstr.mCachedLight.mCosAtten[1] = (f32)source->mCachedLight.mCosAtten[1];
+    m_smoke_tevstr.mCachedLight.mCosAtten[2] = (f32)source->mCachedLight.mCosAtten[2];
+    m_smoke_tevstr.mCachedLight.mDistAtten[0] = (f32)source->mCachedLight.mDistAtten[0];
+    m_smoke_tevstr.mCachedLight.mDistAtten[1] = (f32)source->mCachedLight.mDistAtten[1];
+    m_smoke_tevstr.mCachedLight.mDistAtten[2] = (f32)source->mCachedLight.mDistAtten[2];
+    m_smoke_tevstr.mCachedLight.mCutoff = (f32)source->mCachedLight.mCutoff;
+    m_smoke_tevstr.mCachedLight.mReferenceBrightness = (f32)source->mCachedLight.mReferenceBrightness;
+    m_smoke_tevstr.mCachedLight2.mPosition.x = (f32)source->mCachedLight2.mPosition.x;
+    m_smoke_tevstr.mCachedLight2.mPosition.y = (f32)source->mCachedLight2.mPosition.y;
+    m_smoke_tevstr.mCachedLight2.mPosition.z = (f32)source->mCachedLight2.mPosition.z;
+    m_smoke_tevstr.mCachedLight2.mDirection.x = (f32)source->mCachedLight2.mDirection.x;
+    m_smoke_tevstr.mCachedLight2.mDirection.y = (f32)source->mCachedLight2.mDirection.y;
+    m_smoke_tevstr.mCachedLight2.mDirection.z = (f32)source->mCachedLight2.mDirection.z;
+    m_smoke_tevstr.mCachedLight2.mColor.r = (u8)source->mCachedLight2.mColor.r;
+    m_smoke_tevstr.mCachedLight2.mColor.g = (u8)source->mCachedLight2.mColor.g;
+    m_smoke_tevstr.mCachedLight2.mColor.b = (u8)source->mCachedLight2.mColor.b;
+    m_smoke_tevstr.mCachedLight2.mColor.a = (u8)source->mCachedLight2.mColor.a;
+    m_smoke_tevstr.mCachedLight2.mColorS10.r = (u16)source->mCachedLight2.mColorS10.r;
+    m_smoke_tevstr.mCachedLight2.mColorS10.g = (u16)source->mCachedLight2.mColorS10.g;
+    m_smoke_tevstr.mCachedLight2.mColorS10.b = (u16)source->mCachedLight2.mColorS10.b;
+    m_smoke_tevstr.mCachedLight2.mColorS10.a = (u16)source->mCachedLight2.mColorS10.a;
+    m_smoke_tevstr.mCachedLight2.mCosAtten[0] = (f32)source->mCachedLight2.mCosAtten[0];
+    m_smoke_tevstr.mCachedLight2.mCosAtten[1] = (f32)source->mCachedLight2.mCosAtten[1];
+    m_smoke_tevstr.mCachedLight2.mCosAtten[2] = (f32)source->mCachedLight2.mCosAtten[2];
+    m_smoke_tevstr.mCachedLight2.mDistAtten[0] = (f32)source->mCachedLight2.mDistAtten[0];
+    m_smoke_tevstr.mCachedLight2.mDistAtten[1] = (f32)source->mCachedLight2.mDistAtten[1];
+    m_smoke_tevstr.mCachedLight2.mDistAtten[2] = (f32)source->mCachedLight2.mDistAtten[2];
+    m_smoke_tevstr.mCachedLight2.mCutoff = (f32)source->mCachedLight2.mCutoff;
+    m_smoke_tevstr.mCachedLight2.mReferenceBrightness = (f32)source->mCachedLight2.mReferenceBrightness;
 }
-VERIFY(0x022ABB18, &daNpc_Os_c::playerAction);
 
-/* 022ABBF8 */
-BOOL daNpc_Os_c::returnLinkCheck() {
-    WWHD_FUNC(0x022ABBF8, BOOL, this);
-    if (!(gabi::load<u8>(dComIfGp_ea() + 0x5292) != 0) /* dComIfGp_event_runCheck() */) {
-        /* HD: one pad check (02007840) instead of CPad_CHECK_TRIG_R || CPad_CHECK_TRIG_START */
-        if (gabi::call<BOOL>(0x02007840, 0) && (mAcch.m_flags & 0x20) /* ChkGroundHit */) {
-            return TRUE;
-        }
-    }
-    return FALSE;
+static inline bool os_isPmf(ProcFunc_l* p, u32 function) {
+    return p->i == -1 && p->d == 0 && p->f == function;
 }
-VERIFY(0x022ABBF8, &daNpc_Os_c::returnLinkCheck);
-
-/* 022ABC68 */
-void daNpc_Os_c::carryCheck() {
-    WWHD_FUNC(0x022ABC68, void, this);
-    if (actor_status & 0x2000 /* fopAcM_checkCarryNow */) {
-        os_pmf_npc(this, 0x1001F280 /* &daNpc_Os_c::carryNpcAction */, nullptr);
-    }
+static inline void os_setEmitterScale(u32 address, u32 scaleAddress) {
+    auto* emitter = gabi::at<OsEmitterScaleHD>(address);
+    const auto* scale = gabi::at<const cXyz>(scaleAddress);
+    f32 x = scale->x;
+    emitter->mGlobalScale.x = x;
+    f32 y = scale->y;
+    emitter->mGlobalScale.y = y;
+    f32 z = scale->z;
+    emitter->mGlobalParticleScale.x = x;
+    emitter->mGlobalScale.z = z;
+    emitter->mGlobalParticleScale.y = y;
+    emitter->mGlobalParticleScale.z = z;
 }
-VERIFY(0x022ABC68, &daNpc_Os_c::carryCheck);
-
-/* 022ABCB0 */
-void daNpc_Os_c::checkOrder() {
-    WWHD_FUNC(0x022ABCB0, void, this);
-    if (gabi::load<u16>(gabi::ea(this) + 0xF8) == 1 /* eventInfo.checkCommandTalk() */ &&
-        (field_0x7A5 == 0x12 || field_0x7A5 == 0x11)) {
-        field_0x7A5 = -1;
-        os_pmf_npc(this, 0x1001F2A8 /* &daNpc_Os_c::talkNpcAction */, nullptr);
-        fopAcM_cancelCarryNow(this);
-    }
-}
-VERIFY(0x022ABCB0, &daNpc_Os_c::checkOrder);
-
-static inline void os_initBrkAnm(daNpc_Os_c* t, u32 no, u32 b) { gabi::call(0x022A9F4C, t, no, b); }
-static inline BOOL os_wakeupCheck(daNpc_Os_c* t) { return gabi::call<BOOL>(0x022A9E0C, t); }
-static inline BOOL os_finishCheck(daNpc_Os_c* t) { return gabi::call<BOOL>(0x022A9EAC, t); }
-static inline void os_cb_end(daNpc_Os_infiniteEcallBack_l* cb) { gabi::call(0x022AB258, cb); }
-
-/* 022ABD30 */
-void daNpc_Os_c::npcAction(void* param_1) {
-    WWHD_FUNC(0x022ABD30, void, this, param_1);
-    if (mNpcAction.i == 0) { /* !mNpcAction */
-        s8 brk = field_0x7A2;
-        speedF = 0.0f;
-        if (brk == 8) {
-            os_initBrkAnm(this, 6, 1);
-        }
-        os_pmf_npc(this, 0x1001F260 /* &daNpc_Os_c::waitNpcAction */, nullptr);
-    }
-    md_pmf_call<BOOL>(this, &mNpcAction, param_1);
-}
-VERIFY(0x022ABD30, &daNpc_Os_c::npcAction);
+static inline cBgS_PolyInfo_l* os_gnd(daNpc_Os_c* t) {
+    return reinterpret_cast<cBgS_PolyInfo_l*>(static_cast<cBgS_PolyInfo*>(&t->mAcch.m_gnd));
+} /* mAcch.m_gnd */
+static inline f32 os_groundH(daNpc_Os_c* t) { return t->mAcch.GetGroundH(); }
 
 /* 022ABE08 */
 s8 daNpc_Os_c::getFinishOrderEventNum() {
-    WWHD_FUNC(0x022ABE08, s8, this);
-    if (actor_status & 0x2000 /* fopAcM_checkCarryNow */) {
-        if (argument == 0) return 0xB;
-        if (argument == 1) return 0xD;
-        if (argument == 2) return 0xF;
+    if (actor_status & fopAcStts_CARRY_e) {
+        if (argument == 0)
+            return 0xB;
+        if (argument == 1)
+            return 0xD;
+        if (argument == 2)
+            return 0xF;
     } else {
-        if (argument == 0) return 0xA;
-        if (argument == 1) return 0xC;
-        if (argument == 2) return 0xE;
+        if (argument == 0)
+            return 0xA;
+        if (argument == 1)
+            return 0xC;
+        if (argument == 2)
+            return 0xE;
     }
     return -1;
 }
-VERIFY(0x022ABE08, &daNpc_Os_c::getFinishOrderEventNum);
 
 /* 022ABE84 */
 BOOL daNpc_Os_c::checkGoalRoom() {
-    WWHD_FUNC(0x022ABE84, BOOL, this);
-    if (current.roomNo == 7 && os_wakeupCheck(this) && !os_finishCheck(this)) {
+    if (current.roomNo == 7 && wakeupCheck() && !finishCheck()) {
         field_0x7A5 = getFinishOrderEventNum();
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x022ABE84, &daNpc_Os_c::checkGoalRoom);
-
-/* 022ABF04 */
-static void daNpc_Os_infiniteEcallBack_makeEmitter(daNpc_Os_infiniteEcallBack_l* cb, u16 id, const cXyz* pos, const csXyz* angle,
-                                                   const cXyz* scale) {
-    WWHD_FUNC(0x022ABF04, void, cb, id, pos, angle, scale);
-    os_cb_end(cb);
-    /* dComIfGp_particle_set(id, pos, angle, scale, 0xFF, this) */
-    dPa_control_set(dComIfGp_getParticle(), 0, id, pos, angle, scale, 0xFF, (dPa_levelEcallBack*)cb, -1, nullptr, nullptr, nullptr);
-}
-VERIFY(0x022ABF04, daNpc_Os_infiniteEcallBack_makeEmitter);
-
-/* 022ABF7C */
-void daNpc_Os_c::makeBeam(int param_1) {
-    WWHD_FUNC(0x022ABF7C, void, this, param_1);
-    if (field_0x738.mpBaseEmitter == nullptr) {
-        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x738, 0x826E /* ID_AK_SN_OTOMOBEAM00 */, &current.pos, &shape_angle, nullptr);
-        if (param_1) {
-            s32 reverb = dComIfGp_getReverb(current.roomNo); /* fopAcM_seStartCurrent */
-            mDoAud_seStart(0x5900 /* JA_SE_OBJ_OSTATUE_LIGHT_ST */, &current.pos, 0, reverb);
-        }
-    }
-    if (field_0x740.mpBaseEmitter == nullptr) {
-        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x740, 0x826F /* ID_AK_SN_OTOMOBEAM01 */, &current.pos, &shape_angle, nullptr);
-    }
-}
-VERIFY(0x022ABF7C, &daNpc_Os_c::makeBeam);
-
-static inline BOOL os_isSwitch(u32 sw, s32 room) { return gabi::call<BOOL>(0x025BA0C0, gabi::load<u32>(0x101F84DC) + 0x20, sw, room); }
-static inline BOOL os_isEventBit(u16 f) { return gabi::call<BOOL>(0x025B8B94, gabi::load<u32>(0x101F84DC) + 0x644, f); }
 
 /* 022AC030 */
 void daNpc_Os_c::eventOrderCheck() {
-    WWHD_FUNC(0x022AC030, void, this);
     if (field_0x7A5 == -1) {
         s8 roomNo = current.roomNo;
         if (argument == 0) {
-            if (roomNo == 7 && os_isSwitch(field_0x794, roomNo) && !os_isEventBit(0x2510)) {
+            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2510)) {
                 field_0x7A5 = 7;
             }
         } else if (argument == 1) {
-            if (roomNo == 7 && os_isSwitch(field_0x794, roomNo) && !os_isEventBit(0x2608)) {
+            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2608)) {
                 field_0x7A5 = 8;
             }
         } else if (argument == 2) {
-            if (roomNo == 7 && os_isSwitch(field_0x794, roomNo) && !os_isEventBit(0x2604)) {
+            if (roomNo == 7 && dComIfGs_isSwitch(field_0x794, roomNo) && !dComIfGs_isEventBit(0x2604)) {
                 field_0x7A5 = 9;
             }
         }
     }
 }
-VERIFY(0x022AC030, &daNpc_Os_c::eventOrderCheck);
 
-/* 022AC160 */
-void daNpc_Os_c::eventOrder() {
-    WWHD_FUNC(0x022AC160, void, this);
-    if (m4E4 & 2 /* isEventAccept() */) {
-        return;
-    }
-    if (field_0x7A5 == 0x12 || field_0x7A5 == 0x11) {
-        gabi::store<u16>(gabi::ea(this) + 0xFA, gabi::load<u16>(gabi::ea(this) + 0xFA) | 1); /* eventInfo.onCondition(CANTALK) */
-        if (field_0x7A5 == 0x12) {
-            gabi::call(0x025D76A8, this); /* fopAcM_orderSpeakEvent */
+/* 022ABF7C */
+void daNpc_Os_c::makeBeam(int param_1) {
+    if (field_0x738.mpBaseEmitter == nullptr) {
+        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x738, os_a::ID_AK_SN_OTOMOBEAM00, &current.pos,
+                                               &shape_angle, nullptr);
+        if (param_1) {
+            s32 reverb = dComIfGp_getReverb(current.roomNo);
+            mDoAud_seStart(os_a::JA_SE_OBJ_OSTATUE_LIGHT_ST, &current.pos, 0, reverb);
         }
-    } else if (field_0x7A5 != -1 && field_0x7A5 < 0x10) {
-        field_0x7AA = field_0x7A5;
-        gabi::call(0x025D7A58, this, (s32)field_0x7C4[field_0x7AA], 0xFF, 0xFFFF, 0, 1); /* fopAcM_orderOtherEventId */
+    }
+    if (field_0x740.mpBaseEmitter == nullptr) {
+        daNpc_Os_infiniteEcallBack_makeEmitter(&field_0x740, os_a::ID_AK_SN_OTOMOBEAM01, &current.pos,
+                                               &shape_angle, nullptr);
     }
 }
-VERIFY(0x022AC160, &daNpc_Os_c::eventOrder);
 
-static inline u32 os_evmng() { return dComIfGp_ea() + 0x52C4; }
-
-/* 022AB6DC */
-BOOL daNpc_Os_c::eventProc() {
-    WWHD_FUNC(0x022AB6DC, BOOL, this);
-    if (gabi::load<u16>(gabi::ea(this) + 0xF8) == 2 /* eventInfo.checkCommandDemoAccrpt() */ && field_0x7A5 != -1) {
-        if (field_0x7A5 == 0) {
-            if (gabi::call<BOOL>(0x025445B8, os_evmng(), 0x1001F620 /* "OPTION_CHAR_END" */) /* startCheckOld */ ||
-                gabi::call<BOOL>(0x0254457C, os_evmng(), 0x1001F620) /* endCheckOld */) {
-                fopAc_ac_c* link = dComIfGp_getLinkPlayer();
-                u32 evt = dComIfGp_ea() + 0x51D0; /* dComIfGp_event_setTalkPartner(link) */
-                gabi::store<u32>(evt + 0xCC, gabi::call<u32>(0x0253F124, evt, link));
-                gabi::call(0x025E1988, 0x886); /* mDoAud_seStart(JA_SE_CTRL_NPC_TO_LINK) */
-            } else {
-                m4E4 = m4E4 & ~1u; /* offReturnLink() */
-                field_0x7A5 = -1;
-                goto staff;
-            }
-        } else if (field_0x7A5 != 2 && field_0x7A5 != 4 && field_0x7A5 != 6) {
-            if ((u32)(field_0x7A5 - 0xA) <= 5) {
-                os_pmf_npc(this, 0x1001F260 /* &daNpc_Os_c::waitNpcAction */, nullptr);
-                mNoResetFlg1 = (mNoResetFlg1 & ~2u) | 0x40; /* offNpcCallCommand(); onNpcNotChange() */
-                gabi::store<u32>(dComIfGp_ea() + 0x5B38, 0); /* dComIfGp_setCb1Player(NULL) */
-                gabi::call(0x022AB618, this);                /* setFinish() */
-            } else if (field_0x7A5 == 8) {
-                gabi::call(0x025B8B68, gabi::load<u32>(0x101F84DC) + 0x644, 0x2608); /* dComIfGs_onEventBit */
-            } else if (field_0x7A5 == 9) {
-                gabi::call(0x025B8B68, gabi::load<u32>(0x101F84DC) + 0x644, 0x2604);
-            }
+/* 022ABD30 */
+void daNpc_Os_c::npcAction(void* param_1) {
+    if (mNpcAction.i == 0) { /* !mNpcAction */
+        s8 brk = field_0x7A2;
+        speedF = 0.0f;
+        if (brk == 8) {
+            Os_initBrkHD(this, 6, 1);
         }
-        if (field_0x7A5 != -1) {
-            u32 f = m4E4;
-            field_0x7A5 = -1;
-            m4E4 = f | 2; /* onEventAccept() */
-        }
+        Os_setNpcActionHD(this, &l_actionDescriptors.mWaitNpc, nullptr);
     }
-staff:
-    int staffIdx = gabi::call<s32>(0x022AB5A4, this); /* getMyStaffId() */
-    if (gabi::load<u8>(dComIfGp_ea() + 0x5292) != 0 /* dComIfGp_event_runCheck() */ && !gabi::call<BOOL>(0x022AB670, this) /* checkCommandTalk() */) {
-        if (staffIdx != -1) {
-            s32 actIdx = gabi::call<s32>(0x02542EDC, os_evmng(), staffIdx, 0x101C2854 /* cut_name_tbl */, 0xC, 1, 0); /* getMyActIdx */
-            u32 ev = os_evmng();
-            if (actIdx == -1) {
-                gabi::call(0x02543280, ev, staffIdx); /* cutEnd */
-            } else {
-                if (gabi::call<BOOL>(0x025447C8, ev, staffIdx) /* getIsAddvance */) {
-                    md_pmf_call<BOOL>(this, gabi::at<ProcFunc_l>(0x101C2964 + actIdx * 8) /* event_init_tbl */, staffIdx);
-                }
-                if (md_pmf_call<BOOL>(this, gabi::at<ProcFunc_l>(0x101C29C4 + actIdx * 8) /* event_action_tbl */, staffIdx)) {
-                    gabi::call(0x02543280, os_evmng(), staffIdx); /* cutEnd */
-                }
-            }
-        }
-        if (m4E4 & 2 /* isEventAccept() */) {
-            s16 id = field_0x7C4[field_0x7AA];
-            if (gabi::call<BOOL>(0x025440C8, os_evmng(), (s32)id) /* endCheck */) {
-                u32 play = dComIfGp_ea(); /* dComIfGp_event_reset() */
-                gabi::store<u16>(play + 0x52B8, gabi::load<u16>(play + 0x52B8) | 8);
-                m4E4 = m4E4 & ~2u; /* offEventAccept() */
-                if (field_0x7AA == 0) {
-                    gabi::call(0x022AB684, this); /* returnLinkPlayer() */
-                    m4E4 = m4E4 & ~1u;            /* offReturnLink() */
-                }
-                field_0x7AA = -1;
-            }
-            return TRUE;
-        }
-        if (gabi::load<u16>(gabi::ea(dComIfGp_getLinkPlayer()) + 0xF8) != 3 /* !eventInfo.checkCommandDoor() */) {
+    Os_callActionHD(this, &mNpcAction, param_1);
+}
+
+/* 022ABB18 */
+void daNpc_Os_c::playerAction(void* param_1) {
+    if (mPlayerAction.i == 0) { /* !mPlayerAction */
+        speedF = 0.0f;
+        gabi::Local<ProcFunc_l> fn;
+        Os_copyActionHD(fn, &l_actionDescriptors.mWaitPlayer);
+        setPlayerAction(fn, nullptr);
+    }
+    dComIfGp_setRStatusForce(os_a::dActStts_RETURN_e);
+    dComIfGp_setDoStatus(os_a::dActStts_HIDDEN_e);
+    dComIfGp_setAStatus(os_a::dActStts_HIDDEN_e);
+    Os_callActionHD(this, &mPlayerAction, param_1);
+}
+
+/* 022ABAC8 */
+void daNpc_Os_c::setPlayerAction(ProcFunc_l* actionFunc, void* arg) {
+    mNpcAction.d = 0;
+    mNpcAction.i = 0;
+    mNpcAction.f = 0;
+    gabi::Local<ProcFunc_l> fn; /* by-value copy */
+    Os_copyActionHD(fn, actionFunc);
+    setAction(&mPlayerAction, fn, arg);
+}
+
+/* 022ABBF8 */
+BOOL daNpc_Os_c::returnLinkCheck() {
+    if (!dComIfGp_event_runCheck()) {
+        // HD: a single combined pad check replaces the GC R/Start checks.
+        if (Os_triggerReturnHD(0) && (mAcch.m_flags & 0x20)) {
             return TRUE;
         }
     }
     return FALSE;
 }
-VERIFY(0x022AB6DC, &daNpc_Os_c::eventProc);
 
-/* 022AD0F0 */
-static BOOL daNpc_Os_Execute(daNpc_Os_c* i_this) {
-    WWHD_FUNC(0x022AD0F0, BOOL, i_this);
-    BOOL ret = gabi::call<BOOL>(0x022AC1DC, i_this); /* execute() */
-    if (i_this->argument == 2) {
-        gabi::store<s8>(0x101D5F46, i_this->current.roomNo); /* setCattleRoomNo(fopAcM_GetRoomNo(this)) */
+/* 022AB6DC */
+BOOL daNpc_Os_c::eventProc() {
+    if (eventInfo.checkCommandDemoAccrpt() && field_0x7A5 != -1) {
+        if (field_0x7A5 == 0) {
+            if (Os_startCheckHD(dComIfGp_getPEvtManager(), "OPTION_CHAR_END") ||
+                Os_endCheckNameHD(dComIfGp_getPEvtManager(), "OPTION_CHAR_END")) {
+                fopAc_ac_c* link = dComIfGp_getLinkPlayer();
+                dComIfGp_event_setTalkPartner(link);
+                Os_controlSoundHD(os_a::JA_SE_CTRL_NPC_TO_LINK);
+            } else {
+                m4E4 = m4E4 & ~1u;
+                field_0x7A5 = -1;
+            }
+        } else if (field_0x7A5 != 2 && field_0x7A5 != 4 && field_0x7A5 != 6) {
+            if ((u32)(field_0x7A5 - 0xA) <= 5) {
+                Os_setNpcActionHD(this, &l_actionDescriptors.mWaitNpc, nullptr);
+                mNoResetFlg1 = (mNoResetFlg1 & ~2u) | 0x40;
+                Os_clearCbPlayerHD();
+                setFinish();
+            } else if (field_0x7A5 == 8) {
+                dComIfGs_onEventBit(0x2608);
+            } else if (field_0x7A5 == 9) {
+                dComIfGs_onEventBit(0x2604);
+            }
+        }
+        if (field_0x7A5 != -1) {
+            u32 f = m4E4;
+            field_0x7A5 = -1;
+            m4E4 = f | 2;
+        }
     }
-    return ret;
+    int staffIdx = getMyStaffId();
+    if (dComIfGp_event_runCheck() && !checkCommandTalk()) {
+        if (staffIdx != -1) {
+            s32 actIdx = Os_getActIndexHD(dComIfGp_getPEvtManager(), staffIdx,
+                                          gabi::at<OsCutNamesHD>(0x101C2854)->mNames, 0xC, 1, 0);
+            dEvent_manager_c* ev = dComIfGp_getPEvtManager();
+            if (actIdx == -1) {
+                Os_cutEndHD(ev, staffIdx);
+            } else {
+                if (Os_getAdvanceHD(ev, staffIdx)) {
+                    (this->*event_init_tbl.mActions[actIdx])(staffIdx);
+                }
+                if ((this->*event_action_tbl.mActions[actIdx])(staffIdx)) {
+                    Os_cutEndHD(dComIfGp_getPEvtManager(), staffIdx);
+                }
+            }
+        }
+        if (m4E4 & 2) {
+            s16 id = field_0x7C4[field_0x7AA];
+            if (Os_endCheckHD(dComIfGp_getPEvtManager(), (s32)id)) {
+                dComIfGp_event_reset();
+                m4E4 = m4E4 & ~2u;
+                if (field_0x7AA == 0) {
+                    returnLinkPlayer();
+                    m4E4 = m4E4 & ~1u;
+                }
+                field_0x7AA = -1;
+            }
+            return TRUE;
+        }
+        if (dComIfGp_getLinkPlayer()->eventInfo.mCommand != dEvtCmd_INDOOR_e) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
-VERIFY(0x022AD0F0, daNpc_Os_Execute);
 
-/* 022AD138 HD: no blob shadow (dComIfGd_setShadow removed) */
+/* 022ABC68 */
+void daNpc_Os_c::carryCheck() {
+    if (actor_status & fopAcStts_CARRY_e) {
+        Os_setNpcActionHD(this, &l_actionDescriptors.mCarry, nullptr);
+    }
+}
+
+/* 022AC160 */
+void daNpc_Os_c::eventOrder() {
+    if (m4E4 & 2) {
+        return;
+    }
+    if (field_0x7A5 == 0x12 || field_0x7A5 == 0x11) {
+        eventInfo.onCondition(dEvtCnd_CANTALK_e);
+        if (field_0x7A5 == 0x12) {
+            fopAcM_orderSpeakEvent(this);
+        }
+    } else if (field_0x7A5 != -1 && field_0x7A5 < 0x10) {
+        field_0x7AA = field_0x7A5;
+        Os_orderEventHD(this, (s32)field_0x7C4[field_0x7AA], 0xFF, 0xFFFF, 0, 1);
+    }
+}
+
+/* 022ABCB0 */
+void daNpc_Os_c::checkOrder() {
+    if (eventInfo.checkCommandTalk() && (field_0x7A5 == 0x12 || field_0x7A5 == 0x11)) {
+        field_0x7A5 = -1;
+        Os_setNpcActionHD(this, &l_actionDescriptors.mTalk, nullptr);
+        fopAcM_cancelCarryNow(this);
+    }
+}
+
+/* 022AD138 */
 BOOL daNpc_Os_c::draw() {
-    WWHD_FUNC(0x022AD138, BOOL, this);
     if (home.roomNo < 0) {
         return TRUE;
     }
-    if (gabi::call<BOOL>(0x022A9EAC, this) /* finishCheck() */ && mpPedestal == nullptr) {
+    if (finishCheck() && mpPedestal == nullptr) {
         return TRUE;
     }
     s8 roomNo = current.roomNo;
-    dComIfGp_get(); /* HD: dComIfGp_roomControl_checkStatusFlag (room status table 0x1047E8E8, 0x22C each) */
-    if (!(gabi::load<u8>(0x1047E8E8 + roomNo * 0x22C) & 0x10)) {
+    dComIfGp_get(); // HD: retain the room-control accessor before reading the static status table.
+    if (!(gabi::at<OsRoomStatusHD>(0x1047E8E8)[(s8)roomNo].mStatus & 0x10)) {
         return TRUE;
     }
     J3DModel* pModel = mpMorf->getModel();
-    J3DModelData* pModelData = gabi::at<J3DModelData>(gabi::load<u32>(gabi::ea(pModel) + 0xAC));
+    J3DModelData* pModelData = pModel->mModelData;
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
     setLightTevColorType(dKy_getEnvlight(), pModel, &tevStr);
-    gabi::call(0x025E83FC, &mBrkAnm, pModelData, (f32)mBrkAnm.mFrameCtrl.mFrame); /* mBrkAnm.entry(modelData) */
-    gabi::call(0x025E5590, mpMorf.get()); /* mpMorf->entryDL() */
-    gabi::store<u32>(gabi::ea(pModelData) + 0x48, 0); /* mBrkAnm.remove(modelData) */
+    Os_enterBrkHD(&mBrkAnm, pModelData, (f32)mBrkAnm.mFrameCtrl.mFrame); /* mBrkAnm.entry(modelData) */
+    mpMorf->entryDL();                                                   /* mpMorf->entryDL() */
+    reinterpret_cast<OsAnimatedModelDataHD*>(pModelData)->mpBrk = 0;     /* mBrkAnm.remove(modelData) */
     return TRUE;
 }
-VERIFY(0x022AD138, &daNpc_Os_c::draw);
-
-/* m_smoke_tevstr = tevStr (dKy_tevstr_c::operator=, HD: member-wise; m_smoke_tevstr at 0x10475460) */
-static inline void os_copy_tevstr(daNpc_Os_c* self) {
-    u32 a = gabi::ea(self);
-    u32 T = 0x10475460;
-    gabi::store<f32>(T + 0x0, gabi::load<f32>(a + 0x110));
-    gabi::store<f32>(T + 0x4, gabi::load<f32>(a + 0x114));
-    gabi::store<f32>(T + 0x8, gabi::load<f32>(a + 0x118));
-    gabi::store<f32>(T + 0xC, gabi::load<f32>(a + 0x11C));
-    gabi::store<f32>(T + 0x10, gabi::load<f32>(a + 0x120));
-    gabi::store<f32>(T + 0x14, gabi::load<f32>(a + 0x124));
-    gabi::store<u8>(T + 0x18, gabi::load<u8>(a + 0x128));
-    gabi::store<u8>(T + 0x19, gabi::load<u8>(a + 0x129));
-    gabi::store<u8>(T + 0x1A, gabi::load<u8>(a + 0x12A));
-    gabi::store<u8>(T + 0x1B, gabi::load<u8>(a + 0x12B));
-    gabi::store<u16>(T + 0x1C, gabi::load<u16>(a + 0x12C));
-    gabi::store<u16>(T + 0x1E, gabi::load<u16>(a + 0x12E));
-    gabi::store<u16>(T + 0x20, gabi::load<u16>(a + 0x130));
-    gabi::store<u16>(T + 0x22, gabi::load<u16>(a + 0x132));
-    gabi::store<f32>(T + 0x24, gabi::load<f32>(a + 0x134));
-    gabi::store<f32>(T + 0x28, gabi::load<f32>(a + 0x138));
-    gabi::store<f32>(T + 0x2C, gabi::load<f32>(a + 0x13C));
-    gabi::store<f32>(T + 0x30, gabi::load<f32>(a + 0x140));
-    gabi::store<f32>(T + 0x34, gabi::load<f32>(a + 0x144));
-    gabi::store<f32>(T + 0x38, gabi::load<f32>(a + 0x148));
-    gabi::store<f32>(T + 0x3C, gabi::load<f32>(a + 0x14C));
-    gabi::store<f32>(T + 0x40, gabi::load<f32>(a + 0x150));
-    gabi::store<u32>(T + 0x84, gabi::load<u32>(a + 0x194));
-    gabi::store<u32>(T + 0x88, gabi::load<u32>(a + 0x198));
-    gabi::store<u32>(T + 0x8C, gabi::load<u32>(a + 0x19C));
-    gabi::store<u16>(T + 0x90, gabi::load<u16>(a + 0x1A0));
-    gabi::store<u16>(T + 0x92, gabi::load<u16>(a + 0x1A2));
-    gabi::store<u16>(T + 0x94, gabi::load<u16>(a + 0x1A4));
-    gabi::store<u16>(T + 0x96, gabi::load<u16>(a + 0x1A6));
-    gabi::store<u32>(T + 0x98, gabi::load<u32>(a + 0x1A8)); /* lswi/stswi 4 bytes */
-    gabi::store<u32>(T + 0x9C, gabi::load<u32>(a + 0x1AC));
-    gabi::store<u16>(T + 0xA0, gabi::load<u16>(a + 0x1B0));
-    gabi::store<u16>(T + 0xA2, gabi::load<u16>(a + 0x1B2));
-    gabi::store<u16>(T + 0xA4, gabi::load<u16>(a + 0x1B4));
-    gabi::store<u16>(T + 0xA6, gabi::load<u16>(a + 0x1B6));
-    gabi::store<f32>(T + 0xA8, gabi::load<f32>(a + 0x1B8));
-    gabi::store<f32>(T + 0xAC, gabi::load<f32>(a + 0x1BC));
-    gabi::store<f32>(T + 0xB0, gabi::load<f32>(a + 0x1C0));
-    gabi::store<u8>(T + 0xB4, gabi::load<u8>(a + 0x1C4));
-    gabi::store<u8>(T + 0xB5, gabi::load<u8>(a + 0x1C5));
-    gabi::store<u8>(T + 0xB6, gabi::load<u8>(a + 0x1C6));
-    gabi::store<u8>(T + 0xB7, gabi::load<u8>(a + 0x1C7));
-    gabi::store<u8>(T + 0xB8, gabi::load<u8>(a + 0x1C8));
-    gabi::store<u8>(T + 0xB9, gabi::load<u8>(a + 0x1C9));
-    gabi::store<u8>(T + 0xBA, gabi::load<u8>(a + 0x1CA));
-    gabi::store<u8>(T + 0xBB, gabi::load<u8>(a + 0x1CB));
-    gabi::store<u8>(T + 0xBC, gabi::load<u8>(a + 0x1CC));
-    gabi::store<f32>(T + 0xC0, gabi::load<f32>(a + 0x1D0));
-    gabi::store<f32>(T + 0xC4, gabi::load<f32>(a + 0x1D4));
-    gabi::store<f32>(T + 0xC8, gabi::load<f32>(a + 0x1D8));
-    gabi::store<f32>(T + 0xCC, gabi::load<f32>(a + 0x1DC));
-    gabi::store<f32>(T + 0xD0, gabi::load<f32>(a + 0x1E0));
-    gabi::store<f32>(T + 0xD4, gabi::load<f32>(a + 0x1E4));
-    gabi::store<u8>(T + 0xD8, gabi::load<u8>(a + 0x1E8));
-    gabi::store<u8>(T + 0xD9, gabi::load<u8>(a + 0x1E9));
-    gabi::store<u8>(T + 0xDA, gabi::load<u8>(a + 0x1EA));
-    gabi::store<u8>(T + 0xDB, gabi::load<u8>(a + 0x1EB));
-    gabi::store<u16>(T + 0xDC, gabi::load<u16>(a + 0x1EC));
-    gabi::store<u16>(T + 0xDE, gabi::load<u16>(a + 0x1EE));
-    gabi::store<u16>(T + 0xE0, gabi::load<u16>(a + 0x1F0));
-    gabi::store<u16>(T + 0xE2, gabi::load<u16>(a + 0x1F2));
-    gabi::store<f32>(T + 0xE4, gabi::load<f32>(a + 0x1F4));
-    gabi::store<f32>(T + 0xE8, gabi::load<f32>(a + 0x1F8));
-    gabi::store<f32>(T + 0xEC, gabi::load<f32>(a + 0x1FC));
-    gabi::store<f32>(T + 0xF0, gabi::load<f32>(a + 0x200));
-    gabi::store<f32>(T + 0xF4, gabi::load<f32>(a + 0x204));
-    gabi::store<f32>(T + 0xF8, gabi::load<f32>(a + 0x208));
-    gabi::store<f32>(T + 0xFC, gabi::load<f32>(a + 0x20C));
-    gabi::store<f32>(T + 0x100, gabi::load<f32>(a + 0x210));
-    gabi::store<f32>(T + 0x144, gabi::load<f32>(a + 0x254));
-    gabi::store<f32>(T + 0x148, gabi::load<f32>(a + 0x258));
-    gabi::store<f32>(T + 0x14C, gabi::load<f32>(a + 0x25C));
-    gabi::store<f32>(T + 0x150, gabi::load<f32>(a + 0x260));
-    gabi::store<f32>(T + 0x154, gabi::load<f32>(a + 0x264));
-    gabi::store<f32>(T + 0x158, gabi::load<f32>(a + 0x268));
-    gabi::store<u8>(T + 0x15C, gabi::load<u8>(a + 0x26C));
-    gabi::store<u8>(T + 0x15D, gabi::load<u8>(a + 0x26D));
-    gabi::store<u8>(T + 0x15E, gabi::load<u8>(a + 0x26E));
-    gabi::store<u8>(T + 0x15F, gabi::load<u8>(a + 0x26F));
-    gabi::store<u16>(T + 0x160, gabi::load<u16>(a + 0x270));
-    gabi::store<u16>(T + 0x162, gabi::load<u16>(a + 0x272));
-    gabi::store<u16>(T + 0x164, gabi::load<u16>(a + 0x274));
-    gabi::store<u16>(T + 0x166, gabi::load<u16>(a + 0x276));
-    gabi::store<f32>(T + 0x168, gabi::load<f32>(a + 0x278));
-    gabi::store<f32>(T + 0x16C, gabi::load<f32>(a + 0x27C));
-    gabi::store<f32>(T + 0x170, gabi::load<f32>(a + 0x280));
-    gabi::store<f32>(T + 0x174, gabi::load<f32>(a + 0x284));
-    gabi::store<f32>(T + 0x178, gabi::load<f32>(a + 0x288));
-    gabi::store<f32>(T + 0x17C, gabi::load<f32>(a + 0x28C));
-    gabi::store<f32>(T + 0x180, gabi::load<f32>(a + 0x290));
-    gabi::store<f32>(T + 0x184, gabi::load<f32>(a + 0x294));
-}
-
-static inline bool os_isPmf(ProcFunc_l* p, u32 f) { return p->i == -1 && (p->i == 0 || (p->d == 0 && p->f == f)); }
-static inline void os_endBeam(daNpc_Os_c* t) { gabi::call(0x022AB28C, t); }
-static inline void os_setEmitterScale(u32 e, u32 scale) {
-    f32 x = gabi::load<f32>(scale);
-    gabi::store<f32>(e + 0x220, x);
-    f32 y = gabi::load<f32>(scale + 4);
-    gabi::store<f32>(e + 0x224, y);
-    f32 z = gabi::load<f32>(scale + 8);
-    gabi::store<f32>(e + 0x238, x);
-    gabi::store<f32>(e + 0x228, z);
-    gabi::store<f32>(e + 0x23C, y);
-    gabi::store<f32>(e + 0x240, z);
-}
-static inline u32 os_gnd(daNpc_Os_c* t) { return gabi::ea(&t->mAcch) + 0xE8; } /* mAcch.m_gnd */
-static inline f32 os_groundH(daNpc_Os_c* t) { return gabi::load<f32>(gabi::ea(&t->mAcch) + 0x94); }
 
 /* 022AC1DC */
 BOOL daNpc_Os_c::execute() {
-    WWHD_FUNC(0x022AC1DC, BOOL, this);
     /* static JGeometry::TVec3<f32> splash_scale(0.6f, ...), ripple_scale(1.0f, ...) */
-    if (gabi::load<u32>(0x10467F00) == 0) {
-        gabi::store<u32>(0x10467F00, 1);
-        gabi::store<f32>(0x10467F08, 0.6f);
-        gabi::store<f32>(0x10467F10, 0.6f);
-        gabi::store<f32>(0x10467F0C, 0.6f);
+    if ((u32)l_waterScales.mSplashGuard == 0) {
+        l_waterScales.mSplashGuard = 1;
+        l_waterScales.mSplashScale.x = 0.6f;
+        l_waterScales.mSplashScale.z = 0.6f;
+        l_waterScales.mSplashScale.y = 0.6f;
     }
-    if (gabi::load<u32>(0x10467F04) == 0) {
-        gabi::store<u32>(0x10467F04, 1);
-        gabi::store<f32>(0x10467F14, 1.0f);
-        gabi::store<f32>(0x10467F1C, 1.0f);
-        gabi::store<f32>(0x10467F18, 1.0f);
+    if ((u32)l_waterScales.mRippleGuard == 0) {
+        l_waterScales.mRippleGuard = 1;
+        l_waterScales.mRippleScale.x = 1.0f;
+        l_waterScales.mRippleScale.z = 1.0f;
+        l_waterScales.mRippleScale.y = 1.0f;
     }
     field_0x784 = field_0x784 & ~0x10u;
-    actor_status = actor_status & ~0x20u; /* fopAcM_OffStatus(SHOWMAP) */
-    gabi::call(0x022AB1C4, this);          /* checkPlayerRoom() */
-    if (!gabi::call<BOOL>(0x022A9EAC, this) /* finishCheck() */) {
-        if (!gabi::call<BOOL>(0x024451B4, this) /* check_initialRoom() */) {
-            current.roomNo = (s8)gabi::call<s32>(0x024EF130, dComIfG_Bgsp(), os_gnd(this)); /* HD: GetRoomId(m_gnd) */
-            if (gabi::load<u32>(dComIfGp_ea() + 0x5B38) == gabi::ea(this)) { /* dComIfGp_getCb1Player() == this */
-                gabi::store<u32>(dComIfGp_ea() + 0x5B38, 0);
+    actor_status = actor_status & ~fopAcStts_SHOWMAP_e;
+    checkPlayerRoom();
+    if (!finishCheck()) {
+        if (!Os_initialRoomCheckHD(this)) {
+            current.roomNo = (s8)Os_groundRoomHD(dComIfG_Bgsp(), os_gnd(this)); /* HD: GetRoomId(m_gnd) */
+            if (dComIfGp_getCb1Player() == this) {
+                Os_clearCbPlayerHD();
             }
-            os_endBeam(this);
+            endBeam();
             return TRUE;
         }
-        gabi::call(0x0244586C, this, (s32)gabi::call<s8>(0x022AA42C, this) /* getRestartNumber() */, 1); /* initialRestartOption */
-        if (gabi::call<BOOL>(0x022A9E0C, this) /* wakeupCheck() */) {
-            mNoResetFlg1 = mNoResetFlg1 & ~0x40u; /* offNpcNotChange() */
+        Os_initialRestartHD(this, (s32)getRestartNumber(), 1);
+        if (wakeupCheck()) {
+            mNoResetFlg1 = mNoResetFlg1 & ~0x40u;
         } else {
-            mNoResetFlg1 = mNoResetFlg1 | 0x40u;  /* onNpcNotChange() */
+            mNoResetFlg1 = mNoResetFlg1 | 0x40u;
         }
     }
     fopAcM_setStageLayer(this);
 
     f32 r15 = 15.0f;
-    if (os_isPmf(&mNpcAction, 0x022AECD4 /* carryNpcAction */)) {
-        gabi::call(0x024EFF3C, &mAcchCir[0], r15); /* SetWallR */
-        gabi::call(0x024EFF3C, &mAcchCir[1], r15); /* SetWallR */
+    if (os_isPmf(&mNpcAction, OS_CARRY_ACTION_HD)) {
+        Os_setWallRadiusHD(&mAcchCir[0], r15);
+        Os_setWallRadiusHD(&mAcchCir[1], r15);
     } else {
-        gabi::call(0x024EFF3C, &mAcchCir[0], 40.0f); /* SetWallR */
-        gabi::call(0x024EFF3C, &mAcchCir[1], 40.0f); /* SetWallR */
+        Os_setWallRadiusHD(&mAcchCir[0], 40.0f);
+        Os_setWallRadiusHD(&mAcchCir[1], 40.0f);
     }
-    /* searchFromName(l_daiza_name[argument], 0xFF, 1) */
-    fopAc_ac_c* ped = gabi::call<fopAc_ac_c*>(0x025D9F38, gabi::load<u32>(0x101C28F0 + 4 * argument), 0xFF, 1);
+
+    fopAc_ac_c* ped = Os_searchPedestalHD(gabi::at<OsNamesHD>(0x101C28F0)->mNames[(s8)argument], 0xFF, 1);
     if (ped != nullptr) {
-        u32 id = ped != nullptr ? gabi::load<u32>(gabi::ea(ped) + 4) : 0xFFFFFFFFu;
-        if (gabi::call<BOOL>(0x025DD868, id) /* fpcM_IsCreating */) {
+        u32 id = ped != nullptr ? (u32)ped->mBsPcId : 0xFFFFFFFFu;
+        if (Os_isCreatingHD(id)) {
             ped = nullptr;
         }
     }
@@ -479,7 +431,7 @@ BOOL daNpc_Os_c::execute() {
 
     if (ped != nullptr) {
         if (!(field_0x784 & 1) /* !isFinish() */) {
-            if (gabi::call<BOOL>(0x022A9EAC, this)) {
+            if (finishCheck()) {
                 fopAc_ac_c* p = mpPedestal;
                 home.pos.x = p->current.pos.x;
                 home.pos.y = p->current.pos.y + 240.0f;
@@ -500,53 +452,54 @@ BOOL daNpc_Os_c::execute() {
             mAcch.CrrPos(dComIfG_Bgsp());
             field_0x784 = field_0x784 | 0x10;
             if (os_groundH(this) != -1000000000.0f) {
-                gabi::store<u8>(gabi::ea(this) + 0x1C9, (u8)gabi::call<s32>(0x024EF130, dComIfG_Bgsp(), os_gnd(this))); /* tevStr.mRoomNo */
-                u8 color = (u8)gabi::call<u32>(0x024EEEB8, dComIfG_Bgsp(), os_gnd(this)); /* GetPolyColor */
+                tevStr.mRoomNo = (u8)Os_groundRoomHD(dComIfG_Bgsp(), os_gnd(this)); /* tevStr.mRoomNo */
+                u8 color = (u8)Os_groundColorHD(dComIfG_Bgsp(), os_gnd(this));
                 u32 f = field_0x784;
-                gabi::store<u8>(gabi::ea(this) + 0x1CA, color); /* tevStr.mEnvrIdxOverride */
-                field_0x784 = f | 2; /* onSetHomePos() */
+                tevStr.mEnvrIdxOverride = color; /* tevStr.mEnvrIdxOverride */
+                field_0x784 = f | 2;
             }
         }
     }
 
-    if (gabi::call<BOOL>(0x022A9EAC, this) /* finishCheck() */) {
+    if (finishCheck()) {
         u32 f = field_0x784;
         s8 roomNo = current.roomNo;
-        if (f & 1) { /* isFinish() */
+        if (f & 1) {
             current.pos.copy(home.pos);
         }
-        dComIfGp_get(); /* dComIfGp_roomControl_checkStatusFlag(roomNo, 0x10) */
-        u8 st = gabi::load<u8>(0x1047E8E8 + roomNo * 0x22C);
+        dComIfGp_get();
+        u8 st = gabi::at<OsRoomStatusHD>(0x1047E8E8)[(s8)roomNo].mStatus;
         if (roomNo < 0 || !(st & 0x10) || mpPedestal == nullptr) {
-            os_endBeam(this);
+            endBeam();
             return TRUE;
         }
     } else {
-        if (gabi::call<BOOL>(0x024452A0, this) /* check_moveStop() */) {
+        if (Os_moveStopCheckHD(this)) {
             gabi::Local<ProcFunc_l> fn;
-            md_pmf_load(fn, 0x1001F260); /* &daNpc_Os_c::waitNpcAction */
-            os_setNpcAction(this, fn, nullptr);
+            Os_copyActionHD(fn, &l_actionDescriptors.mWaitNpc);
+            setNpcAction(fn, nullptr);
             field_0x7A3 = 0;
-            os_endBeam(this);
+            endBeam();
             return TRUE;
         }
-        if (field_0x7A8 && gabi::call<BOOL>(0x02008254, dComIfG_Bgsp(), &field_0x7FC) /* ChkPolySafe */ &&
-            gabi::call<BOOL>(0x024EEABC, dComIfG_Bgsp(), &field_0x7FC) /* ChkMoveBG */) {
-            gabi::call(0x024EF968, dComIfG_Bgsp(), &field_0x7FC, 1, &old.pos, 0, 0); /* MoveBgCrrPos */
+        if (field_0x7A8 && Os_polygonSafeHD(dComIfG_Bgsp(), &field_0x7FC) &&
+            Os_isMovingBackgroundHD(dComIfG_Bgsp(), &field_0x7FC)) {
+            Os_correctMovingBackgroundHD(dComIfG_Bgsp(), &field_0x7FC, 1, &old.pos, 0, 0);
         }
     }
 
-    actor_status = (actor_status & ~0x3Fu) | 0x2E; /* fopAcM_SetStatusMap(this, 0xE) (HD 0x2E) */
+    actor_status = (actor_status & ~0x3Fu) | 0x2E;
     {
-        u32 h = OS_L_HIO; /* mJntCtrl.setParam(l_HIO.mNpc...) */
-        gabi::call(0x0259E08C, &mJntCtrl, (s32)gabi::load<s16>(h + 0x36), (s32)gabi::load<s16>(h + 0x3A), (s32)gabi::load<s16>(h + 0x3E),
-                   (s32)gabi::load<s16>(h + 0x42), (s32)gabi::load<s16>(h + 0x34), (s32)gabi::load<s16>(h + 0x38),
-                   (s32)gabi::load<s16>(h + 0x3C), (s32)gabi::load<s16>(h + 0x40), (s32)gabi::load<s16>(h + 0x44));
+        const auto* h = gabi::at<const OsJointHioHD>(0x10467E44); /* mJntCtrl.setParam(l_HIO.mNpc...) */
+        Os_setJointParamsHD(&mJntCtrl, (s32)h->mNpc.mMaxBackboneX, (s32)h->mNpc.mMaxBackboneY,
+                            (s32)h->mNpc.mMinBackboneX, (s32)h->mNpc.mMinBackboneY, (s32)h->mNpc.mMaxHeadX,
+                            (s32)h->mNpc.mMaxHeadY, (s32)h->mNpc.mMinHeadX, (s32)h->mNpc.mMinHeadY,
+                            (s32)h->mNpc.mMaxTurnStep);
     }
 
     if (!(field_0x784 & 1) /* !isFinish() */) {
-        if (!(actor_status & 0x2000) && (field_0x784 & 8) /* isGravity() */ &&
-            gabi::call<BOOL>(0x02445950, this, gabi::load<u32>(0x101C28E4 + 4 * argument)) /* checkNowPosMove(l_staff_name[argument]) */) {
+        if (!(actor_status & fopAcStts_CARRY_e) && (field_0x784 & 8) &&
+            Os_positionMoveCheckHD(this, gabi::at<OsNamesHD>(0x101C28E4)->mNames[(s8)argument])) {
             u16 ang = current.angle.y;
             f32 sy = speed.y;
             if (maxFallSpeed < sy) {
@@ -562,95 +515,98 @@ BOOL daNpc_Os_c::execute() {
                     speed.y = maxFallSpeed;
                 }
             }
-            u32 e = 0x104A44F8 + ((ang >> 3) << 3); /* cM_ssin / cM_scos */
             f32 sf = speedF;
-            speed.x = sf * gabi::load<f32>(e);
-            speed.z = sf * gabi::load<f32>(e + 4);
-            gabi::call(0x025D6800, this, &mStts); /* fopAcM_posMove(this, mStts.GetCCMoveP()) */
+            speed.x = sf * cM_ssin(ang);
+            speed.z = sf * cM_scos(ang);
+            Os_movePositionHD(this, &mStts);
         }
         mAcch.CrrPos(dComIfG_Bgsp());
         field_0x784 = field_0x784 | 0x10;
 
         f32 gndY = os_groundH(this);
-        if ((os_isPmf(&mPlayerAction, 0x022AFF94 /* walkPlayerAction */) || os_isPmf(&mNpcAction, 0x022AF8D4 /* searchNpcAction */)) &&
+        if ((os_isPmf(&mPlayerAction, OS_WALK_PLAYER_ACTION_HD) ||
+             os_isPmf(&mNpcAction, OS_SEARCH_ACTION_HD)) &&
             !(mAcch.m_flags & 0x20) /* !ChkGroundHit() */) {
             f32 delta = gndY - current.pos.y;
             if (delta < 0.0f && !(delta < -30.1f)) {
                 speed.y = 0.0f;
                 current.pos.y = gndY;
-                mAcch.m_flags = mAcch.m_flags | 0x20; /* SetGroundHit() */
+                mAcch.m_flags = mAcch.m_flags | 0x20;
             }
             gndY = os_groundH(this);
         }
 
         if (gndY != -1000000000.0f) {
-            u32 gnd = os_gnd(this);
-            u32 pla = gabi::call<u32>(0x020084C8, dComIfG_Bgsp(), (u32)gabi::load<u16>(gnd + 2), (u32)gabi::load<u16>(gnd)); /* GetTriPla */
+            cBgS_PolyInfo_l* gnd = os_gnd(this);
+            u32 pla = Os_trianglePlaneHD(dComIfG_Bgsp(), (u32)gnd->mBgIndex, (u32)gnd->mPolyIndex);
             if (pla) {
                 field_0x7F0.copy(*gabi::at<cXyz>(pla)); /* plane->mNormal */
             }
-            s8 roomNo = (s8)gabi::call<s32>(0x024EF130, dComIfG_Bgsp(), gnd); /* GetRoomId */
+            s8 roomNo = (s8)Os_groundRoomHD(dComIfG_Bgsp(), gnd);
             current.roomNo = roomNo;
-            gabi::store<s8>(gabi::ea(this) + 0x1C9, roomNo); /* tevStr.mRoomNo */
-            u8 color = (u8)gabi::call<u32>(0x024EEEB8, dComIfG_Bgsp(), gnd); /* GetPolyColor */
-            field_0x7FC.mpBgW = gabi::load<u32>(gnd + 4); /* field_0x7FC.SetPolyInfo(m_gnd) */
-            field_0x7FC.mPolyIndex = gabi::load<u16>(gnd);
-            field_0x7FC.mBgIndex = gabi::load<u16>(gnd + 2);
-            gabi::store<u8>(gabi::ea(this) + 0x1CA, color);
-            gabi::store<s8>(gabi::ea(&mStts) + 0x22, roomNo); /* mStts.SetRoomId(roomNo) */
-            gabi::store<u32>(gabi::ea(&field_0x7FC) + 8, gabi::load<u32>(gnd + 8));
+            tevStr.mRoomNo = roomNo; /* tevStr.mRoomNo */
+            u8 color = (u8)Os_groundColorHD(dComIfG_Bgsp(), gnd);
+            field_0x7FC.mpBgW = (u32)gnd->mpBgW; /* field_0x7FC.SetPolyInfo(m_gnd) */
+            field_0x7FC.mPolyIndex = gnd->mPolyIndex;
+            field_0x7FC.mBgIndex = gnd->mBgIndex;
+            tevStr.mEnvrIdxOverride = color;
+            mStts.mRoomId = roomNo; /* mStts.SetRoomId(roomNo) */
+            field_0x7FC.mProcId = (u32)gnd->mProcId;
             if (roomNo != 7) {
                 mpPedestal = nullptr;
             }
         }
 
-        field_0x7A8 = (mAcch.m_flags >> 5) & 1; /* ChkGroundHit() */
-        if (!(actor_status & 0x2000)) {
-            if (os_groundH(this) == -1000000000.0f ||
-                gabi::call<s32>(0x024EF0BC, dComIfG_Bgsp(), os_gnd(this)) /* GetGroundCode */ == 4) {
+        field_0x7A8 = (mAcch.m_flags >> 5) & 1;
+        if (!(actor_status & fopAcStts_CARRY_e)) {
+            if (os_groundH(this) == -1000000000.0f || Os_groundCodeHD(dComIfG_Bgsp(), os_gnd(this)) == 4) {
                 u8 c = m4E8;
                 if (c < 30) {
                     m4E8 = c + 1;
                 } else {
                     s8 room = home.roomNo;
-                    dComIfGp_get(); /* dComIfGp_roomControl_checkStatusFlag(fopAcM_GetHomeRoomNo(this), 0x10) */
-                    if (!(gabi::load<u8>(0x1047E8E8 + room * 0x22C) & 0x10)) {
-                        u32 a = gabi::ea(this); /* current = home; shape_angle = home.angle */
-                        u16 ax = gabi::load<u16>(a + 0x2F8);
-                        u16 ay = gabi::load<u16>(a + 0x2FA);
-                        gabi::store<u16>(a + 0x328, ax);
-                        gabi::store<u32>(a + 0x31C, gabi::load<u32>(a + 0x2F4));
-                        gabi::store<u32>(a + 0x320, gabi::load<u32>(a + 0x2F8));
-                        gabi::store<u32>(a + 0x324, gabi::load<u32>(a + 0x2FC));
+                    dComIfGp_get();
+                    if (!(gabi::at<OsRoomStatusHD>(0x1047E8E8)[(s8)room].mStatus & 0x10)) {
+                        // HD: preserve the GHS word-copy order, including packed angle/room words.
+                        auto* dst = reinterpret_cast<OsPlacementWordsHD*>(&current);
+                        const auto* src = reinterpret_cast<const OsPlacementWordsHD*>(&home);
+                        u16 ax = home.angle.x;
+                        u16 ay = home.angle.y;
+                        shape_angle.x = ax;
+                        dst->mPosition.z = (u32)src->mPosition.z;
+                        dst->mAnglesXY = (u32)src->mAnglesXY;
+                        dst->mAngleZAndRoom = (u32)src->mAngleZAndRoom;
                         speedF = 0.0f;
                         m4E8 = 0;
-                        gabi::store<u16>(a + 0x32A, ay);
-                        gabi::store<u32>(a + 0x318, gabi::load<u32>(a + 0x2F0));
-                        gabi::store<u32>(a + 0x314, gabi::load<u32>(a + 0x2EC));
-                        gabi::store<u16>(a + 0x32C, gabi::load<u16>(a + 0x2FC));
+                        shape_angle.y = ay;
+                        dst->mPosition.y = (u32)src->mPosition.y;
+                        dst->mPosition.x = (u32)src->mPosition.x;
+                        shape_angle.z = (u16)home.angle.z;
                     } else {
-                        /* daPy_getPlayerLinkActorClass()->npcStartRestartRoom() */
-                        gabi::call(0x023FD4E4, gabi::load<u32>(dComIfGp_ea() + 0x5B34), 5, 0xC9, -1.0f, 0);
+
+                        Os_restartLinkHD(dComIfGp_getLinkPlayer(), 5, 0xC9, -1.0f, 0);
                     }
                 }
             } else {
                 m4E8 = 0;
             }
-            if (mAcch.m_flags & 0x1000 /* ChkWaterIn() */) {
-                gabi::call(0x023FD4E4, gabi::load<u32>(dComIfGp_ea() + 0x5B34), 5, 0xC9, -1.0f, 0); /* npcStartRestartRoom */
+            if (mAcch.m_flags & 0x1000) {
+                Os_restartLinkHD(dComIfGp_getLinkPlayer(), 5, 0xC9, -1.0f, 0);
                 if (!(field_0x784 & 4) /* !isWaterHit() */) {
-                    field_0x784 = field_0x784 | 4; /* onWaterHit() */
-                    u32 splash = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 0, 0x40 /* ID_IT_JN_WP_SHIBUKI */, &current.pos,
-                                                          nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
+                    field_0x784 = field_0x784 | 4;
+                    u32 splash = gabi::ea(
+                        dPa_control_set(dComIfGp_getParticle(), 0, os_a::ID_IT_JN_WP_SHIBUKI, &current.pos,
+                                        nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
                     if (splash) {
-                        gabi::store<f32>(splash + 0x34, r15); /* setRate(15.0f) */
-                        os_setEmitterScale(splash, 0x10467F08 /* splash_scale */);
+                        gabi::at<JPABaseEmitter>(splash)->setRate(r15);
+                        os_setEmitterScale(splash, gabi::ea(&l_waterScales.mSplashScale));
                     }
-                    /* dComIfGp_particle_setSingleRipple(ID_IT_JN_WP_HAMON01, &current.pos) */
-                    u32 ripple = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 5, 0x3D, &current.pos, nullptr, nullptr, 0xFF,
-                                                          gabi::at<dPa_levelEcallBack>(0x1047B2E4), -1, nullptr, nullptr, nullptr));
+
+                    u32 ripple = gabi::ea(dPa_control_set(
+                        dComIfGp_getParticle(), 5, os_a::ID_IT_JN_WP_HAMON01, &current.pos, nullptr, nullptr,
+                        0xFF, gabi::at<dPa_levelEcallBack>(0x1047B2E4), -1, nullptr, nullptr, nullptr));
                     if (ripple) {
-                        os_setEmitterScale(ripple, 0x10467F14 /* ripple_scale */);
+                        os_setEmitterScale(ripple, gabi::ea(&l_waterScales.mRippleScale));
                     }
                 }
             }
@@ -660,40 +616,40 @@ BOOL daNpc_Os_c::execute() {
         f32 gh = os_groundH(this);
         field_0x784 = field_0x784 | 0x10;
         if (gh != -1000000000.0f) {
-            gabi::store<u8>(gabi::ea(this) + 0x1C9, (u8)gabi::call<s32>(0x024EF130, dComIfG_Bgsp(), os_gnd(this)));
-            gabi::store<u8>(gabi::ea(this) + 0x1CA, (u8)gabi::call<u32>(0x024EEEB8, dComIfG_Bgsp(), os_gnd(this)));
+            tevStr.mRoomNo = (u8)Os_groundRoomHD(dComIfG_Bgsp(), os_gnd(this));
+            tevStr.mEnvrIdxOverride = (u8)Os_groundColorHD(dComIfG_Bgsp(), os_gnd(this));
         }
     }
 
-    if (!(actor_status & 0x2000)) {
-        gabi::call(0x022AB2BC, this); /* setCollision() */
+    if (!(actor_status & fopAcStts_CARRY_e)) {
+        setCollision();
     }
-    if (gabi::call<BOOL>(0x02445950, this, gabi::load<u32>(0x101C28E4 + 4 * argument)) /* checkNowPosMove */) {
-        gabi::call(0x022AB488, this); /* animationPlay() */
+    if (Os_positionMoveCheckHD(this, gabi::at<OsNamesHD>(0x101C28E4)->mNames[(s8)argument])) {
+        animationPlay();
     }
 
     if (!eventProc()) {
-        if (!gabi::call<BOOL>(0x022A9EAC, this) /* finishCheck() */) {
+        if (!finishCheck()) {
             if (dComIfGp_getPlayer(0) == this) {
                 u32 st = actor_status;
                 u32 flg = m4E4;
-                actor_status = (st & ~0x3Fu) | 0x33; /* fopAcM_SetStatusMap(this, 0x13) (HD 0x33) */
-                if (flg & 1) { /* isReturnLink() */
+                actor_status = (st & ~0x3Fu) | 0x33;
+                if (flg & 1) {
                     field_0x7A5 = 0;
                 } else {
                     playerAction(nullptr);
                     if (returnLinkCheck()) {
-                        m4E4 = m4E4 | 1; /* returnLink() */
+                        m4E4 = m4E4 | 1;
                     }
                 }
             } else {
-                if (gabi::call<BOOL>(0x022A9E0C, this) /* wakeupCheck() */) {
+                if (wakeupCheck()) {
                     actor_status = (actor_status & ~0x3Fu) | 0x2E;
                 }
                 carryCheck();
                 checkOrder();
                 npcAction(nullptr);
-                if (!os_isPmf(&mNpcAction, 0x022AEF70 /* throwNpcAction */)) {
+                if (!os_isPmf(&mNpcAction, OS_THROW_ACTION_HD)) {
                     current.angle.y = shape_angle.y;
                 }
             }
@@ -702,25 +658,92 @@ BOOL daNpc_Os_c::execute() {
         if (field_0x78C == 2 || field_0x78C == 4) {
             makeBeam(0);
         } else {
-            os_endBeam(this);
+            endBeam();
         }
         eventOrderCheck();
     }
 
     eventOrder();
-    gabi::call(0x022AA464, this); /* setBaseMtx() */
+    setBaseMtx();
     if (field_0x738.mpBaseEmitter != nullptr || field_0x740.mpBaseEmitter != nullptr) {
-        s32 reverb = dComIfGp_getReverb(current.roomNo); /* fopAcM_seStartCurrent(JA_SE_OBJ_OSTATUE_LIGHT_SUS) */
-        mDoAud_seStart(0x7046, &current.pos, 0, reverb);
+        s32 reverb = dComIfGp_getReverb(current.roomNo);
+        mDoAud_seStart(os_a::JA_SE_OBJ_OSTATUE_LIGHT_SUS, &current.pos, 0, reverb);
     }
     os_copy_tevstr(this);
     return TRUE;
 }
-VERIFY(0x022AC1DC, &daNpc_Os_c::execute);
+
+/* 022AD0F0 */
+static BOOL daNpc_Os_Execute(daNpc_Os_c* i_this) {
+    BOOL ret = i_this->execute();
+    if (i_this->argument == 2) {
+        gabi::at<OsCattleRoomHD>(0x101D5F46)->mRoomNo = (s8)i_this->current.roomNo;
+    }
+    return ret;
+}
 
 /* 022AD210 */
-static BOOL daNpc_Os_IsDelete(daNpc_Os_c*) {
-    WWHD_FUNC(0x022AD210, BOOL, (u32)0);
-    return TRUE;
+static BOOL daNpc_Os_IsDelete(daNpc_Os_c* i_this) { return TRUE; }
+
+/* 022ABF04 */
+static void daNpc_Os_infiniteEcallBack_makeEmitter(daNpc_Os_infiniteEcallBack_l* cb, u16 id, const cXyz* pos,
+                                                   const csXyz* angle, const cXyz* scale) {
+    Os_endEmitterHD(cb);
+
+    dPa_control_set(dComIfGp_getParticle(), 0, id, pos, angle, scale, 0xFF, (dPa_levelEcallBack*)cb, -1,
+                    nullptr, nullptr, nullptr);
 }
-VERIFY(0x022AD210, daNpc_Os_IsDelete);
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py): this translation unit
+data m_smoke_tevstr 10475460
+data l_waterScales 10467F00
+data l_actionDescriptors 1001F260
+data event_init_tbl 101C2964
+data event_action_tbl 101C29C4
+str 1001F620 "OPTION_CHAR_END"
+ext 02007840 BOOL Os_triggerReturnHD(s32 port)
+ext 022A9F4C void Os_initBrkHD(daNpc_Os_c* actor, u32 animation, u32 loop)
+ext 022AB258 void Os_endEmitterHD(daNpc_Os_infiniteEcallBack_l* callback)
+ext 025D7A58 void Os_orderEventHD(daNpc_Os_c* actor, s32 event, u32 mapTool, u32 flags, s32 priority, s32 mode)
+ext 025445B8 BOOL Os_startCheckHD(dEvent_manager_c* manager, const char* name)
+ext 0254457C BOOL Os_endCheckNameHD(dEvent_manager_c* manager, const char* name)
+ext 025E1988 void Os_controlSoundHD(u32 sound)
+ext 02542EDC s32 Os_getActIndexHD(dEvent_manager_c* manager, s32 staff, gptr<char>* names, s32 count, s32 flag, s32 extra)
+ext 02543280 void Os_cutEndHD(dEvent_manager_c* manager, s32 staff)
+ext 025447C8 BOOL Os_getAdvanceHD(dEvent_manager_c* manager, s32 staff)
+ext 025440C8 BOOL Os_endCheckHD(dEvent_manager_c* manager, s32 event)
+ext 025E83FC void Os_enterBrkHD(mDoExt_brkAnm_os* animation, J3DModelData* data, f32 frame)
+ext 024451B4 BOOL Os_initialRoomCheckHD(daNpc_Os_c* actor)
+ext 0244586C void Os_initialRestartHD(daNpc_Os_c* actor, s32 restart, s32 flag)
+ext 024EFF3C void Os_setWallRadiusHD(dBgS_AcchCir* circle, f32 radius)
+ext 025D9F38 fopAc_ac_c* Os_searchPedestalHD(const char* name, s32 room, s32 flag)
+ext 025DD868 BOOL Os_isCreatingHD(u32 processId)
+ext 024452A0 BOOL Os_moveStopCheckHD(daNpc_Os_c* actor)
+ext 02008254 BOOL Os_polygonSafeHD(dBgS* background, cBgS_PolyInfo_l* polygon)
+ext 024EEABC BOOL Os_isMovingBackgroundHD(dBgS* background, cBgS_PolyInfo_l* polygon)
+ext 024EF968 void Os_correctMovingBackgroundHD(dBgS* background, cBgS_PolyInfo_l* polygon, s32 flag, cXyz* pos, s32 angle, s32 extra)
+ext 0259E08C void Os_setJointParamsHD(dNpc_JntCtrl_c* joint, s32 backX, s32 backY, s32 minBackX, s32 minBackY, s32 headX, s32 headY, s32 minHeadX, s32 minHeadY, s32 step)
+ext 02445950 BOOL Os_positionMoveCheckHD(daNpc_Os_c* actor, const char* name)
+ext 025D6800 void Os_movePositionHD(daNpc_Os_c* actor, dCcD_Stts* status)
+ext 024EF130 s32 Os_groundRoomHD(dBgS* background, cBgS_PolyInfo_l* polygon)
+ext 024EEEB8 u32 Os_groundColorHD(dBgS* background, cBgS_PolyInfo_l* polygon)
+ext 024EF0BC s32 Os_groundCodeHD(dBgS* background, cBgS_PolyInfo_l* polygon)
+ext 020084C8 u32 Os_trianglePlaneHD(dBgS* background, u32 backgroundIndex, u32 polygonIndex)
+ext 023FD4E4 void Os_restartLinkHD(fopAc_ac_c* player, s32 mode, s32 room, f32 speed, s32 flag)
+ext 022AA630 BOOL daNpc_Os_c::setAction(ProcFunc_l* cur, ProcFunc_l* action, void* arg)
+ext 022AA778 void daNpc_Os_c::setNpcAction(ProcFunc_l* action, void* arg)
+ext 022A9E0C BOOL daNpc_Os_c::wakeupCheck()
+ext 022A9EAC BOOL daNpc_Os_c::finishCheck()
+ext 022AB28C void daNpc_Os_c::endBeam()
+ext 022AB618 void daNpc_Os_c::setFinish()
+ext 022AB5A4 int daNpc_Os_c::getMyStaffId()
+ext 022AB670 BOOL daNpc_Os_c::checkCommandTalk()
+ext 022AB684 void daNpc_Os_c::returnLinkPlayer()
+ext 022AB1C4 void daNpc_Os_c::checkPlayerRoom()
+ext 022AA42C s8 daNpc_Os_c::getRestartNumber()
+ext 022AB2BC void daNpc_Os_c::setCollision()
+ext 022AB488 void daNpc_Os_c::animationPlay()
+ext 022AA464 void daNpc_Os_c::setBaseMtx()
+*/
+// clang-format on

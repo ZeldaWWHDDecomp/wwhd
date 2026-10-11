@@ -1,53 +1,19 @@
-/* d_stage: stage/room data (dStage_*), part 2 of 5 (025C1384..025C1E44), WWHD. See d_stage.cpp for the unit.
- *
- * dStage_playerInit (with dStage_decodeSearchIkada / dStage_playerInitIkada inlined) and the
- * first chunk handlers. The handlers call the dStage_dt_c virtuals: the HD vtable has one
- * 8-byte entry per virtual ({adjust, function}, the function at vtbl + 12 + 8*k, k = GameCube
- * vt index - 2); the memory block virtuals (set/getMemoryConfig, set/getMemoryMap) are gone. */
-#include "bindings.h"
+/** Player spawning and the first stage-chunk handlers. Private decomp source.
+ * HD: raft/restart modes are inlined, a missing spawn point selects the first player,
+ * and the meter is created without an AGB actor. Integer copies preserve float bits.
+ */
+#include "d/d_stage.h"
 
-namespace d_stage_2_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void JUT_ASSERT_l(u32 file, s32 line, u32 msg) { gabi::call(0x0273AA24, file, line, msg); }
-static inline u32 fopAcM_CreateAppend_l() { return gabi::call<u32>(0x025D5600); }
-static inline u32 fopScnM_SearchByID_l(u32 id) { return gabi::call<u32>(0x025DC80C, id); }
-static inline u32 fopAcM_create_l(s32 proc, u32 prm, u32 pos, s32 room, u32 angle, u32 scale, s32 subtype, u32 cb) {
-    return gabi::call<u32>(0x025D5834, proc, prm, pos, room, angle, scale, subtype, cb);
-}
-static inline u32 fpcLy_CurrentLayer_l() { return gabi::call<u32>(0x025DED64); }
-static inline u32 fpcSCtRq_Request_l(u32 layer, s32 proc, u32 a2, u32 a3, u32 prm) { return gabi::call<u32>(0x025E14A8, layer, proc, a2, a3, prm); }
-static inline void PSMTXTrans_l(u32 m, f32 x, f32 y, f32 z) { gabi::call(0x028E93CC, m, x, y, z); }
-static inline void mDoMtx_YrotM_l(u32 m, s16 y) { gabi::call(0x025F1C28, m, y); }
-static inline void PSMTXMultVec_l(u32 m, u32 in, u32 out) { gabi::call(0x028E8F64, m, in, out); }
-static inline void daSea_execute_l(u32 pos) { gabi::call(0x0246C5C8, pos); }
-static inline BOOL daSea_ChkArea_l(f32 x, f32 z) { return gabi::call<BOOL>(0x0246B6A4, x, z); }
-static inline f32 daSea_calcWave_l(f32 x, f32 z) { return gabi::call<f32>(0x0246BA0C, x, z); }
-static inline u32 cMl_memalignB_l(s32 align, u32 size) { return gabi::call<u32>(0x02019430, align, size); }
-static inline u32 fopCamM_Create_l(s32 idx, s32 proc, u32 prm) { return gabi::call<u32>(0x025DA654, idx, proc, prm); }
-/* this unit's functions */
-static inline void dStage_startStage_c_set_l(u32 self, u32 name, u32 roomNo, s32 point, s32 layer) { gabi::call(0x025C1328, self, name, roomNo, point, layer); }
-static inline void dStage_actorCreate_l(u32 data, u32 prm) { gabi::call(0x025C1154, data, prm); }
-
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u16 ld16(u32 a) { return gabi::load<u16>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline u32 vfn(u32 obj, u32 off) { return ld(ld(obj) + off); }
-static inline u32 save_l() { return ld(0x101F84DC); }
-
-struct cXyz_l { be<f32> x, y, z; };
-
-static constexpr u32 mDoMtx_stack_now = 0x1048D0CC;
+// HD: the inlined raft assertion uses its own "d_stage.cpp" string copy.
+static const dStage_sourceFileName l_ikadaSourceFile;
+static const dStage_actorTagTable l_actorTags;
+static inline u32 dStage_getSaveBase() { return gabi::ea(dComIfGs_info()) - 0x20; }
 
 /* inline strcmp(a, b) == 0 */
-static bool streq(u32 a, u32 b) {
+static bool dStage_nameMatches(u32 a, const char* name) {
+    u32 b = gabi::guest_str(name);
     for (;;) {
-        u8 ca = ld8(a), cb = ld8(b);
+        u8 ca = gabi::load<u8>(a), cb = gabi::load<u8>(b);
         if (ca != cb) return false;
         if (ca == 0) return true;
         a++;
@@ -57,69 +23,67 @@ static bool streq(u32 a, u32 b) {
 
 /* the common end of dStage_playerInit's four start modes */
 static s32 playerInit_tail(u32 appen, u32 player_data) {
-    st(save_l() + 0x116C, 0); /* dComIfGs_setRestartRoomParam(0) */
-    st8(appen + 0x21, 0xFF);
-    st16(appen + 0x16, 0xFFFF);
-    u32 stage = dComIfGp_ea() + 0x5134;
-    u32 name = dComIfGp_ea() + 0x5134;
-    s32 point = (s16)ld16(dComIfGp_ea() + 0x513C);
+    dComIfGs_info()->mRestart.mRestartParam = 0; /* dComIfGs_setRestartRoomParam(0) */
+    gabi::at<fopAcM_prm_class>(appen)->room_no = 0xFF;
+    gabi::at<fopAcM_prm_class>(appen)->base.setID = 0xFFFF;
+    u32 stage = gabi::ea(&gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mCurStage);
+    u32 name = gabi::ea(&gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mCurStage);
+    s32 point = (s16)dComIfGp_getStartStagePoint();
     u32 p = dComIfGp_ea();
-    s32 layer = (s8)ld8(p + 0x513F);
-    dStage_startStage_c_set_l(stage, name, ld(appen) & 0x3F, point, layer);
-    u32 shipId = (ld16(appen + 0x14) >> 8) & 0xFF;
-    st8(dComIfGp_ea() + 0x5D14, (u8)shipId);
-    u32 shipRoom = ld(appen) & 0x3F;
-    st8(dComIfGp_ea() + 0x5D15, (u8)shipRoom);
-    dStage_actorCreate_l(player_data, appen);
-    u32 proc = fopScnM_SearchByID_l(ld(0x1047E6C4)); /* dStage_roomControl_c::mProcID */
+    s32 layer = (s8)gabi::at<dComIfG_inf_c>(p)->play.mCurStage.mLayer;
+    StagePlayerAPI::dStage_startStage_c_set(stage, name, gabi::at<fopAcM_prm_class>(appen)->base.parameters & 0x3F, point, layer);
+    u32 shipId = (gabi::at<fopAcM_prm_class>(appen)->base.angle.z >> 8) & 0xFF;
+    gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mShipId = (u8)shipId;
+    u32 shipRoom = gabi::at<fopAcM_prm_class>(appen)->base.parameters & 0x3F;
+    gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mShipRoomId = (u8)shipRoom;
+    StagePlayerAPI::dStage_actorCreate(player_data, appen);
+    u32 proc = StagePlayerAPI::fopScnM_SearchByID(dStage_roomControlStatics::mProcID); /* dStage_roomControlStatics::mProcID */
     if (proc == 0) {
-        JUT_ASSERT_l(0x1005593C, 0x7BA, 0x10055958);
-        fopAcM_create_l(0x1BC, 0, 0, -1, 0, 0, -1, 0); /* TITLE */
-    } else if ((s16)ld16(proc + 8) != 7) {
-        fopAcM_create_l(0x1BC, 0, 0, -1, 0, 0, -1, 0);
+        StagePlayerAPI::reportAssert("d_stage.cpp", 0x7BA, "stageProc != (0)");
+        StagePlayerAPI::fopAcM_create(dStageProcess::fpcNm_TITLE_e, 0, 0, -1, 0, 0, -1, 0); /* TITLE */
+    } else if ((s16)gabi::at<base_process_class>(proc)->mProcName != dStageProcess::fpcNm_PLAY_SCENE_e) {
+        StagePlayerAPI::fopAcM_create(dStageProcess::fpcNm_TITLE_e, 0, 0, -1, 0, 0, -1, 0);
     }
     /* fopMsgM_Create(METER): HD: always, and no AGB */
-    u32 layer2 = fpcLy_CurrentLayer_l();
-    fpcSCtRq_Request_l(layer2, 0x1E1, 0, 0, 0);
+    u32 layer2 = StagePlayerAPI::fpcLy_CurrentLayer();
+    StagePlayerAPI::fpcSCtRq_Request(layer2, dStageProcess::fpcNm_METER_e, 0, 0, 0);
     return 1;
 }
 
-/* 025C1384: HD-changed: the player list count comes from the chunk (not the argument); an
- * unknown start point falls back to the first entry; the meter is always created and the
- * GBA (AGB) actor is gone */
-static s32 dStage_playerInit(u32 i_stage, u32 i_data, s32 num, u32 i_file) {
-    WWHD_FUNC(0x025C1384, s32, i_stage, i_data, num, i_file);
+// HD: the player list count comes from the chunk (not the argument); an unknown start point falls back to the first entry; the meter is always created and the GBA (AGB) actor is gone
+/* 025C1384 */
+static s32 dStage_playerInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 num, u32 i_file) {
     (void)num;
-    if (ld(dComIfGp_ea() + 0x5B2C) != 0) return 1;
-    u32 player = i_data + 4;
-    gabi::call_ptr(vfn(i_stage, 0x3C), i_stage, player); /* setPlayer */
-    u32 fn = vfn(i_stage, 0x4C);
-    u32 n = ld(i_data + 4);
-    gabi::call_ptr(fn, i_stage, n & 0xFFFF); /* setPlayerNum */
-    u32 appen = fopAcM_CreateAppend_l();
-    if (appen == 0) JUT_ASSERT_l(0x1005593C, 0x746, 0x10055948);
+    if (gabi::ea(dComIfGp_getPlayer(0)) != 0) return 1;
+    u32 player = gabi::ea(&i_data->m_entryNum);
+    gabi::call_ptr(i_stage->__vtbl->setPlayer.function.get(), i_stage, player);
+    u32 fn = i_stage->__vtbl->setPlayerNum.function.get();
+    u32 n = (u32)i_data->m_entryNum;
+    gabi::call_ptr(fn, i_stage, n & 0xFFFF);
+    u32 appen = StagePlayerAPI::fopAcM_CreateAppend();
+    if (appen == 0) StagePlayerAPI::reportAssert("d_stage.cpp", 0x746, "appen != (0)");
     u32 p = dComIfGp_ea();
-    s32 point = (s16)ld16(p + 0x513C);
-    u32 player_data = ld(i_data + 8);
-    u32 save = save_l();
-    u32 roomParam = ld(save + 0x116C);
+    s32 point = (s16)gabi::at<dComIfG_inf_c>(p)->play.mCurStage.mPoint;
+    u32 player_data = (u32)i_data->m_offset;
+    u32 save = dStage_getSaveBase();
+    u32 roomParam = gabi::at<dSv_info_c>(save + 0x20)->mRestart.mRestartParam;
     if (point == -2) {
         /* dStage_playerInitIkada / dStage_decodeSearchIkada */
-        u32 shipId = ld8(dComIfGp_ea() + 0x5D17);
+        u32 shipId = gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mIkadaShipId;
         u32 ikada = 0;
         bool found = false;
         if (i_file != 0) {
-            s32 cnt = (s32)ld(i_file);
+            s32 cnt = (s32)gabi::at<dStage_fileHeader>(i_file)->m_chunkCount;
             for (u32 i = 0; i < 13 && !found; i++) {
-                u32 tag = ld(0x10055880 + i * 8); /* "ACTR", "ACT0".."ACTb" */
+                u32 tag = l_actorTags.mTags[i].mTag; /* "ACTR", "ACT0".."ACTb" */
                 u32 node = i_file + 4;
                 for (s32 j = 0; j < cnt; j++, node += 0xC) {
-                    if (ld(node) != tag) continue;
-                    s32 en = (s32)ld(node + 4);
-                    u32 a = ld(node + 8);
+                    if (gabi::at<dStage_nodeHeader>(node)->m_tag != tag) continue;
+                    s32 en = (s32)(u32)gabi::at<dStage_nodeHeader>(node)->m_entryNum;
+                    u32 a = (u32)gabi::at<dStage_nodeHeader>(node)->m_offset;
                     for (s32 k = 0; k < en; k++, a += 0x20) {
-                        if (streq(a, 0x10055318) || streq(a, 0x10055320) || streq(a, 0x1005538C)) {
-                            if (shipId == ((ld(a + 8) >> 18) & 0xFF)) {
+                        if (dStage_nameMatches(a, "ikada_h") || dStage_nameMatches(a, "ikada_u") || dStage_nameMatches(a, "ikadaS")) {
+                            if (shipId == ((gabi::at<stage_actor_data_class>(a)->base.parameters >> 18) & 0xFF)) {
                                 ikada = a;
                                 found = true;
                                 break;
@@ -130,209 +94,206 @@ static s32 dStage_playerInit(u32 i_stage, u32 i_data, s32 num, u32 i_file) {
                 }
             }
         }
-        if (!found) JUT_ASSERT_l(0x100553F4, 0x6A3, 0x1005544C);
-        u32 roomNo = ld8(dComIfGp_ea() + 0x5D16);
-        st(appen, (roomNo | 0xFF000000) | 0x80);
-        PSMTXTrans_l(mDoMtx_stack_now, ldf(ikada + 0xC), ldf(ikada + 0x10), ldf(ikada + 0x14));
-        mDoMtx_YrotM_l(mDoMtx_stack_now, (s16)ld16(ikada + 0x1A));
-        gabi::Local<cXyz_l> offset;
-        gabi::Local<cXyz_l> pos;
+        // HD: this inlined raft check uses a separate copy of the source filename.
+        if (!found) StagePlayerAPI::reportAssert(l_ikadaSourceFile.mText, 0x6A3, "ikada_data != (0)");
+        u32 roomNo = gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mIkadaShipBeforeRoomId;
+        gabi::at<fopAcM_prm_class>(appen)->base.parameters = (roomNo | 0xFF000000) | 0x80;
+        StagePlayerAPI::PSMTXTrans(gabi::ea(mDoMtx_stack_c::get()), gabi::at<stage_actor_data_class>(ikada)->base.position.x, gabi::at<stage_actor_data_class>(ikada)->base.position.y, gabi::at<stage_actor_data_class>(ikada)->base.position.z);
+        StagePlayerAPI::mDoMtx_YrotM(gabi::ea(mDoMtx_stack_c::get()), (s16)gabi::at<stage_actor_data_class>(ikada)->base.angle.y);
+        gabi::Local<cXyz> offset;
+        gabi::Local<cXyz> pos;
         offset->x = 0.0f;
         offset->y = 87.0f;
         offset->z = 550.0f;
-        PSMTXMultVec_l(mDoMtx_stack_now, gabi::ea(offset.get()), gabi::ea(pos.get()));
-        daSea_execute_l(gabi::ea(pos.get()));
+        StagePlayerAPI::PSMTXMultVec(gabi::ea(mDoMtx_stack_c::get()), gabi::ea(offset.get()), gabi::ea(pos.get()));
+        StagePlayerAPI::daSea_execute(gabi::ea(pos.get()));
         f32 h = 0.0f;
-        if (daSea_ChkArea_l(ldf(ikada + 0xC), ldf(ikada + 0x14))) h = daSea_calcWave_l(ldf(ikada + 0xC), ldf(ikada + 0x14));
+        if (StagePlayerAPI::daSea_ChkArea(gabi::at<stage_actor_data_class>(ikada)->base.position.x, gabi::at<stage_actor_data_class>(ikada)->base.position.z)) h = StagePlayerAPI::daSea_calcWave(gabi::at<stage_actor_data_class>(ikada)->base.position.x, gabi::at<stage_actor_data_class>(ikada)->base.position.z);
         f32 y = pos->y;
         y = y + h;
         y = y + 500.0f;
         f32 x = pos->x;
         pos->y = y;
-        stf(appen + 4, x);
-        stf(appen + 8, y);
-        stf(appen + 0xC, (f32)pos->z);
-        u16 az = (u16)(ld8(ikada + 0x19) << 8);
-        u16 ay = ld16(ikada + 0x1A);
-        st16(appen + 0x10, 0);
-        st16(appen + 0x14, az);
-        st16(appen + 0x12, ay);
+        gabi::at<fopAcM_prm_class>(appen)->base.position.x = x;
+        gabi::at<fopAcM_prm_class>(appen)->base.position.y = y;
+        gabi::at<fopAcM_prm_class>(appen)->base.position.z = (f32)pos->z;
+        u16 az = (u16)((u8)gabi::at<stage_actor_data_class>(ikada)->base.angle.x << 8);
+        u16 ay = gabi::at<stage_actor_data_class>(ikada)->base.angle.y;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.x = 0;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.z = az;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.y = ay;
         return playerInit_tail(appen, player_data);
     }
     if (point == -3) {
-        st(appen, ld(save + 0x1284)); /* turn restart param */
-        u32 s = save_l();
-        st(appen + 4, ld(s + 0x1278));
-        st(appen + 8, ld(s + 0x127C));
-        st(appen + 0xC, ld(s + 0x1280));
-        s = save_l();
-        u16 ay = ld16(s + 0x1288);
-        st16(appen + 0x10, 0);
-        st16(appen + 0x12, ay);
-        st16(appen + 0x14, 0xFF00);
+        gabi::at<fopAcM_prm_class>(appen)->base.parameters = gabi::at<dSv_info_c>(save + 0x20)->mTurnRestart.mParam; /* turn restart param */
+        u32 s = dStage_getSaveBase();
+        gabi::at<dStage_actorBaseWords>(appen)->position[0] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mTurnRestart));
+        gabi::at<dStage_actorBaseWords>(appen)->position[1] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mTurnRestart.mPosition) + 4);
+        gabi::at<dStage_actorBaseWords>(appen)->position[2] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mTurnRestart.mPosition) + 8);
+        s = dStage_getSaveBase();
+        u16 ay = gabi::at<dSv_info_c>(s + 0x20)->mTurnRestart.mAngleY;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.x = 0;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.y = ay;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.z = 0xFF00;
         return playerInit_tail(appen, player_data);
     }
     if (point == -1) {
-        st(appen, roomParam);
-        u32 s = save_l();
-        st(appen + 4, ld(s + 0x1160));
-        st(appen + 8, ld(s + 0x1164));
-        st(appen + 0xC, ld(s + 0x1168));
-        s = save_l();
-        u16 ay = ld16(s + 0x115E);
-        st16(appen + 0x14, 0xFF00);
-        st16(appen + 0x12, ay);
-        st16(appen + 0x10, 0);
+        gabi::at<fopAcM_prm_class>(appen)->base.parameters = roomParam;
+        u32 s = dStage_getSaveBase();
+        gabi::at<dStage_actorBaseWords>(appen)->position[0] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mRestart.mRestartPos));
+        gabi::at<dStage_actorBaseWords>(appen)->position[1] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mRestart.mRestartPos) + 4);
+        gabi::at<dStage_actorBaseWords>(appen)->position[2] = gabi::load<u32>(gabi::ea(&gabi::at<dSv_info_c>(s + 0x20)->mRestart.mRestartPos) + 8);
+        s = dStage_getSaveBase();
+        u16 ay = gabi::at<dSv_info_c>(s + 0x20)->mRestart.mRestartAngle;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.z = 0xFF00;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.y = ay;
+        gabi::at<fopAcM_prm_class>(appen)->base.angle.x = 0;
         return playerInit_tail(appen, player_data);
     }
     u32 e = player_data;
     u32 i = 0;
     if ((s32)n > 0) {
         for (u32 c = n; c != 0; c--) {
-            if ((u32)ld8(e + 0x1D) == (u32)point) break;
+            if ((u32)gabi::load<u8>(e + 0x1D) == (u32)point) break;
             e += 0x20;
             i++;
         }
     }
     if (i == n) e = player_data; /* HD: not found -> the first entry (GameCube: assert) */
-    st(appen + 0, ld(e + 8));
-    st(appen + 4, ld(e + 0xC));
-    st(appen + 8, ld(e + 0x10));
-    st(appen + 0xC, ld(e + 0x14));
-    st(appen + 0x10, ld(e + 0x18));
-    st(appen + 0x14, ld(e + 0x1C));
+    dStage_copyActorBase(appen, e + offsetof(stage_actor_data_class, base));
     if (roomParam != 0) {
-        u32 prm = ld(appen);
-        if (((prm >> 12) & 0xF) != 2) st(appen, (roomParam & ~0x3Fu) | (prm & 0x3F));
+        u32 prm = gabi::at<fopAcM_prm_class>(appen)->base.parameters;
+        if (((prm >> 12) & 0xF) != 2) gabi::at<fopAcM_prm_class>(appen)->base.parameters = (roomParam & ~0x3Fu) | (prm & 0x3F);
     }
     return playerInit_tail(appen, e);
 }
-VERIFY(0x025C1384, dStage_playerInit);
 
-/* 025C1AD0: dStage_cameraInit, dStage_cameraCreate inlined (matcher: dStage_cameraCreate) */
-static s32 dStage_cameraInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1AD0, s32, i_stage, i_data, i_num, i_file);
-    gabi::call_ptr(vfn(i_stage, 0x1C), i_stage, i_data + 4); /* setCamera */
-    u32 prm = cMl_memalignB_l(-4, 0x18);
+// HD: dStage_cameraInit, dStage_cameraCreate inlined (matcher: dStage_cameraCreate)
+/* 025C1AD0 */
+static s32 dStage_cameraInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    gabi::call_ptr(i_stage->__vtbl->setCamera.function.get(), i_stage, gabi::ea(&i_data->m_entryNum));
+    u32 prm = StagePlayerAPI::cMl_memalignB(-4, 0x18);
     if (prm != 0) {
-        st(prm, 0);
-        stf(prm + 4, 0.0f);
-        stf(prm + 8, 0.0f);
-        fopCamM_Create_l(0, 0x1DC, prm);
+        gabi::at<fopAcM_prmBase_class>(prm)->parameters = 0;
+        gabi::at<fopAcM_prmBase_class>(prm)->position.x = 0.0f;
+        gabi::at<fopAcM_prmBase_class>(prm)->position.y = 0.0f;
+        StagePlayerAPI::fopCamM_Create(0, dStageProcess::fpcNm_CAMERA_e, prm);
     }
     return 1;
 }
-VERIFY(0x025C1AD0, dStage_cameraInit);
 
 /* 025C1B38 */
-static s32 dStage_RoomCameraInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1B38, s32, i_stage, i_data, i_num, i_file);
-    gabi::call_ptr(vfn(i_stage, 0x1C), i_stage, i_data + 4);
+static s32 dStage_RoomCameraInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    gabi::call_ptr(i_stage->__vtbl->setCamera.function.get(), i_stage, gabi::ea(&i_data->m_entryNum));
     return 1;
 }
-VERIFY(0x025C1B38, dStage_RoomCameraInit);
 
 /* 025C1B6C */
-static s32 dStage_arrowInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1B6C, s32, i_stage, i_data, i_num, i_file);
-    gabi::call_ptr(vfn(i_stage, 0x2C), i_stage, i_data + 4); /* setArrow */
+static s32 dStage_arrowInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    gabi::call_ptr(i_stage->__vtbl->setArrow.function.get(), i_stage, gabi::ea(&i_data->m_entryNum));
     return 1;
 }
-VERIFY(0x025C1B6C, dStage_arrowInit);
 
 /* 025C1BA0 */
 static s32 dStage_mapInfo_GetOceanX(u32 i_mapInfo) {
-    WWHD_FUNC(0x025C1BA0, s32, i_mapInfo);
-    s32 rt = ld8(i_mapInfo + 0x36) & 0xF;
+    s32 rt = gabi::at<stage_map_info_class>(i_mapInfo)->mOceanXZ & 0xF;
     if (rt & 8) return rt - 0x10;
     return rt;
 }
-VERIFY(0x025C1BA0, dStage_mapInfo_GetOceanX);
 
 /* 025C1BB8 */
 static s32 dStage_mapInfo_GetOceanZ(u32 i_mapInfo) {
-    WWHD_FUNC(0x025C1BB8, s32, i_mapInfo);
-    s32 rt = (ld8(i_mapInfo + 0x36) >> 4) & 0xF;
+    s32 rt = (gabi::at<stage_map_info_class>(i_mapInfo)->mOceanXZ >> 4) & 0xF;
     if (rt & 8) return rt - 0x10;
     return rt;
 }
-VERIFY(0x025C1BB8, dStage_mapInfo_GetOceanZ);
 
 /* 025C1BD4 */
-static s32 dStage_mapInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1BD4, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0x6C);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8)); /* setMapInfo(m_entries) */
-    gabi::call_ptr(vfn(i_stage, 0x84), i_stage, i_data + 4); /* setMapInfoBase */
+static s32 dStage_mapInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setMapInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
+    gabi::call_ptr(i_stage->__vtbl->setMapInfoBase.function.get(), i_stage, gabi::ea(&i_data->m_entryNum));
     return 1;
 }
-VERIFY(0x025C1BD4, dStage_mapInfoInit);
 
 /* 025C1C38 */
-static s32 dStage_paletInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1C38, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0x94);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+static s32 dStage_paletInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setPaletInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1C38, dStage_paletInfoInit);
 
 /* 025C1C6C */
-static s32 dStage_pselectInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1C6C, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0xA4);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+static s32 dStage_pselectInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setPselectInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1C6C, dStage_pselectInfoInit);
 
 /* 025C1CA0 */
-static s32 dStage_envrInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1CA0, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0xB4);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+static s32 dStage_envrInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setEnvrInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1CA0, dStage_envrInfoInit);
 
 /* 025C1CD4 */
-static s32 dStage_filiInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1CD4, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0x1D4); /* setFileListInfo */
+static s32 dStage_filiInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setFileListInfo.function.get();
     if (i_num == 0) gabi::call_ptr(fn, i_stage, 0u);
-    else gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+    else gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1CD4, dStage_filiInfoInit);
 
 /* 025C1D24 */
-static s32 dStage_vrboxInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1D24, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0xC4);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+static s32 dStage_vrboxInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setVrboxInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1D24, dStage_vrboxInfoInit);
 
 /* 025C1D58 */
-static s32 dStage_plightInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1D58, s32, i_stage, i_data, i_num, i_file);
-    u32 fn = vfn(i_stage, 0xD4);
-    gabi::call_ptr(fn, i_stage, ld(i_data + 8)); /* setPlightInfo */
-    gabi::call_ptr(vfn(i_stage, 0x124), i_stage, (u32)i_num); /* setPlightNumInfo */
+static s32 dStage_plightInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    u32 fn = i_stage->__vtbl->setPlightInfo.function.get();
+    gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
+    gabi::call_ptr(i_stage->__vtbl->setPlightNumInfo.function.get(), i_stage, (u32)i_num);
     return 1;
 }
-VERIFY(0x025C1D58, dStage_plightInfoInit);
 
 /* 025C1DBC */
-static s32 dStage_lgtvInfoInit(u32 i_stage, u32 i_data, s32 i_num, u32 i_file) {
-    WWHD_FUNC(0x025C1DBC, s32, i_stage, i_data, i_num, i_file);
-    gabi::call_ptr(vfn(i_stage, 0x144), i_stage, (u32)i_num); /* setLightVecInfoNum */
-    u32 fn = vfn(i_stage, 0x134); /* setLightVecInfo */
+static s32 dStage_lgtvInfoInit(dStage_dt_c* i_stage, dStage_nodeHeader* i_data, s32 i_num, u32 i_file) {
+    gabi::call_ptr(i_stage->__vtbl->setLightVecInfoNum.function.get(), i_stage, (u32)i_num);
+    u32 fn = i_stage->__vtbl->setLightVecInfo.function.get();
     if (i_num == 0) gabi::call_ptr(fn, i_stage, 0u);
-    else gabi::call_ptr(fn, i_stage, ld(i_data + 8));
+    else gabi::call_ptr(fn, i_stage, (u32)i_data->m_offset);
     return 1;
 }
-VERIFY(0x025C1DBC, dStage_lgtvInfoInit);
 
-} // namespace d_stage_2_cpp
+/* WWHD glue (tools/verify/autoglue.py): private ABI bindings
+data l_actorTags 10055880
+data l_ikadaSourceFile 100553F4
+str 10055318 in 025C1384
+str 10055320 in 025C1384
+str 1005538C in 025C1384
+
+str 1005544C in 025C1384
+str 1005593C in 025C1384
+str 10055948 in 025C1384
+str 10055958 in 025C1384
+ext 0273AA24 void StagePlayerAPI::reportAssert(const char* file, s32 line, const char* msg)
+ext 025D5600 u32 StagePlayerAPI::fopAcM_CreateAppend()
+ext 025DC80C u32 StagePlayerAPI::fopScnM_SearchByID(u32 id)
+ext 025D5834 u32 StagePlayerAPI::fopAcM_create(s32 proc, u32 prm, u32 pos, s32 room, u32 angle, u32 scale, s32 subtype, u32 cb)
+ext 025DED64 u32 StagePlayerAPI::fpcLy_CurrentLayer()
+ext 025E14A8 u32 StagePlayerAPI::fpcSCtRq_Request(u32 layer, s32 proc, u32 a2, u32 a3, u32 prm)
+ext 028E93CC void StagePlayerAPI::PSMTXTrans(u32 m, f32 x, f32 y, f32 z)
+ext 025F1C28 void StagePlayerAPI::mDoMtx_YrotM(u32 m, s16 y)
+ext 028E8F64 void StagePlayerAPI::PSMTXMultVec(u32 m, u32 in, u32 out)
+ext 0246C5C8 void StagePlayerAPI::daSea_execute(u32 pos)
+ext 0246B6A4 BOOL StagePlayerAPI::daSea_ChkArea(f32 x, f32 z)
+ext 0246BA0C f32 StagePlayerAPI::daSea_calcWave(f32 x, f32 z)
+ext 02019430 u32 StagePlayerAPI::cMl_memalignB(s32 align, u32 size)
+ext 025DA654 u32 StagePlayerAPI::fopCamM_Create(s32 idx, s32 proc, u32 prm)
+ext 025C1328 void StagePlayerAPI::dStage_startStage_c_set(u32 self, u32 name, u32 roomNo, s32 point, s32 layer)
+ext 025C1154 void StagePlayerAPI::dStage_actorCreate(u32 data, u32 prm)
+*/

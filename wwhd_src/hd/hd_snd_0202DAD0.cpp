@@ -1,238 +1,234 @@
-/* hd_snd_0202DAD0: two HD sound TUs (no GameCube source).
- *
- * 0202DAD0..0202DD2B: accessors of the HD sound player's NW4F objects (sead RTTI-checked; sound archive
- *                     +0x1C / sound heap +0x14 of 101F8BA8), NW4F sound id by name / by index; __sinit 0202DC98
- * 0202DD2C..0202EE07: the sound path strings: five FixedSafeString<256> statics (101FFE6C, 101FFF78,
- *                     10200084, 10200190, 1020029C) built by sead copy/append from the SafeString constants
- *                     101FFDF0..101FFE48 (set in the __sinit 0202EABC), their accessors, and companions
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD sound archive access and resource paths.
+ * GameCube-style source verified as hd_snd_0202DAD0; no GameCube counterpart. */
+#include "hd/hd_snd_0202DAD0.h"
 
-namespace hd_snd_0202DAD0 {
+static hdSound_playerGlobal_c sSoundPlayer = {};
+static u32 sArchiveTypeGuard = {};
+static u32 sHeapTypeGuard = {};
+static hdSound_typeInfo_c sArchiveType = {};
+static hdSound_typeInfo_c sHeapType = {};
+static hdSound_string_c sPathParts[12] = {};
+static hdSound_fixedString256_c sPaths[5] = {};
+enum PathPart { COMMON, CAFE, JP, EU, US, AUDIO_RES, JAUDIO_RES,
+                COMMON_ARCHIVE, INITIAL_FILE, BANKS, SEQUENCES, SOUND_INFO };
+enum SoundPath { ARCHIVE_PATH, INITIAL_FILE_PATH, BANKS_PATH, SEQUENCES_PATH, SOUND_INFO_PATH };
+static const u32 archiveTypeParent = 0x10004248;
+static const u32 heapTypeParent = 0x10004258;
+static const u32 safeStringVtable = 0x10004270;
+static const u32 fixedString256Vtable = 0x100042B8;
+static const u32 fixedString128Vtable = 0x100042E8;
 
-static inline u32 checked_obj(u32 field, u32 guard, u32 obj, u32 parent) {
-    u32 o = ld(ld(0x101F8BA8) + field);
-    if (ld(guard) == 0) {
-        st(guard, 1);
-        st(obj, parent);
+static hdSound_object_c* hdSound_checkedObject(hdSound_object_c* object, be<u32>* guard,
+                                              hdSound_typeInfo_c* type, u32 parent) {
+    if (!*guard) {
+        *guard = 1;
+        type->mParent = parent;
     }
-    if (o == 0) return 0;
-    if (gabi::call_ptr<u32>(vfn(o, 0, 0xC), o, obj) == 0) return 0;
-    return o;
+    if (!object) return nullptr;
+    if (!gabi::call_ptr<u32>(object->mVtable->mIsDerived, object, type)) return nullptr;
+    return object;
 }
 
-static u32 SndPlayer_archiveObj() {
-    WWHD_FUNC(0x0202DAD0, u32);
-    return checked_obj(0x1C, 0x101FD634, 0x101FD950, 0x10004248);
-}
-VERIFY(0x0202DAD0, SndPlayer_archiveObj);
-
-static u32 SndPlayer_heapObj() {
-    WWHD_FUNC(0x0202DB6C, u32);
-    return checked_obj(0x14, 0x101FD648, 0x101FD958, 0x10004258);
-}
-VERIFY(0x0202DB6C, SndPlayer_heapObj);
-
-static u32 SndPlayer_archive() {
-    WWHD_FUNC(0x0202DC08, u32);
-    u32 p = gabi::call<u32>(0x0202DAD0);
-    return gabi::call<u32>(0x02764774, ld(p + 0x144));
-}
-VERIFY(0x0202DC08, SndPlayer_archive);
-
-static u32 SndPlayer_idByName(u32 name) {
-    WWHD_FUNC(0x0202DC30, u32, name);
-    u32 a = gabi::call<u32>(0x0202DC08);
-    return gabi::call<u32>(0x0288E91C, a, name);
-}
-VERIFY(0x0202DC30, SndPlayer_idByName);
-
-static u32 SndPlayer_itemById(u32 id) {
-    WWHD_FUNC(0x0202DC64, u32, id);
-    u32 a = gabi::call<u32>(0x0202DC08);
-    return gabi::call<u32>(0x0288E914, a, id);
-}
-VERIFY(0x0202DC64, SndPlayer_itemById);
-
-static void sinit_0202DC98() {
-    WWHD_FUNC(0x0202DC98, void);
-    header_sinit(0x101FFDE0, 0x1018ECB4, 0x10004268);
-}
-VERIFY(0x0202DC98, sinit_0202DC98);
-
-/* sead BufferedSafeString::copy(src) into a buffer {data +0, vtable +4, capacity +8} */
-static inline void bs_copy(u32 d, u32 src) {
-    u32 fn = ld(ld(src + 4) + 0x14);
-    u32 dd = ld(d + 0);
-    gabi::call_ptr(fn, src);
-    s32 len = sstrlen(ld(src + 0));
-    s32 cap = (s32)ld(d + 8);
-    if (!(len < cap)) len = cap - 1;
-    sstr_assure(src);
-    gabi::call(OSBlockMove, dd, ld(src + 0), len, 0);
-    stb(dd + len, 0);
+/* 0202DAD0 */
+static hdSound_object_c* hdSound_getArchiveObject() {
+    return hdSound_checkedObject(sSoundPlayer.mpPlayer->mpArchive, &sArchiveTypeGuard, &sArchiveType, archiveTypeParent);
 }
 
-/* sead BufferedSafeString::append(src) */
-static inline void bs_append(u32 d, u32 src) {
-    u32 fn = ld(ld(d + 4) + 0x14);
-    u32 dd = ld(d + 0);
-    gabi::call_ptr(fn, d);
-    s32 cur = sstrlen(ld(d + 0));
-    s32 base = cur < 0 ? 0 : cur;
-    sstr_assure(src);
-    s32 n = sstrlen(ld(src + 0));
-    s32 room = (s32)ld(d + 8) - base;
-    if (!(n < room)) n = room - 1;
-    if (n <= 0) return;
-    sstr_assure(src);
-    gabi::call(OSBlockMove, dd + base, ld(src + 0), n, 0);
-    if (base + n > cur) stb(dd + base + n, 0);
+/* 0202DB6C */
+static hdSound_object_c* hdSound_getHeapObject() {
+    return hdSound_checkedObject(sSoundPlayer.mpPlayer->mpHeap, &sHeapTypeGuard, &sHeapType, heapTypeParent);
 }
 
-struct sbuf128_l { u8 b[0x8C]; };
-
-/* 0202DD2C: build the five sound path strings */
-static void SndPath_build() {
-    WWHD_FUNC(0x0202DD2C, void);
-    bs_copy(0x101FFE6C, 0x101FFDF0);
-    bs_append(0x101FFE6C, 0x101FFE18);
-    bs_append(0x101FFE6C, 0x101FFE28);
-    gabi::Local<sbuf128_l> t;
-    stb(t.a + 0x8B, 0);
-    st(t.a + 0, t.a + 0xC);
-    st(t.a + 8, 0x80);
-    stb(t.a + 0xC, 0);
-    st(t.a + 4, 0x100042E8);
-    bs_copy(t.a, 0x101FFDF8);
-    bs_append(t.a, 0x101FFE10);
-    bs_append(t.a, 0x101FFE18);
-    bs_append(t.a, 0x101FFE20);
-    bs_copy(0x101FFF78, t.a);
-    bs_append(0x101FFF78, 0x101FFE30);
-    bs_copy(0x10200084, t.a);
-    bs_append(0x10200084, 0x101FFE38);
-    bs_copy(0x10200190, t.a);
-    bs_append(0x10200190, 0x101FFE40);
-    bs_copy(0x1020029C, t.a);
-    bs_append(0x1020029C, 0x101FFE48);
+/* 0202DC08 */
+static void* hdSound_getArchive() {
+    hdSound_object_c* object = hdSound_getArchiveObject();
+    return hdSound_archiveFromHandle(object->mpArchiveHandle);
 }
-VERIFY(0x0202DD2C, SndPath_build);
 
-static u32 SndPath_0202EA80() {
-    WWHD_FUNC(0x0202EA80, u32);
-    return 0x101FFE6C;
+/* 0202DC30 */
+static u32 hdSound_getIdByName(void* name) {
+    void* archive = hdSound_getArchive();
+    return hdSound_archiveIdByName(archive, name);
 }
-VERIFY(0x0202EA80, SndPath_0202EA80);
 
-static u32 SndPath_0202EA8C() {
-    WWHD_FUNC(0x0202EA8C, u32);
-    return 0x101FFF78;
+/* 0202DC64 */
+static u32 hdSound_getItemById(u32 id) {
+    void* archive = hdSound_getArchive();
+    return hdSound_archiveItemById(archive, id);
 }
-VERIFY(0x0202EA8C, SndPath_0202EA8C);
 
-static u32 SndPath_0202EA98() {
-    WWHD_FUNC(0x0202EA98, u32);
-    return 0x10200084;
-}
-VERIFY(0x0202EA98, SndPath_0202EA98);
-
-static u32 SndPath_0202EAA4() {
-    WWHD_FUNC(0x0202EAA4, u32);
-    return 0x10200190;
-}
-VERIFY(0x0202EAA4, SndPath_0202EAA4);
-
-static u32 SndPath_0202EAB0() {
-    WWHD_FUNC(0x0202EAB0, u32);
-    return 0x1020029C;
-}
-VERIFY(0x0202EAB0, SndPath_0202EAB0);
-
-/* 0202EABC: __sinit (header statics, twelve SafeString constants, five FixedSafeString<256> statics) */
-static void sinit_0202EABC() {
-    WWHD_FUNC(0x0202EABC, void);
-    header_sinit(0x101FFE5C, 0x1018ECD8, 0x10004300);
-    static const u32 strs[][2] = {
-        {0x101FFDF0, 0x10004308}, {0x101FFE00, 0x10004310}, {0x101FFDF8, 0x1000431C}, {0x101FFE08, 0x10004314},
-        {0x101FFE10, 0x10004318}, {0x101FFE18, 0x1000434C}, {0x101FFE38, 0x1000432C}, {0x101FFE48, 0x10004340},
-        {0x101FFE40, 0x10004324}, {0x101FFE30, 0x10004334}, {0x101FFE28, 0x10004364}, {0x101FFE20, 0x10004358}};
-    for (auto& p : strs) {
-        st(p[0] + 4, 0x10004270);
-        st(p[0], p[1]);
+static s32 hdSound_stringLength(be<u8>* text) {
+    s32 length = 0;
+    if (!*text) return 0;
+    for (;;) {
+        ++length;
+        ++text;
+        // HD: the verified SafeString loop treats overlong strings as empty.
+        if (length > 0x40000) return 0;
+        if (!*text) return length;
     }
-    static const u32 bufs[] = {0x101FFE6C, 0x101FFF78, 0x10200084, 0x10200190, 0x1020029C};
+}
+
+static void hdSound_copy(hdSound_bufferedString_c* dest, hdSound_string_c* source) {
+    // HD: cache the destination buffer and source virtual before invoking it.
+    u32 assure = source->mVtable->mAssureTermination;
+    be<u8>* data = dest->mStringTop;
+    gabi::call_ptr<void>(assure, source);
+    s32 length = hdSound_stringLength(source->mStringTop);
+    s32 capacity = dest->mCapacity;
+    if (!(length < capacity)) length = capacity - 1;
+    source->assureTermination();
+    OSBlockMove(data, source->mStringTop, length, 0);
+    // HD: be<> indexing retains 32-bit guest-address wrap for a negative clamped length.
+    data[length] = 0;
+}
+
+static void hdSound_append(hdSound_bufferedString_c* dest, hdSound_string_c* source) {
+    u32 assure = dest->mVtable->mAssureTermination;
+    be<u8>* data = dest->mStringTop;
+    gabi::call_ptr<void>(assure, dest);
+    s32 current = hdSound_stringLength(dest->mStringTop);
+    s32 base = current < 0 ? 0 : current;
+    source->assureTermination();
+    s32 length = hdSound_stringLength(source->mStringTop);
+    s32 room = s32(u32(dest->mCapacity) - u32(base));
+    if (!(length < room)) length = room - 1;
+    if (length <= 0) return;
+    source->assureTermination();
+    OSBlockMove(data + base, source->mStringTop, length, 0);
+    if (base + length > current) data[base + length] = 0;
+}
+
+/* 0202DD2C */
+static void hdSound_buildPaths() {
+    hdSound_copy(&sPaths[ARCHIVE_PATH], &sPathParts[COMMON]);
+    hdSound_append(&sPaths[ARCHIVE_PATH], &sPathParts[AUDIO_RES]);
+    hdSound_append(&sPaths[ARCHIVE_PATH], &sPathParts[COMMON_ARCHIVE]);
+    gabi::Local<hdSound_fixedString128_c> base;
+    base->mBuffer[127] = 0;
+    base->mStringTop = base->mBuffer;
+    base->mCapacity = 128;
+    base->mBuffer[0] = 0;
+    base->setVtable(fixedString128Vtable);
+    hdSound_copy(base.get(), &sPathParts[CAFE]);
+    hdSound_append(base.get(), &sPathParts[US]);
+    hdSound_append(base.get(), &sPathParts[AUDIO_RES]);
+    hdSound_append(base.get(), &sPathParts[JAUDIO_RES]);
+    hdSound_copy(&sPaths[INITIAL_FILE_PATH], base.get());
+    hdSound_append(&sPaths[INITIAL_FILE_PATH], &sPathParts[INITIAL_FILE]);
+    hdSound_copy(&sPaths[BANKS_PATH], base.get());
+    hdSound_append(&sPaths[BANKS_PATH], &sPathParts[BANKS]);
+    hdSound_copy(&sPaths[SEQUENCES_PATH], base.get());
+    hdSound_append(&sPaths[SEQUENCES_PATH], &sPathParts[SEQUENCES]);
+    hdSound_copy(&sPaths[SOUND_INFO_PATH], base.get());
+    hdSound_append(&sPaths[SOUND_INFO_PATH], &sPathParts[SOUND_INFO]);
+}
+
+/* 0202EA80 */
+static hdSound_fixedString256_c* hdSound_getArchivePath() { return &sPaths[ARCHIVE_PATH]; }
+/* 0202EA8C */
+static hdSound_fixedString256_c* hdSound_getInitialFilePath() { return &sPaths[INITIAL_FILE_PATH]; }
+/* 0202EA98 */
+static hdSound_fixedString256_c* hdSound_getBanksPath() { return &sPaths[BANKS_PATH]; }
+/* 0202EAA4 */
+static hdSound_fixedString256_c* hdSound_getSequencesPath() { return &sPaths[SEQUENCES_PATH]; }
+/* 0202EAB0 */
+static hdSound_fixedString256_c* hdSound_getInfoPath() { return &sPaths[SOUND_INFO_PATH]; }
+
+/* ---------------- HD: compiler-generated companion code ---------------- */
+
+/* 0202DC98 */
+static void __sinit_hd_sound_player_cpp() {
+    sinit_header_statics_rodata(0x101FFDD4, 0x1018ECB4, 0x101FFDE0, 0x10004268);
+}
+
+static void hdSound_initPathPart(PathPart part, const char* text) {
+    sPathParts[part].setVtable(safeStringVtable);
+    sPathParts[part].setText(text);
+}
+
+/* 0202EABC */
+static void __sinit_hd_sound_paths_cpp() {
+    sinit_header_statics_rodata(0x101FFE50, 0x1018ECD8, 0x101FFE5C, 0x10004300);
+    hdSound_initPathPart(COMMON, "Common/");
+    hdSound_initPathPart(JP, "JP/");
+    hdSound_initPathPart(CAFE, "Cafe/");
+    hdSound_initPathPart(EU, "EU/");
+    hdSound_initPathPart(US, "US/");
+    hdSound_initPathPart(AUDIO_RES, "Audiores/");
+    hdSound_initPathPart(BANKS, "Banks/");
+    hdSound_initPathPart(SOUND_INFO, "JaiInfo.asn");
+    hdSound_initPathPart(SEQUENCES, "Seqs/");
+    hdSound_initPathPart(INITIAL_FILE, "JaiInit.aaf");
+    hdSound_initPathPart(COMMON_ARCHIVE, "c_king.bfsar");
+    hdSound_initPathPart(JAUDIO_RES, "JAudioRes/");
     for (u32 i = 0; i < 5; ++i) {
-        u32 d = bufs[i];
-        stb(d + 0xC, 0);
-        stb(d + 0x10B, 0);
-        st(d + 0, d + 0xC);
-        st(d + 8, 0x100);
-        st(d + 4, 0x100042B8);
-        gabi::call(0x028F026C, 0x1018ECFC + i * 0xC);
+        hdSound_fixedString256_c* path = &sPaths[i];
+        path->mBuffer[0] = 0;
+        path->mBuffer[255] = 0;
+        path->mStringTop = path->mBuffer;
+        path->mCapacity = 256;
+        path->setVtable(fixedString256Vtable);
+        __register_global_object(0x1018ECFC + i * 0xC);
     }
 }
-VERIFY(0x0202EABC, sinit_0202EABC);
 
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202ED74, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+// HD: six deleting template companions share this body; their exact specializations are unconfirmed.
+/* 0202ED74 */
+static void hdSound_destroyStringStorageA(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202ED74, Comp_dt1);
-
-static void SafeString_assureNone() {
-    WWHD_FUNC(0x0202ED88, void);
+/* 0202ED88 */
+static void hdSound_assureNone() {}
+/* 0202ED8C */
+static void hdSound_assureTermination(hdSound_bufferedString_c* i_this) {
+    be<u8>* data = i_this->mStringTop;
+    u32 capacity = i_this->mCapacity;
+    data[capacity - 1] = 0;
 }
-VERIFY(0x0202ED88, SafeString_assureNone);
-
-/* sead BufferedSafeString::assureTerminationImpl_ instance */
-static void SafeString_assureTermination(u32 self) {
-    WWHD_FUNC(0x0202ED8C, void, self);
-    stb(ld(self + 0) + ld(self + 8) - 1, 0);
+/* 0202EDA4 */
+static void hdSound_destroyStringStorageB(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202ED8C, SafeString_assureTermination);
-
-static void Comp_dt2(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EDA4, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EDB8 */
+static void hdSound_destroyStringStorageC(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202EDA4, Comp_dt2);
-
-static void Comp_dt3(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EDB8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EDCC */
+static void hdSound_destroyStringStorageD(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202EDB8, Comp_dt3);
-
-static void Comp_dt4(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EDCC, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EDE0 */
+static void hdSound_destroyStringStorageE(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202EDCC, Comp_dt4);
-
-static void Comp_dt5(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EDE0, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EDF4 */
+static void hdSound_destroyStringStorageF(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0202EDE0, Comp_dt5);
 
-static void Comp_dt6(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EDF4, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x0202EDF4, Comp_dt6);
-
-}  // namespace hd_snd_0202DAD0
+/* WWHD glue
+data sSoundPlayer 101F8BA8 nocheck
+data sArchiveTypeGuard 101FD634 nocheck
+data sHeapTypeGuard 101FD648 nocheck
+data sArchiveType 101FD950 nocheck
+data sHeapType 101FD958 nocheck
+data sPathParts 101FFDF0 nocheck
+data sPaths 101FFE6C nocheck
+str 10004308 "Common/"
+str 10004310 "JP/"
+str 1000431C "Cafe/"
+str 10004314 "EU/"
+str 10004318 "US/"
+str 1000434C "Audiores/"
+str 1000432C "Banks/"
+str 10004340 "JaiInfo.asn"
+str 10004324 "Seqs/"
+str 10004334 "JaiInit.aaf"
+str 10004364 "c_king.bfsar"
+str 10004358 "JAudioRes/"
+ext 02764774 void* hdSound_archiveFromHandle(void* handle)
+ext 0288E91C u32 hdSound_archiveIdByName(void* archive, void* name)
+ext 0288E914 u32 hdSound_archiveItemById(void* archive, u32 id)
+ext C0009988 void OSBlockMove(be<u8>* dest, be<u8>* source, s32 size, u32 flags)
+*/

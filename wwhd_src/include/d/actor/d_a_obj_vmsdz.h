@@ -1,14 +1,18 @@
+/* Master Sword pedestal, WWHD members +0x11C from GameCube. */
 #pragma once
-#include "bindings.h"
-// HD preserves the GC order: model, then the resource phase.
-struct daObjVmsdz_c : fopAc_ac_c {
-    gptr<J3DModel> mModel;
-    request_of_phase_process_class mPhs;
+#include "gc_api/gc_api.h"
+class daObjVmsdz_c : public fopAc_ac_c {
+public:
+    daObjVmsdz_c();
+    enum : u32 { __vt = 0x10032E84 };
     BOOL create_heap();
+    cPhs_State _create();
+    bool _delete();
     void init_mtx();
-    s32 _create();
-    BOOL _delete();
-    BOOL _draw();
+    bool _draw();
+    static const char M_arcname[];
+    /* 0x3AC */ gptr<J3DModel> mModel;
+    /* 0x3B0 */ request_of_phase_process_class mPhs;
 };
 WWHD_OFFSET(daObjVmsdz_c, mModel, 0x3AC);
 WWHD_OFFSET(daObjVmsdz_c, mPhs, 0x3B0);

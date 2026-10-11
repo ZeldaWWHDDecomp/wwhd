@@ -1,99 +1,267 @@
-#include "d_kankyo_rain_private.h"
+/* Weather particles.
+ * HD: shader uniforms and double-buffered geometry replace immediate GX rendering.
+ */
+// HD: shader uniforms and cached double-buffered geometry replace GX draws.
+#include "d/d_kankyo_rain_cloudShadowMove.h"
+using namespace RainReadable;
 namespace d_kankyo_rain_cpp {
-static void cloudShadowMove() {
-    WWHD_FUNC(0x0256BB6C,void);
-    u32 packet=ld(environment()+0xA84),camera=ld(gameInfo()+0x5AF8);
-    gabi::Local<Vec_l> wind,center,position,pointWind,outputWind;
-    gabi::Local<Matrix_l> inverse;
-    gabi::call(0x0257DB28,wind.get());gameInfo();f32 power=gabi::call<f32>(0x02578348);
-    if(ld(gameInfo()+0x5FA4)==0)return;
-    gabi::call(0x028E91EC,ld(gameInfo()+0x5FA4)+0x1E4,inverse.get());
-    if((s32)ld(packet+0x9C)>(s32)ld(environment()+0xA80)) {if(ld(packet+0x9C)==0)return;}
-    else {s16 wanted=gabi::load<s16>(environment()+0xA82);gabi::store<u32>(packet+0x9C,(s32)wanted);if(wanted==0)return;}
-    f32 depth=lf(0x1004F8C0);gabi::call(0x0256401C,camera,center.get(),depth,depth);
-    u16 globalPhase=gabi::load<u16>(packet+0x988);
-    f32 decay=gabi::fmadds(lf(0x1004F56C),power,lf(0x1004F56C));
-    f32 counter=gabi::fsubs_ppc(lf(packet+0x98C),decay),zero=lf(0x1004F528);
-    f32 globalSine=lf(0x104A44F8+(globalPhase>>3)*8);
-    gabi::store<u16>(packet+0x988,globalPhase+0x104);
-    if(counter<zero)counter=lf(0x1004F8C4);sf(packet+0x98C,counter);
-    if((s32)ld(packet+0x9C)<=0)return;
-    f32 countStep=gabi::fmadds(lf(0x1004F538),power,lf(0x1004F8D8));
-    u16 phaseStep=(u16)gabi::ftoi(countStep);
-    const f32 small=lf(0x1004F588),blend=lf(0x1004F554),wrapMul=lf(0x1004F8D4),pointMin=lf(0x1004F724),one=lf(0x1004F550),half=lf(0x1004F57C),radius=lf(0x1004F8C8);
-    f32 alphaScale=gabi::fmadds(gabi::fadds_ppc(globalSine,one),lf(0x1004F8CC),lf(0x1004F8D0));
-    const f32 jitter=lf(0x1004F590),initRadius=lf(0x1004F598),phaseMax=lf(0x1004F6D8),innerRadius=lf(0x1004F8DC),pointThreshold=lf(0x1004F728),pointGain=lf(0x1004F72C),scatter=lf(0x1004F544);
-    auto stageEquals=[&](u32 literal,bool ignore=false) {
-        gabi::Local<SafeString_l> name,current;
-        name->text=literal;name->vtable=0x1004F3AC;current->text=gameInfo()+0x5134;current->vtable=0x1004F3AC;
-        safe_string_callback(name.get());safe_string_callback(name.get());u32 left=name->text;safe_string_callback(current.get());u32 right=current->text;
-        bool equal=left==right||equal_terminated_strings(left,right);(void)ignore;return equal;
-    };
-    auto sumPosition=[&](u32 p){position->x=gabi::fadds_ppc(lf(p+0x10),lf(p+4));position->y=gabi::fadds_ppc(lf(p+0x14),lf(p+8));position->z=gabi::fadds_ppc(lf(p+0x18),lf(p+12));};
-    auto copyCenter=[&](u32 p){for(u32 off=0;off<12;off+=4)gabi::store<u32>(p+0x10+off,ld(gabi::ea(center.get())+off));};
-    auto distance=[&](u32 a,u32 b){gabi::call(0x028E8DE8,a,b);return gabi::call<f32>(0x028F4384);};
-    for(s32 i=0;i<(s32)ld(packet+0x9C);++i) {
-        u32 p=packet+0xA0+(u32)i*76;u8 state=gabi::load<u8>(p);
-        if(state==0) {
-            f32 size=gabi::fadds_ppc(gabi::call<f32>(0x020198D8,initRadius),lf(0x1004F8E0));sf(p+0x48,size);sf(p+0x44,size);copyCenter(p);
-            sf(p+4,gabi::call<f32>(0x02019918,radius));sf(p+8,gabi::call<f32>(0x02019918,radius));sf(p+12,gabi::call<f32>(0x02019918,radius));
-            f32 speed=gabi::fadds_ppc(gabi::call<f32>(0x020198D8,lf(0x1004F584)),lf(0x1004F8E4));sf(p+0x38,speed);sf(p+0x40,zero);
-            gabi::store<u16>(p+0x3C,(u16)gabi::ftoi(gabi::call<f32>(0x020198D8,lf(0x1004F59C))));
-            sf(p+0x28,gabi::call<f32>(0x020198D8,phaseMax));sf(p+0x2C,gabi::call<f32>(0x020198D8,phaseMax));sf(p+0x30,gabi::call<f32>(0x020198D8,phaseMax));
-            gabi::store<u8>(p,gabi::load<u8>(p)+1);sf(p+0x1C,zero);sf(p+0x20,zero);sf(p+0x24,zero);
-        }
-        if(state<=2) {
-            sumPosition(p);gabi::store<u16>(p+0x3C,gabi::load<u16>(p+0x3C)+phaseStep);
-            gabi::call(0x0200F5C8,p+0x34,lf(p+0x38),lf(0x1004F808));
-            u8 mode=gabi::load<u8>(environment()+0xA7D);
-            if(mode&1) {
-                bool ordinary=!stageEquals(0x1004F900)||gabi::load<u8>(environment()+0x109E)!=0;
-                if(ordinary) {
-                    if(gabi::load<u8>(environment()+0xA7D)==1)sf(p+8,gabi::fmadds(lf(0x1004F730),lf(p+0x38),lf(p+8)));
-                }else sf(p+8,gabi::fadds_ppc(lf(p+8),lf(p+0x38)));
-            }
-            f32 speed=gabi::load<u8>(environment()+0xA7D)==1?lf(0x1004F5B4):lf(0x1004F8E8);
-            f32 windSpeed=lf(p+0x38);
-            sf(p+4,gabi::fmadds(gabi::fmuls_ppc((f32)wind->x,speed),windSpeed,lf(p+4)));
-            sf(p+8,gabi::fmadds(gabi::fmuls_ppc((f32)wind->y,speed),windSpeed,lf(p+8)));
-            sf(p+12,gabi::fmadds(gabi::fmuls_ppc((f32)wind->z,speed),windSpeed,lf(p+12)));
-            gabi::call(0x0257E128,outputWind.get(),position.get());
-            pointWind->x=outputWind->x;pointWind->y=outputWind->y;pointWind->z=outputWind->z;
-            for(u32 off=0;off<12;off+=4)if(lf(p+0x1C+off)<pointThreshold)sf(p+0x1C+off,gabi::fmadds(lf(gabi::ea(pointWind.get())+off),pointGain,lf(p+0x1C+off)));
-            for(u32 off=0;off<12;off+=4)gabi::call(0x0200ECD4,p+0x1C+off,zero,blend,small,pointMin);
-            for(u32 off=0;off<12;off+=4) {f32 factor=gabi::fadds_ppc(gabi::call<f32>(0x02019918,jitter),one);sf(p+4+off,gabi::fmadds(lf(p+0x1C+off),factor,lf(p+4+off)));}
-            stageEquals(0x1004F910,true);
-            bool special=stageEquals(0x1004F908);
-            f32 wanderSpeed=gabi::fmuls_ppc(speed,special?initRadius:lf(0x1004F584));
-            for(u32 off=0;off<12;off+=4)sf(p+4+off,gabi::fmadds(gabi::fsubs_ppc(lf(p+0x28+off)/phaseMax,half),wanderSpeed,lf(p+4+off)));
-            copyCenter(p);sumPosition(p);
-            if(distance(gabi::ea(position.get()),gabi::ea(center.get()))>lf(0x1004F8EC)) {
-                copyCenter(p);gabi::call(0x02563F0C,position.get(),center.get(),pointWind.get());
-                for(u32 off=0;off<12;off+=4){f32 random=gabi::call<f32>(0x02019918,scatter);sf(gabi::ea(pointWind.get())+off,gabi::fadds_ppc(lf(gabi::ea(pointWind.get())+off),random));}
-                for(u32 off=0;off<12;off+=4)sf(p+4+off,gabi::fmuls_ppc(gabi::fmuls_ppc(lf(gabi::ea(pointWind.get())+off),radius),wrapMul));
-                sf(p+0x40,zero);
-            }
-            sumPosition(p);
-        }else {if(state==3)gabi::store<u8>(p,0);sumPosition(p);}
-        f32 viewFactor=lf(ld(gameInfo()+0x5FA4)+0xD4)/lf(0x1004F7F8);if(viewFactor>one)viewFactor=one;
-        f32 cameraDistance=distance(gabi::ea(position.get()),camera+0xDC)/lf(0x1004F8F0);
-        f32 sine=lf(0x104A44F8+(gabi::load<u16>(p+0x3C)>>3)*8),baseSize=lf(p+0x48);
-        f32 animated=gabi::fmadds(gabi::fmuls_ppc(baseSize,blend),sine,baseSize);
-        sf(p+0x44,gabi::fmuls_ppc(gabi::fmuls_ppc(animated,gabi::fmadds(cameraDistance,lf(0x1004F8F4),one)),viewFactor));
-        f32 dist=distance(gabi::ea(position.get()),gabi::ea(center.get())),alpha=one;
-        if(dist<radius) {if(dist>innerRadius)alpha=gabi::fsubs_ppc(one,gabi::fsubs_ppc(dist,innerRadius)/lf(0x1004F8F8));}
-        else alpha=zero;
-        alpha=gabi::fmuls_ppc(gabi::fmuls_ppc(gabi::fmuls_ppc(alpha,alpha),alpha),cameraDistance);
-        alpha=gabi::fmuls_ppc(alpha,alphaScale);
-        f32 limit=lf(0x1004F8FC);
-        if(gabi::load<u8>(environment()+0xA7D)==3)limit=blend;
-        else if(gabi::load<u8>(environment()+0xA7D)==4)limit=lf(0x1004F734);
-        if(i>(s32)(ld(environment()+0xA80)-1)) {
-            alpha=zero;
-            if(lf(p+0x40)<lf(0x1004F58C)&&(u32)i==ld(packet+0x9C)-1)gabi::store<u32>(packet+0x9C,ld(packet+0x9C)-1);
-        }
-        sf(p+0x40,gabi::fmuls_ppc(alpha,limit));
+/* 0256BB6C */
+static void cloud_shadow_move() {
+  u32 packet = (u32)view<Environment>(environment())->mpMoyaPacket,
+      camera = (u32)view<GameInfo>(gameInfo())->camera;
+  gabi::Local<cXyz> wind, center, position, pointWind, outputWind;
+  gabi::Local<Matrix> inverse;
+  sdk::getWindVectorPower<void>(wind.get());
+  gameInfo();
+  f32 power = sdk::getWindPower<f32>();
+  if ((u32)view<GameInfo>(gameInfo())->view == 0)
+    return;
+  sdk::MTXInverse<void>(
+      gabi::ea(&view<View>(view<GameInfo>(gameInfo())->view)->rotation),
+      inverse.get());
+  if ((s32)(u32)view<dKankyo_cloud_Packet>(packet)->mCount >
+      (s32)(u32)view<Environment>(environment())->mMoyaCount) {
+    if ((u32)view<dKankyo_cloud_Packet>(packet)->mCount == 0)
+      return;
+  } else {
+    s16 wanted = (s16)view<Environment>(environment())->moyaCountParts.low;
+    view<dKankyo_cloud_Packet>(packet)->mCount = (s32)wanted;
+    if (wanted == 0)
+      return;
+  }
+  f32 depth = (f32)constant(CloudDepth);
+  sdk::setEyeVector<void>(camera, center.get(), depth, depth);
+  u16 globalPhase = (u16)view<dKankyo_cloud_Packet>(packet)->mAnimCounter;
+  f32 decay =
+      gabi::fmadds((f32)constant(WindDecay), power, (f32)constant(WindDecay));
+  f32 counter =
+          gabi::fsubs_ppc((f32)view<dKankyo_cloud_Packet>(packet)->mRot, decay),
+      zero = (f32)constant(Zero);
+  f32 globalSine = sampleSine(globalPhase);
+  view<dKankyo_cloud_Packet>(packet)->mAnimCounter = globalPhase + 0x104;
+  if (counter < zero)
+    counter = (f32)constant(CloudRotationWrap);
+  view<dKankyo_cloud_Packet>(packet)->mRot = counter;
+  if ((s32)(u32)view<dKankyo_cloud_Packet>(packet)->mCount <= 0)
+    return;
+  f32 countStep = gabi::fmadds((f32)constant(CloudPhasePower), power,
+                               (f32)constant(CloudPhaseBase));
+  u16 phaseStep = (u16)gabi::ftoi(countStep);
+  const f32 small = (f32)constant(CloudPointStep),
+            blend = (f32)constant(CloudBlend),
+            wrapMul = (f32)constant(CloudWrapScale),
+            pointMin = (f32)constant(CloudPointMinimum),
+            one = (f32)constant(One), half = (f32)constant(CloudHalf),
+            radius = (f32)constant(CloudRadius);
+  f32 alphaScale = gabi::fmadds(gabi::fadds_ppc(globalSine, one),
+                                (f32)constant(CloudAlphaScale),
+                                (f32)constant(CloudAlphaBias));
+  const f32 jitter = (f32)constant(CloudJitter),
+            initRadius = (f32)constant(CloudInitialJitter),
+            phaseMax = (f32)constant(CloudWanderPhase),
+            innerRadius = (f32)constant(CloudInnerRadius),
+            pointThreshold = (f32)constant(CloudPointThreshold),
+            pointGain = (f32)constant(CloudPointGain),
+            scatter = (f32)constant(CloudScatter);
+  auto stageEquals = [&](u32 literal, bool ignore = false) {
+    gabi::Local<SafeString> name, current;
+    name->text = literal;
+    name->vtable = StringVtable;
+    current->text = gameInfo() + 0x5134;
+    current->vtable = StringVtable;
+    safeStringCallback(name.get());
+    safeStringCallback(name.get());
+    u32 left = name->text;
+    safeStringCallback(current.get());
+    u32 right = current->text;
+    bool equal = left == right || equalTerminatedStrings(left, right);
+    (void)ignore;
+    return equal;
+  };
+  auto sumPosition = [&](u32 p) {
+    position->x = gabi::fadds_ppc((f32)view<CLOUD_EFF>(p)->mBasePos.x,
+                                  (f32)view<CLOUD_EFF>(p)->mPos.x);
+    position->y = gabi::fadds_ppc((f32)view<CLOUD_EFF>(p)->mBasePos.y,
+                                  (f32)view<CLOUD_EFF>(p)->mPos.y);
+    position->z = gabi::fadds_ppc((f32)view<CLOUD_EFF>(p)->mBasePos.z,
+                                  (f32)view<CLOUD_EFF>(p)->mPos.z);
+  };
+  auto copyCenter = [&](u32 p) {
+    for (u32 off = 0; off < 12; off += 4)
+      wordAxis(&view<CLOUD_EFF>(p)->mBasePos, off / 4) =
+          (u32)wordAxis(center.get(), off / 4);
+  };
+  auto distance = [&](u32 a, u32 b) {
+    sdk::distanceSquared<void>(a, b);
+    return sdk::squareRoot<f32>();
+  };
+  for (s32 i = 0; i < (s32)(u32)view<dKankyo_cloud_Packet>(packet)->mCount;
+       ++i) {
+    u32 p = gabi::ea(&view<dKankyo_cloud_Packet>(packet)->mEff[i]);
+    u8 state = (u8)view<CLOUD_EFF>(p)->mStatus;
+    if (state == ParticleUninitialized) {
+      f32 size = gabi::fadds_ppc(sdk::randomF<f32>(initRadius),
+                                 (f32)constant(CloudSizeBias));
+      view<CLOUD_EFF>(p)->mInitialSize = size;
+      view<CLOUD_EFF>(p)->mSize = size;
+      copyCenter(p);
+      view<CLOUD_EFF>(p)->mPos.x = sdk::randomFX<f32>(radius);
+      view<CLOUD_EFF>(p)->mPos.y = sdk::randomFX<f32>(radius);
+      view<CLOUD_EFF>(p)->mPos.z = sdk::randomFX<f32>(radius);
+      f32 speed = gabi::fadds_ppc(
+          sdk::randomF<f32>((f32)constant(CloudSpeedRandomRange)),
+          (f32)constant(CloudSpeedBias));
+      view<CLOUD_EFF>(p)->mWindSpeed = speed;
+      view<CLOUD_EFF>(p)->mAlpha = zero;
+      view<CLOUD_EFF>(p)->mAnimCounter =
+          (u16)gabi::ftoi(sdk::randomF<f32>((f32)constant(CloudCounterMax)));
+      view<CLOUD_EFF>(p)->mVelRndm.x = sdk::randomF<f32>(phaseMax);
+      view<CLOUD_EFF>(p)->mVelRndm.y = sdk::randomF<f32>(phaseMax);
+      view<CLOUD_EFF>(p)->mVelRndm.z = sdk::randomF<f32>(phaseMax);
+      view<CLOUD_EFF>(p)->mStatus = (u8)view<CLOUD_EFF>(p)->mStatus + 1;
+      view<CLOUD_EFF>(p)->mPntWindVel.x = zero;
+      view<CLOUD_EFF>(p)->mPntWindVel.y = zero;
+      view<CLOUD_EFF>(p)->mPntWindVel.z = zero;
     }
+    if (state <= ParticleSettled) {
+      sumPosition(p);
+      view<CLOUD_EFF>(p)->mAnimCounter =
+          (u16)view<CLOUD_EFF>(p)->mAnimCounter + phaseStep;
+      sdk::chaseF<void>(gabi::ea(&view<CLOUD_EFF>(p)->field_0x34),
+                        (f32)view<CLOUD_EFF>(p)->mWindSpeed,
+                        (f32)constant(RainAlphaScale));
+      u8 mode = (u8)view<Environment>(environment())->mMoyaMode;
+      if (mode & 1) {
+        bool ordinary =
+            !stageEquals(StageDragon) ||
+            (u8)view<Environment>(environment())->mbVrboxInvisible != 0;
+        if (ordinary) {
+          if ((u8)view<Environment>(environment())->mMoyaMode == 1)
+            view<CLOUD_EFF>(p)->mPos.y =
+                gabi::fmadds((f32)constant(CloudVerticalGain),
+                             (f32)view<CLOUD_EFF>(p)->mWindSpeed,
+                             (f32)view<CLOUD_EFF>(p)->mPos.y);
+        } else
+          view<CLOUD_EFF>(p)->mPos.y =
+              gabi::fadds_ppc((f32)view<CLOUD_EFF>(p)->mPos.y,
+                              (f32)view<CLOUD_EFF>(p)->mWindSpeed);
+      }
+      f32 speed = (u8)view<Environment>(environment())->mMoyaMode == 1
+                      ? (f32)constant(CloudMode1Speed)
+                      : (f32)constant(CloudNormalSpeed);
+      f32 windSpeed = (f32)view<CLOUD_EFF>(p)->mWindSpeed;
+      view<CLOUD_EFF>(p)->mPos.x =
+          gabi::fmadds(gabi::fmuls_ppc((f32)wind->x, speed), windSpeed,
+                       (f32)view<CLOUD_EFF>(p)->mPos.x);
+      view<CLOUD_EFF>(p)->mPos.y =
+          gabi::fmadds(gabi::fmuls_ppc((f32)wind->y, speed), windSpeed,
+                       (f32)view<CLOUD_EFF>(p)->mPos.y);
+      view<CLOUD_EFF>(p)->mPos.z =
+          gabi::fmadds(gabi::fmuls_ppc((f32)wind->z, speed), windSpeed,
+                       (f32)view<CLOUD_EFF>(p)->mPos.z);
+      sdk::getPointWindVectorPower<void>(outputWind.get(), position.get());
+      pointWind->x = outputWind->x;
+      pointWind->y = outputWind->y;
+      pointWind->z = outputWind->z;
+      for (u32 off = 0; off < 12; off += 4)
+        if ((f32)vectorComponent(&view<CLOUD_EFF>(p)->mPntWindVel, off / 4) <
+            pointThreshold)
+          vectorComponent(&view<CLOUD_EFF>(p)->mPntWindVel, off / 4) =
+              gabi::fmadds((f32)vectorComponent(pointWind.get(), off / 4),
+                           pointGain,
+                           (f32)vectorComponent(
+                               &view<CLOUD_EFF>(p)->mPntWindVel, off / 4));
+      for (u32 off = 0; off < 12; off += 4)
+        sdk::addCalc<void>(gabi::ea(&vectorComponent(
+                               &view<CLOUD_EFF>(p)->mPntWindVel, off / 4)),
+                           zero, blend, small, pointMin);
+      for (u32 off = 0; off < 12; off += 4) {
+        f32 factor = gabi::fadds_ppc(sdk::randomFX<f32>(jitter), one);
+        vectorComponent(&view<CLOUD_EFF>(p)->mPos, off / 4) = gabi::fmadds(
+            (f32)vectorComponent(&view<CLOUD_EFF>(p)->mPntWindVel, off / 4),
+            factor, (f32)vectorComponent(&view<CLOUD_EFF>(p)->mPos, off / 4));
+      }
+      stageEquals(StageKaze, true);
+      bool special = stageEquals(StageAdanmae);
+      f32 wanderSpeed = gabi::fmuls_ppc(
+          speed, special ? initRadius : (f32)constant(CloudSpeedRandomRange));
+      for (u32 off = 0; off < 12; off += 4)
+        vectorComponent(&view<CLOUD_EFF>(p)->mPos, off / 4) = gabi::fmadds(
+            gabi::fsubs_ppc(
+                (f32)vectorComponent(&view<CLOUD_EFF>(p)->mVelRndm, off / 4) /
+                    phaseMax,
+                half),
+            wanderSpeed,
+            (f32)vectorComponent(&view<CLOUD_EFF>(p)->mPos, off / 4));
+      copyCenter(p);
+      sumPosition(p);
+      if (distance(gabi::ea(position.get()), gabi::ea(center.get())) >
+          (f32)constant(CloudWrapDistance)) {
+        copyCenter(p);
+        sdk::getVector<void>(position.get(), center.get(), pointWind.get());
+        for (u32 off = 0; off < 12; off += 4) {
+          f32 random = sdk::randomFX<f32>(scatter);
+          vectorComponent(pointWind.get(), off / 4) = gabi::fadds_ppc(
+              (f32)vectorComponent(pointWind.get(), off / 4), random);
+        }
+        for (u32 off = 0; off < 12; off += 4)
+          vectorComponent(&view<CLOUD_EFF>(p)->mPos, off / 4) = gabi::fmuls_ppc(
+              gabi::fmuls_ppc((f32)vectorComponent(pointWind.get(), off / 4),
+                              radius),
+              wrapMul);
+        view<CLOUD_EFF>(p)->mAlpha = zero;
+      }
+      sumPosition(p);
+    } else {
+      if (state == ParticleExpired)
+        view<CLOUD_EFF>(p)->mStatus = ParticleUninitialized;
+      sumPosition(p);
+    }
+    f32 viewFactor = (f32)view<View>(view<GameInfo>(gameInfo())->view)->fovy /
+                     (f32)constant(FovScale);
+    if (viewFactor > one)
+      viewFactor = one;
+    f32 cameraDistance = distance(gabi::ea(position.get()),
+                                  gabi::ea(&view<Camera>(camera)->eye)) /
+                         (f32)constant(CloudDistanceScale);
+    f32 sine = sampleSine(view<CLOUD_EFF>(p)->mAnimCounter),
+        baseSize = (f32)view<CLOUD_EFF>(p)->mInitialSize;
+    f32 animated =
+        gabi::fmadds(gabi::fmuls_ppc(baseSize, blend), sine, baseSize);
+    view<CLOUD_EFF>(p)->mSize = gabi::fmuls_ppc(
+        gabi::fmuls_ppc(
+            animated, gabi::fmadds(cameraDistance,
+                                   (f32)constant(CloudSizeDistanceSlope), one)),
+        viewFactor);
+    f32 dist = distance(gabi::ea(position.get()), gabi::ea(center.get())),
+        alpha = one;
+    if (dist < radius) {
+      if (dist > innerRadius)
+        alpha =
+            gabi::fsubs_ppc(one, gabi::fsubs_ppc(dist, innerRadius) /
+                                     (f32)constant(CloudAlphaDistanceRange));
+    } else
+      alpha = zero;
+    alpha = gabi::fmuls_ppc(
+        gabi::fmuls_ppc(gabi::fmuls_ppc(alpha, alpha), alpha), cameraDistance);
+    alpha = gabi::fmuls_ppc(alpha, alphaScale);
+    f32 limit = (f32)constant(CloudAlphaLimit);
+    if ((u8)view<Environment>(environment())->mMoyaMode == 3)
+      limit = blend;
+    else if ((u8)view<Environment>(environment())->mMoyaMode == 4)
+      limit = (f32)constant(CloudMode4Alpha);
+    if (i > (s32)((u32)view<Environment>(environment())->mMoyaCount - 1)) {
+      alpha = zero;
+      if ((f32)view<CLOUD_EFF>(p)->mAlpha < (f32)constant(CloudOffThreshold) &&
+          (u32)i == (u32)view<dKankyo_cloud_Packet>(packet)->mCount - 1)
+        view<dKankyo_cloud_Packet>(packet)->mCount =
+            (u32)view<dKankyo_cloud_Packet>(packet)->mCount - 1;
+    }
+    view<CLOUD_EFF>(p)->mAlpha = gabi::fmuls_ppc(alpha, limit);
+  }
 }
-VERIFY(0x0256BB6C,cloudShadowMove);
-}
+} // namespace d_kankyo_rain_cpp
+
+using namespace d_kankyo_rain_cpp;
+/* WWHD glue (tools/verify/autoglue.py)
+*/

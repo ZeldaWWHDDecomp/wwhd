@@ -1,24 +1,36 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_command_guide {
-u32 flag(u32 self) { WWHD_FUNC(0x026489F8,u32,self); return load<u8>(0x1047B07A); }
-VERIFY(0x026489F8,flag);
-static u32 vfn(u32 self,u32 slot) { return load<u32>(load<u32>(self+4)+slot); }
-void wait(u32 self) {
- WWHD_FUNC(0x02648A04,void,self);
- if(call_ptr<u32>(vfn(self,0x14C),self)) {
-  u32 n=load<u32>(self+0xD0);
-  if(n) {
-   store<u32>(self+0xD0,n-1);
-   if(n==1) {
-    store<u8>(self+0xDC,call<u32>(0x026489F8,self));
-    store<u8>(self+0xDD,call_ptr<u32>(vfn(self,0x14C),self));
-    call<void>(0x020063C0,self+0x18,0x10491670u);
-   }
-  } else store<u32>(self+0xD0,3);
- } else store<u32>(self+0xD0,0);
- call_ptr<void>(vfn(self,0xB4),self);
- call_ptr<void>(vfn(self,0x8C),self);
+/** HD command-guide waiting state; private decomp source. */
+#include "bindings.h"
+#include "d/hd_screen_command_a.h"
+static u8 sCommandGuideFlag;
+static hdHudStateDescriptor sGuideActiveState;
+
+/* 026489F8 */
+static u32 getCommandGuideFlag(hdHudCommandGuide*) {
+    return sCommandGuideFlag;
 }
-VERIFY(0x02648A04,wait);
+
+/* 02648A04 */
+static void waitCommandGuide(hdHudCommandGuide* i_this) {
+    if (i_this->canShow()) {
+        u32 timer = i_this->mWaitTimer;
+        if (timer != 0) {
+            i_this->mWaitTimer = timer - 1;
+            if (timer == 1) {
+                i_this->mCachedFlag = getCommandGuideFlag(i_this);
+                i_this->mCachedCanShow = i_this->canShow();
+                hdHudChangeState(&i_this->mStateMachine, &sGuideActiveState);
+            }
+        } else {
+            i_this->mWaitTimer = 3;
+        }
+    } else {
+        i_this->mWaitTimer = 0;
+    }
+    i_this->updateCommand();
+    i_this->update();
 }
+
+/* WWHD glue (tools/verify/autoglue.py): HD guide state
+ data sCommandGuideFlag 1047B07A
+ data sGuideActiveState 10491670
+*/

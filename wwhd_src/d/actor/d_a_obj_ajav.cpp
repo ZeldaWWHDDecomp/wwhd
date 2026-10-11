@@ -1,704 +1,1005 @@
-/* WWHD Jabun's cave barrier. Derived game code: */
-#include "bindings.h"
-namespace Ajav {
-struct Act;
-struct Method { be<s16> delta,index; be<u32> target; };
-struct Part {
-    cXyz center,centerToOrigin,displacement,rate,flaw;
-    csXyz rotation,rotationRate;
-    cXyz soundPosition;
-    be<u16> trigger,timer; be<s16> angleLimit; be<u8> splashed;
-    u8 padding[0x11];
-    cXyz particlePosition;
-    gptr<J3DModel> model; gptr<dKy_tevstr_c> lighting;
-    Method execute,draw;
-};
-WWHD_OFFSET(Part,particlePosition,0x6C);
-WWHD_OFFSET(Part,execute,0x80);
-WWHD_SIZE(Part,0x90);
-struct Act : fopAc_ac_c {
-    be<u32> switchNo; request_of_phase_process_class phase;
-    u8 collision[0x520-0x3B8]; cXyz sphereOffset;
-    u8 collisionRest[0x970-0x52C]; Mtx34 matrix; u8 padding[12];
-    Part parts[6]; be<s16> eventIndex; be<u8> status,loaded,action,padding2;
-    be<u16> cutsceneDelay; be<u8> hintHits; u8 padding3[3]; gptr<dBgW> background;
-};
-WWHD_OFFSET(Act,parts,0x9AC);
-WWHD_OFFSET(Act,background,0xD18);
-WWHD_SIZE(Act,0xD1C);
-static void setMethod(Method* method,u32 target) {
-    method->delta=0; method->index=-1; method->target=target;
-}
-static void dispatch(Part* part,Method* method,Act* actor) {
-    s16 index=method->index,delta=method->delta;
-    u32 self=gabi::ea(part)+(s32)delta,target;
-    if(index<0) target=method->target;
-    else {
-        s16 offset=gabi::load<s16>(gabi::ea(method)+6);
-        u32 table=gabi::load<u32>(self+(s32)offset);
-        target=gabi::load<u32>(table+(s32)index*8+4);
-    }
-    gabi::call_ptr(target,gabi::at<Part>(self),actor);
-}
-static void no_proc(Part* p,Act* actor) { WWHD_FUNC(0x02313AA8,void,p,actor); }
-VERIFY(0x02313AA8,no_proc);
-static BOOL check_angle(be<s16>* angle,s32 limit) {
-    WWHD_FUNC(0x02313ED0,BOOL,angle,limit);
-    s32 value=*angle,absolute=value<0?-value:value;
-    if(absolute<limit) return FALSE;
-    s16 excess=(s16)((u32)absolute-(u32)limit);
-    u32 reflected=(u32)limit-(u32)(s32)excess;
-    *angle=(s16)(value>0?reflected:0u-reflected);
-    return TRUE;
-}
-VERIFY(0x02313ED0,check_angle);
-static void limit_angle(be<s16>* angle,s32 limit) {
-    WWHD_FUNC(0x02314D7C,void,angle,limit);
-    s32 value=*angle,absolute=value<0?-value:value;
-    if(absolute>limit) *angle=(s16)(value>0?(u32)limit:0u-(u32)limit);
-}
-VERIFY(0x02314D7C,limit_angle);
-static BOOL check_all_wait(Act* actor) {
-    WWHD_FUNC(0x0231513C,BOOL,actor);
-    for(u32 i=0;i<6;++i) {
-        Method* method=&actor->parts[i].execute;
-        if((s16)method->index!=-1) return FALSE;
-        if((s16)method->delta!=0 || (u32)method->target!=0x02313AA8) return FALSE;
-    }
-    return TRUE;
-}
-VERIFY(0x0231513C,check_all_wait);
-static BOOL check_end(Act* actor) {
-    WWHD_FUNC(0x02315194,BOOL,actor);
-    if((u8)actor->status!=3) return FALSE;
-    return check_all_wait(actor);
-}
-VERIFY(0x02315194,check_end);
-static void empty(void* p) { WWHD_FUNC(0x02315E44,void,p); }
-VERIFY(0x02315E44,empty);
-static BOOL IsDelete(Act* actor) { WWHD_FUNC(0x02315F0C,BOOL,actor); return TRUE; }
-VERIFY(0x02315F0C,IsDelete);
-static void trivial_dt(void* p,s32 flags) {
-    WWHD_FUNC(0x02315D3C,void,p,flags);
-    if(p && (flags&1)) operator_delete(p);
-}
-VERIFY(0x02315D3C,trivial_dt);
-static void copyWords(void* destination,const void* source,u32 count) {
-    for(u32 i=0;i<count;++i) gabi::store<u32>(gabi::ea(destination)+4*i,gabi::load<u32>(gabi::ea(source)+4*i));
-}
-static void init_data(Part* p,const cXyz* actorPosition,const cXyz* offset,dKy_tevstr_c* lighting,const cXyz* particleOffset) {
-    WWHD_FUNC(0x023135F0,void,p,actorPosition,offset,lighting,particleOffset);
-    copyWords(&p->center,offset,3);
-    gabi::Local<cXyz> temporary; gabi::Local<u8[16]> callerLinkage1;
-    gabi::call(0x0201ADE0,gabi::at<cXyz>(0x101FFBA8),(cXyz*)temporary,&p->center);
-    copyWords(&p->centerToOrigin,(cXyz*)temporary,3);
-    for(u32 i=0;i<3;++i) gabi::store<u16>(gabi::ea(&p->rotation)+2*i,gabi::load<u16>(0x101FFB14+2*i));
-    copyWords(&p->displacement,gabi::at<cXyz>(0x101FFBA8),3);
-    u32 zeroX=gabi::load<u32>(0x101FFBA8); gabi::store<u32>(gabi::ea(&p->rate),zeroX);
-    u32 zeroY=gabi::load<u32>(0x101FFBAC); gabi::store<u32>(gabi::ea(&p->rate)+4,zeroY);
-    u32 zeroZ=gabi::load<u32>(0x101FFBB0); p->lighting=lighting;
-    gabi::store<u32>(gabi::ea(&p->rate)+8,zeroZ);
-    gabi::call(0x0201AD78,particleOffset,(cXyz*)temporary,actorPosition);
-    copyWords(&p->particlePosition,(cXyz*)temporary,3);
-    setMethod(&p->execute,0x02313AA8); setMethod(&p->draw,0x02313AAC);
-}
-VERIFY(0x023135F0,init_data);
-// Keep the complete SafeString above the nonleaf callee linkage area.
-static void* objectResource(const char* archive,s32 index) {
+/** Stone barrier at Jabun's cave, in zeldaret/tww layout and source order.
+ * WWHD functions are verified against the original.
+ */
+#include "d/actor/d_a_obj_ajav.h"
+const gc_tu_data gc_tu = {.safeString = 0x100247C0,
+                          .headerStatics = {0x10468F20, 0x101C7A64, 0x10468F2C}};
+
+// HD: autoglue does not yet register external functions passed as callbacks.
+static gabi::HostFn l_cylinderDestructorBinding((const void*)ajavCylinderDt, 0x02515A70);
+static gabi::HostFn l_statusDestructorBinding((const void*)ajavStatusDt, 0x02515860);
+
+static cXyz l_daObjAjav_co_offset[3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+static cXyz l_daObjAjav_offset[6] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0},
+                                     {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+static cXyz l_daObjAjav_cyl_offset[6] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0},
+                                         {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+static cXyz l_daObjAjav_rock_pos_table[6] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0},
+                                             {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+static cXyz l_flawPos[6] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+static const f32 l_daObjAjav_hint_cyl_h_talbe[3] = {3300.0f, 2360.0f, 1050.0f};
+static const f32 l_daObjAjav_cyl_r[6] = {629.0f, 294.8f, 491.0f, 216.0f, 563.0f, 85.3f};
+static const f32 l_daObjAjav_cyl_h[6] = {773.0f, 458.5f, 1100.5f, 1401.9f, 1133.0f, 451.9f};
+// Resource order: AJAVA through AJAVF; literals keep the glue byte check enabled.
+static const s32 l_daObjAjav_idx_table[6] = {4,5,6,7,8,9};
+static AjavTrigTable l_sincosTable;
+static cXyz l_baseX = {1, 0, 0};
+static cXyz l_baseZ = {0, 0, 1};
+static csXyz l_zeroRotation = {0, 0, 0};
+static u32 l_flawPosInitialized = 0;
+static const char* l_daObjAjav_ev_name[3] = {"ajav_destroy0", "ajav_destroy1", "ajav_uzu"};
+static const u8 l_daObjAjav_sph_data[64] = {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0,  0,   0, 0,
+                                            0, 0, 0, 32, 0, 0, 0, 15, 0, 0, 0, 0, 0,  0,   0, 0,
+                                            0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 4, 0,  0,   0, 0,
+                                            0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 67, 140, 0, 0};
+static const u8 l_daObjAjav_cyl_data[68] = {
+    0, 0, 0, 0, 0, 0, 0,   0,  0, 0, 0, 0, 0, 0, 0,  0,  0, 0, 0,  32, 0,  0, 0,
+    9, 0, 0, 0, 0, 0, 0,   0,  0, 0, 0, 0, 0, 0, 0,  0,  0, 0, 0,  0,  6,  0, 0,
+    0, 0, 0, 0, 0, 0, 194, 32, 0, 0, 0, 0, 0, 0, 68, 67, 0, 0, 69, 78, 64, 0};
+static const u8 l_daObjAjav_hint_cyl_data[68] = {
+    0, 0, 0, 0, 0, 0, 0,   0,  0, 0, 0, 0, 0, 0, 0,  0,  0, 0, 0,  32, 0,  0, 0,
+    9, 0, 0, 0, 0, 0, 0,   0,  0, 0, 0, 0, 0, 0, 0,  0,  0, 0, 0,  0,  6,  0, 0,
+    0, 0, 0, 0, 0, 0, 194, 32, 0, 0, 0, 0, 0, 0, 68, 67, 0, 0, 69, 78, 64, 0};
+
+static BOOL daObjAjav_solidHeapCB(daObjAjav::Act_c*);
+static void constructStatus(dCcD_Stts*);
+static void constructCylinder(dCcD_Cyl*);
+static void* daObjAjav_Stts_constructor(void*);
+static void* daObjAjav_Cyl_constructor(void*);
+
+// HD: the resource SafeString lives above the callee linkage scratch.
+static void* objectResource(const char* archive, s32 index) {
     gabi::Local<SafeString> name;
     gabi::Local<u8[16]> resourceLinkage;
-    name->mStringTop=gabi::ea(archive);
-    name->__vtbl=0x100247C0;
-    return gabi::call<void*>(0x026066C4,dComIfG_resControl(),name.get(),index);
+    name->mStringTop = gabi::guest_addr(archive);
+    name->__vtbl = gc_tu.safeString;
+    return ajavObjectResource(dComIfG_resControl(), name.get(), index);
 }
-static BOOL set_mdl_area(Part* p,const char* archive,s32 index,u32 flags) {
-    WWHD_FUNC(0x02313714,BOOL,p,archive,index,flags);
-    auto data=gabi::at<J3DModelData>(gabi::ea(objectResource(archive,index)));
-    if(!data) { JUT_ASSERT_fail(STR(0x10024858),0x25C,STR(0x10024848)); return FALSE; }
-    p->model=mDoExt_J3DModel__create(data,0x80000,flags); return TRUE;
-}
-VERIFY(0x02313714,set_mdl_area);
-static void init_mtx(Part* p,const cXyz* position,const csXyz* angle,const cXyz* scale) {
-    WWHD_FUNC(0x023137B0,void,p,position,angle,scale);
-    u32 model=gabi::ea(p->model); f32 sy=scale->y,sx=scale->x,sz=scale->z;
-    gabi::store<f32>(model+0xBC,sx); gabi::store<f32>(model+0xC0,sy); gabi::store<f32>(model+0xC4,sz);
-    f32 x=position->x,y=position->y,z=position->z;
-    mDoMtx_stack_c::transS(x,y,z);
-    s16 ax=angle->x,ay=angle->y,az=angle->z;
-    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(),ax,ay,az);
-    J3DModel_setBaseTRMtx(p->model,mDoMtx_stack_c::get());
-    gabi::call(0x027F4D5C,(J3DModel*)p->model);
-}
-VERIFY(0x023137B0,init_mtx);
-static void draw_normal(Part* p,Act* actor) {
-    WWHD_FUNC(0x02313AAC,void,p,actor);
-    auto environment=dKy_getEnvlight();
-    setLightTevColorType(environment,p->model,p->lighting);
-    mDoExt_modelUpdateDL(p->model);
-}
-VERIFY(0x02313AAC,draw_normal);
-static void fall_init(Part* p,const cXyz* rate,const csXyz* rotationRate,s16 limit,u16 trigger) {
-    WWHD_FUNC(0x02313E70,void,p,rate,rotationRate,limit,trigger);
-    copyWords(&p->rate,rate,3);
-    for(u32 i=0;i<3;++i) gabi::store<u16>(gabi::ea(&p->rotationRate)+2*i,gabi::load<u16>(gabi::ea(rotationRate)+2*i));
-    setMethod(&p->execute,0x02313F24); p->splashed=0; p->timer=0; p->angleLimit=limit; p->trigger=trigger;
-}
-VERIFY(0x02313E70,fall_init);
+
 static void trans(const cXyz* vector) {
-    f32 x=vector->x,y=vector->y,z=vector->z;
-    mDoMtx_stack_c::transM(x,y,z);
+    f32 x = vector->x, y = vector->y, z = vector->z;
+    mDoMtx_stack_c::transM(x, y, z);
 }
+
 static void rotate(const csXyz* angle) {
-    s16 x=angle->x,y=angle->y,z=angle->z;
-    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(),x,y,z);
+    s16 x = angle->x, y = angle->y, z = angle->z;
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), x, y, z);
 }
-static void finishMatrix(Part* p) {
-    J3DModel_setBaseTRMtx(p->model,mDoMtx_stack_c::get());
-    gabi::call(0x027F4D5C,(J3DModel*)p->model);
+
+static void finishMatrix(daObjAjav::Part_c* p) {
+    J3DModel_setBaseTRMtx(p->mpModel, mDoMtx_stack_c::get());
+    p->mpModel->calc();
 }
-static void set_fall_mtx(Part* p,const cXyz* position,const csXyz* angle) {
-    WWHD_FUNC(0x023138A4,void,p,position,angle);
-    f32 x=position->x,y=position->y,z=position->z;
-    mDoMtx_stack_c::transS(x,y,z); rotate(angle);
-    trans(&p->displacement); trans(&p->center); rotate(&p->rotation); trans(&p->centerToOrigin);
-    finishMatrix(p);
+
+static GXColor* getColor(AjavMaterial* material) { return material->mTevBlock->getTevKColor(); }
+
+static void constructStatus(dCcD_Stts* status) { dCcD_Stts_ct(status); }
+
+static void constructCylinder(dCcD_Cyl* cylinder) {
+    auto shape = reinterpret_cast<AjavCylinderShape*>(cylinder);
+    ajavObjectInfoCtor(cylinder);
+    shape->mShapeVtable = 0x100015A8;
+    shape->mAabVtable = 0x100247D8;
+    ajavCylinderGeometryCtor(&cylinder->mCyl);
+    cylinder->__vtbl_hitinf = 0x1004B108;
+    cylinder->mCyl.__vtbl = 0x1004B150;
+    shape->mShapeVtable = 0x1004B160;
 }
-VERIFY(0x023138A4,set_fall_mtx);
-static void set_flaw_mtx(Part* p,const cXyz* position,const csXyz* angle) {
-    WWHD_FUNC(0x023139C0,void,p,position,angle);
-    f32 x=position->x,y=position->y,z=position->z;
-    mDoMtx_stack_c::transS(x,y,z); rotate(angle); trans(&p->displacement); finishMatrix(p);
+
+static daObjAjav::Part_c* partAt(daObjAjav::Act_c* actor, u32 index) {
+    return &actor->mRockParts[index];
 }
-VERIFY(0x023139C0,set_flaw_mtx);
-static void flaw(Part* p,Act* actor) {
-    WWHD_FUNC(0x02314460,void,p,actor);
-    gabi::call(0x028E8D88,&p->displacement,&p->flaw,&p->displacement);
-    gabi::Local<cXyz> position; gabi::Local<csXyz> angle; gabi::Local<u8[16]> callerLinkage2;
-    position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-    for(u32 i=0;i<3;++i) gabi::store<u16>(gabi::ea((csXyz*)angle)+i*2,gabi::load<u16>(gabi::ea(&actor->shape_angle)+i*2));
-    set_flaw_mtx(p,position,angle); setMethod(&p->execute,0x02313AA8);
+
+/* 02314108 */
+void daObjAjav::Part_c::make_hamon(cXyz* i_hamonPos, f32 i_scale) {
+    gabi::Local<cXyz> scale;
+    gabi::Local<be<f32>> height;
+    gabi::Local<u8[16]> callerLinkage5;
+    f32 value = 2.0f + i_scale / 2000.0f;
+    scale->x = value;
+    scale->y = value;
+    scale->z = value;
+    i_hamonPos->y = (f32)i_hamonPos->y + 10.0f;
+    if (ajavWaterHeight(i_hamonPos, (be<f32>*)height) == 1)
+        i_hamonPos->y = (f32)*height + 0.1f;
+    dComIfGp_particle_set(0x3F, i_hamonPos, nullptr, scale);
 }
-VERIFY(0x02314460,flaw);
-static BOOL draw(Act* actor) {
-    WWHD_FUNC(0x02315994,BOOL,actor);
-    auto environment=dKy_getEnvlight();
-    settingTevStruct(environment,1,&actor->current.pos,&actor->tevStr);
-    for(u32 i=0;i<6;++i) dispatch(&actor->parts[i],&actor->parts[i].draw,actor);
+
+/* 02313AA8 */
+void daObjAjav::Part_c::no_proc(daObjAjav::Act_c* i_actor) {}
+
+/* 023135F0 */
+void daObjAjav::Part_c::init_data(const cXyz* i_actorPos, const cXyz* i_rockOffset,
+                                  dKy_tevstr_c* i_tevStr, const cXyz* i_rockPos) {
+    (mCenterPos) = (*i_rockOffset);
+    gabi::Local<cXyz> temporary;
+    gabi::Local<u8[16]> callerLinkage1;
+    ajavSubtractPosition(&cXyz::Zero, (cXyz*)temporary, &mCenterPos);
+    (mCenterToOriginTrans) = (*(cXyz*)temporary);
+    mAccumulatedRotation = l_zeroRotation;
+    (mRockDisplacement) = (*&cXyz::Zero);
+    u32 zeroX = reinterpret_cast<const AjavVectorWords*>(&cXyz::Zero)->x;
+    reinterpret_cast<AjavVectorWords*>(&mRockDisplacementRate)->x = zeroX;
+    u32 zeroY = reinterpret_cast<const AjavVectorWords*>(&cXyz::Zero)->y;
+    reinterpret_cast<AjavVectorWords*>(&mRockDisplacementRate)->y = zeroY;
+    u32 zeroZ = reinterpret_cast<const AjavVectorWords*>(&cXyz::Zero)->z;
+    mpTevStr = i_tevStr;
+    reinterpret_cast<AjavVectorWords*>(&mRockDisplacementRate)->z = zeroZ;
+    ajavAddPosition(i_rockPos, (cXyz*)temporary, i_actorPos);
+    (mRockParticlePos) = (*(cXyz*)temporary);
+    setExeProc(daObjAjav::Part_c::PROC_NONE);
+    setDrawProc(daObjAjav::Part_c::PROC_DRAW_NORMAL);
+}
+
+/* 02313714 */
+BOOL daObjAjav::Part_c::set_mdl_area(const char* i_arcName, s32 i_index, u32 i_differedDlistFlag) {
+    auto data = static_cast<J3DModelData*>(objectResource(i_arcName, i_index));
+    if (!data) {
+        JUT_ASSERT_fail("d_a_obj_ajav.cpp", 0x25C, "mdl_data != 0");
+        return FALSE;
+    }
+    mpModel = mDoExt_J3DModel__create(data, 0x80000, i_differedDlistFlag);
     return TRUE;
 }
-VERIFY(0x02315994,draw);
-static BOOL DrawWrapper(Act* actor) { WWHD_FUNC(0x02315A58,BOOL,actor); return draw(actor); }
-VERIFY(0x02315A58,DrawWrapper);
-static void* statusCtor(void* p) {
-    WWHD_FUNC(0x02315D50,void*,p);
-    if(!p) p=gabi::call<void*>(0x0273AD10,0x3C);
-    if(p) {
-        gabi::call(0x0200BD2C,p); gabi::call(0x02515DA0,gabi::at<void>(gabi::ea(p)+0x1C));
-        gabi::store<u32>(gabi::ea(p)+0x18,0x1004AE88); gabi::store<u32>(gabi::ea(p)+0x1C,0x1004AEC0);
+
+/* 023137B0 */
+void daObjAjav::Part_c::init_mtx(const cXyz* i_pos, const csXyz* i_angle, const cXyz* i_scale) {
+    f32 sy = i_scale->y, sx = i_scale->x, sz = i_scale->z;
+    mpModel->mBaseScale.x = sx;
+    mpModel->mBaseScale.y = sy;
+    mpModel->mBaseScale.z = sz;
+    f32 x = i_pos->x, y = i_pos->y, z = i_pos->z;
+    mDoMtx_stack_c::transS(x, y, z);
+    s16 ax = i_angle->x, ay = i_angle->y, az = i_angle->z;
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), ax, ay, az);
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
+    mpModel->calc();
+}
+
+/* 023139C0 */
+void daObjAjav::Part_c::set_flaw_mtx(const cXyz* i_pos, const csXyz* i_angle) {
+    f32 x = i_pos->x, y = i_pos->y, z = i_pos->z;
+    mDoMtx_stack_c::transS(x, y, z);
+    rotate(i_angle);
+    trans(&mRockDisplacement);
+    finishMatrix(this);
+}
+
+/* 023138A4 */
+void daObjAjav::Part_c::set_fall_mtx(const cXyz* i_pos, const csXyz* i_angle) {
+    f32 x = i_pos->x, y = i_pos->y, z = i_pos->z;
+    mDoMtx_stack_c::transS(x, y, z);
+    rotate(i_angle);
+    trans(&mRockDisplacement);
+    trans(&mCenterPos);
+    rotate(&mAccumulatedRotation);
+    trans(&mCenterToOriginTrans);
+    finishMatrix(this);
+}
+
+/* 02313E70 */
+void daObjAjav::Part_c::fall_init(const cXyz* i_initDispRate, const csXyz* i_initRotSpeed,
+                                  s16 i_angleLimit, u16 i_timerTrigger) {
+    (mRockDisplacementRate) = (*i_initDispRate);
+    mRotationSpeed = *i_initRotSpeed;
+    setExeProc(daObjAjav::Part_c::PROC_FALL_0);
+    mbHasSplashed = 0;
+    mTimer = 0;
+    mAngleLimit = i_angleLimit;
+    mTimerTrigger = i_timerTrigger;
+}
+
+/* 02313ED0 */
+static BOOL daObjAjav_check_angle(be<s16>* i_anglePtr, s32 i_angleLimit) {
+    s32 value = *i_anglePtr, absolute = value < 0 ? -value : value;
+    if (absolute < i_angleLimit)
+        return FALSE;
+    s16 excess = (s16)((u32)absolute - (u32)i_angleLimit);
+    u32 reflected = (u32)i_angleLimit - (u32)(s32)excess;
+    *i_anglePtr = (s16)(value > 0 ? reflected : 0u - reflected);
+    return TRUE;
+}
+
+/* 02313F24 */
+void daObjAjav::Part_c::fall_0(daObjAjav::Act_c* i_actor) {
+    ajavAddRotation(&mAccumulatedRotation, &mRotationSpeed);
+    BOOL reflected = daObjAjav_check_angle(&mAccumulatedRotation.x, mAngleLimit);
+    s16 limit = mAngleLimit;
+    if (reflected)
+        mRotationSpeed.x = (s16) - (s16)mRotationSpeed.x;
+    if (daObjAjav_check_angle(&mAccumulatedRotation.y, limit))
+        mRotationSpeed.y = (s16) - (s16)mRotationSpeed.y;
+    PSVECAdd(&mRockDisplacement, &mRockDisplacementRate, &mRockDisplacement);
+    f32 random = cM_rnd();
+    f32 factor = gabi::fmadds(0.2f, random, 0.8f);
+    u16 timer = (u16)((u16)mTimer + 1), trigger = mTimerTrigger;
+    f32 speedZ = (f32)mRockDisplacementRate.z * factor;
+    mTimer = timer;
+    mRockDisplacementRate.z = speedZ;
+    if (timer == trigger) {
+        gabi::Local<cXyz> reduced;
+        gabi::Local<u8[16]> callerLinkage9;
+        ajavScalePosition(&mRockDisplacementRate, (cXyz*)reduced, 0.4f);
+        f32 x = reduced->x, z = reduced->z;
+        setExeProc(daObjAjav::Part_c::PROC_FALL_1);
+        mTimer = 0;
+        mRockDisplacementRate.x = x;
+        mRockDisplacementRate.y = 5.0f;
+        mRockDisplacementRate.z = z;
+        // HD: csXyz returns its third component in the high half of r4.
+        u32 packed = ajavScaleRotation(&mRotationSpeed, 0.3f);
+        u32 last = gabi::cpu->r[4];
+        mRotationSpeed.x = (s16)(packed >> 16);
+        mRotationSpeed.y = (s16)packed;
+        mRotationSpeed.z = (s16)(last >> 16);
+        s32 sign = gabi::ftoi(-2.0f * cM_rnd());
+        s32 magnitude = gabi::ftoi(511.0f * cM_rnd());
+        mRotationSpeed.z = (s16)((u32)sign * (u32)magnitude);
     }
-    return p;
+    gabi::Local<cXyz> position;
+    gabi::Local<csXyz> angle;
+    gabi::Local<u8[16]> callerLinkage10;
+    position->x = i_actor->current.pos.x;
+    position->y = i_actor->current.pos.y;
+    position->z = i_actor->current.pos.z;
+    *angle = i_actor->shape_angle;
+    set_fall_mtx(position, angle);
 }
-VERIFY(0x02315D50,statusCtor);
-static void* cylinderCtor(void* p) {
-    WWHD_FUNC(0x02315DB8,void*,p);
-    if(!p) p=gabi::call<void*>(0x0273AD10,0x130);
-    if(p) {
-        u32 address=gabi::ea(p);
-        gabi::call(0x02515FB8,p);
-        gabi::store<u32>(address+0x114,0x100015A8); gabi::store<u32>(address+0x110,0x100247D8);
-        gabi::call(0x02018590,gabi::at<void>(address+0x118));
-        gabi::store<u32>(address+0x3C,0x1004B108); gabi::store<u32>(address+0x12C,0x1004B150); gabi::store<u32>(address+0x114,0x1004B160);
+
+/* 023141CC */
+void daObjAjav::Part_c::fall_1(daObjAjav::Act_c* i_actor) {
+    PSVECAdd(&mRockDisplacement, &mRockDisplacementRate, &mRockDisplacement);
+    f32 elapsed = (f32)(u16)mTimer;
+    mRockDisplacement.y = (f32)mRockDisplacement.y - (elapsed + elapsed);
+    ajavAddRotation(&mAccumulatedRotation, &mRotationSpeed);
+    f32 y = mRockDisplacement.y, originY = mCenterToOriginTrans.y;
+    u16 timer = mTimer;
+    u8 splashed = mbHasSplashed;
+    mTimer = (u16)(timer + 1);
+    if (!splashed && !(y > originY - 100.0f)) {
+        gabi::Local<cXyz> displaced, sum, position, scale;
+        gabi::Local<u8[16]> callerLinkage11;
+        ajavAddPosition(&i_actor->current.pos, (cXyz*)displaced, &mRockDisplacement);
+        ajavAddPosition((cXyz*)displaced, (cXyz*)sum, &mCenterPos);
+        f32 size = 4.0f + (f32)mCenterPos.y / 2000.0f, x = sum->x, z = sum->z;
+        position->x = x;
+        position->y = 0.0f;
+        position->z = z;
+        scale->x = size;
+        scale->y = 4.0f;
+        scale->z = size;
+        dComIfGp_particle_set(0x3C, position, nullptr, scale);
+        f32 centerY = mCenterPos.y;
+        mbHasSplashed = 1;
+        position->x = x;
+        position->y = 0.0f;
+        position->z = z;
+        make_hamon(position, centerY);
+        mSePos.x = x;
+        mSePos.y = 0.0f;
+        mSePos.z = z;
+        s32 reverb = dComIfGp_getReverb(i_actor->current.roomNo);
+        mDoAud_seStart(0x6A29, &mSePos, 0, reverb);
+        originY = mCenterToOriginTrans.y;
+        y = mRockDisplacement.y;
     }
-    return p;
-}
-VERIFY(0x02315DB8,cylinderCtor);
-static void destroy(Act* actor,s32 flags) {
-    WWHD_FUNC(0x02315E48,void,actor,flags);
-    if(!actor) return;
-    u32 address=gabi::ea(actor);
-    gabi::call(0x028F0164,gabi::at<void>(address+0x710),2,0x130,0x02515A70,0,0);
-    gabi::call(0x028F0164,gabi::at<void>(address+0x698),2,0x3C,0x02515860,0,0);
-    gabi::call(0x02515A70,gabi::at<void>(address+0x568),2);
-    gabi::call(0x02515860,gabi::at<void>(address+0x52C),2);
-    gabi::call(0x02515AE8,gabi::at<void>(address+0x3F4),2);
-    gabi::call(0x02515860,gabi::at<void>(address+0x3B8),2);
-    gabi::call(0x025D50BC,actor,0);
-    if(flags&1) operator_delete(actor);
-}
-VERIFY(0x02315E48,destroy);
-static BOOL create_heap(Act* actor) {
-    WWHD_FUNC(0x023145D8,BOOL,actor);
-    BOOL result=set_mdl_area(&actor->parts[0],STR(0x100249D8),4,0x11000002);
-    if(!result) return FALSE;
-    for(u32 i=1;i<6;++i) {
-        s32 index=gabi::load<s32>(0x100247E8+i*4);
-        result=set_mdl_area(&actor->parts[i],STR(0x100249D8),index,0x15021202);
-        if(!result) return FALSE;
+    if (!(y > originY - 1000.0f)) {
+        setExeProc(daObjAjav::Part_c::PROC_NONE);
+        setDrawProc(daObjAjav::Part_c::PROC_NONE);
     }
-    void* resource=objectResource(STR(0x100249D8),12);
-    dBgW* background=gabi::call<dBgW*>(0x024F2478,resource,1,&actor->matrix);
-    actor->background=background;
-    return background?result:FALSE;
+    gabi::Local<cXyz> position;
+    gabi::Local<csXyz> angle;
+    gabi::Local<u8[16]> callerLinkage12;
+    position->x = i_actor->current.pos.x;
+    position->y = i_actor->current.pos.y;
+    position->z = i_actor->current.pos.z;
+    *angle = i_actor->shape_angle;
+    set_fall_mtx(position, angle);
 }
-VERIFY(0x023145D8,create_heap);
-static BOOL solidHeapCB(Act* actor) { WWHD_FUNC(0x023146B4,BOOL,actor); return create_heap(actor); }
-VERIFY(0x023146B4,solidHeapCB);
-static void actor_init_mtx(Act* actor) {
-    WWHD_FUNC(0x023146B8,void,actor);
-    for(u32 i=0;i<6;++i) {
-        gabi::Local<cXyz> position,scale; gabi::Local<csXyz> angle; gabi::Local<u8[16]> callerLinkage3;
-        position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-        scale->x=actor->scale.x; scale->y=actor->scale.y; scale->z=actor->scale.z;
-        for(u32 j=0;j<3;++j) gabi::store<u16>(gabi::ea((csXyz*)angle)+j*2,gabi::load<u16>(gabi::ea(&actor->shape_angle)+j*2));
-        init_mtx(&actor->parts[i],position,angle,scale);
+
+/* 02314460 */
+void daObjAjav::Part_c::flaw(daObjAjav::Act_c* i_actor) {
+    PSVECAdd(&mRockDisplacement, &mFlawPos, &mRockDisplacement);
+    gabi::Local<cXyz> position;
+    gabi::Local<csXyz> angle;
+    gabi::Local<u8[16]> callerLinkage2;
+    position->x = i_actor->current.pos.x;
+    position->y = i_actor->current.pos.y;
+    position->z = i_actor->current.pos.z;
+    *angle = i_actor->shape_angle;
+    set_flaw_mtx(position, angle);
+    setExeProc(daObjAjav::Part_c::PROC_NONE);
+}
+
+/* 02313AAC */
+void daObjAjav::Part_c::draw_normal(daObjAjav::Act_c* i_actor) {
+    auto environment = dKy_getEnvlight();
+    setLightTevColorType(environment, mpModel, mpTevStr);
+    mDoExt_modelUpdateDL(mpModel);
+}
+
+/* 02313AF0 */
+void daObjAjav::Part_c::draw_flashing(daObjAjav::Act_c* i_actor) {
+    if (!(dKy_tevstr_c*)mpTevStr)
+        return;
+    auto environment = dKy_getEnvlight();
+    setLightTevColorType(environment, mpModel, mpTevStr);
+    auto data = reinterpret_cast<AjavModelData*>((J3DModelData*)mpModel->mModelData);
+    auto joint = (AjavJoint*)data->mJointNodePointer;
+    auto material = (AjavMaterial*)joint->mMesh;
+    u8 red = 0, green = 0, blue = 0;
+    if (material) {
+        f32 ratio = (f32)(u16)mTimer / (f32)(u16)mTimerTrigger;
+        u16 theta = (u16)((u16)gabi::ftoi(20479.0f * ratio) + 0x3000);
+        f32 strength = std::fabs((f32)l_sincosTable.entries[theta >> 3].sine);
+        red = getColor(material)->r;
+        green = getColor(material)->g;
+        blue = getColor(material)->b;
+        getColor(material)->r = (u8)gabi::ftoi(85.0f * strength);
+        getColor(material)->g = (u8)gabi::ftoi(11.0f * strength);
+        getColor(material)->b = (u8)gabi::ftoi(9.0f * strength);
+        GXColor* color = getColor(material);
+        AjavTevBlock* block = material->mTevBlock;
+        block->setTevKColor(color);
+        // HD: normalize and convert the color into the material uniform buffer.
+        gabi::Local<ColorFloat> normalized, converted;
+        gabi::Local<u8[16]> callerLinkage13;
+        ajavNormalizeColor((ColorFloat*)normalized, color);
+        ajavConvertColor((ColorFloat*)converted, (ColorFloat*)normalized, 1.0f);
+        material->mUniform.mFlags |= 0x100;
+        auto output = ajavUniformBuffer(&material->mUniform, 8);
+        f32 alpha = (f32)(u8)color->a / 255.0f;
+        f32 x = converted->value[0], y = converted->value[1], z = converted->value[2];
+        output->r = x;
+        output->g = y;
+        output->b = z;
+        output->a = alpha;
+    }
+    mDoExt_modelUpdateDL(mpModel);
+    if (material) {
+        getColor(material)->r = red;
+        getColor(material)->g = green;
+        getColor(material)->b = blue;
     }
 }
-VERIFY(0x023146B8,actor_init_mtx);
-static void set_tex(Act* actor) {
-    WWHD_FUNC(0x02314760,void,actor);
-    u32 data=gabi::load<u32>(gabi::ea(actor->parts[0].model)+0xAC);
-    u32 texture=gabi::load<u32>(data+0x30),names=gabi::load<u32>(data+0x34);
-    for(u32 i=1;i<6;++i) {
-        data=gabi::load<u32>(gabi::ea(actor->parts[i].model)+0xAC);
-        gabi::store<u32>(data+0x30,texture); gabi::store<u32>(data+0x34,names);
+
+/* 02313E0C */
+void daObjAjav::Part_c::draw_flashing_normal(daObjAjav::Act_c* i_actor) {
+    draw_flashing(i_actor);
+    u16 timer = (u16)((u16)mTimer + 1), trigger = mTimerTrigger;
+    mTimer = timer;
+    if (timer == trigger)
+        setDrawProc(daObjAjav::Part_c::PROC_DRAW_NORMAL);
+}
+
+/* 02314500 */
+void daObjAjav::Part_c::make_fall_rock(BOOL i_increasedRate) {
+    auto emitter = dComIfGp_particle_set(0x8427, &mRockParticlePos);
+    if (emitter && (dKy_tevstr_c*)mpTevStr) {
+        if (i_increasedRate)
+            emitter->setRate(20.0f);
+        auto environment = dKy_getEnvlight();
+        settingTevStruct(environment, 1, &mRockParticlePos, mpTevStr);
+        auto output = reinterpret_cast<AjavEmitter*>(emitter);
+        u8 red = mpTevStr->mColorK0.r, green = mpTevStr->mColorK0.g, blue = mpTevStr->mColorK0.b;
+        output->mGlobalPrmColor.r = red;
+        output->mGlobalPrmColor.g = green;
+        output->mGlobalPrmColor.b = blue;
     }
 }
-VERIFY(0x02314760,set_tex);
-static BOOL actor_delete(Act* actor) {
-    WWHD_FUNC(0x02314BDC,BOOL,actor);
-    if(gabi::load<u32>(gabi::ea(actor)+0xF4)!=0) {
-        u32 background=gabi::ea(actor->background);
-        if(background && gabi::load<u32>(background)<0x100) {
-            auto space=dComIfG_Bgsp(); gabi::call(0x020087EC,space,(dBgW*)actor->background); actor->background=nullptr;
+
+/* 023146B4 */
+static BOOL daObjAjav_solidHeapCB(daObjAjav::Act_c* i_actor) { return i_actor->create_heap(); }
+
+/* 023145D8 */
+BOOL daObjAjav::Act_c::create_heap() {
+    BOOL result = mRockParts[0].set_mdl_area("Ajav", dRes_INDEX_AJAV_BDL_AJAVA_e, 0x11000002);
+    if (!result)
+        return FALSE;
+    for (u32 i = 1; i < PART_COUNT; ++i) {
+        s32 index = l_daObjAjav_idx_table[i];
+        result = mRockParts[i].set_mdl_area("Ajav", index, 0x15021202);
+        if (!result)
+            return FALSE;
+    }
+    void* resource = objectResource("Ajav", dRes_INDEX_AJAV_DZB_AJAV_e);
+    dBgW* background = ajavNewBackground(resource, 1, &mMtx);
+    mpBgW = background;
+    return background ? result : FALSE;
+}
+
+/* 023148B4 */
+s32 daObjAjav::Act_c::_create() {
+    u32 address = gabi::ea(this), condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (address) {
+            ajavActorCtor(this);
+            __vtbl = 0x10024800;
+            constructStatus(&mSphStts);
+            ajavSphereCtor(&mSph);
+            constructStatus(&mCylStts);
+            constructCylinder(&mCyl);
+            ajavConstructArray(mHintCylStts, 2, 0x3C, daObjAjav_Stts_constructor);
+            ajavConstructArray(mHintCyls, 2, 0x130, daObjAjav_Cyl_constructor);
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
+    }
+    u32 switchNo = (u32)mParameters & 0xFF;
+    mbResLoaded = 0;
+    mSwNo = switchNo;
+    if (!dComIfGs_isEventBit(ENDLESS_NIGHT))
+        return cPhs_ERROR_e;
+    s8 room = home.roomNo;
+    if (dComIfGs_isSwitch(mSwNo, room))
+        return cPhs_ERROR_e;
+    s32 phase = dComIfG_resLoad(&mPhs, "Ajav");
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)daObjAjav_solidHeapCB), 0))
+        return cPhs_ERROR_e;
+    for (u32 i = 0; i < PART_COUNT; ++i) {
+        gabi::Local<cXyz> position, offset;
+        gabi::Local<u8[16]> callerLinkage14;
+        position->x = current.pos.x;
+        position->y = current.pos.y;
+        position->z = current.pos.z;
+        offset->x = l_daObjAjav_offset[i].x;
+        offset->y = l_daObjAjav_offset[i].y;
+        offset->z = l_daObjAjav_offset[i].z;
+        mRockParts[i].init_data(position, offset, &tevStr, &l_daObjAjav_rock_pos_table[i]);
+    }
+    init_mtx();
+    MTXCopy(J3DModel_getBaseTRMtx(mRockParts[5].mpModel), &mMtx);
+    set_tex();
+    mSphStts.Init(0, 255, this);
+    mSph.SetStts(&mSphStts);
+    mSph.Set((dCcD_SrcSph*)l_daObjAjav_sph_data);
+    mCylStts.Init(0, 255, this);
+    mCyl.SetStts(&mCylStts);
+    mCyl.Set((dCcD_SrcCyl*)l_daObjAjav_cyl_data);
+    mCyl.SetC(&current.pos);
+    for (u32 i = 0; i < 2; ++i) {
+        auto status = &mHintCylStts[i];
+        auto cylinder = &mHintCyls[i];
+        status->Init(0, 255, this);
+        cylinder->SetStts(status);
+        cylinder->Set((dCcD_SrcCyl*)l_daObjAjav_hint_cyl_data);
+    }
+    set_co_offset();
+    auto space = dComIfG_Bgsp();
+    space->Regist(mpBgW, this);
+    mHintCylHits = 0;
+    mActionIdx = ACTION_WAIT;
+    mbResLoaded = 1;
+    return phase;
+}
+
+/* 023146B8 */
+void daObjAjav::Act_c::init_mtx() {
+    for (u32 i = 0; i < PART_COUNT; ++i) {
+        gabi::Local<cXyz> position, scale;
+        gabi::Local<csXyz> angle;
+        gabi::Local<u8[16]> callerLinkage3;
+        position->x = current.pos.x;
+        position->y = current.pos.y;
+        position->z = current.pos.z;
+        scale->x = this->scale.x;
+        scale->y = this->scale.y;
+        scale->z = this->scale.z;
+        *angle = shape_angle;
+        mRockParts[i].init_mtx(position, angle, scale);
+    }
+}
+
+/* 02314760 */
+void daObjAjav::Act_c::set_tex() {
+    auto data = reinterpret_cast<AjavModelData*>((J3DModelData*)mRockParts[0].mpModel->mModelData);
+    u32 texture = data->mTexture, names = data->mTextureName;
+    for (u32 i = 1; i < PART_COUNT; ++i) {
+        data = reinterpret_cast<AjavModelData*>((J3DModelData*)mRockParts[i].mpModel->mModelData);
+        data->mTexture = texture;
+        data->mTextureName = names;
+    }
+}
+
+/* 02314794 */
+void daObjAjav::Act_c::set_co_offset() {
+    u32 status = M_status;
+    if (status >= STATUS_MAX - 1) {
+        JUT_ASSERT_fail("d_a_obj_ajav.cpp", 0x4A0,
+                        "(M_status >= 0) && (M_status < STATUS_MAX - 1)");
+        status = M_status;
+    }
+    (mSphCoOffset) = (*&l_daObjAjav_co_offset[status]);
+    gabi::Local<cXyz> center;
+    gabi::Local<u8[16]> callerLinkage4;
+    ajavAddPosition(&current.pos, (cXyz*)center, &mSphCoOffset);
+    mSph.SetC(center);
+    status = M_status;
+    mCyl.SetH(l_daObjAjav_hint_cyl_h_talbe[status]);
+    status = M_status;
+    for (u32 i = 0; i < 2; ++i) {
+        u32 index = status * 2 + i;
+        ajavAddPosition(&current.pos, (cXyz*)center, &l_daObjAjav_cyl_offset[index]);
+        cM3dGCyl* cylinder = &mHintCyls[i].mCyl;
+        cylinder->SetC(center);
+        cylinder->SetR(l_daObjAjav_cyl_r[index]);
+        cylinder->SetH(l_daObjAjav_cyl_h[index]);
+    }
+}
+
+/* 02314BDC */
+BOOL daObjAjav::Act_c::_delete() {
+    if ((JKRSolidHeap*)heap != 0) {
+        u32 background = gabi::ea(mpBgW);
+        if (background && mpBgW->ChkUsed()) {
+            auto space = dComIfG_Bgsp();
+            space->Release(mpBgW);
+            mpBgW = nullptr;
         }
     }
-    dComIfG_resDelete(&actor->phase,STR(0x100249D8));
-    for(u32 i=0;i<6;++i) gabi::call(0x025E1B34,&actor->parts[i].soundPosition);
+    dComIfG_resDelete(&mPhs, "Ajav");
+    for (u32 i = 0; i < PART_COUNT; ++i)
+        mDoAud_seDeleteObject(&mRockParts[i].mSePos);
     return TRUE;
 }
-VERIFY(0x02314BDC,actor_delete);
-static BOOL DeleteWrapper(Act* actor) { WWHD_FUNC(0x02315A50,BOOL,actor); return actor_delete(actor); }
-VERIFY(0x02315A50,DeleteWrapper);
-static void to_broken(Act* actor) {
-    WWHD_FUNC(0x02314C78,void,actor);
-    const char* name=gabi::at<char>(gabi::load<u32>(0x10024810+(u8)actor->status*4));
-    auto manager=dComIfGp_getPEvtManager(); s32 event=gabi::call<s32>(0x02543F10,manager,name,255);
-    u16 command=gabi::load<u16>(gabi::ea(actor)+0xF8);
-    actor->eventIndex=(s16)event; actor->action=1;
-    if(command!=2) {
-        gabi::call(0x025D7A58,actor,(s16)actor->eventIndex,255,0xFFFF,0,1);
-        u32 address=gabi::ea(actor)+0xFA; gabi::store<u16>(address,gabi::load<u16>(address)|2);
+
+/* 02314D7C */
+static void daObjAjav_limit_angle(be<s16>* i_anglePtr, s32 i_angleLimit) {
+    s32 value = *i_anglePtr, absolute = value < 0 ? -value : value;
+    if (absolute > i_angleLimit)
+        *i_anglePtr = (s16)(value > 0 ? (u32)i_angleLimit : 0u - (u32)i_angleLimit);
+}
+
+/* 0231513C */
+BOOL daObjAjav::Act_c::check_all_wait() {
+    for (u32 i = 0; i < PART_COUNT; ++i) {
+        daObjAjav::Part_c::daObjAjavPartCallback* method = &mRockParts[i].mExeProc;
+        if ((s16)method->i != -1)
+            return FALSE;
+        if ((s16)method->d != 0 || (u32)method->f != daObjAjav::Part_c::PROC_NONE)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+/* 02315194 */
+BOOL daObjAjav::Act_c::check_end() {
+    if ((u8)M_status != STATUS_MAX - 1)
+        return FALSE;
+    return check_all_wait();
+}
+
+/* 02314C78 */
+void daObjAjav::Act_c::to_broken() {
+    const char* name = l_daObjAjav_ev_name[(u8)M_status];
+    auto manager = dComIfGp_getPEvtManager();
+    s32 event = ajavGetEvent(manager, name, 255);
+    u16 command = (u16)eventInfo.mCommand;
+    mEventIdx = (s16)event;
+    mActionIdx = ACTION_EVENT;
+    if (command != dEvtCmd_INDEMO_e) {
+        fopAcM_orderOtherEventId(this, (s16)mEventIdx, 255, 0xFFFF, 0, 1);
+        eventInfo.onCondition(dEvtCnd_UNK2_e);
     }
 }
-VERIFY(0x02314C78,to_broken);
-static BOOL damage_part(Act* actor) {
-    WWHD_FUNC(0x02314D14,BOOL,actor);
-    void* sphere=gabi::at<void>(gabi::ea(actor)+0x3F4);
-    if((u8)actor->status<3 && gabi::call<BOOL>(0x025162A4,sphere)) {
-        to_broken(actor); gabi::call(0x0251621C,sphere); return TRUE;
+
+/* 02314D14 */
+BOOL daObjAjav::Act_c::damage_part() {
+    dCcD_Sph* sphere = &mSph;
+    if ((u8)M_status < STATUS_MAX - 1 && sphere->ChkTgHit()) {
+        to_broken();
+        sphere->ClrTgHit();
+        return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x02314D14,damage_part);
-static void set_co_offset(Act* actor) {
-    WWHD_FUNC(0x02314794,void,actor);
-    u32 status=actor->status;
-    if(status>=3) { JUT_ASSERT_fail(STR(0x100248BC),0x4A0,STR(0x100248D0)); status=actor->status; }
-    copyWords(&actor->sphereOffset,gabi::at<cXyz>(0x10468F3C+status*12),3);
-    gabi::Local<cXyz> center; gabi::Local<u8[16]> callerLinkage4;
-    gabi::call(0x0201AD78,&actor->current.pos,(cXyz*)center,&actor->sphereOffset);
-    u32 address=gabi::ea(actor);
-    gabi::call(0x02018D40,gabi::at<void>(address+0x50C),(cXyz*)center);
-    status=actor->status;
-    gabi::call(0x02018428,gabi::at<void>(address+0x680),gabi::load<f32>(0x101C79D0+status*4));
-    status=actor->status;
-    for(u32 i=0;i<2;++i) {
-        u32 index=status*2+i;
-        gabi::call(0x0201AD78,&actor->current.pos,(cXyz*)center,gabi::at<cXyz>(0x10468FA8+index*12));
-        void* cylinder=gabi::at<void>(address+0x828+i*0x130);
-        gabi::call(0x020182E0,cylinder,(cXyz*)center);
-        gabi::call(0x020184DC,cylinder,gabi::load<f32>(0x101C79A0+index*4));
-        gabi::call(0x02018428,cylinder,gabi::load<f32>(0x101C79B8+index*4));
+
+/* 02314DAC */
+void daObjAjav::Act_c::make_shot_rock() {
+    gabi::Local<cXyz> position;
+    gabi::Local<u8[16]> callerLinkage7;
+    position->x = mSph.mSph.mCenter.x;
+    position->y = mSph.mSph.mCenter.y;
+    position->z = mSph.mSph.mCenter.z;
+    auto emitter = dComIfGp_particle_set(0x8426, position);
+    if (emitter) {
+        auto environment = dKy_getEnvlight();
+        settingTevStruct(environment, 1, position, &tevStr);
+        u8 red = tevStr.mColorK0.r, green = tevStr.mColorK0.g, blue = tevStr.mColorK0.b;
+        auto output = reinterpret_cast<AjavEmitter*>(emitter);
+        output->mGlobalPrmColor.r = red;
+        output->mGlobalPrmColor.g = green;
+        output->mGlobalPrmColor.b = blue;
     }
 }
-VERIFY(0x02314794,set_co_offset);
-static void make_hamon(Part* p,cXyz* position,f32 size) {
-    WWHD_FUNC(0x02314108,void,p,position,size);
-    gabi::Local<cXyz> scale; gabi::Local<be<f32>> height; gabi::Local<u8[16]> callerLinkage5;
-    f32 value=2.0f+size/2000.0f; scale->x=value; scale->y=value; scale->z=value;
-    position->y=(f32)position->y+10.0f;
-    if(gabi::call<s32>(0x025D9F70,position,(be<f32>*)height)==1) position->y=(f32)*height+0.1f;
-    dComIfGp_particle_set(0x3F,position,nullptr,scale);
-}
-VERIFY(0x02314108,make_hamon);
-static void make_hamon2(Act* actor,cXyz* position,f32 size) {
-    WWHD_FUNC(0x02314E6C,void,actor,position,size);
-    gabi::Local<cXyz> scale; gabi::Local<be<f32>> height; gabi::Local<u8[16]> callerLinkage6;
-    f32 value=1.0f+size/3000.0f; scale->x=value; scale->y=value; scale->z=value;
-    position->y=(f32)position->y+10.0f;
-    if(gabi::call<s32>(0x025D9F70,position,(be<f32>*)height)==1) position->y=(f32)*height+0.1f;
-    auto emitter=dComIfGp_particle_set(0x8454,position,nullptr,scale);
-    if(emitter) {
-        auto environment=dKy_getEnvlight(); settingTevStruct(environment,2,&actor->current.pos,&actor->tevStr);
-        u32 address=gabi::ea(actor),output=gabi::ea(emitter);
-        u8 red=gabi::load<u8>(address+0x1A1),blue=gabi::load<u8>(address+0x1A5);
-        gabi::store<u8>(output+0x244,red);
-        u8 green=gabi::load<u8>(address+0x1A3);
-        gabi::store<u8>(output+0x246,blue); gabi::store<u8>(output+0x245,green);
+
+/* 02314E6C */
+void daObjAjav::Act_c::make_hamon2(cXyz* i_hamonPos, f32 i_scale) {
+    gabi::Local<cXyz> scale;
+    gabi::Local<be<f32>> height;
+    gabi::Local<u8[16]> callerLinkage6;
+    f32 value = 1.0f + i_scale / 3000.0f;
+    scale->x = value;
+    scale->y = value;
+    scale->z = value;
+    i_hamonPos->y = (f32)i_hamonPos->y + 10.0f;
+    if (ajavWaterHeight(i_hamonPos, (be<f32>*)height) == 1)
+        i_hamonPos->y = (f32)*height + 0.1f;
+    auto emitter = dComIfGp_particle_set(0x8454, i_hamonPos, nullptr, scale);
+    if (emitter) {
+        auto environment = dKy_getEnvlight();
+        settingTevStruct(environment, 2, &current.pos, &tevStr);
+        auto output = reinterpret_cast<AjavEmitter*>(emitter);
+        u8 red = (u8)(s16)tevStr.mColorC0.r, blue = (u8)(s16)tevStr.mColorC0.b;
+        output->mGlobalPrmColor.r = red;
+        u8 green = (u8)(s16)tevStr.mColorC0.g;
+        output->mGlobalPrmColor.b = blue;
+        output->mGlobalPrmColor.g = green;
     }
 }
-VERIFY(0x02314E6C,make_hamon2);
-static void make_shot_rock(Act* actor) {
-    WWHD_FUNC(0x02314DAC,void,actor);
-    gabi::Local<cXyz> position; gabi::Local<u8[16]> callerLinkage7;
-    u32 address=gabi::ea(actor);
-    position->x=gabi::load<f32>(address+0x50C); position->y=gabi::load<f32>(address+0x510); position->z=gabi::load<f32>(address+0x514);
-    auto emitter=dComIfGp_particle_set(0x8426,position);
-    if(emitter) {
-        auto environment=dKy_getEnvlight(); settingTevStruct(environment,1,position,&actor->tevStr);
-        u8 red=gabi::load<u8>(address+0x1A8),green=gabi::load<u8>(address+0x1A9),blue=gabi::load<u8>(address+0x1AA);
-        u32 output=gabi::ea(emitter); gabi::store<u8>(output+0x244,red); gabi::store<u8>(output+0x245,green); gabi::store<u8>(output+0x246,blue);
+
+/* 02314F78 */
+void daObjAjav::Act_c::set_hamon(f32 i_scale) {
+    gabi::Local<cXyz> forward, side, current, temporary, position;
+    gabi::Local<u8[16]> callerLinkage8;
+    ajavYrotS(mDoMtx_stack_c::get(), (s16)this->current.angle.y);
+    PSMTXMultVec(mDoMtx_stack_c::get(), &l_baseZ, (cXyz*)forward);
+    PSVECScale((cXyz*)forward, (cXyz*)forward, 1300.0f);
+    ajavYrotS(mDoMtx_stack_c::get(), (s16)this->current.angle.y);
+    PSMTXMultVec(mDoMtx_stack_c::get(), &l_baseX, (cXyz*)side);
+    for (u32 i = 0; i < 2; ++i) {
+        (*(cXyz*)current) = (this->current.pos);
+        (*(cXyz*)temporary) = (*(cXyz*)side);
+        f32 factor = gabi::fmadds(-2.0f, (f32)i, 1.0f) * 400.0f;
+        PSVECScale((cXyz*)temporary, (cXyz*)temporary, factor);
+        PSVECAdd((cXyz*)current, (cXyz*)forward, (cXyz*)current);
+        PSVECAdd((cXyz*)current, (cXyz*)temporary, (cXyz*)current);
+        position->x = current->x;
+        position->y = current->y;
+        position->z = current->z;
+        make_hamon2(position, i_scale);
     }
 }
-VERIFY(0x02314DAC,make_shot_rock);
-static void make_fall_rock(Part* p,BOOL increased) {
-    WWHD_FUNC(0x02314500,void,p,increased);
-    auto emitter=dComIfGp_particle_set(0x8427,&p->particlePosition);
-    if(emitter && (dKy_tevstr_c*)p->lighting) {
-        if(increased) gabi::store<f32>(gabi::ea(emitter)+0x34,20.0f);
-        auto environment=dKy_getEnvlight(); settingTevStruct(environment,1,&p->particlePosition,p->lighting);
-        u32 lighting=gabi::ea(p->lighting),output=gabi::ea(emitter);
-        u8 red=gabi::load<u8>(lighting+0x98),green=gabi::load<u8>(lighting+0x99),blue=gabi::load<u8>(lighting+0x9A);
-        gabi::store<u8>(output+0x244,red); gabi::store<u8>(output+0x245,green); gabi::store<u8>(output+0x246,blue);
-    }
-}
-VERIFY(0x02314500,make_fall_rock);
-static void set_hamon(Act* actor,f32 size) {
-    WWHD_FUNC(0x02314F78,void,actor,size);
-    gabi::Local<cXyz> forward,side,current,temporary,position; gabi::Local<u8[16]> callerLinkage8;
-    gabi::call(0x025F1884,mDoMtx_stack_c::get(),(s16)actor->current.angle.y);
-    gabi::call(0x028E8F64,mDoMtx_stack_c::get(),gabi::at<cXyz>(0x101FFBCC),(cXyz*)forward);
-    gabi::call(0x028E8E64,(cXyz*)forward,(cXyz*)forward,1300.0f);
-    gabi::call(0x025F1884,mDoMtx_stack_c::get(),(s16)actor->current.angle.y);
-    gabi::call(0x028E8F64,mDoMtx_stack_c::get(),gabi::at<cXyz>(0x101FFBB4),(cXyz*)side);
-    for(u32 i=0;i<2;++i) {
-        copyWords((cXyz*)current,&actor->current.pos,3); copyWords((cXyz*)temporary,(cXyz*)side,3);
-        f32 factor=gabi::fmadds(-2.0f,(f32)i,1.0f)*400.0f;
-        gabi::call(0x028E8E64,(cXyz*)temporary,(cXyz*)temporary,factor);
-        gabi::call(0x028E8D88,(cXyz*)current,(cXyz*)forward,(cXyz*)current);
-        gabi::call(0x028E8D88,(cXyz*)current,(cXyz*)temporary,(cXyz*)current);
-        position->x=current->x; position->y=current->y; position->z=current->z;
-        make_hamon2(actor,position,size);
-    }
-}
-VERIFY(0x02314F78,set_hamon);
-static void fall_0(Part* p,Act* actor) {
-    WWHD_FUNC(0x02313F24,void,p,actor);
-    gabi::call(0x0201A554,&p->rotation,&p->rotationRate);
-    BOOL reflected=check_angle(&p->rotation.x,p->angleLimit);
-    s16 limit=p->angleLimit;
-    if(reflected) p->rotationRate.x=(s16)-(s16)p->rotationRate.x;
-    if(check_angle(&p->rotation.y,limit)) p->rotationRate.y=(s16)-(s16)p->rotationRate.y;
-    gabi::call(0x028E8D88,&p->displacement,&p->rate,&p->displacement);
-    f32 random=gabi::call<f32>(0x02019788);
-    f32 factor=gabi::fmadds(0.2f,random,0.8f);
-    u16 timer=(u16)((u16)p->timer+1),trigger=p->trigger;
-    f32 speedZ=(f32)p->rate.z*factor;
-    p->timer=timer; p->rate.z=speedZ;
-    if(timer==trigger) {
-        gabi::Local<cXyz> reduced; gabi::Local<u8[16]> callerLinkage9;
-        gabi::call(0x0201AE48,&p->rate,(cXyz*)reduced,0.4f);
-        f32 x=reduced->x,z=reduced->z;
-        setMethod(&p->execute,0x023141CC); p->timer=0;
-        p->rate.x=x; p->rate.y=5.0f; p->rate.z=z;
-        u32 packed=gabi::call<u32>(0x0201A588,&p->rotationRate,0.3f);
-        u32 last=gabi::cpu->r[4];
-        p->rotationRate.x=(s16)(packed>>16); p->rotationRate.y=(s16)packed; p->rotationRate.z=(s16)(last>>16);
-        s32 sign=gabi::ftoi(-2.0f*gabi::call<f32>(0x02019788));
-        s32 magnitude=gabi::ftoi(511.0f*gabi::call<f32>(0x02019788));
-        p->rotationRate.z=(s16)((u32)sign*(u32)magnitude);
-    }
-    gabi::Local<cXyz> position; gabi::Local<csXyz> angle; gabi::Local<u8[16]> callerLinkage10;
-    position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-    for(u32 i=0;i<3;++i) gabi::store<u16>(gabi::ea((csXyz*)angle)+2*i,gabi::load<u16>(gabi::ea(&actor->shape_angle)+2*i));
-    set_fall_mtx(p,position,angle);
-}
-VERIFY(0x02313F24,fall_0);
-static void fall_1(Part* p,Act* actor) {
-    WWHD_FUNC(0x023141CC,void,p,actor);
-    gabi::call(0x028E8D88,&p->displacement,&p->rate,&p->displacement);
-    f32 elapsed=(f32)(u16)p->timer;
-    p->displacement.y=(f32)p->displacement.y-(elapsed+elapsed);
-    gabi::call(0x0201A554,&p->rotation,&p->rotationRate);
-    f32 y=p->displacement.y,originY=p->centerToOrigin.y;
-    u16 timer=p->timer; u8 splashed=p->splashed; p->timer=(u16)(timer+1);
-    if(!splashed && !(y>originY-100.0f)) {
-        gabi::Local<cXyz> displaced,sum,position,scale; gabi::Local<u8[16]> callerLinkage11;
-        gabi::call(0x0201AD78,&actor->current.pos,(cXyz*)displaced,&p->displacement);
-        gabi::call(0x0201AD78,(cXyz*)displaced,(cXyz*)sum,&p->center);
-        f32 size=4.0f+(f32)p->center.y/2000.0f,x=sum->x,z=sum->z;
-        position->x=x; position->y=0.0f; position->z=z;
-        scale->x=size; scale->y=4.0f; scale->z=size;
-        dComIfGp_particle_set(0x3C,position,nullptr,scale);
-        f32 centerY=p->center.y; p->splashed=1;
-        position->x=x; position->y=0.0f; position->z=z;
-        make_hamon(p,position,centerY);
-        p->soundPosition.x=x; p->soundPosition.y=0.0f; p->soundPosition.z=z;
-        s32 reverb=dComIfGp_getReverb(actor->current.roomNo);
-        mDoAud_seStart(0x6A29,&p->soundPosition,0,reverb);
-        originY=p->centerToOrigin.y; y=p->displacement.y;
-    }
-    if(!(y>originY-1000.0f)) { setMethod(&p->execute,0x02313AA8); setMethod(&p->draw,0x02313AA8); }
-    gabi::Local<cXyz> position; gabi::Local<csXyz> angle; gabi::Local<u8[16]> callerLinkage12;
-    position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-    for(u32 i=0;i<3;++i) gabi::store<u16>(gabi::ea((csXyz*)angle)+2*i,gabi::load<u16>(gabi::ea(&actor->shape_angle)+2*i));
-    set_fall_mtx(p,position,angle);
-}
-VERIFY(0x023141CC,fall_1);
-static u32 getColor(u32 material) {
-    u32 block=gabi::load<u32>(material+0x18),table=gabi::load<u32>(block+4),target=gabi::load<u32>(table+0x4C);
-    return gabi::call_ptr<u32>(target,gabi::at<void>(block),1);
-}
-struct ColorFloat { be<f32> value[4]; };
-static void draw_flashing(Part* p,Act* actor) {
-    WWHD_FUNC(0x02313AF0,void,p,actor);
-    if(!(dKy_tevstr_c*)p->lighting) return;
-    auto environment=dKy_getEnvlight(); setLightTevColorType(environment,p->model,p->lighting);
-    u32 model=gabi::ea(p->model),data=gabi::load<u32>(model+0xAC),joint=gabi::load<u32>(data+8),material=gabi::load<u32>(joint+0x10);
-    u8 red=0,green=0,blue=0;
-    if(material) {
-        f32 ratio=(f32)(u16)p->timer/(f32)(u16)p->trigger;
-        u16 theta=(u16)((u16)gabi::ftoi(20479.0f*ratio)+0x3000);
-        f32 strength=std::fabs(gabi::load<f32>(0x104A44F8+(theta>>3)*8));
-        red=gabi::load<u8>(getColor(material)); green=gabi::load<u8>(getColor(material)+1); blue=gabi::load<u8>(getColor(material)+2);
-        gabi::store<u8>(getColor(material),(u8)gabi::ftoi(85.0f*strength));
-        gabi::store<u8>(getColor(material)+1,(u8)gabi::ftoi(11.0f*strength));
-        gabi::store<u8>(getColor(material)+2,(u8)gabi::ftoi(9.0f*strength));
-        u32 color=getColor(material),block=gabi::load<u32>(material+0x18),table=gabi::load<u32>(block+4);
-        gabi::call_ptr(gabi::load<u32>(table+0x3C),gabi::at<void>(block),1,gabi::at<GXColor>(color));
-        gabi::Local<ColorFloat> normalized,converted; gabi::Local<u8[16]> callerLinkage13;
-        gabi::call(0x0231353C,(ColorFloat*)normalized,gabi::at<GXColor>(color));
-        gabi::call(0x0274D458,(ColorFloat*)converted,(ColorFloat*)normalized,1.0f);
-        gabi::store<u32>(material+0xA0,gabi::load<u32>(material+0xA0)|0x100);
-        u32 output=gabi::call<u32>(0x027F9F0C,gabi::at<void>(material+0xA0),8);
-        f32 alpha=(f32)gabi::load<u8>(color+3)/255.0f;
-        f32 x=converted->value[0],y=converted->value[1],z=converted->value[2];
-        gabi::store<f32>(output,x); gabi::store<f32>(output+4,y); gabi::store<f32>(output+8,z); gabi::store<f32>(output+12,alpha);
-    }
-    mDoExt_modelUpdateDL(p->model);
-    if(material) {
-        gabi::store<u8>(getColor(material),red); gabi::store<u8>(getColor(material)+1,green); gabi::store<u8>(getColor(material)+2,blue);
-    }
-}
-VERIFY(0x02313AF0,draw_flashing);
-static void draw_flashing_normal(Part* p,Act* actor) {
-    WWHD_FUNC(0x02313E0C,void,p,actor);
-    draw_flashing(p,actor);
-    u16 timer=(u16)((u16)p->timer+1),trigger=p->trigger; p->timer=timer;
-    if(timer==trigger) setMethod(&p->draw,0x02313AAC);
-}
-VERIFY(0x02313E0C,draw_flashing_normal);
-static void constructStatus(u32 address) {
-    gabi::call(0x0200BD2C,gabi::at<void>(address));
-    gabi::call(0x02515DA0,gabi::at<void>(address+0x1C));
-    gabi::store<u32>(address+0x18,0x1004AE88); gabi::store<u32>(address+0x1C,0x1004AEC0);
-}
-static void constructCylinder(u32 address) {
-    gabi::call(0x02515FB8,gabi::at<void>(address));
-    gabi::store<u32>(address+0x114,0x100015A8); gabi::store<u32>(address+0x110,0x100247D8);
-    gabi::call(0x02018590,gabi::at<void>(address+0x118));
-    gabi::store<u32>(address+0x3C,0x1004B108); gabi::store<u32>(address+0x12C,0x1004B150); gabi::store<u32>(address+0x114,0x1004B160);
-}
-static s32 create(Act* actor) {
-    WWHD_FUNC(0x023148B4,s32,actor);
-    u32 address=gabi::ea(actor),condition=actor->actor_condition;
-    if(!(condition&8)) {
-        if(address) {
-            gabi::call(0x025D4ED0,actor); actor->__vtbl=0x10024800;
-            constructStatus(address+0x3B8); gabi::call(0x025166F0,gabi::at<void>(address+0x3F4));
-            constructStatus(address+0x52C); constructCylinder(address+0x568);
-            gabi::call(0x028EFFD0,gabi::at<void>(address+0x698),2,0x3C,0x02315D50);
-            gabi::call(0x028EFFD0,gabi::at<void>(address+0x710),2,0x130,0x02315DB8);
-            condition=actor->actor_condition;
+
+/* 023151CC */
+BOOL daObjAjav::Act_c::_execute() {
+    // HD: write the initialization flag before filling the static positions.
+    if (!(u32)l_flawPosInitialized) {
+        l_flawPosInitialized = 1;
+        const f32 offsets[18] = {0, 0, 0, 0, 0, 0, 0, 40, 0, 30, 30, 0, -20, 0, 0, 20, 0, 0};
+        for (u32 i = 0; i < 6; ++i) {
+            l_flawPos[i].x = offsets[i * 3];
+            l_flawPos[i].y = offsets[i * 3 + 1];
+            l_flawPos[i].z = offsets[i * 3 + 2];
         }
-        actor->actor_condition=condition|8;
     }
-    u32 switchNo=gabi::load<u8>(address+0xB3); actor->loaded=0; actor->switchNo=switchNo;
-    u32 save=gabi::load<u32>(0x101F84DC);
-    if(!gabi::call<BOOL>(0x025B8B94,gabi::at<void>(save+0x644),0xA02)) return 5;
-    s8 room=actor->home.roomNo; save=gabi::load<u32>(0x101F84DC);
-    if(gabi::call<BOOL>(0x025BA0C0,gabi::at<void>(save+0x20),(u32)actor->switchNo,room)) return 5;
-    s32 phase=dComIfG_resLoad(&actor->phase,STR(0x100249D8));
-    if(phase!=4) return phase;
-    if(!fopAcM_entrySolidHeap(actor,0x023146B4,0)) return 5;
-    for(u32 i=0;i<6;++i) {
-        gabi::Local<cXyz> position,offset; gabi::Local<u8[16]> callerLinkage14;
-        position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-        offset->x=gabi::load<f32>(0x10468F60+i*12); offset->y=gabi::load<f32>(0x10468F64+i*12); offset->z=gabi::load<f32>(0x10468F68+i*12);
-        init_data(&actor->parts[i],position,offset,&actor->tevStr,gabi::at<cXyz>(0x10468FF0+i*12));
+    for (u32 i = 0; i < PART_COUNT; ++i) {
+        daObjAjav::Part_c* part = partAt(this, i);
+        gabi::Local<cXyz> position, sum;
+        gabi::Local<u8[16]> callerLinkage15;
+        position->x = current.pos.x;
+        position->y = current.pos.y;
+        position->z = current.pos.z;
+        ajavAddPosition((cXyz*)position, (cXyz*)sum, &part->mCenterPos);
+        (part->mSePos) = (*(cXyz*)sum);
+        PSVECAdd(&part->mSePos, &part->mRockDisplacement, &part->mSePos);
     }
-    actor_init_mtx(actor);
-    gabi::call(0x028E90D4,J3DModel_getBaseTRMtx(actor->parts[5].model),&actor->matrix); set_tex(actor);
-    gabi::call(0x02515F14,gabi::at<void>(address+0x3B8),0,255,actor);
-    gabi::store<u32>(address+0x438,address+0x3B8);
-    gabi::call(0x0251677C,gabi::at<void>(address+0x3F4),gabi::at<void>(0x101C7960));
-    gabi::call(0x02515F14,gabi::at<void>(address+0x52C),0,255,actor);
-    gabi::store<u32>(address+0x5AC,address+0x52C);
-    gabi::call(0x02516518,gabi::at<void>(address+0x568),gabi::at<void>(0x101C79DC));
-    gabi::call(0x020182E0,gabi::at<void>(address+0x680),&actor->current.pos);
-    for(u32 i=0;i<2;++i) {
-        u32 status=address+0x698+i*0x3C,cylinder=address+0x710+i*0x130;
-        gabi::call(0x02515F14,gabi::at<void>(status),0,255,actor);
-        gabi::store<u32>(cylinder+0x44,status);
-        gabi::call(0x02516518,gabi::at<void>(cylinder),gabi::at<void>(0x101C7A20));
-    }
-    set_co_offset(actor);
-    auto space=dComIfG_Bgsp(); gabi::call(0x024EEA6C,space,(dBgW*)actor->background,actor);
-    actor->hintHits=0; actor->action=0; actor->loaded=1; return phase;
-}
-VERIFY(0x023148B4,create);
-static s32 CreateWrapper(Act* actor) { WWHD_FUNC(0x02315A4C,s32,actor); return create(actor); }
-VERIFY(0x02315A4C,CreateWrapper);
-static void sinit() {
-    WWHD_FUNC(0x02315A5C,void,(u32)0);
-    sinit_header_statics_z(0x10468F20,0x101C7A64,0x10468F2C);
-    const f32 sphere[9]={0,2550,200,250,1270,200,-290,740,200};
-    const f32 parts[18]={0,3000,0,500,2400,0,-300,1900,0,500,1400,0,-550,650,0,250,400,0};
-    const f32 cylinders[18]={33,2541,220,465,2083,220,-137.7f,1297,220,530,511,220,-124.5f,118,220,530,118,220};
-    const f32 particles[18]={-170,3087,222,563,2384,222,-371,1880,222,615,1391,222,-494,748,222,249,535,222};
-    for(u32 i=0;i<9;++i) gabi::store<f32>(0x10468F3C+i*4,sphere[i]);
-    for(u32 i=0;i<18;++i) gabi::store<f32>(0x10468F60+i*4,parts[i]);
-    for(u32 i=0;i<18;++i) gabi::store<f32>(0x10468FA8+i*4,cylinders[i]);
-    for(u32 i=0;i<18;++i) gabi::store<f32>(0x10468FF0+i*4,particles[i]);
-}
-VERIFY(0x02315A5C,sinit);
-static Part* partAt(Act* actor,u32 index) { return gabi::at<Part>(gabi::ea(actor)+0x9AC+index*0x90); }
-static BOOL execute(Act* actor) {
-    WWHD_FUNC(0x023151CC,BOOL,actor);
-    u32 address=gabi::ea(actor);
-    if(!gabi::load<u32>(0x10469080)) {
-        gabi::store<u32>(0x10469080,1);
-        const f32 offsets[18]={0,0,0,0,0,0,0,40,0,30,30,0,-20,0,0,20,0,0};
-        for(u32 i=0;i<18;++i) gabi::store<f32>(0x10469038+i*4,offsets[i]);
-    }
-    for(u32 i=0;i<6;++i) {
-        Part* part=partAt(actor,i); gabi::Local<cXyz> position,sum; gabi::Local<u8[16]> callerLinkage15;
-        position->x=actor->current.pos.x; position->y=actor->current.pos.y; position->z=actor->current.pos.z;
-        gabi::call(0x0201AD78,(cXyz*)position,(cXyz*)sum,&part->center);
-        copyWords(&part->soundPosition,(cXyz*)sum,3);
-        gabi::call(0x028E8D88,&part->soundPosition,&part->displacement,&part->soundPosition);
-    }
-    switch((u8)actor->action) {
-    case 0:
-        if(!damage_part(actor)) {
-            bool counted=false,broken=false;
-            for(u32 i=0;i<2;++i) {
-                gabi::call(0x02515E50,gabi::at<void>(address+0x6B4+i*0x3C));
-                void* cylinder=gabi::at<void>(address+0x710+i*0x130);
-                if(gabi::call<BOOL>(0x025162A4,cylinder)) {
-                    if(!counted) {
-                        u8 count=(u8)((u8)actor->hintHits+1); actor->hintHits=count;
-                        if(count>=3) { to_broken(actor); actor->hintHits=0; broken=true; }
-                        counted=true;
+    switch ((u8)mActionIdx) {
+    case ACTION_WAIT:
+        if (!damage_part()) {
+            bool counted = false, broken = false;
+            for (u32 i = 0; i < 2; ++i) {
+                mHintCylStts[i].Move();
+                dCcD_Cyl* cylinder = &mHintCyls[i];
+                if (cylinder->ChkTgHit()) {
+                    if (!counted) {
+                        u8 count = (u8)((u8)mHintCylHits + 1);
+                        mHintCylHits = count;
+                        if (count >= 3) {
+                            to_broken();
+                            mHintCylHits = 0;
+                            broken = true;
+                        }
+                        counted = true;
                     }
-                    gabi::call(0x0251621C,cylinder);
+                    cylinder->ClrTgHit();
                 }
             }
-            if(!broken) {
-                gabi::call(0x02515E50,gabi::at<void>(address+0x548));
-                void* cylinder=gabi::at<void>(address+0x568);
-                if(gabi::call<BOOL>(0x025162A4,cylinder)) {
-                    u32 first=(u8)actor->status*2;
-                    for(u32 i=0;i<2;++i) {
-                        Part* part=partAt(actor,first+i); make_fall_rock(part,TRUE);
-                        part->timer=0; part->trigger=30; setMethod(&part->draw,0x02313E0C);
+            if (!broken) {
+                mCylStts.Move();
+                dCcD_Cyl* cylinder = &mCyl;
+                if (cylinder->ChkTgHit()) {
+                    u32 first = (u8)M_status * 2;
+                    for (u32 i = 0; i < 2; ++i) {
+                        daObjAjav::Part_c* part = partAt(this, first + i);
+                        part->make_fall_rock(TRUE);
+                        part->mTimer = 0;
+                        part->mTimerTrigger = 30;
+                        part->setDrawProc(daObjAjav::Part_c::PROC_DRAW_FLASHING_NORMAL);
                     }
-                    gabi::call(0x0251621C,cylinder);
+                    cylinder->ClrTgHit();
                 }
             }
         }
         break;
-    case 1:
-        if(gabi::load<u16>(address+0xF8)==2) {
-            u32 first=(u8)actor->status*2;
-            for(u32 i=0;i<2;++i) {
-                Part* part=partAt(actor,first+i);
-                gabi::Local<cXyz> offset,center,difference,rate; gabi::Local<u8[16]> callerLinkage16;
-                gabi::Local<csXyz> rotation,byValueRotation; gabi::Local<u8[16]> callerLinkage17;
-                offset->x=actor->sphereOffset.x; offset->y=actor->sphereOffset.y; offset->z=actor->sphereOffset.z;
-                center->x=part->center.x; center->y=part->center.y; center->z=part->center.z;
-                gabi::call(0x0201ADE0,(cXyz*)offset,(cXyz*)difference,(cXyz*)center);
-                rotation->x=(s16)gabi::ftoi(difference->y); rotation->y=(s16)gabi::ftoi(difference->x);
-                gabi::store<u16>(gabi::ea((csXyz*)rotation)+4,gabi::load<u16>(0x101FFB18));
-                limit_angle(&rotation->x,511); limit_angle(&rotation->y,511);
-                for(u32 j=0;j<3;++j) gabi::store<u16>(gabi::ea((csXyz*)byValueRotation)+2*j,gabi::load<u16>(gabi::ea((csXyz*)rotation)+2*j));
-                rate->x=((first+i)&1)?12.0f:-12.0f; rate->y=-10.0f; rate->z=55.0f;
-                u16 trigger=(u16)((u16)gabi::ftoi(9.0f*gabi::call<f32>(0x02019788))+7);
-                fall_init(part,rate,byValueRotation,511,trigger);
-                s32 reverb=dComIfGp_getReverb(actor->current.roomNo);
-                mDoAud_seStart(0x6A28,&part->soundPosition,0,reverb);
-                setMethod(&part->draw,0x02313AAC); make_fall_rock(part,FALSE);
+    case ACTION_EVENT:
+        if (eventInfo.checkCommandDemoAccrpt()) {
+            u32 first = (u8)M_status * 2;
+            for (u32 i = 0; i < 2; ++i) {
+                daObjAjav::Part_c* part = partAt(this, first + i);
+                gabi::Local<cXyz> offset, center, difference, rate;
+                gabi::Local<u8[16]> callerLinkage16;
+                gabi::Local<csXyz> rotation, byValueRotation;
+                gabi::Local<u8[16]> callerLinkage17;
+                offset->x = mSphCoOffset.x;
+                offset->y = mSphCoOffset.y;
+                offset->z = mSphCoOffset.z;
+                center->x = part->mCenterPos.x;
+                center->y = part->mCenterPos.y;
+                center->z = part->mCenterPos.z;
+                ajavSubtractPosition((cXyz*)offset, (cXyz*)difference, (cXyz*)center);
+                rotation->x = (s16)gabi::ftoi(difference->y);
+                rotation->y = (s16)gabi::ftoi(difference->x);
+                rotation->z = l_zeroRotation.z;
+                daObjAjav_limit_angle(&rotation->x, 511);
+                daObjAjav_limit_angle(&rotation->y, 511);
+                *byValueRotation = *rotation;
+                rate->x = ((first + i) & 1) ? 12.0f : -12.0f;
+                rate->y = -10.0f;
+                rate->z = 55.0f;
+                u16 trigger = (u16)((u16)gabi::ftoi(9.0f * cM_rnd()) + 7);
+                part->fall_init(rate, byValueRotation, 511, trigger);
+                s32 reverb = dComIfGp_getReverb(current.roomNo);
+                mDoAud_seStart(0x6A28, &part->mSePos, 0, reverb);
+                part->setDrawProc(daObjAjav::Part_c::PROC_DRAW_NORMAL);
+                part->make_fall_rock(FALSE);
             }
-            make_shot_rock(actor);
-            u32 firstNow=(u8)actor->status*2;
-            set_hamon(actor,partAt(actor,firstNow)->displacement.y);
-            u8 status=(u8)((u8)actor->status+1); actor->status=status;
-            if(status<3) {
-                for(u32 i=0;i<2;++i) {
-                    u32 index=status*2+i; Part* part=partAt(actor,index);
-                    copyWords(&part->flaw,gabi::at<cXyz>(0x10469038+index*12),3);
-                    setMethod(&part->execute,0x02314460);
+            make_shot_rock();
+            u32 firstNow = (u8)M_status * 2;
+            set_hamon(partAt(this, firstNow)->mRockDisplacement.y);
+            u8 status = (u8)((u8)M_status + 1);
+            M_status = status;
+            if (status < STATUS_MAX - 1) {
+                for (u32 i = 0; i < 2; ++i) {
+                    u32 index = status * 2 + i;
+                    daObjAjav::Part_c* part = partAt(this, index);
+                    (part->mFlawPos) = (*&l_flawPos[index]);
+                    part->setExeProc(daObjAjav::Part_c::PROC_FLAW);
                 }
-                set_co_offset(actor); actor->action=2;
-            } else { actor->cutsceneDelay=60; actor->action=3; }
+                set_co_offset();
+                mActionIdx = ACTION_EVENT_END;
+            } else {
+                mCutsceneEndDelay = 60;
+                mActionIdx = ACTION_LAST_FALL;
+            }
         } else {
-            gabi::call(0x025D7A58,actor,(s16)actor->eventIndex,255,0xFFFF,0,1);
-            gabi::store<u16>(address+0xFA,gabi::load<u16>(address+0xFA)|2);
+            fopAcM_orderOtherEventId(this, (s16)mEventIdx, 255, 0xFFFF, 0, 1);
+            eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
         break;
-    case 2: {
-        s16 event=actor->eventIndex; auto manager=dComIfGp_getPEvtManager();
-        if(gabi::call<BOOL>(0x025440C8,manager,event)) {
-            auto play=dComIfGp_get(); u32 flagAddress=gabi::ea(play)+0x52B8;
-            gabi::store<u16>(flagAddress,gabi::load<u16>(flagAddress)|8);
-            if((u8)actor->status<3) actor->action=0; else actor->action=4;
+    case ACTION_EVENT_END: {
+        s16 event = mEventIdx;
+        auto manager = dComIfGp_getPEvtManager();
+        if (ajavEventEndCheck(manager, event)) {
+            dComIfGp_getEvent()->reset();
+            if ((u8)M_status < STATUS_MAX - 1)
+                mActionIdx = ACTION_WAIT;
+            else
+                mActionIdx = ACTION_DONE;
         }
         break;
     }
-    case 3:
-        if(check_end(actor)) {
-            u16 delay=actor->cutsceneDelay;
-            if(delay) actor->cutsceneDelay=(u16)(delay-1);
+    case ACTION_LAST_FALL:
+        if (check_end()) {
+            u16 delay = mCutsceneEndDelay;
+            if (delay)
+                mCutsceneEndDelay = (u16)(delay - 1);
             else {
-                auto manager=dComIfGp_getPEvtManager(); s32 staff=gabi::call<s32>(0x02542D88,manager,STR(0x10024934),0,0);
-                manager=dComIfGp_getPEvtManager(); gabi::call(0x02543280,manager,staff);
-                if(gabi::load<u32>(address+0xF4)) {
-                    u32 background=gabi::ea(actor->background);
-                    if(background && gabi::load<u32>(background)<0x100) {
-                        auto space=dComIfG_Bgsp(); gabi::call(0x020087EC,space,(dBgW*)actor->background); actor->background=nullptr;
+                auto manager = dComIfGp_getPEvtManager();
+                s32 staff = ajavGetStaff(manager, "Ajav", 0, 0);
+                manager = dComIfGp_getPEvtManager();
+                ajavCutEnd(manager, staff);
+                if ((JKRSolidHeap*)heap) {
+                    u32 background = gabi::ea(mpBgW);
+                    if (background && mpBgW->ChkUsed()) {
+                        auto space = dComIfG_Bgsp();
+                        space->Release(mpBgW);
+                        mpBgW = nullptr;
                     }
                 }
-                s8 room=actor->home.roomNo; u32 save=gabi::load<u32>(0x101F84DC);
-                gabi::call(0x025B9E38,gabi::at<void>(save+0x20),(u32)actor->switchNo,room);
-                gabi::call(0x025E1988,0x806); gabi::call(0x025E1928);
-                u8 status=(u8)((u8)actor->status+1); actor->action=2; actor->status=status;
+                s8 room = home.roomNo;
+                dComIfGs_onSwitch(mSwNo, room);
+                ajavSystemSeStart(0x806);
+                ajavSubBgmStop();
+                u8 status = (u8)((u8)M_status + 1);
+                mActionIdx = ACTION_EVENT_END;
+                M_status = status;
             }
         }
         break;
-    case 4: break;
-    default: actor->action=0; break;
+    case ACTION_DONE:
+        break;
+    default:
+        mActionIdx = ACTION_WAIT;
+        break;
     }
-    if((u8)actor->status<3) {
-        auto space=dComIfG_Ccsp(); gabi::call(0x0200E240,space,gabi::at<void>(address+0x3F4));
-        space=dComIfG_Ccsp(); gabi::call(0x0200E240,space,gabi::at<void>(address+0x568));
-        for(u32 i=0;i<2;++i) { space=dComIfG_Ccsp(); gabi::call(0x0200E240,space,gabi::at<void>(address+0x710+i*0x130)); }
+    if ((u8)M_status < STATUS_MAX - 1) {
+        auto space = dComIfG_Ccsp();
+        ajavCollisionSet(space, &mSph);
+        space = dComIfG_Ccsp();
+        ajavCollisionSet(space, &mCyl);
+        for (u32 i = 0; i < 2; ++i) {
+            space = dComIfG_Ccsp();
+            ajavCollisionSet(space, &mHintCyls[i]);
+        }
     }
-    for(u32 i=0;i<6;++i) { Part* part=partAt(actor,i); dispatch(part,&part->execute,actor); }
-    u32 background=gabi::ea(actor->background);
-    if(background && gabi::load<u32>(background)<0x100) gabi::call(0x024F43DC,gabi::at<dBgW>(background));
+    for (u32 i = 0; i < PART_COUNT; ++i) {
+        daObjAjav::Part_c* part = partAt(this, i);
+        (part->*part->mExeProc)(this);
+    }
+    u32 background = gabi::ea(mpBgW);
+    if (background && mpBgW->ChkUsed())
+        mpBgW->Move();
     return TRUE;
 }
-VERIFY(0x023151CC,execute);
-static BOOL ExecuteWrapper(Act* actor) { WWHD_FUNC(0x02315A54,BOOL,actor); return execute(actor); }
-VERIFY(0x02315A54,ExecuteWrapper);
+
+/* 02315994 */
+BOOL daObjAjav::Act_c::_draw() {
+    auto environment = dKy_getEnvlight();
+    settingTevStruct(environment, 1, &current.pos, &tevStr);
+    for (u32 i = 0; i < PART_COUNT; ++i)
+        ((&mRockParts[i])->*mRockParts[i].mDrawProc)(this);
+    return TRUE;
 }
+
+/* 02315A4C */
+static s32 daObjAjav_Mthd_Create(daObjAjav::Act_c* i_actor) { return i_actor->_create(); }
+
+/* 02315A50 */
+static BOOL daObjAjav_Mthd_Delete(daObjAjav::Act_c* i_actor) { return i_actor->_delete(); }
+
+/* 02315A54 */
+static BOOL daObjAjav_Mthd_Execute(daObjAjav::Act_c* i_actor) { return i_actor->_execute(); }
+
+/* 02315A58 */
+static BOOL daObjAjav_Mthd_Draw(daObjAjav::Act_c* i_actor) { return i_actor->_draw(); }
+
+/* 02315F0C */
+static BOOL daObjAjav_Mthd_IsDelete(daObjAjav::Act_c* i_actor) { return TRUE; }
+
+/* ---------------- HD: compiler-generated and template code of this translation unit
+ * ---------------- */
+
+/* 02315A5C */
+static void daObjAjav_sinit() {
+    __sinit_header_statics();
+    const f32 sphere[9] = {0, 2550, 200, 250, 1270, 200, -290, 740, 200};
+    const f32 parts[18] = {0,   3000, 0, 500,  2400, 0, -300, 1900, 0,
+                           500, 1400, 0, -550, 650,  0, 250,  400,  0};
+    const f32 cylinders[18] = {33,  2541, 220, 465,     2083, 220, -137.7f, 1297, 220,
+                               530, 511,  220, -124.5f, 118,  220, 530,     118,  220};
+    const f32 particles[18] = {-170, 3087, 222, 563,  2384, 222, -371, 1880, 222,
+                               615,  1391, 222, -494, 748,  222, 249,  535,  222};
+    for (u32 i = 0; i < 3; ++i) {
+        l_daObjAjav_co_offset[i].x = sphere[i * 3];
+        l_daObjAjav_co_offset[i].y = sphere[i * 3 + 1];
+        l_daObjAjav_co_offset[i].z = sphere[i * 3 + 2];
+    }
+    for (u32 i = 0; i < 6; ++i) {
+        l_daObjAjav_offset[i].x = parts[i * 3];
+        l_daObjAjav_offset[i].y = parts[i * 3 + 1];
+        l_daObjAjav_offset[i].z = parts[i * 3 + 2];
+    }
+    for (u32 i = 0; i < 6; ++i) {
+        l_daObjAjav_cyl_offset[i].x = cylinders[i * 3];
+        l_daObjAjav_cyl_offset[i].y = cylinders[i * 3 + 1];
+        l_daObjAjav_cyl_offset[i].z = cylinders[i * 3 + 2];
+    }
+    for (u32 i = 0; i < 6; ++i) {
+        l_daObjAjav_rock_pos_table[i].x = particles[i * 3];
+        l_daObjAjav_rock_pos_table[i].y = particles[i * 3 + 1];
+        l_daObjAjav_rock_pos_table[i].z = particles[i * 3 + 2];
+    }
+}
+
+/* 02315D3C */
+static void daObjAjav_Part_destructor(void* p, s32 flags) {
+    if (p && (flags & 1))
+        operator_delete(p);
+}
+
+/* 02315D50 */
+static void* daObjAjav_Stts_constructor(void* p) {
+    if (!p)
+        p = operator_new(0x3C);
+    if (p) {
+        constructStatus((dCcD_Stts*)p);
+    }
+    return p;
+}
+
+/* 02315DB8 */
+static void* daObjAjav_Cyl_constructor(void* p) {
+    if (!p)
+        p = operator_new(0x130);
+    if (p) {
+        constructCylinder((dCcD_Cyl*)p);
+    }
+    return p;
+}
+
+/* 02315E44 */
+static void daObjAjav_emptyDestructor(void* p) {}
+
+/* 02315E48 */
+static void daObjAjav_Act_destructor(daObjAjav::Act_c* i_actor, s32 flags) {
+    if (!i_actor)
+        return;
+    ajavDestroyArray(i_actor->mHintCyls, 2, 0x130, ajavCylinderDt, 0, 0);
+    ajavDestroyArray(i_actor->mHintCylStts, 2, 0x3C, ajavStatusDt, 0, 0);
+    ajavCylinderDt(&i_actor->mCyl, 2);
+    ajavStatusDt(&i_actor->mCylStts, 2);
+    ajavSphereDt(&i_actor->mSph, 2);
+    ajavStatusDt(&i_actor->mSphStts, 2);
+    ajavActorDt(i_actor, 0);
+    if (flags & 1)
+        operator_delete(i_actor);
+}
+
+/* WWHD glue
+data l_sincosTable 104A44F8 nocheck # Shared runtime-initialized sine/cosine table
+data l_daObjAjav_co_offset 10468F3C nocheck # HD: BSS populated by the original initializer
+data l_daObjAjav_offset 10468F60 nocheck # HD: BSS populated by the original initializer
+data l_daObjAjav_cyl_offset 10468FA8 nocheck # HD: BSS populated by the original initializer
+data l_daObjAjav_rock_pos_table 10468FF0 nocheck # HD: BSS populated by the original initializer
+data l_flawPos 10469038 nocheck # HD: BSS populated by the original initializer
+data l_daObjAjav_hint_cyl_h_talbe 101C79D0
+data l_daObjAjav_cyl_r 101C79A0
+data l_daObjAjav_cyl_h 101C79B8
+data l_daObjAjav_idx_table 100247E8
+data l_baseX 101FFBB4 nocheck # Common-header BSS initialized by sinit_header_statics_z
+data l_baseZ 101FFBCC nocheck # Common-header BSS initialized by sinit_header_statics_z
+data l_zeroRotation 101FFB14 nocheck # Common-header BSS initialized by sinit_header_statics_z
+data l_flawPosInitialized 10469080 nocheck # HD: BSS populated by the original initializer
+data l_daObjAjav_ev_name 10024810
+data l_daObjAjav_sph_data 101C7960
+data l_daObjAjav_cyl_data 101C79DC
+data l_daObjAjav_hint_cyl_data 101C7A20
+str 10024858 in 02313714
+str 10024848
+str 100248BC in 02314794
+str 100248D0
+str 100249D8
+str 10024934 in 023151CC
+ext 0200E240 void ajavCollisionSet(cCcS*,void*)
+ext 02018590 void ajavCylinderGeometryCtor(void*)
+ext 0201A554 void ajavAddRotation(csXyz*,const csXyz*)
+ext 0201A588 u32 ajavScaleRotation(csXyz*,f32)
+ext 0201AD78 void ajavAddPosition(const cXyz*,cXyz*,const cXyz*)
+ext 0201ADE0 void ajavSubtractPosition(const cXyz*,cXyz*,const cXyz*)
+ext 0201AE48 void ajavScalePosition(const cXyz*,cXyz*,f32)
+ext 0231353C void ajavNormalizeColor(ColorFloat*,GXColor*)
+ext 024F2478 dBgW* ajavNewBackground(void*,u32,Mtx34*)
+ext 02515860 void ajavStatusDt(void*,s32)
+ext 02515A70 void ajavCylinderDt(void*,s32)
+ext 02515AE8 void ajavSphereDt(void*,s32)
+ext 02515FB8 void ajavObjectInfoCtor(void*)
+ext 025166F0 void ajavSphereCtor(void*)
+ext 02542D88 s32 ajavGetStaff(dEvent_manager_c*,const char*,s32,s32)
+ext 02543280 void ajavCutEnd(dEvent_manager_c*,s32)
+ext 02543F10 s32 ajavGetEvent(dEvent_manager_c*,const char*,s32)
+ext 025440C8 BOOL ajavEventEndCheck(dEvent_manager_c*,s16)
+ext 025D4ED0 void ajavActorCtor(fopAc_ac_c*)
+ext 025D50BC void ajavActorDt(fopAc_ac_c*,s32)
+ext 025D9F70 s32 ajavWaterHeight(cXyz*,be<f32>*)
+ext 025E1928 void ajavSubBgmStop()
+ext 025E1988 void ajavSystemSeStart(u32)
+ext 025F1884 void ajavYrotS(Mtx34*,s16)
+ext 026066C4 void* ajavObjectResource(dRes_control_c*,SafeString*,s32)
+ext 0274D458 void ajavConvertColor(ColorFloat*,ColorFloat*,f32)
+ext 027F9F0C AjavColorUniform* ajavUniformBuffer(void*,u32)
+ext 028EFFD0 void ajavConstructArray(void*,u32,u32,AjavConstructor)
+ext 028F0164 void ajavDestroyArray(void*,u32,u32,AjavDestructor,u32,u32)
+*/

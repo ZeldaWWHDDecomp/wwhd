@@ -1,114 +1,179 @@
-#include "wwhd.h"
-#include "gabi.h"
-namespace pcbase {
-template<class T> T load(u32 a,u32 o=0){return gabi::load<T>(a+o);}
-template<class T> void put(u32 a,u32 o,T v){gabi::store<T>(a+o,v);}
-void* p(u32 a){return gabi::at<void>(a);}
+/**
+ * f_pc_base.cpp
+ * Process framework - base process (create, execute, delete)
+ *
+ * WWHD (cking.rpx), written in the style of the GameCube decompilation (zeldaret/tww) and verified
+ * function by function against the recompiled original (tools/verify, unit f_pc_base). Each
+ * function is marked with its WWHD address; the glue block at the end lists this translation
+ * unit's data (tools/verify/autoglue.py).
+ */
+
+#include "f_pc/f_pc_base.h"
+#include "gc_api/SSystem/c_malloc.h"
+#include "gc_api/f_pc/f_pc.h"
+
+enum : u32 { base_process_class__vt = 0x10057E58 }; /* HD: base_process_class's vtable */
+
+/* 025DD258 */
+BOOL fpcBs_Is_JustOfType(int i_typeA, int i_typeB) {
+    if (i_typeB == i_typeA) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
 }
-using namespace pcbase;
-BOOL pcbase_same(s32 a,s32 b){
- WWHD_FUNC(0x025DD258,BOOL,a,b);
- return a==b;
+
+static int g_fpcBs_type;
+
+/* 025DD268 */
+int fpcBs_MakeOfType(be<int>* i_type) {
+    static s32 t_type = 0x9130000;
+    if (*i_type == 0) {
+        *i_type = ++t_type;
+    }
+    return *i_type;
 }
-VERIFY(0x025DD258,pcbase_same);
-u32 pcbase_type(void* type){
- WWHD_FUNC(0x025DD268,u32,type);
- u32 a=gabi::ea(type), v=load<u32>(a);
- if(!v){v=load<u32>(0x101F3908)+1;put<u32>(0x101F3908,0,v);put<u32>(a,0,v);}
- return v;
+
+/* 025DD290 */
+fpc_ProcID fpcBs_MakeOfId() {
+    static fpc_ProcID process_id = 1;
+    fpc_ProcID id = process_id;
+    // HD: the next id skips 0xFFFFFFFE and fpcM_ERROR_PROCESS_ID_e (GameCube: process_id++)
+    fpc_ProcID next = id;
+    do {
+        next++;
+    } while (next == 0xFFFFFFFE || next == fpcM_ERROR_PROCESS_ID_e);
+    process_id = next;
+    return id;
 }
-VERIFY(0x025DD268,pcbase_type);
-u32 pcbase_id(){
- WWHD_FUNC(0x025DD290,u32);
- u32 old=load<u32>(0x101F390C), next=old;
- do {next++;} while(next==0xFFFFFFFEu || next==0xFFFFFFFFu);
- put<u32>(0x101F390C,0,next);return old;
+
+/* 025DD2B8 */
+BOOL fpcBs_Execute(base_process_class* i_proc) {
+    BOOL result;
+    layer_class* savedLayer = fpcLy_CurrentLayer();
+    fpcLy_SetCurrentLayer(i_proc->mLyTg.mpLayer);
+    result = fpcMtd_Execute(i_proc->mpPcMtd, i_proc);
+    fpcLy_SetCurrentLayer(savedLayer);
+    return result;
 }
-VERIFY(0x025DD290,pcbase_id);
-BOOL pcbase_execute(void* proc){
- WWHD_FUNC(0x025DD2B8,BOOL,proc);
- u32 a=gabi::ea(proc),saved=gabi::call<u32>(0x025DED64);
- u32 layer=load<u32>(a,0x2C);gabi::call<void>(0x025DEAB4,p(layer));
- u32 methods=load<u32>(a,0xA8);BOOL result=gabi::call<BOOL>(0x025DFCC4,p(methods),proc);
- gabi::call<void>(0x025DEAB4,p(saved));return result;
+
+/* 025DD314 */
+void fpcBs_DeleteAppend(base_process_class* i_proc) {
+    if (i_proc->mpUserData != NULL) {
+        cMl::free(i_proc->mpUserData);
+        i_proc->mpUserData = NULL;
+    }
 }
-VERIFY(0x025DD2B8,pcbase_execute);
-void pcbase_delete_append(void* proc){
- WWHD_FUNC(0x025DD314,void,proc);
- u32 a=gabi::ea(proc), data=load<u32>(a,0xAC);
- if(data){gabi::call<void>(0x0201945C,p(data));put<u32>(a,0xAC,0);}
+
+/* 025DD354 */
+BOOL fpcBs_IsDelete(base_process_class* i_proc) {
+    BOOL result;
+    layer_class* savedLayer = fpcLy_CurrentLayer();
+    fpcLy_SetCurrentLayer(i_proc->mLyTg.mpLayer);
+    result = fpcMtd_IsDelete(i_proc->mpPcMtd, i_proc);
+    fpcLy_SetCurrentLayer(savedLayer);
+    return result;
 }
-VERIFY(0x025DD314,pcbase_delete_append);
-BOOL pcbase_is_delete(void* proc){
- WWHD_FUNC(0x025DD354,BOOL,proc);
- u32 a=gabi::ea(proc), saved=gabi::call<u32>(0x025DED64);
- u32 layer=load<u32>(a,0x2C);gabi::call<void>(0x025DEAB4,p(layer));
- u32 methods=load<u32>(a,0xA8);BOOL result=gabi::call<BOOL>(0x025DFCCC,p(methods),proc);
- gabi::call<void>(0x025DEAB4,p(saved));return result;
+
+/* 025DD3B0 */
+BOOL fpcBs_Delete(base_process_class* i_proc) {
+    BOOL result = fpcMtd_Delete(i_proc->mpPcMtd, i_proc);
+    if (result == TRUE) {
+        fpcBs_DeleteAppend(i_proc);
+        i_proc->mBsType = 0;
+        cMl::free(i_proc);
+    }
+    return result;
 }
-VERIFY(0x025DD354,pcbase_is_delete);
-BOOL pcbase_delete(void* proc){
- WWHD_FUNC(0x025DD3B0,BOOL,proc);
- u32 a=gabi::ea(proc),methods=load<u32>(a,0xA8);
- BOOL result=gabi::call<BOOL>(0x025DFCD4,p(methods),proc);
- if(result==1){gabi::call<void>(0x025DD314,proc);put<u32>(a,0,0);gabi::call<void>(0x0201945C,proc);}
- return result;
+
+/* 025DD414 */
+base_process_class* fpcBs_Create(s16 i_profName, fpc_ProcID i_procID, void* i_data) {
+    process_profile_definition* procProfDef;
+    base_process_class* procClass;
+    u32 size;
+
+    procProfDef = fpcPf_Get(i_profName);
+    JUT_ASSERT(484, (procProfDef->mSize & 0x3) == 0 && (procProfDef->mSizeOther & 0x3) == 0); // HD
+    size = procProfDef->mSize + procProfDef->mSizeOther;
+    procClass = (base_process_class*)cMl::memalignB(-4, size);
+    if (procClass == NULL) {
+        return NULL;
+    } else {
+        sBs_ClearArea(procClass, size);
+        fpcLyTg_Init(&procClass->mLyTg, procProfDef->mLayerID, procClass);
+        fpcLnTg_Init(&procClass->mLnTg, procClass);
+        fpcDtTg_Init(&procClass->mDtTg, procClass);
+        fpcPi_Init(&procClass->mPi, procClass, procProfDef->mLayerID, procProfDef->mListID, procProfDef->mListPrio);
+        procClass->mInitState = 0;
+        procClass->mUnk0 = 0;
+        procClass->mBsPcId = i_procID;
+        procClass->mProfName = i_profName;
+        procClass->mBsType = fpcBs_MakeOfType(&g_fpcBs_type);
+        procClass->mProcName = procProfDef->mProcName;
+        fpcPause_Init(procClass);
+        procClass->mpPcMtd = procProfDef->sub_method;
+        procClass->mpProf = procProfDef;
+        procClass->mpUserData = i_data;
+        procClass->mParameters = procProfDef->mParameters;
+        return procClass;
+    }
 }
-VERIFY(0x025DD3B0,pcbase_delete);
-void* pcbase_create(s16 name,u32 id,void* data){
- WWHD_FUNC(0x025DD414,void*,name,id,data);
- u32 profile=gabi::call<u32>(0x025E10E0,name);
- u32 first=load<u32>(profile,0x10), second=0;
- if(!(first&3))second=load<u32>(profile,0x14);
- if((first&3)||(second&3)){
-  gabi::call<void>(0x0273AA24,p(0x10057DF4),0x1E4,p(0x10057E04));
-  first=load<u32>(profile,0x10);second=load<u32>(profile,0x14);
- }
- u32 size=first+second, a=gabi::call<u32>(0x02019430,-4,size);
- if(!a)return nullptr;
- gabi::call<void>(0x0201B680,p(a),size);
- u32 layer=load<u32>(profile);gabi::call<void>(0x025DF178,p(a+0x18),layer,p(a));
- gabi::call<void>(0x025DF7A8,p(a+0x34),p(a));
- gabi::call<void>(0x025DDEEC,p(a+0x4C),p(a));
- u32 list=load<u16>(profile,4);layer=load<u32>(profile);u32 priority=load<u16>(profile,6);
- gabi::call<void>(0x025E0FB0,p(a+0x68),p(a),layer,list,priority);
- put<u32>(a,4,id);put<s16>(a,0xE,name);put<u8>(a,0xC,0);put<u8>(a,0xA,0);
- u32 type=gabi::call<u32>(0x025DD268,p(0x101F3934));put<u32>(a,0,type);
- put<s16>(a,8,load<s16>(profile,8));gabi::call<void>(0x025E0C1C,p(a));
- u32 methods=load<u32>(profile,0xC);put<u32>(a,0x10,profile);put<u32>(a,0xA8,methods);
- put<u32>(a,0xAC,gabi::ea(data));put<u32>(a,0xB0,load<u32>(profile,0x18));return p(a);
+
+/* 025DD538 */
+cPhs_State fpcBs_SubCreate(base_process_class* i_proc) {
+    switch (fpcMtd_Create(i_proc->mpPcMtd, i_proc)) {
+    case cPhs_NEXT_e:
+    case cPhs_COMPLEATE_e:
+        fpcBs_DeleteAppend(i_proc);
+        i_proc->mCreateResult = cPhs_NEXT_e;
+        return cPhs_NEXT_e;
+    case cPhs_INIT_e:
+    case cPhs_LOADING_e:
+        i_proc->mInitState = 1;
+        i_proc->mCreateResult = cPhs_INIT_e;
+        return cPhs_INIT_e;
+    case cPhs_STOP_e:
+        i_proc->mCreateResult = cPhs_STOP_e;
+        return cPhs_STOP_e;
+    case cPhs_ERROR_e:
+    default:
+        i_proc->mCreateResult = cPhs_ERROR_e;
+        return cPhs_ERROR_e;
+    }
 }
-VERIFY(0x025DD414,pcbase_create);
-s32 pcbase_subcreate(void* proc){
- WWHD_FUNC(0x025DD538,s32,proc);
- u32 a=gabi::ea(proc),methods=load<u32>(a,0xA8);
- u32 phase=gabi::call<u32>(0x025DFCDC,p(methods),proc);
- if(phase==2||phase==4){gabi::call<void>(0x025DD314,proc);put<u8>(a,0xD,2);return 2;}
- if(phase<2){put<u8>(a,0xC,1);put<u8>(a,0xD,0);return 0;}
- if(phase==3){put<u8>(a,0xD,3);return 3;}
- put<u8>(a,0xD,5);return 5;
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 025DD5F0 */
+// base_process_class::base_process_class() (GHS: allocates when called with NULL)
+static base_process_class* base_process_class__ct(base_process_class* i_this) {
+    if (i_this == NULL) {
+        i_this = (base_process_class*)operator_new(sizeof(base_process_class));
+    }
+    if (i_this != NULL) {
+        i_this->__vtbl = base_process_class__vt;
+    }
+    return i_this;
 }
-VERIFY(0x025DD538,pcbase_subcreate);
-void* pcbase_ctor(void* self){
- WWHD_FUNC(0x025DD5F0,void*,self);
- u32 a=gabi::ea(self);if(!a)a=gabi::call<u32>(0x0273AD10,0xB8);
- if(a)put<u32>(a,0xB4,0x10057E58);return p(a);
+
+/* 025DD630 */
+// base_process_class::~base_process_class() (deleting)
+static void base_process_class__dt(base_process_class* i_this, int flags) {
+    if (i_this != NULL && (flags & 1)) {
+        operator_delete(i_this);
+    }
 }
-VERIFY(0x025DD5F0,pcbase_ctor);
-void pcbase_dtor(void* self,s32 flag){
- WWHD_FUNC(0x025DD630,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+
+/* 025DD644 */
+// __sinit_f_pc_base_cpp: the common header statics (the pi pair copied from .rodata)
+static void __sinit_f_pc_base_cpp() {
+    sinit_header_statics_rodata(0x1048A6A0, 0x101F3910, 0x1048A6AC, 0x10057E4C);
 }
-VERIFY(0x025DD630,pcbase_dtor);
-// Startup registration associated with this unit by adjacency, not a matched name.
-void pcbase_startup(){
- WWHD_FUNC(0x025DD644,void);
- put<u32>(0x1048A6AC,8,0);put<u32>(0x1048A6AC,0,0);
- put<u32>(0x1048A6AC,12,0);put<u32>(0x1048A6AC,4,0);
- gabi::call<void>(0x028F026C,p(0x101F3910));
- f32 lower=load<f32>(0x10057E4C),upper=load<f32>(0x10057E50);
- put<f32>(0x1048A6A0,0,lower);put<f32>(0x1048A6A4,0,upper);
- gabi::call<void>(0x028ED6F8,p(0x1048A6A8));gabi::call<void>(0x028F026C,p(0x101F391C));
- gabi::call<void>(0x028EAB2C,p(0x1048A6A9));gabi::call<void>(0x028F026C,p(0x101F3928));
-}
-VERIFY(0x025DD644,pcbase_startup);
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+str  10057DF4                               # "f_pc_base.cpp"
+str  10057E04 "(procProfDef->mSize & 0x3) == 0 && (procProfDef->mSizeOther & 0x3) == 0" renamed  # HD: "(profile->size & 0x3) == 0 && (profile->heapSize & 0x3) == 0"
+data g_fpcBs_type 101F3934
+data t_type 101F3908
+data process_id 101F390C
+*/

@@ -1,71 +1,162 @@
-// Reconstruction of HD JSU pointer lists;
-#include "gabi.h"
-using namespace gabi;
-namespace jsu_list {
-static u32 get(u32 p,u32 off=0){return load<u32>(p+off);}
-static void put(u32 p,u32 off,u32 v){store<u32>(p+off,v);}
-u32 link_ctor(u32 self,u32 object){
- WWHD_FUNC(0x027EC50C,u32,self,object);
- if(!self)self=call<u32>(0x0273AD10,16u);
- if(self){put(self,0,object);put(self,4,0);put(self,8,0);put(self,12,0);}return self;
+/** JSU intrusive pointer lists, using the GameCube layout and names. Private decomp source. */
+#include "bindings.h"
+#include "JSystem/JSupport/JSUList.h"
+
+static JSUListStaticBlock sListStaticBlock;
+static u32 sListStaticRegister;
+
+/* 027EC50C */
+static JSUPtrLink* JSUPtrLink__ct(JSUPtrLink* i_this, void* object) {
+    if (i_this == NULL) i_this = (JSUPtrLink*)operator_new(sizeof(JSUPtrLink));
+    if (i_this != NULL) {
+        // HD: the allocation entry writes the object before clearing the list and links.
+        i_this->mObject = object;
+        i_this->mList = NULL;
+        i_this->mPrev = NULL;
+        i_this->mNext = NULL;
+    }
+    return i_this;
 }
-VERIFY(0x027EC50C,link_ctor);
-u32 remove(u32 self,u32 link){
- WWHD_FUNC(0x027EC560,u32,self,link);
- if(get(link,4)!=self)return 0;
- if(get(self,8)==1){put(self,4,0);put(self,0,0);}
- else if(link==get(self)){put(get(link,12),8,0);put(self,0,get(link,12));}
- else if(link==get(self,4)){put(get(link,8),12,0);put(self,4,get(link,8));}
- else{u32 previous=get(link,8);put(previous,12,get(link,12));u32 next=get(link,12);put(next,8,get(link,8));}
- put(link,4,0);put(self,8,get(self,8)-1);return 1;
+
+/* 027EC560 */
+u32 JSUPtrList::remove(JSUPtrLink* ptr) {
+    if (ptr->mList != this) return 0;
+    if (mLength == 1) {
+        // HD: preserve tail/head write order when the arguments alias list fields.
+        mTail = NULL;
+        mHead = NULL;
+    } else if (ptr == mHead) {
+        ptr->mNext->mPrev = NULL;
+        mHead = ptr->mNext;
+    } else if (ptr == mTail) {
+        ptr->mPrev->mNext = NULL;
+        mTail = ptr->mPrev;
+    } else {
+        JSUPtrLink* previous = ptr->mPrev;
+        previous->mNext = ptr->mNext;
+        JSUPtrLink* next = ptr->mNext;
+        next->mPrev = ptr->mPrev;
+    }
+    ptr->mList = NULL;
+    mLength = (u32)mLength - 1;
+    return 1;
 }
-VERIFY(0x027EC560,remove);
-void link_dtor(u32 self,u32 flags){
- WWHD_FUNC(0x027EC62C,void,self,flags);
- if(self){u32 list=get(self,4);if(list)call<u32>(0x027EC560,list,self);if(flags&1)call<void>(0x0273AF40,self);}
+
+// HD: deleting-destructor entry points also accept null objects and allocation flags.
+/* 027EC62C */
+static void JSUPtrLink__dt(JSUPtrLink* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    JSUPtrList* list = i_this->mList;
+    if (list != NULL) list->remove(i_this);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x027EC62C,link_dtor);
-void initiate(u32 self){
- WWHD_FUNC(0x027EC678,void,self);put(self,0,0);put(self,4,0);put(self,8,0);
+
+/* 027EC678 */
+void JSUPtrList::initiate() {
+    mHead = NULL;
+    mTail = NULL;
+    mLength = 0;
 }
-VERIFY(0x027EC678,initiate);
-void list_dtor(u32 self,u32 flags){
- WWHD_FUNC(0x027EC68C,void,self,flags);if(!self)return;
- u32 count=get(self,8),removed=0,node=get(self);
- while(removed<count){put(node,4,0);count=get(self,8);++removed;node=get(node,12);}
- if(flags&1)call<void>(0x0273AF40,self);
+
+/* 027EC68C */
+static void JSUPtrList__dt(JSUPtrList* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    u32 count = i_this->mLength;
+    u32 removed = 0;
+    JSUPtrLink* node = i_this->mHead;
+    while (removed < count) {
+        node->mList = NULL;
+        // HD: reload the length before advancing to the next node (alias-sensitive).
+        count = i_this->mLength;
+        ++removed;
+        node = node->mNext;
+    }
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x027EC68C,list_dtor);
-void set_first(u32 self,u32 first){
- WWHD_FUNC(0x027EC6D0,void,self,first);put(first,4,self);put(first,8,0);put(first,12,0);put(self,4,first);put(self,0,first);put(self,8,1);
+
+/* 027EC6D0 */
+void JSUPtrList::setFirst(JSUPtrLink* first) {
+    first->mList = this;
+    first->mPrev = NULL;
+    first->mNext = NULL;
+    mTail = first;
+    mHead = first;
+    mLength = 1;
 }
-VERIFY(0x027EC6D0,set_first);
-u32 append(u32 self,u32 link){
- WWHD_FUNC(0x027EC6F4,u32,self,link);u32 old=get(link,4),result=old?call<u32>(0x027EC560,old,link):1;
- if(result){if(!get(self,8))call<void>(0x027EC6D0,self,link);
-  else{put(link,4,self);u32 tail=get(self,4);put(link,12,0);put(link,8,tail);put(get(self,4),12,link);u32 count=get(self,8);put(self,4,link);put(self,8,count+1);}}
- return result;
+
+/* 027EC6F4 */
+u32 JSUPtrList::append(JSUPtrLink* ptr) {
+    JSUPtrList* list = ptr->mList;
+    u32 result = list != NULL ? list->remove(ptr) : 1;
+    if (result != 0) {
+        if (mLength == 0) {
+            setFirst(ptr);
+        } else {
+            ptr->mList = this;
+            JSUPtrLink* tail = mTail;
+            ptr->mNext = NULL;
+            ptr->mPrev = tail;
+            mTail->mNext = ptr;
+            // HD: GHS keeps this count across the tail assignment.
+            u32 count = mLength;
+            mTail = ptr;
+            mLength = count + 1;
+        }
+    }
+    return result;
 }
-VERIFY(0x027EC6F4,append);
-u32 prepend(u32 self,u32 link){
- WWHD_FUNC(0x027EC778,u32,self,link);u32 old=get(link,4),result=old?call<u32>(0x027EC560,old,link):1;
- if(result){if(!get(self,8))call<void>(0x027EC6D0,self,link);
-  else{put(link,4,self);put(link,8,0);put(link,12,get(self));put(get(self),8,link);u32 count=get(self,8);put(self,0,link);put(self,8,count+1);}}
- return result;
+
+/* 027EC778 */
+u32 JSUPtrList::prepend(JSUPtrLink* ptr) {
+    JSUPtrList* list = ptr->mList;
+    u32 result = list != NULL ? list->remove(ptr) : 1;
+    if (result != 0) {
+        if (mLength == 0) {
+            setFirst(ptr);
+        } else {
+            ptr->mList = this;
+            ptr->mPrev = NULL;
+            ptr->mNext = mHead;
+            mHead->mPrev = ptr;
+            u32 count = mLength;
+            mHead = ptr;
+            mLength = count + 1;
+        }
+    }
+    return result;
 }
-VERIFY(0x027EC778,prepend);
-u32 insert(u32 self,u32 before,u32 link){
- WWHD_FUNC(0x027EC7FC,u32,self,before,link);
- if(before==get(self))return call<u32>(0x027EC778,self,link);
- if(!before)return call<u32>(0x027EC6F4,self,link);
- if(get(before,4)!=self)return 0;
- u32 old=get(link,4),result=old?call<u32>(0x027EC560,old,link):1;
- if(result){u32 previous=get(before,8);put(link,4,self);put(link,8,previous);put(link,12,before);put(previous,12,link);put(before,8,link);put(self,8,get(self,8)+1);}
- return result;
+
+/* 027EC7FC */
+u32 JSUPtrList::insert(JSUPtrLink* before, JSUPtrLink* ptr) {
+    if (before == mHead) return prepend(ptr);
+    if (before == NULL) return append(ptr);
+    if (before->mList != this) return 0;
+    JSUPtrList* list = ptr->mList;
+    u32 result = list != NULL ? list->remove(ptr) : 1;
+    if (result != 0) {
+        JSUPtrLink* previous = before->mPrev;
+        ptr->mList = this;
+        ptr->mPrev = previous;
+        ptr->mNext = before;
+        previous->mNext = ptr;
+        before->mPrev = ptr;
+        mLength = (u32)mLength + 1;
+    }
+    return result;
 }
-VERIFY(0x027EC7FC,insert);
-void static_init(){
- WWHD_FUNC(0x027EC8E0,void);put(0x104A2470,8,0);put(0x104A2470,0,0);put(0x104A2470,12,0);put(0x104A2470,4,0);call<void>(0x028F026C,0x101F97B0u);
+
+// HD: compiler-generated initialization of this translation unit's platform statics.
+/* 027EC8E0 */
+static void __sinit_JSUList_cpp() {
+    sListStaticBlock.mWords[2] = 0;
+    sListStaticBlock.mWords[0] = 0;
+    sListStaticBlock.mWords[3] = 0;
+    sListStaticBlock.mWords[1] = 0;
+    JSUListConstructRegister(&sListStaticRegister);
 }
-VERIFY(0x027EC8E0,static_init);
-}
+
+/* WWHD glue
+ data sListStaticBlock 104A2470
+ data sListStaticRegister 101F97B0
+ ext 028F026C void JSUListConstructRegister(void*)
+*/

@@ -1,419 +1,438 @@
+/** Particle emitter calculation and volume sampling. Verified WWHD behavior, tww names. */
 #include "JSystem/JParticle/JPA_emitter_calc.h"
 #include <climits>
 #include <cstring>
-namespace {
-constexpr u32 info = 0x104B5730;
-template <class T> T rd(u32 p) {
-    return gabi::load<T>(p);
-}
-template <class T> void wr(u32 p, T x) {
-    gabi::store<T>(p, x);
-}
-u32 vfn(u32 p, u32 slot) {
-    return rd<u32>(rd<u32>(p) + slot);
-}
-u32 randomNext(JPAEmitterCalc_l *e) {
-    u32 s = (u32)e->randomSeed * 0x19660du + 0x3c6ef35fu;
-    e->randomSeed = s;
+namespace jpa_emitter_calc {
+static JPAEmitterInfo emtrInfo;
+static char assertFile[1] = {};
+static char assertMessage[1] = {};
+// HD: typed ROM views use original bytes rather than invented initializers.
+static SinCosEntry sincosTable[8192] = {};
+u32 randomNext(JPABaseEmitter *e) {
+    u32 s = (u32)e->mRandomSeed * 0x19660du + 0x3c6ef35fu;
+    e->mRandomSeed = s;
     return s;
 }
-f32 randomFloat(JPAEmitterCalc_l *e) {
+f32 randomFloat(JPABaseEmitter *e) {
     u32 bits = 0x3f800000u | (randomNext(e) >> 9);
     f32 f;
     std::memcpy(&f, &bits, 4);
     return f - 1.0f;
 }
-s16 randomShort(JPAEmitterCalc_l *e) {
+s16 randomShort(JPABaseEmitter *e) {
     return (s16)(randomNext(e) >> 16);
 }
 f32 sinAngle(u16 angle) {
-    return rd<f32>(0x104A44F8 + (angle >> 3) * 8);
+    return sincosTable[angle >> 3].sin;
 }
 f32 cosAngle(u16 angle) {
-    return rd<f32>(0x104A44FC + (angle >> 3) * 8);
+    return sincosTable[angle >> 3].cos;
 }
+// HD: signed division edge cases retain the original quotient used by volume/key loops.
 s32 divide(s32 a, s32 b) {
     return !b || (a == INT_MIN && b == -1) ? (a < 0 ? -1 : 0) : a / b;
 }
 void volumeResult(f32 x, f32 y, f32 z) {
-    f32 sx = rd<f32>(info + 0xc8), sy = rd<f32>(info + 0xcc), sz = rd<f32>(info + 0xd0);
-    wr<f32>(info + 0x134, x);
-    wr<f32>(info + 0x138, y);
-    wr<f32>(info + 0x13c, z);
-    wr<f32>(info + 0x140, gabi::fmuls_ppc(x, sx));
-    wr<f32>(info + 0x144, gabi::fmuls_ppc(y, sy));
-    wr<f32>(info + 0x148, gabi::fmuls_ppc(z, sz));
-    wr<f32>(info + 0x14c, x);
-    wr<f32>(info + 0x150, 0.0f);
-    wr<f32>(info + 0x154, z);
+    f32 sx = (f32)emtrInfo.mEmitterGlobalScale[0], sy = (f32)emtrInfo.mEmitterGlobalScale[1], sz = (f32)emtrInfo.mEmitterGlobalScale[2];
+    emtrInfo.mVolumePos[0] = x;
+    emtrInfo.mVolumePos[1] = y;
+    emtrInfo.mVolumePos[2] = z;
+    emtrInfo.mVelOmni[0] = gabi::fmuls_ppc(x, sx);
+    emtrInfo.mVelOmni[1] = gabi::fmuls_ppc(y, sy);
+    emtrInfo.mVelOmni[2] = gabi::fmuls_ppc(z, sz);
+    emtrInfo.mVelAxis[0] = x;
+    emtrInfo.mVelAxis[1] = 0.0f;
+    emtrInfo.mVelAxis[2] = z;
 }
-void emitterCallback(JPAEmitterCalc_l *e, u32 slot) {
-    u32 cb = e->emitterCallback;
+// HD: capture the callback and guest target independently on each invocation.
+void emitterCallback(JPABaseEmitter *e, u32 slot) {
+    EmitterCallback* cb = e->mpEmitterCallBack;
     if (cb)
-        gabi::call<void>(vfn(cb, slot), gabi::at<void>(cb), e);
+        gabi::call_ptr<void>(cb->__vtbl->slots[slot / 4], cb, e);
 }
-} // namespace
-bool JPA_doStartFrameProcess(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x028200C4, bool, e);
-    f32 time = e->time;
-    if (!(time < (f32)(s16)e->startFrame))
+/* 028200C4 */
+bool jpa_emitter_calc::JPABaseEmitter::doStartFrameProcess() {
+    f32 time = mTime;
+    if (!(time < (f32)(s16)mStartFrame))
         return true;
-    if (!((u32)e->status & 2)) {
+    if (!((u32)mFlags & JPAEmtrStts_StopCalc)) {
         f32 next = time + 1.0f;
-        e->time = next < 0.0f ? 0.0f : next;
+        mTime = next < 0.0f ? 0.0f : next;
     }
     return false;
 }
-VERIFY(0x028200C4, JPA_doStartFrameProcess);
-bool JPA_doTerminationProcess(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x0282014C, bool, e);
-    u8 delay = e->deleteCountdown;
+/* 0282014C */
+bool jpa_emitter_calc::JPABaseEmitter::doTerminationProcess() {
+    // HD: deletion waits two frames once the particle lists become empty.
+    u8 delay = mDeleteCountdown;
     if (delay) {
         delay--;
-        e->deleteCountdown = delay;
+        mDeleteCountdown = delay;
         return delay == 0;
     }
-    s32 max = e->maxFrame;
+    s32 max = mMaxFrame;
     bool empty = false;
     if (max < 0) {
-        e->status = (u32)e->status | 8;
-        u32 base = gabi::ea(e);
-        empty = rd<u32>(base + 0x1b4) + rd<u32>(base + 0x1c0) == 0;
-    } else if (max > 0 && !((f32)e->tick < (f32)max)) {
-        u32 status = (u32)e->status | 8;
-        e->status = status;
-        if (status & 0x40)
+        mFlags = (u32)mFlags | JPAEmtrStts_EnableDeleteEmitter;
+        empty = (u32)mActiveParticleCount + (u32)mChildParticleCount == 0;
+    } else if (max > 0 && !((f32)mTick < (f32)max)) {
+        u32 status = (u32)mFlags | JPAEmtrStts_EnableDeleteEmitter;
+        mFlags = status;
+        if (status & JPAEmtrStts_Immortal)
             return false;
-        u32 base = gabi::ea(e);
-        empty = rd<u32>(base + 0x1b4) + rd<u32>(base + 0x1c0) == 0;
+        empty = (u32)mActiveParticleCount + (u32)mChildParticleCount == 0;
     }
-    if (empty && !(u8)e->deleteCountdown) {
-        e->deleteCountdown = 2;
+    if (empty && !(u8)mDeleteCountdown) {
+        mDeleteCountdown = 2;
         return false;
     }
     return empty;
 }
-VERIFY(0x0282014C, JPA_doTerminationProcess);
-void JPA_emitterCalc(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x0281FE40, void, e);
-    wr<u32>(info + 0x15c, 0);
-    if ((u32)e->status & 2) {
-        emitterCallback(e, 0x1c);
-        emitterCallback(e, 0x24);
+/* 0281FE40 */
+void jpa_emitter_calc::JPABaseEmitter::calc() {
+    emtrInfo.mVolumeEmitCount = 0;
+    if ((u32)mFlags & JPAEmtrStts_StopCalc) {
+        emitterCallback(this, CallbackExecute);
+        emitterCallback(this, CallbackExecuteAfter);
         return;
     }
-    if ((u8)e->deleteCountdown)
+    // HD: defer calculation while the teardown/clear countdowns are active.
+    if ((u8)mDeleteCountdown)
         return;
-    u8 clear = e->clearCountdown;
+    u8 clear = mClearCountdown;
     if (clear) {
-        e->clearCountdown = --clear;
+        mClearCountdown = --clear;
         if (!clear)
-            gabi::call<void>(0x0281DE68, e, 0);
+            JPADeleteAllParticleHD(this, 0);
         return;
     }
-    gabi::call<void>(0x0281F42C, e);
-    emitterCallback(e, 0x1c);
-    gabi::call<void>(0x0281F688, e);
-    gabi::call<void>(0x0282DC48, gabi::at<void>(gabi::ea(e) + 0x9c));
-    gabi::call<void>(0x02824294, gabi::at<void>(gabi::ea(e) + 0x19c));
-    if (!((u32)e->status & 8))
-        gabi::call<void>(0x0281F878, e);
-    emitterCallback(e, 0x24);
-    gabi::call<void>(0x0281FBD8, e);
-    gabi::call<void>(0x0281FD14, e);
-    f32 tick = (f32)e->tick + 1.0f;
-    e->tick = tick < 0.0f ? 0.0f : tick;
+    JPACalcKey(this);
+    emitterCallback(this, CallbackExecute);
+    JPACalcEmitterInfo(this);
+    JPADrawCalc(mDraw);
+    JPAFieldPreCalc(mFieldManager);
+    if (!((u32)mFlags & JPAEmtrStts_EnableDeleteEmitter))
+        JPACalcCreatePtcls(this);
+    emitterCallback(this, CallbackExecuteAfter);
+    JPACalcParticle(this);
+    JPACalcChild(this);
+    f32 tick = (f32)mTick + 1.0f;
+    mTick = tick < 0.0f ? 0.0f : tick;
 }
-VERIFY(0x0281FE40, JPA_emitterCalc);
-void JPA_managerCalc(void *manager, u8 group) {
-    WWHD_FUNC(0x0282167C, void, manager, group);
+/* 0282167C */
+void jpa_emitter_calc::JPAEmitterManager::calc(u8 group) {
+    JPAEmitterManager* manager = this;
     if (group >= 16)
-        gabi::call<void>(0x0273AA24, gabi::at<void>(0x10170E84), 0x108, gabi::at<void>(0x10170E9C));
-    u32 link = rd<u32>(gabi::ea(manager) + 0x50 + 12 * group);
+        JPAAssert(assertFile, 0x108, assertMessage);
+    EmitterLink* link = manager->mEmtrGroup[group].first;
     while (link) {
-        auto *emitter = gabi::at<JPAEmitterCalc_l>(rd<u32>(link));
-        link = rd<u32>(link + 0xc);
-        if (JPA_doStartFrameProcess(emitter)) {
-            if (JPA_doTerminationProcess(emitter))
-                gabi::call<void>(0x028215F8, manager, emitter);
+        JPABaseEmitter* emitter = link->object;
+        link = link->next;
+        if (emitter->doStartFrameProcess()) {
+            if (emitter->doTerminationProcess())
+                JPADeleteEmitter(manager, emitter);
             else
-                JPA_emitterCalc(emitter);
+                emitter->calc();
         }
     }
 }
-VERIFY(0x0282167C, JPA_managerCalc);
-void JPA_calcCreateParticles(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x0281F878, void, e);
-    if ((u32)e->status & 0x20) {
+
+/* 0281F878 */
+void jpa_emitter_calc::JPABaseEmitter::calcCreatePtcls() {
+    if ((u32)mFlags & JPAEmtrStts_RateStepEmit) {
         s32 count = 0;
-        if ((u32)e->dataFlags & 2) {
-            u32 div = e->divisions;
-            count = (u8)e->volumeType == 1 ? (s32)((div + 1) * (div - 1) * 4 + 6) : (s32)div;
-            wr<u32>(info + 0x160, 0);
+        if ((u32)mDataFlag & JPADynFlag_FixedInterval) {
+            u32 div = mDivNumber;
+            count = (u8)mVolumeType == 1 ? (s32)((div + 1) * (div - 1) * 4 + 6) : (s32)div;
+            emtrInfo.mVolumeEmitIdx = 0;
         } else {
-            f32 r = randomFloat(e);
+            f32 r = randomFloat(this);
             r = (r + r) - 1.0f;
             f32 increment =
-                gabi::fmuls_ppc((f32)e->rate, gabi::fmadds((f32)e->rateRandom, r, 1.0f));
-            f32 counter = gabi::fadds_ppc((f32)e->emitCount, increment);
+                gabi::fmuls_ppc((f32)mRate, gabi::fmadds((f32)mRateRndm, r, 1.0f));
+            f32 counter = gabi::fadds_ppc((f32)mEmitCount, increment);
             if (!(counter < 1.0f)) {
                 count = gabi::ftoi(counter);
-                e->emitCount = counter - (f32)count;
+                mEmitCount = counter - (f32)count;
             } else {
-                e->emitCount = counter;
-                if (increment > 0.0f && ((u32)e->status & 0x10))
+                mEmitCount = counter;
+                if (increment > 0.0f && ((u32)mFlags & JPAEmtrStts_FirstEmit))
                     count = 1;
             }
         }
-        wr<s32>(info + 0x15c, count);
-        if ((u32)e->status & 1)
+        emtrInfo.mVolumeEmitCount = count;
+        if ((u32)mFlags & JPAEmtrStts_StopEmit)
             count = 0;
         for (s32 i = 0; i < count; i++)
-            if (!gabi::call<void *>(0x0281DCB8, e))
+            if (!JPACreateParticle(this))
                 break;
     }
-    f32 limit = (f32)((u8)e->rateStep + 1);
-    f32 timer = (f32)e->rateStepTimer + 1.0f;
-    e->rateStepTimer = timer;
+    f32 limit = (f32)((u8)mRateStep + 1);
+    f32 timer = (f32)mRateStepTimer + 1.0f;
+    mRateStepTimer = timer;
     if (!(timer < limit)) {
-        e->rateStepTimer = timer - limit;
-        e->status = ((u32)e->status | 0x20) & ~0x10u;
+        mRateStepTimer = timer - limit;
+        mFlags = ((u32)mFlags | JPAEmtrStts_RateStepEmit) & ~u32(JPAEmtrStts_FirstEmit);
     } else
-        e->status = (u32)e->status & ~0x30u;
+        mFlags = (u32)mFlags & ~u32(JPAEmtrStts_RateStepEmit | JPAEmtrStts_FirstEmit);
 }
-VERIFY(0x0281F878, JPA_calcCreateParticles);
-void JPA_calcKey(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x0281F42C, void, e);
-    u32 data = e->dataLink;
-    for (u32 i = 0; i < rd<u8>(data + 0x22); i++) {
-        u32 key = rd<u32>(rd<u32>(data + 0x14) + 4 * i);
-        u32 target = vfn(key, 0x2c);
-        f32 tick = e->tick;
-        u32 ptr = gabi::call<u32>(target, gabi::at<void>(key));
-        u32 number = gabi::call<u32>(vfn(key, 0x24), gabi::at<void>(key));
-        if (gabi::call<u32>(vfn(key, 0x1c), gabi::at<void>(key))) {
-            s32 end = (s32)((u32)gabi::ftoi(rd<f32>(ptr + number * 16 - 16)) + 1);
+/* 0281F42C */
+void jpa_emitter_calc::JPABaseEmitter::calcKey() {
+    JPADataBlockLinkInfo* data = mpDataLinkInfo;
+    for (u32 i = 0; i < (u8)data->keyNum; i++) {
+        JPAKeyBlock* key = data->keyBlocks[i];
+        u32 target = key->__vtbl->getKeyDataPtr;
+        f32 tick = mTick;
+        // HD: virtual scalar results retain their full register width.
+        u32 ptr = gabi::call_ptr<u32>(target, key);
+        u32 number = gabi::call_ptr<u32>(key->__vtbl->getNumber, key);
+        if (gabi::call_ptr<u32>(key->__vtbl->isLoopEnable, key)) {
+            s32 end = (s32)((u32)gabi::ftoi(gabi::at<KeyFrame>(ptr)[number - 1].time) + 1);
             u32 loops = (u32)divide(gabi::ftoi(tick), end);
             tick -= (f32)(s32)(loops * (u32)end);
         }
-        f32 value = gabi::call<f32>(0x028249D8, number, gabi::at<void>(ptr), tick);
-        u32 id = gabi::call<u32>(vfn(key, 0x14), gabi::at<void>(key));
+        f32 value = JPAGetKeyFrameValueHD(number, gabi::at<void>(ptr), tick);
+        u32 id = gabi::call_ptr<u32>(key->__vtbl->getID, key);
         switch (id) {
         case 0:
-            e->rate = value;
+            mRate = value;
             break;
         case 1:
-            e->volumeSize = (u16)gabi::ftoi(value);
+            mVolumeSize = (u16)gabi::ftoi(value);
             break;
         case 2:
-            e->volumeSweep = value;
+            mVolumeSweep = value;
             break;
         case 3:
-            e->volumeMinRadius = value;
+            mVolumeMinRad = value;
             break;
         case 4:
-            e->lifetime = (s16)gabi::ftoi(value);
+            mLifeTime = (s16)gabi::ftoi(value);
             break;
         case 5:
-            e->moment = value;
+            mMoment = value;
             break;
         case 6:
-            e->velocityOmni = value;
+            mInitialVelOmni = value;
             break;
         case 7:
-            e->velocityAxis = value;
+            mInitialVelAxis = value;
             break;
         case 8:
-            e->velocityDirection = value;
+            mInitialVelDir = value;
             break;
         case 9:
-            e->spread = value;
+            mSpread = value;
             break;
         case 10:
-            wr<f32>(gabi::ea(e) + 0x180, value);
+            mKeyScale = value;
             break;
         }
-        data = e->dataLink;
+        data = mpDataLinkInfo;
     }
 }
-VERIFY(0x0281F42C, JPA_calcKey);
-void JPA_calcEmitterGlobalPosition(JPAEmitterCalc_l *e, void *dst) {
-    WWHD_FUNC(0x0281DBEC, void, e, dst);
+/* 0281DBEC */
+void jpa_emitter_calc::JPABaseEmitter::calcEmitterGlobalPosition(void *dst) {
     gabi::Local<be<f32>[12]> matrix;
-    gabi::call<void>(0x028E945C, matrix.get(), (f32)e->globalScale[0], (f32)e->globalScale[1],
-                     (f32)e->globalScale[2]);
-    gabi::call<void>(0x028E9108, e->globalRotation, matrix.get(), matrix.get());
+    MTXScale(matrix.get(), (f32)mGlobalDynamicsScale[0], (f32)mGlobalDynamicsScale[1],
+                     (f32)mGlobalDynamicsScale[2]);
+    MTXConcat(mGlobalRotation, matrix.get(), matrix.get());
+    // HD: these are word copies; float assignment would quiet signaling NaNs.
     for (int i = 0; i < 3; i++)
-        wr<u32>(gabi::ea(matrix.get()) + i * 16 + 12, rd<u32>(gabi::ea(e) + 0x22c + i * 4));
-    gabi::call<void>(0x028E8F64, matrix.get(), e->emitterTranslation, dst);
+        reinterpret_cast<be<u32>*>(matrix.get())[i * 4 + 3] = (u32)reinterpret_cast<be<u32>*>(mGlobalTranslation)[i];
+    MTXMultVec(matrix.get(), mEmitterTranslation, dst);
 }
-VERIFY(0x0281DBEC, JPA_calcEmitterGlobalPosition);
-void JPA_calcEmitterInfo(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x0281F688, void, e);
-    wr<u32>(info + 0x168, 0);
-    wr<u32>(info + 0x164, 0);
-    wr<u32>(info + 0x16c, 1);
-    wr<u32>(info + 4, gabi::ea(e));
-    wr<u32>(info + 0x170, (u16)e->divisions * 2 + 1);
-    wr<f32>(info + 0x158, (f32)(u16)e->volumeSize);
+/* 0281F688 */
+void jpa_emitter_calc::JPABaseEmitter::calcEmitterInfo() {
+    emtrInfo.mVolumeEmitXCount = 0;
+    emtrInfo.mVolumeEmitAngleCount = 0;
+    emtrInfo.mVolumeEmitAngleMax = 1;
+    emtrInfo.mpCurEmitter = this;
+    emtrInfo.mDivNumber = (u16)mDivNumber * 2 + 1;
+    emtrInfo.mVolumeSize = (f32)(u16)mVolumeSize;
     gabi::Local<be<f32>[12]> scale, rotation, matrix;
-    gabi::call<void>(0x028E945C, scale.get(), (f32)e->emitterScale[0], (f32)e->emitterScale[1],
-                     (f32)e->emitterScale[2]);
-    s16 x = ((s32)(s16)e->emitterRotation[0] * 0x4000) / 90;
-    s16 y = ((s32)(s16)e->emitterRotation[1] * 0x4000) / 90;
-    s16 z = ((s32)(s16)e->emitterRotation[2] * 0x4000) / 90;
-    gabi::call<void>(0x028245AC, x, y, z, rotation.get());
-    gabi::call<void>(0x028E945C, matrix.get(), (f32)e->globalScale[0], (f32)e->globalScale[1],
-                     (f32)e->globalScale[2]);
-    gabi::call<void>(0x028E9108, e->globalRotation, matrix.get(), matrix.get());
+    MTXScale(scale.get(), (f32)mEmitterScale[0], (f32)mEmitterScale[1],
+                     (f32)mEmitterScale[2]);
+    s16 x = ((s32)(s16)mEmitterRot[0] * 0x4000) / 90;
+    s16 y = ((s32)(s16)mEmitterRot[1] * 0x4000) / 90;
+    s16 z = ((s32)(s16)mEmitterRot[2] * 0x4000) / 90;
+    JPAGetXYZRotateMtx(x, y, z, rotation.get());
+    MTXScale(matrix.get(), (f32)mGlobalDynamicsScale[0], (f32)mGlobalDynamicsScale[1],
+                     (f32)mGlobalDynamicsScale[2]);
+    MTXConcat(mGlobalRotation, matrix.get(), matrix.get());
+    // HD: these are word copies; float assignment would quiet signaling NaNs.
     for (int i = 0; i < 3; i++)
-        wr<u32>(gabi::ea(matrix.get()) + i * 16 + 12, rd<u32>(gabi::ea(e) + 0x22c + i * 4));
-    gabi::call<void>(0x028E90D4, e->globalRotation, gabi::at<void>(info + 0x68));
-    gabi::call<void>(0x028E9108, e->globalRotation, rotation.get(), gabi::at<void>(info + 0x38));
-    gabi::call<void>(0x028E9108, gabi::at<void>(info + 0x38), scale.get(),
-                     gabi::at<void>(info + 8));
-    gabi::call<void>(0x0282466C, e->emitterDirection, gabi::at<void>(info + 0x98));
+        reinterpret_cast<be<u32>*>(matrix.get())[i * 4 + 3] = (u32)reinterpret_cast<be<u32>*>(mGlobalTranslation)[i];
+    MTXCopy(mGlobalRotation, &emtrInfo.mGlobalRot);
+    MTXConcat(mGlobalRotation, rotation.get(), &emtrInfo.mEmitterGlobalRot);
+    MTXConcat(&emtrInfo.mEmitterGlobalRot, scale.get(),
+                     emtrInfo.mEmitterGlobalSR);
+    JPAGetDirMtx(mEmitterDir, &emtrInfo.mEmitterDirMtx);
     for (int i = 0; i < 3; i++)
-        wr<f32>(info + 0xc8 + 4 * i,
-                gabi::fmuls_ppc((f32)e->emitterScale[i], (f32)e->globalScale[i]));
+        emtrInfo.mEmitterGlobalScale[i] = gabi::fmuls_ppc((f32)mEmitterScale[i], (f32)mGlobalDynamicsScale[i]);
+    // HD: these are word copies; float assignment would quiet signaling NaNs.
     for (int i = 0; i < 3; i++)
-        wr<u32>(info + 0xd4 + 4 * i, rd<u32>(gabi::ea(e) + 0x14 + 4 * i));
+        reinterpret_cast<be<u32>*>(emtrInfo.mEmitterTranslation)[i] = (u32)reinterpret_cast<be<u32>*>(mEmitterTranslation)[i];
+    // HD: these are word copies; float assignment would quiet signaling NaNs.
     for (int i = 0; i < 3; i++)
-        wr<u32>(info + 0xec + 4 * i, rd<u32>(gabi::ea(e) + 0x220 + 4 * i));
-    gabi::call<void>(0x028E8F64, matrix.get(), e->emitterTranslation, gabi::at<void>(info + 0xe0));
+        reinterpret_cast<be<u32>*>(emtrInfo.mPublicScale)[i] = (u32)reinterpret_cast<be<u32>*>(mGlobalDynamicsScale)[i];
+    MTXMultVec(matrix.get(), mEmitterTranslation, emtrInfo.mEmitterGlobalCenter);
 }
-VERIFY(0x0281F688, JPA_calcEmitterInfo);
-void JPA_calcVolumePoint(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820244, void, e);
-    wr<f32>(info + 0x13c, 0.0f);
-    wr<f32>(info + 0x138, 0.0f);
-    wr<f32>(info + 0x134, 0.0f);
-    f32 x = randomFloat(e) - 0.5f, y = randomFloat(e) - 0.5f, z = randomFloat(e) - 0.5f;
-    wr<f32>(info + 0x140, x);
-    wr<f32>(info + 0x144, y);
-    wr<f32>(info + 0x148, z);
-    x = randomFloat(e) - 0.5f;
-    z = randomFloat(e) - 0.5f;
-    wr<f32>(info + 0x14c, x);
-    wr<f32>(info + 0x150, 0.0f);
-    wr<f32>(info + 0x154, z);
+/* 02820244 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumePoint() {
+    emtrInfo.mVolumePos[2] = 0.0f;
+    emtrInfo.mVolumePos[1] = 0.0f;
+    emtrInfo.mVolumePos[0] = 0.0f;
+    f32 x = randomFloat(this) - 0.5f, y = randomFloat(this) - 0.5f, z = randomFloat(this) - 0.5f;
+    emtrInfo.mVelOmni[0] = x;
+    emtrInfo.mVelOmni[1] = y;
+    emtrInfo.mVelOmni[2] = z;
+    x = randomFloat(this) - 0.5f;
+    z = randomFloat(this) - 0.5f;
+    emtrInfo.mVelAxis[0] = x;
+    emtrInfo.mVelAxis[1] = 0.0f;
+    emtrInfo.mVelAxis[2] = z;
 }
-VERIFY(0x02820244, JPA_calcVolumePoint);
-void JPA_calcVolumeLine(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820354, void, e);
+/* 02820354 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeLine() {
     f32 z;
-    if ((u32)e->dataFlags & 2) {
-        u32 idx = rd<u32>(info + 0x160);
-        f32 count = (f32)rd<s32>(info + 0x15c);
-        f32 size = rd<f32>(info + 0x158);
-        wr<u32>(info + 0x160, idx + 1);
+    if ((u32)mDataFlag & JPADynFlag_FixedInterval) {
+        u32 idx = (u32)emtrInfo.mVolumeEmitIdx;
+        f32 count = (f32)(s32)emtrInfo.mVolumeEmitCount;
+        f32 size = (f32)emtrInfo.mVolumeSize;
+        emtrInfo.mVolumeEmitIdx = idx + 1;
         z = gabi::fmuls_ppc(size, ((f32)(s32)idx / (count - 1.0f)) - 0.5f);
     } else {
-        f32 r = randomFloat(e) - 0.5f;
-        z = gabi::fmuls_ppc(r, rd<f32>(info + 0x158));
+        f32 r = randomFloat(this) - 0.5f;
+        z = gabi::fmuls_ppc(r, (f32)emtrInfo.mVolumeSize);
     }
     volumeResult(0.0f, 0.0f, z);
 }
-VERIFY(0x02820354, JPA_calcVolumeLine);
-void JPA_calcVolumeCube(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820688, void, e);
-    f32 x = randomFloat(e) - 0.5f, y = randomFloat(e) - 0.5f, z = randomFloat(e) - 0.5f;
-    f32 size = rd<f32>(info + 0x158);
+/* 02820688 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeCube() {
+    f32 x = randomFloat(this) - 0.5f, y = randomFloat(this) - 0.5f, z = randomFloat(this) - 0.5f;
+    f32 size = (f32)emtrInfo.mVolumeSize;
     volumeResult(gabi::fmuls_ppc(size, x), gabi::fmuls_ppc(size, y), gabi::fmuls_ppc(size, z));
 }
-VERIFY(0x02820688, JPA_calcVolumeCube);
-void JPA_calcVolumeCircle(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x028204A0, void, e);
+/* 028204A0 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeCircle() {
     s16 angle;
-    if ((u32)e->dataFlags & 2) {
-        u32 idx = rd<u32>(info + 0x160);
-        s16 step = divide((s32)(idx << 16), rd<s32>(info + 0x15c));
-        f32 sweep = e->volumeSweep;
-        wr<u32>(info + 0x160, idx + 1);
+    if ((u32)mDataFlag & JPADynFlag_FixedInterval) {
+        u32 idx = (u32)emtrInfo.mVolumeEmitIdx;
+        s16 step = divide((s32)(idx << 16), (s32)emtrInfo.mVolumeEmitCount);
+        f32 sweep = mVolumeSweep;
+        emtrInfo.mVolumeEmitIdx = idx + 1;
         angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)step, sweep));
     } else {
-        s16 r = randomShort(e);
-        angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r, (f32)e->volumeSweep));
+        s16 r = randomShort(this);
+        angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r, (f32)mVolumeSweep));
     }
-    f32 r = randomFloat(e), min = e->volumeMinRadius;
-    if ((u32)e->dataFlags & 1)
+    // HD: keep fused interpolation and the original double-precision density expression.
+    f32 r = randomFloat(this), min = mVolumeMinRad;
+    if ((u32)mDataFlag & JPADynFlag_FixedDensity)
         r = (f32)(1.0 - (double)r * r);
-    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), rd<f32>(info + 0x158));
+    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), (f32)emtrInfo.mVolumeSize);
     volumeResult(gabi::fmuls_ppc(sinAngle(angle), radius), 0.0f,
                  gabi::fmuls_ppc(cosAngle(angle), radius));
 }
-VERIFY(0x028204A0, JPA_calcVolumeCircle);
-void JPA_calcVolumeSphere(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820778, void, e);
+/* 02820778 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeSphere() {
     s16 x, angle;
-    if ((u32)e->dataFlags & 2) {
-        u32 a = rd<u32>(info + 0x164), maximum = rd<u32>(info + 0x16c);
-        u32 latitude = rd<u32>(info + 0x168), div = rd<u32>(info + 0x170);
+    if ((u32)mDataFlag & JPADynFlag_FixedInterval) {
+        u32 a = (u32)emtrInfo.mVolumeEmitAngleCount, maximum = (u32)emtrInfo.mVolumeEmitAngleMax;
+        u32 latitude = (u32)emtrInfo.mVolumeEmitXCount, div = (u32)emtrInfo.mDivNumber;
         u16 step = divide((s32)(a << 16), (s32)maximum);
         x = (s16)((u32)divide((s32)(latitude << 15), (s32)(div - 1)) + 0x4000);
-        angle = (s16)gabi::ftoi(gabi::fmadds((f32)step, (f32)e->volumeSweep, 32768.0f));
+        angle = (s16)gabi::ftoi(gabi::fmadds((f32)step, (f32)mVolumeSweep, 32768.0f));
         if (++a == maximum) {
-            latitude = rd<u32>(info + 0x168) + 1;
-            div = rd<u32>(info + 0x170);
-            wr<u32>(info + 0x164, 0);
-            wr<u32>(info + 0x168, latitude);
-            wr<u32>(info + 0x16c, (s32)(latitude * 2) < (s32)div
+            latitude = (u32)emtrInfo.mVolumeEmitXCount + 1;
+            div = (u32)emtrInfo.mDivNumber;
+            emtrInfo.mVolumeEmitAngleCount = 0;
+            emtrInfo.mVolumeEmitXCount = latitude;
+            emtrInfo.mVolumeEmitAngleMax = (s32)(latitude * 2) < (s32)div
                                       ? maximum + (maximum == 1 ? 3 : 4)
-                                      : (maximum == 4 ? 1 : maximum - 4));
+                                      : (maximum == 4 ? 1 : maximum - 4);
         } else
-            wr<u32>(info + 0x164, a);
+            emtrInfo.mVolumeEmitAngleCount = a;
     } else {
-        s16 r = randomShort(e);
-        s16 r2 = randomShort(e);
+        s16 r = randomShort(this);
+        s16 r2 = randomShort(this);
         x = r >> 1;
-        angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r2, (f32)e->volumeSweep));
+        angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r2, (f32)mVolumeSweep));
     }
-    f32 r = randomFloat(e), min = e->volumeMinRadius;
-    if ((u32)e->dataFlags & 1) {
+    // HD: keep fused interpolation and the original double-precision density expression.
+    f32 r = randomFloat(this), min = mVolumeMinRad;
+    if ((u32)mDataFlag & JPADynFlag_FixedDensity) {
         f32 square = r * r;
         r = (f32)(1.0 - (double)square * r);
     }
-    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), rd<f32>(info + 0x158));
+    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), (f32)emtrInfo.mVolumeSize);
     f32 side = gabi::fmuls_ppc(radius, cosAngle(x));
     volumeResult(gabi::fmuls_ppc(side, sinAngle(angle)), -gabi::fmuls_ppc(radius, sinAngle(x)),
                  gabi::fmuls_ppc(side, cosAngle(angle)));
 }
-VERIFY(0x02820778, JPA_calcVolumeSphere);
-void JPA_calcVolumeCylinder(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820A84, void, e);
-    s16 rangle = randomShort(e);
-    s16 angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)rangle, (f32)e->volumeSweep));
-    f32 r = randomFloat(e), min = e->volumeMinRadius;
-    if ((u32)e->dataFlags & 1)
+/* 02820A84 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeCylinder() {
+    s16 rangle = randomShort(this);
+    s16 angle = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)rangle, (f32)mVolumeSweep));
+    // HD: keep fused interpolation and the original double-precision density expression.
+    f32 r = randomFloat(this), min = mVolumeMinRad;
+    if ((u32)mDataFlag & JPADynFlag_FixedDensity)
         r = (f32)(1.0 - (double)r * r);
-    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), rd<f32>(info + 0x158));
-    f32 y = randomFloat(e);
+    f32 radius = gabi::fmuls_ppc(gabi::fmadds(r, 1.0f - min, min), (f32)emtrInfo.mVolumeSize);
+    f32 y = randomFloat(this);
     y = (y + y) - 1.0f;
     volumeResult(gabi::fmuls_ppc(radius, sinAngle(angle)),
-                 gabi::fmuls_ppc(rd<f32>(info + 0x158), y),
+                 gabi::fmuls_ppc((f32)emtrInfo.mVolumeSize, y),
                  gabi::fmuls_ppc(radius, cosAngle(angle)));
 }
-VERIFY(0x02820A84, JPA_calcVolumeCylinder);
-void JPA_calcVolumeTorus(JPAEmitterCalc_l *e) {
-    WWHD_FUNC(0x02820BE0, void, e);
-    s16 r = randomShort(e);
-    s16 a = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r, (f32)e->volumeSweep));
-    u16 b = randomShort(e);
-    f32 size = rd<f32>(info + 0x158);
-    f32 radius = gabi::fmuls_ppc((f32)e->volumeMinRadius, size);
+/* 02820BE0 */
+void jpa_emitter_calc::JPABaseEmitter::calcVolumeTorus() {
+    s16 r = randomShort(this);
+    s16 a = (s16)gabi::ftoi(gabi::fmuls_ppc((f32)r, (f32)mVolumeSweep));
+    u16 b = randomShort(this);
+    f32 size = (f32)emtrInfo.mVolumeSize;
+    f32 radius = gabi::fmuls_ppc((f32)mVolumeMinRad, size);
     f32 sa = sinAngle(a), ca = cosAngle(a), sb = sinAngle(b), cb = cosAngle(b);
     f32 axisX = gabi::fmuls_ppc(gabi::fmuls_ppc(radius, sa), cb);
     f32 axisY = gabi::fmuls_ppc(radius, sb);
     f32 axisZ = gabi::fmuls_ppc(gabi::fmuls_ppc(radius, ca), cb);
-    wr<f32>(info + 0x14c, axisX);
-    wr<f32>(info + 0x150, axisY);
-    wr<f32>(info + 0x154, axisZ);
+    emtrInfo.mVelAxis[0] = axisX;
+    emtrInfo.mVelAxis[1] = axisY;
+    emtrInfo.mVelAxis[2] = axisZ;
     f32 x = gabi::fmadds(size, sa, axisX), z = gabi::fmadds(size, ca, axisZ);
-    wr<f32>(info + 0x134, x);
-    wr<f32>(info + 0x138, axisY);
-    wr<f32>(info + 0x13c, z);
-    wr<f32>(info + 0x140, gabi::fmuls_ppc(x, rd<f32>(info + 0xc8)));
-    wr<f32>(info + 0x144, gabi::fmuls_ppc(axisY, rd<f32>(info + 0xcc)));
-    wr<f32>(info + 0x148, gabi::fmuls_ppc(z, rd<f32>(info + 0xd0)));
+    emtrInfo.mVolumePos[0] = x;
+    emtrInfo.mVolumePos[1] = axisY;
+    emtrInfo.mVolumePos[2] = z;
+    emtrInfo.mVelOmni[0] = gabi::fmuls_ppc(x, (f32)emtrInfo.mEmitterGlobalScale[0]);
+    emtrInfo.mVelOmni[1] = gabi::fmuls_ppc(axisY, (f32)emtrInfo.mEmitterGlobalScale[1]);
+    emtrInfo.mVelOmni[2] = gabi::fmuls_ppc(z, (f32)emtrInfo.mEmitterGlobalScale[2]);
 }
-VERIFY(0x02820BE0, JPA_calcVolumeTorus);
+
+} // namespace jpa_emitter_calc
+using namespace jpa_emitter_calc;
+
+/* WWHD glue (tools/verify/autoglue.py)
+data emtrInfo 104B5730
+data sincosTable 104A44F8 nocheck
+data assertFile 10170E84 nocheck
+data assertMessage 10170E9C nocheck
+ext 0281DE68 void JPADeleteAllParticleHD(jpa_emitter_calc::JPABaseEmitter*, u32)
+ext 0281F42C void JPACalcKey(jpa_emitter_calc::JPABaseEmitter*)
+ext 0281F688 void JPACalcEmitterInfo(jpa_emitter_calc::JPABaseEmitter*)
+ext 0282DC48 void JPADrawCalc(void*)
+ext 02824294 void JPAFieldPreCalc(void*)
+ext 0281F878 void JPACalcCreatePtcls(jpa_emitter_calc::JPABaseEmitter*)
+ext 0281FBD8 void JPACalcParticle(jpa_emitter_calc::JPABaseEmitter*)
+ext 0281FD14 void JPACalcChild(jpa_emitter_calc::JPABaseEmitter*)
+ext 028215F8 void JPADeleteEmitter(jpa_emitter_calc::JPAEmitterManager*, jpa_emitter_calc::JPABaseEmitter*)
+ext 0281DCB8 void* JPACreateParticle(jpa_emitter_calc::JPABaseEmitter*)
+ext 028249D8 f32 JPAGetKeyFrameValueHD(u32, void*, f32)
+ext 028E945C void MTXScale(void*, f32, f32, f32)
+ext 028E9108 void MTXConcat(void*, void*, void*)
+ext 028E90D4 void MTXCopy(void*, void*)
+ext 028E8F64 void MTXMultVec(void*, void*, void*)
+ext 028245AC void JPAGetXYZRotateMtx(s16, s16, s16, void*)
+ext 0282466C void JPAGetDirMtx(void*, void*)
+ext 0273AA24 void JPAAssert(void*, s32, void*)
+*/

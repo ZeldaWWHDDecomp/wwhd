@@ -7,96 +7,38 @@
  * (zeldaret/tww src/d/actor/d_a_fm.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_fm_local.h"
+#include "d/actor/d_a_fm_a.h"
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* functions of the other d_a_fm parts, by address (matcher names in this unit are wrong, see the report) */
-static inline void fm_setAnm(daFm_c* a, s8 idx, bool force) { gabi::call(0x021418D0, a, (s32)idx, (u32)force); }
-static inline bool fm_setHoleScale(daFm_c* a, f32 x, f32 y, f32 z) { return gabi::call<bool>(0x02142450, a, x, y, z); }
-static inline void fm_modeProc(daFm_c* a, s32 proc, s32 mode) { gabi::call(0x021412BC, a, proc, mode); }
-static inline void fm_holeExecute(daFm_c* a) { gabi::call(0x02142200, a); }
-static inline void fm_iceProc(daFm_c* a) { gabi::call(0x021424D0, a); }
-static inline void fm_setBaseTarget(daFm_c* a) { gabi::call(0x02141714, a); }
-static inline void fm_bodySetMtx(daFm_c* a) { gabi::call(0x0214153C, a); }
-static inline void fm_holeSetMtx(daFm_c* a) { gabi::call(0x0214162C, a); }
-static inline u8 fm_areaCheck(daFm_c* a) { return gabi::call<u8>(0x0214264C, a); }
-static inline u32 fm_lineCheck(daFm_c* a, cXyz* p1, cXyz* p2) { return gabi::call<u32>(0x021425BC, a, p1, p2); }
-static inline u32 fm_isLink(daFm_c* a, fopAc_ac_c* t) { return gabi::call<u32>(0x02141280, a, t); }
-static inline void fm_setAttention(daFm_c* a) { gabi::call(0x021422A4, a); }
-static inline void fm_spAttackVJump(daFm_c* a) { gabi::call(0x02142870, a); }
-static inline void fm_spAttackJump(daFm_c* a) { gabi::call(0x021428FC, a); }
-/* 020CB92C daBomb_c::chk_state(state) */
-static inline u32 daBomb_chk_state(fopAc_ac_c* b, u32 st) { return gabi::call<u32>(0x020CB92C, b, st); }
-/* 025E535C mDoExt_McaMorf::play(cXyz*, u32, s8) */
-static inline void morf_play(mDoExt_McaMorf* m, cXyz* pos, u32 a, s32 b) { gabi::call(0x025E535C, m, pos, a, b); }
-/* 028E9BC0 C_QUATSlerp(p, q, r, t) */
-static inline void C_QUATSlerp(Quaternion_fm* p, u32 q, Quaternion_fm* r, f32 t) { gabi::call(0x028E9BC0, p, q, r, t); }
-#define ZeroQuat 0x101E9C38u
-static inline void morf_calc(mDoExt_McaMorf* m) { gabi::call(0x025E55A0, m); }
-
-enum { fpcNm_NPC_CB1_e = 0x14E, fpcNm_NPC_MD_e = 0x16F };
-
-/* daPy_lk_c virtuals through the HD vtable (+0xB4): checkPlayerFly +0x4C, checkFrontRoll +0x5C,
- * getGrabActorID +0xBC (results tested as full words) */
-static inline s32 daPy_vcall(fopAc_ac_c* p, u32 off) { return gabi::call_ptr<s32>(gabi::load<u32>(gabi::load<u32>(gabi::ea(p) + 0xB4) + off), p); }
-static inline s32 daPy_checkPlayerFly(fopAc_ac_c* p) { return daPy_vcall(p, 0x4C); }
-static inline s32 daPy_checkFrontRoll(fopAc_ac_c* p) { return daPy_vcall(p, 0x5C); }
-static inline s32 daPy_getGrabActorID(fopAc_ac_c* p) { return daPy_vcall(p, 0xBC); }
-/* 02587D24 dLib_pathMove(cXyz* pos, s8* pntNo, dPath*, f32 speed, cb, void* data) */
-static inline void dLib_pathMove(cXyz* pos, be<s8>* pnt, dPath* path, f32 spd, u32 cb, void* data) {
-    gabi::call(0x02587D24, pos, pnt, path, spd, cb, data);
+/* inlined into daFm_c::grabPlayer */
+static inline f32 fm_abs_copy(cXyz* vector) {
+    gabi::Local<cXyz> copy;
+    copy->copy(*vector);
+    return std_sqrtf(PSVECSquareMag(copy.get()));
 }
-#define pathMove_CB 0x02140CA8u
-/* 025BEBB8 dSnap_RegistFig(u8 type, fopAc_ac_c*, const cXyz& pos, s16 angleY, f32, f32, f32) */
-static inline void dSnap_RegistFig_pos(u32 type, fopAc_ac_c* a, cXyz* pos, s16 angY, f32 x, f32 y, f32 z) {
-    gabi::call(0x025BEBB8, type, a, pos, angY, x, y, z);
-}
-enum { DSNAP_TYPE_FM = 0xB5 };
-enum { fpcNm_BOMB_e = 0x126, fpcNm_TSUBO_e = 0x1C5, FM_JNT_TE_e = 5 };
-/* 02048038 daObj::PrmAbstract(actor, width, shift) */
-static inline u32 daObj_PrmAbstract(fopAc_ac_c* a, u32 w, u32 sh) { return gabi::call<u32>(0x02048038, a, w, sh); }
-/* 02018F3C cM3dGSph::SetC(f32, f32, f32) */
-static inline void cM3dGSph_SetC_xyz(cM3dGSph* s, f32 x, f32 y, f32 z) { gabi::call(0x02018F3C, s, x, y, z); }
-/* 0x101FF558 g_Counter.mCounter0 (frame counter) */
-static inline u32 g_Counter0() { return gabi::load<u32>(0x101FF558); }
-/* daPy_py_c::setPlayerPosAndAngle(MtxP) through the HD vtable (+0x124) */
-static inline void daPy_setPlayerPosAndAngle_mtx(fopAc_ac_c* p, Mtx34* m) {
-    gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(p) + 0xB4) + 0x124), p, m);
-}
-/* daPy_py_c::getHeadTopPos (+0x3D8) */
-static inline cXyz* fm_headTopPos(fopAc_ac_c* p) { return gabi::at<cXyz>(gabi::ea(p) + 0x3D8); }
-/* cXyz::abs() on a copy: sqrtf(PSVECSquareMag) */
-static inline f32 fm_abs_copy(cXyz* v) {
-    gabi::Local<cXyz> c;
-    c->copy(*v);
-    return std_sqrtf(PSVECSquareMag(c.get()));
-}
-/* mDoMtx_stack_c::multVecZero(out): the translation column (float copies, bit-exact) */
 static inline void fm_multVecZero(cXyz* out) {
-    u32 m = gabi::ea(mDoMtx_stack_c::get());
-    gabi::store<u32>(gabi::ea(out) + 0, gabi::load<u32>(m + 0x0C));
-    gabi::store<u32>(gabi::ea(out) + 4, gabi::load<u32>(m + 0x1C));
-    gabi::store<u32>(gabi::ea(out) + 8, gabi::load<u32>(m + 0x2C));
+    auto* matrix = reinterpret_cast<fm_a::MatrixWords*>(mDoMtx_stack_c::get());
+    auto* words = reinterpret_cast<fm_a::VectorWords*>(out);
+    words->x = u32(matrix->m[0][3]);
+    words->y = u32(matrix->m[1][3]);
+    words->z = u32(matrix->m[2][3]);
 }
-static inline bool dComIfGp_checkPlayerStatus0(u32 bits) { return (gabi::load<u32>(dComIfGp_ea() + PLAY_PLAYER_STATUS0) & bits) != 0; }
-/* 0254457C dEvent_manager_c::endCheckOld(const char*) */
-static inline BOOL dComIfGp_evmng_endCheckOld(const char* name) { return gabi::call<BOOL>(0x0254457C, dComIfGp_getPEvtManager(), name); }
-/* (a - b).absXZ(): cXyz::operator- into a temporary, then sqrtf(PSVECSquareMag({x, 0, z})) */
+/* inlined into daFm_c::modeGoalKeeper */
 static inline f32 fm_absXZ_mi(cXyz* a, cXyz* b) {
     gabi::Local<cXyz> diff;
     cXyz_mi(a, diff.get(), b);
     gabi::Local<cXyz> xz;
-    gabi::store<f32>(gabi::ea(xz.get()) + 4, 0.0f);
-    gabi::store<u32>(gabi::ea(xz.get()) + 0, gabi::load<u32>(gabi::ea(diff.get()) + 0));
-    gabi::store<u32>(gabi::ea(xz.get()) + 8, gabi::load<u32>(gabi::ea(diff.get()) + 8));
+    xz->y = 0.0f;
+    auto* dst = reinterpret_cast<fm_a::VectorWords*>(xz.get());
+    auto* src = reinterpret_cast<fm_a::VectorWords*>(diff.get());
+    dst->x = u32(src->x);
+    dst->z = u32(src->z);
     return std_sqrtf(PSVECSquareMag(xz.get()));
 }
 
-/* ---- functions ---- */
+// Numeric actor and HIO fields retain the names from zeldaret/tww.
 
 /* 02142988 */
 void daFm_c::spAttackNone() {
-    WWHD_FUNC(0x02142988, void, this);
     /* setBtAttackData(100.0f, 100.0f, 10000.0f, 0); setBtNowFrame(0.0f) */
     mBtStartFrame = 100.0f;
     mBtNowFrame = 0.0f;
@@ -104,158 +46,126 @@ void daFm_c::spAttackNone() {
     mBtAttackType = 0;
     mBtMaxDis = 10000.0f;
 }
-VERIFY(0x02142988, &daFm_c::spAttackNone);
 
 /* 02142BC4 */
 bool daFm_c::isNpc(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x02142BC4, bool, this, i_actor);
     if (i_actor == nullptr) {
         return false;
     }
-    /* HD: fopAcM_GetName checks for NULL (inline, twice) */
+    // HD: fopAcM_GetName checks for NULL (inline, twice)
     return (i_actor != nullptr && fpcM_GetName(i_actor) == fpcNm_NPC_CB1_e) ||
            (i_actor != nullptr && fpcM_GetName(i_actor) == fpcNm_NPC_MD_e);
 }
-VERIFY(0x02142BC4, &daFm_c::isNpc);
 
 /* 02142C0C */
 void daFm_c::MtxToRot(Mtx34* i_mtx, csXyz* angle) {
-    WWHD_FUNC(0x02142C0C, void, this, i_mtx, angle);
     gabi::Local<Mtx34> mtx;
     mDoMtx_inverseTranspose(i_mtx, mtx);
     mDoMtx_MtxToRot(mtx, angle);
 }
-VERIFY(0x02142C0C, &daFm_c::MtxToRot);
 
 /* 0214399C */
 static bool daFmExecute(daFm_c* i_this) {
-    WWHD_FUNC(0x0214399C, bool, i_this);
     return i_this->_execute();
 }
-VERIFY(0x0214399C, daFmExecute);
 
 /* 0214418C */
 static bool daFmDraw(daFm_c* i_this) {
-    WWHD_FUNC(0x0214418C, bool, i_this);
     return i_this->_draw();
 }
-VERIFY(0x0214418C, daFmDraw);
 
 /* 02144190 */
 void daFm_c::modeSwWaitInit() {
-    WWHD_FUNC(0x02144190, void, this);
     fm_setAnm(this, 8, false);
-    field_0x3E0 = hio_f(0x120);
+    field_0x3E0 = fm_a::hio().field_0x120;
 }
-VERIFY(0x02144190, &daFm_c::modeSwWaitInit);
 
 /* 021441D0 */
 void daFm_c::resetInvKine() {
-    WWHD_FUNC(0x021441D0, void, this);
     if (isBodyAppear()) {
         field_0x390 = 0;
         for (int i = 0; i < 6; i++) {
-            C_QUATSlerp(&field_0x330[i], ZeroQuat, &field_0x330[i], 0.05f);
+            C_QUATSlerp(&field_0x330[i], fm_a::zeroQuatAddress(), &field_0x330[i], 0.05f);
         }
         morf_calc(mpMorf);
     }
 }
-VERIFY(0x021441D0, &daFm_c::resetInvKine);
 
 /* 021444FC */
 int daFm_c::setRnd(int param_1, int param_2) {
-    WWHD_FUNC(0x021444FC, int, this, param_1, param_2);
     f32 rnd = cM_rndF(std::fabs((f32)(param_2 - param_1)));
     return param_1 + gabi::ftoi(rnd);
 }
-VERIFY(0x021444FC, &daFm_c::setRnd);
 
 /* 02144568 */
 void daFm_c::modeHideInit() {
-    WWHD_FUNC(0x02144568, void, this);
     fm_setAnm(this, 8, false);
-    field_0x650 = setRnd(hio_s(0x084), hio_s(0x086));
+    field_0x650 = setRnd(fm_a::hio().field_0x084, fm_a::hio().field_0x086);
 }
-VERIFY(0x02144568, &daFm_c::modeHideInit);
 
 /* 021445B8 */
 void daFm_c::modeHide() {
-    WWHD_FUNC(0x021445B8, void, this);
     field_0x690.copy(current.pos);
     resetInvKine();
-    if (fm_setHoleScale(this, hio_f(0x120), 0.1f, hio_f(0x128))) {
+    if (fm_setHoleScale(this, fm_a::hio().field_0x120, 0.1f, fm_a::hio().field_0x128)) {
         current.pos.x = mBaseTarget->current.pos.x;
         current.pos.z = mBaseTarget->current.pos.z;
-        if (cLib_calcTimer(&field_0x650) == 0) {
-            /* HD: field_0xAE4 != 0 (GameCube: == 1) */
-            if (!(std::fabs(field_0x69C.y - mBaseTarget->current.pos.y) > hio_f(0x0A8)) && field_0xAE4 != 0) {
-                fm_modeProc(this, PROC_INIT_e, 2);
+        if (fm_calcTimer(&field_0x650) == 0) {
+            // HD: field_0xAE4 != 0 (GameCube: == 1)
+            if (!(std::fabs(field_0x69C.y - mBaseTarget->current.pos.y) > fm_a::hio().field_0x0A8) && field_0xAE4 != 0) {
+                fm_modeProc(this, PROC_INIT_e, fm_a::MODE_UNDERFOOT);
             }
         }
     }
 }
-VERIFY(0x021445B8, &daFm_c::modeHide);
 
 /* 0214468C */
 void daFm_c::modeUnderFootInit() {
-    WWHD_FUNC(0x0214468C, void, this);
     fm_setAnm(this, 8, false);
-    field_0x650 = hio_s(0x066);
+    field_0x650 = fm_a::hio().field_0x066;
     current.pos.x = mBaseTarget->current.pos.x;
     current.pos.z = mBaseTarget->current.pos.z;
-    field_0x3E0 = hio_f(0x120);
+    field_0x3E0 = fm_a::hio().field_0x120;
 }
-VERIFY(0x0214468C, &daFm_c::modeUnderFootInit);
 
 /* 021446EC */
 bool daFm_c::isLinkControl() {
-    WWHD_FUNC(0x021446EC, bool, this);
     fopAc_ac_c* p0 = dComIfGp_getPlayer(0);
     return p0 != dComIfGp_getLinkPlayer();
 }
-VERIFY(0x021446EC, &daFm_c::isLinkControl);
 
 /* 021449C4 */
 void daFm_c::modePathMoveInit() {
-    WWHD_FUNC(0x021449C4, void, this);
     fm_setAnm(this, 8, false);
-    field_0x3E0 = hio_f(0x124);
+    field_0x3E0 = fm_a::hio().field_0x124;
 }
-VERIFY(0x021449C4, &daFm_c::modePathMoveInit);
 
 /* 02144A04 */
 void daFm_c::turnToBaseTarget() {
-    WWHD_FUNC(0x02144A04, void, this);
     cLib_addCalcAngleS2(&shape_angle.y, field_0x9D0, 4, 0x800);
 }
-VERIFY(0x02144A04, &daFm_c::turnToBaseTarget);
 
 /* 02144B54 */
 void daFm_c::modeGoalKeeperInit() {
-    WWHD_FUNC(0x02144B54, void, this);
     fm_setAnm(this, 8, false);
-    field_0x3E0 = hio_f(0x124);
+    field_0x3E0 = fm_a::hio().field_0x124;
 }
-VERIFY(0x02144B54, &daFm_c::modeGoalKeeperInit);
 
 /* 02144D88 */
 void daFm_c::modeAppearInit() {
-    WWHD_FUNC(0x02144D88, void, this);
     fm_setAnm(this, 2, false);
     field_0x660.copy(current.pos);
     shape_angle.y = field_0x9D0;
     field_0x650 = 0x1E;
 }
-VERIFY(0x02144D88, &daFm_c::modeAppearInit);
 
-/* 0214472C (USA path: the link player is used throughout) */
+/* 0214472C */
 bool daFm_c::isGrabFoot() {
-    WWHD_FUNC(0x0214472C, bool, this);
     fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
     if (std::fabs(current.pos.y - pLink->current.pos.y) > 10.0f) {
         return false;
     }
-    if (fopAcM_searchActorDistanceXZ(this, pLink) > hio_f(0x0DC)) {
+    if (fopAcM_searchActorDistanceXZ(this, pLink) > fm_a::hio().field_0x0DC) {
         return false;
     }
     if (pLink->speedF > 4.0f) {
@@ -266,141 +176,132 @@ bool daFm_c::isGrabFoot() {
     }
     return true;
 }
-VERIFY(0x0214472C, &daFm_c::isGrabFoot);
 
 /* 02144838 */
 void daFm_c::modeUnderFoot() {
-    WWHD_FUNC(0x02144838, void, this);
-    if (cLib_calcTimer(&field_0x648) == 0) {
+    if (fm_calcTimer(&field_0x648) == 0) {
         field_0x660.copy(mBaseTarget->current.pos);
-        field_0x648 = hio_s(0x08A);
+        field_0x648 = fm_a::hio().field_0x08A;
     }
-    cLib_addCalcPosXZ2(&current.pos, &field_0x660, 0.1f, hio_f(0x0C0));
+    fm_addCalcPosXZ2(&current.pos, &field_0x660, 0.1f, fm_a::hio().field_0x0C0);
 
     field_0x690.copy(current.pos);
     resetInvKine();
-    if (std::fabs(field_0x69C.y - mBaseTarget->current.pos.y) > hio_f(0x0A8) || field_0xAE4 == 0) {
-        fm_modeProc(this, PROC_INIT_e, 1);
-    } else if (fm_setHoleScale(this, hio_f(0x124), 0.1f, hio_f(0x12C))) {
-        if (cLib_calcTimer(&field_0x650) == 0) {
+    if (std::fabs(field_0x69C.y - mBaseTarget->current.pos.y) > fm_a::hio().field_0x0A8 || field_0xAE4 == 0) {
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_HIDE);
+    } else if (fm_setHoleScale(this, fm_a::hio().field_0x124, 0.1f, fm_a::hio().field_0x12C)) {
+        if (fm_calcTimer(&field_0x650) == 0) {
             if (isGrabFoot() && !dComIfGp_event_runCheck()) {
-                fm_modeProc(this, PROC_INIT_e, 0xF);
-            } else if (field_0x9D4 < hio_f(0x0E4) && field_0xAE5 == 0) {
-                fm_modeProc(this, PROC_INIT_e, 5);
+                fm_modeProc(this, PROC_INIT_e, fm_a::MODE_GRAB_FOOT_DEMO);
+            } else if (field_0x9D4 < fm_a::hio().field_0x0E4 && field_0xAE5 == 0) {
+                fm_modeProc(this, PROC_INIT_e, fm_a::MODE_APPEAR);
             } else {
-                fm_modeProc(this, PROC_INIT_e, 1);
+                fm_modeProc(this, PROC_INIT_e, fm_a::MODE_HIDE);
             }
         }
     }
 }
-VERIFY(0x02144838, &daFm_c::modeUnderFoot);
 
 /* 02144A18 */
 void daFm_c::modePathMove() {
-    WWHD_FUNC(0x02144A18, void, this);
     field_0x690.copy(current.pos);
     resetInvKine();
     turnToBaseTarget();
     if (isGrabFoot() && !dComIfGp_event_runCheck()) {
-        fm_modeProc(this, PROC_INIT_e, 0xF);
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_GRAB_FOOT_DEMO);
     } else {
         dLib_pathMove(&field_0x3B0, &field_0x3BC, mpPath, 3.0f, pathMove_CB, this);
-        cLib_addCalcPosXZ2(&current.pos, &field_0x3B0, (hio_f(0x0D0) + 1.0f) * 0.005f * field_0x394, 20.0f);
+        fm_addCalcPosXZ2(&current.pos, &field_0x3B0, (fm_a::hio().field_0x0D0 + 1.0f) * 0.005f * field_0x394, 20.0f);
         fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
-        if (field_0x9D4 < hio_f(0x0E4) && std::fabs(pLink->current.pos.y - current.pos.y) < hio_f(0x0A8) &&
+        if (field_0x9D4 < fm_a::hio().field_0x0E4 && std::fabs(pLink->current.pos.y - current.pos.y) < fm_a::hio().field_0x0A8 &&
             field_0xAE5 == 0) {
-            fm_modeProc(this, PROC_INIT_e, 5);
+            fm_modeProc(this, PROC_INIT_e, fm_a::MODE_APPEAR);
         }
     }
 }
-VERIFY(0x02144A18, &daFm_c::modePathMove);
 
 /* 02144B94 */
 void daFm_c::modeGoalKeeper() {
-    WWHD_FUNC(0x02144B94, void, this);
-    if (field_0x2E5 && dComIfGp_evmng_endCheckOld(STR(0x1000F878) /* "DEFAULT_FM_SUIKOMI_NPC" */)) {
-        fm_modeProc(this, PROC_INIT_e, 6);
+    if (field_0x2E5 && fm_endCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_FM_SUIKOMI_NPC" /* "DEFAULT_FM_SUIKOMI_NPC" */)) {
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_DISAPPEAR);
         return;
     }
 
     resetInvKine();
     turnToBaseTarget();
     if (isGrabFoot() && !dComIfGp_event_runCheck()) {
-        fm_modeProc(this, PROC_INIT_e, 0xF);
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_GRAB_FOOT_DEMO);
     } else if (field_0x2E4 != 0) {
-        fm_modeProc(this, PROC_INIT_e, 5);
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_APPEAR);
     } else {
         f32 temp = std::fabs(current.pos.y - mBaseTarget->current.pos.y);
-        if (field_0x9D4 < hio_f(0x0E8) && temp < hio_f(0x0A8)) {
+        if (field_0x9D4 < fm_a::hio().field_0x0E8 && temp < fm_a::hio().field_0x0A8) {
             if (fm_absXZ_mi(&mBaseTarget->current.pos, &field_0x69C) < field_0x2E0 && field_0xAE5 == 0) {
-                fm_modeProc(this, PROC_INIT_e, 5);
+                fm_modeProc(this, PROC_INIT_e, fm_a::MODE_APPEAR);
             }
         }
         field_0x690.copy(field_0x69C);
-        cLib_addCalcPosXZ2(&current.pos, &field_0x690, (hio_f(0x0CC) + 1.0f) * 0.005f * field_0x394, 40.0f);
+        fm_addCalcPosXZ2(&current.pos, &field_0x690, (fm_a::hio().field_0x0CC + 1.0f) * 0.005f * field_0x394, 40.0f);
     }
 }
-VERIFY(0x02144B94, &daFm_c::modeGoalKeeper);
 
 /* 021442A8 */
 void daFm_c::modeSwWait() {
-    WWHD_FUNC(0x021442A8, void, this);
     resetInvKine();
     if (!dComIfGs_isSwitch(field_0x2D4, current.roomNo)) {
         return;
     }
 
     if (field_0x2E4 != 0) {
-        fm_setHoleScale(this, hio_f(0x124), 0.1f, hio_f(0x128));
+        fm_setHoleScale(this, fm_a::hio().field_0x124, 0.1f, fm_a::hio().field_0x128);
         if (eventInfo_checkCommandDemoAccrpt(this)) {
-            if (field_0x2E4 != 0 && cLib_calcTimer(&field_0x650) != 0) {
+            if (field_0x2E4 != 0 && fm_calcTimer(&field_0x650) != 0) {
                 return;
             }
         } else {
-            /* HD: event by name (startCheckOld) and fopAcM_orderOtherEvent2(name, 1, 0xFFFF) */
-            if (dComIfGp_evmng_startCheckOld(STR(0x1000F854) /* "DEFAULT_FM_SW_APEEAR" */) == 0) {
-                fopAcM_orderOtherEvent2(this, STR(0x1000F854), 1, 0xFFFF);
+            // HD: event by name (startCheckOld) and fopAcM_orderOtherEvent2(name, 1, 0xFFFF)
+            if (fm_startCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_FM_SW_APEEAR" /* "DEFAULT_FM_SW_APEEAR" */) == 0) {
+                fopAcM_orderOtherEvent2(this, "DEFAULT_FM_SW_APEEAR", 1, 0xFFFF);
                 return;
             }
         }
     } else {
-        if (dComIfGp_evmng_startCheckOld(STR(0x1000F854)) != 0) {
+        if (fm_startCheckOld(dComIfGp_getPEvtManager(), "DEFAULT_FM_SW_APEEAR") != 0) {
             field_0x2E5 = 1;
         }
-        actor_status |= 0x4000u; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
+        actor_status |= fopAcStts_UNK4000_e; /* fopAcM_OnStatus(this, fopAcStts_UNK4000_e) */
     }
 
     switch ((u32)field_0x2D0) {
     case 0:
-        fm_modeProc(this, PROC_INIT_e, 2);
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_UNDERFOOT);
         break;
     case 1:
-        if (fm_setHoleScale(this, hio_f(0x124), 0.1f, hio_f(0x128))) {
-            fm_modeProc(this, PROC_INIT_e, 3);
+        if (fm_setHoleScale(this, fm_a::hio().field_0x124, 0.1f, fm_a::hio().field_0x128)) {
+            fm_modeProc(this, PROC_INIT_e, fm_a::MODE_PATH_MOVE);
         }
         break;
     case 2:
-        if (fm_setHoleScale(this, hio_f(0x124), 0.1f, hio_f(0x128))) {
-            fm_modeProc(this, PROC_INIT_e, 4);
+        if (fm_setHoleScale(this, fm_a::hio().field_0x124, 0.1f, fm_a::hio().field_0x128)) {
+            fm_modeProc(this, PROC_INIT_e, fm_a::MODE_GOAL_KEEPER);
         }
         break;
     }
 }
-VERIFY(0x021442A8, &daFm_c::modeSwWait);
 
 /* 02144DE4 */
 void daFm_c::moveRndBack() {
-    WWHD_FUNC(0x02144DE4, void, this);
     cLib_distanceAngleS(shape_angle.y, field_0x9D0); /* unused angle */
     f32 temp = 100000.0f;
     if (mpActorTarget != nullptr) {
         temp = fopAcM_searchActorDistanceXZ(this, mpActorTarget);
     }
 
-    f32 e0 = hio_f(0x0E0);
+    bool moveDirectly = false;
+    f32 e0 = fm_a::hio().field_0x0E0;
     if (!(field_0x9D4 > e0) || !(temp > e0)) {
         if (!isGrabFoot()) {
-            s32 timer = cLib_calcTimer(&field_0x648);
+            s32 timer = fm_calcTimer(&field_0x648);
             if (field_0xAE4 == 0 || mObjAcch.ChkWallHit()) {
                 s16 old = field_0x680;
                 f32 r = cM_rndF(3.0f);
@@ -410,38 +311,35 @@ void daFm_c::moveRndBack() {
                 f32 r = cM_rndF(5.0f);
                 field_0x680 = (s16)gabi::ftoi(gabi::fmadds(r, 4096.0f, base));
             } else {
-                goto move;
+                moveDirectly = true;
             }
-            field_0x394 = cM_rndF(9.0f) + 1.0f;
-            field_0x660.z = gabi::fmadds(hio_f(0x0AC), cM_scos(field_0x680), field_0x660.z);
-            field_0x660.x = gabi::fmadds(hio_f(0x0AC), cM_ssin(field_0x680), field_0x660.x);
-            field_0x648 = hio_s(0x0A0);
+            if (!moveDirectly) {
+                field_0x394 = cM_rndF(9.0f) + 1.0f;
+                field_0x660.z = gabi::fmadds(fm_a::hio().field_0x0AC, cM_scos(field_0x680), field_0x660.z);
+                field_0x660.x = gabi::fmadds(fm_a::hio().field_0x0AC, cM_ssin(field_0x680), field_0x660.x);
+                field_0x648 = fm_a::hio().field_0x0A0;
+            }
         }
     }
 
-    if (field_0xAE4 != 0 && !mObjAcch.ChkWallHit()) {
-    move:
-        cLib_addCalcPosXZ2(&current.pos, &field_0x660, 0.1f, hio_f(0x0B0));
+    if (moveDirectly || (field_0xAE4 != 0 && !mObjAcch.ChkWallHit())) {
+        fm_addCalcPosXZ2(&current.pos, &field_0x660, 0.1f, fm_a::hio().field_0x0B0);
     }
 }
-VERIFY(0x02144DE4, &daFm_c::moveRndBack);
 
 /* 02143FF0 */
 void daFm_c::holeDraw() {
-    WWHD_FUNC(0x02143FF0, void, this);
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, mpModel, &tevStr);
     J3DModelData* modelData = J3DModel_getModelData(mpModel);
     mBtkAnm.entry(modelData, mBtkAnm.getFrame());
     mDoExt_modelUpdateDL(mpModel);
-    /* HD: mBtkAnm.remove inline: clear the model data's texture-SRT animation */
-    gabi::store<u32>(gabi::ea(J3DModel_getModelData(mpModel)) + 0x44, 0);
+    // HD: mBtkAnm.remove inline: clear the model data's texture-SRT animation
+    reinterpret_cast<fm_a::ModelData*>(J3DModel_getModelData(mpModel))->mTextureSRTAnimation = 0;
 }
-VERIFY(0x02143FF0, &daFm_c::holeDraw);
 
 /* 02144058 */
 void daFm_c::bodyDraw() {
-    WWHD_FUNC(0x02144058, void, this);
     J3DModel* model = mpMorf->getModel();
     dScnKy_env_light_c* env = dKy_getEnvlight();
     setLightTevColorType(env, model, &tevStr);
@@ -451,11 +349,9 @@ void daFm_c::bodyDraw() {
         mpMorf->entryDL();
     }
 }
-VERIFY(0x02144058, &daFm_c::bodyDraw);
 
 /* 021440D8 */
 bool daFm_c::_draw() {
-    WWHD_FUNC(0x021440D8, bool, this);
     debugDraw();
     if (field_0x3E0 > 0.015f) {
         holeDraw();
@@ -466,21 +362,19 @@ bool daFm_c::_draw() {
     }
     return true;
 }
-VERIFY(0x021440D8, &daFm_c::_draw);
 
 /* 02142E0C */
 void daFm_c::grabBomb() {
-    WWHD_FUNC(0x02142E0C, void, this);
     fopAc_ac_c* target = mpActorTarget;
-    /* HD: fopAcM_GetName checks for NULL */
+    // HD: fopAcM_GetName checks for NULL
     if (target != nullptr && fpcM_GetName(target) == fpcNm_BOMB_e) {
         gabi::Local<cXyz> temp_pos;
         temp_pos->x = 5.0f;
         temp_pos->y = -10.0f;
         temp_pos->z = 5.0f;
         gabi::Local<cXyz> pos;
-        cXyz_pl(hio_xyz(0x038), pos, temp_pos);
-        PSMTXCopy(fm_getAnmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
+        cXyz_pl(&fm_a::hio().field_0x038, pos, temp_pos);
+        PSMTXCopy(fm_a::anmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
         PSMTXMultVec(mDoMtx_stack_c::get(), pos, &mpActorTarget->current.pos);
         mpActorTarget->gravity = 0.0f;
         mpActorTarget->speedF = 0.0f;
@@ -489,24 +383,22 @@ void daFm_c::grabBomb() {
         mpActorTarget->speed.z = 0.0f;
     }
 }
-VERIFY(0x02142E0C, &daFm_c::grabBomb);
 
 /* 021432B8 */
 void daFm_c::setCollision() {
-    WWHD_FUNC(0x021432B8, void, this);
     if (isBodyAppear()) {
-        if (dComIfGp_checkPlayerStatus0(0x402)) {
-            /* HD: a fixed radius of 120 (GameCube: HIO radius * 1.5), set after the centre */
+        if (dComIfGp_checkPlayerStatus0(0, 0x402)) {
+            // HD: a fixed radius of 120 (GameCube: HIO radius * 1.5), set after the centre
             mSph.SetC(&field_0x61C);
             mSph.SetR(120.0f);
         } else {
-            /* HD: on odd frames the sphere is centred 30 above the actor's position */
-            if (g_Counter0() & 1) {
+            // HD: on odd frames the sphere is centred 30 above the actor's position
+            if (fm_a::counter() & 1) {
                 cM3dGSph_SetC_xyz(&mSph.mSph, current.pos.x, current.pos.y + 30.0f, current.pos.z);
             } else {
                 mSph.SetC(&field_0x61C);
             }
-            mSph.SetR(hio_f(0x0C8));
+            mSph.SetR(fm_a::hio().field_0x0C8);
         }
         dComIfG_Ccsp_Set(&mSph);
     }
@@ -518,14 +410,12 @@ void daFm_c::setCollision() {
         dComIfG_Ccsp_Set(&mCyl);
     }
 }
-VERIFY(0x021432B8, &daFm_c::setCollision);
 
 /* 021429BC */
 void daFm_c::grabPlayer() {
-    WWHD_FUNC(0x021429BC, void, this);
     fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
     gabi::Local<cXyz> head;
-    head->copy(*fm_headTopPos(pLink));
+    head->copy(static_cast<fm_a::Player*>(pLink)->mHeadTopPos);
     gabi::Local<cXyz> offset; /* unused */
     cXyz_mi(head, offset, &pLink->current.pos);
     gabi::Local<cXyz> temp;
@@ -539,7 +429,7 @@ void daFm_c::grabPlayer() {
     case 6: {
         fopAc_ac_c* pLink2 = dComIfGp_getLinkPlayer();
         gabi::Local<cXyz> head2;
-        head2->copy(*fm_headTopPos(pLink2));
+        head2->copy(static_cast<fm_a::Player*>(pLink2)->mHeadTopPos);
         gabi::Local<cXyz> offset2;
         cXyz_mi(head2, offset2, &pLink2->current.pos);
         temp->y = 0.0f;
@@ -549,13 +439,13 @@ void daFm_c::grabPlayer() {
         angle->y = 0;
         angle->z = 7000;
         gabi::Local<cXyz> temp2;
-        cXyz_pl(hio_xyz(0x038), temp2, temp);
+        cXyz_pl(&fm_a::hio().field_0x038, temp2, temp);
         f32 ty = temp2->y;
         f32 tz = temp2->z;
         f32 tx = temp2->x;
         ty = ty - fm_abs_copy(offset2);
 
-        PSMTXCopy(fm_getAnmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
+        PSMTXCopy(fm_a::anmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), angle->x, angle->y, angle->z);
         mDoMtx_stack_c::transM(tx, ty, tz);
         PSMTXCopy(mDoMtx_stack_c::get(), &field_0x6BC);
@@ -566,11 +456,9 @@ void daFm_c::grabPlayer() {
         break;
     }
 }
-VERIFY(0x021429BC, &daFm_c::grabPlayer);
 
 /* 02142C4C */
 void daFm_c::grabNPC() {
-    WWHD_FUNC(0x02142C4C, void, this);
     if (isNpc(mpActorTarget) == true) {
         gabi::Local<cXyz> temp;
         temp->x = 0.0f;
@@ -579,7 +467,7 @@ void daFm_c::grabNPC() {
         gabi::Local<csXyz> angle;
         csXyz_ct(angle, 0, 0, 0);
         fopAc_ac_c* target = mpActorTarget;
-        /* HD: fopAcM_GetName checks for NULL */
+        // HD: fopAcM_GetName checks for NULL
         if (target != nullptr) {
             if (fpcM_GetName(target) == fpcNm_NPC_CB1_e) {
                 temp->set(-15.0f, -10.0f, 8.0f);
@@ -595,8 +483,8 @@ void daFm_c::grabNPC() {
             }
         }
         gabi::Local<cXyz> temp2;
-        cXyz_pl(hio_xyz(0x038), temp2, temp);
-        PSMTXCopy(fm_getAnmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
+        cXyz_pl(&fm_a::hio().field_0x038, temp2, temp);
+        PSMTXCopy(fm_a::anmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
         mDoMtx_stack_c::transM(temp2->x, temp2->y, temp2->z);
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), angle->x, angle->y, angle->z);
         PSMTXCopy(mDoMtx_stack_c::get(), &field_0x6BC);
@@ -604,13 +492,11 @@ void daFm_c::grabNPC() {
         MtxToRot(mDoMtx_stack_c::get(), &mpActorTarget->shape_angle);
     }
 }
-VERIFY(0x02142C4C, &daFm_c::grabNPC);
 
 /* 02142EF4 */
 void daFm_c::grabTsubo() {
-    WWHD_FUNC(0x02142EF4, void, this);
     fopAc_ac_c* tsubo = mpActorTarget;
-    /* HD: fopAcM_GetName checks for NULL */
+    // HD: fopAcM_GetName checks for NULL
     if (tsubo != nullptr && fpcM_GetName(tsubo) == fpcNm_TSUBO_e) {
         gabi::Local<cXyz> pos;
         pos->x = 0.0f;
@@ -643,30 +529,28 @@ void daFm_c::grabTsubo() {
         }
 
         gabi::Local<cXyz> pos2;
-        cXyz_pl(hio_xyz(0x038), pos2, pos);
-        PSMTXCopy(fm_getAnmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
+        cXyz_pl(&fm_a::hio().field_0x038, pos2, pos);
+        PSMTXCopy(fm_a::anmMtx(mpMorf->getModel(), FM_JNT_TE_e), mDoMtx_stack_c::get());
         mDoMtx_stack_c::transM(pos2->x, pos2->y, pos2->z);
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), angle->x, angle->y, angle->z);
         PSMTXCopy(mDoMtx_stack_c::get(), &field_0x6BC);
         fm_multVecZero(&mpActorTarget->current.pos);
         MtxToRot(mDoMtx_stack_c::get(), &mpActorTarget->shape_angle);
         /* tsubo->tevStr.mEnvrIdxOverride = tevStr.mEnvrIdxOverride */
-        gabi::store<u8>(gabi::ea(tsubo) + 0x1CA, gabi::load<u8>(gabi::ea(this) + 0x1CA));
+        tsubo->tevStr.mEnvrIdxOverride = u8(tevStr.mEnvrIdxOverride);
     }
 }
-VERIFY(0x02142EF4, &daFm_c::grabTsubo);
 
 /* 02143418 */
 bool daFm_c::_execute() {
-    WWHD_FUNC(0x02143418, bool, this);
     fm_holeExecute(this);
     fopAcM_SearchByID_out(mProcId, &mpActorTarget);
     fopAc_ac_c* bomb = mpActorTarget;
-    /* HD: fopAcM_GetName checks for NULL */
+    // HD: fopAcM_GetName checks for NULL
     if (bomb != nullptr && bomb != nullptr && fpcM_GetName(bomb) == fpcNm_BOMB_e && daBomb_chk_state(bomb, 0)) {
         mpActorTarget = nullptr;
         mProcId = 0;
-        fm_modeProc(this, PROC_INIT_e, 7);
+        fm_modeProc(this, PROC_INIT_e, fm_a::MODE_WAIT);
     }
 
     if (enemy_ice(&mEnemyIce)) {
@@ -693,7 +577,7 @@ bool daFm_c::_execute() {
     temp2->copy(mBaseTarget->current.pos);
     temp2->y = temp2->y + 100.0f;
 
-    if (field_0x9D4 < hio_f(0x0E8) && fm_lineCheck(this, temp, temp2) != 0) {
+    if (field_0x9D4 < fm_a::hio().field_0x0E8 && fm_lineCheck(this, temp, temp2) != 0) {
         field_0xAE5 = 1;
     }
     if (field_0x2E4 != 0) {
@@ -701,7 +585,7 @@ bool daFm_c::_execute() {
     }
 
     if (mpActorTarget != nullptr) {
-        if (mMode == 8 && mAnmPrmIdx == 4 && fm_isLink(this, mpActorTarget)) {
+        if (mMode == fm_a::MODE_ATTACK && mAnmPrmIdx == 4 && fm_isLink(this, mpActorTarget)) {
             fm_spAttackVJump(this);
         } else if (mAnmPrmIdx == 0xB || mAnmPrmIdx == 0xC) {
             fm_spAttackJump(this);
@@ -709,7 +593,7 @@ bool daFm_c::_execute() {
             spAttackNone();
         }
     }
-    fm_modeProc(this, PROC_EXEC_e, 0x15);
+    fm_modeProc(this, PROC_EXEC_e, fm_a::MODE_UNUSED_EXEC);
     fm_setAnm(this, 0xF, false);
     morf_play(mpMorf, &current.pos, 0, 0);
     morf_calc(mpMorf);
@@ -734,7 +618,7 @@ bool daFm_c::_execute() {
         }
     }
     field_0x660.y = current.pos.y;
-    fopAcM_posMoveF(this, gabi::at<cXyz>(gabi::ea(&mStts))); /* mStts.GetCCMoveP() */
+    fopAcM_posMoveF(this, reinterpret_cast<cXyz*>(&mStts)); /* mStts.GetCCMoveP() */
     mObjAcch.CrrPos(dComIfG_Bgsp());
 
     fm_bodySetMtx(this);
@@ -744,92 +628,156 @@ bool daFm_c::_execute() {
     setCollision();
     return true;
 }
-VERIFY(0x02143418, &daFm_c::_execute);
 
-/* function-local static GXColor initialised on first use (guard, then memcpy of 4 bytes from .rodata) */
-static inline void fm_static_color(u32 guard, u32 dst, u32 src) {
-    if (gabi::load<u32>(guard) == 0) {
-        gabi::store<u32>(guard, 1);
-        gabi::call(0xC000A848, dst, src, 4); /* memcpy (import, through the thunk 028FEAC0) */
+// HD: debug calls were removed, but their guarded colour copies remain.
+static const GXColor colorAInitial = {0, 0, 255, 128};
+static GXColor colorA = {};
+static FmColorGuard colorAGuard = {0};
+static const GXColor colorBInitial = {0, 255, 0, 128};
+static GXColor colorB = {};
+static FmColorGuard colorBGuard = {0};
+static const GXColor colorCInitial = {255, 0, 0, 128};
+static GXColor colorC = {};
+static FmColorGuard colorCGuard = {0};
+static const GXColor colorDInitial = {255, 0, 255, 128};
+static GXColor colorD = {};
+static FmColorGuard colorDGuard = {0};
+static const GXColor colorEInitial = {0, 255, 255, 128};
+static GXColor colorE = {};
+static FmColorGuard colorEGuard = {0};
+static const GXColor colorFInitial = {255, 255, 0, 128};
+static GXColor colorF = {};
+static FmColorGuard colorFGuard = {0};
+static inline void fm_static_color(be<u32>& guard, GXColor* dst, const GXColor* src) {
+    if (guard == 0) {
+        guard = 1;
+        fm_copyColor(dst, src, 4);
     }
 }
-#define FM_COLOR_A() fm_static_color(0x101FDAC0, 0x101FEBF8, 0x1000F23C)
-#define FM_COLOR_B() fm_static_color(0x101FDA48, 0x101FEBEC, 0x1000F240)
-#define FM_COLOR_C() fm_static_color(0x101FDA50, 0x101FEBF4, 0x1000F244)
-#define FM_COLOR_D() fm_static_color(0x101FDAC4, 0x101FEBFC, 0x1000F248)
-#define FM_COLOR_E() fm_static_color(0x101FDA4C, 0x101FEBF0, 0x1000F24C)
-#define FM_COLOR_F() fm_static_color(0x101FDA44, 0x101FEBE8, 0x1000F250)
 
-/* 021439A0
- * HD: every debug draw call except dLib_debugDrawAxis is compiled out; what is left are the
- * initialisations of the function-local static colours used by the removed calls (in the order of
- * the inlined code paths) and dead dComIfGp_get() calls. */
+/* 021439A0 */
+// HD: only debug axes, conditional static-colour initialization and accessor calls remain.
 void daFm_c::debugDraw() {
-    WWHD_FUNC(0x021439A0, void, this);
-    if (hio_u8(0x004) != 0 && isBodyAppear()) {
+    if (fm_a::hio().field_0x004 != 0 && isBodyAppear()) {
         if (mpActorTarget != nullptr) {
-            FM_COLOR_A();
+            fm_static_color(colorAGuard, &colorA, &colorAInitial);
         }
         if (mBaseTarget != nullptr) {
-            FM_COLOR_B();
+            fm_static_color(colorBGuard, &colorB, &colorBInitial);
         }
     }
-    if (hio_u8(0x00C) != 0) {
+    if (fm_a::hio().field_0x00C != 0) {
         for (int i = 0; i != 12; i++) {
         }
-        FM_COLOR_A();
-        FM_COLOR_A();
-        FM_COLOR_C();
-        FM_COLOR_B();
-        FM_COLOR_D();
+        fm_static_color(colorAGuard, &colorA, &colorAInitial);
+        fm_static_color(colorAGuard, &colorA, &colorAInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorDGuard, &colorD, &colorDInitial);
         dComIfGp_get();
     }
-    if (hio_u8(0x00A) != 0) {
-        FM_COLOR_E();
-        if (mMode == 0xD && field_0x684 == 4) {
+    if (fm_a::hio().field_0x00A != 0) {
+        fm_static_color(colorEGuard, &colorE, &colorEInitial);
+        if (mMode == fm_a::MODE_GRAB && field_0x684 == 4) {
             dComIfGp_get();
-            FM_COLOR_D();
+            fm_static_color(colorDGuard, &colorD, &colorDInitial);
         }
     }
-    if (hio_u8(0x009) != 0) {
-        FM_COLOR_A();
-        FM_COLOR_B();
-        FM_COLOR_C();
-        FM_COLOR_F();
-        FM_COLOR_C();
-        FM_COLOR_C();
-        FM_COLOR_B();
-        FM_COLOR_B();
-        FM_COLOR_C();
+    if (fm_a::hio().field_0x009 != 0) {
+        fm_static_color(colorAGuard, &colorA, &colorAInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorFGuard, &colorF, &colorFInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
     }
-    if (hio_u8(0x00B) != 0) {
+    if (fm_a::hio().field_0x00B != 0) {
         for (int i = 0; i < 6; i++) {
             if (i == 4) {
                 continue;
             }
-            FM_COLOR_C();
-            FM_COLOR_B();
-            FM_COLOR_B();
+            fm_static_color(colorCGuard, &colorC, &colorCInitial);
+            fm_static_color(colorBGuard, &colorB, &colorBInitial);
+            fm_static_color(colorBGuard, &colorB, &colorBInitial);
         }
     }
-    if (hio_u8(0x006) != 0) {
+    if (fm_a::hio().field_0x006 != 0) {
         dLib_debugDrawAxis(&field_0x6BC, 100.0f);
     }
-    if (hio_u8(0x007) != 0) {
+    if (fm_a::hio().field_0x007 != 0) {
         gabi::Local<Mtx34> mtx;
-        J3DModel* mdl = gabi::at<J3DModel>(gabi::load<u32>(gabi::ea(this) + 0x368)); /* fopAc_ac_c::model */
-        PSMTXCopy(fm_getAnmMtx(mdl, FM_JNT_TE_e), mtx);
+        J3DModel* mdl = fm_a::actorModel(this); /* fopAc_ac_c::model */
+        PSMTXCopy(fm_a::anmMtx(mdl, FM_JNT_TE_e), mtx);
         dLib_debugDrawAxis(mtx, 100.0f);
     }
-    if (hio_u8(0x005) != 0) {
+    if (fm_a::hio().field_0x005 != 0) {
         dComIfGp_get(); /* daPy_getPlayerLinkActorClass()->getHeadTopPos() */
-        FM_COLOR_B();
-        FM_COLOR_A();
-        FM_COLOR_C();
-        FM_COLOR_B();
-        FM_COLOR_B();
-        FM_COLOR_C();
-        FM_COLOR_B();
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorAGuard, &colorA, &colorAInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
+        fm_static_color(colorCGuard, &colorC, &colorCInitial);
+        fm_static_color(colorBGuard, &colorB, &colorBInitial);
     }
 }
-VERIFY(0x021439A0, &daFm_c::debugDraw);
+
+/* WWHD glue
+ext 021418D0 void fm_setAnmFull(daFm_c* a, s32 idx, u32 force)
+ext 02142450 bool fm_setHoleScale(daFm_c* a, f32 x, f32 y, f32 z)
+ext 021412BC void fm_modeProc(daFm_c* a, s32 proc, s32 mode)
+ext 02142200 void fm_holeExecute(daFm_c* a)
+ext 021424D0 void fm_iceProc(daFm_c* a)
+ext 02141714 void fm_setBaseTarget(daFm_c* a)
+ext 0214153C void fm_bodySetMtx(daFm_c* a)
+ext 0214162C void fm_holeSetMtx(daFm_c* a)
+ext 0214264C u8 fm_areaCheck(daFm_c* a)
+ext 021425BC u32 fm_lineCheck(daFm_c* a, cXyz* p1, cXyz* p2)
+ext 02141280 u32 fm_isLink(daFm_c* a, fopAc_ac_c* t)
+ext 021422A4 void fm_setAttention(daFm_c* a)
+ext 02142870 void fm_spAttackVJump(daFm_c* a)
+ext 021428FC void fm_spAttackJump(daFm_c* a)
+ext 020CB92C u32 daBomb_chk_state(fopAc_ac_c* b, u32 st)
+ext 025E535C void morf_play(mDoExt_McaMorf* m, cXyz* pos, u32 a, s32 b)
+ext 028E9BC0 void C_QUATSlerp(Quaternion_fm* p, u32 q, Quaternion_fm* r, f32 t)
+ext 025E55A0 void morf_calc(mDoExt_McaMorf* m)
+ext 02048038 u32 daObj_PrmAbstract(fopAc_ac_c* a, u32 w, u32 sh)
+ext 02018F3C void cM3dGSph_SetC_xyz(cM3dGSph* s, f32 x, f32 y, f32 z)
+ext 02587D24 void dLib_pathMove(cXyz* pos, be<s8>* pnt, dPath* path, f32 spd, u32 cb, void* data)
+ext 025BEBB8 void dSnap_RegistFig_pos(u32 type, fopAc_ac_c* actor, cXyz* pos, s16 angle, f32 x, f32 y, f32 z)
+ext 0211D2F8 s32 fm_calcTimer(be<s32>* timer)
+ext 0200F268 void fm_addCalcPosXZ2(cXyz* pos, const cXyz* target, f32 scale, f32 maxStep)
+ext 025F20B0 void mDoMtx_inverseTranspose(Mtx34* src, Mtx34* dst)
+ext 025F232C void mDoMtx_MtxToRot(Mtx34* src, csXyz* dst)
+ext 0259138C void dMat_control_iceEntryDL(mDoExt_McaMorf* morf, s32 param, void* invisible)
+ext 025D54C4 bool fopAcM_SearchByID_out(u32 id, gptr<fopAc_ac_c>* out)
+ext 020402C8 BOOL enemy_ice(enemyice_l* ice)
+ext 02587514 void dLib_debugDrawAxis(Mtx34* matrix, f32 scale)
+ext 025445B8 BOOL fm_startCheckOld(void* manager, const char* name)
+ext 0254457C BOOL fm_endCheckOld(void* manager, const char* name)
+ext 025D77DC void fopAcM_orderOtherEvent2(fopAc_ac_c* actor, const char* name, u16 flag, u16 hind)
+ext C000A848 void fm_copyColor(GXColor* dst, const GXColor* src, u32 size)
+data colorAInitial 1000F23C
+data colorA 101FEBF8 nocheck
+data colorAGuard 101FDAC0 nocheck
+data colorBInitial 1000F240
+data colorB 101FEBEC nocheck
+data colorBGuard 101FDA48 nocheck
+data colorCInitial 1000F244
+data colorC 101FEBF4 nocheck
+data colorCGuard 101FDA50 nocheck
+data colorDInitial 1000F248
+data colorD 101FEBFC nocheck
+data colorDGuard 101FDAC4 nocheck
+data colorEInitial 1000F24C
+data colorE 101FEBF0 nocheck
+data colorEGuard 101FDA4C nocheck
+data colorFInitial 1000F250
+data colorF 101FEBE8 nocheck
+data colorFGuard 101FDA44 nocheck
+str 1000F878 "DEFAULT_FM_SUIKOMI_NPC"
+str 1000F854 "DEFAULT_FM_SW_APEEAR"
+*/

@@ -1,518 +1,530 @@
 /* Fire hazard, derived from GameCube source and audited HD disassembly. */
-#include "gabi.h"
-namespace fire {
-using gabi::call;
-using gabi::load;
-using gabi::store;
-void normal_proc(u32 a) { WWHD_FUNC(0x0213E8BC, void, a); }
-VERIFY(0x0213E8BC, normal_proc);
-void stop(u32 a) {
-  WWHD_FUNC(0x0213E8C0, void, a);
-  for (int i = 0; i < 3; ++i) {
-    u32 e = load<u32>(a + 0x9D8 + 4 * i);
-    if (e)
-      store<u32>(e + 0x254, load<u32>(e + 0x254) | 1);
-  }
-  u32 x = load<u32>(a + 0x3E8), y = load<u32>(a + 0x7A4),
-      z = load<u32>(a + 0x8A8);
-  store<u32>(a + 0x3E8, x & ~1u);
-  store<u32>(a + 0x7A4, y & ~1u);
-  store<u32>(a + 0x8A8, z & ~1u);
-}
-VERIFY(0x0213E8C0, stop);
-void stopNow(u32 a) {
-  WWHD_FUNC(0x0213EE90, void, a);
-  for (int i = 0; i < 3; ++i) {
-    u32 e = load<u32>(a + 0x9D8 + 4 * i);
-    if (e)
-      call<void>(0x0281DE68, e, 1);
-  }
-  u32 x = load<u32>(a + 0x3E8), y = load<u32>(a + 0x7A4),
-      z = load<u32>(a + 0x8A8);
-  store<u32>(a + 0x3E8, x & ~1u);
-  store<u32>(a + 0x7A4, y & ~1u);
-  store<u32>(a + 0x8A8, z & ~1u);
-}
-VERIFY(0x0213EE90, stopNow);
-void playFire(u32 a) {
-  WWHD_FUNC(0x0213EF18, void, a);
-  for (int i = 0; i < 3; ++i) {
-    u32 e = load<u32>(a + 0x9D8 + 4 * i);
-    if (e)
-      store<u32>(e + 0x254, load<u32>(e + 0x254) & ~1u);
-  }
-  u32 x = load<u32>(a + 0x3E8), y = load<u32>(a + 0x7A4),
-      z = load<u32>(a + 0x8A8);
-  store<u32>(a + 0x3E8, x | 1);
-  store<u32>(a + 0x7A4, y | 1);
-  store<u32>(a + 0x8A8, z | 1);
-}
-VERIFY(0x0213EF18, playFire);
-void searchWind(u32 a) {
-  WWHD_FUNC(0x0213EE34, void, a);
-  gabi::Local<u32> type;
-  store<u16>(type.a, 0x187);
-  u32 w = call<u32>(0x025D5218, 0x025E121Cu, type.a);
-  store<u32>(a + 0xA0C, w ? load<u32>(w + 4) : 0xFFFFFFFFu);
-}
-VERIFY(0x0213EE34, searchWind);
-void setDir(u32 a, u32 d) {
-  WWHD_FUNC(0x0213EF88, void, a, d);
-  call<void>(0x0200F5C8, a + 0x9F0, load<f32>(d), 1.0f);
-  call<void>(0x0200F5C8, a + 0x9F4, load<f32>(d + 4), 1.0f);
-  call<void>(0x0200F5C8, a + 0x9F8, load<f32>(d + 8), 1.0f);
-  for (int i = 0; i < 3; ++i) {
-    u32 e = load<u32>(a + 0x9D8 + 4 * i);
-    if (e) {
-      f32 y = load<f32>(a + 0x9F4), z = load<f32>(a + 0x9F8),
-          x = load<f32>(a + 0x9F0);
-      store<f32>(e + 0x30, z);
-      store<f32>(e + 0x2C, y);
-      store<f32>(e + 0x28, x);
-    }
-  }
-}
-VERIFY(0x0213EF88, setDir);
-bool CreateInit(u32 a) {
-  WWHD_FUNC(0x0213E930, bool, a);
-  u32 param = load<u32>(a + 0xB0);
-  store<s32>(a + 0x9E4, param & 255);
-  store<u32>(a + 0x9E8, (param >> 12) & 31);
-  bool stopped = call<s32>(0x025BA0C0, load<u32>(0x101F84DC) + 0x20,
-                           load<s32>(a + 0x9E4), load<s8>(a + 0x2FE)) != 0;
-  if (!stopped)
-    stopped = call<s32>(0x025B8C74, load<u32>(0x101F84DC) + 0x798,
-                        load<u32>(a + 0x9E8)) != 0;
-  store<u8>(a + 0xA08, stopped);
-  if (call<s32>(0x025B8C74, load<u32>(0x101F84DC) + 0x798,
-                load<u32>(a + 0x9E8)))
-    return false;
-  param = load<u32>(a + 0xB0);
-  u8 type = (param >> 17) & 7;
-  store<u8>(a + 0xA1C, type);
-  if (type == 0 && load<s32>(a + 0x9E4) == 255)
-    store<u8>(a + 0xA1C, 2);
-  store<s8>(a + 0xA1D, 30);
-  u8 shape = (param >> 8) & 15;
-  store<u8>(a + 0x9EC, shape);
-  if (shape == 1)
-    store<f32>(a + 0x338, 0.0f);
-  if (shape == 2) {
-    u32 e = load<u32>(a + 0x9D8);
-    store<f32>(a + 0x330, 1.25f);
-    store<f32>(a + 0x334, 1.25f);
-    store<f32>(a + 0x338, 1.25f);
-    if (e) {
-      f32 z = load<f32>(a + 0x338), y = load<f32>(a + 0x334);
-      store<f32>(e + 0x228, z);
-      store<f32>(e + 0x224, y);
-      store<f32>(e + 0x238, 1.25f);
-      store<f32>(e + 0x23C, y);
-      store<f32>(e + 0x240, z);
-      store<f32>(e + 0x220, 1.25f);
-    }
-    for (int i = 1; i < 3; ++i) {
-      e = load<u32>(a + 0x9D8 + 4 * i);
-      if (e) {
-        f32 z = load<f32>(a + 0x338), y = load<f32>(a + 0x334),
-            x = load<f32>(a + 0x330);
-        store<f32>(e + 0x224, y);
-        store<f32>(e + 0x228, z);
-        store<f32>(e + 0x238, x);
-        store<f32>(e + 0x240, z);
-        store<f32>(e + 0x23C, y);
-        store<f32>(e + 0x220, x);
-      }
-    }
-  }
-  u32 st = a + 0x3AC;
-  call<void>(0x02515F14, st, 255, 255, a);
-  if (load<u8>(a + 0x9EC) == 1) {
+#include "d/actor/d_a_fire.h"
+/* 0213F5D0 */
+bool daFire_c::_delete() {
     for (int i = 0; i < 3; ++i) {
-      u32 c = a + 0x3E8 + 0x130 * i;
-      call<void>(0x02516518, c, 0x101B4F64u);
-      store<u32>(c + 0x44, st);
-      call<void>(0x020184DC, c + 0x118, 50.0f);
-    }
-  } else {
-    call<void>(0x02516518, a + 0x3E8, 0x101B4F64u);
-    store<u32>(a + 0x42C, st);
-  }
-  call<void>(0x02516518, a + 0x8A8, 0x101B4FECu);
-  store<u32>(a + 0x8EC, st);
-  call<void>(0x02516518, a + 0x778, 0x101B4FA8u);
-  store<u32>(a + 0x7BC, st);
-  f32 x = load<f32>(0x101FFBA8), y = load<f32>(0x101FFBAC),
-      z = load<f32>(0x101FFBB0);
-  store<f32>(a + 0x464, x);
-  store<f32>(a + 0x468, y);
-  store<f32>(a + 0x46C, z);
-  call<void>(0x025DA884, a + 0xDC);
-  x = load<f32>(0x101FFBC0);
-  store<f32>(a + 0x9F0, x);
-  y = load<f32>(0x101FFBC4);
-  type = load<u8>(a + 0xA1C);
-  store<f32>(a + 0x9F4, y);
-  z = load<f32>(0x101FFBC8);
-  store<f32>(a + 0x9FC, x);
-  store<f32>(a + 0x9F8, z);
-  store<f32>(a + 0xA00, y);
-  store<f32>(a + 0xA04, z);
-  s32 sw;
-  if (type == 0) {
-    u32 sound = (load<u32>(a + 0xB0) >> 20) & 15;
-    s16 off = call<s16>(0x02543F10, call<u32>(0x025200D4) + 0x52C4,
-                        sound ? 0x1000F0F0u : 0x1000F118u, 255);
-    store<s16>(a + 0xA1A, off);
-    s16 on =
-        call<s16>(0x02543F10, call<u32>(0x025200D4) + 0x52C4, 0x1000F100u, 255);
-    sw = load<s32>(a + 0x9E4);
-    store<s16>(a + 0xA18, on);
-  } else if (type == 1) {
-    u32 sound = (load<u32>(a + 0xB0) >> 20) & 15;
-    s16 off = call<s16>(0x02543F10, call<u32>(0x025200D4) + 0x52C4,
-                        sound ? 0x1000F128u : 0x1000F10Cu, 255);
-    sw = load<s32>(a + 0x9E4);
-    store<s16>(a + 0xA1A, off);
-    store<s16>(a + 0xA18, -1);
-  } else {
-    sw = load<s32>(a + 0x9E4);
-    store<s16>(a + 0xA1A, -1);
-    store<s16>(a + 0xA18, -1);
-  }
-  if (sw == 255) {
-    store<u8>(a + 0xA1E, 1);
-    return true;
-  }
-  if (call<s32>(0x025BA0C0, load<u32>(0x101F84DC) + 0x20, sw,
-                load<s8>(a + 0x2FE))) {
-    store<u8>(a + 0xA1E, 0);
-    stop(a);
-  } else
-    store<u8>(a + 0xA1E, 1);
-  return true;
-}
-VERIFY(0x0213E930, CreateInit);
-void ctrlEffect(u32 a) {
-  WWHD_FUNC(0x0213F078, void, a);
-  if (!load<u8>(a + 0xA1E))
-    return;
-  bool stopped = false;
-  searchWind(a);
-  gabi::Local<u32> id;
-  u32 n = load<u32>(a + 0xA0C);
-  store<u32>(id.a, n);
-  u32 wind = 0;
-  if (n != 0xFFFFFFFFu)
-    wind = call<u32>(0x025D5218, 0x025E1234u, id.a);
-  s32 hit = call<s32>(0x025162A4, a + 0x3E8);
-  f32 zero = 0.0f, one = 1.0f;
-  if (hit) {
-    u32 o = call<u32>(0x02516300, a + 0x3E8);
-    bool cleared = false;
-    if (o) {
-      u32 t = load<u32>(o + 0x10);
-      if ((t & 0x200000) && wind) {
-        u32 owner = call<u32>(0x02515BBC, a + 0x47C);
-        if (owner == wind) {
-          stopped = true;
-          call<void>(0x0251621C, a + 0x3E8);
-          cleared = true;
-        } else
-          t = load<u32>(o + 0x10);
-      }
-      if (!cleared) {
-        if (t & 0x80100) {
-          store<u8>(a + 0x9EE, 80);
-          store<u8>(a + 0x9ED, 0);
-          stopped = true;
-          stopNow(a);
-          call<u32>(0x025A847C, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0,
-                    0x463, a + 0x314, 0, 0, 255, 0, -1, 0, 0, 0);
-        } else if (t & 0x200000) {
-          u32 owner = call<u32>(0x02515BBC, a + 0x47C);
-          if (owner != wind) {
-            f32 z = load<f32>(a + 0x4B0), x = load<f32>(a + 0x4A8), z2 = z * z,
-                y = load<f32>(a + 0x4AC);
-            f32 sq = gabi::fmadds(x, x, z2);
-            store<f32>(a + 0xA00, y);
-            store<f32>(a + 0x9FC, x);
-            store<f32>(a + 0xA04, z);
-            store<f32>(a + 0xA00, call<f32>(0x028F4384, sq / 1000.0f));
-            if (!call<s32>(0x0201B47C, a + 0x9FC)) {
-              store<f32>(a + 0xA00, one);
-              store<f32>(a + 0x9FC, zero);
-              store<f32>(a + 0xA04, zero);
-            }
-          }
+        FireEmitterHD *e = emitter(i).get();
+        if (e) {
+            u32 flags = (u32)e->mFlags;
+            e->mMaxFrame = -1;
+            e->mFlags = flags | 1;
+            emitter(i) = nullptr;
         }
-      }
     }
-    if (!cleared)
-      call<void>(0x0251621C, a + 0x3E8);
-  } else {
-    call<void>(0x0200F5C8, a + 0x9FC, zero, 0.025f);
-    call<void>(0x0200F5C8, a + 0xA00, one, 0.025f);
-    call<void>(0x0200F5C8, a + 0xA04, zero, 0.025f);
-  }
-  if (load<u8>(a + 0x9ED) == 0 && load<u8>(a + 0x9EE) != 0) {
-    u8 c = load<u8>(a + 0x9EE);
-    store<u8>(a + 0x9EE, c - 1);
-    stopped = true;
-    stop(a);
-  } else if (stopped)
-    stop(a);
-  else {
-    playFire(a);
-    s32 rev = call<s32>(0x02520540, load<s8>(a + 0x326));
-    call<void>(0x025E1A40, 0x614F, a + 0x37C, 0, rev);
-  }
-  if (load<u8>(a + 0xA08) != (u8)stopped) {
-    u32 snd = stopped ? 0x6950 : 0x694E;
-    s32 rev = call<s32>(0x02520540, load<s8>(a + 0x326));
-    call<void>(0x025E1A40, snd, a + 0x37C, 0, rev);
-  }
-  setDir(a, a + 0x9FC);
-  store<u8>(a + 0xA08, stopped);
+    return true;
 }
-VERIFY(0x0213F078, ctrlEffect);
-u32 cylinderCtor(u32 a) {
-  WWHD_FUNC(0x0213FBEC, u32, a);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x130);
-  if (!a)
-    return 0;
-  call<void>(0x02515FB8, a);
-  store<u32>(a + 0x114, 0x100015A8);
-  store<u32>(a + 0x110, 0x1000F0C4);
-  call<void>(0x02018590, a + 0x118);
-  store<u32>(a + 0x3C, 0x1004B108);
-  store<u32>(a + 0x12C, 0x1004B150);
-  store<u32>(a + 0x114, 0x1004B160);
-  return a;
-}
-VERIFY(0x0213FBEC, cylinderCtor);
-s32 create(u32 a) {
-  WWHD_FUNC(0x0213F3D0, s32, a);
-  u32 flags = load<u32>(a + 0x2E4);
-  if (!(flags & 8)) {
-    if (a) {
-      call<void>(0x025D4ED0, a);
-      store<u32>(a + 0xB4, 0x1000F0D4);
-      call<void>(0x0200BD2C, a + 0x3AC);
-      call<void>(0x02515DA0, a + 0x3C8);
-      store<u32>(a + 0x3C4, 0x1004AE88);
-      store<u32>(a + 0x3C8, 0x1004AEC0);
-      call<void>(0x028EFFD0, a + 0x3E8, 3, 0x130, 0x0213FBECu);
-      call<void>(0x02515FB8, a + 0x778);
-      store<u32>(a + 0x888, 0x1000F0C4);
-      store<u32>(a + 0x88C, 0x100015A8);
-      call<void>(0x02018590, a + 0x890);
-      store<u32>(a + 0x7B4, 0x1004B108);
-      store<u32>(a + 0x8A4, 0x1004B150);
-      store<u32>(a + 0x88C, 0x1004B160);
-      call<void>(0x02515FB8, a + 0x8A8);
-      store<u32>(a + 0x9BC, 0x100015A8);
-      store<u32>(a + 0x9B8, 0x1000F0C4);
-      call<void>(0x02018590, a + 0x9C0);
-      store<u32>(a + 0x9D4, 0x1004B150);
-      store<u32>(a + 0x9BC, 0x1004B160);
-      flags = load<u32>(a + 0x2E4);
-      store<u32>(a + 0x8E4, 0x1004B108);
+
+/* 0213E930 */
+bool daFire_c::CreateInit() {
+    u32 param = (u32)mParameters;
+    mSwitchNo = param & 255;
+    mTrboxBit = (param >> 12) & 31;
+    bool stopped = dComIfGs_isSwitch((s32)mSwitchNo, (s8)home.roomNo) != 0;
+    if (!stopped)
+        stopped = fireIsTbox(dComIfGs_ea() + 0x798, (u32)mTrboxBit) != 0;
+    field_0x8EC = stopped;
+    if (fireIsTbox(dComIfGs_ea() + 0x798, (u32)mTrboxBit))
+        return false;
+    param = (u32)mParameters;
+    u8 type = (param >> 17) & 7;
+    mType = type;
+    if (type == 0 && (s32)mSwitchNo == 255)
+        mType = 2;
+    field_0x901 = 30;
+    u8 shape = (param >> 8) & 15;
+    mShape = shape;
+    if (shape == 1)
+        scale.z = 0.0f;
+    if (shape == 2) {
+        FireEmitterHD *e = field_0x8BC.get();
+        scale.x = 1.25f;
+        scale.y = 1.25f;
+        scale.z = 1.25f;
+        if (e) {
+            f32 z = (f32)scale.z, y = (f32)scale.y;
+            e->mGlobalScale.z = z;
+            e->mGlobalScale.y = y;
+            e->mGlobalParticleScale.x = 1.25f;
+            e->mGlobalParticleScale.y = y;
+            e->mGlobalParticleScale.z = z;
+            e->mGlobalScale.x = 1.25f;
+        }
+        for (int i = 1; i < 3; ++i) {
+            e = emitter(i).get();
+            if (e) {
+                f32 z = (f32)scale.z, y = (f32)scale.y, x = (f32)scale.x;
+                e->mGlobalScale.y = y;
+                e->mGlobalScale.z = z;
+                e->mGlobalParticleScale.x = x;
+                e->mGlobalParticleScale.z = z;
+                e->mGlobalParticleScale.y = y;
+                e->mGlobalScale.x = x;
+            }
+        }
     }
-    store<u32>(a + 0x2E4, flags | 8);
-  }
-  store<u32>(a + 0x9D8,
-             call<u32>(0x025A847C, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0,
-                       0x461, a + 0x314, 0, 0, 255, 0, -1, 0, 0, 0));
-  store<u32>(a + 0x9DC,
-             call<u32>(0x025A847C, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0,
-                       0x462, a + 0x314, 0, 0, 255, 0, -1, 0, 0, 0));
-  store<u32>(a + 0x9E0,
-             call<u32>(0x025A847C, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 4,
-                       0x445B, a + 0x314, 0, 0, 255, 0, -1, 0, 0, 0));
-  if (!CreateInit(a))
-    return 5;
-  ctrlEffect(a);
-  return 4;
-}
-VERIFY(0x0213F3D0, create);
-s32 createWrapper(u32 a) {
-  WWHD_FUNC(0x0213F5CC, s32, a);
-  return create(a);
-}
-VERIFY(0x0213F5CC, createWrapper);
-bool remove(u32 a) {
-  WWHD_FUNC(0x0213F5D0, bool, a);
-  for (int i = 0; i < 3; ++i) {
-    u32 e = load<u32>(a + 0x9D8 + 4 * i);
-    if (e) {
-      u32 flags = load<u32>(e + 0x254);
-      store<s32>(e + 0x5C, -1);
-      store<u32>(e + 0x254, flags | 1);
-      store<u32>(a + 0x9D8 + 4 * i, 0);
+    u32 st = gabi::ea(&mStts);
+    fireSttsInit(st, 255, 255, gabi::ea(this));
+    if ((u8)mShape == 1) {
+        for (int i = 0; i < 3; ++i) {
+            u32 c = gabi::ea(&field_0x2CC[i]);
+            fireCylinderSet(c, 0x101B4F64u);
+            gabi::at<dCcD_Cyl>(c)->mStts.v = st;
+            fireCylinderRadius(c + 0x118, 50.0f);
+        }
+    } else {
+        fireCylinderSet(gabi::ea(&field_0x2CC[0]), 0x101B4F64u);
+        field_0x2CC[0].mStts.v = st;
     }
-  }
-  return true;
-}
-VERIFY(0x0213F5D0, remove);
-bool deleteWrapper(u32 a) {
-  WWHD_FUNC(0x0213F648, bool, a);
-  return remove(a);
-}
-VERIFY(0x0213F648, deleteWrapper);
-bool draw(u32 a) {
-  WWHD_FUNC(0x0213F64C, bool, a);
-  return true;
-}
-VERIFY(0x0213F64C, draw);
-void demo(u32 a) {
-  WWHD_FUNC(0x0213F654, void, a);
-  s32 staff = load<s32>(a + 0xA14);
-  u32 act = call<u32>(0x02542EDC, call<u32>(0x025200D4) + 0x52C4, staff,
-                      0x101B5030u, 3, 0, 0);
-  if (act == 1) {
-    if (!load<u8>(a + 0xA1E)) {
-      s32 rev = call<s32>(0x02520540, load<s8>(a + 0x326));
-      call<void>(0x025E1A40, 0x694E, a + 0x37C, 0, rev);
+    fireCylinderSet(gabi::ea(&field_0x78C), 0x101B4FECu);
+    field_0x78C.mStts.v = st;
+    fireCylinderSet(gabi::ea(&field_0x65C), 0x101B4FA8u);
+    field_0x65C.mStts.v = st;
+    f32 x = (f32)cXyz::Zero.x, y = (f32)cXyz::Zero.y, z = (f32)cXyz::Zero.z;
+    field_0x2CC[0].mGObjAt.mVec.x = x;
+    field_0x2CC[0].mGObjAt.mVec.y = y;
+    field_0x2CC[0].mGObjAt.mVec.z = z;
+    fireOffDraw(gabi::ea(&draw_tag));
+    x = (f32)fireBaseY().x;
+    field_0x8D4.x = x;
+    y = (f32)fireBaseY().y;
+    type = (u8)mType;
+    field_0x8D4.y = y;
+    z = (f32)fireBaseY().z;
+    field_0x8E0.x = x;
+    field_0x8D4.z = z;
+    field_0x8E0.y = y;
+    field_0x8E0.z = z;
+    s32 sw;
+    if (type == 0) {
+        u32 sound = ((u32)mParameters >> 20) & 15;
+        s16 off = dComIfGp_evmng_getEventIdx(sound ? "fire_off_cam_ws" : "fire_off_cam", 255);
+        field_0x8FE = off;
+        s16 on = dComIfGp_evmng_getEventIdx("fire_on_cam", 255);
+        sw = (s32)mSwitchNo;
+        field_0x8FC = on;
+    } else if (type == 1) {
+        u32 sound = ((u32)mParameters >> 20) & 15;
+        s16 off = dComIfGp_evmng_getEventIdx(sound ? "zenfire_cam_ws" : "zenfire_cam", 255);
+        sw = (s32)mSwitchNo;
+        field_0x8FE = off;
+        field_0x8FC = -1;
+    } else {
+        sw = (s32)mSwitchNo;
+        field_0x8FE = -1;
+        field_0x8FC = -1;
     }
-    playFire(a);
-    staff = load<s32>(a + 0xA14);
-    store<u8>(a + 0xA1E, 1);
-  } else if (act == 2) {
-    u32 e = load<u32>(a + 0x9D8);
-    if (e && (load<u32>(e + 0x1B4) + load<u32>(e + 0x1C0)) &&
-        load<u8>(a + 0xA1E)) {
-      s32 rev = call<s32>(0x02520540, load<s8>(a + 0x326));
-      call<void>(0x025E1A40, 0x6950, a + 0x37C, 0, rev);
+    if (sw == 255) {
+        field_0x902 = 1;
+        return true;
     }
-    stop(a);
-    staff = load<s32>(a + 0xA14);
-    store<u8>(a + 0xA1E, 0);
-  } else
-    staff = load<s32>(a + 0xA14);
-  call<void>(0x02543280, call<u32>(0x025200D4) + 0x52C4, staff);
+    if (dComIfGs_isSwitch(sw, (s8)home.roomNo)) {
+        field_0x902 = 0;
+        execStopFire();
+    } else
+        field_0x902 = 1;
+    return true;
 }
-VERIFY(0x0213F654, demo);
-void checkOrder(u32 a) {
-  WWHD_FUNC(0x0213F7A4, void, a);
-  if (load<u16>(a + 0xF8) != 2)
-    return;
-  s16 ev = load<s16>(a + 0xA18);
-  bool reset = call<s32>(0x0254407C, call<u32>(0x025200D4) + 0x52C4, ev) &&
-               load<u32>(a + 0xA10) != 0;
-  if (!reset) {
-    ev = load<s16>(a + 0xA1A);
-    reset = call<s32>(0x0254407C, call<u32>(0x025200D4) + 0x52C4, ev) &&
-            load<u32>(a + 0xA10) != 0;
-  }
-  if (reset)
-    store<u32>(a + 0xA10, 0);
-  ev = load<s16>(a + 0xA18);
-  bool ended =
-      ev != -1 && call<s32>(0x025440C8, call<u32>(0x025200D4) + 0x52C4, ev);
-  if (!ended) {
-    ev = load<s16>(a + 0xA1A);
-    ended =
-        ev != -1 && call<s32>(0x025440C8, call<u32>(0x025200D4) + 0x52C4, ev);
-  }
-  if (ended) {
-    u32 p = call<u32>(0x025200D4);
-    store<u16>(p + 0x52B8, load<u16>(p + 0x52B8) | 8);
-  }
-  u32 name = load<u32>(0x101B503C + 4 * load<u8>(a + 0xA1C));
-  store<s32>(a + 0xA14,
-             call<s32>(0x02542D88, call<u32>(0x025200D4) + 0x52C4, name, 0, 0));
-  demo(a);
+
+/* 0213F3D0 */
+s32 daFire_c::_create() {
+    u32 flags = (u32)actor_condition;
+    if (!(flags & 8)) {
+        // HD: preserve the inline constructor null-this guard and store order.
+        if (this) {
+            fireActorConstruct(this);
+            __vtbl = FIRE_ACTOR_VTABLE;
+            fireSttsConstruct(gabi::ea(&mStts));
+            fireGSttsConstruct(gabi::ea(&mStts.__vtbl_gstts));
+            mStts.__vtbl = FIRE_STTS_VTABLE;
+            mStts.__vtbl_gstts = FIRE_GSTTS_VTABLE;
+            fireConstructArray(gabi::ea(&field_0x2CC[0]), 3, 0x130, FIRE_CYLINDER_CTOR);
+            fireCollisionConstruct(gabi::ea(&field_0x65C));
+            fireCylinderVtables(&field_0x65C)->mShapeBaseVtable = FIRE_CYL_SHAPE_VTABLE;
+            fireCylinderVtables(&field_0x65C)->mShapeVtable = FIRE_SHAPE_BASE_VTABLE;
+            fireCylinderConstruct(gabi::ea(&field_0x65C.mCyl));
+            field_0x65C.__vtbl_hitinf = FIRE_CYL_HIT_VTABLE;
+            field_0x65C.mCyl.__vtbl = FIRE_CYL_VTABLE;
+            fireCylinderVtables(&field_0x65C)->mShapeVtable = FIRE_CYL_SHAPE_FINAL_VTABLE;
+            fireCollisionConstruct(gabi::ea(&field_0x78C));
+            fireCylinderVtables(&field_0x78C)->mShapeVtable = FIRE_SHAPE_BASE_VTABLE;
+            fireCylinderVtables(&field_0x78C)->mShapeBaseVtable = FIRE_CYL_SHAPE_VTABLE;
+            fireCylinderConstruct(gabi::ea(&field_0x78C.mCyl));
+            field_0x78C.mCyl.__vtbl = FIRE_CYL_VTABLE;
+            fireCylinderVtables(&field_0x78C)->mShapeVtable = FIRE_CYL_SHAPE_FINAL_VTABLE;
+            flags = (u32)actor_condition;
+            field_0x78C.__vtbl_hitinf = FIRE_CYL_HIT_VTABLE;
+        }
+        actor_condition = flags | 8;
+    }
+    field_0x8BC.v = fireParticleSet(gabi::ea(dComIfGp_getParticle()), 0, 0x461,
+                                    gabi::ea(&current.pos), 0, 0, 255, 0, -1, 0, 0, 0);
+    field_0x8C0.v = fireParticleSet(gabi::ea(dComIfGp_getParticle()), 0, 0x462,
+                                    gabi::ea(&current.pos), 0, 0, 255, 0, -1, 0, 0, 0);
+    field_0x8C4.v = fireParticleSet(gabi::ea(dComIfGp_getParticle()), 4, 0x445B,
+                                    gabi::ea(&current.pos), 0, 0, 255, 0, -1, 0, 0, 0);
+    if (!CreateInit())
+        return 5;
+    ctrlEffect();
+    return 4;
 }
-VERIFY(0x0213F7A4, checkOrder);
-void eventOrder(u32 a) {
-  WWHD_FUNC(0x0213F8C4, void, a);
-  u8 off = call<u32>(0x025B8C74, load<u32>(0x101F84DC) + 0x798,
-                     load<u32>(a + 0x9E8));
-  u8 type = load<u8>(a + 0xA1C);
-  if (type == 1) {
-    if (call<s32>(0x025D98E8, load<s8>(a + 0x326)))
-      store<u8>(a + 0xA1F, 5);
-    else if (!call<u8>(0x0207A9A0, a + 0xA1F))
-      off = 1;
-  } else if (type == 0 && call<s32>(0x025BA0C0, load<u32>(0x101F84DC) + 0x20,
-                                    load<s32>(a + 0x9E4), load<s8>(a + 0x2FE)))
-    off = 1;
-  s32 state = load<s32>(a + 0xA10);
-  if (state == 1 || state == 2) {
-    s16 ev = load<s16>(a + (state == 1 ? 0xA18 : 0xA1A));
-    call<s32>(0x025D7A58, a, ev, 255, 65535, 0, 1);
-    store<u16>(a + 0xFA, load<u16>(a + 0xFA) | 2);
-    store<u8>(a + 0xA09, off != 0);
-    return;
-  }
-  if (state == 0 && load<s8>(a + 0xA1D) < 0 && load<u8>(a + 0xA09) != off)
-    store<u32>(a + 0xA10, off ? 2 : 1);
-  store<u8>(a + 0xA09, off != 0);
+
+/* 0213FAF4 */
+bool daFire_c::_execute() {
+    s8 t = (s8)field_0x901;
+    if (t >= 0)
+        field_0x901 = t - 1;
+    checkOrder();
+    ctrlEffect();
+    // HD: the empty normal_proc call is omitted.
+    eventOrder();
+    checkCol();
+    return true;
 }
-VERIFY(0x0213F8C4, eventOrder);
-void checkCol(u32 a) {
-  WWHD_FUNC(0x0213FA58, void, a);
-  if (load<u8>(a + 0x9EC) != 1) {
-    call<void>(0x020182E0, a + 0x500, a + 0x314);
-    call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, a + 0x3E8);
-  }
-  call<void>(0x020182E0, a + 0x9C0, a + 0x314);
-  call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, a + 0x8A8);
-  call<void>(0x020182E0, a + 0x890, a + 0x314);
-  call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, a + 0x778);
+
+/* 0213EE34 */
+void daFire_c::search_wind() {
+    gabi::Local<FireSearchNameHD> type;
+    type->name = 0x187;
+    u32 w = fireActorSearch(FIRE_SEARCH_BY_NAME, type.a);
+    field_0x8F0 = w ? (u32)gabi::at<fopAc_ac_c>(w)->mBsPcId : 0xFFFFFFFFu;
 }
-VERIFY(0x0213FA58, checkCol);
-bool execute(u32 a) {
-  WWHD_FUNC(0x0213FAF4, bool, a);
-  s8 t = load<s8>(a + 0xA1D);
-  if (t >= 0)
-    store<s8>(a + 0xA1D, t - 1);
-  checkOrder(a);
-  ctrlEffect(a);
-  eventOrder(a);
-  checkCol(a);
-  return true;
+
+/* 0213F078 */
+void daFire_c::ctrlEffect() {
+    if (!(u8)field_0x902)
+        return;
+    bool stopped = false;
+    search_wind();
+    gabi::Local<be<u32>> id;
+    u32 n = (u32)field_0x8F0;
+    *id = n;
+    u32 wind = 0;
+    if (n != 0xFFFFFFFFu)
+        wind = fireActorSearch(FIRE_SEARCH_BY_ID, id.a);
+    s32 hit = fireCheckTargetHit(gabi::ea(&field_0x2CC[0]));
+    f32 zero = 0.0f, one = 1.0f;
+    if (hit) {
+        u32 o = fireGetTargetHitObj(gabi::ea(&field_0x2CC[0]));
+        bool cleared = false;
+        if (o) {
+            u32 t = (u32)gabi::at<dCcD_GObjInf>(o)->mAtType;
+            if ((t & 0x200000) && wind) {
+                u32 owner = fireGetTargetHitActor(gabi::ea(&field_0x2CC[0].mGObjTg));
+                if (owner == wind) {
+                    stopped = true;
+                    fireClearTargetHit(gabi::ea(&field_0x2CC[0]));
+                    cleared = true;
+                } else
+                    t = (u32)gabi::at<dCcD_GObjInf>(o)->mAtType;
+            }
+            if (!cleared) {
+                if (t & 0x80100) {
+                    field_0x8D2 = 80;
+                    field_0x8D1 = 0;
+                    stopped = true;
+                    execStopNowFire();
+                    fireParticleSet(gabi::ea(dComIfGp_getParticle()), 0, 0x463,
+                                    gabi::ea(&current.pos), 0, 0, 255, 0, -1, 0, 0, 0);
+                } else if (t & 0x200000) {
+                    u32 owner = fireGetTargetHitActor(gabi::ea(&field_0x2CC[0].mGObjTg));
+                    if (owner != wind) {
+                        f32 z = (f32)field_0x2CC[0].mGObjTg.mRVec.z,
+                            x = (f32)field_0x2CC[0].mGObjTg.mRVec.x, z2 = z * z,
+                            y = (f32)field_0x2CC[0].mGObjTg.mRVec.y;
+                        f32 sq = gabi::fmadds(x, x, z2);
+                        field_0x8E0.y = y;
+                        field_0x8E0.x = x;
+                        field_0x8E0.z = z;
+                        field_0x8E0.y = fireSquareRoot(sq / 1000.0f);
+                        if (!fireNormalizeRS(&field_0x8E0)) {
+                            field_0x8E0.y = one;
+                            field_0x8E0.x = zero;
+                            field_0x8E0.z = zero;
+                        }
+                    }
+                }
+            }
+        }
+        if (!cleared)
+            fireClearTargetHit(gabi::ea(&field_0x2CC[0]));
+    } else {
+        fireChaseF(&field_0x8E0.x, zero, 0.025f);
+        fireChaseF(&field_0x8E0.y, one, 0.025f);
+        fireChaseF(&field_0x8E0.z, zero, 0.025f);
+    }
+    if ((u8)field_0x8D1 == 0 && (u8)field_0x8D2 != 0) {
+        u8 c = (u8)field_0x8D2;
+        field_0x8D2 = c - 1;
+        stopped = true;
+        execStopFire();
+    } else if (stopped)
+        execStopFire();
+    else {
+        execPlayFire();
+        s32 rev = fireReverb((s8)current.roomNo);
+        fireSoundStart(0x614F, &eyePos, 0, rev);
+    }
+    if ((u8)field_0x8EC != (u8)stopped) {
+        u32 snd = stopped ? 0x6950 : 0x694E;
+        s32 rev = fireReverb((s8)current.roomNo);
+        fireSoundStart(snd, &eyePos, 0, rev);
+    }
+    setDirParticle(&field_0x8E0);
+    field_0x8EC = stopped;
 }
-VERIFY(0x0213FAF4, execute);
-bool executeWrapper(u32 a) {
-  WWHD_FUNC(0x0213FB54, bool, a);
-  return execute(a);
+
+/* 0213F654 */
+void daFire_c::demo_proc() {
+    s32 staff = (s32)field_0x8F8;
+    u32 act = dComIfGp_evmng_getMyActIdx(staff, gabi::at<gptr<char>>(0x101B5030), 3, 0, 0);
+    if (act == 1) {
+        if (!(u8)field_0x902) {
+            s32 rev = fireReverb((s8)current.roomNo);
+            fireSoundStart(0x694E, &eyePos, 0, rev);
+        }
+        execPlayFire();
+        staff = (s32)field_0x8F8;
+        field_0x902 = 1;
+    } else if (act == 2) {
+        FireEmitterHD *e = field_0x8BC.get();
+        if (e && ((u32)e->mAliveParticles + (u32)e->mAliveChildren) && (u8)field_0x902) {
+            s32 rev = fireReverb((s8)current.roomNo);
+            fireSoundStart(0x6950, &eyePos, 0, rev);
+        }
+        execStopFire();
+        staff = (s32)field_0x8F8;
+        field_0x902 = 0;
+    } else
+        staff = (s32)field_0x8F8;
+    dComIfGp_evmng_cutEnd(staff);
 }
-VERIFY(0x0213FB54, executeWrapper);
+
+/* 0213E8BC */
+void daFire_c::normal_proc() {}
+
+/* 0213F8C4 */
+void daFire_c::eventOrder() {
+    u8 off = fireIsTbox(dComIfGs_ea() + 0x798, (u32)mTrboxBit);
+    u8 type = (u8)mType;
+    if (type == 1) {
+        if (fireSearchRoomEnemy((s8)current.roomNo))
+            field_0x903 = 5;
+        else if (!fireCalcTimer(&field_0x903))
+            off = 1;
+    } else if (type == 0 && dComIfGs_isSwitch((s32)mSwitchNo, (s8)home.roomNo))
+        off = 1;
+    s32 state = (s32)field_0x8F4;
+    if (state == 1 || state == 2) {
+        s16 ev = (s16)(state == 1 ? field_0x8FC : field_0x8FE);
+        fireOrderOtherEvent(this, ev, 255, 65535, 0, 1);
+        eventInfo.mCondition = (u16)eventInfo.mCondition | 2;
+        field_0x8ED = off != 0;
+        return;
+    }
+    if (state == 0 && (s8)field_0x901 < 0 && (u8)field_0x8ED != off)
+        field_0x8F4 = off ? 2 : 1;
+    field_0x8ED = off != 0;
+}
+
+/* 0213F7A4 */
+void daFire_c::checkOrder() {
+    if ((u16)eventInfo.mCommand != 2)
+        return;
+    s16 ev = (s16)field_0x8FC;
+    bool reset = dComIfGp_evmng_startCheck(ev) && (u32)field_0x8F4 != 0;
+    if (!reset) {
+        ev = (s16)field_0x8FE;
+        reset = dComIfGp_evmng_startCheck(ev) && (u32)field_0x8F4 != 0;
+    }
+    if (reset)
+        field_0x8F4 = 0;
+    ev = (s16)field_0x8FC;
+    bool ended = ev != -1 && dComIfGp_evmng_endCheck(ev);
+    if (!ended) {
+        ev = (s16)field_0x8FE;
+        ended = ev != -1 && dComIfGp_evmng_endCheck(ev);
+    }
+    if (ended) {
+        u32 p = gabi::ea(dComIfGp_get());
+        gabi::at<FirePlayHD>(p)->mEventFlags = (u16)gabi::at<FirePlayHD>(p)->mEventFlags | 8;
+    }
+    const char *name = (*gabi::at<gptr<char>[2]>(0x101B503C))[(u8)mType].get();
+    field_0x8F8 = dComIfGp_evmng_getMyStaffId(name, nullptr, 0);
+    demo_proc();
+}
+
+/* 0213E8C0 */
+void daFire_c::execStopFire() {
+    for (int i = 0; i < 3; ++i) {
+        FireEmitterHD *e = emitter(i).get();
+        if (e)
+            e->mFlags = (u32)e->mFlags | 1;
+    }
+    u32 x = (u32)field_0x2CC[0].mObjAt.mSPrm, y = (u32)field_0x65C.mObjCo.mSPrm,
+        z = (u32)field_0x78C.mObjAt.mSPrm;
+    field_0x2CC[0].mObjAt.mSPrm = x & ~1u;
+    field_0x65C.mObjCo.mSPrm = y & ~1u;
+    field_0x78C.mObjAt.mSPrm = z & ~1u;
+}
+
+/* 0213EE90 */
+void daFire_c::execStopNowFire() {
+    for (int i = 0; i < 3; ++i) {
+        FireEmitterHD *e = emitter(i).get();
+        if (e)
+            fireDeleteAllParticles(gabi::ea(e), 1);
+    }
+    u32 x = (u32)field_0x2CC[0].mObjAt.mSPrm, y = (u32)field_0x65C.mObjCo.mSPrm,
+        z = (u32)field_0x78C.mObjAt.mSPrm;
+    field_0x2CC[0].mObjAt.mSPrm = x & ~1u;
+    field_0x65C.mObjCo.mSPrm = y & ~1u;
+    field_0x78C.mObjAt.mSPrm = z & ~1u;
+}
+
+/* 0213EF18 */
+void daFire_c::execPlayFire() {
+    for (int i = 0; i < 3; ++i) {
+        FireEmitterHD *e = emitter(i).get();
+        if (e)
+            e->mFlags = (u32)e->mFlags & ~1u;
+    }
+    u32 x = (u32)field_0x2CC[0].mObjAt.mSPrm, y = (u32)field_0x65C.mObjCo.mSPrm,
+        z = (u32)field_0x78C.mObjAt.mSPrm;
+    field_0x2CC[0].mObjAt.mSPrm = x | 1;
+    field_0x65C.mObjCo.mSPrm = y | 1;
+    field_0x78C.mObjAt.mSPrm = z | 1;
+}
+
+/* 0213EF88 */
+void daFire_c::setDirParticle(cXyz *d) {
+    fireChaseF(&field_0x8D4.x, (f32)d->x, 1.0f);
+    fireChaseF(&field_0x8D4.y, (f32)d->y, 1.0f);
+    fireChaseF(&field_0x8D4.z, (f32)d->z, 1.0f);
+    for (int i = 0; i < 3; ++i) {
+        FireEmitterHD *e = emitter(i).get();
+        if (e) {
+            f32 y = (f32)field_0x8D4.y, z = (f32)field_0x8D4.z, x = (f32)field_0x8D4.x;
+            e->mDirection.z = z;
+            e->mDirection.y = y;
+            e->mDirection.x = x;
+        }
+    }
+}
+
+/* 0213FA58 */
+void daFire_c::checkCol() {
+    if ((u8)mShape != 1) {
+        fireCylinderCenter(&field_0x2CC[0].mCyl, &current.pos);
+        fireCollisionSet(gabi::ea(dComIfG_Ccsp()), gabi::ea(&field_0x2CC[0]));
+    }
+    fireCylinderCenter(&field_0x78C.mCyl, &current.pos);
+    fireCollisionSet(gabi::ea(dComIfG_Ccsp()), gabi::ea(&field_0x78C));
+    fireCylinderCenter(&field_0x65C.mCyl, &current.pos);
+    fireCollisionSet(gabi::ea(dComIfG_Ccsp()), gabi::ea(&field_0x65C));
+}
+
+/* 0213F64C */
+bool daFire_c::_draw() { return true; }
+
+/* 0213F5CC */
+s32 daFire_Create(daFire_c *a) { return a->_create(); }
+
+/* 0213F648 */
+bool daFire_Delete(daFire_c *a) { return a->_delete(); }
+
+/* 0213FB54 */
+bool daFire_Execute(daFire_c *a) { return a->_execute(); }
+
+/* 0213FC78 */
+bool daFire_IsDelete(daFire_c *a) { return true; }
+
+/* 0213FB58 */
 void staticInit() {
-  WWHD_FUNC(0x0213FB58, void);
-  store<u32>(0x10463DCC, 0);
-  store<u32>(0x10463DC4, 0);
-  store<u32>(0x10463DD0, 0);
-  store<u32>(0x10463DC8, 0);
-  call<void>(0x028F026C, 0x101B5044u);
-  f32 lo = load<f32>(0x1000F168), hi = load<f32>(0x1000F16C);
-  store<f32>(0x10463DB8, lo);
-  store<f32>(0x10463DBC, hi);
-  call<void>(0x028ED6F8, 0x10463DC0u);
-  call<void>(0x028F026C, 0x101B5050u);
-  call<void>(0x028EAB2C, 0x10463DC1u);
-  call<void>(0x028F026C, 0x101B505Cu);
+    fireHeaderStatics()->mCounter14 = 0;
+    fireHeaderStatics()->mCounterC = 0;
+    fireHeaderStatics()->mCounter18 = 0;
+    fireHeaderStatics()->mCounter10 = 0;
+    fireRegisterStatic(0x101B5044u);
+    f32 lo = (f32)*gabi::at<be<f32>>(0x1000F168), hi = (f32)*gabi::at<be<f32>>(0x1000F16C);
+    fireHeaderStatics()->mMinimum = lo;
+    fireHeaderStatics()->mMaximum = hi;
+    fireInitializeOne(0x10463DC0u);
+    fireRegisterStatic(0x101B5050u);
+    fireInitializeZero(0x10463DC1u);
+    fireRegisterStatic(0x101B505Cu);
 }
-VERIFY(0x0213FB58, staticInit);
-bool isDelete(u32 a) {
-  WWHD_FUNC(0x0213FC78, bool, a);
-  return true;
+
+/* 0213FBEC */
+u32 cylinderCtor(u32 a) {
+    if (!a)
+        a = fireNew(0x130);
+    if (!a)
+        return 0;
+    fireCollisionConstruct(a);
+    fireCylinderVtables(gabi::at<dCcD_Cyl>(a))->mShapeVtable = FIRE_SHAPE_BASE_VTABLE;
+    fireCylinderVtables(gabi::at<dCcD_Cyl>(a))->mShapeBaseVtable = FIRE_CYL_SHAPE_VTABLE;
+    fireCylinderConstruct(a + 0x118);
+    gabi::at<dCcD_Cyl>(a)->__vtbl_hitinf = FIRE_CYL_HIT_VTABLE;
+    gabi::at<dCcD_Cyl>(a)->mCyl.__vtbl = FIRE_CYL_VTABLE;
+    fireCylinderVtables(gabi::at<dCcD_Cyl>(a))->mShapeVtable = FIRE_CYL_SHAPE_FINAL_VTABLE;
+    return a;
 }
-VERIFY(0x0213FC78, isDelete);
-void actorDtor(u32 a, u32 flags) {
-  WWHD_FUNC(0x0213FC80, void, a, flags);
-  if (a) {
-    call<void>(0x02515A70, a + 0x8A8, 2);
-    call<void>(0x02515A70, a + 0x778, 2);
-    call<void>(0x028F0164, a + 0x3E8, 3, 0x130, 0x02515A70u, 0, 0);
-    call<void>(0x02515860, a + 0x3AC, 2);
-    call<void>(0x025D50BC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
+
+/* 0213FC80 */
+void actorDtor(daFire_c *a, u32 flags) {
+    if (a) {
+        fireCylinderDestroy(&a->field_0x78C, 2);
+        fireCylinderDestroy(&a->field_0x65C, 2);
+        fireDestroyArray(gabi::ea(&a->field_0x2CC[0]), 3, 0x130, FIRE_CYLINDER_DTOR, 0, 0);
+        fireSttsDestroy(&a->mStts, 2);
+        fireActorDestroy(a, 0);
+        if (flags & 1)
+            fireDelete(gabi::ea(a));
+    }
 }
-VERIFY(0x0213FC80, actorDtor);
-} // namespace fire
+
+// clang-format off
+/* WWHD glue
+str 1000F0F0
+str 1000F118
+str 1000F100
+str 1000F128
+str 1000F10C
+ext 0281DE68 void fireDeleteAllParticles(u32,s32)
+ext 025D5218 u32 fireActorSearch(u32,u32)
+ext 0200F5C8 void fireChaseF(be<f32>*,f32,f32)
+ext 025B8C74 u32 fireIsTbox(u32,u32)
+ext 02515F14 void fireSttsInit(u32,s32,s32,u32)
+ext 02516518 void fireCylinderSet(u32,u32)
+ext 020184DC void fireCylinderRadius(u32,f32)
+ext 025DA884 void fireOffDraw(u32)
+ext 025162A4 s32 fireCheckTargetHit(u32)
+ext 02516300 u32 fireGetTargetHitObj(u32)
+ext 02515BBC u32 fireGetTargetHitActor(u32)
+ext 0251621C void fireClearTargetHit(u32)
+ext 025A847C u32 fireParticleSet(u32,u32,u32,u32,u32,u32,u32,u32,s32,u32,u32,u32)
+ext 028F4384 f32 fireSquareRoot(f32)
+ext 0201B47C s32 fireNormalizeRS(cXyz*)
+ext 02520540 s32 fireReverb(s32)
+ext 025E1A40 void fireSoundStart(u32,const cXyz*,u32,s32)
+ext 0273AD10 u32 fireNew(u32)
+ext 02515FB8 void fireCollisionConstruct(u32)
+ext 02018590 void fireCylinderConstruct(u32)
+ext 025D4ED0 void fireActorConstruct(fopAc_ac_c*)
+ext 0200BD2C void fireSttsConstruct(u32)
+ext 02515DA0 void fireGSttsConstruct(u32)
+ext 028EFFD0 void fireConstructArray(u32,u32,u32,u32)
+ext 025D98E8 s32 fireSearchRoomEnemy(s32)
+ext 0207A9A0 u8 fireCalcTimer(be<u8>*)
+ext 025D7A58 s32 fireOrderOtherEvent(fopAc_ac_c*,s32,u32,u32,u32,u32)
+ext 020182E0 void fireCylinderCenter(cM3dGCyl*,cXyz*)
+ext 0200E240 void fireCollisionSet(u32,u32)
+ext 028F026C void fireRegisterStatic(u32)
+ext 028ED6F8 void fireInitializeOne(u32)
+ext 028EAB2C void fireInitializeZero(u32)
+ext 02515A70 void fireCylinderDestroy(dCcD_Cyl*,s32)
+ext 028F0164 void fireDestroyArray(u32,u32,u32,u32,u32,u32)
+ext 02515860 void fireSttsDestroy(dCcD_Stts*,s32)
+ext 025D50BC void fireActorDestroy(fopAc_ac_c*,s32)
+ext 0273AF40 void fireDelete(u32)
+*/

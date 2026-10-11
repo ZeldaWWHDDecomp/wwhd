@@ -1,108 +1,582 @@
-// HD wind lines and inlined seabird update.
-#include "gabi.h"
+/* Wind lines and inlined seabirds on the HD weather layout. */
+#include "d/d_kankyo_rain_weather.h"
+using namespace weather_move;
 using namespace gabi;
-static u32 windWord(u32 a,u32 o=0){return load<u32>(a+o);}
-static f32 windFloat(u32 a,u32 o=0){return load<f32>(a+o);}
-static f32 windSin(u32 angle){return windFloat(0x104A44F8+((u16)angle>>3)*8);}
-static f32 windCos(u32 angle){return windFloat(0x104A44FC+((u16)angle>>3)*8);}
-// The caller owns vectors12, SafeString pairs8 and the derived ground query84.
-// Preserve their nonoverlapping original frame positions, including base-subobject aliases.
-struct WindScratch {u8 bytes[0x158];};
-static void windInvalidate(u32 slot){u32 p=windWord(slot);call<void>(0x0281DE68,p,1);p=windWord(slot);u32 flags=windWord(p,0x254);store<u32>(p+0x5C,0xFFFFFFFF);store<u32>(p+0x254,flags|1);store<u32>(slot,0);}
-static void windScale(u32 emitter,f32 scale){for(u32 o:{0x220u,0x224u,0x228u,0x238u,0x23Cu,0x240u})store<f32>(emitter+o,scale);}
-static void windTranslate(u32 emitter,u32 position){f32 x=windFloat(position),y=windFloat(position,4),z=windFloat(position,8);store<f32>(emitter+0x22C,x);u32 flip=load<u8>(emitter+0x262);store<f32>(emitter+0x230,y);store<f32>(emitter+0x234,z);if(flip>=7)store<f32>(emitter+0x230,-windFloat(emitter,0x230));}
-static void windTotal(u32 slot,u32 pos){store<f32>(pos,fadds_ppc(windFloat(slot,4),windFloat(slot,0x10)));store<f32>(pos+4,fadds_ppc(windFloat(slot,8),windFloat(slot,0x14)));store<f32>(pos+8,fadds_ppc(windFloat(slot,0xC),windFloat(slot,0x18)));}
-void rainWindMove(){
- WWHD_FUNC(0x025642AC,void);
- Local<WindScratch> scratch;u32 sp=scratch.a-8;
- u32 env=call<u32>(0x02555D0C),packet=windWord(env,0xAAC);
- u32 camera=windWord(call<u32>(0x025200D4),0x5AF8),player=windWord(call<u32>(0x025200D4),0x5B2C);
- call<void>(0x02008E0C,sp+0x108);
- store<u32>(sp+0x44,sp+0x148);store<u32>(sp+0x4C,sp+0x154);
- for(u32 o:{0x14Du,0x14Eu,0x14Fu,0x150u,0x151u,0x152u})store<u8>(sp+o,0);
- store<u32>(sp+0x154,0x1004F494);store<u32>(sp+0x10C,sp+0x154);store<u32>(sp+0x118,0x1004F474);store<u32>(sp+0x128,0x1004F484);store<u32>(sp+0x108,sp+0x148);store<u32>(sp+0x50,0x1004F404);store<u32>(sp+0x158,15);store<u32>(sp+0x58,0x1004F3E4);store<u8>(sp+0x14C,1);store<u32>(sp+0x54,0x1004F424);store<u32>(sp+0x148,0x1004F4A4);
- u32 direction=call<u32>(0x0257DAA8);f32 power=call<f32>(0x02578348);
- f32 windX=windFloat(direction),windZ=windFloat(direction,8),windY=windFloat(direction,4);
- call<u32>(0x025200D4);s32 count=windWord(env,0xAA8);u32 particlesRoot=windWord(0x1047B2D4);u32 particles=windWord(particlesRoot,0x24)-windWord(particlesRoot,8);
- f32 range=windFloat(0x1004F540),spawnDistance=windFloat(0x1004F53C),offsetY=range,scale=windFloat(0x1004F550);
- store<f32>(sp+0x28,windFloat(0x1004F548));store<f32>(sp+0x30,windFloat(0x1004F544));store<f32>(sp+0x34,scale);store<f32>(sp+0x18,range);store<f32>(sp+0x48,windFloat(0x1004F554));store<f32>(sp+0x1C,windFloat(0x1004F54C));
- f32 distance=call<f32>(0x028E8DE8,packet+0x758,camera+0xDC);distance=call<f32>(0x028F4384,distance);distance/=windFloat(0x1004F558);if(distance>windFloat(sp,0x34))distance=windFloat(sp,0x34);
- f32 speed=fmadds(windFloat(0x1004F560),distance,windFloat(0x1004F55C));
- store<u32>(packet+0x758,windWord(camera,0xDC));store<u32>(packet+0x75C,windWord(camera,0xE0));store<u32>(packet+0x760,windWord(camera,0xE4));store<f32>(sp+0x38,speed);
- if(windWord(call<u32>(0x025200D4),0x5CDC)&0x20)count=10;
- f32 custom=windFloat(env,0xA20),zero=windFloat(0x1004F528);u32 oldCustom=load<u8>(packet+0x764);store<f32>(sp+0x2C,zero);store<f32>(sp+0x24,windFloat(0x1004F52C));bool reset=false;
- if(custom>zero){range=windFloat(0x1004F568);offsetY=windFloat(sp,0x24);spawnDistance=windFloat(0x1004F564);scale=windFloat(0x1004F578);count=9;store<f32>(sp+0x1C,offsetY);store<f32>(sp+0x38,windFloat(0x1004F56C));store<f32>(sp+0x18,windFloat(0x1004F574));store<f32>(sp+0x48,windFloat(sp,0x2C));store<f32>(sp+0x28,range);store<f32>(sp+0x30,windFloat(0x1004F570));if(!oldCustom){store<u8>(packet+0x764,1);reset=true;}}
- else if(oldCustom){store<u8>(packet+0x764,0);reset=true;}
- if(reset)for(u32 i=0;i<30;i++){u32 slot=packet+i*0x34;if(windWord(slot))windInvalidate(slot);store<u32>(slot+0x24,0);}
- call<void>(0x0256401C,camera,sp+0xC8,spawnDistance,spawnDistance);
- store<f32>(sp+0x5C,fmadds(windX,windX,fmuls_ppc(windZ,windZ)));
- const f32 half=windFloat(0x1004F57C),epsilon=windFloat(0x1004F580),fifth=windFloat(0x1004F554),third=windFloat(0x1004F584),tenth=windFloat(0x1004F588),fourth=windFloat(0x1004F598),angleMaximum=windFloat(0x1004F59C),height=windFloat(0x1004F594);
- store<f32>(sp+0x40,windFloat(0x1004F58C));store<f32>(sp+0x3C,windFloat(0x1004F590));f32 lineZero=windFloat(sp,0x2C),one=windFloat(sp,0x34);bool enough=!(power<third);
- for(s32 i=0;i<30;i++){
-  u32 slot=packet+i*0x34,state=windWord(slot,0x24);if(i>=count&&!state){if(windWord(slot))windInvalidate(slot);continue;}
-  if(!state){if(!enough||particles>1500)continue;u32 tick=windWord(0x101FF558);if(((tick>>4)&7)==((u32)i&3)&&!load<u8>(packet+0x764))continue;
-   store<f32>(slot+0x1C,lineZero);store<f32>(slot+0x20,lineZero);store<u16>(slot+0x2C,0);
-   u32 base=load<u8>(packet+0x764)==1?player+0x314:sp+0xC8;f32 x=windFloat(base),y=windFloat(base,4),z=windFloat(base,8);store<f32>(slot+4,x);store<f32>(slot+8,fadds_ppc(y,offsetY));store<f32>(slot+0xC,z);
-   store<f32>(slot+0x10,call<f32>(0x02019918,range));store<f32>(slot+0x14,call<f32>(0x02019918,range));store<f32>(slot+0x18,call<f32>(0x02019918,range));f32 random=call<f32>(0x020198D8,one);f32 spread=fmadds(windFloat(sp,0x28),random,windFloat(sp,0x28));
-   x=fnmsubs(windX,spread,windFloat(slot,0x10));y=fnmsubs(windY,spread,windFloat(slot,0x14));z=fnmsubs(windZ,spread,windFloat(slot,0x18));store<f32>(slot+0x10,x);store<f32>(slot+0x14,y);store<f32>(slot+0x18,z);
-   random=call<f32>(0x020198D8,angleMaximum);store<u16>(slot+0x2C,(u16)ftoi(random));windTotal(slot,sp+0x68);
-   if(load<u8>(packet+0x764)!=1){store<u32>(sp+0x12C,windWord(sp+0x68));store<f32>(sp+0x130,fadds_ppc(windFloat(sp,0x6C),height));store<u32>(sp+0x134,windWord(sp+0x70));u32 game=call<u32>(0x025200D4);f32 ground=call<f32>(0x02008974,game+0x12A0,sp+0x108);
-    if(windFloat(sp,0x6C)<ground){f32 raised=fadds_ppc(ground,offsetY);random=call<f32>(0x020198D8,offsetY);store<f32>(slot+0x14,fsubs_ppc(fadds_ppc(raised,random),windFloat(slot,8)));}
-   }
-   windTotal(slot,sp+0x68);u32 game=call<u32>(0x025200D4);u32 emitter=call<u32>(0x025A847C,windWord(game,0x5AB0),0,0x31,sp+0x68,0,0,255,0,-1,0,0,0);store<u32>(slot,emitter);if(emitter){store<u8>(emitter+0x247,0);windScale(windWord(slot),scale);store<u32>(slot+0x24,1);}
-   f32 horizontal=call<f32>(0x028F4384,windFloat(sp,0x5C));store<f32>(sp+0x20,horizontal);u32 angle=call<u32>(0x020195B0,windX,windZ);store<u16>(slot+0x30,angle);angle=call<u32>(0x020195B0,windY,windFloat(sp,0x20));store<u32>(slot+0x28,0);store<u16>(slot+0x2E,angle);random=call<f32>(0x020198D8,one);store<u8>(slot+0x32,!(random>windFloat(sp,0x48)));continue;
-  }
-  if(state==3){if(!load<u8>(packet+0x764))store<u32>(slot+0x24,0);continue;}if(state>3)continue;
-  s32 oldAngle=load<s16>(slot+0x2C),oldPitch=load<s16>(slot+0x2E);u16 phase=(u16)ftoi(fmadds(windFloat(sp,0x18),power,(f32)oldAngle));f32 deficit=fsubs_ppc(one,power);f32 sway=windFloat(sp,0x1C);sway=fnmsubs(fmuls_ppc(sway,fifth),deficit,sway);store<u16>(slot+0x2C,phase);
-  store<u16>(slot+0x2E,(u16)ftoi(fmadds(windSin(phase),sway,(f32)oldPitch)));s32 yaw=load<s16>(slot+0x30);store<u16>(slot+0x30,(u16)ftoi(i&1?fmadds(windSin(load<u16>(slot+0x2C)),sway,(f32)yaw):fnmsubs(windSin(load<u16>(slot+0x2C)),sway,(f32)yaw)));
-  if(windFloat(slot,0x1C)>fourth&&load<u8>(slot+0x32)==1){s32 add=3600+i*200;u32 counter=windWord(slot,0x28)+add;store<u32>(slot+0x28,counter);store<u16>(slot+0x2E,load<s16>(slot+0x2E)+add);if((s32)counter>60535)store<u8>(slot+0x32,0);}
-  else{f32 horizontal=call<f32>(0x028F4384,windFloat(sp,0x5C));store<f32>(sp+0x20,horizontal);u32 targetYaw=call<u32>(0x020195B0,windX,windZ);u32 targetPitch=call<u32>(0x020195B0,windY,windFloat(sp,0x20));call<void>(0x0200F378,slot+0x2E,targetPitch,10,1000,1);call<void>(0x0200F378,slot+0x30,targetYaw,10,1000,1);}
-  u32 pitch=load<u16>(slot+0x2E),heading=load<u16>(slot+0x30);f32 moveX=fmuls_ppc(windCos(pitch),windSin(heading));store<f32>(sp+0x74,moveX);store<f32>(sp+0x78,windSin(load<u16>(slot+0x2E)));store<f32>(sp+0x7C,fmuls_ppc(windCos(load<u16>(slot+0x2E)),windCos(load<u16>(slot+0x30))));
-  f32 fraction=(f32)load<s16>(slot+0x2C)/angleMaximum;f32 baseSpeed=windFloat(sp,0x38);f32 effective=fnmsubs(fmuls_ppc(baseSpeed,fifth),deficit,baseSpeed);if(fraction>one)fraction=one;else fraction=fraction>=0?fraction:lineZero;
-  effective=fmadds(fmuls_ppc(effective,third),fraction,effective);
-  store<f32>(slot+0x10,fmadds(moveX,effective,windFloat(slot,0x10)));store<f32>(slot+0x14,fmadds(windFloat(sp,0x78),effective,windFloat(slot,0x14)));store<f32>(slot+0x18,fmadds(windFloat(sp,0x7C),effective,windFloat(slot,0x18)));windTotal(slot,sp+0x68);windTranslate(windWord(slot),sp+0x68);
-  f32 step=fmadds(fmuls_ppc(windFloat(sp,0x30),tenth),(f32)(i/30),windFloat(sp,0x30));f32 distanceToEye=call<f32>(0x028E8DE8,sp+0x68,camera+0xDC);distanceToEye=call<f32>(0x028F4384,distanceToEye);distanceToEye/=windFloat(sp,0x24);if(distanceToEye>one)distanceToEye=one;
-  u32 red=load<u8>(env+0xB70),green=load<u8>(env+0xB71),blue=load<u8>(env+0xB72);f32 color=fmuls_ppc((f32)(red+green+blue),windFloat(0x1004F5A8))/windFloat(0x1004F5AC);color=fmuls_ppc(color,color);f32 alpha=fmuls_ppc(power,fmuls_ppc(distanceToEye,color));store<f32>(sp+0x20,alpha);if(alpha<half)store<f32>(sp+0x20,half);
-  call<void>(0x0201AE48,sp+0x74,sp+0xF4,windFloat(0x1004F54C));call<void>(0x0201AD78,sp+0x68,sp+0xD4,sp+0xF4);store<u32>(sp+0x12C,windWord(sp+0xD4));store<f32>(sp+0x130,fadds_ppc(windFloat(sp,0xD8),height));store<u32>(sp+0x134,windWord(sp+0xDC));
-  u32 game=call<u32>(0x025200D4);f32 ground=call<f32>(0x02008974,game+0x12A0,sp+0x108);if(ground>windFloat(sp,0x6C)){step=fmadds((f32)i,epsilon,fifth);store<u32>(slot+0x24,2);}
-  store<u8>(windWord(slot)+0x247,(u8)ftoi(fmuls_ppc(fmuls_ppc(windFloat(slot,0x20),windFloat(0x1004F5AC)),windFloat(sp,0x20))));
-  if(windWord(slot,0x24)==1){call<void>(0x0200ECD4,slot+0x1C,one,third,fmuls_ppc(step,tenth),epsilon);f32 timer=windFloat(slot,0x1C);if(!(timer<one)){store<u32>(slot+0x24,2);timer=windFloat(slot,0x1C);}if(timer>half)call<void>(0x0200ECD4,slot+0x20,one,half,windFloat(sp,0x3C),windFloat(sp,0x40));}
-  else{call<void>(0x0200ECD4,slot+0x1C,lineZero,fourth,fmuls_ppc(step,fmadds((f32)i,epsilon,tenth)),epsilon);f32 timer=windFloat(slot,0x1C);if(!(timer>lineZero)){windInvalidate(slot);store<u32>(slot+0x24,0);u32 custom=load<u8>(packet+0x764);timer=windFloat(slot,0x1C);if(custom==1)store<u32>(slot+0x24,4);}if(timer<half)call<void>(0x0200ECD4,slot+0x20,lineZero,half,windFloat(sp,0x3C),windFloat(sp,0x40));}
- }
- // dKyr_kamome_move is inlined in this HD entry.
- env=call<u32>(0x02555D0C);packet=windWord(env,0xAAC);camera=windWord(call<u32>(0x025200D4),0x5AF8);call<u32>(0x0257DAA8);
- store<u32>(sp+0xEC,0x1004F3A8);store<u32>(sp+0xF0,0x1004F3AC);u32 game=call<u32>(0x025200D4);store<u32>(sp+0x100,game+0x5134);store<u32>(sp+0x104,0x1004F3AC);
- // Actual1004F3AC+14 target0257770C is empty and reads no argument registers.
- call_ptr<void>(windWord(windWord(sp+0xF0),0x14),sp+0xEC);call_ptr<void>(windWord(windWord(sp+0xF0),0x14),sp+0xEC);u32 name=windWord(sp+0xEC);call_ptr<void>(windWord(windWord(sp+0x104),0x14),sp+0x100);
- bool sea=name==windWord(sp+0x100);if(!sea){u32 a=windWord(sp+0xEC),b=windWord(sp+0x100);for(u32 j=0;j<0x40001;j++){u8 left=load<u8>(a+j),right=load<u8>(b+j);if(left!=right)break;if(!left){sea=true;break;}}}
- bool spawn=false;
- if(sea){bool bad=false;u32 e=call<u32>(0x02555D0C);if(load<u8>(e+0x108D)==1){e=call<u32>(0x02555D0C);bad=windFloat(e,0xFC8)>windFloat(sp,0x2C);}
-  if(!bad){e=call<u32>(0x02555D0C);if(load<u8>(e+0x108C)==1){e=call<u32>(0x02555D0C);bad=windFloat(e,0xFC8)<windFloat(sp,0x34);}}
-  if(!bad){e=call<u32>(0x02555D0C);if(load<u8>(e+0x108D)==2){e=call<u32>(0x02555D0C);bad=windFloat(e,0xFC8)>windFloat(sp,0x2C);}}
-  if(!bad){e=call<u32>(0x02555D0C);if(load<u8>(e+0x108C)==2){e=call<u32>(0x02555D0C);bad=windFloat(e,0xFC8)<windFloat(sp,0x34);}}
-  spawn=!bad;
- }
- f32 birdZero=windFloat(sp,0x2C),birdOne=windFloat(sp,0x34),negativeMaximum=windFloat(0x1004F5C8),radius=windFloat(0x1004F5B0),vertical=windFloat(0x1004F5C0),maximum=windFloat(0x1004F558),minimum=windFloat(0x1004F55C),negativeMinimum=windFloat(0x1004F5C4),fadeFactor=windFloat(0x1004F588),fadeStep=windFloat(0x1004F5BC),fadeMinimum=windFloat(0x1004F5B8),birdScale=windFloat(0x1004F5B4),birdDelay=windFloat(0x1004F5D4),resetDelay=windFloat(0x1004F5CC),resetSpread=windFloat(0x1004F5D0),angleRange=windFloat(0x1004F59C);
- for(u32 i=0;i<2;i++){
-  u32 bird=packet+0x618+i*0x20;u32 state=load<u8>(bird+0x1E);
-  if(state==0){if(spawn){s32 timer=load<s16>(bird+0x1C);if(!timer){store<u16>(bird+0x10,(u16)ftoi(call<f32>(0x02019918,angleRange)));f32 r=call<f32>(0x02019918,angleRange);u32 angle=load<u16>(bird+0x10);store<u16>(bird+0x12,(u16)ftoi(r));f32 x=fmadds(windSin(angle),radius,windFloat(camera,0xDC)),z=fmadds(windCos(angle),radius,windFloat(camera,0xE4));store<f32>(bird+8,windFloat(0x1004F5D8));store<f32>(bird+4,x);store<f32>(bird+0xC,z);
-    store<f32>(bird+0x14,call<f32>(0x02019918,birdOne));store<f32>(bird+0x18,birdZero);r=call<f32>(0x020198D8,windFloat(0x1004F5DC));store<u16>(bird+0x1C,(u16)ftoi(fadds_ppc(r,birdDelay)));game=call<u32>(0x025200D4);u32 emitter=call<u32>(0x025A847C,windWord(game,0x5AB0),0,0x429,bird+4,0,0,255,0,-1,0,0,0);u8 old=load<u8>(bird+0x1E);store<u32>(bird,emitter);store<u8>(bird+0x1E,old+1);
-   }else store<u16>(bird+0x1C,timer-1);}}
-  else if(state==1&&windWord(bird)){
-   f32 old=windFloat(bird,0x14),r=call<f32>(0x02019918,birdOne),speed=fadds_ppc(old,r);if(old<birdZero){if(speed<negativeMaximum)speed=negativeMaximum;else if(speed>negativeMinimum)speed=negativeMinimum;}else{if(speed>maximum)speed=maximum;else if(speed<minimum)speed=minimum;}store<f32>(bird+0x14,speed);
-   store<f32>(sp+0x98,fmuls_ppc(windSin(load<u16>(bird+0x10)),radius));store<f32>(sp+0x9C,std::fabs(fmuls_ppc(windSin(load<u16>(bird+0x12)),vertical)));store<f32>(sp+0xA0,fmuls_ppc(windCos(load<u16>(bird+0x10)),radius));
-   s32 angle=load<s16>(bird+0x10);u16 heading=(u16)ftoi(fmadds(windFloat(bird,0x14),windFloat(bird,0x18),(f32)angle));s32 pitch=load<s16>(bird+0x12);store<u16>(bird+0x10,heading);store<u16>(bird+0x12,pitch+15);
-   f32 x=fmuls_ppc(windSin(heading),radius),y=std::fabs(fmuls_ppc(windSin(load<u16>(bird+0x12)),vertical)),z=fmuls_ppc(windCos(load<u16>(bird+0x10)),radius);store<f32>(sp+0x8C,x);store<f32>(sp+0x90,y);store<f32>(sp+0x94,z);y=fadds_ppc(y,windFloat(0x1004F5E0));x=fadds_ppc(windFloat(camera,0xDC),x);z=fadds_ppc(windFloat(camera,0xE4),z);store<f32>(bird+8,y);store<f32>(bird+4,x);store<f32>(bird+0xC,z);store<f32>(sp+0xB0,x);store<f32>(sp+0xB4,y);store<f32>(sp+0xB8,z);windTranslate(windWord(bird),sp+0xB0);
-   if(load<s16>(bird+0x1C)&&spawn){call<void>(0x0200ECD4,bird+0x18,birdOne,fadeFactor,fadeStep,fadeMinimum);store<u16>(bird+0x1C,load<s16>(bird+0x1C)-1);}
-   else{call<void>(0x0200ECD4,bird+0x18,birdZero,fadeFactor,fadeStep,fadeMinimum);if(windFloat(bird,0x18)<windFloat(0x1004F58C))store<u8>(bird+0x1E,load<u8>(bird+0x1E)+1);}
-   call<void>(0x02563F64,sp+0x98,sp+0x8C,sp+0xE0);u32 rotation=call<u32>(0x020195B0,windFloat(sp,0xE0),windFloat(sp,0xE8));call<void>(0x028245AC,0,rotation,0,windWord(bird)+0x1F0);
-  }
-  else if(state==2){windInvalidate(bird);store<u8>(bird+0x1E,0);f32 r=call<f32>(0x020198D8,resetSpread);store<u16>(bird+0x1C,(u16)ftoi(fadds_ppc(r,resetDelay)));}
-  if(windWord(bird)){
-   game=call<u32>(0x025200D4);if(windWord(game,0x5FA4)){game=call<u32>(0x025200D4);u32 view=windWord(game,0x5FA4);f32 fov=windFloat(view,0xD4)/windFloat(0x1004F5E4);f32 scale=windFloat(bird,0x18);if(!(fov<birdOne))fov=birdOne;windScale(windWord(bird),fmuls_ppc(fmuls_ppc(scale,fov),birdScale));}
-   u32 emitter=windWord(bird);u32 red=load<u8>(call<u32>(0x02555D0C)+0xB70);u32 green=load<u8>(call<u32>(0x02555D0C)+0xB71);u32 blue=load<u8>(call<u32>(0x02555D0C)+0xB72);store<u8>(emitter+0x244,red);store<u8>(emitter+0x245,green);store<u8>(emitter+0x246,blue);
-  }
- }
- store<u32>(sp+0x128,windWord(sp,0x50));u32 first=windWord(sp,0x44),second=windWord(sp,0x4C),a=windWord(sp,0x54),b=windWord(sp,0x58);store<u32>(first,a);store<u32>(second,b);call<void>(0x02008DAC,sp+0x108,0);
+using WeatherWordHD = be<u32>;
+using ParticleListPointerHD = gptr<WeatherParticleListHD>;
+static WeatherWordHD windFrameCounter;
+static ParticleListPointerHD windParticleList;
+static WeatherWordHD windAllGroupVtable;
+static WeatherWordHD windAllCheckVtable;
+static WeatherWordHD windAllPolyInfoVtable;
+static WeatherWordHD windAllPolyPassVtable;
+static WeatherWordHD windBasePolyInfoVtable;
+static WeatherWordHD windBasePolyPassVtable;
+static WeatherWordHD windBaseGroupPassVtable;
+static SafeStringVtableHD windSafeStringVtable;
+namespace weather_move {
+static WeatherTrigHD windWeatherTrig;
+static f32 weatherSin(u32 angle) {
+  return windWeatherTrig.entries[(u16)angle >> 3].sin;
 }
-VERIFY(0x025642AC,rainWindMove);
+static f32 weatherCos(u32 angle) {
+  return windWeatherTrig.entries[(u16)angle >> 3].cos;
+}
+} // namespace weather_move
+static void windInvalidate(gptr<WeatherEmitterHD> *slot) {
+  WeatherEmitterHD *p = *slot;
+  weatherEmitterDelete(p, 1);
+  p = *slot;
+  u32 flags = p->mStatus;
+  p->mMaxFrame = -1;
+  p->mStatus = flags | 1;
+  *slot = nullptr;
+}
+static void windScale(WeatherEmitterHD *emitter, f32 scale) {
+  emitter->mGlobalScale.x = scale;
+  emitter->mGlobalScale.y = scale;
+  emitter->mGlobalScale.z = scale;
+  emitter->mGlobalParticleScale.x = scale;
+  emitter->mGlobalParticleScale.y = scale;
+  emitter->mGlobalParticleScale.z = scale;
+}
+static void windTranslate(WeatherEmitterHD *emitter,
+                          WeatherVectorHD *position) {
+  f32 x = position->x, y = position->y, z = position->z;
+  emitter->mGlobalTranslation.x = x;
+  u32 flip = emitter->mVolumeType;
+  emitter->mGlobalTranslation.y = y;
+  emitter->mGlobalTranslation.z = z;
+  if (flip >= 7)
+    emitter->mGlobalTranslation.y = -(f32)emitter->mGlobalTranslation.y;
+}
+static void windTotal(WindEffHD *slot, WeatherVectorHD *pos) {
+  pos->x = fadds_ppc(slot->mBasePos.x, slot->mPos.x);
+  pos->y = fadds_ppc(slot->mBasePos.y, slot->mPos.y);
+  pos->z = fadds_ppc(slot->mBasePos.z, slot->mPos.z);
+}
+static void windEmitterAlpha(WeatherEmitterHD *p, u8 alpha) {
+  p->mGlobalAlpha = alpha;
+}
+// HD: camera motion scales wind speed, player event status selects ten lines,
+// and custom wind changes scale/range. Seabird movement remains inlined in this
+// entry. Emitter writes retain native order, volume-dependent Y inversion and
+// both global scale triplets. Ground-query base vtables remain TU-specific.
+/* 025642AC */
+void dKyr_wind_move() {
+  WindScratchHD scratch;
+  // HD: keep GHS frame positions, including base-subobject aliases.
+  WindWorkHD *work = at<WindWorkHD>(ea(&scratch) - 8);
+  WeatherEnvironmentHD *env = weatherEnvironment();
+  WindPacketHD *pWind = env->mpWind;
+  WeatherCameraHD *pCamera = weatherPlay()->mpCamera;
+  WeatherPlayerHD *pPlayer = weatherPlay()->mpPlayer;
+  weatherGroundConstruct(&work->mGroundCheck);
+  work->mpPolyVtable = &work->mGroundCheck.dBgS_PolyPassChk::__vtbl;
+  work->mpGroupVtable = &work->mGroundCheck.dBgS_GrpPassChk::__vtbl;
+  work->mGroundCheck.mbCamThrough = 0;
+  work->mGroundCheck.mbLinkThrough = 0;
+  work->mGroundCheck.mbArrowThrough = 0;
+  work->mGroundCheck.mbBombThrough = 0;
+  work->mGroundCheck.mbBoomerangThrough = 0;
+  work->mGroundCheck.mbRopeThrough = 0;
+  work->mGroundCheck.dBgS_GrpPassChk::__vtbl = ea(&windAllGroupVtable);
+  work->mGroundCheck.mGrpPassChk =
+      ea(&work->mGroundCheck.dBgS_GrpPassChk::__vtbl);
+  work->mGroundCheck.cBgS_Chk::__vtbl = ea(&windAllCheckVtable);
+  work->mGroundCheck.cBgS_PolyInfo::__vtbl = ea(&windAllPolyInfoVtable);
+  work->mGroundCheck.mPolyPassChk =
+      ea(&work->mGroundCheck.dBgS_PolyPassChk::__vtbl);
+  work->mBasePolyInfoVtable = ea(&windBasePolyInfoVtable);
+  work->mGroundCheck.mGrp = 15;
+  work->mBaseGroupPassVtable = ea(&windBaseGroupPassVtable);
+  work->mGroundCheck.mbObjThrough = 1;
+  work->mBasePolyPassVtable = ea(&windBasePolyPassVtable);
+  work->mGroundCheck.dBgS_PolyPassChk::__vtbl = ea(&windAllPolyPassVtable);
+  WeatherVectorHD *direction = dKyw_get_wind_vecHD();
+  f32 power = dKyw_get_wind_powHD();
+  f32 windX = (f32)direction->x, windZ = (f32)direction->z,
+      windY = (f32)direction->y;
+  weatherPlay();
+  s32 count = (u32)env->mWindlineCount;
+  WeatherParticleListHD *particlesRoot = windParticleList;
+  u32 particles =
+      (u32)particlesRoot->mEndCount - (u32)particlesRoot->mBeginCount;
+  f32 range = 2e+03f, spawnDistance = 4e+03f, offsetY = range, scale = 1.0f;
+  work->mPosWindScale = 2.5e+03f;
+  work->mStateStep = 0.15f;
+  work->mOne = scale;
+  work->mPhaseStep = range;
+  work->mLoopChance = 0.2f;
+  work->mSwayAmplitude = 2.5e+02f;
+  f32 distance = weatherDistanceSquared(&pWind->mOldEyePosHD, &pCamera->mEye);
+  distance = weatherSqrtFloat(distance);
+  distance /= 1e+02f;
+  if (distance > (f32)work->mOne)
+    distance = (f32)work->mOne;
+  f32 speed = fmadds(96.0f, distance, 8e+01f);
+  pWind->mOldEyePosHD.words[0] = (u32)pCamera->mEye.words[0];
+  pWind->mOldEyePosHD.words[1] = (u32)pCamera->mEye.words[1];
+  pWind->mOldEyePosHD.words[2] = (u32)pCamera->mEye.words[2];
+  work->mMoveSpeed = speed;
+  if (weatherPlay()->mEventStatus.get() & WindlinePlayerEventHD)
+    count = 10;
+  f32 custom = (f32)env->mCustomWindPower, zero = 0.0f;
+  u32 oldCustom = (u8)pWind->mbHasCustomWindPower;
+  work->mZero = zero;
+  work->mFadeDistance = 2e+02f;
+  bool reset = false;
+  if (custom > zero) {
+    range = 1.6e+02f;
+    offsetY = (f32)work->mFadeDistance;
+    spawnDistance = 5e+01f;
+    scale = 0.14f;
+    count = 9;
+    work->mSwayAmplitude = offsetY;
+    work->mMoveSpeed = 8.0f;
+    work->mPhaseStep = 1.5e+02f;
+    work->mLoopChance = (f32)work->mZero;
+    work->mPosWindScale = range;
+    work->mStateStep = 0.18f;
+    if (!oldCustom) {
+      pWind->mbHasCustomWindPower = 1;
+      reset = true;
+    }
+  } else if (oldCustom) {
+    pWind->mbHasCustomWindPower = 0;
+    reset = true;
+  }
+  if (reset)
+    for (u32 i = 0; i < 30; i++) {
+      WindEffHD *slot = &pWind->mWindEff[i];
+      if (slot->mpEmitter.get())
+        windInvalidate(&slot->mpEmitter);
+      slot->mState = 0;
+    }
+  dKy_set_eyevect_calc2HD(pCamera, &work->mEyeVector, spawnDistance,
+                          spawnDistance);
+  work->mWindLengthXZSquared = fmadds(windX, windX, fmuls_ppc(windZ, windZ));
+  const f32 half = 0.5f, epsilon = 0.01f, fifth = 0.2f, third = 0.3f,
+            tenth = 0.1f, fourth = 0.4f, angleMaximum = 65535.0f,
+            height = 1e+04f;
+  work->mAlphaMinimum = 0.001f;
+  work->mAlphaStep = 0.05f;
+  f32 lineZero = (f32)work->mZero, one = (f32)work->mOne;
+  bool enough = !(power < third);
+  for (s32 i = 0; i < 30; i++) {
+    WindEffHD *slot = &pWind->mWindEff[i];
+    u32 state = (u32)slot->mState;
+    if (i >= count && !state) {
+      if (slot->mpEmitter.get())
+        windInvalidate(&slot->mpEmitter);
+      continue;
+    }
+    if (!state) {
+      if (!enough || particles > 1500)
+        continue;
+      u32 tick = windFrameCounter.get();
+      if (((tick >> 4) & 7) == ((u32)i & 3) && !(u8)pWind->mbHasCustomWindPower)
+        continue;
+      slot->mStateTimer = lineZero;
+      slot->mAlpha = lineZero;
+      slot->mSwerveAnimCounter = 0;
+      WeatherVectorHD *base = pWind->mbHasCustomWindPower.get() == 1
+                                  ? &pPlayer->mCurrentPos
+                                  : &work->mEyeVector;
+      f32 x = (f32)base->x, y = (f32)base->y, z = (f32)base->z;
+      slot->mBasePos.x = x;
+      slot->mBasePos.y = fadds_ppc(y, offsetY);
+      slot->mBasePos.z = z;
+      slot->mPos.x = cM_rndFX(range);
+      slot->mPos.y = cM_rndFX(range);
+      slot->mPos.z = cM_rndFX(range);
+      f32 random = cM_rndF(one);
+      f32 spread =
+          fmadds((f32)work->mPosWindScale, random, (f32)work->mPosWindScale);
+      x = fnmsubs(windX, spread, (f32)slot->mPos.x);
+      y = fnmsubs(windY, spread, (f32)slot->mPos.y);
+      z = fnmsubs(windZ, spread, (f32)slot->mPos.z);
+      slot->mPos.x = x;
+      slot->mPos.y = y;
+      slot->mPos.z = z;
+      random = cM_rndF(angleMaximum);
+      slot->mSwerveAnimCounter = (u16)ftoi(random);
+      windTotal(slot, &work->mPosition);
+      if ((u8)pWind->mbHasCustomWindPower != 1) {
+        reinterpret_cast<WeatherVectorHD *>(&work->mGroundCheck.m_pos)
+            ->words[0] = (u32)work->mPosition.words[0];
+        work->mGroundCheck.m_pos.y = fadds_ppc((f32)work->mPosition.y, height);
+        reinterpret_cast<WeatherVectorHD *>(&work->mGroundCheck.m_pos)
+            ->words[2] = (u32)work->mPosition.words[2];
+        WeatherPlayHD *game = weatherPlay();
+        f32 ground =
+            weatherGroundCross(game->mBackgroundSystem, &work->mGroundCheck);
+        if ((f32)work->mPosition.y < ground) {
+          f32 raised = fadds_ppc(ground, offsetY);
+          random = cM_rndF(offsetY);
+          slot->mPos.y =
+              fsubs_ppc(fadds_ppc(raised, random), (f32)slot->mBasePos.y);
+        }
+      }
+      windTotal(slot, &work->mPosition);
+      WeatherPlayHD *game = weatherPlay();
+      WeatherEmitterHD *emitter =
+          weatherParticleSet(game->mpParticle, 0, ID_AK_JN_WINDLINE00,
+                             &work->mPosition, 0, 0, 255, 0, -1, 0, 0, 0);
+      slot->mpEmitter = emitter;
+      if (emitter) {
+        emitter->mGlobalAlpha = 0;
+        windScale(slot->mpEmitter.get(), scale);
+        slot->mState = 1;
+      }
+      f32 horizontal = weatherSqrtFloat((f32)work->mWindLengthXZSquared);
+      work->mFloatScratch = horizontal;
+      u32 angle = weatherAtan2Angle(windX, windZ);
+      slot->mAngleXZ = angle;
+      angle = weatherAtan2Angle(windY, (f32)work->mFloatScratch);
+      slot->mLoopCounter = 0;
+      slot->mAngleY = angle;
+      random = cM_rndF(one);
+      slot->mLoopEnabled = !(random > (f32)work->mLoopChance);
+      continue;
+    }
+    if (state == 3) {
+      if (!(u8)pWind->mbHasCustomWindPower)
+        slot->mState = 0;
+      continue;
+    }
+    if (state > 3)
+      continue;
+    s32 oldAngle = (s16)slot->mSwerveAnimCounter, oldPitch = (s16)slot->mAngleY;
+    u16 phase = (u16)ftoi(fmadds((f32)work->mPhaseStep, power, (f32)oldAngle));
+    f32 deficit = fsubs_ppc(one, power);
+    f32 sway = (f32)work->mSwayAmplitude;
+    sway = fnmsubs(fmuls_ppc(sway, fifth), deficit, sway);
+    slot->mSwerveAnimCounter = phase;
+    slot->mAngleY = (u16)ftoi(fmadds(weatherSin(phase), sway, (f32)oldPitch));
+    s32 yaw = (s16)slot->mAngleXZ;
+    slot->mAngleXZ =
+        (u16)ftoi(i & 1 ? fmadds(weatherSin((u16)slot->mSwerveAnimCounter),
+                                 sway, (f32)yaw)
+                        : fnmsubs(weatherSin((u16)slot->mSwerveAnimCounter),
+                                  sway, (f32)yaw));
+    if ((f32)slot->mStateTimer > fourth && (u8)slot->mLoopEnabled == 1) {
+      s32 add = 3600 + i * 200;
+      u32 counter = (u32)slot->mLoopCounter + add;
+      slot->mLoopCounter = counter;
+      slot->mAngleY = (s16)slot->mAngleY + add;
+      if ((s32)counter > 60535)
+        slot->mLoopEnabled = 0;
+    } else {
+      f32 horizontal = weatherSqrtFloat((f32)work->mWindLengthXZSquared);
+      work->mFloatScratch = horizontal;
+      u32 targetYaw = weatherAtan2Angle(windX, windZ);
+      u32 targetPitch = weatherAtan2Angle(windY, (f32)work->mFloatScratch);
+      weatherAddCalcAngle(&slot->mAngleY, targetPitch, 10, 1000, 1);
+      weatherAddCalcAngle(&slot->mAngleXZ, targetYaw, 10, 1000, 1);
+    }
+    u32 pitch = (u16)slot->mAngleY, heading = (u16)slot->mAngleXZ;
+    f32 moveX = fmuls_ppc(weatherCos(pitch), weatherSin(heading));
+    work->mMoveDirection.x = moveX;
+    work->mMoveDirection.y = weatherSin((u16)slot->mAngleY);
+    work->mMoveDirection.z = fmuls_ppc(weatherCos((u16)slot->mAngleY),
+                                       weatherCos((u16)slot->mAngleXZ));
+    f32 fraction = (f32)(s16)slot->mSwerveAnimCounter / angleMaximum;
+    f32 baseSpeed = (f32)work->mMoveSpeed;
+    f32 effective = fnmsubs(fmuls_ppc(baseSpeed, fifth), deficit, baseSpeed);
+    if (fraction > one)
+      fraction = one;
+    else
+      fraction = fraction >= 0 ? fraction : lineZero;
+    effective = fmadds(fmuls_ppc(effective, third), fraction, effective);
+    slot->mPos.x = fmadds(moveX, effective, (f32)slot->mPos.x);
+    slot->mPos.y =
+        fmadds((f32)work->mMoveDirection.y, effective, (f32)slot->mPos.y);
+    slot->mPos.z =
+        fmadds((f32)work->mMoveDirection.z, effective, (f32)slot->mPos.z);
+    windTotal(slot, &work->mPosition);
+    windTranslate(slot->mpEmitter.get(), &work->mPosition);
+    f32 step = fmadds(fmuls_ppc((f32)work->mStateStep, tenth), (f32)(i / 30),
+                      (f32)work->mStateStep);
+    f32 distanceToEye =
+        weatherDistanceSquared(&work->mPosition, &pCamera->mEye);
+    distanceToEye = weatherSqrtFloat(distanceToEye);
+    distanceToEye /= (f32)work->mFadeDistance;
+    if (distanceToEye > one)
+      distanceToEye = one;
+    u32 red = (u8)env->mBG0_K0[0], green = (u8)env->mBG0_K0[1],
+        blue = (u8)env->mBG0_K0[2];
+    f32 color = fmuls_ppc((f32)(red + green + blue), 0.33333334f) / 255.0f;
+    color = fmuls_ppc(color, color);
+    f32 alpha = fmuls_ppc(power, fmuls_ppc(distanceToEye, color));
+    work->mFloatScratch = alpha;
+    if (alpha < half)
+      work->mFloatScratch = half;
+    weatherVectorScale(&work->mMoveDirection, &work->mGroundOffset, 2.5e+02f);
+    weatherVectorAdd(&work->mPosition, &work->mGroundPosition,
+                     &work->mGroundOffset);
+    reinterpret_cast<WeatherVectorHD *>(&work->mGroundCheck.m_pos)->words[0] =
+        (u32)work->mGroundPosition.words[0];
+    work->mGroundCheck.m_pos.y =
+        fadds_ppc((f32)work->mGroundPosition.y, height);
+    reinterpret_cast<WeatherVectorHD *>(&work->mGroundCheck.m_pos)->words[2] =
+        (u32)work->mGroundPosition.words[2];
+    WeatherPlayHD *game = weatherPlay();
+    f32 ground =
+        weatherGroundCross(game->mBackgroundSystem, &work->mGroundCheck);
+    if (ground > (f32)work->mPosition.y) {
+      step = fmadds((f32)i, epsilon, fifth);
+      slot->mState = 2;
+    }
+    windEmitterAlpha(slot->mpEmitter,
+                     (u8)ftoi(fmuls_ppc(fmuls_ppc((f32)slot->mAlpha, 255.0f),
+                                        (f32)work->mFloatScratch)));
+    if ((u32)slot->mState == 1) {
+      weatherAddCalc(&slot->mStateTimer, one, third, fmuls_ppc(step, tenth),
+                     epsilon);
+      f32 timer = (f32)slot->mStateTimer;
+      if (!(timer < one)) {
+        slot->mState = 2;
+        timer = (f32)slot->mStateTimer;
+      }
+      if (timer > half)
+        weatherAddCalc(&slot->mAlpha, one, half, (f32)work->mAlphaStep,
+                       (f32)work->mAlphaMinimum);
+    } else {
+      weatherAddCalc(&slot->mStateTimer, lineZero, fourth,
+                     fmuls_ppc(step, fmadds((f32)i, epsilon, tenth)), epsilon);
+      f32 timer = (f32)slot->mStateTimer;
+      if (!(timer > lineZero)) {
+        windInvalidate(&slot->mpEmitter);
+        slot->mState = 0;
+        u32 custom = (u8)pWind->mbHasCustomWindPower;
+        timer = (f32)slot->mStateTimer;
+        if (custom == 1)
+          slot->mState = 4;
+      }
+      if (timer < half)
+        weatherAddCalc(&slot->mAlpha, lineZero, half, (f32)work->mAlphaStep,
+                       (f32)work->mAlphaMinimum);
+    }
+  }
+  // dKyr_kamome_move is inlined in this HD entry.
+  env = weatherEnvironment();
+  pWind = env->mpWind;
+  pCamera = weatherPlay()->mpCamera;
+  dKyw_get_wind_vecHD();
+  work->mSeaName.mStringTop = at<be<u8>>(guest_addr("sea"));
+  work->mSeaName.__vtbl = &windSafeStringVtable;
+  WeatherPlayHD *game = weatherPlay();
+  work->mStageName.mStringTop = game->mStageName;
+  work->mStageName.__vtbl = &windSafeStringVtable;
+  work->mSeaName.assureTermination();
+  work->mSeaName.assureTermination();
+  be<u8> *name = work->mSeaName.mStringTop;
+  work->mStageName.assureTermination();
+  bool sea = name == work->mStageName.mStringTop.get();
+  if (!sea) {
+    be<u8> *a = work->mSeaName.mStringTop;
+    be<u8> *b = work->mStageName.mStringTop;
+    for (u32 j = 0; j < 0x40001; j++) {
+      u8 left = a[j], right = b[j];
+      if (left != right)
+        break;
+      if (!left) {
+        sea = true;
+        break;
+      }
+    }
+  }
+  bool spawn = false;
+  if (sea) {
+    bool bad = false;
+    WeatherEnvironmentHD *e = weatherEnvironment();
+    if ((u8)e->mColpatCurr == 1) {
+      e = weatherEnvironment();
+      bad = (f32)e->mColPatBlend > (f32)work->mZero;
+    }
+    if (!bad) {
+      e = weatherEnvironment();
+      if ((u8)e->mColpatPrev == 1) {
+        e = weatherEnvironment();
+        bad = (f32)e->mColPatBlend < (f32)work->mOne;
+      }
+    }
+    if (!bad) {
+      e = weatherEnvironment();
+      if ((u8)e->mColpatCurr == 2) {
+        e = weatherEnvironment();
+        bad = (f32)e->mColPatBlend > (f32)work->mZero;
+      }
+    }
+    if (!bad) {
+      e = weatherEnvironment();
+      if ((u8)e->mColpatPrev == 2) {
+        e = weatherEnvironment();
+        bad = (f32)e->mColPatBlend < (f32)work->mOne;
+      }
+    }
+    spawn = !bad;
+  }
+  f32 birdZero = (f32)work->mZero, birdOne = (f32)work->mOne,
+      negativeMaximum = -1e+02f, radius = 7e+03f, vertical = 3.2e+03f,
+      maximum = 1e+02f, minimum = 8e+01f, negativeMinimum = -8e+01f,
+      fadeFactor = 0.1f, fadeStep = 0.003f, fadeMinimum = 1e-06f,
+      birdScale = 1.6f, birdDelay = 3e+02f, resetDelay = 9e+02f,
+      resetSpread = 6e+02f, angleRange = 65535.0f;
+  for (u32 i = 0; i < 2; i++) {
+    KamomeEffHD *bird = &pWind->mKamomeEff[i];
+    u32 state = (u8)bird->mStatus;
+    if (state == 0) {
+      if (spawn) {
+        s32 timer = (s16)bird->mTimer;
+        if (!timer) {
+          bird->mAngleY = (u16)ftoi(cM_rndFX(angleRange));
+          f32 r = cM_rndFX(angleRange);
+          u32 angle = (u16)bird->mAngleY;
+          bird->mAngleX = (u16)ftoi(r);
+          f32 x = fmadds(weatherSin(angle), radius, (f32)pCamera->mEye.x),
+              z = fmadds(weatherCos(angle), radius, (f32)pCamera->mEye.z);
+          bird->mPos.y = 4.5e+03f;
+          bird->mPos.x = x;
+          bird->mPos.z = z;
+          bird->mAngleYSpeed = cM_rndFX(birdOne);
+          bird->mScale = birdZero;
+          r = cM_rndF(1.8e+02f);
+          bird->mTimer = (u16)ftoi(fadds_ppc(r, birdDelay));
+          game = weatherPlay();
+          WeatherEmitterHD *emitter =
+              weatherParticleSet(game->mpParticle, 0, ID_AK_JN_KAMOME00,
+                                 &bird->mPos, 0, 0, 255, 0, -1, 0, 0, 0);
+          u8 old = (u8)bird->mStatus;
+          bird->mpEmitter = emitter;
+          bird->mStatus = old + 1;
+        } else
+          bird->mTimer = timer - 1;
+      }
+    } else if (state == 1 && bird->mpEmitter.get()) {
+      f32 old = (f32)bird->mAngleYSpeed, r = cM_rndFX(birdOne),
+          speed = fadds_ppc(old, r);
+      if (old < birdZero) {
+        if (speed < negativeMaximum)
+          speed = negativeMaximum;
+        else if (speed > negativeMinimum)
+          speed = negativeMinimum;
+      } else {
+        if (speed > maximum)
+          speed = maximum;
+        else if (speed < minimum)
+          speed = minimum;
+      }
+      bird->mAngleYSpeed = speed;
+      work->mOldBirdTarget.x =
+          fmuls_ppc(weatherSin((u16)bird->mAngleY), radius);
+      work->mOldBirdTarget.y =
+          std::fabs(fmuls_ppc(weatherSin((u16)bird->mAngleX), vertical));
+      work->mOldBirdTarget.z =
+          fmuls_ppc(weatherCos((u16)bird->mAngleY), radius);
+      s32 angle = (s16)bird->mAngleY;
+      u16 heading = (u16)ftoi(
+          fmadds((f32)bird->mAngleYSpeed, (f32)bird->mScale, (f32)angle));
+      s32 pitch = (s16)bird->mAngleX;
+      bird->mAngleY = heading;
+      bird->mAngleX = pitch + 15;
+      f32 x = fmuls_ppc(weatherSin(heading), radius),
+          y = std::fabs(fmuls_ppc(weatherSin((u16)bird->mAngleX), vertical)),
+          z = fmuls_ppc(weatherCos((u16)bird->mAngleY), radius);
+      work->mNewBirdTarget.x = x;
+      work->mNewBirdTarget.y = y;
+      work->mNewBirdTarget.z = z;
+      y = fadds_ppc(y, 4.8e+03f);
+      x = fadds_ppc((f32)pCamera->mEye.x, x);
+      z = fadds_ppc((f32)pCamera->mEye.z, z);
+      bird->mPos.y = y;
+      bird->mPos.x = x;
+      bird->mPos.z = z;
+      work->mBirdPosition.x = x;
+      work->mBirdPosition.y = y;
+      work->mBirdPosition.z = z;
+      windTranslate(bird->mpEmitter.get(), &work->mBirdPosition);
+      if ((s16)bird->mTimer && spawn) {
+        weatherAddCalc(&bird->mScale, birdOne, fadeFactor, fadeStep,
+                       fadeMinimum);
+        bird->mTimer = (s16)bird->mTimer - 1;
+      } else {
+        weatherAddCalc(&bird->mScale, birdZero, fadeFactor, fadeStep,
+                       fadeMinimum);
+        if ((f32)bird->mScale < 0.001f)
+          bird->mStatus = (u8)bird->mStatus + 1;
+      }
+      dKyr_get_vectle_calcHD(&work->mOldBirdTarget, &work->mNewBirdTarget,
+                             &work->mBirdTargetRotation);
+      u32 rotation = weatherAtan2Angle((f32)work->mBirdTargetRotation.x,
+                                       (f32)work->mBirdTargetRotation.z);
+      weatherRotationMatrix(0, rotation, 0, &bird->mpEmitter->mGlobalRotation);
+    } else if (state == 2) {
+      windInvalidate(&bird->mpEmitter);
+      bird->mStatus = 0;
+      f32 r = cM_rndF(resetSpread);
+      bird->mTimer = (u16)ftoi(fadds_ppc(r, resetDelay));
+    }
+    if (bird->mpEmitter.get()) {
+      game = weatherPlay();
+      if (game->mpView.get()) {
+        game = weatherPlay();
+        WeatherViewHD *view = game->mpView;
+        f32 fov = (f32)view->mFovy / 26.0f;
+        f32 scale = (f32)bird->mScale;
+        if (!(fov < birdOne))
+          fov = birdOne;
+        windScale(bird->mpEmitter.get(),
+                  fmuls_ppc(fmuls_ppc(scale, fov), birdScale));
+      }
+      WeatherEmitterHD *emitter = bird->mpEmitter;
+      u32 red = (u8)weatherEnvironment()->mBG0_K0[0];
+      u32 green = (u8)weatherEnvironment()->mBG0_K0[1];
+      u32 blue = (u8)weatherEnvironment()->mBG0_K0[2];
+      emitter->mGlobalPrmColor[0] = red;
+      emitter->mGlobalPrmColor[1] = green;
+      emitter->mGlobalPrmColor[2] = blue;
+    }
+  }
+  work->mGroundCheck.cBgS_PolyInfo::__vtbl = work->mBasePolyInfoVtable.get();
+  be<u32> *first = work->mpPolyVtable;
+  be<u32> *second = work->mpGroupVtable;
+  u32 a = work->mBasePolyPassVtable, b = work->mBaseGroupPassVtable;
+  *first = a;
+  *second = b;
+  weatherGroundDestruct(&work->mGroundCheck, 0);
+}
+/* WWHD glue (tools/verify/autoglue.py)
+str 1004F3A8 "sea"
+data windFrameCounter 101FF558
+data windParticleList 1047B2D4
+data windAllGroupVtable 1004F494
+data windAllCheckVtable 1004F474
+data windAllPolyInfoVtable 1004F484
+data windAllPolyPassVtable 1004F4A4
+data windBasePolyInfoVtable 1004F404
+data windBasePolyPassVtable 1004F424
+data windBaseGroupPassVtable 1004F3E4
+data windSafeStringVtable 1004F3AC
+data windWeatherTrig 104A44F8
+ext 02555D0C WeatherEnvironmentHD *weatherEnvironment()
+ext 025200D4 WeatherPlayHD *weatherPlay()
+ext 02008E0C void weatherGroundConstruct(dBgS_GndChk*)
+ext 02008DAC void weatherGroundDestruct(dBgS_GndChk*,s32)
+ext 0257DAA8 WeatherVectorHD *dKyw_get_wind_vecHD()
+ext 02578348 f32 dKyw_get_wind_powHD()
+ext 0256401C void dKy_set_eyevect_calc2HD(WeatherCameraHD *, WeatherVectorHD *, f32, f32)
+ext 028E8DE8 f32 weatherDistanceSquared(WeatherVectorHD *, WeatherVectorHD *)
+ext 028F4384 f32 weatherSqrtFloat(f32)
+ext 02008974 f32 weatherGroundCross(void*, dBgS_GndChk*)
+ext 025A847C WeatherEmitterHD* weatherParticleSet(WeatherParticleControllerHD*,u32,u32,WeatherVectorHD*,u32,u32,u32,u32,s32,u32,u32,u32)
+ext 020195B0 u32 weatherAtan2Angle(f32,f32)
+ext 0200F378 void weatherAddCalcAngle(be<s16>*,u32,s32,s32,s32)
+ext 0201AE48 void weatherVectorScale(WeatherVectorHD*,WeatherVectorHD*,f32)
+ext 0201AD78 void weatherVectorAdd(WeatherVectorHD*,WeatherVectorHD*,WeatherVectorHD*)
+ext 0200ECD4 void weatherAddCalc(be<f32> *, f32, f32, f32, f32)
+ext 02563F64 void dKyr_get_vectle_calcHD(WeatherVectorHD*, WeatherVectorHD*, WeatherVectorHD*)
+ext 028245AC void weatherRotationMatrix(u32,u32,u32,WeatherMatrixHD*)
+ext 0281DE68 void weatherEmitterDelete(WeatherEmitterHD*,u32)
+*/

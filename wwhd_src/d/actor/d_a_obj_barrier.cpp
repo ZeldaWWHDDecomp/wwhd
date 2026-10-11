@@ -1,706 +1,837 @@
-/* Hyrule electric barrier. Actual HD TU02322390..0232409B,35 functions,
- * including specialized effect BCK construction and trailing cleanup helpers.
- */
+/** Hyrule electric barrier. */
+// HD: Expanded animation containers and a texture-object replacement path.
+// Preserve the render-list changes, collision order and specialized BCK lifetime.
 #include "d/actor/d_a_obj_barrier.h"
-#include "bindings.h"
+#include "gc_api/tu.h"
+const gc_tu_data gc_tu = {.safeString = 0x1002602C};
+void* barrierResource(void*, BarrierArchive*, s32);
+BarrierGameInfo* barrierGameInfo();
+void barrierAssert(const char*, s32, const char*);
+void* barrierAllocate(u32);
+void barrierConstructFrame(void*, s32);
+void barrierConstructBinding(void*);
+void barrierDestroyArray(void*, u32, u32, void*, u32, u32);
+void barrierDestroyCylinder(BarrierCylinder*, u32);
+void barrierDestroyStatus(dCcD_Stts*, u32);
+void barrierDestroyActor(void*, u32);
+void barrierDelete(void*);
+void barrierRegisterDestructor(void*);
+void barrierInitRandom(void*);
+void barrierInitRandomByte(void*);
+void barrierReleaseBg(dBgS*, dBgW*);
+void barrierConstructStatus(dCcD_Stts*);
+void barrierSetCollider(void*, BarrierCylinder*);
+void barrierCylinderCenter(cM3dGCyl*, cXyz*);
+void barrierCylinderHeight(cM3dGCyl*, f32);
+void barrierCylinderRadius(cM3dGCyl*, f32);
+void barrierConstructCylinder(cM3dGCyl*);
+u32 barrierAtan2(f32, f32);
+void barrierConstructAngle(csXyz*, s32, s32, s32);
+void barrierSubtract(cXyz*, cXyz*, cXyz*);
+s32 barrierRegisterBg(dBgS*, dBgW*, daObjBarrier_c*);
+dBgW* barrierNewBackground(void*, u32, Mtx34*);
+void barrierMoveBg(dBgW*);
+fopAc_ac_c* barrierHitActor(void*);
+void barrierConstructGlobalStatus(void*);
+void barrierMoveStatus(void*);
+void barrierInitStatus(dCcD_Stts*, s32, s32, daObjBarrier_c*);
+void barrierConstructCollider(BarrierCylinder*);
+void barrierClearAt(BarrierCylinder*);
+s32 barrierCheckAt(BarrierCylinder*);
+void barrierClearTg(BarrierCylinder*);
+s32 barrierCheckTg(BarrierCylinder*);
+u32 barrierTgHitObject(BarrierCylinder*);
+void barrierSetCylinder(BarrierCylinder*, void*);
+s32 barrierLoad(request_of_phase_process_class*, const char*);
+void barrierUnload(request_of_phase_process_class*, const char*);
+s32 barrierEventIndex(void*, const char*, u32);
+s32 barrierEventEnd(void*, s32);
+void barrierParticle(void*, u32, u32, cXyz*, csXyz*, u32, u32, u32, s32, u32, u32, u32);
+void barrierSetEvent(void*, u32);
+s32 barrierCheckEvent(void*, u32);
+void barrierConstructActor(daObjBarrier_c*);
+void barrierDeleteActor(daObjBarrier_c*);
+s32 barrierEnterHeap(daObjBarrier_c*, void*, u32);
+void barrierOrderEvent(daObjBarrier_c*, s32, u32, u32, u32, u32);
+void barrierUpdateModel(J3DModel*, u32);
+J3DModel* barrierNewModel(void*, u32, u32);
+void barrierConstructBtk(mDoExt_btkAnm*);
+s32 barrierInitBtk(mDoExt_btkAnm*, void*, void*, u32, s32, f32, s32, s32, u32, u32);
+void barrierEntryBtk(mDoExt_btkAnm*, J3DModelData*, f32);
+void barrierConstructBrk(BarrierBrkAnm*);
+s32 barrierInitBrk(BarrierBrkAnm*, void*, void*, u32, s32, f32, s32, s32, u32, u32);
+void barrierEntryBrk(BarrierBrkAnm*, J3DModelData*, f32);
+s32 barrierInitBck(mDoExt_bckAnm*, void*, void*, u32, s32, f32, s32, s32, u32);
+void barrierEntryBck(mDoExt_bckAnm*, J3DModelData*, f32);
+void barrierChangeScene(u32, u32);
+void barrierRotateZXY(Mtx34*, s32, s32, s32);
+be<u8>* barrierTextureName(JUTNameTab*, u32);
+BarrierTextureObject* barrierTextureCtor(void*, void*);
+void barrierMatrixDtor(void*, u32);
+void* barrierTextureHandle(void*, u32);
+f64 barrierSquareMag(cXyz*);
+void barrierCopyMtx(Mtx34*, Mtx34*);
+void barrierConstructArray(void*, u32, u32, void*);
+f64 barrierSqrt(f64);
+void* barrier_bckConstructor(void*);
+void barrier_bckDestructor(void*, u32);
+BOOL barrier_heapCallback(daObjBarrier_c*);
+u32 barrier_parameter(daObjBarrier_c*, u32, u32);
+static u8 sActorVtable;
+static u8 sStatusVtable;
+static u8 sGlobalStatusVtable;
+static u8 sInitialShapeVtable;
+static u8 sCylinderAttrVtable;
+static u8 sHitInfoVtable;
+static u8 sShapeVtable;
+static u8 sCylinderVtable;
+static u8 sInitialMatrixVtable;
+static u8 sBindingVtable;
+static u8 sMatrixVtable;
+static void* sResourceControl;
+static void* sTextureControl;
+static BarrierSave* sSave;
+static u32 sDrawList;
+static u32 sXluDrawList;
+static BarrierHeaderStatics sHeader;
+static BarrierPiLimits sPiLimits;
+static BarrierTrigTable sTrig;
+static BarrierDummyName sDummyName;
+static u8 sPiRegistration;
+static u8 sRandomRegistration;
+static u8 sRandomByteRegistration;
+static u8 sAttackSource;
+static u8 sTargetSource;
+static u8 sBtkConstructor;
+static u8 sBrkConstructor;
+static void* resource(s32 index) {
+    gabi::Local<BarrierArchive> arc;
+    arc->mpName = gabi::at<char>(gabi::guest_addr("Ycage"));
+    arc->mVtable = gc_tu.safeString;
+    return barrierResource(sResourceControl, arc.get(), index);
+}
+static BarrierGameInfo* play() { return barrierGameInfo(); }
+static BarrierPlayer* player() { return play()->mpPlayer; }
+static void assertion(const char* file, s32 line, const char* expression) {
+    barrierAssert(file, line, expression);
+}
+static void setInvisibleList() {
+    sDrawList = play()->mInvisibleDrawList;
+    sXluDrawList = play()->mInvisibleXluDrawList;
+}
+static void setNormalList() {
+    sDrawList = play()->mDrawList;
+    sXluDrawList = play()->mXluDrawList;
+}
+static void copyVectorWord(be<f32>* dst, const be<f32>* src) {
+    gabi::store<u32>(gabi::ea(dst), gabi::load<u32>(gabi::ea(src)));
+}
 namespace {
-template <class T> T read(u32 a, u32 o = 0) { return *gabi::at<be<T>>(a + o); }
-template <class T> void write(u32 a, u32 o, T v) {
-  *gabi::at<be<T>>(a + o) = v;
-}
-void *ptr(u32 a, u32 o = 0) { return gabi::at<void>(a + o); }
-struct BarrierArchive {
-  be<u32> name, vt;
-};
-u32 resource(s32 index) {
-  gabi::Local<BarrierArchive> arc;
-  arc->name = 0x10026024;
-  arc->vt = 0x1002602C;
-  return gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), arc.get(),
-                         index);
-}
-u32 play() { return gabi::call<u32>(0x025200D4); }
-u32 player() { return read<u32>(play(), 0x5B2C); }
-void assertion(u32 file, s32 line, u32 expression) {
-  gabi::call(0x0273AA24, ptr(file), line, ptr(expression));
-}
-void setRenderList(u32 first, u32 second) {
-  write<u32>(0x104B4634, 0, read<u32>(play(), first));
-  write<u32>(0x104B4634, 4, read<u32>(play(), second));
-}
+u32 shiftLeft(u32 value, u32 shift) { return (shift & 32) ? 0 : value << (shift & 31); }
+u32 shiftRight(u32 value, u32 shift) { return (shift & 32) ? 0 : value >> (shift & 31); }
 } // namespace
-BOOL barrier_animationInit(BarrierAnimation *animation) {
-  WWHD_FUNC(0x02322390, BOOL, animation);
-  u32 data = resource(10), btk = resource(18), brk = resource(14);
-  BOOL ok = 1;
-  if (!data || !btk || !brk) {
-    assertion(0x1002611C, 411, 0x10026118);
-    ok = 0;
-  } else {
-    animation->model =
-        gabi::call<u32>(0x025E38E0, ptr(data), 0x80000, 0x01000200);
-    s32 btkOK = gabi::call<s32>(0x025E7CE0, &animation->btk, ptr(data),
-                                ptr(btk), 1, 2, 1.f, 0, -1, 0, 0);
-    s32 brkOK = gabi::call<s32>(0x025E8154, &animation->brk, ptr(data),
-                                ptr(brk), 1, 2, 1.f, 0, -1, 0, 0);
-    if (!animation->model || !btkOK || !brkOK)
-      ok = 0;
-  }
-  return ok;
-}
-VERIFY(0x02322390, barrier_animationInit);
-BOOL barrier_createHeap(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x023229A4, BOOL, barrier);
-  s32 anm = gabi::call<s32>(0x02322390, &barrier->animation),
-      effect = gabi::call<s32>(0x02322760, &barrier->effect);
-  BOOL ok = 1;
-  if (!anm || !effect)
-    ok = 0;
-  else {
-    u32 dzb = resource(22);
-    barrier->background =
-        gabi::call<u32>(0x024F2478, ptr(dzb), 1, &barrier->backgroundMatrix);
-    if (!barrier->background)
-      ok = 0;
-  }
-  return ok;
-}
-VERIFY(0x023229A4, barrier_createHeap);
-BOOL barrier_heapCallback(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322A50, BOOL, barrier);
-  return gabi::call<BOOL>(0x023229A4, barrier);
-}
-VERIFY(0x02322A50, barrier_heapCallback);
-void barrier_initMatrix(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322A54, void, barrier);
-  u32 model = barrier->animation.model;
-  J3DModel_setBaseScale(gabi::at<J3DModel>(model), &barrier->scale);
-  mDoMtx_stack_c::transS(barrier->current.pos.x, barrier->current.pos.y,
-                         barrier->current.pos.z);
-  mDoMtx_stack_c::YrotM(barrier->shape_angle.y);
-  J3DModel_setBaseTRMtx(gabi::at<J3DModel>((u32)barrier->animation.model),
-                        mDoMtx_stack_c::get());
-  mDoMtx_stack_c::scaleM(barrier->scale.x, barrier->scale.y, barrier->scale.z);
-  gabi::call(0x028E90D4, mDoMtx_stack_c::get(), &barrier->backgroundMatrix);
-}
-VERIFY(0x02322A54, barrier_initMatrix);
-void barrier_effectCreate(BarrierEffect *effect) {
-  WWHD_FUNC(0x02322B48, void, effect);
-  for (u32 i = 0; i < 4; i++) {
-    u32 model = effect->model[i];
-    f32 z = read<f32>(0x10469298, 8), x = read<f32>(0x10469298),
-        y = read<f32>(0x10469298, 4);
-    write<f32>(model, 0xBC, x);
-    write<f32>(model, 0xC4, z);
-    write<f32>(model, 0xC0, y);
-  }
-}
-VERIFY(0x02322B48, barrier_effectCreate);
-BOOL barrier_Create(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322E88, BOOL, barrier);
-  return gabi::call<BOOL>(0x02322B7C, barrier);
-}
-VERIFY(0x02322E88, barrier_Create);
-BOOL barrier_delete(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322E8C, BOOL, barrier);
-  if (barrier->active) {
-    gabi::call(0x025204C8, &barrier->phase, ptr(0x10026024));
-    if (read<u32>(gabi::ea(barrier), 0xF4) && barrier->background) {
-      if (read<u32>(barrier->background) < 256)
-        gabi::call(0x020087EC, ptr(play(), 0x12A0), ptr(barrier->background));
-      barrier->background = 0;
-    }
-  }
-  return 1;
-}
-VERIFY(0x02322E8C, barrier_delete);
-BOOL barrier_Delete(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322F10, BOOL, barrier);
-  return gabi::call<BOOL>(0x02322E8C, barrier);
-}
-VERIFY(0x02322F10, barrier_Delete);
-BOOL barrier_effectCheckActor(BarrierEffect *effect, void *actor) {
-  WWHD_FUNC(0x02323000, BOOL, effect, actor);
-  for (u32 i = 0; i < 4; i++)
-    if (effect->hitActor[i] == gabi::ea(actor))
-      return 1;
-  return 0;
-}
-VERIFY(0x02323000, barrier_effectCheckActor);
-void barrier_effectExecute(BarrierEffect *effect) {
-  WWHD_FUNC(0x02323AB4, void, effect);
-  u32 flags = effect->activeFlags;
-  for (u32 i = 0; i < 4; i++)
-    if (flags & (1u << i)) {
-      effect->btk[i].play();
-      if (effect->btk[i].mFrameCtrl.checkState(1) ||
-          effect->btk[i].mFrameCtrl.mRate == 0.f) {
-        flags ^= 1u << i;
-        effect->hitActor[i] = 0;
-      }
-    }
-  effect->activeFlags = flags;
-}
-VERIFY(0x02323AB4, barrier_effectExecute);
-BOOL barrier_execute(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323B74, BOOL, barrier);
-  barrier->animation.btk.play();
-  gabi::call(0x02322F14, barrier);
-  gabi::call(0x024F43DC, ptr(barrier->background));
-  gabi::call(0x02515E50, ptr(gabi::ea(barrier), 0x4F8));
-  gabi::call(0x02515E50, ptr(gabi::ea(barrier), 0x534));
-  gabi::call(0x023234F0, barrier);
-  if (!gabi::call<s32>(0x023235B4, barrier))
-    gabi::call(0x023236E8, barrier);
-  if (!gabi::call<s32>(0x02323A44, barrier))
-    gabi::call(0x02323AB4, &barrier->effect);
-  return 1;
-}
-VERIFY(0x02323B74, barrier_execute);
-BOOL barrier_Execute(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323C00, BOOL, barrier);
-  return gabi::call<BOOL>(0x02323B74, barrier);
-}
-VERIFY(0x02323C00, barrier_Execute);
-BOOL barrier_Draw(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323E28, BOOL, barrier);
-  return gabi::call<BOOL>(0x02323D60, barrier);
-}
-VERIFY(0x02323E28, barrier_Draw);
-BOOL barrier_IsDelete() {
-  WWHD_FUNC(0x02323E2C, BOOL);
-  return 1;
-}
-VERIFY(0x02323E2C, barrier_IsDelete);
-u32 barrier_parameter(daObjBarrier_c *barrier, u32 width, u32 shift) {
-  WWHD_FUNC(0x02324080, u32, barrier, width, shift);
-  u32 mask = (width & 32) ? 0 : (1u << (width & 31));
-  u32 value = (shift & 32) ? 0 : ((u32)barrier->mParameters >> (shift & 31));
-  return value & (mask - 1);
-}
-VERIFY(0x02324080, barrier_parameter);
 
-void barrier_brkAnimationPlay(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322F14, void, barrier);
-  gabi::Local<cXyz> delta, horizontal;
-  gabi::call(0x0201ADE0, ptr(player(), 0x314), delta.get(),
-             &barrier->current.pos);
-  horizontal->x = delta->x;
-  horizontal->y = 0.f;
-  horizontal->z = delta->z;
-  f64 distance = gabi::call<f64>(0x028F4384,
-                                 gabi::call<f64>(0x028E8DD0, horizontal.get()));
-  f32 radius = gabi::fmsubs(1000.f, barrier->scale.x, 150.f);
-  f32 depth = distance > radius ? 0.f : f32(radius - distance);
-  barrier->animation.brkFrame =
-      depth > 700.f ? 1.f : gabi::fmadds(1.f - depth / 700.f, 59.f, 1.f);
+/* 02322A54 */
+void daObjBarrier_c::init_mtx() {
+    J3DModel* model = mAnm.mpModel;
+    J3DModel_setBaseScale(model, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::YrotM(shape_angle.y);
+    J3DModel_setBaseTRMtx(mAnm.mpModel.get(), mDoMtx_stack_c::get());
+    mDoMtx_stack_c::scaleM(scale.x, scale.y, scale.z);
+    barrierCopyMtx(mDoMtx_stack_c::get(), &mBgMtx);
 }
-VERIFY(0x02322F14, barrier_brkAnimationPlay);
-void barrier_breakStartWait(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x0232384C, void, barrier);
-  if (gabi::call<s32>(0x025B8B94, ptr(read<u32>(0x101F84DC), 0x644), 0x3980) !=
-      1)
-    return;
-  u32 link = player();
-  gabi::Local<cXyz> delta, horizontal;
-  gabi::call(0x0201ADE0, ptr(link, 0x314), delta.get(), &barrier->current.pos);
-  horizontal->x = delta->x;
-  horizontal->y = 0.f;
-  horizontal->z = delta->z;
-  f64 distance = gabi::call<f64>(0x028F4384,
-                                 gabi::call<f64>(0x028E8DD0, horizontal.get()));
-  if (distance < 8800.f)
-    return;
-  if (read<u8>(read<u32>(0x101F84DC), 0x2E) != 0x3E)
-    return;
-  if (!read<u16>(play(), 0x5BAC))
-    return;
-  u8 cut = read<u8>(link, 0x3AC);
-  if (cut < 1 || cut > 10)
-    return;
-  gabi::call(0x025B8B68, ptr(read<u32>(0x101F84DC), 0x644), 0x2C02);
-  barrier->eventID =
-      gabi::call<s32>(0x02543F10, ptr(play(), 0x52C4), ptr(0x1002622C), 255);
-  barrier->procedure = 1;
-}
-VERIFY(0x0232384C, barrier_breakStartWait);
-void barrier_breakOrder(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323958, void, barrier);
-  if (read<u16>(gabi::ea(barrier), 0xF8) == 2) {
-    barrier->procedure = 2;
-    return;
-  }
-  gabi::call(0x025D7A58, barrier, (s32)(s16)barrier->eventID, 255, 65535, 0, 1);
-  write<u16>(gabi::ea(barrier), 0xFA, read<u16>(gabi::ea(barrier), 0xFA) | 2);
-}
-VERIFY(0x02323958, barrier_breakOrder);
-void barrier_breakEndWait(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x023239D4, void, barrier);
-  s32 event = (s16)barrier->eventID;
-  if (gabi::call<s32>(0x025440C8, ptr(play(), 0x52C4), event)) {
-    u32 game = play();
-    write<u16>(game, 0x52B8, read<u16>(game, 0x52B8) | 8);
-    gabi::call(0x025D57E0, barrier);
-    gabi::call(0x025F05D0, 26, 0);
-  }
-}
-VERIFY(0x023239D4, barrier_breakEndWait);
-BOOL barrier_breakCheck(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323A44, BOOL, barrier);
-  if (barrier->moya)
-    return 0;
-  switch ((u32)barrier->procedure) {
-  case 0:
-    gabi::call(0x0232384C, barrier);
-    return 0;
-  case 1:
-    gabi::call(0x02323958, barrier);
-    return 1;
-  case 2:
-    gabi::call(0x023239D4, barrier);
-    return 1;
-  default:
-    return 0;
-  }
-}
-VERIFY(0x02323A44, barrier_breakCheck);
-void *barrier_bckConstructor(void *object) {
-  WWHD_FUNC(0x02323EE0, void *, object);
-  u32 address = gabi::ea(object);
-  if (!address) {
-    address = gabi::call<u32>(0x0273AD10, 0x8C);
-    if (!address)
-      return nullptr;
-  }
-  gabi::call(0x027F2BC0, ptr(address), 0);
-  write<u32>(address, 0x10, 0x1016E54C);
-  gabi::call(0x027DA984, ptr(address, 0x14));
-  write<u32>(address, 0x88, 0);
-  write<u32>(address, 0x48, 0x1016D820);
-  write<u32>(address, 0x58, 0);
-  write<u32>(address, 0x84, 0);
-  write<u32>(address, 0x10, 0x10026054);
-  write<u32>(address, 0x80, 0);
-  write<u32>(address, 0x7C, 0);
-  return ptr(address);
-}
-VERIFY(0x02323EE0, barrier_bckConstructor);
-void barrier_trivialDestructor(void *object, u32 flags) {
-  WWHD_FUNC(0x02323F70, void, object, flags);
-  if (object && (flags & 1))
-    gabi::call(0x0273AF40, object);
-}
-VERIFY(0x02323F70, barrier_trivialDestructor);
-void barrier_bckDestructor(void *object, u32 flags) {
-  WWHD_FUNC(0x02323F84, void, object, flags);
-  if (object) {
-    gabi::call(0x027F3628, ptr(gabi::ea(object), 0x10), 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, object);
-  }
-}
-VERIFY(0x02323F84, barrier_bckDestructor);
-void barrier_actorDestructor(void *object, u32 flags) {
-  WWHD_FUNC(0x02323FD8, void, object, flags);
-  if (!object)
-    return;
-  u32 address = gabi::ea(object);
-  gabi::call(0x028F0164, ptr(address, 0x998), 4, 0x8C, ptr(0x02323F84), 0, 0);
-  gabi::call(0x02515A70, ptr(address, 0x684), 2);
-  gabi::call(0x02515A70, ptr(address, 0x554), 2);
-  gabi::call(0x02515860, ptr(address, 0x518), 2);
-  gabi::call(0x02515860, ptr(address, 0x4DC), 2);
-  gabi::call(0x025D50BC, object, 0);
-  if (flags & 1)
-    gabi::call(0x0273AF40, object);
-}
-VERIFY(0x02323FD8, barrier_actorDestructor);
-void barrier_noop(void *object) { WWHD_FUNC(0x0232407C, void, object); }
-VERIFY(0x0232407C, barrier_noop);
-
-void barrier_effectDraw(BarrierEffect *effect) {
-  WWHD_FUNC(0x02323C04, void, effect);
-  u32 flags = effect->activeFlags;
-  for (u32 i = 0; i < 4; i++)
-    if (flags & (1u << i)) {
-      u32 model = effect->model[i];
-      gabi::call(0x025E7FC4, &effect->btk[i], ptr(read<u32>(model, 0xAC)),
-                 (f32)effect->btk[i].mFrameCtrl.mFrame);
-      f32 frame = (s16)gabi::ftoi(effect->btk[i].mFrameCtrl.mFrame);
-      gabi::call(0x025E86B8, &effect->bck[i], ptr(read<u32>(model, 0xAC)),
-                 frame);
-      frame = (s16)gabi::ftoi(effect->btk[i].mFrameCtrl.mFrame);
-      gabi::call(0x025E83FC, &effect->brk[i], ptr(read<u32>(model, 0xAC)),
-                 frame);
-      setRenderList(0x5D8C, 0x5D90);
-      gabi::call(0x025E2DE0, ptr(model), 0);
-      setRenderList(0x5D78, 0x5D7C);
-    }
-}
-VERIFY(0x02323C04, barrier_effectDraw);
-BOOL barrier_draw(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02323D60, BOOL, barrier);
-  if (!barrier->procedure) {
-    if (!barrier->moya && barrier->animation.brkFrame > 1.f) {
-      gabi::call(0x025E7FC4, &barrier->animation.btk,
-                 ptr(read<u32>(barrier->animation.model, 0xAC)),
-                 (f32)barrier->animation.btk.mFrameCtrl.mFrame);
-      f32 frame = (s16)gabi::ftoi(barrier->animation.brkFrame);
-      gabi::call(0x025E83FC, &barrier->animation.brk,
-                 ptr(read<u32>(barrier->animation.model, 0xAC)), frame);
-      gabi::call(0x025E2DE0, ptr(barrier->animation.model), 0);
-    }
-    gabi::call(0x02323C04, &barrier->effect);
-  }
-  return 1;
-}
-VERIFY(0x02323D60, barrier_draw);
-void barrier_staticInit() {
-  WWHD_FUNC(0x02323E34, void);
-  for (s32 i = 3; i >= 0; i--)
-    write<u32>(0x10469288, i * 4, 0);
-  gabi::call(0x028F026C, ptr(0x101C7FA4));
-  write<f32>(0x1046927C, 0, read<f32>(0x10026238));
-  write<f32>(0x10469280, 0, read<f32>(0x1002623C));
-  gabi::call(0x028ED6F8, ptr(0x10469284));
-  gabi::call(0x028F026C, ptr(0x101C7FB0));
-  gabi::call(0x028EAB2C, ptr(0x10469285));
-  gabi::call(0x028F026C, ptr(0x101C7FBC));
-  for (u32 i = 0; i < 3; i++)
-    write<f32>(0x10469298, i * 4, 1.f);
-}
-VERIFY(0x02323E34, barrier_staticInit);
-void barrier_checkCollisionAttack(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x023234F0, void, barrier);
-  u32 address = gabi::ea(barrier);
-  if (gabi::call<s32>(0x025160DC, ptr(address, 0x554))) {
-    u32 actor = gabi::call<u32>(0x02515BBC, ptr(address, 0x5A4));
-    u32 link = player();
-    if (actor && actor == link) {
-      gabi::Local<cXyz> center, hit;
-      center->x = read<f32>(address, 0x66C);
-      center->y = read<f32>(address, 0x670);
-      center->z = read<f32>(address, 0x674);
-      f32 radius = 1000.f * barrier->scale.x;
-      hit->x = read<f32>(actor, 0x314);
-      hit->y = read<f32>(actor, 0x318);
-      hit->z = read<f32>(actor, 0x31C);
-      gabi::call(0x0232302C, &barrier->effect, ptr(actor), center.get(),
-                 hit.get(), 1, radius);
-    }
-    gabi::call(0x02516094, ptr(address, 0x554));
-  }
-}
-VERIFY(0x023234F0, barrier_checkCollisionAttack);
-BOOL barrier_checkCollisionTarget(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x023235B4, BOOL, barrier);
-  u32 address = gabi::ea(barrier);
-  if (gabi::call<s32>(0x025162A4, ptr(address, 0x684))) {
-    u32 actor = gabi::call<u32>(0x02515BBC, ptr(address, 0x718));
-    if (actor) {
-      f32 z = read<f32>(actor, 0x31C), y = read<f32>(actor, 0x318),
-          x = read<f32>(actor, 0x314);
-      s32 target = 1;
-      if (actor == player()) {
-        target = 0;
-        if (gabi::call<u32>(0x02516300, ptr(address, 0x684))) {
-          y = read<f32>(address, 0x754);
-          x = read<f32>(address, 0x750);
-          z = read<f32>(address, 0x758);
-        }
-      }
-      gabi::Local<cXyz> center, hit;
-      center->x = read<f32>(address, 0x79C);
-      center->y = read<f32>(address, 0x7A0);
-      center->z = read<f32>(address, 0x7A4);
-      f32 radius = 1000.f * barrier->scale.x;
-      hit->x = x;
-      hit->y = y;
-      hit->z = z;
-      gabi::call(0x0232302C, &barrier->effect, ptr(actor), center.get(),
-                 hit.get(), target, radius);
-    }
-    gabi::call(0x0251621C, ptr(address, 0x684));
-  }
-  return 0;
-}
-VERIFY(0x023235B4, barrier_checkCollisionTarget);
-void barrier_registerCollision(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x023236E8, void, barrier);
-  u32 address = gabi::ea(barrier);
-  gabi::Local<cXyz> center, delta;
-  center->x = barrier->current.pos.x;
-  center->y = barrier->current.pos.y - 300.f;
-  center->z = barrier->current.pos.z;
-  f32 height = gabi::fmadds(10000.f, barrier->scale.y, 300.f),
-      radius = 1000.f * barrier->scale.x;
-  gabi::call(0x020182E0, ptr(address, 0x66C), center.get());
-  gabi::call(0x020184DC, ptr(address, 0x66C), radius - 60.f);
-  gabi::call(0x02018428, ptr(address, 0x66C), height);
-  gabi::call(0x020182E0, ptr(address, 0x79C), center.get());
-  gabi::call(0x020184DC, ptr(address, 0x79C), radius - 20.f);
-  gabi::call(0x02018428, ptr(address, 0x79C), height);
-  gabi::call(0x0201ADE0, &barrier->current.pos, delta.get(),
-             ptr(player(), 0x314));
-  write<u32>(address, 0x5D0, read<u32>(gabi::ea(delta.get())));
-  write<u32>(address, 0x5D8, read<u32>(gabi::ea(delta.get()), 8));
-  write<u32>(address, 0x5D4, read<u32>(gabi::ea(delta.get()), 4));
-  gabi::call(0x0200E240, ptr(play(), 0x26A4), ptr(address, 0x554));
-  gabi::call(0x0200E240, ptr(play(), 0x26A4), ptr(address, 0x684));
-}
-VERIFY(0x023236E8, barrier_registerCollision);
-
-BOOL barrier_effectInit(BarrierEffect *effect) {
-  WWHD_FUNC(0x02322760, BOOL, effect);
-  u32 data = resource(11), btk = resource(19), bck = resource(7),
-      brk = resource(15);
-  if (!data || !btk || !bck || !brk) {
-    assertion(0x10026184, 1048, 0x10026180);
-    return 0;
-  }
-  for (u32 i = 0; i < 4; i++) {
-    effect->model[i] =
-        gabi::call<u32>(0x025E38E0, ptr(data), 0x80000, 0x05020200);
-    gabi::call(0x02322518, effect, i);
-    s32 btkOK = gabi::call<s32>(0x025E7CE0, &effect->btk[i], ptr(data),
-                                ptr(btk), 1, 0, 1.f, 0, -1, 0, 0);
-    s32 bckOK = gabi::call<s32>(0x025E8508, &effect->bck[i], ptr(data),
-                                ptr(bck), 1, 0, 0.f, 0, -1, 0);
-    s32 brkOK = gabi::call<s32>(0x025E8154, &effect->brk[i], ptr(data),
-                                ptr(brk), 1, 0, 0.f, 0, -1, 0, 0);
-    if (!effect->model[i] || !btkOK || !bckOK || !brkOK)
-      return 0;
-  }
-  return 1;
-}
-VERIFY(0x02322760, barrier_effectInit);
-BOOL barrier_create(daObjBarrier_c *barrier) {
-  WWHD_FUNC(0x02322B7C, BOOL, barrier);
-  u32 a = gabi::ea(barrier);
-  s32 phase = 5;
-  if (!(read<u32>(a, 0x2E4) & 8)) {
-    if (a) {
-      gabi::call(0x025D4ED0, barrier);
-      write<u32>(a, 0xB4, 0x1002607C);
-      gabi::call(0x025E7C6C, &barrier->animation.btk);
-      gabi::call(0x025E80D0, &barrier->animation.brk);
-      barrier->animation.brkFrame = 0.f;
-      gabi::call(0x0200BD2C, ptr(a, 0x4DC));
-      gabi::call(0x02515DA0, ptr(a, 0x4F8));
-      write<u32>(a, 0x4F4, 0x1004AE88);
-      write<u32>(a, 0x4F8, 0x1004AEC0);
-      gabi::call(0x0200BD2C, ptr(a, 0x518));
-      gabi::call(0x02515DA0, ptr(a, 0x534));
-      write<u32>(a, 0x530, 0x1004AE88);
-      write<u32>(a, 0x534, 0x1004AEC0);
-      gabi::call(0x02515FB8, ptr(a, 0x554));
-      write<u32>(a, 0x668, 0x100015A8);
-      write<u32>(a, 0x664, 0x10026044);
-      gabi::call(0x02018590, ptr(a, 0x66C));
-      write<u32>(a, 0x590, 0x1004B108);
-      write<u32>(a, 0x668, 0x1004B160);
-      write<u32>(a, 0x680, 0x1004B150);
-      gabi::call(0x02515FB8, ptr(a, 0x684));
-      write<u32>(a, 0x798, 0x100015A8);
-      write<u32>(a, 0x794, 0x10026044);
-      gabi::call(0x02018590, ptr(a, 0x79C));
-      write<u32>(a, 0x6C0, 0x1004B108);
-      write<u32>(a, 0x7B0, 0x1004B150);
-      write<u32>(a, 0x798, 0x1004B160);
-      gabi::call(0x028EFFD0, ptr(a, 0x7C8), 4, 0x74, ptr(0x025E7C6C));
-      gabi::call(0x028EFFD0, ptr(a, 0x998), 4, 0x8C, ptr(0x02323EE0));
-      gabi::call(0x028EFFD0, ptr(a, 0xBC8), 4, 0x78, ptr(0x025E80D0));
-      barrier->effect.activeFlags = 0;
-    }
-    write<u32>(a, 0x2E4, read<u32>(a, 0x2E4) | 8);
-  }
-  if (read<u8>(a, 0xC)) {
-    if (!barrier->active)
-      return phase;
-  } else {
-    s32 moya = gabi::call<s32>(0x02324080, barrier, 1, 8);
-    barrier->moya = moya;
-    if (!moya && gabi::call<s32>(0x025B8B94, ptr(read<u32>(0x101F84DC), 0x644),
-                                 0x2C02) == 1)
-      barrier->active = 0;
-    else
-      barrier->active = 1;
-    if (!barrier->active)
-      return phase;
-  }
-  phase = gabi::call<s32>(0x02520460, &barrier->phase, ptr(0x10026024));
-  if (phase != 4)
-    return phase;
-  if (!gabi::call<s32>(0x025D63E8, barrier, ptr(0x02322A50), 0x30E0))
-    return 5;
-  if (gabi::call<s32>(0x024EEA6C, ptr(play(), 0x12A0), ptr(barrier->background),
-                      barrier))
-    return 5;
-  write<u32>(barrier->background, 0xA8, 0);
-  u32 model = barrier->animation.model;
-  barrier->scale.z = barrier->scale.x;
-  write<u32>(a, 0x348, model ? model + 0xC8 : 0);
-  gabi::call(0x02322A54, barrier);
-  gabi::call(0x02515F14, ptr(a, 0x4DC), 255, 255, barrier);
-  gabi::call(0x02516518, ptr(a, 0x554), ptr(0x1002608C));
-  write<u32>(a, 0x598, a + 0x4DC);
-  write<u32>(a, 0x594, read<u32>(a, 0x594) | 2);
-  gabi::call(0x02515F14, ptr(a, 0x518), 255, 255, barrier);
-  gabi::call(0x02516518, ptr(a, 0x684), ptr(0x100260D0));
-  write<u32>(a, 0x6C8, a + 0x518);
-  write<u32>(a, 0x6C4, read<u32>(a, 0x6C4) | 2);
-  if (gabi::call<s32>(0x02324080, barrier, 1, 16))
-    write<u8>(a, 0x568, 0);
-  gabi::call(0x02322B48, &barrier->effect);
-  return phase;
-}
-VERIFY(0x02322B7C, barrier_create);
-
-void barrier_effectBirth(BarrierEffect *effect, void *actor, cXyz *center,
-                         cXyz *hit, s32 check, f32 radius) {
-  WWHD_FUNC(0x0232302C, void, effect, actor, center, hit, check, radius);
-  if (check && gabi::call<s32>(0x02323000, effect, actor))
-    return;
-  gabi::Local<csXyz> angle;
-  gabi::Local<cXyz> position;
-  // Real callees write the caller linkage word at SP+4. Keep it outside locals.
-  gabi::Local<BarrierArchive> outgoingLinkage;
-  gabi::call(0x0201A478, angle.get(), 0, 0, 0);
-  u32 yaw = gabi::call<u32>(0x020195B0, (f32)center->x - (f32)hit->x,
-                            (f32)center->z - (f32)hit->z);
-  angle->y = yaw;
-  u32 trig = 0x104A44F8 + ((yaw & 0xFFFF) >> 3) * 8;
-  position->z = gabi::fnmsubs(radius, read<f32>(trig, 4), center->z);
-  position->x = gabi::fnmsubs(radius, read<f32>(trig), center->x);
-  u32 flags = effect->activeFlags;
-  position->y = hit->y;
-  s32 chosen = -1;
-  for (u32 i = 0; i < 4; i++)
-    if (!(flags & (1u << i))) {
-      chosen = i;
-      break;
-    }
-  if (chosen == -1) {
-    f32 maximum = -1.f;
-    for (u32 i = 0; i < 4; i++)
-      if (effect->btk[i].mFrameCtrl.mFrame > maximum) {
-        maximum = effect->btk[i].mFrameCtrl.mFrame;
-        chosen = i;
-      }
-  }
-  for (u32 i = 0; i < 4; i++)
-    if (flags & (1u << i)) {
-      if (i == (u32)chosen)
-        break;
-      effect->btk[i].mFrameCtrl.mRate =
-          ((f32)(s16)effect->btk[i].mFrameCtrl.mEnd -
-           (f32)effect->btk[i].mFrameCtrl.mFrame) /
-          3.f;
-      break;
-    }
-  if (chosen == -1)
-    assertion(0x100261BC, 952, 0x100261D0);
-  u32 a = gabi::ea(effect), index = (u32)chosen;
-  u32 bit = (index & 32) ? 0 : 1u << (index & 31);
-  effect->activeFlags = (u32)effect->activeFlags | bit;
-  u32 pos = a + 0x5F4 + index * 12;
-  write<f32>(pos, 0, position->x);
-  write<f32>(pos, 4, position->y);
-  write<f32>(pos, 8, position->z);
-  write<s16>(a + 0x624 + index * 2, 0, angle->y);
-  write<u32>(a + 0x62C + index * 4, 0, gabi::ea(actor));
-  u32 data = read<u32>(read<u32>(a + 4 + index * 4), 0xAC);
-  u32 btk = resource(19);
-  if (!btk)
-    assertion(0x100261BC, 969, 0x100261DC);
-  u32 bck = resource(7);
-  if (!bck)
-    assertion(0x100261BC, 974, 0x100261F0);
-  u32 brk = resource(15);
-  if (!brk)
-    assertion(0x100261BC, 979, 0x10026204);
-  gabi::call(0x025E7CE0, ptr(a + 0x14 + index * 0x74), ptr(data), ptr(btk), 1,
-             0, 1.f, 0, -1, 1, 0);
-  gabi::call(0x025E8508, ptr(a + 0x1E4 + index * 0x8C), ptr(data), ptr(bck), 1,
-             0, 0.f, 0, -1, 1);
-  gabi::call(0x025E8154, ptr(a + 0x414 + index * 0x78), ptr(data), ptr(brk), 1,
-             0, 0.f, 0, -1, 1, 0);
-  mDoMtx_stack_c::transS(position->x, position->y, position->z);
-  gabi::call(0x025F1B48, mDoMtx_stack_c::get(), 0, (s32)(s16)angle->y, 0);
-  J3DModel_setBaseTRMtx(gabi::at<J3DModel>(read<u32>(a + 4 + index * 4)),
-                        mDoMtx_stack_c::get());
-  gabi::call(0x025A847C, ptr(read<u32>(play(), 0x5AB0)), 0, 0x81A9,
-             position.get(), angle.get(), 0, 255, 0, -1, 0, 0, 0);
-}
-VERIFY(0x0232302C, barrier_effectBirth);
-namespace {
-u32 shiftLeft(u32 value, u32 shift) {
-  return (shift & 32) ? 0 : value << (shift & 31);
-}
-u32 shiftRight(u32 value, u32 shift) {
-  return (shift & 32) ? 0 : value >> (shift & 31);
-}
-struct BarrierTextureScratch {
-  u8 bytes[80];
-};
-} // namespace
-void barrier_effectSetDummyTexture(BarrierEffect *effect, u32 index) {
-  WWHD_FUNC(0x02322518, void, effect, index);
-  gabi::Local<BarrierTextureScratch> scratch;
-  u32 image = gabi::ea(scratch.get()) + 8;
-  u32 data = read<u32>(read<u32>(gabi::ea(effect) + 4 + index * 4), 0xAC);
-  u32 texture = read<u32>(data, 0x30), names = read<u32>(data, 0x34);
-  if (!texture)
-    assertion(0x10026138, 821, 0x10026158);
-  if (!names)
-    assertion(0x10026138, 822, 0x10026168);
-  for (u16 i = 0; i < read<u16>(texture); i++) {
-    u32 name = gabi::call<u32>(0x027ED1F0, ptr(names), (u32)i);
-    if (!name) {
-      assertion(0x10026138, 827, 0x1002614C);
-      continue;
-    }
-    u32 j = 0;
-    bool match;
-    do {
-      u8 a = read<u8>(name, j), b = read<u8>(0x10026130, j);
-      match = a == b;
-      if (!match || !a)
-        break;
-      j++;
-    } while (true);
-    if (!match)
-      continue;
-    u32 handle = gabi::call<u32>(0x027F81A4, ptr(read<u32>(0x101F9968)), 6);
-    u32 object = gabi::call<u32>(
-        0x02773680, ptr(gabi::call<u32>(0x0273AD10, 0xC0)), ptr(handle));
-    write<u32>(image, 0x20, object);
-    write<u16>(image, 2, read<u32>(object, 8));
-    write<u8>(image, 8, 0);
-    write<u16>(image, 4, read<u32>(object, 0xC));
-    u32 offset = (u32)i * 0x24, dest = read<u32>(texture, 4) + offset;
-    for (u32 k = 0; k < 9; k++)
-      write<u32>(dest, k * 4, read<u32>(image, k * 4));
-    dest = read<u32>(texture, 4) + offset;
-    write<u32>(dest, 0x1C, read<u32>(dest, 0x1C) + image - dest);
-    dest = read<u32>(texture, 4) + offset;
-    write<u32>(dest, 0xC, read<u32>(dest, 0xC) + image - dest);
-    dest = read<u32>(texture, 4) + offset;
-    write<u32>(dest, 0x20, read<u32>(image, 0x20));
-    u32 hi = read<u32>(texture, 0x18), lo = read<u32>(texture, 0x1C),
-        shift = i < 64 ? i : (u32)i - 64;
-    u32 shiftedHi = shiftLeft(hi, shift) | shiftRight(lo, 32 - shift) |
-                    shiftLeft(lo, shift + 32),
-        shiftedLo = shiftLeft(lo, shift);
-    if (i < 64) {
-      u32 oldLo = read<u32>(texture, 0xC), oldHi = read<u32>(texture, 8);
-      write<u32>(texture, 8, oldHi | shiftedHi);
-      write<u32>(texture, 0xC, oldLo | shiftedLo);
+/* 02322A50 */
+BOOL barrier_heapCallback(daObjBarrier_c* barrier) { return barrier->create_heap(); }
+/* 02322390 */
+BOOL daObjBarrier_anm_c::init() {
+    void* data = resource(dRes_INDEX_YCAGE_BDL_YCAGE00_e);
+    void* btk = resource(dRes_INDEX_YCAGE_BTK_YCAGE00_e);
+    void* brk = resource(dRes_INDEX_YCAGE_BRK_YCAGE00_e);
+    BOOL ok = 1;
+    if (!data || !btk || !brk) {
+        assertion("d_a_obj_barrier.cpp", 411, "0");
+        ok = 0;
     } else {
-      u32 oldHi = read<u32>(texture, 0x10), oldLo = read<u32>(texture, 0x14);
-      write<u32>(texture, 0x14, oldLo | shiftedLo);
-      write<u32>(texture, 0x10, oldHi | shiftedHi);
+        mpModel = barrierNewModel(data, 0x80000, 0x01000200);
+        s32 btkOK = barrierInitBtk(&mBtk, data, btk, 1, 2, 1.f, 0, -1, 0, 0);
+        s32 brkOK = barrierInitBrk(&mBrk, data, brk, 1, 2, 1.f, 0, -1, 0, 0);
+        if (!mpModel || !btkOK || !brkOK)
+            ok = 0;
     }
-  }
+    return ok;
 }
-VERIFY(0x02322518, barrier_effectSetDummyTexture);
+/* 023229A4 */
+BOOL daObjBarrier_c::create_heap() {
+    s32 anm = mAnm.init(), effect = mEffect.init();
+    BOOL ok = 1;
+    if (!anm || !effect)
+        ok = 0;
+    else {
+        void* dzb = resource(dRes_INDEX_YCAGE_DZB_KEKKAI_e);
+        mpBgW = barrierNewBackground(dzb, 1, &mBgMtx);
+        if (!mpBgW)
+            ok = 0;
+    }
+    return ok;
+}
+/* 023235B4 */
+BOOL daObjBarrier_c::checkCollision_Tg() {
+    if (barrierCheckTg(&mTgCyl)) {
+        fopAc_ac_c* actor = barrierHitActor(&mTgCyl.mGObjTg);
+        if (actor) {
+            f32 z = actor->current.pos.z, y = actor->current.pos.y, x = actor->current.pos.x;
+            s32 target = 1;
+            if (actor == player()) {
+                target = 0;
+                if (barrierTgHitObject(&mTgCyl)) {
+                    y = mTgCyl.mGObjTg.mHitPos.y;
+                    x = mTgCyl.mGObjTg.mHitPos.x;
+                    z = mTgCyl.mGObjTg.mHitPos.z;
+                }
+            }
+            gabi::Local<cXyz> center, hit;
+            center->x = mTgCyl.mCyl.mCenter.x;
+            center->y = mTgCyl.mCyl.mCenter.y;
+            center->z = mTgCyl.mCyl.mCenter.z;
+            f32 radius = 1000.f * scale.x;
+            hit->x = x;
+            hit->y = y;
+            hit->z = z;
+            mEffect.birth(actor, center.get(), hit.get(), target, radius);
+        }
+        barrierClearTg(&mTgCyl);
+    }
+    return 0;
+}
+/* 023234F0 */
+void daObjBarrier_c::checkCollision_At() {
+    if (barrierCheckAt(&mAtCyl)) {
+        fopAc_ac_c* actor = barrierHitActor(&mAtCyl.mGObjAt);
+        BarrierPlayer* link = player();
+        if (actor && actor == link) {
+            gabi::Local<cXyz> center, hit;
+            center->x = mAtCyl.mCyl.mCenter.x;
+            center->y = mAtCyl.mCyl.mCenter.y;
+            center->z = mAtCyl.mCyl.mCenter.z;
+            f32 radius = 1000.f * scale.x;
+            hit->x = actor->current.pos.x;
+            hit->y = actor->current.pos.y;
+            hit->z = actor->current.pos.z;
+            mEffect.birth(actor, center.get(), hit.get(), 1, radius);
+        }
+        barrierClearAt(&mAtCyl);
+    }
+}
+/* 023236E8 */
+void daObjBarrier_c::registCollisionTable() {
+    gabi::Local<cXyz> center, delta;
+    center->x = current.pos.x;
+    center->y = current.pos.y - 300.f;
+    center->z = current.pos.z;
+    f32 height = gabi::fmadds(10000.f, scale.y, 300.f), radius = 1000.f * scale.x;
+    barrierCylinderCenter(&mAtCyl.mCyl, center.get());
+    barrierCylinderRadius(&mAtCyl.mCyl, radius - 60.f);
+    barrierCylinderHeight(&mAtCyl.mCyl, height);
+    barrierCylinderCenter(&mTgCyl.mCyl, center.get());
+    barrierCylinderRadius(&mTgCyl.mCyl, radius - 20.f);
+    barrierCylinderHeight(&mTgCyl.mCyl, height);
+    barrierSubtract(&current.pos, delta.get(), &player()->current.pos);
+    copyVectorWord(&mAtCyl.mGObjAt.mVec.x, &delta->x);
+    copyVectorWord(&mAtCyl.mGObjAt.mVec.z, &delta->z);
+    copyVectorWord(&mAtCyl.mGObjAt.mVec.y, &delta->y);
+    barrierSetCollider(play()->mCollision, &mAtCyl);
+    barrierSetCollider(play()->mCollision, &mTgCyl);
+}
+
+/* 02322F14 */
+void daObjBarrier_c::brkAnmPlay() {
+    gabi::Local<cXyz> delta, horizontal;
+    barrierSubtract(&player()->current.pos, delta.get(), &current.pos);
+    horizontal->x = delta->x;
+    horizontal->y = 0.f;
+    horizontal->z = delta->z;
+    f64 distance = barrierSqrt(barrierSquareMag(horizontal.get()));
+    f32 radius = gabi::fmsubs(1000.f, scale.x, 150.f);
+    f32 depth = distance > radius ? 0.f : f32(radius - distance);
+    mAnm.mBrkFrame = depth > 700.f ? 1.f : gabi::fmadds(1.f - depth / 700.f, 59.f, 1.f);
+}
+/* 0232384C */
+void daObjBarrier_c::break_start_wait_proc() {
+    if (barrierCheckEvent(sSave->mEvent, 0x3980) != 1)
+        return;
+    BarrierPlayer* link = player();
+    gabi::Local<cXyz> delta, horizontal;
+    barrierSubtract(&link->current.pos, delta.get(), &current.pos);
+    horizontal->x = delta->x;
+    horizontal->y = 0.f;
+    horizontal->z = delta->z;
+    f64 distance = barrierSqrt(barrierSquareMag(horizontal.get()));
+    if (distance < 8800.f)
+        return;
+    if (sSave->mEquippedSword != 0x3E)
+        return;
+    if (!play()->mSwordActive)
+        return;
+    u8 cut = link->mCutType;
+    if (cut < 1 || cut > 10)
+        return;
+    barrierSetEvent(sSave->mEvent, 0x2C02);
+    mEventID = barrierEventIndex(play()->mEventManager, "seal", 255);
+    mBarrierProc = PROC_BREAK_ORDER_e;
+}
+/* 02323958 */
+void daObjBarrier_c::break_order_proc() {
+    if (eventInfo.mCommand == 2) {
+        mBarrierProc = PROC_BREAK_END_WAIT_e;
+        return;
+    }
+    barrierOrderEvent(this, (s32)(s16)mEventID, 255, 65535, 0, 1);
+    eventInfo.mCondition = (u16)eventInfo.mCondition | 2;
+}
+/* 023239D4 */
+void daObjBarrier_c::break_end_wait_proc() {
+    s32 event = (s16)mEventID;
+    if (barrierEventEnd(play()->mEventManager, event)) {
+        BarrierGameInfo* game = play();
+        game->mEvent.mEventFlag = (u16)game->mEvent.mEventFlag | 8;
+        barrierDeleteActor(this);
+        barrierChangeScene(26, 0);
+    }
+}
+/* 02323A44 */
+BOOL daObjBarrier_c::break_check() {
+    if (mMoya)
+        return 0;
+    switch ((u32)mBarrierProc) {
+    case PROC_BREAK_START_WAIT_e:
+        this->break_start_wait_proc();
+        return 0;
+    case PROC_BREAK_ORDER_e:
+        this->break_order_proc();
+        return 1;
+    case PROC_BREAK_END_WAIT_e:
+        this->break_end_wait_proc();
+        return 1;
+    default:
+        return 0;
+    }
+}
+/* 02322518 */
+void daObjBarrier_ef_c::setDummyTexture(u32 index) {
+    gabi::Local<BarrierTextureScratch> scratch;
+    BarrierImageWords* image = &scratch->mImage;
+    auto* data = reinterpret_cast<BarrierModelData*>(mpModel[index]->mModelData.get());
+    BarrierTexture* texture = data->mpTexture;
+    JUTNameTab* names = data->mpTextureNames;
+    if (!texture)
+        assertion("d_a_obj_barrier.cpp", 821, "texture != (0)");
+    if (!names)
+        assertion("d_a_obj_barrier.cpp", 822, "textureName != (0)");
+    for (u16 i = 0; i < texture->mNum; i++) {
+        be<u8>* name = barrierTextureName( names, (u32)i);
+        if (!name) {
+            assertion("d_a_obj_barrier.cpp", 827, "name != (0)");
+            continue;
+        }
+        u32 j = 0;
+        bool match;
+        do {
+            u8 a = name[j], b = sDummyName.mBytes[j];
+            match = a == b;
+            if (!match || !a)
+                break;
+            j++;
+        } while (true);
+        if (!match)
+            continue;
+        void* handle = barrierTextureHandle(sTextureControl, 6);
+        BarrierTextureObject* object =
+            barrierTextureCtor( barrierAllocate(0xC0), handle);
+        image->mImage.mpTexture = object;
+        image->mImage.mWidth = object->mWidth;
+        image->mImage.mIndexTexture = 0;
+        image->mImage.mHeight = object->mHeight;
+        BarrierImageWords* dest = &texture->mpImages[i];
+        for (u32 k = 0; k < 9; k++)
+            dest->mWords[k] = image->mWords[k];
+        dest = &texture->mpImages[i];
+        dest->mImage.mImageOffset =
+            (u32)dest->mImage.mImageOffset + gabi::ea(image) - gabi::ea(dest);
+        dest = &texture->mpImages[i];
+        dest->mImage.mPaletteOffset =
+            (u32)dest->mImage.mPaletteOffset + gabi::ea(image) - gabi::ea(dest);
+        dest = &texture->mpImages[i];
+        dest->mImage.mpTexture = image->mImage.mpTexture.get();
+        u32 hi = texture->mMaskHi, lo = texture->mMaskLo, shift = i < 64 ? i : (u32)i - 64;
+        u32 shiftedHi =
+                shiftLeft(hi, shift) | shiftRight(lo, 32 - shift) | shiftLeft(lo, shift + 32),
+            shiftedLo = shiftLeft(lo, shift);
+        if (i < 64) {
+            u32 oldLo = texture->mUsedLo, oldHi = texture->mUsedHi;
+            texture->mUsedHi = oldHi | shiftedHi;
+            texture->mUsedLo = oldLo | shiftedLo;
+        } else {
+            u32 oldHi = texture->mUsedHiExtra, oldLo = texture->mUsedLoExtra;
+            texture->mUsedLoExtra = oldLo | shiftedLo;
+            texture->mUsedHiExtra = oldHi | shiftedHi;
+        }
+    }
+}
+
+/* 02323000 */
+BOOL daObjBarrier_ef_c::checkHitActor(void* actor) {
+    for (u32 i = 0; i < 4; i++)
+        if (mHitActor[i].get() == actor)
+            return 1;
+    return 0;
+}
+/* 0232302C */
+void daObjBarrier_ef_c::birth(void* actor, cXyz* center, cXyz* hit, s32 check, f32 radius) {
+    if (check && this->checkHitActor(actor))
+        return;
+    gabi::Local<csXyz> angle;
+    gabi::Local<cXyz> position;
+    // Real callees write the caller linkage word at SP+4. Keep it outside locals.
+    gabi::Local<BarrierArchive> outgoingLinkage;
+    barrierConstructAngle(angle.get(), 0, 0, 0);
+    u32 yaw = barrierAtan2((f32)center->x - (f32)hit->x, (f32)center->z - (f32)hit->z);
+    angle->y = yaw;
+    u32 trig = (yaw & 0xFFFF) >> 3;
+    position->z = gabi::fnmsubs(radius, sTrig.mEntries[trig].mCos, center->z);
+    position->x = gabi::fnmsubs(radius, sTrig.mEntries[trig].mSin, center->x);
+    u32 flags = mActiveEffFlags;
+    position->y = hit->y;
+    s32 chosen = -1;
+    for (u32 i = 0; i < 4; i++)
+        if (!(flags & (1u << i))) {
+            chosen = i;
+            break;
+        }
+    if (chosen == -1) {
+        f32 maximum = -1.f;
+        for (u32 i = 0; i < 4; i++)
+            if (mBtk[i].mFrameCtrl.mFrame > maximum) {
+                maximum = mBtk[i].mFrameCtrl.mFrame;
+                chosen = i;
+            }
+    }
+    for (u32 i = 0; i < 4; i++)
+        if (flags & (1u << i)) {
+            if (i == (u32)chosen)
+                break;
+            mBtk[i].mFrameCtrl.mRate =
+                ((f32)(s16)mBtk[i].mFrameCtrl.mEnd - (f32)mBtk[i].mFrameCtrl.mFrame) / 3.f;
+            break;
+        }
+    if (chosen == -1)
+        assertion("d_a_obj_barrier.cpp", 952, "idx != -1");
+    u32 index = (u32)chosen;
+    u32 bit = (index & 32) ? 0 : 1u << (index & 31);
+    mActiveEffFlags = (u32)mActiveEffFlags | bit;
+    mPos[index].x = position->x;
+    mPos[index].y = position->y;
+    mPos[index].z = position->z;
+    mAngle[index] = angle->y;
+    mHitActor[index] = actor;
+    J3DModelData* data = mpModel[index]->mModelData;
+    void* btk = resource(dRes_INDEX_YCAGE_BTK_YHRBR00_e);
+    if (!btk)
+        assertion("d_a_obj_barrier.cpp", 969, "btk_anm_p != (0)");
+    void* bck = resource(dRes_INDEX_YCAGE_BCK_YHRBR00_e);
+    if (!bck)
+        assertion("d_a_obj_barrier.cpp", 974, "bck_anm_p != (0)");
+    void* brk = resource(dRes_INDEX_YCAGE_BRK_YHRBR00_e);
+    if (!brk)
+        assertion("d_a_obj_barrier.cpp", 979, "brk_anm_p != (0)");
+    barrierInitBtk(&mBtk[index], data, btk, 1, 0, 1.f, 0, -1, 1, 0);
+    barrierInitBck(&mBck[index], data, bck, 1, 0, 0.f, 0, -1, 1);
+    barrierInitBrk(&mBrk[index], data, brk, 1, 0, 0.f, 0, -1, 1, 0);
+    mDoMtx_stack_c::transS(position->x, position->y, position->z);
+    barrierRotateZXY(mDoMtx_stack_c::get(), 0, (s32)(s16)angle->y, 0);
+    J3DModel_setBaseTRMtx(mpModel[index].get(), mDoMtx_stack_c::get());
+    barrierParticle(play()->mpParticle.get(), 0, 0x81A9, position.get(), angle.get(), 0, 255, 0, -1,
+                    0, 0, 0);
+}
+/* 02322760 */
+BOOL daObjBarrier_ef_c::init() {
+    void* data = resource(dRes_INDEX_YCAGE_BDL_YHRBR00_e);
+    void* btk = resource(dRes_INDEX_YCAGE_BTK_YHRBR00_e);
+    void* bck = resource(dRes_INDEX_YCAGE_BCK_YHRBR00_e);
+    void* brk = resource(dRes_INDEX_YCAGE_BRK_YHRBR00_e);
+    if (!data || !btk || !bck || !brk) {
+        assertion("d_a_obj_barrier.cpp", 1048, "0");
+        return 0;
+    }
+    for (u32 i = 0; i < 4; i++) {
+        mpModel[i] = barrierNewModel(data, 0x80000, 0x05020200);
+        this->setDummyTexture(i);
+        s32 btkOK = barrierInitBtk(&mBtk[i], data, btk, 1, 0, 1.f, 0, -1, 0, 0);
+        s32 bckOK = barrierInitBck(&mBck[i], data, bck, 1, 0, 0.f, 0, -1, 0);
+        s32 brkOK = barrierInitBrk(&mBrk[i], data, brk, 1, 0, 0.f, 0, -1, 0, 0);
+        if (!mpModel[i] || !btkOK || !bckOK || !brkOK)
+            return 0;
+    }
+    return 1;
+}
+/* 02322B48 */
+void daObjBarrier_ef_c::create() {
+    for (u32 i = 0; i < 4; i++) {
+        J3DModel* model = mpModel[i];
+        f32 z = sHeader.mEffectScale.z, x = sHeader.mEffectScale.x, y = sHeader.mEffectScale.y;
+        model->mBaseScale.x = x;
+        model->mBaseScale.z = z;
+        model->mBaseScale.y = y;
+    }
+}
+/* 02323AB4 */
+void daObjBarrier_ef_c::execute() {
+    u32 flags = mActiveEffFlags;
+    for (u32 i = 0; i < 4; i++)
+        if (flags & (1u << i)) {
+            mBtk[i].play();
+            if (mBtk[i].mFrameCtrl.checkState(1) || mBtk[i].mFrameCtrl.mRate == 0.f) {
+                flags ^= 1u << i;
+                mHitActor[i] = 0;
+            }
+        }
+    mActiveEffFlags = flags;
+}
+/* 02323C04 */
+void daObjBarrier_ef_c::draw() {
+    u32 flags = mActiveEffFlags;
+    for (u32 i = 0; i < 4; i++)
+        if (flags & (1u << i)) {
+            J3DModel* model = mpModel[i];
+            barrierEntryBtk(&mBtk[i], model->mModelData.get(), (f32)mBtk[i].mFrameCtrl.mFrame);
+            f32 frame = (s16)gabi::ftoi(mBtk[i].mFrameCtrl.mFrame);
+            barrierEntryBck(&mBck[i], model->mModelData.get(), frame);
+            frame = (s16)gabi::ftoi(mBtk[i].mFrameCtrl.mFrame);
+            barrierEntryBrk(&mBrk[i], model->mModelData.get(), frame);
+            setInvisibleList();
+            barrierUpdateModel(model, 0);
+            setNormalList();
+        }
+}
+/* 02322B7C */
+BOOL daObjBarrier_c::_create() {
+    s32 phase = 5;
+    if (!(actor_condition & 8)) {
+        if (gabi::ea(this) != 0) {
+            barrierConstructActor(this);
+            __vtbl = gabi::ea(&sActorVtable);
+            barrierConstructBtk(&mAnm.mBtk);
+            barrierConstructBrk(&mAnm.mBrk);
+            mAnm.mBrkFrame = 0.f;
+            barrierConstructStatus(&mAtStts);
+            barrierConstructGlobalStatus(&mAtStts.__vtbl_gstts);
+            mAtStts.__vtbl = gabi::ea(&sStatusVtable);
+            mAtStts.__vtbl_gstts = gabi::ea(&sGlobalStatusVtable);
+            barrierConstructStatus(&mTgStts);
+            barrierConstructGlobalStatus(&mTgStts.__vtbl_gstts);
+            mTgStts.__vtbl = gabi::ea(&sStatusVtable);
+            mTgStts.__vtbl_gstts = gabi::ea(&sGlobalStatusVtable);
+            barrierConstructCollider(&mAtCyl);
+            mAtCyl.mShapeVtable = gabi::ea(&sInitialShapeVtable);
+            mAtCyl.mAttrVtable = gabi::ea(&sCylinderAttrVtable);
+            barrierConstructCylinder(&mAtCyl.mCyl);
+            mAtCyl.__vtbl_hitinf = gabi::ea(&sHitInfoVtable);
+            mAtCyl.mShapeVtable = gabi::ea(&sShapeVtable);
+            mAtCyl.mCyl.__vtbl = gabi::ea(&sCylinderVtable);
+            barrierConstructCollider(&mTgCyl);
+            mTgCyl.mShapeVtable = gabi::ea(&sInitialShapeVtable);
+            mTgCyl.mAttrVtable = gabi::ea(&sCylinderAttrVtable);
+            barrierConstructCylinder(&mTgCyl.mCyl);
+            mTgCyl.__vtbl_hitinf = gabi::ea(&sHitInfoVtable);
+            mTgCyl.mCyl.__vtbl = gabi::ea(&sCylinderVtable);
+            mTgCyl.mShapeVtable = gabi::ea(&sShapeVtable);
+            barrierConstructArray(&mEffect.mBtk, 4, 0x74, &sBtkConstructor);
+            barrierConstructArray(
+                &mEffect.mBck, 4, 0x8C,
+                gabi::at<void>(gabi::guest_fn((const void*)barrier_bckConstructor)));
+            barrierConstructArray(&mEffect.mBrk, 4, 0x78, &sBrkConstructor);
+            mEffect.mActiveEffFlags = 0;
+        }
+        actor_condition = actor_condition | 8;
+    }
+    if (mInitState) {
+        if (!mBarrierActive)
+            return phase;
+    } else {
+        s32 moya = barrier_parameter(this, PRM_MOYA_W, PRM_MOYA_S);
+        mMoya = moya;
+        if (!moya && barrierCheckEvent(sSave->mEvent, 0x2C02) == 1)
+            mBarrierActive = 0;
+        else
+            mBarrierActive = 1;
+        if (!mBarrierActive)
+            return phase;
+    }
+    phase = barrierLoad(&mPhase, "Ycage");
+    if (phase != 4)
+        return phase;
+    if (!barrierEnterHeap(this, gabi::at<void>(gabi::guest_fn((const void*)barrier_heapCallback)),
+                          0x30E0))
+        return 5;
+    if (barrierRegisterBg(&play()->mBgS, mpBgW.get(), this))
+        return 5;
+    reinterpret_cast<BarrierBackground*>(mpBgW.get())->mCorrectionCallback = 0;
+    J3DModel* model = mAnm.mpModel;
+    scale.z = scale.x;
+    cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    this->init_mtx();
+    barrierInitStatus(&mAtStts, 255, 255, this);
+    barrierSetCylinder(&mAtCyl, &sAttackSource);
+    mAtCyl.mStts = &mAtStts;
+    mAtCyl.mFlags = mAtCyl.mFlags | 2;
+    barrierInitStatus(&mTgStts, 255, 255, this);
+    barrierSetCylinder(&mTgCyl, &sTargetSource);
+    mTgCyl.mStts = &mTgStts;
+    mTgCyl.mFlags = mTgCyl.mFlags | 2;
+    if (barrier_parameter(this, PRM_DAMAGE_W, PRM_DAMAGE_S))
+        mAtCyl.mAtp = 0;
+    mEffect.create();
+    return phase;
+}
+
+/* 02322E8C */
+BOOL daObjBarrier_c::_delete() {
+    if (mBarrierActive) {
+        barrierUnload(&mPhase, "Ycage");
+        if (heap && mpBgW) {
+            if (mpBgW->m_id < 256)
+                barrierReleaseBg(&play()->mBgS, mpBgW.get());
+            mpBgW = 0;
+        }
+    }
+    return 1;
+}
+/* 02323B74 */
+BOOL daObjBarrier_c::_execute() {
+    mAnm.mBtk.play();
+    this->brkAnmPlay();
+    barrierMoveBg(mpBgW.get());
+    barrierMoveStatus(&mAtStts.__vtbl_gstts);
+    barrierMoveStatus(&mTgStts.__vtbl_gstts);
+    this->checkCollision_At();
+    if (!this->checkCollision_Tg())
+        this->registCollisionTable();
+    if (!this->break_check())
+        mEffect.execute();
+    return 1;
+}
+/* 02323D60 */
+BOOL daObjBarrier_c::_draw() {
+    if (!mBarrierProc) {
+        if (!mMoya && mAnm.mBrkFrame > 1.f) {
+            barrierEntryBtk(&mAnm.mBtk, mAnm.mpModel->mModelData.get(),
+                            (f32)mAnm.mBtk.mFrameCtrl.mFrame);
+            f32 frame = (s16)gabi::ftoi(mAnm.mBrkFrame);
+            barrierEntryBrk(&mAnm.mBrk, mAnm.mpModel->mModelData.get(), frame);
+            barrierUpdateModel(mAnm.mpModel.get(), 0);
+        }
+        mEffect.draw();
+    }
+    return 1;
+}
+/* 02322E88 */
+BOOL daObjBarrier_Create(daObjBarrier_c* barrier) { return barrier->_create(); }
+/* 02322F10 */
+BOOL daObjBarrier_Delete(daObjBarrier_c* barrier) { return barrier->_delete(); }
+/* 02323C00 */
+BOOL daObjBarrier_Execute(daObjBarrier_c* barrier) { return barrier->_execute(); }
+/* 02323E28 */
+BOOL daObjBarrier_Draw(daObjBarrier_c* barrier) { return barrier->_draw(); }
+/* 02323E2C */
+BOOL daObjBarrier_IsDelete() { return 1; }
+
+// HD: Compiler-generated and template code of this translation unit.
+/* 02323E34 */
+void barrier_staticInit() {
+    for (s32 i = 3; i >= 0; --i)
+        sHeader.mSeeds[i] = 0;
+    barrierRegisterDestructor(&sPiRegistration);
+    sHeader.mMin = sPiLimits.mMin;
+    sHeader.mMax = sPiLimits.mMax;
+    barrierInitRandom(&sHeader.mRandom);
+    barrierRegisterDestructor(&sRandomRegistration);
+    barrierInitRandomByte(&sHeader.mRandomBytes[1]);
+    barrierRegisterDestructor(&sRandomByteRegistration);
+    sHeader.mEffectScale.x = 1.f;
+    sHeader.mEffectScale.y = 1.f;
+    sHeader.mEffectScale.z = 1.f;
+}
+/* 02323EE0 */
+void* barrier_bckConstructor(void* object) {
+    auto* anm = static_cast<BarrierBckView*>(object);
+    if (!anm) {
+        anm = static_cast<BarrierBckView*>(barrierAllocate(0x8C));
+        if (!anm)
+            return nullptr;
+    }
+    barrierConstructFrame(anm, 0);
+    anm->mMatrixCalcVtable = gabi::ea(&sInitialMatrixVtable);
+    barrierConstructBinding(anm->mBinding);
+    anm->mLast = 0;
+    anm->mBindingVtable = gabi::ea(&sBindingVtable);
+    anm->mAnimation = 0;
+    anm->mReserved = 0;
+    anm->mMatrixCalcVtable = gabi::ea(&sMatrixVtable);
+    anm->mFlags = 0;
+    anm->mState = 0;
+    return anm;
+}
+
+/* 02323F70 */
+void barrier_trivialDestructor(void* object, u32 flags) {
+    if (object && (flags & 1))
+        barrierDelete(object);
+}
+/* 02323F84 */
+void barrier_bckDestructor(void* object, u32 flags) {
+    if (object) {
+        barrierMatrixDtor(&static_cast<BarrierBckView*>(object)->mMatrixCalcVtable, 0);
+        if (flags & 1)
+            barrierDelete(object);
+    }
+}
+/* 02323FD8 */
+void barrier_actorDestructor(void* object, u32 flags) {
+    if (!object)
+        return;
+    auto* actor = static_cast<daObjBarrier_c*>(object);
+    barrierDestroyArray(actor->mEffect.mBck, 4, 0x8C,
+                        gabi::at<void>(gabi::guest_fn((const void*)barrier_bckDestructor)), 0, 0);
+    barrierDestroyCylinder(&actor->mTgCyl, 2);
+    barrierDestroyCylinder(&actor->mAtCyl, 2);
+    barrierDestroyStatus(&actor->mTgStts, 2);
+    barrierDestroyStatus(&actor->mAtStts, 2);
+    barrierDestroyActor(object, 0);
+    if (flags & 1)
+        barrierDelete(object);
+}
+/* 0232407C */
+void barrier_noop(void* object) {}
+
+/* 02324080 */
+u32 barrier_parameter(daObjBarrier_c* barrier, u32 width, u32 shift) {
+    u32 mask = (width & 32) ? 0 : (1u << (width & 31));
+    u32 value = (shift & 32) ? 0 : ((u32)barrier->mParameters >> (shift & 31));
+    return value & (mask - 1);
+}
+
+// clang-format off
+/* WWHD glue
+data sActorVtable 1002607C
+data sStatusVtable 1004AE88
+data sGlobalStatusVtable 1004AEC0
+data sInitialShapeVtable 100015A8
+data sCylinderAttrVtable 10026044
+data sHitInfoVtable 1004B108
+data sShapeVtable 1004B160
+data sCylinderVtable 1004B150
+data sInitialMatrixVtable 1016E54C
+data sBindingVtable 1016D820
+data sMatrixVtable 10026054
+data sResourceControl 101F4F28
+data sTextureControl 101F9968
+data sSave 101F84DC
+data sDrawList 104B4634
+data sXluDrawList 104B4638
+data sHeader 1046927C
+data sPiLimits 10026238
+data sTrig 104A44F8
+data sDummyName 10026130
+data sPiRegistration 101C7FA4
+data sRandomRegistration 101C7FB0
+data sRandomByteRegistration 101C7FBC
+data sAttackSource 1002608C
+data sTargetSource 100260D0
+data sBtkConstructor 025E7C6C
+data sBrkConstructor 025E80D0
+ext 026066C4 void* barrierResource(void*, BarrierArchive*, s32)
+ext 025200D4 BarrierGameInfo* barrierGameInfo()
+ext 0273AA24 void barrierAssert(const char*, s32, const char*)
+ext 0273AD10 void* barrierAllocate(u32)
+ext 027F2BC0 void barrierConstructFrame(void*, s32)
+ext 027DA984 void barrierConstructBinding(void*)
+ext 028F0164 void barrierDestroyArray(void*, u32, u32, void*, u32, u32)
+ext 02515A70 void barrierDestroyCylinder(BarrierCylinder*, u32)
+ext 02515860 void barrierDestroyStatus(dCcD_Stts*, u32)
+ext 025D50BC void barrierDestroyActor(void*, u32)
+ext 0273AF40 void barrierDelete(void*)
+ext 028F026C void barrierRegisterDestructor(void*)
+ext 028ED6F8 void barrierInitRandom(void*)
+ext 028EAB2C void barrierInitRandomByte(void*)
+ext 020087EC void barrierReleaseBg(dBgS*, dBgW*)
+ext 0200BD2C void barrierConstructStatus(dCcD_Stts*)
+ext 0200E240 void barrierSetCollider(void*, BarrierCylinder*)
+ext 020182E0 void barrierCylinderCenter(cM3dGCyl*, cXyz*)
+ext 02018428 void barrierCylinderHeight(cM3dGCyl*, f32)
+ext 020184DC void barrierCylinderRadius(cM3dGCyl*, f32)
+ext 02018590 void barrierConstructCylinder(cM3dGCyl*)
+ext 020195B0 u32 barrierAtan2(f32, f32)
+ext 0201A478 void barrierConstructAngle(csXyz*, s32, s32, s32)
+ext 0201ADE0 void barrierSubtract(cXyz*, cXyz*, cXyz*)
+ext 024EEA6C s32 barrierRegisterBg(dBgS*, dBgW*, daObjBarrier_c*)
+ext 024F2478 dBgW* barrierNewBackground(void*, u32, Mtx34*)
+ext 024F43DC void barrierMoveBg(dBgW*)
+ext 02515BBC fopAc_ac_c* barrierHitActor(void*)
+ext 02515DA0 void barrierConstructGlobalStatus(void*)
+ext 02515E50 void barrierMoveStatus(void*)
+ext 02515F14 void barrierInitStatus(dCcD_Stts*, s32, s32, daObjBarrier_c*)
+ext 02515FB8 void barrierConstructCollider(BarrierCylinder*)
+ext 02516094 void barrierClearAt(BarrierCylinder*)
+ext 025160DC s32 barrierCheckAt(BarrierCylinder*)
+ext 0251621C void barrierClearTg(BarrierCylinder*)
+ext 025162A4 s32 barrierCheckTg(BarrierCylinder*)
+ext 02516300 u32 barrierTgHitObject(BarrierCylinder*)
+ext 02516518 void barrierSetCylinder(BarrierCylinder*, void*)
+ext 02520460 s32 barrierLoad(request_of_phase_process_class*, const char*)
+ext 025204C8 void barrierUnload(request_of_phase_process_class*, const char*)
+ext 02543F10 s32 barrierEventIndex(void*, const char*, u32)
+ext 025440C8 s32 barrierEventEnd(void*, s32)
+ext 025A847C void barrierParticle(void*, u32, u32, cXyz*, csXyz*, u32, u32, u32, s32, u32, u32, u32)
+ext 025B8B68 void barrierSetEvent(void*, u32)
+ext 025B8B94 s32 barrierCheckEvent(void*, u32)
+ext 025D4ED0 void barrierConstructActor(daObjBarrier_c*)
+ext 025D57E0 void barrierDeleteActor(daObjBarrier_c*)
+ext 025D63E8 s32 barrierEnterHeap(daObjBarrier_c*, void*, u32)
+ext 025D7A58 void barrierOrderEvent(daObjBarrier_c*, s32, u32, u32, u32, u32)
+ext 025E2DE0 void barrierUpdateModel(J3DModel*, u32)
+ext 025E38E0 J3DModel* barrierNewModel(void*, u32, u32)
+ext 025E7C6C void barrierConstructBtk(mDoExt_btkAnm*)
+ext 025E7CE0 s32 barrierInitBtk(mDoExt_btkAnm*, void*, void*, u32, s32, f32, s32, s32, u32, u32)
+ext 025E7FC4 void barrierEntryBtk(mDoExt_btkAnm*, J3DModelData*, f32)
+ext 025E80D0 void barrierConstructBrk(BarrierBrkAnm*)
+ext 025E8154 s32 barrierInitBrk(BarrierBrkAnm*, void*, void*, u32, s32, f32, s32, s32, u32, u32)
+ext 025E83FC void barrierEntryBrk(BarrierBrkAnm*, J3DModelData*, f32)
+ext 025E8508 s32 barrierInitBck(mDoExt_bckAnm*, void*, void*, u32, s32, f32, s32, s32, u32)
+ext 025E86B8 void barrierEntryBck(mDoExt_bckAnm*, J3DModelData*, f32)
+ext 025F05D0 void barrierChangeScene(u32, u32)
+ext 025F1B48 void barrierRotateZXY(Mtx34*, s32, s32, s32)
+ext 027ED1F0 be<u8>* barrierTextureName(JUTNameTab*, u32)
+ext 02773680 BarrierTextureObject* barrierTextureCtor(void*, void*)
+ext 027F3628 void barrierMatrixDtor(void*, u32)
+ext 027F81A4 void* barrierTextureHandle(void*, u32)
+ext 028E8DD0 f64 barrierSquareMag(cXyz*)
+ext 028E90D4 void barrierCopyMtx(Mtx34*, Mtx34*)
+ext 028EFFD0 void barrierConstructArray(void*, u32, u32, void*)
+ext 028F4384 f64 barrierSqrt(f64)
+str 10026024
+str 1002611C in 02322390
+str 10026118 in 02322390
+str 10026138 in 02322518
+str 1002614C in 02322518
+str 10026158 in 02322518
+str 10026168 in 02322518
+str 10026184 in 02322760
+str 10026180 in 02322760
+str 100261BC in 0232302C
+str 100261D0 in 0232302C
+str 100261DC in 0232302C
+str 100261F0 in 0232302C
+str 10026204 in 0232302C
+str 1002622C in 0232384C
+*/
+// clang-format on

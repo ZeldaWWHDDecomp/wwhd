@@ -1,595 +1,738 @@
-/**
- * d_a_obj_firewall.cpp (WWHD)
- * Object - ring-shaped fire wall (daObjFirewall_c)
- *
- * Written from the WWHD code (all GameCube functions are stubs) with the
- * GameCube decompilation (zeldaret/tww src/d/actor/d_a_obj_firewall.cpp) as reference,
- * verified against cking.rpx.
- */
-#include "bindings.h"
+/* Ring-shaped fire wall. */
 #include "d/actor/d_a_obj_firewall.h"
-namespace {
-    template<class T> T field(u32 actor,u32 offset) { return gabi::load<T>(actor+offset);
+const gc_tu_data gc_tu = {.safeString = 0x10028A4C};
+// HD: typed views for fields absent from the shared emitter and shape API.
+struct FirewallEmitter {
+    u8 _00[0x5C];
+    be<s32> mMaxFrame;
+    u8 _60[0x254 - 0x60];
+    be<u32> mStatus;
+};
+struct FirewallShape {
+    u8 _00[0x18];
+    be<u32> __vtbl_base, __vtbl_shape;
+};
+struct FirewallPlayerVtable {
+    u8 _00[0xE4];
+    be<u32> seStart;
+};
+struct FirewallPlayer {
+    u8 _00[0xB4];
+    gptr<FirewallPlayerVtable> vtable;
+};
+// HD: tww has no action body yet; the state names follow its declared methods.
+enum ActionTarget : u32 {
+    Wait = 0x02342878,
+    Wait2 = 0x02342990,
+    Wait3 = 0x02342A8C,
+    Appear = 0x02342B6C,
+    DemoEndWait = 0x02342C04,
+    BurnWait = 0x02342C88,
+    Retire = 0x02342DD8
+};
+struct ArcName {
+    be<u8> bytes[8];
+};
+static ArcName archive;
+struct GuestText {
+    be<u8> bytes[64];
+};
+static GuestText fileText;
+static GuestText heapAssertText;
+static GuestText playerStaffText;
+static GuestText waitStaffText;
+static GuestText wait3StaffText;
+static GuestText burnCutText;
+static GuestText burn3CutText;
+static GuestText burnAssertFileText;
+static GuestText burnAssertText;
+static const char *text(const GuestText &t) { return reinterpret_cast<const char *>(&t); }
+static const char *arcName() { return reinterpret_cast<const char *>(&archive); }
+static const char *assertFile() { return text(fileText); }
+static const char *heapAssertion() { return text(heapAssertText); }
+static const char *playerStaffName() { return text(playerStaffText); }
+static const char *waitStaffName() { return text(waitStaffText); }
+static const char *wait3StaffName() { return text(wait3StaffText); }
+static const char *burnCutName() { return text(burnCutText); }
+static const char *burn3CutName() { return text(burn3CutText); }
+static const char *burnAssertFile() { return text(burnAssertFileText); }
+static const char *burnAssertion() { return text(burnAssertText); }
+struct Names2 {
+    gptr<char> names[2];
+};
+static Names2 eventNames;
+struct Names3 {
+    gptr<char> names[3];
+};
+static Names3 playerCuts;
+struct Sounds3 {
+    be<u32> ids[3];
+};
+static Sounds3 playerSounds;
+struct Angles5 {
+    be<s16> values[5];
+};
+static Angles5 collisionAngles;
+struct TrigEntry {
+    be<f32> sine, cosine;
+};
+struct TrigTable {
+    TrigEntry entries[8192];
+};
+static TrigTable trig;
+struct CylinderSource {
+    be<u32> words[17];
+};
+static CylinderSource l_cyl_src;
+struct FloatValue {
+    be<f32> value;
+};
+struct WordValue {
+    be<u32> value;
+};
+struct ByteValue {
+    be<u8> value;
+};
+struct Record {
+    be<u32> words[3];
+};
+static FloatValue radiusBias;
+static FloatValue minimum;
+static FloatValue maximum;
+static WordValue zero0;
+static WordValue zero1;
+static WordValue zero2;
+static WordValue zero3;
+static WordValue angleLimit;
+static ByteValue flag0;
+static ByteValue flag1;
+static Record record0;
+static Record record1;
+static Record record2;
+// HD: preserve bit copies of the floating-point vectors, including NaN payloads.
+static be<u32> &word(be<f32> &v) { return *reinterpret_cast<be<u32> *>(&v); }
+static bool sameGuestString(const char *left, const char *right) {
+    const auto *a = reinterpret_cast<const be<u8> *>(left);
+    const auto *b = reinterpret_cast<const be<u8> *>(right);
+    for (;;) {
+        u8 x = *a++, y = *b++;
+        if (x != y)
+            return false;
+        if (!x)
+            return true;
     }
-    template<class T> void put(u32 actor,u32 offset,T value) { gabi::store<T>(actor+offset,value);
-    }
-    u32 play() { return gabi::call<u32>(0x025200D4);
-    }
-    void setAction(u32 actor,u32 action) {
-        put<s16>(actor,0x680,0);
-        put<s16>(actor,0x682,-1);
-        put<u32>(actor,0x684,action);
-    }
-    void releaseBackground(u32 actor) {
-        if (field<u32>(actor,0xf4)) {
-            u32 bg=field<u32>(actor,0x524);
-            if(bg) {
-                if(gabi::load<u32>(bg)<0x100) { u32 world=play();
-                    bg=field<u32>(actor,0x524);
-                    gabi::call<void>(0x020087EC,world+0x12a0,bg);
-                }
-                put<u32>(actor,0x524,0);
+}
+static void setAction(daObjFirewall_c *actor, ActionTarget action) {
+    actor->mAction.d = 0;
+    actor->mAction.i = -1;
+    actor->mAction.f = action;
+}
+static void releaseBackground(daObjFirewall_c *actor) {
+    if (actor->heap) {
+        dBgW *bg = actor->mpBgW;
+        if (bg) {
+            if (bg->ChkUsed()) {
+                dBgS *world = dComIfG_Bgsp();
+                bg = actor->mpBgW;
+                world->Release(bg);
             }
+            actor->mpBgW = nullptr;
         }
     }
 }
-
-static void particle_delete(u32 actor) {
-    WWHD_FUNC(0x02341BBC,void,actor);
-    for(u32 i=0;i<12;++i) {
-        u32 offset=0x614+4*i, emitter=field<u32>(actor,offset);
-        if(emitter) { u32 flags=gabi::load<u32>(emitter+0x254);
-            gabi::store<u32>(emitter+0x5c,~0u);
-            gabi::store<u32>(emitter+0x254,flags|1);
-            put<u32>(actor,offset,0);
+extern void *getResource(dRes_control_c *, SafeString *, s32);
+static void *resource(s32 index) {
+    gabi::Local<SafeString> name;
+    name->mStringTop = gabi::ea(&archive);
+    name->__vtbl = 0x10028A4C;
+    return getResource(dComIfG_resControl(), name.get(), index);
+}
+extern void startSound(u32, const cXyz *);
+extern void deleteSound(const cXyz *);
+extern void modelUpdateDL(J3DModel *, u32);
+extern void playAnimation(void *);
+extern void destroyCylinder(dCcD_Cyl *, u32);
+extern void destroyStatus(dCcD_Stts *, u32);
+extern void destroyActor(fopAc_ac_c *, u32);
+extern void constructStatus(dCcD_Stts *);
+extern void constructGStatus(void *);
+extern void constructObjectInfo(dCcD_GObjInf *);
+extern void constructCylinder(cM3dGCyl *);
+extern void constructArray(void *, u32, u32, u32);
+extern void registerHeader(void *);
+extern void constructHeader0(void *);
+extern void constructHeader1(void *);
+extern void addCalc(be<f32> *, f32, f32, f32);
+extern void setLightType(u32, u32, f32);
+extern dBgW *createBackground(cBgD_t *, u32, Mtx34 *);
+extern u32 initBtk(mDoExt_btkAnm *, J3DModelData *, J3DAnmTextureSRTKey *, u32, u32, f32, s32, s32, u32, u32);
+extern u32 initBrk(mDoExt_brkAnm *, J3DModelData *, J3DAnmTevRegKey *, u32, u32, f32, s32, s32, u32, u32);
+extern void translateMatrix(f32, f32, f32);
+extern const char *getNowCutName(void *, s32);
+extern u32 getEventData(void *, s32);
+// HD: these paths forward the full return word to getEventData, rather than a narrowed event ID.
+extern s32 getEventIdxFullWord(void *, const char *, u32);
+extern void subtractVector(const cXyz *, cXyz *, const cXyz *);
+extern f32 vectorSquare(const cXyz *);
+extern f32 sqrtf_guest(f32);
+extern void orderEvent(fopAc_ac_c *, s16, u32, u32, u32, u32);
+extern void registCollisionGuest(daObjFirewall_c *);
+extern s32 atan2s(f32, f32);
+static daObjFirewall_c *firewall_ctor(daObjFirewall_c *);
+static u32 param_extract(daObjFirewall_c *, u32, u32);
+static BOOL solidHeapCB(fopAc_ac_c *);
+/* 02341BBC */
+void daObjFirewall_c::particle_delete() {
+    for (u32 i = 0; i < 12; i++) {
+        FirewallEmitter *e = mpEmitters[i];
+        if (e) {
+            u32 flags = e->mStatus;
+            e->mMaxFrame = -1;
+            e->mStatus = flags | 1;
+            mpEmitters[i] = nullptr;
         }
     }
 }
-VERIFY(0x02341BBC,particle_delete);
-
-static void seStart(u32 actor,u32 sound) {
-    WWHD_FUNC(0x02341C68,void,actor,sound);
-    for(u32 i=0;i<8;++i) gabi::call<void>(0x025E19CC,sound,actor+0x68c+12*i);
+/* 02341C68 */
+void daObjFirewall_c::seStart(u32 sound) {
+    for (u32 i = 0; i < 8; i++)
+        startSound(sound, &mSoundPositions[i]);
 }
-VERIFY(0x02341C68,seStart);
-
-static void set_se(u32 actor,u32 enabled) {
-    WWHD_FUNC(0x02341CC0,void,actor,enabled);
-    u8 old=field<u8>(actor,0x68a);
-    if(old!=enabled) seStart(actor,old?0x6950:0x694e);
-    else if(old) seStart(actor,0x614f);
-    put<u8>(actor,0x68a,enabled);
+/* 02341CC0 */
+void daObjFirewall_c::set_se(u32 enabled) {
+    // HD: the entry accepts a full word, compares it before narrowing to the stored byte.
+    u8 old = mSoundEnabled;
+    if (old != enabled)
+        seStart(old ? 0x6950 : 0x694E);
+    else if (old)
+        seStart(0x614F);
+    mSoundEnabled = enabled;
 }
-VERIFY(0x02341CC0,set_se);
-
-static void setup_put_the_fire_out(u32 actor) {
-    WWHD_FUNC(0x02341D34,void,actor);
-    if(field<u8>(actor,0x6ed)) {particle_delete(actor);
-        releaseBackground(actor);
-        set_se(actor,0);
-        put<u8>(actor,0x6ed,0);
+/* 02341D34 */
+void daObjFirewall_c::setup_put_the_fire_out() {
+    if (mBurning) {
+        particle_delete();
+        releaseBackground(this);
+        set_se(0);
+        mBurning = 0;
     }
 }
-VERIFY(0x02341D34,setup_put_the_fire_out);
-
-static void seDelete(u32 actor) {
-    WWHD_FUNC(0x02341DC4,void,actor);
-    if(field<u8>(actor,0x6ec)) for(u32 i=0;i<8;++i) gabi::call<void>(0x025E1B34,actor+0x68c+12*i);
+/* 02341DC4 */
+void daObjFirewall_c::seDelete() {
+    if (mSoundInitialized)
+        for (u32 i = 0; i < 8; i++)
+            deleteSound(&mSoundPositions[i]);
 }
-VERIFY(0x02341DC4,seDelete);
-
-static BOOL firewall_delete(u32 actor) {
-    WWHD_FUNC(0x02341E18,BOOL,actor);
-    gabi::call<void>(0x025204C8,actor+0x3ac,0x10028a20u);
-    releaseBackground(actor);
-    setup_put_the_fire_out(actor);
-    seDelete(actor);
+/* 02341E18 */
+BOOL daObjFirewall_c::_delete() {
+    dComIfG_resDelete(&mPhase, arcName());
+    releaseBackground(this);
+    setup_put_the_fire_out();
+    seDelete();
     return TRUE;
 }
-VERIFY(0x02341E18,firewall_delete);
-
-static BOOL firewall_draw(u32 actor) {
-    WWHD_FUNC(0x0234218C,BOOL,actor);
-    u32 model=field<u32>(actor,0x520);
-    float frame=field<float>(actor,0x52c);
-    u32 data=gabi::load<u32>(model+0xac);
-    gabi::call<void>(0x025E7FC4,actor+0x528,data,frame);
-    model=field<u32>(actor,0x520);
-    frame=field<float>(actor,0x5a0);
-    data=gabi::load<u32>(model+0xac);
-    gabi::call<void>(0x025E83FC,actor+0x59c,data,frame);
-    gabi::call<void>(0x025E2DE0,field<u32>(actor,0x520),0);
+/* 0234218C */
+BOOL daObjFirewall_c::_draw() {
+    J3DModel *model = mpModel;
+    f32 frame = mBtk.getFrame();
+    J3DModelData *data = model->getModelData();
+    mBtk.entry(data, frame);
+    model = mpModel;
+    frame = mBrk.getFrame();
+    data = model->getModelData();
+    mBrk.entry(data, frame);
+    modelUpdateDL(mpModel, 0);
     return TRUE;
 }
-VERIFY(0x0234218C,firewall_draw);
-
-static void retire_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342DD8,void,actor);
-    gabi::call<void>(0x025E742C,actor+0x59c);
-    if((field<u8>(actor,0x5ab)&1)||field<float>(actor,0x59c)==0) {
-        u32 save=gabi::load<u32>(0x101f84dc);
-        gabi::call<void>(0x025B8B68,save+0x644,0x2c01);
-        gabi::call<void>(0x025D57E0,actor);
+/* 02342DD8 */
+void daObjFirewall_c::retire_act_proc() {
+    playAnimation(&mBrk);
+    if (mBrk.mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) || mBrk.getPlaySpeed() == 0) {
+        dComIfGs_onEventBit(0x2C01);
+        fopAcM_delete(this);
     }
 }
-VERIFY(0x02342DD8,retire_act_proc);
-
-static void appear_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342B6C,void,actor);
-    gabi::call<void>(0x025E742C,actor+0x59c);
-    if((field<u8>(actor,0x5ab)&1)||field<float>(actor,0x59c)==0) {
-        s16 event=field<s16>(actor,0x688);
-        put<s16>(actor,0x680,0);
-        put<float>(actor,0x67c,1);
-        put<s16>(actor,0x682,-1);
-        put<u32>(actor,0x684,event==-1?0x02342c88:0x02342c04);
+/* 02342B6C */
+void daObjFirewall_c::appear_act_proc() {
+    playAnimation(&mBrk);
+    if (mBrk.mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) || mBrk.getPlaySpeed() == 0) {
+        s16 event = mEventIndex;
+        mAction.d = 0;
+        mLightStrength = 1;
+        mAction.i = -1;
+        mAction.f = event == -1 ? BurnWait : DemoEndWait;
     }
-    set_se(actor,1);
+    set_se(1);
 }
-VERIFY(0x02342B6C,appear_act_proc);
-
-static void demo_end_wait_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342C04,void,actor);
-    s16 event=field<s16>(actor,0x688);
-    u32 world=play();
-    if(gabi::call<u32>(0x025440C8,world+0x52c4,event)) {
-        world=play();
-        u16 flags=gabi::load<u16>(world+0x52b8);
-        gabi::store<u16>(world+0x52b8,flags|8);
-        setAction(actor,0x02342c88);
+/* 02342C04 */
+void daObjFirewall_c::demo_end_wait_act_proc() {
+    s16 event = mEventIndex;
+    if (dComIfGp_evmng_endCheck(event)) {
+        dComIfGp_event_onEventFlag(8);
+        setAction(this, BurnWait);
     }
-    set_se(actor,1);
+    set_se(1);
 }
-VERIFY(0x02342C04,demo_end_wait_act_proc);
-
-static u32 particle_ctor(u32 particle) {
-    WWHD_FUNC(0x02342EE4,u32,particle);
-    if(!particle) particle=gabi::call<u32>(0x0273AD10,0x24);
-    if(particle) put<float>(particle,0x20,1);
+/* 02342EE4 */
+static LIGHT_INFLUENCE *particle_ctor(LIGHT_INFLUENCE *particle) {
+    if (!particle)
+        particle = static_cast<LIGHT_INFLUENCE *>(operator_new(sizeof(LIGHT_INFLUENCE)));
+    if (particle)
+        particle->mHD20 = 1;
     return particle;
 }
-VERIFY(0x02342EE4,particle_ctor);
-
-static void particle_dtor(u32 particle,u32 flags) {
-    WWHD_FUNC(0x02342F24,void,particle,flags);
-    if(particle&&(flags&1))gabi::call<void>(0x0273AF40,particle);
+/* 02342F24 */
+static void particle_dtor(LIGHT_INFLUENCE *particle, u32 flags) {
+    if (particle && (flags & 1))
+        operator_delete(particle);
 }
-VERIFY(0x02342F24,particle_dtor);
-
-static void firewall_dtor(u32 actor,u32 flags) {
-    WWHD_FUNC(0x02342F38,void,actor,flags);
-    if(actor) {gabi::call<void>(0x02515A70,actor+0x3f0,2);
-        gabi::call<void>(0x02515860,actor+0x3b4,2);
-        gabi::call<void>(0x025D50BC,actor,0);
-        if(flags&1)gabi::call<void>(0x0273AF40,actor);
+/* 02342F38 */
+static void firewall_dtor(daObjFirewall_c *actor, u32 flags) {
+    if (actor) {
+        destroyCylinder(&actor->mCollisionCylinder, 2);
+        destroyStatus(&actor->mCollisionStatus, 2);
+        destroyActor(actor, 0);
+        if (flags & 1)
+            operator_delete(actor);
     }
 }
-VERIFY(0x02342F38,firewall_dtor);
-
-static void empty_virtual() { WWHD_FUNC(0x02342FA4,void);
+/* 02342FA4 */
+static void empty_virtual() {}
+/* 02342FA8 */
+static u32 param_extract(daObjFirewall_c *actor, u32 width, u32 shift) {
+    u32 params = actor->mParameters;
+    u32 mask = (width & 32) ? 0u : 1u << (width & 31);
+    return ((shift & 32) ? 0u : params >> (shift & 31)) & (mask - 1);
 }
-VERIFY(0x02342FA4,empty_virtual);
-
-static u32 param_extract(u32 actor,u32 width,u32 shift) {
-    WWHD_FUNC(0x02342FA8,u32,actor,width,shift);
-    u32 params=field<u32>(actor,0xb0);
-    u32 mask=(width&32)?0u:1u<<(width&31);
-    return ((shift&32)?0u:params>>(shift&31))&(mask-1);
+/* 023418D0 */
+void daObjFirewall_c::init_mtx() {
+    f32 y = scale.y, x = scale.x;
+    J3DModel *model = mpModel;
+    f32 z = scale.z;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    model->mBaseScale.x = x;
+    mDoMtx_stack_c::transS(0, 0, 0);
+    f32 matrix[12];
+    Mtx34 *now = mDoMtx_stack_c::get();
+    for (u32 i = 0; i < 12; i++)
+        matrix[i] = now->m[i / 4][i % 4];
+    model = mpModel;
+    for (u32 i = 0; i < 12; i++)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
 }
-VERIFY(0x02342FA8,param_extract);
-
-static void init_mtx(u32 actor) {
-    WWHD_FUNC(0x023418D0,void,actor);
-    float y=field<float>(actor,0x334),x=field<float>(actor,0x330);
-    u32 model=field<u32>(actor,0x520);
-    float z=field<float>(actor,0x338);
-    put<float>(model,0xc0,y);
-    put<float>(model,0xc4,z);
-    put<float>(model,0xbc,x);
-    gabi::call<void>(0x028E93CC,0x1048d0ccu,0.f,0.f,0.f);
-    float matrix[12];
-    for(u32 i=0;i<12;++i)matrix[i]=gabi::load<float>(0x1048d0cc+4*i);
-    model=field<u32>(actor,0x520);
-    for(u32 i=0;i<12;++i)put<float>(model,0xc8+4*i,matrix[i]);
+/* 02341614 */
+static daObjFirewall_c *firewall_ctor(daObjFirewall_c *actor) {
+    if (!actor)
+        actor = static_cast<daObjFirewall_c *>(operator_new(sizeof(daObjFirewall_c)));
+    if (actor) {
+        fopAc_ac_c_ct(actor);
+        actor->__vtbl = 0x10028A74;
+        constructStatus(&actor->mCollisionStatus);
+        constructGStatus(&actor->mCollisionStatus.__vtbl_gstts);
+        actor->mCollisionStatus.__vtbl = 0x1004AE88;
+        actor->mCollisionStatus.__vtbl_gstts = 0x1004AEC0;
+        constructObjectInfo(&actor->mCollisionCylinder);
+        auto *shape = reinterpret_cast<FirewallShape *>(actor->mCollisionCylinder.mShapeAttr);
+        shape->__vtbl_shape = 0x100015A8;
+        shape->__vtbl_base = 0x10028A64;
+        constructCylinder(&actor->mCollisionCylinder.mCyl);
+        actor->mCollisionCylinder.__vtbl_hitinf = 0x1004B108;
+        shape->__vtbl_shape = 0x1004B160;
+        actor->mCollisionCylinder.mCyl.__vtbl = 0x1004B150;
+        mDoExt_btkAnm::ct(&actor->mBtk);
+        mDoExt_brkAnm::ct(&actor->mBrk);
+        // HD: the array helper takes the separately verified light-constructor guest entry.
+        constructArray(&actor->mLight, 1, sizeof(LIGHT_INFLUENCE), 0x02342EE4);
+    }
+    return actor;
 }
-VERIFY(0x023418D0,init_mtx);
-
-static u32 firewall_ctor(u32 actor) {
-    WWHD_FUNC(0x02341614,u32,actor);
-    if(!actor)actor=gabi::call<u32>(0x0273AD10,0x6f8);
-    if(actor) {
-        gabi::call<void>(0x025D4ED0,actor);
-        put<u32>(actor,0xb4,0x10028a74);
-        gabi::call<void>(0x0200BD2C,actor+0x3b4);
-        gabi::call<void>(0x02515DA0,actor+0x3d0);
-        put<u32>(actor,0x3cc,0x1004ae88);
-        put<u32>(actor,0x3d0,0x1004aec0);
-        gabi::call<void>(0x02515FB8,actor+0x3f0);
-        put<u32>(actor,0x504,0x100015a8);
-        put<u32>(actor,0x500,0x10028a64);
-        gabi::call<void>(0x02018590,actor+0x508);
-        put<u32>(actor,0x42c,0x1004b108);
-        put<u32>(actor,0x504,0x1004b160);
-        put<u32>(actor,0x51c,0x1004b150);
-        gabi::call<void>(0x025E7C6C,actor+0x528);
-        gabi::call<void>(0x025E80D0,actor+0x59c);
-        gabi::call<void>(0x028EFFD0,actor+0x648,1,0x24,0x02342ee4u);
-    }return actor;
-}
-VERIFY(0x02341614,firewall_ctor);
-
+/* 02342E44 */
 static void firewall_static_init() {
-    WWHD_FUNC(0x02342E44,void);
-    gabi::store<u32>(0x10469b98,0);
-    gabi::store<u32>(0x10469b90,0);
-    gabi::store<u32>(0x10469b9c,0);
-    gabi::store<u32>(0x10469b94,0);
-    gabi::call<void>(0x028F026C,0x101c9418u);
-    gabi::store<float>(0x10469b80,-3.1415927410125732f);
-    gabi::store<float>(0x10469b84,3.1415927410125732f);
-    gabi::call<void>(0x028ED6F8,0x10469b8cu);
-    gabi::call<void>(0x028F026C,0x101c9424u);
-    gabi::call<void>(0x028EAB2C,0x10469b8du);
-    gabi::call<void>(0x028F026C,0x101c9430u);
-    gabi::store<u32>(0x10469b88,0xe00);
+    zero2.value = 0;
+    zero0.value = 0;
+    zero3.value = 0;
+    zero1.value = 0;
+    registerHeader(&record0);
+    minimum.value = -3.1415927410125732f;
+    maximum.value = 3.1415927410125732f;
+    constructHeader0(&flag0);
+    registerHeader(&record1);
+    constructHeader1(&flag1);
+    registerHeader(&record2);
+    angleLimit.value = 0xE00;
 }
-VERIFY(0x02342E44,firewall_static_init);
-
-static BOOL firewall_create(u32 actor) {
-    WWHD_FUNC(0x023419A0,BOOL,actor);
-    u32 condition=field<u32>(actor,0x2e4);
-    if(!(condition&8)) {if(actor) {firewall_ctor(actor);
-            condition=field<u32>(actor,0x2e4);
-        }put<u32>(actor,0x2e4,condition|8);
+/* 023419A0 */
+s32 daObjFirewall_c::_create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (this) {
+            firewall_ctor(this);
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
     }
-    s32 phase=gabi::call<s32>(0x02520460,actor+0x3ac,0x10028a20u);
-    if(phase!=4)return phase;
-    if(!gabi::call<u32>(0x025D63E8,actor,0x023418ccu,0x1420))return 5;
-    u32 model=field<u32>(actor,0x520);
-    put<u32>(actor,0x348,model?model+0xc8:0);
-    init_mtx(actor);
-    gabi::call<void>(0x02515F14,actor+0x3b4,0xff,0xff,actor);
-    gabi::call<void>(0x02516518,actor+0x3f0,0x10028aa4u);
-    u32 flags=field<u32>(actor,0x430);
-    put<u32>(actor,0x434,actor+0x3b4);
-    put<u32>(actor,0x430,flags|2);
-    for(u32 i=0;i<8;++i) {
-        float scale=field<float>(actor,0x330),sine=gabi::load<float>(0x104a44f8+0x2000*i),x=field<float>(actor,0x314);
-        float sx=sine*1000.f,cosine=gabi::load<float>(0x104a44fc+0x2000*i);
-        // Preserve PPC fmadds rounding and operand order. NaN payloads are not
-        // selected here; real actor fields are four-byte aligned.
-        float px=gabi::fmadds(sx,scale,x);
-        float y=field<float>(actor,0x318),cz=cosine*1000.f,z=field<float>(actor,0x31c);
-        put<float>(actor,0x68c+12*i,px);
-        put<float>(actor,0x690+12*i,y);
-        put<float>(actor,0x694+12*i,gabi::fmadds(cz,scale,z));
+    s32 phase = dComIfG_resLoad(&mPhase, arcName());
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0x1420))
+        return cPhs_ERROR_e;
+    J3DModel *model = mpModel;
+    cullMtx = gabi::ea(J3DModel_getBaseTRMtx(model));
+    init_mtx();
+    mCollisionStatus.Init(255, 255, this);
+    mCollisionCylinder.Set(reinterpret_cast<dCcD_SrcCyl *>(&l_cyl_src));
+    u32 flags = mCollisionCylinder.mFlags;
+    mCollisionCylinder.mStts = &mCollisionStatus;
+    mCollisionCylinder.mFlags = flags | 2;
+    for (u32 i = 0; i < 8; i++) {
+        f32 scaleX = scale.x, sine = trig.entries[0x400 * i].sine, x = current.pos.x;
+        f32 sx = sine * 1000.f, cosine = trig.entries[0x400 * i].cosine;
+        f32 px = gabi::fmadds(sx, scaleX, x);
+        f32 y = current.pos.y, cz = cosine * 1000.f, z = current.pos.z;
+        mSoundPositions[i].x = px;
+        mSoundPositions[i].y = y;
+        mSoundPositions[i].z = gabi::fmadds(cz, scaleX, z);
     }
-    put<u8>(actor,0x6ec,1);
-    u32 sw=param_extract(actor,8,0);
-    put<u32>(actor,0x644,sw);
-    u32 save=gabi::load<u32>(0x101f84dc);
-    if(gabi::call<u32>(0x025B8B94,save+0x644,0x3520)==1) {
-        put<u32>(actor,0x6f0,1);
-        u32 name=gabi::load<u32>(0x101c9440),world=play();
-        s32 event=gabi::call<s32>(0x02543F10,world+0x52c4,name,0xff);
-        put<s16>(actor,0x688,event);
-        setAction(actor,0x02342990);
-    }else {put<s16>(actor,0x680,0);
-        put<s16>(actor,0x688,-1);
-        put<s16>(actor,0x682,-1);
-        put<u32>(actor,0x6f0,0);
-        put<u32>(actor,0x684,0x02342878);
+    mSoundInitialized = 1;
+    u32 sw = param_extract(this, 8, 0);
+    mSaveSwitch = sw;
+    // HD: this branch tests exactly one, rather than any nonzero event-bit result.
+    if (dComIfGs_isEventBit(0x3520) == 1) {
+        mEventStarted = 1;
+        const char *name = eventNames.names[1];
+        s32 event = getEventIdxFullWord(dComIfGp_getPEvtManager(), name, 255);
+        mEventIndex = event;
+        setAction(this, Wait2);
+    } else {
+        mAction.d = 0;
+        mEventIndex = -1;
+        mAction.i = -1;
+        mEventStarted = 0;
+        mAction.f = Wait;
     }
     return phase;
 }
-VERIFY(0x023419A0,firewall_create);
-
-static BOOL Firewall_Create(u32 actor) {WWHD_FUNC(0x02341BB8,BOOL,actor);
-    return firewall_create(actor);
+/* 02341BB8 */
+static BOOL daObjFirewall_Create(daObjFirewall_c *actor) { return actor->_create(); }
+/* 02341EA0 */
+static BOOL daObjFirewall_Delete(daObjFirewall_c *actor) { return actor->_delete(); }
+/* 023421EC */
+static BOOL daObjFirewall_Draw(daObjFirewall_c *actor) { return actor->_draw(); }
+/* 023421F0 */
+static BOOL daObjFirewall_IsDelete(daObjFirewall_c *actor) { return TRUE; }
+/* 02341EA4 */
+void daObjFirewall_c::setPointLight() {
+    s16 index = mAction.i;
+    bool lit = false;
+    if (index == -1 && mAction.d == 0) {
+        u32 action = mAction.f;
+        lit = action == BurnWait || action == DemoEndWait || action == Appear;
+    }
+    if (lit) {
+        f32 random = cM_rndF(0.5f);
+        addCalc(&mLightStrength, random + 1, 0.5f, 0.04f);
+    }
+    if (lit) {
+        u32 y = word(mLightPosition.y), x = word(mLightPosition.x);
+        mLight.mColorR = 500;
+        word(mLight.mPos.x) = x;
+        word(mLight.mPos.y) = y;
+        u32 z = word(mLightPosition.z);
+        mLight.mColorG = 200;
+        mLight.mColorB = 120;
+        word(mLight.mPos.z) = z;
+    } else {
+        u32 z = word(mLightPosition.z), y = word(mLightPosition.y), x = word(mLightPosition.x);
+        mLightStrength = 0;
+        word(mLight.mPos.x) = x;
+        word(mLight.mPos.y) = y;
+        mLight.mColorR = 500;
+        mLight.mColorG = 200;
+        mLight.mColorB = 120;
+        word(mLight.mPos.z) = z;
+    }
+    f32 radius = (radiusBias.value + 400) * mLightStrength;
+    mLight.mPower = (f32)(s16)gabi::ftoi(radius);
+    mLight.mFluctuation = 250;
+    f32 strength = mLightStrength;
+    if (strength > 1)
+        setLightType(0, 3, 1);
+    else if (strength > 0.5f)
+        setLightType(0, 3, strength);
+    else
+        setLightType(3, 0, 1 - strength);
 }
-VERIFY(0x02341BB8,Firewall_Create);
-
-static BOOL Firewall_Delete(u32 actor) {WWHD_FUNC(0x02341EA0,BOOL,actor);
-    return firewall_delete(actor);
-}
-VERIFY(0x02341EA0,Firewall_Delete);
-
-static BOOL Firewall_Draw(u32 actor) {WWHD_FUNC(0x023421EC,BOOL,actor);
-    return firewall_draw(actor);
-}
-VERIFY(0x023421EC,Firewall_Draw);
-
-static BOOL Firewall_IsDelete(u32 actor) {WWHD_FUNC(0x023421F0,BOOL,actor);
+/* 023420EC */
+BOOL daObjFirewall_c::_execute() {
+    dBgW *bg = mpBgW;
+    if (bg && bg->ChkUsed())
+        bg->Move();
+    playAnimation(&mBtk);
+    setPointLight();
+    (this->*mAction)();
     return TRUE;
 }
-VERIFY(0x023421F0,Firewall_IsDelete);
-
-static void setPointLight(u32 actor) {
-    WWHD_FUNC(0x02341EA4,void,actor);
-    s16 index=field<s16>(actor,0x682);
-    bool lit=false;
-    if(index==-1&&field<s16>(actor,0x680)==0) {u32 action=field<u32>(actor,0x684);
-        lit=action==0x02342c88||action==0x02342c04||action==0x02342b6c;
-    }
-    if(lit) {float random=gabi::call<float>(0x020198D8,0.5f);
-        gabi::call<void>(0x0200ED84,actor+0x67c,random+1.f,0.5f,0.04f);
-    }
-    if(lit) {
-        u32 y=field<u32>(actor,0x670),x=field<u32>(actor,0x66c);
-        put<u16>(actor,0x654,500);
-        put<u32>(actor,0x648,x);
-        put<u32>(actor,0x64c,y);
-        u32 z=field<u32>(actor,0x674);
-        put<u16>(actor,0x656,200);
-        put<u16>(actor,0x658,120);
-        put<u32>(actor,0x650,z);
-    }else {
-        u32 z=field<u32>(actor,0x674),y=field<u32>(actor,0x670),x=field<u32>(actor,0x66c);
-        put<float>(actor,0x67c,0);
-        put<u32>(actor,0x648,x);
-        put<u32>(actor,0x64c,y);
-        put<u16>(actor,0x654,500);
-        put<u16>(actor,0x656,200);
-        put<u16>(actor,0x658,120);
-        put<u32>(actor,0x650,z);
-    }
-    float radius=(gabi::load<float>(0x1047bcd0)+400.f)*field<float>(actor,0x67c);
-    put<float>(actor,0x65c,float(s16(gabi::ftoi(radius))));
-    put<float>(actor,0x660,250);
-    float strength=field<float>(actor,0x67c);
-    if(strength>1.f)gabi::call<void>(0x0255FDA4,0,3,1.f);
-    else if(strength>0.5f)gabi::call<void>(0x0255FDA4,0,3,strength);
-    else gabi::call<void>(0x0255FDA4,3,0,1.f-strength);
-}
-VERIFY(0x02341EA4,setPointLight);
-
-static BOOL firewall_execute(u32 actor) {
-    WWHD_FUNC(0x023420EC,BOOL,actor);
-    u32 bg=field<u32>(actor,0x524);
-    if(bg&&gabi::load<u32>(bg)<0x100)gabi::call<void>(0x024F43DC,bg);
-    gabi::call<void>(0x025E742C,actor+0x528);
-    setPointLight(actor);
-    s16 index=field<s16>(actor,0x682),adjust=field<s16>(actor,0x680);
-    u32 object=actor+adjust,target;
-    if(index<0)target=field<u32>(actor,0x684);
-    else {s16 offset=field<s16>(actor,0x686);
-        u32 vtable=gabi::load<u32>(object+offset);
-        target=gabi::load<u32>(vtable+8*index+4);
-    }
-    gabi::call_ptr<void>(target,object);
-    return TRUE;
-}
-VERIFY(0x023420EC,firewall_execute);
-
-static BOOL Firewall_Execute(u32 actor) {WWHD_FUNC(0x02342188,BOOL,actor);
-    return firewall_execute(actor);
-}
-VERIFY(0x02342188,Firewall_Execute);
-
-static BOOL create_heap(u32 actor) {
-    WWHD_FUNC(0x02341704,BOOL,actor);
-    auto resource=[](s32 index) {gabi::Local<SafeString> name;
-        name->mStringTop=0x10028a20;
-        name->__vtbl=0x10028a4c;
-        u32 controller=gabi::load<u32>(0x101f4f28);
-        return gabi::call<u32>(0x026066C4,controller,name.get(),index);
-    };
-    u32 data=resource(6),btk=resource(12),brk=resource(9);
-    if(!data||!btk||!brk) {gabi::call<void>(0x0273AA24,0x10028af0u,0x171,0x10028aecu);
+/* 02342188 */
+static BOOL daObjFirewall_Execute(daObjFirewall_c *actor) { return actor->_execute(); }
+/* 02341704 */
+BOOL daObjFirewall_c::create_heap() {
+    auto *data = static_cast<J3DModelData *>(resource(6));
+    auto *btk = static_cast<J3DAnmTextureSRTKey *>(resource(12));
+    auto *brk = static_cast<J3DAnmTevRegKey *>(resource(9));
+    if (!data || !btk || !brk) {
+        JUT_ASSERT_fail(assertFile(), 0x171, heapAssertion());
         return FALSE;
     }
-    u32 model=gabi::call<u32>(0x025E38E0,data,0x80000,0x11000222);
-    put<u32>(actor,0x520,model);
-    u32 mesh=resource(15);
-    model=field<u32>(actor,0x520);
-    u32 bg=gabi::call<u32>(0x024F2478,mesh,1,model?model+0xc8:0);
-    put<u32>(actor,0x524,bg);
-    u32 btkOk=gabi::call<u32>(0x025E7CE0,actor+0x528,data,btk,1,2,1.f,0,-1,0,0);
-    u32 brkOk=gabi::call<u32>(0x025E8154,actor+0x59c,data,brk,1,0,1.f,0,-1,0,0);
-    return field<u32>(actor,0x520)&&field<u32>(actor,0x524)&&btkOk&&brkOk;
+    mpModel = mDoExt_J3DModel__create(data, 0x80000, 0x11000222);
+    auto *mesh = static_cast<cBgD_t *>(resource(15));
+    J3DModel *model = mpModel;
+    mpBgW = createBackground(mesh, 1, J3DModel_getBaseTRMtx(model));
+    u32 btkOk = initBtk(&mBtk, data, btk, 1, 2, 1, 0, -1, 0, 0);
+    u32 brkOk = initBrk(&mBrk, data, brk, 1, 0, 1, 0, -1, 0, 0);
+    return mpModel && mpBgW && btkOk && brkOk;
 }
-VERIFY(0x02341704,create_heap);
-
-static BOOL solidHeapCB(u32 actor) {WWHD_FUNC(0x023418CC,BOOL,actor);
-    return create_heap(actor);
-}
-VERIFY(0x023418CC,solidHeapCB);
-
-static void particle_set(u32 actor) {
-    WWHD_FUNC(0x023424AC,void,actor);
+/* 023418CC */
+static BOOL solidHeapCB(fopAc_ac_c *actor) { return static_cast<daObjFirewall_c *>(actor)->create_heap(); }
+/* 023424AC */
+void daObjFirewall_c::particle_set() {
     gabi::Local<csXyz> rotation;
-    gabi::call<void>(0x0201A478,rotation.get(),0,0,0);
-    const s16 angles[11]={0x1555,s16(-0x1555),0x4000,s16(-0x4000),0x6aaa,s16(-0x6aaa),0,s16(-0x2aaa),0x2aaa,0x5555,s16(-0x5555)};
-    for(u32 i=0;i<11;++i) {
-        u32 offset=0x614+4*i;
-        if(!field<u32>(actor,offset)) {
-            rotation->y=angles[i];
-            u32 world=play(),control=gabi::load<u32>(world+0x5ab0);
-            u32 emitter=gabi::call<u32>(0x025A847C,control,0,i<6?0x82b6:0x82b7,actor+0x314,rotation.get(),0,0xff,0,-1,0,0,0);
-            put<u32>(actor,offset,emitter);
+    csXyz_ct(rotation.get(), 0, 0, 0);
+    const s16 angles[11] = {0x1555, s16(-0x1555), 0x4000, s16(-0x4000), 0x6AAA,      s16(-0x6AAA),
+                            0,      s16(-0x2AAA), 0x2AAA, 0x5555,       s16(-0x5555)};
+    for (u32 i = 0; i < 11; i++) {
+        if (!mpEmitters[i]) {
+            rotation->y = angles[i];
+            mpEmitters[i] = reinterpret_cast<FirewallEmitter *>(
+                dComIfGp_particle_set(i < 6 ? 0x82B6 : 0x82B7, &current.pos, rotation.get(), nullptr, 255, nullptr, -1,
+                                      nullptr, nullptr, nullptr));
         }
     }
-    if(!field<u32>(actor,0x640)) {
-        u32 world=play(),control=gabi::load<u32>(world+0x5ab0);
-        u32 emitter=gabi::call<u32>(0x025A847C,control,0,0x82b8,actor+0x314,0,0,0xff,0,-1,0,0,0);
-        put<u32>(actor,0x640,emitter);
+    if (!mpEmitters[11])
+        mpEmitters[11] = reinterpret_cast<FirewallEmitter *>(
+            dComIfGp_particle_set(0x82B8, &current.pos, nullptr, nullptr, 255, nullptr, -1, nullptr, nullptr, nullptr));
+}
+/* 0234276C */
+void daObjFirewall_c::setup_burn_up() {
+    particle_set();
+    dBgW *bg = mpBgW;
+    if (bg && !bg->ChkUsed()) {
+        dBgS *world = dComIfG_Bgsp();
+        bg = mpBgW;
+        world->Regist(bg, this);
+    }
+    set_se(1);
+    f32 scaleX = scale.x, x = current.pos.x, z = current.pos.z, y = current.pos.y;
+    f32 distance = 1000 * scaleX;
+    mDoMtx_stack_c::transS(x, y, z);
+    mDoMtx_stack_c::YrotM(0);
+    translateMatrix(distance, 0, 0);
+    Mtx34 *matrix = mDoMtx_stack_c::get();
+    mLightPosition.x = matrix->m[0][3];
+    mLightPosition.y = matrix->m[1][3];
+    mLightPosition.z = matrix->m[2][3];
+    mAction.f = Appear;
+    mAction.i = -1;
+    mAction.d = 0;
+    mBurning = 1;
+}
+/* 0234268C */
+void daObjFirewall_c::set_pl_se() {
+    s32 staff = dComIfGp_evmng_getMyStaffId(playerStaffName(), 0, 0);
+    if (staff == -1)
+        return;
+    const char *cut = getNowCutName(dComIfGp_getPEvtManager(), staff);
+    u32 index = mPlayerSoundIndex;
+    const char *name = playerCuts.names[index];
+    if (!sameGuestString(cut, name))
+        return;
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
+    if (!player)
+        return;
+    auto *view = reinterpret_cast<FirewallPlayer *>(player);
+    index = mPlayerSoundIndex;
+    u32 sound = playerSounds.ids[index];
+    gabi::call_ptr<void>(view->vtable->seStart, player, sound);
+    mPlayerSoundIndex = (u32)mPlayerSoundIndex + 1;
+}
+/* 02342878 */
+void daObjFirewall_c::wait_act_proc() {
+    const char *name = eventNames.names[0];
+    void *manager = dComIfGp_getPEvtManager();
+    s32 event = getEventIdxFullWord(dComIfGp_getPEvtManager(), name, 255);
+    if (!getEventData(manager, event))
+        return;
+    s32 staff = dComIfGp_evmng_getMyStaffId(waitStaffName(), 0, 0);
+    if (staff == -1)
+        return;
+    const char *cut = getNowCutName(dComIfGp_getPEvtManager(), staff);
+    if (sameGuestString(cut, burnCutName())) {
+        dComIfGs_onEventBit(0x3520);
+        setup_burn_up();
+    } else
+        set_pl_se();
+}
+/* 02342A8C */
+void daObjFirewall_c::wait3_act_proc() {
+    const char *name = eventNames.names[1];
+    void *manager = dComIfGp_getPEvtManager();
+    s32 event = getEventIdxFullWord(dComIfGp_getPEvtManager(), name, 255);
+    if (!getEventData(manager, event))
+        return;
+    s32 staff = dComIfGp_evmng_getMyStaffId(wait3StaffName(), 0, 0);
+    if (staff == -1)
+        return;
+    const char *cut = getNowCutName(dComIfGp_getPEvtManager(), staff);
+    if (sameGuestString(cut, burn3CutName())) {
+        setup_burn_up();
     }
 }
-VERIFY(0x023424AC,particle_set);
-
-static void setup_burn_up(u32 actor) {
-    WWHD_FUNC(0x0234276C,void,actor);
-    particle_set(actor);
-    u32 bg=field<u32>(actor,0x524);
-    if(bg&&gabi::load<u32>(bg)>=0x100) {u32 world=play();
-        bg=field<u32>(actor,0x524);
-        gabi::call<void>(0x024EEA6C,world+0x12a0,bg,actor);
-    }
-    set_se(actor,1);
-    float scale=field<float>(actor,0x330),x=field<float>(actor,0x314),z=field<float>(actor,0x31c),y=field<float>(actor,0x318);
-    float distance=1000.f*scale;
-    gabi::call<void>(0x028E93CC,0x1048d0ccu,x,y,z);
-    gabi::call<void>(0x025F1C28,0x1048d0ccu,0);
-    gabi::call<void>(0x025F24E0,distance,0.f,0.f);
-    put<float>(actor,0x66c,gabi::load<float>(0x1048d0d8));
-    put<float>(actor,0x670,gabi::load<float>(0x1048d0e8));
-    put<float>(actor,0x674,gabi::load<float>(0x1048d0f8));
-    put<u32>(actor,0x684,0x02342b6c);
-    put<s16>(actor,0x682,-1);
-    put<s16>(actor,0x680,0);
-    put<u8>(actor,0x6ed,1);
-}
-VERIFY(0x0234276C,setup_burn_up);
-
-static bool sameGuestString(u32 left,u32 right) {
-    for(u32 i=0;;++i) {u8 a=gabi::load<u8>(left+i),b=gabi::load<u8>(right+i);
-        if(a!=b)return false;
-        if(!a)return true;
-    }
-}
-
-static void set_pl_se(u32 actor) {
-    WWHD_FUNC(0x0234268C,void,actor);
-    u32 world=play();
-    s32 staff=gabi::call<s32>(0x02542D88,world+0x52c4,0x10028b4cu,0,0);
-    if(staff==-1)return;
-    world=play();
-    u32 cut=gabi::call<u32>(0x02544830,world+0x52c4,staff);
-    u32 index=field<u32>(actor,0x6f4),name=gabi::load<u32>(0x101c93e0+index*4);
-    if(!sameGuestString(cut,name))return;
-    world=play();
-    u32 player=gabi::load<u32>(world+0x5b2c);
-    if(!player)return;
-    u32 vt=gabi::load<u32>(player+0xb4),target=gabi::load<u32>(vt+0xe4);
-    index=field<u32>(actor,0x6f4);
-    u32 sound=gabi::load<u32>(0x101c93ec+4*index);
-    gabi::call_ptr<void>(target,player,sound);
-    put<u32>(actor,0x6f4,field<u32>(actor,0x6f4)+1);
-}
-VERIFY(0x0234268C,set_pl_se);
-
-static void wait_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342878,void,actor);
-    u32 name=gabi::load<u32>(0x101c943c),manager=play()+0x52c4,world=play();
-    s32 event=gabi::call<s32>(0x02543F10,world+0x52c4,name,0xff);
-    if(!gabi::call<u32>(0x02544044,manager,event))return;
-    world=play();
-    s32 staff=gabi::call<s32>(0x02542D88,world+0x52c4,0x10028b54u,0,0);
-    if(staff==-1)return;
-    world=play();
-    u32 cut=gabi::call<u32>(0x02544830,world+0x52c4,staff);
-    if(sameGuestString(cut,0x10028b5c)) {u32 save=gabi::load<u32>(0x101f84dc);
-        gabi::call<void>(0x025B8B68,save+0x644,0x3520);
-        setup_burn_up(actor);
-    }
-    else set_pl_se(actor);
-}
-VERIFY(0x02342878,wait_act_proc);
-
-static void wait3_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342A8C,void,actor);
-    u32 name=gabi::load<u32>(0x101c9440),manager=play()+0x52c4,world=play();
-    s32 event=gabi::call<s32>(0x02543F10,world+0x52c4,name,0xff);
-    if(!gabi::call<u32>(0x02544044,manager,event))return;
-    world=play();
-    s32 staff=gabi::call<s32>(0x02542D88,world+0x52c4,0x10028b6cu,0,0);
-    if(staff==-1)return;
-    world=play();
-    u32 cut=gabi::call<u32>(0x02544830,world+0x52c4,staff);
-    if(sameGuestString(cut,0x10028b74))setup_burn_up(actor);
-}
-VERIFY(0x02342A8C,wait3_act_proc);
-
-static void wait2_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342990,void,actor);
-    u32 world=play(),player=gabi::load<u32>(world+0x5b2c);
-    if(!player)return;
-    gabi::Local<cXyz> delta,flat;
-    gabi::call<void>(0x0201ADE0,player+0x314,delta.get(),actor+0x314);
-    flat->x=delta->x;
-    flat->y=0;
-    flat->z=delta->z;
-    float square=gabi::call<float>(0x028E8DD0,flat.get());
-    float distance=gabi::call<float>(0x028F4384,square);
-    if(distance<950.f&&field<float>(player,0x31c)<-7000.f) {
-        if(field<u16>(actor,0xf8)==2) {put<s16>(actor,0x682,-1);
-            put<u32>(actor,0x684,0x02342a8c);
-            put<s16>(actor,0x680,0);
-        }
-        else {s16 event=field<s16>(actor,0x688);
-            gabi::call<void>(0x025D7A58,actor,event,0xff,0xffff,0,1);
+/* 02342990 */
+void daObjFirewall_c::wait2_act_proc() {
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
+    if (!player)
+        return;
+    gabi::Local<cXyz> delta, flat;
+    subtractVector(&player->current.pos, delta.get(), &current.pos);
+    flat->x = (f32)delta->x;
+    flat->y = 0;
+    flat->z = (f32)delta->z;
+    f32 square = vectorSquare(flat.get());
+    f32 distance = sqrtf_guest(square);
+    if (distance < 950 && (f32)player->current.pos.z < -7000) {
+        if (eventInfo.mCommand == 2) {
+            mAction.i = -1;
+            mAction.f = Wait3;
+            mAction.d = 0;
+        } else {
+            s16 event = mEventIndex;
+            orderEvent(this, event, 255, 65535, 0, 1);
         }
     }
 }
-VERIFY(0x02342990,wait2_act_proc);
-
-static void burn_wait_act_proc(u32 actor) {
-    WWHD_FUNC(0x02342C88,void,actor);
-    gabi::call<void>(0x02515E50,actor+0x3d0);
-    gabi::call<void>(0x023421F8,actor);
-    u32 sw=field<u32>(actor,0x644);
-    if(sw!=0xff) {
-        s8 room=field<s8>(actor,0x2fe);
-        u32 save=gabi::load<u32>(0x101f84dc);
-        if(gabi::call<u32>(0x025BA0C0,save+0x20,sw,room)==1) {
-            save=gabi::load<u32>(0x101f84dc);
-            gabi::call<void>(0x025B8B68,save+0x644,0x2c01);
-            gabi::Local<SafeString> name;
-            name->mStringTop=0x10028a20;
-            name->__vtbl=0x10028a4c;
-            u32 controller=gabi::load<u32>(0x101f4f28);
-            u32 brk=gabi::call<u32>(0x026066C4,controller,name.get(),9);
-            if(!brk)gabi::call<void>(0x0273AA24,0x10028b7cu,0x4e9,0x10028b94u);
-            u32 model=field<u32>(actor,0x520),data=gabi::load<u32>(model+0xac);
-            gabi::call<void>(0x025E8154,actor+0x59c,data,brk,1,0,-1.f,0,-1,1,0);
-            setup_put_the_fire_out(actor);
-            setAction(actor,0x02342dd8);
+/* 02342C88 */
+void daObjFirewall_c::burn_wait_act_proc() {
+    mCollisionStatus.Move();
+    registCollisionGuest(this);
+    u32 sw = mSaveSwitch;
+    if (sw != 255) {
+        s8 room = home.roomNo;
+        if (dComIfGs_isSwitch(sw, room) == 1) {
+            dComIfGs_onEventBit(0x2C01);
+            auto *brk = static_cast<J3DAnmTevRegKey *>(resource(9));
+            if (!brk)
+                JUT_ASSERT_fail(burnAssertFile(), 0x4E9, burnAssertion());
+            J3DModel *model = mpModel;
+            J3DModelData *data = model->getModelData();
+            initBrk(&mBrk, data, brk, 1, 0, -1, 0, -1, 1, 0);
+            setup_put_the_fire_out();
+            setAction(this, Retire);
             return;
         }
     }
-    set_se(actor,1);
+    set_se(1);
 }
-VERIFY(0x02342C88,burn_wait_act_proc);
-
-static void registCollisionTable(u32 actor) {
-    WWHD_FUNC(0x023421F8,void,actor);
-    u32 world=play(),player=gabi::load<u32>(world+0x5b2c);
-    float ax=field<float>(actor,0x314),px=field<float>(player,0x314),az=field<float>(actor,0x31c),pz=field<float>(player,0x31c);
-    s32 angle=gabi::call<s32>(0x020195B0,px-ax,pz-az);
-    s32 absolute=std::abs(s32(s16(angle))),limit=gabi::load<s32>(0x10469b88);
-    float inset=100;
-    if(absolute<limit) {
-        u16 theta=gabi::ftoi((float(absolute)/float(limit))*16384.f);
-        float cosine=gabi::load<float>(0x104a44fc+8*(theta>>3));
-        inset=gabi::fmadds(30.f,cosine,100.f);
-    }else {
-        for(u32 i=0;i<5;++i) {s16 base=gabi::load<s16>(0x101c93d4+2*i);
-            s32 diff=std::abs(s32(s16(angle-base)));
-            if(diff<0x1a00) {u16 theta=gabi::ftoi((float(diff)/6656.f)*16384.f);
-                float cosine=gabi::load<float>(0x104a44fc+8*(theta>>3));
-                inset=gabi::fmadds(115.f,cosine,100.f);
-                if(inset==-1.f)inset=100.f;
+/* 023421F8 */
+void daObjFirewall_c::registCollisionTable() {
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
+    f32 ax = current.pos.x, px = player->current.pos.x, az = current.pos.z, pz = player->current.pos.z;
+    s32 angle = atan2s(px - ax, pz - az);
+    s32 absolute = std::abs((s32)(s16)angle), limit = angleLimit.value;
+    f32 inset = 100;
+    if (absolute < limit) {
+        u16 theta = gabi::ftoi(((f32)absolute / (f32)limit) * 16384);
+        f32 cosine = trig.entries[theta >> 3].cosine;
+        inset = gabi::fmadds(30, cosine, 100);
+    } else {
+        for (u32 i = 0; i < 5; i++) {
+            s16 base = collisionAngles.values[i];
+            s32 diff = std::abs((s32)(s16)(angle - base));
+            if (diff < 0x1A00) {
+                u16 theta = gabi::ftoi(((f32)diff / 6656) * 16384);
+                f32 cosine = trig.entries[theta >> 3].cosine;
+                inset = gabi::fmadds(115, cosine, 100);
+                if (inset == -1)
+                    inset = 100;
                 break;
             }
         }
     }
-    gabi::Local<cXyz> center,delta;
-    center->x=field<float>(actor,0x314);
-    float z=field<float>(actor,0x31c),y=field<float>(actor,0x318);
-    float scaleX=field<float>(actor,0x330),scaleY=field<float>(actor,0x334);
-    center->y=y-300.f;
-    center->z=z;
-    float height=gabi::fmadds(10000.f,scaleY,300.f);
-    gabi::call<void>(0x020182E0,actor+0x508,center.get());
-    gabi::call<void>(0x020184DC,actor+0x508,gabi::fmsubs(1000.f,scaleX,inset));
-    gabi::call<void>(0x02018428,actor+0x508,height);
-    gabi::call<void>(0x0201ADE0,actor+0x314,delta.get(),player+0x314);
-    u32 dx=gabi::load<u32>(gabi::ea(delta.get())),dy=gabi::load<u32>(gabi::ea(delta.get())+4);
-    put<u32>(actor,0x46c,dx);
-    u32 dz=gabi::load<u32>(gabi::ea(delta.get())+8);
-    put<u32>(actor,0x470,dy);
-    put<u32>(actor,0x474,dz);
-    world=play();
-    gabi::call<void>(0x0200E240,world+0x26a4,actor+0x3f0);
+    gabi::Local<cXyz> center, delta;
+    center->x = (f32)current.pos.x;
+    f32 z = current.pos.z, y = current.pos.y, scaleX = scale.x, scaleY = scale.y;
+    center->y = y - 300;
+    center->z = z;
+    f32 height = gabi::fmadds(10000, scaleY, 300);
+    mCollisionCylinder.SetC(center.get());
+    mCollisionCylinder.SetR(gabi::fmsubs(1000, scaleX, inset));
+    mCollisionCylinder.SetH(height);
+    subtractVector(&current.pos, delta.get(), &player->current.pos);
+    u32 dx = word(delta->x), dy = word(delta->y);
+    word(mCollisionCylinder.mGObjAt.mVec.x) = dx;
+    u32 dz = word(delta->z);
+    word(mCollisionCylinder.mGObjAt.mVec.y) = dy;
+    word(mCollisionCylinder.mGObjAt.mVec.z) = dz;
+    dComIfG_Ccsp_Set(&mCollisionCylinder);
 }
-VERIFY(0x023421F8,registCollisionTable);
+/* WWHD glue
+data archive 10028A20
+data fileText 10028AF0
+data heapAssertText 10028AEC
+data playerStaffText 10028B4C
+data waitStaffText 10028B54
+data wait3StaffText 10028B6C
+data burnCutText 10028B5C
+data burn3CutText 10028B74
+data burnAssertFileText 10028B7C
+data burnAssertText 10028B94
+data eventNames 101C943C
+data playerCuts 101C93E0
+data playerSounds 101C93EC
+data collisionAngles 101C93D4
+data trig 104A44F8
+data l_cyl_src 10028AA4
+data radiusBias 1047BCD0
+data minimum 10469B80
+data maximum 10469B84
+data zero0 10469B90
+data zero1 10469B94
+data zero2 10469B98
+data zero3 10469B9C
+data angleLimit 10469B88
+data flag0 10469B8C
+data flag1 10469B8D
+data record0 101C9418
+data record1 101C9424
+data record2 101C9430
+ext 026066C4 void* getResource(dRes_control_c*,SafeString*,s32)
+ext 025E19CC void startSound(u32,const cXyz*)
+ext 025E1B34 void deleteSound(const cXyz*)
+ext 025E2DE0 void modelUpdateDL(J3DModel*,u32)
+ext 025E742C void playAnimation(void*)
+ext 02515A70 void destroyCylinder(dCcD_Cyl*,u32)
+ext 02515860 void destroyStatus(dCcD_Stts*,u32)
+ext 025D50BC void destroyActor(fopAc_ac_c*,u32)
+ext 0200BD2C void constructStatus(dCcD_Stts*)
+ext 02515DA0 void constructGStatus(void*)
+ext 02515FB8 void constructObjectInfo(dCcD_GObjInf*)
+ext 02018590 void constructCylinder(cM3dGCyl*)
+ext 028EFFD0 void constructArray(void*,u32,u32,u32)
+ext 028F026C void registerHeader(void*)
+ext 028ED6F8 void constructHeader0(void*)
+ext 028EAB2C void constructHeader1(void*)
+ext 0200ED84 void addCalc(be<f32>*,f32,f32,f32)
+ext 0255FDA4 void setLightType(u32,u32,f32)
+ext 024F2478 dBgW* createBackground(cBgD_t*,u32,Mtx34*)
+ext 025E7CE0 u32 initBtk(mDoExt_btkAnm*,J3DModelData*,J3DAnmTextureSRTKey*,u32,u32,f32,s32,s32,u32,u32)
+ext 025E8154 u32 initBrk(mDoExt_brkAnm*,J3DModelData*,J3DAnmTevRegKey*,u32,u32,f32,s32,s32,u32,u32)
+ext 025F24E0 void translateMatrix(f32,f32,f32)
+ext 02544830 const char* getNowCutName(void*,s32)
+ext 02543F10 s32 getEventIdxFullWord(void*,const char*,u32)
+ext 02544044 u32 getEventData(void*,s32)
+ext 0201ADE0 void subtractVector(const cXyz*,cXyz*,const cXyz*)
+ext 028E8DD0 f32 vectorSquare(const cXyz*)
+ext 028F4384 f32 sqrtf_guest(f32)
+ext 025D7A58 void orderEvent(fopAc_ac_c*,s16,u32,u32,u32,u32)
+ext 023421F8 void registCollisionGuest(daObjFirewall_c*)
+ext 020195B0 s32 atan2s(f32,f32)
+*/

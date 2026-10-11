@@ -8,51 +8,28 @@
  * mCurrProc is an 8-byte GHS pointer to member, ShopCam_action_c HD 0x50 (GameCube 0x58), so the
  * members from mpShopItems on are +0x168. Size 0xAD0 (GameCube 0x968). */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
+#include "d/d_shop.h"
 
-/* ---- shared NPC / shop classes, WWHD layouts (SHARED-CANDIDATE; as d_a_npc_bms1.h) ---- */
+/* Zunari ABI adapters over the shared NPC and shop layouts. */
 
-/* STControl (HD 0x28: GameCube members 0x04..0x28 at 0x00, the vtable at +0x24) */
-struct STControl_l {
-    /* 0x00 */ u8 _00[0x24];
-    /* 0x24 */ be<u32> __vtbl;
-};
-WWHD_SIZE(STControl_l, 0x28);
+// HD: STControl storage prefix. The shared d_lib layout conflicts with gc_api/d_lib.
+struct RshStickControl { u8 _padding[0x24]; be<u32> mVtable; };
+WWHD_OFFSET(RshStickControl, mVtable, 0x24);
+WWHD_SIZE(RshStickControl, 0x28);
 
 /* ShopCam_action_c (HD 0x50, constructor 025BBDF0): the action pointer to member (8 bytes) and
  * 8 more bytes, then GameCube m18.. at -8 */
-struct ShopCam_action_c_l {
-    /* 0x00 */ u8 mAction[8];
-    /* 0x08 */ u8 _08[8];
-    /* 0x10 */ cXyz m18;
-    /* 0x1C */ cXyz m24;
-    /* 0x28 */ be<f32> m30;
-    /* 0x2C */ cXyz mOrigCenter;
-    /* 0x38 */ cXyz mOrigEye;
-    /* 0x44 */ be<f32> mOrigFovy;
-    /* 0x48 */ be<u16> m50;
-    /* 0x4A */ be<u16> m52;
-    /* 0x4C */ be<s16> m54;
-    /* 0x4E */ be<s16> mCamDataIdx;
+struct RshShopCamera : ShopCam_action_c {
     void Reset() { gabi::call(0x025BC620, this); }                       /* 025BC620 */
     void Save() { gabi::call(0x025BC5B0, this); }                        /* 025BC5B0 */
     BOOL shop_cam_action_init() { return gabi::call<BOOL>(0x025BBE98, this); } /* 025BBE98 */
     void move() { gabi::call(0x025BC714, this); }                        /* 025BC714 */
 };
-WWHD_SIZE(ShopCam_action_c_l, 0x50);
+WWHD_SIZE(RshShopCamera, 0x50);
 
 /* ShopItems_c (HD 0x44 as GameCube, constructor 025BC760) */
-struct ShopItems_c_l {
-    /* 0x00 */ be<s16> mSelectedItemIdx;
-    /* 0x02 */ u8 _02[2];
-    /* 0x04 */ be<u32> mItemActorProcessIds[8];
-    /* 0x24 */ be<u32> m24;
-    /* 0x28 */ be<u8> mItemIsSoldOut[8];
-    /* 0x30 */ u8 _30[0x3C - 0x30];
-    /* 0x3C */ be<s16> m3C;
-    /* 0x3E */ be<s16> mbIsHide;
-    /* 0x40 */ be<s16> mNumItems;
-    /* 0x42 */ be<s16> mItemSetListGlobalIdx;
+struct RshShopItems : ShopItems_c {
     void setItemSetDataList() { gabi::call(0x025BCF84, this); }              /* 025BCF84 */
     void createItem(s32 a, s32 room) { gabi::call(0x025BC810, this, a, room); } /* 025BC810 */
     void Item_Move() { gabi::call(0x025BCCA4, this); }                       /* 025BCCA4 */
@@ -64,53 +41,27 @@ struct ShopItems_c_l {
     void getSelectItemPos(cXyz* out) { gabi::call(0x025BCFA8, this, out); }     /* 025BCFA8 */
     void getSelectItemBasePos(cXyz* out) { gabi::call(0x025BD0EC, this, out); } /* 025BD0EC */
 };
-WWHD_SIZE(ShopItems_c_l, 0x44);
+WWHD_SIZE(RshShopItems, 0x44);
+WWHD_OFFSET(RshShopItems, mNumItems, 0x40);
 
 /* ShopCursor_c: only the members the NPCs touch (show/hide flag +0xB4, setScale +0x98..+0xB0) */
-struct ShopCursor_c_l {
-    /* 0x00 */ u8 _00[0x98];
-    /* 0x98 */ be<f32> m98;
-    /* 0x9C */ be<f32> m9C;
-    /* 0xA0 */ u8 _A0[8];
-    /* 0xA8 */ be<f32> mA8;
-    /* 0xAC */ be<f32> mAC;
-    /* 0xB0 */ be<f32> mB0;
-    /* 0xB4 */ be<u8> mbShow;
-    void show() { mbShow = 1; }
-    void hide() { mbShow = 0; }
+struct RshShopCursor : ShopCursor_c {
+    void show() { m54 = 1; }
+    void hide() { m54 = 0; }
     void setPos(cXyz* p) { gabi::call(0x025BD31C, this, p); }   /* 025BD31C (cXyz&) */
     void anm_play() { gabi::call(0x025BD290, this); }           /* 025BD290 */
     void draw() { gabi::call(0x025BD338, this); }               /* 025BD338 */
 };
 
-/* dNpc_HIO_c, HD 0x28 (GameCube members 0x04.. at 0x00, the vtable at +0x24; constructor 0259DA18) */
-struct dNpc_HIO_c_l {
-    /* 0x00 */ be<f32> m04;
-    /* 0x04 */ be<s16> mMaxHeadX;
-    /* 0x06 */ be<s16> mMaxBackboneX;
-    /* 0x08 */ be<s16> mMaxHeadY;
-    /* 0x0A */ be<s16> mMaxBackboneY;
-    /* 0x0C */ be<s16> mMinHeadX;
-    /* 0x0E */ be<s16> mMinBackboneX;
-    /* 0x10 */ be<s16> mMinHeadY;
-    /* 0x12 */ be<s16> mMinBackboneY;
-    /* 0x14 */ be<s16> mMaxTurnStep;
-    /* 0x16 */ be<s16> mMaxHeadTurnVel;
-    /* 0x18 */ be<f32> mAttnYOffset;
-    /* 0x1C */ be<s16> mMaxAttnAngleY;
-    /* 0x1E */ be<u8> m22;
-    /* 0x1F */ u8 _1F;
-    /* 0x20 */ be<f32> mMaxAttnDistXZ;
-    /* 0x24 */ be<u32> __vtbl;
-};
-WWHD_SIZE(dNpc_HIO_c_l, 0x28);
+WWHD_SIZE(RshShopCursor, 0xB8);
+WWHD_OFFSET(RshShopCursor, m54, 0xB4);
 
 /* daNpc_Rsh1_HIO_c (HD 0x6C, l_HIO at 0x104685A0; vtable at the end) */
 struct daNpc_Rsh1_HIO_c {
     /* 0x00 */ be<s8> mNo;
     /* 0x01 */ u8 _01[3];
     /* 0x04 */ be<s32> m08;
-    /* 0x08 */ dNpc_HIO_c_l mNpcHIO;
+    /* 0x08 */ dNpc_HIO_c mNpcHIO;
     /* 0x30 */ be<f32> m34;
     /* 0x34 */ be<f32> m38;
     /* 0x38 */ be<f32> m3C;
@@ -130,15 +81,12 @@ struct daNpc_Rsh1_HIO_c {
 };
 WWHD_SIZE(daNpc_Rsh1_HIO_c, 0x6C);
 #define RSH1_HIO_ADDR 0x104685A0u
-static inline daNpc_Rsh1_HIO_c& rsh1_HIO() { return *gabi::at<daNpc_Rsh1_HIO_c>(RSH1_HIO_ADDR); }
+daNpc_Rsh1_HIO_c& rsh1_HIO();
 
 struct daNpc_Rsh1_c : fopAc_ac_c {
     /* GHS pointer to member (8 bytes) */
-    struct ProcFunc_l {
-        /* 0x0 */ be<s16> d;
-        /* 0x2 */ be<s16> i;
-        /* 0x4 */ be<u32> f;
-    };
+    typedef BOOL (daNpc_Rsh1_c::*ProcFunc)(void*);
+    using ProcStorage = gabi::ptmf<ProcFunc>;
 
     BOOL checkCreateInShopPlayer();
     BOOL initTexPatternAnm(u32 i_modify); /* bool, passed on as the full register */
@@ -202,7 +150,7 @@ struct daNpc_Rsh1_c : fopAc_ac_c {
     /* 0x7AA */ u8 _7AA[2];
     /* 0x7AC */ dNpc_JntCtrl_c mJntCtrl;
     /* 0x7E0 */ dNpc_EventCut_c mEventCut;
-    /* 0x84C */ STControl_l mSTControl;
+    /* 0x84C */ RshStickControl mSTControl;
     /* 0x874 */ gptr<dPath> mpPath;
     /* 0x878 */ be<s8> m704;
     /* 0x879 */ u8 _879[3];
@@ -231,12 +179,12 @@ struct daNpc_Rsh1_c : fopAc_ac_c {
     /* 0x907 */ be<u8> m793;
     /* 0x908 */ cXyz m794;
     /* 0x914 */ cXyz m7A0;
-    /* 0x920 */ ProcFunc_l mCurrProc;
-    /* 0x928 */ ShopCam_action_c_l mShopCamAct;
-    /* 0x978 */ gptr<ShopItems_c_l> mpShopItems;
-    /* 0x97C */ ShopItems_c_l mShopItemsArr[4];
+    /* 0x920 */ ProcStorage mCurrProc;
+    /* 0x928 */ RshShopCamera mShopCamAct;
+    /* 0x978 */ gptr<RshShopItems> mpShopItems;
+    /* 0x97C */ RshShopItems mShopItemsArr[4];
     /* 0xA8C */ be<u32> mShopItemDataPtrs[12];
-    /* 0xABC */ gptr<ShopCursor_c_l> mpShopCursor;
+    /* 0xABC */ gptr<RshShopCursor> mpShopCursor;
     /* 0xAC0 */ be<s8> m958;
     /* 0xAC1 */ be<s8> m959;
     /* 0xAC2 */ be<s8> m95A;
@@ -273,7 +221,6 @@ WWHD_SIZE(daNpc_Rsh1_c, 0xAD0);
 int daNpc_Rsh1_countShop();
 BOOL daNpc_Rsh1_shopMsgCheck(u32);
 BOOL daNpc_Rsh1_shopStickMoveMsgCheck(u32);
-BOOL daNpc_Rsh1_checkRotenBaseTalkArea();
 
 /* action addresses (pointer-to-member targets) */
 enum : u32 {
@@ -285,27 +232,19 @@ enum : u32 {
 };
 #define RSH1_VTBL 0x100216A4u /* daNpc_Rsh1_c vtable (HD virtual destructor) */
 #define RSH1_ARC 0x101C619Cu  /* "Rsh" (daNpc_Rsh1_c::m_arcname) */
-/* HEADER READY */
 
-/* ---- local bindings and helpers of the TU (SHARED-CANDIDATE where noted) ---- */
+
+/* Unit-local ABI bindings and layout adapters. */
 #define RSH1_SAFESTRING_VTBL 0x1002164Cu /* this TU's sead::SafeString vtable */
 static inline void* rsh1_getRes(s32 idx) { return dComIfG_getObjectRes(STR(RSH1_ARC), idx, RSH1_SAFESTRING_VTBL); }
 /* dComIfGs_isGetItemReserve(i): dSv_player_get_bag_item_c (save + 0xB0)::isReserve (025B7840) */
 static inline BOOL rsh1_isGetItemReserve(u8 i) { return gabi::call<BOOL>(0x025B7840, gabi::load<u32>(0x101F84DC) + 0xB0, (u32)i); }
 /* 02520C0C dComIfGs_checkGetItem(u8) */
-static inline BOOL dComIfGs_checkGetItem_l(u8 item) { return gabi::call<BOOL>(0x02520C0C, (u32)item); }
+
 /* J3DModel::getAnmMtx (HD: joint matrix block at +0x2C, dirty flag 0x10 at +4, matrices at +0x10) */
-static inline u32 rsh1_getAnmMtx(J3DModel* model, u32 jntNo) {
-    u32 blk = gabi::load<u32>(gabi::ea(model) + 0x2C);
-    gabi::store<u16>(blk + 4, (u16)(gabi::load<u16>(blk + 4) | 0x10));
-    return gabi::load<u32>(blk + 0x10) + jntNo * 0x30;
-}
+
 /* matrix assignment through FPRs (lfs/stfs: the recompiled lfs quiets a signalling NaN) */
-static inline void rsh1_mtx_copy(u32 dst, u32 src) {
-    f32 t[12];
-    for (int i = 0; i < 12; i++) t[i] = gabi::load<f32>(src + 4 * i);
-    for (int i = 0; i < 12; i++) gabi::store<f32>(dst + 4 * i, t[i]);
-}
+
 static inline s32 rsh1_btpInit(void* anm, J3DModelData* d, void* p, s32 play, s32 attr, f32 rate, s32 start, s32 end,
                                u32 modify, s32 entry) {
     return gabi::call<s32>(0x025E789C, anm, d, p, play, attr, rate, start, end, modify, entry);
@@ -327,28 +266,19 @@ static inline void rsh1_setJointCallBack(u32 data, u32 i, u32 cb) {
     if (i < n) p += i * 0x1C;
     gabi::store<u32>(p + 8, cb);
 }
-static inline ShopCursor_c_l* rsh1_ShopCursor_create(void* mdl, void* brk, f32 scale) {
-    return gabi::call<ShopCursor_c_l*>(0x025BBD7C, mdl, brk, scale);
+static inline RshShopCursor* rsh1_ShopCursor_create(void* mdl, void* brk, f32 scale) {
+    return gabi::call<RshShopCursor*>(0x025BBD7C, mdl, brk, scale);
 }
 static inline void rsh1_dNpc_setAnm_2(mDoExt_McaMorf* m, s32 loop, f32 morf, f32 speed, s32 anm, s32 bas, const char* arc) {
     gabi::call(0x0259D79C, m, loop, morf, speed, anm, bas, arc);
 }
 /* (this->*mCurrProc)(NULL): GHS pointer to member call (i < 0: plain; i >= 0: virtual) */
 static inline void rsh1_callProc(daNpc_Rsh1_c* a) {
-    daNpc_Rsh1_c::ProcFunc_l* pmf = &a->mCurrProc;
-    u32 thisp = gabi::ea(a) + (s32)(s16)pmf->d;
-    s16 i = pmf->i;
-    if (i < 0) {
-        gabi::call_ptr<BOOL>(pmf->f, thisp, (u32)0);
-    } else {
-        s16 voff = gabi::load<s16>(gabi::ea(pmf) + 6);
-        u32 vt = gabi::load<u32>(thisp + voff);
-        gabi::call_ptr<BOOL>(gabi::load<u32>(vt + i * 8 + 4), thisp, (u32)0);
-    }
+    (a->*a->mCurrProc)(nullptr);
 }
 /* setAction(&daNpc_Rsh1_c::fn, NULL) (inline): GHS compares the pointer to member with {0, -1, fn} */
 static inline void rsh1_setAction(daNpc_Rsh1_c* a, u32 fn) {
-    daNpc_Rsh1_c::ProcFunc_l* cur = &a->mCurrProc;
+    daNpc_Rsh1_c::ProcStorage* cur = &a->mCurrProc;
     if (cur->i == -1 && cur->d == 0 && cur->f == fn) return;
     if (cur->i != 0) {
         a->mActionStatus = -1;
@@ -361,7 +291,7 @@ static inline void rsh1_setAction(daNpc_Rsh1_c* a, u32 fn) {
     gabi::call_ptr<BOOL>(cur->f, a, (u32)0);
 }
 /* dComIfGp_evmng_getEventIdx(name, 0xFF) */
-static inline s16 rsh1_getEventIdx(u32 name) { return gabi::call<s16>(0x02543F10, dComIfGp_getPEvtManager(), name, (u32)0xFF); }
+static inline s16 rsh1_getEventIdx(const char* name) { return gabi::call<s16>(0x02543F10, dComIfGp_getPEvtManager(), name, (u32)0xFF); }
 /* cXyz assignment as GHS does it for a plain copy (three word loads, three word stores) */
 static inline void rsh1_copy12(u32 dst, u32 src) {
     u32 a = gabi::load<u32>(src), b = gabi::load<u32>(src + 4), c = gabi::load<u32>(src + 8);
@@ -369,3 +299,245 @@ static inline void rsh1_copy12(u32 dst, u32 src) {
     gabi::store<u32>(dst + 4, b);
     gabi::store<u32>(dst + 8, c);
 }
+
+// HD: one TU-wide message ID, shared by the split sources.
+be<u32>& rsh1_messageId();
+
+/* HD message and save ABI bindings. */
+struct RshMessageManager;
+static inline u16 rsh1m_msgGetStatus(RshMessageManager* mng) { return gabi::call<u16>(0x025F795C, mng); }
+static inline void rsh1m_msgSetStatus(RshMessageManager* mng, u32 st) { gabi::call(0x025F74D0, mng, st); }
+static inline u32 rsh1m_msgSet(RshMessageManager* mng, u32 msgNo, void* pos) { return gabi::call<u32>(0x025F7DB0, mng, msgNo, pos); }
+static inline void rsh1m_demoMsgFlagOn() { gabi::call(0x025DB58C); }
+static inline BOOL rsh1m_CPad_CHECK_TRIG_B(s32 port) { return gabi::call<BOOL>(0x020078BC, port); }
+static inline u8 rsh1m_play_u8(u32 off) { return gabi::load<u8>(dComIfGp_ea() + off); }
+static inline void rsh1m_play_set_u8(u32 off, u8 v) { gabi::store<u8>(dComIfGp_ea() + off, v); }
+static inline u32 rsh1m_save() { return gabi::load<u32>(0x101F84DC); }
+static inline BOOL rsh1m_isEventBit(u16 f) { return gabi::call<BOOL>(0x025B8B94, rsh1m_save() + 0x644, f); }
+static inline void rsh1m_onEventBit(u16 f) { gabi::call(0x025B8B68, rsh1m_save() + 0x644, f); }
+static inline BOOL rsh1m_checkGetItem(u8 item) { return gabi::call<BOOL>(0x02520C0C, item); }
+static inline BOOL rsh1m_checkItemGet(u8 item, s32 flag) { return gabi::call<BOOL>(0x0254DA50, item, flag); }
+static inline void rsh1m_execItemGet(u8 item) { gabi::call(0x0254DA38, item); }
+static inline s32 rsh1m_BoughtErrorStatus(u32 items, s32 a, s32 price) { return gabi::call<s32>(0x025BBA1C, items, a, price); }
+static inline BOOL rsh1m_now_triggercheck(void* stick, u32 items, be<u32>* msg, u32 cb, u32 cbArg) {
+    return gabi::call<BOOL>(0x025BB698, stick, items, msg, cb, cbArg);
+}
+static inline void rsh1m_seStart(u32 id, cXyz* pos, u32 param, s32 reverb) { gabi::call(0x025E1A40, id, pos, param, reverb); }
+static inline BOOL rsh1m_checkReserveItem(u8 item) { return gabi::call<BOOL>(0x025B7570, rsh1m_save() + 0x96, item); }
+static inline BOOL rsh1m_normalizeRS(cXyz* v) { return gabi::call<BOOL>(0x0201B47C, v); }
+static inline f32 rsh1m_addCalcPos(cXyz* pos, cXyz* target, f32 scale, f32 maxStep, f32 minStep) {
+    return gabi::call<f32>(0x0200EE00, pos, target, scale, maxStep, minStep);
+}
+/* HD-only save flags: *(save + 0x12C0) + 0x8C (02720118), a 32-bit word; 0271F954 tests, 0271F968 sets */
+static inline u32 rsh1m_hdFlags() { return gabi::call<u32>(0x02720118, rsh1m_save() + 0x12C0); }
+static inline BOOL rsh1m_hdFlagCheck(u32 p, u32 bit) { return gabi::call<BOOL>(0x0271F954, p, bit); }
+static inline void rsh1m_hdFlagOn(u32 p, u32 bit) { gabi::call(0x0271F968, p, bit); }
+/* ShopCam_action_c::rsh_talk_cam_action_init(actor, cXyz ctr, cXyz eye, f32 fovy) (cXyz by value) */
+static inline void rsh1m_talkCamInit(RshShopCamera* cam, fopAc_ac_c* a, cXyz* ctr, cXyz* eye, f32 fovy) {
+    gabi::call(0x025BC1B0, cam, a, ctr, eye, fovy);
+}
+
+
+// HD: the manager replaces GameCube's msg_class pointer; these are its verified fields.
+struct RshMessageManager {
+    u8 _padding[0x922];
+    be<u8> mCancel;
+    u8 _padding923[0x938 - 0x923];
+    be<u32> mMsgNo;
+    u8 _padding93C[0x948 - 0x93C];
+    be<u32> mSelectNum;
+};
+WWHD_OFFSET(RshMessageManager, mCancel, 0x922);
+WWHD_OFFSET(RshMessageManager, mMsgNo, 0x938);
+WWHD_OFFSET(RshMessageManager, mSelectNum, 0x948);
+WWHD_SIZE(RshMessageManager, 0x94C);
+struct RshCameraView {
+    u8 _padding[0xE8];
+    cXyz mCenter;
+};
+WWHD_OFFSET(RshCameraView, mCenter, 0xE8);
+WWHD_SIZE(RshCameraView, 0xF4);
+struct RshPlayerState : fopAc_ac_c {
+    u8 _padding3AC[0x3B8 - 0x3AC];
+    be<u32> mNoResetFlg0;
+};
+WWHD_OFFSET(RshPlayerState, mNoResetFlg0, 0x3B8);
+WWHD_SIZE(RshPlayerState, 0x3BC);
+struct RshPathPoint { be<u8> mArg0, mArg1, mArg2, mArg3; cXyz m_position; };
+struct RshPath { be<u16> m_num, m_nextID; be<u8> mArg0, m_closed, mArg2, mArg3; gptr<RshPathPoint> m_points; };
+WWHD_OFFSET(RshPath, m_points, 8);
+WWHD_SIZE(RshPath, 0xC);
+WWHD_OFFSET(RshPathPoint, m_position, 4);
+WWHD_SIZE(RshPathPoint, 0x10);
+inline RshPlayerState* rsh1_playerState(fopAc_ac_c* p) { return reinterpret_cast<RshPlayerState*>(p); }
+// 025E7820: HD ABI used by Zunari.
+inline void rsh1_btpConstruct(void* a) { return gabi::call<void>(0x025E7820, a); }
+// 0259DAA0: HD ABI used by Zunari.
+inline void rsh1_jointControlConstruct(dNpc_JntCtrl_c* a) { return gabi::call<void>(0x0259DAA0, a); }
+// 0259F740: HD ABI used by Zunari.
+inline void rsh1_eventCutConstruct(dNpc_EventCut_c* a) { return gabi::call<void>(0x0259F740, a); }
+// 025885C4: HD ABI used by Zunari.
+inline void rsh1_stickWaitParm(RshStickControl* a, s32 l, s32 r, s32 u, s32 d, f32 value, f32 threshold, s32 repeat, s32 angle) { return gabi::call<void>(0x025885C4, a, l, r, u, d, value, threshold, repeat, angle); }
+// 025885E8: HD ABI used by Zunari.
+inline void rsh1_stickInit(RshStickControl* a) { return gabi::call<void>(0x025885E8, a); }
+// 025BBDF0: HD ABI used by Zunari.
+inline void rsh1_shopCameraConstruct(RshShopCamera* a) { return gabi::call<void>(0x025BBDF0, a); }
+// 028EFFD0: HD ABI used by Zunari.
+inline void rsh1_constructItems(RshShopItems* a, s32 count, s32 size, u32 ctor) { return gabi::call<void>(0x028EFFD0, a, count, size, ctor); }
+// 025E7B3C: HD ABI used by Zunari.
+inline void rsh1_btpEntry(void* a, J3DModelData* d, u32 frame) { return gabi::call<void>(0x025E7B3C, a, d, frame); }
+// 025BEBB8: HD ABI used by Zunari.
+inline void rsh1_registerFigure(s32 type, daNpc_Rsh1_c* a, cXyz* p, s32 angle, f32 sx, f32 sy, f32 sz) { return gabi::call<void>(0x025BEBB8, type, a, p, angle, sx, sy, sz); }
+// 0259DA18: HD ABI used by Zunari.
+inline void rsh1_npcHioConstruct(dNpc_HIO_c* a) { return gabi::call<void>(0x0259DA18, a); }
+// 025D87E4: HD ABI used by Zunari.
+inline u32 rsh1_createShopItem(u32 p, u32 item, csXyz* angle, s32 room, s32 arg4, s32 arg5) { return gabi::call<u32>(0x025D87E4, p, item, angle, room, arg4, arg5); }
+// 025BCFA0: HD ABI used by Zunari.
+inline void rsh1_setItemDataList(RshShopItems* a, be<u32>* list) { return gabi::call<void>(0x025BCFA0, a, list); }
+// 02515F14: HD ABI used by Zunari.
+inline void rsh1_statusInit(dCcD_Stts* a, s32 weight, s32 flags, daNpc_Rsh1_c* actor) { return gabi::call<void>(0x02515F14, a, weight, flags, actor); }
+// 02516518: HD ABI used by Zunari.
+
+// 0259F7D4: HD ABI used by Zunari.
+inline void rsh1_setActorInfo(dNpc_EventCut_c* a, const char* name, daNpc_Rsh1_c* actor) { return gabi::call<void>(0x0259F7D4, a, name, actor); }
+// 025D7A58: HD ABI used by Zunari.
+inline void rsh1_orderOtherEventId(daNpc_Rsh1_c* a, s32 event, s32 map, s32 arg3, s32 arg4, s32 arg5) { return gabi::call<void>(0x025D7A58, a, event, map, arg3, arg4, arg5); }
+// 025D77DC: HD ABI used by Zunari.
+inline void rsh1_orderOtherEvent(daNpc_Rsh1_c* a, const char* event, s32 priority, s32 flags) { return gabi::call<void>(0x025D77DC, a, event, priority, flags); }
+// 0259D54C: HD ABI used by Zunari.
+inline void rsh1_playerEyePos(cXyz* out, f32 offset) { return gabi::call<void>(0x0259D54C, out, offset); }
+// 0259DED0: HD ABI used by Zunari.
+inline void rsh1_lookAtTarget(dNpc_JntCtrl_c* a, be<s16>* angle, cXyz* target, cXyz* eye, s32 base, s32 velocity, u32 headOnly) { return gabi::call<void>(0x0259DED0, a, angle, target, eye, base, velocity, headOnly); }
+// 024EF130: HD ABI used by Zunari.
+inline s8 rsh1_groundRoomId(dBgS* bg, cBgS_PolyInfo* poly) { return gabi::call<s8>(0x024EF130, bg, poly); }
+// 024EEEB8: HD ABI used by Zunari.
+inline u8 rsh1_groundColor(dBgS* bg, cBgS_PolyInfo* poly) { return gabi::call<u8>(0x024EEEB8, bg, poly); }
+// 022D8D44: HD ABI used by Zunari.
+inline u8 rsh1_attentionByte(daNpc_Rsh1_c* a, cXyz* p, s32 angle) { return gabi::call<u8>(0x022D8D44, a, p, angle); }
+// 025D7DEC: HD ABI used by Zunari.
+inline u32 rsh1_createPresent(cXyz* p, u32 item, s32 arg2, s32 arg3, s32 room, s32 arg5, s32 arg6) { return gabi::call<u32>(0x025D7DEC, p, item, arg2, arg3, room, arg5, arg6); }
+// 0254457C: HD ABI used by Zunari.
+inline BOOL rsh1_endCheckOld(dEvent_manager_c* a, const char* name) { return gabi::call<BOOL>(0x0254457C, a, name); }
+// 02542EDC: HD ABI used by Zunari.
+inline s32 rsh1_getActIdx(dEvent_manager_c* a, s32 staff, u32 names, s32 count, s32 force, s32 arg5) { return gabi::call<s32>(0x02542EDC, a, staff, names, count, force, arg5); }
+// 028F026C: HD ABI used by Zunari.
+inline void rsh1_registerGlobal(u32 record) { return gabi::call<void>(0x028F026C, record); }
+// 028ED6F8: HD ABI used by Zunari.
+inline void rsh1_initializeHeaderByte(u32 value) { return gabi::call<void>(0x028ED6F8, value); }
+// 028EAB2C: HD ABI used by Zunari.
+inline void rsh1_initializeHeaderFlag(u32 value) { return gabi::call<void>(0x028EAB2C, value); }
+// 022DB690: HD ABI used by Zunari.
+inline void rsh1_constructHio(u32 hio) { return gabi::call<void>(0x022DB690, hio); }
+// 0273AF40: HD ABI used by Zunari.
+inline void rsh1_operatorDelete(void* value) { return gabi::call<void>(0x0273AF40, value); }
+// 025886D8: HD ABI used by Zunari.
+inline void rsh1_stickDestroy(RshStickControl* a, s32 flags) { return gabi::call<void>(0x025886D8, a, flags); }
+// 02018034: HD ABI used by Zunari.
+inline void rsh1_circleDestroy(u32 a, s32 flags) { return gabi::call<void>(0x02018034, a, flags); }
+// 024EFD9C: HD ABI used by Zunari.
+inline void rsh1_acchDestroy(u32 a, s32 flags) { return gabi::call<void>(0x024EFD9C, a, flags); }
+// 025D50BC: HD ABI used by Zunari.
+inline void rsh1_actorDestroy(daNpc_Rsh1_c* a, s32 flags) { return gabi::call<void>(0x025D50BC, a, flags); }
+
+// HD: scalar word copies load every component before any destination store.
+struct RshVectorWords { be<u32> x, y, z; };
+WWHD_SIZE(RshVectorWords, 0xC);
+inline RshVectorWords& rsh1_words(cXyz& v) { return *reinterpret_cast<RshVectorWords*>(&v); }
+inline BOOL rsh1_chasePosXZ(cXyz* p, cXyz* target, f32 step) { return gabi::call<BOOL>(0x0200F764, p, target, step); }
+inline void rsh1_outprod(cXyz* p, cXyz* out, cXyz* other) { gabi::call(0x0201B080, p, out, other); }
+inline bool rsh1_normalizeRS(cXyz* p) { return gabi::call<bool>(0x0201B47C, p); }
+inline cXyz& rsh1_baseY() { return *gabi::at<cXyz>(0x101FFBC0); }
+inline RshCameraView* rsh1_camera() { return gabi::at<RshCameraView>(gabi::load<u32>(dComIfGp_ea() + 0x5AF8)); }
+inline RshMessageManager* rsh1_messageManager() { return gabi::at<RshMessageManager>(gabi::load<u32>(0x101F4B5C)); }
+inline RshPath* rsh1_path(dPath* p) { return reinterpret_cast<RshPath*>(p); }
+inline void rsh1_removeBtp(J3DModelData* d) { *gabi::at<be<u32>>(gabi::ea(d) + 0x38) = 0; }
+
+enum {
+ dRes_INDEX_RSH_BCK_RS_PUSH_e = 21, dRes_INDEX_RSH_BCK_RS_TALK01_e = 23,
+ dRes_INDEX_RSH_BCK_RS_TALK02_e = 24, dRes_INDEX_RSH_BCK_RS_WAIT01_e = 27,
+ dRes_INDEX_RSH_BCK_RS_WAIT02_e = 28, dRes_INDEX_RSH_BCK_RS_WALK_e = 29,
+ dRes_INDEX_RSH_BAS_RS_PUSH_e = 9, dRes_INDEX_RSH_BAS_RS_TALK01_e = 11,
+ dRes_INDEX_RSH_BAS_RS_TALK02_e = 12, dRes_INDEX_RSH_BAS_RS_WAIT01_e = 15,
+ dRes_INDEX_RSH_BAS_RS_WAIT02_e = 16, dRes_INDEX_RSH_BAS_RS_WALK_e = 17,
+ dRes_INDEX_RSH_BDL_RS_e = 32, dRes_INDEX_RSH_BMD_SHOP_CURSOR01_e = 35,
+ dRes_INDEX_RSH_BRK_SHOP_CURSOR01_e = 38, dRes_INDEX_RSH_BTP_RS_MABA01_e = 41,
+ DSNAP_TYPE_NPC_RSH1 = 0x5F
+};
+
+inline void rsh1_subtract(cXyz* a, cXyz* b, cXyz* out) { gabi::call(0x028E8DAC, a, b, out); }
+
+// HD: one owner-source view of this translation unit's writable statics.
+struct RshStatics {
+    /* 0x000 */ be<u32> mMessageId;
+    /* 0x004 */ be<f32> mNegativePi, mPositivePi;
+    /* 0x00C */ be<u32> mTalkAreaGuard;
+    /* 0x010 */ be<u8> mHeaderByte, mHeaderFlag;
+    u8 _padding012[2];
+    /* 0x014 */ cXyz mShopArea1[4];
+    /* 0x044 */ cXyz mShopArea2[4];
+    /* 0x074 */ cXyz mTalkArea[4];
+    /* 0x0A4 */ cXyz mTalkCenter[2];
+    /* 0x0BC */ cXyz mTalkEye[2];
+    /* 0x0D4 */ be<u32> mHeaderZeros[4];
+    /* 0x0E4 */ daNpc_Rsh1_HIO_c mHIO;
+    /* 0x150 */ be<u32> mTalkCenterGuard, mTalkEyeGuard;
+};
+WWHD_OFFSET(RshStatics, mShopArea1, 0x14);
+WWHD_OFFSET(RshStatics, mShopArea2, 0x44);
+WWHD_OFFSET(RshStatics, mTalkArea, 0x74);
+WWHD_OFFSET(RshStatics, mTalkCenter, 0xA4);
+WWHD_OFFSET(RshStatics, mTalkEye, 0xBC);
+WWHD_OFFSET(RshStatics, mHIO, 0xE4);
+WWHD_OFFSET(RshStatics, mTalkCenterGuard, 0x150);
+WWHD_SIZE(RshStatics, 0x158);
+RshStatics& rsh1_statics();
+inline be<f32>* rsh1_components(cXyz* vectors) { return reinterpret_cast<be<f32>*>(vectors); }
+
+inline gptr<__shop_items_set_data>* rsh1_shopItemData() { return gabi::at<gptr<__shop_items_set_data>>(0x101EB940); }
+inline ShopItems_c__ItemData* rsh1_itemData(__shop_items_set_data* data) { return gabi::at<ShopItems_c__ItemData>(data->mpItemData); }
+inline cXyz* rsh1_shopItemPositions() { return gabi::at<cXyz>(0x101EB998); }
+inline dCcD_SrcCyl* rsh1_cylinderSource() { return gabi::at<dCcD_SrcCyl>(0x101C60A0); }
+inline bool rsh1_forceWait() { return *gabi::at<be<u8>>(0x101D5F45) != 0; }
+inline void rsh1_setStickVtable(RshStickControl* stick) { stick->mVtable = 0x10050788; }
+inline void rsh1_setActorVtable(daNpc_Rsh1_c* a) { *gabi::at<be<u32>>(gabi::ea(a) + 0xB4) = RSH1_VTBL; }
+enum : u32 { RSH1_CYL_AAB_VTBL = 0x10021664, RSH1_HIO_VTBL = 0x100216B4,
+ RSH1_HEADER_RECORD_0 = 0x101C6178, RSH1_HEADER_RECORD_1 = 0x101C6184, RSH1_HEADER_RECORD_2 = 0x101C6190,
+ RSH1_SHOP_CAM_ACTION = 0x025BBF4C, RSH1_TALK_CAM_ACTION = 0x025BC38C };
+
+static inline void rsh1m_setAction(daNpc_Rsh1_c* a, u32 fn) {
+    daNpc_Rsh1_c::ProcStorage* cur = &a->mCurrProc;
+    s16 i = cur->i;
+    if (i == -1 && cur->d == 0 && cur->f == fn) {
+        return;
+    }
+    if (i != 0) {
+        u32 thisp = gabi::ea(a) + (s32)(s16)cur->d;
+        s16 ci = cur->i;
+        a->mActionStatus = -1;
+        if (ci < 0) {
+            gabi::call_ptr<BOOL>(cur->f, thisp, (u32)0);
+        } else {
+            u32 vt = gabi::load<u32>(thisp + (s32)gabi::load<s16>(gabi::ea(cur) + 6));
+            gabi::call_ptr<BOOL>(gabi::load<u32>(vt + ci * 8 + 4), thisp, (u32)0);
+        }
+    }
+    cur->d = 0;
+    u32 thisp = gabi::ea(a) + (s32)(s16)cur->d;
+    cur->i = -1;
+    cur->f = fn;
+    a->mActionStatus = 0;
+    gabi::call_ptr<BOOL>(cur->f, thisp, (u32)0);
+}
+
+enum : u32 { RSH1_next_msgStatus = 0x022D8F58 };
+static inline u32 rsh1m_next_msgStatus(daNpc_Rsh1_c* a, be<u32>* p, be<u32>* p2) {
+    return gabi::call<u32>(RSH1_next_msgStatus, a, p, p2);
+}
+
+inline u16 rsh1_jointNumber(J3DJoint* j) { return *gabi::at<be<u16>>(gabi::ea(j) + 4); }
+
+u32 rsh1_cutNames();
+
+enum { dItemNo_DELIVERY_BAG_e = 0x30 };
+
+enum { fpcNm_PLAYER_e = 0xA8, dItemNo_TOWN_FLOWER_e = 0x8C, dItemNo_SAIL_e = 0x78, dItemNo_MAGIC_ARMOR_e = 0x2A, dItemNo_SWIFT_SAIL_e = 0x77, dActStts_CHOOSE_e = 0x17, dActStts_CANCEL_e = 0x27 };

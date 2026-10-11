@@ -1,408 +1,317 @@
-/* hd_ui_020015C8: four HD UI TUs (no GameCube source). 
- *
- * 020015C8..02001727: UI widget base (0x18: list node +0..+0xC, serial number +0x10 from the counter
- *                     1018C178 (never 0), vtable 100001B0 at +0x14); __sinit 0200167C; three constant
- *                     virtuals 02001710 (0) / 02001718 (1) / 02001720 (1)
- * 02001728..020019FF: GamePad pointer (0x1B4, derived from the sead-side base 0273CDD4; vtables 10000220
- *                     at +0x170 and 10000258 at +0x13C): integer cursor +0x194/+0x198, float cursor
- *                     +0x19C/+0x1A0, centre +0x1A4/+0x1A8, scale +0x1AC/+0x1B0; __sinit 0200196C
- * 02001A00..02001CAF: UI touch widget (0x58 = widget base + layout pane +0x18, state +0x1C, eight user
- *                     words +0x38); __sinit 02001C1C
- * 02001CB0..020021FB: UI event queue (0x1C: heap +0, list header +4 (count +0xC), event-box array +0x10
- *                     with its count +0x14, vtable 100002B0 at +0x18); __sinit 02002168 */
-#include "hd_blk.h"
-using namespace hdblk;
+/* HD: widget serials, GamePad cursor mapping, pane hit testing and queued UI events. */
+#include "hd/hd_ui_020015C8.h"
+static u32 sWidgetSerial;
+static u32 sArrayCookieSize;
+static hdWidget_cursor_c sInitialCursor;
+static f32 sZero = 0.0f;
+static f32 sOne = 1.0f;
+static f32 sHalf = 0.5f;
+static const u32 widgetVtable = 0x100001B0;
+static const u32 pointerVtable = 0x10000220;
+static const u32 pointerSecondaryVtable = 0x10000258;
+static const u32 pointerBaseVtable = 0x101432B0;
+static const u32 touchVtable = 0x10000270;
+static const u32 queueVtable = 0x100002B0;
+static const u32 eventBoxConstructor = 0x02001084;
+static const u32 eventBoxDestructor = 0x02001110;
 
-namespace hd_ui_020015C8 {
-
-/* 020015C8: widget base constructor */
-static u32 Widget_ct(u32 self) {
-    WWHD_FUNC(0x020015C8, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x18);
-        if (t == 0) return 0;
+/* 020015C8 */
+static hdWidget_c* hdWidget_construct(hdWidget_c* widget) {
+    if (!widget) {
+        widget = static_cast<hdWidget_c*>(operator_new(sizeof(hdWidget_c)));
+        if (!widget) return nullptr;
     }
-    /* inline list-node constructor (its null branch is dead) */
-    st(t + 8, t);
-    st(t + 4, 0);
-    st(t + 0, 0);
-    st(t + 0xC, 0);
-    st(t + 0x14, 0x100001B0);
-    u32 serial = ld(0x1018C178);
-    st(0x1018C178, serial + 1);
-    st(t + 0x10, serial);
-    if (ld(0x1018C178) == 0) st(0x1018C178, 1);
-    return t;
+    widget->mpOwner = widget;
+    widget->mpNext = nullptr;
+    widget->mpPrevious = nullptr;
+    widget->mNodeState = 0;
+    widget->mVtable = widgetVtable;
+    u32 serial = sWidgetSerial;
+    sWidgetSerial = serial + 1;
+    widget->mSerial = serial;
+    if (!sWidgetSerial) sWidgetSerial = 1;
+    return widget;
 }
-VERIFY(0x020015C8, Widget_ct);
-
-static void Widget_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02001668, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 02001668 */
+static void hdWidget_destroy(hdWidget_c* widget, s32 flags) { if (widget && (flags & 1)) operator_delete(widget); }
+/* 0200167C */
+static void hdWidget_initStatics() { sinit_header_statics_rodata(0x101FF0EC, 0x1018C17C, 0x101FF0F8, 0x100001A8); }
+/* 02001710 */
+static u32 hdWidget_defaultFalse() { return 0; }
+/* 02001718 */
+static u32 hdWidget_defaultTrue() { return 1; }
+/* 02001720 */
+static u32 hdWidget_defaultEnabled() { return 1; }
+/* 02001728 */
+static void hdWidget_destroyPointer(hdWidget_pointer_c* pointer, s32 flags) {
+    if (!pointer) return;
+    pointer->mSecondaryVtable = pointerBaseVtable;
+    hdWidget_destroyPointerBase(pointer, 0);
+    if (flags & 1) operator_delete(pointer);
 }
-VERIFY(0x02001668, Widget_dt);
-
-static void sinit_0200167C() {
-    WWHD_FUNC(0x0200167C, void);
-    header_sinit(0x101FF0F8, 0x1018C17C, 0x100001A8);
+/* 02001788 */
+static void hdWidget_destroyPointerSecondary(void* secondary, s32 flags) {
+    hdWidget_destroyPointerEntry(gabi::at<hdWidget_pointer_c>(gabi::ea(secondary) - 0x130), flags);
 }
-VERIFY(0x0200167C, sinit_0200167C);
-
-static u32 Widget_false() {
-    WWHD_FUNC(0x02001710, u32);
-    return 0;
+/* 02001790 */
+static hdWidget_pointer_c* hdWidget_constructPointer(hdWidget_pointer_c* pointer) {
+    if (!pointer) {
+        pointer = static_cast<hdWidget_pointer_c*>(operator_new(sizeof(hdWidget_pointer_c)));
+        if (!pointer) return nullptr;
+    }
+    hdWidget_constructPointerBase(pointer);
+    pointer->mVtable = pointerVtable;
+    pointer->mSecondaryVtable = pointerSecondaryVtable;
+    pointer->mCursor.x = s32(sInitialCursor.x);
+    pointer->mCursor.y = s32(sInitialCursor.y);
+    // HD: this member constructor's allocation branch remains reachable when its guest address wraps.
+    hdWidget_vec2_c* position = gabi::at<hdWidget_vec2_c>(gabi::ea(pointer) + 0x19C);
+    if (!position) position = static_cast<hdWidget_vec2_c*>(operator_new(sizeof(hdWidget_vec2_c)));
+    if (position) {
+        s32 x = sInitialCursor.x, y = sInitialCursor.y;
+        position->x = f32(f64(x));
+        position->y = f32(f64(y));
+    }
+    f32 zero = sZero, one = sOne;
+    pointer->mCenter.x = zero;
+    pointer->mCenter.y = zero;
+    pointer->mScale.x = one;
+    pointer->mScale.y = one;
+    return pointer;
 }
-VERIFY(0x02001710, Widget_false);
-
-static u32 Widget_true1() {
-    WWHD_FUNC(0x02001718, u32);
+/* 0200188C */
+void hdWidget_pointer_c::update() {
+    hdWidget_updatePointerBase(this);
+    f32 centerY = mCenter.y, rawY = mRawPosition.y, centerX = mCenter.x;
+    f32 deltaY = gabi::fsubs_ppc(rawY, centerY);
+    f32 rawX = mRawPosition.x, scaleY = mScale.y;
+    f32 deltaX = gabi::fsubs_ppc(rawX, centerX);
+    f32 scaleX = mScale.x;
+    f32 y = gabi::fmuls_ppc(deltaY, scaleY);
+    f32 x = gabi::fmuls_ppc(deltaX, scaleX);
+    mPosition.x = x;
+    mPosition.y = y;
+    mCursor.y = gabi::ftoi(y);
+    mCursor.x = gabi::ftoi(x);
+}
+/* 0200190C */
+static u32 hdWidget_getInputPointerId(hdWidget_input_c* input) {
+    hdWidget_pointer_c* pointer = input->mpPointer;
+    if (!pointer) return 0;
+    return pointer->mId;
+}
+static f32 hdWidget_divide(f32 a, f32 b) {
+    // HD: match PowerPC's first-NaN propagation and single-precision division.
+    if (a != a) return gabi::ppc_qnan(a);
+    if (b != b) return gabi::ppc_qnan(b);
+    return f32(f64(a) / f64(b));
+}
+/* 02001924 */
+void hdWidget_pointer_c::setScreen(f32 width, f32 height, f32 targetWidth, f32 targetHeight) {
+    f32 half = sHalf, zero = sZero;
+    mCenter.x = width * half;
+    mCenter.y = height * half;
+    if (targetWidth == zero || targetHeight == zero) return;
+    mScale.y = -hdWidget_divide(targetHeight, height);
+    mScale.x = hdWidget_divide(targetWidth, width);
+}
+/* 0200196C */
+static void hdWidget_initPointerStatics() { sinit_header_statics_rodata(0x101FF108, 0x1018C1A0, 0x101FF114, 0x10000218); }
+/* 02001A00 */
+static hdWidget_touch_c* hdWidget_constructTouch(hdWidget_touch_c* widget, void* pane) {
+    if (!widget) {
+        widget = static_cast<hdWidget_touch_c*>(operator_new(sizeof(hdWidget_touch_c)));
+        if (!widget) return nullptr;
+    }
+    hdWidget_constructBase(widget);
+    widget->mpPane = pane;
+    widget->mPointerId = 0;
+    widget->mState = 1;
+    widget->mInputFlags = 0;
+    widget->mVtable = touchVtable;
+    widget->mFlags = 0;
+    widget->mTouchFlags = 0;
+    widget->mPreviousTouchFlags = 0;
+    widget->mEventFlags = 0;
+    widget->mInputId = 0;
+    widget->mPreviousFrame = 0;
+    widget->mFrame = 0;
+    // HD: allocation is observable when the embedded array wraps to null; its result is unused.
+    if (gabi::ea(widget) + 0x38 == 0) operator_new(0x20);
+    for (u32 i = 0; i < 8; ++i) widget->mUserData[i] = 0;
+    return widget;
+}
+/* 02001ABC */
+static void hdWidget_destroyTouch(hdWidget_touch_c* widget, s32 flags) {
+    if (!widget) return;
+    hdWidget_destroyBase(widget, 0);
+    if (flags & 1) operator_delete(widget);
+}
+/* 02001B10 */
+u32 hdWidget_touch_c::hitTest(f32 x, f32 y) {
+    void* pane = mpPane;
+    if (!pane) return 0;
+    gabi::Local<hdWidget_paneTransform_c> transform;
+    hdWidget_getPaneTransform(pane, transform);
+    gabi::Local<hdWidget_vec2_c> point;
+    point->y = y;
+    pane = mpPane;
+    point->x = x;
+    return hdWidget_hitPane(pane, point);
+}
+/* 02001BC0 */
+u32 hdWidget_touch_c::isStateZero() { return mState == 0 ? 1 : 0; }
+/* 02001BD0 */
+u32 hdWidget_touch_c::isStateOne() { return mState == 1 ? 1 : 0; }
+/* 02001BE4 */
+void hdWidget_touch_c::setUserData(u32 index, u32 value) { mUserData[index < 8 ? index : 0] = value; }
+/* 02001C00 */
+u32 hdWidget_touch_c::getUserData(u32 index) { return mUserData[index < 8 ? index : 0]; }
+/* 02001C1C */
+static void hdWidget_initTouchStatics() { sinit_header_statics_rodata(0x101FF124, 0x1018C1C4, 0x101FF130, 0x10000268); }
+/* 02001CB0 */
+static hdWidget_queue_c* hdWidget_constructQueue(hdWidget_queue_c* queue) {
+    if (!queue) {
+        queue = static_cast<hdWidget_queue_c*>(operator_new(sizeof(hdWidget_queue_c)));
+        if (!queue) return nullptr;
+    }
+    queue->mpHeap = nullptr;
+    queue->mVtable = queueVtable;
+    // HD: retain the list member's separate null-address allocation path.
+    hdWidget_list_c* list = gabi::at<hdWidget_list_c>(gabi::ea(queue) + 4);
+    if (!list) list = static_cast<hdWidget_list_c*>(operator_new(sizeof(hdWidget_list_c)));
+    if (list) {
+        list->mpNext.v = gabi::ea(list);
+        list->mCount = 0;
+        list->mpPrevious.v = gabi::ea(list);
+    }
+    queue->mBoxCount = 0;
+    queue->mpBoxes = nullptr;
+    return queue;
+}
+/* 02001D38 */
+static void hdWidget_destroyQueue(hdWidget_queue_c* queue, s32 flags) { if (queue && (flags & 1)) operator_delete(queue); }
+/* 02001D4C */
+s32 hdWidget_queue_c::initialize(void* heap, u32 count) {
+    mpHeap = heap;
+    if (!heap) return 0;
+    mBoxCount = count;
+    if (!count) return 0;
+    u32 cookie = sArrayCookieSize;
+    void* allocation = hdWidget_allocateBoxes(count * sizeof(hdWidget_eventBox_c) + cookie, mpHeap, 4);
+    if (!allocation) { mpBoxes = nullptr; return 0; }
+    hdWidget_eventBox_c* boxes = hdWidget_constructBoxes(gabi::at<void>(gabi::ea(allocation) + sArrayCookieSize), count, sizeof(hdWidget_eventBox_c), eventBoxConstructor, 0);
+    mpBoxes = boxes;
+    return boxes ? 1 : 0;
+}
+/* 02001E18 */
+void hdWidget_queue_c::finalize() {
+    hdWidget_eventBox_c* boxes = mpBoxes;
+    if (boxes) {
+        hdWidget_destroyBoxes(boxes, -1, sizeof(hdWidget_eventBox_c), eventBoxDestructor, 1, 0);
+        mpBoxes = nullptr;
+    }
+    mBoxCount = 0;
+    mpHeap = nullptr;
+}
+/* 02001E80 */
+s32 hdWidget_queue_c::pop(hdWidget_event_c* out) {
+    hdWidget_eventBox_c* box = hdWidget_popList(gabi::at<hdWidget_list_c>(gabi::ea(this) + 4));
+    if (box) box->mpOwner = nullptr;
+    if (!box) return 0;
+    hdWidget_copyEvent(out, &box->mEvent);
+    if (box->mpOwner) {
+        box->mpOwner = nullptr;
+        hdWidget_unlinkNode(box);
+        mList.mCount = u32(mList.mCount) - 1;
+    }
+    hdWidget_clearEvent(&box->mEvent);
     return 1;
 }
-VERIFY(0x02001718, Widget_true1);
-
-static u32 Widget_true2() {
-    WWHD_FUNC(0x02001720, u32);
-    return 1;
-}
-VERIFY(0x02001720, Widget_true2);
-
-/* 02001728: pointer destructor */
-static void Pointer_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02001728, void, self, flags);
-    if (self == 0) return;
-    st(self + 0x13C, 0x101432B0);
-    gabi::call(0x0273D0E0, self, 0);
-    if (flags & 1) op_delete(self);
-}
-VERIFY(0x02001728, Pointer_dt);
-
-/* 02001788: destructor thunk for the secondary base at +0x130 */
-static void Pointer_dtThunk(u32 self, s32 flags) {
-    WWHD_FUNC(0x02001788, void, self, flags);
-    gabi::call(0x02001728, self - 0x130, flags);
-}
-VERIFY(0x02001788, Pointer_dtThunk);
-
-/* 02001790: pointer constructor */
-static u32 Pointer_ct(u32 self) {
-    WWHD_FUNC(0x02001790, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x1B4);
-        if (t == 0) return 0;
-    }
-    gabi::call(0x0273CDD4, t);
-    st(t + 0x170, 0x10000220);
-    st(t + 0x13C, 0x10000258);
-    st(t + 0x194, ld(0x1049FFA8));
-    st(t + 0x198, ld(0x1049FFAC));
-    u32 v = t + 0x19C;
-    if (v == 0) v = op_new(8);
-    if (v != 0) {
-        s32 x = (s32)ld(0x1049FFA8), y = (s32)ld(0x1049FFAC);
-        stf(v + 0, (f32)(f64)x);
-        stf(v + 4, (f32)(f64)y);
-    }
-    f32 zero = ldf(0x10000210), one = ldf(0x10000200);
-    stf(t + 0x1A4, zero);
-    stf(t + 0x1A8, zero);
-    stf(t + 0x1AC, one);
-    stf(t + 0x1B0, one);
-    return t;
-}
-VERIFY(0x02001790, Pointer_ct);
-
-/* 0200188C: update: base update, then map the raw position into the cursor */
-static void Pointer_update(u32 self) {
-    WWHD_FUNC(0x0200188C, void, self);
-    gabi::call(0x0273CE94, self);
-    f32 cy = ldf(self + 0x1A8), ry = ldf(self + 0x114), cx = ldf(self + 0x1A4);
-    f32 dy = gabi::fsubs_ppc(ry, cy);
-    f32 rx = ldf(self + 0x110), sy = ldf(self + 0x1B0);
-    f32 dx = gabi::fsubs_ppc(rx, cx);
-    f32 sx = ldf(self + 0x1AC);
-    f32 y = gabi::fmuls_ppc(dy, sy);
-    f32 x = gabi::fmuls_ppc(dx, sx);
-    stf(self + 0x19C, x);
-    stf(self + 0x1A0, y);
-    st(self + 0x198, (u32)gabi::ftoi(y));
-    st(self + 0x194, (u32)gabi::ftoi(x));
-}
-VERIFY(0x0200188C, Pointer_update);
-
-/* 0200190C: id of the pointer that produced an input state (+0x140 -> +0x130) */
-static u32 Input_pointerId(u32 ev) {
-    WWHD_FUNC(0x0200190C, u32, ev);
-    u32 p = ld(ev + 0x140);
-    if (p == 0) return 0;
-    return ld(p + 0x130);
-}
-VERIFY(0x0200190C, Input_pointerId);
-
-/* 02001924: set the screen size (centre = half size) and, for a non-zero target size, the scale */
-static void Pointer_setScreen(u32 self, f32 w, f32 h, f32 tw, f32 th) {
-    WWHD_FUNC(0x02001924, void, self, w, h, tw, th);
-    f32 half = ldf(0x10000214);
-    f32 zero = ldf(0x10000210);
-    stf(self + 0x1A4, w * half);
-    stf(self + 0x1A8, h * half);
-    if (tw == zero) return;
-    if (th == zero) return;
-    stf(self + 0x1B0, -fdivs_ppc(th, h));
-    stf(self + 0x1AC, fdivs_ppc(tw, w));
-}
-VERIFY(0x02001924, Pointer_setScreen);
-
-static void sinit_0200196C() {
-    WWHD_FUNC(0x0200196C, void);
-    header_sinit(0x101FF114, 0x1018C1A0, 0x10000218);
-}
-VERIFY(0x0200196C, sinit_0200196C);
-
-/* 02001A00: touch widget constructor */
-static u32 TouchWidget_ct(u32 self, u32 pane) {
-    WWHD_FUNC(0x02001A00, u32, self, pane);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x58);
-        if (t == 0) return 0;
-    }
-    gabi::call(0x020015C8, t);
-    st(t + 0x18, pane);
-    st(t + 0x2C, 0);
-    st(t + 0x1C, 1);
-    sth(t + 0x22, 0);
-    st(t + 0x14, 0x10000270);
-    sth(t + 0x20, 0);
-    sth(t + 0x28, 0);
-    sth(t + 0x2A, 0);
-    st(t + 0x34, 0);
-    st(t + 0x24, 0);
-    sth(t + 0x32, 0);
-    sth(t + 0x30, 0);
-    if (t + 0x38 == 0) op_new(0x20); /* inline array constructor's null check (result unused) */
-    for (u32 i = 0; i < 8; ++i) st(t + 0x38 + i * 4, 0);
-    return t;
-}
-VERIFY(0x02001A00, TouchWidget_ct);
-
-/* 02001ABC: touch widget destructor */
-static void TouchWidget_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02001ABC, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02001668, self, 0);
-    if (flags & 1) op_delete(self);
-}
-VERIFY(0x02001ABC, TouchWidget_dt);
-
-struct mtx_l { u8 b[0x14]; };
-struct vec2_l { u8 b[8]; };
-
-/* 02001B10: hit test of the pane against a point (x, y) */
-static u32 TouchWidget_hit(u32 self, f32 x, f32 y) {
-    WWHD_FUNC(0x02001B10, u32, self, x, y);
-    u32 pane = ld(self + 0x18);
-    if (pane == 0) return 0;
-    gabi::Local<mtx_l> m;
-    gabi::call(0x02876368, pane, m.a);
-    gabi::Local<vec2_l> p;
-    stf(p.a + 4, y);
-    u32 pane2 = ld(self + 0x18);
-    stf(p.a + 0, x);
-    return gabi::call<u32>(0x0287F05C, pane2, p.a);
-}
-VERIFY(0x02001B10, TouchWidget_hit);
-
-static u32 TouchWidget_isState0(u32 self) {
-    WWHD_FUNC(0x02001BC0, u32, self);
-    return ld(self + 0x1C) == 0 ? 1 : 0;
-}
-VERIFY(0x02001BC0, TouchWidget_isState0);
-
-static u32 TouchWidget_isState1(u32 self) {
-    WWHD_FUNC(0x02001BD0, u32, self);
-    return ld(self + 0x1C) == 1 ? 1 : 0;
-}
-VERIFY(0x02001BD0, TouchWidget_isState1);
-
-/* 02001BE4 / 02001C00: user words (index >= 8 uses word 0) */
-static void TouchWidget_setUser(u32 self, u32 i, u32 v) {
-    WWHD_FUNC(0x02001BE4, void, self, i, v);
-    u32 a = self + 0x38;
-    if (i < 8) a += i * 4;
-    st(a, v);
-}
-VERIFY(0x02001BE4, TouchWidget_setUser);
-
-static u32 TouchWidget_getUser(u32 self, u32 i) {
-    WWHD_FUNC(0x02001C00, u32, self, i);
-    u32 a = self + 0x38;
-    if (i < 8) a += i * 4;
-    return ld(a);
-}
-VERIFY(0x02001C00, TouchWidget_getUser);
-
-static void sinit_02001C1C() {
-    WWHD_FUNC(0x02001C1C, void);
-    header_sinit(0x101FF130, 0x1018C1C4, 0x10000268);
-}
-VERIFY(0x02001C1C, sinit_02001C1C);
-
-/* 02001CB0: event queue constructor */
-static u32 Queue_ct(u32 self) {
-    WWHD_FUNC(0x02001CB0, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x1C);
-        if (t == 0) return 0;
-    }
-    st(t + 0, 0);
-    st(t + 0x18, 0x100002B0);
-    u32 h = t + 4;
-    if (h == 0) h = op_new(0xC);
-    if (h != 0) {
-        st(h + 4, h);
-        st(h + 8, 0);
-        st(h + 0, h);
-    }
-    st(t + 0x14, 0);
-    st(t + 0x10, 0);
-    return t;
-}
-VERIFY(0x02001CB0, Queue_ct);
-
-static void Queue_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02001D38, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x02001D38, Queue_dt);
-
-/* 02001D4C: allocate COUNT event boxes from HEAP (array new with cookie) */
-static s32 Queue_init(u32 self, u32 heap, u32 count) {
-    WWHD_FUNC(0x02001D4C, s32, self, heap, count);
-    st(self + 0, heap);
-    if (heap == 0) return 0;
-    st(self + 0x14, count);
-    if (count == 0) return 0;
-    u32 cookie = ld(0x101FCD08);
-    u32 p = gabi::call<u32>(0x0273B0D4, count * 0x38 + cookie, ld(self + 0), 4);
-    if (p == 0) {
-        st(self + 0x10, 0);
-        return 0;
-    }
-    u32 arr = gabi::call<u32>(0x028EFF8C, p + ld(0x101FCD08), count, 0x38, 0x02001084, 0);
-    st(self + 0x10, arr);
-    return arr != 0 ? 1 : 0;
-}
-VERIFY(0x02001D4C, Queue_init);
-
-/* 02001E18: release the event boxes */
-static void Queue_fini(u32 self) {
-    WWHD_FUNC(0x02001E18, void, self);
-    u32 arr = ld(self + 0x10);
-    if (arr != 0) {
-        gabi::call(0x028F0164, arr, -1, 0x38, 0x02001110, 1, 0);
-        st(self + 0x10, 0);
-    }
-    st(self + 0x14, 0);
-    st(self + 0, 0);
-}
-VERIFY(0x02001E18, Queue_fini);
-
-/* 02001E80: pop the first queued event into OUT */
-static s32 Queue_pop(u32 self, u32 out) {
-    WWHD_FUNC(0x02001E80, s32, self, out);
-    u32 n = gabi::call<u32>(0x0273B494, self + 4);
-    if (n != 0) st(n + 0x30, 0);
-    if (n == 0) return 0;
-    gabi::call(0x0200143C, out, n + 8);
-    if (ld(n + 0x30) != 0) {
-        st(n + 0x30, 0);
-        gabi::call(0x0273B310, n);
-        st(self + 0xC, ld(self + 0xC) - 1);
-    }
-    gabi::call(0x02001480, n + 8);
-    return 1;
-}
-VERIFY(0x02001E80, Queue_pop);
-
-/* 02001F44: (re)link an event box at the end of the queue list */
-static void Queue_link(u32 self, u32 box) {
-    WWHD_FUNC(0x02001F44, void, self, box);
-    u32 list = self + 4;
-    if (ld(box + 0x30) != 0) {
-        st(box + 0x30, 0);
-        gabi::call(0x0273B310, box);
-        st(self + 0xC, ld(self + 0xC) - 1);
-        u32 owner = ld(box + 0x30);
-        if (owner != 0) {
-            st(box + 0x30, 0);
-            gabi::call(0x0273B310, box);
-            st(owner + 8, ld(owner + 8) - 1);
+/* 02001F44 */
+void hdWidget_queue_c::link(hdWidget_eventBox_c* box) {
+    hdWidget_list_c* list = gabi::at<hdWidget_list_c>(gabi::ea(this) + 4);
+    if (box->mpOwner) {
+        box->mpOwner = nullptr;
+        hdWidget_unlinkNode(box);
+        mList.mCount = u32(mList.mCount) - 1;
+        hdWidget_list_c* owner = box->mpOwner;
+        if (owner) {
+            box->mpOwner = nullptr;
+            hdWidget_unlinkNode(box);
+            owner->mCount = u32(owner->mCount) - 1;
         }
     }
-    st(box + 0x30, list);
-    gabi::call(0x0273B2F0, list, box);
-    st(list + 8, ld(list + 8) + 1);
+    box->mpOwner = list;
+    hdWidget_appendNode(list, box);
+    list->mCount = u32(list->mCount) + 1;
 }
-VERIFY(0x02001F44, Queue_link);
-
-/* 02001FF4: post: copy EV into the first free box and queue it */
-static s32 Queue_post(u32 self, u32 ev) {
-    WWHD_FUNC(0x02001FF4, s32, self, ev);
-    u32 arr = ld(self + 0x10);
-    if (arr == 0) return 0;
-    u32 cnt = ld(self + 0x14);
-    for (u32 i = 0, off = 0; i < cnt; ++i, off += 0x38) {
-        u32 e = arr + off;
-        if (ld(e + 0xC) == 0) {
-            gabi::call(0x0200143C, e + 8, ev);
-            gabi::call(0x02001F44, self, ld(self + 0x10) + off);
+/* 02001FF4 */
+s32 hdWidget_queue_c::post(hdWidget_event_c* event) {
+    hdWidget_eventBox_c* boxes = mpBoxes;
+    if (!boxes) return 0;
+    u32 count = mBoxCount;
+    for (u32 i = 0, offset = 0; i < count; ++i, offset += sizeof(hdWidget_eventBox_c)) {
+        hdWidget_eventBox_c* box = gabi::at<hdWidget_eventBox_c>(gabi::ea(boxes) + offset);
+        if (!box->mEvent.mActive) {
+            hdWidget_copyEvent(&box->mEvent, event);
+            hdWidget_linkBox(this, gabi::at<hdWidget_eventBox_c>(gabi::ea(mpBoxes) + offset));
             return 1;
         }
     }
     return 0;
 }
-VERIFY(0x02001FF4, Queue_post);
-
-/* 0200209C: drop all queued events and clear every box */
-static void Queue_clear(u32 self) {
-    WWHD_FUNC(0x0200209C, void, self);
-    u32 list = self + 4;
-    u32 n = ld(self + 8);
-    while (n != list) {
-        u32 cur = n;
-        u32 f = ld(cur + 0x30);
-        n = ld(cur + 4);
-        if (f != 0) {
-            st(cur + 0x30, 0);
-            gabi::call(0x0273B310, cur);
-            st(list + 8, ld(list + 8) - 1);
+/* 0200209C */
+void hdWidget_queue_c::clear() {
+    hdWidget_list_c* list = gabi::at<hdWidget_list_c>(gabi::ea(this) + 4);
+    hdWidget_eventBox_c* node = mList.mpNext;
+    while (gabi::ea(node) != gabi::ea(list)) {
+        hdWidget_eventBox_c* current = node;
+        hdWidget_list_c* owner = current->mpOwner;
+        node = current->mpNext;
+        if (owner) {
+            current->mpOwner = nullptr;
+            hdWidget_unlinkNode(current);
+            list->mCount = u32(list->mCount) - 1;
         }
     }
-    u32 arr = ld(self + 0x10);
-    if (arr == 0) return;
+    hdWidget_eventBox_c* boxes = mpBoxes;
+    if (!boxes) return;
     u32 i = 0;
-    if (i >= ld(self + 0x14)) return;
-    for (u32 off = 0;; ) {
-        gabi::call(0x02001480, arr + off + 8);
-        off += 0x38;
+    if (i >= u32(mBoxCount)) return;
+    for (u32 offset = 0;;) {
+        hdWidget_clearEvent(gabi::at<hdWidget_event_c>(gabi::ea(boxes) + offset + 8));
+        offset += sizeof(hdWidget_eventBox_c);
         ++i;
-        if (i >= ld(self + 0x14)) break;
-        arr = ld(self + 0x10);
+        if (i >= u32(mBoxCount)) break;
+        boxes = mpBoxes;
     }
 }
-VERIFY(0x0200209C, Queue_clear);
+/* 02002168 */
+static void hdWidget_initQueueStatics() { sinit_header_statics_rodata(0x101FF140, 0x1018C1E8, 0x101FF14C, 0x100002A8); }
 
-static void sinit_02002168() {
-    WWHD_FUNC(0x02002168, void);
-    header_sinit(0x101FF14C, 0x1018C1E8, 0x100002A8);
-}
-VERIFY(0x02002168, sinit_02002168);
-
-}  // namespace hd_ui_020015C8
+/* WWHD glue
+data sWidgetSerial 1018C178 nocheck
+data sArrayCookieSize 101FCD08 nocheck
+data sInitialCursor 1049FFA8 nocheck
+data sZero 10000210
+data sOne 10000200
+data sHalf 10000214
+ext 0273D0E0 void hdWidget_destroyPointerBase(hdWidget_pointer_c* pointer, u32 flags)
+ext 02001728 void hdWidget_destroyPointerEntry(hdWidget_pointer_c* pointer, s32 flags)
+ext 0273CDD4 void hdWidget_constructPointerBase(hdWidget_pointer_c* pointer)
+ext 0273CE94 void hdWidget_updatePointerBase(hdWidget_pointer_c* pointer)
+ext 020015C8 hdWidget_c* hdWidget_constructBase(hdWidget_c* widget)
+ext 02001668 void hdWidget_destroyBase(hdWidget_c* widget, u32 flags)
+ext 02876368 void hdWidget_getPaneTransform(void* pane, hdWidget_paneTransform_c* transform)
+ext 0287F05C u32 hdWidget_hitPane(void* pane, hdWidget_vec2_c* point)
+ext 0273B0D4 void* hdWidget_allocateBoxes(u32 size, void* heap, u32 alignment)
+ext 028EFF8C hdWidget_eventBox_c* hdWidget_constructBoxes(void* allocation, u32 count, u32 stride, u32 constructor, u32 flags)
+ext 028F0164 void hdWidget_destroyBoxes(hdWidget_eventBox_c* boxes, s32 count, u32 stride, u32 destructor, u32 flags, u32 reserved)
+ext 0273B494 hdWidget_eventBox_c* hdWidget_popList(hdWidget_list_c* list)
+ext 0200143C void hdWidget_copyEvent(hdWidget_event_c* out, hdWidget_event_c* event)
+ext 02001480 void hdWidget_clearEvent(hdWidget_event_c* event)
+ext 0273B310 void hdWidget_unlinkNode(hdWidget_eventBox_c* box)
+ext 0273B2F0 void hdWidget_appendNode(hdWidget_list_c* list, hdWidget_eventBox_c* box)
+ext 02001F44 void hdWidget_linkBox(hdWidget_queue_c* queue, hdWidget_eventBox_c* box)
+*/

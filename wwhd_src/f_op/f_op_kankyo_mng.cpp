@@ -1,81 +1,135 @@
-#include "wwhd.h"
-#include "gabi.h"
-namespace ky { template<class T>T ld(u32 a,u32 o=0){return gabi::load<T>(a+o);} template<class T>void st(u32 a,u32 o,T v){gabi::store<T>(a+o,v);} void* ptr(u32 a){return gabi::at<void>(a);} struct Vec {f32 x,y,z;}; }
-using namespace ky;
-void* ky_search(u32 id){
- WWHD_FUNC(0x025DAC50,void*,id);
- return gabi::call<void*>(0x025DE50C,id);
+/** Environment Process Manager. WWHD. */
+#include "f_op/f_op_kankyo_mng.h"
+
+static const f32 l_unitScale;
+static KankyoMngHeaderStatics l_headerStatics;
+static const KankyoMngPiPair l_piPair;
+
+/* 025DAC50 */
+kankyo_class* fopKyM_SearchByID(u32 id) {
+    return fpcEx_SearchByID(id);
 }
-VERIFY(0x025DAC50,ky_search);
-// Adjacent unnamed tail wrapper included to preserve the full unit interval.
-BOOL ky_wrapper(void* a){
- WWHD_FUNC(0x025DAC54,BOOL,a);
- return gabi::call<BOOL>(0x025DA958,a);
+
+/* 025DAC54 */
+BOOL fopKyM_IsKankyo(kankyo_class* i_process) {
+    // HD: adjacent tail wrapper retained with the complete unit interval.
+    return fopKy_IsKankyo(i_process);
 }
-VERIFY(0x025DAC54,ky_wrapper);
-void* ky_append(){
- WWHD_FUNC(0x025DAC58,void*);
- u32 a=gabi::call<u32>(0x02019430,-4,0x1C);
- if(a){gabi::call<void>(0x0200ECCC,ptr(a),0,0x1C);f32 one=ld<f32>(0x100579B8);st<f32>(a,0xC,one);st<f32>(a,0x14,one);st<f32>(a,0x10,one);}
- return ptr(a);
+
+/* 025DAC58 */
+static fopKyM_prm_class* fopKyM_CreateAppend() {
+    fopKyM_prm_class* params = static_cast<fopKyM_prm_class*>(cMl::memalignB(-4, sizeof(fopKyM_prm_class)));
+    if (params) {
+        cLib_memSet(params, 0, sizeof(fopKyM_prm_class));
+        f32 one = l_unitScale;
+        // HD: preserve the emitted x, z, y store order.
+        params->mScale.x = one;
+        params->mScale.z = one;
+        params->mScale.y = one;
+    }
+    return params;
 }
-VERIFY(0x025DAC58,ky_append);
-void* ky_make_append(s32 param,void* pos,void* scale){
- WWHD_FUNC(0x025DACB8,void*,param,pos,scale);
- u32 a=gabi::call<u32>(0x025DAC58);
- if(a){if(pos){u32 b=gabi::ea(pos);st<u32>(a,0,ld<u32>(b));st<u32>(a,4,ld<u32>(b,4));st<u32>(a,8,ld<u32>(b,8));}if(scale){u32 b=gabi::ea(scale);st<u32>(a,0xC,ld<u32>(b));st<u32>(a,0x10,ld<u32>(b,4));st<u32>(a,0x14,ld<u32>(b,8));}st<s32>(a,0x18,param);}
- return ptr(a);
+
+/* 025DACB8 */
+static fopKyM_prm_class* createAppend(s32 i_param, cXyz* i_pos, cXyz* i_scale) {
+    fopKyM_prm_class* params = fopKyM_CreateAppend();
+    if (params) {
+        if (i_pos) {
+            params->mPos = *i_pos;
+        }
+        if (i_scale) {
+            params->mScale = *i_scale;
+        }
+        params->mParam = i_param;
+    }
+    return params;
 }
-VERIFY(0x025DACB8,ky_make_append);
-u32 ky_delete(void* a){
- WWHD_FUNC(0x025DAD48,u32,a);
- return gabi::call<u32>(0x025DF944,a);
+
+/* 025DAD48 */
+u32 fopKyM_Delete(void* i_process) {
+    // HD: retain the tail call's return register.
+    return fpcM_Delete(i_process);
 }
-VERIFY(0x025DAD48,ky_delete);
-u32 ky_create(s32 name,void* callback,void* data){
- WWHD_FUNC(0x025DAD4C,u32,name,callback,data);
- u32 layer=gabi::call<u32>(0x025DED64);
- return gabi::call<u32>(0x025E14A8,ptr(layer),name,callback,0,data);
+
+/* 025DAD4C */
+u32 fopKyM_Create(s32 i_procName, fopKyM_CreateFunc i_createFunc, void* i_process) {
+    // HD: full register-width process name and explicit current-layer lookup.
+    layer_class* layer = fpcLy_CurrentLayer();
+    return fpcSCtRq_Request(layer, i_procName, i_createFunc, 0, i_process);
 }
-VERIFY(0x025DAD4C,ky_create);
-u32 ky_create_params(s32 name,s32 param,void* pos,void* scale,void* callback){
- WWHD_FUNC(0x025DADA4,u32,name,param,pos,scale,callback);
- u32 a=gabi::call<u32>(0x025DACB8,param,pos,scale);
- if(!a)return 0xFFFFFFFFu;
- return gabi::call<u32>(0x025DAD4C,name,callback,ptr(a));
+
+/* 025DADA4 */
+u32 fopKyM_create(s32 i_procName, s32 i_param, cXyz* i_pos, cXyz* i_scale, fopKyM_CreateFunc i_createFunc) {
+    fopKyM_prm_class* params = createAppend(i_param, i_pos, i_scale);
+    if (!params) {
+        return -1;
+    }
+    return fopKyM_Create(i_procName, i_createFunc, params);
 }
-VERIFY(0x025DADA4,ky_create_params);
-void* ky_fast_create(s32 name,s32 param,void* pos,void* scale,void* callback){
- WWHD_FUNC(0x025DAE00,void*,name,param,pos,scale,callback);
- u32 a=gabi::call<u32>(0x025DACB8,param,pos,scale);
- if(!a)return nullptr;
- return gabi::call<void*>(0x025DFAB8,name,callback,0,ptr(a));
+
+/* 025DAE00 */
+base_process_class* fopKyM_fastCreate(s32 i_procName, s32 i_param, cXyz* i_pos, cXyz* i_scale, fopKyM_CreateFunc i_createFunc) {
+    fopKyM_prm_class* params = createAppend(i_param, i_pos, i_scale);
+    if (!params) {
+        return nullptr;
+    }
+    return fpcM_FastCreate(i_procName, i_createFunc, 0, params);
 }
-VERIFY(0x025DAE00,ky_fast_create);
-u32 ky_water_pillar(void* pos,f32 xz,f32 y,s32 param){
- WWHD_FUNC(0x025DAE64,u32,pos,xz,y,param);
- u32 a=gabi::call<u32>(0x025DAC58);
- if(!a)return 0xFFFFFFFFu;
- u32 b=gabi::ea(pos);st<u32>(a,0,ld<u32>(b));st<u32>(a,4,ld<u32>(b,4));u32 z=ld<u32>(b,8);
- st<f32>(a,0xC,xz);st<u32>(a,8,z);st<f32>(a,0x14,xz);st<s32>(a,0x18,param);st<f32>(a,0x10,y);
- return gabi::call<u32>(0x025DAD4C,0x1C1,0,ptr(a));
+
+// HD: distinct adapter name retains the returned ID; the legacy binding has a void signature.
+/* 025DAE64 */
+u32 fopKyM_createWpillarHD(const cXyz* i_pos, f32 scaleXZ, f32 scaleY, s32 i_param) {
+    fopKyM_prm_class* params = fopKyM_CreateAppend();
+    if (!params) {
+        return -1;
+    }
+    params->mPos = *i_pos;
+    // HD: retain x, z, parameter, y store order after the position copy.
+    params->mScale.x = scaleXZ;
+    params->mScale.z = scaleXZ;
+    params->mParam = i_param;
+    params->mScale.y = scaleY;
+    return fopKyM_Create(fpcNm_WPILLAR_e, 0, params);
 }
-VERIFY(0x025DAE64,ky_water_pillar);
-s32 ky_magma_pillar(void* pos,f32 size){
- WWHD_FUNC(0x025DAF3C,s32,pos,size);
- gabi::Local<Vec> scale;st<f32>(scale.a,0,size);st<f32>(scale.a,4,size);st<f32>(scale.a,8,size);
- u32 game=gabi::call<u32>(0x025200D4),particles=ld<u32>(game,0x5AB0);
- gabi::call<void>(0x025A847C,ptr(particles),0,0x80D5,pos,0,scale.get(),0xFF,0,-1,0,0,0);
- return -1;
+
+/* 025DAF3C */
+s32 fopKyM_createMpillar(const cXyz* i_pos, f32 i_size) {
+    cXyz scale;
+    scale.x = i_size;
+    scale.y = i_size;
+    scale.z = i_size;
+    dComIfGp_particle_set(dPa_name::ID_IT_SN_YOGAN_HANE00, i_pos, nullptr, &scale);
+    return -1;
 }
-VERIFY(0x025DAF3C,ky_magma_pillar);
-// Startup attribution is by adjacency, without a matched source function name.
-void ky_startup(){
- WWHD_FUNC(0x025DAFBC,void);
- st<u32>(0x1048A4B4,8,0);st<u32>(0x1048A4B4,0,0);st<u32>(0x1048A4B4,12,0);st<u32>(0x1048A4B4,4,0);
- gabi::call<void>(0x028F026C,ptr(0x101F3420));
- f32 lo=ld<f32>(0x100579C4),hi=ld<f32>(0x100579C8);st<f32>(0x1048A4A8,0,lo);st<f32>(0x1048A4AC,0,hi);
- gabi::call<void>(0x028ED6F8,ptr(0x1048A4B0));gabi::call<void>(0x028F026C,ptr(0x101F342C));
- gabi::call<void>(0x028EAB2C,ptr(0x1048A4B1));gabi::call<void>(0x028F026C,ptr(0x101F3438));
+
+/* 025DAFBC */
+static void __sinit_f_op_kankyo_mng_cpp() {
+    // HD: common-header initialization, original source name attributed by adjacency.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F3420);
+    f32 lo = l_piPair.negativePi;
+    f32 hi = l_piPair.positivePi;
+    l_headerStatics.negativePi = lo;
+    l_headerStatics.positivePi = hi;
+    KankyoMngFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F342C);
+    KankyoMngSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F3438);
 }
-VERIFY(0x025DAFBC,ky_startup);
+
+/* WWHD glue: data and other-unit calls
+ data l_unitScale 100579B8
+ data l_headerStatics 1048A4A8
+ data l_piPair 100579C4
+ ext 025DE50C kankyo_class* fpcEx_SearchByID(u32)
+ ext 025DA958 BOOL fopKy_IsKankyo(kankyo_class*)
+ ext 0200ECCC void cLib_memSet(void*, s32, u32)
+ ext 025DF944 u32 fpcM_Delete(void*)
+ ext 025E14A8 u32 fpcSCtRq_Request(layer_class*, s32, fopKyM_CreateFunc, u32, void*)
+ ext 025DFAB8 base_process_class* fpcM_FastCreate(s32, fopKyM_CreateFunc, u32, fopKyM_prm_class*)
+ ext 028ED6F8 void KankyoMngFirstHeaderObject_ct(u8*)
+ ext 028EAB2C void KankyoMngSecondHeaderObject_ct(u8*)
+*/

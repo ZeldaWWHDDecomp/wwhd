@@ -1,380 +1,1468 @@
-// Qualified HD HUD trailing range.
-#include "gabi.h"
+// HUD trailing range: GameCube names and pane fields with verified HD behavior.
+#include "d/d_meter_02.h"
+using namespace meter_detail;
 using namespace gabi;
-static u32 tailWord(u32 p,u32 n=0){return load<u32>(p+n);}
-static f32 tailFloat(u32 p,u32 n=0){return load<f32>(p+n);}
-static u32 tailStage(){u32 p=call<u32>(0x025200D4)+0x5150;return call_ptr<u32>(tailWord(tailWord(p),0x15C),p);}
-struct TailNameStorage {be<u32> text,vtable;};
-struct TailSceneStorage {TailNameStorage left,right;};
-static bool tailSceneEquals(u32 name){
- Local<TailSceneStorage> pair;pair->left.text=name;pair->left.vtable=0x1005107Cu;
- u32 state=call<u32>(0x025200D4);pair->right.text=state+0x5134;pair->right.vtable=0x1005107Cu;
- u32 left=pair.a,right=pair.a+8;
- // Real1005107C+14 points to empty0259D1B4 and reads no argument registers.
- call_ptr<void>(tailWord(tailWord(left,4),0x14),left);call_ptr<void>(tailWord(tailWord(left,4),0x14),left);u32 old=tailWord(left);
- call_ptr<void>(tailWord(tailWord(right,4),0x14),right);if(old==tailWord(right))return true;
- u32 a=tailWord(left),b=tailWord(right);for(u32 i=0;i<0x40001;i++){u8 x=load<u8>(a+i),y=load<u8>(b+i);if(x!=y)return false;if(!x)return true;}return false;
+using GuestWord = be<u32>;
+using GuestFloat = be<f32>;
+using GuestHalf = be<s16>;
+using GuestByte = be<u8>;
+struct ThreeHalves {
+    GuestHalf values[3];
+};
+struct EightBytes {
+    GuestByte values[8];
+};
+struct ThreeBytes {
+    GuestByte values[3];
+};
+static GuestWord l_saveRoot;
+static GuestByte dMeter_collectMode;
+static GuestByte dMeter_auctionFlag;
+static GuestByte dMenu_menuFlag;
+static GuestByte dMenu_menuButton;
+static GuestByte dMenu_pause;
+static GuestByte dMeter_itemMode;
+static GuestByte rupy_soundSetFlag;
+static GuestByte rupy_soundOnFlag;
+static GuestHalf l_xyFadeCount;
+static GuestHalf l_xyFadeMode;
+static GuestHalf l_rFadeCount;
+static GuestHalf l_rFadeMode;
+static GuestHalf l_rPaneCount;
+static GuestByte l_buttonAlphaState;
+static GuestByte l_metronomeVisible;
+static GuestByte l_magicPulse;
+static GuestByte l_bossVisible;
+static GuestByte l_zakoVisible;
+static GuestByte l_itemButtonMode;
+static GuestFloat l_bossHealth;
+static GuestFloat l_zakoHealth;
+static GuestWord l_arrowCapacityInitialized;
+static GuestWord l_bombCapacityInitialized;
+static GuestWord l_metronomeInitialized;
+static GuestWord l_metronomeStateInitialized;
+static GuestByte l_arrowCapacity;
+static GuestByte l_bombCapacity;
+static GuestByte l_metronomeFlag;
+static GuestByte dMeter_windStatus;
+static GuestByte l_cb1FlightActive;
+static GuestHalf l_cb1FlightTime;
+static GuestByte l_mdFlightActive;
+static GuestHalf l_mdFlightTime;
+static const GuestFloat l_one;
+static const GuestFloat l_zero;
+static const GuestFloat l_magicLengthScale;
+static const GuestFloat l_half;
+static const GuestFloat l_magicGaugeScale;
+static const GuestFloat l_magicGaugeDivisor;
+static const GuestFloat l_screenHalfHeight;
+static const GuestFloat l_screenHalfWidth;
+static const GuestFloat l_bowAlphaMin;
+static const GuestFloat l_bowPulseDepth;
+static ThreeHalves l_xyPaneCount;
+static EightBytes dMenu_baitNum;
+static const ThreeBytes l_itemShowMask;
+static cXyz l_zakoPosition;
+static dMeter_HIO_c g_meterHIO;
+static GuestWord l_safeStringVtable;
+// HD: named guest callback binding until autoglue supports external callback registration.
+static GuestByte l_actorNameJudge;
+static GuestByte l_bossStage0;        // Xboss0
+static GuestByte l_bossStage1;        // Xboss1
+static GuestByte l_bossStage2;        // Xboss2
+static GuestByte l_bossStage3;        // Xboss3
+static GuestByte l_magicStage;        // Ojhous
+static GuestByte l_magicCounterStage; // Ojhous
+static GuestByte l_assertFile;        // d_meter.cpp
+static GuestByte l_stageAssertion;    // stage_info != NULL
+static u32 meterStage() {
+    auto data = &meterGame(dComIfGp_ea())->play.mStageData;
+    auto stage = reinterpret_cast<StageData *>(data);
+    return stage->mVtable->getStag(stage);
 }
-void meterTailCounter6(u32 meter){
- WWHD_FUNC(0x0259C0EC,void,meter);
- u32 flags=tailWord(meter,0x3008);bool hide=true;
- bool input=false;if(!(flags&0x4000)&&(flags&0x40)){u32 state=call<u32>(0x025200D4);if(load<u8>(state+0x5292)){state=call<u32>(0x025200D4);input=(load<u16>(state+0x52A6)&0x200)!=0;}}
- if(!(flags&0x4000)&&!input&&load<u8>(0x101EA073)!=4){
-  flags=tailWord(meter,0x3008);
-  if(!(flags&0x013E00A0)&&!load<u8>(0x101EA06C)&&!(flags&0x02C00000)){
-   hide=tailSceneEquals(0x10051074u)&&load<u8>(call<u32>(0x025200D4)+0x5CEA)==6;
-  }
- }
- if(hide||(tailWord(meter,0x3008)&0x18))call<void>(0x02591AB4,6);else call<void>(0x02591B00,6);
+// HD: SafeString expands to three virtual cleanup calls before the bounded byte comparison.
+static bool meterSceneEquals(u32 name) {
+    gabi::Local<ScenePair> pair;
+    pair->left.text = name;
+    pair->left.vtable = gabi::ea(&l_safeStringVtable);
+    u32 state = dComIfGp_ea();
+    pair->right.text = gabi::ea(&meterGame(state)->play.mCurStage.mName);
+    pair->right.vtable = gabi::ea(&l_safeStringVtable);
+    auto left = &pair->left;
+    auto right = &pair->right;
+    auto leftVtable = gabi::at<SafeStringVtable>((u32)left->vtable);
+    leftVtable->cleanup(left);
+    leftVtable = gabi::at<SafeStringVtable>((u32)left->vtable);
+    leftVtable->cleanup(left);
+    u32 old = left->text;
+    auto rightVtable = gabi::at<SafeStringVtable>((u32)right->vtable);
+    rightVtable->cleanup(right);
+    if (old == (u32)right->text)
+        return true;
+    auto a = gabi::at<const be<u8>>((u32)left->text);
+    auto b = gabi::at<const be<u8>>((u32)right->text);
+    for (u32 i = 0; i < 0x40001; i++) {
+        u8 x = a[i], y = b[i];
+        if (x != y)
+            return false;
+        if (!x)
+            return true;
+    }
+    return false;
 }
-VERIFY(0x0259C0EC,meterTailCounter6);
-void meterTailPaneAlpha(u32 meter){
- WWHD_FUNC(0x0259C2BC,void,meter);f32 hearts=tailFloat(meter,0x2FC0),magic=tailFloat(meter,0x2FC4);
- for(u32 i=0;i<20;i++){call<void>(0x025DB690,meter+0x644+i*0x38,hearts);call<void>(0x025DB690,meter+0xAA4+i*0x38,hearts);}
- store<u8>(meter+0xF39,(u8)ftoi(fmuls_ppc((f32)load<u8>(meter+0xF39),hearts)));
- for(u32 i=0;i<8;i++)call<void>(0x025DB690,meter+0xF3C+i*0x38,magic);
- for(u32 p:{0x10FCu,0x11A4u,0x11DCu})call<void>(0x025DB690,meter+p,magic);
-}
-VERIFY(0x0259C2BC,meterTailPaneAlpha);
-void meterTailMagicVisibility(u32 meter){
- WWHD_FUNC(0x0259C3CC,void,meter);u32 visible=0;u32 state=call<u32>(0x025200D4);
- if(load<u8>(state+0x5BD1)&&!(tailWord(meter,0x3008)&0x00800038)){
-  state=call<u32>(0x025200D4);if(load<u16>(state+0x5BAC)&&!call<u32>(0x027161BC))visible=1;
- }
- store<u8>(0x1047B097,visible);
-}
-VERIFY(0x0259C3CC,meterTailMagicVisibility);
-void meterTailCounter4(u32 meter){
- WWHD_FUNC(0x0259CCA8,void,meter);u32 flags=tailWord(meter,0x3008);bool reset=(flags&0x4000)!=0;
- if(!reset){if(flags&0x40){u32 state=call<u32>(0x025200D4);if(load<u8>(state+0x5292)){state=call<u32>(0x025200D4);reset=(load<u16>(state+0x52A6)&0x100)!=0;}flags=tailWord(meter,0x3008);}
-  reset=reset||(flags&0x02600000)||(flags&0x009201B8);
-  if(!reset){u32 state=call<u32>(0x025200D4);reset=load<u8>(state+0x5CEA)==1;if(!reset){state=call<u32>(0x025200D4);reset=load<u8>(state+0x5CEA)==8;}}
- }
- if(reset){call<void>(0x02593434,meter);return;}
- if((tailWord(meter,0x3008)&0x400)&&(load<u8>(tailStage()+9)>>1)!=5)call<void>(0x02591B00,4);else call<void>(0x02591AB4,4);
-}
-VERIFY(0x0259CCA8,meterTailCounter4);
-void meterTailCounter5(u32 meter){
- WWHD_FUNC(0x0259CDC4,void,meter);
- if(!tailWord(0x1047A9BC)){store<u32>(0x1047A9BC,1);store<u8>(0x1047A9C8,call<u32>(0x02526C9C));}
- if(!tailWord(0x1047A9C0))store<u32>(0x1047A9C0,1);
- u32 state=call<u32>(0x025200D4);bool shown=(tailWord(state,0x5CD8)&0x1000)!=0;
- if(shown){const u32 mask=0x002040C0u|0x00800120u|0x00120018u;shown=!(tailWord(meter,0x3008)&mask);if(shown)shown=load<u8>(call<u32>(0x025200D4)+0x5CEA)!=8;}
- if(shown)call<void>(0x02591B00,5);else call<void>(0x02591AB4,5);
-}
-VERIFY(0x0259CDC4,meterTailCounter5);
-void meterTailPhotoState(u32 meter){
- WWHD_FUNC(0x0259CEA0,void,meter);u32 state=call<u32>(0x025200D4);
- if(load<u8>(state+0x5BEC))return;
- state=call<u32>(0x025200D4);call<void>(0x02540024,state+0x51D0);
- state=call<u32>(0x025200D4);u32 mode=load<u8>(state+0x5BE8);bool photo=mode==2;
- if(!photo){state=call<u32>(0x025200D4);photo=load<u8>(state+0x5BE8)==3;}
- if(photo){store<u16>(meter+0x3040,89);store<u8>(0x101EACB7,24);}
- u32 index=load<u16>(meter+0x3040);if((index==99||index==89||index==98)&&tailWord(meter,0x303C)==0xFFFFFFFF)store<u16>(meter+0x3040,0);
-}
-VERIFY(0x0259CEA0,meterTailPhotoState);
 
-void meterTailRupeeMove(u32 meter){
- WWHD_FUNC(0x0259C454,void,meter);
- u32 state=tailWord(0x101F84DC);if((u32)(s32)load<s16>(meter+0x1A62)!=load<u8>(state+0x32)){call<void>(0x025931CC,meter);store<u16>(meter+0x1A62,load<u8>(tailWord(0x101F84DC)+0x32));}
- u32 game=call<u32>(0x025200D4);u32 pending;
- if(tailWord(game,0x5B48)){
-  game=call<u32>(0x025200D4);state=tailWord(0x101F84DC);u32 delta=tailWord(game,0x5B48),mode=load<u8>(state+0x32);s32 total=(s32)((u32)load<u16>(state+0x24)+delta);
-  u32 cap=mode==0?500:(mode==1?1000:5000),current=load<u16>(meter+0x300C);u32 value=total>(s32)cap?cap:(total<0?0:(u32)total);
-  store<u32>(meter+0x3000,value-current);store<u16>(tailWord(0x101F84DC)+0x24,value);
-  store<u32>(call<u32>(0x025200D4)+0x5B48,0);pending=tailWord(meter,0x3000);
-  if(pending>=5)store<u8>(0x101EA076,1);
- }else pending=tailWord(meter,0x3000);
- if(pending){
-  bool increase=(s32)pending>0;u32 step=call<u32>(0x025931A8,increase?pending:0u-pending);
-  u32 current=load<u16>(meter+0x300C);pending=tailWord(meter,0x3000);
-  current=increase?current+step:current-step;pending=increase?pending-step:pending+step;
-  store<u16>(meter+0x300C,current);store<u32>(meter+0x3000,pending);
-  if(load<u8>(0x101EA076)){
-   if(!pending){call<void>(0x025E1988,increase?0x83Au:0x83Cu);store<u8>(0x101EA076,0);store<u8>(0x101EA075,0);}
-   else if(!load<u8>(0x101EA075)){call<void>(0x025E1988,increase?0x839u:0x83Bu);store<u8>(0x101EA075,1);}
-   else store<u8>(0x101EA075,0);
-  }
-  current=load<u16>(meter+0x300C);store<u16>(call<u32>(0x025200D4)+0x5BAE,current);
- }
- u32 flags=tailWord(meter,0x3008);bool hide=(flags&0x4000)!=0;
- if(!hide){if(flags&0x40){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&0x80)!=0;}flags=tailWord(meter,0x3008);}
-  hide=hide||(flags&0x00F200B8);
-  if(!hide){game=call<u32>(0x025200D4);hide=load<u8>(game+0x5CEA)==1;if(!hide){game=call<u32>(0x025200D4);hide=load<u8>(game+0x5CEA)==6;}}
- }
- call<void>(hide?0x02591AB4u:0x02591B00u,2);
- f32 alpha=call<f32>(hide?0x0259174Cu:0x025917FCu,meter+0x2A5A,meter+0x1A2A);
- u32 emitter=tailWord(meter,0x2F24);if(emitter){u32 bits=tailWord(emitter,0x254);store<u32>(emitter+0x254,hide?bits|4u:bits&~4u);}
- for(u32 i=0;i<4;i++){call<void>(0x025DB690,meter+0x19F4+i*0x38,alpha);call<void>(0x025DB690,meter+0x1B44+i*0x38,alpha);}
- call<void>(0x025DB690,meter+0x2A24,alpha);call<void>(0x025DB690,meter+0x2A5C,alpha);store<f32>(meter+0x3030,alpha);
+/* 0259C0EC */
+void dMeter_magicAlpha(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 flags = (u32)meter->mStatusFlags;
+    bool hide = true;
+    bool input = false;
+    if (!(flags & (dMtrStts_UNK4000_e)) && (flags & (dMtrStts_UNK40_e))) {
+        u32 state = dComIfGp_ea();
+        if ((u8)meterGame(state)->play.mEvtCtrl.mMode) {
+            state = dComIfGp_ea();
+            input = ((u16)meterGame(state)->play.mEvtCtrl.mHindFlag & 0x200) != 0;
+        }
+    }
+    if (!(flags & (dMtrStts_UNK4000_e)) && !input && (u8)dMeter_collectMode != 4) {
+        flags = (u32)meter->mStatusFlags;
+        if (!(flags & (dMtrStts_UNK20_e | dMtrStts_UNK80_e | dMtrStts_UNK20000_e |
+                       dMtrStts_UNK40000_e | dMtrStts_UNK80000_e | dMtrStts_UNK100000_e |
+                       dMtrStts_UNK200000_e | dMtrStts_HD1000000_e)) &&
+            !(u8)dMeter_auctionFlag &&
+            !(flags & (dMtrStts_UNK400000_e | dMtrStts_UNK800000_e | dMtrStts_HD2000000_e))) {
+            hide = meterSceneEquals(gabi::ea(&l_magicCounterStage)) &&
+                   (u8)meterGame(dComIfGp_ea())->play.mMiniGameType == 6;
+        }
+    }
+    if (hide || ((u32)meter->mStatusFlags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e)))
+        dMeter_hideCounter(6);
+    else
+        dMeter_showCounter(6);
 }
-VERIFY(0x0259C454,meterTailRupeeMove);
+/* 0259C2BC */
+void dMeter_gaugeAlpha(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    f32 hearts = (f32)meter->field_0x2fbc, magic = (f32)meter->field_0x2fc0;
+    for (u32 i = 0; i < 20; i++) {
+        fopMsgM_setNowAlpha(&meter->mHeart[i], hearts);
+        fopMsgM_setNowAlpha(&meter->mHeartShadow[i], hearts);
+    }
+    meter->field_0x0f00.mNowAlpha =
+        (u8)((u8)ftoi(fmuls_ppc((f32)(u8)meter->field_0x0f00.mNowAlpha, hearts)));
+    for (u32 i = 0; i < 8; i++)
+        fopMsgM_setNowAlpha(&meter->field_0x0f38[i], magic);
+    for (auto pane : {&meter->field_0x10f8, &meter->field_0x11a0, &meter->field_0x11d8})
+        fopMsgM_setNowAlpha(pane, magic);
+}
+// HD: publish metronome HUD visibility separately from the GC menu path.
+/* 0259C3CC */
+void dMeter_metronomeVisibility(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 visible = 0;
+    u32 state = dComIfGp_ea();
+    if ((u8)meterGame(state)->play.mMetronome &&
+        !((u32)meter->mStatusFlags &
+          (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20_e | dMtrStts_UNK800000_e))) {
+        state = dComIfGp_ea();
+        if ((u16)meterGame(state)->play.mItemNowLife && !meterIsMagicBlocked())
+            visible = 1;
+    }
+    l_metronomeVisible = (u8)(visible);
+}
+/* 0259CCA8 */
+void dMeter_compassMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 flags = (u32)meter->mStatusFlags;
+    bool reset = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!reset) {
+        if (flags & (dMtrStts_UNK40_e)) {
+            u32 state = dComIfGp_ea();
+            if ((u8)meterGame(state)->play.mEvtCtrl.mMode) {
+                state = dComIfGp_ea();
+                reset = ((u16)meterGame(state)->play.mEvtCtrl.mHindFlag & 0x100) != 0;
+            }
+            flags = (u32)meter->mStatusFlags;
+        }
+        reset = reset ||
+                (flags & (dMtrStts_UNK200000_e | dMtrStts_UNK400000_e | dMtrStts_HD2000000_e)) ||
+                (flags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20_e | dMtrStts_UNK80_e |
+                          dMtrStts_UNK100_e | dMtrStts_UNK20000_e | dMtrStts_UNK100000_e |
+                          dMtrStts_UNK800000_e));
+        if (!reset) {
+            u32 state = dComIfGp_ea();
+            reset = (u8)meterGame(state)->play.mMiniGameType == 1;
+            if (!reset) {
+                state = dComIfGp_ea();
+                reset = (u8)meterGame(state)->play.mMiniGameType == 8;
+            }
+        }
+    }
+    if (reset) {
+        dMeter_compassValueInit(meter);
+        return;
+    }
+    if (((u32)meter->mStatusFlags & (dMtrStts_UNK400_e)) &&
+        ((u8)meterStageView(meterStage())->mDisplayFlags >> 1) != 5)
+        dMeter_showCounter(4);
+    else
+        dMeter_hideCounter(4);
+}
+/* 0259CDC4 */
+void dMeter_metronomeMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!(u32)l_metronomeInitialized) {
+        l_metronomeInitialized = (u32)(1);
+        l_metronomeFlag = (u8)(meterGetMetronome());
+    }
+    if (!(u32)l_metronomeStateInitialized)
+        l_metronomeStateInitialized = (u32)(1);
+    u32 state = dComIfGp_ea();
+    bool shown = ((u32)meterGame(state)->play.mPlayerStatus[0][0] & 0x1000) != 0;
+    if (shown) {
+        const u32 mask =
+            (dMtrStts_UNK40_e | dMtrStts_UNK80_e | dMtrStts_UNK4000_e | dMtrStts_UNK200000_e) |
+            (dMtrStts_UNK20_e | dMtrStts_UNK100_e | dMtrStts_UNK800000_e) |
+            (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20000_e | dMtrStts_UNK100000_e);
+        shown = !((u32)meter->mStatusFlags & mask);
+        if (shown)
+            shown = (u8)meterGame(dComIfGp_ea())->play.mMiniGameType != 8;
+    }
+    if (shown)
+        dMeter_showCounter(5);
+    else
+        dMeter_hideCounter(5);
+}
+/* 0259CEA0 */
+void dMeter_windMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 state = dComIfGp_ea();
+    if ((u8)meterScene(state)->mWindBlocked)
+        return;
+    state = dComIfGp_ea();
+    meterUpdateEvent(gabi::ea(&meterGame(state)->play.mEvtCtrl));
+    state = dComIfGp_ea();
+    u32 mode = (u8)meterScene(state)->mOperateWind;
+    bool photo = mode == 2;
+    if (!photo) {
+        state = dComIfGp_ea();
+        photo = (u8)meterScene(state)->mOperateWind == 3;
+    }
+    if (photo) {
+        meter->mWindItem = (u16)(89);
+        dMeter_windStatus = (u8)(24);
+    }
+    u32 index = (u16)meter->mWindItem;
+    if ((index == 99 || index == dItemNo_FOREST_WATER_e || index == 98) &&
+        (u32)meter->mWindID == 0xFFFFFFFF)
+        meter->mWindItem = (u16)(0);
+}
 
-struct TailThresholdStorage {be<s16> values[5];};
-void meterTailCounter3(u32 meter){
- WWHD_FUNC(0x0259C7FC,void,meter);
- if(load<u8>(tailStage()+9)&1){
-  u32 game=call<u32>(0x025200D4);
-  if(load<s16>(game+0x5B5C)){
-   game=call<u32>(0x025200D4);u32 state=tailWord(0x101F84DC);s32 total=(s16)(load<u8>(state+0x7B8)+load<s16>(game+0x5B5C));u32 current=load<u8>(meter+0x3021);total=total>99?99:(total<0?0:total);
-   store<u16>(meter+0x3012,(u32)total-current);store<u8>(tailWord(0x101F84DC)+0x7B8,total);store<u16>(call<u32>(0x025200D4)+0x5B5C,0);
-  }
-  s32 pending=load<s16>(meter+0x3012);
-  if(pending>0){store<u16>(meter+0x3012,pending-1);store<u8>(meter+0x3021,load<u8>(meter+0x3021)+1);}
-  else if(pending<0){store<u8>(meter+0x3021,load<u8>(meter+0x3021)-1);store<u16>(meter+0x3012,pending+1);}
- }
- Local<TailThresholdStorage> thresholds;const s16 values[]={30,40,45,50,58};for(u32 i=0;i<5;i++)thresholds->values[i]=values[i];
- u32 flags=tailWord(meter,0x3008);bool hide=(flags&0x4000)!=0;
- if(!hide){if(flags&0x40){u32 game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&0x40)!=0;}flags=tailWord(meter,0x3008);}
-  hide=hide||(flags&0x00F204B8);if(!hide)hide=!(load<u8>(tailStage()+9)&1);
- }
- call<void>(hide?0x02591AB4u:0x02591B00u,3);
- f32 alpha=call<f32>(hide?0x0259174Cu:0x025917FCu,meter+0x1CCA,meter+0x1B0A);
- for(u32 i=0;i<2;i++){call<void>(0x025DB690,meter+0x1AD4+i*0x38,alpha);call<void>(0x025DB690,meter+0x1C24+i*0x38,alpha);}
- call<void>(0x025DB690,meter+0x1C94,alpha);
- if(load<s16>(meter+0x19F2)==1){
-  u32 config=0x1047AD14;f32 rnd=call<f32>(0x02019918,(f32)load<s16>(config+0x9A));s16 threshold=(s16)ftoi(fadds_ppc((f32)load<s16>(config+0x90),rnd));store<u16>(meter+0x2FDE,threshold);
-  for(u32 i=0;i<3;i++){rnd=call<f32>(0x02019918,(f32)load<s16>(config+0x92+i*2));s32 base=threshold+load<s16>(config+0x88+i*2);threshold=(s16)ftoi(fadds_ppc((f32)base,rnd));store<u16>(meter+0x2FE0+i*2,threshold);}
-  f32 base=(f32)(threshold+load<s16>(config+0x8E));rnd=call<f32>(0x02019918,(f32)load<s16>(config+0x98));store<u16>(meter+0x2FE6,(s16)ftoi(fadds_ppc(base,rnd)));
- }
- call<void>(0x02593284,meter+0x1984,thresholds.get(),alpha);call<void>(0x02593284,meter+0x19BC,meter+0x2FDE,alpha);store<f32>(meter+0x3034,alpha);
+/* 0259C454 */
+void dMeter_rupyMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 state = (u32)l_saveRoot;
+    if ((u32)(s32)(s16)meter->field_0x19f0[1].mUserArea !=
+        (u8)meterSave(state)->mSave.mSavedata.mPlayer.mPlayerStatusA.mWalletSize) {
+        dMeter_walletChange(meter);
+        meter->field_0x19f0[1].mUserArea =
+            (u16)((u8)meterSave((u32)l_saveRoot)
+                      ->mSave.mSavedata.mPlayer.mPlayerStatusA.mWalletSize);
+    }
+    u32 game = dComIfGp_ea();
+    u32 pending;
+    if ((u32)meterGame(game)->play.mItemRupeeCount) {
+        game = dComIfGp_ea();
+        state = (u32)l_saveRoot;
+        u32 delta = (u32)meterGame(game)->play.mItemRupeeCount,
+            mode = (u8)meterSave(state)->mSave.mSavedata.mPlayer.mPlayerStatusA.mWalletSize;
+        s32 total =
+            (s32)((u32)(u16)meterSave(state)->mSave.mSavedata.mPlayer.mPlayerStatusA.mRupee +
+                  delta);
+        // HD: the first wallet holds 500 rupees (GameCube: 200).
+        u32 cap = mode == 0 ? 500 : (mode == 1 ? 1000 : 5000), current = (u16)meter->mRupyCount;
+        u32 value = total > (s32)cap ? cap : (total < 0 ? 0 : (u32)total);
+        meter->mAdjustRupy = (u32)(value - current);
+        meterSave((u32)l_saveRoot)->mSave.mSavedata.mPlayer.mPlayerStatusA.mRupee = (u16)(value);
+        meterGame(dComIfGp_ea())->play.mItemRupeeCount = (u32)(0);
+        pending = (u32)meter->mAdjustRupy;
+        // HD: the sound threshold tests the unsigned adjustment, including negative values.
+        if (pending >= 5)
+            rupy_soundOnFlag = (u8)(1);
+    } else
+        pending = (u32)meter->mAdjustRupy;
+    if (pending) {
+        bool increase = (s32)pending > 0;
+        u32 step = meterRupyStep(increase ? pending : 0u - pending);
+        u32 current = (u16)meter->mRupyCount;
+        pending = (u32)meter->mAdjustRupy;
+        current = increase ? current + step : current - step;
+        pending = increase ? pending - step : pending + step;
+        meter->mRupyCount = (u16)(current);
+        meter->mAdjustRupy = (u32)(pending);
+        if ((u8)rupy_soundOnFlag) {
+            if (!pending) {
+                mDoAud_seStart(increase ? 0x83Au : 0x83Cu);
+                rupy_soundOnFlag = (u8)(0);
+                rupy_soundSetFlag = (u8)(0);
+            } else if (!(u8)rupy_soundSetFlag) {
+                mDoAud_seStart(increase ? 0x839u : 0x83Bu);
+                rupy_soundSetFlag = (u8)(1);
+            } else
+                rupy_soundSetFlag = (u8)(0);
+        }
+        current = (u16)meter->mRupyCount;
+        meterGame(dComIfGp_ea())->play.mItemNowRupee = (u16)(current);
+    }
+    u32 flags = (u32)meter->mStatusFlags;
+    bool hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide) {
+        if (flags & (dMtrStts_UNK40_e)) {
+            game = dComIfGp_ea();
+            if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+                game = dComIfGp_ea();
+                hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 0x80) != 0;
+            }
+            flags = (u32)meter->mStatusFlags;
+        }
+        hide =
+            hide || (flags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20_e |
+                              dMtrStts_UNK80_e | dMtrStts_UNK20000_e | dMtrStts_UNK100000_e |
+                              dMtrStts_UNK200000_e | dMtrStts_UNK400000_e | dMtrStts_UNK800000_e));
+        if (!hide) {
+            game = dComIfGp_ea();
+            hide = (u8)meterGame(game)->play.mMiniGameType == 1;
+            if (!hide) {
+                game = dComIfGp_ea();
+                hide = (u8)meterGame(game)->play.mMiniGameType == 6;
+            }
+        }
+    }
+    if (hide)
+        dMeter_hideCounter(2);
+    else
+        dMeter_showCounter(2);
+    f32 alpha =
+        (hide
+             ? dMeter_alphaClose(&meter->field_0x2a20.mUserArea, &meter->field_0x19f0[0].mUserArea)
+             : dMeter_alphaOpen(&meter->field_0x2a20.mUserArea, &meter->field_0x19f0[0].mUserArea));
+    u32 emitter = (u32)meter->mpRupyParticle;
+    if (emitter) {
+        u32 bits = (u32)meterParticle(emitter)->mFlags;
+        meterParticle(emitter)->mFlags = (u32)(hide ? bits | 4u : bits & ~4u);
+    }
+    for (u32 i = 0; i < 4; i++) {
+        fopMsgM_setNowAlpha(&meter->field_0x19f0[i], alpha);
+        fopMsgM_setNowAlpha(&meter->field_0x1b40[i], alpha);
+    }
+    fopMsgM_setNowAlpha(&meter->field_0x2a20, alpha);
+    fopMsgM_setNowAlpha(&meter->field_0x2a58, alpha);
+    meter->mRupyAlpha = (f32)(alpha);
 }
-VERIFY(0x0259C7FC,meterTailCounter3);
 
-void meterTailActionIndicator(u32 meter){
- WWHD_FUNC(0x0259A5B0,void,meter);
- u32 game=call<u32>(0x025200D4);if(load<u8>(game+0x5BB8)){u32 mode=load<u8>(call<u32>(0x025200D4)+0x5BB8);store<u8>(call<u32>(0x025200D4)+0x5BB5,mode);}
- if(load<s16>(meter+0x1D02)){
-  game=call<u32>(0x025200D4);if(load<u8>(game+0x5BB5)){game=call<u32>(0x025200D4);if(load<u8>(game+0x5BB5)!=7)call<u32>(0x025200D4);call<u32>(0x025200D4);}
-  u32 mode=load<u8>(call<u32>(0x025200D4)+0x5BB5);store<u16>(meter+0x1D02,0);store<u16>(meter+0x2712,1);store<u8>(meter+0x3020,mode);
- }
- game=call<u32>(0x025200D4);if(load<u8>(meter+0x3020)!=load<u8>(game+0x5BB5))store<u16>(meter+0x1D02,1);
- Local<be<u8>> state;*state.get()=load<u8>(0x1047B07A);u32 flags=tailWord(meter,0x3008),mode=0;bool hide=(flags&0x4000)!=0;
- if(!hide){if(flags&0x40){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&8)!=0;}flags=tailWord(meter,0x3008);}
-  hide=hide||(flags&0x100);if(!hide){game=call<u32>(0x025200D4);hide=load<u8>(game+0x5BB5)==62;}
- }
- if(!hide){flags=tailWord(meter,0x3008);
-  if(flags&0x20000){game=call<u32>(0x025200D4);hide=load<u8>(game+0x5BE8)==2;mode=2;}
-  else if(flags&0x40000)mode=4;
-  else{
-   if(load<u8>(0x101EA069)){
-    game=call<u32>(0x025200D4);
-    if(load<u8>(game+0x5BE8)!=2){u32 m=load<u8>(0x101EA06A);hide=m==1||(load<u8>(0x101EA067)==1&&m==0);}
-    if(!hide&&load<u8>(0x101EA069)){u32 m=load<u8>(0x101EA06A);hide=m==2||(load<u8>(0x101EA067)==2&&m==0);}
-    flags=tailWord(meter,0x3008);
-   }
-   hide=hide||(flags&0x800000);
-   if(!hide&&(flags&0x20)){hide=(load<u16>(tailStage()+0xA)&3)==1;flags=tailWord(meter,0x3008);}
-   hide=hide||(flags&0x01780080);
-   if(!hide&&(flags&0x20)){u32 value=load<u8>(0x1047B09F);if(value<=3)mode=3;else if(value>=7&&value<=10)mode=5;else hide=true;}
-  }
- }
- if(hide)mode=1;
- if(load<s16>(0x101EA062)!=(s32)mode){call<void>(0x0259173C,meter+0x302A,8);if(mode==1)call<void>(0x0259173C,state.get(),8);}
- store<u16>(0x101EA062,mode);
- if(load<u8>(meter+0x302A)!=15){
-  if(!call<u32>(0x02591718,meter+0x302A,8)){
-   if(mode!=1)call<void>(0x0259172C,state.get(),8);
-   s32 count=load<s16>(0x101EA060);if(count>=5){store<u16>(0x101EA060,5);call<void>(0x0259172C,meter+0x302A,8);}else store<u16>(0x101EA060,count+1);
-  }
- }else{ s32 count=load<s16>(0x101EA060);store<u16>(0x101EA060,count>0?count-1:0); }
- if((u8)*state.get()!=load<u8>(0x1047B07A))store<u8>(0x1047B07A,(u8)*state.get());
- flags=tailWord(meter,0x3008);hide=(flags&0x4000)!=0;
- if(!hide){if(flags&0x40){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&8)!=0;}flags=tailWord(meter,0x3008);}
-  hide=hide||(flags&0x01FC03B8);
- }
- s32 count=load<s16>(0x101EA064);
- if(hide){store<u16>(0x101EA064,count<5?count+1:5);store<u8>(meter+0x3038,load<u8>(meter+0x3038)|16);count=load<s16>(0x101EA064);}
- else if(flags&0xA000){count=count>3?(s16)(count-1):(count<3?(s16)(count+1):3);store<u16>(0x101EA064,count);}
- else{store<u16>(0x101EA064,count<5?count+1:5);store<u8>(meter+0x3028,load<u8>(meter+0x3028)|16);store<u8>(meter+0x3038,load<u8>(meter+0x3038)|16);count=load<s16>(0x101EA064);}
- f32 alpha=call<f32>(0x025DB6F4,5,count,0);game=call<u32>(0x025200D4);
- if(!load<u8>(game+0x5BB5))call<void>(0x025DB6E0,meter+0x1CCC);else call<void>(0x025DB690,meter+0x1CCC,alpha);
- if((tailWord(meter,0x3008)&0x20)&&!(load<u16>(tailStage()+0xA)&3))alpha=fsubs_ppc(tailFloat(0x100512B4),alpha);
- call<void>(0x025DB690,meter+0x26A4,alpha);call<void>(0x025DB690,meter+0x26DC,alpha);store<u8>(call<u32>(0x025200D4)+0x5BB8,0);
+/* 0259C7FC */
+void dMeter_keyMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if ((u8)meterStageView(meterStage())->mDisplayFlags & 1) {
+        u32 game = dComIfGp_ea();
+        if ((s16)meterGame(game)->play.mItemKeyNumCount) {
+            game = dComIfGp_ea();
+            u32 state = (u32)l_saveRoot;
+            s32 total = (s16)((u8)meterSave(state)->mSave.mMemory.mMembit.mKeyNum +
+                              (s16)meterGame(game)->play.mItemKeyNumCount);
+            u32 current = (u8)meter->field_0x301d;
+            total = total > 99 ? 99 : (total < 0 ? 0 : total);
+            meter->field_0x300e = (u16)((u32)total - current);
+            meterSave((u32)l_saveRoot)->mSave.mMemory.mMembit.mKeyNum = (u8)(total);
+            meterGame(dComIfGp_ea())->play.mItemKeyNumCount = (u16)(0);
+        }
+        s32 pending = (s16)meter->field_0x300e;
+        if (pending > 0) {
+            meter->field_0x300e = (u16)(pending - 1);
+            meter->field_0x301d = (u8)((u8)meter->field_0x301d + 1);
+        } else if (pending < 0) {
+            meter->field_0x301d = (u8)((u8)meter->field_0x301d - 1);
+            meter->field_0x300e = (u16)(pending + 1);
+        }
+    }
+    Local<Thresholds> thresholds;
+    const s16 values[] = {30, 40, 45, 50, 58};
+    for (u32 i = 0; i < 5; i++)
+        thresholds->values[i] = values[i];
+    u32 flags = (u32)meter->mStatusFlags;
+    bool hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide) {
+        if (flags & (dMtrStts_UNK40_e)) {
+            u32 game = dComIfGp_ea();
+            if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+                game = dComIfGp_ea();
+                hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 0x40) != 0;
+            }
+            flags = (u32)meter->mStatusFlags;
+        }
+        hide = hide ||
+               (flags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20_e | dMtrStts_UNK80_e |
+                         dMtrStts_UNK400_e | dMtrStts_UNK20000_e | dMtrStts_UNK100000_e |
+                         dMtrStts_UNK200000_e | dMtrStts_UNK400000_e | dMtrStts_UNK800000_e));
+        if (!hide)
+            hide = !((u8)meterStageView(meterStage())->mDisplayFlags & 1);
+    }
+    if (hide)
+        dMeter_hideCounter(3);
+    else
+        dMeter_showCounter(3);
+    f32 alpha =
+        (hide
+             ? dMeter_alphaClose(&meter->field_0x1c90.mUserArea, &meter->field_0x1ad0[0].mUserArea)
+             : dMeter_alphaOpen(&meter->field_0x1c90.mUserArea, &meter->field_0x1ad0[0].mUserArea));
+    for (u32 i = 0; i < 2; i++) {
+        fopMsgM_setNowAlpha(&meter->field_0x1ad0[i], alpha);
+        fopMsgM_setNowAlpha(&meter->field_0x1c20[i], alpha);
+    }
+    fopMsgM_setNowAlpha(&meter->field_0x1c90, alpha);
+    if ((s16)meter->field_0x19b8.mUserArea == 1) {
+        f32 rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x9a);
+        s16 threshold = (s16)ftoi(fadds_ppc((f32)(s16)g_meterHIO.field_0x90, rnd));
+        meter->field_0x2fda[0] = (u16)(threshold);
+        for (u32 i = 0; i < 3; i++) {
+            rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x92[i]);
+            s32 base = threshold + (s16)g_meterHIO.field_0x88[i];
+            threshold = (s16)ftoi(fadds_ppc((f32)base, rnd));
+            meter->field_0x2fda[1 + i] = (u16)(threshold);
+        }
+        f32 base = (f32)(threshold + (s16)g_meterHIO.field_0x8e);
+        rnd = cM_rndFX((f32)(s16)g_meterHIO.field_0x98);
+        meter->field_0x2fda[4] = (u16)((s16)ftoi(fadds_ppc(base, rnd)));
+    }
+    dMeter_keyLight(&meter->field_0x1980, thresholds.get(), alpha);
+    dMeter_keyLight(&meter->field_0x19b8, &meter->field_0x2fda[0], alpha);
+    meter->mKeyAlpha = (f32)(alpha);
 }
-VERIFY(0x0259A5B0,meterTailActionIndicator);
-void meterTailMagicGauge(u32 meter){
- WWHD_FUNC(0x0259B698,void,meter);
- if(tailWord(meter,0x3008)&0x40000){
-  u32 player=tailWord(call<u32>(0x025200D4),0x5B38);Local<be<u16>> id;id->set(0x14E);
-  if(player==call<u32>(0x025D5218,0x025E121C,id.a)){u32 active=load<u8>(0x101BDC2D);u32 maximum=call<u32>(0x022271B8);call<void>(0x02592EE8,meter,active,maximum,load<s16>(0x101BDC28));}
-  else{player=tailWord(call<u32>(0x025200D4),0x5B38);id->set(0x16F);
-   if(player==call<u32>(0x025D5218,0x025E121C,id.a)){u32 active=load<u8>(0x101D5F3E);u32 maximum=call<u32>(0x02526C94);call<void>(0x02592EE8,meter,active,maximum,load<s16>(0x101D5F38));}
-   else call<void>(0x02592EE8,meter,0,1,1);
-  }
-  if(load<s16>(meter+0xFE2)==1)store<u16>(meter+0xFE2,0);store<u16>(meter+0x108A,1);return;
- }
- f32 divisor=tailFloat(0x10051348),length=tailFloat(0x100512B4);
- if(load<s16>(meter+0xF72)==1){store<u16>(meter+0xF72,0);f32 zero=tailFloat(0x100512B8);call<void>(0x02592CD8,meter,zero,zero,length);call<void>(0x02592BC4,meter);call<void>(0x02592A88,meter,((f32)load<u16>(meter+0x301A)/divisor));}
- u32 game=call<u32>(0x025200D4);
- if(load<s16>(game+0x5B64)){game=call<u32>(0x025200D4);u32 save=tailWord(0x101F84DC);s32 cap=(s16)(load<u8>(save+0x33)+load<s16>(game+0x5B64));if(cap>32)cap=32;store<u8>(save+0x33,cap);store<u16>(call<u32>(0x025200D4)+0x5B64,0);}
- u32 save=tailWord(0x101F84DC);u32 displayed=load<u8>(meter+0x301C),capacity=load<u8>(save+0x33);bool finalLength=false;
- if(displayed<capacity){displayed=(u8)(displayed+1);store<u8>(meter+0x301C,displayed);call<void>(0x02592888,meter,fmuls_ppc((f32)displayed,tailFloat(0x100512C0)));save=tailWord(0x101F84DC);capacity=load<u8>(save+0x33);finalLength=load<u8>(meter+0x301C)==capacity;}
- else if(displayed>capacity||load<s16>(meter+0xFE2)==0){if(displayed>capacity){displayed=(u8)(displayed-1);store<u8>(meter+0x301C,displayed);}call<void>(0x02592888,meter,fmuls_ppc((f32)displayed,tailFloat(0x100512C0)));save=tailWord(0x101F84DC);capacity=load<u8>(save+0x33);finalLength=load<u8>(meter+0x301C)==capacity;}
- if(finalLength){if(capacity<=16)length=tailFloat(0x100512C8);call<void>(0x02592888,meter,length);store<u16>(meter+0xFE2,1);save=tailWord(0x101F84DC);capacity=load<u8>(save+0x33);}
- if(capacity){game=call<u32>(0x025200D4);if(load<s16>(game+0x5B60)){game=call<u32>(0x025200D4);save=tailWord(0x101F84DC);s32 value=(s16)(load<u8>(save+0x34)+load<s16>(game+0x5B60));if(value<0)value=0;store<u8>(save+0x34,value);store<u16>(call<u32>(0x025200D4)+0x5B60,0);}save=tailWord(0x101F84DC);capacity=load<u8>(save+0x33);}
- if(load<u8>(save+0x34)>capacity)store<u8>(save+0x34,capacity);
- bool blocked=call<u32>(0x025DBE38)!=0;
- if(!blocked&&(tailWord(meter,0x3008)&0x40)){
-  game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);if(load<u16>(game+0x52A6)&0x20){game=call<u32>(0x025200D4);if(call<u32>(0x025449B0,game+0x52C4)){game=call<u32>(0x025200D4);blocked=!(tailWord(game,0x5CDC)&0x2000);}}}
- }
- if(blocked)store<u16>(meter+0x108A,1);
- else{
-  save=tailWord(0x101F84DC);f32 scaled=fmuls_ppc(fmuls_ppc((f32)load<u8>(save+0x34),tailFloat(meter,0xF60)),tailFloat(0x10051310));u32 desired=(u16)ftoi(scaled),shown=load<u16>(meter+0x301A);
-  if(desired!=shown){
-   if(desired>shown){shown=desired-shown<625?desired:(u16)(shown+625);store<u16>(meter+0x301A,shown);if(shown%1250==0){call<void>(0x025E1A04,0x87D,0,shown/1250);shown=load<u16>(meter+0x301A);}}
-   else{if(shown-desired<625){store<u16>(meter+0x301A,0);call<void>(0x025E1988,0x87E);shown=load<u16>(meter+0x301A);}else{shown=(u16)(shown-625);store<u16>(meter+0x301A,shown);if(shown%1250==0){call<void>(0x025E1988,0x87E);shown=load<u16>(meter+0x301A);}}if(!shown){call<void>(0x025E1988,0x881);shown=load<u16>(meter+0x301A);}}
-   call<void>(0x02592A88,meter,((f32)shown/divisor));store<u16>(meter+0x108A,1);
-  }else if(load<s16>(meter+0x108A)){call<void>(0x02592A88,meter,((f32)shown/divisor));store<u16>(meter+0x108A,0);}
- }
- bool pulse=false;
- if(!(tailWord(meter,0x3008)&0x00800118)){
-  game=call<u32>(0x025200D4);pulse=(load<u8>(game+0x5BEF)&1)!=0;
-  if(!pulse){game=call<u32>(0x025200D4);pulse=call<u32>(0x0244363C,tailWord(game,0x5B34))!=0;}
-  if(!pulse){game=call<u32>(0x025200D4);pulse=(tailWord(game,0x5CDC)&0x20)!=0;}
-  if(!pulse){game=call<u32>(0x025200D4);if((tailWord(game,0x5CD8)&0x1000)&&call<u32>(0x02526C9C)){game=call<u32>(0x025200D4);u32 actor=tailWord(game,0x5B2C);pulse=call_ptr<s32>(tailWord(tailWord(actor,0xB4),0xAC),actor)!=-1;}}
- }
- if(pulse){if(!load<s16>(meter+0x1052))store<u16>(meter+0x1052,1);s32 timer=load<s16>(meter+0x101A);s32 value;
-  if(timer>=29){store<u16>(meter+0x101A,0);value=0;}else{timer=(s16)(timer+1);store<u16>(meter+0x101A,timer);value=timer<15?timer:30-timer;}
-  call<f32>(0x025DB6F4,15,value,0);game=call<u32>(0x025200D4);store<u8>(game+0x5BEF,load<u8>(game+0x5BEF)&0xFE);store<u8>(0x1047B098,1);
- }else{if(load<s16>(meter+0x1052)==1)store<u16>(meter+0x1052,0);store<u8>(0x1047B098,0);}
- save=tailWord(0x101F84DC);bool hide=load<u8>(save+0x33)==0;u32 flags=tailWord(meter,0x3008);
- if(!hide)hide=(flags&0x4000)!=0;
- if(!hide&&(flags&0x40)){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);if(load<u16>(game+0x52A6)&0x20){game=call<u32>(0x025200D4);hide=!(tailWord(game,0x5CDC)&0x2000);}}}
- if(!hide)hide=load<u8>(0x101EA073)==4;
- if(!hide){flags=tailWord(meter,0x3008);hide=(flags&0x013A00A0)||load<u8>(0x101EA06C)||(flags&0x00C00000);}
- if(!hide)hide=tailSceneEquals(0x1005106Cu)&&load<u8>(call<u32>(0x025200D4)+0x5CEA)==6;
- s32 timer;
- if(hide){call<void>(0x02591AB4,1);timer=load<s16>(meter+0x1132);timer=timer>0?(s16)(timer-1):0;}
- else if(tailWord(meter,0x3008)&0x18){call<void>(0x02591AB4,1);timer=load<s16>(meter+0x1132);timer=timer>3?(s16)(timer-1):(timer<3?(s16)(timer+1):3);}
- else{call<void>(0x02591B00,1);timer=load<s16>(meter+0x1132);timer=timer<5?(s16)(timer+1):5;}
- store<u16>(meter+0x1132,timer);f32 alpha=call<f32>(0x025DB6F4,5,timer,0);store<f32>(meter+0x2FC4,alpha);if(load<s16>(meter+0x1212))store<u16>(meter+0x1212,0);
+
+/* 0259A5B0 */
+void dMeter_rAlpha(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 game = dComIfGp_ea();
+    if ((u8)meterGame(game)->play.mRStatusForce) {
+        u32 mode = (u8)meterGame(dComIfGp_ea())->play.mRStatusForce;
+        meterGame(dComIfGp_ea())->play.mRStatus = (u8)(mode);
+    }
+    if ((s16)meter->field_0x1cc8.mUserArea) {
+        game = dComIfGp_ea();
+        if ((u8)meterGame(game)->play.mRStatus) {
+            game = dComIfGp_ea();
+            if ((u8)meterGame(game)->play.mRStatus != 7)
+                dComIfGp_ea();
+            dComIfGp_ea();
+        }
+        u32 mode = (u8)meterGame(dComIfGp_ea())->play.mRStatus;
+        meter->field_0x1cc8.mUserArea = (u16)(0);
+        meter->field_0x26d8.mUserArea = (u16)(1);
+        meter->field_0x301c = (u8)(mode);
+    }
+    game = dComIfGp_ea();
+    if ((u8)meter->field_0x301c != (u8)meterGame(game)->play.mRStatus)
+        meter->field_0x1cc8.mUserArea = (u16)(1);
+    Local<be<u8>> state;
+    *state.get() = (u8)l_buttonAlphaState;
+    u32 flags = (u32)meter->mStatusFlags, mode = 0;
+    bool hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide) {
+        if (flags & (dMtrStts_UNK40_e)) {
+            game = dComIfGp_ea();
+            if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+                game = dComIfGp_ea();
+                hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 8) != 0;
+            }
+            flags = (u32)meter->mStatusFlags;
+        }
+        hide = hide || (flags & (dMtrStts_UNK100_e));
+        if (!hide) {
+            game = dComIfGp_ea();
+            hide = (u8)meterGame(game)->play.mRStatus == 62;
+        }
+    }
+    if (!hide) {
+        flags = (u32)meter->mStatusFlags;
+        if (flags & (dMtrStts_UNK20000_e)) {
+            game = dComIfGp_ea();
+            hide = (u8)meterScene(game)->mOperateWind == 2;
+            mode = 2;
+        } else if (flags & (dMtrStts_UNK40000_e))
+            mode = 4;
+        else {
+            if ((u8)dMenu_menuFlag) {
+                game = dComIfGp_ea();
+                if ((u8)meterScene(game)->mOperateWind != 2) {
+                    u32 m = (u8)dMenu_menuButton;
+                    hide = m == 1 || ((u8)dMenu_pause == 1 && m == 0);
+                }
+                if (!hide && (u8)dMenu_menuFlag) {
+                    u32 m = (u8)dMenu_menuButton;
+                    hide = m == 2 || ((u8)dMenu_pause == 2 && m == 0);
+                }
+                flags = (u32)meter->mStatusFlags;
+            }
+            hide = hide || (flags & (dMtrStts_UNK800000_e));
+            if (!hide && (flags & (dMtrStts_UNK20_e))) {
+                hide = ((u16)meterStageView(meterStage())->mStageFlags & 3) == 1;
+                flags = (u32)meter->mStatusFlags;
+            }
+            hide = hide ||
+                   (flags & (dMtrStts_UNK80_e | dMtrStts_UNK80000_e | dMtrStts_UNK100000_e |
+                             dMtrStts_UNK200000_e | dMtrStts_UNK400000_e | dMtrStts_HD1000000_e));
+            if (!hide && (flags & (dMtrStts_UNK20_e))) {
+                u32 value = (u8)l_itemButtonMode;
+                if (value <= 3)
+                    mode = 3;
+                else if (value >= 7 && value <= 10)
+                    mode = 5;
+                else
+                    hide = true;
+            }
+        }
+    }
+    if (hide)
+        mode = 1;
+    if ((s16)l_rFadeMode != (s32)mode) {
+        dMeter_alphaFlagOff(&meter->field_0x3026, 8);
+        if (mode == 1)
+            dMeter_alphaFlagOff(state.get(), 8);
+    }
+    l_rFadeMode = (u16)(mode);
+    if ((u8)meter->field_0x3026 != 15) {
+        if (!dMeter_alphaFlagCheck(&meter->field_0x3026, 8)) {
+            if (mode != 1)
+                dMeter_alphaFlagOn(state.get(), 8);
+            s32 count = (s16)l_rFadeCount;
+            if (count >= 5) {
+                l_rFadeCount = (u16)(5);
+                dMeter_alphaFlagOn(&meter->field_0x3026, 8);
+            } else
+                l_rFadeCount = (u16)(count + 1);
+        }
+    } else {
+        s32 count = (s16)l_rFadeCount;
+        l_rFadeCount = (u16)(count > 0 ? count - 1 : 0);
+    }
+    if ((u8)*state.get() != (u8)l_buttonAlphaState)
+        l_buttonAlphaState = (u8)((u8)*state.get());
+    flags = (u32)meter->mStatusFlags;
+    hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide) {
+        if (flags & (dMtrStts_UNK40_e)) {
+            game = dComIfGp_ea();
+            if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+                game = dComIfGp_ea();
+                hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 8) != 0;
+            }
+            flags = (u32)meter->mStatusFlags;
+        }
+        hide = hide ||
+               (flags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK20_e | dMtrStts_UNK80_e |
+                         dMtrStts_UNK100_e | dMtrStts_UNK200_e | dMtrStts_UNK40000_e |
+                         dMtrStts_UNK80000_e | dMtrStts_UNK100000_e | dMtrStts_UNK200000_e |
+                         dMtrStts_UNK400000_e | dMtrStts_UNK800000_e | dMtrStts_HD1000000_e));
+    }
+    s32 count = (s16)l_rPaneCount;
+    if (hide) {
+        l_rPaneCount = (u16)(count < 5 ? count + 1 : 5);
+        meter->mButtonShowFlags = (u8)((u8)meter->mButtonShowFlags | 16);
+        count = (s16)l_rPaneCount;
+    } else if (flags & (dMtrStts_UNK2000_e | dMtrStts_UNK8000_e)) {
+        count = count > 3 ? (s16)(count - 1) : (count < 3 ? (s16)(count + 1) : 3);
+        l_rPaneCount = (u16)(count);
+    } else {
+        l_rPaneCount = (u16)(count < 5 ? count + 1 : 5);
+        meter->field_0x3024 = (u8)((u8)meter->field_0x3024 | 16);
+        meter->mButtonShowFlags = (u8)((u8)meter->mButtonShowFlags | 16);
+        count = (s16)l_rPaneCount;
+    }
+    f32 alpha = fopMsgM_valueIncrease(5, count, 0);
+    game = dComIfGp_ea();
+    if (!(u8)meterGame(game)->play.mRStatus)
+        fopMsgM_setNowAlphaZero(&meter->field_0x1cc8);
+    else
+        fopMsgM_setNowAlpha(&meter->field_0x1cc8, alpha);
+    if (((u32)meter->mStatusFlags & (dMtrStts_UNK20_e)) &&
+        !((u16)meterStageView(meterStage())->mStageFlags & 3))
+        alpha = fsubs_ppc((f32)l_one, alpha);
+    fopMsgM_setNowAlpha(&meter->field_0x26a0, alpha);
+    fopMsgM_setNowAlpha(&meter->field_0x26d8, alpha);
+    meterGame(dComIfGp_ea())->play.mRStatusForce = (u8)(0);
 }
-VERIFY(0x0259B698,meterTailMagicGauge);
-struct TailVector {be<f32> x,y,z;};
-void meterTailEnemy(u32 meter){
- WWHD_FUNC(0x0259ACD4,void,meter);
- u32 attention=call<u32>(0x025200D4)+0x5804,stage=tailStage();
- if(!stage)call<void>(0x0273AA24,0x10051130,0x1D6F,0x10051140);
- f32 zero=tailFloat(0x100512B8),one=tailFloat(0x100512B4);u32 event=load<u8>(0x101EA069);bool track=false;
- if(attention){
-  if(!event){
-   bool eligible=!load<u8>(call<u32>(0x025200D4)+0x5292);
-   if(eligible)eligible=call<u32>(0x024EC8D0,attention,0)!=0;
-   if(eligible){u32 a=call<u32>(0x024EC8D0,call<u32>(0x025200D4)+0x5804,0);eligible=(f32)load<s8>(a+0x3A0)>zero;}
-   if(eligible)eligible=call<u32>(0x025B7A2C,tailWord(0x101F84DC)+0xD4,4,1)!=0;
-   if(eligible)eligible=call<u32>(0x024EDFCC,attention)!=0;
-   if(eligible)eligible=load<u8>(call<u32>(0x024EC8D0,attention,0)+0x2DA)==2;
-   for(s16 excluded:{0xEA,0xEB,0xEE,0xD3,0xF3,0xF4,0xF5,0xF6}){if(!eligible)break;u32 actor=call<u32>(0x024EC8D0,attention,0);if(actor&&load<s16>(actor+8)==excluded)eligible=false;}
-   if(eligible){u32 actor=call<u32>(0x024EC8D0,attention,0);if(actor&&load<s16>(actor+8)==0xF0){actor=call<u32>(0x024EC8D0,attention,0);if(!(tailWord(actor,0xB0)&15))eligible=false;}}
-   if(eligible){u32 actor=call<u32>(0x024EC8D0,attention,0);if(actor&&load<s16>(actor+8)==0xD9)eligible=false;}
-   if(eligible){u32 actor=call<u32>(0x024EC8D0,call<u32>(0x025200D4)+0x5804,0);Local<TailVector> position;call<void>(0x025F0EA4,actor+0x390,position.a);
-    f32 ratio=(f32)load<s8>(actor+0x3A1)/(f32)load<s8>(actor+0x3A0);if(ratio<zero)ratio=zero;else if(ratio>one)ratio=one;
-    store<f32>(0x1047B03C,position->x.get());store<f32>(0x1047B040,position->y.get());store<f32>(0x1047B044,position->z.get());event=load<u8>(0x101EA069);store<u8>(0x1047B09C,1);store<f32>(0x1047B068,ratio);
-   }else{event=load<u8>(0x101EA069);store<u8>(0x1047B09C,0);}
-  }else store<u8>(0x1047B09C,0);
- }
- if(!event&&call<u32>(0x025B7A2C,tailWord(0x101F84DC)+0xD4,4,1)){
-  if(!load<u8>(call<u32>(0x025200D4)+0x5292)&&!(tailWord(meter,0x3008)&0x20080)){
-   bool environment=((tailWord(stage,0xC)>>16)&7)==3;
-   if(!environment){Local<be<u16>> name;name->set(0xEE);environment=call<u32>(0x025D5218,0x025E121C,name.a)!=0;}
-   if(environment){
-    if(call<u32>(0x025B9100,tailWord(0x101F84DC)+0x798,5)&&!call<u32>(0x025B9100,tailWord(0x101F84DC)+0x798,3))track=true;
-    else{for(u32 name:{0x1005104Cu,0x10051054u,0x1005105Cu,0x10051064u})if(tailSceneEquals(name)){track=true;break;}}
-   }
-  }
- }
- if(!track){call<void>(0x02592878,meter);return;}
- u32 actor=0;
- for(u16 kind:{0xEA,0xEB,0xEE,0xF0,0xD9,0xD3}){Local<be<u16>> first;first->set(kind);actor=call<u32>(0x025D5218,0x025E121C,first.a);if(actor){Local<be<u16>> second;second->set(kind);actor=call<u32>(0x025D5218,0x025E121C,second.a);break;}}
- if(!actor){call<void>(0x02592878,meter);return;}
- s32 maximum=load<s8>(actor+0x3A0);f32 ratio;
- if(maximum){ratio=(f32)load<s8>(actor+0x3A1)/(f32)maximum;if(ratio<zero)ratio=zero;else if(ratio>one)ratio=one;}
- else ratio=tailFloat(0x1047AD20);
- store<f32>(0x1047B064,ratio);store<u8>(0x1047B09B,1);
+// HD: flight selection, gauge movement, pulse and alpha are combined in this entry.
+/* 0259B698 */
+void dMeter_magicGaugeMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if ((u32)meter->mStatusFlags & (dMtrStts_UNK40000_e)) {
+        u32 player = gabi::ea(meterGame(dComIfGp_ea())->play.mpPlayerPtr[1].get());
+        Local<be<u16>> id;
+        id->set(fpcNm_NPC_CB1_e);
+        if (player == meterActorJudge(gabi::ea(&l_actorNameJudge), id.a)) {
+            u32 active = (u8)l_cb1FlightActive;
+            u32 maximum = meterCb1MaxFlight();
+            dMeter_flyGaugeMove(meter, active, maximum, (s16)l_cb1FlightTime);
+        } else {
+            player = gabi::ea(meterGame(dComIfGp_ea())->play.mpPlayerPtr[1].get());
+            id->set(fpcNm_NPC_MD_e);
+            if (player == meterActorJudge(gabi::ea(&l_actorNameJudge), id.a)) {
+                u32 active = (u8)l_mdFlightActive;
+                u32 maximum = meterMdMaxFlight();
+                dMeter_flyGaugeMove(meter, active, maximum, (s16)l_mdFlightTime);
+            } else
+                dMeter_flyGaugeMove(meter, 0, 1, 1);
+        }
+        if ((s16)meter->field_0x0f38[2].mUserArea == 1)
+            meter->field_0x0f38[2].mUserArea = (u16)(0);
+        meter->field_0x0f38[5].mUserArea = (u16)(1);
+        return;
+    }
+    f32 divisor = (f32)l_magicGaugeDivisor, length = (f32)l_one;
+    if ((s16)meter->field_0x0f38[0].mUserArea == 1) {
+        meter->field_0x0f38[0].mUserArea = (u16)(0);
+        f32 zero = (f32)l_zero;
+        dMeter_magicTransScale(meter, zero, zero, length);
+        dMeter_magicInitTrans(meter);
+        dMeter_magicChange(meter, ((f32)(u16)meter->field_0x3016 / divisor));
+    }
+    u32 game = dComIfGp_ea();
+    if ((s16)meterGame(game)->play.mItemMaxMagicCount) {
+        game = dComIfGp_ea();
+        u32 save = (u32)l_saveRoot;
+        s32 cap = (s16)((u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic +
+                        (s16)meterGame(game)->play.mItemMaxMagicCount);
+        if (cap > 32)
+            cap = 32;
+        meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic = (u8)(cap);
+        meterGame(dComIfGp_ea())->play.mItemMaxMagicCount = (u16)(0);
+    }
+    u32 save = (u32)l_saveRoot;
+    u32 displayed = (u8)meter->field_0x3018,
+        capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+    bool finalLength = false;
+    if (displayed < capacity) {
+        displayed = (u8)(displayed + 1);
+        meter->field_0x3018 = (u8)(displayed);
+        dMeter_magicLength(meter, fmuls_ppc((f32)displayed, (f32)l_magicLengthScale));
+        save = (u32)l_saveRoot;
+        capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+        finalLength = (u8)meter->field_0x3018 == capacity;
+    } else if (displayed > capacity || (s16)meter->field_0x0f38[2].mUserArea == 0) {
+        if (displayed > capacity) {
+            displayed = (u8)(displayed - 1);
+            meter->field_0x3018 = (u8)(displayed);
+        }
+        dMeter_magicLength(meter, fmuls_ppc((f32)displayed, (f32)l_magicLengthScale));
+        save = (u32)l_saveRoot;
+        capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+        finalLength = (u8)meter->field_0x3018 == capacity;
+    }
+    if (finalLength) {
+        if (capacity <= 16)
+            length = (f32)l_half;
+        dMeter_magicLength(meter, length);
+        meter->field_0x0f38[2].mUserArea = (u16)(1);
+        save = (u32)l_saveRoot;
+        capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+    }
+    if (capacity) {
+        game = dComIfGp_ea();
+        if ((s16)meterGame(game)->play.mItemMagicCount) {
+            game = dComIfGp_ea();
+            save = (u32)l_saveRoot;
+            s32 value = (s16)((u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic +
+                              (s16)meterGame(game)->play.mItemMagicCount);
+            if (value < 0)
+                value = 0;
+            meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic = (u8)(value);
+            meterGame(dComIfGp_ea())->play.mItemMagicCount = (u16)(0);
+        }
+        save = (u32)l_saveRoot;
+        capacity = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic;
+    }
+    if ((u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic > capacity)
+        meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic = (u8)(capacity);
+    bool blocked = meterOverlapIsDoingReq() != 0;
+    if (!blocked && ((u32)meter->mStatusFlags & (dMtrStts_UNK40_e))) {
+        game = dComIfGp_ea();
+        if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+            game = dComIfGp_ea();
+            if ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 0x20) {
+                game = dComIfGp_ea();
+                if (meterCheckStartDemo(gabi::ea(&meterGame(game)->play.mEvtManager))) {
+                    game = dComIfGp_ea();
+                    blocked = !((u32)meterGame(game)->play.mPlayerStatus[0][1] & 0x2000);
+                }
+            }
+        }
+    }
+    if (blocked)
+        meter->field_0x0f38[5].mUserArea = (u16)(1);
+    else {
+        save = (u32)l_saveRoot;
+        f32 scaled = fmuls_ppc(
+            fmuls_ppc((f32)(u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMagic,
+                      (f32)meter->field_0x0f38[0].mSizeOrig.x),
+            (f32)l_magicGaugeScale);
+        u32 desired = (u16)ftoi(scaled), shown = (u16)meter->field_0x3016;
+        if (desired != shown) {
+            if (desired > shown) {
+                shown = desired - shown < 625 ? desired : (u16)(shown + 625);
+                meter->field_0x3016 = (u16)(shown);
+                if (shown % 1250 == 0) {
+                    mDoAud_seStartLevel(0x87D, 0, shown / 1250);
+                    shown = (u16)meter->field_0x3016;
+                }
+            } else {
+                if (shown - desired < 625) {
+                    meter->field_0x3016 = (u16)(0);
+                    mDoAud_seStart(0x87E);
+                    shown = (u16)meter->field_0x3016;
+                } else {
+                    shown = (u16)(shown - 625);
+                    meter->field_0x3016 = (u16)(shown);
+                    if (shown % 1250 == 0) {
+                        mDoAud_seStart(0x87E);
+                        shown = (u16)meter->field_0x3016;
+                    }
+                }
+                if (!shown) {
+                    mDoAud_seStart(0x881);
+                    shown = (u16)meter->field_0x3016;
+                }
+            }
+            dMeter_magicChange(meter, ((f32)shown / divisor));
+            meter->field_0x0f38[5].mUserArea = (u16)(1);
+        } else if ((s16)meter->field_0x0f38[5].mUserArea) {
+            dMeter_magicChange(meter, ((f32)shown / divisor));
+            meter->field_0x0f38[5].mUserArea = (u16)(0);
+        }
+    }
+    bool pulse = false;
+    if (!((u32)meter->mStatusFlags &
+          (dMtrStts_UNK8_e | dMtrStts_UNK10_e | dMtrStts_UNK100_e | dMtrStts_UNK800000_e))) {
+        game = dComIfGp_ea();
+        pulse = ((u8)meterScene(game)->mMagicPulse & 1) != 0;
+        if (!pulse) {
+            game = dComIfGp_ea();
+            pulse = meterPlayerMagicUse(gabi::ea(meterGame(game)->play.mpPlayerPtr[0].get())) != 0;
+        }
+        if (!pulse) {
+            game = dComIfGp_ea();
+            pulse = ((u32)meterGame(game)->play.mPlayerStatus[0][1] & 0x20) != 0;
+        }
+        if (!pulse) {
+            game = dComIfGp_ea();
+            if (((u32)meterGame(game)->play.mPlayerStatus[0][0] & 0x1000) && meterGetMetronome()) {
+                game = dComIfGp_ea();
+                u32 actor = gabi::ea(meterGame(game)->play.mPlayerInfo[0].mpPlayer.get());
+                pulse = gabi::at<PlayerVtable>((u32)meterActor(actor)->__vtbl)
+                            ->getTactMusic(meterActor(actor)) != -1;
+            }
+        }
+    }
+    if (pulse) {
+        if (!(s16)meter->field_0x0f38[4].mUserArea)
+            meter->field_0x0f38[4].mUserArea = (u16)(1);
+        s32 timer = (s16)meter->field_0x0f38[3].mUserArea;
+        s32 value;
+        if (timer >= 29) {
+            meter->field_0x0f38[3].mUserArea = (u16)(0);
+            value = 0;
+        } else {
+            timer = (s16)(timer + 1);
+            meter->field_0x0f38[3].mUserArea = (u16)(timer);
+            value = timer < 15 ? timer : 30 - timer;
+        }
+        fopMsgM_valueIncrease(15, value, 0);
+        game = dComIfGp_ea();
+        meterScene(game)->mMagicPulse = (u8)((u8)meterScene(game)->mMagicPulse & 0xFE);
+        l_magicPulse = (u8)(1);
+    } else {
+        if ((s16)meter->field_0x0f38[4].mUserArea == 1)
+            meter->field_0x0f38[4].mUserArea = (u16)(0);
+        l_magicPulse = (u8)(0);
+    }
+    save = (u32)l_saveRoot;
+    bool hide = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mPlayerStatusA.mMaxMagic == 0;
+    u32 flags = (u32)meter->mStatusFlags;
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK40_e))) {
+        game = dComIfGp_ea();
+        if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+            game = dComIfGp_ea();
+            if ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 0x20) {
+                game = dComIfGp_ea();
+                hide = !((u32)meterGame(game)->play.mPlayerStatus[0][1] & 0x2000);
+            }
+        }
+    }
+    if (!hide)
+        hide = (u8)dMeter_collectMode == 4;
+    if (!hide) {
+        flags = (u32)meter->mStatusFlags;
+        hide = (flags &
+                (dMtrStts_UNK20_e | dMtrStts_UNK80_e | dMtrStts_UNK20000_e | dMtrStts_UNK80000_e |
+                 dMtrStts_UNK100000_e | dMtrStts_UNK200000_e | dMtrStts_HD1000000_e)) ||
+               (u8)dMeter_auctionFlag || (flags & (dMtrStts_UNK400000_e | dMtrStts_UNK800000_e));
+    }
+    if (!hide)
+        hide = meterSceneEquals(gabi::ea(&l_magicStage)) &&
+               (u8)meterGame(dComIfGp_ea())->play.mMiniGameType == 6;
+    s32 timer;
+    if (hide) {
+        dMeter_hideCounter(1);
+        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = timer > 0 ? (s16)(timer - 1) : 0;
+    } else if ((u32)meter->mStatusFlags & (dMtrStts_UNK8_e | dMtrStts_UNK10_e)) {
+        dMeter_hideCounter(1);
+        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = timer > 3 ? (s16)(timer - 1) : (timer < 3 ? (s16)(timer + 1) : 3);
+    } else {
+        dMeter_showCounter(1);
+        timer = (s16)meter->field_0x10f8.mUserArea;
+        timer = timer < 5 ? (s16)(timer + 1) : 5;
+    }
+    meter->field_0x10f8.mUserArea = (u16)(timer);
+    f32 alpha = fopMsgM_valueIncrease(5, timer, 0);
+    meter->field_0x2fc0 = (f32)(alpha);
+    if ((s16)meter->field_0x11d8.mUserArea)
+        meter->field_0x11d8.mUserArea = (u16)(0);
 }
-VERIFY(0x0259ACD4,meterTailEnemy);
-static void tailMaskBoth(u32 meter,u8 mask){u8 a=load<u8>(meter+0x3028),b=load<u8>(meter+0x3038);store<u8>(meter+0x3028,a|mask);store<u8>(meter+0x3038,b|mask);}
-void meterTailBowLight(u32 meter){
- WWHD_FUNC(0x02599584,void,meter);
- u32 game=call<u32>(0x025200D4);if(load<u8>(game+0x5C2F)!=77){u32 previous=load<u8>(call<u32>(0x025200D4)+0x5C2F);store<u8>(call<u32>(0x025200D4)+0x5C2E,previous);}
- bool unchanged=true,particles=false;
- for(u32 i=0;i<3;i++){game=call<u32>(0x025200D4);if(load<u8>(meter+0x3025+i)!=load<u8>(game+0x5BBB+i)){
-  call<void>(0x02591F68,meter,i);unchanged=false;game=call<u32>(0x025200D4);bool special=load<u8>(game+0x5BBB+i)==53;
-  if(!special){game=call<u32>(0x025200D4);special=load<u8>(game+0x5BBB+i)==54;}if(!special)store<u16>(meter+0x235A+i*0x38,0);
-  store<u8>(meter+0x3025+i,load<u8>(call<u32>(0x025200D4)+0x5BBB+i));
- }}
- if(unchanged){bool update=false;u32 save;
-  if(!tailWord(0x1047A9B4)){save=tailWord(0x101F84DC);store<u32>(0x1047A9B4,1);store<u8>(0x1047A9C6,load<u8>(save+0x8F));}
-  if(!tailWord(0x1047A9B8)){save=tailWord(0x101F84DC);store<u32>(0x1047A9B8,1);store<u8>(0x1047A9C7,load<u8>(save+0x90));}
-  game=call<u32>(0x025200D4);if(load<s16>(game+0x5B66)){u32 block=call<u32>(0x02720144,tailWord(0x101F84DC)+0x12C0);s32 value=load<u8>(block+0x3C030C);value=(s16)(value+load<s16>(call<u32>(0x025200D4)+0x5B66));store<u16>(call<u32>(0x025200D4)+0x5B66,0);save=tailWord(0x101F84DC);if(value<0)value=0;if(value>12)value=12;block=call<u32>(0x02720144,save+0x12C0);call<void>(0x027262B0,block,(u8)value);update=true;}
-  bool obtained=call<u32>(0x02520C0C,39)!=0;if(!obtained)obtained=call<u32>(0x02520C0C,53)!=0;if(!obtained)obtained=call<u32>(0x02520C0C,54)!=0;
-  bool change=false;if(obtained)change=load<s16>(call<u32>(0x025200D4)+0x5B68)!=0;
-  if(!change){save=tailWord(0x101F84DC);change=load<u8>(0x1047A9C6)!=load<u8>(save+0x8F);}
-  if(change){if(load<u8>(0x1047AD76))store<u16>(call<u32>(0x025200D4)+0x5B68,0);game=call<u32>(0x025200D4);save=tailWord(0x101F84DC);s32 value=(s16)(load<u8>(save+0x89)+load<s16>(game+0x5B68));store<u16>(call<u32>(0x025200D4)+0x5B68,0);save=tailWord(0x101F84DC);u32 cap=load<u8>(save+0x8F);if(value<0)value=0;if(value>(s32)cap)value=cap;store<u8>(save+0x89,value);store<u8>(0x1047A9C6,load<u8>(tailWord(0x101F84DC)+0x8F));update=true;}
-  change=false;if(call<u32>(0x02520C0C,49))change=load<s16>(call<u32>(0x025200D4)+0x5B6C)!=0;
-  if(!change){save=tailWord(0x101F84DC);change=load<u8>(0x1047A9C7)!=load<u8>(save+0x90);}
-  if(change){if(load<u8>(0x1047AD77))store<u16>(call<u32>(0x025200D4)+0x5B6C,0);game=call<u32>(0x025200D4);save=tailWord(0x101F84DC);s32 value=(s16)(load<u8>(save+0x8A)+load<s16>(game+0x5B6C));store<u16>(call<u32>(0x025200D4)+0x5B6C,0);save=tailWord(0x101F84DC);u32 cap=load<u8>(save+0x90);if(value<0)value=0;if(value>(s32)cap)value=cap;store<u8>(save+0x8A,value);store<u8>(0x1047A9C7,load<u8>(tailWord(0x101F84DC)+0x90));update=true;}
-  for(u32 i=0;i<8;i++){game=call<u32>(0x025200D4);if(load<s16>(game+0x5B70+2*i)){
-   game=call<u32>(0x025200D4);save=tailWord(0x101F84DC);s32 value=(s16)(load<u8>(save+0xBC+i)+load<s16>(game+0x5B70+2*i));store<u16>(call<u32>(0x025200D4)+0x5B70+2*i,0);
-   if(value<=0){store<u8>(tailWord(0x101F84DC)+0xBC+i,0);for(u32 j=0;j<3;j++){call<u32>(0x025200D4);call<u32>(0x025DB5AC,24+i);}u32 item=call<u32>(0x025DB5AC,24+i);call<void>(0x025B6308,tailWord(0x101F84DC)+0x96,item);}
-   else{save=tailWord(0x101F84DC);if(value>99)value=99;store<u8>(save+0xBC+i,value);}update=true;
-  }save=tailWord(0x101F84DC);u8 cap=load<u8>(save+0xC4+i);if(load<u8>(0x1047A98C+i)!=cap){store<u8>(0x1047A98C+i,cap);update=true;}}
-  for(u32 i=0;i<3;i++)if(load<u8>(call<u32>(0x025200D4)+0x5BBB+i)==130)update=true;
-  if(update)for(u32 i=0;i<3;i++)call<void>(0x02591E60,meter,i);
- }
- Local<be<u8>> state;state->set(load<u8>(0x1047B07A));u32 flags=tailWord(meter,0x3008),mode=0;bool hide=(flags&0x4000)!=0;
- if(!hide&&(flags&0x40)){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&1)!=0;}flags=tailWord(meter,0x3008);}
- if(!hide)hide=(flags&0x100)!=0;
- if(!hide&&load<u8>(0x101EA069)){u32 action=load<u8>(0x101EA06A);hide=action==2||(load<u8>(0x101EA067)==2&&action==0);}
- if(!hide)hide=(flags&0x800000)!=0;
- if(!hide&&(flags&0x20)){hide=(load<u16>(tailStage()+0xA)&3)==1;flags=tailWord(meter,0x3008);}
- if(!hide)hide=(flags&0x00300080)!=0;
- if(!hide&&(flags&0x20000)){hide=load<u8>(call<u32>(0x025200D4)+0x5BE8)==2;flags=tailWord(meter,0x3008);}
- if(!hide)hide=(flags&0x004C0000)!=0;
- if(!hide){bool eventMode=false;if(load<u8>(0x101EA069)){u32 action=load<u8>(0x101EA06A);eventMode=action==1||(load<u8>(0x101EA067)==1&&action==0);}
-  if(eventMode){if(load<u8>(0x101EA072))hide=true;else mode=2;}
-  else if(flags&0x20){u32 item=load<u8>(0x1047B09F);if(item<=3)mode=3;else if(item>=7&&item<=10)mode=4;else hide=true;}
- }
- if(hide)mode=1;
- if(load<s16>(0x101EA054)!=(s32)mode){call<void>(0x0259173C,meter+0x302A,4);if(mode==1)call<void>(0x0259173C,state.a,4);}store<u16>(0x101EA054,mode);
- bool paneDone=load<u8>(meter+0x302A)==15;
- if(!paneDone&&!call<u32>(0x02591718,meter+0x302A,4)){
-  if(mode!=1)call<void>(0x0259172C,state.a,4);s32 count=load<s16>(0x101EA052);if(count>=5){store<u16>(0x101EA052,5);call<void>(0x0259172C,meter+0x302A,4);}else store<u16>(0x101EA052,count+1);
- }else if(paneDone){ s32 count=load<s16>(0x101EA052);store<u16>(0x101EA052,count>0?count-1:0);}
- if(state->get()!=load<u8>(0x1047B07A))store<u8>(0x1047B07A,state->get());
- f32 zero=tailFloat(0x100512B8),height=tailFloat(0x10051500),width=tailFloat(0x10051504),one=tailFloat(0x100512B4),minimum=tailFloat(0x10051508),pulseDepth=tailFloat(0x1005150C);
- for(u32 i=0;i<3;i++){
-  game=call<u32>(0x025200D4);bool bow=load<u8>(game+0x5BBB+i)==53;if(!bow)bow=load<u8>(call<u32>(0x025200D4)+0x5BBB+i)==54;
-  if(bow){store<u16>(meter+0x235A,load<s16>(meter+0x235A)+1);u32 pane=meter+0x2324;u32 pulsePane=pane+i*0x38;s32 timer=load<s16>(pulsePane+0x36),phase;
-   if(timer>=120){store<u16>(pulsePane+0x36,0);phase=0;}else phase=timer<60?timer:120-timer;
-   f32 weight=call<f32>(0x025DB6F4,60,phase,0),base=(f32)load<u8>(pane+0x34);u8 alpha=(u8)ftoi(fnmsubs(fsubs_ppc(base,minimum),weight,base));f32 scale=fnmsubs(pulseDepth,weight,one);
-   for(u32 j=0;j<3;j++){u32 p=pulsePane+j*0xA8;call<void>(0x025DB654,p,scale);store<u8>(p+0x35,alpha);}
-  }else if(load<u8>(call<u32>(0x025200D4)+0x5BBB+i)==89){Local<TailVector> position;position->x=fsubs_ppc(tailFloat(meter,0x20A0+i*0x38),width);position->y=fsubs_ppc(tailFloat(meter,0x20A4+i*0x38),height);position->z=zero;particles=true;
-   for(u32 j=0;j<2;j++){u32 slot=meter+0x2F30+j*4,emitter=tailWord(slot);if(emitter){f32 y=position->y.get();if(load<u8>(emitter+0x262)>=7)y=-y;store<f32>(emitter+0x22C,position->x.get());store<f32>(emitter+0x230,y);store<f32>(emitter+0x234,position->z.get());emitter=tailWord(slot);store<u32>(emitter+0x254,tailWord(emitter,0x254)&~4u);emitter=tailWord(slot);store<u8>(emitter+0x247,load<u8>(meter+0x2084+i*0x38+0x35));}
-    else{game=call<u32>(0x025200D4);u32 p=call<u32>(0x025A847C,tailWord(game,0x5AB0),9,0x2D,position.a,0,0,255,0,-1,0,0,0);store<u32>(slot,p);}
-   }
-  }
- }
- if(!particles)for(u32 j=0;j<2;j++){u32 slot=meter+0x2F30+j*4,emitter=tailWord(slot);if(emitter){store<u32>(emitter+0x5C,0xFFFFFFFF);store<u32>(emitter+0x254,tailWord(emitter,0x254)|1);emitter=tailWord(slot);store<u32>(emitter+0x254,tailWord(emitter,0x254)&~0x40u);store<u32>(slot,0);}}
- flags=tailWord(meter,0x3008);hide=(flags&0x4000)!=0;
- if(!hide&&(flags&0x40)){game=call<u32>(0x025200D4);if(load<u8>(game+0x5292)){game=call<u32>(0x025200D4);hide=(load<u16>(game+0x52A6)&1)!=0;}flags=tailWord(meter,0x3008);}
- if(!hide)hide=(flags&0x00800110)!=0;
- if(!hide&&(flags&0x20)){hide=(load<u16>(tailStage()+0xA)&3)==1;flags=tailWord(meter,0x3008);}
- if(!hide)hide=(flags&0x007C0080)!=0;
- if(!hide){
-  if(flags&8){for(u32 i=0;i<3;i++){u32 p=0x101EA058+i*2;s32 count=load<s16>(p);store<u16>(p,count<5?count+1:5);store<u8>(meter+0x3038,load<u8>(meter+0x3038)|load<u8>(0x10051510+i));}store<u8>(meter+0x3038,load<u8>(meter+0x3038)|0x40);}
-  else if(flags&0x1AA00){for(u32 i=0;i<3;i++){u32 p=0x101EA058+i*2;s32 count=load<s16>(p);store<u16>(p,count>3?count-1:(count<3?count+1:3));}}
-  else{
-   bool stageZero=false;if(flags&0x20){stageZero=!(load<u16>(tailStage()+0xA)&3);if(!stageZero)flags=tailWord(meter,0x3008);}
-   if(stageZero){s32 count=load<s16>(0x101EA058);store<u16>(0x101EA058,count>0?count-1:0);count=load<s16>(0x101EA05A);store<u16>(0x101EA05A,count<5?count+1:5);tailMaskBoth(meter,4);count=load<s16>(0x101EA05C);store<u16>(0x101EA05C,count>0?count-1:0);}
-   else if(flags&0x01000000)tailMaskBoth(meter,0x20);
-   else if(flags&0x20000)tailMaskBoth(meter,4);
-   else{for(u32 i=0;i<3;i++){u32 item=load<u8>(call<u32>(0x025200D4)+0x5BBB+i);bool dim=call<u32>(0x02592144,meter,item)!=0;u32 p=0x101EA058+i*2;s32 count=load<s16>(p);if(dim)store<u16>(p,count>3?count-1:(count<3?count+1:3));else{store<u16>(p,count<5?count+1:5);tailMaskBoth(meter,i==0?4:(i==1?8:0x20));}}
-    if(!call<u32>(0x02592144,meter,0x22))tailMaskBoth(meter,0x40);
-   }
-  }
- }
- store<u8>(call<u32>(0x025200D4)+0x5C2F,77);
+/* 0259ACD4 */
+void dMeter_enemyMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 attention = gabi::ea(&meterGame(dComIfGp_ea())->play.mAttention), stage = meterStage();
+    if (!stage)
+        meterAssertion(gabi::ea(&l_assertFile), 0x1D6F, gabi::ea(&l_stageAssertion));
+    f32 zero = (f32)l_zero, one = (f32)l_one;
+    u32 event = (u8)dMenu_menuFlag;
+    bool track = false;
+    if (attention) {
+        if (!event) {
+            bool eligible = !(u8)meterGame(dComIfGp_ea())->play.mEvtCtrl.mMode;
+            if (eligible)
+                eligible = meterLockonTarget(attention, 0) != 0;
+            if (eligible) {
+                u32 a = meterLockonTarget(gabi::ea(&meterGame(dComIfGp_ea())->play.mAttention), 0);
+                eligible = (f32)(s8)meterActor(a)->max_health > zero;
+            }
+            if (eligible)
+                eligible =
+                    meterIsCollect(
+                        gabi::ea(&meterSave((u32)l_saveRoot)->mSave.mSavedata.mPlayer.mCollect), 4,
+                        1) != 0;
+            if (eligible)
+                eligible = meterLockonTruth(attention) != 0;
+            if (eligible)
+                eligible = (u8)meterActor(meterLockonTarget(attention, 0))->group == fopAc_ENEMY_e;
+            for (s16 excluded : {fpcNm_BTD_e, fpcNm_BMD_e, fpcNm_BDK_e, fpcNm_BPW_e, fpcNm_BGN_e,
+                                 fpcNm_BGN2_e, fpcNm_BGN3_e, fpcNm_GND_e}) {
+                if (!eligible)
+                    break;
+                u32 actor = meterLockonTarget(attention, 0);
+                if (actor && (s16)meterActor(actor)->mProcName == excluded)
+                    eligible = false;
+            }
+            if (eligible) {
+                u32 actor = meterLockonTarget(attention, 0);
+                if (actor && (s16)meterActor(actor)->mProcName == fpcNm_BST_e) {
+                    actor = meterLockonTarget(attention, 0);
+                    if (!((u32)meterActor(actor)->mParameters & 15))
+                        eligible = false;
+                }
+            }
+            if (eligible) {
+                u32 actor = meterLockonTarget(attention, 0);
+                if (actor && (s16)meterActor(actor)->mProcName == fpcNm_BWD_e)
+                    eligible = false;
+            }
+            if (eligible) {
+                u32 actor =
+                    meterLockonTarget(gabi::ea(&meterGame(dComIfGp_ea())->play.mAttention), 0);
+                Local<cXyz> position;
+                meterCopyPosition(gabi::ea(&meterActor(actor)->attention_info.position),
+                                  position.a);
+                f32 ratio =
+                    (f32)(s8)meterActor(actor)->health / (f32)(s8)meterActor(actor)->max_health;
+                if (ratio < zero)
+                    ratio = zero;
+                else if (ratio > one)
+                    ratio = one;
+                l_zakoPosition.x = (f32)(position->x.get());
+                l_zakoPosition.y = (f32)(position->y.get());
+                l_zakoPosition.z = (f32)(position->z.get());
+                event = (u8)dMenu_menuFlag;
+                l_zakoVisible = (u8)(1);
+                l_zakoHealth = (f32)(ratio);
+            } else {
+                event = (u8)dMenu_menuFlag;
+                l_zakoVisible = (u8)(0);
+            }
+        } else
+            l_zakoVisible = (u8)(0);
+    }
+    if (!event &&
+        meterIsCollect(gabi::ea(&meterSave((u32)l_saveRoot)->mSave.mSavedata.mPlayer.mCollect), 4,
+                       1)) {
+        if (!(u8)meterGame(dComIfGp_ea())->play.mEvtCtrl.mMode &&
+            !((u32)meter->mStatusFlags & (dMtrStts_UNK80_e | dMtrStts_UNK20000_e))) {
+            bool environment = (((u32)meterStageView(stage)->mTypeFlags >> 16) & 7) == 3;
+            if (!environment) {
+                Local<be<u16>> name;
+                name->set(fpcNm_BDK_e);
+                environment = meterActorJudge(gabi::ea(&l_actorNameJudge), name.a) != 0;
+            }
+            if (environment) {
+                if (meterIsStageBoss(gabi::ea(&meterSave((u32)l_saveRoot)->mSave.mMemory.mMembit),
+                                     5) &&
+                    !meterIsStageBoss(gabi::ea(&meterSave((u32)l_saveRoot)->mSave.mMemory.mMembit),
+                                      3))
+                    track = true;
+                else {
+                    for (u32 name : {gabi::ea(&l_bossStage0), gabi::ea(&l_bossStage1),
+                                     gabi::ea(&l_bossStage2), gabi::ea(&l_bossStage3)})
+                        if (meterSceneEquals(name)) {
+                            track = true;
+                            break;
+                        }
+                }
+            }
+        }
+    }
+    if (!track) {
+        dMeter_bossEnemyHide(meter);
+        return;
+    }
+    u32 actor = 0;
+    for (u16 kind :
+         {fpcNm_BTD_e, fpcNm_BMD_e, fpcNm_BDK_e, fpcNm_BST_e, fpcNm_BWD_e, fpcNm_BPW_e}) {
+        Local<be<u16>> first;
+        first->set(kind);
+        actor = meterActorJudge(gabi::ea(&l_actorNameJudge), first.a);
+        if (actor) {
+            Local<be<u16>> second;
+            second->set(kind);
+            actor = meterActorJudge(gabi::ea(&l_actorNameJudge), second.a);
+            break;
+        }
+    }
+    if (!actor) {
+        dMeter_bossEnemyHide(meter);
+        return;
+    }
+    s32 maximum = (s8)meterActor(actor)->max_health;
+    f32 ratio;
+    if (maximum) {
+        ratio = (f32)(s8)meterActor(actor)->health / (f32)maximum;
+        if (ratio < zero)
+            ratio = zero;
+        else if (ratio > one)
+            ratio = one;
+    } else
+        ratio = (f32)g_meterHIO.field_0xc;
+    l_bossHealth = (f32)(ratio);
+    l_bossVisible = (u8)(1);
 }
-VERIFY(0x02599584,meterTailBowLight);
+static void meterMaskBoth(sub_meter_class *meter, u8 mask) {
+    u8 a = (u8)meter->field_0x3024, b = (u8)meter->mButtonShowFlags;
+    meter->field_0x3024 = (u8)(a | mask);
+    meter->mButtonShowFlags = (u8)(b | mask);
+}
+// HD: XY item change, quantity, alpha, bow pulse and forest-water particles share one entry.
+/* 02599584 */
+void dMeter_xyMove(sub_meter_class *meter) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 game = dComIfGp_ea();
+    if ((u8)meterScene(game)->mArrowModeForce != 77) {
+        u32 previous = (u8)meterScene(dComIfGp_ea())->mArrowModeForce;
+        meterScene(dComIfGp_ea())->mArrowMode = (u8)(previous);
+    }
+    bool unchanged = true, particles = false;
+    for (u32 i = 0; i < 3; i++) {
+        game = dComIfGp_ea();
+        if ((u8)meter->field_0x3021[i] != (u8)meterGame(game)->play.mSelectItem[i]) {
+            dMeter_xyItemChange(meter, i);
+            unchanged = false;
+            game = dComIfGp_ea();
+            bool special = (u8)meterGame(game)->play.mSelectItem[i] == dItemNo_MAGIC_ARROW_e;
+            if (!special) {
+                game = dComIfGp_ea();
+                special = (u8)meterGame(game)->play.mSelectItem[i] == dItemNo_LIGHT_ARROW_e;
+            }
+            if (!special)
+                meter->field_0x2320[i].mUserArea = (u16)(0);
+            meter->field_0x3021[i] = (u8)((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i]);
+        }
+    }
+    if (unchanged) {
+        bool update = false;
+        u32 save;
+        if (!(u32)l_arrowCapacityInitialized) {
+            save = (u32)l_saveRoot;
+            l_arrowCapacityInitialized = (u32)(1);
+            l_arrowCapacity =
+                (u8)((u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mArrowNum);
+        }
+        if (!(u32)l_bombCapacityInitialized) {
+            save = (u32)l_saveRoot;
+            l_bombCapacityInitialized = (u32)(1);
+            l_bombCapacity =
+                (u8)((u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mBombNum);
+        }
+        game = dComIfGp_ea();
+        if ((s16)meterGame(game)->play.mItemPictureNumCount) {
+            u32 block = meterGetPictureRecord(meterPictureRecord((u32)l_saveRoot));
+            s32 value = (u8)meterGallery(block)->mPictureNum;
+            value = (s16)(value + (s16)meterGame(dComIfGp_ea())->play.mItemPictureNumCount);
+            meterGame(dComIfGp_ea())->play.mItemPictureNumCount = (u16)(0);
+            save = (u32)l_saveRoot;
+            if (value < 0)
+                value = 0;
+            if (value > 12)
+                value = 12;
+            block = meterGetPictureRecord(meterPictureRecord(save));
+            meterSetPictureNum(block, (u8)value);
+            update = true;
+        }
+        bool obtained = meterCheckGetItem(dItemNo_BOW_e) != 0;
+        if (!obtained)
+            obtained = meterCheckGetItem(dItemNo_MAGIC_ARROW_e) != 0;
+        if (!obtained)
+            obtained = meterCheckGetItem(dItemNo_LIGHT_ARROW_e) != 0;
+        bool change = false;
+        if (obtained)
+            change = (s16)meterGame(dComIfGp_ea())->play.mItemArrowNumCount != 0;
+        if (!change) {
+            save = (u32)l_saveRoot;
+            change = (u8)l_arrowCapacity !=
+                     (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mArrowNum;
+        }
+        if (change) {
+            if ((u8)g_meterHIO.field_0x62)
+                meterGame(dComIfGp_ea())->play.mItemArrowNumCount = (u16)(0);
+            game = dComIfGp_ea();
+            save = (u32)l_saveRoot;
+            s32 value = (s16)((u8)meterSave(save)
+                                  ->mSave.mSavedata.mPlayer.mItemRecord.mItemRecord2.mArrowNum +
+                              (s16)meterGame(game)->play.mItemArrowNumCount);
+            meterGame(dComIfGp_ea())->play.mItemArrowNumCount = (u16)(0);
+            save = (u32)l_saveRoot;
+            u32 cap = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mArrowNum;
+            if (value < 0)
+                value = 0;
+            if (value > (s32)cap)
+                value = cap;
+            meterSave(save)->mSave.mSavedata.mPlayer.mItemRecord.mItemRecord2.mArrowNum =
+                (u8)(value);
+            l_arrowCapacity = (u8)((u8)meterSave((u32)l_saveRoot)
+                                       ->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mArrowNum);
+            update = true;
+        }
+        change = false;
+        if (meterCheckGetItem(dItemNo_BOMB_BAG_e))
+            change = (s16)meterGame(dComIfGp_ea())->play.mItemBombNumCount != 0;
+        if (!change) {
+            save = (u32)l_saveRoot;
+            change = (u8)l_bombCapacity !=
+                     (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mBombNum;
+        }
+        if (change) {
+            if ((u8)g_meterHIO.field_0x63)
+                meterGame(dComIfGp_ea())->play.mItemBombNumCount = (u16)(0);
+            game = dComIfGp_ea();
+            save = (u32)l_saveRoot;
+            s32 value = (s16)((u8)meterSave(save)
+                                  ->mSave.mSavedata.mPlayer.mItemRecord.mItemRecord2.mBombNum +
+                              (s16)meterGame(game)->play.mItemBombNumCount);
+            meterGame(dComIfGp_ea())->play.mItemBombNumCount = (u16)(0);
+            save = (u32)l_saveRoot;
+            u32 cap = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mBombNum;
+            if (value < 0)
+                value = 0;
+            if (value > (s32)cap)
+                value = cap;
+            meterSave(save)->mSave.mSavedata.mPlayer.mItemRecord.mItemRecord2.mBombNum =
+                (u8)(value);
+            l_bombCapacity = (u8)((u8)meterSave((u32)l_saveRoot)
+                                      ->mSave.mSavedata.mPlayer.mItemMax.mItemMax2.mBombNum);
+            update = true;
+        }
+        for (u32 i = 0; i < 8; i++) {
+            game = dComIfGp_ea();
+            if ((s16)meterGame(game)->play.mItemBeastNumCounts[i]) {
+                game = dComIfGp_ea();
+                save = (u32)l_saveRoot;
+                s32 value =
+                    (s16)((u8)meterSave(save)->mSave.mSavedata.mPlayer.mBagItemRecord.mBeastNum[i] +
+                          (s16)meterGame(game)->play.mItemBeastNumCounts[i]);
+                meterGame(dComIfGp_ea())->play.mItemBeastNumCounts[i] = (u16)(0);
+                if (value <= 0) {
+                    meterSave((u32)l_saveRoot)
+                        ->mSave.mSavedata.mPlayer.mBagItemRecord.mBeastNum[i] = (u8)(0);
+                    for (u32 j = 0; j < 3; j++) {
+                        dComIfGp_ea();
+                        meterItemTable(24 + i);
+                    }
+                    u32 item = meterItemTable(24 + i);
+                    meterRemoveBagItem(
+                        gabi::ea(&meterSave((u32)l_saveRoot)->mSave.mSavedata.mPlayer.mBagItem),
+                        item);
+                } else {
+                    save = (u32)l_saveRoot;
+                    if (value > 99)
+                        value = 99;
+                    meterSave(save)->mSave.mSavedata.mPlayer.mBagItemRecord.mBeastNum[i] =
+                        (u8)(value);
+                }
+                update = true;
+            }
+            save = (u32)l_saveRoot;
+            u8 cap = (u8)meterSave(save)->mSave.mSavedata.mPlayer.mBagItemRecord.mBaitNum[i];
+            if ((u8)dMenu_baitNum.values[i] != cap) {
+                dMenu_baitNum.values[i] = (u8)(cap);
+                update = true;
+            }
+        }
+        for (u32 i = 0; i < 3; i++)
+            if ((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i] == dItemNo_BIRD_BAIT_5_e)
+                update = true;
+        if (update)
+            for (u32 i = 0; i < 3; i++)
+                dMeter_xyItemCountUp(meter, i);
+    }
+    Local<be<u8>> state;
+    state->set((u8)l_buttonAlphaState);
+    u32 flags = (u32)meter->mStatusFlags, mode = 0;
+    bool hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK40_e))) {
+        game = dComIfGp_ea();
+        if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+            game = dComIfGp_ea();
+            hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 1) != 0;
+        }
+        flags = (u32)meter->mStatusFlags;
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK100_e)) != 0;
+    if (!hide && (u8)dMenu_menuFlag) {
+        u32 action = (u8)dMenu_menuButton;
+        hide = action == 2 || ((u8)dMenu_pause == 2 && action == 0);
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK800000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK20_e))) {
+        hide = ((u16)meterStageView(meterStage())->mStageFlags & 3) == 1;
+        flags = (u32)meter->mStatusFlags;
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK80_e | dMtrStts_UNK100000_e | dMtrStts_UNK200000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK20000_e))) {
+        hide = (u8)meterScene(dComIfGp_ea())->mOperateWind == 2;
+        flags = (u32)meter->mStatusFlags;
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK40000_e | dMtrStts_UNK80000_e | dMtrStts_UNK400000_e)) != 0;
+    if (!hide) {
+        bool eventMode = false;
+        if ((u8)dMenu_menuFlag) {
+            u32 action = (u8)dMenu_menuButton;
+            eventMode = action == 1 || ((u8)dMenu_pause == 1 && action == 0);
+        }
+        if (eventMode) {
+            if ((u8)dMeter_itemMode)
+                hide = true;
+            else
+                mode = 2;
+        } else if (flags & (dMtrStts_UNK20_e)) {
+            u32 item = (u8)l_itemButtonMode;
+            if (item <= 3)
+                mode = 3;
+            else if (item >= 7 && item <= 10)
+                mode = 4;
+            else
+                hide = true;
+        }
+    }
+    if (hide)
+        mode = 1;
+    if ((s16)l_xyFadeMode != (s32)mode) {
+        dMeter_alphaFlagOff(&meter->field_0x3026, 4);
+        if (mode == 1)
+            dMeter_alphaFlagOff(state.get(), 4);
+    }
+    l_xyFadeMode = (u16)(mode);
+    bool paneDone = (u8)meter->field_0x3026 == 15;
+    if (!paneDone && !dMeter_alphaFlagCheck(&meter->field_0x3026, 4)) {
+        if (mode != 1)
+            dMeter_alphaFlagOn(state.get(), 4);
+        s32 count = (s16)l_xyFadeCount;
+        if (count >= 5) {
+            l_xyFadeCount = (u16)(5);
+            dMeter_alphaFlagOn(&meter->field_0x3026, 4);
+        } else
+            l_xyFadeCount = (u16)(count + 1);
+    } else if (paneDone) {
+        s32 count = (s16)l_xyFadeCount;
+        l_xyFadeCount = (u16)(count > 0 ? count - 1 : 0);
+    }
+    if (state->get() != (u8)l_buttonAlphaState)
+        l_buttonAlphaState = (u8)(state->get());
+    f32 zero = (f32)l_zero, height = (f32)l_screenHalfHeight, width = (f32)l_screenHalfWidth,
+        one = (f32)l_one, minimum = (f32)l_bowAlphaMin, pulseDepth = (f32)l_bowPulseDepth;
+    for (u32 i = 0; i < 3; i++) {
+        game = dComIfGp_ea();
+        bool bow = (u8)meterGame(game)->play.mSelectItem[i] == dItemNo_MAGIC_ARROW_e;
+        if (!bow)
+            bow = (u8)meterGame(dComIfGp_ea())->play.mSelectItem[i] == dItemNo_LIGHT_ARROW_e;
+        if (bow) {
+            meter->field_0x2320[0].mUserArea = (u16)((s16)meter->field_0x2320[0].mUserArea + 1);
+            auto pane = &meter->field_0x2320[0];
+            auto pulsePane = &meter->field_0x2320[i];
+            s32 timer = (s16)pulsePane->mUserArea, phase;
+            if (timer >= 120) {
+                pulsePane->mUserArea = (u16)(0);
+                phase = 0;
+            } else
+                phase = timer < 60 ? timer : 120 - timer;
+            f32 weight = fopMsgM_valueIncrease(60, phase, 0), base = (f32)(u8)pane->mInitAlpha;
+            u8 alpha = (u8)ftoi(fnmsubs(fsubs_ppc(base, minimum), weight, base));
+            f32 scale = fnmsubs(pulseDepth, weight, one);
+            for (u32 j = 0; j < 3; j++) {
+                auto panePart = j == 0
+                                    ? &meter->field_0x2320[i]
+                                    : (j == 1 ? &meter->field_0x23c8[i] : &meter->field_0x2470[i]);
+                fopMsgM_paneScaleOne(panePart, scale);
+                panePart->mNowAlpha = (u8)(alpha);
+            }
+        } else if ((u8)meterGame(dComIfGp_ea())->play.mSelectItem[i] == dItemNo_FOREST_WATER_e) {
+            Local<cXyz> position;
+            position->x = fsubs_ppc((f32)meter->field_0x2080[i].mPosCenter.x, width);
+            position->y = fsubs_ppc((f32)meter->field_0x2080[i].mPosCenter.y, height);
+            position->z = zero;
+            particles = true;
+            for (u32 j = 0; j < 2; j++) {
+                auto emitterSlot = &meter->field_0x2f2c[j];
+                u32 emitter = (u32)*emitterSlot;
+                if (emitter) {
+                    f32 y = position->y.get();
+                    if ((u8)meterParticle(emitter)->mDrawMode >= 7)
+                        y = -y;
+                    meterParticle(emitter)->mGlobalTranslation.x = (f32)(position->x.get());
+                    meterParticle(emitter)->mGlobalTranslation.y = (f32)(y);
+                    meterParticle(emitter)->mGlobalTranslation.z = (f32)(position->z.get());
+                    emitter = (u32)*emitterSlot;
+                    meterParticle(emitter)->mFlags =
+                        (u32)((u32)meterParticle(emitter)->mFlags & ~4u);
+                    emitter = (u32)*emitterSlot;
+                    meterParticle(emitter)->mGlobalAlpha =
+                        (u8)((u8)meter->field_0x2080[i].mNowAlpha);
+                } else {
+                    game = dComIfGp_ea();
+                    u32 p = meterParticleSet(gabi::ea(meterGame(game)->play.mParticle.get()), 9,
+                                             0x2D, position.a, 0, 0, 255, 0, -1, 0, 0, 0);
+                    *emitterSlot = (u32)(p);
+                }
+            }
+        }
+    }
+    if (!particles)
+        for (u32 j = 0; j < 2; j++) {
+            auto emitterSlot = &meter->field_0x2f2c[j];
+            u32 emitter = (u32)*emitterSlot;
+            if (emitter) {
+                meterParticle(emitter)->mMaxFrame = (u32)(0xFFFFFFFF);
+                meterParticle(emitter)->mFlags = (u32)((u32)meterParticle(emitter)->mFlags | 1);
+                emitter = (u32)*emitterSlot;
+                meterParticle(emitter)->mFlags =
+                    (u32)((u32)meterParticle(emitter)->mFlags & ~0x40u);
+                *emitterSlot = (u32)(0);
+            }
+        }
+    flags = (u32)meter->mStatusFlags;
+    hide = (flags & (dMtrStts_UNK4000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK40_e))) {
+        game = dComIfGp_ea();
+        if ((u8)meterGame(game)->play.mEvtCtrl.mMode) {
+            game = dComIfGp_ea();
+            hide = ((u16)meterGame(game)->play.mEvtCtrl.mHindFlag & 1) != 0;
+        }
+        flags = (u32)meter->mStatusFlags;
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK10_e | dMtrStts_UNK100_e | dMtrStts_UNK800000_e)) != 0;
+    if (!hide && (flags & (dMtrStts_UNK20_e))) {
+        hide = ((u16)meterStageView(meterStage())->mStageFlags & 3) == 1;
+        flags = (u32)meter->mStatusFlags;
+    }
+    if (!hide)
+        hide = (flags & (dMtrStts_UNK80_e | dMtrStts_UNK40000_e | dMtrStts_UNK80000_e |
+                         dMtrStts_UNK100000_e | dMtrStts_UNK200000_e | dMtrStts_UNK400000_e)) != 0;
+    if (!hide) {
+        if (flags & (dMtrStts_UNK8_e)) {
+            for (u32 i = 0; i < 3; i++) {
+                auto paneCount = &l_xyPaneCount.values[i];
+                s32 count = (s16)*paneCount;
+                *paneCount = (u16)(count < 5 ? count + 1 : 5);
+                meter->mButtonShowFlags =
+                    (u8)((u8)meter->mButtonShowFlags | (u8)l_itemShowMask.values[i]);
+            }
+            meter->mButtonShowFlags = (u8)((u8)meter->mButtonShowFlags | 0x40);
+        } else if (flags & (dMtrStts_UNK200_e | dMtrStts_UNK800_e | dMtrStts_UNK2000_e |
+                            dMtrStts_UNK8000_e | dMtrStts_UNK10000_e)) {
+            for (u32 i = 0; i < 3; i++) {
+                auto paneCount = &l_xyPaneCount.values[i];
+                s32 count = (s16)*paneCount;
+                *paneCount = (u16)(count > 3 ? count - 1 : (count < 3 ? count + 1 : 3));
+            }
+        } else {
+            bool stageZero = false;
+            if (flags & (dMtrStts_UNK20_e)) {
+                stageZero = !((u16)meterStageView(meterStage())->mStageFlags & 3);
+                if (!stageZero)
+                    flags = (u32)meter->mStatusFlags;
+            }
+            if (stageZero) {
+                s32 count = (s16)l_xyPaneCount.values[0];
+                l_xyPaneCount.values[0] = (u16)(count > 0 ? count - 1 : 0);
+                count = (s16)l_xyPaneCount.values[1];
+                l_xyPaneCount.values[1] = (u16)(count < 5 ? count + 1 : 5);
+                meterMaskBoth(meter, 4);
+                count = (s16)l_xyPaneCount.values[2];
+                l_xyPaneCount.values[2] = (u16)(count > 0 ? count - 1 : 0);
+            } else if (flags & (dMtrStts_HD1000000_e))
+                meterMaskBoth(meter, 0x20);
+            else if (flags & (dMtrStts_UNK20000_e))
+                meterMaskBoth(meter, 4);
+            else {
+                for (u32 i = 0; i < 3; i++) {
+                    u32 item = (u8)meterGame(dComIfGp_ea())->play.mSelectItem[i];
+                    bool dim = meterItemDim(meter, item) != 0;
+                    auto paneCount = &l_xyPaneCount.values[i];
+                    s32 count = (s16)*paneCount;
+                    if (dim)
+                        *paneCount = (u16)(count > 3 ? count - 1 : (count < 3 ? count + 1 : 3));
+                    else {
+                        *paneCount = (u16)(count < 5 ? count + 1 : 5);
+                        meterMaskBoth(meter, i == 0 ? 4 : (i == 1 ? 8 : 0x20));
+                    }
+                }
+                if (!meterItemDim(meter, dItemNo_WIND_WAKER_e))
+                    meterMaskBoth(meter, 0x40);
+            }
+        }
+    }
+    meterScene(dComIfGp_ea())->mArrowModeForce = (u8)(77);
+}
+
+// clang-format off
+/* WWHD glue:
+ext 02591AB4 void dMeter_hideCounter(u32)
+ext 02591B00 void dMeter_showCounter(u32)
+ext 025DB690 void fopMsgM_setNowAlpha(fopMsgM_pane_class*,f32)
+ext 025DB654 void fopMsgM_paneScaleOne(fopMsgM_pane_class*,f32)
+ext 025DB6E0 void fopMsgM_setNowAlphaZero(fopMsgM_pane_class*)
+ext 025DB6F4 f32 fopMsgM_valueIncrease(s32,s32,u32)
+ext 027161BC u32 meterIsMagicBlocked()
+ext 02593434 void dMeter_compassValueInit(meter_detail::sub_meter_class*)
+ext 02526C9C u32 meterGetMetronome()
+ext 02540024 void meterUpdateEvent(u32)
+ext 025931CC void dMeter_walletChange(meter_detail::sub_meter_class*)
+ext 025931A8 u32 meterRupyStep(u32)
+ext 025E1988 void mDoAud_seStart(u32)
+ext 02593284 void dMeter_keyLight(fopMsgM_pane_class*,void*,f32)
+ext 0259173C void dMeter_alphaFlagOff(void*,u32)
+ext 02591718 u32 dMeter_alphaFlagCheck(void*,u32)
+ext 0259172C void dMeter_alphaFlagOn(void*,u32)
+ext 025D5218 u32 meterActorJudge(u32,u32)
+ext 022271B8 u32 meterCb1MaxFlight()
+ext 02526C94 u32 meterMdMaxFlight()
+ext 02592EE8 void dMeter_flyGaugeMove(meter_detail::sub_meter_class*,u32,u32,s32)
+ext 02592CD8 void dMeter_magicTransScale(meter_detail::sub_meter_class*,f32,f32,f32)
+ext 02592BC4 void dMeter_magicInitTrans(meter_detail::sub_meter_class*)
+ext 02592A88 void dMeter_magicChange(meter_detail::sub_meter_class*,f32)
+ext 02592888 void dMeter_magicLength(meter_detail::sub_meter_class*,f32)
+ext 025DBE38 u32 meterOverlapIsDoingReq()
+ext 025449B0 u32 meterCheckStartDemo(u32)
+ext 025E1A04 void mDoAud_seStartLevel(u32,u32,u32)
+ext 0244363C u32 meterPlayerMagicUse(u32)
+ext 0273AA24 void meterAssertion(u32,u32,u32)
+ext 024EC8D0 u32 meterLockonTarget(u32,u32)
+ext 025B7A2C u32 meterIsCollect(u32,u32,u32)
+ext 024EDFCC u32 meterLockonTruth(u32)
+ext 025F0EA4 void meterCopyPosition(u32,u32)
+ext 025B9100 u32 meterIsStageBoss(u32,u32)
+ext 02592878 void dMeter_bossEnemyHide(meter_detail::sub_meter_class*)
+ext 02591F68 void dMeter_xyItemChange(meter_detail::sub_meter_class*,u32)
+ext 02720144 u32 meterGetPictureRecord(u32)
+ext 027262B0 void meterSetPictureNum(u32,u32)
+ext 02520C0C u32 meterCheckGetItem(u32)
+ext 025DB5AC u32 meterItemTable(u32)
+ext 025B6308 void meterRemoveBagItem(u32,u32)
+ext 02591E60 void dMeter_xyItemCountUp(meter_detail::sub_meter_class*,u32)
+ext 02592144 u32 meterItemDim(meter_detail::sub_meter_class*,u32)
+ext 025A847C u32 meterParticleSet(u32,u32,u32,u32,u32,u32,u32,u32,s32,u32,u32,u32)
+ext 0259174C f32 dMeter_alphaClose(be<s16>*,be<s16>*)
+ext 025917FC f32 dMeter_alphaOpen(be<s16>*,be<s16>*)
+data l_saveRoot 101F84DC
+data dMeter_collectMode 101EA073
+data dMeter_auctionFlag 101EA06C
+data dMenu_menuFlag 101EA069
+data dMenu_menuButton 101EA06A
+data dMenu_pause 101EA067
+data dMeter_itemMode 101EA072
+data rupy_soundSetFlag 101EA075
+data rupy_soundOnFlag 101EA076
+data l_xyFadeCount 101EA052
+data l_xyFadeMode 101EA054
+data l_rFadeCount 101EA060
+data l_rFadeMode 101EA062
+data l_rPaneCount 101EA064
+data l_buttonAlphaState 1047B07A
+data l_metronomeVisible 1047B097
+data l_magicPulse 1047B098
+data l_bossVisible 1047B09B
+data l_zakoVisible 1047B09C
+data l_itemButtonMode 1047B09F
+data l_bossHealth 1047B064
+data l_zakoHealth 1047B068
+data l_arrowCapacityInitialized 1047A9B4
+data l_bombCapacityInitialized 1047A9B8
+data l_metronomeInitialized 1047A9BC
+data l_metronomeStateInitialized 1047A9C0
+data l_arrowCapacity 1047A9C6
+data l_bombCapacity 1047A9C7
+data l_metronomeFlag 1047A9C8
+data dMeter_windStatus 101EACB7
+data l_cb1FlightActive 101BDC2D
+data l_cb1FlightTime 101BDC28
+data l_mdFlightActive 101D5F3E
+data l_mdFlightTime 101D5F38
+data l_one 100512B4
+data l_zero 100512B8
+data l_magicLengthScale 100512C0
+data l_half 100512C8
+data l_magicGaugeScale 10051310
+data l_magicGaugeDivisor 10051348
+data l_screenHalfHeight 10051500
+data l_screenHalfWidth 10051504
+data l_bowAlphaMin 10051508
+data l_bowPulseDepth 1005150C
+data l_xyPaneCount 101EA058
+data dMenu_baitNum 1047A98C
+data l_itemShowMask 10051510
+data l_zakoPosition 1047B03C
+data g_meterHIO 1047AD14
+data l_safeStringVtable 1005107C
+data l_actorNameJudge 025E121C
+data l_bossStage0 1005104C
+data l_bossStage1 10051054
+data l_bossStage2 1005105C
+data l_bossStage3 10051064
+data l_magicStage 1005106C
+data l_magicCounterStage 10051074
+data l_assertFile 10051130
+data l_stageAssertion 10051140
+*/

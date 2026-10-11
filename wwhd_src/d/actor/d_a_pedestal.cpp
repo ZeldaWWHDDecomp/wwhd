@@ -1,512 +1,553 @@
-/* WWHD tower pedestal. */
+/* Tower pedestal. */
 #include "d/actor/d_a_pedestal.h"
-namespace daPedestal {
-namespace {
-u32 play() { return gabi::call<u32>(0x025200D4); }
-u32 addr(const void *p) { return gabi::ea(p); }
-u32 invoke(u32 object, u32 descriptor, u32 argument) {
-  s16 delta = gabi::load<s16>(descriptor),
-      slot = gabi::load<s16>(descriptor + 2);
-  u32 self = object + delta, target;
-  if (slot < 0)
-    target = gabi::load<u32>(descriptor + 4);
-  else {
-    s16 offset = gabi::load<s16>(descriptor + 6);
-    target =
-        gabi::load<u32>(gabi::load<u32>(self + offset) + u32(slot) * 8 + 4);
-  }
-  return gabi::call_ptr<u32>(target, gabi::at<u8>(self), argument);
-}
-struct Name {
-  be<u32> text, vt;
+using daPedestal::Action;
+using daPedestal::daPds_c;
+using daPedestal::daPds_infiniteEcallBack_c;
+using daPedestal::PdsEmitter;
+const gc_tu_data gc_tu = {.safeString = 0x10034318};
+// HD: a private emitter view covers the fields used by this callback.
+struct daPedestal::PdsEmitter {
+    u8 _00[0x5C];
+    be<u32> mMaxFrame;
+    u8 _60[0x1E4 - 0x60];
+    gptr<void> mpCallback;
+    u8 _1E8[8];
+    Mtx34 mGlobalRotation;
+    u8 _220[12];
+    cXyz mGlobalTranslation;
+    u8 _238[0x254 - 0x238];
+    be<u32> mStatus;
+    u8 _258[10];
+    be<u8> mDrawMode;
 };
-u32 resource(Name *name, s32 index) {
-  return gabi::call<u32>(0x026066C4, gabi::at<u8>(gabi::load<u32>(0x101F4F28)),
-                         name, index);
+// HD: protect the guest caller linkage area for real nonleaf resource callees.
+template <class T> struct ProtectedLocal {
+    struct Frame {
+        u8 linkage[16];
+        T value;
+    };
+    gabi::Local<Frame> storage;
+    T *get() const { return gabi::at<T>(storage.a + offsetof(Frame, value)); }
+    T *operator->() const { return get(); }
+};
+struct ResourceName {
+    be<char> bytes[6];
+};
+static ResourceName m_arcname;
+struct AnmTableEntry {
+    be<s32> loopMode;
+    be<f32> speed;
+    be<s32> unk_4;
+};
+struct AnmTable {
+    AnmTableEntry entries[4];
+};
+static AnmTable brkAnmTbl;
+struct Names3 {
+    gptr<char> entries[3];
+};
+static Names3 l_os_name;
+struct Names4 {
+    gptr<char> entries[4];
+};
+static Names4 cut_name_tbl;
+using EventInit = gabi::ptmf<void (daPds_c::*)(s32)>;
+using EventAction = gabi::ptmf<BOOL (daPds_c::*)(s32)>;
+struct EventInitializers {
+    EventInit entries[4];
+};
+static EventInitializers event_init_tbl;
+struct EventActions {
+    EventAction entries[4];
+};
+static EventActions event_action_tbl;
+static Action wait_action;
+struct StaticWord {
+    be<u32> value;
+};
+struct StaticFloat {
+    be<f32> value;
+};
+struct StaticFlag {
+    be<u8> value;
+};
+struct StaticRecord {
+    be<u32> words[3];
+};
+static StaticWord staticZero0;
+static StaticWord staticZero1;
+static StaticWord staticZero2;
+static StaticWord staticZero3;
+static StaticFloat staticMinimum;
+static StaticFloat staticMaximum;
+static StaticFloat staticMinimumConstant;
+static StaticFloat staticMaximumConstant;
+static StaticFlag staticFlag0;
+static StaticFlag staticFlag1;
+static StaticRecord staticRecord0;
+static StaticRecord staticRecord1;
+static StaticRecord staticRecord2;
+extern void *getResource(dRes_control_c *, SafeString *, s32);
+extern BOOL initBrk(mDoExt_brkAnm *, J3DModelData *, J3DAnmTevRegKey *, u32, s32, f32, s32, s32, BOOL, s32);
+extern s32 setBackground(dBgW *, cBgD_t *, u32, Mtx34 *);
+extern void setEmitterRotation(s16, s16, s16, Mtx34 *);
+extern void seStartLevel(u32, const cXyz *, u32, s32);
+extern fopAc_ac_c *searchFromName(const char *, s32, s32);
+extern f32 searchDistanceXZ(fopAc_ac_c *, fopAc_ac_c *);
+extern s32 playBrk(mDoExt_brkAnm *);
+extern void copyMatrix(const Mtx34 *, Mtx34 *);
+extern void modelUpdateDL(J3DModel *, u32);
+extern void cutEnd(void *, s32);
+extern BOOL getIsAdvance(void *, s32);
+extern void destroyActor(fopAc_ac_c *, s32);
+extern void constructHeader0(void *);
+extern void constructHeader1(void *);
+extern void registerHeader(void *);
+static BOOL heapCB(fopAc_ac_c *);
+static void sound(daPds_c *a, u32 id) {
+    s32 reverb = dComIfGp_getReverb(a->current.roomNo);
+    seStartLevel(id, &a->current.pos, 0, reverb);
 }
-void sound(daPds_c *a, u32 id) {
-  s32 room = gabi::load<s8>(addr(a) + 0x326);
-  s32 reverb = gabi::call<s32>(0x02520540, room);
-  gabi::call(0x025E1A40, id, &a->current.pos, 0, reverb);
+/* 023C84E4 */
+void daPds_infiniteEcallBack_c::execute(PdsEmitter *e) {
+    if (mpPos) {
+        cXyz *p = mpPos;
+        f32 x = p->x, z = p->z, y = p->y;
+        // HD: the emitter draw mode reverses global Y for modes seven and above.
+        if (e->mDrawMode >= 7)
+            y = -y;
+        e->mGlobalTranslation.y = y;
+        e->mGlobalTranslation.x = x;
+        e->mGlobalTranslation.z = z;
+    }
+    if (mpAngle) {
+        csXyz *a = mpAngle;
+        s16 x = a->x, y = a->y, z = a->z;
+        setEmitterRotation(x, y, z, &e->mGlobalRotation);
+    }
 }
-} // namespace
-void Callback::execute(u8 *e) {
-  WWHD_FUNC(0x023C84E4, void, this, e);
-  if (pos) {
-    u32 p = addr((cXyz *)pos), q = addr(e);
-    f32 x = gabi::load<f32>(p), z = gabi::load<f32>(p + 8),
-        y = gabi::load<f32>(p + 4);
-    if (gabi::load<u8>(q + 0x262) >= 7)
-      y = -y;
-    gabi::store<f32>(q + 0x230, y);
-    gabi::store<f32>(q + 0x22C, x);
-    gabi::store<f32>(q + 0x234, z);
-  }
-  if (angle) {
-    u32 p = addr((csXyz *)angle);
-    s16 x = gabi::load<s16>(p), y = gabi::load<s16>(p + 2),
-        z = gabi::load<s16>(p + 4);
-    gabi::call(0x028245AC, x, y, z, gabi::at<u8>(addr(e) + 0x1F0));
-  }
+/* 023C853C */
+void daPds_infiniteEcallBack_c::end() {
+    if (mpEmitter) {
+        PdsEmitter *e = mpEmitter;
+        u32 flags = e->mStatus;
+        e->mMaxFrame = 0xFFFFFFFF;
+        e->mStatus = flags | 1;
+        mpEmitter->mpCallback = nullptr;
+        mpEmitter = nullptr;
+        mpPos = nullptr;
+        mpAngle = nullptr;
+    }
 }
-VERIFY(0x023C84E4, &Callback::execute);
-void Callback::end() {
-  WWHD_FUNC(0x023C853C, void, this);
-  if (emitter) {
-    u32 e = addr((u8 *)emitter), flags = gabi::load<u32>(e + 0x254);
-    gabi::store<u32>(e + 0x5C, 0xFFFFFFFF);
-    gabi::store<u32>(e + 0x254, flags | 1);
-    gabi::store<u32>(addr((u8 *)emitter) + 0x1E4, 0);
-    emitter = nullptr;
-    pos = nullptr;
-    angle = nullptr;
-  }
+/* 023C8578 */
+void daPds_infiniteEcallBack_c::makeEmitter(u16 id, const cXyz *p, const csXyz *a, const cXyz *scale) {
+    end();
+    dComIfGp_particle_set(id, p, a, scale, 255, reinterpret_cast<dPa_levelEcallBack *>(this), -1, nullptr, nullptr,
+                          nullptr);
+    mpAngle = const_cast<csXyz *>(a);
+    mpPos = const_cast<cXyz *>(p);
 }
-VERIFY(0x023C853C, &Callback::end);
-void Callback::makeEmitter(u16 id, const cXyz *p, const csXyz *a,
-                           const cXyz *scale) {
-  WWHD_FUNC(0x023C8578, void, this, id, p, a, scale);
-  end();
-  u32 game = play();
-  gabi::call(0x025A847C, gabi::at<u8>(gabi::load<u32>(game + 0x5AB0)), 0, id, p,
-             a, scale, 255, this, -1, 0, 0, 0);
-  angle = gabi::at<csXyz>(addr(a));
-  pos = gabi::at<cXyz>(addr(p));
-}
-VERIFY(0x023C8578, &Callback::makeEmitter);
+/* 023C85F8 */
 BOOL daPds_c::initBrkAnm(u8 index, BOOL force) {
-  WWHD_FUNC(0x023C85F8, BOOL, this, index, force);
-  u32 data = gabi::load<u32>(addr((J3DModel *)mpModel) + 0xAC);
-  gabi::Local<Name> name;
-  // A real GHS callee may save LR in its caller linkage area at r1+4.
-  gabi::Local<be<u32>> linkage;
-  name->text = 0x100343F0;
-  name->vt = 0x10034318;
-  u32 animation = resource(name.get(), 8);
-  if (!animation)
-    gabi::call(0x0273AA24, STR(0x10034348), 0x28C, STR(0x1003435C));
-  u32 table = 0x101CE5DC + u32(index) * 12;
-  s32 loop = gabi::load<s32>(table);
-  f32 speed = gabi::load<f32>(table + 4);
-  BOOL ok = gabi::call<BOOL>(0x025E8154, &mBrk, gabi::at<u8>(data),
-                             gabi::at<u8>(animation), 1, loop, speed, 0, -1,
-                             force, 0);
-  if (!ok)
-    return false;
-  mAnmIndex = index;
-  if (gabi::load<s32>(table + 8) < 0)
-    gabi::store<f32>(addr(this) + 0x3BC,
-                     f32(gabi::load<s16>(addr(this) + 0x3C2)));
-  mFrame = gabi::load<f32>(addr(this) + 0x3BC);
-  return true;
+    J3DModelData *data = mpModel->getModelData();
+    ProtectedLocal<SafeString> name;
+    name->mStringTop = gabi::ea(&m_arcname);
+    name->__vtbl = 0x10034318;
+    auto *animation = static_cast<J3DAnmTevRegKey *>(getResource(dComIfG_resControl(), name.get(), 8));
+    if (!animation)
+        JUT_ASSERT_fail("d_a_pedestal.cpp", 0x28C, "a_brk != NULL");
+    AnmTableEntry *entry = &brkAnmTbl.entries[index];
+    s32 loop = entry->loopMode;
+    f32 speed = entry->speed;
+    BOOL ok = initBrk(&mBrk, data, animation, 1, loop, speed, 0, -1, force, 0);
+    if (!ok)
+        return FALSE;
+    unk30E = index;
+    if (entry->unk_4 < 0)
+        mBrk.setFrame(mBrk.getEndFrame());
+    unk308 = mBrk.getFrame();
+    return TRUE;
 }
-VERIFY(0x023C85F8, &daPds_c::initBrkAnm);
+/* 023C8718 */
 BOOL daPds_c::CreateHeap() {
-  WWHD_FUNC(0x023C8718, BOOL, this);
-  gabi::Local<Name> name;
-  // A real GHS callee may save LR in its caller linkage area at r1+4.
-  gabi::Local<be<u32>> linkage;
-  name->text = 0x100343F0;
-  name->vt = 0x10034318;
-  u32 data = resource(name.get(), 5);
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x1003436C), 0xC1, STR(0x10034380));
-  mpModel = gabi::at<J3DModel>(
-      gabi::call<u32>(0x025E38E0, gabi::at<u8>(data), 0, 0x11020203));
-  if (!mpModel || !initBrkAnm(3, false))
-    return false;
-  mpBgW = gabi::at<u8>(gabi::call<u32>(0x024F23F4, 0));
-  if (!mpBgW)
-    return false;
-  gabi::Local<Name> collision;
-  gabi::Local<be<u32>> collisionLinkage;
-  collision->text = 0x100343F0;
-  collision->vt = 0x10034318;
-  u32 dzb = resource(collision.get(), 11);
-  return gabi::call<s32>(0x0200A030, (u8 *)mpBgW, gabi::at<u8>(dzb), 1,
-                         &mMtx) == 0;
+    ProtectedLocal<SafeString> name;
+    name->mStringTop = gabi::ea(&m_arcname);
+    name->__vtbl = 0x10034318;
+    auto *data = static_cast<J3DModelData *>(getResource(dComIfG_resControl(), name.get(), 5));
+    if (!data)
+        JUT_ASSERT_fail("d_a_pedestal.cpp", 0xC1, "modelData != NULL");
+    mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    if (!mpModel || !initBrkAnm(3, FALSE))
+        return FALSE;
+    mpBgW = new_dBgW();
+    if (!mpBgW)
+        return FALSE;
+    ProtectedLocal<SafeString> collision;
+    collision->mStringTop = gabi::ea(&m_arcname);
+    collision->__vtbl = 0x10034318;
+    auto *dzb = static_cast<cBgD_t *>(getResource(dComIfG_resControl(), collision.get(), 11));
+    return setBackground(mpBgW, dzb, dBgW::MOVE_BG_e, &mMtx) == 0;
 }
-VERIFY(0x023C8718, &daPds_c::CreateHeap);
-static BOOL heapCB(daPds_c *a) {
-  WWHD_FUNC(0x023C8828, BOOL, a);
-  return a->CreateHeap();
-}
-VERIFY(0x023C8828, heapCB);
+/* 023C8828 */
+static BOOL heapCB(fopAc_ac_c *base) { return static_cast<daPds_c *>(base)->CreateHeap(); }
+/* 023C882C */
 BOOL daPds_c::wakeupCheck() {
-  WWHD_FUNC(0x023C882C, BOOL, this);
-  s8 n = gabi::load<s8>(addr(this) + 0x2DD);
-  u16 bit;
-  switch (n) {
-  case 0:
-    bit = 0x1780;
-    break;
-  case 1:
-    bit = 0x1740;
-    break;
-  case 2:
-    bit = 0x1720;
-    break;
-  default:
-    return false;
-  }
-  return gabi::call<s32>(0x025B8B94,
-                         gabi::at<u8>(gabi::load<u32>(0x101F84DC) + 0x644),
-                         bit) != 0;
+    s8 n = argument;
+    u16 bit;
+    switch (n) {
+    case 0:
+        bit = 0x1780;
+        break;
+    case 1:
+        bit = 0x1740;
+        break;
+    case 2:
+        bit = 0x1720;
+        break;
+    default:
+        return FALSE;
+    }
+    return dComIfGs_isEventBit(bit) != 0;
 }
-VERIFY(0x023C882C, &daPds_c::wakeupCheck);
+/* 023C88CC */
 BOOL daPds_c::finishCheck() {
-  WWHD_FUNC(0x023C88CC, BOOL, this);
-  s8 n = gabi::load<s8>(addr(this) + 0x2DD);
-  u16 bit;
-  switch (n) {
-  case 0:
-    bit = 0x1710;
-    break;
-  case 1:
-    bit = 0x1704;
-    break;
-  case 2:
-    bit = 0x1B01;
-    break;
-  default:
-    return false;
-  }
-  return gabi::call<s32>(0x025B8B94,
-                         gabi::at<u8>(gabi::load<u32>(0x101F84DC) + 0x644),
-                         bit) != 0;
+    s8 n = argument;
+    u16 bit;
+    switch (n) {
+    case 0:
+        bit = 0x1710;
+        break;
+    case 1:
+        bit = 0x1704;
+        break;
+    case 2:
+        bit = 0x1B01;
+        break;
+    default:
+        return FALSE;
+    }
+    return dComIfGs_isEventBit(bit) != 0;
 }
-VERIFY(0x023C88CC, &daPds_c::finishCheck);
+/* 023C896C */
 void daPds_c::set_mtx() {
-  WWHD_FUNC(0x023C896C, void, this);
-  f32 x = scale.x, y = scale.y, z = scale.z;
-  u32 model = addr((J3DModel *)mpModel);
-  gabi::store<f32>(model + 0xBC, x);
-  gabi::store<f32>(model + 0xC0, y);
-  gabi::store<f32>(model + 0xC4, z);
-  auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-  gabi::call(0x028E93CC, matrix, (f32)current.pos.x, (f32)current.pos.y,
-             (f32)current.pos.z);
-  gabi::call(0x025F1C28, matrix, (s16)current.angle.y);
-  f32 values[12];
-  for (u32 i = 0; i < 12; i++)
-    values[i] = gabi::load<f32>(0x1048D0CC + i * 4);
-  model = addr((J3DModel *)mpModel);
-  const u8 order[12] = {4, 10, 7, 11, 5, 3, 6, 1, 9, 8, 2, 0};
-  for (u32 i = 0; i < 12; i++)
-    gabi::store<f32>(model + 0xC8 + order[i] * 4, values[order[i]]);
-  gabi::call(0x028E90D4, matrix, &mMtx);
+    mpModel->setBaseScale(scale);
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    // HD: cache every element before the verified nonsequential model stores.
+    f32 values[12];
+    Mtx34 *matrix = mDoMtx_stack_c::get();
+    for (u32 i = 0; i < 12; i++)
+        values[i] = matrix->m[i / 4][i % 4];
+    J3DModel *model = mpModel;
+    const u8 order[12] = {4, 10, 7, 11, 5, 3, 6, 1, 9, 8, 2, 0};
+    for (u32 i = 0; i < 12; i++)
+        model->mBaseTransformMtx.m[order[i] / 4][order[i] % 4] = values[order[i]];
+    copyMatrix(matrix, &mMtx);
 }
-VERIFY(0x023C896C, &daPds_c::set_mtx);
+/* 023C8A50 */
 void daPds_c::CreateInit() {
-  WWHD_FUNC(0x023C8A50, void, this);
-  u32 model = addr((J3DModel *)mpModel);
-  mType = mParameters & 255;
-  gabi::store<u32>(addr(this) + 0x348, model ? model + 0xC8 : 0);
-  gabi::call(0x025D674C, this, -150.0f, -20.0f, -150.0f, 150.0f, 250.0f,
-             150.0f);
-  u8 type = mType;
-  if (type == 0 && wakeupCheck()) {
-    s8 n = gabi::load<s8>(addr(this) + 0x2DD);
-    if (n <= 2) {
-      u32 name = gabi::load<u32>(0x101CE60C + u32(s32(n)) * 4);
-      u32 npc = gabi::call<u32>(0x025D9F38, STR(name), 0, 0);
-      if (npc && gabi::call<f32>(0x025D6958, this, gabi::at<u8>(npc)) < 100.0f)
-        gabi::store<f32>(npc + 0x318, current.pos.y);
-    }
-    current.pos.y = (f32)current.pos.y - 240.0f;
-  } else if (type == 1 && finishCheck())
-    current.pos.y = (f32)current.pos.y + 240.0f;
-  set_mtx();
-  u32 p = play();
-  gabi::call(0x024EEA6C, gabi::at<u8>(p + 0x12A0), (u8 *)mpBgW, this);
-  gabi::call(0x024F43DC, (u8 *)mpBgW);
+    J3DModel *model = mpModel;
+    mType = mParameters & 255;
+    cullMtx = gabi::ea(J3DModel_getBaseTRMtx(model));
+    fopAcM_setCullSizeBox(this, -150, -20, -150, 150, 250, 150);
+    u8 type = mType;
+    if (type == 0 && wakeupCheck()) {
+        s8 n = argument;
+        if (n <= 2) {
+            const char *name = l_os_name.entries[(u32)(s32)n];
+            fopAc_ac_c *npc = searchFromName(name, 0, 0);
+            if (npc && searchDistanceXZ(this, npc) < 100)
+                npc->current.pos.y = (f32)current.pos.y;
+        }
+        current.pos.y = (f32)current.pos.y - 240;
+    } else if (type == 1 && finishCheck())
+        current.pos.y = (f32)current.pos.y + 240;
+    set_mtx();
+    dComIfG_Bgsp()->Regist(mpBgW, this);
+    mpBgW->Move();
 }
-VERIFY(0x023C8A50, &daPds_c::CreateInit);
+/* 023C8BD8 */
 s32 daPds_c::_create() {
-  WWHD_FUNC(0x023C8BD8, s32, this);
-  u32 flags = actor_condition;
-  if (!(flags & 8)) {
-    if (addr(this)) {
-      gabi::call(0x025D4ED0, this);
-      __vtbl = 0x10034330;
-      gabi::call(0x025E80D0, &mBrk);
-      flags = actor_condition;
-      mGlow.vt = 0x100343F8;
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (this) {
+            fopAc_ac_c_ct(this);
+            __vtbl = 0x10034330;
+            mDoExt_brkAnm::ct(&mBrk);
+            flags = actor_condition;
+            mOctagonGlowCb.__vtbl = 0x100343F8;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
     }
-    actor_condition = flags | 8;
-  }
-  s32 phase = gabi::call<s32>(0x02520460, &mPhase, STR(0x100343F0));
-  if (phase == 4) {
-    if (!gabi::call<BOOL>(0x025D63E8, this, gabi::at<u8>(0x023C8828), 0x2000)) {
-      mpBgW = nullptr;
-      return 5;
+    s32 phase = dComIfG_resLoad(&mPhase, "Hdai1");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, heapCB, 0x2000)) {
+            mpBgW = nullptr;
+            return cPhs_ERROR_e;
+        }
+        CreateInit();
     }
-    CreateInit();
-  }
-  return phase;
+    return phase;
 }
-VERIFY(0x023C8BD8, &daPds_c::_create);
+/* 023C8CB8 */
 BOOL daPds_c::_delete() {
-  WWHD_FUNC(0x023C8CB8, BOOL, this);
-  if (gabi::load<u32>(addr(this) + 0xF4)) {
-    u32 p = play();
-    gabi::call(0x020087EC, gabi::at<u8>(p + 0x12A0), (u8 *)mpBgW);
-  }
-  mGlow.end();
-  gabi::call(0x025204C8, &mPhase, STR(0x100343F0));
-  return true;
+    if (heap)
+        dComIfG_Bgsp()->Release(mpBgW);
+    mOctagonGlowCb.end();
+    dComIfG_resDelete(&mPhase, "Hdai1");
+    return TRUE;
 }
-VERIFY(0x023C8CB8, &daPds_c::_delete);
+/* 023C8D18 */
 void daPds_c::playBrkAnm() {
-  WWHD_FUNC(0x023C8D18, void, this);
-  s32 result = gabi::call<s32>(0x025E742C, &mBrk);
-  f32 frame = gabi::load<f32>(addr(this) + 0x3BC);
-  mPlayResult = result;
-  mFrame = frame;
+    s32 result = playBrk(&mBrk);
+    f32 frame = mBrk.getFrame();
+    unk30F = result;
+    unk308 = frame;
 }
-VERIFY(0x023C8D18, &daPds_c::playBrkAnm);
+/* 023C8D54 */
 s32 daPds_c::getMyStaffId() {
-  WWHD_FUNC(0x023C8D54, s32, this);
-  s8 n = gabi::load<s8>(addr(this) + 0x2DD);
-  u32 name;
-  switch (n) {
-  case 0:
-    name = 0x100343B8;
-    break;
-  case 1:
-    name = 0x100343C0;
-    break;
-  case 2:
-    name = 0x100343C8;
-    break;
-  default:
-    return -1;
-  }
-  return gabi::call<s32>(0x02542D88, gabi::at<u8>(play() + 0x52C4), STR(name),
-                         0, 0);
+    const char *name;
+    switch ((s8)argument) {
+    case 0:
+        name = "Hdai1";
+        break;
+    case 1:
+        name = "Hdai2";
+        break;
+    case 2:
+        name = "Hdai3";
+        break;
+    default:
+        return -1;
+    }
+    return dComIfGp_evmng_getMyStaffId(name, 0, 0);
 }
-VERIFY(0x023C8D54, &daPds_c::getMyStaffId);
+/* 023C8E14 */
 BOOL daPds_c::eventProc() {
-  WWHD_FUNC(0x023C8E14, BOOL, this);
-  s32 staff = getMyStaffId();
-  u32 p = play();
-  if (!gabi::load<u8>(p + 0x5292))
-    return false;
-  if (staff != -1) {
-    s32 index = gabi::call<s32>(0x02542EDC, gabi::at<u8>(play() + 0x52C4),
-                                staff, gabi::at<u8>(0x101CE5AC), 4, 1, 0);
-    u32 manager = play() + 0x52C4;
-    if (index == -1)
-      gabi::call(0x02543280, gabi::at<u8>(manager), staff);
-    else {
-      BOOL advance = gabi::call<BOOL>(0x025447C8, gabi::at<u8>(manager), staff);
-      u32 offset = u32(index) * 8;
-      if (advance)
-        invoke(addr(this), 0x101CE56C + offset, staff);
-      if (invoke(addr(this), 0x101CE58C + offset, staff))
-        gabi::call(0x02543280, gabi::at<u8>(play() + 0x52C4), staff);
+    s32 staff = getMyStaffId();
+    if (!dComIfGp_event_runCheck())
+        return FALSE;
+    if (staff != -1) {
+        s32 index = dComIfGp_evmng_getMyActIdx(staff, cut_name_tbl.entries, 4, 1, 0);
+        void *manager = dComIfGp_getPEvtManager();
+        if (index == -1)
+            cutEnd(manager, staff);
+        else {
+            BOOL advance = getIsAdvance(manager, staff);
+            if (advance)
+                (this->*event_init_tbl.entries[(u32)index])(staff);
+            if ((this->*event_action_tbl.entries[(u32)index])(staff))
+                dComIfGp_evmng_cutEnd(staff);
+        }
     }
-  }
-  return true;
+    return TRUE;
 }
-VERIFY(0x023C8E14, &daPds_c::eventProc);
-BOOL daPds_c::setAction(Action *next, u32 argument) {
-  WWHD_FUNC(0x023C8FBC, BOOL, this, next, argument);
-  if ((s16)mAction.slot != 0) {
-    mStatus = -1;
-    invoke(addr(this), addr(&mAction), argument);
-  }
-  u32 first = gabi::load<u32>(addr(next));
-  gabi::store<u32>(addr(&mAction), first);
-  s16 slot = mAction.slot;
-  u32 second = gabi::load<u32>(addr(next) + 4);
-  mTimer0 = 0;
-  gabi::store<u32>(addr(&mAction) + 4, second);
-  mTimer3 = 0;
-  mTimer2 = 0;
-  mStatus = 0;
-  mValue = 0.0f;
-  mTimer1 = 0;
-  // The newly installed descriptor may alias the actor's own action storage.
-  (void)slot;
-  invoke(addr(this), addr(&mAction), argument);
-  return true;
+/* 023C8FBC */
+BOOL daPds_c::setAction(Action *next, void *argument) {
+    if ((s16)mAction.i != 0) {
+        mActionStatus = ACTION_ENDING;
+        (this->*mAction)(argument);
+    }
+    // HD: preserve descriptor-copy aliasing and the original field-store order.
+    s16 d = next->d, i = next->i;
+    mAction.d = d;
+    mAction.i = i;
+    s16 slot = mAction.i;
+    u32 f = next->f;
+    unk310 = 0;
+    mAction.f = f;
+    unk316 = 0;
+    unk314 = 0;
+    mActionStatus = ACTION_STARTING;
+    unk31C = 0;
+    unk312 = 0;
+    (void)slot;
+    (this->*mAction)(argument);
+    return TRUE;
 }
-VERIFY(0x023C8FBC, &daPds_c::setAction);
-void daPds_c::action(u32 argument) {
-  WWHD_FUNC(0x023C90DC, void, this, argument);
-  if ((s16)mAction.slot == 0) {
-    gabi::Local<Action> initial;
-    gabi::Local<be<u32>> actionLinkage;
-    gabi::store<u32>(addr(initial.get()), gabi::load<u32>(0x100342EC));
-    gabi::store<u32>(addr(initial.get()) + 4, gabi::load<u32>(0x100342F0));
-    setAction(initial.get(), 0);
-  }
-  invoke(addr(this), addr(&mAction), argument);
+/* 023C90DC */
+void daPds_c::action(void *argument) {
+    if ((s16)mAction.i == 0) {
+        ProtectedLocal<Action> initial;
+        initial->d = (s16)wait_action.d;
+        initial->i = (s16)wait_action.i;
+        initial->f = (u32)wait_action.f;
+        setAction(initial.get(), nullptr);
+    }
+    (this->*mAction)(argument);
 }
-VERIFY(0x023C90DC, &daPds_c::action);
+/* 023C9188 */
 BOOL daPds_c::_execute() {
-  WWHD_FUNC(0x023C9188, BOOL, this);
-  playBrkAnm();
-  if (!eventProc())
-    action(0);
-  set_mtx();
-  gabi::call(0x024F43DC, (u8 *)mpBgW);
-  if (mGlow.emitter)
-    sound(this, 0x61D7);
-  return true;
+    playBrkAnm();
+    if (!eventProc())
+        action(nullptr);
+    set_mtx();
+    mpBgW->Move();
+    if (mOctagonGlowCb.mpEmitter)
+        sound(this, 0x61D7);
+    return TRUE;
 }
-VERIFY(0x023C9188, &daPds_c::_execute);
+/* 023C9210 */
 BOOL daPds_c::_draw() {
-  WWHD_FUNC(0x023C9210, BOOL, this);
-  u32 light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, gabi::at<u8>(light), 1, &current.pos,
-             gabi::at<u8>(addr(this) + 0x110));
-  light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, gabi::at<u8>(light), (J3DModel *)mpModel,
-             gabi::at<u8>(addr(this) + 0x110));
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(play() + 0x5D70));
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(play() + 0x5D74));
-  u32 data = gabi::load<u32>(addr((J3DModel *)mpModel) + 0xAC);
-  gabi::call(0x025E83FC, &mBrk, gabi::at<u8>(data),
-             gabi::load<f32>(addr(this) + 0x3BC));
-  gabi::call(0x025E2DE0, (J3DModel *)mpModel, 0);
-  gabi::store<u32>(data + 0x48, 0);
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(play() + 0x5D78));
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(play() + 0x5D7C));
-  return true;
+    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &current.pos, &tevStr);
+    setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
+    dComIfGd_setListBG();
+    J3DModelData *data = mpModel->getModelData();
+    mBrk.entry(data, mBrk.getFrame());
+    modelUpdateDL(mpModel, 0);
+    mDoExt_brkAnm_remove(data);
+    dComIfGd_setList();
+    return TRUE;
 }
-VERIFY(0x023C9210, &daPds_c::_draw);
-void daPds_c::initialDefault(s32 id) { WWHD_FUNC(0x023C92D0, void, this, id); }
-VERIFY(0x023C92D0, &daPds_c::initialDefault);
-BOOL daPds_c::actionDefault(s32 id) {
-  WWHD_FUNC(0x023C92D4, BOOL, this, id);
-  return true;
-}
-VERIFY(0x023C92D4, &daPds_c::actionDefault);
+/* 023C92D0 */
+void daPds_c::initialDefault(s32 id) {}
+/* 023C92D4 */
+BOOL daPds_c::actionDefault(s32 id) { return true; }
+/* 023C92DC */
 void daPds_c::initialMoveEvent(s32 id) {
-  WWHD_FUNC(0x023C92DC, void, this, id);
-  u32 speed = gabi::call<u32>(0x0254487C, gabi::at<u8>(play() + 0x52C4), id,
-                              STR(0x100343D4), 0);
-  gabi::store<f32>(addr(this) + 0x340, speed ? gabi::load<f32>(speed) : 1.0f);
-  u32 distance = gabi::call<u32>(0x0254487C, gabi::at<u8>(play() + 0x52C4), id,
-                                 STR(0x100343DC), 0);
-  f32 y = current.pos.y;
-  mTargetY = distance ? y + gabi::load<f32>(distance) : y;
+    auto *p = dComIfGp_evmng_getMyFloatP(id, "Speed");
+    speed.y = p ? (f32)*p : 1.0f;
+    auto *distance = dComIfGp_evmng_getMyFloatP(id, "Dist");
+    f32 y = current.pos.y;
+    mTargetYPos = distance ? y + (f32)*distance : y;
 }
-VERIFY(0x023C92DC, &daPds_c::initialMoveEvent);
+/* 023C93AC */
 BOOL daPds_c::actionMoveEvent(s32 id) {
-  WWHD_FUNC(0x023C93AC, BOOL, this, id);
-  f32 speed = gabi::load<f32>(addr(this) + 0x340),
-      y = (f32)current.pos.y + speed, target = mTargetY;
-  current.pos.y = y;
-  if (speed < 0.0f) {
-    if (y > target) {
-      sound(this, 0x61D8);
-      return false;
+
+    f32 speed = (f32)this->speed.y, y = (f32)current.pos.y + speed, target = mTargetYPos;
+    current.pos.y = y;
+    if (speed < 0.0f) {
+        if (y > target) {
+            sound(this, 0x61D8);
+            return false;
+        }
+    } else if (speed > 0.0f) {
+        if (y < target) {
+            sound(this, 0x61D8);
+            return false;
+        }
+    } else {
+        current.pos.y = target;
+        sound(this, 0x69D9);
+        return true;
     }
-  } else if (speed > 0.0f) {
-    if (y < target) {
-      sound(this, 0x61D8);
-      return false;
-    }
-  } else {
     current.pos.y = target;
+    this->speed.y = 0;
     sound(this, 0x69D9);
     return true;
-  }
-  current.pos.y = target;
-  gabi::store<f32>(addr(this) + 0x340, 0.0f);
-  sound(this, 0x69D9);
-  return true;
 }
-VERIFY(0x023C93AC, &daPds_c::actionMoveEvent);
+/* 023C94A4 */
 void daPds_c::initialEffectSet(s32 id) {
-  WWHD_FUNC(0x023C94A4, void, this, id);
-  mGlow.makeEmitter(0x826D, &current.pos, &shape_angle, nullptr);
-  initBrkAnm(0, true);
+
+    mOctagonGlowCb.makeEmitter(0x826D, &current.pos, &shape_angle, nullptr);
+    initBrkAnm(0, true);
 }
-VERIFY(0x023C94A4, &daPds_c::initialEffectSet);
+/* 023C94F8 */
 void daPds_c::initialEffectEnd(s32 id) {
-  WWHD_FUNC(0x023C94F8, void, this, id);
-  mGlow.end();
-  initBrkAnm(2, true);
+
+    mOctagonGlowCb.end();
+    initBrkAnm(2, true);
 }
-VERIFY(0x023C94F8, &daPds_c::initialEffectEnd);
-BOOL daPds_c::waitAction(u32 argument) {
-  WWHD_FUNC(0x023C9530, BOOL, this, argument);
-  if (mStatus == 0)
-    mStatus = 1;
-  return true;
+/* 023C9530 */
+BOOL daPds_c::waitAction(void *argument) {
+    if (mActionStatus == ACTION_STARTING)
+        mActionStatus = ACTION_ONGOING;
+    return TRUE;
 }
-VERIFY(0x023C9530, &daPds_c::waitAction);
-static s32 create(daPds_c *a) {
-  WWHD_FUNC(0x023C954C, s32, a);
-  return a->_create();
-}
-VERIFY(0x023C954C, create);
-static BOOL destroy(daPds_c *a) {
-  WWHD_FUNC(0x023C9550, BOOL, a);
-  return a->_delete();
-}
-VERIFY(0x023C9550, destroy);
-static BOOL draw(daPds_c *a) {
-  WWHD_FUNC(0x023C9554, BOOL, a);
-  return a->_draw();
-}
-VERIFY(0x023C9554, draw);
-static BOOL execute(daPds_c *a) {
-  WWHD_FUNC(0x023C9558, BOOL, a);
-  return a->_execute();
-}
-VERIFY(0x023C9558, execute);
+/* 023C954C */
+static s32 create(daPds_c *a) { return a->_create(); }
+/* 023C9550 */
+static BOOL destroy(daPds_c *a) { return a->_delete(); }
+/* 023C9554 */
+static BOOL draw(daPds_c *a) { return a->_draw(); }
+/* 023C9558 */
+static BOOL execute(daPds_c *a) { return a->_execute(); }
+/* 023C955C */
 static void initialize() {
-  WWHD_FUNC(0x023C955C, void);
-  gabi::store<u32>(0x1046CC14, 0);
-  gabi::store<u32>(0x1046CC0C, 0);
-  gabi::store<u32>(0x1046CC18, 0);
-  gabi::store<u32>(0x1046CC10, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CE618));
-  f32 min = gabi::load<f32>(0x100343E4), max = gabi::load<f32>(0x100343E8);
-  gabi::store<f32>(0x1046CC00, min);
-  gabi::store<f32>(0x1046CC04, max);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x1046CC08));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CE624));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x1046CC09));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CE630));
+    staticZero2.value = 0;
+    staticZero0.value = 0;
+    staticZero3.value = 0;
+    staticZero1.value = 0;
+    registerHeader(&staticRecord0);
+    f32 min = staticMinimumConstant.value, max = staticMaximumConstant.value;
+    staticMinimum.value = min;
+    staticMaximum.value = max;
+    constructHeader0(&staticFlag0);
+    registerHeader(&staticRecord1);
+    constructHeader1(&staticFlag1);
+    registerHeader(&staticRecord2);
 }
-VERIFY(0x023C955C, initialize);
+/* 023C95F0 */
 static void stringDestroy(u8 *p, u32 flags) {
-  WWHD_FUNC(0x023C95F0, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
+    if (p && (flags & 1))
+        operator_delete(p);
 }
-VERIFY(0x023C95F0, stringDestroy);
-static void callbackHook0(Callback *p) { WWHD_FUNC(0x023C9604, void, p); }
-VERIFY(0x023C9604, callbackHook0);
-static void callbackHook1(Callback *p) { WWHD_FUNC(0x023C9608, void, p); }
-VERIFY(0x023C9608, callbackHook1);
-static void callbackHook2(Callback *p) { WWHD_FUNC(0x023C960C, void, p); }
-VERIFY(0x023C960C, callbackHook2);
-static void stringTerminate(u8 *p) { WWHD_FUNC(0x023C9610, void, p); }
-VERIFY(0x023C9610, stringTerminate);
-void Callback::setup(u8 *p) {
-  WWHD_FUNC(0x023C9614, void, this, p);
-  emitter = p;
-}
-VERIFY(0x023C9614, &Callback::setup);
+/* 023C9604 */
+static void callbackHook0(daPds_infiniteEcallBack_c *p) {}
+/* 023C9608 */
+static void callbackHook1(daPds_infiniteEcallBack_c *p) {}
+/* 023C960C */
+static void callbackHook2(daPds_infiniteEcallBack_c *p) {}
+/* 023C9610 */
+static void stringTerminate(u8 *p) {}
+/* 023C9614 */
+void daPds_infiniteEcallBack_c::setup(PdsEmitter *p) { mpEmitter = p; }
+/* 023C961C */
 static void actorDestroy(daPds_c *p, u32 flags) {
-  WWHD_FUNC(0x023C961C, void, p, flags);
-  if (p) {
-    gabi::call(0x025D50BC, p, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, p);
-  }
+    if (p) {
+        destroyActor(p, 0);
+        if (flags & 1)
+            operator_delete(p);
+    }
 }
-VERIFY(0x023C961C, actorDestroy);
-static BOOL isDelete(daPds_c *p) {
-  WWHD_FUNC(0x023C9670, BOOL, p);
-  return true;
-}
-VERIFY(0x023C9670, isDelete);
-} // namespace daPedestal
+/* 023C9670 */
+static BOOL isDelete(daPds_c *p) { return true; }
+/* WWHD glue
+data m_arcname 100343F0
+data brkAnmTbl 101CE5DC
+data l_os_name 101CE60C
+data cut_name_tbl 101CE5AC
+data event_init_tbl 101CE56C
+data event_action_tbl 101CE58C
+data wait_action 100342EC
+data staticZero0 1046CC0C
+data staticZero1 1046CC10
+data staticZero2 1046CC14
+data staticZero3 1046CC18
+data staticMinimum 1046CC00
+data staticMaximum 1046CC04
+data staticMinimumConstant 100343E4
+data staticMaximumConstant 100343E8
+data staticFlag0 1046CC08
+data staticFlag1 1046CC09
+data staticRecord0 101CE618
+data staticRecord1 101CE624
+data staticRecord2 101CE630
+str 100343F0 "Hdai1" in 023C8BD8
+str 100343F0 "Hdai1" in 023C8CB8
+str 100343B8 "Hdai1" in 023C8D54
+str 100343C0 "Hdai2"
+str 100343C8 "Hdai3"
+str 100343D4 "Speed"
+str 100343DC "Dist"
+str 10034348 "d_a_pedestal.cpp" in 023C85F8
+str 1003436C "d_a_pedestal.cpp" in 023C8718
+str 1003435C "a_brk != NULL"
+str 10034380 "modelData != NULL"
+ext 026066C4 void* getResource(dRes_control_c*,SafeString*,s32)
+ext 025E8154 BOOL initBrk(mDoExt_brkAnm*,J3DModelData*,J3DAnmTevRegKey*,u32,s32,f32,s32,s32,BOOL,s32)
+ext 0200A030 s32 setBackground(dBgW*,cBgD_t*,u32,Mtx34*)
+ext 028245AC void setEmitterRotation(s16,s16,s16,Mtx34*)
+ext 025E1A40 void seStartLevel(u32,const cXyz*,u32,s32)
+ext 025D9F38 fopAc_ac_c* searchFromName(const char*,s32,s32)
+ext 025D6958 f32 searchDistanceXZ(fopAc_ac_c*,fopAc_ac_c*)
+ext 025E742C s32 playBrk(mDoExt_brkAnm*)
+ext 028E90D4 void copyMatrix(const Mtx34*,Mtx34*)
+ext 025E2DE0 void modelUpdateDL(J3DModel*,u32)
+ext 02543280 void cutEnd(void*,s32)
+ext 025447C8 BOOL getIsAdvance(void*,s32)
+ext 025D50BC void destroyActor(fopAc_ac_c*,s32)
+ext 028ED6F8 void constructHeader0(void*)
+ext 028EAB2C void constructHeader1(void*)
+ext 028F026C void registerHeader(void*)
+*/

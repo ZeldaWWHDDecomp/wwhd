@@ -1,19 +1,37 @@
-/* HD progress display update; original behaviour. Binary-derived. */
-#include "gabi.h"
+/* HD message states. */
+#include "d/hd_msg_window_base.h"
 using namespace gabi;
-namespace hd_ui_02702A20 {
-void updateProgress(u32 self) {
- WWHD_FUNC(0x02702D50,void,self);
- u32 save=load<u32>(0x101F84DC),flags=load<u32>(0x1047B074);
- u32 target=load<u8>(save+0x33),old=load<u32>(self+0x50);
- if(flags&0x40000) target=32;
- bool changed=old!=target;
- if(changed) store<u32>(self+0x50,target);
- u32 play=call<u32>(0x025200D4);
- u32 actual=u32(s32(load<s16>(play+0x5B62))),shown=load<u32>(self+0x54);
- if(actual>shown) { store<u32>(self+0x54,shown+1);call<void>(0x02702BB8,self); }
- else if(actual<shown) { store<u32>(self+0x54,shown-1);call<void>(0x02702BB8,self); }
- else if(changed) call<void>(0x02702BB8,self);
+static WindowSavePointer l_windowSave;
+static u32 l_windowProgressFlags;
+extern WindowPlay *hdMsgProgressGetPlay();
+extern void windowRefreshProgress(WindowProgress *);
+
+/* 02702D50 */
+void hdMsgProgress_updateProgress(WindowProgress *self) {
+    WindowSave *save = l_windowSave.get();
+    u32 flags = l_windowProgressFlags;
+    u32 target = save->mProgressTarget;
+    u32 old = self->mTarget;
+    if (flags & 0x40000)
+        target = 32;
+    bool changed = old != target;
+    if (changed)
+        self->mTarget = target;
+    WindowPlay *play = hdMsgProgressGetPlay();
+    u32 actual = u32(s32(play->mProgress));
+    u32 shown = self->mShown;
+    if (actual > shown) {
+        self->mShown = shown + 1;
+        windowRefreshProgress(self);
+    } else if (actual < shown) {
+        self->mShown = shown - 1;
+        windowRefreshProgress(self);
+    } else if (changed)
+        windowRefreshProgress(self);
 }
-VERIFY(0x02702D50,updateProgress);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_windowSave 101F84DC
+data l_windowProgressFlags 1047B074
+ext 025200D4 WindowPlay* hdMsgProgressGetPlay()
+ext 02702BB8 void windowRefreshProgress(WindowProgress*)
+*/

@@ -1,125 +1,146 @@
-/* Scoped HD MsgWindowScroll updates. WWHD binary reconstruction; no rate changes.
- * Array indices use the original fallback-to-slot-zero behaviour. */
-#include "gabi.h"
+#include "d/hd_msg_window_views.h"
 using namespace gabi;
-namespace hd_screen_msg_window_scroll {
-void setLines(u32 self, u32 text) {
-    WWHD_FUNC(0x026B9BD8, void, self, text);
-    u32 index = load<u32>(self + 0x118);
-    store<u32>(self + 0x11C, 1);
-    store<u32>(self + 0xC8 + (index < 20 ? index * 4 : 0), text);
-    call<void>(0x026B9AF0, self, 0u);
-    index = load<u32>(self + 0x78);
-    store<u8>(load<u32>(self + 0x6C + (index < 3 ? index * 4 : 0)) + 0x45, 255);
-    if (load<u32>(load<u32>(self + 0x138)) != 7) return;
-    index = load<u32>(self + 0x118) + 1;
-    const u32 count = load<u32>(self + 0x11C) + 1;
-    const u32 message = load<u32>(self + 0x138);
-    store<u32>(self + 0x11C, count);
-    store<u32>(self + 0xC8 + (index < 20 ? index * 4 : 0), load<u32>(message + 0x64C));
-    call<void>(0x026B9AF0, self, 1u);
-    index = load<u32>(self + 0x7C);
-    store<u8>(load<u32>(self + 0x6C + (index < 3 ? index * 4 : 0)) + 0x45, 100);
-    if (load<u32>(load<u32>(self + 0x138)) != 7) return;
-    index = load<u32>(self + 0x118) + 2;
-    const u32 count3 = load<u32>(self + 0x11C) + 1;
-    const u32 message3 = load<u32>(self + 0x138);
-    store<u32>(self + 0x11C, count3);
-    store<u32>(self + 0xC8 + (index < 20 ? index * 4 : 0), load<u32>(message3 + 0x64C));
-    call<void>(0x026B9AF0, self, 2u);
-    index = load<u32>(self + 0x80);
-    store<u8>(load<u32>(self + 0x6C + (index < 3 ? index * 4 : 0)) + 0x45, 100);
+extern void hdMsgSetLine(HdMsgScroll*,u32);
+extern bool hdMsgPaneAnimationEnded(void*,u32);
+extern f32 hdMsgOpeningAlpha(HdMsgScroll*,u32,u32);
+extern f32 hdMsgClosingAlpha(HdMsgScroll*,u32,u32);
+extern HdMsgPlay* hdMsgGetPlay();
+extern void hdMsgPositionLines(HdMsgScroll*);
+extern void hdMsgSetControlMode(void*,u32);
+static HdMsgState l_scrollEmptyState;
+static HdMsgState l_scrollTextState;
+static HdMsgState l_scrollWaitState;
+static HdMsgState l_scrollClosedState;
+static f32 l_scrollSpeed;
+static HdMsgControlPointer l_controlManager;
+/* 026B9BD8 */
+void hdMsgSetLines(HdMsgScroll* self, const char* text) {
+    // HD: invalid line and pane indices select slot zero, including wrapped indices.
+    u32 index = self->mLineIndex;
+    self->mLineCount = 1;
+    self->mLines[index < 20 ? index : 0] = text;
+    hdMsgSetLine(self, 0u);
+    index = self->mPaneIndices[0];
+    self->mPanes[index < 3 ? index : 0]->mAlpha = 255;
+    if (self->mMessage->mMode != HD_MSG_CONTINUE) return;
+    index = self->mLineIndex + 1;
+    const u32 count = self->mLineCount + 1;
+    HdMsgMessage* message = self->mMessage;
+    self->mLineCount = count;
+    self->mLines[index < 20 ? index : 0] = message->mNextText;
+    hdMsgSetLine(self, 1u);
+    index = self->mPaneIndices[1];
+    self->mPanes[index < 3 ? index : 0]->mAlpha = 100;
+    if (self->mMessage->mMode != HD_MSG_CONTINUE) return;
+    index = self->mLineIndex + 2;
+    const u32 count3 = self->mLineCount + 1;
+    HdMsgMessage* message3 = self->mMessage;
+    self->mLineCount = count3;
+    self->mLines[index < 20 ? index : 0] = message3->mNextText;
+    hdMsgSetLine(self, 2u);
+    index = self->mPaneIndices[2];
+    self->mPanes[index < 3 ? index : 0]->mAlpha = 100;
 }
-VERIFY(0x026B9BD8, setLines);
-bool animationEnded(u32 self, u32 animation) {
-    WWHD_FUNC(0x026BA0B4, bool, self, animation);
-    return call<bool>(0x02005840, load<u32>(load<u32>(self + 0x44) + 0xD4), animation);
+/* 026BA0B4 */
+bool hdMsgAnimationEnded(HdMsgScroll* self, u32 animation) {
+    return hdMsgPaneAnimationEnded(self->mAnimation->mPlayer, animation);
 }
-VERIFY(0x026BA0B4, animationEnded);
-void openingMove(u32 self) {
-    WWHD_FUNC(0x026BA308, void, self);
-    if (call<bool>(0x026BA0B4, self, 0u)) {
-        const u32 state = load<u32>(self + 0xCC) == 0xFFFFFFFFu ? 0x10498CD8u : 0x10498BE8u;
-        call<void>(0x020063C0, self + 0x18, state);
+/* 026BA308 */
+void hdMsgOpeningMove(HdMsgScroll* self) {
+    if (hdMsgAnimationEnded(self, 0u)) {
+        HdMsgState* state = self->mOpeningMode == 0xFFFFFFFFu ? &l_scrollEmptyState : &l_scrollTextState;
+        hdMsgChangeState(&self->mState, state);
     }
-    const f32 value = call<f32>(0x026BA1A4, self, 5u, load<u32>(self + 0xA0));
+    const f32 value = hdMsgOpeningAlpha(self, 5u, self->mTimer);
     const u8 alpha = u8(ftoi(value));
-    const u32 play = call<u32>(0x025200D4);
-    store<u8>(play + 0x62F1, alpha);
-    store<u32>(self + 0xA0, load<u32>(self + 0xA0) + 1);
+    HdMsgPlay* play = hdMsgGetPlay();
+    play->mWindowAlpha = alpha;
+    self->mTimer = self->mTimer + 1;
 }
-VERIFY(0x026BA308, openingMove);
-void scrollUp(u32 self) {
-    WWHD_FUNC(0x026BAA30, void, self);
-    f32 position = fadds_ppc(load<f32>(self + 0xC4), load<f32>(0x100FF2C0));
-    if (position > load<f32>(self + 0xB4)) {
+/* 026BAA30 */
+void hdMsgScrollUp(HdMsgScroll* self) {
+    f32 position = fadds_ppc(self->mPosition, l_scrollSpeed);
+    if (position > self->mUpperLimit) {
         for (u32 i = 0; i < 3; ++i) {
-            const u32 pane = load<u32>(self + 0x6C + 4 * i);
-            store<u8>(pane + 0x44, load<u8>(pane + 0x44) & 0xFE);
+            HdMsgPane* pane = self->mPanes[i];
+            pane->mFlags = pane->mFlags & 0xFE;
         }
-        const u32 line = load<u32>(self + 0x118) + 1;
-        const f32 target = load<f32>(self + 0xC0);
-        const f32 spacing = load<f32>(self + 0xBC);
-        store<u32>(self + 0x118, line);
+        const u32 line = self->mLineIndex + 1;
+        const f32 target = self->mTarget;
+        const f32 spacing = self->mLineSpacing;
+        self->mLineIndex = line;
         position = fsubs_ppc(position, spacing);
-        store<f32>(self + 0xC0, fsubs_ppc(target, spacing));
-        call<void>(0x026B9BD8, self, load<u32>(self + 0xC8 + (line < 20 ? line * 4 : 0)));
+        self->mTarget = fsubs_ppc(target, spacing);
+        hdMsgSetLines(self, self->mLines[line < 20 ? line : 0]);
     } else {
-        const u32 line = load<u32>(self + 0x118);
-        call<void>(0x026B9BD8, self, load<u32>(self + 0xC8 + (line < 20 ? line * 4 : 0)));
+        const u32 line = self->mLineIndex;
+        hdMsgSetLines(self, self->mLines[line < 20 ? line : 0]);
     }
-    const f32 target = load<f32>(self + 0xC0);
+    const f32 target = self->mTarget;
     if (position > target) {
         position = target;
-        call<void>(0x020063C0, self + 0x18, 0x10498CA8u);
+        hdMsgChangeState(&self->mState, &l_scrollWaitState);
     }
-    store<f32>(self + 0xC4, position);
-    call<void>(0x026B9E1C, self);
+    self->mPosition = position;
+    hdMsgPositionLines(self);
 }
-VERIFY(0x026BAA30, scrollUp);
-void scrollDown(u32 self) {
-    WWHD_FUNC(0x026BAC00, void, self);
-    f32 position = fsubs_ppc(load<f32>(self + 0xC4), load<f32>(0x100FF2C0));
-    if (position < load<f32>(self + 0xB8)) {
+/* 026BAC00 */
+void hdMsgScrollDown(HdMsgScroll* self) {
+    f32 position = fsubs_ppc(self->mPosition, l_scrollSpeed);
+    if (position < self->mLowerLimit) {
         for (u32 i = 0; i < 3; ++i) {
-            const u32 pane = load<u32>(self + 0x6C + 4 * i);
-            store<u8>(pane + 0x44, load<u8>(pane + 0x44) & 0xFE);
+            HdMsgPane* pane = self->mPanes[i];
+            pane->mFlags = pane->mFlags & 0xFE;
         }
-        u32 line = load<u32>(self + 0x118);
+        u32 line = self->mLineIndex;
         if (s32(line) > 0) {
-            const f32 spacing = load<f32>(self + 0xBC);
-            const f32 target = load<f32>(self + 0xC0);
+            const f32 spacing = self->mLineSpacing;
+            const f32 target = self->mTarget;
             --line;
-            store<u32>(self + 0x118, line);
+            self->mLineIndex = line;
             position = fadds_ppc(position, spacing);
-            store<f32>(self + 0xC0, fadds_ppc(target, spacing));
+            self->mTarget = fadds_ppc(target, spacing);
         }
-        call<void>(0x026B9BD8, self, load<u32>(self + 0xC8 + (line < 20 ? line * 4 : 0)));
+        hdMsgSetLines(self, self->mLines[line < 20 ? line : 0]);
     } else {
-        const u32 line = load<u32>(self + 0x118);
-        call<void>(0x026B9BD8, self, load<u32>(self + 0xC8 + (line < 20 ? line * 4 : 0)));
+        const u32 line = self->mLineIndex;
+        hdMsgSetLines(self, self->mLines[line < 20 ? line : 0]);
     }
-    const f32 target = load<f32>(self + 0xC0);
+    const f32 target = self->mTarget;
     if (position < target) {
         position = target;
-        call<void>(0x020063C0, self + 0x18, 0x10498CA8u);
+        hdMsgChangeState(&self->mState, &l_scrollWaitState);
     }
-    store<f32>(self + 0xC4, position);
-    call<void>(0x026B9E1C, self);
+    self->mPosition = position;
+    hdMsgPositionLines(self);
 }
-VERIFY(0x026BAC00, scrollDown);
-void closingMove(u32 self) {
-    WWHD_FUNC(0x026BB1D8, void, self);
-    if (call<bool>(0x026BA0B4, self, 1u)) {
-        call<void>(0x025F74D0, load<u32>(0x101F4B5C), 18u);
-        call<void>(0x020063C0, self + 0x18, 0x10498D68u);
+/* 026BB1D8 */
+void hdMsgClosingMove(HdMsgScroll* self) {
+    if (hdMsgAnimationEnded(self, 1u)) {
+        hdMsgSetControlMode(l_controlManager.mManager, 18u);
+        hdMsgChangeState(&self->mState, &l_scrollClosedState);
     }
-    const f32 value = call<f32>(0x026BB088, self, 5u, load<u32>(self + 0xA0));
+    const f32 value = hdMsgClosingAlpha(self, 5u, self->mTimer);
     const u8 alpha = u8(ftoi(value));
-    const u32 play = call<u32>(0x025200D4);
-    store<u8>(play + 0x62F1, alpha);
-    const u32 timer = load<u32>(self + 0xA0);
-    if (timer) store<u32>(self + 0xA0, timer - 1);
+    HdMsgPlay* play = hdMsgGetPlay();
+    play->mWindowAlpha = alpha;
+    const u32 timer = self->mTimer;
+    if (timer) self->mTimer = timer - 1;
 }
-VERIFY(0x026BB1D8, closingMove);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_scrollEmptyState 10498CD8
+data l_scrollTextState 10498BE8
+data l_scrollWaitState 10498CA8
+data l_scrollClosedState 10498D68
+data l_scrollSpeed 100FF2C0
+data l_controlManager 101F4B5C
+ext 020063C0 void hdMsgChangeState(HdMsgController*,HdMsgState*)
+ext 026B9AF0 void hdMsgSetLine(HdMsgScroll*,u32)
+ext 02005840 bool hdMsgPaneAnimationEnded(void*,u32)
+ext 026BA1A4 f32 hdMsgOpeningAlpha(HdMsgScroll*,u32,u32)
+ext 026BB088 f32 hdMsgClosingAlpha(HdMsgScroll*,u32,u32)
+ext 025200D4 HdMsgPlay* hdMsgGetPlay()
+ext 026B9E1C void hdMsgPositionLines(HdMsgScroll*)
+ext 025F74D0 void hdMsgSetControlMode(void*,u32)
+*/

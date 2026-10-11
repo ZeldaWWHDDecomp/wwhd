@@ -1,29 +1,49 @@
-#include "wwhd.h"
-#include "gabi.h"
-namespace {
-template<class T> T get(u32 p,u32 o=0) { return *gabi::at<be<T>>(p+o); }
-template<class T> void put(u32 p,u32 o,T v) { *gabi::at<be<T>>(p+o)=v; }
+/**
+ * d_file_error.cpp
+ * File error - custom screen and picture pane helpers.
+ *
+ * WWHD, written in GameCube decompilation style and verified against the
+ * recompiled original (unit d_file_error).
+ */
+#include "d/d_file_error.h"
+
+/* 0259CF48 */
+void MyScreen::calcMtx() {
+    // HD: makeMatrix is dispatched unconditionally; keep the target load before the bounds.
+    u32 target = __vtbl->makeMatrix;
+    f32 y = mBounds.i.y;
+    f32 x = mBounds.i.x;
+    gabi::call_ptr<void>(target, this, x, y);
 }
-void screenCalcMtx(u32 p) {
-    WWHD_FUNC(0x0259CF48,void,p);
-    u32 target=get<u32>(get<u32>(p,0xC8),0x64);
-    f32 y=get<f32>(p,0xC),x=get<f32>(p,8);
-    gabi::call_ptr<void>(target,p,x,y);
-}
-VERIFY(0x0259CF48,screenCalcMtx);
-u32 myScreenCreatePane(u32 p,u32 header,u32 stream,u32 parent) {
-    WWHD_FUNC(0x0259D008,u32,p,header,stream,parent);
-    if(get<u32>(header)!=0x50494331) return gabi::call<u32>(0x027F0898,p,header,stream,parent);
-    u32 picture=gabi::call<u32>(0x0273AD10,u32(0x138));
-    if(picture) {
-        gabi::call<void>(0x027EF590,picture,parent,stream);
-        put<u8>(picture,0x134,0); put<u32>(picture,0xC8,0x10057C88);
+
+// The GameCube header reference is expressed as its guest pointer for the entry ABI.
+/* 0259D008 */
+J2DPane* MyScreen::createPane(const J2DScrnBlockHeader* pHeader, JSURandomInputStream* pStream, J2DPane* pParent) {
+    if (pHeader->mMagic != 'PIC1') {
+        return J2DScreen::createPane(pHeader, pStream, pParent);
+    }
+
+    // HD: GHS inlines MyPicture's constructor after the allocation.
+    MyPicture* picture = (MyPicture*)operator_new(sizeof(MyPicture));
+    if (picture != nullptr) {
+        J2DPicture__ct(picture, pParent, pStream);
+        picture->m134 = 0;
+        picture->__vtbl = gabi::at<J2DPane::VTable>(MyPicture::__vt);
     }
     return picture;
 }
-VERIFY(0x0259D008,myScreenCreatePane);
-void myPictureDestructor(u32 p,u32 flags) {
-    WWHD_FUNC(0x0259D0B8,void,p,flags);
-    if(p) { gabi::call<void>(0x027F021C,p,u32(0)); if(flags&1) gabi::call<void>(0x0273AF40,p); }
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 0259D0B8 */
+static void MyPicture_dtor(MyPicture* i_this, u32 flags) {
+    if (i_this != nullptr) {
+        J2DPicture__dt(i_this, 0);
+        if (flags & 1) {
+            operator_delete(i_this);
+        }
+    }
 }
-VERIFY(0x0259D0B8,myPictureDestructor);
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

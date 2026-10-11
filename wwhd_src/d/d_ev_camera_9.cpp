@@ -1,460 +1,518 @@
-/* d_ev_camera, part 9: rollingEvCamera, windDirectionEvCamera. See
- * d_ev_camera.cpp for the unit's layout notes; written from the WWHD code (the GameCube
- * d_ev_camera.cpp is all "Nonmatching" stubs). */
-#include "bindings.h"
+#include "d/d_ev_camera_9.h"
+namespace event_camera_rolling {
+static EventString rollEyeName;
+static EventString rollCenterName;
+static EventString rollCtrCusName;
+static EventString rollTransTypeName;
+static EventString rollFovyName;
+static EventString rollBankName;
+static EventString rollRollName;
+static EventString rollRadiusAddName;
+static EventString rollLatitudeName;
+static EventString rollTimerName;
+static EventString rollRelUseMaskName;
+static EventString rollRelUseMaskDefault;
+static EventString rollRelActorName;
+static f32 degreesToAngle;
+static EventString windBirdFlyDistName;
+static EventString windTorishitaName;
+static EventString windStopDistName;
+static EventString windUpCountName;
+static EventString windSideFlagName;
+static EventString windFollowCushionName;
+static EventString windNearFovyName;
+static EventString windFarFovyName;
+static EventString windFovyCushionName;
+static EventString windTypeName;
 
-namespace d_ev_camera_9_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
+static void copyPoint(cXyz* destination, const cXyz* source) {
+    // HD: preserve interleaved integer loads/stores and NaN payloads.
+    auto* out = reinterpret_cast<VectorWords*>(destination);
+    auto* in = reinterpret_cast<const VectorWords*>(source);
+    out->x = in->x;
+    out->y = in->y;
+    out->z = in->z;
 }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline u32 getEvFloatData(u32 c, u32 out, u32 name, f32 def) { return gabi::call<u32>(0x0253072C, c, out, name, def); }
-static inline u32 getEvXyzData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x0253086C, c, out, name, def); }
-static inline u32 getEvStringData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x02530998, c, out, name, def); }
-static inline u32 getEvActor(u32 c, u32 name) { return gabi::call<u32>(0x02530B84, c, name); }
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline void cXyz_mi(u32 a, u32 out, u32 b) { gabi::call(0x0201ADE0, a, out, b); }
-static inline void cXyz_pl(u32 a, u32 out, u32 b) { gabi::call(0x0201AD78, a, out, b); }
-static inline void cXyz_ml(u32 a, u32 out, f32 s) { gabi::call(0x0201AE48, a, out, s); }
-static inline void cSGlobe_Val(u32 g, u32 v) { gabi::call(0x020072E0, g, v); }
-static inline void cSGlobe_Xyz(u32 g, u32 out) { gabi::call(0x020073AC, g, out); }
-static inline void cSGlobe_ct(u32 g, u32 v) { gabi::call(0x02007324, g, v); }
-static inline void cSAngle_mi(u32 a, u32 out, u32 b) { gabi::call(0x020068B0, a, out, b); }
-static inline void cSAngle_pl(u32 a, u32 out, u32 b) { gabi::call(0x02006894, a, out, b); }
-static inline u32 cSAngleF(u32 tmp, f32 deg) { return gabi::call<u32>(0x020066C0, tmp, deg); } /* cSAngle(f32 degrees) */
-static inline u32 cSAngleS(u32 tmp, s16 v) { return gabi::call<u32>(0x0200658C, tmp, (s32)v); }
-static inline void positionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8D5C, c, out, actor); }
-static inline void directionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F30, c, out, actor); }
-static inline f32 vecLen(u32 v) { return gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, v)); } /* sqrtf(PSVECSquareMag) */
-static inline bool lineBGCheck(u32 c, u32 a, u32 b, u32 flags) { return gabi::call<bool>(0x024FCBE8, c, a, b, flags); }
-static inline void negX(u32 v) { stf(v, -ldf(v)); }
-static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
+static void setPoint(cXyz* point, f32 x, f32 y, f32 z) {
+    point->x = x;
+    point->y = y;
+    point->z = z;
 }
-
-/* relational position modes (one character of RelUseMask) as in fixedFrameEvCamera, the actor
- * re-read from its work slot: 'o' plain, 'n' the offset mirrored when the actor faces away from
- * the camera eye, 'p' mirrored when that puts the point closer to the player */
-static inline void relO(u32 c, u32 actor, u32 ofs, u32 dst) {
-    gabi::Local<cXyz> r;
-    u32 rr = gabi::ea(r.get());
-    relationalPos(c, rr, actor, ofs);
-    copy3(dst, rr);
+static void mirrorX(cXyz* point) {
+    point->x = -static_cast<f32>(point->x);
 }
-static inline void relN(u32 c, u32 slot, u32 ofs, u32 dst) {
-    gabi::Local<cXyz> pos;
-    gabi::Local<cXyz> d;
-    gabi::Local<u8[8]> globe;
-    gabi::Local<s16[2]> ang;
-    u32 pp = gabi::ea(pos.get()), dd = gabi::ea(d.get()), gg = gabi::ea(globe.get()), aa = gabi::ea(ang.get());
-    positionOf(c, pp, ld(slot));
-    cXyz_mi(c + 0x1C, dd, pp);
-    cSGlobe_ct(gg, dd);
-    directionOf(c, aa, ld(slot));
-    cSAngle_mi(gg + 6, aa + 2, aa);
-    if (lds16(aa + 2) < lds16(0x101FF354)) negX(ofs); /* cSAngle::_0 */
-    relationalPos(c, pp, ld(slot), ofs);
-    copy3(dst, pp);
+static f32 vectorLength(cXyz* vector) {
+    return cameraRollingSqrt(cameraRollingSquareMag(vector));
 }
-static inline void relP(u32 c, u32 slot, u32 ofs, u32 dst) {
-    gabi::Local<cXyz> t;
-    gabi::Local<cXyz> p;
-    gabi::Local<cXyz> d;
-    u32 tt = gabi::ea(t.get()), pp = gabi::ea(p.get()), dd = gabi::ea(d.get());
-    relationalPos(c, tt, ld(slot), ofs);
-    positionOf(c, pp, ld(c + 0x128));
-    cXyz_mi(tt, dd, pp);
-    f32 d1 = vecLen(dd);
-    negX(ofs);
-    relationalPos(c, pp, ld(slot), ofs);
-    copy3(tt, pp);
-    positionOf(c, dd, ld(c + 0x128));
-    cXyz_mi(tt, pp, dd);
-    f32 d2 = vecLen(pp);
-    if (d1 > d2) negX(ofs); /* ble: not taken on NaN */
-    relationalPos(c, pp, ld(slot), ofs);
-    copy3(dst, pp);
+static void SkipSmoother(dCamera_c* camera) {
+    camera->m102 = 1;
+    camera->m101 = 1;
+    camera->m100 = 1;
 }
-/* the centre by RelUseMask[0] */
-static inline void relCenter(u32 c, u32 w, u8 m) {
-    if (m == 'o') relO(c, ld(w + 0x3C), w + 0x28, w + 0x10);
-    else if (m == 'n') relN(c, w + 0x3C, w + 0x28, w + 0x10);
-    else if (m == 'p') relP(c, w + 0x3C, w + 0x28, w + 0x10);
+/* inlined into rollingEvCamera */
+static void relativeOffset(dCamera_c* camera, fopAc_ac_c* actor, cXyz* offset, cXyz* destination) {
+    cXyz relative;
+    cameraRollingRelationalPos(camera, &relative, actor, offset);
+    copyPoint(destination, &relative);
+}
+/* inlined into rollingEvCamera */
+static void relativeFacing(dCamera_c* camera, gptr<fopAc_ac_c>* actor, cXyz* offset,
+                           cXyz* destination) {
+    cXyz position;
+    cXyz difference;
+    cSGlobe_l globe;
+    AnglePair angles;
+    cameraRollingPositionOf(camera, &position, actor->get());
+    cameraRollingSubtract(&camera->mEye, &difference, &position);
+    cameraRollingGlobeCtor(&globe, &difference);
+    cameraRollingDirectionOf(camera, &angles.m0, actor->get());
+    cameraRollingAngleSubtract(&globe.mU, &angles.m1, &angles.m0);
+    if (angles.m1 < zeroAngle())
+        mirrorX(offset);
+    cameraRollingRelationalPos(camera, &position, actor->get(), offset);
+    copyPoint(destination, &position);
+}
+/* inlined into rollingEvCamera */
+static void relativePlayer(dCamera_c* camera, gptr<fopAc_ac_c>* actor, cXyz* offset,
+                           cXyz* destination) {
+    cXyz target;
+    cXyz player;
+    cXyz difference;
+    cameraRollingRelationalPos(camera, &target, actor->get(), offset);
+    cameraRollingPositionOf(camera, &player, camera->mpPlayerActor.get());
+    cameraRollingSubtract(&target, &difference, &player);
+    f32 firstDistance = vectorLength(&difference);
+    mirrorX(offset);
+    cameraRollingRelationalPos(camera, &player, actor->get(), offset);
+    copyPoint(&target, &player);
+    cameraRollingPositionOf(camera, &difference, camera->mpPlayerActor.get());
+    cameraRollingSubtract(&target, &player, &difference);
+    f32 secondDistance = vectorLength(&player);
+    if (firstDistance > secondDistance)
+        mirrorX(offset);
+    cameraRollingRelationalPos(camera, &player, actor->get(), offset);
+    copyPoint(destination, &player);
+}
+static void relativeCenter(dCamera_c* camera, RollingWork* work, char mode) {
+    if (mode == 'o')
+        relativeOffset(camera, work->mpRelActor.get(), &work->mCenterOffset, &work->mCenter);
+    else if (mode == 'n')
+        relativeFacing(camera, &work->mpRelActor, &work->mCenterOffset, &work->mCenter);
+    else if (mode == 'p')
+        relativePlayer(camera, &work->mpRelActor, &work->mCenterOffset, &work->mCenter);
 }
 
-/* 025369BC: rollingEvCamera: a fixed view (Eye/Center, relative to RelActor by RelUseMask) whose
- * longitude turns by Roll degrees and radius grows by RadiusAdd per frame; TransType 1/2 follow the
- * actor (2 also pins the latitude). work: +0 timer set, +1 bank set, +4 eye, +0x10 centre, +0x1C Eye,
- * +0x28 Center, +0x34 Fovy, +0x38 Bank, +0x3C RelActor, +0x40 RelUseMask, +0x44 Timer, +0x48
- * TransType, +0x4C Roll, +0x50 RadiusAdd, +0x54 Latitude, +0x58 CtrCus */
-static u32 dCamera_c_rollingEvCamera(u32 i_this) {
-    WWHD_FUNC(0x025369BC, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        gabi::Local<cXyz> def;
-        u32 d = gabi::ea(def.get());
-        f32 x = ldf(i_this + 0x1C), y = ldf(i_this + 0x20);
-        stf(d + 0, x);
-        f32 z = ldf(i_this + 0x24);
-        stf(d + 4, y);
-        stf(d + 8, z);
-        getEvXyzData(i_this, w + 0x1C, 0x1004D134 /* "Eye" */, d);
-        x = ldf(i_this + 0x10);
-        y = ldf(i_this + 0x14);
-        stf(d + 0, x);
-        z = ldf(i_this + 0x18);
-        stf(d + 4, y);
-        stf(d + 8, z);
-        getEvXyzData(i_this, w + 0x28, 0x1004D140 /* "Center" */, d);
-        getEvFloatData(i_this, w + 0x58, 0x1004D148 /* "CtrCus" */, 1.0f);
-        getEvIntData(i_this, w + 0x48, 0x1004D16C /* "TransType" */, 0);
-        getEvFloatData(i_this, w + 0x34, 0x1004D150 /* "Fovy" */, ldf(i_this + 0x38));
-        st8(w + 1, (u8)getEvFloatData(i_this, w + 0x38, 0x1004D158 /* "Bank" */, 0.0f));
-        getEvFloatData(i_this, w + 0x4C, 0x1004D160 /* "Roll" */, 2.0f);
-        getEvFloatData(i_this, w + 0x50, 0x1004D178 /* "RadiusAdd" */, 0.0f);
-        gabi::Local<u8[8]> globe;
-        u32 gg = gabi::ea(globe.get());
-        cXyz_mi(w + 0x1C, d, w + 0x28);
-        cSGlobe_ct(gg, d);
-        f32 lat = gabi::call<f32>(0x02006720, gg + 4); /* cSAngle::Degree */
-        getEvFloatData(i_this, w + 0x54, 0x1004D184 /* "Latitude" */, lat);
-        st8(w + 0, (u8)getEvIntData(i_this, w + 0x44, 0x1004D138 /* "Timer" */, -1));
-        getEvStringData(i_this, w + 0x40, 0x1004D190 /* "RelUseMask" */, 0x1004D168 /* "oo" */);
-        u32 a = getEvActor(i_this, 0x1004D19C /* "RelActor" */);
-        st(w + 0x3C, a);
-        if (a == 0) {
-            copy3(w + 0x10, w + 0x28);
-            copy3(w + 4, w + 0x1C);
+/* 025369BC */
+u32 rollingEvCamera(dCamera_c* camera) {
+    auto* work = reinterpret_cast<RollingWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        cXyz fallback;
+        f32 x = camera->mEye.x;
+        f32 y = camera->mEye.y;
+        fallback.x = x;
+        f32 z = camera->mEye.z;
+        fallback.y = y;
+        fallback.z = z;
+        cameraRollingGetXyz(camera, &work->mEyeOffset, rollEyeName.text, &fallback);
+        x = camera->mCenter.x;
+        y = camera->mCenter.y;
+        fallback.x = x;
+        z = camera->mCenter.z;
+        fallback.y = y;
+        fallback.z = z;
+        cameraRollingGetXyz(camera, &work->mCenterOffset, rollCenterName.text, &fallback);
+        cameraRollingGetFloat(camera, &work->mCtrCus, rollCtrCusName.text, 1.0f);
+        cameraRollingGetInt(camera, &work->mTransType, rollTransTypeName.text, 0);
+        cameraRollingGetFloat(camera, &work->mFovy, rollFovyName.text, camera->mFovy);
+        work->mBankSet =
+            static_cast<u8>(cameraRollingGetFloat(camera, &work->mBank, rollBankName.text, 0.0f));
+        cameraRollingGetFloat(camera, &work->mRoll, rollRollName.text, 2.0f);
+        cameraRollingGetFloat(camera, &work->mRadiusAdd, rollRadiusAddName.text, 0.0f);
+        cSGlobe_l globe;
+        cameraRollingSubtract(&work->mEyeOffset, &fallback, &work->mCenterOffset);
+        cameraRollingGlobeCtor(&globe, &fallback);
+        f32 latitude = cameraRollingAngleDegree(&globe.mV);
+        cameraRollingGetFloat(camera, &work->mLatitude, rollLatitudeName.text, latitude);
+        work->mTimerSet =
+            static_cast<u8>(cameraRollingGetInt(camera, &work->mTimer, rollTimerName.text, -1));
+        cameraRollingGetString(camera, work->mRelUseMask, rollRelUseMaskName.text,
+                               rollRelUseMaskDefault.text);
+        auto* actor = cameraRollingGetActor(camera, rollRelActorName.text);
+        work->mpRelActor = actor;
+        if (!actor) {
+            copyPoint(&work->mCenter, &work->mCenterOffset);
+            copyPoint(&work->mEye, &work->mEyeOffset);
         } else {
-            u8 m0 = ld8(w + 0x40);
-            if (m0 == 'o' || m0 == 'n' || m0 == 'p') relCenter(i_this, w, m0);
-            else copy3(w + 0x10, w + 0x28);
-            u8 m1 = ld8(w + 0x41);
-            if (m1 == 'o') {
-                relO(i_this, ld(w + 0x3C), w + 0x1C, w + 4);
-            } else if (m1 == 'r') {
-                if (ld(i_this + 0x80) & 1) negX(w + 0x1C);
-                relO(i_this, ld(w + 0x3C), w + 0x1C, w + 4);
-                if (lineBGCheck(i_this, w + 0x10, w + 4, 0x8F)) negX(w + 0x1C);
-                relO(i_this, ld(w + 0x3C), w + 0x1C, w + 4);
-            } else if (m1 == 'n') {
-                relN(i_this, w + 0x3C, w + 0x1C, w + 4);
-            } else if (m1 == 'p') {
-                relP(i_this, w + 0x3C, w + 0x1C, w + 4);
+            char centerMode = work->mRelUseMask[0];
+            if (centerMode == 'o' || centerMode == 'n' || centerMode == 'p')
+                relativeCenter(camera, work, centerMode);
+            else
+                copyPoint(&work->mCenter, &work->mCenterOffset);
+            char eyeMode = work->mRelUseMask[1];
+            if (eyeMode == 'o') {
+                relativeOffset(camera, work->mpRelActor.get(), &work->mEyeOffset, &work->mEye);
+            } else if (eyeMode == 'r') {
+                if (camera->m080 & 1)
+                    mirrorX(&work->mEyeOffset);
+                relativeOffset(camera, work->mpRelActor.get(), &work->mEyeOffset, &work->mEye);
+                if (cameraRollingLineBGCheck(camera, &work->mCenter, &work->mEye, 0x8F))
+                    mirrorX(&work->mEyeOffset);
+                relativeOffset(camera, work->mpRelActor.get(), &work->mEyeOffset, &work->mEye);
+            } else if (eyeMode == 'n') {
+                relativeFacing(camera, &work->mpRelActor, &work->mEyeOffset, &work->mEye);
+            } else if (eyeMode == 'p') {
+                relativePlayer(camera, &work->mpRelActor, &work->mEyeOffset, &work->mEye);
             } else {
-                copy3(w + 4, w + 0x1C);
+                copyPoint(&work->mEye, &work->mEyeOffset);
             }
         }
-        setDone(i_this);
+        SkipSmoother(camera);
     }
-    u32 tt = ld(w + 0x48);
-    if ((tt == 1 || tt == 2) && ld(w + 0x3C) != 0) relCenter(i_this, w, ld8(w + 0x40));
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> b;
-    u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
-    cXyz_mi(w + 0x10, aa, i_this + 0x44);
-    cXyz_ml(aa, bb, ldf(w + 0x58));
-    gabi::call(0x028E8D88, i_this + 0x44, bb, i_this + 0x44); /* PSVECAdd: centre += gap * CtrCus */
-    cXyz_mi(w + 4, aa, w + 0x10);
-    cSGlobe_Val(i_this + 0x3C, aa);
-    gabi::Local<s16[4]> ang;
-    gabi::Local<s16[4]> tmp;
-    u32 an = gabi::ea(ang.get()), tp = gabi::ea(tmp.get());
-    if (ld(w + 0x48) == 2) {
-        u32 lat = cSAngleF(tp + 0, ldf(w + 0x54));
-        u32 r = cSAngleS(tp + 2, lds16(lat));
-        st16(i_this + 0x40, (u16)lds16(r));
+    u32 translationType = work->mTransType;
+    if ((translationType == 1 || translationType == 2) && work->mpRelActor)
+        relativeCenter(camera, work, work->mRelUseMask[0]);
+    cXyz difference;
+    cXyz scaled;
+    cameraRollingSubtract(&work->mCenter, &difference, &camera->mViewCache.mCenter);
+    cameraRollingScale(&difference, &scaled, work->mCtrCus);
+    cameraRollingPSVECAdd(&camera->mViewCache.mCenter, &scaled, &camera->mViewCache.mCenter);
+    cameraRollingSubtract(&work->mEye, &difference, &work->mCenter);
+    cSGlobe_Val(&camera->mViewCache.mDirection, &difference);
+    AngleFour angles;
+    AngleFour temporary;
+    if (work->mTransType == 2) {
+        auto* latitude = cameraRollingAngleFloatCtor(&temporary.m0, work->mLatitude);
+        auto* result = cameraRollingAngleShortCtor(&temporary.m1, *latitude);
+        camera->mViewCache.mDirection.mV = *result;
     }
-    /* U += Roll * timer; radius += RadiusAdd * timer */
-    f32 t = (f32)(f64)ld(i_this + 0x11C);
-    u32 roll = cSAngleF(an + 0, t * ldf(w + 0x4C));
-    cSAngle_pl(i_this + 0x42, an + 2, roll);
-    u32 r = cSAngleS(an + 4, lds16(an + 2));
-    f32 t2 = (f32)(f64)ld(i_this + 0x11C);
-    st16(i_this + 0x42, (u16)lds16(r));
-    stf(i_this + 0x3C, gabi::fmadds(t2, ldf(w + 0x50), ldf(i_this + 0x3C)));
-    cSGlobe_Xyz(i_this + 0x3C, bb);
-    cXyz_pl(i_this + 0x44, aa, bb);
-    copy3(i_this + 0x50, aa);
-    stf(i_this + 0x60, ldf(w + 0x34));
-    if (ld8(w + 1) != 0) {
-        u32 res = cSAngleS(an + 6, (s16)gabi::ftoi(ldf(w + 0x38) * ldf(0x1004CDE8)));
-        u32 fl = ld(i_this + 0x510);
-        s16 bank = lds16(res);
-        st(i_this + 0x510, fl | 0x400);
-        st16(i_this + 0x5C, (u16)bank);
+    f32 timer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->m11C)));
+    auto* roll = cameraRollingAngleFloatCtor(&angles.m0, timer * work->mRoll);
+    cameraRollingAngleAdd(&camera->mViewCache.mDirection.mU, &angles.m1, roll);
+    auto* result = cameraRollingAngleShortCtor(&angles.m2, angles.m1);
+    f32 radiusTimer = static_cast<f32>(static_cast<f64>(static_cast<u32>(camera->m11C)));
+    camera->mViewCache.mDirection.mU = *result;
+    camera->mViewCache.mDirection.mRadius =
+        gabi::fmadds(radiusTimer, work->mRadiusAdd, camera->mViewCache.mDirection.mRadius);
+    cameraRollingGlobeXyz(&camera->mViewCache.mDirection, &scaled);
+    cameraRollingAdd(&camera->mViewCache.mCenter, &difference, &scaled);
+    copyPoint(&camera->mViewCache.mEye, &difference);
+    camera->mViewCache.mFovy = work->mFovy;
+    if (work->mBankSet != 0) {
+        result = cameraRollingAngleShortCtor(
+            &angles.m3, static_cast<s16>(gabi::ftoi(work->mBank * degreesToAngle)));
+        u32 flags = camera->mEventFlags;
+        s16 bank = *result;
+        camera->mEventFlags = flags | 0x400;
+        camera->mViewCache.mBank = bank;
     }
-    if (ld8(w + 0) != 0 && ld(i_this + 0x11C) < ld(w + 0x44)) return 0;
+    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+        return 0;
     return 1;
 }
-VERIFY(0x025369BC, dCamera_c_rollingEvCamera);
 
-static inline void attentionPos(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F3C, c, out, actor); }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline u32 tactWindDir() { return gabi::call<u32>(0x0257E560); } /* dKyw_get_tactwind_dir */
-static inline void cSAngle_ml(u32 a, u32 out, f32 f) { gabi::call(0x0200693C, a, out, f); }
-static inline void f3(u32 v, f32 x, f32 y, f32 z) {
-    stf(v + 0, x);
-    stf(v + 4, y);
-    stf(v + 8, z);
+static void windBlurShock(dCamera_c* camera, cXyz* temporary) {
+    cameraRollingResetBlure(camera, 0);
+    cameraRollingBlureTimer(camera, 110);
+    cameraRollingBlureAlpha(camera, 0.6f);
+    cameraRollingBlureScale(camera, 0.99f);
+    auto* vibration = dComIfGp_getVibration();
+    setPoint(temporary, 0.0f, 1.0f, 0.0f);
+    vibration->StartShock(7, 0x20, temporary);
 }
-/* the blur and the rumble when the bird swoops in */
-static inline void windBlurShock(u32 c, u32 tmp) {
-    gabi::call(0x0250D464, c, 0);     /* ResetBlure */
-    gabi::call(0x0250D4C0, c, 0x6E);  /* SetBlureTimer */
-    gabi::call(0x0250D4C8, c, 0.6f);  /* SetBlureAlpha */
-    gabi::call(0x0250D4D0, c, 0.99f); /* SetBlureScale */
-    u32 g = gi();
-    f3(tmp, 0.0f, 1.0f, 0.0f);
-    gabi::call(0x025CB374, g + 0x599C, 7, 0x20, tmp); /* dVibration_c::StartShock */
-}
-/* rp = relationalPos(player, ofs) */
-static inline void relPlayer(u32 c, u32 tmp, u32 ofs, u32 dst) {
-    relationalPos(c, tmp, ld(c + 0x128), ofs);
-    copy3(dst, tmp);
+static void relativeToPlayer(dCamera_c* camera, cXyz* temporary, cXyz* offset, cXyz* destination) {
+    cameraRollingRelationalPos(camera, temporary, camera->mpPlayerActor.get(), offset);
+    copyPoint(destination, temporary);
 }
 
-/* 0253775C: windDirectionEvCamera: the wind-direction event (the bird "BirdFly" actor of the event
- * flies to the player). States (work+0): 0 look from the bird to the player, 1/2/3 wait UpCount
- * frames, then follow the bird and keep it in sight; 0xA..0xF the side view ("Type" 1, or when the
- * line of sight is blocked): 0xA/0xB a fixed side view, 0xC the swing over 40 frames, 0xD..0xF the
- * close view; 0x63 hold. work: +4 frame counter, +8 the wind direction (cSGlobe), +0x10 start
- * globe, +0x18 end globe, +0x20 the bird, +0x24 eye, +0x30 centre, +0x3C Torishita, +0x48 StopDist,
- * +0x4C FollowCushion, +0x50 UpCount / frame limit, +0x54 SideFlag, +0x58 Type, +0x5C start
- * distance, +0x60 BirdFlyDist, +0x64 NearFovy, +0x68 FarFovy, +0x6C FovyCushion, +0x70/+0x74 swing
- * length / progress */
-static u32 dCamera_c_windDirectionEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253775C, u32, i_this);
-    u32 w = i_this + 0x37C;
-    gabi::Local<cXyz[6]> ofs; /* side views: centre, centre, centre, eye, eye, eye (x mirrored by the wind) */
-    u32 o = gabi::ea(ofs.get());
-    u32 oc0 = o + 0x00, oc1 = o + 0x0C, oc2 = o + 0x18, oe0 = o + 0x24, oe1 = o + 0x30, oe2 = o + 0x3C;
-    f3(oc0, -25.0f, 12.0f, 0.0f);
-    f3(oc1, -25.0f, 12.0f, 0.0f);
-    f3(oc2, -25.0f, 12.0f, 0.0f);
-    f3(oe0, -40.0f, -10.0f, -90.0f);
-    f3(oe1, -25.0f, 0.0f, 90.0f);
-    f3(oe2, -25.0f, -30.0f, 90.0f);
-    f32 k = 0.02f;
+/* 0253775C */
+u32 windDirectionEvCamera(dCamera_c* camera) {
+    auto* work = reinterpret_cast<WindWork*>(camera->mWork);
+    SideOffsets offsets;
+    auto* points = offsets.mPoints;
+    setPoint(&points[0], -25.0f, 12.0f, 0.0f);
+    setPoint(&points[1], -25.0f, 12.0f, 0.0f);
+    setPoint(&points[2], -25.0f, 12.0f, 0.0f);
+    setPoint(&points[3], -40.0f, -10.0f, -90.0f);
+    setPoint(&points[4], -25.0f, 0.0f, 90.0f);
+    setPoint(&points[5], -25.0f, -30.0f, 90.0f);
+    f32 cushion = 0.02f;
     f32 ratio = 1.0f;
-    if (ld(i_this + 0x11C) == 0) {
-        st(w + 0, 0);
-        st(w + 4, 0);
-        u32 env = gabi::call<u32>(0x02555D0C); /* dKy_getEnvlight */
-        gabi::call(0x02006FE4, w + 8, 1.0f, (s32)lds16(env + 0xA24), (s32)lds16(env + 0xA26)); /* cSGlobe::Val(r, V, U) */
-        u32 g = gi();
-        st(w + 0x20, gabi::call<u32>(0x0253EE04, g + 0x51D0, ld(g + 0x52A0))); /* dEvt_control_c::convPId */
-        getEvFloatData(i_this, w + 0x60, 0x1004D20C /* "BirdFlyDist" */, 1620.0f);
-        gabi::Local<cXyz> def;
-        u32 d = gabi::ea(def.get());
-        f3(d, 40.0f, -95.0f, 10.0f);
-        getEvXyzData(i_this, w + 0x3C, 0x1004D224 /* "Torishita" */, d);
-        if (tactWindDir() != 0) negX(w + 0x3C);
-        gabi::Local<u8[8]> gl;
-        u32 gg = gabi::ea(gl.get());
-        u32 inv = gabi::call<u32>(0x02007400, w + 8); /* cSGlobe::Invert */
-        gabi::call(0x02007178, gg, inv);              /* cSGlobe(const cSGlobe&) */
-        stf(gg, ldf(w + 0x60));
-        gabi::Local<cXyz> mir;
-        gabi::Local<cXyz> at;
-        gabi::Local<cXyz> pr;
-        gabi::Local<cXyz> br;
-        u32 mm = gabi::ea(mir.get()), aa = gabi::ea(at.get()), pp = gabi::ea(pr.get()), bb = gabi::ea(br.get());
-        f3(mm, -ldf(w + 0x3C), 0.0f, 0.0f);
-        attentionPos(i_this, aa, ld(i_this + 0x128));
-        relationalPos(i_this, pp, ld(i_this + 0x128), mm);
-        relationalPos(i_this, bb, ld(w + 0x20), w + 0x3C);
+    if (camera->m11C == 0) {
+        work->mState = WIND_INITIAL;
+        work->mCounter = 0;
+        auto* wind = reinterpret_cast<WindAnglesView*>(dKy_getEnvlight());
+        cameraRollingGlobeSet(&work->mWind, 1.0f, wind->mTactWindAngleX, wind->mTactWindAngleY);
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        work->mpBird = cameraRollingConvPId(&play->mEvtCtrl, play->mEvtCtrl.mPtItem);
+        cameraRollingGetFloat(camera, &work->mBirdFlyDist, windBirdFlyDistName.text, 1620.0f);
+        cXyz fallback;
+        setPoint(&fallback, 40.0f, -95.0f, 10.0f);
+        cameraRollingGetXyz(camera, &work->mTorishita, windTorishitaName.text, &fallback);
+        if (cameraRollingTactWindDirection() != 0)
+            mirrorX(&work->mTorishita);
+        cSGlobe_l globe;
+        auto* inverse = cameraRollingGlobeInvert(&work->mWind);
+        cameraRollingGlobeCopyCtor(&globe, inverse);
+        globe.mRadius = work->mBirdFlyDist;
+        cXyz mirrored;
+        cXyz attention;
+        cXyz player;
+        cXyz bird;
+        setPoint(&mirrored, -static_cast<f32>(work->mTorishita.x), 0.0f, 0.0f);
+        cameraRollingAttentionPos(camera, &attention, camera->mpPlayerActor.get());
+        cameraRollingRelationalPos(camera, &player, camera->mpPlayerActor.get(), &mirrored);
+        cameraRollingRelationalPos(camera, &bird, work->mpBird.get(), &work->mTorishita);
         u32 blocked = 0;
-        if (lineBGCheck(i_this, aa, bb, 0x7F) || lineBGCheck(i_this, pp, bb, 0x7F)) blocked = 1;
-        getEvFloatData(i_this, w + 0x48, 0x1004D240 /* "StopDist" */, 155.0f);
-        getEvIntData(i_this, w + 0x50, 0x1004D1F4 /* "UpCount" */, 8);
-        getEvIntData(i_this, w + 0x54, 0x1004D24C /* "SideFlag" */, 0);
-        getEvFloatData(i_this, w + 0x4C, 0x1004D230 /* "FollowCushion" */, k);
-        getEvFloatData(i_this, w + 0x64, 0x1004D258 /* "NearFovy" */, 30.0f);
-        getEvFloatData(i_this, w + 0x68, 0x1004D1FC /* "FarFovy" */, 85.0f);
-        getEvFloatData(i_this, w + 0x6C, 0x1004D218 /* "FovyCushion" */, 0.05f);
-        positionOf(i_this, aa, ld(w + 0x20));
-        positionOf(i_this, pp, ld(i_this + 0x128));
-        cXyz_mi(aa, d, pp);
-        stf(w + 0x5C, vecLen(d));
-        stf(i_this + 0x60, ldf(w + 0x68));
-        getEvIntData(i_this, w + 0x58, 0x1004D204 /* "Type" */, (s32)blocked);
-        if (ld(w + 0x58) == 1) st(w + 0, 0xA);
+        if (cameraRollingLineBGCheck(camera, &attention, &bird, 0x7F) ||
+            cameraRollingLineBGCheck(camera, &player, &bird, 0x7F))
+            blocked = 1;
+        cameraRollingGetFloat(camera, &work->mStopDist, windStopDistName.text, 155.0f);
+        cameraRollingGetInt(camera, &work->mFrameLimit, windUpCountName.text, 8);
+        cameraRollingGetInt(camera, &work->mSideFlag, windSideFlagName.text, 0);
+        cameraRollingGetFloat(camera, &work->mFollowCushion, windFollowCushionName.text, cushion);
+        cameraRollingGetFloat(camera, &work->mNearFovy, windNearFovyName.text, 30.0f);
+        cameraRollingGetFloat(camera, &work->mFarFovy, windFarFovyName.text, 85.0f);
+        cameraRollingGetFloat(camera, &work->mFovyCushion, windFovyCushionName.text, 0.05f);
+        cameraRollingPositionOf(camera, &attention, work->mpBird.get());
+        cameraRollingPositionOf(camera, &player, camera->mpPlayerActor.get());
+        cameraRollingSubtract(&attention, &fallback, &player);
+        work->mStartDistance = vectorLength(&fallback);
+        camera->mViewCache.mFovy = work->mFarFovy;
+        cameraRollingGetInt(camera, &work->mType, windTypeName.text, static_cast<s32>(blocked));
+        if (work->mType == 1)
+            work->mState = WIND_SIDE_START;
     }
-    if (tactWindDir() != 0) {
-        for (u32 i = 0; i < 6; i++) negX(o + i * 12);
-    }
-    gabi::Local<cXyz> t1;
-    gabi::Local<cXyz> t2;
-    gabi::Local<cXyz> t3;
-    u32 a1 = gabi::ea(t1.get()), a2 = gabi::ea(t2.get()), a3 = gabi::ea(t3.get());
-    u32 st0 = ld(w + 0);
-    switch (st0) {
-    case 1:
-        if ((s32)ld(w + 4) > (s32)ld(w + 0x50)) st(w + 0, 2);
+    if (cameraRollingTactWindDirection() != 0)
+        for (u32 i = 0; i < 6; ++i)
+            mirrorX(&points[i]);
+    cXyz first;
+    cXyz second;
+    cXyz third;
+    u32 state = work->mState;
+    switch (state) {
+    case WIND_WAIT:
+        if (static_cast<s32>(work->mCounter) > static_cast<s32>(work->mFrameLimit))
+            work->mState = WIND_FOLLOW_START;
         break;
-    case 2:
-        copy3(w + 0x30, i_this + 0x44);
-        st(w + 0, 3);
-        /* fall through */
-    case 3: {
-        attentionPos(i_this, a1, ld(w + 0x20));
-        cXyz_mi(a1, a2, w + 0x30);
-        cXyz_ml(a2, a3, k);
-        cXyz_pl(w + 0x30, a2, a3);
-        copy3(w + 0x30, a2);
-        gabi::Local<u8[0x20]> line;
-        gabi::Local<cXyz> pa;
-        gabi::Local<cXyz> near;
-        gabi::Local<f32> tp;
-        u32 ln = gabi::ea(line.get()), pa_ = gabi::ea(pa.get()), nr = gabi::ea(near.get()), tt = gabi::ea(tp.get());
-        gabi::call(0x02018780, ln, w + 0x30, i_this + 0x50); /* cM3dGLin(start, end) */
-        attentionPos(i_this, pa_, ld(i_this + 0x128));
-        if (gabi::call<bool>(0x02010AE4, ln, pa_, nr, tt)) copy3(i_this + 0x44, nr); /* cM3d_Len3dSqPntAndSegLine */
-        else copy3(i_this + 0x44, w + 0x30);
-        s32 pad = (s32)ld(i_this + 0x124);
-        u32 g = gi();
-        if (ld(g + 0x5CD8 + (u32)(pad << 4)) & 0x10000) {
-            gabi::call(0x024FC0B0, i_this, a3, ld(i_this + 0x128)); /* eyePos */
-            if (ldf(i_this + 0x54) < ldf(a3 + 4)) { /* bge: taken on NaN */
-                gabi::call(0x024FC0B0, i_this, a2, ld(i_this + 0x128));
-                f32 ey = ldf(i_this + 0x54);
-                stf(i_this + 0x54, gabi::fmadds(ldf(a2 + 4) - ey, 0.05f, ey));
+    case WIND_FOLLOW_START:
+        copyPoint(&work->mCenter, &camera->mViewCache.mCenter);
+        work->mState = WIND_FOLLOW;
+        [[fallthrough]];
+    case WIND_FOLLOW: {
+        cameraRollingAttentionPos(camera, &first, work->mpBird.get());
+        cameraRollingSubtract(&first, &second, &work->mCenter);
+        cameraRollingScale(&second, &third, cushion);
+        cameraRollingAdd(&work->mCenter, &second, &third);
+        copyPoint(&work->mCenter, &second);
+        LineFrame line;
+        cXyz playerAttention;
+        cXyz nearest;
+        GuestFloat parameter;
+        cameraRollingLineCtor(&line.mLine, &work->mCenter, &camera->mViewCache.mEye);
+        cameraRollingAttentionPos(camera, &playerAttention, camera->mpPlayerActor.get());
+        if (cameraRollingNearestPoint(&line.mLine, &playerAttention, &nearest, &parameter))
+            copyPoint(&camera->mViewCache.mCenter, &nearest);
+        else
+            copyPoint(&camera->mViewCache.mCenter, &work->mCenter);
+        s32 pad = camera->mPadId;
+        if (dComIfGp_getPlayerStatus0(pad) & 0x10000) {
+            cameraRollingEyePos(camera, &third, camera->mpPlayerActor.get());
+            if (camera->mViewCache.mEye.y < third.y) {
+                cameraRollingEyePos(camera, &second, camera->mpPlayerActor.get());
+                f32 eyeY = camera->mViewCache.mEye.y;
+                camera->mViewCache.mEye.y = gabi::fmadds(second.y - eyeY, 0.05f, eyeY);
             }
         }
-        cXyz_mi(i_this + 0x50, a1, i_this + 0x44);
-        cSGlobe_Val(i_this + 0x3C, a1);
+        cameraRollingSubtract(&camera->mViewCache.mEye, &first, &camera->mViewCache.mCenter);
+        cSGlobe_Val(&camera->mViewCache.mDirection, &first);
         break;
     }
-    case 0xA:
-        relPlayer(i_this, a1, oc0, i_this + 0x44);
-        relPlayer(i_this, a1, oe0, i_this + 0x50);
-        cXyz_mi(i_this + 0x50, a1, i_this + 0x44);
-        cSGlobe_Val(i_this + 0x3C, a1);
-        st(w + 0x50, 0x1C);
-        windBlurShock(i_this, a1);
-        /* fall through */
-    case 0xB:
-        if ((s32)ld(w + 4) > (s32)ld(w + 0x50)) {
-            st(w + 0, 0xC);
-            relPlayer(i_this, a1, oc1, w + 0x30);
-            relPlayer(i_this, a1, oe1, w + 0x24);
-            cXyz_mi(w + 0x24, a1, w + 0x30);
-            cSGlobe_Val(w + 0x18, a1);
-            st(w + 0x10, ld(i_this + 0x3C));
-            stf(w + 0x74, 0.0f);
-            st(w + 0x50, 0x28);
-            st(w + 0x14, ld(i_this + 0x40));
-            stf(w + 0x70, (f32)(f64)(s32)0x334);
-            st(w + 4, 0);
+    case WIND_SIDE_START:
+        relativeToPlayer(camera, &first, &points[0], &camera->mViewCache.mCenter);
+        relativeToPlayer(camera, &first, &points[3], &camera->mViewCache.mEye);
+        cameraRollingSubtract(&camera->mViewCache.mEye, &first, &camera->mViewCache.mCenter);
+        cSGlobe_Val(&camera->mViewCache.mDirection, &first);
+        work->mFrameLimit = 28;
+        windBlurShock(camera, &first);
+        [[fallthrough]];
+    case WIND_SIDE_WAIT:
+        if (static_cast<s32>(work->mCounter) > static_cast<s32>(work->mFrameLimit)) {
+            work->mState = WIND_SIDE_SWING;
+            relativeToPlayer(camera, &first, &points[1], &work->mCenter);
+            relativeToPlayer(camera, &first, &points[4], &work->mEye);
+            cameraRollingSubtract(&work->mEye, &first, &work->mCenter);
+            cSGlobe_Val(&work->mEnd, &first);
+            auto* start = reinterpret_cast<GlobeWords*>(&work->mStart);
+            auto* view = reinterpret_cast<GlobeWords*>(&camera->mViewCache.mDirection);
+            start->mRadius = view->mRadius;
+            work->mSwingProgress = 0.0f;
+            work->mFrameLimit = 40;
+            start->mAngles = view->mAngles;
+            work->mSwingLength = 820.0f;
+            work->mCounter = 0;
         }
         break;
-    case 0xC:
-        if ((s32)ld(w + 4) < (s32)ld(w + 0x50)) {
-            f32 p = ldf(w + 0x74) + (f32)(f64)(s32)ld(w + 4);
-            f32 r = p / ldf(w + 0x70);
-            stf(w + 0x74, p);
-            f32 r0 = ldf(w + 0x10);
-            stf(i_this + 0x3C, gabi::fmadds(ldf(w + 0x18) - r0, r, r0));
-            gabi::Local<s16[4]> an;
-            gabi::Local<s16[2]> ct;
-            u32 ap = gabi::ea(an.get()), cp = gabi::ea(ct.get());
-            cSAngle_mi(w + 0x1C, ap + 4, w + 0x14);
-            cSAngle_ml(ap + 4, ap + 2, r);
-            cSAngle_pl(w + 0x14, ap + 0, ap + 2);
-            u32 res = cSAngleS(ap + 6, lds16(ap + 0));
-            st16(i_this + 0x40, (u16)lds16(res));
-            cSAngle_mi(w + 0x1E, ap + 0, w + 0x16);
-            cSAngle_ml(ap + 0, ap + 2, r);
-            cSAngle_pl(w + 0x16, ap + 4, ap + 2);
-            res = cSAngleS(cp, lds16(ap + 4));
-            st16(i_this + 0x42, (u16)lds16(res));
-            copy3(i_this + 0x44, w + 0x30);
-            cSGlobe_Xyz(i_this + 0x3C, a1);
-            cXyz_pl(i_this + 0x44, a2, a1);
-            copy3(i_this + 0x50, a2);
+    case WIND_SIDE_SWING:
+        if (static_cast<s32>(work->mCounter) < static_cast<s32>(work->mFrameLimit)) {
+            f32 progress = work->mSwingProgress +
+                           static_cast<f32>(static_cast<f64>(static_cast<s32>(work->mCounter)));
+            f32 fraction = progress / work->mSwingLength;
+            work->mSwingProgress = progress;
+            f32 startRadius = work->mStart.mRadius;
+            camera->mViewCache.mDirection.mRadius =
+                gabi::fmadds(work->mEnd.mRadius - startRadius, fraction, startRadius);
+            AngleFour angles;
+            AnglePair temporary;
+            cameraRollingAngleSubtract(&work->mEnd.mV, &angles.m2, &work->mStart.mV);
+            cameraRollingAngleScale(&angles.m2, &angles.m1, fraction);
+            cameraRollingAngleAdd(&work->mStart.mV, &angles.m0, &angles.m1);
+            auto* result = cameraRollingAngleShortCtor(&angles.m3, angles.m0);
+            camera->mViewCache.mDirection.mV = *result;
+            cameraRollingAngleSubtract(&work->mEnd.mU, &angles.m0, &work->mStart.mU);
+            cameraRollingAngleScale(&angles.m0, &angles.m1, fraction);
+            cameraRollingAngleAdd(&work->mStart.mU, &angles.m2, &angles.m1);
+            result = cameraRollingAngleShortCtor(&temporary.m0, angles.m2);
+            camera->mViewCache.mDirection.mU = *result;
+            copyPoint(&camera->mViewCache.mCenter, &work->mCenter);
+            cameraRollingGlobeXyz(&camera->mViewCache.mDirection, &first);
+            cameraRollingAdd(&camera->mViewCache.mCenter, &second, &first);
+            copyPoint(&camera->mViewCache.mEye, &second);
             break;
         }
-        /* fall through */
-    case 0xD:
-        st(w + 0x50, 0);
-        st(w + 4, 0);
-        st(w + 0, 0xE);
-        if (0 > (s32)ld(w + 0x50)) st(w + 0, 0xF);
-        relPlayer(i_this, a1, oc2, w + 0x30);
-        relPlayer(i_this, a1, oe2, w + 0x24);
+        [[fallthrough]];
+    case WIND_CLOSE_START:
+        work->mFrameLimit = 0;
+        work->mCounter = 0;
+        work->mState = WIND_CLOSE_WAIT;
+        if (static_cast<s32>(work->mFrameLimit) < 0)
+            work->mState = WIND_CLOSE_FOLLOW;
+        relativeToPlayer(camera, &first, &points[2], &work->mCenter);
+        relativeToPlayer(camera, &first, &points[5], &work->mEye);
         break;
-    case 0xE:
-        if ((s32)ld(w + 4) > (s32)ld(w + 0x50)) st(w + 0, 0xF);
-        relPlayer(i_this, a1, oc2, w + 0x30);
-        relPlayer(i_this, a1, oe2, w + 0x24);
+    case WIND_CLOSE_WAIT:
+        if (static_cast<s32>(work->mCounter) > static_cast<s32>(work->mFrameLimit))
+            work->mState = WIND_CLOSE_FOLLOW;
+        relativeToPlayer(camera, &first, &points[2], &work->mCenter);
+        relativeToPlayer(camera, &first, &points[5], &work->mEye);
         break;
-    case 0xF:
-        cXyz_mi(w + 0x30, a1, i_this + 0x44);
-        cXyz_ml(a1, a2, k);
-        gabi::call(0x028E8D88, i_this + 0x44, a2, i_this + 0x44); /* PSVECAdd */
-        cXyz_mi(w + 0x24, a2, i_this + 0x50);
-        cXyz_ml(a2, a1, k);
-        gabi::call(0x028E8D88, i_this + 0x50, a1, i_this + 0x50);
-        cXyz_mi(i_this + 0x50, a1, i_this + 0x44);
-        cSGlobe_Val(i_this + 0x3C, a1);
+    case WIND_CLOSE_FOLLOW:
+        cameraRollingSubtract(&work->mCenter, &first, &camera->mViewCache.mCenter);
+        cameraRollingScale(&first, &second, cushion);
+        cameraRollingPSVECAdd(&camera->mViewCache.mCenter, &second, &camera->mViewCache.mCenter);
+        cameraRollingSubtract(&work->mEye, &second, &camera->mViewCache.mEye);
+        cameraRollingScale(&second, &first, cushion);
+        cameraRollingPSVECAdd(&camera->mViewCache.mEye, &first, &camera->mViewCache.mEye);
+        cameraRollingSubtract(&camera->mViewCache.mEye, &first, &camera->mViewCache.mCenter);
+        cSGlobe_Val(&camera->mViewCache.mDirection, &first);
         break;
-    case 0x63:
+    case WIND_HOLD:
         break;
     default: {
-        attentionPos(i_this, a1, ld(i_this + 0x128));
-        copy3(i_this + 0x44, a1);
-        relationalPos(i_this, a1, ld(w + 0x20), w + 0x3C);
-        copy3(i_this + 0x50, a1);
-        f32 hd = gabi::call<f32>(0x024F7AC4, i_this + 0x44, i_this + 0x50); /* dCamMath::xyzHorizontalDistance */
-        windBlurShock(i_this, a1);
-        if (hd < ldf(w + 0x48)) { /* bge: taken on NaN */
-            st(w + 4, 0);
-            st(w + 0, 1);
+        cameraRollingAttentionPos(camera, &first, camera->mpPlayerActor.get());
+        copyPoint(&camera->mViewCache.mCenter, &first);
+        cameraRollingRelationalPos(camera, &first, work->mpBird.get(), &work->mTorishita);
+        copyPoint(&camera->mViewCache.mEye, &first);
+        f32 distance =
+            cameraRollingHorizontalDistance(&camera->mViewCache.mCenter, &camera->mViewCache.mEye);
+        windBlurShock(camera, &first);
+        if (distance < work->mStopDist) {
+            work->mCounter = 0;
+            work->mState = WIND_WAIT;
         }
         break;
     }
     }
-    if (ld(w + 0x58) != 0) {
-        st(i_this + 0x41C, 1);
-        stf(i_this + 0x60, 82.0f);
+    if (work->mType != 0) {
+        camera->mEventData.field_0x20 = 1;
+        camera->mViewCache.mFovy = 82.0f;
     } else {
-        positionOf(i_this, a1, ld(w + 0x20));
-        positionOf(i_this, a2, ld(i_this + 0x128));
-        cXyz_mi(a1, a3, a2);
-        f32 dist = vecLen(a3);
-        f32 near = ldf(w + 0x48);
-        f32 f;
-        if (dist < near) { /* bge: taken on NaN */
-            f32 n = ldf(w + 0x64);
-            f = gabi::fmadds(ldf(w + 0x68) - n, 0.0f, n);
+        cameraRollingPositionOf(camera, &first, work->mpBird.get());
+        cameraRollingPositionOf(camera, &second, camera->mpPlayerActor.get());
+        cameraRollingSubtract(&first, &third, &second);
+        f32 distance = vectorLength(&third);
+        f32 nearDistance = work->mStopDist;
+        f32 fovy;
+        if (distance < nearDistance) {
+            f32 nearFovy = work->mNearFovy;
+            fovy = gabi::fmadds(work->mFarFovy - nearFovy, 0.0f, nearFovy);
         } else {
-            f32 far = ldf(w + 0x5C);
-            if (!(dist > far)) ratio = (dist - near) / (far - near); /* bgt: not taken on NaN */
-            f32 n = ldf(w + 0x64);
-            f = gabi::fmadds(ldf(w + 0x68) - n, ratio, n);
+            f32 farDistance = work->mStartDistance;
+            if (!(distance > farDistance))
+                ratio = (distance - nearDistance) / (farDistance - nearDistance);
+            f32 nearFovy = work->mNearFovy;
+            fovy = gabi::fmadds(work->mFarFovy - nearFovy, ratio, nearFovy);
         }
-        f32 fv = ldf(i_this + 0x60);
-        stf(i_this + 0x60, gabi::fmadds(f - fv, ldf(w + 0x6C), fv));
+        f32 currentFovy = camera->mViewCache.mFovy;
+        camera->mViewCache.mFovy =
+            gabi::fmadds(fovy - currentFovy, work->mFovyCushion, currentFovy);
     }
-    st(w + 4, ld(w + 4) + 1);
-    setDone(i_this);
+    ++work->mCounter;
+    SkipSmoother(camera);
     return 1;
 }
-VERIFY(0x0253775C, dCamera_c_windDirectionEvCamera);
+} // namespace event_camera_rolling
+using namespace event_camera_rolling;
 
-} // namespace d_ev_camera_9_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+data rollEyeName 1004D134
+data rollCenterName 1004D140
+data rollCtrCusName 1004D148
+data rollTransTypeName 1004D16C
+data rollFovyName 1004D150
+data rollBankName 1004D158
+data rollRollName 1004D160
+data rollRadiusAddName 1004D178
+data rollLatitudeName 1004D184
+data rollTimerName 1004D138
+data rollRelUseMaskName 1004D190
+data rollRelUseMaskDefault 1004D168
+data rollRelActorName 1004D19C
+data degreesToAngle 1004CDE8
+data windBirdFlyDistName 1004D20C
+data windTorishitaName 1004D224
+data windStopDistName 1004D240
+data windUpCountName 1004D1F4
+data windSideFlagName 1004D24C
+data windFollowCushionName 1004D230
+data windNearFovyName 1004D258
+data windFarFovyName 1004D1FC
+data windFovyCushionName 1004D218
+data windTypeName 1004D204
+ext 02530634 u32 cameraRollingGetInt(dCamera_c*, GuestWord*, const char*, s32)
+ext 0253072C u32 cameraRollingGetFloat(dCamera_c*, GuestFloat*, const char*, f32)
+ext 0253086C u32 cameraRollingGetXyz(dCamera_c*, cXyz*, const char*, cXyz*)
+ext 02530998 u32 cameraRollingGetString(dCamera_c*, be<char>*, const char*, const char*)
+ext 02530B84 fopAc_ac_c* cameraRollingGetActor(dCamera_c*, const char*)
+ext 0250242C void cameraRollingRelationalPos(dCamera_c*, cXyz*, fopAc_ac_c*, cXyz*)
+ext 024F8D5C void cameraRollingPositionOf(dCamera_c*, cXyz*, fopAc_ac_c*)
+ext 024F8F3C void cameraRollingAttentionPos(dCamera_c*, cXyz*, fopAc_ac_c*)
+ext 024F8F30 void cameraRollingDirectionOf(dCamera_c*, cSAngle_l*, fopAc_ac_c*)
+ext 024FC0B0 void cameraRollingEyePos(dCamera_c*, cXyz*, fopAc_ac_c*)
+ext 0201ADE0 void cameraRollingSubtract(cXyz*, cXyz*, cXyz*)
+ext 0201AD78 void cameraRollingAdd(cXyz*, cXyz*, cXyz*)
+ext 0201AE48 void cameraRollingScale(cXyz*, cXyz*, f32)
+ext 028E8D88 void cameraRollingPSVECAdd(cXyz*, cXyz*, cXyz*)
+ext 020073AC void cameraRollingGlobeXyz(cSGlobe_l*, cXyz*)
+ext 02007324 void cameraRollingGlobeCtor(cSGlobe_l*, cXyz*)
+ext 02007178 void cameraRollingGlobeCopyCtor(cSGlobe_l*, cSGlobe_l*)
+ext 02007400 cSGlobe_l* cameraRollingGlobeInvert(cSGlobe_l*)
+ext 02006FE4 void cameraRollingGlobeSet(cSGlobe_l*, f32, s32, s32)
+ext 020068B0 void cameraRollingAngleSubtract(cSAngle_l*, cSAngle_l*, cSAngle_l*)
+ext 02006894 void cameraRollingAngleAdd(cSAngle_l*, cSAngle_l*, cSAngle_l*)
+ext 0200693C void cameraRollingAngleScale(cSAngle_l*, cSAngle_l*, f32)
+ext 020066C0 cSAngle_l* cameraRollingAngleFloatCtor(cSAngle_l*, f32)
+ext 0200658C cSAngle_l* cameraRollingAngleShortCtor(cSAngle_l*, s32)
+ext 02006720 f32 cameraRollingAngleDegree(cSAngle_l*)
+ext 028E8DD0 f32 cameraRollingSquareMag(cXyz*)
+ext 028F4384 f32 cameraRollingSqrt(f32)
+ext 024FCBE8 bool cameraRollingLineBGCheck(dCamera_c*, cXyz*, cXyz*, u32)
+ext 0257E560 u32 cameraRollingTactWindDirection()
+ext 0253EE04 fopAc_ac_c* cameraRollingConvPId(dEvt_control_c*, u32)
+ext 0250D464 void cameraRollingResetBlure(dCamera_c*, s32)
+ext 0250D4C0 void cameraRollingBlureTimer(dCamera_c*, s32)
+ext 0250D4C8 void cameraRollingBlureAlpha(dCamera_c*, f32)
+ext 0250D4D0 void cameraRollingBlureScale(dCamera_c*, f32)
+ext 02018780 void cameraRollingLineCtor(cM3dGLin*, cXyz*, cXyz*)
+ext 02010AE4 bool cameraRollingNearestPoint(cM3dGLin*, cXyz*, cXyz*, GuestFloat*)
+ext 024F7AC4 f32 cameraRollingHorizontalDistance(cXyz*, cXyz*)
+*/

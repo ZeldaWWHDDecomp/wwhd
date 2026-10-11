@@ -3,7 +3,36 @@
  * Each binding states the WWHD address and the argument/return types as the verified callers
  * use them. Names follow the GameCube decompilation where tools/decomp matched the function
  * (evidence in build/names.tsv); "HD:" marks a signature or behaviour that differs from
- * GameCube. Accessors to HD singletons replace GameCube globals. */
+ * GameCube. Accessors to HD singletons replace GameCube globals.
+ *
+ * GameCube-style sources (gc_api/, tools/verify/autoglue.py) call the GameCube form: class methods
+ * live in the layout headers (d/d_bg_s.h, d/d_particle.h, d/d_vibration.h, m_Do/m_Do_ext.h,
+ * JSystem/J3DGraph.h, gc_api/JSystem/JPAEmitter.h, ...), free GameCube functions in
+ * gc_api/<GameCube header>. The free names below that are not GameCube names stay as aliases for
+ * the raw units ("alias:" names the GameCube form; same call, same arguments):
+ *   dBgS_Regist(s, w, a)              -> s->Regist(w, a)                 (dBgS::Regist)
+ *   cBgS_Release(s, w)                -> s->Release(w)                   (cBgS::Release)
+ *   cBgW_Set(w, dzb, flags, mtx)      -> w->Set(dzb, flags, mtx)         (cBgW::Set)
+ *   dBgW_Move(w)                      -> w->Move()
+ *   cBgS_LineCross(bgs, chk)          -> bgs->LineCross(chk)             (cBgS::LineCross)
+ *   cBgS_GroundCross(bgs, chk)        -> bgs->GroundCross(chk)           (cBgS::GroundCross)
+ *   dBgS_LinChk_Set(chk, s, e, a)     -> chk->Set(s, e, a)               (dBgS_LinChk::Set)
+ *   dBgS_Acch_CrrPos(acch, bgs)       -> acch->CrrPos(bgs)
+ *   McaMorf_setAnm/entryDL/calc(m, ...) -> mDoExt_McaMorf::setAnm/entryDL/calc
+ *   dComIfGp_particle_setSimple(...)  -> dComIfGp_getParticle()->setSimple(...)  (dPa_control_c::setSimple)
+ *   dPa_smokeEcallBack_end / dPa_followEcallBack_end / dPa_rippleEcallBack_end(cb) -> cb->end()
+ *   dComIfGp_getVibration_StartShock(...) / _CheckQuake() -> dComIfGp_getVibration()->StartShock(...) / CheckQuake()
+ *   mDoMtx_stack_transM / scaleM / push / pop -> mDoMtx_stack_c::transM / scaleM / push / pop
+ *   JUT_ASSERT_fail(file, line, msg)  -> JUTAssertion::showAssert (gc_api/JSystem/JUTAssert.h)
+ * Same function as a GameCube form, but kept under their own definitions because forwarding changes
+ * the raw units' objects (the bar for this header is object identity): McaMorf_getModel
+ * (mDoExt_McaMorf::getModel), dPa_control_set (dPa_control_c::set), JPABaseEmitter_setDirection
+ * (JPABaseEmitter::setDirection), eventInfo_checkCommandDemoAccrpt / eventInfo_onCondition
+ * (a->eventInfo.checkCommandDemoAccrpt() / onCondition(c)), J3DModel_setBaseTRMtx /
+ * J3DModel_setBaseScale (J3DModel::setBaseTRMtx / setBaseScale; load/store order differs).
+ * No GameCube form here: cXyz_mi/pl/ml (cXyz operators), csXyz_ct,
+ * daObj_posMoveF_stream (daObj::posMoveF_stream is declared by the d_a_obj unit itself), dSv_event_*
+ * (dSv_event_c), the d_bg_s free helpers, std_sqrtf, cXyz_Zero. */
 #pragma once
 #include "f_op/f_op_actor.h"
 #include "wwhd.h"
@@ -12,6 +41,10 @@
 #include "d/d_cc_d.h"
 #include "m_Do/m_Do_ext.h"
 #include "d/d_npc.h"
+#include "JSystem/J3DGraph.h"
+#include "d/d_particle.h"
+#include "d/d_vibration.h"
+#include "gc_api/JSystem/JPAEmitter.h"
 
 
 /* ---- imports (Cafe OS) ---- */
@@ -29,6 +62,17 @@ struct mDoMtx_stack_c {
     static void YrotM(s16 y) { mDoMtx_YrotM(get(), y); }
     static void transM(f32 x, f32 y, f32 z) { gabi::call(0x025F24E0, x, y, z); }
     static void scaleM(f32 x, f32 y, f32 z) { gabi::call(0x025F2518, x, y, z); }
+    /* GameCube-named inlines on `now` (gc_api) [v nz] */
+    static void transS(const cXyz& p) { transS(p.x, p.y, p.z); }
+    static void copy(const Mtx34* m) { gabi::call(0x028E90D4, m, get()); }               /* PSMTXCopy */
+    static void XrotM(s16 x) { gabi::call(0x025F1BF4, get(), x); }                      /* mDoMtx_XrotM */
+    static void ZrotM(s16 z) { gabi::call(0x025F1C5C, get(), z); }                      /* mDoMtx_ZrotM */
+    static void YrotS(s16 y) { gabi::call(0x025F1884, get(), y); }                      /* mDoMtx_YrotS */
+    static void ZXYrotM(const csXyz& a) { gabi::call(0x025F1B48, get(), (s16)a.x, (s16)a.y, (s16)a.z); }
+    static void multVec(const cXyz* a, cXyz* b) { gabi::call(0x028E8F64, get(), a, b); } /* PSMTXMultVec */
+    static void quatM(const Quaternion* q) { gabi::call(0x025F25CC, q); }                /* HD: `now` implied [v lpalm] */
+    static void push() { gabi::call(0x025F23EC); }                                     /* 025F23EC [v ladder] */
+    static void pop() { gabi::call(0x025F2468); }                                      /* 025F2468 [v ladder] */
 };
 
 /* ---- J3D / m_Do_ext ---- */
@@ -58,15 +102,16 @@ enum { TEV_TYPE_ACTOR = 0, TEV_TYPE_BG0 = 1 };
 /* ---- collision ---- */
 /* HD: GHS constructors allocate when called with this == NULL: `new dBgW()` is dBgW::dBgW(NULL) */
 inline dBgW* new_dBgW() { return gabi::call<dBgW*>(0x024F23F4, (u32)0); }
-inline bool cBgW_Set(dBgW* w, cBgD_t* data, u32 flags, Mtx34* mtx) { return gabi::call<bool>(0x0200A030, w, data, flags, mtx); }
+inline bool cBgW_Set(dBgW* w, cBgD_t* data, u32 flags, Mtx34* mtx) { return w->Set(data, flags, mtx); }   /* alias: cBgW::Set */
 enum { cBgW_MOVE_BG_e = 1 };
-inline void dBgW_Move(dBgW* w) { gabi::call(0x024F43DC, w); }
-inline BOOL dBgS_Regist(dBgS* s, dBgW* w, fopAc_ac_c* actor) { return gabi::call<BOOL>(0x024EEA6C, s, w, actor); }
-inline BOOL cBgS_Release(dBgS* s, dBgW* w) { return gabi::call<BOOL>(0x020087EC, s, w); }
+inline void dBgW_Move(dBgW* w) { w->Move(); }                                                             /* alias: dBgW::Move */
+inline BOOL dBgS_Regist(dBgS* s, dBgW* w, fopAc_ac_c* actor) { return s->Regist(w, actor); }              /* alias: dBgS::Regist */
+inline BOOL cBgS_Release(dBgS* s, dBgW* w) { return s->Release(w); }                                      /* alias: cBgS::Release */
 
 /* ---- d_com_inf_game: see d/d_com_inf_game.h ---- */
 
 /* ---- JUT ---- */
+/* alias: JUTAssertion::showAssert (gc_api/JSystem/JUTAssert.h) */
 inline void JUT_ASSERT_fail(const char* file, s32 line, const char* msg) { gabi::call(0x0273AA24, file, line, msg); }
 
 /* ---- audio ---- */
@@ -132,20 +177,21 @@ inline s16 REG_S(int child, int i) { return gabi::load<s16>(0x1047B688 + 0x90 * 
 /* collision */
 inline void cBgS_LinChk_ct(void* chk) { gabi::call(0x02008FEC, chk); }
 inline void cBgS_LinChk_dt(void* chk, s32 flags) { gabi::call(0x02008B4C, chk, flags); }
-inline void dBgS_LinChk_Set(void* chk, cXyz* start, cXyz* end, fopAc_ac_c* actor) { gabi::call(0x024F1AFC, chk, start, end, actor); }
-inline BOOL cBgS_LineCross(dBgS* bgs, void* chk) { return gabi::call<BOOL>(0x02008860, bgs, chk); }
-inline void dBgS_Acch_CrrPos(void* acch, dBgS* bgs) { gabi::call(0x024F08A8, acch, bgs); }
+inline void dBgS_LinChk_Set(void* chk, cXyz* start, cXyz* end, fopAc_ac_c* actor) { ((dBgS_LinChk*)chk)->Set(start, end, actor); } /* alias */
+inline BOOL cBgS_LineCross(dBgS* bgs, void* chk) { return bgs->LineCross((dBgS_LinChk*)chk); }               /* alias: cBgS::LineCross */
+inline void dBgS_Acch_CrrPos(void* acch, dBgS* bgs) { ((dBgS_Acch*)acch)->CrrPos(bgs); }                     /* alias: dBgS_Acch::CrrPos */
 
 /* J3D (HD) */
 inline J3DJoint* J3DNode_toJoint(J3DNode* n) { return gabi::call<J3DJoint*>(0x027F7878, n); }
 
-/* mDoExt_McaMorf (HD layout: model at +0x90) */
-inline J3DModel* McaMorf_getModel(mDoExt_McaMorf_c* m) { return gabi::at<J3DModel>(gabi::load<u32>(gabi::ea(m) + 0x90)); }
+/* mDoExt_McaMorf (HD layout: model at +0x90); aliases of the mDoExt_McaMorf methods (m_Do/m_Do_ext.h) */
+inline mDoExt_McaMorf* McaMorf(mDoExt_McaMorf_c* m) { return (mDoExt_McaMorf*)m; }
+inline J3DModel* McaMorf_getModel(mDoExt_McaMorf_c* m) { return gabi::at<J3DModel>(gabi::load<u32>(gabi::ea(m) + 0x90)); } /* = getModel() */
 inline void McaMorf_setAnm(mDoExt_McaMorf_c* m, J3DAnmTransform* anm, s32 loopMode, f32 morf, f32 speed, f32 start, f32 end, void* sound) {
-    gabi::call(0x025E4A98, m, anm, loopMode, morf, speed, start, end, sound);
+    McaMorf(m)->setAnm(anm, loopMode, morf, speed, start, end, sound);
 }
-inline void McaMorf_entryDL(mDoExt_McaMorf_c* m) { gabi::call(0x025E5590, m); }
-inline void McaMorf_calc(mDoExt_McaMorf_c* m) { gabi::call(0x025E55A0, m); }
+inline void McaMorf_entryDL(mDoExt_McaMorf_c* m) { McaMorf(m)->entryDL(); }
+inline void McaMorf_calc(mDoExt_McaMorf_c* m) { McaMorf(m)->calc(); }
 
 /* snap, HIO */
 inline void dSnap_RegistFig(s32 type, fopAc_ac_c* a, f32 x, f32 y, f32 z) { gabi::call(0x025BED80, type, a, x, y, z); }
@@ -157,9 +203,8 @@ inline void mDoHIO_deleteChild(s8 no) { gabi::call(0x025F0A18, no); }
  * [g] = GameCube signature, not yet exercised (the harness checks it on first use).
  * Result types: GameCube types; s16/u8/bool where the WWHD code returns that width.
  * ===================================================================================== */
-WWHD_OPAQUE(cBgS_GndChk);
-WWHD_OPAQUE(cBgS_LinChk);
-WWHD_OPAQUE(dSv_event_c);
+/* cBgS_GndChk, cBgS_LinChk: d/d_bg_s.h */
+/* dSv_event_c: d/d_save.h */
 
 /* ---- operator new/delete (HD: GHS runtime) ---- */
 inline void* operator_new(u32 size) { return gabi::call<void*>(0x0273AD10, size); }   /* [v] constructors */
@@ -229,8 +274,8 @@ inline void PSMTXMultVec(const Mtx34* m, const cXyz* in, cXyz* out) { gabi::call
 inline void PSMTXMultVecSR(const Mtx34* m, const cXyz* in, cXyz* out) { gabi::call(0x028E9044, m, in, out); }   /* [g] */
 inline void mDoMtx_ZXYrotM(Mtx34* m, s16 x, s16 y, s16 z) { gabi::call(0x025F1B48, m, x, y, z); }      /* [g] */
 /* mDoMtx_stack_c::transM / scaleM: static, on mDoMtx_stack_c::now (no `this`) */
-inline void mDoMtx_stack_transM(f32 x, f32 y, f32 z) { gabi::call(0x025F24E0, x, y, z); } /* [g] */
-inline void mDoMtx_stack_scaleM(f32 x, f32 y, f32 z) { gabi::call(0x025F2518, x, y, z); } /* [v spotbox] */
+inline void mDoMtx_stack_transM(f32 x, f32 y, f32 z) { mDoMtx_stack_c::transM(x, y, z); } /* alias [g] */
+inline void mDoMtx_stack_scaleM(f32 x, f32 y, f32 z) { mDoMtx_stack_c::scaleM(x, y, z); } /* alias [v spotbox] */
 inline void MtxScale(f32 x, f32 y, f32 z, u8 concat) { gabi::call(0x0200FC74, x, y, z, concat); }      /* [g] */
 inline void MtxPush() { gabi::call(0x0200FCF0); }                                                      /* [g] */
 inline void MtxPull() { gabi::call(0x0200FD38); }                                                      /* [g] */
@@ -238,48 +283,32 @@ inline void MtxPull() { gabi::call(0x0200FD38); }                               
 /* ---- save events (dSv_event_c in the save info) ---- */
 /* HD: dComIfGs_isEventBit(flag) = dSv_event_c::isEventBit(&info.mSavedata.mEvent, flag); the
  * event block's address is still to be confirmed by a verified function: pass it explicitly */
-inline BOOL dSv_event_isEventBit(dSv_event_c* ev, u16 flag) { return gabi::call<BOOL>(0x025B8B94, ev, flag); } /* [g] */
-inline void dSv_event_onEventBit(dSv_event_c* ev, u16 flag) { gabi::call(0x025B8B68, ev, flag); }             /* [g] */
-inline u8 dSv_event_getEventReg(dSv_event_c* ev, u16 reg) { return gabi::call<u8>(0x025B8BB0, ev, reg); }     /* [g] */
-inline void dSv_event_setEventReg(dSv_event_c* ev, u16 reg, u8 v) { gabi::call(0x025B8AF4, ev, reg, v); }     /* [g] */
+/* aliases of the dSv_event_c methods (d/d_save.h) */
+inline BOOL dSv_event_isEventBit(dSv_event_c* ev, u16 flag) { return ev->isEventBit(flag); }
+inline void dSv_event_onEventBit(dSv_event_c* ev, u16 flag) { ev->onEventBit(flag); }
+inline u8 dSv_event_getEventReg(dSv_event_c* ev, u16 reg) { return ev->getEventReg(reg); }
+inline void dSv_event_setEventReg(dSv_event_c* ev, u16 reg, u8 v) { ev->setEventReg(reg, v); }
 
 /* ---- environment ---- */
 inline BOOL dKy_daynight_check() { return gabi::call<BOOL>(0x02556D14); }  /* [g] */
 inline s32 dKy_rain_check() { return gabi::call<s32>(0x0256019C); }        /* [v kamome] */
-inline f32 dComIfGs_getTime() { return gabi::load<f32>(gabi::load<u32>(0x101F84DC) + 0x44); } /* [v kamome] */
+inline f32 dComIfGs_getTime() { return gabi::load<f32>(gabi::load<u32>(0x101F84DC) + SAVE_OFF(mSavedata.mPlayer.mPlayerStatusB.mTime)); } /* [v kamome] */
 inline BOOL daSea_ChkArea(f32 x, f32 z) { return gabi::call<BOOL>(0x0246B6A4, x, z); }  /* [v kamome] */
 inline f32 daSea_calcWave(f32 x, f32 z) { return gabi::call<f32>(0x0246BA0C, x, z); }   /* [v kamome] */
 inline f32 dBgS_GetWaterHeight(cXyz* pos) { return gabi::call<f32>(0x024F17D4, pos); }  /* [v kamome] */
 inline f32 cBgS_GroundCross(dBgS* bgs, void* chk) { return gabi::call<f32>(0x02008974, bgs, chk); } /* [v kamome] */
 inline void fopKyM_createWpillar(const cXyz* pos, f32 sx, f32 sz, s32 p) { gabi::call(0x025DAE64, pos, sx, sz, p); } /* [g] */
 
-/* ---- particles (dPa_control_c* at play+PLAY_PARTICLE) ---- */
-/* 025A847C dPa_control_c::set(u8 grp, u16 id, pos, angle, scale, u8 alpha, cb, s8 setupInfo, prmColor,
- * envColor, scale2D) [g] [v lamp: this = dComIfGp_getParticle(), grp 0, setup -1 on the stack] */
+/* ---- particles (dPa_control_c* at play+PLAY_PARTICLE; layouts and methods: d/d_particle.h) ---- */
 inline JPABaseEmitter* dPa_control_set(dPa_control_c* pa, u8 grp, u16 id, const cXyz* pos, const csXyz* angle,
                                        const cXyz* scale, u8 alpha, dPa_levelEcallBack* cb, s8 setup,
                                        const GXColor* prm, const GXColor* env, const cXyz* scale2D) {
+    /* = pa->set(...) (dPa_control_c::set); kept as its own call: forwarding changes the raw objects */
     return gabi::call<JPABaseEmitter*>(0x025A847C, pa, grp, id, pos, angle, scale, alpha, cb, setup, prm, env, scale2D);
 }
-WWHD_OPAQUE(dPa_smokeEcallBack);
-WWHD_OPAQUE(dPa_rippleEcallBack);
-/* dPa_followEcallBack (0x14, HD: vtable at +0; constructor 025A5894(this, u8, u8)) [v lamp] */
-struct dPa_followEcallBack {
-    /* 0x00 */ be<u32> __vtbl;
-    /* 0x04 */ gptr<JPABaseEmitter> mpEmitter;
-    /* 0x08 */ be<u32> m08;
-    /* 0x0C */ be<u32> m0C;
-    /* 0x10 */ be<u8> m10;
-    /* 0x11 */ be<u8> m11;
-    /* 0x12 */ be<u8> m12;
-    /* 0x13 */ be<u8> m13;
-    JPABaseEmitter* getEmitter() { return mpEmitter; }
-    /* remove(): virtual (vtable +0x44) */
-    void remove() { gabi::call_ptr(gabi::load<u32>(__vtbl + 0x44), this); }
-};
-WWHD_SIZE(dPa_followEcallBack, 0x14);
 inline void dPa_followEcallBack_ct(dPa_followEcallBack* p, u8 a, u8 b) { gabi::call(0x025A5894, p, a, b); }
-/* JPABaseEmitter::setDirection (inline): direction at +0x28 (HD) [v lamp] */
+/* = JPABaseEmitter::setDirection (gc_api/JSystem/JPAEmitter.h): direction at +0x28 (HD) [v lamp]; kept as
+ * its own stores: forwarding changes the raw objects */
 inline void JPABaseEmitter_setDirection(JPABaseEmitter* e, f32 x, f32 y, f32 z) {
     gabi::store<f32>(gabi::ea(e) + 0x28, x);
     gabi::store<f32>(gabi::ea(e) + 0x2C, y);
@@ -297,11 +326,11 @@ inline JPABaseEmitter* dComIfGp_particle_set(u16 id, const cXyz* pos, const csXy
 inline BOOL dComIfGp_particle_setSimple(u16 id, const cXyz* pos, u8 alpha = 0xFF, const GXColor* prm = gabi::at<GXColor>(0x101D5E98),
                                         const GXColor* env = gabi::at<GXColor>(0x101D5E98), s32 p = 0) {
     dPa_control_c* pa = dComIfGp_getParticle();
-    return gabi::call<BOOL>(0x025A8D40, pa, id, pos, alpha, prm, env, p);
+    return pa->setSimple(id, pos, alpha, *prm, *env, p);
 }
-inline void dPa_smokeEcallBack_end(dPa_smokeEcallBack* cb) { gabi::call(0x025A5F88, cb); }    /* [g] */
-inline void dPa_followEcallBack_end(dPa_followEcallBack* cb) { gabi::call(0x025A5AC8, cb); }  /* [g] */
-inline void dPa_rippleEcallBack_end(dPa_rippleEcallBack* cb) { gabi::call(0x025A9270, cb); }  /* [g] */
+inline void dPa_smokeEcallBack_end(dPa_smokeEcallBack* cb) { cb->end(); }    /* alias [g] */
+inline void dPa_followEcallBack_end(dPa_followEcallBack* cb) { cb->end(); }  /* alias [g] */
+inline void dPa_rippleEcallBack_end(dPa_rippleEcallBack* cb) { cb->end(); }  /* alias [g] */
 
 /* ---- point lights (d_kankyo) ---- */
 /* LIGHT_INFLUENCE, HD 0x24 (GameCube 0x20): +0x20 an HD float, 1.0 after construction [v lamp] */
@@ -322,7 +351,7 @@ inline void MtxRotX(f32 rad, u8 concat) { gabi::call(0x0200FB3C, rad, concat); }
 inline void MtxRotZ(f32 rad, u8 concat) { gabi::call(0x0200FC0C, rad, concat); }  /* [v lamp] */
 
 /* ---- audio / vibration ---- */
-inline BOOL dComIfGp_getVibration_CheckQuake() { return gabi::call<BOOL>(0x025CB66C, dComIfGp_getVibration()); } /* [v lamp] */
+inline BOOL dComIfGp_getVibration_CheckQuake() { return dComIfGp_getVibration()->CheckQuake(); } /* alias [v lamp] */
 inline void mDoAud_seDeleteObject(cXyz* pos) { gabi::call(0x025E1B34, pos); } /* 025E1B34 JAIZelBasic::seDeleteObject: HD static? [g] */
 
 /* ---- per-TU static initialisation (HD) ----
@@ -337,6 +366,19 @@ inline void sinit_header_statics_z(u32 P, u32 D, u32 Z) {
     __register_global_object(D);
     gabi::store<f32>(P, -3.1415927f);
     gabi::store<f32>(P + 4, 3.1415927f);
+    gabi::call(0x028ED6F8, P + 8);
+    __register_global_object(D + 0xC);
+    gabi::call(0x028EAB2C, P + 9);
+    __register_global_object(D + 0x18);
+}
+/* the same statics where the TU copies the pi pair from .rodata (PI, PI + 4) instead of storing
+ * constants; Z is the 16-byte zeroed object [v f_pc_base] */
+inline void sinit_header_statics_rodata(u32 P, u32 D, u32 Z, u32 PI) {
+    for (int i = 0; i < 4; i++) gabi::store<u32>(Z + 4 * i, 0);
+    __register_global_object(D);
+    f32 lo = gabi::load<f32>(PI), hi = gabi::load<f32>(PI + 4);
+    gabi::store<f32>(P, lo);
+    gabi::store<f32>(P + 4, hi);
     gabi::call(0x028ED6F8, P + 8);
     __register_global_object(D + 0xC);
     gabi::call(0x028EAB2C, P + 9);
@@ -358,11 +400,11 @@ inline void sinit_header_statics(u32 P, u32 D) {
 inline fpc_ProcID fopAcM_createItemFromTable(cXyz* pos, s32 tbl, s32 bitNo, s32 roomNo, s32 type, csXyz* angle, s32 action, cXyz* scale = nullptr) {
     return gabi::call<fpc_ProcID>(0x025D8120, pos, tbl, bitNo, roomNo, type, angle, action, scale);
 }
-inline BOOL dComIfGs_isItem(s32 bitNo, s32 roomNo) { return gabi::call<BOOL>(0x025BA494, dComIfGs_info(), bitNo, roomNo); } /* [v switem] */
+inline BOOL dComIfGs_isItem(s32 bitNo, s32 roomNo) { return dComIfGs_info()->isItem(bitNo, roomNo); } /* alias: dSv_info_c::isItem [v switem] */
 inline BOOL fopAcM_isItem(fopAc_ac_c* a, s32 bitNo) { return dComIfGs_isItem(bitNo, a->home.roomNo); }      /* [v switem] home room */
 inline BOOL isRupee(u8 itemNo) { return gabi::call<BOOL>(0x02551044, itemNo); }                                /* [v switem] */
-/* dComIfGp_getItemTable(): play+0x5D24 [v switem] */
-inline u32 dComIfGp_getItemTable() { return gabi::load<u32>(dComIfGp_ea() + 0x5D24); }
+/* dComIfGp_getItemTable(): dComIfG_play_c::mpItemTable [v switem] */
+inline u32 dComIfGp_getItemTable() { return gabi::load<u32>(dComIfGp_ea() + PLAY_OFF(mpItemTable)); }
 /* 0201A478 csXyz::csXyz(s16, s16, s16) (out of line) [v switem] */
 inline csXyz* csXyz_ct(csXyz* p, s16 x, s16 y, s16 z) { return gabi::call<csXyz*>(0x0201A478, p, x, y, z); } /* returns this */
 /* fopAcM_offDraw: fopDwTg_DrawQTo(&draw_tag) (draw_tag at +0xDC) [v switem] */
@@ -374,6 +416,12 @@ inline void dComIfGd_setListBG() {
     gabi::store<u32>(0x104B4634, gabi::load<u32>(dComIfGp_ea() + 0x5D70));
     gabi::store<u32>(0x104B4638, gabi::load<u32>(dComIfGp_ea() + 0x5D74));
 }
+/* the sky lists (draw list +0x1C/+0x20: play+0x5D4C/0x5D50) [v bgn] */
+inline void dComIfGd_setListSky() {
+    gabi::store<u32>(0x104B4634, gabi::load<u32>(dComIfGp_ea() + 0x5D4C));
+    gabi::store<u32>(0x104B4638, gabi::load<u32>(dComIfGp_ea() + 0x5D50));
+}
+inline J3DDrawBuffer* dComIfGd_getOpaListSky() { return gabi::at<J3DDrawBuffer>(gabi::load<u32>(dComIfGp_ea() + 0x5D4C)); }
 inline void dComIfGd_setList() {
     gabi::store<u32>(0x104B4634, gabi::load<u32>(dComIfGp_ea() + 0x5D78));
     gabi::store<u32>(0x104B4638, gabi::load<u32>(dComIfGp_ea() + 0x5D7C));
@@ -404,18 +452,19 @@ inline void ptmf_call(u32 entry, void* self) {
 inline BOOL fopAcM_isSwitch(fopAc_ac_c* a, s32 sw) { return dComIfGs_isSwitch(sw, a->home.roomNo); }   /* [v ladder] home room */
 /* dComIfGp_evmng_existence(idx): getEventData(idx) != NULL [v ladder] */
 inline bool dComIfGp_evmng_existence(s16 idx) { return gabi::call<u32>(0x02544044, dComIfGp_getPEvtManager(), idx) != 0; }
-/* dComIfGp_event_reset(): the event control's flag word (play+0x52B8) |= 8 [v ladder] */
+/* dComIfGp_event_reset(): dEvt_control_c::reset, mEventFlag |= 8 [v ladder] */
 inline void dComIfGp_event_reset() {
-    u32 a = dComIfGp_ea() + 0x52B8;
+    u32 a = dComIfGp_ea() + PLAY_OFF(mEvtCtrl.mEventFlag);
     gabi::store<u16>(a, (u16)(gabi::load<u16>(a) | 8));
 }
 /* dEvt_info_c eventInfo at actor+0xF8: mCommand (u16) +0xF8, mCondition (u16) +0xFA [v ladder] */
+/* = a->eventInfo.checkCommandDemoAccrpt() / a->eventInfo.onCondition(c) (raw forms kept: object identity) */
 inline bool eventInfo_checkCommandDemoAccrpt(fopAc_ac_c* a) { return gabi::load<u16>(gabi::ea(a) + 0xF8) == 2; }
 inline void eventInfo_onCondition(fopAc_ac_c* a, u16 c) { u32 p = gabi::ea(a) + 0xFA; gabi::store<u16>(p, (u16)(gabi::load<u16>(p) | c)); }
 /* 025CB374 dVibration_c::StartShock(int, int, cXyz) (cXyz by value: pointer to a copy) [v ladder] */
-inline BOOL dComIfGp_getVibration_StartShock(s32 strength, s32 flags, cXyz* pos) { return gabi::call<BOOL>(0x025CB374, dComIfGp_getVibration(), strength, flags, pos); }
-inline void mDoMtx_stack_push() { gabi::call(0x025F23EC); }  /* [v ladder] */
-inline void mDoMtx_stack_pop() { gabi::call(0x025F2468); }   /* [v ladder] */
+inline BOOL dComIfGp_getVibration_StartShock(s32 strength, s32 flags, cXyz* pos) { return dComIfGp_getVibration()->StartShock(strength, flags, pos); } /* alias */
+inline void mDoMtx_stack_push() { mDoMtx_stack_c::push(); }  /* alias [v ladder] */
+inline void mDoMtx_stack_pop() { mDoMtx_stack_c::pop(); }    /* alias [v ladder] */
 /* cXyz::Zero (0x101FFBA8) [v ladder] */
 #define cXyz_Zero gabi::at<cXyz>(0x101FFBA8)
 /* 023123C0 daObj::posMoveF_stream(actor, const cXyz* ccMove, const cXyz* stream, f32 k1, f32 k2) [v ladder] */

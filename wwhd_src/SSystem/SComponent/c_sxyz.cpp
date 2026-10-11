@@ -1,74 +1,68 @@
-#include "SSystem/SComponent/c_xyz.h"
-using gabi::load; using gabi::store;
-// Explicit six-byte aggregate return ABI: r3 contains x/y, r4 high half z.
-struct SxyzResult { u32 xy; u16 z; };
-namespace gabi {
-template<> constexpr RetKind ret_kind<SxyzResult>() { return RET_AGG6; }
-template<> inline void store_ret<SxyzResult>(Cpu* c,SxyzResult value) { c->r[3]=value.xy; c->r[4]=u32(value.z)<<16; }
-template<> inline SxyzResult result<SxyzResult>(Cpu* c) { return {c->r[3],u16(c->r[4]>>16)}; }
+/** Short-coordinate vector arithmetic. WWHD, verified unit c_sxyz. */
+#include "SSystem/SComponent/c_sxyz.h"
+
+/* 0201A478 */
+csXyz* csXyz__ct(csXyz* i_this, s16 param_0, s16 param_1, s16 param_2) {
+    // HD: GHS allocates on a NULL this and writes y before x.
+    if (i_this == NULL) {
+        i_this = static_cast<csXyz*>(csXyz_allocate(sizeof(csXyz)));
+    }
+    if (i_this != NULL) {
+        i_this->y = param_1;
+        i_this->x = param_0;
+        i_this->z = param_2;
+    }
+    return i_this;
 }
-void* sxyz_construct(void* object,s16 x,s16 y,s16 z) {
- WWHD_FUNC(0x0201A478,void*,object,x,y,z);
- if(!gabi::ea(object)) object=gabi::call<void*>(0x0273AD10,6);
- if(gabi::ea(object)) {
-  store<s16>(gabi::ea(object)+2,y);
-  store<s16>(gabi::ea(object),x);
-  store<s16>(gabi::ea(object)+4,z);
- }
- return object;
+
+static SxyzResult vectorResult(const csXyz* result) {
+    return {u32(u16(result->x)) << 16 | u16(result->y), u16(result->z)};
 }
-VERIFY(0x0201A478,sxyz_construct);
-SxyzResult sxyz_add(void* left,void* right) {
- WWHD_FUNC(0x0201A4DC,SxyzResult,left,right);
- s16 x=s16(s32(load<s16>(gabi::ea(left)))+load<s16>(gabi::ea(right)));
- s16 z=s16(s32(load<s16>(gabi::ea(left)+4))+load<s16>(gabi::ea(right)+4));
- s16 y=s16(s32(load<s16>(gabi::ea(left)+2))+load<s16>(gabi::ea(right)+2));
- gabi::Local<csXyz> temporary;
- void* result=sxyz_construct(temporary.get(),x,y,z);
- u32 a=gabi::ea(result);
- return {u32(load<u16>(a))<<16 | load<u16>(a+2),load<u16>(a+4)};
+
+/* 0201A4DC */
+SxyzResult csXyz_Add(csXyz* i_this, csXyz* param_0) {
+    // HD: the original reads x, z, then y before constructing the return object.
+    s16 x = s16(s32(i_this->x) + s16(param_0->x));
+    s16 z = s16(s32(i_this->z) + s16(param_0->z));
+    s16 y = s16(s32(i_this->y) + s16(param_0->y));
+    gabi::Local<csXyz> temporary;
+    csXyz* result = csXyz__ct(temporary.get(), x, y, z);
+    return vectorResult(result);
 }
-VERIFY(0x0201A4DC,sxyz_add);
-void sxyz_add_assign(void* left,void* right) {
- WWHD_FUNC(0x0201A554,void,left,right);
- u32 a=gabi::ea(left),b=gabi::ea(right);
- s32 x=load<s16>(a)+load<s16>(b);
- s32 y=load<s16>(a+2);
- store<s16>(a,s16(x));
- y+=load<s16>(b+2);
- s32 z=load<s16>(a+4);
- store<s16>(a+2,s16(y));
- z+=load<s16>(b+4);
- store<s16>(a+4,s16(z));
+
+/* 0201A554 */
+void csXyz_AddAssign(csXyz* i_this, csXyz* param_0) {
+    // HD: retain the interleaved loads and stores when the vectors overlap.
+    s32 x = s16(i_this->x) + s16(param_0->x);
+    s32 y = i_this->y;
+    i_this->x = s16(x);
+    y += s16(param_0->y);
+    s32 z = i_this->z;
+    i_this->y = s16(y);
+    z += s16(param_0->z);
+    i_this->z = s16(z);
 }
-VERIFY(0x0201A554,sxyz_add_assign);
-SxyzResult sxyz_scale(void* object,f32 scale) {
- WWHD_FUNC(0x0201A588,SxyzResult,object,scale);
- s16 x=s16(gabi::ftoi(f32(load<s16>(gabi::ea(object)))*scale));
- s16 y=s16(gabi::ftoi(f32(load<s16>(gabi::ea(object)+2))*scale));
- s16 z=s16(gabi::ftoi(f32(load<s16>(gabi::ea(object)+4))*scale));
- gabi::Local<csXyz> temporary;
- void* result=sxyz_construct(temporary.get(),x,y,z);
- u32 a=gabi::ea(result);
- return {u32(load<u16>(a))<<16 | load<u16>(a+2),load<u16>(a+4)};
+
+/* 0201A588 */
+SxyzResult csXyz_Multiply(csXyz* i_this, f32 param_0) {
+    s16 x = s16(gabi::ftoi(f32(s16(i_this->x)) * param_0));
+    s16 y = s16(gabi::ftoi(f32(s16(i_this->y)) * param_0));
+    s16 z = s16(gabi::ftoi(f32(s16(i_this->z)) * param_0));
+    gabi::Local<csXyz> temporary;
+    csXyz* result = csXyz__ct(temporary.get(), x, y, z);
+    return vectorResult(result);
 }
-VERIFY(0x0201A588,sxyz_scale);
-// HD math/header globals and their registration records.
-void sxyz_static_init() {
- WWHD_FUNC(0x0201A668,void);
- store<u32>(0x101FFB0C,0);
- store<u32>(0x101FFB04,0);
- store<u32>(0x101FFB10,0);
- store<u32>(0x101FFB08,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018D3AC));
- f32 first=load<f32>(0x100036BC);
- f32 second=load<f32>(0x100036C0);
- store<f32>(0x101FFAF8,first);
- store<f32>(0x101FFAFC,second);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FFB00));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018D3B8));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FFB01));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018D3C4));
- sxyz_construct(gabi::at<void>(0x101FFB14),0,0,0);
+
+static csXyz Zero;
+
+/* 0201A668 */
+// HD: header statics, destructor registrations, then csXyz::Zero.
+static void __sinit_c_sxyz_cpp() {
+    sinit_header_statics_rodata(0x101FFAF8, 0x1018D3AC, 0x101FFB04, 0x100036BC);
+    csXyz__ct(&Zero, 0, 0, 0);
 }
-VERIFY(0x0201A668,sxyz_static_init);
+
+/* WWHD glue (tools/verify/autoglue.py): HD allocation and vector zero instance
+ext 0273AD10 void* csXyz_allocate(u32)
+data Zero 101FFB14
+*/

@@ -1,67 +1,111 @@
-#include "wwhd.h"
-#include "gabi.h"
+/** Base background collision checks. */
+#include "SSystem/SComponent/c_bg_s_chk.h"
+// HD: GHS base vtable copy.
+enum : u32 { checkVtable = 0x10000E80 };
 
-// HD base layout: pass-check pointers+0/+4, actor ID+8, flag+C, vtable+10; size14.
-void cBgS_Chk_delete(void* object,s32 flags) {
- WWHD_FUNC(0x02008B4C,void,object,flags);
- if(object && (u32(flags)&1)) gabi::call<void>(0x0273AF40,object);
+/* 02008B4C */
+// HD: empty base deleting destructor tests the low GHS flag bit.
+static void cBgS_Chk__dt(cBgS_Chk *object, s32 flags) {
+    if (object != NULL && ((u32)flags & 1))
+        operator_delete(object);
 }
-VERIFY(0x02008B4C,cBgS_Chk_delete);
-void* cBgS_Chk_ctor(void* object) {
- WWHD_FUNC(0x02008B60,void*,object);
- if(!object) object=gabi::call<void*>(0x0273AD10,0x14);
- if(object) {
-  u32 a=gabi::ea(object);
-  gabi::store<u32>(a+8,0);gabi::store<u32>(a,0);gabi::store<u32>(a+4,0);
-  gabi::store<u32>(a+0x10,0x10000E80);gabi::store<u8>(a+0xC,1);
- }
- return object;
-}
-VERIFY(0x02008B60,cBgS_Chk_ctor);
-u8 cBgS_Chk_ChkSameActorPid(void* object,u32 pid) {
- WWHD_FUNC(0x02008BB8,u8,object,pid);
- u32 actor=gabi::load<u32>(gabi::ea(object)+8);
- if(actor==0xFFFFFFFF || pid==0xFFFFFFFF || !gabi::load<u8>(gabi::ea(object)+0xC)) return 0;
- return actor==pid;
-}
-VERIFY(0x02008BB8,cBgS_Chk_ChkSameActorPid);
-void c_bg_s_chk_static_init() {
- WWHD_FUNC(0x02008BF0,void);
- gabi::store<u32>(0x101FF400,0);gabi::store<u32>(0x101FF3F8,0);gabi::store<u32>(0x101FF404,0);gabi::store<u32>(0x101FF3FC,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C54C));
- f32 negativePi=gabi::load<f32>(0x10000E74),positivePi=gabi::load<f32>(0x10000E78);
- gabi::store<f32>(0x101FF3EC,negativePi);gabi::store<f32>(0x101FF3F0,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF3F4));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C558));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF3F5));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C564));
-}
-VERIFY(0x02008BF0,c_bg_s_chk_static_init);
 
-/* ---- hosted here: the static initializer(s) of two separate header-static-only TUs linked between c_bg_s_chk and c_bg_s_gnd_chk (names unknown).
- * Each only initializes the shared header statics (zeroed 16-byte object, -pi/pi pair, two
- * registered global objects); no code of their own. ---- */
-void hd_static_init_02008C84() {
- WWHD_FUNC(0x02008C84,void);
- gabi::store<u32>(0x101FF41C,0);gabi::store<u32>(0x101FF414,0);gabi::store<u32>(0x101FF420,0);gabi::store<u32>(0x101FF418,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C570));
- f32 negativePi=gabi::load<f32>(0x10000EA0),positivePi=gabi::load<f32>(0x10000EA4);
- gabi::store<f32>(0x101FF408,negativePi);gabi::store<f32>(0x101FF40C,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF410));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C57C));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF411));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C588));
+/* 02008B60 */
+// HD: allocating constructor also initializes mActorPid to zero.
+static cBgS_Chk *cBgS_Chk__ct(cBgS_Chk *object) {
+    if (object == NULL)
+        object = (cBgS_Chk *)operator_new(sizeof(cBgS_Chk));
+    if (object != NULL) {
+        object->mActorPid = 0;
+        object->mPolyPassChk = NULL;
+        object->mGrpPassChk = NULL;
+        object->__vtbl = checkVtable;
+        object->mSameActorChk = 1;
+    }
+    return object;
 }
-VERIFY(0x02008C84,hd_static_init_02008C84);
-void hd_static_init_02008D18() {
- WWHD_FUNC(0x02008D18,void);
- gabi::store<u32>(0x101FF438,0);gabi::store<u32>(0x101FF430,0);gabi::store<u32>(0x101FF43C,0);gabi::store<u32>(0x101FF434,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C594));
- f32 negativePi=gabi::load<f32>(0x10000EEC),positivePi=gabi::load<f32>(0x10000EF0);
- gabi::store<f32>(0x101FF424,negativePi);gabi::store<f32>(0x101FF428,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF42C));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C5A0));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF42D));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C5AC));
+
+/* 02008BB8 */
+u8 cBgS_Chk::ChkSameActorPid(u32 pid) {
+    u32 actor = mActorPid;
+    if (actor == fpcM_ERROR_PROCESS_ID_e || pid == fpcM_ERROR_PROCESS_ID_e || !mSameActorChk)
+        return 0;
+    return actor == pid;
 }
-VERIFY(0x02008D18,hd_static_init_02008D18);
+
+// HD: compiler-generated statics; adjacent header-only translation units are hosted here.
+struct HeaderGroup {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject, padding[2];
+    be<u32> words[4];
+};
+WWHD_SIZE(HeaderGroup, 0x1C);
+#define headerGroups (gabi::at<HeaderGroup>(0x101FF3EC))
+static const f32 headerPiMin0 = -3.1415927;
+static const f32 headerPiMax0 = 3.1415927;
+/* 02008BF0 */
+static void __sinit_c_bg_s_chk_cpp() {
+    HeaderGroup *group = &headerGroups[0];
+    group->words[2] = 0;
+    group->words[0] = 0;
+    group->words[3] = 0;
+    group->words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C54C));
+    f32 lo = headerPiMin0, hi = headerPiMax0;
+    group->piMin = lo;
+    group->piMax = hi;
+    initializeHeaderByte(&group->byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C558));
+    initializeHeaderFlag(&group->flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C564));
+}
+static const f32 headerPiMin1 = -3.1415927;
+static const f32 headerPiMax1 = 3.1415927;
+/* 02008C84 */
+static void __sinit_collisionHeaderFirst() {
+    HeaderGroup *group = &headerGroups[1];
+    group->words[2] = 0;
+    group->words[0] = 0;
+    group->words[3] = 0;
+    group->words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C570));
+    f32 lo = headerPiMin1, hi = headerPiMax1;
+    group->piMin = lo;
+    group->piMax = hi;
+    initializeHeaderByte(&group->byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C57C));
+    initializeHeaderFlag(&group->flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C588));
+}
+static const f32 headerPiMin2 = -3.1415927;
+static const f32 headerPiMax2 = 3.1415927;
+/* 02008D18 */
+static void __sinit_collisionHeaderSecond() {
+    HeaderGroup *group = &headerGroups[2];
+    group->words[2] = 0;
+    group->words[0] = 0;
+    group->words[3] = 0;
+    group->words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C594));
+    f32 lo = headerPiMin2, hi = headerPiMax2;
+    group->piMin = lo;
+    group->piMax = hi;
+    initializeHeaderByte(&group->byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C5A0));
+    initializeHeaderFlag(&group->flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C5AC));
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data headerPiMin0 10000E74
+data headerPiMax0 10000E78
+data headerPiMin1 10000EA0
+data headerPiMax1 10000EA4
+data headerPiMin2 10000EEC
+data headerPiMax2 10000EF0
+ext 0273AD10 void* operator_new(u32)
+ext 0273AF40 void operator_delete(void*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

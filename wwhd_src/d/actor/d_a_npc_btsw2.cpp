@@ -6,190 +6,225 @@
  */
 #include "d/actor/d_a_npc_btsw2.h"
 
-static u32 address(daNpc_Btsw2_c* actor) { return gabi::ea(actor); }
+const gc_tu_data gc_tu = {.safeString = 0x10018A00};
+const char daNpc_Btsw2_c::m_arc_name[] = "Btsw";
 
-void daNpc_Btsw2_checkOrder(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CFBC, void, actor);
-    u32 a = address(actor);
-    if (gabi::load<u16>(a + 0xF8) != 1) return;
-    s8 state = gabi::load<s8>(a + 0x8B6);
-    if (state == 1 || state == 2) {
-        gabi::store<s8>(a + 0x8B6, 0);
-        gabi::store<u8>(a + 0x892, 1);
+static daNpc_Btsw2_HIO_c l_HIO;
+static Btsw2HeaderZero l_headerZero;
+static Btsw2DestructorRecords l_headerRecords;
+static u8 l_headerByte;
+static u8 l_headerOtherByte;
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static cXyz a_att_pos_offst;
+static cXyz a_eye_pos_offst;
+static u32 a_att_pos_guard;
+static u32 a_eye_pos_guard;
+static Btsw2SinCosTable l_sinCosTable;
+static const f32 l_zero = 0.0f;
+static const f32 l_eyeOffsetX = 10.0f;
+static const f32 l_eyeOffsetY = 20.0f;
+static const f32 l_one = 1.0f;
+static const f32 l_gravity = -30.0f;
+static const f32 l_attentionHeight = 40.0f;
+static const f32 l_attentionDistance = 200.0f;
+static const f32 l_moveSpeed = 0.8f;
+static const f32 l_moveAcceleration = 0.95f;
+static const f32 l_minAngleInitial = -3.1415927410125732f;
+static const f32 l_maxAngleInitial = 3.1415927410125732f;
+static const f32 a_morf_frame_tbl[11] = {8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f};
+static const s32 l_bck_ix_tbl[11] = {15, 16, 13, 14, 9, 12, 12, 17, 8, 10, 11};
+static const f32 a_play_speed_tbl[11] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+static const s32 a_play_mode_tbl[11] = {2, 2, 2, 2, 0, 2, 2, 2, 0, 2, 0};
+static const u32 l_btp_ix_tbl[1] = {36};
+
+static Btsw2CylinderSource l_cyl_src;
+static Btsw2ArchiveName l_itemArc;
+static BOOL nodeCallBack(void*, int);
+static BOOL CallbackCreateHeap(daNpc_Btsw2_c*);
+
+static u32 address(daNpc_Btsw2_c* actor) {
+    return gabi::ea(actor);
+}
+
+static void* btsw2_resource(const char* archive, u32 id) {
+    gabi::Local<SafeString> key;
+    key->mStringTop = gabi::guest_addr(archive);
+    key->__vtbl = gc_tu.safeString;
+    u32 manager = gabi::ea(dComIfG_resControl());
+    return Btsw2Resource(gabi::at<void>(manager), key.get(), id);
+}
+static s32 btsw2_joint(void* modelData, const char* name) {
+    void* jointNames = Btsw2JointNames(modelData);
+    u32 names = gabi::ea(jointNames);
+    u32 displacement = gabi::at<Btsw2NameBlock>(names)->mTableOffset;
+    return Btsw2NameIndex(gabi::at<void>(displacement ? names + 0x10 + displacement : 0), name);
+}
+static void btsw2_setCallback(u32 data, s8 joint) {
+    u32 index = u16(s16(joint));
+    u32 count = gabi::at<J3DModelData>(data)->mJointNum;
+    u32 array = gabi::at<J3DModelData>(data)->mJointNodes;
+    u32 selected = index < count ? array + index * 0x1C : array;
+    gabi::at<J3DJoint>(selected)->mCallBack = gabi::guest_fn((const void*)nodeCallBack);
+}
+
+void* daNpc_Btsw2_HIO_construct(void* object);
+
+/* 0221C39C */
+BOOL nodeCallBack(void* node, int phase) {
+    if (phase != 0)
+        return TRUE;
+    u32 model = gabi::ea(j3dSys.getModel());
+    u32 actor = gabi::at<J3DModel>(model)->mUserArea;
+    if (!actor)
+        return TRUE;
+    u32 initialized = a_att_pos_guard;
+    f32 zero = l_zero;
+    if (!initialized) {
+        a_att_pos_offst.x = zero;
+        a_att_pos_offst.z = zero;
+        a_att_pos_guard = 1;
+        a_att_pos_offst.y = zero;
     }
-}
-VERIFY(0x0221CFBC, daNpc_Btsw2_checkOrder);
-
-void daNpc_Btsw2_eventOrder(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CFFC, void, actor);
-    u32 a = address(actor);
-    s8 state = gabi::load<s8>(a + 0x8B6);
-    if (state == 1 || state == 2) {
-        s8 orderedState = gabi::load<s8>(a + 0x8B6);
-        u16 condition = gabi::load<u16>(a + 0xFA);
-        gabi::store<u16>(a + 0xFA, condition | 1);
-        if (orderedState == 1) gabi::call(0x025D76A8, actor);
+    if (!a_eye_pos_guard) {
+        f32 x = l_eyeOffsetX;
+        a_eye_pos_guard = 1;
+        f32 y = l_eyeOffsetY;
+        a_eye_pos_offst.x = x;
+        a_eye_pos_offst.y = y;
+        a_eye_pos_offst.z = zero;
     }
-}
-VERIFY(0x0221CFFC, daNpc_Btsw2_eventOrder);
-
-u32 daNpc_Btsw2_getMsg(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D6B4, u32, actor);
-    u32 save = gabi::load<u32>(0x101F84DC);
-    if (!gabi::call<BOOL>(0x025B8B94, gabi::at<void>(save + 0x644), 0x3102)) {
-        save = gabi::load<u32>(0x101F84DC);
-        gabi::call(0x025B8B68, gabi::at<void>(save + 0x644), 0x3102);
-        return 0x1AB0;
+    void* jointObject = Btsw2JointObject();
+    u16 joint = static_cast<Btsw2JointData*>(jointObject)->mJointNo;
+    u32 matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.v.get();
+    u16 flags = gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags;
+    u32 array = gabi::at<J3DMtxBuffer_hd>(matrices)->mpAnmMtx;
+    gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags = flags | 0x10;
+    PSMTXCopy(gabi::at<Mtx34>(array + u32(joint) * 48), mDoMtx_stack_c::get());
+    s8 head = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mHeadJntNum;
+    if (u32(joint) == u32(s32(head))) {
+        PSMTXMultVec(mDoMtx_stack_c::get(), &a_att_pos_offst, &gabi::at<daNpc_Btsw2_c>(actor)->mAttPos);
+        gabi::Local<Mtx34> rotation;
+        PSMTXCopy(mDoMtx_stack_c::get(), rotation.get());
+        f32 x = rotation->m[0][3];
+        f32 z = rotation->m[2][3];
+        rotation->m[2][3] = zero;
+        f32 y = rotation->m[1][3];
+        rotation->m[1][3] = zero;
+        rotation->m[0][3] = zero;
+        PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
+        s16 neck = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mAngles[0][1];
+        s16 facing = gabi::at<daNpc_Btsw2_c>(actor)->current.angle.y;
+        mDoMtx_YrotM(mDoMtx_stack_c::get(), s16(u16(neck) + u16(facing)));
+        s16 pitch = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mAngles[0][0];
+        mDoMtx_XrotM(mDoMtx_stack_c::get(), s16(-s32(pitch)));
+        facing = gabi::at<daNpc_Btsw2_c>(actor)->current.angle.y;
+        mDoMtx_YrotM(mDoMtx_stack_c::get(), s16(-s32(facing)));
+        PSMTXConcat(mDoMtx_stack_c::get(), rotation.get(), mDoMtx_stack_c::get());
+        PSMTXMultVec(mDoMtx_stack_c::get(), &a_eye_pos_offst, &gabi::at<daNpc_Btsw2_c>(actor)->eyePos);
+    } else {
+        s8 back = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mBackboneJntNum;
+        if (u32(joint) == u32(s32(back))) {
+            s16 pitch = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mAngles[1][1];
+            mDoMtx_XrotM(mDoMtx_stack_c::get(), pitch);
+            s16 roll = gabi::at<daNpc_Btsw2_c>(actor)->m_jnt.mAngles[1][0];
+            mDoMtx_ZrotM(mDoMtx_stack_c::get(), s16(-s32(roll)));
+        }
     }
-    return gabi::call<BOOL>(0x02556D14) ? 0x1AB2 : 0x1AB1;
-}
-VERIFY(0x0221D6B4, daNpc_Btsw2_getMsg);
-
-u16 daNpc_Btsw2_nextMsgStatus(daNpc_Btsw2_c* actor, u32* message) {
-    WWHD_FUNC(0x0221D724, u16, actor, message);
-    return 0x10;
-}
-VERIFY(0x0221D724, daNpc_Btsw2_nextMsgStatus);
-
-void daNpc_Btsw2_setAttention(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221DAB0, void, actor);
-    u32 a = address(actor);
-    f32 z = gabi::load<f32>(a + 0x880);
-    f32 y = gabi::load<f32>(a + 0x87C);
-    f32 height = gabi::load<f32>(0x10466AD4);
-    f32 x = gabi::load<f32>(a + 0x878);
-    gabi::store<f32>(a + 0x398, z);
-    gabi::store<f32>(a + 0x390, x);
-    gabi::store<f32>(a + 0x394, gabi::fadds_ppc(y, height));
-}
-VERIFY(0x0221DAB0, daNpc_Btsw2_setAttention);
-
-void daNpc_Btsw2_wait01(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221DC90, void, actor);
-    u32 a = address(actor);
-    if (gabi::load<u8>(a + 0x892)) gabi::store<s8>(a + 0x8B7, 2);
-    else gabi::store<s8>(a + 0x8B6, 2);
-}
-VERIFY(0x0221DC90, daNpc_Btsw2_wait01);
-
-BOOL daNpc_Btsw2_delete(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CE9C, BOOL, actor);
-    u32 a = address(actor);
-    gabi::call(0x025204C8, gabi::at<void>(a + 0x7DC), STR(0x10018BB0));
-    if (gabi::load<u32>(a + 0xF4)) {
-        u32 morf = gabi::load<u32>(a + 0x44C);
-        if (morf) gabi::call(0x025E563C, gabi::at<void>(morf));
-    }
+    PSMTXCopy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
+    matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.v.get();
+    flags = gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags;
+    array = gabi::at<J3DMtxBuffer_hd>(matrices)->mpAnmMtx;
+    gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags = flags | 0x10;
+    mtx_copy(gabi::at<Mtx34>(array + u32(joint) * 48), mDoMtx_stack_c::get());
     return TRUE;
 }
-VERIFY(0x0221CE9C, daNpc_Btsw2_delete);
 
-BOOL daNpc_Btsw2_Delete(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CEF4, BOOL, actor);
-    return daNpc_Btsw2_delete(actor);
-}
-VERIFY(0x0221CEF4, daNpc_Btsw2_Delete);
-
-BOOL daNpc_Btsw2_IsDelete(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221DFE4, BOOL, actor);
+/* 0221C68C */
+BOOL daNpc_Btsw2_c::initTexPatternAnm(u8 modify) {
+    u32 morf = gabi::ea(mpMorf.get());
+    u32 model = gabi::at<mDoExt_McaMorf>(morf)->mpModel.v.get();
+    // HD: this lookup always uses the first texture-pattern resource.
+    u32 resource = l_btp_ix_tbl[0];
+    u32 modelData = gabi::at<J3DModel>(model)->mModelData.v.get();
+    u32 manager = gabi::ea(dComIfG_resControl());
+    gabi::Local<SafeString> key;
+    key->mStringTop = gabi::guest_str(m_arc_name);
+    key->__vtbl = gc_tu.safeString;
+    void* pattern = Btsw2Resource(gabi::at<void>(manager), key.get(), resource);
+    m_btp = pattern;
+    if (!pattern) {
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x11A, "m_btp != (0)");
+        pattern = m_btp.get();
+    }
+    if (!Btsw2BtpInit(&mBtpAnm, gabi::at<void>(modelData), pattern, 1, 2, 0, -1, modify, 1.0f))
+        return FALSE;
+    mBtpFrame = 0;
+    mBlinkTimer = 0;
     return TRUE;
 }
-VERIFY(0x0221DFE4, daNpc_Btsw2_IsDelete);
 
-void daNpc_Btsw2_SafeString_assureTerminated(SafeString* string) {
-    WWHD_FUNC(0x0221E088, void, string);
+/* 0221CEF8 */
+void daNpc_Btsw2_c::playTexPatternAnm() {
+    if (cLib_calcTimer(&mBlinkTimer))
+        return;
+    u32 pattern = gabi::ea(m_btp.get());
+    u32 vtable = gabi::at<Btsw2TexturePattern>(pattern)->__vtbl;
+    u32 target = gabi::at<Btsw2TextureVtable>(vtable)->mpGetFrameMax;
+    s32 frames = gabi::call<s32>(target, gabi::at<void>(pattern));
+    u8 frame = mBtpFrame;
+    if (s32(frame) < frames) {
+        frame = mBtpFrame;
+        mBtpFrame = u8(frame + 1);
+        return;
+    }
+    pattern = gabi::ea(m_btp.get());
+    vtable = gabi::at<Btsw2TexturePattern>(pattern)->__vtbl;
+    target = gabi::at<Btsw2TextureVtable>(vtable)->mpGetFrameMax;
+    frames = gabi::call<s32>(target, gabi::at<void>(pattern));
+    frame = mBtpFrame;
+    mBtpFrame = u8(u32(frame) - u32(frames));
+    f32 random = cM_rndF(100.0f);
+    mBlinkTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, 30.0f)));
 }
-VERIFY(0x0221E088, daNpc_Btsw2_SafeString_assureTerminated);
 
-void daNpc_Btsw2_SafeString_delete(void* object, int flags) {
-    WWHD_FUNC(0x0221DFD0, void, object, flags);
-    if (object && (flags & 1)) gabi::call(0x0273AF40, object);
-}
-VERIFY(0x0221DFD0, daNpc_Btsw2_SafeString_delete);
-
-void daNpc_Btsw2_destructor(daNpc_Btsw2_c* actor, int flags) {
-    WWHD_FUNC(0x0221DFEC, void, actor, flags);
-    if (!actor) return;
-    u32 a = address(actor);
-    gabi::call(0x02515A70, gabi::at<void>(a + 0x690), 2);
-    gabi::call(0x02515860, gabi::at<void>(a + 0x654), 2);
-    gabi::call(0x02018034, gabi::at<void>(a + 0x628), 2);
-    gabi::store<u32>(a + 0x470, 0x10018A18);
-    gabi::store<u32>(a + 0x464, 0x10018A28);
-    gabi::call(0x024EFD9C, gabi::at<void>(a + 0x450), 0);
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1) gabi::call(0x0273AF40, actor);
-}
-VERIFY(0x0221DFEC, daNpc_Btsw2_destructor);
-
-void daNpc_Btsw2_setAnm(daNpc_Btsw2_c* actor, s8 animation) {
-    WWHD_FUNC(0x0221D410, void, actor, animation);
-    s8 current = actor->mAnimation;
-    if (animation == current || current == -1) return;
-    s8 mode = actor->mMode;
-    actor->mAnimation = animation;
+/* 0221D410 */
+void daNpc_Btsw2_c::setAnm(s8 animation) {
+    s8 current = m745;
+    if (animation == current || current == -1)
+        return;
+    s8 mode = m747;
+    m745 = animation;
     u32 animationOffset = u32(s32(animation)) * 4;
     u32 modeOffset = u32(s32(mode)) * 4;
-    u32 morf = gabi::ea(actor->mpMorf.get());
-    f32 morph = gabi::load<f32>(0x101BD850 + modeOffset);
-    s32 resource = gabi::load<s32>(0x10018A48 + animationOffset);
-    f32 speed = gabi::load<f32>(0x101BD87C + modeOffset);
-    s32 loop = gabi::load<s32>(0x101BD824 + modeOffset);
-    gabi::call<BOOL>(0x0259D454, gabi::at<void>(morf), loop, morph, speed,
-                    resource, -1, STR(0x10018BB0));
-    current = actor->mAnimation;
-    gabi::store<u8>(address(actor) + 0x3B7, current == 7 || current == 8);
+    u32 morf = gabi::ea(mpMorf.get());
+    f32 morph = a_morf_frame_tbl[(s32)modeOffset / 4];
+    s32 resource = l_bck_ix_tbl[(s32)animationOffset / 4];
+    f32 speed = a_play_speed_tbl[(s32)modeOffset / 4];
+    s32 loop = a_play_mode_tbl[(s32)modeOffset / 4];
+    dNpc_setAnm(gabi::at<mDoExt_McaMorf>(morf), loop, morph, speed, resource, -1, "Btsw");
+    current = m745;
+    m_jnt.mbHeadLock = current == 7 || current == 8;
 }
-VERIFY(0x0221D410, daNpc_Btsw2_setAnm);
 
-void daNpc_Btsw2_talk01(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221DCB4, void, actor);
-    if (gabi::call<u16>(0x025A11EC, actor, 1) != 0x12) return;
-    actor->mMode = 1;
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u16 flags = gabi::load<u16>(play + 0x52B8);
-    gabi::store<u16>(play + 0x52B8, flags | 8);
-    s16 waitTimer = actor->mWaitTimer;
-    actor->mTalkAccepted = 0;
-    if (waitTimer == 0) actor->mPathAdvance = 1;
-    daNpc_Btsw2_setAnm(actor, 0);
-}
-VERIFY(0x0221DCB4, daNpc_Btsw2_talk01);
-
-void daNpc_Btsw2_anmAtr(daNpc_Btsw2_c* actor, u16 messageStatus) {
-    WWHD_FUNC(0x0221D5FC, void, actor, messageStatus);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u8 requested = gabi::load<u8>(play + 0x5BC5);
-    if (requested <= 6) daNpc_Btsw2_setAnm(actor, requested);
-    u32 morf = gabi::ea(actor->mpMorf.get());
-    s16 end = gabi::load<s16>(morf + 0xA2);
-    f32 frame = f32(end) - 1.0f;
-    if (gabi::call<BOOL>(0x027F2BF8, gabi::at<void>(morf + 0x98), frame)) {
-        s8 animation = actor->mAnimation;
-        if (animation == 4 || animation == 6) daNpc_Btsw2_setAnm(actor, 1);
-    }
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    gabi::store<u8>(play + 0x5BC5, 255);
-}
-VERIFY(0x0221D5FC, daNpc_Btsw2_anmAtr);
-
-bool daNpc_Btsw2_chkAttention(daNpc_Btsw2_c* actor, cXyz* position, s16 facing) {
-    WWHD_FUNC(0x0221D4D0, bool, actor, position, facing);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
+/* 0221D4D0 */
+bool daNpc_Btsw2_c::chkAttention(cXyz* position, s16 facing) {
+    // HD: preserve the verified pointer argument for the by-value GameCube position.
+    u32 play = dComIfGp_ea();
+    u32 player = gabi::at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v;
     f32 z = position->z;
-    f32 playerZ = gabi::load<f32>(player + 0x31C);
-    f32 playerX = gabi::load<f32>(player + 0x314);
+    f32 playerZ = gabi::at<fopAc_ac_c>(player)->current.pos.z;
+    f32 playerX = gabi::at<fopAc_ac_c>(player)->current.pos.x;
     f32 dz = gabi::fsubs_ppc(playerZ, z);
     f32 x = position->x;
-    f32 range = gabi::load<f32>(0x10466ADC);
+    f32 range = l_HIO.mNpc.mMaxAttnDistXZ;
     f32 dx = gabi::fsubs_ppc(playerX, x);
     f32 squareZ = gabi::fmuls_ppc(dz, dz);
     f32 square = gabi::fmadds(dx, dx, squareZ);
-    s32 angleRange = gabi::load<s16>(0x10466AD8);
-    f32 distance = gabi::call<f32>(0x028F4384, square);
-    s16 angle = gabi::call<s16>(0x020195B0, dx, dz);
-    if (actor->mHasAttention) {
+    s32 angleRange = l_HIO.mNpc.mMaxAttnAngleY;
+    f32 distance = std_sqrtf(square);
+    s16 angle = cM_atan2s(dx, dz);
+    if (mHasAttention) {
         range = gabi::fadds_ppc(range, 40.0f);
         angleRange += 0x71C;
     }
@@ -197,633 +232,738 @@ bool daNpc_Btsw2_chkAttention(daNpc_Btsw2_c* actor, cXyz* position, s16 facing) 
     s32 absolute = delta < 0 ? -delta : delta;
     return angleRange > absolute && range > distance;
 }
-VERIFY(0x0221D4D0, daNpc_Btsw2_chkAttention);
 
-BOOL daNpc_Btsw2_create(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CD78, BOOL, actor);
-    u32 a = address(actor);
-    u32 condition = gabi::load<u32>(a + 0x2E4);
-    if (!(condition & 8)) {
-        if (actor) {
-            gabi::call(0x025A1458, actor);
-            gabi::store<u32>(a + 0xB4, 0x10018BB8);
-            gabi::call(0x025E7820, gabi::at<void>(a + 0x7F0));
-            condition = gabi::load<u32>(a + 0x2E4);
-        }
-        gabi::store<u32>(a + 0x2E4, condition | 8);
+/* 0221CFFC */
+void daNpc_Btsw2_c::eventOrder() {
+    s8 state = m746;
+    if (state == 1 || state == 2) {
+        s8 orderedState = m746;
+        u16 condition = eventInfo.mCondition;
+        eventInfo.mCondition = condition | dEvtCmd_INTALK_e;
+        if (orderedState == 1)
+            fopAcM_orderSpeakEvent(this);
     }
-    u32 save = gabi::load<u32>(0x101F84DC);
-    if (gabi::call<u8>(0x025B8BB0, gabi::at<void>(save + 0x644), 0xC203) == 3) return 5;
-    if (!gabi::call<BOOL>(0x0254DA50, 0x6A, 1)) return 5;
-    s32 phase = gabi::call<s32>(0x02520460, gabi::at<void>(a + 0x7DC), STR(0x10018BB0));
-    if (phase != 4) return phase;
-    if (!gabi::call<BOOL>(0x025D63E8, actor, gabi::at<void>(0x0221CAE8), 0x29E0)) return 5;
-    u32 morf = gabi::load<u32>(a + 0x44C);
-    u32 model = gabi::load<u32>(morf + 0x90);
-    gabi::store<u32>(a + 0x348, model ? model + 0xC8 : 0);
-    if (!gabi::call<BOOL>(0x0221CAEC, actor)) return 5;
-    return phase;
 }
-VERIFY(0x0221CD78, daNpc_Btsw2_create);
 
-BOOL daNpc_Btsw2_Create(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CE98, BOOL, actor);
-    return daNpc_Btsw2_create(actor);
-}
-VERIFY(0x0221CE98, daNpc_Btsw2_Create);
-
-BOOL daNpc_Btsw2_CreateHeapCallback(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CAE8, BOOL, actor);
-    return gabi::call<BOOL>(0x0221C790, actor);
-}
-VERIFY(0x0221CAE8, daNpc_Btsw2_CreateHeapCallback);
-
-void* daNpc_Btsw2_HIO_construct(void* object) {
-    WWHD_FUNC(0x0221DE30, void*, object);
-    if (!object) object = gabi::call<void*>(0x0273AD10, 0x40);
-    if (!object) return nullptr;
-    u32 a = gabi::ea(object);
-    gabi::store<u32>(a + 0x3C, 0x10018A38);
-    gabi::call(0x0259DA18, gabi::at<void>(a + 4));
-    gabi::store<s16>(a + 0x12, 0);
-    f32 zero = gabi::load<f32>(0x10018A74);
-    f32 damping = gabi::load<f32>(0x10018BA4);
-    f32 speed = gabi::load<f32>(0x10018BA0);
-    gabi::store<s8>(a, -1);
-    gabi::store<s16>(a + 0xA, 0);
-    f32 attentionHeight = gabi::load<f32>(0x10018B88);
-    gabi::store<s16>(a + 0x18, 1000);
-    gabi::store<s16>(a + 0xC, 8000);
-    gabi::store<u8>(a + 0x22, 0);
-    gabi::store<s16>(a + 0x14, -8000);
-    gabi::store<f32>(a + 0x1C, attentionHeight);
-    gabi::store<f32>(a + 0x30, speed);
-    f32 attentionDistance = gabi::load<f32>(0x10018B9C);
-    gabi::store<s16>(a + 0x10, -3000);
-    gabi::store<s16>(a + 0x2E, 5);
-    gabi::store<f32>(a + 0x34, damping);
-    gabi::store<f32>(a + 4, zero);
-    gabi::store<s16>(a + 0xE, 8000);
-    gabi::store<f32>(a + 0x24, attentionDistance);
-    gabi::store<s16>(a + 0x3A, 90);
-    gabi::store<s16>(a + 0x2C, 600);
-    gabi::store<s16>(a + 0x20, 0x2000);
-    gabi::store<s16>(a + 0x1A, 1600);
-    gabi::store<s16>(a + 0x38, 90);
-    gabi::store<s16>(a + 0x16, -8000);
-    gabi::store<s16>(a + 8, 8000);
-    return object;
-}
-VERIFY(0x0221DE30, daNpc_Btsw2_HIO_construct);
-
-void daNpc_Btsw2_staticInit() {
-    WWHD_FUNC(0x0221DF30, void);
-    gabi::store<u32>(0x10466B00, 0);
-    gabi::store<u32>(0x10466AF8, 0);
-    gabi::store<u32>(0x10466B04, 0);
-    gabi::store<u32>(0x10466AFC, 0);
-    gabi::call(0x028F026C, gabi::at<void>(0x101BD8A8));
-    f32 minimum = gabi::load<f32>(0x10018BA8);
-    f32 maximum = gabi::load<f32>(0x10018BAC);
-    gabi::store<f32>(0x10466AAC, minimum);
-    gabi::store<f32>(0x10466AB0, maximum);
-    gabi::call(0x028ED6F8, gabi::at<void>(0x10466AB4));
-    gabi::call(0x028F026C, gabi::at<void>(0x101BD8B4));
-    gabi::call(0x028EAB2C, gabi::at<void>(0x10466AB5));
-    gabi::call(0x028F026C, gabi::at<void>(0x101BD8C0));
-    daNpc_Btsw2_HIO_construct(gabi::at<void>(0x10466AB8));
-}
-VERIFY(0x0221DF30, daNpc_Btsw2_staticInit);
-
-BOOL daNpc_Btsw2_draw(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D214, BOOL, actor);
-    u32 a = address(actor);
-    u32 morf = gabi::ea(actor->mpMorf.get());
-    u32 model = gabi::load<u32>(morf + 0x90);
-    u32 modelData = gabi::load<u32>(model + 0xAC);
-    void* environment = gabi::call<void*>(0x02555D0C);
-    gabi::call(0x025626A4, environment, 0, gabi::at<void>(a + 0x314), gabi::at<void>(a + 0x110));
-    environment = gabi::call<void*>(0x02555D0C);
-    gabi::call(0x02562F5C, environment, gabi::at<void>(model), gabi::at<void>(a + 0x110));
-    environment = gabi::call<void*>(0x02555D0C);
-    u32 bag = gabi::ea(actor->mpBagModel.get());
-    gabi::call(0x02562F5C, environment, gabi::at<void>(bag), gabi::at<void>(a + 0x110));
-    environment = gabi::call<void*>(0x02555D0C);
-    u32 flyer = gabi::ea(actor->mpFlyerModel.get());
-    gabi::call(0x02562F5C, environment, gabi::at<void>(flyer), gabi::at<void>(a + 0x110));
-    u8 frame = actor->mBtpFrame;
-    gabi::call(0x025E7B3C, gabi::at<void>(a + 0x7F0), gabi::at<void>(modelData), frame);
-    morf = gabi::ea(actor->mpMorf.get());
-    gabi::call(0x025E54D8, gabi::at<void>(morf));
-    s8 joint = actor->mHandLeftJoint;
-    u32 matrices = gabi::load<u32>(model + 0x2C);
-    u32 matrixArray = gabi::load<u32>(matrices + 0x10);
-    u16 flags = gabi::load<u16>(matrices + 4);
-    bag = gabi::ea(actor->mpBagModel.get());
-    gabi::store<u16>(matrices + 4, flags | 0x10);
-    mtx_copy(gabi::at<Mtx34>(bag + 0xC8), gabi::at<Mtx34>(matrixArray + u32(s32(joint) * 48)));
-    joint = actor->mHandRightJoint;
-    matrices = gabi::load<u32>(model + 0x2C);
-    matrixArray = gabi::load<u32>(matrices + 0x10);
-    flags = gabi::load<u16>(matrices + 4);
-    flyer = gabi::ea(actor->mpFlyerModel.get());
-    gabi::store<u16>(matrices + 4, flags | 0x10);
-    mtx_copy(gabi::at<Mtx34>(flyer + 0xC8), gabi::at<Mtx34>(matrixArray + u32(s32(joint) * 48)));
-    bag = gabi::ea(actor->mpBagModel.get());
-    gabi::call(0x025E2DE0, gabi::at<void>(bag), 0);
-    flyer = gabi::ea(actor->mpFlyerModel.get());
-    gabi::call(0x025E2DE0, gabi::at<void>(flyer), 0);
-    gabi::store<u32>(modelData + 0x38, 0);
-    s16 rotation = gabi::load<s16>(a + 0x322);
-    gabi::call(0x025BEBB8, 0x98, actor, gabi::at<void>(a + 0x314), rotation, 1.0f, 1.0f, 1.0f);
-    return TRUE;
-}
-VERIFY(0x0221D214, daNpc_Btsw2_draw);
-
-BOOL daNpc_Btsw2_Draw(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D40C, BOOL, actor);
-    return daNpc_Btsw2_draw(actor);
-}
-VERIFY(0x0221D40C, daNpc_Btsw2_Draw);
-
-BOOL daNpc_Btsw2_execute(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D034, BOOL, actor);
-    u32 a = address(actor);
-    s16 neckMin = gabi::load<s16>(0x10466AC8);
-    s16 headMax = gabi::load<s16>(0x10466AC0);
-    s16 backMin = gabi::load<s16>(0x10466AC6);
-    s16 backMax = gabi::load<s16>(0x10466ACE);
-    s16 headMin = gabi::load<s16>(0x10466AC4);
-    s16 neckMax = gabi::load<s16>(0x10466ACA);
-    s16 turnMin = gabi::load<s16>(0x10466ACC);
-    s16 turnMax = gabi::load<s16>(0x10466AC2);
-    s16 turnStep = gabi::load<s16>(0x10466AD0);
-    gabi::call(0x0259E08C, gabi::at<void>(a + 0x3AC), turnMax, backMin, neckMax,
-               backMax, headMax, headMin, neckMin, turnMin, turnStep);
-    gabi::call(0x0221CEF8, actor);
-    u32 morf = gabi::ea(actor->mpMorf.get());
-    gabi::call(0x025E535C, gabi::at<void>(morf), gabi::at<void>(a + 0x37C), 0, 0);
-    daNpc_Btsw2_checkOrder(actor);
-    if (!gabi::call<BOOL>(0x0259F858, gabi::at<void>(a + 0x3E0))) {
-        s16 index = actor->mActionVtableIndex;
-        s16 adjustment = actor->mActionThisAdjustment;
-        u32 receiver = a + s32(adjustment);
-        u32 target;
-        if (index < 0) target = actor->mActionTarget;
-        else {
-            s16 vtableOffset = gabi::load<s16>(a + 0x8A2);
-            u32 vtable = gabi::load<u32>(receiver + s32(vtableOffset));
-            target = gabi::load<u32>(vtable + u32(s32(index) * 8) + 4);
-        }
-        gabi::call<BOOL>(target, gabi::at<void>(receiver), 0);
-    }
-    daNpc_Btsw2_eventOrder(actor);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    gabi::call(0x024F08A8, gabi::at<void>(a + 0x450), gabi::at<void>(play + 0x12A0));
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    s8 room = gabi::call<s8>(0x024EF130, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x538));
-    gabi::store<s8>(a + 0x1C9, room);
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u8 color = gabi::call<u8>(0x024EEEB8, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x538));
-    morf = gabi::ea(actor->mpMorf.get());
-    f32 x = gabi::load<f32>(a + 0x314);
-    f32 y = gabi::load<f32>(a + 0x318);
-    f32 z = gabi::load<f32>(a + 0x31C);
-    gabi::store<u8>(a + 0x1CA, color);
-    u32 model = gabi::load<u32>(morf + 0x90);
-    gabi::call(0x028E93CC, gabi::at<void>(0x1048D0CC), x, y, z);
-    s16 rotation = gabi::load<s16>(a + 0x322);
-    gabi::call(0x025F1C28, gabi::at<void>(0x1048D0CC), rotation);
-    mtx_copy(gabi::at<Mtx34>(model + 0xC8), gabi::at<Mtx34>(0x1048D0CC));
-    gabi::call(0x025A15AC, actor, 60.0f, 150.0f);
-    return TRUE;
-}
-VERIFY(0x0221D034, daNpc_Btsw2_execute);
-
-BOOL daNpc_Btsw2_Execute(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D210, BOOL, actor);
-    return daNpc_Btsw2_execute(actor);
-}
-VERIFY(0x0221D210, daNpc_Btsw2_Execute);
-
-void daNpc_Btsw2_playTexPattern(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CEF8, void, actor);
-    u32 a = address(actor);
-    if (gabi::call<s16>(0x02055B64, gabi::at<void>(a + 0x868))) return;
-    u32 pattern = gabi::ea(actor->mpTexPattern.get());
-    u32 vtable = gabi::load<u32>(pattern + 4);
-    u32 target = gabi::load<u32>(vtable + 0x14);
-    s32 frames = gabi::call<s32>(target, gabi::at<void>(pattern));
-    u8 frame = actor->mBtpFrame;
-    if (s32(frame) < frames) {
-        frame = actor->mBtpFrame;
-        actor->mBtpFrame = u8(frame + 1);
+/* 0221CFBC */
+void daNpc_Btsw2_c::checkOrder() {
+    // HD: only the talk command is tested here.
+    if (eventInfo.mCommand != dEvtCmd_INTALK_e)
         return;
+    s8 state = m746;
+    if (state == 1 || state == 2) {
+        m746 = 0;
+        m71E = 1;
     }
-    pattern = gabi::ea(actor->mpTexPattern.get());
-    vtable = gabi::load<u32>(pattern + 4);
-    target = gabi::load<u32>(vtable + 0x14);
-    frames = gabi::call<s32>(target, gabi::at<void>(pattern));
-    frame = actor->mBtpFrame;
-    actor->mBtpFrame = u8(u32(frame) - u32(frames));
-    f32 random = gabi::call<f32>(0x020198D8, 100.0f);
-    actor->mBlinkTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, 30.0f)));
 }
-VERIFY(0x0221CEF8, daNpc_Btsw2_playTexPattern);
 
-void daNpc_Btsw2_lookBack(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221DAD8, void, actor);
-    u32 a = address(actor);
-    f32 zero = gabi::load<f32>(0x10018A74);
+/* 0221D5FC */
+void daNpc_Btsw2_c::anmAtr(u16 messageStatus) {
+    u32 play = dComIfGp_ea();
+    u8 requested = gabi::at<dComIfG_inf_c>(play)->play.mMesgAnime;
+    if (requested <= 6)
+        setAnm(requested);
+    u32 morf = gabi::ea(mpMorf.get());
+    s16 end = gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mEnd;
+    f32 frame = f32(end) - 1.0f;
+    if (gabi::at<mDoExt_McaMorf>(morf)->checkFrame(frame)) {
+        s8 animation = m745;
+        if (animation == 4 || animation == 6)
+            setAnm(1);
+    }
+    play = dComIfGp_ea();
+    gabi::at<dComIfG_inf_c>(play)->play.mMesgAnime = 255;
+}
+
+/* 0221D6B4 */
+u32 daNpc_Btsw2_c::getMsg() {
+    if (!dComIfGs_isEventBit(0x3102)) {
+        dComIfGs_onEventBit(0x3102);
+        return 0x1AB0;
+    }
+    return dKy_daynight_check() ? 0x1AB2 : 0x1AB1;
+}
+
+/* 0221D724 */
+u16 daNpc_Btsw2_c::next_msgStatus(u32* message) {
+    return fopMsgStts_MSG_ENDS_e;
+}
+
+/* 0221DAB0 */
+void daNpc_Btsw2_c::setAttention() {
+    f32 z = mAttPos.z;
+    f32 y = mAttPos.y;
+    f32 height = l_HIO.mNpc.mAttnYOffset;
+    f32 x = mAttPos.x;
+    attention_info.position.z = z;
+    attention_info.position.x = x;
+    attention_info.position.y = gabi::fadds_ppc(y, height);
+}
+
+/* 0221DAD8 */
+void daNpc_Btsw2_c::lookBack() {
+    f32 zero = l_zero;
     f32 x = zero, y = zero, z = zero;
     int headOnly = 1;
-    s8 mode = actor->mMode;
-    s16 facing = gabi::load<s16>(a + 0x322);
+    s8 mode = m747;
+    s16 facing = current.angle.y;
     gabi::Local<cXyz> eye;
     cXyz* target = nullptr;
     if (mode == 1 || mode == 2) {
         bool attention;
         if (mode == 2) {
             headOnly = 0;
-            gabi::store<u8>(a + 0x3B6, 1);
-            attention = actor->mHasAttention;
+            m_jnt.mbTrn = 1;
+            attention = mHasAttention;
             if (!attention) {
                 gabi::Local<cXyz> playerEye;
-                f32 offset = gabi::load<f32>(0x10466ABC);
-                gabi::call(0x0259D54C, playerEye.get(), offset);
+                f32 offset = l_HIO.mNpc.m04;
+                Btsw2PlayerEye(playerEye.get(), offset);
                 eye->copy(*playerEye.get());
-                s16 desired = gabi::call<s16>(0x0200F93C, gabi::at<cXyz>(a + 0x314), eye.get());
-                gabi::call(0x0200F428, gabi::at<void>(a + 0x322), desired, 4, 0x1800);
-                attention = actor->mHasAttention;
+                s16 desired = cLib_targetAngleY(&current.pos, eye.get());
+                cLib_addCalcAngleS2(&current.angle.y, desired, 4, 0x1800);
+                attention = mHasAttention;
             }
-        } else attention = actor->mHasAttention;
+        } else
+            attention = mHasAttention;
         if (attention) {
             gabi::Local<cXyz> playerEye;
-            f32 offset = gabi::load<f32>(0x10466ABC);
-            gabi::call(0x0259D54C, playerEye.get(), offset);
-            y = gabi::load<f32>(a + 0x380);
+            f32 offset = l_HIO.mNpc.m04;
+            Btsw2PlayerEye(playerEye.get(), offset);
+            y = eyePos.y;
             eye->copy(*playerEye.get());
-            x = gabi::load<f32>(a + 0x314);
-            z = gabi::load<f32>(a + 0x31C);
+            x = current.pos.x;
+            z = current.pos.z;
             target = eye.get();
         }
     }
     gabi::Local<cXyz> selfEye;
-    selfEye->x = x; selfEye->y = y; selfEye->z = z;
-    s16 speed = gabi::load<s16>(0x10466AD2);
-    gabi::call(0x0259DED0, gabi::at<void>(a + 0x3AC), gabi::at<void>(a + 0x322),
-               target, selfEye.get(), facing, speed, headOnly);
+    selfEye->x = x;
+    selfEye->y = y;
+    selfEye->z = z;
+    s16 speed = l_HIO.mNpc.mMaxHeadTurnVel;
+    Btsw2LookAt(&m_jnt, &current.angle.y, target, selfEye.get(), facing, speed, headOnly);
 }
-VERIFY(0x0221DAD8, daNpc_Btsw2_lookBack);
 
-BOOL daNpc_Btsw2_waitAction(daNpc_Btsw2_c* actor, void* argument) {
-    WWHD_FUNC(0x0221DD2C, BOOL, actor, argument);
-    s8 status = actor->mActionStatus;
-    if (status == 0) {
-        u8 current = gabi::load<u8>(address(actor) + 0x8BA);
-        actor->mMode = 1;
-        actor->mActionStatus = s8(u8(current + 1));
-        return TRUE;
-    }
-    if (status == -1) return TRUE;
-    u32 a = address(actor);
-    s16 facing = gabi::load<s16>(a + 0x322);
-    s16 head = gabi::load<s16>(a + 0x3B2);
-    f32 x = gabi::load<f32>(a + 0x314);
-    f32 y = gabi::load<f32>(a + 0x318);
-    s16 neck = gabi::load<s16>(a + 0x3AE);
-    f32 z = gabi::load<f32>(a + 0x31C);
-    gabi::Local<cXyz> position;
-    position->x = x; position->y = y; position->z = z;
-    u8 attention = gabi::call<u8>(0x0221D4D0, actor, position.get(), s16(u16(facing) + u16(neck) + u16(head)));
-    s8 mode = actor->mMode;
-    actor->mHasAttention = attention;
-    actor->mEventOrder = 0;
-    if (mode == 1) {
-        daNpc_Btsw2_wait01(actor);
-        // GHS keeps r3 across the void wait01 leaf.
-        gabi::call(0x0221D72C, actor);
-    } else if (mode == 2) daNpc_Btsw2_talk01(actor);
-    daNpc_Btsw2_lookBack(actor);
-    daNpc_Btsw2_setAttention(actor);
+/* 0221CAE8 */
+BOOL CallbackCreateHeap(daNpc_Btsw2_c* actor) {
+    return Btsw2CallCreateHeap(actor);
+}
+
+/* 0221C790 */
+BOOL daNpc_Btsw2_c::CreateHeap() {
+    u32 a = address(this);
+    void* modelData = btsw2_resource("Btsw", 0x1A);
+    if (!modelData)
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x269, "modelData != (0)");
+    void* animation = btsw2_resource("Btsw", 0xF);
+    // HD: retain the constructor ABI with play speed in the final floating argument.
+    void* morf = Btsw2MorfCreate(nullptr, modelData, nullptr, nullptr, animation, 2, 0, -1, 1, 0, 0x80000,
+                                 0x15020022, 1.0f);
+    mpMorf = static_cast<mDoExt_McaMorf*>(morf);
+    if (!morf || !static_cast<mDoExt_McaMorf*>(morf)->mpModel.v.get())
+        return FALSE;
+    s8 head = s8(btsw2_joint(modelData, "head"));
+    m_jnt.mHeadJntNum = head;
+    if (head < 0)
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x27C, "m_jnt.getHeadJntNum() >= 0");
+    s8 back = s8(btsw2_joint(modelData, "backbone"));
+    m_jnt.mBackboneJntNum = back;
+    if (back < 0)
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x281, "m_jnt.getBackboneJntNum() >= 0");
+    m_handL_jnt_num = s8(btsw2_joint(modelData, "handL"));
+    m_handR_jnt_num = s8(btsw2_joint(modelData, "handR"));
+    // HD: the item models use a second guest copy of the same archive name.
+    void* bagData = btsw2_resource(l_itemArc.mName, 0x14);
+    void* bag = Btsw2ModelCreate(bagData, 0, 0x11020203);
+    mpKabanModel = static_cast<J3DModel*>(bag);
+    if (!bag)
+        return FALSE;
+    void* flyerData = btsw2_resource(l_itemArc.mName, 0x16);
+    void* flyer = Btsw2ModelCreate(flyerData, 0, 0x11020203);
+    mpTirasiModel = static_cast<J3DModel*>(flyer);
+    if (!flyer)
+        return FALSE;
+    m744 = 0;
+    if (!initTexPatternAnm(false))
+        return FALSE;
+    u32 currentMorf = gabi::ea(mpMorf.get());
+    u32 model = gabi::at<mDoExt_McaMorf>(currentMorf)->mpModel.v.get();
+    s8 headJoint = m_jnt.mHeadJntNum;
+    u32 data = gabi::at<J3DModel>(model)->mModelData.v.get();
+    btsw2_setCallback(data, headJoint);
+    s8 backJoint = m_jnt.mBackboneJntNum;
+    btsw2_setCallback(data, backJoint);
+    currentMorf = gabi::ea(mpMorf.get());
+    model = gabi::at<mDoExt_McaMorf>(currentMorf)->mpModel.v.get();
+    gabi::at<J3DModel>(model)->mUserArea = a;
+    mAcchCir.SetWall(30.0f, 0.0f);
+    mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, 0, 0);
     return TRUE;
 }
-VERIFY(0x0221DD2C, daNpc_Btsw2_waitAction);
 
-BOOL daNpc_Btsw2_createInit(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221CAEC, BOOL, actor);
-    u32 a = address(actor);
-    u16 z = gabi::load<u16>(a + 0x324);
-    u16 x = gabi::load<u16>(a + 0x320);
-    f32 gravity = gabi::load<f32>(0x10018B3C);
-    u16 y = gabi::load<u16>(a + 0x322);
-    actor->mLookRotation.x = s16(x); actor->mLookRotation.y = s16(y);
-    s16 index = actor->mActionVtableIndex;
-    gabi::store<u32>(a + 0x39C, 10);
-    gabi::store<f32>(a + 0x374, gravity);
-    actor->mLookRotation.z = s16(z);
-    bool same = index == -1 && actor->mActionThisAdjustment == 0 && actor->mActionTarget == 0x0221DD2C;
+/* 0221CAEC */
+BOOL daNpc_Btsw2_c::CreateInit() {
+    u32 a = address(this);
+    u16 z = current.angle.z;
+    u16 x = current.angle.x;
+    f32 gravity = l_gravity;
+    u16 y = current.angle.y;
+    m714.x = s16(x);
+    m714.y = s16(y);
+    s16 index = mCurrActionFunc.i;
+    attention_info.flags = fopAc_Attn_LOCKON_TALK_e | fopAc_Attn_ACTION_SPEAK_e;
+    this->gravity = gravity;
+    m714.z = s16(z);
+    bool same = index == -1 && mCurrActionFunc.d == 0 && mCurrActionFunc.f == btsw2_tu::waitAction;
     if (!same) {
         if (index != 0) {
-            s16 adjustment = actor->mActionThisAdjustment;
-            index = actor->mActionVtableIndex;
+            s16 adjustment = mCurrActionFunc.d;
+            index = mCurrActionFunc.i;
             u32 receiver = a + s32(adjustment);
-            actor->mActionStatus = -1;
+            mActionStatus = ACTION_ENDING;
             u32 target;
-            if (index < 0) target = actor->mActionTarget;
+            if (index < 0)
+                target = mCurrActionFunc.f;
             else {
-                s16 offset = gabi::load<s16>(a + 0x8A2);
-                u32 vtable = gabi::load<u32>(receiver + s32(offset));
-                target = gabi::load<u32>(vtable + u32(s32(index) * 8) + 4);
+                s16 offset = gabi::at<Btsw2PtmfView>(gabi::ea(&mCurrActionFunc))->mVtableOffset;
+                u32 vtable = *gabi::at<be<u32>>(receiver + s32(offset));
+                target = gabi::at<Btsw2DispatchVtable>(vtable)->mEntries[u32(s32(index))].mpFunction;
             }
             gabi::call<BOOL>(target, gabi::at<void>(receiver), 0);
         }
-        actor->mActionThisAdjustment = 0;
-        s16 adjustment = actor->mActionThisAdjustment;
-        actor->mActionTarget = 0x0221DD2C;
-        actor->mActionStatus = 0;
-        actor->mActionVtableIndex = -1;
-        u32 target = actor->mActionTarget;
+        mCurrActionFunc.d = 0;
+        s16 adjustment = mCurrActionFunc.d;
+        mCurrActionFunc.f = btsw2_tu::waitAction;
+        mActionStatus = ACTION_STARTING;
+        mCurrActionFunc.i = -1;
+        u32 target = mCurrActionFunc.f;
         gabi::call<BOOL>(target, gabi::at<void>(a + s32(adjustment)), 0);
     }
-    u32 px = gabi::load<u32>(a + 0x314);
-    u32 py = gabi::load<u32>(a + 0x318);
-    gabi::store<u32>(a + 0x878, px);
-    u32 pz = gabi::load<u32>(a + 0x31C);
-    gabi::store<u32>(a + 0x87C, py);
-    gabi::store<u32>(a + 0x880, pz);
-    gabi::call(0x02515F14, gabi::at<void>(a + 0x654), 255, 255, actor);
-    gabi::call(0x02516518, gabi::at<void>(a + 0x690), gabi::at<void>(0x101BD7E0));
-    gabi::store<u32>(a + 0x6D4, a + 0x654);
-    gabi::call(0x025A15AC, actor, 60.0f, 150.0f);
-    u32 parameters = gabi::load<u32>(a + 0xB0);
-    s8 room = gabi::load<s8>(a + 0x326);
-    gabi::store<u8>(a + 0x898, 0);
+    u32 px = reinterpret_cast<Btsw2Words*>(&current.pos)->x;
+    u32 py = reinterpret_cast<Btsw2Words*>(&current.pos)->y;
+    reinterpret_cast<Btsw2Words*>(&mAttPos)->x = px;
+    u32 pz = reinterpret_cast<Btsw2Words*>(&current.pos)->z;
+    reinterpret_cast<Btsw2Words*>(&mAttPos)->y = py;
+    reinterpret_cast<Btsw2Words*>(&mAttPos)->z = pz;
+    mStts.Init(255, 255, this);
+    Btsw2CylinderSet(&mCyl, &l_cyl_src);
+    mCyl.mStts = &mStts;
+    setCollision(60.0f, 150.0f);
+    u32 parameters = mParameters;
+    s8 room = current.roomNo;
+    m724 = 0;
     s8 pathNumber = s8(parameters >> 16);
-    actor->mPathNumber = pathNumber;
-    void* path = gabi::call<void*>(0x025AAF88, pathNumber, room);
-    actor->mpPath = path;
+    mPathNo = pathNumber;
+    void* path = Btsw2RoomPath(pathNumber, room);
+    mpPath = path;
     if (!path) {
-        gabi::call(0x0273AA24, STR(0x10018B5C), 0x2DE, STR(0x10018B70));
-        path = actor->mpPath.get();
+        // HD: assertion text names this field m_move_path.
+        JUT_ASSERT_fail("d_a_npc_btsw2.cpp", 0x2DE, "mpPath != NULL");
+        path = mpPath.get();
     }
-    u16 count = gabi::load<u16>(gabi::ea(path));
-    actor->mFinalPathPoint = s16(count - 1);
-    f32 random = gabi::call<f32>(0x020198D8, 3.0f);
-    actor->mPathTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, 1.0f)));
-    random = gabi::call<f32>(0x020198D8, 300.0f);
+    u16 count = static_cast<Btsw2Path*>(path)->m_num;
+    mFinalPathPntIdx = s16(count - 1);
+    f32 random = cM_rndF(3.0f);
+    m73E = s16(gabi::ftoi(gabi::fadds_ppc(random, 1.0f)));
+    random = cM_rndF(300.0f);
     f32 timer = gabi::fadds_ppc(random, 90.0f);
-    actor->mPathFlags = 0; actor->mPathAdvance = 0;
-    actor->mWaitTimer = s16(gabi::ftoi(timer));
-    actor->mPathPoint = 0;
-    gabi::call(0x0259F814, gabi::at<void>(a + 0x3E0), STR(0x10018B54), actor);
-    gabi::store<u8>(a + 0x389, 0xAB);
-    gabi::store<u8>(a + 0x38B, 0xAB);
+    m735 = 0;
+    m736 = 0;
+    m742 = s16(gabi::ftoi(timer));
+    mPathPntIdx = 0;
+    mEventCut.setActorInfo2("Btsw2", this);
+    attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xAB;
+    attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xAB;
     return TRUE;
 }
-VERIFY(0x0221CAEC, daNpc_Btsw2_createInit);
 
-BOOL daNpc_Btsw2_initTexPattern(daNpc_Btsw2_c* actor, u8 modify) {
-    WWHD_FUNC(0x0221C68C, BOOL, actor, modify);
-    u32 a = address(actor);
-    u32 morf = gabi::ea(actor->mpMorf.get());
-    u32 model = gabi::load<u32>(morf + 0x90);
-    u32 resource = gabi::load<u32>(0x100189FC);
-    u32 modelData = gabi::load<u32>(model + 0xAC);
-    u32 manager = gabi::load<u32>(0x101F4F28);
-    gabi::Local<SafeString> key;
-    key->mStringTop = 0x10018BB0; key->__vtbl = 0x10018A00;
-    void* pattern = gabi::call<void*>(0x026066C4, gabi::at<void>(manager), key.get(), resource);
-    actor->mpTexPattern = pattern;
-    if (!pattern) {
-        gabi::call(0x0273AA24, STR(0x10018A84), 0x11A, STR(0x10018A98));
-        pattern = actor->mpTexPattern.get();
-    }
-    if (!gabi::call<BOOL>(0x025E789C, gabi::at<void>(a + 0x7F0), gabi::at<void>(modelData),
-            pattern, 1, 2, 0, -1, modify, 1.0f)) return FALSE;
-    actor->mBtpFrame = 0;
-    actor->mBlinkTimer = 0;
-    return TRUE;
+/* 0221DC90 */
+void daNpc_Btsw2_c::wait01() {
+    if (m71E)
+        m747 = 2;
+    else
+        m746 = 2;
 }
-VERIFY(0x0221C68C, daNpc_Btsw2_initTexPattern);
 
-static void* btsw2_resource(u32 archive, u32 id) {
-    gabi::Local<SafeString> key;
-    key->mStringTop = archive; key->__vtbl = 0x10018A00;
-    u32 manager = gabi::load<u32>(0x101F4F28);
-    return gabi::call<void*>(0x026066C4, gabi::at<void>(manager), key.get(), id);
+/* 0221DCB4 */
+void daNpc_Btsw2_c::talk01() {
+    if (talk(1) != fopMsgStts_BOX_CLOSED_e)
+        return;
+    m747 = 1;
+    u32 play = dComIfGp_ea();
+    u16 flags = gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag;
+    gabi::at<dComIfG_inf_c>(play)->play.mEvtCtrl.mEventFlag = flags | 8;
+    s16 waitTimer = m742;
+    m71E = 0;
+    if (waitTimer == 0)
+        m736 = 1;
+    setAnm(0);
 }
-static s32 btsw2_joint(void* modelData, u32 name) {
-    void* jointNames = gabi::call<void*>(0x027F68FC, modelData);
-    u32 names = gabi::ea(jointNames);
-    u32 displacement = gabi::load<u32>(names + 0x10);
-    return gabi::call<s32>(0x027DF9B0, gabi::at<void>(displacement ? names + 0x10 + displacement : 0), STR(name));
-}
-static void btsw2_setCallback(u32 data, s8 joint) {
-    u32 index = u16(s16(joint));
-    u32 count = gabi::load<u32>(data + 4);
-    u32 array = gabi::load<u32>(data + 8);
-    u32 selected = index < count ? array + index * 0x1C : array;
-    gabi::store<u32>(selected + 8, 0x0221C39C);
-}
-BOOL daNpc_Btsw2_createHeap(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221C790, BOOL, actor);
-    u32 a = address(actor);
-    void* modelData = btsw2_resource(0x10018BB0, 0x1A);
-    if (!modelData) gabi::call(0x0273AA24, STR(0x10018ACC), 0x269, STR(0x10018AE0));
-    void* animation = btsw2_resource(0x10018BB0, 0xF);
-    void* morf = gabi::call<void*>(0x025E4F64, nullptr, modelData, nullptr, nullptr,
-                                 animation, 2, 0, -1, 1, 0, 0x80000, 0x15020022, 1.0f);
-    actor->mpMorf = static_cast<mDoExt_McaMorf*>(morf);
-    if (!morf || !gabi::load<u32>(gabi::ea(morf) + 0x90)) return FALSE;
-    s8 head = s8(btsw2_joint(modelData, 0x10018ABC));
-    gabi::store<s8>(a + 0x3B4, head);
-    if (head < 0) gabi::call(0x0273AA24, STR(0x10018ACC), 0x27C, STR(0x10018AF4));
-    s8 back = s8(btsw2_joint(modelData, 0x10018B10));
-    gabi::store<s8>(a + 0x3B5, back);
-    if (back < 0) gabi::call(0x0273AA24, STR(0x10018ACC), 0x281, STR(0x10018B1C));
-    actor->mHandLeftJoint = s8(btsw2_joint(modelData, 0x10018AAC));
-    actor->mHandRightJoint = s8(btsw2_joint(modelData, 0x10018AB4));
-    void* bagData = btsw2_resource(0x10018AC4, 0x14);
-    void* bag = gabi::call<void*>(0x025E38E0, bagData, 0, 0x11020203);
-    actor->mpBagModel = static_cast<J3DModel*>(bag);
-    if (!bag) return FALSE;
-    void* flyerData = btsw2_resource(0x10018AC4, 0x16);
-    void* flyer = gabi::call<void*>(0x025E38E0, flyerData, 0, 0x11020203);
-    actor->mpFlyerModel = static_cast<J3DModel*>(flyer);
-    if (!flyer) return FALSE;
-    actor->mPathState = 0;
-    if (!daNpc_Btsw2_initTexPattern(actor, false)) return FALSE;
-    u32 currentMorf = gabi::ea(actor->mpMorf.get());
-    u32 model = gabi::load<u32>(currentMorf + 0x90);
-    s8 headJoint = gabi::load<s8>(a + 0x3B4);
-    u32 data = gabi::load<u32>(model + 0xAC);
-    btsw2_setCallback(data, headJoint);
-    s8 backJoint = gabi::load<s8>(a + 0x3B5);
-    btsw2_setCallback(data, backJoint);
-    currentMorf = gabi::ea(actor->mpMorf.get());
-    model = gabi::load<u32>(currentMorf + 0x90);
-    gabi::store<u32>(model + 0xB8, a);
-    gabi::call(0x024EFF44, gabi::at<void>(a + 0x614), 30.0f, 0.0f);
-    gabi::call(0x024F06B4, gabi::at<void>(a + 0x450), gabi::at<void>(a + 0x314),
-        gabi::at<void>(a + 0x300), actor, 1, gabi::at<void>(a + 0x614), gabi::at<void>(a + 0x33C), 0, 0);
-    return TRUE;
-}
-VERIFY(0x0221C790, daNpc_Btsw2_createHeap);
 
-BOOL daNpc_Btsw2_nodeCallback(void* node, int phase) {
-    WWHD_FUNC(0x0221C39C, BOOL, node, phase);
-    if (phase != 0) return TRUE;
-    u32 model = gabi::load<u32>(0x104B462C);
-    u32 actor = gabi::load<u32>(model + 0xB8);
-    if (!actor) return TRUE;
-    u32 initialized = gabi::load<u32>(0x10466B20);
-    f32 zero = gabi::load<f32>(0x10018A74);
-    if (!initialized) {
-        gabi::store<f32>(0x10466B08, zero);
-        gabi::store<f32>(0x10466B10, zero);
-        gabi::store<u32>(0x10466B20, 1);
-        gabi::store<f32>(0x10466B0C, zero);
-    }
-    if (!gabi::load<u32>(0x10466B24)) {
-        f32 x = gabi::load<f32>(0x10018A78);
-        gabi::store<u32>(0x10466B24, 1);
-        f32 y = gabi::load<f32>(0x10018A7C);
-        gabi::store<f32>(0x10466B14, x);
-        gabi::store<f32>(0x10466B18, y);
-        gabi::store<f32>(0x10466B1C, zero);
-    }
-    void* jointObject = gabi::call<void*>(0x027F7878);
-    u16 joint = gabi::load<u16>(gabi::ea(jointObject) + 4);
-    u32 matrices = gabi::load<u32>(model + 0x2C);
-    u16 flags = gabi::load<u16>(matrices + 4);
-    u32 array = gabi::load<u32>(matrices + 0x10);
-    gabi::store<u16>(matrices + 4, flags | 0x10);
-    gabi::call(0x028E90D4, gabi::at<void>(array + u32(joint) * 48), gabi::at<void>(0x1048D0CC));
-    s8 head = gabi::load<s8>(actor + 0x3B4);
-    if (u32(joint) == u32(s32(head))) {
-        gabi::call(0x028E8F64, gabi::at<void>(0x1048D0CC), gabi::at<void>(0x10466B08), gabi::at<void>(actor + 0x878));
-        gabi::Local<Mtx34> rotation;
-        gabi::call(0x028E90D4, gabi::at<void>(0x1048D0CC), rotation.get());
-        f32 x = rotation->m[0][3];
-        f32 z = rotation->m[2][3];
-        rotation->m[2][3] = zero;
-        f32 y = rotation->m[1][3];
-        rotation->m[1][3] = zero;
-        rotation->m[0][3] = zero;
-        gabi::call(0x028E93CC, gabi::at<void>(0x1048D0CC), x, y, z);
-        s16 neck = gabi::load<s16>(actor + 0x3AE);
-        s16 facing = gabi::load<s16>(actor + 0x322);
-        gabi::call(0x025F1C28, gabi::at<void>(0x1048D0CC), s16(u16(neck) + u16(facing)));
-        s16 pitch = gabi::load<s16>(actor + 0x3AC);
-        gabi::call(0x025F1BF4, gabi::at<void>(0x1048D0CC), s16(-s32(pitch)));
-        facing = gabi::load<s16>(actor + 0x322);
-        gabi::call(0x025F1C28, gabi::at<void>(0x1048D0CC), s16(-s32(facing)));
-        gabi::call(0x028E9108, gabi::at<void>(0x1048D0CC), rotation.get(), gabi::at<void>(0x1048D0CC));
-        gabi::call(0x028E8F64, gabi::at<void>(0x1048D0CC), gabi::at<void>(0x10466B14), gabi::at<void>(actor + 0x37C));
-    } else {
-        s8 back = gabi::load<s8>(actor + 0x3B5);
-        if (u32(joint) == u32(s32(back))) {
-            s16 pitch = gabi::load<s16>(actor + 0x3B2);
-            gabi::call(0x025F1BF4, gabi::at<void>(0x1048D0CC), pitch);
-            s16 roll = gabi::load<s16>(actor + 0x3B0);
-            gabi::call(0x025F1C5C, gabi::at<void>(0x1048D0CC), s16(-s32(roll)));
-        }
-    }
-    gabi::call(0x028E90D4, gabi::at<void>(0x1048D0CC), gabi::at<void>(0x104B4868));
-    matrices = gabi::load<u32>(model + 0x2C);
-    flags = gabi::load<u16>(matrices + 4);
-    array = gabi::load<u32>(matrices + 0x10);
-    gabi::store<u16>(matrices + 4, flags | 0x10);
-    mtx_copy(gabi::at<Mtx34>(array + u32(joint) * 48), gabi::at<Mtx34>(0x1048D0CC));
-    return TRUE;
-}
-VERIFY(0x0221C39C, daNpc_Btsw2_nodeCallback);
-
-void daNpc_Btsw2_pathMove(daNpc_Btsw2_c* actor) {
-    WWHD_FUNC(0x0221D72C, void, actor);
-    u32 a = address(actor);
-    s16 timer = actor->mWaitTimer;
-    f32 one = gabi::load<f32>(0x10018A80);
+/* 0221D72C */
+void daNpc_Btsw2_c::pathMove() {
+    s16 timer = m742;
+    f32 one = l_one;
     if (timer > 0) {
         timer = s16(timer - 1);
-        actor->mWaitTimer = timer;
+        m742 = timer;
         if (timer == 0) {
-            daNpc_Btsw2_setAnm(actor, 7);
-            f32 random = gabi::call<f32>(0x020198D8, 3.0f);
-            actor->mPathTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, one)));
+            setAnm(7);
+            f32 random = cM_rndF(3.0f);
+            m73E = s16(gabi::ftoi(gabi::fadds_ppc(random, one)));
         }
-        if (s8(actor->mAnimation) == 8) {
-            u32 morf = gabi::ea(actor->mpMorf.get());
-            s16 end = gabi::load<s16>(morf + 0xA2);
-            if (gabi::call<BOOL>(0x027F2BF8, gabi::at<void>(morf + 0x98), gabi::fsubs_ppc(f32(end), one)))
-                daNpc_Btsw2_setAnm(actor, 0);
+        if (s8(m745) == 8) {
+            u32 morf = gabi::ea(mpMorf.get());
+            s16 end = gabi::at<mDoExt_McaMorf>(morf)->mFrameCtrl.mEnd;
+            if (gabi::at<mDoExt_McaMorf>(morf)->checkFrame(gabi::fsubs_ppc(f32(end), one)))
+                setAnm(0);
         }
         return;
     }
-    s16 finalPoint = actor->mFinalPathPoint;
-    s16 currentPoint = actor->mPathPoint;
-    u32 path = gabi::ea(actor->mpPath.get());
-    u32 points = gabi::load<u32>(path + 8);
+    s16 finalPoint = mFinalPathPntIdx;
+    s16 currentPoint = mPathPntIdx;
+    u32 path = gabi::ea(mpPath.get());
+    u32 points = gabi::at<Btsw2Path>(path)->m_points;
     s16 nextPoint = currentPoint < finalPoint ? s16(currentPoint + 1) : 0;
     u32 point = points + u32(s32(nextPoint)) * 16;
-    f32 y = gabi::load<f32>(point + 8);
-    f32 x = gabi::load<f32>(point + 4);
-    f32 z = gabi::load<f32>(point + 12);
+    f32 y = gabi::at<Btsw2PathPoint>(point)->m_position.y;
+    f32 x = gabi::at<Btsw2PathPoint>(point)->m_position.x;
+    f32 z = gabi::at<Btsw2PathPoint>(point)->m_position.z;
     gabi::Local<cXyz> destination;
-    destination->x = x; destination->y = y; destination->z = z;
-    s16 desired = gabi::call<s16>(0x0200F93C, gabi::at<void>(a + 0x314), destination.get());
-    s16 maxStep = gabi::load<s16>(0x10466AE4);
-    s16 divisor = gabi::load<s16>(0x10466AE6);
-    gabi::call(0x0200F428, gabi::at<void>(a + 0x322), desired, divisor, maxStep);
+    destination->x = x;
+    destination->y = y;
+    destination->z = z;
+    s16 desired = cLib_targetAngleY(&current.pos, destination.get());
+    s16 maxStep = l_HIO.m30;
+    s16 divisor = l_HIO.m32;
+    cLib_addCalcAngleS2(&current.angle.y, desired, divisor, maxStep);
     gabi::Local<cXyz> direction;
-    gabi::call(0x0201ADE0, destination.get(), direction.get(), gabi::at<void>(a + 0x314));
-    f32 baseSpeed = gabi::load<f32>(0x10466AE8);
-    gabi::store<f32>(a + 0x370, baseSpeed);
-    BOOL normalized = gabi::call<BOOL>(0x0201B47C, direction.get());
-    f32 zero = gabi::load<f32>(0x10018A74);
+    cXyz_mi(destination.get(), direction.get(), &current.pos);
+    f32 baseSpeed = l_HIO.m34;
+    speedF = baseSpeed;
+    BOOL normalized = Btsw2NormalizeRS(direction.get());
+    f32 zero = l_zero;
     if (normalized) {
-        u16 facing = gabi::load<u16>(a + 0x322);
-        u32 sinCos = 0x104A44F8 + (u32(facing) >> 3) * 8;
+        u16 facing = current.angle.y;
+        Btsw2SinCos* sinCos = &l_sinCosTable.mEntries[u32(facing) >> 3];
         gabi::Local<cXyz> forward;
         forward->y = zero;
-        f32 sine = gabi::load<f32>(sinCos);
-        f32 cosine = gabi::load<f32>(sinCos + 4);
-        forward->x = sine; forward->z = cosine;
-        f32 dot = gabi::call<f32>(0x028E8F44, direction.get(), forward.get());
-        f32 acceleration = gabi::load<f32>(0x10466AEC);
-        f32 speed = gabi::load<f32>(a + 0x370);
-        gabi::store<f32>(a + 0x370, gabi::fmadds(acceleration, dot, speed));
+        f32 sine = sinCos->mSin;
+        f32 cosine = sinCos->mCos;
+        forward->x = sine;
+        forward->z = cosine;
+        f32 dot = PSVECDotProduct(direction.get(), forward.get());
+        f32 acceleration = l_HIO.m38;
+        f32 speed = speedF;
+        speedF = gabi::fmadds(acceleration, dot, speed);
     }
-    if (actor->mPathAdvance) {
-        s16 facing = gabi::load<s16>(a + 0x322);
-        gabi::store<f32>(a + 0x370, zero);
-        s16 delta = gabi::call<s16>(0x0200FAAC, facing, desired);
-        gabi::call(0x0200F428, gabi::at<void>(a + 0x322), desired, 4, 0x1800);
+    if (m736) {
+        s16 facing = current.angle.y;
+        speedF = zero;
+        s16 delta = Btsw2DistanceAngle(facing, desired);
+        cLib_addCalcAngleS2(&current.angle.y, desired, 4, 0x1800);
         if (delta < 0x10) {
-            actor->mPathAdvance = 0;
-            daNpc_Btsw2_setAnm(actor, 7);
+            m736 = 0;
+            setAnm(7);
         }
     }
-    gabi::call(0x025D6870, actor, gabi::at<void>(a + 0x654));
+    // HD: this call passes the status object directly.
+    Btsw2PosMove(this, &mStts);
     gabi::Local<cXyz> remaining;
-    gabi::call(0x0201ADE0, destination.get(), remaining.get(), gabi::at<void>(a + 0x314));
+    cXyz_mi(destination.get(), remaining.get(), &current.pos);
     f32 dx = remaining->x;
     f32 dz = remaining->z;
     gabi::Local<cXyz> horizontal;
-    horizontal->x = dx; horizontal->y = zero; horizontal->z = dz;
-    f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    f32 distance = gabi::call<f32>(0x028F4384, square);
-    if (!(distance < 10.0f)) return;
-    timer = actor->mPathTimer;
-    actor->mPathPoint = nextPoint;
-    if (timer > 0) { actor->mPathTimer = s16(timer - 1); return; }
-    f32 random = gabi::call<f32>(0x020198D8, one);
+    horizontal->x = dx;
+    horizontal->y = zero;
+    horizontal->z = dz;
+    f32 square = PSVECSquareMag(horizontal.get());
+    f32 distance = std_sqrtf(square);
+    if (!(distance < 10.0f))
+        return;
+    timer = m73E;
+    mPathPntIdx = nextPoint;
+    if (timer > 0) {
+        m73E = s16(timer - 1);
+        return;
+    }
+    f32 random = cM_rndF(one);
     s8 animation = random < 0.5f ? 0 : 8;
-    daNpc_Btsw2_setAnm(actor, animation);
-    s16 randomRange = gabi::load<s16>(0x10466AF2);
-    random = gabi::call<f32>(0x020198D8, f32(randomRange));
-    s16 randomBase = gabi::load<s16>(0x10466AF0);
-    actor->mWaitTimer = s16(gabi::ftoi(gabi::fadds_ppc(random, f32(randomBase))));
+    setAnm(animation);
+    s16 randomRange = l_HIO.m3E;
+    random = cM_rndF(f32(randomRange));
+    s16 randomBase = l_HIO.m3C;
+    m742 = s16(gabi::ftoi(gabi::fadds_ppc(random, f32(randomBase))));
 }
-VERIFY(0x0221D72C, daNpc_Btsw2_pathMove);
+
+/* 0221DD2C */
+BOOL daNpc_Btsw2_c::wait_action(void* argument) {
+    s8 status = mActionStatus;
+    if (status == ACTION_STARTING) {
+        u8 current = u8(mActionStatus);
+        m747 = 1;
+        mActionStatus = s8(u8(current + 1));
+        return TRUE;
+    }
+    if (status == ACTION_ENDING)
+        return TRUE;
+    s16 facing = current.angle.y;
+    s16 head = m_jnt.mAngles[1][1];
+    f32 x = current.pos.x;
+    f32 y = current.pos.y;
+    s16 neck = m_jnt.mAngles[0][1];
+    f32 z = current.pos.z;
+    gabi::Local<cXyz> position;
+    position->x = x;
+    position->y = y;
+    position->z = z;
+    // HD: retain the guest call and its full verified u8 return width.
+    u8 attention = Btsw2CallChkAttention(this, position.get(), s16(u16(facing) + u16(neck) + u16(head)));
+    s8 mode = m747;
+    mHasAttention = attention;
+    m746 = 0;
+    if (mode == 1) {
+        wait01();
+        // HD: GHS keeps r3 across the void wait01 leaf.
+        Btsw2CallPathMove(this);
+    } else if (mode == 2)
+        talk01();
+    lookBack();
+    setAttention();
+    return TRUE;
+}
+
+/* 0221CD78 */
+BOOL daNpc_Btsw2_c::_create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            Btsw2NpcConstruct(this);
+            __vtbl = btsw2_tu::actorVtable;
+            mDoExt_btpAnm::ct(&mBtpAnm);
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
+    }
+    if (dComIfGs_getEventReg(0xC203) == 3)
+        return cPhs_ERROR_e;
+    if (!checkItemGet(0x6A, 1))
+        return cPhs_ERROR_e;
+    s32 phase = dComIfG_resLoad(&mPhs, "Btsw");
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)CallbackCreateHeap), 0x29E0))
+        return cPhs_ERROR_e;
+    u32 morf = mpMorf.v;
+    u32 model = gabi::at<mDoExt_McaMorf>(morf)->mpModel.v.get();
+    cullMtx = model ? model + 0xC8 : 0;
+    if (!Btsw2CallCreateInit(this))
+        return cPhs_ERROR_e;
+    return phase;
+}
+
+/* 0221CE9C */
+BOOL daNpc_Btsw2_c::_delete() {
+    dComIfG_resDelete(&mPhs, "Btsw");
+    if (heap.v) {
+        u32 morf = mpMorf.v;
+        if (morf)
+            gabi::at<mDoExt_McaMorf>(morf)->stopZelAnime();
+    }
+    return TRUE;
+}
+
+/* 0221D034 */
+BOOL daNpc_Btsw2_c::_execute() {
+    u32 a = address(this);
+    s16 neckMin = l_HIO.mNpc.mMinHeadX;
+    s16 headMax = l_HIO.mNpc.mMaxHeadX;
+    s16 backMin = l_HIO.mNpc.mMaxBackboneY;
+    s16 backMax = l_HIO.mNpc.mMinBackboneY;
+    s16 headMin = l_HIO.mNpc.mMaxHeadY;
+    s16 neckMax = l_HIO.mNpc.mMinBackboneX;
+    s16 turnMin = l_HIO.mNpc.mMinHeadY;
+    s16 turnMax = l_HIO.mNpc.mMaxBackboneX;
+    s16 turnStep = l_HIO.mNpc.mMaxTurnStep;
+    m_jnt.setParam(turnMax, backMin, neckMax, backMax, headMax, headMin, neckMin, turnMin, turnStep);
+    Btsw2CallPlayTexPattern(this);
+    u32 morf = gabi::ea(mpMorf.get());
+    gabi::at<mDoExt_McaMorf>(morf)->play(&eyePos, 0, 0);
+    checkOrder();
+    if (!mEventCut.cutProc()) {
+        s16 index = mCurrActionFunc.i;
+        s16 adjustment = mCurrActionFunc.d;
+        u32 receiver = a + s32(adjustment);
+        u32 target;
+        if (index < 0)
+            target = mCurrActionFunc.f;
+        else {
+            s16 vtableOffset = gabi::at<Btsw2PtmfView>(gabi::ea(&mCurrActionFunc))->mVtableOffset;
+            u32 vtable = *gabi::at<be<u32>>(receiver + s32(vtableOffset));
+            target = gabi::at<Btsw2DispatchVtable>(vtable)->mEntries[u32(s32(index))].mpFunction;
+        }
+        gabi::call<BOOL>(target, gabi::at<void>(receiver), 0);
+    }
+    eventOrder();
+    u32 play = dComIfGp_ea();
+    Btsw2CorrectPosition(&mObjAcch, &gabi::at<dComIfG_inf_c>(play)->play.mBgS);
+    play = dComIfGp_ea();
+    s8 room = Btsw2GroundRoom(&gabi::at<dComIfG_inf_c>(play)->play.mBgS,
+                              static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    tevStr.mRoomNo = room;
+    play = dComIfGp_ea();
+    u8 color = Btsw2GroundColor(&gabi::at<dComIfG_inf_c>(play)->play.mBgS,
+                                static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    morf = gabi::ea(mpMorf.get());
+    f32 x = current.pos.x;
+    f32 y = current.pos.y;
+    f32 z = current.pos.z;
+    tevStr.mEnvrIdxOverride = color;
+    u32 model = gabi::at<mDoExt_McaMorf>(morf)->mpModel.v.get();
+    PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
+    s16 rotation = current.angle.y;
+    mDoMtx_YrotM(mDoMtx_stack_c::get(), rotation);
+    mtx_copy(&gabi::at<J3DModel>(model)->mBaseTransformMtx, mDoMtx_stack_c::get());
+    setCollision(60.0f, 150.0f);
+    return TRUE;
+}
+
+/* 0221D214 */
+BOOL daNpc_Btsw2_c::_draw() {
+    // HD: this draw path omits the GameCube shadow submission.
+    u32 morf = gabi::ea(mpMorf.get());
+    u32 model = gabi::at<mDoExt_McaMorf>(morf)->mpModel.v.get();
+    u32 modelData = gabi::at<J3DModel>(model)->mModelData.v.get();
+    dScnKy_env_light_c* environment = dKy_getEnvlight();
+    settingTevStruct(environment, 0, &current.pos, &tevStr);
+    environment = dKy_getEnvlight();
+    setLightTevColorType(environment, gabi::at<J3DModel>(model), &tevStr);
+    environment = dKy_getEnvlight();
+    u32 bag = gabi::ea(mpKabanModel.get());
+    setLightTevColorType(environment, gabi::at<J3DModel>(bag), &tevStr);
+    environment = dKy_getEnvlight();
+    u32 flyer = gabi::ea(mpTirasiModel.get());
+    setLightTevColorType(environment, gabi::at<J3DModel>(flyer), &tevStr);
+    u8 frame = mBtpFrame;
+    Btsw2BtpEntry(&mBtpAnm, gabi::at<void>(modelData), frame);
+    morf = gabi::ea(mpMorf.get());
+    gabi::at<mDoExt_McaMorf>(morf)->updateDL();
+    s8 joint = m_handL_jnt_num;
+    u32 matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.v.get();
+    u32 matrixArray = gabi::at<J3DMtxBuffer_hd>(matrices)->mpAnmMtx;
+    u16 flags = gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags;
+    bag = gabi::ea(mpKabanModel.get());
+    gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags = flags | 0x10;
+    mtx_copy(&gabi::at<J3DModel>(bag)->mBaseTransformMtx,
+             gabi::at<Mtx34>(matrixArray + u32(s32(joint) * 48)));
+    joint = m_handR_jnt_num;
+    matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.v.get();
+    matrixArray = gabi::at<J3DMtxBuffer_hd>(matrices)->mpAnmMtx;
+    flags = gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags;
+    flyer = gabi::ea(mpTirasiModel.get());
+    gabi::at<J3DMtxBuffer_hd>(matrices)->mFlags = flags | 0x10;
+    mtx_copy(&gabi::at<J3DModel>(flyer)->mBaseTransformMtx,
+             gabi::at<Mtx34>(matrixArray + u32(s32(joint) * 48)));
+    bag = gabi::ea(mpKabanModel.get());
+    Btsw2ModelUpdateDL(gabi::at<void>(bag), 0);
+    flyer = gabi::ea(mpTirasiModel.get());
+    Btsw2ModelUpdateDL(gabi::at<void>(flyer), 0);
+    gabi::at<Btsw2PatternBinding>(modelData)->mpPattern = 0;
+    s16 rotation = current.angle.y;
+    dSnap_RegistFig(0x98, this, &current.pos, rotation, 1.0f, 1.0f, 1.0f);
+    return TRUE;
+}
+
+/* 0221CE98 */
+BOOL daNpc_Btsw2_Create(daNpc_Btsw2_c* actor) {
+    return actor->_create();
+}
+
+/* 0221CEF4 */
+BOOL daNpc_Btsw2_Delete(daNpc_Btsw2_c* actor) {
+    return actor->_delete();
+}
+
+/* 0221D210 */
+BOOL daNpc_Btsw2_Execute(daNpc_Btsw2_c* actor) {
+    return actor->_execute();
+}
+
+/* 0221D40C */
+BOOL daNpc_Btsw2_Draw(daNpc_Btsw2_c* actor) {
+    return actor->_draw();
+}
+
+/* 0221DFE4 */
+BOOL daNpc_Btsw2_IsDelete(daNpc_Btsw2_c* actor) {
+    return TRUE;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+/* 0221DE30 */
+void* daNpc_Btsw2_HIO_construct(void* object) {
+    if (!object)
+        object = operator_new(0x40);
+    if (!object)
+        return nullptr;
+    u32 a = gabi::ea(object);
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->__vtbl = btsw2_tu::hioVtable;
+    Btsw2NpcHioConstruct(&gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc);
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinBackboneX = 0;
+    f32 zero = l_zero;
+    f32 damping = l_moveAcceleration;
+    f32 speed = l_moveSpeed;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNo = -1;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxBackboneX = 0;
+    f32 attentionHeight = l_attentionHeight;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxTurnStep = 1000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadY = 8000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.m22 = 0;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinHeadY = -8000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mAttnYOffset = attentionHeight;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m34 = speed;
+    f32 attentionDistance = l_attentionDistance;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinHeadX = -3000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m32 = 5;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m38 = damping;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.m04 = zero;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxBackboneY = 8000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxAttnDistXZ = attentionDistance;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m3E = 90;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m30 = 600;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxAttnAngleY = 0x2000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadTurnVel = 1600;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->m3C = 90;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMinBackboneY = -8000;
+    gabi::at<daNpc_Btsw2_HIO_c>(a)->mNpc.mMaxHeadX = 8000;
+    return object;
+}
+
+/* 0221DF30 */
+void daNpc_Btsw2_staticInit() {
+    l_headerZero.mWords[2] = 0;
+    l_headerZero.mWords[0] = 0;
+    l_headerZero.mWords[3] = 0;
+    l_headerZero.mWords[1] = 0;
+    Btsw2DestructorChain(&l_headerRecords.mRecords[0]);
+    f32 minimum = l_minAngleInitial;
+    f32 maximum = l_maxAngleInitial;
+    l_minAngle = minimum;
+    l_maxAngle = maximum;
+    Btsw2HeaderByteConstruct(&l_headerByte);
+    Btsw2DestructorChain(&l_headerRecords.mRecords[1]);
+    Btsw2HeaderOtherByteConstruct(&l_headerOtherByte);
+    Btsw2DestructorChain(&l_headerRecords.mRecords[2]);
+    daNpc_Btsw2_HIO_construct(&l_HIO);
+}
+
+/* 0221DFD0 */
+void daNpc_Btsw2_SafeString_delete(void* object, int flags) {
+    if (object && (flags & 1))
+        operator_delete(object);
+}
+
+/* 0221DFEC */
+void daNpc_Btsw2_destructor(daNpc_Btsw2_c* actor, int flags) {
+    if (!actor)
+        return;
+    Btsw2CylinderDestroy(&actor->mCyl, 2);
+    Btsw2StatusDestroy(&actor->mStts, 2);
+    Btsw2CircleDestroy(&actor->mAcchCir.m_cir, 2);
+    actor->mObjAcch.dBgS_GrpPassChk::__vtbl = btsw2_tu::acchGroupVtable;
+    actor->mObjAcch.dBgS_PolyPassChk::__vtbl = btsw2_tu::acchPolyVtable;
+    Btsw2AcchDestroy(&actor->mObjAcch, 0);
+    Btsw2ActorDestroy(actor, 0);
+    if (flags & 1)
+        operator_delete(actor);
+}
+
+/* 0221E088 */
+void daNpc_Btsw2_SafeString_assureTerminated(SafeString* string) {}
+/* WWHD glue
+str 10018BB0 "Btsw"
+data l_itemArc 10018AC4
+str 10018A84 "d_a_npc_btsw2.cpp" in 0221C68C
+str 10018ACC "d_a_npc_btsw2.cpp" in 0221C790
+str 10018B5C "d_a_npc_btsw2.cpp" in 0221CAEC
+str 10018A98 "m_btp != (0)"
+str 10018AE0 "modelData != (0)"
+str 10018AF4 "m_jnt.getHeadJntNum() >= 0"
+str 10018B1C "m_jnt.getBackboneJntNum() >= 0"
+str 10018B70 "mpPath != NULL" renamed
+str 10018B54 "Btsw2"
+str 10018ABC "head"
+str 10018B10 "backbone"
+str 10018AAC "handL"
+str 10018AB4 "handR"
+data l_HIO 10466AB8
+data l_headerZero 10466AF8
+data l_headerRecords 101BD8A8
+data l_headerByte 10466AB4
+data l_headerOtherByte 10466AB5
+data l_minAngle 10466AAC
+data l_maxAngle 10466AB0
+data a_att_pos_offst 10466B08
+data a_eye_pos_offst 10466B14
+data a_att_pos_guard 10466B20
+data a_eye_pos_guard 10466B24
+data l_sinCosTable 104A44F8
+data l_zero 10018A74
+data l_eyeOffsetX 10018A78
+data l_eyeOffsetY 10018A7C
+data l_one 10018A80
+data l_gravity 10018B3C
+data l_attentionHeight 10018B88
+data l_attentionDistance 10018B9C
+data l_moveSpeed 10018BA0
+data l_moveAcceleration 10018BA4
+data l_minAngleInitial 10018BA8
+data l_maxAngleInitial 10018BAC
+data a_morf_frame_tbl 101BD850
+data l_bck_ix_tbl 10018A48
+data a_play_speed_tbl 101BD87C
+data a_play_mode_tbl 101BD824
+data l_btp_ix_tbl 100189FC
+data l_cyl_src 101BD7E0
+ext 02556D14 BOOL dKy_daynight_check()
+ext 02515A70 void Btsw2CylinderDestroy(void*, s32)
+ext 02515860 void Btsw2StatusDestroy(void*, s32)
+ext 02018034 void Btsw2CircleDestroy(void*, s32)
+ext 024EFD9C void Btsw2AcchDestroy(void*, s32)
+ext 025D50BC void Btsw2ActorDestroy(void*, s32)
+ext 025A1458 void Btsw2NpcConstruct(void*)
+ext 0221CAEC BOOL Btsw2CallCreateInit(void*)
+ext 0221C790 BOOL Btsw2CallCreateHeap(void*)
+ext 0259DA18 void Btsw2NpcHioConstruct(void*)
+ext 028F026C void Btsw2DestructorChain(void*)
+ext 028ED6F8 void Btsw2HeaderByteConstruct(void*)
+ext 028EAB2C void Btsw2HeaderOtherByteConstruct(void*)
+ext 025E7B3C void Btsw2BtpEntry(void*, void*, u8)
+ext 025E2DE0 void Btsw2ModelUpdateDL(void*, s32)
+ext 025BEBB8 void dSnap_RegistFig(s32, void*, void*, s16, f32, f32, f32)
+ext 0221CEF8 void Btsw2CallPlayTexPattern(void*)
+ext 024F08A8 void Btsw2CorrectPosition(void*, void*)
+ext 024EF130 s8 Btsw2GroundRoom(void*, void*)
+ext 024EEEB8 u8 Btsw2GroundColor(void*, void*)
+ext 028E93CC void PSMTXTrans(Mtx34*, f32, f32, f32)
+ext 0259D54C void Btsw2PlayerEye(cXyz*, f32)
+ext 0259DED0 void Btsw2LookAt(void*, void*, cXyz*, cXyz*, s16, s16, s32)
+ext 0221D4D0 u8 Btsw2CallChkAttention(void*, cXyz*, s16)
+ext 0221D72C void Btsw2CallPathMove(void*)
+ext 02516518 void Btsw2CylinderSet(void*, void*)
+ext 025AAF88 void* Btsw2RoomPath(s32, s32)
+ext 026066C4 void* Btsw2Resource(void*, SafeString*, u32)
+ext 025E789C BOOL Btsw2BtpInit(void*, void*, void*, s32, s32, s32, s32, u8, f32)
+ext 027F68FC void* Btsw2JointNames(void*)
+ext 027DF9B0 s32 Btsw2NameIndex(void*, const char*)
+ext 025E4F64 void* Btsw2MorfCreate(void*, void*, void*, void*, void*, s32, s32, s32, s32, s32, u32, u32, f32)
+ext 025E38E0 void* Btsw2ModelCreate(void*, s32, u32)
+ext 027F7878 void* Btsw2JointObject()
+ext 028E8F64 void PSMTXMultVec(const Mtx34*, const cXyz*, cXyz*)
+ext 028E9108 void PSMTXConcat(const Mtx34*, const Mtx34*, Mtx34*)
+ext 028E8F44 f32 PSVECDotProduct(const cXyz*, const cXyz*)
+ext 0200FAAC s16 Btsw2DistanceAngle(s16, s16)
+ext 025D6870 void Btsw2PosMove(void*, void*)
+ext 0201B47C BOOL Btsw2NormalizeRS(cXyz*)
+*/

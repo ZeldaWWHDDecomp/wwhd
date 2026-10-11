@@ -1,1534 +1,1843 @@
-/* Local WWHD auction NPC reconstruction. */
+/**
+ * d_a_npc_auction.cpp (WWHD)
+ * NPCs participating in the Windfall auction.
+ * Ported from zeldaret/tww; GameCube names/order follow its nonmatching skeleton.
+ * HD-specific layouts, ABI and copy ordering retain the verified reconstruction's behavior.
+ */
 #include "d/actor/d_a_npc_auction.h"
-using Actor = daNpcAuction_c;
-using gabi::call;
+
+// HD: AutoFrame keeps the original entry frame and conditional Local allocation order.
+// GHS matrices retain separate load/store loops, including their f32 quieting behavior.
+
 using gabi::load;
-using gabi::store;
-namespace {
-template <class T> T read(Actor *a, u32 offset) {
-  return load<T>(gabi::ea(a) + offset);
-}
-template <class T> void write(Actor *a, u32 offset, T value) {
-  store<T>(gabi::ea(a) + offset, value);
-}
-struct SafeString {
-  be<u32> text, vtable;
+
+struct PhaseTable {
+    be<u32> mEntries[3];
 };
-} // namespace
-u32 auctionCreateHeap(Actor *a);
-s32 auctionXyEvent(Actor *a, s32 event);
-u32 auctionXyCheck(Actor *a, s32 event);
+static PhaseTable l_phaseTable;
+static PhaseTable l_phaseTemplate;
+struct StaticInitNode {
+    be<u32> mWords[3];
+};
+static StaticInitNode l_staticInitNodes;
+static StaticInitNode l_eyeInitNode;
+static StaticInitNode l_lookInitNode;
+struct ActionNames {
+    be<u32> mEntries[2];
+};
+static ActionNames l_actionNames;
+struct CylinderSource {
+    u8 mData[0x68];
+};
+static CylinderSource l_cylinderSource;
 
-u8 auctionNpcNumber(Actor *a) {
-  WWHD_FUNC(0x021EB750, u8, a);
-  s8 index = read<s8>(a, 0x2DD);
-  return (u32)(s32)index < 8 ? (u8)index : 0;
-}
-VERIFY(0x021EB750, auctionNpcNumber);
-s32 auctionRandom(Actor *a, s32 limit) {
-  WWHD_FUNC(0x021EB870, s32, a, limit);
-  s32 result = gabi::ftoi(call<f32>(0x020198D8, (f32)limit));
-  return (u32)result == (u32)limit ? 0 : result;
-}
-VERIFY(0x021EB870, auctionRandom);
-void auctionWaitInit(Actor *a) {
-  WWHD_FUNC(0x021EBB90, void, a);
-  write<s16>(a, 0x7DE, -1);
-  write<u32>(a, 0x7E0, 0x021ED81C);
-  write<s16>(a, 0x7DC, 0);
-}
-VERIFY(0x021EBB90, auctionWaitInit);
-u32 auctionXyCheck(Actor *a, s32 event) {
-  WWHD_FUNC(0x021EBBB0, u32, a, event);
-  return 0;
-}
-VERIFY(0x021EBBB0, auctionXyCheck);
-u32 auctionXyCheckThunk(Actor *a, s32 event) {
-  WWHD_FUNC(0x021EBBB8, u32, a, event);
-  return auctionXyCheck(a, event);
-}
-VERIFY(0x021EBBB8, auctionXyCheckThunk);
-s32 auctionXyEventThunk(Actor *a, s32 event) {
-  WWHD_FUNC(0x021EBC78, s32, a, event);
-  return auctionXyEvent(a, event);
-}
-VERIFY(0x021EBC78, auctionXyEventThunk);
-void auctionEmitterEnable(Actor *a) {
-  WWHD_FUNC(0x021EC200, void, a);
-  write<u8>(a, 0x8B5, 1);
-}
-VERIFY(0x021EC200, auctionEmitterEnable);
-u32 auctionHeapThunk(Actor *a) {
-  WWHD_FUNC(0x021EB74C, u32, a);
-  return auctionCreateHeap(a);
-}
-VERIFY(0x021EB74C, auctionHeapThunk);
-u32 auctionIsDelete(Actor *a) {
-  WWHD_FUNC(0x021EE404, u32, a);
-  return 1;
-}
-VERIFY(0x021EE404, auctionIsDelete);
-void auctionSafeStringDestructor(u32 object, s32 flags) {
-  WWHD_FUNC(0x021EE3F0, void, object, flags);
-  if (object && (flags & 1))
-    call(0x0273AF40, object);
-}
-VERIFY(0x021EE3F0, auctionSafeStringDestructor);
-void auctionSafeStringPrepare(u32 object) {
-  WWHD_FUNC(0x021EE4A8, void, object);
-}
-VERIFY(0x021EE4A8, auctionSafeStringPrepare);
-Actor *auctionConstructor(Actor *a) {
-  WWHD_FUNC(0x021EB76C, Actor *, a);
-  u32 self = gabi::ea(a);
-  if (!self)
-    self = call<u32>(0x0273AD10, 0x8B8);
-  if (!self)
-    return nullptr;
-  a = gabi::at<Actor>(self);
-  call(0x025A1458, self);
-  store<u32>(self + 0xB4, 0x10016804);
-  call(0x028F521C, self + 0x7E4, 8);
-  write<u32>(a, 0x7F4, 0);
-  write<u32>(a, 0x7F8, 0);
-  call(0x025E7820, self + 0x7FC);
-  write<u16>(a, 0x8A0, 0);
-  write<u32>(a, 0x870, 0);
-  write<u32>(a, 0x89C, 0);
-  write<u32>(a, 0x88C, 0);
-  write<f32>(a, 0x894, 0.0f);
-  write<u32>(a, 0x898, 0);
-  write<u16>(a, 0x8A2, 0);
-  write<f32>(a, 0x890, 0.0f);
-  write<u32>(a, 0x874, 0);
-  call(0x028F521C, self + 0x8A4, 2);
-  write<u8>(a, 0x8B1, 0);
-  write<u8>(a, 0x8B0, 1);
-  write<u32>(a, 0x88C, 0);
-  write<u16>(a, 0x8A6, 0);
-  write<u8>(a, 0x8AF, 0);
-  write<u8>(a, 0x8B6, 0);
-  write<u32>(a, 0x874, 0);
-  write<u8>(a, 0x8AC, 0);
-  write<u8>(a, 0x8AB, 0);
-  write<u8>(a, 0x8AE, 0);
-  write<u8>(a, 0x8B5, 0);
-  write<u32>(a, 0x870, 0);
-  for (u32 off : {0x8A8u, 0x8AAu, 0x8ADu, 0x8B4u, 0x8B2u, 0x8A9u, 0x8B3u})
-    write<u8>(a, off, 0);
-  return a;
-}
-VERIFY(0x021EB76C, auctionConstructor);
-void auctionDestructor(Actor *a, s32 flags) {
-  WWHD_FUNC(0x021EE40C, void, a, flags);
-  u32 self = gabi::ea(a);
-  if (!self)
-    return;
-  call(0x02515A70, self + 0x690, 2);
-  call(0x02515860, self + 0x654, 2);
-  call(0x02018034, self + 0x628, 2);
-  write<u32>(a, 0x470, 0x1001630C);
-  write<u32>(a, 0x464, 0x1001631C);
-  call(0x024EFD9C, self + 0x450, 0);
-  call(0x025D50BC, self, 0);
-  if (flags & 1)
-    call(0x0273AF40, self);
-}
-VERIFY(0x021EE40C, auctionDestructor);
-u32 auctionInitTexture(Actor *a, u32 restart) {
-  WWHD_FUNC(0x021EB318, u32, a, restart);
-  u32 model = read<u32>(a, 0x7F4);
-  if (!model)
-    model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-  u32 material = load<u32>(model + 0xAC);
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 animation = read<u32>(a, 0x89C);
-  u32 name = load<u32>(0x101BB7FC + 4 * costume);
-  gabi::Local<SafeString> resource;
-  resource->text = name;
-  resource->vtable = 0x100162F4;
-  u32 resources = load<u32>(0x101F4F28);
-  u32 texture = call<u32>(0x026067F4, resources, resource.get(), animation);
-  write<u32>(a, 0x7F8, texture);
-  if (!texture) {
-    call(0x0273AA24, 0x100165FCu, 0x902, 0x10016610u);
-    texture = read<u32>(a, 0x7F8);
-  }
-  u32 ok = call<u32>(0x025E789C, gabi::ea(a) + 0x7FC, material, texture, 1, 2,
-                     0, -1, restart, 0, 1.0f);
-  if (!ok)
-    return 0;
-  write<u8>(a, 0x8AB, 0);
-  write<u16>(a, 0x8A0, 0);
-  return 1;
-}
-VERIFY(0x021EB318, auctionInitTexture);
-s32 auctionXyEvent(Actor *a, s32 event) {
-  WWHD_FUNC(0x021EBBBC, s32, a, event);
-  u32 play = call<u32>(0x025200D4);
-  s32 index = call<s32>(0x02543F10, play + 0x52C4, 0x100166D8u, 255);
-  play = call<u32>(0x025200D4);
-  u8 item = load<u8>(play + (u32)event + 0x5BBB);
-  bool missing = false;
-  if (item == 150 || item == 151) {
-    u32 save = load<u32>(0x101F84DC);
-    missing =
-        !call<u32>(0x025B8B94, save + 0x644, item == 150 ? 0x1008 : 0x1004);
-  }
-  if (missing) {
-    index = read<s16>(a, 0x8A4);
-    write<u8>(a, 0x8B0, 0);
-  }
-  return index;
-}
-VERIFY(0x021EBBBC, auctionXyEvent);
-u32 auctionCreateHeap(Actor *a) {
-  WWHD_FUNC(0x021EB450, u32, a);
-  u32 self = gabi::ea(a);
-  gabi::Local<SafeString> modelName, animationName, extraName;
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 resource = load<u32>(0x101F4F28);
-  u32 modelNumber = load<u32>(0x1001633C + 4 * costume);
-  modelName->text = load<u32>(0x101BB7FC + 4 * costume);
-  modelName->vtable = 0x100162F4;
-  u32 modelData = call<u32>(0x026067F4, resource, modelName.get(), modelNumber);
-  costume = read<u8>(a, 0x8AD);
-  u8 animationIndex = read<u8>(a, 0x8B2);
-  resource = load<u32>(0x101F4F28);
-  u32 animationNumber =
-      load<u32>(0x10016418 + 4 * ((u32)costume * 10 + animationIndex));
-  animationName->text = load<u32>(0x101BB7FC + 4 * costume);
-  animationName->vtable = 0x100162F4;
-  u32 animation =
-      call<u32>(0x026067F4, resource, animationName.get(), animationNumber);
-  u32 morf = call<u32>(0x025E4F64, 0, modelData, 0, 0, animation, 2, 0, -1, 1,
-                       0, 0x80000, 0x11020203, 1.0f);
-  write<u32>(a, 0x44C, morf);
-  if (!morf || !load<u32>(morf + 0x90))
-    return 0;
-  costume = read<u8>(a, 0x8AD);
-  s32 extraModel = load<s32>(0x1001636C + 4 * costume);
-  if (extraModel >= 0) {
-    extraName->text = load<u32>(0x101BB7FC + 4 * costume);
-    extraName->vtable = 0x100162F4;
-    resource = load<u32>(0x101F4F28);
-    u32 extraData =
-        call<u32>(0x026067F4, resource, extraName.get(), extraModel);
-    u32 extra = call<u32>(0x025E38E0, extraData, 0x80000, 0x15020022);
-    write<u32>(a, 0x7F4, extra);
-    if (!extra)
-      return 0;
-  }
-  u32 names = call<u32>(0x027F68FC, modelData);
-  u32 delta = load<u32>(names + 0x10);
-  u32 strings = delta ? names + 0x10 + delta : 0;
-  s8 head = (s8)call<s32>(0x027DF9B0, strings, 0x10016630u);
-  write<s8>(a, 0x3B4, head);
-  if (head < 0)
-    call(0x0273AA24, 0x10016638u, 0x4A9, 0x1001664Cu);
-  names = call<u32>(0x027F68FC, modelData);
-  delta = load<u32>(names + 0x10);
-  strings = delta ? names + 0x10 + delta : 0;
-  s8 backbone = (s8)call<s32>(0x027DF9B0, strings, 0x10016668u);
-  write<s8>(a, 0x3B5, backbone);
-  if (backbone < 0)
-    call(0x0273AA24, 0x10016638u, 0x4AD, 0x10016674u);
-  if (!auctionInitTexture(a, 0))
-    return 0;
-  u32 tree = call<u32>(0x027F3F94, modelData);
-  u16 count = load<u16>(tree + 8);
-  for (u16 joint = 0; joint < count; ++joint) {
-    s8 headIndex = read<s8>(a, 0x3B4);
-    if ((u32)joint == (u32)(s32)headIndex ||
-        (u32)joint == (u32)(s32)read<s8>(a, 0x3B5)) {
-      u32 extent = load<u32>(modelData + 4);
-      u32 entry = load<u32>(modelData + 8);
-      if (joint < extent)
-        entry += (u32)joint * 0x1C;
-      u8 npc = read<u8>(a, 0x8AC);
-      store<u32>(entry + 8, load<u32>(0x101BB6B8 + 4 * npc));
-    }
-    tree = call<u32>(0x027F3F94, modelData);
-    count = load<u16>(tree + 8);
-  }
-  morf = read<u32>(a, 0x44C);
-  u32 model = load<u32>(morf + 0x90);
-  store<u32>(model + 0xB8, self);
-  call(0x024EFF44, self + 0x614, 30.0f, 30.0f);
-  call(0x024F06B4, self + 0x450, self + 0x314, self + 0x300, self, 1,
-       self + 0x614, self + 0x33C, self + 0x320, self + 0x328);
-  return 1;
-}
-VERIFY(0x021EB450, auctionCreateHeap);
-void auctionSetMatrix(Actor *a) {
-  WWHD_FUNC(0x021EBC7C, void, a);
-  u32 model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-  f32 z = read<f32>(a, 0x338), x = read<f32>(a, 0x330), y = read<f32>(a, 0x334);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  store<f32>(model + 0xC4, z);
-  x = read<f32>(a, 0x314);
-  y = read<f32>(a, 0x318);
-  z = read<f32>(a, 0x31C);
-  call(0x028E93CC, 0x1048D0CCu, x, y, z);
-  call(0x025F1C28, 0x1048D0CCu, read<s16>(a, 0x322));
-  model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-  f32 matrix[12];
-  for (u32 i = 0; i < 12; ++i)
-    matrix[i] = load<f32>(0x1048D0CC + 4 * i);
-  for (u32 i = 0; i < 12; ++i)
-    store<f32>(model + 0xC8 + 4 * i, matrix[i]);
-}
-VERIFY(0x021EBC7C, auctionSetMatrix);
-u32 auctionCreateInit(Actor *a) {
-  WWHD_FUNC(0x021EBD5C, u32, a);
-  u32 self = gabi::ea(a);
-  u8 npc = read<u8>(a, 0x8AC);
-  write<f32>(a, 0x374, -9.0f);
-  call(0x0259F814, self + 0x3E0, load<u32>(0x101BB698 + 4 * npc), self);
-  u32 morf = read<u32>(a, 0x44C);
-  write<u8>(a, 0x8A8, 0);
-  write<u16>(a, 0x8A2, 0);
-  write<u8>(a, 0x8A9, 0);
-  u32 model = load<u32>(morf + 0x90);
-  write<u32>(a, 0x348, model ? model + 0xC8 : 0);
-  auctionWaitInit(a);
-  u8 attention = read<u8>(a, 0x8AC) == 0 ? 0xAD : 0xA9;
-  write<u8>(a, 0x389, attention);
-  write<u32>(a, 0x39C, 10);
-  write<u8>(a, 0x38B, attention);
-  u32 play = call<u32>(0x025200D4);
-  s32 event = call<s32>(0x02543F10, play + 0x52C4, 0x100166F4u, 255);
-  write<s16>(a, 0x8A4, (s16)event);
-  call(0x0253E9B0, self + 0xF8, 0x10016704u);
-  u8 costume = read<u8>(a, 0x8AD);
-  write<u32>(a, 0x100, 0x021EBC78);
-  write<u32>(a, 0x104, 0x021EBBB8);
-  write<f32>(a, 0x890, load<f32>(0x10465A78 + (u32)costume * 0x34));
-  auctionSetMatrix(a);
-  model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-  call(0x027F4D5C, model);
-  call(0x02515F14, self + 0x654, 255, 255, self);
-  call(0x02516518, self + 0x690, 0x101EA190u);
-  write<u32>(a, 0x6D4, self + 0x654);
-  call(0x025A15AC, self, 60.0f, 150.0f);
-  return 4;
-}
-VERIFY(0x021EBD5C, auctionCreateInit);
-u32 auctionPhaseTwo(Actor *a) {
-  WWHD_FUNC(0x021EBF80, u32, a);
-  u32 self = gabi::ea(a);
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 result =
-      call<u32>(0x02520460, self + 0x7E4, load<u32>(0x101BB7FC + 4 * costume));
-  if (result == 4) {
-    if (call<u32>(0x025D63E8, self, 0x021EB74Cu, 0x10000))
-      return auctionCreateInit(a);
-    write<u32>(a, 0x44C, 0);
-    return 5;
-  }
-  return result;
-}
-VERIFY(0x021EBF80, auctionPhaseTwo);
-u32 auctionCreate(Actor *a) {
-  WWHD_FUNC(0x021EC014, u32, a);
-  if (!load<u32>(0x101FDB54)) {
-    store<u32>(0x101FDB54, 1);
-    call(0xC000A848, gabi::at<void>(0x101FDB58u), gabi::at<void>(0x101BB728u),
-         12);
-  }
-  return call<u32>(0x02525FE4, gabi::ea(a) + 0x7EC, 0x101FDB58u, a);
-}
-VERIFY(0x021EC014, auctionCreate);
-u32 auctionDelete(Actor *a) {
-  WWHD_FUNC(0x021EC084, u32, a);
-  u8 costume = read<u8>(a, 0x8AD);
-  call(0x025204C8, gabi::ea(a) + 0x7E4, load<u32>(0x101BB7FC + 4 * costume));
-  if (read<u32>(a, 0xF4)) {
-    u32 morf = read<u32>(a, 0x44C);
-    if (morf)
-      call(0x025E563C, morf);
-  }
-  return 1;
-}
-VERIFY(0x021EC084, auctionDelete);
-u32 auctionIsExecute(Actor *a) {
-  WWHD_FUNC(0x021EC0E8, u32, a);
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 status = read<u32>(a, 0x2E0);
-  u32 mask = load<u32>(0x101BB6D8 + 4 * costume);
-  gabi::Local<be<u16>> process;
-  *process = (u16)0x17E;
-  write<u32>(a, 0x2E0, status & ~mask);
-  u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-  if (!manager)
-    return 0;
-  u32 shift = read<u8>(a, 0x8AC) & 63;
-  u8 active = load<u8>(manager + 0x938);
-  if (!(active & (shift < 32 ? 1u << shift : 0)))
-    return 0;
-  costume = read<u8>(a, 0x8AD);
-  status = read<u32>(a, 0x2E0);
-  mask = load<u32>(0x101BB6D8 + 4 * costume);
-  write<u32>(a, 0x2E0, status | mask);
-  return 1;
-}
-VERIFY(0x021EC0E8, auctionIsExecute);
+struct arcNamesTable {
+    be<u32> mEntries[12];
+};
+static arcNamesTable l_arcNames;
+struct modelNumbersTable {
+    be<u32> mEntries[12];
+};
+static modelNumbersTable l_modelNumbers;
+struct extraModelsTable {
+    be<s32> mEntries[12];
+};
+static extraModelsTable l_extraModels;
+struct btpNumbersTable {
+    be<u32> mEntries[12];
+};
+static btpNumbersTable l_btpNumbers;
+struct eventNamesTable {
+    be<u32> mEntries[8];
+};
+static eventNamesTable l_eventNames;
+struct jointCallbacksTable {
+    be<u32> mEntries[8];
+};
+static jointCallbacksTable l_jointCallbacks;
+struct statusMasksTable {
+    be<u32> mEntries[12];
+};
+static statusMasksTable l_statusMasks;
+struct shadowTypesTable {
+    be<u8> mEntries[12];
+};
+static shadowTypesTable l_shadowTypes;
+struct AnimationNumbers {
+    be<u32> mEntries[12][10];
+};
+struct CostumeRanges {
+    be<u32> mEntries[8][2];
+};
+struct MessageNumbers {
+    be<u32> mEntries[12][3];
+};
+static AnimationNumbers l_animationNumbers;
+static CostumeRanges l_costumeRanges;
+static MessageNumbers l_messageNumbers;
+static u32 l_resControl;
+static u32 l_save;
+static u32 l_message;
+static u32 l_calcMtx;
+static u32 l_currentModel;
+static u32 l_phaseInitialized;
+static Mtx34 l_translationMtx;
+static Mtx34 l_currentMtx;
+static sAnmDat l_messageAnimation0;
+static sAnmDat l_messageAnimation1;
+static sAnmDat l_messageAnimation2;
+static sAnmDat l_messageAnimation3;
+static sAnmDat l_messageAnimation4;
+static sAnmDat l_messageAnimation5;
+static sAnmDat l_messageAnimation6;
+static sAnmDat l_messageAnimation7;
+static sAnmDat l_messageAnimation8;
+static sAnmDat l_messageAnimation9;
+static sAnmDat l_messageAnimation10;
 
-void auctionCheckOrder(Actor *a) {
-  WWHD_FUNC(0x021EC1A8, void, a);
-  u16 state = read<u16>(a, 0xF8);
-  if (state == 2) {
-    write<u8>(a, 0x8AA, 0);
-  } else if (state == 1) {
-    u8 order = read<u8>(a, 0x8AA);
-    if ((order == 1 || order == 2) && !read<u8>(a, 0x8A8) &&
-        !read<u8>(a, 0x8B1))
-      write<u8>(a, 0x8A8, 1);
-  }
-}
-VERIFY(0x021EC1A8, auctionCheckOrder);
+// HD: these twelve costumes share the verified 0x34-byte HIO payload.
+static AuctionHIOArray l_HIO;
+static f32 l_zero;
+static f32 l_ten;
+static f32 l_defaultScale;
+static f32 l_defaultOffset;
+static f32 l_height4;
+static f32 l_height5;
+static f32 l_height6;
+static f32 l_height7;
+static f32 l_height8;
+static f32 l_height9;
+static f32 l_height10;
+static f32 l_height11;
+static f32 l_height12;
+static f32 l_height13;
+static f32 l_height14;
+static f32 l_height15;
+static f32 l_height16;
+static f32 l_height17;
+static f32 l_height18;
+static f32 l_height19;
+static f32 l_height20;
+static u32 l_guard3;
+static u32 l_guard2;
+static u32 l_guard1;
+static u32 l_guard0;
+static f32 l_defaultSize;
+static f32 l_defaultAngle;
+static u8 l_eyeInit;
+static u8 l_lookInit;
 
-void auctionEventMessageInit(Actor *a, s32 staff) {
-  WWHD_FUNC(0x021EC20C, void, a, staff);
-  u32 play = call<u32>(0x025200D4);
-  u32 substance = call<u32>(0x0254487C, play + 0x52C4, staff, 0x10016714u, 3);
-  u32 message = substance ? load<u32>(substance)
-                          : call<u32>(load<u32>(read<u32>(a, 0xB4) + 0x1C), a);
-  write<u32>(a, 0x7C0, message);
-}
-VERIFY(0x021EC20C, auctionEventMessageInit);
-
-void auctionSetAnimation(Actor *a, s32 animation, s32 mode, f32 blend) {
-  WWHD_FUNC(0x021EC288, void, a, animation, mode, blend);
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 resources = load<u32>(0x101F4F28);
-  u32 archive = load<u32>(0x101BB7FC + 4 * costume);
-  u32 resourceId =
-      load<u32>(0x10016418 + 4 * ((u32)costume * 10 + (u32)animation));
-  gabi::Local<SafeString> name;
-  name->text = archive;
-  name->vtable = 0x100162F4;
-  u32 resource = call<u32>(0x026067F4, resources, name.get(), resourceId);
-  call(0x025E4A98, read<u32>(a, 0x44C), resource, mode, 0, blend, 1.0f, 0.0f,
-       -1.0f);
-  write<u8>(a, 0x8B2, (u8)animation);
-}
-VERIFY(0x021EC288, auctionSetAnimation);
-
-void auctionSetAnimationIfNeeded(Actor *a, s32 animation, s32 mode, f32 blend) {
-  WWHD_FUNC(0x021EC360, void, a, animation, mode, blend);
-  if ((u32)read<u8>(a, 0x8B2) != (u32)animation || mode == 0) {
-    auctionSetAnimation(a, animation, mode, blend);
-    write<u32>(a, 0x88C, 0);
-  }
-}
-VERIFY(0x021EC360, auctionSetAnimationIfNeeded);
-
-void auctionClearEmitter(Actor *a) {
-  WWHD_FUNC(0x021EC3AC, void, a);
-  u32 emitter = read<u32>(a, 0x870);
-  if (!emitter)
-    return;
-  u32 flags = load<u32>(emitter + 0x254);
-  store<u32>(emitter + 0x5C, 0xFFFFFFFF);
-  u32 node = load<u32>(emitter + 0x1AC);
-  store<u32>(emitter + 0x254, flags | 1);
-  while (node) {
-    u32 particle = load<u32>(node);
-    store<u32>(particle + 0xCC, load<u32>(particle + 0xCC) | 2);
-    node = load<u32>(node + 0xC);
-  }
-  write<u32>(a, 0x870, 0);
-}
-VERIFY(0x021EC3AC, auctionClearEmitter);
-
-u32 auctionEventMessage(Actor *a) {
-  WWHD_FUNC(0x021EC6F4, u32, a);
-  return call<u32>(0x025A11EC, a, 0) == 0x12;
-}
-VERIFY(0x021EC6F4, auctionEventMessage);
-
-void auctionSetAnimationTable(Actor *a, u32 table) {
-  WWHD_FUNC(0x021EC878, void, a, table);
-  u8 animation = load<u8>(table);
-  if (animation == 255) {
-    write<u32>(a, 0x88C, 0);
-    return;
-  }
-  write<u32>(a, 0x88C, table);
-  s8 repeats = load<s8>(table + 2);
-  write<s8>(a, 0x8B4, repeats);
-  animation = load<u8>(table);
-  if (repeats > 0 || read<u8>(a, 0x8B2) != animation)
-    auctionSetAnimation(a, animation, repeats > 0 ? 0 : 2,
-                        (f32)load<u8>(table + 1));
-}
-VERIFY(0x021EC878, auctionSetAnimationTable);
-
-void auctionEventOrder(Actor *a) {
-  WWHD_FUNC(0x021ECD6C, void, a);
-  u8 order = read<u8>(a, 0x8AA);
-  if (order != 1 && order != 2)
-    return;
-  write<u16>(a, 0xFA, read<u16>(a, 0xFA) | 1);
-  u32 save = load<u32>(0x101F84DC);
-  u32 event = call<u32>(0x025B8B94, save + 0x644, 0x1404);
-  order = read<u8>(a, 0x8AA);
-  if (event)
-    write<u16>(a, 0xFA, read<u16>(a, 0xFA) | 0x20);
-  if (order == 2)
-    call(0x025D76A8, a);
-}
-VERIFY(0x021ECD6C, auctionEventOrder);
-
-void auctionPlayTexture(Actor *a) {
-  WWHD_FUNC(0x021ECDF0, void, a);
-  if (call<u32>(0x02055B64, gabi::ea(a) + 0x8A0))
-    return;
-  u32 texture = read<u32>(a, 0x7F8);
-  s32 frames = call<s32>(load<u32>(load<u32>(texture + 4) + 0x14), texture);
-  if ((s32)read<u8>(a, 0x8AB) >= frames) {
-    texture = read<u32>(a, 0x7F8);
-    frames = call<s32>(load<u32>(load<u32>(texture + 4) + 0x14), texture);
-    write<u8>(a, 0x8AB, (u8)((u32)read<u8>(a, 0x8AB) - (u32)frames));
-    write<u16>(a, 0x8A0, (u16)((u32)auctionRandom(a, 60) + 60));
-  } else {
-    write<u8>(a, 0x8AB, (u8)(read<u8>(a, 0x8AB) + 1));
-  }
-}
-VERIFY(0x021ECDF0, auctionPlayTexture);
-
-void auctionPlayAnimation(Actor *a) {
-  WWHD_FUNC(0x021ECE9C, void, a);
-  if (!call<u32>(0x025E535C, read<u32>(a, 0x44C), 0, 0, 0))
-    return;
-  if (!read<u32>(a, 0x88C))
-    return;
-  s8 repeats = read<s8>(a, 0x8B4);
-  if (repeats <= 0)
-    return;
-  repeats = (s8)(repeats - 1);
-  write<s8>(a, 0x8B4, repeats);
-  u32 table = read<u32>(a, 0x88C);
-  if (!repeats) {
-    table += 3;
-    write<u32>(a, 0x88C, table);
-    auctionSetAnimationTable(a, table);
-  } else {
-    auctionSetAnimation(a, load<u8>(table), 0, 0.0f);
-  }
-}
-VERIFY(0x021ECE9C, auctionPlayAnimation);
-
-u32 auctionEventMain(Actor *a);
-void auctionPrivateCut(Actor *a) {
-  WWHD_FUNC(0x021EC724, void, a);
-  u32 name = load<u32>(0x101BB698 + 4 * read<u8>(a, 0x8AC));
-  u32 play = call<u32>(0x025200D4);
-  s32 staff = call<s32>(0x02542D88, play + 0x52C4, name, 0, 0);
-  if (staff == -1)
-    return;
-  play = call<u32>(0x025200D4);
-  s8 action =
-      (s8)call<u32>(0x02542EDC, play + 0x52C4, staff, 0x101BB7D0u, 2, 1, 0);
-  write<s8>(a, 0x8B6, action);
-  play = call<u32>(0x025200D4);
-  if (action == -1) {
-    call(0x02543280, play + 0x52C4, staff);
-    return;
-  }
-  if (call<u32>(0x025447C8, play + 0x52C4, staff)) {
-    action = read<s8>(a, 0x8B6);
-    if (action == 0)
-      auctionEmitterEnable(a);
-    else if (action == 1)
-      auctionEventMessageInit(a, staff);
-    else {
-      play = call<u32>(0x025200D4);
-      call(0x02543280, play + 0x52C4, staff);
-      return;
-    }
-  }
-  action = read<s8>(a, 0x8B6);
-  if (action == 0) {
-    if (!auctionEventMain(a))
-      return;
-  } else if (action == 1) {
-    if (!auctionEventMessage(a))
-      return;
-  }
-  play = call<u32>(0x025200D4);
-  call(0x02543280, play + 0x52C4, staff);
-}
-VERIFY(0x021EC724, auctionPrivateCut);
-
-u32 auctionEventMain(Actor *a) {
-  WWHD_FUNC(0x021EC400, u32, a);
-  gabi::Local<be<u16>> process;
-  *process = 0x17E;
-  u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-  if (!manager)
-    return 0;
-  u8 flags = load<u8>(manager + 0x94C);
-  bool particle = false;
-  auto animate = [&](s32 index, u8 bit) {
-    auctionSetAnimationIfNeeded(a, index, 2, 8.0f);
-    write<u8>(a, 0x8B3, read<u8>(a, 0x8B3) | bit);
-  };
-  if (flags & 4) {
-    if (!(read<u8>(a, 0x8B3) & 8)) {
-      animate(3, 8);
-      flags = load<u8>(manager + 0x94C);
-      particle = (flags & 4) != 0;
-    } else
-      particle = true;
-  } else if (load<u8>(manager + 0x941) == read<u8>(a, 0x8AC)) {
-    if (flags & 1) {
-      if (read<u8>(a, 0x8B3) & 4)
-        goto clear;
-      animate(2, 4);
-    } else if (flags & 8) {
-      if (read<u8>(a, 0x8B3) & 0x10)
-        goto clear;
-      animate(4, 0x10);
-    } else if (flags & 0x20) {
-      if (read<u8>(a, 0x8B3) & 0x40)
-        goto clear;
-      animate(6, 0x40);
-    } else if (flags & 0x10) {
-      if (!(read<u8>(a, 0x8B3) & 0x20))
-        animate(5, 0x20);
-      write<u8>(a, 0x8B5, 0);
-    } else {
-      u8 animation = read<u8>(a, 0x8B2);
-      write<u8>(a, 0x8B3, 0);
-      if (animation)
-        auctionSetAnimationIfNeeded(a, 0, 2, 8.0f);
-    }
-    flags = load<u8>(manager + 0x94C);
-    particle = (flags & 4) != 0;
-  } else {
-    u8 animation = read<u8>(a, 0x8B2);
-    write<u8>(a, 0x8B3, 0);
-    if (animation)
-      auctionSetAnimationIfNeeded(a, 0, 2, 8.0f);
-    flags = load<u8>(manager + 0x94C);
-    particle = (flags & 4) != 0;
-  }
-  if (!particle)
-    goto clear;
-  if (!read<u32>(a, 0x870)) {
-    s32 room = read<s8>(a, 0x326);
-    u32 play = call<u32>(0x025200D4);
-    u32 self = gabi::ea(a);
-    u32 emitter =
-        call<u32>(0x025A847C, load<u32>(play + 0x5AB0), 0, 0x819D, self + 0x314,
-                  0, 0, 255, 0, room, self + 0x1A8, self + 0x1A8, 0);
-    write<u32>(a, 0x870, emitter);
-    if (!emitter)
-      return 0;
-    store<u32>(emitter + 0x254, load<u32>(emitter + 0x254) | 0x40);
-    if (!read<u32>(a, 0x870))
-      return 0;
-  }
-  {
-    u32 model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-    s32 joint = read<s8>(a, 0x3B4);
-    u32 matrices = load<u32>(model + 0x2C);
-    u16 flags = load<u16>(matrices + 4);
-    u32 base = load<u32>(matrices + 0x10);
-    store<u16>(matrices + 4, flags | 0x10);
-    call(0x028E90D4, base + (u32)joint * 0x30, load<u32>(0x1018C7B0));
-    call(0x025F1C5C, load<u32>(0x1018C7B0), -0x4000);
-    u8 costume = read<u8>(a, 0x8AD);
-    call(0x028E93CC, 0x1048D0CCu, 0.0f, load<f32>(0x10465A84 + costume * 0x34),
-         0.0f);
-    u32 matrix = load<u32>(0x1018C7B0);
-    call(0x028E9108, matrix, 0x1048D0CCu, matrix);
-    u32 emitter = read<u32>(a, 0x870);
-    call(0x028249B0, load<u32>(0x1018C7B0), emitter + 0x1F0, emitter + 0x22C);
-    return 0;
-  }
-clear:
-  auctionClearEmitter(a);
-  return 0;
-}
-VERIFY(0x021EC400, auctionEventMain);
-
-void auctionAnimationFromMessage(Actor *a) {
-  WWHD_FUNC(0x021EC93C, void, a);
-  u32 play = call<u32>(0x025200D4);
-  u8 kind = read<u8>(a, 0x8AC);
-  u8 tag = load<u8>(play + 0x5BC5);
-  u32 table = 0;
-  if (tag <= 7) {
-    if (kind == 0 || kind == 7) {
-      static constexpr u32 tables[8] = {0x101BB680, 0x101BB680, 0x101BB683,
-                                        0x101BB686, 0x101BB670, 0x101BB689,
-                                        0x101BB734, 0x101BB68C};
-      table = tables[tag];
-    } else {
-      static constexpr u32 tables[8] = {0x101BB680, 0x101BB68F, 0x101BB692,
-                                        0x101BB695, 0x101BB678, 0x101BB695,
-                                        0x101BB678, 0x101BB678};
-      table = tables[tag];
-    }
-    auctionSetAnimationTable(a, table);
-    if ((kind == 0 || kind == 7) && tag == 6) {
-      write<u32>(a, 0x898, 0x8DD);
-      write<u16>(a, 0x8A6, 100);
-    }
-  }
-  play = call<u32>(0x025200D4);
-  store<u8>(play + 0x5BC5, 255);
-}
-VERIFY(0x021EC93C, auctionAnimationFromMessage);
-
-void auctionEventMove(Actor *a) {
-  WWHD_FUNC(0x021ECB68, void, a);
-  auto ended = [](u32 name) {
-    u32 play = call<u32>(0x025200D4);
-    return call<u32>(0x0254457C, play + 0x52C4, name) != 0;
-  };
-  if (ended(0x10016764) || ended(0x10016744) || ended(0x10016778)) {
-    write<f32>(a, 0x890, 200.0f);
-    return;
-  }
-  if (ended(0x10016754)) {
-    if (!read<u8>(a, 0x8B1)) {
-      u32 play = call<u32>(0x025200D4);
-      store<u16>(play + 0x52B8, load<u16>(play + 0x52B8) | 8);
-      write<u8>(a, 0x8A8, 0);
-      write<u8>(a, 0x8B0, 1);
-      return;
-    }
-    if (!read<u8>(a, 0x8AC)) {
-      gabi::Local<be<u16>> process;
-      *process = 0x17E;
-      u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-      if (manager) {
-        u8 selection = read<u8>(a, 0x8B1);
-        if (selection == 1) {
-          store<u8>(manager + 0x939, 1);
-          write<u8>(a, 0x8B0, 1);
-          write<u8>(a, 0x8A8, 0);
-          return;
-        }
-        if (selection == 2) {
-          store<u8>(manager + 0x939, 2);
-          store<u8>(manager + 0x93B, read<u8>(a, 0x8AF));
-        }
-      }
-    }
-    write<u8>(a, 0x8B0, 1);
-    write<u8>(a, 0x8A8, 0);
-    return;
-  }
-  u8 previousCut = read<u8>(a, 0x440);
-  if (call<u32>(0x0259F858, gabi::ea(a) + 0x3E0)) {
-    if (!read<u8>(a, 0x440))
-      write<u8>(a, 0x440, previousCut);
-  } else {
-    auctionPrivateCut(a);
-    if (read<u8>(a, 0x8AC) == 7)
-      auctionAnimationFromMessage(a);
-  }
-}
-VERIFY(0x021ECB68, auctionEventMove);
-
-void auctionWaitAction(Actor *a) {
-  WWHD_FUNC(0x021ED81C, void, a);
-  write<u8>(a, 0x8AA, read<u8>(a, 0x8A9) != 0);
-  if (read<u8>(a, 0x8A8) == 1) {
-    if (call<u32>(0x025A11EC, a, 1) == 0x12) {
-      write<u8>(a, 0x8A8, 0);
-      auctionSetAnimationIfNeeded(a, 7, 2, 8.0f);
-      if (!read<u8>(a, 0x8B1)) {
-        u32 play = call<u32>(0x025200D4);
-        store<u16>(play + 0x52B8, load<u16>(play + 0x52B8) | 8);
-      } else if (!read<u8>(a, 0x8AC)) {
-        gabi::Local<be<u16>> process;
-        *process = 0x17E;
-        u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-        if (manager) {
-          u8 selection = read<u8>(a, 0x8B1);
-          if (selection == 1)
-            store<u8>(manager + 0x939, 1);
-          else if (selection == 2) {
-            store<u8>(manager + 0x939, 2);
-            store<u8>(manager + 0x93B, read<u8>(a, 0x8AF));
-          }
-        }
-      }
-    }
-    auctionAnimationFromMessage(a);
-  }
-  if (!read<u8>(a, 0x8B2))
-    auctionSetAnimationIfNeeded(a, 7, 2, 8.0f);
-}
-VERIFY(0x021ED81C, auctionWaitAction);
-
-u32 auctionGetMessage(Actor *a) {
-  WWHD_FUNC(0x021EDBF8, u32, a);
-  u8 kind = read<u8>(a, 0x8AC);
-  auto eventBit = [](u32 flag) {
-    return call<u32>(0x025B8B94, load<u32>(0x101F84DC) + 0x644, flag) != 0;
-  };
-  if (!kind) {
-    u32 play = call<u32>(0x025200D4);
-    u32 selection = load<u8>(play + 0x52B0);
-    if (selection - 1 <= 3) {
-      play = call<u32>(0x025200D4);
-      u8 item = load<u8>(play + 0x52B1);
-      if (item == 150 || item == 151) {
-        if (eventBit(item == 150 ? 0x1008 : 0x1004))
-          return 0x27F7;
-        write<u8>(a, 0x8AF, item == 151);
-        return 0x27EB;
-      }
-      return 0x27EA;
-    }
-    if (eventBit(0xA02) && !call<u32>(0x02520C0C, 0x69))
-      return 0x27F8;
-    if (eventBit(0x1002))
-      return call<u32>(0x0205CD90) ? 0x27DB : 0x27F0;
-    call(0x025B8B68, load<u32>(0x101F84DC) + 0x644, 0x1002);
-    return 0x27DA;
-  }
-  if (kind == 6)
-    return 0x1D35;
-  gabi::Local<be<u16>> process;
-  *process = 0x17E;
-  u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-  if (!manager)
-    call(0x0273AA24, 0x1001678Cu, 0x80A, 0x100167A0u);
-  u8 costume = read<u8>(a, 0x8AD);
-  u8 current = load<u8>(manager + 0x93C);
-  u32 table = 0x101BB740 + costume * 12;
-  if (!current)
-    return load<u32>(table);
-  return load<u32>(table + (current == read<u8>(a, 0x8AC) ? 4 : 8));
-}
-VERIFY(0x021EDBF8, auctionGetMessage);
-
-u32 auctionNextMessageStatus(Actor *a, u32 message) {
-  WWHD_FUNC(0x021ED964, u32, a, message);
-  u32 player = load<u32>(0x101F4B5C);
-  gabi::Local<be<u16>> process;
-  *process = 0x17E;
-  u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-  u32 current = load<u32>(message);
-  u32 next = 0;
-  u32 status = 15;
-  switch (current) {
-  case 0x27DA:
-    next = 0x27DC;
-    break;
-  case 0x27DC:
-    next = 0x27DD;
-    break;
-  case 0x27DD:
-    next = 0x27DE;
-    break;
-  case 0x27DB:
-  case 0x27DE:
-    next = 0x27DF;
-    break;
-  case 0x27DF:
-    if (!load<u32>(player + 0x948)) {
-      store<u32>(message, 0x27E1);
-      call(0x025B8B68, load<u32>(0x101F84DC) + 0x644, 0x1408);
-      return status;
-    }
-    next = 0x27E0;
-    break;
-  case 0x27E1:
-    next = 0x27E2;
-    break;
-  case 0x27E2:
-    next = load<u32>(player + 0x948) ? 0x27E4 : 0x27E3;
-    break;
-  case 0x27E5:
-    next = 0x27E6;
-    break;
-  case 0x27E6:
-    next = 0x27E7;
-    break;
-  case 0x27E7:
-    next = load<u32>(player + 0x948) ? 0x27E8 : 0x27E9;
-    break;
-  case 0x27E3:
-    next = 0x27E9;
-    break;
-  case 0x27E4:
-  case 0x27E8:
-    next = 0x27E5;
-    break;
-  case 0x27E9:
-    write<u8>(a, 0x8B1, 1);
-    status = 16;
-    break;
-  case 0x27EC:
-    if (!load<u32>(player + 0x948)) {
-      store<u32>(message, 0x27EE);
-      call(0x025B7270, load<u32>(0x101F84DC) + 0x96);
-      return status;
-    }
-    next = 0x27ED;
-    break;
-  case 0x27EE:
-    next = 0x27EF;
-    break;
-  case 0x27EF:
-    write<u8>(a, 0x8B1, 2);
-    status = 16;
-    break;
-  case 0x1D35:
-    next = 0x1D36;
-    break;
-  case 0x1D36:
-    next = 0x1D37;
-    break;
-  case 0x1D37:
-    next = manager && load<u8>(manager + 0x93F) ? 0x1D39 : 0x1D38;
-    break;
-  default:
-    status = 16;
-    break;
-  }
-  if (next)
-    store<u32>(message, next);
-  return status;
-}
-VERIFY(0x021ED964, auctionNextMessageStatus);
-
-u32 auctionPhaseOne(Actor *a) {
-  WWHD_FUNC(0x021EB8DC, u32, a);
-  u32 flags = read<u32>(a, 0x2E4);
-  if (!(flags & 8)) {
-    if (a) {
-      auctionConstructor(a);
-      flags = read<u32>(a, 0x2E4);
-    }
-    write<u32>(a, 0x2E4, flags | 8);
-  }
-  gabi::Local<be<u32>> managerOut;
-  if (!call<u32>(0x025D5578, 0x17E, managerOut.get()))
-    return 0;
-  u32 manager = *managerOut;
-  if (!manager)
-    return 0;
-  u8 kind = load<u8>(manager + 0x924 + auctionNpcNumber(a));
-  if (kind >= 8) {
-    call(0x0273AA24, 0x100166A0u, 0x429, 0x100166B4u);
-    return 5;
-  }
-  write<u8>(a, 0x8AC, kind);
-  u32 actorId = a ? read<u32>(a, 4) : 0xFFFFFFFF;
-  u32 ownerSlot = manager + 0x850 + 4 * kind;
-  if (load<u32>(ownerSlot) != 0xFFFFFFFF)
-    return 0;
-  store<u32>(ownerSlot, actorId);
-  u32 low = load<u32>(0x100163CC + kind * 8);
-  u32 high = load<u32>(0x100163D0 + kind * 8);
-  u8 costume;
-  if (kind >= 2 && kind <= 5) {
-    u32 pairOffset = kind <= 3 ? 0x934 : 0x935;
-    u8 previous = load<u8>((u32)*managerOut + pairOffset);
-    costume = (u8)((u32)auctionRandom(a, (s32)(high - low + 1)) + low);
-    manager = *managerOut;
-    if (previous == 255) {
-      store<u8>(manager + pairOffset, costume);
-      manager = *managerOut;
-    } else if (costume == load<u8>(manager + pairOffset)) {
-      costume = (u8)(costume == (u8)high ? costume - 1 : costume + 1);
-    }
-  } else {
-    costume = (u8)((u32)auctionRandom(a, (s32)(high - low + 1)) + low);
-    manager = *managerOut;
-  }
-  write<u8>(a, 0x8AD, costume);
-  store<u8>(manager + kind + 0x92C, costume);
-  write<u32>(a, 0x89C, load<u32>(0x1001639C + 4 * costume));
-  return 2;
-}
-VERIFY(0x021EB8DC, auctionPhaseOne);
-
+// HD: the two callbacks share this inlined matrix path.
 namespace {
 template <bool alternate> u32 auctionJointRotation(u32 jointObject, s32 phase) {
-  if (phase != 0)
-    return 1;
-  u32 model = load<u32>(0x104B462C);
-  Actor *a = gabi::at<Actor>(load<u32>(model + 0xB8));
-  u32 jointData = call<u32>(0x027F7878, jointObject);
-  u32 matrices = load<u32>(model + 0x2C);
-  u16 joint = load<u16>(jointData + 4);
-  u16 flags = load<u16>(matrices + 4);
-  u32 base = load<u32>(matrices + 0x10);
-  store<u16>(matrices + 4, flags | 0x10);
-  call(0x028E90D4, base + joint * 0x30, load<u32>(0x1018C7B0));
-  if ((u32)joint == (u32)(s32)read<s8>(a, 0x3B4)) {
-    s16 angle = read<s16>(a, 0x3AE);
-    call(alternate ? 0x025F1BF4 : 0x025F1C28, load<u32>(0x1018C7B0),
-         alternate ? angle : (s16)-angle);
-    angle = read<s16>(a, 0x3AC);
-    call(0x025F1C5C, load<u32>(0x1018C7B0), (s16)-angle);
-  }
-  if ((u32)joint == (u32)(s32)read<s8>(a, 0x3B5)) {
-    call(0x025F1BF4, load<u32>(0x1018C7B0), read<s16>(a, 0x3B2));
-    s16 angle = read<s16>(a, 0x3B0);
-    call(0x025F1C5C, load<u32>(0x1018C7B0), alternate ? (s16)-angle : angle);
-  }
-  matrices = load<u32>(model + 0x2C);
-  u32 matrix = load<u32>(0x1018C7B0);
-  flags = load<u16>(matrices + 4);
-  base = load<u32>(matrices + 0x10);
-  store<u16>(matrices + 4, flags | 0x10);
-  f32 values[12];
-  for (u32 i = 0; i < 12; ++i)
-    values[i] = load<f32>(matrix + 4 * i);
-  for (u32 i = 0; i < 12; ++i)
-    store<f32>(base + joint * 0x30 + 4 * i, values[i]);
-  call(0x028E90D4, load<u32>(0x1018C7B0), 0x104B4868u);
-  return 1;
-}
-} // namespace
-u32 auctionJointCallback(u32 jointObject, s32 phase) {
-  WWHD_FUNC(0x021EB068, u32, jointObject, phase);
-  return auctionJointRotation<false>(jointObject, phase);
-}
-VERIFY(0x021EB068, auctionJointCallback);
-u32 auctionAlternateJointCallback(u32 jointObject, s32 phase) {
-  WWHD_FUNC(0x021EB1C0, u32, jointObject, phase);
-  return auctionJointRotation<true>(jointObject, phase);
-}
-VERIFY(0x021EB1C0, auctionAlternateJointCallback);
-
-u32 auctionDraw(Actor *a) {
-  WWHD_FUNC(0x021ED628, u32, a);
-  if (!auctionIsExecute(a))
-    return 1;
-  u32 model = load<u32>(read<u32>(a, 0x44C) + 0x90);
-  u32 extra = read<u32>(a, 0x7F4);
-  u32 material = load<u32>(model + 0xAC);
-  if (extra)
-    material = load<u32>(extra + 0xAC);
-  u32 lighting = call<u32>(0x02555D0C);
-  call(0x025626A4, lighting, 0, gabi::ea(a) + 0x314, gabi::ea(a) + 0x110);
-  u32 morf = read<u32>(a, 0x44C);
-  lighting = call<u32>(0x02555D0C);
-  call(0x02562F5C, lighting, load<u32>(morf + 0x90), gabi::ea(a) + 0x110);
-  if (extra) {
-    lighting = call<u32>(0x02555D0C);
-    call(0x02562F5C, lighting, read<u32>(a, 0x7F4), gabi::ea(a) + 0x110);
-  }
-  call(0x025E7B3C, gabi::ea(a) + 0x7FC, material, read<u8>(a, 0x8AB));
-  call(0x025E54D8, read<u32>(a, 0x44C));
-  if (extra) {
-    s32 joint = read<s8>(a, 0x3B4);
-    u32 matrices = load<u32>(model + 0x2C);
-    u16 flags = load<u16>(matrices + 4);
-    u32 matrix = load<u32>(matrices + 0x10) + (u32)joint * 0x30;
-    extra = read<u32>(a, 0x7F4);
-    store<u16>(matrices + 4, flags | 0x10);
+    if (phase != 0)
+        return 1;
+    J3DModel* model = gabi::at<J3DModel>((u32)l_currentModel);
+    daNpcAuction_c* a = gabi::at<daNpcAuction_c>((u32)model->mUserArea);
+    auction_cpp::Joint* jointData = gabi::at<auction_cpp::Joint>(auction_toJoint(jointObject));
+    J3DMtxBuffer_hd* matrices = model->mpMtxBuffer.get();
+    u16 joint = (u16)jointData->mJointNo;
+    u16 flags = (u16)matrices->mFlags;
+    Mtx34* base = gabi::at<Mtx34>((u32)matrices->mpAnmMtx);
+    matrices->mFlags = flags | 0x10;
+    auction_matrixCopy(gabi::ea(base) + joint * 0x30, (u32)l_calcMtx);
+    if ((u32)joint == (u32)(s32)(s8)a->m_jnt.mHeadJntNum) {
+        s16 angle = (s16)a->m_jnt.mAngles[0][1];
+        (alternate ? auction_matrixXRotate : auction_matrixYRotate)((u32)l_calcMtx,
+                                                                    alternate ? angle : (s16)-angle);
+        angle = (s16)a->m_jnt.mAngles[0][0];
+        auction_matrixZRotate((u32)l_calcMtx, (s16)-angle);
+    }
+    if ((u32)joint == (u32)(s32)(s8)a->m_jnt.mBackboneJntNum) {
+        auction_matrixXRotate((u32)l_calcMtx, (s16)a->m_jnt.mAngles[1][1]);
+        s16 angle = (s16)a->m_jnt.mAngles[1][0];
+        auction_matrixZRotate((u32)l_calcMtx, alternate ? (s16)-angle : angle);
+    }
+    matrices = model->mpMtxBuffer.get();
+    Mtx34* matrix = gabi::at<Mtx34>((u32)l_calcMtx);
+    flags = (u16)matrices->mFlags;
+    base = gabi::at<Mtx34>((u32)matrices->mpAnmMtx);
+    matrices->mFlags = flags | 0x10;
     f32 values[12];
     for (u32 i = 0; i < 12; ++i)
-      values[i] = load<f32>(matrix + 4 * i);
+        values[i] = (f32)matrix->m[i / 4][i % 4];
     for (u32 i = 0; i < 12; ++i)
-      store<f32>(extra + 0xC8 + 4 * i, values[i]);
-    call(0x025E2DE0, read<u32>(a, 0x7F4), 0);
-  }
-  store<u32>(material + 0x38, 0);
-  u8 costume = read<u8>(a, 0x8AD);
-  call(0x025BED80, load<u8>(0x1001640C + costume), a, 1.0f, 1.0f, 1.0f);
-  return 1;
+        (base + joint)->m[i / 4][i % 4] = values[i];
+    auction_matrixCopy((u32)l_calcMtx, gabi::ea(&l_currentMtx));
+    return 1;
 }
-VERIFY(0x021ED628, auctionDraw);
+} // namespace
 
-void auctionLookBack(Actor *a);
-u32 auctionExecute(Actor *a) {
-  WWHD_FUNC(0x021ED31C, u32, a);
-  if (!auctionIsExecute(a))
-    return 0;
-  u32 parameters = 0x10465A58 + read<u8>(a, 0x8AD) * 0x34;
-  s16 angles[9];
-  for (u32 i = 0; i < 9; ++i)
-    angles[i] = load<s16>(parameters + 4 + 2 * i);
-  call(0x0259E08C, gabi::ea(a) + 0x3AC, angles[1], angles[3], angles[5],
-       angles[7], angles[0], angles[2], angles[4], angles[6], angles[8]);
-  auctionCheckOrder(a);
-  u32 play = call<u32>(0x025200D4);
-  bool action = !load<u8>(play + 0x5292);
-  if (!action)
-    action = read<u16>(a, 0xF8) == 1 && read<u8>(a, 0x8B0) != 0;
-  if (action) {
-    s32 offset = read<s16>(a, 0x7DC);
-    s32 virtualIndex = read<s16>(a, 0x7DE);
-    u32 receiver = gabi::ea(a) + (u32)offset;
-    write<u8>(a, 0x8B5, 0);
-    u32 target;
-    if (virtualIndex < 0)
-      target = read<u32>(a, 0x7E0);
-    else {
-      s32 tableOffset = read<s16>(a, 0x7E2);
-      target = load<u32>(load<u32>(receiver + (u32)tableOffset) +
-                         (u32)virtualIndex * 8 + 4);
+/* 021EB76C */
+daNpcAuction_c* daNpcAuction_c_ct(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 self = gabi::ea(a);
+    if (!self)
+        self = auction_operatorNew(0x8B8);
+    if (!self)
+        return nullptr;
+    a = gabi::at<daNpcAuction_c>(self);
+    auction_fopNpcConstruct(self);
+    a->__vtbl = AUCTION_VTABLE;
+    auction_memclr(gabi::ea(&a->mPhs), 8);
+    auction_cpp::bits(&a->mpExtraModel) = 0;
+    auction_cpp::bits(&a->mpTexture) = 0;
+    auction_btpConstruct(gabi::ea(&a->mBtp));
+    a->mBlinkTimer = 0;
+    auction_cpp::bits(&a->mpEmitter) = 0;
+    a->mBtpNo = 0;
+    auction_cpp::bits(&a->mpAnmTable) = 0;
+    a->mPiconOfsY = 0.0f;
+    a->mVoiceId = 0;
+    a->mLookVel = 0;
+    a->mMaxTalkDist = 0.0f;
+    a->mUnused874 = 0;
+    auction_memclr(gabi::ea(&a->mEventId), 2);
+    a->mSelection = 0;
+    a->mCanTalk = 1;
+    auction_cpp::bits(&a->mpAnmTable) = 0;
+    a->mVoiceTimer = 0;
+    a->mItemChoice = 0;
+    a->mActIdx = 0;
+    a->mUnused874 = 0;
+    a->mNpcNo = 0;
+    a->mBlinkFrame = 0;
+    a->mUnused8AE = 0;
+    a->mEmitterEnabled = 0;
+    auction_cpp::bits(&a->mpEmitter) = 0;
+    a->mTalking = 0;
+    a->mOrder = 0;
+    a->mMdlNo = 0;
+    a->mAnmRepeat = 0;
+    a->mAnmNo = 0;
+    a->mAttentive = 0;
+    a->mGestureDone = 0;
+    return a;
+}
+
+/* 021EB068 */
+u32 daNpc_Auction_nodeCallBack1(u32 jointObject, s32 phase) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return auctionJointRotation<false>(jointObject, phase);
+}
+
+/* 021EB1C0 */
+u32 daNpc_Auction_nodeCallBack2(u32 jointObject, s32 phase) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return auctionJointRotation<true>(jointObject, phase);
+}
+
+/* 021EB74C */
+u32 CheckCreateHeap(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return a->createHeap();
+}
+
+/* 021EB8DC */
+u32 phase_1(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 flags = (u32)a->actor_condition;
+    if (!(flags & 8)) {
+        if (a) {
+            daNpcAuction_c_ct(a);
+            flags = (u32)a->actor_condition;
+        }
+        a->actor_condition = flags | 8;
     }
-    call(target, receiver);
-  } else
-    auctionEventMove(a);
-  auctionEventOrder(a);
-  auctionPlayTexture(a);
-  auctionPlayAnimation(a);
-  play = call<u32>(0x025200D4);
-  call(0x024F08A8, gabi::ea(a) + 0x450, play + 0x12A0);
-  call(0x025A15AC, a, 60.0f, 150.0f);
-  parameters = 0x10465A58 + read<u8>(a, 0x8AD) * 0x34;
-  f32 x = read<f32>(a, 0x314), z = read<f32>(a, 0x31C), y = read<f32>(a, 0x318);
-  f32 height = load<f32>(parameters + 0x18);
-  write<f32>(a, 0x398, z);
-  write<f32>(a, 0x390, x);
-  write<f32>(a, 0x394, y + height);
-  height = load<f32>(parameters + 0x28);
-  write<f32>(a, 0x384, z);
-  write<f32>(a, 0x37C, x);
-  write<f32>(a, 0x380, y + height);
-  auctionLookBack(a);
-  auctionSetMatrix(a);
-  s16 timer = read<s16>(a, 0x8A6);
-  if (timer) {
-    timer = (s16)(timer - 1);
-    write<s16>(a, 0x8A6, timer);
-    if (!timer)
-      call(0x025E1988, read<u32>(a, 0x898));
-  }
-  parameters = 0x10465A58 + read<u8>(a, 0x8AD) * 0x34;
-  write<f32>(a, 0x894, load<f32>(parameters + 0x30));
-  return 0;
+    gabi::Local<be<u32>> managerOut;
+    if (!auction_searchByName(AUCTION_MANAGER_PROCESS, gabi::ea(managerOut.get())))
+        return 0;
+    auction_cpp::Manager* manager = gabi::at<auction_cpp::Manager>((u32)*managerOut);
+    if (!manager)
+        return 0;
+    u8 kind = (u8)manager->mNpcKinds[a->getPrmNpcNo()];
+    if (kind >= 8) {
+        auction_panic(gabi::guest_str("d_a_npc_auction.cpp"), 0x429,
+                      gabi::guest_str("npcNo < daNpcAuction_c::Npc_No_Max"));
+        return 5;
+    }
+    a->mNpcNo = kind;
+    u32 actorId = a ? (u32)a->mBsPcId : 0xFFFFFFFF;
+    be<u32>* ownerSlot = &manager->mNpcIds[kind];
+    if ((u32)*ownerSlot != 0xFFFFFFFF)
+        return 0;
+    *ownerSlot = actorId;
+    u32 low = (u32)l_costumeRanges.mEntries[kind][0];
+    u32 high = (u32)l_costumeRanges.mEntries[kind][1];
+    u8 costume;
+    if (kind >= 2 && kind <= 5) {
+        u32 pairIndex = kind <= 3 ? 0 : 1;
+        u8 previous = (u8)gabi::at<auction_cpp::Manager>((u32)*managerOut)->mPairedCostumes[pairIndex];
+        costume = (u8)((u32)a->getRand((s32)(high - low + 1)) + low);
+        manager = gabi::at<auction_cpp::Manager>((u32)*managerOut);
+        if (previous == 255) {
+            manager->mPairedCostumes[pairIndex] = costume;
+            manager = gabi::at<auction_cpp::Manager>((u32)*managerOut);
+        } else if (costume == (u8)manager->mPairedCostumes[pairIndex]) {
+            costume = (u8)(costume == (u8)high ? costume - 1 : costume + 1);
+        }
+    } else {
+        costume = (u8)((u32)a->getRand((s32)(high - low + 1)) + low);
+        manager = gabi::at<auction_cpp::Manager>((u32)*managerOut);
+    }
+    a->mMdlNo = costume;
+    manager->mCostumes[kind] = costume;
+    a->mBtpNo = (u32)l_btpNumbers.mEntries[costume];
+    return 2;
 }
-VERIFY(0x021ED31C, auctionExecute);
 
-void auctionLookBack(Actor *a) {
-  WWHD_FUNC(0x021ECF4C, void, a);
-  u8 costume = read<u8>(a, 0x8AD);
-  u32 parameters = 0x10465A58 + costume * 0x34;
-  u8 emitterEnabled = read<u8>(a, 0x8B5);
-  s16 facing = read<s16>(a, 0x322);
-  f32 eyeHeight = load<f32>(parameters);
-  s16 turn = load<s16>(parameters + 0x16);
-  u32 track = 1;
-  gabi::Local<cXyz> target;
-  u32 targetAddress = 0;
-  if (emitterEnabled) {
+/* 021EBF80 */
+u32 phase_2(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 self = gabi::ea(a);
+    u8 costume = (u8)a->mMdlNo;
+    u32 result = auction_loadArchive(gabi::ea(&a->mPhs), (u32)l_arcNames.mEntries[costume]);
+    if (result == 4) {
+        if (auction_entrySolidHeap(self, gabi::guest_fn((const void*)&CheckCreateHeap), 0x10000))
+            return a->createInit();
+        auction_cpp::bits(&a->mpMorf) = 0;
+        return 5;
+    }
+    return result;
+}
+
+/* 021EB450 */
+u32 daNpcAuction_c::createHeap() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 self = gabi::ea(this);
+    gabi::Local<SafeString> modelName, animationName, extraName;
+    u8 costume = (u8)mMdlNo;
+    u32 resource = (u32)l_resControl;
+    u32 modelNumber = (u32)l_modelNumbers.mEntries[costume];
+    modelName->mStringTop = (u32)l_arcNames.mEntries[costume];
+    modelName->__vtbl = SAFE_STRING_VTABLE;
+    auction_cpp::JointData* modelData = gabi::at<auction_cpp::JointData>(
+        auction_getResource(resource, gabi::ea(modelName.get()), modelNumber));
+    costume = (u8)mMdlNo;
+    u8 animationIndex = (u8)mAnmNo;
+    resource = (u32)l_resControl;
+    u32 animationNumber = (u32)l_animationNumbers.mEntries[costume][animationIndex];
+    animationName->mStringTop = (u32)l_arcNames.mEntries[costume];
+    animationName->__vtbl = SAFE_STRING_VTABLE;
+    u32 animation = auction_getResource(resource, gabi::ea(animationName.get()), animationNumber);
+    mDoExt_McaMorf* morf = gabi::at<mDoExt_McaMorf>(auction_createMorf(
+        0, gabi::ea(modelData), 0, 0, animation, 2, 0, -1, 1, 0, 0x80000, 0x11020203, 1.0f));
+    auction_cpp::bits(&mpMorf) = gabi::ea(morf);
+    if (!morf || !auction_cpp::bits(&morf->mpModel))
+        return 0;
+    costume = (u8)mMdlNo;
+    s32 extraModel = (s32)l_extraModels.mEntries[costume];
+    if (extraModel >= 0) {
+        extraName->mStringTop = (u32)l_arcNames.mEntries[costume];
+        extraName->__vtbl = SAFE_STRING_VTABLE;
+        resource = (u32)l_resControl;
+        u32 extraData = auction_getResource(resource, gabi::ea(extraName.get()), extraModel);
+        J3DModel* extra = gabi::at<J3DModel>(auction_createModel(extraData, 0x80000, 0x15020022));
+        auction_cpp::bits(&mpExtraModel) = gabi::ea(extra);
+        if (!extra)
+            return 0;
+    }
+    auction_cpp::JointName* names = gabi::at<auction_cpp::JointName>(auction_jointNames(gabi::ea(modelData)));
+    u32 delta = (u32)names->mNameOffset;
+    u32 strings = delta ? gabi::ea(names) + 0x10 + delta : 0;
+    s8 head = (s8)auction_findJointName(strings, gabi::guest_str("head"));
+    m_jnt.mHeadJntNum = head;
+    if (head < 0)
+        auction_panic(gabi::guest_str("d_a_npc_auction.cpp"), 0x4A9,
+                      gabi::guest_str("m_jnt.getHeadJntNum() >= 0"));
+    names = gabi::at<auction_cpp::JointName>(auction_jointNames(gabi::ea(modelData)));
+    delta = (u32)names->mNameOffset;
+    strings = delta ? gabi::ea(names) + 0x10 + delta : 0;
+    s8 backbone = (s8)auction_findJointName(strings, gabi::guest_str("backbone"));
+    m_jnt.mBackboneJntNum = backbone;
+    if (backbone < 0)
+        auction_panic(gabi::guest_str("d_a_npc_auction.cpp"), 0x4AD,
+                      gabi::guest_str("m_jnt.getBackboneJntNum() >= 0"));
+    if (!initTexPatternAnm(0))
+        return 0;
+    auction_cpp::JointTree* tree = gabi::at<auction_cpp::JointTree>(auction_jointTree(gabi::ea(modelData)));
+    u16 count = (u16)tree->mJointCount;
+    for (u16 joint = 0; joint < count; ++joint) {
+        s8 headIndex = (s8)m_jnt.mHeadJntNum;
+        if ((u32)joint == (u32)(s32)headIndex || (u32)joint == (u32)(s32)(s8)m_jnt.mBackboneJntNum) {
+            u32 extent = (u32)modelData->mExtent;
+            auction_cpp::Joint* entry = gabi::at<auction_cpp::Joint>((u32)modelData->mEntries);
+            if (joint < extent)
+                entry = gabi::at<auction_cpp::Joint>(gabi::ea(entry) + (u32)joint * 0x1C);
+            u8 npc = (u8)mNpcNo;
+            entry->mCallback = l_jointCallbacks.mEntries[npc];
+        }
+        tree = gabi::at<auction_cpp::JointTree>(auction_jointTree(gabi::ea(modelData)));
+        count = (u16)tree->mJointCount;
+    }
+    morf = mpMorf.get();
+    J3DModel* model = morf->mpModel.get();
+    model->mUserArea = self;
+    auction_setWall(gabi::ea(&mAcchCir), 30.0f, 30.0f);
+    auction_acchSet(gabi::ea(&mObjAcch), gabi::ea(&current.pos), gabi::ea(&old.pos), self, 1,
+                    gabi::ea(&mAcchCir), gabi::ea(&speed), gabi::ea(&current.angle), gabi::ea(&shape_angle));
+    return 1;
+}
+
+/* 021EBBB8 */
+u32 daNpcAuction_XyCheckCB(daNpcAuction_c* a, s32 event) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return a->XyCheckCB(event);
+}
+
+/* 021EBC78 */
+s32 daNpcAuction_XyEventCB(daNpcAuction_c* a, s32 event) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return a->XyEventCB(event);
+}
+
+/* 021EBD5C */
+u32 daNpcAuction_c::createInit() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 self = gabi::ea(this);
+    u8 npc = (u8)mNpcNo;
+    gravity = -9.0f;
+    auction_eventCutSet(gabi::ea(&mEventCut), (u32)l_eventNames.mEntries[npc], self);
+    mDoExt_McaMorf* morf = mpMorf.get();
+    mTalking = 0;
+    mLookVel = 0;
+    mAttentive = 0;
+    J3DModel* model = morf->mpModel.get();
+    cullMtx = model ? gabi::ea(model) + 0xC8 : 0;
+    wait_action_init();
+    u8 attention = (u8)mNpcNo == 0 ? 0xAD : 0xA9;
+    attention_info.distances[fopAc_Attn_TYPE_TALK_e] = attention;
+    attention_info.flags = 10;
+    attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = attention;
+    auction_cpp::Play* play = auction_getPlay();
+    s32 event =
+        auction_getEventIndex(gabi::ea(&play->mEventManager), gabi::guest_str("AUCTION_TALK_XY"), 255);
+    mEventId = (s16)event;
+    auction_setArchiveName(self + 0xF8, gabi::guest_str("AUCTION_TALK"));
+    u8 costume = (u8)mMdlNo;
+    eventInfo.mpEventCB = gabi::guest_fn((const void*)&daNpcAuction_XyEventCB);
+    eventInfo.mpCheckCB = gabi::guest_fn((const void*)&daNpcAuction_XyCheckCB);
+    mMaxTalkDist = (f32)l_HIO.mCostumes[costume].mTalkDistance;
+    setMtx();
+    model = mpMorf.get()->mpModel.get();
+    auction_modelCalc(gabi::ea(model));
+    auction_statusInit(gabi::ea(&mStts), 255, 255, self);
+    auction_cylinderSet(gabi::ea(&mCyl), gabi::ea(&l_cylinderSource));
+    auction_cpp::bits(&mCyl.mStts) = gabi::ea(&mStts);
+    auction_setAttention(self, 60.0f, 150.0f);
+    return 4;
+}
+
+/* 021EBB90 */
+void daNpcAuction_c::wait_action_init() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mActionIndex = -1;
+    mActionFunction = WAIT_ACTION;
+    mActionDelta = 0;
+}
+
+/* 021ED81C */
+void daNpcAuction_c::wait_action() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mOrder = (u8)mAttentive != 0;
+    if ((u8)mTalking == 1) {
+        if (auction_talk(gabi::ea(this), 1) == 0x12) {
+            mTalking = 0;
+            setAnm2(7, 2, 8.0f);
+            if (!(u8)mSelection) {
+                auction_cpp::Play* play = auction_getPlay();
+                play->mEventFlags = (u16)play->mEventFlags | 8;
+            } else if (!(u8)mNpcNo) {
+                gabi::Local<be<u16>> process;
+                *process = AUCTION_MANAGER_PROCESS;
+                auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+                if (manager) {
+                    u8 selection = (u8)mSelection;
+                    if (selection == 1)
+                        manager->mSelection = 1;
+                    else if (selection == 2) {
+                        manager->mSelection = 2;
+                        manager->mItemChoice = (u8)mItemChoice;
+                    }
+                }
+            }
+        }
+        setAnmFromMsgTag();
+    }
+    if (!(u8)mAnmNo)
+        setAnm2(7, 2, 8.0f);
+}
+
+/* 021EC1A8 */
+void daNpcAuction_c::checkOrder() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u16 state = (u16)eventInfo.mCommand;
+    if (state == AUCTION_EVENT_DEMO) {
+        mOrder = 0;
+    } else if (state == AUCTION_EVENT_TALK) {
+        u8 order = (u8)mOrder;
+        if ((order == 1 || order == 2) && !(u8)mTalking && !(u8)mSelection)
+            mTalking = 1;
+    }
+}
+
+/* 021ECD6C */
+void daNpcAuction_c::eventOrder() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 order = (u8)mOrder;
+    if (order != 1 && order != 2)
+        return;
+    eventInfo.mCondition = (u16)eventInfo.mCondition | 1;
+    u32 save = (u32)l_save;
+    u32 event = auction_isEventBit(save + 0x644, 0x1404);
+    order = (u8)mOrder;
+    if (event)
+        eventInfo.mCondition = (u16)eventInfo.mCondition | 0x20;
+    if (order == 2)
+        auction_orderSpeak(gabi::ea(this));
+}
+
+/* 021ECB68 */
+void daNpcAuction_c::eventMove() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auto ended = [](u32 name) {
+        auction_cpp::Play* play = auction_getPlay();
+        return auction_eventEndCheck(gabi::ea(&play->mEventManager), name) != 0;
+    };
+    if (ended(gabi::guest_str("AUCTION_GET_ITEM")) || ended(gabi::guest_str("AUCTION_NO_ITEM")) ||
+        ended(gabi::guest_str("AUCTION_END2"))) {
+        mMaxTalkDist = 200.0f;
+        return;
+    }
+    if (ended(gabi::guest_str("AUCTION_TALK_XY"))) {
+        if (!(u8)mSelection) {
+            auction_cpp::Play* play = auction_getPlay();
+            play->mEventFlags = (u16)play->mEventFlags | 8;
+            mTalking = 0;
+            mCanTalk = 1;
+            return;
+        }
+        if (!(u8)mNpcNo) {
+            gabi::Local<be<u16>> process;
+            *process = AUCTION_MANAGER_PROCESS;
+            auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+            if (manager) {
+                u8 selection = (u8)mSelection;
+                if (selection == 1) {
+                    manager->mSelection = 1;
+                    mCanTalk = 1;
+                    mTalking = 0;
+                    return;
+                }
+                if (selection == 2) {
+                    manager->mSelection = 2;
+                    manager->mItemChoice = (u8)mItemChoice;
+                }
+            }
+        }
+        mCanTalk = 1;
+        mTalking = 0;
+        return;
+    }
+    u8 previousCut = (u8)mEventCut.mbAttention;
+    if (auction_eventCutMove(gabi::ea(&mEventCut))) {
+        if (!(u8)mEventCut.mbAttention)
+            mEventCut.mbAttention = previousCut;
+    } else {
+        privateCut();
+        if ((u8)mNpcNo == 7)
+            setAnmFromMsgTag();
+    }
+}
+
+/* 021EC724 */
+void daNpcAuction_c::privateCut() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 name = (u32)l_eventNames.mEntries[(u8)mNpcNo];
+    auction_cpp::Play* play = auction_getPlay();
+    s32 staff = auction_getStaffId(gabi::ea(&play->mEventManager), name, 0, 0);
+    if (staff == -1)
+        return;
+    play = auction_getPlay();
+    s8 action =
+        (s8)auction_getActionIndex(gabi::ea(&play->mEventManager), staff, gabi::ea(&l_actionNames), 2, 1, 0);
+    mActIdx = action;
+    play = auction_getPlay();
+    if (action == -1) {
+        auction_cutEnd(gabi::ea(&play->mEventManager), staff);
+        return;
+    }
+    if (auction_isAdvance(gabi::ea(&play->mEventManager), staff)) {
+        action = (s8)mActIdx;
+        if (action == 0)
+            eventMainInit();
+        else if (action == 1)
+            eventMesSetInit(staff);
+        else {
+            play = auction_getPlay();
+            auction_cutEnd(gabi::ea(&play->mEventManager), staff);
+            return;
+        }
+    }
+    action = (s8)mActIdx;
+    if (action == 0) {
+        if (!eventMain())
+            return;
+    } else if (action == 1) {
+        if (!eventMesSet())
+            return;
+    }
+    play = auction_getPlay();
+    auction_cutEnd(gabi::ea(&play->mEventManager), staff);
+}
+
+/* 021EC200 */
+void daNpcAuction_c::eventMainInit() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mEmitterEnabled = 1;
+}
+
+/* 021EC400 */
+u32 daNpcAuction_c::eventMain() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     gabi::Local<be<u16>> process;
-    *process = 0x17E;
-    u32 manager = call<u32>(0x025D5218, 0x025E121Cu, process.get());
-    if (manager) {
-      f32 ownX = read<f32>(a, 0x37C);
-      f32 x = load<f32>(manager + 0x37C);
-      f32 y = load<f32>(manager + 0x380);
-      f32 z = load<f32>(manager + 0x384);
-      if (ownX != x || read<f32>(a, 0x380) != y || read<f32>(a, 0x384) != z) {
+    *process = AUCTION_MANAGER_PROCESS;
+    auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+    if (!manager)
+        return 0;
+    u8 flags = (u8)manager->mGestureFlags;
+    bool particle = false;
+    auto animate = [&](s32 index, u8 bit) {
+        setAnm2(index, 2, 8.0f);
+        mGestureDone = (u8)mGestureDone | bit;
+    };
+    if (flags & 4) {
+        if (!((u8)mGestureDone & 8)) {
+            animate(3, 8);
+            flags = (u8)manager->mGestureFlags;
+            particle = (flags & 4) != 0;
+        } else
+            particle = true;
+    } else if ((u8)manager->mSpeakingNpc == (u8)mNpcNo) {
+        if (flags & 1) {
+            if ((u8)mGestureDone & 4) {
+                clrEmitter();
+                return 0;
+            }
+            animate(2, 4);
+        } else if (flags & 8) {
+            if ((u8)mGestureDone & 0x10) {
+                clrEmitter();
+                return 0;
+            }
+            animate(4, 0x10);
+        } else if (flags & 0x20) {
+            if ((u8)mGestureDone & 0x40) {
+                clrEmitter();
+                return 0;
+            }
+            animate(6, 0x40);
+        } else if (flags & 0x10) {
+            if (!((u8)mGestureDone & 0x20))
+                animate(5, 0x20);
+            mEmitterEnabled = 0;
+        } else {
+            u8 animation = (u8)mAnmNo;
+            mGestureDone = 0;
+            if (animation)
+                setAnm2(0, 2, 8.0f);
+        }
+        flags = (u8)manager->mGestureFlags;
+        particle = (flags & 4) != 0;
+    } else {
+        u8 animation = (u8)mAnmNo;
+        mGestureDone = 0;
+        if (animation)
+            setAnm2(0, 2, 8.0f);
+        flags = (u8)manager->mGestureFlags;
+        particle = (flags & 4) != 0;
+    }
+    if (!particle) {
+        clrEmitter();
+        return 0;
+    }
+    if (!(u32)auction_cpp::bits(&mpEmitter)) {
+        s32 room = (s8)current.roomNo;
+        auction_cpp::Play* play = auction_getPlay();
+        auction_cpp::Emitter* emitter =
+            auction_particleSet((u32)play->mParticle, 0, 0x819D, gabi::ea(&current.pos), 0, 0, 255, 0, room,
+                                gabi::ea(&tevStr.mColorK0), gabi::ea(&tevStr.mColorK0), 0);
+        mpEmitter = emitter;
+        if (!emitter)
+            return 0;
+        emitter->mStatus = (u32)emitter->mStatus | 0x40;
+        if (!(u32)auction_cpp::bits(&mpEmitter))
+            return 0;
+    }
+    {
+        J3DModel* model = mpMorf.get()->mpModel.get();
+        s32 joint = (s8)m_jnt.mHeadJntNum;
+        J3DMtxBuffer_hd* matrices = model->mpMtxBuffer.get();
+        u16 flags = (u16)matrices->mFlags;
+        Mtx34* base = gabi::at<Mtx34>((u32)matrices->mpAnmMtx);
+        matrices->mFlags = flags | 0x10;
+        auction_matrixCopy(gabi::ea(base) + (u32)joint * 0x30, (u32)l_calcMtx);
+        auction_matrixZRotate((u32)l_calcMtx, -0x4000);
+        u8 costume = (u8)mMdlNo;
+        auction_matrixTranslate(gabi::ea(&l_translationMtx), 0.0f,
+                                (f32)l_HIO.mCostumes[costume].mParticleHeight, 0.0f);
+        Mtx34* matrix = gabi::at<Mtx34>((u32)l_calcMtx);
+        auction_matrixConcat(gabi::ea(matrix), gabi::ea(&l_translationMtx), gabi::ea(matrix));
+        auction_cpp::Emitter* emitter = mpEmitter;
+        auction_emitterSetGlobalMatrix((u32)l_calcMtx, gabi::ea(&emitter->mGlobalRotation),
+                                       gabi::ea(&emitter->mGlobalTranslation));
+        return 0;
+    }
+}
+
+/* 021EC20C */
+void daNpcAuction_c::eventMesSetInit(s32 staff) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auction_cpp::Play* play = auction_getPlay();
+    u32 substance = auction_substance(gabi::ea(&play->mEventManager), staff, gabi::guest_str("MsgNo"), 3);
+    u32 message = substance ? (u32)*gabi::at<be<u32>>(substance)
+                            : gabi::call_ptr<u32>(load<u32>((u32)__vtbl + 0x1C), this);
+    mCurrMsgNo = message;
+}
+
+/* 021EC6F4 */
+u32 daNpcAuction_c::eventMesSet() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return auction_talk(gabi::ea(this), 0) == 0x12;
+}
+
+/* 021EBBB0 */
+u32 daNpcAuction_c::XyCheckCB(s32 event) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return 0;
+}
+
+/* 021EBBBC */
+s32 daNpcAuction_c::XyEventCB(s32 event) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auction_cpp::Play* play = auction_getPlay();
+    s32 index =
+        auction_getEventIndex(gabi::ea(&play->mEventManager), gabi::guest_str("DEFAULT_TALK_XY"), 255);
+    play = auction_getPlay();
+    u8 item = (u8)play->mXYItems[(u32)event];
+    bool missing = false;
+    if (item == AUCTION_ITEM_TRIFORCE_CHART || item == AUCTION_ITEM_TREASURE_CHART) {
+        u32 save = (u32)l_save;
+        missing = !auction_isEventBit(save + 0x644, item == AUCTION_ITEM_TRIFORCE_CHART ? 0x1008 : 0x1004);
+    }
+    if (missing) {
+        index = (s16)mEventId;
+        mCanTalk = 0;
+    }
+    return index;
+}
+
+/* 021ED964 */
+u32 daNpcAuction_c::next_msgStatus(u32 message) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 player = (u32)l_message;
+    gabi::Local<be<u16>> process;
+    *process = AUCTION_MANAGER_PROCESS;
+    auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+    u32 current = (u32)*gabi::at<be<u32>>(message);
+    u32 next = 0;
+    u32 status = 15;
+    switch (current) {
+    case 0x27DA:
+        next = 0x27DC;
+        break;
+    case 0x27DC:
+        next = 0x27DD;
+        break;
+    case 0x27DD:
+        next = 0x27DE;
+        break;
+    case 0x27DB:
+    case 0x27DE:
+        next = 0x27DF;
+        break;
+    case 0x27DF:
+        if (!(u32)gabi::at<auction_cpp::Message>(player)->mChoice) {
+            *gabi::at<be<u32>>(message) = 0x27E1;
+            auction_onEventBit((u32)l_save + 0x644, 0x1408);
+            return status;
+        }
+        next = 0x27E0;
+        break;
+    case 0x27E1:
+        next = 0x27E2;
+        break;
+    case 0x27E2:
+        next = (u32)gabi::at<auction_cpp::Message>(player)->mChoice ? 0x27E4 : 0x27E3;
+        break;
+    case 0x27E5:
+        next = 0x27E6;
+        break;
+    case 0x27E6:
+        next = 0x27E7;
+        break;
+    case 0x27E7:
+        next = (u32)gabi::at<auction_cpp::Message>(player)->mChoice ? 0x27E8 : 0x27E9;
+        break;
+    case 0x27E3:
+        next = 0x27E9;
+        break;
+    case 0x27E4:
+    case 0x27E8:
+        next = 0x27E5;
+        break;
+    case 0x27E9:
+        mSelection = 1;
+        status = 16;
+        break;
+    case 0x27EC:
+        if (!(u32)gabi::at<auction_cpp::Message>(player)->mChoice) {
+            *gabi::at<be<u32>>(message) = 0x27EE;
+            auction_onAuctionWin((u32)l_save + 0x96);
+            return status;
+        }
+        next = 0x27ED;
+        break;
+    case 0x27EE:
+        next = 0x27EF;
+        break;
+    case 0x27EF:
+        mSelection = 2;
+        status = 16;
+        break;
+    case 0x1D35:
+        next = 0x1D36;
+        break;
+    case 0x1D36:
+        next = 0x1D37;
+        break;
+    case 0x1D37:
+        next = manager && (u8)manager->mResult ? 0x1D39 : 0x1D38;
+        break;
+    default:
+        status = 16;
+        break;
+    }
+    if (next)
+        *gabi::at<be<u32>>(message) = next;
+    return status;
+}
+
+/* 021EDBF8 */
+u32 daNpcAuction_c::getMsg() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 kind = (u8)mNpcNo;
+    auto eventBit = [](u32 flag) { return auction_isEventBit((u32)l_save + 0x644, flag) != 0; };
+    if (!kind) {
+        auction_cpp::Play* play = auction_getPlay();
+        u32 selection = (u8)play->mTalkXY;
+        if (selection - 1 <= 3) {
+            play = auction_getPlay();
+            u8 item = (u8)play->mPreItem;
+            if (item == AUCTION_ITEM_TRIFORCE_CHART || item == AUCTION_ITEM_TREASURE_CHART) {
+                if (eventBit(item == AUCTION_ITEM_TRIFORCE_CHART ? 0x1008 : 0x1004))
+                    return 0x27F7;
+                mItemChoice = item == AUCTION_ITEM_TREASURE_CHART;
+                return 0x27EB;
+            }
+            return 0x27EA;
+        }
+        if (eventBit(0xA02) && !auction_isTriforce(0x69))
+            return 0x27F8;
+        if (eventBit(0x1002))
+            return auction_isSecondQuest() ? 0x27DB : 0x27F0;
+        auction_onEventBit((u32)l_save + 0x644, 0x1002);
+        return 0x27DA;
+    }
+    if (kind == 6)
+        return 0x1D35;
+    gabi::Local<be<u16>> process;
+    *process = AUCTION_MANAGER_PROCESS;
+    auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+    if (!manager)
+        auction_panic(gabi::guest_str("d_a_npc_auction.cpp"), 0x80A, gabi::guest_str("actAuc != (0)"));
+    u8 costume = (u8)mMdlNo;
+    u8 current = (u8)manager->mCurrentNpc;
+    be<u32>* table = l_messageNumbers.mEntries[costume];
+    if (!current)
+        return (u32)table[0];
+    return (u32)table[current == (u8)mNpcNo ? 1 : 2];
+}
+
+/* 021EC93C */
+void daNpcAuction_c::setAnmFromMsgTag() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auction_cpp::Play* play = auction_getPlay();
+    u8 kind = (u8)mNpcNo;
+    u8 tag = (u8)play->mMsgTag;
+    u32 table = 0;
+    if (tag <= 7) {
+        if (kind == 0 || kind == 7) {
+            const u32 tables[8] = {gabi::ea(&l_messageAnimation2),  gabi::ea(&l_messageAnimation2),
+                                   gabi::ea(&l_messageAnimation3),  gabi::ea(&l_messageAnimation4),
+                                   gabi::ea(&l_messageAnimation0),  gabi::ea(&l_messageAnimation5),
+                                   gabi::ea(&l_messageAnimation10), gabi::ea(&l_messageAnimation6)};
+            table = tables[tag];
+        } else {
+            const u32 tables[8] = {gabi::ea(&l_messageAnimation2), gabi::ea(&l_messageAnimation7),
+                                   gabi::ea(&l_messageAnimation8), gabi::ea(&l_messageAnimation9),
+                                   gabi::ea(&l_messageAnimation1), gabi::ea(&l_messageAnimation9),
+                                   gabi::ea(&l_messageAnimation1), gabi::ea(&l_messageAnimation1)};
+            table = tables[tag];
+        }
+        setAnmTbl(table);
+        if ((kind == 0 || kind == 7) && tag == 6) {
+            mVoiceId = 0x8DD;
+            mVoiceTimer = 100;
+        }
+    }
+    play = auction_getPlay();
+    play->mMsgTag = 255;
+}
+
+/* 021EB750 */
+u8 daNpcAuction_c::getPrmNpcNo() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    s8 index = (s8)argument;
+    return (u32)(s32)index < 8 ? (u8)index : 0;
+}
+
+/* 021EBC7C */
+void daNpcAuction_c::setMtx() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    J3DModel* model = mpMorf.get()->mpModel.get();
+    f32 z = (f32)scale.z, x = (f32)scale.x, y = (f32)scale.y;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = (f32)current.pos.x;
+    y = (f32)current.pos.y;
+    z = (f32)current.pos.z;
+    auction_matrixTranslate(gabi::ea(&l_translationMtx), x, y, z);
+    auction_matrixYRotate(gabi::ea(&l_translationMtx), (s16)current.angle.y);
+    model = mpMorf.get()->mpModel.get();
+    f32 matrix[12];
+    for (u32 i = 0; i < 12; ++i)
+        matrix[i] = (f32)l_translationMtx.m[i / 4][i % 4];
+    for (u32 i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
+}
+
+/* 021ECF4C */
+void daNpcAuction_c::lookBack() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 costume = (u8)mMdlNo;
+    AuctionHIO* parameters = &l_HIO.mCostumes[costume];
+    u8 emitterEnabled = (u8)mEmitterEnabled;
+    s16 facing = (s16)current.angle.y;
+    f32 eyeHeight = (f32)parameters->mEyeHeight;
+    s16 turn = (s16)parameters->mTurnSpeed;
+    u32 track = 1;
+    gabi::Local<cXyz> target;
+    u32 targetAddress = 0;
+    if (emitterEnabled) {
+        gabi::Local<be<u16>> process;
+        *process = AUCTION_MANAGER_PROCESS;
+        auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+        if (manager) {
+            f32 ownX = (f32)eyePos.x;
+            f32 x = (f32)manager->eyePos.x;
+            f32 y = (f32)manager->eyePos.y;
+            f32 z = (f32)manager->eyePos.z;
+            if (ownX != x || (f32)eyePos.y != y || (f32)eyePos.z != z) {
+                target->set(x, y, z);
+                targetAddress = gabi::ea(target.get());
+            }
+        }
+    } else if ((u8)mEventCut.mbAttention) {
+        f32 x = (f32)mEventCut.mPos.x, y = (f32)mEventCut.mPos.y;
+        m_jnt.mbTrn = 1;
+        f32 z = (f32)mEventCut.mPos.z;
         target->set(x, y, z);
         targetAddress = gabi::ea(target.get());
-      }
-    }
-  } else if (read<u8>(a, 0x440)) {
-    f32 x = read<f32>(a, 0x434), y = read<f32>(a, 0x438);
-    write<u8>(a, 0x3B6, 1);
-    f32 z = read<f32>(a, 0x43C);
-    target->set(x, y, z);
-    targetAddress = gabi::ea(target.get());
-    track = 0;
-    if (!read<u8>(a, 0x8A9))
-      write<u8>(a, 0x8A9, 1);
-  } else {
-    u32 play = call<u32>(0x025200D4);
-    u32 player = load<u32>(play + 0x5B34);
-    gabi::Local<cXyz> actorPosition;
-    actorPosition->set(read<f32>(a, 0x314), read<f32>(a, 0x318),
-                       read<f32>(a, 0x31C));
-    costume = read<u8>(a, 0x8AD);
-    gabi::Local<cXyz> playerPosition;
-    f32 px = load<f32>(player + 0x314), py = load<f32>(player + 0x318);
-    f32 distanceLimit = read<f32>(a, 0x890);
-    parameters = 0x10465A58 + costume * 0x34;
-    f32 pz = load<f32>(player + 0x31C);
-    playerPosition->set(px, py, pz);
-    s32 angleLimit = load<s16>(parameters + 0x1C);
-    s32 frontalLimit = 0x4000;
-    gabi::Local<be<f32>> distance;
-    gabi::Local<be<s16>> angle;
-    call(0x0259D624, actorPosition.get(), playerPosition.get(), distance.get(),
-         angle.get());
-    u8 attentive = read<u8>(a, 0x8A9);
-    s16 currentFacing = read<s16>(a, 0x322);
-    s16 relative = (s16)((s32)(s16)*angle - currentFacing);
-    f32 actualDistance = *distance;
-    if (attentive) {
-      distanceLimit += 40.0f;
-      angleLimit += 0x71C;
-      frontalLimit = 0x471C;
-    }
-    *angle = relative;
-    // PPC ble branches whenever the greater-than bit is clear, including
-    // unordered.
-    if (distanceLimit > actualDistance) {
-      s32 absolute = relative < 0 ? -(s32)relative : relative;
-      if (frontalLimit > absolute) {
-        gabi::Local<cXyz> eye;
-        call(0x0259D54C, eye.get(), eyeHeight);
-        target->copy(*eye);
-        targetAddress = gabi::ea(target.get());
-        track = 1;
-        if (!read<u8>(a, 0x8A9))
-          write<u8>(a, 0x8A9, 1);
-      } else if (angleLimit > absolute) {
-        u8 talking = read<u8>(a, 0x8A8);
-        if (talking) {
-          gabi::Local<cXyz> eye;
-          call(0x0259D54C, eye.get(), eyeHeight);
-          target->copy(*eye);
-          targetAddress = gabi::ea(target.get());
-          write<u8>(a, 0x3B6, 1);
-          track = 0;
-          attentive = read<u8>(a, 0x8A9);
-        }
-        if (!attentive)
-          write<u8>(a, 0x8A9, 1);
-      } else
-        goto far;
-    } else {
-    far:
-      u8 kind = read<u8>(a, 0x8AC);
-      write<u8>(a, 0x8A9, 0);
-      if (!kind) {
-        facing = read<s16>(a, 0x2FA);
         track = 0;
-        write<u8>(a, 0x3B6, 1);
-      }
+        if (!(u8)mAttentive)
+            mAttentive = 1;
+    } else {
+        auction_cpp::Play* play = auction_getPlay();
+        u32 player = (u32)play->mPlayer;
+        gabi::Local<cXyz> actorPosition;
+        actorPosition->set((f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
+        costume = (u8)mMdlNo;
+        gabi::Local<cXyz> playerPosition;
+        f32 px = (f32)gabi::at<fopAc_ac_c>(player)->current.pos.x,
+            py = (f32)gabi::at<fopAc_ac_c>(player)->current.pos.y;
+        f32 distanceLimit = (f32)mMaxTalkDist;
+        parameters = &l_HIO.mCostumes[costume];
+        f32 pz = (f32)gabi::at<fopAc_ac_c>(player)->current.pos.z;
+        playerPosition->set(px, py, pz);
+        s32 angleLimit = (s16)parameters->mAngleLimit;
+        s32 frontalLimit = 0x4000;
+        gabi::Local<be<f32>> distance;
+        gabi::Local<be<s16>> angle;
+        auction_distanceAngle(gabi::ea(actorPosition.get()), gabi::ea(playerPosition.get()),
+                              gabi::ea(distance.get()), gabi::ea(angle.get()));
+        u8 attentive = (u8)mAttentive;
+        s16 currentFacing = (s16)current.angle.y;
+        s16 relative = (s16)((s32)(s16)*angle - currentFacing);
+        f32 actualDistance = *distance;
+        if (attentive) {
+            distanceLimit += 40.0f;
+            angleLimit += 0x71C;
+            frontalLimit = 0x471C;
+        }
+        *angle = relative;
+        // PPC ble branches whenever the greater-than bit is clear, including
+        // unordered.
+        bool far = !(distanceLimit > actualDistance);
+        if (!far) {
+            s32 absolute = relative < 0 ? -(s32)relative : relative;
+            if (frontalLimit > absolute) {
+                gabi::Local<cXyz> eye;
+                auction_playerEyePos(gabi::ea(eye.get()), eyeHeight);
+                target->copy(*eye);
+                targetAddress = gabi::ea(target.get());
+                track = 1;
+                if (!(u8)mAttentive)
+                    mAttentive = 1;
+            } else if (angleLimit > absolute) {
+                u8 talking = (u8)mTalking;
+                if (talking) {
+                    gabi::Local<cXyz> eye;
+                    auction_playerEyePos(gabi::ea(eye.get()), eyeHeight);
+                    target->copy(*eye);
+                    targetAddress = gabi::ea(target.get());
+                    m_jnt.mbTrn = 1;
+                    track = 0;
+                    attentive = (u8)mAttentive;
+                }
+                if (!attentive)
+                    mAttentive = 1;
+            } else
+                far = true;
+        }
+        if (far) {
+            u8 kind = (u8)mNpcNo;
+            mAttentive = 0;
+            if (!kind) {
+                facing = (s16)home.angle.y;
+                track = 0;
+                m_jnt.mbTrn = 1;
+            }
+        }
     }
-  }
-  if (read<u8>(a, 0x8A8)) {
-    track = 0;
-    write<u8>(a, 0x3B6, 1);
-  }
-  s16 smoothing = 0;
-  if (read<u8>(a, 0x3B6)) {
-    s16 overrideTurn = read<s16>(a, 0x442);
-    if (overrideTurn)
-      turn = overrideTurn;
-    call(0x0200F428, gabi::ea(a) + 0x8A2, turn, 4, 0x800);
-    smoothing = read<s16>(a, 0x8A2);
-  } else
-    write<s16>(a, 0x8A2, 0);
-  gabi::Local<cXyz> origin;
-  origin->set(read<f32>(a, 0x37C), read<f32>(a, 0x380), read<f32>(a, 0x384));
-  call(0x0259DED0, gabi::ea(a) + 0x3AC, gabi::ea(a) + 0x322, targetAddress,
-       origin.get(), facing, smoothing, track);
-  u16 x = read<u16>(a, 0x320), y = read<u16>(a, 0x322), z = read<u16>(a, 0x324);
-  write<u16>(a, 0x328, x);
-  write<u16>(a, 0x32A, y);
-  write<u16>(a, 0x32C, z);
+    if ((u8)mTalking) {
+        track = 0;
+        m_jnt.mbTrn = 1;
+    }
+    s16 smoothing = 0;
+    if ((u8)m_jnt.mbTrn) {
+        s16 overrideTurn = (s16)mEventCut.mTurnSpeed;
+        if (overrideTurn)
+            turn = overrideTurn;
+        auction_approachAngle(gabi::ea(&mLookVel), turn, 4, 0x800);
+        smoothing = (s16)mLookVel;
+    } else
+        mLookVel = 0;
+    gabi::Local<cXyz> origin;
+    origin->set((f32)eyePos.x, (f32)eyePos.y, (f32)eyePos.z);
+    auction_lookAtTarget(gabi::ea(&m_jnt), gabi::ea(&current.angle.y), targetAddress, gabi::ea(origin.get()),
+                         facing, smoothing, track);
+    u16 x = (u16)current.angle.x, y = (u16)current.angle.y, z = (u16)current.angle.z;
+    shape_angle.x = x;
+    shape_angle.y = y;
+    shape_angle.z = z;
 }
-VERIFY(0x021ECF4C, auctionLookBack);
 
-void auctionStaticInitialize() {
-  WWHD_FUNC(0x021EDDC8, void);
-  store<u32>(0x10465A54, 0x0);
-  store<u32>(0x10465A50, 0x0);
-  store<u32>(0x10465A4C, 0x0);
-  store<u32>(0x10465A48, 0x0);
-  call(0x028F026C, 0x101BB7D8u);
-
-  f32 constant_100167B0_1 = load<f32>(0x100167B0);
-  f32 constant_100167B4_1 = load<f32>(0x100167B4);
-  store<f32>(0x10465A3C, constant_100167B0_1);
-  store<f32>(0x10465A40, constant_100167B4_1);
-  call(0x028ED6F8, 0x10465A44u);
-
-  call(0x028F026C, 0x101BB7E4u);
-
-  call(0x028EAB2C, 0x10465A45u);
-
-  call(0x028F026C, 0x101BB7F0u);
-
-  call(0x0259DA18, 0x10465A58u);
-
-  store<u16>(0x10465A5C, 0xFA0);
-  store<u16>(0x10465A5E, 0x0);
-  f32 constant_100167C4_1 = load<f32>(0x100167C4);
-  store<u16>(0x10465A60, 0x1F40);
-  store<u16>(0x10465A62, 0x1F40);
-  store<u16>(0x10465A64, 0xF18C);
-  f32 constant_100167B8_1 = load<f32>(0x100167B8);
-  f32 constant_10016694_1 = load<f32>(0x10016694);
-  store<f32>(0x10465A58, constant_10016694_1);
-  f32 constant_100167C0_1 = load<f32>(0x100167C0);
-  store<f32>(0x10465A70, constant_100167B8_1);
-  store<u16>(0x10465A66, 0x0);
-  store<u16>(0x10465A68, 0xE0C0);
-  f32 constant_100167BC_1 = load<f32>(0x100167BC);
-  store<f32>(0x10465A78, constant_10016694_1);
-  store<f32>(0x10465A80, constant_100167BC_1);
-  store<f32>(0x10465A84, constant_100167C0_1);
-  store<f32>(0x10465A88, constant_100167C4_1);
-  store<u8>(0x10465A76, 0x0);
-  store<u16>(0x10465A6A, 0xE0C0);
-  store<u16>(0x10465A6C, 0x5DC);
-  store<u16>(0x10465A6E, 0x6A4);
-  store<u32>(0x10465A7C, 0x1001632C);
-  store<u16>(0x10465A74, 0x7FFF);
-  call(0x0259DA18, 0x10465A8Cu);
-
-  store<u16>(0x10465A90, 0xFA0);
-  store<u16>(0x10465A92, 0x0);
-  store<u32>(0x10465AB0, 0x1001632C);
-  f32 constant_100167CC_1 = load<f32>(0x100167CC);
-  store<f32>(0x10465A8C, constant_10016694_1);
-  store<u16>(0x10465A94, 0xFA0);
-  store<u16>(0x10465A96, 0x1B58);
-  store<u16>(0x10465A98, 0xF060);
-  store<u8>(0x10465AAA, 0x0);
-  f32 constant_100166F0_1 = load<f32>(0x100166F0);
-  store<u16>(0x10465A9A, 0x0);
-  f32 constant_100167C8_1 = load<f32>(0x100167C8);
-  store<u16>(0x10465A9C, 0xE4A8);
-  store<u16>(0x10465A9E, 0xE0C0);
-  store<u16>(0x10465AA0, 0x3E8);
-  store<u16>(0x10465AA2, 0x5DC);
-  store<u16>(0x10465AA8, 0x7FFF);
-  store<f32>(0x10465AA4, constant_100167C8_1);
-  store<f32>(0x10465AAC, constant_10016694_1);
-  store<f32>(0x10465AB4, constant_100166F0_1);
-  store<f32>(0x10465AB8, constant_100167CC_1);
-  store<f32>(0x10465ABC, constant_100167C8_1);
-  call(0x0259DA18, 0x10465AC0u);
-
-  store<u16>(0x10465AC4, 0xFA0);
-  store<u16>(0x10465AC6, 0x0);
-  store<u16>(0x10465AC8, 0x1F40);
-  store<u16>(0x10465ACA, 0x1F40);
-  store<u16>(0x10465ACC, 0xE4A8);
-  store<u16>(0x10465ACE, 0x0);
-  store<u16>(0x10465AD0, 0xE0C0);
-  store<u16>(0x10465AD2, 0xE0C0);
-  store<u16>(0x10465AD4, 0x3E8);
-  store<u16>(0x10465AD6, 0x514);
-  store<u16>(0x10465ADC, 0x7FFF);
-  f32 constant_100167D0_1 = load<f32>(0x100167D0);
-  store<f32>(0x10465AC0, constant_10016694_1);
-  store<f32>(0x10465AD8, constant_100167D0_1);
-  store<u32>(0x10465AE4, 0x1001632C);
-  store<f32>(0x10465AE0, constant_10016694_1);
-  store<f32>(0x10465AE8, constant_100166F0_1);
-  store<f32>(0x10465AEC, constant_10016694_1);
-  store<u8>(0x10465ADE, 0x0);
-  store<f32>(0x10465AF0, constant_100167D0_1);
-  call(0x0259DA18, 0x10465AF4u);
-
-  store<u16>(0x10465AF8, 0xFA0);
-  store<u16>(0x10465AFA, 0x0);
-  store<u16>(0x10465AFC, 0x1388);
-  store<u32>(0x10465B18, 0x1001632C);
-  store<u16>(0x10465AFE, 0x1F40);
-  store<u16>(0x10465B00, 0xF254);
-  store<u16>(0x10465B02, 0x0);
-  store<f32>(0x10465AF4, constant_10016694_1);
-  f32 constant_100167D4_1 = load<f32>(0x100167D4);
-  store<u16>(0x10465B04, 0xEC78);
-  store<f32>(0x10465B0C, constant_100167D4_1);
-  store<f32>(0x10465B14, constant_10016694_1);
-  store<f32>(0x10465B1C, constant_100166F0_1);
-  store<f32>(0x10465B20, constant_10016694_1);
-  store<f32>(0x10465B24, constant_100167D4_1);
-  store<u16>(0x10465B06, 0xE0C0);
-  store<u16>(0x10465B08, 0x3E8);
-  store<u16>(0x10465B0A, 0x5DC);
-  store<u8>(0x10465B12, 0x0);
-  store<u16>(0x10465B10, 0x7FFF);
-  call(0x0259DA18, 0x10465B28u);
-
-  store<u16>(0x10465B2C, 0xFA0);
-  store<u16>(0x10465B2E, 0x0);
-  store<u16>(0x10465B30, 0x2328);
-  store<u16>(0x10465B32, 0x1388);
-  store<u16>(0x10465B34, 0xEC78);
-  store<u8>(0x10465B46, 0x0);
-  store<f32>(0x10465B28, constant_10016694_1);
-  store<u16>(0x10465B36, 0x0);
-  store<u16>(0x10465B38, 0xDCD8);
-  store<f32>(0x10465B40, constant_100167D0_1);
-  store<u16>(0x10465B3A, 0xEC78);
-  store<f32>(0x10465B48, constant_10016694_1);
-  store<f32>(0x10465B50, constant_100166F0_1);
-  store<f32>(0x10465B54, constant_10016694_1);
-  store<f32>(0x10465B58, constant_100167D0_1);
-  store<u16>(0x10465B3C, 0x7D0);
-  store<u16>(0x10465B3E, 0x5DC);
-  store<u32>(0x10465B4C, 0x1001632C);
-  store<u16>(0x10465B44, 0x7FFF);
-  call(0x0259DA18, 0x10465B5Cu);
-
-  store<u8>(0x10465B7A, 0x0);
-  store<u16>(0x10465B60, 0x9C4);
-  store<u16>(0x10465B62, 0x0);
-  store<u16>(0x10465B64, 0x1B58);
-  store<u16>(0x10465B66, 0x1B58);
-  store<u32>(0x10465B80, 0x1001632C);
-  store<u16>(0x10465B68, 0xFC18);
-  store<u16>(0x10465B6A, 0x0);
-  store<u16>(0x10465B6C, 0xE4A8);
-  store<u16>(0x10465B6E, 0xE4A8);
-  store<u16>(0x10465B70, 0x2BC);
-  store<u16>(0x10465B72, 0x514);
-  store<u16>(0x10465B78, 0x7FFF);
-  f32 constant_100167D8_1 = load<f32>(0x100167D8);
-  store<f32>(0x10465B5C, constant_10016694_1);
-  store<f32>(0x10465B74, constant_100167D8_1);
-  store<f32>(0x10465B7C, constant_10016694_1);
-  f32 constant_100167DC_1 = load<f32>(0x100167DC);
-  store<f32>(0x10465B84, constant_100166F0_1);
-  store<f32>(0x10465B88, constant_100167DC_1);
-  store<f32>(0x10465B8C, constant_100167D8_1);
-  call(0x0259DA18, 0x10465B90u);
-
-  store<f32>(0x10465B90, constant_10016694_1);
-  f32 constant_100167E0_1 = load<f32>(0x100167E0);
-  store<u8>(0x10465BAE, 0x0);
-  store<f32>(0x10465BA8, constant_100167E0_1);
-  store<u16>(0x10465B94, 0x9C4);
-  store<u16>(0x10465B96, 0x0);
-  store<u16>(0x10465B98, 0x1B58);
-  store<u16>(0x10465B9A, 0x1B58);
-  store<u16>(0x10465B9C, 0xFC18);
-  store<u16>(0x10465B9E, 0x0);
-  store<u16>(0x10465BA0, 0xE4A8);
-  store<u16>(0x10465BA2, 0xE4A8);
-  store<u16>(0x10465BA4, 0x2BC);
-  store<u16>(0x10465BA6, 0x514);
-  store<u32>(0x10465BB4, 0x1001632C);
-  store<f32>(0x10465BB0, constant_10016694_1);
-  store<f32>(0x10465BB8, constant_100166F0_1);
-  store<f32>(0x10465BBC, constant_10016694_1);
-  store<f32>(0x10465BC0, constant_100167E0_1);
-  store<u16>(0x10465BAC, 0x7FFF);
-  call(0x0259DA18, 0x10465BC4u);
-
-  store<u16>(0x10465BC8, 0xFA0);
-  store<u16>(0x10465BCA, 0x0);
-  store<u8>(0x10465BE2, 0x0);
-  store<u16>(0x10465BCC, 0x2328);
-  store<f32>(0x10465BC4, constant_10016694_1);
-  store<f32>(0x10465BDC, constant_100167D0_1);
-  store<f32>(0x10465BE4, constant_10016694_1);
-  store<f32>(0x10465BEC, constant_100166F0_1);
-  store<f32>(0x10465BF0, constant_10016694_1);
-  store<f32>(0x10465BF4, constant_100167D0_1);
-  store<u16>(0x10465BCE, 0x1770);
-  store<u16>(0x10465BD0, 0xFC18);
-  store<u16>(0x10465BD2, 0x0);
-  store<u16>(0x10465BD4, 0xDCD8);
-  store<u16>(0x10465BD6, 0xE890);
-  store<u16>(0x10465BD8, 0x7D0);
-  store<u16>(0x10465BDA, 0x5DC);
-  store<u32>(0x10465BE8, 0x1001632C);
-  store<u16>(0x10465BE0, 0x7FFF);
-  call(0x0259DA18, 0x10465BF8u);
-
-  store<u16>(0x10465BFC, 0xFA0);
-  store<u16>(0x10465BFE, 0x0);
-  store<u16>(0x10465C00, 0x1F40);
-  store<u16>(0x10465C02, 0x1388);
-  store<u16>(0x10465C04, 0xF060);
-  store<u16>(0x10465C06, 0x0);
-  store<u16>(0x10465C08, 0xE0C0);
-  store<u16>(0x10465C0A, 0xEC78);
-  store<u16>(0x10465C0C, 0x7D0);
-  store<u16>(0x10465C0E, 0x9C4);
-  store<f32>(0x10465BF8, constant_10016694_1);
-  store<f32>(0x10465C10, constant_100167C8_1);
-  store<f32>(0x10465C18, constant_10016694_1);
-  store<u8>(0x10465C16, 0x0);
-  store<u16>(0x10465C14, 0x7FFF);
-  f32 constant_100167C0_2 = load<f32>(0x100167C0);
-  store<f32>(0x10465C20, constant_100166F0_1);
-  store<f32>(0x10465C24, constant_100167C0_2);
-  store<u32>(0x10465C1C, 0x1001632C);
-  store<f32>(0x10465C28, constant_100167C8_1);
-  call(0x0259DA18, 0x10465C2Cu);
-
-  store<f32>(0x10465C2C, constant_10016694_1);
-  f32 constant_100167E4_1 = load<f32>(0x100167E4);
-  store<u8>(0x10465C4A, 0x0);
-  store<f32>(0x10465C44, constant_100167E4_1);
-  store<u16>(0x10465C30, 0x9C4);
-  store<u16>(0x10465C32, 0x7D0);
-  store<u16>(0x10465C34, 0x1770);
-  store<u16>(0x10465C36, 0x1F40);
-  store<u16>(0x10465C38, 0xFE0C);
-  store<u16>(0x10465C3A, 0xF830);
-  store<u16>(0x10465C3C, 0xE890);
-  store<u16>(0x10465C3E, 0xE0C0);
-  store<u16>(0x10465C40, 0x3E8);
-  store<u16>(0x10465C42, 0x5DC);
-  store<u32>(0x10465C50, 0x1001632C);
-  store<f32>(0x10465C4C, constant_10016694_1);
-  store<f32>(0x10465C54, constant_100167C8_1);
-  store<f32>(0x10465C58, constant_10016694_1);
-  store<f32>(0x10465C5C, constant_100167E4_1);
-  store<u16>(0x10465C48, 0x7FFF);
-  call(0x0259DA18, 0x10465C60u);
-
-  store<u32>(0x10465C84, 0x1001632C);
-  store<u16>(0x10465C64, 0x200);
-  store<u16>(0x10465C66, 0x1388);
-  store<u16>(0x10465C68, 0x200);
-  store<u16>(0x10465C6A, 0x1770);
-  f32 constant_100167F0_1 = load<f32>(0x100167F0);
-  f32 constant_100167EC_1 = load<f32>(0x100167EC);
-  f32 constant_100167E8_1 = load<f32>(0x100167E8);
-  f32 constant_100167E0_2 = load<f32>(0x100167E0);
-  store<f32>(0x10465C60, constant_100167E8_1);
-  store<f32>(0x10465C78, constant_100167E0_2);
-  store<f32>(0x10465C80, constant_100167EC_1);
-  store<f32>(0x10465C88, constant_100167F0_1);
-  store<f32>(0x10465C8C, constant_10016694_1);
-  store<u16>(0x10465C6C, 0xFE00);
-  store<u16>(0x10465C6E, 0xEC78);
-  store<u16>(0x10465C70, 0xFE00);
-  f32 constant_100167F4_1 = load<f32>(0x100167F4);
-  store<u8>(0x10465C7E, 0x0);
-  store<u16>(0x10465C72, 0xE890);
-  store<u16>(0x10465C74, 0x1000);
-  store<u16>(0x10465C76, 0x800);
-  store<u16>(0x10465C7C, 0x7FFF);
-  store<f32>(0x10465C90, constant_100167F4_1);
-  call(0x0259DA18, 0x10465C94u);
-
-  store<u16>(0x10465C98, 0x200);
-  store<u16>(0x10465C9A, 0x1388);
-  store<u16>(0x10465C9C, 0x200);
-  store<u16>(0x10465C9E, 0x1770);
-  store<u16>(0x10465CA0, 0xFE00);
-  store<u16>(0x10465CA2, 0xEC78);
-  store<u16>(0x10465CA4, 0xFE00);
-  store<u16>(0x10465CA6, 0xE890);
-  store<u16>(0x10465CA8, 0x1000);
-  store<u16>(0x10465CAA, 0x800);
-  store<u16>(0x10465CB0, 0x7FFF);
-  f32 constant_100167E8_2 = load<f32>(0x100167E8);
-  f32 constant_100167F8_1 = load<f32>(0x100167F8);
-  store<f32>(0x10465C94, constant_100167E8_2);
-  store<f32>(0x10465CAC, constant_100167F8_1);
-  f32 constant_100167F0_2 = load<f32>(0x100167F0);
-  store<f32>(0x10465CB4, constant_10016694_1);
-  store<f32>(0x10465CBC, constant_100167F0_2);
-  store<f32>(0x10465CC0, constant_10016694_1);
-  store<u32>(0x10465CB8, 0x1001632C);
-  f32 constant_100167F4_2 = load<f32>(0x100167F4);
-  store<u8>(0x10465CB2, 0x0);
-  store<f32>(0x10465CC4, constant_100167F4_2);
+/* 021EB318 */
+u32 daNpcAuction_c::initTexPatternAnm(u32 restart) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    J3DModel* model = gabi::at<J3DModel>((u32)auction_cpp::bits(&mpExtraModel));
+    if (!model)
+        model = mpMorf.get()->mpModel.get();
+    u32 material = (u32)auction_cpp::bits(&model->mModelData);
+    u8 costume = (u8)mMdlNo;
+    u32 animation = (u32)mBtpNo;
+    u32 name = (u32)l_arcNames.mEntries[costume];
+    gabi::Local<SafeString> resource;
+    resource->mStringTop = name;
+    resource->__vtbl = SAFE_STRING_VTABLE;
+    u32 resources = (u32)l_resControl;
+    u32 texture = auction_getResource(resources, gabi::ea(resource.get()), animation);
+    auction_cpp::bits(&mpTexture) = texture;
+    if (!texture) {
+        auction_panic(gabi::guest_str("d_a_npc_auction.cpp"), 0x902,
+                      gabi::guest_str("m_head_tex_pattern != (0)"));
+        texture = (u32)auction_cpp::bits(&mpTexture);
+    }
+    u32 ok = auction_btpInit(gabi::ea(&mBtp), material, texture, 1, 2, 0, -1, restart, 0, 1.0f);
+    if (!ok)
+        return 0;
+    mBlinkFrame = 0;
+    mBlinkTimer = 0;
+    return 1;
 }
-VERIFY(0x021EDDC8, auctionStaticInitialize);
+
+/* 021ECDF0 */
+void daNpcAuction_c::playTexPatternAnm() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (auction_decrementTimer(gabi::ea(&mBlinkTimer)))
+        return;
+    u32 texture = (u32)auction_cpp::bits(&mpTexture);
+    s32 frames = gabi::call_ptr<s32>(load<u32>(load<u32>(texture + 4) + 0x14), texture);
+    if ((s32)(u8)mBlinkFrame >= frames) {
+        texture = (u32)auction_cpp::bits(&mpTexture);
+        frames = gabi::call_ptr<s32>(load<u32>(load<u32>(texture + 4) + 0x14), texture);
+        mBlinkFrame = (u8)((u32)(u8)mBlinkFrame - (u32)frames);
+        mBlinkTimer = (u16)((u32)getRand(60) + 60);
+    } else {
+        mBlinkFrame = (u8)((u8)mBlinkFrame + 1);
+    }
+}
+
+/* 021ECE9C */
+void daNpcAuction_c::playAnm() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!auction_morfPlay((u32)auction_cpp::bits(&mpMorf), 0, 0, 0))
+        return;
+    if (!(u32)auction_cpp::bits(&mpAnmTable))
+        return;
+    s8 repeats = (s8)mAnmRepeat;
+    if (repeats <= 0)
+        return;
+    repeats = (s8)(repeats - 1);
+    mAnmRepeat = repeats;
+    u32 table = (u32)auction_cpp::bits(&mpAnmTable);
+    if (!repeats) {
+        table += 3;
+        auction_cpp::bits(&mpAnmTable) = table;
+        setAnmTbl(table);
+    } else {
+        setAnm((u8)gabi::at<sAnmDat>(table)->mAnmNo, 0, 0.0f);
+    }
+}
+
+/* 021EC288 */
+void daNpcAuction_c::setAnm(s32 animation, s32 mode, f32 blend) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 costume = (u8)mMdlNo;
+    u32 resources = (u32)l_resControl;
+    u32 archive = (u32)l_arcNames.mEntries[costume];
+    u32 resourceId = (u32)l_animationNumbers.mEntries[costume][(u32)animation];
+    gabi::Local<SafeString> name;
+    name->mStringTop = archive;
+    name->__vtbl = SAFE_STRING_VTABLE;
+    u32 resource = auction_getResource(resources, gabi::ea(name.get()), resourceId);
+    auction_morfSetAnimation((u32)auction_cpp::bits(&mpMorf), resource, mode, 0, blend, 1.0f, 0.0f, -1.0f);
+    mAnmNo = (u8)animation;
+}
+
+/* 021EC360 */
+void daNpcAuction_c::setAnm2(s32 animation, s32 mode, f32 blend) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if ((u32)(u8)mAnmNo != (u32)animation || mode == 0) {
+        setAnm(animation, mode, blend);
+        auction_cpp::bits(&mpAnmTable) = 0;
+    }
+}
+
+/* 021EC878 */
+void daNpcAuction_c::setAnmTbl(u32 table) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 animation = (u8)gabi::at<sAnmDat>(table)->mAnmNo;
+    if (animation == 255) {
+        auction_cpp::bits(&mpAnmTable) = 0;
+        return;
+    }
+    auction_cpp::bits(&mpAnmTable) = table;
+    s8 repeats = (s8)gabi::at<sAnmDat>(table)->mRepeat;
+    mAnmRepeat = repeats;
+    animation = (u8)gabi::at<sAnmDat>(table)->mAnmNo;
+    if (repeats > 0 || (u8)mAnmNo != animation)
+        setAnm(animation, repeats > 0 ? 0 : 2, (f32)(u8)gabi::at<sAnmDat>(table)->mMorf);
+}
+
+/* 021EC0E8 */
+u32 daNpcAuction_c::isExecute() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 costume = (u8)mMdlNo;
+    u32 status = (u32)actor_status;
+    u32 mask = (u32)l_statusMasks.mEntries[costume];
+    gabi::Local<be<u16>> process;
+    *process = (u16)0x17E;
+    actor_status = status & ~mask;
+    auction_cpp::Manager* manager = auction_judge(AUCTION_MANAGER_JUDGE, gabi::ea(process.get()));
+    if (!manager)
+        return 0;
+    u32 shift = (u8)mNpcNo & 63;
+    u8 active = (u8)manager->mActiveNpcs;
+    if (!(active & (shift < 32 ? 1u << shift : 0)))
+        return 0;
+    costume = (u8)mMdlNo;
+    status = (u32)actor_status;
+    mask = (u32)l_statusMasks.mEntries[costume];
+    actor_status = status | mask;
+    return 1;
+}
+
+/* 021EB870 */
+s32 daNpcAuction_c::getRand(s32 limit) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    s32 result = gabi::ftoi(auction_cM_rndF((f32)limit));
+    return (u32)result == (u32)limit ? 0 : result;
+}
+
+/* 021EC3AC */
+void daNpcAuction_c::clrEmitter() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auction_cpp::Emitter* emitter = mpEmitter;
+    if (!emitter)
+        return;
+    u32 flags = (u32)emitter->mStatus;
+    emitter->mId = 0xFFFFFFFF;
+    auction_cpp::ParticleNode* node = emitter->mpParticles.get();
+    emitter->mStatus = flags | 1;
+    while (node) {
+        auction_cpp::Particle* particle = node->mpParticle.get();
+        particle->mStatus = (u32)particle->mStatus | 2;
+        node = node->mpNext.get();
+    }
+    auction_cpp::bits(&mpEmitter) = 0;
+}
+
+/* 021EC014 */
+u32 daNpc_AuctionCreate(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!(u32)l_phaseInitialized) {
+        l_phaseInitialized = 1;
+        auction_phaseInit(gabi::ea(&l_phaseTable), gabi::ea(&l_phaseTemplate), 12);
+    }
+    return auction_phaseExecute(gabi::ea(&a->mPhase), gabi::ea(&l_phaseTable), gabi::ea(a));
+}
+
+/* 021EC084 */
+u32 daNpc_AuctionDelete(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u8 costume = (u8)a->mMdlNo;
+    auction_deleteArchive(gabi::ea(&a->mPhs), (u32)l_arcNames.mEntries[costume]);
+    if ((u32)auction_cpp::bits(&a->heap)) {
+        mDoExt_McaMorf* morf = a->mpMorf.get();
+        if (morf)
+            auction_stopMorf(gabi::ea(morf));
+    }
+    return 1;
+}
+
+/* 021ED628 */
+u32 daNpc_AuctionDraw(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!a->isExecute())
+        return 1;
+    J3DModel* model = a->mpMorf.get()->mpModel.get();
+    J3DModel* extra = gabi::at<J3DModel>((u32)auction_cpp::bits(&a->mpExtraModel));
+    u32 material = (u32)auction_cpp::bits(&model->mModelData);
+    if (extra)
+        material = (u32)auction_cpp::bits(&extra->mModelData);
+    u32 lighting = auction_getLighting();
+    auction_setLight(lighting, 0, gabi::ea(&a->current.pos), gabi::ea(&a->tevStr));
+    mDoExt_McaMorf* morf = a->mpMorf.get();
+    lighting = auction_getLighting();
+    auction_setModelLight(lighting, auction_cpp::bits(&morf->mpModel), gabi::ea(&a->tevStr));
+    if (extra) {
+        lighting = auction_getLighting();
+        auction_setModelLight(lighting, (u32)auction_cpp::bits(&a->mpExtraModel), gabi::ea(&a->tevStr));
+    }
+    auction_btpEntry(gabi::ea(&a->mBtp), material, (u8)a->mBlinkFrame);
+    auction_morfEntry((u32)auction_cpp::bits(&a->mpMorf));
+    if (extra) {
+        s32 joint = (s8)a->m_jnt.mHeadJntNum;
+        J3DMtxBuffer_hd* matrices = model->mpMtxBuffer.get();
+        u16 flags = (u16)matrices->mFlags;
+        Mtx34* matrix = gabi::at<Mtx34>((u32)matrices->mpAnmMtx + (u32)joint * 0x30);
+        extra = gabi::at<J3DModel>((u32)auction_cpp::bits(&a->mpExtraModel));
+        matrices->mFlags = flags | 0x10;
+        f32 values[12];
+        for (u32 i = 0; i < 12; ++i)
+            values[i] = (f32)matrix->m[i / 4][i % 4];
+        for (u32 i = 0; i < 12; ++i)
+            extra->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+        auction_modelUpdate((u32)auction_cpp::bits(&a->mpExtraModel), 0);
+    }
+    gabi::at<auction_cpp::Material>(material)->mAnimation = 0;
+    u8 costume = (u8)a->mMdlNo;
+    auction_drawShadow((u8)l_shadowTypes.mEntries[costume], gabi::ea(a), 1.0f, 1.0f, 1.0f);
+    return 1;
+}
+
+/* 021ED31C */
+u32 daNpc_AuctionExecute(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!a->isExecute())
+        return 0;
+    AuctionHIO* parameters = &l_HIO.mCostumes[(u8)a->mMdlNo];
+    s16 angles[9];
+    for (u32 i = 0; i < 9; ++i)
+        angles[i] = (s16)(u16)parameters->mAngles[i];
+    auction_setJointLimits(gabi::ea(&a->m_jnt), angles[1], angles[3], angles[5], angles[7], angles[0],
+                           angles[2], angles[4], angles[6], angles[8]);
+    a->checkOrder();
+    auction_cpp::Play* play = auction_getPlay();
+    bool action = !(u8)play->mEventRunning;
+    if (!action)
+        action = (u16)a->eventInfo.mCommand == 1 && (u8)a->mCanTalk != 0;
+    if (action) {
+        s32 offset = (s16)a->mActionDelta;
+        s32 virtualIndex = (s16)a->mActionIndex;
+        u32 receiver = gabi::ea(a) + (u32)offset;
+        a->mEmitterEnabled = 0;
+        u32 target;
+        if (virtualIndex < 0)
+            target = (u32)a->mActionFunction;
+        else {
+            s32 tableOffset = (s16)a->mActionVtableOffset();
+            target = load<u32>(load<u32>(receiver + (u32)tableOffset) + (u32)virtualIndex * 8 + 4);
+        }
+        gabi::call_ptr(target, receiver);
+    } else
+        a->eventMove();
+    a->eventOrder();
+    a->playTexPatternAnm();
+    a->playAnm();
+    play = auction_getPlay();
+    auction_correctBackground(gabi::ea(&a->mObjAcch), gabi::ea(play) + 0x12A0);
+    auction_setAttention(gabi::ea(a), 60.0f, 150.0f);
+    parameters = &l_HIO.mCostumes[(u8)a->mMdlNo];
+    f32 x = (f32)a->current.pos.x, z = (f32)a->current.pos.z, y = (f32)a->current.pos.y;
+    f32 height = (f32)parameters->mAttentionHeight;
+    a->attention_info.position.z = z;
+    a->attention_info.position.x = x;
+    a->attention_info.position.y = y + height;
+    height = (f32)parameters->mLookHeight;
+    a->eyePos.z = z;
+    a->eyePos.x = x;
+    a->eyePos.y = y + height;
+    a->lookBack();
+    a->setMtx();
+    s16 timer = (s16)a->mVoiceTimer;
+    if (timer) {
+        timer = (s16)(timer - 1);
+        a->mVoiceTimer = timer;
+        if (!timer)
+            auction_startVoice((u32)a->mVoiceId);
+    }
+    parameters = &l_HIO.mCostumes[(u8)a->mMdlNo];
+    a->mPiconOfsY = (f32)parameters->mPiconHeight;
+    return 0;
+}
+
+/* 021EE404 */
+u32 daNpc_AuctionIsDelete(daNpcAuction_c* a) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+/* 021EE3F0 */
+void SafeString_dtor(u32 object, s32 flags) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (object && (flags & 1))
+        auction_operatorDelete(object);
+}
+
+/* 021EE4A8 */
+void SafeString_assureTerminationImpl(u32 object) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+}
+
+/* 021EE40C */
+void daNpcAuction_c_dt(daNpcAuction_c* a, s32 flags) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 self = gabi::ea(a);
+    if (!self)
+        return;
+    auction_cylinderDestroy(gabi::ea(&a->mCyl), 2);
+    auction_statusDestroy(gabi::ea(&a->mStts), 2);
+    auction_circleDestroy(gabi::ea(&a->mAcchCir.m_cir), 2);
+    a->mObjAcchView().mActorVtable = ACCH_ACTOR_VTABLE;
+    a->mObjAcchView().mCheckVtable = ACCH_CHECK_VTABLE;
+    auction_acchDestroy(gabi::ea(&a->mObjAcch), 0);
+    auction_actorDestroy(self, 0);
+    if (flags & 1)
+        auction_operatorDelete(self);
+}
+
+/* 021EDDC8 */
+void __sinit_d_a_npc_auction_cpp() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    l_guard3 = 0x0;
+    l_guard2 = 0x0;
+    l_guard1 = 0x0;
+    l_guard0 = 0x0;
+    auction_staticInit(gabi::ea(&l_staticInitNodes));
+
+    f32 defaultScaleValue1 = l_defaultScale;
+    f32 defaultOffsetValue1 = l_defaultOffset;
+    l_defaultSize = defaultScaleValue1;
+    l_defaultAngle = defaultOffsetValue1;
+    auction_initEyeState(gabi::ea(&l_eyeInit));
+
+    auction_staticInit(gabi::ea(&l_eyeInitNode));
+
+    auction_initLookState(gabi::ea(&l_lookInit));
+
+    auction_staticInit(gabi::ea(&l_lookInitNode));
+
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[0]));
+
+    l_HIO.mCostumes[0].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[0].mAngles[1] = 0x0;
+    f32 height7Value1 = l_height7;
+    l_HIO.mCostumes[0].mAngles[2] = 0x1F40;
+    l_HIO.mCostumes[0].mAngles[3] = 0x1F40;
+    l_HIO.mCostumes[0].mAngles[4] = 0xF18C;
+    f32 height4Value1 = l_height4;
+    f32 zeroValue1 = l_zero;
+    l_HIO.mCostumes[0].mEyeHeight = zeroValue1;
+    f32 height6Value1 = l_height6;
+    l_HIO.mCostumes[0].mAttentionHeight = height4Value1;
+    l_HIO.mCostumes[0].mAngles[5] = 0x0;
+    l_HIO.mCostumes[0].mAngles[6] = 0xE0C0;
+    f32 height5Value1 = l_height5;
+    l_HIO.mCostumes[0].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[0].mLookHeight = height5Value1;
+    l_HIO.mCostumes[0].mParticleHeight = height6Value1;
+    l_HIO.mCostumes[0].mPiconHeight = height7Value1;
+    l_HIO.mCostumes[0].mDebug = 0x0;
+    l_HIO.mCostumes[0].mAngles[7] = 0xE0C0;
+    l_HIO.mCostumes[0].mAngles[8] = 0x5DC;
+    l_HIO.mCostumes[0].mTurnSpeed = 0x6A4;
+    l_HIO.mCostumes[0].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[0].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[1]));
+
+    l_HIO.mCostumes[1].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[1].mAngles[1] = 0x0;
+    l_HIO.mCostumes[1].__vtbl = HIO_VTABLE;
+    f32 height9Value1 = l_height9;
+    l_HIO.mCostumes[1].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[1].mAngles[2] = 0xFA0;
+    l_HIO.mCostumes[1].mAngles[3] = 0x1B58;
+    l_HIO.mCostumes[1].mAngles[4] = 0xF060;
+    l_HIO.mCostumes[1].mDebug = 0x0;
+    f32 tenValue1 = l_ten;
+    l_HIO.mCostumes[1].mAngles[5] = 0x0;
+    f32 height8Value1 = l_height8;
+    l_HIO.mCostumes[1].mAngles[6] = 0xE4A8;
+    l_HIO.mCostumes[1].mAngles[7] = 0xE0C0;
+    l_HIO.mCostumes[1].mAngles[8] = 0x3E8;
+    l_HIO.mCostumes[1].mTurnSpeed = 0x5DC;
+    l_HIO.mCostumes[1].mAngleLimit = 0x7FFF;
+    l_HIO.mCostumes[1].mAttentionHeight = height8Value1;
+    l_HIO.mCostumes[1].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[1].mLookHeight = tenValue1;
+    l_HIO.mCostumes[1].mParticleHeight = height9Value1;
+    l_HIO.mCostumes[1].mPiconHeight = height8Value1;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[2]));
+
+    l_HIO.mCostumes[2].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[2].mAngles[1] = 0x0;
+    l_HIO.mCostumes[2].mAngles[2] = 0x1F40;
+    l_HIO.mCostumes[2].mAngles[3] = 0x1F40;
+    l_HIO.mCostumes[2].mAngles[4] = 0xE4A8;
+    l_HIO.mCostumes[2].mAngles[5] = 0x0;
+    l_HIO.mCostumes[2].mAngles[6] = 0xE0C0;
+    l_HIO.mCostumes[2].mAngles[7] = 0xE0C0;
+    l_HIO.mCostumes[2].mAngles[8] = 0x3E8;
+    l_HIO.mCostumes[2].mTurnSpeed = 0x514;
+    l_HIO.mCostumes[2].mAngleLimit = 0x7FFF;
+    f32 height10Value1 = l_height10;
+    l_HIO.mCostumes[2].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[2].mAttentionHeight = height10Value1;
+    l_HIO.mCostumes[2].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[2].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[2].mLookHeight = tenValue1;
+    l_HIO.mCostumes[2].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[2].mDebug = 0x0;
+    l_HIO.mCostumes[2].mPiconHeight = height10Value1;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[3]));
+
+    l_HIO.mCostumes[3].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[3].mAngles[1] = 0x0;
+    l_HIO.mCostumes[3].mAngles[2] = 0x1388;
+    l_HIO.mCostumes[3].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[3].mAngles[3] = 0x1F40;
+    l_HIO.mCostumes[3].mAngles[4] = 0xF254;
+    l_HIO.mCostumes[3].mAngles[5] = 0x0;
+    l_HIO.mCostumes[3].mEyeHeight = zeroValue1;
+    f32 height11Value1 = l_height11;
+    l_HIO.mCostumes[3].mAngles[6] = 0xEC78;
+    l_HIO.mCostumes[3].mAttentionHeight = height11Value1;
+    l_HIO.mCostumes[3].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[3].mLookHeight = tenValue1;
+    l_HIO.mCostumes[3].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[3].mPiconHeight = height11Value1;
+    l_HIO.mCostumes[3].mAngles[7] = 0xE0C0;
+    l_HIO.mCostumes[3].mAngles[8] = 0x3E8;
+    l_HIO.mCostumes[3].mTurnSpeed = 0x5DC;
+    l_HIO.mCostumes[3].mDebug = 0x0;
+    l_HIO.mCostumes[3].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[4]));
+
+    l_HIO.mCostumes[4].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[4].mAngles[1] = 0x0;
+    l_HIO.mCostumes[4].mAngles[2] = 0x2328;
+    l_HIO.mCostumes[4].mAngles[3] = 0x1388;
+    l_HIO.mCostumes[4].mAngles[4] = 0xEC78;
+    l_HIO.mCostumes[4].mDebug = 0x0;
+    l_HIO.mCostumes[4].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[4].mAngles[5] = 0x0;
+    l_HIO.mCostumes[4].mAngles[6] = 0xDCD8;
+    l_HIO.mCostumes[4].mAttentionHeight = height10Value1;
+    l_HIO.mCostumes[4].mAngles[7] = 0xEC78;
+    l_HIO.mCostumes[4].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[4].mLookHeight = tenValue1;
+    l_HIO.mCostumes[4].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[4].mPiconHeight = height10Value1;
+    l_HIO.mCostumes[4].mAngles[8] = 0x7D0;
+    l_HIO.mCostumes[4].mTurnSpeed = 0x5DC;
+    l_HIO.mCostumes[4].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[4].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[5]));
+
+    l_HIO.mCostumes[5].mDebug = 0x0;
+    l_HIO.mCostumes[5].mAngles[0] = 0x9C4;
+    l_HIO.mCostumes[5].mAngles[1] = 0x0;
+    l_HIO.mCostumes[5].mAngles[2] = 0x1B58;
+    l_HIO.mCostumes[5].mAngles[3] = 0x1B58;
+    l_HIO.mCostumes[5].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[5].mAngles[4] = 0xFC18;
+    l_HIO.mCostumes[5].mAngles[5] = 0x0;
+    l_HIO.mCostumes[5].mAngles[6] = 0xE4A8;
+    l_HIO.mCostumes[5].mAngles[7] = 0xE4A8;
+    l_HIO.mCostumes[5].mAngles[8] = 0x2BC;
+    l_HIO.mCostumes[5].mTurnSpeed = 0x514;
+    l_HIO.mCostumes[5].mAngleLimit = 0x7FFF;
+    f32 height12Value1 = l_height12;
+    l_HIO.mCostumes[5].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[5].mAttentionHeight = height12Value1;
+    l_HIO.mCostumes[5].mTalkDistance = zeroValue1;
+    f32 height13Value1 = l_height13;
+    l_HIO.mCostumes[5].mLookHeight = tenValue1;
+    l_HIO.mCostumes[5].mParticleHeight = height13Value1;
+    l_HIO.mCostumes[5].mPiconHeight = height12Value1;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[6]));
+
+    l_HIO.mCostumes[6].mEyeHeight = zeroValue1;
+    f32 height14Value1 = l_height14;
+    l_HIO.mCostumes[6].mDebug = 0x0;
+    l_HIO.mCostumes[6].mAttentionHeight = height14Value1;
+    l_HIO.mCostumes[6].mAngles[0] = 0x9C4;
+    l_HIO.mCostumes[6].mAngles[1] = 0x0;
+    l_HIO.mCostumes[6].mAngles[2] = 0x1B58;
+    l_HIO.mCostumes[6].mAngles[3] = 0x1B58;
+    l_HIO.mCostumes[6].mAngles[4] = 0xFC18;
+    l_HIO.mCostumes[6].mAngles[5] = 0x0;
+    l_HIO.mCostumes[6].mAngles[6] = 0xE4A8;
+    l_HIO.mCostumes[6].mAngles[7] = 0xE4A8;
+    l_HIO.mCostumes[6].mAngles[8] = 0x2BC;
+    l_HIO.mCostumes[6].mTurnSpeed = 0x514;
+    l_HIO.mCostumes[6].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[6].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[6].mLookHeight = tenValue1;
+    l_HIO.mCostumes[6].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[6].mPiconHeight = height14Value1;
+    l_HIO.mCostumes[6].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[7]));
+
+    l_HIO.mCostumes[7].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[7].mAngles[1] = 0x0;
+    l_HIO.mCostumes[7].mDebug = 0x0;
+    l_HIO.mCostumes[7].mAngles[2] = 0x2328;
+    l_HIO.mCostumes[7].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[7].mAttentionHeight = height10Value1;
+    l_HIO.mCostumes[7].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[7].mLookHeight = tenValue1;
+    l_HIO.mCostumes[7].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[7].mPiconHeight = height10Value1;
+    l_HIO.mCostumes[7].mAngles[3] = 0x1770;
+    l_HIO.mCostumes[7].mAngles[4] = 0xFC18;
+    l_HIO.mCostumes[7].mAngles[5] = 0x0;
+    l_HIO.mCostumes[7].mAngles[6] = 0xDCD8;
+    l_HIO.mCostumes[7].mAngles[7] = 0xE890;
+    l_HIO.mCostumes[7].mAngles[8] = 0x7D0;
+    l_HIO.mCostumes[7].mTurnSpeed = 0x5DC;
+    l_HIO.mCostumes[7].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[7].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[8]));
+
+    l_HIO.mCostumes[8].mAngles[0] = 0xFA0;
+    l_HIO.mCostumes[8].mAngles[1] = 0x0;
+    l_HIO.mCostumes[8].mAngles[2] = 0x1F40;
+    l_HIO.mCostumes[8].mAngles[3] = 0x1388;
+    l_HIO.mCostumes[8].mAngles[4] = 0xF060;
+    l_HIO.mCostumes[8].mAngles[5] = 0x0;
+    l_HIO.mCostumes[8].mAngles[6] = 0xE0C0;
+    l_HIO.mCostumes[8].mAngles[7] = 0xEC78;
+    l_HIO.mCostumes[8].mAngles[8] = 0x7D0;
+    l_HIO.mCostumes[8].mTurnSpeed = 0x9C4;
+    l_HIO.mCostumes[8].mEyeHeight = zeroValue1;
+    l_HIO.mCostumes[8].mAttentionHeight = height8Value1;
+    l_HIO.mCostumes[8].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[8].mDebug = 0x0;
+    l_HIO.mCostumes[8].mAngleLimit = 0x7FFF;
+    f32 height6Value2 = l_height6;
+    l_HIO.mCostumes[8].mLookHeight = tenValue1;
+    l_HIO.mCostumes[8].mParticleHeight = height6Value2;
+    l_HIO.mCostumes[8].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[8].mPiconHeight = height8Value1;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[9]));
+
+    l_HIO.mCostumes[9].mEyeHeight = zeroValue1;
+    f32 height15Value1 = l_height15;
+    l_HIO.mCostumes[9].mDebug = 0x0;
+    l_HIO.mCostumes[9].mAttentionHeight = height15Value1;
+    l_HIO.mCostumes[9].mAngles[0] = 0x9C4;
+    l_HIO.mCostumes[9].mAngles[1] = 0x7D0;
+    l_HIO.mCostumes[9].mAngles[2] = 0x1770;
+    l_HIO.mCostumes[9].mAngles[3] = 0x1F40;
+    l_HIO.mCostumes[9].mAngles[4] = 0xFE0C;
+    l_HIO.mCostumes[9].mAngles[5] = 0xF830;
+    l_HIO.mCostumes[9].mAngles[6] = 0xE890;
+    l_HIO.mCostumes[9].mAngles[7] = 0xE0C0;
+    l_HIO.mCostumes[9].mAngles[8] = 0x3E8;
+    l_HIO.mCostumes[9].mTurnSpeed = 0x5DC;
+    l_HIO.mCostumes[9].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[9].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[9].mLookHeight = height8Value1;
+    l_HIO.mCostumes[9].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[9].mPiconHeight = height15Value1;
+    l_HIO.mCostumes[9].mAngleLimit = 0x7FFF;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[10]));
+
+    l_HIO.mCostumes[10].__vtbl = HIO_VTABLE;
+    l_HIO.mCostumes[10].mAngles[0] = 0x200;
+    l_HIO.mCostumes[10].mAngles[1] = 0x1388;
+    l_HIO.mCostumes[10].mAngles[2] = 0x200;
+    l_HIO.mCostumes[10].mAngles[3] = 0x1770;
+    f32 height18Value1 = l_height18;
+    f32 height17Value1 = l_height17;
+    f32 height16Value1 = l_height16;
+    f32 height14Value2 = l_height14;
+    l_HIO.mCostumes[10].mEyeHeight = height16Value1;
+    l_HIO.mCostumes[10].mAttentionHeight = height14Value2;
+    l_HIO.mCostumes[10].mTalkDistance = height17Value1;
+    l_HIO.mCostumes[10].mLookHeight = height18Value1;
+    l_HIO.mCostumes[10].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[10].mAngles[4] = 0xFE00;
+    l_HIO.mCostumes[10].mAngles[5] = 0xEC78;
+    l_HIO.mCostumes[10].mAngles[6] = 0xFE00;
+    f32 height19Value1 = l_height19;
+    l_HIO.mCostumes[10].mDebug = 0x0;
+    l_HIO.mCostumes[10].mAngles[7] = 0xE890;
+    l_HIO.mCostumes[10].mAngles[8] = 0x1000;
+    l_HIO.mCostumes[10].mTurnSpeed = 0x800;
+    l_HIO.mCostumes[10].mAngleLimit = 0x7FFF;
+    l_HIO.mCostumes[10].mPiconHeight = height19Value1;
+    auction_hioConstruct(gabi::ea(&l_HIO.mCostumes[11]));
+
+    l_HIO.mCostumes[11].mAngles[0] = 0x200;
+    l_HIO.mCostumes[11].mAngles[1] = 0x1388;
+    l_HIO.mCostumes[11].mAngles[2] = 0x200;
+    l_HIO.mCostumes[11].mAngles[3] = 0x1770;
+    l_HIO.mCostumes[11].mAngles[4] = 0xFE00;
+    l_HIO.mCostumes[11].mAngles[5] = 0xEC78;
+    l_HIO.mCostumes[11].mAngles[6] = 0xFE00;
+    l_HIO.mCostumes[11].mAngles[7] = 0xE890;
+    l_HIO.mCostumes[11].mAngles[8] = 0x1000;
+    l_HIO.mCostumes[11].mTurnSpeed = 0x800;
+    l_HIO.mCostumes[11].mAngleLimit = 0x7FFF;
+    f32 height16Value2 = l_height16;
+    f32 height20Value1 = l_height20;
+    l_HIO.mCostumes[11].mEyeHeight = height16Value2;
+    l_HIO.mCostumes[11].mAttentionHeight = height20Value1;
+    f32 height18Value2 = l_height18;
+    l_HIO.mCostumes[11].mTalkDistance = zeroValue1;
+    l_HIO.mCostumes[11].mLookHeight = height18Value2;
+    l_HIO.mCostumes[11].mParticleHeight = zeroValue1;
+    l_HIO.mCostumes[11].__vtbl = HIO_VTABLE;
+    f32 height19Value2 = l_height19;
+    l_HIO.mCostumes[11].mDebug = 0x0;
+    l_HIO.mCostumes[11].mPiconHeight = height19Value2;
+}
+
+// clang-format off
+/* WWHD glue
+data l_HIO 10465A58
+data l_zero 10016694
+data l_ten 100166F0
+data l_defaultScale 100167B0
+data l_defaultOffset 100167B4
+data l_height4 100167B8
+data l_height5 100167BC
+data l_height6 100167C0
+data l_height7 100167C4
+data l_height8 100167C8
+data l_height9 100167CC
+data l_height10 100167D0
+data l_height11 100167D4
+data l_height12 100167D8
+data l_height13 100167DC
+data l_height14 100167E0
+data l_height15 100167E4
+data l_height16 100167E8
+data l_height17 100167EC
+data l_height18 100167F0
+data l_height19 100167F4
+data l_height20 100167F8
+data l_guard3 10465A54
+data l_guard2 10465A50
+data l_guard1 10465A4C
+data l_guard0 10465A48
+data l_defaultSize 10465A3C
+data l_defaultAngle 10465A40
+data l_eyeInit 10465A44
+data l_lookInit 10465A45
+ext 0200F428 void auction_approachAngle(u32, u32, u32, u32)
+ext 02018034 void auction_circleDestroy(u32, u32)
+ext 020198D8 f32 auction_cM_rndF(f32)
+ext 02055B64 u32 auction_decrementTimer(u32)
+ext 0205CD90 u32 auction_isSecondQuest()
+ext 024EFD9C void auction_acchDestroy(u32, u32)
+ext 024EFF44 void auction_setWall(u32, f32, f32)
+ext 024F06B4 void auction_acchSet(u32, u32, u32, u32, u32, u32, u32, u32, u32)
+ext 024F08A8 void auction_correctBackground(u32, u32)
+ext 02515860 void auction_statusDestroy(u32, u32)
+ext 02515A70 void auction_cylinderDestroy(u32, u32)
+ext 02515F14 void auction_statusInit(u32, u32, u32, u32)
+ext 02516518 void auction_cylinderSet(u32, u32)
+ext 025200D4 auction_cpp::Play* auction_getPlay()
+ext 02520460 u32 auction_loadArchive(u32, u32)
+ext 025204C8 void auction_deleteArchive(u32, u32)
+ext 02520C0C u32 auction_isTriforce(u32)
+ext 02525FE4 u32 auction_phaseExecute(u32, u32, u32)
+ext 0253E9B0 void auction_setArchiveName(u32, u32)
+ext 02542D88 s32 auction_getStaffId(u32, u32, u32, u32)
+ext 02542EDC u32 auction_getActionIndex(u32, u32, u32, u32, u32, u32)
+ext 02543280 void auction_cutEnd(u32, u32)
+ext 02543F10 s32 auction_getEventIndex(u32, u32, u32)
+ext 0254457C u32 auction_eventEndCheck(u32, u32)
+ext 025447C8 u32 auction_isAdvance(u32, u32)
+ext 0254487C u32 auction_substance(u32, u32, u32, u32)
+ext 02555D0C u32 auction_getLighting()
+ext 025626A4 void auction_setLight(u32, u32, u32, u32)
+ext 02562F5C void auction_setModelLight(u32, u32, u32)
+ext 0259D54C void auction_playerEyePos(u32, f32)
+ext 0259D624 void auction_distanceAngle(u32, u32, u32, u32)
+ext 0259DA18 void auction_hioConstruct(u32)
+ext 0259DED0 void auction_lookAtTarget(u32, u32, u32, u32, u32, u32, u32)
+ext 0259E08C void auction_setJointLimits(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32)
+ext 0259F814 void auction_eventCutSet(u32, u32, u32)
+ext 0259F858 u32 auction_eventCutMove(u32)
+ext 025A11EC u32 auction_talk(u32, u32)
+ext 025A1458 void auction_fopNpcConstruct(u32)
+ext 025A15AC void auction_setAttention(u32, f32, f32)
+ext 025A847C auction_cpp::Emitter* auction_particleSet(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32)
+ext 025B7270 void auction_onAuctionWin(u32)
+ext 025B8B68 void auction_onEventBit(u32, u32)
+ext 025B8B94 u32 auction_isEventBit(u32, u32)
+ext 025BED80 void auction_drawShadow(u32, u32, f32, f32, f32)
+ext 025D50BC void auction_actorDestroy(u32, u32)
+ext 025D5218 auction_cpp::Manager* auction_judge(u32, u32)
+ext 025D5578 u32 auction_searchByName(u32, u32)
+ext 025D63E8 u32 auction_entrySolidHeap(u32, u32, u32)
+ext 025D76A8 void auction_orderSpeak(u32)
+ext 025E1988 void auction_startVoice(u32)
+ext 025E2DE0 void auction_modelUpdate(u32, u32)
+ext 025E38E0 u32 auction_createModel(u32, u32, u32)
+ext 025E4A98 void auction_morfSetAnimation(u32, u32, u32, u32, f32, f32, f32, f32)
+ext 025E4F64 u32 auction_createMorf(u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, u32, f32)
+ext 025E535C u32 auction_morfPlay(u32, u32, u32, u32)
+ext 025E54D8 void auction_morfEntry(u32)
+ext 025E563C void auction_stopMorf(u32)
+ext 025E7820 void auction_btpConstruct(u32)
+ext 025E789C u32 auction_btpInit(u32, u32, u32, u32, u32, u32, u32, u32, u32, f32)
+ext 025E7B3C void auction_btpEntry(u32, u32, u32)
+ext 025F1BF4 void auction_matrixXRotate(u32, u32)
+ext 025F1C28 void auction_matrixYRotate(u32, u32)
+ext 025F1C5C void auction_matrixZRotate(u32, u32)
+ext 026067F4 u32 auction_getResource(u32, u32, u32)
+ext 0273AA24 void auction_panic(u32, u32, u32)
+ext 0273AD10 u32 auction_operatorNew(u32)
+ext 0273AF40 void auction_operatorDelete(u32)
+ext 027DF9B0 s32 auction_findJointName(u32, u32)
+ext 027F3F94 u32 auction_jointTree(u32)
+ext 027F4D5C void auction_modelCalc(u32)
+ext 027F68FC u32 auction_jointNames(u32)
+ext 027F7878 u32 auction_toJoint(u32)
+ext 028249B0 void auction_emitterSetGlobalMatrix(u32, u32, u32)
+ext 028E90D4 void auction_matrixCopy(u32, u32)
+ext 028E9108 void auction_matrixConcat(u32, u32, u32)
+ext 028E93CC void auction_matrixTranslate(u32, f32, f32, f32)
+ext 028EAB2C void auction_initLookState(u32)
+ext 028ED6F8 void auction_initEyeState(u32)
+ext 028F026C void auction_staticInit(u32)
+ext 028F521C void auction_memclr(u32, u32)
+ext C000A848 void auction_phaseInit(u32, u32, u32)
+data l_arcNames 101BB7FC
+data l_modelNumbers 1001633C
+data l_extraModels 1001636C
+data l_btpNumbers 1001639C
+data l_eventNames 101BB698
+data l_jointCallbacks 101BB6B8
+data l_statusMasks 101BB6D8
+data l_shadowTypes 1001640C
+data l_animationNumbers 10016418
+data l_costumeRanges 100163CC
+data l_messageNumbers 101BB740
+data l_resControl 101F4F28
+data l_save 101F84DC
+data l_message 101F4B5C
+data l_calcMtx 1018C7B0
+data l_currentModel 104B462C
+data l_phaseInitialized 101FDB54
+data l_translationMtx 1048D0CC
+data l_currentMtx 104B4868
+str 100165FC "d_a_npc_auction.cpp" in 021EB318
+str 10016610 "m_head_tex_pattern != (0)" in 021EB318
+str 100166D8 "DEFAULT_TALK_XY" in 021EBBBC
+str 10016630 "head" in 021EB450
+str 10016638 "d_a_npc_auction.cpp" in 021EB450
+str 1001664C "m_jnt.getHeadJntNum() >= 0" in 021EB450
+str 10016668 "backbone" in 021EB450
+str 10016674 "m_jnt.getBackboneJntNum() >= 0" in 021EB450
+str 100166F4 "AUCTION_TALK_XY" in 021EBD5C
+str 10016704 "AUCTION_TALK" in 021EBD5C
+str 10016714 "MsgNo" in 021EC20C
+str 1001678C "d_a_npc_auction.cpp" in 021EDBF8
+str 100167A0 "actAuc != (0)" in 021EDBF8
+str 100166A0 "d_a_npc_auction.cpp" in 021EB8DC
+str 100166B4 "npcNo < daNpcAuction_c::Npc_No_Max" in 021EB8DC
+data l_messageAnimation0 101BB670
+data l_messageAnimation1 101BB678
+data l_messageAnimation2 101BB680
+data l_messageAnimation3 101BB683
+data l_messageAnimation4 101BB686
+data l_messageAnimation5 101BB689
+data l_messageAnimation6 101BB68C
+data l_messageAnimation7 101BB68F
+data l_messageAnimation8 101BB692
+data l_messageAnimation9 101BB695
+data l_messageAnimation10 101BB734
+str 10016764 "AUCTION_GET_ITEM" in 021ECB68
+str 10016744 "AUCTION_NO_ITEM" in 021ECB68
+str 10016778 "AUCTION_END2" in 021ECB68
+str 10016754 "AUCTION_TALK_XY" in 021ECB68
+data l_phaseTable 101FDB58
+data l_phaseTemplate 101BB728
+data l_staticInitNodes 101BB7D8
+data l_eyeInitNode 101BB7E4
+data l_lookInitNode 101BB7F0
+data l_actionNames 101BB7D0
+data l_cylinderSource 101EA190
+*/
+// clang-format on

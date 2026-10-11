@@ -5,19 +5,15 @@
  * derives from fopNpc_npc_c (0x7DC, see d_a_npc_ba1.h). Size 0x988 (profile g_profile_NPC_GP1,
  * size word at 0x101BE6D0). */
 #pragma once
-#include "d/actor/d_a_npc_ba1.h" /* fopNpc_npc_l, ProcFunc_l (shared NPC base, measured) */
-
-/* dNpc_PathRun_c (8 bytes, as on GameCube) */
-struct dNpc_PathRun_gp1 {
-    /* 0x00 */ gptr<dPath> mPath;
-    /* 0x04 */ be<u8> field_0x04;
-    /* 0x05 */ be<u8> mIdx;
-    /* 0x06 */ be<u8> mbDir;
-    /* 0x07 */ be<u8> field_0x07;
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/d/d_npc.h"
+struct Gp1ActionFunc {
+    be<s16> d, i;
+    be<u32> f;
 };
-WWHD_SIZE(dNpc_PathRun_gp1, 8);
+WWHD_SIZE(Gp1ActionFunc, 8);
 
-struct daNpc_Gp1_c : fopNpc_npc_l {
+struct daNpc_Gp1_c : fopNpc_npc_c {
     struct anm_prm_c {
         /* 0x00 */ be<s8> bckNum;
         /* 0x01 */ be<s8> btpNum;
@@ -34,7 +30,7 @@ struct daNpc_Gp1_c : fopNpc_npc_l {
     u32 iniTexPttrnAnm(u32);
     BOOL CreateHeap();
     BOOL charDecide(int);
-    BOOL set_action(ProcFunc_l*, void*);
+    BOOL set_action(Gp1ActionFunc*, void*);
     bool init_GP1_0();
     void plyTexPttrnAnm();
     u32 setAnm_tex(s8);
@@ -91,23 +87,23 @@ struct daNpc_Gp1_c : fopNpc_npc_l {
     /* 0x7DC */ request_of_phase_process_class mPhs;
     /* 0x7E4 */ be<s8> m_hed_jnt_num;
     /* 0x7E5 */ be<s8> m_bbone_jnt_num;
-    /* 0x7E6 */ be<s8> m_hnd_L_jnt_num;             /* rupees are thrown from the left hand */
+    /* 0x7E6 */ be<s8> m_hnd_L_jnt_num; /* rupees are thrown from the left hand */
     /* 0x7E7 */ u8 _7E7;
     /* 0x7E8 */ gptr<J3DAnmTexPattern> m_hed_tex_pttrn;
-    /* 0x7EC */ u8 mBtpAnm[0x74];                   /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x7EC */ u8 mBtpAnm[0x74]; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x860 */ be<u8> mBtpFrame;
     /* 0x861 */ u8 _861;
     /* 0x862 */ be<s16> mBlinkTimer;
-    /* 0x864 */ ProcFunc_l mCurrProcFunc;
-    /* 0x86C */ dNpc_PathRun_gp1 mPathRun;
-    /* 0x874 */ dNpc_EventCut_c mEventCut;          /* hides fopNpc_npc_c::mEventCut */
-    /* 0x8E0 */ be<u32> mPartnerID;                 /* the Bm (fpcNm 0x149) found by partner_srch */
+    /* 0x864 */ Gp1ActionFunc mCurrProcFunc;
+    /* 0x86C */ dNpc_PathRun_c mPathRun;
+    /* 0x874 */ dNpc_EventCut_c mEventCut; /* hides fopNpc_npc_c::mEventCut */
+    /* 0x8E0 */ be<u32> mPartnerID;        /* the Bm (fpcNm 0x149) found by partner_srch */
     /* 0x8E4 */ cXyz mHomePos;
     /* 0x8F0 */ csXyz mHomeAngle;
     /* 0x8F6 */ csXyz mAngle;
-    /* 0x8FC */ cXyz mEyePos;                       /* head joint * (24, -24, 0) */
+    /* 0x8FC */ cXyz mEyePos; /* head joint * (24, -24, 0) */
     /* 0x908 */ cXyz mLookPos;
-    /* 0x914 */ cXyz mPathPos;                      /* current path point */
+    /* 0x914 */ cXyz mPathPos; /* current path point */
     /* 0x920 */ u8 _920[0x92C - 0x920];
     /* 0x92C */ be<f32> mPrevMorfFrame;
     /* 0x930 */ be<f32> mEyeOffsetY;
@@ -126,14 +122,14 @@ struct daNpc_Gp1_c : fopNpc_npc_l {
     /* 0x958 */ be<s16> mHairTimer;
     /* 0x95A */ be<s16> mLookVel;
     /* 0x95C */ be<s16> mLookAngleY;
-    /* 0x95E */ be<s16> mBuyNum;                    /* skull necklaces handed over */
-    /* 0x960 */ be<s16> mRupeeNum;                  /* rupees to throw */
+    /* 0x95E */ be<s16> mBuyNum;   /* skull necklaces handed over */
+    /* 0x960 */ be<s16> mRupeeNum; /* rupees to throw */
     /* 0x962 */ be<s16> mWaitTimer;
     /* 0x964 */ be<s8> mbMorfAnimStopped;
     /* 0x965 */ be<s8> mLoopCnt;
     /* 0x966 */ be<s8> mbAfterEvent;
     /* 0x967 */ be<u8> mItemNo;
-    /* 0x968 */ be<u8> m968;
+    /* 0x968 */ be<u8> mbHidden;
     /* 0x969 */ be<u8> mbNoShapeAngle;
     /* 0x96A */ be<u8> mbNoMove;
     /* 0x96B */ be<u8> mbNoDraw;
@@ -157,7 +153,7 @@ struct daNpc_Gp1_c : fopNpc_npc_l {
     /* 0x980 */ be<s8> mStt;
     /* 0x981 */ be<s8> mPrevStt;
     /* 0x982 */ be<s8> mLookMode;
-    /* 0x983 */ be<s8> m983;
+    /* 0x983 */ be<s8> mSubtype;
     /* 0x984 */ be<s8> mType;
     /* 0x985 */ be<s8> mActState;
     /* 0x986 */ be<s8> mAtrSet;
@@ -173,3 +169,177 @@ WWHD_OFFSET(daNpc_Gp1_c, mEventIDTbl, 0x94A);
 WWHD_OFFSET(daNpc_Gp1_c, mbSetEyePos, 0x970);
 WWHD_OFFSET(daNpc_Gp1_c, mAtrSet, 0x986);
 WWHD_SIZE(daNpc_Gp1_c, 0x988);
+
+// HD: measured HIO layout; vtable first and byte debug switch.
+struct daNpc_Gp1_HIO_c {
+    struct hio_prm_c {
+        /* 0x00 */ be<s16> mMaxHeadX;
+        /* 0x02 */ be<s16> mMaxHeadY;
+        /* 0x04 */ be<s16> mMinHeadX;
+        /* 0x06 */ be<s16> mMinHeadY;
+        /* 0x08 */ be<s16> mMaxBackBoneX;
+        /* 0x0A */ be<s16> mMaxBackBoneY;
+        /* 0x0C */ be<s16> mMinBackBoneX;
+        /* 0x0E */ be<s16> mMinBackBoneY;
+        /* 0x10 */ be<s16> mMaxTurnStep;
+        /* 0x12 */ be<s16> mLookVelMax;
+        /* 0x14 */ be<f32> mAttPosOffsetY;
+        /* 0x18 */ be<u8> mDebugDraw;
+        /* 0x19 */ u8 _19[3];
+        /* 0x1C */ be<f32> mForceTlkDist;
+        /* 0x20 */ be<s16> mTurnScale;
+        /* 0x22 */ be<s16> mTurnMaxStep;
+        /* 0x24 */ be<f32> mAnmSpdRate;
+        /* 0x28 */ be<f32> mWalkSpd;
+        /* 0x2C */ be<f32> mWalkAccel;
+        /* 0x30 */ be<f32> mPassDist;
+    };
+    /* 0x00 */ be<u32> __vtbl; /* HD: vtable first */
+    /* 0x04 */ be<s8> mNo;
+    /* 0x05 */ u8 _05[3];
+    /* 0x08 */ be<s32> mEntryID;
+    /* 0x0C */ hio_prm_c mPrm;
+};
+WWHD_SIZE(daNpc_Gp1_HIO_c, 0x40);
+struct Gp1RupeeFrame {
+    /* 0x00 */ cXyz pos;
+    /* 0x0C */ be<f32>
+        a_angle_tbl[3]; // HD: {-30, 0, 30}; signed lookup can reach the preceding position.
+};
+WWHD_OFFSET(Gp1RupeeFrame, pos, 0);
+WWHD_OFFSET(Gp1RupeeFrame, a_angle_tbl, 0xC);
+WWHD_SIZE(Gp1RupeeFrame, 0x18);
+// HD: virtual frame count, animation-removal and destructor layouts.
+struct Gp1AnmVtable {
+    u8 _0[0x14];
+    be<u32> mGetFrameMax;
+};
+struct Gp1Anm {
+    u8 _0[4];
+    gptr<Gp1AnmVtable> mpVtable;
+};
+struct Gp1ModelAnimation {
+    u8 _0[0x38];
+    be<u32> mpBtpAnimation;
+};
+struct Gp1AcchVtables {
+    u8 _0[0x14];
+    be<u32> mCheckVtable;
+    u8 _18[8];
+    be<u32> mPolyVtable;
+};
+WWHD_OFFSET(Gp1AnmVtable, mGetFrameMax, 0x14);
+WWHD_OFFSET(Gp1Anm, mpVtable, 4);
+WWHD_OFFSET(Gp1ModelAnimation, mpBtpAnimation, 0x38);
+WWHD_OFFSET(Gp1AcchVtables, mCheckVtable, 0x14);
+WWHD_OFFSET(Gp1AcchVtables, mPolyVtable, 0x20);
+template <class T, class U> inline T* Gp1_view(U* p) { return gabi::at<T>(gabi::ea(p)); }
+inline s32 Gp1_frameMax(J3DAnmTexPattern* p) {
+    auto* a = Gp1_view<Gp1Anm>(p);
+    auto* t = a->mpVtable.get();
+    return gabi::call_ptr<s32>(t->mGetFrameMax, p);
+}
+inline void Gp1_loadAction(Gp1ActionFunc* dst, Gp1ActionFunc* src) {
+    auto* d = Gp1_view<be<u32>>(dst);
+    auto* s = Gp1_view<be<u32>>(src);
+    d[0] = s[0];
+    d[1] = s[1];
+}
+struct Gp1VirtualAction {
+    u8 _0[6];
+    be<s16> mVtableOffset;
+};
+inline void Gp1_callAction(void* self, Gp1ActionFunc* action, void* arg) {
+    s16 index = action->i;
+    u32 object = gabi::ea(self) + (s32)(s16)action->d;
+    if (index < 0) {
+        gabi::call_ptr<BOOL>(action->f, object, arg);
+    } else {
+        s16 offset = Gp1_view<Gp1VirtualAction>(action)->mVtableOffset;
+        auto* vtable = gabi::at<be<u32>>(object + offset);
+        auto* entry = gabi::at<be<u32>>((u32)*vtable + index * 8 + 4);
+        gabi::call_ptr<BOOL>(*entry, object, arg);
+    }
+}
+inline void Gp1_initDebugColour(be<u32>* guard, be<u32>* dst, be<u32>* src) {
+    if ((u32)*guard == 0) {
+        *guard = 1;
+        memcpy_g(dst, src, 4);
+    }
+}
+
+s8 Gp1_roomId(dBgS*, cBgS_PolyInfo*);
+u8 Gp1_polyColour(dBgS*, cBgS_PolyInfo*);
+
+inline const char* Gp1_staffName(dNpc_EventCut_c* cut) {
+    return gabi::at<const char>(cut->mpEvtStaffName);
+}
+inline void Gp1_copyWords(cXyz* dst, const cXyz* src) {
+    auto* s = Gp1_view<be<u32>>(src);
+    auto* d = Gp1_view<be<u32>>(dst);
+    u32 x = s[0], y = s[1], z = s[2];
+    d[0] = x;
+    d[1] = y;
+    d[2] = z;
+}
+inline be<u8>* Gp1_bytes(void* p) { return gabi::at<be<u8>>(gabi::ea(p)); }
+WWHD_SIZE(Gp1AnmVtable, 0x18);
+WWHD_SIZE(Gp1Anm, 8);
+WWHD_SIZE(Gp1ModelAnimation, 0x3C);
+WWHD_SIZE(Gp1AcchVtables, 0x24);
+WWHD_OFFSET(Gp1VirtualAction, mVtableOffset, 6);
+WWHD_SIZE(Gp1VirtualAction, 8);
+WWHD_OFFSET(Gp1ActionFunc, d, 0);
+WWHD_OFFSET(Gp1ActionFunc, i, 2);
+WWHD_OFFSET(Gp1ActionFunc, f, 4);
+
+struct Gp1PathFlags {
+    u8 _0[5];
+    be<u8> mClosed;
+};
+WWHD_OFFSET(Gp1PathFlags, mClosed, 5);
+WWHD_SIZE(Gp1PathFlags, 6);
+inline fopAc_ac_c* Gp1_actorFromResult(u32 a) { return gabi::at<fopAc_ac_c>(a); }
+inline f32 Gp1_rupeeAngle(Gp1RupeeFrame* frame, s32 index) {
+    return *gabi::at<be<f32>>(gabi::ea(&frame->a_angle_tbl[0]) + index * 4);
+}
+s8 Gp1_roomId(dBgS*, cBgS_PolyInfo*);
+u8 Gp1_polyColour(dBgS*, cBgS_PolyInfo*);
+s16 Gp1_calcTimer(be<s16>*);
+s32 Gp1_btpInit(void*, J3DModelData*, J3DAnmTexPattern*, s32, s32, f32, s32, s32, u32, s32);
+bool Gp1_lockonTruth(dAttention_c*);
+fopAc_ac_c* Gp1_lockonTarget(dAttention_c*, s32);
+fopAc_ac_c* Gp1_actionTarget(dAttention_c*, s32);
+void Gp1_playerEyePos(cXyz*, f32);
+u32 Gp1_messageStatus(void*);
+void Gp1_lookAtTarget(dNpc_JntCtrl_c*, be<s16>*, cXyz*, cXyz*, s16, s16, u8);
+void* Gp1_search(u32, void*);
+BOOL Gp1_searchById(u32, be<u32>*);
+u32 Gp1_eventPid(dEvt_control_c*, fopAc_ac_c*);
+fopAc_ac_c* Gp1_createItem(cXyz*, s32, s32, csXyz*, cXyz*, f32, f32, f32, s32, u32);
+void Gp1_npcCtor(daNpc_Gp1_c*);
+void Gp1_btpCtor(void*);
+void Gp1_eventCutCtor(dNpc_EventCut_c*);
+void* Gp1_demoGetActor(u32, u8);
+J3DAnmTexPattern* Gp1_demoBtp(void*, const char*);
+void Gp1_demoData(daNpc_Gp1_c*, u32, mDoExt_McaMorf*, const char*, s32, u32, u32, s32);
+void Gp1_circleDestroy(void*, s32);
+void Gp1_acchDestroy(dBgS_Acch*, s32);
+void Gp1_actorDestroy(daNpc_Gp1_c*, s32);
+
+WWHD_SIZE(daNpc_Gp1_c::anm_prm_c, 0x10);
+WWHD_OFFSET(daNpc_Gp1_c::anm_prm_c, bckNum, 0);
+WWHD_OFFSET(daNpc_Gp1_c::anm_prm_c, btpNum, 1);
+WWHD_OFFSET(daNpc_Gp1_c::anm_prm_c, morf, 4);
+WWHD_OFFSET(daNpc_Gp1_c::anm_prm_c, speed, 8);
+WWHD_OFFSET(daNpc_Gp1_c::anm_prm_c, loopMode, 0xC);
+WWHD_OFFSET(daNpc_Gp1_HIO_c, mPrm, 0xC);
+WWHD_SIZE(daNpc_Gp1_HIO_c::hio_prm_c, 0x34);
+WWHD_OFFSET(daNpc_Gp1_HIO_c::hio_prm_c, mForceTlkDist, 0x1C);
+WWHD_OFFSET(daNpc_Gp1_HIO_c::hio_prm_c, mWalkSpd, 0x28);
+WWHD_OFFSET(daNpc_Gp1_HIO_c::hio_prm_c, mPassDist, 0x30);
+
+WWHD_OFFSET(daNpc_Gp1_c, mbHidden, 0x968);
+WWHD_OFFSET(daNpc_Gp1_c, mSubtype, 0x983);
+WWHD_OFFSET(daNpc_Gp1_HIO_c, mNo, 4);
+WWHD_OFFSET(daNpc_Gp1_HIO_c, mEntryID, 8);

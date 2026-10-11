@@ -1,221 +1,562 @@
-/** Kf1 event tag, WWHD reconstruction (see wwhd_src/README.md).
- * GC supplies method names but placeholder bodies; HD instructions are authoritative.
- * Actual TU: 024ABBF4..024ACAC0, 33 functions including static init and destructor.
- * Leading KbItem destructor and following Kk1 create are excluded by vtable/profile evidence.
- */
+/* Kf1 pottery compensation event tag. Private, numerically verified
+ * reconstruction. */
 #include "d/actor/d_a_tag_kf1.h"
-using gabi::load; using gabi::store; using gabi::call;
-static u32 play() { return call<u32>(0x025200D4); }
-// Resolve the GHS descriptor at the point of invocation, allowing callees to change fields.
-static void invokeAction(u32 actor, u32 context) {
-    s32 index=load<s16>(actor+0x7DE), adjust=load<s16>(actor+0x7DC);
-    u32 object=actor+adjust, target;
-    if(index<0) target=load<u32>(actor+0x7E0);
-    else { s32 offset=load<s16>(actor+0x7E2); u32 table=load<u32>(object+offset); target=load<u32>(table+8*index+4); }
-    gabi::call_ptr(target,object,context);
+
+// HD: GameCube bodies are placeholders; verified HD call and store order is
+// authoritative.
+static s32 l_partnerCount;
+static daTag_Kf1_HIO_c l_HIO;
+static KfPartnerList l_partners;
+static KfActionWords l_waitAction;
+static u8 l_debugDraw;
+static u32 l_redGuard;
+static KfColorWord l_red;
+static KfColorWord l_redLiteral;
+static u32 l_saveInfo;
+static KfCutNames l_cutNames;
+static KfEventNames l_eventNames;
+static KfHioDefaults l_hioDefaults;
+static f32 l_headerNear;
+static f32 l_headerFar;
+static u8 l_headerByte;
+static u8 l_headerFlag;
+static u32 l_headerZero0;
+static u32 l_headerZero1;
+static u32 l_headerZero2;
+static u32 l_headerZero3;
+static f32 l_nearLiteral;
+static f32 l_farLiteral;
+static f32 l_nextStageSpeed;
+static KfGlobalNode l_headerNode0;
+static KfGlobalNode l_headerNode1;
+static KfGlobalNode l_hioNode;
+
+static KfPlay *play() {
+    return kfGetPlay();
 }
-static u32 searchActor_Kutani(u32 actor,u32 context) {
-    WWHD_FUNC(0x024ABBF4,u32,actor,context);
-    if(load<s32>(0x1046E388)<100 && call<u32>(0x025D4604,actor) && actor && load<s16>(actor+8)==0x1C5 && call<u32>(0x02048038,actor,4,24)==14) {
-        u32 count=load<u32>(0x1046E388); store<u32>(0x1046E388,count+1); store<u32>(0x1046E3BC+4*count,actor);
+// Resolve the GHS descriptor at the point of invocation, allowing callees to
+// change fields.
+static void invokeAction(daTag_Kf1_c *i_this, u32 context) {
+    // HD: reload the GHS descriptor for each invocation; exit handlers may mutate it.
+    s32 index = i_this->mAction.i;
+    s32 adjust = i_this->mAction.d;
+    KfActionObject object(i_this, adjust);
+    u32 target = index < 0 ? (u32)i_this->mAction.f
+                           : object.virtualTarget(i_this->mAction.virtualOffset(), index);
+    gabi::call_ptr(target, object.address(), context);
+}
+/* 024AC920 */
+static daTag_Kf1_HIO_c *daTag_Kf1_HIO_c_ct(daTag_Kf1_HIO_c *object) {
+    if (!object) {
+        object = kfAllocate(0x14);
+        if (!object)
+            return 0;
+    }
+    object->__vtbl = daTag_Kf1_HIO_c::__vt;
+    u32 word = (u32)l_hioDefaults.words[0];
+    object->mAttentionDistanceBits = word;
+    word = (u32)l_hioDefaults.words[1];
+    object->mAttentionHeightBits = word;
+    word = (u32)l_hioDefaults.words[2];
+    object->mNo = -1;
+    object->mDebugDrawWord = word;
+    return object;
+}
+
+/* 024ABBF4 */
+static u32 searchActor_Kutani(fopAc_ac_c *i_this, u32 context) {
+    if (l_partnerCount < 100 && kfIsActor(i_this) && i_this &&
+        (s16)i_this->mProcName == fpcNm_TSUBO_e && kfGetActorParam(i_this, 4, 24) == 14) {
+        u32 count = (u32)l_partnerCount;
+        l_partnerCount = (u32)(count + 1);
+        l_partners.actors[count] = gabi::ea(i_this);
     }
     return 0;
 }
-VERIFY(0x024ABBF4,searchActor_Kutani);
-static u32 set_action(u32 actor,u32 descriptor,u32 context) {
-    WWHD_FUNC(0x024ABC8C,u32,actor,descriptor,context);
-    s32 index=load<s16>(descriptor+2), oldIndex=load<s16>(actor+0x7DE), adjust; u32 target;
-    if(oldIndex==index) {
-        if(!oldIndex) return 1;
-        adjust=load<s16>(descriptor); s32 oldAdjust=load<s16>(actor+0x7DC); target=load<u32>(descriptor+4);
-        if(oldAdjust==adjust && load<u32>(actor+0x7E0)==target) return 1;
-    } else { target=load<u32>(descriptor+4); adjust=load<s16>(descriptor); }
-    if(oldIndex) { store<u8>(actor+0x87E,0xFF); invokeAction(actor,context); }
-    store<u32>(actor+0x7E0,target); store<s16>(actor+0x7DC,adjust); store<s16>(actor+0x7DE,index); store<u8>(actor+0x87E,0);
-    invokeAction(actor,context); return 1;
+
+/* 024ABDB0 */
+u32 daTag_Kf1_c::createInit() {
+    kfSetActorInfo(&mTagEventCut, "TagKf1", this);
+    gabi::Local<KfActionWords> descriptor;
+    descriptor->words[0] = l_waitAction.words[0];
+    descriptor->words[1] = l_waitAction.words[1];
+    set_action(reinterpret_cast<const KfAction *>(descriptor.get()), 0);
+    return 1;
 }
-VERIFY(0x024ABC8C,set_action);
-static u32 createInit(u32 actor) {
-    WWHD_FUNC(0x024ABDB0,u32,actor);
-    call(0x0259F7D4,actor+0x7E4,0x1003F5B8,actor);
-    gabi::Local<be<u32>[2]> descriptor;
-    (*descriptor)[0]=load<u32>(0x1003F578); (*descriptor)[1]=load<u32>(0x1003F57C);
-    set_action(actor,descriptor.a,0); return 1;
+
+/* 024ABFB4 */
+void daTag_Kf1_c::setStt(u32 state) {
+    mState = (u8)(state);
 }
-VERIFY(0x024ABDB0,createInit);
-static u32 create(u32 actor) {
-    WWHD_FUNC(0x024ABE14,u32,actor);
-    u32 flags=load<u32>(actor+0x2E4);
-    if(!(flags&8)) { if(actor) { call(0x025A1458,actor); store<u32>(actor+0xB4,0x1003F648); call(0x0259F740,actor+0x7E4); flags=load<u32>(actor+0x2E4); } store<u32>(actor+0x2E4,flags|8); }
-    if(load<s16>(actor+8)!=0x19E) return 5;
-    store<u8>(actor+0x87D,0);
-    if(load<s8>(0x1046E3A8)<0) { u32 id=call<u32>(0x025F0A10,0x1003F5C0,0x1046E3A8); store<u8>(0x1046E3A8,id); }
-    return createInit(actor)?4:5;
+
+/* 024AC61C */
+u32 daTag_Kf1_c::next_msgStatus(be<u32> *message) {
+    u32 number = (u32)*message;
+    if (number == KfMsg_CANNOT_PAY) {
+        *message = KfMsg_PAYMENT_NEXT;
+        return 15;
+    }
+    if (number == KfMsg_PAYMENT_NEXT) {
+        *message = KfMsg_PAYMENT_END;
+        return 15;
+    }
+    if (number == KfMsg_CHECK_RUPEES) {
+        KfSave *save = KfGuestMemory::save(l_saveInfo);
+        u32 rupees = save->mRupees;
+        mRupees = (u16)(rupees);
+    }
+    return 16;
 }
-VERIFY(0x024ABE14,create);
-static u32 Create(u32 actor) { WWHD_FUNC(0x024ABF00,u32,actor); return create(actor); }
-VERIFY(0x024ABF00,Create);
-static u32 remove(u32 actor) {
-    WWHD_FUNC(0x024ABF04,u32,actor);
-    s32 id=load<s8>(0x1046E3A8); if(id>=0) { call(0x025F0A18,id); store<u8>(0x1046E3A8,0xFF); } return 1;
+
+/* 024AC498 */
+void daTag_Kf1_c::eventOrder() {
+    s32 order = (s8)mOrder;
+    if (order == 1 || order == 2) {
+        s32 current = (s8)mOrder;
+        u32 flags = (u16)eventInfo.mCondition;
+        eventInfo.mCondition = (u16)(flags | 1);
+        if (current == 1)
+            kfOrderSpeakEvent(this);
+    } else if (order >= 3) {
+        u32 name = (u32)l_eventNames.names[order];
+        kfOrderOtherEvent(this, name, 1, 0xFFFF);
+    }
 }
-VERIFY(0x024ABF04,remove);
-static u32 Delete(u32 actor) { WWHD_FUNC(0x024ABF48,u32,actor); return remove(actor); }
-VERIFY(0x024ABF48,Delete);
-static void checkOrder(u32 actor) {
-    WWHD_FUNC(0x024ABF4C,void,actor);
-    if(load<u16>(actor+0xF8)==2) { u32 events=play()+0x52C4; if(call<u32>(0x025445B8,events,0x1003F5D4) && load<s8>(actor+0x87B)==3) store<u8>(actor+0x87B,0); }
+
+/* 024ABF4C */
+void daTag_Kf1_c::checkOrder() {
+    if ((u16)eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        void *events = &play()->mEventManager;
+        if (kfIsPresent(events, "BENSYO") && (s8)mOrder == 3)
+            mOrder = (u8)(0);
+    }
 }
-VERIFY(0x024ABF4C,checkOrder);
-static void setStt(u32 actor,u32 state) { WWHD_FUNC(0x024ABFB4,void,actor,state); store<u8>(actor+0x87C,state); }
-VERIFY(0x024ABFB4,setStt);
-static void event_talkInit(u32 actor,s32 staff) {
-    WWHD_FUNC(0x024ABFBC,void,actor,staff);
-    u32 events=play()+0x52C4; u32 substance=call<u32>(0x0254487C,events,staff,0x1003F5DC,3);
-    store<u32>(actor+0x7C8,0xFFFFFFFF);
-    if(!substance) store<u32>(actor+0x7C0,0);
-    else { u32 msg=load<u32>(substance); store<u32>(actor+0x7C0,msg); if(msg==0x1C2D) { s32 debt=load<s16>(actor+0x852)*10; u32 state=play(); store<u16>(state+0x5BA0,debt); } }
+
+/* 024AC678 */
+u32 daTag_Kf1_c::chkAttention(const cXyz *position) {
+    KfPlay *state = play();
+    u32 player = state->mPlayer;
+    f32 distance2 = kfSquareDistance(position, &KfGuestMemory::actor(player)->current.pos);
+    f32 distance = kfSqrt(distance2);
+    state = play();
+    player = (u32)state->mPlayer;
+    f32 horizontal = (f32)l_HIO.mAttentionDistance,
+        playerY = (f32)KfGuestMemory::actor(player)->current.pos.y, y = (f32)position->y;
+    f32 dy = (f32)((f64)playerY - (f64)y);
+    // PPC bge tests !LT, so unordered NaNs fail either attention comparison.
+    return distance < horizontal && dy < (f32)l_HIO.mAttentionHeight;
 }
-VERIFY(0x024ABFBC,event_talkInit);
-static void bensyoInit(u32 actor) {
-    WWHD_FUNC(0x024AC05C,void,actor);
-    u32 debt=(u32)(load<s16>(actor+0x852)*10), state=play(); u32 balance=load<u32>(state+0x5B48); store<u32>(state+0x5B48,balance-debt);
-    s32 cost=load<s16>(actor+0x852)*10; u32 rupees=load<u16>(actor+0x856);
-    store<u32>(actor+0x7C8,0xFFFFFFFF); store<u32>(actor+0x7C0,(s32)rupees>cost?0x1C2F:0x1C30);
+
+/* 024AC71C */
+u32 daTag_Kf1_c::partner_srch() {
+    for (u32 i = 0; i < 8; ++i)
+        mPartnerIds[i] = 0xFFFFFFFF;
+    l_partnerCount = (u32)(0);
+    for (u32 i = 0; i < 100; ++i)
+        l_partners.actors[i] = 0;
+    kfSearchAll(gabi::guest_fn((const void *)searchActor_Kutani), this);
+    s32 count = l_partnerCount;
+    if (count > 8 || count == 0)
+        return 0;
+    mPartnerCount = (s16)(0);
+    count = l_partnerCount;
+    for (s32 i = 0; i < count; ++i) {
+        u32 partner = (u32)l_partners.actors[i];
+        u32 id = partner ? (u32)KfGuestMemory::actor(partner)->mBsPcId : 0xFFFFFFFF;
+        mPartnerIds[i] = id;
+        s32 saved = (s16)mPartnerCount;
+        mPartnerCount = (s16)(saved + 1);
+        count = l_partnerCount;
+    }
+    return 1;
 }
-VERIFY(0x024AC05C,bensyoInit);
-static void goto_nextStage(u32 actor) {
-    WWHD_FUNC(0x024AC0CC,void,actor);
-    u32 stage=play()+0x5134; f32 speed=load<f32>(0x1003F5E4); call(0x0252012C,stage,0,-1,-1,0,1,0,speed);
-}
-VERIFY(0x024AC0CC,goto_nextStage);
-static s32 checkPartner(u32 actor) {
-    WWHD_FUNC(0x024AC114,s32,actor);
-    s32 found=0, count=load<s16>(actor+0x878);
+
+/* 024AC114 */
+s32 daTag_Kf1_c::checkPartner() {
+    s32 found = 0, count = (s16)mPartnerCount;
     gabi::Local<be<u32>> id;
-    for(s32 i=0;i<count;++i) { u32 value=load<u32>(actor+0x858+4*i); *id=value;
-        if(value!=0xFFFFFFFF) { u32 result=call<u32>(0x025D5218,0x025E1234,id.a); count=load<s16>(actor+0x878); if(result) found=(s16)(found+1); }
+    for (s32 i = 0; i < count; ++i) {
+        u32 value = (u32)mPartnerIds[i];
+        *id = value;
+        if (value != 0xFFFFFFFF) {
+            u32 result = kfSearchByJudge(kfJudgeByIDAddress, id.a);
+            count = (s16)mPartnerCount;
+            if (result)
+                found = (s16)(found + 1);
+        }
     }
     return found;
 }
-VERIFY(0x024AC114,checkPartner);
-static void event_cntTsubo(u32 actor) { WWHD_FUNC(0x024AC19C,void,actor); s32 found=checkPartner(actor); s32 count=load<s16>(actor+0x878); store<s16>(actor+0x852,count-found); }
-VERIFY(0x024AC19C,event_cntTsubo);
-static u32 event_mesSet(u32 actor) { WWHD_FUNC(0x024AC1D4,u32,actor); call(0x025A11EC,actor,0); return load<u32>(actor+0x7C8)!=0xFFFFFFFF; }
-VERIFY(0x024AC1D4,event_mesSet);
-static u32 event_mesEnd(u32 actor) { WWHD_FUNC(0x024AC218,u32,actor); return call<u32>(0x025A11EC,actor,0)==0x12; }
-VERIFY(0x024AC218,event_mesEnd);
-static u32 event_bensyo(u32 actor) { WWHD_FUNC(0x024AC248,u32,actor); return event_mesSet(actor); }
-VERIFY(0x024AC248,event_bensyo);
-static void privateCut(u32 actor) {
-    WWHD_FUNC(0x024AC24C,void,actor);
-    u32 events=play()+0x52C4; s32 staff=call<s32>(0x02542D88,events,0x1003F5E8,0,0); if(staff==-1) return;
-    events=play()+0x52C4; s32 cut=(s8)call<u32>(0x02542EDC,events,staff,0x101D1BF8,5,1,0); store<s8>(actor+0x87A,cut);
-    events=play()+0x52C4; if(cut==-1) { call(0x02543280,events,staff); return; }
-    if(call<u32>(0x025447C8,events,staff)) {
-        cut=load<s8>(actor+0x87A);
-        if(cut==0) event_talkInit(actor,staff);
-        else if(cut==2) bensyoInit(actor);
-        else if(cut==3) goto_nextStage(actor);
-        else if(cut==4) event_cntTsubo(actor);
+
+/* 024AC0CC */
+void daTag_Kf1_c::goto_nextStage() {
+    void *stage = &play()->mStartStage;
+    f32 speed = l_nextStageSpeed;
+    kfSetNextStage(stage, 0, -1, -1, 0, 1, 0, speed);
+}
+
+/* 024ABFBC */
+void daTag_Kf1_c::event_talkInit(s32 staff) {
+    void *events = &play()->mEventManager;
+    u32 substance = kfGetSubstance(events, staff, "MsgNo", 3);
+    mCurrMsgBsPcId = (u32)(0xFFFFFFFF);
+    if (!substance)
+        mCurrMsgNo = (u32)(0);
+    else {
+        u32 msg = KfGuestMemory::word(substance);
+        mCurrMsgNo = (u32)(msg);
+        if (msg == KfMsg_DEBT) {
+            s32 debt = (s16)mMissingPartners * 10;
+            KfPlay *state = play();
+            state->mRupeeDebt = debt;
+        }
+    }
+}
+
+/* 024AC1D4 */
+u32 daTag_Kf1_c::event_mesSet() {
+    kfTalk(this, 0);
+    return (u32)mCurrMsgBsPcId != 0xFFFFFFFF;
+}
+
+/* 024AC218 */
+u32 daTag_Kf1_c::event_mesEnd() {
+    return kfTalk(this, 0) == 0x12;
+}
+
+/* 024AC05C */
+void daTag_Kf1_c::bensyoInit() {
+    u32 debt = (u32)((s16)mMissingPartners * 10);
+    KfPlay *state = play();
+    u32 balance = (u32)state->mRupeeBalance;
+    state->mRupeeBalance = balance - debt;
+    s32 cost = (s16)mMissingPartners * 10;
+    u32 rupees = (u16)mRupees;
+    mCurrMsgBsPcId = (u32)(0xFFFFFFFF);
+    mCurrMsgNo = (u32)((s32)rupees > cost ? KfMsg_CAN_PAY : KfMsg_CANNOT_PAY);
+}
+
+/* 024AC248 */
+u32 daTag_Kf1_c::event_bensyo() {
+    return event_mesSet();
+}
+
+/* 024AC19C */
+void daTag_Kf1_c::event_cntTsubo() {
+    s32 found = checkPartner();
+    s32 count = (s16)mPartnerCount;
+    mMissingPartners = (s16)(count - found);
+}
+
+/* 024AC24C */
+void daTag_Kf1_c::privateCut() {
+    void *events = &play()->mEventManager;
+    s32 staff = kfGetMyStaffId(events, "TagKf1", 0, 0);
+    if (staff == -1)
+        return;
+    events = &play()->mEventManager;
+    s32 cut = (s8)kfGetMyActIdx(events, staff, gabi::ea(&l_cutNames), 5, 1, 0);
+    mCutIndex = (s8)(cut);
+    events = &play()->mEventManager;
+    if (cut == -1) {
+        kfCutEnd(events, staff);
+        return;
+    }
+    if (kfIsAdvance(events, staff)) {
+        cut = (s8)mCutIndex;
+        if (cut == 0)
+            event_talkInit(staff);
+        else if (cut == 2)
+            bensyoInit();
+        else if (cut == 3)
+            goto_nextStage();
+        else if (cut == 4)
+            event_cntTsubo();
         // Original reloads only after one of the four initialization callbacks.
-        if(cut==0 || cut==2 || cut==3 || cut==4) cut=load<s8>(actor+0x87A);
-    } else cut=load<s8>(actor+0x87A);
+        if (cut == 0 || cut == 2 || cut == 3 || cut == 4)
+            cut = (s8)mCutIndex;
+    } else
+        cut = (s8)mCutIndex;
     bool finish;
-    if((u32)cut<1) finish=event_mesSet(actor)!=0;
-    else if(cut==1) finish=event_mesEnd(actor)!=0;
-    else if(cut==2) finish=event_bensyo(actor)!=0;
-    else finish=true;
-    if(finish) { events=play()+0x52C4; call(0x02543280,events,staff); }
+    if ((u32)cut < 1)
+        finish = event_mesSet() != 0;
+    else if (cut == 1)
+        finish = event_mesEnd() != 0;
+    else if (cut == 2)
+        finish = event_bensyo() != 0;
+    else
+        finish = true;
+    if (finish) {
+        events = &play()->mEventManager;
+        kfCutEnd(events, staff);
+    }
 }
-VERIFY(0x024AC24C,privateCut);
-static void event_proc(u32 actor) {
-    WWHD_FUNC(0x024AC3E4,void,actor);
-    u32 events=play()+0x52C4;
-    if(call<u32>(0x0254457C,events,0x1003F624)) { setStt(actor,2); return; }
-    u32 saved=load<u8>(actor+0x844); u32 result=call<u32>(0x0259F858,actor+0x7E4);
-    if(result) { if(!load<u8>(actor+0x844)) store<u8>(actor+0x844,saved); }
-    else privateCut(actor);
+
+/* 024AC3E4 */
+void daTag_Kf1_c::event_proc() {
+    void *events = &play()->mEventManager;
+    if (kfIsEnd(events, "BENSYO")) {
+        setStt(2);
+        return;
+    }
+    u32 saved = (u8)mTagEventCut.mbAttention;
+    u32 result = kfCutProc(&mTagEventCut);
+    if (result) {
+        if (!(u8)mTagEventCut.mbAttention)
+            mTagEventCut.mbAttention = (u8)(saved);
+    } else
+        privateCut();
 }
-VERIFY(0x024AC3E4,event_proc);
-static void eventOrder(u32 actor) {
-    WWHD_FUNC(0x024AC498,void,actor);
-    s32 order=load<s8>(actor+0x87B);
-    if(order==1 || order==2) { s32 current=load<s8>(actor+0x87B); u32 flags=load<u16>(actor+0xFA); store<u16>(actor+0xFA,flags|1); if(current==1) call(0x025D76A8,actor); }
-    else if(order>=3) { u32 name=load<u32>(0x101D1C00+4*order); call(0x025D77DC,actor,name,1,0xFFFF); }
-}
-VERIFY(0x024AC498,eventOrder);
-static u32 execute(u32 actor) {
-    WWHD_FUNC(0x024AC4F8,u32,actor); checkOrder(actor); u32 state=play();
-    if(load<u8>(state+0x5292) && load<u16>(actor+0xF8)!=1) event_proc(actor); else invokeAction(actor,0);
-    eventOrder(actor); return 1;
-}
-VERIFY(0x024AC4F8,execute);
-static u32 Execute(u32 actor) { WWHD_FUNC(0x024AC5AC,u32,actor); return execute(actor); }
-VERIFY(0x024AC5AC,Execute);
-static u32 draw(u32 actor) {
-    WWHD_FUNC(0x024AC5B0,u32,actor);
-    if(load<u8>(0x1046E3B4) && !load<u32>(0x101FDA50)) { store<u32>(0x101FDA50,1); call(0xC000A848,0x101FEBF4,0x1003F580,4); } return 1;
-}
-VERIFY(0x024AC5B0,draw);
-static u32 Draw(u32 actor) { WWHD_FUNC(0x024AC610,u32,actor); return draw(actor); }
-VERIFY(0x024AC610,Draw);
-static u32 IsDelete(u32 actor) { WWHD_FUNC(0x024AC614,u32,actor); return 1; }
-VERIFY(0x024AC614,IsDelete);
-static u32 next_msgStatus(u32 actor,u32 message) {
-    WWHD_FUNC(0x024AC61C,u32,actor,message); u32 number=load<u32>(message);
-    if(number==0x1C30) { store<u32>(message,0x1C35); return 15; }
-    if(number==0x1C35) { store<u32>(message,0x1C31); return 15; }
-    if(number==0x1C2E) { u32 save=load<u32>(0x101F84DC); u32 rupees=load<u16>(save+0x24); store<u16>(actor+0x856,rupees); } return 16;
-}
-VERIFY(0x024AC61C,next_msgStatus);
-static u32 chkAttention(u32 actor,u32 position) {
-    WWHD_FUNC(0x024AC678,u32,actor,position);
-    u32 state=play(), player=load<u32>(state+0x5B2C); f32 distance2=call<f32>(0x028E8DE8,position,player+0x314); f32 distance=call<f32>(0x028F4384,distance2);
-    state=play(); player=load<u32>(state+0x5B2C); f32 horizontal=load<f32>(0x1046E3AC), playerY=load<f32>(player+0x318), y=load<f32>(position+4); f32 dy=(f32)((f64)playerY-(f64)y);
-    // PPC bge tests !LT, so unordered NaNs fail either attention comparison.
-    return distance<horizontal && dy<load<f32>(0x1046E3B0);
-}
-VERIFY(0x024AC678,chkAttention);
-static u32 partner_srch(u32 actor) {
-    WWHD_FUNC(0x024AC71C,u32,actor);
-    for(u32 i=0;i<8;++i) store<u32>(actor+0x858+4*i,0xFFFFFFFF);
-    store<u32>(0x1046E388,0); for(u32 i=0;i<100;++i) store<u32>(0x1046E3BC+4*i,0);
-    call(0x025DE508,0x024ABBF4,actor); s32 count=load<s32>(0x1046E388); if(count>8 || count==0) return 0;
-    store<s16>(actor+0x878,0); count=load<s32>(0x1046E388);
-    for(s32 i=0;i<count;++i) { u32 partner=load<u32>(0x1046E3BC+4*i); u32 id=partner?load<u32>(partner+4):0xFFFFFFFF; store<u32>(actor+0x858+4*i,id); s32 saved=load<s16>(actor+0x878); store<s16>(actor+0x878,saved+1); count=load<s32>(0x1046E388); }
+
+/* 024ABC8C */
+u32 daTag_Kf1_c::set_action(const KfAction *descriptor, u32 context) {
+    s32 index = (s16)descriptor->i, oldIndex = (s16)mAction.i, adjust;
+    u32 target;
+    if (oldIndex == index) {
+        if (!oldIndex)
+            return 1;
+        adjust = (s16)descriptor->d;
+        s32 oldAdjust = (s16)mAction.d;
+        target = (u32)descriptor->f;
+        if (oldAdjust == adjust && (u32)mAction.f == target)
+            return 1;
+    } else {
+        target = (u32)descriptor->f;
+        adjust = (s16)descriptor->d;
+    }
+    if (oldIndex) {
+        mActionPhase = (u8)(0xFF);
+        invokeAction(this, context);
+    }
+    mAction.f = (u32)(target);
+    mAction.d = (s16)(adjust);
+    mAction.i = (s16)(index);
+    mActionPhase = (u8)(0);
+    invokeAction(this, context);
     return 1;
 }
-VERIFY(0x024AC71C,partner_srch);
-static u32 wait01(u32 actor) {
-    WWHD_FUNC(0x024AC80C,u32,actor); u32 attention=load<u8>(actor+0x850); store<u8>(actor+0x87B,0);
-    if(attention) { u32 found=checkPartner(actor); u32 count=(u32)load<s16>(actor+0x878); if(count!=found) store<u8>(actor+0x87B,3); } return 1;
-}
-VERIFY(0x024AC80C,wait01);
-static u32 wait_action1(u32 actor,u32 context) {
-    WWHD_FUNC(0x024AC868,u32,actor,context); s32 phase=load<s8>(actor+0x87E);
-    if(!phase) { setStt(actor,1); u32 value=load<u8>(actor+0x87E); store<u8>(actor+0x87E,value+1); return 1; }
-    if(phase!=-1) {
-        if(phase==1) { partner_srch(actor); store<u8>(actor+0x87E,2); }
-        gabi::Local<cXyz> position; position->x=load<f32>(actor+0x314); position->y=load<f32>(actor+0x318); position->z=load<f32>(actor+0x31C);
-        u32 attention=chkAttention(actor,position.a); s32 state=load<s8>(actor+0x87C); store<u8>(actor+0x850,attention); if(state==1) wait01(actor);
+
+/* 024AC80C */
+u32 daTag_Kf1_c::wait01() {
+    u32 attention = (u8)mbAttention;
+    mOrder = (u8)(0);
+    if (attention) {
+        u32 found = checkPartner();
+        u32 count = (u32)(s16)mPartnerCount;
+        if (count != found)
+            mOrder = (u8)(3);
     }
     return 1;
 }
-VERIFY(0x024AC868,wait_action1);
-static u32 HIO_ctor(u32 object) {
-    WWHD_FUNC(0x024AC920,u32,object); if(!object) { object=call<u32>(0x0273AD10,0x14); if(!object) return 0; }
-    store<u32>(object+0x10,0x1003F5A8); u32 word=load<u32>(0x101D1C10); store<u32>(object+4,word); word=load<u32>(0x101D1C14); store<u32>(object+8,word); word=load<u32>(0x101D1C18); store<u8>(object,0xFF); store<u32>(object+12,word); return object;
+
+/* 024AC868 */
+u32 daTag_Kf1_c::wait_action1(u32 context) {
+    s32 phase = (s8)mActionPhase;
+    if (!phase) {
+        setStt(1);
+        u32 value = (u8)mActionPhase;
+        mActionPhase = (u8)(value + 1);
+        return 1;
+    }
+    if (phase != -1) {
+        if (phase == 1) {
+            partner_srch();
+            mActionPhase = (u8)(2);
+        }
+        gabi::Local<cXyz> position;
+        position->x = (f32)current.pos.x;
+        position->y = (f32)current.pos.y;
+        position->z = (f32)current.pos.z;
+        u32 attention = chkAttention(position.get());
+        s32 state = (s8)mState;
+        mbAttention = (u8)(attention);
+        if (state == 1)
+            wait01();
+    }
+    return 1;
 }
-VERIFY(0x024AC920,HIO_ctor);
-static void static_init() {
-    WWHD_FUNC(0x024AC984,void); store<u32>(0x1046E3A0,0); store<u32>(0x1046E398,0); store<u32>(0x1046E3A4,0); store<u32>(0x1046E39C,0);
-    call(0x028F026C,0x101D1C1C); store<f32>(0x1046E38C,load<f32>(0x1003F63C)); store<f32>(0x1046E390,load<f32>(0x1003F640));
-    call(0x028ED6F8,0x1046E394); call(0x028F026C,0x101D1C28); call(0x028EAB2C,0x1046E395); call(0x028F026C,0x101D1C34); HIO_ctor(0x1046E3A8);
+
+/* 024AC5B0 */
+u32 daTag_Kf1_c::_draw() {
+    if (l_debugDraw && !l_redGuard) {
+        l_redGuard = (u32)(1);
+        kfCopyBytes(gabi::ea(&l_red), gabi::ea(&l_redLiteral), 4);
+    }
+    return 1;
 }
-VERIFY(0x024AC984,static_init);
-static void destructor(u32 actor,u32 flags) {
-    WWHD_FUNC(0x024ACA24,void,actor,flags);
-    if(actor) { call(0x02515A70,actor+0x690,2); call(0x02515860,actor+0x654,2); call(0x02018034,actor+0x628,2); store<u32>(actor+0x470,0x1003F588); store<u32>(actor+0x464,0x1003F598); call(0x024EFD9C,actor+0x450,0); call(0x025D50BC,actor,0); if(flags&1) call(0x0273AF40,actor); }
+
+/* 024AC4F8 */
+u32 daTag_Kf1_c::_execute() {
+    checkOrder();
+    KfPlay *state = play();
+    if ((u8)state->mEventState && (u16)eventInfo.mCommand != dEvtCmd_INTALK_e)
+        event_proc();
+    else
+        invokeAction(this, 0);
+    eventOrder();
+    return 1;
 }
-VERIFY(0x024ACA24,destructor);
+
+/* 024ABF04 */
+u32 daTag_Kf1_c::_delete() {
+    s32 id = (s8)l_HIO.mNo;
+    if (id >= 0) {
+        kfHioDeleteChild(id);
+        l_HIO.mNo = (u8)(0xFF);
+    }
+    return 1;
+}
+
+/* 024ABE14 */
+u32 daTag_Kf1_c::_create() {
+    u32 flags = (u32)actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            kfNpcConstruct(this);
+            __vtbl = (u32)(daTag_Kf1_c::__vt);
+            kfEventCutConstruct(&mTagEventCut);
+            flags = (u32)actor_condition;
+        }
+        actor_condition = (u32)(flags | fopAcCnd_INIT_e);
+    }
+    if ((s16)mProcName != fpcNm_TAG_KF1_e)
+        return cPhs_ERROR_e;
+    mbInitialized = (u8)(0);
+    if ((s8)l_HIO.mNo < 0) {
+        u32 id = kfHioCreateChild(
+            "\u0083N\u0083^\u0083j\u008f\u00c4\u0082\u00ab\u008a\u00c4\u008e\u008b\u0083^\u0083O",
+            gabi::ea(&l_HIO));
+        l_HIO.mNo = (u8)(id);
+    }
+    return createInit() ? cPhs_COMPLEATE_e : cPhs_ERROR_e;
+}
+
+/* 024ABF00 */
+static u32 daTag_Kf1_Create(daTag_Kf1_c *i_this) {
+    return i_this->_create();
+}
+
+/* 024ABF48 */
+static u32 daTag_Kf1_Delete(daTag_Kf1_c *i_this) {
+    return i_this->_delete();
+}
+
+/* 024AC5AC */
+static u32 daTag_Kf1_Execute(daTag_Kf1_c *i_this) {
+    return i_this->_execute();
+}
+
+/* 024AC610 */
+static u32 daTag_Kf1_Draw(daTag_Kf1_c *i_this) {
+    return i_this->_draw();
+}
+
+/* 024AC614 */
+static u32 daTag_Kf1_IsDelete(daTag_Kf1_c *i_this) {
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit
+
+/* 024AC984 */
+static void __sinit_d_a_tag_kf1_cpp() {
+    l_headerZero2 = (u32)(0);
+    l_headerZero0 = (u32)(0);
+    l_headerZero3 = (u32)(0);
+    l_headerZero1 = (u32)(0);
+    kfRegisterGlobal(gabi::ea(&l_headerNode0));
+    l_headerNear = (f32)(l_nearLiteral);
+    l_headerFar = (f32)(l_farLiteral);
+    kfHeaderByteConstruct(gabi::ea(&l_headerByte));
+    kfRegisterGlobal(gabi::ea(&l_headerNode1));
+    kfHeaderFlagConstruct(gabi::ea(&l_headerFlag));
+    kfRegisterGlobal(gabi::ea(&l_hioNode));
+    daTag_Kf1_HIO_c_ct(&l_HIO);
+}
+
+/* 024ACA24 */
+static void daTag_Kf1_c_dt(daTag_Kf1_c *i_this, u32 flags) {
+    if (i_this) {
+        kfAcchDestroy(&i_this->mCyl, 2);
+        kfAcchCircleDestroy(&i_this->mStts, 2);
+        kfLineCheckDestroy(&i_this->mAcchCir.m_cir, 2);
+        static_cast<dBgS_GrpPassChk &>(i_this->mObjAcch).__vtbl = KfAcchVtables::ground;
+        static_cast<dBgS_PolyPassChk &>(i_this->mObjAcch).__vtbl = KfAcchVtables::line;
+        kfActorAcchDestroy(&i_this->mObjAcch, 0);
+        kfActorDestroy(i_this, 0);
+        if (flags & 1)
+            kfFree(i_this);
+    }
+}
+
+// clang-format off
+/* WWHD glue: private HD data views
+data l_partnerCount 1046E388
+data l_HIO 1046E3A8
+data l_partners 1046E3BC
+data l_waitAction 1003F578
+data l_debugDraw 1046E3B4
+data l_redGuard 101FDA50
+data l_red 101FEBF4
+data l_redLiteral 1003F580
+data l_saveInfo 101F84DC
+data l_cutNames 101D1BF8
+data l_eventNames 101D1C00
+data l_hioDefaults 101D1C10
+data l_headerNear 1046E38C
+data l_headerFar 1046E390
+data l_headerByte 1046E394
+data l_headerFlag 1046E395
+data l_headerZero0 1046E398
+data l_headerZero1 1046E39C
+data l_headerZero2 1046E3A0
+data l_headerZero3 1046E3A4
+data l_nearLiteral 1003F63C
+data l_farLiteral 1003F640
+data l_nextStageSpeed 1003F5E4
+data l_headerNode0 101D1C1C
+data l_headerNode1 101D1C28
+data l_hioNode 101D1C34
+str 1003F5B8 in 024ABDB0
+str 1003F5C0
+str 1003F5D4 in 024ABF4C
+str 1003F5DC
+str 1003F5E8 in 024AC24C
+str 1003F624 in 024AC3E4
+ext 025200D4 KfPlay* kfGetPlay()
+ext 025D4604 u32 kfIsActor(void*)
+ext 02048038 u32 kfGetActorParam(void*,u32,u32)
+ext 0259F7D4 void kfSetActorInfo(void*,const char*,void*)
+ext 025A1458 void kfNpcConstruct(void*)
+ext 0259F740 void kfEventCutConstruct(void*)
+ext 025F0A10 u32 kfHioCreateChild(const char*,u32)
+ext 025F0A18 void kfHioDeleteChild(s32)
+ext 025445B8 u32 kfIsPresent(void*,const char*)
+ext 0254487C u32 kfGetSubstance(void*,s32,const char*,u32)
+ext 0252012C void kfSetNextStage(void*,u32,s32,s32,u32,u32,u32,f32)
+ext 025D5218 u32 kfSearchByJudge(u32,u32)
+ext 025A11EC u32 kfTalk(void*,u32)
+ext 02542D88 s32 kfGetMyStaffId(void*,const char*,u32,u32)
+ext 02542EDC u32 kfGetMyActIdx(void*,s32,u32,u32,u32,u32)
+ext 02543280 void kfCutEnd(void*,s32)
+ext 025447C8 u32 kfIsAdvance(void*,s32)
+ext 0254457C u32 kfIsEnd(void*,const char*)
+ext 0259F858 u32 kfCutProc(void*)
+ext 025D76A8 void kfOrderSpeakEvent(void*)
+ext 025D77DC void kfOrderOtherEvent(void*,u32,u32,u32)
+ext C000A848 void kfCopyBytes(u32,u32,u32)
+ext 028E8DE8 f32 kfSquareDistance(const cXyz*,const cXyz*)
+ext 028F4384 f32 kfSqrt(f32)
+ext 025DE508 void kfSearchAll(u32,void*)
+ext 0273AD10 daTag_Kf1_HIO_c* kfAllocate(u32)
+ext 028F026C void kfRegisterGlobal(u32)
+ext 028ED6F8 void kfHeaderByteConstruct(u32)
+ext 028EAB2C void kfHeaderFlagConstruct(u32)
+ext 02515A70 void kfAcchDestroy(void*,u32)
+ext 02515860 void kfAcchCircleDestroy(void*,u32)
+ext 02018034 void kfLineCheckDestroy(void*,u32)
+ext 024EFD9C void kfActorAcchDestroy(void*,u32)
+ext 025D50BC void kfActorDestroy(void*,u32)
+ext 0273AF40 void kfFree(void*)
+*/
+// clang-format on

@@ -1,262 +1,457 @@
-/* WWHD wooden and metal bars. Derived game code: */
-#include "bindings.h"
-namespace Mdoor {
-struct Act : fopAc_ac_c {
-    u8 smoke[0x20]; request_of_phase_process_class phase;
-    gptr<J3DModel> model; gptr<dBgW> background;
-    be<s32> staff; be<s16> timer,event;
-    be<u8> tool,action; be<u16> flags; be<f32> height;
-};
-WWHD_OFFSET(Act,phase,0x3CC);
-WWHD_OFFSET(Act,model,0x3D4);
-WWHD_OFFSET(Act,staff,0x3DC);
-WWHD_OFFSET(Act,height,0x3E8);
-WWHD_SIZE(Act,0x3EC);
-static u8 getShape(Act* actor) { WWHD_FUNC(0x021C0EA0,u8,actor); return actor->mParameters>>24; }
-VERIFY(0x021C0EA0,getShape);
-static void calcMtx(Act* actor) {
-    WWHD_FUNC(0x021C0EAC,void,actor);
-    f32 height=actor->height,y=actor->current.pos.y,x=actor->current.pos.x,z=actor->current.pos.z;
-    PSMTXTrans(mDoMtx_stack_c::get(),x,y+height,z);
-    mDoMtx_YrotM(mDoMtx_stack_c::get(),actor->home.angle.y);
-    f32 matrix[12]; for(u32 i=0;i<12;++i) matrix[i]=gabi::load<f32>(0x1048D0CC+i*4);
-    u32 model=gabi::ea(actor->model);
-    for(u32 i=0;i<12;++i) gabi::store<f32>(model+0xC8+i*4,matrix[i]);
+/* Wooden and metal bars. WWHD behavior verified against the original. */
+#include "d/actor/d_a_mdoor.h"
+
+const gc_tu_data gc_tu = {.safeString = 0x100148F4,
+                          .safeStringAssure = 0x021C2060,
+                          .headerStatics = {0x10464FA0, 0x101BA408, 0x10464FAC}};
+const char daMdoor_c::M_arcname[] = "Mdoor";
+static MdoorActionNames action_table;
+static u32 actionInitialized;
+static MdoorActionTable l_action;
+// HD: GHS copies the original action targets into a mutable guarded table.
+// Keep guest target words so arbitrary initialized dispatch targets retain their full width.
+static MdoorActionTable initial_actions;
+
+/* 021C0EA0 */
+u8 daMdoor_c::getShapeType() {
+    return mParameters >> 24;
 }
-VERIFY(0x021C0EAC,calcMtx);
+/* 021C0EAC */
+void daMdoor_c::calcMtx() {
+    f32 height = m2CC, y = current.pos.y, x = current.pos.x, z = current.pos.z;
+    PSMTXTrans(mDoMtx_stack_c::get(), x, y + height, z);
+    mDoMtx_YrotM(mDoMtx_stack_c::get(), home.angle.y);
+    mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
+}
 // SafeString payload remains above every nonleaf caller linkage save.
+/* inlined into CreateHeap */
 static void* objectResource(s32 index) {
-    gabi::Local<SafeString> name; gabi::Local<u8[16]> callerLinkage;
-    name->__vtbl=0x100148F4; name->mStringTop=0x100149E0;
-    return gabi::call<void*>(0x026066C4,dComIfG_resControl(),name.get(),index);
+    SafeString name;
+    // HD: preserve the caller linkage space below the SafeString temporary.
+    gabi::Local<u8[16]> callerLinkage;
+    name.__vtbl = gc_tu.safeString;
+    name.mStringTop = gabi::guest_str(daMdoor_c::M_arcname);
+    return mdoorGetResource(dComIfG_resControl(), &name, index);
 }
-static BOOL createHeap(Act* actor) {
-    WWHD_FUNC(0x021C0F70,BOOL,actor);
-    bool second=getShape(actor)==1; s32 collisionIndex=second?9:8;
-    void* data=objectResource(second?5:4);
-    if(!data) JUT_ASSERT_fail(STR(0x1001491C),0x90,STR(0x1001492C));
-    actor->model=gabi::call<J3DModel*>(0x025E38E0,data,0,0x11020203);
-    if(!gabi::ea(actor->model)) return FALSE;
-    actor->background=gabi::call<dBgW*>(0x024F23F4,(u32)0);
-    if(!gabi::ea(actor->background)) return FALSE;
-    data=objectResource(collisionIndex);
-    if(!data) return FALSE;
-    calcMtx(actor);
-    J3DModel* model=actor->model; dBgW* background=actor->background;
-    return gabi::call<BOOL>(0x0200A030,background,data,1,J3DModel_getBaseTRMtx(model))?FALSE:TRUE;
+/* 021C0F70 */
+BOOL daMdoor_c::CreateHeap() {
+    bool second = getShapeType() == 1;
+    s32 collisionIndex = second ? dRes_INDEX_MDOOR_DZB_MORI2_e : dRes_INDEX_MDOOR_DZB_MORI1_e;
+    void* data =
+        objectResource(second ? dRes_INDEX_MDOOR_BDL_MORI2_e : dRes_INDEX_MDOOR_BDL_MORI1_e);
+    if (!data)
+        JUT_ASSERT_fail("d_a_mdoor.cpp", 0x90, "modelData != NULL");
+    mpModel = mDoExt_J3DModel__create((J3DModelData*)data, 0, 0x11020203);
+    if (!gabi::ea(mpModel))
+        return FALSE;
+    mpBgW = new_dBgW();
+    if (!gabi::ea(mpBgW))
+        return FALSE;
+    data = objectResource(collisionIndex);
+    if (!data)
+        return FALSE;
+    calcMtx();
+    J3DModel* model = mpModel;
+    dBgW* background = mpBgW;
+    return mdoorSetBackground(background, (cBgD_t*)data, cBgW_MOVE_BG_e,
+                              J3DModel_getBaseTRMtx(model))
+               ? FALSE
+               : TRUE;
 }
-VERIFY(0x021C0F70,createHeap);
-static BOOL heapCB(Act* actor) { WWHD_FUNC(0x021C10B8,BOOL,actor); return createHeap(actor); }
-VERIFY(0x021C10B8,heapCB);
-static BOOL actionWait(Act* actor) { WWHD_FUNC(0x021C10BC,BOOL,actor); return TRUE; }
-VERIFY(0x021C10BC,actionWait);
-static void smokeInit(Act* actor) {
-    WWHD_FUNC(0x021C10C4,void,actor);
-    s8 room=actor->current.roomNo; auto play=dComIfGp_get();
-    u32 control=gabi::load<u32>(gabi::ea(play)+0x5AB0);
-    u32 emitter=gabi::call<u32>(0x025A847C,gabi::at<void>(control),0,0x2022,&actor->current.pos,&actor->shape_angle,(u32)0,0xAA,gabi::at<void>(gabi::ea(actor)+0x3AC),room,0,0,0);
-    if(emitter) {
-        gabi::store<f32>(emitter+0x34,16.0f); gabi::store<f32>(emitter+0x58,0.35f);
-        for(u32 i=0;i<3;++i) { gabi::store<f32>(emitter+0x220+i*4,2.0f); gabi::store<f32>(emitter+0x238+i*4,2.0f); }
-    }
+/* 021C10B8 */
+static BOOL CheckCreateHeap(daMdoor_c* i_this) {
+    return i_this->CreateHeap();
 }
-VERIFY(0x021C10C4,smokeInit);
-static void debris(Act* actor) {
-    dComIfGp_particle_set(0x81B2,&actor->current.pos,&actor->current.angle,nullptr,0xFF,nullptr,-1);
+/* 021C10BC */
+static BOOL daMdoor_actionWait(daMdoor_c* i_this) {
+    return TRUE;
 }
-static void sound(Act* actor,u32 id,bool checkNull=false) {
-    if(checkNull && (!gabi::ea(actor) || !(u32)(gabi::ea(actor)+0x37C))) return;
-    s8 room=actor->current.roomNo; s32 reverb=dComIfGp_getReverb(room);
-    mDoAud_seStart(id,&actor->eyePos,0,reverb);
-}
-static void cutEnd(Act* actor) { s32 staff=actor->staff; auto manager=dComIfGp_getPEvtManager(); gabi::call(0x02543280,manager,staff); }
-static void move(Act* actor) { calcMtx(actor); gabi::call(0x024F43DC,(dBgW*)actor->background); }
-static void demoProc(Act* actor) {
-    WWHD_FUNC(0x021C1174,void,actor);
-    s32 staff=actor->staff; auto manager=dComIfGp_getPEvtManager();
-    u32 action=gabi::call<u32>(0x02542EDC,manager,staff,gabi::at<void>(0x101BA3FC),3,0,0);
-    staff=actor->staff; manager=dComIfGp_getPEvtManager();
-    if(gabi::call<BOOL>(0x025447C8,manager,staff)) {
-        if(action==1) { u16 flags=actor->flags; actor->speedF=0.0f; actor->flags=flags|1; sound(actor,0x697C); }
-        else if(action==2) { actor->speedF=0.0f; if(getShape(actor)!=1) debris(actor); sound(actor,0x697D); }
-    }
-    if(action==1) {
-        cLib_chaseF(&actor->speedF,60.0f,6.0f);
-        if(cLib_chaseF(&actor->height,0.0f,actor->speedF)) {
-            cutEnd(actor); u16 flags=actor->flags;
-            if(flags&1) { actor->flags=flags&0xFFFE; if(getShape(actor)!=1) debris(actor); smokeInit(actor); }
+/* 021C10C4 */
+void daMdoor_c::smokeInit() {
+    s8 room = current.roomNo;
+    auto play = dComIfGp_get();
+    dPa_control_c* control = ((dComIfG_inf_c*)play)->play.mParticle;
+    MdoorEmitter* emitter = (MdoorEmitter*)control->set(
+        0, dPa_name::ID_AK_JT_ELEMENTSMOKE00, &current.pos, &shape_angle, nullptr, 0xAA,
+        (dPa_levelEcallBack*)&m290, room, nullptr, nullptr, nullptr);
+    if (emitter) {
+        emitter->mRate = 16.0f;
+        emitter->mSpread = 0.35f;
+        for (u32 i = 0; i < 3; ++i) {
+            emitter->mGlobalScale[i] = 2.0f;
+            emitter->mGlobalScaleOut[i] = 2.0f;
         }
-        move(actor);
-    } else if(action==2) {
-        cLib_chaseF(&actor->speedF,30.0f,3.0f);
-        if(cLib_chaseF(&actor->height,280.0f,actor->speedF)) cutEnd(actor);
-        move(actor);
-    } else cutEnd(actor);
+    }
 }
-VERIFY(0x021C1174,demoProc);
-static BOOL actionDemoWait(Act* actor) {
-    WWHD_FUNC(0x021C1418,BOOL,actor);
-    s16 event=actor->event; auto manager=dComIfGp_getPEvtManager();
-    if(gabi::call<BOOL>(0x0254407C,manager,event)) {
-        actor->action=(u8)((u8)actor->action+1);
-        manager=dComIfGp_getPEvtManager(); actor->staff=gabi::call<s32>(0x02542D88,manager,STR(0x10014980),0,0); demoProc(actor);
+static void debris(daMdoor_c* i_this) {
+    dComIfGp_particle_set(0x81B2, &i_this->current.pos, &i_this->current.angle, nullptr, 0xFF,
+                          nullptr, -1);
+}
+static void sound(daMdoor_c* i_this, u32 id, bool checkNull = false) {
+    if (checkNull && (!gabi::ea(i_this) || !(u32)(gabi::ea(i_this) + 0x37C)))
+        return;
+    s8 room = i_this->current.roomNo;
+    s32 reverb = dComIfGp_getReverb(room);
+    mDoAud_seStart(id, &i_this->eyePos, 0, reverb);
+}
+static void cutEnd(daMdoor_c* i_this) {
+    s32 staff = i_this->m2C0;
+    dComIfGp_evmng_cutEnd(staff);
+}
+static void move(daMdoor_c* i_this) {
+    i_this->calcMtx();
+    i_this->mpBgW->Move();
+}
+/* 021C1174 */
+void daMdoor_c::demoProc() {
+    s32 staff = m2C0;
+
+    u32 action = dComIfGp_evmng_getMyActIdx(staff, action_table.entries, 3, 0, 0);
+    staff = m2C0;
+
+    if (dComIfGp_evmng_getIsAddvance(staff)) {
+        if (action == 1) {
+            u16 flags = m2CA;
+            speedF = 0.0f;
+            m2CA = flags | 1;
+            sound(this, JA_SE_OBJ_CAGE_CLOSE);
+        } else if (action == 2) {
+            speedF = 0.0f;
+            if (getShapeType() != 1)
+                debris(this);
+            sound(this, JA_SE_OBJ_CAGE_OPEN);
+        }
+    }
+    if (action == 1) {
+        cLib_chaseF(&speedF, 60.0f, 6.0f);
+        if (cLib_chaseF(&m2CC, 0.0f, speedF)) {
+            cutEnd(this);
+            u16 flags = m2CA;
+            if (flags & 1) {
+                m2CA = flags & 0xFFFE;
+                if (getShapeType() != 1)
+                    debris(this);
+                smokeInit();
+            }
+        }
+        move(this);
+    } else if (action == 2) {
+        cLib_chaseF(&speedF, 30.0f, 3.0f);
+        if (cLib_chaseF(&m2CC, 280.0f, speedF))
+            cutEnd(this);
+        move(this);
+    } else
+        cutEnd(this);
+}
+/* 021C1418 */
+static BOOL daMdoor_actionDemoWait(daMdoor_c* i_this) {
+    s16 event = i_this->m2C6;
+
+    if (dComIfGp_evmng_startCheck(event)) {
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+
+        i_this->m2C0 = dComIfGp_evmng_getMyStaffId("Mori1", 0, 0);
+        i_this->demoProc();
     }
     return TRUE;
 }
-VERIFY(0x021C1418,actionDemoWait);
-static BOOL actionDemo(Act* actor) {
-    WWHD_FUNC(0x021C149C,BOOL,actor);
-    s16 event=actor->event; auto manager=dComIfGp_getPEvtManager();
-    if(gabi::call<BOOL>(0x025440C8,manager,event)) actor->action=(u8)((u8)actor->action+1);
-    else demoProc(actor);
+/* 021C149C */
+static BOOL daMdoor_actionDemo(daMdoor_c* i_this) {
+    s16 event = i_this->m2C6;
+
+    if (dComIfGp_evmng_endCheck(event))
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+    else
+        i_this->demoProc();
     return TRUE;
 }
-VERIFY(0x021C149C,actionDemo);
-static u8 getType(Act* actor) { WWHD_FUNC(0x021C1508,u8,actor); return (actor->mParameters>>8)&0xFF; }
-VERIFY(0x021C1508,getType);
-static void order(Act* actor) { s16 event=actor->event; u8 tool=actor->tool; gabi::call(0x025D7A58,actor,event,tool,0xFFFF,0,1); }
-static BOOL actionGenocide(Act* actor) {
-    WWHD_FUNC(0x021C1514,BOOL,actor);
-    if(!gabi::call<u32>(0x025D98E8,(s8)actor->current.roomNo)) {
-        s16 timer=actor->timer;
-        if(timer>0) actor->timer=(s16)(timer-1);
-        else { if(getType(actor)==1) gabi::call(0x025E1928); order(actor); actor->action=(u8)((u8)actor->action+1); }
-    }
-    return TRUE;
+/* 021C1508 */
+u8 daMdoor_c::getType() {
+    return (mParameters >> 8) & 0xFF;
 }
-VERIFY(0x021C1514,actionGenocide);
-static void resetEvent() { auto play=dComIfGp_get(); u32 address=gabi::ea(play)+0x52B8; gabi::store<u16>(address,gabi::load<u16>(address)|8); }
-static BOOL actionOpen(Act* actor) {
-    WWHD_FUNC(0x021C15B0,BOOL,actor);
-    s16 event=actor->event; auto manager=dComIfGp_getPEvtManager();
-    if(gabi::call<BOOL>(0x025440C8,manager,event)) { actor->action=(u8)((u8)actor->action+1); resetEvent(); return TRUE; }
-    s16 timer=actor->timer;
-    if(timer<0) return TRUE;
-    if(timer>0) {
-        timer=(s16)(timer-1); actor->timer=timer;
-        if(timer) return TRUE;
-        actor->speedF=0.0f; if(getShape(actor)!=1) debris(actor); sound(actor,0x697D,true);
-        if((s16)actor->timer!=0) return TRUE;
-    }
-    cLib_chaseF(&actor->speedF,30.0f,3.0f); cLib_chaseF(&actor->height,280.0f,actor->speedF); move(actor);
-    return TRUE;
+static void order(daMdoor_c* i_this) {
+    s16 event = i_this->m2C6;
+    u8 tool = i_this->m2C8;
+    fopAcM_orderOtherEventId(i_this, event, tool, 0xFFFF, 0, 1);
 }
-VERIFY(0x021C15B0,actionOpen);
-static u8 getSwitch(Act* actor) { WWHD_FUNC(0x021C1718,u8,actor); return (u8)actor->mParameters; }
-VERIFY(0x021C1718,getSwitch);
-static BOOL actionSwitch(Act* actor) {
-    WWHD_FUNC(0x021C1724,BOOL,actor);
-    u8 sw=getSwitch(actor); s8 room=actor->current.roomNo; u32 save=gabi::load<u32>(0x101F84DC);
-    if(gabi::call<BOOL>(0x025BA0C0,gabi::at<void>(save+0x20),sw,room)) { order(actor); actor->action=(u8)((u8)actor->action+1); }
-    return TRUE;
-}
-VERIFY(0x021C1724,actionSwitch);
-static BOOL actionReady(Act* actor) {
-    WWHD_FUNC(0x021C17A4,BOOL,actor);
-    if(gabi::load<u16>(gabi::ea(actor)+0xF8)==2) {
-        auto manager=dComIfGp_getPEvtManager(); actor->staff=gabi::call<s32>(0x02542D88,manager,STR(0x10014988),0,0); demoProc(actor);
-        actor->action=(u8)((u8)actor->action+1); u8 sw=getSwitch(actor);
-        if(sw!=0xFF) { u32 save=gabi::load<u32>(0x101F84DC); gabi::call(0x025BA0C0,gabi::at<void>(save+0x20),sw,(s8)actor->current.roomNo); }
-        if(getType(actor)==1) { u32 save=gabi::load<u32>(0x101F84DC); gabi::call(0x025B8B68,gabi::at<void>(save+0x644),0x1140); }
-    } else order(actor);
-    return TRUE;
-}
-VERIFY(0x021C17A4,actionReady);
-static BOOL actionReadyOpen(Act* actor) {
-    WWHD_FUNC(0x021C188C,BOOL,actor);
-    if(gabi::load<u16>(gabi::ea(actor)+0xF8)==2) {
-        actor->action=(u8)((u8)actor->action+1); u8 sw=getSwitch(actor);
-        if(sw!=0xFF) { u32 save=gabi::load<u32>(0x101F84DC); gabi::call(0x025BA0C0,gabi::at<void>(save+0x20),sw,(s8)actor->current.roomNo); }
-        actor->timer=20;
-    } else order(actor);
-    return TRUE;
-}
-VERIFY(0x021C188C,actionReadyOpen);
-static BOOL actionEvent(Act* actor) {
-    WWHD_FUNC(0x021C1924,BOOL,actor);
-    s16 event=actor->event; auto manager=dComIfGp_getPEvtManager();
-    if(gabi::call<BOOL>(0x025440C8,manager,event)) { actor->action=(u8)((u8)actor->action+1); resetEvent(); }
-    else demoProc(actor);
-    return TRUE;
-}
-VERIFY(0x021C1924,actionEvent);
-static BOOL draw(Act* actor) {
-    WWHD_FUNC(0x021C19A0,BOOL,actor);
-    auto light=dKy_getEnvlight(); settingTevStruct(light,1,&actor->current.pos,&actor->tevStr);
-    light=dKy_getEnvlight(); setLightTevColorType(light,actor->model,&actor->tevStr); mDoExt_modelUpdateDL(actor->model); return TRUE;
-}
-VERIFY(0x021C19A0,draw);
-static void smokeEnd(Act* actor) { WWHD_FUNC(0x021C19FC,void,actor); gabi::call(0x025A5F88,gabi::at<void>(gabi::ea(actor)+0x3AC)); }
-VERIFY(0x021C19FC,smokeEnd);
-static BOOL execute(Act* actor) {
-    WWHD_FUNC(0x021C1A04,BOOL,actor);
-    smokeEnd(actor);
-    if(!gabi::load<u32>(0x101FDAF8)) { gabi::store<u32>(0x101FDAF8,1); memcpy_g(gabi::at<void>(0x101FDAFC),gabi::at<void>(0x101BA39C),64); }
-    u8 action=actor->action; gabi::call_ptr(gabi::load<u32>(0x101FDAFC+(u32)action*4),actor); return TRUE;
-}
-VERIFY(0x021C1A04,execute);
-static BOOL isDelete(Act* actor) { WWHD_FUNC(0x021C1A88,BOOL,actor); return TRUE; }
-VERIFY(0x021C1A88,isDelete);
-static BOOL remove(Act* actor) {
-    WWHD_FUNC(0x021C1A90,BOOL,actor);
-    if(actor->heap) { auto space=dComIfG_Bgsp(); gabi::call(0x020087EC,space,(dBgW*)actor->background); }
-    smokeEnd(actor); dComIfG_resDelete(&actor->phase,STR(0x100149E0)); return TRUE;
-}
-VERIFY(0x021C1A90,remove);
-static u8 getTool(Act* actor) { WWHD_FUNC(0x021C1AF0,u8,actor); return (actor->mParameters>>16)&0xFF; }
-VERIFY(0x021C1AF0,getTool);
-static void raiseAttention(Act* actor) {
-    f32 attention=gabi::load<f32>(gabi::ea(actor)+0x394),eye=actor->eyePos.y;
-    gabi::store<f32>(gabi::ea(actor)+0x394,attention+150.0f); actor->eyePos.y=eye+150.0f;
-}
-static BOOL createInit(Act* actor) {
-    WWHD_FUNC(0x021C1AFC,BOOL,actor);
-    u8 sw=getSwitch(actor),type=getType(actor); auto space=dComIfG_Bgsp();
-    if(gabi::call<BOOL>(0x024EEA6C,space,(dBgW*)actor->background,actor)) JUT_ASSERT_fail(STR(0x100149AC),0xEC,STR(0x1001499C));
-    s8 room=actor->current.roomNo; actor->height=0.0f; actor->tevStr.mRoomNo=room; actor->tool=0xFF;
-    if(type==0) {
-        u32 save=gabi::load<u32>(0x101F84DC); bool done=gabi::call<BOOL>(0x025B8B94,gabi::at<void>(save+0x644),0x1101);
-        if(done) actor->action=3; else { actor->height=280.0f; actor->action=1; }
-        auto manager=dComIfGp_getPEvtManager(); s16 event=gabi::call<s16>(0x02543F10,manager,STR(0x100149A0),0xFF); actor->event=event;
-    } else if(type==1) {
-        u32 save=gabi::load<u32>(0x101F84DC);
-        if(gabi::call<BOOL>(0x025B8B94,gabi::at<void>(save+0x644),0x1101)) { actor->action=7; actor->height=280.0f; }
+/* 021C1514 */
+static BOOL daMdoor_actionGenocide(daMdoor_c* i_this) {
+    if (!mdoorSearchEnemy((s8)i_this->current.roomNo)) {
+        s16 timer = i_this->m2C4;
+        if (timer > 0)
+            i_this->m2C4 = (s16)(timer - 1);
         else {
-            save=gabi::load<u32>(0x101F84DC); gabi::call(0x025B8B7C,gabi::at<void>(save+0x644),0x1140); actor->action=4;
-            auto manager=dComIfGp_getPEvtManager(); s16 event=gabi::call<s16>(0x02543F10,manager,STR(0x100149BC),0xFF); actor->timer=1; actor->event=event;
+            if (i_this->getType() == 1)
+                mDoAud_subBgmStop();
+            order(i_this);
+            i_this->mAction = (u8)((u8)i_this->mAction + 1);
         }
-    } else if(type==2) {
-        bool done=sw==0xFF;
-        if(!done) { u32 save=gabi::load<u32>(0x101F84DC); done=gabi::call<BOOL>(0x025BA0C0,gabi::at<void>(save+0x20),sw,(s8)actor->current.roomNo); }
-        if(done) { actor->action=11; actor->height=280.0f; }
-        else {
-            actor->tool=getTool(actor); u8 tool=getTool(actor); auto manager=dComIfGp_getPEvtManager();
-            s16 event=gabi::call<s16>(0x02543F10,manager,STR(0x100149BC),tool); u8 savedTool=actor->tool; actor->event=event; actor->action=savedTool==0xFF?8:12;
-        }
-    } else actor->action=0;
-    raiseAttention(actor); move(actor); return TRUE;
-}
-VERIFY(0x021C1AFC,createInit);
-static s32 create(Act* actor) {
-    WWHD_FUNC(0x021C1E8C,s32,actor);
-    s32 phase=dComIfG_resLoad(&actor->phase,STR(0x100149E0)); u32 condition=actor->actor_condition;
-    if(!(condition&8)) {
-        if(actor) { gabi::call(0x025D4ED0,actor); actor->__vtbl=0x1001490C; gabi::call(0x025A5B18,gabi::at<void>(gabi::ea(actor)+0x3AC),1); condition=actor->actor_condition; }
-        actor->actor_condition=condition|8;
     }
-    if(phase!=4) return phase;
-    if(!fopAcM_entrySolidHeap(actor,0x021C10B8,0x1640)) return 5;
-    createInit(actor); return 4;
+    return TRUE;
 }
-VERIFY(0x021C1E8C,create);
-static s32 createWrapper(Act* actor) { WWHD_FUNC(0x021C1F60,s32,actor); return create(actor); }
-VERIFY(0x021C1F60,createWrapper);
-static void sinit() { WWHD_FUNC(0x021C1F64,void,(u32)0); sinit_header_statics_z(0x10464FA0,0x101BA408,0x10464FAC); }
-VERIFY(0x021C1F64,sinit);
-static void stringDtor(void* p,s32 flags) { WWHD_FUNC(0x021C1FF8,void,p,flags); if(p && (flags&1)) operator_delete(p); }
-VERIFY(0x021C1FF8,stringDtor);
-static void actorDtor(Act* actor,s32 flags) { WWHD_FUNC(0x021C200C,void,actor,flags); if(actor) { gabi::call(0x025D50BC,actor,0); if(flags&1) operator_delete(actor); } }
-VERIFY(0x021C200C,actorDtor);
-static void stringTerminate(void* p) { WWHD_FUNC(0x021C2060,void,p); }
-VERIFY(0x021C2060,stringTerminate);
+static void resetEvent() {
+    dComIfGp_event_reset();
 }
+/* 021C15B0 */
+static BOOL daMdoor_actionOpen(daMdoor_c* i_this) {
+    s16 event = i_this->m2C6;
+
+    if (dComIfGp_evmng_endCheck(event)) {
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+        resetEvent();
+        return TRUE;
+    }
+    s16 timer = i_this->m2C4;
+    if (timer < 0)
+        return TRUE;
+    if (timer > 0) {
+        timer = (s16)(timer - 1);
+        i_this->m2C4 = timer;
+        if (timer)
+            return TRUE;
+        i_this->speedF = 0.0f;
+        if (i_this->getShapeType() != 1)
+            debris(i_this);
+        sound(i_this, JA_SE_OBJ_CAGE_OPEN, true);
+        if ((s16)i_this->m2C4 != 0)
+            return TRUE;
+    }
+    cLib_chaseF(&i_this->speedF, 30.0f, 3.0f);
+    cLib_chaseF(&i_this->m2CC, 280.0f, i_this->speedF);
+    move(i_this);
+    return TRUE;
+}
+/* 021C1718 */
+u8 daMdoor_c::getSwbit() {
+    return (u8)mParameters;
+}
+/* 021C1724 */
+static BOOL daMdoor_actionSwitch(daMdoor_c* i_this) {
+    u8 sw = i_this->getSwbit();
+    s8 room = i_this->current.roomNo;
+    dSv_info_c* save = dComIfGs_info();
+    if (save->isSwitch(sw, room)) {
+        order(i_this);
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+    }
+    return TRUE;
+}
+/* 021C17A4 */
+static BOOL daMdoor_actionReady(daMdoor_c* i_this) {
+    if ((u16)i_this->eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+
+        i_this->m2C0 = dComIfGp_evmng_getMyStaffId("SHUTTER_DOOR", 0, 0);
+        i_this->demoProc();
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+        u8 sw = i_this->getSwbit();
+        if (sw != 0xFF) {
+            dSv_info_c* save = dComIfGs_info();
+            save->isSwitch(sw, (s8)i_this->current.roomNo);
+        }
+        if (i_this->getType() == 1) {
+            dSv_info_c* save = dComIfGs_info();
+            save->mSavedata.mEvent.onEventBit(0x1140);
+        }
+    } else
+        order(i_this);
+    return TRUE;
+}
+/* 021C188C */
+static BOOL daMdoor_actionReadyOpen(daMdoor_c* i_this) {
+    if ((u16)i_this->eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+        u8 sw = i_this->getSwbit();
+        if (sw != 0xFF) {
+            dSv_info_c* save = dComIfGs_info();
+            save->isSwitch(sw, (s8)i_this->current.roomNo);
+        }
+        i_this->m2C4 = 20;
+    } else
+        order(i_this);
+    return TRUE;
+}
+/* 021C1924 */
+static BOOL daMdoor_actionEvent(daMdoor_c* i_this) {
+    s16 event = i_this->m2C6;
+
+    if (dComIfGp_evmng_endCheck(event)) {
+        i_this->mAction = (u8)((u8)i_this->mAction + 1);
+        resetEvent();
+    } else
+        i_this->demoProc();
+    return TRUE;
+}
+/* 021C19A0 */
+static BOOL daMdoor_Draw(daMdoor_c* i_this) {
+    auto light = dKy_getEnvlight();
+    settingTevStruct(light, 1, &i_this->current.pos, &i_this->tevStr);
+    light = dKy_getEnvlight();
+    setLightTevColorType(light, i_this->mpModel, &i_this->tevStr);
+    mDoExt_modelUpdateDL(i_this->mpModel);
+    return TRUE;
+}
+/* 021C19FC */
+void daMdoor_c::smokeEnd() {
+    m290.end();
+}
+/* 021C1A04 */
+static BOOL daMdoor_Execute(daMdoor_c* i_this) {
+    i_this->smokeEnd();
+    if (!actionInitialized) {
+        actionInitialized = 1;
+        mdoorCopyActions(&l_action, &initial_actions, sizeof(initial_actions));
+    }
+    u8 action = i_this->mAction;
+    gabi::call_ptr(l_action.entries[action], i_this);
+    return TRUE;
+}
+/* 021C1A88 */
+static BOOL daMdoor_IsDelete(daMdoor_c* i_this) {
+    return TRUE;
+}
+/* 021C1A90 */
+static BOOL daMdoor_Delete(daMdoor_c* i_this) {
+    if (i_this->heap) {
+        auto space = dComIfG_Bgsp();
+        space->Release(i_this->mpBgW);
+    }
+    i_this->smokeEnd();
+    dComIfG_resDelete(&i_this->mPhase, "Mdoor");
+    return TRUE;
+}
+/* 021C1AF0 */
+u8 daMdoor_c::getToolId() {
+    return (mParameters >> 16) & 0xFF;
+}
+static void raiseAttention(daMdoor_c* i_this) {
+    f32 attention = (f32)i_this->attention_info.position.y, eye = i_this->eyePos.y;
+    i_this->attention_info.position.y = attention + 150.0f;
+    i_this->eyePos.y = eye + 150.0f;
+}
+/* 021C1AFC */
+BOOL daMdoor_c::CreateInit() {
+    u8 sw = getSwbit(), type = getType();
+    auto space = dComIfG_Bgsp();
+    if (space->Regist(mpBgW, this))
+        JUT_ASSERT_fail("d_a_mdoor.cpp", 0xEC, "0");
+    s8 room = current.roomNo;
+    m2CC = 0.0f;
+    tevStr.mRoomNo = room;
+    m2C8 = 0xFF;
+    if (type == 0) {
+        dSv_info_c* save = dComIfGs_info();
+        bool done = save->mSavedata.mEvent.isEventBit(0x1101);
+        if (done)
+            mAction = ACT_WAIT3_e;
+        else {
+            m2CC = 280.0f;
+            mAction = ACT_DEMO_WAIT_e;
+        }
+
+        s16 event = dComIfGp_evmng_getEventIdx("MORI1_EVENT", 0xFF);
+        m2C6 = event;
+    } else if (type == 1) {
+        dSv_info_c* save = dComIfGs_info();
+        if (save->mSavedata.mEvent.isEventBit(0x1101)) {
+            mAction = ACT_WAIT7_e;
+            m2CC = 280.0f;
+        } else {
+            save = dComIfGs_info();
+            mdoorOffEventBit(&save->mSavedata.mEvent, 0x1140);
+            mAction = ACT_GENOCIDE_e;
+
+            s16 event = dComIfGp_evmng_getEventIdx("DEFAULT_STOP_OPEN", 0xFF);
+            m2C4 = 1;
+            m2C6 = event;
+        }
+    } else if (type == 2) {
+        bool done = sw == 0xFF;
+        if (!done) {
+            dSv_info_c* save = dComIfGs_info();
+            done = save->isSwitch(sw, (s8)current.roomNo);
+        }
+        if (done) {
+            mAction = ACT_WAIT11_e;
+            m2CC = 280.0f;
+        } else {
+            m2C8 = getToolId();
+            u8 tool = getToolId();
+
+            s16 event = dComIfGp_evmng_getEventIdx("DEFAULT_STOP_OPEN", tool);
+            u8 savedTool = m2C8;
+            m2C6 = event;
+            mAction = savedTool == 0xFF ? ACT_SWITCH8_e : ACT_SWITCH12_e;
+        }
+    } else
+        mAction = ACT_WAIT0_e;
+    raiseAttention(this);
+    move(this);
+    return TRUE;
+}
+/* 021C1E8C */
+s32 daMdoor_c::create() {
+    s32 phase = dComIfG_resLoad(&mPhase, "Mdoor");
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (this) {
+            mdoorActorConstruct(this);
+            __vtbl = __vt;
+            __ct(&m290, 1);
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
+    }
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)CheckCreateHeap), 0x1640))
+        return cPhs_ERROR_e;
+    CreateInit();
+    return cPhs_COMPLEATE_e;
+}
+/* 021C1F60 */
+static s32 daMdoor_Create(daMdoor_c* i_this) {
+    return i_this->create();
+}
+/* 021C1F64 */
+// HD: compiler-generated and template code of this translation unit.
+static void __sinit_d_a_mdoor_cpp() {
+    __sinit_header_statics();
+}
+/* 021C1FF8 */
+static void SafeString_dtor(void* p, s32 flags) {
+    if (p && (flags & 1))
+        operator_delete(p);
+}
+/* 021C200C */
+static void daMdoor_c_dtor(daMdoor_c* i_this, s32 flags) {
+    if (i_this) {
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
+    }
+}
+/* 021C2060 */
+static void SafeString_assureTerminationImpl(void* p) {
+}
+/* WWHD glue
+ext C000A848 void mdoorCopyActions(void*, const void*, u32)
+ext 025B8B7C void mdoorOffEventBit(dSv_event_c*, u16)
+ext 025D4ED0 void mdoorActorConstruct(fopAc_ac_c*)
+ext 026066C4 void* mdoorGetResource(dRes_control_c*, SafeString*, s32)
+ext 0200A030 BOOL mdoorSetBackground(dBgW*, cBgD_t*, u32, Mtx34*)
+ext 025D98E8 u32 mdoorSearchEnemy(s8)
+ext 025E1928 void mDoAud_subBgmStop()
+data action_table 101BA3FC
+data actionInitialized 101FDAF8
+data l_action 101FDAFC
+data initial_actions 101BA39C
+str 1001491C "d_a_mdoor.cpp" in 021C0F70
+str 1001492C "modelData != NULL"
+str 10014980 "Mori1"
+str 10014988 "SHUTTER_DOOR"
+str 100149AC "d_a_mdoor.cpp" in 021C1AFC
+str 1001499C "0"
+str 100149A0 "MORI1_EVENT"
+str 100149BC "DEFAULT_STOP_OPEN"
+str 100149E0 "Mdoor"
+*/

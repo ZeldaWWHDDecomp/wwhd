@@ -12,6 +12,7 @@
 #include "d/actor/d_a_itembase.h"
 
 struct daItem_c : daItemBase_c {
+    typedef void (daItem_c::*ModeFunc)();
     enum Status {
         STATUS_UNK0 = 0x0,
         STATUS_UNK1 = 0x1,
@@ -35,13 +36,24 @@ struct daItem_c : daItemBase_c {
         FLAG_HOOK = 0x40,
     };
     enum Mode { MODE_WAIT = 0x0, MODE_WATER = 0x2 };
+    // HD: the thrown pickup launches, bounces and either splashes or vanishes.
+    enum ThrownItemState {
+        THROWN_WAIT,
+        THROWN_LAUNCH,
+        THROWN_FLY,
+        THROWN_VANISH,
+        THROWN_SMOKE,
+        THROWN_DELETE,
+        THROWN_SPLASH,
+        THROWN_FLOAT,
+    };
 
     /* 0x750 */ cXyz mScaleTarget;
     /* 0x75C */ be<s32> mSpawnSwitchNo;
     /* 0x760 */ be<s32> mCollideSwitchNo;
-    /* 0x764 */ be<f32> field_0x650;       /* the last non-zero speed.y */
-    /* 0x768 */ be<f32> mHD768;
-    /* 0x76C */ be<s16> mHDRotY;           /* HD: added to the Y rotation of the model */
+    /* 0x764 */ be<f32> field_0x650; /* the last non-zero speed.y */
+    /* 0x768 */ be<f32> mWaterAcceleration;
+    /* 0x76C */ be<s16> mHDRotY; /* HD: added to the Y rotation of the model */
     /* 0x76E */ be<s16> mRotateSpeed;
     /* 0x770 */ be<s16> mTargetAngleX;
     /* 0x772 */ be<s16> mWaitTimer;
@@ -57,19 +69,19 @@ struct daItem_c : daItemBase_c {
     /* 0x784 */ be<u8> mMode;
     /* 0x785 */ be<u8> mItemStatus;
     /* 0x786 */ be<u8> mOnGroundTimer;
-    /* 0x787 */ be<u8> mHD787;
-    /* 0x788 */ be<u8> mHD788;
+    /* 0x787 */ be<u8> mThrownItemState;
+    /* 0x788 */ be<u8> mThrownItemTimer;
     /* 0x789 */ u8 _789[3];
-    /* 0x78C */ cXyz mHDTargetPos;         /* HD action 0xD: where the item flies to */
+    /* 0x78C */ cXyz mHDTargetPos; /* HD action 0xD: where the item flies to */
     /* 0x798 */ be<f32> mHDTargetSpeedF;
-    /* 0x79C */ be<u8> mHD79C;
-    /* 0x79D */ be<u8> mHD79D;
-    /* 0x79E */ be<u8> mHD79E;             /* HD action 0xF */
+    /* 0x79C */ be<u8> mGroundAboveWater;
+    /* 0x79D */ be<u8> mWaterFloatInitialized;
+    /* 0x79E */ be<u8> mNoCollect; /* HD action 0xF */
     /* 0x79F */ u8 _79F;
     /* 0x7A0 */ be<u32> mDemoItemBsPcId;
-    /* 0x7A4 */ u8 mPtclRippleCb[0x14];    /* dPa_rippleEcallBack */
+    /* 0x7A4 */ u8 mPtclRippleCb[0x14]; /* dPa_rippleEcallBack */
     /* 0x7B8 */ dPa_followEcallBack mPtclFollowCb;
-    /* 0x7CC */ u8 mPtclSmokeCb[0x20];     /* dPa_smokeEcallBack (vtable at +0) */
+    /* 0x7CC */ u8 mPtclSmokeCb[0x20]; /* dPa_smokeEcallBack (vtable at +0) */
     /* 0x7EC */ gptr<JPABaseEmitter> mpParticleEmitter;
 
     void setFlag(u8 flag) { mFlag = mFlag | flag; }
@@ -78,7 +90,7 @@ struct daItem_c : daItemBase_c {
 
     f32 getYOffset();
     void set_mtx();
-    void set_mtx_base(J3DModel*, cXyz*, csXyz*);
+    void set_mtx_base(J3DModel *, cXyz *, csXyz *);
     void CreateInit();
     cPhs_State _daItem_create();
     BOOL _daItem_execute();
@@ -109,9 +121,9 @@ struct daItem_c : daItemBase_c {
     BOOL itemActionForArrow();
     void checkWall();
     void set_bound_se();
-    void checkHD14Delete();
+    void checkTingleBottleDelete();
     void waterFloat();
-    BOOL itemActionForHD13();
+    BOOL itemActionForThrownItem();
     BOOL checkGetItem();
     BOOL timeCount();
     void mode_wait_init();
@@ -137,13 +149,13 @@ WWHD_OFFSET(daItem_c, mpParticleEmitter, 0x7EC);
 WWHD_SIZE(daItem_c, 0x7F0);
 
 namespace daItem_prm {
-inline u32 getType(daItem_c* i_this) { return (fopAcM_GetParam(i_this) & 0x03000000) >> 0x18; }
-inline u32 getAction(daItem_c* i_this) { return (fopAcM_GetParam(i_this) & 0xFC000000) >> 0x1A; }
-inline u32 getItemNo(daItem_c* i_this) { return (fopAcM_GetParam(i_this) & 0x000000FF) >> 0x00; }
-inline u32 getItemBitNo(daItem_c* i_this) { return (fopAcM_GetParam(i_this) & 0x0000FF00) >> 0x08; }
-inline u32 getSwitchNo(daItem_c* i_this) { return (i_this->home.angle.z & 0x00FF) >> 0; }
-inline u32 getSwitchNo2(daItem_c* i_this) { return (fopAcM_GetParam(i_this) & 0x00FF0000) >> 0x10; }
-}  // namespace daItem_prm
+inline u32 getType(daItem_c *i_this) { return (fopAcM_GetParam(i_this) & 0x03000000) >> 0x18; }
+inline u32 getAction(daItem_c *i_this) { return (fopAcM_GetParam(i_this) & 0xFC000000) >> 0x1A; }
+inline u32 getItemNo(daItem_c *i_this) { return (fopAcM_GetParam(i_this) & 0x000000FF) >> 0x00; }
+inline u32 getItemBitNo(daItem_c *i_this) { return (fopAcM_GetParam(i_this) & 0x0000FF00) >> 0x08; }
+inline u32 getSwitchNo(daItem_c *i_this) { return (i_this->home.angle.z & 0x00FF) >> 0; }
+inline u32 getSwitchNo2(daItem_c *i_this) { return (fopAcM_GetParam(i_this) & 0x00FF0000) >> 0x10; }
+} // namespace daItem_prm
 
 /* daItemBase_c::m_data (this TU's copy, .rodata 0x100121B0) */
 struct daItemBase_c_m_data {
@@ -173,4 +185,156 @@ struct daItemBase_c_m_data {
     /* 0x48 */ be<f32> mVelocityScale;
 };
 WWHD_SIZE(daItemBase_c_m_data, 0x4C);
-inline const daItemBase_c_m_data* daItem_getData() { return gabi::at<daItemBase_c_m_data>(0x100121B0); }
+const daItemBase_c_m_data *daItem_getData();
+
+// HD: private views of the item code's emitter, callback and save-data prefixes.
+struct ItemEmitter {
+    u8 pad0[0x5C];
+    be<s32> mMaxFrame;
+    u8 pad60[0x22C - 0x60];
+    cXyz mGlobalTranslation;
+    u8 pad238[0x254 - 0x238];
+    be<u32> mFlags;
+    u8 pad258[10];
+    be<u8> mVersion;
+};
+WWHD_OFFSET(ItemEmitter, mMaxFrame, 0x5C);
+WWHD_OFFSET(ItemEmitter, mGlobalTranslation, 0x22C);
+WWHD_OFFSET(ItemEmitter, mFlags, 0x254);
+WWHD_OFFSET(ItemEmitter, mVersion, 0x262);
+WWHD_SIZE(ItemEmitter, 0x263);
+struct ItemCallbackVtable {
+    u8 pad0[0x44];
+    be<u32> mRemove;
+};
+WWHD_OFFSET(ItemCallbackVtable, mRemove, 0x44);
+WWHD_SIZE(ItemCallbackVtable, 0x48);
+struct ItemCallback {
+    gptr<ItemCallbackVtable> mVtable;
+};
+WWHD_SIZE(ItemCallback, 4);
+struct ItemBaseVtable {
+    u8 pad0[0x14];
+    be<u32> mDrawBase;
+};
+WWHD_OFFSET(ItemBaseVtable, mDrawBase, 0x14);
+WWHD_SIZE(ItemBaseVtable, 0x18);
+struct ItemPlayerVtable {
+    u8 pad0[0xE4];
+    be<u32> mItemAction;
+};
+WWHD_OFFSET(ItemPlayerVtable, mItemAction, 0xE4);
+WWHD_SIZE(ItemPlayerVtable, 0xE8);
+struct ItemSave {
+    u8 pad0[0x20];
+    be<u8> mSave;
+    u8 pad21[0x598 - 0x21];
+    be<u8> mMemory;
+    u8 pad599[0x12C0 - 0x599];
+    be<u8> mGameMode;
+};
+WWHD_OFFSET(ItemSave, mSave, 0x20);
+WWHD_OFFSET(ItemSave, mMemory, 0x598);
+WWHD_OFFSET(ItemSave, mGameMode, 0x12C0);
+WWHD_SIZE(ItemSave, 0x12C1);
+struct ItemCollisionActor {
+    u8 pad0[0xE];
+    be<s16> mName;
+};
+WWHD_OFFSET(ItemCollisionActor, mName, 0xE);
+WWHD_SIZE(ItemCollisionActor, 0x10);
+struct ItemTevColors {
+    u8 pad0[0x90];
+    GXColorS10 mColorC0;
+    GXColor mColorK0;
+};
+WWHD_OFFSET(ItemTevColors, mColorC0, 0x90);
+WWHD_OFFSET(ItemTevColors, mColorK0, 0x98);
+WWHD_SIZE(ItemTevColors, 0x9C);
+struct ItemBottleState {
+    u8 pad0[0x4FD4];
+    be<u8> mDeleteBottle;
+};
+WWHD_OFFSET(ItemBottleState, mDeleteBottle, 0x4FD4);
+WWHD_SIZE(ItemBottleState, 0x4FD5);
+struct ItemThrowFrame {
+    u8 pad0[0x20];
+    cXyz mLanding;
+};
+WWHD_OFFSET(ItemThrowFrame, mLanding, 0x20);
+WWHD_SIZE(ItemThrowFrame, 0x2C);
+struct ItemRipple {
+    u8 pad0[0x10];
+    be<f32> mRate;
+};
+WWHD_OFFSET(ItemRipple, mRate, 0x10);
+WWHD_SIZE(ItemRipple, 0x14);
+struct ItemInfo {
+    be<u8> mShadowSize, mHeight, mRadius, mFlags;
+};
+WWHD_SIZE(ItemInfo, 4);
+struct ItemFieldResource {
+    gptr<const be<u8>> mArcName;
+    u8 pad4[0x18 - 4];
+    be<u16> mHeapSize;
+    u8 pad1A[2];
+};
+WWHD_OFFSET(ItemFieldResource, mHeapSize, 0x18);
+WWHD_SIZE(ItemFieldResource, 0x1C);
+
+struct ItemInfoTable {
+    ItemInfo mItems[256];
+};
+WWHD_SIZE(ItemInfoTable, 0x400);
+struct ItemResourceTable {
+    ItemFieldResource mItems[256];
+};
+WWHD_SIZE(ItemResourceTable, 0x1C00);
+struct ItemBoundSounds {
+    be<u16> mSound[15];
+};
+WWHD_SIZE(ItemBoundSounds, 30);
+struct ItemArrowSounds {
+    be<u16> mSound[20];
+};
+WWHD_SIZE(ItemArrowSounds, 40);
+
+struct ItemBottleGlobal {
+    gptr<ItemBottleState> mpState;
+};
+WWHD_SIZE(ItemBottleGlobal, 4);
+struct ItemWaterGlobal {
+    gptr<be<u8>> mpState;
+};
+WWHD_SIZE(ItemWaterGlobal, 4);
+struct ItemModeEntry {
+    gabi::ptmf<daItem_c::ModeFunc> mProc;
+};
+WWHD_SIZE(ItemModeEntry, 8);
+
+struct dEvent_manager_c;
+s16 itemTargetAngleYHD(cXyz *from, cXyz *to);
+void fopAcM_addAngleY(fopAc_ac_c *actor, s16 target, s16 step);
+void fopAcM_orderItemEvent(fopAc_ac_c *actor, u16 param);
+u32 fopAcM_createItemForPresentDemo(cXyz *pos, s32 itemNo, u8 flag, s32 bitNo, s32 roomNo,
+                                    csXyz *angle, cXyz *scale);
+BOOL itemEndCheckOld(dEvent_manager_c *manager, const char *name);
+BOOL checkSpecialEffect(u8 itemNo);
+u16 getSpecialEffect(u8 itemNo);
+void mDoAud_seStart_id(u32 id);
+void mDoAud_seStartName(const char *name);
+void itemClearCoHit(dCcD_Cyl *cyl);
+void itemOnSwitch(be<u8> *memory, s32 bit);
+void itemOnItem(be<u8> *save, s32 bit, s32 room);
+void cXyz_normalize(const cXyz *vector, cXyz *result);
+BOOL itemCheckQuake(dDetect_c *detect, cXyz *pos);
+void itemDestroyCheck(dBgS_GndChk *check, s32 flags);
+BOOL itemWaterPositionTest(be<u8> *state, cXyz *pos);
+BOOL itemCheckAppearEffect(u8 itemNo);
+u16 itemGetAppearEffect(u8 itemNo);
+f32 itemStickValue(s32 port);
+void itemRippleCtor(void *callback);
+void itemSmokeCtor(void *callback, s32 mode);
+u32 itemGetGameMode(be<u8> *save);
+BOOL itemDisallowHearts(u32 mode);
+void itemBaseDestructor(daItem_c *item, s32 flags);

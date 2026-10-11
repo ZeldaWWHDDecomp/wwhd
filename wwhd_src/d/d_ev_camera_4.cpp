@@ -1,171 +1,235 @@
-/* d_ev_camera, part 4: event cameras on point lists (fixedFrames, bSpline). See d_ev_camera.cpp for the unit's layout notes; written from the WWHD
- * code (the GameCube d_ev_camera.cpp is all "Nonmatching" stubs). */
-#include "bindings.h"
+#include "d/d_ev_camera_4.h"
+#include "gc_api/d/d_com_inf_game.h"
 
-namespace d_ev_camera_4_cpp {
+namespace event_camera_lists {
+static EventString fixedCenters;
+static EventString fixedEyes;
+static EventString fixedFovys;
+static EventString fixedTimer;
+static EventString relativeMask;
+static EventString relativeDefault;
+static EventString relativeActor;
+static EventString fixedFile;
+static EventString fixedCentersAssert;
+static EventString fixedEyesAssert;
+static EventString fixedFovysAssert;
+static EventString splineCenters;
+static EventString splineEyes;
+static EventString splineFovys;
+static EventString splineTimer;
+static EventString splineFile;
+static EventString splineCentersAssert;
+static EventString splineEyesAssert;
+static EventString splineFovysAssert;
+static f32 cameraCollisionRadius;
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
+static s32 substanceNum(dCamera_c* camera, const char* name) {
+    s32 staff = camera->mEventData.mStaffIdx;
+    return dComIfGp_evmng_getMySubstanceNum(staff, name);
 }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline s32 substanceNum(u32 c, u32 name) {
-    s32 staff = (s32)ld(c + 0x400);
-    return gabi::call<s32>(0x025448CC, gi() + 0x52C4, staff, name);
+static void* substanceP(dCamera_c* camera, const char* name, s32 type) {
+    s32 staff = camera->mEventData.mStaffIdx;
+    return dComIfGp_evmng_getMySubstanceP(staff, name, type);
 }
-static inline u32 substanceP(u32 c, u32 name, s32 type) {
-    s32 staff = (s32)ld(c + 0x400);
-    return gabi::call<u32>(0x0254487C, gi() + 0x52C4, staff, name, type);
+static void copyPoint(cXyz* destination, const cXyz* source) {
+    // HD: preserve the interleaved integer loads and stores, including NaN payloads.
+    auto* out = reinterpret_cast<VectorWords*>(destination);
+    auto* in = reinterpret_cast<const VectorWords*>(source);
+    out->x = in->x;
+    out->y = in->y;
+    out->z = in->z;
 }
-static inline u32 JUT_ASSERT_l(u32 file, s32 line, u32 msg) { return gabi::call<u32>(0x0273AA24, file, line, msg); }
-static inline u32 getEvIntData2(u32 c, u32 out, u32 name) { return gabi::call<u32>(0x02530418, c, out, name); }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline u32 getEvStringData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x02530998, c, out, name, def); }
-static inline u32 getEvActor(u32 c, u32 name) { return gabi::call<u32>(0x02530B84, c, name); }
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline bool lineBGCheck(u32 c, u32 a, u32 b, u32 flags) { return gabi::call<bool>(0x024FCBE8, c, a, b, flags); }
-static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
+static void SkipSmoother(dCamera_c* camera) {
+    camera->m102 = 1;
+    camera->m101 = 1;
+    camera->m100 = 1;
 }
-static inline void setViewFromWork(u32 c, u32 ctr, u32 eye, u32 fovy) {
-    gabi::Local<cXyz> d;
-    u32 dd = gabi::ea(d.get());
-    copy3(c + 0x44, ctr);
-    copy3(c + 0x50, eye);
-    stf(c + 0x60, ldf(fovy));
-    gabi::call(0x0201ADE0, c + 0x50, dd, c + 0x44); /* cXyz::operator- */
-    gabi::call(0x020072E0, c + 0x3C, dd);           /* cSGlobe::Val */
+/* inlined into fixedFramesEvCamera */
+static void setViewFromWork(dCamera_c* camera, FixedFramesWork* work) {
+    cXyz direction;
+    copyPoint(&camera->mViewCache.mCenter, &work->mCenter);
+    copyPoint(&camera->mViewCache.mEye, &work->mEye);
+    camera->mViewCache.mFovy = work->mFovy;
+    cameraListSubtract(&camera->mViewCache.mEye, &direction, &camera->mViewCache.mCenter);
+    cSGlobe_Val(&camera->mViewCache.mDirection, &direction);
 }
 
-/* 0253A268: fixedFramesEvCamera: the first of the listed frames (Centers/Eyes/Fovys) whose line of
- * sight is clear. work: +0 timer set, +4 centre, +0x10 eye, +0x1C Eyes, +0x20 Centers, +0x24 Fovys,
- * +0x28 fovy, +0x2C RelActor, +0x30 RelUseMask, +0x34 Timer, +0x38 frame count */
-static u32 dCamera_c_fixedFramesEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253A268, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        st(w + 0x38, 9999);
-        s32 n = substanceNum(i_this, 0x1004D3D4 /* "Centers" */);
-        if (n == 0) return 1;
-        u32 p = substanceP(i_this, 0x1004D3D4, 1);
-        s32 m = (s32)ld(w + 0x38);
-        st(w + 0x20, p);
-        if (m > n) st(w + 0x38, (u32)n);
-        n = substanceNum(i_this, 0x1004D3EC /* "Eyes" */);
-        if (n == 0) return 1;
-        p = substanceP(i_this, 0x1004D3EC, 1);
-        m = (s32)ld(w + 0x38);
-        st(w + 0x1C, p);
-        if (m > n) st(w + 0x38, (u32)n);
-        n = substanceNum(i_this, 0x1004D3DC /* "Fovys" */);
-        if (n == 0) return 1;
-        p = substanceP(i_this, 0x1004D3DC, 0);
-        m = (s32)ld(w + 0x38);
-        st(w + 0x24, p);
-        if (m > n) st(w + 0x38, (u32)n);
-        st8(w + 0, (u8)getEvIntData(i_this, w + 0x34, 0x1004D3E4 /* "Timer" */, 1));
-        getEvStringData(i_this, w + 0x30, 0x1004D438 /* "RelUseMask" */, 0x1004D3F4 /* "oo" */);
-        u32 a = getEvActor(i_this, 0x1004D444 /* "RelActor" */);
-        u32 cs = ld(w + 0x20);
-        st(w + 0x2C, a);
-        if (cs == 0) JUT_ASSERT_l(0x1004D3F8, 0xF06, 0x1004D408);
-        if (ld(w + 0x1C) == 0) JUT_ASSERT_l(0x1004D3F8, 0xF07, 0x1004D418);
-        if (ld(w + 0x24) == 0) JUT_ASSERT_l(0x1004D3F8, 0xF08, 0x1004D428);
-        gabi::Local<cXyz> ctr;
-        gabi::Local<cXyz> eye;
-        gabi::Local<cXyz> r;
-        gabi::Local<cXyz> a1;
-        gabi::Local<cXyz> a2;
-        u32 cc = gabi::ea(ctr.get()), ee = gabi::ea(eye.get()), rr = gabi::ea(r.get());
-        u32 p1 = gabi::ea(a1.get()), p2 = gabi::ea(a2.get());
-        for (s32 i = 0; i < (s32)ld(w + 0x38); i++) {
-            copy3(cc, ld(w + 0x20) + (u32)i * 12);
-            copy3(ee, ld(w + 0x1C) + (u32)i * 12);
-            u32 act = ld(w + 0x2C);
-            if (act != 0 && ld8(w + 0x30) == 'o') {
-                relationalPos(i_this, rr, act, cc);
-                copy3(w + 4, rr);
+/* 0253A268 */
+u32 fixedFramesEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    auto* work = reinterpret_cast<FixedFramesWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        work->mFrameCount = 9999;
+        s32 count = substanceNum(camera, fixedCenters.text);
+        if (count == 0)
+            return 1;
+        auto* points = static_cast<cXyz*>(substanceP(camera, fixedCenters.text, 1));
+        s32 previousCount = work->mFrameCount;
+        work->mpCenters = points;
+        if (previousCount > count)
+            work->mFrameCount = count;
+        count = substanceNum(camera, fixedEyes.text);
+        if (count == 0)
+            return 1;
+        points = static_cast<cXyz*>(substanceP(camera, fixedEyes.text, 1));
+        previousCount = work->mFrameCount;
+        work->mpEyes = points;
+        if (previousCount > count)
+            work->mFrameCount = count;
+        count = substanceNum(camera, fixedFovys.text);
+        if (count == 0)
+            return 1;
+        auto* fovys = static_cast<be<f32>*>(substanceP(camera, fixedFovys.text, 0));
+        previousCount = work->mFrameCount;
+        work->mpFovys = fovys;
+        if (previousCount > count)
+            work->mFrameCount = count;
+        work->mTimerSet =
+            static_cast<u8>(cameraListGetEvIntData(camera, &work->mTimer, fixedTimer.text, 1));
+        cameraListGetEvStringData(camera, reinterpret_cast<char*>(work->mRelUseMask),
+                                  relativeMask.text, relativeDefault.text);
+        auto* actor = cameraListGetEvActor(camera, relativeActor.text);
+        auto* centers = work->mpCenters.get();
+        work->mpRelActor = actor;
+        if (!centers)
+            cameraListAssert(fixedFile.text, 0xF06, fixedCentersAssert.text);
+        if (!work->mpEyes)
+            cameraListAssert(fixedFile.text, 0xF07, fixedEyesAssert.text);
+        if (!work->mpFovys)
+            cameraListAssert(fixedFile.text, 0xF08, fixedFovysAssert.text);
+        cXyz center;
+        cXyz eye;
+        cXyz relative;
+        cXyz collisionCenter;
+        cXyz collisionEye;
+        for (s32 i = 0; i < work->mFrameCount; ++i) {
+            copyPoint(&center, work->mpCenters.get() + i);
+            copyPoint(&eye, work->mpEyes.get() + i);
+            actor = work->mpRelActor.get();
+            if (actor && work->mRelUseMask[0] == 'o') {
+                camera->relationalPos(&relative, actor, &center);
+                copyPoint(&work->mCenter, &relative);
             } else {
-                copy3(w + 4, cc);
+                copyPoint(&work->mCenter, &center);
             }
-            act = ld(w + 0x2C);
-            bool hit;
-            if (act != 0 && ld8(w + 0x31) == 'o') {
-                relationalPos(i_this, rr, act, ee);
-                copy3(w + 0x10, rr);
+            actor = work->mpRelActor.get();
+            if (actor && work->mRelUseMask[1] == 'o') {
+                camera->relationalPos(&relative, actor, &eye);
+                copyPoint(&work->mEye, &relative);
             } else {
-                copy3(w + 0x10, ee);
+                copyPoint(&work->mEye, &eye);
             }
-            stf(w + 0x28, ldf(ld(w + 0x24) + (u32)i * 4));
-            hit = lineBGCheck(i_this, w + 4, w + 0x10, 0x8F);
-            if (hit) continue;
-            for (u32 k = 0; k < 3; k++) stf(p1 + 4 * k, ldf(w + 4 + 4 * k));
-            for (u32 k = 0; k < 3; k++) stf(p2 + 4 * k, ldf(w + 0x10 + 4 * k));
-            u32 pl = ld(i_this + 0x128);
-            u32 ra = ld(w + 0x2C);
-            u32 g = gi();
-            if (!gabi::call<bool>(0x025187D8, g + 0x26A4, p1, p2, ldf(0x1004CF80), pl, ra)) break; /* dCcS::ChkCamera */
+            work->mFovy = work->mpFovys.get()[i];
+            if (cameraListLineBGCheck(camera, &work->mCenter, &work->mEye, 0x8F))
+                continue;
+            collisionCenter.x = work->mCenter.x;
+            collisionCenter.y = work->mCenter.y;
+            collisionCenter.z = work->mCenter.z;
+            collisionEye.x = work->mEye.x;
+            collisionEye.y = work->mEye.y;
+            collisionEye.z = work->mEye.z;
+            auto* player = camera->mpPlayerActor.get();
+            actor = work->mpRelActor.get();
+            auto* collision = dComIfG_Ccsp();
+            if (!cameraListChkCamera(collision, &collisionCenter, &collisionEye,
+                                     cameraCollisionRadius, player, actor))
+                break;
         }
-        setDone(i_this);
+        SkipSmoother(camera);
     }
-    setViewFromWork(i_this, w + 4, w + 0x10, w + 0x28);
-    if (ld8(w + 0) != 0 && ld(i_this + 0x11C) < ld(w + 0x34)) return 0;
+    setViewFromWork(camera, work);
+    if (work->mTimerSet && camera->m11C < work->mTimer)
+        return 0;
     return 1;
 }
-VERIFY(0x0253A268, dCamera_c_fixedFramesEvCamera);
 
-/* 0253A704: bSplineEvCamera: a d2DBSplinePath (this + 0x4CC) through Centers/Eyes/Fovys.
- * work: +0 Centers, +4 Eyes, +8 Fovys, +0xC Timer, +0x10 point count */
-static u32 dCamera_c_bSplineEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253A704, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        st(w + 0x10, 9999);
-        s32 n = substanceNum(i_this, 0x1004D450 /* "Centers" */);
-        if (n == 0) return 1;
-        u32 p = substanceP(i_this, 0x1004D450, 1);
-        st(w + 0, p);
-        if (p == 0) JUT_ASSERT_l(0x1004D470, 0xF3E, 0x1004D480);
-        if ((s32)ld(w + 0x10) > n) st(w + 0x10, (u32)n);
-        n = substanceNum(i_this, 0x1004D468 /* "Eyes" */);
-        if (n == 0) return 1;
-        p = substanceP(i_this, 0x1004D468, 1);
-        st(w + 4, p);
-        if (p == 0) JUT_ASSERT_l(0x1004D470, 0xF48, 0x1004D490);
-        if ((s32)ld(w + 0x10) > n) st(w + 0x10, (u32)n);
-        n = substanceNum(i_this, 0x1004D458 /* "Fovys" */);
-        if (n == 0) return 1;
-        p = substanceP(i_this, 0x1004D458, 0);
-        st(w + 8, p);
-        if (p == 0) JUT_ASSERT_l(0x1004D470, 0xF52, 0x1004D4A0);
-        if ((s32)ld(w + 0x10) > n) st(w + 0x10, (u32)n);
-        if (getEvIntData2(i_this, w + 0xC, 0x1004D460 /* "Timer" */) == 0) return 1;
-        gabi::call(0x025C0B18, i_this + 0x4CC, ld(w + 0x10), ld(w + 0xC)); /* d2DBSplinePath::Init */
-        setDone(i_this);
+/* 0253A704 */
+u32 bSplineEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    auto* work = reinterpret_cast<BSplineWork*>(camera->mWork);
+    auto* spline = reinterpret_cast<BSplinePathView*>(camera->mEventData.mSpline2DPath);
+    if (camera->m11C == 0) {
+        work->mKeyNum = 9999;
+        s32 count = substanceNum(camera, splineCenters.text);
+        if (count == 0)
+            return 1;
+        auto* points = static_cast<cXyz*>(substanceP(camera, splineCenters.text, 1));
+        work->mpCenters = points;
+        if (!points)
+            cameraListAssert(splineFile.text, 0xF3E, splineCentersAssert.text);
+        if (work->mKeyNum > count)
+            work->mKeyNum = count;
+        count = substanceNum(camera, splineEyes.text);
+        if (count == 0)
+            return 1;
+        points = static_cast<cXyz*>(substanceP(camera, splineEyes.text, 1));
+        work->mpEyes = points;
+        if (!points)
+            cameraListAssert(splineFile.text, 0xF48, splineEyesAssert.text);
+        if (work->mKeyNum > count)
+            work->mKeyNum = count;
+        count = substanceNum(camera, splineFovys.text);
+        if (count == 0)
+            return 1;
+        auto* fovys = static_cast<be<f32>*>(substanceP(camera, splineFovys.text, 0));
+        work->mpFovys = fovys;
+        if (!fovys)
+            cameraListAssert(splineFile.text, 0xF52, splineFovysAssert.text);
+        if (work->mKeyNum > count)
+            work->mKeyNum = count;
+        if (!cameraListGetEvIntDataRequired(camera, &work->mTimer, splineTimer.text))
+            return 1;
+        cameraListSplineInit(spline, work->mKeyNum, work->mTimer);
+        SkipSmoother(camera);
     }
-    if (gabi::call<u32>(0x025C0C80, i_this + 0x4CC) == 0) return 1; /* d2DBSplinePath::Step */
-    gabi::Local<cXyz> v;
-    u32 vv = gabi::ea(v.get());
-    gabi::call(0x025C0E38, i_this + 0x4CC, vv, ld(w + 0)); /* Calc(cXyz*) */
-    copy3(i_this + 0x44, vv);
-    gabi::call(0x025C0E38, i_this + 0x4CC, vv, ld(w + 4));
-    copy3(i_this + 0x50, vv);
-    f32 fovy = gabi::call<f32>(0x025C0F30, i_this + 0x4CC, ld(w + 8)); /* Calc(f32*) */
-    stf(i_this + 0x60, fovy);
-    gabi::call(0x0201ADE0, i_this + 0x50, vv, i_this + 0x44);
-    gabi::call(0x020072E0, i_this + 0x3C, vv);
-    return ld(i_this + 0x4D8) == 3 ? 1 : 0;
+    if (!cameraListSplineStep(spline))
+        return 1;
+    cXyz position;
+    cameraListSplineCalcXyz(spline, &position, work->mpCenters.get());
+    copyPoint(&camera->mViewCache.mCenter, &position);
+    cameraListSplineCalcXyz(spline, &position, work->mpEyes.get());
+    copyPoint(&camera->mViewCache.mEye, &position);
+    f32 fovy = cameraListSplineCalcFloat(spline, work->mpFovys.get());
+    camera->mViewCache.mFovy = fovy;
+    cameraListSubtract(&camera->mViewCache.mEye, &position, &camera->mViewCache.mCenter);
+    cSGlobe_Val(&camera->mViewCache.mDirection, &position);
+    return spline->mState == SPLINE_DONE ? 1 : 0;
 }
-VERIFY(0x0253A704, dCamera_c_bSplineEvCamera);
+} // namespace event_camera_lists
+using namespace event_camera_lists;
 
-} // namespace d_ev_camera_4_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+data fixedCenters 1004D3D4
+data fixedEyes 1004D3EC
+data fixedFovys 1004D3DC
+data fixedTimer 1004D3E4
+data relativeMask 1004D438
+data relativeDefault 1004D3F4
+data relativeActor 1004D444
+data fixedFile 1004D3F8
+data fixedCentersAssert 1004D408
+data fixedEyesAssert 1004D418
+data fixedFovysAssert 1004D428
+data splineCenters 1004D450
+data splineEyes 1004D468
+data splineFovys 1004D458
+data splineTimer 1004D460
+data splineFile 1004D470
+data splineCentersAssert 1004D480
+data splineEyesAssert 1004D490
+data splineFovysAssert 1004D4A0
+data cameraCollisionRadius 1004CF80
+ext 0273AA24 u32 cameraListAssert(const char*, s32, const char*)
+ext 02530634 u32 cameraListGetEvIntData(dCamera_c*, be<u32>*, const char*, s32)
+ext 02530418 u32 cameraListGetEvIntDataRequired(dCamera_c*, be<u32>*, const char*)
+ext 02530998 u32 cameraListGetEvStringData(dCamera_c*, char*, const char*, const char*)
+ext 02530B84 fopAc_ac_c* cameraListGetEvActor(dCamera_c*, const char*)
+ext 024FCBE8 bool cameraListLineBGCheck(dCamera_c*, cXyz*, cXyz*, u32)
+ext 025187D8 bool cameraListChkCamera(void*, cXyz*, cXyz*, f32, fopAc_ac_c*, fopAc_ac_c*)
+ext 025C0B18 void cameraListSplineInit(BSplinePathView*, u32, u32)
+ext 025C0C80 u32 cameraListSplineStep(BSplinePathView*)
+ext 025C0E38 void cameraListSplineCalcXyz(BSplinePathView*, cXyz*, cXyz*)
+ext 025C0F30 f32 cameraListSplineCalcFloat(BSplinePathView*, be<f32>*)
+ext 0250242C void dCamera_c::relationalPos(cXyz*, fopAc_ac_c*, cXyz*)
+ext 0201ADE0 void cameraListSubtract(cXyz*, cXyz*, cXyz*)
+*/

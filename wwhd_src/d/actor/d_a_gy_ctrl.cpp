@@ -1,316 +1,535 @@
-/* Gyorg controller, reconstructed from WWHD. */
+/* Gyorg encounter controller. Restored tww structure with retained HD behavior. */
 #include "d/actor/d_a_gy_ctrl.h"
-template<class T> static T rd(u32 p,u32 o=0) { return gabi::load<T>(p+o); }
-template<class T> static void wr(u32 p,u32 o,T v) { gabi::store<T>(p+o,v); }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static void copy3(u32 dst,u32 src) { for(u32 i=0;i<12;i+=4) wr<u32>(dst,i,rd<u32>(src,i)); }
-static u32 shiftRight(u32 v,u32 n) { n&=63; return n<32?v>>n:0; }
-static u32 shiftLeft(u32 v,u32 n) { n&=63; return n<32?v<<n:0; }
-void* daGyCtrl_SearchNear(daGyCtrl_c* self,void* actor) {
-    WWHD_FUNC(0x0216B6E8,void*,self,actor);
-    if(!gabi::call<BOOL>(0x025D4604,actor)) return nullptr;
-    f32 distance=gabi::call<f32>(0x025D6958,self,actor);
-    u32 p=gabi::ea(actor); s16 id=actor?rd<s16>(p,8):0;
-    if(self->mType==0 && actor && id==0xE6 && distance<6000.0f) return actor;
-    if(actor && (id==0xE1 || id==0x44 || id==0x76) && distance<6000.0f) return actor;
+#include "gc_api/gc_api.h"
+
+static daGy_Ctrl_HIO_c l_HIO;
+static GyHideRegsHD l_hideRegs;
+static GyHeaderZerosHD l_headerZeros;
+static GyRegistrationHD l_registration0;
+static GyRegistrationHD l_registration1;
+static GyRegistrationHD l_registration2;
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static u8 l_angleInit;
+static u8 l_limitInit;
+static GyModeEntryHD mode_tbl[4] = {
+    {&daGy_Ctrl_c::modeSwWaitInit, &daGy_Ctrl_c::modeSwWait, "SW_WAIT"},
+    {&daGy_Ctrl_c::modeCreateInit, &daGy_Ctrl_c::modeCreate, "CREATE"},
+    {&daGy_Ctrl_c::modeWaitInit, &daGy_Ctrl_c::modeWait, "WAIT"},
+    {&daGy_Ctrl_c::modeHideInit, &daGy_Ctrl_c::modeHide, "HIDE"}};
+enum GyNative_e {
+  GY_NAME_JUDGE_e = 0x025E121C,
+  fpcNm_GY_CTRL_e = 0xE5,
+  fpcNm_GY_CTRLB_e = 0xE6,
+  fpcNm_GY_e = 0xE4,
+  fpcNm_DAIOCTA_e = 0xE1,
+  fpcNm_OBJ_IKADA_e = 0x44,
+  fpcNm_NPC_SO_e = 0x76,
+  dItemNo_BOOMERANG_e = 0x2D,
+  daPyStts0_SHIP_RIDE_e = 0x10000,
+  daPyStts0_UNK1000000_e = 0x1000000,
+  daPyStts0_SWIM_e = 0x100000
+};
+s32 Gy_calcTimer(be<s32> *timer);
+f64 Gy_sqrtDistance(f32 square);
+void *Gy_getCameraBody();
+void Gy_setCameraType(void *camera, const char *type, u32 argument);
+u32 Gy_createChild(s32 name, u32 parent, s32 parameter, cXyz *position,
+                   s32 room, csXyz *angle, u32 scale, s32 subtype, u32 append);
+void Gy_initAngles(csXyz *, s16, s16, s16);
+void Gy_registerGlobal(GyRegistrationHD *);
+void Gy_initAngle(be<u8> *);
+void Gy_initLimit(be<u8> *);
+void *searchNearActor_CB(void *, void *);
+daGy_Ctrl_HIO_c *HIO_constructHD(daGy_Ctrl_HIO_c *);
+
+// HD: retain this TU's constructor stores and their order for the embedded line
+// check.
+daGyCtrl_c::daGyCtrl_c() {
+  fopAc_ac_c_ct(this);
+  __vtbl = 0x10010D78;
+  Gy_constructLine(&mLinChk);
+  mLinChk.mbBombThrough = 0;
+  mLinChk.mbCamThrough = 0;
+  mLinChk.cBgS_PolyInfo::__vtbl = 0x10010D48;
+  mLinChk.mGrp = 1;
+  mLinChk.mbBoomerangThrough = 0;
+  mLinChk.mbArrowThrough = 0;
+  mLinChk.dBgS_GrpPassChk::__vtbl = 0x10010D58;
+  mLinChk.mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk *>(&mLinChk));
+  mLinChk.mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk *>(&mLinChk));
+  mLinChk.dBgS_PolyPassChk::__vtbl = 0x10010D68;
+  mLinChk.mbObjThrough = 1;
+  mLinChk.cBgS_Chk::__vtbl = 0x10010D38;
+  mLinChk.mbLinkThrough = 0;
+  mLinChk.mbRopeThrough = 0;
+}
+
+/* 0216B7B4 */
+void *searchNearActor_CB(void *actor, void *controller) {
+  return static_cast<daGy_Ctrl_c *>(controller)
+      ->searchNearActor(static_cast<fopAc_ac_c *>(actor));
+}
+
+/* 0216B6E8 */
+void *daGy_Ctrl_c::searchNearActor(fopAc_ac_c *actor) {
+  if (!fopAc_IsActor(actor))
     return nullptr;
+  f32 distance = fopAcM_searchActorDistanceXZ(this, actor);
+  s16 id = actor ? actor->mProcName.get() : 0;
+  if (mType == TYPE_NO_AREA_e && actor && id == fpcNm_GY_CTRLB_e &&
+      distance < 6000.0f)
+    return actor;
+  if (actor &&
+      (id == fpcNm_DAIOCTA_e || id == fpcNm_OBJ_IKADA_e || id == fpcNm_NPC_SO_e) &&
+      distance < 6000.0f)
+    return actor;
+  return nullptr;
 }
-VERIFY(0x0216B6E8,daGyCtrl_SearchNear);
-void* daGyCtrl_SearchCallback(daGyCtrl_c* self,void* actor) {
-    WWHD_FUNC(0x0216B7B4,void*,self,actor);
-    return gabi::call<void*>(0x0216B6E8,actor,self);
-}
-VERIFY(0x0216B7B4,daGyCtrl_SearchCallback);
-u8 daGyCtrl_GetParam(daGyCtrl_c* self,u32 param,u32 shift,u32 bits) {
-    WWHD_FUNC(0x0216B7C4,u8,self,param,shift,bits);
-    return (u8)(shiftRight(param,shift)&(shiftLeft(1,bits)-1));
-}
-VERIFY(0x0216B7C4,daGyCtrl_GetParam);
-void daGyCtrl_GetArg(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216B7E0,void,self);
-    u32 param=rd<u32>(gabi::ea(self),0xB0);
-    self->mType=gabi::call<u8>(0x0216B7C4,self,param,0,4);
-    self->mCount=gabi::call<u8>(0x0216B7C4,self,param,4,4);
-    u8 distance=gabi::call<u8>(0x0216B7C4,self,param,8,8);
-    self->mSwitch=gabi::call<u8>(0x0216B7C4,self,param,24,8);
-    if(self->mType==15) self->mType=0;
-    if(self->mCount==15) self->mCount=1;
-    self->mMaxDistance=distance==255?10000.0f:(f32)distance*1000.0f;
-}
-VERIFY(0x0216B7E0,daGyCtrl_GetArg);
-BOOL daGyCtrl_CheckExist(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216B8B8,BOOL,self);
-    gabi::Local<be<s16>> id; *id=0xE5;
-    u32 actor=gabi::call<u32>(0x025D5218,0x025E121C,id.get());
-    return actor && rd<u8>(actor,0x444)==0 && rd<u8>(actor,0x44D)!=0;
-}
-VERIFY(0x0216B8B8,daGyCtrl_CheckExist);
-void daGyCtrl_ModeProc(daGyCtrl_c* self,s32 action,s32 mode) {
-    WWHD_FUNC(0x0216B924,void,self,action,mode);
-    u32 descriptor;
-    if(action==0) { self->mMode=mode; descriptor=0x10010C64+(u32)mode*20; }
-    else if(action==1) descriptor=0x10010C64+(u32)(s32)self->mMode*20+8;
-    else return;
-    u32 receiver=gabi::ea(self)+(s32)rd<s16>(descriptor);
-    s16 slot=rd<s16>(descriptor,2); u32 target;
-    if(slot<0) target=rd<u32>(descriptor,4);
-    else target=rd<u32>(rd<u32>(receiver+(s32)rd<s16>(descriptor,6)),(u32)(s32)slot*8+4);
-    gabi::call_ptr(target,receiver);
-}
-VERIFY(0x0216B924,daGyCtrl_ModeProc);
-void daGyCtrl_CreateInitNoArea(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216B9D0,void,self);
-    gabi::call(0x025D537C,self); self->mLayerInitialized=1;
-    self->mRoom=rd<s8>(gabi::ea(self),0x326);
-}
-VERIFY(0x0216B9D0,daGyCtrl_CreateInitNoArea);
-void daGyCtrl_CreateInit(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216BA10,void,self);
-    gabi::call(0x0216B924,self,0,self->mSwitch==255?1:0);
-    copy3(gabi::ea(self)+0x454,gabi::ea(self)+0x314); self->mTarget=0;
-    if(self->mType==0) gabi::call(0x0216B9D0,self);
-}
-VERIFY(0x0216BA10,daGyCtrl_CreateInit);
-s32 daGyCtrl_Create(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216BA8C,s32,self);
-    u32 p=gabi::ea(self),status=rd<u32>(p,0x2E4);
-    if(!(status&8)) {
-        if(self) {
-            gabi::call(0x025D4ED0,self); wr<u32>(p,0xB4,0x10010D78);
-            gabi::call(0x02008FEC,p+0x498);
-            wr<u8>(p,0x4F8,0);wr<u8>(p,0x4F5,0);wr<u32>(p,0x4B8,0x10010D48);
-            wr<u32>(p,0x500,1);wr<u8>(p,0x4F9,0);wr<u8>(p,0x4F7,0);
-            wr<u32>(p,0x4FC,0x10010D58);wr<u32>(p,0x49C,p+0x4FC);wr<u32>(p,0x498,p+0x4F0);
-            wr<u32>(p,0x4F0,0x10010D68);wr<u8>(p,0x4F4,1);wr<u32>(p,0x4A8,0x10010D38);
-            wr<u8>(p,0x4F6,0);wr<u8>(p,0x4FA,0); status=rd<u32>(p,0x2E4);
-        }
-        wr<u32>(p,0x2E4,status|8);
-    }
-    gabi::call(0x0216B7E0,self);
-    if(self->mType==0 && gabi::call<BOOL>(0x0216B8B8,self)) return 5;
-    if(!gabi::call<BOOL>(0x02520C0C,0x2D)) return 5;
-    gabi::call(0x0216BA10,self); return 4;
-}
-VERIFY(0x0216BA8C,daGyCtrl_Create);
-s32 daGyCtrl_CreateWrapper(daGyCtrl_c* self) { WWHD_FUNC(0x0216BBB0,s32,self); return gabi::call<s32>(0x0216BA8C,self); }
-VERIFY(0x0216BBB0,daGyCtrl_CreateWrapper);
-BOOL daGyCtrl_Delete(daGyCtrl_c* self) { WWHD_FUNC(0x0216BBB4,BOOL,self); return TRUE; }
-VERIFY(0x0216BBB4,daGyCtrl_Delete);
-void daGyCtrl_SetTarget(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216BBBC,void,self);
-    if((rd<u32>(play(),0x5CD8)&0x10000) || (rd<u32>(play(),0x5CD8)&0x1000000)) {
-        if(self->mPathClear && !gabi::call<s32>(0x0211D2F8,&self->mCameraTimer)) self->mCameraTimer=30;
-        self->mCameraMode=2;self->mTarget=1;
+
+/* 0216BBBC */
+void daGy_Ctrl_c::setTarget() {
+  if (dComIfGp_checkPlayerStatus0(0, daPyStts0_SHIP_RIDE_e) ||
+      dComIfGp_checkPlayerStatus0(0, daPyStts0_UNK1000000_e)) {
+    if (mPathClear && !Gy_calcTimer(&mCameraTimer))
+      mCameraTimer = 30;
+    // HD: the camera mode store also occurs when the path is blocked, before
+    // the common clear.
+    mCameraMode = 2;
+    mTarget = TARGET_SHIP_e;
+  } else {
+    if (dComIfGp_checkPlayerStatus0(0, daPyStts0_SWIM_e)) {
+      if (!Gy_calcTimer(&mCameraTimer))
+        mCameraTimer = 30;
+      mCameraMode = 1;
     } else {
-        if(rd<u32>(play(),0x5CD8)&0x100000) {
-            if(!gabi::call<s32>(0x0211D2F8,&self->mCameraTimer)) self->mCameraTimer=30;
-            self->mCameraMode=1;
-        } else { self->mCameraMode=0;self->mCameraTimer=30; }
-        self->mTarget=0;
+      mCameraMode = 0;
+      mCameraTimer = 30;
     }
-    if(!self->mPathClear || !self->mTargetInRange) self->mCameraMode=0;
-    self->mAllChildrenDead=1; u32 p=gabi::ea(self);
-    for(u32 i=0;i<(u8)self->mCount;++i) {
-        gabi::Local<be<u32>> id;*id=rd<u32>(p,0x47C+4*i);
-        if((u32)*id!=0xFFFFFFFF) {
-            u32 child=gabi::call<u32>(0x025D5218,0x025E1234,id.get());
-            if(child && rd<u32>(child,0x3CC)) self->mAllChildrenDead=0;
-        }
+    mTarget = TARGET_PLAYER_e;
+  }
+  if (!mPathClear || !mTargetInRange)
+    mCameraMode = 0;
+  mAllChildrenDead = 1;
+  for (u32 i = 0; i < u8(mCount); ++i) {
+    u32 id = mChildIds[i];
+    GyChildHD *child = static_cast<GyChildHD *>(fopAcM_SearchByID(id));
+    if (child && child->mAlive)
+      mAllChildrenDead = 0;
+  }
+  if (mAllChildrenDead)
+    mCameraMode = 0;
+  else {
+    s32 mode = mCameraMode;
+    if (mode == 1 || mode == 2) {
+      void *camera = Gy_getCameraBody();
+      Gy_setCameraType(camera, mode == 1 ? "WaterBattle" : "BoatBattle", 0);
     }
-    if(self->mAllChildrenDead) self->mCameraMode=0;
+  }
+}
+
+/* 0216BDD4 */
+BOOL daGy_Ctrl_c::setPathTargetPos() {
+  cXyz pos;
+  if (mTarget == TARGET_PLAYER_e) {
+    pos.copy(dComIfGp_getPlayer(0)->current.pos);
+    mAngle = s16(s16(mAngle) + s16(l_HIO.mPlayerAngleStep));
+    mDesiredRadius = l_HIO.mPlayerRadius;
+  } else if (mTarget == TARGET_SHIP_e) {
+    fopAc_ac_c *ship = dComIfGp_getShipActor();
+    if (ship) {
+      pos.copy(ship->current.pos);
+      mDesiredRadius = l_HIO.mShipRadius;
+      mAngle = s16(s16(mAngle) + s16(l_HIO.mShipAngleStep));
+    }
+  }
+  pos.y = getWaterY(&pos);
+  if (mType != TYPE_NO_AREA_e) {
+    cXyz difference = mCenter - pos;
+    cXyz flat;
+    flat.x = difference.x;
+    flat.y = 0;
+    flat.z = difference.z;
+    f32 square = PSVECSquareMag(&flat);
+    // HD: retain the double-precision distance returned in the full FP
+    // register.
+    f64 distance = Gy_sqrtDistance(square);
+    if (!(distance < f32(mMaxDistance)))
+      return FALSE;
+  }
+  current.pos.x = pos.x;
+  current.pos.y = pos.y;
+  current.pos.z = pos.z;
+  return TRUE;
+}
+
+/* 0216BDB8 */
+f32 daGy_Ctrl_c::getWaterY(cXyz *pos) {
+  pos->y = f32(pos->y) + 1000.0f;
+  return dBgS_GetWaterHeight(pos);
+}
+
+/* 0216BF50 */
+BOOL daGy_Ctrl_c::lineCheck(cXyz *start, cXyz *end) {
+  mLinChk.Set(start, end, this);
+  if (!dComIfG_Bgsp()->LineCross(&mLinChk))
+    return FALSE;
+  end->copy(mLinChk.mLin.mEnd);
+  return TRUE;
+}
+
+/* 0216BFE0 */
+BOOL daGy_Ctrl_c::checkPath() {
+  if (dComIfGp_getEvent()->mMode)
+    return FALSE;
+  for (u32 i = 0; i < 16; ++i) {
+    f32 radius = mRadius;
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::YrotM(s16(i * 0xFFF));
+    mDoMtx_stack_c::transM(radius, 0.0f, 0.0f);
+    cXyz *path = &mRadialPaths[i];
+    cXyz start;
+    Gy_copyTranslationHD(*path, *mDoMtx_stack_c::get());
+    start.x = path->x;
+    start.y = f32(path->y) + f32(l_HIO.mLineStartHeight);
+    start.z = path->z;
+    path->y = f32(mDoMtx_stack_c::get()->m[1][3]) + f32(l_HIO.mLineEndHeight);
+    if (lineCheck(&start, path))
+      return FALSE;
+  }
+  return TRUE;
+}
+
+/* 0216C27C */
+void daGy_Ctrl_c::setPathPos() {
+  for (u32 i = 0; i < u8(mCount); ++i) {
+    u32 count = u8(mCount);
+    s16 angle = s16(s16(mAngle) + (65535 / count) * i);
+    mSpawnAngles[i] = angle;
+    f32 radius = gabi::fmadds(cM_ssin(u16(angle)), l_HIO.mRadiusWave, mRadius);
+    s16 checkAngle = s16(angle + 0x500);
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::YrotM(angle);
+    mDoMtx_stack_c::transM(radius, 0.0f, 0.0f);
+    cXyz *spawn = &mSpawnPositions[i];
+    cXyz *check = &mCheckPositions[i];
+    Gy_copyTranslationHD(*spawn, *mDoMtx_stack_c::get());
+    spawn->y = getWaterY(spawn);
+    f32 height = l_HIO.mLineEndHeight;
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::YrotM(checkAngle);
+    mDoMtx_stack_c::transM(radius, 0.0f, height);
+    Gy_copyTranslationHD(*check, *mDoMtx_stack_c::get());
+    cXyz start;
+    start.x = check->x;
+    start.y = check->y;
+    start.z = check->z;
+    start.y = f32(start.y) + f32(l_HIO.mLineStartHeight);
+    check->y = getWaterY(check);
+    // HD: XOR and byte truncation preserve non-boolean callee returns.
+    mPathFree[i] = u8(u32(lineCheck(&start, check)) ^ 1u);
+  }
+  cLib_addCalc2(&mRadius, mDesiredRadius, 0.1f, l_HIO.mRadiusStep);
+}
+
+/* 0216B924 */
+void daGy_Ctrl_c::modeProc(s32 action, s32 mode) {
+  if (action == PROC_INIT_e) {
+    mMode = mode;
+    (this->*mode_tbl[mode].init)();
+  } else if (action == PROC_EXEC_e)
+    (this->*mode_tbl[mMode].exec)();
+}
+
+/* 0216C9D0 */
+void daGy_Ctrl_c::modeSwWaitInit() {}
+
+/* 0216C1E0 */
+void daGy_Ctrl_c::modeSwWait() {
+  s32 room = mType == TYPE_AREA_e ? s32(current.roomNo) : s32(mRoom);
+  // HD: capture the room before the save pointer accessor, as in the retained
+  // caller.
+  dSv_info_c *save = dComIfGs_info();
+  u8 sw = mSwitch;
+  if (save->isSwitch(sw, room))
+    modeProc(PROC_INIT_e, MODE_CREATE_e);
+}
+
+/* 0216C26C */
+void daGy_Ctrl_c::modeCreateInit() { mCreateTimer = l_HIO.mCreateDelay; }
+
+/* inlined into daGy_Ctrl_c::modeCreate and modeWait */
+static bool mustHide(daGy_Ctrl_c *self) {
+  return (self->mType == daGy_Ctrl_c::TYPE_AREA_e && !self->mTargetInRange) ||
+         !self->mPathClear ||
+         fopAcM_Search(searchNearActor_CB, self) != nullptr;
+}
+
+/* 0216C4A8 */
+void daGy_Ctrl_c::modeCreate() {
+  if (mustHide(this)) {
+    modeProc(PROC_INIT_e, MODE_HIDE_e);
+    return;
+  }
+  s32 index = mSpawnIndex;
+  u32 count = u8(mCount);
+  bool pending = index < s32(count);
+  if (pending && !Gy_calcTimer(&mCreateTimer)) {
+    index = mSpawnIndex;
+    cXyz pos;
+    cXyz *path = &mSpawnPositions[index];
+    pos.x = path->x;
+    pos.y = path->y;
+    pos.z = path->z;
+    csXyz angles;
+    Gy_initAngles(&angles, 0, 0, 0);
+    s32 room = tevStr.mRoomNo;
+    index = mSpawnIndex;
+    pos.y = -1000.0f;
+    u32 parent = mBsPcId;
+    angles.y = mSpawnAngles[index];
+    be<u32> *destination = &mChildIds[index];
+    *destination =
+        Gy_createChild(fpcNm_GY_e, parent, -1, &pos, room, &angles, 0, -1, 0);
+    index = mSpawnIndex;
+    mChildActive[index] = 1;
+    mCreateTimer = l_HIO.mSpawnDelay;
+  }
+  if (pending) {
+    count = u8(mCount);
+    index = mSpawnIndex;
+  }
+  if (u32(index) == count)
+    modeProc(PROC_INIT_e, MODE_WAIT_e);
+  setPathPos();
+}
+
+/* 0216C9D4 */
+void daGy_Ctrl_c::modeWaitInit() {}
+
+/* 0216C6E8 */
+void daGy_Ctrl_c::modeWait() {
+  if (mustHide(this)) {
+    modeProc(PROC_INIT_e, MODE_HIDE_e);
+    return;
+  }
+  deadCheckGy();
+  setPathPos();
+}
+
+/* 0216C780 */
+void daGy_Ctrl_c::modeHideInit() { mHideTimer = s16(l_hideRegs.initial) + 30; }
+
+/* 0216C794 */
+void daGy_Ctrl_c::modeHide() {
+  bool ready =
+      (mType == TYPE_AREA_e ? mTargetInRange != 0 : mType == TYPE_NO_AREA_e) &&
+      mPathClear != 0;
+  if (Gy_calcTimer(&mHideTimer))
+    return;
+  if (fopAcM_Search(searchNearActor_CB, this)) {
+    mHideTimer = s16(l_hideRegs.retry) + 30;
+    return;
+  }
+  if (ready && mPathClear)
+    modeProc(PROC_INIT_e, MODE_CREATE_e);
+}
+
+/* 0216C634 */
+void daGy_Ctrl_c::deadCheckGy() {
+  u32 count = u8(mCount), dead = 0;
+  for (u32 i = 0; i < count; ++i) {
+    if (!mChildActive[i])
+      continue;
+    u32 id = mChildIds[i];
+    if (id == 0xFFFFFFFFu)
+      ++dead;
     else {
-        s32 mode=self->mCameraMode;
-        if(mode==1 || mode==2) {
-            u32 camera=gabi::call<u32>(0x024F8044);
-            gabi::call(0x02514EE4,camera,mode==1?STR(0x10010D98):STR(0x10010DA4),0);
-        }
+      fopAc_ac_c *child = fopAcM_SearchByID(id);
+      count = u8(mCount);
+      if (!child)
+        ++dead;
     }
+  }
+  if (dead == count)
+    fopAcM_delete(this);
 }
-VERIFY(0x0216BBBC,daGyCtrl_SetTarget);
-f32 daGyCtrl_WaterY(daGyCtrl_c* self,cXyz* pos) {
-    WWHD_FUNC(0x0216BDB8,f32,self,pos);pos->y=(f32)pos->y+1000.0f;return gabi::call<f32>(0x024F17D4,pos);
-}
-VERIFY(0x0216BDB8,daGyCtrl_WaterY);
-BOOL daGyCtrl_SetPathTarget(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216BDD4,BOOL,self);
-    gabi::Local<cXyz> pos;
-    if(self->mTarget==0) {
-        copy3(gabi::ea(pos.get()),rd<u32>(play(),0x5B2C)+0x314);
-        self->mAngle=(s16)((s16)self->mAngle+rd<s16>(0x10464634,0xA));self->mDesiredRadius=rd<f32>(0x10464634,0x1C);
-    } else if(self->mTarget==1) {
-        u32 ship=rd<u32>(play(),0x5B3C);if(ship) {
-            copy3(gabi::ea(pos.get()),ship+0x314);
-            self->mDesiredRadius=rd<f32>(0x10464634,0x18);self->mAngle=(s16)((s16)self->mAngle+rd<s16>(0x10464634,0xC));
-        }
-    }
-    pos->y=gabi::call<f32>(0x0216BDB8,self,pos.get());
-    if(self->mType!=0) {
-        gabi::Local<cXyz> difference,flat;
-        gabi::call(0x0201ADE0,&self->mCenter,difference.get(),pos.get());
-        flat->x=difference->x;flat->y=0;flat->z=difference->z;
-        f32 square=gabi::call<f32>(0x028E8DD0,flat.get());
-        f64 distance=gabi::call<f64>(0x028F4384,square);
-        if(!(distance<(f32)self->mMaxDistance)) return FALSE;
-    }
-    self->current.pos.x=pos->x; self->current.pos.y=pos->y; self->current.pos.z=pos->z;return TRUE;
-}
-VERIFY(0x0216BDD4,daGyCtrl_SetPathTarget);
-BOOL daGyCtrl_Line(daGyCtrl_c* self,cXyz* start,cXyz* end) {
-    WWHD_FUNC(0x0216BF50,BOOL,self,start,end);
-    u32 p=gabi::ea(self);gabi::call(0x024F1AFC,p+0x498,start,end,self);
-    if(!gabi::call<BOOL>(0x02008860,play()+0x12A0,p+0x498)) return FALSE;
-    copy3(gabi::ea(end),p+0x4C8);return TRUE;
-}
-VERIFY(0x0216BF50,daGyCtrl_Line);
 
-BOOL daGyCtrl_CheckPath(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216BFE0,BOOL,self);
-    if(rd<u8>(play(),0x5292)) return FALSE;
-    for(u32 i=0;i<16;++i) {
-        f32 radius=self->mRadius;
-        gabi::call(0x028E93CC,0x1048D0CC,(f32)self->current.pos.x,(f32)self->current.pos.y,(f32)self->current.pos.z);
-        gabi::call(0x025F1C28,0x1048D0CC,(s16)(i*0xFFF));gabi::call(0x025F24E0,radius,0.0f,0.0f);
-        u32 path=gabi::ea(self)+0x508+i*12;gabi::Local<cXyz> start;
-        wr<u32>(path,0,rd<u32>(0x1048D0CC,0xC));wr<u32>(path,4,rd<u32>(0x1048D0CC,0x1C));wr<u32>(path,8,rd<u32>(0x1048D0CC,0x2C));
-        start->x=rd<f32>(path);start->y=rd<f32>(path,4)+rd<f32>(0x10464634,0x24);start->z=rd<f32>(path,8);
-        wr<f32>(path,4,rd<f32>(0x1048D0CC,0x1C)+rd<f32>(0x10464634,0x28));
-        if(gabi::call<BOOL>(0x0216BF50,self,start.get(),path)) return FALSE;
-    }
-    return TRUE;
+/* 0216C13C */
+s32 daGy_Ctrl_c::_execute() {
+  setTarget();
+  mTargetInRange = setPathTargetPos();
+  mPathClear = checkPath();
+  modeProc(PROC_EXEC_e, 4);
+  mRoom = current.roomNo;
+  return 0;
 }
-VERIFY(0x0216BFE0,daGyCtrl_CheckPath);
-s32 daGyCtrl_Execute(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C13C,s32,self);
-    gabi::call(0x0216BBBC,self);self->mTargetInRange=gabi::call<BOOL>(0x0216BDD4,self);
-    self->mPathClear=gabi::call<BOOL>(0x0216BFE0,self);gabi::call(0x0216B924,self,1,4);
-    self->mRoom=rd<s8>(gabi::ea(self),0x326);return 0;
-}
-VERIFY(0x0216C13C,daGyCtrl_Execute);
-s32 daGyCtrl_ExecuteWrapper(daGyCtrl_c* self) { WWHD_FUNC(0x0216C1A0,s32,self);return gabi::call<s32>(0x0216C13C,self); }
-VERIFY(0x0216C1A0,daGyCtrl_ExecuteWrapper);
-BOOL daGyCtrl_Draw(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C1A4,BOOL,self);
-    if(rd<u8>(0x10464634,4)) { for(u32 i=0;i<(u8)self->mCount;++i) {} for(u32 i=0;i<16;++i) {} }
-    return TRUE;
-}
-VERIFY(0x0216C1A4,daGyCtrl_Draw);
-BOOL daGyCtrl_DrawWrapper(daGyCtrl_c* self) { WWHD_FUNC(0x0216C1DC,BOOL,self);return gabi::call<BOOL>(0x0216C1A4,self); }
-VERIFY(0x0216C1DC,daGyCtrl_DrawWrapper);
-void daGyCtrl_ModeSwitchWait(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C1E0,void,self);
-    s32 room=self->mType==1?rd<s8>(gabi::ea(self),0x326):(s32)self->mRoom;
-    u32 save=rd<u32>(0x101F84DC);u8 sw=self->mSwitch;
-    if(gabi::call<BOOL>(0x025BA0C0,save+0x20,sw,room)) gabi::call(0x0216B924,self,0,1);
-}
-VERIFY(0x0216C1E0,daGyCtrl_ModeSwitchWait);
-void daGyCtrl_ModeCreateInit(daGyCtrl_c* self) { WWHD_FUNC(0x0216C26C,void,self);self->mCreateTimer=rd<s16>(0x10464634,6); }
-VERIFY(0x0216C26C,daGyCtrl_ModeCreateInit);
-void daGyCtrl_SetPathPos(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C27C,void,self);
-    u32 p=gabi::ea(self);
-    for(u32 i=0;i<(u8)self->mCount;++i) {
-        u32 count=(u8)self->mCount;
-        s16 angle=(s16)((s16)self->mAngle+(65535/count)*i);wr<s16>(p,0x424+i*2,angle);
-        f32 radius=gabi::fmadds(rd<f32>(0x104A44F8+((u16)angle>>3)*8),rd<f32>(0x10464634,0x10),(f32)self->mRadius);
-        s16 checkAngle=(s16)(angle+0x500);
-        gabi::call(0x028E93CC,0x1048D0CC,(f32)self->current.pos.x,(f32)self->current.pos.y,(f32)self->current.pos.z);
-        gabi::call(0x025F1C28,0x1048D0CC,angle);gabi::call(0x025F24E0,radius,0.0f,0.0f);
-        u32 spawn=p+0x3AC+i*12,check=p+0x3E8+i*12;
-        wr<u32>(spawn,0,rd<u32>(0x1048D0CC,0xC));wr<u32>(spawn,4,rd<u32>(0x1048D0CC,0x1C));wr<u32>(spawn,8,rd<u32>(0x1048D0CC,0x2C));
-        wr<f32>(spawn,4,gabi::call<f32>(0x0216BDB8,self,spawn));
-        f32 height=rd<f32>(0x10464634,0x28);
-        gabi::call(0x028E93CC,0x1048D0CC,(f32)self->current.pos.x,(f32)self->current.pos.y,(f32)self->current.pos.z);
-        gabi::call(0x025F1C28,0x1048D0CC,checkAngle);gabi::call(0x025F24E0,radius,0.0f,height);
-        wr<u32>(check,0,rd<u32>(0x1048D0CC,0xC));wr<u32>(check,4,rd<u32>(0x1048D0CC,0x1C));wr<u32>(check,8,rd<u32>(0x1048D0CC,0x2C));
-        gabi::Local<cXyz> start;start->x=rd<f32>(check);start->y=rd<f32>(check,4);start->z=rd<f32>(check,8);
-        start->y=(f32)start->y+rd<f32>(0x10464634,0x24);
-        wr<f32>(check,4,gabi::call<f32>(0x0216BDB8,self,check));
-        wr<u8>(p,0x42E + i,(u8)(gabi::call<u32>(0x0216BF50,self,start.get(),check)^1));
-    }
-    gabi::call(0x0200ED84,&self->mRadius,(f32)self->mDesiredRadius,0.1f,rd<f32>(0x10464634,0x2C));
-}
-VERIFY(0x0216C27C,daGyCtrl_SetPathPos);
-static bool mustHide(daGyCtrl_c* self) {
-    return (self->mType==1 && !self->mTargetInRange) || !self->mPathClear || gabi::call<u32>(0x025D5218,0x0216B7B4,self)!=0;
-}
-void daGyCtrl_ModeCreate(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C4A8,void,self);
-    if(mustHide(self)) { gabi::call(0x0216B924,self,0,3);return; }
-    s32 index=self->mSpawnIndex;u32 count=(u8)self->mCount,p=gabi::ea(self);
-    bool pending=index<(s32)count;
-    if(pending && !gabi::call<s32>(0x0211D2F8,&self->mCreateTimer)) {
-        index=self->mSpawnIndex;gabi::Local<cXyz> pos;u32 path=p+0x3AC+(u32)index*12;
-        pos->x=rd<f32>(path);pos->y=rd<f32>(path,4);pos->z=rd<f32>(path,8);
-        gabi::Local<csXyz> angles;gabi::call(0x0201A478,angles.get(),0,0,0);
-        s32 room=rd<s8>(p,0x1C9);index=self->mSpawnIndex;pos->y=-1000.0f;
-        u32 parent=rd<u32>(p,4);angles->y=rd<s16>(p,0x424+(u32)index*2);
-        u32 destination=p+0x47C+(u32)index*4;
-        wr<u32>(destination,0,gabi::call<u32>(0x025D5A20,0xE4,parent,-1,pos.get(),room,angles.get(),0,-1,0));
-        index=self->mSpawnIndex;wr<u8>(p,0x490+(u32)index,1);self->mCreateTimer=rd<s16>(0x10464634,8);
-    }
-    if(pending) { count=(u8)self->mCount;index=self->mSpawnIndex; }
-    if((u32)index==count) gabi::call(0x0216B924,self,0,2);
-    gabi::call(0x0216C27C,self);
-}
-VERIFY(0x0216C4A8,daGyCtrl_ModeCreate);
-void daGyCtrl_DeadCheck(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C634,void,self);
-    u32 count=(u8)self->mCount,dead=0,p=gabi::ea(self);
-    for(u32 i=0;i<count;++i) {
-        if(!rd<u8>(p,0x490+i)) continue;
-        gabi::Local<be<u32>> id;*id=rd<u32>(p,0x47C+4*i);
-        if((u32)*id==0xFFFFFFFF) ++dead;
-        else {u32 child=gabi::call<u32>(0x025D5218,0x025E1234,id.get());count=(u8)self->mCount;if(!child) ++dead;}
-    }
-    if(dead==count) gabi::call(0x025D57E0,self);
-}
-VERIFY(0x0216C634,daGyCtrl_DeadCheck);
-void daGyCtrl_ModeWait(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C6E8,void,self);
-    if(mustHide(self)) { gabi::call(0x0216B924,self,0,3);return; }
-    gabi::call(0x0216C634,self);gabi::call(0x0216C27C,self);
-}
-VERIFY(0x0216C6E8,daGyCtrl_ModeWait);
-void daGyCtrl_ModeHideInit(daGyCtrl_c* self) { WWHD_FUNC(0x0216C780,void,self);self->mHideTimer=rd<s16>(0x1047BB18)+30; }
-VERIFY(0x0216C780,daGyCtrl_ModeHideInit);
-void daGyCtrl_ModeHide(daGyCtrl_c* self) {
-    WWHD_FUNC(0x0216C794,void,self);
-    bool ready=(self->mType==1?self->mTargetInRange!=0:self->mType==0) && self->mPathClear!=0;
-    if(gabi::call<s32>(0x0211D2F8,&self->mHideTimer)) return;
-    if(gabi::call<u32>(0x025D5218,0x0216B7B4,self)) {self->mHideTimer=rd<s16>(0x1047BB1A)+30;return;}
-    if(ready && self->mPathClear) gabi::call(0x0216B924,self,0,1);
-}
-VERIFY(0x0216C794,daGyCtrl_ModeHide);
-BOOL daGyCtrl_IsDelete(daGyCtrl_c* self) { WWHD_FUNC(0x0216C9C8,BOOL,self);return TRUE; }
-VERIFY(0x0216C9C8,daGyCtrl_IsDelete);
-void daGyCtrl_ModeSwitchWaitInit(daGyCtrl_c* self) { WWHD_FUNC(0x0216C9D0,void,self); }
-VERIFY(0x0216C9D0,daGyCtrl_ModeSwitchWaitInit);
-void daGyCtrl_ModeWaitInit(daGyCtrl_c* self) { WWHD_FUNC(0x0216C9D4,void,self); }
-VERIFY(0x0216C9D4,daGyCtrl_ModeWaitInit);
-void daGyCtrl_Destructor(daGyCtrl_c* self,u32 flags) {
-    WWHD_FUNC(0x0216C9D8,void,self,flags);if(!self) return;u32 p=gabi::ea(self);
-    wr<u32>(p,0x4F0,0x10010D28);wr<u32>(p,0x4FC,0x10010CE8);wr<u32>(p,0x4B8,0x10010CD8);
-    gabi::call(0x02008B4C,p+0x498,0);gabi::call(0x025D50BC,self,0);
-    if(flags&1) gabi::call(0x0273AF40,self);
-}
-VERIFY(0x0216C9D8,daGyCtrl_Destructor);
 
-void* daGyCtrl_HioConstructor(void* self) {
-    WWHD_FUNC(0x0216C870,void*,self);
-    if(!self) self=gabi::call<void*>(0x0273AD10,0x30);
-    if(!self) return nullptr;u32 p=gabi::ea(self);
-    wr<f32>(p,0x28,-500.0f);wr<s16>(p,0xC,250);wr<f32>(p,0x1C,700.0f);wr<f32>(p,0x10,10.0f);
-    wr<s16>(p,8,240);wr<f32>(p,0x18,1000.0f);wr<f32>(p,0x20,10000.0f);wr<s16>(p,0xA,200);
-    wr<s16>(p,6,100);wr<u8>(p,4,0);wr<f32>(p,0x2C,10.0f);wr<u8>(p,5,0);wr<f32>(p,0x24,500.0f);
-    wr<u32>(p,0,0x10010D88);return self;
+/* 0216C1A4 */
+BOOL daGy_Ctrl_c::_draw() {
+  // HD: debug draw retains only the HIO read and empty iteration loops.
+  if (l_HIO.mDrawDebug) {
+    for (u32 i = 0; i < u8(mCount); ++i) {
+    }
+    for (u32 i = 0; i < 16; ++i) {
+    }
+  }
+  return TRUE;
 }
-VERIFY(0x0216C870,daGyCtrl_HioConstructor);
-void daGyCtrl_StaticInit() {
-    WWHD_FUNC(0x0216C928,void);
-    wr<u32>(0x10464664,8,0);wr<u32>(0x10464664,0,0);wr<u32>(0x10464664,0xC,0);wr<u32>(0x10464664,4,0);
-    gabi::call(0x028F026C,0x101B6D70);
-    wr<f32>(0x10464628,0,-3.1415927410125732f);wr<f32>(0x1046462C,0,3.1415927410125732f);
-    gabi::call(0x028ED6F8,0x10464630);gabi::call(0x028F026C,0x101B6D7C);
-    gabi::call(0x028EAB2C,0x10464631);gabi::call(0x028F026C,0x101B6D88);gabi::call(0x0216C870,0x10464634);
+
+/* 0216B9D0 */
+void daGy_Ctrl_c::createInitNoArer() {
+  fopAcM_setStageLayer(this);
+  mLayerInitialized = 1;
+  mRoom = current.roomNo;
 }
-VERIFY(0x0216C928,daGyCtrl_StaticInit);
+
+/* 0216BA10 */
+void daGy_Ctrl_c::createInit() {
+  modeProc(PROC_INIT_e, mSwitch == 255 ? MODE_CREATE_e : MODE_SWITCH_WAIT_e);
+  mCenter.copy(current.pos);
+  mTarget = TARGET_PLAYER_e;
+  if (mType == TYPE_NO_AREA_e)
+    createInitNoArer();
+}
+
+/* 0216B7C4 */
+u8 daGy_Ctrl_c::getParam(u32 param, u32 shift, u32 bits) {
+  // HD: keep PPC shift semantics for the full incoming registers.
+  shift &= 63;
+  bits &= 63;
+  return u8((shift < 32 ? param >> shift : 0) &
+            ((bits < 32 ? 1u << bits : 0) - 1));
+}
+
+/* 0216B7E0 */
+void daGy_Ctrl_c::getArg() {
+  u32 param = mParameters;
+  mType = getParam(param, 0, 4);
+  mCount = getParam(param, 4, 4);
+  u8 distance = getParam(param, 8, 8);
+  mSwitch = getParam(param, 24, 8);
+  if (mType == 15)
+    mType = TYPE_NO_AREA_e;
+  if (mCount == 15)
+    mCount = 1;
+  mMaxDistance = distance == 255 ? 10000.0f : f32(distance) * 1000.0f;
+}
+
+/* 0216B8B8 */
+BOOL daGy_Ctrl_c::checkGyCtrlExist() {
+  gabi::Local<be<s16>> id;
+  *id = fpcNm_GY_CTRL_e;
+  daGy_Ctrl_c *actor =
+      static_cast<daGy_Ctrl_c *>(fopAcIt_Judge(GY_NAME_JUDGE_e, id.get()));
+  return actor && actor->mType == TYPE_NO_AREA_e &&
+         actor->mLayerInitialized != 0;
+}
+
+/* 0216BA8C */
+s32 daGy_Ctrl_c::_create() {
+  fopAcM_ct(this, daGy_Ctrl_c);
+  getArg();
+  if (mType == TYPE_NO_AREA_e && checkGyCtrlExist())
+    return cPhs_ERROR_e;
+  if (!dComIfGs_checkGetItem(dItemNo_BOOMERANG_e))
+    return cPhs_ERROR_e;
+  createInit();
+  return cPhs_COMPLEATE_e;
+}
+
+/* 0216BBB0 */
+s32 daGy_CtrlCreate(daGy_Ctrl_c *i_this) { return i_this->_create(); }
+/* 0216BBB4 */
+BOOL daGy_CtrlDelete(daGy_Ctrl_c *i_this) { return TRUE; }
+/* 0216C1A0 */
+s32 daGy_CtrlExecute(daGy_Ctrl_c *i_this) { return i_this->_execute(); }
+/* 0216C1DC */
+BOOL daGy_CtrlDraw(daGy_Ctrl_c *i_this) { return i_this->_draw(); }
+/* 0216C9C8 */
+BOOL daGy_CtrlIsDelete(daGy_Ctrl_c *i_this) { return TRUE; }
+
+// HD: compiler-generated and template code of this translation unit.
+/* 0216C9D8 */
+void Gy_destructHD(daGy_Ctrl_c *i_this, u32 flags) {
+  if (!i_this)
+    return;
+  i_this->mLinChk.dBgS_PolyPassChk::__vtbl = 0x10010D28;
+  i_this->mLinChk.dBgS_GrpPassChk::__vtbl = 0x10010CE8;
+  i_this->mLinChk.cBgS_PolyInfo::__vtbl = 0x10010CD8;
+  Gy_destructLine(&i_this->mLinChk, 0);
+  __dt(i_this);
+  if (flags & 1)
+    operator_delete(i_this);
+}
+
+/* 0216C870 */
+daGy_Ctrl_HIO_c *HIO_constructHD(daGy_Ctrl_HIO_c *i_this) {
+  if (!i_this)
+    i_this =
+        static_cast<daGy_Ctrl_HIO_c *>(operator_new(sizeof(daGy_Ctrl_HIO_c)));
+  if (!i_this)
+    return nullptr;
+  i_this->mLineEndHeight = -500.0f;
+  i_this->mShipAngleStep = 250;
+  i_this->mPlayerRadius = 700.0f;
+  i_this->mRadiusWave = 10.0f;
+  i_this->mSpawnDelay = 240;
+  i_this->mShipRadius = 1000.0f;
+  i_this->mMaximumDistance = 10000.0f;
+  i_this->mPlayerAngleStep = 200;
+  i_this->mCreateDelay = 100;
+  i_this->mDrawDebug = 0;
+  i_this->mRadiusStep = 10.0f;
+  i_this->mDebugEnabled = 0;
+  i_this->mLineStartHeight = 500.0f;
+  i_this->mVtable = 0x10010D88;
+  return i_this;
+}
+
+/* 0216C928 */
+void __sinit_d_a_gy_ctrl_cpp() {
+  l_headerZeros.words[2] = 0;
+  l_headerZeros.words[0] = 0;
+  l_headerZeros.words[3] = 0;
+  l_headerZeros.words[1] = 0;
+  Gy_registerGlobal(&l_registration0);
+  l_minAngle = -3.1415927f;
+  l_maxAngle = 3.1415927f;
+  Gy_initAngle(&l_angleInit);
+  Gy_registerGlobal(&l_registration1);
+  Gy_initLimit(&l_limitInit);
+  Gy_registerGlobal(&l_registration2);
+  HIO_constructHD(&l_HIO);
+}
+
+/* WWHD glue
+data l_HIO 10464634
+data l_hideRegs 1047BB18
+data mode_tbl 10010C64
+data l_headerZeros 10464664
+data l_registration0 101B6D70
+data l_registration1 101B6D7C
+data l_registration2 101B6D88
+data l_minAngle 10464628
+data l_maxAngle 1046462C
+data l_angleInit 10464630
+data l_limitInit 10464631
+str 10010CB4 "SW_WAIT"
+str 10010CBC "CREATE"
+str 10010CC4 "WAIT"
+str 10010CCC "HIDE"
+str 10010D98 "WaterBattle"
+str 10010DA4 "BoatBattle"
+ext 0211D2F8 s32 Gy_calcTimer(be<s32>*)
+ext 028F4384 f64 Gy_sqrtDistance(f32)
+ext 024F8044 void* Gy_getCameraBody()
+ext 02514EE4 void Gy_setCameraType(void*,const char*,u32)
+ext 025D5A20 u32 Gy_createChild(s32,u32,s32,cXyz*,s32,csXyz*,u32,s32,u32)
+ext 0201A478 void Gy_initAngles(csXyz*,s16,s16,s16)
+ext 02008FEC void Gy_constructLine(cBgS_LinChk*)
+ext 02008B4C void Gy_destructLine(cBgS_LinChk*,s32)
+ext 028F026C void Gy_registerGlobal(GyRegistrationHD*)
+ext 028ED6F8 void Gy_initAngle(be<u8>*)
+ext 028EAB2C void Gy_initLimit(be<u8>*)
+*/

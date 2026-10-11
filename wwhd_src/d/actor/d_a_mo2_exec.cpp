@@ -7,71 +7,145 @@
  * (zeldaret/tww src/d/actor/d_a_mo2.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_mo2.h"
-
-/* ---- other mo2 functions: called by address ---- */
-static void tex_anm_set(mo2_class* i, u16 idx) { gabi::call(0x021C6368, i, (u32)idx); }
-static void anm_init(mo2_class* i, s32 bck, f32 morf, u8 loopMode, f32 speed, s32 snd) {
-    gabi::call(0x021C6440, i, bck, morf, (u32)loopMode, speed, snd);
-}
-static void smoke_set_s(mo2_class* i, f32 rate) { gabi::call(0x021C6578, i, rate); }
-static void wait_set(mo2_class* i) { gabi::call(0x021C8E30, i); }
-static void path_check(mo2_class* i) { gabi::call(0x021C9004, i); }
-static void Mo2_move(mo2_class* i) { gabi::call(0x021D0A14, i); } /* the matcher names it fight */
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline BOOL enemy_ice(enemyice_l* e) { return gabi::call<BOOL>(0x020402C8, e); }
-static inline void enemy_fire(enemyfire_l* e) { gabi::call(0x02041570, e); }
-static inline s32 dr_damage_anime(damagereaction_l* d) { return gabi::call<s32>(0x02041F94, d); } /* damage_reaction */
-static inline void dComIfGp_setNextStage(const char* stage, s16 point, s8 room, s8 layer, f32 speed, u32 mode, s32 setPoint, s8 wipe) {
-    gabi::call(0x0252012C, stage, point, room, layer, speed, mode, setPoint, wipe);
-}
-static inline void fopAcM_orderPotentialEvent(fopAc_ac_c* a, u16 flag, u16 prio, u16 p3) { gabi::call(0x025D7B24, a, flag, prio, p3); }
-/* HD controller checks (CPad_CHECK_TRIG_B(0) / CPad_CHECK_HOLD_Y(0)) */
-static inline s32 CPad_CHECK_TRIG_B(s32 pad) { return gabi::call<s32>(0x020078BC, pad); }
-static inline s32 CPad_CHECK_HOLD_Y(s32 pad) { return gabi::call<s32>(0x02007738, pad); }
-/* CcAtInfo (unchanged from GameCube) */
-struct CcAtInfo_l {
-    /* 0x00 */ be<u32> mpObj;
-    /* 0x04 */ be<u32> mpActor;
-    /* 0x08 */ be<u8> mDamage;
-    /* 0x09 */ be<u8> mbDead;
-    /* 0x0A */ be<u8> mResultingAttackType;
-    /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
-    /* 0x12 */ be<u16> mPlCutBit;
-    /* 0x14 */ be<u32> pParticlePos;
-    /* 0x18 */ be<s32> mHitSoundId;
-};
-WWHD_SIZE(CcAtInfo_l, 0x1C);
-static inline void def_se_set(fopAc_ac_c* a, void* obj, u32 mtrl) { gabi::call(0x02518CC8, a, obj, mtrl); }
-static inline void at_power_check(CcAtInfo_l* info) { gabi::call(0x02518DB0, info); }
-static inline u32 cc_at_check(fopAc_ac_c* a, CcAtInfo_l* info) { return gabi::call<u32>(0x025192A8, a, info); }
-static inline void dKy_Sound_set(cXyz* pos, s32 a, u32 id, s32 b) { gabi::call(0x0255F458, pos, a, id, b); }
-static inline void dCcMassS_Set(void* obj, u8 prio) { gabi::call(0x02516C14, gabi::at<u8>(dComIfGp_ea() + PLAY_CCMASS), obj, (u32)prio); }
-/* camera (HD) */
-static inline void dCam_getCamera() { gabi::call(0x024F8020); }
-static inline u8* dCam_getBody() { return gabi::call<u8*>(0x024F8044); }
-static inline void dCamera_Set(u8* cam, cXyz* center, cXyz* eye, f32 fovy, s16 bank) { gabi::call(0x02514F88, cam, center, eye, fovy, bank); }
-static inline void dCamera_SetTypeForce(u8* cam, const char* type, fopAc_ac_c* a) { gabi::call(0x02514EE4, cam, type, a); }
-static inline void dCamera_SetTrimTypeForce(u8* cam, s32 t) { gabi::call(0x0251528C, cam, t); }
-static inline void dCamera_SetTrimSize_l(u8* cam, s32 t) { gabi::call(0x02515280, cam, t); }
-static inline void dCamera_Stop(u8* cam) { gabi::call(0x02514F2C, cam); }
-static inline void dCamera_Start(u8* cam) { gabi::call(0x02514F38, cam); }
-static inline void dMeter_mtrShow() { gabi::call(0x0259169C); }
-static inline void mDoAud_seStart_4(u32 id, cXyz* pos, u32 param, s32 reverb) { gabi::call(0x025E1A40, id, pos, param, reverb); }
-static inline void dVibration_StartShock(u8* vib, s32 strength, s32 flags, cXyz* dir) { gabi::call(0x025CB374, vib, strength, flags, dir); }
-/* daPy_py_c::getCutType(): +0x3AC (HD) */
-static inline u8 daPy_getCutType(fopAc_ac_c* p) { return gabi::load<u8>(gabi::ea(p) + 0x3AC); }
-/* daBoko_c (HD offsets): setRotAngleSpeed +0x43A; moveStateInit stores angle.y, speed.y, speedF */
-static inline void daBoko_setRotAngleSpeed(fopAc_ac_c* b, s16 s) { gabi::store<s16>(gabi::ea(b) + 0x43A, s); }
+#include "d/actor/d_a_mo2_exec.h"
 
 enum {
-    AT_TYPE_HD_ICE_ARROW = 0x80000, AT_TYPE_HD_ICE_OR_LIGHT = 0x180000, AT_TYPE_HD_FIRE = 0x40200,
-    JA_SE_CV_MO_DAMAGE = 0x4809, JA_SE_CV_MO_DAMAGE_HIP = 0x480A, JA_SE_CV_MO_FAINTED = 0x480E, JA_SE_MAJU_MO_CHECK = 0x905,
+    AT_TYPE_HD_ICE_ARROW = 0x80000,
+    AT_TYPE_HD_ICE_OR_LIGHT = 0x180000,
+    AT_TYPE_HD_FIRE = 0x40200,
+    JA_SE_CV_MO_DAMAGE = 0x4809,
+    JA_SE_CV_MO_DAMAGE_HIP = 0x480A,
+    JA_SE_CV_MO_FAINTED = 0x480E,
+    JA_SE_MAJU_MO_CHECK = 0x905,
 };
 
-/* mo2_eye_tex_anm (inlined) */
+/* inlined into daMo2_Execute */
+static inline void fopAcM_monsSeStart(fopAc_ac_c* actor, u32 id, u32 param) {
+    if (gabi::ea(&actor->eyePos) != 0) {
+        s8 room = fopAcM_GetRoomNo(actor);
+        u32 pid = fopAcM_GetID(actor);
+        s32 reverb = dComIfGp_getReverb(room);
+        Mo2Exec_monsSeStart(id, &actor->eyePos, pid, param, reverb);
+    }
+}
+static inline void fopAcM_onActor(fopAc_ac_c* actor) {
+    dComIfGs_onActor(actor->setID, actor->home.roomNo);
+}
+static inline bool fopAcM_CheckStatus(fopAc_ac_c* actor, u32 mask) {
+    return (actor->actor_status & mask) != 0;
+}
+
+/* inlined into daMo2_Execute */
+static inline void yari_off_check(mo2_class* i_this) {
+    fopAc_ac_c* actor = i_this;
+    if (i_this->mSpawnWeaponActor != 0) {
+        i_this->m05AE = l_mo2HIO().m08A;
+        PSMTXCopy(model_getAnmMtx((Mo2ExecModel*)i_this->mpMorf->getModel(), MO_JNT_MO_YARI_e),
+                  calc_mtx());
+        gabi::Local<cXyz> local_48;
+        local_48->x = 0.0f;
+        local_48->y = 0.0f;
+        local_48->z = 0.0f;
+        gabi::Local<cXyz> cStack_54;
+        MtxPosition(local_48, cStack_54);
+        i_this->mWeaponPcId =
+            fopAcM_create(fpcNm_BOKO_e, Mo2ExecBoko::Type_MOBLIN_SPEAR_e, cStack_54,
+                          fopAcM_GetRoomNo(actor), nullptr, nullptr, -1, 0);
+        i_this->mbThrowWeapon = 1;
+        i_this->mSpawnWeaponActorMode = i_this->mSpawnWeaponActor;
+        i_this->mSpawnWeaponActor = 0;
+        i_this->mbHasInnateWeapon = 0;
+    }
+    if (i_this->mbThrowWeapon != 0) {
+        fopAc_ac_c* boko = fopAcM_SearchByID(i_this->mWeaponPcId);
+        if (boko != nullptr && i_this->mSpawnWeaponActorMode != 2) {
+            reinterpret_cast<Mo2ExecBoko*>(boko)->mRotAngleSpeed =
+                (s16)gabi::ftoi(cM_rndFX(2000.0f));
+            s16 angleY = actor->shape_angle.y + 0x8000;
+            angleY = angleY + (s16)gabi::ftoi(cM_rndFX(8000.0f));
+            f32 s1 = cM_rndF(10.0f) + 20.0f;
+            f32 s2 = cM_rndF(10.0f) + 20.0f;
+            /* daBoko_c::moveStateInit */
+            boko->current.angle.y = angleY;
+            boko->speed.y = s2;
+            boko->speedF = s1;
+            i_this->mbThrowWeapon = 0;
+        }
+    }
+}
+
+/* inlined into daMo2_Execute */
+static inline void ground_smoke_set(mo2_class* i_this) {
+    fopAc_ac_c* actor = i_this;
+    if (i_this->m05F0 == 0) {
+        return;
+    }
+    i_this->m05F0--;
+    if (i_this->m05F0 >= l_mo2HIO().m024) {
+        gabi::Local<cXyz> sp8;
+        sp8->x = 0.0f;
+        sp8->y = 0.0f;
+        i_this->m05E8.x = 0;
+        i_this->m05E8.z = 0;
+        MtxTrans(actor->current.pos.x, actor->current.pos.y + 7.5f, actor->current.pos.z, 0);
+        if (i_this->m05F2 == 0) {
+            sp8->z = -350.0f;
+            cMtx_YrotM(calc_mtx(), i_this->m05EE);
+            MtxPosition(sp8, &i_this->m05DC);
+            i_this->m05E8.y = i_this->m05EE;
+            smoke_set_s(i_this, 6.0f);
+            i_this->m05EE = i_this->m05EE + REG0_S(7) + 2000;
+        } else if (i_this->m05F2 == 1) {
+            cMtx_YrotM(calc_mtx(), actor->current.angle.y);
+            cMtx_YrotM(calc_mtx(), i_this->m05EE);
+            sp8->z = -55.0f;
+            MtxPosition(sp8, &i_this->m05DC);
+            i_this->m05E8.y = i_this->m05EE;
+            smoke_set_s(i_this, 6.0f);
+            i_this->m05EE += 0x1FA0;
+        } else if (i_this->m05F2 == 2) {
+            MtxTrans(i_this->m2904.x, i_this->m2904.y + 7.5f, i_this->m2904.z, 0);
+            cMtx_YrotM(calc_mtx(), i_this->m05EE);
+            sp8->z = -12.5f;
+            MtxPosition(sp8, &i_this->m05DC);
+            i_this->m05E8.y = i_this->m05EE;
+            smoke_set_s(i_this, 6.0f);
+            i_this->m05EE += 0x2000;
+        } else if (i_this->m05F2 == 3) {
+            cMtx_YrotM(calc_mtx(), actor->current.angle.y);
+            cMtx_YrotM(calc_mtx(), i_this->m05EE);
+            sp8->z = -37.5f;
+            MtxPosition(sp8, &i_this->m05DC);
+            i_this->m05E8.y = i_this->m05EE;
+            smoke_set_s(i_this, 2.0f);
+            i_this->m05EE += 0x1FA0;
+        } else if (i_this->m05F2 == 4) {
+            cXyz* src = (i_this->m059C & 1) ? &i_this->mDamageReaction.m100[14]
+                                            : &i_this->mDamageReaction.m100[15];
+            f32 sy = src->y;
+            i_this->m05DC.y = sy;
+            f32 sz = src->z;
+            f32 sx = src->x;
+            i_this->m05DC.x = sx;
+            i_this->m05DC.z = sz;
+            if (i_this->mDamageReaction.m712 != 0) {
+                i_this->m05DC.y = 512.5f;
+            } else {
+                i_this->m05DC.y = sy - 12.5f;
+            }
+            i_this->m05E8.y = cM_atan2s(actor->speed.x, actor->speed.z);
+            smoke_set_s(i_this, 1.0f);
+        }
+    } else {
+        i_this->m05DC.y = i_this->mDamageReaction.mSpawnY + 25000.0f;
+    }
+    if (i_this->m05F0 == 0) {
+        Mo2Exec_endSmoke(&i_this->m05F4);
+        i_this->m05F3 = 0;
+    }
+}
+
+/* inlined into daMo2_Execute */
 static inline void mo2_eye_tex_anm(mo2_class* i_this) {
     if (i_this->m02E0 != 0) {
         i_this->m02E0--;
@@ -90,11 +164,11 @@ static inline void mo2_eye_tex_anm(mo2_class* i_this) {
     }
 }
 
-/* damage_check (inlined) */
+/* inlined into daMo2_Execute */
 static inline u8 damage_check(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    gabi::Local<CcAtInfo_l> atInfo;
+    gabi::Local<Mo2AtInfo> atInfo;
     atInfo->mpObj = 0;
     atInfo->mDamage = 0;
     atInfo->mPlCutBit = 0;
@@ -120,15 +194,19 @@ static inline u8 damage_check(mo2_class* i_this) {
         s16 pz = player->shape_angle.z;
         local_68->y = (s16)(py - 0x8000);
         local_68->z = pz;
-        GXColor* k0 = gabi::at<GXColor>(gabi::ea(&actor->tevStr) + 0x98); /* tevStr.mColorK0 */
-        JPABaseEmitter* emitter = dComIfGp_particle_set(0x2B /* ID_AK_JN_ELEMENTKIKUZU00 */, &i_this->m2928, local_68, nullptr,
-                                                        0xFF, nullptr, -1, k0, k0, nullptr);
+        GXColor* k0 = &actor->tevStr.mColorK0;
+        Mo2ExecEmitter* emitter = reinterpret_cast<Mo2ExecEmitter*>(
+            dComIfGp_particle_set(ID_AK_JN_ELEMENTKIKUZU00, &i_this->m2928, local_68, nullptr, 0xFF,
+                                  nullptr, -1, k0, k0, nullptr));
         if (emitter != nullptr) {
-            JPA_setMaxFrame(emitter, 1);
-            JPA_setRate(emitter, 10.0f);
-            JPA_setSpread(emitter, 0.2f);
-            gabi::store<f32>(gabi::ea(emitter) + 0x7C, 0.15f); /* setVolumeSweep */
-            JPA_setGlobalParticleScale(emitter, REG_F(14, 16) + 0.85f);
+            emitter->mMaxFrame = 1;
+            emitter->mRate = 10.0f;
+            emitter->mSpread = 0.2f;
+            emitter->mVolumeSweep = 0.15f;
+            f32 scale = REG_F(14, 16) + 0.85f;
+            emitter->mGlobalParticleScale.x = scale;
+            emitter->mGlobalParticleScale.y = scale;
+            emitter->mGlobalParticleScale.z = scale;
         }
         return 0;
     }
@@ -138,25 +216,25 @@ static inline u8 damage_check(mo2_class* i_this) {
         i_this->m05A0 = 0;
         i_this->m2944 = -1;
         i_this->m294E = 0;
-        i_this->m05B4 = 4; /* HD: 4 (GameCube REG0_S(7) + 5) */
-        u32 obj;
+        i_this->m05B4 = 4; // HD: four frames instead of the GameCube register plus five.
+        dCcD_GObjInf* obj;
         if (i_this->mHeadSph.ChkTgHit()) {
             iVar12 = 1;
-            obj = gabi::ea(i_this->mHeadSph.GetTgHitObj());
+            obj = static_cast<dCcD_GObjInf*>(i_this->mHeadSph.GetTgHitObj());
             atInfo->mpObj = obj;
-            atInfo->pParticlePos = gabi::ea(i_this->mHeadSph.GetTgHitPosP());
+            atInfo->pParticlePos = i_this->mHeadSph.GetTgHitPosP();
         } else if (i_this->mTgCyl.ChkTgHit()) {
             iVar12 = 2;
-            obj = gabi::ea(i_this->mTgCyl.GetTgHitObj());
+            obj = static_cast<dCcD_GObjInf*>(i_this->mTgCyl.GetTgHitObj());
             atInfo->mpObj = obj;
-            atInfo->pParticlePos = gabi::ea(i_this->mTgCyl.GetTgHitPosP());
+            atInfo->pParticlePos = i_this->mTgCyl.GetTgHitPosP();
         } else {
             obj = atInfo->mpObj;
         }
         /* HD: ChkAtType tests the object for NULL */
         if (obj != 0) {
-            if (gabi::load<u32>(obj + 0x10) & AT_TYPE_HD_ICE_OR_LIGHT) {
-                if (gabi::load<u32>(obj + 0x10) & AT_TYPE_HD_ICE_ARROW) {
+            if (obj->ChkAtType(AT_TYPE_HD_ICE_OR_LIGHT)) {
+                if (obj->ChkAtType(AT_TYPE_HD_ICE_ARROW)) {
                     i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
                     i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
                     path_check(i_this);
@@ -165,16 +243,16 @@ static inline u8 damage_check(mo2_class* i_this) {
                 } else {
                     i_this->mEnemyIce.mLightShrinkTimer = 1;
                 }
-                enemy_fire_remove(&i_this->mEnemyFire);
+                Mo2Exec_enemyFireRemove(&i_this->mEnemyFire);
                 i_this->m05F0 = 0;
-                dPa_smokeEcallBack_end_l(&i_this->m05F4);
+                Mo2Exec_endSmoke(&i_this->m05F4);
                 if (i_this->mbHasInnateWeapon != 0) {
                     i_this->mSpawnWeaponActor = 2;
                 }
                 i_this->m2A09 = 1;
                 return 0;
             }
-            if (gabi::load<u32>(obj + 0x10) & AT_TYPE_HD_FIRE) {
+            if (obj->ChkAtType(AT_TYPE_HD_FIRE)) {
                 i_this->m05B4 = 0x32;
                 i_this->mEnemyFire.mFireDuration = REG0_S(2) + 100;
             }
@@ -202,7 +280,7 @@ static inline u8 damage_check(mo2_class* i_this) {
         i_this->m05B6 = 0x19;
         pos->z = pz;
         dKy_Sound_set(pos, 100, fopAcM_GetID(actor), 5);
-        /* HD: no l_mo2HIO.m007 health reset; type 0xC sets m05B4 */
+        // HD: health debug reset removed; type twelve sets ten invincible frames.
         if (atInfo->mResultingAttackType == 0xC) {
             i_this->m05B4 = 0xA;
         }
@@ -219,7 +297,7 @@ static inline u8 damage_check(mo2_class* i_this) {
                 if (sVar3 < 0) {
                     sVar3 = -sVar3;
                 }
-                if (daPy_getCutType(player) == 5) {
+                if (reinterpret_cast<Mo2ExecPlayer*>(player)->mCutType == 5) {
                     iVar11 = 2;
                 } else if ((u16)sVar3 > 0x4000) {
                     if (atInfo->mbDead != 0) {
@@ -286,7 +364,8 @@ static inline u8 damage_check(mo2_class* i_this) {
         i_this->mDamageReaction.m424 |= 0x20;
         i_this->mDamageReaction.m428 = 23.0f;
         cMtx_YrotS(calc_mtx(), i_this->m05D6);
-        anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f, dRes_INDEX_MO2_BAS_PAOMUKE_e);
+        anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
+                 dRes_INDEX_MO2_BAS_PAOMUKE_e);
         i_this->mDamageReaction.m70E = 7;
         i_this->mDamageReaction.m48A = 10;
         i_this->mDamageReaction.m474 = 5000.0f;
@@ -338,7 +417,7 @@ static inline u8 damage_check(mo2_class* i_this) {
     return atInfo->mDamage;
 }
 
-/* mo2_demo_camera (inlined) */
+/* inlined into daMo2_Execute */
 static inline void mo2_demo_camera(mo2_class* i_this) {
     fopAc_ac_c* actor = i_this;
     dComIfGp_get();
@@ -351,15 +430,16 @@ static inline void mo2_demo_camera(mo2_class* i_this) {
         break;
     case 1:
     case 2: {
-        mDoAud_seStart_4(JA_SE_MAJU_MO_CHECK, nullptr, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
+        mDoAud_seStart(JA_SE_MAJU_MO_CHECK, nullptr, 0,
+                       dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
         gabi::Local<cXyz> dir;
         dir->x = 0.0f;
         dir->y = 1.0f;
         dir->z = 0.0f;
-        u8* vib = gabi::at<u8>(dComIfGp_ea() + PLAY_VIBRATION);
-        dVibration_StartShock(vib, REG0_S(2) + 4, -0x21, dir);
+        dVibration_c* vib = dComIfGp_getVibration();
+        dVibration_StartShock(reinterpret_cast<u8*>(vib), REG0_S(2) + 4, -0x21, dir);
         camera_mode() = 1;
-        dCamera_SetTrimSize_l(camera, 1);
+        dCamera_SetTrimSize(camera, 1);
         i_this->m2A44 = 55.0f;
         i_this->m2A2C.copy(actor->current.pos);
         i_this->m2A1D = 3;
@@ -369,30 +449,30 @@ static inline void mo2_demo_camera(mo2_class* i_this) {
         /* fallthrough */
     case 3:
         r28 = false;
-        dCamera_SetTypeForce(camera, STR(0x10014EF4) /* "Restrict" */, actor);
+        dCamera_SetTypeForce(camera, "Restrict", actor);
         dCamera_SetTrimTypeForce(camera, 1);
         break;
     case 10:
-        dCamera_SetTrimSize_l(camera, 0);
+        dCamera_SetTrimSize(camera, 0);
         r28 = false;
         dMeter_mtrShow();
         i_this->m2A1D = 0;
         camera_mode() = 0;
         break;
     case 0x32:
-        if (!eventInfo_checkCommandDemoAccrpt(actor)) {
-            fopAcM_orderPotentialEvent(actor, 2 /* dEvtFlag_STAFF_ALL_e */, 0xFFFF, 0);
-            eventInfo_onCondition(actor, 2);
+        if (!actor->eventInfo.checkCommandDemoAccrpt()) {
+            fopAcM_orderPotentialEvent(actor, dEvtFlag_STAFF_ALL_e, 0xFFFF, 0);
+            actor->eventInfo.onCondition(dEvtCnd_UNK2_e);
             r28 = false;
             break;
         }
         dCamera_Stop(camera);
-        dCamera_SetTrimSize_l(camera, 1);
+        dCamera_SetTrimSize(camera, 1);
         i_this->m2A1D = 0x33;
         {
-            u32 cam2 = gabi::load<u32>(dComIfGp_ea() + 0x5AF8); /* dComIfGp_getCamera(0) */
-            i_this->m2A20.copy(*gabi::at<cXyz>(cam2 + 0xDC));  /* view.mLookat.mEye */
-            i_this->m2A2C.copy(*gabi::at<cXyz>(cam2 + 0xE8));  /* view.mLookat.mCenter */
+            Mo2ExecCamera* camera2 = reinterpret_cast<Mo2ExecCamera*>(dComIfGp_getCamera(0));
+            i_this->m2A20.copy(camera2->mLookat.mEye);    /* view.mLookat.mEye */
+            i_this->m2A2C.copy(camera2->mLookat.mCenter); /* view.mLookat.mCenter */
         }
         i_this->m2A44 = 55.0f;
         i_this->m2A1E = 0;
@@ -401,12 +481,13 @@ static inline void mo2_demo_camera(mo2_class* i_this) {
         cLib_addCalc2(&i_this->m2A44, REG0_F(0xd) + 30.0f, 0.2f, REG0_F(0xe) + 0.4f);
         if (i_this->m2A1C == 0) {
             cLib_addCalc2(&i_this->m2A2C.x, actor->current.pos.x, 0.1f, 100.0f);
-            cLib_addCalc2(&i_this->m2A2C.y, actor->current.pos.y + 230.0f + REG0_F(0xc), 0.1f, 100.0f);
+            cLib_addCalc2(&i_this->m2A2C.y, actor->current.pos.y + 230.0f + REG0_F(0xc), 0.1f,
+                          100.0f);
             cLib_addCalc2(&i_this->m2A2C.z, actor->current.pos.z, 0.1f, 100.0f);
         }
         i_this->m2A1E++;
         if (i_this->m2A1E > 0x96) {
-            dCamera_SetTrimSize_l(camera, 0);
+            dCamera_SetTrimSize(camera, 0);
             dCamera_Start(camera);
             dMeter_mtrShow();
             dComIfGp_event_reset();
@@ -424,115 +505,8 @@ static inline void mo2_demo_camera(mo2_class* i_this) {
     }
 }
 
-/* ground_smoke_set (inlined) */
-static inline void ground_smoke_set(mo2_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    if (i_this->m05F0 == 0) {
-        return;
-    }
-    i_this->m05F0--;
-    if (i_this->m05F0 >= l_mo2HIO().m024) {
-        gabi::Local<cXyz> sp8;
-        sp8->x = 0.0f;
-        sp8->y = 0.0f;
-        i_this->m05E8.x = 0;
-        i_this->m05E8.z = 0;
-        MtxTrans(actor->current.pos.x, actor->current.pos.y + 7.5f, actor->current.pos.z, 0);
-        if (i_this->m05F2 == 0) {
-            sp8->z = -350.0f;
-            cMtx_YrotM(calc_mtx(), i_this->m05EE);
-            MtxPosition(sp8, &i_this->m05DC);
-            i_this->m05E8.y = i_this->m05EE;
-            smoke_set_s(i_this, 6.0f);
-            i_this->m05EE = i_this->m05EE + REG0_S(7) + 2000;
-        } else if (i_this->m05F2 == 1) {
-            cMtx_YrotM(calc_mtx(), actor->current.angle.y);
-            cMtx_YrotM(calc_mtx(), i_this->m05EE);
-            sp8->z = -55.0f;
-            MtxPosition(sp8, &i_this->m05DC);
-            i_this->m05E8.y = i_this->m05EE;
-            smoke_set_s(i_this, 6.0f);
-            i_this->m05EE += 0x1FA0;
-        } else if (i_this->m05F2 == 2) {
-            MtxTrans(i_this->m2904.x, i_this->m2904.y + 7.5f, i_this->m2904.z, 0);
-            cMtx_YrotM(calc_mtx(), i_this->m05EE);
-            sp8->z = -12.5f;
-            MtxPosition(sp8, &i_this->m05DC);
-            i_this->m05E8.y = i_this->m05EE;
-            smoke_set_s(i_this, 6.0f);
-            i_this->m05EE += 0x2000;
-        } else if (i_this->m05F2 == 3) {
-            cMtx_YrotM(calc_mtx(), actor->current.angle.y);
-            cMtx_YrotM(calc_mtx(), i_this->m05EE);
-            sp8->z = -37.5f;
-            MtxPosition(sp8, &i_this->m05DC);
-            i_this->m05E8.y = i_this->m05EE;
-            smoke_set_s(i_this, 2.0f);
-            i_this->m05EE += 0x1FA0;
-        } else if (i_this->m05F2 == 4) {
-            cXyz* src = (i_this->m059C & 1) ? &i_this->mDamageReaction.m100[14] : &i_this->mDamageReaction.m100[15];
-            f32 sy = src->y;
-            i_this->m05DC.y = sy;
-            f32 sz = src->z;
-            f32 sx = src->x;
-            i_this->m05DC.x = sx;
-            i_this->m05DC.z = sz;
-            if (i_this->mDamageReaction.m712 != 0) {
-                i_this->m05DC.y = 512.5f;
-            } else {
-                i_this->m05DC.y = sy - 12.5f;
-            }
-            i_this->m05E8.y = cM_atan2s(actor->speed.x, actor->speed.z);
-            smoke_set_s(i_this, 1.0f);
-        }
-    } else {
-        i_this->m05DC.y = i_this->mDamageReaction.mSpawnY + 25000.0f;
-    }
-    if (i_this->m05F0 == 0) {
-        dPa_smokeEcallBack_end_l(&i_this->m05F4);
-        i_this->m05F3 = 0;
-    }
-}
-
-/* yari_off_check (inlined) */
-static inline void yari_off_check(mo2_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    if (i_this->mSpawnWeaponActor != 0) {
-        i_this->m05AE = l_mo2HIO().m08A;
-        PSMTXCopy(model_getAnmMtx((J3DModel_l*)i_this->mpMorf->getModel(), MO_JNT_MO_YARI_e), calc_mtx());
-        gabi::Local<cXyz> local_48;
-        local_48->x = 0.0f;
-        local_48->y = 0.0f;
-        local_48->z = 0.0f;
-        gabi::Local<cXyz> cStack_54;
-        MtxPosition(local_48, cStack_54);
-        i_this->mWeaponPcId = fopAcM_create(fpcNm_BOKO_e, 4 /* Type_MOBLIN_SPEAR_e */, cStack_54, fopAcM_GetRoomNo(actor),
-                                            nullptr, nullptr, -1, 0);
-        i_this->mbThrowWeapon = 1;
-        i_this->mSpawnWeaponActorMode = i_this->mSpawnWeaponActor;
-        i_this->mSpawnWeaponActor = 0;
-        i_this->mbHasInnateWeapon = 0;
-    }
-    if (i_this->mbThrowWeapon != 0) {
-        fopAc_ac_c* boko = fopAcM_SearchByID(i_this->mWeaponPcId);
-        if (boko != nullptr && i_this->mSpawnWeaponActorMode != 2) {
-            daBoko_setRotAngleSpeed(boko, (s16)gabi::ftoi(cM_rndFX(2000.0f)));
-            s16 angleY = actor->shape_angle.y + 0x8000;
-            angleY = angleY + (s16)gabi::ftoi(cM_rndFX(8000.0f));
-            f32 s1 = cM_rndF(10.0f) + 20.0f;
-            f32 s2 = cM_rndF(10.0f) + 20.0f;
-            /* daBoko_c::moveStateInit */
-            boko->current.angle.y = angleY;
-            boko->speed.y = s2;
-            boko->speedF = s1;
-            i_this->mbThrowWeapon = 0;
-        }
-    }
-}
-
 /* 021C9B1C */
 static BOOL daMo2_Execute(mo2_class* i_this) {
-    WWHD_FUNC(0x021C9B1C, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     /* HD: a Moblin with a death switch that fell far below its home sets the switch and goes away */
@@ -559,7 +533,7 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &actor->current.pos, &actor->tevStr);
     enemy_fire(&i_this->mEnemyFire);
     if (i_this->m2A4B != 0 || i_this->m2A4C == 1) {
-        dComIfGp_setNextStage(STR(0x10015118) /* "majroom" */, 0, 0, -1, 0.0f, 0, 1, 0);
+        dComIfGp_setNextStage("majroom", 0, 0, -1, 0.0f, 0, 1, 0);
         return TRUE;
     }
     if (i_this->m2A4C != 0) {
@@ -570,11 +544,11 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     }
     /* HD: no m2970 / fell-4000-below-home deletion here */
     if (i_this->m2A4A != 0) {
-        if (eventInfo_checkCommandDemoAccrpt(actor)) {
+        if (actor->eventInfo.checkCommandDemoAccrpt()) {
             i_this->m2A4A = 0;
         } else {
-            fopAcM_orderPotentialEvent(actor, 2 /* dEvtType_OTHER_e */, 0xFFFF, 0);
-            eventInfo_onCondition(actor, 2);
+            fopAcM_orderPotentialEvent(actor, dEvtType_OTHER_e, 0xFFFF, 0);
+            actor->eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
     }
     if (i_this->m2A48 != 0) {
@@ -587,7 +561,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->mDamageReaction.mMode = 0;
         }
     }
-    if (i_this->mDamageReaction.mAction == ACTION_JYUNKAI && daPy_checkGrabWear(player)) {
+    if (i_this->mDamageReaction.mAction == ACTION_JYUNKAI &&
+        (reinterpret_cast<Mo2ExecPlayer*>(player)->mGrabWear < 0.0f)) {
         if (i_this->mDamageReaction.mMode < 2) {
             l_mo2HIO().m02C = REG0_F(10) + 800.0f;
         } else {
@@ -632,7 +607,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         if (i_this->m05B6 != 0) {
             i_this->m05B6--;
         }
-        if (dComIfGs_isCollect(0, 0) || dComIfGs_isCollect(0, 1) || dComIfGs_isCollect(0, 2) || dComIfGs_isCollect(0, 3)) {
+        if (dComIfGs_isCollect(0, 0) || dComIfGs_isCollect(0, 1) || dComIfGs_isCollect(0, 2) ||
+            dComIfGs_isCollect(0, 3)) {
             rouya_mode() = 0;
         } else {
             rouya_mode() = 1;
@@ -640,15 +616,16 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         if (i_this->m02C1 != 0) {
             if (dComIfGs_isSwitch(i_this->m02C1 - 1, fopAcM_GetRoomNo(actor))) {
                 i_this->m02C1 = 0;
-                attention_flags(actor) = fopAc_Attn_LOCKON_BATTLE_e;
+                actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
             } else {
-                attention_flags(actor) = 0;
+                actor->attention_info.flags = 0;
                 return TRUE;
             }
         } else {
-            attention_flags(actor) &= ~0x10u; /* HD */
+            // HD: clear the carry attention flag when no spawn switch gates the actor.
+            actor->attention_info.flags &= ~fopAc_Attn_ACTION_CARRY_e;
         }
-        actor->actor_status |= 0x20; /* fopAcM_OnStatus(fopAcStts_SHOWMAP_e) */
+        actor->actor_status |= fopAcStts_SHOWMAP_e;
         i_this->m0594 = 0;
         i_this->m0598 = 0;
         mo2_eye_tex_anm(i_this);
@@ -667,31 +644,35 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->m05B2--;
         }
         i_this->mDamageReaction.mpEnemy = (fopEn_enemy_c*)actor;
-        i_this->mDamageReaction.mEnemyType = 1; /* damagereaction::TYPE_MOBLIN */
+        i_this->mDamageReaction.mEnemyType = damagereaction_l::TYPE_MOBLIN;
     }
     if (i_this->mDamageReaction.mAction != ACTION_CARRY_DROP) {
         actor->shape_angle.x = actor->current.angle.x;
         actor->shape_angle.y = actor->current.angle.y;
         actor->shape_angle.z = actor->current.angle.z;
     }
-    s32 r3 = dr_damage_anime(&i_this->mDamageReaction);
+    s32 r3 = damage_reaction(&i_this->mDamageReaction);
     if (r3 != 0) {
         i_this->m05F0 = 1;
         i_this->m2954 = fpcM_ERROR_PROCESS_ID_e;
         switch ((u32)r3) {
         case 1:
-            anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f, dRes_INDEX_MO2_BAS_PAOMUKE_e);
-            if (i_this->mbHasInnateWeapon != 0 && (actor->health <= 0 || r23 >= 4 || cM_rndF(1.0f) < 0.5f)) {
+            anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
+                     dRes_INDEX_MO2_BAS_PAOMUKE_e);
+            if (i_this->mbHasInnateWeapon != 0 &&
+                (actor->health <= 0 || r23 >= 4 || cM_rndF(1.0f) < 0.5f)) {
                 i_this->mSpawnWeaponActor = 1;
             }
             i_this->mDamageReaction.mAction = ACTION_JYUNKAI;
             break;
         case 2:
-            anm_init(i_this, dRes_INDEX_MO2_BCK_PUTSUBUSE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f, dRes_INDEX_MO2_BAS_PUTSUBUSE_e);
+            anm_init(i_this, dRes_INDEX_MO2_BCK_PUTSUBUSE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
+                     dRes_INDEX_MO2_BAS_PUTSUBUSE_e);
             break;
         case 5:
             if ((i_this->mMode != 1 || rouya_mode() == 0) &&
-                (i_this->mDamageReaction.mAction != ACTION_FIGHT_RUN && i_this->mDamageReaction.mAction != ACTION_HUKKI &&
+                (i_this->mDamageReaction.mAction != ACTION_FIGHT_RUN &&
+                 i_this->mDamageReaction.mAction != ACTION_HUKKI &&
                  i_this->mDamageReaction.mAction != ACTION_P_LOST && i_this->m05A4[1] == 0)) {
                 wait_set(i_this);
                 i_this->mDamageReaction.mAction = ACTION_FIGHT_RUN;
@@ -720,7 +701,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
             i_this->mDamageReaction.m4C8[2] = l_mo2HIO().m088;
             break;
         case 0x1E:
-            anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f, dRes_INDEX_MO2_BAS_PAOMUKE_e);
+            anm_init(i_this, dRes_INDEX_MO2_BCK_PAOMUKE_e, 2.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
+                     dRes_INDEX_MO2_BAS_PAOMUKE_e);
             if (i_this->mbHasInnateWeapon != 0) {
                 i_this->mSpawnWeaponActor = 1;
             }
@@ -761,7 +743,8 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     MtxPosition(local_b8, cStack_c4);
     i_this->mCoCyl.SetC(cStack_c4);
     dComIfG_Ccsp_Set(&i_this->mCoCyl);
-    dCcMassS_Set(&i_this->mCoCyl, 3);
+    Mo2Exec_massSet(&reinterpret_cast<Mo2ExecMassManager*>(dComIfG_Ccsp())->mMass, &i_this->mCoCyl,
+                    3);
     gabi::Local<cXyz> local_d0;
     gabi::Local<cXyz> local_dc;
     f32 d0x = i_this->m28C8.x, d0y = i_this->m28C8.y, d0z = i_this->m28C8.z;
@@ -788,11 +771,11 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
         i_this->m05DA--;
         if (i_this->m05DA == 0) {
             i_this->m05E8.y = actor->current.angle.y;
-            dComIfGp_particle_set(0xE /* ID_AK_JN_TUBA00 */, &i_this->m28C8, &i_this->m05E8);
+            dComIfGp_particle_set(ID_AK_JN_TUBA00, &i_this->m28C8, &i_this->m05E8);
         }
     }
     if (i_this->mDamageReaction.mAcch.ChkGroundHit()) {
-        gabi::Local<dBgS_GndChk_l> gndChk;
+        gabi::Local<Mo2ExecGndChk> gndChk;
         dBgS_GndChk_ct(gndChk);
         s16 r22 = 0x7FFF;
         s16 r21 = 0x7FFF;
@@ -871,4 +854,42 @@ static BOOL daMo2_Execute(mo2_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x021C9B1C, daMo2_Execute);
+
+/* WWHD glue
+ext 021C6368 void tex_anm_set(mo2_class*, u16)
+ext 021C6440 void anm_init(mo2_class*, s32, f32, u8, f32, s32)
+ext 021C6578 void smoke_set_s(mo2_class*, f32)
+ext 021C8E30 void wait_set(mo2_class*)
+ext 021C9004 void path_check(mo2_class*)
+ext 021D0A14 void Mo2_move(mo2_class*)
+ext 020402C8 BOOL enemy_ice(enemyice_l*)
+ext 02041570 void enemy_fire(enemyfire_l*)
+ext 02041F94 s32 damage_reaction(damagereaction_l*)
+ext 0252012C void dComIfGp_setNextStage(const char*, s16, s8, s8, f32, u32, s32, s8)
+ext 025D7B24 void fopAcM_orderPotentialEvent(fopAc_ac_c*, u16, u16, u16)
+ext 020078BC s32 CPad_CHECK_TRIG_B(s32)
+ext 02007738 s32 CPad_CHECK_HOLD_Y(s32)
+ext 02518CC8 void def_se_set(fopAc_ac_c*, void*, u32)
+ext 02518DB0 void at_power_check(Mo2AtInfo*)
+ext 025192A8 fopAc_ac_c* cc_at_check(fopAc_ac_c*, Mo2AtInfo*)
+ext 0255F458 void dKy_Sound_set(cXyz*, s32, u32, s32)
+ext 024F8020 void dCam_getCamera()
+ext 024F8044 u8* dCam_getBody()
+ext 02514F88 void dCamera_Set(u8*, cXyz*, cXyz*, f32, s16)
+ext 02514EE4 void dCamera_SetTypeForce(u8*, const char*, fopAc_ac_c*)
+ext 0251528C void dCamera_SetTrimTypeForce(u8*, s32)
+ext 02515280 void dCamera_SetTrimSize(u8*, s32)
+ext 02514F2C void dCamera_Stop(u8*)
+ext 02514F38 void dCamera_Start(u8*)
+ext 0259169C void dMeter_mtrShow()
+ext 025CB374 void dVibration_StartShock(u8*, s32, s32, cXyz*)
+ext 025A5F88 void Mo2Exec_endSmoke(dPa_smokeEcallBack_l*)
+ext 02041C30 void Mo2Exec_enemyFireRemove(enemyfire_l*)
+ext 025E1AA4 void Mo2Exec_monsSeStart(u32, cXyz*, u32, u32, s32)
+ext 025E1AE0 void mDoAud_seStop(u32, s32)
+ext 02516C14 void Mo2Exec_massSet(void*, void*, u32)
+ext 02008E0C void Mo2Exec_gndConstruct(void*)
+ext 02008DAC void Mo2Exec_gndDestroy(void*, s32)
+str 10014EF4 "Restrict"
+str 10015118 "majroom"
+*/

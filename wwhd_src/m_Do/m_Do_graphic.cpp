@@ -1,210 +1,285 @@
-/* m_Do_graphic: WWHD graphics state TU025F03C4..025F0943,17entries.
- * Includes Before/After draw, heap initialization,
- * display wrappers, blur/fade/monotone state and adjacent header-static initializer.
- * GC renderer/capture routines are absent from this HD body. External calls mocked. */
-#include "bindings.h"
-namespace m_Do_graphic_cpp {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static s16 lh(u32 a){return gabi::load<s16>(a);}
-static f32 lf(u32 a){return gabi::load<f32>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void sb(u32 a,u8 v){gabi::store<u8>(a,v);}
-static void sf(u32 a,f32 v){gabi::store<f32>(a,v);}
-static BOOL BeforeOfDraw(){
-    WWHD_FUNC(0x025F03C4,BOOL,(u32)0);
-    u32 play=gabi::call<u32>(0x025200D4);
-    gabi::call(0x0252F264,play+0x5D30);
+/** Graphics state and native display wrappers, using tww names and WWHD layouts.
+ * HD omits the GameCube capture/renderer body. Verified against cking.rpx. */
+#include "m_Do/m_Do_graphic.h"
+const gc_tu_data gc_tu = {.headerStatics = {0x1048CF68, 0x101F47E4, 0x1048CF74}};
+static mDoGph_StateHD l_graphics;
+static mDoGph_Color l_defaultColor;
+using GraphicsDisplayPtr = gptr<mDoGph_DisplayHD>;
+static GraphicsDisplayPtr l_display;
+static Mtx34 l_blureMtx;
+static Mtx34 l_defaultBlureMtx;
+static mDoGph_HeaderStaticsHD l_header;
+static f32 l_minAngle = -3.1415927410125732f;
+static f32 l_maxAngle = 3.1415927410125732f;
+// HD: static-method bodies use free entry adapters because autoglue assumes a this parameter.
+
+/* 025F03C4 */
+static BOOL mDoGph_BeforeOfDraw() {
+    mDoGph_GameInfoHD *play = mDoGph_getGameInfo();
+    mDoGph_drawListBefore(play->mDrawList);
     return TRUE;
 }
-VERIFY(0x025F03C4,BeforeOfDraw);
-static BOOL AfterOfDraw(){
-    WWHD_FUNC(0x025F03F0,BOOL,(u32)0);
-    u32 play=gabi::call<u32>(0x025200D4);
-    gabi::call(0x0252E388,play+0x60EC);
+/* 025F03F0 */
+static BOOL mDoGph_AfterOfDraw() {
+    mDoGph_GameInfoHD *play = mDoGph_getGameInfo();
+    mDoGph_drawListAfter(play->m2DList);
     return TRUE;
 }
-VERIFY(0x025F03F0,AfterOfDraw);
-static void createHeap(){
-    WWHD_FUNC(0x025F041C,void,(u32)0);
-    u32 parent=gabi::call<u32>(0x027EC230);
-    u32 first=gabi::call<u32>(0x027EC464,0x10000,parent,0);
-    st(0x101F4808,first);
-    if(!first) gabi::call(0x0273AA24,0x10058EF4,0xFB,0x10058EAC);
-    u32 second=gabi::call<u32>(0x027EC464,0x10000,parent,0);
-    st(0x101F480C,second);
-    if(!second) gabi::call(0x0273AA24,0x10058EF4,0xFD,0x10058EBC);
-    st(ld(0x101F4808)+0x10,0x10058ECC);
-    st(ld(0x101F480C)+0x10,0x10058EE0);
-    sb(0x101F4824,0);
+// inlined into mDoGph_createHeap
+void mDoGph_gInf_c::createHeap() {
+    // HD: heap debug labels are kept as mapped strings (Shift-JIS in the image).
+    void *parent = mDoGph_getParentHeap();
+    mDoGph_HeapHD *first = mDoGph_createHeapHD(0x10000, parent, 0);
+    l_graphics.mHeap[0] = first;
+    if (!first)
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFB, "mHeap[0] != NULL");
+    mDoGph_HeapHD *second = mDoGph_createHeapHD(0x10000, parent, 0);
+    l_graphics.mHeap[1] = second;
+    if (!second)
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xFD, "mHeap[1] != NULL");
+    l_graphics.mHeap[0]->setName("描画用一時ヒープ[0]");
+    l_graphics.mHeap[1]->setName("描画用一時ヒープ[1]");
+    l_graphics.mCurrentHeap = 0;
 }
-VERIFY(0x025F041C,createHeap);
-static void create(){
-    WWHD_FUNC(0x025F04EC,void,(u32)0);
-    gabi::call(0x025F041C);
-    gabi::call(0x027F0148,0x400);
-    sb(0x101F4825,0);
-    sb(0x101F4827,0);
-    u32 color=ld(0x101D5E90);
-    st(0x101F4818,color);
-    st(0x101F481C,color);
+
+/* 025F041C */
+void mDoGph_createHeap() {
+    mDoGph_gInf_c::createHeap();
 }
-VERIFY(0x025F04EC,create);
-static BOOL Create(){
-    WWHD_FUNC(0x025F0550,BOOL,(u32)0);
-    u32 heap=gabi::call<u32>(0x025E35BC,0,0,0);
-    if(!heap) gabi::call(0x0273AA24,0x10058F14,0xD1C,0x10058F08);
-    st(heap+0x10,0x10058F28);
-    gabi::call(0x025F04EC);
-    u32 play=gabi::call<u32>(0x025200D4);
-    gabi::call(0x0252ED28,play+0x5D30);
-    gabi::call(0x025E3678,heap);
-    gabi::call(0x025E37D8);
+// inlined into mDoGph_create
+void mDoGph_gInf_c::create() {
+    // HD: native display setup replaces the GC frame/depth buffer allocations.
+    mDoGph_createHeap();
+    mDoGph_initializeBuffers(0x400);
+    l_graphics.mBlureFlag = 0;
+    l_graphics.mFade = 0;
+    u32 color = (u32)l_defaultColor.word;
+    l_graphics.mBackColor.word = color;
+    l_graphics.mFadeColor.word = color;
+}
+
+/* 025F04EC */
+void mDoGph_create() {
+    mDoGph_gInf_c::create();
+}
+/* 025F0550 */
+static BOOL mDoGph_Create() {
+    mDoGph_HeapHD *heap = mDoGph_createGameHeap(0, 0, 0);
+    if (!heap)
+        JUT_ASSERT_fail("m_Do_graphic.cpp", 0xD1C, "heap != NULL");
+    heap->setName("ドルフィングラフィック(mDoGph)");
+    mDoGph_create();
+    mDoGph_GameInfoHD *play = mDoGph_getGameInfo();
+    mDoGph_drawListInitialize(play->mDrawList);
+    mDoGph_adjustGameHeap(heap);
+    mDoGph_restoreCurrentHeap();
     return TRUE;
 }
-VERIFY(0x025F0550,Create);
-static u32 displayControl(u32 first,u32 second){
-    WWHD_FUNC(0x025F05D0,u32,first,second);
-    return gabi::call<u32>(0x02728CB8,ld(0x101F86B4),first,second);
+/* 025F05D0 */
+static u32 mDoGph_displayControl(u32 first, u32 second) {
+    return mDoGph_displayControlHD(l_display, first, second);
 }
-VERIFY(0x025F05D0,displayControl);
-static void displayControlOne(u32 first){
-    WWHD_FUNC(0x025F05E8,void,first);
-    gabi::call(0x02728CD4,ld(0x101F86B4),first);
+/* 025F05E8 */
+static void mDoGph_displayControlOne(u32 first) {
+    mDoGph_displayControlOneHD(l_display, first);
 }
-VERIFY(0x025F05E8,displayControlOne);
-static void setDisplayColor(u32 color){
-    WWHD_FUNC(0x025F05F8,void,color);
-    u32 display=ld(0x101F86B4);
-    u32 value=ld(color);
-    u32 fader=ld(display+0x440);
-    st(fader+8,value);
+/* 025F05F8 */
+static void mDoGph_setFadeColor(const mDoGph_Color *color) {
+    mDoGph_DisplayHD *display = l_display;
+    u32 value = color->word;
+    mDoGph_FaderHD *fader = display->mFader;
+    fader->mColor.word = value;
 }
-VERIFY(0x025F05F8,setDisplayColor);
-static void onBlurMatrix(u32 matrix){
-    WWHD_FUNC(0x025F0634,void,matrix);
-    sb(0x101F4825,1);
-    gabi::call(0x028E90D4,matrix,0x1048CF84);
+// inlined into mDoGph_onBlureMatrix
+void mDoGph_gInf_c::onBlure(const Mtx34 *matrix) {
+    l_graphics.mBlureFlag = 1;
+    PSMTXCopy(matrix, &l_blureMtx);
 }
-VERIFY(0x025F0634,onBlurMatrix);
-static void onBlur(){
-    WWHD_FUNC(0x025F064C,void,(u32)0);
-    gabi::call(0x025F0634,0x101F48F0);
+
+/* 025F0634 */
+void mDoGph_onBlureMatrix(const Mtx34 *matrix) {
+    mDoGph_gInf_c::onBlure(matrix);
 }
-VERIFY(0x025F064C,onBlur);
-static void fadeOut(f32 speed,u32 color){
-    WWHD_FUNC(0x025F0658,void,speed,color);
-    sb(0x101F4827,1);
-    sf(0x101F4814,speed);
-    u32 value=ld(color);
-    st(0x101F481C,value);
-    sf(0x101F4810,speed>=0.0f?0.0f:1.0f);
+// inlined into mDoGph_onBlure
+void mDoGph_gInf_c::onBlure() {
+    mDoGph_onBlureMatrix(&l_defaultBlureMtx);
 }
-VERIFY(0x025F0658,fadeOut);
-static void fadeOutDefault(f32 speed){
-    WWHD_FUNC(0x025F069C,void,speed);
-    gabi::call(0x025F0658,speed,0x101D5E90);
+
+/* 025F064C */
+void mDoGph_onBlure() {
+    mDoGph_gInf_c::onBlure();
 }
-VERIFY(0x025F069C,fadeOutDefault);
-static void calcFade(){
-    WWHD_FUNC(0x025F06A8,void,(u32)0);
-    if(lb(0x101F4827)) {
-        f32 speed=lf(0x101F4814);
-        f32 rate=gabi::fadds_ppc(lf(0x101F4810),speed);
-        if(rate<0.0f){rate=0.0f;sf(0x101F4810,rate);sb(0x101F4827,0);}
-        else if(rate>1.0f){rate=1.0f;sf(0x101F4810,rate);}
-        else sf(0x101F4810,rate);
-        u8 alpha=(u8)gabi::ftoi(gabi::fmuls_ppc(255.0f,rate));
-        sb(0x101F481F,alpha);
-        if(!alpha) return;
+// inlined into mDoGph_fadeOut
+void mDoGph_gInf_c::fadeOut(f32 speed, const mDoGph_Color &color) {
+    l_graphics.mFade = 1;
+    l_graphics.mFadeSpeed = speed;
+    u32 value = color.word;
+    l_graphics.mFadeColor.word = value;
+    l_graphics.mFadeRate = speed >= 0.0f ? 0.0f : 1.0f;
+}
+
+/* 025F0658 */
+void mDoGph_fadeOut(f32 speed, const mDoGph_Color *color) {
+    mDoGph_gInf_c::fadeOut(speed, *color);
+}
+// inlined into mDoGph_fadeOutDefault
+void mDoGph_gInf_c::fadeOut(f32 speed) {
+    mDoGph_fadeOut(speed, &l_defaultColor);
+}
+
+/* 025F069C */
+void mDoGph_fadeOutDefault(f32 speed) {
+    mDoGph_gInf_c::fadeOut(speed);
+}
+// inlined into mDoGph_calcFade
+void mDoGph_gInf_c::calcFade() {
+    // HD: the native display applies the color instead of drawing a GX quad.
+    if (l_graphics.mFade) {
+        f32 speed = l_graphics.mFadeSpeed;
+        f32 rate = gabi::fadds_ppc(l_graphics.mFadeRate, speed);
+        if (rate < 0.0f) {
+            rate = 0.0f;
+            l_graphics.mFadeRate = rate;
+            l_graphics.mFade = 0;
+        } else if (rate > 1.0f) {
+            rate = 1.0f;
+            l_graphics.mFadeRate = rate;
+        } else
+            l_graphics.mFadeRate = rate;
+        u8 alpha = (u8)gabi::ftoi(gabi::fmuls_ppc(255.0f, rate));
+        l_graphics.mFadeColor.rgba.a = alpha;
+        if (!alpha)
+            return;
     } else {
-        u32 play=gabi::call<u32>(0x025200D4);
-        if(lb(play+0x62F1)==255){sb(0x101F481F,0);return;}
-        sb(0x101F481C,0);sb(0x101F481D,0);sb(0x101F481E,0);
-        play=gabi::call<u32>(0x025200D4);
-        u8 alpha=255-lb(play+0x62F1);
-        sb(0x101F481F,alpha);
-        if(!alpha) return;
+        mDoGph_GameInfoHD *play = mDoGph_getGameInfo();
+        if ((u8)play->mFadeBrightness == 255) {
+            l_graphics.mFadeColor.rgba.a = 0;
+            return;
+        }
+        l_graphics.mFadeColor.rgba.r = 0;
+        l_graphics.mFadeColor.rgba.g = 0;
+        l_graphics.mFadeColor.rgba.b = 0;
+        play = mDoGph_getGameInfo();
+        u8 alpha = 255 - (u8)play->mFadeBrightness;
+        l_graphics.mFadeColor.rgba.a = alpha;
+        if (!alpha)
+            return;
     }
-    gabi::call(0x027291FC,ld(0x101F86B4));
+    mDoGph_applyFade(l_display);
 }
-VERIFY(0x025F06A8,calcFade);
-static void onMonotone(){
-    WWHD_FUNC(0x025F0820,void,(u32)0);
-    sb(0x101F4829,1);
-}
-VERIFY(0x025F0820,onMonotone);
-static void offMonotone(){
-    WWHD_FUNC(0x025F0830,void,(u32)0);
-    sb(0x101F4829,0);
-}
-VERIFY(0x025F0830,offMonotone);
-static void calcMonotone(){
-    WWHD_FUNC(0x025F0840,void,(u32)0);
-    s16 speed=lh(0x101F4822);
-    s32 target=speed<0?400:-600;
-    s32 step=(s16)(speed<0?-speed:speed);
-    s32 complete=gabi::call<s32>(0x0200F564,0x101F4820,target,step);
-    if(complete && lh(0x101F4822)>0) gabi::call(0x025F0830);
-}
-VERIFY(0x025F0840,calcMonotone);
-static void sinit(){
-    WWHD_FUNC(0x025F08B0,void,(u32)0);
-    for(int i=0;i<4;++i) st(0x1048CF74+4*i,0);
-    gabi::call(0x028F026C,0x101F47E4);
-    sf(0x1048CF68,lf(0x10058F58));
-    sf(0x1048CF6C,lf(0x10058F5C));
-    gabi::call(0x028ED6F8,0x1048CF72);
-    gabi::call(0x028F026C,0x101F47F0);
-    gabi::call(0x028EAB2C,0x1048CF73);
-    gabi::call(0x028F026C,0x101F47FC);
-}
-VERIFY(0x025F08B0,sinit);
 
-/* 025F0944 graphics interface table entry 1018C4AC (probably mDoGph_BlankingON, empty as on GameCube): empty function */
-static void mDoGph_interface_empty_025F0944() {
-    WWHD_FUNC(0x025F0944, void);
+/* 025F06A8 */
+void mDoGph_calcFade() {
+    mDoGph_gInf_c::calcFade();
 }
-VERIFY(0x025F0944, mDoGph_interface_empty_025F0944);
-
-/* 025F0948 graphics interface table entry 1018C4B0 (probably mDoGph_BlankingOFF, empty as on GameCube): empty function */
-static void mDoGph_interface_empty_025F0948() {
-    WWHD_FUNC(0x025F0948, void);
+// inlined into mDoGph_onMonotone
+void mDoGph_gInf_c::onMonotone() {
+    // HD: there is no GC frame-buffer texture swap.
+    l_graphics.mMonotone = 1;
 }
-VERIFY(0x025F0948, mDoGph_interface_empty_025F0948);
 
-/* 025F094C graphics interface table entry 1018C4A8 (probably mDoGph_Create): returns 1 */
-static u32 mDoGph_interface_025F094C() {
-    WWHD_FUNC(0x025F094C, u32);
+/* 025F0820 */
+void mDoGph_onMonotone() {
+    mDoGph_gInf_c::onMonotone();
+}
+// inlined into mDoGph_offMonotone
+void mDoGph_gInf_c::offMonotone() {
+    // HD: there is no GC frame-buffer texture swap.
+    l_graphics.mMonotone = 0;
+}
+
+/* 025F0830 */
+void mDoGph_offMonotone() {
+    mDoGph_gInf_c::offMonotone();
+}
+// inlined into mDoGph_calcMonotone
+void mDoGph_gInf_c::calcMonotone() {
+    s16 speed = l_graphics.mMonotoneRateSpeed;
+    s32 target = speed < 0 ? 400 : -600;
+    s32 step = (s16)(speed < 0 ? -speed : speed);
+    s32 complete = mDoGph_chaseMonotone(&l_graphics.mMonotoneRate, target, step);
+    if (complete && l_graphics.mMonotoneRateSpeed > 0)
+        mDoGph_offMonotone();
+}
+
+/* 025F0840 */
+void mDoGph_calcMonotone() {
+    mDoGph_gInf_c::calcMonotone();
+}
+// HD: compiler-generated header objects and graphics interface companions.
+/* 025F08B0 */
+static void __sinit_m_Do_graphic_cpp() {
+    for (int i = 0; i < 4; ++i)
+        l_header.mZero[i] = 0;
+    __register_global_object(gc_tu.headerStatics[1]);
+    l_header.mMinAngle = l_minAngle;
+    l_header.mMaxAngle = l_maxAngle;
+    // HD: the one-byte header objects are two bytes later than in most TUs.
+    mDoGph_initializeAngle(&l_header.mAngleTable);
+    __register_global_object(gc_tu.headerStatics[1] + 0xc);
+    mDoGph_initializeMath(&l_header.mMathTable);
+    __register_global_object(gc_tu.headerStatics[1] + 0x18);
+}
+
+/* 025F0944 */
+static void mDoGph_BlankingOnStub() {}
+
+/* 025F0948 */
+static void mDoGph_BlankingOffStub() {}
+
+/* 025F094C */
+static u32 mDoGph_interfaceCreate() {
     return 1;
 }
-VERIFY(0x025F094C, mDoGph_interface_025F094C);
 
-/* 025F0954 this TU's sead::SafeString copy (vtable 10058E94 in this TU's rodata): deleting destructor of a trivially
- * destructible class: operator delete when this != NULL and bit 0 of the flags is set */
-static void SafeString_deletingDtor_m_Do_graphic(u32 p, u32 flags) {
-    WWHD_FUNC(0x025F0954, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) gabi::call(0x0273AF40, p);
+/* 025F0954 */
+static void SafeString_deletingDtor_m_Do_graphic(void *p, u32 flags) {
+    if (p == 0)
+        return;
+    if (flags & 1)
+        operator_delete(p);
 }
-VERIFY(0x025F0954, SafeString_deletingDtor_m_Do_graphic);
 
-/* 025F0968 empty HD graphics hook called by the logo scene (d_s_logo phase_2): empty function */
-static void mDoGph_empty_025F0968() {
-    WWHD_FUNC(0x025F0968, void);
-}
-VERIFY(0x025F0968, mDoGph_empty_025F0968);
+/* 025F0968 */
+static void mDoGph_logoHook() {}
 
-/* 025F096C empty HD graphics hook called by the logo/menu/name/play scenes: empty function */
-static void mDoGph_empty_025F096C() {
-    WWHD_FUNC(0x025F096C, void);
-}
-VERIFY(0x025F096C, mDoGph_empty_025F096C);
+/* 025F096C */
+static void mDoGph_sceneHook() {}
 
-/* 025F0970 this TU's sead::SafeString copy assureTerminationImpl_ (vtable 10058E94): empty function */
-static void SafeString_assureTerminationImpl_m_Do_graphic(u32 p) {
-    WWHD_FUNC(0x025F0970, void, p);
-}
-VERIFY(0x025F0970, SafeString_assureTerminationImpl_m_Do_graphic);
+/* 025F0970 */
+static void SafeString_assureTerminationImpl_m_Do_graphic(void *p) {}
 
-}
+/* WWHD glue
+data l_graphics 101F4808
+data l_defaultColor 101D5E90
+data l_display 101F86B4
+data l_blureMtx 1048CF84
+data l_defaultBlureMtx 101F48F0
+data l_header 1048CF68
+data l_minAngle 10058F58
+data l_maxAngle 10058F5C
+str 10058EF4 in 025F041C # "m_Do_graphic.cpp"
+str 10058F14 in 025F0550 # "m_Do_graphic.cpp"
+str 10058EAC "mHeap[0] != NULL"
+str 10058EBC "mHeap[1] != NULL"
+str 10058F08 "heap != NULL"
+str 10058ECC "\u63cf\u753b\u7528\u4e00\u6642\u30d2\u30fc\u30d7[0]" renamed
+str 10058EE0 "\u63cf\u753b\u7528\u4e00\u6642\u30d2\u30fc\u30d7[1]" renamed
+str 10058F28 "\u30c9\u30eb\u30d5\u30a3\u30f3\u30b0\u30e9\u30d5\u30a3\u30c3\u30af(mDoGph)" renamed
+ext 027EC230 void* mDoGph_getParentHeap()
+ext 027EC464 mDoGph_HeapHD* mDoGph_createHeapHD(u32,void*,u32)
+ext 027F0148 void mDoGph_initializeBuffers(u32)
+ext 025E35BC mDoGph_HeapHD* mDoGph_createGameHeap(u32,u32,u32)
+ext 025E3678 void mDoGph_adjustGameHeap(mDoGph_HeapHD*)
+ext 025E37D8 void mDoGph_restoreCurrentHeap()
+ext 025200D4 mDoGph_GameInfoHD* mDoGph_getGameInfo()
+ext 0252F264 void mDoGph_drawListBefore(void*)
+ext 0252E388 void mDoGph_drawListAfter(void*)
+ext 0252ED28 void mDoGph_drawListInitialize(void*)
+ext 02728CB8 u32 mDoGph_displayControlHD(mDoGph_DisplayHD*,u32,u32)
+ext 02728CD4 void mDoGph_displayControlOneHD(mDoGph_DisplayHD*,u32)
+ext 027291FC void mDoGph_applyFade(mDoGph_DisplayHD*)
+ext 028ED6F8 void mDoGph_initializeAngle(be<u8>*)
+ext 028EAB2C void mDoGph_initializeMath(be<u8>*)
+ext 0200F564 s32 mDoGph_chaseMonotone(be<s16>*,s32,s32)
+*/

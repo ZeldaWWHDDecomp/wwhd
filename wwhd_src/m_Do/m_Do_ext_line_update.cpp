@@ -1,10 +1,323 @@
-#include "gabi.h"
-using namespace gabi;
-static void vectorCopy(u32 dst,u32 src){u32 x=load<u32>(src),y=load<u32>(src+4),z=load<u32>(src+8);store<u32>(dst,x);store<u32>(dst+4,y);store<u32>(dst+8,z);}
-static void positionCopy(u32 dst,u32 src){store<f32>(dst,load<f32>(src));store<f32>(dst+4,load<f32>(src+4));store<f32>(dst+8,load<f32>(src+8));}
-static u32 vertex(u32 table,u32 index){u32 n=load<u32>(table),p=load<u32>(table+4);return index<n?p+index*0x98:p;}
-static void attributes(u32 table,u32 index,u32 tangent,f32 x,f32 y,f32 z,f32 zero,bool reverse){u32 q=vertex(table,index);positionCopy(q+0xC,tangent);q=vertex(table,index);if(reverse){store<f32>(q+0x1C,y);store<f32>(q+0x20,z);store<f32>(q+0x24,zero);store<f32>(q+0x18,x);}else{store<f32>(q+0x18,x);store<f32>(q+0x1C,y);store<f32>(q+0x20,z);store<f32>(q+0x24,zero);}}
-void ext_lineUpdate(void* self,u32 count,void* color,u32 taper,void* lighting,f32 width){WWHD_FUNC(0x025EA548,void,self,count,color,taper,lighting,width);u32 o=ea(self);store<u32>(o+0x134,load<u32>(ea(color)));u32 capacity=load<u16>(o+0x13E);store<u32>(o+0x138,ea(lighting));store<u16>(o+0x140,(u16)count);if(count>capacity)store<u16>(o+0x140,(u16)capacity);u32 game=call<u32>(0x025200D4),camera=load<u32>(game+0x5FA4),line=load<u32>(o+0x144);f32 zero=load<f32>(0x100586DC),step=taper?width/(f32)taper:zero;Local<u8[144]> work;u32 s=ea(work.get()),tangent=s,cross=s+0x18,normal=s+0x24,temp=s+0x60,eye=s+0x6C,out=s+0x78,norm=s+0x84,partial=s+0xC,averagePlus=s+0x48,averageMinus=s+0x54,scaled=s+0x30,norm2=s+0x3C;for(u32 i=0;i<load<u16>(o+0x13C);i++,line+=16){f32 half=load<f32>(0x100586D8),currentWidth=width;u32 point=load<u32>(line);call(0x0201ADE0,at<void>(point+12),at<void>(temp),at<void>(point));vectorCopy(tangent,temp);vectorCopy(cross,temp);call(0x0201ADE0,at<void>(point),at<void>(temp),at<void>(camera+0xDC));vectorCopy(eye,temp);call(0x0201B080,at<void>(cross),at<void>(temp),at<void>(eye));vectorCopy(cross,temp);call(0x028E8DD0,at<void>(cross));f32 magnitude=call<f32>(0x028F4384);call(0x0201B080,at<void>(tangent),at<void>(temp),at<void>(cross));vectorCopy(tangent,temp);f32 nx,ny,nz;if(call<u32>(0x025EA530,magnitude)){call(0x0201B084,at<void>(tangent),at<void>(norm));vectorCopy(tangent,norm);call(0x0201B084,at<void>(cross),at<void>(norm));nz=load<f32>(norm+8);store<f32>(normal+8,nz);nx=load<f32>(norm);store<f32>(normal,nx);ny=load<f32>(norm+4);store<f32>(normal+4,ny);call(0x028E8E64,at<void>(cross),at<void>(cross),currentWidth/magnitude);}else{nz=load<f32>(normal+8);nx=load<f32>(normal);ny=load<f32>(normal+4);}u32 root=load<u32>(line+8),table=load<u32>(root+load<u32>(root+0x1C)*8+4),destination=load<u32>(table+4);call(0x0201AD78,at<void>(point),at<void>(out),at<void>(cross));positionCopy(destination,out);attributes(table,0,tangent,nx,ny,nz,zero,true);destination=vertex(table,1);call(0x0201ADE0,at<void>(point),at<void>(out),at<void>(cross));positionCopy(destination,out);attributes(table,1,tangent,nx,ny,nz,zero,false);point+=12;u32 index=2;call(0x0201AD78,at<void>(point),at<void>(temp),at<void>(cross));vectorCopy(averagePlus,temp);call(0x0201ADE0,at<void>(point),at<void>(temp),at<void>(cross));vectorCopy(averageMinus,temp);s32 remaining=(s32)load<u16>(o+0x140)-2;for(s32 n=remaining;n>0;n--){if(n<(s32)taper)currentWidth=fsubs_ppc(currentWidth,step);call(0x0201ADE0,at<void>(point+12),at<void>(partial),at<void>(point));vectorCopy(cross,partial);vectorCopy(tangent,partial);call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(camera+0xDC));vectorCopy(eye,partial);call(0x0201B080,at<void>(cross),at<void>(partial),at<void>(eye));vectorCopy(cross,partial);call(0x028E8DD0,at<void>(cross));magnitude=call<f32>(0x028F4384);call(0x0201B080,at<void>(tangent),at<void>(partial),at<void>(cross));vectorCopy(tangent,partial);if(call<u32>(0x025EA530,magnitude)){call(0x0201B084,at<void>(tangent),at<void>(norm2));vectorCopy(tangent,norm2);call(0x0201B084,at<void>(cross),at<void>(norm2));nx=load<f32>(norm2);ny=load<f32>(norm2+4);store<f32>(normal,nx);nz=load<f32>(norm2+8);store<f32>(normal+4,ny);magnitude=currentWidth/magnitude;store<f32>(normal+8,nz);}call(0x028E8E64,at<void>(cross),at<void>(cross),magnitude);call(0x0201AD78,at<void>(point),at<void>(partial),at<void>(cross));call(0x028E8D88,at<void>(averagePlus),at<void>(partial),at<void>(averagePlus));call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(cross));call(0x028E8D88,at<void>(averageMinus),at<void>(partial),at<void>(averageMinus));destination=vertex(table,index);call(0x0201AE48,at<void>(averagePlus),at<void>(scaled),half);positionCopy(destination,scaled);attributes(table,index,tangent,nx,ny,nz,zero,true);index++;destination=vertex(table,index);call(0x0201AE48,at<void>(averageMinus),at<void>(scaled),half);positionCopy(destination,scaled);attributes(table,index,tangent,nx,ny,nz,zero,false);point+=12;index++;call(0x0201AD78,at<void>(point),at<void>(partial),at<void>(cross));vectorCopy(averagePlus,partial);call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(cross));vectorCopy(averageMinus,partial);}u32 last=taper?point:averagePlus;destination=vertex(table,index);positionCopy(destination,last);attributes(table,index,tangent,nx,ny,nz,zero,false);index++;destination=vertex(table,index);positionCopy(destination,taper?point:averageMinus);attributes(table,index,tangent,nx,ny,nz,zero,true);}for(u32 i=0;i<load<u16>(o+0x13C);i++){u32 current=load<u32>(o+0x144)+i*16;call(0x027FF1D8,at<void>(load<u32>(current+8)),0,1);}call(0x025E9670,self,at<void>(load<u32>(o+0x138)),at<void>(o+0x134));}
-VERIFY(0x025EA548,ext_lineUpdate);
-void ext_lineUpdateWidths(void* self,u32 count,void* color,void* lighting){WWHD_FUNC(0x025EAF58,void,self,count,color,lighting);u32 o=ea(self);store<u32>(o+0x134,load<u32>(ea(color)));u32 capacity=load<u16>(o+0x13E);store<u32>(o+0x138,ea(lighting));store<u16>(o+0x140,(u16)count);if(count>capacity)store<u16>(o+0x140,(u16)capacity);u32 game=call<u32>(0x025200D4),camera=load<u32>(game+0x5FA4),line=load<u32>(o+0x144);f32 zero=load<f32>(0x100586DC);Local<u8[156]> work;u32 s=ea(work.get()),tangent=s+0xC,cross=s+0x18,normal=s+0x30,temp=s+0x6C,eye=s+0x78,out=s+0x84,norm=s+0x90,partial=s,averagePlus=s+0x54,averageMinus=s+0x60,scaled=s+0x3C,norm2=s+0x48;for(u32 i=0;i<load<u16>(o+0x13C);i++,line+=16){f32 half=load<f32>(0x100586D8);u32 widths=load<u32>(line+4),point=load<u32>(line);if(!widths)call(0x0273AA24,at<void>(0x10058BAC),0x1C03,at<void>(0x10058B9C));call(0x0201ADE0,at<void>(point+12),at<void>(temp),at<void>(point));vectorCopy(tangent,temp);vectorCopy(cross,temp);call(0x0201ADE0,at<void>(point),at<void>(temp),at<void>(camera+0xDC));vectorCopy(eye,temp);call(0x0201B080,at<void>(cross),at<void>(temp),at<void>(eye));vectorCopy(cross,temp);call(0x028E8DD0,at<void>(cross));f32 magnitude=call<f32>(0x028F4384);call(0x0201B080,at<void>(tangent),at<void>(temp),at<void>(cross));vectorCopy(tangent,temp);f32 nx,ny,nz;if(call<u32>(0x025EA530,magnitude)){call(0x0201B084,at<void>(tangent),at<void>(norm));vectorCopy(tangent,norm);call(0x0201B084,at<void>(cross),at<void>(norm));nz=load<f32>(norm+8);store<f32>(normal+8,nz);nx=load<f32>(norm);store<f32>(normal,nx);ny=load<f32>(norm+4);store<f32>(normal+4,ny);call(0x028E8E64,at<void>(cross),at<void>(cross),(f32)load<u8>(widths)/magnitude);}else{nz=load<f32>(normal+8);nx=load<f32>(normal);ny=load<f32>(normal+4);}u32 root=load<u32>(line+8),table=load<u32>(root+load<u32>(root+0x1C)*8+4),destination=load<u32>(table+4);call(0x0201AD78,at<void>(point),at<void>(out),at<void>(cross));positionCopy(destination,out);attributes(table,0,tangent,nx,ny,nz,zero,true);destination=vertex(table,1);call(0x0201ADE0,at<void>(point),at<void>(out),at<void>(cross));positionCopy(destination,out);attributes(table,1,tangent,nx,ny,nz,zero,false);point+=12;widths++;u32 index=2;call(0x0201AD78,at<void>(point),at<void>(temp),at<void>(cross));vectorCopy(averagePlus,temp);call(0x0201ADE0,at<void>(point),at<void>(temp),at<void>(cross));vectorCopy(averageMinus,temp);s32 remaining=(s32)load<u16>(o+0x140)-2;for(s32 n=remaining;n>0;n--){call(0x0201ADE0,at<void>(point+12),at<void>(partial),at<void>(point));vectorCopy(cross,partial);vectorCopy(tangent,partial);call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(camera+0xDC));vectorCopy(eye,partial);call(0x0201B080,at<void>(cross),at<void>(partial),at<void>(eye));vectorCopy(cross,partial);call(0x028E8DD0,at<void>(cross));magnitude=call<f32>(0x028F4384);call(0x0201B080,at<void>(tangent),at<void>(partial),at<void>(cross));vectorCopy(tangent,partial);if(call<u32>(0x025EA530,magnitude)){call(0x0201B084,at<void>(tangent),at<void>(norm2));vectorCopy(tangent,norm2);call(0x0201B084,at<void>(cross),at<void>(norm2));nx=load<f32>(norm2);ny=load<f32>(norm2+4);store<f32>(normal,nx);nz=load<f32>(norm2+8);store<f32>(normal+4,ny);magnitude=(f32)load<u8>(widths)/magnitude;store<f32>(normal+8,nz);}call(0x028E8E64,at<void>(cross),at<void>(cross),magnitude);call(0x0201AD78,at<void>(point),at<void>(partial),at<void>(cross));call(0x028E8D88,at<void>(averagePlus),at<void>(partial),at<void>(averagePlus));call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(cross));call(0x028E8D88,at<void>(averageMinus),at<void>(partial),at<void>(averageMinus));destination=vertex(table,index);call(0x0201AE48,at<void>(averagePlus),at<void>(scaled),half);positionCopy(destination,scaled);attributes(table,index,tangent,nx,ny,nz,zero,true);index++;destination=vertex(table,index);call(0x0201AE48,at<void>(averageMinus),at<void>(scaled),half);positionCopy(destination,scaled);attributes(table,index,tangent,nx,ny,nz,zero,false);point+=12;widths++;index++;call(0x0201AD78,at<void>(point),at<void>(partial),at<void>(cross));vectorCopy(averagePlus,partial);call(0x0201ADE0,at<void>(point),at<void>(partial),at<void>(cross));vectorCopy(averageMinus,partial);}u32 last=averagePlus;destination=vertex(table,index);positionCopy(destination,last);attributes(table,index,tangent,nx,ny,nz,zero,false);index++;destination=vertex(table,index);positionCopy(destination,averageMinus);attributes(table,index,tangent,nx,ny,nz,zero,true);}for(u32 i=0;i<load<u16>(o+0x13C);i++){u32 current=load<u32>(o+0x144)+i*16;call(0x027FF1D8,at<void>(load<u32>(current+8)),0,1);}call(0x025E9670,self,at<void>(load<u32>(o+0x138)),at<void>(o+0x134));}
-VERIFY(0x025EAF58,ext_lineUpdateWidths);
+/** m_Do_ext_line_update.cpp — line material vertex updates.
+ * Based on tww m_Do/m_Do_ext.cpp.
+ */
+#include "m_Do/m_Do_ext_line_update.h"
+using namespace line_layout;
+static f32 lineZero;
+static f32 lineHalf;
+
+static void copyPosition(cXyz* destination, const cXyz* source) {
+    // HD: floating loads/stores here; vector work copies below are integer bit copies.
+    destination->x = source->x;
+    destination->y = source->y;
+    destination->z = source->z;
+}
+static void setAttributes(VertexTable* table, u32 index, const cXyz* tangent,
+                          f32 x, f32 y, f32 z, f32 zero, bool reverse) {
+    Vertex* vertex = table->getVertex(index);
+    copyPosition(&vertex->mTangent, tangent);
+    vertex = table->getVertex(index);
+    if (reverse) {
+        vertex->mNormal.y = y;
+        vertex->mNormal.z = z;
+        vertex->mNormalW = zero;
+        vertex->mNormal.x = x;
+    } else {
+        vertex->mNormal.x = x;
+        vertex->mNormal.y = y;
+        vertex->mNormal.z = z;
+        vertex->mNormalW = zero;
+    }
+}
+
+/* 025EA548 */
+void line_layout::mDoExt_3DlineMat0_c::update(u32 count, const be<u32>* color, u32 taper, dKy_tevstr_c* lighting, f32 width) {
+    mColor = *color;
+    u32 capacity = mMaxSegments;
+    mpTevStr = lighting;
+    mNumSegments = count;
+    if (count > capacity)
+        mNumSegments = capacity;
+    CameraView* camera = lineGetView();
+    mDoExt_3Dline_c* line = mpLines;
+    f32 zero = lineZero;
+    f32 step = taper ? width / static_cast<f32>(taper) : zero;
+    LineWork work; // HD: keep the original shared stack slots, including carried normal values.
+    cXyz* tangent = &work.tangent;
+    cXyz* cross = &work.cross;
+    cXyz* normal = &work.normal;
+    cXyz* temp = &work.temp;
+    cXyz* eye = &work.eye;
+    cXyz* out = &work.out;
+    cXyz* norm = &work.norm;
+    cXyz* partial = &work.partial;
+    cXyz* averagePlus = &work.averagePlus;
+    cXyz* averageMinus = &work.averageMinus;
+    cXyz* scaled = &work.scaled;
+    cXyz* norm2 = &work.norm2;
+    for (u32 i = 0; i < mNumLines; ++i, ++line) {
+        f32 half = lineHalf;
+        f32 currentWidth = width;
+        cXyz* point = line->mpSegments;
+
+        *temp = point[1] - point[0];
+        tangent->copy(*temp);
+        cross->copy(*temp);
+        *temp = point[0] - camera->mEye;
+        eye->copy(*temp);
+        *temp = cross->outprod(*eye);
+        cross->copy(*temp);
+        PSVECSquareMag(cross);
+        f32 magnitude = lineSquareRoot();
+        *temp = tangent->outprod(*cross);
+        tangent->copy(*temp);
+        f32 nx, ny, nz;
+        if (lineNonzero(magnitude)) {
+            lineNormalize(tangent, norm);
+            tangent->copy(*norm);
+            lineNormalize(cross, norm);
+            nz = norm->z;
+            normal->z = nz;
+            nx = norm->x;
+            normal->x = nx;
+            ny = norm->y;
+            normal->y = ny;
+            PSVECScale(cross, cross, currentWidth / magnitude);
+        } else {
+            nz = normal->z;
+            nx = normal->x;
+            ny = normal->y;
+        }
+        MeshBuffer* root = line->mpMeshBuffer;
+        VertexTable* table = root->getVertices();
+        Vertex* destination = table->mpVertices;
+        *out = point[0] + *cross;
+        copyPosition(&destination->mPosition, out);
+        setAttributes(table, 0, tangent, nx, ny, nz, zero, true);
+        destination = table->getVertex(1);
+        *out = point[0] - *cross;
+        copyPosition(&destination->mPosition, out);
+        setAttributes(table, 1, tangent, nx, ny, nz, zero, false);
+        ++point;
+
+        u32 index = 2;
+        *temp = point[0] + *cross;
+        averagePlus->copy(*temp);
+        *temp = point[0] - *cross;
+        averageMinus->copy(*temp);
+        s32 remaining = static_cast<s32>(mNumSegments) - 2;
+        for (s32 n = remaining; n > 0; --n) {
+            if (n < static_cast<s32>(taper))
+                currentWidth = gabi::fsubs_ppc(currentWidth, step);
+            *partial = point[1] - point[0];
+            cross->copy(*partial);
+            tangent->copy(*partial);
+            *partial = point[0] - camera->mEye;
+            eye->copy(*partial);
+            *partial = cross->outprod(*eye);
+            cross->copy(*partial);
+            PSVECSquareMag(cross);
+            magnitude = lineSquareRoot();
+            *partial = tangent->outprod(*cross);
+            tangent->copy(*partial);
+            if (lineNonzero(magnitude)) {
+                lineNormalize(tangent, norm2);
+                tangent->copy(*norm2);
+                lineNormalize(cross, norm2);
+                nx = norm2->x;
+                ny = norm2->y;
+                normal->x = nx;
+                nz = norm2->z;
+                normal->y = ny;
+                magnitude = currentWidth / magnitude;
+                normal->z = nz;
+            }
+            PSVECScale(cross, cross, magnitude);
+            *partial = point[0] + *cross;
+            lineAddVectors(averagePlus, partial, averagePlus);
+            *partial = point[0] - *cross;
+            lineAddVectors(averageMinus, partial, averageMinus);
+            destination = table->getVertex(index);
+            lineScale(averagePlus, scaled, half);
+            copyPosition(&destination->mPosition, scaled);
+            setAttributes(table, index, tangent, nx, ny, nz, zero, true);
+            ++index;
+            destination = table->getVertex(index);
+            lineScale(averageMinus, scaled, half);
+            copyPosition(&destination->mPosition, scaled);
+            setAttributes(table, index, tangent, nx, ny, nz, zero, false);
+            ++point;
+
+            ++index;
+            *partial = point[0] + *cross;
+            averagePlus->copy(*partial);
+            *partial = point[0] - *cross;
+            averageMinus->copy(*partial);
+        }
+        cXyz* last = taper ? point : averagePlus;
+        destination = table->getVertex(index);
+        copyPosition(&destination->mPosition, last);
+        setAttributes(table, index, tangent, nx, ny, nz, zero, false);
+        ++index;
+        destination = table->getVertex(index);
+        copyPosition(&destination->mPosition, taper ? point : averageMinus);
+        setAttributes(table, index, tangent, nx, ny, nz, zero, true);
+    }
+    // HD: finalization changes each mesh's selected buffer; do it after all geometry.
+    for (u32 i = 0; i < mNumLines; ++i)
+        lineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
+    lineMaterialSetup(this, mpTevStr, &mColor);
+}
+
+/* 025EAF58 */
+void line_layout::mDoExt_3DlineMat0_c::updateWidths(u32 count, const be<u32>* color, dKy_tevstr_c* lighting) {
+    mColor = *color;
+    u32 capacity = mMaxSegments;
+    mpTevStr = lighting;
+    mNumSegments = count;
+    if (count > capacity)
+        mNumSegments = capacity;
+    CameraView* camera = lineGetView();
+    mDoExt_3Dline_c* line = mpLines;
+    f32 zero = lineZero;
+
+    WidthWork work; // HD: keep the original shared stack slots, including carried normal values.
+    cXyz* tangent = &work.tangent;
+    cXyz* cross = &work.cross;
+    cXyz* normal = &work.normal;
+    cXyz* temp = &work.temp;
+    cXyz* eye = &work.eye;
+    cXyz* out = &work.out;
+    cXyz* norm = &work.norm;
+    cXyz* partial = &work.partial;
+    cXyz* averagePlus = &work.averagePlus;
+    cXyz* averageMinus = &work.averageMinus;
+    cXyz* scaled = &work.scaled;
+    cXyz* norm2 = &work.norm2;
+    for (u32 i = 0; i < mNumLines; ++i, ++line) {
+        f32 half = lineHalf;
+        be<u8>* widths = line->mpSize;
+        cXyz* point = line->mpSegments;
+        if (!widths)
+            JUTAssertion_showAssert("m_Do_ext.cpp", 0x1C03, "size_p != (0)");
+        *temp = point[1] - point[0];
+        tangent->copy(*temp);
+        cross->copy(*temp);
+        *temp = point[0] - camera->mEye;
+        eye->copy(*temp);
+        *temp = cross->outprod(*eye);
+        cross->copy(*temp);
+        PSVECSquareMag(cross);
+        f32 magnitude = lineSquareRoot();
+        *temp = tangent->outprod(*cross);
+        tangent->copy(*temp);
+        f32 nx, ny, nz;
+        if (lineNonzero(magnitude)) {
+            lineNormalize(tangent, norm);
+            tangent->copy(*norm);
+            lineNormalize(cross, norm);
+            nz = norm->z;
+            normal->z = nz;
+            nx = norm->x;
+            normal->x = nx;
+            ny = norm->y;
+            normal->y = ny;
+            PSVECScale(cross, cross, static_cast<f32>(*widths) / magnitude);
+        } else {
+            nz = normal->z;
+            nx = normal->x;
+            ny = normal->y;
+        }
+        MeshBuffer* root = line->mpMeshBuffer;
+        VertexTable* table = root->getVertices();
+        Vertex* destination = table->mpVertices;
+        *out = point[0] + *cross;
+        copyPosition(&destination->mPosition, out);
+        setAttributes(table, 0, tangent, nx, ny, nz, zero, true);
+        destination = table->getVertex(1);
+        *out = point[0] - *cross;
+        copyPosition(&destination->mPosition, out);
+        setAttributes(table, 1, tangent, nx, ny, nz, zero, false);
+        ++point;
+        ++widths;
+        u32 index = 2;
+        *temp = point[0] + *cross;
+        averagePlus->copy(*temp);
+        *temp = point[0] - *cross;
+        averageMinus->copy(*temp);
+        s32 remaining = static_cast<s32>(mNumSegments) - 2;
+        for (s32 n = remaining; n > 0; --n) {
+
+            *partial = point[1] - point[0];
+            cross->copy(*partial);
+            tangent->copy(*partial);
+            *partial = point[0] - camera->mEye;
+            eye->copy(*partial);
+            *partial = cross->outprod(*eye);
+            cross->copy(*partial);
+            PSVECSquareMag(cross);
+            magnitude = lineSquareRoot();
+            *partial = tangent->outprod(*cross);
+            tangent->copy(*partial);
+            if (lineNonzero(magnitude)) {
+                lineNormalize(tangent, norm2);
+                tangent->copy(*norm2);
+                lineNormalize(cross, norm2);
+                nx = norm2->x;
+                ny = norm2->y;
+                normal->x = nx;
+                nz = norm2->z;
+                normal->y = ny;
+                magnitude = static_cast<f32>(*widths) / magnitude;
+                normal->z = nz;
+            }
+            PSVECScale(cross, cross, magnitude);
+            *partial = point[0] + *cross;
+            lineAddVectors(averagePlus, partial, averagePlus);
+            *partial = point[0] - *cross;
+            lineAddVectors(averageMinus, partial, averageMinus);
+            destination = table->getVertex(index);
+            lineScale(averagePlus, scaled, half);
+            copyPosition(&destination->mPosition, scaled);
+            setAttributes(table, index, tangent, nx, ny, nz, zero, true);
+            ++index;
+            destination = table->getVertex(index);
+            lineScale(averageMinus, scaled, half);
+            copyPosition(&destination->mPosition, scaled);
+            setAttributes(table, index, tangent, nx, ny, nz, zero, false);
+            ++point;
+            ++widths;
+            ++index;
+            *partial = point[0] + *cross;
+            averagePlus->copy(*partial);
+            *partial = point[0] - *cross;
+            averageMinus->copy(*partial);
+        }
+        cXyz* last = averagePlus;
+        destination = table->getVertex(index);
+        copyPosition(&destination->mPosition, last);
+        setAttributes(table, index, tangent, nx, ny, nz, zero, false);
+        ++index;
+        destination = table->getVertex(index);
+        copyPosition(&destination->mPosition, averageMinus);
+        setAttributes(table, index, tangent, nx, ny, nz, zero, true);
+    }
+    // HD: finalization changes each mesh's selected buffer; do it after all geometry.
+    for (u32 i = 0; i < mNumLines; ++i)
+        lineFinalize(mpLines[i].mpMeshBuffer, 0, 1);
+    lineMaterialSetup(this, mpTevStr, &mColor);
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data lineZero 100586DC
+data lineHalf 100586D8
+str 10058BAC
+str 10058B9C
+ext 025EA530 u32 lineNonzero(f32 value)
+ext 028F4384 f32 lineSquareRoot()
+ext 0201B084 void lineNormalize(cXyz* vector, cXyz* result)
+ext 0201AE48 void lineScale(cXyz* vector, cXyz* result, f32 scale)
+ext 028E8D88 void lineAddVectors(cXyz* a, cXyz* b, cXyz* result)
+ext 027FF1D8 void lineFinalize(line_layout::MeshBuffer* buffer, u32 first, u32 count)
+ext 025E9670 void lineMaterialSetup(line_layout::mDoExt_3DlineMat0_c* material, dKy_tevstr_c* lighting, be<u32>* color)
+*/

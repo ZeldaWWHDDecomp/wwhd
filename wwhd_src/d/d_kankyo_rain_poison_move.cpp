@@ -1,87 +1,400 @@
-// HD poison particle motion;
-#include "gabi.h"
-using namespace gabi;
-static u32 pw(u32 a,u32 o=0){return load<u32>(a+o);}
-static f32 pf(u32 a,u32 o=0){return load<f32>(a+o);}
-static f32 ps(u32 a){return pf(0x104A44F8+((u16)a>>3)*8);}
-static f32 pc(u32 a){return pf(0x104A44FC+((u16)a>>3)*8);}
-struct PoisonFrame{u8 bytes[0x1A4];};
-static void poisonTotal(u32 out,u32 base,u32 slot){for(u32 o:{0u,4u,8u})store<f32>(out+o,fadds_ppc(pf(base,o),pf(slot,4+o)));}
-static f32 poisonDistance(u32 a,u32 b){f32 d=call<f32>(0x028E8DE8,a,b);return call<f32>(0x028F4384,d);}
-static void poisonCopy(u32 out,u32 in){for(u32 o:{0u,4u,8u})store<u32>(out+o,pw(in,o));}
-void rainPoisonMove(){
- WWHD_FUNC(0x0256CA54,void);
- Local<PoisonFrame> frame;u32 sp=frame.a-8;
- u32 packet=pw(call<u32>(0x02555D0C),0xA6C),camera=pw(call<u32>(0x025200D4),0x5AF8),player=pw(call<u32>(0x025200D4),0x5B2C),link=pw(call<u32>(0x025200D4),0x5B2C);
- call<void>(0x0257DB28,sp+0xB0);
- for(u32 o=0;o<240;o+=4)store<u32>(sp+0xBC+o,pw(0x1004F9A0+o));
- s32 room=load<s8>(0x1047E6C8);u32 env=call<u32>(0x02555D0C);if(load<u8>(env+0x10A3)!=255)room=load<u8>(call<u32>(0x02555D0C)+0x10A3);
- if(pw(0x101E99F0)!=(u32)room){store<u32>(0x101E99F0,room);for(u32 i=0;i<1000;i++)store<u8>(packet+0x98+i*0x30,0);}
- s32 pattern=room<16?(s32)pw(0x1004F960+room*4):-1;u32 data=sp+0xBC+(pattern>=0?pattern:1)*48;
- f32 baseX=pf(data),baseY=pf(data,4),baseZ=pf(data,8),rangeX=pf(data,12),rangeZ=pf(data,20),size=pf(data,24),rise=pf(data,28),rangeY=pf(data,16);
- store<f32>(sp+0x38,rise);store<f32>(sp+8,rangeY);env=call<u32>(0x02555D0C);store<u32>(env+0xA68,pattern>=0?pw(data,32):0);
- f32 drift=pf(data,40);u32 tilt=load<u16>(data+36),heading=load<u16>(data+38);u32 base=packet+0xBC18;
- store<f32>(base,baseX);store<f32>(base+8,baseZ);store<f32>(base+4,fadds_ppc(baseY,size));rangeX=fsubs_ppc(rangeX,size);rangeZ=fsubs_ppc(rangeZ,size);
- f32 phase=fadds_ppc(pf(packet,0xBC38),pf(0x1004F924));if(!(phase<pf(0x1004F8C4)))phase=fsubs_ppc(phase,pf(0x1004F8C4));store<f32>(packet+0xBC38,phase);
- store<f32>(sp+0x48,rangeX);store<f32>(sp+0x50,rangeZ);store<f32>(sp+0x1C,pf(0x1004F630));
- s32 count=pw(call<u32>(0x02555D0C),0xA68);
- if(count>0){
- const f32 zero=pf(0x1004F528),one=pf(0x1004F550),tiny=pf(0x1004F58C),fifth=pf(0x1004F554),half=pf(0x1004F57C),five=pf(0x1004F730),ten=pf(0x1004F6B8),push=pf(0x1004F92C),limit=pf(0x1004F928),decay=pf(0x1004F740),far=pf(0x1004F540);
- store<f32>(sp+0x20,fadds_ppc(size,pf(0x1004F938)));store<f32>(sp+12,fadds_ppc(size,pf(0x1004F940)));store<f32>(sp+0x3C,fsubs_ppc(pf(0x1004F930),size));store<f32>(sp+0x28,fsubs_ppc(pf(0x1004F5C0),size));store<f32>(sp+0x34,fadds_ppc(size,pf(0x1004F934)));store<f32>(sp+0x4C,pf(0x1004F558));store<f32>(sp+0x30,fadds_ppc(size,pf(0x1004F6C4)));store<f32>(sp+0x14,fsubs_ppc(pf(0x1004F93C),size));store<f32>(sp+0x10,pf(0x1004F590));store<f32>(sp+0x24,pf(0x1004F854));store<f32>(sp+0x44,fmuls_ppc(size,fifth));store<f32>(sp+0x18,pf(0x1004F81C));
- for(s32 i=0;i<count;i++){
-  u32 slot=packet+0x98+i*0x30,state=load<u8>(slot);rangeZ=pf(sp,0x50);rangeX=pf(sp,0x48);rangeY=pf(sp,8);
-  if(!state){store<f32>(slot+0x28,zero);
-   if(pattern==2){u32 x=(u16)ftoi(call<f32>(0x02019918,pf(0x1004F944)));u32 z=(u16)ftoi(call<f32>(0x02019918,pf(0x1004F944)));store<f32>(slot+4,fmuls_ppc(ps(x),rangeX));store<f32>(slot+12,fmuls_ppc(pc(z),rangeX));store<f32>(slot+8,call<f32>(0x020198D8,rangeY));}
-   else{store<f32>(slot+4,call<f32>(0x02019918,rangeX));store<f32>(slot+8,call<f32>(0x020198D8,rangeY));store<f32>(slot+12,call<f32>(0x02019918,rangeZ));}
-   store<f32>(slot+0x10,zero);store<f32>(slot+0x14,zero);store<f32>(slot+0x18,zero);store<f32>(slot+0x1C,call<f32>(0x020198D8,pf(0x1004F6D8)));store<f32>(slot+0x20,call<f32>(0x020198D8,one));f32 angle=call<f32>(0x020198D8,pf(0x1004F748));u8 old=load<u8>(slot);store<f32>(slot+0x24,zero);store<u16>(slot+0x2C,(u16)ftoi(angle));store<u16>(slot+0x2E,0);store<u8>(slot,old+1);
-  }
-  else if(state<=2){
-   f32 swirl=state==1?pf(0x1004F744):ten,up=state==1?pf(sp,0x38):five;store<f32>(sp+0x2C,swirl);store<u16>(slot+0x2C,load<s16>(slot+0x2C)+400);
-   f32 random=pf(slot,0x20),dy=fmuls_ppc(up,fadds_ppc(random,half)),dx=fmuls_ppc(pf(sp,0xB0),ten),dz=fmuls_ppc(pf(sp,0xB8),ten);
-   f32 maxY=fmuls_ppc(rangeY,fmadds(random,pf(sp,0x24),one));dx=fmadds(fmuls_ppc(dx,half),random,dx);dy=fmadds(fmuls_ppc(dy,half),random,dy);dz=fmadds(fmuls_ppc(dz,half),random,dz);store<f32>(sp+0x40,dz);
-   call<void>(0x0201AD78,base,sp+0x74,slot+4);store<u32>(sp+0x54,pw(sp,0x74));store<f32>(sp+0x58,fadds_ppc(pf(sp,0x78),pf(0x1004F52C)));store<u32>(sp+0x5C,pw(sp,0x7C));call<void>(0x0257E128,sp+0x74,sp+0x54);
-   f32 windY=pf(sp,0x78),windX=pf(sp,0x74),windZ=pf(sp,0x7C);store<f32>(sp+0xA8,windY);f32 px=fmadds(windX,push,pf(slot,0x10));store<f32>(slot+0x10,px);f32 py=fmadds(pf(sp,0xA8),push,pf(slot,0x14));f32 keptX=pf(slot,0x10),pz=pf(slot,0x18);if(py<zero)py=zero;pz=fmadds(windZ,push,pz);store<f32>(slot+0x14,py);store<f32>(slot+0x18,pz);
-   if(keptX>limit||pf(slot,0x14)>limit||pz>limit)store<u16>(slot+0x2E,180);
-   for(u32 o:{0x10u,0x14u,0x18u})call<void>(0x0200ECD4,slot+o,zero,fifth,decay,tiny);
-   dy=fadds_ppc(dy,pf(slot,0x14));dz=fadds_ppc(pf(sp,0x40),pf(slot,0x18));dx=fadds_ppc(dx,pf(slot,0x10));f32 z=fadds_ppc(pf(slot,12),dz),x=fadds_ppc(pf(slot,4),dx),y=fadds_ppc(pf(slot,8),dy);store<f32>(slot+4,x);store<f32>(slot+8,y);store<f32>(slot+12,z);store<f32>(sp+0x40,dz);
-   f32 cosine=pc(tilt),sine=ps(tilt),horizontal=fmuls_ppc(fmuls_ppc(cosine,ps(heading)),drift),vertical=fmuls_ppc(sine,drift);random=pf(slot,0x20);y=fmadds(vertical,five,y);x=fmadds(horizontal,five,x);f32 hz=fmuls_ppc(fmuls_ppc(cosine,pc(heading)),drift);u32 angle=(u16)ftoi(fmuls_ppc(random,pf(0x1004F59C)));z=fmadds(hz,five,z);store<f32>(slot+4,x);store<f32>(slot+8,y);store<f32>(slot+12,z);
-   f32 amplitude=fmuls_ppc(random,pf(sp,0x2C));x=fmadds(ps(angle),amplitude,x);z=fmadds(pc(angle),amplitude,z);store<f32>(slot+4,x);store<f32>(slot+12,z);
-   if(!load<s16>(slot+0x2E)){bool wrap=false;
-    if(pattern==2){store<f32>(sp+0x80,fadds_ppc(pf(base),x));store<f32>(sp+0x84,pf(base,4));store<f32>(sp+0x88,fadds_ppc(pf(base,8),pf(slot,12)));f32 distance=poisonDistance(sp+0x80,base);if(!(distance<rangeX)){store<f32>(slot+4,-fmuls_ppc(pf(slot,4),pf(0x1004F948)));store<f32>(slot+12,-fmuls_ppc(pf(slot,12),pf(0x1004F948)));wrap=true;}}
-    else if(pattern==4){f32 worldX=fadds_ppc(pf(base),x),worldZ=fadds_ppc(pf(base,8),z);
-     if(x>rangeX){store<f32>(slot+4,-rangeX);wrap=true;}else if(x < -rangeX){store<f32>(slot+4,rangeX);wrap=true;}
-     if(worldX>pf(0x1004F94C)){if(worldZ<pf(sp,0x30)){store<f32>(slot+12,fsubs_ppc(pf(sp,0x30),pf(base,8)));wrap=true;}else if(worldZ>pf(sp,0x28)){store<f32>(slot+12,fsubs_ppc(pf(sp,0x28),pf(base,8)));wrap=true;}}
-     else if(worldX>pf(0x1004F950)){if(worldZ<pf(sp,0x20)){store<f32>(slot+12,fsubs_ppc(pf(sp,0x20),pf(base,8)));wrap=true;}else if(worldZ>pf(sp,0x28)){store<f32>(slot+12,fsubs_ppc(pf(sp,0x28),pf(base,8)));wrap=true;}}
-     else if(worldX<pf(0x1004F954)&&worldX>pf(0x1004F958)){if(worldZ<pf(sp,12)){store<f32>(slot+12,fsubs_ppc(pf(sp,12),pf(base,8)));wrap=true;}else if(worldZ>pf(sp,0x14)){store<f32>(slot+12,fsubs_ppc(pf(sp,0x14),pf(base,8)));wrap=true;}}
-     else if(pf(slot,12)>rangeZ){store<f32>(slot+12,rangeZ);wrap=true;}else if(pf(slot,12)<-rangeZ){store<f32>(slot+12,-rangeZ);wrap=true;}
-     if(wrap)store<f32>(slot+0x20,call<f32>(0x020198D8,one));
+// HD: poison particle packet and room pattern data retain their native layouts.
+#include "d/d_kankyo_rain_kazanbai_move.h"
+namespace RainMotion {
+/* 0256CA54 */
+void poison_move() {
+    Local<PoisonMotionWork> frame;
+    u32 packet = (u32)at<Environment>(sdk::getEnvironment<u32>())->mpPoisonPacket,
+        camera = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mCamera,
+        player = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mPlayer,
+        link = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mPlayer;
+    sdk::dKyw_get_wind_vecpow<void>(ea(&frame->wind));
+    for (u32 i = 0; i < 60; i++)
+        frame->patterns[i / 12].words[i % 12] =
+            (u32)at<PoisonPatternData>(PoisonPatterns)[i / 12].words[i % 12];
+    s32 room = (s8)*at<be<s8>>(CurrentRoom);
+    u32 env = sdk::getEnvironment<u32>();
+    if ((u8)at<Environment>(env)->mPoisonRoom != 255)
+        room = (u8)at<Environment>(sdk::getEnvironment<u32>())->mPoisonRoom;
+    if ((u32)*at<be<u32>>(PreviousPoisonRoom) != (u32)room) {
+        *at<be<u32>>(PreviousPoisonRoom) = room;
+        for (u32 i = 0; i < 1000; i++)
+            at<PoisonPacket>(packet)->mEff[i].mStatus = 0;
     }
-    else if(pattern==3){f32 worldX=fadds_ppc(pf(base),x),worldZ=fadds_ppc(pf(base,8),z);
-     if(z>rangeZ){store<f32>(slot+12,-rangeZ);wrap=true;}else if(z<-rangeZ){store<f32>(slot+12,rangeZ);wrap=true;}
-     if(worldZ>pf(0x1004F95C)){if(worldX<pf(sp,0x34)){store<f32>(slot+4,fsubs_ppc(pf(sp,0x34),pf(base)));wrap=true;}else if(worldX>pf(sp,0x3C)){store<f32>(slot+4,fsubs_ppc(pf(sp,0x3C),pf(base)));wrap=true;}}
-     else if(pf(slot,4)>rangeX){store<f32>(slot+4,rangeX);wrap=true;}else if(pf(slot,4)<-rangeX){store<f32>(slot+4,-rangeX);wrap=true;}
-     if(wrap)store<f32>(slot+0x20,call<f32>(0x020198D8,one));
+    s32 pattern = room < 16 ? (s32)(u32)at<be<s32>>(RoomPatternMap)[room] : -1;
+    u32 data = ea(&frame->patterns[pattern >= 0 ? pattern : 1].value);
+    f32 baseX = (f32)at<PoisonPattern>(data)->mBasePos.channels[0],
+        baseY = (f32)at<PoisonPattern>(data)->mBasePos.channels[1],
+        baseZ = (f32)at<PoisonPattern>(data)->mBasePos.channels[2],
+        rangeX = (f32)at<PoisonPattern>(data)->mRange.channels[0],
+        rangeZ = (f32)at<PoisonPattern>(data)->mRange.channels[2], size = (f32)at<PoisonPattern>(data)->mSize,
+        rise = (f32)at<PoisonPattern>(data)->mRise, rangeY = (f32)at<PoisonPattern>(data)->mRange.channels[1];
+    frame->rise.value = rise;
+    frame->rangeY.value = rangeY;
+    env = sdk::getEnvironment<u32>();
+    at<Environment>(env)->mPoisonCount = pattern >= 0 ? (u32)at<PoisonPattern>(data)->mCount : 0;
+    f32 drift = (f32)at<PoisonPattern>(data)->mDrift;
+    u32 tilt = (u16)at<PoisonPattern>(data)->mTilt, heading = (u16)at<PoisonPattern>(data)->mHeading;
+    u32 base = ea(&at<PoisonPacket>(packet)->mBasePos);
+    (*at<Vector>(base)).channels[0] = baseX;
+    (*at<Vector>(base)).channels[2] = baseZ;
+    (*at<Vector>(base)).channels[1] = fadds_ppc(baseY, size);
+    rangeX = fsubs_ppc(rangeX, size);
+    rangeZ = fsubs_ppc(rangeZ, size);
+    f32 phase = fadds_ppc((f32)at<PoisonPacket>(packet)->mPhase, (f32)*at<be<f32>>(PoisonPhaseStep));
+    if (!(phase < (f32)*at<be<f32>>(PoisonPhaseWrap)))
+        phase = fsubs_ppc(phase, (f32)*at<be<f32>>(PoisonPhaseWrap));
+    at<PoisonPacket>(packet)->mPhase = phase;
+    frame->rangeX.value = rangeX;
+    frame->rangeZ.value = rangeZ;
+    frame->closestDistance.value = (f32)*at<be<f32>>(NoGroundHeight);
+    s32 count = (u32)at<Environment>(sdk::getEnvironment<u32>())->mPoisonCount;
+    if (count > 0) {
+        const f32 zero = (f32)*at<be<f32>>(Zero), one = (f32)*at<be<f32>>(One),
+                  tiny = (f32)*at<be<f32>>(SprayMinimumStep), fifth = (f32)*at<be<f32>>(Rate),
+                  half = (f32)*at<be<f32>>(Half), five = (f32)*at<be<f32>>(PoisonRapidRise),
+                  ten = (f32)*at<be<f32>>(PoisonWindGain), push = (f32)*at<be<f32>>(PoisonInfluenceGain),
+                  limit = (f32)*at<be<f32>>(PoisonInfluenceLimit),
+                  decay = (f32)*at<be<f32>>(PoisonInfluenceDecay),
+                  far = (f32)*at<be<f32>>(PoisonForwardEyeDistance);
+        frame->middleLowerZ.value = fadds_ppc(size, (f32)*at<be<f32>>(PoisonMiddleLowerZ));
+        frame->hallLowerZ.value = fadds_ppc(size, (f32)*at<be<f32>>(PoisonHallLowerZ));
+        frame->corridorUpperX.value = fsubs_ppc((f32)*at<be<f32>>(PoisonCorridorUpperX), size);
+        frame->middleUpperZ.value = fsubs_ppc((f32)*at<be<f32>>(PoisonMiddleUpperZ), size);
+        frame->corridorLowerX.value = fadds_ppc(size, (f32)*at<be<f32>>(PoisonCorridorLowerX));
+        frame->edgeWidth.value = (f32)*at<be<f32>>(PoisonEdgeWidth);
+        frame->outerLowerZ.value = fadds_ppc(size, (f32)*at<be<f32>>(PoisonOuterLowerZ));
+        frame->hallUpperZ.value = fsubs_ppc((f32)*at<be<f32>>(PoisonHallUpperZ), size);
+        frame->phaseStep.value = (f32)*at<be<f32>>(AlphaStep);
+        frame->playerRadiusScale.value = (f32)*at<be<f32>>(PoisonPlayerRadiusScale);
+        frame->sizeWaveAmplitude.value = fmuls_ppc(size, fifth);
+        frame->nearDistance.value = (f32)*at<be<f32>>(PoisonNearFadeDistance);
+        for (s32 i = 0; i < count; i++) {
+            u32 slot = ea(&at<PoisonPacket>(packet)->mEff[i]), state = (u8)at<POISON_EFF>(slot)->mStatus;
+            rangeZ = (f32)frame->rangeZ.value;
+            rangeX = (f32)frame->rangeX.value;
+            rangeY = (f32)frame->rangeY.value;
+            if (!state) {
+                at<POISON_EFF>(slot)->mSize = zero;
+                if (pattern == PoisonCircular) {
+                    u32 x = (u16)ftoi(sdk::cM_rndFX<f32>((f32)*at<be<f32>>(PoisonAngleRange)));
+                    u32 z = (u16)ftoi(sdk::cM_rndFX<f32>((f32)*at<be<f32>>(PoisonAngleRange)));
+                    at<POISON_EFF>(slot)->mPos.channels[0] = fmuls_ppc(poisonSine(x), rangeX);
+                    at<POISON_EFF>(slot)->mPos.channels[2] = fmuls_ppc(poisonCosine(z), rangeX);
+                    at<POISON_EFF>(slot)->mPos.channels[1] = sdk::cM_rndF<f32>(rangeY);
+                } else {
+                    at<POISON_EFF>(slot)->mPos.channels[0] = sdk::cM_rndFX<f32>(rangeX);
+                    at<POISON_EFF>(slot)->mPos.channels[1] = sdk::cM_rndF<f32>(rangeY);
+                    at<POISON_EFF>(slot)->mPos.channels[2] = sdk::cM_rndFX<f32>(rangeZ);
+                }
+                at<POISON_EFF>(slot)->field_0x10 = zero;
+                at<POISON_EFF>(slot)->field_0x14 = zero;
+                at<POISON_EFF>(slot)->field_0x18 = zero;
+                at<POISON_EFF>(slot)->field_0x1c =
+                    sdk::cM_rndF<f32>((f32)*at<be<f32>>(PoisonInitialPhaseRange));
+                at<POISON_EFF>(slot)->field_0x20 = sdk::cM_rndF<f32>(one);
+                f32 angle = sdk::cM_rndF<f32>((f32)*at<be<f32>>(PoisonPhaseRange));
+                u8 old = (u8)at<POISON_EFF>(slot)->mStatus;
+                at<POISON_EFF>(slot)->mAlpha = zero;
+                at<POISON_EFF>(slot)->field_0x2c = (u16)ftoi(angle);
+                at<POISON_EFF>(slot)->field_0x2e = 0;
+                at<POISON_EFF>(slot)->mStatus = old + 1;
+            } else if (state <= ParticleSettled) {
+                f32 swirl = state == ParticleMoving ? (f32)*at<be<f32>>(PoisonSwirlBase) : ten,
+                    up = state == ParticleMoving ? (f32)frame->rise.value : five;
+                frame->swirl.value = swirl;
+                at<POISON_EFF>(slot)->field_0x2c = (s16)at<POISON_EFF>(slot)->field_0x2c + 400;
+                f32 random = (f32)at<POISON_EFF>(slot)->field_0x20,
+                    dy = fmuls_ppc(up, fadds_ppc(random, half)),
+                    dx = fmuls_ppc((f32)frame->wind.channels[0], ten),
+                    dz = fmuls_ppc((f32)frame->wind.channels[2], ten);
+                f32 maxY = fmuls_ppc(rangeY, fmadds(random, (f32)frame->playerRadiusScale.value, one));
+                dx = fmadds(fmuls_ppc(dx, half), random, dx);
+                dy = fmadds(fmuls_ppc(dy, half), random, dy);
+                dz = fmadds(fmuls_ppc(dz, half), random, dz);
+                frame->windZ.value = dz;
+                sdk::vectorAdd<void>(base, ea(&frame->influence), ea(&at<POISON_EFF>(slot)->mPos));
+                frame->total.words[0] = (u32)frame->influence.words[0];
+                frame->total.channels[1] =
+                    fadds_ppc((f32)frame->influence.channels[1], (f32)*at<be<f32>>(PoisonInfluenceHeight));
+                frame->total.words[2] = (u32)frame->influence.words[2];
+                sdk::dKyw_get_AllWind_vec<void>(ea(&frame->influence), ea(&frame->total));
+                f32 windY = (f32)frame->influence.channels[1], windX = (f32)frame->influence.channels[0],
+                    windZ = (f32)frame->influence.channels[2];
+                frame->windY.value = windY;
+                f32 px = fmadds(windX, push, (f32)at<POISON_EFF>(slot)->field_0x10);
+                at<POISON_EFF>(slot)->field_0x10 = px;
+                f32 py = fmadds((f32)frame->windY.value, push, (f32)at<POISON_EFF>(slot)->field_0x14);
+                f32 keptX = (f32)at<POISON_EFF>(slot)->field_0x10, pz = (f32)at<POISON_EFF>(slot)->field_0x18;
+                if (py < zero)
+                    py = zero;
+                pz = fmadds(windZ, push, pz);
+                at<POISON_EFF>(slot)->field_0x14 = py;
+                at<POISON_EFF>(slot)->field_0x18 = pz;
+                if (keptX > limit || (f32)at<POISON_EFF>(slot)->field_0x14 > limit || pz > limit)
+                    at<POISON_EFF>(slot)->field_0x2e = 180;
+                for (be<f32> *motion : {&at<POISON_EFF>(slot)->field_0x10, &at<POISON_EFF>(slot)->field_0x14,
+                                        &at<POISON_EFF>(slot)->field_0x18})
+                    sdk::cLib_addCalc<void>(ea(motion), zero, fifth, decay, tiny);
+                dy = fadds_ppc(dy, (f32)at<POISON_EFF>(slot)->field_0x14);
+                dz = fadds_ppc((f32)frame->windZ.value, (f32)at<POISON_EFF>(slot)->field_0x18);
+                dx = fadds_ppc(dx, (f32)at<POISON_EFF>(slot)->field_0x10);
+                f32 z = fadds_ppc((f32)at<POISON_EFF>(slot)->mPos.channels[2], dz),
+                    x = fadds_ppc((f32)at<POISON_EFF>(slot)->mPos.channels[0], dx),
+                    y = fadds_ppc((f32)at<POISON_EFF>(slot)->mPos.channels[1], dy);
+                at<POISON_EFF>(slot)->mPos.channels[0] = x;
+                at<POISON_EFF>(slot)->mPos.channels[1] = y;
+                at<POISON_EFF>(slot)->mPos.channels[2] = z;
+                frame->windZ.value = dz;
+                f32 cosine = poisonCosine(tilt), sine = poisonSine(tilt),
+                    horizontal = fmuls_ppc(fmuls_ppc(cosine, poisonSine(heading)), drift),
+                    vertical = fmuls_ppc(sine, drift);
+                random = (f32)at<POISON_EFF>(slot)->field_0x20;
+                y = fmadds(vertical, five, y);
+                x = fmadds(horizontal, five, x);
+                f32 hz = fmuls_ppc(fmuls_ppc(cosine, poisonCosine(heading)), drift);
+                u32 angle = (u16)ftoi(fmuls_ppc(random, (f32)*at<be<f32>>(PoisonSwirlAngleScale)));
+                z = fmadds(hz, five, z);
+                at<POISON_EFF>(slot)->mPos.channels[0] = x;
+                at<POISON_EFF>(slot)->mPos.channels[1] = y;
+                at<POISON_EFF>(slot)->mPos.channels[2] = z;
+                f32 amplitude = fmuls_ppc(random, (f32)frame->swirl.value);
+                x = fmadds(poisonSine(angle), amplitude, x);
+                z = fmadds(poisonCosine(angle), amplitude, z);
+                at<POISON_EFF>(slot)->mPos.channels[0] = x;
+                at<POISON_EFF>(slot)->mPos.channels[2] = z;
+                if (!(s16)at<POISON_EFF>(slot)->field_0x2e) {
+                    bool wrap = false;
+                    if (pattern == PoisonCircular) {
+                        frame->radialPosition.channels[0] =
+                            fadds_ppc((f32)(*at<Vector>(base)).channels[0], x);
+                        frame->radialPosition.channels[1] = (f32)(*at<Vector>(base)).channels[1];
+                        frame->radialPosition.channels[2] =
+                            fadds_ppc((f32)(*at<Vector>(base)).channels[2],
+                                      (f32)at<POISON_EFF>(slot)->mPos.channels[2]);
+                        f32 distance = poisonDistance(ea(&frame->radialPosition), base);
+                        if (!(distance < rangeX)) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] =
+                                -fmuls_ppc((f32)at<POISON_EFF>(slot)->mPos.channels[0],
+                                           (f32)*at<be<f32>>(PoisonWrapScale));
+                            at<POISON_EFF>(slot)->mPos.channels[2] =
+                                -fmuls_ppc((f32)at<POISON_EFF>(slot)->mPos.channels[2],
+                                           (f32)*at<be<f32>>(PoisonWrapScale));
+                            wrap = true;
+                        }
+                    } else if (pattern == PoisonHall) {
+                        f32 worldX = fadds_ppc((f32)(*at<Vector>(base)).channels[0], x),
+                            worldZ = fadds_ppc((f32)(*at<Vector>(base)).channels[2], z);
+                        if (x > rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = -rangeX;
+                            wrap = true;
+                        } else if (x < -rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = rangeX;
+                            wrap = true;
+                        }
+                        if (worldX > (f32)*at<be<f32>>(PoisonOuterBoundaryX)) {
+                            if (worldZ < (f32)frame->outerLowerZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->outerLowerZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            } else if (worldZ > (f32)frame->middleUpperZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->middleUpperZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            }
+                        } else if (worldX > (f32)*at<be<f32>>(PoisonMiddleBoundaryX)) {
+                            if (worldZ < (f32)frame->middleLowerZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->middleLowerZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            } else if (worldZ > (f32)frame->middleUpperZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->middleUpperZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            }
+                        } else if (worldX < (f32)*at<be<f32>>(PoisonHallMaximumX) &&
+                                   worldX > (f32)*at<be<f32>>(PoisonHallMinimumX)) {
+                            if (worldZ < (f32)frame->hallLowerZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->hallLowerZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            } else if (worldZ > (f32)frame->hallUpperZ.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[2] = fsubs_ppc(
+                                    (f32)frame->hallUpperZ.value, (f32)(*at<Vector>(base)).channels[2]);
+                                wrap = true;
+                            }
+                        } else if ((f32)at<POISON_EFF>(slot)->mPos.channels[2] > rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = rangeZ;
+                            wrap = true;
+                        } else if ((f32)at<POISON_EFF>(slot)->mPos.channels[2] < -rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = -rangeZ;
+                            wrap = true;
+                        }
+                        if (wrap)
+                            at<POISON_EFF>(slot)->field_0x20 = sdk::cM_rndF<f32>(one);
+                    } else if (pattern == PoisonCorridor) {
+                        f32 worldX = fadds_ppc((f32)(*at<Vector>(base)).channels[0], x),
+                            worldZ = fadds_ppc((f32)(*at<Vector>(base)).channels[2], z);
+                        if (z > rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = -rangeZ;
+                            wrap = true;
+                        } else if (z < -rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = rangeZ;
+                            wrap = true;
+                        }
+                        if (worldZ > (f32)*at<be<f32>>(PoisonCorridorBoundaryZ)) {
+                            if (worldX < (f32)frame->corridorLowerX.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[0] = fsubs_ppc(
+                                    (f32)frame->corridorLowerX.value, (f32)(*at<Vector>(base)).channels[0]);
+                                wrap = true;
+                            } else if (worldX > (f32)frame->corridorUpperX.value) {
+                                at<POISON_EFF>(slot)->mPos.channels[0] = fsubs_ppc(
+                                    (f32)frame->corridorUpperX.value, (f32)(*at<Vector>(base)).channels[0]);
+                                wrap = true;
+                            }
+                        } else if ((f32)at<POISON_EFF>(slot)->mPos.channels[0] > rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = rangeX;
+                            wrap = true;
+                        } else if ((f32)at<POISON_EFF>(slot)->mPos.channels[0] < -rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = -rangeX;
+                            wrap = true;
+                        }
+                        if (wrap)
+                            at<POISON_EFF>(slot)->field_0x20 = sdk::cM_rndF<f32>(one);
+                    } else {
+                        if (x > rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = -rangeX;
+                            wrap = true;
+                            z = (f32)at<POISON_EFF>(slot)->mPos.channels[2];
+                        } else if (x < -rangeX) {
+                            at<POISON_EFF>(slot)->mPos.channels[0] = rangeX;
+                            wrap = true;
+                            z = (f32)at<POISON_EFF>(slot)->mPos.channels[2];
+                        }
+                        if (z > rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = -rangeZ;
+                            wrap = true;
+                        } else if (z < -rangeZ) {
+                            at<POISON_EFF>(slot)->mPos.channels[2] = rangeZ;
+                            wrap = true;
+                        }
+                    }
+                    y = (f32)at<POISON_EFF>(slot)->mPos.channels[1];
+                    if (y > maxY && !((f32)at<POISON_EFF>(slot)->mAlpha > tiny))
+                        at<POISON_EFF>(slot)->mPos.channels[1] = zero;
+                    else if (y < zero && !((f32)at<POISON_EFF>(slot)->mAlpha > tiny))
+                        at<POISON_EFF>(slot)->mPos.channels[1] = maxY;
+                    if (wrap) {
+                        at<POISON_EFF>(slot)->field_0x2e = 120;
+                        at<POISON_EFF>(slot)->mAlpha = zero;
+                    }
+                }
+                rangeY = maxY;
+            }
+            poisonTotal(ea(&frame->total), base, slot);
+            sdk::dKyr_get_vectle_calc<void>(ea(&at<Camera>(camera)->mEye), ea(&at<Camera>(camera)->mCenter),
+                                            ea(&frame->viewDirection));
+            if (pattern == PoisonForwardEye) {
+                for (u32 component = 0; component < 3; component++)
+                    frame->eye.channels[component] =
+                        fmadds((f32)frame->viewDirection.channels[component], far,
+                               (f32)at<Camera>(camera)->mEye.channels[component]);
+            } else
+                poisonCopy(ea(&frame->eye), ea(&at<Camera>(camera)->mEye));
+            f32 distance = poisonDistance(ea(&frame->total), ea(&frame->eye));
+            if (distance < (f32)frame->closestDistance.value) {
+                poisonCopy(ea(&at<PoisonPacket>(packet)->field_0xbb9c), ea(&frame->total));
+                frame->closestDistance.value = distance;
+            }
+            f32 ratio = distance / fadds_ppc(rangeX, rangeZ);
+            if (ratio > one)
+                ratio = one;
+            u32 angle = sdk::cM_deg2s<u32>((f32)at<POISON_EFF>(slot)->field_0x1c);
+            f32 phase = (f32)at<POISON_EFF>(slot)->field_0x1c,
+                y = (f32)at<POISON_EFF>(slot)->mPos.channels[1], upper = fmuls_ppc(rangeY, half);
+            f32 newSize =
+                fmadds((f32)frame->sizeWaveAmplitude.value, poisonSine(angle), fmadds(size, ratio, size));
+            at<POISON_EFF>(slot)->field_0x1c = fadds_ppc(phase, (f32)frame->phaseStep.value);
+            at<POISON_EFF>(slot)->mSize = newSize;
+            f32 verticalAlpha;
+            if (y > upper)
+                verticalAlpha = fsubs_ppc(rangeY, y) / upper;
+            else {
+                f32 lower = fmuls_ppc(rangeY, (f32)*at<be<f32>>(Drag));
+                verticalAlpha = y < lower ? y / lower : one;
+            }
+            f32 radial = one;
+            if (pattern == PoisonCircular) {
+                poisonCopy(ea(&frame->flatPosition), ea(&frame->total));
+                frame->flatPosition.channels[1] = (f32)(*at<Vector>(base)).channels[1];
+                ratio = poisonDistance(ea(&frame->flatPosition), base) / rangeX;
+                if (ratio > one)
+                    ratio = one;
+                f32 square = fmuls_ppc(ratio, ratio), cube = fmuls_ppc(square, ratio),
+                    fourth = fmuls_ppc(cube, ratio);
+                radial = fnmsubs(ratio, fourth, one);
+                newSize = (f32)at<POISON_EFF>(slot)->mSize;
+            } else {
+                f32 edgeX = fsubs_ppc(rangeX, (f32)frame->edgeWidth.value),
+                    x = std::fabs((f32)at<POISON_EFF>(slot)->mPos.channels[0]);
+                if (x > edgeX) {
+                    f32 span = fsubs_ppc(rangeX, edgeX);
+                    radial = span > zero ? fsubs_ppc(rangeX, x) / span : zero;
+                }
+                f32 edgeZ = fsubs_ppc(rangeZ, (f32)frame->edgeWidth.value),
+                    z = std::fabs((f32)at<POISON_EFF>(slot)->mPos.channels[2]);
+                if (z > edgeZ) {
+                    f32 span = fsubs_ppc(rangeZ, edgeZ);
+                    radial = span > zero ? fmuls_ppc(radial, fsubs_ppc(rangeZ, z) / span) : zero;
+                }
+            }
+            at<POISON_EFF>(slot)->mSize = fmuls_ppc(newSize, radial);
+            f32 deficit = fsubs_ppc(one, verticalAlpha);
+            verticalAlpha = fnmsubs(deficit, deficit, one);
+            s32 timer = (s16)at<POISON_EFF>(slot)->field_0x2e;
+            if (timer) {
+                at<POISON_EFF>(slot)->field_0x2e = timer - 1;
+                verticalAlpha = zero;
+            } else if ((u8)at<POISON_EFF>(slot)->mStatus == 2)
+                at<POISON_EFF>(slot)->mStatus = ParticleInactive;
+            if (sdk::dKy_contrast_flg_get<u32>())
+                verticalAlpha = zero;
+            sdk::cLib_addCalc<void>(ea(&at<POISON_EFF>(slot)->mAlpha),
+                                    fmuls_ppc(fmuls_ppc(fifth, verticalAlpha), radial),
+                                    (f32)frame->phaseStep.value, (f32)*at<be<f32>>(Increment), tiny);
+            f32 near = (f32)*at<be<f32>>(PoisonInfluenceHeight);
+            if (pattern == PoisonForwardEye)
+                poisonCopy(ea(&frame->eye), ea(&at<Camera>(camera)->mEye));
+            else if (pattern == PoisonCorridor)
+                near = (f32)frame->nearDistance.value;
+            distance = poisonDistance(ea(&frame->total), ea(&frame->eye));
+            if (distance < near) {
+                ratio = distance / (f32)frame->nearDistance.value;
+                if (ratio > one)
+                    ratio = one;
+                at<POISON_EFF>(slot)->mAlpha =
+                    fmuls_ppc((f32)at<POISON_EFF>(slot)->mAlpha, fmuls_ppc(fmuls_ppc(ratio, ratio), ratio));
+            }
+            u32 current = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mPlayer,
+                hero = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mLinkPlayer;
+            if (current == hero &&
+                (f32)at<POISON_EFF>(slot)->mAlpha > (f32)*at<be<f32>>(FlareMinimumVisibility) &&
+                !(s16)at<POISON_EFF>(slot)->field_0x2e) {
+                frame->total.channels[1] =
+                    fsubs_ppc((f32)frame->total.channels[1], (f32)*at<be<f32>>(AshOffsetStep));
+                distance = poisonDistance(ea(&frame->total), ea(&at<PoisonPlayer>(player)->mCurrentPos));
+                if (distance <
+                    fmuls_ppc((f32)at<POISON_EFF>(slot)->mSize, (f32)frame->playerRadiusScale.value))
+                    at<PoisonPlayer>(link)->mResetFlg0 =
+                        (u32)at<PoisonPlayer>(link)->mResetFlg0 | PoisonCurseFlag;
+            }
+            count = (u32)at<Environment>(sdk::getEnvironment<u32>())->mPoisonCount;
+        }
     }
-    else{if(x>rangeX){store<f32>(slot+4,-rangeX);wrap=true;z=pf(slot,12);}else if(x<-rangeX){store<f32>(slot+4,rangeX);wrap=true;z=pf(slot,12);}if(z>rangeZ){store<f32>(slot+12,-rangeZ);wrap=true;}else if(z<-rangeZ){store<f32>(slot+12,rangeZ);wrap=true;}}
-    y=pf(slot,8);if(y>maxY&&!(pf(slot,0x24)>tiny))store<f32>(slot+8,zero);else if(y<zero&&!(pf(slot,0x24)>tiny))store<f32>(slot+8,maxY);if(wrap){store<u16>(slot+0x2E,120);store<f32>(slot+0x24,zero);}
-   }
-   rangeY=maxY;
-  }
-  poisonTotal(sp+0x54,base,slot);call<void>(0x02563F64,camera+0xDC,camera+0xE8,sp+0x8C);
-  if(pattern==0){for(u32 o:{0u,4u,8u})store<f32>(sp+0x68+o,fmadds(pf(sp+0x8C,o),far,pf(camera,0xDC+o)));}else poisonCopy(sp+0x68,camera+0xDC);
-  f32 distance=poisonDistance(sp+0x54,sp+0x68);if(distance<pf(sp,0x1C)){poisonCopy(base+12,sp+0x54);store<f32>(sp+0x1C,distance);}f32 ratio=distance/fadds_ppc(rangeX,rangeZ);if(ratio>one)ratio=one;
-  u32 angle=call<u32>(0x02019510,pf(slot,0x1C));f32 phase=pf(slot,0x1C),y=pf(slot,8),upper=fmuls_ppc(rangeY,half);f32 newSize=fmadds(pf(sp,0x44),ps(angle),fmadds(size,ratio,size));store<f32>(slot+0x1C,fadds_ppc(phase,pf(sp,0x10)));store<f32>(slot+0x28,newSize);
-  f32 verticalAlpha;if(y>upper)verticalAlpha=fsubs_ppc(rangeY,y)/upper;else{f32 lower=fmuls_ppc(rangeY,pf(0x1004F588));verticalAlpha=y<lower?y/lower:one;}
-  f32 radial=one;
-  if(pattern==2){poisonCopy(sp+0x98,sp+0x54);store<f32>(sp+0x9C,pf(base,4));ratio=poisonDistance(sp+0x98,base)/rangeX;if(ratio>one)ratio=one;f32 square=fmuls_ppc(ratio,ratio),cube=fmuls_ppc(square,ratio),fourth=fmuls_ppc(cube,ratio);radial=fnmsubs(ratio,fourth,one);newSize=pf(slot,0x28);}
-  else{f32 edgeX=fsubs_ppc(rangeX,pf(sp,0x4C)),x=std::fabs(pf(slot,4));if(x>edgeX){f32 span=fsubs_ppc(rangeX,edgeX);radial=span>zero?fsubs_ppc(rangeX,x)/span:zero;}f32 edgeZ=fsubs_ppc(rangeZ,pf(sp,0x4C)),z=std::fabs(pf(slot,12));if(z>edgeZ){f32 span=fsubs_ppc(rangeZ,edgeZ);radial=span>zero?fmuls_ppc(radial,fsubs_ppc(rangeZ,z)/span):zero;}}
-  store<f32>(slot+0x28,fmuls_ppc(newSize,radial));f32 deficit=fsubs_ppc(one,verticalAlpha);verticalAlpha=fnmsubs(deficit,deficit,one);s32 timer=load<s16>(slot+0x2E);if(timer){store<u16>(slot+0x2E,timer-1);verticalAlpha=zero;}else if(load<u8>(slot)==2)store<u8>(slot,0);
-  if(call<u32>(0x02560704))verticalAlpha=zero;call<void>(0x0200ECD4,slot+0x24,fmuls_ppc(fmuls_ppc(fifth,verticalAlpha),radial),pf(sp,0x10),pf(0x1004F580),tiny);
-  f32 near=pf(0x1004F52C);if(pattern==0)poisonCopy(sp+0x68,camera+0xDC);else if(pattern==3)near=pf(sp,0x18);distance=poisonDistance(sp+0x54,sp+0x68);if(distance<near){ratio=distance/pf(sp,0x18);if(ratio>one)ratio=one;store<f32>(slot+0x24,fmuls_ppc(pf(slot,0x24),fmuls_ppc(fmuls_ppc(ratio,ratio),ratio)));}
-  u32 current=pw(call<u32>(0x025200D4),0x5B2C),hero=pw(call<u32>(0x025200D4),0x5B34);if(current==hero&&pf(slot,0x24)>pf(0x1004F5E8)&&!load<s16>(slot+0x2E)){store<f32>(sp+0x58,fsubs_ppc(pf(sp,0x58),pf(0x1004F564)));distance=poisonDistance(sp+0x54,player+0x314);if(distance<fmuls_ppc(pf(slot,0x28),pf(sp,0x24)))store<u32>(link+0x3C0,pw(link,0x3C0)|0x100000);}
-  count=pw(call<u32>(0x02555D0C),0xA68);
- }
- }
- packet=pw(call<u32>(0x02555D0C),0xA6C);store<u32>(packet+0xBC30,pw(packet,0xBC30)+1);
+    packet = (u32)at<Environment>(sdk::getEnvironment<u32>())->mpPoisonPacket;
+    at<PoisonPacket>(packet)->mCount = (u32)at<PoisonPacket>(packet)->mCount + 1;
 }
-VERIFY(0x0256CA54,rainPoisonMove);
+} // namespace RainMotion
+using namespace RainMotion;
+/* WWHD glue (tools/verify/autoglue.py)
+ */

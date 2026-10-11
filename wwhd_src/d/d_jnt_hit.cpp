@@ -1,218 +1,573 @@
-#include "gabi.h"
+/** Joint hit geometry and nearest-joint selection.
+ * Verified against both joint-hit specs; guest stack slots and GHS float operations are explicit. */
+#include "d/d_jnt_hit.h"
 using namespace gabi;
-static bool cylinder(s16 t) {return t==0||t==2||t==3||t==5||t==7;}
-static bool sphere(s16 t) {return t==1||t==4||t==6||t==8;}
-u32 JntHit_ctor_hd(u32 p) {
- WWHD_FUNC(0x025528D8,u32,p);
- if(!p) p=call<u32>(0x0273AD10,32u);
- if(p) {store<u32>(p+8,0);store<u32>(p+12,0);store<u32>(p+16,0);store<u32>(p+28,0);store<u32>(p,0);store<u32>(p+20,0);store<u16>(p+24,0);store<u32>(p+4,0);}
- return p;
+static bool isCylinder(s16 type) {
+    return type == JntHitType_CYL_e || type == JntHitType_CYL2_e || type == JntHitType_CYL_THROW_e ||
+           type == JntHitType_CYL_UNK_e || type == JntHitType_CYL_DELETE_e;
 }
-VERIFY(0x025528D8,JntHit_ctor_hd);
-u32 JntHit_CreateInit_hd(u32 p) {
- WWHD_FUNC(0x02552930,u32,p);
- const s32 n=load<s16>(p+24);u32 pos=0,data=load<u32>(p);
- for(s32 i=0;i<n;++i) {const s16 t=load<s16>(data+12*i);if(cylinder(t))pos+=2;else if(sphere(t))pos++;}
- store<u32>(p+16,call<u32>(0x0273ADAC,u32(n)*2));
- store<u32>(p+8,call<u32>(0x028EFFD0,0u,pos,12u,0u));
- store<u32>(p+12,call<u32>(0x0273ADAC,u32(s32(load<s16>(p+24)))*4));
- const s32 n2=load<s16>(p+24);
- u32 joints=call<u32>(0x0273ADAC,u32(n2)*2);u32 types=load<u32>(p+16);store<u32>(p+20,joints);
- if(!types)return 0;u32 offsets=load<u32>(p+8);if(!offsets)return 0;u32 radii=load<u32>(p+12);if(!radii||!joints)return 0;
- data=load<u32>(p);
- for(s32 i=0;i<s32(load<s16>(p+24));++i) {
-  store<s16>(types,load<s16>(data));store<s16>(joints,load<s16>(data+2));store<u32>(radii,load<u32>(data+4));
-  const s16 t=load<s16>(types);
-  if(cylinder(t)) {u32 v=load<u32>(data+8);store<u32>(offsets,load<u32>(v));store<u32>(offsets+4,load<u32>(v+4));store<u32>(offsets+8,load<u32>(v+8));v=load<u32>(data+8);store<u32>(offsets+12,load<u32>(v+12));store<u32>(offsets+16,load<u32>(v+16));store<u32>(offsets+20,load<u32>(v+20));offsets+=12;}
-  else if(sphere(t)) {const u32 v=load<u32>(data+8);store<u32>(offsets,load<u32>(v));store<u32>(offsets+4,load<u32>(v+4));store<u32>(offsets+8,load<u32>(v+8));}
-  offsets+=12;types+=2;joints+=2;radii+=4;data+=12;
- }
- return 1;
+static bool isSphere(s16 type) {
+    return type == JntHitType_SPH_e || type == JntHitType_SPH_THROW_e ||
+           type == JntHitType_SPH_UNK_e || type == JntHitType_SPH_DELETE_e;
 }
-VERIFY(0x02552930,JntHit_CreateInit_hd);
-u32 JntHit_create_hd(u32 model,u32 data,u32 count) {
- WWHD_FUNC(0x02552B60,u32,model,data,count);
- u32 p=call<u32>(0x0273AD10,32u);if(!p)return 0;p=call<u32>(0x025528D8,p);if(!p)return 0;
- store<u32>(p+4,model);store<u16>(p+24,u16(count));store<u32>(p,data);
- return call<u32>(0x02552930,p)?p:0;
-}
-VERIFY(0x02552B60,JntHit_create_hd);
-u32 JntHit_HIO_ctor_hd(u32 p) {
- WWHD_FUNC(0x02552BE8,u32,p);
- if(!p)p=call<u32>(0x0273AD10,44u);if(!p)return 0;
- store<u8>(p,0);const f32 a=load<f32>(0x1004EF1C);store<u8>(p+36,0);store<f32>(p+8,a);store<u16>(p+4,0);
- const f32 b=load<f32>(0x1004EF24);store<u16>(p+2,0);store<u32>(p+40,0x1004EF0Cu);
- const u32 x=load<u32>(0x101FFBA8);const f32 z=load<f32>(0x1004EF20);store<u32>(p+12,x);store<u32>(p+16,load<u32>(0x101FFBAC));const u32 zz=load<u32>(0x101FFBB0);
- store<f32>(p+32,b);store<u32>(p+20,zz);store<f32>(p+28,z);store<f32>(p+24,z);store<u8>(p,0xFF);return p;
-}
-VERIFY(0x02552BE8,JntHit_HIO_ctor_hd);
+using FloatConstant = be<f32>;
+static FloatConstant l_hioRadius;
+static FloatConstant l_zeroFloat;
+static FloatConstant l_epsilon;
+static FloatConstant l_nearest;
+static JntHitHD::SinCosTable l_sincosTable;
+static FloatConstant l_hioRange;
+static cXyz l_zeroVector;
+static u8 l_hioVtable;
+static JntHitHD::PiPair l_pi;
+static JntHitHD::HeaderStatics l_headerStatics;
 
-struct JntVec {f32 x,y,z;};
-u32 JntHit_Sph_hd(u32 self,u32 pos,u32 rot,u32 outpos,u32 outrot,u32 center,f32 radius) {
- WWHD_FUNC(0x02552C88,u32,self,pos,rot,outpos,outrot,center,radius);
- Local<JntVec> dir,scaled,point,normalized;
- const u32 ax=(u32(load<u16>(rot))>>3)*8+0x104A44F8u,ay=(u32(load<u16>(rot+2))>>3)*8+0x104A44F8u;
- const f32 cx=load<f32>(ax+4),sy=load<f32>(ay),sx=load<f32>(ax),cy=load<f32>(ay+4);
- store<f32>(dir.a,cx*sy);store<f32>(dir.a+4,-sx);store<f32>(dir.a+8,cx*cy);
- const f32 dot=call<f32>(0x028E8F44,pos,dir.a);
- const f32 mag2=call<f32>(0x028E8DD0,pos);
- f32 disc=fmadds(dot,dot,radius*radius)-mag2;
- if(!(disc>=0))disc=load<f32>(0x1004EF20);
- const f32 root=call<f32>(0x028F4384,disc),scale=-dot-root;
- call<void>(0x0201AE48,dir.a,scaled.a,scale);
- for(u32 i=0;i<12;i+=4)store<u32>(point.a+i,load<u32>(scaled.a+i));
- call<void>(0x028E8D88,point.a,pos,point.a);
- const f32 square=call<f32>(0x028E8DD0,point.a);const f32 length=call<f32>(0x028F4384,square);
- if(length>radius) {call<void>(0x0201B3C0,point.a,normalized.a);call<void>(0x028E8E64,point.a,point.a,radius);}
- call<void>(0x028E8D88,point.a,center,point.a);
- constexpr u32 matrix=0x1048D0CCu;call<void>(0x028E91EC,matrix,matrix);
- const f32 z=load<f32>(point.a+8),x=load<f32>(point.a),y=load<f32>(point.a+4);
- call<void>(0x025F24E0,x,y,z);
- call<void>(0x025F1B48,matrix,s32(load<s16>(rot)),s32(load<s16>(rot+2)),s32(load<s16>(rot+4)));
- store<f32>(outpos,load<f32>(matrix+12));store<f32>(outpos+4,load<f32>(matrix+28));store<f32>(outpos+8,load<f32>(matrix+44));call<void>(0x025F232C,matrix,outrot);return 1;
-}
-VERIFY(0x02552C88,JntHit_Sph_hd);
-
-u32 JntHit_Buffer_hd(u32 self,u32 index,u32 best,u32 joint,u32 rot,u32 point) {
- WWHD_FUNC(0x025537B4,u32,self,index,best,joint,rot,point);
- Local<JntVec> transformed,direction,difference;
- const u32 model=load<u32>(self+4),buffer=load<u32>(model+44),matrices=load<u32>(buffer+16);const u16 flags=load<u16>(buffer+4);
- store<u16>(buffer+4,flags|16);call<void>(0x028E90D4,matrices+joint*48,0x1048D0CCu);call<void>(0x028E8F64,0x1048D0CCu,point,transformed.a);
- if(load<s32>(index)>=0) {
-  const u32 ax=(u32(load<u16>(rot))>>3)*8+0x104A44F8u,ay=(u32(load<u16>(rot+2))>>3)*8+0x104A44F8u;
-  const f32 sx=load<f32>(ax),sy=load<f32>(ay),cx=load<f32>(ax+4),cy=load<f32>(ay+4);
-  store<f32>(direction.a+4,-sx);store<f32>(direction.a,cx*sy);store<f32>(direction.a+8,cx*cy);
-  call<void>(0x0201ADE0,transformed.a,difference.a,best);
-  const f32 dot=call<f32>(0x028E8F44,difference.a,direction.a),zero=load<f32>(0x1004EF20);
-  if(!(dot<zero))return 0;
- }
- const u32 y=load<u32>(transformed.a+4),z=load<u32>(transformed.a+8),x=load<u32>(transformed.a);
- store<u32>(index,joint);store<u32>(best,x);store<u32>(best+4,y);store<u32>(best+8,z);return 1;
-}
-VERIFY(0x025537B4,JntHit_Buffer_hd);
-
-static void jnt_copy(u32 dst,u32 src) {for(u32 i=0;i<12;i+=4)store<u32>(dst+i,load<u32>(src+i));}
-static void jnt_direction(u32 dst,u32 rot) {
- const u32 ax=(u32(load<u16>(rot))>>3)*8+0x104A44F8u,ay=(u32(load<u16>(rot+2))>>3)*8+0x104A44F8u;
- const f32 cx=load<f32>(ax+4),sy=load<f32>(ay),sx=load<f32>(ax),cy=load<f32>(ay+4);
- store<f32>(dst,fmuls_ppc(cx,sy));store<f32>(dst+4,-sx);store<f32>(dst+8,fmuls_ppc(cx,cy));
-}
-static void jnt_finish(u32 point,u32 rot,u32 outpos,u32 outrot) {
- constexpr u32 m=0x1048D0CCu;call<void>(0x028E91EC,m,m);
- const f32 z=load<f32>(point+8),x=load<f32>(point),y=load<f32>(point+4);call<void>(0x025F24E0,x,y,z);
- call<void>(0x025F1B48,m,s32(load<s16>(rot)),s32(load<s16>(rot+2)),s32(load<s16>(rot+4)));
- store<u32>(outpos,load<u32>(m+12));store<u32>(outpos+4,load<u32>(m+28));store<u32>(outpos+8,load<u32>(m+44));call<void>(0x025F232C,m,outrot);
-}
-u32 JntHit_Cyl2_hd(u32 self,u32 pos,u32 rot,u32 outpos,u32 outrot,u32 base,u32 end,f32 radius) {
- WWHD_FUNC(0x02553388,u32,self,pos,rot,outpos,outrot,base,end,radius);
- Local<JntVec> delta,axis,dir,scaled,sum,point,radial,projection,saved,changed;
- call<void>(0x0201ADE0,end,delta.a,base);call<void>(0x0201B12C,delta.a,axis.a);
- const f32 square=call<f32>(0x028E8DD0,delta.a);const f32 length=call<f32>(0x028F4384,square);
- const f32 longitudinal=call<f32>(0x028E8F44,pos,axis.a);
- jnt_direction(dir.a,rot);const f32 alignment=call<f32>(0x028E8F44,dir.a,axis.a);
- if(!(std::fabs(alignment)<load<f32>(0x1004EF28))) {
-  const f32 zero=load<f32>(0x1004EF20);const f32 scale=alignment>zero ? -longitudinal/alignment : fsubs_ppc(length,longitudinal)/alignment;
-  jnt_copy(scaled.a,dir.a);call<void>(0x028E8E64,scaled.a,scaled.a,scale);call<void>(0x0201AD78,pos,sum.a,scaled.a);jnt_copy(point.a,sum.a);jnt_copy(radial.a,sum.a);
- } else {jnt_copy(point.a,pos);jnt_copy(radial.a,pos);}
- const f32 along=call<f32>(0x028E8F44,radial.a,axis.a);jnt_copy(projection.a,axis.a);call<void>(0x028E8E64,projection.a,projection.a,along);call<void>(0x028E8DAC,radial.a,projection.a,radial.a);jnt_copy(saved.a,radial.a);
- const f32 rad2=call<f32>(0x028E8DD0,radial.a);const f32 radlen=call<f32>(0x028F4384,rad2);
- if(radlen>radius&&call<u32>(0x0201B47C,radial.a)) {call<void>(0x028E8E64,radial.a,radial.a,radius);call<void>(0x0201ADE0,saved.a,changed.a,radial.a);jnt_copy(radial.a,changed.a);call<void>(0x028E8DAC,point.a,radial.a,point.a);}
- call<void>(0x028E8D88,point.a,base,point.a);jnt_finish(point.a,rot,outpos,outrot);return 1;
-}
-VERIFY(0x02553388,JntHit_Cyl2_hd);
-
-u32 JntHit_Cyl_hd(u32 self,u32 pos,u32 rot,u32 outpos,u32 outrot,u32 base,u32 end,f32 radius) {
- WWHD_FUNC(0x02552E50,u32,self,pos,rot,outpos,outrot,base,end,radius);
- Local<JntVec> delta,axis,projection,radial,dir,projectedDir,scaled,point,corrected,aux,secondAux;
- call<void>(0x0201ADE0,end,delta.a,base);call<void>(0x0201B12C,delta.a,axis.a);
- const f32 square=call<f32>(0x028E8DD0,delta.a);const f32 length=call<f32>(0x028F4384,square);
- const f32 along=call<f32>(0x028E8F44,pos,axis.a);jnt_copy(radial.a,pos);jnt_copy(projection.a,axis.a);call<void>(0x028E8E64,projection.a,projection.a,along);call<void>(0x028E8DAC,radial.a,projection.a,radial.a);
- jnt_direction(dir.a,rot);const f32 alignment=call<f32>(0x028E8F44,dir.a,axis.a);jnt_copy(projectedDir.a,dir.a);jnt_copy(projection.a,axis.a);call<void>(0x028E8E64,projection.a,projection.a,alignment);call<void>(0x028E8DAC,projectedDir.a,projection.a,projectedDir.a);
- const u32 normal=call<u32>(0x0201B47C,projectedDir.a);const f32 zero=load<f32>(0x1004EF20);bool adjust;
- if(normal) {
-  const f32 dot=call<f32>(0x028E8F44,radial.a,projectedDir.a);const f32 rsquare=call<f32>(0x028E8DD0,radial.a);
-  f32 disc=fsubs_ppc(fmadds(dot,dot,fmuls_ppc(radius,radius)),rsquare);if(!(disc>=0))disc=zero;
-  const f32 root=call<f32>(0x028F4384,disc);call<void>(0x0201AE48,dir.a,scaled.a,fsubs_ppc(-dot,root));jnt_copy(point.a,scaled.a);call<void>(0x028E8D88,point.a,pos,point.a);adjust=disc==zero;
- } else {jnt_copy(point.a,pos);adjust=true;}
- if(adjust) {
-  jnt_copy(corrected.a,point.a);const f32 dot=call<f32>(0x028E8F44,point.a,axis.a);
-  const u32 tmp=normal?delta.a:secondAux.a;
-  call<void>(0x0201AE48,axis.a,tmp,dot);call<void>(0x028E8DAC,corrected.a,tmp,corrected.a);call<void>(0x0201B3C0,corrected.a,tmp);call<void>(0x0201AE48,corrected.a,tmp,radius);jnt_copy(corrected.a,tmp);
-  const f32 dot2=call<f32>(0x028E8F44,point.a,axis.a);call<void>(0x0201AE48,axis.a,tmp,dot2);call<void>(0x028E8D88,corrected.a,tmp,corrected.a);jnt_copy(point.a,corrected.a);
- }
- const f32 position=call<f32>(0x028E8F44,point.a,axis.a);f32 correction=zero;
- if(position<zero)correction=-position;else if(position>length)correction=fsubs_ppc(length,position);
- call<void>(0x0201AE48,axis.a,aux.a,correction);call<void>(0x028E8D88,point.a,aux.a,point.a);call<void>(0x028E8D88,point.a,base,point.a);jnt_finish(point.a,rot,outpos,outrot);return 1;
-}
-VERIFY(0x02552E50,JntHit_Cyl_hd);
-
-static bool jnt_throw(s16 t){return t==3||t==4;}
-static bool jnt_delete(s16 t){return t==7||t==8;}
-static void jnt_matrix(u32 model,s32 joint){const u32 b=load<u32>(model+44),m=load<u32>(b+16);const u16 flags=load<u16>(b+4);store<u16>(b+4,flags|16);call<void>(0x028E90D4,m+u32(joint)*48,0x1048D0CCu);}
-s32 JntHit_Search_hd(u32 self,u32 pos,u32 rot,u32 outpos,u32 outrot) {
- WWHD_FUNC(0x025538E4,s32,self,pos,rot,outpos,outrot);
- Local<JntVec> a,b,delta,axis,relative,cross,best,savedpos,transformed,temp;
- struct Ang {s16 x,y,z;};Local<Ang> savedrot;Local<s32> bestjoint;
- store<s32>(bestjoint.a,-1);
- u32 types=load<u32>(self+16),joints=load<u32>(self+20),radii=load<u32>(self+12),offsets=load<u32>(self+8),model=load<u32>(self+4);
- f32 nearest=load<f32>(0x1004EF2C);s32 chosen=-1,hit=0,hitpos=0,offsetindex=0;
- const f32 zero=load<f32>(0x1004EF20),epsilon=load<f32>(0x1004EF28);
- for(s32 i=0;i<s32(load<s16>(self+24));++i) {
-  jnt_matrix(model,load<s16>(joints));s16 shape=load<s16>(types);
-  bool record=false;
-  if(cylinder(shape)) {
-   call<void>(0x028E8F64,0x1048D0CCu,offsets,a.a);call<void>(0x028E8F64,0x1048D0CCu,offsets+12,b.a);call<void>(0x0201ADE0,b.a,delta.a,a.a);jnt_copy(axis.a,delta.a);call<void>(0x0201ADE0,pos,temp.a,a.a);jnt_copy(relative.a,temp.a);
-   if(!call<u32>(0x0201B47C,axis.a)) {
-    const f32 sq=call<f32>(0x028E8DD0,relative.a),len=call<f32>(0x028F4384,sq),radius=load<f32>(radii);f32 d=fsubs_ppc(len,radius);if(!(d>=0))d=zero;
-    if(!(d>nearest)) {chosen=load<s16>(joints);nearest=d;hit=i;hitpos=offsetindex;
-     if(d<radius){call<u32>(0x02552C88,self,relative.a,rot,outpos,outrot,a.a,radius);record=call<u32>(0x025537B4,self,bestjoint.a,best.a,chosen,rot,outpos)!=0;}
+// HD: explicit nullable construction preserves GHS allocation and store order.
+/* 025528D8 */
+static JntHit_c* JntHit_c__ct(JntHit_c* i_this) {
+    if (!i_this) i_this = static_cast<JntHit_c*>(operator_new(sizeof(JntHit_c)));
+    if (i_this) {
+        i_this->mpOffsets = nullptr;
+        i_this->mpRadiuses = nullptr;
+        i_this->mpShapeTypes = nullptr;
+        i_this->field_0x1C = nullptr;
+        i_this->mpSearchData = nullptr;
+        i_this->mpJointIndexes = nullptr;
+        i_this->mMaxNum = 0;
+        i_this->mpModel = nullptr;
     }
-   } else {
-    call<void>(0x0201B080,axis.a,cross.a,relative.a);const f32 csq=call<f32>(0x028E8DD0,cross.a),clen=call<f32>(0x028F4384,csq),radius=load<f32>(radii);f32 radial=fsubs_ppc(clen,radius);if(!(radial>=0))radial=zero;
-    const f32 longitudinal=call<f32>(0x028E8F44,axis.a,relative.a);f32 excess=zero,d;
-    if(longitudinal<zero){excess=-longitudinal;d=call<f32>(0x028F4384,fmadds(longitudinal,longitudinal,fmuls_ppc(radial,radial)));}
-    else {const f32 dsq=call<f32>(0x028E8DD0,delta.a),dlen=call<f32>(0x028F4384,dsq);
-     if(longitudinal>dlen){const f32 dsq2=call<f32>(0x028E8DD0,delta.a),dlen2=call<f32>(0x028F4384,dsq2);excess=fsubs_ppc(longitudinal,dlen2);d=call<f32>(0x028F4384,fmadds(excess,excess,fmuls_ppc(radial,radial)));}
-     else d=call<f32>(0x028F4384,fmuls_ppc(radial,radial));
-    }
-    if(!(d>nearest)){chosen=load<s16>(joints);nearest=d;hit=i;hitpos=offsetindex;
-     if(std::fabs(excess)<epsilon&&std::fabs(radial)<epsilon){shape=load<s16>(types);if(!jnt_throw(shape)){
-      if(shape==0)call<u32>(0x02552E50,self,relative.a,rot,outpos,outrot,a.a,b.a,load<f32>(radii));else if(shape==2)call<u32>(0x02553388,self,relative.a,rot,outpos,outrot,a.a,b.a,load<f32>(radii));
-      if(jnt_delete(load<s16>(types)))return -3;record=call<u32>(0x025537B4,self,bestjoint.a,best.a,chosen,rot,outpos)!=0;
-     }}
-    }
-   }
-   offsets+=24;offsetindex+=2;
-  } else if(sphere(shape)) {
-   call<void>(0x028E8F64,0x1048D0CCu,offsets,a.a);call<void>(0x0201ADE0,pos,temp.a,a.a);jnt_copy(relative.a,temp.a);
-   const f32 sq=call<f32>(0x028E8DD0,relative.a),len=call<f32>(0x028F4384,sq),radius=load<f32>(radii);f32 d=fsubs_ppc(len,radius);if(!(d>=0))d=zero;
-   if(!(d>nearest)){chosen=load<s16>(joints);nearest=d;hit=i;hitpos=offsetindex;
-    if(std::fabs(d)<epsilon){call<u32>(0x02552C88,self,relative.a,rot,outpos,outrot,a.a,radius);shape=load<s16>(types);if(jnt_delete(shape))return -3;if(!jnt_throw(shape))record=call<u32>(0x025537B4,self,bestjoint.a,best.a,chosen,rot,outpos)!=0;}
-   }
-   offsets+=12;offsetindex++;
-  }
-  if(record){jnt_copy(savedpos.a,outpos);for(u32 k=0;k<6;k+=2)store<u16>(savedrot.a+k,load<u16>(outrot+k));}
-  types+=2;joints+=2;radii+=4;
- }
- const s32 winner=load<s32>(bestjoint.a);
- if(winner>=0){jnt_copy(outpos,savedpos.a);for(u32 k=0;k<6;k+=2)store<u16>(outrot+k,load<u16>(savedrot.a+k));return winner;}
- types=load<u32>(self+16);radii=load<u32>(self+12);offsets=load<u32>(self+8);jnt_matrix(model,chosen);const s16 shape=load<s16>(types+hit*2);
- if(jnt_throw(shape))return -1;if(jnt_delete(shape))return -3;
- const u32 off=offsets+u32(hitpos)*12;
- if(shape==0){call<void>(0x028E8F64,0x1048D0CCu,off,a.a);call<void>(0x028E8F64,0x1048D0CCu,off+12,b.a);call<void>(0x0201ADE0,pos,temp.a,a.a);jnt_copy(relative.a,temp.a);call<u32>(0x02552E50,self,relative.a,rot,outpos,outrot,a.a,b.a,load<f32>(radii+hit*4));}
- else if(shape==1){call<void>(0x028E8F64,0x1048D0CCu,off,a.a);call<void>(0x0201ADE0,pos,temp.a,a.a);jnt_copy(relative.a,temp.a);call<u32>(0x02552C88,self,relative.a,rot,outpos,outrot,a.a,load<f32>(radii+hit*4));}
- else {call<void>(0x028E8F64,0x1048D0CCu,off,a.a);call<void>(0x028E8F64,0x1048D0CCu,off+12,b.a);call<void>(0x0201ADE0,pos,temp.a,a.a);jnt_copy(relative.a,temp.a);call<u32>(0x02553388,self,relative.a,rot,outpos,outrot,a.a,b.a,load<f32>(radii+hit*4));}
- return chosen;
+    return i_this;
 }
-VERIFY(0x025538E4,JntHit_Search_hd);
 
-void JntHit_sinit_hd() {
- WWHD_FUNC(0x025541F4,void);
- store<u32>(0x10475A44,0);store<u32>(0x10475A3C,0);store<u32>(0x10475A48,0);store<u32>(0x10475A40,0);
- call<void>(0x028F026C,0x101E8C9Cu);
- const f32 a=load<f32>(0x1004EF34),b=load<f32>(0x1004EF38);
- store<f32>(0x10475A30,a);store<f32>(0x10475A34,b);
- call<void>(0x028ED6F8,0x10475A38u);call<void>(0x028F026C,0x101E8CA8u);
- call<void>(0x028EAB2C,0x10475A39u);call<void>(0x028F026C,0x101E8CB4u);
+/* 02552930 */
+u32 JntHit_c::CreateInit() {
+    s32 count = mMaxNum;
+    u32 posCount = 0;
+    __jnt_hit_data_c* data = mpSearchData;
+    for (s32 i = 0; i < count; ++i) {
+        s16 type = data[i].mShapeType;
+        if (isCylinder(type)) posCount += 2;
+        else if (isSphere(type)) ++posCount;
+    }
+    mpShapeTypes = static_cast<be<s16>*>(JntHit_newArray(u32(count) * 2));
+    // HD: vector array construction passes four explicit allocator arguments.
+    mpOffsets = JntHit_constructVectorArray(0, posCount, sizeof(cXyz), 0);
+    mpRadiuses = static_cast<be<f32>*>(JntHit_newArray(u32(s32(mMaxNum)) * 4));
+    s32 jointCount = mMaxNum;
+    be<s16>* joints = static_cast<be<s16>*>(JntHit_newArray(u32(jointCount) * 2));
+    be<s16>* types = mpShapeTypes;
+    mpJointIndexes = joints;
+    if (!types) return 0;
+    cXyz* offsets = mpOffsets;
+    if (!offsets) return 0;
+    be<f32>* radiuses = mpRadiuses;
+    if (!radiuses || !joints) return 0;
+    data = mpSearchData;
+    for (s32 i = 0; i < s32(mMaxNum); ++i) {
+        *types = s16(data->mShapeType);
+        *joints = s16(data->mJointIndex);
+        // HD: radius copying uses integer words, preserving signaling NaN bits.
+        *reinterpret_cast<be<u32>*>(radiuses) = u32(*reinterpret_cast<be<u32>*>(&data->mRadius));
+        s16 type = *types;
+        if (isCylinder(type)) {
+            *offsets = data->mpOffsets[0];
+            offsets[1] = data->mpOffsets[1];
+            ++offsets;
+        } else if (isSphere(type)) {
+            *offsets = data->mpOffsets[0];
+        }
+        ++offsets;
+        ++types;
+        ++joints;
+        ++radiuses;
+        ++data;
+    }
+    return 1;
 }
-VERIFY(0x025541F4,JntHit_sinit_hd);
+
+/* 02552B60 */
+static JntHit_c* JntHit_create(J3DModel* model, __jnt_hit_data_c* jntHitData, u32 count) {
+    // HD: count retains its full caller register until the halfword store.
+    JntHit_c* hit = static_cast<JntHit_c*>(operator_new(sizeof(JntHit_c)));
+    if (!hit) return nullptr;
+    hit = JntHit_c__ct(hit);
+    if (!hit) return nullptr;
+    hit->mpModel = model;
+    hit->mMaxNum = count;
+    hit->mpSearchData = jntHitData;
+    return hit->CreateInit() ? hit : nullptr;
+}
+
+/* 02552BE8 */
+static JntHit_HIO_c* JntHit_HIO_c__ct(JntHit_HIO_c* i_this) {
+    if (!i_this) i_this = static_cast<JntHit_HIO_c*>(operator_new(sizeof(JntHit_HIO_c)));
+    if (!i_this) return nullptr;
+    i_this->mNo = 0;
+    f32 radius = l_hioRadius;
+    i_this->field_0x24 = 0;
+    i_this->m0C = radius;
+    i_this->m08 = 0;
+    f32 range = l_hioRange;
+    i_this->m06 = 0;
+    i_this->__vtbl = &l_hioVtable;
+    // HD: retain the interleaved vector-word loads and float stores.
+    be<u32>* zero = reinterpret_cast<be<u32>*>(&l_zeroVector);
+    be<u32>* vector = reinterpret_cast<be<u32>*>(&i_this->m10);
+    u32 x = zero[0];
+    f32 value = l_zeroFloat;
+    vector[0] = x;
+    vector[1] = u32(zero[1]);
+    u32 z = zero[2];
+    i_this->m24 = range;
+    vector[2] = z;
+    i_this->m20 = value;
+    i_this->m1C = value;
+    i_this->mNo = 0xFF;
+    return i_this;
+}
+
+static void jnt_copy(cXyz* destination, const cXyz* source) {
+    *destination = *source;
+}
+
+static void jnt_direction(cXyz* direction, csXyz* rotation) {
+    u32 ax = u16(rotation->x) >> 3;
+    u32 ay = u16(rotation->y) >> 3;
+    f32 cosX = l_sincosTable.m[ax].cos;
+    f32 sinY = l_sincosTable.m[ay].sin;
+    f32 sinX = l_sincosTable.m[ax].sin;
+    f32 cosY = l_sincosTable.m[ay].cos;
+    direction->x = fmuls_ppc(cosX, sinY);
+    direction->y = -sinX;
+    direction->z = fmuls_ppc(cosX, cosY);
+}
+
+static void jnt_finish(cXyz* point, csXyz* rotation, cXyz* outpos, csXyz* outrot) {
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    JntHit_inverse(matrix, matrix);
+    f32 z = point->z;
+    f32 x = point->x;
+    f32 y = point->y;
+    mDoMtx_stack_c::transM(x, y, z);
+    mDoMtx_stack_c::ZXYrotM(*rotation);
+    // HD: the cylinder entries copy translation as integer words; the sphere uses floats.
+    be<u32>* output = reinterpret_cast<be<u32>*>(outpos);
+    output[0] = u32(*reinterpret_cast<be<u32>*>(&matrix->m[0][3]));
+    output[1] = u32(*reinterpret_cast<be<u32>*>(&matrix->m[1][3]));
+    output[2] = u32(*reinterpret_cast<be<u32>*>(&matrix->m[2][3]));
+    JntHit_MtxToRot(matrix, outrot);
+}
+
+static void jnt_matrix(J3DModel* model, s32 joint) {
+    J3DMtxBuffer_hd* buffer = model->mpMtxBuffer;
+    u32 matrices = buffer->mpAnmMtx;
+    u16 flags = buffer->mFlags;
+    buffer->mFlags = flags | 0x10;
+    // HD: retain the 32-bit wrapping joint offset, including the no-hit index -1.
+    Mtx34* source = gabi::at<Mtx34>(matrices + u32(joint) * sizeof(Mtx34));
+    PSMTXCopy(source, mDoMtx_stack_c::get());
+}
+
+/* 02552C88 */
+u32 JntHit_c::SphHitPosAngleOffset(cXyz* position, csXyz* rotation, cXyz* outPosition,
+                                    csXyz* outRotation, cXyz* center, f32 radius) {
+    Local<cXyz> direction, scaled, point, normalized;
+    u32 ax = u16(rotation->x) >> 3;
+    u32 ay = u16(rotation->y) >> 3;
+    f32 cosX = l_sincosTable.m[ax].cos;
+    f32 sinY = l_sincosTable.m[ay].sin;
+    f32 sinX = l_sincosTable.m[ax].sin;
+    f32 cosY = l_sincosTable.m[ay].cos;
+    // HD: this entry uses ordinary float products, unlike the cylinder helper.
+    direction->x = cosX * sinY;
+    direction->y = -sinX;
+    direction->z = cosX * cosY;
+    f32 dot = PSVECDotProduct(position, direction.get());
+    f32 magnitudeSquared = PSVECSquareMag(position);
+    f32 discriminant = fmadds(dot, dot, radius * radius) - magnitudeSquared;
+    if (!(discriminant >= 0)) discriminant = l_zeroFloat;
+    f32 root = std_sqrtf(discriminant);
+    f32 scale = -dot - root;
+    cXyz_ml(direction.get(), scaled.get(), scale);
+    jnt_copy(point.get(), scaled.get());
+    PSVECAdd(point.get(), position, point.get());
+    f32 square = PSVECSquareMag(point.get());
+    f32 length = std_sqrtf(square);
+    if (length > radius) {
+        // HD: the normalization output has its own guest slot, even though it is not copied back.
+        JntHit_normalizeZP(point.get(), normalized.get());
+        PSVECScale(point.get(), point.get(), radius);
+    }
+    PSVECAdd(point.get(), center, point.get());
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    JntHit_inverse(matrix, matrix);
+    f32 z = point->z;
+    f32 x = point->x;
+    f32 y = point->y;
+    mDoMtx_stack_c::transM(x, y, z);
+    mDoMtx_stack_c::ZXYrotM(*rotation);
+    // HD: the sphere copies float values; the cylinder helper copies integer words.
+    outPosition->x = f32(matrix->m[0][3]);
+    outPosition->y = f32(matrix->m[1][3]);
+    outPosition->z = f32(matrix->m[2][3]);
+    JntHit_MtxToRot(matrix, outRotation);
+    return 1;
+}
+
+/* 02552E50 */
+u32 JntHit_c::CylHitPosAngleOffset(cXyz* position, csXyz* rotation, cXyz* outPosition,
+                                    csXyz* outRotation, cXyz* base, cXyz* end, f32 radius) {
+    Local<cXyz> delta, axis, projection, radial, direction, projectedDirection,
+                scaled, point, corrected, auxiliary, secondAuxiliary;
+    cXyz_mi(end, delta.get(), base);
+    JntHit_normZP(delta.get(), axis.get());
+    f32 square = PSVECSquareMag(delta.get());
+    f32 length = std_sqrtf(square);
+    f32 along = PSVECDotProduct(position, axis.get());
+    jnt_copy(radial.get(), position);
+    jnt_copy(projection.get(), axis.get());
+    PSVECScale(projection.get(), projection.get(), along);
+    PSVECSubtract(radial.get(), projection.get(), radial.get());
+    jnt_direction(direction.get(), rotation);
+    f32 alignment = PSVECDotProduct(direction.get(), axis.get());
+    jnt_copy(projectedDirection.get(), direction.get());
+    jnt_copy(projection.get(), axis.get());
+    PSVECScale(projection.get(), projection.get(), alignment);
+    PSVECSubtract(projectedDirection.get(), projection.get(), projectedDirection.get());
+    u32 normal = JntHit_normalizeRS(projectedDirection.get());
+    f32 zero = l_zeroFloat;
+    bool adjust;
+    if (normal) {
+        f32 dot = PSVECDotProduct(radial.get(), projectedDirection.get());
+        f32 radialSquare = PSVECSquareMag(radial.get());
+        f32 discriminant = fsubs_ppc(fmadds(dot, dot, fmuls_ppc(radius, radius)), radialSquare);
+        if (!(discriminant >= 0)) discriminant = zero;
+        f32 root = std_sqrtf(discriminant);
+        cXyz_ml(direction.get(), scaled.get(), fsubs_ppc(-dot, root));
+        jnt_copy(point.get(), scaled.get());
+        PSVECAdd(point.get(), position, point.get());
+        adjust = discriminant == zero;
+    } else {
+        jnt_copy(point.get(), position);
+        adjust = true;
+    }
+    if (adjust) {
+        jnt_copy(corrected.get(), point.get());
+        f32 dot = PSVECDotProduct(point.get(), axis.get());
+        // HD: GHS reuses delta in the normalized branch; the other branch has a separate slot.
+        cXyz* temporary = normal ? delta.get() : secondAuxiliary.get();
+        cXyz_ml(axis.get(), temporary, dot);
+        PSVECSubtract(corrected.get(), temporary, corrected.get());
+        JntHit_normalizeZP(corrected.get(), temporary);
+        cXyz_ml(corrected.get(), temporary, radius);
+        jnt_copy(corrected.get(), temporary);
+        f32 dot2 = PSVECDotProduct(point.get(), axis.get());
+        cXyz_ml(axis.get(), temporary, dot2);
+        PSVECAdd(corrected.get(), temporary, corrected.get());
+        jnt_copy(point.get(), corrected.get());
+    }
+    f32 longitudinal = PSVECDotProduct(point.get(), axis.get());
+    f32 correction = zero;
+    if (longitudinal < zero) correction = -longitudinal;
+    else if (longitudinal > length) correction = fsubs_ppc(length, longitudinal);
+    cXyz_ml(axis.get(), auxiliary.get(), correction);
+    PSVECAdd(point.get(), auxiliary.get(), point.get());
+    PSVECAdd(point.get(), base, point.get());
+    jnt_finish(point.get(), rotation, outPosition, outRotation);
+    return 1;
+}
+
+/* 02553388 */
+u32 JntHit_c::Cyl2HitPosAngleOffset(cXyz* position, csXyz* rotation, cXyz* outPosition,
+                                     csXyz* outRotation, cXyz* base, cXyz* end, f32 radius) {
+    Local<cXyz> delta, axis, direction, scaled, sum, point, radial, projection, saved, changed;
+    cXyz_mi(end, delta.get(), base);
+    JntHit_normZP(delta.get(), axis.get());
+    f32 square = PSVECSquareMag(delta.get());
+    f32 length = std_sqrtf(square);
+    f32 longitudinal = PSVECDotProduct(position, axis.get());
+    jnt_direction(direction.get(), rotation);
+    f32 alignment = PSVECDotProduct(direction.get(), axis.get());
+    if (!(std::fabs(alignment) < f32(l_epsilon))) {
+        f32 zero = l_zeroFloat;
+        f32 scale = alignment > zero ? -longitudinal / alignment : fsubs_ppc(length, longitudinal) / alignment;
+        jnt_copy(scaled.get(), direction.get());
+        PSVECScale(scaled.get(), scaled.get(), scale);
+        cXyz_pl(position, sum.get(), scaled.get());
+        jnt_copy(point.get(), sum.get());
+        jnt_copy(radial.get(), sum.get());
+    } else {
+        jnt_copy(point.get(), position);
+        jnt_copy(radial.get(), position);
+    }
+    f32 along = PSVECDotProduct(radial.get(), axis.get());
+    jnt_copy(projection.get(), axis.get());
+    PSVECScale(projection.get(), projection.get(), along);
+    PSVECSubtract(radial.get(), projection.get(), radial.get());
+    jnt_copy(saved.get(), radial.get());
+    f32 radialSquare = PSVECSquareMag(radial.get());
+    f32 radialLength = std_sqrtf(radialSquare);
+    if (radialLength > radius && JntHit_normalizeRS(radial.get())) {
+        PSVECScale(radial.get(), radial.get(), radius);
+        cXyz_mi(saved.get(), changed.get(), radial.get());
+        jnt_copy(radial.get(), changed.get());
+        PSVECSubtract(point.get(), radial.get(), point.get());
+    }
+    PSVECAdd(point.get(), base, point.get());
+    jnt_finish(point.get(), rotation, outPosition, outRotation);
+    return 1;
+}
+
+/* 025537B4 */
+u32 JntHit_c::HitBufferUpdate(be<s32>* index, cXyz* best, u32 joint, csXyz* rotation, cXyz* point) {
+    Local<cXyz> transformed, direction, difference;
+    J3DModel* model = mpModel;
+    jnt_matrix(model, joint);
+    mDoMtx_stack_c::multVec(point, transformed.get());
+    if (*index >= 0) {
+        u32 ax = u16(rotation->x) >> 3;
+        u32 ay = u16(rotation->y) >> 3;
+        // HD: this entry loads sinX/sinY before cosX/cosY.
+        f32 sinX = l_sincosTable.m[ax].sin;
+        f32 sinY = l_sincosTable.m[ay].sin;
+        f32 cosX = l_sincosTable.m[ax].cos;
+        f32 cosY = l_sincosTable.m[ay].cos;
+        direction->y = -sinX;
+        direction->x = cosX * sinY;
+        direction->z = cosX * cosY;
+        cXyz_mi(transformed.get(), difference.get(), best);
+        f32 dot = PSVECDotProduct(difference.get(), direction.get());
+        f32 zero = l_zeroFloat;
+        if (!(dot < zero)) return 0;
+    }
+    // HD: all three words are loaded before the index and vector stores.
+    be<u32>* words = reinterpret_cast<be<u32>*>(transformed.get());
+    u32 y = words[1];
+    u32 z = words[2];
+    u32 x = words[0];
+    *index = joint;
+    words = reinterpret_cast<be<u32>*>(best);
+    words[0] = x;
+    words[1] = y;
+    words[2] = z;
+    return 1;
+}
+
+
+static bool jnt_throw(s16 type) {
+    return type == JntHitType_CYL_THROW_e || type == JntHitType_SPH_THROW_e;
+}
+static bool jnt_delete(s16 type) {
+    return type == JntHitType_CYL_DELETE_e || type == JntHitType_SPH_DELETE_e;
+}
+
+/* 025538E4 */
+s32 JntHit_c::searchJntHitPosAngleOffset(cXyz* pos, csXyz* rotation, cXyz* outpos, csXyz* outrot) {
+    // HD: retain all ten vector slots, including the unused transformed slot, in GHS order.
+    Local<cXyz> a, b, delta, axis, relative, cross, best, savedpos, transformed, temp;
+    Local<csXyz> savedrot;
+    Local<be<s32>> bestjoint;
+    *bestjoint.get() = JntHitIdx_NONE_e;
+    be<s16>* types = mpShapeTypes;
+    be<s16>* joints = mpJointIndexes;
+    be<f32>* radii = mpRadiuses;
+    cXyz* offsets = mpOffsets;
+    J3DModel* model = mpModel;
+    f32 nearest = l_nearest;
+    s32 chosen = JntHitIdx_NONE_e;
+    s32 hit = 0;
+    s32 hitpos = 0;
+    s32 offsetindex = 0;
+    f32 zero = l_zeroFloat;
+    f32 epsilon = l_epsilon;
+    for (s32 i = 0; i < s32(mMaxNum); ++i) {
+        jnt_matrix(model, *joints);
+        s16 shape = *types;
+        bool record = false;
+        if (isCylinder(shape)) {
+            mDoMtx_stack_c::multVec(offsets, a.get());
+            mDoMtx_stack_c::multVec(offsets + 1, b.get());
+            cXyz_mi(b.get(), delta.get(), a.get());
+            jnt_copy(axis.get(), delta.get());
+            cXyz_mi(pos, temp.get(), a.get());
+            jnt_copy(relative.get(), temp.get());
+            if (!JntHit_normalizeRS(axis.get())) {
+                f32 square = PSVECSquareMag(relative.get());
+                f32 length = std_sqrtf(square);
+                f32 radius = *radii;
+                f32 distance = fsubs_ppc(length, radius);
+                // HD: unordered comparisons also clamp to zero.
+                if (!(distance >= 0)) distance = zero;
+                if (!(distance > nearest)) {
+                    chosen = *joints;
+                    nearest = distance;
+                    hit = i;
+                    hitpos = offsetindex;
+                    if (distance < radius) {
+                        SphHitPosAngleOffset(relative.get(), rotation, outpos, outrot, a.get(), radius);
+                        record = HitBufferUpdate(bestjoint.get(), best.get(), chosen, rotation, outpos) != 0;
+                    }
+                }
+            } else {
+                JntHit_cross(axis.get(), cross.get(), relative.get());
+                f32 crossSquare = PSVECSquareMag(cross.get());
+                f32 crossLength = std_sqrtf(crossSquare);
+                f32 radius = *radii;
+                f32 radial = fsubs_ppc(crossLength, radius);
+                if (!(radial >= 0)) radial = zero;
+                f32 longitudinal = PSVECDotProduct(axis.get(), relative.get());
+                f32 excess = zero;
+                f32 distance;
+                if (longitudinal < zero) {
+                    excess = -longitudinal;
+                    distance = std_sqrtf(fmadds(longitudinal, longitudinal, fmuls_ppc(radial, radial)));
+                } else {
+                    f32 deltaSquare = PSVECSquareMag(delta.get());
+                    f32 deltaLength = std_sqrtf(deltaSquare);
+                    if (longitudinal > deltaLength) {
+                        // HD: GHS calls both length helpers again on this branch.
+                        f32 deltaSquare2 = PSVECSquareMag(delta.get());
+                        f32 deltaLength2 = std_sqrtf(deltaSquare2);
+                        excess = fsubs_ppc(longitudinal, deltaLength2);
+                        distance = std_sqrtf(fmadds(excess, excess, fmuls_ppc(radial, radial)));
+                    } else {
+                        distance = std_sqrtf(fmuls_ppc(radial, radial));
+                    }
+                }
+                if (!(distance > nearest)) {
+                    chosen = *joints;
+                    nearest = distance;
+                    hit = i;
+                    hitpos = offsetindex;
+                    if (std::fabs(excess) < epsilon && std::fabs(radial) < epsilon) {
+                        shape = *types;
+                        if (!jnt_throw(shape)) {
+                            if (shape == JntHitType_CYL_e) {
+                                CylHitPosAngleOffset(relative.get(), rotation, outpos, outrot,
+                                                     a.get(), b.get(), *radii);
+                            } else if (shape == JntHitType_CYL2_e) {
+                                Cyl2HitPosAngleOffset(relative.get(), rotation, outpos, outrot,
+                                                      a.get(), b.get(), *radii);
+                            }
+                            if (jnt_delete(*types)) return JntHitIdx_DELETE_e;
+                            record = HitBufferUpdate(bestjoint.get(), best.get(), chosen, rotation, outpos) != 0;
+                        }
+                    }
+                }
+            }
+            offsets += 2;
+            offsetindex += 2;
+        } else if (isSphere(shape)) {
+            mDoMtx_stack_c::multVec(offsets, a.get());
+            cXyz_mi(pos, temp.get(), a.get());
+            jnt_copy(relative.get(), temp.get());
+            f32 square = PSVECSquareMag(relative.get());
+            f32 length = std_sqrtf(square);
+            f32 radius = *radii;
+            f32 distance = fsubs_ppc(length, radius);
+            if (!(distance >= 0)) distance = zero;
+            if (!(distance > nearest)) {
+                chosen = *joints;
+                nearest = distance;
+                hit = i;
+                hitpos = offsetindex;
+                if (std::fabs(distance) < epsilon) {
+                    SphHitPosAngleOffset(relative.get(), rotation, outpos, outrot, a.get(), radius);
+                    shape = *types;
+                    if (jnt_delete(shape)) return JntHitIdx_DELETE_e;
+                    if (!jnt_throw(shape)) {
+                        record = HitBufferUpdate(bestjoint.get(), best.get(), chosen, rotation, outpos) != 0;
+                    }
+                }
+            }
+            ++offsets;
+            ++offsetindex;
+        }
+        if (record) {
+            jnt_copy(savedpos.get(), outpos);
+            savedrot->x = s16(outrot->x);
+            savedrot->y = s16(outrot->y);
+            savedrot->z = s16(outrot->z);
+        }
+        ++types;
+        ++joints;
+        ++radii;
+    }
+    s32 winner = *bestjoint.get();
+    if (winner >= 0) {
+        jnt_copy(outpos, savedpos.get());
+        outrot->x = s16(savedrot->x);
+        outrot->y = s16(savedrot->y);
+        outrot->z = s16(savedrot->z);
+        return winner;
+    }
+    types = mpShapeTypes;
+    radii = mpRadiuses;
+    offsets = mpOffsets;
+    jnt_matrix(model, chosen);
+    s16 shape = types[hit];
+    if (jnt_throw(shape)) return JntHitIdx_NONE_e;
+    if (jnt_delete(shape)) return JntHitIdx_DELETE_e;
+    cXyz* offset = offsets + u32(hitpos);
+    if (shape == JntHitType_CYL_e) {
+        mDoMtx_stack_c::multVec(offset, a.get());
+        mDoMtx_stack_c::multVec(offset + 1, b.get());
+        cXyz_mi(pos, temp.get(), a.get());
+        jnt_copy(relative.get(), temp.get());
+        CylHitPosAngleOffset(relative.get(), rotation, outpos, outrot, a.get(), b.get(), radii[hit]);
+    } else if (shape == JntHitType_SPH_e) {
+        mDoMtx_stack_c::multVec(offset, a.get());
+        cXyz_mi(pos, temp.get(), a.get());
+        jnt_copy(relative.get(), temp.get());
+        SphHitPosAngleOffset(relative.get(), rotation, outpos, outrot, a.get(), radii[hit]);
+    } else {
+        mDoMtx_stack_c::multVec(offset, a.get());
+        mDoMtx_stack_c::multVec(offset + 1, b.get());
+        cXyz_mi(pos, temp.get(), a.get());
+        jnt_copy(relative.get(), temp.get());
+        Cyl2HitPosAngleOffset(relative.get(), rotation, outpos, outrot, a.get(), b.get(), radii[hit]);
+    }
+    return chosen;
+}
+
+// HD: compiler-generated header statics.
+/* 025541F4 */
+static void __sinit_d_jnt_hit_cpp() {
+    l_headerStatics.mZero[2] = 0;
+    l_headerStatics.mZero[0] = 0;
+    l_headerStatics.mZero[3] = 0;
+    l_headerStatics.mZero[1] = 0;
+    __register_global_object(0x101E8C9C);
+    f32 negative = l_pi.negative;
+    f32 positive = l_pi.positive;
+    l_headerStatics.mNegativePi = negative;
+    l_headerStatics.mPositivePi = positive;
+    JntHitFirstHeaderObject_ct(&l_headerStatics.mFirstObject);
+    __register_global_object(0x101E8CA8);
+    JntHitSecondHeaderObject_ct(&l_headerStatics.mSecondObject);
+    __register_global_object(0x101E8CB4);
+}
+
+/* WWHD glue (tools/verify/autoglue.py):
+data l_hioRadius 1004EF1C
+data l_zeroFloat 1004EF20
+data l_epsilon 1004EF28
+data l_nearest 1004EF2C
+data l_sincosTable 104A44F8
+data l_hioRange 1004EF24
+data l_zeroVector 101FFBA8
+data l_hioVtable 1004EF0C
+data l_pi 1004EF34
+data l_headerStatics 10475A30
+ext 028E8DAC void PSVECSubtract(const cXyz*, const cXyz*, cXyz*)
+ext 0201B12C void JntHit_normZP(const cXyz*, cXyz*)
+ext 0201B3C0 void JntHit_normalizeZP(cXyz*, cXyz*)
+ext 0201B47C u32 JntHit_normalizeRS(cXyz*)
+ext 0201B080 void JntHit_cross(const cXyz*, cXyz*, const cXyz*)
+ext 028E91EC void JntHit_inverse(Mtx34*, Mtx34*)
+ext 025F232C void JntHit_MtxToRot(Mtx34*, csXyz*)
+ext 0273ADAC void* JntHit_newArray(u32)
+ext 028EFFD0 cXyz* JntHit_constructVectorArray(u32, u32, u32, u32)
+ext 028ED6F8 void JntHitFirstHeaderObject_ct(be<u8>*)
+ext 028EAB2C void JntHitSecondHeaderObject_ct(be<u8>*)
+*/

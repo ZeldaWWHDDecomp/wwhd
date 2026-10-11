@@ -1,124 +1,58 @@
 /**
  * d_a_wind_tag.cpp (WWHD)
- * Tag - Wind column (Yaflw00 / Ybgaf00) with a point wind, collision and a water splash emitter.
+ * Tag - Wind column (Yaflw00 / Ybgaf00) with a point wind, collision and a
+ * water splash emitter.
  *
- * Ported from the GameCube decompilation
- * (zeldaret/tww src/d/actor/d_a_wind_tag.cpp) to the WWHD layout and code, verified against
- * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
+ * Ported from the GameCube
+ * decompilation (zeldaret/tww src/d/actor/d_a_wind_tag.cpp) to the WWHD layout
+ * and code, verified against cking.rpx. "HD:" marks where WWHD's code differs
+ * from the GameCube source.
  */
-#include "bindings.h"
+#include "d/actor/d_a_wind_tag.h"
 
-#define SAFESTRING_VTBL 0x10042ABC /* this TU's sead::SafeString vtable */
-#define WINDTAG_VTBL 0x10042B0C
-#define FILE_NAME STR(0x10042B4C)
-#define l_cps_src 0x101D33A0
+const gc_tu_data gc_tu = {
+    .safeString = 0x10042ABC,
+    .safeStringAssure = 0x024E0B24,
+    .headerStatics = {0x1046EBE4, 0x101D33EC, 0},
+};
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void J3DFrameCtrl_init(void* p, s16 end) { gabi::call(0x027F2BC0, p, end); }
-static inline void mDoExt_btkAnm_entryModel(void* a, J3DModel* m, f32 frame) { gabi::call(0x025E8048, a, m, frame); } /* HD: takes the model */
-static inline void cM3dGCps_Set(void* cps, void* src) { gabi::call(0x020181FC, cps, src); }
-static inline void PSVECSubtract(void* a, void* b, void* out) { gabi::call(0x028E8DAC, a, b, out); }
-static inline void dCcD_Cps_Set(void* cps, u32 src) { gabi::call(0x025164C0, cps, src); }
-static inline void dPointWind_set_pwind_init(void* pw, void* cps) { gabi::call(0x025AB3F8, pw, cps); }
-static inline void dPointWind_set_pwind_move(void* pw) { gabi::call(0x025AB454, pw); }
-static inline void dPointWind_set_pwind_delete(void* pw) { gabi::call(0x025AB710, pw); }
-static inline u32 fopKyM_create(s16 name, u32 prm, cXyz* pos, cXyz* scale, u32 fn) { return gabi::call<u32>(0x025DADA4, name, prm, pos, scale, fn); }
-static inline void* fopKyM_SearchByID(u32 id) { return gabi::call<void*>(0x025DAC50, id); }
-static inline BOOL cLib_chasePos(cXyz* pos, cXyz* target, f32 speed) { return gabi::call<BOOL>(0x0200F62C, pos, target, speed); }
-static inline f32 cLib_addCalc(be<f32>* v, f32 target, f32 scale, f32 maxStep, f32 minStep) {
-    return gabi::call<f32>(0x0200ECD4, v, target, scale, maxStep, minStep);
-}
-static inline u32 dKy_get_schbit() { return gabi::call<u32>(0x025602A8); }
-static inline f32 dBgS_ObjGndChk_Wtr_Func(cXyz* pos) { return gabi::call<f32>(0x024F1478, pos); }
-static inline void cM3d_CalcVecAngle(void* v, be<s16>* x, be<s16>* z) { gabi::call(0x02017264, v, x, z); }
-static inline void JPAGetXYZRotateMtx(s16 x, s16 y, s16 z, u32 mtx) { gabi::call(0x028245AC, x, y, z, mtx); }
-static inline s32 fopAcM_cullingCheck_call(fopAc_ac_c* a) { return gabi::call<s32>(0x025D6CE8, a); }
-static inline s16 fpcLf_GetPriority(void* a) { return gabi::call<s16>(0x025DF2B8, a); }
-static inline void fopDwTg_ToDrawQ(u32 tag, s16 prio) { gabi::call(0x025DA874, tag, prio); }
-static inline void dKy_tevstr_init_l(void* t, s8 roomNo, u8 p) { gabi::call(0x0255FFF4, t, roomNo, p); }
-/* HD material colour helpers (as in d_a_obj_swlight / d_a_obj_ice) */
-static inline void color_convert(void* out, void* in, f32 f) { gabi::call(0x0274D458, out, in, f); }
-static inline u32 material_uniform(u32 p, s32 n) { return gabi::call<u32>(0x027F9F0C, p, n); }
-static inline void matpacket_getTevColor(void* out, u32 packet, s32 idx) { gabi::call(0x027FA160, out, packet, idx); }
+#define SAFESTRING_VTBL gc_tu.safeString
+#define WINDTAG_VTBL WindTagHD::ActorVtable
+#define FILE_NAME "d_a_wind_tag.cpp"
+static WindTagHD::CapsuleSource l_cps_src = {
+    0, 0x200000, 0, 13, 0, 0, 0, 0, 2, 0, 4, 0, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, 200.0f,
+};
+
 /* J3DTevBlock virtuals (vtable at +4 of the block at material+0x18) */
-static inline u32 tevblock_vfn(u32 mat, u32 slot) {
-    u32 tb = gabi::load<u32>(mat + 0x18);
-    return gabi::load<u32>(gabi::load<u32>(tb + 4) + slot);
+static inline u32 tevblock_vfn(WindTagHD::Material* mat, u32 slot) {
+    WindTagHD::TevBlock* tb = mat->mpTevBlock;
+    return tb->__vtbl->slots[slot / 4].get();
 }
-/* J3DModelData::getMaterialNodePointer(i) */
-static inline u32 j3d_material(u32 data, u16 i) {
-    u32 count = gabi::load<u32>(data + 0xC);
-    u32 mat = gabi::load<u32>(data + 0x10);
-    if (i < count) mat += i * 0x39C;
+static inline WindTagHD::Material* j3d_material(WindTagHD::MaterialData* data, u16 i) {
+    u32 count = data->mMaterialNum;
+    WindTagHD::Material* mat = data->mpMaterials;
+    if (i < count)
+        mat += i;
     return mat;
 }
 
-namespace daWindTag {
+using namespace daWindTag;
 
-struct daWindTag_c : fopAc_ac_c {
-    bool _delete();
-    BOOL CreateHeap();
-    void CreateInit();
-    void set_wind_angle();
-    cPhs_State _create();
-    void set_mtx();
-    bool checkSizeSpecialBig();
-    void set_wind_se_sub(u32, cXyz*);
-    void set_wind_se();
-    bool _execute();
-    void path_move();
-    void set_next_pnt();
-    bool _draw();
-    void MoveEmitter();
-
-    /* 0x3AC */ u8 mStts[0x3C];       /* dCcD_Stts */
-    /* 0x3E8 */ u8 mCps[0x118];       /* dCcD_Cps: dCcD_GObjInf ... */
-    /* 0x500 */ u8 mCpsCps[0x20];     /*   its cM3dGCps (start 0x500, end 0x50C) */
-    /* 0x520 */ cXyz mCpsS_mStart;    /* cM3dGCpsS mCpsS */
-    /* 0x52C */ cXyz mCpsS_mEnd;
-    /* 0x538 */ be<f32> mCpsS_mRadius;
-    /* 0x53C */ request_of_phase_process_class mPhs;
-    /* 0x544 */ gptr<J3DModel> mpModel;
-    /* 0x548 */ mDoExt_btkAnm mBtkAnm0;
-    /* 0x5BC */ mDoExt_btkAnm mBtkAnm1;
-    /* 0x630 */ mDoExt_bckAnm mBckAnm;
-    /* 0x6BC */ u8 mPointWind[0x30];  /* dPointWind_c (mWind.mStrength at +0x20) */
-    /* 0x6EC */ be<u8> mType;
-    /* 0x6ED */ u8 _6ED[3];
-    /* 0x6F0 */ be<f32> mOffsY;
-    /* 0x6F4 */ be<f32> field_0x49c;
-    /* 0x6F8 */ be<u32> mpEmitter;
-    /* 0x6FC */ be<u8> mEfColor[4];
-    /* 0x700 */ dKy_tevstr_c mEfTevStr;
-    /* 0x8C8 */ cXyz mSePos;
-    /* 0x8D4 */ cXyz mTargetPos;
-    /* 0x8E0 */ be<u32> mpPath;
-    /* 0x8E4 */ be<u8> mPathId;
-    /* 0x8E5 */ be<s8> mCurPathPoint;
-    /* 0x8E6 */ be<s8> mPathPointDir;
-    /* 0x8E7 */ be<u8> field_0x577;
-    /* 0x8E8 */ be<s32> mSwNo;
-    /* 0x8EC */ be<u8> field_0x57c;
-    /* 0x8ED */ be<u8> field_0x57d;
-    /* 0x8EE */ be<u8> mbDraw;
-    /* 0x8EF */ be<u8> field_0x57f;
-    /* 0x8F0 */ be<u32> mLevelSeID;
+static WindTagHD::LightTemplate initialLight = {
+    {0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f},
+    {255, 255, 255, 255},
+    {255, 255, 255, 255},
+    {1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f},
 };
-WWHD_OFFSET(daWindTag_c, mCpsS_mStart, 0x520);
-WWHD_OFFSET(daWindTag_c, mBckAnm, 0x630);
-WWHD_OFFSET(daWindTag_c, mType, 0x6EC);
-WWHD_OFFSET(daWindTag_c, mEfTevStr, 0x700);
-WWHD_OFFSET(daWindTag_c, mLevelSeID, 0x8F0);
-WWHD_SIZE(daWindTag_c, 0x8F4);
 
 /* static tables (.data / .rodata) */
-static u32 m_arcname(u32 type) { return gabi::load<u32>(0x101D3410 + type * 4); }
-static s16 m_bdlidx(u32 type) { return gabi::load<s16>(0x10042BC0 + type * 2); }
-static s16 m_heapsize(u32 type) { return gabi::load<s16>(0x10042BC4 + type * 2); }
-static s16 m_bckidx(u32 type) { return gabi::load<s16>(0x10042BC8 + type * 2); }
-static s16 m_btkidx(u32 type) { return gabi::load<s16>(0x10042BCC + type * 2); }
-static s16 m_btkidx2(u32 type) { return gabi::load<s16>(0x10042BD0 + type * 2); }
-static f32 mData(u32 i) { return gabi::load<f32>(0x1004BD3C + i * 4); }
+static const char* m_arcname[] = {"Yaflw00", "Ybgaf00"};
+static s16 m_bdlidx[] = {8, 8};
+static s16 m_heapsize[] = {3136, 3136};
+static s16 m_bckidx[] = {5, 5};
+static s16 m_btkidx[] = {11, 11};
+static s16 m_btkidx2[] = {12, 12};
+static f32 mData[] = {150.0f, 1000.0f, 1000.0f, 7000.0f};
 
 namespace daWindTag_prm {
 inline u8 getSch(daWindTag_c* i_this) { return fopAcM_GetParam(i_this) & 0xFF; }
@@ -129,37 +63,41 @@ inline u8 getSwType(daWindTag_c* i_this) { return (fopAcM_GetParam(i_this) >> 23
 inline u8 getSwitchNo(daWindTag_c* i_this) { return (fopAcM_GetParam(i_this) >> 24) & 0xFF; }
 inline u8 getSplashFlag(daWindTag_c* i_this) { return (i_this->home.angle.z & 0x0F) == 1; }
 inline u8 getDrawFlag(daWindTag_c* i_this) { return (i_this->home.angle.z >> 4) & 0x0F; }
-}  // namespace daWindTag_prm
+} // namespace daWindTag_prm
 
-/* sead::SafeString(lit) == the stage name (play+0x5134) (HD inline: cstr() through the vtable,
- * the left operand twice, pointer compare, bounded strcmp) */
-static bool isStage(u32 lit) {
-    gabi::Local<SafeString> a;
-    a->__vtbl = SAFESTRING_VTBL;
-    a->mStringTop = lit;
-    u32 stage = dComIfGp_ea() + 0x5134;
-    gabi::Local<SafeString> b;
-    b->__vtbl = SAFESTRING_VTBL;
-    b->mStringTop = stage;
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a.get());
-    u32 pa = a->mStringTop;
-    gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b.get());
-    u32 pb = b->mStringTop;
-    if (pa == pb) return true;
+/* sead::SafeString(lit) == the stage name (play+0x5134) (HD inline: cstr()
+ * through the vtable, the left operand twice, pointer compare, bounded strcmp)
+ */
+static bool isStage(const char* lit) {
+    gabi::Local<PointWindSafeString> a;
+    a->__vtbl.v = gc_tu.safeString;
+    a->mStringTop.v = gabi::guest_addr(lit);
+    const char* stage = dComIfGp_getStartStageName();
+    gabi::Local<PointWindSafeString> b;
+    b->__vtbl.v = gc_tu.safeString;
+    b->mStringTop = reinterpret_cast<const be<char>*>(stage);
+    a->assureTermination();
+    a->assureTermination();
+    const be<u8>* lhs = reinterpret_cast<const be<u8>*>(a->mStringTop.get());
+    b->assureTermination();
+    const be<u8>* rhs = reinterpret_cast<const be<u8>*>(b->mStringTop.get());
+    if (lhs == rhs)
+        return true;
     for (u32 i = 0; i < 0x40001; i++) {
-        u8 ca = gabi::load<u8>(pa + i);
-        if (ca != gabi::load<u8>(pb + i)) return false;
-        if (ca == 0) return true;
+        u8 ca = lhs[i];
+        if (ca != (u8)rhs[i])
+            return false;
+        if (ca == 0)
+            return true;
     }
     return false;
 }
 
-struct ColorF { be<f32> r, g, b, a; };
+using WindTagHD::ColorF;
 
-/* 024DFB00: GXColor (u8 x4) -> normalised float colour (this TU's copy) */
+// HD: GXColor (u8 x4) -> normalised float colour (this TU's copy)
+/* 024DFB00 */
 static void color_normalize(ColorF* out, be<u8>* in) {
-    WWHD_FUNC(0x024DFB00, void, out, in);
     f32 r = (f32)(u8)in[0] / 255.0f;
     f32 g = (f32)(u8)in[1] / 255.0f;
     f32 b = (f32)(u8)in[2] / 255.0f;
@@ -169,116 +107,111 @@ static void color_normalize(ColorF* out, be<u8>* in) {
     t->g = g;
     t->b = b;
     t->a = a;
-    u32 s = gabi::ea(t.get()), d = gabi::ea(out);
-    for (u32 i = 0; i < 16; i += 4) gabi::store<u32>(d + i, gabi::load<u32>(s + i));
+    auto* src = reinterpret_cast<WindTagHD::ColorWords*>(t.get());
+    auto* dst = reinterpret_cast<WindTagHD::ColorWords*>(out);
+    for (u32 i = 0; i < 4; i++)
+        dst->rgba[i] = (u32)src->rgba[i];
 }
-VERIFY(0x024DFB00, color_normalize);
 
 /* GXColorS10 (s16 x4) / 255 as a word-copied float colour */
-static void color_s10_normalize(ColorF* out, u32 c) {
-    out->r = (f32)gabi::load<s16>(c + 0) / 255.0f;
-    out->g = (f32)gabi::load<s16>(c + 2) / 255.0f;
-    out->b = (f32)gabi::load<s16>(c + 4) / 255.0f;
-    out->a = (f32)gabi::load<s16>(c + 6) / 255.0f;
+static void color_s10_normalize(ColorF* out, GXColorS10* c) {
+    out->r = (f32)(s16)c->r / 255.0f;
+    out->g = (f32)(s16)c->g / 255.0f;
+    out->b = (f32)(s16)c->b / 255.0f;
+    out->a = (f32)(s16)c->a / 255.0f;
 }
 
-/* writes a converted colour (rgb) and alpha into the material's uniform block */
-static void store_uniform(u32 u, ColorF* conv, f32 alpha) {
+/* writes a converted colour (rgb) and alpha into the material's uniform block
+ */
+static void store_uniform(ColorF* u, ColorF* conv, f32 alpha) {
     f32 r = conv->r, g = conv->g, b = conv->b;
-    gabi::store<f32>(u + 4, g);
-    gabi::store<f32>(u + 8, b);
-    gabi::store<f32>(u + 0, r);
-    gabi::store<f32>(u + 0xC, alpha);
+    u->g = g;
+    u->b = b;
+    u->r = r;
+    u->a = alpha;
 }
 
 /* 024DFA88 */
-bool daWindTag_c::_delete() {
-    WWHD_FUNC(0x024DFA88, bool, this);
+bool daWindTag::daWindTag_c::_delete() {
     if (mpEmitter != 0) {
-        u32 e = mpEmitter; /* becomeInvalidEmitter() */
-        gabi::store<s32>(e + 0x5C, -1);
-        gabi::store<u32>(e + 0x254, gabi::load<u32>(e + 0x254) | 1);
+        WindTagHD::Emitter* e = mpEmitter.get(); /* becomeInvalidEmitter() */
+        e->mMaxFrame = -1;
+        e->mFlags = (u32)e->mFlags | WindTagHD::StopCreateParticle;
         mpEmitter = 0;
     }
 
-    dComIfG_resDelete(&mPhs, gabi::at<const char>(m_arcname(mType))); /* dComIfG_resDeleteDemo */
-    dPointWind_set_pwind_delete(mPointWind);
+    dComIfG_resDelete(&mPhs, m_arcname[mType]); /* dComIfG_resDeleteDemo */
+    mPointWind.set_pwind_delete();
     return true;
 }
-VERIFY(0x024DFA88, &daWindTag_c::_delete);
 
 /* 024DF33C */
-static BOOL CheckCreateHeap(fopAc_ac_c* i_ac) {
-    WWHD_FUNC(0x024DF33C, BOOL, i_ac);
-    return ((daWindTag_c*)i_ac)->CreateHeap();
-}
-VERIFY(0x024DF33C, CheckCreateHeap);
+static BOOL CheckCreateHeap(fopAc_ac_c* i_ac) { return ((daWindTag_c*)i_ac)->CreateHeap(); }
 
 /* 024DEE3C */
-BOOL daWindTag_c::CreateHeap() {
-    WWHD_FUNC(0x024DEE3C, BOOL, this);
-    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(gabi::at<const char>(m_arcname(mType)), m_bdlidx(mType), SAFESTRING_VTBL);
+BOOL daWindTag::daWindTag_c::CreateHeap() {
+    J3DModelData* modelData =
+        (J3DModelData*)dComIfG_getObjectRes(m_arcname[mType], m_bdlidx[mType], SAFESTRING_VTBL);
     if (modelData == NULL) /* JUT_ASSERT(362, modelData != NULL) */
-        JUT_ASSERT_fail(FILE_NAME, 0x16A, STR(0x10042B60));
+        JUT_ASSERT_fail(FILE_NAME, 0x16A, "modelData != (0)");
 
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
     if (!mpModel)
         return FALSE;
 
-    J3DAnmTextureSRTKey* pbtk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(gabi::at<const char>(m_arcname(mType)), m_btkidx(mType), SAFESTRING_VTBL);
+    J3DAnmTextureSRTKey* pbtk =
+        (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(m_arcname[mType], m_btkidx[mType], SAFESTRING_VTBL);
     if (pbtk == NULL)
-        JUT_ASSERT_fail(FILE_NAME, 0x17A, STR(0x10042B34));
+        JUT_ASSERT_fail(FILE_NAME, 0x17A, "pbtk != (0)");
     if (!mBtkAnm0.init(modelData, pbtk, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0))
         return FALSE;
 
-    pbtk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(gabi::at<const char>(m_arcname(mType)), m_btkidx2(mType), SAFESTRING_VTBL);
+    pbtk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(m_arcname[mType], m_btkidx2[mType], SAFESTRING_VTBL);
     if (pbtk == NULL)
-        JUT_ASSERT_fail(FILE_NAME, 0x186, STR(0x10042B34));
+        JUT_ASSERT_fail(FILE_NAME, 0x186, "pbtk != (0)");
     if (!mBtkAnm1.init(modelData, pbtk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
         return FALSE;
 
-    J3DAnmTransform* pbck = (J3DAnmTransform*)dComIfG_getObjectRes(gabi::at<const char>(m_arcname(mType)), m_bckidx(mType), SAFESTRING_VTBL);
+    J3DAnmTransform* pbck =
+        (J3DAnmTransform*)dComIfG_getObjectRes(m_arcname[mType], m_bckidx[mType], SAFESTRING_VTBL);
     if (pbck == NULL)
-        JUT_ASSERT_fail(FILE_NAME, 0x192, STR(0x10042B40));
+        JUT_ASSERT_fail(FILE_NAME, 0x192, "pbck != (0)");
     if (!mBckAnm.init(modelData, pbck, true, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false))
         return FALSE;
 
-    /* HD: on the "sea" stage, each material's TEV colour 2 is taken from its packet and written,
-     * converted, into the material's uniform block */
-    if (isStage(0x10042B30 /* "sea" */)) {
-        for (s32 i = 0; i < gabi::load<u16>(gabi::ea(mpModel) + 0x2A); i++) {
-            u32 model = gabi::ea(mpModel);
-            u32 data = gabi::load<u32>(model + 0xAC);
-            u32 mat = j3d_material(data, (u16)i);
-            u32 packets = gabi::load<u32>(model + 0x34);
+    /* HD: on the "sea" stage, each material's TEV colour 2 is taken from its
+   * packet and written, converted, into the material's uniform block */
+    if (isStage("sea")) {
+        for (s32 i = 0; i < reinterpret_cast<WindTagHD::Model*>(mpModel.get())->mMaterialNum; i++) {
+            WindTagHD::Model* model = reinterpret_cast<WindTagHD::Model*>(mpModel.get());
+            WindTagHD::MaterialData* data = model->mpModelData;
+            WindTagHD::Material* mat = j3d_material(data, (u16)i);
+            u32 packets = (u32)model->mMatPackets;
             gabi::Local<be<s16>[4]> col;
             matpacket_getTevColor(col.get(), packets + i * 0x3C, 2);
-            gabi::call_ptr(tevblock_vfn(mat, 0x24), gabi::load<u32>(mat + 0x18), 2, col.get()); /* setTevColor(2, col) */
+            gabi::call_ptr(tevblock_vfn(mat, WindTagHD::SetTevColor), gabi::ea(mat->mpTevBlock), 2,
+                           col.get()); /* setTevColor(2, col) */
             gabi::Local<ColorF> norm;
-            color_s10_normalize(norm.get(), gabi::ea(col.get()));
+            color_s10_normalize(norm.get(), reinterpret_cast<GXColorS10*>(col.get()));
             gabi::Local<ColorF> conv;
             color_convert(conv.get(), norm.get(), 1.0f);
-            gabi::store<u32>(mat + 0xA0, gabi::load<u32>(mat + 0xA0) | 0x40);
-            u32 u = material_uniform(mat + 0xA0, 6);
-            store_uniform(u, conv.get(), (f32)gabi::load<s16>(gabi::ea(col.get()) + 6) / 255.0f);
+            mat->mUniformFlags |= WindTagHD::TevColorUniform;
+            ColorF* u = material_uniform(&mat->mUniformFlags, 6);
+            store_uniform(u, conv.get(), (f32)(s16)(*col.get())[3] / 255.0f);
         }
     }
     return TRUE;
 }
-VERIFY(0x024DEE3C, &daWindTag_c::CreateHeap);
 
 /* 024DF534 */
-bool daWindTag_c::checkSizeSpecialBig() {
-    WWHD_FUNC(0x024DF534, bool, this);
+bool daWindTag::daWindTag_c::checkSizeSpecialBig() {
     if (mType == 1)
         return true;
     return false;
 }
-VERIFY(0x024DF534, &daWindTag_c::checkSizeSpecialBig);
 
 /* 024DF548 */
-void daWindTag_c::CreateInit() {
-    WWHD_FUNC(0x024DF548, void, this);
+void daWindTag::daWindTag_c::CreateInit() {
     mbDraw = true;
     if (daWindTag_prm::getDrawFlag(this) == 1) {
         mbDraw = false;
@@ -290,16 +223,16 @@ void daWindTag_c::CreateInit() {
     }
 
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel)); /* fopAcM_SetMtx */
-    f32 maxXZ = mData(mType * 2) * scale.x;
+    f32 maxXZ = mData[mType * 2] * scale.x;
     f32 minXZ = -maxXZ;
-    f32 maxY = mData(mType * 2 + 1) * scale.y;
+    f32 maxY = mData[mType * 2 + 1] * scale.y;
     fopAcM_setCullSizeBox(this, minXZ, 0.0f, minXZ, maxXZ, maxY, maxXZ);
     cullSizeFar = 4.0f; /* fopAcM_setCullSizeFar(this, m_cullsize_far) */
 
-    gabi::call(0x02515F14, mStts, 0xFF, 0xFF, this); /* mStts.Init(0xFF, 0xFF, this) */
-    dCcD_Cps_Set(mCps, l_cps_src);
+    mStts.Init(0xFF, 0xFF, this); /* mStts.Init(0xFF, 0xFF, this) */
+    dCcD_Cps_Set(&mCps, gabi::ea(&l_cps_src));
     field_0x49c = scale.y;
-    gabi::store<u32>(gabi::ea(this) + 0x42C, gabi::ea(mStts)); /* mCps.SetStts(&mStts) */
+    mCps.mpStts = &mStts; /* mCps.SetStts(&mStts) */
     mSwNo = daWindTag_prm::getSwitchNo(this);
     field_0x57c = (u8)fopAcM_isSwitch(this, mSwNo);
 
@@ -311,7 +244,7 @@ void daWindTag_c::CreateInit() {
     }
 
     if (r28 != 0) {
-        mOffsY = mData(mType * 2 + 1) * field_0x49c;
+        mOffsY = mData[mType * 2 + 1] * field_0x49c;
         mBtkAnm1.mFrameCtrl.setFrame((f32)mBtkAnm1.mFrameCtrl.getEnd());
     } else {
         mOffsY = 0.0f;
@@ -321,50 +254,49 @@ void daWindTag_c::CreateInit() {
     set_wind_angle();
     mPathId = daWindTag_prm::getPathId(this);
     if (mPathId != 0xFF) {
-        mpPath = gabi::ea(dPath_GetRoomPath(mPathId, fopAcM_GetRoomNo(this)));
+        mpPath = reinterpret_cast<path_layout::dPath*>(dPath_GetRoomPath(mPathId, fopAcM_GetRoomNo(this)));
         if (mpPath != 0) {
             mPathPointDir = 1;
             mCurPathPoint = 1;
             /* HD: the point index is the constant 1 */
-            u32 pnt = gabi::load<u32>(mpPath + 8) + 1 * 0x10;
-            mTargetPos.x = gabi::load<f32>(pnt + 4);
-            mTargetPos.y = gabi::load<f32>(pnt + 8);
-            mTargetPos.z = gabi::load<f32>(pnt + 0xC);
-            current.pos.x = gabi::load<f32>(gabi::load<u32>(mpPath + 8) + 4);
-            current.pos.y = gabi::load<f32>(gabi::load<u32>(mpPath + 8) + 8);
+            path_layout::dPnt* pnt = &mpPath->m_points[1];
+            mTargetPos.x = (f32)pnt->m_position.x;
+            mTargetPos.y = (f32)pnt->m_position.y;
+            mTargetPos.z = (f32)pnt->m_position.z;
+            current.pos.x = (f32)mpPath->m_points[0].m_position.x;
+            current.pos.y = (f32)mpPath->m_points[0].m_position.y;
             speedF = 10.0f + daWindTag_prm::getSpeed(this);
-            current.pos.z = gabi::load<f32>(gabi::load<u32>(mpPath + 8) + 0xC);
+            current.pos.z = (f32)mpPath->m_points[0].m_position.z;
         } else {
             mPathId = 0xFF;
         }
     }
-    dPointWind_set_pwind_init(mPointWind, &mCpsS_mStart);
-    u32 seNum = 0x701D; /* JA_SE_OBJ_WIND_TAG */
+    mPointWind.set_pwind_init(&mCpsS);
+    u32 seNum = JA_SE_OBJ_WIND_TAG;
     if (checkSizeSpecialBig()) {
-        seNum = 0x701E; /* JA_SE_OBJ_WIND_TAG_L */
+        seNum = JA_SE_OBJ_WIND_TAG_L;
     }
-    mLevelSeID = fopKyM_create(0x18 /* fpcNm_LEVEL_SE_e */, seNum, &eyePos, nullptr, 0);
+    mLevelSeID = fopKyM_create(fpcNm_LEVEL_SE_e, seNum, &eyePos, nullptr, 0);
     mpEmitter = 0;
     f32 efScale = scale.x; /* cXyz efScale(scale.x, scale.x, scale.x) */
     if (field_0x57f) {
         settingTevStruct(dKy_getEnvlight(), 2 /* TEV_TYPE_BG1 */, &current.pos, &mEfTevStr);
-        u32 c0 = gabi::ea(&mEfTevStr) + 0x90; /* mColorC0 (GXColorS10) */
-        mEfColor[0] = (u8)gabi::load<s16>(c0 + 0);
-        mEfColor[1] = (u8)gabi::load<s16>(c0 + 2);
-        mEfColor[2] = (u8)gabi::load<s16>(c0 + 4);
-        mEfColor[3] = (u8)gabi::load<s16>(c0 + 6);
+        mEfColor[0] = (u8)(s16)mEfTevStr.mColorC0.r;
+        mEfColor[1] = (u8)(s16)mEfTevStr.mColorC0.g;
+        mEfColor[2] = (u8)(s16)mEfTevStr.mColorC0.b;
+        mEfColor[3] = (u8)(s16)mEfTevStr.mColorC0.a;
         s8 roomNo = fopAcM_GetRoomNo(this);
-        mpEmitter = gabi::ea(dPa_control_set(dComIfGp_getParticle(), 0, 0x8290 /* ID_AK_SN_AIRFLOWSPLASH00 */, &current.pos,
-                                             nullptr, &scale, 0xFF, nullptr, roomNo,
-                                             (const GXColor*)mEfColor, nullptr, nullptr));
+        mpEmitter = reinterpret_cast<WindTagHD::Emitter*>(
+            dPa_control_set(dComIfGp_getParticle(), 0, ID_AK_SN_AIRFLOWSPLASH00, &current.pos, nullptr,
+                            &scale, 0xFF, nullptr, roomNo, (const GXColor*)mEfColor, nullptr, nullptr));
         if (mpEmitter != 0) {
-            u32 e = mpEmitter; /* setGlobalScale(efScale) (HD: two copies) */
-            gabi::store<f32>(e + 0x220, efScale);
-            gabi::store<f32>(e + 0x224, efScale);
-            gabi::store<f32>(e + 0x228, efScale);
-            gabi::store<f32>(e + 0x238, efScale);
-            gabi::store<f32>(e + 0x23C, efScale);
-            gabi::store<f32>(e + 0x240, efScale);
+            WindTagHD::Emitter* e = mpEmitter.get(); /* setGlobalScale(efScale) (HD: two copies) */
+            e->mGlobalScale.x = efScale;
+            e->mGlobalScale.y = efScale;
+            e->mGlobalScale.z = efScale;
+            e->mGlobalParticleScale.x = efScale;
+            e->mGlobalParticleScale.y = efScale;
+            e->mGlobalParticleScale.z = efScale;
         }
     }
 
@@ -372,82 +304,21 @@ void daWindTag_c::CreateInit() {
     home.angle.z = 0;
     dKy_tevstr_init_l(&mEfTevStr, fopAcM_GetRoomNo(this), 0xFF);
 }
-VERIFY(0x024DF548, &daWindTag_c::CreateInit);
 
 /* 024DF4A8 */
-void daWindTag_c::set_wind_angle() {
-    WWHD_FUNC(0x024DF4A8, void, this);
-    mCpsS_mStart.copy(current.pos);
-    mCpsS_mRadius = mData(mType * 2) * scale.x;
+void daWindTag::daWindTag_c::set_wind_angle() {
+    mCpsS.mStart.copy(current.pos);
+    mCpsS.mRadius = mData[mType * 2] * scale.x;
     set_mtx();
-    cM3dGCps_Set(mCpsCps, &mCpsS_mStart); /* mCps.cM3dGCps::Set(mCpsS) */
+    cM3dGCps_Set(&mCps.mCps, &mCpsS); /* mCps.cM3dGCps::Set(mCpsS) */
     /* mCps.CalcAtVec(): at vector = end - start */
-    PSVECSubtract(mCpsCps + 0xC, mCpsCps, gabi::at<u8>(gabi::ea(this) + 0x464));
+    PSVECSubtract(&mCps.mCps.mEnd, &mCps.mCps.mStart, &mCps.mAtVec);
 }
-VERIFY(0x024DF4A8, &daWindTag_c::set_wind_angle);
 
-/* 024DEBB0: daWindTag_c::daWindTag_c() (fopAcM_ct; GHS allocates when this == NULL) */
-static daWindTag_c* daWindTag_ct(daWindTag_c* p) {
-    WWHD_FUNC(0x024DEBB0, daWindTag_c*, p);
-    if (p == nullptr) {
-        p = (daWindTag_c*)operator_new(0x8F4);
-        if (p == nullptr)
-            return nullptr;
-    }
-    u32 a = gabi::ea(p);
-    fopAc_ac_c_ct(p);
-    p->__vtbl = WINDTAG_VTBL;
-    /* dCcD_Stts mStts */
-    gabi::call(0x0200BD2C, p->mStts);                       /* cCcD_Stts::cCcD_Stts */
-    gabi::call(0x02515DA0, gabi::at<u8>(a + 0x3C8));        /* dCcD_GStts::dCcD_GStts */
-    gabi::store<u32>(a + 0x3C4, 0x1004AE88);
-    gabi::store<u32>(a + 0x3C8, 0x1004AEC0);
-    /* dCcD_Cps mCps */
-    gabi::call(0x02515FB8, p->mCps);                        /* dCcD_GObjInf::dCcD_GObjInf */
-    gabi::store<u32>(a + 0x4FC, 0x100015A8);
-    gabi::store<u32>(a + 0x4F8, 0x10042AD4);
-    gabi::call(0x02018150, p->mCpsCps);                     /* cM3dGCps::cM3dGCps */
-    gabi::store<u32>(a + 0x424, 0x1004AF18);
-    gabi::store<u32>(a + 0x4FC, 0x1004AF70);
-    gabi::store<u32>(a + 0x518, 0x1004AF60);
-    mDoExt_btkAnm::ct(&p->mBtkAnm0);
-    mDoExt_btkAnm::ct(&p->mBtkAnm1);
-    /* mDoExt_bckAnm mBckAnm */
-    J3DFrameCtrl_init(&p->mBckAnm, 0);
-    gabi::store<u32>(a + 0x640, 0x1016E54C);
-    gabi::call(0x027DA984, gabi::at<u8>(a + 0x644));
-    gabi::store<u32>(a + 0x6AC, 0);
-    gabi::store<u32>(a + 0x6B0, 0);
-    gabi::store<u32>(a + 0x688, 0);
-    gabi::store<u32>(a + 0x678, 0x1016D820);
-    gabi::store<u32>(a + 0x6B4, 0);
-    gabi::store<u32>(a + 0x640, 0x10042AE4);
-    gabi::store<u32>(a + 0x6B8, 0);
-    /* dKy_tevstr_c mEfTevStr: three lights initialised from the 0x44-byte template 0x1016E414 */
-    const u32 T = 0x1016E414;
-    f32 f0[6];
-    for (int i = 0; i < 6; i++) f0[i] = gabi::load<f32>(T + 4 * i);
-    u8 b[4];
-    for (int i = 0; i < 4; i++) b[i] = gabi::load<u8>(T + 0x18 + i);
-    s16 h[4];
-    for (int i = 0; i < 4; i++) h[i] = gabi::load<s16>(T + 0x1C + 2 * i);
-    f32 f1[8];
-    for (int i = 0; i < 8; i++) f1[i] = gabi::load<f32>(T + 0x24 + 4 * i);
-    static const u32 dst[3] = {0x700, 0x7C0, 0x844};
-    for (int k = 0; k < 3; k++) {
-        u32 d = a + dst[k];
-        for (int i = 0; i < 6; i++) gabi::store<f32>(d + 4 * i, f0[i]);
-        for (int i = 0; i < 4; i++) gabi::store<u8>(d + 0x18 + i, b[i]);
-        for (int i = 0; i < 4; i++) gabi::store<s16>(d + 0x1C + 2 * i, h[i]);
-        for (int i = 0; i < 8; i++) gabi::store<f32>(d + 0x24 + 4 * i, f1[i]);
-    }
-    return p;
-}
-VERIFY(0x024DEBB0, daWindTag_ct);
+static daWindTag_c* daWindTag_ct(daWindTag_c* p);
 
 /* 024DF9AC */
-cPhs_State daWindTag_c::_create() {
-    WWHD_FUNC(0x024DF9AC, cPhs_State, this);
+cPhs_State daWindTag::daWindTag_c::_create() {
     /* fopAcM_ct(this, daWindTag_c) */
     if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
         if (this != nullptr) {
@@ -456,94 +327,86 @@ cPhs_State daWindTag_c::_create() {
         fopAcM_OnCondition(this, fopAcCnd_INIT_e);
     }
     mType = daWindTag_prm::getType(this);
-    cPhs_State rt = dComIfG_resLoad(&mPhs, gabi::at<const char>(m_arcname(daWindTag_prm::getType(this))));
+    cPhs_State rt = dComIfG_resLoad(&mPhs, m_arcname[daWindTag_prm::getType(this)]);
     if (rt == cPhs_COMPLEATE_e) {
-        if (!fopAcM_entrySolidHeap(this, 0x024DF33C /* CheckCreateHeap */, (u32)(s32)m_heapsize(mType)))
+        if (!fopAcM_entrySolidHeap(this, CheckCreateHeap, (u32)(s32)m_heapsize[mType]))
             return cPhs_ERROR_e;
         CreateInit();
     }
     return rt;
 }
-VERIFY(0x024DF9AC, &daWindTag_c::_create);
 
 /* 024DF340 */
-void daWindTag_c::set_mtx() {
-    WWHD_FUNC(0x024DF340, void, this);
+void daWindTag::daWindTag_c::set_mtx() {
     f32 offsY = mOffsY;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
     mDoMtx_stack_c::transM(0.0f, offsY, 0.0f);
-    PSMTXMultVec(mDoMtx_stack_c::get(), gabi::at<cXyz>(0x101FFBA8) /* cXyz::Zero */, &mCpsS_mEnd);
+    PSMTXMultVec(mDoMtx_stack_c::get(), &cXyz::Zero, &mCpsS.mEnd);
     if (current.angle.x == 0) {
-        mCpsS_mEnd.x = current.pos.x;
-        mCpsS_mEnd.z = current.pos.z;
+        mCpsS.mEnd.x = current.pos.x;
+        mCpsS.mEnd.z = current.pos.z;
     }
-    u32 m = gabi::ea(mpModel); /* setBaseScale(scale) */
-    gabi::store<f32>(m + 0xBC, scale.x);
-    gabi::store<f32>(m + 0xC0, scale.y);
-    gabi::store<f32>(m + 0xC4, scale.z);
+    WindTagHD::Model* model = reinterpret_cast<WindTagHD::Model*>(mpModel.get());
+    model->mBaseScale.x = scale.x;
+    model->mBaseScale.y = scale.y;
+    model->mBaseScale.z = scale.z;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), current.angle.x, current.angle.y, current.angle.z);
     J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
-VERIFY(0x024DF340, &daWindTag_c::set_mtx);
 
 /* 024E0158 */
-void daWindTag_c::set_wind_se_sub(u32 p1, cXyz* pos) {
-    WWHD_FUNC(0x024E0158, void, this, p1, pos);
+void daWindTag::daWindTag_c::set_wind_se_sub(u32 p1, cXyz* pos) {
     if (mLevelSeID != 0xFFFFFFFF) {
-        u32 se = gabi::ea(fopKyM_SearchByID(mLevelSeID));
+        dLevelSe_c* se = reinterpret_cast<dLevelSe_c*>(fopKyM_SearchByID(mLevelSeID));
         if (se != 0) {
             s8 reverb = (s8)dComIfGp_getReverb(fopAcM_GetRoomNo(this));
             /* se->setReverb(100, reverb) */
-            gabi::store<s8>(se + 0x100, reverb);
-            gabi::store<u32>(se + 0xFC, 100);
-            u8 flag = gabi::load<u8>(se + 0x101) | 4;
-            gabi::store<u8>(se + 0x101, flag);
-            gabi::at<cXyz>(se + 0xE0)->copy(*pos); /* se->mPos = *pos */
+            se->mReverb = reverb;
+            se->mSoundParam = 100;
+            u8 flag = (u8)se->mFlag | dLevelSe_c::CUSTOM_REVERB;
+            se->mFlag = flag;
+            se->mPos.copy(*pos); /* se->mPos = *pos */
             if (mOffsY < 1.0f)
-                gabi::store<u8>(se + 0x101, flag | 0x08);
+                se->mFlag = flag | dLevelSe_c::STOPPED;
             else
-                gabi::store<u8>(se + 0x101, flag & ~0x08);
+                se->mFlag = flag & ~dLevelSe_c::STOPPED;
         }
     }
 }
-VERIFY(0x024E0158, &daWindTag_c::set_wind_se_sub);
 
 /* 024E0228 */
-void daWindTag_c::set_wind_se() {
-    WWHD_FUNC(0x024E0228, void, this);
-    f32 radius = mData(mType * 2) * scale.x;
-    u32 camera = gabi::load<u32>(dComIfGp_ea() + 0x5AF8); /* dComIfGp_getCamera(0) */
-    cXyz* eye = gabi::at<cXyz>(camera + 0xDC);            /* view.mLookat.mEye */
+void daWindTag::daWindTag_c::set_wind_se() {
+    f32 radius = mData[mType * 2] * scale.x;
+    auto* camera = reinterpret_cast<WindTagHD::Camera*>(dComIfGp_getCamera(0));
+    cXyz* eye = &camera->mEye;
 
     gabi::Local<u8[0x20]> cps;
-    gabi::call(0x02018150, cps.get()); /* cM3dGCps::cM3dGCps */
+    cM3dGCps_ct(cps.get()); /* cM3dGCps::cM3dGCps */
     gabi::Local<u8[0x14]> camSph;
-    gabi::call(0x02018C40, camSph.get()); /* cM3dGSph::cM3dGSph */
+    cM3dGSph_ct(camSph.get()); /* cM3dGSph::cM3dGSph */
     gabi::Local<cXyz> cross;
     gabi::Local<cXyz> start;
     gabi::Local<cXyz> end;
-    start->set(mCpsS_mStart.x, mCpsS_mStart.y, mCpsS_mStart.z);
-    end->set(mCpsS_mEnd.x, mCpsS_mEnd.y, mCpsS_mEnd.z);
-    gabi::call(0x020181B0, cps.get(), start.get(), end.get(), radius); /* cps.Set(start, end, radius) */
-    gabi::call(0x02018E88, camSph.get(), eye, 1.0f);                    /* camSph.Set(eye, 1.0f) */
-    if (gabi::call<BOOL>(0x020168D4, cps.get(), camSph.get(), cross.get())) { /* cM3d_Cross_CpsSph */
+    start->set(mCpsS.mStart.x, mCpsS.mStart.y, mCpsS.mStart.z);
+    end->set(mCpsS.mEnd.x, mCpsS.mEnd.y, mCpsS.mEnd.z);
+    cM3dGCps_SetStartEnd(cps.get(), start.get(), end.get(), radius); /* cps.Set(start, end, radius) */
+    cM3dGSph_SetCenterRadius(camSph.get(), eye, 1.0f);               /* camSph.Set(eye, 1.0f) */
+    if (cM3d_Cross_CpsSph(cps.get(), camSph.get(), cross.get())) {   /* cM3d_Cross_CpsSph */
         mSePos.copy(*eye);
         set_wind_se_sub(0, &mSePos);
     } else {
         gabi::Local<cXyz> e;
         e->set(eye->x, eye->y, eye->z);
-        gabi::call(0x020170F4, cps.get(), e.get(), &mSePos); /* cps.NearPos(eye, &mSePos) */
+        cM3dGCps_NearPos(cps.get(), e.get(), &mSePos); /* cps.NearPos(eye, &mSePos) */
         set_wind_se_sub(0, &mSePos);
     }
-    gabi::call(0x0201819C, cps.get(), 2); /* cM3dGCps::~cM3dGCps */
+    cM3dGCps_dt(cps.get(), 2); /* cM3dGCps::~cM3dGCps */
 }
-VERIFY(0x024E0228, &daWindTag_c::set_wind_se);
 
 /* 024E065C */
-bool daWindTag_c::_execute() {
-    WWHD_FUNC(0x024E065C, bool, this);
+bool daWindTag::daWindTag_c::_execute() {
     u32 r26 = dKy_get_schbit();
     u8 r29 = daWindTag_prm::getSch(this);
     speedF = daWindTag_prm::getSpeed(this) + 10.0f;
@@ -575,10 +438,10 @@ bool daWindTag_c::_execute() {
         }
     }
 
-    be<f32>* strength = gabi::at<be<f32>>(gabi::ea(mPointWind) + 0x20); /* mPointWind.mWind.mStrength */
+    be<f32>* strength = &mPointWind.mWind.mStrength; /* mPointWind.mWind.mStrength */
     if ((r27 != 0 && r26_2 != 0) || field_0x577 != 0) {
         cLib_addCalc(strength, 1.0f, 0.5f, 0.5f, 0.01f);
-        f31 = mData(mType * 2 + 1) * field_0x49c;
+        f31 = mData[mType * 2 + 1] * field_0x49c;
         mBtkAnm1.mFrameCtrl.setRate(1.0f);
     } else {
         cLib_addCalc(strength, 0.0f, 0.5f, 0.5f, 0.01f);
@@ -588,7 +451,7 @@ bool daWindTag_c::_execute() {
 
     set_wind_se();
 
-    f32 len = mData(mType * 2 + 1) * field_0x49c;
+    f32 len = mData[mType * 2 + 1] * field_0x49c;
     if (daWindTag_prm::getSwType(this) == 0) {
         f32 f3 = len * 0.1f;
         cLib_addCalc(&mOffsY, f31, f30, f3, f3 * 0.5f);
@@ -601,10 +464,11 @@ bool daWindTag_c::_execute() {
     if (mOffsY < 50.0f) {
         fopAcM_offDraw(this);
     } else {
-        fopDwTg_ToDrawQ(gabi::ea(this) + 0xDC, fpcLf_GetPriority(this)); /* fopAcM_onDraw */
-        cM3dGCps_Set(mCpsCps, &mCpsS_mStart);
-        cCcS_Set(dComIfG_Ccsp(), mCps);
-        gabi::call(0x02516C14, gabi::at<u8>(dComIfGp_ea() + PLAY_CCMASS), mCps, 2); /* SetMass(&mCps, 2) */
+        fopDwTg_ToDrawQ(gabi::ea(&draw_tag), fpcLf_GetPriority(this)); /* fopAcM_onDraw */
+        cM3dGCps_Set(&mCps.mCps, &mCpsS);
+        cCcS_Set(dComIfG_Ccsp(), &mCps);
+        dCcS_SetMass(reinterpret_cast<WindTagHD::PlayMass*>(dComIfGp_get())->mMass, &mCps,
+                     2); /* SetMass(&mCps, 2) */
     }
 
     mBtkAnm0.play();
@@ -613,40 +477,36 @@ bool daWindTag_c::_execute() {
     field_0x57d = (u8)r27v;
     field_0x57c = (u8)fopAcM_isSwitch(this, mSwNo);
     MoveEmitter();
-    dPointWind_set_pwind_move(mPointWind);
+    mPointWind.set_pwind_move();
 
     return true;
 }
-VERIFY(0x024E065C, &daWindTag_c::_execute);
 
 /* 024E0104 */
-void daWindTag_c::path_move() {
-    WWHD_FUNC(0x024E0104, void, this);
+void daWindTag::daWindTag_c::path_move() {
     if (mPathId != 0xFF && cLib_chasePos(&current.pos, &mTargetPos, speedF))
         set_next_pnt();
 }
-VERIFY(0x024E0104, &daWindTag_c::path_move);
 
 /* 024E0020 */
-void daWindTag_c::set_next_pnt() {
-    WWHD_FUNC(0x024E0020, void, this);
+void daWindTag::daWindTag_c::set_next_pnt() {
     if (mPathId == 0xFF)
         return;
 
     s8 cur = (s8)((u8)mCurPathPoint + (u8)mPathPointDir);
     mCurPathPoint = cur;
-    if (gabi::load<u8>(mpPath + 5) & 1) { /* dPath_ChkClose */
-        if (cur > (s8)gabi::load<u16>(mpPath) - 1) {
+    if ((u8)mpPath->m_closed & 1) { /* dPath_ChkClose */
+        if (cur > (s8)(u16)mpPath->m_num - 1) {
             cur = 0;
             mCurPathPoint = cur;
         } else if (cur < 0) {
-            cur = (s8)(gabi::load<u16>(mpPath) - 1);
+            cur = (s8)((u16)mpPath->m_num - 1);
             mCurPathPoint = cur;
         }
     } else {
-        if (cur > gabi::load<u16>(mpPath) - 1) {
+        if (cur > (u16)mpPath->m_num - 1) {
             mPathPointDir = -1;
-            cur = (s8)(gabi::load<u16>(mpPath) - 2);
+            cur = (s8)((u16)mpPath->m_num - 2);
             mCurPathPoint = cur;
         } else if (cur < 0) {
             mPathPointDir = 1;
@@ -655,16 +515,14 @@ void daWindTag_c::set_next_pnt() {
         }
     }
 
-    u32 pnt = gabi::load<u32>(mpPath + 8) + cur * 0x10;
-    mTargetPos.x = gabi::load<f32>(pnt + 4);
-    mTargetPos.y = gabi::load<f32>(pnt + 8);
-    mTargetPos.z = gabi::load<f32>(pnt + 0xC);
+    path_layout::dPnt* pnt = &mpPath->m_points[cur];
+    mTargetPos.x = (f32)pnt->m_position.x;
+    mTargetPos.y = (f32)pnt->m_position.y;
+    mTargetPos.z = (f32)pnt->m_position.z;
 }
-VERIFY(0x024E0020, &daWindTag_c::set_next_pnt);
 
 /* 024DFBB4 */
-bool daWindTag_c::_draw() {
-    WWHD_FUNC(0x024DFBB4, bool, this);
+bool daWindTag::daWindTag_c::_draw() {
     if (!mbDraw)
         return TRUE;
 
@@ -674,64 +532,64 @@ bool daWindTag_c::_draw() {
     mDoExt_btkAnm_entryModel(&mBtkAnm1, mpModel, mBtkAnm1.mFrameCtrl.getFrame());
     mBckAnm.entry(J3DModel_getModelData(mpModel), mBckAnm.mFrameCtrl.getFrame());
 
-    /* HD: on the "sea" stage, each material gets TEV konst colour 1 with alpha 50 and TEV colour 2
-     * from the actor's light colour, both written (converted) into the material's uniform blocks */
-    if (isStage(0x10042B8C /* "sea" */)) {
-        for (s32 i = 0; i < gabi::load<u16>(gabi::ea(mpModel) + 0x2A); i++) {
-            u32 data = gabi::load<u32>(gabi::ea(mpModel) + 0xAC);
-            u32 mat = j3d_material(data, (u16)i);
-            u32 kcol = gabi::call_ptr<u32>(tevblock_vfn(mat, 0x4C), gabi::load<u32>(mat + 0x18), 1); /* getTevKColor(1) */
-            gabi::store<u8>(kcol + 3, 0x32);
-            gabi::call_ptr(tevblock_vfn(mat, 0x3C), gabi::load<u32>(mat + 0x18), 1, kcol); /* setTevKColor(1, kcol) */
+    /* HD: on the "sea" stage, each material gets TEV konst colour 1 with alpha 50
+   * and TEV colour 2 from the actor's light colour, both written (converted)
+   * into the material's uniform blocks */
+    if (isStage("sea")) {
+        for (s32 i = 0; i < reinterpret_cast<WindTagHD::Model*>(mpModel.get())->mMaterialNum; i++) {
+            WindTagHD::MaterialData* data = reinterpret_cast<WindTagHD::Model*>(mpModel.get())->mpModelData;
+            WindTagHD::Material* mat = j3d_material(data, (u16)i);
+            GXColor* kcol = gabi::call_ptr<GXColor*>(tevblock_vfn(mat, WindTagHD::GetTevKColor),
+                                                     gabi::ea(mat->mpTevBlock), 1); /* getTevKColor(1) */
+            kcol->a = 0x32;
+            gabi::call_ptr(tevblock_vfn(mat, WindTagHD::SetTevKColor), gabi::ea(mat->mpTevBlock), 1,
+                           kcol); /* setTevKColor(1, kcol) */
             gabi::Local<ColorF> norm;
-            color_normalize(norm.get(), gabi::at<be<u8>>(kcol));
+            color_normalize(norm.get(), reinterpret_cast<be<u8>*>(kcol));
             gabi::Local<ColorF> conv;
             color_convert(conv.get(), norm.get(), 1.0f);
-            gabi::store<u32>(mat + 0xA0, gabi::load<u32>(mat + 0xA0) | 0x100);
-            u32 u = material_uniform(mat + 0xA0, 8);
-            store_uniform(u, conv.get(), (f32)gabi::load<u8>(kcol + 3) / 255.0f);
+            mat->mUniformFlags |= WindTagHD::KonstColorUniform;
+            ColorF* u = material_uniform(&mat->mUniformFlags, 8);
+            store_uniform(u, conv.get(), (f32)(u8)kcol->a / 255.0f);
 
-            u32 col = gabi::call_ptr<u32>(tevblock_vfn(mat, 0x34), gabi::load<u32>(mat + 0x18), 2); /* getTevColor(2) */
-            u32 t = gabi::ea(&tevStr);
-            gabi::store<s16>(col + 0, gabi::load<u8>(t + 0x98));
-            gabi::store<s16>(col + 2, gabi::load<u8>(t + 0x99));
-            gabi::store<s16>(col + 4, gabi::load<u8>(t + 0x9A));
-            u32 fn = tevblock_vfn(mat, 0x24);
-            f32 f29 = gabi::load<f32>(t + 0x24);
-            gabi::call_ptr(fn, gabi::load<u32>(mat + 0x18), 2, col); /* setTevColor(2, col) */
+            GXColorS10* col = gabi::call_ptr<GXColorS10*>(tevblock_vfn(mat, WindTagHD::GetTevColor),
+                                                          gabi::ea(mat->mpTevBlock), 2); /* getTevColor(2) */
+            col->r = (u8)tevStr.mColorK0.r;
+            col->g = (u8)tevStr.mColorK0.g;
+            col->b = (u8)tevStr.mColorK0.b;
+            u32 fn = tevblock_vfn(mat, WindTagHD::SetTevColor);
+            f32 f29 = reinterpret_cast<WindTagHD::LightTemplate*>(tevStr.mLightObj)->mAttenuation[0];
+            gabi::call_ptr(fn, gabi::ea(mat->mpTevBlock), 2, col); /* setTevColor(2, col) */
             gabi::Local<ColorF> norm2;
             color_s10_normalize(norm2.get(), col);
             gabi::Local<ColorF> conv2;
             color_convert(conv2.get(), norm2.get(), f29);
-            gabi::store<u32>(mat + 0xA0, gabi::load<u32>(mat + 0xA0) | 0x40);
-            u = material_uniform(mat + 0xA0, 6);
-            store_uniform(u, conv2.get(), (f32)gabi::load<s16>(col + 6) / 255.0f);
+            mat->mUniformFlags |= WindTagHD::TevColorUniform;
+            u = material_uniform(&mat->mUniformFlags, 6);
+            store_uniform(u, conv2.get(), (f32)(s16)col->a / 255.0f);
         }
     }
     mDoExt_modelUpdateDL(mpModel);
 
     if (mpEmitter != 0) {
         settingTevStruct(dKy_getEnvlight(), 2 /* TEV_TYPE_BG1 */, &current.pos, &mEfTevStr);
-        u32 c0 = gabi::ea(&mEfTevStr) + 0x90;
-        u8 r = (u8)gabi::load<s16>(c0 + 0);
+        u8 r = (u8)(s16)mEfTevStr.mColorC0.r;
         mEfColor[0] = r;
-        u8 g = (u8)gabi::load<s16>(c0 + 2);
-        u8 b = gabi::load<u8>(c0 + 5);
+        u8 g = (u8)(s16)mEfTevStr.mColorC0.g;
+        u8 b = (u8)(s16)mEfTevStr.mColorC0.b;
         mEfColor[1] = g;
         mEfColor[2] = b;
-        u32 e = mpEmitter; /* setGlobalPrmColor(r, g, b) */
-        gabi::store<u8>(e + 0x244, r);
-        gabi::store<u8>(e + 0x245, g);
-        gabi::store<u8>(e + 0x246, b);
+        WindTagHD::Emitter* e = mpEmitter.get(); /* setGlobalPrmColor(r, g, b) */
+        e->mPrmColor[0] = r;
+        e->mPrmColor[1] = g;
+        e->mPrmColor[2] = b;
     }
 
     return TRUE;
 }
-VERIFY(0x024DFBB4, &daWindTag_c::_draw);
 
 /* 024E0394 */
-void daWindTag_c::MoveEmitter() {
-    WWHD_FUNC(0x024E0394, void, this);
+void daWindTag::daWindTag_c::MoveEmitter() {
     f32 px = current.pos.x, pz = current.pos.z; /* cXyz sp4C = current.pos */
     gabi::Local<csXyz> sp08;
     sp08->x = 0;
@@ -748,7 +606,7 @@ void daWindTag_c::MoveEmitter() {
         sp34->set(x - 50.0f, f31, z + 50.0f);
         sp28->set(x + 50.0f, f1, z - 50.0f);
         gabi::Local<u8[0x3C]> sp58;
-        gabi::call(0x020190B8, sp58.get(), sp40.get(), sp34.get(), sp28.get()); /* cM3dGTri::cM3dGTri */
+        cM3dGTri_ct(sp58.get(), sp40.get(), sp34.get(), sp28.get()); /* cM3dGTri::cM3dGTri */
         cM3d_CalcVecAngle(sp58.get() /* GetNP() */, &sp08->x, &sp08->z);
     } else {
         gabi::Local<cXyz> sp1C;
@@ -760,24 +618,25 @@ void daWindTag_c::MoveEmitter() {
 
     if (mpEmitter != 0) {
         f32 s = scale.x; /* setGlobalScale(cXyz(scale.x, scale.x, scale.x)) */
-        u32 e = mpEmitter;
-        gabi::store<f32>(e + 0x224, s);
-        gabi::store<f32>(e + 0x238, s);
-        gabi::store<f32>(e + 0x240, s);
-        gabi::store<f32>(e + 0x23C, s);
-        gabi::store<f32>(e + 0x228, s);
-        gabi::store<f32>(e + 0x220, s);
-        JPAGetXYZRotateMtx(sp08->x, sp08->y, sp08->z, mpEmitter + 0x1F0); /* setGlobalRotation(sp08) */
-        if (py == -1000000000.0f) { /* -G_CM3D_F_INF */
+        WindTagHD::Emitter* e = mpEmitter.get();
+        e->mGlobalScale.y = s;
+        e->mGlobalParticleScale.x = s;
+        e->mGlobalParticleScale.z = s;
+        e->mGlobalParticleScale.y = s;
+        e->mGlobalScale.z = s;
+        e->mGlobalScale.x = s;
+        JPAGetXYZRotateMtx(sp08->x, sp08->y, sp08->z,
+                           gabi::ea(&mpEmitter.get()->mGlobalRotation)); /* setGlobalRotation(sp08) */
+        if (py == -1000000000.0f) {                                      /* -G_CM3D_F_INF */
             py = current.pos.y;
         }
-        e = mpEmitter; /* setGlobalTranslation(sp4C) */
-        u8 k = gabi::load<u8>(e + 0x262);
-        gabi::store<f32>(e + 0x22C, px);
-        gabi::store<f32>(e + 0x234, pz);
-        gabi::store<f32>(e + 0x230, py);
+        e = mpEmitter.get(); /* setGlobalTranslation(sp4C) */
+        u8 k = (u8)e->mDrawTimes;
+        e->mGlobalTranslation.x = px;
+        e->mGlobalTranslation.z = pz;
+        e->mGlobalTranslation.y = py;
         if (k >= 7) { /* HD */
-            gabi::store<f32>(e + 0x230, -gabi::load<f32>(e + 0x230));
+            e->mGlobalTranslation.y = -(f32)e->mGlobalTranslation.y;
         }
     }
 
@@ -785,89 +644,194 @@ void daWindTag_c::MoveEmitter() {
 
     if (mOffsY < 100.0f || (actor_condition & 4) || fopAcM_cullingCheck_call(this)) {
         if (mpEmitter != 0) {
-            u32 e = mpEmitter;
-            gabi::store<u32>(e + 0x254, gabi::load<u32>(e + 0x254) | 1); /* stopCreateParticle */
+            WindTagHD::Emitter* e = mpEmitter.get();
+            e->mFlags = (u32)e->mFlags | WindTagHD::StopCreateParticle; /* stopCreateParticle */
         }
     } else {
         if (mpEmitter != 0) {
-            u32 e = mpEmitter;
-            gabi::store<u32>(e + 0x254, gabi::load<u32>(e + 0x254) & ~1u); /* playCreateParticle */
+            WindTagHD::Emitter* e = mpEmitter.get();
+            e->mFlags = (u32)e->mFlags & ~(u32)WindTagHD::StopCreateParticle; /* playCreateParticle */
         }
     }
 
     cullSizeFar = 4.0f; /* fopAcM_setCullSizeFar(this, m_cullsize_far) */
 }
-VERIFY(0x024E0394, &daWindTag_c::MoveEmitter);
 
-}  // namespace daWindTag
 using daWindTag::daWindTag_c;
 
 /* 024DFA84 */
-static cPhs_State daWindTag_Create(void* i_ac) {
-    WWHD_FUNC(0x024DFA84, cPhs_State, i_ac);
-    return ((daWindTag_c*)i_ac)->_create();
-}
-VERIFY(0x024DFA84, daWindTag_Create);
+static cPhs_State daWindTag_Create(void* i_ac) { return ((daWindTag_c*)i_ac)->_create(); }
 
 /* 024DFAFC */
-static BOOL daWindTag_Delete(void* i_ac) {
-    WWHD_FUNC(0x024DFAFC, bool, i_ac);
-    return ((daWindTag_c*)i_ac)->_delete();
-}
-VERIFY(0x024DFAFC, daWindTag_Delete);
+static bool daWindTag_Delete(void* i_ac) { return ((daWindTag_c*)i_ac)->_delete(); }
 
 /* 024E001C */
-static BOOL daWindTag_Draw(void* i_ac) {
-    WWHD_FUNC(0x024E001C, bool, i_ac);
-    return ((daWindTag_c*)i_ac)->_draw();
-}
-VERIFY(0x024E001C, daWindTag_Draw);
+static bool daWindTag_Draw(void* i_ac) { return ((daWindTag_c*)i_ac)->_draw(); }
 
 /* 024E0A70 */
-static BOOL daWindTag_Execute(void* i_ac) {
-    WWHD_FUNC(0x024E0A70, bool, i_ac);
-    return ((daWindTag_c*)i_ac)->_execute();
-}
-VERIFY(0x024E0A70, daWindTag_Execute);
+static bool daWindTag_Execute(void* i_ac) { return ((daWindTag_c*)i_ac)->_execute(); }
 
 /* 024E0B1C */
-static BOOL daWindTag_IsDelete(void*) {
-    WWHD_FUNC(0x024E0B1C, BOOL, (u32)0);
-    return TRUE;
-}
-VERIFY(0x024E0B1C, daWindTag_IsDelete);
+static BOOL daWindTag_IsDelete(void*) { return TRUE; }
 
-/* 024E0A74: __sinit_d_a_wind_tag_cpp (compiler-generated: header statics only) */
+// HD: compiler-generated and template code of this translation unit
+
+// HD: daWindTag::daWindTag_c::daWindTag_c() (fopAcM_ct; GHS allocates when this
+// == NULL)
+/* 024DEBB0 */
+static daWindTag_c* daWindTag_ct(daWindTag_c* p) {
+    if (p == nullptr) {
+        p = (daWindTag_c*)operator_new(0x8F4);
+        if (p == nullptr)
+            return nullptr;
+    }
+    fopAc_ac_c_ct(p);
+    p->__vtbl = WINDTAG_VTBL;
+    /* dCcD_Stts mStts */
+    cCcD_Stts_ct(&p->mStts);               /* cCcD_Stts::cCcD_Stts */
+    dCcD_GStts_ct(&p->mStts.__vtbl_gstts); /* dCcD_GStts::dCcD_GStts */
+    p->mStts.__vtbl = WindTagHD::CollisionStatusVtable;
+    p->mStts.__vtbl_gstts = WindTagHD::GameCollisionStatusVtable;
+    /* dCcD_Cps mCps */
+    dCcD_GObjInf_ct(&p->mCps); /* dCcD_GObjInf::dCcD_GObjInf */
+    p->mCps.mShapeVtable = WindTagHD::ShapeBaseVtable;
+    p->mCps.mAabVtable = WindTagHD::AabVtable;
+    cM3dGCps_ct(&p->mCps.mCps); /* cM3dGCps::cM3dGCps */
+    p->mCps.mHitInfoVtable = WindTagHD::HitInfoVtable;
+    p->mCps.mShapeVtable = WindTagHD::CapsuleShapeVtable;
+    p->mCps.mCps.__vtbl = WindTagHD::CapsuleVtable;
+    mDoExt_btkAnm::ct(&p->mBtkAnm0);
+    mDoExt_btkAnm::ct(&p->mBtkAnm1);
+    /* mDoExt_bckAnm mBckAnm */
+    auto* bck = reinterpret_cast<WindTagHD::BckConstruction*>(&p->mBckAnm);
+    J3DFrameCtrl_init(&p->mBckAnm, 0);
+    bck->mVtable = WindTagHD::BaseAnimationVtable;
+    J3DAnmTransform_ct(bck->mTransformCache);
+    bck->mCacheCount = 0;
+    bck->mData = 0;
+    bck->mCacheData = 0;
+    bck->mCacheVtable = WindTagHD::TransformCacheVtable;
+    bck->mResource = 0;
+    bck->mVtable = WindTagHD::BckAnimationVtable;
+    bck->mFlags = 0;
+    /* dKy_tevstr_c mEfTevStr: three lights initialised from the 0x44-byte
+   * template 0x1016E414 */
+
+    f32 f0[6];
+    for (int i = 0; i < 6; i++)
+        f0[i] = (f32)initialLight.mPositionDirection[i];
+    u8 b[4];
+    for (int i = 0; i < 4; i++)
+        b[i] = (u8)initialLight.mColor[i];
+    s16 h[4];
+    for (int i = 0; i < 4; i++)
+        h[i] = (s16)initialLight.mSpot[i];
+    f32 f1[8];
+    for (int i = 0; i < 8; i++)
+        f1[i] = (f32)initialLight.mAttenuation[i];
+    WindTagHD::LightTemplate* dst[3] = {
+        reinterpret_cast<WindTagHD::LightTemplate*>(p->mEfTevStr.mLightObj),
+        reinterpret_cast<WindTagHD::LightTemplate*>(p->mEfTevStr.mHdLightParam),
+        reinterpret_cast<WindTagHD::LightTemplate*>(p->mEfTevStr.mHdLightParam + 0x84)};
+    for (int k = 0; k < 3; k++) {
+        WindTagHD::LightTemplate* d = dst[k];
+        for (int i = 0; i < 6; i++)
+            d->mPositionDirection[i] = f0[i];
+        for (int i = 0; i < 4; i++)
+            d->mColor[i] = b[i];
+        for (int i = 0; i < 4; i++)
+            d->mSpot[i] = h[i];
+        for (int i = 0; i < 8; i++)
+            d->mAttenuation[i] = f1[i];
+    }
+    return p;
+}
+
+// HD: __sinit_d_a_wind_tag_cpp (compiler-generated: header statics only)
+/* 024E0A74 */
 static void __sinit_d_a_wind_tag_cpp() {
-    WWHD_FUNC(0x024E0A74, void);
-    sinit_header_statics(0x1046EBE4, 0x101D33EC);
+    sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
 }
-VERIFY(0x024E0A74, __sinit_d_a_wind_tag_cpp);
 
-/* 024E0B08: sead::SafeString deleting destructor (this TU's copy, vtable 0x10042ABC) */
+// HD: sead::SafeString deleting destructor (this TU's copy, vtable 0x10042ABC)
+/* 024E0B08 */
 static void SafeString_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x024E0B08, void, p, flags);
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x024E0B08, SafeString_dt);
 
-/* 024E0B24: sead::SafeString::assureTerminationImpl_ (this TU's copy, empty) */
-static void SafeString_assureTerminationImpl(void*) {
-    WWHD_FUNC(0x024E0B24, void, (u32)0);
-}
-VERIFY(0x024E0B24, SafeString_assureTerminationImpl);
+// HD: sead::SafeString::assureTerminationImpl_ (this TU's copy, empty)
+/* 024E0B24 */
+static void SafeString_assureTerminationImpl(void*) {}
 
-/* 024E0B28: daWindTag_c deleting destructor (vtable 0x10042B0C) */
+// HD: daWindTag_c deleting destructor (vtable WindTagHD::ActorVtable)
+/* 024E0B28 */
 static void daWindTag_c_dt(daWindTag_c* p, s32 flags) {
-    WWHD_FUNC(0x024E0B28, void, p, flags);
     if (p != nullptr) {
-        gabi::call(0x027F3628, gabi::at<u8>(gabi::ea(p) + 0x640), 0); /* mBckAnm's member destructor */
-        gabi::call(0x02515980, p->mCps, 2);                            /* dCcD_GObjInf::~dCcD_GObjInf */
-        gabi::call(0x02515860, p->mStts, 2);                           /* dCcD_Stts::~dCcD_Stts */
-        gabi::call(0x025D50BC, p, 0);                                  /* fopAc_ac_c::~fopAc_ac_c */
+        J3DAnmTransform_dt(&reinterpret_cast<WindTagHD::BckConstruction*>(&p->mBckAnm)->mVtable,
+                           0);        /* mBckAnm's member destructor */
+        dCcD_GObjInf_dt(&p->mCps, 2); /* dCcD_GObjInf::~dCcD_GObjInf */
+        dCcD_Stts_dt(&p->mStts, 2);   /* dCcD_Stts::~dCcD_Stts */
+        fopAc_ac_c_dt(p, 0);          /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);
     }
 }
-VERIFY(0x024E0B28, daWindTag_c_dt);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_cps_src 101D33A0
+str 10042B30 in 024DEE3C
+str 10042B8C in 024DFBB4
+str 10042B4C
+str 10042B60
+str 10042B34
+str 10042B40
+data initialLight 1016E414
+ext 025D50BC void fopAc_ac_c_dt(void* p, s32 flags)
+ext 02515860 void dCcD_Stts_dt(void* p, s32 flags)
+ext 02515980 void dCcD_GObjInf_dt(void* p, s32 flags)
+ext 027F3628 void J3DAnmTransform_dt(void* p, s32 flags)
+ext 020190B8 void cM3dGTri_ct(void* p, cXyz* a, cXyz* b, cXyz* c)
+ext 02516C14 void dCcS_SetMass(void* p, void* shape, s32 mass)
+ext 0201819C void cM3dGCps_dt(void* p, s32 flags)
+ext 020170F4 void cM3dGCps_NearPos(void* p, cXyz* eye, cXyz* nearest)
+ext 020168D4 BOOL cM3d_Cross_CpsSph(void* cps, void* sph, cXyz* cross)
+ext 02018E88 void cM3dGSph_SetCenterRadius(void* p, cXyz* center, f32 radius)
+ext 020181B0 void cM3dGCps_SetStartEnd(void* p, cXyz* start, cXyz* end, f32 radius)
+ext 02018C40 void cM3dGSph_ct(void* p)
+ext 027DA984 void J3DAnmTransform_ct(void* p)
+ext 02018150 void cM3dGCps_ct(void* p)
+ext 02515FB8 void dCcD_GObjInf_ct(void* p)
+ext 02515DA0 void dCcD_GStts_ct(void* p)
+ext 0200BD2C void cCcD_Stts_ct(void* p)
+ext 025AB3F8 void dPointWind_c::set_pwind_init(PointWind::cM3dGCpsS* pCps)
+ext 025AB454 void dPointWind_c::set_pwind_move()
+ext 025AB710 void dPointWind_c::set_pwind_delete()
+data m_arcname 101D3410
+data m_bdlidx 10042BC0
+data m_heapsize 10042BC4
+data m_bckidx 10042BC8
+data m_btkidx 10042BCC
+data m_btkidx2 10042BD0
+data mData 1004BD3C
+ext 027F2BC0 void J3DFrameCtrl_init(void* p, s16 end)
+ext 025E8048 void mDoExt_btkAnm_entryModel(void* a, J3DModel* m, f32 frame)
+ext 020181FC void cM3dGCps_Set(void* cps, void* src)
+ext 028E8DAC void PSVECSubtract(void* a, void* b, void* out)
+ext 025164C0 void dCcD_Cps_Set(void* cps, u32 src)
+ext 025DADA4 u32 fopKyM_create(s16 name, u32 prm, cXyz* pos, cXyz* scale, u32 fn)
+ext 025DAC50 void* fopKyM_SearchByID(u32 id)
+ext 0200F62C BOOL cLib_chasePos(cXyz* pos, cXyz* target, f32 speed)
+ext 0200ECD4 f32 cLib_addCalc(be<f32>* v, f32 target, f32 scale, f32 maxStep, f32 minStep)
+ext 025602A8 u32 dKy_get_schbit()
+ext 024F1478 f32 dBgS_ObjGndChk_Wtr_Func(cXyz* pos)
+ext 02017264 void cM3d_CalcVecAngle(void* v, be<s16>* x, be<s16>* z)
+ext 028245AC void JPAGetXYZRotateMtx(s16 x, s16 y, s16 z, u32 mtx)
+ext 025D6CE8 s32 fopAcM_cullingCheck_call(fopAc_ac_c* a)
+ext 025DF2B8 s16 fpcLf_GetPriority(void* a)
+ext 025DA874 void fopDwTg_ToDrawQ(u32 tag, s16 prio)
+ext 0255FFF4 void dKy_tevstr_init_l(void* t, s8 roomNo, u8 p)
+ext 0274D458 void color_convert(void* out, void* in, f32 f)
+ext 027F9F0C WindTagHD::ColorF* material_uniform(void* p, s32 n)
+ext 027FA160 void matpacket_getTevColor(void* out, u32 packet, s32 idx)
+*/

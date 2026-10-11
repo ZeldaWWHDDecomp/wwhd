@@ -1,363 +1,373 @@
-/* hd_screen_arrow: HD arrow-type layout screen (bow arrow icon with element particles; states
- * Wait / Disp / Change), WWHD. HD-only code (no GameCube
- * source): written from the WWHD code. Range 0261AC84..0261BC97; static initialiser 0261B83C.
- * 0261BC08..0261BC80 (controller flag adapters) were verified with d_auction_screen.
- * Not verified here (sead library template instances): 0261BAE8/0261BAFC (SafeString), 0261BB08
- * (StateID getter), 0261BB1C/0261BB5C/0261BB9C (state delegate invokers), 0261BBDC (StateID).
- *
- * Screen (0x70): base 02700ADC (cking 2D screen: +0x18 state machine, +0x20 current state, +0x44
- * layout with its animation at +0xD4), +4 vtable 100E2D28, +0x2C/+0x30 vtables, +0x50[2] panes
- * "G_Arrow_00/01" (names 1048DF50), +0x58[2] element particles, +0x60 particle position,
- * +0x6C u8 arrow type (02526C9C), +0x6D u8, +0x6E u8 shown. States 1048DF60 (Wait),
- * 1048DF90 (Disp), 1048DFC0 (Change).
- */
-#include "gabi.h"
-using namespace gabi;
+/* HD arrow-type icon: two element particles and Wait/Disp/Change layout states.
+ * GameCube-style source verified as hd_screen_arrow; no GameCube counterpart. */
+#include "d/hd_screen_arrow.h"
 
-namespace hd_screen_arrow {
+static const u32 screenVtable = 0x100E2D28;
+static const u32 firstBaseVtable = 0x100E2E38;
+static const u32 secondBaseVtable = 0x100E2E48;
+static const u32 safeStringVtable = 0x100E2BBC;
+static const u32 stateVtable = 0x100E2C28;
+static hdArrow_state_c sWait;
+static hdArrow_state_c sDisp;
+static hdArrow_state_c sChange;
+static hdArrow_string_c sAnimationNames[3] = {};
+static hdArrow_string_c sAnimationPanes[3] = {};
+static hdArrow_string_c sPaneNames[2] = {};
+static hdArrow_string_c sScreenName;
+static u32 sStateCounterReady;
+static u32 sStateCounter;
+static u8 sStateContext;
+static hdArrow_heapManagerPointer_c sHeapManager;
+static u16 sParticleIds[3] = {737, 738, 751};
+static u32 sAnimationPaneIndices[3] = {1, 2, 0};
+static f32 sAnimationStart = 1.0f;
+static f32 sZero = 0.0f;
 
-static const u32 kWait = 0x1048DF60, kDisp = 0x1048DF90, kChange = 0x1048DFC0;
+enum hdArrow_emitterFlags_e { EMITTER_STOP = 1, EMITTER_KILL = 4, EMITTER_ATTACHED = 0x40 };
 
-static u32 anim(u32 self) { return load<u32>(load<u32>(self + 0x44) + 0xD4); }
-static void changeState(u32 self, u32 st) { call<void>(0x020063C0, self + 0x18, st); }
-
-/* stops an emitter: kill, keep alive -1 frames, detach */
-static void stopEmitter(u32 slot) {
-    u32 e = load<u32>(slot);
-    store<u32>(e + 0x254, load<u32>(e + 0x254) | 4);
-    e = load<u32>(slot);
-    store<u32>(e + 0x5C, 0xFFFFFFFF);
-    store<u32>(e + 0x254, load<u32>(e + 0x254) | 1);
-    e = load<u32>(slot);
-    store<u32>(e + 0x254, load<u32>(e + 0x254) & ~0x40u);
+/* inlined into particle transitions */
+static void hdArrow_stopEmitter(gptr<hdArrow_emitter_c>* slot) {
+    hdArrow_emitter_c* emitter = *slot;
+    emitter->mFlags = u32(emitter->mFlags) | EMITTER_KILL;
+    emitter = *slot;
+    emitter->mMaxFrame = -1;
+    emitter->mFlags = u32(emitter->mFlags) | EMITTER_STOP;
+    emitter = *slot;
+    emitter->mFlags = u32(emitter->mFlags) & ~u32(EMITTER_ATTACHED);
 }
 
-/* 0261AC84: deleting destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x0261AC84, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0x2C, 0x100E2E38);
-    store<u32>(p + 0x30, 0x100E2E48);
-    call<void>(0x02700A70, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+/* inlined into setType and changeInit */
+static void hdArrow_spawn(u32 type, cXyz* position, gptr<hdArrow_emitter_c>* slot) {
+    u32 index = u8(type - 1);
+    if (index >= 3) index = 0;
+    u32 id = sParticleIds[index];
+    dPa_control_c* particles = dComIfGp_getParticle();
+    *slot = hdArrow_spawnEmitter(particles, 7, id, position, 0, 0, 255, 0, 0xFFFFFFFF, 0, 0, 0);
 }
-VERIFY(0x0261AC84, dtor);
 
-/* 0261ACF0: removes both element particles */
-void killParticles(u32 self) {
-    WWHD_FUNC(0x0261ACF0, void, self);
-    for (u32 i = 0; i < 2; i++) {
-        const u32 slot = self + 0x58 + 4 * i;
-        if (!load<u32>(slot)) continue;
-        stopEmitter(slot);
-        store<u32>(slot, 0);
+/* 0261AC84 */
+static void hdArrow_destroy(hdArrow_screen_c* i_this, u32 flags) {
+    if (!i_this) return;
+    i_this->mFirstBaseVtable = firstBaseVtable;
+    i_this->mSecondBaseVtable = secondBaseVtable;
+    hdArrow_destroyBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
+}
+
+/* 0261ACF0 */
+void hdArrow_screen_c::killParticles() {
+    for (u32 i = 0; i < 2; ++i) {
+        if (!mpEmitter[i]) continue;
+        hdArrow_stopEmitter(&mpEmitter[i]);
+        mpEmitter[i] = nullptr;
     }
-    store<u8>(self + 0x6E, 0);
-}
-VERIFY(0x0261ACF0, killParticles);
-
-/* 0261AE00: hides (state Disp) when shown */
-void hide(u32 self) {
-    WWHD_FUNC(0x0261AE00, void, self);
-    if (!load<u8>(self + 0x6E)) return;
-    store<u8>(self + 0x6D, 0);
-    changeState(self, kDisp);
-}
-VERIFY(0x0261AE00, hide);
-
-static void spawn(u32 self, u32 type, u32 pos, u32 slot) {
-    u32 idx = u8(type - 1);
-    if (idx >= 3) idx = 0;
-    const u32 id = load<u16>(0x100E2BB4 + 2 * idx);
-    const u32 env = call<u32>(0x025200D4);
-    store<u32>(slot, call<u32>(0x025A847C, load<u32>(env + 0x5AB0), 7u, id, pos, 0u, 0u, 255u, 0u, 0xFFFFFFFFu, 0u, 0u, 0u));
+    mShown = 0;
 }
 
-/* 0261AE28: shows the current arrow type at once */
-void setType(u32 self) {
-    WWHD_FUNC(0x0261AE28, void, self);
-    const u32 t = call<u32>(0x02526C9C);
-    store<u8>(self + 0x6C, u8(t));
-    call<void>(0x0200552C, anim(self), 0u, 1u, f32(f64(t)));
-    call<void>(0x0200552C, anim(self), 1u, 2u, f32(f64(load<u8>(self + 0x6C))));
-    const u32 s = self + 0x58;
-    if (load<u32>(s)) stopEmitter(s);
-    store<u32>(s, load<u32>(s + 4));
-    store<u32>(s + 4, 0);
-    const u32 type = load<u8>(self + 0x6C);
-    if (type && !load<u32>(s)) spawn(self, type, self + 0x60, s);
+/* 0261AE00 */
+void hdArrow_screen_c::hide() {
+    if (!mShown) return;
+    mDisplayRequested = 0;
+    hdArrow_changeState(&mpStateMachine, &sDisp);
 }
-VERIFY(0x0261AE28, setType);
 
-/* 0261AFA4: state Wait: changes to Wait when hidden, to Change when the arrow type changed */
-void waitMove(u32 self) {
-    WWHD_FUNC(0x0261AFA4, void, self);
-    if (!load<u8>(self + 0x6E)) changeState(self, kWait);
-    else if (const u32 t = call<u32>(0x02526C9C); load<u8>(self + 0x6C) != t) changeState(self, kChange);
-    call_ptr<void>(load<u32>(load<u32>(self + 4) + 0x8C), self);
+/* 0261AE28 */
+void hdArrow_screen_c::setType() {
+    u32 type = hdArrow_arrowType();
+    mArrowType = u8(type);
+    hdArrow_setAnimationFrame(animation(), 0, 1, f32(f64(type)));
+    hdArrow_setAnimationFrame(animation(), 1, 2, f32(f64(u8(mArrowType))));
+    if (mpEmitter[0]) hdArrow_stopEmitter(&mpEmitter[0]);
+    mpEmitter[0] = mpEmitter[1];
+    mpEmitter[1] = nullptr;
+    type = mArrowType;
+    if (type && !mpEmitter[0]) hdArrow_spawn(type, &mParticlePos, &mpEmitter[0]);
 }
-VERIFY(0x0261AFA4, waitMove);
 
-/* 0261B020: state Change init: plays the change animation and swaps the particle */
-void changeInit(u32 self) {
-    WWHD_FUNC(0x0261B020, void, self);
-    call<void>(0x020053E4, anim(self), 2u, 0u, load<f32>(0x100E2C70));
-    call<void>(0x0200552C, anim(self), 0u, 1u, f32(f64(load<u8>(self + 0x6C))));
-    const u32 t = call<u32>(0x02526C9C);
-    store<u8>(self + 0x6C, u8(t));
-    call<void>(0x0200552C, anim(self), 1u, 2u, f32(f64(t)));
-    if (load<u32>(self + 0x5C)) {
-        store<u32>(self + 0x58, load<u32>(self + 0x5C));
-        store<u32>(self + 0x5C, 0);
-        const u32 e = load<u32>(self + 0x58);
-        const f32 x = load<f32>(self + 0x60);
-        f32 y = load<f32>(self + 0x64);
-        const f32 z = load<f32>(self + 0x68);
-        if (load<u8>(e + 0x262) >= 7) y = -y;
-        store<f32>(e + 0x22C, x);
-        store<f32>(e + 0x230, y);
-        store<f32>(e + 0x234, z);
+/* 0261AFA4 */
+void hdArrow_screen_c::waitMove() {
+    if (!mShown) hdArrow_changeState(&mpStateMachine, &sWait);
+    else if (u32 type = hdArrow_arrowType(); mArrowType != type) hdArrow_changeState(&mpStateMachine, &sChange);
+    gabi::call_ptr<void>(mVtable->mUpdate, this);
+}
+
+/* 0261B020 */
+void hdArrow_screen_c::changeInit() {
+    hdArrow_startAnimation(animation(), 2, 0, sAnimationStart);
+    hdArrow_setAnimationFrame(animation(), 0, 1, f32(f64(u8(mArrowType))));
+    u32 type = hdArrow_arrowType();
+    mArrowType = u8(type);
+    hdArrow_setAnimationFrame(animation(), 1, 2, f32(f64(type)));
+    if (mpEmitter[1]) {
+        mpEmitter[0] = mpEmitter[1];
+        mpEmitter[1] = nullptr;
+        hdArrow_emitter_c* emitter = mpEmitter[0];
+        f32 x = mParticlePos.x;
+        f32 y = mParticlePos.y;
+        f32 z = mParticlePos.z;
+        if (emitter->mCoordinateMode >= 7) y = -y;
+        emitter->mGlobalTranslation.x = x;
+        emitter->mGlobalTranslation.y = y;
+        emitter->mGlobalTranslation.z = z;
     }
-    if (!load<u8>(self + 0x6C)) return;
-    Local<f32[8]> F;
-    call<void>(0x02704D2C, F.a + 0x10, load<u32>(self + 0x54));
-    const u32 type = load<u8>(self + 0x6C);
-    store<f32>(F.a + 8, load<f32>(F.a + 0x18));
-    store<f32>(F.a + 4, load<f32>(F.a + 0x14));
-    store<f32>(F.a, load<f32>(F.a + 0x10));
-    spawn(self, type, F.a, self + 0x5C);
+    if (!mArrowType) return;
+    gabi::Local<hdArrow_changeFrame_c> frame;
+    hdArrow_panePosition(&frame->mPanePosition.mPosition, mpPane[1]);
+    type = mArrowType;
+    // HD: the second pane position is copied to the spawn slot in z/y/x store order.
+    frame->mSpawnPosition.z = f32(frame->mPanePosition.mPosition.z);
+    frame->mSpawnPosition.y = f32(frame->mPanePosition.mPosition.y);
+    frame->mSpawnPosition.x = f32(frame->mPanePosition.mPosition.x);
+    hdArrow_spawn(type, &frame->mSpawnPosition, &mpEmitter[1]);
 }
-VERIFY(0x0261B020, changeInit);
 
-/* 0261B1C8: state Change: particles follow the panes; back to Wait/Disp when done */
-void changeMove(u32 self) {
-    WWHD_FUNC(0x0261B1C8, void, self);
-    for (u32 i = 0; i < 2; i++) {
-        if (!load<u32>(self + 0x58 + 4 * i)) continue;
-        Local<f32[4]> pos;
-        call<void>(0x02704D2C, pos.a, load<u32>(self + 0x50 + 4 * i));
-        const u32 e = load<u32>(self + 0x58 + 4 * i);
-        const f32 x = load<f32>(pos.a);
-        f32 y = load<f32>(pos.a + 4);
-        const f32 z = load<f32>(pos.a + 8);
-        if (load<u8>(e + 0x262) >= 7) y = -y;
-        store<f32>(e + 0x230, y);
-        store<f32>(e + 0x234, z);
-        store<f32>(e + 0x22C, x);
-        const u32 e2 = load<u32>(self + 0x58 + 4 * i);
-        store<u8>(e2 + 0x247, load<u8>(load<u32>(self + 0x50 + 4 * i) + 0x46));
+/* 0261B1C8 */
+void hdArrow_screen_c::changeMove() {
+    for (u32 i = 0; i < 2; ++i) {
+        if (!mpEmitter[i]) continue;
+        gabi::Local<hdArrow_positionFrame_c> position;
+        hdArrow_panePosition(&position->mPosition, mpPane[i]);
+        hdArrow_emitter_c* emitter = mpEmitter[i];
+        f32 x = position->mPosition.x;
+        f32 y = position->mPosition.y;
+        f32 z = position->mPosition.z;
+        if (emitter->mCoordinateMode >= 7) y = -y;
+        emitter->mGlobalTranslation.y = y;
+        emitter->mGlobalTranslation.z = z;
+        emitter->mGlobalTranslation.x = x;
+        emitter = mpEmitter[i];
+        emitter->mGlobalAlpha = u8(mpPane[i]->mAlpha);
     }
-    if (!load<u8>(self + 0x6E)) changeState(self, kWait);
-    else if (const u32 t = call<u32>(0x02526C9C); load<u8>(self + 0x6C) != t) changeState(self, kChange);
-    else if (call<u32>(0x02005840, anim(self), 2u)) changeState(self, kDisp);
-    call_ptr<void>(load<u32>(load<u32>(self + 4) + 0x8C), self);
+    if (!mShown) hdArrow_changeState(&mpStateMachine, &sWait);
+    else if (u32 type = hdArrow_arrowType(); mArrowType != type) hdArrow_changeState(&mpStateMachine, &sChange);
+    else if (hdArrow_animationDone(animation(), 2)) hdArrow_changeState(&mpStateMachine, &sDisp);
+    gabi::call_ptr<void>(mVtable->mUpdate, this);
 }
-VERIFY(0x0261B1C8, changeMove);
 
-/* 0261B370: removes the current particle */
-void killCurrent(u32 self) {
-    WWHD_FUNC(0x0261B370, void, self);
-    const u32 s = self + 0x58;
-    if (!load<u32>(s)) return;
-    stopEmitter(s);
-    store<u32>(s, 0);
+/* 0261B370 */
+void hdArrow_screen_c::killCurrent() {
+    if (!mpEmitter[0]) return;
+    hdArrow_stopEmitter(&mpEmitter[0]);
+    mpEmitter[0] = nullptr;
 }
-VERIFY(0x0261B370, killCurrent);
 
-/* 0261B3C4: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x0261B3C4, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x70u);
-        if (!p) return 0;
+/* 0261B3C4 */
+static hdArrow_screen_c* hdArrow_construct(hdArrow_screen_c* i_this) {
+    if (!i_this) {
+        i_this = (hdArrow_screen_c*)operator_new(sizeof(hdArrow_screen_c));
+        if (!i_this) return nullptr;
     }
-    call<void>(0x02700ADC, p);
-    store<u32>(p + 4, 0x100E2D28);
-    store<u32>(p + 0x30, 0x100E2E48);
-    store<u32>(p + 0x2C, 0x100E2E38);
-    if (!(p + 0x50)) call<u32>(0x0273AD10, 8u);
-    if (!(p + 0x58)) call<u32>(0x0273AD10, 8u);
-    const f32 z = load<f32>(0x100E2C80);
-    store<u8>(p + 0x6E, 0);
-    store<f32>(p + 0x68, z);
-    store<u8>(p + 0x6D, 0);
-    store<f32>(p + 0x60, z);
-    store<u8>(p + 0x6C, 0);
-    store<f32>(p + 0x64, z);
-    for (u32 i = 0; i < 2; i++) {
-        store<u32>(p + 0x50 + 4 * i, 0);
-        store<u32>(p + 0x58 + 4 * i, 0);
+    hdArrow_constructBase(i_this);
+    i_this->mVtable.v = screenVtable;
+    i_this->mSecondBaseVtable = secondBaseVtable;
+    i_this->mFirstBaseVtable = firstBaseVtable;
+    // HD: GHS checks embedded-array addresses after unsigned guest wraparound.
+    if (!gabi::ea(i_this->mpPane)) operator_new(sizeof(i_this->mpPane));
+    if (!gabi::ea(i_this->mpEmitter)) operator_new(sizeof(i_this->mpEmitter));
+    f32 zero = sZero;
+    i_this->mShown = 0;
+    i_this->mParticlePos.z = zero;
+    i_this->mDisplayRequested = 0;
+    i_this->mParticlePos.x = zero;
+    i_this->mArrowType = 0;
+    i_this->mParticlePos.y = zero;
+    for (u32 i = 0; i < 2; ++i) {
+        i_this->mpPane[i] = nullptr;
+        i_this->mpEmitter[i] = nullptr;
     }
-    return p;
+    return i_this;
 }
-VERIFY(0x0261B3C4, ctor);
 
-/* 0261B4E4: screen setup: the two arrow panes, the particle position and the Wait state */
-u32 setup(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x0261B4E4, u32, self, a, b, c);
-    if (!call<u32>(0x02700B48, self, 0x1048DFF0u, a, b, c)) return 0;
-    const u32 root = load<u32>(load<u32>(load<u32>(self + 0x44) + 4) + 0xC);
-    for (u32 i = 0; i < 2; i++) {
-        const u32 str = 0x1048DF50 + 8 * i;
-        const u32 fn = load<u32>(load<u32>(str + 4) + 0x14);
-        const u32 vt = load<u32>(root + 8);
-        call_ptr<void>(fn, str);
-        store<u32>(self + 0x50 + 4 * i, call_ptr<u32>(load<u32>(vt + 0x5C), root, load<u32>(str), 1u));
+/* 0261B4E4 */
+u32 hdArrow_screen_c::setup(u32 a, u32 b, u32 c) {
+    if (!hdArrow_setupBase(this, &sScreenName, a, b, c)) return 0;
+    hdArrow_pane_c* root = mpLayout->mpInfo->mpRoot;
+    for (u32 i = 0; i < 2; ++i) {
+        hdArrow_string_c* name = &sPaneNames[i];
+        u32 assureTermination = name->mVtable->mAssureTermination;
+        hdArrow_paneVtable_c* vtable = root->mVtable;
+        gabi::call_ptr<void>(assureTermination, name);
+        mpPane[i] = gabi::call_ptr<hdArrow_pane_c*>(vtable->mFindPane, root, (be<u8>*)name->mStringTop, 1u);
     }
-    Local<f32[4]> pos;
-    call<void>(0x02704D2C, pos.a, load<u32>(self + 0x50));
-    const u32 st = load<u32>(self + 0x18);
-    store<f32>(self + 0x60, load<f32>(pos.a));
-    store<f32>(self + 0x68, load<f32>(pos.a + 8));
-    store<f32>(self + 0x64, load<f32>(pos.a + 4));
-    const u32 action = call_ptr<u32>(load<u32>(load<u32>(st) + 0x14), st, kWait);
-    store<u32>(self + 0x20, action);
-    call_ptr<void>(load<u32>(load<u32>(action) + 0x1C), action);
+    gabi::Local<hdArrow_positionFrame_c> position;
+    hdArrow_panePosition(&position->mPosition, mpPane[0]);
+    hdArrow_machine_c* machine = mpStateMachine;
+    mParticlePos.x = f32(position->mPosition.x);
+    mParticlePos.z = f32(position->mPosition.z);
+    mParticlePos.y = f32(position->mPosition.y);
+    hdArrow_action_c* action = gabi::call_ptr<hdArrow_action_c*>(machine->mVtable->mSetState, machine, &sWait);
+    mpCurrentState = action;
+    gabi::call_ptr<void>(action->mVtable->mEnter, action);
     return 1;
 }
-VERIFY(0x0261B4E4, setup);
 
-/* 0261B628: hides the particles (screen hide) */
-void hideParticles(u32 self) {
-    WWHD_FUNC(0x0261B628, void, self);
-    call<void>(0x026F8B00, self);
-    for (u32 i = 0; i < 2; i++) {
-        const u32 slot = self + 0x58 + 4 * i;
-        if (!load<u32>(slot)) continue;
-        u32 e = load<u32>(slot);
-        store<u32>(e + 0x5C, 0xFFFFFFFF);
-        store<u32>(e + 0x254, load<u32>(e + 0x254) | 1);
-        e = load<u32>(slot);
-        store<u32>(e + 0x254, load<u32>(e + 0x254) & ~0x40u);
+/* 0261B628 */
+void hdArrow_screen_c::hideParticles() {
+    hdArrow_hideBase(this);
+    for (u32 i = 0; i < 2; ++i) {
+        if (!mpEmitter[i]) continue;
+        hdArrow_emitter_c* emitter = mpEmitter[i];
+        emitter->mMaxFrame = -1;
+        emitter->mFlags = u32(emitter->mFlags) | EMITTER_STOP;
+        emitter = mpEmitter[i];
+        emitter->mFlags = u32(emitter->mFlags) & ~u32(EMITTER_ATTACHED);
     }
 }
-VERIFY(0x0261B628, hideParticles);
 
-void stateExecute(u32 self) { WWHD_FUNC(0x0261B70C, void, self); call<void>(0x02006364, self + 0x18); }
-VERIFY(0x0261B70C, stateExecute);
-void toWait(u32 self) { WWHD_FUNC(0x0261B714, void, self); changeState(self, kWait); }
-VERIFY(0x0261B714, toWait);
+/* 0261B70C */
+void hdArrow_screen_c::stateExecute() {
+    hdArrow_executeState(&mpStateMachine);
+}
 
-/* 0261B724: loads the layout and binds its three animations */
-u32 loadScreen(u32 self, u32 a, u32 b, u32 c, u32 d, u32 e) {
-    WWHD_FUNC(0x0261B724, u32, self, a, b, c, d, e);
-    u32 scr = call<u32>(0x0273B050, 0x110u, load<u32>(load<u32>(0x1018C404) + 0x10), 4u);
-    if (scr) scr = call<u32>(0x026FADB0, scr);
-    store<u32>(self + 0x44, scr);
-    if (!scr) return 0;
-    if (!call_ptr<u32>(load<u32>(load<u32>(scr + 0xE0) + 0x14), scr, a, b, c, d, 3u, 3u, e)) return 0;
-    for (u32 i = 0; i < 3; i++)
-        call<void>(0x02004E04, anim(self), i, 0x1048DF38 + 8 * i, 0x1048DF20 + 8 * load<u32>(0x100E2BD4 + 4 * i));
+/* 0261B714 */
+void hdArrow_screen_c::toWait() {
+    hdArrow_changeState(&mpStateMachine, &sWait);
+}
+
+/* 0261B724 */
+u32 hdArrow_screen_c::loadScreen(u32 a, u32 b, u32 c, u32 d, u32 e) {
+    hdArrow_layout_c* layout = hdArrow_allocLayout(sizeof(hdArrow_layout_c), sHeapManager.mpManager->mpHeap, 4);
+    if (layout) layout = hdArrow_constructLayout(layout);
+    mpLayout = layout;
+    if (!layout) return 0;
+    if (!gabi::call_ptr<u32>(layout->mVtable->mLoad, layout, a, b, c, d, 3u, 3u, e)) return 0;
+    for (u32 i = 0; i < 3; ++i)
+        hdArrow_bindAnimation(animation(), i, &sAnimationNames[i], &sAnimationPanes[sAnimationPaneIndices[i]]);
     return 1;
 }
-VERIFY(0x0261B724, loadScreen);
 
-/* 0261B83C: static initialiser: shared objects, pane/animation names and the three states */
-void staticInit() {
-    WWHD_FUNC(0x0261B83C, void);
-    const u32 b = 0x1048DF10;
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 8, 0);
-    store<u32>(b + 4, 0);
-    store<u32>(b, 0);
-    call<void>(0x028F026C, 0x101F5128u);
-    const f32 lo = load<f32>(0x100E2C84), hi = load<f32>(0x100E2C88);
-    store<f32>(0x1048DF04, lo);
-    store<f32>(0x1048DF08, hi);
-    call<void>(0x028ED6F8, 0x1048DF0Cu);
-    call<void>(0x028F026C, 0x101F5134u);
-    call<void>(0x028EAB2C, 0x1048DF0Du);
-    call<void>(0x028F026C, 0x101F5140u);
-    const u32 vt = 0x100E2BBC;
-    const u32 an = 0x1048DF38, ar = 0x1048DF20, pane = 0x1048DF50, ps = 0x1048DFF0;
-    store<u32>(an + 4, vt);
-    store<u32>(ar + 4, vt);
-    store<u32>(ar, 0x100E2C98);
-    store<u32>(ar + 0xC, vt);
-    store<u32>(ar + 8, 0x100E2CB4);
-    store<u32>(ar + 0x14, vt);
-    store<u32>(ps + 4, vt);
-    store<u32>(ps, 0x100E2CE4);
-    store<u32>(an, 0x100E2CA8);
-    store<u32>(an + 0xC, vt);
-    store<u32>(an + 8, 0x100E2CA8);
-    store<u32>(an + 0x14, vt);
-    const u32 guard = load<u32>(0x101FD8E4);
-    store<u32>(pane + 4, vt);
-    store<u32>(an + 0x10, 0x100E2C8C);
-    store<u32>(ar + 0x10, 0x100E2CC0);
-    store<u32>(pane, 0x100E2CCC);
-    store<u32>(pane + 0xC, vt);
-    store<u32>(pane + 8, 0x100E2CD8);
+/* ---------------- HD: compiler-generated and template code ---------------- */
+
+/* 0261B83C */
+static void __sinit_hd_screen_arrow_cpp() {
+    sinit_header_statics_rodata(0x1048DF04, 0x101F5128, 0x1048DF10, 0x100E2C84);
+    sAnimationNames[0].setVtable(safeStringVtable);
+    sAnimationPanes[0].setVtable(safeStringVtable);
+    sAnimationPanes[0].setText("G_ArrowAll_00");
+    sAnimationPanes[1].setVtable(safeStringVtable);
+    sAnimationPanes[1].setText("G_Arrow_00");
+    sAnimationPanes[2].setVtable(safeStringVtable);
+    sScreenName.setVtable(safeStringVtable);
+    sScreenName.setText("Arrow_00");
+    sAnimationNames[0].setText("ArrowType");
+    sAnimationNames[1].setVtable(safeStringVtable);
+    sAnimationNames[1].setText("ArrowType");
+    sAnimationNames[2].setVtable(safeStringVtable);
+    u32 guard = sStateCounterReady;
+    sPaneNames[0].setVtable(safeStringVtable);
+    sAnimationNames[2].setText("ArrowChange");
+    sAnimationPanes[2].setText("G_Arrow_01");
+    sPaneNames[0].setText("P_Arrow_00");
+    sPaneNames[1].setVtable(safeStringVtable);
+    sPaneNames[1].setText("P_Arrow_01");
     u32 id;
-    if (guard) id = load<u32>(0x101FDD50);
+    if (guard) id = sStateCounter;
     else {
         id = 0;
-        store<u32>(0x101FD8E4, 1);
+        sStateCounterReady = 1;
     }
-    const u32 w = kWait, d = kDisp, c = kChange;
-    store<u16>(w + 0xC, 0);
-    store<u16>(w + 0xE, 0x19);
-    store<u16>(w + 0x14, 0);
-    store<u32>(w, id + 1);
-    store<u16>(w + 0x16, 0x1A);
-    store<u32>(d, id + 2);
-    store<u16>(d + 0xC, 0);
-    store<u16>(w + 0x1C, 0);
-    store<u16>(w + 0x1E, 0x1B);
-    store<u32>(w + 4, 0x100E2CF0);
-    store<u32>(w + 0x10, 4);
-    store<u32>(d + 4, 0x100E2D00);
-    store<u16>(c + 0xC, 0);
-    store<u16>(c + 0xE, 0x1F);
-    store<u32>(d + 0x10, 4);
-    store<u32>(d + 0x18, 4);
-    store<u32>(w + 0x18, 4);
-    store<u32>(d + 0x20, 4);
-    store<u16>(d + 0xE, 0x1C);
-    store<u32>(d + 0x28, 0);
-    store<u16>(d + 0x14, 0);
-    store<u16>(d + 0x16, 0x1D);
-    store<u16>(d + 0x1C, 0);
-    store<u32>(w + 0x20, 4);
-    store<u32>(w + 0x28, 0);
-    store<u16>(d + 0x1E, 0x1E);
-    store<u16>(w + 0x24, 0);
-    store<u16>(c + 0x14, 0);
-    store<u32>(c, id + 3);
-    store<u32>(c + 4, 0x100E2D10);
-    store<u16>(d + 0x24, 0);
-    store<u16>(w + 0x26, 0);
-    store<u32>(w + 8, 0x100E2C28);
-    store<u32>(d + 8, 0x100E2C28);
-    store<u16>(d + 0x26, 0);
-    store<u32>(d + 0x2C, 0x101FF32C);
-    store<u32>(w + 0x2C, 0x101FF32C);
-    store<u32>(c + 0x10, 4);
-    store<u32>(c + 0x18, 4);
-    store<u32>(c + 0x20, 4);
-    store<u32>(c + 0x28, 0);
-    store<u32>(c + 8, 0x100E2C28);
-    store<u32>(c + 0x2C, 0x101FF32C);
-    store<u16>(c + 0x16, 0x20);
-    store<u16>(c + 0x1C, 0);
-    store<u16>(c + 0x1E, 0x21);
-    store<u16>(c + 0x24, 0);
-    store<u32>(0x101FDD50, id + 3);
-    store<u16>(c + 0x26, 0);
+    sWait.mEnter.mThisDelta = 0;
+    sWait.mEnter.mVirtualIndex = 0x19;
+    sWait.mMove.mThisDelta = 0;
+    sWait.mId = id + 1;
+    sWait.mMove.mVirtualIndex = 0x1A;
+    sDisp.mId = id + 2;
+    sDisp.mEnter.mThisDelta = 0;
+    sWait.mLeave.mThisDelta = 0;
+    sWait.mLeave.mVirtualIndex = 0x1B;
+    sWait.setName("::StateID_Wait");
+    sWait.mEnter.mFunction = 4;
+    sDisp.setName("::StateID_Disp");
+    sChange.mEnter.mThisDelta = 0;
+    sChange.mEnter.mVirtualIndex = 0x1F;
+    sDisp.mEnter.mFunction = 4;
+    sDisp.mMove.mFunction = 4;
+    sWait.mMove.mFunction = 4;
+    sDisp.mLeave.mFunction = 4;
+    sDisp.mEnter.mVirtualIndex = 0x1C;
+    sDisp.mUnused.mFunction = 0;
+    sDisp.mMove.mThisDelta = 0;
+    sDisp.mMove.mVirtualIndex = 0x1D;
+    sDisp.mLeave.mThisDelta = 0;
+    sWait.mLeave.mFunction = 4;
+    sWait.mUnused.mFunction = 0;
+    sDisp.mLeave.mVirtualIndex = 0x1E;
+    sWait.mUnused.mThisDelta = 0;
+    sChange.mMove.mThisDelta = 0;
+    sChange.mId = id + 3;
+    sChange.setName("::StateID_Change");
+    sDisp.mUnused.mThisDelta = 0;
+    sWait.mUnused.mVirtualIndex = 0;
+    sWait.mVtable = stateVtable;
+    sDisp.mVtable = stateVtable;
+    sDisp.mUnused.mVirtualIndex = 0;
+    sDisp.mContext = &sStateContext;
+    sWait.mContext = &sStateContext;
+    sChange.mEnter.mFunction = 4;
+    sChange.mMove.mFunction = 4;
+    sChange.mLeave.mFunction = 4;
+    sChange.mUnused.mFunction = 0;
+    sChange.mVtable = stateVtable;
+    sChange.mContext = &sStateContext;
+    sChange.mMove.mVirtualIndex = 0x20;
+    sChange.mLeave.mThisDelta = 0;
+    sChange.mLeave.mVirtualIndex = 0x21;
+    sChange.mUnused.mThisDelta = 0;
+    sStateCounter = id + 3;
+    sChange.mUnused.mVirtualIndex = 0;
 }
-VERIFY(0x0261B83C, staticInit);
 
-/* 0261BB00 / 0261BB04 / 0261BB10 / 0261BB14 / 0261BB18: empty state enter/exit functions */
-void nop1() { WWHD_FUNC(0x0261BB00, void); }
-VERIFY(0x0261BB00, nop1);
-void nop2() { WWHD_FUNC(0x0261BB04, void); }
-VERIFY(0x0261BB04, nop2);
-void nop3() { WWHD_FUNC(0x0261BB10, void); }
-VERIFY(0x0261BB10, nop3);
-void nop4() { WWHD_FUNC(0x0261BB14, void); }
-VERIFY(0x0261BB14, nop4);
-void nop5() { WWHD_FUNC(0x0261BB18, void); }
-VERIFY(0x0261BB18, nop5);
+/* 0261BB00 */
+static void hdArrow_waitEnter() {}
+/* 0261BB04 */
+static void hdArrow_waitLeave() {}
+/* 0261BB10 */
+static void hdArrow_dispEnter() {}
+/* 0261BB14 */
+static void hdArrow_dispLeave() {}
+/* 0261BB18 */
+static void hdArrow_changeLeave() {}
 
-} // namespace hd_screen_arrow
+/* WWHD glue
+data sWait 1048DF60 nocheck
+data sDisp 1048DF90 nocheck
+data sChange 1048DFC0 nocheck
+data sAnimationNames 1048DF38 nocheck
+data sAnimationPanes 1048DF20 nocheck
+data sPaneNames 1048DF50 nocheck
+data sScreenName 1048DFF0 nocheck
+data sStateCounterReady 101FD8E4 nocheck
+data sStateCounter 101FDD50 nocheck
+data sStateContext 101FF32C nocheck
+data sHeapManager 1018C404 nocheck
+data sParticleIds 100E2BB4
+data sAnimationPaneIndices 100E2BD4
+data sAnimationStart 100E2C70
+data sZero 100E2C80
+str 100E2C98 "G_ArrowAll_00" in 0261B83C
+str 100E2CB4 "G_Arrow_00" in 0261B83C
+str 100E2CC0 "G_Arrow_01" in 0261B83C
+str 100E2CA8 "ArrowType" in 0261B83C
+str 100E2C8C "ArrowChange" in 0261B83C
+str 100E2CCC "P_Arrow_00" in 0261B83C
+str 100E2CD8 "P_Arrow_01" in 0261B83C
+str 100E2CE4 "Arrow_00" in 0261B83C
+str 100E2CF0 "::StateID_Wait" in 0261B83C
+str 100E2D00 "::StateID_Disp" in 0261B83C
+str 100E2D10 "::StateID_Change" in 0261B83C
+ext 02700A70 void hdArrow_destroyBase(hdArrow_screen_c* screen, u32 flags)
+ext 02700ADC void hdArrow_constructBase(hdArrow_screen_c* screen)
+ext 02526C9C u32 hdArrow_arrowType()
+ext 0200552C void hdArrow_setAnimationFrame(void* animation, u32 track, u32 mode, f32 frame)
+ext 020053E4 void hdArrow_startAnimation(void* animation, u32 track, u32 flags, f32 frame)
+ext 02005840 u32 hdArrow_animationDone(void* animation, u32 track)
+ext 025A847C hdArrow_emitter_c* hdArrow_spawnEmitter(dPa_control_c* manager, u32 group, u32 id, const cXyz* pos, u32 angle, u32 scale, u32 alpha, u32 callback, u32 setup, u32 primary, u32 environment, u32 scale2D)
+ext 02704D2C void hdArrow_panePosition(cXyz* out, hdArrow_pane_c* pane)
+ext 02700B48 u32 hdArrow_setupBase(hdArrow_screen_c* screen, hdArrow_string_c* name, u32 a, u32 b, u32 c)
+ext 026F8B00 void hdArrow_hideBase(hdArrow_screen_c* screen)
+ext 02006364 void hdArrow_executeState(gptr<hdArrow_machine_c>* machine)
+ext 020063C0 void hdArrow_changeState(gptr<hdArrow_machine_c>* machine, hdArrow_state_c* state)
+ext 0273B050 hdArrow_layout_c* hdArrow_allocLayout(u32 size, void* heap, u32 alignment)
+ext 026FADB0 hdArrow_layout_c* hdArrow_constructLayout(hdArrow_layout_c* layout)
+ext 02004E04 void hdArrow_bindAnimation(void* animation, u32 track, hdArrow_string_c* name, hdArrow_string_c* archive)
+*/

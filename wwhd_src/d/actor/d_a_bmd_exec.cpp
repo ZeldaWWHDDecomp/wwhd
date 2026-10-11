@@ -10,30 +10,19 @@
 #include "d/actor/d_a_bmd.h"
 #include <cmath>
 
-/* CcAtInfo (0x1C) */
-struct CcAtInfo_bl {
-    /* 0x00 */ be<u32> mpObj;
-    /* 0x04 */ be<u32> mpActor;
-    /* 0x08 */ be<u8> mDamage;
-    /* 0x09 */ be<u8> mbDead;
-    /* 0x0A */ be<u8> mResultingAttackType;
-    /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
-    /* 0x12 */ be<u16> mPlCutBit;
-    /* 0x14 */ be<u32> pParticlePos;
-    /* 0x18 */ be<s32> mHitSoundId;
-};
-WWHD_SIZE(CcAtInfo_bl, 0x1C);
-static inline fopAc_ac_c* cc_at_check(fopAc_ac_c* a, CcAtInfo_bl* info) { return gabi::call<fopAc_ac_c*>(0x025192A8, a, info); }
+static const u16 eff_joint[] = {0x8, 0x9, 0x4};
+
+static const u16 eff_name[] = {0x80EE, 0x80EF, 0x80F5};
 
 /* dComIfGp_particle_setToon (HD: dPa_control_c::set group 2); the room is read before the play object */
-static inline JPABaseEmitter* particle_setToon(u16 id, cXyz* pos, u8 alpha, dPa_smokeEcallBack_l* cb, s8 room) {
+static inline JPABaseEmitter* particle_setToon(u16 id, cXyz* pos, u8 alpha, dPa_smokeEcallBack* cb, s8 room) {
     dPa_control_c* pa = dComIfGp_getParticle();
-    return dPa_control_set(pa, 2, id, pos, nullptr, nullptr, alpha, (dPa_levelEcallBack*)cb, room, nullptr, nullptr, nullptr);
+    return dPa_control_set(pa, 2, id, pos, nullptr, nullptr, alpha, (dPa_levelEcallBack*)cb, room, nullptr,
+                           nullptr, nullptr);
 }
 /* emitter->setGlobalRTMatrix(mtx): JPASetRMtxTVecfromMtx(mtx, mGlobalRot (+0x1F0), mGlobalTrs (+0x22C)) */
 static inline void emitter_setGlobalRTMatrix(JPABaseEmitter* e, Mtx34* m) {
-    gabi::call(0x028249B0, m, gabi::ea(e) + 0x1F0, gabi::ea(e) + 0x22C);
+    ((BmdEmitterView*)e)->setGlobalRTMatrix(m);
 }
 /* fopAcM_seStartCurrent (HD inline: null checks on the actor and its position) */
 static inline void fopAcM_seStartCurrent(fopAc_ac_c* a, u32 id, u32 param) {
@@ -46,7 +35,7 @@ static inline void monsSeStart_e(fopAc_ac_c* a, u32 id) {
         s8 room = fopAcM_GetRoomNo(a);
         u32 pid = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, id, &a->eyePos, pid, 0, reverb);
+        mDoAudioApi::monsSeStart(id, &a->eyePos, pid, 0, reverb);
     }
 }
 /* the morf pointer is read after the resource lookup */
@@ -56,12 +45,10 @@ static inline void morf_setAnm(gptr<mDoExt_McaMorf>& mp, const char* arc, s32 id
     m->setAnm(anm, mode, morf, 1.0f, 0.0f, -1.0f, nullptr);
 }
 /* model->setBaseTRMtx(mDoMtx_stack_c::get()) */
-static inline void setBaseTRMtx_now(J3DModel* model) {
-    mtx_copy(gabi::at<Mtx34>(gabi::ea(model) + 0xC8), mDoMtx_stack_c::get());
-}
+static inline void setBaseTRMtx_now(J3DModel* model) { model->setBaseTRMtx(mDoMtx_stack_c::get()); }
 static inline s32 frame_int(mDoExt_McaMorf* m) { return gabi::ftoi(m->getFrame()); }
-static inline void dCamera_SetTypeForce(u32 cam, const char* type) { gabi::call(0x02514EE4, cam, type, 0); }
 
+// HD: two identical archive strings in this function have distinct guest copies.
 #define ARC_CORE STR(0x10009A90) /* "Bmd" */
 #define ARC_MK STR(0x10009A94)   /* "Bmd" */
 
@@ -79,12 +66,12 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
     gabi::Local<cXyz> local_38;
     if (i_this->mCoreSph.ChkTgHit() != 0) {
         i_this->m310 = 8;
-        fopAcM_monsSeStart(actor, 0x4855 /* JA_SE_CV_BKM_DAMAGE */, 0);
+        fopAcM_monsSeStart(actor, JA_SE_CV_BKM_DAMAGE, 0);
         i_this->m306 = 1;
-        gabi::Local<CcAtInfo_bl> atInfo;
-        atInfo->pParticlePos = 0;
-        atInfo->mpObj = gabi::ea(i_this->mCoreSph.GetTgHitObj());
-        atInfo->pParticlePos = gabi::ea(i_this->mCoreSph.GetTgHitPosP());
+        gabi::Local<CcAtInfo> atInfo;
+        atInfo->pParticlePos = nullptr;
+        atInfo->mpObj = (dCcD_GObjInf*)i_this->mCoreSph.GetTgHitObj();
+        atInfo->pParticlePos = i_this->mCoreSph.GetTgHitPosP();
         fopAc_ac_c* pfVar4 = cc_at_check(actor, atInfo);
         if (pfVar4 != nullptr) {
             f32 x = actor->eyePos.x - pfVar4->current.pos.x;
@@ -101,30 +88,43 @@ static inline void core_damage_check(bmd_class* i_this, fopAc_ac_c* player) {
     {
         gabi::Local<cXyz> tmp;
         cXyz_mi(&player->current.pos, tmp, &actor->current.pos);
-        gabi::store<u32>(gabi::ea(local_38.get()), gabi::load<u32>(gabi::ea(tmp.get())));
-        gabi::store<u32>(gabi::ea(local_38.get()) + 8, gabi::load<u32>(gabi::ea(tmp.get()) + 8));
+        BmdVectorWords* dst = (BmdVectorWords*)local_38.get();
+        const BmdVectorWords* src = (const BmdVectorWords*)tmp.get();
+        dst->x = src->x;
+        dst->z = src->z;
         local_38->y = 0.0f;
     }
     /* daPy_py_c::checkForestWaterUse(): a player flag */
-    if (!((gabi::load<u32>(gabi::ea(player) + 0x3BC) & 0x20000) && i_this->m304 != 0 &&
+    if (!((((daPy_py_c*)player)->mNoResetFlg1 & 0x20000) && i_this->m304 != 0 &&
           std_sqrtf(PSVECSquareMag(local_38)) < 300.0f) &&
         !bVar2) {
         return;
     }
     if (!bVar2) {
-        fopAcM_seStartCurrent(actor, 0x2828 /* JA_SE_LK_LAST_HIT */, 0);
+        fopAcM_seStartCurrent(actor, JA_SE_LK_LAST_HIT, 0);
     }
-    gabi::store<f32>(dComIfGp_ea() + 0x5B44, 0.0f); /* HD */
-    i_this->mB72 = 1;                              /* HD */
+    ((dComIfG_inf_c*)dComIfGp_get())->play.mItemLifeCount = 0.0f; // HD: clear pending life.
+    i_this->mB72 = 1;                                             /* HD */
     i_this->m306 = 100;
     i_this->mMode = 0xB;
     i_this->m302 = 0;
     i_this->mB74 = 100;
-    gabi::store<u8>(0x101EACB7, 8); /* dScnPly_ply_c::setPauseTimer(8) */
+    dScnPly_setPauseTimer(8);
     i_this->m310 = 20000;
     i_this->mBE0 = 2;
     i_this->mBDC = 1.0f;
-    mDoAud_bgmStop(30);
+    mDoAudioApi::bgmStop(30);
+}
+
+/* inlined into core_move: shared motion of the dying core */
+static inline void core_dead_move(bmd_class* i_this) {
+    PSVECAdd(&i_this->m924, &i_this->m930, &i_this->m924); /* m924 += m930 */
+    if ((i_this->m308[1] & 0xF) == 0) {
+        i_this->m930.x = -i_this->m930.x;
+        i_this->m930.z = -i_this->m930.z;
+    }
+    cLib_addCalcAngleS2(&i_this->m93C, 0, 2, 0x800);
+    cLib_addCalcAngleS2(&i_this->m93E, 0, 2, 0x800);
 }
 
 static inline void core_move(bmd_class* i_this) {
@@ -139,7 +139,8 @@ static inline void core_move(bmd_class* i_this) {
     case 0:
         break;
     case 1:
-        morf_setAnm(i_this->mpHeadMorf, ARC_CORE, 0xB /* COA_DAMAGE */, 0, 1.0f);
+        morf_setAnm(i_this->mpHeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DAMAGE_e, J3DFrameCtrl::EMode_NONE,
+                    1.0f);
         i_this->m918 = 0;
         i_this->m306 = 2;
         i_this->m91C = REG0_F(9) + 6000.0f;
@@ -148,11 +149,13 @@ static inline void core_move(bmd_class* i_this) {
     case 2:
         if (std::fabs((f32)i_this->m91C) < 200.0f) {
             i_this->m306 = 0;
-            morf_setAnm(i_this->mpHeadMorf, ARC_CORE, 0x14 /* COA_WAIT */, 2, 5.0f);
+            morf_setAnm(i_this->mpHeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_WAIT_e, J3DFrameCtrl::EMode_LOOP,
+                        5.0f);
         }
         break;
     case 100:
-        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, 0xC /* COA_DEAD1 */, 0, 5.0f);
+        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DEAD1_e,
+                    J3DFrameCtrl::EMode_NONE, 5.0f);
         i_this->m306 = 0x65;
         i_this->m924.copy(actor->current.pos);
         cMtx_YrotS(calc_mtx(), (actor->shape_angle.y + REG0_S(4)) + 3000);
@@ -164,7 +167,7 @@ static inline void core_move(bmd_class* i_this) {
         i_this->m93C = 0;
         i_this->m930.y = REG0_F(11) + 50.0f;
         i_this->m308[2] = 0;
-        monsSeStart_e(actor, 0x4856 /* JA_SE_CV_BKM_LAST_DAMAGE */);
+        monsSeStart_e(actor, JA_SE_CV_BKM_LAST_DAMAGE);
         break;
     case 101:
         i_this->mA8C = 3;
@@ -175,63 +178,74 @@ static inline void core_move(bmd_class* i_this) {
         if (!(i_this->m924.y > (i_this->m328 - 10.0f) + REG0_F(13))) {
             i_this->m924.y = (i_this->m328 - 10.0f) + REG0_F(13);
             i_this->m306 = 0x66;
-            mDoAud_bgmStreamPlay();
-            morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, 0xD /* COA_DEAD2 */, 0, 1.0f);
+            mDoAudioApi::bgmStreamPlay();
+            morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_DEAD2_e,
+                        J3DFrameCtrl::EMode_NONE, 1.0f);
             i_this->m930.y = 0.0f;
             i_this->m930.z = 0.0f;
             i_this->m930.x = 0.0f;
             bVar5 = true;
-            fopAcM_monsSeStart(actor, 0x4857 /* JA_SE_CV_BKM_FALLDOWN */, 0);
-            fopAcM_seStart(actor, 0x5855 /* JA_SE_CM_BKM_END_CORE_DROP */, 0);
+            fopAcM_monsSeStart(actor, JA_SE_CV_BKM_FALLDOWN, 0);
+            fopAcM_seStart(actor, JA_SE_CM_BKM_END_CORE_DROP, 0);
         }
         break;
     case 102:
         if (frame_int(i_this->mpHeadDeadMorf) == 14) {
             bVar5 = true;
-            fopAcM_monsSeStart(actor, 0x4858 /* JA_SE_CV_BKM_JITABATA */, 0);
+            fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
         i_this->mA8C = 3;
         if (i_this->mpHeadDeadMorf->isStop()) {
-            morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, 0xF /* COA_NDEAD1 */, 0, 1.0f);
+            morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_NDEAD1_e,
+                        J3DFrameCtrl::EMode_NONE, 1.0f);
             i_this->m306 = 0x67;
             i_this->m930.z = 10.0f;
             i_this->m930.x = 10.0f;
             i_this->m308[1] = REG0_S(6) + 0xC3;
         }
-        goto temp_884;
+        core_dead_move(i_this);
+        break;
     case 103:
         if (frame_int(i_this->mpHeadDeadMorf) == 18) {
             bVar5 = true;
-            fopAcM_monsSeStart(actor, 0x4858 /* JA_SE_CV_BKM_JITABATA */, 0);
+            fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
         i_this->mA8C = 3;
         if (!i_this->mpHeadDeadMorf->isStop()) {
-            goto temp_884;
+            core_dead_move(i_this);
+            break;
         }
-        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, 0x10 /* COA_NDEAD2 */, 0, 1.0f);
+        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_NDEAD2_e,
+                    J3DFrameCtrl::EMode_NONE, 1.0f);
         i_this->m306 = 0x68;
-        goto temp_884;
+        core_dead_move(i_this);
+        break;
     case 104:
         if (frame_int(i_this->mpHeadDeadMorf) == 17 || frame_int(i_this->mpHeadDeadMorf) == 37) {
             bVar5 = true;
-            fopAcM_monsSeStart(actor, 0x4858 /* JA_SE_CV_BKM_JITABATA */, 0);
+            fopAcM_monsSeStart(actor, JA_SE_CV_BKM_JITABATA, 0);
         }
         i_this->mA8C = 10;
         if (!i_this->mpHeadDeadMorf->isStop()) {
-            goto temp_884;
+            core_dead_move(i_this);
+            break;
         }
-        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, 0xE /* COA_LDEAD */, 0, 1.0f);
+        morf_setAnm(i_this->mpHeadDeadMorf, ARC_CORE, dRes_INDEX_BMD_BCK_COA_LDEAD_e,
+                    J3DFrameCtrl::EMode_NONE, 1.0f);
         i_this->m930.z = 0.0f;
         i_this->m930.x = 0.0f;
         i_this->m306 = 0x69;
-        goto temp_884;
+        core_dead_move(i_this);
+        break;
     case 105:
         if (frame_int(i_this->mpHeadDeadMorf) == 37) {
-            JPABaseEmitter* pJVar7 = dComIfGp_particle_set(0x80FE /* ID_AK_SN_BKMCORESIGH00 */, &actor->current.pos);
+            JPABaseEmitter* pJVar7 =
+                dComIfGp_particle_set(dPa_name::ID_AK_SN_BKMCORESIGH00, &actor->current.pos);
             if (pJVar7 != nullptr) {
-                emitter_setGlobalRTMatrix(pJVar7, bl_getAnmMtx(i_this->mpHeadDeadMorf->getModel(), 5 /* UWAAGO */));
+                emitter_setGlobalRTMatrix(
+                    pJVar7, i_this->mpHeadDeadMorf->getModel()->getAnmMtx(BKM_COA_DEADMODEL_JNT_UWAAGO_e));
             }
-            fopAcM_monsSeStart(actor, 0x4859 /* JA_SE_CV_BKM_DIE */, 0);
+            fopAcM_monsSeStart(actor, JA_SE_CV_BKM_DIE, 0);
         }
         if (i_this->mpHeadDeadMorf->isStop()) {
             gabi::Local<cXyz> local_58;
@@ -243,14 +257,7 @@ static inline void core_move(bmd_class* i_this) {
             i_this->m306 = 0x6E;
             i_this->m308[2] = 0xAA;
         }
-    temp_884:
-        PSVECAdd(&i_this->m924, &i_this->m930, &i_this->m924); /* m924 += m930 */
-        if ((i_this->m308[1] & 0xF) == 0) {
-            i_this->m930.x = -i_this->m930.x;
-            i_this->m930.z = -i_this->m930.z;
-        }
-        cLib_addCalcAngleS2(&i_this->m93C, 0, 2, 0x800);
-        cLib_addCalcAngleS2(&i_this->m93E, 0, 2, 0x800);
+        core_dead_move(i_this);
         break;
     case 110:
         if (i_this->m308[2] == 1) {
@@ -284,16 +291,16 @@ static inline void core_move(bmd_class* i_this) {
         setBaseTRMtx_now(pJVar11);
         i_this->mpHeadMorf->play(&actor->eyePos, 0, 0);
         i_this->mpHeadMorf->calc();
-        PSMTXCopy(bl_getAnmMtx(pJVar11, 6 /* BKM_COA_JNT_UWAAGO_e */), calc_mtx());
+        PSMTXCopy(pJVar11->getAnmMtx(6 /* BKM_COA_JNT_UWAAGO_e */), calc_mtx());
         local_40->x = 0.0f;
         local_40->y = -20.0f;
         local_40->z = 30.0f;
         MtxPosition(local_40, &actor->eyePos);
-        cXyz* attn = gabi::at<cXyz>(gabi::ea(actor) + 0x390); /* attention_info.position */
+        cXyz* attn = &actor->attention_info.position;
         cXyz_fcopy(attn, &actor->eyePos);
         attn->y = actor->eyePos.y + 50.0f;
         if (i_this->m304 != 0 && i_this->m940 == 0 && i_this->mMode != 10) {
-            gabi::store<u32>(gabi::ea(actor) + 0x39C, 4); /* attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e */
+            actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         }
     } else {
         mDoMtx_stack_c::transS(i_this->m924.x, i_this->m924.y, i_this->m924.z);
@@ -303,7 +310,7 @@ static inline void core_move(bmd_class* i_this) {
         setBaseTRMtx_now(pJVar11);
         i_this->mpHeadDeadMorf->play(&actor->eyePos, 0, 0);
         i_this->mpHeadDeadMorf->calc();
-        PSMTXCopy(bl_getAnmMtx(pJVar11, REG0_S(4) + 1 /* BKM_COA_DEADMODEL_JNT_KOUTOUBU_e */), calc_mtx());
+        PSMTXCopy(pJVar11->getAnmMtx(REG0_S(4) + 1 /* BKM_COA_DEADMODEL_JNT_KOUTOUBU_e */), calc_mtx());
         local_40->z = 0.0f;
         local_40->y = 0.0f;
         local_40->x = 0.0f;
@@ -317,26 +324,27 @@ static inline void core_move(bmd_class* i_this) {
     dComIfG_Ccsp_Set(&i_this->mCoreSph);
     if (bVar5) {
         s8 room = fopAcM_GetRoomNo(actor);
-        particle_setToon(0xA0FD /* ID_AK_ST_BKMCOREDEADSMOKE00 */, &i_this->m924, 0xB9, &i_this->mSmokeCb[6], room);
-        fopAcM_seStart(actor, 0x5856 /* JA_SE_CM_BKM_END_CORE_LEAP */, 0);
+        particle_setToon(dPa_name::ID_AK_ST_BKMCOREDEADSMOKE00, &i_this->m924, 0xB9, &i_this->mSmokeCb[6],
+                         room);
+        fopAcM_seStart(actor, JA_SE_CM_BKM_END_CORE_LEAP, 0);
     }
 }
 
 static inline void bmd_kankyo(bmd_class* i_this) {
-    gabi::call(0x0255FE50, (f32)l_HIO().m0C); /* dKy_custom_timeset */
+    dKy_custom_timeset((f32)l_HIO().m0C);
     switch (i_this->mBE0) {
     case 0:
-        gabi::call(0x0255FDA4, 0, 6, (f32)i_this->mBDC); /* dKy_custom_colset */
+        dKy_custom_colset(0, 6, (f32)i_this->mBDC); /* dKy_custom_colset */
         cLib_addCalc0(&i_this->mBDC, 1.0f, 0.025f);
         i_this->m2D8 = 11.0f * (1.0f - i_this->mBDC);
         break;
     case 1:
-        gabi::call(0x0255FDA4, 0, 4, (f32)i_this->mBDC);
+        dKy_custom_colset(0, 4, (f32)i_this->mBDC);
         cLib_addCalc0(&i_this->mBDC, 1.0f, 0.025f);
         i_this->m2D8 = 11.0f * (1.0f - i_this->mBDC);
         break;
     case 2:
-        gabi::call(0x0255FDA4, 5, 6, (f32)i_this->mBDC);
+        dKy_custom_colset(5, 6, (f32)i_this->mBDC);
         cLib_addCalc0(&i_this->mBDC, 1.0f, 0.02f);
         i_this->m2D8 = 11.0f * i_this->mBDC;
         break;
@@ -348,25 +356,22 @@ static inline void eff_cont(bmd_class* i_this) {
     for (s32 i = 0; i < 3; i++) {
         if (i_this->mA7C[i] != nullptr) {
             JPABaseEmitter* e = i_this->mA7C[i];
-            u16 jnt = gabi::load<u16>(0x101919B4 + 2 * i); /* eff_joint */
+            u16 jnt = eff_joint[i];
             if (i >= 2) {
-                emitter_setGlobalRTMatrix(e, bl_getAnmMtx(i_this->mpHeadDeadMorf->getModel(), jnt));
+                emitter_setGlobalRTMatrix(e, i_this->mpHeadDeadMorf->getModel()->getAnmMtx(jnt));
             } else {
-                emitter_setGlobalRTMatrix(e, bl_getAnmMtx(i_this->mpHeadMorf->getModel(), jnt));
+                emitter_setGlobalRTMatrix(e, i_this->mpHeadMorf->getModel()->getAnmMtx(jnt));
             }
             if (i_this->mA88[i] != 0) {
                 i_this->mA88[i] = i_this->mA88[i] - 1;
                 if (i_this->mA88[i] == 0) {
                     /* becomeInvalidEmitter(): stopCreateParticle(); mMaxFrame = -1 */
-                    u32 em = gabi::ea(i_this->mA7C[i].get());
-                    u32 flags = gabi::load<u32>(em + 0x254);
-                    gabi::store<s32>(em + 0x5C, -1);
-                    gabi::store<u32>(em + 0x254, flags | 1);
+                    ((BmdEmitterView*)i_this->mA7C[i].get())->becomeInvalidEmitter();
                     i_this->mA7C[i] = nullptr;
                 }
             }
         } else if (i_this->mA88[i] != 0) {
-            u16 name = gabi::load<u16>(0x101919AC + 2 * i); /* eff_name */
+            u16 name = eff_name[i];
             i_this->mA7C[i] = dComIfGp_particle_set(name, &actor->current.pos);
         }
     }
@@ -381,32 +386,37 @@ static inline void mk_move(bmd_class* i_this) {
             break;
         case 1:
             if (i_this->m308[3] == 0) {
-                morf_setAnm(i_this->mpMakarMorf, ARC_MK, 8 /* CALL_01 */, 2, 5.0f);
+                morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_01_e,
+                            J3DFrameCtrl::EMode_LOOP, 5.0f);
                 i_this->m308[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
                 i_this->m2DC = 2;
-                mk_voice_set(i_this, 0x48C5 /* JA_SE_CV_CB_HELP */);
+                mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             }
             break;
         case 2:
             if (i_this->m308[3] == 0) {
-                morf_setAnm(i_this->mpMakarMorf, ARC_MK, 9 /* CALL_02 */, 2, 5.0f);
+                morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_02_e,
+                            J3DFrameCtrl::EMode_LOOP, 5.0f);
                 i_this->m308[3] = (s16)gabi::ftoi(cM_rndF(90.0f) + 60.0f);
                 i_this->m2DC = 1;
-                mk_voice_set(i_this, 0x48C5 /* JA_SE_CV_CB_HELP */);
+                mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             }
             break;
         case 3:
-            morf_setAnm(i_this->mpMakarMorf, ARC_MK, 8 /* CALL_01 */, 2, 5.0f);
+            morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_01_e, J3DFrameCtrl::EMode_LOOP,
+                        5.0f);
             i_this->m2DC = 10;
-            mk_voice_set(i_this, 0x48C5 /* JA_SE_CV_CB_HELP */);
+            mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             break;
         case 4:
-            morf_setAnm(i_this->mpMakarMorf, ARC_MK, 0xA /* CALL_03 */, 2, 5.0f);
+            morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_CALL_03_e, J3DFrameCtrl::EMode_LOOP,
+                        5.0f);
             i_this->m2DC = 10;
-            mk_voice_set(i_this, 0x48C5 /* JA_SE_CV_CB_HELP */);
+            mk_voice_set(i_this, JA_SE_CV_CB_HELP);
             break;
         case 5:
-            morf_setAnm(i_this->mpMakarMorf, ARC_MK, 0x15 /* DROP */, 0, 1.0f);
+            morf_setAnm(i_this->mpMakarMorf, ARC_MK, dRes_INDEX_BMD_BCK_DROP_e, J3DFrameCtrl::EMode_NONE,
+                        1.0f);
             i_this->m2DC = 6;
             break;
         case 6:
@@ -417,14 +427,13 @@ static inline void mk_move(bmd_class* i_this) {
                 local_28->z = i_this->m2E0.z;
                 local_28->y = y + 10.0f;
                 s8 room = fopAcM_GetRoomNo(actor);
-                JPABaseEmitter* emitter =
-                    particle_setToon(0xA0FD /* ID_AK_ST_BKMCOREDEADSMOKE00 */, local_28, 0xB9, &i_this->mSmokeCb[6], room);
+                JPABaseEmitter* emitter = particle_setToon(dPa_name::ID_AK_ST_BKMCOREDEADSMOKE00, local_28,
+                                                           0xB9, &i_this->mSmokeCb[6], room);
                 if (emitter != nullptr) {
                     /* setGlobalScale(0.5): HD stores the 3D and 2D scales */
-                    u32 e = gabi::ea(emitter);
-                    for (u32 o : {0x220u, 0x224u, 0x228u, 0x238u, 0x23Cu, 0x240u}) gabi::store<f32>(e + o, 0.5f);
+                    ((BmdEmitterView*)emitter)->setGlobalScale(0.5f);
                 }
-                mk_voice_set(i_this, 0x48C7 /* JA_SE_CV_CB_SAVED */);
+                mk_voice_set(i_this, JA_SE_CV_CB_SAVED);
             }
             break;
         }
@@ -438,10 +447,9 @@ static inline void mk_move(bmd_class* i_this) {
 
 /* 020AEBCC */
 static BOOL daBmd_Execute(bmd_class* i_this) {
-    WWHD_FUNC(0x020AEBCC, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused fetch */
-    if (dComIfGp_getStartStageName0() == 'X') {
+    if (bmd_startStageName0() == 'X') {
         i_this->mB72 = 0x32;
     }
     i_this->m2FE = i_this->m2FE + 1;
@@ -545,15 +553,15 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     s8 b71 = i_this->mB71;
     if (b71 != 0) {
         if (actor->current.pos.y > 100.0f) {
-            u32 body = gabi::ea(gabi::call<void*>(0x024F8044)); /* dCam_getBody() */
-            dCamera_SetTypeForce(body, STR(0x10009C54) /* "Boss02" */);
+            dCamera_c* body = dCam_getBody();
+            dCamera_SetTypeForce(body, "Boss02" /* "Boss02" */, 0);
         } else {
-            u32 cam = dComIfGp_getCamera0_bl() + 0x248;
+            dCamera_c* cam = &((BmdCameraProcessView*)dComIfGp_getCamera(0))->mCamera;
             if (b71 == 2) {
-                dCamera_SetTypeForce(cam, STR(0x10009C4C) /* "Field" */);
+                dCamera_SetTypeForce(cam, "Field" /* "Field" */, 0);
                 i_this->mB71 = 1;
             } else {
-                dCamera_SetTypeForce(cam, STR(0x10009C44) /* "Dungeon" */);
+                dCamera_SetTypeForce(cam, "Dungeon" /* "Dungeon" */, 0);
             }
         }
     }
@@ -562,4 +570,13 @@ static BOOL daBmd_Execute(bmd_class* i_this) {
     i_this->mpR00_EFBrk->mFrameCtrl.setFrame(i_this->m2D8); /* setFrame(m2D8) */
     return TRUE;
 }
-VERIFY(0x020AEBCC, daBmd_Execute);
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data eff_joint 101919B4
+data eff_name 101919AC
+str 10009C44
+str 10009C4C
+str 10009C54
+*/
+// clang-format on

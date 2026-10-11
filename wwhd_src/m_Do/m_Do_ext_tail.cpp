@@ -1,32 +1,255 @@
-#include "gabi.h"
-using namespace gabi;
-void ext_sortClear(void* self){WWHD_FUNC(0x025EDBC0,void,self);u32 o=ea(self),p=load<u32>(o+0x98);if(p){call(0x027F0ECC,at<void>(load<u32>(0x104B4634)),self,0);store<u32>(o+0x98,0);do{u32 next=load<u32>(p);store<u32>(p,0);p=next;}while(p);}}
-VERIFY(0x025EDBC0,ext_sortClear);
-void* ext_sortCtor(void* self){WWHD_FUNC(0x025EDC2C,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x9C);if(!o)return nullptr;}call(0x027F1278,at<void>(o));store<u32>(o+0xC,0x10058E20);call(0x025EDBC0,at<void>(o));return at<void>(o);}
-VERIFY(0x025EDC2C,ext_sortCtor);
-void ext_sortDraw(void* self,void* arguments){WWHD_FUNC(0x025EDC88,void,self,arguments);u32 o=ea(self),p=load<u32>(o+0x98);call_ptr(load<u32>(load<u32>(p+0x130)+0x1C),at<void>(p),arguments);p=load<u32>(o+0x98);do{call_ptr(load<u32>(load<u32>(p+0x130)+0x2C),at<void>(p),arguments);p=load<u32>(p);}while(p);call(0x02750370,at<void>(0x104B474C));}
-VERIFY(0x025EDC88,ext_sortDraw);
-void ext_sortSet(void* self,void* material){WWHD_FUNC(0x025EDD04,void,self,material);u32 o=ea(self),p=load<u32>(o+0x98);if(!p){call(0x027F0E04,at<void>(load<u32>(0x104B4634)),self,0);p=load<u32>(o+0x98);}store<u32>(ea(material),p);store<u32>(o+0x98,ea(material));}
-VERIFY(0x025EDD04,ext_sortSet);
-u32 ext_weightInit(void* self,void* input){WWHD_FUNC(0x025EDD64,u32,self,input);u32 o=ea(self),n=load<u32>(ea(input)),rounded=(n*12+31)&~31u;u32 q=(u32)(((u64)0xAAAAAAAB*rounded)>>32)>>3;u32 p=call<u32>(0x0273AE48,q*12,0x20);store<u32>(o+4,p);if(!p)return 0;store<u32>(o,ea(input));return 1;}
-VERIFY(0x025EDD64,ext_weightInit);
-void ext_weightCalc(void* self,void* model){WWHD_FUNC(0x025EDE0C,void,self,model);u32 o=ea(self),m=ea(model),root=load<u32>(m+0x2C);u16 flags=load<u16>(root+4);u32 saved=(flags>>1)&1;if(saved)store<u16>(root+4,flags&0xFFFD);s32 value=(s32)load<u8>(m+0x6C)+1,divisor=load<u8>(root+6);u32 index=divisor?(u32)(value%divisor):(u32)value;call(0x027DE778,at<void>(m+0x14),index);if(saved)store<u16>(root+4,load<u16>(root+4)|2);u32 matrices=call<u32>(0x027DBBB0,at<void>(root+0x18),index),input=load<u32>(o),count=load<u32>(input),output=load<u32>(o+4),end=output+(count*12&~31u);if(output<end){for(u32 p=output;p<end;p+=32){u32 block=p&~31u;for(u32 j=0;j<32;j++)store<u8>(block+j,0);}input=load<u32>(o);count=load<u32>(input);}end=output+count*12;Local<u8[12]> transformed;u32 t=ea(transformed.get());for(u32 p=output,q=input+4;p<end;p+=12,q+=0x34){f32 zero=load<f32>(0x100586DC);store<f32>(p,zero);store<f32>(p+8,zero);store<f32>(p+4,zero);u32 weight=q+0xC,limit=q+0x2C,bone=limit;for(;weight<limit;weight+=4,bone++){s8 id=load<s8>(bone);if(id<0)continue;call(0x028E8F64,at<void>(matrices+(s32)id*0x30),at<void>(q),at<void>(t));f32 z=load<f32>(t+8),w=load<f32>(weight),x=load<f32>(t),y=load<f32>(t+4);z=fmuls_ppc(z,w);x=fmuls_ppc(x,w);y=fmuls_ppc(y,w);store<f32>(t,x);store<f32>(t+4,y);store<f32>(t+8,z);f32 px=load<f32>(p),py=load<f32>(p+4);store<f32>(p,fadds_ppc(px,x));store<f32>(p+4,fadds_ppc(py,y));store<f32>(p+8,fadds_ppc(load<f32>(p+8),load<f32>(t+8)));}}}
-VERIFY(0x025EDE0C,ext_weightCalc);
-void ext_tailGlobals(){WWHD_FUNC(0x025EDFA0,void);store<u32>(0x1048CF10,0);store<u32>(0x1048CF08,0);store<u32>(0x1048CF14,0);store<u32>(0x1048CF0C,0);call(0x028F026C,at<void>(0x101F4794));f32 lower=load<f32>(0x10058C48),upper=load<f32>(0x10058C4C);store<f32>(0x1048CEDC,lower);store<f32>(0x1048CEE0,upper);call(0x028ED6F8,at<void>(0x1048CEE5));call(0x028F026C,at<void>(0x101F47A0));call(0x028EAB2C,at<void>(0x1048CEE6));call(0x028F026C,at<void>(0x101F47AC));}
-VERIFY(0x025EDFA0,ext_tailGlobals);
-void ext_inlineDelete(void* self,u32 flag){WWHD_FUNC(0x025EE034,void,self,flag);if(ea(self)&&(flag&1))call(0x0273AF40,self);}
-VERIFY(0x025EE034,ext_inlineDelete);
-u32 ext_heapCF34(){WWHD_FUNC(0x025EE048,u32);return load<u32>(0x1048CF34);}
-VERIFY(0x025EE048,ext_heapCF34);
-u32 ext_heapCF38(){WWHD_FUNC(0x025EE054,u32);return load<u32>(0x1048CF38);}
-VERIFY(0x025EE054,ext_heapCF38);
-u32 ext_commandHeap(){WWHD_FUNC(0x025EE060,u32);return load<u32>(0x1048CF3C);}
-VERIFY(0x025EE060,ext_commandHeap);
-u32 ext_heapCF40(){WWHD_FUNC(0x025EE06C,u32);return load<u32>(0x1048CF40);}
-VERIFY(0x025EE06C,ext_heapCF40);
-u32 ext_heapCF48(){WWHD_FUNC(0x025EE078,u32);return load<u32>(0x1048CF48);}
-VERIFY(0x025EE078,ext_heapCF48);
-void ext_inlineArrayDtor(void* self,u32 flag){WWHD_FUNC(0x025EE084,void,self,flag);u32 o=ea(self);if(!o)return;u32 p=load<u32>(o+0x1C);store<u32>(o+0xC,0x1005874C);store<u32>(o+0x14,0x1005875C);if(p){for(u32 i=0;(s32)i<(s32)load<u32>(o+0x18);i++){u32 q=p+i*0xA0;call_ptr(load<u32>(load<u32>(q+0xC)+0xC),at<void>(q),2);p=load<u32>(o+0x1C);}u32 manager=call<u32>(0x02755FEC,at<void>(load<u32>(0x101F8B4C)),at<void>(p));call_ptr(load<u32>(load<u32>(manager+0xC)+0x3C),at<void>(manager),at<void>(load<u32>(o+0x1C)));store<u32>(o+0x18,0);store<u32>(o+0x1C,0);}call(0x025E39C8,self,0);if(flag&1)call(0x0273AF40,self);}
-VERIFY(0x025EE084,ext_inlineArrayDtor);
-void* ext_inlineShapeCtor(void* self){WWHD_FUNC(0x025EE17C,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x68);if(!o)return nullptr;}call(0x027DA984,at<void>(o));store<u32>(o+0x44,0);store<u32>(o+0x34,0x1016D820);return at<void>(o);}
-VERIFY(0x025EE17C,ext_inlineShapeCtor);
+/* HD line-material sorting, weighted vertex animation and generated helpers. Local source only. */
+#include "m_Do/m_Do_ext_tail.h"
+
+static HdTailHeapPointer l_opaqueDrawBuffer;
+static HdTailHeapPointer l_heapManager;
+static HdTailDrawState l_drawState;
+static u32 l_sortVtable;
+static u32 l_arrayVtable;
+static u32 l_arrayMemberVtable;
+static u32 l_shapeVtable;
+static f32 l_zero;
+static f32 l_lower;
+static f32 l_upper;
+static HdTailGlobals l_globals;
+static HdTailRange l_range;
+static u32 l_globalRegistration;
+static u32 l_signedRegistration;
+static u32 l_unsignedRegistration;
+static u32 l_heapA;
+static u32 l_heapB;
+static u32 l_commandHeap;
+static u32 l_heapC;
+static u32 l_heapD;
+
+enum HdTailFlags : u32 { HdTail_MatrixLocked = 2, HdTail_Delete = 1 };
+enum HdLineMaterialSlot : u32 { HdLine_SetMaterial = 7, HdLine_Draw = 11 };
+enum HdTailHeapSlot : u32 { HdTail_Free = 15, HdTail_PacketDestroy = 3 };
+
+/* 025EDBC0 */
+void HdLineSortPacket::reset() {
+    HdLineMaterial* lineMat = mp3DlineMat;
+    if (lineMat != NULL) {
+        hdTailRemovePacket(l_opaqueDrawBuffer.mpHeap.get(), this, 0);
+        mp3DlineMat = NULL;
+        do {
+            HdLineMaterial* next = lineMat->mpNextLineMat;
+            lineMat->mpNextLineMat = NULL;
+            lineMat = next;
+        } while (lineMat != NULL);
+    }
+}
+
+/* 025EDC2C */
+// HD: nullable constructor destination and enlarged packet ABI.
+static HdLineSortPacket* mDoExt_3DlineMatSortPacket__ct(HdLineSortPacket* self) {
+    if (self == NULL) {
+        self = static_cast<HdLineSortPacket*>(hdTailAllocate(sizeof(HdLineSortPacket)));
+        if (self == NULL) return NULL;
+    }
+    hdTailPacketConstruct(self);
+    self->mVtable = &l_sortVtable;
+    self->reset();
+    return self;
+}
+
+/* 025EDC88 */
+void HdLineSortPacket::draw(void* arguments) {
+    HdLineMaterial* lineMat = mp3DlineMat;
+    gabi::call_ptr(lineMat->mVtable[HdLine_SetMaterial].get(), lineMat, arguments);
+    lineMat = mp3DlineMat;
+    do {
+        gabi::call_ptr(lineMat->mVtable[HdLine_Draw].get(), lineMat, arguments);
+        lineMat = lineMat->mpNextLineMat;
+    } while (lineMat != NULL);
+    // HD: restore the native draw state after submitting the sorted materials.
+    hdTailDrawStateApply(&l_drawState);
+}
+
+/* 025EDD04 */
+void HdLineSortPacket::setMat(HdLineMaterial* i_3DlineMat) {
+    HdLineMaterial* lineMat = mp3DlineMat;
+    if (lineMat == NULL) {
+        hdTailEntryPacket(l_opaqueDrawBuffer.mpHeap.get(), this, 0);
+        lineMat = mp3DlineMat;
+    }
+    i_3DlineMat->mpNextLineMat = lineMat;
+    mp3DlineMat = i_3DlineMat;
+}
+
+/* 025EDD64 */
+// HD: weighted vertex storage has no matching GameCube wrapper.
+u32 HdVertexWeight::init(HdWeightInput* input) {
+    u32 count = input->mCount;
+    u32 rounded = (count * sizeof(cXyz) + 31) & ~31u;
+    u32 vertices = (u32)(((u64)0xAAAAAAAB * rounded) >> 32) >> 3;
+    cXyz* output = static_cast<cXyz*>(hdTailAllocateAligned(vertices * sizeof(cXyz), 0x20));
+    mpOutput = output;
+    if (output == NULL) return 0;
+    mpInput = input;
+    return 1;
+}
+
+/* 025EDE0C */
+void HdVertexWeight::calc(HdWeightModel* model) {
+    HdWeightResource* root = model->mResource;
+    u16 flags = root->mFlags;
+    bool wasLocked = (flags & HdTail_MatrixLocked) != 0;
+    if (wasLocked) root->mFlags = flags & ~HdTail_MatrixLocked;
+    s32 value = (s32)model->mBufferIndex + 1;
+    s32 divisor = root->mMatrixCount;
+    u32 index = divisor ? (u32)(value % divisor) : (u32)value;
+    hdTailUpdateMatrix(&model->mMatrixTarget, index);
+    if (wasLocked) root->mFlags = root->mFlags | HdTail_MatrixLocked;
+    Mtx34* matrices = hdTailGetMatrices(&root->mMatrixResource, index);
+    HdWeightInput* input = mpInput;
+    u32 count = input->mCount;
+    cXyz* output = mpOutput;
+    // HD: retain cache-line clearing, including the original guest address wrap and alignment.
+    u32 outputAddress = gabi::ea(output);
+    u32 clearEnd = outputAddress + (count * sizeof(cXyz) & ~31u);
+    if (outputAddress < clearEnd) {
+        for (u32 address = outputAddress; address < clearEnd; address += 32) {
+            u32 block = address & ~31u;
+            for (u32 byte = 0; byte < 32; byte++) gabi::store<u8>(block + byte, 0);
+        }
+        input = mpInput;
+        count = input->mCount;
+    }
+    u32 end = outputAddress + count * sizeof(cXyz);
+    gabi::Local<cXyz> transformed;
+    HdWeightVertex* vertex = input->mVertices;
+    for (u32 address = outputAddress; address < end; address += sizeof(cXyz), vertex++) {
+        cXyz* destination = gabi::at<cXyz>(address);
+        f32 zero = l_zero;
+        destination->x = zero;
+        destination->z = zero;
+        destination->y = zero;
+        for (u32 weightIndex = 0; weightIndex < 8; weightIndex++) {
+            s8 bone = vertex->mBones[weightIndex];
+            if (bone < 0) continue;
+            hdTailTransform(&matrices[bone], &vertex->mPosition, transformed.get());
+            f32 z = transformed->z;
+            f32 weight = vertex->mWeights[weightIndex];
+            f32 x = transformed->x;
+            f32 y = transformed->y;
+            z = gabi::fmuls_ppc(z, weight);
+            x = gabi::fmuls_ppc(x, weight);
+            y = gabi::fmuls_ppc(y, weight);
+            transformed->x = x;
+            transformed->y = y;
+            transformed->z = z;
+            f32 oldX = destination->x;
+            f32 oldY = destination->y;
+            destination->x = gabi::fadds_ppc(oldX, x);
+            destination->y = gabi::fadds_ppc(oldY, y);
+            destination->z = gabi::fadds_ppc(destination->z, transformed->z);
+        }
+    }
+}
+
+/* 025EDFA0 */
+static void __sinit_m_Do_ext_tail_cpp() {
+    l_globals.mThird = 0;
+    l_globals.mFirst = 0;
+    l_globals.mFourth = 0;
+    l_globals.mSecond = 0;
+    hdTailRegister(&l_globalRegistration);
+    f32 lower = l_lower;
+    f32 upper = l_upper;
+    l_range.mLower = lower;
+    l_range.mUpper = upper;
+    hdTailInitSigned(&l_range.mSignedInitialized);
+    hdTailRegister(&l_signedRegistration);
+    hdTailInitUnsigned(&l_range.mUnsignedInitialized);
+    hdTailRegister(&l_unsignedRegistration);
+}
+
+/* 025EE034 */
+static void mDoExt_inlineDelete(void* self, u32 flags) {
+    if (self != NULL && (flags & HdTail_Delete)) hdTailDelete(self);
+}
+
+/* 025EE048 */
+static u32 mDoExt_getAnimationHeapA() { return l_heapA; }
+/* 025EE054 */
+static u32 mDoExt_getAnimationHeapB() { return l_heapB; }
+/* 025EE060 */
+static u32 mDoExt_getCommandHeap() { return l_commandHeap; }
+/* 025EE06C */
+static u32 mDoExt_getAnimationHeapC() { return l_heapC; }
+/* 025EE078 */
+static u32 mDoExt_getAnimationHeapD() { return l_heapD; }
+
+/* 025EE084 */
+// HD: deleting destructor for the native invisible-joint packet array.
+static void mDoExt_invJntPacketArray__dt(HdTailPacketArray* self, u32 flags) {
+    if (self == NULL) return;
+    HdTailPacket* packets = self->mpPackets;
+    self->mVtable = &l_arrayVtable;
+    self->mMemberVtable = &l_arrayMemberVtable;
+    if (packets != NULL) {
+        for (u32 i = 0; (s32)i < (s32)self->mCount; i++) {
+            HdTailPacket* packet = &packets[i];
+            gabi::call_ptr(packet->mVtable[HdTail_PacketDestroy].get(), packet, 2);
+            packets = self->mpPackets;
+        }
+        HdTailHeap* heap = hdTailFindHeap(l_heapManager.mpHeap, packets);
+        gabi::call_ptr(heap->mVtable[HdTail_Free].get(), heap, self->mpPackets.get());
+        self->mCount = 0;
+        self->mpPackets = NULL;
+    }
+    hdTailPacketArrayDestroy(self, 0);
+    if (flags & HdTail_Delete) hdTailDelete(self);
+}
+
+/* 025EE17C */
+static HdTailShape* mDoExt_inlineShape__ct(HdTailShape* self) {
+    if (self == NULL) {
+        self = static_cast<HdTailShape*>(hdTailAllocate(sizeof(HdTailShape)));
+        if (self == NULL) return NULL;
+    }
+    hdTailShapeConstruct(self);
+    self->mBuffer = 0;
+    self->mVtable = &l_shapeVtable;
+    return self;
+}
+
+/* WWHD glue (tools/verify/autoglue.py): HD render and animation backend operations.
+data l_opaqueDrawBuffer 104B4634
+data l_heapManager 101F8B4C
+data l_drawState 104B474C
+data l_sortVtable 10058E20
+data l_arrayVtable 1005874C
+data l_arrayMemberVtable 1005875C
+data l_shapeVtable 1016D820
+data l_zero 100586DC
+data l_lower 10058C48
+data l_upper 10058C4C
+data l_globals 1048CF08
+data l_range 1048CEDC
+data l_globalRegistration 101F4794
+data l_signedRegistration 101F47A0
+data l_unsignedRegistration 101F47AC
+data l_heapA 1048CF34
+data l_heapB 1048CF38
+data l_commandHeap 1048CF3C
+data l_heapC 1048CF40
+data l_heapD 1048CF48
+ext 027F1278 void hdTailPacketConstruct(void*)
+ext 0273AD10 void* hdTailAllocate(u32)
+ext 0273AE48 void* hdTailAllocateAligned(u32, u32)
+ext 0273AF40 void hdTailDelete(void*)
+ext 027F0ECC void hdTailRemovePacket(void*, void*, u32)
+ext 027F0E04 void hdTailEntryPacket(void*, void*, u32)
+ext 02750370 void hdTailDrawStateApply(HdTailDrawState*)
+ext 027DE778 void hdTailUpdateMatrix(void*, u32)
+ext 027DBBB0 Mtx34* hdTailGetMatrices(void*, u32)
+ext 028E8F64 void hdTailTransform(Mtx34*, cXyz*, cXyz*)
+ext 028F026C void hdTailRegister(void*)
+ext 028ED6F8 void hdTailInitSigned(be<u8>*)
+ext 028EAB2C void hdTailInitUnsigned(be<u8>*)
+ext 02755FEC HdTailHeap* hdTailFindHeap(HdTailHeap*, void*)
+ext 025E39C8 void hdTailPacketArrayDestroy(HdTailPacketArray*, u32)
+ext 027DA984 void hdTailShapeConstruct(HdTailShape*)
+*/

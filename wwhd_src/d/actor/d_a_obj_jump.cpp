@@ -1,478 +1,549 @@
+/* Wind Temple Iron Boots springboard. Verified HD semantics, with TWW
+ * layout/names. */
 #include "d/actor/d_a_obj_jump.h"
 using namespace daObjJump;
-using gabi::load;
-using gabi::store;
-static u32 address(const void *p) { return gabi::ea(p); }
-static u32 attr(Act_c *a);
-static u32 joint(u32 data, u16 index);
-s32 Act_c::Mthd_Create() {
-  WWHD_FUNC(0x02365C98, s32, this);
-  u32 condition = load<u32>(address(this) + 0x2E4);
-  if (!(condition & 8)) {
-    if (address(this)) {
-      gabi::call<void>(0x024F1D40, this);
-      condition = load<u32>(address(this) + 0x2E4);
-      store<u32>(address(this) + 0xB4, 0x1002BAE8);
-    }
-    store<u32>(address(this) + 0x2E4, condition | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, &mPhase, STR(0x1002BA40));
-  if (phase == 4) {
-    mType = gabi::call<s32>(0x02366CE4, this, 1, 0);
-    u32 table = attr(this), heap = load<u32>(table);
-    s16 dzb = load<s16>(table + 4);
-    phase = gabi::call<s32>(0x024F1D9C, this, STR(0x1002BA40), dzb,
-                            gabi::at<void>(0x024EE658), heap);
-    if (phase != 4 && phase != 5)
-      gabi::call<void>(0x0273AA24, STR(0x1002B980), 0x186, STR(0x1002B994));
-  }
-  return phase;
+static s32 jnodeCB_lower(J3DNode *, s32);
+static void rideCB(void *, Act_c *, fopAc_ac_c *);
+
+// HD: native constructor vtable and SafeString table are translation-unit
+// specific.
+static constexpr u32 kActorVtableHD = 0x1002BAE8;
+static constexpr u32 kSafeStringVtableHD = 0x1002B968;
+static constexpr u32 kMoveBgProcHD = 0x024EE658;
+enum {
+  ActorConstructedHD = 8,
+  fpcNm_PLAYER_e = 0xA8,
+  HeavyBootsHD = 0x02000000,
+  PlayerHangHD = 0x100,
+  ForceVomitJumpHD = 0x10,
+  JA_SE_OBJ_JUMP_SPR_CLOSE = 0x69B9,
+  JA_SE_OBJ_JUMP_SPR_OPEN = 0x69BA
+};
+static const char M_arcname[] = "Hjump";
+static const char l_createFile[] = "d_a_obj_jump.cpp";
+static const char l_heapFile[] = "d_a_obj_jump.cpp";
+static const char l_phaseAssert[] =
+    "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)";
+static const char l_modelAssert[] = "model_data != 0";
+static JumpAttributesHD l_attributes;
+static JumpModeTableHD l_modeProc;
+static Mtx34 l_matrixStack;
+static Mtx34 M_tmp_mtx;
+using JumpResourcePointerHD = gptr<void>;
+static JumpResourcePointerHD l_resources;
+static JumpDrawListsHD l_drawLists;
+static JumpHeaderStaticsHD l_headerStatics;
+static JumpHeaderConstantsHD l_headerConstants;
+static JumpRegistrationsHD l_registration;
+const Attr_c &Act_c::attr() const { return l_attributes.mEntries[s32(mType)]; }
+void jumpMoveBgConstructHD(Act_c *actor);
+s32 jumpResLoadHD(request_of_phase_process_class *phase, const char *name);
+s32 jumpGetTypeHD(Act_c *actor, s32 width, s32 shift);
+s32 jumpMoveBgCreateHD(Act_c *actor, const char *name, s16 dzb, void *callback,
+                       u32 heap);
+void jumpAssertHD(const char *file, s32 line, const char *expression);
+s32 jumpMoveBgDeleteHD(Act_c *actor);
+void jumpResDeleteHD(request_of_phase_process_class *phase, const char *name);
+void jumpMtxCopyHD(const Mtx34 *source, Mtx34 *target);
+void jumpScaleMHD(f32 x, f32 y, f32 z);
+J3DModelData *jumpGetResourceHD(void *resources, SafeString *name, s16 index);
+J3DModel *jumpCreateModelHD(J3DModelData *data, u32 flags, u32 materialFlags);
+void jumpTransSHD(Mtx34 *matrix, f32 x, f32 y, f32 z);
+void jumpRotateZXYHD(Mtx34 *matrix, s16 x, s16 y, s16 z);
+void jumpTransMHD(f32 x, f32 y, f32 z);
+void jumpCullBoxHD(Act_c *actor, f32 minX, f32 minY, f32 minZ, f32 maxX,
+                   f32 maxY, f32 maxZ);
+JumpPlayHD *jumpGetPlayHD();
+void *jumpGetEnvLightHD();
+void jumpSetTevHD(void *env, s32 type, cXyz *position, dKy_tevstr_c *tev);
+void jumpLightTevHD(void *env, J3DModel *model, dKy_tevstr_c *tev);
+void jumpModelUpdateHD(J3DModel *model, s32 flags);
+s32 jumpReverbHD(s8 room);
+void jumpSoundHD(u32 sound, cXyz *position, s32 flags, s32 reverb);
+s32 jumpMoveBgExecuteHD(Act_c *actor);
+void jumpRegisterHD(JumpRegistrationHD *registration);
+void jumpTrigInitHD(be<u8> *state);
+void jumpRandomInitHD(be<u8> *state);
+void jumpDeleteHD(void *object);
+void jumpActorDestroyHD(Act_c *actor, s32 flags);
+
+static void seStart(Act_c *actor, u32 id) {
+  s8 room = actor->current.roomNo;
+  s32 reverb = jumpReverbHD(room);
+  jumpSoundHD(id, &actor->eyePos, 0, reverb);
 }
-VERIFY(0x02365C98, &Act_c::Mthd_Create);
-s32 Act_c::Mthd_Delete() {
-  WWHD_FUNC(0x02365D8C, s32, this);
-  s32 result = gabi::call<s32>(0x024F1F64, this);
-  gabi::call<void>(0x025204C8, &mPhase, STR(0x1002BA40));
-  return result;
-}
-VERIFY(0x02365D8C, &Act_c::Mthd_Delete);
-static u32 attr(Act_c *a) { return 0x1002BA48 + u32(s32(a->mType)) * 0x50; }
-static u32 joint(u32 data, u16 index) {
-  u32 count = load<u32>(data + 4), nodes = load<u32>(data + 8);
-  return index < count ? nodes + u32(index) * 0x1C : nodes;
-}
-s32 jnodeCB_lower(void *node, s32 timing) {
-  WWHD_FUNC(0x02365DD8, s32, node, timing);
-  if (timing == 0) {
-    u32 model = load<u32>(0x104B462C), actor = load<u32>(model + 0xB8);
-    u32 desc = address(gabi::call<void *>(0x027F7878, node));
-    u16 index = load<u16>(desc + 4);
-    u32 block = load<u32>(model + 0x2C),
-        matrix = load<u32>(block + 0x10) + u32(index) * 48;
-    store<u16>(block + 4, load<u16>(block + 4) | 0x10);
-    gabi::call<void>(0x028E90D4, gabi::at<void>(matrix),
-                     gabi::at<void>(0x1048D0CC));
-    if (index == 1)
-      gabi::call<void>(0x025F2518, load<f32>(actor + 0x400), 1.0f, 1.0f);
-    else if (index == 2)
-      gabi::call<void>(0x025F2518, 1.0f / load<f32>(actor + 0x400), 1.0f, 1.0f);
-    block = load<u32>(model + 0x2C);
-    matrix = load<u32>(block + 0x10) + u32(index) * 48;
-    store<u16>(block + 4, load<u16>(block + 4) | 0x10);
-    mtx_copy(gabi::at<Mtx34>(matrix), gabi::at<Mtx34>(0x1048D0CC));
-    u32 table = 0x1002BA48 + load<u32>(actor + 0x3EC) * 0x50;
-    f32 scale = load<f32>(actor + 0x400), low = load<f32>(table + 0x18),
-        high = load<f32>(table + 0x1C);
-    store<f32>(0x104B4884,
-               gabi::fmadds(high - low, scale - 1.0f, load<f32>(0x104B4884)));
-  }
-  return 1;
-}
-VERIFY(0x02365DD8, jnodeCB_lower);
+/* 02365F68 */
 s32 Act_c::CreateHeap() {
-  WWHD_FUNC(0x02365F68, s32, this);
-  u32 table = attr(this), resources = load<u32>(0x101F4F28);
+  const Attr_c &table = attr();
+  void *resources = l_resources.get();
   gabi::Local<SafeString> name;
-  name->mStringTop = 0x1002BA40;
-  name->__vtbl = 0x1002B968;
-  s16 index = load<s16>(table + 6);
-  void *data = gabi::call<void *>(0x026066C4, gabi::at<void>(resources),
-                                  name.get(), index);
+  name->mStringTop = gabi::guest_addr(M_arcname);
+  name->__vtbl = kSafeStringVtableHD;
+  s16 index = table.bdlResIndex;
+  J3DModelData *data = jumpGetResourceHD(resources, name.get(), index);
   if (!data)
-    gabi::call<void>(0x0273AA24, STR(0x1002B9E8), 0x11A, STR(0x1002B9D8));
-  mModel = gabi::call<J3DModel *>(0x025E38E0, data, 0x80000, 0x11000022);
+    jumpAssertHD(l_heapFile, 0x11A, l_modelAssert);
+  mModel = jumpCreateModelHD(data, 0x80000, 0x11000022);
   if (mModel.get()) {
-    u16 spring = load<u16>(attr(this) + 0x16);
-    store<u32>(joint(address(data), spring) + 8, 0x02365DD8);
-    spring = load<u16>(attr(this) + 0x16);
-    store<u32>(joint(address(data), u16(spring + 1)) + 8, 0x02365DD8);
-    store<u32>(address(mModel.get()) + 0xB8, address(this));
+    u16 spring = u16(attr().springJntNum);
+    data->getJointNodePointer(spring)->setCallBack(jnodeCB_lower);
+    spring = u16(attr().springJntNum);
+    // HD: the second spring joint also compensates its inherited X scale.
+    data->getJointNodePointer(u16(spring + 1))->setCallBack(jnodeCB_lower);
+    mModel->setUserArea(reinterpret_cast<uintptr_t>(this));
   }
   return mModel.get() != nullptr;
 }
-VERIFY(0x02365F68, &Act_c::CreateHeap);
-void Act_c::set_mtx() {
-  WWHD_FUNC(0x023660A4, void, this);
-  auto matrix = gabi::at<Mtx34>(0x1048D0CC);
-  f32 x = load<f32>(address(this) + 0x314),
-      y = load<f32>(address(this) + 0x318),
-      z = load<f32>(address(this) + 0x31C);
-  gabi::call<void>(0x028E93CC, matrix, x, y, z);
-  s16 rx = load<s16>(address(this) + 0x328),
-      ry = load<s16>(address(this) + 0x32A),
-      rz = load<s16>(address(this) + 0x32C);
-  gabi::call<void>(0x025F1B48, matrix, rx, ry, rz);
-  mtx_copy(gabi::at<Mtx34>(address(mModel.get()) + 0xC8), matrix);
-  u32 table = attr(this);
-  f32 scale = mSpringScale, offset = load<f32>(table + 0x24);
-  f32 low = load<f32>(table + 0x18), high = load<f32>(table + 0x1C),
-      span = load<f32>(table + 0x20) - offset;
-  f32 ratio = gabi::fmadds(high - low, scale - 1.0f, span) / span;
-  gabi::call<void>(0x025F24E0, 0.0f, offset, 0.0f);
-  gabi::call<void>(0x025F2518, 1.0f, ratio, 1.0f);
-  offset = load<f32>(attr(this) + 0x24);
-  gabi::call<void>(0x025F24E0, 0.0f, -offset, 0.0f);
-  gabi::call<void>(0x028E90D4, matrix, gabi::at<Mtx34>(0x1046A338));
-}
-VERIFY(0x023660A4, &Act_c::set_mtx);
-void Act_c::init_mtx() {
-  WWHD_FUNC(0x02366248, void, this);
-  u32 model = address(mModel.get());
-  f32 x = load<f32>(address(this) + 0x330),
-      y = load<f32>(address(this) + 0x334),
-      z = load<f32>(address(this) + 0x338);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  store<f32>(model + 0xC4, z);
-  set_mtx();
-}
-VERIFY(0x02366248, &Act_c::init_mtx);
-void rideCB(void *bg, Act_c *actor, fopAc_ac_c *rider) {
-  WWHD_FUNC(0x02366268, void, bg, actor, rider);
-  actor->mIsRide = 1;
-  if (!rider || load<s16>(address(rider) + 0xE) != 0xA8)
-    return;
-  actor->mIsPlayerRide = 1;
-  u32 flags = load<u32>(address(rider) + 0x3B8);
-  if (flags & 0x02000000)
-    actor->mIsHeavyRide = 1;
-  f32 speed = load<f32>(address(rider) + 0x370),
-      threshold = load<f32>(attr(actor) + 0x4C);
-  if (!(speed <= threshold))
-    actor->mWobble = 1;
-}
-VERIFY(0x02366268, rideCB);
-void Act_c::mode_wait_init() {
-  WWHD_FUNC(0x023662C8, void, this);
-  mMode = 0;
-  mTargetScale = 1.0f;
-  mVibrationTimer = 0;
-}
-VERIFY(0x023662C8, &Act_c::mode_wait_init);
+
+/* 023662E4 */
 s32 Act_c::Create() {
-  WWHD_FUNC(0x023662E4, s32, this);
-  u32 model = address(mModel.get());
-  mTargetScale = 1.0f;
-  mSpringScale = 1.0f;
-  store<u32>(address(this) + 0x348, model ? model + 0xC8 : 0);
+  J3DModel *model = mModel.get();
+  field_0x338 = 1.0f;
+  field_0x33C = 1.0f;
+  cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
   init_mtx();
-  u32 table = attr(this);
-  f32 minx = load<s16>(table + 8), miny = load<s16>(table + 10),
-      minz = load<s16>(table + 12);
-  f32 maxx = load<s16>(table + 14), maxy = load<s16>(table + 16),
-      maxz = load<s16>(table + 18);
-  gabi::call<void>(0x025D674C, this, minx, miny, minz, maxx, maxy, maxz);
-  if (s32(mType) == 1) {
-    u32 status = load<u32>(address(this) + 0x2E0);
-    store<u8>(address(this) + 0x2DE, 0);
-    store<u32>(address(this) + 0x2E0, status & ~63u);
+  const Attr_c &table = attr();
+  f32 minx = s16(table.cullSizeBoxMin.x), miny = s16(table.cullSizeBoxMin.y),
+      minz = s16(table.cullSizeBoxMin.z);
+  f32 maxx = s16(table.cullSizeBoxMax.x), maxy = s16(table.cullSizeBoxMax.y),
+      maxz = s16(table.cullSizeBoxMax.z);
+  jumpCullBoxHD(this, minx, miny, minz, maxx, maxy, maxz);
+  if (s32(mType) == Type_SPRING_ON_BOX_e) {
+    u32 status = actor_status;
+    gbaName = 0;
+    actor_status = status & ~63u;
   }
-  u32 bg = load<u32>(address(this) + 0x3AC);
-  store<u32>(bg + 0xB0, 0x02366268);
+  reinterpret_cast<JumpBackgroundHD *>(mpBgW.get())->setRideCallback(rideCB);
+  // HD: the GameCube ground-check and simple-shadow path is omitted.
   mode_wait_init();
   return 1;
 }
-VERIFY(0x023662E4, &Act_c::Create);
-void Act_c::set_push_flag() {
-  WWHD_FUNC(0x0236642C, void, this);
-  mRideStarted = 0;
-  if (mIsRide) {
-    u8 count = mRideCount;
-    if (count < 255)
-      mRideCount = ++count;
-    if (count == load<u8>(attr(this) + 0x43))
-      mRideStarted = 1;
-  } else
-    mRideCount = 0;
-  mRideEnded = 0;
-  if (mIsRide)
-    mUnriddenCount = 0;
-  else {
-    u8 count = mUnriddenCount;
-    if (count < 255)
-      mUnriddenCount = ++count;
-    if (count == load<u8>(attr(this) + 0x44))
-      mRideEnded = 1;
+
+/* 02365C98 */
+s32 Act_c::Mthd_Create() {
+  u32 condition = actor_condition;
+  if (!(condition & ActorConstructedHD)) {
+    if (gabi::ea(this)) {
+      jumpMoveBgConstructHD(this);
+      condition = actor_condition;
+      __vtbl = kActorVtableHD;
+    }
+    actor_condition = condition | ActorConstructedHD;
   }
-  mPlayerPush = 0;
+  s32 phase = jumpResLoadHD(&mPhase, M_arcname);
+  if (phase == cPhs_COMPLEATE_e) {
+    mType = jumpGetTypeHD(this, PRM_TYPE_W, PRM_TYPE_S);
+    const Attr_c &table = attr();
+    u32 heap = table.heapSize;
+    s16 dzb = table.dzbResIndex;
+    phase = jumpMoveBgCreateHD(this, M_arcname, dzb,
+                               gabi::at<void>(kMoveBgProcHD), heap);
+    // HD: the phase assertion uses line 390 in the native source.
+    if (phase != cPhs_COMPLEATE_e && phase != cPhs_ERROR_e)
+      jumpAssertHD(l_createFile, 0x186, l_phaseAssert);
+  }
+  return phase;
+}
+
+/* 02366C88 */
+s32 Act_c::Delete() { return 1; }
+
+/* 02365D8C */
+s32 Act_c::Mthd_Delete() {
+  s32 result = jumpMoveBgDeleteHD(this);
+  jumpResDeleteHD(&mPhase, M_arcname);
+  return result;
+}
+
+/* 023660A4 */
+void Act_c::set_mtx() {
+  Mtx34 *matrix = &l_matrixStack;
+  f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+  jumpTransSHD(matrix, x, y, z);
+  s16 rx = shape_angle.x, ry = shape_angle.y, rz = shape_angle.z;
+  jumpRotateZXYHD(matrix, rx, ry, rz);
+  mtx_copy(&mModel->mBaseTransformMtx, matrix);
+  const Attr_c &table = attr();
+  f32 scale = field_0x33C, offset = f32(table.field_0x024);
+  f32 low = f32(table.field_0x018), high = f32(table.field_0x01C),
+      span = f32(table.field_0x020) - offset;
+  f32 ratio = gabi::fmadds(high - low, scale - 1.0f, span) / span;
+  jumpTransMHD(0.0f, offset, 0.0f);
+  jumpScaleMHD(1.0f, ratio, 1.0f);
+  offset = f32(attr().field_0x024);
+  jumpTransMHD(0.0f, -offset, 0.0f);
+  jumpMtxCopyHD(matrix, &M_tmp_mtx);
+}
+
+/* 02366248 */
+void Act_c::init_mtx() {
+  J3DModel *model = mModel.get();
+  f32 x = scale.x, y = scale.y, z = scale.z;
+  model->mBaseScale.x = x;
+  model->mBaseScale.y = y;
+  model->mBaseScale.z = z;
+  set_mtx();
+}
+
+/* 0236642C */
+void Act_c::set_push_flag() {
+  field_0x345 = 0;
+  if (mIsRide) {
+    u8 count = field_0x347;
+    if (count < 255)
+      field_0x347 = ++count;
+    if (count == u8(attr().field_0x043))
+      field_0x345 = 1;
+  } else
+    field_0x347 = 0;
+  field_0x346 = 0;
+  if (mIsRide)
+    field_0x348 = 0;
+  else {
+    u8 count = field_0x348;
+    if (count < 255)
+      field_0x348 = ++count;
+    if (count == u8(attr().field_0x044))
+      field_0x346 = 1;
+  }
+  field_0x34a = 0;
   bool player = mIsPlayerRide != 0;
   if (player) {
-    u32 play = address(gabi::call<void *>(0x025200D4));
-    player = (load<u32>(play + 0x5CD8) & 0x100) != 0;
+    JumpPlayHD *play = jumpGetPlayHD();
+    player = (u32(play->mPlayerStatus0) & PlayerHangHD) != 0;
   }
   if (player) {
-    u8 count = mPlayerCount;
+    u8 count = field_0x34b;
     if (count < 255)
-      mPlayerCount = ++count;
-    if (count == load<u8>(attr(this) + 0x45))
-      mPlayerPush = 1;
+      field_0x34b = ++count;
+    if (count == u8(attr().field_0x045))
+      field_0x34a = 1;
   } else
-    mPlayerCount = 0;
-  mHeavyStarted = 0;
+    field_0x34b = 0;
+  field_0x34d = 0;
   if (mIsHeavyRide) {
-    u8 count = mHeavyCount;
+    u8 count = field_0x34f;
     if (count < 255)
-      mHeavyCount = ++count;
-    if (count == load<u8>(attr(this) + 0x46))
-      mHeavyStarted = 1;
+      field_0x34f = ++count;
+    if (count == u8(attr().field_0x046))
+      field_0x34d = 1;
   } else
-    mHeavyCount = 0;
-  mHeavyEnded = 0;
+    field_0x34f = 0;
+  field_0x34e = 0;
   if (mIsHeavyRide)
-    mLightCount = 0;
+    field_0x350 = 0;
   else {
-    u8 count = mLightCount;
+    u8 count = field_0x350;
     if (count < 255)
-      mLightCount = ++count;
-    if (count == load<u8>(attr(this) + 0x47))
-      mHeavyEnded = 1;
+      field_0x350 = ++count;
+    if (count == u8(attr().field_0x047))
+      field_0x34e = 1;
   }
 }
-VERIFY(0x0236642C, &Act_c::set_push_flag);
-void Act_c::calc_vib_pos() {
-  WWHD_FUNC(0x02366668, void, this);
-  u32 table = attr(this);
-  f32 target = mTargetScale, scale = mSpringScale, velocity = mVelocity;
-  velocity = gabi::fnmsubs(scale - target, load<f32>(table + 0x2C), velocity);
-  mVelocity = velocity;
-  velocity = gabi::fnmsubs(velocity, load<f32>(table + 0x28), velocity);
-  mVelocity = velocity;
-  mSpringScale = scale + velocity;
-}
-VERIFY(0x02366668, &Act_c::calc_vib_pos);
+
+/* 023666B0 */
 void Act_c::clear_push_flag() {
-  WWHD_FUNC(0x023666B0, void, this);
   mIsRide = 0;
-  mWobble = 0;
+  field_0x354 = 0;
   mIsHeavyRide = 0;
   mIsPlayerRide = 0;
 }
-VERIFY(0x023666B0, &Act_c::clear_push_flag);
-s32 Act_c::Execute(Mtx34 **out) {
-  WWHD_FUNC(0x023666C8, s32, this, out);
-  set_push_flag();
-  u32 entry = 0x1002BA08 + u32(s32(mMode)) * 8;
-  s16 vindex = load<s16>(entry + 2), adjustment = load<s16>(entry);
-  u32 receiver = address(this) + s32(adjustment), target;
-  if (vindex < 0)
-    target = load<u32>(entry + 4);
-  else {
-    s16 voffset = load<s16>(entry + 6);
-    u32 vtable = load<u32>(receiver + s32(voffset));
-    target = load<u32>(vtable + u32(s32(vindex)) * 8 + 4);
+
+/* 02366668 */
+void Act_c::calc_vib_pos() {
+  const Attr_c &table = attr();
+  f32 target = field_0x338, scale = field_0x33C, velocity = field_0x340;
+  velocity = gabi::fnmsubs(scale - target, f32(table.field_0x02C), velocity);
+  field_0x340 = velocity;
+  velocity = gabi::fnmsubs(velocity, f32(table.field_0x028), velocity);
+  field_0x340 = velocity;
+  field_0x33C = scale + velocity;
+}
+
+/* 02366268 */
+static void rideCB(void *bg, Act_c *actor, fopAc_ac_c *rider) {
+  actor->mIsRide = 1;
+  if (!rider || rider->mProfName != fpcNm_PLAYER_e)
+    return;
+  actor->mIsPlayerRide = 1;
+  u32 flags = static_cast<JumpPlayerHD *>(rider)->mNoResetFlg0;
+  if (flags & HeavyBootsHD)
+    actor->mIsHeavyRide = 1;
+  f32 speed = rider->speedF, threshold = f32(actor->attr().field_0x04C);
+  // HD: this unordered compare also starts wobbling for a NaN speed.
+  if (!(speed <= threshold))
+    actor->field_0x354 = 1;
+}
+
+/* 02365DD8 */
+static s32 jnodeCB_lower(J3DNode *node, s32 timing) {
+  if (timing == 0) {
+    J3DModel *model = j3dSys.getModel();
+    Act_c *i_this = static_cast<Act_c *>(model->getUserArea());
+    u16 index = reinterpret_cast<J3DJoint *>(node)->getJntNo();
+    Mtx34 *matrix = model->getAnmMtx(index);
+    jumpMtxCopyHD(matrix, &l_matrixStack);
+    // HD: both spring joints have callbacks; the second cancels the X stretch.
+    if (index == 1)
+      jumpScaleMHD(i_this->field_0x33C, 1.0f, 1.0f);
+    else if (index == 2)
+      jumpScaleMHD(1.0f / f32(i_this->field_0x33C), 1.0f, 1.0f);
+    matrix = model->getAnmMtx(index);
+    mtx_copy(matrix, &l_matrixStack);
+    const Attr_c &table = i_this->attr();
+    f32 scale = i_this->field_0x33C, low = table.field_0x018,
+        high = table.field_0x01C;
+    J3DSys::mCurrentMtx->m[1][3] =
+        gabi::fmadds(high - low, scale - 1.0f, J3DSys::mCurrentMtx->m[1][3]);
   }
-  gabi::call<void>(target, gabi::at<void>(receiver));
-  s32 mode = mMode;
-  if ((mode == 0 || mode == 2) && mWobble)
-    mVelocity = f32(mVelocity) + load<f32>(attr(this) + 0x34);
-  calc_vib_pos();
-  set_mtx();
-  store<u32>(address(out), 0x1046A338);
-  clear_push_flag();
   return 1;
 }
-VERIFY(0x023666C8, &Act_c::Execute);
-s32 Act_c::Draw() {
-  WWHD_FUNC(0x023667C4, s32, this);
-  void *env = gabi::call<void *>(0x02555D0C);
-  gabi::call<void>(0x025626A4, env, 0, gabi::at<cXyz>(address(this) + 0x314),
-                   gabi::at<void>(address(this) + 0x110));
-  env = gabi::call<void *>(0x02555D0C);
-  J3DModel *model = mModel.get();
-  gabi::call<void>(0x02562F5C, env, model,
-                   gabi::at<void>(address(this) + 0x110));
-  u32 play = address(gabi::call<void *>(0x025200D4));
-  store<u32>(0x104B4634, load<u32>(play + 0x5D70));
-  play = address(gabi::call<void *>(0x025200D4));
-  store<u32>(0x104B4638, load<u32>(play + 0x5D74));
-  model = mModel.get();
-  gabi::call<void>(0x025E2DE0, model, 0);
-  play = address(gabi::call<void *>(0x025200D4));
-  store<u32>(0x104B4634, load<u32>(play + 0x5D78));
-  play = address(gabi::call<void *>(0x025200D4));
-  store<u32>(0x104B4638, load<u32>(play + 0x5D7C));
-  return 1;
+
+/* 023662C8 */
+void Act_c::mode_wait_init() {
+  mMode = Mode_WAIT_e;
+  field_0x338 = 1.0f;
+  field_0x352 = 0;
 }
-VERIFY(0x023667C4, &Act_c::Draw);
-void Act_c::mode_w_l_init() {
-  WWHD_FUNC(0x0236685C, void, this);
-  mMode = 1;
-  mTargetScale = load<f32>(attr(this) + 0x38);
-}
-VERIFY(0x0236685C, &Act_c::mode_w_l_init);
-static void sound(Act_c *actor, u32 id) {
-  s8 room = load<s8>(address(actor) + 0x326);
-  s32 reverb = gabi::call<s32>(0x02520540, room);
-  gabi::call<void>(0x025E1A40, id, gabi::at<void>(address(actor) + 0x37C), 0,
-                   reverb);
-}
+
+/* 0236687C */
 void Act_c::mode_wait() {
-  WWHD_FUNC(0x0236687C, void, this);
-  s16 timer = mVibrationTimer;
+  s16 timer = field_0x352;
   if (timer <= 0 &&
-      (mRideStarted || mRideEnded || mPlayerPush || mHeavyStarted)) {
-    mVelocity = f32(mVelocity) + load<f32>(attr(this) + 0x30);
-    mVibrationTimer = load<u8>(attr(this) + 0x48);
+      (field_0x345 || field_0x346 || field_0x34a || field_0x34d)) {
+    field_0x340 = f32(field_0x340) + f32(attr().field_0x030);
+    field_0x352 = u8(attr().field_0x048);
   } else if (timer > 0)
-    mVibrationTimer = s16(timer - 1);
-  if (u8(mHeavyCount) > load<u8>(attr(this) + 0x40)) {
-    sound(this, 0x69B9);
+    field_0x352 = s16(timer - 1);
+  if (u8(field_0x34f) > u8(attr().field_0x040)) {
+    seStart(this, JA_SE_OBJ_JUMP_SPR_CLOSE);
     mode_w_l_init();
   }
 }
-VERIFY(0x0236687C, &Act_c::mode_wait);
-void Act_c::mode_lower_init() {
-  WWHD_FUNC(0x02366998, void, this);
-  mMode = 2;
-  mVibrationTimer = 0;
+
+/* 0236685C */
+void Act_c::mode_w_l_init() {
+  mMode = Mode_WAIT_LOWER_e;
+  field_0x338 = f32(attr().field_0x038);
 }
-VERIFY(0x02366998, &Act_c::mode_lower_init);
+
+/* 023669AC */
 void Act_c::mode_w_l() {
-  WWHD_FUNC(0x023669AC, void, this);
-  if (!(f32(mSpringScale) > f32(mTargetScale)))
+  if (!(f32(field_0x33C) > f32(field_0x338)))
     mode_lower_init();
 }
-VERIFY(0x023669AC, &Act_c::mode_w_l);
-void Act_c::mode_l_u_init() {
-  WWHD_FUNC(0x023669C0, void, this);
-  mMode = 3;
-  mTargetScale = load<f32>(attr(this) + 0x3C);
+
+/* 02366998 */
+void Act_c::mode_lower_init() {
+  mMode = Mode_LOWER_e;
+  field_0x352 = 0;
 }
-VERIFY(0x023669C0, &Act_c::mode_l_u_init);
+
+/* 023669E0 */
 void Act_c::mode_lower() {
-  WWHD_FUNC(0x023669E0, void, this);
-  s16 timer = mVibrationTimer;
-  if (timer <= 0 && mHeavyEnded) {
-    mVelocity = f32(mVelocity) + load<f32>(attr(this) + 0x30);
-    mVibrationTimer = load<u8>(attr(this) + 0x48);
+  s16 timer = field_0x352;
+  if (timer <= 0 && field_0x34e) {
+    field_0x340 = f32(field_0x340) + f32(attr().field_0x030);
+    field_0x352 = u8(attr().field_0x048);
   } else if (timer > 0)
-    mVibrationTimer = s16(timer - 1);
-  if (u8(mLightCount) > load<u8>(attr(this) + 0x41)) {
-    sound(this, 0x69BA);
+    field_0x352 = s16(timer - 1);
+  if (u8(field_0x350) > u8(attr().field_0x041)) {
+    seStart(this, JA_SE_OBJ_JUMP_SPR_OPEN);
     mode_l_u_init();
   }
 }
-VERIFY(0x023669E0, &Act_c::mode_lower);
-void Act_c::mode_upper_init() {
-  WWHD_FUNC(0x02366AD4, void, this);
-  mMode = 4;
-  mTimer = load<u8>(attr(this) + 0x42);
+
+/* 023669C0 */
+void Act_c::mode_l_u_init() {
+  mMode = Mode_LOWER_UPPER_e;
+  field_0x338 = f32(attr().field_0x03C);
 }
-VERIFY(0x02366AD4, &Act_c::mode_upper_init);
+
+/* 02366AF4 */
 void Act_c::mode_l_u() {
-  WWHD_FUNC(0x02366AF4, void, this);
-  f32 scale = mSpringScale, target = mTargetScale;
+  f32 scale = field_0x33C, target = field_0x338;
   if (!(scale < target)) {
     bool player = mIsPlayerRide != 0;
-    mSpringScale = target;
-    mVelocity = 0.0f;
+    field_0x33C = target;
+    field_0x340 = 0.0f;
     if (player) {
-      u32 play = address(gabi::call<void *>(0x025200D4)),
-          actor = load<u32>(play + 0x5B2C);
-      store<u32>(actor + 0x3BC, load<u32>(actor + 0x3BC) | 0x10);
+      JumpPlayHD *play = jumpGetPlayHD();
+      JumpPlayerHD *actor = play->mPlayer;
+      actor->mNoResetFlg1 |= ForceVomitJumpHD;
     }
     mode_upper_init();
   }
 }
-VERIFY(0x02366AF4, &Act_c::mode_l_u);
-void Act_c::mode_u_w_init() {
-  WWHD_FUNC(0x02366B64, void, this);
-  mMode = 5;
-  mTargetScale = 1.0f;
+
+/* 02366AD4 */
+void Act_c::mode_upper_init() {
+  mMode = Mode_UPPER_e;
+  mTimer = u8(attr().field_0x042);
 }
-VERIFY(0x02366B64, &Act_c::mode_u_w_init);
+
+/* 02366B7C */
 void Act_c::mode_upper() {
-  WWHD_FUNC(0x02366B7C, void, this);
   s16 timer = s16(s16(mTimer) - 1);
   mTimer = timer;
   if (timer <= 0)
     mode_u_w_init();
 }
-VERIFY(0x02366B7C, &Act_c::mode_upper);
+
+/* 02366B64 */
+void Act_c::mode_u_w_init() {
+  mMode = Mode_UPPER_WAIT_e;
+  field_0x338 = 1.0f;
+}
+
+/* 02366B94 */
 void Act_c::mode_u_w() {
-  WWHD_FUNC(0x02366B94, void, this);
-  if (!(f32(mSpringScale) > f32(mTargetScale)))
+  if (!(f32(field_0x33C) > f32(field_0x338)))
     mode_wait_init();
 }
-VERIFY(0x02366B94, &Act_c::mode_u_w);
-s32 jump_Mthd_Create(Act_c *actor) {
-  WWHD_FUNC(0x02366BA8, s32, actor);
-  return actor->Mthd_Create();
+
+/* 023666C8 */
+s32 Act_c::Execute(gptr<Mtx34> *out) {
+  set_push_flag();
+  (this->*l_modeProc.mModes[s32(mMode)])();
+  s32 mode = mMode;
+  if ((mode == Mode_WAIT_e || mode == Mode_LOWER_e) && field_0x354)
+    field_0x340 = f32(field_0x340) + f32(attr().field_0x034);
+  calc_vib_pos();
+  set_mtx();
+  // HD: the matrix output slot contains a 32-bit guest pointer.
+  *out = &M_tmp_mtx;
+  clear_push_flag();
+  return 1;
 }
-VERIFY(0x02366BA8, jump_Mthd_Create);
-s32 jump_Mthd_Delete(Act_c *actor) {
-  WWHD_FUNC(0x02366BAC, s32, actor);
-  return actor->Mthd_Delete();
+
+/* 023667C4 */
+s32 Act_c::Draw() {
+  void *env = jumpGetEnvLightHD();
+  jumpSetTevHD(env, 0, &current.pos, &tevStr);
+  env = jumpGetEnvLightHD();
+  J3DModel *model = mModel.get();
+  jumpLightTevHD(env, model, &tevStr);
+  JumpPlayHD *play = jumpGetPlayHD();
+  l_drawLists.mOpaque = play->mBackgroundOpaque;
+  play = jumpGetPlayHD();
+  l_drawLists.mTranslucent = play->mBackgroundTranslucent;
+  model = mModel.get();
+  jumpModelUpdateHD(model, 0);
+  play = jumpGetPlayHD();
+  l_drawLists.mOpaque = play->mOpaque;
+  play = jumpGetPlayHD();
+  l_drawLists.mTranslucent = play->mTranslucent;
+  return 1;
 }
-VERIFY(0x02366BAC, jump_Mthd_Delete);
-s32 jump_Mthd_Execute(Act_c *actor) {
-  WWHD_FUNC(0x02366BB0, s32, actor);
-  return gabi::call<s32>(0x024F1E9C, actor);
+
+/* 02366BA8 */
+static s32 Mthd_Create(Act_c *actor) { return actor->Mthd_Create(); }
+
+/* 02366BAC */
+static s32 Mthd_Delete(Act_c *actor) { return actor->Mthd_Delete(); }
+
+/* 02366BB0 */
+static s32 Mthd_Execute(Act_c *actor) { return jumpMoveBgExecuteHD(actor); }
+
+/* 02366BB4 */
+static s32 Mthd_Draw(Act_c *actor) {
+  const JumpActorVtableHD *vtable = JumpActorVtableHD::get(actor);
+  return vtable->draw(actor);
 }
-VERIFY(0x02366BB0, jump_Mthd_Execute);
-s32 jump_Mthd_Draw(Act_c *actor) {
-  WWHD_FUNC(0x02366BB4, s32, actor);
-  u32 vtable = load<u32>(address(actor) + 0xB4);
-  return gabi::call<s32>(load<u32>(vtable + 0x2C), actor);
+
+/* 02366BC4 */
+static s32 Mthd_IsDelete(Act_c *actor) {
+  const JumpActorVtableHD *vtable = JumpActorVtableHD::get(actor);
+  return vtable->isDelete(actor);
 }
-VERIFY(0x02366BB4, jump_Mthd_Draw);
-s32 jump_Mthd_IsDelete(Act_c *actor) {
-  WWHD_FUNC(0x02366BC4, s32, actor);
-  u32 vtable = load<u32>(address(actor) + 0xB4);
-  return gabi::call<s32>(load<u32>(vtable + 0x3C), actor);
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02366BD4 */
+static void __sinit_d_a_obj_jump_cpp() {
+  l_headerStatics.mZero[2] = 0;
+  l_headerStatics.mZero[0] = 0;
+  l_headerStatics.mZero[3] = 0;
+  l_headerStatics.mZero[1] = 0;
+  jumpRegisterHD(&l_registration.mEntries[0]);
+  l_headerStatics.mFirst = l_headerConstants.mFirst;
+  l_headerStatics.mSecond = l_headerConstants.mSecond;
+  jumpTrigInitHD(&l_headerStatics.mTrigState);
+  jumpRegisterHD(&l_registration.mEntries[1]);
+  jumpRandomInitHD(&l_headerStatics.mRandomState);
+  jumpRegisterHD(&l_registration.mEntries[2]);
 }
-VERIFY(0x02366BC4, jump_Mthd_IsDelete);
-void jump_sinit() {
-  WWHD_FUNC(0x02366BD4, void);
-  store<u32>(0x1046A330, 0);
-  store<u32>(0x1046A328, 0);
-  store<u32>(0x1046A334, 0);
-  store<u32>(0x1046A32C, 0);
-  gabi::call<void>(0x028F026C, gabi::at<void>(0x101CA5A4));
-  store<f32>(0x1046A31C, load<f32>(0x1002BA38));
-  store<f32>(0x1046A320, load<f32>(0x1002BA3C));
-  gabi::call<void>(0x028ED6F8, gabi::at<void>(0x1046A324));
-  gabi::call<void>(0x028F026C, gabi::at<void>(0x101CA5B0));
-  gabi::call<void>(0x028EAB2C, gabi::at<void>(0x1046A325));
-  gabi::call<void>(0x028F026C, gabi::at<void>(0x101CA5BC));
-}
-VERIFY(0x02366BD4, jump_sinit);
-void jump_static_dtor(void *object, s32 flags) {
-  WWHD_FUNC(0x02366C68, void, object, flags);
+
+/* 02366C68 */
+static void jump_static_dtor(void *object, s32 flags) {
   if (object && (flags & 1))
-    gabi::call<void>(0x0273AF40, object);
+    jumpDeleteHD(object);
 }
-VERIFY(0x02366C68, jump_static_dtor);
-s32 jump_IsDelete(Act_c *actor) {
-  WWHD_FUNC(0x02366C7C, s32, actor);
-  return 1;
-}
-VERIFY(0x02366C7C, jump_IsDelete);
-s32 Act_c::Delete() {
-  WWHD_FUNC(0x02366C88, s32, this);
-  return 1;
-}
-VERIFY(0x02366C88, &Act_c::Delete);
-void jump_dtor(Act_c *actor, s32 flags) {
-  WWHD_FUNC(0x02366C90, void, actor, flags);
+
+/* 02366C7C */
+static s32 IsDelete(Act_c *actor) { return 1; }
+
+/* 02366C90 */
+static void jump_dtor(Act_c *actor, s32 flags) {
   if (actor) {
-    gabi::call<void>(0x025D50BC, actor, 0);
+    jumpActorDestroyHD(actor, 0);
     if (flags & 1)
-      gabi::call<void>(0x0273AF40, actor);
+      jumpDeleteHD(actor);
   }
 }
-VERIFY(0x02366C90, jump_dtor);
-u32 jump_PrmAbstract(Act_c *actor, u32 width, u32 shift) {
-  WWHD_FUNC(0x02366CE4, u32, actor, width, shift);
-  u32 parameters = load<u32>(address(actor) + 0xB0);
+
+/* 02366CE4 */
+static u32 PrmAbstract(Act_c *actor, u32 width, u32 shift) {
+  u32 parameters = u32(actor->mParameters);
   u32 mask = (width & 32) ? 0u : (1u << (width & 31));
   u32 value = (shift & 32) ? 0u : (parameters >> (shift & 31));
   return value & (mask - 1);
 }
-VERIFY(0x02366CE4, jump_PrmAbstract);
 
-// SafeString vtable1002B968+0x14 points to this empty termination hook.
-void jump_SafeString_assureTermination(const SafeString *key) {
-  WWHD_FUNC(0x02366C84, void, key);
-}
-VERIFY(0x02366C84, jump_SafeString_assureTermination);
+// HD: SafeString termination hook is empty.
+
+/* 02366C84 */
+static void SafeString_assureTerminationImpl_(const SafeString *key) {}
+/* WWHD glue
+ext 024F1D40 void jumpMoveBgConstructHD(Act_c* actor)
+ext 02520460 s32 jumpResLoadHD(request_of_phase_process_class* phase, const char* name)
+ext 02366CE4 s32 jumpGetTypeHD(Act_c* actor, s32 width, s32 shift)
+ext 024F1D9C s32 jumpMoveBgCreateHD(Act_c* actor, const char* name, s16 dzb, void* callback, u32 heap)
+ext 0273AA24 void jumpAssertHD(const char* file, s32 line, const char* expression)
+ext 024F1F64 s32 jumpMoveBgDeleteHD(Act_c* actor)
+ext 025204C8 void jumpResDeleteHD(request_of_phase_process_class* phase, const char* name)
+ext 028E90D4 void jumpMtxCopyHD(const Mtx34* source, Mtx34* target)
+ext 025F2518 void jumpScaleMHD(f32 x, f32 y, f32 z)
+ext 026066C4 J3DModelData* jumpGetResourceHD(void* resources, SafeString* name, s16 index)
+ext 025E38E0 J3DModel* jumpCreateModelHD(J3DModelData* data, u32 flags, u32 materialFlags)
+ext 028E93CC void jumpTransSHD(Mtx34* matrix, f32 x, f32 y, f32 z)
+ext 025F1B48 void jumpRotateZXYHD(Mtx34* matrix, s16 x, s16 y, s16 z)
+ext 025F24E0 void jumpTransMHD(f32 x, f32 y, f32 z)
+ext 025D674C void jumpCullBoxHD(Act_c* actor, f32 minX, f32 minY, f32 minZ, f32 maxX, f32 maxY, f32 maxZ)
+ext 025200D4 JumpPlayHD* jumpGetPlayHD()
+ext 02555D0C void* jumpGetEnvLightHD()
+ext 025626A4 void jumpSetTevHD(void* env, s32 type, cXyz* position, dKy_tevstr_c* tev)
+ext 02562F5C void jumpLightTevHD(void* env, J3DModel* model, dKy_tevstr_c* tev)
+ext 025E2DE0 void jumpModelUpdateHD(J3DModel* model, s32 flags)
+ext 02520540 s32 jumpReverbHD(s8 room)
+ext 025E1A40 void jumpSoundHD(u32 sound, cXyz* position, s32 flags, s32 reverb)
+ext 024F1E9C s32 jumpMoveBgExecuteHD(Act_c* actor)
+ext 028F026C void jumpRegisterHD(JumpRegistrationHD* registration)
+ext 028ED6F8 void jumpTrigInitHD(be<u8>* state)
+ext 028EAB2C void jumpRandomInitHD(be<u8>* state)
+ext 0273AF40 void jumpDeleteHD(void* object)
+ext 025D50BC void jumpActorDestroyHD(Act_c* actor, s32 flags)
+data l_attributes 1002BA48
+data l_modeProc 1002BA08
+data l_matrixStack 1048D0CC
+data M_tmp_mtx 1046A338
+data l_resources 101F4F28
+data l_drawLists 104B4634
+data l_headerStatics 1046A31C
+data l_headerConstants 1002BA38
+data l_registration 101CA5A4
+str 1002BA40 "Hjump"
+str 1002B980 "d_a_obj_jump.cpp" in 02365C98
+str 1002B9E8 "d_a_obj_jump.cpp" in 02365F68
+str 1002B994 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
+str 1002B9D8 "model_data != 0"
+*/

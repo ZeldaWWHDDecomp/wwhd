@@ -1,106 +1,116 @@
-#include "gabi.h"
+/**
+ * c_m3d_g_pla.cpp
+ * Component - planes with normals
+ *
+ * Written in the style of the GameCube decompilation and verified function by function
+ * against the recompiled WWHD original (tools/verify, unit c_m3d_g_pla).
+ */
+#include "SSystem/SComponent/c_m3d_g_pla.h"
 #include <cmath>
-using namespace gabi;
 
-void* pla_ctor(void* self) {
-    WWHD_FUNC(0x020189A0, void*, self);
-    if (!self) self = call<void*>(0x0273AD10, 20);
-    if (self) {
-        f32 d = load<f32>(0x100033AC);
-        store<u32>(ea(self)+16, 0x1000339C);
-        store<f32>(ea(self)+12, d);
+static const f32 initialDistance = 0.0f;
+static const f32 G_CM3D_F_ABS_MIN = 0.000003814697265625f;
+enum : u32 { planeVtable = 0x1000339C }; // HD: cM3dGPla vtable.
+
+/* 02018BA8 */
+s16 cM3dGPla::CalcAngleXz(be<s16>* pAngleX, be<s16>* pAngleY) {
+    // HD: forwards the callee's s16 result (GameCube returns void).
+    return cM3d_CalcVecAngle(&mNormal, pAngleX, pAngleY);
+}
+
+/* 02018A7C */
+void cM3dGPla::SetupNP0(const cXyz* pNormal, const cXyz* pPoint) {
+    // GHS copies these components through floating-point loads, in this order.
+    mNormal.x = pNormal->x;
+    mNormal.y = pNormal->y;
+    mNormal.z = pNormal->z;
+    PSVECNormalize(&mNormal, &mNormal);
+    f32 d = PSVECDotProduct(&mNormal, pPoint);
+    mD = -d;
+}
+
+/* 02018AE4 */
+u32 cM3dGPla::getCrossY(const cXyz* i_axis, be<f32>* i_value) {
+    f32 y = mNormal.y;
+    if (std::fabs(y) < G_CM3D_F_ABS_MIN) {
+        return FALSE;
     }
-    return self;
+    f32 nx = mNormal.x;
+    f32 px = i_axis->x;
+    f32 product = nx * px;
+    f32 nz = mNormal.z;
+    f32 pz = i_axis->z;
+    f32 numerator = gabi::fnmsubs(nz, pz, -product);
+    f32 d = mD;
+    *i_value = (numerator - d) / y;
+    return TRUE;
 }
-VERIFY(0x020189A0, pla_ctor);
 
-void* pla_ctor_nd(void* self, void* normal, f32 d) {
-    WWHD_FUNC(0x020189EC, void*, self, normal, d);
-    if (!self) self = call<void*>(0x0273AD10, 20);
-    if (self) {
-        f32 initial = load<f32>(0x100033AC);
-        store<u32>(ea(self)+16, 0x1000339C);
-        store<f32>(ea(self)+12, initial);
-        store<u32>(ea(self), load<u32>(ea(normal)));
-        store<u32>(ea(self)+4, load<u32>(ea(normal)+4));
-        u32 z = load<u32>(ea(normal)+8);
-        store<f32>(ea(self)+12, d);
-        store<u32>(ea(self)+8, z);
+/* 02018B38 */
+u32 cM3dGPla::getCrossYLessD(const cXyz* i_axis, be<f32>* i_value) {
+    f32 y = mNormal.y;
+    if (std::fabs(y) < G_CM3D_F_ABS_MIN) {
+        return FALSE;
     }
-    return self;
-}
-VERIFY(0x020189EC, pla_ctor_nd);
-
-void pla_setup_np0(void* self, void* normal, void* point) {
-    WWHD_FUNC(0x02018A7C, void, self, normal, point);
-    store<f32>(ea(self), load<f32>(ea(normal)));
-    store<f32>(ea(self)+4, load<f32>(ea(normal)+4));
-    store<f32>(ea(self)+8, load<f32>(ea(normal)+8));
-    call<void>(0x028E8EF0, self, self);
-    f32 d = call<f32>(0x028E8F44, self, point);
-    store<f32>(ea(self)+12, -d);
-}
-VERIFY(0x02018A7C, pla_setup_np0);
-
-u32 pla_cross_y(void* self, void* point, void* out) {
-    WWHD_FUNC(0x02018AE4, u32, self, point, out);
-    f32 y = load<f32>(ea(self)+4);
-    if (std::fabs(y) < load<f32>(0x100030B8)) return 0;
-    f32 nx = load<f32>(ea(self));
-    f32 px = load<f32>(ea(point));
+    f32 px = i_axis->x;
+    f32 nx = mNormal.x;
     f32 product = nx * px;
-    f32 nz = load<f32>(ea(self)+8);
-    f32 pz = load<f32>(ea(point)+8);
-    f32 numerator = fnmsubs(nz, pz, -product);
-    f32 d = load<f32>(ea(self)+12);
-    store<f32>(ea(out), (numerator-d)/y);
-    return 1;
+    f32 nz = mNormal.z;
+    f32 pz = i_axis->z;
+    *i_value = gabi::fnmsubs(nz, pz, -product) / y;
+    return TRUE;
 }
-VERIFY(0x02018AE4, pla_cross_y);
 
-u32 pla_cross_y_no_d(void* self, void* point, void* out) {
-    WWHD_FUNC(0x02018B38, u32, self, point, out);
-    f32 y = load<f32>(ea(self)+4);
-    if (std::fabs(y) < load<f32>(0x100030B8)) return 0;
-    f32 px = load<f32>(ea(point));
-    f32 nx = load<f32>(ea(self));
-    f32 product = nx * px;
-    f32 nz = load<f32>(ea(self)+8);
-    f32 pz = load<f32>(ea(point)+8);
-    store<f32>(ea(out), fnmsubs(nz, pz, -product)/y);
-    return 1;
+/* 02018B84 */
+void cM3dGPla::Set(const cM3dGPla* pla) {
+    mNormal = pla->mNormal;
+    mD = pla->mD;
 }
-VERIFY(0x02018B38, pla_cross_y_no_d);
 
-void pla_set(void* self, void* other) {
-    WWHD_FUNC(0x02018B84, void, self, other);
-    store<u32>(ea(self), load<u32>(ea(other)));
-    store<u32>(ea(self)+4, load<u32>(ea(other)+4));
-    store<u32>(ea(self)+8, load<u32>(ea(other)+8));
-    store<f32>(ea(self)+12, load<f32>(ea(other)+12));
-}
-VERIFY(0x02018B84, pla_set);
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
 
-s16 pla_calc_angle_xz(void* self, void* x, void* z) {
-    WWHD_FUNC(0x02018BA8, s16, self, x, z);
-    return call<s16>(0x02017264, self, x, z);
+/* 020189A0 */
+// HD: GHS constructor allocates when called with NULL, then initializes mD.
+static cM3dGPla* cM3dGPla__ct(cM3dGPla* i_this) {
+    if (i_this == NULL) {
+        i_this = (cM3dGPla*)operator_new(sizeof(cM3dGPla));
+    }
+    if (i_this != NULL) {
+        f32 d = initialDistance;
+        i_this->__vtbl = planeVtable;
+        i_this->mD = d;
+    }
+    return i_this;
 }
-VERIFY(0x02018BA8, pla_calc_angle_xz);
 
-void pla_sinit() {
-    WWHD_FUNC(0x02018BAC, void);
-    store<u32>(0x101FF95C, 0);
-    store<u32>(0x101FF954, 0);
-    store<u32>(0x101FF960, 0);
-    store<u32>(0x101FF958, 0);
-    call<void>(0x028F026C, at<void>(0x1018C988));
-    f32 a = load<f32>(0x100033B4);
-    f32 b = load<f32>(0x100033B8);
-    store<f32>(0x101FF948, a);
-    store<f32>(0x101FF94C, b);
-    call<void>(0x028ED6F8, at<void>(0x101FF950));
-    call<void>(0x028F026C, at<void>(0x1018C994));
-    call<void>(0x028EAB2C, at<void>(0x101FF951));
-    call<void>(0x028F026C, at<void>(0x1018C9A0));
+/* 020189EC */
+// HD: allocating constructor with a normal and distance; GHS stores mD before the last normal word.
+static cM3dGPla* cM3dGPla__ct_normal(cM3dGPla* i_this, const cXyz* normal, f32 d) {
+    if (i_this == NULL) {
+        i_this = (cM3dGPla*)operator_new(sizeof(cM3dGPla));
+    }
+    if (i_this != NULL) {
+        f32 initial = initialDistance;
+        i_this->__vtbl = planeVtable;
+        i_this->mD = initial;
+        // Integer word copies preserve signalling NaNs and the original aliasing order.
+        *reinterpret_cast<be<u32>*>(&i_this->mNormal.x) = *reinterpret_cast<const be<u32>*>(&normal->x);
+        *reinterpret_cast<be<u32>*>(&i_this->mNormal.y) = *reinterpret_cast<const be<u32>*>(&normal->y);
+        u32 z = *reinterpret_cast<const be<u32>*>(&normal->z);
+        i_this->mD = d;
+        *reinterpret_cast<be<u32>*>(&i_this->mNormal.z) = z;
+    }
+    return i_this;
 }
-VERIFY(0x02018BAC, pla_sinit);
+
+/* 02018BAC */
+static void __sinit_c_m3d_g_pla_cpp() {
+    sinit_header_statics_rodata(0x101FF948, 0x1018C988, 0x101FF954, 0x100033B4);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data initialDistance 100033AC
+data G_CM3D_F_ABS_MIN 100030B8
+ext 028E8EF0 void PSVECNormalize(const cXyz*, cXyz*)
+ext 02017264 s16 cM3d_CalcVecAngle(const cXyz*, be<s16>*, be<s16>*)
+*/

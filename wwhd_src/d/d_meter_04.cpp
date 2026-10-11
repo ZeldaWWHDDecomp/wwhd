@@ -1,45 +1,60 @@
-#include "gabi.h"
-using namespace gabi;
+/**
+ * HUD draw-list construction and destruction helpers from d_meter.cpp.
+ * Verified against WWHD (unit d_meter_04).
+ */
+#include "d/d_meter_04.h"
 
-u32 meterPaneFactory(u32 object) {
-    WWHD_FUNC(0x0259CF60, u32, object);
-    if (!object) object = call<u32>(0x0273AD10, u32(0xC4));
-    if (object) {
-        call<void>(0x0252CCBC, object);
-        store<u32>(object, 0x1004CBD8);
+/* ---------------- HD: compiler-generated and template code of this translation unit ---------------- */
+
+/* 0259CF60 */
+// HD: GHS allocates when the constructor receives NULL.
+static dDlst_2Dm_c* dDlst_2Dm_c__ct(dDlst_2Dm_c* i_this) {
+    if (i_this == NULL) {
+        i_this = (dDlst_2Dm_c*)operator_new(sizeof(dDlst_2Dm_c));
     }
-    return object;
-}
-VERIFY(0x0259CF60, meterPaneFactory);
-
-void meterPaneDeleteA(u32 object, u32 flags) {
-    WWHD_FUNC(0x0259CFB4, void, object, flags);
-    if (object) {
-        call<void>(0x0252CCFC, object, u32(0));
-        if (flags & 1) call<void>(0x0273AF40, object);
+    if (i_this != NULL) {
+        dDlst_base_c__ct(i_this);
+        i_this->__vtbl = dDlst_2Dm_c::__vt;
     }
+    return i_this;
 }
-VERIFY(0x0259CFB4, meterPaneDeleteA);
 
-void meterPaneDeleteB(u32 object, u32 flags) {
-    WWHD_FUNC(0x0259D10C, void, object, flags);
-    if (object) {
-        call<void>(0x0252CCFC, object, u32(0));
-        if (flags & 1) call<void>(0x0273AF40, object);
-    }
-}
-VERIFY(0x0259D10C, meterPaneDeleteB);
-
-void meterPaneDeleteC(u32 object, u32 flags) {
-    WWHD_FUNC(0x0259D160, void, object, flags);
-    if (object) {
-        call<void>(0x0252CCFC, object, u32(0));
-        if (flags & 1) call<void>(0x0273AF40, object);
+/* 0259CFB4 */
+static void dDlst_2Dm_c__dt(dDlst_2Dm_c* i_this, u32 flags) {
+    if (i_this != NULL) {
+        dDlst_base_c__dt(i_this, 0);
+        if (flags & 1) {
+            operator_delete(i_this);
+        }
     }
 }
-VERIFY(0x0259D160, meterPaneDeleteC);
 
-void meterPaneEmpty(u32 object) {
-    WWHD_FUNC(0x0259D1B4, void, object);
+/* 0259D10C */
+static void dDlst_2DMETER2_c__dt(dDlst_2DMETER2_c* i_this, u32 flags) {
+    if (i_this != NULL) {
+        dDlst_base_c__dt(i_this, 0);
+        if (flags & 1) {
+            operator_delete(i_this);
+        }
+    }
 }
-VERIFY(0x0259D1B4, meterPaneEmpty);
+
+/* 0259D160 */
+static void dDlst_2DMETER1_c__dt(dDlst_2DMETER1_c* i_this, u32 flags) {
+    if (i_this != NULL) {
+        dDlst_base_c__dt(i_this, 0);
+        if (flags & 1) {
+            operator_delete(i_this);
+        }
+    }
+}
+
+/* 0259D1B4 */
+// HD: this TU's empty SafeString virtual method.
+static void SafeString_assureTerminationImpl(SafeString* i_this) {
+}
+
+/* WWHD glue (tools/verify/autoglue.py): external draw-list base helpers
+ext 0252CCBC dDlst_base_c* dDlst_base_c__ct(dDlst_base_c* i_this)
+ext 0252CCFC void dDlst_base_c__dt(dDlst_base_c* i_this, u32 flags)
+*/

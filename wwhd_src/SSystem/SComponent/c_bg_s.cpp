@@ -1,165 +1,387 @@
-#include "gabi.h"
-using namespace gabi;
-namespace c_bg_s {
-void assert_at(u32 text, u32 line, u32 condition) { call<void>(0x0273AA24, at<void>(text), line, at<void>(condition)); }
-u32 entry(void *self, u32 id) { return ea(self) + id * 20u; }
-void elm_init(void *self) {
-  WWHD_FUNC(0x02007F60, void, self);
-  u32 a=ea(self); store<u32>(a+12,0);store<u32>(a+8,0xFFFFFFFF);store<u32>(a+4,0);store<u32>(a,0);
+/* Background-world registration and collision-query dispatch. Verified HD behavior. */
+#include "SSystem/SComponent/c_bg_s.h"
+static s32 l_SetCounter = 0;
+static const f32 groundHeightMin = -1000000000.0f;
+static const f32 piMin = -3.1415927410125732f;
+static const f32 piMax = 3.1415927410125732f;
+enum : u32 { registryVtable = 0x10000E3C, elementVtable = 0x10000E24 };
+static cBgS_ChkElm *cBgS_ChkElm__ct(cBgS_ChkElm *);
+
+/* 02007F60 */
+void cBgS_ChkElm::Init() {
+    m_actor_ptr = NULL;
+    m_actor_id = fpcM_ERROR_PROCESS_ID_e;
+    m_flags = 0;
+    m_bgw_base_ptr = NULL;
 }
-VERIFY(0x02007F60, elm_init);
-void elm_regist(void *self,void *world,u32 pid,void *actor) {
-  WWHD_FUNC(0x02007F7C, void, self,world,pid,actor);
-  u32 a=ea(self),flags=load<u32>(a+4);store<u32>(a,ea(world));store<u32>(a+8,pid);store<u32>(a+12,ea(actor));store<u32>(a+4,flags|1);
+/* 02007F7C */
+void cBgS_ChkElm::Regist2(cBgWMesh *bgw, u32 pid, void *actor) {
+    u32 flags = m_flags;
+    m_bgw_base_ptr = bgw;
+    m_actor_id = pid;
+    m_actor_ptr = actor;
+    m_flags = flags | USED;
 }
-VERIFY(0x02007F7C, elm_regist);
-void elm_release(void *self) {
-  WWHD_FUNC(0x02007F98,void,self);
-  u32 a=ea(self),flags=load<u32>(a+4);store<u32>(a,0);store<u32>(a+12,0);store<u32>(a+8,0xFFFFFFFF);store<u32>(a+4,flags&~1u);
+/* 02007F98 */
+void cBgS_ChkElm::Release() {
+    u32 flags = m_flags;
+    m_bgw_base_ptr = NULL;
+    m_actor_ptr = NULL;
+    m_actor_id = fpcM_ERROR_PROCESS_ID_e;
+    m_flags = flags & ~USED;
 }
-VERIFY(0x02007F98, elm_release);
-void *construct(void *self) {
-  WWHD_FUNC(0x02007FBC,void *,self);
-  if(!self)self=call<void *>(0x0273AD10,0x1404);
-  if(self){store<u32>(ea(self)+0x1400,0x10000E3C);call<void>(0x028EFFD0,self,256,20,at<void>(0x02008B04));}return self;
+
+/* 020086D4 */
+bool cBgS::Regist(cBgWMesh *bgw, u32 pid, void *actor) {
+    if (bgw == NULL || (u32)bgw->m_id < MAX_BG)
+        return true;
+    if (cBgW_ChkMemoryError(bgw))
+        return true;
+    u32 i = l_SetCounter;
+    if (i >= MAX_BG)
+        assertion("c_bg_s.cpp", 0xA3, "0 <= i && i < 256");
+    while (true) {
+        cBgS_ChkElm *elm = &m_chk_element[i];
+        u32 next = i + 1;
+        if (!(elm->m_flags & cBgS_ChkElm::USED)) {
+            elm->Regist2(bgw, pid, actor);
+            bgw->m_id = i;
+            l_SetCounter = (s32)next < MAX_BG ? next : 0;
+            return false;
+        }
+        i = next;
+        u32 start = l_SetCounter;
+        if ((s32)i >= MAX_BG)
+            i = 0;
+        if (start == i)
+            break;
+    }
+    bgw->m_id = MAX_BG;
+    return true;
 }
-VERIFY(0x02007FBC, construct);
-void initialize(void *self) {
-  WWHD_FUNC(0x02008020,void,self);
-  store<u32>(0x1018C520,0);
-  for(u32 i=0;i<256;++i)call<void>(0x02007F60,at<void>(entry(self,i)));
+/* 020087EC */
+bool cBgS::Release(cBgWMesh *bgw) {
+    if (bgw == NULL)
+        return true;
+    u32 id = bgw->m_id;
+    if (id >= MAX_BG)
+        return true;
+    cBgS_ChkElm *elm = &m_chk_element[id];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return true;
+    elm->Release();
+    bgw->m_id = MAX_BG;
+    return false;
 }
-VERIFY(0x02008020,initialize);
-void clear(void *self) {
-  WWHD_FUNC(0x0200805C,void,self);
-  for(u32 i=0;i<256;++i)if(load<u32>(entry(self,i)+4)&1)call<void>(0x02007F98,at<void>(entry(self,i)));
-  for(u32 i=0;i<256;++i)call<void>(0x02007F60,at<void>(entry(self,i)));
+/* 02008020 */
+void cBgS::Ct() {
+    l_SetCounter = 0;
+    for (u32 i = 0; i < MAX_BG; ++i)
+        m_chk_element[i].Init();
 }
-VERIFY(0x0200805C,clear);
-void *convert(void *work) {
-  WWHD_FUNC(0x020080C0,void *,work);
-  u32 a=ea(work),flag=load<u32>(a+0x30);if(flag&0x80000000u)return work;
-  u32 vertex=load<u32>(a+4);store<u32>(a+0x30,flag|0x80000000u);
-  if(vertex&3)assert_at(0x10000C08,0x244,0x10000B88);
-  if(load<u32>(a+12)&1)assert_at(0x10000C08,0x245,0x10000BA8);
-  if(load<u32>(a+20)&1)assert_at(0x10000C08,0x246,0x10000BC8);
-  if(load<u32>(a+28)&1)assert_at(0x10000C08,0x247,0x10000C14);
-  if(load<u32>(a+36)&3)assert_at(0x10000C08,0x248,0x10000BE8);
-  if(load<u32>(a+44)&3)assert_at(0x10000C08,0x249,0x10000C38);
-  vertex=load<u32>(a+4);u32 groups=load<u32>(a+36);if(vertex)store<u32>(a+4,vertex+a);
-  u32 trees=load<u32>(a+28),info=load<u32>(a+44);store<u32>(a+36,groups+a);
-  u32 blocks=load<u32>(a+20);u32 tris=load<u32>(a+12);store<u32>(a+44,info+a);
-  s32 count=load<s32>(a+32);store<u32>(a+28,trees+a);store<u32>(a+12,tris+a);store<u32>(a+20,blocks+a);
-  for(s32 i=0;i<count;++i){u32 table=load<u32>(a+36),p=table+u32(i)*52u;store<u32>(p,load<u32>(p)+a);count=load<s32>(a+32);}
-  return work;
+/* 0200805C */
+void cBgS::Dt() {
+    for (u32 i = 0; i < MAX_BG; ++i)
+        if (m_chk_element[i].m_flags & cBgS_ChkElm::USED)
+            m_chk_element[i].Release();
+    for (u32 i = 0; i < MAX_BG; ++i)
+        m_chk_element[i].Init();
 }
-VERIFY(0x020080C0,convert);
-bool poly_safe(void *self,void *poly) {
-  WWHD_FUNC(0x02008254,bool,self,poly);
-  u32 p=ea(poly);if(load<u16>(p)==0xFFFF)return false;u32 id=load<u16>(p+2);if(id>=256)return false;
-  u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return false;
-  u32 ptr=load<u32>(p+4),world=load<u32>(e),pid=load<u32>(e+8);
-  if(ptr!=world)return false;return load<u32>(p+8)==pid;
+
+/* 02008860 */
+// HD: keep query initialization and registry reloads in the original callback order.
+bool cBgS::LineCross(cBgS_LinChk *chk) {
+    chk->mpBgW = NULL;
+    chk->mActorId = fpcM_ERROR_PROCESS_ID_e;
+    chk->mBgIndex = MAX_BG;
+    chk->mPolyIndex = INVALID_POLY;
+    chk->mFlag = (u32)chk->mFlag & ~cBgS_LinChk::HIT_e;
+    bool ret = false;
+    for (u32 i = 0; i < MAX_BG; ++i) {
+        cBgS_ChkElm *elm = &m_chk_element[i];
+        if (!(elm->m_flags & cBgS_ChkElm::USED))
+            continue;
+        cBgWMesh *world = elm->m_bgw_base_ptr.get();
+        if (world->pm_vtx_tbl.get() == NULL)
+            continue;
+        if (cBgS_ChkSameActorPid(chk, elm->m_actor_id))
+            continue;
+        u32 flags = chk->mFlag;
+        chk->mPreWallChk = ((flags >> 30) & 1) ^ 1;
+        chk->mPreGroundChk = ((flags >> 31) & 1) ^ 1;
+        chk->mPreRoofChk = ((flags >> 29) & 1) ^ 1;
+        world = elm->m_bgw_base_ptr.get();
+        if (!cBgW_LineCheckGrpRp(world, chk, world->m_rootGrpIdx, 1))
+            continue;
+        u32 pid = elm->m_actor_id;
+        cBgWMesh *ptr = elm->m_bgw_base_ptr.get();
+        chk->mActorId = pid;
+        chk->mpBgW = (cBgW *)ptr;
+        chk->mBgIndex = i;
+        ret = true;
+    }
+    if (ret)
+        chk->mFlag = (u32)chk->mFlag | cBgS_LinChk::HIT_e;
+    return ret;
 }
-VERIFY(0x02008254,poly_safe);
-s32 tri_group(void *self,u32 id,s32 poly) {
-  WWHD_FUNC(0x020082C0,s32,self,id,poly);
-  if(id>=256)assert_at(0x10000CA8,0x2F5,0x10000C58);u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return -1;
-  u32 w=load<u32>(e),data=0;if(poly>=0)data=load<u32>(w+0x94);
-  if(poly<0||poly>=load<s32>(data+8)){assert_at(0x10000CB4,0x2A2,0x10000C78);data=load<u32>(w+0x94);}
-  return load<u16>(load<u32>(data+12)+u32(poly)*10u+8);
+/* 02008974 */
+f32 cBgS::GroundCross(cBgS_GndChk *chk) {
+    f32 height = groundHeightMin;
+    u32 flags = chk->mFlag;
+    chk->mPolyIndex = INVALID_POLY;
+    chk->mpBgW = NULL;
+    chk->mActorId = fpcM_ERROR_PROCESS_ID_e;
+    chk->mBgIndex = MAX_BG;
+    chk->mGndPrecheck = flags & 1;
+    chk->mNowY = height;
+    chk->mWallPrecheck = flags & 2;
+    for (u32 i = 0; i < MAX_BG; ++i) {
+        cBgS_ChkElm *elm = &m_chk_element[i];
+        if (!(elm->m_flags & cBgS_ChkElm::USED))
+            continue;
+        cBgWMesh *world = elm->m_bgw_base_ptr.get();
+        if (world->pm_vtx_tbl.get() == NULL)
+            continue;
+        if (cBgS_ChkSameActorPid(chk, elm->m_actor_id))
+            continue;
+        world = elm->m_bgw_base_ptr.get();
+        if (!cBgW_GroundCrossGrpRp(world, chk, world->m_rootGrpIdx, 1))
+            continue;
+        u32 pid = elm->m_actor_id;
+        cBgWMesh *ptr = elm->m_bgw_base_ptr.get();
+        chk->mActorId = pid;
+        chk->mpBgW = (cBgW *)ptr;
+        chk->mBgIndex = i;
+    }
+    return chk->mNowY;
 }
-VERIFY(0x020082C0,tri_group);
-s32 group_room(void *self,u32 id,u32 group) {
-  WWHD_FUNC(0x0200839C,s32,self,id,group);
-  if(id>=256)assert_at(0x10000CE0,0x306,0x10000CC0);u32 e=entry(self,id);if(!(load<u32>(e+4)&1)||group==0xFFFF)return 0xFFFF;
-  u32 world=load<u32>(e),vtable=load<u32>(world+4);return call_ptr<s32>(load<u32>(vtable+0x14),at<void>(world),group);
+
+/* 020080C0 */
+// HD: free entry for GameCube's static cBgS::ConvDzb; preserve relocation/assertion ordering.
+static cBgD_Reloc *ConvDzb(cBgD_Reloc *pbgd) {
+    u32 base = gabi::ea(pbgd), flag = pbgd->flag;
+    if (flag & cBgD_Reloc::RELOCATED)
+        return pbgd;
+    u32 vertex = pbgd->m_v_tbl.v;
+    pbgd->flag = flag | cBgD_Reloc::RELOCATED;
+    if (vertex & 3)
+        assertion("c_bg_s.cpp", 0x244, "((int)pbgd->m_v_tbl % 4) == 0");
+    if (pbgd->m_t_tbl.v & 1)
+        assertion("c_bg_s.cpp", 0x245, "((int)pbgd->m_t_tbl % 2) == 0");
+    if (pbgd->m_b_tbl.v & 1)
+        assertion("c_bg_s.cpp", 0x246, "((int)pbgd->m_b_tbl % 2) == 0");
+    if (pbgd->m_tree_tbl.v & 1)
+        assertion("c_bg_s.cpp", 0x247, "((int)pbgd->m_tree_tbl % 2) == 0");
+    if (pbgd->m_g_tbl.v & 3)
+        assertion("c_bg_s.cpp", 0x248, "((int)pbgd->m_g_tbl % 4) == 0");
+    if (pbgd->m_ti_tbl.v & 3)
+        assertion("c_bg_s.cpp", 0x249, "((int)pbgd->m_ti_tbl % 4) == 0");
+    vertex = pbgd->m_v_tbl.v;
+    u32 groups = pbgd->m_g_tbl.v;
+    if (vertex)
+        pbgd->m_v_tbl.v = vertex + base;
+    u32 trees = pbgd->m_tree_tbl.v, info = pbgd->m_ti_tbl.v;
+    pbgd->m_g_tbl.v = groups + base;
+    u32 blocks = pbgd->m_b_tbl.v, tris = pbgd->m_t_tbl.v;
+    pbgd->m_ti_tbl.v = info + base;
+    s32 count = pbgd->m_g_num;
+    pbgd->m_tree_tbl.v = trees + base;
+    pbgd->m_t_tbl.v = tris + base;
+    pbgd->m_b_tbl.v = blocks + base;
+    for (s32 i = 0; i < count; ++i) {
+        cBgD_Grp_t *group = &pbgd->m_g_tbl.get()[i];
+        group->m_name.v = (u32)group->m_name.v + base;
+        count = pbgd->m_g_num;
+    }
+    return pbgd;
 }
-VERIFY(0x0200839C,group_room);
-void *actor_pointer(void *self,u32 id) {
-  WWHD_FUNC(0x02008438,void *,self,id);
-  if(id>=256)assert_at(0x10000D24,0x2B4,0x10000CFC);return at<void>(load<u32>(entry(self,id)+12));
+
+/* 02008438 */
+void *cBgS::GetActorPointer(u32 actor_index) {
+    if (actor_index >= MAX_BG)
+        assertion("c_bg_s.cpp", 0x2B4, "0 <= actor_index && actor_index < 256");
+    return m_chk_element[actor_index].m_actor_ptr.get();
 }
-VERIFY(0x02008438,actor_pointer);
-void *world_pointer(void *self,void *poly) {
-  WWHD_FUNC(0x02008498,void *,self,poly);
-  u32 id=load<u16>(ea(poly)+2);if(id>=256)return nullptr;u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return nullptr;return at<void>(load<u32>(e));
+/* 02008498 */
+cBgWMesh *cBgS::GetBgWPointer(cBgS_PolyInfo *poly) {
+    u32 id = poly->mBgIndex;
+    if (id >= MAX_BG)
+        return NULL;
+    cBgS_ChkElm *elm = &m_chk_element[id];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return NULL;
+    return elm->m_bgw_base_ptr.get();
 }
-VERIFY(0x02008498,world_pointer);
-void *triangle_plane(void *self,u32 id,s32 poly) {
-  WWHD_FUNC(0x020084C8,void *,self,id,poly);
-  if(id>=256)return nullptr;u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return nullptr;u32 w=load<u32>(e);
-  if(poly<0||poly>=load<s32>(load<u32>(w+0x94)+8))assert_at(0x10000D60,0x2AF,0x10000D30);
-  return at<void>(load<u32>(w+0x88)+u32(poly)*24u);
+/* 02008254 */
+bool cBgS::ChkPolySafe(cBgS_PolyInfo *poly) {
+    if (poly->mPolyIndex == INVALID_POLY)
+        return false;
+    u32 id = poly->mBgIndex;
+    if (id >= MAX_BG)
+        return false;
+    cBgS_ChkElm *elm = &m_chk_element[id];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return false;
+    cBgW *ptr = poly->mpBgW.get();
+    cBgWMesh *world = elm->m_bgw_base_ptr.get();
+    u32 pid = elm->m_actor_id;
+    if ((void *)ptr != (void *)world)
+        return false;
+    return poly->mActorId == pid;
 }
-VERIFY(0x020084C8,triangle_plane);
-void triangle_points(void *self,void *poly,void *p0,void *p1,void *p2) {
-  WWHD_FUNC(0x02008570,void,self,poly,p0,p1,p2);
-  u32 id=load<u16>(ea(poly)+2);if(id>=256)assert_at(0x10000D80,0x373,0x10000D6C);u32 e=entry(self,id);
-  if(load<u32>(e+4)&1)call<void>(0x0200A220,at<void>(load<u32>(e)),load<u16>(ea(poly)),p0,p1,p2);
+/* 020082C0 */
+s32 cBgS::GetTriGrp(u32 bg_index, s32 poly_index) {
+    if (bg_index >= MAX_BG)
+        assertion("c_bg_s.cpp", 0x2F5, "0 <= bg_index && bg_index < 256");
+    cBgS_ChkElm *elm = &m_chk_element[bg_index];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return -1;
+    cBgWMesh *world = elm->m_bgw_base_ptr.get();
+    cBgD_Mesh *data = NULL;
+    if (poly_index >= 0)
+        data = world->pm_bgd.get();
+    if (poly_index < 0 || poly_index >= (s32)data->m_t_num) {
+        assertion("c_bg_w.h", 0x2A2, "0 <= poly_index && poly_index < pm_bgd->m_t_num");
+        data = world->pm_bgd.get();
+    }
+    return data->m_t_tbl.get()[poly_index].grp;
 }
-VERIFY(0x02008570,triangle_points);
-s32 group_info(void *self,void *poly,s32 group) {
-  WWHD_FUNC(0x020085F8,s32,self,poly,group);
-  u32 id=load<u16>(ea(poly)+2);if(id>=256)assert_at(0x10000DD4,0x3FA,0x10000D8C);u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return -1;
-  u32 w=load<u32>(e),data=0;if(group>=0)data=load<u32>(w+0x94);
-  if(group<0||group>=load<s32>(data+32)){assert_at(0x10000DE0,0x2E1,0x10000DAC);data=load<u32>(w+0x94);}
-  return load<s32>(load<u32>(data+36)+u32(group)*52u+48);
+/* 0200839C */
+s32 cBgS::GetGrpToRoomId(u32 bg_index, u32 grp_id) {
+    if (bg_index >= MAX_BG)
+        assertion("c_bg_s.cpp", 0x306, "0 <= bg_index && bg_index < 256");
+    cBgS_ChkElm *elm = &m_chk_element[bg_index];
+    if (!(elm->m_flags & cBgS_ChkElm::USED) || grp_id == INVALID_POLY)
+        return INVALID_POLY;
+    cBgWMesh *world = elm->m_bgw_base_ptr.get();
+    auto *vtable = (BgSRoomVtable *)world->__vtbl.get();
+    return gabi::call_ptr<s32>(vtable->GetGrpToRoomIndex, world, grp_id);
 }
-VERIFY(0x020085F8,group_info);
-bool regist(void *self,void *world,u32 pid,void *actor) {
-  WWHD_FUNC(0x020086D4,bool,self,world,pid,actor);
-  if(!world||load<u32>(ea(world))<256)return true;
-  if(call<s32>(0x02009E58,world))return true;
-  u32 i=load<u32>(0x1018C520);if(i>=256)assert_at(0x10000E00,0xA3,0x10000DEC);
-  for(;;){u32 e=entry(self,i),n=i+1;if(!(load<u32>(e+4)&1)){
-    call<void>(0x02007F7C,at<void>(e),world,pid,actor);store<u32>(ea(world),i);store<u32>(0x1018C520,s32(n)<256?n:0);return false;}
-    i=n;u32 start=load<u32>(0x1018C520);if(s32(i)>=256)i=0;if(start==i)break;
-  }store<u32>(ea(world),256);return true;
+/* 020084C8 */
+cBgW_Plane *cBgS::GetTriPla(u32 bg_index, s32 poly_index) {
+    if (bg_index >= MAX_BG)
+        return NULL;
+    cBgS_ChkElm *elm = &m_chk_element[bg_index];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return NULL;
+    cBgWMesh *world = elm->m_bgw_base_ptr.get();
+    if (poly_index < 0 || poly_index >= (s32)world->pm_bgd->m_t_num)
+        assertion("c_bg_w.h", 0x2AF, "0 <= poly_index && poly_index < pm_bgd->m_t_num");
+    return &world->pm_tri.get()[poly_index].m_plane;
 }
-VERIFY(0x020086D4,regist);
-bool release(void *self,void *world) {
-  WWHD_FUNC(0x020087EC,bool,self,world);
-  if(!world)return true;u32 id=load<u32>(ea(world));if(id>=256)return true;u32 e=entry(self,id);if(!(load<u32>(e+4)&1))return true;
-  call<void>(0x02007F98,at<void>(e));store<u32>(ea(world),256);return false;
+/* 02008570 */
+void cBgS::GetTriPnt(cBgS_PolyInfo *poly, cXyz *p0, cXyz *p1, cXyz *p2) {
+    u32 id = poly->mBgIndex;
+    if (id >= MAX_BG)
+        assertion("c_bg_s.cpp", 0x373, "0 <= id && id < 256");
+    cBgS_ChkElm *elm = &m_chk_element[id];
+    if (elm->m_flags & cBgS_ChkElm::USED)
+        cBgW_GetTriPnt(elm->m_bgw_base_ptr.get(), poly->mPolyIndex, p0, p1, p2);
 }
-VERIFY(0x020087EC,release);
-bool line_cross(void *self,void *check) {
-  WWHD_FUNC(0x02008860,bool,self,check);
-  u32 q=ea(check);store<u32>(q+0x18,0);store<u32>(q+0x1C,0xFFFFFFFF);store<u16>(q+0x16,256);store<u16>(q+0x14,0xFFFF);
-  store<u32>(q+0x4C,load<u32>(q+0x4C)&~0x10u);bool result=false;
-  for(u32 i=0;i<256;++i){u32 e=entry(self,i);if(!(load<u32>(e+4)&1))continue;u32 w=load<u32>(e);if(!load<u32>(w+0x90))continue;
-    if(call<s32>(0x02008BB8,check,load<u32>(e+8)))continue;
-    u32 flags=load<u32>(q+0x4C);store<u8>(q+0x50,u8(((flags>>30)&1)^1));store<u8>(q+0x51,u8(((flags>>31)&1)^1));store<u8>(q+0x52,u8(((flags>>29)&1)^1));
-    w=load<u32>(e);if(!call<s32>(0x0200AB4C,at<void>(w),check,load<u32>(w+0xA4),1))continue;
-    u32 pid=load<u32>(e+8),ptr=load<u32>(e);store<u32>(q+0x1C,pid);store<u32>(q+0x18,ptr);store<u16>(q+0x16,u16(i));result=true;
-  }if(result)store<u32>(q+0x4C,load<u32>(q+0x4C)|0x10);return result;
+/* 02008B48 */
+void cBgS::Move() {}
+/* 020085F8 */
+s32 cBgS::GetGrpInf(cBgS_PolyInfo *poly, s32 grp_id) {
+    u32 id = poly->mBgIndex;
+    if (id >= MAX_BG)
+        assertion("c_bg_s.cpp", 0x3FA, "0 <= bg_index && bg_index < 256");
+    cBgS_ChkElm *elm = &m_chk_element[id];
+    if (!(elm->m_flags & cBgS_ChkElm::USED))
+        return -1;
+    cBgWMesh *world = elm->m_bgw_base_ptr.get();
+    cBgD_Mesh *data = NULL;
+    if (grp_id >= 0)
+        data = world->pm_bgd.get();
+    if (grp_id < 0 || grp_id >= (s32)data->m_g_num) {
+        // HD: the assertion text calls this index grp_id.
+        assertion("c_bg_w.h", 0x2E1, "0 <= grp_index && grp_index < pm_bgd->m_g_num");
+        data = world->pm_bgd.get();
+    }
+    return data->m_g_tbl.get()[grp_id].m_info;
 }
-VERIFY(0x02008860,line_cross);
-f32 ground_cross(void *self,void *check) {
-  WWHD_FUNC(0x02008974,f32,self,check);
-  u32 q=ea(check);f32 height=load<f32>(0x10000E0C);u32 flags=load<u32>(q+0x30);
-  store<u16>(q+0x14,0xFFFF);store<u32>(q+0x18,0);store<u32>(q+0x1C,0xFFFFFFFF);store<u16>(q+0x16,256);store<u32>(q+0x3C,flags&1);store<f32>(q+0x34,height);store<u32>(q+0x38,flags&2);
-  for(u32 i=0;i<256;++i){u32 e=entry(self,i);if(!(load<u32>(e+4)&1))continue;u32 w=load<u32>(e);if(!load<u32>(w+0x90))continue;
-    if(call<s32>(0x02008BB8,check,load<u32>(e+8)))continue;
-    w=load<u32>(e);if(!call<s32>(0x0200B380,at<void>(w),check,load<u32>(w+0xA4),1))continue;
-    u32 pid=load<u32>(e+8),ptr=load<u32>(e);store<u32>(q+0x1C,pid);store<u32>(q+0x18,ptr);store<u16>(q+0x16,u16(i));
-  }return load<f32>(q+0x34);
+
+// HD: compiler-generated array construction and header statics.
+/* 02007FBC */
+static cBgS *cBgS__ct(cBgS *object) {
+    if (object == NULL)
+        object = (cBgS *)operator_new(sizeof(cBgS));
+    if (object != NULL) {
+        object->__vtbl = registryVtable;
+        constructElements(object, cBgS::MAX_BG, sizeof(cBgS_ChkElm), cBgS_ChkElm__ct);
+    }
+    return object;
 }
-VERIFY(0x02008974,ground_cross);
-void static_init() {
-  WWHD_FUNC(0x02008A70,void);
-  store<u32>(0x101FF3E4,0);store<u32>(0x101FF3DC,0);store<u32>(0x101FF3E8,0);store<u32>(0x101FF3E0,0);
-  call<void>(0x028F026C,at<void>(0x1018C528));
-  f32 first=load<f32>(0x10000E14),second=load<f32>(0x10000E18);store<f32>(0x101FF3D0,first);store<f32>(0x101FF3D4,second);
-  call<void>(0x028ED6F8,at<void>(0x101FF3D8));call<void>(0x028F026C,at<void>(0x1018C534));call<void>(0x028EAB2C,at<void>(0x101FF3D9));call<void>(0x028F026C,at<void>(0x1018C540));
+/* 02008B04 */
+static cBgS_ChkElm *cBgS_ChkElm__ct(cBgS_ChkElm *object) {
+    if (object == NULL)
+        object = (cBgS_ChkElm *)operator_new(sizeof(cBgS_ChkElm));
+    if (object != NULL) {
+        object->__vtbl = elementVtable;
+        object->Init();
+    }
+    return object;
 }
-VERIFY(0x02008A70,static_init);
-void *elm_construct(void *self) {
-  WWHD_FUNC(0x02008B04,void *,self);
-  if(!self)self=call<void *>(0x0273AD10,20);if(self){store<u32>(ea(self)+16,0x10000E24);call<void>(0x02007F60,self);}return self;
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject, padding[2];
+    be<u32> words[4];
+};
+#define headerStatics (*gabi::at<HeaderStatics>(0x101FF3D0))
+/* 02008A70 */
+static void __sinit_c_bg_s_cpp() {
+    headerStatics.words[2] = 0;
+    headerStatics.words[0] = 0;
+    headerStatics.words[3] = 0;
+    headerStatics.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C528));
+    f32 first = piMin, second = piMax;
+    headerStatics.piMin = first;
+    headerStatics.piMax = second;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C534));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C540));
 }
-VERIFY(0x02008B04,elm_construct);
-void move(void *self) {WWHD_FUNC(0x02008B48,void,self);}
-VERIFY(0x02008B48,move);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_SetCounter 1018C520
+data groundHeightMin 10000E0C
+data piMin 10000E14
+data piMax 10000E18
+str 10000C08 "c_bg_s.cpp" in 020080C0
+str 10000B88 "((int)pbgd->m_v_tbl % 4) == 0" in 020080C0
+str 10000BA8 "((int)pbgd->m_t_tbl % 2) == 0" in 020080C0
+str 10000BC8 "((int)pbgd->m_b_tbl % 2) == 0" in 020080C0
+str 10000C14 "((int)pbgd->m_tree_tbl % 2) == 0" in 020080C0
+str 10000BE8 "((int)pbgd->m_g_tbl % 4) == 0" in 020080C0
+str 10000C38 "((int)pbgd->m_ti_tbl % 4) == 0" in 020080C0
+str 10000CA8 "c_bg_s.cpp" in 020082C0
+str 10000C58 "0 <= bg_index && bg_index < 256" in 020082C0
+str 10000CB4 "c_bg_w.h" in 020082C0
+str 10000C78 "0 <= poly_index && poly_index < pm_bgd->m_t_num" in 020082C0
+str 10000CE0 "c_bg_s.cpp" in 0200839C
+str 10000CC0 "0 <= bg_index && bg_index < 256" in 0200839C
+str 10000D24 "c_bg_s.cpp" in 02008438
+str 10000CFC "0 <= actor_index && actor_index < 256" in 02008438
+str 10000D60 "c_bg_w.h" in 020084C8
+str 10000D30 "0 <= poly_index && poly_index < pm_bgd->m_t_num" in 020084C8
+str 10000D80 "c_bg_s.cpp" in 02008570
+str 10000D6C "0 <= id && id < 256" in 02008570
+str 10000DD4 "c_bg_s.cpp" in 020085F8
+str 10000D8C "0 <= bg_index && bg_index < 256" in 020085F8
+str 10000DE0 "c_bg_w.h" in 020085F8
+str 10000DAC "0 <= grp_index && grp_index < pm_bgd->m_g_num" renamed in 020085F8
+str 10000E00 "c_bg_s.cpp" in 020086D4
+str 10000DEC "0 <= i && i < 256" in 020086D4
+ext 0273AD10 void* operator_new(u32)
+ext 028EFFD0 void constructElements(cBgS*,u32,u32,BgSElementCtor)
+ext 02009E58 s32 cBgW_ChkMemoryError(cBgWMesh*)
+ext 02008BB8 s32 cBgS_ChkSameActorPid(cBgS_Chk*,u32)
+ext 0200AB4C s32 cBgW_LineCheckGrpRp(cBgWMesh*,cBgS_LinChk*,u32,u32)
+ext 0200B380 s32 cBgW_GroundCrossGrpRp(cBgWMesh*,cBgS_GndChk*,u32,u32)
+ext 0200A220 void cBgW_GetTriPnt(cBgWMesh*,u32,cXyz*,cXyz*,cXyz*)
+ext 0273AA24 void assertion(const char*,u32,const char*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

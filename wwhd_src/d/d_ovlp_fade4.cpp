@@ -1,184 +1,413 @@
-#include "bindings.h"
-namespace {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static s16 sh(u32 a){return gabi::load<s16>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void ss(u32 a,u16 v){gabi::store<u16>(a,v);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static void sb(u32 a,u8 v){gabi::store<u8>(a,v);}
-static void sf(u32 a,f32 v){gabi::store<f32>(a,v);}
-static f32 lf(u32 a){return gabi::load<f32>(a);}
-static void phase(u32 self,u32 f){ss(self+0xD0,0);ss(self+0xD2,0xFFFF);st(self+0xD4,f);}
-static u32 spriteCtor(u32 self){
-    WWHD_FUNC(0x025A2B88,u32,self);
-    if(!self)self=gabi::call<u32>(0x0273AD10,0x6C);
-    if(self){gabi::call(0x0252CCBC,self);st(self,0x100519C0);gabi::call(0x028F521C,self+4,64);
-        f32 zero=lf(0x10051974);st(self+0x44,0);sf(self+0x5C,zero);st(self+0x4C,0);sf(self+0x60,zero);st(self+0x50,0);sf(self+0x54,zero);sf(self+0x58,zero);
-        st(self+0x48,0);gabi::call(0x028F521C,self+0x64,4);sf(self+0x68,zero);
-    }return self;
+/** Fade4 overlap transition. */
+#include "d/d_ovlp_fade4.h"
+
+using RendererPtr = gptr<dOvlpFd4_renderer_c>;
+using RegistryPtr = gptr<dOvlpFd4_registry_c>;
+using BlurPtr = gptr<dOvlpFd4_blur_c>;
+static RendererPtr l_renderer;
+static RegistryPtr l_registry;
+static BlurPtr l_blur;
+static f32 l_zero;
+static f32 l_eight;
+static f32 l_one;
+static f32 l_minusOne;
+static f32 l_blurStrength;
+static dOvlpFd4_staticWords_c l_staticWords;
+static dOvlpFd4_staticFloats_c l_staticFloats;
+static f32 l_staticInitialX;
+static f32 l_staticInitialY;
+
+// HD: Address-only views of this TU's vtables and static registration records.
+static dOvlpFd4_data_c l_spriteVtable;
+static dOvlpFd4_data_c l_effectVtable;
+static dOvlpFd4_data_c l_snapshotVtable;
+static dOvlpFd4_data_c l_taskVtable;
+static dOvlpFd4_data_c l_outputRegistry;
+static dOvlpFd4_data_c l_floatRegistration;
+static dOvlpFd4_data_c l_flagRegistration;
+static dOvlpFd4_data_c l_byteRegistration;
+static dOvlpFd4_data_c l_staticFlag;
+static dOvlpFd4_data_c l_staticByte;
+
+static u32 execWait(u32);
+static void execFirstSnap(u32);
+static void execFadeOut(u32);
+static void execNextSnap(u32);
+static void execFadeIn(u32);
+static void drawFadeOut();
+static void drawFadeIn();
+
+// HD: Keep the original u32 entry signatures used by the verification harness.
+static u32 guestFunction(const void* function) { return gabi::guest_fn(function); }
+static void setExecute(dOvlpFd4_c* task, void (*function)(u32)) {
+    task->mExecuteFunc.d = 0;
+    task->mExecuteFunc.i = -1;
+    task->mExecuteFunc.f = guestFunction((const void*)function);
 }
-VERIFY(0x025A2B88,spriteCtor);
-static u32 effectCtor(u32 self){
-    WWHD_FUNC(0x025A2C3C,u32,self);
-    if(!self)self=gabi::call<u32>(0x0273AD10,0x178);
-    if(self){gabi::call(0x0252CCBC,self);f32 zero=lf(0x10051974);sb(self+8,0);sf(self+4,zero);st(self,0x100519D8);
-        gabi::call(0x028F521C,self+12,12);gabi::call(0x0252CCBC,self+12);st(self+12,0x100519A8);gabi::call(0x025A2B88,self+0x18);
-        gabi::call(0x028F521C,self+0x84,12);gabi::call(0x0252CCBC,self+0x84);st(self+0x84,0x100519A8);gabi::call(0x025A2B88,self+0x90);
-        gabi::call(0x028F521C,self+0xFC,12);gabi::call(0x0252CCBC,self+0xFC);st(self+0xFC,0x100519A8);gabi::call(0x025A2B88,self+0x108);
-        ss(self+0x176,0);ss(self+0x174,0);
-    }return self;
-}
-VERIFY(0x025A2C3C,effectCtor);
-static u32 sceneCtor(u32 self){
-    WWHD_FUNC(0x025A2D24,u32,self);
-    if(!self)self=gabi::call<u32>(0x0273AD10,0x370);
-    if(self){gabi::call(0x025DD5F0,self);st(self+0xB4,0x10051960);
-        gabi::call(0x028F521C,self+0xD0,8);gabi::call(0x028F521C,self+0xD8,8);
-        gabi::call(0x028F521C,self+0xE0,12);gabi::call(0x0252CCBC,self+0xE0);st(self+0xE0,0x100519A8);
-        gabi::call(0x028F521C,self+0xEC,12);gabi::call(0x0252CCBC,self+0xEC);st(self+0xEC,0x100519A8);
-        gabi::call(0x025A2B88,self+0xF8);gabi::call(0x025A2B88,self+0x164);gabi::call(0x025A2C3C,self+0x1D0);
-        sb(self+0x348,1);f32 zero=lf(0x10051974);st(self+0x36C,0);sf(self+0x354,zero);sf(self+0x350,zero);sf(self+0x364,zero);
-        st(self+0xD4,0x025A32E8);ss(self+0xDA,0xFFFF);st(self+0xDC,0x025A36D8);ss(self+0xD0,0);
-        sb(self+0x35C,0);sf(self+0x358,zero);ss(self+0x360,0);sb(self+0x34A,0);sb(self+0x368,0);sb(self+0x349,0);ss(self+0x35E,0);sb(self+0x35D,0);ss(self+0x34C,0);ss(self+0xD2,0xFFFF);ss(self+0xD8,0);
-        sb(gabi::call<u32>(0x025200D4)+0x5C22,0);sb(self+0x34A,39);ss(self+0x34C,10);sf(self+0x350,zero);sb(self+0x349,0);
-    }return self;
-}
-VERIFY(0x025A2D24,sceneCtor);
-static u32 wait(u32 self){
-    WWHD_FUNC(0x025A32E8,u32,self);
-    s16 time=sh(self+0x34C);if(time>0){ss(self+0x34C,time-1);return self; /* original: r3 still self */}
-    phase(self,0x025A3014);return gabi::call<u32>(0x02728D6C,ld(0x101F86B4),self);
-}
-VERIFY(0x025A32E8,wait);
-static void effectDraw(u32 self){
-    WWHD_FUNC(0x025A2EC0,void,self);
-    s32 t=gabi::ftoi(gabi::fmuls_ppc(lf(0x10051978),lf(self+4)));
-    ss(self+0x174,(u32)t*-16u+320);ss(self+0x176,(u32)t*-12u+240);
-    if(lb(self+8)){sb(self+8,0);return;}
-    if(lb(gabi::call<u32>(0x025200D4)+0x5AC9))return;
-    s32 w=320,h=240;
-    while(w-16>=gabi::load<u16>(self+0x174)&&h-12>=gabi::load<u16>(self+0x176)){
-        s32 dw=w-16,dh=h-12;st(self+0xDC,w/2);st(self+0xE0,h/2);ss(self+0x104,dw);ss(self+0x106,dh);sf(self+0xEC,(f32)dw);sf(self+0xF0,(f32)dh);w=dw;h=dh;
+
+/* 025A2B88 */
+u32 dDlst_2Dt_Sp_construct(u32 self) {
+    if (!self) self = gabi::ea(dOvlpFd4_alloc(sizeof(dDlst_2Dt_Sp_c)));
+    if (self) {
+        auto* sprite = gabi::at<dDlst_2Dt_Sp_c>(self);
+        dDlst_base_construct(sprite);
+        sprite->__vtbl = gabi::ea(&l_spriteVtable);
+        dOvlpFd4_clear(sprite->mTexObj, sizeof(sprite->mTexObj));
+        f32 zero = l_zero;
+        sprite->mTimg = nullptr;
+        sprite->mWidth = zero;
+        sprite->mImageWidth = 0;
+        sprite->mHeight = zero;
+        sprite->mImageHeight = 0;
+        sprite->mPosX = zero;
+        sprite->mPosY = zero;
+        sprite->mImagePtr = nullptr;
+        dOvlpFd4_clear(&sprite->mColor, sizeof(sprite->mColor));
+        sprite->mPercent = zero;
     }
-    f32 zero=lf(0x10051974);st(self+0x154,w/2);sf(self+0x15C,zero);sf(self+0x160,zero);st(self+0x158,h/2);
+    return self;
 }
-VERIFY(0x025A2EC0,effectDraw);
-struct Texture {u8 bytes[0x198];};
-struct Scale {be<f32> x,y;};
-static void nativeDraw(u32 self,u32 context){
-    WWHD_FUNC(0x025A332C,void,self,context);
-    f32 effect=lf(0x10051990),one=lf(0x10051988);u32 renderer=ld(0x101F9968);
-    bool initial=sh(self+0xDA)==-1&&sh(self+0xD8)==0&&ld(self+0xDC)==0x025A36D8;
-    if(lb(self+0x348)){gabi::call(0x027F84A4,renderer,4,context);sb(self+0x348,0);if(initial)return;}
-    gabi::call(0x0274D690,ld(context+8));gabi::call(0x0274F964,ld(context+0x1C),ld(context+8));
-    u32 image=gabi::call<u32>(0x027F81A4,renderer,4);
-    gabi::Local<Texture> texture;u32 ptr=gabi::ea(texture.get());gabi::call(0x027BE114,ptr,image);
-    sb(ptr+0x190,lb(ptr+0x190)|4);u32 size=ld(context+8);
-    f32 denom=gabi::fadds_ppc((f32)ld(self+0x36C),one);
-    st(ptr+0x150,0);st(ptr+0x154,0);st(ptr+0x158,0);
-    gabi::Local<Scale> scale;u32 sp=gabi::ea(scale.get());sf(sp,(f32)(lf(size+0x10)/denom));sf(sp+4,(f32)(lf(size+0x14)/denom));
-    u32 output=gabi::call<u32>(0x027F29D4,0x104B45C0);
-    u32 result=gabi::call<u32>(0x0272CF9C,ld(0x101F8710),ptr,sp,ld(output),(f32)ld(self+0x36C),effect);
-    output=gabi::call<u32>(0x027F29D4,0x104B45C0);st(output,result);st(output+4,0);
-    gabi::call(0x027BE2B0,ptr,2);
+
+/* 025A2C3C */
+u32 dDlst_2DtEff1_construct(u32 self) {
+    if (!self) self = gabi::ea(dOvlpFd4_alloc(sizeof(dDlst_2DtEff1_c)));
+    if (self) {
+        auto* effect = gabi::at<dDlst_2DtEff1_c>(self);
+        dDlst_base_construct(effect);
+        f32 zero = l_zero;
+        effect->first = false;
+        effect->timer = zero;
+        effect->__vtbl = gabi::ea(&l_effectVtable);
+        dOvlpFd4_clear(&effect->snap_dlst, sizeof(effect->snap_dlst));
+        dDlst_base_construct(&effect->snap_dlst);
+        effect->snap_dlst.__vtbl = gabi::ea(&l_snapshotVtable);
+        dDlst_2Dt_Sp_construct(gabi::ea(&effect->redraw_dlst));
+        dOvlpFd4_clear(&effect->save_dlst, sizeof(effect->save_dlst));
+        dDlst_base_construct(&effect->save_dlst);
+        effect->save_dlst.__vtbl = gabi::ea(&l_snapshotVtable);
+        dDlst_2Dt_Sp_construct(gabi::ea(&effect->blur0_dlst));
+        dOvlpFd4_clear(&effect->blur0Snap_dlst, sizeof(effect->blur0Snap_dlst));
+        dDlst_base_construct(&effect->blur0Snap_dlst);
+        effect->blur0Snap_dlst.__vtbl = gabi::ea(&l_snapshotVtable);
+        dDlst_2Dt_Sp_construct(gabi::ea(&effect->composite_dlst));
+        effect->curHeight = 0;
+        effect->curWidth = 0;
+    }
+    return self;
 }
-VERIFY(0x025A332C,nativeDraw);
-static void firstSnap(u32 self){
-    WWHD_FUNC(0x025A3014,void,self);
-    if(!lb(self+0x348)&&!gabi::call<u32>(0x02055B64,self+0x34C)){
-        phase(self,0x025A3098);gabi::call(0x025DBDDC,self);
-        sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);st(self+0x36C,0);ss(self+0x34C,15);
+
+/* 025A2D24 */
+u32 dOvlpFd4_construct(u32 self) {
+    if (!self) self = gabi::ea(dOvlpFd4_alloc(sizeof(dOvlpFd4_c)));
+    if (self) {
+        auto* task = gabi::at<dOvlpFd4_c>(self);
+        fpcBs_construct(&task->base);
+        task->base.__vtbl = gabi::ea(&l_taskVtable);
+        dOvlpFd4_clear(&task->mExecuteFunc, sizeof(task->mExecuteFunc));
+        dOvlpFd4_clear(&task->mDrawFunc, sizeof(task->mDrawFunc));
+        dOvlpFd4_clear(&task->fadeOutBlur0_dlst, sizeof(task->fadeOutBlur0_dlst));
+        dDlst_base_construct(&task->fadeOutBlur0_dlst);
+        task->fadeOutBlur0_dlst.__vtbl = gabi::ea(&l_snapshotVtable);
+        dOvlpFd4_clear(&task->fadeOutSnap_dlst, sizeof(task->fadeOutSnap_dlst));
+        dDlst_base_construct(&task->fadeOutSnap_dlst);
+        task->fadeOutSnap_dlst.__vtbl = gabi::ea(&l_snapshotVtable);
+        dDlst_2Dt_Sp_construct(gabi::ea(&task->fadeOutComposite_dlst));
+        dDlst_2Dt_Sp_construct(gabi::ea(&task->fadeOutBlur1_dlst));
+        dDlst_2DtEff1_construct(gabi::ea(&task->fadeIn_dlst));
+        task->first = true;
+        f32 zero = l_zero;
+        task->mBlurCounter = 0;
+        task->field_0x2b8 = zero;
+        task->delayPercent = zero;
+        task->timerStep = zero;
+        task->mExecuteFunc.f = guestFunction((const void*)execWait);
+        task->mDrawFunc.i = -1;
+        task->mDrawFunc.f = guestFunction((const void*)drawFadeOut);
+        task->mExecuteFunc.d = 0;
+        task->sizeStep = 0;
+        task->field_0x2bc = zero;
+        task->field_0x2c4 = 0;
+        task->totalTime = 0;
+        task->field_0x2cc = 0;
+        task->fadeOutStatus = 0;
+        task->field_0x2c2 = 0;
+        task->startTime = 0;
+        task->timer = 0;
+        task->mExecuteFunc.i = -1;
+        task->mDrawFunc.d = 0;
+        dOvlpFd4_getPlay()->m2DShow = false;
+        task->totalTime = 39;
+        // HD: The initial wait is ten frames instead of GameCube's two.
+        task->timer = 10;
+        task->delayPercent = zero;
+        task->fadeOutStatus = 0;
+    }
+    return self;
+}
+
+/* 025A32E8 */
+static u32 execWait(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    s16 time = task->timer;
+    if (time > 0) {
+        task->timer = time - 1;
+        return self; // HD: The early return retains the incoming r3 value.
+    }
+    setExecute(task, execFirstSnap);
+    return dOvlpFd4_register(l_registry, task);
+}
+
+/* 025A2EC0 */
+void dDlst_2DtEff1_draw(u32 self) {
+    auto* effect = gabi::at<dDlst_2DtEff1_c>(self);
+    s32 time = gabi::ftoi(gabi::fmuls_ppc(l_eight, effect->timer));
+    // HD: Conversion uses the full signed word rather than GameCube's s16.
+    effect->curWidth = (u32)time * -16u + 320;
+    effect->curHeight = (u32)time * -12u + 240;
+    if (effect->first) {
+        effect->first = false;
+        return;
+    }
+    if (dOvlpFd4_getPlay()->mWindowNum) return;
+    s32 width = 320, height = 240;
+    // HD: Native rendering submits these packet dimensions elsewhere.
+    while (width - 16 >= effect->curWidth && height - 12 >= effect->curHeight) {
+        s32 dstWidth = width - 16, dstHeight = height - 12;
+        effect->blur0_dlst.mImageWidth = width / 2;
+        effect->blur0_dlst.mImageHeight = height / 2;
+        effect->blur0Snap_dlst.mWidth = dstWidth;
+        effect->blur0Snap_dlst.mHeight = dstHeight;
+        effect->blur0_dlst.mWidth = (f32)dstWidth;
+        effect->blur0_dlst.mHeight = (f32)dstHeight;
+        width = dstWidth;
+        height = dstHeight;
+    }
+    f32 zero = l_zero;
+    effect->composite_dlst.mImageWidth = width / 2;
+    effect->composite_dlst.mPosX = zero;
+    effect->composite_dlst.mPosY = zero;
+    effect->composite_dlst.mImageHeight = height / 2;
+}
+
+/* 025A332C */
+void dOvlpFd4_drawNative(u32 self, u32 context) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    auto* drawContext = gabi::at<dOvlpFd4_context_c>(context);
+    f32 strength = l_blurStrength, one = l_one;
+    auto* renderer = l_renderer.get();
+    bool initial = task->mDrawFunc.i == -1 && task->mDrawFunc.d == 0 &&
+        task->mDrawFunc.f == guestFunction((const void*)drawFadeOut);
+    if (task->first) {
+        dOvlpFd4_capture(renderer, 4, context);
+        task->first = false;
+        if (initial) return;
+    }
+    // HD: Snapshot textures and a native blur replace the GameCube GX draw lists.
+    dOvlpFd4_setSize(drawContext->mSize);
+    dOvlpFd4_setTarget(drawContext->mTarget, drawContext->mSize);
+    u32 image = dOvlpFd4_getImage(renderer, 4);
+    gabi::Local<dOvlpFd4_texture_c> texture;
+    dOvlpFd4_initTexture(texture.get(), image);
+    texture->mDirty |= 4;
+    auto* size = drawContext->mSize.get();
+    f32 denominator = gabi::fadds_ppc((f32)task->mBlurCounter, one);
+    texture->mFilter[0] = 0;
+    texture->mFilter[1] = 0;
+    texture->mFilter[2] = 0;
+    gabi::Local<dOvlpFd4_scale_c> scale;
+    scale->x = (f32)(size->mWidth / denominator);
+    scale->y = (f32)(size->mHeight / denominator);
+    auto* output = dOvlpFd4_getOutput(gabi::ea(&l_outputRegistry));
+    u32 result = dOvlpFd4_blur(l_blur, texture.get(), scale.get(), output->mTexture,
+                             (f32)task->mBlurCounter, strength);
+    output = dOvlpFd4_getOutput(gabi::ea(&l_outputRegistry));
+    output->mTexture = result;
+    output->mFlags = 0;
+    dOvlpFd4_destroyTexture(texture.get(), 2);
+}
+
+/* 025A3014 */
+static void execFirstSnap(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    if (!task->first && !dOvlpFd4_calcTimer(&task->timer)) {
+        setExecute(task, execFadeOut);
+        fopOvlpM_Done(task);
+        dOvlpFd4_getPlay()->mWindowNum = 0;
+        task->mBlurCounter = 0;
+        task->timer = 15;
     }
 }
-VERIFY(0x025A3014,firstSnap);
-static void fadeOut(u32 self){
-    WWHD_FUNC(0x025A3098,void,self);
-    sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);
-    if(!gabi::call<u32>(0x02055B64,self+0x34C)&&ld(self+0x36C)>=45&&gabi::call<u32>(0x025DBDC4,self)){
-        gabi::call(0x025DBD74);sb(self+0x349,0);phase(self,0x025A3168);
-        sb(gabi::call<u32>(0x025200D4)+0x5C22,0);st(self+0x36C,45);return;
+
+/* 025A3098 */
+static void execFadeOut(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    dOvlpFd4_getPlay()->mWindowNum = 0;
+    // HD: Forty-five native blur steps replace the GameCube dimension test.
+    if (!dOvlpFd4_calcTimer(&task->timer) && task->mBlurCounter >= 45 && fopOvlpM_IsOutReq(task)) {
+        fopOvlpM_SceneIsStart();
+        task->fadeOutStatus = 0;
+        setExecute(task, execNextSnap);
+        dOvlpFd4_getPlay()->m2DShow = false;
+        task->mBlurCounter = 45;
+        return;
     }
-    if(!sh(self+0x34C)&&ld(self+0x36C)<45)st(self+0x36C,ld(self+0x36C)+1);
+    if (!task->timer && task->mBlurCounter < 45) task->mBlurCounter = task->mBlurCounter + 1;
 }
-VERIFY(0x025A3098,fadeOut);
-static void nextSnap(u32 self){
-    WWHD_FUNC(0x025A3168,void,self);
-    phase(self,0x025A3224);ss(self+0xD8,0);ss(self+0xDA,0xFFFF);sb(self+0x348,1);st(self+0xDC,0x025A36DC);
-    sb(gabi::call<u32>(0x025200D4)+0x5AC9,1);
-    s8 time=gabi::load<s8>(self+0x34A);f32 a=lf(0x10051988),b=lf(0x1005198C);
-    ss(self+0x34C,(u16)(s16)time);sf(self+0x1D4,a);sf(self+0x364,(f32)(b/(f32)time));
+
+/* 025A3168 */
+static void execNextSnap(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    setExecute(task, execFadeIn);
+    task->mDrawFunc.d = 0;
+    task->mDrawFunc.i = -1;
+    task->first = true;
+    task->mDrawFunc.f = guestFunction((const void*)drawFadeIn);
+    dOvlpFd4_getPlay()->mWindowNum = 1;
+    s8 time = task->totalTime;
+    f32 one = l_one, minusOne = l_minusOne;
+    task->timer = time;
+    task->fadeIn_dlst.timer = one;
+    task->timerStep = (f32)(minusOne / (f32)time);
 }
-VERIFY(0x025A3168,nextSnap);
-static void fadeIn(u32 self){
-    WWHD_FUNC(0x025A3224,void,self);
-    if(!gabi::call<u32>(0x02055B64,self+0x34C)&&!ld(self+0x36C)){
-        if(!lb(self+0x368)){gabi::call(0x025DBD74);sb(self+0x368,1);return;}
-        gabi::call(0x025DBDDC,self);sb(gabi::call<u32>(0x025200D4)+0x5AC9,1);sb(gabi::call<u32>(0x025200D4)+0x5C22,1);return;
+
+/* 025A3224 */
+static void execFadeIn(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    if (!dOvlpFd4_calcTimer(&task->timer) && !task->mBlurCounter) {
+        if (!task->field_0x2cc) {
+            fopOvlpM_SceneIsStart();
+            task->field_0x2cc = true;
+            return;
+        }
+        fopOvlpM_Done(task);
+        dOvlpFd4_getPlay()->mWindowNum = 1;
+        dOvlpFd4_getPlay()->m2DShow = true;
+        return;
     }
-    sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);gabi::call(0x025DBD24);
-    u32 n=ld(self+0x36C);if(n)st(self+0x36C,n-1);
+    dOvlpFd4_getPlay()->mWindowNum = 0;
+    fopOvlpM_SceneIsStop();
+    u32 count = task->mBlurCounter;
+    if (count) task->mBlurCounter = count - 1;
 }
-VERIFY(0x025A3224,fadeIn);
-static void invoke(u32 self,u32 off){
-    s16 index=sh(self+off+2),adjust=sh(self+off);u32 receiver=self+(s32)adjust;
-    u32 target=index<0?ld(self+off+4):ld(ld(receiver+(s32)sh(self+off+6))+(u32)(s32)index*8+4);
-    gabi::call_ptr(target,receiver);
-}
-static BOOL Draw(u32 self){
-    WWHD_FUNC(0x025A29C4,BOOL,self);
-    if(sh(self+0xDA))invoke(self,0xD8);
+
+/* 025A29C4 */
+BOOL dOvlpFd4_Draw(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    if (task->mDrawFunc.i) (task->*task->mDrawFunc)();
     return TRUE;
 }
-VERIFY(0x025A29C4,Draw);
-static BOOL Execute(u32 self){
-    WWHD_FUNC(0x025A2A34,BOOL,self);
-    invoke(self,0xD0);return TRUE;
-}
-VERIFY(0x025A2A34,Execute);
-static BOOL Delete(u32 self){
-    WWHD_FUNC(0x025A2AA0,BOOL,self);
-    if(self){
-        for(u32 off:{0x2D8u,0x2CCu,0x260u,0x254u,0x1E8u,0x1DCu,0x1D0u,0x164u,0xF8u,0xECu,0xE0u})gabi::call(0x0252CCFC,self+off,0);
-        gabi::call(0x025DD630,self,0);
-    }
-    gabi::call(0x027F88C8,ld(0x101F9968),4);
-    gabi::call(0x02728EE0,ld(0x101F86B4));return TRUE;
-}
-VERIFY(0x025A2AA0,Delete);
-static u32 Create(u32 self){
-    WWHD_FUNC(0x025A2E94,u32,self);
-    if(self)gabi::call(0x025A2D24,self);return 4;
-}
-VERIFY(0x025A2E94,Create);
-static void sinit(){
-    WWHD_FUNC(0x025A3634,void,(u32)0);
-    st(0x1047B14C,0);st(0x1047B144,0);st(0x1047B150,0);st(0x1047B148,0);
-    gabi::call(0x028F026C,0x101EA3AC);
-    f32 a=gabi::load<f32>(0x100519A0),b=gabi::load<f32>(0x100519A4);
-    gabi::store<f32>(0x1047B138,a);gabi::store<f32>(0x1047B13C,b);
-    gabi::call(0x028ED6F8,0x1047B140);gabi::call(0x028F026C,0x101EA3B8);
-    gabi::call(0x028EAB2C,0x1047B141);gabi::call(0x028F026C,0x101EA3C4);
-}
-VERIFY(0x025A3634,sinit);
-static BOOL IsDelete(){
-    WWHD_FUNC(0x025A36C8,BOOL,(u32)0);
+
+/* 025A2A34 */
+BOOL dOvlpFd4_Execute(u32 self) {
+    auto* task = gabi::at<dOvlpFd4_c>(self);
+    (task->*task->mExecuteFunc)();
     return TRUE;
 }
-VERIFY(0x025A36C8,IsDelete);
-static void inline0(){
-    WWHD_FUNC(0x025A36D0,void,(u32)0);
+
+/* 025A2AA0 */
+BOOL dOvlpFd4_Delete(u32 self) {
+    if (self) {
+        auto* task = gabi::at<dOvlpFd4_c>(self);
+        // HD: Keep the original reverse destruction order of the embedded draw packets.
+        dDlst_base_destroy(&task->fadeIn_dlst.composite_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst.blur0Snap_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst.blur0_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst.save_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst.redraw_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst.snap_dlst, 0);
+        dDlst_base_destroy(&task->fadeIn_dlst, 0);
+        dDlst_base_destroy(&task->fadeOutBlur1_dlst, 0);
+        dDlst_base_destroy(&task->fadeOutComposite_dlst, 0);
+        dDlst_base_destroy(&task->fadeOutSnap_dlst, 0);
+        dDlst_base_destroy(&task->fadeOutBlur0_dlst, 0);
+        fpcBs_destruct(&task->base, 0);
+    }
+    dOvlpFd4_release(l_renderer, 4);
+    dOvlpFd4_unregister(l_registry);
+    return TRUE;
 }
-VERIFY(0x025A36D0,inline0);
-static void inline1(){
-    WWHD_FUNC(0x025A36D4,void,(u32)0);
+
+/* 025A2E94 */
+u32 dOvlpFd4_Create(u32 self) {
+    if (self) dOvlpFd4_construct(self);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x025A36D4,inline1);
-static void inline2(){
-    WWHD_FUNC(0x025A36D8,void,(u32)0);
+
+// HD: Compiler-generated static initialization and native draw stubs.
+/* 025A3634 */
+void dOvlpFd4_staticInit() {
+    l_staticWords.values[2] = 0;
+    l_staticWords.values[0] = 0;
+    l_staticWords.values[3] = 0;
+    l_staticWords.values[1] = 0;
+    dOvlpFd4_registerStatic(gabi::ea(&l_floatRegistration));
+    f32 x = l_staticInitialX, y = l_staticInitialY;
+    l_staticFloats.values[0] = x;
+    l_staticFloats.values[1] = y;
+    dOvlpFd4_initFlag(gabi::ea(&l_staticFlag));
+    dOvlpFd4_registerStatic(gabi::ea(&l_flagRegistration));
+    dOvlpFd4_initByte(gabi::ea(&l_staticByte));
+    dOvlpFd4_registerStatic(gabi::ea(&l_byteRegistration));
 }
-VERIFY(0x025A36D8,inline2);
-static void inline3(){
-    WWHD_FUNC(0x025A36DC,void,(u32)0);
-}
-VERIFY(0x025A36DC,inline3);
-}
+
+/* 025A36C8 */
+BOOL dOvlpFd4_IsDelete() { return TRUE; }
+/* 025A36D0 */
+void dDlst_snapShot2_draw() {}
+/* 025A36D4 */
+void dDlst_2Dt_Sp_draw() {}
+/* 025A36D8 */
+static void drawFadeOut() {}
+/* 025A36DC */
+static void drawFadeIn() {}
+
+/* WWHD glue
+ext 0273AD10 void* dOvlpFd4_alloc(u32)
+ext 0252CCBC void dDlst_base_construct(dDlst_base_c*)
+ext 0252CCFC void dDlst_base_destroy(dDlst_base_c*, s32)
+ext 028F521C void dOvlpFd4_clear(void*, u32)
+ext 025DD5F0 void fpcBs_construct(base_process_class*)
+ext 025DD630 void fpcBs_destruct(base_process_class*, s32)
+ext 025200D4 dOvlpFd4_play_c* dOvlpFd4_getPlay()
+ext 02055B64 u32 dOvlpFd4_calcTimer(be<s16>*)
+ext 025DBDDC void fopOvlpM_Done(dOvlpFd4_c*)
+ext 025DBDC4 u32 fopOvlpM_IsOutReq(dOvlpFd4_c*)
+ext 025DBD74 void fopOvlpM_SceneIsStart()
+ext 025DBD24 void fopOvlpM_SceneIsStop()
+ext 02728D6C u32 dOvlpFd4_register(dOvlpFd4_registry_c*, dOvlpFd4_c*)
+ext 02728EE0 void dOvlpFd4_unregister(dOvlpFd4_registry_c*)
+ext 027F84A4 void dOvlpFd4_capture(dOvlpFd4_renderer_c*, s32, u32)
+ext 027F88C8 void dOvlpFd4_release(dOvlpFd4_renderer_c*, s32)
+ext 0274D690 void dOvlpFd4_setSize(dOvlpFd4_size_c*)
+ext 0274F964 void dOvlpFd4_setTarget(void*, dOvlpFd4_size_c*)
+ext 027F81A4 u32 dOvlpFd4_getImage(dOvlpFd4_renderer_c*, s32)
+ext 027BE114 void dOvlpFd4_initTexture(dOvlpFd4_texture_c*, u32)
+ext 027F29D4 dOvlpFd4_output_c* dOvlpFd4_getOutput(u32)
+ext 0272CF9C u32 dOvlpFd4_blur(dOvlpFd4_blur_c*, dOvlpFd4_texture_c*, dOvlpFd4_scale_c*, u32, f32, f32)
+ext 027BE2B0 void dOvlpFd4_destroyTexture(dOvlpFd4_texture_c*, s32)
+ext 028F026C void dOvlpFd4_registerStatic(u32)
+ext 028ED6F8 void dOvlpFd4_initFlag(u32)
+ext 028EAB2C void dOvlpFd4_initByte(u32)
+data l_spriteVtable 100519C0
+data l_effectVtable 100519D8
+data l_snapshotVtable 100519A8
+data l_taskVtable 10051960
+data l_outputRegistry 104B45C0
+data l_floatRegistration 101EA3AC
+data l_flagRegistration 101EA3B8
+data l_byteRegistration 101EA3C4
+data l_staticFlag 1047B140
+data l_staticByte 1047B141
+data l_renderer 101F9968
+data l_registry 101F86B4
+data l_blur 101F8710
+data l_zero 10051974
+data l_eight 10051978
+data l_one 10051988
+data l_minusOne 1005198C
+data l_blurStrength 10051990
+data l_staticWords 1047B144
+data l_staticFloats 1047B138
+data l_staticInitialX 100519A0
+data l_staticInitialY 100519A4
+*/

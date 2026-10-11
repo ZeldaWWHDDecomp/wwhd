@@ -1,256 +1,264 @@
-/* d_ev_camera, part 3: style / save / load event cameras. See d_ev_camera.cpp for the unit's layout notes; written from the WWHD
- * code (the GameCube d_ev_camera.cpp is all "Nonmatching" stubs). */
-#include "bindings.h"
+#include "d/d_ev_camera_3.h"
 
-namespace d_ev_camera_3_cpp {
+namespace event_camera_style {
+static EventString mapId;
+static EventString styleName;
+static EventString defaultStyle;
+static EventString saveSlot;
+static EventString loadSlot;
+static cXyz tactCenterOffset;
+static cXyz tactEyeOffset;
+static f32 tactFovy;
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline u32 getEvStringPntData(u32 c, u32 name, u32 def) { return gabi::call<u32>(0x02530AAC, c, name, def); }
-static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
+static void copyPoint(cXyz* destination, const cXyz* source) {
+    // HD: integer copies preserve the original load/store order and NaN payloads.
+    auto* out = reinterpret_cast<VectorWords*>(destination);
+    auto* in = reinterpret_cast<const VectorWords*>(source);
+    out->x = in->x;
+    out->y = in->y;
+    out->z = in->z;
 }
-static inline u8 isDone(u32 c) {
-    u8 r = 0;
-    if (ld8(c + 0x100) != 0 && ld8(c + 0x101) != 0 && ld8(c + 0x102) != 0) r = 1;
-    return r;
+static void SkipSmoother(dCamera_c* camera) {
+    camera->m102 = 1;
+    camera->m101 = 1;
+    camera->m100 = 1;
 }
-
-/* run the camera engine of a style: the engine table 101D5678 holds pointer-to-member entries
- * {this delta, vtable index (< 0: direct), function or vtable offset}, by the style's algorithm */
-static inline void runStyleEngine(u32 c, s32 style) {
-    u32 alg = ld(0x10044880 + (u32)style * 0x84);
-    u32 e = 0x101D5678 + (alg << 3);
-    s16 idx = lds16(e + 2);
-    u32 obj = c + (u32)(s32)lds16(e + 0);
-    u32 fn;
-    if (idx < 0) fn = ld(e + 4);
-    else fn = ld(ld(obj + (u32)(s32)lds16(e + 6)) + ((u32)(s32)idx << 3) + 4);
-    gabi::call_ptr(fn, obj, style);
-}
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
-}
-
-/* 02535830: maptoolIdEvCamera: the stage's event camera list (dStage_Event_dt entries 0x18:
- * type 0x10, frames/10 0x11, flags 0x12, room 0x14), from the map tool id "ID" or the event's own */
-static u32 dCamera_c_maptoolIdEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02535830, u32, i_this);
-    u32 d;
-    if (ld(i_this + 0x108) != 0) {
-        d = ld(i_this + 0x4C8);
-        if (d == 0) return 1;
+static void runStyleEngine(dCamera_c* camera, s32 style) {
+    auto* entry = engineEntry(camStyleAlg(style));
+    s16 index = entry->mVtableIndex;
+    auto* object = reinterpret_cast<u8*>(camera) + static_cast<s32>(entry->mThisDelta);
+    u32 function;
+    if (index < 0) {
+        function = entry->mFunction;
     } else {
-        gabi::Local<s32> idl;
-        u32 ip = gabi::ea(idl.get());
-        getEvIntData(i_this, ip, 0x1004D0B0 /* "ID" */, -1);
-        s32 id = (s32)ld(ip);
-        st(i_this + 0x404, 0);
-        st(i_this + 0x11C, 0);
-        u32 g = gi();
-        if (id == -1) {
-            d = gabi::call<u32>(0x02540348, g + 0x12A0 + 0x3F30); /* dEvt_control_c::getStageEventDt */
-            st(i_this + 0x4C8, d);
+        auto* vtable = engineObject(object, entry->mVtableOffset)->mpVtable.get();
+        function = vtable[index].mFunction.get();
+    }
+    gabi::call_ptr(function, object, style);
+}
+
+/* 02535830 */
+u32 maptoolIdEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    StageEvent* event;
+    if (camera->m108 != 0) {
+        event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
+        if (!event)
+            return 1;
+    } else {
+        EventInt id;
+        cameraStyleGetEvIntData(camera, &id, mapId.text, -1);
+        s32 mapIdValue = id;
+        camera->mEventData.field_0x08 = 0;
+        camera->m11C = 0;
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        if (mapIdValue == -1) {
+            event = cameraStyleGetStageEventDt(&play->mEvtCtrl);
+            camera->mEventData.field_0xcc = gabi::ea(event);
         } else {
-            u32 stg = g + 0x12A0 + 0x3EB0;
-            u32 info = gabi::call_ptr<u32>(ld(ld(stg) + 0x1CC), stg);
-            if (id >= 0 && id < (s32)ld(info + 0)) d = ld(info + 4) + (u32)id * 0x18;
-            else d = 0;
-            st(i_this + 0x4C8, d);
+            auto* stage = reinterpret_cast<StageView*>(play->mStageData);
+            auto* info =
+                gabi::call_ptr<StageEventInfo*>(stage->mpVtable->getEventInfo.get(), stage);
+            if (mapIdValue >= 0 && mapIdValue < info->num)
+                event = info->events.get() + mapIdValue;
+            else
+                event = nullptr;
+            camera->mEventData.field_0xcc = gabi::ea(event);
         }
-        if (d == 0) return 1;
+        if (!event)
+            return 1;
     }
-    s32 room = (s8)ld8(d + 0x14);
-    u32 fl = ld8(d + 0x12);
-    u32 snd = 0xFFFFFFFF;
-    u32 type = ld8(d + 0x10);
-    if (fl != 0xFF) {
-        if (fl & 1) {
-            st(i_this + 0x510, ld(i_this + 0x510) & ~0x200000u);
-            d = ld(i_this + 0x4C8);
-            fl = ld8(d + 0x12);
+    s32 room = event->field_0x14;
+    u32 flags = event->field_0x12;
+    u32 soundFrame = 0xFFFFFFFF;
+    u32 type = event->field_0x10;
+    if (flags != MAP_KEEP_EVENT) {
+        if (flags & MAP_CLEAR_EVENT_FLAG) {
+            camera->mEventFlags &= ~0x200000u;
+            event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
+            flags = event->field_0x12;
         }
-        if (fl & 2) {
-            d = ld(i_this + 0x4C8);
-            st(i_this + 0x68, 0);
-            fl = ld8(d + 0x12);
+        if (flags & MAP_CLEAR_COUNTER) {
+            event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
+            camera->m068 = 0;
+            flags = event->field_0x12;
         }
-        if (fl & 0x80) snd = 0;
-        if (fl & 0x40) snd = 0x1E;
+        if (flags & MAP_SOUND_NOW)
+            soundFrame = 0;
+        if (flags & MAP_SOUND_LATER)
+            soundFrame = 30;
     }
-    if (ld(i_this + 0x108) == snd) gabi::call(0x025E1988, 0x806); /* mDoAud_seStart */
-    s32 camType = gabi::call<s32>(0x024FA208, i_this, type, room); /* GetCameraTypeFromMapToolID */
-    st(i_this + 0x408, (u32)camType);
-    if (camType == 0xFF) {
-        st(i_this + 0x4C8, 0);
+    if (camera->m108 == soundFrame)
+        cameraStyleSoundStart(MAP_CAMERA_SOUND);
+    s32 cameraType = cameraStyleGetCameraTypeFromMapToolID(camera, type, room);
+    camera->mEventData.field_0x0c = cameraType;
+    if (cameraType == MAP_KEEP_EVENT) {
+        camera->mEventData.field_0xcc = 0;
         return 1;
     }
-    s32 style = lds16(0x10049368 + ((u32)camType << 6)); /* types[type].mStyles[0] */
-    runStyleEngine(i_this, style);
-    d = ld(i_this + 0x4C8);
-    u32 t = ld8(d + 0x11);
-    if (t != 0xFF && ld(i_this + 0x11C) <= t * 10) return d == 0 ? 1 : 0;
-    u32 g = gi();
-    u32 n = gabi::call<u32>(0x025403D4, g + 0x51D0, d); /* dEvt_control_c::nextStageEventDt */
-    st8(i_this + 0x100, 0);
-    st8(i_this + 0x102, 0);
-    st(i_this + 0x4C8, n);
-    st8(i_this + 0x101, 0);
-    if (n == 0) return 1;
-    d = ld(i_this + 0x4C8);
-    st(i_this + 0x11C, 0xFFFFFFFF);
-    return d == 0 ? 1 : 0;
+    s32 style = camTypeStyle(cameraType, 0);
+    runStyleEngine(camera, style);
+    event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
+    u32 duration = event->field_0x11;
+    if (duration != MAP_KEEP_EVENT && camera->m11C <= duration * 10)
+        return !event ? 1 : 0;
+    auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+    auto* next = cameraStyleNextStageEventDt(&play->mEvtCtrl, event);
+    camera->m100 = 0;
+    camera->m102 = 0;
+    camera->mEventData.field_0xcc = gabi::ea(next);
+    camera->m101 = 0;
+    if (!next)
+        return 1;
+    event = gabi::at<StageEvent>(camera->mEventData.field_0xcc);
+    camera->m11C = 0xFFFFFFFF;
+    return !event ? 1 : 0;
 }
-VERIFY(0x02535830, dCamera_c_maptoolIdEvCamera);
 
-/* 0253754C: tactEvCamera (conducting the Wind Waker): fixed offsets around the player; the view is
- * saved to the play's slot first */
-static u32 dCamera_c_tactEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253754C, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        st(w + 4, 0);
-        st(w + 8, ((ld(i_this + 0x7C) >> 1) & 1) ^ 1);
-        f32 fovy = ldf(i_this + 0x60);
-        st(i_this + 0x41C, 0);
-        setDone(i_this);
-        s16 bank = lds16(i_this + 0x5C);
-        u32 g = gi();
-        st(g + 0x5B0C, ld(i_this + 0x44));
-        st(g + 0x5B10, ld(i_this + 0x48));
-        st(g + 0x5B14, ld(i_this + 0x4C));
-        st(g + 0x5B18, ld(i_this + 0x50));
-        st(g + 0x5B1C, ld(i_this + 0x54));
-        st(g + 0x5B20, ld(i_this + 0x58));
-        st16(g + 0x5B28, (u16)bank);
-        stf(g + 0x5B24, fovy);
+/* 0253754C */
+u32 tactEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    auto* work = reinterpret_cast<TactWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        work->mTimer = 0;
+        work->mMirror = ((static_cast<u32>(camera->m07C) >> 1) & 1) ^ 1;
+        f32 fovy = camera->mViewCache.mFovy;
+        camera->mEventData.field_0x20 = 0;
+        SkipSmoother(camera);
+        s16 bank = camera->mViewCache.mBank;
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        auto* saved = reinterpret_cast<CameraInfoView*>(&play->mCameraInfo[0]);
+        copyPoint(&saved->mCameraPos, &camera->mViewCache.mCenter);
+        copyPoint(&saved->mCameraTarget, &camera->mViewCache.mEye);
+        saved->mCameraBank = bank;
+        saved->mCameraFovy = fovy;
     }
-    gabi::Local<cXyz> ctrOfs;
-    gabi::Local<cXyz> eyeOfs;
-    gabi::Local<cXyz> r;
-    gabi::Local<cXyz> r2;
-    u32 co = gabi::ea(ctrOfs.get()), eo = gabi::ea(eyeOfs.get()), rr = gabi::ea(r.get()), r2r = gabi::ea(r2.get());
-    stf(co + 4, ldf(0x1004D1AC));
-    stf(co + 0, ldf(0x1004D1A8));
-    stf(co + 8, ldf(0x1004D1B0));
-    stf(eo + 4, ldf(0x1004D1B8));
-    stf(eo + 8, ldf(0x1004D1BC));
-    stf(eo + 0, ldf(0x1004D1B4));
-    if (ld(w + 0) != 1) st(w + 0, 1);
-    relationalPos(i_this, rr, ld(i_this + 0x128), co);
-    copy3(i_this + 0x44, rr);
-    u32 mirror = ld(w + 8);
-    u32 pl = ld(i_this + 0x128);
-    if (mirror != 0) stf(eo, -ldf(eo));
-    relationalPos(i_this, rr, pl, eo);
-    copy3(i_this + 0x50, rr);
-    if (gabi::call<bool>(0x024FCBE8, i_this, i_this + 0x44, i_this + 0x50, 0x8F)) { /* lineBGCheck */
-        stf(eo, -ldf(eo));
-        relationalPos(i_this, r2r, ld(i_this + 0x128), eo);
-        copy3(i_this + 0x50, r2r);
+    cXyz centerOffset;
+    cXyz eyeOffset;
+    cXyz relative;
+    cXyz reflected;
+    centerOffset.y = tactCenterOffset.y;
+    centerOffset.x = tactCenterOffset.x;
+    centerOffset.z = tactCenterOffset.z;
+    eyeOffset.y = tactEyeOffset.y;
+    eyeOffset.z = tactEyeOffset.z;
+    eyeOffset.x = tactEyeOffset.x;
+    if (work->mMode != 1)
+        work->mMode = 1;
+    cameraStyleRelationalPos(camera, &relative, camera->mpPlayerActor.get(), &centerOffset);
+    copyPoint(&camera->mViewCache.mCenter, &relative);
+    u32 mirror = work->mMirror;
+    auto* player = camera->mpPlayerActor.get();
+    if (mirror)
+        eyeOffset.x = -static_cast<f32>(eyeOffset.x);
+    cameraStyleRelationalPos(camera, &relative, player, &eyeOffset);
+    copyPoint(&camera->mViewCache.mEye, &relative);
+    if (cameraStyleLineBGCheck(camera, &camera->mViewCache.mCenter, &camera->mViewCache.mEye,
+                               0x8F)) {
+        eyeOffset.x = -static_cast<f32>(eyeOffset.x);
+        cameraStyleRelationalPos(camera, &reflected, camera->mpPlayerActor.get(), &eyeOffset);
+        copyPoint(&camera->mViewCache.mEye, &reflected);
     }
-    stf(i_this + 0x60, ldf(0x1004D1C0)); /* 55 */
-    st(w + 4, ld(w + 4) + 1);
+    camera->mViewCache.mFovy = tactFovy;
+    ++work->mTimer;
     return 1;
 }
-VERIFY(0x0253754C, dCamera_c_tactEvCamera);
 
-/* 02538A54: styleEvCamera: run the engine of the style named by "Name" (default "FN01") through
- * the engine table 101D5678 (pointer-to-member entries {this delta, vtable index, function or
- * vtable offset}, by the style's algorithm) */
-static u8 dCamera_c_styleEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02538A54, u8, i_this);
-    if (ld(i_this + 0x108) == 0) {
-        st(i_this + 0x11C, 0);
-        st(i_this + 0x404, 0);
+/* 02538A54 */
+u8 styleEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    if (camera->m108 == 0) {
+        camera->m11C = 0;
+        camera->mEventData.field_0x08 = 0;
     }
-    u32 name = getEvStringPntData(i_this, 0x1004D288 /* "Name" */, 0x1004D290 /* "FN01" */);
-    s32 style = gabi::call<s32>(0x024F732C, i_this + 0x8A4, ld(name)); /* dCamParam_c::SearchStyle */
-    runStyleEngine(i_this, style);
-    return isDone(i_this);
+    auto* name = cameraStyleGetEvStringPntData(camera, styleName.text, defaultStyle.text);
+    s32 style = cameraStyleSearchStyle(camera->mCamParam, *name);
+    runStyleEngine(camera, style);
+    u8 done = 0;
+    if (camera->m100 != 0 && camera->m101 != 0 && camera->m102 != 0)
+        done = 1;
+    return done;
 }
-VERIFY(0x02538A54, dCamera_c_styleEvCamera);
 
-/* 02538B54: saveEvCamera: the current view into slot "Slot" (0..1: m0A4[], 9: the play's slot) */
-static u32 dCamera_c_saveEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02538B54, u32, i_this);
-    gabi::Local<s32> slot;
-    u32 sp = gabi::ea(slot.get());
-    getEvIntData(i_this, sp, 0x1004D298 /* "Slot" */, 0);
-    s32 n = (s32)ld(sp);
-    if (n == 9) {
-        f32 fovy = ldf(i_this + 0x60);
-        s16 bank = lds16(i_this + 0x5C);
-        u32 g = gi();
-        st(g + 0x5B0C, ld(i_this + 0x44));
-        st(g + 0x5B10, ld(i_this + 0x48));
-        st(g + 0x5B14, ld(i_this + 0x4C));
-        st(g + 0x5B18, ld(i_this + 0x50));
-        st(g + 0x5B1C, ld(i_this + 0x54));
-        st(g + 0x5B20, ld(i_this + 0x58));
-        stf(g + 0x5B24, fovy);
-        st16(g + 0x5B28, (u16)bank);
-        setDone(i_this);
+/* 02538B54 */
+u32 saveEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    EventInt slot;
+    cameraStyleGetEvIntData(camera, &slot, saveSlot.text, 0);
+    s32 index = slot;
+    if (index == PLAY_CAMERA_SLOT) {
+        f32 fovy = camera->mViewCache.mFovy;
+        s16 bank = camera->mViewCache.mBank;
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        auto* saved = reinterpret_cast<CameraInfoView*>(&play->mCameraInfo[0]);
+        copyPoint(&saved->mCameraPos, &camera->mViewCache.mCenter);
+        copyPoint(&saved->mCameraTarget, &camera->mViewCache.mEye);
+        saved->mCameraFovy = fovy;
+        saved->mCameraBank = bank;
+        SkipSmoother(camera);
         return 1;
     }
-    u32 p = i_this + 0xA4 + ((u32)n << 5);
-    for (u32 i = 0; i < 0x18; i += 4) st(p + i, ld(i_this + 0x44 + i));
-    stf(p + 0x18, ldf(i_this + 0x60));
-    s16 bank = lds16(i_this + 0x5C);
-    st16(p + 0x1E, 1);
-    st16(p + 0x1C, (u16)bank);
-    setDone(i_this);
+    auto* saved = &camera->m0A4[static_cast<u32>(index)];
+    copyPoint(&saved->mCenter, &camera->mViewCache.mCenter);
+    copyPoint(&saved->mEye, &camera->mViewCache.mEye);
+    saved->mFovY = camera->mViewCache.mFovy;
+    s16 bank = camera->mViewCache.mBank;
+    saved->m1E = 1;
+    saved->mBank = bank;
+    SkipSmoother(camera);
     return 1;
 }
-VERIFY(0x02538B54, dCamera_c_saveEvCamera);
 
-/* 02538C7C: loadEvCamera */
-static u32 dCamera_c_loadEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02538C7C, u32, i_this);
-    gabi::Local<s32> slot;
-    u32 sp = gabi::ea(slot.get());
-    getEvIntData(i_this, sp, 0x1004D2A0 /* "Slot" */, 0);
-    s32 n = (s32)ld(sp);
-    if (n == 9) {
-        u32 g = gi();
-        st(i_this + 0x44, ld(g + 0x5B0C));
-        st(i_this + 0x48, ld(g + 0x5B10));
-        st(i_this + 0x4C, ld(g + 0x5B14));
-        st(i_this + 0x50, ld(g + 0x5B18));
-        st(i_this + 0x54, ld(g + 0x5B1C));
-        st(i_this + 0x58, ld(g + 0x5B20));
-        stf(i_this + 0x60, ldf(g + 0x5B24));
-        gabi::Local<s16> ang;
-        u32 res = gabi::call<u32>(0x0200658C, gabi::ea(ang.get()), (s32)lds16(g + 0x5B28));
-        st16(i_this + 0x5C, (u16)lds16(res));
-        setDone(i_this);
+/* 02538C7C */
+u32 loadEvCamera(u32 i_this) {
+    auto* camera = gabi::at<dCamera_c>(i_this);
+    EventInt slot;
+    cameraStyleGetEvIntData(camera, &slot, loadSlot.text, 0);
+    s32 index = slot;
+    if (index == PLAY_CAMERA_SLOT) {
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        auto* saved = reinterpret_cast<CameraInfoView*>(&play->mCameraInfo[0]);
+        copyPoint(&camera->mViewCache.mCenter, &saved->mCameraPos);
+        copyPoint(&camera->mViewCache.mEye, &saved->mCameraTarget);
+        camera->mViewCache.mFovy = saved->mCameraFovy;
+        cSAngle_l bank;
+        auto* result = cameraStyleAngleCtor(&bank, saved->mCameraBank);
+        camera->mViewCache.mBank = *result;
+        SkipSmoother(camera);
         return 1;
     }
-    u32 p = i_this + 0xA4 + ((u32)n << 5);
-    for (u32 i = 0; i < 0x18; i += 4) st(i_this + 0x44 + i, ld(p + i));
-    stf(i_this + 0x60, ldf(p + 0x18));
-    st16(i_this + 0x5C, (u16)lds16(p + 0x1C));
-    gabi::Local<cXyz> d;
-    u32 dd = gabi::ea(d.get());
-    gabi::call(0x0201ADE0, i_this + 0x50, dd, i_this + 0x44);
-    gabi::call(0x020072E0, i_this + 0x3C, dd);
-    setDone(i_this);
+    auto* saved = &camera->m0A4[static_cast<u32>(index)];
+    copyPoint(&camera->mViewCache.mCenter, &saved->mCenter);
+    copyPoint(&camera->mViewCache.mEye, &saved->mEye);
+    camera->mViewCache.mFovy = saved->mFovY;
+    camera->mViewCache.mBank = saved->mBank;
+    cXyz direction;
+    cameraStyleSubtract(&camera->mViewCache.mEye, &direction, &camera->mViewCache.mCenter);
+    cSGlobe_Val(&camera->mViewCache.mDirection, &direction);
+    SkipSmoother(camera);
     return 1;
 }
-VERIFY(0x02538C7C, dCamera_c_loadEvCamera);
+} // namespace event_camera_style
+using namespace event_camera_style;
 
-} // namespace d_ev_camera_3_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+data mapId 1004D0B0
+data styleName 1004D288
+data defaultStyle 1004D290
+data saveSlot 1004D298
+data loadSlot 1004D2A0
+data tactCenterOffset 1004D1A8
+data tactEyeOffset 1004D1B4
+data tactFovy 1004D1C0
+ext 02530634 u32 cameraStyleGetEvIntData(dCamera_c*, be<s32>*, const char*, s32)
+ext 02530AAC be<u32>* cameraStyleGetEvStringPntData(dCamera_c*, const char*, const char*)
+ext 02540348 StageEvent* cameraStyleGetStageEventDt(dEvt_control_c*)
+ext 025403D4 StageEvent* cameraStyleNextStageEventDt(dEvt_control_c*, StageEvent*)
+ext 024FA208 s32 cameraStyleGetCameraTypeFromMapToolID(dCamera_c*, u32, s32)
+ext 024F732C s32 cameraStyleSearchStyle(void*, u32)
+ext 025E1988 void cameraStyleSoundStart(u32)
+ext 0250242C void cameraStyleRelationalPos(dCamera_c*, cXyz*, fopAc_ac_c*, cXyz*)
+ext 024FCBE8 bool cameraStyleLineBGCheck(dCamera_c*, cXyz*, cXyz*, u32)
+ext 0201ADE0 void cameraStyleSubtract(cXyz*, cXyz*, cXyz*)
+ext 0200658C cSAngle_l* cameraStyleAngleCtor(cSAngle_l*, s32)
+*/

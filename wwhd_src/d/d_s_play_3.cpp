@@ -1,172 +1,162 @@
-/* d_s_play part 3: heapSizeCheck and phase_00. WWHD. 
- * See d_s_play.cpp for the unit's range and layouts.
- *
- * HD phase_00 constructs the scene object in place, builds the HD scene system at +0x1D4 from a
- * stack description (0x214 bytes), loads the "LOD48" setup through the HD resource system and
- * initialises the camera-like object it returns, then does the GameCube reset handling. */
-#include "bindings.h"
+/* Play scene part 3. */
+// HD: native scene, wind and resource systems extend the GameCube play scene.
+#include "d/d_s_play.h"
 
-namespace d_s_play_3_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 mDoExt_getArchiveHeap_l() { return gabi::call<u32>(0x025E3268); }
-static inline u32 mDoExt_getGameHeap_l() { return gabi::call<u32>(0x025E2FBC); }
-static inline u32 mDoExt_getZeldaHeap_l() { return gabi::call<u32>(0x025EE048); }
-static inline u32 mDoExt_getCommandHeap_l() { return gabi::call<u32>(0x025EE060); }
-static inline s32 mDoExt_getSafeArchiveHeapSize_l() { return gabi::call<s32>(0x025EE078); }
-static inline s32 mDoExt_getSafeGameHeapSize_l() { return gabi::call<s32>(0x025E2FF8); }
-static inline s32 mDoExt_getSafeZeldaHeapSize_l() { return gabi::call<s32>(0x025EE054); }
-static inline s32 mDoExt_getSafeCommandHeapSize_l() { return gabi::call<s32>(0x025EE06C); }
-static inline s32 JKRHeap_getTotalFreeSize_l(u32 h) { return gabi::call<s32>(0x027EC1FC, h); }
-static inline BOOL heapSizeCheck_l() { return gabi::call<BOOL>(0x025B0C30); }
-
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u16 ld16(u32 a) { return gabi::load<u16>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline u32 ld_vt(u32 obj, u32 off) { return gabi::load<u32>(gabi::load<u32>(obj + 0xC) + off); }
-static inline s32 JKRHeap_getFreeSize_l(u32 h) { return gabi::call_ptr<s32>(ld_vt(h, 0x74), h); } /* virtual */
-
-struct sstr_l { be<u32> str, vt; };
-struct u32_l { be<u32> v; };
-struct u32x2_l { be<u32> a, b; };
-struct desc_l { u8 b[0x214]; };
+static inline s32 dScnPly_getFreeHeapSize(u32 h) {
+    return gabi::call_ptr<s32>(gabi::at<dScnPly_HeapObject>(h)->mVtable->getFreeSize, h);
+} /* virtual */
 
 /* 025B0C30 */
 static BOOL heapSizeCheck() {
-    WWHD_FUNC(0x025B0C30, BOOL);
-    s32 archive_free = JKRHeap_getFreeSize_l(mDoExt_getArchiveHeap_l());
-    s32 archive_total_free = JKRHeap_getTotalFreeSize_l(mDoExt_getArchiveHeap_l());
+    s32 archive_free = dScnPly_getFreeHeapSize(dScnPlyAPI_getArchiveHeap());
+    s32 archive_total_free = dScnPlyAPI_getTotalFreeHeapSize(dScnPlyAPI_getArchiveHeap());
     f32 at = (f32)archive_total_free;
-    s32 archive_safe = mDoExt_getSafeArchiveHeapSize_l();
+    s32 archive_safe = dScnPlyAPI_getSafeArchiveHeapSize();
     f32 a1 = (f32)archive_free / at;
     f32 a2 = at / (f32)archive_safe;
-    s32 game_free = JKRHeap_getFreeSize_l(mDoExt_getGameHeap_l());
-    s32 game_total_free = JKRHeap_getTotalFreeSize_l(mDoExt_getGameHeap_l());
+    s32 game_free = dScnPly_getFreeHeapSize(dScnPlyAPI_getGameHeap());
+    s32 game_total_free = dScnPlyAPI_getTotalFreeHeapSize(dScnPlyAPI_getGameHeap());
     f32 gt = (f32)game_total_free;
-    s32 game_safe = mDoExt_getSafeGameHeapSize_l();
+    s32 game_safe = dScnPlyAPI_getSafeGameHeapSize();
     f32 g1 = (f32)game_free / gt;
     f32 g2 = gt / (f32)game_safe;
-    JKRHeap_getFreeSize_l(mDoExt_getZeldaHeap_l());
-    f32 zt = (f32)JKRHeap_getTotalFreeSize_l(mDoExt_getZeldaHeap_l());
-    f32 z = zt / (f32)mDoExt_getSafeZeldaHeapSize_l();
-    JKRHeap_getFreeSize_l(mDoExt_getCommandHeap_l());
-    f32 ct = (f32)JKRHeap_getTotalFreeSize_l(mDoExt_getCommandHeap_l());
-    f32 c = ct / (f32)mDoExt_getSafeCommandHeapSize_l();
-    if (a2 < 0.7f || a1 < 0.7f || g2 < 0.7f || g1 < 0.7f || z < 0.7f || c < 0.7f) return FALSE; /* bge on NaN: a NaN last ratio passes */
+    dScnPly_getFreeHeapSize(dScnPlyAPI_getZeldaHeap());
+    f32 zt = (f32)dScnPlyAPI_getTotalFreeHeapSize(dScnPlyAPI_getZeldaHeap());
+    f32 z = zt / (f32)dScnPlyAPI_getSafeZeldaHeapSize();
+    dScnPly_getFreeHeapSize(dScnPlyAPI_getCommandHeap());
+    f32 ct = (f32)dScnPlyAPI_getTotalFreeHeapSize(dScnPlyAPI_getCommandHeap());
+    f32 c = ct / (f32)dScnPlyAPI_getSafeCommandHeapSize();
+    if (a2 < 0.7f || a1 < 0.7f || g2 < 0.7f || g1 < 0.7f || z < 0.7f || c < 0.7f)
+        return FALSE; /* bge on NaN: a NaN last ratio passes */
     return TRUE;
 }
-VERIFY(0x025B0C30, heapSizeCheck);
 
 /* the HD scene system's entry for the current index (a bounded table lookup), or NULL */
-static inline u32 scene_entry(u32 sys, u32 idxPtr) {
-    u32 idx = (u32)(s32)(s16)ld16(idxPtr);
-    u32 n1 = ld(sys + 8);
-    u32 arr = ld(sys + 0xC);
-    u32 e = idx < n1 ? arr + (idx << 2) : arr;
-    if (ld16(e + 2) == 0) return 0;
-    u32 n2 = ld(sys + 0x10);
-    u32 e2 = idx < n1 ? arr + (idx << 2) : arr;
-    u32 k = ld16(e2);
-    u32 p2 = 0;
-    if (k < n2) p2 = ld(sys + 0x14) + (k << 2);
-    return ld(p2);
+/* inlined into phase_00 */
+static u32 scene_entry(dScnPly::SceneSystem *sys, be<s16> *idxPtr) {
+    u32 idx = (u32)(s32)*idxPtr;
+    u32 n1 = sys->mEntryCount;
+    dScnPly::SceneEntry *arr = sys->mpEntries;
+    dScnPly::SceneEntry *entry = idx < n1 ? arr + idx : arr;
+    if (entry->mIsValid == 0)
+        return 0;
+    u32 n2 = sys->mObjectCount;
+    entry = idx < n1 ? arr + idx : arr;
+    u32 k = entry->mObjectIndex;
+    gptr<void> *object = nullptr;
+    if (k < n2)
+        object = sys->mpObjects + k;
+    // HD: an invalid index retains the original read from guest address zero.
+    return object->v;
 }
 
-/* 025B0FB4: HD: see the file comment */
-static s32 phase_00(u32 i_this) {
-    WWHD_FUNC(0x025B0FB4, s32, i_this);
-    if (ld8(0x1018F484) == 0) {
-        gabi::call(0x02038624, gabi::call<u32>(0x0203E900));
-        u32 x = gabi::call<u32>(0x0203E900);
-        gabi::call(0x02038744, ld(0x1018F47C), x);
-        gabi::call(0x02038A3C, ld(0x1018F47C));
+// HD: see the file comment
+/* 025B0FB4 */
+static s32 phase_00(dScnPly::dScnPly_ply_c *i_this) {
+    if (l_displayReady.mValue == 0) {
+        dScnPlyAPI_prepareDisplayHeap(dScnPlyAPI_getDisplayAllocator());
+        u32 x = dScnPlyAPI_getDisplayAllocator();
+        dScnPlyAPI_attachDisplayHeap(l_displaySystem.mValue, x);
+        dScnPlyAPI_initializeDisplayResources(l_displaySystem.mValue);
     }
-    if (gabi::call<BOOL>(0x025E20F0)) return 0; /* mDoAud_isUsedHeapForStreamBuffer */
-    if (i_this != 0) gabi::call(0x025B0F2C, i_this); /* dScnPly_ply_c::dScnPly_ply_c (in place) */
-    gabi::Local<desc_l> desc;
+    if (dScnPlyAPI_checkStreamHeap())
+        return cPhs_INIT_e; /* mDoAud_isUsedHeapForStreamBuffer */
+    if (i_this != 0)
+        dScnPlyAPI_constructPlayScene(
+            gabi::ea(i_this)); /* dScnPly_ply_c::dScnPly_ply_c (in place) */
+    gabi::Local<dScnPly_SceneDescription> desc;
     u32 d = gabi::ea(desc.get());
-    gabi::call(0x0276CAA4, d);
-    gabi::call(0x0276F9F0, d, (u32)(s32)(s16)ld16(ld(0x104A1F64)), 1);
-    gabi::call(0x0276F9F0, d, (u32)(s32)(s16)ld16(ld(0x104A1F70)), 8);
-    gabi::call(0x0276F9F0, d, (u32)(s32)(s16)ld16(ld(0x104A1460)), 1);
-    u32 idxPtr = ld(0x104A145C);
-    gabi::call(0x0276F9F0, d, (u32)(s32)(s16)ld16(idxPtr), 1);
-    u32 sys = i_this + 0x1D4;
-    u32 heap = gabi::call<u32>(0x0203E8F4);
-    gabi::call(0x0276C3F8, sys, d, heap);
-    gabi::Local<sstr_l> a, b;
-    a->vt = 0x10052EEC;
-    b->vt = 0x10052EEC;
-    a->str = 0x1005326C;
-    b->str = 0x10053280;
-    gabi::call(0x026124B0, ld(0x101F4F7C), gabi::ea(a.get()), gabi::ea(b.get()), 0);
-    u32 r = gabi::call<u32>(0x027E2DC0);
-    u32 off = ld(r + 0x4C);
-    u32 p = off != 0 ? r + 0x4C + off : 0; /* relative pointer */
-    u32 q = gabi::call<u32>(0x027DFA24, p, 0x10053274);
-    u32 off2 = ld(q);
+    dScnPlyAPI_constructSceneDescription(d);
+    dScnPlyAPI_appendSceneDescription(d, (u32)(s32)*gabi::at<be<s16>>(l_sceneBaseIndex.mValue), 1);
+    dScnPlyAPI_appendSceneDescription(d, (u32)(s32)*gabi::at<be<s16>>(l_sceneResourceIndex.mValue),
+                                      8);
+    dScnPlyAPI_appendSceneDescription(
+        d, (u32)(s32)*gabi::at<be<s16>>(l_sceneDescriptionIndex.mValue), 1);
+    u32 idxPtr = l_sceneIndex.mValue;
+    dScnPlyAPI_appendSceneDescription(d, (u32)(s32)*gabi::at<be<s16>>(idxPtr), 1);
+    u32 sys = gabi::ea(&i_this->mSceneSystem);
+    u32 heap = dScnPlyAPI_getCurrentHeap_u320();
+    dScnPlyAPI_initializeSceneSystem(sys, d, heap);
+    gabi::Local<dScnPly_SafeString> a, b;
+    a->mVtable = gc_tu.safeString;
+    b->mVtable = gc_tu.safeString;
+    a->mString = gabi::guest_addr("Misc");
+    b->mString = gabi::guest_addr("Misc.bfres");
+    dScnPlyAPI_getResource_void4(l_resourceSystem.mValue, gabi::ea(a.get()), gabi::ea(b.get()), 0);
+    u32 r = dScnPlyAPI_getResourceFile();
+    u32 off = gabi::at<dScnPly_ResourceFile>(r)->mFileDictionaryOffset;
+    u32 p = off != 0 ? gabi::ea(&gabi::at<dScnPly_ResourceFile>(r)->mFileDictionaryOffset) + off
+                     : 0; /* relative pointer */
+    u32 q = dScnPlyAPI_findResource(p, gabi::guest_addr("env.baglenv"));
+    u32 off2 = *gabi::at<be<u32>>(q);
     u32 p2 = off2 != 0 ? q + off2 : 0;
-    gabi::Local<u32_l> out;
-    u32 res = gabi::call<u32>(0x027A7558, gabi::ea(out.get()), p2);
-    u32 v = ld(res);
-    gabi::Local<u32x2_l> pair;
-    pair->b = v;
-    pair->a = v;
-    gabi::call(0x0276B710, sys, gabi::ea(pair.get()) + 0, gabi::ea(pair.get()) + 4, (u32)-1, 1.0f);
-    u32 obj = scene_entry(sys, idxPtr);
-    if (ld(0x101FD7E0) == 0) { /* function-local static */
-        st(0x101FD7E0, 1);
-        st(0x101FDD14, 0x10052FAC);
+    gabi::Local<dScnPly_ModelHandle> out;
+    u32 res = dScnPlyAPI_resolveSceneModel(gabi::ea(out.get()), p2);
+    u32 v = gabi::at<dScnPly_ModelHandle>(res)->mValue;
+    gabi::Local<dScnPly_ModelPair> pair;
+    pair->mSecond = v;
+    pair->mFirst = v;
+    dScnPlyAPI_bindSceneModel(sys, gabi::ea(&pair->mFirst), gabi::ea(&pair->mSecond), (u32)-1,
+                              1.0f);
+    u32 obj = scene_entry(gabi::at<dScnPly::SceneSystem>(sys), gabi::at<be<s16>>(idxPtr));
+    if (l_sceneTypeGuard.mInitialized == 0) { /* function-local static */
+        l_sceneTypeGuard.mInitialized = 1;
+        l_sceneType.mVtable = play_tu.mSceneTypeVtable;
     }
-    if (obj != 0 && gabi::call_ptr<u32>(ld(ld(obj + 0x58) + 0x44), obj, 0x101FDD14u) == 0) obj = 0; /* isKindOf(&type descriptor 101FDD14): r4 is live at the bctrl (game test 2026-10-04) */
-    gabi::call(0x0277019C, obj, 1);
-    stf(obj + 0x13C, 1.0f);
-    st(obj + 0xF4, 1);
-    stf(obj + 0x16C, 1.0f);
-    stf(obj + 0x15C, 10000.0f);
-    stf(obj + 0x14C, 1.0f);
-    stf(obj + 0x18C, 1000.0f);
-    stf(obj + 0x120, 0.0f);
-    stf(obj + 0x108, 8000.0f);
-    stf(obj + 0x124, 0.0f);
-    stf(obj + 0x11C, 0.0f);
-    stf(obj + 0x104, 0.0f);
-    stf(obj + 0x134, 0.0f);
-    stf(obj + 0x10C, 0.0f);
-    stf(obj + 0x138, 0.0f);
-    gabi::call(0x0276C8B8, sys);
-    st(0x104B4708, sys);
-    st8(i_this + 0x930, ld8(i_this + 0x930) | 2);
-    st(i_this + 0x900, 0);
-    stf(i_this + 0x9F0, 15.0f);
-    stf(i_this + 0x9F4, 15.0f);
-    st(i_this + 0x8FC, 0);
-    stf(i_this + 0xA04, 0.02f);
-    st(i_this + 0x904, 0);
-    stf(i_this + 0xA08, 0.01f);
-    st8(i_this + 0xA80, 1);
-    gabi::call(0x0272D16C, ld(0x101F8710));
-    st8(0x101F4825, 0);
-    if (i_this != 0 && (s16)ld16(i_this + 8) == 7) { /* fpcNm_PLAY_SCENE */
-        heapSizeCheck_l();
-        return 2;
+    if (obj != 0 &&
+        gabi::call_ptr<u32>(
+            gabi::at<dScnPly_SceneObject>(obj)->mRuntimeTypeVtable->checkDerivedRuntimeTypeInfo,
+            obj, &l_sceneType) == 0)
+        obj = 0;
+    dScnPlyAPI_enableSceneObject(obj, 1);
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[14] = 1.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mInitializationFlags = 1;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[26] = 1.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[22] = 10000.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[18] = 1.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[34] = 1000.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[7] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[1] = 8000.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[8] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[6] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[0] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[12] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[2] = 0.0f;
+    gabi::at<dScnPly_SceneObject>(obj)->mRenderParameters[13] = 0.0f;
+    dScnPlyAPI_updateSceneSystem(sys);
+    l_activeSceneSystem.mValue = sys;
+    i_this->mWindSystem.mFlags = i_this->mWindSystem.mFlags | 2;
+    i_this->mWindSystem.mStateWords[1] = 0;
+    i_this->mWindSystem.mSpeedX = 15.0f;
+    i_this->mWindSystem.mSpeedZ = 15.0f;
+    i_this->mWindSystem.mStateWords[0] = 0;
+    i_this->mWindSystem.mWindX = 0.02f;
+    i_this->mWindSystem.mStateWords[2] = 0;
+    i_this->mWindSystem.mWindZ = 0.01f;
+    i_this->mWindSystem.mIsEnabled = 1;
+    dScnPlyAPI_resetControllerSystem(l_controllerSystem.mValue);
+    l_graphicsResetState.mValue = 0;
+    if (i_this != 0 &&
+        (s16)i_this->mProcName == dScnPly::fpcNm_PLAY_SCENE_e) { /* fpcNm_PLAY_SCENE */
+        dScnPlyAPI_checkHeapSize();
+        return cPhs_NEXT_e;
     }
-    heapSizeCheck_l();
-    if (ld(ld(0x101F4974)) != 0) { /* mDoRst::isReset() */
-        gabi::call(0x025E1D8C);           /* audio reset recovery */
-        st8(0x101F4827, 0);               /* mDoGph_gInf_c::offFade() */
-        gabi::call(0x025F0830);           /* mDoGph_gInf_c::offMonotone() */
-        st8(0x101D616C, 0);               /* dDlst_list_c::offWipe() */
-        gabi::call(0x02526570);           /* daTitle_proc_c::daTitle_Kirakira_Sound_flag_on() */
-        gabi::call(0x023AB3D0);           /* daObjTribox::Act_c::reset() */
-        st8(dComIfGp_ea() + 0x514C, 0);   /* dComIfGp_offEnableNextStage() */
+    dScnPlyAPI_checkHeapSize();
+    if (gabi::at<dScnPly_Reset>(l_reset.mValue)->mReset != 0) { /* mDoRst::isReset() */
+        dScnPlyAPI_recoverAudioReset();                         /* audio reset recovery */
+        l_fadeEnabled.mValue = 0;                               /* mDoGph_gInf_c::offFade() */
+        dScnPlyAPI_disableMonotone();                           /* mDoGph_gInf_c::offMonotone() */
+        l_wipeEnabled.mValue = 0;                               /* dDlst_list_c::offWipe() */
+        dScnPlyAPI_enableTitleKirakiraSound(); /* daTitle_proc_c::daTitle_Kirakira_Sound_flag_on() */
+        dScnPlyAPI_resetTribox();              /* daObjTribox::Act_c::reset() */
+        dScnPly_gameInfo()->play.mNextStage.enable = 0; /* dComIfGp_offEnableNextStage() */
     }
-    gabi::call(0x025B9A18, ld(0x101F84DC) + 0x20); /* dComIfGs_init() */
-    return 2;
+    dScnPlyAPI_initializeSave(
+        gabi::ea(&gabi::at<dScnPly_SaveRoot>(l_save.mValue)->mSave)); /* dComIfGs_init() */
+    return cPhs_NEXT_e;
 }
-VERIFY(0x025B0FB4, phase_00);
-
-} // namespace d_s_play_3_cpp
+/* WWHD glue
+str 1005326C "Misc" in 025B0FB4
+str 10053274 "env.baglenv" in 025B0FB4
+str 10053280 "Misc.bfres" in 025B0FB4
+*/

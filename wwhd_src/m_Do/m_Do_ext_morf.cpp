@@ -1,107 +1,489 @@
-#include "gabi.h"
-using namespace gabi;
-void ext_setMorf(void* self,f32 duration) {
- WWHD_FUNC(0x025E4A54,void,self,duration);
- u32 o=ea(self);f32 previous=load<f32>(o+0xB4),zero=load<f32>(0x100586DC),one=load<f32>(0x100586D4);
- if(previous<zero||!(duration>zero)){store<f32>(o+0xB0,one);store<f32>(o+0xB4,one);return;}
- f32 delta=one/duration;store<f32>(o+0xB0,zero);store<f32>(o+0xB4,zero);store<f32>(o+0xB8,delta);
-}
-VERIFY(0x025E4A54,ext_setMorf);
-void ext_4ECC(void* self) {
- WWHD_FUNC(0x025E4ECC,void,self);
- u32 o=ea(self),model=load<u32>(o+0x90),data=load<u32>(model+0xAC),joints=call<u32>(0x027F3F94,at<void>(data));store<u32>(o+0x6C,joints);
- Local<u8[0x14]> desc; /* game test 2026-10-05: 027E06E0/027E063C fill desc+4..+0x14 */store<u32>(ea(desc.get())+4,0);store<u32>(ea(desc.get()),0xFFFFFFFF);store<u32>(ea(desc.get())+8,0);
- load<u16>(joints+8);u32 count=load<u16>(joints+8);store<u32>(ea(desc.get()),count);
- u32 size=call<u32>(0x027E06E0,desc.get()),buffer=call<u32>(0x025E3A34,size,0x40);store<u32>(o+0x8C,buffer);call(0x027E063C,at<void>(o+0x78),desc.get(),at<void>(buffer),size);
-}
-VERIFY(0x025E4ECC,ext_4ECC);
-u32 ext_play(void* self,void* position,u32 sound,s32 reverb) {
- WWHD_FUNC(0x025E535C,u32,self,position,sound,reverb);
- u32 o=ea(self);f32 progress=load<f32>(o+0xB0),one=load<f32>(0x100586D4);
- if(progress<one){f32 delta=load<f32>(o+0xB8);store<f32>(o+0xB4,progress);call(0x0200F5C8,at<void>(o+0xB0),one,delta);}
- call(0x027F2FC4,at<void>(o+0x98));u32 audio=load<u32>(o+0xBC);
- if(audio&&load<u32>(audio+0x9C)&&ea(position)){f32 frame=load<f32>(o+0x9C),rate=load<f32>(o+0x98);call(0x0201BF08,at<void>(audio),position,sound,reverb,frame,rate);}
- if(load<u8>(o+0xA7)&1)return 1;return load<f32>(o+0x98)==load<f32>(0x100586DC)?1:0;
-}
-VERIFY(0x025E535C,ext_play);
-void ext_5434(void* self) {
- WWHD_FUNC(0x025E5434,void,self);
- u32 o=ea(self),model=load<u32>(o+0x90);if(!model)return;
- u32 anim=load<u32>(o+0x94);
- if(anim){u32 frameBits=load<u32>(o+0x9C);store<u32>(anim,frameBits);anim=load<u32>(o+0x94);call(0x027F363C,self,at<void>(anim));u32 control=load<u32>(o+4);anim=load<u32>(o+0x94);u32 target=load<u32>(control+0x10);f32 second=load<f32>(control+4);u32 receiver=load<u32>(control+0x14);f32 third=load<f32>(control+8),first=load<f32>(anim);f32 result=call_ptr<f32>(target,at<void>(receiver),first,second,third);store<f32>(control,result);model=load<u32>(o+0x90);}
- u32 data=load<u32>(model+0xAC),root=load<u32>(data+8);store<u32>(root+0x14,o);model=load<u32>(o+0x90);
- call(0x025E2DA8,at<void>(model));
- f32 progress=load<f32>(o+0xB0);store<f32>(o+0xB4,progress);}
-VERIFY(0x025E5434,ext_5434);
-void ext_54D8(void* self) {
- WWHD_FUNC(0x025E54D8,void,self);
- u32 o=ea(self),model=load<u32>(o+0x90);if(!model)return;
- u32 anim=load<u32>(o+0x94);
- if(anim){u32 frameBits=load<u32>(o+0x9C);store<u32>(anim,frameBits);anim=load<u32>(o+0x94);call(0x027F363C,self,at<void>(anim));u32 control=load<u32>(o+4);anim=load<u32>(o+0x94);u32 target=load<u32>(control+0x10);f32 second=load<f32>(control+4);u32 receiver=load<u32>(control+0x14);f32 third=load<f32>(control+8),first=load<f32>(anim);f32 result=call_ptr<f32>(target,at<void>(receiver),first,second,third);store<f32>(control,result);model=load<u32>(o+0x90);}
- u32 data=load<u32>(model+0xAC),root=load<u32>(data+8);store<u32>(root+0x14,o);model=load<u32>(o+0x90);
- call(0x025E2DE0,at<void>(model),0);
- f32 progress=load<f32>(o+0xB0);store<f32>(o+0xB4,progress);}
-VERIFY(0x025E54D8,ext_54D8);
-void ext_55A0(void* self) {
- WWHD_FUNC(0x025E55A0,void,self);
- u32 o=ea(self),model=load<u32>(o+0x90);if(!model)return;
- u32 anim=load<u32>(o+0x94);
- if(anim){u32 frameBits=load<u32>(o+0x9C);store<u32>(anim,frameBits);anim=load<u32>(o+0x94);call(0x027F363C,self,at<void>(anim));u32 control=load<u32>(o+4);anim=load<u32>(o+0x94);u32 target=load<u32>(control+0x10);f32 second=load<f32>(control+4);u32 receiver=load<u32>(control+0x14);f32 third=load<f32>(control+8),first=load<f32>(anim);f32 result=call_ptr<f32>(target,at<void>(receiver),first,second,third);store<f32>(control,result);model=load<u32>(o+0x90);}
- u32 data=load<u32>(model+0xAC),root=load<u32>(data+8);store<u32>(root+0x14,o);model=load<u32>(o+0x90);
- call(0x027F4D5C,at<void>(model));
- }
-VERIFY(0x025E55A0,ext_55A0);
-void ext_5580(void* self){WWHD_FUNC(0x025E5580,void,self);u32 target=load<u32>(ea(self)+0x90);if(target)call(0x025E2E24,at<void>(target));}
-VERIFY(0x025E5580,ext_5580);
-void ext_5590(void* self){WWHD_FUNC(0x025E5590,void,self);u32 target=load<u32>(ea(self)+0x90);if(target)call(0x025E2E5C,at<void>(target));}
-VERIFY(0x025E5590,ext_5590);
-void ext_563C(void* self){WWHD_FUNC(0x025E563C,void,self);u32 target=load<u32>(ea(self)+0xBC);if(target)call(0x02801D3C,at<void>(target));}
-VERIFY(0x025E563C,ext_563C);
+/** Single-animation morph controller, tww fields and methods. Private source. */
+#include "m_Do/m_Do_ext_morf.h"
+using gabi::cpu;
+using gabi::ftoi;
+// HD: verified argument ordering, constructor guest-stack words and buffer state are retained.
+// HD: resource SafeString calls and Md comparison preserve callback argument ordering.
+static f32 l_zero;
+static f32 l_one;
+static f32 l_initialPrevMorf;
+static mDoExtMorf::Address l_stringVtable;
+static mDoExtMorf::Address l_mdName;
+static mDoExtMorf::Word l_resources;
+static mDoExtMorf::Address l_baseVtable;
+static mDoExtMorf::Address l_morfVtable;
+static mDoExtMorf::Address l_secondaryVtable;
+static mDoExtMorf::Address l_soundAgent;
+static mDoExtMorf::Transform l_defaultTransform;
+/* 025E4A54 */
+void mDoExt_McaMorf::setMorf(f32 duration) {
 
-void ext_setAnm(void* self,void* animation,s32 mode,void* bas,f32 morf,f32 speed,f32 start,f32 end) {
- WWHD_FUNC(0x025E4A98,void,self,animation,mode,bas,morf,speed,start,end);
- u32 o=ea(self),a=ea(animation),b=ea(bas);f32 zero=load<f32>(0x100586DC);s16 first=(s16)ftoi(start);
- store<u32>(o+0x94,a);store<s16>(o+0xA0,first);store<f32>(o+0x9C,(f32)first);
- s32 last;
- if(!(end<zero))last=(s16)ftoi(end);
- else {u32 current=load<u32>(o+0x94);if(!current)last=0;else{u32 table=load<u32>(current+4),target=load<u32>(table+0x14),data=load<u32>(a+8),flags=load<u32>(data+0xC);last=call_ptr<s32>(target,at<void>(current));if(flags&4)last=(s16)(last-1);}}
- call(0x027F2BC0,at<void>(o+0x98),last);
- if(a&&mode<0){u32 table=load<u32>(a+4);mode=call_ptr<s32>(load<u32>(table+0xC),animation);}
- store<f32>(o+0x98,speed);store<u8>(o+0xA6,(u8)mode);
- s16 frame=speed<zero?load<s16>(o+0xA2):first;store<f32>(o+0x9C,(f32)frame);store<s16>(o+0xA4,frame);
- call(0x025E4A54,self,morf);u32 audio=load<u32>(o+0xBC);if(!audio)return;
- if(!b&&a){u32 data=load<u32>(a+8),relative=load<u32>(data+4),name=relative?data+4+relative:0;Local<u8[8]> str;store<u32>(ea(str.get()),name);store<u32>(ea(str.get())+4,0x10058704);b=call<u32>(0x0260702C,at<void>(load<u32>(0x101F4F28)),str.get(),at<void>(a+0xC));audio=load<u32>(o+0xBC);}
- store<u32>(audio+0x9C,b);audio=load<u32>(o+0xBC);u32 agent=load<u32>(audio+0x94),target=load<u32>(agent+0x14);
- if(!b){call_ptr(target,at<void>(audio),0,1,zero);return;}
- s32 direction=load<f32>(o+0x98)<zero?-1:1;f32 current=(f32)load<s16>(o+0xA4);call_ptr(target,at<void>(audio),at<void>(b),direction,current);
- Local<u8[8]> str;u32 st=ea(str.get());store<u32>(st,0x10058A08);store<u32>(st+4,0x10058704);call(0x025EE5EC,str.get());call_ptr(load<u32>(load<u32>(st+4)+0x14),str.get());
- u32 name=load<u32>(st);call_ptr(load<u32>(load<u32>(a+0x10)+0x14),at<void>(a+0xC));u32 other=load<u32>(a+0xC);
- if(name!=other){for(u32 i=0;i<0x40001;i++){u8 left=load<u8>(name+i),right=load<u8>(other+i);if(left!=right)return;if(!left){audio=load<u32>(o+0xBC);store<u32>(audio+0x98,1);return;}}return;}
- audio=load<u32>(o+0xBC);store<u32>(audio+0x98,1);
+  u32 o = gabi::ea(this);
+  f32 previous = mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf, zero = l_zero,
+      one = l_one;
+  if (previous < zero || !(duration > zero)) {
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf = one;
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = one;
+    return;
+  }
+  f32 delta = one / duration;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf = zero;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = zero;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mMorfStep = delta;
 }
-VERIFY(0x025E4A98,ext_setAnm);
 
-void* ext_morfCtor(void* self,void* data,void* cb1,void* cb2,void* animation,s32 mode,s32 start,s32 end,f32 speed){
- WWHD_FUNC(0x025E4F64,void*,self,data,cb1,cb2,animation,mode,start,end,speed);
- u32 entrySP=cpu->r[1],enable=load<u32>(entrySP+8),b=load<u32>(entrySP+0xC),modelFlag=load<u32>(entrySP+0x10),dlFlag=load<u32>(entrySP+0x14);
- u32 o=ea(self),d=ea(data),a=ea(animation);if(!o){o=call<u32>(0x0273AD10,0xC8);if(!o)return nullptr;}
- store<u32>(o,0x1016E54C);call(0x027DA984,at<void>(o+4));store<u32>(o,0x10058CC0);store<u32>(o+0x38,0x1016D820);
- store<u32>(o+0x48,0);store<u32>(o+0x6C,0);store<u32>(o+0x70,0);store<u32>(o+0x74,0);store<u32>(o+0x88,0);store<u32>(o+0x8C,0);store<u32>(o+0x90,0);store<u32>(o+0x94,0);call(0x027F2BC0,at<void>(o+0x98),0);
- for(u32 offset: {0xC0u,0xC4u,0x90u,0x94u,0xBCu,0xA8u,0xACu})store<u32>(o+offset,0);
- f32 zero=load<f32>(0x100586DC);store<f32>(o+0xB0,zero);store<f32>(o+0xB4,zero);store<f32>(o+0xB8,zero);if(!d)return at<void>(o);
- u32 model=call<u32>(0x025E38E0,data,modelFlag,dlFlag);store<u32>(o+0x90,model);if(!model)return at<void>(o);
- call(0x027F36FC,at<void>(o),data,animation);
- bool found=false;
- if(!b&&a){u32 ad=load<u32>(a+8),rel=load<u32>(ad+4),name=rel?ad+4+rel:0;Local<u8[8]> str;store<u32>(ea(str.get()),name);store<u32>(ea(str.get())+4,0x10058704);b=call<u32>(0x0260702C,at<void>(load<u32>(0x101F4F28)),str.get(),at<void>(a+0xC));found=b!=0;}
- bool failed=false;
- if((found||enable)&&!call<u32>(0x025E20F8)){u32 audio=call<u32>(0x0273AD10,0xA0);if(audio){call(0x028F521C,at<void>(audio),0xA0);call(0x02801DA0,at<void>(audio));store<u32>(audio+0x98,0);store<u32>(audio+0x94,0x1005871C);}store<u32>(o+0xBC,audio);if(!audio)failed=true;}
- if(!failed){call(0x025E4A98,at<void>(o),animation,mode,at<void>(b),zero,speed,(f32)start,(f32)end);store<f32>(o+0xB4,load<f32>(0x10058A0C));
- u32 joints=call<u32>(0x027F3F94,data),count=load<u16>(joints+8),trans=call<u32>(0x0273ADAC,count<<5);store<u32>(o+0xA8,trans);if(!trans)failed=true;
- if(!failed){joints=call<u32>(0x027F3F94,data);count=load<u16>(joints+8);u32 quat=call<u32>(0x0273ADAC,count<<4);store<u32>(o+0xAC,quat);if(!quat)failed=true;
- if(!failed){call(0x025E4ECC,at<void>(o));model=load<u32>(o+0x90);trans=load<u32>(o+0xA8);u32 md=load<u32>(model+0xAC);quat=load<u32>(o+0xAC);joints=call<u32>(0x027F3F94,at<void>(md));count=load<u16>(joints+8);
- if(count){f32 sx=load<f32>(0x1016E464),sy=load<f32>(0x1016E468),sz=load<f32>(0x1016E46C),tx=load<f32>(0x1016E478),ty=load<f32>(0x1016E47C),tz=load<f32>(0x1016E480);s16 rx=load<s16>(0x1016E470),ry=load<s16>(0x1016E472),rz=load<s16>(0x1016E474);
- for(u32 i=0;i<count;i++){store<f32>(trans,sx);store<f32>(trans+4,sy);store<f32>(trans+8,sz);store<f32>(trans+0x14,tx);store<f32>(trans+0x18,ty);store<f32>(trans+0x1C,tz);store<s16>(trans+0xC,rx);store<s16>(trans+0xE,ry);store<s16>(trans+0x10,rz);call(0x027ED2D0,(s32)rx,(s32)ry,(s32)rz,at<void>(quat));trans+=32;quat+=16;}}
- store<u32>(o+0xC0,ea(cb1));store<u32>(o+0xC4,ea(cb2));return at<void>(o);}}}
- u32 audio=load<u32>(o+0xBC);if(audio){call(0x02801D3C,at<void>(audio));store<u32>(o+0xBC,0);}u32 trans=load<u32>(o+0xA8),quat=load<u32>(o+0xAC);if(trans)store<u32>(o+0xA8,0);if(quat)store<u32>(o+0xAC,0);model=load<u32>(o+0x90);if(model){call_ptr(load<u32>(load<u32>(model+0xC)+0xC),at<void>(model),2);store<u32>(o+0x90,0);}return at<void>(o);
+/* 025E4ECC */
+void mDoExt_McaMorf::createAnmBuffer() {
+
+  u32 o = gabi::ea(this), model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel,
+      data = mDoExtMorf_at<mDoExtMorf::Model>(model)->mpModelData,
+      joints = mDoExtMorf_joints(gabi::at<void>(data));
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpJoints = joints;
+  gabi::Local<mDoExtMorf::BufferDesc>
+      desc; /* game test 2026-10-05: 027E06E0/027E063C fill desc+4..+0x14 */
+  desc->mFirst = 0;
+  desc->mCount = 0xFFFFFFFF;
+  desc->mSize = 0;
+  (void)mDoExtMorf_at<mDoExtMorf::Joints>(joints)->mNum;
+  u32 count = mDoExtMorf_at<mDoExtMorf::Joints>(joints)->mNum;
+  desc->mCount = count;
+  u32 size = mDoExtMorf_bufferSize(desc.get()),
+      buffer = mDoExtMorf_allocAligned(size, 0x40);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpBufferMemory = buffer;
+  mDoExtMorf_bufferConstruct(gabi::at<void>(o + 0x78), desc.get(),
+                             gabi::at<void>(buffer), size);
 }
-VERIFY(0x025E4F64,ext_morfCtor);
+
+/* 025E535C */
+u32 mDoExt_McaMorf::play(void *position, u32 sound, s32 reverb) {
+
+  u32 o = gabi::ea(this);
+  f32 progress = mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf, one = l_one;
+  if (progress < one) {
+    f32 delta = mDoExtMorf_at<mDoExt_McaMorf>(o)->mMorfStep;
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = progress;
+    mDoExtMorf_chaseF(gabi::at<void>(o + 0xB0), one, delta);
+  }
+  mDoExtMorf_frameUpdate(gabi::at<void>(o + 0x98));
+  u32 audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  if (audio && mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mpBasAnm &&
+      gabi::ea(position)) {
+    f32 frame = mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrame,
+        rate = mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mRate;
+    mDoExtMorf_animSound(gabi::at<void>(audio), position, sound, reverb, frame,
+                         rate);
+  }
+  if (mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mState & 1)
+    return 1;
+  return mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mRate == l_zero ? 1 : 0;
+}
+
+/* 025E5434 */
+void mDoExt_McaMorf::update() {
+
+  u32 o = gabi::ea(this), model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  if (!model)
+    return;
+  u32 anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+  if (anim) {
+    u32 frameBits = mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrameWord;
+    mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrameWord = frameBits;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    mDoExtMorf_calcBind(this, gabi::at<void>(anim));
+    u32 control = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpControl;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    u32 target = mDoExtMorf_at<mDoExtMorf::Control>(control)->mCallback;
+    f32 second = mDoExtMorf_at<mDoExtMorf::Control>(control)->mSecond;
+    u32 receiver = mDoExtMorf_at<mDoExtMorf::Control>(control)->mReceiver;
+    f32 third = mDoExtMorf_at<mDoExtMorf::Control>(control)->mThird,
+        first = mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrame;
+    f32 result = gabi::call_ptr<f32>(target, gabi::at<void>(receiver), first,
+                                     second, third);
+    mDoExtMorf_at<mDoExtMorf::Control>(control)->mValue = result;
+    model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  }
+  u32 data = mDoExtMorf_at<mDoExtMorf::Model>(model)->mpModelData,
+      root = mDoExtMorf_at<mDoExtMorf::AnimationData>(data)->mpRoot;
+  mDoExtMorf_at<mDoExtMorf::Root>(root)->mpMtxCalc = o;
+  model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  mDoExtMorf_modelUpdate(gabi::at<void>(model));
+  f32 progress = mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = progress;
+}
+
+/* 025E54D8 */
+void mDoExt_McaMorf::updateDL() {
+
+  u32 o = gabi::ea(this), model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  if (!model)
+    return;
+  u32 anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+  if (anim) {
+    u32 frameBits = mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrameWord;
+    mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrameWord = frameBits;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    mDoExtMorf_calcBind(this, gabi::at<void>(anim));
+    u32 control = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpControl;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    u32 target = mDoExtMorf_at<mDoExtMorf::Control>(control)->mCallback;
+    f32 second = mDoExtMorf_at<mDoExtMorf::Control>(control)->mSecond;
+    u32 receiver = mDoExtMorf_at<mDoExtMorf::Control>(control)->mReceiver;
+    f32 third = mDoExtMorf_at<mDoExtMorf::Control>(control)->mThird,
+        first = mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrame;
+    f32 result = gabi::call_ptr<f32>(target, gabi::at<void>(receiver), first,
+                                     second, third);
+    mDoExtMorf_at<mDoExtMorf::Control>(control)->mValue = result;
+    model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  }
+  u32 data = mDoExtMorf_at<mDoExtMorf::Model>(model)->mpModelData,
+      root = mDoExtMorf_at<mDoExtMorf::AnimationData>(data)->mpRoot;
+  mDoExtMorf_at<mDoExtMorf::Root>(root)->mpMtxCalc = o;
+  model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  mDoExtMorf_modelUpdateDL(gabi::at<void>(model), 0);
+  f32 progress = mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = progress;
+}
+
+/* 025E55A0 */
+void mDoExt_McaMorf::calc() {
+
+  u32 o = gabi::ea(this), model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  if (!model)
+    return;
+  u32 anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+  if (anim) {
+    u32 frameBits = mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrameWord;
+    mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrameWord = frameBits;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    mDoExtMorf_calcBind(this, gabi::at<void>(anim));
+    u32 control = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpControl;
+    anim = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    u32 target = mDoExtMorf_at<mDoExtMorf::Control>(control)->mCallback;
+    f32 second = mDoExtMorf_at<mDoExtMorf::Control>(control)->mSecond;
+    u32 receiver = mDoExtMorf_at<mDoExtMorf::Control>(control)->mReceiver;
+    f32 third = mDoExtMorf_at<mDoExtMorf::Control>(control)->mThird,
+        first = mDoExtMorf_at<mDoExtMorf::Animation>(anim)->mFrame;
+    f32 result = gabi::call_ptr<f32>(target, gabi::at<void>(receiver), first,
+                                     second, third);
+    mDoExtMorf_at<mDoExtMorf::Control>(control)->mValue = result;
+    model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  }
+  u32 data = mDoExtMorf_at<mDoExtMorf::Model>(model)->mpModelData,
+      root = mDoExtMorf_at<mDoExtMorf::AnimationData>(data)->mpRoot;
+  mDoExtMorf_at<mDoExtMorf::Root>(root)->mpMtxCalc = o;
+  model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  mDoExtMorf_modelCalc(gabi::at<void>(model));
+}
+
+/* 025E5580 */
+void mDoExt_McaMorf::entry() {
+  u32 target = static_cast<mDoExt_McaMorf *>(this)->mpModel;
+  if (target)
+    mDoExtMorf_modelEntry(gabi::at<void>(target));
+}
+
+/* 025E5590 */
+void mDoExt_McaMorf::entryDL() {
+  u32 target = static_cast<mDoExt_McaMorf *>(this)->mpModel;
+  if (target)
+    mDoExtMorf_modelEntryDL(gabi::at<void>(target));
+}
+
+/* 025E563C */
+void mDoExt_McaMorf::stopZelAnime() {
+  u32 target = static_cast<mDoExt_McaMorf *>(this)->mpSound;
+  if (target)
+    mDoExtMorf_soundStop(gabi::at<void>(target));
+}
+
+/* 025E4A98 */
+void mDoExt_McaMorf::setAnm(void *animation, s32 mode, void *bas, f32 morf,
+                            f32 speed, f32 start, f32 end) {
+
+  u32 o = gabi::ea(this), a = gabi::ea(animation), b = gabi::ea(bas);
+  f32 zero = l_zero;
+  s16 first = (s16)ftoi(start);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm = a;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mStart = first;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrame = (f32)first;
+  s32 last;
+  if (!(end < zero))
+    last = (s16)ftoi(end);
+  else {
+    u32 current = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm;
+    if (!current)
+      last = 0;
+    else {
+      u32 table = mDoExtMorf_at<mDoExtMorf::Animation>(current)->mpVtable,
+          target =
+              mDoExtMorf_at<mDoExtMorf::AnimationVtable>(table)->mGetFrameMax,
+          data = mDoExtMorf_at<mDoExtMorf::Animation>(a)->mpData,
+          flags = mDoExtMorf_at<mDoExtMorf::AnimationData>(data)->mFlags;
+      last = gabi::call_ptr<s32>(target, gabi::at<void>(current));
+      if (flags & 4)
+        last = (s16)(last - 1);
+    }
+  }
+  mDoExtMorf_frameInit(gabi::at<void>(o + 0x98), last);
+  if (a && mode < 0) {
+    u32 table = mDoExtMorf_at<mDoExtMorf::Animation>(a)->mpVtable;
+    mode = gabi::call_ptr<s32>(
+        mDoExtMorf_at<mDoExtMorf::AnimationVtable>(table)->mGetAttribute,
+        animation);
+  }
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mRate = speed;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mAttribute = (u8)mode;
+  s16 frame =
+      speed < zero ? mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mEnd : first;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mFrame = (f32)frame;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mLoop = frame;
+  mDoExtMorf_setMorfCall(this, morf);
+  u32 audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  if (!audio)
+    return;
+  if (!b && a) {
+    u32 data = mDoExtMorf_at<mDoExtMorf::Animation>(a)->mpData,
+        relative = mDoExtMorf_at<mDoExtMorf::AnimationData>(data)->mNameOffset,
+        name = relative ? data + 4 + relative : 0;
+    gabi::Local<mDoExtMorf::SafeString> str;
+    str->mData = name;
+    str->mpVtable = gabi::ea(&l_stringVtable);
+    b = mDoExtMorf_resource(gabi::at<void>(l_resources.mValue), str.get(),
+                            gabi::at<void>(a + 0xC));
+    audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  }
+  mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mpBasAnm = b;
+  audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  u32 agent = mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mpAgent,
+      target = mDoExtMorf_at<mDoExtMorf::Agent>(agent)->mInit;
+  if (!b) {
+    gabi::call_ptr(target, gabi::at<void>(audio), 0, 1, zero);
+    return;
+  }
+  s32 direction =
+      mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mRate < zero ? -1 : 1;
+  f32 current = (f32)mDoExtMorf_at<mDoExt_McaMorf>(o)->mFrameCtrl.mLoop;
+  gabi::call_ptr(target, gabi::at<void>(audio), gabi::at<void>(b), direction,
+                 current);
+  gabi::Local<mDoExtMorf::SafeString> str;
+  str->mData = gabi::ea(&l_mdName);
+  str->mpVtable = gabi::ea(&l_stringVtable);
+  mDoExtMorf_checkName(str.get());
+  gabi::call_ptr(*mDoExtMorf_at<be<u32>>(str->mpVtable + 0x14), str.get());
+  u32 name = str->mData;
+  gabi::call_ptr(
+      *mDoExtMorf_at<be<u32>>(
+          mDoExtMorf_at<mDoExtMorf::Animation>(a)->mName.mpVtable + 0x14),
+      gabi::at<void>(a + 0xC));
+  u32 other = mDoExtMorf_at<mDoExtMorf::Animation>(a)->mName.mData;
+  if (name != other) {
+    for (u32 i = 0; i < 0x40001; i++) {
+      u8 left = *mDoExtMorf_at<be<u8>>(name + i),
+         right = *mDoExtMorf_at<be<u8>>(other + i);
+      if (left != right)
+        return;
+      if (!left) {
+        audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+        mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mIsMd = 1;
+        return;
+      }
+    }
+    return;
+  }
+  audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mIsMd = 1;
+}
+
+/* 025E4F64 */
+void *mDoExt_McaMorf_create(void *self, void *data, void *cb1, void *cb2,
+                            void *animation, s32 mode, s32 start, s32 end,
+                            f32 speed) {
+
+  u32 entrySP = cpu->r[1],
+      enable = mDoExtMorf_at<mDoExtMorf::StackArgs>(entrySP)->mEnable,
+      b = mDoExtMorf_at<mDoExtMorf::StackArgs>(entrySP)->mBasAnm,
+      modelFlag = mDoExtMorf_at<mDoExtMorf::StackArgs>(entrySP)->mModelFlag,
+      dlFlag = mDoExtMorf_at<mDoExtMorf::StackArgs>(entrySP)->mDlFlag;
+  u32 o = gabi::ea(self), d = gabi::ea(data), a = gabi::ea(animation);
+  if (!o) {
+    o = mDoExtMorf_alloc(0xC8);
+    if (!o)
+      return nullptr;
+  }
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpVtable = gabi::ea(&l_baseVtable);
+  mDoExtMorf_baseConstruct(gabi::at<void>(o + 4));
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpVtable = gabi::ea(&l_morfVtable);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSecondaryVtable =
+      gabi::ea(&l_secondaryVtable);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mBaseState = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpJoints = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mJointState = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mCalcState = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mAnmBuffer.mState = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpBufferMemory = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm = 0;
+  mDoExtMorf_frameInit(gabi::at<void>(o + 0x98), 0);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpCallback1 = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpCallback2 = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpAnm = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpTransformInfo = 0;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpQuat = 0;
+  f32 zero = l_zero;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mCurMorf = zero;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = zero;
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mMorfStep = zero;
+  if (!d)
+    return gabi::at<void>(o);
+  u32 model = mDoExtMorf_modelCreate(data, modelFlag, dlFlag);
+  mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel = model;
+  if (!model)
+    return gabi::at<void>(o);
+  mDoExtMorf_bindModel(gabi::at<void>(o), data, animation);
+  bool found = false;
+  if (!b && a) {
+    u32 ad = mDoExtMorf_at<mDoExtMorf::Animation>(a)->mpData,
+        rel = mDoExtMorf_at<mDoExtMorf::AnimationData>(ad)->mNameOffset,
+        name = rel ? ad + 4 + rel : 0;
+    gabi::Local<mDoExtMorf::SafeString> str;
+    str->mData = name;
+    str->mpVtable = gabi::ea(&l_stringVtable);
+    b = mDoExtMorf_resource(gabi::at<void>(l_resources.mValue), str.get(),
+                            gabi::at<void>(a + 0xC));
+    found = b != 0;
+  }
+  bool failed = false;
+  if ((found || enable) && !mDoExtMorf_audioDisabled()) {
+    u32 audio = mDoExtMorf_alloc(0xA0);
+    if (audio) {
+      mDoExtMorf_clear(gabi::at<void>(audio), 0xA0);
+      mDoExtMorf_soundConstruct(gabi::at<void>(audio));
+      mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mIsMd = 0;
+      mDoExtMorf_at<mDoExtMorf::Sound>(audio)->mpAgent =
+          gabi::ea(&l_soundAgent);
+    }
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound = audio;
+    if (!audio)
+      failed = true;
+  }
+  if (!failed) {
+    mDoExtMorf_setAnmCall(gabi::at<void>(o), animation, mode, gabi::at<void>(b),
+                          zero, speed, (f32)start, (f32)end);
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mPrevMorf = l_initialPrevMorf;
+    u32 joints = mDoExtMorf_joints(data),
+        count = mDoExtMorf_at<mDoExtMorf::Joints>(joints)->mNum,
+        trans = mDoExtMorf_allocArray(count << 5);
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpTransformInfo = trans;
+    if (!trans)
+      failed = true;
+    if (!failed) {
+      joints = mDoExtMorf_joints(data);
+      count = mDoExtMorf_at<mDoExtMorf::Joints>(joints)->mNum;
+      u32 quat = mDoExtMorf_allocArray(count << 4);
+      mDoExtMorf_at<mDoExt_McaMorf>(o)->mpQuat = quat;
+      if (!quat)
+        failed = true;
+      if (!failed) {
+        mDoExtMorf_createBufferCall(gabi::at<void>(o));
+        model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+        trans = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpTransformInfo;
+        u32 md = mDoExtMorf_at<mDoExtMorf::Model>(model)->mpModelData;
+        quat = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpQuat;
+        joints = mDoExtMorf_joints(gabi::at<void>(md));
+        count = mDoExtMorf_at<mDoExtMorf::Joints>(joints)->mNum;
+        if (count) {
+          f32 sx = l_defaultTransform.mScale.x,
+              sy = l_defaultTransform.mScale.y,
+              sz = l_defaultTransform.mScale.z,
+              tx = l_defaultTransform.mTranslate.x,
+              ty = l_defaultTransform.mTranslate.y,
+              tz = l_defaultTransform.mTranslate.z;
+          s16 rx = l_defaultTransform.mRotation.x,
+              ry = l_defaultTransform.mRotation.y,
+              rz = l_defaultTransform.mRotation.z;
+          for (u32 i = 0; i < count; i++) {
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mScale.x = sx;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mScale.y = sy;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mScale.z = sz;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mTranslate.x = tx;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mTranslate.y = ty;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mTranslate.z = tz;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mRotation.x = rx;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mRotation.y = ry;
+            mDoExtMorf_at<mDoExtMorf::Transform>(trans)->mRotation.z = rz;
+            mDoExtMorf_EulerToQuat((s32)rx, (s32)ry, (s32)rz,
+                                   gabi::at<void>(quat));
+            trans += 32;
+            quat += 16;
+          }
+        }
+        mDoExtMorf_at<mDoExt_McaMorf>(o)->mpCallback1 = gabi::ea(cb1);
+        mDoExtMorf_at<mDoExt_McaMorf>(o)->mpCallback2 = gabi::ea(cb2);
+        return gabi::at<void>(o);
+      }
+    }
+  }
+  u32 audio = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound;
+  if (audio) {
+    mDoExtMorf_soundStop(gabi::at<void>(audio));
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpSound = 0;
+  }
+  u32 trans = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpTransformInfo,
+      quat = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpQuat;
+  if (trans)
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpTransformInfo = 0;
+  if (quat)
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpQuat = 0;
+  model = mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel;
+  if (model) {
+    gabi::call_ptr(*mDoExtMorf_at<be<u32>>(
+                       mDoExtMorf_at<mDoExtMorf::Model>(model)->mpVtable + 0xC),
+                   gabi::at<void>(model), 2);
+    mDoExtMorf_at<mDoExt_McaMorf>(o)->mpModel = 0;
+  }
+  return gabi::at<void>(o);
+}
+/* WWHD glue (tools/verify/autoglue.py)
+ext 027F3F94 u32 mDoExtMorf_joints(void*)
+ext 027E06E0 u32 mDoExtMorf_bufferSize(void*)
+ext 025E3A34 u32 mDoExtMorf_allocAligned(u32, u32)
+ext 027E063C void mDoExtMorf_bufferConstruct(void*, void*, void*, u32)
+ext 0200F5C8 void mDoExtMorf_chaseF(void*, f32, f32)
+ext 027F2FC4 void mDoExtMorf_frameUpdate(void*)
+ext 0201BF08 void mDoExtMorf_animSound(void*, void*, u32, s32, f32, f32)
+ext 027F363C void mDoExtMorf_calcBind(void*, void*)
+ext 025E2DA8 void mDoExtMorf_modelUpdate(void*)
+ext 025E2DE0 void mDoExtMorf_modelUpdateDL(void*, u32)
+ext 027F4D5C void mDoExtMorf_modelCalc(void*)
+ext 025E2E24 void mDoExtMorf_modelEntry(void*)
+ext 025E2E5C void mDoExtMorf_modelEntryDL(void*)
+ext 02801D3C void mDoExtMorf_soundStop(void*)
+ext 027F2BC0 void mDoExtMorf_frameInit(void*, s32)
+ext 025E4A54 void mDoExtMorf_setMorfCall(void*, f32)
+ext 0260702C u32 mDoExtMorf_resource(void*, void*, void*)
+ext 025EE5EC void mDoExtMorf_checkName(void*)
+ext 0273AD10 u32 mDoExtMorf_alloc(u32)
+ext 027DA984 void mDoExtMorf_baseConstruct(void*)
+ext 025E38E0 u32 mDoExtMorf_modelCreate(void*, u32, u32)
+ext 027F36FC void mDoExtMorf_bindModel(void*, void*, void*)
+ext 025E20F8 u32 mDoExtMorf_audioDisabled()
+ext 028F521C void mDoExtMorf_clear(void*, u32)
+ext 02801DA0 void mDoExtMorf_soundConstruct(void*)
+ext 025E4A98 void mDoExtMorf_setAnmCall(void*, void*, s32, void*, f32, f32, f32, f32)
+ext 0273ADAC u32 mDoExtMorf_allocArray(u32)
+ext 025E4ECC void mDoExtMorf_createBufferCall(void*)
+ext 027ED2D0 void mDoExtMorf_EulerToQuat(s32, s32, s32, void*)
+data l_zero 100586DC
+data l_one 100586D4
+data l_initialPrevMorf 10058A0C
+data l_stringVtable 10058704
+data l_mdName 10058A08
+data l_resources 101F4F28
+data l_baseVtable 1016E54C
+data l_morfVtable 10058CC0
+data l_secondaryVtable 1016D820
+data l_soundAgent 1005871C
+data l_defaultTransform 1016E464
+*/

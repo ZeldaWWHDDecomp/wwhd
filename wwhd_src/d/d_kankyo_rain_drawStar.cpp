@@ -1,101 +1,174 @@
-#include "d_kankyo_rain_private.h"
-namespace d_kankyo_rain_cpp {
-static void drawStar() {
-    WWHD_FUNC(0x02574144,void);
-    u32 env=environment(),packet=ld(environment()+0xA60),camera=ld(gameInfo()+0x5AF8);
-    gabi::Local<ProjectParams_l> params,starParams;
-    gabi::Local<Matrix_l> view,rotation;
-    gabi::Local<Vec_l> reference,position,projected,input,output;
-    gabi::Local<Quad_l> triangle;
-    gabi::call(0x02563DD8,params.get());
-    if(!ld(0x10477588)) {
-        gabi::store<u32>(0x10477588,1);
-        static constexpr s32 angles[16][3]={{0x32C8,0x2904,-16000},{0x24B8,0x2648,-12646},{0x27D8,0x2E18,-13525},{0x283C,0x348A,-13525},{0x3A98,0x47E0,-16162},{0x30D4,0x4D58,-15000},{0x23DB,0x4330,-14404},{0x251C,0x2648,-12646},{-7421,0x791D,0x496E},{-10937,0x6D60,0x3A98},{-10000,0x6146,0x47E0},{-9400,0x57E4,0x3E1C},{-9179,0x5334,0x37DC},{-10300,0x55F0,0x5208},{-16000,0x639C,0x4E20},{0,0x7530,0x4A38}};
-        for(u32 i=0;i<16;i++)gabi::call(0x0201A478,0x10477520+i*6,angles[i][0],angles[i][1],angles[i][2]);
+// Weather drawing: GameCube names; verified HD rendering buffers.
+#include "d/d_kankyo_rain_drawSibuki.h"
+namespace RainDraw {
+/* 02574144 */
+void dKyr_drawStar() {
+
+    u32 env = getEnvironment(), packet = (u32)(at<Environment>(getEnvironment())->mpStarPacket.v),
+        camera = (u32)(at<GameInfo>(getGameInfo())->camera);
+    gabi::Local<ProjectParams> params, starParams;
+    gabi::Local<Matrix> view, rotation;
+    gabi::Local<cXyz> reference, position, projected, input, output;
+    gabi::Local<Quad> triangle;
+    sdk::prepareProjection(params.get());
+    if (!(u32)(*at<be<u32>>(ConstellationInitialized))) {
+        *at<be<u32>>(ConstellationInitialized) = 1;
+        const s32 angles[16][3] = {
+            {0x32C8, 0x2904, -16000}, {0x24B8, 0x2648, -12646}, {0x27D8, 0x2E18, -13525},
+            {0x283C, 0x348A, -13525}, {0x3A98, 0x47E0, -16162}, {0x30D4, 0x4D58, -15000},
+            {0x23DB, 0x4330, -14404}, {0x251C, 0x2648, -12646}, {-7421, 0x791D, 0x496E},
+            {-10937, 0x6D60, 0x3A98}, {-10000, 0x6146, 0x47E0}, {-9400, 0x57E4, 0x3E1C},
+            {-9179, 0x5334, 0x37DC},  {-10300, 0x55F0, 0x5208}, {-16000, 0x639C, 0x4E20},
+            {0, 0x7530, 0x4A38}};
+        for (u32 i = 0; i < 16; i++)
+            sdk::constructAngle(ConstellationPositions + i * 6, angles[i][0], angles[i][1], angles[i][2]);
     }
-    if(!gabi::load<s16>(packet+0xCC))return;
-    if(!ld(gameInfo()+0x5FA4))return;
-    gabi::call(0x028E91EC,ld(gameInfo()+0x5FA4)+0x1E4,view.get());
-    gabi::call(0x025F1018,env+0xB44,reference.get(),params.get());
-    gabi::call(0x028E98C0,rotation.get(),90,gabi::fmuls_ppc((f32)ld(packet+0xD0),lf(0x1004FB7C)));
-    gabi::call(0x028E9108,view.get(),rotation.get(),view.get());
-    f32 cameraY=lf(camera+0xE0),cameraX=lf(camera+0xDC),zero=lf(0x1004F528),cameraZ=lf(camera+0xE4),fade=zero;
-    u32 info=gameInfo();f32 one=lf(0x1004F550);
-    if(ld(info+0x5FA4)) {
-        fade=lf(ld(gameInfo()+0x5FA4)+0xD4)/lf(0x1004F6EC);
-        if(!(fade<one))fade=one;
-        fade=gabi::fsubs_ppc(one,fade);
+    if (!(s16)(at<StarPacket>(packet)->mEffectNum))
+        return;
+    if (!(u32)(at<GameInfo>(getGameInfo())->view))
+        return;
+    sdk::MTXInverse(ea(&at<View>((u32)at<GameInfo>(getGameInfo())->view)->mRotation), view.get());
+    sdk::project(ea(&at<Environment>(env)->mMoonPos), reference.get(), params.get());
+    sdk::MTXRotDeg(
+        rotation.get(), 90,
+        gabi::fmuls_ppc((f32)(u32)(at<StarPacket>(packet)->mRot), (f32)(*at<be<f32>>(DegreeToRadians))));
+    sdk::MTXConcat(view.get(), rotation.get(), view.get());
+    f32 cameraY = (f32)(at<Camera>(camera)->mEye.value.y), cameraX = (f32)(at<Camera>(camera)->mEye.value.x),
+        zero = (f32)(*at<be<f32>>(Zero)), cameraZ = (f32)(at<Camera>(camera)->mEye.value.z), fade = zero;
+    u32 info = getGameInfo();
+    f32 one = (f32)(*at<be<f32>>(One));
+    if ((u32)(at<GameInfo>(info)->view)) {
+        fade = (f32)(at<View>((u32)at<GameInfo>(getGameInfo())->view)->mFovy) / (f32)(*at<be<f32>>(WideFovy));
+        if (!(fade < one))
+            fade = one;
+        fade = gabi::fsubs_ppc(one, fade);
     }
-    f32 sizeBase=lf(0x1004FC98),half=lf(0x1004F57C);
-    f32 radius=gabi::fmuls_ppc(gabi::fnmsubs(lf(0x1004F740),fade,sizeBase),half);
-    f32 bottom=-gabi::fmuls_ppc(radius,half);
-    for(u32 vertex=0;vertex<3;vertex++) {
-        input->x=vertex==0?zero:vertex==1?radius:-radius;
-        input->y=vertex==0?radius:bottom;input->z=zero;
-        gabi::call(0x028E8F64,view.get(),input.get(),output.get());
-        triangle->vertices[vertex].x=gabi::fadds_ppc(cameraX,(f32)output->x);
-        triangle->vertices[vertex].y=gabi::fadds_ppc(cameraY,(f32)output->y);
-        triangle->vertices[vertex].z=gabi::fadds_ppc(cameraZ,(f32)output->z);
+    f32 sizeBase = (f32)(*at<be<f32>>(StarSizeBase)), half = (f32)(*at<be<f32>>(Half));
+    f32 radius = gabi::fmuls_ppc(gabi::fnmsubs((f32)(*at<be<f32>>(Fall)), fade, sizeBase), half);
+    f32 bottom = -gabi::fmuls_ppc(radius, half);
+    for (u32 vertex = 0; vertex < 3; vertex++) {
+        input->x = vertex == 0 ? zero : vertex == 1 ? radius : -radius;
+        input->y = vertex == 0 ? radius : bottom;
+        input->z = zero;
+        sdk::MTXMultVec(view.get(), input.get(), output.get());
+        triangle->vertices[vertex].value.x = gabi::fadds_ppc(cameraX, (f32)output->x);
+        triangle->vertices[vertex].value.y = gabi::fadds_ppc(cameraY, (f32)output->y);
+        triangle->vertices[vertex].value.z = gabi::fadds_ppc(cameraZ, (f32)output->z);
     }
-    f32 spiral=zero;
-    f32 distanceLimit=gabi::fmadds(lf(0x1004F6BC),gabi::fmuls_ppc(fade,fade),lf(0x1004F55C));
-    f32 minCoord=lf(0x1004FCAC),spiralShrink=lf(0x1004FCB0),two=lf(0x1004F52C),maxX=lf(0x1004F634),maxY=lf(0x1004F7CC),distanceFactor=lf(0x1004F800),tableScale=lf(0x1004F54C);
-    u32 phase=0,phaseStep=0;
-    for(s32 i=0;i<gabi::load<s16>(packet+0xCC);i++) {
-        u32 flags=packet+0x49A608;
-        gabi::store<u8>(packet+0xD4+(u32)i,0);
-        if(i<16)gabi::store<u8>(flags+(u32)i,i==6||i==8?0:1);
-        else {u32 kind=(u32)i&7;gabi::store<u8>(flags+(u32)i,kind<2?2:kind);}
-        f32 x,y,z,scale;
-        if(i<16) {
-            u32 angle=0x10477520+(u32)i*6;
-            x=(f32)gabi::load<s16>(angle);y=(f32)gabi::load<s16>(angle+2);z=(f32)gabi::load<s16>(angle+4);
-            scale=gabi::fmuls_ppc(lf(packet+0xC0),lf(i>7?0x1004FCB4:0x1004F6D8));
-            scale=gabi::fnmsubs(fade,gabi::fmuls_ppc(scale,half),scale);
+    f32 spiral = zero;
+    f32 distanceLimit = gabi::fmadds((f32)(*at<be<f32>>(MoonDistanceGain)), gabi::fmuls_ppc(fade, fade),
+                                     (f32)(*at<be<f32>>(MoonDistanceBase)));
+    f32 minCoord = (f32)(*at<be<f32>>(ScreenMinimum)), spiralShrink = (f32)(*at<be<f32>>(SpiralShrink)),
+        two = (f32)(*at<be<f32>>(SkyRange)), maxX = (f32)(*at<be<f32>>(ScreenMaximumX)),
+        maxY = (f32)(*at<be<f32>>(ScreenMaximumY)), distanceFactor = (f32)(*at<be<f32>>(SpiralDistanceGain)),
+        tableScale = (f32)(*at<be<f32>>(StarTableScale));
+    u32 phase = 0, phaseStep = 0;
+    for (s32 i = 0; i < (s16)(at<StarPacket>(packet)->mEffectNum); i++) {
+        u32 flags = ea(&at<StarPacket>(packet)->mColorKind);
+        at<StarPacket>(packet)->mDrawn[i] = 0;
+        if (i < 16)
+            at<be<u8>>(flags)[(u32)i] = i == 6 || i == 8 ? 0 : 1;
+        else {
+            u32 kind = (u32)i & 7;
+            at<be<u8>>(flags)[(u32)i] = kind < 2 ? 2 : kind;
+        }
+        f32 x, y, z, scale;
+        if (i < 16) {
+            u32 angle = ConstellationPositions + (u32)i * 6;
+            x = (f32)(s16)(at<csXyz>(angle)->x);
+            y = (f32)(s16)(at<csXyz>(angle)->y);
+            z = (f32)(s16)(at<csXyz>(angle)->z);
+            scale = gabi::fmuls_ppc((f32)(at<StarPacket>(packet)->mSin),
+                                    (f32)(*at<be<f32>>(i > 7 ? u32(LargeStarScale) : u32(Degrees))));
+            scale = gabi::fnmsubs(fade, gabi::fmuls_ppc(scale, half), scale);
         } else {
-            scale=gabi::fmadds(gabi::fmuls_ppc(gabi::fmuls_ppc((f32)(i&63),lf(0x1004FCB8)),lf(0x1004F640)),lf(packet+0xC0),sizeBase);
-            if((i&15)==2) {scale=gabi::fmuls_ppc(scale,lf(0x1004FB8C));gabi::store<u8>(flags+(u32)i,2);}
-            u32 table=0x104A44F8+(((phase-0x8000)&0xFFFFu)>>3)*8;
-            f32 shrink=gabi::fnmsubs(spiral,spiralShrink,one);
-            f32 px=gabi::fmuls_ppc(gabi::fmuls_ppc(lf(table),tableScale),shrink),pz=gabi::fmuls_ppc(gabi::fmuls_ppc(lf(table+4),tableScale),shrink);
-            f32 term=spiral/two;term=gabi::fmuls_ppc(term,gabi::fmuls_ppc(term,term));
-            f32 increment=gabi::fmadds(term,distanceFactor,one);
-            y=gabi::fadds_ppc(spiral,lf(0x1004FB84));
-            spiral=gabi::fadds_ppc(spiral,increment);phase+=phaseStep;phaseStep+=2500;
-            x=-px;z=pz;
-            if(spiral>two)spiral=gabi::fmuls_ppc((f32)i/lf(0x1004F540),lf(0x1004F6D4));
+            scale = gabi::fmadds(
+                gabi::fmuls_ppc(gabi::fmuls_ppc((f32)(i & 63), (f32)(*at<be<f32>>(StarVariation))),
+                                (f32)(*at<be<f32>>(StarVariationScale))),
+                (f32)(at<StarPacket>(packet)->mSin), sizeBase);
+            if ((i & 15) == 2) {
+                scale = gabi::fmuls_ppc(scale, (f32)(*at<be<f32>>(LargeStarGain)));
+                at<be<u8>>(flags)[(u32)i] = 2;
+            }
+            u32 table = SinCosTable + (((phase - 0x8000) & 0xFFFFu) >> 3) * 8;
+            f32 shrink = gabi::fnmsubs(spiral, spiralShrink, one);
+            f32 px = gabi::fmuls_ppc(gabi::fmuls_ppc((f32)(at<SinCos>(table)->sine), tableScale), shrink),
+                pz = gabi::fmuls_ppc(gabi::fmuls_ppc((f32)(at<SinCos>(table)->cosine), tableScale), shrink);
+            f32 term = spiral / two;
+            term = gabi::fmuls_ppc(term, gabi::fmuls_ppc(term, term));
+            f32 increment = gabi::fmadds(term, distanceFactor, one);
+            y = gabi::fadds_ppc(spiral, (f32)(*at<be<f32>>(SpiralHeight)));
+            spiral = gabi::fadds_ppc(spiral, increment);
+            phase += phaseStep;
+            phaseStep += 2500;
+            x = -px;
+            z = pz;
+            if (spiral > two)
+                spiral = gabi::fmuls_ppc((f32)i / (f32)(*at<be<f32>>(SpiralResetScale)),
+                                         (f32)(*at<be<f32>>(NarrowFovy)));
         }
-        gabi::call(0x02563DD8,starParams.get());
-        position->x=gabi::fadds_ppc(cameraX,x);position->y=gabi::fadds_ppc(cameraY,y);position->z=gabi::fadds_ppc(cameraZ,z);
-        gabi::call(0x025F1018,position.get(),projected.get(),starParams.get());
-        f32 squared=gabi::call<f32>(0x028E8DE8,reference.get(),projected.get());
-        f64 distance=gabi::call<f64>(0x028F4384,(f64)squared);
-        f32 screenX=(f32)projected->x,screenY=(f32)projected->y;
-        if(!(screenX>minCoord&&screenX<maxX&&screenY>minCoord&&screenY<maxY&&distance>distanceLimit))continue;
-        u32 geometry=packet+0x8A8+(u32)i*0x968;
-        u32 selected=ld(geometry+0x950),slot=geometry+selected*596;
-        u32 buffer=ld(slot),end=buffer+32;
-        if(buffer<end)for(u32 cursor=buffer;cursor<end;cursor+=32)for(u32 k=0;k<32;k+=4)gabi::store<u32>((cursor&~31u)+k,0);
-        selected=ld(geometry+0x950);slot=geometry+selected*596;buffer=ld(slot);
-        for(u32 vertex=0;vertex<3;vertex++)for(u32 axis=0;axis<3;axis++) {
-            f32 origin=axis==0?cameraX:axis==1?cameraY:cameraZ;
-            f32 offset=gabi::fmuls_ppc(gabi::fsubs_ppc(lf(gabi::ea(triangle.get())+vertex*12+axis*4),origin),scale);
-            sf(buffer+vertex*12+axis*4,gabi::fadds_ppc(lf(gabi::ea(position.get())+axis*4),offset));
+        sdk::prepareProjection(starParams.get());
+        position->x = gabi::fadds_ppc(cameraX, x);
+        position->y = gabi::fadds_ppc(cameraY, y);
+        position->z = gabi::fadds_ppc(cameraZ, z);
+        sdk::project(position.get(), projected.get(), starParams.get());
+        f32 squared = sdk::distanceSquared<f32>(reference.get(), projected.get());
+        f64 distance = sdk::squareRoot<f64>((f64)squared);
+        f32 screenX = (f32)projected->x, screenY = (f32)projected->y;
+        if (!(screenX > minCoord && screenX < maxX && screenY > minCoord && screenY < maxY &&
+              distance > distanceLimit))
+            continue;
+        u32 geometry = ea(&at<StarPacket>(packet)->mGeometry[i]);
+        u32 selected = (u32)(at<StarGeometry>(geometry)->selected),
+            slot = geometry + selected * u32(sizeof(BufferSlot));
+        u32 buffer = (u32)(at<BufferSlot>(slot)->buffer), end = buffer + 32;
+        if (buffer < end)
+            for (u32 cursor = buffer; cursor < end; cursor += 32)
+                for (u32 k = 0; k < 32; k += 4)
+                    at<CacheLine>(cursor & ~31u)->words[k / 4] = 0;
+        selected = (u32)(at<StarGeometry>(geometry)->selected);
+        slot = geometry + selected * u32(sizeof(BufferSlot));
+        buffer = (u32)(at<BufferSlot>(slot)->buffer);
+        for (u32 vertex = 0; vertex < 3; vertex++)
+            for (u32 axis = 0; axis < 3; axis++) {
+                f32 origin = axis == 0 ? cameraX : axis == 1 ? cameraY : cameraZ;
+                f32 offset = gabi::fmuls_ppc(
+                    gabi::fsubs_ppc((f32)(triangle->vertices[vertex].channels[axis]), origin), scale);
+                at<Vector>(buffer + vertex * u32(sizeof(Vector)))->channels[axis] =
+                    gabi::fadds_ppc((f32)(at<Vector>(gabi::ea(position.get()))->channels[axis]), offset);
+            }
+        selected = (u32)(at<StarGeometry>(geometry)->selected);
+        slot = geometry + selected * u32(sizeof(BufferSlot));
+        buffer = (u32)(at<StarGeometry>(slot)->slots[1][0].buffer);
+        end = buffer + 32;
+        if (buffer < end)
+            for (u32 cursor = buffer; cursor < end; cursor += 32)
+                for (u32 k = 0; k < 32; k += 4)
+                    at<CacheLine>(cursor & ~31u)->words[k / 4] = 0;
+        selected = (u32)(at<StarGeometry>(geometry)->selected);
+        slot = geometry + selected * u32(sizeof(BufferSlot));
+        buffer = (u32)(at<StarGeometry>(slot)->slots[1][0].buffer);
+        for (u32 vertex = 0; vertex < 3; vertex++)
+            for (u32 axis = 0; axis < 3; axis++) {
+                f32 origin = axis == 0 ? cameraX : axis == 1 ? cameraY : cameraZ;
+                f32 offset = gabi::fmuls_ppc(
+                    gabi::fsubs_ppc((f32)(triangle->vertices[vertex].channels[axis]), origin), scale);
+                at<Vector>(buffer + vertex * u32(sizeof(Vector)))->channels[axis] =
+                    gabi::fsubs_ppc((f32)(at<Vector>(gabi::ea(position.get()))->channels[axis]), offset);
+            }
+        selected = (u32)(at<StarGeometry>(geometry)->selected);
+        slot = geometry + selected * u32(sizeof(BufferSlot));
+        for (u32 face = 0; face < 2; face++) {
+            sdk::flushBuffer(ea(&at<BufferSlot>(slot)->flushObject), 0, (u32)(at<BufferSlot>(slot)->size));
+            slot += 2 * sizeof(BufferSlot);
         }
-        selected=ld(geometry+0x950);slot=geometry+selected*596;buffer=ld(slot+0x4A8);end=buffer+32;
-        if(buffer<end)for(u32 cursor=buffer;cursor<end;cursor+=32)for(u32 k=0;k<32;k+=4)gabi::store<u32>((cursor&~31u)+k,0);
-        selected=ld(geometry+0x950);slot=geometry+selected*596;buffer=ld(slot+0x4A8);
-        for(u32 vertex=0;vertex<3;vertex++)for(u32 axis=0;axis<3;axis++) {
-            f32 origin=axis==0?cameraX:axis==1?cameraY:cameraZ;
-            f32 offset=gabi::fmuls_ppc(gabi::fsubs_ppc(lf(gabi::ea(triangle.get())+vertex*12+axis*4),origin),scale);
-            sf(buffer+vertex*12+axis*4,gabi::fsubs_ppc(lf(gabi::ea(position.get())+axis*4),offset));
-        }
-        selected=ld(geometry+0x950);slot=geometry+selected*596;
-        for(u32 face=0;face<2;face++) {gabi::call(0x027B5E94,slot+4,0,ld(slot+0x150));slot+=0x4A8;}
-        gabi::store<u32>(geometry+0x950,ld(geometry+0x950)==0?1:0);
-        gabi::store<u8>(packet+0xD4+(u32)i,1);
+        at<StarGeometry>(geometry)->selected = (u32)(at<StarGeometry>(geometry)->selected) == 0 ? 1 : 0;
+        at<StarPacket>(packet)->mDrawn[i] = 1;
     }
-    gabi::call(0x0258115C,packet);
+    sdk::drawStarPacket(packet);
 }
-VERIFY(0x02574144,drawStar);
-}
+} // namespace RainDraw
+
+using namespace RainDraw;
+/* WWHD glue (tools/verify/autoglue.py)
+ */

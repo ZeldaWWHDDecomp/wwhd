@@ -1,939 +1,940 @@
-#include "wwhd.h"
-#include "gabi.h"
-// Qualified modern WindControl UI group;
-
-void Wind_WeakDtor(u32 s,u32 flag) {
-
- WWHD_FUNC(0x0264D388,void,s,flag);
-
-if(s&&(flag&1))gabi::call<void>(0x0273AF40,s);
-
-}
-
-VERIFY(0x0264D388,Wind_WeakDtor);
-
-
-void Wind_Empty_0264D39C() {
-
- WWHD_FUNC(0x0264D39C,void);
-
-
-}
-
-VERIFY(0x0264D39C,Wind_Empty_0264D39C);
-
-
-void Wind_Empty_0264D3A0() {
-
- WWHD_FUNC(0x0264D3A0,void);
-
-
-}
-
-VERIFY(0x0264D3A0,Wind_Empty_0264D3A0);
-
-
-void Wind_Empty_0264D3A4() {
-
- WWHD_FUNC(0x0264D3A4,void);
-
-
-}
-
-VERIFY(0x0264D3A4,Wind_Empty_0264D3A4);
-
-
-void Wind_Empty_0264D3A8() {
-
- WWHD_FUNC(0x0264D3A8,void);
-
-
-}
-
-VERIFY(0x0264D3A8,Wind_Empty_0264D3A8);
-
-
-void Wind_Empty_0264D3AC() {
-
- WWHD_FUNC(0x0264D3AC,void);
-
-
-}
-
-VERIFY(0x0264D3AC,Wind_Empty_0264D3AC);
-
-
-void Wind_Empty_0264D3B0() {
-
- WWHD_FUNC(0x0264D3B0,void);
-
-
-}
-
-VERIFY(0x0264D3B0,Wind_Empty_0264D3B0);
-
-
-void Wind_Empty_0264D3B4() {
-
- WWHD_FUNC(0x0264D3B4,void);
-
-
-}
-
-VERIFY(0x0264D3B4,Wind_Empty_0264D3B4);
-
-
-void Wind_Empty_0264D3B8() {
-
- WWHD_FUNC(0x0264D3B8,void);
-
-
-}
-
-VERIFY(0x0264D3B8,Wind_Empty_0264D3B8);
-
-
-void Wind_Empty_0264D3C4() {
-
- WWHD_FUNC(0x0264D3C4,void);
-
-
-}
-
-VERIFY(0x0264D3C4,Wind_Empty_0264D3C4);
-
-
-void Wind_Empty_0264D3C8() {
-
- WWHD_FUNC(0x0264D3C8,void);
-
-
-}
-
-VERIFY(0x0264D3C8,Wind_Empty_0264D3C8);
-
-
-void Wind_Empty_0264D3CC() {
-
- WWHD_FUNC(0x0264D3CC,void);
-
-
-}
-
-VERIFY(0x0264D3CC,Wind_Empty_0264D3CC);
-
-
-u32 Wind_StateId(u32 s) {
-
- WWHD_FUNC(0x0264D3BC,u32,s);
-
-return gabi::load<u32>(s);
-
-}
-
-VERIFY(0x0264D3BC,Wind_StateId);
-
-
-u32 Wind_Dispatch_12(u32 desc,u32 obj) {
-
- WWHD_FUNC(0x0264D3D0,u32,desc,obj);
-
-s16 index=gabi::load<s16>(desc+14),adjust=gabi::load<s16>(desc+12);
-u32 self=obj+s32(adjust),target;
-if(index<0)target=gabi::load<u32>(desc+16);
-else{
-s16 vtOff=gabi::load<s16>(desc+18);
-u32 vt=gabi::load<u32>(self+s32(vtOff));
-target=gabi::load<u32>(vt+u32(s32(index))*8+4);
-}
-return gabi::call_ptr<u32>(target,self,obj);
-
-}
-
-VERIFY(0x0264D3D0,Wind_Dispatch_12);
-
-
-u32 Wind_Dispatch_20(u32 desc,u32 obj) {
-
- WWHD_FUNC(0x0264D410,u32,desc,obj);
-
-s16 index=gabi::load<s16>(desc+22),adjust=gabi::load<s16>(desc+20);
-u32 self=obj+s32(adjust),target;
-if(index<0)target=gabi::load<u32>(desc+24);
-else{
-s16 vtOff=gabi::load<s16>(desc+26);
-u32 vt=gabi::load<u32>(self+s32(vtOff));
-target=gabi::load<u32>(vt+u32(s32(index))*8+4);
-}
-return gabi::call_ptr<u32>(target,self,obj);
-
-}
-
-VERIFY(0x0264D410,Wind_Dispatch_20);
-
-
-u32 Wind_Dispatch_28(u32 desc,u32 obj) {
-
- WWHD_FUNC(0x0264D450,u32,desc,obj);
-
-s16 index=gabi::load<s16>(desc+30),adjust=gabi::load<s16>(desc+28);
-u32 self=obj+s32(adjust),target;
-if(index<0)target=gabi::load<u32>(desc+32);
-else{
-s16 vtOff=gabi::load<s16>(desc+34);
-u32 vt=gabi::load<u32>(self+s32(vtOff));
-target=gabi::load<u32>(vt+u32(s32(index))*8+4);
-}
-return gabi::call_ptr<u32>(target,self,obj);
-
-}
-
-VERIFY(0x0264D450,Wind_Dispatch_28);
-
-
-u32 Wind_CurrentState(u32 s) {
-
- WWHD_FUNC(0x0264D490,u32,s);
-
-u32 state=gabi::load<u32>(s+0x2C);
-if(gabi::load<s32>(state)==-1)return gabi::load<u32>(s);
-u32 vt=gabi::load<u32>(state+8);
-return gabi::call_ptr<u32>(gabi::load<u32>(vt+0x14),state);
-
-}
-
-VERIFY(0x0264D490,Wind_CurrentState);
-
-
-void Wind_Dtor(u32 s,u32 flag) {
-
- WWHD_FUNC(0x0264D4BC,void,s,flag);
-
-if(!s)return;
-u32 p=gabi::load<u32>(s+0x60);
-gabi::store<u32>(s+4,0x100EED70);
-gabi::store<u32>(s+0x2C,0x100EEEB0);
-gabi::store<u32>(s+0x30,0x100EEEC0);
-if(p){
-u32 vt=gabi::load<u32>(p+0x24);
-gabi::call_ptr<void>(gabi::load<u32>(vt+12),p,3);
-}
-gabi::call<void>(0x026F88F0,s,0);
-if(flag&1)gabi::call<void>(0x0273AF40,s);
-
-}
-
-VERIFY(0x0264D4BC,Wind_Dtor);
-
-
-void Wind_UpdateTimer(u32 s) {
-
- WWHD_FUNC(0x0264D554,void,s);
-
-u16 timer=gabi::load<u16>(s+0x96);
-if(timer){
-timer=u16(timer-1);
-gabi::store<u16>(s+0x96,timer);
-if(!timer)gabi::store<u16>(s+0x90,u16(gabi::call<u32>(0x0257DACC)));
-}
-u32 play=gabi::call<u32>(0x025200D4);
-if(gabi::load<u8>(play+0x5BD0)==2)gabi::call<void>(0x020063C0,s+0x18,0x10491A74);
-
-}
-
-VERIFY(0x0264D554,Wind_UpdateTimer);
-
-
-void Wind_Rotate_84(u32 s,f32 angle) {
-
- WWHD_FUNC(0x0264D5C0,void,s,angle);
-
-u32 pane=gabi::load<u32>(s+84);
-u32 x=gabi::load<u32>(pane+0x28),y=gabi::load<u32>(pane+0x2C);
-gabi::load<u32>(pane+0x30);
-gabi::store<f32>(pane+0x28,gabi::f32_from_bits(x));
-f32 yy=gabi::f32_from_bits(y);
-u8 flags=gabi::load<u8>(pane+0x44);
-gabi::store<f32>(pane+0x2C,yy);
-gabi::store<f32>(pane+0x30,angle);
-gabi::store<u8>(pane+0x44,flags|16);
-
-}
-
-VERIFY(0x0264D5C0,Wind_Rotate_84);
-
-
-void Wind_Rotate_88(u32 s,f32 angle) {
-
- WWHD_FUNC(0x0264D608,void,s,angle);
-
-u32 pane=gabi::load<u32>(s+88);
-u32 x=gabi::load<u32>(pane+0x28),y=gabi::load<u32>(pane+0x2C);
-gabi::load<u32>(pane+0x30);
-gabi::store<f32>(pane+0x28,gabi::f32_from_bits(x));
-f32 yy=gabi::f32_from_bits(y);
-u8 flags=gabi::load<u8>(pane+0x44);
-gabi::store<f32>(pane+0x2C,yy);
-gabi::store<f32>(pane+0x30,angle);
-gabi::store<u8>(pane+0x44,flags|16);
-
-}
-
-VERIFY(0x0264D608,Wind_Rotate_88);
-
-
-void Wind_Reset(u32 s) {
-
- WWHD_FUNC(0x0264D650,void,s);
-
-u32 angle=gabi::call<u32>(0x0257DACC);
-u32 quantized=(angle+0x1000)&0xE000,whole=quantized<<16;
-gabi::store<u16>(s+0x92,u16(quantized));
-gabi::store<u32>(s+0x78,whole);
-f32 degrees=(f32(s32(whole))*180.0f)/2147483648.0f;
-gabi::call<void>(0x0264D5C0,s,degrees);
-gabi::store<u16>(s+0x92,0);
-gabi::store<u32>(s+0x78,0);
-gabi::call<void>(0x0264D608,s,0.0f);
-u32 obj=gabi::load<u32>(s+0x60);
-gabi::store<u16>(s+0x94,gabi::load<u16>(s+0x92));
-gabi::store<u32>(s+0x7C,gabi::load<u32>(s+0x78));
-u32 vt=gabi::load<u32>(obj+0x24);
-f32 result=gabi::call_ptr<f32>(gabi::load<u32>(vt+0x14),obj);
-gabi::store<u8>(s+0x9B,0);
-gabi::store<u8>(s+0x9A,0);
-gabi::store<u8>(s+0x9C,0);
-gabi::store<u8>(s+0x9D,0);
-gabi::store<u8>(s+0x9E,0);
-gabi::store<u32>(s+0x8C,0);
-gabi::store<f32>(s+0x80,result);
-
-}
-
-VERIFY(0x0264D650,Wind_Reset);
-
-
-void Wind_Enter(u32 s) {
-
- WWHD_FUNC(0x0264D73C,void,s);
-
-u32 play=gabi::call<u32>(0x025200D4);
-u8 b=gabi::load<u8>(play+0x5C29),a=gabi::load<u8>(play+0x5C28),c=gabi::load<u8>(play+0x5C2A);
-gabi::store<u8>(play+0x5C2B,a);
-gabi::store<u8>(play+0x5C2D,c);
-gabi::store<u8>(play+0x5C2C,b);
-play=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(play+0x5C28,23);
-play=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(play+0x5C29,7);
-gabi::store<u8>(0x1047B03C+0x5A,1);
-gabi::store<u8>(0x1047B03C+0x40,3);
-u32 layout=gabi::load<u32>(s+0x44);
-gabi::call<void>(0x020053E4,gabi::load<u32>(layout+0xD4),0,0,1.0f);
-gabi::call<void>(0x0264D650,s);
-u32 global=gabi::load<u32>(0x101F8344),manager=gabi::load<u32>(global+0x1C8);
-gabi::call<void>(0x020063C0,manager+0x18,0x10491B70);
-gabi::store<u8>(s+0x98,1);
-gabi::store<u8>(s+0xA0,1);
-
-}
-
-VERIFY(0x0264D73C,Wind_Enter);
-
-
-void Wind_CheckEnter(u32 s) {
-
- WWHD_FUNC(0x0264D800,void,s);
-
-u32 layout=gabi::load<u32>(s+0x44);
-if(gabi::call<u32>(0x02005840,gabi::load<u32>(layout+0xD4),0))gabi::call<void>(0x020063C0,s+0x18,0x10491AA4);
-
-}
-
-VERIFY(0x0264D800,Wind_CheckEnter);
-
-
-void Wind_Highlight(u32 s) {
-
- WWHD_FUNC(0x0264D850,void,s);
-
-u32 layout=gabi::load<u32>(s+0x44);
-gabi::call<void>(0x020053E4,gabi::load<u32>(layout+0xD4),1,1,1.0f);
-layout=gabi::load<u32>(s+0x44);
-gabi::call<void>(0x020053E4,gabi::load<u32>(layout+0xD4),2,2,1.0f);
-
-}
-
-VERIFY(0x0264D850,Wind_Highlight);
-
-
-void Wind_ClearActive(u32 s) {
-
- WWHD_FUNC(0x0264DF80,void,s);
-
-gabi::store<u8>(s+0xA0,0);
-
-}
-
-VERIFY(0x0264DF80,Wind_ClearActive);
-
-
-void Wind_CommitWind(u32 s) {
-
- WWHD_FUNC(0x0264DF8C,void,s);
-
-s32 angle=s32(gabi::load<u32>(s+0x78))/65536;
-gabi::call<void>(0x0257E490,0,s16(-(angle+0x4000)));
-
-}
-
-VERIFY(0x0264DF8C,Wind_CommitWind);
-
-u32 Wind_HitBlocked(u32 s) {
-
- WWHD_FUNC(0x0264D8C8,u32,s);
-
-if(gabi::call<u32>(0x02617AE4,gabi::load<u32>(0x101F5088)))return 1;
-u32 pad=gabi::load<u32>(0x101F5088);
-u32 point=(gabi::load<u32>(pad+0x24)&1)?pad+0x1B4:0x1049FFA0;
-f32 x=gabi::load<f32>(point),y=gabi::load<f32>(point+4);
-gabi::store<f32>(s+0x70,x);
-gabi::Local<u8[8]> xy;
-gabi::store<f32>(xy.a,x);
-gabi::store<f32>(xy.a+4,y);
-u32 pane=gabi::load<u32>(s+0x50);
-gabi::store<f32>(s+0x74,y);
-if(!gabi::call<u32>(0x0287F05C,pane,xy.a))return 1;
-if(!gabi::load<u8>(s+0x9B)){
-f32 dx=gabi::load<f32>(s+0x70)-gabi::load<f32>(s+0x64),dy=gabi::load<f32>(s+0x74)-gabi::load<f32>(s+0x68);
-f32 d=gabi::fmadds(dx,dx,dy*dy);
-if(d<gabi::load<f32>(s+0x88))return 1;
-}
-return 0;
-
-}
-
-VERIFY(0x0264D8C8,Wind_HitBlocked);
-
-
-u32 Wind_PadHeld() {
-
- WWHD_FUNC(0x0264D9B0,u32);
-
-if(gabi::call<u32>(0x02617AE4,gabi::load<u32>(0x101F5088)))return 0;
-u32 pad=gabi::load<u32>(0x101F5088);
-return (gabi::load<u32>(pad+0x124)&0x8000)!=0;
-
-}
-
-VERIFY(0x0264D9B0,Wind_PadHeld);
-
-
-void Wind_TouchAngle(u32 s) {
-
- WWHD_FUNC(0x0264DA14,void,s);
-
-f32 dx=gabi::load<f32>(s+0x70)-gabi::load<f32>(s+0x64),dy=gabi::load<f32>(s+0x74)-gabi::load<f32>(s+0x68);
-gabi::store<u8>(s+0x99,1);
-u32 angle=gabi::call<u32>(0x020195B0,-dx,dy);
-gabi::store<u16>(s+0x92,u16((angle+0x1000)&0xE000));
-
-}
-
-VERIFY(0x0264DA14,Wind_TouchAngle);
-
-
-u32 Wind_TouchNear(u32 s) {
-
- WWHD_FUNC(0x0264DA70,u32,s);
-
-gabi::Local<u8[12]> point; /* game-test Local sweep 2026-10-05: 02704D2C writes a 12-byte vector */
-gabi::call<void>(0x02704D2C,point.a,gabi::load<u32>(s+0x5C));
-f32 dy=gabi::load<f32>(s+0x74)-gabi::load<f32>(point.a+4),dx=gabi::load<f32>(s+0x70)-gabi::load<f32>(point.a);
-return gabi::fmadds(dx,dx,dy*dy)<gabi::load<f32>(s+0x84);
-
-}
-
-VERIFY(0x0264DA70,Wind_TouchNear);
-
-
-void Wind_RequestChange(u32 s) {
-
- WWHD_FUNC(0x0264DAD4,void,s);
-
-if(!gabi::load<u8>(s+0x9D)||gabi::load<u8>(s+0x9C)||gabi::load<u8>(s+0x9F))return;
-gabi::store<u8>(s+0x9C,1);
-u32 global=gabi::load<u32>(0x101F8344);
-gabi::call<void>(0x0264F3F4,gabi::load<u32>(global+0x1C8));
-
-}
-
-VERIFY(0x0264DAD4,Wind_RequestChange);
-
-
-void Wind_TouchControl(u32 s) {
-
- WWHD_FUNC(0x0264DB10,void,s);
-
-s32 blocked=gabi::call<s32>(0x0264D8C8,s);
-u32 mode=gabi::load<u32>(s+0x8C);
-if(mode==0){
-if(gabi::call<u32>(0x0264D9B0,s)){
-if(blocked>0){
-gabi::store<u8>(s+0x9A,1);
-return;
-}
-u8 was=gabi::load<u8>(s+0x9A);
-gabi::store<u8>(s+0x9B,0);
-gabi::store<u32>(s+0x8C,1);
-if(was)return;
-gabi::call<void>(0x02030B38,0x100EEBF4);
-if(blocked==0){
-gabi::call<void>(0x0264DA14,s);
-if(gabi::call<u32>(0x0264DA70,s))gabi::store<u8>(s+0x9B,1);
-}
-}
-else{
-u16 angle=gabi::load<u16>(s+0x92);
-gabi::store<u8>(s+0x9A,0);
-gabi::store<u8>(s+0x9E,1);
-gabi::store<u16>(s+0x94,angle);
-gabi::call<void>(0x0264DAD4,s);
-}
-}
-else if(mode==1){
-u32 held=gabi::call<u32>(0x0264D9B0,s);
-u8 near=gabi::load<u8>(s+0x9B);
-if(held){
-if(near){
-gabi::store<u8>(s+0x9E,1);
-gabi::store<u16>(s+0x94,gabi::load<u16>(s+0x92));
-gabi::call<void>(0x0264DA14,s);
-}
-else if(gabi::call<u32>(0x0264DA70,s)){
-gabi::store<u8>(s+0x9B,1);
-gabi::call<void>(0x0264DA14,s);
-}
-}
-else{
-if(near)gabi::store<u8>(s+0x9B,0);
-gabi::store<u32>(s+0x8C,0);
-}
-}
-
-}
-
-VERIFY(0x0264DB10,Wind_TouchControl);
-
-
-void Wind_ButtonStep(u32 s) {
-
- WWHD_FUNC(0x0264DCF4,void,s);
-
-if(gabi::load<u8>(s+0x99))return;
-u32 pad=gabi::load<u32>(0x101F5088),mode=gabi::load<u32>(pad+0x124),a=gabi::load<u32>(pad+0x20),b=gabi::load<u32>(pad+0x18),buttons=a|b;
-if(mode&0x00F00000)buttons&=0x00F00000;
-if(buttons&0x00440000)gabi::store<u16>(s+0x92,u16((gabi::load<u16>(s+0x92)+0x2000)&0xE000));
-else if(buttons&0x00880000)gabi::store<u16>(s+0x92,u16((gabi::load<u16>(s+0x92)-0x2000)&0xE000));
-
-}
-
-VERIFY(0x0264DCF4,Wind_ButtonStep);
-
-void Wind_Move(u32 s) {
-
- WWHD_FUNC(0x0264DD5C,void,s);
-
-gabi::store<u8>(s+0x99,0);
-gabi::call<void>(0x0264DB10,s);
-u8 near=gabi::load<u8>(s+0x9B);
-gabi::store<u8>(s+0x9F,0);
-if(near){
-u32 whole=u32(gabi::load<u16>(s+0x92))<<16;
-gabi::store<u32>(s+0x78,whole);
-gabi::store<u32>(s+0x7C,whole);
-gabi::call<void>(0x0264D608,s,(f32(s32(whole))*180.0f)/2147483648.0f);
-}
-else{
-gabi::call<void>(0x0264DCF4,s);
-u32 target=u32(gabi::load<u16>(s+0x92))<<16;
-u32 previous=gabi::load<u32>(s+0x7C);
-gabi::Local<u32> to,step;
-gabi::store<u32>(to.a,target);
-gabi::store<u32>(step.a,0x20000000);
-if(previous!=target){
-gabi::call<void>(0x02030B38,0x100EEC04);
-gabi::store<u32>(s+0x7C,gabi::load<u32>(to.a));
-}
-gabi::call<void>(0x0271F738,s+0x78,to.a,step.a);
-gabi::call<void>(0x0264D608,s,(f32(gabi::load<s32>(s+0x78))*180.0f)/2147483648.0f);
-}
-if(gabi::load<u8>(s+0x9E)&&gabi::load<u16>(s+0x94)!=gabi::load<u16>(s+0x92)){
-gabi::store<u8>(s+0x9E,0);
-gabi::store<u8>(s+0x9D,1);
-gabi::call<void>(0x02030B38,0x100EEC04);
-}
-
-}
-
-VERIFY(0x0264DD5C,Wind_Move);
-
-
-void Wind_StateControl(u32 s) {
-
- WWHD_FUNC(0x0264DED8,void,s);
-
-u32 root=gabi::load<u32>(0x101F8344),manager=gabi::load<u32>(root+0x1C8);
-if(gabi::load<u8>(manager+0x52)){
-gabi::call<void>(0x020063C0,s+0x18,0x10491AD4);
-return;
-}
-if(gabi::load<u8>(manager+0x53)){
-u32 play=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(play+0x5BD0,0);
-gabi::call<void>(0x020063C0,s+0x18,0x10491B04);
-return;
-}
-gabi::call<void>(0x0264DD5C,s);
-
-}
-
-VERIFY(0x0264DED8,Wind_StateControl);
-
-
-void Wind_Confirm(u32 s) {
-
- WWHD_FUNC(0x0264DFAC,void,s);
-
-u32 root=gabi::load<u32>(0x101F8344),manager=gabi::load<u32>(root+0x1C8);
-if(gabi::load<u8>(manager+0x54)){
-gabi::store<u16>(s+0x90,gabi::load<u16>(s+0x92));
-gabi::call<void>(0x0264DF8C,s);
-u32 play=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(play+0x5BD0,1);
-gabi::call<void>(0x020063C0,s+0x18,0x10491B04);
-}
-
-}
-
-VERIFY(0x0264DFAC,Wind_Confirm);
-
-
-void Wind_ExitAnim(u32 s) {
-
- WWHD_FUNC(0x0264E018,void,s);
-
-u32 layout=gabi::load<u32>(s+0x44);
-gabi::call<void>(0x020053E4,gabi::load<u32>(layout+0xD4),3,0,1.0f);
-
-}
-
-VERIFY(0x0264E018,Wind_ExitAnim);
-
-
-void Wind_CheckExit(u32 s) {
-
- WWHD_FUNC(0x0264E034,void,s);
-
-u32 layout=gabi::load<u32>(s+0x44);
-if(gabi::call<u32>(0x02005840,gabi::load<u32>(layout+0xD4),3))gabi::call<void>(0x020063C0,s+0x18,0x10491A44);
-
-}
-
-VERIFY(0x0264E034,Wind_CheckExit);
-
-
-void Wind_RestoreGame(u32 s) {
-
- WWHD_FUNC(0x0264E084,void,s);
-
-u32 play=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(play+0x5BD0,0);
-gabi::store<u8>(s+0x98,0);
-play=gabi::call<u32>(0x025200D4);
-u8 c=gabi::load<u8>(play+0x5C2D),b=gabi::load<u8>(play+0x5C2C);
-gabi::store<u8>(play+0x5C2A,c);
-u8 a=gabi::load<u8>(play+0x5C2B);
-gabi::store<u8>(play+0x5C29,b);
-gabi::store<u8>(play+0x5C28,a);
-gabi::store<u8>(0x1047B096,0);
-
-}
-
-VERIFY(0x0264E084,Wind_RestoreGame);
-
-
-u32 Wind_Ctor(u32 s) {
-
- WWHD_FUNC(0x0264E0E8,u32,s);
-
-if(!s)s=gabi::call<u32>(0x0273AD10,0xA4);
-if(s){
-gabi::call<void>(0x026F89E8,s);
-gabi::store<u32>(s+0x30,0x100EEEC0);
-gabi::store<u32>(s+4,0x100EED70);
-gabi::store<u32>(s+0x2C,0x100EEEB0);
-if(s+0x50==0)gabi::call<u32>(0x0273AD10,4);
-gabi::store<u32>(s+0x58,0);
-gabi::store<f32>(s+0x6C,0);
-gabi::store<u32>(s+0x54,0);
-gabi::store<f32>(s+0x68,0);
-gabi::store<u32>(s+0x60,0);
-u32 vec=s+0x70;
-gabi::store<f32>(s+0x64,0);
-if(!vec)vec=gabi::call<u32>(0x0273AD10,8);
-if(vec){
-gabi::store<f32>(vec+4,0);
-gabi::store<f32>(vec,0);
-}
-gabi::store<u16>(s+0x90,0);
-gabi::store<u8>(s+0xA0,0);
-gabi::store<u8>(s+0x9F,0);
-gabi::store<u16>(s+0x96,2);
-gabi::store<u8>(s+0x9C,0);
-gabi::store<u32>(s+0x7C,0);
-gabi::store<u8>(s+0x9A,0);
-gabi::store<u8>(s+0x9E,0);
-gabi::store<f32>(s+0x84,0);
-gabi::store<u32>(s+0x78,0);
-gabi::store<u16>(s+0x92,0);
-gabi::store<u8>(s+0x98,0);
-gabi::store<f32>(s+0x80,0);
-gabi::store<u8>(s+0x9B,0);
-gabi::store<u8>(s+0x9D,0);
-gabi::store<u8>(s+0x99,0);
-gabi::store<f32>(s+0x88,0);
-gabi::store<u32>(s+0x8C,0);
-u32 manager=gabi::call<u32>(0x0258861C,0,5,2,3,2,0x1000,0x2000,1.0f,1.0f);
-gabi::store<u32>(s+0x60,manager);
-}
-return s;
-
-}
-
-VERIFY(0x0264E0E8,Wind_Ctor);
-
-
-void Wind_CenterPane(u32 s) {
-
- WWHD_FUNC(0x0264E240,void,s);
-
-u32 layout=gabi::load<u32>(s+0x44),nameVt=gabi::load<u32>(0x104919AC),a=gabi::load<u32>(layout+4),owner=gabi::load<u32>(a+12),table=gabi::load<u32>(owner+8);
-gabi::call_ptr<void>(gabi::load<u32>(nameVt+0x14),0x104919A8);
-u32 pane=gabi::call_ptr<u32>(gabi::load<u32>(table+0x5C),owner,gabi::load<u32>(0x104919A8),1);
-gabi::store<u32>(s+0x50,pane);
-gabi::store<u32>(s+0x64,gabi::load<u32>(pane+0x1C));
-gabi::store<u32>(s+0x68,gabi::load<u32>(pane+0x20));
-gabi::store<u32>(s+0x6C,gabi::load<u32>(pane+0x24));
-
-}
-
-VERIFY(0x0264E240,Wind_CenterPane);
-
-
-void Wind_Execute(u32 s) {
-
- WWHD_FUNC(0x0264E560,void,s);
-
-u32 vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0xAC),s);
-vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0x84),s);
-gabi::call<void>(0x026F91F8,s);
-
-}
-
-VERIFY(0x0264E560,Wind_Execute);
-
-
-void Wind_Animate(u32 s) {
-
- WWHD_FUNC(0x0264E5B4,void,s);
-
-gabi::call<void>(0x02006364,s+0x18);
-u32 vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0xB4),s);
-vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0x8C),s);
-
-}
-
-VERIFY(0x0264E5B4,Wind_Animate);
-
-
-void Wind_Draw(u32 s) {
-
- WWHD_FUNC(0x0264E60C,void,s);
-
-if(gabi::load<u8>(s+0x98)){
-u32 vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0x9C),s);
-}
-
-}
-
-VERIFY(0x0264E60C,Wind_Draw);
-
-
-u32 Wind_LoadLayout(u32 s,u32 archive,u32 a,u32 b,u32 c,u32 d) {
-
- WWHD_FUNC(0x0264E628,u32,s,archive,a,b,c,d);
-
-u32 global=gabi::load<u32>(0x1018C404);
-u32 layout=gabi::call<u32>(0x0273B050,0x110,gabi::load<u32>(global+0x10),4);
-if(layout)layout=gabi::call<u32>(0x026FADB0,layout);
-gabi::store<u32>(s+0x44,layout);
-if(!layout)return 0;
-u32 vt=gabi::load<u32>(layout+0xE0);
-if(!gabi::call_ptr<u32>(gabi::load<u32>(vt+0x14),layout,archive,a,b,c,4,3,d))return 0;
-for(u32 i=0;i<4;++i){
-u32 target=gabi::load<u32>(s+0x44),index=gabi::load<u32>(0x100EEB3C+4*i);
-gabi::call<void>(0x02004E04,gabi::load<u32>(target+0xD4),i,0x10491A14+8*i,0x104919FC+8*index);
-}
-vt=gabi::load<u32>(s+4);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0x8C),s);
-return 1;
-
-}
-
-VERIFY(0x0264E628,Wind_LoadLayout);
-
-
-static u32 wind_pane(u32 owner,u32 name) {
-
- u32 vt=gabi::load<u32>(name+4),target=gabi::load<u32>(vt+0x14),table=gabi::load<u32>(owner+8);
-
- gabi::call_ptr<void>(target,name);
-
- return gabi::call_ptr<u32>(gabi::load<u32>(table+0x5C),owner,gabi::load<u32>(name),1);
-
-}
-
-u32 Wind_Setup(u32 s,u32 archive,u32 a,u32 b) {
-
- WWHD_FUNC(0x0264E2C8,u32,s,archive,a,b);
-
- gabi::call<void>(0x026F90D8,s,0x10491A34,2);
-
- u32 vt=gabi::load<u32>(s+4),target=gabi::load<u32>(vt+0x7C);
-
- if(!gabi::call_ptr<u32>(target,s,0x10491B34,gabi::load<u32>(s+0x34),archive,a,b))return 0;
-
- gabi::call<void>(0x0264E240,s);
-
- u32 layout=gabi::load<u32>(s+0x44),namevt=gabi::load<u32>(0x104919B4),base=gabi::load<u32>(layout+4),owner=gabi::load<u32>(base+12),table=gabi::load<u32>(owner+8),nameTarget=gabi::load<u32>(namevt+0x14);
-
- gabi::call_ptr<void>(nameTarget,0x104919B0);
-
- u32 pane=gabi::call_ptr<u32>(gabi::load<u32>(table+0x5C),owner,gabi::load<u32>(0x104919B0),1);
-
- gabi::store<u32>(s+0x54,pane);
-
- pane=wind_pane(owner,0x104919B8);
-gabi::store<u32>(s+0x58,pane);
-
- pane=wind_pane(owner,0x104919C0);
-gabi::store<u32>(s+0x5C,pane);
-
- f32 x=gabi::load<f32>(pane+0x3C)*0.5f,y=gabi::load<f32>(pane+0x40)*0.5f;
-
- gabi::store<f32>(s+0x84,gabi::fmadds(x,x,y*y));
-
- pane=wind_pane(owner,0x104919C8);
-x=gabi::load<f32>(pane+0x3C)*0.5f;
-y=gabi::load<f32>(pane+0x40)*0.5f;
-
- gabi::store<f32>(s+0x88,gabi::fmadds(x,x,y*y)*0.5f);
-
- pane=wind_pane(owner,0x104919A0);
-gabi::store<u8>(pane+0x44,gabi::load<u8>(pane+0x44)&0xFE);
-
- u32 state=gabi::load<u32>(s+0x18);
-vt=gabi::load<u32>(state);
-
- state=gabi::call_ptr<u32>(gabi::load<u32>(vt+0x14),state,0x10491A44);
-gabi::store<u32>(s+0x20,state);
-
- vt=gabi::load<u32>(state);
-gabi::call_ptr<void>(gabi::load<u32>(vt+0x1C),state);
-return 1;
-
-}
-
-VERIFY(0x0264E2C8,Wind_Setup);
-
-void Wind_StaticInit() {
-
- WWHD_FUNC(0x0264E754,void);
-
- for(u32 off: {
-12u,8u,4u,0u}
-)gabi::store<u32>(0x104919EC+off,0);
-
- gabi::call<void>(0x028F026C,0x101F58F4);
-
- gabi::store<f32>(0x104919D0,-3.1415927410125732f);
-gabi::store<f32>(0x104919D4,3.1415927410125732f);
-
- gabi::call<void>(0x028ED6F8,0x104919E8);
-gabi::call<void>(0x028F026C,0x101F5900);
-gabi::call<void>(0x028EAB2C,0x104919E9);
-gabi::call<void>(0x028F026C,0x101F590C);
-
- gabi::store<f32>(0x104919D8,50000.0f);
-gabi::store<f32>(0x104919E0,10000.0f);
-gabi::store<f32>(0x104919DC,50000.0f);
-gabi::store<f32>(0x104919E4,10000.0f);
-
- const u32 names[]={
-0x104919FC,0x10491A14,0x10491A1C,0x10491A24,0x10491A2C,0x104919A0,0x10491A34,0x10491A3C,0x104919B8,0x104919B0,0x104919A8,0x10491B34,0x104919C0,0x104919C8,0x10491A04,0x10491A0C}
-;
-
- const u32 strings[]={
-0x100EECB0,0x100EEC2C,0x100EEC70,0x100EECD0,0x100EEC34,0x100EEC7C,0x100EECE0,0x100EEC88,0x100EED14,0x100EED04,0x100EECF0,0x100EECE0,0x100EEC3C,0x100EED28,0x100EECBC,0x100EEC5C}
-;
-
- for(u32 i=0;i<16;++i){
-gabi::store<u32>(names[i],strings[i]);
-gabi::store<u32>(names[i]+4,0x100EEB24);
-}
-
- bool initialized=gabi::load<u32>(0x101FD8E4)!=0;
-u32 id;
-
- if(initialized)id=gabi::load<u32>(0x101FDD50);
-else{
-gabi::store<u32>(0x101FD8E4,1);
-id=0;
-}
-
- const u32 objects[]={
-0x10491A44,0x10491A74,0x10491AA4,0x10491AD4,0x10491B04}
-;
-
- const u32 stateNames[]={
-0x100EED3C,0x100EEC4C,0x100EED4C,0x100EEC9C,0x100EED5C}
-;
-
- for(u32 i=0;i<5;++i){
-u32 at=objects[i];
-gabi::store<u32>(at,++id);
-gabi::store<u32>(at+4,stateNames[i]);
-gabi::store<u32>(at+8,0x100EEB94);
-for(u32 k=0;k<3;++k){
-gabi::store<u16>(at+12+8*k,0);
-gabi::store<u16>(at+14+8*k,u16(25+i*3+k));
-gabi::store<u32>(at+16+8*k,4);
-}
-gabi::store<u16>(at+36,0);
-gabi::store<u16>(at+38,0);
-gabi::store<u32>(at+40,0);
-gabi::store<u32>(at+44,0x101FF32C);
-}
-
- gabi::store<u32>(0x101FDD50,id);
-
-}
-
-VERIFY(0x0264E754,Wind_StaticInit);
-
+#include "d/d_operate_wind.h"
+
+// Wind direction control. HD: GamePad layout/state implementation replaces J2D.
+// HD: constructor/state template entries retain their verified register widths.
+
+static dOwVtableIdentity_c l_safeStringVtable;
+static dOwVtableIdentity_c l_stateDescriptorVtable;
+static dOwVtableIdentity_c l_windVtable;
+static dOwVtableIdentity_c l_stateIdVtable;
+static dOwVtableIdentity_c l_stateFactoryVtable;
+static u32 l_heapRoot;
+static u32 l_gamePad;
+static dOwRegistration_c l_angleRegistration;
+static dOwRegistration_c l_angleFlagRegistration;
+static dOwRegistration_c l_moveFlagRegistration;
+static u32 l_uiRoot;
+static u32 l_stateIdInitialized;
+static u32 l_stateIdCount;
+static dOwVtableIdentity_c l_defaultFactoryVtable;
+static dOwUiFlags_c l_uiFlags;
+static dOwSafeString_c l_languagePane;
+static dOwSafeString_c l_controlArea;
+static dOwSafeString_c l_windNowPane;
+static dOwSafeString_c l_arrowChangePane;
+static dOwSafeString_c l_windChangePane;
+static dOwSafeString_c l_innerControlArea;
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static f32 l_moveRangeX;
+static f32 l_moveRangeY;
+static f32 l_moveStepX;
+static f32 l_moveStepY;
+static u8 l_angleRangeFlag;
+static u8 l_moveRangeFlag;
+static dOwZeroBlock_c l_zeroBlock;
+static dOwSafeString_c l_allGroup;
+static dOwSafeString_c l_windNowGroup;
+static dOwSafeString_c l_windChangeGroup;
+static dOwSafeString_c l_inAllAnimation;
+static dOwSafeString_c l_windNowAnimation;
+static dOwSafeString_c l_windChangeAnimation;
+static dOwSafeString_c l_outAllAnimation;
+static dOwSafeString_c l_screenName;
+static dOwSafeString_c l_buttonName;
+static dOwStateDescriptor_c StateID_Wait;
+static dOwStateDescriptor_c StateID_InAll;
+static dOwStateDescriptor_c StateID_Disp;
+static dOwStateDescriptor_c StateID_OutWait;
+static dOwStateDescriptor_c StateID_OutAll;
+static dOwSafeString_c l_layoutName;
+static dOwStateDescriptor_c l_managerInAll;
+static dOwPoint_c l_noTouchPoint;
+static const u32 l_animationGroups[4] = {0, 1, 2, 0};
+
+static u32 wind_pane(u32 owner, u32 name) {
+
+    dOwSafeStringVtable_c *vt =
+        gabi::at<dOwSafeStringVtable_c>(gabi::at<dOwSafeString_c>(name)->mVtable);
+    u32 target = vt->mAssureTermination;
+    dOwPaneOwnerVtable_c *table =
+        gabi::at<dOwPaneOwnerVtable_c>(gabi::at<dOwPaneOwner_c>(owner)->mVtable);
+
+    gabi::call_ptr<void>(target, name);
+
+    return gabi::call_ptr<u32>(table->mFindPane, owner,
+                               u32(gabi::at<dOwSafeString_c>(name)->mpString), 1);
+}
+
+// Screen operations in the GameCube source order.
+
+/* 0264E240 */
+void dOperate_wind_c::screenSet() {
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    dOwSafeStringVtable_c *nameVt = gabi::at<dOwSafeStringVtable_c>(l_controlArea.mVtable);
+    dOwPaneManager_c *paneManager = layout->mpPaneManager.get();
+    dOwPaneOwner_c *owner = paneManager->mpRootPane.get();
+    dOwPaneOwnerVtable_c *table = gabi::at<dOwPaneOwnerVtable_c>(owner->mVtable);
+    gabi::call_ptr<void>(nameVt->mAssureTermination, gabi::ea(&l_controlArea));
+    dOwPane_c *pane = gabi::at<dOwPane_c>(
+        gabi::call_ptr<u32>(table->mFindPane, gabi::ea(owner), u32(l_controlArea.mpString), 1));
+    this->mpCenterPane = pane;
+    this->mPosXBits = pane->mPositionXBits;
+    this->mPosYBits = pane->mPositionYBits;
+    this->mPosZBits = pane->mPositionZBits;
+}
+
+/* 0264DD5C */
+void dOperate_wind_c::arrowDirection() {
+    u32 s = gabi::ea(this);
+
+    this->mTouchAngleSet = 0;
+    dOw_callTouchControl(s);
+    u8 near = this->mDragging;
+    this->mChangeBlocked = 0;
+    if (near) {
+        u32 whole = u32(this->mDeg) << 16;
+        this->mArrowAngle = whole;
+        this->mTargetAngle = whole;
+        dOw_callCursorRotate(s, (f32(s32(whole)) * 180.0f) / 2147483648.0f);
+    } else {
+        dOw_callButtonControl(s);
+        u32 target = u32(this->mDeg) << 16;
+        u32 previous = this->mTargetAngle;
+        gabi::Local<gabi::be<u32>> to, step;
+        *to = target;
+        *step = 0x20000000;
+        if (previous != target) {
+            dOw_playSound(gabi::guest_str("SE_TAKT_WIND_CURSOR"));
+            this->mTargetAngle = u32(*to);
+        }
+        dOw_addCalcAngle(gabi::ea(&this->mArrowAngle), to.a, step.a);
+        dOw_callCursorRotate(s, (f32(s32(this->mArrowAngle)) * 180.0f) / 2147483648.0f);
+    }
+    if (this->mCheckChange && this->mPreviousDeg != this->mDeg) {
+        this->mCheckChange = 0;
+        this->mChanged = 1;
+        dOw_playSound(gabi::guest_str("SE_TAKT_WIND_CURSOR"));
+    }
+}
+
+/* 0264DF8C */
+void dOperate_wind_c::windSet() {
+
+    s32 angle = s32(this->mArrowAngle) / 65536;
+    dOw_tactWindSet(0, s16(-(angle + 0x4000)));
+}
+
+/* 0264D5C0 */
+void dOperate_wind_c::arrowRotate(f32 angle) {
+
+    dOwPane_c *pane = this->mpWindArrow.get();
+    u32 x = pane->mRotationXBits, y = pane->mRotationYBits;
+    (void)u32(pane->mRotationZBits);
+    pane->mRotationX = gabi::f32_from_bits(x);
+    f32 yy = gabi::f32_from_bits(y);
+    u8 flags = pane->mFlags;
+    pane->mRotationY = yy;
+    pane->mRotationZ = angle;
+    pane->mFlags = flags | dOwPane_RotationChanged_e;
+}
+
+/* 0264D650 */
+void dOperate_wind_c::initialize() {
+    u32 s = gabi::ea(this);
+
+    u32 angle = dOw_getWindAngle();
+    u32 quantized = (angle + dOwAngle_HalfStep_e) & dOwAngle_DirectionMask_e;
+    u32 whole = quantized << 16;
+    this->mDeg = u16(quantized);
+    this->mArrowAngle = whole;
+    f32 degrees = (f32(s32(whole)) * 180.0f) / 2147483648.0f;
+    dOw_callArrowRotate(s, degrees);
+    this->mDeg = 0;
+    this->mArrowAngle = 0;
+    dOw_callCursorRotate(s, 0.0f);
+    dOwStick_c *obj = this->stick.get();
+    this->mPreviousDeg = this->mDeg;
+    this->mTargetAngle = this->mArrowAngle;
+    dOwStickVtable_c *vt = gabi::at<dOwStickVtable_c>(obj->mVtable);
+    f32 result = gabi::call_ptr<f32>(vt->mGetValue, gabi::ea(obj));
+    this->mDragging = 0;
+    this->mTouchBlocked = 0;
+    this->mChangeRequested = 0;
+    this->mChanged = 0;
+    this->mCheckChange = 0;
+    this->mTouchMode = dOwTouch_Idle_e;
+    this->mStickValue = result;
+}
+
+/* 0264E2C8 */
+u32 dOperate_wind_c::_create(u32 archive, u32 a, u32 b) {
+    u32 s = gabi::ea(this);
+
+    dOw_setLayoutName(s, gabi::ea(&l_screenName), 2);
+
+    dOwScreenVtable_c *vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    u32 target = vt->mLoadLayout;
+
+    if (!gabi::call_ptr<u32>(target, s, gabi::ea(&l_layoutName), gabi::ea(this->mpArchive.get()),
+                             archive, a, b))
+        return 0;
+
+    dOw_callCenterPane(s);
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    dOwSafeStringVtable_c *namevt = gabi::at<dOwSafeStringVtable_c>(l_windNowPane.mVtable);
+    dOwPaneManager_c *paneManager = layout->mpPaneManager.get();
+    dOwPaneOwner_c *owner = paneManager->mpRootPane.get();
+    dOwPaneOwnerVtable_c *table = gabi::at<dOwPaneOwnerVtable_c>(owner->mVtable);
+    u32 nameTarget = namevt->mAssureTermination;
+
+    gabi::call_ptr<void>(nameTarget, gabi::ea(&l_windNowPane));
+
+    dOwPane_c *pane = gabi::at<dOwPane_c>(
+        gabi::call_ptr<u32>(table->mFindPane, gabi::ea(owner), u32(l_windNowPane.mpString), 1));
+
+    this->mpWindArrow = pane;
+
+    pane = gabi::at<dOwPane_c>(wind_pane(gabi::ea(owner), gabi::ea(&l_arrowChangePane)));
+    this->mpCursorArrow = pane;
+
+    pane = gabi::at<dOwPane_c>(wind_pane(gabi::ea(owner), gabi::ea(&l_windChangePane)));
+    this->mpCursorPane = pane;
+
+    f32 x = pane->mWidth * 0.5f, y = pane->mHeight * 0.5f;
+
+    this->mCursorRadiusSquared = gabi::fmadds(x, x, y * y);
+
+    pane = gabi::at<dOwPane_c>(wind_pane(gabi::ea(owner), gabi::ea(&l_innerControlArea)));
+    x = pane->mWidth * 0.5f;
+    y = pane->mHeight * 0.5f;
+
+    this->mCenterRadiusSquared = gabi::fmadds(x, x, y * y) * 0.5f;
+
+    pane = gabi::at<dOwPane_c>(wind_pane(gabi::ea(owner), gabi::ea(&l_languagePane)));
+    pane->mFlags = pane->mFlags & ~dOwPane_Visible_e;
+
+    u32 state = this->mStateManager;
+    dOwStateVtable_c *stateVt =
+        gabi::at<dOwStateVtable_c>(gabi::at<dOwStateInterface_c>(state)->mVtable);
+
+    state = gabi::call_ptr<u32>(stateVt->mGetState, state, gabi::ea(&StateID_Wait));
+    this->mState = state;
+
+    stateVt = gabi::at<dOwStateVtable_c>(gabi::at<dOwStateInterface_c>(state)->mVtable);
+    gabi::call_ptr<void>(stateVt->mInitialize, state);
+    return 1;
+}
+
+/* 0264D4BC */
+void dOperate_wind_c::_delete(u32 flag) {
+    u32 s = gabi::ea(this);
+
+    if (!s)
+        return;
+    dOwStick_c *p = this->stick.get();
+    this->mVtable = gabi::ea(&l_windVtable);
+    this->mStateIdVtable = gabi::ea(&l_stateIdVtable);
+    this->mStateFactoryVtable = gabi::ea(&l_stateFactoryVtable);
+    if (p) {
+        dOwStickVtable_c *vt = gabi::at<dOwStickVtable_c>(p->mVtable);
+        gabi::call_ptr<void>(vt->mDestroy, gabi::ea(p), 3);
+    }
+    dOw_layoutScreenDtor(s, 0);
+    if (flag & 1)
+        dOw_operatorDelete(s);
+}
+
+/* 0264E5B4 */
+void dOperate_wind_c::_move() {
+    u32 s = gabi::ea(this);
+
+    dOw_executeStateManager(gabi::ea(&this->mStateManager));
+    dOwScreenVtable_c *vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    gabi::call_ptr<void>(vt->mBeforeMove, s);
+    vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    gabi::call_ptr<void>(vt->mAnimateLayout, s);
+}
+
+/* 0264E60C */
+void dOperate_wind_c::_draw() {
+    u32 s = gabi::ea(this);
+
+    if (this->mVisible) {
+        dOwScreenVtable_c *vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+        gabi::call_ptr<void>(vt->mDrawLayout, s);
+    }
+}
+
+// HD: touch input, layout animations and wind screen states.
+
+/* 0264D554 */
+void dOperate_wind_c::wait() {
+
+    u16 timer = this->mTimer;
+    if (timer) {
+        timer = u16(timer - 1);
+        this->mTimer = timer;
+        if (!timer)
+            this->mWindAngle = u16(dOw_getWindAngle());
+    }
+    dOwPlayView_c *play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    if (play->getPlay()->mOperateWind == 2)
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_InAll));
+}
+
+/* 0264D608 */
+void dOperate_wind_c::cursorRotate(f32 angle) {
+
+    dOwPane_c *pane = this->mpCursorArrow.get();
+    u32 x = pane->mRotationXBits, y = pane->mRotationYBits;
+    (void)u32(pane->mRotationZBits);
+    pane->mRotationX = gabi::f32_from_bits(x);
+    f32 yy = gabi::f32_from_bits(y);
+    u8 flags = pane->mFlags;
+    pane->mRotationY = yy;
+    pane->mRotationZ = angle;
+    pane->mFlags = flags | dOwPane_RotationChanged_e;
+}
+
+/* 0264D73C */
+void dOperate_wind_c::initializeState_InAll() {
+    u32 s = gabi::ea(this);
+
+    dOwPlayView_c *play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    u8 b = play->mActionButtonB, a = play->mActionButtonA, c = play->mActionButtonR;
+    play->mSavedActionButtonA = a;
+    play->mSavedActionButtonR = c;
+    play->mSavedActionButtonB = b;
+    play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    play->mActionButtonA = 23;
+    play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    play->mActionButtonB = 7;
+    l_uiFlags.mWindControl = 1;
+    l_uiFlags.mControlMode = 3;
+    dOwLayout_c *layout = this->mpLayout.get();
+    dOw_startAnimation(layout->mpAnimator, dOwAnimation_InAll_e, 0, 1.0f);
+    dOw_callInitialize(s);
+    dOwRoot_c *global = gabi::at<dOwRoot_c>(l_uiRoot);
+    u32 manager = global->mpWindManager;
+    dOw_changeState(manager + 0x18, gabi::ea(&l_managerInAll));
+    this->mVisible = 1;
+    this->mActive = 1;
+}
+
+/* 0264D800 */
+void dOperate_wind_c::executeState_InAll() {
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    if (dOw_isAnimationDone(layout->mpAnimator, dOwAnimation_InAll_e))
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_Disp));
+}
+
+/* 0264D850 */
+void dOperate_wind_c::initializeState_Disp() {
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    dOw_startAnimation(layout->mpAnimator, dOwAnimation_WindNow_e, 1, 1.0f);
+    layout = this->mpLayout.get();
+    dOw_startAnimation(layout->mpAnimator, dOwAnimation_WindChange_e, 2, 1.0f);
+}
+
+/* 0264DF80 */
+void dOperate_wind_c::finalizeState_Disp() { this->mActive = 0; }
+
+/* 0264D8C8 */
+u32 dOperate_wind_c::checkTouchBlocked() {
+
+    if (dOw_isInputBlocked(l_gamePad))
+        return 1;
+    dOwPadView_c *pad = gabi::at<dOwPadView_c>(l_gamePad);
+    dOwPoint_c *point =
+        gabi::at<dOwPoint_c>((pad->mTouchFlags & dOwPad_TouchValid_e) ? gabi::ea(pad) + 0x1B4
+                                                                      : gabi::ea(&l_noTouchPoint));
+    f32 x = point->x, y = point->y;
+    this->mTouchX = x;
+    gabi::Local<dOwPoint_c> xy;
+    xy->x = x;
+    xy->y = y;
+    u32 pane = gabi::ea(this->mpCenterPane.get());
+    this->mTouchY = y;
+    if (!dOw_containsPoint(pane, xy.a))
+        return 1;
+    if (!this->mDragging) {
+        f32 dx = this->mTouchX - this->mPosX, dy = this->mTouchY - this->mPosY;
+        f32 d = gabi::fmadds(dx, dx, dy * dy);
+        if (d < this->mCenterRadiusSquared)
+            return 1;
+    }
+    return 0;
+}
+
+/* 0264DA14 */
+void dOperate_wind_c::touchAngle() {
+
+    f32 dx = this->mTouchX - this->mPosX, dy = this->mTouchY - this->mPosY;
+    this->mTouchAngleSet = 1;
+    // HD: keep the full returned register until the direction mask is applied.
+    u32 angle = dOw_atan2sRegister(-dx, dy);
+    this->mDeg = u16((angle + dOwAngle_HalfStep_e) & dOwAngle_DirectionMask_e);
+}
+
+/* 0264DA70 */
+u32 dOperate_wind_c::isTouchNearCursor() {
+
+    gabi::Local<cXyz> point; // HD: pane query writes all twelve bytes of a position.
+    dOw_getPanePosition(point.a, gabi::ea(this->mpCursorPane.get()));
+    f32 dy = this->mTouchY - point->y, dx = this->mTouchX - point->x;
+    return gabi::fmadds(dx, dx, dy * dy) < this->mCursorRadiusSquared;
+}
+
+/* 0264DAD4 */
+void dOperate_wind_c::requestChange() {
+
+    if (!this->mChanged || this->mChangeRequested || this->mChangeBlocked)
+        return;
+    this->mChangeRequested = 1;
+    dOwRoot_c *global = gabi::at<dOwRoot_c>(l_uiRoot);
+    dOw_notifyWindChange(global->mpWindManager);
+}
+
+/* 0264DB10 */
+void dOperate_wind_c::touchControl() {
+    u32 s = gabi::ea(this);
+
+    s32 blocked = dOw_callCheckTouchBlocked(s);
+    u32 mode = this->mTouchMode;
+    if (mode == dOwTouch_Idle_e) {
+        if (dOw_callIsTouchHeld(s)) {
+            if (blocked > 0) {
+                this->mTouchBlocked = 1;
+                return;
+            }
+            u8 was = this->mTouchBlocked;
+            this->mDragging = 0;
+            this->mTouchMode = dOwTouch_Drag_e;
+            if (was)
+                return;
+            dOw_playSound(gabi::guest_str("SE_DRC_TOUCH_ON"));
+            if (blocked == 0) {
+                dOw_callTouchAngle(s);
+                if (dOw_callIsTouchNearCursor(s))
+                    this->mDragging = 1;
+            }
+        } else {
+            u16 angle = this->mDeg;
+            this->mTouchBlocked = 0;
+            this->mCheckChange = 1;
+            this->mPreviousDeg = angle;
+            dOw_callRequestChange(s);
+        }
+    } else if (mode == dOwTouch_Drag_e) {
+        u32 held = dOw_callIsTouchHeld(s);
+        u8 near = this->mDragging;
+        if (held) {
+            if (near) {
+                this->mCheckChange = 1;
+                this->mPreviousDeg = this->mDeg;
+                dOw_callTouchAngle(s);
+            } else if (dOw_callIsTouchNearCursor(s)) {
+                this->mDragging = 1;
+                dOw_callTouchAngle(s);
+            }
+        } else {
+            if (near)
+                this->mDragging = 0;
+            this->mTouchMode = dOwTouch_Idle_e;
+        }
+    }
+}
+
+/* 0264DCF4 */
+void dOperate_wind_c::buttonControl() {
+
+    if (this->mTouchAngleSet)
+        return;
+    dOwPadView_c *pad = gabi::at<dOwPadView_c>(l_gamePad);
+    u32 mode = pad->mRepeatButtons, a = pad->mTriggerButtons, b = pad->mHoldButtons,
+        buttons = a | b;
+    if (mode & dOwPad_RepeatMask_e)
+        buttons &= dOwPad_RepeatMask_e;
+    if (buttons & dOwPad_Clockwise_e)
+        this->mDeg = u16((this->mDeg + dOwAngle_Step_e) & dOwAngle_DirectionMask_e);
+    else if (buttons & dOwPad_CounterClockwise_e)
+        this->mDeg = u16((this->mDeg - dOwAngle_Step_e) & dOwAngle_DirectionMask_e);
+}
+
+/* 0264DED8 */
+void dOperate_wind_c::executeState_Disp() {
+    u32 s = gabi::ea(this);
+
+    dOwRoot_c *root = gabi::at<dOwRoot_c>(l_uiRoot);
+    dOwManager_c *manager = gabi::at<dOwManager_c>(root->mpWindManager);
+    if (manager->mConfirmRequested) {
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_OutWait));
+        return;
+    }
+    if (manager->mCancelRequested) {
+        dOwPlayView_c *play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+        play->getPlay()->mOperateWind = 0;
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_OutAll));
+        return;
+    }
+    dOw_callArrowDirection(s);
+}
+
+/* 0264DFAC */
+void dOperate_wind_c::executeState_OutWait() {
+    u32 s = gabi::ea(this);
+
+    dOwRoot_c *root = gabi::at<dOwRoot_c>(l_uiRoot);
+    dOwManager_c *manager = gabi::at<dOwManager_c>(root->mpWindManager);
+    if (manager->mConfirmDone) {
+        this->mWindAngle = this->mDeg;
+        dOw_callWindSet(s);
+        dOwPlayView_c *play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+        play->getPlay()->mOperateWind = 1;
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_OutAll));
+    }
+}
+
+/* 0264E018 */
+void dOperate_wind_c::initializeState_OutAll() {
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    dOw_startAnimation(layout->mpAnimator, dOwAnimation_OutAll_e, 0, 1.0f);
+}
+
+/* 0264E034 */
+void dOperate_wind_c::executeState_OutAll() {
+
+    dOwLayout_c *layout = this->mpLayout.get();
+    if (dOw_isAnimationDone(layout->mpAnimator, dOwAnimation_OutAll_e))
+        dOw_changeState(gabi::ea(&this->mStateManager), gabi::ea(&StateID_Wait));
+}
+
+/* 0264E084 */
+void dOperate_wind_c::finalizeState_OutAll() {
+
+    dOwPlayView_c *play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    play->getPlay()->mOperateWind = 0;
+    this->mVisible = 0;
+    play = gabi::at<dOwPlayView_c>(dComIfGp_ea());
+    u8 c = play->mSavedActionButtonR, b = play->mSavedActionButtonB;
+    play->mActionButtonR = c;
+    u8 a = play->mSavedActionButtonA;
+    play->mActionButtonB = b;
+    play->mActionButtonA = a;
+    l_uiFlags.mWindControl = 0;
+}
+
+/* 0264E560 */
+void dOperate_wind_c::_execute() {
+    u32 s = gabi::ea(this);
+
+    dOwScreenVtable_c *vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    gabi::call_ptr<void>(vt->mBeforeExecute, s);
+    vt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    gabi::call_ptr<void>(vt->mExecuteLayout, s);
+    dOw_layoutScreenExecute(s);
+}
+
+/* 0264E628 */
+u32 dOperate_wind_c::loadLayout(u32 archive, u32 a, u32 b, u32 c, u32 d) {
+    u32 s = gabi::ea(this);
+
+    dOwHeapRoot_c *global = gabi::at<dOwHeapRoot_c>(l_heapRoot);
+    dOwLayout_c *layout = gabi::at<dOwLayout_c>(dOw_heapNew(0x110, global->mpHeap, 4));
+    if (layout)
+        layout = gabi::at<dOwLayout_c>(dOw_layoutCtor(gabi::ea(layout)));
+    this->mpLayout = layout;
+    if (!layout)
+        return 0;
+    dOwLayoutVtable_c *vt = gabi::at<dOwLayoutVtable_c>(layout->mVtable);
+    if (!gabi::call_ptr<u32>(vt->mLoad, gabi::ea(layout), archive, a, b, c, 4, 3, d))
+        return 0;
+    for (u32 i = 0; i < dOwAnimation_Count_e; ++i) {
+        dOwLayout_c *target = this->mpLayout.get();
+        u32 index = l_animationGroups[i];
+        dOw_bindAnimation(target->mpAnimator, i, gabi::ea(&l_inAllAnimation) + 8 * i,
+                          gabi::ea(&l_allGroup) + 8 * index);
+    }
+    dOwScreenVtable_c *screenVt = gabi::at<dOwScreenVtable_c>(this->mVtable);
+    gabi::call_ptr<void>(screenVt->mAnimateLayout, s);
+    return 1;
+}
+
+// HD: this entry consumes no receiver, while its callers pass the original extra r3.
+/* 0264D9B0 */
+u32 dOw_isTouchHeld() {
+
+    if (dOw_isInputBlocked(l_gamePad))
+        return 0;
+    dOwPadView_c *pad = gabi::at<dOwPadView_c>(l_gamePad);
+    return (pad->mRepeatButtons & dOwPad_TouchHeld_e) != 0;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+// Distinct empty template hooks retain their individual verified entries.
+
+/* 0264D388 */
+void dOw_deleteStateFactory(u32 s, u32 flag) {
+    if (s && (flag & 1))
+        dOw_operatorDelete(s);
+}
+
+/* 0264D39C */
+void dOw_emptyStateHook1() {}
+
+/* 0264D3A0 */
+void dOw_emptyStateHook2() {}
+
+/* 0264D3A4 */
+void dOw_emptyStateHook3() {}
+
+/* 0264D3A8 */
+void dOw_emptyStateHook4() {}
+
+/* 0264D3AC */
+void dOw_emptyStateHook5() {}
+
+/* 0264D3B0 */
+void dOw_emptyStateHook6() {}
+
+/* 0264D3B4 */
+void dOw_emptyStateHook7() {}
+
+/* 0264D3B8 */
+void dOw_emptyStateHook8() {}
+
+/* 0264D3C4 */
+void dOw_emptyStateHook9() {}
+
+/* 0264D3C8 */
+void dOw_emptyStateHook10() {}
+
+/* 0264D3CC */
+void dOw_emptyStateHook11() {}
+
+/* 0264D3BC */
+u32 dOw_getStateId(u32 s) {
+    dOwStateId_c *state = gabi::at<dOwStateId_c>(s);
+    return u32(state->mId);
+}
+
+/* 0264D3D0 */
+u32 dOw_initializeState(u32 desc, u32 obj) {
+    dOwStateDescriptor_c *stateDesc = gabi::at<dOwStateDescriptor_c>(desc);
+
+    s16 index = stateDesc->mInitialize.mVirtualIndex,
+        adjust = stateDesc->mInitialize.mThisAdjustment;
+    u32 self = obj + s32(adjust);
+    u32 target;
+    if (index < 0)
+        target = stateDesc->mInitialize.mFunction;
+    else {
+        s16 vtOff = stateDesc->mInitialize.mVtableOffset;
+        // HD: the member descriptor supplies both the subobject vtable offset and slot.
+        u32 vt = gabi::load<u32>(self + s32(vtOff));
+        target = gabi::load<u32>(vt + u32(s32(index)) * 8 + 4);
+    }
+    return gabi::call_ptr<u32>(target, self, obj);
+}
+
+/* 0264D410 */
+u32 dOw_executeState(u32 desc, u32 obj) {
+    dOwStateDescriptor_c *stateDesc = gabi::at<dOwStateDescriptor_c>(desc);
+
+    s16 index = stateDesc->mExecute.mVirtualIndex, adjust = stateDesc->mExecute.mThisAdjustment;
+    u32 self = obj + s32(adjust);
+    u32 target;
+    if (index < 0)
+        target = stateDesc->mExecute.mFunction;
+    else {
+        s16 vtOff = stateDesc->mExecute.mVtableOffset;
+        // HD: the member descriptor supplies both the subobject vtable offset and slot.
+        u32 vt = gabi::load<u32>(self + s32(vtOff));
+        target = gabi::load<u32>(vt + u32(s32(index)) * 8 + 4);
+    }
+    return gabi::call_ptr<u32>(target, self, obj);
+}
+
+/* 0264D450 */
+u32 dOw_finalizeState(u32 desc, u32 obj) {
+    dOwStateDescriptor_c *stateDesc = gabi::at<dOwStateDescriptor_c>(desc);
+
+    s16 index = stateDesc->mFinalize.mVirtualIndex, adjust = stateDesc->mFinalize.mThisAdjustment;
+    u32 self = obj + s32(adjust);
+    u32 target;
+    if (index < 0)
+        target = stateDesc->mFinalize.mFunction;
+    else {
+        s16 vtOff = stateDesc->mFinalize.mVtableOffset;
+        // HD: the member descriptor supplies both the subobject vtable offset and slot.
+        u32 vt = gabi::load<u32>(self + s32(vtOff));
+        target = gabi::load<u32>(vt + u32(s32(index)) * 8 + 4);
+    }
+    return gabi::call_ptr<u32>(target, self, obj);
+}
+
+/* 0264D490 */
+u32 dOw_getCurrentState(u32 s) {
+    dOperate_wind_c *i_this = gabi::at<dOperate_wind_c>(s);
+
+    dOwStateId_c *state = gabi::at<dOwStateId_c>(i_this->mStateIdVtable);
+    if (state->mId == -1)
+        return i_this->mBaseVtable;
+    dOwStateVtable_c *vt = gabi::at<dOwStateVtable_c>(state->mVtable);
+    return gabi::call_ptr<u32>(vt->mGetState, gabi::ea(state));
+}
+
+// HD: full-register allocating constructor; retain wraparound allocation tests.
+/* 0264E0E8 */
+u32 dOw_createScreen(u32 s) {
+
+    if (!s)
+        s = dOw_operatorNew(sizeof(dOperate_wind_c));
+    if (s) {
+        dOperate_wind_c *i_this = gabi::at<dOperate_wind_c>(s);
+        dOw_layoutScreenCtor(s);
+        i_this->mStateFactoryVtable = gabi::ea(&l_stateFactoryVtable);
+        i_this->mVtable = gabi::ea(&l_windVtable);
+        i_this->mStateIdVtable = gabi::ea(&l_stateIdVtable);
+        if (s + 0x50 == 0)
+            dOw_operatorNew(4);
+        i_this->mpCursorArrow = 0;
+        i_this->mPosZ = 0;
+        i_this->mpWindArrow = 0;
+        i_this->mPosY = 0;
+        i_this->stick = 0;
+        dOwPoint_c *vec = gabi::at<dOwPoint_c>(s + 0x70);
+        i_this->mPosX = 0;
+        if (!vec)
+            vec = gabi::at<dOwPoint_c>(dOw_operatorNew(8));
+        if (vec) {
+            vec->y = 0;
+            vec->x = 0;
+        }
+        i_this->mWindAngle = 0;
+        i_this->mActive = 0;
+        i_this->mChangeBlocked = 0;
+        i_this->mTimer = 2;
+        i_this->mChangeRequested = 0;
+        i_this->mTargetAngle = 0;
+        i_this->mTouchBlocked = 0;
+        i_this->mCheckChange = 0;
+        i_this->mCursorRadiusSquared = 0;
+        i_this->mArrowAngle = 0;
+        i_this->mDeg = 0;
+        i_this->mVisible = 0;
+        i_this->mStickValue = 0;
+        i_this->mDragging = 0;
+        i_this->mChanged = 0;
+        i_this->mTouchAngleSet = 0;
+        i_this->mCenterRadiusSquared = 0;
+        i_this->mTouchMode = dOwTouch_Idle_e;
+        u32 manager = dOw_stControlCtor(0, 5, 2, 3, 2, 0x1000, 0x2000, 1.0f, 1.0f);
+        i_this->stick = gabi::at<dOwStick_c>(manager);
+    }
+    return s;
+}
+
+/* 0264E754 */
+void dOw_staticInit() {
+
+    for (u32 off : {12u, 8u, 4u, 0u})
+        l_zeroBlock.mWords[off / 4] = 0;
+
+    dOw_registerRange(gabi::ea(&l_angleRegistration));
+
+    l_minAngle = -3.1415927410125732f;
+    l_maxAngle = 3.1415927410125732f;
+
+    dOw_initializeRangeFlag(gabi::ea(&l_angleRangeFlag));
+    dOw_registerRange(gabi::ea(&l_angleFlagRegistration));
+    dOw_initializeScaleFlag(gabi::ea(&l_moveRangeFlag));
+    dOw_registerRange(gabi::ea(&l_moveFlagRegistration));
+
+    l_moveRangeX = 50000.0f;
+    l_moveStepX = 10000.0f;
+    l_moveRangeY = 50000.0f;
+    l_moveStepY = 10000.0f;
+
+    const u32 names[] = {gabi::ea(&l_allGroup),         gabi::ea(&l_inAllAnimation),
+                         gabi::ea(&l_windNowAnimation), gabi::ea(&l_windChangeAnimation),
+                         gabi::ea(&l_outAllAnimation),  gabi::ea(&l_languagePane),
+                         gabi::ea(&l_screenName),       gabi::ea(&l_buttonName),
+                         gabi::ea(&l_arrowChangePane),  gabi::ea(&l_windNowPane),
+                         gabi::ea(&l_controlArea),      gabi::ea(&l_layoutName),
+                         gabi::ea(&l_windChangePane),   gabi::ea(&l_innerControlArea),
+                         gabi::ea(&l_windNowGroup),     gabi::ea(&l_windChangeGroup)};
+
+    const u32 strings[] = {
+        gabi::guest_str("G_All_00"),         gabi::guest_str("InAll"),
+        gabi::guest_str("LoopWindNow"),      gabi::guest_str("LoopWindChange"),
+        gabi::guest_str("OutAll"),           gabi::guest_str("N_JpJa_00"),
+        gabi::guest_str("ControlWind_00"),   gabi::guest_str("BtnControlWind_00"),
+        gabi::guest_str("N_ArrowChange_00"), gabi::guest_str("N_WindNow_00"),
+        gabi::guest_str("B_ControlArea_00"), gabi::guest_str("ControlWind_00"),
+        gabi::guest_str("B_WindChange_00"),  gabi::guest_str("B_ControlArea_01"),
+        gabi::guest_str("G_LoopWindNow_00"), gabi::guest_str("G_LoopWindChange_00")};
+
+    for (u32 i = 0; i < 16; ++i) {
+        dOwSafeString_c *name = gabi::at<dOwSafeString_c>(names[i]);
+        name->mpString = strings[i];
+        name->mVtable = gabi::ea(&l_safeStringVtable);
+    }
+
+    bool initialized = l_stateIdInitialized != 0;
+    u32 id;
+
+    if (initialized)
+        id = l_stateIdCount;
+    else {
+        l_stateIdInitialized = 1;
+        id = 0;
+    }
+
+    const u32 objects[] = {gabi::ea(&StateID_Wait), gabi::ea(&StateID_InAll),
+                           gabi::ea(&StateID_Disp), gabi::ea(&StateID_OutWait),
+                           gabi::ea(&StateID_OutAll)};
+
+    const u32 stateNames[] = {gabi::guest_str("::StateID_Wait"), gabi::guest_str("::StateID_InAll"),
+                              gabi::guest_str("::StateID_Disp"),
+                              gabi::guest_str("::StateID_OutWait"),
+                              gabi::guest_str("::StateID_OutAll")};
+
+    for (u32 i = 0; i < 5; ++i) {
+        dOwStateDescriptor_c *descriptor = gabi::at<dOwStateDescriptor_c>(objects[i]);
+        descriptor->mId = ++id;
+        descriptor->mpName = stateNames[i];
+        descriptor->mVtable = gabi::ea(&l_stateDescriptorVtable);
+        for (u32 k = 0; k < dOwState_MethodCount_e; ++k) {
+            dOwMemberFunction_c *callback = gabi::at<dOwMemberFunction_c>(
+                gabi::ea(&descriptor->mInitialize) + sizeof(dOwMemberFunction_c) * k);
+            callback->mThisAdjustment = 0;
+            callback->mVirtualIndex = u16(dOwState_FirstMethod_e + i * dOwState_MethodCount_e + k);
+            callback->mFunction = 4;
+        }
+        descriptor->mDefault.mThisAdjustment = 0;
+        descriptor->mDefault.mVirtualIndex = 0;
+        descriptor->mDefault.mFunction = 0;
+        descriptor->mFactoryVtable = gabi::ea(&l_defaultFactoryVtable);
+    }
+
+    l_stateIdCount = id;
+}
+
+/* WWHD glue
+data l_safeStringVtable 100EEB24
+data l_stateDescriptorVtable 100EEB94
+data l_windVtable 100EED70
+data l_stateIdVtable 100EEEB0
+data l_stateFactoryVtable 100EEEC0
+data l_heapRoot 1018C404
+data l_gamePad 101F5088
+data l_angleRegistration 101F58F4
+data l_angleFlagRegistration 101F5900
+data l_moveFlagRegistration 101F590C
+data l_uiRoot 101F8344
+data l_stateIdInitialized 101FD8E4
+data l_stateIdCount 101FDD50
+data l_defaultFactoryVtable 101FF32C
+data l_uiFlags 1047B03C
+data l_languagePane 104919A0
+data l_controlArea 104919A8
+data l_windNowPane 104919B0
+data l_arrowChangePane 104919B8
+data l_windChangePane 104919C0
+data l_innerControlArea 104919C8
+data l_minAngle 104919D0
+data l_maxAngle 104919D4
+data l_moveRangeX 104919D8
+data l_moveRangeY 104919DC
+data l_moveStepX 104919E0
+data l_moveStepY 104919E4
+data l_angleRangeFlag 104919E8
+data l_moveRangeFlag 104919E9
+data l_zeroBlock 104919EC
+data l_allGroup 104919FC
+data l_windNowGroup 10491A04
+data l_windChangeGroup 10491A0C
+data l_inAllAnimation 10491A14
+data l_windNowAnimation 10491A1C
+data l_windChangeAnimation 10491A24
+data l_outAllAnimation 10491A2C
+data l_screenName 10491A34
+data l_buttonName 10491A3C
+data StateID_Wait 10491A44
+data StateID_InAll 10491A74
+data StateID_Disp 10491AA4
+data StateID_OutWait 10491AD4
+data StateID_OutAll 10491B04
+data l_layoutName 10491B34
+data l_managerInAll 10491B70
+data l_noTouchPoint 1049FFA0
+data l_animationGroups 100EEB3C
+str 100EEBF4 "SE_DRC_TOUCH_ON"
+str 100EEC04 "SE_TAKT_WIND_CURSOR"
+str 100EEC2C "InAll"
+str 100EEC34 "OutAll"
+str 100EEC3C "B_WindChange_00"
+str 100EEC4C "::StateID_InAll"
+str 100EEC5C "G_LoopWindChange_00"
+str 100EEC70 "LoopWindNow"
+str 100EEC7C "N_JpJa_00"
+str 100EEC88 "BtnControlWind_00"
+str 100EEC9C "::StateID_OutWait"
+str 100EECB0 "G_All_00"
+str 100EECBC "G_LoopWindNow_00"
+str 100EECD0 "LoopWindChange"
+str 100EECE0 "ControlWind_00"
+str 100EECF0 "B_ControlArea_00"
+str 100EED04 "N_WindNow_00"
+str 100EED14 "N_ArrowChange_00"
+str 100EED28 "B_ControlArea_01"
+str 100EED3C "::StateID_Wait"
+str 100EED4C "::StateID_Disp"
+str 100EED5C "::StateID_OutAll"
+ext 0273AF40 void dOw_operatorDelete(u32 a0)
+ext 026F88F0 void dOw_layoutScreenDtor(u32 a0, u32 a1)
+ext 0257DACC u32 dOw_getWindAngle()
+ext 020063C0 void dOw_changeState(u32 a0, u32 a1)
+ext 0264D5C0 void dOw_callArrowRotate(u32 a0, f32 a1)
+ext 0264D608 void dOw_callCursorRotate(u32 a0, f32 a1)
+ext 020053E4 void dOw_startAnimation(u32 a0, u32 a1, u32 a2, f32 a3)
+ext 0264D650 void dOw_callInitialize(u32 a0)
+ext 02005840 u32 dOw_isAnimationDone(u32 a0, u32 a1)
+ext 0257E490 void dOw_tactWindSet(u32 a0, s16 a1)
+ext 02617AE4 u32 dOw_isInputBlocked(u32 a0)
+ext 0287F05C u32 dOw_containsPoint(u32 a0, u32 a1)
+ext 020195B0 u32 dOw_atan2sRegister(f32 a0, f32 a1)
+ext 02704D2C void dOw_getPanePosition(u32 a0, u32 a1)
+ext 0264F3F4 void dOw_notifyWindChange(u32 a0)
+ext 0264D8C8 s32 dOw_callCheckTouchBlocked(u32 a0)
+ext 0264D9B0 u32 dOw_callIsTouchHeld(u32 a0)
+ext 02030B38 void dOw_playSound(u32 a0)
+ext 0264DA14 void dOw_callTouchAngle(u32 a0)
+ext 0264DA70 u32 dOw_callIsTouchNearCursor(u32 a0)
+ext 0264DAD4 void dOw_callRequestChange(u32 a0)
+ext 0264DB10 void dOw_callTouchControl(u32 a0)
+ext 0264DCF4 void dOw_callButtonControl(u32 a0)
+ext 0271F738 void dOw_addCalcAngle(u32 a0, u32 a1, u32 a2)
+ext 0264DD5C void dOw_callArrowDirection(u32 a0)
+ext 0264DF8C void dOw_callWindSet(u32 a0)
+ext 0273AD10 u32 dOw_operatorNew(u32 a0)
+ext 026F89E8 void dOw_layoutScreenCtor(u32 a0)
+ext 0258861C u32 dOw_stControlCtor(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6, f32 a7, f32 a8)
+ext 026F91F8 void dOw_layoutScreenExecute(u32 a0)
+ext 02006364 void dOw_executeStateManager(u32 a0)
+ext 0273B050 u32 dOw_heapNew(u32 a0, u32 a1, u32 a2)
+ext 026FADB0 u32 dOw_layoutCtor(u32 a0)
+ext 02004E04 void dOw_bindAnimation(u32 a0, u32 a1, u32 a2, u32 a3)
+ext 026F90D8 void dOw_setLayoutName(u32 a0, u32 a1, u32 a2)
+ext 0264E240 void dOw_callCenterPane(u32 a0)
+ext 028F026C void dOw_registerRange(u32 a0)
+ext 028ED6F8 void dOw_initializeRangeFlag(u32 a0)
+ext 028EAB2C void dOw_initializeScaleFlag(u32 a0)
+*/

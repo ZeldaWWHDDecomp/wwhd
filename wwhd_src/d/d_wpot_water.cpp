@@ -1,74 +1,296 @@
-#include "bindings.h"
-static void callback_dtor(u32 p,u32 flags) {WWHD_FUNC(0x025D3950,void,p,flags);if(p&&(flags&1))gabi::call(0x0273AF40,p,flags);}
-VERIFY(0x025D3950,callback_dtor);
-static void packet_noop(u32 p) {WWHD_FUNC(0x025D3964,void,p);}
-VERIFY(0x025D3964,packet_noop);
-static s32 draw(u32 p) {WWHD_FUNC(0x025D3968,s32,p);u32 game=gabi::call<u32>(0x025200D4);gabi::call(0x027F0E04,gabi::load<u32>(game+0x5D7C),p+0x100,0);return 1;}
-VERIFY(0x025D3968,draw);
-static s32 execute(u32 p) {WWHD_FUNC(0x025D39A8,s32,p);gabi::call(0x028E93CC,0x1048D0CC,gabi::load<f32>(p+0xE0),gabi::fadds_ppc(gabi::load<f32>(p+0xE4),gabi::load<f32>(0x10056D84)),gabi::load<f32>(p+0xE8));f32 scale=gabi::load<f32>(0x10056D88);gabi::call(0x025F2518,scale,gabi::load<f32>(0x10056D8C),scale);gabi::call(0x028E9108,0x104B45F8,0x1048D0CC,p+0x198);u32 em=gabi::load<u32>(p+0xFC);if((gabi::load<u32>(em+0x254)&8)&&gabi::load<u32>(em+0x1B4)+gabi::load<u32>(em+0x1C0)==0){gabi::store<u32>(em+0x254,gabi::load<u32>(em+0x254)&~0x40u);gabi::call(0x025DAD48,p);}return 1;}
-VERIFY(0x025D39A8,execute);
-static s32 is_delete(u32 p) {WWHD_FUNC(0x025D3A60,s32,p);return 1;}
-VERIFY(0x025D3A60,is_delete);
-static s32 remove(u32 p) {WWHD_FUNC(0x025D3A68,s32,p);if(p){gabi::call(0x027F13DC,p+0x100,0);gabi::call(0x025DD630,p,0);}return 1;}
-VERIFY(0x025D3A68,remove);
-struct Ground {u8 bytes[84];};
-static void ground_setup(u32 a,bool lava) {
- gabi::call(0x02008E0C,a);gabi::store<u32>(a,a+0x40);gabi::store<u32>(a+4,a+0x4C);
- gabi::store<u32>(a+0x10,lava?0x10056D44:0x10056CC4);gabi::store<u32>(a+0x20,lava?0x10056D54:0x10056CD4);
- for(u32 i=0;i<7;i++)gabi::store<u8>(a+0x44+i,0);if(lava)gabi::store<u8>(a+0x44,1);
- gabi::store<u32>(a+0x40,lava?0x10056D74:0x10056CF4);gabi::store<u32>(a+0x4C,lava?0x10056D64:0x10056CE4);gabi::store<u32>(a+0x50,lava?4:1);
+/* Spilled water effect, verified WWHD behavior. */
+#include "d/d_wpot_water.h"
+
+static f32 surfaceOffset;
+static f32 waterScale;
+static f32 waterHeight;
+static f32 invalidGround;
+static f32 probeStep;
+static f32 lavaRaise;
+static f32 splashOffset;
+static f32 alphaReference;
+static f32 initialLow;
+static f32 initialHigh;
+static Mtx34 viewMatrix;
+static WpotSinCosTable sincosTable;
+static dWpotWater_EcallBack mEcallback;
+static WpotInitWords initializedWords;
+static WpotInitFloats initializedFloats;
+static WpotRegistration wordsRegistration;
+static WpotRegistration byteRegistration;
+static WpotRegistration wideRegistration;
+static WpotRegistration callbackRegistration;
+static u8 byteStringState;
+static u8 wideStringState;
+static u32 actorVtable;
+static u32 packetVtable;
+static u32 callbackVtable;
+static u32 groundChkVtable;
+static u32 groundPolyVtable;
+static u32 groundPassVtable;
+static u32 groundGroupVtable;
+static u32 lavaChkVtable;
+static u32 lavaPolyVtable;
+static u32 lavaPassVtable;
+static u32 lavaGroupVtable;
+static u32 groundGroupDtorVtable;
+
+/* 025D3950 */
+// HD: distinct deleting-destructor entry preserves the forwarded flags register.
+static void wpotCallbackDeletingDtor(void* object, u32 flags) {
+    if (object != NULL && (flags & WpotDestructor_Delete)) wpotDeleteStorage(object, flags);
 }
-static void ground_destroy(u32 lava,u32 ground) {for(u32 a:{lava,ground}){gabi::store<u32>(a+0x20,0x10056CD4);gabi::store<u32>(a+0x40,0x10056CF4);gabi::store<u32>(a+0x4C,0x10056CB4);gabi::call(0x02008DAC,a,0);}}
-static s32 create(u32 p) {
- WWHD_FUNC(0x025D3AB0,s32,p);
- gabi::Local<Ground> ground;ground_setup(ground.a,false);gabi::Local<Ground> lava;ground_setup(lava.a,true);
- f32 sentinel=gabi::load<f32>(0x10056D90),step=gabi::load<f32>(0x10056D94),up=gabi::load<f32>(0x10056D8C),raise=gabi::load<f32>(0x10056D98);
- for(u32 i=0;i<50;i++) {
-  u32 trig=0x104A44F8+(((u16)(i*10000))>>3)*8;f32 r=gabi::fmuls_ppc((f32)i,step);
-  f32 x=gabi::fmadds(r,gabi::load<f32>(trig+4),gabi::load<f32>(p+0xE0)),y=gabi::fadds_ppc(gabi::load<f32>(p+0xE4),up),z=gabi::fmadds(r,gabi::load<f32>(trig),gabi::load<f32>(p+0xE8));
-  gabi::store<f32>(lava.a+0x24,x);gabi::store<f32>(lava.a+0x28,y);gabi::store<f32>(lava.a+0x2C,z);
-  u32 game=gabi::call<u32>(0x025200D4);f64 lavaY=gabi::call<f64>(0x02008974,game+0x12A0,lava.get());
-  if(lavaY==sentinel)continue;
-  gabi::store<f32>(ground.a+0x24,x);gabi::store<f32>(ground.a+0x28,y);gabi::store<f32>(ground.a+0x2C,z);
-  game=gabi::call<u32>(0x025200D4);f64 gndY=gabi::call<f64>(0x02008974,game+0x12A0,ground.get());
-  if(gabi::load<u16>(lava.a+0x14)==65535||gabi::load<u16>(lava.a+0x16)==256)continue;
-  game=gabi::call<u32>(0x025200D4);if(gabi::call<s32>(0x024EF0F4,game+0x12A0,lava.a+0x14)!=6||!(lavaY>gndY))continue;
-  gabi::Local<gabi::be<f32>[3]> spawn;gabi::store<f32>(spawn.a,x);gabi::store<f32>(spawn.a+4,(f32)(lavaY+raise));gabi::store<f32>(spawn.a+8,z);
-  gabi::call(0x025D5834,0x2A,0,spawn.get(),gabi::load<u32>(p+0xF8),0,0,~0u,0);break;
- }
- gabi::store<f32>(ground.a+0x24,gabi::load<f32>(p+0xE0));gabi::store<f32>(ground.a+0x28,gabi::fadds_ppc(gabi::load<f32>(p+0xE4),up));gabi::store<f32>(ground.a+0x2C,gabi::load<f32>(p+0xE8));
- u32 game=gabi::call<u32>(0x025200D4);f64 gy=gabi::call<f64>(0x02008974,game+0x12A0,ground.get());gabi::store<f32>(p+0xE4,(f32)gy);
- if(gy==sentinel){ground_destroy(lava.a,ground.a);return 5;}
- gabi::Local<gabi::be<f32>[3]> pos;gabi::store<f32>(pos.a,gabi::load<f32>(p+0xE0));gabi::store<f32>(pos.a+4,(f32)gy);gabi::store<f32>(pos.a+8,gabi::load<f32>(p+0xE8));
- gabi::call(0x025D5834,0xB7,0,pos.get(),gabi::load<u32>(p+0xF8),0,0,~0u,0);
- if(p){gabi::call(0x025DD5F0,p);gabi::store<u32>(p+0xB4,0x10056CA4);gabi::call(0x027F1278,p+0x100);gabi::store<u32>(p+0x10C,0x1004CC38);}
- gabi::Local<gabi::be<f32>[3]> splash;gabi::store<f32>(splash.a,gabi::load<f32>(p+0xE0));gabi::store<f32>(splash.a+4,gabi::fadds_ppc(gabi::load<f32>(p+0xE4),gabi::load<f32>(0x10056DA8)));gabi::store<f32>(splash.a+8,gabi::load<f32>(p+0xE8));
- game=gabi::call<u32>(0x025200D4);gabi::call(0x025A847C,gabi::load<u32>(game+0x5AB0),0,0x8083,splash.get(),0,0,255,0,~0u,0,0,0);
- game=gabi::call<u32>(0x025200D4);gabi::call(0x025A847C,gabi::load<u32>(game+0x5AB0),0,0x8084,p+0xE0,0,0,255,0,~0u,0,0,0);
- game=gabi::call<u32>(0x025200D4);u32 emitter=gabi::call<u32>(0x025A847C,gabi::load<u32>(game+0x5AB0),0,0x8086,p+0xE0,0,0,0xAA,0x104873AC,~0u,0,0,0);gabi::store<u32>(p+0xFC,emitter);
- if(emitter)gabi::store<u32>(emitter+0x254,gabi::load<u32>(emitter+0x254)|0x40);
- ground_destroy(lava.a,ground.a);return emitter?4:5;
+
+/* 025D3964 */
+static void wpotPacketNoop(void* packet) {}
+
+/* 025D3968 */
+BOOL dWpotWater_c::draw() {
+    WpotDrawListView* game = reinterpret_cast<WpotDrawListView*>(dComIfGp_get());
+    wpotDrawEntry(game->mpXluList, &mPacket, 0);
+    return TRUE;
 }
-VERIFY(0x025D3AB0,create);
-struct DrawState {u8 bytes[284];};
-static void emitter_draw(u32 cb,u32 em) {
- WWHD_FUNC(0x025D4124,void,cb,em);if(!(gabi::load<u8>(em+0x18E)&1))return;
- gabi::Local<DrawState> state;u32 a=state.a;gabi::call(0x02750250,state.get());u32 flags=gabi::load<u32>(a+0xC),mode=gabi::load<u32>(a+0xEC);
- gabi::store<u32>(a+0xE4,7);gabi::store<f32>(a+0xE8,gabi::load<f32>(0x10056DAC));gabi::store<u32>(a+4,3);gabi::store<u32>(a+0xC,flags|3);
- gabi::store<u8>(a,0);gabi::store<u8>(a+1,0);gabi::store<u32>(a+0x10,6);gabi::store<u8>(a+0xE0,1);gabi::store<u32>(a+0x14,6);
- gabi::store<u32>(a+0x1C,7);gabi::store<u32>(a+0x2C,6);gabi::store<u32>(a+0x18,7);gabi::store<u32>(a+0x28,6);gabi::store<u32>(a+0x30,7);gabi::store<u32>(a+0xEC,(((mode&~15u)+8)&~0xF0u)+0x80);gabi::store<u32>(a+0x34,7);
- gabi::call(0x027505B4,state.get());gabi::call(0x02750520,state.get());gabi::call(0x02750534,state.get());gabi::call(0x027505DC,state.get());
+
+/* 025D39A8 */
+BOOL dWpotWater_c::execute() {
+    mDoMtx_stack_c::transS(mPos.x, gabi::fadds_ppc(mPos.y, surfaceOffset), mPos.z);
+    f32 scale = waterScale;
+    mDoMtx_stack_c::scaleM(scale, waterHeight, scale);
+    wpotMatrixConcat(&viewMatrix, mDoMtx_stack_c::get(), &mPacket.mtx);
+    WpotEmitter* emitter = emtr;
+    // HD: unsigned count addition and its wrap are part of the delete test.
+    if ((emitter->mStatus & WpotEmitter_Delete) &&
+        u32(u32(emitter->mAliveParticleCount) + u32(emitter->mAliveChildCount)) == 0) {
+        emitter->mStatus = u32(emitter->mStatus) & ~WpotEmitter_Immortal;
+        wpotKankyoDelete(this);
+    }
+    return TRUE;
 }
-VERIFY(0x025D4124,emitter_draw);
-static void initializer() {WWHD_FUNC(0x025D41F0,void,(u32)0);for(u32 i=0;i<4;i++)gabi::store<u32>(0x1048739C+i*4,0);gabi::call(0x028F026C,0x101F2FE0);gabi::store<f32>(0x10487390,gabi::load<f32>(0x10056DB4));gabi::store<f32>(0x10487394,gabi::load<f32>(0x10056DB8));gabi::call(0x028ED6F8,0x10487398);gabi::call(0x028F026C,0x101F2FEC);gabi::call(0x028EAB2C,0x10487399);gabi::call(0x028F026C,0x101F2FF8);gabi::store<u32>(0x104873AC,0x10056DC0);gabi::call(0x028F026C,0x101F3004);}
-VERIFY(0x025D41F0,initializer);
-static void callback_empty_A0(u32 p) {WWHD_FUNC(0x025D42A0,void,p);}
-VERIFY(0x025D42A0,callback_empty_A0);
-static void callback_empty_A4(u32 p) {WWHD_FUNC(0x025D42A4,void,p);}
-VERIFY(0x025D42A4,callback_empty_A4);
-static void callback_delete(u32 p,u32 flags) {WWHD_FUNC(0x025D42A8,void,p,flags);if(p&&(flags&1))gabi::call(0x0273AF40,p,flags);}
-VERIFY(0x025D42A8,callback_delete);
-static void callback_empty_BC(u32 p) {WWHD_FUNC(0x025D42BC,void,p);}
-VERIFY(0x025D42BC,callback_empty_BC);
-static void callback_empty_C0(u32 p) {WWHD_FUNC(0x025D42C0,void,p);}
-VERIFY(0x025D42C0,callback_empty_C0);
+
+/* 025D3A60 */
+static BOOL dWpotWater_IsDelete(dWpotWater_c* i_this) { return TRUE; }
+
+/* 025D3A68 */
+static BOOL dWpotWater_Delete(dWpotWater_c* i_this) {
+    // HD: packet and environment base destruction are explicit.
+    if (i_this != NULL) {
+        wpotPacketDestruct(&i_this->mPacket, 0);
+        wpotBaseDestruct(i_this, 0);
+    }
+    return TRUE;
+}
+
+static void wpotGroundSetup(dBgS_GndChk* check, bool lava) {
+    wpotGroundConstruct(check);
+    check->mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk*>(check));
+    check->mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk*>(check));
+    static_cast<cBgS_Chk*>(check)->__vtbl = gabi::ea(lava ? &lavaChkVtable : &groundChkVtable);
+    static_cast<cBgS_PolyInfo*>(check)->__vtbl = gabi::ea(lava ? &lavaPolyVtable : &groundPolyVtable);
+    check->mbObjThrough = 0;
+    check->mbCamThrough = 0;
+    check->mbLinkThrough = 0;
+    check->mbArrowThrough = 0;
+    check->mbBombThrough = 0;
+    check->mbBoomerangThrough = 0;
+    check->mbRopeThrough = 0;
+    if (lava) check->mbObjThrough = 1;
+    static_cast<dBgS_PolyPassChk*>(check)->__vtbl = gabi::ea(lava ? &lavaPassVtable : &groundPassVtable);
+    static_cast<dBgS_GrpPassChk*>(check)->__vtbl = gabi::ea(lava ? &lavaGroupVtable : &groundGroupVtable);
+    check->mGrp = lava ? WpotGround_Lava : WpotGround_Normal;
+}
+
+static void wpotGroundDestroy(dBgS_GndChk* lava, dBgS_GndChk* ground) {
+    for (dBgS_GndChk* check : {lava, ground}) {
+        static_cast<cBgS_PolyInfo*>(check)->__vtbl = gabi::ea(&groundPolyVtable);
+        static_cast<dBgS_PolyPassChk*>(check)->__vtbl = gabi::ea(&groundPassVtable);
+        static_cast<dBgS_GrpPassChk*>(check)->__vtbl = gabi::ea(&groundGroupDtorVtable);
+        wpotGroundDestruct(check, 0);
+    }
+}
+
+/* 025D3AB0 */
+cPhs_State dWpotWater_c::create() {
+    // HD: the ground-probe wrapper and actor creation are one entry point.
+    gabi::Local<dBgS_GndChk> ground;
+    wpotGroundSetup(ground.get(), false);
+    gabi::Local<dBgS_GndChk> lava;
+    wpotGroundSetup(lava.get(), true);
+    f32 sentinel = invalidGround;
+    f32 step = probeStep;
+    f32 up = waterHeight;
+    f32 raise = lavaRaise;
+    for (u32 i = 0; i < 50; ++i) {
+        u32 index = u16(i * 10000) >> 3;
+        f32 radius = gabi::fmuls_ppc(f32(i), step);
+        f32 x = gabi::fmadds(radius, sincosTable.entries[index].cosine, mPos.x);
+        f32 y = gabi::fadds_ppc(mPos.y, up);
+        f32 z = gabi::fmadds(radius, sincosTable.entries[index].sine, mPos.z);
+        lava->m_pos.x = x;
+        lava->m_pos.y = y;
+        lava->m_pos.z = z;
+        // HD: ground-query returns stay double precision until their explicit stores.
+        f64 lavaY = wpotGroundCross(dComIfG_Bgsp(), lava.get());
+        if (lavaY == sentinel) continue;
+        ground->m_pos.x = x;
+        ground->m_pos.y = y;
+        ground->m_pos.z = z;
+        f64 groundY = wpotGroundCross(dComIfG_Bgsp(), ground.get());
+        if (lava->mPolyIndex == WpotGround_InvalidPoly || lava->mBgIndex == WpotGround_InvalidBg) continue;
+        if (wpotGetAttribute(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(lava.get())) != WpotGround_LavaAttribute
+            || !(lavaY > groundY)) continue;
+        gabi::Local<cXyz> spawnPos;
+        spawnPos->x = x;
+        spawnPos->y = f32(lavaY + raise);
+        spawnPos->z = z;
+        fopAcM_create(fpcNm_Obj_Magmarock_e, 0, spawnPos.get(), mParam, NULL, NULL, -1, 0);
+        break;
+    }
+    ground->m_pos.x = mPos.x;
+    ground->m_pos.y = gabi::fadds_ppc(mPos.y, up);
+    ground->m_pos.z = mPos.z;
+    f64 groundY = wpotGroundCross(dComIfG_Bgsp(), ground.get());
+    mPos.y = f32(groundY);
+    if (groundY == sentinel) {
+        wpotGroundDestroy(lava.get(), ground.get());
+        return cPhs_ERROR_e;
+    }
+    gabi::Local<cXyz> pos;
+    pos->x = mPos.x;
+    pos->y = f32(groundY);
+    pos->z = mPos.z;
+    fopAcM_create(fpcNm_HITOBJ_e, 0, pos.get(), mParam, NULL, NULL, -1, 0);
+    if (gabi::ea(this) != 0) {
+        wpotBaseConstruct(this);
+        base.__vtbl = gabi::ea(&actorVtable);
+        wpotPacketConstruct(&mPacket);
+        mPacket.__vtbl = gabi::ea(&packetVtable);
+    }
+    // HD: the first splash is raised independently of the actor's grounded position.
+    gabi::Local<cXyz> splash;
+    splash->x = mPos.x;
+    splash->y = gabi::fadds_ppc(mPos.y, splashOffset);
+    splash->z = mPos.z;
+    dComIfGp_particle_set(ID_IT_SN_WPOT_BITYA, splash.get());
+    dComIfGp_particle_set(ID_IT_SN_WPOT_SHIBUKI, &mPos);
+    JPABaseEmitter* emitter = dComIfGp_particle_set(ID_IT_SN_WPOT_YUKA, &mPos, NULL, NULL,
+        0xAA, reinterpret_cast<dPa_levelEcallBack*>(&mEcallback));
+    emtr = reinterpret_cast<WpotEmitter*>(emitter);
+    if (emitter != NULL) emtr->mStatus = u32(emtr->mStatus) | WpotEmitter_Immortal;
+    wpotGroundDestroy(lava.get(), ground.get());
+    return emitter != NULL ? cPhs_COMPLEATE_e : cPhs_ERROR_e;
+}
+
+/* 025D4124 */
+void dWpotWater_EcallBack::draw(WpotEmitter* emtr) {
+    if (!(emtr->mDrawFlags & WpotEmitter_ZDraw)) return;
+    // HD: the GX setup is expressed through an expanded draw-state object.
+    gabi::Local<WpotDrawState> state;
+    wpotDrawStateConstruct(state.get());
+    u32 flags = state->mFlags;
+    u32 mode = state->mBlendMode;
+    state->mAlphaCompare = WpotRender_Always;
+    state->mAlphaReference = alphaReference;
+    state->mDepthCompare = WpotRender_LessEqual;
+    state->mFlags = flags | WpotRender_StateMask;
+    state->mColorUpdate = 0;
+    state->mDepthUpdate = 0;
+    state->mBlendFactors[0] = WpotRender_DestinationAlpha;
+    state->mAlphaUpdate = 1;
+    state->mBlendFactors[1] = WpotRender_DestinationAlpha;
+    state->mBlendFactors[3] = WpotRender_InverseDestinationAlpha;
+    state->mBlendFactors[7] = WpotRender_DestinationAlpha;
+    state->mBlendFactors[2] = WpotRender_InverseDestinationAlpha;
+    state->mBlendFactors[6] = WpotRender_DestinationAlpha;
+    state->mBlendFactors[8] = WpotRender_InverseDestinationAlpha;
+    state->mBlendMode = (((mode & ~WpotRender_ModeLowMask) + WpotRender_ModeLowValue) & ~WpotRender_ModeHighMask) + WpotRender_ModeHighValue;
+    state->mBlendFactors[9] = WpotRender_InverseDestinationAlpha;
+    wpotApplyBlend(state.get());
+    wpotApplyDepth(state.get());
+    wpotApplyCompare(state.get());
+    wpotApplyColor(state.get());
+}
+
+/* 025D41F0 */
+static void __sinit_d_wpot_water_cpp() {
+    // HD: common header statics and callback registration.
+    for (u32 i = 0; i < 4; ++i) initializedWords.values[i] = 0;
+    wpotRegisterGlobal(&wordsRegistration);
+    initializedFloats.low = initialLow;
+    initializedFloats.high = initialHigh;
+    wpotInitializeByteState(&byteStringState);
+    wpotRegisterGlobal(&byteRegistration);
+    wpotInitializeWideState(&wideStringState);
+    wpotRegisterGlobal(&wideRegistration);
+    mEcallback.__vtbl = gabi::ea(&callbackVtable);
+    wpotRegisterGlobal(&callbackRegistration);
+}
+
+/* 025D42A0 */
+static void wpotCallbackExecuteNoop(void* callback) {}
+/* 025D42A4 */
+static void wpotCallbackSetupNoop(void* callback) {}
+/* 025D42A8 */
+// HD: the second callback deleting-destructor entry retains the forwarded flags.
+static void wpotCallbackDelete(void* object, u32 flags) {
+    if (object != NULL && (flags & WpotDestructor_Delete)) wpotDeleteStorage(object, flags);
+}
+/* 025D42BC */
+static void wpotCallbackDrawNoop(void* callback) {}
+/* 025D42C0 */
+static void wpotCallbackCleanupNoop(void* callback) {}
+
+/* WWHD glue
+data surfaceOffset 10056D84
+data waterScale 10056D88
+data waterHeight 10056D8C
+data invalidGround 10056D90
+data probeStep 10056D94
+data lavaRaise 10056D98
+data splashOffset 10056DA8
+data alphaReference 10056DAC
+data initialLow 10056DB4
+data initialHigh 10056DB8
+data viewMatrix 104B45F8
+data sincosTable 104A44F8
+data mEcallback 104873AC
+data initializedWords 1048739C
+data initializedFloats 10487390
+data wordsRegistration 101F2FE0
+data byteRegistration 101F2FEC
+data wideRegistration 101F2FF8
+data callbackRegistration 101F3004
+data byteStringState 10487398
+data wideStringState 10487399
+data actorVtable 10056CA4
+data packetVtable 1004CC38
+data callbackVtable 10056DC0
+data groundChkVtable 10056CC4
+data groundPolyVtable 10056CD4
+data groundPassVtable 10056CF4
+data groundGroupVtable 10056CE4
+data lavaChkVtable 10056D44
+data lavaPolyVtable 10056D54
+data lavaPassVtable 10056D74
+data lavaGroupVtable 10056D64
+data groundGroupDtorVtable 10056CB4
+ext 0273AF40 void wpotDeleteStorage(void*, u32)
+ext 027F0E04 void wpotDrawEntry(void*, dDlst_alphaVolPacket*, u32)
+ext 025DAD48 void wpotKankyoDelete(dWpotWater_c*)
+ext 027F13DC void wpotPacketDestruct(dDlst_alphaVolPacket*, u32)
+ext 025DD630 void wpotBaseDestruct(dWpotWater_c*, u32)
+ext 02008E0C void wpotGroundConstruct(dBgS_GndChk*)
+ext 02008DAC void wpotGroundDestruct(dBgS_GndChk*, u32)
+ext 02008974 f64 wpotGroundCross(dBgS*, dBgS_GndChk*)
+ext 024EF0F4 s32 wpotGetAttribute(dBgS*, cBgS_PolyInfo*)
+ext 025DD5F0 void wpotBaseConstruct(dWpotWater_c*)
+ext 027F1278 void wpotPacketConstruct(dDlst_alphaVolPacket*)
+ext 028E9108 void wpotMatrixConcat(Mtx34*, Mtx34*, Mtx34*)
+ext 02750250 void wpotDrawStateConstruct(WpotDrawState*)
+ext 027505B4 void wpotApplyBlend(WpotDrawState*)
+ext 02750520 void wpotApplyDepth(WpotDrawState*)
+ext 02750534 void wpotApplyCompare(WpotDrawState*)
+ext 027505DC void wpotApplyColor(WpotDrawState*)
+ext 028F026C void wpotRegisterGlobal(WpotRegistration*)
+ext 028ED6F8 void wpotInitializeByteState(void*)
+ext 028EAB2C void wpotInitializeWideState(void*)
+*/

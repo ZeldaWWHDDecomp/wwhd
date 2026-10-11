@@ -6,22 +6,11 @@
  * Ported from the GameCube decompilation (zeldaret/tww
  * src/d/actor/d_a_npc_ji1.cpp) to the WWHD layout and verified against the WWHD code (cking.rpx).
  */
-#include "d/actor/d_a_npc_ji1.h"
+#include "d/actor/d_a_npc_ji1_speak.h"
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* HD message manager: the pointer at 0x101F4B5C replaces GameCube's msg_class* (l_msg); the
- * actor keeps only the message id. The manager is read once at the start of the function. */
-WWHD_OPAQUE(dMsgMng_l);
-static inline dMsgMng_l* dMsg_mgr() { return gabi::at<dMsgMng_l>(gabi::load<u32>(0x101F4B5C)); }
-/* 025F7DB0 fopMsgM_messageSet(mgr, msgNo, cXyz* pos): message id, -1 on failure */
-static inline u32 msg_set(dMsgMng_l* m, u32 no, cXyz* pos) { return gabi::call<u32>(0x025F7DB0, m, no, pos); }
-/* 025F795C (matcher: fopMsgM_SearchByID): the current message's status (fopMsgStts_*) */
-static inline s32 msg_status(dMsgMng_l* m) { return gabi::call<s32>(0x025F795C, m); }
-/* 025F74D0: set the current message's status */
-static inline void msg_setStatus(dMsgMng_l* m, u32 s) { gabi::call(0x025F74D0, m, s); }
-/* next_msgStatus returns a u16: GHS passes its r3 on without re-extending it, so the status is
- * forwarded as the whole register (a guest call to 0224DA74) */
-static inline u32 ji1_next_msgStatus(daNpc_Ji1_c* a) { return gabi::call<u32>(0x0224DA74, a, &a->mMsgNo); }
+// HD: the current message manager replaces GameCube's l_msg. Cache it once per action.
+static Ji1MessageManager* l_messageManager = {0};
+static u32 l_msgId = 0;
 enum {
     fopMsgStts_MSG_DISPLAYED_e = 0xE,
     fopMsgStts_MSG_CONTINUES_e = 0xF,
@@ -29,36 +18,29 @@ enum {
     fopMsgStts_BOX_CLOSED_e = 0x12,
     fopMsgStts_MSG_DESTROYED_e = 0x13,
 };
-/* static fpc_ProcID l_msgId (0x10467228) */
-static inline be<u32>& l_msgId() { return *gabi::at<be<u32>>(0x10467228); }
-
-/* audio: 025E18EC mDoAud_bgmStart(id), 025E1904 mDoAud_bgmStop(frames) */
-static inline void mDoAud_bgmStart(u32 id) { gabi::call(0x025E18EC, id); }
-static inline void mDoAud_bgmStop(u32 t) { gabi::call(0x025E1904, t); }
-
-/* mini games (play+0x5CE8 flags u16, +0x5CEA type u8, +0x5CEE u8): HD start/end set/toggle the
- * type's flag bit 1 << (type - 1) */
-static inline u8 dComIfGp_getMiniGameType() { return gabi::load<u8>(dComIfGp_ea() + 0x5CEA); }
-static inline void dComIfGp_endMiniGame(u16 bit) {
-    u32 p = dComIfGp_ea();
-    gabi::store<u8>(p + 0x5CEA, 0);
-    gabi::store<u8>(p + 0x5CEE, 0);
-    gabi::store<u16>(p + 0x5CE8, (u16)(gabi::load<u16>(p + 0x5CE8) ^ bit));
+// HD: preserve the inlined update order and the already-fetched play object.
+static dComIfG_play_c& Ji1_play() {
+    return reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
 }
-static inline void play_startMiniGame(u32 p, u8 type, u16 bit) {
-    gabi::store<u8>(p + 0x5CEA, type);
-    gabi::store<u16>(p + 0x5CE8, (u16)(gabi::load<u16>(p + 0x5CE8) | bit));
+static u8 Ji1_miniGameType() { return Ji1_play().mMiniGameType; }
+static void Ji1_endMiniGame(u16 bit) {
+    auto& play = Ji1_play();
+    play.mMiniGameType = 0;
+    play.mMinigameResult = 0;
+    play.mMinigameFlags = (u16)play.mMinigameFlags ^ bit;
 }
-/* dComIfGp_setMessageCountNumber: play+0x5BA0 (s16) */
-static inline void dComIfGp_setMessageCountNumber(s32 n) { gabi::store<s16>(dComIfGp_ea() + 0x5BA0, (s16)n); }
-/* camera attention status (camera 0): play+0x5B00 */
-static inline void dComIfGp_onCameraAttentionStatus4() {
-    u32 p = dComIfGp_ea() + 0x5B00;
-    gabi::store<u32>(p, gabi::load<u32>(p) | 4);
+static void Ji1_startMiniGame(dComIfG_play_c& play, u8 type, u16 bit) {
+    play.mMiniGameType = type;
+    play.mMinigameFlags = (u16)play.mMinigameFlags | bit;
 }
-static inline void dComIfGp_offCameraAttentionStatus4() {
-    u32 p = dComIfGp_ea() + 0x5B00;
-    gabi::store<u32>(p, gabi::load<u32>(p) & ~4u);
+static void Ji1_messageCount(s32 count) { Ji1_play().mMsgCountNumber = (s16)count; }
+static void Ji1_onCameraAttention() {
+    auto& status = Ji1_play().mCameraInfo[0].mCameraAttentionStatus;
+    status = (u32)status | 4;
+}
+static void Ji1_offCameraAttention() {
+    auto& status = Ji1_play().mCameraInfo[0].mCameraAttentionStatus;
+    status = (u32)status & ~4u;
 }
 /* fopAcM_orderOtherEventId(this, idx) with the defaults (0xFF, 0xFFFF, 0, 1) */
 static inline void ji1_orderOtherEvent(daNpc_Ji1_c* a, s16 idx) { fopAcM_orderOtherEventId(a, idx, 0xFF, 0xFFFF, 0, 1); }
@@ -72,18 +54,17 @@ enum {
     JA_BGM_JI_TRAINING = 0x80000011,
 };
 
-/* 02253880 HD: the message is driven through the message manager (status get/set); the
- * animation is set only once the message exists */
+/* 02253880 */
+// HD: the message is driven through the message manager (status get/set); the animation is set only once the message exists
 BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
-    WWHD_FUNC(0x02253880, BOOL, this, arg);
-    dMsgMng_l* mgr = dMsg_mgr();
+    Ji1MessageManager* mgr = l_messageManager;
     if (field_0xC78 == 0) {
-        if (!eventInfo_checkCommandDemoAccrpt(this)) {
+        if (!eventInfo.checkCommandDemoAccrpt()) {
             ji1_orderOtherEvent(this, mEventIdx[0]);
-            eventInfo_onCondition(this, 2);
+            eventInfo.onCondition(dEvtCnd_UNK2_e);
             return FALSE;
         }
-        dComIfGp_evmng_cutEnd(dComIfGp_evmng_getMyStaffId(STR(0x1001B280) /* "Ji1" */, nullptr, 0));
+        dComIfGp_evmng_cutEnd(dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0));
         if (dComIfGs_isEventBit(0x0520)) {
             if (field_0xD7B) {
                 mMsgNo = 0x9B5;
@@ -101,27 +82,27 @@ BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
             mMsgNo = 0x969;
         }
         field_0xC78 = field_0xC78 + 1;
-        l_msgId() = fpcM_ERROR_PROCESS_ID_e;
+        l_msgId = fpcM_ERROR_PROCESS_ID_e;
     } else if (field_0xC78 != -1) {
-        if (l_msgId() == fpcM_ERROR_PROCESS_ID_e) {
-            l_msgId() = msg_set(mgr, mMsgNo, &eyePos);
-            if (l_msgId() != fpcM_ERROR_PROCESS_ID_e) {
+        if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
+            l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
+            if (l_msgId != fpcM_ERROR_PROCESS_ID_e) {
                 setAnm(5, 4.0f, 0);
             }
         } else if (field_0xC78 == 1) {
             field_0xC78 = field_0xC78 + 1;
-        } else if (msg_status(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
-            msg_setStatus(mgr, ji1_next_msgStatus(this));
-            if (msg_status(mgr) == fopMsgStts_MSG_CONTINUES_e) {
-                msg_set(mgr, mMsgNo, nullptr);
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
+            Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
+            if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
+                Ji1_messageSet(mgr, mMsgNo, nullptr);
             }
-        } else if (msg_status(mgr) == fopMsgStts_BOX_CLOSED_e) {
-            int staffIdx = dComIfGp_evmng_getMyStaffId(STR(0x1001B280), nullptr, 0);
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_BOX_CLOSED_e) {
+            int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
             if (staffIdx != -1) {
                 dComIfGp_evmng_cutEnd(staffIdx);
             }
             if (dComIfGp_evmng_endCheck(mEventIdx[0])) {
-                msg_setStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
+                Ji1_setMessageStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
                 u32 no = mMsgNo;
                 field_0xD70 = 0;
                 if (no == 0x969) {
@@ -140,18 +121,17 @@ BOOL daNpc_Ji1_c::startspeakAction(void* arg) {
     }
     return TRUE;
 }
-VERIFY(0x02253880, &daNpc_Ji1_c::startspeakAction);
 
-/* 02253EE8 HD: message manager; the animation is set only once the message exists */
+/* 02253EE8 */
+// HD: message manager; the animation is set only once the message exists
 BOOL daNpc_Ji1_c::endspeakAction(void* arg) {
-    WWHD_FUNC(0x02253EE8, BOOL, this, arg);
-    dMsgMng_l* mgr = dMsg_mgr();
-    int staffIdx = dComIfGp_evmng_getMyStaffId(STR(0x1001B284) /* "Ji1" */, nullptr, 0);
+    Ji1MessageManager* mgr = l_messageManager;
+    int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
     if (field_0xC78 == 0) {
-        if (!eventInfo_checkCommandDemoAccrpt(this)) {
+        if (!eventInfo.checkCommandDemoAccrpt()) {
             ji1_orderOtherEvent(this, mEventIdx[2]);
-            eventInfo_onCondition(this, 2);
+            eventInfo.onCondition(dEvtCnd_UNK2_e);
             return false;
         }
         if (actionNo == 0) {
@@ -167,36 +147,35 @@ BOOL daNpc_Ji1_c::endspeakAction(void* arg) {
             mMsgNo = 0x954;
         }
         field_0xC78 = field_0xC78 + 1;
-        l_msgId() = fpcM_ERROR_PROCESS_ID_e;
+        l_msgId = fpcM_ERROR_PROCESS_ID_e;
     } else if (field_0xC78 != -1) {
-        if (l_msgId() == fpcM_ERROR_PROCESS_ID_e) {
-            l_msgId() = msg_set(mgr, mMsgNo, &eyePos);
-            if (l_msgId() != fpcM_ERROR_PROCESS_ID_e) {
+        if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
+            l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
+            if (l_msgId != fpcM_ERROR_PROCESS_ID_e) {
                 setAnm(5, 4.0f, 0);
             }
         } else if (field_0xC78 == 1) {
             field_0xC78 = field_0xC78 + 1;
-        } else if (msg_status(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
             setAnimFromMsgNo(mMsgNo);
-            msg_setStatus(mgr, ji1_next_msgStatus(this));
-            if (msg_status(mgr) == fopMsgStts_MSG_CONTINUES_e) {
-                msg_set(mgr, mMsgNo, nullptr);
+            Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
+            if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
+                Ji1_messageSet(mgr, mMsgNo, nullptr);
             }
-        } else if (msg_status(mgr) == fopMsgStts_BOX_CLOSED_e) {
-            msg_setStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_BOX_CLOSED_e) {
+            Ji1_setMessageStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
             mDoAud_bgmStop(45);
             ji1_setAction(this, ACT_reiAction, nullptr);
         }
     }
     return true;
 }
-VERIFY(0x02253EE8, &daNpc_Ji1_c::endspeakAction);
 
-/* 02254434 HD: message manager */
+/* 02254434 */
+// HD: message manager
 BOOL daNpc_Ji1_c::reiAction(void* arg) {
-    WWHD_FUNC(0x02254434, BOOL, this, arg);
-    dMsgMng_l* mgr = dMsg_mgr();
-    int staffIdx = dComIfGp_evmng_getMyStaffId(STR(0x1001B288) /* "Ji1" */, nullptr, 0);
+    Ji1MessageManager* mgr = l_messageManager;
+    int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
     if (field_0xC78 == 0) {
         if (actionNo == 1) {
@@ -205,11 +184,11 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
         }
         if (actionNo == 2) {
             initPos(0);
-            if (dComIfGp_getMiniGameType() == 6) {
-                dComIfGp_endMiniGame(0x20);
+            if (Ji1_miniGameType() == 6) {
+                Ji1_endMiniGame(0x20);
             }
-            if (dComIfGp_getMiniGameType() == 2) {
-                dComIfGp_endMiniGame(0x2);
+            if (Ji1_miniGameType() == 2) {
+                Ji1_endMiniGame(0x2);
             }
             dComIfGp_evmng_cutEnd(staffIdx);
             return FALSE;
@@ -220,7 +199,7 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
             if (n == 0) {
                 mMsgNo = 0x997;
             } else {
-                dComIfGp_setMessageCountNumber(n);
+                Ji1_messageCount(n);
                 mMsgNo = 0x999;
             }
         } else if (dComIfGs_isEventBit(0x0001)) {
@@ -232,24 +211,24 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
             mMsgNo = 0x955;
         }
         field_0xC78 = field_0xC78 + 1;
-        l_msgId() = fpcM_ERROR_PROCESS_ID_e;
-        dComIfGp_onCameraAttentionStatus4();
+        l_msgId = fpcM_ERROR_PROCESS_ID_e;
+        Ji1_onCameraAttention();
     } else if (field_0xC78 != -1) {
-        if (l_msgId() == fpcM_ERROR_PROCESS_ID_e) {
-            l_msgId() = msg_set(mgr, mMsgNo, &eyePos);
+        if (l_msgId == fpcM_ERROR_PROCESS_ID_e) {
+            l_msgId = Ji1_messageSet(mgr, mMsgNo, &eyePos);
         } else if (field_0xC78 == 1) {
             field_0xC78 = field_0xC78 + 1;
-        } else if (msg_status(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
-            msg_setStatus(mgr, ji1_next_msgStatus(this));
-            if (msg_status(mgr) == fopMsgStts_MSG_CONTINUES_e) {
-                msg_set(mgr, mMsgNo, nullptr);
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_DISPLAYED_e) {
+            Ji1_setMessageStatus(mgr, Ji1_nextMessageStatus(this, &mMsgNo));
+            if (Ji1_messageStatus(mgr) == fopMsgStts_MSG_CONTINUES_e) {
+                Ji1_messageSet(mgr, mMsgNo, nullptr);
                 setAnimFromMsgNo(mMsgNo);
             }
-        } else if (msg_status(mgr) == fopMsgStts_BOX_CLOSING_e) {
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_BOX_CLOSING_e) {
             if (actionNo == 3) {
                 dComIfGp_evmng_cutEnd(staffIdx);
             }
-        } else if (msg_status(mgr) == fopMsgStts_BOX_CLOSED_e) {
+        } else if (Ji1_messageStatus(mgr) == fopMsgStts_BOX_CLOSED_e) {
             if (actionNo == 4) {
                 if (mAnimation == 0xC && ji1_checkFrameEnd(mpOrcaMorf, 2.0f)) {
                     dComIfGp_evmng_cutEnd(staffIdx);
@@ -264,23 +243,21 @@ BOOL daNpc_Ji1_c::reiAction(void* arg) {
                 dComIfGp_evmng_cutEnd(staffIdx);
             }
             if (dComIfGp_evmng_endCheck(mEventIdx[2])) {
-                msg_setStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
+                Ji1_setMessageStatus(mgr, fopMsgStts_MSG_DESTROYED_e);
                 setAnm(0, 16.0f, 0);
                 ji1_setAction(this, ACT_normalAction, nullptr);
                 dComIfGp_event_reset();
-                dComIfGp_offCameraAttentionStatus4();
+                Ji1_offCameraAttention();
                 field_0xD74 = 0;
             }
         }
     }
     return TRUE;
 }
-VERIFY(0x02254434, &daNpc_Ji1_c::reiAction);
 
 /* 02257C9C */
 BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
-    WWHD_FUNC(0x02257C9C, BOOL, this, arg);
-    int staffIdx = dComIfGp_evmng_getMyStaffId(STR(0x1001B2B8) /* "Ji1" */, nullptr, 0);
+    int staffIdx = dComIfGp_evmng_getMyStaffId("Ji1", nullptr, 0);
     int actionNo = getEventActionNo(staffIdx);
     if (field_0xC78 == 0) {
         if (dComIfGp_evmng_startCheck(mEventIdx[4])) {
@@ -288,7 +265,7 @@ BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
             field_0xC78 = field_0xC78 + 1;
         } else {
             ji1_orderOtherEvent(this, mEventIdx[4]);
-            eventInfo_onCondition(this, 2);
+            eventInfo.onCondition(dEvtCnd_UNK2_e);
         }
     } else if (field_0xC78 != -1) {
         if (mAnimation == 0xB) {
@@ -318,19 +295,19 @@ BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
                 initPos(0);
                 BOOL ev = dComIfGs_isEventBit(0x0520);
                 if (field_0xD7B == 0) {
-                    u32 play = dComIfGp_ea();
+                    auto& play = Ji1_play();
                     if (ev) {
-                        play_startMiniGame(play, 6, 0x20);
+                        Ji1_startMiniGame(play, 6, 0x20);
                         game_life_point() = 3;
                     } else {
-                        play_startMiniGame(play, 2, 0x2);
+                        Ji1_startMiniGame(play, 2, 0x2);
                     }
                 }
             }
         }
         if (dComIfGp_evmng_endCheck(mEventIdx[4])) {
             ji1_orderOtherEvent(this, mEventIdx[0]);
-            eventInfo_onCondition(this, 2);
+            eventInfo.onCondition(dEvtCnd_UNK2_e);
             ji1_setAction(this, ACT_startspeakAction, nullptr);
             dComIfGp_event_reset();
             dtParticle();
@@ -338,4 +315,18 @@ BOOL daNpc_Ji1_c::plmoveAction(void* arg) {
     }
     return TRUE;
 }
-VERIFY(0x02257C9C, &daNpc_Ji1_c::plmoveAction);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_messageManager 101F4B5C
+data l_msgId 10467228 nocheck # BSS: the harness supplies the current message id.
+str 1001B280 "Ji1" in 02253880
+str 1001B284 "Ji1" in 02253EE8
+str 1001B288 "Ji1" in 02254434
+str 1001B2B8 "Ji1" in 02257C9C
+ext 025F7DB0 u32 Ji1_messageSet(Ji1MessageManager*, u32, cXyz*)
+ext 025F795C s32 Ji1_messageStatus(Ji1MessageManager*)
+ext 025F74D0 void Ji1_setMessageStatus(Ji1MessageManager*, u32)
+ext 0224DA74 u32 Ji1_nextMessageStatus(daNpc_Ji1_c*, be<u32>*)
+ext 025E18EC void mDoAud_bgmStart(u32)
+ext 025E1904 void mDoAud_bgmStop(u32)
+*/

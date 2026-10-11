@@ -10,11 +10,6 @@
  */
 #include "d/actor/d_a_bwds.h"
 
-/* this TU's functions (d_a_bwds.cpp) */
-static inline void anm_init(bwds_class* i_this, int bck, f32 morf, u8 loopMode, f32 speed, int snd) {
-    gabi::call(0x02105DD8, i_this, bck, morf, loopMode, speed, snd);
-}
-static inline void fopAcM_seStart_bw(fopAc_ac_c* a, u32 id, u32 param) { gabi::call(0x02108F10, a, id, param); }
 /* fopAcM_seStart inlined: HD tests &eyePos only */
 static inline void se_start(fopAc_ac_c* a, u32 id, u32 param = 0) {
     cXyz* eye = &a->eyePos;
@@ -47,6 +42,126 @@ static inline void set_jump_target(bwds_class* i_this) {
     gabi::Local<cXyz> sum;
     cXyz_pl(&actor->current.pos, sum, cStack_40);
     i_this->m02FC.copy(*sum);
+}
+
+/* body_control (inlined) */
+static inline void body_control(bwds_class* i_this) {
+    fopAc_ac_c* actor = i_this;
+    f32 fVar1 = 0.0f;
+    J3DModel* model = i_this->mpMorf->getModel();
+    PSMTXCopy(bw_getAnmMtx(model, 2 /* KOBOSS_HEAD_JNT_HEAD_e */), calc_mtx());
+    gabi::Local<cXyz> vec1;
+    vec1->z = (f32)REG0_F(2);
+    vec1->y = (f32)REG0_F(1);
+    vec1->x = (REG0_F(0) + 60.0f) * l_HIO.m008;
+    MtxPosition(vec1, &i_this->m032C[0]);
+    i_this->m03E0[0].x = (s16)actor->shape_angle.x;
+    i_this->m03E0[0].y = (s16)actor->shape_angle.y;
+    i_this->m03E0[0].z = (s16)actor->shape_angle.z;
+
+    cMtx_YrotS(calc_mtx(), actor->shape_angle.y);
+    cMtx_XrotM(calc_mtx(), actor->shape_angle.x);
+
+    vec1->y = 0.0f;
+    vec1->x = 0.0f;
+    gabi::Local<cXyz> vec3;
+    if (i_this->m04F5 != 0) {
+        /* HD: REG18 registers, -30 (GameCube REG0_F(6) - 10) */
+        vec1->z = (REG18_F(6) + -30.0f) * l_HIO.m008;
+        fVar1 = REG18_F(5) + 0.85f;
+    } else {
+        vec1->z = (REG18_F(17) + -5.0f) * l_HIO.m008;
+    }
+    MtxPosition(vec1, vec3);
+    /* HD: no vec3.y adjustment while hooked */
+
+    gabi::Local<dBgS_GndChk> gndChk;
+    dBgS_GndChk_ct(gndChk, BW_GNDCHK_VT, false);
+    /* HD: the trail stiffness is geometric: (REG18_F(7) + 1) * (REG18_F(8) + 0.9)^i
+     * (GameCube (0xe - i) * (REG0_F(17) + 0.5) + 1) */
+    f32 fVar2 = REG18_F(7) + 1.0f;
+    gabi::Local<cXyz> vec2; /* one frame slot for all iterations */
+    for (s32 i = 1; i < 0xf; i++) {
+        cXyz* p032c = &i_this->m032C[i];
+        csXyz* p03e0 = &i_this->m03E0[i];
+        cXyz* p043c = &i_this->m043C[i];
+        fVar2 = fVar2 * (REG18_F(8) + 0.9f);
+        f32 fVar3 = gabi::fmadds(vec3->y, fVar2, p032c->y + p043c->y);
+        if (i_this->m04F5 == 1) {
+            cXyz* pos = &gndChk->m_pos;
+            f32 py = p032c->y + 200.0f;
+            pos->x = (f32)p032c->x;
+            pos->y = py;
+            pos->z = (f32)p032c->z;
+            f32 g = cBgS_GroundCross(dComIfG_Bgsp(), gndChk);
+            f32 dVar8 = (((g + -90.0f) + REG0_F(16)) + 100.0f) + REG0_F(19);
+            if (!(fVar3 > dVar8)) {
+                fVar3 = dVar8;
+            }
+        }
+        f32 diff_x = gabi::fmadds(vec3->x, fVar2, (p032c->x - p032c[-1].x) + p043c->x);
+        f32 diff_z = gabi::fmadds(vec3->z, fVar2, (p032c->z - p032c[-1].z) + p043c->z);
+        f32 diff_y = fVar3 - p032c[-1].y;
+
+        s16 sVar2 = cM_atan2s(diff_x, diff_z);
+        s16 sVar1 = (s16)-cM_atan2s(diff_y, std_sqrtf(gabi::fmadds(diff_x, diff_x, diff_z * diff_z)));
+
+        Mtx34* mtx = calc_mtx();
+        vec1->x = 0.0f;
+        f32 len = (REG0_F(7) + 70.0f) * l_HIO.m008;
+        vec1->y = 0.0f;
+        vec1->z = len;
+        cMtx_YrotS(mtx, sVar2);
+        cMtx_XrotM(calc_mtx(), sVar1);
+        MtxPosition(vec1, vec2);
+
+        p03e0[-1].y = sVar2;
+        p03e0[-1].x = (s16)(sVar1 + 0x8000);
+
+        p043c->copy(*p032c);
+        f32 nx = p032c[-1].x + vec2->x;
+        p032c->x = nx;
+        p032c->y = p032c[-1].y + vec2->y;
+        p032c->z = p032c[-1].z + vec2->z;
+        p043c->x = (nx - p043c->x) * fVar1;
+        p043c->y = (p032c->y - p043c->y) * fVar1;
+        p043c->z = (p032c->z - p043c->z) * fVar1;
+
+        if (i < 0xe) {
+            J3DModel* iVar5 = i_this->mp02BC[i - 1];
+            mDoMtx_stack_c::transS(p032c->x, p032c->y, p032c->z);
+            mDoMtx_stack_c::YrotM(p03e0->y);
+            mDoMtx_XrotM(mDoMtx_stack_c::get(), p03e0->x);
+            f32 s = cM_ssin(i_this->m02F4 * (REG0_S(5) + 3500) + i * (REG0_S(6) + 10000));
+            f32 fVar4 = gabi::fmadds(s, REG0_F(4) + 0.1f, 1.0f);
+            f32 fVar5 = fVar4 * l_HIO.m008;
+            mDoMtx_stack_c::scaleM(fVar5, fVar5, l_HIO.m008);
+            J3DModel_setBaseTRMtx(iVar5, mDoMtx_stack_c::get());
+        }
+        if (i >= 3) {
+            i_this->m0670[i].SetC(p032c);
+            i_this->m0670[i].SetR((REG0_F(9) + 10.0f) * l_HIO.m008);
+            dComIfG_Ccsp_Set(&i_this->m0670[i]);
+        }
+    }
+    bw_GndChk_dt(gndChk);
+}
+
+/* easy_bg_check2 (inlined) */
+static inline void easy_bg_check2(bwds_class* i_this) {
+    fopAc_ac_c* actor = i_this;
+    gabi::Local<cXyz> local_54;
+    for (s32 i = 0; i < 0x14; i++) {
+        local_54->z = (f32)actor->current.pos.z;
+        local_54->x = (f32)actor->current.pos.x;
+        local_54->y = 0.0f;
+        f32 fVar3 = std_sqrtf(PSVECSquareMag(local_54));
+        if (!(fVar3 > 3800.0f)) {
+            break;
+        }
+        actor->current.pos.x = actor->current.pos.x * 0.99f;
+        actor->current.pos.z = actor->current.pos.z * 0.99f;
+    }
 }
 
 /* pos_move (inlined) */
@@ -89,7 +204,7 @@ static inline void ug_move(bwds_class* i_this) {
     s16 sVar5 = 0;
     switch ((s16)i_this->m02F8) {
     case -10:
-        anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
+        bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
         i_this->m02F8 = 3;
         i_this->m030C = REG0_F(3) + 3000.0f;
         actor->speedF = (f32)l_HIO.m010;
@@ -104,7 +219,7 @@ static inline void ug_move(bwds_class* i_this) {
         se_start(actor, JA_SE_CV_BWD_C_ATTACK);
         break;
     case 0:
-        anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 2.0f, 0, 1.0f, -1);
+        bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 2.0f, 0, 1.0f, -1);
         actor->current.pos.y = (f32)i_this->m0504;
         i_this->m02F8 = i_this->m02F8 + 1;
         actor->shape_angle.z = 0;
@@ -112,7 +227,7 @@ static inline void ug_move(bwds_class* i_this) {
         /* fall through */
     case 1: {
         actor->current.pos.y = (f32)i_this->m0504;
-        attn_flags(actor) = 4; /* fopAc_Attn_LOCKON_BATTLE_e */
+        actor->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         i_this->m02FC.copy(player->current.pos);
         i_this->m030C = REG0_F(3) + 3000.0f;
         actor->speedF = (f32)l_HIO.m010;
@@ -131,7 +246,7 @@ static inline void ug_move(bwds_class* i_this) {
         sVar5 = ftos(cM_ssin(i_this->m02F4 * (REG0_S(3) + 0x514)) * fVar1);
 
         if (fVar8 < REG0_F(12) + 600.0f) {
-            anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
+            bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
             i_this->m02F8 = i_this->m02F8 + 1;
             actor->speedF = (f32)l_HIO.m010;
             actor->speed.y = REG0_F(13) + 50.0f;
@@ -154,7 +269,7 @@ static inline void ug_move(bwds_class* i_this) {
             i_this->m02F8 = 4;
             actor->speedF = REG0_F(5) + 5.0f;
             i_this->m0314[0] = REG0_S(3) + 0x23;
-            attn_flags(actor) = 0;
+            actor->attention_info.flags = 0;
             i_this->m04F5 = 2;
             se_start(actor, JA_SE_CM_BWD_C_IN_SAND);
         }
@@ -175,7 +290,7 @@ static inline void ug_move(bwds_class* i_this) {
         actor->shape_angle.z = 0;
         i_this->m0500 = 0;
         if (i_this->m0314[0] == 0) {
-            attn_flags(actor) = 4;
+            actor->attention_info.flags = 4;
             i_this->m0314[0] = ftos(cM_rndF(20.0f) + 20.0f);
             f32 px = actor->current.pos.x;
             i_this->m02FC.x = px;
@@ -218,7 +333,7 @@ static inline void hook_on(bwds_class* i_this) {
     i_this->m031E = 3;
     switch ((s16)i_this->m02F8) {
     case 0: {
-        anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 2.0f, 0, 1.0f, -1);
+        bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 2.0f, 0, 1.0f, -1);
         i_this->m02F8 = i_this->m02F8 + 1;
         gabi::Local<cXyz> local_34;
         cXyz_mi(&player->eyePos, local_34, &actor->eyePos);
@@ -232,7 +347,7 @@ static inline void hook_on(bwds_class* i_this) {
         break;
     }
     case 1:
-        if (!(actor->actor_status & 0x100000) /* fopAcStts_HOOK_CARRY_e */) {
+        if (!(actor->actor_status & fopAcStts_HOOK_CARRY_e)) {
             i_this->m02F6 = ACTION_HOOK_CHANCE;
             i_this->m02F8 = 0;
         }
@@ -247,7 +362,7 @@ static inline void hook_chance(bwds_class* i_this) {
     i_this->m0670[0].OnCoSPrmBit(1); /* OnCoSetBit */
     switch ((s16)i_this->m02F8) {
     case 0:
-        anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
+        bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 2.0f, 2, 1.0f, -1);
         i_this->m02F8 = i_this->m02F8 + 1;
         i_this->m0314[0] = (s16)l_HIO.m014;
         /* fall through */
@@ -270,9 +385,9 @@ static inline void hook_chance(bwds_class* i_this) {
             i_this->m0502 = ftos(cM_rndFX(REG0_F(5) + 2500.0f));
             if (cM_rndF(1.0f) < 0.5f) {
                 if (cM_rndF(1.0f) < 0.5f) {
-                    anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 5.0f, 0, 1.0f, -1);
+                    bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e, 5.0f, 0, 1.0f, -1);
                 } else {
-                    anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 5.0f, 2, 1.0f, -1);
+                    bw_anm_init(i_this, dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e, 5.0f, 2, 1.0f, -1);
                 }
             }
         }
@@ -368,13 +483,13 @@ static inline void damage_check(bwds_class* i_this) {
     fopAc_ac_c* actor = i_this;
     fopAc_ac_c* player = daPy_getPlayerActorClass();
     if (i_this->m031E == 0) {
-        if (actor->actor_status & 0x100000 /* fopAcStts_HOOK_CARRY_e */) {
+        if (actor->actor_status & fopAcStts_HOOK_CARRY_e) {
             gabi::Local<cXyz> local_38;
             local_38->x = 0.0f;
             local_38->y = 0.0f;
             local_38->z = 0.0f;
             /* daPy_py_c::setHookshotCarryOffset (virtual, HD vtable +0x10C) */
-            u32 fn = gabi::load<u32>(player->__vtbl + 0x10C);
+            u32 fn = bw_playerVtable(player)->setHookshotCarryOffset;
             gabi::call_ptr(fn, player, fopAcM_GetID(actor), local_38.get());
             i_this->m02F6 = ACTION_HOOK_ON;
             i_this->m02F8 = 0;
@@ -390,7 +505,7 @@ static inline void damage_check(bwds_class* i_this) {
                     i_this->m031E = 6;
                     local_2c->mpObj = gabi::ea(i_this->m0670[0].GetTgHitObj());
                     local_2c->pParticlePos = gabi::ea(i_this->m0670[0].GetTgHitPosP());
-                    cc_at_check(actor, local_2c);
+                    bw_cc_at_check(actor, local_2c);
 
                     if (actor->health <= 0) {
                         i_this->m02F6 = ACTION_FAIL;
@@ -407,7 +522,7 @@ static inline void damage_check(bwds_class* i_this) {
             }
             for (s32 i = 3; i < 0xf; i++) {
                 if (i_this->m0670[i].ChkTgHit()) {
-                    def_se_set(actor, i_this->m0670[i].GetTgHitObj(), 0x40);
+                    bw_def_se_set(actor, i_this->m0670[i].GetTgHitObj(), 0x40);
                     break;
                 }
             }
@@ -456,129 +571,8 @@ static inline void move(bwds_class* i_this) {
     }
 }
 
-/* easy_bg_check2 (inlined) */
-static inline void easy_bg_check2(bwds_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    gabi::Local<cXyz> local_54;
-    for (s32 i = 0; i < 0x14; i++) {
-        local_54->z = (f32)actor->current.pos.z;
-        local_54->x = (f32)actor->current.pos.x;
-        local_54->y = 0.0f;
-        f32 fVar3 = std_sqrtf(PSVECSquareMag(local_54));
-        if (!(fVar3 > 3800.0f)) {
-            break;
-        }
-        actor->current.pos.x = actor->current.pos.x * 0.99f;
-        actor->current.pos.z = actor->current.pos.z * 0.99f;
-    }
-}
-
-/* body_control (inlined) */
-static inline void body_control(bwds_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    f32 fVar1 = 0.0f;
-    J3DModel* model = i_this->mpMorf->getModel();
-    PSMTXCopy(bw_getAnmMtx(model, 2 /* KOBOSS_HEAD_JNT_HEAD_e */), calc_mtx());
-    gabi::Local<cXyz> vec1;
-    vec1->z = (f32)REG0_F(2);
-    vec1->y = (f32)REG0_F(1);
-    vec1->x = (REG0_F(0) + 60.0f) * l_HIO.m008;
-    MtxPosition(vec1, &i_this->m032C[0]);
-    i_this->m03E0[0].x = (s16)actor->shape_angle.x;
-    i_this->m03E0[0].y = (s16)actor->shape_angle.y;
-    i_this->m03E0[0].z = (s16)actor->shape_angle.z;
-
-    cMtx_YrotS(calc_mtx(), actor->shape_angle.y);
-    cMtx_XrotM(calc_mtx(), actor->shape_angle.x);
-
-    vec1->y = 0.0f;
-    vec1->x = 0.0f;
-    gabi::Local<cXyz> vec3;
-    if (i_this->m04F5 != 0) {
-        /* HD: REG18 registers, -30 (GameCube REG0_F(6) - 10) */
-        vec1->z = (REG18_F(6) + -30.0f) * l_HIO.m008;
-        fVar1 = REG18_F(5) + 0.85f;
-    } else {
-        vec1->z = (REG18_F(17) + -5.0f) * l_HIO.m008;
-    }
-    MtxPosition(vec1, vec3);
-    /* HD: no vec3.y adjustment while hooked */
-
-    gabi::Local<dBgS_GndChk> gndChk;
-    dBgS_GndChk_ct(gndChk, BW_GNDCHK_VT, false);
-    /* HD: the trail stiffness is geometric: (REG18_F(7) + 1) * (REG18_F(8) + 0.9)^i
-     * (GameCube (0xe - i) * (REG0_F(17) + 0.5) + 1) */
-    f32 fVar2 = REG18_F(7) + 1.0f;
-    gabi::Local<cXyz> vec2; /* one frame slot for all iterations */
-    for (s32 i = 1; i < 0xf; i++) {
-        cXyz* p032c = &i_this->m032C[i];
-        csXyz* p03e0 = &i_this->m03E0[i];
-        cXyz* p043c = &i_this->m043C[i];
-        fVar2 = fVar2 * (REG18_F(8) + 0.9f);
-        f32 fVar3 = gabi::fmadds(vec3->y, fVar2, p032c->y + p043c->y);
-        if (i_this->m04F5 == 1) {
-            cXyz* pos = gabi::at<cXyz>(gabi::ea(gndChk.get()) + 0x24);
-            f32 py = p032c->y + 200.0f;
-            pos->x = (f32)p032c->x;
-            pos->y = py;
-            pos->z = (f32)p032c->z;
-            f32 g = cBgS_GroundCross(dComIfG_Bgsp(), gndChk);
-            f32 dVar8 = (((g + -90.0f) + REG0_F(16)) + 100.0f) + REG0_F(19);
-            if (!(fVar3 > dVar8)) {
-                fVar3 = dVar8;
-            }
-        }
-        f32 diff_x = gabi::fmadds(vec3->x, fVar2, (p032c->x - p032c[-1].x) + p043c->x);
-        f32 diff_z = gabi::fmadds(vec3->z, fVar2, (p032c->z - p032c[-1].z) + p043c->z);
-        f32 diff_y = fVar3 - p032c[-1].y;
-
-        s16 sVar2 = cM_atan2s(diff_x, diff_z);
-        s16 sVar1 = (s16)-cM_atan2s(diff_y, std_sqrtf(gabi::fmadds(diff_x, diff_x, diff_z * diff_z)));
-
-        Mtx34* mtx = calc_mtx();
-        vec1->x = 0.0f;
-        f32 len = (REG0_F(7) + 70.0f) * l_HIO.m008;
-        vec1->y = 0.0f;
-        vec1->z = len;
-        cMtx_YrotS(mtx, sVar2);
-        cMtx_XrotM(calc_mtx(), sVar1);
-        MtxPosition(vec1, vec2);
-
-        p03e0[-1].y = sVar2;
-        p03e0[-1].x = (s16)(sVar1 + 0x8000);
-
-        p043c->copy(*p032c);
-        f32 nx = p032c[-1].x + vec2->x;
-        p032c->x = nx;
-        p032c->y = p032c[-1].y + vec2->y;
-        p032c->z = p032c[-1].z + vec2->z;
-        p043c->x = (nx - p043c->x) * fVar1;
-        p043c->y = (p032c->y - p043c->y) * fVar1;
-        p043c->z = (p032c->z - p043c->z) * fVar1;
-
-        if (i < 0xe) {
-            J3DModel* iVar5 = i_this->mp02BC[i - 1];
-            mDoMtx_stack_c::transS(p032c->x, p032c->y, p032c->z);
-            mDoMtx_stack_c::YrotM(p03e0->y);
-            mDoMtx_XrotM(mDoMtx_stack_c::get(), p03e0->x);
-            f32 s = cM_ssin(i_this->m02F4 * (REG0_S(5) + 3500) + i * (REG0_S(6) + 10000));
-            f32 fVar4 = gabi::fmadds(s, REG0_F(4) + 0.1f, 1.0f);
-            f32 fVar5 = fVar4 * l_HIO.m008;
-            mDoMtx_stack_c::scaleM(fVar5, fVar5, l_HIO.m008);
-            J3DModel_setBaseTRMtx(iVar5, mDoMtx_stack_c::get());
-        }
-        if (i >= 3) {
-            i_this->m0670[i].SetC(p032c);
-            i_this->m0670[i].SetR((REG0_F(9) + 10.0f) * l_HIO.m008);
-            dComIfG_Ccsp_Set(&i_this->m0670[i]);
-        }
-    }
-    bw_GndChk_dt(gndChk);
-}
-
 /* 0210602C */
 static BOOL daBwds_Execute(bwds_class* i_this) {
-    WWHD_FUNC(0x0210602C, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
     dComIfGp_get(); /* HD: an unused player lookup */
 
@@ -609,7 +603,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
         gabi::Local<dBgS_GndChk> gndChk;
         dBgS_GndChk_ct(gndChk, BW_GNDCHK_VT, false);
         {
-            cXyz* pos = gabi::at<cXyz>(gabi::ea(gndChk.get()) + 0x24);
+            cXyz* pos = &gndChk->m_pos;
             f32 off = REG0_F(13) + 2500.0f;
             f32 x = actor->current.pos.x;
             f32 y = actor->current.pos.y + off;
@@ -655,7 +649,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
     }
 
     {
-        cXyz* att = gabi::at<cXyz>(gabi::ea(actor) + 0x390); /* attention_info.position */
+        cXyz* att = &actor->attention_info.position;
         f32 ey = actor->eyePos.y;
         att->z = (f32)actor->eyePos.z;
         att->x = (f32)actor->eyePos.x;
@@ -695,9 +689,9 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
         if (i_this->m181C == 1) {
             i_this->m181C = i_this->m181C + 1;
             dPa_smokeEcallBack_end(smoke(&i_this->m1820[0])); /* remove() */
-            dComIfGp_particle_setToon(0xA247 /* ID_IT_ST_BWK_IDOU_MOKO00 */, &i_this->m1810, &actor->shape_angle, nullptr, 0xFF,
+            bw_particle_setToon(0xA247 /* ID_IT_ST_BWK_IDOU_MOKO00 */, &i_this->m1810, &actor->shape_angle, nullptr, 0xFF,
                                       &i_this->m1820[0], fopAcM_GetRoomNo(actor));
-            smoke_setColor(&i_this->m1820[0], eff_col);
+            smoke_setColor(&i_this->m1820[0], &eff_col);
             dComIfGp_particle_set(0xA248 /* ID_IT_ST_BWK_IDOU_SUNA00 */, &i_this->m1810, &actor->shape_angle, nullptr, 0xFF,
                                   (dPa_levelEcallBack*)&i_this->m1880, fopAcM_GetRoomNo(actor));
         }
@@ -707,7 +701,7 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
             dPa_followEcallBack_end(&i_this->m1880);
         }
         if (i_this->m181C != 0) {
-            fopAcM_seStart_bw(actor, JA_SE_CM_BWD_C_MOVE_SAND, 0);
+            bw_seStart(actor, JA_SE_CM_BWD_C_MOVE_SAND, 0);
         }
     }
 
@@ -723,10 +717,10 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
                 i_this->m181D = REG0_S(5) + 5;
                 dPa_smokeEcallBack_end(smoke(&i_this->m1820[1]));
                 s8 room = fopAcM_GetRoomNo(actor);
-                u8 alpha = gabi::load<u8>(eff_col); /* eff_col.r */
-                dComIfGp_particle_setToon(0xA24A /* ID_IT_ST_BWK_OUT_SMOKE00 */, &i_this->m1804, nullptr, nullptr, alpha,
+                u8 alpha = eff_col.r;
+                bw_particle_setToon(0xA24A /* ID_IT_ST_BWK_OUT_SMOKE00 */, &i_this->m1804, nullptr, nullptr, alpha,
                                           &i_this->m1820[1], room);
-                smoke_setColor(&i_this->m1820[1], eff_col);
+                smoke_setColor(&i_this->m1820[1], &eff_col);
                 dComIfGp_particle_set(0x8249 /* ID_IT_SN_BWK_OUT_SUNA00 */, &i_this->m1804);
             }
         } else {
@@ -747,10 +741,10 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
                 i_this->m1804.z = (f32)actor->current.pos.z;
                 i_this->m181E = REG0_S(5) + 5;
                 s8 room = fopAcM_GetRoomNo(actor);
-                u8 alpha = gabi::load<u8>(eff_col);
-                dComIfGp_particle_setToon(0xA24C /* ID_IT_ST_BWK_DIVE_SMOKE00 */, &i_this->m1804, nullptr, nullptr, alpha,
+                u8 alpha = eff_col.r;
+                bw_particle_setToon(0xA24C /* ID_IT_ST_BWK_DIVE_SMOKE00 */, &i_this->m1804, nullptr, nullptr, alpha,
                                           &i_this->m1820[2], room);
-                smoke_setColor(&i_this->m1820[2], eff_col);
+                smoke_setColor(&i_this->m1820[2], &eff_col);
                 dComIfGp_particle_set(0x824B /* ID_IT_SN_BWK_DIVE_SUNA00 */, &i_this->m1804);
             }
         } else {
@@ -765,8 +759,8 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
         if (i_this->m1894[i] != 0) {
             f32 fVar14 = (f32)(s32)i_this->m1894[i] - 1.0f;
             i_this->mp18B0[i]->setFrame(fVar14);
-            gabi::store<f32>(gabi::ea(i_this->mp18B8[i].get()) + 4, fVar14); /* setFrame */
-            gabi::store<f32>(gabi::ea(i_this->mp18C0[i].get()) + 4, fVar14);
+            i_this->mp18B8[i]->mFrameCtrl.mFrame = fVar14;
+            i_this->mp18C0[i]->mFrameCtrl.mFrame = fVar14;
             mDoMtx_stack_c::transS(i_this->m1898[i].x, i_this->m1898[i].y, i_this->m1898[i].z);
             mDoMtx_stack_c::scaleM(l_HIO.m00C, l_HIO.m00C, l_HIO.m00C);
             J3DModel_setBaseTRMtx(i_this->mp18B0[i]->getModel(), mDoMtx_stack_c::get());
@@ -780,4 +774,8 @@ static BOOL daBwds_Execute(bwds_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x0210602C, daBwds_Execute);
+
+/* WWHD glue (tools/verify/autoglue.py): split source's calls remain guest calls
+ext 02105DD8 void bw_anm_init(bwds_class* actor, int animation, f32 morph, u8 loop, f32 speed, int sound)
+ext 02108F10 void bw_seStart(fopAc_ac_c* actor, u32 sound, u32 parameter)
+*/

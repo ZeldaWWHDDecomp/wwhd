@@ -1,439 +1,416 @@
-/* hd_ui_020021FC: four HD UI TUs around the layout screen loader (no GameCube source).
- *
- * 020021FC..020023CB: a 0x104 NW4F-lyt-derived object (lyt ctors 0287795C / 02877DB8, dtor 02877FE8,
- *                     vtable 100002C8 at +8); __sinit 02002338
- * 020023CC..02002697: layout child holder (0xC, vtable 100003A8) with its sead RTTI static and a
- *                     DynamicCast-based attach (02005978 / 020042A4); __sinit 02002604
- * 02002698..02002803: a 0xC0 NW4F-lyt-derived object (02874AAC / 02874C64, vtable 100003C8); __sinit 02002770
- * 02002804..020032F3: the layout screen (0xE4, vtable 100004F8 at +0xE0): resource accessor at +4,
- *                     layout at +8, lyt object +0xC, animation set +0xD4, pane-pointer table +0xD8/+0xDC;
- *                     loads "%s.bflyt"; __sinit 020031F4; sead SafeString / deleting-dtor companions after it */
-#include "hd_blk.h"
-using namespace hdblk;
-
-namespace hd_ui_020021FC {
-
-static u32 LytA_ct3(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x020021FC, u32, self, a, b, c);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x104);
-        if (t == 0) return 0;
+/** HD layout screen loader, text/picture panes and child holder. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_ui_020021FC.h"
+static u32 sScreenHolderTypeInitialized;
+static u32 sScreenHolderParentInitialized;
+static u32 sScreenRootTypeInitialized;
+static u32 sScreenPaneOwnerTypeInitialized;
+static u32 sScreenPaneOwnerParentInitialized;
+static u32 sScreenTypeInitialized;
+static u32 sScreenParentInitialized;
+static hdScreenType sScreenHolderType;
+static hdScreenType sScreenHolderParent;
+static hdScreenType sScreenRootType;
+static hdScreenType sScreenPaneOwnerType;
+static hdScreenType sScreenPaneOwnerParent;
+static hdScreenType sScreenType;
+static hdScreenType sScreenParent;
+static hdScreenUiSystem* sScreenUiSystem;
+static void* sScreenHeapManager;
+static hdScreenStringTable sScreenFixedStringTable;
+static hdScreenStringTable sScreenSafeStringTable;
+static hdScreenDeleteTable sScreenHolderTable;
+static hdScreenTable sLayoutScreenTable;
+/* 020021FC */
+static hdScreenTextBox* constructScreenTextBox(hdScreenTextBox* i_this, u32 resource, u32 option, u32 argument) {
+    if (i_this == NULL) {
+        i_this = (hdScreenTextBox*)operator_new(sizeof(hdScreenTextBox));
+        if (i_this == NULL) return NULL;
     }
-    gabi::call(0x0287795C, t, a, b, c);
-    st(t + 8, 0x100002C8);
-    return t;
+    hdScreenConstructTextBoxBase(i_this, resource, option, argument);
+    i_this->mVtable = 0x100002C8;
+    return i_this;
 }
-VERIFY(0x020021FC, LytA_ct3);
-
-static u32 LytA_ct1(u32 self, u32 a) {
-    WWHD_FUNC(0x02002280, u32, self, a);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x104);
-        if (t == 0) return 0;
+/* 02002280 */
+static hdScreenTextBox* constructScreenTextBoxResource(hdScreenTextBox* i_this, u32 resource) {
+    if (i_this == NULL) {
+        i_this = (hdScreenTextBox*)operator_new(sizeof(hdScreenTextBox));
+        if (i_this == NULL) return NULL;
     }
-    gabi::call(0x02877DB8, t, a);
-    st(t + 8, 0x100002C8);
-    return t;
+    hdScreenConstructTextBoxResource(i_this, resource);
+    i_this->mVtable = 0x100002C8;
+    return i_this;
 }
-VERIFY(0x02002280, LytA_ct1);
-
-static void LytA_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x020022E4, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02877FE8, self, 0);
-    if (flags & 1) op_delete(self);
+/* 020022E4 */
+static void destroyScreenTextBox(hdScreenTextBox* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    hdScreenDestroyTextBoxBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020022E4, LytA_dt);
-
-static void sinit_02002338() {
-    WWHD_FUNC(0x02002338, void);
-    header_sinit(0x101FF168, 0x1018C20C, 0x100002C0);
+/* 02002338 */
+static void __sinit_hd_text_box_cpp() {
+    sinit_header_statics_rodata(0x101FF15C, 0x1018C20C, 0x101FF168, 0x100002C0);
 }
-VERIFY(0x02002338, sinit_02002338);
-
-/* 020023CC: Holder::getRuntimeTypeInfoStatic() */
-static u32 Holder_rtti() {
-    WWHD_FUNC(0x020023CC, u32);
-    return rtti_static3(0x101FD8F0, 0x101FD8F4, 0x101FD89C, 0x101FD8F8, 0x101FD888, 0x101FD8FC);
+/* 020023CC */
+static hdScreenType* getScreenHolderType() {
+    if (sScreenHolderTypeInitialized != 0) return &sScreenHolderType;
+    u32 parentInitialized = sScreenHolderParentInitialized;
+    sScreenHolderTypeInitialized = 1;
+    if (parentInitialized != 0) { sScreenHolderType.mParent = &sScreenHolderParent; return &sScreenHolderType; }
+    u32 rootInitialized = sScreenRootTypeInitialized;
+    sScreenHolderParentInitialized = 1;
+    if (rootInitialized == 0) { sScreenRootTypeInitialized = 1; sScreenRootType.mParent = NULL; }
+    sScreenHolderType.mParent = &sScreenHolderParent;
+    sScreenHolderParent.mParent = &sScreenRootType;
+    return &sScreenHolderType;
 }
-VERIFY(0x020023CC, Holder_rtti);
-
-/* 02002450: holder constructor (owner, layout) */
-static u32 Holder_ct(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02002450, u32, self, a, b);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xC);
-        if (t == 0) return 0;
+/* 02002450 */
+static hdScreenHolder* constructScreenHolder(hdScreenHolder* i_this, void* owner, void* layout) {
+    if (i_this == NULL) {
+        i_this = (hdScreenHolder*)operator_new(sizeof(hdScreenHolder));
+        if (i_this == NULL) return NULL;
     }
-    st(t + 8, b);
-    st(t + 4, a);
-    st(t + 0, 0x100003A8);
-    return t;
+    i_this->mLayout = layout;
+    i_this->mOwner = owner;
+    i_this->mVtable = &sScreenHolderTable;
+    return i_this;
 }
-VERIFY(0x02002450, Holder_ct);
-
-static void Holder_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x020024B0, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 020024B0 */
+static void destroyScreenHolder(hdScreenHolder* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020024B0, Holder_dt);
-
-/* 020024C4: attach: cast OBJ to the pane-owner type (RTTI 101FD900) and give its target (+0x34) a new
- * 0x3C child built from (ARG, OBJ, this->+4) */
-static void Holder_attach(u32 self, u32 arg, u32 obj) {
-    WWHD_FUNC(0x020024C4, void, self, arg, obj);
-    rtti_static2(0x101FD8C4, 0x101FD900, 0x101FD894, 0x101FD904);
-    u32 o = dyncast(obj, 0x30, 0xC, 0x101FD900);
-    u32 target = ld(o + 0x34); /* o may be null: the original reads 0x34 then */
-    if (target == 0) return;
-    u32 heap = ld(ld(0x1018C404) + 0x10);
-    u32 p = gabi::call<u32>(0x0273B050, 0x3C, heap, 4);
-    if (p != 0) p = gabi::call<u32>(0x02005978, p, arg, o, ld(self + 4));
-    gabi::call(0x020042A4, target, p);
-}
-VERIFY(0x020024C4, Holder_attach);
-
-static void sinit_02002604() {
-    WWHD_FUNC(0x02002604, void);
-    header_sinit(0x101FF184, 0x1018C230, 0x100003A0);
-}
-VERIFY(0x02002604, sinit_02002604);
-
-static u32 LytB_ct(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x02002698, u32, self, a, b, c);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xC0);
-        if (t == 0) return 0;
+static hdScreenPaneOwner* screenPaneOwnerCast(hdScreenPaneOwner* object) {
+    if (object == NULL) return NULL;
+    hdScreenType* type = gabi::call_ptr<hdScreenType*>(object->mVtable->mGetRuntimeType.get(), object);
+    if (type == NULL) return NULL;
+    for (; type != NULL; type = type->mParent) {
+        if (type == &sScreenPaneOwnerType) return object;
     }
-    gabi::call(0x02874AAC, t, a, b, c);
-    st(t + 8, 0x100003C8);
-    return t;
+    return NULL;
 }
-VERIFY(0x02002698, LytB_ct);
-
-static void LytB_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0200271C, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02874C64, self, 0);
-    if (flags & 1) op_delete(self);
-}
-VERIFY(0x0200271C, LytB_dt);
-
-static void sinit_02002770() {
-    WWHD_FUNC(0x02002770, void);
-    header_sinit(0x101FF1A0, 0x1018C254, 0x100003C0);
-}
-VERIFY(0x02002770, sinit_02002770);
-
-/* 02002804: Screen::getRuntimeTypeInfoStatic() */
-static u32 Screen_rtti() {
-    WWHD_FUNC(0x02002804, u32);
-    return rtti_static3(0x101FD908, 0x101FD90C, 0x101FD898, 0x101FD910, 0x101FD888, 0x101FD8FC);
-}
-VERIFY(0x02002804, Screen_rtti);
-
-/* 02002888: screen constructor */
-static u32 Screen_ct(u32 self) {
-    WWHD_FUNC(0x02002888, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xE4);
-        if (t == 0) return 0;
+/* 020024C4 */
+static void attachScreenHolder(hdScreenHolder* i_this, void* argument, hdScreenPaneOwner* object) {
+    if (sScreenPaneOwnerTypeInitialized == 0) {
+        u32 parentInitialized = sScreenPaneOwnerParentInitialized;
+        sScreenPaneOwnerTypeInitialized = 1;
+        if (parentInitialized == 0) {
+            sScreenPaneOwnerParentInitialized = 1;
+            sScreenPaneOwnerParent.mParent = NULL;
+        }
+        sScreenPaneOwnerType.mParent = &sScreenPaneOwnerParent;
     }
-    st(t + 8, 0);
-    st(t + 4, 0);
-    st(t + 0xE0, 0x100004F8);
-    st(t + 0, 0);
-    gabi::call(0x02873D70, t + 0xC);
-    u32 tab = t + 0xD8;
-    st(t + 0xD4, 0);
-    if (tab == 0) tab = op_new(8);
-    if (tab != 0) {
-        st(tab + 4, 0);
-        st(tab + 0, 0);
+    hdScreenPaneOwner* owner = screenPaneOwnerCast(object);
+    void* target = hdScreenReadTarget(owner);
+    if (target == NULL) return;
+    hdScreenHeap* heap = sScreenUiSystem->mHeap;
+    void* child = hdScreenAllocate(0x3C, heap, 4);
+    if (child != NULL) child = hdScreenConstructChild(child, argument, owner, i_this->mOwner);
+    hdScreenAddChild(target, child);
+}
+/* 02002604 */
+static void __sinit_hd_holder_cpp() {
+    sinit_header_statics_rodata(0x101FF178, 0x1018C230, 0x101FF184, 0x100003A0);
+}
+/* 02002698 */
+static hdScreenPicture* constructScreenPicture(hdScreenPicture* i_this, u32 resource, u32 option, u32 argument) {
+    if (i_this == NULL) {
+        i_this = (hdScreenPicture*)operator_new(sizeof(hdScreenPicture));
+        if (i_this == NULL) return NULL;
     }
-    return t;
+    hdScreenConstructPictureBase(i_this, resource, option, argument);
+    i_this->mVtable = 0x100003C8;
+    return i_this;
 }
-VERIFY(0x02002888, Screen_ct);
-
-static void Screen_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02002918, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02873FD0, self + 0xC, 2);
-    if (flags & 1) op_delete(self);
+/* 0200271C */
+static void destroyScreenPicture(hdScreenPicture* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    hdScreenDestroyPictureBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02002918, Screen_dt);
-
-/* 0200296C: set the lyt object's resource from X (02874D83C converts it) */
-static void Screen_setRes(u32 self, u32 x) {
-    WWHD_FUNC(0x0200296C, void, self, x);
-    if (x == 0) return;
-    u32 r = gabi::call<u32>(0x0274D83C, x);
-    gabi::call(0x02873FE4, self + 0xC, r);
+/* 02002770 */
+static void __sinit_hd_picture_cpp() {
+    sinit_header_statics_rodata(0x101FF194, 0x1018C254, 0x101FF1A0, 0x100003C0);
 }
-VERIFY(0x0200296C, Screen_setRes);
-
-/* 020029AC: copy a 0x30-byte block (12 words) to +0x4C */
-static void Screen_setBlock(u32 self, u32 src) {
-    WWHD_FUNC(0x020029AC, void, self, src);
-    if (src == 0) return;
-    for (u32 i = 0; i < 12; ++i) st(self + 0x4C + i * 4, ld(src + i * 4));
+/* 02002804 */
+static hdScreenType* getLayoutScreenType() {
+    if (sScreenTypeInitialized != 0) return &sScreenType;
+    u32 parentInitialized = sScreenParentInitialized;
+    sScreenTypeInitialized = 1;
+    if (parentInitialized != 0) { sScreenType.mParent = &sScreenParent; return &sScreenType; }
+    u32 rootInitialized = sScreenRootTypeInitialized;
+    sScreenParentInitialized = 1;
+    if (rootInitialized == 0) { sScreenRootTypeInitialized = 1; sScreenRootType.mParent = NULL; }
+    sScreenType.mParent = &sScreenParent;
+    sScreenParent.mParent = &sScreenRootType;
+    return &sScreenType;
 }
-VERIFY(0x020029AC, Screen_setBlock);
-
-/* 020029EC: build: record the system word, set the resource and the block */
-static void Screen_setup(u32 self, u32 res, u32 block) {
-    WWHD_FUNC(0x020029EC, void, self, res, block);
-    st(self + 0xB4, ld(ld(0x1018C404) + 0x14));
-    gabi::call(0x0200296C, self, res);
-    gabi::call(0x020029AC, self, block);
+/* 02002888 */
+static hdLayoutScreen* constructLayoutScreen(hdLayoutScreen* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdLayoutScreen*)operator_new(sizeof(hdLayoutScreen));
+        if (i_this == NULL) return NULL;
+    }
+    i_this->mHolder = NULL;
+    i_this->mAccessor = NULL;
+    i_this->mVtable = &sLayoutScreenTable;
+    i_this->field_0x0 = 0;
+    hdScreenConstructLytObject(i_this->lytObject());
+    hdScreenPaneArray* panes = i_this->panesForConstruction();
+    i_this->mAnimationSet = NULL;
+    if (panes == NULL) panes = (hdScreenPaneArray*)operator_new(sizeof(hdScreenPaneArray));
+    if (panes != NULL) { panes->mData = NULL; panes->mCount = 0; }
+    return i_this;
 }
-VERIFY(0x020029EC, Screen_setup);
-
-static inline u32 svf(u32 self, u32 off) { return vfn(self, 0xE0, off); }
-
-/* 02002A40: build with optional archive (r10) through the screen's virtuals */
-static s32 Screen_build(u32 self, u32 a4, u32 a5, u32 res, u32 block, u32 v8, u32 v9, u32 arc) {
-    WWHD_FUNC(0x02002A40, s32, self, a4, a5, res, block, v8, v9, arc);
-    (void)a4; (void)a5;
-    if (arc == 0) {
-        if (gabi::call_ptr<u32>(svf(self, 0x3C), self) == 0) return 0;
-        if (gabi::call_ptr<u32>(svf(self, 0x4C), self, v8, v9) == 0) return 0;
-        gabi::call(0x020029EC, self, res, block);
+/* 02002918 */
+static void destroyLayoutScreen(hdLayoutScreen* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    hdScreenDestroyLytObject(i_this->lytObject(), 2);
+    if (flags & 1) operator_delete(i_this);
+}
+/* 0200296C */
+static void setLayoutScreenResource(hdLayoutScreen* i_this, void* source) {
+    if (source == NULL) return;
+    void* resource = hdScreenConvertResource(source);
+    hdScreenSetLytResource(i_this->lytObject(), resource);
+}
+/* 020029AC */
+static void setLayoutScreenBlock(hdLayoutScreen* i_this, be<u32>* source) {
+    if (source == NULL) return;
+    for (u32 i = 0; i < 12; ++i) i_this->mLytObject.mBlock[i] = source[i];
+}
+/* 020029EC */
+static void setupLayoutScreen(hdLayoutScreen* i_this, void* resource, be<u32>* block) {
+    i_this->mLytObject.mSystemWord = sScreenUiSystem->mSystemWord;
+    hdScreenSetResource(i_this, resource);
+    hdScreenSetBlock(i_this, block);
+}
+/* 02002A40 */
+static s32 buildLayoutScreen(hdLayoutScreen* i_this, u32 argument, u32 option, void* resource, be<u32>* block, u32 first, u32 second, hdScreenArchive* archive) {
+    (void)argument; (void)option;
+    if (archive == NULL) {
+        if (gabi::call_ptr<u32>(i_this->mVtable->mInitialize.get(), i_this) == 0) return 0;
+        if (gabi::call_ptr<u32>(i_this->mVtable->mInitializeOptions.get(), i_this, first, second) == 0) return 0;
+        hdScreenSetup(i_this, resource, block);
         return 1;
     }
-    if (lbz(arc + 0x10) == 0) {
-        gabi::call(0x020029EC, self, res, block);
-        return 1;
-    }
-    if (gabi::call_ptr<u32>(svf(self, 0x44), self, arc) == 0) return 0;
-    if (gabi::call_ptr<u32>(svf(self, 0x4C), self, v8, v9) == 0) return 0;
-    gabi::call_ptr(svf(self, 0x5C), self, arc);
-    gabi::call_ptr(svf(self, 0x54), self, arc);
-    gabi::call(0x020029EC, self, res, block);
+    if (archive->mAvailable == 0) { hdScreenSetup(i_this, resource, block); return 1; }
+    if (gabi::call_ptr<u32>(i_this->mVtable->mInitializeArchive.get(), i_this, archive) == 0) return 0;
+    if (gabi::call_ptr<u32>(i_this->mVtable->mInitializeOptions.get(), i_this, first, second) == 0) return 0;
+    gabi::call_ptr(i_this->mVtable->mFinishArchiveFirst.get(), i_this, archive);
+    gabi::call_ptr(i_this->mVtable->mFinishArchiveSecond.get(), i_this, archive);
+    hdScreenSetup(i_this, resource, block);
     return 1;
 }
-VERIFY(0x02002A40, Screen_build);
-
-/* 02002B84: release the pane table, the animation set, the layout and the resource accessor */
-static void Screen_release(u32 self) {
-    WWHD_FUNC(0x02002B84, void, self);
-    s32 n = (s32)ld(self + 0xD8);
-    if (n > 0 && ld(self + 0xDC) != 0) { /* the count fix-up for n <= 0 is dead */
-        u32 tab = ld(self + 0xDC);
-        u32 h = gabi::call<u32>(0x02755FEC, ld(0x101F8B4C), tab); /* r4 still holds the table */
-        u32 fn = vfn(h, 0xC, 0x3C);
-        gabi::call_ptr(fn, h, ld(self + 0xDC));
-        st(self + 0xD8, 0);
-        st(self + 0xDC, 0);
+/* 02002B84 */
+static void releaseLayoutScreen(hdLayoutScreen* i_this) {
+    s32 count = i_this->mPanes.mCount;
+    if (count > 0 && i_this->mPanes.mData != NULL) {
+        gptr<void>* data = i_this->mPanes.mData;
+        hdScreenHeap* heap = hdScreenFindHeap(sScreenHeapManager, data);
+        heap->free(i_this->mPanes.mData);
+        i_this->mPanes.mCount = 0;
+        i_this->mPanes.mData = NULL;
     }
-    if (ld(self + 0xD4) != 0) {
-        gabi::call(0x02004CAC, ld(self + 0xD4));
-        u32 a = ld(self + 0xD4);
-        if (a != 0) gabi::call_ptr(vfn(a, 0x14, 0xC), a, 3);
-        st(self + 0xD4, 0);
+    if (i_this->mAnimationSet != NULL) {
+        hdScreenReleaseAnimationSet(i_this->mAnimationSet);
+        hdScreenAnimationSet* set = i_this->mAnimationSet;
+        if (set != NULL) set->destroy(3);
+        i_this->mAnimationSet = NULL;
     }
-    u32 l = ld(self + 8);
-    if (l != 0) {
-        gabi::call_ptr(vfn(l, 0, 0xC), l, 3);
-        st(self + 8, 0);
-    }
-    u32 r = ld(self + 4);
-    if (ld(ld(r + 0xC) + 0xC) == 0 && r != 0) {
-        gabi::call_ptr(vfn(r, 0x30, 0x14), r, 3);
-        st(self + 4, 0);
+    hdScreenHolder* holder = i_this->mHolder;
+    if (holder != NULL) { holder->destroy(3); i_this->mHolder = NULL; }
+    hdScreenAccessor* accessor = i_this->mAccessor;
+    if (hdScreenAccessorBusy(accessor) == 0 && accessor != NULL) {
+        accessor->destroy(3);
+        i_this->mAccessor = NULL;
     }
 }
-VERIFY(0x02002B84, Screen_release);
-
-/* 02002C90: draw through the resource accessor (when it is not busy) */
-static void Screen_draw(u32 self) {
-    WWHD_FUNC(0x02002C90, void, self);
-    u32 r = ld(self + 4);
-    if (ld(ld(r + 0xC) + 0xC) != 0) return;
-    gabi::call_ptr(vfn(r, 0x30, 0x4C), r);
-    r = ld(self + 4);
-    gabi::call_ptr(vfn(r, 0x30, 0x64), r, self + 0xC, 0);
-    r = ld(self + 4);
-    gabi::call_ptr(vfn(r, 0x30, 0x54), r);
+/* 02002C90 */
+static void drawLayoutScreen(hdLayoutScreen* i_this) {
+    hdScreenAccessor* accessor = i_this->mAccessor;
+    if (hdScreenAccessorBusy(accessor) != 0) return;
+    accessor->prepareDraw();
+    accessor = i_this->mAccessor;
+    accessor->draw(i_this->lytObject());
+    accessor = i_this->mAccessor;
+    accessor->finishDraw();
 }
-VERIFY(0x02002C90, Screen_draw);
-
-static u32 Screen_calc(u32 self) {
-    WWHD_FUNC(0x02002D0C, u32, self);
-    return gabi::call_ptr<u32>(svf(self, 0x34), self, self + 0xC);
+/* 02002D0C */
+static u32 calcLayoutScreen(hdLayoutScreen* i_this) {
+    return gabi::call_ptr<u32>(i_this->mVtable->mCalc.get(), i_this, i_this->lytObject());
 }
-VERIFY(0x02002D0C, Screen_calc);
-
-/* 02002D20: draw with a fresh draw-info (two flags cleared, mode 2) */
-static void Screen_drawWith(u32 self, u32 info) {
-    WWHD_FUNC(0x02002D20, void, self, info);
-    u32 r = ld(self + 4);
-    if (ld(ld(r + 0xC) + 0xC) != 0) return;
-    u32 d = ld(ld(0x1018C404) + 0x18);
-    stb(d + 0, 0);
-    stb(d + 1, 0);
-    d = ld(ld(0x1018C404) + 0x18);
-    st(d + 8, 2);
-    gabi::call(0x0286DFB4, ld(ld(0x1018C404) + 0x18));
-    r = ld(self + 4);
-    gabi::call_ptr(vfn(r, 0x30, 0x6C), r, info);
+/* 02002D20 */
+static void drawLayoutScreenWithInfo(hdLayoutScreen* i_this, void* info) {
+    hdScreenAccessor* accessor = i_this->mAccessor;
+    if (hdScreenAccessorBusy(accessor) != 0) return;
+    hdScreenDrawInfo* drawInfo = sScreenUiSystem->mDrawInfo;
+    drawInfo->field_0x0 = 0;
+    drawInfo->field_0x1 = 0;
+    drawInfo = sScreenUiSystem->mDrawInfo;
+    drawInfo->mMode = 2;
+    hdScreenPrepareDrawInfo(sScreenUiSystem->mDrawInfo);
+    accessor = i_this->mAccessor;
+    accessor->drawWithInfo(info);
 }
-VERIFY(0x02002D20, Screen_drawWith);
-
-struct sbuf64_l { u8 b[0x4C]; }; /* sead::FixedSafeString<64>: {char*, vtable, capacity, char[64]} */
-
-/* 02002DB4: load: create the resource accessor and the "<name>.bflyt" layout */
-static u32 Screen_load(u32 self, u32 name, u32 arg) {
-    WWHD_FUNC(0x02002DB4, u32, self, name, arg);
-    u32 heap = ld(ld(0x1018C404) + 0x10);
-    u32 p = gabi::call<u32>(0x0273B050, 0x248, heap, 4);
-    if (p != 0) p = gabi::call<u32>(0x02003D84, p);
-    st(self + 4, p);
-    if (p == 0) return 0;
-    gabi::Local<sbuf64_l> buf;
-    u32 nvt = ld(name + 4);
-    stb(buf.a + 0x4B, 0);
-    stb(buf.a + 0xC, 0);
-    st(buf.a + 8, 0x40);
-    st(buf.a + 0, buf.a + 0xC);
-    st(buf.a + 4, 0x100004C8);
-    gabi::call_ptr(ld(nvt + 0x14), name);
-    gabi::call(0x02759C28, buf.a, 0x100004E0, ld(name + 0));
-    u32 q = gabi::call<u32>(0x0273B050, 0xC, heap, 4);
-    if (q != 0) q = gabi::call<u32>(0x02002450, q, self, ld(self + 4));
-    st(self + 8, q);
-    if (q == 0) return 0;
-    gabi::call_ptr(ld(ld(buf.a + 4) + 0x14), buf.a);
-    return gabi::call<u32>(0x0287F640, ld(self + 4), ld(buf.a + 0), arg, ld(self + 8), 0);
+/* 02002DB4 */
+static u32 loadLayoutScreen(hdLayoutScreen* i_this, hdScreenString* name, u32 argument) {
+    hdScreenHeap* heap = sScreenUiSystem->mHeap;
+    hdScreenAccessor* accessor = (hdScreenAccessor*)hdScreenAllocate(0x248, heap, 4);
+    if (accessor != NULL) accessor = hdScreenConstructAccessor(accessor);
+    i_this->mAccessor = accessor;
+    if (accessor == NULL) return 0;
+    hdScreenFixedString buffer;
+    hdScreenStringTable* nameTable = name->mVtable;
+    buffer.mBuffer[63] = 0;
+    buffer.mBuffer[0] = 0;
+    buffer.mCapacity = 64;
+    buffer.mText = buffer.mBuffer;
+    buffer.mVtable = &sScreenFixedStringTable;
+    gabi::call_ptr(nameTable->mAssureTermination.get(), name);
+    hdScreenFormatName(&buffer, "%s.bflyt", name->mText);
+    hdScreenHolder* holder = (hdScreenHolder*)hdScreenAllocate(sizeof(hdScreenHolder), heap, 4);
+    if (holder != NULL) holder = hdScreenConstructHolder(holder, i_this, i_this->mAccessor);
+    i_this->mHolder = holder;
+    if (holder == NULL) return 0;
+    buffer.assureTermination();
+    return hdScreenLoadLayout(i_this->mAccessor, (const char*)buffer.mText.get(), argument, i_this->mHolder, 0);
 }
-VERIFY(0x02002DB4, Screen_load);
-
-/* 02002F04: read a {+0x20, +0x1C} pair; false when +0x1C is 0 */
-static u32 Screen_getPair(u32 out, u32 src) {
-    WWHD_FUNC(0x02002F04, u32, out, src);
-    u32 v = ld(src + 0x1C);
-    st(out + 4, v);
-    if (v == 0) return 0;
-    st(out + 0, ld(src + 0x20));
+/* 02002F04 */
+static u32 getScreenPair(hdScreenPair* output, hdScreenPairSource* source) {
+    u32 second = source->mSecond;
+    output->mSecond = second;
+    if (second == 0) return 0;
+    output->mFirst = source->mFirst;
     return 1;
 }
-VERIFY(0x02002F04, Screen_getPair);
-
-/* 02002F30: create the animation set (0x18) for (a, b) */
-static u32 Screen_createAnim(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02002F30, u32, self, a, b);
-    if (a == 0 || b == 0) return 1;
-    u32 p = gabi::call<u32>(0x0273B050, 0x18, ld(ld(0x1018C404) + 0x10), 4);
-    if (p != 0) p = gabi::call<u32>(0x02004AC0, p);
-    st(self + 0xD4, p);
-    if (p == 0) return 0;
-    return gabi::call<u32>(0x02004B70, p, ld(self + 4), a, b);
+/* 02002F30 */
+static u32 createScreenAnimationSet(hdLayoutScreen* i_this, u32 entryCount, u32 slotCount) {
+    if (entryCount == 0 || slotCount == 0) return 1;
+    hdScreenAnimationSet* set = (hdScreenAnimationSet*)hdScreenAllocate(sizeof(hdScreenAnimationSet), sScreenUiSystem->mHeap, 4);
+    if (set != NULL) set = hdScreenConstructAnimationSet(set);
+    i_this->mAnimationSet = set;
+    if (set == NULL) return 0;
+    return hdScreenInitializeAnimationSet(set, i_this->mAccessor, entryCount, slotCount);
 }
-VERIFY(0x02002F30, Screen_createAnim);
-
-/* 02002FE4: pane table: one entry per pane name of the resource (lhz +0x28), looked up by name */
-static void Screen_bindPanes(u32 self, u32 res) {
-    WWHD_FUNC(0x02002FE4, void, self, res);
-    u32 n = lhz(res + 0x28);
-    if (n == 0) return;
-    u32 heap = ld(ld(0x1018C404) + 0x10);
-    if (heap == 0) heap = gabi::call<u32>(0x02756140, ld(0x101F8B4C));
-    u32 p = gabi::call_ptr<u32>(vfn(heap, 0xC, 0x34), heap, n << 2, 4);
-    if (p != 0) {
-        st(self + 0xDC, p);
-        st(self + 0xD8, n);
+/* 02002FE4 */
+static void bindScreenPanes(hdLayoutScreen* i_this, hdScreenResource* resource) {
+    u32 count = resource->mNames.mPaneCount;
+    if (count == 0) return;
+    hdScreenHeap* heap = sScreenUiSystem->mHeap;
+    if (heap == NULL) heap = hdScreenGetCurrentHeap(sScreenHeapManager);
+    void* allocation = heap->allocate(count << 2);
+    if (allocation != NULL) {
+        i_this->mPanes.mData = (gptr<void>*)allocation;
+        i_this->mPanes.mCount = count;
     }
-    s32 m = (s32)ld(self + 0xD8);
-    for (s32 i = 0; i < m; ++i) st(ld(self + 0xDC) + i * 4, 0);
-    u32 cnt = n > 1 ? n : 1;
-    for (u32 i = 0; cnt != 0; --cnt, ++i) {
-        u32 s = gabi::call<u32>(0x02873D24, res + 0x24, i);
-        if (s == 0 || lbz(s) == 0) continue;
-        u32 obj = ld(ld(self + 4) + 0xC);
-        u32 size = ld(self + 0xD8);
-        u32 fn = vfn(obj, 8, 0x5C);
-        u32 slot = ld(self + 0xDC);
-        if (i < size) slot += i * 4;
-        u32 r = gabi::call_ptr<u32>(fn, obj, s, 1);
-        st(slot, r);
+    s32 tableCount = i_this->mPanes.mCount;
+    for (s32 i = 0; i < tableCount; ++i) *hdScreenPaneArray::element(i_this->mPanes.mData, i) = NULL;
+    u32 remaining = count > 1 ? count : 1;
+    for (u32 i = 0; remaining != 0; --remaining, ++i) {
+        const be<u8>* name = (const be<u8>*)hdScreenPaneName(&resource->mNames, i);
+        if (name == NULL || *name == 0) continue;
+        hdScreenResourceObject* object = i_this->mAccessor->mObject;
+        u32 size = i_this->mPanes.mCount;
+        u32 target = object->mVtable->mFindPane.get();
+        gptr<void>* data = i_this->mPanes.mData;
+        gptr<void>* slot = hdScreenPaneArray::element(data, i < size ? i : 0);
+        void* pane = gabi::call_ptr<void*>(target, object, (const char*)name, 1);
+        *slot = pane;
     }
 }
-VERIFY(0x02002FE4, Screen_bindPanes);
-
-/* 02003130: register the animation names of the resource (lhz +0x2A) with the animation set */
-static void Screen_bindAnims(u32 self, u32 res) {
-    WWHD_FUNC(0x02003130, void, self, res);
-    u32 n = lhz(res + 0x2A);
-    if (n == 0) return;
-    u32 cnt = n > 1 ? n : 1;
-    gabi::Local<be<u32>[2]> s;
-    for (u32 i = 0; cnt != 0; --cnt, ++i) {
-        u32 nm = gabi::call<u32>(0x02873D48, res + 0x24, i);
-        if (nm == 0 || lbz(nm) == 0) continue;
-        u32 set = ld(self + 0xD4);
-        st(s.a + 4, 0x10000480);
-        st(s.a + 0, nm);
-        gabi::call(0x02004F50, set, i, s.a);
+/* 02003130 */
+static void bindScreenAnimations(hdLayoutScreen* i_this, hdScreenResource* resource) {
+    u32 count = resource->mNames.mAnimationCount;
+    if (count == 0) return;
+    u32 remaining = count > 1 ? count : 1;
+    hdScreenString name;
+    for (u32 i = 0; remaining != 0; --remaining, ++i) {
+        const be<u8>* text = (const be<u8>*)hdScreenAnimationName(&resource->mNames, i);
+        if (text == NULL || *text == 0) continue;
+        hdScreenAnimationSet* set = i_this->mAnimationSet;
+        name.mVtable = &sScreenSafeStringTable;
+        name.mText = (const char*)text;
+        hdScreenBindAnimation(set, i, &name);
     }
 }
-VERIFY(0x02003130, Screen_bindAnims);
-
-static void sinit_020031F4() {
-    WWHD_FUNC(0x020031F4, void);
-    header_sinit(0x101FF1BC, 0x1018C278, 0x100004EC);
+// HD: compiler-generated and template code of these translation units.
+/* 020031F4 */
+static void __sinit_hd_layout_screen_cpp() {
+    sinit_header_statics_rodata(0x101FF1B0, 0x1018C278, 0x101FF1BC, 0x100004EC);
 }
-VERIFY(0x020031F4, sinit_020031F4);
-
-/* companions after the __sinit: deleting destructors, an empty virtual and the sead
- * BufferedSafeString::assureTerminationImpl_ instance (writes the last byte of the buffer) */
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003288, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 02003288 */
+static void destroyScreenCompanionFirst(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003288, Comp_dt1);
-
-static void Comp_empty() {
-    WWHD_FUNC(0x0200329C, void);
+/* 0200329C */
+static void assureScreenStringNone() {}
+/* 020032A0 */
+static void terminateScreenString(hdScreenFixedString* i_this) { i_this->terminate(); }
+/* 020032B8 */
+static void destroyScreenCompanionSecond(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0200329C, Comp_empty);
-
-static void SafeString_assureTermination(u32 self) {
-    WWHD_FUNC(0x020032A0, void, self);
-    stb(ld(self + 0) + ld(self + 8) - 1, 0);
+/* 020032CC */
+static void destroyScreenCompanionThird(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020032A0, SafeString_assureTermination);
-
-static void Comp_dt2(u32 self, s32 flags) {
-    WWHD_FUNC(0x020032B8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 020032E0 */
+static void destroyScreenCompanionFourth(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020032B8, Comp_dt2);
-
-static void Comp_dt3(u32 self, s32 flags) {
-    WWHD_FUNC(0x020032CC, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x020032CC, Comp_dt3);
-
-static void Comp_dt4(u32 self, s32 flags) {
-    WWHD_FUNC(0x020032E0, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x020032E0, Comp_dt4);
-
-}  // namespace hd_ui_020021FC
+/* WWHD glue (tools/verify/autoglue.py): HD screen constants and external layout calls
+ data sScreenHolderTypeInitialized 101FD8F0
+ data sScreenHolderParentInitialized 101FD89C
+ data sScreenRootTypeInitialized 101FD888
+ data sScreenPaneOwnerTypeInitialized 101FD8C4
+ data sScreenPaneOwnerParentInitialized 101FD894
+ data sScreenTypeInitialized 101FD908
+ data sScreenParentInitialized 101FD898
+ data sScreenHolderType 101FD8F4
+ data sScreenHolderParent 101FD8F8
+ data sScreenRootType 101FD8FC
+ data sScreenPaneOwnerType 101FD900
+ data sScreenPaneOwnerParent 101FD904
+ data sScreenType 101FD90C
+ data sScreenParent 101FD910
+ data sScreenUiSystem 1018C404
+ data sScreenHeapManager 101F8B4C
+ data sScreenFixedStringTable 100004C8
+ data sScreenSafeStringTable 10000480
+ data sScreenHolderTable 100003A8
+ data sLayoutScreenTable 100004F8
+ str 100004E0 "%s.bflyt"
+ ext 0287795C void hdScreenConstructTextBoxBase(hdScreenTextBox*, u32, u32, u32)
+ ext 02877DB8 void hdScreenConstructTextBoxResource(hdScreenTextBox*, u32)
+ ext 02877FE8 void hdScreenDestroyTextBoxBase(hdScreenTextBox*, u32)
+ ext 02874AAC void hdScreenConstructPictureBase(hdScreenPicture*, u32, u32, u32)
+ ext 02874C64 void hdScreenDestroyPictureBase(hdScreenPicture*, u32)
+ ext 0273B050 void* hdScreenAllocate(u32, hdScreenHeap*, u32)
+ ext 02005978 void* hdScreenConstructChild(void*, void*, hdScreenPaneOwner*, void*)
+ ext 020042A4 void hdScreenAddChild(void*, void*)
+ ext 02873D70 void hdScreenConstructLytObject(hdScreenLytObject*)
+ ext 02873FD0 void hdScreenDestroyLytObject(hdScreenLytObject*, u32)
+ ext 0274D83C void* hdScreenConvertResource(void*)
+ ext 02873FE4 void hdScreenSetLytResource(hdScreenLytObject*, void*)
+ ext 0200296C void hdScreenSetResource(hdLayoutScreen*, void*)
+ ext 020029AC void hdScreenSetBlock(hdLayoutScreen*, be<u32>*)
+ ext 020029EC void hdScreenSetup(hdLayoutScreen*, void*, be<u32>*)
+ ext 02755FEC hdScreenHeap* hdScreenFindHeap(void*, void*)
+ ext 02756140 hdScreenHeap* hdScreenGetCurrentHeap(void*)
+ ext 02004CAC void hdScreenReleaseAnimationSet(hdScreenAnimationSet*)
+ ext 0286DFB4 void hdScreenPrepareDrawInfo(hdScreenDrawInfo*)
+ ext 02003D84 hdScreenAccessor* hdScreenConstructAccessor(hdScreenAccessor*)
+ ext 02759C28 void hdScreenFormatName(hdScreenFixedString*, const char*, const char*)
+ ext 02002450 hdScreenHolder* hdScreenConstructHolder(hdScreenHolder*, void*, hdScreenAccessor*)
+ ext 0287F640 u32 hdScreenLoadLayout(hdScreenAccessor*, const char*, u32, hdScreenHolder*, u32)
+ ext 02004AC0 hdScreenAnimationSet* hdScreenConstructAnimationSet(hdScreenAnimationSet*)
+ ext 02004B70 u32 hdScreenInitializeAnimationSet(hdScreenAnimationSet*, hdScreenAccessor*, u32, u32)
+ ext 02873D24 const char* hdScreenPaneName(hdScreenNameTable*, u32)
+ ext 02873D48 const char* hdScreenAnimationName(hdScreenNameTable*, u32)
+ ext 02004F50 void hdScreenBindAnimation(hdScreenAnimationSet*, u32, hdScreenString*)
+*/

@@ -1,388 +1,363 @@
-/* hd_swkbd_mgr: cking::ui::input::SwkbdMgr (GamePad software keyboard for names), WWHD.
- * HD-only code (no GameCube source): written from the
- * WWHD code. Range 02619220..0261A197 (02619220 is the pointer controller's deleting destructor, a
- * companion of the preceding TU); static initialiser 0261A0D8. Not verified here (sead library):
- * 0261A16C (SafeString deleting destructor), 0261A180 (SafeString assureTermination).
- *
- * SwkbdMgr (0x1C8): base IDisposer, +0x10 u16 text buffer, +0x34 work memory, +0x38 / +0x3C the two
- * keyboard layouts (02672D98 / 02673AFC), +0x40 controller info copy (0xAC), +0xEC controller
- * pointers, +0x100 keyboard create/appear arguments, +0x1A8..+0x1BC input form arguments,
- * +0x1C0 mode, +0x1C4 vtable 100E2AC0. nn::swkbd wrappers at 0286CD54..0286D400.
- */
-#include "gabi.h"
-using namespace gabi;
+/* HD: cking::ui::input::SwkbdMgr, GamePad software keyboard for name entry. */
+#include "d/hd_swkbd_mgr.h"
+static hdSwkbd_InstancePointer_c sInstance;
+static hdSwkbd_RegisteredDisposerPointer_c sRegisteredDisposer;
+static hdSwkbd_ControllerManagerPointer_c sControllerManager;
+static hdSwkbd_FontManagerPointer_c sFontManager;
+static hdSwkbd_FsClientPointer_c sFsClient;
+static hdSwkbd_ConfigPointer_c sConfig;
+static hdSwkbd_InputModeManagerPointer_c sInputModeManager;
+static u32 sPadTypeReady;
+static u32 sDrcTypeReady;
+static hdSwkbd_typeInfo_c sPadType;
+static hdSwkbd_typeInfo_c sDrcType;
+static u8 sFallbackPrimary[1] = {};
+static u8 sFallbackSecondary[1] = {};
+static u8 sOpenState[1] = {};
+static u8 sCloseState[1] = {};
+static const u32 pointerVtable = 0x100E2A78;
+static const u32 managerVtable = 0x100E2AC0;
+static const u32 disposerVtable = 0x100E2AF8;
+static const u32 stringVtable = 0x100E2A88;
+static const u32 controllerTypeVtable = 0x100E2AB0;
+enum hdSwkbd_region_e { CONSOLE_JAPAN = 1, CONSOLE_EUROPE = 4, KEYBOARD_JAPAN = 0, KEYBOARD_AMERICA = 1, KEYBOARD_EUROPE = 2 };
+enum hdSwkbd_fontFlags_e { FONT_ALTERNATE = 1 << 6, FONT_EMBEDDED_SECONDARY = 1 << 7, FONT_EXTENDED_PRIMARY = 1 << 12 };
 
-namespace hd_swkbd_mgr {
-
-static const u32 kInstance = 0x101F50D8;
-static const u32 kCtrlMgr = 0x101F8AE8;
-
-/* 02619220: pointer controller deleting destructor */
-void pointerDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x02619220, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0x13C, 0x100E2A78);
-    call<void>(0x02001728, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+/* 02619220 */
+static void hdSwkbd_destroyPointer(hdSwkbd_pointer_c* pointer, u32 flags) {
+    if (!pointer) return;
+    pointer->mSecondaryVtable = pointerVtable;
+    hdSwkbd_destroyPointerBase(pointer, 0);
+    if (flags & 1) operator_delete(pointer);
 }
-VERIFY(0x02619220, pointerDtor);
-
-/* 02619280: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x02619280, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x1C8u);
-        if (!p) return 0;
+/* 02619280 */
+static hdSwkbd_mgr_c* hdSwkbd_construct(hdSwkbd_mgr_c* manager) {
+    if (!manager) {
+        manager = static_cast<hdSwkbd_mgr_c*>(operator_new(sizeof(hdSwkbd_mgr_c)));
+        if (!manager) return nullptr;
     }
-    store<u32>(p + 0x34, 0);
-    store<u32>(p + 0x3C, 0);
-    store<u32>(p + 0x38, 0);
-    store<u32>(p + 0x1C4, 0x100E2AC0);
-    call<void>(0x028F521C, p + 0x40, 0xACu);
-    u32 q = p + 0xEC;
-    if (!q) q = call<u32>(0x0273AD10, 0x14u);
-    if (q)
-        for (u32 i = 0; i < 5; i++) store<u32>(q + 4 * i, 0);
-    q = p + 0x100;
-    if (!q) q = call<u32>(0x0273AD10, 0xA8u);
-    if (q) {
-        store<u32>(q + 0x30, 0);
-        store<u32>(q, 0);
-        store<u32>(q + 0x14, 0xFFFFFFFF);
-        store<u32>(q + 0x10, 0x13);
-        store<u8>(q + 0x18, 0);
-        store<u32>(q + 0xA4, 0xFFFFFFFF);
-        store<u32>(q + 0x28, 0);
-        store<u32>(q + 0xC, 0x7FFFF);
-        store<u32>(q + 4, 4);
-        store<u32>(q + 0x2C, 0);
-        store<u8>(q + 0xA0, 0);
-        store<u16>(q + 0x22, 0);
-        store<u32>(q + 8, 0);
-        store<u16>(q + 0x20, 0);
-        store<u8>(q + 0x24, 0);
-        store<u32>(q + 0x1C, 0);
-        store<u32>(q + 0x9C, 1);
-        for (u32 i = 0; i < 13; i++) {
-            store<u32>(q + 0x34 + 4 * i, 0);
-            store<u32>(q + 0x68 + 4 * i, 0);
+    manager->mpWorkMemory = nullptr;
+    manager->mpLayouts[1] = nullptr;
+    manager->mpLayouts[0] = nullptr;
+    manager->mVtable.v = managerVtable;
+    hdSwkbd_zeroMemory(manager->mControllerInfo, 0xAC);
+    // HD: embedded member addresses can wrap to null, retaining their original allocation paths.
+    gptr<void>* controllers = gabi::at<gptr<void>>(gabi::ea(manager) + 0xEC);
+    if (!controllers) controllers = static_cast<gptr<void>*>(operator_new(0x14));
+    if (controllers) for (u32 i = 0; i < 5; ++i) controllers[i] = nullptr;
+    hdSwkbd_appearArgs_c* args = gabi::at<hdSwkbd_appearArgs_c>(gabi::ea(manager) + 0x100);
+    if (!args) args = static_cast<hdSwkbd_appearArgs_c*>(operator_new(sizeof(hdSwkbd_appearArgs_c)));
+    if (args) {
+        args->mUnknown30 = 0;
+        args->mLanguage = 0;
+        args->mCursorPosition = 0xFFFFFFFF;
+        args->mKeyboardType = 0x13;
+        args->mEnable = 0;
+        args->mUnknownA4 = 0xFFFFFFFF;
+        args->mUnknown28 = 0;
+        args->mFlags = 0x7FFFF;
+        args->mMode = 4;
+        args->mUnknown2C = 0;
+        args->mUnknownA0 = 0;
+        args->mUnknown22 = 0;
+        args->mUnknown08 = 0;
+        args->mUnknown20 = 0;
+        args->mUnknown24 = 0;
+        args->mUnknown1C = 0;
+        args->mInputMode = 1;
+        for (u32 i = 0; i < 13; ++i) {
+            args->mTextParameters[i] = 0;
+            args->mPredictionParameters[i] = 0;
         }
     }
-    store<u32>(p + 0x1A8, 0);
-    store<u32>(p + 0x1B8, 0);
-    store<u32>(p + 0x1B4, 0xFFFFFFFF);
-    store<u32>(p + 0x1C0, 2);
-    store<u32>(p + 0x1B0, 0);
-    store<u32>(p + 0x1AC, 0);
-    store<u32>(p + 0x1BC, 0xFFFFFFFF);
-    return p;
+    manager->mFormArgs.mpParameters = nullptr;
+    manager->mFormArgs.mUnknown10 = 0;
+    manager->mFormArgs.mCursorPosition = 0xFFFFFFFF;
+    manager->mMode = hdSwkbd_mgr_c::MODE_NAME;
+    manager->mFormArgs.mMaxLength = 0;
+    manager->mFormArgs.mpText = nullptr;
+    manager->mFormArgs.mUnknown14 = 0xFFFFFFFF;
+    return manager;
 }
-VERIFY(0x02619280, ctor);
-
-/* 026193D4: creates the singleton (the disposer is the object's base) */
-void createInstance(u32 heap) {
-    WWHD_FUNC(0x026193D4, void, heap);
-    if (load<u32>(kInstance)) return;
-    const u32 p = call<u32>(0x0273B0D4, 0x1C8u, heap, 4u);
-    if (p) {
-        call<void>(0x02752B0C, p, heap, 3u);
-        store<u32>(p + 0xC, 0x100E2AF8);
+/* 026193D4 */
+static void hdSwkbd_createInstance(void* heap) {
+    if (sInstance.mpValue) return;
+    hdSwkbd_mgr_c* manager = static_cast<hdSwkbd_mgr_c*>(hdSwkbd_allocate(sizeof(hdSwkbd_mgr_c), heap, 4));
+    if (manager) {
+        hdSwkbd_constructDisposer(manager, heap, 3);
+        manager->hdSwkbd_disposer_c::mVtable = disposerVtable;
     }
-    store<u32>(0x101F50DC, p);
-    store<u32>(kInstance, p ? ctor(p) : 0u);
+    sRegisteredDisposer.mpValue = manager;
+    sInstance.mpValue = manager ? hdSwkbd_construct(manager) : nullptr;
 }
-VERIFY(0x026193D4, createInstance);
-
-/* 02619468: creates the two keyboard layouts and gives them the system fonts */
-void createLayouts(u32 self) {
-    WWHD_FUNC(0x02619468, void, self);
-    const u32 heap = call<u32>(0x0203E8E8);
-    u32 a = call<u32>(0x0273B050, 0x60u, heap, 4u);
-    if (a) a = call<u32>(0x02672D98, a);
-    store<u32>(self + 0x38, a);
-    u32 b = call<u32>(0x0273B050, 0x50u, heap, 4u);
-    if (b) b = call<u32>(0x02673AFC, b);
-    store<u32>(self + 0x3C, b);
-    const u32 g = load<u32>(0x101F95D0);
-    const u32 n = load<u32>(g + 0x1020);
-    u32 e = load<u32>(g + 0x1024);
-    if (n > 7) e += 0x1C;
-    const u32 font = load<u32>(e);
-    const u32 flags = load<u32>(font + 0x50);
-    u32 f1, f2;
-    bool alt = false;
-    if ((flags >> 12) & 1) {
-        f1 = load<u32>(font + 0x164);
-        alt = (flags >> 6) & 1;
+/* 02619468 */
+void hdSwkbd_mgr_c::createLayouts() {
+    void* heap = hdSwkbd_getLayoutHeap();
+    hdSwkbd_layout_c* first = static_cast<hdSwkbd_layout_c*>(hdSwkbd_allocateLayout(0x60, heap, 4));
+    if (first) first = hdSwkbd_constructLayout(first);
+    mpLayouts[0] = first;
+    hdSwkbd_layout_c* second = static_cast<hdSwkbd_layout_c*>(hdSwkbd_allocateLayout(0x50, heap, 4));
+    if (second) second = hdSwkbd_constructSubLayout(second);
+    mpLayouts[1] = second;
+    hdSwkbd_fontManager_c* fonts = sFontManager.mpValue;
+    u32 count = fonts->mFontCount;
+    gptr<hdSwkbd_font_c>* table = fonts->mpFonts;
+    if (count > 7) table = gabi::at<gptr<hdSwkbd_font_c>>(gabi::ea(table) + 0x1C);
+    hdSwkbd_font_c* font = *table;
+    u32 flags = font->mFlags;
+    void* primary;
+    if (flags & FONT_EXTENDED_PRIMARY) primary = font->mpExtendedPrimary;
+    else {
+        primary = sFallbackPrimary;
+        void* loaded = font->mpPrimary;
+        if (loaded) primary = loaded;
+    }
+    void* secondary;
+    if ((flags & FONT_ALTERNATE) && (flags & FONT_EMBEDDED_SECONDARY)) secondary = font->mEmbeddedSecondary;
+    else {
+        void* loaded = font->mpSecondary;
+        secondary = loaded ? loaded : sFallbackSecondary;
+    }
+    hdSwkbd_setLayoutFonts(mpLayouts[0], primary, secondary, 0);
+    hdSwkbd_setSubLayoutFonts(mpLayouts[1], primary, secondary, 0);
+}
+/* 026195C4 */
+void hdSwkbd_mgr_c::prepare() {
+    createLayouts();
+    gabi::Local<hdSwkbd_prepareStack_c> frame;
+    hdSwkbd_string_c* name = &frame->mHeapName;
+    name->mVtable = stringVtable;
+    name->mpText.v = gabi::guest_addr("cking::ui::input::SwkbdMgr");
+    hdSwkbd_heap_c* heap = hdSwkbd_createHeap(0x1900000, name, hdSwkbd_getWorkHeap(), 1, 0);
+    hdSwkbd_createArgs_c* args = &frame->mCreateArgs;
+    args->mpWork = nullptr;
+    args->mpFsClient = nullptr;
+    args->mRegion = 0;
+    args->mType = 2;
+    u32 size = hdSwkbd_getWorkSize(2);
+    void* work = hdSwkbd_allocate(size, heap, 4);
+    args->mpWork = work;
+    mpWorkMemory = work;
+    void* fs = gabi::at<void>(gabi::ea(sFsClient.mpValue) + 0x24);
+    mAppearArgs.mInputMode = 2;
+    mAppearArgs.mUnknownA0 = 0;
+    mAppearArgs.mUnknown24 = 0;
+    mAppearArgs.mEnable = 1;
+    hdSwkbd_config_c* config = sConfig.mpValue;
+    args->mpFsClient = fs;
+    u32 region = config->mRegion, language = config->mLanguage;
+    if (region == CONSOLE_JAPAN) {
+        args->mRegion = KEYBOARD_JAPAN;
+        mAppearArgs.mLanguage = 0;
+        mAppearArgs.mFlags = 0x6001;
+        mAppearArgs.mUnknown28 = 0xAD;
+        mAppearArgs.mCursorPosition = 0xFFFFFFFF;
+        mAppearArgs.mKeyboardType = 0xD;
+        mAppearArgs.mUnknown08 = 0;
+    } else if (region == CONSOLE_EUROPE) {
+        args->mRegion = KEYBOARD_EUROPE;
+        mAppearArgs.mFlags = 0x3E0;
+        u32 keyboard = 5, layout = 1;
+        if (language == 2) { keyboard = 6; layout = 2; }
+        else if (language == 3) { keyboard = 7; layout = 3; }
+        else if (language == 4) { keyboard = 8; layout = 4; }
+        else if (language == 5) { keyboard = 9; layout = 5; }
+        mAppearArgs.mUnknown08 = 0;
+        mAppearArgs.mUnknown28 = 0xAD;
+        mAppearArgs.mCursorPosition = 0xFFFFFFFF;
+        mAppearArgs.mKeyboardType = keyboard;
+        mAppearArgs.mLanguage = layout;
     } else {
-        f1 = 0x104A20FC;
-        const u32 v = load<u32>(font + 0x4C);
-        if (v) f1 = v;
-        alt = (flags >> 6) & 1;
+        args->mRegion = KEYBOARD_AMERICA;
+        mAppearArgs.mFlags = 0xE;
+        u32 keyboard = 1, layout = 1;
+        if (language == 2) { keyboard = 2; layout = 2; }
+        else if (language == 5) { keyboard = 3; layout = 5; }
+        mAppearArgs.mLanguage = layout;
+        mAppearArgs.mKeyboardType = keyboard;
+        mAppearArgs.mUnknown08 = 0;
+        mAppearArgs.mCursorPosition = 0xFFFFFFFF;
+        mAppearArgs.mUnknown28 = 0xAD;
     }
-    if (alt && ((flags >> 7) & 1)) {
-        f2 = font + 0x84;
-    } else {
-        const u32 v = load<u32>(font + 0x48);
-        f2 = v ? v : 0x104A2098;
-    }
-    call<void>(0x026730B8, load<u32>(self + 0x38), f1, f2, 0u);
-    call<void>(0x02673B68, load<u32>(self + 0x3C), f1, f2, 0u);
+    hdSwkbd_createKeyboard(args);
+    gabi::call_ptr<void>(heap->mVtable->mAdjust, heap);
 }
-VERIFY(0x02619468, createLayouts);
-
-/* 026195C4: prepare: work heap, keyboard creation for the console region and language */
-void prepare(u32 self) {
-    WWHD_FUNC(0x026195C4, void, self);
-    createLayouts(self);
-    Local<u32[6]> F; /* +0 create arg {work, region, 2, FS client}, +0x10 heap name */
-    const u32 arg = F.a, name = F.a + 0x10;
-    store<u32>(name + 4, 0x100E2A88);
-    store<u32>(name, 0x100E2AD0);
-    const u32 heap = call<u32>(0x02753004, 0x1900000u, name, call<u32>(0x0203E918), 1u, 0u);
-    store<u32>(arg, 0);
-    store<u32>(arg + 0xC, 0);
-    store<u32>(arg + 4, 0);
-    store<u32>(arg + 8, 2);
-    const u32 size = call<u32>(0x0286CD54, 2u);
-    const u32 work = call<u32>(0x0273B0D4, size, heap, 4u);
-    store<u32>(arg, work);
-    store<u32>(self + 0x34, work);
-    const u32 fs = load<u32>(0x101F8B08) + 0x24;
-    store<u32>(self + 0x19C, 2);
-    store<u8>(self + 0x1A0, 0);
-    store<u8>(self + 0x124, 0);
-    store<u8>(self + 0x118, 1);
-    const u32 cfg = load<u32>(0x101F4BAC);
-    store<u32>(arg + 0xC, fs);
-    const u32 region = load<u32>(cfg + 0x10), lang = load<u32>(cfg + 0x14);
-    u32 kb, layout;
-    if (region == 1) {
-        store<u32>(arg + 4, 0);
-        store<u32>(self + 0x100, 0);
-        store<u32>(self + 0x10C, 0x6001);
-        kb = 0xD;
-        layout = 0;
-        (void)layout;
-        store<u32>(self + 0x128, 0xAD);
-        store<u32>(self + 0x114, 0xFFFFFFFF);
-        store<u32>(self + 0x110, kb);
-        store<u32>(self + 0x108, 0);
-    } else if (region == 4) {
-        store<u32>(arg + 4, 2);
-        store<u32>(self + 0x10C, 0x3E0);
-        u32 k = 5, l = 1;
-        if (lang == 2) { k = 6; l = 2; }
-        else if (lang == 3) { k = 7; l = 3; }
-        else if (lang == 4) { k = 8; l = 4; }
-        else if (lang == 5) { k = 9; l = 5; }
-        store<u32>(self + 0x108, 0);
-        store<u32>(self + 0x128, 0xAD);
-        store<u32>(self + 0x114, 0xFFFFFFFF);
-        store<u32>(self + 0x110, k);
-        store<u32>(self + 0x100, l);
-    } else {
-        store<u32>(arg + 4, 1);
-        store<u32>(self + 0x10C, 0xE);
-        u32 k = 1, l = 1;
-        if (lang == 2) { k = 2; l = 2; }
-        else if (lang == 5) { k = 3; l = 5; }
-        store<u32>(self + 0x100, l);
-        store<u32>(self + 0x110, k);
-        store<u32>(self + 0x108, 0);
-        store<u32>(self + 0x114, 0xFFFFFFFF);
-        store<u32>(self + 0x128, 0xAD);
-    }
-    call<void>(0x0286CD7C, arg);
-    call_ptr<void>(load<u32>(load<u32>(heap + 0xC) + 0x2C), heap);
+/* 02619978 */
+void hdSwkbd_mgr_c::setControllers() {
+    hdSwkbd_pad_c* pad = static_cast<hdSwkbd_pad_c*>(hdSwkbd_getController(sControllerManager.mpValue, 8));
+    if (!sPadTypeReady) { sPadTypeReady = 1; sPadType.mVtable = controllerTypeVtable; }
+    if (pad && gabi::call_ptr<u32>(pad->mVtable->mIsDerived, pad, &sPadType) && pad && s32(pad->mConnected) > 0) {
+        for (u32 i = 0; i < 43; ++i) mControllerInfo[i] = u32(pad->mInfo[i]);
+        // HD: VPAD calibration uses the same packed point for input and output (+0x52 within the copied info).
+        void* point = gabi::at<void>(gabi::ea(this) + 0x92);
+        hdSwkbd_calibrateTouch(0, point, point);
+        mpControllers[0] = mControllerInfo;
+    } else mpControllers[0] = nullptr;
+    hdSwkbd_drc_c* drc = static_cast<hdSwkbd_drc_c*>(hdSwkbd_getController(sControllerManager.mpValue, 7));
+    if (!sDrcTypeReady) { sDrcType.mVtable = controllerTypeVtable; sDrcTypeReady = 1; }
+    if (drc && gabi::call_ptr<u32>(drc->mVtable->mIsDerived, drc, &sDrcType) && drc) {
+        mpControllers[1] = s32(drc->mConnected) > 0 ? drc->mInfo : nullptr;
+    } else for (u32 i = 1; i < 5; ++i) mpControllers[i] = nullptr;
+    hdSwkbd_setControllerInfo(mpControllers);
+    if (hdSwkbd_needsSoundUpdate()) hdSwkbd_updateSound();
 }
-VERIFY(0x026195C4, prepare);
-
-/* 02619978: passes the GamePad and DRC controller states to the keyboard */
-void setControllers(u32 self) {
-    WWHD_FUNC(0x02619978, void, self);
-    const u32 pad = call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 8u);
-    if (!load<u32>(0x101FD694)) {
-        store<u32>(0x101FD694, 1);
-        store<u32>(0x101FD968, 0x100E2AB0);
-    }
-    if (pad && call_ptr<u32>(load<u32>(load<u32>(pad + 0x10) + 0xC), pad, 0x101FD968u) && pad &&
-        s32(load<u32>(pad + 0xAD4)) > 0) {
-        for (u32 i = 0; i < 0x2B; i++) store<u32>(self + 0x40 + 4 * i, load<u32>(pad + 0x14 + 4 * i));
-        call<void>(0xC00075D0, 0u, self + 0x92, self + 0x92);
-        store<u32>(self + 0xEC, self + 0x40);
-    } else {
-        store<u32>(self + 0xEC, 0);
-    }
-    const u32 drc = call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 7u);
-    if (!load<u32>(0x101FD698)) {
-        store<u32>(0x101FD978, 0x100E2AB0);
-        store<u32>(0x101FD698, 1);
-    }
-    if (drc && call_ptr<u32>(load<u32>(load<u32>(drc + 0x10) + 0xC), drc, 0x101FD978u) && drc) {
-        store<u32>(self + 0xF0, s32(load<u32>(drc + 0x2018)) > 0 ? drc + 0x1118 : 0u);
-    } else {
-        for (u32 i = 0; i < 4; i++) store<u32>(self + 0xF0 + 4 * i, 0);
-    }
-    call<void>(0x0286D280, self + 0xEC);
-    if (call<u32>(0x0286D2D4)) call<void>(0x0286D2E4);
+/* 02619B68 */
+void hdSwkbd_mgr_c::calc() {
+    if (!hdSwkbd_getState()) return;
+    setControllers();
+    hdSwkbd_setLayoutText(mpLayouts[0], mText);
+    hdSwkbd_layout_c* layout = mpLayouts[0];
+    gabi::call_ptr<void>(layout->mVtable->mCalc, layout);
+    gabi::Local<hdSwkbd_layoutState_c> state;
+    hdSwkbd_getLayoutState(mpLayouts[0], state);
+    hdSwkbd_setSubLayoutState(mpLayouts[1], state);
+    layout = mpLayouts[1];
+    gabi::call_ptr<void>(layout->mVtable->mCalc, layout);
 }
-VERIFY(0x02619978, setControllers);
-
-/* 02619B68: per-frame update while the keyboard is shown */
-void calc(u32 self) {
-    WWHD_FUNC(0x02619B68, void, self);
-    if (!call<u32>(0x0286D270)) return;
-    setControllers(self);
-    call<void>(0x026732B8, load<u32>(self + 0x38), self + 0x10);
-    u32 a = load<u32>(self + 0x38);
-    call_ptr<void>(load<u32>(load<u32>(a + 4) + 0x5C), a);
-    Local<u32[4]> st;
-    call<void>(0x0267341C, load<u32>(self + 0x38), st.a);
-    call<void>(0x02673C98, load<u32>(self + 0x3C), st.a);
-    a = load<u32>(self + 0x3C);
-    call_ptr<void>(load<u32>(load<u32>(a + 4) + 0x5C), a);
-}
-VERIFY(0x02619B68, calc);
-
-/* 02619BF0: keyboard state 2 (shown)? */
-u32 isShown(u32 self) {
-    WWHD_FUNC(0x02619BF0, u32, self);
-    return call<u32>(0x0286D270) == 2;
-}
-VERIFY(0x02619BF0, isShown);
-
-static void drawBoth(u32 self, u32 port) {
-    u32 a = load<u32>(self + 0x38);
-    call_ptr<void>(load<u32>(load<u32>(a + 4) + 0x6C), a, port);
-    if (isShown(self)) {
-        a = load<u32>(self + 0x3C);
-        call_ptr<void>(load<u32>(load<u32>(a + 4) + 0x6C), a, port);
+/* 02619BF0 */
+u32 hdSwkbd_mgr_c::isShown() { return hdSwkbd_getState() == STATE_SHOWN; }
+static void hdSwkbd_drawBoth(hdSwkbd_mgr_c* manager, u32 port) {
+    hdSwkbd_layout_c* layout = manager->mpLayouts[0];
+    gabi::call_ptr<void>(layout->mVtable->mDraw, layout, port);
+    if (manager->isShown()) {
+        layout = manager->mpLayouts[1];
+        gabi::call_ptr<void>(layout->mVtable->mDraw, layout, port);
     }
 }
-/* 02619C1C / 02619C90 / 02619D04: draw on the TV, on the DRC, layouts only */
-void drawTV(u32 self, u32 port) { WWHD_FUNC(0x02619C1C, void, self, port); drawBoth(self, port); call<void>(0x0286D2F4); }
-VERIFY(0x02619C1C, drawTV);
-void drawDRC(u32 self, u32 port) { WWHD_FUNC(0x02619C90, void, self, port); drawBoth(self, port); call<void>(0x0286D338); }
-VERIFY(0x02619C90, drawDRC);
-void drawLayouts(u32 self, u32 port) { WWHD_FUNC(0x02619D04, void, self, port); drawBoth(self, port); }
-VERIFY(0x02619D04, drawLayouts);
-void drawKbTV() { WWHD_FUNC(0x02619D74, void); call<void>(0x0286D2F4); }
-VERIFY(0x02619D74, drawKbTV);
-void drawKbDRC() { WWHD_FUNC(0x02619D78, void); call<void>(0x0286D338); }
-VERIFY(0x02619D78, drawKbDRC);
-
-/* 02619D7C: opens the input form for the name buffer */
-void open(u32 self) {
-    WWHD_FUNC(0x02619D7C, void, self);
-    call<void>(0x02673344, load<u32>(self + 0x38), load<u32>(self + 0x1C0));
-    call<void>(0x020063C0, load<u32>(self + 0x38) + 0x18, 0x10494EF4u);
-    store<u16>(self + 0x10, 0);
-    const u32 mode0 = call<u32>(0x02617AE4, load<u32>(0x101F5088));
-    const u32 a = load<u32>(self + 0x38);
-    store<u32>(self + 0x104, mode0 ? 0u : 4u);
-    const u32 m = load<u32>(self + 0x1C0);
-    store<u32>(self + 0x1B4, 0xFFFFFFFF);
-    store<u32>(self + 0x1BC, 0xFFFFFFFF);
-    store<u32>(self + 0x1AC, self + 0x10);
-    store<u32>(self + 0x1B0, m == 1 ? 0x11u : 9u);
-    store<u32>(self + 0x1A8, a ? a + 0x50 : 0u);
-    store<u32>(self + 0x1B8, 0);
-    call<void>(0x0286D3E0, self + 0x100);
+/* 02619C1C */
+void hdSwkbd_mgr_c::drawTV(u32 port) { hdSwkbd_drawBoth(this, port); hdSwkbd_drawKeyboardTV(); }
+/* 02619C90 */
+void hdSwkbd_mgr_c::drawDRC(u32 port) { hdSwkbd_drawBoth(this, port); hdSwkbd_drawKeyboardDRC(); }
+/* 02619D04 */
+void hdSwkbd_mgr_c::drawLayouts(u32 port) { hdSwkbd_drawBoth(this, port); }
+/* 02619D74 */
+static void hdSwkbd_drawTV() { hdSwkbd_drawKeyboardTV(); }
+/* 02619D78 */
+static void hdSwkbd_drawDRC() { hdSwkbd_drawKeyboardDRC(); }
+/* 02619D7C */
+void hdSwkbd_mgr_c::open() {
+    hdSwkbd_setLayoutMode(mpLayouts[0], mMode);
+    hdSwkbd_changeState(gabi::at<void>(gabi::ea(mpLayouts[0]) + 0x18), sOpenState);
+    mText[0] = 0;
+    u32 mode = hdSwkbd_getInputMode(sInputModeManager.mpValue);
+    hdSwkbd_layout_c* layout = mpLayouts[0];
+    mAppearArgs.mMode = mode ? 0 : 4;
+    u32 inputMode = mMode;
+    mFormArgs.mCursorPosition = 0xFFFFFFFF;
+    mFormArgs.mUnknown14 = 0xFFFFFFFF;
+    mFormArgs.mpText = mText;
+    mFormArgs.mMaxLength = inputMode == MODE_LONG_NAME ? 0x11 : 9;
+    mFormArgs.mpParameters = layout ? gabi::at<void>(gabi::ea(layout) + 0x50) : nullptr;
+    mFormArgs.mUnknown10 = 0;
+    hdSwkbd_appear(&mAppearArgs);
 }
-VERIFY(0x02619D7C, open);
-
-/* 02619E84: closes the input form */
-void close(u32 self) {
-    WWHD_FUNC(0x02619E84, void, self);
-    call<void>(0x020063C0, load<u32>(self + 0x38) + 0x18, 0x10494F24u);
-    call<void>(0x0286D400, self + 0x110);
-    call<void>(0x0286D3F0);
+/* 02619E84 */
+void hdSwkbd_mgr_c::close() {
+    hdSwkbd_changeState(gabi::at<void>(gabi::ea(mpLayouts[0]) + 0x18), sCloseState);
+    hdSwkbd_setDisappearArgs(&mAppearArgs.mKeyboardType);
+    hdSwkbd_disappear();
 }
-VERIFY(0x02619E84, close);
-
-u32 disappearA() { WWHD_FUNC(0x02619ECC, u32); return call<u32>(0x0286D3D0, 0u); }
-VERIFY(0x02619ECC, disappearA);
-u32 disappearB() { WWHD_FUNC(0x02619ED4, u32); return call<u32>(0x0286D3C0, 0u); }
-VERIFY(0x02619ED4, disappearB);
-u32 getText(u32 self) { WWHD_FUNC(0x02619EDC, u32, self); return self + 0x10; }
-VERIFY(0x02619EDC, getText);
-void layoutCall(u32 self, u32 a) { WWHD_FUNC(0x02619EE4, void, self, a); call<void>(0x026733AC, load<u32>(self + 0x38), a); }
-VERIFY(0x02619EE4, layoutCall);
-
-/* 02619EEC: destroys the layouts, the keyboard and its work memory */
-void destroy(u32 self) {
-    WWHD_FUNC(0x02619EEC, void, self);
-    for (u32 off = 0x38; off <= 0x3C; off += 4) {
-        u32 a = load<u32>(self + off);
-        if (!a) continue;
-        call_ptr<void>(load<u32>(load<u32>(a + 4) + 0x54), a);
-        a = load<u32>(self + off);
-        if (a) call_ptr<void>(load<u32>(load<u32>(a + 4) + 0xC), a, 3u);
-        store<u32>(self + off, 0);
+/* 02619ECC */
+static u32 hdSwkbd_disappearA() { return hdSwkbd_getDisappearA(0); }
+/* 02619ED4 */
+static u32 hdSwkbd_disappearB() { return hdSwkbd_getDisappearB(0); }
+/* 02619EDC */
+be<u16>* hdSwkbd_mgr_c::getText() { return gabi::at<be<u16>>(gabi::ea(this) + 0x10); }
+/* 02619EE4 */
+void hdSwkbd_mgr_c::layoutCall(u32 value) { hdSwkbd_layoutParameter(mpLayouts[0], value); }
+/* 02619EEC */
+void hdSwkbd_mgr_c::destroy() {
+    for (u32 i = 0; i < 2; ++i) {
+        hdSwkbd_layout_c* layout = mpLayouts[i];
+        if (!layout) continue;
+        gabi::call_ptr<void>(layout->mVtable->mFinalize, layout);
+        layout = mpLayouts[i];
+        if (layout) gabi::call_ptr<void>(layout->mVtable->mDestroy, layout, 3);
+        mpLayouts[i] = nullptr;
     }
-    call<void>(0x0286D37C);
-    call<void>(0x0273AFC8, load<u32>(self + 0x34));
-    store<u32>(self + 0x34, 0);
+    hdSwkbd_destroyKeyboard();
+    hdSwkbd_freeWork(mpWorkMemory);
+    mpWorkMemory = nullptr;
 }
-VERIFY(0x02619EEC, destroy);
-
-/* 02619FB0: passes a parameter pair to both layouts */
-void setBoth(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02619FB0, void, self, a, b);
-    call<void>(0x02673414, load<u32>(self + 0x38), a, b);
-    call<void>(0x02673CCC, load<u32>(self + 0x3C), a, b);
+/* 02619FB0 */
+void hdSwkbd_mgr_c::setBoth(u32 first, u32 second) {
+    hdSwkbd_setLayoutParameters(mpLayouts[0], first, second);
+    hdSwkbd_setSubLayoutParameters(mpLayouts[1], first, second);
 }
-VERIFY(0x02619FB0, setBoth);
-
-/* 0261A008: keyboard hidden (state 0)? */
-u32 isHidden(u32 self) {
-    WWHD_FUNC(0x0261A008, u32, self);
-    return call<u32>(0x0286D270) == 0;
-}
-VERIFY(0x0261A008, isHidden);
-
-/* 0261A030: SingletonDisposer deleting destructor (deletes the instance) */
-void disposerDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x0261A030, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0xC, 0x100E2AF8);
-    if (p == load<u32>(0x101F50DC)) {
-        const u32 inst = load<u32>(kInstance);
-        store<u32>(0x101F50DC, 0);
-        call_ptr<void>(load<u32>(load<u32>(inst + 0x1C4) + 0xC), inst, 2u);
-        store<u32>(kInstance, 0);
+/* 0261A008 */
+u32 hdSwkbd_mgr_c::isHidden() { return hdSwkbd_getState() == STATE_HIDDEN; }
+/* 0261A030 */
+static void hdSwkbd_destroyDisposer(hdSwkbd_disposer_c* disposer, u32 flags) {
+    if (!disposer) return;
+    disposer->mVtable = disposerVtable;
+    if (disposer == (hdSwkbd_disposer_c*)sRegisteredDisposer.mpValue) {
+        hdSwkbd_mgr_c* instance = sInstance.mpValue;
+        sRegisteredDisposer.mpValue = nullptr;
+        gabi::call_ptr<void>(instance->mVtable->mDestroy, instance, 2);
+        sInstance.mpValue = nullptr;
     }
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    hdSwkbd_destroyDisposerBase(disposer, 0);
+    if (flags & 1) operator_delete(disposer);
 }
-VERIFY(0x0261A030, disposerDtor);
+/* 0261A0D8 */
+static void hdSwkbd_initStatics() { sinit_header_statics_rodata(0x1048DEA0, 0x101F50B4, 0x1048DEAC, 0x100E2AEC); }
+/* 0261A184 */
+static void hdSwkbd_destroyManager(hdSwkbd_mgr_c* manager, u32 flags) { if (manager && (flags & 1)) operator_delete(manager); }
 
-/* 0261A0D8: static initialiser */
-void staticInit() {
-    WWHD_FUNC(0x0261A0D8, void);
-    const u32 b = 0x1048DEAC;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F50B4u);
-    const f32 lo = load<f32>(0x100E2AEC), hi = load<f32>(0x100E2AF0);
-    store<f32>(0x1048DEA0, lo);
-    store<f32>(0x1048DEA4, hi);
-    call<void>(0x028ED6F8, 0x1048DEA8u);
-    call<void>(0x028F026C, 0x101F50C0u);
-    call<void>(0x028EAB2C, 0x1048DEA9u);
-    call<void>(0x028F026C, 0x101F50CCu);
-}
-VERIFY(0x0261A0D8, staticInit);
-
-/* 0261A184: SwkbdMgr deleting destructor (trivial) */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x0261A184, void, p, flags);
-    if (!p) return;
-    if (flags & 1) call<void>(0x0273AF40, p);
-}
-VERIFY(0x0261A184, dtor);
-
-} // namespace hd_swkbd_mgr
+/* WWHD glue
+data sInstance 101F50D8 nocheck
+data sRegisteredDisposer 101F50DC nocheck
+data sControllerManager 101F8AE8 nocheck
+data sFontManager 101F95D0 nocheck
+data sFsClient 101F8B08 nocheck
+data sConfig 101F4BAC nocheck
+data sInputModeManager 101F5088 nocheck
+data sPadTypeReady 101FD694 nocheck
+data sDrcTypeReady 101FD698 nocheck
+data sPadType 101FD968 nocheck
+data sDrcType 101FD978 nocheck
+data sFallbackPrimary 104A20FC nocheck
+data sFallbackSecondary 104A2098 nocheck
+data sOpenState 10494EF4 nocheck
+data sCloseState 10494F24 nocheck
+str 100E2AD0 "cking::ui::input::SwkbdMgr" in 026195C4
+ext 02001728 void hdSwkbd_destroyPointerBase(hdSwkbd_pointer_c* pointer, u32 flags)
+ext 028F521C void hdSwkbd_zeroMemory(void* data, u32 size)
+ext 0273B0D4 void* hdSwkbd_allocate(u32 size, void* heap, u32 alignment)
+ext 02752B0C void hdSwkbd_constructDisposer(hdSwkbd_disposer_c* disposer, void* heap, u32 flags)
+ext 0203E8E8 void* hdSwkbd_getLayoutHeap()
+ext 0273B050 void* hdSwkbd_allocateLayout(u32 size, void* heap, u32 alignment)
+ext 02672D98 hdSwkbd_layout_c* hdSwkbd_constructLayout(hdSwkbd_layout_c* layout)
+ext 02673AFC hdSwkbd_layout_c* hdSwkbd_constructSubLayout(hdSwkbd_layout_c* layout)
+ext 026730B8 void hdSwkbd_setLayoutFonts(hdSwkbd_layout_c* layout, void* primary, void* secondary, u32 flags)
+ext 02673B68 void hdSwkbd_setSubLayoutFonts(hdSwkbd_layout_c* layout, void* primary, void* secondary, u32 flags)
+ext 0203E918 void* hdSwkbd_getWorkHeap()
+ext 02753004 hdSwkbd_heap_c* hdSwkbd_createHeap(u32 size, hdSwkbd_string_c* name, void* parent, u32 flags, u32 alignment)
+ext 0286CD54 u32 hdSwkbd_getWorkSize(u32 type)
+ext 0286CD7C void hdSwkbd_createKeyboard(hdSwkbd_createArgs_c* args)
+ext 0273CB8C void* hdSwkbd_getController(void* manager, u32 index)
+ext C00075D0 void hdSwkbd_calibrateTouch(u32 channel, void* output, void* input)
+ext 0286D280 void hdSwkbd_setControllerInfo(gptr<void>* controllers)
+ext 0286D2D4 u32 hdSwkbd_needsSoundUpdate()
+ext 0286D2E4 void hdSwkbd_updateSound()
+ext 0286D270 u32 hdSwkbd_getState()
+ext 026732B8 void hdSwkbd_setLayoutText(hdSwkbd_layout_c* layout, be<u16>* text)
+ext 0267341C void hdSwkbd_getLayoutState(hdSwkbd_layout_c* layout, hdSwkbd_layoutState_c* state)
+ext 02673C98 void hdSwkbd_setSubLayoutState(hdSwkbd_layout_c* layout, hdSwkbd_layoutState_c* state)
+ext 0286D2F4 void hdSwkbd_drawKeyboardTV()
+ext 0286D338 void hdSwkbd_drawKeyboardDRC()
+ext 02673344 void hdSwkbd_setLayoutMode(hdSwkbd_layout_c* layout, u32 mode)
+ext 020063C0 void hdSwkbd_changeState(void* machine, void* state)
+ext 02617AE4 u32 hdSwkbd_getInputMode(void* manager)
+ext 0286D3E0 void hdSwkbd_appear(hdSwkbd_appearArgs_c* args)
+ext 0286D400 void hdSwkbd_setDisappearArgs(be<u32>* args)
+ext 0286D3F0 void hdSwkbd_disappear()
+ext 0286D3D0 u32 hdSwkbd_getDisappearA(u32 flags)
+ext 0286D3C0 u32 hdSwkbd_getDisappearB(u32 flags)
+ext 026733AC void hdSwkbd_layoutParameter(hdSwkbd_layout_c* layout, u32 value)
+ext 0286D37C void hdSwkbd_destroyKeyboard()
+ext 0273AFC8 void hdSwkbd_freeWork(void* work)
+ext 02673414 void hdSwkbd_setLayoutParameters(hdSwkbd_layout_c* layout, u32 first, u32 second)
+ext 02673CCC void hdSwkbd_setSubLayoutParameters(hdSwkbd_layout_c* layout, u32 first, u32 second)
+ext 02752BEC void hdSwkbd_destroyDisposerBase(hdSwkbd_disposer_c* disposer, u32 flags)
+*/

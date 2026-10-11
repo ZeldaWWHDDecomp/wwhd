@@ -1,687 +1,928 @@
-// WWHD collision-data primitives; see wwhd_src/README.md.
-#include "gabi.h"
+// WWHD collision-data primitives.
+#include "SSystem/SComponent/c_cc_d.h"
 using namespace gabi;
-struct CcVector { be<f32> xyz[3]; };
-struct CcTriangle { u8 bytes[56]; };
-static f32 F(u32 p,u32 n=0) { return load<f32>(p+n); }
-static void S(u32 p,u32 n,f32 v) { store<f32>(p+n,v); }
-static void copyVector(u32 d,u32 p) {
-    u32 x=load<u32>(p),y=load<u32>(p+4),z=load<u32>(p+8);
-    store<u32>(d,x);store<u32>(d+4,y);store<u32>(d+8,z);
+using namespace CcDataHD;
+// HD: guest vtables and diagnostic strings have fixed image addresses.
+enum GuestAddress : u32 {
+    kPlaneVtable = 0x1000136C,
+    kBgTriangleVtable = 0x100011DC,
+    kBgNodeVtable = 0x100011FC,
+    kCapsuleVtable = 0x10001718,
+    kTriangleVtable = 0x10001728,
+    kCylinderVtable = 0x100017D8,
+    kSphereVtable = 0x100017E8,
+    kDivideInfoVtable = 0x10001520,
+    kDivideAreaVtable = 0x100017F8,
+    kStatusVtable = 0x10001530,
+    kAttackVtable = 0x10001568,
+    kTargetVtable = 0x10001578,
+    kHitInfoVtable = 0x10001598,
+    kCollisionVtable = 0x10001588,
+    kObjectVtable = 0x10001648,
+    kAssertFile = 0x10001398,
+    kMoveXAssertion = 0x100013A4,
+    kMoveYAssertion = 0x100013EC,
+    kMoveZAssertion = 0x10001434,
+    kMoveRangeAssertion = 0x1000147C,
+};
+
+u32 ccNew(u32);
+void ccDelete(u32);
+void constructPlane(u32);
+void destroyCapsule(u32, u32);
+void aabSet(u32, u32, u32);
+void aabClear(u32);
+void aabSetMinMax(u32, u32);
+void aabPlusRadius(u32, f32);
+void constructAttack(u32);
+void constructTarget(u32);
+void constructDivideInfo(u32);
+void PSVECSubtract(u32, u32, u32);
+f32 PSVECDotProduct(u32, u32);
+void PSVECScale(u32, u32, f32);
+void PSVECAdd(u32, u32, u32);
+f32 PSVECMag(u32);
+void PSVECNormalize(u32, u32);
+void ccAssert(u32, u32, u32);
+void registerGlobal(u32);
+void constructHeaderByte(u32);
+void constructHeaderFlag(u32);
+u32 crossCpsCps(u32, u32, u32);
+u32 crossCpsCyl(u32, u32, u32);
+u32 crossCpsSph(u32, u32, u32);
+u32 crossTriTri(u32, u32, u32);
+u32 crossTriCyl(u32, u32, u32);
+u32 crossSphTri(u32, u32, u32);
+u32 crossCpsTri(u32, u32, u32);
+u32 crossCylCylAtTg(u32, u32, u32);
+u32 crossCylSphAtTg(u32, u32, u32);
+u32 crossCylCylCo(u32, u32, u32);
+u32 crossSphCylCo(u32, u32, u32);
+u32 crossSphCylAtTg(u32, u32, u32);
+u32 crossSphSphAtTg(u32, u32, u32);
+u32 crossSphSphCo(u32, u32, u32);
+u32 crossCpsTriangleCopy(u32, u32, u32);
+using CcVector = Vector;
+using CcTriangle = Triangle;
+static void copyVector(u32 dst, u32 src) {
+    auto* source = gabi::at<WordVector>(src);
+    auto* target = gabi::at<WordVector>(dst);
+    u32 x = source->mCoord[0], y = source->mCoord[1], z = source->mCoord[2];
+    target->mCoord[0] = x;
+    target->mCoord[1] = y;
+    target->mCoord[2] = z;
 }
-static void floatVector(u32 d,u32 p) {
-    f32 x=F(p),y=F(p,4),z=F(p,8);S(d,0,x);S(d,4,y);S(d,8,z);
+static void floatVector(u32 dst, u32 src) {
+    auto* source = gabi::at<Vector>(src);
+    auto* target = gabi::at<Vector>(dst);
+    f32 x = source->mCoord[0], y = source->mCoord[1], z = source->mCoord[2];
+    target->mCoord[0] = x;
+    target->mCoord[1] = y;
+    target->mCoord[2] = z;
 }
 // Espresso slw uses the low six shift bits, and returns zero when bit five is set.
-static u32 shiftOne(u32 n) { return (n&32) ? 0u : (1u<<(n&31)); }
-static u32 divideAxis(u32 p,u32 b,u32 axis,u32 last,bool rejectOutside) {
-    u32 base=axis*4, flag=0x1Cu+axis*12;
-    if (load<u8>(p+flag)) return (1u<<(last+1))-1;
-    f32 origin=F(p,base), low=F(b,base), high=F(b,base+12), inv=F(p,flag+8);
-    s32 lo=ftoi((low-origin)*inv),hi=ftoi((high-origin)*inv);
-    if (rejectOutside && ((lo<0 && hi<0) || (lo>(s32)last && hi>(s32)last))) return 0;
-    if (hi>(s32)last) hi=(s32)last;
-    u32 mask=shiftOne((u32)hi+1u)-1u;
-    if (lo>0) mask &= ~(shiftOne((u32)lo-1u)-1u);
+static u32 shiftOne(u32 n) { return (n & 32) ? 0u : (1u << (n & 31)); }
+static u32 divideAxis(u32 p, u32 box, u32 axis, u32 last, bool rejectOutside) {
+    auto* area = gabi::at<cCcD_DivideArea>(p);
+    auto* bounds = gabi::at<Aab>(box);
+    auto* partition = &area->mAxis[axis];
+    if (partition->mDiffIsZero)
+        return (1u << (last + 1)) - 1;
+    f32 origin = area->mAab.mMin.mCoord[axis], low = bounds->mMin.mCoord[axis],
+        high = bounds->mMax.mCoord[axis], inv = partition->mInvScaledDiff;
+    s32 lo = ftoi((low - origin) * inv), hi = ftoi((high - origin) * inv);
+    if (rejectOutside && ((lo < 0 && hi < 0) || (lo > (s32)last && hi > (s32)last)))
+        return 0;
+    if (hi > (s32)last)
+        hi = (s32)last;
+    u32 mask = shiftOne((u32)hi + 1u) - 1u;
+    if (lo > 0)
+        mask &= ~(shiftOne((u32)lo - 1u) - 1u);
     return mask;
 }
+// HD: overload-specific free adapters retain the verified ABI; autoglue cannot register overloaded methods.
 // Shape attributes contain a geometry object at +0x20; its triangle base
 // copies normal/d through floating loads and vertices through integer loads.
-static void makeTriangle(u32 d,u32 p) {
-    for (u32 i=0;i<4;i++) S(d,i*4,F(p,0x20+i*4));
-    store<u32>(d+16,0x1000136Cu);
-    for (u32 i=0;i<9;i++) store<u32>(d+20+i*4,load<u32>(p+0x34+i*4));
+static void makeTriangle(u32 dst, u32 shape) {
+    auto* triangle = gabi::at<Triangle>(dst);
+    auto* source = gabi::at<cCcD_TriAttr>(shape);
+    for (u32 i = 0; i < 4; i++)
+        triangle->mPlane.mCoefficients[i] = source->mTri.mPlane.mCoefficients[i].get();
+    triangle->mPlane.mVtable = kPlaneVtable;
+    for (u32 i = 0; i < 9; i++)
+        triangle->mVertex[i / 3].mCoord[i % 3] = source->mTri.mVertex[i / 3].mCoord[i % 3].get();
 }
-u32 cc_0200B56C(u32 p) {
-    WWHD_FUNC(0x0200B56C,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,24u);
+
+// HD: constants and shared header initialization retain their original guest storage.
+static f32 kZero;
+static f32 kXZPartitionScale;
+static f32 kOne;
+static f32 kYPartitionScale;
+static f32 kEpsilon;
+static f32 kRangeMin;
+static f32 kRangeMax;
+static f32 kNegativeOne;
+static f32 kPiMin;
+static f32 kPiMax;
+static HeaderZero sHeaderZero;
+static HeaderStatics sHeaderStatics;
+static Vector sZeroVector;
+static Vector sVirtualCenter;
+static DestructorRecord sHeaderZeroDestructor;
+static DestructorRecord sHeaderByteDestructor;
+static DestructorRecord sHeaderFlagDestructor;
+
+/* 0200B56C */
+u32 cBgW_TriElm__ct(u32 p) {
+    if (!p)
+        p = ccNew(24u);
     if (p) {
-        store<u32>(p+20,0x100011DCu);call<void>(0x020189A0,p);
+        gabi::at<cBgW_TriElm>(p)->mVtable = kBgTriangleVtable;
+        constructPlane(p);
     }
     return p;
 }
-VERIFY(0x0200B56C,cc_0200B56C);
 
-u32 cc_0200B5C0(u32 p) {
-    WWHD_FUNC(0x0200B5C0,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,28u);
+/* 0200B5C0 */
+u32 cBgW_NodeTree__ct(u32 p) {
+    if (!p)
+        p = ccNew(28u);
     if (p) {
-        store<u32>(p+24,0x100011FCu);
+        gabi::at<cBgW_NodeTree>(p)->mAab.mVtable = kBgNodeVtable;
     }
     return p;
 }
-VERIFY(0x0200B5C0,cc_0200B5C0);
 
-void cc_0200B600(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B600,void,p,flags);
-    if (!p) return;
-    store<u32>(p+56,0x10001718u);call<void>(0x0201819C,p+32,0u);
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B600 */
+void cCcD_CpsAttr__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    gabi::at<cCcD_CpsAttr>(p)->mCps.mVtable = kCapsuleVtable;
+    destroyCapsule(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps), 0u);
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B600,cc_0200B600);
 
-void cc_0200B660(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B660,void,p,flags);
-    if (!p) return;
-    store<u32>(p+48,0x10001728u);
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B660 */
+void cCcD_TriAttr__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    gabi::at<cCcD_TriAttr>(p)->mTri.mPlane.mVtable = kTriangleVtable;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B660,cc_0200B660);
 
-void cc_0200B680(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B680,void,p,flags);
-    if (!p) return;
-    store<u32>(p+52,0x100017D8u);
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B680 */
+void cCcD_CylAttr__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    gabi::at<cCcD_CylAttr>(p)->mCyl.mVtable = kCylinderVtable;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B680,cc_0200B680);
 
-void cc_0200B6A0(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B6A0,void,p,flags);
-    if (!p) return;
-    store<u32>(p+48,0x100017E8u);
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B6A0 */
+void cCcD_SphAttr__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    gabi::at<cCcD_SphAttr>(p)->mSph.mVtable = kSphereVtable;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B6A0,cc_0200B6A0);
 
-u32 cc_0200B6C0(u32 p) {
-    WWHD_FUNC(0x0200B6C0,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,8u);
+/* 0200B6C0 */
+u32 cCcD_DivideInfo__ct(u32 p) {
+    if (!p)
+        p = ccNew(8u);
     if (p) {
-        store<u32>(p,0u);store<u32>(p+4,0x10001520u);
+        gabi::at<cCcD_DivideInfo>(p)->mRangeBits = 0u;
+        gabi::at<cCcD_DivideInfo>(p)->mVtable = kDivideInfoVtable;
     }
     return p;
 }
-VERIFY(0x0200B6C0,cc_0200B6C0);
 
-void cc_0200B708(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B708,void,p,flags);
-    if (!p) return;
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B708 */
+void cCcD_DivideInfo__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B708,cc_0200B708);
 
-void cc_0200B7C0(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200B7C0,void,p,flags);
-    if (!p) return;
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200B7C0 */
+void cCcD_DivideArea__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200B7C0,cc_0200B7C0);
 
-void cc_0200BD18(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200BD18,void,p,flags);
-    if (!p) return;
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200BD18 */
+void cCcD_GStts__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200BD18,cc_0200BD18);
 
-void cc_0200BD88(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200BD88,void,p,flags);
-    if (!p) return;
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200BD88 */
+void cCcD_Stts__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200BD88,cc_0200BD88);
 
-void cc_0200C110(u32 p,u32 flags) {
-    WWHD_FUNC(0x0200C110,void,p,flags);
-    if (!p) return;
-    if (flags&1u) call<void>(0x0273AF40,p);
+/* 0200C110 */
+void cCcD_GObjInf__dt(u32 p, u32 flags) {
+    if (!p)
+        return;
+    if (flags & 1u)
+        ccDelete(p);
 }
-VERIFY(0x0200C110,cc_0200C110);
 
-u32 cCcD_DivideInfo_Chk(u32 p,u32 q) {
-    WWHD_FUNC(0x0200B71C,u32,p,q);
-    u32 m=load<u32>(p)&load<u32>(q);
-    return (m&0x7FFu) && (m&0xFFE00000u) && (m&0x1FF800u);
+/* 0200B71C */
+u32 CcDataHD::cCcD_DivideInfo::Chk(u32 q) {
+    u32 m = mRangeBits.get() & gabi::at<cCcD_DivideInfo>(q)->mRangeBits.get();
+    return (m & 0x7FFu) && (m & 0xFFE00000u) && (m & 0x1FF800u);
 }
-VERIFY(0x0200B71C,cCcD_DivideInfo_Chk);
 
-u32 cc_0200B750(u32 p) {
-    WWHD_FUNC(0x0200B750,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,64u);
+/* 0200B750 */
+u32 cCcD_DivideArea__ct(u32 p) {
+    if (!p)
+        p = ccNew(64u);
     if (p) {
-        f32 z=F(0x1000137Cu);
-        store<u8>(p+28,0);S(p,44,z);store<u32>(p+24,0x100017F8u);S(p,36,z);
-        store<u8>(p+40,0);S(p,48,z);store<u8>(p+52,0);S(p,32,z);S(p,60,z);S(p,56,z);
+        f32 z = kZero.get();
+        gabi::at<cCcD_DivideArea>(p)->mAxis[0].mDiffIsZero = 0;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[1].mScaledDiff = z;
+        gabi::at<cCcD_DivideArea>(p)->mAab.mVtable = kDivideAreaVtable;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[0].mInvScaledDiff = z;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[1].mDiffIsZero = 0;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[1].mInvScaledDiff = z;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[2].mDiffIsZero = 0;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[0].mScaledDiff = z;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[2].mInvScaledDiff = z;
+        gabi::at<cCcD_DivideArea>(p)->mAxis[2].mScaledDiff = z;
     }
     return p;
 }
-VERIFY(0x0200B750,cc_0200B750);
 
-void cCcD_DivideArea_SetArea(u32 p,u32 box) {
-    WWHD_FUNC(0x0200B7D4,void,p,box);
-    call<void>(0x02017D08,p,box,box+12);
-    f32 x=(F(p,12)-F(p))*F(0x10001380u),eps=F(0x100030B8u),one=F(0x10001384u);
-    S(p,32,x);store<u8>(p+28,std::fabs(x)<eps);
-    if (!(std::fabs(x)<eps)) S(p,36,one/F(p,32));
-    f32 y=(F(p,16)-F(p,4))*F(0x10001388u);
-    S(p,44,y);store<u8>(p+40,std::fabs(y)<eps);
-    if (!(std::fabs(y)<eps)) S(p,48,one/F(p,44));
-    f32 z=(F(p,20)-F(p,8))*F(0x10001380u);
-    S(p,56,z);store<u8>(p+52,std::fabs(z)<eps);
-    if (!(std::fabs(z)<eps)) S(p,60,one/F(p,56));
+/* 0200B7D4 */
+void CcDataHD::cCcD_DivideArea::SetArea(u32 box) {
+    const u32 p = gabi::ea(this);
+    aabSet(p, box, box + 12);
+    f32 x = (mAab.mMax.mCoord[0].get() - mAab.mMin.mCoord[0].get()) * kXZPartitionScale.get(),
+        eps = kEpsilon.get(), one = kOne.get();
+    mAxis[0].mScaledDiff = x;
+    mAxis[0].mDiffIsZero = std::fabs(x) < eps;
+    if (!(std::fabs(x) < eps))
+        mAxis[0].mInvScaledDiff = one / mAxis[0].mScaledDiff.get();
+    f32 y = (mAab.mMax.mCoord[1].get() - mAab.mMin.mCoord[1].get()) * kYPartitionScale.get();
+    mAxis[1].mScaledDiff = y;
+    mAxis[1].mDiffIsZero = std::fabs(y) < eps;
+    if (!(std::fabs(y) < eps))
+        mAxis[1].mInvScaledDiff = one / mAxis[1].mScaledDiff.get();
+    f32 z = (mAab.mMax.mCoord[2].get() - mAab.mMin.mCoord[2].get()) * kXZPartitionScale.get();
+    mAxis[2].mScaledDiff = z;
+    mAxis[2].mDiffIsZero = std::fabs(z) < eps;
+    if (!(std::fabs(z) < eps))
+        mAxis[2].mInvScaledDiff = one / mAxis[2].mScaledDiff.get();
 }
-VERIFY(0x0200B7D4,cCcD_DivideArea_SetArea);
 
-void cCcD_DivideArea_CalcDivideInfo(u32 p,u32 out,u32 box,u32 all) {
-    WWHD_FUNC(0x0200B8CC,void,p,out,box,all);
-    if (all) {store<u32>(out,0xFFFFFFFFu);return;}
-    u32 m=divideAxis(p,box,0,10,false);
-    m|=divideAxis(p,box,1,9,false)<<11;
-    m|=divideAxis(p,box,2,10,false)<<21;
-    store<u32>(out,m);
+/* 0200B8CC */
+void CcDataHD::cCcD_DivideArea::CalcDivideInfo(u32 out, u32 box, u32 all) {
+    const u32 p = gabi::ea(this);
+    if (all) {
+        gabi::at<cCcD_DivideInfo>(out)->mRangeBits = 0xFFFFFFFFu;
+        return;
+    }
+    u32 m = divideAxis(p, box, 0, 10, false);
+    m |= divideAxis(p, box, 1, 9, false) << 11;
+    m |= divideAxis(p, box, 2, 10, false) << 21;
+    gabi::at<cCcD_DivideInfo>(out)->mRangeBits = m;
 }
-VERIFY(0x0200B8CC,cCcD_DivideArea_CalcDivideInfo);
 
-void cCcD_DivideArea_CalcDivideInfoOverArea(u32 p,u32 out,u32 box) {
-    WWHD_FUNC(0x0200BAC0,void,p,out,box);
-    u32 m=divideAxis(p,box,0,10,true);
-    m|=divideAxis(p,box,1,9,true)<<11;
-    m|=divideAxis(p,box,2,10,true)<<21;
-    store<u32>(out,m);
+/* 0200BAC0 */
+void CcDataHD::cCcD_DivideArea::CalcDivideInfoOverArea(u32 out, u32 box) {
+    const u32 p = gabi::ea(this);
+    u32 m = divideAxis(p, box, 0, 10, true);
+    m |= divideAxis(p, box, 1, 9, true) << 11;
+    m |= divideAxis(p, box, 2, 10, true) << 21;
+    gabi::at<cCcD_DivideInfo>(out)->mRangeBits = m;
 }
-VERIFY(0x0200BAC0,cCcD_DivideArea_CalcDivideInfoOverArea);
 
-u32 cc_0200BD2C(u32 p) {
-    WWHD_FUNC(0x0200BD2C,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,28u);
+/* 0200BD2C */
+u32 cCcD_Stts__ct(u32 p) {
+    if (!p)
+        p = ccNew(28u);
     if (p) {
-        store<u32>(p+16,0u);store<u32>(p+24,0x10001530u);store<u8>(p+23,0);store<u32>(p+12,0u);store<u8>(p+21,0);store<u8>(p+22,0);store<u8>(p+20,0);
+        gabi::at<cCcD_Stts>(p)->m_apid = 0u;
+        gabi::at<cCcD_Stts>(p)->mVtable = kStatusVtable;
+        gabi::at<cCcD_Stts>(p)->mReserved = 0;
+        gabi::at<cCcD_Stts>(p)->mp_actor = 0u;
+        gabi::at<cCcD_Stts>(p)->mInitFlags = 0;
+        gabi::at<cCcD_Stts>(p)->m_dmg = 0;
+        gabi::at<cCcD_Stts>(p)->m_weight = 0;
     }
     return p;
 }
-VERIFY(0x0200BD2C,cc_0200BD2C);
 
-void cCcD_Stts_Ct(u32 p) {
-    WWHD_FUNC(0x0200BD9C,void,p);
-    f32 z=F(0x1000137Cu);
-    store<u32>(p+12,0u);store<u32>(p+16,0xFFFFFFFFu);store<u8>(p+20,0);
-    S(p,0,z);store<u8>(p+21,0);S(p,4,z);store<u8>(p+22,0);S(p,8,z);
+/* 0200BD9C */
+void CcDataHD::cCcD_Stts::Ct() {
+    f32 z = kZero.get();
+    mp_actor = 0u;
+    m_apid = 0xFFFFFFFFu;
+    m_weight = 0;
+    m_cc_move.mCoord[0] = z;
+    mInitFlags = 0;
+    m_cc_move.mCoord[1] = z;
+    m_dmg = 0;
+    m_cc_move.mCoord[2] = z;
 }
-VERIFY(0x0200BD9C,cCcD_Stts_Ct);
 
-void cCcD_Stts_Init(u32 p,s32 weight,s32 flags,u32 actor,u32 id) {
-    WWHD_FUNC(0x0200BDD0,void,p,weight,flags,actor,id);
-    u32 v=load<u32>(p+24),fn=load<u32>(v+36);
-    call_ptr<void>(fn,p,weight,flags,actor,id);
-    store<u8>(p+20,(u8)weight);store<u8>(p+21,(u8)flags);store<u32>(p+12,actor);store<u32>(p+16,id);
+/* 0200BDD0 */
+void CcDataHD::cCcD_Stts::Init(s32 weight, s32 flags, u32 actor, u32 id) {
+    const u32 p = gabi::ea(this);
+    u32 v = mVtable.get(), fn = gabi::at<StatusVtable>(v)->Ct.get();
+    gabi::call_ptr<void>(fn, p, weight, flags, actor, id);
+    m_weight = (u8)weight;
+    mInitFlags = (u8)flags;
+    mp_actor = actor;
+    m_apid = id;
 }
-VERIFY(0x0200BDD0,cCcD_Stts_Init);
 
-void cCcD_Stts_PlusCcMove(u32 p,f32 x,f32 y,f32 z) {
-    WWHD_FUNC(0x0200BE28,void,p,x,y,z);
-    f32 a=F(p)+x,c=F(p,8)+z,b=F(p,4)+y;
-    S(p,8,c);S(p,0,a);S(p,4,b);
-    if (std::isnan(a)) call<void>(0x0273AA24,0x10001398u,0x1E7u,0x100013A4u);
-    if (std::isnan(F(p,4))) call<void>(0x0273AA24,0x10001398u,0x1E8u,0x100013ECu);
-    if (std::isnan(F(p,8))) call<void>(0x0273AA24,0x10001398u,0x1E9u,0x10001434u);
-    f32 lo=F(0x1000138Cu),hi=F(0x10001390u);
-    if (!(lo<F(p) && F(p)<hi && lo<F(p,4) && F(p,4)<hi && lo<F(p,8) && F(p,8)<hi))
-        call<void>(0x0273AA24,0x10001398u,0x1EBu,0x1000147Cu);
+/* 0200BE28 */
+void CcDataHD::cCcD_Stts::PlusCcMove(f32 x, f32 y, f32 z) {
+    f32 a = m_cc_move.mCoord[0].get() + x, c = m_cc_move.mCoord[2].get() + z,
+        b = m_cc_move.mCoord[1].get() + y;
+    m_cc_move.mCoord[2] = c;
+    m_cc_move.mCoord[0] = a;
+    m_cc_move.mCoord[1] = b;
+    if (std::isnan(a))
+        ccAssert(kAssertFile, 0x1E7u, kMoveXAssertion);
+    if (std::isnan(m_cc_move.mCoord[1].get()))
+        ccAssert(kAssertFile, 0x1E8u, kMoveYAssertion);
+    if (std::isnan(m_cc_move.mCoord[2].get()))
+        ccAssert(kAssertFile, 0x1E9u, kMoveZAssertion);
+    f32 lo = kRangeMin.get(), hi = kRangeMax.get();
+    if (!(lo < m_cc_move.mCoord[0].get() && m_cc_move.mCoord[0].get() < hi &&
+          lo < m_cc_move.mCoord[1].get() && m_cc_move.mCoord[1].get() < hi &&
+          lo < m_cc_move.mCoord[2].get() && m_cc_move.mCoord[2].get() < hi))
+        ccAssert(kAssertFile, 0x1EBu, kMoveRangeAssertion);
 }
-VERIFY(0x0200BE28,cCcD_Stts_PlusCcMove);
 
-void cc_0200BF6C(u32 p) {
-    WWHD_FUNC(0x0200BF6C,void,p);
-    store<u8>(p+22,0);
-}
-VERIFY(0x0200BF6C,cc_0200BF6C);
+/* 0200BF6C */
+void CcDataHD::cCcD_Stts::ClrTg() { m_dmg = 0; }
 
-u32 cc_0200BF78(u32 p) {
-    WWHD_FUNC(0x0200BF78,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,24u);
+/* 0200BF78 */
+u32 cCcD_ObjAt__ct(u32 p) {
+    if (!p)
+        p = ccNew(24u);
     if (p) {
-        store<u32>(p+8,0u);store<u32>(p+12,0x10001568u);store<u32>(p+16,0u);store<u8>(p+20,0);store<u32>(p+4,0u);store<u32>(p,0u);
+        gabi::at<cCcD_ObjAt>(p)->mBase.mHitObj = 0u;
+        gabi::at<cCcD_ObjAt>(p)->mBase.mVtable = kAttackVtable;
+        gabi::at<cCcD_ObjAt>(p)->mType = 0u;
+        gabi::at<cCcD_ObjAt>(p)->mAtp = 0;
+        gabi::at<cCcD_ObjAt>(p)->mBase.mRPrm = 0u;
+        gabi::at<cCcD_ObjAt>(p)->mBase.mSPrm = 0u;
     }
     return p;
 }
-VERIFY(0x0200BF78,cc_0200BF78);
 
-u32 cc_0200BFD0(u32 p) {
-    WWHD_FUNC(0x0200BFD0,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,20u);
+/* 0200BFD0 */
+u32 cCcD_ObjTg__ct(u32 p) {
+    if (!p)
+        p = ccNew(20u);
     if (p) {
-        store<u32>(p+16,0u);store<u32>(p+12,0x10001578u);store<u32>(p+4,0u);store<u32>(p+8,0u);store<u32>(p,0u);
+        gabi::at<cCcD_ObjTg>(p)->mType = 0u;
+        gabi::at<cCcD_ObjTg>(p)->mBase.mVtable = kTargetVtable;
+        gabi::at<cCcD_ObjTg>(p)->mBase.mRPrm = 0u;
+        gabi::at<cCcD_ObjTg>(p)->mBase.mHitObj = 0u;
+        gabi::at<cCcD_ObjTg>(p)->mBase.mSPrm = 0u;
     }
     return p;
 }
-VERIFY(0x0200BFD0,cc_0200BFD0);
 
-u32 cc_0200C034(u32 p) {
-    WWHD_FUNC(0x0200C034,u32,p);
-    if (!p) p=call<u32>(0x0273AD10,80u);
+/* 0200C034 */
+u32 cCcD_Obj__ct(u32 p) {
+    if (!p)
+        p = ccNew(80u);
     if (p) {
-        store<u32>(p+60,0x10001598u);call<void>(0x0200BF78,p);call<void>(0x0200BFD0,p+24);
-        store<u32>(p+44,0u);store<u32>(p+48,0u);store<u32>(p+52,0u);store<u32>(p+68,0u);
-        store<u32>(p+56,0x10001588u);store<u32>(p+60,0x10001648u);store<u32>(p+64,0u);
-        call<void>(0x0200B6C0,p+72);store<u32>(p+64,0u);
+        gabi::at<cCcD_Obj>(p)->mVtable = kHitInfoVtable;
+        constructAttack(p);
+        constructTarget(gabi::ea(&gabi::at<cCcD_Obj>(p)->mObjTg));
+        gabi::at<cCcD_Obj>(p)->mObjCo.mSPrm = 0u;
+        gabi::at<cCcD_Obj>(p)->mObjCo.mRPrm = 0u;
+        gabi::at<cCcD_Obj>(p)->mObjCo.mHitObj = 0u;
+        gabi::at<cCcD_Obj>(p)->mStts = 0u;
+        gabi::at<cCcD_Obj>(p)->mObjCo.mVtable = kCollisionVtable;
+        gabi::at<cCcD_Obj>(p)->mVtable = kObjectVtable;
+        gabi::at<cCcD_Obj>(p)->mFlags = 0u;
+        constructDivideInfo(gabi::ea(&gabi::at<cCcD_Obj>(p)->mDivideInfo));
+        gabi::at<cCcD_Obj>(p)->mFlags = 0u;
     }
     return p;
 }
-VERIFY(0x0200C034,cc_0200C034);
 
-void cCcD_Obj_Set(u32 p,u32 q) {
-    WWHD_FUNC(0x0200C0D4,void,p,q);
-    store<u32>(p+64,load<u32>(q+0));
-    store<u32>(p+0,load<u32>(q+12));
-    store<u32>(p+16,load<u32>(q+4));
-    store<u8>(p+20,load<u8>(q+8));
-    store<u32>(p+24,load<u32>(q+20));
-    store<u32>(p+40,load<u32>(q+16));
-    store<u32>(p+44,load<u32>(q+24));
-
+/* 0200C0D4 */
+void CcDataHD::cCcD_Obj::Set(u32 q) {
+    mFlags = gabi::at<cCcD_SrcObj>(q)->mFlags.get();
+    mObjAt.mBase.mSPrm = gabi::at<cCcD_SrcObj>(q)->mAtSPrm.get();
+    mObjAt.mType = gabi::at<cCcD_SrcObj>(q)->mAtType.get();
+    mObjAt.mAtp = gabi::at<cCcD_SrcObj>(q)->mAtp.get();
+    mObjTg.mBase.mSPrm = gabi::at<cCcD_SrcObj>(q)->mTgSPrm.get();
+    mObjTg.mType = gabi::at<cCcD_SrcObj>(q)->mTgType.get();
+    mObjCo.mSPrm = gabi::at<cCcD_SrcObj>(q)->mCoSPrm.get();
 }
-VERIFY(0x0200C0D4,cCcD_Obj_Set);
 
-u32 cc_0200C124(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C124,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+36);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C124 */
+u32 cCcD_CpsAttr_CrossAtTg_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mAtCps.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C124,cc_0200C124);
 
-u32 cc_0200C20C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C20C,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+92);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C20C */
+u32 cCcD_CpsAttr_CrossCo_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mCoCps.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C20C,cc_0200C20C);
 
-u32 cc_0200C548(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C548,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+44);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C548 */
+u32 cCcD_TriAttr_CrossAtTg_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mAtTri.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C548,cc_0200C548);
 
-u32 cc_0200C63C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C63C,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+100);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C63C */
+u32 cCcD_TriAttr_CrossCo_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mCoTri.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C63C,cc_0200C63C);
 
-u32 cc_0200C79C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C79C,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+60);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C79C */
+u32 cCcD_CylAttr_CrossAtTg_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mAtCyl.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C79C,cc_0200C79C);
 
-u32 cc_0200C7EC(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C7EC,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+116);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200C7EC */
+u32 cCcD_CylAttr_CrossCo_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mCoCyl.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200C7EC,cc_0200C7EC);
 
-u32 cc_0200CA18(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA18,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+68);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200CA18 */
+u32 cCcD_SphAttr_CrossAtTg_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mAtSph.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200CA18,cc_0200CA18);
 
-u32 cc_0200CA68(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA68,u32,p,q,out);
-    u32 v=load<u32>(q+28),fn=load<u32>(v+124);
-    return call_ptr<u32>(fn,q,p,out);
+/* 0200CA68 */
+u32 cCcD_SphAttr_CrossCo_Shape(u32 p, u32 q, u32 out) {
+    u32 v = gabi::at<cCcD_ShapeAttr>(q)->mVtable.get(), fn = gabi::at<ShapeVtable>(v)->mCoSph.get();
+    return gabi::call_ptr<u32>(fn, q, p, out);
 }
-VERIFY(0x0200CA68,cc_0200CA68);
 
-u32 cc_0200C140(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C140,u32,p,q,out);
-    return call<u32>(0x020159EC,p+32,q+32,out);
+/* 0200C140 */
+u32 cCcD_CpsAttr_CrossAtTg_Cps(u32 p, u32 q, u32 out) {
+    return crossCpsCps(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps), out);
 }
-VERIFY(0x0200C140,cc_0200C140);
 
-u32 cc_0200C14C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C14C,u32,p,q,out);
-    return call<u32>(0x02015CF0,p+32,q+32,out);
+/* 0200C14C */
+u32 cCcD_CpsAttr_CrossAtTg_Cyl(u32 p, u32 q, u32 out) {
+    return crossCpsCyl(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), out);
 }
-VERIFY(0x0200C14C,cc_0200C14C);
 
-u32 cc_0200C200(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C200,u32,p,q,out);
-    return call<u32>(0x020168D4,p+32,q+32,out);
+/* 0200C200 */
+u32 cCcD_CpsAttr_CrossAtTg_Sph(u32 p, u32 q, u32 out) {
+    return crossCpsSph(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), out);
 }
-VERIFY(0x0200C200,cc_0200C200);
 
-u32 cc_0200C614(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C614,u32,p,q,out);
-    return call<u32>(0x0201923C,p+32,q+32,out);
+/* 0200C614 */
+u32 cCcD_TriAttr_CrossAtTg_Tri(u32 p, u32 q, u32 out) {
+    return crossTriTri(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri),
+                       gabi::ea(&gabi::at<cCcD_TriAttr>(q)->mTri), out);
 }
-VERIFY(0x0200C614,cc_0200C614);
 
-u32 cc_0200C620(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C620,u32,p,q,out);
-    return call<u32>(0x02016A20,p+32,q+32,out);
+/* 0200C620 */
+u32 cCcD_TriAttr_CrossAtTg_Cyl(u32 p, u32 q, u32 out) {
+    return crossTriCyl(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri),
+                       gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), out);
 }
-VERIFY(0x0200C620,cc_0200C620);
 
-u32 cc_0200C62C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C62C,u32,p,q,out);
-    return call<u32>(0x02014200,q+32,p+32,out);
+/* 0200C62C */
+u32 cCcD_TriAttr_CrossAtTg_Sph(u32 p, u32 q, u32 out) {
+    return crossSphTri(gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph),
+                       gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri), out);
 }
-VERIFY(0x0200C62C,cc_0200C62C);
 
-u32 cc_0200C7B8(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C7B8,u32,p,q,out);
-    return call<u32>(0x02015CF0,q+32,p+32,out);
+/* 0200C7B8 */
+u32 cCcD_CylAttr_CrossAtTg_Cps(u32 p, u32 q, u32 out) {
+    return crossCpsCyl(gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl), out);
 }
-VERIFY(0x0200C7B8,cc_0200C7B8);
 
-u32 cc_0200C7C8(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C7C8,u32,p,q,out);
-    return call<u32>(0x020156D0,p+32,q+32,out);
+/* 0200C7C8 */
+u32 cCcD_CylAttr_CrossAtTg_Tri(u32 p, u32 q, u32 out) {
+    return crossCpsTri(gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl),
+                       gabi::ea(&gabi::at<cCcD_TriAttr>(q)->mTri), out);
 }
-VERIFY(0x0200C7C8,cc_0200C7C8);
 
-u32 cc_0200C7D4(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C7D4,u32,p,q,out);
-    return call<u32>(0x020186C4,p+32,q+32,out);
+/* 0200C7D4 */
+u32 cCcD_CylAttr_CrossAtTg_Cyl(u32 p, u32 q, u32 out) {
+    return crossCylCylAtTg(gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl),
+                           gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), out);
 }
-VERIFY(0x0200C7D4,cc_0200C7D4);
 
-u32 cc_0200C7E0(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C7E0,u32,p,q,out);
-    return call<u32>(0x020186C8,p+32,q+32,out);
+/* 0200C7E0 */
+u32 cCcD_CylAttr_CrossAtTg_Sph(u32 p, u32 q, u32 out) {
+    return crossCylSphAtTg(gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl),
+                           gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), out);
 }
-VERIFY(0x0200C7E0,cc_0200C7E0);
 
-u32 cc_0200C84C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C84C,u32,p,q,out);
-    return call<u32>(0x02014AF8,p+32,q+32,out);
+/* 0200C84C */
+u32 cCcD_CylAttr_CrossCo_Cyl(u32 p, u32 q, u32 out) {
+    return crossCylCylCo(gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl),
+                         gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), out);
 }
-VERIFY(0x0200C84C,cc_0200C84C);
 
-u32 cc_0200C858(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C858,u32,p,q,out);
-    return call<u32>(0x020135C8,p+32,q+32,out);
+/* 0200C858 */
+u32 cCcD_CylAttr_CrossCo_Sph(u32 p, u32 q, u32 out) {
+    return crossSphCylCo(gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl),
+                         gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), out);
 }
-VERIFY(0x0200C858,cc_0200C858);
 
-u32 cc_0200CA34(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA34,u32,p,q,out);
-    return call<u32>(0x020168D4,q+32,p+32,out);
+/* 0200CA34 */
+u32 cCcD_SphAttr_CrossAtTg_Cps(u32 p, u32 q, u32 out) {
+    return crossCpsSph(gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps),
+                       gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph), out);
 }
-VERIFY(0x0200CA34,cc_0200CA34);
 
-u32 cc_0200CA44(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA44,u32,p,q,out);
-    return call<u32>(0x02014200,p+32,q+32,out);
+/* 0200CA44 */
+u32 cCcD_SphAttr_CrossAtTg_Tri(u32 p, u32 q, u32 out) {
+    return crossSphTri(gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph),
+                       gabi::ea(&gabi::at<cCcD_TriAttr>(q)->mTri), out);
 }
-VERIFY(0x0200CA44,cc_0200CA44);
 
-u32 cc_0200CA50(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA50,u32,p,q,out);
-    return call<u32>(0x02018F6C,p+32,q+32,out);
+/* 0200CA50 */
+u32 cCcD_SphAttr_CrossAtTg_Cyl(u32 p, u32 q, u32 out) {
+    return crossSphCylAtTg(gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph),
+                           gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), out);
 }
-VERIFY(0x0200CA50,cc_0200CA50);
 
-u32 cc_0200CA5C(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA5C,u32,p,q,out);
-    return call<u32>(0x02018F9C,p+32,q+32,out);
+/* 0200CA5C */
+u32 cCcD_SphAttr_CrossAtTg_Sph(u32 p, u32 q, u32 out) {
+    return crossSphSphAtTg(gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph),
+                           gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), out);
 }
-VERIFY(0x0200CA5C,cc_0200CA5C);
 
-u32 cc_0200CAC8(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CAC8,u32,p,q,out);
-    return call<u32>(0x020135C8,q+32,p+32,out);
+/* 0200CAC8 */
+u32 cCcD_SphAttr_CrossCo_Cyl(u32 p, u32 q, u32 out) {
+    return crossSphCylCo(gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl),
+                         gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph), out);
 }
-VERIFY(0x0200CAC8,cc_0200CAC8);
 
-u32 cc_0200CAD8(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CAD8,u32,p,q,out);
-    return call<u32>(0x02013B78,p+32,q+32,out);
+/* 0200CAD8 */
+u32 cCcD_SphAttr_CrossCo_Sph(u32 p, u32 q, u32 out) {
+    return crossSphSphCo(gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph),
+                         gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), out);
 }
-VERIFY(0x0200CAD8,cc_0200CAD8);
 
-u32 cc_0200C228(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C228,u32,p,q,out);
-    Local<CcVector> hit;S(out,0,F(0x1000137Cu));
-    return call<u32>(0x020159EC,p+32,q+32,hit.get());
+/* 0200C228 */
+u32 cCcD_CpsAttr_CrossCo_Cps(u32 p, u32 q, u32 out) {
+    Local<CcVector> hit;
+    gabi::at<Vector>(out)->mCoord[0] = kZero.get();
+    return crossCpsCps(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps), hit.a);
 }
-VERIFY(0x0200C228,cc_0200C228);
 
-u32 cc_0200C268(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C268,u32,p,q,out);
-    Local<CcVector> hit;S(out,0,F(0x1000137Cu));
-    return call<u32>(0x02015CF0,p+32,q+32,hit.get());
+/* 0200C268 */
+u32 cCcD_CpsAttr_CrossCo_Cyl(u32 p, u32 q, u32 out) {
+    Local<CcVector> hit;
+    gabi::at<Vector>(out)->mCoord[0] = kZero.get();
+    return crossCpsCyl(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CylAttr>(q)->mCyl), hit.a);
 }
-VERIFY(0x0200C268,cc_0200C268);
 
-u32 cc_0200C2A0(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C2A0,u32,p,q,out);
-    Local<CcVector> hit;S(out,0,F(0x1000137Cu));
-    return call<u32>(0x020168D4,p+32,q+32,hit.get());
+/* 0200C2A0 */
+u32 cCcD_CpsAttr_CrossCo_Sph(u32 p, u32 q, u32 out) {
+    Local<CcVector> hit;
+    gabi::at<Vector>(out)->mCoord[0] = kZero.get();
+    return crossCpsSph(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps),
+                       gabi::ea(&gabi::at<cCcD_SphAttr>(q)->mSph), hit.a);
 }
-VERIFY(0x0200C2A0,cc_0200C2A0);
 
-u32 cc_0200C808(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C808,u32,p,q,out);
-    Local<CcVector> hit;S(out,0,F(0x1000137Cu));
-    return call<u32>(0x02015CF0,q+32,p+32,hit.get());
+/* 0200C808 */
+u32 cCcD_CylAttr_CrossCo_Cps(u32 p, u32 q, u32 out) {
+    Local<CcVector> hit;
+    gabi::at<Vector>(out)->mCoord[0] = kZero.get();
+    return crossCpsCyl(gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps),
+                       gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl), hit.a);
 }
-VERIFY(0x0200C808,cc_0200C808);
 
-u32 cc_0200CA84(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200CA84,u32,p,q,out);
-    Local<CcVector> hit;S(out,0,F(0x1000137Cu));
-    return call<u32>(0x020168D4,q+32,p+32,hit.get());
+/* 0200CA84 */
+u32 cCcD_SphAttr_CrossCo_Cps(u32 p, u32 q, u32 out) {
+    Local<CcVector> hit;
+    gabi::at<Vector>(out)->mCoord[0] = kZero.get();
+    return crossCpsSph(gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps),
+                       gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph), hit.a);
 }
-VERIFY(0x0200CA84,cc_0200CA84);
 
-u32 cc_0200C158(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C158,u32,p,q,out);
-    Local<CcTriangle> tri;makeTriangle(tri.a,q);
-    return call<u32>(0x02016CE8,p+32,tri.get(),out);
+/* 0200C158 */
+u32 cCcD_CpsAttr_CrossAtTg_Tri(u32 p, u32 q, u32 out) {
+    Local<CcTriangle> tri;
+    makeTriangle(tri.a, q);
+    return crossCpsTriangleCopy(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps), tri.a, out);
 }
-VERIFY(0x0200C158,cc_0200C158);
 
-u32 cc_0200C564(u32 p,u32 q,u32 out) {
-    WWHD_FUNC(0x0200C564,u32,p,q,out);
-    Local<CcTriangle> tri;makeTriangle(tri.a,p);
-    return call<u32>(0x02016CE8,q+32,tri.get(),out);
+/* 0200C564 */
+u32 cCcD_TriAttr_CrossAtTg_Cps(u32 p, u32 q, u32 out) {
+    Local<CcTriangle> tri;
+    makeTriangle(tri.a, p);
+    return crossCpsTriangleCopy(gabi::ea(&gabi::at<cCcD_CpsAttr>(q)->mCps), tri.a, out);
 }
-VERIFY(0x0200C564,cc_0200C564);
 
-u32 cc_0200C024() {
-    WWHD_FUNC(0x0200C024,u32);
-    return 0;
+/* 0200C024 */
+u32 cCcD_ShapeAttr_CrossAtTg_Unsupported() { return 0; }
+
+/* 0200C02C */
+u32 cCcD_ShapeAttr_CrossCo_Unsupported() { return 0; }
+
+/* 0200C260 */
+u32 cCcD_CpsAttr_CrossCo_Tri() { return 0; }
+
+/* 0200C658 */
+u32 cCcD_TriAttr_CrossCo_Cps() { return 0; }
+
+/* 0200C660 */
+u32 cCcD_TriAttr_CrossCo_Tri() { return 0; }
+
+/* 0200C668 */
+u32 cCcD_TriAttr_CrossCo_Cyl() { return 0; }
+
+/* 0200C670 */
+u32 cCcD_TriAttr_CrossCo_Sph() { return 0; }
+
+/* 0200C844 */
+u32 cCcD_CylAttr_CrossCo_Tri() { return 0; }
+
+/* 0200CAC0 */
+u32 cCcD_SphAttr_CrossCo_Tri() { return 0; }
+
+/* 0200CCE4 */
+u32 cCcD_Stts_GetGStts() { return 0; }
+
+/* 0200CCFC */
+u32 cCcD_Obj_GetGObjInf() { return 0; }
+
+/* 0200CD04 */
+u32 cCcD_Obj_GetShapeAttr() { return 0; }
+
+/* 0200C794 */
+u32 CcDataHD::cCcD_CylAttr::GetCoCP() {
+    const u32 p = gabi::ea(this);
+    return gabi::ea(&gabi::at<cCcD_CylAttr>(p)->mCyl);
 }
-VERIFY(0x0200C024,cc_0200C024);
 
-u32 cc_0200C02C() {
-    WWHD_FUNC(0x0200C02C,u32);
-    return 0;
+/* 0200CA10 */
+u32 CcDataHD::cCcD_SphAttr::GetCoCP() {
+    const u32 p = gabi::ea(this);
+    return gabi::ea(&gabi::at<cCcD_SphAttr>(p)->mSph);
 }
-VERIFY(0x0200C02C,cc_0200C02C);
 
-u32 cc_0200C260() {
-    WWHD_FUNC(0x0200C260,u32);
-    return 0;
+/* 0200CCF0 */
+u32 cCcD_ShapeAttr_GetCoCP() { return gabi::ea(&sVirtualCenter); }
+
+/* 0200CCEC */
+void cCcD_Stts_ClrAt() {}
+
+/* 0200C2D8 */
+void CcDataHD::cCcD_CpsAttr::CalcAabBox() {
+    const u32 p = gabi::ea(this);
+    aabClear(p);
+    aabSetMinMax(p, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps));
+    aabSetMinMax(p, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps.mEnd));
+    f32 radius = mCps.mRadius.get();
+    aabPlusRadius(p, radius);
 }
-VERIFY(0x0200C260,cc_0200C260);
 
-u32 cc_0200C658() {
-    WWHD_FUNC(0x0200C658,u32);
-    return 0;
-}
-VERIFY(0x0200C658,cc_0200C658);
-
-u32 cc_0200C660() {
-    WWHD_FUNC(0x0200C660,u32);
-    return 0;
-}
-VERIFY(0x0200C660,cc_0200C660);
-
-u32 cc_0200C668() {
-    WWHD_FUNC(0x0200C668,u32);
-    return 0;
-}
-VERIFY(0x0200C668,cc_0200C668);
-
-u32 cc_0200C670() {
-    WWHD_FUNC(0x0200C670,u32);
-    return 0;
-}
-VERIFY(0x0200C670,cc_0200C670);
-
-u32 cc_0200C844() {
-    WWHD_FUNC(0x0200C844,u32);
-    return 0;
-}
-VERIFY(0x0200C844,cc_0200C844);
-
-u32 cc_0200CAC0() {
-    WWHD_FUNC(0x0200CAC0,u32);
-    return 0;
-}
-VERIFY(0x0200CAC0,cc_0200CAC0);
-
-u32 cc_0200CCE4() {
-    WWHD_FUNC(0x0200CCE4,u32);
-    return 0;
-}
-VERIFY(0x0200CCE4,cc_0200CCE4);
-
-u32 cc_0200CCFC() {
-    WWHD_FUNC(0x0200CCFC,u32);
-    return 0;
-}
-VERIFY(0x0200CCFC,cc_0200CCFC);
-
-u32 cc_0200CD04() {
-    WWHD_FUNC(0x0200CD04,u32);
-    return 0;
-}
-VERIFY(0x0200CD04,cc_0200CD04);
-
-u32 cc_0200C794(u32 p) {
-    WWHD_FUNC(0x0200C794,u32,p);
-    return p+32;
-}
-VERIFY(0x0200C794,cc_0200C794);
-
-u32 cc_0200CA10(u32 p) {
-    WWHD_FUNC(0x0200CA10,u32,p);
-    return p+32;
-}
-VERIFY(0x0200CA10,cc_0200CA10);
-
-u32 cCcD_ShapeAttr_GetCoCP() {
-    WWHD_FUNC(0x0200CCF0,u32);
-    return 0x101FF504u;
-}
-VERIFY(0x0200CCF0,cCcD_ShapeAttr_GetCoCP);
-
-void cc_0200CCEC() {
-    WWHD_FUNC(0x0200CCEC,void);
-
-}
-VERIFY(0x0200CCEC,cc_0200CCEC);
-
-void cCcD_CpsAttr_CalcAabBox(u32 p) {
-    WWHD_FUNC(0x0200C2D8,void,p);
-    call<void>(0x02017DAC,p);call<void>(0x02017E74,p,p+32);call<void>(0x02017E74,p,p+44);
-    f32 radius=F(p,60);call<void>(0x02017F54,p,radius);
-}
-VERIFY(0x0200C2D8,cCcD_CpsAttr_CalcAabBox);
-
-u32 cCcD_CpsAttr_GetNVec(u32 p,u32 point,u32 out) {
-    WWHD_FUNC(0x0200C328,u32,p,point,out);
-    Local<CcVector> line,relative,nearest;
-    call<void>(0x028E8DAC,p+44,p+32,line.get());
-    f32 length=call<f32>(0x028E8F44,line.get(),line.get());
-    f32 eps=F(0x100030B8u);
-    if (std::fabs(length)<eps) return 0;
-    call<void>(0x028E8DAC,point,p+32,relative.get());
-    f32 dot=call<f32>(0x028E8F44,relative.get(),line.get());
-    f32 fraction=dot/length,zero=F(0x1000137Cu);
-    if (fraction<zero) copyVector(nearest.a,p+32);
-    else if (fraction>F(0x10001384u)) copyVector(nearest.a,p+44);
+/* 0200C328 */
+u32 CcDataHD::cCcD_CpsAttr::GetNVec(u32 point, u32 out) {
+    const u32 p = gabi::ea(this);
+    Local<CcVector> line, relative, nearest;
+    PSVECSubtract(gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps.mEnd),
+                  gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps), line.a);
+    f32 length = PSVECDotProduct(line.a, line.a);
+    f32 eps = kEpsilon.get();
+    if (std::fabs(length) < eps)
+        return 0;
+    PSVECSubtract(point, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps), relative.a);
+    f32 dot = PSVECDotProduct(relative.a, line.a);
+    f32 fraction = dot / length, zero = kZero.get();
+    if (fraction < zero)
+        copyVector(nearest.a, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps));
+    else if (fraction > kOne.get())
+        copyVector(nearest.a, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps.mEnd));
     else {
-        call<void>(0x028E8E64,line.get(),line.get(),fraction);
-        call<void>(0x028E8D88,line.get(),p+32,nearest.get());
+        PSVECScale(line.a, line.a, fraction);
+        PSVECAdd(line.a, gabi::ea(&gabi::at<cCcD_CpsAttr>(p)->mCps), nearest.a);
     }
-    call<void>(0x028E8DAC,point,nearest.get(),out);
-    f32 mag=call<f32>(0x028E8E10,out);
-    if (std::fabs(mag)<eps) {S(out,4,zero);S(out,0,zero);S(out,8,zero);return 0;}
-    call<void>(0x028E8EF0,out,out);return 1;
-}
-VERIFY(0x0200C328,cCcD_CpsAttr_GetNVec);
-
-void cCcD_TriAttr_CalcAabBox(u32 p) {
-    WWHD_FUNC(0x0200C678,void,p);
-    Local<CcVector> vertex;call<void>(0x02017DAC,p);
-    floatVector(vertex.a,p+52);call<void>(0x02017E74,p,vertex.get());
-    floatVector(vertex.a,p+64);call<void>(0x02017E74,p,vertex.get());
-    floatVector(vertex.a,p+76);call<void>(0x02017E74,p,vertex.get());
-}
-VERIFY(0x0200C678,cCcD_TriAttr_CalcAabBox);
-
-u32 cCcD_TriAttr_GetNVec(u32 p,u32 point,u32 out) {
-    WWHD_FUNC(0x0200C710,u32,p,point,out);
-    f32 dot=call<f32>(0x028E8F44,p+32,point);
-    f32 side=dot+F(p,44),zero=F(0x1000137Cu);
-    store<u32>(out,load<u32>(p+32));store<u32>(out+4,load<u32>(p+36));store<u32>(out+8,load<u32>(p+40));
-    if (side<zero) call<void>(0x028E8E64,out,out,F(0x10001514u));
+    PSVECSubtract(point, nearest.a, out);
+    f32 mag = PSVECMag(out);
+    if (std::fabs(mag) < eps) {
+        gabi::at<Vector>(out)->mCoord[1] = zero;
+        gabi::at<Vector>(out)->mCoord[0] = zero;
+        gabi::at<Vector>(out)->mCoord[2] = zero;
+        return 0;
+    }
+    PSVECNormalize(out, out);
     return 1;
 }
-VERIFY(0x0200C710,cCcD_TriAttr_GetNVec);
 
-void cCcD_CylAttr_CalcAabBox(u32 p) {
-    WWHD_FUNC(0x0200C864,void,p);
-    Local<CcVector> low,high;
-    f32 r=F(p,44),x=F(p,32),z=F(p,40),y=F(p,36),h=F(p,48);
-    S(low.a,0,x-r);S(low.a,4,y);S(low.a,8,z-r);
-    S(high.a,4,y+h);S(high.a,0,x+r);S(high.a,8,z+r);
-    call<void>(0x02017D08,p,low.get(),high.get());
+/* 0200C678 */
+void CcDataHD::cCcD_TriAttr::CalcAabBox() {
+    const u32 p = gabi::ea(this);
+    Local<CcVector> vertex;
+    aabClear(p);
+    floatVector(vertex.a, gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri.mVertex[0]));
+    aabSetMinMax(p, vertex.a);
+    floatVector(vertex.a, gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri.mVertex[1]));
+    aabSetMinMax(p, vertex.a);
+    floatVector(vertex.a, gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri.mVertex[2]));
+    aabSetMinMax(p, vertex.a);
 }
-VERIFY(0x0200C864,cCcD_CylAttr_CalcAabBox);
 
-u32 cCcD_CylAttr_GetNVec(u32 p,u32 point,u32 out) {
-    WWHD_FUNC(0x0200C8CC,u32,p,point,out);
+/* 0200C710 */
+u32 CcDataHD::cCcD_TriAttr::GetNVec(u32 point, u32 out) {
+    const u32 p = gabi::ea(this);
+    f32 dot = PSVECDotProduct(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri), point);
+    f32 side = dot + mTri.mPlane.mCoefficients[3].get(), zero = kZero.get();
+    gabi::at<WordVector>(out)->mCoord[0] =
+        gabi::at<WordVector>(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri))->mCoord[0].get();
+    gabi::at<WordVector>(out)->mCoord[1] =
+        gabi::at<WordVector>(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri))->mCoord[1].get();
+    gabi::at<WordVector>(out)->mCoord[2] =
+        gabi::at<WordVector>(gabi::ea(&gabi::at<cCcD_TriAttr>(p)->mTri))->mCoord[2].get();
+    if (side < zero)
+        PSVECScale(out, out, kNegativeOne.get());
+    return 1;
+}
+
+/* 0200C864 */
+void CcDataHD::cCcD_CylAttr::CalcAabBox() {
+    const u32 p = gabi::ea(this);
+    Local<CcVector> low, high;
+    f32 r = mCyl.mRadius.get(), x = mCyl.mCenter.mCoord[0].get(), z = mCyl.mCenter.mCoord[2].get(),
+        y = mCyl.mCenter.mCoord[1].get(), h = mCyl.mHeight.get();
+    low->mCoord[0] = x - r;
+    low->mCoord[1] = y;
+    low->mCoord[2] = z - r;
+    high->mCoord[1] = y + h;
+    high->mCoord[0] = x + r;
+    high->mCoord[2] = z + r;
+    aabSet(p, low.a, high.a);
+}
+
+/* 0200C8CC */
+u32 CcDataHD::cCcD_CylAttr::GetNVec(u32 point, u32 out) {
     Local<CcVector> nearest;
-    f32 y=F(point,4),base=F(p,36),x=F(p,32);
-    S(nearest.a,0,x);S(nearest.a,4,base);S(nearest.a,8,F(p,40));
-    if (base>y) {}
-    else {f32 height=F(p,48);if ((base+height)<y) S(nearest.a,4,base+height);else S(nearest.a,4,y);}
-    call<void>(0x028E8DAC,point,nearest.get(),out);
-    f32 mag=call<f32>(0x028E8E10,out),eps=F(0x100030B8u);
-    if (std::fabs(mag)<eps) {f32 zero=F(0x1000137Cu);S(out,0,zero);S(out,4,zero);S(out,8,zero);return 0;}
-    call<void>(0x028E8EF0,out,out);return 1;
+    f32 y = gabi::at<Vector>(point)->mCoord[1].get(), base = mCyl.mCenter.mCoord[1].get(),
+        x = mCyl.mCenter.mCoord[0].get();
+    nearest->mCoord[0] = x;
+    nearest->mCoord[1] = base;
+    nearest->mCoord[2] = mCyl.mCenter.mCoord[2].get();
+    if (base > y) {
+    } else {
+        f32 height = mCyl.mHeight.get();
+        if ((base + height) < y)
+            nearest->mCoord[1] = base + height;
+        else
+            nearest->mCoord[1] = y;
+    }
+    PSVECSubtract(point, nearest.a, out);
+    f32 mag = PSVECMag(out), eps = kEpsilon.get();
+    if (std::fabs(mag) < eps) {
+        f32 zero = kZero.get();
+        gabi::at<Vector>(out)->mCoord[0] = zero;
+        gabi::at<Vector>(out)->mCoord[1] = zero;
+        gabi::at<Vector>(out)->mCoord[2] = zero;
+        return 0;
+    }
+    PSVECNormalize(out, out);
+    return 1;
 }
-VERIFY(0x0200C8CC,cCcD_CylAttr_GetNVec);
 
-void cCcD_SphAttr_CalcAabBox(u32 p) {
-    WWHD_FUNC(0x0200CAE4,void,p);
-    Local<CcVector> low,high;
-    f32 x=F(p,32),y=F(p,36),z=F(p,40),r=F(p,44);
-    S(low.a,0,x-r);S(low.a,4,y-r);S(low.a,8,z-r);
-    S(high.a,0,x+r);S(high.a,4,y+r);S(high.a,8,z+r);
-    call<void>(0x02017D08,p,low.get(),high.get());
+/* 0200CAE4 */
+void CcDataHD::cCcD_SphAttr::CalcAabBox() {
+    const u32 p = gabi::ea(this);
+    Local<CcVector> low, high;
+    f32 x = mSph.mCenter.mCoord[0].get(), y = mSph.mCenter.mCoord[1].get(),
+        z = mSph.mCenter.mCoord[2].get(), r = mSph.mRadius.get();
+    low->mCoord[0] = x - r;
+    low->mCoord[1] = y - r;
+    low->mCoord[2] = z - r;
+    high->mCoord[0] = x + r;
+    high->mCoord[1] = y + r;
+    high->mCoord[2] = z + r;
+    aabSet(p, low.a, high.a);
 }
-VERIFY(0x0200CAE4,cCcD_SphAttr_CalcAabBox);
 
-u32 cCcD_SphAttr_GetNVec(u32 p,u32 point,u32 out) {
-    WWHD_FUNC(0x0200CB7C,u32,p,point,out);
-    S(out,0,F(point)-F(p,32));S(out,4,F(point,4)-F(p,36));S(out,8,F(point,8)-F(p,40));
-    f32 mag=call<f32>(0x028E8E10,out),eps=F(0x100030B8u);
-    if (std::fabs(mag)<eps) {f32 zero=F(0x1000137Cu);S(out,0,zero);S(out,4,zero);S(out,8,zero);return 0;}
-    call<void>(0x028E8EF0,out,out);return 1;
+/* 0200CB7C */
+u32 CcDataHD::cCcD_SphAttr::GetNVec(u32 point, u32 out) {
+    gabi::at<Vector>(out)->mCoord[0] =
+        gabi::at<Vector>(point)->mCoord[0].get() - mSph.mCenter.mCoord[0].get();
+    gabi::at<Vector>(out)->mCoord[1] =
+        gabi::at<Vector>(point)->mCoord[1].get() - mSph.mCenter.mCoord[1].get();
+    gabi::at<Vector>(out)->mCoord[2] =
+        gabi::at<Vector>(point)->mCoord[2].get() - mSph.mCenter.mCoord[2].get();
+    f32 mag = PSVECMag(out), eps = kEpsilon.get();
+    if (std::fabs(mag) < eps) {
+        f32 zero = kZero.get();
+        gabi::at<Vector>(out)->mCoord[0] = zero;
+        gabi::at<Vector>(out)->mCoord[1] = zero;
+        gabi::at<Vector>(out)->mCoord[2] = zero;
+        return 0;
+    }
+    PSVECNormalize(out, out);
+    return 1;
 }
-VERIFY(0x0200CB7C,cCcD_SphAttr_GetNVec);
 
+/* 0200CC2C */
 void cCcD_static_init() {
-    WWHD_FUNC(0x0200CC2C,void);
-    store<u32>(0x101FF500u,0u);store<u32>(0x101FF4FCu,0u);store<u32>(0x101FF4F8u,0u);store<u32>(0x101FF4F4u,0u);
-    call<void>(0x028F026C,0x1018C690u);
-    f32 lo=F(0x10001518u),hi=F(0x1000151Cu);S(0x101FF4E8u,0,lo);S(0x101FF4ECu,0,hi);
-    call<void>(0x028ED6F8,0x101FF4F0u);call<void>(0x028F026C,0x1018C69Cu);
-    call<void>(0x028EAB2C,0x101FF4F1u);call<void>(0x028F026C,0x1018C6A8u);
-    f32 y=F(0x101FFBA8u,4),x=F(0x101FFBA8u),z=F(0x101FFBA8u,8);
-    S(0x101FF504u,0,x);S(0x101FF504u,8,z);S(0x101FF504u,4,y);
+    sHeaderZero.mWords[3] = 0;
+    sHeaderZero.mWords[2] = 0;
+    sHeaderZero.mWords[1] = 0;
+    sHeaderZero.mWords[0] = 0;
+    registerGlobal(gabi::ea(&sHeaderZeroDestructor));
+    f32 lo = kPiMin.get(), hi = kPiMax.get();
+    sHeaderStatics.mPiMin = lo;
+    sHeaderStatics.mPiMax = hi;
+    constructHeaderByte(gabi::ea(&sHeaderStatics.mByte));
+    registerGlobal(gabi::ea(&sHeaderByteDestructor));
+    constructHeaderFlag(gabi::ea(&sHeaderStatics.mFlag));
+    registerGlobal(gabi::ea(&sHeaderFlagDestructor));
+    f32 y = sZeroVector.mCoord[1].get(), x = sZeroVector.mCoord[0].get(),
+        z = sZeroVector.mCoord[2].get();
+    sVirtualCenter.mCoord[0] = x;
+    sVirtualCenter.mCoord[2] = z;
+    sVirtualCenter.mCoord[1] = y;
 }
-VERIFY(0x0200CC2C,cCcD_static_init);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 0273AD10 u32 ccNew(u32)
+ext 0273AF40 void ccDelete(u32)
+ext 020189A0 void constructPlane(u32)
+ext 0201819C void destroyCapsule(u32,u32)
+ext 02017D08 void aabSet(u32,u32,u32)
+ext 02017DAC void aabClear(u32)
+ext 02017E74 void aabSetMinMax(u32,u32)
+ext 02017F54 void aabPlusRadius(u32,f32)
+ext 0200BF78 void constructAttack(u32)
+ext 0200BFD0 void constructTarget(u32)
+ext 0200B6C0 void constructDivideInfo(u32)
+ext 028E8DAC void PSVECSubtract(u32,u32,u32)
+ext 028E8F44 f32 PSVECDotProduct(u32,u32)
+ext 028E8E64 void PSVECScale(u32,u32,f32)
+ext 028E8D88 void PSVECAdd(u32,u32,u32)
+ext 028E8E10 f32 PSVECMag(u32)
+ext 028E8EF0 void PSVECNormalize(u32,u32)
+ext 0273AA24 void ccAssert(u32,u32,u32)
+ext 028F026C void registerGlobal(u32)
+ext 028ED6F8 void constructHeaderByte(u32)
+ext 028EAB2C void constructHeaderFlag(u32)
+ext 020159EC u32 crossCpsCps(u32,u32,u32)
+ext 02015CF0 u32 crossCpsCyl(u32,u32,u32)
+ext 020168D4 u32 crossCpsSph(u32,u32,u32)
+ext 0201923C u32 crossTriTri(u32,u32,u32)
+ext 02016A20 u32 crossTriCyl(u32,u32,u32)
+ext 02014200 u32 crossSphTri(u32,u32,u32)
+ext 020156D0 u32 crossCpsTri(u32,u32,u32)
+ext 020186C4 u32 crossCylCylAtTg(u32,u32,u32)
+ext 020186C8 u32 crossCylSphAtTg(u32,u32,u32)
+ext 02014AF8 u32 crossCylCylCo(u32,u32,u32)
+ext 020135C8 u32 crossSphCylCo(u32,u32,u32)
+ext 02018F6C u32 crossSphCylAtTg(u32,u32,u32)
+ext 02018F9C u32 crossSphSphAtTg(u32,u32,u32)
+ext 02013B78 u32 crossSphSphCo(u32,u32,u32)
+ext 02016CE8 u32 crossCpsTriangleCopy(u32,u32,u32)
+data kZero 1000137C
+data kXZPartitionScale 10001380
+data kOne 10001384
+data kYPartitionScale 10001388
+data kEpsilon 100030B8
+data kRangeMin 1000138C
+data kRangeMax 10001390
+data kNegativeOne 10001514
+data kPiMin 10001518
+data kPiMax 1000151C
+data sHeaderZero 101FF4F4
+data sHeaderStatics 101FF4E8
+data sZeroVector 101FFBA8
+data sVirtualCenter 101FF504
+data sHeaderZeroDestructor 1018C690
+data sHeaderByteDestructor 1018C69C
+data sHeaderFlagDestructor 1018C6A8
+*/

@@ -1,130 +1,346 @@
-#include "gabi.h"
+/* HD SDK packed animation blending; GameCube packet/line roles retained.
+ * Preserve guest reloads, write order and PPC arithmetic. */
+#include "m_Do/m_Do_ext_completeness_tail.h"
+using namespace mDoExtTail;
 using namespace gabi;
-namespace ext_packed {
-struct Pair {f32 first,second;};
-static u32 angleWord(f32 angle){call(0x028F5680,angle);return cpu->r[4];} // Native unsigned64 conversion returns low word in r4.
-static Pair tablePair(u32 word,f32 factor){
- u32 table=0x1016C7E0+((word>>24)&255)*16;
- f32 fraction=fmuls_ppc((f32)(u16)(word>>8),factor);
- f32 slope0=load<f32>(table+8),slope1=load<f32>(table+12);
- f32 base0=load<f32>(table),base1=load<f32>(table+4);
- return {fmadds(slope0,fraction,base0),fmadds(slope1,fraction,base1)};
+
+static u32 angleWord(f32 angle) {
+  truncateUnsigned64(angle);
+  return cpu->r[4];
+} // Native unsigned64 conversion returns low word in r4.
+// HD: this interpolation path uses the middle 16 bits of the fraction.
+static TrigPair tablePair(u32 word, f32 factor) {
+  u32 table = ea(&trigTable()[(word >> 24) & 255]);
+  f32 fraction = fmuls_ppc((f32)(u16)(word >> 8), factor);
+  f32 slope0 = static_cast<f32>(view<TrigEntry>(table)->mSinSlope),
+      slope1 = static_cast<f32>(view<TrigEntry>(table)->mCosSlope);
+  f32 base0 = static_cast<f32>(view<TrigEntry>(table)->mSin),
+      base1 = static_cast<f32>(view<TrigEntry>(table)->mCos);
+  return {fmadds(slope0, fraction, base0), fmadds(slope1, fraction, base1)};
 }
-static void linear(u32 out,u32 record,u32 weights,u32 index){
- f32 weight=load<f32>(weights+index*4);
- f32 a0=load<f32>(record+4),a1=load<f32>(record+8),b0=load<f32>(out+4),b1=load<f32>(out+8);
- f32 b2=load<f32>(out+12),b3=load<f32>(out+16);
- store<f32>(out+4,fmadds(a0,weight,b0));store<f32>(out+8,fmadds(a1,weight,b1));
- f32 a2=load<f32>(record+12),a3=load<f32>(record+16),total=load<f32>(out+28);
- f32 b4=load<f32>(out+20),b5=load<f32>(out+24);
- store<f32>(out+12,fmadds(a2,weight,b2));store<f32>(out+16,fmadds(a3,weight,b3));
- f32 a4=load<f32>(record+20),a5=load<f32>(record+24);
- u32 flags=load<u32>(out),source=load<u32>(record);
- store<f32>(out+20,fmadds(a4,weight,b4));store<f32>(out+24,fmadds(a5,weight,b5));
- store<f32>(out+28,total+weight);store<u32>(out,flags|~source);
+static void linear(u32 out, u32 record, u32 weights, u32 index) {
+  f32 weight = static_cast<f32>(view<be<f32>>(weights)[index]);
+  f32 a0 = static_cast<f32>(view<SourceRecord>(record)->mScale.value[0]),
+      a1 = static_cast<f32>(view<SourceRecord>(record)->mScale.value[1]),
+      b0 = static_cast<f32>(view<BlendRecord>(out)->mScale.value[0]),
+      b1 = static_cast<f32>(view<BlendRecord>(out)->mScale.value[1]);
+  f32 b2 = static_cast<f32>(view<BlendRecord>(out)->mScale.value[2]),
+      b3 = static_cast<f32>(view<BlendRecord>(out)->mTranslate.value[0]);
+  (view<BlendRecord>(out)->mScale.value[0] = fmadds(a0, weight, b0));
+  (view<BlendRecord>(out)->mScale.value[1] = fmadds(a1, weight, b1));
+  f32 a2 = static_cast<f32>(view<SourceRecord>(record)->mScale.value[2]),
+      a3 = static_cast<f32>(view<SourceRecord>(record)->mTranslate.value[0]),
+      total = static_cast<f32>(view<BlendRecord>(out)->mWeight);
+  f32 b4 = static_cast<f32>(view<BlendRecord>(out)->mTranslate.value[1]),
+      b5 = static_cast<f32>(view<BlendRecord>(out)->mTranslate.value[2]);
+  (view<BlendRecord>(out)->mScale.value[2] = fmadds(a2, weight, b2));
+  (view<BlendRecord>(out)->mTranslate.value[0] = fmadds(a3, weight, b3));
+  f32 a4 = static_cast<f32>(view<SourceRecord>(record)->mTranslate.value[1]),
+      a5 = static_cast<f32>(view<SourceRecord>(record)->mTranslate.value[2]);
+  u32 flags = static_cast<u32>(view<BlendRecord>(out)->mFlags),
+      source = static_cast<u32>(view<SourceRecord>(record)->mFlags);
+  (view<BlendRecord>(out)->mTranslate.value[1] = fmadds(a4, weight, b4));
+  (view<BlendRecord>(out)->mTranslate.value[2] = fmadds(a5, weight, b5));
+  (view<BlendRecord>(out)->mWeight = total + weight);
+  (view<BlendRecord>(out)->mFlags = flags | ~source);
 }
-static f32 sine(u32 word,f32 factor){
- u32 table=0x1016C7E0+((word>>24)&255)*16;
- f32 fraction=fmuls_ppc((f32)(word&0xFFFFFF),factor);
- f32 slope=load<f32>(table+8),base=load<f32>(table);
- return fmadds(slope,fraction,base);
+static f32 sine(u32 word, f32 factor) {
+  u32 table = ea(&trigTable()[(word >> 24) & 255]);
+  f32 fraction = fmuls_ppc((f32)(word & 0xFFFFFF), factor);
+  f32 slope = static_cast<f32>(view<TrigEntry>(table)->mSinSlope),
+      base = static_cast<f32>(view<TrigEntry>(table)->mSin);
+  return fmadds(slope, fraction, base);
 }
-static f32 reciprocalRefined(f32 x){f32 estimate=(f32)fres(x);f32 twice=estimate+estimate;return fnmsubs(fmuls_ppc(x,estimate),estimate,twice);}
-static u32 unsignedTruncate(f32 x,f32 boundary){if(!(x<boundary))return (u32)ftoi(x-boundary)+0x80000000;return (u32)ftoi(x);}
-static void quaternionBlend(u32 out,u32 record,u32 weights,u32 index,f32 zero,f32 scale,f32 fractionScale,f32 boundary,f32 threshold,f32 one,f64 positive,f64 negative,const f32* computed=nullptr,f32 savedOldWeight=0,f32 savedWeight=0){
- f32 oldWeight=computed?savedOldWeight:load<f32>(out+28),weight=computed?savedWeight:load<f32>(weights+index*4);
- if(oldWeight==zero){for(u32 j=0;j<4;j++){if(computed)store<f32>(out+32+j*4,computed[j]);else store<u32>(out+32+j*4,load<u32>(record+32+j*4));}linear(out,record,weights,index);return;}
- f32 old[4]={load<f32>(out+32),load<f32>(out+36),load<f32>(out+40),load<f32>(out+44)};
- f32 incoming[4];for(u32 j=0;j<4;j++)incoming[j]=computed?computed[j]:load<f32>(record+32+j*4);
- f32 p0=fmuls_ppc(old[0],incoming[0]),p1=fmuls_ppc(old[1],incoming[1]);
- f32 a=fmadds(old[2],incoming[2],p0),b=fmadds(old[3],incoming[3],p1),dot=a+b;
- f32 total=oldWeight+weight,estimate=(f32)fres(total),prod=fmuls_ppc(total,estimate);
- f32 sign=(f32)(dot>=0?negative:positive),magnitude=std::fabs(dot);
- f32 ratio=fmuls_ppc(weight,fnmsubs(prod,estimate,estimate+estimate));
- f32 oldCoefficient,newCoefficient;
- if(magnitude>threshold){newCoefficient=fmuls_ppc(sign,ratio);oldCoefficient=one-ratio;}
- else{
-  f64 angle=call<f64>(0x028F4FAC,(f64)magnitude);
-  u32 word=angleWord((f32)(angle*(f64)scale));
-  f32 denominator=sine(word,fractionScale),inv=reciprocalRefined(denominator);
-  u32 next=unsignedTruncate(fmuls_ppc(ratio,(f32)word),boundary),previous=word-next;
-  oldCoefficient=fmuls_ppc(sine(previous,fractionScale),inv);
-  newCoefficient=fmuls_ppc(sign,fmuls_ppc(sine(next,fractionScale),inv));
- }
- for(u32 pair=0;pair<2;pair++){
-  u32 p=out+32+pair*8,r=record+32+pair*8;
-  f32 new0=computed?computed[pair*2]:load<f32>(r),new1=computed?computed[pair*2+1]:load<f32>(r+4),old0=load<f32>(p),old1=load<f32>(p+4);
-  f32 p0=fmuls_ppc(new0,newCoefficient),p1=fmuls_ppc(new1,newCoefficient);
-  store<f32>(p,fmadds(old0,oldCoefficient,p0));store<f32>(p+4,fmadds(old1,oldCoefficient,p1));
- }
- linear(out,record,weights,index);
+static f32 reciprocalRefined(f32 x) {
+  f32 estimate = (f32)fres(x);
+  f32 twice = estimate + estimate;
+  return fnmsubs(fmuls_ppc(x, estimate), estimate, twice);
 }
-void quaternionAccumulate(void* destination,void* animation,void* weights){
- WWHD_FUNC(0x025EEC68,void,destination,animation,weights);
- u32 d=ea(destination),a=ea(animation),w=ea(weights);
- store<u32>(a+0x50,load<u32>(a+0x50)|8);u32 record=load<u32>(a+0x2C);
- store<u32>(d+8,load<u32>(d+8)|8);u16 count=load<u16>(a+0x40);u32 buffer=load<u32>(d);
- if(!count)return;
- f32 zero=load<f32>(0x100586DC),factor=load<f32>(0x100589C8),scale=load<f32>(0x100589C0),threshold=load<f32>(0x100589D0),boundary=load<f32>(0x100589CC),one=load<f32>(0x100586D4);
- f64 positive=load<f64>(0x100589D8),negative=load<f64>(0x100589E0);
- for(u32 i=0;i<count;i++,record+=48){u32 flag=load<u32>(load<u32>(a+0x38)+i*4);if(flag&0x80000000)continue;quaternionBlend(buffer+(flag&0x7FFF)*56,record,w,i,zero,scale,factor,boundary,threshold,one,positive,negative);}
+static u32 unsignedTruncate(f32 x, f32 boundary) {
+  if (!(x < boundary))
+    return (u32)ftoi(x - boundary) + 0x80000000;
+  return (u32)ftoi(x);
 }
-VERIFY(0x025EEC68,quaternionAccumulate);
-static Pair fullTablePair(u32 word,f32 factor){u32 table=0x1016C7E0+((word>>24)&255)*16;f32 fraction=fmuls_ppc((f32)(word&0xFFFFFF),factor);f32 slope0=load<f32>(table+8),base0=load<f32>(table),slope1=load<f32>(table+12),base1=load<f32>(table+4);return {fmadds(slope0,fraction,base0),fmadds(slope1,fraction,base1)};}
-static f32 squareRootRefined(f32 value,f32 half,f32 threeHalves){if(value==0)return value;f32 estimate=(f32)frsqrte(value),product=fmuls_ppc(fmuls_ppc(half,value),estimate);estimate=fmuls_ppc(estimate,fnmsubs(product,estimate,threeHalves));return fmuls_ppc(value,estimate);}
-static void matrixQuaternion(const f32* m,f32* q,f32 zero,f32 quarter,f32 half,f32 threeHalves,f32 four){
- f32 trace=(m[0]+m[4])+m[8],argument=trace;u32 axis=3;
- if(trace<zero){argument=(m[0]+m[0])-trace;axis=0;if(argument<zero){argument=(m[4]+m[4])-trace;axis=1;if(argument<zero){argument=(m[8]+m[8])-trace;axis=2;}}}
- f32 root=squareRootRefined(fmadds(argument,quarter,quarter),half,threeHalves),inv=reciprocalRefined(fmuls_ppc(root,four));
- if(axis==3){q[0]=fmuls_ppc(m[7]-m[5],inv);q[1]=fmuls_ppc(m[2]-m[6],inv);q[2]=fmuls_ppc(m[3]-m[1],inv);q[3]=root;}
- else if(axis==0){q[0]=root;q[1]=fmuls_ppc(m[3]+m[1],inv);q[2]=fmuls_ppc(m[2]+m[6],inv);q[3]=fmuls_ppc(m[7]-m[5],inv);}
- else if(axis==1){q[0]=fmuls_ppc(m[1]+m[3],inv);q[1]=root;q[2]=fmuls_ppc(m[5]+m[7],inv);q[3]=fmuls_ppc(m[2]-m[6],inv);}
- else{q[0]=fmuls_ppc(m[6]+m[2],inv);q[1]=fmuls_ppc(m[7]+m[5],inv);q[2]=root;q[3]=fmuls_ppc(m[3]-m[1],inv);}
+static void quaternionBlend(u32 out, u32 record, u32 weights, u32 index,
+                            f32 zero, f32 scale, f32 fractionScale,
+                            f32 boundary, f32 threshold, f32 one, f64 positive,
+                            f64 negative, const f32 *computed = nullptr,
+                            f32 savedOldWeight = 0, f32 savedWeight = 0) {
+  f32 oldWeight = computed ? savedOldWeight
+                           : static_cast<f32>(view<BlendRecord>(out)->mWeight),
+      weight = computed ? savedWeight
+                        : static_cast<f32>(view<be<f32>>(weights)[index]);
+  if (oldWeight == zero) {
+    for (u32 j = 0; j < 4; j++) {
+      if (computed)
+        (view<BlendRecord>(out)->mQuat.value[j] = computed[j]);
+      else
+        (view<BlendRecord>(out)->mQuat.words[j] = static_cast<u32>(
+             view<SourceRecord>(record)->mOrientation.words[j]));
+    }
+    linear(out, record, weights, index);
+    return;
+  }
+  f32 old[4] = {static_cast<f32>(view<BlendRecord>(out)->mQuat.value[0]),
+                static_cast<f32>(view<BlendRecord>(out)->mQuat.value[1]),
+                static_cast<f32>(view<BlendRecord>(out)->mQuat.value[2]),
+                static_cast<f32>(view<BlendRecord>(out)->mQuat.value[3])};
+  f32 incoming[4];
+  for (u32 j = 0; j < 4; j++)
+    incoming[j] = computed
+                      ? computed[j]
+                      : static_cast<f32>(
+                            view<SourceRecord>(record)->mOrientation.value[j]);
+  f32 p0 = fmuls_ppc(old[0], incoming[0]), p1 = fmuls_ppc(old[1], incoming[1]);
+  f32 a = fmadds(old[2], incoming[2], p0), b = fmadds(old[3], incoming[3], p1),
+      dot = a + b;
+  f32 total = oldWeight + weight, estimate = (f32)fres(total),
+      prod = fmuls_ppc(total, estimate);
+  f32 sign = (f32)(dot >= 0 ? negative : positive), magnitude = std::fabs(dot);
+  f32 ratio = fmuls_ppc(weight, fnmsubs(prod, estimate, estimate + estimate));
+  f32 oldCoefficient, newCoefficient;
+  if (magnitude > threshold) {
+    newCoefficient = fmuls_ppc(sign, ratio);
+    oldCoefficient = one - ratio;
+  } else {
+    f64 angle = arcCos((f64)magnitude);
+    u32 word = angleWord((f32)(angle * (f64)scale));
+    f32 denominator = sine(word, fractionScale),
+        inv = reciprocalRefined(denominator);
+    u32 next = unsignedTruncate(fmuls_ppc(ratio, (f32)word), boundary),
+        previous = word - next;
+    oldCoefficient = fmuls_ppc(sine(previous, fractionScale), inv);
+    newCoefficient = fmuls_ppc(sign, fmuls_ppc(sine(next, fractionScale), inv));
+  }
+  for (u32 pair = 0; pair < 2; pair++) {
+    u32 p = out + 32 + pair * 8, r = record + 32 + pair * 8;
+    f32 new0 = computed ? computed[pair * 2]
+                        : static_cast<f32>(view<be<f32>>(r)[0]),
+        new1 = computed ? computed[pair * 2 + 1]
+                        : static_cast<f32>(view<be<f32>>(r)[1]),
+        old0 = static_cast<f32>(view<be<f32>>(p)[0]),
+        old1 = static_cast<f32>(view<be<f32>>(p)[1]);
+    f32 p0 = fmuls_ppc(new0, newCoefficient),
+        p1 = fmuls_ppc(new1, newCoefficient);
+    (view<be<f32>>(p)[0] = fmadds(old0, oldCoefficient, p0));
+    (view<be<f32>>(p)[1] = fmadds(old1, oldCoefficient, p1));
+  }
+  linear(out, record, weights, index);
 }
-void eulerQuaternionAccumulate(void* destination,void* animation,void* weights){
- WWHD_FUNC(0x025EF13C,void,destination,animation,weights);
- u32 d=ea(destination),a=ea(animation),w=ea(weights);
- store<u32>(a+0x50,load<u32>(a+0x50)|8);u32 record=load<u32>(a+0x2C);
- store<u32>(d+8,load<u32>(d+8)|8);u16 count=load<u16>(a+0x40);u32 buffer=load<u32>(d);if(!count)return;
- f32 threshold=load<f32>(0x100589D0),quarter=load<f32>(0x100586D0),scale=load<f32>(0x100589C0),fractionScale=load<f32>(0x100589C8),boundary=load<f32>(0x100589CC),zero=load<f32>(0x100586DC),one=load<f32>(0x100586D4),four=load<f32>(0x100589F0),threeHalves=load<f32>(0x100589F4),half=load<f32>(0x100586D8);
- f64 negative=load<f64>(0x100589E0),positive=load<f64>(0x100589D8);
- for(u32 i=0;i<count;i++,record+=48){
-  u32 flag=load<u32>(load<u32>(a+0x38)+i*4);if(flag&0x80000000)continue;u32 out=buffer+(flag&0x7FFF)*56;
-  f32 angle=load<f32>(record+32),weight=load<f32>(w+i*4);
-  Pair x=fullTablePair(angleWord(fmuls_ppc(angle,scale)),fractionScale);
-  Pair y=fullTablePair(angleWord(fmuls_ppc(load<f32>(record+36),scale)),fractionScale);
-  u32 zword=angleWord(fmuls_ppc(load<f32>(record+40),scale));
-  // The native reads destination weight after the third conversion, before final trig interpolation.
-  f32 oldWeight=load<f32>(out+28);Pair z=fullTablePair(zword,fractionScale);
-  f32 sxsy=fmuls_ppc(x.first,y.first),sxcy=fmuls_ppc(x.first,y.second),cxcy=fmuls_ppc(x.second,y.second);
-  f32 cxsz=fmuls_ppc(x.second,z.first),sxcz=fmuls_ppc(x.first,z.second),sxsz=fmuls_ppc(x.first,z.first),cxcz=fmuls_ppc(x.second,z.second);
-  f32 m[9]={fmuls_ppc(y.second,z.second),fmsubs(sxsy,z.second,cxsz),fmadds(cxcz,y.first,sxsz),fmuls_ppc(y.second,z.first),fmadds(sxsy,z.first,cxcz),fmsubs(cxsz,y.first,sxcz),-y.first,sxcy,cxcy};
-  f32 q[4];matrixQuaternion(m,q,zero,quarter,half,threeHalves,four);
-  quaternionBlend(out,record,w,i,zero,scale,fractionScale,boundary,threshold,one,positive,negative,q,oldWeight,weight);
- }
+/* 025EEC68 */
+void mDoExt_blendQuaternionRecords(void *destination, void *animation,
+                                   void *weights) {
+
+  u32 d = ea(destination), a = ea(animation), w = ea(weights);
+  (view<Animation>(a)->mFlags =
+       static_cast<u32>(view<Animation>(a)->mFlags) | BUFFER_DIRTY);
+  u32 record = static_cast<u32>(view<Animation>(a)->mpRecords);
+  (view<BlendBuffer>(d)->mFlags =
+       static_cast<u32>(view<BlendBuffer>(d)->mFlags) | BUFFER_DIRTY);
+  u16 count = static_cast<u16>(view<Animation>(a)->mNum);
+  u32 buffer = static_cast<u32>(view<BlendBuffer>(d)->mpRecords);
+  if (!count)
+    return;
+  f32 zero = static_cast<f32>(constants()->mZero),
+      factor = static_cast<f32>(constants()->mFraction24),
+      scale = static_cast<f32>(constants()->mAngleScale),
+      threshold = static_cast<f32>(constants()->mDotThreshold),
+      boundary = static_cast<f32>(constants()->mUnsignedBoundary),
+      one = static_cast<f32>(constants()->mOne);
+  f64 positive = static_cast<f64>(constants()->mPositive),
+      negative = static_cast<f64>(constants()->mNegative);
+  for (u32 i = 0; i < count; i++, record += 48) {
+    u32 flag = static_cast<u32>(
+        view<be<u32>>(static_cast<u32>(view<Animation>(a)->mpJointIndices))[i]);
+    if (flag & SKIP_JOINT)
+      continue;
+    quaternionBlend(buffer + (flag & JOINT_INDEX_MASK) * 56, record, w, i, zero,
+                    scale, factor, boundary, threshold, one, positive,
+                    negative);
+  }
 }
-VERIFY(0x025EF13C,eulerQuaternionAccumulate);
-void eulerAccumulate(void* destination,void* animation,void* weights){
- WWHD_FUNC(0x025EE9F4,void,destination,animation,weights);
- u32 d=ea(destination),a=ea(animation),w=ea(weights);
- store<u32>(a+0x50,load<u32>(a+0x50)|8);u32 record=load<u32>(a+0x2C);
- store<u32>(d+8,load<u32>(d+8)|8);u16 count=load<u16>(a+0x40);u32 buffer=load<u32>(d);
- if(!count)return;
- f32 scale=load<f32>(0x100589C0),factor=load<f32>(0x100589C4);
- for(u32 i=0;i<count;i++,record+=48){
-  u32 flag=load<u32>(load<u32>(a+0x38)+i*4);if(flag&0x80000000)continue;
-  f32 angle=load<f32>(record+0x20),weight=load<f32>(w+i*4);u32 out=buffer+(flag&0x7FFF)*56;
-  Pair x=tablePair(angleWord(fmuls_ppc(angle,scale)),factor);
-  Pair y=tablePair(angleWord(fmuls_ppc(load<f32>(record+0x24),scale)),factor);
-  Pair z=tablePair(angleWord(fmuls_ppc(load<f32>(record+0x28),scale)),factor);
-  Pair xz{fmuls_ppc(x.first,z.first),fmuls_ppc(x.second,z.second)};
-  Pair cross{fmuls_ppc(x.second,z.first),fmuls_ppc(x.first,z.second)};
-  Pair plus{fmadds(xz.second,y.first,xz.first),fmadds(xz.first,y.first,xz.second)};
-  Pair minus{fmsubs(cross.second,y.first,cross.first),fmsubs(cross.first,y.first,cross.second)};
-  f32 values[6]={fmuls_ppc(z.second,y.second),minus.first,plus.first,fmuls_ppc(z.first,y.second),plus.second,minus.second};
-  for(u32 pair=0;pair<3;pair++){u32 p=out+0x20+pair*8;f32 old0=load<f32>(p),old1=load<f32>(p+4);store<f32>(p,fmadds(values[pair*2],weight,old0));store<f32>(p+4,fmadds(values[pair*2+1],weight,old1));}
-  linear(out,record,w,i);
- }
+// HD: quaternion blending uses all 24 fractional bits.
+static TrigPair fullTablePair(u32 word, f32 factor) {
+  u32 table = ea(&trigTable()[(word >> 24) & 255]);
+  f32 fraction = fmuls_ppc((f32)(word & 0xFFFFFF), factor);
+  f32 slope0 = static_cast<f32>(view<TrigEntry>(table)->mSinSlope),
+      base0 = static_cast<f32>(view<TrigEntry>(table)->mSin),
+      slope1 = static_cast<f32>(view<TrigEntry>(table)->mCosSlope),
+      base1 = static_cast<f32>(view<TrigEntry>(table)->mCos);
+  return {fmadds(slope0, fraction, base0), fmadds(slope1, fraction, base1)};
 }
-VERIFY(0x025EE9F4,eulerAccumulate);
+static f32 squareRootRefined(f32 value, f32 half, f32 threeHalves) {
+  if (value == 0)
+    return value;
+  f32 estimate = (f32)frsqrte(value),
+      product = fmuls_ppc(fmuls_ppc(half, value), estimate);
+  estimate = fmuls_ppc(estimate, fnmsubs(product, estimate, threeHalves));
+  return fmuls_ppc(value, estimate);
 }
+// HD: retain SDK diagonal selection and comparison order, including NaNs/ties.
+static void matrixQuaternion(const f32 *m, f32 *q, f32 zero, f32 quarter,
+                             f32 half, f32 threeHalves, f32 four) {
+  f32 trace = (m[0] + m[4]) + m[8], argument = trace;
+  u32 axis = 3;
+  if (trace < zero) {
+    argument = (m[0] + m[0]) - trace;
+    axis = 0;
+    if (argument < zero) {
+      argument = (m[4] + m[4]) - trace;
+      axis = 1;
+      if (argument < zero) {
+        argument = (m[8] + m[8]) - trace;
+        axis = 2;
+      }
+    }
+  }
+  f32 root = squareRootRefined(fmadds(argument, quarter, quarter), half,
+                               threeHalves),
+      inv = reciprocalRefined(fmuls_ppc(root, four));
+  if (axis == 3) {
+    q[0] = fmuls_ppc(m[7] - m[5], inv);
+    q[1] = fmuls_ppc(m[2] - m[6], inv);
+    q[2] = fmuls_ppc(m[3] - m[1], inv);
+    q[3] = root;
+  } else if (axis == 0) {
+    q[0] = root;
+    q[1] = fmuls_ppc(m[3] + m[1], inv);
+    q[2] = fmuls_ppc(m[2] + m[6], inv);
+    q[3] = fmuls_ppc(m[7] - m[5], inv);
+  } else if (axis == 1) {
+    q[0] = fmuls_ppc(m[1] + m[3], inv);
+    q[1] = root;
+    q[2] = fmuls_ppc(m[5] + m[7], inv);
+    q[3] = fmuls_ppc(m[2] - m[6], inv);
+  } else {
+    q[0] = fmuls_ppc(m[6] + m[2], inv);
+    q[1] = fmuls_ppc(m[7] + m[5], inv);
+    q[2] = root;
+    q[3] = fmuls_ppc(m[3] - m[1], inv);
+  }
+}
+/* 025EF13C */
+void mDoExt_blendEulerQuaternionRecords(void *destination, void *animation,
+                                        void *weights) {
+
+  u32 d = ea(destination), a = ea(animation), w = ea(weights);
+  (view<Animation>(a)->mFlags =
+       static_cast<u32>(view<Animation>(a)->mFlags) | BUFFER_DIRTY);
+  u32 record = static_cast<u32>(view<Animation>(a)->mpRecords);
+  (view<BlendBuffer>(d)->mFlags =
+       static_cast<u32>(view<BlendBuffer>(d)->mFlags) | BUFFER_DIRTY);
+  u16 count = static_cast<u16>(view<Animation>(a)->mNum);
+  u32 buffer = static_cast<u32>(view<BlendBuffer>(d)->mpRecords);
+  if (!count)
+    return;
+  f32 threshold = static_cast<f32>(constants()->mDotThreshold),
+      quarter = static_cast<f32>(constants()->mQuarter),
+      scale = static_cast<f32>(constants()->mAngleScale),
+      fractionScale = static_cast<f32>(constants()->mFraction24),
+      boundary = static_cast<f32>(constants()->mUnsignedBoundary),
+      zero = static_cast<f32>(constants()->mZero),
+      one = static_cast<f32>(constants()->mOne),
+      four = static_cast<f32>(constants()->mFour),
+      threeHalves = static_cast<f32>(constants()->mThreeHalves),
+      half = static_cast<f32>(constants()->mHalf);
+  f64 negative = static_cast<f64>(constants()->mNegative),
+      positive = static_cast<f64>(constants()->mPositive);
+  for (u32 i = 0; i < count; i++, record += 48) {
+    u32 flag = static_cast<u32>(
+        view<be<u32>>(static_cast<u32>(view<Animation>(a)->mpJointIndices))[i]);
+    if (flag & SKIP_JOINT)
+      continue;
+    u32 out = buffer + (flag & JOINT_INDEX_MASK) * 56;
+    f32 angle =
+            static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[0]),
+        weight = static_cast<f32>(view<be<f32>>(w)[i]);
+    auto x = fullTablePair(angleWord(fmuls_ppc(angle, scale)), fractionScale);
+    auto y = fullTablePair(
+        angleWord(fmuls_ppc(
+            static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[1]),
+            scale)),
+        fractionScale);
+    u32 zword = angleWord(fmuls_ppc(
+        static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[2]),
+        scale));
+    // The native reads destination weight after the third conversion, before final trig interpolation.
+    f32 oldWeight = static_cast<f32>(view<BlendRecord>(out)->mWeight);
+    auto z = fullTablePair(zword, fractionScale);
+    f32 sxsy = fmuls_ppc(x.first, y.first), sxcy = fmuls_ppc(x.first, y.second),
+        cxcy = fmuls_ppc(x.second, y.second);
+    f32 cxsz = fmuls_ppc(x.second, z.first),
+        sxcz = fmuls_ppc(x.first, z.second), sxsz = fmuls_ppc(x.first, z.first),
+        cxcz = fmuls_ppc(x.second, z.second);
+    f32 m[9] = {fmuls_ppc(y.second, z.second),
+                fmsubs(sxsy, z.second, cxsz),
+                fmadds(cxcz, y.first, sxsz),
+                fmuls_ppc(y.second, z.first),
+                fmadds(sxsy, z.first, cxcz),
+                fmsubs(cxsz, y.first, sxcz),
+                -y.first,
+                sxcy,
+                cxcy};
+    f32 q[4];
+    matrixQuaternion(m, q, zero, quarter, half, threeHalves, four);
+    quaternionBlend(out, record, w, i, zero, scale, fractionScale, boundary,
+                    threshold, one, positive, negative, q, oldWeight, weight);
+  }
+}
+/* 025EE9F4 */
+void mDoExt_blendEulerRecords(void *destination, void *animation,
+                              void *weights) {
+
+  u32 d = ea(destination), a = ea(animation), w = ea(weights);
+  (view<Animation>(a)->mFlags =
+       static_cast<u32>(view<Animation>(a)->mFlags) | BUFFER_DIRTY);
+  u32 record = static_cast<u32>(view<Animation>(a)->mpRecords);
+  (view<BlendBuffer>(d)->mFlags =
+       static_cast<u32>(view<BlendBuffer>(d)->mFlags) | BUFFER_DIRTY);
+  u16 count = static_cast<u16>(view<Animation>(a)->mNum);
+  u32 buffer = static_cast<u32>(view<BlendBuffer>(d)->mpRecords);
+  if (!count)
+    return;
+  f32 scale = static_cast<f32>(constants()->mAngleScale),
+      factor = static_cast<f32>(constants()->mFraction16);
+  for (u32 i = 0; i < count; i++, record += 48) {
+    u32 flag = static_cast<u32>(
+        view<be<u32>>(static_cast<u32>(view<Animation>(a)->mpJointIndices))[i]);
+    if (flag & SKIP_JOINT)
+      continue;
+    f32 angle =
+            static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[0]),
+        weight = static_cast<f32>(view<be<f32>>(w)[i]);
+    u32 out = buffer + (flag & JOINT_INDEX_MASK) * 56;
+    auto x = tablePair(angleWord(fmuls_ppc(angle, scale)), factor);
+    auto y = tablePair(
+        angleWord(fmuls_ppc(
+            static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[1]),
+            scale)),
+        factor);
+    auto z = tablePair(
+        angleWord(fmuls_ppc(
+            static_cast<f32>(view<SourceRecord>(record)->mOrientation.value[2]),
+            scale)),
+        factor);
+    auto xz =
+        TrigPair{fmuls_ppc(x.first, z.first), fmuls_ppc(x.second, z.second)};
+    auto cross =
+        TrigPair{fmuls_ppc(x.second, z.first), fmuls_ppc(x.first, z.second)};
+    auto plus = TrigPair{fmadds(xz.second, y.first, xz.first),
+                         fmadds(xz.first, y.first, xz.second)};
+    auto minus = TrigPair{fmsubs(cross.second, y.first, cross.first),
+                          fmsubs(cross.first, y.first, cross.second)};
+    f32 values[6] = {fmuls_ppc(z.second, y.second), minus.first, plus.first,
+                     fmuls_ppc(z.first, y.second),  plus.second, minus.second};
+    for (u32 pair = 0; pair < 3; pair++) {
+      u32 p = out + 0x20 + pair * 8;
+      f32 old0 = static_cast<f32>(view<be<f32>>(p)[0]),
+          old1 = static_cast<f32>(view<be<f32>>(p)[1]);
+      (view<be<f32>>(p)[0] = fmadds(values[pair * 2], weight, old0));
+      (view<be<f32>>(p)[1] = fmadds(values[pair * 2 + 1], weight, old1));
+    }
+    linear(out, record, w, i);
+  }
+}
+
+/* WWHD glue (tools/verify/autoglue.py): no TU-wide static objects. */

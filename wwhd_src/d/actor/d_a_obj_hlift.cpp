@@ -1,434 +1,461 @@
+// Pirate ship rope minigame platforms.
 #include "d/actor/d_a_obj_hlift.h"
-#include "bindings.h"
 using daObjHlift::Act_c;
-namespace {
-constexpr u32 ARC = 0x1002A790, DIST = 0x1002A798, SIZE = 0x1002A7A8;
-constexpr u32 CONTROL = 0x101C9F7C, LAG = 0x101C9F80, MOVING = 0x101C9F84,
-              MTX = 0x1048D0CC;
-static s32 parameter(Act_c *a, s32 width, s32 shift) {
-  WWHD_FUNC(0x02357208, s32, a, width, shift);
-  u32 bits = a->mParameters;
-  u32 w = u32(width) & 63, sh = u32(shift) & 63;
-  u32 mask = w >= 32 ? 0 : 1u << w;
-  return (sh >= 32 ? 0 : bits >> sh) & (mask - 1);
+const gc_tu_data gc_tu = {.safeString = 0x1002A608, .headerStatics = {0x10469E74, 0x101C9F58, 0x10469E80}};
+// HD: unit data retains the tww names; arrays use guest-layout wrappers.
+struct HliftDistanceTable {
+    be<s16> mValues[8];
+};
+struct HliftSizeTable {
+    Act_c::size_data mValues[2];
+};
+struct HliftLagTable {
+    be<u8> mValues[5];
+};
+struct HliftModes {
+    gabi::ptmf<void (Act_c::*)()> mProc[5];
+};
+struct HliftVtable {
+    be<u32> mEntry;
+};
+static HliftDistanceTable M_up_dist;
+static HliftSizeTable M_data_size;
+static HliftLagTable L_time_lag;
+static HliftModes mode_proc;
+static HliftVtable M_actorVtable;
+struct HliftProcessID {
+    be<u32> mValue;
+};
+static HliftProcessID M_control_id;
+struct HliftLagIndex {
+    be<s32> mValue;
+};
+static HliftLagIndex L_time_lag_num;
+struct HliftMoveFlag {
+    be<u8> mValue;
+};
+static HliftMoveFlag M_lift_move_flag;
+static Mtx34 M_tmp_mtx;
+enum { JA_SE_OBJ_PRT_LIFT_UD = 0x6949, JA_SE_OBJ_PRT_LIFT_STOP = 0x694A, JA_SE_OBJ_PRT_LIFT_WORK = 0x301A };
+void Hlift_soundWhole(u32);
+// HD: the MoveBG create API takes a raw guest callback address; no reference forwarding.
+void Hlift_MoveBGProc(dBgW*, fopAc_ac_c*, cBgS_PolyInfo*, cXyz*, csXyz*, csXyz*, bool);
+static gabi::HostFn M_moveBgBinding(reinterpret_cast<const void*>(Hlift_MoveBGProc), 0x024EE708);
+/* 02357208 */
+static s32 Hlift_PrmAbstract(Act_c* a, s32 width, s32 shift) {
+    u32 bits = a->mParameters;
+    u32 w = u32(width) & 63, sh = u32(shift) & 63;
+    u32 mask = w >= 32 ? 0 : 1u << w;
+    return (sh >= 32 ? 0 : bits >> sh) & (mask - 1);
 }
-VERIFY(0x02357208, parameter);
-static f32 distance(Act_c *a) {
-  return f32(gabi::load<s16>(DIST + u32(s32(a->mDistance)) * 2));
+
+static f32 distance(Act_c* a) {
+    return f32(M_up_dist.mValues[u32(s32(a->field_0x2D8))]);
 }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static s32 switched(Act_c *a, s32 sw) {
-  u32 save = gabi::load<u32>(0x101F84DC);
-  s8 room = a->home.roomNo;
-  return gabi::call<s32>(0x025BA0C0, save + 0x20, sw, room);
+
+static void sound(Act_c* a, u32 id) {
+    s8 room = a->current.roomNo;
+    s32 reverb = dComIfGp_getReverb(room);
+    mDoAud_seStart(id, &a->eyePos, 0, reverb);
 }
-static void sound(Act_c *a, u32 id) {
-  s8 room = a->current.roomNo;
-  s32 reverb = gabi::call<s32>(0x02520540, room);
-  gabi::call(0x025E1A40, id, &a->eyePos, 0, reverb);
+
+static void lagSet(Act_c* a) {
+    s32 lag = s32(L_time_lag_num.mValue);
+    a->field_0x2F4 = L_time_lag.mValues[u32(lag)];
+    lag = s32(L_time_lag_num.mValue);
+    s32 next = s32(u32(lag) + 1);
+    L_time_lag_num.mValue = next % 5;
 }
-static void copyMatrix(u32 dst) {
-  f32 values[12];
-  for (int i = 0; i < 12; i++)
-    values[i] = gabi::load<f32>(MTX + 4 * i);
-  for (int i = 0; i < 12; i++)
-    gabi::store<f32>(dst + 4 * i, values[i]);
+
+/* 023561E4 */
+s32 Act_c::CreateHeap() {
+    s16 resource = M_data_size.mValues[u32(s32(field_0x2DC))].field_0x00;
+    auto* model_data = static_cast<J3DModelData*>(dComIfG_getObjectRes("Hlift", resource, gc_tu.safeString));
+    if (!model_data)
+        JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x120, "model_data != 0");
+    mModel1 = mDoExt_J3DModel__create(model_data, 0x80000, 0x11000022);
+    auto* model_data_c = static_cast<J3DModelData*>(dComIfG_getObjectRes("Hlift", 6, gc_tu.safeString));
+    if (!model_data_c)
+        JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x12A, "model_data_c != 0");
+    J3DModel* model = mDoExt_J3DModel__create(model_data_c, 0x80000, 0x11000022);
+    J3DModel* first = mModel1;
+    mModel2 = model;
+    return first && model;
 }
-static void upperInit(Act_c *a) {
-  WWHD_FUNC(0x023562EC, void, a);
-  f32 d = distance(a);
-  f32 y = a->home.pos.y;
-  a->mMode = 2;
-  a->current.pos.y = y + d;
+
+/* 023564F4 */
+s32 Act_c::Create() {
+    field_0x2EC = 0;
+    s32 sw = Hlift_PrmAbstract(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    if (fopAcM_isSwitch(this, sw))
+        mode_upper_init();
+    else
+        mode_lower_init();
+    field_0x2E4 = Mode_UNK;
+    field_0x2F6 = 0;
+    u8 event = Hlift_PrmAbstract(this, Act_c::PRM_EVENTID_W, Act_c::PRM_EVENTID_S);
+    s16 eid = dComIfGp_evmng_getEventIdx("Hlift_up", event);
+    u32 model = gabi::ea(mModel1.get());
+    mEventId = eid;
+    cullMtx = model ? model + 0xC8 : 0;
+    init_mtx();
+    fopAcM_setCullSizeBox(this, -151.f, -1005.f, -151.f, 151.f, 1.f, 151.f);
+    if (u32(M_control_id.mValue) == fpcM_ERROR_PROCESS_ID_e)
+        M_control_id.mValue = u32(mBsPcId);
+    return 1;
 }
-VERIFY(0x023562EC, upperInit);
-static void lowerInit(Act_c *a) {
-  WWHD_FUNC(0x02356344, void, a);
-  f32 y = a->home.pos.y;
-  a->mMode = 0;
-  a->current.pos.y = y;
-}
-VERIFY(0x02356344, lowerInit);
-static void setMtx(Act_c *a) {
-  WWHD_FUNC(0x02356358, void, a);
-  f32 offset = a->mVibOffset;
-  f32 y = a->current.pos.y;
-  y = (y + offset) + 30.0f;
-  f32 z = a->current.pos.z;
-  f32 x = a->current.pos.x;
-  gabi::call(0x028E93CC, MTX, x, y, z);
-  s16 az = a->shape_angle.z, ax = a->shape_angle.x, ay = a->shape_angle.y;
-  gabi::call(0x025F1B48, MTX, ax, ay, az);
-  copyMatrix(gabi::ea(a->mModel1.get()) + 0xC8);
-  gabi::call(0x028E90D4, MTX, 0x10469E90);
-  x = a->home.pos.x;
-  y = a->home.pos.y;
-  z = a->home.pos.z;
-  gabi::call(0x028E93CC, MTX, x, y, z);
-  copyMatrix(gabi::ea(a->mModel2.get()) + 0xC8);
-}
-VERIFY(0x02356358, setMtx);
-static void initMtx(Act_c *a) {
-  WWHD_FUNC(0x023564B8, void, a);
-  for (int n = 0; n < 2; n++) {
-    u32 model = gabi::ea(n ? a->mModel2.get() : a->mModel1.get());
-    f32 x = a->scale.x, y = a->scale.y, z = a->scale.z;
-    gabi::store<f32>(model + 0xBC, x);
-    gabi::store<f32>(model + 0xC0, y);
-    gabi::store<f32>(model + 0xC4, z);
-  }
-  setMtx(a);
-}
-VERIFY(0x023564B8, initMtx);
-static s32 create(Act_c *a) {
-  WWHD_FUNC(0x023564F4, s32, a);
-  a->mVibOffset = 0;
-  s32 sw = parameter(a, 8, 8);
-  if (switched(a, sw))
-    upperInit(a);
-  else
-    lowerInit(a);
-  a->mNextMode = 5;
-  a->mDemo = 0;
-  u8 event = parameter(a, 8, 16);
-  u32 p = play();
-  s32 eid = gabi::call<s32>(0x02543F10, p + 0x52C4, STR(0x1002A7B8), event);
-  u32 model = gabi::ea(a->mModel1.get());
-  a->mEventId = eid;
-  a->cullMtx = model ? model + 0xC8 : 0;
-  initMtx(a);
-  gabi::call(0x025D674C, a, -151.f, -1005.f, -151.f, 151.f, 1.f, 151.f);
-  if (gabi::load<u32>(CONTROL) == 0xFFFFFFFF)
-    gabi::store<u32>(CONTROL, gabi::load<u32>(gabi::ea(a) + 4));
-  return 1;
-}
-VERIFY(0x023564F4, create);
-static u8 demoEnd(Act_c *a) {
-  WWHD_FUNC(0x02356664, u8, a);
-  u8 demo = a->mDemo;
-  if (demo) {
-    s16 id = a->mEventId;
-    u32 p = play();
-    if (gabi::call<s32>(0x025440C8, p + 0x52C4, id)) {
-      p = play();
-      u16 flag = gabi::load<u16>(p + 0x52B8);
-      gabi::store<u16>(p + 0x52B8, flag | 8);
-      a->mDemo = 0;
-      demo = 0;
-    } else
-      demo = a->mDemo;
-  }
-  return demo ^ 1;
-}
-VERIFY(0x02356664, demoEnd);
-static void rotate(Act_c *a) {
-  WWHD_FUNC(0x023566EC, void, a);
-  f32 y = a->current.pos.y, home = a->home.pos.y;
-  a->shape_angle.y =
-      s16(0u - u32(gabi::ftoi((y - home) * 262.144012451171875f)));
-}
-VERIFY(0x023566EC, rotate);
-static void vibrate(Act_c *a) {
-  WWHD_FUNC(0x02356728, void, a);
-  s16 timer = a->mVibTimer;
-  if (timer > 0) {
-    u16 angle = a->mVibAngle;
-    f32 factor = gabi::fmadds(f32(10 - timer), 0.05000000074505806f, 0.5f);
-    f32 sine = gabi::load<f32>(0x104A44F8 + (u32(angle) >> 3) * 8);
-    timer = a->mVibTimer;
-    a->mVibAngle = angle + 0x4000;
-    a->mVibTimer = timer - 1;
-    a->mVibOffset = sine * (2.5f * factor);
-  } else
-    a->mVibOffset = 0;
-}
-VERIFY(0x02356728, vibrate);
-static void soundWhole(Act_c *a) {
-  WWHD_FUNC(0x023567D0, void, a);
-  u32 id = gabi::load<u32>(gabi::ea(a) + 4);
-  if (gabi::load<u32>(CONTROL) == id && gabi::load<u8>(MOVING)) {
-    gabi::call(0x025E1988, 0x301A);
-    gabi::store<u8>(MOVING, 0);
-  }
-}
-VERIFY(0x023567D0, soundWhole);
-static s32 execute(Act_c *a, u32 *out) {
-  WWHD_FUNC(0x02356828, s32, a, out);
-  demoEnd(a);
-  ptmf_call(0x1002A70C + u32(s32(a->mMode)) * 8, a);
-  s32 mode = a->mMode;
-  if (mode == 1 || mode == 3 || mode == 4)
-    gabi::store<u8>(MOVING, 1);
-  rotate(a);
-  vibrate(a);
-  soundWhole(a);
-  f32 x = a->current.pos.x, z = a->current.pos.z, y = a->current.pos.y;
-  a->eyePos.z = z;
-  a->eyePos.y = y;
-  a->eyePos.x = x;
-  setMtx(a);
-  gabi::store<u32>(gabi::ea(out), 0x10469E90);
-  return 1;
-}
-VERIFY(0x02356828, execute);
-static s32 draw(Act_c *a) {
-  WWHD_FUNC(0x02356928, s32, a);
-  u32 env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, env, 1, &a->current.pos, &a->tevStr);
-  env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, env, a->mModel1.get(), &a->tevStr);
-  env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, env, a->mModel2.get(), &a->tevStr);
-  u32 p = play();
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(p + 0x5D70));
-  p = play();
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(p + 0x5D74));
-  gabi::call(0x025E2DE0, a->mModel1.get(), 0);
-  gabi::call(0x025E2DE0, a->mModel2.get(), 0);
-  p = play();
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(p + 0x5D78));
-  p = play();
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(p + 0x5D7C));
-  return 1;
-}
-VERIFY(0x02356928, draw);
-static s32 remove(Act_c *a) {
-  WWHD_FUNC(0x023569DC, s32, a);
-  u32 id = gabi::load<u32>(gabi::ea(a) + 4);
-  if (gabi::load<u32>(CONTROL) == id)
-    gabi::store<u32>(CONTROL, 0xFFFFFFFF);
-  return 1;
-}
-VERIFY(0x023569DC, remove);
-static void vibSet(Act_c *a) {
-  WWHD_FUNC(0x02356A00, void, a);
-  a->mVibTimer = 10;
-  a->mVibAngle = 0x4000;
-}
-VERIFY(0x02356A00, vibSet);
-static void demoInit(Act_c *a, s32 next) {
-  WWHD_FUNC(0x02356A14, void, a, next);
-  if (next != 3 && next != 1)
-    gabi::call(0x0273AA24, STR(0x1002A734), 0x241, STR(0x1002A748));
-  a->mNextMode = next;
-  a->mDemo = 0;
-  u8 event = parameter(a, 8, 16);
-  s16 id = a->mEventId;
-  gabi::call(0x025D7A58, a, id, event, 0xFFFF, 0, 1);
-  u16 flags = gabi::load<u16>(gabi::ea(a) + 0xFA);
-  a->mMode = 4;
-  gabi::store<u16>(gabi::ea(a) + 0xFA, flags | 2);
-}
-VERIFY(0x02356A14, demoInit);
-static void lower(Act_c *a) {
-  WWHD_FUNC(0x02356AC8, void, a);
-  s32 sw = parameter(a, 8, 8);
-  if (switched(a, sw))
-    demoInit(a, 1);
-}
-VERIFY(0x02356AC8, lower);
-static void lagSet(Act_c *a) {
-  s32 lag = gabi::load<s32>(LAG);
-  a->mLag = gabi::load<u8>(0x1002A644 + u32(lag));
-  lag = gabi::load<s32>(LAG);
-  s32 next = s32(u32(lag) + 1);
-  gabi::store<s32>(LAG, next % 5);
-}
-static void risingInit(Act_c *a) {
-  WWHD_FUNC(0x02356B2C, void, a);
-  vibSet(a);
-  a->mMoveSpeed = 0;
-  a->mMode = 1;
-  sound(a, 0x6949);
-  lagSet(a);
-}
-VERIFY(0x02356B2C, risingInit);
-static void rising(Act_c *a) {
-  WWHD_FUNC(0x02356BD0, void, a);
-  s16 lag = a->mLag;
-  if (lag > 0) {
-    a->mLag = lag - 1;
-    return;
-  }
-  f32 y = a->current.pos.y, home = a->home.pos.y;
-  f32 height = y - home;
-  if (height < 50.f)
-    gabi::call<s32>(0x0200F5C8, &a->mMoveSpeed, 10.f, 0.3f);
-  else if (height < distance(a) - 50.f)
-    a->mMoveSpeed = 10.f;
-  else
-    gabi::call<s32>(0x0200F5C8, &a->mMoveSpeed, 2.f, 1.2f);
-  f32 d = distance(a);
-  home = a->home.pos.y;
-  f32 speed = a->mMoveSpeed;
-  if (gabi::call<s32>(0x0200F5C8, &a->current.pos.y, home + d, speed)) {
-    vibSet(a);
-    sound(a, 0x694A);
-    upperInit(a);
-  }
-}
-VERIFY(0x02356BD0, rising);
-static void upper(Act_c *a) {
-  WWHD_FUNC(0x02356DDC, void, a);
-  s32 sw = parameter(a, 8, 8);
-  if (!switched(a, sw))
-    demoInit(a, 3);
-}
-VERIFY(0x02356DDC, upper);
-static void fallingInit(Act_c *a) {
-  WWHD_FUNC(0x02356E40, void, a);
-  vibSet(a);
-  a->mMoveSpeed = 0;
-  sound(a, 0x6949);
-  lagSet(a);
-  a->mMode = 3;
-}
-VERIFY(0x02356E40, fallingInit);
-static void falling(Act_c *a) {
-  WWHD_FUNC(0x02356EE0, void, a);
-  s16 lag = a->mLag;
-  if (lag > 0) {
-    a->mLag = lag - 1;
-    return;
-  }
-  f32 home = a->home.pos.y, y = a->current.pos.y;
-  f32 height = y - home;
-  if (height < 50.f)
-    gabi::call<s32>(0x0200F5C8, &a->mMoveSpeed, 2.f, 1.2f);
-  else if (height < distance(a) - 50.f)
-    a->mMoveSpeed = 10.f;
-  else
-    gabi::call<s32>(0x0200F5C8, &a->mMoveSpeed, 10.f, 0.3f);
-  home = a->home.pos.y;
-  f32 speed = a->mMoveSpeed;
-  if (gabi::call<s32>(0x0200F5C8, &a->current.pos.y, home, speed)) {
-    vibSet(a);
-    sound(a, 0x694A);
-    lowerInit(a);
-  }
-}
-VERIFY(0x02356EE0, falling);
-static void demo(Act_c *a) {
-  WWHD_FUNC(0x02357040, void, a);
-  s16 id = a->mEventId;
-  u32 p = play();
-  if (gabi::call<u32>(0x02544044, p + 0x52C4, id) &&
-      gabi::load<u16>(gabi::ea(a) + 0xF8) == 2)
-    a->mDemo = 1;
-  if (s32(a->mNextMode) == 3)
-    fallingInit(a);
-  else
-    risingInit(a);
-}
-VERIFY(0x02357040, demo);
-static s32 createHeap(Act_c *a) {
-  WWHD_FUNC(0x023561E4, s32, a);
-  gabi::Local<SafeString> name;
-  name->__vtbl = 0x1002A608;
-  s16 resource = gabi::load<s16>(SIZE + u32(s32(a->mSize)) * 8);
-  u32 control = gabi::load<u32>(0x101F4F28);
-  name->mStringTop = ARC;
-  void *data = gabi::call<void *>(0x026066C4, control, name.get(), resource);
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x1002A6B4), 0x120, STR(0x1002A6A4));
-  a->mModel1 = gabi::call<J3DModel *>(0x025E38E0, data, 0x80000, 0x11000022);
-  gabi::Local<SafeString> name2;
-  name2->__vtbl = 0x1002A608;
-  control = gabi::load<u32>(0x101F4F28);
-  name2->mStringTop = ARC;
-  data = gabi::call<void *>(0x026066C4, control, name2.get(), 6);
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x1002A6B4), 0x12A, STR(0x1002A6C8));
-  J3DModel *model =
-      gabi::call<J3DModel *>(0x025E38E0, data, 0x80000, 0x11000022);
-  J3DModel *first = a->mModel1;
-  a->mModel2 = model;
-  return first && model;
-}
-VERIFY(0x023561E4, createHeap);
-static s32 methodCreate(Act_c *a) {
-  WWHD_FUNC(0x02356090, s32, a);
-  if (!(u32(a->actor_condition) & 8)) {
-    if (a) {
-      gabi::call(0x024F1D40, a);
-      gabi::store<u32>(gabi::ea(a) + 0xB4, 0x1002A7C4);
+
+/* 02356090 */
+cPhs_State Act_c::Mthd_Create() {
+    if (!(u32(actor_condition) & fopAcCnd_INIT_e)) {
+        if (this) {
+            dBgS_MoveBgActor::ct(this);
+            __vtbl = gabi::ea(&M_actorVtable);
+        }
+        actor_condition = u32(actor_condition) | fopAcCnd_INIT_e;
     }
-    a->actor_condition = u32(a->actor_condition) | 8;
-  }
-  s32 state = gabi::call<s32>(0x02520460, &a->mPhase, STR(ARC));
-  if (state == 4) {
-    a->mDistance = parameter(a, 3, 0);
-    s32 size = parameter(a, 1, 4);
-    a->mSize = size;
-    u32 row = SIZE + u32(size) * 8;
-    u32 heap = gabi::load<u32>(row + 4);
-    s16 dzb = gabi::load<s16>(row + 2);
-    state = gabi::call<s32>(0x024F1D9C, a, STR(ARC), dzb, 0x024EE708, heap);
-    if (state != 4 && state != 5)
-      gabi::call(0x0273AA24, STR(0x1002A64C), 0x16E, STR(0x1002A660));
-  }
-  return state;
+    cPhs_State state = dComIfG_resLoad(&mPhase, "Hlift");
+    if (state == 4) {
+        field_0x2D8 = Hlift_PrmAbstract(this, Act_c::PRM_DIST_W, Act_c::PRM_DIST_S);
+        s32 size = Hlift_PrmAbstract(this, Act_c::PRM_SIZE_W, Act_c::PRM_SIZE_S);
+        field_0x2DC = size;
+        auto* row = &M_data_size.mValues[u32(size)];
+        u32 heap = row->field_0x02;
+        s16 dzb = row->field_0x01;
+        state = MoveBGCreate("Hlift", dzb, gabi::guest_fn(reinterpret_cast<const void*>(Hlift_MoveBGProc)), heap);
+        if (state != 4 && state != 5)
+            JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x16E,
+                            "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
+    }
+    return state;
 }
-VERIFY(0x02356090, methodCreate);
-static s32 methodDelete(Act_c *a) {
-  WWHD_FUNC(0x02356198, s32, a);
-  s32 result = gabi::call<s32>(0x024F1F64, a);
-  gabi::call(0x025204C8, &a->mPhase, STR(ARC));
-  return result;
+
+/* 023569DC */
+s32 Act_c::Delete() {
+    u32 id = u32(mBsPcId);
+    if (u32(M_control_id.mValue) == id)
+        M_control_id.mValue = fpcM_ERROR_PROCESS_ID_e;
+    return 1;
 }
-VERIFY(0x02356198, methodDelete);
-static s32 wrapperCreate(Act_c *a) {
-  WWHD_FUNC(0x023570D4, s32, a);
-  return methodCreate(a);
+
+/* 02356198 */
+s32 Act_c::Mthd_Delete() {
+    s32 result = MoveBGDelete();
+    dComIfG_resDelete(&mPhase, "Hlift");
+    return result;
 }
-VERIFY(0x023570D4, wrapperCreate);
-static s32 wrapperDelete(Act_c *a) {
-  WWHD_FUNC(0x023570D8, s32, a);
-  return methodDelete(a);
+
+/* 02356344 */
+void Act_c::mode_lower_init() {
+    f32 y = this->home.pos.y;
+    field_0x2E0 = Mode_LOWER;
+    current.pos.y = y;
 }
-VERIFY(0x023570D8, wrapperDelete);
-static s32 wrapperExecute(Act_c *a) {
-  WWHD_FUNC(0x023570DC, s32, a);
-  return gabi::call<s32>(0x024F1E9C, a);
+
+/* 02356AC8 */
+void Act_c::mode_lower() {
+    s32 sw = Hlift_PrmAbstract(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    if (fopAcM_isSwitch(this, sw))
+        mode_demoreq_init(Mode_L_U);
 }
-VERIFY(0x023570DC, wrapperExecute);
-static s32 wrapperIsDelete(Act_c *a) {
-  WWHD_FUNC(0x023570E0, s32, a);
-  u32 vt = gabi::load<u32>(gabi::ea(a) + 0xB4);
-  return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x2C), a);
+
+/* 02356B2C */
+void Act_c::mode_l_u_init() {
+    vib_set();
+    field_0x2F0 = 0;
+    field_0x2E0 = Mode_L_U;
+    sound(this, JA_SE_OBJ_PRT_LIFT_UD);
+    lagSet(this);
 }
-VERIFY(0x023570E0, wrapperIsDelete);
-static s32 wrapperDraw(Act_c *a) {
-  WWHD_FUNC(0x023570F0, s32, a);
-  u32 vt = gabi::load<u32>(gabi::ea(a) + 0xB4);
-  return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x3C), a);
+
+/* 02356BD0 */
+void Act_c::mode_l_u() {
+    s16 lag = field_0x2F4;
+    if (lag > 0) {
+        field_0x2F4 = lag - 1;
+        return;
+    }
+    f32 y = current.pos.y, home = this->home.pos.y;
+    f32 height = y - home;
+    if (height < 50.f)
+        cLib_chaseF(&field_0x2F0, 10.f, 0.3f);
+    else if (height < distance(this) - 50.f)
+        field_0x2F0 = 10.f;
+    else
+        cLib_chaseF(&field_0x2F0, 2.f, 1.2f);
+    f32 d = distance(this);
+    home = this->home.pos.y;
+    f32 speed = field_0x2F0;
+    if (cLib_chaseF(&current.pos.y, home + d, speed)) {
+        vib_set();
+        sound(this, JA_SE_OBJ_PRT_LIFT_STOP);
+        mode_upper_init();
+    }
 }
-VERIFY(0x023570F0, wrapperDraw);
-static void sinit() {
-  WWHD_FUNC(0x02357100, void, (u32)0);
-  sinit_header_statics(0x10469E74, 0x101C9F58);
+
+/* 023562EC */
+void Act_c::mode_upper_init() {
+    f32 d = distance(this);
+    f32 y = this->home.pos.y;
+    field_0x2E0 = Mode_UPPER;
+    current.pos.y = y + d;
 }
-VERIFY(0x02357100, sinit);
-static void headerDelete(void *a, s32 flags) {
-  WWHD_FUNC(0x02357194, void, a, flags);
-  if (a && (flags & 1))
-    gabi::call(0x0273AF40, a);
+
+/* 02356DDC */
+void Act_c::mode_upper() {
+    s32 sw = Hlift_PrmAbstract(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    if (!fopAcM_isSwitch(this, sw))
+        mode_demoreq_init(Mode_U_L);
 }
-VERIFY(0x02357194, headerDelete);
-static s32 isDelete(Act_c *a) {
-  WWHD_FUNC(0x023571A8, s32, a);
-  return 1;
+
+/* 02356E40 */
+void Act_c::mode_u_l_init() {
+    vib_set();
+    field_0x2F0 = 0;
+    sound(this, JA_SE_OBJ_PRT_LIFT_UD);
+    lagSet(this);
+    field_0x2E0 = Mode_U_L;
 }
-VERIFY(0x023571A8, isDelete);
-static void empty(Act_c *a) { WWHD_FUNC(0x023571B0, void, a); }
-VERIFY(0x023571B0, empty);
-static void actorDelete(Act_c *a, s32 flags) {
-  WWHD_FUNC(0x023571B4, void, a, flags);
-  if (a) {
-    gabi::call(0x025D50BC, a, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, a);
-  }
+
+/* 02356EE0 */
+void Act_c::mode_u_l() {
+    s16 lag = field_0x2F4;
+    if (lag > 0) {
+        field_0x2F4 = lag - 1;
+        return;
+    }
+    f32 home = this->home.pos.y, y = current.pos.y;
+    f32 height = y - home;
+    if (height < 50.f)
+        cLib_chaseF(&field_0x2F0, 2.f, 1.2f);
+    else if (height < distance(this) - 50.f)
+        field_0x2F0 = 10.f;
+    else
+        cLib_chaseF(&field_0x2F0, 10.f, 0.3f);
+    home = this->home.pos.y;
+    f32 speed = field_0x2F0;
+    if (cLib_chaseF(&current.pos.y, home, speed)) {
+        vib_set();
+        sound(this, JA_SE_OBJ_PRT_LIFT_STOP);
+        mode_lower_init();
+    }
 }
-VERIFY(0x023571B4, actorDelete);
-} // namespace
+
+/* 02356A14 */
+void Act_c::mode_demoreq_init(Mode_e next) {
+    if (next != Mode_U_L && next != Mode_L_U)
+        JUT_ASSERT_fail("d_a_obj_hlift.cpp", 0x241, "(next == Mode_U_L) || (next == Mode_L_U)");
+    field_0x2E4 = next;
+    field_0x2F6 = 0;
+    u8 event = Hlift_PrmAbstract(this, Act_c::PRM_EVENTID_W, Act_c::PRM_EVENTID_S);
+    s16 id = mEventId;
+    fopAcM_orderOtherEventId(this, id, event, 0xFFFF, 0, 1);
+    u16 flags = u16(eventInfo.mCondition);
+    field_0x2E0 = Mode_DEMOREQ;
+    eventInfo.mCondition = flags | dEvtCnd_UNK2_e;
+}
+
+/* 02357040 */
+void Act_c::mode_demoreq() {
+    s16 id = mEventId;
+    if (dComIfGp_evmng_existence(id) && eventInfo.checkCommandDemoAccrpt())
+        field_0x2F6 = 1;
+    if (s32(field_0x2E4) == Mode_U_L)
+        mode_u_l_init();
+    else
+        mode_l_u_init();
+}
+
+/* 02356358 */
+void Act_c::set_mtx() {
+    f32 offset = field_0x2EC;
+    f32 y = current.pos.y;
+    y = (y + offset) + 30.0f;
+    f32 z = current.pos.z;
+    f32 x = current.pos.x;
+    mDoMtx_stack_c::transS(x, y, z);
+    s16 az = shape_angle.z, ax = shape_angle.x, ay = shape_angle.y;
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), ax, ay, az);
+    mModel1->setBaseTRMtx(mDoMtx_stack_c::get());
+    PSMTXCopy(mDoMtx_stack_c::get(), &M_tmp_mtx);
+    x = this->home.pos.x;
+    y = this->home.pos.y;
+    z = this->home.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    mModel2->setBaseTRMtx(mDoMtx_stack_c::get());
+}
+
+/* 023564B8 */
+void Act_c::init_mtx() {
+    for (int n = 0; n < 2; n++) {
+        J3DModel* model = n ? mModel2.get() : mModel1.get();
+        f32 x = scale.x, y = scale.y, z = scale.z;
+        model->mBaseScale.set(x, y, z);
+    }
+    set_mtx();
+}
+
+/* 023566EC */
+void Act_c::rot_set() {
+    f32 y = current.pos.y, home = this->home.pos.y;
+    shape_angle.y = s16(0u - u32(gabi::ftoi((y - home) * 262.144012451171875f)));
+}
+
+/* 02356A00 */
+void Act_c::vib_set() {
+    field_0x2E8 = 10;
+    field_0x2EA = 0x4000;
+}
+
+/* 02356728 */
+void Act_c::vib_proc() {
+    s16 timer = field_0x2E8;
+    if (timer > 0) {
+        u16 angle = field_0x2EA;
+        // HD: retain fused multiply-add and the original constant rounding.
+        f32 factor = gabi::fmadds(f32(10 - timer), 0.05000000074505806f, 0.5f);
+        f32 sine = cM_ssin(angle);
+        timer = field_0x2E8;
+        field_0x2EA = angle + 0x4000;
+        field_0x2E8 = timer - 1;
+        field_0x2EC = sine * (2.5f * factor);
+    } else
+        field_0x2EC = 0;
+}
+
+/* 02356664 */
+u8 Act_c::chk_demo_end() {
+    u8 demo = field_0x2F6;
+    if (demo) {
+        s16 id = mEventId;
+        if (dComIfGp_evmng_endCheck(id)) {
+            dComIfGp_event_reset();
+            field_0x2F6 = 0;
+            demo = 0;
+        } else
+            demo = field_0x2F6;
+    }
+    // HD: XOR the byte, including non-canonical values, without boolean conversion.
+    return demo ^ 1;
+}
+
+/* 023567D0 */
+void Act_c::se_whole() {
+    u32 id = u32(mBsPcId);
+    if (u32(M_control_id.mValue) == id && u8(M_lift_move_flag.mValue)) {
+        Hlift_soundWhole(JA_SE_OBJ_PRT_LIFT_WORK);
+        M_lift_move_flag.mValue = 0;
+    }
+}
+
+/* 02356828 */
+s32 Act_c::Execute(gptr<Mtx34>* out) {
+    chk_demo_end();
+    (this->*mode_proc.mProc[u32(s32(field_0x2E0))])();
+    s32 mode = field_0x2E0;
+    if (mode == Mode_L_U || mode == Mode_U_L || mode == Mode_DEMOREQ)
+        M_lift_move_flag.mValue = 1;
+    rot_set();
+    vib_proc();
+    se_whole();
+    f32 x = current.pos.x, z = current.pos.z, y = current.pos.y;
+    eyePos.z = z;
+    eyePos.y = y;
+    eyePos.x = x;
+    set_mtx();
+    *out = &M_tmp_mtx;
+    return 1;
+}
+
+/* 02356928 */
+s32 Act_c::Draw() {
+    auto* env = dKy_getEnvlight();
+    settingTevStruct(env, 1, &current.pos, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mModel1, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mModel2, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelUpdateDL(mModel1);
+    mDoExt_modelUpdateDL(mModel2);
+    dComIfGd_setList();
+    return TRUE;
+}
+
+/* 023570D4 */
+static cPhs_State daObjHlift_Mthd_Create(Act_c* a) {
+    return a->Mthd_Create();
+}
+
+/* 023570D8 */
+static s32 daObjHlift_Mthd_Delete(Act_c* a) {
+    return a->Mthd_Delete();
+}
+
+/* 023570DC */
+static s32 daObjHlift_Mthd_Execute(Act_c* a) {
+    return a->MoveBGExecute();
+}
+
+/* 023570F0 */
+static s32 daObjHlift_Mthd_Draw(Act_c* a) {
+    // HD: Draw is at the unit vtable slot 0x3C.
+    return a->vcall(0x3C);
+}
+
+/* 023570E0 */
+static s32 daObjHlift_Mthd_IsDelete(Act_c* a) {
+    // HD: IsDelete is at the unit vtable slot 0x2C.
+    return a->vcall(0x2C);
+}
+
+/* 02357100 */
+static void __sinit_d_a_obj_hlift_cpp() {
+    sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
+}
+
+/* 02357194 */
+static void Hlift_SafeString_dtor(void* a, s32 flags) {
+    if (a && (flags & 1))
+        operator_delete(a);
+}
+
+/* 023571A8 */
+static s32 Hlift_IsDelete(Act_c* a) {
+    return 1;
+}
+
+/* 023571B0 */
+static void Hlift_SafeString_assureTerminationImpl(Act_c* a) {}
+
+/* 023571B4 */
+static void Hlift_dtor(Act_c* a, s32 flags) {
+    if (a) {
+        __dt(static_cast<fopAc_ac_c*>(a));
+        if (flags & 1)
+            operator_delete(a);
+    }
+}
+
+/* WWHD glue
+ data M_up_dist 1002A798
+ data M_data_size 1002A7A8
+ data L_time_lag 1002A644
+ data mode_proc 1002A70C
+ data M_actorVtable 1002A7C4
+ data M_control_id 101C9F7C
+ data L_time_lag_num 101C9F80
+ data M_lift_move_flag 101C9F84
+ data M_tmp_mtx 10469E90
+ str 1002A790
+ str 1002A7B8
+ str 1002A734 in 02356A14
+ str 1002A748
+ str 1002A6B4 in 023561E4
+ str 1002A6A4 "model_data != 0"
+ str 1002A6C8 "model_data_c != 0"
+ str 1002A64C "d_a_obj_hlift.cpp" in 02356090
+ str 1002A660 "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
+ ext 025E1988 void Hlift_soundWhole(u32)
+ ext 024EE708 void Hlift_MoveBGProc(dBgW*, fopAc_ac_c*, cBgS_PolyInfo*, cXyz*, csXyz*, csXyz*, bool)
+*/

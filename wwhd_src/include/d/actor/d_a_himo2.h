@@ -6,7 +6,151 @@
  * (0xB0 each, constructor 02080404), so the members from m24B4 on are +0x630. Size 0x2D68.
  * Offsets measured from daHimo2_Create, CallbackCreateHeap, s_a_d_sub and himo2_bg_check. */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
+
+struct himo2_xyzWords_c {
+    be<u32> x, y, z;
+};
+WWHD_SIZE(himo2_xyzWords_c, 0xC);
+struct himo2_safeStringVtable_c {
+    u8 _00[0x14];
+    be<u32> assureTermination;
+};
+WWHD_OFFSET(himo2_safeStringVtable_c, assureTermination, 0x14);
+WWHD_SIZE(himo2_safeStringVtable_c, 0x18);
+struct himo2_playerVtable_c {
+    u8 _00[0x14];
+    be<u32> getLeftHandMatrix;
+    u8 _18[4];
+    be<u32> getRightHandMatrix;
+    u8 _20[0x1C];
+    be<u32> checkPlayerGuard;
+    u8 _40[0x0C];
+    be<u32> checkPlayerFly;
+    u8 _50[0x7C];
+    be<u32> checkPlayerNoDraw;
+    u8 _D0[0x0C];
+    be<u32> checkRopeReadyAnime;
+};
+WWHD_OFFSET(himo2_playerVtable_c, getLeftHandMatrix, 0x14);
+WWHD_OFFSET(himo2_playerVtable_c, getRightHandMatrix, 0x1C);
+WWHD_OFFSET(himo2_playerVtable_c, checkPlayerGuard, 0x3C);
+WWHD_OFFSET(himo2_playerVtable_c, checkPlayerFly, 0x4C);
+WWHD_OFFSET(himo2_playerVtable_c, checkPlayerNoDraw, 0xCC);
+WWHD_OFFSET(himo2_playerVtable_c, checkRopeReadyAnime, 0xDC);
+WWHD_SIZE(himo2_playerVtable_c, 0xE0);
+inline himo2_playerVtable_c* himo2_playerVtable(fopAc_ac_c* player) {
+    return gabi::at<himo2_playerVtable_c>(player->__vtbl);
+}
+struct himo2_attention_c {
+    u8 _00[0x20];
+    be<u32> mFlags;
+};
+WWHD_OFFSET(himo2_attention_c, mFlags, 0x20);
+WWHD_SIZE(himo2_attention_c, 0x24);
+// HD: the guide particle's draw-status word is later than in the GameCube emitter.
+struct himo2_guideEmitter_c {
+    u8 _00[0x254];
+    be<u32> mStatus;
+};
+WWHD_OFFSET(himo2_guideEmitter_c, mStatus, 0x254);
+WWHD_SIZE(himo2_guideEmitter_c, 0x258);
+extern gptr<himo2_guideEmitter_c>& l_guideEmitter;
+struct himo2_bk_c : fopAc_ac_c {
+    u8 _3AC[0x4A0 - 0x3AC];
+    struct {
+        be<s16> mMode, mAction;
+    } dr;
+};
+WWHD_OFFSET(himo2_bk_c, dr, 0x4A0);
+WWHD_SIZE(himo2_bk_c, 0x4A4);
+
+// HD: the rope impact effect also sets the emitter's volume sweep.
+struct himo2_particle_c {
+    u8 _00[0x34];
+    /* 0x34 */ be<f32> mRate;
+    u8 _38[0x20];
+    /* 0x58 */ be<f32> mSpread;
+    /* 0x5C */ be<s32> mMaxFrame;
+    u8 _60[0x0C];
+    /* 0x6C */ be<f32> mInitialVelAxis;
+    u8 _70[0x0C];
+    /* 0x7C */ be<f32> mVolumeSweep;
+};
+WWHD_OFFSET(himo2_particle_c, mRate, 0x34);
+WWHD_OFFSET(himo2_particle_c, mSpread, 0x58);
+WWHD_OFFSET(himo2_particle_c, mMaxFrame, 0x5C);
+WWHD_OFFSET(himo2_particle_c, mInitialVelAxis, 0x6C);
+WWHD_OFFSET(himo2_particle_c, mVolumeSweep, 0x7C);
+WWHD_SIZE(himo2_particle_c, 0x80);
+
+// HD: camera-process view used by rope targeting and the boss sequences.
+struct himo2_camera_c {
+    u8 _00[0xDC];
+    /* 0xDC */ cXyz eye;
+    u8 _E8[0x248 - 0xE8];
+    /* 0x248 */ u8 mCamera[1];
+};
+WWHD_OFFSET(himo2_camera_c, eye, 0xDC);
+WWHD_OFFSET(himo2_camera_c, mCamera, 0x248);
+WWHD_SIZE(himo2_camera_c, 0x249);
+
+// Only the tww boss members used by the rope sequences are exposed here.
+struct himo2_dr_c : fopAc_ac_c {
+    u8 _3AC[0x526 - 0x3AC];
+    /* 0x526 */ be<u8> unk_40A;
+    u8 _527[9];
+    /* 0x530 */ be<f32> unk_414;
+    u8 _534[0x5D6 - 0x534];
+    /* 0x5D6 */ be<s16> unk_4BA;
+    u8 _5D8[0x0E];
+    /* 0x5E6 */ be<s16> unk_4CA;
+    u8 _5E8[0x40];
+    /* 0x628 */ be<u8> unk_50C;
+    u8 _629[3];
+};
+WWHD_OFFSET(himo2_dr_c, unk_40A, 0x526);
+WWHD_OFFSET(himo2_dr_c, unk_414, 0x530);
+WWHD_OFFSET(himo2_dr_c, unk_4BA, 0x5D6);
+WWHD_OFFSET(himo2_dr_c, unk_4CA, 0x5E6);
+WWHD_OFFSET(himo2_dr_c, unk_50C, 0x628);
+WWHD_SIZE(himo2_dr_c, 0x62C);
+struct himo2_btd_c : fopAc_ac_c {
+    u8 _3AC[0x63D4 - 0x3AC];
+    /* 0x63D4 */ be<u8> m6190;
+    u8 _63D5[0x7059 - 0x63D5];
+    /* 0x7059 */ be<u8> m6E15;
+    u8 _705A[2];
+};
+WWHD_OFFSET(himo2_btd_c, m6190, 0x63D4);
+WWHD_OFFSET(himo2_btd_c, m6E15, 0x7059);
+WWHD_SIZE(himo2_btd_c, 0x705C);
+
+enum himo2_demo_state_e {
+    HIMO2_DEMO_REQUEST = -1,
+    HIMO2_DEMO_INACTIVE = 0,
+    HIMO2_DEMO_COIL = 2,
+    HIMO2_DEMO_SET_ROCK = 3,
+    HIMO2_DEMO_DROP_ROCK = 4,
+    HIMO2_DEMO_CONTROL = 5,
+    HIMO2_DEMO_JUMP = 6,
+    HIMO2_DEMO_RESET = 7,
+    HIMO2_DEMO_BOSS_FALL = 8,
+    HIMO2_DEMO_BOSS_END = 9,
+};
+
+enum himo2_state_e {
+    HIMO2_WAIT = 0,
+    HIMO2_SPIN = 1,
+    HIMO2_LAUNCH_FREE = 2,
+    HIMO2_LAUNCH_TARGET = 3,
+    HIMO2_HOOK_BODY = 4,
+    HIMO2_PULL_BACK = 5,
+    HIMO2_MAX_LENGTH = 8,
+    HIMO2_REBOUND = 9,
+    HIMO2_HOOKED = 10,
+    HIMO2_HANG = 11,
+};
 
 struct himo2_s {
     /* 0x00 */ u8 m00[0x0C];
@@ -18,12 +162,33 @@ struct himo2_s {
 };
 WWHD_SIZE(himo2_s, 0x24);
 
-/* mDoExt_3DlineMat1_c (HD 0x188), opaque */
-struct mDoExt_3DlineMat1_c_l {
-    u8 _[0x188];
+// HD: rope line entries have a 0x10 stride; the shared line API uses 0x18.
+struct himo2_line_c {
+    gptr<cXyz> mpPositions;
+    u8 _04[0x0C];
 };
+WWHD_SIZE(himo2_line_c, 0x10);
+struct himo2_lineMat_c {
+    u8 _00[0x130];
+    /* 0x130 */ be<u32> __vtbl;
+    u8 _134[0x50];
+    /* 0x184 */ gptr<himo2_line_c> mpLines;
+};
+WWHD_OFFSET(himo2_lineMat_c, __vtbl, 0x130);
+WWHD_OFFSET(himo2_lineMat_c, mpLines, 0x184);
+WWHD_SIZE(himo2_lineMat_c, 0x188);
+
+// HD: the added packet's lighting pointer is at 0xA4.
+struct himo2_modelPacket_c {
+    u8 _00[0xA4];
+    /* 0xA4 */ gptr<dKy_tevstr_c> mpTevStr;
+    u8 _A8[8];
+};
+WWHD_OFFSET(himo2_modelPacket_c, mpTevStr, 0xA4);
+WWHD_SIZE(himo2_modelPacket_c, 0xB0);
 
 struct himo2_class : fopAc_ac_c {
+    BOOL setTargetPos(cXyz*, be<f32>*, be<f32>*);
     /* 0x03AC */ u8 _3AC[0x3B8 - 0x3AC];
     /* 0x03B8 */ be<s16> m029C;
     /* 0x03BA */ be<s16> m029E;
@@ -47,7 +212,7 @@ struct himo2_class : fopAc_ac_c {
     /* 0x0426 */ u8 _426[0x42C - 0x426];
     /* 0x042C */ himo2_s m0310[100];
     /* 0x123C */ himo2_s m1120[100];
-    /* 0x204C */ mDoExt_3DlineMat1_c_l m1F30;
+    /* 0x204C */ himo2_lineMat_c m1F30;
     /* 0x21D4 */ be<s32> m1F6C;
     /* 0x21D8 */ be<f32> m1F70[5];
     /* 0x21EC */ cXyz m1F84;
@@ -55,20 +220,20 @@ struct himo2_class : fopAc_ac_c {
     /* 0x21FA */ be<s16> m1F92;
     /* 0x21FC */ be<s16> m1F94;
     /* 0x21FE */ u8 _21FE[2];
-    /* 0x2200 */ mDoExt_3DlineMat1_c_l m1F98;
+    /* 0x2200 */ himo2_lineMat_c m1F98;
     /* 0x2388 */ be<f32> m1FD4;
-    /* 0x238C */ mDoExt_3DlineMat1_c_l m1FD8;
+    /* 0x238C */ himo2_lineMat_c m1FD8;
     /* 0x2514 */ dCcD_Stts m2014;
     /* 0x2550 */ dCcD_Sph m2050;
     /* 0x267C */ gptr<fopAc_ac_c> m217C;
     /* 0x2680 */ be<u32> m2180;
     /* 0x2684 */ be<f32> m2184;
     /* 0x2688 */ be<f32> m2188;
-    /* 0x268C */ gptr<fopAc_ac_c> m218C[100];  /* HD: 100 (GameCube 200) */
+    /* 0x268C */ gptr<fopAc_ac_c> m218C[100]; /* HD: 100 (GameCube 200) */
     /* 0x281C */ be<u8> m24AC;
     /* 0x281D */ u8 _281D[3];
     /* 0x2820 */ gptr<J3DModel> mpHookModel;
-    /* 0x2824 */ u8 mPackets[4][0xB0];          /* HD: mDoExt_J3DModelPacketS x4 */
+    /* 0x2824 */ himo2_modelPacket_c mPackets[4]; /* HD: mDoExt_J3DModelPacketS x4 */
     /* 0x2AE4 */ be<f32> m24B4;
     /* 0x2AE8 */ be<f32> m24B8;
     /* 0x2AEC */ be<s32> m24BC;
@@ -132,21 +297,59 @@ struct himo2HIO_c {
     /* 0x20 */ be<u32> __vtbl;
 };
 WWHD_SIZE(himo2HIO_c, 0x24);
-#define l_himo2HIO (*gabi::at<himo2HIO_c>(0x1046469C))
-#define rope_scale (*gabi::at<be<f32>>(0x10464674))
-#define himo2_btd (*gabi::at<be<u32>>(0x10464678)) /* found with b_a_sub (0216DE2C) */
-#define himo2_dr (*gabi::at<be<u32>>(0x1046467C))  /* found with dr_a_sub (0216DDDC) */
-/* the HD debug registers (REG0_F / REG0_S) that this TU still reads */
-#define HIMO2_REG(off) (0x1047B608 + (off))
+extern himo2HIO_c& l_himo2HIO;
+extern be<f32>& rope_scale;
+extern gptr<himo2_btd_c>& himo2_btd;
+extern gptr<himo2_dr_c>& himo2_dr;
+// HD: the debug-register root's children start at 4; each child keeps the tww layout.
+struct himo2_reg_childHIO_c {
+    be<u32> __vtbl;
+    be<f32> mFloatRegs[30];
+    be<s16> mShortRegs[10];
+};
+WWHD_OFFSET(himo2_reg_childHIO_c, mFloatRegs, 4);
+WWHD_OFFSET(himo2_reg_childHIO_c, mShortRegs, 0x7C);
+WWHD_SIZE(himo2_reg_childHIO_c, 0x90);
+struct himo2_reg_HIO_c {
+    u8 _00[4];
+    himo2_reg_childHIO_c mChild[22];
+};
+WWHD_OFFSET(himo2_reg_HIO_c, mChild, 4);
+WWHD_SIZE(himo2_reg_HIO_c, 0xC64);
+extern himo2_reg_HIO_c& l_himo2Regs;
 
 #define HIMO2_VTBL 0x10010EF4
 #define HIMO2_SAFESTRING_VTBL 0x10010DEC
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 025EB82C mDoExt_3DlineMat1_c::mDoExt_3DlineMat1_c (HD, out of line) */
-static inline void mDoExt_3DlineMat1_c_ct(void* p) { gabi::call(0x025EB82C, p); }
-/* 025EBA58 mDoExt_3DlineMat1_c::init(s16 numLines, s16 numSegments, ResTIMG*, int) */
-static inline BOOL mDoExt_3DlineMat1_c_init(void* p, s32 n, s32 seg, void* img, s32 x) { return gabi::call<BOOL>(0x025EBA58, p, n, seg, img, x); }
-/* 02080404 mDoExt_J3DModelPacketS::mDoExt_J3DModelPacketS (HD 0xB0) */
-static inline void mDoExt_J3DModelPacketS_ct(void* p) { gabi::call(0x02080404, p); }
-static inline u32 dComIfGp_getParticle_ea() { return gabi::load<u32>(dComIfGp_ea() + 0x5AB0); }
+// HD: unit-local ABI bridges preserve full-word collision results and stack-copy arguments.
+u32 himo2_GetOnePolyInfo(dBgS_Acch*, cBgS_PolyInfo*);
+s32 himo2_GetAttributeCode(dBgS*, cBgS_PolyInfo*);
+void himo2_SoundSet(cXyz*, s32, u32, s32);
+void himo2_constructSphere(dCcD_Sph*);
+void himo2_setupPacket(void*, s32);
+void himo2_moveExternal(himo2_class*);
+void himo2_destroyGroundCheck(dBgS_GndChk*, s32);
+void himo2_setLinePacket(daPy_py_c*, himo2_modelPacket_c*, himo2_lineMat_c*);
+void himo2_setHookPacket(daPy_py_c*, himo2_modelPacket_c*, J3DModel*);
+
+u32 himo2_padTrigX(u32);
+u32 himo2_padTrigY(u32);
+u32 himo2_padTrigZ(u32);
+f32 himo2_subStickY(u32);
+f32 himo2_subStickX(u32);
+void himo2_cameraStop(void*);
+void himo2_cameraStart(void*);
+void himo2_cameraTrim(void*, s32);
+void himo2_cameraReset(void*, cXyz*, cXyz*);
+void himo2_cameraSet(void*, cXyz*, cXyz*, s16, f32);
+void himo2_customColorSet(u32, u32, f32);
+void himo2_orderPotentialEvent(fopAc_ac_c*, u16, u16, u32);
+void himo2_playerPosExternal(himo2_class*);
+BOOL himo2_bgCheckExternal(himo2_class*);
+u32 himo2_LockonTruth(u32);
+u32 himo2_LockonTarget(u32, s32);
+void himo2_destroyLineCheck(dBgS_LinChk*, s32);
+
+void himo2_constructPacket(himo2_modelPacket_c*);
+void himo2_destroyPacket(himo2_modelPacket_c*, s32);
+void himo2_destroySphere(dCcD_Sph*, s32);

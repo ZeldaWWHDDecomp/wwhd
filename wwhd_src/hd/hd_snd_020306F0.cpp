@@ -1,332 +1,352 @@
-/* hd_snd_020306F0: the HD sound interface TU (no GameCube source).
- *
- * TU 020306F0..02031263 (__sinit 020311C4 + fader companion 02031258). The free functions the HD game
- * code uses for sound (159 callers in the GamePad UI and system code): the sound manager's sub-systems
- * (020307E0 SE player, 020307EC BGM/fade controller, 020307F8 HD sound player, 0203103C sound archive),
- * game-mode switch SE and output fades, TV/DRC output modes, menu in/out through JAIZelBasic (101FFC78),
- * player flags +0x1F4..+0x1F8 / mode +0x1FC, HD stream start/is-playing/pause by index, group loading,
- * pause/resume of all sound; plus an RTTI checkDerived and a destructor of the sound heap class.
- */
-#include "hd_blk.h"
-using namespace hdblk;
-
-namespace hd_snd_020306F0 {
-
-static u32 Heap_isDerived(u32 self, u32 ti) {
-    WWHD_FUNC(0x020306F0, u32, self, ti);
-    if (ld(0x101FD648) == 0) {
-        st(0x101FD648, 1);
-        st(0x101FD958, 0x10004768);
+/** HD free sound interface. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_snd_020306F0.h"
+static void* sSoundManager;
+static hdSoundInterfaceJAudio* sJAudio;
+static f32 sOne;
+static f32 sZero;
+static f32 sFaderOne;
+static u32 sHeapTypeInitialized;
+static u32 sParentTypeInitialized;
+static u32 sHeapType;
+static u32 sParentType;
+/* 020306F0 */
+static u32 isSoundHeapDerived(void* self, void* ti) {
+    (void)self;
+    if (sHeapTypeInitialized == 0) {
+        sHeapTypeInitialized = 1;
+        sHeapType = 0x10004768;
     }
-    if (ti == 0x101FD958) return 1;
-    if (ld(0x101FD588) == 0) {
-        st(0x101FD588, 1);
-        st(0x101FD95C, 0x10004758);
+    if (ti == &sHeapType) return 1;
+    if (sParentTypeInitialized == 0) {
+        sParentTypeInitialized = 1;
+        sParentType = 0x10004758;
     }
-    return ti == 0x101FD95C ? 1 : 0;
+    return ti == &sParentType ? 1 : 0;
 }
-VERIFY(0x020306F0, Heap_isDerived);
 
-static void Heap_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02030768, void, self, flags);
-    if (self == 0) return;
-    st(self + 4, 0x1015EBB8);
-    gabi::call(0x02766334, self + 0xFC, 2);
-    gabi::call(0x02760168, self + 0xA4, 2);
-    gabi::call(0x02760168, self + 0x44, 2);
-    if (flags & 1) op_delete(self);
+/* 02030768 */
+static void destroySoundHeap(hdSoundInterfaceHeap* self, s32 flags) {
+    if (self == NULL) return;
+    self->mVtable = 0x1015EBB8;
+    hdInterfaceDestroyTrailing(self->mTrailingMember, 2);
+    hdInterfaceDestroyMember(self->mSecondMember, 2);
+    hdInterfaceDestroyMember(self->mFirstMember, 2);
+    if (flags & 1) operator_delete(self);
 }
-VERIFY(0x02030768, Heap_dt);
 
-static u32 Snd_se() {
-    WWHD_FUNC(0x020307E0, u32);
-    return gabi::call<u32>(0x0202BF88, ld(0x1018EC64));
+/* 020307E0 */
+static hdSoundInterfaceSe* getSePlayer() {
+    return hdInterfaceGetSe(sSoundManager);
 }
-VERIFY(0x020307E0, Snd_se);
 
-static u32 Snd_bgm() {
-    WWHD_FUNC(0x020307EC, u32);
-    return gabi::call<u32>(0x0202BF98, ld(0x1018EC64));
+/* 020307EC */
+static hdSoundInterfaceBgm* getBgmController() {
+    return hdInterfaceGetBgm(sSoundManager);
 }
-VERIFY(0x020307EC, Snd_bgm);
 
-static u32 Snd_player() {
-    WWHD_FUNC(0x020307F8, u32);
-    return gabi::call<u32>(0x0202BF78, ld(0x1018EC64));
+/* 020307F8 */
+static hdSoundInterfacePlayer* getSoundPlayer() {
+    return hdInterfaceGetPlayer(sSoundManager);
 }
-VERIFY(0x020307F8, Snd_player);
 
-static u32 Snd_archive() {
-    WWHD_FUNC(0x0203103C, u32);
-    return gabi::call<u32>(0x0202BF80, ld(0x1018EC64));
+/* 0203103C */
+static hdSoundInterfaceArchive* getSoundArchive() {
+    return hdInterfaceGetArchive(sSoundManager);
 }
-VERIFY(0x0203103C, Snd_archive);
 
-static inline u32 se() { return gabi::call<u32>(0x020307E0); }
-static inline u32 bgm() { return gabi::call<u32>(0x020307EC); }
-static inline u32 player() { return gabi::call<u32>(0x020307F8); }
+static inline hdSoundInterfaceSe* se() { return getSePlayer(); }
+static inline hdSoundInterfaceBgm* bgm() { return getBgmController(); }
+static inline hdSoundInterfacePlayer* player() { return getSoundPlayer(); }
 
 /* fade the BGM controller and the player's master faders (FRAMES, TV, DRC) */
 static inline void fade_both(u32 frames, f32 tv, f32 drc) {
-    gabi::call(0x02031264, bgm(), frames, tv, drc);
-    gabi::call(0x0202F14C, player(), frames, tv, drc);
+    hdInterfaceFadeBgm(bgm(), frames, tv, drc);
+    hdInterfaceFadePlayer(player(), frames, tv, drc);
 }
 
-/* 02030804: game-mode switch: optional SE, then fade everything out in 3 frames */
-static void Snd_gameModeSwitch(u32 withSe) {
-    WWHD_FUNC(0x02030804, void, withSe);
-    if (withSe != 0) gabi::call(0x02031920, se(), 0x10004834); /* "SE_GAME_MODE_SWITCH" */
-    f32 zero = ldf(0x10004830);
+// HD: optional game-mode SE, then fade both outputs over three frames.
+/* 02030804 */
+static void switchSoundGameMode(u32 withSe) {
+    if (withSe != 0) hdInterfaceStartSe(se(), "SE_GAME_MODE_SWITCH");
+    f32 zero = sZero;
     fade_both(3, zero, zero);
 }
-VERIFY(0x02030804, Snd_gameModeSwitch);
 
-/* 02030880: output mode 0 TV / 1 GamePad / 2 both (fade 5 frames) */
-static void Snd_outputMode_02030880(u32 mode) {
-    WWHD_FUNC(0x02030880, void, mode);
-    f32 one = ldf(0x10004820), zero = ldf(0x10004830);
-    if (mode == 0) fade_both(5, one, zero);
-    else if (mode == 1) fade_both(5, zero, one);
-    else if (mode == 2) fade_both(5, one, one);
+// HD: switch TV/GamePad output over five frames.
+/* 02030880 */
+static void fadeSoundOutputMode(u32 mode) {
+    f32 one = sOne, zero = sZero;
+    if (mode == SOUND_OUTPUT_TV) fade_both(5, one, zero);
+    else if (mode == SOUND_OUTPUT_DRC) fade_both(5, zero, one);
+    else if (mode == SOUND_OUTPUT_BOTH) fade_both(5, one, one);
 }
-VERIFY(0x02030880, Snd_outputMode_02030880);
 
-/* 020309AC: output mode 0 TV / 1 GamePad / 2 both (fade 0 frames) */
-static void Snd_outputMode_020309AC(u32 mode) {
-    WWHD_FUNC(0x020309AC, void, mode);
-    f32 one = ldf(0x10004820), zero = ldf(0x10004830);
-    if (mode == 0) fade_both(0, one, zero);
-    else if (mode == 1) fade_both(0, zero, one);
-    else if (mode == 2) fade_both(0, one, one);
+// HD: switch TV/GamePad output immediately.
+/* 020309AC */
+static void setSoundOutputMode(u32 mode) {
+    f32 one = sOne, zero = sZero;
+    if (mode == SOUND_OUTPUT_TV) fade_both(0, one, zero);
+    else if (mode == SOUND_OUTPUT_DRC) fade_both(0, zero, one);
+    else if (mode == SOUND_OUTPUT_BOTH) fade_both(0, one, one);
 }
-VERIFY(0x020309AC, Snd_outputMode_020309AC);
 
-/* 02030AD8: player mode 0 / 1 */
-static void Snd_setPlayerMode(u32 mode) {
-    WWHD_FUNC(0x02030AD8, void, mode);
+// HD: only the two existing player modes are accepted.
+/* 02030AD8 */
+static void setPlayerMode(u32 mode) {
     if (mode > 1) return;
-    st(player() + 0x1FC, mode == 0 ? 0 : 1);
+    player()->mMode = mode == 0 ? 0 : 1;
 }
-VERIFY(0x02030AD8, Snd_setPlayerMode);
 
-static void Snd_playSe(u32 name) {
-    WWHD_FUNC(0x02030B38, void, name);
-    gabi::call(0x02031920, se(), name);
+/* 02030B38 */
+static void playSe(const char* name) {
+    hdInterfaceStartSe(se(), name);
 }
-VERIFY(0x02030B38, Snd_playSe);
 
-/* 02030B6C: set the volume (0, A) and pitch (B) of the playing SE NAME */
-static void Snd_setSeParams(u32 name, f32 a, f32 b) {
-    WWHD_FUNC(0x02030B6C, void, name, a, b);
-    u32 h = gabi::call<u32>(0x020319C8, se(), name);
-    if (h == 0 || ld(h) == 0) return;
-    gabi::call(0x02885914, ld(h), 0, a);
-    if (ld(h) == 0) return;
-    gabi::call(0x028859A0, ld(h), b);
+// HD: prepare the named SE and adjust its volume and pitch.
+/* 02030B6C */
+static void setSeParams(const char* name, f32 a, f32 b) {
+    hdSoundInterfaceHandle* h = hdInterfacePrepareSe(se(), name);
+    if (h == NULL || h->mSound == NULL) return;
+    hdInterfaceSetVolume(h->mSound, 0, a);
+    if (h->mSound == NULL) return;
+    hdInterfaceSetPitch(h->mSound, b);
 }
-VERIFY(0x02030B6C, Snd_setSeParams);
 
-static void Snd_bgmUpdate() {
-    WWHD_FUNC(0x02030C10, void);
-    gabi::call(0x020316E0, bgm());
+/* 02030C10 */
+static void bgmUpdate() {
+    hdInterfaceDisarmSe(bgm());
 }
-VERIFY(0x02030C10, Snd_bgmUpdate);
 
-static void Snd_menuIn() {
-    WWHD_FUNC(0x02030C34, void);
-    u32 b = ld(0x101FFC78);
-    if (b == 0) return;
-    gabi::call(0x0201E5E0, b);
-    stb(player() + 0x1F4, 1);
+/* 02030C34 */
+static void menuIn() {
+    hdSoundInterfaceJAudio* b = sJAudio;
+    if (b == NULL) return;
+    hdInterfaceMenuIn(b);
+    player()->mMenuFlag = 1;
 }
-VERIFY(0x02030C34, Snd_menuIn);
 
-static void Snd_menuOut() {
-    WWHD_FUNC(0x02030C70, void);
-    u32 b = ld(0x101FFC78);
-    if (b == 0) return;
-    gabi::call(0x0201DCD4, b);
-    stb(player() + 0x1F4, 0);
+/* 02030C70 */
+static void menuOut() {
+    hdSoundInterfaceJAudio* b = sJAudio;
+    if (b == NULL) return;
+    hdInterfaceMenuOut(b);
+    player()->mMenuFlag = 0;
 }
-VERIFY(0x02030C70, Snd_menuOut);
 
-static u32 Snd_get_02030CAC() {
-    WWHD_FUNC(0x02030CAC, u32);
-    return lbz(player() + 0x1F4);
+/* 02030CAC */
+static u32 getMenuFlag() {
+    return player()->mMenuFlag;
 }
-VERIFY(0x02030CAC, Snd_get_02030CAC);
 
-static void Snd_set_02030CD0() {
-    WWHD_FUNC(0x02030CD0, void);
-    stb(player() + 0x1F5, 1);
+/* 02030CD0 */
+static void setPlayerFlagF5() {
+    player()->field_0x1f5 = 1;
 }
-VERIFY(0x02030CD0, Snd_set_02030CD0);
 
-static void Snd_set_02030CF8() {
-    WWHD_FUNC(0x02030CF8, void);
-    stb(player() + 0x1F5, 0);
+/* 02030CF8 */
+static void clearPlayerFlagF5() {
+    player()->field_0x1f5 = 0;
 }
-VERIFY(0x02030CF8, Snd_set_02030CF8);
 
-static u32 Snd_get_02030D20() {
-    WWHD_FUNC(0x02030D20, u32);
-    return lbz(player() + 0x1F5);
+/* 02030D20 */
+static u32 getPlayerFlagF5() {
+    return player()->field_0x1f5;
 }
-VERIFY(0x02030D20, Snd_get_02030D20);
 
-static void Snd_set_02030D44() {
-    WWHD_FUNC(0x02030D44, void);
-    stb(player() + 0x1F6, 1);
+/* 02030D44 */
+static void setPlayerFlagF6() {
+    player()->field_0x1f6 = 1;
 }
-VERIFY(0x02030D44, Snd_set_02030D44);
 
-static void Snd_set_02030D6C() {
-    WWHD_FUNC(0x02030D6C, void);
-    stb(player() + 0x1F6, 0);
+/* 02030D6C */
+static void clearPlayerFlagF6() {
+    player()->field_0x1f6 = 0;
 }
-VERIFY(0x02030D6C, Snd_set_02030D6C);
 
-static void Snd_set_02030D94() {
-    WWHD_FUNC(0x02030D94, void);
-    stb(player() + 0x1F7, 1);
-    gabi::call(0x02030C10);
+/* 02030D94 */
+static void setPlayerFlagF7() {
+    player()->field_0x1f7 = 1;
+    bgmUpdate();
 }
-VERIFY(0x02030D94, Snd_set_02030D94);
 
-static void Snd_set_02030DC0() {
-    WWHD_FUNC(0x02030DC0, void);
-    stb(player() + 0x1F7, 0);
+/* 02030DC0 */
+static void clearPlayerFlagF7() {
+    player()->field_0x1f7 = 0;
 }
-VERIFY(0x02030DC0, Snd_set_02030DC0);
 
-static void Snd_set_02030DE8() {
-    WWHD_FUNC(0x02030DE8, void);
-    stb(player() + 0x1F8, 1);
+/* 02030DE8 */
+static void setPlayerFlagF8() {
+    player()->field_0x1f8 = 1;
 }
-VERIFY(0x02030DE8, Snd_set_02030DE8);
 
-static void Snd_set_02030E10() {
-    WWHD_FUNC(0x02030E10, void);
-    stb(player() + 0x1F8, 0);
+/* 02030E10 */
+static void clearPlayerFlagF8() {
+    player()->field_0x1f8 = 0;
 }
-VERIFY(0x02030E10, Snd_set_02030E10);
 
-static void Snd_bgmFlag_02030E38() {
-    WWHD_FUNC(0x02030E38, void);
-    stb(ld(bgm() + 0x5C) + 0x38, 1);
+/* 02030E38 */
+static void setBridgeFlag() {
+    bgm()->mBridge->field_0x38 = 1;
 }
-VERIFY(0x02030E38, Snd_bgmFlag_02030E38);
 
-static void Snd_bgmFlag_02030E64() {
-    WWHD_FUNC(0x02030E64, void);
-    stb(ld(bgm() + 0x5C) + 0x38, 0);
+/* 02030E64 */
+static void clearBridgeFlag() {
+    bgm()->mBridge->field_0x38 = 0;
 }
-VERIFY(0x02030E64, Snd_bgmFlag_02030E64);
 
-static u32 Snd_streamStart(u32 i) {
-    WWHD_FUNC(0x02030E90, u32, i);
-    static const u32 fn[4] = {0x0202FFB8, 0x02030054, 0x020300F0, 0x0203018C};
-    if (i > 3) return 0;
-    return gabi::call<u32>(fn[i], player());
+/* 02030E90 */
+static u32 streamStart(u32 i) {
+    switch (i) {
+    case 0: return hdInterfaceStreamStart0(player());
+    case 1: return hdInterfaceStreamStart1(player());
+    case 2: return hdInterfaceStreamStart2(player());
+    case 3: return hdInterfaceStreamStart3(player());
+    default: return 0;
+    }
 }
-VERIFY(0x02030E90, Snd_streamStart);
 
-static u32 Snd_streamIsPlaying(u32 i) {
-    WWHD_FUNC(0x02030F1C, u32, i);
-    static const u32 fn[4] = {0x0202FFF4, 0x02030090, 0x0203012C, 0x020301C8};
-    if (i > 3) return 0;
-    return gabi::call<u32>(fn[i], player());
+/* 02030F1C */
+static u32 streamIsPlaying(u32 i) {
+    switch (i) {
+    case 0: return hdInterfaceStreamIsPlaying0(player());
+    case 1: return hdInterfaceStreamIsPlaying1(player());
+    case 2: return hdInterfaceStreamIsPlaying2(player());
+    case 3: return hdInterfaceStreamIsPlaying3(player());
+    default: return 0;
+    }
 }
-VERIFY(0x02030F1C, Snd_streamIsPlaying);
 
-static u32 Snd_streamPause(u32 i, u32 a, u32 b) {
-    WWHD_FUNC(0x02030FA8, u32, i, a, b);
-    static const u32 fn[4] = {0x02030044, 0x020300E0, 0x0203017C, 0x02030218};
-    if (i > 3) return i;
-    return gabi::call<u32>(fn[i], player(), a, b);
+/* 02030FA8 */
+static u32 streamPause(u32 i, u32 a, u32 b) {
+    switch (i) {
+    case 0: return hdInterfaceStreamPause0(player(), a, b);
+    case 1: return hdInterfaceStreamPause1(player(), a, b);
+    case 2: return hdInterfaceStreamPause2(player(), a, b);
+    case 3: return hdInterfaceStreamPause3(player(), a, b);
+    default: return i;
+    }
 }
-VERIFY(0x02030FA8, Snd_streamPause);
 
-static void Snd_loadStatic() {
-    WWHD_FUNC(0x02031048, void);
-    gabi::call(0x02030468, gabi::call<u32>(0x0203103C));
+/* 02031048 */
+static void loadStatic() {
+    hdInterfaceLoadStatic(getSoundArchive());
 }
-VERIFY(0x02031048, Snd_loadStatic);
 
-static void Snd_loadBgmWds() {
-    WWHD_FUNC(0x0203106C, void);
-    gabi::call(0x02030474, gabi::call<u32>(0x0203103C));
+/* 0203106C */
+static void loadBgmWds() {
+    hdInterfaceLoadBgmWds(getSoundArchive());
 }
-VERIFY(0x0203106C, Snd_loadBgmWds);
 
-static u32 Snd_jaiQuery1() {
-    WWHD_FUNC(0x02031090, u32);
-    u32 b = ld(0x101FFC78);
-    if (b == 0) return 0;
-    return gabi::call<u32>(0x02027A7C, b);
+/* 02031090 */
+static u32 jaiQuery1() {
+    hdSoundInterfaceJAudio* b = sJAudio;
+    if (b == NULL) return 0;
+    return hdInterfaceQueryFirst(b);
 }
-VERIFY(0x02031090, Snd_jaiQuery1);
 
-static u32 Snd_jaiQuery2() {
-    WWHD_FUNC(0x020310A4, u32);
-    u32 b = ld(0x101FFC78);
-    if (b == 0) return 1;
-    return gabi::call<u32>(0x020278E8, b);
+/* 020310A4 */
+static u32 jaiQuery2() {
+    hdSoundInterfaceJAudio* b = sJAudio;
+    if (b == NULL) return 1;
+    return hdInterfaceQuerySecond(b);
 }
-VERIFY(0x020310A4, Snd_jaiQuery2);
 
-static void Snd_unpause() {
-    WWHD_FUNC(0x020310C0, void);
-    gabi::call(0x0202FC38, player(), 1);
-    gabi::call(0x020316C8, bgm(), 1);
+/* 020310C0 */
+static void unpause() {
+    hdInterfaceUnpausePlayer(player(), 1);
+    hdInterfaceUnpauseBgm(bgm(), 1);
 }
-VERIFY(0x020310C0, Snd_unpause);
 
-/* 020310F4: reset the HD sound state */
-static void Snd_reset() {
-    WWHD_FUNC(0x020310F4, void);
-    gabi::call(0x020309AC, 0);
-    gabi::call(0x02030E38);
-    gabi::call(0x02030C70);
-    gabi::call(0x02030CF8);
-    gabi::call(0x02030D6C);
-    gabi::call(0x02030DC0);
-    gabi::call(0x020310C0);
-    gabi::call(0x02030E10);
-    gabi::call(0x02030C10);
+// HD: reset each independent player flag in the original call order.
+/* 020310F4 */
+static void reset() {
+    setSoundOutputMode(0);
+    setBridgeFlag();
+    menuOut();
+    clearPlayerFlagF5();
+    clearPlayerFlagF6();
+    clearPlayerFlagF7();
+    unpause();
+    clearPlayerFlagF8();
+    bgmUpdate();
 }
-VERIFY(0x020310F4, Snd_reset);
 
-static void Snd_pauseAll() {
-    WWHD_FUNC(0x02031138, void);
-    gabi::call(0x0202FB98, player(), 3);
-    gabi::call(0x02031698, bgm(), 3);
+/* 02031138 */
+static void pauseAll() {
+    hdInterfacePausePlayer(player(), 3);
+    hdInterfacePauseBgm(bgm(), 3);
 }
-VERIFY(0x02031138, Snd_pauseAll);
 
-static void Snd_resumeAll() {
-    WWHD_FUNC(0x0203116C, void);
-    gabi::call(0x0202FC28, player(), 3);
-    gabi::call(0x020316B8, bgm(), 3);
+/* 0203116C */
+static void resumeAll() {
+    hdInterfaceResumePlayer(player(), 3);
+    hdInterfaceResumeBgm(bgm(), 3);
 }
-VERIFY(0x0203116C, Snd_resumeAll);
 
-static void Snd_bgmStop() {
-    WWHD_FUNC(0x020311A0, void);
-    gabi::call(0x020316D4, bgm());
+/* 020311A0 */
+static void bgmStop() {
+    hdInterfaceArmSe(bgm());
 }
-VERIFY(0x020311A0, Snd_bgmStop);
 
-static void sinit_020311C4() {
-    WWHD_FUNC(0x020311C4, void);
-    header_sinit(0x10200454, 0x1018EE08, 0x10004848);
+/* 020311C4 */
+static void __sinit_hd_sound_interface_cpp() {
+    sinit_header_statics_rodata(0x10200448, 0x1018EE08, 0x10200454, 0x10004848);
 }
-VERIFY(0x020311C4, sinit_020311C4);
 
-static u32 Fader_ct1(u32 self) {
-    WWHD_FUNC(0x02031258, u32, self);
-    return gabi::call<u32>(0x02762170, self, ldf(0x10004850));
+/* 02031258 */
+static u32 constructDefaultFader(hdSoundInterfaceFader* self) {
+    return hdInterfaceInitializeFader(self, sFaderOne);
 }
-VERIFY(0x02031258, Fader_ct1);
 
-}  // namespace hd_snd_020306F0
+/* WWHD glue (tools/verify/autoglue.py): private interface globals and calls
+ str 10004834
+ data sSoundManager 1018EC64
+ data sJAudio 101FFC78
+ data sOne 10004820
+ data sZero 10004830
+ data sFaderOne 10004850
+ data sHeapTypeInitialized 101FD648
+ data sParentTypeInitialized 101FD588
+ data sHeapType 101FD958
+ data sParentType 101FD95C
+ ext 02766334 void hdInterfaceDestroyTrailing(void*, u32)
+ ext 02760168 void hdInterfaceDestroyMember(void*, u32)
+ ext 0202BF88 hdSoundInterfaceSe* hdInterfaceGetSe(void*)
+ ext 0202BF98 hdSoundInterfaceBgm* hdInterfaceGetBgm(void*)
+ ext 0202BF78 hdSoundInterfacePlayer* hdInterfaceGetPlayer(void*)
+ ext 0202BF80 hdSoundInterfaceArchive* hdInterfaceGetArchive(void*)
+ ext 02031264 void hdInterfaceFadeBgm(hdSoundInterfaceBgm*, u32, f32, f32)
+ ext 0202F14C void hdInterfaceFadePlayer(hdSoundInterfacePlayer*, u32, f32, f32)
+ ext 02031920 void hdInterfaceStartSe(hdSoundInterfaceSe*, const char*)
+ ext 020319C8 hdSoundInterfaceHandle* hdInterfacePrepareSe(hdSoundInterfaceSe*, const char*)
+ ext 02885914 void hdInterfaceSetVolume(void*, u32, f32)
+ ext 028859A0 void hdInterfaceSetPitch(void*, f32)
+ ext 020316E0 void hdInterfaceDisarmSe(hdSoundInterfaceBgm*)
+ ext 0201E5E0 void hdInterfaceMenuIn(hdSoundInterfaceJAudio*)
+ ext 0201DCD4 void hdInterfaceMenuOut(hdSoundInterfaceJAudio*)
+ ext 02030468 void hdInterfaceLoadStatic(hdSoundInterfaceArchive*)
+ ext 02030474 void hdInterfaceLoadBgmWds(hdSoundInterfaceArchive*)
+ ext 02027A7C u32 hdInterfaceQueryFirst(hdSoundInterfaceJAudio*)
+ ext 020278E8 u32 hdInterfaceQuerySecond(hdSoundInterfaceJAudio*)
+ ext 0202FC38 void hdInterfaceUnpausePlayer(hdSoundInterfacePlayer*, u32)
+ ext 020316C8 void hdInterfaceUnpauseBgm(hdSoundInterfaceBgm*, u32)
+ ext 0202FB98 void hdInterfacePausePlayer(hdSoundInterfacePlayer*, u32)
+ ext 02031698 void hdInterfacePauseBgm(hdSoundInterfaceBgm*, u32)
+ ext 0202FC28 void hdInterfaceResumePlayer(hdSoundInterfacePlayer*, u32)
+ ext 020316B8 void hdInterfaceResumeBgm(hdSoundInterfaceBgm*, u32)
+ ext 020316D4 void hdInterfaceArmSe(hdSoundInterfaceBgm*)
+ ext 02762170 u32 hdInterfaceInitializeFader(hdSoundInterfaceFader*, f32)
+ ext 0202FFB8 u32 hdInterfaceStreamStart0(hdSoundInterfacePlayer*)
+ ext 02030054 u32 hdInterfaceStreamStart1(hdSoundInterfacePlayer*)
+ ext 020300F0 u32 hdInterfaceStreamStart2(hdSoundInterfacePlayer*)
+ ext 0203018C u32 hdInterfaceStreamStart3(hdSoundInterfacePlayer*)
+ ext 0202FFF4 u32 hdInterfaceStreamIsPlaying0(hdSoundInterfacePlayer*)
+ ext 02030090 u32 hdInterfaceStreamIsPlaying1(hdSoundInterfacePlayer*)
+ ext 0203012C u32 hdInterfaceStreamIsPlaying2(hdSoundInterfacePlayer*)
+ ext 020301C8 u32 hdInterfaceStreamIsPlaying3(hdSoundInterfacePlayer*)
+ ext 02030044 u32 hdInterfaceStreamPause0(hdSoundInterfacePlayer*, u32, u32)
+ ext 020300E0 u32 hdInterfaceStreamPause1(hdSoundInterfacePlayer*, u32, u32)
+ ext 0203017C u32 hdInterfaceStreamPause2(hdSoundInterfacePlayer*, u32, u32)
+ ext 02030218 u32 hdInterfaceStreamPause3(hdSoundInterfacePlayer*, u32, u32)
+*/

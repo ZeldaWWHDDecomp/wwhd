@@ -1,99 +1,112 @@
 /**
  * d_a_gnd_move.cpp (WWHD)
- * Boss - Ganondorf: gnd_move (02159FC8; the function map calls it attack0), the action dispatch
- * by m3EA with move0, attack0, attack1, attack2 and attackPZ inlined, followed by the shot (light
- * arrow) check and damage_check.
+ * Boss - Ganondorf movement, sword combos, and light-arrow defence.
  *
  * The GameCube source of this unit is all "Nonmatching"
- * stubs: written from the WWHD code (cking.rpx) and verified against it.
+ * stubs. HD: movement logic below preserves the verified HD implementation.
  */
-#include "d/actor/d_a_gnd.h"
+#include "d/actor/d_a_gnd_move.h"
 
-#define ZELDA_PTR 0x10464008u
-#define HIO_F(off) gabi::load<f32>(L_HIO + (off))
-#define HIO_S(off) gabi::load<s16>(L_HIO + (off))
+static GndMoveHioHD l_moveHio;
+struct GndMoveZeldaPointer {
+    gptr<fopAc_ac_c> actor;
+};
+static GndMoveZeldaPointer l_moveZelda;
 
-static inline bool mv_isStop(mDoExt_McaMorf* morf) { return (morf->mFrameCtrl.mState & 1) || morf->mFrameCtrl.mRate == 0.0f; }
+/* inlined into gnd_move */
+static inline bool mv_isStop(mDoExt_McaMorf* morf) {
+    return (morf->mFrameCtrl.mState & 1) || morf->mFrameCtrl.mRate == 0.0f;
+}
+/* inlined into gnd_move */
 static inline void mv_mons_se(gnd_class* a, u32 id) {
     if (a != nullptr && gabi::ea(&a->eyePos) != 0) {
         s8 room = fopAcM_GetRoomNo(a);
         u32 pid = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, id, &a->eyePos, pid, 0, reverb);
+        gndMoveMonsterSound(id, &a->eyePos, pid, 0, reverb);
     }
 }
+/* inlined into gnd_move */
 static inline void mv_mons_se_eye(gnd_class* a, u32 id) {
     if (gabi::ea(&a->eyePos) != 0) {
         s8 room = fopAcM_GetRoomNo(a);
         u32 pid = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, id, &a->eyePos, pid, 0, reverb);
+        gndMoveMonsterSound(id, &a->eyePos, pid, 0, reverb);
     }
 }
+/* inlined into gnd_move */
 static inline void mv_se(fopAc_ac_c* a, u32 id) {
     if (a != nullptr && gabi::ea(&a->eyePos) != 0) {
         mDoAud_seStart(id, &a->eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(a)));
     }
 }
+/* inlined into gnd_move */
 static inline void mv_se_eye(fopAc_ac_c* a, u32 id) {
     if (gabi::ea(&a->eyePos) != 0) {
         mDoAud_seStart(id, &a->eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(a)));
     }
 }
-static inline void mv_setTarget(gnd_class* i_this, fopAc_ac_c* pl) { GXYZ(0x3F0)->copy(pl->current.pos); }
-static inline fopAc_ac_c* mv_zelda() { return gabi::at<fopAc_ac_c>(gabi::load<u32>(ZELDA_PTR)); }
+/* inlined into gnd_move */
+static inline void mv_setTarget(gnd_class* i_this, fopAc_ac_c* pl) {
+    moveState(i_this).mTargetPos.copy(pl->current.pos);
+}
+/* inlined into gnd_move */
+static inline fopAc_ac_c* mv_zelda() { return l_moveZelda.actor; }
 
-/* move0's common end */
+// HD: GHS shares this movement tail across the inlined states.
+/* inlined into gnd_move */
 static inline void mv_moveEnd(gnd_class* i_this) {
     pos_move(i_this, 0);
-    GF(f32, 0x40C) = 2000.0f;
+    moveState(i_this).mTurnRate = 2000.0f;
     cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 2, 0x1000);
 }
 
-/* move0 (m3EA 0) */
-static inline void mv_move0(gnd_class* i_this) {
+/* Movement and spacing. */
+/* inlined into gnd_move */
+static inline void move0(gnd_class* i_this) {
     fopAc_ac_c* pl = dComIfGp_getPlayer(0);
     f32 dist = fopAcM_searchActorDistance(i_this, dComIfGp_getPlayer(0));
     s32 frame = gabi::ftoi(i_this->mpMorf->mFrameCtrl.mFrame);
-    switch ((u32)(s32)GF(s16, 0x3EC)) {
+    switch ((u32)(s32)moveState(i_this).mMode) {
     case 0:
-        anm_init(i_this, 0x59, 10.0f, 2, 1.0f, 0x21);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        anm_init(i_this, GND_BCK_MOVE, 10.0f, 2, 1.0f, 0x21);
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         break;
     case 1:
-        GF(f32, 0x414) = HIO_F(0x10);
-        if (dist < HIO_F(0x14)) {
-            anm_init(i_this, 0x58, 10.0f, 2, 1.0f, -1);
-            GF(s16, 0x3EC) = 2;
-        } else if (dist > HIO_F(0x18)) {
-            anm_init(i_this, 0x44, 10.0f, 0, 1.0f, 0x17);
+        moveState(i_this).mTargetSpeed = l_moveHio.mMoveSpeed;
+        if (dist < l_moveHio.mNearDistance) {
+            anm_init(i_this, GND_BCK_WAIT, 10.0f, 2, 1.0f, -1);
+            moveState(i_this).mMode = 2;
+        } else if (dist > l_moveHio.mFarDistance) {
+            anm_init(i_this, GND_BCK_JUMP_START, 10.0f, 0, 1.0f, 0x17);
             i_this->speedF = 0.0f;
-            GF(f32, 0x414) = 0.0f;
-            GF(s16, 0x3EC) = 3;
+            moveState(i_this).mTargetSpeed = 0.0f;
+            moveState(i_this).mMode = 3;
         }
         mv_setTarget(i_this, pl);
         break;
     case 2: {
-        GF(f32, 0x414) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
         s16 ang = fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0));
         if (player_view_check(i_this, ang)) {
             s16 next;
-            if (dist > HIO_F(0x38) && GF(s16, 0x420) == 0) {
+            if (dist > l_moveHio.mComboDistance && moveState(i_this).mAttackCooldown == 0) {
                 next = 0;
-            } else if (dist < HIO_F(0x28)) {
+            } else if (dist < l_moveHio.mCloseAttackDistance) {
                 next = 0x14;
-            } else if (GF(s16, 0x420) != 0) {
+            } else if (moveState(i_this).mAttackCooldown != 0) {
                 next = -1;
-            } else if (cM_rndF(100.0f) < HIO_F(0x44)) {
-                GF(s16, 0x3EA) = 2;
+            } else if (cM_rndF(100.0f) < l_moveHio.mAlternateAttackChance) {
+                moveState(i_this).mAction = GND_ACTION_ATTACK_ALTERNATE;
                 next = (cM_rndF(1.0f) < 0.5f) ? 0 : 1;
             } else {
-                s8 g = GF(s8, 0x60C);
-                GF(s16, 0x3EA) = 1;
+                s8 g = moveState(i_this).mFightPhase;
+                moveState(i_this).mAction = GND_ACTION_ATTACK_COMBO;
                 if (g == 0) {
                     next = 0;
                 } else {
-                    u8 h = gabi::load<u8>(L_HIO + 0xD);
+                    u8 h = l_moveHio.mComboChoice;
                     if (h == 1) {
                         next = 0;
                     } else if (g == 1 || h == 2) {
@@ -103,91 +116,92 @@ static inline void mv_move0(gnd_class* i_this) {
                     }
                 }
             }
-            if (next >= 0) GF(s16, 0x3EC) = next;
+            if (next >= 0)
+                moveState(i_this).mMode = next;
         }
         mv_setTarget(i_this, pl);
         break;
     }
     case 3:
-        i_this->gravity = HIO_F(0x24);
+        i_this->gravity = l_moveHio.mJumpGravity;
         if (frame == 0xC) {
-            i_this->speed.y = HIO_F(0x20);
-            f32 s = HIO_F(0x1C);
-            GF(f32, 0x414) = s;
+            i_this->speed.y = l_moveHio.mJumpY;
+            f32 s = l_moveHio.mJumpSpeed;
+            moveState(i_this).mTargetSpeed = s;
             i_this->speedF = s;
             splash_set(i_this);
         }
         if (mv_isStop(i_this->mpMorf)) {
-            anm_init(i_this, 0x43, 5.0f, 2, 1.0f, -1);
-            GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+            anm_init(i_this, GND_BCK_JUMP_LOOP, 5.0f, 2, 1.0f, -1);
+            moveState(i_this).mMode = moveState(i_this).mMode + 1;
         }
         break;
     case 4: {
         mv_se(i_this, 0x5158);
         f32 sy = i_this->speed.y;
-        i_this->gravity = HIO_F(0x24);
+        i_this->gravity = l_moveHio.mJumpGravity;
         if (sy < 0.0f) { /* bge: taken on NaN */
-            anm_init(i_this, 0x41, 5.0f, 0, 1.0f, -1);
-            GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+            anm_init(i_this, GND_BCK_FALL, 5.0f, 0, 1.0f, -1);
+            moveState(i_this).mMode = moveState(i_this).mMode + 1;
         }
         break;
     }
     case 5: {
         mv_se(i_this, 0x5158);
-        f32 g = HIO_F(0x24);
-        GF(f32, 0x40C) = 0.0f;
+        f32 g = l_moveHio.mJumpGravity;
+        moveState(i_this).mTurnRate = 0.0f;
         i_this->gravity = g;
         if (checkGround(i_this, 0.0f)) {
-            anm_init(i_this, 0x42, 2.0f, 0, 1.0f, -1);
-            GF(s16, 0x3EC) = 6;
+            anm_init(i_this, GND_BCK_LAND, 2.0f, 0, 1.0f, -1);
+            moveState(i_this).mMode = 6;
             splash_set(i_this);
         }
         break;
     }
     case 6: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x414) = 0.0f;
-        GF(f32, 0x40C) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
+        moveState(i_this).mTurnRate = 0.0f;
         if (mv_isStop(morf)) {
-            GF(s16, 0x3EC) = 2;
-            anm_init(i_this, 0x58, 10.0f, 2, 1.0f, -1);
+            moveState(i_this).mMode = 2;
+            anm_init(i_this, GND_BCK_WAIT, 10.0f, 2, 1.0f, -1);
         }
         break;
     }
     case 0x14:
-        anm_init(i_this, 0x4A, 5.0f, 0, 1.0f, 0x1B);
-        GF(s16, 0x3EC) = 0x15;
+        anm_init(i_this, GND_BCK_BACK_JUMP_START, 5.0f, 0, 1.0f, 0x1B);
+        moveState(i_this).mMode = 0x15;
         break;
     case 0x15: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
         i_this->speedF = 0.0f;
-        GF(f32, 0x414) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
         if (mv_isStop(morf)) {
-            i_this->speed.y = HIO_F(0x30);
-            f32 s = HIO_F(0x2C);
+            i_this->speed.y = l_moveHio.mBackJumpY;
+            f32 s = l_moveHio.mBackJumpSpeed;
             i_this->speedF = s;
-            GF(f32, 0x414) = s;
-            anm_init(i_this, 0x4B, 5.0f, 0, 1.0f, -1);
-            GF(s16, 0x3EC) = 0x16;
+            moveState(i_this).mTargetSpeed = s;
+            anm_init(i_this, GND_BCK_BACK_JUMP, 5.0f, 0, 1.0f, -1);
+            moveState(i_this).mMode = 0x16;
         }
         mv_setTarget(i_this, pl);
         break;
     }
     case 0x16:
-        i_this->gravity = HIO_F(0x34);
+        i_this->gravity = l_moveHio.mBackJumpGravity;
         if (checkGround(i_this, 0.0f)) {
-            anm_init(i_this, 0x4C, 5.0f, 0, 1.0f, 0x1C);
-            GF(s16, 0x3EC) = 0x17;
+            anm_init(i_this, GND_BCK_BACK_JUMP_LAND, 5.0f, 0, 1.0f, 0x1C);
+            moveState(i_this).mMode = 0x17;
         }
         mv_setTarget(i_this, pl);
         break;
     case 0x17: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x414) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
         if (mv_isStop(morf)) {
-            GF(s16, 0x3EC) = 2;
+            moveState(i_this).mMode = 2;
             wait_set(i_this);
-            GF(s16, 0x420) = 0x14;
+            moveState(i_this).mAttackCooldown = 0x14;
         }
         break;
     }
@@ -195,20 +209,21 @@ static inline void mv_move0(gnd_class* i_this) {
     mv_moveEnd(i_this);
 }
 
-/* attack0 (m3EA 1): the sword combos. Returns the guard flag (r30). */
-static inline void mv_attack0(gnd_class* i_this) {
+/* Sword combos. */
+/* inlined into gnd_move */
+static inline void attack0(gnd_class* i_this) {
     fopAc_ac_c* pl = dComIfGp_getPlayer(0);
     f32 dist = fopAcM_searchActorDistance(i_this, dComIfGp_getPlayer(0));
     mDoExt_McaMorf* morf0 = i_this->mpMorf;
     bool follow = false, guard = false, endAtk = false, home = false;
     int turn = 0;
-    s16 mode = GF(s16, 0x3EC);
+    s16 mode = moveState(i_this).mMode;
     s32 frame = gabi::ftoi(morf0->mFrameCtrl.mFrame);
     switch ((u32)(s32)mode) {
     case 0:
-        anm_init(i_this, 0x24, 3.0f, 0, 1.0f, 8);
+        anm_init(i_this, GND_BCK_COMBO_LEFT_START, 3.0f, 0, 1.0f, 8);
         mv_mons_se(i_this, 0x4947);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         guard = true;
         break;
     case 1: {
@@ -216,15 +231,16 @@ static inline void mv_attack0(gnd_class* i_this) {
         guard = true;
         mDoExt_McaMorf* morf = i_this->mpMorf;
         if (frame >= 0x17) {
-            GF(f32, 0x414) = HIO_F(0x48);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboAdvanceSpeed;
         } else {
-            GF(f32, 0x414) = HIO_F(0x50);
-            if ((u32)(frame - 0xD) < 4) GF(u8, 0x1718) = 1;
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboWindupSpeed;
+            if ((u32)(frame - 0xD) < 4)
+                moveState(i_this).mLeftSwordAttack = 1;
         }
         if (mv_isStop(morf)) {
-            anm_init(i_this, 0x25, 1.0f, 0, 1.0f, 9);
+            anm_init(i_this, GND_BCK_COMBO_LEFT_FOLLOW, 1.0f, 0, 1.0f, 9);
             mv_mons_se(i_this, 0x4948);
-            GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+            moveState(i_this).mMode = moveState(i_this).mMode + 1;
         }
         break;
     }
@@ -233,91 +249,101 @@ static inline void mv_attack0(gnd_class* i_this) {
         guard = true;
         mDoExt_McaMorf* morf = i_this->mpMorf;
         if (frame >= 0xC) {
-            GF(f32, 0x414) = HIO_F(0x48);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboAdvanceSpeed;
         } else {
-            GF(f32, 0x414) = HIO_F(0x4C);
-            if ((u32)(frame - 5) < 6) GF(u8, 0x1718) = 1;
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboSwingSpeed;
+            if ((u32)(frame - 5) < 6)
+                moveState(i_this).mLeftSwordAttack = 1;
         }
         if (mv_isStop(morf)) {
-            if (GF(s8, 0x608) != 0) goto counter;
-            anm_init(i_this, 0x26, 2.0f, 0, 1.0f, 0xA);
+            if (moveState(i_this).mCounterRequest != 0) {
+                moveState(i_this).mCounterRequest = 0;
+                anm_init(i_this, GND_BCK_COUNTER_START, 3.0f, 0, 1.0f, 0x1D);
+                moveState(i_this).mMode = 0x15;
+                break;
+            }
+            anm_init(i_this, GND_BCK_COMBO_LEFT_FINISH, 2.0f, 0, 1.0f, 0xA);
             mv_mons_se(i_this, 0x4949);
-            GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+            moveState(i_this).mMode = moveState(i_this).mMode + 1;
         }
-        if (frame > HIO_S(0x66)) GF(u8, 0x172F) = 1;
+        if (frame > l_moveHio.mFirstParryFrame)
+            moveState(i_this).mNextParryOpeningType = 1;
         break;
     }
     case 3:
         guard = true;
         if (frame >= 0x19) {
-            GF(f32, 0x414) = HIO_F(0x48);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboAdvanceSpeed;
         } else {
-            GF(f32, 0x414) = HIO_F(0x4C);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboSwingSpeed;
             if ((u32)(frame - 6) < 0x11) {
-                GF(u8, 0x1718) = 1;
-                GF(u8, 0x1719) = 1;
+                moveState(i_this).mLeftSwordAttack = 1;
+                moveState(i_this).mRightSwordAttack = 1;
             }
         }
-        if (frame >= HIO_S(0x68) && frame <= HIO_S(0x6A)) GF(u8, 0x172F) = 1;
+        if (frame >= l_moveHio.mComboParryStart && frame <= l_moveHio.mComboParryEnd)
+            moveState(i_this).mNextParryOpeningType = 1;
         if (mv_isStop(i_this->mpMorf)) {
-            GF(s16, 0x3EA) = 0;
-            GF(s16, 0x3EC) = 0;
+            moveState(i_this).mAction = GND_ACTION_MOVE;
+            moveState(i_this).mMode = 0;
         }
         break;
     case 5:
-        anm_init(i_this, 0x27, 3.0f, 0, 1.0f, 0xB);
+        anm_init(i_this, GND_BCK_COMBO_RIGHT_START, 3.0f, 0, 1.0f, 0xB);
         mv_mons_se(i_this, 0x4947);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         guard = true;
         break;
     case 6: {
         guard = true;
         if ((u32)(frame - 9) < 0xB) {
-            GF(f32, 0x414) = HIO_F(0x50);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboWindupSpeed;
         } else {
-            GF(f32, 0x414) = HIO_F(0x48);
+            moveState(i_this).mTargetSpeed = l_moveHio.mComboAdvanceSpeed;
         }
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        if ((u32)(frame - 0xD) < 5) GF(u8, 0x1719) = 1;
+        if ((u32)(frame - 0xD) < 5)
+            moveState(i_this).mRightSwordAttack = 1;
         follow = true;
         if (mv_isStop(morf)) {
-            anm_init(i_this, 0x28, 2.0f, 0, 1.0f, 0xC);
+            anm_init(i_this, GND_BCK_COMBO_RIGHT_FOLLOW, 2.0f, 0, 1.0f, 0xC);
             mv_mons_se(i_this, 0x4949);
-            GF(s16, 0x3EC) = 7;
+            moveState(i_this).mMode = 7;
         }
         break;
     }
     case 7: {
         follow = true;
         guard = true;
-        GF(f32, 0x414) = HIO_F(0x4C);
+        moveState(i_this).mTargetSpeed = l_moveHio.mComboSwingSpeed;
         mDoExt_McaMorf* morf = i_this->mpMorf;
         if ((u32)(frame - 8) < 0x10) {
-            GF(u8, 0x1718) = 1;
-            GF(u8, 0x1719) = 1;
+            moveState(i_this).mLeftSwordAttack = 1;
+            moveState(i_this).mRightSwordAttack = 1;
         }
-        if (!mv_isStop(morf)) break;
-        if (GF(s8, 0x608) != 0) goto counter;
-        anm_init(i_this, 0x2B, 5.0f, 0, 1.0f, 0xF);
-        GF(s16, 0x3EC) = 8;
+        if (!mv_isStop(morf))
+            break;
+        if (moveState(i_this).mCounterRequest != 0) {
+            moveState(i_this).mCounterRequest = 0;
+            anm_init(i_this, GND_BCK_COUNTER_START, 3.0f, 0, 1.0f, 0x1D);
+            moveState(i_this).mMode = 0x15;
+            break;
+        }
+        anm_init(i_this, GND_BCK_COMBO_RIGHT_FINISH, 5.0f, 0, 1.0f, 0xF);
+        moveState(i_this).mMode = 8;
         break;
     }
-    counter:
-        guard = true;
-        GF(s8, 0x608) = 0;
-        anm_init(i_this, 0x4D, 3.0f, 0, 1.0f, 0x1D);
-        GF(s16, 0x3EC) = 0x15;
-        break;
     case 8: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x414) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
         guard = true;
-        if (!mv_isStop(morf)) break;
-        anm_init(i_this, 0x29, 2.0f, 0, 1.0f, 0xD);
+        if (!mv_isStop(morf))
+            break;
+        anm_init(i_this, GND_BCK_JUMP_SLASH_START, 2.0f, 0, 1.0f, 0xD);
         mv_mons_se(i_this, 0x4948);
-        GF(s16, 0x3EC) = 9;
-        i_this->speed.y = HIO_F(0x58);
-        GF(f32, 0x414) = gabi::fmuls_ppc(dist, REG0_F(9) + 0.015f);
+        moveState(i_this).mMode = 9;
+        i_this->speed.y = l_moveHio.mAttackJumpY;
+        moveState(i_this).mTargetSpeed = gabi::fmuls_ppc(dist, REG0_F(9) + 0.015f);
         splash_set(i_this);
         break;
     }
@@ -327,203 +353,221 @@ static inline void mv_attack0(gnd_class* i_this) {
         if (sy > 0.0f) { /* ble: taken on NaN */
             f32 sx = i_this->speed.x;
             f32 sz = i_this->speed.z;
-            GF(f32, 0x3FC) = sx;
-            GF(f32, 0x400) = sy;
-            GF(f32, 0x404) = sz;
+            moveState(i_this).mSavedSpeed.x = sx;
+            moveState(i_this).mSavedSpeed.y = sy;
+            moveState(i_this).mSavedSpeed.z = sz;
         }
         home = true;
         turn = 1;
-        if (frame > HIO_S(0x6C)) GF(u8, 0x172F) = 2;
-        f32 g = HIO_F(0x5C);
-        GF(f32, 0x40C) = 0.0f;
+        if (frame > l_moveHio.mJumpParryFrame)
+            moveState(i_this).mNextParryOpeningType = 2;
+        f32 g = l_moveHio.mAttackGravity;
+        moveState(i_this).mTurnRate = 0.0f;
         i_this->gravity = g;
-        if (!checkGround(i_this, 0.0f)) break;
-        anm_init(i_this, 0x2A, 2.0f, 0, 1.0f, 0xE);
-        GF(s16, 0x3EC) = 0xA;
+        if (!checkGround(i_this, 0.0f))
+            break;
+        anm_init(i_this, GND_BCK_JUMP_SLASH_LAND, 2.0f, 0, 1.0f, 0xE);
+        moveState(i_this).mMode = 0xA;
         splash_set(i_this);
         break;
     }
     case 0xA: {
         guard = true;
-        s8 g = GF(s8, 0x60C);
+        s8 g = moveState(i_this).mFightPhase;
         s16 a = i_this->shape_angle.y;
-        if (g >= 2) GF(u8, 0x60B) = 2;
+        if (g >= 2)
+            moveState(i_this).mCombatEffect = 2;
         i_this->current.angle.y = a;
-        if (frame >= HIO_S(0x6E) && frame <= HIO_S(0x70)) GF(u8, 0x172F) = 2;
-        GF(f32, 0x414) = 0.0f;
+        if (frame >= l_moveHio.mLandingParryStart && frame <= l_moveHio.mLandingParryEnd)
+            moveState(i_this).mNextParryOpeningType = 2;
+        moveState(i_this).mTargetSpeed = 0.0f;
         mDoExt_McaMorf* morf = i_this->mpMorf;
         if ((u32)(frame - 3) < 3) {
-            GF(u8, 0x1718) = 1;
-            GF(u8, 0x1719) = 1;
-            GF(f32, 0x1728) = 60.0f;
-            GF(f32, 0x1724) = 60.0f;
+            moveState(i_this).mLeftSwordAttack = 1;
+            moveState(i_this).mRightSwordAttack = 1;
+            moveState(i_this).mRightSwordRadius = 60.0f;
+            moveState(i_this).mLeftSwordRadius = 60.0f;
         }
         if (mv_isStop(morf)) {
-            GF(s16, 0x3EC) = 0xB;
-            GF(s16, 0x41E) = HIO_S(0x72);
+            moveState(i_this).mMode = 0xB;
+            moveState(i_this).mActionTimer = l_moveHio.mCounterParryFrame;
         }
         break;
     }
     case 0xB: {
-        s8 g = GF(s8, 0x60C);
+        s8 g = moveState(i_this).mFightPhase;
         s16 a = i_this->shape_angle.y;
-        if (g >= 2) GF(u8, 0x60B) = 2;
-        s16 t = GF(s16, 0x41E);
+        if (g >= 2)
+            moveState(i_this).mCombatEffect = 2;
+        s16 t = moveState(i_this).mActionTimer;
         i_this->current.angle.y = a;
-        if (t == 0) endAtk = true;
+        if (t == 0)
+            endAtk = true;
         break;
     }
     case 0xF: {
-        s16 t = GF(s16, 0x41E);
-        GF(f32, 0x40C) = 8000.0f;
-        GF(f32, 0x414) = 0.0f;
+        s16 t = moveState(i_this).mActionTimer;
+        moveState(i_this).mTurnRate = 8000.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
         follow = true;
-        if (t != 0) break;
-        anm_init(i_this, 0x48, 5.0f, 0, 1.0f, 0x1A);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        if (t != 0)
+            break;
+        anm_init(i_this, GND_BCK_CHARGE_START, 5.0f, 0, 1.0f, 0x1A);
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         break;
     }
     case 0x10: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x40C) = 8000.0f;
+        moveState(i_this).mTurnRate = 8000.0f;
         follow = true;
-        if (!mv_isStop(morf)) break;
-        anm_init(i_this, 0x47, 2.0f, 0, 1.0f, -1);
+        if (!mv_isStop(morf))
+            break;
+        anm_init(i_this, GND_BCK_CHARGE_JUMP, 2.0f, 0, 1.0f, -1);
         mv_mons_se(i_this, 0x494A);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         i_this->speed.y = REG0_F(9) + 30.0f;
-        GF(f32, 0x414) = gabi::fmuls_ppc(dist, REG0_F(10) + 0.025f);
+        moveState(i_this).mTargetSpeed = gabi::fmuls_ppc(dist, REG0_F(10) + 0.025f);
         splash_set(i_this);
         break;
     }
     case 0x11: {
         f32 g = REG0_F(11) + -2.0f;
         f32 sy = i_this->speed.y;
-        GF(f32, 0x40C) = 5000.0f;
+        moveState(i_this).mTurnRate = 5000.0f;
         i_this->gravity = g;
-        if (sy > 0.0f) break;
-        anm_init(i_this, 0x45, 2.0f, 0, 1.0f, 0x18);
+        if (sy > 0.0f)
+            break;
+        anm_init(i_this, GND_BCK_CHARGE_FALL, 2.0f, 0, 1.0f, 0x18);
         mv_mons_se_eye(i_this, 0x494B);
-        s16 m = GF(s16, 0x3EC);
-        u32 sx = gabi::load<u32>(gabi::ea(i_this) + 0x33C);
-        u32 syw = gabi::load<u32>(gabi::ea(i_this) + 0x340);
-        GF(u32, 0x3FC) = sx;
-        u32 sz = gabi::load<u32>(gabi::ea(i_this) + 0x344);
-        GF(u32, 0x400) = syw;
-        GF(s16, 0x3EC) = m + 1;
-        GF(u32, 0x404) = sz;
+        s16 m = moveState(i_this).mMode;
+        // HD: Preserve the integer word copies, including signaling NaNs.
+        u32 sx = moveWord(i_this->speed.x);
+        u32 syw = moveWord(i_this->speed.y);
+        moveWord(moveState(i_this).mSavedSpeed.x) = sx;
+        u32 sz = moveWord(i_this->speed.z);
+        moveWord(moveState(i_this).mSavedSpeed.y) = syw;
+        moveState(i_this).mMode = m + 1;
+        moveWord(moveState(i_this).mSavedSpeed.z) = sz;
         {
-            u32 lp = gabi::load<u32>(dComIfGp_ea() + 0x5B34);
-            u32 f = gabi::load<u32>(lp + 0x6A70);
-            gabi::store<s16>(lp + 0x3B0, 0);
-            gabi::store<u32>(lp + 0x6A70, f & ~8u);
+            GndMovePlayerHD* lp = reinterpret_cast<GndMovePlayHD*>(dComIfGp_get())->mpLink;
+            u32 f = lp->mStatus;
+            lp->mCounterState = 0;
+            lp->mStatus = f & ~8u;
         }
         break;
     }
     case 0x12:
-        GF(u8, 0x1718) = 4;
+        moveState(i_this).mLeftSwordAttack = 4;
         home = true;
-        GF(u8, 0x1719) = 4;
-        if (!checkGround(i_this, 0.0f)) break;
-        anm_init(i_this, 0x46, 2.0f, 0, 1.0f, 0x19);
+        moveState(i_this).mRightSwordAttack = 4;
+        if (!checkGround(i_this, 0.0f))
+            break;
+        anm_init(i_this, GND_BCK_CHARGE_LAND, 2.0f, 0, 1.0f, 0x19);
         {
-            s16 m = GF(s16, 0x3EC);
+            s16 m = moveState(i_this).mMode;
             i_this->speedF = 0.0f;
-            GF(f32, 0x414) = 0.0f;
-            GF(s16, 0x3EC) = m + 1;
+            moveState(i_this).mTargetSpeed = 0.0f;
+            moveState(i_this).mMode = m + 1;
         }
         splash_set(i_this);
         break;
     case 0x13:
         if (frame <= 4) {
-            GF(u8, 0x1718) = 4;
-            GF(u8, 0x1719) = 4;
+            moveState(i_this).mLeftSwordAttack = 4;
+            moveState(i_this).mRightSwordAttack = 4;
         }
-        if (mv_isStop(morf0)) endAtk = true;
+        if (mv_isStop(morf0))
+            endAtk = true;
         break;
     case 0x14:
         guard = true;
-        anm_init(i_this, 0x4D, 3.0f, 0, 1.0f, 0x1D);
-        GF(s16, 0x3EC) = 0x15;
+        anm_init(i_this, GND_BCK_COUNTER_START, 3.0f, 0, 1.0f, 0x1D);
+        moveState(i_this).mMode = 0x15;
         break;
     case 0x15: {
-        GF(f32, 0x40C) = 5000.0f;
+        moveState(i_this).mTurnRate = 5000.0f;
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x414) = HIO_F(0x60);
+        moveState(i_this).mTargetSpeed = l_moveHio.mCounterSpeed;
         guard = true;
-        if (!mv_isStop(morf)) break;
-        anm_init(i_this, 0x4E, 2.0f, 0, 1.0f, -1);
+        if (!mv_isStop(morf))
+            break;
+        anm_init(i_this, GND_BCK_COUNTER_SLASH, 2.0f, 0, 1.0f, -1);
         mv_mons_se(i_this, 0x494A);
-        GF(s16, 0x3EC) = 0x16;
+        moveState(i_this).mMode = 0x16;
         break;
     }
     case 0x16: {
         guard = true;
         if ((u32)frame < 5) {
-            GF(u8, 0x1719) = 3;
-            GF(f32, 0x1728) = REG0_F(12) + 170.0f;
+            moveState(i_this).mRightSwordAttack = 3;
+            moveState(i_this).mRightSwordRadius = REG0_F(12) + 170.0f;
         }
-        if (frame == 0x14 && GF(s8, 0x608) == 0) {
-            GF(s8, 0x1731) = (s8)(REG0_S(4) + 0xD);
+        if (frame == 0x14 && moveState(i_this).mCounterRequest == 0) {
+            moveState(i_this).mImpactTimer = (s8)(REG0_S(4) + 0xD);
         }
-        if (!mv_isStop(i_this->mpMorf)) break;
-        if (GF(s8, 0x608) != 0) {
-            s8 g = GF(s8, 0x60C);
-            GF(s8, 0x608) = 0;
+        if (!mv_isStop(i_this->mpMorf))
+            break;
+        if (moveState(i_this).mCounterRequest != 0) {
+            s8 g = moveState(i_this).mFightPhase;
+            moveState(i_this).mCounterRequest = 0;
             if (g == 0) {
-                GF(f32, 0x414) = 0.0f;
+                moveState(i_this).mTargetSpeed = 0.0f;
                 wait_set(i_this);
-                GF(s16, 0x3EC) = 0x17;
-                GF(s16, 0x41E) = 0x96;
+                moveState(i_this).mMode = 0x17;
+                moveState(i_this).mActionTimer = 0x96;
             } else {
-                GF(s16, 0x3EC) = 0xF;
-                GF(s16, 0x41E) = REG0_S(7);
+                moveState(i_this).mMode = 0xF;
+                moveState(i_this).mActionTimer = REG0_S(7);
             }
         } else {
-            GF(s16, 0x3EC) = 0x1A;
+            moveState(i_this).mMode = 0x1A;
             wait_set(i_this);
-            GF(s16, 0x41E) = REG0_S(5) + 0x2D;
+            moveState(i_this).mActionTimer = REG0_S(5) + 0x2D;
         }
         break;
     }
     case 0x17:
-        if (GF(s16, 0x41E) != 0) break;
-        anm_init(i_this, 0x50, 3.0f, 0, 1.0f, -1);
-        GF(s16, 0x3EC) = 0x18;
+        if (moveState(i_this).mActionTimer != 0)
+            break;
+        anm_init(i_this, GND_BCK_COUNTER_RECOVER, 3.0f, 0, 1.0f, -1);
+        moveState(i_this).mMode = 0x18;
         break;
     case 0x18: {
-        if (!mv_isStop(morf0)) break;
+        if (!mv_isStop(morf0))
+            break;
         s16 ang = fopAcM_searchActorAngleY(i_this, dComIfGp_getPlayer(0));
         if (player_view_check(i_this, ang)) {
             endAtk = true;
             break;
         }
-        anm_init(i_this, 0x3F, 3.0f, 0, 1.0f, -1);
+        anm_init(i_this, GND_BCK_TURN, 3.0f, 0, 1.0f, -1);
         mv_mons_se(i_this, 0x4954);
-        GF(s16, 0x3EC) = 0x19;
-        GF(s16, 0x41E) = 0x14;
+        moveState(i_this).mMode = 0x19;
+        moveState(i_this).mActionTimer = 0x14;
         break;
     }
     case 0x19:
         turn = 1;
-        if (GF(s16, 0x41E) == 0) endAtk = true;
+        if (moveState(i_this).mActionTimer == 0)
+            endAtk = true;
         break;
     case 0x1A: {
-        s16 t = GF(s16, 0x41E);
+        s16 t = moveState(i_this).mActionTimer;
         guard = true;
-        GF(f32, 0x414) = 0.0f;
-        if (t == 0) endAtk = true;
+        moveState(i_this).mTargetSpeed = 0.0f;
+        if (t == 0)
+            endAtk = true;
         break;
     }
     }
-    i_this->speedF = GF(f32, 0x414);
+    i_this->speedF = moveState(i_this).mTargetSpeed;
     if (follow) {
         mv_setTarget(i_this, pl);
         pos_move(i_this, 0);
     } else {
         pos_move(i_this, 1);
     }
-    GF(f32, 0x40C) = 2000.0f;
+    moveState(i_this).mTurnRate = 2000.0f;
     if (turn == 0) {
         cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 4, 0x2000);
     } else {
@@ -531,50 +575,53 @@ static inline void mv_attack0(gnd_class* i_this) {
         cLib_addCalcAngleS2(&i_this->shape_angle.y, ang, 4, (s16)(turn << 12));
     }
     if (home) {
-        cLib_addCalc2(&i_this->current.pos.x, pl->current.pos.x, 0.8f, fabsf(GF(f32, 0x3FC)));
-        cLib_addCalc2(&i_this->current.pos.z, pl->current.pos.z, 0.8f, fabsf(GF(f32, 0x404)));
+        cLib_addCalc2(&i_this->current.pos.x, pl->current.pos.x, 0.8f,
+                      fabsf(moveState(i_this).mSavedSpeed.x));
+        cLib_addCalc2(&i_this->current.pos.z, pl->current.pos.z, 0.8f,
+                      fabsf(moveState(i_this).mSavedSpeed.z));
     }
     if (endAtk) {
         s16 a = i_this->shape_angle.y;
-        GF(s16, 0x3EA) = 0;
-        GF(s16, 0x3EC) = 0;
+        moveState(i_this).mAction = GND_ACTION_MOVE;
+        moveState(i_this).mMode = 0;
         i_this->current.angle.y = a;
-        GF(s16, 0x420) = HIO_S(0x64);
+        moveState(i_this).mAttackCooldown = l_moveHio.mAttackCooldown;
     }
-    if (gabi::load<u8>(L_HIO + 0x40) == 0 && GF(s8, 0x60C) < 2 && guard) {
-        GF(u8, 0x172E) = 0;
-        GF(u8, 0x60B) = 5;
+    if (l_moveHio.mDisableGuard == 0 && moveState(i_this).mFightPhase < 2 && guard) {
+        moveState(i_this).mCheckLightArrows = 0;
+        moveState(i_this).mCombatEffect = 5;
     }
 }
 
-/* attack1 (m3EA 2) */
-static inline void mv_attack1(gnd_class* i_this) {
+/* Alternate sword attacks. */
+/* inlined into gnd_move */
+static inline void attack1(gnd_class* i_this) {
     u32 play = dComIfGp_ea();
     mDoExt_McaMorf* morf = i_this->mpMorf;
     f32 reg = REG0_F(13);
     s32 frame = gabi::ftoi(morf->mFrameCtrl.mFrame);
-    fopAc_ac_c* pl = gabi::at<fopAc_ac_c>(gabi::load<u32>(play + 0x5B2C));
+    fopAc_ac_c* pl = gabi::at<GndMovePlayHD>(play)->mpPlayer;
     bool done = false;
     f32 r = reg + 110.0f;
-    s16 mode = GF(s16, 0x3EC);
-    GF(f32, 0x1728) = r;
-    GF(f32, 0x1724) = r;
+    s16 mode = moveState(i_this).mMode;
+    moveState(i_this).mRightSwordRadius = r;
+    moveState(i_this).mLeftSwordRadius = r;
     switch ((u32)(s32)mode) {
     case 0:
-        anm_init(i_this, 0x53, 5.0f, 0, 1.0f, 0x1F);
+        anm_init(i_this, GND_BCK_ALTERNATE_LEFT, 5.0f, 0, 1.0f, 0x1F);
         mv_mons_se(i_this, 0x494A);
-        GF(s16, 0x3EC) = 5;
+        moveState(i_this).mMode = 5;
         break;
     case 1:
-        anm_init(i_this, 0x54, 5.0f, 0, 1.0f, 0x20);
+        anm_init(i_this, GND_BCK_ALTERNATE_RIGHT, 5.0f, 0, 1.0f, 0x20);
         mv_mons_se(i_this, 0x494C);
-        GF(s16, 0x3EC) = 6;
+        moveState(i_this).mMode = 6;
         break;
     case 5:
     case 6:
         if (mode == 5 ? (u32)(frame - 0xF) < 4 : (u32)(frame - 0xC) < 0x17) {
             mDoExt_McaMorf* m = i_this->mpMorf;
-            GF(u8, mode == 5 ? 0x1718 : 0x1719) = 1;
+            (mode == 5 ? moveState(i_this).mLeftSwordAttack : moveState(i_this).mRightSwordAttack) = 1;
             done = mv_isStop(m);
         } else {
             mv_setTarget(i_this, pl);
@@ -582,62 +629,66 @@ static inline void mv_attack1(gnd_class* i_this) {
         }
         break;
     }
-    GF(f32, 0x414) = HIO_F(0x10);
+    moveState(i_this).mTargetSpeed = l_moveHio.mMoveSpeed;
     pos_move(i_this, 0);
     cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 2, 0x1000);
     if (done) {
-        GF(s16, 0x3EA) = 0;
-        GF(s16, 0x3EC) = 0;
+        moveState(i_this).mAction = GND_ACTION_MOVE;
+        moveState(i_this).mMode = 0;
         s16 a = i_this->shape_angle.y;
-        GF(s16, 0x420) = 0;
+        moveState(i_this).mAttackCooldown = 0;
         i_this->current.angle.y = a;
     }
 }
 
-/* attack2 (m3EA 3) */
-static inline void mv_attack2(gnd_class* i_this) {
+/* Quick sword attacks. */
+/* inlined into gnd_move */
+static inline void attack2(gnd_class* i_this) {
     dComIfGp_get();
     mDoExt_McaMorf* morf = i_this->mpMorf;
     f32 reg = REG0_F(13);
-    s16 mode = GF(s16, 0x3EC);
+    s16 mode = moveState(i_this).mMode;
     s32 frame = gabi::ftoi(morf->mFrameCtrl.mFrame);
-    GF(u8, 0x172E) = 0;
+    moveState(i_this).mCheckLightArrows = 0;
     f32 r = reg + 110.0f;
-    GF(f32, 0x1728) = r;
-    GF(f32, 0x1724) = r;
+    moveState(i_this).mRightSwordRadius = r;
+    moveState(i_this).mLeftSwordRadius = r;
     switch ((u32)(s32)mode) {
     case 0:
-        anm_init(i_this, 0x36, 2.0f, 0, 1.0f, 0x13);
+        anm_init(i_this, GND_BCK_QUICK_LEFT, 2.0f, 0, 1.0f, 0x13);
         mv_mons_se(i_this, 0x494A);
-        GF(s16, 0x3EC) = 2;
+        moveState(i_this).mMode = 2;
         break;
     case 1:
-        anm_init(i_this, 0x37, 2.0f, 0, 1.0f, 0x14);
+        anm_init(i_this, GND_BCK_QUICK_RIGHT, 2.0f, 0, 1.0f, 0x14);
         mv_mons_se(i_this, 0x4947);
-        GF(s16, 0x3EC) = 3;
+        moveState(i_this).mMode = 3;
         break;
     case 2:
     case 3:
         if (mode == 2) {
-            if (frame >= 4) GF(u8, 0x1718) = 1;
+            if (frame >= 4)
+                moveState(i_this).mLeftSwordAttack = 1;
         } else {
-            if (frame >= 6) GF(u8, 0x1719) = 1;
+            if (frame >= 6)
+                moveState(i_this).mRightSwordAttack = 1;
         }
         if (mv_isStop(i_this->mpMorf)) {
-            GF(s16, 0x3EA) = 0;
-            GF(s16, 0x3EC) = 0;
+            moveState(i_this).mAction = GND_ACTION_MOVE;
+            moveState(i_this).mMode = 0;
             s16 a = i_this->shape_angle.y;
-            GF(s16, 0x420) = 0;
+            moveState(i_this).mAttackCooldown = 0;
             i_this->current.angle.y = a;
         }
         break;
     }
 }
 
-/* attackPZ's common end: follow a point beside Zelda */
+// HD: Follow a point beside Zelda after each fight state.
+/* inlined into gnd_move */
 static inline void mv_pzEnd(gnd_class* i_this, bool done) {
-    i_this->speedF = GF(f32, 0x414);
-    mDoMtx_YrotS(calc_mtx(), GF(s16, 0x436));
+    i_this->speedF = moveState(i_this).mTargetSpeed;
+    mDoMtx_YrotS(calc_mtx(), moveState(i_this).mZeldaAngle);
     gabi::Local<cXyz> l20;
     gabi::Local<cXyz> l4c;
     gabi::Local<cXyz> l64;
@@ -646,17 +697,20 @@ static inline void mv_pzEnd(gnd_class* i_this, bool done) {
     l20->z = REG0_F(17) + 100.0f;
     MtxPosition(l20, l4c);
     cXyz_pl(&mv_zelda()->current.pos, l64, l4c);
-    GXYZ(0x3F0)->copy(*l64);
+    moveState(i_this).mTargetPos.copy(*l64);
     pos_move(i_this, 0);
     cLib_addCalcAngleS2(&i_this->shape_angle.y, i_this->current.angle.y, 4, 0x2000);
     if (done) {
-        cLib_addCalc2(&i_this->current.pos.x, GF(f32, 0x3F0), 0.2f, fabsf(GF(f32, 0x3FC)));
-        cLib_addCalc2(&i_this->current.pos.z, GF(f32, 0x3F8), 0.2f, fabsf(GF(f32, 0x404)));
+        cLib_addCalc2(&i_this->current.pos.x, moveState(i_this).mTargetPos.x, 0.2f,
+                      fabsf(moveState(i_this).mSavedSpeed.x));
+        cLib_addCalc2(&i_this->current.pos.z, moveState(i_this).mTargetPos.z, 0.2f,
+                      fabsf(moveState(i_this).mSavedSpeed.z));
     }
 }
 
-/* attackPZ (m3EA 4): the fight beside Zelda */
-static inline void mv_attackPZ(gnd_class* i_this) {
+/* The fight beside Zelda. */
+/* inlined into gnd_move */
+static inline void attackPZ(gnd_class* i_this) {
     fopAc_ac_c* zelda0 = mv_zelda();
     gabi::Local<cXyz> d;
     cXyz_mi(&zelda0->current.pos, d, &i_this->current.pos);
@@ -666,9 +720,9 @@ static inline void mv_attackPZ(gnd_class* i_this) {
     f32 dz = gabi::fsubs_ppc(i_this->current.pos.z, z->current.pos.z);
     s16 ang = cM_atan2s(dx, dz);
     mDoExt_McaMorf* morf0 = i_this->mpMorf;
-    GF(u8, 0x172E) = 0;
-    GF(s16, 0x428) = 5;
-    s16 mode = GF(s16, 0x3EC);
+    moveState(i_this).mCheckLightArrows = 0;
+    moveState(i_this).mDefenceTimer = 5;
+    s16 mode = moveState(i_this).mMode;
     s32 frame = gabi::ftoi(morf0->mFrameCtrl.mFrame);
     bool done = false;
     switch ((u32)(s32)mode) {
@@ -687,48 +741,50 @@ static inline void mv_attackPZ(gnd_class* i_this) {
         }
         mv_zelda()->shape_angle.y = ang;
         mv_zelda()->current.angle.y = ang;
-        GF(s16, 0x436) = ang;
-        GF(s16, 0x3EC) = 1;
-        GF(s16, 0x41E) = 0x14;
-        GF(s16, 0x18BE) = 1;
-        gabi::store<u8>(gabi::ea(zelda0) + 0x857, 1);
+        moveState(i_this).mZeldaAngle = ang;
+        moveState(i_this).mMode = 1;
+        moveState(i_this).mActionTimer = 0x14;
+        moveState(i_this).mDemoMode = 1;
+        reinterpret_cast<GndMoveZeldaHD*>(zelda0)->mFightRequest = 1;
         i_this->speedF = 0.0f;
-        GF(f32, 0x414) = 0.0f;
-        gabi::call(0x025E1950, 1); /* mDoAud_changeBgmStatus */
+        moveState(i_this).mTargetSpeed = 0.0f;
+        gndMoveChangeBgmStatus(1); /* mDoAud_changeBgmStatus */
         /* fall through */
     case 1: {
-        s16 t = GF(s16, 0x41E);
-        GF(f32, 0x40C) = 0.0f;
-        if (t != 0) break;
-        anm_init(i_this, 0x4F, 10.0f, 0, 1.0f, -1);
+        s16 t = moveState(i_this).mActionTimer;
+        moveState(i_this).mTurnRate = 0.0f;
+        if (t != 0)
+            break;
+        anm_init(i_this, GND_BCK_ZELDA_WAIT, 10.0f, 0, 1.0f, -1);
         mv_mons_se_eye(i_this, 0x4954);
         J3DModel* model = i_this->mpMorf->getModel();
-        void* res = dComIfG_getObjectRes(STR(0x1000FFE4) /* "Gnd" */, 0x62, GND_SAFESTRING_VTBL);
+        void* res = dComIfG_getObjectRes("Gnd", 0x62, GND_SAFESTRING_VTBL);
         gnd_btkAnm_init(i_this->mpBtk, J3DModel_getModelData(model), res, 1, 0, 1.0f, 0, -1, true, 0);
-        GF(s16, 0x3EC) = 2;
+        moveState(i_this).mMode = 2;
         break;
     }
     case 2:
-        GF(f32, 0x40C) = 0.0f;
+        moveState(i_this).mTurnRate = 0.0f;
         break;
     case 3:
-        GF(s16, 0x3EC) = 5;
+        moveState(i_this).mMode = 5;
         /* fall through */
     case 5:
-        anm_init(i_this, 0x44, 5.0f, 0, 1.0f, 0x17);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        anm_init(i_this, GND_BCK_JUMP_START, 5.0f, 0, 1.0f, 0x17);
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         break;
     case 6:
-        GF(f32, 0x40C) = 8000.0f;
+        moveState(i_this).mTurnRate = 8000.0f;
         i_this->gravity = REG0_F(17) + -0.5f;
         if (frame == 0xC) {
             i_this->speed.y = REG0_F(19) + 10.0f;
-            GF(f32, 0x414) = gabi::fmuls_ppc(dist, REG0_F(18) + 0.018f);
+            moveState(i_this).mTargetSpeed = gabi::fmuls_ppc(dist, REG0_F(18) + 0.018f);
             splash_set(i_this);
         }
-        if (!mv_isStop(i_this->mpMorf)) break;
-        anm_init(i_this, 0x43, 2.0f, 2, 1.0f, -1);
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+        if (!mv_isStop(i_this->mpMorf))
+            break;
+        anm_init(i_this, GND_BCK_JUMP_LOOP, 2.0f, 2, 1.0f, -1);
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
         break;
     case 7: {
         mv_se_eye(i_this, 0x5158);
@@ -736,61 +792,66 @@ static inline void mv_attackPZ(gnd_class* i_this) {
         f32 sy = i_this->speed.y;
         i_this->gravity = g;
         if (sy < 0.0f) { /* bge: taken on NaN */
-            anm_init(i_this, 0x41, 5.0f, 0, 1.0f, -1);
-            GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
+            anm_init(i_this, GND_BCK_FALL, 5.0f, 0, 1.0f, -1);
+            moveState(i_this).mMode = moveState(i_this).mMode + 1;
         }
         break;
     }
     case 8: {
         mv_se_eye(i_this, 0x5158);
         f32 g = REG0_F(17) + -0.5f;
-        GF(f32, 0x40C) = 0.0f;
+        moveState(i_this).mTurnRate = 0.0f;
         i_this->gravity = g;
-        if (!checkGround(i_this, 0.0f)) break;
-        anm_init(i_this, 0x42, 2.0f, 0, 1.0f, -1);
-        u32 sx = gabi::load<u32>(gabi::ea(i_this) + 0x33C);
-        u32 sy = gabi::load<u32>(gabi::ea(i_this) + 0x340);
-        GF(u32, 0x3FC) = sx;
-        s16 m = GF(s16, 0x3EC);
-        GF(u32, 0x400) = sy;
-        u32 sz = gabi::load<u32>(gabi::ea(i_this) + 0x344);
-        GF(s16, 0x3EC) = m + 1;
-        GF(u32, 0x404) = sz;
+        if (!checkGround(i_this, 0.0f))
+            break;
+        anm_init(i_this, GND_BCK_LAND, 2.0f, 0, 1.0f, -1);
+        // HD: Preserve the integer word copies, including signaling NaNs.
+        u32 sx = moveWord(i_this->speed.x);
+        u32 sy = moveWord(i_this->speed.y);
+        moveWord(moveState(i_this).mSavedSpeed.x) = sx;
+        s16 m = moveState(i_this).mMode;
+        moveWord(moveState(i_this).mSavedSpeed.y) = sy;
+        u32 sz = moveWord(i_this->speed.z);
+        moveState(i_this).mMode = m + 1;
+        moveWord(moveState(i_this).mSavedSpeed.z) = sz;
         splash_set(i_this);
         break;
     }
     case 9: {
         mDoExt_McaMorf* morf = i_this->mpMorf;
-        GF(f32, 0x414) = 0.0f;
-        GF(f32, 0x40C) = 0.0f;
+        moveState(i_this).mTargetSpeed = 0.0f;
+        moveState(i_this).mTurnRate = 0.0f;
         done = true;
-        if (!mv_isStop(morf)) break;
-        GF(s16, 0x3EC) = GF(s16, 0x3EC) + 1;
-        anm_init(i_this, 0x2C, 3.0f, 0, 1.0f, 0x10);
+        if (!mv_isStop(morf))
+            break;
+        moveState(i_this).mMode = moveState(i_this).mMode + 1;
+        anm_init(i_this, GND_BCK_ZELDA_STRIKE_START, 3.0f, 0, 1.0f, 0x10);
         break;
     }
     case 0xA: {
         done = true;
-        if (!mv_isStop(morf0)) break;
-        GF(s16, 0x3EC) = mode + 1;
-        anm_init(i_this, 0x2D, 2.0f, 0, 1.0f, 0x11);
+        if (!mv_isStop(morf0))
+            break;
+        moveState(i_this).mMode = mode + 1;
+        anm_init(i_this, GND_BCK_ZELDA_STRIKE_FINISH, 2.0f, 0, 1.0f, 0x11);
         mv_mons_se_eye(i_this, 0x4955);
         JPABaseEmitter* emitter = dComIfGp_particle_set(0x837E, &i_this->current.pos);
-        GF(u32, 0x174C) = gabi::ea(emitter);
-        if (emitter == nullptr) break;
+        moveState(i_this).mAttackEmitter = gabi::ea(emitter);
+        if (emitter == nullptr)
+            break;
         u32 e = gabi::ea(emitter);
-        u8 r = GF(u8, 0x4CD);
-        u8 b = GF(u8, 0x4D1);
-        gabi::store<u8>(e + 0x244, r);
-        u8 g = GF(u8, 0x4CF);
-        gabi::store<u8>(e + 0x245, g);
-        gabi::store<u8>(e + 0x246, b);
+        u8 r = moveState(i_this).mEffectRed;
+        u8 b = moveState(i_this).mEffectBlue;
+        gabi::at<GndMoveEmitterHD>(e)->mRed = r;
+        u8 g = moveState(i_this).mEffectGreen;
+        gabi::at<GndMoveEmitterHD>(e)->mGreen = g;
+        gabi::at<GndMoveEmitterHD>(e)->mBlue = b;
         break;
     }
     case 0xB: {
         if ((u32)frame == (u32)(REG0_S(5) + 2)) {
-            GF(s16, 0x18BC) = 0x96;
-            gabi::store<u32>(gabi::ea(zelda0) + 0xADC, 1);
+            moveState(i_this).mZeldaTimer = 0x96;
+            reinterpret_cast<GndMoveZeldaHD*>(zelda0)->mHitRequest = 1;
             mv_se(mv_zelda(), 0x2828);
             gabi::Local<cXyz> p;
             u32 vib = gabi::ea(dComIfGp_getVibration());
@@ -798,24 +859,27 @@ static inline void mv_attackPZ(gnd_class* i_this) {
             p->x = 0.0f;
             p->y = 1.0f;
             p->z = 0.0f;
-            gabi::call<BOOL>(0x025CB374, vib, reg + 4, -0x21, p.get());
+            gabi::at<dVibration_c>(vib)->StartShock(reg + 4, -0x21, p.get());
         }
         u32 e;
         {
             s16 reg6 = REG0_S(6);
-            e = GF(u32, 0x174C);
+            e = moveState(i_this).mAttackEmitter;
             if ((u32)frame == (u32)(reg6 + 2)) {
-                GF(s16, 0x18BE) = 4;
-                GF(s16, 0x18C0) = 0;
+                moveState(i_this).mDemoMode = 4;
+                moveState(i_this).mDemoTimer = 0;
             }
         }
-        if (e == 0) break;
+        if (e == 0)
+            break;
         mDoExt_McaMorf* morf = i_this->mpMorf;
         if (mv_isStop(morf)) {
             gnd_becomeInvalidEmitter(e);
-            GF(u32, 0x174C) = 0;
+            moveState(i_this).mAttackEmitter = 0;
         } else {
-            gabi::call(0x028249B0, gnd_getAnmMtx(morf->getModel(), 0x23), e + 0x1F0, e + 0x22C);
+            gndMoveEmitterTransform(gnd_getAnmMtx(morf->getModel(), 0x23),
+                                    &gabi::at<GndMoveEmitterHD>(e)->mRotation,
+                                    &gabi::at<GndMoveEmitterHD>(e)->mTranslation);
         }
         break;
     }
@@ -825,52 +889,52 @@ static inline void mv_attackPZ(gnd_class* i_this) {
 
 /* 02159FC8 */
 void gnd_move(gnd_class* i_this) {
-    WWHD_FUNC(0x02159FC8, void, i_this);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    switch ((u32)(s32)GF(s16, 0x3EA)) {
-    case 0:
-        mv_move0(i_this);
+    switch ((u32)(s32)moveState(i_this).mAction) {
+    case GND_ACTION_MOVE:
+        move0(i_this);
         break;
-    case 1:
-        mv_attack0(i_this);
+    case GND_ACTION_ATTACK_COMBO:
+        attack0(i_this);
         break;
-    case 2:
-        mv_attack1(i_this);
+    case GND_ACTION_ATTACK_ALTERNATE:
+        attack1(i_this);
         break;
-    case 3:
-        mv_attack2(i_this);
+    case GND_ACTION_ATTACK_QUICK:
+        attack2(i_this);
         break;
-    case 4:
-        mv_attackPZ(i_this);
+    case GND_ACTION_ATTACK_ZELDA:
+        attackPZ(i_this);
         break;
-    case 5:
+    case GND_ACTION_ATTACK_LAST:
         attack_last(i_this);
         break;
-    case 10:
+    case GND_ACTION_DEFENCE:
         defence0(i_this);
         break;
-    case 11:
+    case GND_ACTION_DAMAGE:
         damage(i_this);
         break;
-    case 20:
+    case GND_ACTION_DEMO_WAIT:
         demowait(i_this);
         break;
-    case 21:
+    case GND_ACTION_YA_WAIT:
         yawait(i_this);
         break;
-    case 30:
+    case GND_ACTION_FINISH:
         finish(i_this);
         return;
     }
-    if (GF(s8, 0x60C) >= 2 && GF(s16, 0x3EA) != 0xB) GF(s16, 0x42A) = 3;
+    if (moveState(i_this).mFightPhase >= 2 && moveState(i_this).mAction != GND_ACTION_DAMAGE)
+        moveState(i_this).mDamageTimer = 3;
     {
-        u8 t = gabi::load<u8>(gabi::ea(player) + 0x3AC);
-        if ((t == 5 || t == 0xF) && GF(s8, 0x60C) < 2) {
-            GF(u8, 0x60B) = 0;
-            GF(u8, 0x172E) = 0;
+        u8 t = reinterpret_cast<GndMoveActorFlagsHD*>(player)->mArrowState;
+        if ((t == 5 || t == 0xF) && moveState(i_this).mFightPhase < 2) {
+            moveState(i_this).mCombatEffect = 0;
+            moveState(i_this).mCheckLightArrows = 0;
         }
     }
-    if (GF(s8, 0x172E) != 0) {
+    if (static_cast<s8>(moveState(i_this).mCheckLightArrows) != 0) {
         /* the light arrows */
         bool hit = false;
         bool check = true;
@@ -878,62 +942,75 @@ void gnd_move(gnd_class* i_this) {
         if (shot != nullptr) {
             gabi::Local<cXyz> d;
             gabi::Local<cXyz> v;
-            cXyz_mi(&shot->current.pos, d, GXYZ(0x1940));
+            cXyz_mi(&shot->current.pos, d, &moveState(i_this).mArrowCheckPos);
             v->copy(*d);
             if (fpcM_GetName(shot) == 0x1D8) {
                 f32 len = std_sqrtf(PSVECSquareMag(v));
-                if (len < shot->speedF * 10.0f && gabi::load<u8>(gabi::ea(shot) + 0x3AC) != 0 && GF(s8, 0x60C) < 2) {
+                if (len < shot->speedF * 10.0f &&
+                    reinterpret_cast<GndMoveActorFlagsHD*>(shot)->mArrowState != 0 &&
+                    moveState(i_this).mFightPhase < 2) {
                     s16 dd = i_this->shape_angle.y - shot->current.angle.y;
-                    if (dd < 0) dd = -dd;
+                    if (dd < 0)
+                        dd = -dd;
                     if ((u16)dd < 0x4000) {
-                        GF(u8, 0x172E) = 0;
+                        moveState(i_this).mCheckLightArrows = 0;
                     } else {
-                        GF(s16, 0x3EA) = 0xA;
+                        moveState(i_this).mAction = GND_ACTION_DEFENCE;
                         s16 m = 0;
-                        if (checkGround(i_this, 50.0f)) m = 0xF;
-                        GF(s16, 0x3EC) = m;
-                        GF(u8, 0x60F) = 0;
-                        GF(s16, 0x428) = 0x1E;
+                        if (checkGround(i_this, 50.0f))
+                            m = 0xF;
+                        moveState(i_this).mMode = m;
+                        moveState(i_this).mDefenceRequest = 0;
+                        moveState(i_this).mDefenceTimer = 0x1E;
                     }
                 }
             } else {
                 f32 len = std_sqrtf(PSVECSquareMag(v));
-                if (len < shot->speedF * 10.0f) hit = true;
+                if (len < shot->speedF * 10.0f)
+                    hit = true;
             }
         }
         f32 pd = fopAcM_searchActorDistance(i_this, dComIfGp_getPlayer(0));
         if (!hit) {
-            check = gabi::load<u8>(gabi::ea(player) + 0x3AC) != 0 && pd < HIO_F(0x3C);
+            check = reinterpret_cast<GndMoveActorFlagsHD*>(player)->mArrowState != 0 &&
+                    pd < l_moveHio.mDefenceDistance;
         }
         if (check) {
-            if (GF(s16, 0x3EA) != 0xA) {
-                GF(u8, 0x609) = 0;
-                GF(u8, 0x60F) = 0;
-                GF(u8, 0x610) = 0;
-                GF(s16, 0x3EA) = 0xA;
-                GF(s16, 0x3EC) = 0;
+            if (moveState(i_this).mAction != GND_ACTION_DEFENCE) {
+                moveState(i_this).mDefenceChoice = 0;
+                moveState(i_this).mDefenceRequest = 0;
+                moveState(i_this).mDefenceCount = 0;
+                moveState(i_this).mAction = GND_ACTION_DEFENCE;
+                moveState(i_this).mMode = 0;
             }
-            GF(s16, 0x41E) = REG_S(10, 3) + 2;
+            moveState(i_this).mActionTimer = REG_S(10, 3) + 2;
         }
     }
     damage_check(i_this);
-    GF(u8, 0x172E) = 1;
+    moveState(i_this).mCheckLightArrows = 1;
     if (gabi::ea(&i_this->mStts) != 0) {
         cXyz* mv = &i_this->mStts.m_cc_move;
         i_this->current.pos.x = gabi::fadds_ppc(i_this->current.pos.x, mv->x);
         i_this->current.pos.y = gabi::fadds_ppc(i_this->current.pos.y, mv->y);
         i_this->current.pos.z = gabi::fadds_ppc(i_this->current.pos.z, mv->z);
     }
-    if (GF(f32, 0x42C) > 0.01f) { /* ble: taken on NaN */
+    if (moveState(i_this).mKnockbackSpeed > 0.01f) { /* ble: taken on NaN */
         gabi::Local<cXyz> p;
         gabi::Local<cXyz> o;
-        p->z = GF(f32, 0x42C);
+        p->z = moveState(i_this).mKnockbackSpeed;
         p->x = 0.0f;
         p->y = 0.0f;
-        mDoMtx_YrotS(calc_mtx(), GF(s16, 0x430));
+        mDoMtx_YrotS(calc_mtx(), moveState(i_this).mKnockbackAngle);
         MtxPosition(p, o);
         PSVECAdd(&i_this->current.pos, o, &i_this->current.pos);
-        cLib_addCalc0(&GF(f32, 0x42C), 1.0f, REG0_F(12) + 7.0f);
+        cLib_addCalc0(&moveState(i_this).mKnockbackSpeed, 1.0f, REG0_F(12) + 7.0f);
     }
 }
-VERIFY(0x02159FC8, gnd_move);
+/* WWHD glue
+ext 025E1AA4 void gndMoveMonsterSound(u32 id,cXyz* pos,u32 actorId,u32 info,s32 reverb)
+ext 025E1950 void gndMoveChangeBgmStatus(s32 status)
+ext 028249B0 void gndMoveEmitterTransform(Mtx34* source,Mtx34* rotation,cXyz* translation)
+str 1000FFE4 "Gnd" in 02159FC8
+data l_moveHio 104640BC
+data l_moveZelda 10464008
+*/

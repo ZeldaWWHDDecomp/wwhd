@@ -1,58 +1,122 @@
-/* Full HD game-application TU42C4..4603. Previous HIO vtable10056DC0 links
- * preceding stubs42A0..42C0 to water-pot TU; own HIO stores vtable10056E04. */
-#include "bindings.h"
-namespace f_ap_game_cpp {
-static void after(){
- WWHD_FUNC(0x025D42C4,void,(u32)0);
- gabi::call(0x025DC98C);gabi::call(0x025DBEEC);gabi::call(0x025DA750);
+/** Game application framework. */
+#include "f_ap/f_ap_game.h"
+
+static fapGm_HIO_c g_HIO;
+static u8 developmentMode;
+static const GameApplicationConstants l_constants;
+static GameApplicationHeaderStatics l_headerStatics;
+enum { gc_tuHIO_VT = 0x10056E04 };
+
+/* 025D4384 */
+static fapGm_HIO_c* fapGm_HIO_c__ct(fapGm_HIO_c* i_this) {
+    // HD: preserve nullable allocation and the compiler's packed initialization order.
+    if (!i_this) {
+        i_this = static_cast<fapGm_HIO_c*>(operator_new(sizeof(fapGm_HIO_c)));
+        if (!i_this) return nullptr;
+    }
+    i_this->mLetterBottomShadowColor = 0xFFFFFFFF;
+    i_this->mColor = 0xFFFFFFFF;
+    i_this->mLetterTopColor = 0xFFFFFFFF;
+    i_this->__vtbl = gc_tuHIO_VT;
+    i_this->mLetterBottomColor = 0xFFFFFFFF;
+    i_this->mUsingHostIO = 1;
+    i_this->mLetterTopShadowColor = 0xFFFFFFFF;
+    bool dev = developmentMode != 0;
+    i_this->mDisplayMeter = dev ? 1 : 0;
+    i_this->field_0x10 = 0;
+    i_this->field_0x30 = 0;
+    i_this->field_0x09 = 1;
+    i_this->field_0x14 = 10;
+    i_this->field_0x15 = 12;
+    i_this->field_0x11 = 0;
+    i_this->mDisplayFlag = dev ? 1 : 0;
+    i_this->field_0x1b = 1;
+    i_this->field_0x18 = 8;
+    i_this->mAspectRatio = f32(l_constants.aspectRatio);
+    i_this->field_0x12 = 8;
+    i_this->mEfbHeight = 480;
+    i_this->field_0x17 = 8;
+    i_this->field_0x1c = 0;
+    i_this->field_0x13 = 8;
+    i_this->field_0x16 = 10;
+    i_this->field_0x0a = 1;
+    i_this->field_0x1a = 0;
+    i_this->field_0x19 = -1;
+    i_this->mFbWidth = 640;
+    i_this->mColor = 0xFFFFFFFF;
+    i_this->mTriggerThreshLo = f32(l_constants.triggerThreshLo);
+    i_this->mTriggerThreshHi = f32(l_constants.triggerThreshHi);
+    i_this->mLetterTopColor = 0xFF9600FF;
+    i_this->mLetterBottomColor = 0xFF7800FF;
+    i_this->mLetterTopShadowColor = 0x000000FF;
+    i_this->mLetterBottomShadowColor = 0x000000FF;
+    i_this->mLetterPositionY = 10;
+    i_this->mLetterFontSize = 27;
+    i_this->mLineSpacing = 0;
+    i_this->mBackgroundAlpha = 130;
+    i_this->mLetterSpacing = 0;
+    i_this->mLetterPositionX = 0;
+    return i_this;
 }
-VERIFY(0x025D42C4,after);
-static void execute(){
- WWHD_FUNC(0x025D42EC,void,(u32)0);
- gabi::call(0x025DF948,0u,0x025D42C4u);gabi::call(0x0200E6EC,0u);
+
+/* 025D42C4 */
+void fapGm_After() {
+    fopScnM_Management();
+    fopOvlpM_Management();
+    fopCamM_Management();
 }
-VERIFY(0x025D42EC,execute);
-static void create(){
- WWHD_FUNC(0x025D4320,void,(u32)0);
- gabi::call(0x025DFA7C);gabi::call(0x025DCA60);gabi::call(0x025DC04C);
- gabi::call(0x025DA754);gabi::call(0x025DA8AC);
- gabi::call(0x025DC91C,5u,0x7FFFu,0u,0u);
- u32 no=gabi::call<u32>(0x025F0A10,0x10056E14u,0x104873CCu);
- gabi::store<u8>(0x104873CC,no);
+
+/* 025D42EC */
+void fapGm_Execute() {
+    fpcM_Management(0, fapGm_After);
+    cCt_Counter(0);
 }
-VERIFY(0x025D4320,create);
-static u32 HIO_constructor(u32 self){
- WWHD_FUNC(0x025D4384,u32,self);
- if(!self){self=gabi::call<u32>(0x0273AD10,0x58u);if(!self)return 0;}
- gabi::store<u32>(self+0x42,0xFFFFFFFF);gabi::store<u32>(self+0x19,0xFFFFFFFF);
- gabi::store<u32>(self+0x36,0xFFFFFFFF);gabi::store<u32>(self+0x54,0x10056E04);
- gabi::store<u32>(self+0x3A,0xFFFFFFFF);gabi::store<u8>(self+1,1);
- gabi::store<u32>(self+0x3E,0xFFFFFFFF);
- bool dev=gabi::load<u8>(0x101F48C0)!=0;
- gabi::store<u8>(self+2,dev?1:0);
- gabi::store<u8>(self+0xC,0);gabi::store<u8>(self+0x2C,0);
- gabi::store<u8>(self+5,1);gabi::store<u8>(self+0x10,10);gabi::store<u8>(self+0x11,12);
- gabi::store<u8>(self+0xD,0);gabi::store<u8>(self+3,dev?1:0);gabi::store<u8>(self+0x17,1);
- gabi::store<u8>(self+0x14,8);gabi::store<f32>(self+8,gabi::load<f32>(0x10056E24));
- gabi::store<u8>(self+0xE,8);gabi::store<u16>(self+0x2A,480);gabi::store<u8>(self+0x13,8);
- gabi::store<u8>(self+0x18,0);gabi::store<u8>(self+0xF,8);gabi::store<u8>(self+0x12,10);
- gabi::store<u8>(self+6,1);gabi::store<u8>(self+0x16,0);gabi::store<u8>(self+0x15,255);
- gabi::store<u16>(self+0x28,640);gabi::store<u32>(self+0x19,0xFFFFFFFF);
- gabi::store<f32>(self+0x20,gabi::load<f32>(0x10056E28));gabi::store<f32>(self+0x24,gabi::load<f32>(0x10056E2C));
- gabi::store<u32>(self+0x36,0xFF9600FF);gabi::store<u32>(self+0x3A,0xFF7800FF);
- gabi::store<u32>(self+0x3E,0x000000FF);gabi::store<u32>(self+0x42,0x000000FF);
- gabi::store<u16>(self+0x48,10);gabi::store<u16>(self+0x4E,27);gabi::store<u16>(self+0x4A,0);
- gabi::store<u8>(self+0x50,130);gabi::store<u16>(self+0x4C,0);gabi::store<u16>(self+0x46,0);
- return self;
+
+/* 025D4320 */
+void fapGm_Create() {
+    fpcM_Init();
+    fopScnM_Init();
+    fopOvlpM_Init();
+    fopCamM_Init();
+    fopDwTg_CreateQueue();
+    fopScnM_CreateReq(fpcNm_LOGO_SCENE_e, fpcNm_INVALID_e, 0, 0);
+    g_HIO.mNo = mDoHIO_createChild("ゲームシステム", &g_HIO);
 }
-VERIFY(0x025D4384,HIO_constructor);
-static void initialize(){
- WWHD_FUNC(0x025D4564,void,(u32)0);
- gabi::store<u32>(0x104873C4,0);gabi::store<u32>(0x104873BC,0);gabi::store<u32>(0x104873C8,0);gabi::store<u32>(0x104873C0,0);
- gabi::call(0x028F026C,0x101F3038u);
- gabi::store<f32>(0x104873B0,gabi::load<f32>(0x10056E34));gabi::store<f32>(0x104873B4,gabi::load<f32>(0x10056E38));
- gabi::call(0x028ED6F8,0x104873B8u);gabi::call(0x028F026C,0x101F3044u);
- gabi::call(0x028EAB2C,0x104873B9u);gabi::call(0x028F026C,0x101F3050u);gabi::call(0x025D4384,0x104873CCu);
+
+/* 025D4564 */
+static void __sinit_f_ap_game_cpp() {
+    // HD: common-header statics and constructor registrations are retained in order.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F3038);
+    l_headerStatics.negativePi = f32(l_constants.negativePi);
+    l_headerStatics.positivePi = f32(l_constants.positivePi);
+    GameApplicationFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F3044);
+    GameApplicationSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F3050);
+    fapGm_HIO_c__ct(&g_HIO);
 }
-VERIFY(0x025D4564,initialize);
-}
+
+/* WWHD glue (tools/verify/autoglue.py):
+data g_HIO 104873CC
+data developmentMode 101F48C0
+data l_constants 10056E24
+data l_headerStatics 104873B0
+str 10056E14 "\u30b2\u30fc\u30e0\u30b7\u30b9\u30c6\u30e0" renamed
+ext 025DC98C void fopScnM_Management()
+ext 025DBEEC void fopOvlpM_Management()
+ext 025DA750 void fopCamM_Management()
+ext 025DF948 void fpcM_Management(u32, fapGm_AfterCallback)
+ext 0200E6EC void cCt_Counter(u32)
+ext 025DFA7C void fpcM_Init()
+ext 025DCA60 void fopScnM_Init()
+ext 025DC04C void fopOvlpM_Init()
+ext 025DA754 void fopCamM_Init()
+ext 025DA8AC void fopDwTg_CreateQueue()
+ext 025DC91C void fopScnM_CreateReq(u32, u32, u32, u32)
+ext 028ED6F8 void GameApplicationFirstHeaderObject_ct(u8*)
+ext 028EAB2C void GameApplicationSecondHeaderObject_ct(u8*)
+*/

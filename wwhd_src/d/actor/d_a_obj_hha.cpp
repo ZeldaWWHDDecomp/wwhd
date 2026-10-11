@@ -1,959 +1,1074 @@
+/** Tower of the Gods entrance waterfall. HD behavior preserved by unit verification.
+ * GC part, splash, gush and actor methods use asserted HD layouts. */
 #include "d/actor/d_a_obj_hha.h"
 #include "gabi.h"
 using Actor = daObjHha_c;
-static u32 rd(u32 p) { return gabi::load<u32>(p); }
-static s16 sh(u32 p) { return gabi::load<s16>(p); }
-static u16 uh(u32 p) { return gabi::load<u16>(p); }
-static u8 byte(u32 p) { return gabi::load<u8>(p); }
-static f32 lf(u32 p) { return gabi::load<f32>(p); }
-static void put(u32 p, u32 v) { gabi::store<u32>(p, v); }
-static void ss(u32 p, s32 v) { gabi::store<s16>(p, v); }
-static void sb(u32 p, u32 v) { gabi::store<u8>(p, v); }
-static void sf(u32 p, f32 v) { gabi::store<f32>(p, v); }
-static void words(u32 src, u32 dst, u32 count) {
-  for (u32 i = 0; i < count; ++i)
-    put(dst + i * 4, rd(src + i * 4));
+enum HhaResource {
+    dRes_INDEX_HHA_BCK_YGSTP00_e = 6,
+    dRes_INDEX_HHA_BDL_HHA1_e = 9, dRes_INDEX_HHA_BDL_HHA2_e = 10,
+    dRes_INDEX_HHA_BDL_YGSTP00_e = 11, dRes_INDEX_HHA_BDL_YSWTR00_e = 12,
+    dRes_INDEX_HHA_BTK_YGSTP00_e = 15,
+    dRes_INDEX_HHA_BTK_YSWTR00_01_e = 16, dRes_INDEX_HHA_BTK_YSWTR00_02_e = 17,
+    dRes_INDEX_HHA_DZB_HHA1_e = 20, dRes_INDEX_HHA_DZB_HHA2_e = 21,
+};
+static const HhaTU gc_tu = {
+    0x1002A348, // mSafeStringVtable
+    0x1002A428, // mPartAssertFile
+    0x1002A438, // mPartModelAssert
+    0x1002A44C, // mGushAssertFile
+    0x1002A45C, // mGushModelDataAssert
+    0x1002A48C, // mGushModelAssert
+    0x1002A46C, // mBtkAssert
+    0x1002A47C, // mBckAssert
+    0x1002A370, // mBckVtable
+    0x1016E54C, // mFrameCtrlVtable
+    0x1016D820, // mControllerVtable
+    0x1016E414, // mDefaultLight
+    0x1002A578, // mArchiveName
+    0x1002A4A4, // mActorAssertFile
+    0x1002A4B4, // mActorModelAssert
+    0x1002A4C4, // mActorBtkAssert
+    0x1002A3A8, // mWaterVtable
+    0x1002A3C8, // mWaterPolyVtable
+    0x1002A398, // mWaterGroupVtable
+    0x1002A5BC, // mCylinderData
+    0x1002A57C, // mSphereData
+    0x1002A408, // mActorVtable
+    0x1004AEC0, // mStatusGameVtable
+    0x1004AE88, // mStatusBaseVtable
+    0x100015A8, // mShapeBaseVtable
+    0x1002A360, // mBoundsVtable
+    0x1004B108, // mCylinderVtable
+    0x1004B150, // mCylinderGeometryVtable
+    0x1004B160, // mCylinderShapeVtable
+    0x1002A540, // mEventName
+    0x101C9EE4, // mHeaderLink0
+    0x101C9EF0, // mHeaderLink1
+    0x101C9EFC, // mHeaderLink2
+    0x025E7C6C, // mBtkConstructor
+    0x02355F70, // mSplashConstructor
+    0x02354B3C, // mHeapCallback
+    0x02355FC0, // mSplashDestructor
+    0x02353D00, // mPartNormal
+    0x02353D9C, // mPartMove
+    0x02353EC0, // mPartDraw
+};
+
+// HD: checked table initializers remain numeric for autoglue; HhaResource names define their indices.
+static u32 l_daObjHha_bdl_idx_table[2] = {9, 10};
+static u32 l_daObjHha_dzb_idx_table[2] = {20, 21};
+static u32 l_daObjHha_btk_idx_table[2] = {16, 17};
+static u32 l_daObjHha_btk_mode_table[2] = {2, 0};
+static u16 l_daObjHha_splash_id_table[2] = {33037, 33038};
+static f32 splash_y[2] = {-1400.0f, -1450.0f};
+static f32 splash_z[2] = {0.0f, 100.0f};
+static u16 move_frame[2] = {55, 30};
+static f32 pos_y[4] = {150.0f, -150.0f, 0.0f, 0.0f};
+static f32 tar_y[4] = {0.0f, 0.0f, 150.0f, -150.0f};
+static f32 l_headerFloats[2] = {-3.1415927410125732f, 3.1415927410125732f};
+static u32 l_resourceControl = 0;
+static u32 l_saveInfo = 0;
+static f32 l_waterLevel = 0;
+static cXyz l_baseZ = {0.0f, 0.0f, 1.0f};
+static f32 l_matrix[12] = {};
+static u32 l_headerWords[4] = {};
+static f32 l_headerValues[2] = {};
+static u8 l_headerGuard = 0;
+static u8 l_headerByte = 0;
+// HD: preserve the original word copies and float-copy load/store order.
+static void copyWords(cXyz* src, cXyz* dst) {
+  for (u32 i = 0; i < 3; ++i) Hha_word(*dst, i) = (u32)Hha_word(*src, i);
 }
-static void vector_float_copy(u32 src, u32 dst) {
-  f32 x = lf(src), y = lf(src + 4), z = lf(src + 8);
-  sf(dst, x);
-  sf(dst + 4, y);
-  sf(dst + 8, z);
+static void copyVector(cXyz* src, cXyz* dst) {
+  f32 x = src->x, y = src->y, z = src->z;
+  dst->x = x; dst->y = y; dst->z = z;
 }
-static void angle_copy(u32 src, u32 dst) {
-  ss(dst, sh(src));
-  ss(dst + 2, sh(src + 2));
-  ss(dst + 4, sh(src + 4));
+static void copyAngle(csXyz* src, csXyz* dst) {
+  dst->x = (s16)src->x; dst->y = (s16)src->y; dst->z = (s16)src->z;
 }
-static void matrix_copy(u32 src, u32 dst) {
+static void copyMatrix(be<f32>* src, be<f32>* dst) {
   f32 m[12];
-  for (u32 i = 0; i < 12; ++i)
-    m[i] = lf(src + i * 4);
-  for (u32 i = 0; i < 12; ++i)
-    sf(dst + i * 4, m[i]);
+  for (u32 i = 0; i < 12; ++i) m[i] = src[i];
+  for (u32 i = 0; i < 12; ++i) dst[i] = m[i];
 }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static u32 resource(u32 name, s32 index) {
-  gabi::Local<u32[2]> s;
-  put(gabi::ea(s.get()), name);
-  put(gabi::ea(s.get()) + 4, 0x1002A348);
-  u32 ctl = rd(0x101F4F28);
-  return gabi::call<u32>(0x026066C4, ctl, gabi::ea(s.get()), index);
+static u32 play() { return Hha_getPlay(); }
+static u32 resource(const char* name, s32 index) {
+  gabi::Local<HhaSafeString> s;
+  s->mText = gabi::guest_addr(name);
+  s->mVtable = gc_tu.mSafeStringVtable;
+  u32 ctl = l_resourceControl;
+  return Hha_getObjectRes(Hha_guest<void>(ctl), s.get(), index);
 }
 static void assertion(u32 line, u32 condition) {
-  gabi::call(0x0273AA24, 0x1002A428u, line, condition);
+  Hha_assert(Hha_guest<void>(gc_tu.mPartAssertFile), line, Hha_guest<void>(condition));
 }
 static BOOL switch_on(u32 self) {
-  u32 save = rd(0x101F84DC);
-  return gabi::call<BOOL>(0x025BA0C0, save + 0x20, rd(self + 0xB6C),
-                          (s8)byte(self + 0x2FE));
+  u32 save = l_saveInfo;
+  return Hha_isSwitch(&Hha_guest<HhaSave>(save)->mZone, Hha_guest<Actor>(self)->mSwitchNo, (s8)Hha_guest<Actor>(self)->home.roomNo);
 }
-void get_offset(void *destination, u32 yaw) {
-  WWHD_FUNC(0x02353924, void, destination, yaw);
-  u32 dest = gabi::ea(destination);
-  f32 scale = lf(0x101D5F28) * -190.f;
-  gabi::Local<cXyz> vec;
-  vector_float_copy(0x101FFBCC, gabi::ea(vec.get()));
-  gabi::call(0x025F1884, 0x1048D0CCu, yaw);
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(vec.get()));
-  gabi::call(0x028E8E64, gabi::ea(vec.get()), gabi::ea(vec.get()), scale);
-  if (!dest)
-    dest = gabi::call<u32>(0x0273AD10, 12);
-  if (dest)
-    vector_float_copy(gabi::ea(vec.get()), dest);
-}
-VERIFY(0x02353924, get_offset);
-void part_init(void *part, f32 initial, f32 target, u16 frames, u8 index,
+
+/* 02353A00 */
+void daObjHhaPart_c::init_data(f32 initial, f32 target, u16 frames, u8 index,
                u8 middle) {
-  WWHD_FUNC(0x02353A00, void, part, initial, target, frames, index, middle);
-  u32 p = gabi::ea(part);
-  sf(p + 8, 0.f);
-  sf(p + 12, initial);
-  sf(p + 16, 0.f);
-  sf(p + 20, 0.f);
-  sf(p + 24, target);
-  sb(p + 48, index);
-  sf(p + 28, 0.f);
-  sf(p + 44, (target - initial) / (f32)frames);
+  mPos.x = 0.f;
+  mPos.y = initial;
+  mPos.z = 0.f;
+  mPosTarget.x = 0.f;
+  mPosTarget.y = target;
+  mPartIdx = index;
+  mPosTarget.z = 0.f;
+  mDeltaY = (target - initial) / (f32)frames;
   gabi::Local<cXyz> diff;
-  gabi::call(0x0201ADE0, p + 20, gabi::ea(diff.get()), p + 8);
-  words(gabi::ea(diff.get()), p + 32, 3);
-  gabi::call(0x0201B47C, p + 32);
-  sb(p + 49, middle);
-  ss(p + 52, 0);
-  ss(p + 54, -1);
-  ss(p + 60, 0);
-  ss(p + 62, -1);
-  put(p + 56, 0x02353D00);
-  put(p + 64, 0x02353EC0);
+  Hha_subtractVector(&mPosTarget.x, diff.get(), &mPos);
+  copyWords(diff.get(), reinterpret_cast<cXyz*>(&mPosDeltaDir.x));
+  Hha_normalizeRS(&mPosDeltaDir.x);
+  mbMid = middle;
+  mCbExec.d = 0;
+  mCbExec.i = -1;
+  mCbDraw.d = 0;
+  mCbDraw.i = -1;
+  mCbExec.f = 0x02353D00;
+  mCbDraw.f = 0x02353EC0;
 }
-VERIFY(0x02353A00, part_init);
-BOOL part_model(void *part, const char *name, s32 index) {
-  WWHD_FUNC(0x02353AE8, BOOL, part, name, index);
-  u32 p = gabi::ea(part), data = resource(gabi::ea(name), index);
+
+/* 02353AE8 */
+BOOL daObjHhaPart_c::set_mdl_area(const char *name, s32 index) {
+  u32 data = resource(name, index);
   if (!data) {
-    assertion(0x1D9, 0x1002A438);
+    assertion(0x1D9, gc_tu.mPartModelAssert);
     return 0;
   }
-  u32 model = gabi::call<u32>(0x025E38E0, data, 0, 0x11020203u);
-  put(p, model);
+  u32 model = Hha_modelCreate(Hha_guest<void>(data), 0, 0x11020203u);
+  mpModel = model;
   return 1;
 }
-VERIFY(0x02353AE8, part_model);
-BOOL part_background(void *part, const char *name, s32 index) {
-  WWHD_FUNC(0x02353B7C, BOOL, part, name, index);
-  u32 p = gabi::ea(part), data = resource(gabi::ea(name), index), model = rd(p);
-  u32 bg = gabi::call<u32>(0x024F2478, data, 1, model ? model + 0xC8 : 0);
-  put(p + 4, bg);
+
+/* 02353B7C */
+BOOL daObjHhaPart_c::set_bgw(const char *name, s32 index) {
+  u32 data = resource(name, index), model = mpModel;
+  u32 bg = Hha_bgNewSet(Hha_guest<void>(data), 1, Hha_guest<void>(model ? gabi::ea(&Hha_guest<HhaModel>(model)->mBaseTransformMtx) : 0));
+  mpBgw = bg;
   return bg != 0;
 }
-VERIFY(0x02353B7C, part_background);
-void part_matrix(void *part, cXyz *position, csXyz *angle, cXyz *scale) {
-  WWHD_FUNC(0x02353BFC, void, part, position, angle, scale);
-  u32 p = gabi::ea(part), pos = gabi::ea(position), ang = gabi::ea(angle),
-      s = gabi::ea(scale), model = rd(p);
-  vector_float_copy(s, model + 0xBC);
-  gabi::call(0x028E93CC, 0x1048D0CCu, lf(pos), lf(pos + 4), lf(pos + 8));
-  gabi::call(0x025F1B48, 0x1048D0CCu, sh(ang), sh(ang + 2), sh(ang + 4));
-  gabi::call(0x025F24E0, lf(p + 8), lf(p + 12), lf(p + 16));
-  model = rd(p);
-  matrix_copy(0x1048D0CC, model + 0xC8);
-  gabi::call(0x027F4D5C, rd(p));
+
+/* 02353BFC */
+void daObjHhaPart_c::init_mtx(cXyz *position, csXyz *angle, cXyz *scale) {
+  u32 pos = gabi::ea(position), ang = gabi::ea(angle),
+      s = gabi::ea(scale), model = mpModel;
+  copyVector(Hha_guest<cXyz>(s), reinterpret_cast<cXyz*>(&Hha_guest<HhaModel>(model)->mBaseScale));
+  Hha_transS(l_matrix, Hha_guest<cXyz>(pos)->x, Hha_guest<cXyz>(pos)->y, Hha_guest<cXyz>(pos)->z);
+  Hha_ZXYrotM(l_matrix, Hha_guest<csXyz>(ang)->x, Hha_guest<csXyz>(ang)->y, Hha_guest<csXyz>(ang)->z);
+  Hha_transM(mPos.x, mPos.y, mPos.z);
+  model = mpModel;
+  copyMatrix(l_matrix, Hha_guest<be<f32>>(gabi::ea(&Hha_guest<HhaModel>(model)->mBaseTransformMtx)));
+  Hha_modelCalc(Hha_guest<void>(mpModel));
 }
-VERIFY(0x02353BFC, part_matrix);
 static void part_parent_matrix(u32 part, u32 parent) {
   gabi::Local<cXyz> pos, scale;
   gabi::Local<csXyz> angle;
-  vector_float_copy(parent + 0x314, gabi::ea(pos.get()));
-  vector_float_copy(parent + 0x330, gabi::ea(scale.get()));
-  angle_copy(parent + 0x328, gabi::ea(angle.get()));
-  gabi::call(0x02353BFC, part, gabi::ea(pos.get()), gabi::ea(angle.get()),
-             gabi::ea(scale.get()));
+  copyVector(&Hha_guest<Actor>(parent)->current.pos, pos.get());
+  copyVector(&Hha_guest<Actor>(parent)->scale, scale.get());
+  copyAngle(&Hha_guest<Actor>(parent)->shape_angle, angle.get());
+  Hha_guest<daObjHhaPart_c>(part)->init_mtx(pos.get(), angle.get(), scale.get());
 }
-void part_normal(void *part, Actor *parent) {
-  WWHD_FUNC(0x02353D00, void, part, parent);
-  u32 p = gabi::ea(part);
+
+/* 02353D00 */
+void daObjHhaPart_c::exe_normal(Actor *parent) {
+  u32 p = gabi::ea(this);
   part_parent_matrix(p, gabi::ea(parent));
-  u32 bg = rd(p + 4);
-  if (bg && rd(bg) < 0x100)
-    gabi::call(0x024F43DC, bg);
+  u32 bg = mpBgw;
+  if (bg && Hha_guest<be<u32>>(bg)[0] < 0x100)
+    Hha_bgMove(Hha_guest<void>(bg));
 }
-VERIFY(0x02353D00, part_normal);
-void part_move(void *part, Actor *parent) {
-  WWHD_FUNC(0x02353D9C, void, part, parent);
-  u32 p = gabi::ea(part);
-  sf(p + 12, lf(p + 12) + lf(p + 44));
+
+/* 02353D9C */
+void daObjHhaPart_c::exe_move(Actor *parent) {
+  mPos.y = mPos.y + mDeltaY;
   gabi::Local<cXyz> raw, diff;
-  gabi::call(0x0201ADE0, p + 20, gabi::ea(raw.get()), p + 8);
-  words(gabi::ea(raw.get()), gabi::ea(diff.get()), 3);
-  f32 dot = gabi::call<f32>(0x028E8F44, p + 32, gabi::ea(diff.get()));
+  Hha_subtractVector(&mPosTarget.x, raw.get(), &mPos);
+  copyWords(raw.get(), diff.get());
+  f32 dot = Hha_dotProduct(&mPosDeltaDir.x, diff.get());
+  // HD: unordered values take the completion branch.
   if (!(dot > 0.f)) {
-    u32 y = rd(p + 24), z = rd(p + 28);
-    u8 middle = byte(p + 49);
-    ss(p + 52, 0);
-    put(p + 56, 0x02353D00);
-    ss(p + 54, -1);
-    put(p + 16, z);
-    u32 x = rd(p + 20);
-    put(p + 12, y);
-    put(p + 8, x);
-    if (!middle && !byte(p + 48)) {
+    u32 y = Hha_bits(mPosTarget.y), z = Hha_bits(mPosTarget.z);
+    u8 middle = mbMid;
+    mCbExec.d = 0;
+    mCbExec.f = 0x02353D00;
+    mCbExec.i = -1;
+    Hha_bits(mPos.z) = z;
+    u32 x = Hha_bits(mPosTarget.x);
+    Hha_bits(mPos.y) = y;
+    Hha_bits(mPos.x) = x;
+    if (!middle && !mPartIdx) {
       u32 pl = play();
       gabi::Local<cXyz> direction;
       direction->set(0.f, 1.f, 0.f);
-      gabi::call(0x025CB374, pl + 0x599C, 4, -0x21, gabi::ea(direction.get()));
+      Hha_startShock(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mVibration), 4, -0x21, direction.get());
     }
   }
-  gabi::call(0x02353D00, part, parent);
+  exe_normal(parent);
 }
-VERIFY(0x02353D9C, part_move);
-void part_draw(void *part, Actor *parent) {
-  WWHD_FUNC(0x02353EC0, void, part, parent);
-  u32 p = gabi::ea(part), env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, env, rd(p), gabi::ea(parent) + 0x110);
-  gabi::call(0x025E2DE0, rd(p), 0);
-}
-VERIFY(0x02353EC0, part_draw);
 
-void splash_create(void *splash, u16 id, cXyz *position, f32 yOffset,
+/* 02353EC0 */
+void daObjHhaPart_c::draw_normal(Actor *parent) {
+  u32 env = Hha_getEnvLight();
+  Hha_setLightTevColorType(Hha_guest<void>(env), Hha_guest<void>(mpModel), &parent->tevStr);
+  Hha_modelUpdateDL(Hha_guest<void>(mpModel), 0);
+}
+
+/* 02353F10 */
+void daObjHhaSplash_c::create_s(u16 id, cXyz *position, f32 yOffset,
                    f32 zOffset, csXyz *angle) {
-  WWHD_FUNC(0x02353F10, void, splash, id, position, yOffset, zOffset, angle);
-  u32 p = gabi::ea(splash), pos = gabi::ea(position), ang = gabi::ea(angle);
-  f32 x = lf(pos), y = lf(pos + 4), z = lf(pos + 8);
-  sf(p + 32, x);
-  sf(p + 40, z);
-  sf(p + 36, y + yOffset);
-  gabi::call(0x025F1884, 0x1048D0CCu, sh(ang + 2));
+  u32 p = gabi::ea(this), pos = gabi::ea(position), ang = gabi::ea(angle);
+  f32 x = Hha_guest<cXyz>(pos)->x, y = Hha_guest<cXyz>(pos)->y, z = Hha_guest<cXyz>(pos)->z;
+  mPos.x = x;
+  mPos.z = z;
+  mPos.y = y + yOffset;
+  Hha_YrotS(l_matrix, Hha_guest<csXyz>(ang)->y);
   gabi::Local<cXyz> vec;
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(vec.get()));
-  gabi::call(0x028E8E64, gabi::ea(vec.get()), gabi::ea(vec.get()), zOffset);
-  gabi::call(0x028E8D88, p + 32, gabi::ea(vec.get()), p + 32);
-  u32 vx = rd(p + 32), vz = rd(p + 40);
-  put(p + 20, vx);
-  u32 vy = rd(p + 36);
-  put(p + 28, vz);
-  put(p + 24, vy);
-  angle_copy(ang, p + 44);
-  u32 pl = play(), ctl = rd(pl + 0x5AB0);
-  gabi::call(0x025A847C, ctl, 0, id, p + 32, p + 44, 0, 0xFF, p, -1, 0, 0, 0);
-  sb(p + 50, 1);
+  Hha_multVec(l_matrix, &l_baseZ, vec.get());
+  Hha_scaleVec(vec.get(), vec.get(), zOffset);
+  Hha_addVector(&mPos, vec.get(), &mPos);
+  u32 vx = Hha_bits(mPos.x), vz = Hha_bits(mPos.z);
+  Hha_bits(mBasePos.x) = vx;
+  u32 vy = Hha_bits(mPos.y);
+  Hha_bits(mBasePos.z) = vz;
+  Hha_bits(mBasePos.y) = vy;
+  copyAngle(Hha_guest<csXyz>(ang), reinterpret_cast<csXyz*>(&mAngle.x));
+  u32 pl = play(), ctl = Hha_guest<HhaPlay>(pl)->mpParticle;
+  Hha_setParticle(Hha_guest<void>(ctl), 0, id, &mPos, &mAngle.x, 0, Hha_guest<void>(0xFF), p, -1, Hha_guest<void>(0), Hha_guest<void>(0), Hha_guest<void>(0));
+  mbIsActive = 1;
 }
-VERIFY(0x02353F10, splash_create);
 static void gush_assert(u32 line, u32 condition) {
-  gabi::call(0x0273AA24, 0x1002A44Cu, line, condition);
+  Hha_assert(Hha_guest<void>(gc_tu.mGushAssertFile), line, Hha_guest<void>(condition));
 }
-BOOL gush_create(void *gush, const char *name) {
-  WWHD_FUNC(0x02354050, BOOL, gush, name);
-  u32 p = gabi::ea(gush), n = gabi::ea(name);
-  u32 data = resource(n, 11);
+
+/* 02354050 */
+BOOL daObjHhaYgush_c::create_area(const char *name) {
+  const char* n = name;
+  u32 data = resource(n, dRes_INDEX_HHA_BDL_YGSTP00_e);
   if (!data) {
-    gush_assert(0x280, 0x1002A45C);
+    gush_assert(0x280, gc_tu.mGushModelDataAssert);
     return 0;
   }
-  u32 model = gabi::call<u32>(0x025E38E0, data, 0x80000u, 0x11000222u);
-  put(p, model);
+  u32 model = Hha_modelCreate(Hha_guest<void>(data), 0x80000u, 0x11000222u);
+  M_mdl = model;
   if (!model) {
-    gush_assert(0x289, 0x1002A48C);
-    if (!rd(p))
+    gush_assert(0x289, gc_tu.mGushModelAssert);
+    if (!M_mdl)
       return 0;
   }
-  u32 btk = resource(n, 15);
+  u32 btk = resource(n, dRes_INDEX_HHA_BTK_YGSTP00_e);
   if (!btk)
-    gush_assert(0x290, 0x1002A46C);
-  if (!gabi::call<BOOL>(0x025E7CE0, p + 4, rd(rd(p) + 0xAC), btk, 1, 2, 0, -1,
-                        0, 1.f, 0))
+    gush_assert(0x290, gc_tu.mBtkAssert);
+  if (!Hha_btkInit(&mBtk, Hha_guest<void>(Hha_guest<HhaModel>(M_mdl)->mModelData), Hha_guest<void>(btk), 1, 2, 0, -1, 0, 1.f, 0))
     return 0;
-  u32 bck = resource(n, 6);
+  u32 bck = resource(n, dRes_INDEX_HHA_BCK_YGSTP00_e);
   if (!bck)
-    gush_assert(0x295, 0x1002A47C);
-  return gabi::call<BOOL>(0x025E8508, p + 0x78, rd(rd(p) + 0xAC), bck, 1, 2, 0,
-                          -1, 0, 1.f) != 0;
+    gush_assert(0x295, gc_tu.mBckAssert);
+  return Hha_bckInit(&mBck, Hha_guest<void>(Hha_guest<HhaModel>(M_mdl)->mModelData), Hha_guest<void>(bck), 1, 2, 0, -1, 0, 1.f) != 0;
 }
-VERIFY(0x02354050, gush_create);
 // Tev state is a sparse field copy: HD intentionally leaves the matrix/padding
 // blocks alone.
+// HD: light copies read and store one field at a time, never the matrix tail.
+static void copyLight(HhaLight* src, HhaLight* dst) {
+  dst->mPosition.x = (f32)src->mPosition.x;
+  dst->mPosition.y = (f32)src->mPosition.y;
+  dst->mPosition.z = (f32)src->mPosition.z;
+  dst->mDirection.x = (f32)src->mDirection.x;
+  dst->mDirection.y = (f32)src->mDirection.y;
+  dst->mDirection.z = (f32)src->mDirection.z;
+  for (u32 i=0; i<4; ++i) dst->mColor[i] = (u8)src->mColor[i];
+  for (u32 i=0; i<4; ++i) dst->mAngle[i] = (s16)src->mAngle[i];
+  for (u32 i=0; i<8; ++i) dst->mAttenuation[i] = (f32)src->mAttenuation[i];
+}
+// HD: sparse TEV assignment leaves all matrix and padding bytes untouched.
 static void tev_copy(u32 source, u32 destination) {
-  for (u32 i = 0; i < 6; ++i)
-    sf(destination + i * 4, lf(source + i * 4));
-  for (u32 i = 0x18; i < 0x1C; ++i)
-    sb(destination + i, byte(source + i));
-  for (u32 i = 0x1C; i < 0x24; i += 2)
-    ss(destination + i, sh(source + i));
-  for (u32 i = 0x24; i < 0x44; i += 4)
-    sf(destination + i, lf(source + i));
-  for (u32 i = 0x84; i < 0x90; i += 4)
-    put(destination + i, rd(source + i));
-  for (u32 i = 0x90; i < 0x98; i += 2)
-    ss(destination + i, uh(source + i));
-  put(destination + 0x98, rd(source + 0x98));
-  put(destination + 0x9C, rd(source + 0x9C));
-  for (u32 i = 0xA0; i < 0xA8; i += 2)
-    ss(destination + i, uh(source + i));
-  for (u32 i = 0xA8; i < 0xB4; i += 4)
-    sf(destination + i, lf(source + i));
-  for (u32 i = 0xB4; i < 0xBD; ++i)
-    sb(destination + i, byte(source + i));
-  for (u32 i = 0xC0; i < 0xD8; i += 4)
-    sf(destination + i, lf(source + i));
-  for (u32 i = 0xD8; i < 0xDC; ++i)
-    sb(destination + i, byte(source + i));
-  for (u32 i = 0xDC; i < 0xE4; i += 2)
-    ss(destination + i, sh(source + i));
-  for (u32 i = 0xE4; i < 0x104; i += 4)
-    sf(destination + i, lf(source + i));
-  for (u32 i = 0x144; i < 0x15C; i += 4)
-    sf(destination + i, lf(source + i));
-  for (u32 i = 0x15C; i < 0x160; ++i)
-    sb(destination + i, byte(source + i));
-  for (u32 i = 0x160; i < 0x168; i += 2)
-    ss(destination + i, sh(source + i));
-  for (u32 i = 0x168; i < 0x188; i += 4)
-    sf(destination + i, lf(source + i));
+  HhaTev* src = Hha_guest<HhaTev>(source);
+  HhaTev* dst = Hha_guest<HhaTev>(destination);
+  copyLight(&src->mLightObj, &dst->mLightObj);
+  for (u32 i=0; i<3; ++i) dst->mLightPosWorld[i] = (u32)src->mLightPosWorld[i];
+  for (u32 i=0; i<4; ++i) dst->mColorC0[i] = (u16)src->mColorC0[i];
+  dst->mColorK0 = (u32)src->mColorK0;
+  dst->mColorK1 = (u32)src->mColorK1;
+  for (u32 i=0; i<4; ++i) dst->mFogColor[i] = (u16)src->mFogColor[i];
+  dst->mFogStartZ = (f32)src->mFogStartZ;
+  dst->mFogEndZ = (f32)src->mFogEndZ;
+  dst->mColpatBlend = (f32)src->mColpatBlend;
+  dst->mInitTimer = (u8)src->mInitTimer;
+  dst->mEnvrIdxCurr = (u8)src->mEnvrIdxCurr;
+  dst->mEnvrIdxPrev = (u8)src->mEnvrIdxPrev;
+  dst->mColpatCurr = (u8)src->mColpatCurr;
+  dst->mColpatPrev = (u8)src->mColpatPrev;
+  dst->mRoomNo = (u8)src->mRoomNo;
+  dst->mEnvrIdxOverride = (u8)src->mEnvrIdxOverride;
+  dst->mLightMode = (u8)src->mLightMode;
+  dst->mInitType = (u8)src->mInitType;
+  copyLight(&src->mHdLightParam, &dst->mHdLightParam);
+  copyLight(&src->mHdLightParamExtra, &dst->mHdLightParamExtra);
 }
-void gush_init(void *gush, cXyz *position, f32 distance, csXyz *angle,
-               cXyz *scale, void *tev, u8 visible) {
-  WWHD_FUNC(0x02354200, void, gush, position, distance, angle, scale, tev,
-            visible);
-  u32 p = gabi::ea(gush), ang = gabi::ea(angle);
-  gabi::call(0x025F1884, 0x1048D0CCu, sh(ang + 2));
-  gabi::Local<cXyz> vec, sum;
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(vec.get()));
-  gabi::call(0x028E8E64, gabi::ea(vec.get()), gabi::ea(vec.get()), distance);
-  gabi::call(0x0201AD78, position, gabi::ea(sum.get()), gabi::ea(vec.get()));
-  u32 x = rd(gabi::ea(sum.get())), y = rd(gabi::ea(sum.get()) + 4),
-      z = rd(gabi::ea(sum.get()) + 8);
-  put(p + 0x2D4, z);
-  put(p + 0x2CC, x);
-  put(p + 0x2D8, x);
-  put(p + 0x2D0, y);
-  put(p + 0x2DC, y);
-  put(p + 0x2E0, z);
-  angle_copy(ang, p + 0x2F0);
-  words(gabi::ea(scale), p + 0x2E4, 3);
-  tev_copy(gabi::ea(tev), p + 0x104);
-  sb(p + 0x2F6, visible);
-}
-VERIFY(0x02354200, gush_init);
-void gush_matrix(void *gush) {
-  WWHD_FUNC(0x023545DC, void, gush);
-  u32 p = gabi::ea(gush), model = rd(p);
-  if (model) {
-    vector_float_copy(p + 0x2E4, model + 0xBC);
-    gabi::call(0x028E93CC, 0x1048D0CCu, lf(p + 0x2D8), lf(p + 0x2DC),
-               lf(p + 0x2E0));
-    gabi::call(0x025F1B48, 0x1048D0CCu, sh(p + 0x2F0), sh(p + 0x2F2),
-               sh(p + 0x2F4));
-    gabi::call(0x025F2518, 13.f, 1.f, 11.f);
-    model = rd(p);
-    matrix_copy(0x1048D0CC, model + 0xC8);
-  }
-}
-VERIFY(0x023545DC, gush_matrix);
-void gush_draw(void *gush) {
-  WWHD_FUNC(0x023546E0, void, gush);
-  u32 p = gabi::ea(gush);
-  if (byte(p + 0x2F6) && rd(p)) {
-    u32 env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, env, 2, p + 0x2D8, p + 0x104);
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, env, rd(p), p + 0x104);
-    gabi::call(0x025E7FC4, p + 4, rd(rd(p) + 0xAC), lf(p + 8));
-    gabi::call(0x025E86B8, p + 0x78, rd(rd(p) + 0xAC), lf(p + 0x7C));
-    gabi::call(0x025E2DE0, rd(p), 0);
-  }
-}
-VERIFY(0x023546E0, gush_draw);
 
-static void tev_light_copy(u32 src, u32 dst) {
-  for (u32 i = 0; i < 0x18; i += 4)
-    sf(dst + i, lf(src + i));
-  for (u32 i = 0x18; i < 0x1C; ++i)
-    sb(dst + i, byte(src + i));
-  for (u32 i = 0x1C; i < 0x24; i += 2)
-    ss(dst + i, sh(src + i));
-  for (u32 i = 0x24; i < 0x44; i += 4)
-    sf(dst + i, lf(src + i));
+/* 02354200 */
+void daObjHhaYgush_c::init_data(cXyz *position, f32 distance, csXyz *angle,
+               cXyz *scale, void *tev, u8 visible) {
+  u32 ang = gabi::ea(angle);
+  Hha_YrotS(l_matrix, Hha_guest<csXyz>(ang)->y);
+  gabi::Local<cXyz> vec, sum;
+  Hha_multVec(l_matrix, &l_baseZ, vec.get());
+  Hha_scaleVec(vec.get(), vec.get(), distance);
+  Hha_sumVectorResult(position, sum.get(), vec.get());
+  u32 x = Hha_bits(sum->x), y = Hha_bits(sum->y),
+      z = Hha_bits(sum->z);
+  Hha_bits(mBasePos.z) = z;
+  Hha_bits(mBasePos.x) = x;
+  Hha_bits(mPos.x) = x;
+  Hha_bits(mBasePos.y) = y;
+  Hha_bits(mPos.y) = y;
+  Hha_bits(mPos.z) = z;
+  copyAngle(Hha_guest<csXyz>(ang), reinterpret_cast<csXyz*>(&mRot));
+  copyWords(reinterpret_cast<cXyz*>(scale), reinterpret_cast<cXyz*>(&mScale));
+  tev_copy(gabi::ea(tev), gabi::ea(&mTev));
+  mbVisible = visible;
 }
-void *gush_constructor(void *gush) {
-  WWHD_FUNC(0x02354778, void *, gush);
-  u32 p = gabi::ea(gush);
-  if (!p)
-    p = gabi::call<u32>(0x0273AD10, 0x2F8);
-  if (p) {
-    gabi::call(0x025E7C6C, p + 4);
-    gabi::call(0x027F2BC0, p + 0x78, 0);
-    put(p + 0x88, 0x1016E54C);
-    gabi::call(0x027DA984, p + 0x8C);
-    put(p + 0x100, 0);
-    put(p + 0xFC, 0);
-    put(p + 0x88, 0x1002A370);
-    put(p + 0xF8, 0);
-    put(p + 0xC0, 0x1016D820);
-    put(p + 0xD0, 0);
-    put(p + 0xF4, 0);
-    tev_light_copy(0x1016E414, p + 0x104);
-    tev_light_copy(0x1016E414, p + 0x1C4);
-    tev_light_copy(0x1016E414, p + 0x248);
+
+/* 023545DC */
+void daObjHhaYgush_c::init_mtx() {
+  u32 model = M_mdl;
+  if (model) {
+    copyVector(reinterpret_cast<cXyz*>(&mScale), reinterpret_cast<cXyz*>(&Hha_guest<HhaModel>(model)->mBaseScale));
+    Hha_transS(l_matrix, mPos.x, mPos.y, mPos.z);
+    Hha_ZXYrotM(l_matrix, mRot.x, mRot.y, mRot.z);
+    Hha_scaleM(13.f, 1.f, 11.f);
+    model = M_mdl;
+    copyMatrix(l_matrix, Hha_guest<be<f32>>(gabi::ea(&Hha_guest<HhaModel>(model)->mBaseTransformMtx)));
   }
-  return gabi::at<void>(p);
 }
-VERIFY(0x02354778, gush_constructor);
-BOOL create_heap(Actor *actor) {
-  WWHD_FUNC(0x02354974, BOOL, actor);
-  u32 p = gabi::ea(actor);
+
+/* 023546E0 */
+void daObjHhaYgush_c::draw() {
+  if (mbVisible && M_mdl) {
+    u32 env = Hha_getEnvLight();
+    Hha_settingTevStruct(Hha_guest<void>(env), 2, &mPos, &mTev);
+    env = Hha_getEnvLight();
+    Hha_setLightTevColorType(Hha_guest<void>(env), Hha_guest<void>(M_mdl), &mTev);
+    Hha_btkEntry(&mBtk, Hha_guest<void>(Hha_guest<HhaModel>(M_mdl)->mModelData), mBtk.mFrameCtrl.mFrame);
+    Hha_bckEntry(&mBck, Hha_guest<void>(Hha_guest<HhaModel>(M_mdl)->mModelData), mBck.mFrameCtrl.mFrame);
+    Hha_modelUpdateDL(Hha_guest<void>(M_mdl), 0);
+  }
+}
+
+/* 02354974 */
+BOOL daObjHha_c::create_heap() {
   for (u32 i = 0; i < 2; ++i) {
-    if (!gabi::call<BOOL>(0x02353AE8, p + 0xA70 + i * 0x44, 0x1002A578u,
-                          rd(0x1002A320 + i * 4)))
+    if (!mPartA[i].set_mdl_area("Hha", l_daObjHha_bdl_idx_table[i]))
       return 0;
-    if (!gabi::call<BOOL>(0x02353B7C, p + 0xA70 + i * 0x44, 0x1002A578u,
-                          rd(0x1002A328 + i * 4)))
+    if (!mPartA[i].set_bgw("Hha", l_daObjHha_dzb_idx_table[i]))
       return 0;
   }
-  u32 data = resource(0x1002A578, 12);
+  u32 data = resource("Hha", dRes_INDEX_HHA_BDL_YSWTR00_e);
+  // HD: missing waterfall model data still creates the gush.
   if (!data) {
-    gabi::call(0x0273AA24, 0x1002A4A4u, 0x324, 0x1002A4B4u);
-    return gabi::call<BOOL>(0x02354050, p + 0x778, 0x1002A578u);
+    Hha_assert(Hha_guest<void>(gc_tu.mActorAssertFile), 0x324, Hha_guest<void>(gc_tu.mActorModelAssert));
+    return mYgush.create_area("Hha");
   }
-  u32 model = gabi::call<u32>(0x025E38E0, data, 0x80000u, 0x11000222u);
-  put(p + 0x3AC, model);
+  u32 model = Hha_modelCreate(Hha_guest<void>(data), 0x80000u, 0x11000222u);
+  mpModel = model;
   for (u32 i = 0; i < 2; ++i) {
-    u32 animation = resource(0x1002A578, rd(0x1002A330 + i * 4));
+    u32 animation = resource("Hha", l_daObjHha_btk_idx_table[i]);
     if (!animation)
-      gabi::call(0x0273AA24, 0x1002A4A4u, 0x32F, 0x1002A4C4u);
-    if (!gabi::call<BOOL>(0x025E7CE0, p + 0x3B0 + i * 0x74, data, animation, 1,
-                          rd(0x1002A338 + i * 4), 0, -1, 0, 1.f, 0))
+      Hha_assert(Hha_guest<void>(gc_tu.mActorAssertFile), 0x32F, Hha_guest<void>(gc_tu.mActorBtkAssert));
+    if (!Hha_btkInit(&mBtkA[i], Hha_guest<void>(data), Hha_guest<void>(animation), 1, l_daObjHha_btk_mode_table[i], 0, -1, 0, 1.f, 0))
       return 0;
   }
-  return gabi::call<BOOL>(0x02354050, p + 0x778, 0x1002A578u);
+  return mYgush.create_area("Hha");
 }
-VERIFY(0x02354974, create_heap);
-BOOL heap_callback(Actor *actor) {
-  WWHD_FUNC(0x02354B3C, BOOL, actor);
-  return gabi::call<BOOL>(0x02354974, actor);
+
+/* 02354B3C */
+BOOL solidHeapCB(Actor *actor) {
+  return actor->create_heap();
 }
-VERIFY(0x02354B3C, heap_callback);
-void set_texture(Actor *actor, f32 frame, f32 speed, s32 index) {
-  WWHD_FUNC(0x02354B40, void, actor, frame, speed, index);
-  u32 p = gabi::ea(actor) + (u32)index * 0x74;
-  sf(p + 0x3B4, frame);
-  sf(p + 0x3B0, speed);
+
+/* 02354B40 */
+void daObjHha_c::set_tex(f32 frame, f32 speed, s32 index) {
+  mBtkA[index].mFrameCtrl.mFrame = frame;
+  mBtkA[index].mFrameCtrl.mRate = speed;
 }
-VERIFY(0x02354B40, set_texture);
-void actor_matrix(Actor *actor) {
-  WWHD_FUNC(0x02354B54, void, actor);
-  u32 p = gabi::ea(actor), model = rd(p + 0x3AC);
-  vector_float_copy(p + 0x330, model + 0xBC);
-  gabi::call(0x028E93CC, 0x1048D0CCu, lf(p + 0x314), lf(p + 0x318),
-             lf(p + 0x31C));
-  gabi::call(0x025F1B48, 0x1048D0CCu, sh(p + 0x328), sh(p + 0x32A),
-             sh(p + 0x32C));
-  gabi::call(0x025F24E0, lf(p + 0xB60), lf(p + 0xB64), lf(p + 0xB68));
-  gabi::call(0x025F2518, 1.f, 1.f, lf(p + 0xB74));
-  model = rd(p + 0x3AC);
-  matrix_copy(0x1048D0CC, model + 0xC8);
-  gabi::call(0x027F4D5C, rd(p + 0x3AC));
+
+/* 02354B54 */
+void daObjHha_c::init_mtx() {
+  u32 model = mpModel;
+  copyVector(reinterpret_cast<cXyz*>(&scale), reinterpret_cast<cXyz*>(&Hha_guest<HhaModel>(model)->mBaseScale));
+  Hha_transS(l_matrix, current.pos.x, current.pos.y, current.pos.z);
+  Hha_ZXYrotM(l_matrix, shape_angle.x, shape_angle.y, shape_angle.z);
+  Hha_transM(mPosOffset.x, mPosOffset.y, mPosOffset.z);
+  Hha_scaleM(1.f, 1.f, mWtrScale);
+  model = mpModel;
+  copyMatrix(l_matrix, Hha_guest<be<f32>>(gabi::ea(&Hha_guest<HhaModel>(model)->mBaseTransformMtx)));
+  Hha_modelCalc(Hha_guest<void>(mpModel));
 }
-VERIFY(0x02354B54, actor_matrix);
-f32 water_height(Actor *actor) {
-  WWHD_FUNC(0x02354C60, f32, actor);
-  u32 p = gabi::ea(actor);
-  gabi::Local<u8[0x50]> check;
+
+/* 02354C60 */
+f32 daObjHha_c::get_water_h() {
+  gabi::Local<HhaWaterCheck> check;
   gabi::Local<cXyz> position, vec;
-  gabi::call(0x024F22DC, gabi::ea(check.get()));
-  vector_float_copy(p + 0x314, gabi::ea(position.get()));
-  s16 yaw = sh(p + 0x322);
-  f32 height = lf(p + 0x318);
-  vector_float_copy(0x101FFBCC, gabi::ea(vec.get()));
-  gabi::call(0x025F1884, 0x1048D0CCu, yaw);
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(vec.get()));
-  gabi::call(0x028E8E64, gabi::ea(vec.get()), gabi::ea(vec.get()), 400.f);
-  gabi::call(0x028E8D88, gabi::ea(position.get()), gabi::ea(vec.get()),
-             gabi::ea(position.get()));
-  if (gabi::call<BOOL>(0x024F15A4, gabi::ea(position.get()),
-                       gabi::ea(check.get()), 1.f))
-    height = lf(gabi::ea(check.get()) + 0x48);
-  put(gabi::ea(check.get()) + 0x20, 0x1002A3A8);
-  put(gabi::ea(check.get()) + 0x24, 0x1002A3C8);
-  put(gabi::ea(check.get()) + 0x30, 0x1002A398);
-  gabi::call(0x02008B4C, gabi::ea(check.get()) + 0x10, 0);
+  Hha_waterCheckCtor(check.get());
+  copyVector(reinterpret_cast<cXyz*>(&current.pos), position.get());
+  s16 yaw = current.angle.y;
+  f32 height = current.pos.y;
+  copyVector(&l_baseZ, vec.get());
+  Hha_YrotS(l_matrix, yaw);
+  Hha_multVec(l_matrix, &l_baseZ, vec.get());
+  Hha_scaleVec(vec.get(), vec.get(), 400.f);
+  Hha_addVector(position.get(), vec.get(), position.get());
+  if (Hha_waterCross(position.get(), check.get(), 1.f))
+    height = (f32)check->mHeight;
+  check->mVtable = gc_tu.mWaterVtable;
+  check->mPolyVtable = gc_tu.mWaterPolyVtable;
+  check->mGroupVtable = gc_tu.mWaterGroupVtable;
+  Hha_polyInfoDtor(&check->mBaseVtable, 0);
   return height;
 }
-VERIFY(0x02354C60, water_height);
-void collision_init(Actor *actor) {
-  WWHD_FUNC(0x02354D7C, void, actor);
-  u32 p = gabi::ea(actor);
+
+/* 02354D7C */
+void daObjHha_c::init_co() {
+  u32 p = gabi::ea(this);
   gabi::Local<cXyz> center;
-  gabi::call(0x025F1884, 0x1048D0CCu, sh(p + 0x322));
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(center.get()));
-  gabi::call(0x028E8E64, gabi::ea(center.get()), gabi::ea(center.get()), 460.f);
-  f32 height = gabi::call<f32>(0x02354C60, actor);
-  sf(gabi::ea(center.get()) + 4, height);
-  gabi::call(0x028E8D88, gabi::ea(center.get()), p + 0x314,
-             gabi::ea(center.get()));
-  gabi::call(0x02515F14, p + 0x4A0, 0xFF, 0xFF, actor);
-  put(p + 0x520, p + 0x4A0);
-  gabi::call(0x02516518, p + 0x4DC, 0x1002A5BCu);
-  gabi::call(0x020182E0, p + 0x5F4, gabi::ea(center.get()));
-  if (!switch_on(p) && !byte(p + 0xB70)) {
-    gabi::call(0x02515F14, p + 0x610, 0xFF, 0xFF, actor);
-    put(p + 0x690, p + 0x610);
-    gabi::call(0x0251677C, p + 0x64C, 0x1002A57Cu);
-    f32 y = lf(p + 0x318), z = lf(p + 0x31C), x = lf(p + 0x314);
+  Hha_YrotS(l_matrix, current.angle.y);
+  Hha_multVec(l_matrix, &l_baseZ, center.get());
+  Hha_scaleVec(center.get(), center.get(), 460.f);
+  f32 height = get_water_h();
+  center->y = height;
+  Hha_addVector(center.get(), &current.pos, center.get());
+  Hha_statusInit(&mCylStts, 0xFF, 0xFF, this);
+  mCyl.mStts = &mCylStts;
+  Hha_setCylinder(&mCyl, Hha_guest<void>(gc_tu.mCylinderData));
+  Hha_cylinderSetC(&mCyl.mCyl, center.get());
+  if (!switch_on(p) && !mIsMiddle) {
+    Hha_statusInit(&mSphStts, 0xFF, 0xFF, this);
+    mSph.mStts = &mSphStts;
+    Hha_setSphere(&mSph, Hha_guest<void>(gc_tu.mSphereData));
+    f32 y = current.pos.y, z = current.pos.z, x = current.pos.x;
     center->set(x, y - 400.f, z - 110.f);
-    gabi::call(0x02018D40, p + 0x764, gabi::ea(center.get()));
-    gabi::call(0x02018C8C, p + 0x764, 220.f);
+    Hha_sphereSetC(&mSph.mSph, center.get());
+    Hha_sphereSetR(&mSph.mSph, 220.f);
   }
 }
-VERIFY(0x02354D7C, collision_init);
 
 static void splash_stop(u32 splash) {
-  u32 emitter = rd(splash + 4);
+  u32 emitter = Hha_guest<daObjHhaSplash_c>(splash)->mSplashCb.mpEmitter;
   if (emitter) {
-    put(emitter + 0x254, rd(emitter + 0x254) | 1);
-    sb(splash + 0x32, 0);
+    Hha_guest<HhaEmitter>(emitter)->mFlags = Hha_guest<HhaEmitter>(emitter)->mFlags | 1;
+    Hha_guest<daObjHhaSplash_c>(splash)->mbIsActive = 0;
   }
 }
 static void splash_play(u32 splash) {
-  u32 emitter = rd(splash + 4);
+  u32 emitter = Hha_guest<daObjHhaSplash_c>(splash)->mSplashCb.mpEmitter;
   if (emitter) {
-    put(emitter + 0x254, rd(emitter + 0x254) & ~1u);
-    sb(splash + 0x32, 1);
+    Hha_guest<HhaEmitter>(emitter)->mFlags = Hha_guest<HhaEmitter>(emitter)->mFlags & ~1u;
+    Hha_guest<daObjHhaSplash_c>(splash)->mbIsActive = 1;
   }
 }
-s32 create(Actor *actor) {
-  WWHD_FUNC(0x02354EE0, s32, actor);
-  u32 p = gabi::ea(actor), flags = rd(p + 0x2E4);
+
+/* 02354EE0 */
+s32 daObjHha_c::_create() {
+  u32 p = gabi::ea(this), flags = actor_condition;
   if (!(flags & 8)) {
     if (p) {
-      gabi::call(0x025D4ED0, actor);
-      put(p + 0xB4, 0x1002A408);
-      gabi::call(0x028EFFD0, p + 0x3B0, 2, 0x74, 0x025E7C6Cu);
-      gabi::call(0x0200BD2C, p + 0x4A0);
-      gabi::call(0x02515DA0, p + 0x4BC);
-      put(p + 0x4BC, 0x1004AEC0);
-      put(p + 0x4B8, 0x1004AE88);
-      gabi::call(0x02515FB8, p + 0x4DC);
-      put(p + 0x5F0, 0x100015A8);
-      put(p + 0x5EC, 0x1002A360);
-      gabi::call(0x02018590, p + 0x5F4);
-      put(p + 0x518, 0x1004B108);
-      put(p + 0x608, 0x1004B150);
-      put(p + 0x5F0, 0x1004B160);
-      gabi::call(0x0200BD2C, p + 0x610);
-      gabi::call(0x02515DA0, p + 0x62C);
-      put(p + 0x628, 0x1004AE88);
-      put(p + 0x62C, 0x1004AEC0);
-      gabi::call(0x025166F0, p + 0x64C);
-      gabi::call(0x02354778, p + 0x778);
-      gabi::call(0x028EFFD0, p + 0xAF8, 2, 0x34, 0x02355F70u);
-      flags = rd(p + 0x2E4);
+      Hha_actorCtor(this);
+      __vtbl = gc_tu.mActorVtable;
+      Hha_constructArray(&mBtkA[0], 2, 0x74, Hha_guest<void>(0x025E7C6Cu));
+      Hha_statusBaseCtor(&mCylStts);
+      Hha_statusGameCtor(&mCylStts.__vtbl_gstts);
+      mCylStts.__vtbl_gstts = gc_tu.mStatusGameVtable;
+      mCylStts.__vtbl = gc_tu.mStatusBaseVtable;
+      Hha_collisionObjectCtor(&mCyl);
+      Hha_guest<HhaShapeAttribute>(gabi::ea(mCyl.mShapeAttr))->mVtable = gc_tu.mShapeBaseVtable;
+      Hha_guest<HhaShapeAttribute>(gabi::ea(mCyl.mShapeAttr))->mBoundsVtable = gc_tu.mBoundsVtable;
+      Hha_cylinderGeometryCtor(&mCyl.mCyl);
+      mCyl.__vtbl_hitinf = gc_tu.mCylinderVtable;
+      mCyl.mCyl.__vtbl = gc_tu.mCylinderGeometryVtable;
+      Hha_guest<HhaShapeAttribute>(gabi::ea(mCyl.mShapeAttr))->mVtable = gc_tu.mCylinderShapeVtable;
+      Hha_statusBaseCtor(&mSphStts);
+      Hha_statusGameCtor(&mSphStts.__vtbl_gstts);
+      mSphStts.__vtbl = gc_tu.mStatusBaseVtable;
+      mSphStts.__vtbl_gstts = gc_tu.mStatusGameVtable;
+      Hha_sphereCtor(&mSph);
+      gushConstructor(&mYgush);
+      Hha_constructArray(&mSplashA[0].mSplashCb.mVtable, 2, 0x34, Hha_guest<void>(0x02355F70u));
+      flags = actor_condition;
     }
-    put(p + 0x2E4, flags | 8);
+    actor_condition = flags | 8;
   }
-  s32 phase = gabi::call<s32>(0x02520460, p + 0x498, 0x1002A578u);
-  if (phase != 4)
+  s32 phase = Hha_resLoad(&mPhs, "Hha");
+  if (phase != HHA_PHASE_COMPLETE)
     return phase;
-  if (!gabi::call<BOOL>(0x025D63E8, actor, 0x02354B3Cu, 0x3C80))
-    return 5;
-  u32 params = rd(p + 0xB0);
-  put(p + 0xB6C, params & 0xFF);
-  sb(p + 0xB70, (params >> 8) & 0xFF);
+  if (!Hha_entrySolidHeap(this, Hha_guest<void>(0x02354B3Cu), 0x3C80))
+    return HHA_PHASE_ERROR;
+  u32 params = mParameters;
+  mSwitchNo = params & 0xFF;
+  mIsMiddle = (params >> 8) & 0xFF;
   u32 pl = play();
-  s32 event = gabi::call<s32>(0x02543F10, pl + 0x52C4, 0x1002A540u, 0xFF);
-  u8 middle = byte(p + 0xB70);
-  ss(p + 0xB80, event);
+  s32 event = Hha_getEventIdx(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mEventManager), "hha_close", 0xFF);
+  u8 middle = mIsMiddle;
+  mEventIdx = event;
   if (middle == 15)
-    sb(p + 0xB70, 0);
+    mIsMiddle = 0;
   if (switch_on(p)) {
-    middle = byte(p + 0xB70);
-    sb(p + 0xB82, 2);
-    sb(p + 0xB70, (middle + 1) & 1);
+    middle = mIsMiddle;
+    mState = State_CLOSED;
+    mIsMiddle = (middle + 1) & 1;
   }
-  ss(p + 0xB72, -1);
-  middle = byte(p + 0xB70);
+  mPartTimer = -1;
+  middle = mIsMiddle;
   u32 posIndex = (middle & 1) * 8;
   for (u32 i = 0; i < 2; ++i) {
-    u32 part = p + 0xA70 + i * 0x44;
-    gabi::call(0x02353A00, part, lf(0x1002A520 + posIndex),
-               lf(0x1002A530 + posIndex), uh(0x1002A51C + middle * 2), (u8)i,
-               middle);
+    u32 part = gabi::ea(&mPartA[i]);
+    Hha_guest<daObjHhaPart_c>(part)->init_data(pos_y[posIndex / 4], tar_y[posIndex / 4], move_frame[middle], (u8)i, middle);
     pl = play();
-    gabi::call(0x024EEA6C, pl + 0x12A0, rd(part + 4), actor);
+    Hha_bgRegist(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mBgS), Hha_guest<void>(Hha_guest<daObjHhaPart_c>(part)->mpBgw), this);
     part_parent_matrix(part, p);
     posIndex += 4;
     if (i == 0)
-      middle = byte(p + 0xB70);
+      middle = mIsMiddle;
   }
-  sf(p + 0xB74, 1.f);
-  sf(p + 0xB68, 50.f);
-  sf(p + 0xB60, 0.f);
-  sf(p + 0xB64, -1400.f);
+  mWtrScale = 1.f;
+  mPosOffset.z = 50.f;
+  mPosOffset.x = 0.f;
+  mPosOffset.y = -1400.f;
   for (u32 i = 0; i < 2; ++i)
-    gabi::call(0x02353F10, p + 0xAF8 + i * 0x34, uh(0x1002A344 + i * 2),
-               p + 0x314, lf(0x1002A50C + i * 4), lf(0x1002A514 + i * 4),
-               p + 0x320);
-  if (!byte(p + 0xB70)) {
-    gabi::call(0x02354B40, actor, 36.f, 0.f, 1);
-    sb(p + 0x60C, 1);
-    gabi::call(0x02354200, p + 0x778, p + 0x314, 600.f, p + 0x320, p + 0x330,
-               p + 0x110, 1);
-    sb(p + 0xB83, 1);
+    mSplashA[i].create_s(l_daObjHha_splash_id_table[i], &current.pos, splash_y[i], splash_z[i], &current.angle);
+  if (!mIsMiddle) {
+    set_tex(36.f, 0.f, 1);
+    mHitboxActive = 1;
+    mYgush.init_data(&current.pos, 600.f, &current.angle, &scale, &tevStr, 1);
+    mWaterSound = 1;
   } else {
-    gabi::call(0x02354B40, actor, 0.f, 0.f, 1);
-    splash_stop(p + 0xAF8);
-    splash_stop(p + 0xB2C);
-    gabi::call(0x02354200, p + 0x778, p + 0x314, 600.f, p + 0x320, p + 0x330,
-               p + 0x110, 0);
-    sb(p + 0xB83, 0);
+    set_tex(0.f, 0.f, 1);
+    splash_stop(gabi::ea(&mSplashA[0].mSplashCb.mVtable));
+    splash_stop(gabi::ea(&mSplashA[1].mSplashCb.mVtable));
+    mYgush.init_data(&current.pos, 600.f, &current.angle, &scale, &tevStr, 0);
+    mWaterSound = 0;
   }
-  gabi::call(0x023545DC, p + 0x778);
-  gabi::call(0x02354B54, actor);
-  gabi::call(0x02354D7C, actor);
-  u32 model = rd(p + 0xA70);
-  put(p + 0x348, model ? model + 0xC8 : 0);
-  gabi::call(0x025D674C, actor, -700.f, -1600.f, -400.f, 700.f, 120.f, 1000.f);
-  return 4;
+  mYgush.init_mtx();
+  init_mtx();
+  init_co();
+  u32 model = mPartA[0].mpModel;
+  cullMtx = model ? gabi::ea(&Hha_guest<HhaModel>(model)->mBaseTransformMtx) : 0;
+  Hha_setCullBox(this, -700.f, -1600.f, -400.f, 700.f, 120.f, 1000.f);
+  return HHA_PHASE_COMPLETE;
 }
-VERIFY(0x02354EE0, create);
-u8 remove(Actor *actor) {
-  WWHD_FUNC(0x02355394, u8, actor);
-  u32 p = gabi::ea(actor);
-  if (rd(p + 0xF4))
+
+/* 02355394 */
+u8 daObjHha_c::_delete() {
+  if (heap)
     for (u32 i = 0; i < 2; ++i) {
-      u32 part = p + 0xA70 + i * 0x44, bg = rd(part + 4);
-      if (bg && rd(bg) < 0x100) {
+      u32 part = gabi::ea(&mPartA[i]), bg = Hha_guest<daObjHhaPart_c>(part)->mpBgw;
+      if (bg && Hha_guest<be<u32>>(bg)[0] < 0x100) {
         u32 pl = play();
-        gabi::call(0x020087EC, pl + 0x12A0, rd(part + 4));
-        put(part + 4, 0);
+        Hha_bgRelease(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mBgS), Hha_guest<void>(Hha_guest<daObjHhaPart_c>(part)->mpBgw));
+        Hha_guest<daObjHhaPart_c>(part)->mpBgw = 0;
       }
     }
   for (u32 i = 0; i < 2; ++i) {
-    u32 splash = p + 0xAF8 + i * 0x34;
-    if (rd(splash + 4)) {
-      gabi::call(rd(rd(splash) + 0x44), splash);
-      sb(splash + 0x32, 0);
+    u32 splash = gabi::ea(&mSplashA[i]);
+    if (Hha_guest<daObjHhaSplash_c>(splash)->mSplashCb.mpEmitter) {
+      Hha_removeSplash(Hha_guest<daObjHhaSplash_c>(splash));
+      Hha_guest<daObjHhaSplash_c>(splash)->mbIsActive = 0;
     }
   }
-  gabi::call(0x025204C8, p + 0x498, 0x1002A578u);
+  Hha_resDelete(&mPhs, "Hha");
   return 1;
 }
-VERIFY(0x02355394, remove);
-static void part_dispatch(u32 part, u32 parent, u32 offset) {
-  s16 slot = sh(part + offset + 2);
-  if (slot) {
-    u32 receiver = part + (s32)sh(part + offset), function;
-    if (slot < 0)
-      function = rd(part + offset + 4);
-    else
-      function =
-          rd(rd(receiver + (s32)sh(part + offset + 6)) + (u32)slot * 8 + 4);
-    gabi::call(function, receiver, parent);
-  }
-}
-void part_manager(Actor *actor) {
-  WWHD_FUNC(0x02355464, void, actor);
-  u32 p = gabi::ea(actor);
-  s32 timer = sh(p + 0xB72);
+
+/* 02355464 */
+void daObjHha_c::part_manager() {
+  s32 timer = mPartTimer;
   if (timer >= 0) {
     if (timer == 0) {
-      u8 middle = byte(p + 0xB70);
-      ss(p + 0xAA4, 0);
-      ss(p + 0xB72, -1);
-      put(p + 0xAEC, 0x02353D9C);
-      ss(p + 0xAE8, 0);
-      put(p + 0xAA8, 0x02353D9C);
-      ss(p + 0xAA6, -1);
-      ss(p + 0xAEA, -1);
+      u8 middle = mIsMiddle;
+      mPartA[0].mCbExec.d = 0;
+      mPartTimer = -1;
+      mPartA[1].mCbExec.f = 0x02353D9C;
+      mPartA[1].mCbExec.d = 0;
+      mPartA[0].mCbExec.f = 0x02353D9C;
+      mPartA[0].mCbExec.i = -1;
+      mPartA[1].mCbExec.i = -1;
       if (!middle) {
-        s32 reverb = gabi::call<s32>(0x02520540, (s8)byte(p + 0x326));
-        gabi::call(0x025E1A40, 0x6A12, p + 0x314, 0, reverb);
+        s32 reverb = Hha_getReverb((s8)current.roomNo);
+        Hha_seStartCurrent(JA_SE_OBJ_F_WATERGATE_CL, &current.pos, 0, reverb);
       }
     } else
-      ss(p + 0xB72, timer - 1);
+      mPartTimer = timer - 1;
   }
   for (u32 i = 0; i < 2; ++i)
-    part_dispatch(p + 0xA70 + i * 0x44, p, 0x34);
+    Hha_dispatch(&mPartA[i], this, mPartA[i].mCbExec);
 }
-VERIFY(0x02355464, part_manager);
-void splash_height(Actor *actor) {
-  WWHD_FUNC(0x0235557C, void, actor);
-  f32 y = gabi::call<f32>(0x02354C60, actor);
-  sf(gabi::ea(actor) + 0xB1C, y);
+
+/* 0235557C */
+void daObjHha_c::set_splash_bottom_h() {
+  f32 y = get_water_h();
+  mSplashA[0].mPos.y = y;
 }
-VERIFY(0x0235557C, splash_height);
-void splash_radius(Actor *actor) {
-  WWHD_FUNC(0x023555AC, void, actor);
-  u32 p = gabi::ea(actor);
+
+/* 02353924 */
+void daObjHha_get_r(void *destination, u32 yaw) {
+  u32 dest = gabi::ea(destination);
+  f32 scale = l_waterLevel * -190.f;
+  gabi::Local<cXyz> vec;
+  copyVector(&l_baseZ, vec.get());
+  Hha_YrotS(l_matrix, yaw);
+  Hha_multVec(l_matrix, &l_baseZ, vec.get());
+  Hha_scaleVec(vec.get(), vec.get(), scale);
+  if (!dest)
+    dest = Hha_new(12);
+  if (dest)
+    copyVector(vec.get(), Hha_guest<cXyz>(dest));
+}
+
+/* 023555AC */
+void daObjHha_c::set_splash_bottom_r() {
   gabi::Local<cXyz> result, base;
-  vector_float_copy(0x101FFBCC, gabi::ea(result.get()));
-  gabi::call(0x02353924, gabi::ea(base.get()), sh(p + 0x322));
-  u32 x = rd(gabi::ea(base.get()));
-  sf(gabi::ea(base.get()), lf(p + 0xB0C));
-  u32 y = rd(gabi::ea(base.get()) + 4);
-  sf(gabi::ea(base.get()) + 4, lf(p + 0xB10));
-  put(gabi::ea(result.get()), x);
-  put(gabi::ea(result.get()) + 4, y);
-  u32 z = rd(gabi::ea(base.get()) + 8);
-  put(gabi::ea(result.get()) + 8, z);
-  sf(gabi::ea(base.get()) + 8, lf(p + 0xB14));
-  gabi::call(0x028E8D88, gabi::ea(result.get()), gabi::ea(base.get()),
-             gabi::ea(result.get()));
-  f32 vx = lf(gabi::ea(result.get())), vz = lf(gabi::ea(result.get()) + 8);
-  sf(p + 0xB18, vx);
-  sf(p + 0xB20, vz);
+  copyVector(&l_baseZ, result.get());
+  daObjHha_get_r(base.get(), current.angle.y);
+  u32 x = Hha_bits(base->x);
+  base->x = mSplashA[0].mBasePos.x;
+  u32 y = Hha_bits(base->y);
+  base->y = mSplashA[0].mBasePos.y;
+  Hha_bits(result->x) = x;
+  Hha_bits(result->y) = y;
+  u32 z = Hha_bits(base->z);
+  Hha_bits(result->z) = z;
+  base->z = mSplashA[0].mBasePos.z;
+  Hha_addVector(result.get(), base.get(), result.get());
+  f32 vx = result->x, vz = result->z;
+  mSplashA[0].mPos.x = vx;
+  mSplashA[0].mPos.z = vz;
 }
-VERIFY(0x023555AC, splash_radius);
-void splash_stop_radius(Actor *actor) {
-  WWHD_FUNC(0x02355650, void, actor);
-  u32 p = gabi::ea(actor);
-  f32 distance = (1.f - (f32)((s32)uh(p + 0xB7C) - 15) / 75.f) * -300.f;
+
+/* 02355650 */
+void daObjHha_c::set_splash_bottom_stop_r() {
+  f32 distance = (1.f - (f32)((s32)mWtrTimer - 15) / 75.f) * -300.f;
   gabi::Local<cXyz> vec, base;
-  vector_float_copy(0x101FFBCC, gabi::ea(vec.get()));
-  gabi::call(0x025F1884, 0x1048D0CCu, sh(p + 0x322));
-  gabi::call(0x028E8F64, 0x1048D0CCu, 0x101FFBCCu, gabi::ea(vec.get()));
-  gabi::call(0x028E8E64, gabi::ea(vec.get()), gabi::ea(vec.get()), distance);
-  vector_float_copy(p + 0xB18, gabi::ea(base.get()));
-  gabi::call(0x028E8D88, gabi::ea(vec.get()), gabi::ea(base.get()),
-             gabi::ea(vec.get()));
-  f32 x = lf(gabi::ea(vec.get())), z = lf(gabi::ea(vec.get()) + 8);
-  sf(p + 0xB18, x);
-  sf(p + 0xB20, z);
+  copyVector(&l_baseZ, vec.get());
+  Hha_YrotS(l_matrix, current.angle.y);
+  Hha_multVec(l_matrix, &l_baseZ, vec.get());
+  Hha_scaleVec(vec.get(), vec.get(), distance);
+  copyVector(reinterpret_cast<cXyz*>(&mSplashA[0].mPos.x), base.get());
+  Hha_addVector(vec.get(), base.get(), vec.get());
+  f32 x = vec->x, z = vec->z;
+  mSplashA[0].mPos.x = x;
+  mSplashA[0].mPos.z = z;
 }
-VERIFY(0x02355650, splash_stop_radius);
 
 static void splash_remove(u32 splash) {
-  gabi::call(rd(rd(splash) + 0x44), splash);
-  sb(splash + 0x32, 0);
+  Hha_removeSplash(Hha_guest<daObjHhaSplash_c>(splash));
+  Hha_guest<daObjHhaSplash_c>(splash)->mbIsActive = 0;
 }
-void water_manager(Actor *actor) {
-  WWHD_FUNC(0x02355774, void, actor);
-  u32 p = gabi::ea(actor);
-  gabi::call(0x0235557C, actor);
-  gabi::call(0x023555AC, actor);
-  u8 state = byte(p + 0xB7E);
-  if (state == 1) {
-    f32 scale = lf(p + 0xB74) - 0.0061111110262572765f, minimum = lf(p + 0xB78);
-    sf(p + 0xB74, scale);
-    u32 timer = uh(p + 0xB7C);
+
+/* 02355774 */
+void daObjHha_c::water_manager() {
+  set_splash_bottom_h();
+  set_splash_bottom_r();
+  u8 state = mWtrState;
+  switch (state) {
+  case Water_STOPPING: {
+    f32 scale = mWtrScale - 0.0061111110262572765f, minimum = mWtrScaleMin;
+    mWtrScale = scale;
+    u32 timer = mWtrTimer;
     if (scale < minimum)
-      sf(p + 0xB74, minimum);
+      mWtrScale = minimum;
     if (timer == 34) {
-      gabi::call(0x02354B40, actor, 37.f, 1.f, 1);
-      timer = uh(p + 0xB7C);
+      set_tex(37.f, 1.f, 1);
+      timer = mWtrTimer;
     }
     if (timer >= 15) {
       if (timer == 15) {
-        u32 emitter = rd(p + 0xB30);
+        u32 emitter = mSplashA[1].mSplashCb.mpEmitter;
         if (emitter) {
-          put(emitter + 0x254, rd(emitter + 0x254) | 1);
-          u32 reloaded = rd(p + 0xB30);
-          sb(p + 0xB5E, 0);
+          Hha_guest<HhaEmitter>(emitter)->mFlags = Hha_guest<HhaEmitter>(emitter)->mFlags | 1;
+          u32 reloaded = mSplashA[1].mSplashCb.mpEmitter;
+          mSplashA[1].mbIsActive = 0;
           if (reloaded) {
-            splash_remove(p + 0xB2C);
-            timer = uh(p + 0xB7C);
+            splash_remove(gabi::ea(&mSplashA[1].mSplashCb.mVtable));
+            timer = mWtrTimer;
           } else
-            timer = uh(p + 0xB7C);
+            timer = mWtrTimer;
         }
       } else {
-        gabi::call(0x02355650, actor);
-        timer = uh(p + 0xB7C);
+        set_splash_bottom_stop_r();
+        timer = mWtrTimer;
       }
     }
     timer = (timer - 1) & 0xFFFF;
-    ss(p + 0xB7C, timer);
+    mWtrTimer = timer;
     if (!timer) {
-      sb(p + 0xB7E, 0);
-      u32 emitter = rd(p + 0xAFC);
+      mWtrState = Water_IDLE;
+      u32 emitter = mSplashA[0].mSplashCb.mpEmitter;
       if (emitter) {
-        put(emitter + 0x254, rd(emitter + 0x254) | 1);
-        u32 reloaded = rd(p + 0xAFC);
-        sb(p + 0xB2A, 0);
+        Hha_guest<HhaEmitter>(emitter)->mFlags = Hha_guest<HhaEmitter>(emitter)->mFlags | 1;
+        u32 reloaded = mSplashA[0].mSplashCb.mpEmitter;
+        mSplashA[0].mbIsActive = 0;
         if (reloaded)
-          splash_remove(p + 0xAF8);
+          splash_remove(gabi::ea(&mSplashA[0].mSplashCb.mVtable));
       }
-      sb(p + 0x60C, 0);
-      sb(p + 0xA6E, 0);
-      sb(p + 0xB83, 0);
+      mHitboxActive = 0;
+      mYgush.mbVisible = 0;
+      mWaterSound = 0;
     }
-  } else if (state == 2) {
-    u32 timer = uh(p + 0xB7C);
+    break;
+  }
+  case Water_STARTING: {
+    u32 timer = mWtrTimer;
     if (timer == 35) {
-      splash_play(p + 0xB2C);
-      gabi::call(0x02354B40, actor, 0.f, 1.f, 1);
-      timer = uh(p + 0xB7C);
+      splash_play(gabi::ea(&mSplashA[1].mSplashCb.mVtable));
+      set_tex(0.f, 1.f, 1);
+      timer = mWtrTimer;
     }
-    u8 active = byte(p + 0xB2A);
+    u8 active = mSplashA[0].mbIsActive;
     timer = (timer - 1) & 0xFFFF;
-    ss(p + 0xB7C, timer);
+    mWtrTimer = timer;
     if (!active) {
-      f32 threshold = gabi::fmadds(5.f, lf(0x101D5F28), 10.f);
+      // HD: retain the fused threshold and unordered comparison.
+      f32 threshold = gabi::fmadds(5.f, l_waterLevel, 10.f);
       if (!((f32)timer > threshold)) {
-        splash_play(p + 0xAF8);
-        timer = uh(p + 0xB7C);
-        sb(p + 0xB83, 1);
-        sb(p + 0xA6E, 1);
+        splash_play(gabi::ea(&mSplashA[0].mSplashCb.mVtable));
+        timer = mWtrTimer;
+        mWaterSound = 1;
+        mYgush.mbVisible = 1;
       }
     }
     if (!timer) {
-      gabi::call(0x02354B40, actor, 36.f, 0.f, 1);
-      sb(p + 0xB7E, 0);
-      sb(p + 0x60C, 1);
+      set_tex(36.f, 0.f, 1);
+      mWtrState = Water_IDLE;
+      mHitboxActive = 1;
     }
   }
+    break;
+  default: break;
+  }
   for (u32 i = 0; i < 2; ++i)
-    gabi::call(0x025E742C, p + 0x3B0 + i * 0x74);
-  gabi::call(0x02354B54, actor);
+    Hha_animationPlay(&mBtkA[i]);
+  init_mtx();
 }
-VERIFY(0x02355774, water_manager);
-void gush_manager(Actor *actor) {
-  WWHD_FUNC(0x02355A18, void, actor);
-  u32 p = gabi::ea(actor);
-  if (byte(p + 0xA6E)) {
+
+/* 02355A18 */
+void daObjHha_c::ygush_manager() {
+  if (mYgush.mbVisible) {
     gabi::Local<cXyz> base, result;
-    gabi::call(0x02353924, gabi::ea(base.get()), sh(p + 0x322));
-    u32 x = rd(gabi::ea(base.get()));
-    sf(gabi::ea(base.get()), lf(p + 0xA44));
-    u32 y = rd(gabi::ea(base.get()) + 4);
-    sf(gabi::ea(base.get()) + 4, lf(p + 0xA48));
-    put(gabi::ea(result.get()), x);
-    put(gabi::ea(result.get()) + 4, y);
-    u32 z = rd(gabi::ea(base.get()) + 8);
-    put(gabi::ea(result.get()) + 8, z);
-    sf(gabi::ea(base.get()) + 8, lf(p + 0xA4C));
-    gabi::call(0x028E8D88, gabi::ea(result.get()), gabi::ea(base.get()),
-               gabi::ea(result.get()));
-    f32 height = gabi::call<f32>(0x02354C60, actor),
-        vz = lf(gabi::ea(result.get()) + 8), vx = lf(gabi::ea(result.get()));
-    sf(p + 0xA58, vz);
-    sf(p + 0xA50, vx);
-    sf(p + 0xA54, height);
-    sf(gabi::ea(result.get()) + 4, height);
-    sf(gabi::ea(base.get()) + 8, vz);
-    sf(gabi::ea(base.get()) + 4, height);
-    sf(gabi::ea(base.get()), vx);
-    gabi::call(0x025E742C, p + 0x77C);
-    gabi::call(0x025E742C, p + 0x7F0);
-    gabi::call(0x023545DC, p + 0x778);
+    daObjHha_get_r(base.get(), current.angle.y);
+    u32 x = Hha_bits(base->x);
+    base->x = mYgush.mBasePos.x;
+    u32 y = Hha_bits(base->y);
+    base->y = mYgush.mBasePos.y;
+    Hha_bits(result->x) = x;
+    Hha_bits(result->y) = y;
+    u32 z = Hha_bits(base->z);
+    Hha_bits(result->z) = z;
+    base->z = mYgush.mBasePos.z;
+    Hha_addVector(result.get(), base.get(), result.get());
+    f32 height = get_water_h(),
+        vz = result->z, vx = result->x;
+    mYgush.mPos.z = vz;
+    mYgush.mPos.x = vx;
+    mYgush.mPos.y = height;
+    result->y = height;
+    base->z = vz;
+    base->y = height;
+    base->x = vx;
+    Hha_animationPlay(&mYgush.mBtk);
+    Hha_animationPlay(&mYgush.mBck);
+    mYgush.init_mtx();
   }
 }
-VERIFY(0x02355A18, gush_manager);
-u8 execute(Actor *actor) {
-  WWHD_FUNC(0x02355AE8, u8, actor);
-  u32 p = gabi::ea(actor);
-  u8 state = byte(p + 0xB82);
-  if (state == 0) {
+
+/* 02355AE8 */
+u8 daObjHha_c::_execute() {
+  u32 p = gabi::ea(this);
+  u8 state = mState;
+  switch (state) {
+  case State_OPEN: {
     if (switch_on(p)) {
-      if (!byte(p + 0xB70)) {
-        if (uh(p + 0xF8) != 2) {
-          gabi::call(0x025D7A58, actor, sh(p + 0xB80), 0xFF, 0xFFFF, 0, 1);
-          ss(p + 0xFA, uh(p + 0xFA) | 2);
+      if (!mIsMiddle) {
+        if (eventInfo.mCommand != dEvtCmd_INDEMO_e) {
+          Hha_orderOtherEventId(this, mEventIdx, 0xFF, 0xFFFF, 0, 1);
+          eventInfo.mCondition = eventInfo.mCondition | 2;
         } else {
-          gabi::call(0x025E1988, 0x806);
-          sb(p + 0xB82, 1);
-          sb(p + 0xB7E, 1);
-          ss(p + 0xB7C, 90);
-          ss(p + 0xB72, 65);
+          Hha_seStartGlobal(JA_SE_READ_RIDDLE_1);
+          mState = State_SWITCHING;
+          mWtrState = Water_STOPPING;
+          mWtrTimer = 90;
+          mPartTimer = 65;
         }
       } else {
-        s32 event = sh(p + 0xB80);
+        s32 event = mEventIdx;
         u32 pl = play();
-        if (gabi::call<BOOL>(0x0254407C, pl + 0x52C4, event)) {
-          sb(p + 0xB82, 2);
-          sb(p + 0xB7E, 2);
-          ss(p + 0xB7C, 35);
-          ss(p + 0xB72, 0);
+        if (Hha_eventStartCheck(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mEventManager), event)) {
+          mState = State_CLOSED;
+          mWtrState = Water_STARTING;
+          mWtrTimer = 35;
+          mPartTimer = 0;
         }
       }
     }
-  } else if (state == 1) {
-    s32 event = sh(p + 0xB80);
+    break;
+  }
+  case State_SWITCHING: {
+    s32 event = mEventIdx;
     u32 pl = play();
-    if (gabi::call<BOOL>(0x025440C8, pl + 0x52C4, event)) {
+    if (Hha_eventEndCheck(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mEventManager), event)) {
       pl = play();
-      ss(pl + 0x52B8, uh(pl + 0x52B8) | 8);
-      sb(p + 0xB82, 2);
+      Hha_guest<HhaPlay>(pl)->mEventFlags = Hha_guest<HhaPlay>(pl)->mEventFlags | 8;
+      mState = State_CLOSED;
     }
   }
-  gabi::call(0x02355464, actor);
-  gabi::call(0x02355774, actor);
-  gabi::call(0x02355A18, actor);
-  if (byte(p + 0xB83)) {
-    s32 reverb = gabi::call<s32>(0x02520540, (s8)byte(p + 0x326));
-    gabi::call(0x025E1A40, 0x701F, p + 0x314, 0, reverb);
+    break;
+  default: break;
   }
-  if (byte(p + 0x60C)) {
+  part_manager();
+  water_manager();
+  ygush_manager();
+  if (mWaterSound) {
+    s32 reverb = Hha_getReverb((s8)current.roomNo);
+    Hha_seStartCurrent(JA_SE_ATM_WATER_GATE, &current.pos, 0, reverb);
+  }
+  if (mHitboxActive) {
     gabi::Local<cXyz> center;
-    vector_float_copy(p + 0x5F4, gabi::ea(center.get()));
-    f32 height = gabi::call<f32>(0x02354C60, actor);
-    sf(gabi::ea(center.get()) + 4, height);
-    gabi::call(0x020182E0, p + 0x5F4, gabi::ea(center.get()));
+    copyVector(&mCyl.mCyl.mCenter, center.get());
+    f32 height = get_water_h();
+    center->y = height;
+    Hha_cylinderSetC(&mCyl.mCyl, center.get());
     u32 pl = play();
-    gabi::call(0x0200E240, pl + 0x26A4, p + 0x4DC);
-    if (!switch_on(p) && !byte(p + 0xB70)) {
+    Hha_collisionSet(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mCcS), &mCyl);
+    if (!switch_on(p) && !mIsMiddle) {
       pl = play();
-      gabi::call(0x0200E240, pl + 0x26A4, p + 0x64C);
+      Hha_collisionSet(reinterpret_cast<void*>(&Hha_guest<HhaPlay>(pl)->mCcS), &mSph);
     }
   }
   return 1;
 }
-VERIFY(0x02355AE8, execute);
-u8 draw(Actor *actor) {
-  WWHD_FUNC(0x02355D9C, u8, actor);
-  u32 p = gabi::ea(actor), env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, env, 1, p + 0x314, p + 0x110);
+
+/* 02355D9C */
+u8 daObjHha_c::_draw() {
+  u32 env = Hha_getEnvLight();
+  Hha_settingTevStruct(Hha_guest<void>(env), 1, &current.pos, &tevStr);
   for (u32 i = 0; i < 2; ++i)
-    part_dispatch(p + 0xA70 + i * 0x44, p, 0x3C);
-  if (rd(p + 0x3AC)) {
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, env, 0, p + 0x314, p + 0x110);
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, env, rd(p + 0x3AC), p + 0x110);
+    Hha_dispatch(&mPartA[i], this, mPartA[i].mCbDraw);
+  if (mpModel) {
+    env = Hha_getEnvLight();
+    Hha_settingTevStruct(Hha_guest<void>(env), 0, &current.pos, &tevStr);
+    env = Hha_getEnvLight();
+    Hha_setLightTevColorType(Hha_guest<void>(env), Hha_guest<void>(mpModel), &tevStr);
     for (u32 i = 0; i < 2; ++i)
-      gabi::call(0x025E8048, p + 0x3B0 + i * 0x74, rd(p + 0x3AC),
-                 lf(p + 0x3B4 + i * 0x74));
-    gabi::call(0x025E2DE0, rd(p + 0x3AC), 0);
+      Hha_btkEntryModel(&mBtkA[i], Hha_guest<void>(mpModel), (f32)mBtkA[i].mFrameCtrl.mFrame);
+    Hha_modelUpdateDL(Hha_guest<void>(mpModel), 0);
   }
-  gabi::call(0x023546E0, p + 0x778);
+  mYgush.draw();
   return 1;
 }
-VERIFY(0x02355D9C, draw);
-s32 create_adapter(Actor *actor) {
-  WWHD_FUNC(0x02355EB8, s32, actor);
-  return gabi::call<s32>(0x02354EE0, actor);
+
+/* 02355EB8 */
+s32 Mthd_Create(Actor *actor) {
+  return actor->_create();
 }
-VERIFY(0x02355EB8, create_adapter);
-u8 delete_adapter(Actor *actor) {
-  WWHD_FUNC(0x02355EBC, u8, actor);
-  return gabi::call<u8>(0x02355394, actor);
+
+/* 02355EBC */
+u8 Mthd_Delete(Actor *actor) {
+  return actor->_delete();
 }
-VERIFY(0x02355EBC, delete_adapter);
-u8 execute_adapter(Actor *actor) {
-  WWHD_FUNC(0x02355EC0, u8, actor);
-  return gabi::call<u8>(0x02355AE8, actor);
+
+/* 02355EC0 */
+u8 Mthd_Execute(Actor *actor) {
+  return actor->_execute();
 }
-VERIFY(0x02355EC0, execute_adapter);
-u8 draw_adapter(Actor *actor) {
-  WWHD_FUNC(0x02355EC4, u8, actor);
-  return gabi::call<u8>(0x02355D9C, actor);
+
+/* 02355EC4 */
+u8 Mthd_Draw(Actor *actor) {
+  return actor->_draw();
 }
-VERIFY(0x02355EC4, draw_adapter);
-void static_initialize() {
-  WWHD_FUNC(0x02355EC8, void);
-  put(0x10469E6C, 0);
-  put(0x10469E64, 0);
-  put(0x10469E70, 0);
-  put(0x10469E68, 0);
-  gabi::call(0x028F026C, 0x101C9EE4u);
-  sf(0x10469E58, lf(0x1002A570));
-  sf(0x10469E5C, lf(0x1002A574));
-  gabi::call(0x028ED6F8, 0x10469E60u);
-  gabi::call(0x028F026C, 0x101C9EF0u);
-  gabi::call(0x028EAB2C, 0x10469E61u);
-  gabi::call(0x028F026C, 0x101C9EFCu);
+// HD: compiler-generated and template code of this translation unit.
+/* 02354778 */
+void *gushConstructor(void *gush) {
+  u32 p = gabi::ea(gush);
+  if (!p)
+    p = Hha_new(0x2F8);
+  if (p) {
+    Hha_btkCtor(&Hha_guest<daObjHhaYgush_c>(p)->mBtk);
+    Hha_frameCtrlCtor(&Hha_guest<daObjHhaYgush_c>(p)->mBck, 0);
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mVtable = gc_tu.mFrameCtrlVtable;
+    Hha_bckControllerCtor(&Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mPadding14);
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mState = 0;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mCount = 0;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mVtable = gc_tu.mBckVtable;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mResource = 0;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mControllerVtable = gc_tu.mControllerVtable;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mFlags = 0;
+    Hha_guest<HhaAnimationTail>(gabi::ea(&Hha_guest<daObjHhaYgush_c>(p)->mBck))->mBuffer = 0;
+    copyLight(Hha_guest<HhaLight>(gc_tu.mDefaultLight), &Hha_guest<daObjHhaYgush_c>(p)->mTev.mLightObj);
+    copyLight(Hha_guest<HhaLight>(gc_tu.mDefaultLight), &Hha_guest<daObjHhaYgush_c>(p)->mTev.mHdLightParam);
+    copyLight(Hha_guest<HhaLight>(gc_tu.mDefaultLight), &Hha_guest<daObjHhaYgush_c>(p)->mTev.mHdLightParamExtra);
+  }
+  return Hha_guest<void>(p);
 }
-VERIFY(0x02355EC8, static_initialize);
-void static_destructor(void *object, s32 mode) {
-  WWHD_FUNC(0x02355F5C, void, object, mode);
+
+/* 02355EC8 */
+void __sinit_d_a_obj_hha_cpp() {
+  l_headerWords[2] = 0;
+  l_headerWords[0] = 0;
+  l_headerWords[3] = 0;
+  l_headerWords[1] = 0;
+  Hha_registerDestructor(Hha_guest<void>(gc_tu.mHeaderLink0));
+  l_headerValues[0] = l_headerFloats[0];
+  l_headerValues[1] = l_headerFloats[1];
+  Hha_headerGuardCtor(&l_headerGuard);
+  Hha_registerDestructor(Hha_guest<void>(gc_tu.mHeaderLink1));
+  Hha_headerByteCtor(&l_headerByte);
+  Hha_registerDestructor(Hha_guest<void>(gc_tu.mHeaderLink2));
+}
+
+/* 02355F5C */
+void SafeString_destructor(void *object, s32 mode) {
   if (object && (mode & 1))
-    gabi::call(0x0273AF40, object);
+    Hha_delete(object);
 }
-VERIFY(0x02355F5C, static_destructor);
-void *splash_constructor(void *splash) {
-  WWHD_FUNC(0x02355F70, void *, splash);
+
+/* 02355F70 */
+void *splashConstructor(void *splash) {
   u32 p = gabi::ea(splash);
   if (!p)
-    p = gabi::call<u32>(0x0273AD10, 0x34);
+    p = Hha_new(0x34);
   if (p)
-    gabi::call(0x025A5894, p, 0, 0);
-  return gabi::at<void>(p);
+    Hha_followCallbackCtor(Hha_guest<void>(p), 0, 0);
+  return Hha_guest<void>(p);
 }
-VERIFY(0x02355F70, splash_constructor);
-void splash_destructor(void *object, s32 mode) {
-  WWHD_FUNC(0x02355FC0, void, object, mode);
+
+/* 02355FC0 */
+void splashDestructor(void *object, s32 mode) {
   if (object && (mode & 1))
-    gabi::call(0x0273AF40, object);
+    Hha_delete(object);
 }
-VERIFY(0x02355FC0, splash_destructor);
-void actor_destructor(Actor *actor, s32 mode) {
-  WWHD_FUNC(0x02355FD4, void, actor, mode);
+
+/* 02355FD4 */
+void actorDestructor(Actor *actor, s32 mode) {
   u32 p = gabi::ea(actor);
   if (p) {
-    gabi::call(0x028F0164, p + 0xAF8, 2, 0x34, 0x02355FC0u, 0, 0);
-    gabi::call(0x027F3628, p + 0x800, 0);
-    gabi::call(0x02515AE8, p + 0x64C, 2);
-    gabi::call(0x02515860, p + 0x610, 2);
-    gabi::call(0x02515A70, p + 0x4DC, 2);
-    gabi::call(0x02515860, p + 0x4A0, 2);
-    gabi::call(0x025D50BC, actor, 0);
+    Hha_destroyArray(&Hha_guest<daObjHha_c>(p)->mSplashA[0].mSplashCb.mVtable, 2, 0x34, Hha_guest<void>(0x02355FC0u), 0, 0);
+    Hha_bckControllerDtor(&reinterpret_cast<HhaAnimationTail*>(&Hha_guest<daObjHha_c>(p)->mYgush.mBck)->mVtable, 0);
+    Hha_sphereDtor(&Hha_guest<daObjHha_c>(p)->mSph, 2);
+    Hha_statusDtor(&Hha_guest<daObjHha_c>(p)->mSphStts, 2);
+    Hha_cylinderDtor(&Hha_guest<daObjHha_c>(p)->mCyl, 2);
+    Hha_statusDtor(&Hha_guest<daObjHha_c>(p)->mCylStts, 2);
+    Hha_actorDtor(actor, 0);
     if (mode & 1)
-      gabi::call(0x0273AF40, actor);
+      Hha_delete(actor);
   }
 }
-VERIFY(0x02355FD4, actor_destructor);
-void noop(void *object) { WWHD_FUNC(0x02356084, void, object); }
-VERIFY(0x02356084, noop);
-BOOL is_delete(Actor *actor) {
-  WWHD_FUNC(0x02356088, BOOL, actor);
+
+/* 02356084 */
+void SafeString_assureTerminationImpl(void *object) { }
+
+/* 02356088 */
+BOOL Mthd_IsDelete(Actor *actor) {
   return 1;
 }
-VERIFY(0x02356088, is_delete);
+
+/* WWHD glue
+str 1002A578 "Hha"
+str 1002A540 "hha_close"
+data l_daObjHha_bdl_idx_table 1002A320
+data l_daObjHha_dzb_idx_table 1002A328
+data l_daObjHha_btk_idx_table 1002A330
+data l_daObjHha_btk_mode_table 1002A338
+data l_daObjHha_splash_id_table 1002A344
+data splash_y 1002A50C
+data splash_z 1002A514
+data move_frame 1002A51C
+data pos_y 1002A520
+data tar_y 1002A530
+data l_headerFloats 1002A570
+data l_resourceControl 101F4F28 nocheck
+data l_saveInfo 101F84DC nocheck
+data l_waterLevel 101D5F28 nocheck
+data l_baseZ 101FFBCC nocheck
+data l_matrix 1048D0CC nocheck
+data l_headerWords 10469E64 nocheck
+data l_headerValues 10469E58 nocheck
+data l_headerGuard 10469E60 nocheck
+data l_headerByte 10469E61 nocheck
+ext 025200D4 u32 Hha_getPlay()
+ext 026066C4 u32 Hha_getObjectRes(void*, void*, u32)
+ext 0273AA24 void Hha_assert(void*, u32, void*)
+ext 025BA0C0 BOOL Hha_isSwitch(void*, u32, u32)
+ext 025F1884 void Hha_YrotS(void*, u32)
+ext 028E8F64 void Hha_multVec(void*, void*, void*)
+ext 028E8E64 void Hha_scaleVec(void*, void*, f32)
+ext 0273AD10 u32 Hha_new(u32)
+ext 0201ADE0 void Hha_subtractVector(void*, void*, void*)
+ext 0201B47C void Hha_normalizeRS(void*)
+ext 025E38E0 u32 Hha_modelCreate(void*, u32, u32)
+ext 024F2478 u32 Hha_bgNewSet(void*, u32, void*)
+ext 028E93CC void Hha_transS(void*, f32, f32, f32)
+ext 025F1B48 void Hha_ZXYrotM(void*, u32, u32, u32)
+ext 025F24E0 void Hha_transM(f32, f32, f32)
+ext 027F4D5C void Hha_modelCalc(void*)
+ext 024F43DC void Hha_bgMove(void*)
+ext 028E8F44 f32 Hha_dotProduct(void*, void*)
+ext 025CB374 void Hha_startShock(void*, u32, u32, void*)
+ext 02555D0C u32 Hha_getEnvLight()
+ext 02562F5C void Hha_setLightTevColorType(void*, void*, void*)
+ext 025E2DE0 void Hha_modelUpdateDL(void*, u32)
+ext 028E8D88 void Hha_addVector(void*, void*, void*)
+ext 025A847C void Hha_setParticle(void*, u32, u32, void*, void*, u32, void*, u32, u32, void*, void*, void*)
+ext 025E7CE0 BOOL Hha_btkInit(void*, void*, void*, u32, u32, u32, u32, u32, f32, u32)
+ext 025E8508 BOOL Hha_bckInit(void*, void*, void*, u32, u32, u32, u32, u32, f32)
+ext 0201AD78 void Hha_sumVectorResult(void*, void*, void*)
+ext 025F2518 void Hha_scaleM(f32, f32, f32)
+ext 025626A4 void Hha_settingTevStruct(void*, u32, void*, void*)
+ext 025E7FC4 void Hha_btkEntry(void*, void*, f32)
+ext 025E86B8 void Hha_bckEntry(void*, void*, f32)
+ext 025E7C6C void Hha_btkCtor(void*)
+ext 027F2BC0 void Hha_frameCtrlCtor(void*, u32)
+ext 027DA984 void Hha_bckControllerCtor(void*)
+ext 024F22DC void Hha_waterCheckCtor(void*)
+ext 024F15A4 BOOL Hha_waterCross(void*, void*, f32)
+ext 02008B4C void Hha_polyInfoDtor(void*, u32)
+ext 02515F14 void Hha_statusInit(void*, u32, u32, void*)
+ext 02516518 void Hha_setCylinder(void*, void*)
+ext 020182E0 void Hha_cylinderSetC(void*, void*)
+ext 0251677C void Hha_setSphere(void*, void*)
+ext 02018D40 void Hha_sphereSetC(void*, void*)
+ext 02018C8C void Hha_sphereSetR(void*, f32)
+ext 025D4ED0 void Hha_actorCtor(void*)
+ext 028EFFD0 void Hha_constructArray(void*, u32, u32, void*)
+ext 0200BD2C void Hha_statusBaseCtor(void*)
+ext 02515DA0 void Hha_statusGameCtor(void*)
+ext 02515FB8 void Hha_collisionObjectCtor(void*)
+ext 02018590 void Hha_cylinderGeometryCtor(void*)
+ext 025166F0 void Hha_sphereCtor(void*)
+ext 02520460 s32 Hha_resLoad(void*, const char*)
+ext 025D63E8 BOOL Hha_entrySolidHeap(void*, void*, u32)
+ext 02543F10 s32 Hha_getEventIdx(void*, const char*, u32)
+ext 024EEA6C void Hha_bgRegist(void*, void*, void*)
+ext 025D674C void Hha_setCullBox(void*, f32, f32, f32, f32, f32, f32)
+ext 020087EC void Hha_bgRelease(void*, void*)
+ext 025204C8 void Hha_resDelete(void*, const char*)
+ext 02520540 s32 Hha_getReverb(u32)
+ext 025E1A40 void Hha_seStartCurrent(u32, void*, u32, u32)
+ext 025E742C void Hha_animationPlay(void*)
+ext 025D7A58 void Hha_orderOtherEventId(void*, u32, u32, u32, u32, u32)
+ext 025E1988 void Hha_seStartGlobal(u32)
+ext 0254407C BOOL Hha_eventStartCheck(void*, u32)
+ext 025440C8 BOOL Hha_eventEndCheck(void*, u32)
+ext 0200E240 void Hha_collisionSet(void*, void*)
+ext 025E8048 void Hha_btkEntryModel(void*, void*, f32)
+ext 028F026C void Hha_registerDestructor(void*)
+ext 028ED6F8 void Hha_headerGuardCtor(void*)
+ext 028EAB2C void Hha_headerByteCtor(void*)
+ext 0273AF40 void Hha_delete(void*)
+ext 025A5894 void Hha_followCallbackCtor(void*, u32, u32)
+ext 028F0164 void Hha_destroyArray(void*, u32, u32, void*, u32, u32)
+ext 027F3628 void Hha_bckControllerDtor(void*, u32)
+ext 02515AE8 void Hha_sphereDtor(void*, u32)
+ext 02515860 void Hha_statusDtor(void*, u32)
+ext 02515A70 void Hha_cylinderDtor(void*, u32)
+ext 025D50BC void Hha_actorDtor(void*, u32)
+*/

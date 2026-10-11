@@ -8,37 +8,64 @@
  */
 #include "d/actor/d_a_bb.h"
 
+static bbHIO_c l_bbHIO;
+static s32 esa_check_count;
+static BbBaitPointer esa_info[100] = {};
+static u8 check_index[255] = {};
+static s8 callback_check_index[31] = {-1,-1,-1,100,-1,-1,-1,-1,100,-1,-1,0,1,2,3,4,5,6,7,8,9,10,100,100,100,-1,-1,-1,-1,100,100};
+static f32 tial_scale[9] = {0.25f,0.275f,0.2875f,0.3f,0.325f,0.375f,0.4625f,0.575f,0.8f};
+// TATACK, TCLOSE, TDAMAGE, TKAIJO, TMABATAKI, TOPEN.
+static u16 bb_tex_anm_idx[6] = {0x29,0x2A,0x2B,0x2C,0x2D,0x2E};
+static u16 bb_tex_max_frame[6] = {5,3,40,5,7,3};
+
+static dCcD_SrcSph head_at_sph_src;
+static dCcD_SrcSph head_tg_sph_src;
+static dCcD_SrcSph body_tg_sph_src;
+static dCcD_SrcSph body_co_sph_src;
+// KATAL, KANEAL, HANEBL, HANECL, KATAR, HANEAR, HANEBR, HANECR, KUBIC, OA.
+static s8 fire_j[10] = {0xB,0xC,0xD,0xE,0xF,0x10,0x11,0x12,0x15,0x1D};
+static f32 fire_sc[10] = {1.0f,0.8f,0.7f,0.6f,0.5f,1.0f,0.8f,0.7f,0.6f,0.5f};
+
+
+static bb_class* bb_class_ct(bb_class* i_this);
+
+static inline JPABaseEmitter* bbParticleSet(u8 grp, u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
+                                             void* cb, s8 setup, const void* prm, const void* env) {
+    dPa_control_c* pa = dComIfGp_getParticle();
+    return dPa_control_set(pa, grp, id, pos, angle, scale, alpha, (dPa_levelEcallBack*)cb, setup, (const GXColor*)prm,
+                           (const GXColor*)env, nullptr);
+}
+
 /* 0205D078 */
 BOOL nodeCallBack(J3DNode* node, int calcTiming) {
-    WWHD_FUNC(0x0205D078, BOOL, node, calcTiming);
     if (calcTiming == 0 /* J3DNodeCBCalcTiming_In */) {
-        J3DJoint* joint = J3DNode_toJoint(node);
-        s32 jntNo = gabi::load<u16>(gabi::ea(joint) + 4);
-        /* HD: bounds check on the joint number */
+        BbJointData* joint = reinterpret_cast<BbJointData*>(J3DNode_toJoint(node));
+        s32 jntNo = joint->mNumber;
+        // HD: bounds check on the joint number
         if (jntNo >= BB_JNT_NUM_e) {
-            JUT_ASSERT_fail(STR(0x10007CD4), 0x194, STR(0x10007CCC));
+            JUT_ASSERT_fail("d_a_bb.cpp", 0x194, "no < 31");
             return TRUE;
         }
-        J3DModel_l* model = j3dSys_getModel();
-        bb_class* i_this = gabi::at<bb_class>(model->mUserArea);
-        s32 idx = callback_check_index(jntNo);
+        J3DModel* model = j3dSys.getModel();
+        bb_class* i_this = static_cast<bb_class*>(model->getUserArea());
+        s32 idx = callback_check_index[jntNo];
         if (i_this != nullptr) {
-            PSMTXCopy(model_getAnmMtx(model, jntNo), calc_mtx());
+            PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
 
             if (idx >= 0 && idx <= 10) {
                 cMtx_YrotM(calc_mtx(), i_this->unk_C00[idx].y);
                 cMtx_XrotM(calc_mtx(), i_this->unk_C00[idx].x);
                 cMtx_ZrotM(calc_mtx(), i_this->unk_C00[idx].z);
-                mtx_copy(model_getAnmMtx(model, jntNo), calc_mtx());
+                mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             }
 
-            gabi::Local<cXyz> v;
+            cXyz v;
             if (jntNo == BB_JNT_ATAMA_e) {
-                v->x = 0.0f;
-                v->z = 0.0f;
-                v->y = 0.0f;
-                MtxPosition(v, &i_this->eyePos);
-                cXyz* attn = gabi::at<cXyz>(gabi::ea(i_this) + 0x390); /* attention_info.position */
+                v.x = 0.0f;
+                v.z = 0.0f;
+                v.y = 0.0f;
+                MtxPosition(&v, &i_this->eyePos);
+                cXyz* attn = &i_this->attention_info.position; /* attention_info.position */
                 f32 ez = i_this->eyePos.z;
                 f32 ey = i_this->eyePos.y;
                 attn->z = ez;
@@ -47,43 +74,41 @@ BOOL nodeCallBack(J3DNode* node, int calcTiming) {
                 attn->x = ex;
                 attn->y = ey + gabi::fmadds(REG0_F(8), 10.0f, 50.0f);
             } else if (jntNo == BB_JNT_OB_e) {
-                v->x = REG_F(10, 1) + 10.0f; /* HD (GameCube REG0_F(10) * 10.0f + 10.0f) */
-                v->y = REG0_F(11) * 10.0f;
-                v->z = REG0_F(12) * 10.0f;
-                MtxPosition(v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
+                v.x = REG_F(10, 1) + 10.0f; // HD: GameCube uses REG0_F(10) * 10.0f + 10.0f.
+                v.y = REG0_F(11) * 10.0f;
+                v.z = REG0_F(12) * 10.0f;
+                MtxPosition(&v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
             } else if (jntNo == BB_JNT_OA_e) {
-                v->x = 0.0f;
-                v->z = 0.0f;
-                v->y = 0.0f;
-                MtxPosition(v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
+                v.x = 0.0f;
+                v.z = 0.0f;
+                v.y = 0.0f;
+                MtxPosition(&v, &i_this->unk_BD4[jntNo - BB_JNT_OA_e]);
             } else if (jntNo == BB_JNT_FOOTL_e || jntNo == BB_JNT_FOOTR_e) {
-                v->x = gabi::fmadds(REG0_F(10), 10.0f, 5.0f);
-                v->y = REG0_F(11) * 10.0f;
-                v->z = REG0_F(12) * 10.0f;
+                v.x = gabi::fmadds(REG0_F(10), 10.0f, 5.0f);
+                v.y = REG0_F(11) * 10.0f;
+                v.z = REG0_F(12) * 10.0f;
                 if (jntNo == BB_JNT_FOOTL_e) {
-                    MtxPosition(v, &i_this->unk_A6C[0]);
+                    MtxPosition(&v, &i_this->unk_A6C[0]);
                 } else {
-                    MtxPosition(v, &i_this->unk_A6C[1]);
+                    MtxPosition(&v, &i_this->unk_A6C[1]);
                 }
             } else if (jntNo == BB_JNT_KUCHIA_e) {
                 cMtx_ZrotM(calc_mtx(), (s16)-i_this->unk_C4E);
-                mtx_copy(model_getAnmMtx(model, jntNo), calc_mtx());
+                mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             } else if (jntNo == BB_JNT_KUCHIB_e) {
                 cMtx_YrotM(calc_mtx(), i_this->unk_C4E);
-                mtx_copy(model_getAnmMtx(model, jntNo), calc_mtx());
+                mtx_copy(model->getAnmMtx(jntNo), calc_mtx());
             }
-            PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
+            PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
         }
     }
     return TRUE;
 }
-VERIFY(0x0205D078, nodeCallBack);
 
 /* 0205D4BC */
 void tail_control(bb_class* i_this) {
-    WWHD_FUNC(0x0205D4BC, void, i_this);
-    gabi::Local<cXyz> sp28;
-    gabi::Local<cXyz> sp1C;
+    cXyz sp28;
+    cXyz sp1C;
     f32 x = i_this->unk_BD4[1].x - i_this->unk_BD4[0].x;
     f32 y = i_this->unk_BD4[1].y - i_this->unk_BD4[0].y;
     f32 z = i_this->unk_BD4[1].z - i_this->unk_BD4[0].z;
@@ -91,13 +116,13 @@ void tail_control(bb_class* i_this) {
     i_this->unk_BEE = cM_atan2s(x, z);
     i_this->unk_BEC = (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z)));
 
-    sp28->x = 0.0f;
-    sp28->y = 0.0f;
-    sp28->z = REG0_F(5) + 5.0f;
+    sp28.x = 0.0f;
+    sp28.y = 0.0f;
+    sp28.z = REG0_F(5) + 5.0f;
 
     cMtx_YrotS(calc_mtx(), i_this->unk_BEE);
     cMtx_XrotM(calc_mtx(), i_this->unk_BEC);
-    MtxPosition(sp28, &i_this->unk_BF4);
+    MtxPosition(&sp28, &i_this->unk_BF4);
 
     cXyz* AA8 = &i_this->unk_AA8[1];
     csXyz* B20 = &i_this->unk_B20[1];
@@ -118,17 +143,17 @@ void tail_control(bb_class* i_this) {
             s16 s5 = REG0_S(5);
             s16 s6 = REG0_S(6);
             s16 t = i_this->unk_352;
-            sp28->z = 0.0f;
-            sp28->x = cM_ssin(t * (s5 + 1200) + i * (s6 + 6000)) * reg3;
-            sp28->y = cM_ssin(t * (s5 + 1000) + i * (s6 + 5000)) * reg3;
+            sp28.z = 0.0f;
+            sp28.x = cM_ssin(t * (s5 + 1200) + i * (s6 + 6000)) * reg3;
+            sp28.y = cM_ssin(t * (s5 + 1000) + i * (s6 + 5000)) * reg3;
 
             cMtx_YrotS(calc_mtx(), i_this->unk_BEE);
             cMtx_XrotM(calc_mtx(), i_this->unk_BEC);
-            MtxPosition(sp28, sp1C);
+            MtxPosition(&sp28, &sp1C);
 
-            sx += sp1C->x;
-            sy += sp1C->y;
-            sz += sp1C->z;
+            sx += sp1C.x;
+            sy += sp1C.y;
+            sz += sp1C.z;
         }
 
         f32 gY = AA8->y + sy;
@@ -145,22 +170,22 @@ void tail_control(bb_class* i_this) {
         (B20 - 1)->y = atan;
         (B20 - 1)->x = atan2;
 
-        sp28->y = 0.0f;
-        sp28->x = 0.0f;
+        sp28.y = 0.0f;
+        sp28.x = 0.0f;
         f32 l = 20.0f * gabi::fmadds((f32)i, 0.03f, 0.25f);
-        sp28->z = l + l;
+        sp28.z = l + l;
 
         cMtx_YrotS(calc_mtx(), atan);
         cMtx_XrotM(calc_mtx(), atan2);
-        MtxPosition(sp28, sp1C);
+        MtxPosition(&sp28, &sp1C);
 
         B5C->copy(*AA8);
 
-        f32 nx = (AA8 - 1)->x + sp1C->x;
+        f32 nx = (AA8 - 1)->x + sp1C.x;
         AA8->x = nx;
-        f32 ny = (AA8 - 1)->y + sp1C->y;
+        f32 ny = (AA8 - 1)->y + sp1C.y;
         AA8->y = ny;
-        f32 nz = (AA8 - 1)->z + sp1C->z;
+        f32 nz = (AA8 - 1)->z + sp1C.z;
         AA8->z = nz;
 
         B5C->x = (nx - B5C->x) * reg2;
@@ -168,25 +193,21 @@ void tail_control(bb_class* i_this) {
         B5C->z = (AA8->z - B5C->z) * reg2;
     }
 }
-VERIFY(0x0205D4BC, tail_control);
 
 /* 0205D964 */
 void tex_anm_set(bb_class* i_this, u16 idx) {
-    WWHD_FUNC(0x0205D964, void, i_this, idx);
     i_this->unk_2CD = 1;
-    i_this->unk_2CE = (u8)bb_tex_max_frame(idx);
+    i_this->unk_2CE = (u8)bb_tex_max_frame[idx];
     i_this->unk_2CC = 0;
 
-    J3DAnmTexPattern* btp = (J3DAnmTexPattern*)dComIfG_getObjectRes(STR(0x10007D0C), bb_tex_anm_idx(idx), SAFESTRING_VTBL);
-    if (btp == nullptr) JUT_ASSERT_fail(STR(0x10007D10), 0x2A6, STR(0x10007D08));
+    J3DAnmTexPattern* btp = (J3DAnmTexPattern*)dComIfG_getObjectRes("Bb", bb_tex_anm_idx[idx], SAFESTRING_VTBL);
+    if (btp == nullptr) JUT_ASSERT_fail("d_a_bb.cpp", 0x2A6, "btp");
 
-    mDoExt_btpAnm_init(&i_this->mBtpAnm, J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2, 1.0f, 0, -1, 1, 0);
+    i_this->mBtpAnm.init(J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2, 1.0f, 0, -1, 1, 0);
 }
-VERIFY(0x0205D964, tex_anm_set);
 
 /* 0205DA3C */
 void anm_init(bb_class* i_this, int animFileIdx, f32 morf, u8 loopMode, f32 speed, int soundFileIdx) {
-    WWHD_FUNC(0x0205DA3C, void, i_this, animFileIdx, morf, loopMode, speed, soundFileIdx);
     if (i_this->unk_2DF < 3) {
         if (soundFileIdx >= 0) {
             J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(BB_ARC, animFileIdx, SAFESTRING_VTBL);
@@ -198,49 +219,45 @@ void anm_init(bb_class* i_this, int animFileIdx, f32 morf, u8 loopMode, f32 spee
         }
     }
 }
-VERIFY(0x0205DA3C, anm_init);
 
 /* 0205DB74 */
 void* s_a_d_sub(void* ac1, void* ac2) {
-    WWHD_FUNC(0x0205DB74, void*, ac1, ac2);
-    gabi::Local<dBgS_LinChk_l> linChk;
-    dBgS_LinChk_ct(linChk);
+    BbLineCheck linChk;
+    dBgS_LinChk_ct(&linChk);
 
-    if (esa_check_count() < 100 && fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_ESA_e) {
+    if (esa_check_count < 100 && fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_ESA_e) {
         esa_class* esa1 = (esa_class*)ac1;
         fopAc_ac_c* esa2 = (fopAc_ac_c*)ac2;
         if (esa1->field_0x298 == 0) {
-            gabi::Local<cXyz> sp14;
-            gabi::Local<cXyz> sp8;
-            Vec3f p = esa1->current.pos.get();
+            cXyz sp14;
+            cXyz sp8;
+            auto p = esa1->current.pos.get();
             p.y += 10.0f;
-            *sp8 = p;
-            sp14->copy(esa2->current.pos);
+            sp8 = p;
+            sp14.copy(esa2->current.pos);
 
-            dBgS_LinChk_Set(linChk, sp14, sp8, esa2);
-            if (!cBgS_LineCross(dComIfG_Bgsp(), linChk)) {
-                s32 n = esa_check_count();
-                esa_check_count() = n + 1;
-                esa_info()[n] = esa1;
+            dBgS_LinChk_Set(&linChk, &sp14, &sp8, esa2);
+            if (!cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
+                s32 n = esa_check_count;
+                esa_check_count = n + 1;
+                esa_info[n] = esa1;
             }
         }
     }
-    dBgS_LinChk_dt(linChk);
+    dBgS_LinChk_dt(&linChk);
     return nullptr;
 }
-VERIFY(0x0205DB74, s_a_d_sub);
 
 /* 0205DCFC */
 esa_class* search_esa(bb_class* i_this) {
-    WWHD_FUNC(0x0205DCFC, esa_class*, i_this);
-    esa_check_count() = 0;
-    fpcM_Search(0x0205DB74 /* s_a_d_sub */, i_this);
+    esa_check_count = 0;
+    bbSearch(s_a_d_sub, i_this);
 
-    if (esa_check_count() != 0) {
+    if (esa_check_count != 0) {
         f32 fDist = 50.0f;
         s32 i = 0;
-        while (i < esa_check_count()) {
-            esa_class* esa = esa_info()[i];
+        while (i < esa_check_count) {
+            esa_class* esa = esa_info[i];
             f32 x = esa->current.pos.x - i_this->current.pos.x;
             f32 z = esa->current.pos.z - i_this->current.pos.z;
             if (std_sqrtf(gabi::fmadds(x, x, z * z)) < fDist) {
@@ -248,7 +265,7 @@ esa_class* search_esa(bb_class* i_this) {
                 return esa;
             }
             i++;
-            if (i == esa_check_count()) {
+            if (i == esa_check_count) {
                 i = 0;
                 fDist += 50.0f;
                 if (fDist > 10000.0f) {
@@ -259,48 +276,42 @@ esa_class* search_esa(bb_class* i_this) {
     }
     return nullptr;
 }
-VERIFY(0x0205DCFC, search_esa);
 
 /* 0205DE54 */
 void kuti_open(bb_class* i_this, s16 arg1, u32 sfxId) {
-    WWHD_FUNC(0x0205DE54, void, i_this, arg1, sfxId);
     if (i_this->unk_C50 == 0) {
         i_this->unk_C50 = arg1;
         i_this->unk_C52 = arg1 - 3;
         i_this->unk_C54 = sfxId;
     }
 }
-VERIFY(0x0205DE54, kuti_open);
 
-/* 0205DE74 (unnamed by the matcher) */
+/* 0205DE74 */
 BOOL bb_player_bg_check(bb_class* i_this) {
-    WWHD_FUNC(0x0205DE74, BOOL, i_this);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    gabi::Local<dBgS_LinChk_l> linChk;
-    dBgS_LinChk_ct(linChk);
-    gabi::Local<cXyz> sp14;
-    gabi::Local<cXyz> sp8;
+    BbLineCheck linChk;
+    dBgS_LinChk_ct(&linChk);
+    cXyz sp14;
+    cXyz sp8;
 
-    Vec3f p = player->current.pos.get();
+    auto p = player->current.pos.get();
     p.y += 100.0f;
-    *sp8 = p;
-    sp14->copy(i_this->eyePos);
+    sp8 = p;
+    sp14.copy(i_this->eyePos);
 
-    dBgS_LinChk_Set(linChk, sp14, sp8, i_this);
-    BOOL ret = cBgS_LineCross(dComIfG_Bgsp(), linChk);
-    dBgS_LinChk_dt(linChk);
+    dBgS_LinChk_Set(&linChk, &sp14, &sp8, i_this);
+    BOOL ret = cBgS_LineCross(dComIfG_Bgsp(), &linChk);
+    dBgS_LinChk_dt(&linChk);
     return ret;
 }
-VERIFY(0x0205DE74, bb_player_bg_check);
 
 /* 0205DFC0 */
 s32 bb_player_view_check(bb_class* i_this) {
-    WWHD_FUNC(0x0205DFC0, s32, i_this);
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     s16 var_r5;
     f32 var_f2;
 
-    if (l_bbHIO().unk_06 != 0) {
+    if (l_bbHIO.unk_06 != 0) {
         return 1;
     }
 
@@ -308,20 +319,20 @@ s32 bb_player_view_check(bb_class* i_this) {
         if (i_this->unk_33C > (f32)(u8)i_this->unk_2D9 * 100.0f || bb_player_bg_check(i_this)) {
             return 0;
         }
-    } else if (i_this->unk_2DD == 4 || i_this->unk_2DD == 7) {
-        if (i_this->unk_33C > l_bbHIO().unk_6C || bb_player_bg_check(i_this)) {
+    } else if (i_this->unk_2DD == BB_MODE_WAIT || i_this->unk_2DD == BB_MODE_NEST_WAIT) {
+        if (i_this->unk_33C > l_bbHIO.unk_6C || bb_player_bg_check(i_this)) {
             return 0;
         }
-    } else if (i_this->unk_33C > l_bbHIO().unk_68 || bb_player_bg_check(i_this)) {
+    } else if (i_this->unk_33C > l_bbHIO.unk_68 || bb_player_bg_check(i_this)) {
         return 0;
     }
 
-    if (i_this->unk_2DD == 4 || i_this->unk_2DD == 7) {
-        var_r5 = l_bbHIO().unk_72;
-        var_f2 = l_bbHIO().unk_78;
+    if (i_this->unk_2DD == BB_MODE_WAIT || i_this->unk_2DD == BB_MODE_NEST_WAIT) {
+        var_r5 = l_bbHIO.unk_72;
+        var_f2 = l_bbHIO.unk_78;
     } else {
-        var_r5 = l_bbHIO().unk_70;
-        var_f2 = l_bbHIO().unk_74;
+        var_r5 = l_bbHIO.unk_70;
+        var_f2 = l_bbHIO.unk_74;
     }
 
     if (std::fabs(player->current.pos.y - i_this->eyePos.y) < var_f2) {
@@ -335,32 +346,30 @@ s32 bb_player_view_check(bb_class* i_this) {
     }
     return 0;
 }
-VERIFY(0x0205DFC0, bb_player_view_check);
 
 /* 0205E14C */
 void path_check(bb_class* i_this) {
-    WWHD_FUNC(0x0205E14C, void, i_this);
     if (i_this->ppd == nullptr) {
         return;
     }
 
-    gabi::Local<dBgS_LinChk_l> linChk;
-    dBgS_LinChk_ct(linChk);
-    gabi::Local<cXyz> sp24;
-    gabi::Local<cXyz> spC;
+    BbLineCheck linChk;
+    dBgS_LinChk_ct(&linChk);
+    cXyz sp24;
+    cXyz spC;
 
-    Vec3f p = i_this->current.pos.get();
+    auto p = i_this->current.pos.get();
     p.y += 100.0f;
-    *sp24 = p;
+    sp24 = p;
 
-    dPnt_l* point = i_this->ppd->m_points;
+    BbPoint* point = i_this->ppd->m_points;
     for (s32 i = 0; i < i_this->ppd->m_num; i++, point++) {
-        spC->x = point->m_position.x;
-        spC->y = point->m_position.y + 100.0f;
-        spC->z = point->m_position.z;
+        spC.x = point->m_position.x;
+        spC.y = point->m_position.y + 100.0f;
+        spC.z = point->m_position.z;
 
-        dBgS_LinChk_Set(linChk, sp24, spC, i_this);
-        check_index()[i] = (u8)(cBgS_LineCross(dComIfG_Bgsp(), linChk) ^ 1);
+        dBgS_LinChk_Set(&linChk, &sp24, &spC, i_this);
+        check_index[i] = (u8)(cBgS_LineCross(dComIfG_Bgsp(), &linChk) ^ 1);
     }
 
     f32 fDist = 0.0f;
@@ -369,7 +378,7 @@ void path_check(bb_class* i_this) {
     for (s32 j = 0; j < 100; j++) {
         point = i_this->ppd->m_points;
         for (s32 i = 0; i < i_this->ppd->m_num; i++, point++) {
-            if (check_index()[i] != 0) {
+            if (check_index[i] != 0) {
                 f32 y = i_this->current.pos.y - point->m_position.y;
                 f32 x = i_this->current.pos.x - point->m_position.x;
                 f32 z = i_this->current.pos.z - point->m_position.z;
@@ -397,14 +406,12 @@ void path_check(bb_class* i_this) {
     } else {
         i_this->unk_35D = (s8)(i_this->unk_2DA + 1);
     }
-    dBgS_LinChk_dt(linChk);
+    dBgS_LinChk_dt(&linChk);
 }
-VERIFY(0x0205E14C, path_check);
 
-/* 0205E420. HD: no blob shadow (daBb_shadowDraw is gone); tail_draw inlined, with an extra
- * translation along the segment and mDoExt_modelUpdate */
+// HD: blob shadows are removed; tail drawing adds a local Z translation.
+/* 0205E420 */
 BOOL daBb_Draw(bb_class* i_this) {
-    WWHD_FUNC(0x0205E420, BOOL, i_this);
     if (i_this->unk_2F2 != 0) {
         return TRUE;
     }
@@ -417,34 +424,32 @@ BOOL daBb_Draw(bb_class* i_this) {
         return TRUE;
     }
 
-    mDoExt_btpAnm_entry_l(&i_this->mBtpAnm, J3DModel_getModelData(model), i_this->unk_2CC);
+    i_this->mBtpAnm.entry(J3DModel_getModelData(model), i_this->unk_2CC);
     i_this->mpMorf->entryDL();
-    mDoExt_btpAnm_remove_l(J3DModel_getModelData(model));
+    bbRemoveTexPattern(J3DModel_getModelData(model));
 
     /* tail_draw */
     cXyz* AA8 = &i_this->unk_AA8[0];
     csXyz* B20 = &i_this->unk_B20[0];
     for (s32 i = 0; i < 9; AA8++, B20++, i++) {
         MtxTrans(AA8->x, AA8->y, AA8->z, 0);
-        f32 scale = tial_scale(i);
+        f32 scale = tial_scale[i];
         MtxScale(scale, scale, scale, 1);
         cMtx_YrotM(calc_mtx(), B20->y);
         cMtx_XrotM(calc_mtx(), B20->x);
         MtxTrans(0.0f, 0.0f, REG_F(10, 0) + 25.0f, 1); /* HD */
 
         J3DModel* tail = i_this->unk_A84[i];
-        mtx_copy(gabi::at<Mtx34>(gabi::ea(tail) + 0xC8), calc_mtx()); /* setBaseTRMtx */
+        tail->setBaseTRMtx(calc_mtx()); /* setBaseTRMtx */
         setLightTevColorType(dKy_getEnvlight(), tail, &i_this->tevStr);
         mDoExt_modelUpdate(tail);
     }
-    dSnap_RegistFig_l(0xB0 /* DSNAP_TYPE_BB */, i_this, &i_this->eyePos, i_this->shape_angle.y, 1.0f, 1.0f, 1.0f);
+    bbRegistFig(DSNAP_TYPE_BB, i_this, &i_this->eyePos, i_this->shape_angle.y, 1.0f, 1.0f, 1.0f);
     return TRUE;
 }
-VERIFY(0x0205E420, daBb_Draw);
 
 /* 0205E638 */
 void bb_pos_move(bb_class* i_this) {
-    WWHD_FUNC(0x0205E638, void, i_this);
     f32 x = i_this->unk_2F4.x - i_this->current.pos.x;
     f32 z = i_this->unk_2F4.z - i_this->current.pos.z;
     f32 y = i_this->unk_2F4.y - i_this->current.pos.y;
@@ -454,7 +459,7 @@ void bb_pos_move(bb_class* i_this) {
     s16 atan2 = (s16)-cM_atan2s(y, sqrt);
 
     s16 old_y = i_this->current.angle.y;
-    cLib_addCalcAngleS2_l(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 10),
+    cLib_addCalcAngleS2(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 10),
                           (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
     old_y = (s16)((old_y - i_this->current.angle.y) * 32);
 
@@ -465,21 +470,21 @@ void bb_pos_move(bb_class* i_this) {
         old_y = -target;
     }
 
-    cLib_addCalcAngleS2_l(&i_this->current.angle.z, old_y, (s16)(REG0_S(3) + 10),
+    cLib_addCalcAngleS2(&i_this->current.angle.z, old_y, (s16)(REG0_S(3) + 10),
                           (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308 * 0.5f));
-    cLib_addCalcAngleS2_l(&i_this->current.angle.x, atan2, (s16)(REG0_S(3) + 10),
+    cLib_addCalcAngleS2(&i_this->current.angle.x, atan2, (s16)(REG0_S(3) + 10),
                           (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
-    cLib_addCalc2_l(&i_this->unk_308, 1.0f, 1.0f, 0.04f);
-    cLib_addCalc2_l(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
+    cLib_addCalc2(&i_this->unk_308, 1.0f, 1.0f, 0.04f);
+    cLib_addCalc2(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
 
-    gabi::Local<cXyz> v;
-    v->x = 0.0f;
-    v->y = 0.0f;
-    v->z = i_this->speedF;
+    cXyz v;
+    v.x = 0.0f;
+    v.y = 0.0f;
+    v.z = i_this->speedF;
 
     cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->current.angle.x);
-    MtxPosition(v, &i_this->speed);
+    MtxPosition(&v, &i_this->speed);
 
     i_this->current.pos.x = i_this->current.pos.x + i_this->speed.x;
     i_this->current.pos.y = i_this->current.pos.y + i_this->speed.y;
@@ -490,30 +495,28 @@ void bb_pos_move(bb_class* i_this) {
         i_this->current.pos.y = i_this->current.pos.y + 5.0f;
     }
 }
-VERIFY(0x0205E638, bb_pos_move);
 
 /* 0205E8AC */
 void bb_ground_pos_move(bb_class* i_this) {
-    WWHD_FUNC(0x0205E8AC, void, i_this);
-    gabi::Local<cXyz> v;
-    gabi::Local<cXyz> v2;
+    cXyz v;
+    cXyz v2;
 
     s16 atan = cM_atan2s(i_this->unk_2F4.x - i_this->current.pos.x, i_this->unk_2F4.z - i_this->current.pos.z);
-    cLib_addCalcAngleS2_l(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 2),
+    cLib_addCalcAngleS2(&i_this->current.angle.y, atan, (s16)(REG0_S(3) + 2),
                           (s16)gabi::ftoi(i_this->unk_310 * i_this->unk_308));
-    cLib_addCalc2_l(&i_this->unk_308, 1.0f, 1.0f, 0.1f);
-    cLib_addCalc2_l(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
+    cLib_addCalc2(&i_this->unk_308, 1.0f, 1.0f, 0.1f);
+    cLib_addCalc2(&i_this->speedF, i_this->unk_300, 1.0f, i_this->unk_304);
 
-    v->x = 0.0f;
-    v->y = 0.0f;
-    v->z = i_this->speedF;
+    v.x = 0.0f;
+    v.y = 0.0f;
+    v.z = i_this->speedF;
 
     cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
-    MtxPosition(v, v2);
+    MtxPosition(&v, &v2);
 
-    f32 sx = v2->x;
+    f32 sx = v2.x;
     i_this->speed.x = sx;
-    f32 sz = v2->z;
+    f32 sz = v2.z;
     i_this->speed.z = sz;
     f32 sy = i_this->speed.y;
 
@@ -527,43 +530,186 @@ void bb_ground_pos_move(bb_class* i_this) {
         i_this->speed.y = -0.5f;
     }
 }
-VERIFY(0x0205E8AC, bb_ground_pos_move);
 
-/* 0205EA08 (fpcNm_NPC_KAM_e 0xC3) */
+/* 02063404 */
+void bb_water_check(bb_class* i_this) {
+    if (daSea_ChkArea(i_this->unk_2F4.x, i_this->unk_2F4.z)) {
+        f32 waveHeight = daSea_calcWave(i_this->unk_2F4.x, i_this->unk_2F4.z);
+        waveHeight = waveHeight + REG0_F(0);
+        waveHeight = waveHeight + 100.0f;
+        if (!(i_this->current.pos.y > waveHeight)) { /* GHS: bgt over the store */
+            i_this->current.pos.y = waveHeight;
+        }
+    }
+}
+
+/* 0205EA08 */
 void* pl_name_check(void* ac, void*) {
-    WWHD_FUNC(0x0205EA08, void*, ac, (u32)0);
     if (fopAc_IsActor(ac) && ac != nullptr && fpcM_GetName(ac) == 0xC3) {
         return ac;
     }
     return nullptr;
 }
-VERIFY(0x0205EA08, pl_name_check);
+
+// HD: feather callback ends directly; emitter colors use the expanded HD layout.
+/* 0206432C */
+void damage_check(bb_class* i_this) {
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    cXyz scale;
+    CcAtInfo sp30;
+
+    i_this->mStts.Move();
+
+    bool bodyHit = i_this->mBodyTgSph.ChkTgHit() != 0;
+    if ((bodyHit || i_this->mHeadTgSph.ChkTgHit()) && i_this->unk_340 == 0) {
+        i_this->unk_340 = 5;
+        tex_anm_set(i_this, 2);
+
+        if (bodyHit) {
+            sp30.mpObj = static_cast<dCcD_GObjInf*>(i_this->mBodyTgSph.GetTgHitObj());
+            sp30.pParticlePos = i_this->mBodyTgSph.GetTgHitPosP();
+        } else {
+            sp30.mpObj = static_cast<dCcD_GObjInf*>(i_this->mHeadTgSph.GetTgHitObj());
+            sp30.pParticlePos = i_this->mHeadTgSph.GetTgHitPosP();
+        }
+
+        u32 atType = sp30.mpObj->mAtType;
+        if (atType & AT_TYPE_LIGHT_ICE_ARROW) {
+            if (sp30.mpObj->mAtType & AT_TYPE_ICE_ARROW) {
+                i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
+                i_this->unk_2DD = BB_MODE_ATTACK;
+                i_this->unk_2F1 = 0;
+                anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
+            } else {
+                i_this->mEnemyIce.mLightShrinkTimer = 1;
+            }
+            enemy_fire_remove(&i_this->mEnemyFire);
+            return;
+        }
+
+        if (atType & AT_TYPE_FIRE_ARROW_FIRE) {
+            i_this->mEnemyFire.mFireDuration = REG0_S(2) + 100;
+            i_this->unk_340 = 50;
+        }
+
+        s8 old_health = i_this->health;
+        at_power_check(&sp30);
+        if (sp30.mResultingAttackType == 14) {
+            i_this->health = 20;
+        }
+        sp30.mpActor = cc_at_check(i_this, &sp30);
+
+        if (sp30.mResultingAttackType == 14) {
+            i_this->health = old_health;
+            bbParticleSet(0, ID_IT_JN_PIYOHIT00, sp30.pParticlePos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
+        } else if (i_this->health <= 0) {
+            bbParticleSet(0, ID_AK_JN_CRITICALHITFLASH, sp30.pParticlePos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
+            scale.x = 2.0f;
+            scale.y = 2.0f;
+            scale.z = 2.0f;
+            bbParticleSet(0, ID_AK_JN_CRITICALHIT, sp30.pParticlePos, &player->shape_angle, &scale, 0xFF, nullptr, -1, nullptr, nullptr);
+        } else {
+            bbParticleSet(0, ID_AK_JN_OK, sp30.pParticlePos, &player->shape_angle, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
+        }
+
+        cXyz pos;
+        auto p = i_this->current.pos.get();
+        pos = p;
+        dKy_Sound_set(&pos, 100, fopAcM_GetID(i_this), 5);
+
+        if (l_bbHIO.unk_04 != 0) {
+            i_this->health = 10;
+        }
+
+        if (sp30.mbDead) {
+            if (i_this->health <= 0) {
+                i_this->unk_C7E = 1;
+                i_this->unk_2F1 = 0;
+                fopAcM_monsSeStart(i_this, JA_SE_CV_BB_FAINTED, 0);
+            } else {
+                fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
+            }
+            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 5000.0f);
+        } else {
+            i_this->unk_C58 = gabi::fmadds(REG0_F(9), 200.0f, 10000.0f);
+            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 3000.0f);
+            fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
+        }
+
+        GXColor* k0 = &reinterpret_cast<BbTevColors*>(&i_this->tevStr)->mColorK0;
+        bbParticleSet(2, ID_IT_JN_KG_HANE_A, &i_this->current.pos, &i_this->current.angle, nullptr, 0xFF, nullptr,
+                       fopAcM_GetRoomNo(i_this), k0, k0);
+        i_this->mParticleCallBack.end();
+        JPABaseEmitter* emitter = bbParticleSet(2, ID_IT_JN_KG_HANE_B, &i_this->current.pos, &i_this->current.angle,
+                                                 nullptr, 0xFF, &i_this->mParticleCallBack, fopAcM_GetRoomNo(i_this), nullptr, nullptr);
+        if (emitter != nullptr) {
+            BbEmitter* colors = static_cast<BbEmitter*>(emitter);
+            if (sp30.mbDead) {
+                emitter->setMaxFrame(REG0_S(7) + 20); /* setMaxFrame */
+            } else {
+                emitter->setMaxFrame(REG0_S(8) + 6);
+            }
+            /* setGlobalPrmColor / setGlobalEnvColor */
+            colors->mGlobalPrmColor.r = k0->r;
+            colors->mGlobalPrmColor.g = k0->g;
+            colors->mGlobalPrmColor.b = k0->b;
+            colors->mGlobalEnvColor.r = k0->r;
+            colors->mGlobalEnvColor.g = k0->g;
+            colors->mGlobalEnvColor.b = k0->b;
+        }
+
+        if (sp30.mResultingAttackType == 1) {
+            i_this->unk_342 = i_this->unk_336;
+            i_this->unk_344 = i_this->unk_338;
+        } else {
+            i_this->unk_342 = sp30.m0C.y;
+            i_this->unk_344 = 0;
+        }
+
+        if (i_this->unk_2DD != BB_MODE_ATTACK) {
+            i_this->unk_2DD = BB_MODE_ATTACK;
+            f32 r = cM_rndF((f32)(l_bbHIO.unk_18 - l_bbHIO.unk_16));
+            i_this->unk_35D = 0;
+            i_this->unk_318[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO.unk_16);
+        }
+
+        if (sp30.mbDead) {
+            i_this->unk_348 = l_bbHIO.unk_58;
+            if (cM_rndF(1.0f) < 0.5f) {
+                i_this->unk_350 = (s16)gabi::ftoi(cM_rndF(3000.0f) + 5000.0f);
+            } else {
+                i_this->unk_350 = (s16)gabi::ftoi(-(cM_rndF(3000.0f) + 5000.0f));
+            }
+        } else {
+            i_this->unk_348 = l_bbHIO.unk_5C;
+            i_this->unk_350 = 0;
+        }
+
+        i_this->unk_C7C = 1;
+        anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
+    }
+}
 
 /* 0206195C */
 static BOOL daBb_IsDelete(bb_class*) {
-    WWHD_FUNC(0x0206195C, BOOL, (u32)0);
     return TRUE;
 }
-VERIFY(0x0206195C, daBb_IsDelete);
 
 /* 02061964 */
 static BOOL daBb_Delete(bb_class* i_this) {
-    WWHD_FUNC(0x02061964, BOOL, i_this);
-    dComIfG_resDelete(&i_this->mPhase, STR(0x10007DC8));
-    dPa_EcallBack_remove(&i_this->mParticleCallBack);
+    dComIfG_resDelete(&i_this->mPhase, "Bb");
+    i_this->mParticleCallBack.remove();
     enemy_fire_remove(&i_this->mEnemyFire);
     if (i_this->heap != nullptr) {
         i_this->mpMorf->stopZelAnime();
     }
     return TRUE;
 }
-VERIFY(0x02061964, daBb_Delete);
 
 /* 020619D0 */
 BOOL useHeapInit(fopAc_ac_c* ac) {
-    WWHD_FUNC(0x020619D0, BOOL, ac);
     bb_class* i_this = (bb_class*)ac;
-    const char* arc = STR(0x10007DD0); /* "Bb" */
+    const char* arc = "Bb"; /* "Bb" */
 
     J3DModelData* bdl = (J3DModelData*)dComIfG_getObjectRes(arc, dRes_INDEX_BB_BDL_BB_e, SAFESTRING_VTBL);
     J3DAnmTransform* bck = (J3DAnmTransform*)dComIfG_getObjectRes(arc, dRes_INDEX_BB_BCK_FLY02_e, SAFESTRING_VTBL);
@@ -576,7 +722,7 @@ BOOL useHeapInit(fopAc_ac_c* ac) {
     }
 
     J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(arc, dRes_INDEX_BB_BDL_BB_TAIL_e, SAFESTRING_VTBL);
-    if (modelData == nullptr) JUT_ASSERT_fail(STR(0x10007DD4), 0x11C4, STR(0x10007DE0));
+    if (modelData == nullptr) JUT_ASSERT_fail("d_a_bb.cpp", 0x11C4, "modelData != (0)");
 
     for (s32 i = 0; i < 9; i++) {
         i_this->unk_A84[i] = mDoExt_J3DModel__create(modelData, 0x80000, 0x33221202);
@@ -585,66 +731,20 @@ BOOL useHeapInit(fopAc_ac_c* ac) {
         }
     }
 
-    J3DAnmTexPattern* btp = (J3DAnmTexPattern*)dComIfG_getObjectRes(arc, bb_tex_anm_idx(4), SAFESTRING_VTBL);
-    if (btp == nullptr) JUT_ASSERT_fail(STR(0x10007DD4), 0x11D9, STR(0x10007DCC));
+    J3DAnmTexPattern* btp = (J3DAnmTexPattern*)dComIfG_getObjectRes(arc, bb_tex_anm_idx[4], SAFESTRING_VTBL);
+    if (btp == nullptr) JUT_ASSERT_fail("d_a_bb.cpp", 0x11D9, "btp");
 
-    if (!mDoExt_btpAnm_init(&i_this->mBtpAnm, J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2, 1.0f, 0, -1, 0, 0)) {
+    if (!i_this->mBtpAnm.init(J3DModel_getModelData(i_this->mpMorf->getModel()), btp, 0, 2, 1.0f, 0, -1, 0, 0)) {
         return FALSE;
     }
     return TRUE;
 }
-VERIFY(0x020619D0, useHeapInit);
-
-/* 02061BE4 enemyfire::enemyfire (inline constructor, out of line in this TU) */
-static enemyfire_l* enemyfire_ct(enemyfire_l* i_this) {
-    WWHD_FUNC(0x02061BE4, enemyfire_l*, i_this);
-    if (i_this == nullptr) {
-        i_this = (enemyfire_l*)operator_new(0x22C);
-        if (i_this == nullptr) return nullptr;
-    }
-    if (gabi::ea(&i_this->mDirection) == 0) {
-        operator_new(0xC); /* GHS: JGeometry::TVec3 member constructor with a null `this` */
-    }
-    dCcD_Stts_ct(&i_this->mStts);
-    dCcD_Sph_ct(&i_this->mSph);
-    gabi::store<f32>(gabi::ea(i_this) + 0x228, 1.0f); /* LIGHT_INFLUENCE (HD) */
-    return i_this;
-}
-VERIFY(0x02061BE4, enemyfire_ct);
-
-/* 02061C70 bb_class::bb_class (compiler-generated) */
-static bb_class* bb_class_ct(bb_class* i_this) {
-    WWHD_FUNC(0x02061C70, bb_class*, i_this);
-    if (i_this == nullptr) {
-        i_this = (bb_class*)operator_new(0x13D8);
-        if (i_this == nullptr) return nullptr;
-    }
-    fopAc_ac_c_ct(i_this);
-    i_this->__vtbl = BB_VTBL;
-    gabi::call(0x025E7820, &i_this->mBtpAnm); /* mDoExt_btpAnm */
-    gabi::call(0x024EFE94, &i_this->mAcchCir); /* dBgS_AcchCir */
-    dBgS_ObjAcch_ct_l(&i_this->mAcch);
-    dCcD_Stts_ct(&i_this->mStts);
-    dCcD_Sph_ct(&i_this->mHeadAtSph);
-    dCcD_Sph_ct(&i_this->mHeadTgSph);
-    dCcD_Sph_ct(&i_this->mBodyTgSph);
-    dCcD_Sph_ct(&i_this->mBodyCoSph);
-    dPa_followEcallBack_ct_l(&i_this->mParticleCallBack, 0, 0);
-    dCcD_Stts_ct(&i_this->mEnemyIce.mStts);
-    dCcD_Cyl_ct(&i_this->mEnemyIce.mCyl, BB_AAB_VTBL);
-    gabi::call(0x024EFE94, &i_this->mEnemyIce.mBgAcchCir);
-    dBgS_ObjAcch_ct_l(&i_this->mEnemyIce.mBgAcch);
-    enemyfire_ct(&i_this->mEnemyFire);
-    return i_this;
-}
-VERIFY(0x02061C70, bb_class_ct);
 
 /* 02061DEC */
 static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x02061DEC, cPhs_State, a_this);
     bb_class* i_this = (bb_class*)a_this;
 
-    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, STR(0x10007E04) /* "Bb" */);
+    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, "Bb" /* "Bb" */);
 
     /* fopAcM_ct(a_this, bb_class) */
     if (!fopAcM_CheckCondition(a_this, fopAcCnd_INIT_e)) {
@@ -673,7 +773,7 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
             return cPhs_ERROR_e;
         }
 
-        if (!fopAcM_entrySolidHeap(a_this, 0x020619D0 /* useHeapInit */, 0x9FA0)) {
+        if (!bbEntrySolidHeap(a_this, useHeapInit, 0x9FA0)) {
             return cPhs_ERROR_e;
         }
 
@@ -687,22 +787,19 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
         a_this->current.pos.y = y;
         a_this->home.pos.z = z;
 
-        a_this->itemTableIdx = dComIfGp_CharTbl_GetNameIndex(STR(0x10007E04), 0);
+        a_this->itemTableIdx = bbCharTblGetNameIndex("Bb", 0);
         J3DModel* model = i_this->mpMorf->getModel();
-        for (u16 i = 0; i < gabi::load<u16>(modelData_getJointTree(gabi::load<u32>(gabi::ea(model) + 0xAC)) + 8); i++) {
-            if (i >= BB_JNT_NUM_e) continue; /* HD: bounds check on the table */
-            if (callback_check_index(i) >= 0) {
-                u32 md2 = gabi::load<u32>(gabi::ea(model) + 0xAC);
-                u32 jnts = gabi::load<u32>(md2 + 8);
-                u32 nodeP = i < gabi::load<u32>(md2 + 4) ? jnts + i * 0x1C : jnts;
-                gabi::store<u32>(nodeP + 8, 0x0205D078 /* nodeCallBack */);
+        for (u16 i = 0; i < model->getModelData()->getJointNum(); i++) {
+            if (i >= BB_JNT_NUM_e) continue; // HD: table bounds check.
+            if (callback_check_index[i] >= 0) {
+                model->getModelData()->getJointNodePointer(i)->setCallBack(nodeCallBack);
             }
         }
 
-        gabi::store<u32>(gabi::ea(model) + 0xB8, gabi::ea(i_this)); /* setUserArea */
+        model->setUserArea(reinterpret_cast<uintptr_t>(i_this)); /* setUserArea */
 
         if (i_this->unk_2DA != 0xFF) {
-            i_this->ppd = (dPath_l*)dPath_GetRoomPath(i_this->unk_2DA, fopAcM_GetRoomNo(a_this));
+            i_this->ppd = (BbPath*)dPath_GetRoomPath(i_this->unk_2DA, fopAcM_GetRoomNo(a_this));
             if (i_this->ppd == nullptr) {
                 return cPhs_ERROR_e;
             }
@@ -714,28 +811,26 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
             i_this->unk_2F2 = i_this->unk_2DB + 1;
         }
 
-        if (i_this->unk_2DD == 5 || i_this->unk_2DD == 6) {
+        if (i_this->unk_2DD == BB_MODE_CARRY_MOBLIN || i_this->unk_2DD == BB_MODE_CARRY_BOKOBLIN) {
             i_this->unk_2DF = 1;
 
-            u8* ac = fopAcM_CreateAppend();
-            gabi::store<u32>(gabi::ea(ac) + 4, gabi::load<u32>(gabi::ea(&a_this->current.pos.x)));
-            gabi::store<u32>(gabi::ea(ac) + 8, gabi::load<u32>(gabi::ea(&a_this->current.pos.y)));
-            gabi::store<u32>(gabi::ea(ac) + 0xC, gabi::load<u32>(gabi::ea(&a_this->current.pos.z)));
-            gabi::store<u16>(gabi::ea(ac) + 0x10, (u16)a_this->home.angle.x);
-            gabi::store<u16>(gabi::ea(ac) + 0x12, (u16)a_this->home.angle.y);
-            gabi::store<u16>(gabi::ea(ac) + 0x14, (u16)a_this->home.angle.z);
-            gabi::store<s8>(gabi::ea(ac) + 0x21, fopAcM_GetRoomNo(a_this));
-            gabi::store<u32>(gabi::ea(ac), (fopAcM_GetParam(i_this) & 0xFF000000) | 0xFFFF05);
+            BbCreateAppend* ac = fopAcM_CreateAppend();
+            ac->base.position.copy(a_this->current.pos);
+            ac->base.angle.x = a_this->home.angle.x;
+            ac->base.angle.y = a_this->home.angle.y;
+            ac->base.angle.z = a_this->home.angle.z;
+            ac->room_no = fopAcM_GetRoomNo(a_this);
+            ac->base.parameters = (fopAcM_GetParam(i_this) & 0xFF000000) | 0xFFFF05;
 
-            if (i_this->unk_2DD == 5) {
+            if (i_this->unk_2DD == BB_MODE_CARRY_MOBLIN) {
                 i_this->unk_2E8 = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_MO2_e, 0, 0, ac);
                 i_this->unk_2EC = fpcNm_MO2_e;
             } else {
                 i_this->unk_2E8 = fpcSCtRq_Request(fpcLy_CurrentLayer(), fpcNm_BK_e, 0, 0, ac);
                 i_this->unk_2EC = fpcNm_BK_e;
             }
-        } else if (i_this->unk_2D8 == 3) {
-            i_this->unk_2DD = 3;
+        } else if (i_this->unk_2D8 == BB_MODE_ATTACK) {
+            i_this->unk_2DD = BB_MODE_ATTACK;
         }
 
         a_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpMorf->getModel()));
@@ -749,10 +844,10 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
         a_this->max_health = 2;
 
         i_this->mStts.Init(100, 0xFF, a_this);
-        i_this->mHeadAtSph.Set(gabi::at<dCcD_SrcSph>(0x101904CC));
-        i_this->mHeadTgSph.Set(gabi::at<dCcD_SrcSph>(0x1019050C));
-        i_this->mBodyTgSph.Set(gabi::at<dCcD_SrcSph>(0x1019054C));
-        i_this->mBodyCoSph.Set(gabi::at<dCcD_SrcSph>(0x1019058C));
+        i_this->mHeadAtSph.Set(&head_at_sph_src);
+        i_this->mHeadTgSph.Set(&head_tg_sph_src);
+        i_this->mBodyTgSph.Set(&body_tg_sph_src);
+        i_this->mBodyCoSph.Set(&body_co_sph_src);
 
         i_this->mHeadAtSph.SetStts(&i_this->mStts);
         i_this->mHeadTgSph.SetStts(&i_this->mStts);
@@ -770,8 +865,8 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
         i_this->mEnemyIce.mParticleScale = 1.3f;
 
         for (int i = 0; i < 10; i++) {
-            i_this->mEnemyFire.mFlameJntIdxs[i] = gabi::load<s8>(0x101905F4 + i);       /* fire_j */
-            i_this->mEnemyFire.mParticleScale[i] = gabi::load<f32>(0x101905CC + 4 * i); /* fire_sc */
+            i_this->mEnemyFire.mFlameJntIdxs[i] = fire_j[i];       /* fire_j */
+            i_this->mEnemyFire.mParticleScale[i] = fire_sc[i]; /* fire_sc */
         }
 
         a_this->stealItemLeft = 3;
@@ -779,13 +874,53 @@ static cPhs_State daBb_Create(fopAc_ac_c* a_this) {
     }
     return ret;
 }
-VERIFY(0x02061DEC, daBb_Create);
 
-/* 02062394 __sinit_d_a_bb_cpp: header statics, then the bbHIO_c constructor of l_bbHIO */
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02061BE4 */
+static enemyfire* enemyfire_ct(enemyfire* i_this) {
+    if (i_this == nullptr) {
+        i_this = (enemyfire*)operator_new(0x22C);
+        if (i_this == nullptr) return nullptr;
+    }
+    if (gabi::ea(&i_this->mDirection) == 0) {
+        operator_new(0xC); /* GHS: JGeometry::TVec3 member constructor with a null `this` */
+    }
+    dCcD_Stts_ct(&i_this->mStts);
+    dCcD_Sph_ct(&i_this->mSph);
+    i_this->mLight.mHD20 = 1.0f; /* LIGHT_INFLUENCE (HD) */
+    return i_this;
+}
+
+/* 02061C70 */
+static bb_class* bb_class_ct(bb_class* i_this) {
+    if (i_this == nullptr) {
+        i_this = (bb_class*)operator_new(0x13D8);
+        if (i_this == nullptr) return nullptr;
+    }
+    fopAc_ac_c_ct(i_this);
+    i_this->__vtbl = BB_VTBL;
+    mDoExt_btpAnm::ct(&i_this->mBtpAnm); /* mDoExt_btpAnm */
+    bbAcchCircleConstruct(&i_this->mAcchCir); /* dBgS_AcchCir */
+    bbAcchConstruct(&i_this->mAcch);
+    dCcD_Stts_ct(&i_this->mStts);
+    dCcD_Sph_ct(&i_this->mHeadAtSph);
+    dCcD_Sph_ct(&i_this->mHeadTgSph);
+    dCcD_Sph_ct(&i_this->mBodyTgSph);
+    dCcD_Sph_ct(&i_this->mBodyCoSph);
+    bbFollowCallbackConstruct(&i_this->mParticleCallBack, 0, 0);
+    dCcD_Stts_ct(&i_this->mEnemyIce.mStts);
+    dCcD_Cyl_ct(&i_this->mEnemyIce.mCyl, BB_AAB_VTBL);
+    bbAcchCircleConstruct(&i_this->mEnemyIce.mBgAcchCir);
+    bbAcchConstruct(&i_this->mEnemyIce.mBgAcch);
+    enemyfire_ct(&i_this->mEnemyFire);
+    return i_this;
+}
+
+/* 02062394 */
 static void __sinit_d_a_bb_cpp() {
-    WWHD_FUNC(0x02062394, void, (u32)0);
     sinit_header_statics(0x10461590, 0x10190600);
-    bbHIO_c& h = l_bbHIO();
+    bbHIO_c& h = l_bbHIO;
     h.__vtbl = 0x10007C7C;
     h.unk_04 = 0;
     h.unk_05 = 0;
@@ -824,258 +959,94 @@ static void __sinit_d_a_bb_cpp() {
     h.unk_72 = 0x59D8;
     h.unk_7C = 10000.0f;
 }
-VERIFY(0x02062394, __sinit_d_a_bb_cpp);
 
-/* 02062584: this TU's out-of-line copy of fopAcM_SearchByID (called by daBb_Execute) */
+/* 02062584 */
 static fopAc_ac_c* fopAcM_SearchByID_copy(u32 id) {
-    WWHD_FUNC(0x02062584, fopAc_ac_c*, id);
-    gabi::Local<be<u32>> key;
-    *key = id;
+    BbSearchKey key;
+    key.mId = id;
     if (id == 0xFFFFFFFFu) {
         return nullptr;
     }
-    return fopAcIt_Judge(0x025E1234 /* fpcSch_JudgeByID */, key.get());
+    return fopAcIt_Judge(0x025E1234 /* fpcSch_JudgeByID */, &key);
 }
-VERIFY(0x02062584, fopAcM_SearchByID_copy);
 
-/* 020625C0 / 02063474: this TU's copies of the sin/cos table lookups (JMath TSinCosTable,
- * 8 bytes per entry: sin, cos) */
+/* 020625C0 */
 static f32 sinShort_copy(void* table, s16 a) {
-    WWHD_FUNC(0x020625C0, f32, table, a);
-    return gabi::load<f32>(gabi::ea(table) + ((((s32)(u16)a) >> 3) << 3));
+    return bbSinCosTable(table)[(u16)a >> 3].mSin;
 }
-VERIFY(0x020625C0, sinShort_copy);
-static f32 cosShort_copy(void* table, s16 a) {
-    WWHD_FUNC(0x02063474, f32, table, a);
-    return gabi::load<f32>(gabi::ea(table) + ((((s32)(u16)a) >> 3) << 3) + 4);
-}
-VERIFY(0x02063474, cosShort_copy);
 
-/* 020625D4: this TU's sead::SafeString deleting destructor (SafeString vtable 0x10007BC4 +0xC) */
+/* 02063474 */
+static f32 cosShort_copy(void* table, s16 a) {
+    return bbSinCosTable(table)[(u16)a >> 3].mCos;
+}
+
+/* 020625D4 */
 static void SafeString_dt(SafeString* s, s32 flags) {
-    WWHD_FUNC(0x020625D4, void, s, flags);
     if (s != nullptr && (flags & 1)) {
         operator_delete(s);
     }
 }
-VERIFY(0x020625D4, SafeString_dt);
 
-/* 02064CF0: this TU's sead::SafeString::assureTerminationImpl_ (empty) */
+/* 02064CF0 */
 static void SafeString_assureTerminationImpl(SafeString*) {
-    WWHD_FUNC(0x02064CF0, void, (u32)0);
-}
-VERIFY(0x02064CF0, SafeString_assureTerminationImpl);
-
-/* 02063404 */
-void bb_water_check(bb_class* i_this) {
-    WWHD_FUNC(0x02063404, void, i_this);
-    if (daSea_ChkArea(i_this->unk_2F4.x, i_this->unk_2F4.z)) {
-        f32 waveHeight = daSea_calcWave(i_this->unk_2F4.x, i_this->unk_2F4.z);
-        waveHeight = waveHeight + REG0_F(0);
-        waveHeight = waveHeight + 100.0f;
-        if (!(i_this->current.pos.y > waveHeight)) { /* GHS: bgt over the store */
-            i_this->current.pos.y = waveHeight;
-        }
-    }
-}
-VERIFY(0x02063404, bb_water_check);
-
-/* dBgS_ObjAcch destructor as GHS expands it: this TU's vtables, then dBgS_Acch::~dBgS_Acch */
-static inline void dBgS_ObjAcch_dt_l(dBgS_ObjAcch* p) {
-    gabi::store<u32>(gabi::ea(p) + 0x20, 0x10007C1C);
-    gabi::store<u32>(gabi::ea(p) + 0x14, 0x10007C2C);
-    gabi::call(0x024EFD9C, p, 0);
 }
 
-/* 02064BD0 bb_class deleting destructor (compiler-generated, HD virtual destructor) */
+/* 02064BD0 */
 static void bb_class_dt(bb_class* i_this, s32 flags) {
-    WWHD_FUNC(0x02064BD0, void, i_this, flags);
     if (i_this != nullptr) {
-        gabi::call(0x02515AE8, &i_this->mEnemyFire.mSph, 2); /* dCcD_Sph::~dCcD_Sph */
+        bbSphereDestroy(&i_this->mEnemyFire.mSph, 2); /* dCcD_Sph::~dCcD_Sph */
         dCcD_Stts_dt(&i_this->mEnemyFire.mStts, 2);
-        dBgS_ObjAcch_dt_l(&i_this->mEnemyIce.mBgAcch);
-        gabi::call(0x02018034, gabi::at<u8>(gabi::ea(&i_this->mEnemyIce.mBgAcchCir) + 0x14), 2); /* cM3dGCir::~cM3dGCir */
+        bbAcchDestroy(&i_this->mEnemyIce.mBgAcch);
+        bbCircleDestroy(&i_this->mEnemyIce.mBgAcchCir.m_cir, 2); /* cM3dGCir::~cM3dGCir */
         dCcD_Cyl_dt(&i_this->mEnemyIce.mCyl, 2);
         dCcD_Stts_dt(&i_this->mEnemyIce.mStts, 2);
-        gabi::call(0x02515AE8, &i_this->mBodyCoSph, 2);
-        gabi::call(0x02515AE8, &i_this->mBodyTgSph, 2);
-        gabi::call(0x02515AE8, &i_this->mHeadTgSph, 2);
-        gabi::call(0x02515AE8, &i_this->mHeadAtSph, 2);
+        bbSphereDestroy(&i_this->mBodyCoSph, 2);
+        bbSphereDestroy(&i_this->mBodyTgSph, 2);
+        bbSphereDestroy(&i_this->mHeadTgSph, 2);
+        bbSphereDestroy(&i_this->mHeadAtSph, 2);
         dCcD_Stts_dt(&i_this->mStts, 2);
-        dBgS_ObjAcch_dt_l(&i_this->mAcch);
-        gabi::call(0x02018034, gabi::at<u8>(gabi::ea(&i_this->mAcchCir) + 0x14), 2);
-        gabi::call(0x025D50BC, i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
+        bbAcchDestroy(&i_this->mAcch);
+        bbCircleDestroy(&i_this->mAcchCir.m_cir, 2);
+        bbActorDestroy(i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1) {
             operator_delete(i_this);
         }
     }
 }
-VERIFY(0x02064BD0, bb_class_dt);
 
-/* ---- damage_check ---- */
-struct CcAtInfo_l {
-    /* 0x00 */ be<u32> mpObj;
-    /* 0x04 */ be<u32> mpActor;
-    /* 0x08 */ be<u8> mDamage;
-    /* 0x09 */ be<u8> mbDead;
-    /* 0x0A */ be<u8> mResultingAttackType;
-    /* 0x0B */ u8 _0B;
-    /* 0x0C */ csXyz m0C;
-    /* 0x12 */ be<u16> mPlCutBit;
-    /* 0x14 */ gptr<cXyz> pParticlePos;
-    /* 0x18 */ be<s32> mHitSoundId;
-};
-WWHD_SIZE(CcAtInfo_l, 0x1C);
-static inline void at_power_check(CcAtInfo_l* i) { gabi::call(0x02518DB0, i); }
-static inline u32 cc_at_check(fopAc_ac_c* a, CcAtInfo_l* i) { return gabi::call<u32>(0x025192A8, a, i); }
-static inline void dKy_Sound_set(cXyz* pos, s32 p, u32 pid, s32 t) { gabi::call(0x0255F458, pos, p, pid, t); }
-/* 025A5AC8 dPa_followEcallBack::end (HD: called directly here instead of the virtual remove) */
-static inline void dPa_followEcallBack_end_l(dPa_followEcallBack_l* cb) { gabi::call(0x025A5AC8, cb); }
-static inline JPABaseEmitter* particle_set_l(u8 grp, u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
-                                             void* cb, s8 setup, const void* prm, const void* env) {
-    dPa_control_c* pa = dComIfGp_getParticle();
-    return dPa_control_set(pa, grp, id, pos, angle, scale, alpha, (dPa_levelEcallBack*)cb, setup, (const GXColor*)prm,
-                           (const GXColor*)env, nullptr);
-}
-enum { AT_TYPE_LIGHT_ICE_ARROW = 0x180000, AT_TYPE_ICE_ARROW = 0x80000, AT_TYPE_FIRE_ARROW_FIRE = 0x40200 };
-enum { JA_SE_CV_BB_DAMAGE = 0x4816, JA_SE_CV_BB_FAINTED = 0x4817 };
-
-/* 0206432C */
-void damage_check(bb_class* i_this) {
-    WWHD_FUNC(0x0206432C, void, i_this);
-    fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    gabi::Local<cXyz> scale;
-    gabi::Local<CcAtInfo_l> sp30;
-
-    i_this->mStts.Move();
-
-    bool bodyHit = i_this->mBodyTgSph.ChkTgHit() != 0;
-    if ((bodyHit || i_this->mHeadTgSph.ChkTgHit()) && i_this->unk_340 == 0) {
-        i_this->unk_340 = 5;
-        tex_anm_set(i_this, 2);
-
-        if (bodyHit) {
-            sp30->mpObj = gabi::ea(i_this->mBodyTgSph.GetTgHitObj());
-            sp30->pParticlePos = i_this->mBodyTgSph.GetTgHitPosP();
-        } else {
-            sp30->mpObj = gabi::ea(i_this->mHeadTgSph.GetTgHitObj());
-            sp30->pParticlePos = i_this->mHeadTgSph.GetTgHitPosP();
-        }
-
-        u32 atType = gabi::load<u32>(sp30->mpObj + 0x10);
-        if (atType & AT_TYPE_LIGHT_ICE_ARROW) {
-            if (gabi::load<u32>(sp30->mpObj + 0x10) & AT_TYPE_ICE_ARROW) {
-                i_this->mEnemyIce.mFreezeDuration = REG0_S(3) + 300;
-                i_this->unk_2DD = 3;
-                i_this->unk_2F1 = 0;
-                anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
-            } else {
-                i_this->mEnemyIce.mLightShrinkTimer = 1;
-            }
-            enemy_fire_remove(&i_this->mEnemyFire);
-            return;
-        }
-
-        if (atType & AT_TYPE_FIRE_ARROW_FIRE) {
-            i_this->mEnemyFire.mFireDuration = REG0_S(2) + 100;
-            i_this->unk_340 = 50;
-        }
-
-        s8 old_health = i_this->health;
-        at_power_check(sp30);
-        if (sp30->mResultingAttackType == 14) {
-            i_this->health = 20;
-        }
-        sp30->mpActor = cc_at_check(i_this, sp30);
-
-        if (sp30->mResultingAttackType == 14) {
-            i_this->health = old_health;
-            particle_set_l(0, 0x27B /* ID_IT_JN_PIYOHIT00 */, sp30->pParticlePos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
-        } else if (i_this->health <= 0) {
-            particle_set_l(0, 0x10 /* ID_AK_JN_CRITICALHITFLASH */, sp30->pParticlePos, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
-            scale->x = 2.0f;
-            scale->y = 2.0f;
-            scale->z = 2.0f;
-            particle_set_l(0, 0xF /* ID_AK_JN_CRITICALHIT */, sp30->pParticlePos, &player->shape_angle, scale, 0xFF, nullptr, -1, nullptr, nullptr);
-        } else {
-            particle_set_l(0, 0xD /* ID_AK_JN_OK */, sp30->pParticlePos, &player->shape_angle, nullptr, 0xFF, nullptr, -1, nullptr, nullptr);
-        }
-
-        gabi::Local<cXyz> pos;
-        Vec3f p = i_this->current.pos.get();
-        *pos = p;
-        dKy_Sound_set(pos, 100, fopAcM_GetID(i_this), 5);
-
-        if (l_bbHIO().unk_04 != 0) {
-            i_this->health = 10;
-        }
-
-        if (sp30->mbDead) {
-            if (i_this->health <= 0) {
-                i_this->unk_C7E = 1;
-                i_this->unk_2F1 = 0;
-                fopAcM_monsSeStart(i_this, JA_SE_CV_BB_FAINTED, 0);
-            } else {
-                fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
-            }
-            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 5000.0f);
-        } else {
-            i_this->unk_C58 = gabi::fmadds(REG0_F(9), 200.0f, 10000.0f);
-            i_this->unk_34C = gabi::fmadds(REG0_F(13), 100.0f, 3000.0f);
-            fopAcM_monsSeStart(i_this, JA_SE_CV_BB_DAMAGE, 0);
-        }
-
-        u8* k0 = gabi::at<u8>(gabi::ea(i_this) + 0x1A8); /* tevStr.mColorK0 */
-        particle_set_l(2, 0x438 /* ID_IT_JN_KG_HANE_A */, &i_this->current.pos, &i_this->current.angle, nullptr, 0xFF, nullptr,
-                       fopAcM_GetRoomNo(i_this), k0, k0);
-        dPa_followEcallBack_end_l(&i_this->mParticleCallBack);
-        JPABaseEmitter* emitter = particle_set_l(2, 0x439 /* ID_IT_JN_KG_HANE_B */, &i_this->current.pos, &i_this->current.angle,
-                                                 nullptr, 0xFF, &i_this->mParticleCallBack, fopAcM_GetRoomNo(i_this), nullptr, nullptr);
-        if (emitter != nullptr) {
-            u32 e = gabi::ea(emitter);
-            if (sp30->mbDead) {
-                gabi::store<s32>(e + 0x5C, REG0_S(7) + 20); /* setMaxFrame */
-            } else {
-                gabi::store<s32>(e + 0x5C, REG0_S(8) + 6);
-            }
-            /* setGlobalPrmColor / setGlobalEnvColor */
-            gabi::store<u8>(e + 0x244, gabi::load<u8>(gabi::ea(k0) + 0));
-            gabi::store<u8>(e + 0x245, gabi::load<u8>(gabi::ea(k0) + 1));
-            gabi::store<u8>(e + 0x246, gabi::load<u8>(gabi::ea(k0) + 2));
-            gabi::store<u8>(e + 0x248, gabi::load<u8>(gabi::ea(k0) + 0));
-            gabi::store<u8>(e + 0x249, gabi::load<u8>(gabi::ea(k0) + 1));
-            gabi::store<u8>(e + 0x24A, gabi::load<u8>(gabi::ea(k0) + 2));
-        }
-
-        if (sp30->mResultingAttackType == 1) {
-            i_this->unk_342 = i_this->unk_336;
-            i_this->unk_344 = i_this->unk_338;
-        } else {
-            i_this->unk_342 = sp30->m0C.y;
-            i_this->unk_344 = 0;
-        }
-
-        if (i_this->unk_2DD != 3) {
-            i_this->unk_2DD = 3;
-            f32 r = cM_rndF((f32)(l_bbHIO().unk_18 - l_bbHIO().unk_16));
-            i_this->unk_35D = 0;
-            i_this->unk_318[1] = (s16)gabi::ftoi(r + (f32)l_bbHIO().unk_16);
-        }
-
-        if (sp30->mbDead) {
-            i_this->unk_348 = l_bbHIO().unk_58;
-            if (cM_rndF(1.0f) < 0.5f) {
-                i_this->unk_350 = (s16)gabi::ftoi(cM_rndF(3000.0f) + 5000.0f);
-            } else {
-                i_this->unk_350 = (s16)gabi::ftoi(-(cM_rndF(3000.0f) + 5000.0f));
-            }
-        } else {
-            i_this->unk_348 = l_bbHIO().unk_5C;
-            i_this->unk_350 = 0;
-        }
-
-        i_this->unk_C7C = 1;
-        anm_init(i_this, dRes_INDEX_BB_BCK_DAMAGEP_e, 0.0f, 0, 1.0f, -1);
-    }
-}
-VERIFY(0x0206432C, damage_check);
+/* WWHD glue
+str 10007CD4 in 0205D078
+str 10007CCC in 0205D078
+str 10007D0C in 0205D964
+str 10007D10 in 0205D964
+str 10007D08 in 0205D964
+str 10007DC8 in 02061964
+str 10007DD0 in 020619D0
+str 10007DD4 in 020619D0
+str 10007DE0 in 020619D0
+str 10007DCC in 020619D0
+str 10007E04 in 02061DEC
+str 10007D20 in 0205DA3C
+ext 02518DB0 void at_power_check(CcAtInfo* info)
+ext 025192A8 fopAc_ac_c* cc_at_check(fopAc_ac_c* actor, CcAtInfo* info)
+ext 0255F458 void dKy_Sound_set(cXyz* position, s32 range, u32 id, s32 type)
+ext 024EFD9C void bbAcchBaseDestroy(dBgS_ObjAcch* acch, s32 flags)
+data head_at_sph_src 101904CC
+data head_tg_sph_src 1019050C
+data body_tg_sph_src 1019054C
+data body_co_sph_src 1019058C
+data fire_j 101905F4
+data fire_sc 101905CC
+ext 024EFE94 void bbAcchCircleConstruct(dBgS_AcchCir* circle)
+ext 02515AE8 void bbSphereDestroy(dCcD_Sph* sphere, s32 flags)
+ext 02018034 void bbCircleDestroy(cM3dGCir_l* circle, s32 flags)
+ext 025D50BC void bbActorDestroy(fopAc_ac_c* actor, s32 flags)
+data l_bbHIO 104615AC
+data esa_check_count 1046158C
+data esa_info 1046162C nocheck # BSS
+data check_index 104617BC nocheck # BSS
+data callback_check_index 101904AC
+data tial_scale 10190470
+data bb_tex_anm_idx 10190494
+data bb_tex_max_frame 101904A0
+*/

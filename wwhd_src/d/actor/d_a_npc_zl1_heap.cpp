@@ -6,318 +6,297 @@
  * (zeldaret/tww src/d/actor/d_a_npc_zl1.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_npc_zl1.h"
+#include "d/actor/d_a_npc_zl1_heap.h"
 
-/* ---- local bindings ---- */
-/* 028F040C strcpy */
-static inline void strcpy_g(u32 dst, u32 src) { gabi::call(0x028F040C, dst, src); }
-/* strcat, inlined by GHS: find the end of dst, copy src with its terminator */
-static inline void strcat_inl(u32 dst, u32 src) {
-    u32 d = dst;
-    while (gabi::load<u8>(d) != 0) d++;
-    u8 c;
+const gc_tu_data gc_tu = {.safeString=ZL1_SAFESTRING_VTBL};
+static const char* a_BTPName_tbl[] = {"hang", "maba_a", "zl_t01", "zl_t02", "zl_t03", "zl_t04", "zl_t05", "zl_t06", "fall", "hang_m1", "hang_m2", "hang_m3", "maba_a", "swoon", "wake", "zl_t07", "zl_t08"};
+static const char* a_BTKName_tbl[] = {"center", "maba_a", "zl_st01", "zl_st02", "hang_m2", "hang_m3", "look", "swoon", "wake", "zl_t07"};
+static const char* a_BCKName_tbl[] = {"wait", "wait02", "talk01", "talk02", "talk03", "fall", "hang", "hang_mov", "wait03", "walk", "land", "run", "look", "swoon", "wake", "wait04", "wait05"};
+static const u32 a_siz_tbl[] = {0x0, 0x0};
+static s32 l_checkWork = 0;
+static fopAc_ac_c* l_checkActors[20] = {};
+static char l_BCKName[32] = {};
+static char l_BTPName[32] = {};
+static char l_BTKName[32] = {};
+static const s8 a_btk_num_tbl[] = {0, 1, 2, 1, 1, 1, 3, 1, 0, 0, 4, 5, 6, 7, 8, 9, 1};
+static SafeString l_eyeMaterials[2] = {};
+
+static SafeString l_headNames[2] = {};
+static SafeString l_eyeNames[6] = {};
+static SafeString l_eyebrowNames[6] = {};
+static u32 l_headerZero[4] = {};
+static u32 l_headGuard = {};
+static u32 l_eyeGuard = {};
+static u32 l_eyebrowGuard = {};
+static daNpc_Zl1_HIO_c l_heapHIO = {};
+static zl1Heap::HeaderStatics l_headerStatics = {};
+static zl1Heap::DestructorRecord l_headDestructor = {};
+static zl1Heap::DestructorRecord l_eyeDestructor = {};
+static zl1Heap::DestructorRecord l_eyebrowDestructor = {};
+static zl1Heap::DestructorRecord l_headerDestructors[3] = {};
+static const daNpc_Zl1_HIO_c::hio_prm_c a_prm_tbl = {6370, 9000, -6370, -9000, 3000, 1000, -1820, -1000, 4096, 2048, 140.0f, 0, 0, 0, 0, 200.0f, 200.0f, 40, 20, 0, 60, 130.0f, 0.03999999910593033f, 10.0f, 0.0f, 1.0f, 1.0f, 200.0f, 0.25f, 25.0f, 10.0f, 384, 5000};
+
+/* inlined into bckResID, btpResID and btkResID */
+static void appendExtension(be<char>* destination, const char* source) {
+    auto* end = reinterpret_cast<be<u8>*>(destination);
+    auto* text = zl1Heap::bytes(gabi::guest_str(source));
+    while (*end != 0) ++end;
+    u8 value;
     do {
-        c = gabi::load<u8>(src++);
-        gabi::store<u8>(d++, c);
-    } while (c != 0);
+        value = *text++;
+        *end++ = value;
+    } while (value != 0);
 }
-static inline u32 selfrel(u32 base) { u32 off = gabi::load<u32>(base); return off != 0 ? base + off : 0; }
-/* a sead::SafeString's virtual assureTermination (vtable slot +0x14) */
-static inline void SafeString_assure(SafeString* s) { gabi::call_ptr(gabi::load<u32>(s->__vtbl + 0x14), s); }
 
-/* 0230242C daNpc_Zl1_matAnm_c::daNpc_Zl1_matAnm_c (HD: allocates when this == NULL; the
- * J3DMaterialAnm base constructor is inlined: only the vtable is written) */
+/* a bounded strcmp of two SafeStrings (sead::SafeString::isEqual, HD inline) */
+/* inlined into daNpc_Zl1_c::setBtp */
+static bool SafeString_isEqual(const be<u8>* a, const be<u8>* b) {
+    if (a == b) return true;
+    for (u32 remaining = 0x40001; remaining != 0; --remaining) {
+        u8 c0 = *a;
+        u8 c1 = *b;
+        if (c0 != c1) return false;
+        if (c0 == 0) return true;
+        ++a;
+        ++b;
+    }
+    return false;
+}
+
+static void SafeString_dt(SafeString* i_this, s32 flags);
+
+/* inlined into bodyCreateHeap */
+static void initMaterialNames(be<u32>* guard, SafeString* names, const char* const* source,
+                              int count, zl1Heap::DestructorRecord* destructor) {
+    if (*guard == 0) {
+        *guard = 1;
+        for (int i = 0; i < count; ++i) {
+            names[i].__vtbl = ZL1_SAFESTRING_VTBL;
+            names[i].mStringTop = gabi::guest_str(source[i]);
+        }
+        __register_global_object(gabi::ea(destructor));
+    }
+}
+/* inlined into bodyCreateHeap */
+static s32 materialIndexOf(J3DModelData* data, SafeString* name) {
+    auto* header = zl1Heap::resourceHeader(zl1Heap_materialNameHeader(gabi::ea(data)));
+    zl1Heap::assure(name);
+    return zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+}
+/* inlined into bodyCreateHeap */
+static zl1Heap::Material* materialByName(J3DModelData* data, SafeString* name) {
+    auto* header = zl1Heap::modelData(data)->mpResource.get();
+    zl1Heap::assure(name);
+    s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+    return zl1Heap::materialByIndex(data, index);
+}
+
+static daNpc_Zl1_c* daNpc_Zl1_c_ct(daNpc_Zl1_c* i_this);
+
+// HD: null-this allocation and vtable-first HIO layout.
+/* 0230A0EC */
+static daNpc_Zl1_HIO_c* daNpc_Zl1_HIO_c_ct(daNpc_Zl1_HIO_c* i_this) {
+    if (i_this == nullptr) {
+        i_this = (daNpc_Zl1_HIO_c*)operator_new(0x64);
+        if (i_this == nullptr)
+            return i_this;
+    }
+    i_this->__vtbl = zl1Heap::hioVtable;
+    memcpy_g(&i_this->mPrmTbl, &a_prm_tbl, sizeof(a_prm_tbl));
+    i_this->mNo = -1;
+    i_this->field_0x8 = -1;
+    return i_this;
+}
+
+// HD: null-this allocation and the inlined base vtable store.
+/* 0230242C */
 static daNpc_Zl1_matAnm_c* daNpc_Zl1_matAnm_c_ct(daNpc_Zl1_matAnm_c* i_this) {
-    WWHD_FUNC(0x0230242C, daNpc_Zl1_matAnm_c*, i_this);
     if (i_this == nullptr) {
         i_this = (daNpc_Zl1_matAnm_c*)operator_new(0x80);
         if (i_this == nullptr)
             return i_this;
     }
     i_this->field_0x7C = 0;
-    i_this->mOffsetX = 0.0f;
-    i_this->__vtbl = 0x10024298;
-    i_this->mOffsetY = 0.0f;
+    i_this->mOffset.x = 0.0f;
+    i_this->__vtbl = zl1Heap::materialAnmVtable;
+    i_this->mOffset.y = 0.0f;
     return i_this;
 }
-VERIFY(0x0230242C, daNpc_Zl1_matAnm_c_ct);
 
-/* 02302484 btpResID (not named by the matcher) */
-u32 daNpc_Zl1_c::btpResID(int param_1) {
-    WWHD_FUNC(0x02302484, u32, this, param_1);
-    /* a_BTPName_tbl (.data 0x101C70F0), l_BTPName (0x10468BE0) */
-    strcpy_g(0x10468BE0, gabi::load<u32>(0x101C70F0 + param_1 * 4));
-    strcat_inl(0x10468BE0, 0x10023C78 /* ".btp" */);
-    return 0x10468BE0;
+// HD: resolve the texture matrix by name rather than scanning eight matrix slots.
+/* 023086FC */
+static void daNpc_Zl1_matAnm_c_calc(daNpc_Zl1_matAnm_c* i_this, void* i_material) {
+    auto* material = reinterpret_cast<zl1Heap::Material*>(i_material);
+    auto* resource = material->mpResource.get();
+    s32 index = zl1Heap_nameIndex(gabi::ea(resource->mTexMatrixNames.get()), "texmtx1");
+    resource = material->mpResource.get();
+    auto* entry = zl1Heap::texMatrix(resource, index);
+    if (entry->mAnimationIndex >= 0) {
+        material->mFlags = material->mFlags | 4;
+        be<u32>* bits = &material->mpDirtyBits.get()[index >> 5];
+        *bits = *bits | (1u << (index & 31));
+        resource = material->mpResource.get();
+    }
+    u32 relatedIndex = entry->mRelatedMatrix;
+    auto* related = zl1Heap::texMatrix(resource, relatedIndex);
+    if (related->mAnimationIndex >= 0) {
+        material->mFlags = material->mFlags | 4;
+        be<u32>* bits = &material->mpDirtyBits.get()[(s32)relatedIndex >> 5];
+        *bits = *bits | (1u << (relatedIndex & 31));
+    }
+    auto* srt = reinterpret_cast<zl1Heap::TextureSRT*>(material->mpTextureSRT.get() + (u16)entry->mSRTOffset);
+    if (i_this->field_0x7C != 0) {
+        srt->mTranslationX = i_this->mOffset.x;
+        srt->mTranslationY = i_this->mOffset.y;
+    }
 }
-VERIFY(0x02302484, &daNpc_Zl1_c::btpResID);
 
-/* 02302834 btkResID (not named by the matcher) */
-u32 daNpc_Zl1_c::btkResID(int param_1) {
-    WWHD_FUNC(0x02302834, u32, this, param_1);
-    /* a_BTKName_tbl (.data 0x101C7134), l_BTKName (0x10468C00) */
-    strcpy_g(0x10468C00, gabi::load<u32>(0x101C7134 + param_1 * 4));
-    strcat_inl(0x10468C00, 0x10023D10 /* ".btk" */);
-    return 0x10468C00;
+/* 023035BC */
+static void* searchActor_Branch(void* i_actorP, void*) {
+    if (l_checkWork < zl1Heap::SearchMax && fopAc_IsActor(i_actorP) && i_actorP != nullptr && fpcM_GetName(i_actorP) == zl1Heap::Branch) {
+        s32 n = l_checkWork;
+        l_checkWork = n + 1;
+        l_checkActors[n] = (fopAc_ac_c*)i_actorP;
+    }
+    return nullptr;
 }
-VERIFY(0x02302834, &daNpc_Zl1_c::btkResID);
 
-/* 0230600C bckResID (not named by the matcher) */
+/* 0230363C */
+static void* searchActor_Bm1(void* i_actorP, void*) {
+    if (l_checkWork < zl1Heap::SearchMax && fopAc_IsActor(i_actorP) && i_actorP != nullptr && fpcM_GetName(i_actorP) == zl1Heap::Bm1) {
+        s32 n = l_checkWork;
+        l_checkWork = n + 1;
+        l_checkActors[n] = (fopAc_ac_c*)i_actorP;
+    }
+    return nullptr;
+}
+
+/* 0230600C */
 u32 daNpc_Zl1_c::bckResID(int param_1) {
-    WWHD_FUNC(0x0230600C, u32, this, param_1);
-    /* a_BCKName_tbl (.data 0x101C7188), l_BCKName (0x10468BC0) */
-    strcpy_g(0x10468BC0, gabi::load<u32>(0x101C7188 + param_1 * 4));
-    strcat_inl(0x10468BC0, 0x1002405C /* ".bck" */);
-    return 0x10468BC0;
+    zl1Heap_strcpy(l_BCKName, a_BCKName_tbl[param_1]);
+    appendExtension(l_BCKName, ".bck");
+    return gabi::ea(l_BCKName);
 }
-VERIFY(0x0230600C, &daNpc_Zl1_c::bckResID);
 
-/* 023028A4 setMat (not named by the matcher). HD: the eye materials are found by name (static
- * SafeStrings "eyeL"/"eyeR" at 0x10468BA4) instead of the btk's update material ids. */
-void daNpc_Zl1_c::setMat() {
-    WWHD_FUNC(0x023028A4, void, this);
-    u32 btk = gabi::load<u32>(gabi::ea(mBtkAnm) + 0x68); /* mBtkAnm.getBtkAnm() */
-    u16 material_num = gabi::load<u16>(gabi::load<u32>(btk + 0xC) + 0x14);
+/* 02302484 */
+u32 daNpc_Zl1_c::btpResID(int param_1) {
+    zl1Heap_strcpy(l_BTPName, a_BTPName_tbl[param_1]);
+    appendExtension(l_BTPName, ".btp");
+    return gabi::ea(l_BTPName);
+}
+
+/* 02302834 */
+u32 daNpc_Zl1_c::btkResID(int param_1) {
+    zl1Heap_strcpy(l_BTKName, a_BTKName_tbl[param_1]);
+    appendExtension(l_BTKName, ".btk");
+    return gabi::ea(l_BTKName);
+}
+
+// HD: preserve the full animation-number and modify-flag registers.
+/* 023024F4 */
+u32 daNpc_Zl1_c::setBtp(s32 param_1, u32 param_2) {
     J3DModel* model = mpMorf->getModel();
-    for (u16 i = 0; i < material_num; i++) {
-        SafeString* name_obj = gabi::at<SafeString>(0x10468BA4 + i * 8);
-        J3DModelData* md = J3DModel_getModelData_l(model);
-        u32 hdr = gabi::load<u32>(gabi::ea(md));
-        SafeString_assure(name_obj);
-        s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(hdr + 0x18), gabi::at<const char>(name_obj->mStringTop)); /* JUTNameTab::getIndex */
-        u32 mat;
-        if (idx < 0) {
-            mat = 0;
-        } else {
-            mat = gabi::load<u32>(gabi::ea(md) + 0x10);
-            if ((u32)idx < gabi::load<u32>(gabi::ea(md) + 0xC))
-                mat += idx * 0x39C;
-        }
-        field_0x6D4[i] = gabi::at<daNpc_Zl1_matAnm_c>(gabi::load<u32>(mat + 0x24)); /* getMaterialAnm() */
-    }
-}
-VERIFY(0x023028A4, &daNpc_Zl1_c::setMat);
-
-/* 02302984 setBtk (not named by the matcher). The number is passed on as the full register
- * (int; GameCube s8). */
-static u32 setBtk_l(daNpc_Zl1_c* i_this, s32 param_1, u32 param_2) {
-    WWHD_FUNC(0x02302984, u32, i_this, param_1, param_2);
-    J3DModel* model = i_this->mpMorf->getModel();
     if (param_1 < 0) {
         return false;
     }
-    void* a_btk = dComIfG_getObjectRes_name(i_this->mArcName, gabi::at<const char>(gabi::call<u32>(0x02302834, i_this, param_1) /* btkResID */));
-    /* HD: no JUT_ASSERT */
-    i_this->field_0x848 = (s8)param_1;
-    i_this->mBtkAnmFrame = 0;
-    if (mDoExt_btkAnm_init(i_this->mBtkAnm, J3DModel_getModelData_l(model), a_btk, 1, 0, 1.0f, 0, -1, param_2, 0) != 0) {
-        if (!param_2) {
-            i_this->setMat();
-        }
-        return true;
-    }
-    return false;
-}
-VERIFY(0x02302984, setBtk_l);
-
-/* a bounded strcmp of two SafeStrings (sead::SafeString::isEqual, HD inline) */
-static inline bool SafeString_isEqual(u32 a, u32 b) {
-    if (a == b)
-        return true;
-    for (u32 n = 0x40001; n != 0; n--) {
-        u8 c0 = gabi::load<u8>(a);
-        u8 c1 = gabi::load<u8>(b);
-        if (c0 != c1)
-            return false;
-        if (c0 == 0)
-            return true;
-        a++;
-        b++;
-    }
-    return false;
-}
-
-/* 023024F4 setBtp (not named by the matcher). HD: the pattern animation is set up twice (mBtpAnm
- * and the HD mBtpAnm2), and mBtpAnm2's material table is relinked: every material of the btp
- * except "zelda_mouth" is linked to its model material. The number is passed on as the full
- * register. */
-static u32 setBtp_l(daNpc_Zl1_c* i_this, s32 param_1, u32 param_2) {
-    WWHD_FUNC(0x023024F4, u32, i_this, param_1, param_2);
-    J3DModel* model = i_this->mpMorf->getModel();
-    if (param_1 < 0) {
-        return false;
-    }
-    void* a_btp = dComIfG_getObjectRes_name(i_this->mArcName, gabi::at<const char>(gabi::call<u32>(0x02302484, i_this, param_1) /* btpResID */));
-    /* HD: no JUT_ASSERT */
-    i_this->field_0x847 = (s8)param_1;
-    i_this->mBtpAnmFrame = 0;
-    i_this->mTimer = 0;
-    s32 ret = mDoExt_btpAnm_init(i_this->mBtpAnm, J3DModel_getModelData_l(model), a_btp, 1, 0, 1.0f, 0, -1, param_2, 0);
-    mDoExt_btpAnm_init(i_this->mBtpAnm2, J3DModel_getModelData_l(model), a_btp, 1, 0, 1.0f, 0, -1, param_2, 0);
-    u32 anm = gabi::load<u32>(gabi::ea(i_this->mBtpAnm2) + 0x60); /* mBtpAnm2.getBtpAnm() */
-    J3DModelData* md = J3DModel_getModelData_l(i_this->mpMorf->getModel());
-    u16 n = gabi::load<u16>(anm + 0x16); /* update material count */
-    u32 tblp = gabi::ea(i_this->mBtpAnm2) + 0x54; /* material links (u32[]) */
-    for (u32 i = 0; i < n; i++) {
-        u32 entry = selfrel(anm + 0x2C) + i * 0x1C;
+    void* a_btp = zl1Heap::objectResource(mArcName, zl1Heap::text(zl1Heap_btpResID(this, param_1) /* btpResID */));
+    // HD: the GameCube resource assertion is absent.
+    field_0x847 = (s8)param_1;
+    mBtpAnmFrame = 0;
+    mTimer = 0;
+    s32 ret = zl1Heap_btpInit(mBtpAnm, model->getModelData(), a_btp, 1, 0, 1.0f, 0, -1, param_2, 0);
+    zl1Heap_btpInit(mBtpAnm2, model->getModelData(), a_btp, 1, 0, 1.0f, 0, -1, param_2, 0);
+    auto* pattern = zl1Heap::btp(mBtpAnm2)->mpAnimation.get();
+    J3DModelData* data = mpMorf->getModel()->getModelData();
+    u16 materialNum = pattern->mUpdateMaterialCount;
+    auto* links = &zl1Heap::btp(mBtpAnm2)->mpMaterialLinks;
+    // HD: link both pattern-animation instances to the named model materials.
+    for (u32 i = 0; i < materialNum; ++i) {
+        zl1Heap::BtpEntry* entry = &pattern->mMaterials.get()[i];
         gabi::Local<SafeString> name;
-        name->mStringTop = selfrel(entry + 0xC);
+        name->mStringTop = gabi::ea(entry->mName.get());
         name->__vtbl = ZL1_SAFESTRING_VTBL;
-        u32 h = gabi::call<u32>(0x027F3F8C, md); /* the material name table header */
-        SafeString_assure(name);
-        s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(h + 0x18), gabi::at<const char>(name->mStringTop));
+        auto* header = zl1Heap::resourceHeader(zl1Heap_patternNameHeader(data));
+        zl1Heap::assure(name);
+        s32 index = zl1Heap_nameIndex(gabi::ea(header->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
         gabi::Local<SafeString> mouth;
-        mouth->mStringTop = 0x10023D04; /* "zelda_mouth" */
+        mouth->mStringTop = gabi::guest_str("zelda_mouth");
         mouth->__vtbl = ZL1_SAFESTRING_VTBL;
-        SafeString_assure(name);
-        SafeString_assure(name);
-        u32 a = name->mStringTop;
-        SafeString_assure(mouth);
-        bool eq = SafeString_isEqual(a, mouth->mStringTop);
-        if (!eq) {
-            u32 t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + i * 4, gabi::load<u32>(t + i * 4) & 0x3FFF8000);
-            u32 nx = idx + 1;
-            t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + i * 4, gabi::load<u32>(t + i * 4) | (nx & 0x7FFF));
-            t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + nx * 4, gabi::load<u32>(t + nx * 4) & 0xC0007FFF);
-            t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + nx * 4, gabi::load<u32>(t + nx * 4) | ((i << 15) & 0x3FFF8000));
+        zl1Heap::assure(name);
+        zl1Heap::assure(name);
+        u32 text = name->mStringTop;
+        zl1Heap::assure(mouth);
+        bool isMouth = SafeString_isEqual(zl1Heap::bytes(text), zl1Heap::bytes(mouth->mStringTop));
+        // GHS reloads the link pointer between every masked update.
+        if (!isMouth) {
+            be<u32>* table = links->get();
+            table[i] = table[i] & 0x3FFF8000;
+            u32 next = index + 1;
+            table = links->get();
+            table[i] = table[i] | (next & 0x7FFF);
+            table = links->get();
+            table[next] = table[next] & 0xC0007FFF;
+            table = links->get();
+            table[next] = table[next] | ((i << 15) & 0x3FFF8000);
         } else {
-            u32 t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + i * 4, gabi::load<u32>(t + i * 4) | 0xC0007FFF);
-            t = gabi::load<u32>(tblp);
-            gabi::store<u32>(t + idx * 4, gabi::load<u32>(t + idx * 4) | 0x3FFF8000);
+            be<u32>* table = links->get();
+            table[i] = table[i] | 0xC0007FFF;
+            table = links->get();
+            table[index] = table[index] | 0x3FFF8000;
         }
     }
     return ret != 0;
 }
-VERIFY(0x023024F4, setBtp_l);
+
+/* 023028A4 */
+void daNpc_Zl1_c::setMat() {
+    auto* animation = zl1Heap::btk(mBtkAnm)->mpAnimation.get();
+    u16 materialNum = animation->mpMaterials->mCount;
+    J3DModel* model = mpMorf->getModel();
+    // HD: match eye materials by name rather than using the animation's material IDs.
+    for (u16 i = 0; i < materialNum; ++i) {
+        SafeString* name = &l_eyeMaterials[i];
+        J3DModelData* data = model->getModelData();
+        auto* resource = zl1Heap::modelData(data)->mpResource.get();
+        zl1Heap::assure(name);
+        s32 index = zl1Heap_nameIndex(gabi::ea(resource->mMaterialNames.get()), zl1Heap::text(name->mStringTop));
+        zl1Heap::Material* material = zl1Heap::materialByIndex(data, index);
+        field_0x6D4[i] = material->mpMaterialAnm.get();
+    }
+}
+
+// HD: preserve the full animation-number and modify-flag registers.
+/* 02302984 */
+u32 daNpc_Zl1_c::setBtk(s32 param_1, u32 param_2) {
+    J3DModel* model = mpMorf->getModel();
+    if (param_1 < 0) {
+        return false;
+    }
+    void* a_btk = zl1Heap::objectResource(mArcName, zl1Heap::text(zl1Heap_btkResID(this, param_1) /* btkResID */));
+    // HD: the GameCube resource assertion is absent.
+    field_0x848 = (s8)param_1;
+    mBtkAnmFrame = 0;
+    if (zl1Heap_btkInit(mBtkAnm, model->getModelData(), a_btk, 1, 0, 1.0f, 0, -1, param_2, 0) != 0) {
+        if (!param_2) {
+            setMat();
+        }
+        return true;
+    }
+    return false;
+}
 
 /* 02302A90 */
 u32 daNpc_Zl1_c::init_texPttrnAnm(s8 param_1, u32 param_2) {
-    WWHD_FUNC(0x02302A90, u32, this, param_1, param_2);
     u32 ret = false;
-    if (setBtp_l(this, param_1, param_2) != 0) {
-        /* a_btk_num_tbl (.rodata 0x10023D68) */
-        ret = setBtk_l(this, gabi::load<s8>(0x10023D68 + param_1), param_2);
+    if (setBtp(param_1, param_2) != 0) {
+        ret = setBtk(a_btk_num_tbl[param_1], param_2);
     }
     return ret;
 }
-VERIFY(0x02302A90, &daNpc_Zl1_c::init_texPttrnAnm);
-
-/* 02303400 */
-BOOL daNpc_Zl1_c::itemCreateHeap() {
-    WWHD_FUNC(0x02303400, BOOL, this);
-    if (field_0x84F != 1) {
-        mpModel = nullptr;
-        return TRUE;
-    }
-    J3DModelData* a_mdl_dat = (J3DModelData*)dComIfG_getObjectRes_name(mArcName, STR(0x10023EAC) /* "cloth.bdl" */);
-    if (a_mdl_dat == nullptr) /* JUT_ASSERT(0x10E6, a_mdl_dat != NULL) */
-        JUT_ASSERT_fail(STR(0x10023E9C), 0x10E6, STR(0x10023EB8));
-    mpModel = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
-    return mpModel.get() != nullptr;
-}
-VERIFY(0x02303400, &daNpc_Zl1_c::itemCreateHeap);
-
-/* 023034DC */
-BOOL daNpc_Zl1_c::CreateHeap() {
-    WWHD_FUNC(0x023034DC, BOOL, this);
-    if (bodyCreateHeap() == FALSE) {
-        return FALSE;
-    }
-    if (itemCreateHeap() == FALSE) {
-        mpMorf = nullptr;
-        return FALSE;
-    }
-    mLightInfluence2.mPower = 0.0f;
-    mLightInfluence1.mPower = 0.0f;
-    gabi::call(0x0255A2B8, &mLightInfluence1); /* dKy_plight_priority_set */
-    gabi::call(0x0255B9C8, &mLightInfluence2); /* dKy_efplight_set */
-    mAcchCir.SetWall(30.0f, 50.0f);
-    mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
-    return TRUE;
-}
-VERIFY(0x023034DC, &daNpc_Zl1_c::CreateHeap);
-
-/* 023035BC searchActor_Branch (not named by the matcher) */
-static void* searchActor_Branch(void* i_actorP, void*) {
-    WWHD_FUNC(0x023035BC, void*, i_actorP, (void*)nullptr);
-    if (l_check_wrk() < 20 && fopAc_IsActor(i_actorP) && i_actorP != nullptr && fpcM_GetName(i_actorP) == 0x1A9 /* fpcNm_BRANCH_e */) {
-        s32 n = l_check_wrk();
-        l_check_wrk() = n + 1;
-        l_check_inf()[n] = (fopAc_ac_c*)i_actorP;
-    }
-    return nullptr;
-}
-VERIFY(0x023035BC, searchActor_Branch);
-
-/* 0230363C searchActor_Bm1 (not named by the matcher) */
-static void* searchActor_Bm1(void* i_actorP, void*) {
-    WWHD_FUNC(0x0230363C, void*, i_actorP, (void*)nullptr);
-    if (l_check_wrk() < 20 && fopAc_IsActor(i_actorP) && i_actorP != nullptr && fpcM_GetName(i_actorP) == 0x146 /* fpcNm_NPC_BM1_e */) {
-        s32 n = l_check_wrk();
-        l_check_wrk() = n + 1;
-        l_check_inf()[n] = (fopAc_ac_c*)i_actorP;
-    }
-    return nullptr;
-}
-VERIFY(0x0230363C, searchActor_Bm1);
-
-/* 023036BC / 023036E0 / 02303704: destruction of the function-local static SafeString arrays
- * (registered at exit): __destroy_arr(arr, n, 8, SafeString_dt) */
-static void destroy_arr_10468B24() {
-    WWHD_FUNC(0x023036BC, void, (u32)0);
-    gabi::call(0x028F0164, 0x10468B24, 2, 8, 0x0230A228, 0, 0);
-}
-VERIFY(0x023036BC, destroy_arr_10468B24);
-static void destroy_arr_10468B34() {
-    WWHD_FUNC(0x023036E0, void, (u32)0);
-    gabi::call(0x028F0164, 0x10468B34, 6, 8, 0x0230A228, 0, 0);
-}
-VERIFY(0x023036E0, destroy_arr_10468B34);
-static void destroy_arr_10468B64() {
-    WWHD_FUNC(0x02303704, void, (u32)0);
-    gabi::call(0x028F0164, 0x10468B64, 6, 8, 0x0230A228, 0, 0);
-}
-VERIFY(0x02303704, destroy_arr_10468B64);
-
-/* 02303728 daNpc_Zl1_c::daNpc_Zl1_c (out of line in HD; allocates when this == NULL) */
-static daNpc_Zl1_c* daNpc_Zl1_c_ct(daNpc_Zl1_c* i_this) {
-    WWHD_FUNC(0x02303728, daNpc_Zl1_c*, i_this);
-    if (i_this == nullptr) {
-        i_this = (daNpc_Zl1_c*)operator_new(0xD74);
-        if (i_this == nullptr)
-            return i_this;
-    }
-    gabi::call(0x025A1458, i_this);                    /* fopNpc_npc_c::fopNpc_npc_c */
-    i_this->__vtbl = ZL1_VTBL;
-    gabi::call(0x025E7C6C, i_this->mBtkAnm);           /* mDoExt_btkAnm::mDoExt_btkAnm */
-    gabi::call(0x025E7820, i_this->mBtpAnm);           /* mDoExt_btpAnm::mDoExt_btpAnm */
-    gabi::call(0x025E7820, i_this->mBtpAnm2);
-    gabi::call(0x025A9084, i_this->mRippleCallBack);   /* dPa_rippleEcallBack::dPa_rippleEcallBack */
-    i_this->mLightInfluence2.mHD20 = 1.0f;
-    i_this->mLightInfluence1.mHD20 = 1.0f;
-    /* mDoExt_offCupOnAupPacket / mDoExt_onCupOffAupPacket: J3DPacket base constructor, then the
-     * derived vtable at +0xC */
-    gabi::call(0x027F1278, i_this->mOffCupOnAupPacket1);
-    gabi::store<u32>(gabi::ea(i_this->mOffCupOnAupPacket1) + 0xC, 0x10058D10);
-    gabi::call(0x027F1278, i_this->mOffCupOnAupPacket2);
-    gabi::store<u32>(gabi::ea(i_this->mOffCupOnAupPacket2) + 0xC, 0x10058D10);
-    gabi::call(0x027F1278, i_this->mOnCupOffAupPacket1);
-    gabi::store<u32>(gabi::ea(i_this->mOnCupOffAupPacket1) + 0xC, 0x10058D40);
-    gabi::call(0x027F1278, i_this->mOnCupOffAupPacket2);
-    gabi::store<u32>(gabi::ea(i_this->mOnCupOffAupPacket2) + 0xC, 0x10058D40);
-    return i_this;
-}
-VERIFY(0x02303728, daNpc_Zl1_c_ct);
 
 /* 023052B4 */
 cPhs_State daNpc_Zl1_c::_create() {
-    WWHD_FUNC(0x023052B4, cPhs_State, this);
-    /* fopAcM_ct(this, daNpc_Zl1_c) (HD: the constructor is out of line) */
+    // HD: the actor constructor is out of line.
     if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
         if (this != nullptr) {
             daNpc_Zl1_c_ct(this);
@@ -332,8 +311,7 @@ cPhs_State daNpc_Zl1_c::_create() {
     if (!mStateIsComplaete) {
         return state;
     }
-    /* a_siz_tbl (.data 0x101C7180) */
-    if (!fopAcM_entrySolidHeap(this, 0x023035B8 /* CheckCreateHeap */, gabi::load<u32>(0x101C7180 + field_0x84E * 4))) {
+    if (!fopAcM_entrySolidHeap(this, zl1Heap::CheckCreateHeap, a_siz_tbl[field_0x84E])) {
         return cPhs_ERROR_e;
     }
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpMorf->getModel())); /* fopAcM_SetMtx */
@@ -343,227 +321,271 @@ cPhs_State daNpc_Zl1_c::_create() {
     }
     return state;
 }
-VERIFY(0x023052B4, &daNpc_Zl1_c::_create);
-
-/* 023086FC daNpc_Zl1_matAnm_c::calc(J3DMaterial*) (not named by the matcher; HD: the texture
- * matrix is found through the material's resource tables by name; the GameCube loops over 8) */
-static void daNpc_Zl1_matAnm_c_calc(daNpc_Zl1_matAnm_c* i_this, void* i_material) {
-    WWHD_FUNC(0x023086FC, void, i_this, i_material);
-    u32 mat = gabi::ea(i_material);
-    u32 hdr = gabi::load<u32>(mat);
-    s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(hdr + 0x38), STR(0x10024254));
-    hdr = gabi::load<u32>(mat);
-    u32 entry = selfrel(hdr + 0x34) + idx * 0x14;
-    if (gabi::load<s32>(entry + 4) >= 0) {
-        gabi::store<u16>(mat + 4, gabi::load<u16>(mat + 4) | 4);
-        u32 bits = gabi::load<u32>(mat + 0xC) + ((idx >> 5) << 2);
-        gabi::store<u32>(bits, gabi::load<u32>(bits) | (1u << (idx & 31)));
-        hdr = gabi::load<u32>(mat);
-    }
-    u32 idx2 = gabi::load<u16>(entry + 0xC);
-    u32 entry2 = selfrel(hdr + 0x34) + idx2 * 0x14;
-    if (gabi::load<s32>(entry2 + 4) >= 0) {
-        gabi::store<u16>(mat + 4, gabi::load<u16>(mat + 4) | 4);
-        u32 bits = gabi::load<u32>(mat + 0xC) + (((s32)idx2 >> 5) << 2);
-        gabi::store<u32>(bits, gabi::load<u32>(bits) | (1u << (idx2 & 31)));
-    }
-    u32 srt = gabi::load<u32>(mat + 0x28) + gabi::load<u16>(entry + 2);
-    if (i_this->field_0x7C != 0) {
-        gabi::store<f32>(srt + 0x10, i_this->mOffsetX);
-        gabi::store<f32>(srt + 0x14, i_this->mOffsetY);
-    }
-}
-VERIFY(0x023086FC, daNpc_Zl1_matAnm_c_calc);
-
-/* 0230A0EC daNpc_Zl1_HIO_c::daNpc_Zl1_HIO_c (HD: allocates when this == NULL) */
-static daNpc_Zl1_HIO_c* daNpc_Zl1_HIO_c_ct(daNpc_Zl1_HIO_c* i_this) {
-    WWHD_FUNC(0x0230A0EC, daNpc_Zl1_HIO_c*, i_this);
-    if (i_this == nullptr) {
-        i_this = (daNpc_Zl1_HIO_c*)operator_new(0x64);
-        if (i_this == nullptr)
-            return i_this;
-    }
-    i_this->__vtbl = 0x10023C18;
-    memcpy_g(&i_this->mPrmTbl, gabi::at<u8>(0x101C7574), 0x58); /* a_prm_tbl */
-    i_this->mNo = -1;
-    i_this->field_0x8 = -1;
-    return i_this;
-}
-VERIFY(0x0230A0EC, daNpc_Zl1_HIO_c_ct);
-
-/* 0230A158: static initialisation of the translation unit */
-static void __sinit_d_a_npc_zl1_cpp() {
-    WWHD_FUNC(0x0230A158, void, (u32)0);
-    /* header statics (the zeroed object at 0x10468B94) */
-    const u32 P = 0x10468B18, D = 0x101C75CC;
-    for (int i = 0; i < 4; i++) gabi::store<u32>(0x10468B94 + 4 * i, 0);
-    __register_global_object(D);
-    gabi::store<f32>(P + 4, 3.1415927f);
-    gabi::store<f32>(P, -3.1415927f);
-    gabi::call(0x028ED6F8, P + 8);
-    __register_global_object(D + 0xC);
-    gabi::call(0x028EAB2C, P + 9);
-    __register_global_object(D + 0x18);
-    /* HD: two static sead::SafeStrings naming the eye materials (setMat) */
-    gabi::store<u32>(0x10468BA8, ZL1_SAFESTRING_VTBL);
-    gabi::store<u32>(0x10468BA4, 0x10024288); /* "eyeL" */
-    gabi::store<u32>(0x10468BB0, ZL1_SAFESTRING_VTBL);
-    gabi::store<u32>(0x10468BAC, 0x10024290); /* "eyeR" */
-    daNpc_Zl1_HIO_c_ct(&l_HIO()); /* static daNpc_Zl1_HIO_c l_HIO */
-}
-VERIFY(0x0230A158, __sinit_d_a_npc_zl1_cpp);
-
-/* 0230A228: sead::SafeString deleting destructor (this TU's copy) */
-static void SafeString_dt(SafeString* i_this, s32 flags) {
-    WWHD_FUNC(0x0230A228, void, i_this, flags);
-    if (i_this != nullptr && (flags & 1))
-        operator_delete(i_this);
-}
-VERIFY(0x0230A228, SafeString_dt);
-
-/* 0230A23C: daNpc_Zl1_c deleting destructor (compiler-generated, HD virtual destructor) */
-static void daNpc_Zl1_c_dt(daNpc_Zl1_c* i_this, s32 flags) {
-    WWHD_FUNC(0x0230A23C, void, i_this, flags);
-    if (i_this != nullptr) {
-        gabi::call(0x027F13DC, i_this->mOnCupOffAupPacket2, 0); /* J3DPacket::~J3DPacket */
-        gabi::call(0x027F13DC, i_this->mOnCupOffAupPacket1, 0);
-        gabi::call(0x027F13DC, i_this->mOffCupOnAupPacket2, 0);
-        gabi::call(0x027F13DC, i_this->mOffCupOnAupPacket1, 0);
-        dCcD_Cyl_dt(&i_this->mCyl, 2);
-        dCcD_Stts_dt(&i_this->mStts, 2);
-        gabi::call(0x02018034, gabi::ea(&i_this->mAcchCir) + 0x14, 2); /* cM3dGCir::~cM3dGCir (mAcchCir.m_cir) */
-        gabi::store<u32>(gabi::ea(&i_this->mObjAcch) + 0x20, 0x10023BB8);
-        gabi::store<u32>(gabi::ea(&i_this->mObjAcch) + 0x14, 0x10023BC8);
-        gabi::call(0x024EFD9C, &i_this->mObjAcch, 0);
-        gabi::call(0x025D50BC, i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
-        if (flags & 1)
-            operator_delete(i_this);
-    }
-}
-VERIFY(0x0230A23C, daNpc_Zl1_c_dt);
-
-/* 0230A308: sead::SafeString::assureTerminationImpl_ (this TU's copy; empty) */
-static void SafeString_assureTerminationImpl(SafeString*) {
-    WWHD_FUNC(0x0230A308, void, (SafeString*)nullptr);
-}
-VERIFY(0x0230A308, SafeString_assureTerminationImpl);
-
-/* material by name: md->getMaterialNodePointer(getMaterialName()->getIndex(name)) (HD inline;
- * materials are 0x39C bytes; an index past the count gives the first material) */
-static inline u32 materialByIndex(u32 md, s32 idx) {
-    if (idx < 0)
-        return 0;
-    u32 mat = gabi::load<u32>(md + 0x10);
-    if ((u32)idx < gabi::load<u32>(md + 0xC))
-        mat += idx * 0x39C;
-    return mat;
-}
-/* joint by name (HD inline; joints are 0x1C bytes; an index past the count gives the first) */
-static inline u32 jointByName(u32 md, const char* name) {
-    s32 r = gabi::call<s32>(0x027DF9B0, J3DModelData_getJointName(gabi::at<J3DModelData>(md)), name);
-    u32 idx = (u16)r;
-    u32 joint = gabi::load<u32>(md + 8);
-    if (idx < gabi::load<u32>(md + 4))
-        joint += idx * 0x1C;
-    return joint;
-}
-/* function-local static sead::SafeString arrays (initialised on first use, destroyed at exit) */
-static inline void static_names_init(u32 guard, u32 arr, const u32* names, int n, u32 dtor_rec) {
-    if (gabi::load<u32>(guard) == 0) {
-        gabi::store<u32>(guard, 1);
-        for (int i = 0; i < n; i++) {
-            gabi::store<u32>(arr + i * 8 + 4, ZL1_SAFESTRING_VTBL);
-            gabi::store<u32>(arr + i * 8, names[i]);
-        }
-        __register_global_object(dtor_rec);
-    }
-}
-/* the material index of a SafeString name (027F68F4: the material name table header) */
-static inline s32 materialIndexOf(u32 md, SafeString* name) {
-    u32 h = gabi::call<u32>(0x027F68F4, md);
-    SafeString_assure(name);
-    return gabi::call<s32>(0x027DF9B0, selfrel(h + 0x18), gabi::at<const char>(name->mStringTop));
-}
-/* modelData->getJointNodePointer(jnt)->setCallBack(cb) (HD inline) */
-static inline void setJointCallBack(daNpc_Zl1_c* i_this, s8 jnt, u32 cb) {
-    J3DModelData* md = J3DModel_getModelData_l(i_this->mpMorf->getModel());
-    u32 idx = (u16)(s16)jnt;
-    u32 n = gabi::load<u32>(gabi::ea(md) + 4);
-    u32 joint = gabi::load<u32>(gabi::ea(md) + 8);
-    if (idx < n)
-        joint += idx * 0x1C;
-    gabi::store<u32>(joint + 8, cb);
-}
 
 /* 02302B08 */
 BOOL daNpc_Zl1_c::bodyCreateHeap() {
-    WWHD_FUNC(0x02302B08, BOOL, this);
-    J3DModelData* a_mdl_dat = (J3DModelData*)dComIfG_getObjectRes_name(mArcName, STR(0x10023D9C) /* "zl.bdl" */);
+    J3DModelData* a_mdl_dat = (J3DModelData*)zl1Heap::objectResource(mArcName, "zl.bdl" /* "zl.bdl" */);
     if (a_mdl_dat == nullptr) /* JUT_ASSERT(0x104C, a_mdl_dat != NULL) */
-        JUT_ASSERT_fail(STR(0x10023DC4), 0x104C, STR(0x10023E10));
-    u32 md = gabi::ea(a_mdl_dat);
-    /* HD: only the two eye materials ("eyeL"/"eyeR", the static SafeStrings at 0x10468BA4) get a
-     * daNpc_Zl1_matAnm_c (GameCube: every material) */
+        JUT_ASSERT_fail("d_a_npc_zl1.cpp", 0x104C, "a_mdl_dat != (0)");
+    // HD: only the two eye materials get an animation object; GameCube uses every material.
     for (int i = 0; i < 2; i++) {
-        SafeString* name_obj = gabi::at<SafeString>(0x10468BA4 + i * 8);
-        u32 hdr = gabi::load<u32>(md);
-        SafeString_assure(name_obj);
-        s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(hdr + 0x18), gabi::at<const char>(name_obj->mStringTop));
-        u32 mat = materialByIndex(md, idx);
+        SafeString* name_obj = &l_eyeMaterials[i];
+        zl1Heap::Material* material = materialByName(a_mdl_dat, name_obj);
         daNpc_Zl1_matAnm_c* anm = (daNpc_Zl1_matAnm_c*)operator_new(0x80);
         if (anm != nullptr)
             anm = daNpc_Zl1_matAnm_c_ct(anm);
-        gabi::store<u32>(mat + 0x24, gabi::ea(anm)); /* mat->setMaterialAnm() */
+        material->mpMaterialAnm = anm;
     }
     mpMorf = mDoExt_McaMorf::create(nullptr, a_mdl_dat, nullptr, nullptr, nullptr, -1 /* EMode_NULL */, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11020222);
     if (mpMorf.get() == nullptr) {
         return FALSE;
     }
     if (mpMorf->getModel() == nullptr || !init_texPttrnAnm(1, false)) {
-        mpMorf = nullptr; /* HD: the morf is not deleted */
+        // HD: clear the pointer without deleting the morph.
+        mpMorf = nullptr;
         return FALSE;
     }
-    /* HD: the joints are found by name (GameCube: joint numbers 0, 0xB, 0xC) */
-    mJoint1 = gabi::at<J3DJoint>(jointByName(md, STR(0x10023E24) /* "world_root" */));
-    mJoint2 = gabi::at<J3DJoint>(jointByName(md, STR(0x10023DA4) /* "zl_eye" */));
-    mJoint3 = gabi::at<J3DJoint>(jointByName(md, STR(0x10023D7C) /* "zl_mayu" */));
-    /* HD: the indices of two head materials ("zelda_zhead", "zelda_zhead_2_") */
-    static const u32 head_names[2] = {0x10023DD4, 0x10023E30};
-    static_names_init(0x10468CD8, 0x10468B24, head_names, 2, 0x101C715C);
-    mB0C = materialIndexOf(md, gabi::at<SafeString>(0x10468B24));
-    mB10 = materialIndexOf(md, gabi::at<SafeString>(0x10468B2C));
-    /* HD: the eye and eyebrow materials are found by name (GameCube: the meshes of the joints) */
-    static const u32 eye_names[6] = {0x10023E40, 0x10023E4C, 0x10023DAC, 0x10023E58, 0x10023E64, 0x10023DB4};
-    static_names_init(0x10468CDC, 0x10468B34, eye_names, 6, 0x101C7168);
+    // HD: find joints by name rather than fixed joint numbers.
+    mJoint1 = zl1Heap::jointByName(a_mdl_dat, "world_root" /* "world_root" */);
+    mJoint2 = zl1Heap::jointByName(a_mdl_dat, "zl_eye" /* "zl_eye" */);
+    mJoint3 = zl1Heap::jointByName(a_mdl_dat, "zl_mayu" /* "zl_mayu" */);
+    // HD: retain the two head-material indices.
+    static const char* const head_names[] = {"zelda_zhead", "zelda_zhead_2_"};
+    initMaterialNames(&l_headGuard, l_headNames, head_names, 2, &l_headDestructor);
+    mHeadMaterialIndex = materialIndexOf(a_mdl_dat, &l_headNames[0]);
+    mHeadOverlayMaterialIndex = materialIndexOf(a_mdl_dat, &l_headNames[1]);
+    // HD: find eye and eyebrow materials by name rather than walking the joint meshes.
+    static const char* const eye_names[] = {"eyeLdamB", "eyeLdamA", "eyeL", "eyeRdamB", "eyeRdamA", "eyeR"};
+    initMaterialNames(&l_eyeGuard, l_eyeNames, eye_names, 6, &l_eyeDestructor);
     for (int no = 0; no < 6; no++) {
-        SafeString* name_obj = gabi::at<SafeString>(0x10468B34 + no * 8);
-        u32 hdr = gabi::load<u32>(md);
-        SafeString_assure(name_obj);
-        s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(hdr + 0x18), gabi::at<const char>(name_obj->mStringTop));
-        u32 mat = materialByIndex(md, idx);
-        field_0x860[no] = mat;
-        field_0x890[no] = gabi::load<u32>(mat + 8); /* getShape() */
+        SafeString* name = &l_eyeNames[no];
+        zl1Heap::Material* material = materialByName(a_mdl_dat, name);
+        field_0x860[no] = gabi::ea(material);
+        field_0x890[no] = material->mShape;
     }
-    static const u32 mayu_names[6] = {0x10023DE0, 0x10023DEC, 0x10023D84, 0x10023DF8, 0x10023E04, 0x10023D8C};
-    static_names_init(0x10468CE0, 0x10468B64, mayu_names, 6, 0x101C7174);
+    static const char* const mayu_names[] = {"mayuLdamB", "mayuLdamA", "mayuL", "mayuRdamB", "mayuRdamA", "mayuR"};
+    initMaterialNames(&l_eyebrowGuard, l_eyebrowNames, mayu_names, 6, &l_eyebrowDestructor);
     for (int no = 0; no < 6; no++) {
-        SafeString* name_obj = gabi::at<SafeString>(0x10468B64 + no * 8);
-        u32 hdr = gabi::load<u32>(md);
-        SafeString_assure(name_obj);
-        s32 idx = gabi::call<s32>(0x027DF9B0, selfrel(hdr + 0x18), gabi::at<const char>(name_obj->mStringTop));
-        u32 mat = materialByIndex(md, idx);
-        field_0x878[no] = mat;
-        field_0x8A8[no] = gabi::load<u32>(mat + 8);
+        SafeString* name = &l_eyebrowNames[no];
+        zl1Heap::Material* material = materialByName(a_mdl_dat, name);
+        field_0x878[no] = gabi::ea(material);
+        field_0x8A8[no] = material->mShape;
     }
-    m_hed_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), STR(0x10023DBC) /* "head" */);
+    m_hed_jnt_num = zl1Heap_jointNameIndex(zl1Heap::jointNames(a_mdl_dat), "head" /* "head" */);
     if (m_hed_jnt_num < 0)
-        JUT_ASSERT_fail(STR(0x10023DC4), 0x10C6, STR(0x10023E70));
-    m_bbone_jnt_num = JUTNameTab_getIndex(J3DModelData_getJointName(a_mdl_dat), STR(0x10023D94) /* "chest" */);
+        JUT_ASSERT_fail("d_a_npc_zl1.cpp", 0x10C6, "m_hed_jnt_num >= 0");
+    m_bbone_jnt_num = zl1Heap_jointNameIndex(zl1Heap::jointNames(a_mdl_dat), "chest" /* "chest" */);
     if (m_bbone_jnt_num < 0)
-        JUT_ASSERT_fail(STR(0x10023DC4), 0x10C8, STR(0x10023E84));
-    setJointCallBack(this, m_hed_jnt_num, 0x02302278 /* nodeCB_Head */);
-    setJointCallBack(this, m_bbone_jnt_num, 0x023023E4 /* nodeCB_BackBone */);
-    gabi::store<u32>(gabi::ea(mpMorf->getModel()) + 0xB8, gabi::ea(this)); /* setUserArea(this) */
+        JUT_ASSERT_fail("d_a_npc_zl1.cpp", 0x10C8, "m_bbone_jnt_num >= 0");
+    zl1Heap::setJointCallback(this, m_hed_jnt_num, zl1Heap::nodeCB_Head);
+    zl1Heap::setJointCallback(this, m_bbone_jnt_num, zl1Heap::nodeCB_BackBone);
+    mpMorf->getModel()->setUserArea(gabi::ea(this)); /* setUserArea(this) */
     return TRUE;
 }
-VERIFY(0x02302B08, &daNpc_Zl1_c::bodyCreateHeap);
+
+/* 02303400 */
+BOOL daNpc_Zl1_c::itemCreateHeap() {
+    if (field_0x84F != 1) {
+        mpModel = nullptr;
+        return TRUE;
+    }
+    J3DModelData* a_mdl_dat = (J3DModelData*)zl1Heap::objectResource(mArcName, "cloth.bdl" /* "cloth.bdl" */);
+    if (a_mdl_dat == nullptr) /* JUT_ASSERT(0x10E6, a_mdl_dat != NULL) */
+        JUT_ASSERT_fail("d_a_npc_zl1.cpp", 0x10E6, "a_mdl_dat != (0)");
+    mpModel = mDoExt_J3DModel__create(a_mdl_dat, 0x80000, 0x11000022);
+    return mpModel.get() != nullptr;
+}
+
+/* 023034DC */
+BOOL daNpc_Zl1_c::CreateHeap() {
+    if (bodyCreateHeap() == FALSE) {
+        return FALSE;
+    }
+    if (itemCreateHeap() == FALSE) {
+        mpMorf = nullptr;
+        return FALSE;
+    }
+    mLightInfluence2.mPower = 0.0f;
+    mLightInfluence1.mPower = 0.0f;
+    zl1Heap_lightPriority(&mLightInfluence1); /* dKy_plight_priority_set */
+    zl1Heap_effectLight(&mLightInfluence2); /* dKy_efplight_set */
+    mAcchCir.SetWall(30.0f, 50.0f);
+    mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
+    return TRUE;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 023036BC */
+static void destroyHeadNames() {
+    zl1Heap_destroyArray(gabi::ea(l_headNames), 2, sizeof(SafeString), gabi::guest_fn(reinterpret_cast<const void*>(SafeString_dt)), 0, 0);
+}
+
+/* 023036E0 */
+static void destroyEyeNames() {
+    zl1Heap_destroyArray(gabi::ea(l_eyeNames), 6, sizeof(SafeString), gabi::guest_fn(reinterpret_cast<const void*>(SafeString_dt)), 0, 0);
+}
+
+/* 02303704 */
+static void destroyEyebrowNames() {
+    zl1Heap_destroyArray(gabi::ea(l_eyebrowNames), 6, sizeof(SafeString), gabi::guest_fn(reinterpret_cast<const void*>(SafeString_dt)), 0, 0);
+}
+
+/* 02303728 */
+static daNpc_Zl1_c* daNpc_Zl1_c_ct(daNpc_Zl1_c* i_this) {
+    if (i_this == nullptr) {
+        i_this = (daNpc_Zl1_c*)operator_new(0xD74);
+        if (i_this == nullptr)
+            return i_this;
+    }
+    zl1Heap_npcConstructor(i_this);                    /* fopNpc_npc_c::fopNpc_npc_c */
+    i_this->__vtbl = zl1Heap::actorVtable;
+    zl1Heap_btkConstructor(i_this->mBtkAnm);           /* mDoExt_btkAnm::mDoExt_btkAnm */
+    zl1Heap_btpConstructor(i_this->mBtpAnm);           /* mDoExt_btpAnm::mDoExt_btpAnm */
+    zl1Heap_btpConstructor(i_this->mBtpAnm2);
+    zl1Heap_rippleConstructor(i_this->mRippleCallBack);   /* dPa_rippleEcallBack::dPa_rippleEcallBack */
+    i_this->mLightInfluence2.mHD20 = 1.0f;
+    i_this->mLightInfluence1.mHD20 = 1.0f;
+    /* mDoExt_offCupOnAupPacket / mDoExt_onCupOffAupPacket: J3DPacket base constructor, then the
+     * derived vtable at +0xC */
+    zl1Heap_packetConstructor(i_this->mOffCupOnAupPacket1);
+    zl1Heap::packet(i_this->mOffCupOnAupPacket1)->mVtable = zl1Heap::offCupVtable;
+    zl1Heap_packetConstructor(i_this->mOffCupOnAupPacket2);
+    zl1Heap::packet(i_this->mOffCupOnAupPacket2)->mVtable = zl1Heap::offCupVtable;
+    zl1Heap_packetConstructor(i_this->mOnCupOffAupPacket1);
+    zl1Heap::packet(i_this->mOnCupOffAupPacket1)->mVtable = zl1Heap::onCupVtable;
+    zl1Heap_packetConstructor(i_this->mOnCupOffAupPacket2);
+    zl1Heap::packet(i_this->mOnCupOffAupPacket2)->mVtable = zl1Heap::onCupVtable;
+    return i_this;
+}
+
+/* 0230A158 */
+static void __sinit_d_a_npc_zl1_cpp() {
+    for (int i = 0; i < 4; ++i) l_headerZero[i] = 0;
+    __register_global_object(gabi::ea(&l_headerDestructors[0]));
+    // GHS stores the positive pi before the negative pi in this TU.
+    l_headerStatics.mPi = 3.1415927f;
+    l_headerStatics.mNegativePi = -3.1415927f;
+    zl1Heap_headerFirst(&l_headerStatics.mFirst);
+    __register_global_object(gabi::ea(&l_headerDestructors[1]));
+    zl1Heap_headerSecond(&l_headerStatics.mSecond);
+    __register_global_object(gabi::ea(&l_headerDestructors[2]));
+    // HD: static eye-material names replace the GameCube material-number lookup.
+    l_eyeMaterials[0].__vtbl = ZL1_SAFESTRING_VTBL;
+    l_eyeMaterials[0].mStringTop = gabi::guest_str("eyeL");
+    l_eyeMaterials[1].__vtbl = ZL1_SAFESTRING_VTBL;
+    l_eyeMaterials[1].mStringTop = gabi::guest_str("eyeR");
+    daNpc_Zl1_HIO_c_ct(&l_heapHIO);
+}
+
+/* 0230A228 */
+static void SafeString_dt(SafeString* i_this, s32 flags) {
+    if (i_this != nullptr && (flags & 1))
+        operator_delete(i_this);
+}
+
+/* 0230A23C */
+static void daNpc_Zl1_c_dt(daNpc_Zl1_c* i_this, s32 flags) {
+    if (i_this != nullptr) {
+        zl1Heap_packetDestructor(i_this->mOnCupOffAupPacket2, 0); /* J3DPacket::~J3DPacket */
+        zl1Heap_packetDestructor(i_this->mOnCupOffAupPacket1, 0);
+        zl1Heap_packetDestructor(i_this->mOffCupOnAupPacket2, 0);
+        zl1Heap_packetDestructor(i_this->mOffCupOnAupPacket1, 0);
+        dCcD_Cyl_dt(&i_this->mCyl, 2);
+        dCcD_Stts_dt(&i_this->mStts, 2);
+        zl1Heap_circleDestructor(gabi::ea(&i_this->mAcchCir.m_cir), 2); /* cM3dGCir::~cM3dGCir (mAcchCir.m_cir) */
+        zl1Heap::destroyAcch(&i_this->mObjAcch);
+        zl1Heap_actorDestructor(i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
+        if (flags & 1)
+            operator_delete(i_this);
+    }
+}
+
+/* 0230A308 */
+static void SafeString_assureTerminationImpl(SafeString*) {
+}
+
+/* WWHD glue
+data a_BTPName_tbl 101C70F0
+data a_BTKName_tbl 101C7134
+data a_BCKName_tbl 101C7188
+data a_siz_tbl 101C7180
+data l_BCKName 10468BC0 nocheck
+data l_BTPName 10468BE0 nocheck
+data l_BTKName 10468C00 nocheck
+data a_btk_num_tbl 10023D68
+data l_eyeMaterials 10468BA4 nocheck
+str 10023C78 ".btp"
+str 10023D10 ".btk"
+str 1002405C ".bck"
+ext 02302834 u32 zl1Heap_btkResID(daNpc_Zl1_c* actor, s32 number)
+ext 02302484 u32 zl1Heap_btpResID(daNpc_Zl1_c* actor, s32 number)
+ext 027DF9B0 s32 zl1Heap_nameIndex(u32 table, const char* name)
+ext 027F3F8C u32 zl1Heap_patternNameHeader(J3DModelData* data)
+ext 027F68F4 u32 zl1Heap_materialNameHeader(u32 data)
+ext 0255A2B8 void zl1Heap_lightPriority(LIGHT_INFLUENCE* light)
+ext 0255B9C8 void zl1Heap_effectLight(LIGHT_INFLUENCE* light)
+ext 025A1458 void zl1Heap_npcConstructor(daNpc_Zl1_c* actor)
+ext 025E7C6C void zl1Heap_btkConstructor(void* animation)
+ext 025E7820 void zl1Heap_btpConstructor(void* animation)
+ext 025A9084 void zl1Heap_rippleConstructor(void* callback)
+ext 027F1278 void zl1Heap_packetConstructor(void* packet)
+ext 027F13DC void zl1Heap_packetDestructor(void* packet, s32 flags)
+ext 02018034 void zl1Heap_circleDestructor(u32 circle, s32 flags)
+ext 025D50BC void zl1Heap_actorDestructor(daNpc_Zl1_c* actor, s32 flags)
+ext 028F0164 void zl1Heap_destroyArray(u32 array, s32 count, s32 stride, u32 destructor, s32 flag1, s32 flag2)
+ext 028F040C void zl1Heap_strcpy(void* destination, const char* source)
+str 10023D04 "zelda_mouth"
+str 10024254 "texmtx1"
+str 10023EAC "cloth.bdl"
+str 10023E9C "d_a_npc_zl1.cpp" in 02303400
+str 10023EB8 "a_mdl_dat != (0)" in 02303400
+str 10023D9C "zl.bdl"
+str 10023DC4 "d_a_npc_zl1.cpp" in 02302B08
+str 10023E10 "a_mdl_dat != (0)" in 02302B08
+str 10023E24 "world_root"
+str 10023DA4 "zl_eye"
+str 10023D7C "zl_mayu"
+str 10023DBC "head"
+str 10023E70 "m_hed_jnt_num >= 0"
+str 10023D94 "chest"
+str 10023E84 "m_bbone_jnt_num >= 0"
+data l_headNames 10468B24 nocheck
+data l_eyeNames 10468B34 nocheck
+data l_eyebrowNames 10468B64 nocheck
+data l_headerZero 10468B94 nocheck
+data l_headGuard 10468CD8 nocheck
+data l_eyeGuard 10468CDC nocheck
+data l_eyebrowGuard 10468CE0 nocheck
+data l_heapHIO 10468C20 nocheck
+data l_headerStatics 10468B18 nocheck
+data l_headDestructor 101C715C nocheck
+data l_eyeDestructor 101C7168 nocheck
+data l_eyebrowDestructor 101C7174 nocheck
+data l_headerDestructors 101C75CC nocheck
+data a_prm_tbl 101C7574
+str 10024288 "eyeL" in 0230A158
+str 10024290 "eyeR" in 0230A158
+ext 028ED6F8 void zl1Heap_headerFirst(void* object)
+ext 028EAB2C void zl1Heap_headerSecond(void* object)
+str 10023DD4 "zelda_zhead"
+str 10023E30 "zelda_zhead_2_"
+str 10023E40 "eyeLdamB"
+str 10023E4C "eyeLdamA"
+str 10023DAC "eyeL" in 02302B08
+str 10023E58 "eyeRdamB"
+str 10023E64 "eyeRdamA"
+str 10023DB4 "eyeR" in 02302B08
+str 10023DE0 "mayuLdamB"
+str 10023DEC "mayuLdamA"
+str 10023D84 "mayuL"
+str 10023DF8 "mayuRdamB"
+str 10023E04 "mayuRdamA"
+str 10023D8C "mayuR"
+data l_checkWork 10468B14 nocheck
+data l_checkActors 10468C84 nocheck
+ext 025E789C s32 zl1Heap_btpInit(void* animation, J3DModelData* data, void* resource, s32 play, s32 attribute, f32 rate, s32 start, s32 end, u32 modify, s32 entry)
+ext 025E7CE0 s32 zl1Heap_btkInit(void* animation, J3DModelData* data, void* resource, s32 play, s32 attribute, f32 rate, s32 start, s32 end, u32 modify, s32 entry)
+ext 027F68FC u32 zl1Heap_jointHeader(J3DModelData* data)
+ext 027DF9B0 s8 zl1Heap_jointNameIndex(u32 table, const char* name)
+*/

@@ -1,1146 +1,132 @@
-/* WWHD recovery fairy. */
+// Recovery fairy, ported from the GameCube source with verified HD behaviour.
 #include "d/actor/d_a_npc_fa1.h"
 
-void Fa1_init_up1(daNpc_Fa1_c*);
-void Fa1_init_bottle_baba_move2(daNpc_Fa1_c*);
-void Fa1_init_baba_up(daNpc_Fa1_c*);
+const gc_tu_data gc_tu = {
+    .safeString = 0x10019CF0,
+    .safeStringAssure = 0x02235568,
+    .objAcchDt = {0x10019DD8, 0x10019DE8},
+    .gndChk = {0x10019D98, 0x10019DA8, 0x10019DC8, 0x10019DB8},
+    .gndChkDt = {0x10019D28, 0x10019D48, 0x10019D08},
+};
+// HD: GHS stores this translation unit's own actor/callback and HIO vtables.
+static constexpr u32 l_actorVtable = 0x10019DF8;
+static constexpr u32 l_callbackVtable = 0x10019F40;
+static constexpr u32 l_hioVtable = 0x10019E40;
+static constexpr u32 l_areaHioVtable = 0x10019E30;
+static constexpr u32 l_hoverHioVtable = 0x10019E20;
 
-void Fa1_init_bottle_baba_wait(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223311C, void, actor);
-    u32 a = gabi::ea(actor);
-    actor->mMode = 4;
-    f32 zero = gabi::load<f32>(0x10019E64);
-    gabi::store<f32>(a + 0x378, zero);
-    gabi::store<f32>(a + 0x344, zero);
-    gabi::store<f32>(a + 0x33C, zero);
-    gabi::store<f32>(a + 0x340, zero);
-    gabi::store<f32>(a + 0x370, zero);
-    gabi::store<f32>(a + 0x374, zero);
-    actor->mTimer = gabi::load<u16>(0x1046701C);
-}
-VERIFY(0x0223311C, Fa1_init_bottle_baba_wait);
+static Mtx34 l_matrixStack;
+static fa1_hd::ResourceManagerHandle l_resourceManager;
+static dCcD_SrcCyl l_cyl_src;
+static fa1_hd::HeaderState l_headerState;
+static fa1_hd::HeaderDescriptors l_headerDescriptors;
 
-void Fa1_init_bottle_appear_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233220, void, actor);
-    actor->mMode = 3;
-    Fa1_init_up1(actor);
-    if (actor->mType == 5) gabi::call(0x0254DA38, 0x16);
-}
-VERIFY(0x02233220, Fa1_init_bottle_appear_move);
+static fa1_hd::MainHioInitial l_hioInitial;
+static fa1_hd::AreaHioInitial l_areaHioInitial;
+static fa1_hd::HoverHioInitial l_hoverHioInitial;
 
-void Fa1_init_hover_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223326C, void, actor);
-    u32 a = gabi::ea(actor);
-    actor->mMode = 8;
-    f32 gravity = gabi::load<f32>(0x1046702C);
-    gabi::store<f32>(a + 0x374, gravity);
-    f32 rise = gabi::load<f32>(0x10467028);
-    f32 zero = gabi::load<f32>(0x10019E64);
-    gabi::store<f32>(a + 0x370, zero);
-    gabi::store<f32>(a + 0x378, -rise);
-}
-VERIFY(0x0223326C, Fa1_init_hover_move);
+static f32 l_one;
+static f32 l_zero;
+static f32 l_normalGravity;
+static f32 l_normalMaxFallSpeed;
+static f32 l_pointLightPower;
+static f32 l_pointLightFluctuation;
+static f32 l_areaRadius;
+static f32 l_playerRadius;
+static f32 l_invalidGround;
+static f32 l_homeGroundOffset;
+static f32 l_lookRadius;
+static f32 l_lookUpper;
+static f32 l_lookLower;
+static f32 l_moveHeight;
+static f32 l_animationAcceleration;
+static f32 l_animationMaxRate;
+static f32 l_orbitRadiusStep;
+static f32 l_flowerOffsetX;
+static f32 l_flowerDeleteHeight;
+static f32 l_playerBabaHeight;
+static f32 l_headerTimerInitial;
+static f32 l_headerUnusedInitial;
+static daNpc_Fa1_HIO_c l_HIO;
+// HD: the instance count uses the original unsigned decrement/early-return logic.
+static u32 l_hio_counter;
+static fa1_hd::MoveTable moveProc;
+static fa1_hd::MoveSubTable moveSubProc;
+static fa1_hd::BottleMoveSubTable bottleMoveSubProc;
+static fa1_hd::BottleBabaSubTable bottleBabaSubProc;
 
-void Fa1_init_areaMove(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022332A0, void, actor);
-    actor->mSubMode = 2;
-    gabi::store<f32>(gabi::ea(actor) + 0x374, gabi::load<f32>(0x10019E50));
-    actor->mAreaAngle = 0;
-    actor->mAreaTurn = 0;
-}
-VERIFY(0x022332A0, Fa1_init_areaMove);
+// HD: integer copies preserve signalling-NaN payloads and the original interleaving.
+static be<u32> &fa1_word(const be<f32> &value) { return *gabi::at<be<u32>>(gabi::ea(&value)); }
 
-void Fa1_init_straight2(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022332C4, void, actor);
-    actor->mMoveTimer = 0;
-    gabi::store<f32>(gabi::ea(actor) + 0x374, gabi::load<f32>(0x10019E50));
-    actor->mSubMode = 0;
-}
-VERIFY(0x022332C4, Fa1_init_straight2);
-
-void Fa1_bottle_baba_wait(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022347E4, void, actor);
-    if (!actor->mTimer) Fa1_init_bottle_baba_move2(actor);
-}
-VERIFY(0x022347E4, Fa1_bottle_baba_wait);
-
-void Fa1_baba_down(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234CA0, void, actor);
-    if (gabi::load<f32>(gabi::ea(actor) + 0x318) <
-        gabi::load<f32>(gabi::ea(actor->mpFlower.get()) + 0x318)) Fa1_init_baba_up(actor);
-}
-VERIFY(0x02234CA0, Fa1_baba_down);
-
-void Fa1_init_down(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022351A0, void, actor);
-    actor->mSubMode = 1;
-    actor->mNeckAngle = gabi::load<s16>(0x10466FF8);
-    actor->mNeckStep = gabi::load<s16>(0x10466FFA);
-}
-VERIFY(0x022351A0, Fa1_init_down);
-
-void Fa1_up1(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022351C4, void, actor);
-    if (gabi::load<f32>(gabi::ea(actor) + 0x340) < gabi::load<f32>(0x10019E64)) Fa1_init_down(actor);
-}
-VERIFY(0x022351C4, Fa1_up1);
-
-void Fa1_init_up2(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022351DC, void, actor);
-    u32 a = gabi::ea(actor);
-    actor->mSubMode = 2;
-    s8 room = gabi::load<s8>(a + 0x326);
-    gabi::store<f32>(a + 0x378, gabi::load<f32>(0x10466FD8));
-    s32 reverb = gabi::call<s32>(0x02520540, room);
-    gabi::call(0x025E1A40, 0x6975, gabi::at<void>(a + 0x314), nullptr, reverb);
-}
-VERIFY(0x022351DC, Fa1_init_up2);
-
-void Fa1_down(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02235238, void, actor);
-    if (actor->mLocalPosition.y < gabi::load<f32>(0x10466FE4)) Fa1_init_up2(actor);
-}
-VERIFY(0x02235238, Fa1_down);
-
-BOOL Fa1_morfCallback_execute(Fa1MorfCallback* callback, u16 joint, void* transform) {
-    WWHD_FUNC(0x02233BE8, BOOL, callback, joint, transform);
-    if (joint == callback->neckJoint) gabi::store<s16>(gabi::ea(transform) + 0xC, callback->neckAngle);
-    return TRUE;
-}
-VERIFY(0x02233BE8, Fa1_morfCallback_execute);
-
-void Fa1_init_up1(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233154, void, actor);
-    actor->mSubMode = 0;
-    actor->mTimer = gabi::load<u16>(0x10466FF6);
-    actor->maxFallSpeed = gabi::load<f32>(0x10466FDC);
-    actor->speed.y = gabi::load<f32>(0x10466FD4);
-    f32 gravity = gabi::load<f32>(0x10466FE0);
-    actor->mTurnAngle = 0;
-    actor->gravity = gravity;
-    actor->mNeckAngle = 0;
-    actor->mNeckStep = 0;
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, &actor->current.pos, difference.get(), gabi::at<void>(player + 0x314));
-    f32 x = difference->x;
-    f32 zero = gabi::load<f32>(0x10019E64);
-    f32 z = difference->z;
-    f32 y = difference->y;
-    gabi::Local<cXyz> horizontal;
-    horizontal->y = zero;
-    actor->mLocalPosition.x = x;
-    actor->mLocalPosition.y = y;
-    horizontal->x = x;
-    horizontal->z = z;
-    actor->mLocalPosition.z = z;
-    f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    f32 radius = gabi::call<f32>(0x028F4384, square);
-    z = actor->mLocalPosition.z;
-    actor->mPlayerRadius = radius;
-    x = actor->mLocalPosition.x;
-    s32 angle = gabi::call<s32>(0x020195B0, x, z);
-    actor->current.angle.y = s16(u32(angle) - 0x4000);
-}
-VERIFY(0x02233154, Fa1_init_up1);
-
-u16 Fa1_calcTimer(be<u16>* timer) {
-    WWHD_FUNC(0x0223556C, u16, timer);
-    u16 value = *timer;
-    if (value) { value = u16(value - 1); *timer = value; }
-    return value;
-}
-VERIFY(0x0223556C, Fa1_calcTimer);
-
-u16 Fa1_randomU16(u16 base, u16 range) {
-    WWHD_FUNC(0x0223558C, u16, base, range);
-    f32 random = gabi::call<f32>(0x020198D8, f32(range));
-    return u16(gabi::ftoi(gabi::fadds_ppc(f32(base), random)));
-}
-VERIFY(0x0223558C, Fa1_randomU16);
-
-u8 Fa1_randomU8(u8 base, u8 range) {
-    WWHD_FUNC(0x02235608, u8, base, range);
-    f32 random = gabi::call<f32>(0x020198D8, f32(range));
-    return u8(gabi::ftoi(gabi::fadds_ppc(f32(base), random)));
-}
-VERIFY(0x02235608, Fa1_randomU8);
-
-void Fa1_setPointLightParam(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233494, void, actor);
-    u32 z = gabi::load<u32>(gabi::ea(actor) + 0x398);
-    u32 x = gabi::load<u32>(gabi::ea(actor) + 0x390);
-    actor->mLightRed = 200;
-    f32 power = gabi::load<f32>(0x10019E70);
-    gabi::store<u32>(gabi::ea(actor) + 0x85C, x);
-    u32 y = gabi::load<u32>(gabi::ea(actor) + 0x394);
-    actor->mLightPower = power;
-    actor->mLightBlue = 200;
-    f32 zero = gabi::load<f32>(0x10019E64);
-    actor->mLightGreen = 200;
-    actor->mLightFluctuation = zero;
-    gabi::store<u32>(gabi::ea(actor) + 0x864, z);
-    f32 range = gabi::load<f32>(0x10019E74);
-    gabi::store<u32>(gabi::ea(actor) + 0x860, y);
-    actor->mLightFluctuation = gabi::call<f32>(0x0255F360, range);
-}
-VERIFY(0x02233494, Fa1_setPointLightParam);
-
-Fa1MorfCallback* Fa1_morfCallback_constructor(Fa1MorfCallback* callback) {
-    WWHD_FUNC(0x02232FE4, Fa1MorfCallback*, callback);
-    if (!callback) callback = gabi::call<Fa1MorfCallback*>(0x0273AD10, 8);
-    if (callback) {
-        callback->neckJoint = 0;
-        callback->vtable = 0x10019F40;
-        callback->neckAngle = 0;
-    }
-    return callback;
-}
-VERIFY(0x02232FE4, Fa1_morfCallback_constructor);
-
-void Fa1_init_normal_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022332E0, void, actor);
-    f32 fall = gabi::load<f32>(0x10019E6C);
-    f32 gravity = gabi::load<f32>(0x10019E68);
-    actor->mMode = 0;
-    f32 speed = gabi::load<f32>(0x10466FB4);
-    actor->maxFallSpeed = fall;
-    actor->speedF = speed;
-    actor->gravity = gravity;
-    u16 timer = Fa1_randomU16(gabi::load<u16>(0x10466FF0), 60);
-    s8 type = actor->mType;
-    actor->mTimer = timer;
-    if (type == 4) Fa1_init_areaMove(actor);
-    else Fa1_init_straight2(actor);
-}
-VERIFY(0x022332E0, Fa1_init_normal_move);
-
-void Fa1_init_escape_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223404C, void, actor);
-    actor->mMode = 2;
-    actor->gravity = gabi::load<f32>(0x10466FC4);
-    actor->maxFallSpeed = gabi::load<f32>(0x10466FC0);
-    actor->mTimer = gabi::load<u16>(0x10466FF2);
-}
-VERIFY(0x0223404C, Fa1_init_escape_move);
-
-void Fa1_init_areaOutMove(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234F80, void, actor);
-    actor->mSubMode = 3;
-    actor->gravity = gabi::load<f32>(0x10019E68);
-    actor->mAreaAngle = 0;
-    actor->mAreaTurn = 0;
-}
-VERIFY(0x02234F80, Fa1_init_areaOutMove);
-
-BOOL Fa1_IsDelete(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233BE0, BOOL, actor);
-    return TRUE;
-}
-VERIFY(0x02233BE0, Fa1_IsDelete);
-
-void Fa1_SafeString_assureTerminated(SafeString* string) {
-    WWHD_FUNC(0x02235568, void, string);
-}
-VERIFY(0x02235568, Fa1_SafeString_assureTerminated);
-
-void Fa1_up2(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02235498, void, actor);
-}
-VERIFY(0x02235498, Fa1_up2);
-
-void Fa1_deleteString(void* string, s32 flags) {
-    WWHD_FUNC(0x02235484, void, string, flags);
-    if (string && (flags & 1)) gabi::call(0x0273AF40, string);
-}
-VERIFY(0x02235484, Fa1_deleteString);
-
-daNpc_Fa1_c* Fa1_constructor(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233030, daNpc_Fa1_c*, actor);
-    if (!actor) actor = gabi::call<daNpc_Fa1_c*>(0x0273AD10, 0x8C0);
-    if (!actor) return nullptr;
-    u32 a = gabi::ea(actor);
-    gabi::call(0x025A1458, actor);
-    gabi::store<u32>(a + 0xB4, 0x10019DF8);
-    Fa1_morfCallback_constructor(&actor->mMorfCallback);
-    gabi::call(0x025A5894, gabi::at<void>(a + 0x7F0), 0, 0);
-    gabi::call(0x02008E0C, gabi::at<void>(a + 0x808));
-    gabi::store<u32>(a + 0x854, 0x10019DB8);
-    gabi::store<u32>(a + 0x848, 0x10019DC8);
-    gabi::store<u32>(a + 0x828, 0x10019DA8);
-    gabi::store<u32>(a + 0x818, 0x10019D98);
-    gabi::store<u32>(a + 0x808, a + 0x848);
-    gabi::store<u32>(a + 0x80C, a + 0x854);
-    gabi::store<u8>(a + 0x84C, 1);
-    gabi::store<u8>(a + 0x84D, 0);
-    gabi::store<u8>(a + 0x84E, 0);
-    gabi::store<u8>(a + 0x84F, 0);
-    gabi::store<u8>(a + 0x850, 0);
-    gabi::store<u8>(a + 0x851, 0);
-    gabi::store<u8>(a + 0x852, 0);
-    gabi::store<u32>(a + 0x858, 0xF);
-    actor->mLightMultiplier = gabi::load<f32>(0x10019E50);
-    return actor;
-}
-VERIFY(0x02233030, Fa1_constructor);
-
-void Fa1_destructor(daNpc_Fa1_c* actor, s32 flags) {
-    WWHD_FUNC(0x0223549C, void, actor, flags);
-    if (!actor) return;
-    u32 a = gabi::ea(actor);
-    gabi::store<u32>(a + 0x828, 0x10019D28);
-    gabi::store<u32>(a + 0x848, 0x10019D48);
-    gabi::store<u32>(a + 0x854, 0x10019D08);
-    gabi::call(0x02008DAC, gabi::at<void>(a + 0x808), 0);
-    gabi::call(0x02515A70, gabi::at<void>(a + 0x690), 2);
-    gabi::call(0x02515860, gabi::at<void>(a + 0x654), 2);
-    gabi::call(0x02018034, gabi::at<void>(a + 0x628), 2);
-    gabi::store<u32>(a + 0x470, 0x10019DD8);
-    gabi::store<u32>(a + 0x464, 0x10019DE8);
-    gabi::call(0x024EFD9C, gabi::at<void>(a + 0x450), 0);
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1) gabi::call(0x0273AF40, actor);
-}
-VERIFY(0x0223549C, Fa1_destructor);
-
-void* Fa1_hoverHio_constructor(void* hio) {
-    WWHD_FUNC(0x02235250, void*, hio);
-    if (!hio) hio = gabi::call<void*>(0x0273AD10, 0x1C);
-    if (hio) {
-        u32 a = gabi::ea(hio);
-        gabi::store<s8>(a, -1);
-        gabi::store<u32>(a + 0x18, 0x10019E20);
-        for (u32 offset = 0; offset != 20; offset += 4)
-            gabi::store<u32>(a + 4 + offset, gabi::load<u32>(0x10019EBC + offset));
-    }
-    return hio;
-}
-VERIFY(0x02235250, Fa1_hoverHio_constructor);
-
-void* Fa1_areaHio_constructor(void* hio) {
-    WWHD_FUNC(0x022352C4, void*, hio);
-    if (!hio) hio = gabi::call<void*>(0x0273AD10, 0x28);
-    if (hio) {
-        u32 a = gabi::ea(hio);
-        gabi::store<s8>(a, -1);
-        gabi::store<u32>(a + 0x24, 0x10019E30);
-        for (u32 offset = 0; offset != 32; offset += 4)
-            gabi::store<u32>(a + 4 + offset, gabi::load<u32>(0x10019ED0 + offset));
-    }
-    return hio;
-}
-VERIFY(0x022352C4, Fa1_areaHio_constructor);
-
-void* Fa1_hio_constructor(void* hio) {
-    WWHD_FUNC(0x02235350, void*, hio);
-    if (!hio) hio = gabi::call<void*>(0x0273AD10, 0x94);
-    if (hio) {
-        u32 a = gabi::ea(hio);
-        gabi::store<u32>(a + 0x90, 0x10019E40);
-        Fa1_areaHio_constructor(gabi::at<void>(a + 0x4C));
-        Fa1_hoverHio_constructor(gabi::at<void>(a + 0x74));
-        gabi::store<s8>(a, -1);
-        for (u32 offset = 4; offset <= 0x48; offset += 4)
-            gabi::store<u32>(a + offset, gabi::load<u32>(0x10019EEC + offset));
-    }
-    return hio;
-}
-VERIFY(0x02235350, Fa1_hio_constructor);
-
-void Fa1_staticInitialize() {
-    WWHD_FUNC(0x022353E4, void);
-    gabi::store<u32>(0x10466FA8, 0);
-    gabi::store<u32>(0x10466FA0, 0);
-    gabi::store<u32>(0x10466FAC, 0);
-    gabi::store<u32>(0x10466FA4, 0);
-    gabi::call(0x028F026C, gabi::at<void>(0x101BE368));
-    f32 timer = gabi::load<f32>(0x10019F38);
-    f32 unused = gabi::load<f32>(0x10019F3C);
-    gabi::store<f32>(0x10466F94, timer);
-    gabi::store<f32>(0x10466F98, unused);
-    gabi::call(0x028ED6F8, gabi::at<void>(0x10466F9C));
-    gabi::call(0x028F026C, gabi::at<void>(0x101BE374));
-    gabi::call(0x028EAB2C, gabi::at<void>(0x10466F9D));
-    gabi::call(0x028F026C, gabi::at<void>(0x101BE380));
-    Fa1_hio_constructor(gabi::at<void>(0x10466FB0));
-}
-VERIFY(0x022353E4, Fa1_staticInitialize);
-
-void Fa1_init_straight(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234DC8, void, actor);
-    actor->mSubMode = 0;
-    u8 timer = Fa1_randomU8(60, 60);
-    f32 gravity = gabi::load<f32>(0x10019E68);
-    actor->mMoveTimer = timer;
-    actor->gravity = gravity;
-}
-VERIFY(0x02234DC8, Fa1_init_straight);
-
-void Fa1_init_turn(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234E14, void, actor);
-    actor->mSubMode = 1;
-    u8 timer = Fa1_randomU8(60, 60);
-    f32 gravity = gabi::load<f32>(0x10019E68);
-    actor->mMoveTimer = timer;
-    actor->gravity = gravity;
-}
-VERIFY(0x02234E14, Fa1_init_turn);
-
-void Fa1_init_baba_up(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234C3C, void, actor);
-    u8 mode = actor->mMode;
-    f32 rise = actor->mAreaHeight;
-    actor->mSubMode = 1;
-    actor->maxFallSpeed = rise;
-    if (mode == 6) {
-        s32 reverb = gabi::call<s32>(0x02520540, s8(actor->current.roomNo));
-        gabi::call(0x025E1A40, 0x6A2D, &actor->current.pos, nullptr, reverb);
-    }
-}
-VERIFY(0x02234C3C, Fa1_init_baba_up);
-
-void Fa1_init_baba_down(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022346FC, void, actor);
-    f32 fall = actor->mAreaRadius;
-    actor->mSubMode = 0;
-    f32 zero = gabi::load<f32>(0x10019E64);
-    u8 mode = actor->mMode;
-    actor->speed.y = zero;
-    actor->maxFallSpeed = fall;
-    f32 gravity = gabi::load<f32>(0x10467014);
-    actor->gravity = gravity;
-    if (mode == 5) {
-        s32 reverb = gabi::call<s32>(0x02520540, s8(actor->current.roomNo));
-        gabi::call(0x025E1A40, 0x6A2E, &actor->current.pos, nullptr, reverb);
-    }
-}
-VERIFY(0x022346FC, Fa1_init_baba_down);
-
-void Fa1_init_bottle_baba_move2(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234778, void, actor);
-    actor->mMode = 6;
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    actor->mpFlower = gabi::at<fopAc_ac_c>(player);
-    f32 speed = gabi::load<f32>(0x10467000);
-    actor->mAreaAngle = 0;
-    actor->speedF = speed;
-    actor->mAreaRadius = gabi::load<f32>(0x10467010);
-    actor->mAreaHeight = gabi::load<f32>(0x1046700C);
-    Fa1_init_baba_down(actor);
-}
-VERIFY(0x02234778, Fa1_init_bottle_baba_move2);
-
-void Fa1_init_bottle_baba_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022347F4, void, actor);
-    actor->mMode = 5;
-    gabi::call(0x025D5578, 0x14F, &actor->mpFlower);
-    u32 flower = gabi::ea(actor->mpFlower.get());
-    actor->mTimer = gabi::load<u16>(0x1046701A);
-    f32 speed = gabi::load<f32>(0x10467000);
-    actor->mAreaAngle = 1;
-    actor->speedF = speed;
-    actor->mAreaRadius = gabi::load<f32>(0x10467008);
-    actor->mAreaHeight = gabi::load<f32>(0x10467004);
-    if (flower) {
-        f32 x = gabi::load<f32>(flower + 0x314);
-        f32 offset = gabi::load<f32>(0x10019EB0);
-        x = gabi::fadds_ppc(x, offset);
-        flower = gabi::ea(actor->mpFlower.get());
-        actor->current.pos.x = x;
-        actor->current.pos.z = gabi::load<f32>(flower + 0x31C);
-    }
-    Fa1_init_baba_down(actor);
-}
-VERIFY(0x022347F4, Fa1_init_bottle_baba_move);
-
-void Fa1_straight(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234E60, void, actor);
-    u32 a = gabi::ea(actor);
-    gabi::store<f32>(a + 0x330, gabi::load<f32>(0x10466FBC));
-    if (!gabi::call<u8>(0x0207A9A0, &actor->mMoveTimer)) {
-        gabi::Local<cXyz> difference;
-        gabi::call(0x0201ADE0, &actor->current.pos, difference.get(), gabi::at<void>(a + 0x2EC));
-        gabi::Local<cXyz> horizontal;
-        horizontal->x = f32(difference->x);
-        horizontal->y = gabi::load<f32>(0x10019E64);
-        horizontal->z = f32(difference->z);
-        f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-        f32 radius = gabi::call<f32>(0x028F4384, square);
-        if (radius > gabi::load<f32>(a + 0x330)) Fa1_init_turn(actor);
-    }
-}
-VERIFY(0x02234E60, Fa1_straight);
-
-void Fa1_turn(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234EF0, void, actor);
-    if (gabi::call<u8>(0x0207A9A0, &actor->mMoveTimer)) {
-        gabi::Local<cXyz> difference;
-        gabi::call(0x0201ADE0, &actor->current.pos, difference.get(), gabi::at<void>(gabi::ea(actor) + 0x2EC));
-        f32 x = -f32(difference->x);
-        f32 z = -f32(difference->z);
-        s32 angle = gabi::call<s32>(0x020195B0, x, z);
-        gabi::call(0x0200F378, &actor->current.angle.y, angle, 0x20, 0x800, 1);
-    } else Fa1_init_straight(actor);
-}
-VERIFY(0x02234EF0, Fa1_turn);
-
-void Fa1_position_move(daNpc_Fa1_c* actor, f32 height, f32 verticalSpeed) {
-    WWHD_FUNC(0x02233C04, void, actor, height, verticalSpeed);
-    u32 a = gabi::ea(actor);
-    f32 difference = gabi::fsubs_ppc(f32(actor->current.pos.y), gabi::load<f32>(a + 0x2F0));
-    if (difference > height) { verticalSpeed = -verticalSpeed; actor->maxFallSpeed = verticalSpeed; }
-    else if (difference < -height) actor->maxFallSpeed = verticalSpeed;
-    else verticalSpeed = actor->maxFallSpeed;
-    f32 zero = gabi::load<f32>(0x10019E64);
-    f32 gravity = actor->gravity;
-    u16 angle = gabi::load<u16>(a + 0x322);
-    f32 speed = actor->speed.y;
-    if (verticalSpeed < zero) {
-        speed = gabi::fsubs_ppc(speed, gravity);
-        f32 limit = actor->maxFallSpeed;
-        actor->speed.y = speed;
-        if (speed < limit) actor->speed.y = limit;
-    } else {
-        speed = gabi::fadds_ppc(speed, gravity);
-        f32 limit = actor->maxFallSpeed;
-        actor->speed.y = speed;
-        if (speed > limit) actor->speed.y = limit;
-    }
-    u32 table = 0x104A44F8 + ((u32(angle) >> 3) << 3);
-    f32 forward = actor->speedF;
-    actor->speed.x = gabi::fmuls_ppc(forward, gabi::load<f32>(table));
-    actor->speed.z = gabi::fmuls_ppc(forward, gabi::load<f32>(table + 4));
-    gabi::call(0x025D6800, actor, nullptr);
-}
-VERIFY(0x02233C04, Fa1_position_move);
-
-BOOL Fa1_delete(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233984, BOOL, actor);
-    gabi::call(0x025A5AC8, gabi::at<void>(gabi::ea(actor) + 0x7F0));
-    if (actor->mType == 3) gabi::call(0x0255BA9C, &actor->mLightPosition);
-    u32 count = gabi::load<u32>(0x10466F90);
-    if (count) {
-        count -= 1;
-        gabi::store<u32>(0x10466F90, count);
-        if (s32(count) > 0) return TRUE;
-    }
-    s8 hio = gabi::load<s8>(0x10466FB0);
-    if (hio >= 0) {
-        gabi::call(0x025F0A18, hio);
-        gabi::store<s8>(0x10466FB0, -1);
-    }
-    return TRUE;
-}
-VERIFY(0x02233984, Fa1_delete);
-
-BOOL Fa1_Delete(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233A08, BOOL, actor);
-    return Fa1_delete(actor);
-}
-VERIFY(0x02233A08, Fa1_Delete);
-
-BOOL Fa1_draw(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233B58, BOOL, actor);
-    u32 morf = gabi::ea(actor->mpFairyMorf.get());
-    u32 model = gabi::load<u32>(morf + 0x90);
-    void* environment = gabi::call<void*>(0x02555D0C);
-    gabi::call(0x025626A4, environment, 0, &actor->current.pos, gabi::at<void>(gabi::ea(actor) + 0x110));
-    environment = gabi::call<void*>(0x02555D0C);
-    gabi::call(0x02562F5C, environment, gabi::at<void>(model), gabi::at<void>(gabi::ea(actor) + 0x110));
-    gabi::call(0x025E5590, actor->mpFairyMorf.get());
-    f32 scale = gabi::load<f32>(0x10019E50);
-    gabi::call(0x025BED80, 0x84, actor, scale, scale, scale);
-    return TRUE;
-}
-VERIFY(0x02233B58, Fa1_draw);
-
-BOOL Fa1_Draw(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233BDC, BOOL, actor);
-    return Fa1_draw(actor);
-}
-VERIFY(0x02233BDC, Fa1_Draw);
-
-void Fa1_BGCheck(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233CD8, void, actor);
-    u32 a = gabi::ea(actor);
-    u32 z = gabi::load<u32>(a + 0x31C);
-    u32 y = gabi::load<u32>(a + 0x318);
-    gabi::store<u32>(a + 0x834, z);
-    u32 x = gabi::load<u32>(a + 0x314);
-    gabi::store<u32>(a + 0x830, y);
-    gabi::store<u32>(a + 0x82C, x);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    f32 ground = gabi::call<f32>(0x02008974, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x808));
-    f32 invalid = gabi::load<f32>(0x10019E80);
-    actor->mGroundY = ground;
-    if (ground == invalid) {
-        f32 zero = gabi::load<f32>(0x10019E64);
-        f32 one = gabi::load<f32>(0x10019E50);
-        actor->mMoveTarget.x = zero;
-        actor->mMoveTarget.y = one;
-        actor->mMoveTarget.z = zero;
-        return;
-    }
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u16 index = gabi::load<u16>(a + 0x81C);
-    u16 background = gabi::load<u16>(a + 0x81E);
-    u32 normal = gabi::ea(gabi::call<void*>(0x020084C8, gabi::at<void>(play + 0x12A0), background, index));
-    gabi::store<u32>(a + 0x890, gabi::load<u32>(normal));
-    gabi::store<u32>(a + 0x894, gabi::load<u32>(normal + 4));
-    gabi::store<u32>(a + 0x898, gabi::load<u32>(normal + 8));
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u8 room = gabi::call<u8>(0x024EF130, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x81C));
-    gabi::store<u8>(a + 0x1C9, room);
-    actor->current.roomNo = s8(room);
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u8 color = gabi::call<u8>(0x024EEEB8, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x81C));
-    gabi::store<u8>(a + 0x1CA, color);
-}
-VERIFY(0x02233CD8, Fa1_BGCheck);
-
-void Fa1_findPlayer(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233DC4, void, actor);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, gabi::at<void>(player + 0x314), difference.get(), &actor->current.pos);
-    s32 direction = gabi::call<s32>(0x020195B0, f32(difference->x), f32(difference->z));
-    s16 target = s16(u32(direction) - u32(s32(s16(actor->current.angle.y))));
-    s16 neck = actor->mMorfCallback.neckAngle;
-    if (target < 0) {
-        if (target < -0x4000) target = -0x4000;
-        s16 step = s16(s16(target - neck) / 4);
-        if (step < -0x800) step = -0x800;
-        neck = s16(neck + step);
-        if (neck < target) neck = target;
-    } else {
-        if (target > 0x4000) target = 0x4000;
-        s16 step = s16(s16(target - neck) / 4);
-        if (step > 0x800) step = 0x800;
-        neck = s16(neck + step);
-        if (neck > target) neck = target;
-    }
-    actor->mMorfCallback.neckAngle = neck;
-}
-VERIFY(0x02233DC4, Fa1_findPlayer);
-
-BOOL Fa1_CreateHeap(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02232EA0, BOOL, actor);
-    gabi::Local<SafeString> modelKey;
-    modelKey->mStringTop = 0x10019E54;
-    u32 manager = gabi::load<u32>(0x101F4F28);
-    modelKey->__vtbl = 0x10019CF0;
-    void* data = gabi::call<void*>(0x026066C4, gabi::at<void>(manager), modelKey.get(), 0x1F);
-    manager = gabi::load<u32>(0x101F4F28);
-    gabi::Local<SafeString> animationKey;
-    animationKey->mStringTop = 0x10019E54;
-    animationKey->__vtbl = 0x10019CF0;
-    void* animation = gabi::call<void*>(0x026066C4, gabi::at<void>(manager), animationKey.get(), 0xC);
-    f32 rate = gabi::load<f32>(0x10019E50);
-    void* morf = gabi::call<void*>(0x025E4F64, nullptr, data, &actor->mMorfCallback, nullptr,
-                                 animation, 2, 0, -1, 0, 0, 0, 0x11020203, rate);
-    actor->mpFairyMorf = morf;
-    if (!morf) return FALSE;
-    if (!gabi::load<u32>(gabi::ea(morf) + 0x90)) {
-        actor->mpFairyMorf = nullptr;
-        return FALSE;
-    }
-    u32 names = gabi::ea(gabi::call<void*>(0x027F68FC, data));
-    u32 displacement = gabi::load<u32>(names + 0x10);
-    void* table = gabi::at<void>(displacement ? names + 0x10 + displacement : 0);
-    s32 joint = gabi::call<s32>(0x027DF9B0, table, STR(0x10019E5C));
-    actor->mMorfCallback.neckJoint = u16(joint);
-    actor->mMorfCallback.neckAngle = 0;
-    return TRUE;
-}
-VERIFY(0x02232EA0, Fa1_CreateHeap);
-
-BOOL Fa1_heapCallback(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02232FE0, BOOL, actor);
-    return Fa1_CreateHeap(actor);
-}
-VERIFY(0x02232FE0, Fa1_heapCallback);
-
-void Fa1_setMtx(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233378, void, actor);
-    u32 a = gabi::ea(actor);
-    u32 morf = gabi::ea(actor->mpFairyMorf.get());
-    f32 x = actor->current.pos.x, y = actor->current.pos.y, z = actor->current.pos.z;
-    u32 model = gabi::load<u32>(morf + 0x90);
-    gabi::call(0x028E93CC, gabi::at<void>(0x1048D0CC), x, y, z);
-    gabi::call(0x025F1C28, gabi::at<void>(0x1048D0CC), gabi::load<s16>(a + 0x32A));
-    // Capture the complete source matrix before writing the model destination.
-    f32 matrix[12];
-    for (u32 i = 0; i != 12; ++i) matrix[i] = gabi::load<f32>(0x1048D0CC + i * 4);
-    const u8 order[12] = {1,9,10,8,7,5,2,11,3,0,6,4};
-    for (u8 i : order) gabi::store<f32>(model + 0xC8 + i * 4, matrix[i]);
-    gabi::call(0x025E55A0, actor->mpFairyMorf.get());
-    morf = gabi::ea(actor->mpFairyMorf.get());
-    u16 joint = actor->mMorfCallback.neckJoint;
-    model = gabi::load<u32>(morf + 0x90);
-    u32 matrices = gabi::load<u32>(model + 0x2C);
-    u16 flags = gabi::load<u16>(matrices + 4);
-    u32 table = gabi::load<u32>(matrices + 0x10);
-    u32 selected = table + u32(joint) * 48;
-    gabi::store<u16>(matrices + 4, flags | 0x10);
-    x = gabi::load<f32>(selected + 0xC);
-    y = gabi::load<f32>(selected + 0x1C);
-    z = gabi::load<f32>(selected + 0x2C);
-    gabi::store<f32>(a + 0x394, y);
-    gabi::store<f32>(a + 0x384, z);
-    gabi::store<f32>(a + 0x390, x);
-    gabi::store<f32>(a + 0x398, z);
-    gabi::store<f32>(a + 0x37C, x);
-    gabi::store<f32>(a + 0x380, y);
-}
-VERIFY(0x02233378, Fa1_setMtx);
-
-void Fa1_init_get_player_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233EA8, void, actor);
-    actor->mMode = 1;
-    u16 timer = gabi::load<u16>(0x10466FEE);
-    f32 radius = gabi::load<f32>(0x10019E7C);
-    actor->mTimer = timer;
-    s16 turn = gabi::load<s16>(0x10466FE8);
-    actor->mMorfCallback.neckAngle = 0;
-    actor->mTurnAngle = turn;
-    actor->mPlayerRadius = radius;
-    actor->current.angle.y = 0;
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    s8 room = actor->current.roomNo;
-    actor->current.pos.y = gabi::load<f32>(player + 0x318);
-    s32 reverb = gabi::call<s32>(0x02520540, room);
-    gabi::call(0x025E1A40, 0x695D, &actor->current.pos, nullptr, reverb);
-}
-VERIFY(0x02233EA8, Fa1_init_get_player_move);
-
-void Fa1_hover_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223447C, void, actor);
-    f32 speed = gabi::load<f32>(0x10467028);
-    f32 height = gabi::load<f32>(0x10467030);
-    Fa1_position_move(actor, height, speed);
-    Fa1_BGCheck(actor);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    s32 direction = gabi::call<s32>(0x025D6894, actor, gabi::at<void>(player));
-    gabi::call(0x0200F378, &actor->current.angle.y, direction, 8, 0x2000, 0x400);
-}
-VERIFY(0x0223447C, Fa1_hover_move);
-
-void Fa1_init_bigelf_change(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234CB8, void, actor);
-    u32 a = gabi::ea(actor);
-    u32 flags = gabi::load<u32>(a + 0x2E0);
-    u16 angle = actor->current.angle.y;
-    actor->mMode = 7;
-    gabi::store<u32>(a + 0x2E0, flags | 0x4000);
-    f32 speed = gabi::load<f32>(0x10467034);
-    actor->speedF = speed;
-    u32 table = 0x104A44F8 + ((u32(angle) >> 3) << 3);
-    actor->speed.x = gabi::fmuls_ppc(speed, gabi::load<f32>(table));
-    actor->speed.z = gabi::fmuls_ppc(speed, gabi::load<f32>(table + 4));
-    gabi::call(0x028E8D88, &actor->current.pos, &actor->speed, &actor->current.pos);
-}
-VERIFY(0x02234CB8, Fa1_init_bigelf_change);
-
-void Fa1_bigelf_change(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234D1C, void, actor);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, gabi::at<void>(gabi::ea(actor) + 0x2EC), difference.get(), &actor->current.pos);
-    s32 direction = gabi::call<s32>(0x020195B0, f32(difference->x), f32(difference->z));
-    s16 turn = gabi::load<s16>(0x10467038);
-    u16 angle = u16(u32(direction) + u32(s32(turn)));
-    f32 speed = actor->speedF;
-    actor->current.angle.y = s16(angle);
-    u32 table = 0x104A44F8 + ((u32(angle) >> 3) << 3);
-    actor->speed.x = gabi::fmuls_ppc(speed, gabi::load<f32>(table));
-    actor->speed.z = gabi::fmuls_ppc(speed, gabi::load<f32>(table + 4));
-    gabi::call(0x028E8D88, &actor->current.pos, &actor->speed, &actor->current.pos);
-    Fa1_BGCheck(actor);
-}
-VERIFY(0x02234D1C, Fa1_bigelf_change);
-
-BOOL Fa1_checkBinCatch(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233F40, BOOL, actor);
-    u32 a = gabi::ea(actor);
-    if (gabi::load<u16>(a + 0xF8) == 6) {
-        gabi::call(0x025D57E0, actor);
-        return TRUE;
-    }
-    s16 timer = gabi::load<s16>(0x10466FF4);
-    f32 radius = gabi::load<f32>(0x10466FC8);
-    f32 lower = gabi::load<f32>(0x10466FD0);
-    f32 upper = gabi::load<f32>(0x10466FCC);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    gabi::call(0x024EBB70, gabi::at<void>(play + 0x5934), actor, 0x57, timer, 1, radius, upper, lower);
-    u16 condition = gabi::load<u16>(a + 0xFA);
-    gabi::store<u16>(a + 0xFA, condition | 0x40);
-    return FALSE;
-}
-VERIFY(0x02233F40, Fa1_checkBinCatch);
-
-static f32 Fa1_horizontalRadius(const cXyz* vector) {
+/* inlined into daNpc_Fa1_c::areaMove */
+static f32 Fa1_horizontalRadius(const cXyz *vector) {
     gabi::Local<cXyz> horizontal;
     horizontal->x = f32(vector->x);
-    horizontal->y = gabi::load<f32>(0x10019E64);
+    horizontal->y = l_zero;
     horizontal->z = f32(vector->z);
-    f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    return gabi::call<f32>(0x028F4384, square);
+    f32 square = PSVECSquareMag(horizontal.get());
+    return fa1_sqrtf(square);
 }
 
-static void Fa1_areaTurn(daNpc_Fa1_c* actor, s32 angle) {
-    if (!gabi::call<s16>(0x02055B64, &actor->mAreaAngle)) {
-        actor->mAreaTurn = s16(u16(actor->mAreaTurn) ^ 1);
-        u32 timer = gabi::call<u32>(0x021E1E78, 15, 20);
-        actor->mAreaAngle = s16(u8(timer));
+/* inlined into daNpc_Fa1_c::areaMove */
+static void Fa1_areaTurn(daNpc_Fa1_c *actor, s32 angle) {
+    if (!fa1_calcAreaTimer(&actor->m798)) {
+        actor->m79A = s16(u16(actor->m79A) ^ 1);
+        u32 timer = fa1_randomTimer(15, 20);
+        actor->m798 = s16(u8(timer));
     }
-    s32 turn = actor->mAreaTurn == 0 ? 0x2000 : -0x2000;
-    gabi::call(0x0200F378, &actor->current.angle.y, s16(u32(angle) + u32(turn)), 0x20, 0x800, 1);
+    s32 turn = actor->m79A == 0 ? 0x2000 : -0x2000;
+    cLib_addCalcAngleS(&actor->current.angle.y, s16(u32(angle) + u32(turn)), 0x20, 0x800, 1);
 }
 
-void Fa1_areaMove(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234FA4, void, actor);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, &actor->current.pos, difference.get(), gabi::at<void>(gabi::ea(actor) + 0x2EC));
-    f32 radius = Fa1_horizontalRadius(difference.get());
-    if (radius > gabi::load<f32>(gabi::ea(actor) + 0x330)) { Fa1_init_areaOutMove(actor); return; }
-    s16 direction = actor->current.angle.y;
-    Fa1_areaTurn(actor, direction);
+/* inlined into daNpc_Fa1_c::normal_move */
+static BOOL Fa1_checkCollision(daNpc_Fa1_c *actor) {
+    fa1_cylinderSetCenter(&actor->mCyl.mCyl, &actor->current.pos);
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    fa1_collisionSet(&play->play.mCcS, &actor->mCyl);
+    return fa1_cylinderCheckCoHit(&actor->mCyl);
 }
-VERIFY(0x02234FA4, Fa1_areaMove);
 
-void Fa1_areaOutMove(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223509C, void, actor);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, &actor->current.pos, difference.get(), gabi::at<void>(gabi::ea(actor) + 0x2EC));
-    f32 radius = Fa1_horizontalRadius(difference.get());
-    if (radius < gabi::load<f32>(gabi::ea(actor) + 0x330)) { Fa1_init_areaMove(actor); return; }
-    s32 direction = gabi::call<s32>(0x0200F93C, &actor->current.pos, gabi::at<void>(gabi::ea(actor) + 0x2EC));
-    Fa1_areaTurn(actor, direction);
-}
-VERIFY(0x0223509C, Fa1_areaOutMove);
-
-static void Fa1_dispatch(daNpc_Fa1_c* actor, u32 descriptor) {
-    s16 index = gabi::load<s16>(descriptor + 2);
-    s16 adjustment = gabi::load<s16>(descriptor);
-    u32 receiver = gabi::ea(actor) + u32(s32(adjustment));
-    u32 target;
-    if (index < 0) target = gabi::load<u32>(descriptor + 4);
-    else {
-        s16 offset = gabi::load<s16>(descriptor + 6);
-        u32 table = gabi::load<u32>(receiver + u32(s32(offset)));
-        target = gabi::load<u32>(table + u32(s32(index)) * 8 + 4);
+/* inlined into daNpc_Fa1_c::get_player_move */
+static void Fa1_speedAnimation(daNpc_Fa1_c *actor) {
+    u32 morf = gabi::ea(actor->mpMorf.get());
+    f32 increment = l_animationAcceleration;
+    f32 rate = gabi::fadds_ppc(gabi::at<mDoExt_McaMorf>(morf)->getPlaySpeed(), increment);
+    f32 maximum = l_animationMaxRate;
+    if (rate > maximum) {
+        rate = maximum;
     }
-    gabi::call(target, gabi::at<void>(receiver));
+    gabi::at<mDoExt_McaMorf>(morf)->setPlaySpeed(rate);
 }
 
-BOOL Fa1_createInit(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223350C, BOOL, actor);
-    u32 a = gabi::ea(actor);
-    f32 zero = gabi::load<f32>(0x10019E64);
-    u32 parameters = gabi::load<u32>(a + 0xB0);
-    actor->mLocalPosition.y = zero;
-    actor->mLocalPosition.x = zero;
-    s8 type = s8(parameters);
-    actor->mLocalPosition.z = zero;
-    actor->mStatus = 0;
-    actor->mpFlower = nullptr;
-    actor->mType = type;
-    bool bottle = type == 3 || type == 2 || type == 5;
-    bool hover = type == 6;
-    if (type == 3) Fa1_init_bottle_baba_wait(actor);
-    else if (type == 2 || type == 5) Fa1_init_bottle_appear_move(actor);
-    else if (type == 6) Fa1_init_hover_move(actor);
-    else {
-        if (type == 4) {
-            u32 flags = gabi::load<u32>(a + 0x2E0);
-            s8 reloadedType = actor->mType;
-            f32 radius = gabi::load<f32>(0x10019E78);
-            gabi::store<u32>(a + 0x2E0, flags & ~0x80u);
-            gabi::store<f32>(a + 0x330, radius);
-            type = reloadedType;
-        } else {
-            f32 radius = gabi::load<f32>(0x10466FBC);
-            type = actor->mType;
-            gabi::store<f32>(a + 0x330, radius);
-        }
-        if (type == 1) {
-            u32 flags = gabi::load<u32>(a + 0x2E0);
-            actor->mStatus = 1;
-            gabi::store<u32>(a + 0x2E0, flags & ~0x80u);
-            u16 random = Fa1_randomU16(0, 255);
-            s16 angle = actor->current.angle.y;
-            actor->current.angle.y = s16(u32(s32(angle)) + (u32(random) << 8));
-        } else actor->mType = 0;
-        Fa1_init_normal_move(actor);
-    }
-    if (bottle || hover) {
-        u32 flags = gabi::load<u32>(a + 0x2E0);
-        gabi::store<u32>(a + 0x2E0, (flags & ~0x80u) | (hover ? 0 : 0x4000));
-    }
-    f32 z = actor->current.pos.z;
-    f32 y = actor->current.pos.y;
-    f32 height = gabi::load<f32>(0x10019E7C);
-    f32 x = actor->current.pos.x;
-    y = gabi::fadds_ppc(y, height);
-    gabi::store<f32>(a + 0x834, z);
-    gabi::store<f32>(a + 0x82C, x);
-    gabi::store<f32>(a + 0x830, y);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    f32 ground = gabi::call<f32>(0x02008974, gabi::at<void>(play + 0x12A0), gabi::at<void>(a + 0x808));
-    type = actor->mType;
-    actor->mGroundY = ground;
-    if (type != 6 && !(ground == gabi::load<f32>(0x10019E80)))
-        gabi::store<f32>(a + 0x2F0, gabi::fadds_ppc(ground, gabi::load<f32>(0x10019E84)));
-    gabi::call(0x02515F14, gabi::at<void>(a + 0x654), 255, 255, actor);
-    gabi::store<u32>(a + 0x6D4, a + 0x654);
-    gabi::call(0x02516518, gabi::at<void>(a + 0x690), gabi::at<void>(0x101BE2DC));
-    Fa1_setMtx(actor);
-    if (actor->mType == 3) {
-        Fa1_setPointLightParam(actor);
-        gabi::call(0x0255B9C8, &actor->mLightPosition);
-    }
-    play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 particles = gabi::load<u32>(play + 0x5AB0);
-    actor->mpEmitter = gabi::call<void*>(0x025A847C, gabi::at<void>(particles), 0, 0x52,
-          &actor->current.pos, 0, 0, 255, gabi::at<void>(a + 0x7F0), -1, 0, 0, 0);
-    return TRUE;
-}
-VERIFY(0x0223350C, Fa1_createInit);
-
-s32 Fa1_create(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233854, s32, actor);
-    u32 a = gabi::ea(actor);
-    u32 condition = gabi::load<u32>(a + 0x2E4);
-    if (!(condition & 8)) {
-        if (actor) { Fa1_constructor(actor); condition = gabi::load<u32>(a + 0x2E4); }
-        gabi::store<u32>(a + 0x2E4, condition | 8);
-    }
-    if (!gabi::call<BOOL>(0x025D63E8, actor, 0x02232FE0, 0x1100)) return 5;
-    u32 morf = gabi::ea(actor->mpFairyMorf.get());
-    u32 model = gabi::load<u32>(morf + 0x90);
-    gabi::store<u32>(a + 0x348, model ? model + 0xC8 : 0);
-    if (gabi::load<s8>(0x10466FB0) < 0) {
-        s32 id = gabi::call<s32>(0x025F0A10, STR(0x10019E88), gabi::at<void>(0x10466FB0));
-        gabi::store<s8>(0x10466FB0, s8(id));
-        gabi::store<u32>(0x10466F90, 1);
-    } else gabi::store<u32>(0x10466F90, gabi::load<u32>(0x10466F90) + 1);
-    return Fa1_createInit(actor) ? 4 : 5;
-}
-VERIFY(0x02233854, Fa1_create);
-
-s32 Fa1_Create(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233980, s32, actor);
-    return Fa1_create(actor);
-}
-VERIFY(0x02233980, Fa1_Create);
-
-BOOL Fa1_execute(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233A0C, BOOL, actor);
-    Fa1_calcTimer(&actor->mTimer);
-    u8 mode = actor->mMode;
-    Fa1_dispatch(actor, 0x101BE320 + u32(mode) * 8);
-    s16 angle = actor->current.angle.y;
-    void* morf = actor->mpFairyMorf.get();
-    gabi::store<s16>(gabi::ea(actor) + 0x32A, angle);
-    gabi::call(0x025E535C, morf, 0, 0, 0);
-    Fa1_setMtx(actor);
-    if (actor->mType == 3) Fa1_setPointLightParam(actor);
-    if (actor->mMode == 1) {
-        u32 emitter = gabi::ea(actor->mpEmitter.get());
-        if (emitter) gabi::store<f32>(emitter + 0x34, gabi::load<f32>(0x10019E50));
-    }
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    f32 radius = gabi::load<f32>(0x10019E94);
-    f32 upper = gabi::load<f32>(0x10019E98);
-    f32 lower = gabi::load<f32>(0x10019E9C);
-    gabi::call(0x024EBD80, gabi::at<void>(play + 0x594C), actor, 0x6000, 1, radius, upper, lower);
-    return TRUE;
-}
-VERIFY(0x02233A0C, Fa1_execute);
-
-BOOL Fa1_Execute(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02233B54, BOOL, actor);
-    return Fa1_execute(actor);
-}
-VERIFY(0x02233B54, Fa1_Execute);
-
-static BOOL Fa1_checkCollision(daNpc_Fa1_c* actor) {
-    u32 a = gabi::ea(actor);
-    gabi::call(0x020182E0, gabi::at<void>(a + 0x7A8), &actor->current.pos);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    gabi::call(0x0200E240, gabi::at<void>(play + 0x26A4), gabi::at<void>(a + 0x690));
-    return gabi::call<BOOL>(0x02516464, gabi::at<void>(a + 0x690));
+/* inlined into daNpc_Fa1_c::get_player_move */
+static void Fa1_copyPosition(daNpc_Fa1_c *actor, const cXyz *position) {
+    u32 y = u32(fa1_word(position->y));
+    u32 x = u32(fa1_word(position->x));
+    u32 z = u32(fa1_word(position->z));
+    fa1_word(actor->current.pos.x) = x;
+    fa1_word(actor->current.pos.z) = z;
+    fa1_word(actor->current.pos.y) = y;
 }
 
-void Fa1_normal_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234078, void, actor);
-    u8 submode = actor->mSubMode;
-    actor->speedF = gabi::load<f32>(0x10466FB4);
-    Fa1_dispatch(actor, 0x101BE274 + u32(submode) * 8);
-    f32 height = gabi::load<f32>(0x10019EA0);
-    f32 speed = gabi::load<f32>(0x10019E50);
-    Fa1_position_move(actor, height, speed);
-    Fa1_BGCheck(actor);
-    Fa1_findPlayer(actor);
-    if (Fa1_checkCollision(actor)) { Fa1_init_get_player_move(actor); return; }
-    if (!Fa1_checkBinCatch(actor) && (u8(actor->mStatus) & 1) && !actor->mTimer) Fa1_init_escape_move(actor);
-}
-VERIFY(0x02234078, Fa1_normal_move);
-
-void Fa1_escape_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x0223434C, void, actor);
-    f32 gravity = actor->gravity;
-    f32 speed = gabi::fadds_ppc(f32(actor->speed.y), gravity);
-    f32 limit = actor->maxFallSpeed;
-    actor->speed.y = speed;
-    u16 angle = actor->current.angle.y;
-    if (speed > limit) actor->speed.y = limit;
-    u32 table = 0x104A44F8 + ((u32(angle) >> 3) << 3);
-    f32 forward = actor->speedF;
-    actor->speed.x = gabi::fmuls_ppc(forward, gabi::load<f32>(table));
-    actor->speed.z = gabi::fmuls_ppc(forward, gabi::load<f32>(table + 4));
-    gabi::call(0x025D6800, actor, nullptr);
-    Fa1_BGCheck(actor);
-    s16 neck = actor->mMorfCallback.neckAngle;
-    if (neck > 0) { neck = s16(neck - 0x800); if (neck < 0) neck = 0; }
-    else if (neck < 0) { neck = s16(neck + 0x800); if (neck > 0) neck = 0; }
-    actor->mMorfCallback.neckAngle = neck;
-    if (Fa1_checkCollision(actor)) Fa1_init_get_player_move(actor);
-    else if (!actor->mTimer) gabi::call(0x025D57E0, actor);
-}
-VERIFY(0x0223434C, Fa1_escape_move);
-
-static void Fa1_speedAnimation(daNpc_Fa1_c* actor) {
-    u32 morf = gabi::ea(actor->mpFairyMorf.get());
-    f32 increment = gabi::load<f32>(0x10019EA4);
-    f32 rate = gabi::fadds_ppc(gabi::load<f32>(morf + 0x98), increment);
-    f32 maximum = gabi::load<f32>(0x10019EA8);
-    if (rate > maximum) rate = maximum;
-    gabi::store<f32>(morf + 0x98, rate);
-}
-
-static void Fa1_copyPosition(daNpc_Fa1_c* actor, const cXyz* position) {
-    u32 p = gabi::ea(position);
-    u32 y = gabi::load<u32>(p + 4);
-    u32 x = gabi::load<u32>(p);
-    u32 z = gabi::load<u32>(p + 8);
-    u32 a = gabi::ea(actor);
-    gabi::store<u32>(a + 0x314, x);
-    gabi::store<u32>(a + 0x31C, z);
-    gabi::store<u32>(a + 0x318, y);
-}
-
-void Fa1_get_player_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234204, void, actor);
-    Fa1_speedAnimation(actor);
-    s16 turn = actor->mTurnAngle;
-    s16 angle = s16(u16(actor->current.angle.y) - u16(turn));
-    actor->current.angle.y = angle;
-    s16 acceleration = gabi::load<s16>(0x10466FEC);
-    s16 limit = gabi::load<s16>(0x10466FEA);
-    turn = s16(turn + acceleration);
-    if (turn > limit) turn = limit;
-    actor->mTurnAngle = turn;
-    u16 orbitAngle = u16(u16(angle) + 0x4000);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    u32 table = 0x104A44F8 + ((u32(orbitAngle) >> 3) << 3);
-    f32 radius = actor->mPlayerRadius;
-    f32 x = gabi::fmuls_ppc(radius, gabi::load<f32>(table));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    actor->mLocalPosition.x = x;
-    f32 z = gabi::fmuls_ppc(radius, gabi::load<f32>(table + 4));
-    f32 y = actor->mLocalPosition.y;
-    actor->mLocalPosition.z = z;
-    actor->mLocalPosition.y = gabi::fadds_ppc(y, gabi::load<f32>(0x10466FB8));
-    gabi::Local<cXyz> position;
-    gabi::call(0x0201AD78, gabi::at<void>(player + 0x314), position.get(), &actor->mLocalPosition);
-    Fa1_copyPosition(actor, position.get());
-    Fa1_BGCheck(actor);
-    if (!actor->mTimer) {
-        gabi::call(0x0254DA38, 0x16);
-        gabi::call(0x025D57E0, actor);
-    }
-}
-VERIFY(0x02234204, Fa1_get_player_move);
-
-void Fa1_bottle_appear_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x022344EC, void, actor);
-    Fa1_speedAnimation(actor);
-    s16 angle = actor->current.angle.y;
-    s16 turn = actor->mTurnAngle;
-    s16 acceleration = actor->mNeckStep;
-    s16 limit = actor->mNeckAngle;
-    angle = s16(angle - turn);
-    turn = s16(turn + acceleration);
-    actor->current.angle.y = angle;
-    actor->mTurnAngle = turn;
-    if (turn > limit) actor->mTurnAngle = limit;
-    u16 orbitAngle = u16(u16(angle) + 0x4000);
-    u32 play = gabi::ea(gabi::call<void*>(0x025200D4));
-    f32 radius = actor->mPlayerRadius;
-    f32 vertical = actor->speed.y;
-    u32 table = 0x104A44F8 + ((u32(orbitAngle) >> 3) << 3);
-    f32 x = gabi::fmuls_ppc(radius, gabi::load<f32>(table));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    f32 y = gabi::fadds_ppc(f32(actor->mLocalPosition.y), vertical);
-    actor->mLocalPosition.x = x;
-    f32 z = gabi::fmuls_ppc(radius, gabi::load<f32>(table + 4));
-    actor->mLocalPosition.y = y;
-    actor->mLocalPosition.z = z;
-    gabi::Local<cXyz> position;
-    gabi::call(0x0201AD78, gabi::at<void>(player + 0x314), position.get(), &actor->mLocalPosition);
-    Fa1_copyPosition(actor, position.get());
-    f32 zero = gabi::load<f32>(0x10019E64);
-    f32 fall = actor->maxFallSpeed;
-    f32 speed = actor->speed.y;
-    f32 gravity = actor->gravity;
-    if (fall < zero) {
-        speed = gabi::fsubs_ppc(speed, gravity);
-        fall = actor->maxFallSpeed;
-        actor->speed.y = speed;
-        if (speed < fall) actor->speed.y = fall;
-    } else {
-        speed = gabi::fadds_ppc(speed, gravity);
-        fall = actor->maxFallSpeed;
-        actor->speed.y = speed;
-        if (speed > fall) actor->speed.y = fall;
-    }
-    radius = gabi::fadds_ppc(f32(actor->mPlayerRadius), gabi::load<f32>(0x10019EAC));
-    f32 maximum = gabi::load<f32>(0x10019E7C);
-    if (radius > maximum) radius = maximum;
-    actor->mPlayerRadius = radius;
-    Fa1_BGCheck(actor);
-    Fa1_dispatch(actor, 0x101BE294 + u32(u8(actor->mSubMode)) * 8);
-    if (!actor->mTimer) {
-        if (actor->mType != 5) gabi::call(0x0254DA38, 0x16);
-        gabi::call(0x025D57E0, actor);
-    }
-}
-VERIFY(0x022344EC, Fa1_bottle_appear_move);
-
-static void Fa1_babaPosition(daNpc_Fa1_c* actor) {
-    u32 flower = gabi::ea(actor->mpFlower.get());
-    f32 forward = gabi::load<f32>(0x10467000);
+/* inlined into daNpc_Fa1_c::bottle_baba_move */
+static void Fa1_babaPosition(daNpc_Fa1_c *actor) {
+    auto *flower = actor->m764.get();
+    f32 forward = f32(l_HIO.m50.prm.m08);
     actor->speedF = forward;
     gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, gabi::at<void>(flower + 0x314), difference.get(), &actor->current.pos);
-    s32 direction = gabi::call<s32>(0x020195B0, f32(difference->x), f32(difference->z));
-    s16 turn = gabi::load<s16>(0x10467018);
+    fa1_vectorSubtract(&flower->current.pos, difference.get(), &actor->current.pos);
+    s32 direction = fa1_atan2s(f32(difference->x), f32(difference->z));
+    s16 turn = s16(l_HIO.m50.prm.m20);
     forward = actor->speedF;
     u16 angle = u16(u32(direction) + u32(s32(turn)));
     actor->current.angle.y = s16(angle);
     u16 rereadAngle = actor->current.angle.y;
-    u32 sine = 0x104A44F8 + ((u32(angle) >> 3) << 3);
-    u32 cosine = 0x104A44F8 + ((u32(rereadAngle) >> 3) << 3);
     f32 fall = actor->maxFallSpeed;
-    f32 x = gabi::fmuls_ppc(forward, gabi::load<f32>(sine));
-    f32 zero = gabi::load<f32>(0x10019E64);
+    f32 x = gabi::fmuls_ppc(forward, cM_ssin(angle));
+    f32 zero = l_zero;
     actor->speed.x = x;
-    f32 cos = gabi::load<f32>(cosine + 4);
+    f32 cos = cM_scos(rereadAngle);
     f32 vertical = actor->speed.y;
     f32 z = gabi::fmuls_ppc(forward, cos);
     f32 gravity = actor->gravity;
@@ -1149,48 +135,1328 @@ static void Fa1_babaPosition(daNpc_Fa1_c* actor) {
         vertical = gabi::fsubs_ppc(vertical, gravity);
         fall = actor->maxFallSpeed;
         actor->speed.y = vertical;
-        if (vertical < fall) actor->speed.y = fall;
+        if (vertical < fall) {
+            actor->speed.y = fall;
+        }
     } else {
         vertical = gabi::fadds_ppc(vertical, gravity);
         fall = actor->maxFallSpeed;
         actor->speed.y = vertical;
-        if (vertical > fall) actor->speed.y = fall;
+        if (vertical > fall) {
+            actor->speed.y = fall;
+        }
     }
-    gabi::call(0x028E8D88, &actor->current.pos, &actor->speed, &actor->current.pos);
-    Fa1_BGCheck(actor);
+    PSVECAdd(&actor->current.pos, &actor->speed, &actor->current.pos);
+    actor->BGCheck();
 }
 
-void Fa1_bottle_baba_move(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234894, void, actor);
-    if (!actor->mpFlower.get()) {
-        Fa1_init_bottle_baba_move(actor);
-        Fa1_BGCheck(actor);
-        return;
+/* 02235250 */
+void *daNpc_Fa1_HIO3_c__ct(void *hio) {
+    if (!hio) {
+        hio = fa1_operatorNew(0x1C);
     }
-    Fa1_babaPosition(actor);
-    u8 submode = actor->mSubMode;
-    Fa1_dispatch(actor, 0x101BE2AC + u32(submode) * 8);
-    if (submode == 1) {
-        u32 flower = gabi::ea(actor->mpFlower.get());
-        f32 height = gabi::load<f32>(0x10019EB4);
-        f32 top = gabi::fadds_ppc(gabi::load<f32>(flower + 0x318), height);
-        if (actor->current.pos.y > top) gabi::call(0x025D57E0, actor);
+    if (hio) {
+        auto *object = static_cast<daNpc_Fa1_HIO3_c *>(hio);
+        object->mNo = -1;
+        object->__vtbl = l_hoverHioVtable;
+        // HD: copy tuning data as words, including packed signed timer fields.
+        auto *words = reinterpret_cast<be<u32> *>(&object->prm);
+        for (u32 i = 0; i != 5; ++i) {
+            words[i] = u32(l_hoverHioInitial.mWords[i]);
+        }
     }
+    return hio;
 }
-VERIFY(0x02234894, Fa1_bottle_baba_move);
 
-void Fa1_bottle_baba_move2(daNpc_Fa1_c* actor) {
-    WWHD_FUNC(0x02234A60, void, actor);
-    if (!actor->mpFlower.get()) {
-        Fa1_init_bottle_baba_move2(actor);
-        Fa1_BGCheck(actor);
+/* 022352C4 */
+void *daNpc_Fa1_HIO2_c__ct(void *hio) {
+    if (!hio) {
+        hio = fa1_operatorNew(0x28);
+    }
+    if (hio) {
+        auto *object = static_cast<daNpc_Fa1_HIO2_c *>(hio);
+        object->mNo = -1;
+        object->__vtbl = l_areaHioVtable;
+        // HD: copy tuning data as words, including packed signed timer fields.
+        auto *words = reinterpret_cast<be<u32> *>(&object->prm);
+        for (u32 i = 0; i != 8; ++i) {
+            words[i] = u32(l_areaHioInitial.mWords[i]);
+        }
+    }
+    return hio;
+}
+
+/* 02235350 */
+void *daNpc_Fa1_HIO_c__ct(void *hio) {
+    if (!hio) {
+        hio = fa1_operatorNew(0x94);
+    }
+    if (hio) {
+        auto *object = static_cast<daNpc_Fa1_HIO_c *>(hio);
+        object->__vtbl = l_hioVtable;
+        daNpc_Fa1_HIO2_c__ct(&object->m50);
+        daNpc_Fa1_HIO3_c__ct(&object->m78);
+        object->mNo = -1;
+        // HD: copy tuning data as words, including packed signed timer fields.
+        auto *words = reinterpret_cast<be<u32> *>(&object->prm);
+        for (u32 i = 0; i != 18; ++i) {
+            words[i] = u32(l_hioInitial.mWords[i]);
+        }
+    }
+    return hio;
+}
+
+/* 02232FE4 */
+daNpc_Fa1_McaMorfCallBack1_c *
+daNpc_Fa1_McaMorfCallBack1_c__ct(daNpc_Fa1_McaMorfCallBack1_c *callback) {
+
+    if (!callback) {
+        callback = static_cast<daNpc_Fa1_McaMorfCallBack1_c *>(fa1_operatorNew(8));
+    }
+    if (callback) {
+        callback->mNeckJoint = 0;
+        callback->__vtbl = l_callbackVtable;
+        callback->mNeckAngle = 0;
+    }
+    return callback;
+}
+
+/* 02233BE8 */
+BOOL daNpc_Fa1_McaMorfCallBack1_c::execute(u16 joint, void *transform) {
+
+    if (joint == mNeckJoint) {
+        static_cast<fa1_hd::TransformInfo *>(transform)->mRotation.x = mNeckAngle;
+    }
+    return TRUE;
+}
+
+/* 02233494 */
+void daNpc_Fa1_c::setPointLightParam() {
+
+    u32 z = u32(fa1_word(attention_info.position.z));
+    u32 x = u32(fa1_word(attention_info.position.x));
+    mPointLight.mColorR = 200;
+    f32 power = l_pointLightPower;
+    fa1_word(this->mPointLight.mPos.x) = x;
+    u32 y = u32(fa1_word(attention_info.position.y));
+    mPointLight.mPower = power;
+    mPointLight.mColorB = 200;
+    f32 zero = l_zero;
+    mPointLight.mColorG = 200;
+    mPointLight.mFluctuation = zero;
+    fa1_word(this->mPointLight.mPos.z) = z;
+    f32 range = l_pointLightFluctuation;
+    fa1_word(this->mPointLight.mPos.y) = y;
+    mPointLight.mFluctuation = fa1_yuragiRatio(range);
+}
+
+/* 0223350C */
+BOOL daNpc_Fa1_c::createInit() {
+
+    f32 zero = l_zero;
+    u32 parameters = u32(mParameters);
+    m768.y = zero;
+    m768.x = zero;
+    s8 type = s8(parameters);
+    m768.z = zero;
+    mStatus = 0;
+    m764 = nullptr;
+    mType = type;
+    bool bottle = type == Type_BABA_e || type == Type_LINK_e || type == Type_LINK_DOWN_e;
+    bool hover = type == Type_HOVER_e;
+    if (type == Type_BABA_e) {
+        init_bottle_baba_wait();
+    } else if (type == Type_LINK_e || type == Type_LINK_DOWN_e) {
+        init_bottle_appear_move();
+    } else if (type == Type_HOVER_e) {
+        init_hover_move();
+    } else {
+        if (type == Type_AREA_e) {
+            u32 flags = u32(actor_status);
+            s8 reloadedType = mType;
+            f32 radius = l_areaRadius;
+            actor_status = flags & ~u32(fopAcStts_NOCULLEXEC_e);
+            this->scale.x = radius;
+            type = reloadedType;
+        } else {
+            f32 radius = f32(l_HIO.prm.m10);
+            type = mType;
+            this->scale.x = radius;
+        }
+        if (type == Type_TIMER_e) {
+            u32 flags = u32(actor_status);
+            mStatus = 1;
+            actor_status = flags & ~u32(fopAcStts_NOCULLEXEC_e);
+            u16 random = fa1_getRndValueU16(0, 255);
+            s16 angle = this->current.angle.y;
+            this->current.angle.y = s16(u32(s32(angle)) + (u32(random) << 8));
+        } else {
+            mType = Type_NORMAL_e;
+        }
+        init_normal_move();
+    }
+    if (bottle || hover) {
+        u32 flags = u32(actor_status);
+        actor_status = (flags & ~u32(fopAcStts_NOCULLEXEC_e)) | (hover ? 0 : fopAcStts_UNK4000_e);
+    }
+    f32 z = this->current.pos.z;
+    f32 y = this->current.pos.y;
+    f32 height = l_playerRadius;
+    f32 x = this->current.pos.x;
+    y = gabi::fadds_ppc(y, height);
+    this->mGndChk.m_pos.z = z;
+    this->mGndChk.m_pos.x = x;
+    this->mGndChk.m_pos.y = y;
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    f32 ground = fa1_groundCross(&play->play.mBgS, &this->mGndChk);
+    type = mType;
+    mGroundY = ground;
+    if (type != Type_HOVER_e && !(ground == l_invalidGround)) {
+        this->home.pos.y = gabi::fadds_ppc(ground, l_homeGroundOffset);
+    }
+    fa1_collisionStatusInit(&this->mStts, 255, 255, this);
+    mCyl.mStts = &mStts;
+    fa1_cylinderSet(&this->mCyl, &l_cyl_src);
+    setMtx();
+    if (mType == Type_BABA_e) {
+        setPointLightParam();
+        fa1_effectPointLightSet(&mPointLight.mPos);
+    }
+    play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    u32 particles = gabi::ea(play->play.mParticle.get());
+    mpEmitter =
+        fa1_particleSet(gabi::at<void>(particles), 0, dPa_name::ID_AK_JN_CUREFAIRY00,
+                        &this->current.pos, 0, 0, 255, &this->mSparklePtclCallback, -1, 0, 0, 0);
+    return TRUE;
+}
+
+/* 02233B58 */
+BOOL daNpc_Fa1_c::_draw() {
+    // HD: the GameCube simple-shadow submission is absent.
+
+    u32 morf = gabi::ea(mpMorf.get());
+    u32 model = gabi::ea(gabi::at<mDoExt_McaMorf>(morf)->getModel());
+    void *environment = fa1_getEnvironmentLight();
+    fa1_settingTevStruct(environment, 0, &this->current.pos, &this->tevStr);
+    environment = fa1_getEnvironmentLight();
+    fa1_setLightTevColorType(environment, gabi::at<void>(model), &this->tevStr);
+    mpMorf->entryDL();
+    f32 scale = l_one;
+    dSnap_RegistFig(0x84, this, scale, scale, scale);
+    return TRUE;
+}
+
+/* 02233A0C */
+BOOL daNpc_Fa1_c::_execute() {
+
+    fa1_calcTimerU16(&mTimer);
+    u8 mode = mMode;
+    auto *move =
+        gabi::at<fa1_hd::MovePtmf>(gabi::ea(&moveProc) + u32(mode) * sizeof(fa1_hd::MovePtmf));
+    (this->*(*move))();
+    s16 angle = this->current.angle.y;
+    void *morf = mpMorf.get();
+    this->shape_angle.y = angle;
+    fa1_morfPlay(morf, 0, 0, 0);
+    setMtx();
+    if (mType == Type_BABA_e) {
+        setPointLightParam();
+    }
+    if (mMode == Mode_PLAYER_MOVE_e) {
+        u32 emitter = gabi::ea(mpEmitter.get());
+        if (emitter) {
+            gabi::at<fa1_hd::EmitterRatePrefix>(emitter)->mRate = l_one;
+        }
+    }
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    f32 radius = l_lookRadius;
+    f32 upper = l_lookUpper;
+    f32 lower = l_lookLower;
+    fa1_attentionLookRequest(reinterpret_cast<fa1_hd::Attention *>(&play->play.mAttention)->mLook,
+                             this, 0x6000, 1, radius, upper, lower);
+    return TRUE;
+}
+
+/* 02233F40 */
+BOOL daNpc_Fa1_c::checkBinCatch() {
+
+    if (u16(eventInfo.mCommand) == dEvtCmd_INCATCH_e) {
+        fopAcM_delete(this);
+        return TRUE;
+    }
+    s16 timer = s16(l_HIO.prm.m48);
+    f32 radius = f32(l_HIO.prm.m1C);
+    f32 lower = f32(l_HIO.prm.m24);
+    f32 upper = f32(l_HIO.prm.m20);
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    fa1_attentionCatchRequest(reinterpret_cast<fa1_hd::Attention *>(&play->play.mAttention)->mCatch,
+                              this, dItemNo_FAIRY_BOTTLE_e, timer, 1, radius, upper, lower);
+    u16 condition = u16(eventInfo.mCondition);
+    eventInfo.mCondition = condition | dEvtCnd_CANCATCH_e;
+    return FALSE;
+}
+
+/* 02233C04 */
+void daNpc_Fa1_c::position_move(f32 height, f32 verticalSpeed) {
+
+    f32 difference = gabi::fsubs_ppc(f32(this->current.pos.y), f32(this->home.pos.y));
+    if (difference > height) {
+        verticalSpeed = -verticalSpeed;
+        maxFallSpeed = verticalSpeed;
+    } else if (difference < -height) {
+        maxFallSpeed = verticalSpeed;
+    } else {
+        verticalSpeed = maxFallSpeed;
+    }
+    f32 zero = l_zero;
+    f32 gravity = this->gravity;
+    u16 angle = u16(this->current.angle.y);
+    f32 speed = this->speed.y;
+    if (verticalSpeed < zero) {
+        speed = gabi::fsubs_ppc(speed, gravity);
+        f32 limit = maxFallSpeed;
+        this->speed.y = speed;
+        if (speed < limit) {
+            this->speed.y = limit;
+        }
+    } else {
+        speed = gabi::fadds_ppc(speed, gravity);
+        f32 limit = maxFallSpeed;
+        this->speed.y = speed;
+        if (speed > limit) {
+            this->speed.y = limit;
+        }
+    }
+    u16 tableAngle = angle;
+    f32 forward = speedF;
+    this->speed.x = gabi::fmuls_ppc(forward, cM_ssin(tableAngle));
+    this->speed.z = gabi::fmuls_ppc(forward, cM_scos(tableAngle));
+    fopAcM_posMove(this, nullptr);
+}
+
+/* 02233CD8 */
+void daNpc_Fa1_c::BGCheck() {
+
+    u32 z = u32(fa1_word(this->current.pos.z));
+    u32 y = u32(fa1_word(this->current.pos.y));
+    fa1_word(this->mGndChk.m_pos.z) = z;
+    u32 x = u32(fa1_word(this->current.pos.x));
+    fa1_word(this->mGndChk.m_pos.y) = y;
+    fa1_word(this->mGndChk.m_pos.x) = x;
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    f32 ground = fa1_groundCross(&play->play.mBgS, &this->mGndChk);
+    f32 invalid = l_invalidGround;
+    mGroundY = ground;
+    if (ground == invalid) {
+        f32 zero = l_zero;
+        f32 one = l_one;
+        m774.x = zero;
+        m774.y = one;
+        m774.z = zero;
         return;
     }
-    Fa1_babaPosition(actor);
-    Fa1_dispatch(actor, 0x101BE2AC + u32(u8(actor->mSubMode)) * 8);
-    u32 flower = gabi::ea(actor->mpFlower.get());
-    f32 height = gabi::load<f32>(0x10019EB8);
-    f32 top = gabi::fadds_ppc(gabi::load<f32>(flower + 0x318), height);
-    if (actor->current.pos.y > top) Fa1_init_bottle_baba_move(actor);
+    play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    u16 index = u16(this->mGndChk.mPolyIndex);
+    u16 background = u16(this->mGndChk.mBgIndex);
+    u32 normal = gabi::ea(fa1_getTriPlane(&play->play.mBgS, background, index));
+    fa1_word(this->m774.x) = u32(fa1_word(gabi::at<cXyz>(normal)->x));
+    fa1_word(this->m774.y) = u32(fa1_word(gabi::at<cXyz>(normal)->y));
+    fa1_word(this->m774.z) = u32(fa1_word(gabi::at<cXyz>(normal)->z));
+    play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    u8 room = fa1_getRoomId(&play->play.mBgS, &this->mGndChk.cBgS_PolyInfo::mPolyIndex);
+    tevStr.mRoomNo = s8(room);
+    this->current.roomNo = s8(room);
+    play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    u8 color = fa1_getPolyColor(&play->play.mBgS, &this->mGndChk.cBgS_PolyInfo::mPolyIndex);
+    tevStr.mEnvrIdxOverride = color;
 }
-VERIFY(0x02234A60, Fa1_bottle_baba_move2);
+
+/* 022332E0 */
+void daNpc_Fa1_c::init_normal_move() {
+
+    f32 fall = l_normalMaxFallSpeed;
+    f32 gravity = l_normalGravity;
+    mMode = Mode_NORMAL_MOVE_e;
+    f32 speed = f32(l_HIO.prm.m08);
+    maxFallSpeed = fall;
+    speedF = speed;
+    this->gravity = gravity;
+    u16 timer = fa1_getRndValueU16(u16(l_HIO.prm.m44), 60);
+    s8 type = mType;
+    mTimer = timer;
+    if (type == Type_AREA_e) {
+        init_areaMove();
+    } else {
+        init_straight2();
+    }
+}
+
+/* 02234078 */
+void daNpc_Fa1_c::normal_move() {
+
+    u8 submode = mSubMode;
+    speedF = f32(l_HIO.prm.m08);
+    auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&moveSubProc) +
+                                            u32(submode) * sizeof(fa1_hd::MovePtmf));
+    (this->*(*move))();
+    f32 height = l_moveHeight;
+    f32 speed = l_one;
+    position_move(height, speed);
+    BGCheck();
+    findPlayer();
+    if (Fa1_checkCollision(this)) {
+        init_get_player_move();
+        return;
+    }
+    if (!checkBinCatch() && (u8(mStatus) & 1) && !mTimer) {
+        init_escape_move();
+    }
+}
+
+/* 02234DC8 */
+void daNpc_Fa1_c::init_straight() {
+
+    mSubMode = NormalSubMode_STRAIGHT_e;
+    u8 timer = fa1_getRndValueU8(60, 60);
+    f32 gravity = l_normalGravity;
+    mMoveTimer = timer;
+    this->gravity = gravity;
+}
+
+/* 022332C4 */
+void daNpc_Fa1_c::init_straight2() {
+
+    mMoveTimer = 0;
+    gravity = l_one;
+    mSubMode = NormalSubMode_STRAIGHT_e;
+}
+
+/* 02234E60 */
+void daNpc_Fa1_c::straight() {
+
+    this->scale.x = f32(l_HIO.prm.m10);
+    if (!fa1_calcMoveTimer(&mMoveTimer)) {
+        gabi::Local<cXyz> difference;
+        fa1_vectorSubtract(&this->current.pos, difference.get(), &this->home.pos);
+        gabi::Local<cXyz> horizontal;
+        horizontal->x = f32(difference->x);
+        horizontal->y = l_zero;
+        horizontal->z = f32(difference->z);
+        f32 square = PSVECSquareMag(horizontal.get());
+        f32 radius = fa1_sqrtf(square);
+        if (radius > f32(this->scale.x)) {
+            init_turn();
+        }
+    }
+}
+
+/* 02234E14 */
+void daNpc_Fa1_c::init_turn() {
+
+    mSubMode = NormalSubMode_TURN_e;
+    u8 timer = fa1_getRndValueU8(60, 60);
+    f32 gravity = l_normalGravity;
+    mMoveTimer = timer;
+    this->gravity = gravity;
+}
+
+/* 02234EF0 */
+void daNpc_Fa1_c::turn() {
+
+    if (fa1_calcMoveTimer(&mMoveTimer)) {
+        gabi::Local<cXyz> difference;
+        fa1_vectorSubtract(&this->current.pos, difference.get(), &this->home.pos);
+        f32 x = -f32(difference->x);
+        f32 z = -f32(difference->z);
+        s32 angle = fa1_atan2s(x, z);
+        cLib_addCalcAngleS(&this->current.angle.y, angle, 0x20, 0x800, 1);
+    } else {
+        init_straight();
+    }
+}
+
+/* 022332A0 */
+void daNpc_Fa1_c::init_areaMove() {
+
+    mSubMode = NormalSubMode_AREAMOVE_e;
+    gravity = l_one;
+    m798 = 0;
+    m79A = 0;
+}
+
+/* 02234FA4 */
+void daNpc_Fa1_c::areaMove() {
+
+    gabi::Local<cXyz> difference;
+    fa1_vectorSubtract(&this->current.pos, difference.get(), &this->home.pos);
+    f32 radius = Fa1_horizontalRadius(difference.get());
+    if (radius > f32(this->scale.x)) {
+        init_areaOutMove();
+        return;
+    }
+    s16 direction = this->current.angle.y;
+    Fa1_areaTurn(this, direction);
+}
+
+/* 02234F80 */
+void daNpc_Fa1_c::init_areaOutMove() {
+
+    mSubMode = NormalSubMode_AREAOUTMOVE_e;
+    gravity = l_normalGravity;
+    m798 = 0;
+    m79A = 0;
+}
+
+/* 0223509C */
+void daNpc_Fa1_c::areaOutMove() {
+
+    gabi::Local<cXyz> difference;
+    fa1_vectorSubtract(&this->current.pos, difference.get(), &this->home.pos);
+    f32 radius = Fa1_horizontalRadius(difference.get());
+    if (radius < f32(this->scale.x)) {
+        init_areaMove();
+        return;
+    }
+    s32 direction = fa1_targetAngleY(&this->current.pos, &this->home.pos);
+    Fa1_areaTurn(this, direction);
+}
+
+/* 02233EA8 */
+void daNpc_Fa1_c::init_get_player_move() {
+
+    mMode = Mode_PLAYER_MOVE_e;
+    u16 timer = u16(l_HIO.prm.m42);
+    f32 radius = l_playerRadius;
+    mTimer = timer;
+    s16 turn = s16(l_HIO.prm.m3C);
+    mMcaMorfCallback1.mNeckAngle = 0;
+    m78A = turn;
+    mPlayerR = radius;
+    this->current.angle.y = 0;
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    s8 room = this->current.roomNo;
+    this->current.pos.y = f32(player->current.pos.y);
+    s32 reverb = fa1_getReverb(room);
+    fa1_seStart(JA_SE_OBJ_FAILY_GET, &this->current.pos, nullptr, reverb);
+}
+
+/* 02234204 */
+void daNpc_Fa1_c::get_player_move() {
+
+    Fa1_speedAnimation(this);
+    s16 turn = m78A;
+    s16 angle = s16(u16(this->current.angle.y) - u16(turn));
+    this->current.angle.y = angle;
+    s16 acceleration = s16(l_HIO.prm.m40);
+    s16 limit = s16(l_HIO.prm.m3E);
+    turn = s16(turn + acceleration);
+    if (turn > limit) {
+        turn = limit;
+    }
+    m78A = turn;
+    u16 orbitAngle = u16(u16(angle) + 0x4000);
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    u16 tableAngle = orbitAngle;
+    f32 radius = mPlayerR;
+    f32 x = gabi::fmuls_ppc(radius, cM_ssin(tableAngle));
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    m768.x = x;
+    f32 z = gabi::fmuls_ppc(radius, cM_scos(tableAngle));
+    f32 y = m768.y;
+    m768.z = z;
+    m768.y = gabi::fadds_ppc(y, f32(l_HIO.prm.m0C));
+    gabi::Local<cXyz> position;
+    fa1_vectorAdd(&player->current.pos, position.get(), &m768);
+    Fa1_copyPosition(this, position.get());
+    BGCheck();
+    if (!mTimer) {
+        execItemGet(dItemNo_RECOVER_FAIRY_e);
+        fopAcM_delete(this);
+    }
+}
+
+/* 0223404C */
+void daNpc_Fa1_c::init_escape_move() {
+
+    mMode = Mode_ESCAPE_MOVE_e;
+    gravity = f32(l_HIO.prm.m18);
+    maxFallSpeed = f32(l_HIO.prm.m14);
+    mTimer = u16(l_HIO.prm.m46);
+}
+
+/* 0223434C */
+void daNpc_Fa1_c::escape_move() {
+
+    f32 gravity = this->gravity;
+    f32 speed = gabi::fadds_ppc(f32(this->speed.y), gravity);
+    f32 limit = maxFallSpeed;
+    this->speed.y = speed;
+    u16 angle = this->current.angle.y;
+    if (speed > limit) {
+        this->speed.y = limit;
+    }
+    u16 tableAngle = angle;
+    f32 forward = speedF;
+    this->speed.x = gabi::fmuls_ppc(forward, cM_ssin(tableAngle));
+    this->speed.z = gabi::fmuls_ppc(forward, cM_scos(tableAngle));
+    fopAcM_posMove(this, nullptr);
+    BGCheck();
+    s16 neck = mMcaMorfCallback1.mNeckAngle;
+    if (neck > 0) {
+        neck = s16(neck - 0x800);
+        if (neck < 0) {
+            neck = 0;
+        }
+    } else if (neck < 0) {
+        neck = s16(neck + 0x800);
+        if (neck > 0) {
+            neck = 0;
+        }
+    }
+    mMcaMorfCallback1.mNeckAngle = neck;
+    if (Fa1_checkCollision(this)) {
+        init_get_player_move();
+    } else if (!mTimer) {
+        fopAcM_delete(this);
+    }
+}
+
+/* 0223326C */
+void daNpc_Fa1_c::init_hover_move() {
+
+    mMode = Mode_HOVER_MOVE_e;
+    f32 gravity = f32(l_HIO.m78.prm.m0C);
+    this->gravity = gravity;
+    f32 rise = f32(l_HIO.m78.prm.m08);
+    f32 zero = l_zero;
+    speedF = zero;
+    maxFallSpeed = -rise;
+}
+
+/* 0223447C */
+void daNpc_Fa1_c::hover_move() {
+
+    f32 speed = f32(l_HIO.m78.prm.m08);
+    f32 height = f32(l_HIO.m78.prm.m10);
+    position_move(height, speed);
+    BGCheck();
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    s32 direction = fa1_searchActorAngleY(this, player);
+    cLib_addCalcAngleS(&this->current.angle.y, direction, 8, 0x2000, 0x400);
+}
+
+/* 02233220 */
+void daNpc_Fa1_c::init_bottle_appear_move() {
+
+    mMode = Mode_BOTTLE_APPEAR_MOVE_e;
+    init_up1();
+    if (mType == Type_LINK_DOWN_e) {
+        execItemGet(dItemNo_RECOVER_FAIRY_e);
+    }
+}
+
+/* 022344EC */
+void daNpc_Fa1_c::bottle_appear_move() {
+
+    Fa1_speedAnimation(this);
+    s16 angle = this->current.angle.y;
+    s16 turn = m78A;
+    s16 acceleration = m78E;
+    s16 limit = m78C;
+    angle = s16(angle - turn);
+    turn = s16(turn + acceleration);
+    this->current.angle.y = angle;
+    m78A = turn;
+    if (turn > limit) {
+        m78A = limit;
+    }
+    u16 orbitAngle = u16(u16(angle) + 0x4000);
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    f32 radius = mPlayerR;
+    f32 vertical = this->speed.y;
+    u16 tableAngle = orbitAngle;
+    f32 x = gabi::fmuls_ppc(radius, cM_ssin(tableAngle));
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    f32 y = gabi::fadds_ppc(f32(m768.y), vertical);
+    m768.x = x;
+    f32 z = gabi::fmuls_ppc(radius, cM_scos(tableAngle));
+    m768.y = y;
+    m768.z = z;
+    gabi::Local<cXyz> position;
+    fa1_vectorAdd(&player->current.pos, position.get(), &m768);
+    Fa1_copyPosition(this, position.get());
+    f32 zero = l_zero;
+    f32 fall = maxFallSpeed;
+    f32 speed = this->speed.y;
+    f32 gravity = this->gravity;
+    if (fall < zero) {
+        speed = gabi::fsubs_ppc(speed, gravity);
+        fall = maxFallSpeed;
+        this->speed.y = speed;
+        if (speed < fall) {
+            this->speed.y = fall;
+        }
+    } else {
+        speed = gabi::fadds_ppc(speed, gravity);
+        fall = maxFallSpeed;
+        this->speed.y = speed;
+        if (speed > fall) {
+            this->speed.y = fall;
+        }
+    }
+    radius = gabi::fadds_ppc(f32(mPlayerR), l_orbitRadiusStep);
+    f32 maximum = l_playerRadius;
+    if (radius > maximum) {
+        radius = maximum;
+    }
+    mPlayerR = radius;
+    BGCheck();
+    auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&bottleMoveSubProc) +
+                                            u32(u8(mSubMode)) * sizeof(fa1_hd::MovePtmf));
+    (this->*(*move))();
+    if (!mTimer) {
+        if (mType != Type_LINK_DOWN_e) {
+            execItemGet(dItemNo_RECOVER_FAIRY_e);
+        }
+        fopAcM_delete(this);
+    }
+}
+
+/* 02233154 */
+void daNpc_Fa1_c::init_up1() {
+
+    mSubMode = BottleSubMode_UP1_e;
+    mTimer = u16(l_HIO.prm.m4A);
+    maxFallSpeed = f32(l_HIO.prm.m30);
+    this->speed.y = f32(l_HIO.prm.m28);
+    f32 gravity = f32(l_HIO.prm.m34);
+    m78A = 0;
+    this->gravity = gravity;
+    m78C = 0;
+    m78E = 0;
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    gabi::Local<cXyz> difference;
+    fa1_vectorSubtract(&this->current.pos, difference.get(), &player->current.pos);
+    f32 x = difference->x;
+    f32 zero = l_zero;
+    f32 z = difference->z;
+    f32 y = difference->y;
+    gabi::Local<cXyz> horizontal;
+    horizontal->y = zero;
+    m768.x = x;
+    m768.y = y;
+    horizontal->x = x;
+    horizontal->z = z;
+    m768.z = z;
+    f32 square = PSVECSquareMag(horizontal.get());
+    f32 radius = fa1_sqrtf(square);
+    z = m768.z;
+    mPlayerR = radius;
+    x = m768.x;
+    s32 angle = fa1_atan2s(x, z);
+    this->current.angle.y = s16(u32(angle) - 0x4000);
+}
+
+/* 022351C4 */
+void daNpc_Fa1_c::up1() {
+
+    if (f32(this->speed.y) < l_zero) {
+        init_down();
+    }
+}
+
+/* 022351A0 */
+void daNpc_Fa1_c::init_down() {
+
+    mSubMode = BottleSubMode_DOWN_e;
+    m78C = s16(l_HIO.prm.m4C);
+    m78E = s16(l_HIO.prm.m4E);
+}
+
+/* 02235238 */
+void daNpc_Fa1_c::down() {
+
+    if (m768.y < f32(l_HIO.prm.m38)) {
+        init_up2();
+    }
+}
+
+/* 022351DC */
+void daNpc_Fa1_c::init_up2() {
+
+    mSubMode = BottleSubMode_UP2_e;
+    s8 room = s8(this->current.roomNo);
+    maxFallSpeed = f32(l_HIO.prm.m2C);
+    s32 reverb = fa1_getReverb(room);
+    fa1_seStart(JA_SE_OBJ_BOTTLE_FAILY, &this->current.pos, nullptr, reverb);
+}
+
+/* 02235498 */
+void daNpc_Fa1_c::up2() {}
+
+/* 0223311C */
+void daNpc_Fa1_c::init_bottle_baba_wait() {
+
+    mMode = Mode_BOTTLE_BABA_WAIT_e;
+    f32 zero = l_zero;
+    maxFallSpeed = zero;
+    this->speed.z = zero;
+    this->speed.x = zero;
+    this->speed.y = zero;
+    speedF = zero;
+    gravity = zero;
+    mTimer = u16(l_HIO.m50.prm.m24);
+}
+
+/* 022347E4 */
+void daNpc_Fa1_c::bottle_baba_wait() {
+
+    if (!mTimer) {
+        init_bottle_baba_move2();
+    }
+}
+
+/* 022347F4 */
+void daNpc_Fa1_c::init_bottle_baba_move() {
+
+    mMode = Mode_BOTTLE_BABA_MOVE_e;
+    fa1_searchByName(fpcNm_NPC_BA1_e, &m764);
+    auto *flower = m764.get();
+    mTimer = u16(l_HIO.m50.prm.m22);
+    f32 speed = f32(l_HIO.m50.prm.m08);
+    m798 = 1;
+    speedF = speed;
+    m79C = f32(l_HIO.m50.prm.m10);
+    m7A0 = f32(l_HIO.m50.prm.m0C);
+    if (flower) {
+        f32 x = f32(flower->current.pos.x);
+        f32 offset = l_flowerOffsetX;
+        x = gabi::fadds_ppc(x, offset);
+        flower = m764.get();
+        this->current.pos.x = x;
+        this->current.pos.z = f32(flower->current.pos.z);
+    }
+    init_baba_down();
+}
+
+/* 02234894 */
+void daNpc_Fa1_c::bottle_baba_move() {
+
+    if (!m764.get()) {
+        init_bottle_baba_move();
+        BGCheck();
+        return;
+    }
+    Fa1_babaPosition(this);
+    u8 submode = mSubMode;
+    auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&bottleBabaSubProc) +
+                                            u32(submode) * sizeof(fa1_hd::MovePtmf));
+    (this->*(*move))();
+    if (submode == BottleBabaSubMode_UP2_e) {
+        auto *flower = m764.get();
+        f32 height = l_flowerDeleteHeight;
+        f32 top = gabi::fadds_ppc(f32(flower->current.pos.y), height);
+        if (this->current.pos.y > top) {
+            fopAcM_delete(this);
+        }
+    }
+}
+
+/* 02234778 */
+void daNpc_Fa1_c::init_bottle_baba_move2() {
+
+    mMode = Mode_BOTTLE_BABA_MOVE2_e;
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    m764 = player;
+    f32 speed = f32(l_HIO.m50.prm.m08);
+    m798 = 0;
+    speedF = speed;
+    m79C = f32(l_HIO.m50.prm.m18);
+    m7A0 = f32(l_HIO.m50.prm.m14);
+    init_baba_down();
+}
+
+/* 02234A60 */
+void daNpc_Fa1_c::bottle_baba_move2() {
+
+    if (!m764.get()) {
+        init_bottle_baba_move2();
+        BGCheck();
+        return;
+    }
+    Fa1_babaPosition(this);
+    auto *move = gabi::at<fa1_hd::MovePtmf>(gabi::ea(&bottleBabaSubProc) +
+                                            u32(u8(mSubMode)) * sizeof(fa1_hd::MovePtmf));
+    (this->*(*move))();
+    auto *flower = m764.get();
+    f32 height = l_playerBabaHeight;
+    f32 top = gabi::fadds_ppc(f32(flower->current.pos.y), height);
+    if (this->current.pos.y > top) {
+        init_bottle_baba_move();
+    }
+}
+
+/* 022346FC */
+void daNpc_Fa1_c::init_baba_down() {
+
+    f32 fall = m79C;
+    mSubMode = BottleBabaSubMode_BABADOWN_e;
+    f32 zero = l_zero;
+    u8 mode = mMode;
+    this->speed.y = zero;
+    maxFallSpeed = fall;
+    f32 gravity = f32(l_HIO.m50.prm.m1C);
+    this->gravity = gravity;
+    if (mode == Mode_BOTTLE_BABA_MOVE_e) {
+        s32 reverb = fa1_getReverb(s8(this->current.roomNo));
+        fa1_seStart(JA_SE_OBJ_BA_FAILY_2, &this->current.pos, nullptr, reverb);
+    }
+}
+
+/* 02234CA0 */
+void daNpc_Fa1_c::baba_down() {
+
+    if (f32(this->current.pos.y) < f32(m764->current.pos.y)) {
+        init_baba_up();
+    }
+}
+
+/* 02234C3C */
+void daNpc_Fa1_c::init_baba_up() {
+
+    u8 mode = mMode;
+    f32 rise = m7A0;
+    mSubMode = BottleBabaSubMode_UP2_e;
+    maxFallSpeed = rise;
+    if (mode == Mode_BOTTLE_BABA_MOVE2_e) {
+        s32 reverb = fa1_getReverb(s8(this->current.roomNo));
+        fa1_seStart(JA_SE_OBJ_BA_FAILY_1, &this->current.pos, nullptr, reverb);
+    }
+}
+
+/* 02234CB8 */
+void daNpc_Fa1_c::init_bigelf_change() {
+
+    u32 flags = u32(actor_status);
+    u16 angle = this->current.angle.y;
+    mMode = Mode_BIGELF_CHANGE_e;
+    actor_status = flags | fopAcStts_UNK4000_e;
+    f32 speed = f32(l_HIO.m78.prm.m14);
+    speedF = speed;
+    u16 tableAngle = angle;
+    this->speed.x = gabi::fmuls_ppc(speed, cM_ssin(tableAngle));
+    this->speed.z = gabi::fmuls_ppc(speed, cM_scos(tableAngle));
+    PSVECAdd(&this->current.pos, &this->speed, &this->current.pos);
+}
+
+/* 02234D1C */
+void daNpc_Fa1_c::bigelf_change() {
+
+    gabi::Local<cXyz> difference;
+    fa1_vectorSubtract(&this->home.pos, difference.get(), &this->current.pos);
+    s32 direction = fa1_atan2s(f32(difference->x), f32(difference->z));
+    s16 turn = s16(l_HIO.m78.prm.m18);
+    u16 angle = u16(u32(direction) + u32(s32(turn)));
+    f32 speed = speedF;
+    this->current.angle.y = s16(angle);
+    u16 tableAngle = angle;
+    this->speed.x = gabi::fmuls_ppc(speed, cM_ssin(tableAngle));
+    this->speed.z = gabi::fmuls_ppc(speed, cM_scos(tableAngle));
+    PSVECAdd(&this->current.pos, &this->speed, &this->current.pos);
+    BGCheck();
+}
+
+/* 02233DC4 */
+void daNpc_Fa1_c::findPlayer() {
+
+    auto *play = reinterpret_cast<dComIfG_inf_c *>(dComIfGp_get());
+    auto *player = play->play.mPlayerInfo[0].mpPlayer.get();
+    gabi::Local<cXyz> difference;
+    fa1_vectorSubtract(&player->current.pos, difference.get(), &this->current.pos);
+    s32 direction = fa1_atan2s(f32(difference->x), f32(difference->z));
+    s16 target = s16(u32(direction) - u32(s32(s16(this->current.angle.y))));
+    s16 neck = mMcaMorfCallback1.mNeckAngle;
+    if (target < 0) {
+        if (target < -0x4000) {
+            target = -0x4000;
+        }
+        s16 step = s16(s16(target - neck) / 4);
+        if (step < -0x800) {
+            step = -0x800;
+        }
+        neck = s16(neck + step);
+        if (neck < target) {
+            neck = target;
+        }
+    } else {
+        if (target > 0x4000) {
+            target = 0x4000;
+        }
+        s16 step = s16(s16(target - neck) / 4);
+        if (step > 0x800) {
+            step = 0x800;
+        }
+        neck = s16(neck + step);
+        if (neck > target) {
+            neck = target;
+        }
+    }
+    mMcaMorfCallback1.mNeckAngle = neck;
+}
+
+/* 02233984 */
+BOOL daNpc_Fa1_c::_delete() {
+
+    fa1_followCallbackRemove(&this->mSparklePtclCallback);
+    if (mType == Type_BABA_e) {
+        fa1_effectPointLightCut(&mPointLight.mPos);
+    }
+    u32 count = u32(l_hio_counter);
+    if (count) {
+        count -= 1;
+        l_hio_counter = count;
+        if (s32(count) > 0) {
+            return TRUE;
+        }
+    }
+    s8 hio = s8(l_HIO.mNo);
+    if (hio >= 0) {
+        fa1_hioDeleteChild(hio);
+        l_HIO.mNo = -1;
+    }
+    return TRUE;
+}
+
+// HD: this free heap adapter preserves the verified callback ABI.
+/* 02232FE0 */
+BOOL CheckCreateHeap(daNpc_Fa1_c *actor) { return actor->CreateHeap(); }
+
+/* 02233854 */
+s32 daNpc_Fa1_c::_create() {
+
+    u32 condition = u32(actor_condition);
+    if (!(condition & 8)) {
+        if (gabi::ea(this) != 0) {
+            daNpc_Fa1_c__ct(this);
+            condition = u32(actor_condition);
+        }
+        actor_condition = condition | 8;
+    }
+    if (!fa1_entrySolidHeap(this, CheckCreateHeap, 0x1100)) {
+        return cPhs_ERROR_e;
+    }
+    u32 morf = gabi::ea(mpMorf.get());
+    u32 model = gabi::ea(gabi::at<mDoExt_McaMorf>(morf)->getModel());
+    cullMtx = model ? gabi::ea(&gabi::at<J3DModel>(model)->mBaseTransformMtx) : 0;
+    if (s8(l_HIO.mNo) < 0) {
+        // HD: the guest label retains its original Shift-JIS recovery-fairy text.
+        s32 id = fa1_hioCreateChild("Recovery fairy", &l_HIO);
+        l_HIO.mNo = s8(id);
+        l_hio_counter = 1;
+    } else {
+        l_hio_counter = u32(l_hio_counter) + 1;
+    }
+    return createInit() ? cPhs_COMPLEATE_e : cPhs_ERROR_e;
+}
+
+/* 02232EA0 */
+BOOL daNpc_Fa1_c::CreateHeap() {
+
+    gabi::Local<SafeString> modelKey;
+    modelKey->mStringTop = gabi::guest_str("Always");
+    u32 manager = gabi::ea(l_resourceManager.mResource.get());
+    modelKey->__vtbl = gc_tu.safeString;
+    void *data =
+        fa1_getObjectResource(gabi::at<void>(manager), modelKey.get(), dRes_INDEX_ALWAYS_BDL_FA_e);
+    manager = gabi::ea(l_resourceManager.mResource.get());
+    gabi::Local<SafeString> animationKey;
+    animationKey->mStringTop = gabi::guest_str("Always");
+    animationKey->__vtbl = gc_tu.safeString;
+    void *animation = fa1_getObjectResource(gabi::at<void>(manager), animationKey.get(),
+                                            dRes_INDEX_ALWAYS_BCK_FA_e);
+    f32 rate = l_one;
+    void *morf = fa1_morfCreate(nullptr, data, &mMcaMorfCallback1, nullptr, animation, 2, 0, -1, 0,
+                                0, 0, 0x11020203, rate);
+    mpMorf = static_cast<mDoExt_McaMorf *>(morf);
+    if (!morf) {
+        return FALSE;
+    }
+    if (!gabi::ea(static_cast<mDoExt_McaMorf *>(morf)->getModel())) {
+        mpMorf = nullptr;
+        return FALSE;
+    }
+    u32 names = gabi::ea(fa1_getJointNameResource(data));
+    u32 displacement = u32(gabi::at<fa1_hd::JointNameResourcePrefix>(names)->mNameTableOffset);
+    void *table = gabi::at<void>(displacement ? names + 0x10 + displacement : 0);
+    s32 joint = fa1_getJointIndex(table, "neck");
+    mMcaMorfCallback1.mNeckJoint = u16(joint);
+    mMcaMorfCallback1.mNeckAngle = 0;
+    return TRUE;
+}
+
+/* 02233378 */
+void daNpc_Fa1_c::setMtx() {
+
+    u32 morf = gabi::ea(mpMorf.get());
+    f32 x = this->current.pos.x, y = this->current.pos.y, z = this->current.pos.z;
+    u32 model = gabi::ea(gabi::at<mDoExt_McaMorf>(morf)->getModel());
+    fa1_matrixTranslate(&l_matrixStack, x, y, z);
+    fa1_matrixRotateY(&l_matrixStack, s16(this->shape_angle.y));
+    // Capture the complete source matrix before writing the model destination.
+    f32 matrix[12];
+    for (u32 i = 0; i != 12; ++i) {
+        matrix[i] = f32(l_matrixStack.m[i / 4][i % 4]);
+    }
+    const u8 order[12] = {1, 9, 10, 8, 7, 5, 2, 11, 3, 0, 6, 4};
+    for (u8 i : order) {
+        gabi::at<J3DModel>(model)->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
+    }
+    mpMorf->calc();
+    morf = gabi::ea(mpMorf.get());
+    u16 joint = mMcaMorfCallback1.mNeckJoint;
+    model = gabi::ea(gabi::at<mDoExt_McaMorf>(morf)->getModel());
+    auto *matrices = gabi::at<J3DModel>(model)->mpMtxBuffer.get();
+    u16 flags = u16(matrices->mFlags);
+    u32 table = u32(matrices->mpAnmMtx);
+    auto *selected = gabi::at<Mtx34>(table + u32(joint) * sizeof(Mtx34));
+    matrices->mFlags = flags | 0x10;
+    x = f32(selected->m[0][3]);
+    y = f32(selected->m[1][3]);
+    z = f32(selected->m[2][3]);
+    this->attention_info.position.y = y;
+    this->eyePos.z = z;
+    this->attention_info.position.x = x;
+    this->attention_info.position.z = z;
+    this->eyePos.x = x;
+    this->eyePos.y = y;
+}
+
+/* 02233980 */
+s32 daNpc_Fa1_Create(daNpc_Fa1_c *actor) { return actor->_create(); }
+
+/* 02233A08 */
+BOOL daNpc_Fa1_Delete(daNpc_Fa1_c *actor) { return actor->_delete(); }
+
+/* 02233B54 */
+BOOL daNpc_Fa1_Execute(daNpc_Fa1_c *actor) { return actor->_execute(); }
+
+/* 02233BDC */
+BOOL daNpc_Fa1_Draw(daNpc_Fa1_c *actor) { return actor->_draw(); }
+
+/* 02233BE0 */
+BOOL daNpc_Fa1_IsDelete(daNpc_Fa1_c *actor) { return TRUE; }
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 0223556C */
+u16 fa1_calcTimerU16(be<u16> *timer) {
+
+    u16 value = *timer;
+    if (value) {
+        value = u16(value - 1);
+        *timer = value;
+    }
+    return value;
+}
+
+/* 0223558C */
+u16 fa1_getRndValueU16(u16 base, u16 range) {
+
+    f32 random = cM_rndF(f32(range));
+    return u16(gabi::ftoi(gabi::fadds_ppc(f32(base), random)));
+}
+
+/* 02235608 */
+u8 fa1_getRndValueU8(u8 base, u8 range) {
+
+    f32 random = cM_rndF(f32(range));
+    return u8(gabi::ftoi(gabi::fadds_ppc(f32(base), random)));
+}
+
+/* 02235568 */
+void fa1_SafeString_assureTerminationImpl_(SafeString *string) {}
+
+/* 02235484 */
+void fa1_SafeString__dt(void *string, s32 flags) {
+
+    if (string && (flags & 1)) {
+        fa1_operatorDelete(string);
+    }
+}
+
+/* 02233030 */
+daNpc_Fa1_c *daNpc_Fa1_c__ct(daNpc_Fa1_c *actor) {
+
+    if (!actor) {
+        actor = static_cast<daNpc_Fa1_c *>(fa1_operatorNew(0x8C0));
+    }
+    if (!actor) {
+        return nullptr;
+    }
+    u32 a = gabi::ea(actor);
+    fa1_npcConstructor(actor);
+    actor->__vtbl = l_actorVtable;
+    daNpc_Fa1_McaMorfCallBack1_c__ct(&actor->mMcaMorfCallback1);
+    fa1_followCallbackConstructor(&actor->mSparklePtclCallback, 0, 0);
+    fa1_groundCheckConstructor(&actor->mGndChk);
+    actor->mGndChk.dBgS_GrpPassChk::__vtbl = gc_tu.gndChk.v4C;
+    actor->mGndChk.dBgS_PolyPassChk::__vtbl = gc_tu.gndChk.v40;
+    actor->mGndChk.cBgS_PolyInfo::__vtbl = gc_tu.gndChk.v20;
+    actor->mGndChk.cBgS_Chk::__vtbl = gc_tu.gndChk.v10;
+    actor->mGndChk.mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk *>(&actor->mGndChk));
+    actor->mGndChk.mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk *>(&actor->mGndChk));
+    actor->mGndChk.mbObjThrough = 1;
+    actor->mGndChk.mbCamThrough = 0;
+    actor->mGndChk.mbLinkThrough = 0;
+    actor->mGndChk.mbArrowThrough = 0;
+    actor->mGndChk.mbBombThrough = 0;
+    actor->mGndChk.mbBoomerangThrough = 0;
+    actor->mGndChk.mbRopeThrough = 0;
+    actor->mGndChk.mGrp = 0xF;
+    actor->mPointLight.mHD20 = l_one;
+    return actor;
+}
+
+/* 0223549C */
+void daNpc_Fa1_c__dt(daNpc_Fa1_c *actor, s32 flags) {
+
+    if (!actor) {
+        return;
+    }
+    actor->mGndChk.cBgS_PolyInfo::__vtbl = gc_tu.gndChkDt[0];
+    actor->mGndChk.dBgS_PolyPassChk::__vtbl = gc_tu.gndChkDt[1];
+    actor->mGndChk.dBgS_GrpPassChk::__vtbl = gc_tu.gndChkDt[2];
+    fa1_groundCheckDestructor(&actor->mGndChk, 0);
+    fa1_cylinderDestructor(&actor->mCyl, 2);
+    fa1_collisionStatusDestructor(&actor->mStts, 2);
+    fa1_circleDestructor(&actor->mAcchCir.m_cir, 2);
+    actor->mObjAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcchDt[0];
+    actor->mObjAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcchDt[1];
+    fa1_actorGroundDestructor(&actor->mObjAcch, 0);
+    fa1_actorDestructor(actor, 0);
+    if (flags & 1) {
+        fa1_operatorDelete(actor);
+    }
+}
+
+/* 022353E4 */
+void __sinit_d_a_npc_fa1_cpp() {
+
+    l_headerState.mZero[2] = 0;
+    l_headerState.mZero[0] = 0;
+    l_headerState.mZero[3] = 0;
+    l_headerState.mZero[1] = 0;
+    fa1_registerGlobalObject(&l_headerDescriptors.mWords[0]);
+    f32 timer = l_headerTimerInitial;
+    f32 unused = l_headerUnusedInitial;
+    l_headerState.mTimer = timer;
+    l_headerState.mUnused = unused;
+    fa1_headerStaticConstructor(&l_headerState.mFirst);
+    fa1_registerGlobalObject(&l_headerDescriptors.mWords[3]);
+    fa1_headerStaticByteConstructor(&l_headerState.mSecond);
+    fa1_registerGlobalObject(&l_headerDescriptors.mWords[6]);
+    daNpc_Fa1_HIO_c__ct(&l_HIO);
+}
+
+// clang-format off
+/* WWHD glue
+str 10019E54 "Always"
+data l_matrixStack 1048D0CC
+data l_resourceManager 101F4F28
+data l_cyl_src 101BE2DC
+data l_headerState 10466F94
+data l_headerDescriptors 101BE368
+data l_hioInitial 10019EF0
+data l_areaHioInitial 10019ED0
+data l_hoverHioInitial 10019EBC
+str 10019E5C "neck"
+str 10019E88 "Recovery fairy" renamed
+data l_one 10019E50
+data l_zero 10019E64
+data l_normalGravity 10019E68
+data l_normalMaxFallSpeed 10019E6C
+data l_pointLightPower 10019E70
+data l_pointLightFluctuation 10019E74
+data l_areaRadius 10019E78
+data l_playerRadius 10019E7C
+data l_invalidGround 10019E80
+data l_homeGroundOffset 10019E84
+data l_lookRadius 10019E94
+data l_lookUpper 10019E98
+data l_lookLower 10019E9C
+data l_moveHeight 10019EA0
+data l_animationAcceleration 10019EA4
+data l_animationMaxRate 10019EA8
+data l_orbitRadiusStep 10019EAC
+data l_flowerOffsetX 10019EB0
+data l_flowerDeleteHeight 10019EB4
+data l_playerBabaHeight 10019EB8
+data l_headerTimerInitial 10019F38
+data l_headerUnusedInitial 10019F3C
+ext 02516464 BOOL fa1_cylinderCheckCoHit(void* cylinder)
+ext 0200E240 void fa1_collisionSet(void* collision, void* object)
+ext 020182E0 void fa1_cylinderSetCenter(void* cylinder, const cXyz* pos)
+ext 024EBD80 void fa1_attentionLookRequest(void* attention, fopAc_ac_c* actor, s32 angle, s32 flags, f32 radius, f32 upper, f32 lower)
+ext 025E535C void fa1_morfPlay(void* morf, s32 pos, s32 sound, s32 reverb)
+ext 025F0A10 s32 fa1_hioCreateChild(const char* name, void* hio)
+ext 025D63E8 BOOL fa1_entrySolidHeap(fopAc_ac_c* actor, Fa1HeapCallback callback, u32 size)
+ext 025A847C void* fa1_particleSet(void* controller, s32 group, s32 effect, const cXyz* pos, s32 angle, s32 scale, s32 alpha, void* callback, s32 setup, s32 primary, s32 environment, s32 scale2D)
+ext 0255B9C8 void fa1_effectPointLightSet(void* light)
+ext 02516518 void fa1_cylinderSet(void* cylinder, void* source)
+ext 02515F14 void fa1_collisionStatusInit(void* status, s32 weight, s32 flags, fopAc_ac_c* actor)
+ext 024EBB70 void fa1_attentionCatchRequest(void* attention, fopAc_ac_c* actor, s32 item, s16 timer, s32 flags, f32 radius, f32 upper, f32 lower)
+ext 025D6894 s32 fa1_searchActorAngleY(fopAc_ac_c* actor, void* target)
+ext 025F1C28 void fa1_matrixRotateY(void* matrix, s16 angle)
+ext 028E93CC void fa1_matrixTranslate(void* matrix, f32 x, f32 y, f32 z)
+ext 027DF9B0 s32 fa1_getJointIndex(void* table, const char* name)
+ext 027F68FC void* fa1_getJointNameResource(void* modelData)
+ext 025E4F64 void* fa1_morfCreate(void* object, void* data, void* callback1, void* callback2, void* animation, s32 loop, s32 start, s32 end, s32 param, s32 sound, s32 flags, u32 displayFlags, f32 rate)
+ext 026066C4 void* fa1_getObjectResource(void* manager, SafeString* name, s32 index)
+ext 024EEEB8 u8 fa1_getPolyColor(void* background, void* poly)
+ext 024EF130 u8 fa1_getRoomId(void* background, void* poly)
+ext 020084C8 void* fa1_getTriPlane(void* background, u16 backgroundId, u16 index)
+ext 02008974 f32 fa1_groundCross(void* background, void* check)
+ext 02562F5C void fa1_setLightTevColorType(void* environment, void* model, void* tev)
+ext 025626A4 void fa1_settingTevStruct(void* environment, s32 type, const cXyz* pos, void* tev)
+ext 02555D0C void* fa1_getEnvironmentLight()
+ext 025F0A18 void fa1_hioDeleteChild(s8 child)
+ext 0255BA9C void fa1_effectPointLightCut(void* light)
+ext 025A5AC8 void fa1_followCallbackRemove(void* callback)
+ext 025D5578 void fa1_searchByName(s32 name, gptr<fopAc_ac_c>* result)
+ext 028EAB2C void fa1_headerStaticByteConstructor(void* object)
+ext 028ED6F8 void fa1_headerStaticConstructor(void* object)
+ext 028F026C void fa1_registerGlobalObject(void* descriptor)
+ext 025D50BC void fa1_actorDestructor(fopAc_ac_c* actor, s32 flags)
+ext 024EFD9C void fa1_actorGroundDestructor(void* acch, s32 flags)
+ext 02018034 void fa1_circleDestructor(void* circle, s32 flags)
+ext 02515860 void fa1_collisionStatusDestructor(void* status, s32 flags)
+ext 02515A70 void fa1_cylinderDestructor(void* cylinder, s32 flags)
+ext 02008DAC void fa1_groundCheckDestructor(void* check, s32 flags)
+ext 02008E0C void fa1_groundCheckConstructor(void* check)
+ext 025A5894 void fa1_followCallbackConstructor(void* callback, s32 param, s32 flags)
+ext 025A1458 void fa1_npcConstructor(fopNpc_npc_c* actor)
+ext 0273AF40 void fa1_operatorDelete(void* object)
+ext 0273AD10 void* fa1_operatorNew(u32 size)
+ext 0201AD78 void fa1_vectorAdd(const void* a, cXyz* result, const void* b)
+ext 0201ADE0 void fa1_vectorSubtract(const void* a, cXyz* result, const void* b)
+ext 025E1A40 void fa1_seStart(u32 id, void* pos, void* param, s32 reverb)
+data l_HIO 10466FB0
+data l_hio_counter 10466F90
+data moveProc 101BE320
+data moveSubProc 101BE274
+data bottleMoveSubProc 101BE294
+data bottleBabaSubProc 101BE2AC
+ext 020195B0 s32 fa1_atan2s(f32 x, f32 z)
+ext 0200F93C s32 fa1_targetAngleY(const cXyz* a, const cXyz* b)
+ext 02520540 s32 fa1_getReverb(s8 room)
+ext 028F4384 f32 fa1_sqrtf(f32 value)
+ext 0207A9A0 u8 fa1_calcMoveTimer(be<u8>* timer)
+ext 02055B64 s16 fa1_calcAreaTimer(be<s16>* timer)
+ext 021E1E78 u32 fa1_randomTimer(u32 base, u32 range)
+ext 0255F360 f32 fa1_yuragiRatio(f32 value)
+*/
+// clang-format on

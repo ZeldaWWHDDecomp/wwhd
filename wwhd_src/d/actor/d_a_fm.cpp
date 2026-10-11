@@ -7,43 +7,86 @@
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  * Other parts: d_a_fm_a.cpp, d_a_fm_b.cpp, d_a_fm_c.cpp.
  */
-#include "d/actor/d_a_fm_local.h"
+#include "d/actor/d_a_fm_main.h"
 
-/* 02149D78 sead::SafeString deleting destructor (this TU's vtable) */
-static void fm_SafeString_dtor(void* p, s32 flags) {
-    WWHD_FUNC(0x02149D78, void, p, flags);
-    if (p != nullptr && (flags & 1))
-        operator_delete(p);
-}
-VERIFY(0x02149D78, fm_SafeString_dtor);
+const gc_tu_data gc_tu = {.safeString = fm_main::SafeStringVtable};
+static daFm_c* daFm_c_ct(daFm_c* p);
+static const dBgS_ObjAcch_vt FM_OBJACCH_VT = {0x1000F2A0, 0x1000F2C0, 0x1000F2B0};
+static const dBgS_LinChk_vt FM_OBJLINCHK_VT = {0x1000F310, 0x1000F320, 0x1000F340, 0x1000F330};
 
-#define SAFESTRING_VTBL 0x1000F258 /* this TU's sead::SafeString vtable */
-#define m_arc_name STR(0x1000FA3C)  /* "Fm" */
-
-enum { FM_JNT_TE_e = 5, FM_JNT_CYUBIA_e = 6 };
-enum {
-    dRes_INDEX_FM_BCK_MODORU_e = 0xC, dRes_INDEX_FM_BDL_FM_e = 0x15, dRes_INDEX_FM_BDL_YPIT00_e = 0x18,
-    dRes_INDEX_FM_BTK_YPIT00_e = 0x1B,
+static const s32 a_anm_bcks_tbl[] = {17, 8, 12, 14, 15, 9, 7, 16, 6, 13, 18, 11, 10};
+static const fm_main::AnimationParameters a_anm_prm_tbl[] = {
+    {-1, -1, 0, 8.0f, 1.0f, 0},
+    {0, -1, 0, 8.0f, 1.0f, 2},
+    {1, 1, 0, 8.0f, 1.0f, 0},
+    {2, 8, 0, 8.0f, 1.0f, 0},
+    {3, -1, 0, 8.0f, 1.0f, 0},
+    {4, 1, 0, 8.0f, 1.0f, 0},
+    {5, -1, 0, 8.0f, 1.0f, 0},
+    {6, 1, 0, 8.0f, 1.0f, 0},
+    {1, -1, 0, 0.0f, 0.0f, 0},
+    {7, -1, 0, 8.0f, 1.0f, 2},
+    {8, -1, 0, 8.0f, 1.0f, 0},
+    {9, 1, 0, 8.0f, 1.0f, 0},
+    {10, 9, 0, 8.0f, 1.0f, 0},
+    {11, -1, 0, 8.0f, 1.0f, 2},
+    {12, -1, 0, 8.0f, 1.0f, 2},
 };
+// The other Floormaster parts own these callbacks; the glue checks their guest PTMF records.
+static fm_main::ModeRecord mode_tbl[] = {
+    {0, -1, 0x02144190, 0, -1, 0x021442A8, 0x1000F584},
+    {0, -1, 0x02144568, 0, -1, 0x021445B8, 0x1000F58C},
+    {0, -1, 0x0214468C, 0, -1, 0x02144838, 0x1000F594},
+    {0, -1, 0x021449C4, 0, -1, 0x02144A18, 0x1000F5A0},
+    {0, -1, 0x02144B54, 0, -1, 0x02144B94, 0x1000F5AC},
+    {0, -1, 0x02144D88, 0, -1, 0x021461D0, 0x1000F5B8},
+    {0, -1, 0x021462A0, 0, -1, 0x02146310, 0x1000F5C0},
+    {0, -1, 0x02146434, 0, -1, 0x021464B4, 0x1000F5CC},
+    {0, -1, 0x02146764, 0, -1, 0x02146A34, 0x1000F5D4},
+    {0, -1, 0x021473FC, 0, -1, 0x02147408, 0x1000F5DC},
+    {0, -1, 0x02147724, 0, -1, 0x02147764, 0x1000F5E4},
+    {0, -1, 0x02148D68, 0, -1, 0x02148DB0, 0x1000F5EC},
+    {0, -1, 0x02148CB4, 0, -1, 0x02148CC0, 0x1000F5FC},
+    {0, -1, 0x02147810, 0, -1, 0x02147BE0, 0x1000F604},
+    {0, -1, 0x021482AC, 0, -1, 0x021482F0, 0x1000F60C},
+    {0, -1, 0x0214879C, 0, -1, 0x021487F8, 0x1000F618},
+    {0, -1, 0x02148F9C, 0, -1, 0x02148FA8, 0x1000F628},
+    {0, -1, 0x021491B4, 0, -1, 0x02149208, 0x1000F638},
+    {0, -1, 0x02149D94, 0, -1, 0x021495F8, 0x1000F64C},
+    {0, -1, 0x02149688, 0, -1, 0x021496C8, 0x1000F654},
+    {0, -1, 0x021497C0, 0, -1, 0x02149818, 0x1000F660},
+};
+static fm_main::JointHitRecord search_data[] = {
+    {2, 5, 22.0f, 0x101B51E0},
+    {0, 1, 8.0f, 0x101B51F8},
+    {0, 2, 8.0f, 0x101B51F8},
+    {0, 3, 8.0f, 0x101B51F8},
+    {0, 4, 8.0f, 0x101B51F8},
+    {0, 6, 4.0f, 0x101B5210},
+    {0, 7, 4.0f, 0x101B5210},
+    {0, 8, 4.0f, 0x101B5210},
+    {0, 9, 4.0f, 0x101B5210},
+    {0, 10, 4.0f, 0x101B5210},
+    {0, 11, 4.0f, 0x101B5210},
+    {0, 12, 4.0f, 0x101B5210},
+    {0, 13, 4.0f, 0x101B5210},
+    {0, 14, 4.0f, 0x101B5210},
+    {0, 15, 4.0f, 0x101B5210},
+};
+static const fm_main::SphereSource m_sph_src = {0, 0, 0, {0, 0, 0}, 0, 0xFFBDFEF7, 9, 281, 0, 0, 0, 0, 0, 35, 0, 0, 0, 6, 0, 0.0f, 0.0f, 0.0f, 60.0f};
+static const fm_main::CylinderSource m_cyl_src = {0, 2048, 0, {0, 0, 0}, 0, 0xFF1DFEFF, 0, 281, 0, 0, 0, 0, 0, 35, 0, 0, 0, 0, 0, 0.0f, 0.0f, 0.0f, 60.0f, 0.0f};
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 025F25CC mDoMtx_stack_c::quatM(const Quaternion*) */
-static inline void mDoMtx_stack_quatM(Quaternion_fm* q) { gabi::call(0x025F25CC, q); }
-/* 028E9108 PSMTXConcat(a, b, ab) */
-static inline void PSMTXConcat_g(Mtx34* a, Mtx34* b, Mtx34* ab) { gabi::call(0x028E9108, a, b, ab); }
-/* REG12_S(2) */
-static inline s16 REG12_S2() { return gabi::load<s16>(0x1047BD4C); }
+static const char m_arc_name[] = "fm"; // HD: GameCube archive name is "Fm".
 
 /* ---- functions ---- */
 
 /* 021404AC */
 void daFm_c::_nodeControl(J3DNode* node, J3DModel* model) {
-    WWHD_FUNC(0x021404AC, void, this, node, model);
     J3DJoint* joint = J3DNode_toJoint(node);
-    s32 jntNo = gabi::load<u16>(gabi::ea(joint) + 4);
+    s32 jntNo = reinterpret_cast<fm_main::Joint*>(joint)->mJointNo;
 
     gabi::Local<Mtx34> mtx;
-    PSMTXCopy(fm_getAnmMtx(model, jntNo), mtx);
+    PSMTXCopy(fm_main::anmMtx(model, jntNo), mtx);
 
     f32 z = mtx->m[2][3];
     mtx->m[2][3] = 0.0f;
@@ -52,59 +95,55 @@ void daFm_c::_nodeControl(J3DNode* node, J3DModel* model) {
     f32 x = mtx->m[0][3];
     mtx->m[0][3] = 0.0f;
     mDoMtx_stack_c::transS(x, y, z);
-    if (jntNo < FM_JNT_CYUBIA_e && jntNo >= field_0x390 && hio_u8(0x0F + jntNo) == 1) {
+    if (jntNo < FM_JNT_CYUBIA_e && jntNo >= field_0x390 && fm_main::hio().field_0x00F[jntNo] == 1) {
         mDoMtx_stack_quatM(&field_0x330[jntNo]);
     }
-    PSMTXConcat_g(mtx_now(), mtx, mtx_now());
+    PSMTXConcat_g(fm_main::stackMtx(), mtx, fm_main::stackMtx());
 
     if (jntNo == FM_JNT_TE_e) {
-        if (cLib_calcTimer(&field_0x64C) != 0) {
-            field_0x68A = (s16)(field_0x68A + (REG12_S2() + 0x1830));
+        if (fm_calcTimer(&field_0x64C) != 0) {
+            field_0x68A = (s16)(field_0x68A + (REG_S(12, 2) + 0x1830));
             cLib_addCalcAngleS2(&field_0x68C, 0, 10, 0x1C8);
             s16 a = field_0x68A;
             f32 amp = (f32)(s16)field_0x68C;
             s16 temp3 = (s16)gabi::ftoi(amp * cM_ssin(a));
-            mDoMtx_YrotM(mtx_now(), temp3);
+            mDoMtx_YrotM(fm_main::stackMtx(), temp3);
         }
         gabi::Local<cXyz> temp2;
-        temp2->copy(*hio_xyz(0x38));
-        PSMTXMultVec(mtx_now(), temp2, &field_0x61C);
-        temp2->copy(*hio_xyz(0x104));
-        PSMTXMultVec(mtx_now(), temp2, &field_0x63C);
-        field_0x2E8[jntNo].x = mtx_now()->m[0][3];
-        field_0x2E8[jntNo].y = mtx_now()->m[1][3];
-        field_0x2E8[jntNo].z = mtx_now()->m[2][3];
+        temp2->copy(*(&fm_main::hio().field_0x038));
+        PSMTXMultVec(fm_main::stackMtx(), temp2, &field_0x61C);
+        temp2->copy(*(&fm_main::hio().field_0x104));
+        PSMTXMultVec(fm_main::stackMtx(), temp2, &field_0x63C);
+        field_0x2E8[jntNo].x = fm_main::stackMtx()->m[0][3];
+        field_0x2E8[jntNo].y = fm_main::stackMtx()->m[1][3];
+        field_0x2E8[jntNo].z = fm_main::stackMtx()->m[2][3];
     } else if (jntNo < FM_JNT_CYUBIA_e) {
-        field_0x2E8[jntNo].x = mtx_now()->m[0][3];
-        field_0x2E8[jntNo].y = mtx_now()->m[1][3];
-        field_0x2E8[jntNo].z = mtx_now()->m[2][3];
+        field_0x2E8[jntNo].x = fm_main::stackMtx()->m[0][3];
+        field_0x2E8[jntNo].y = fm_main::stackMtx()->m[1][3];
+        field_0x2E8[jntNo].z = fm_main::stackMtx()->m[2][3];
     }
 
-    mtx_copy(fm_getAnmMtx(model, jntNo), mtx_now()); /* model->setAnmMtx(jntNo, mDoMtx_stack_c::get()) */
-    PSMTXCopy(mtx_now(), J3DSys_mCurrentMtx());
+    mtx_copy(fm_main::anmMtx(model, jntNo), fm_main::stackMtx()); /* model->setAnmMtx(jntNo, mDoMtx_stack_c::get()) */
+    PSMTXCopy(fm_main::stackMtx(), fm_main::currentMtx());
 }
-VERIFY(0x021404AC, &daFm_c::_nodeControl);
 
 /* 0214075C */
 static BOOL nodeControl_CB(J3DNode* node, int calcTiming) {
-    WWHD_FUNC(0x0214075C, BOOL, node, calcTiming);
     if (calcTiming == 0) {
-        u32 model = j3dSys_model();
-        daFm_c* i_this = gabi::at<daFm_c>(gabi::load<u32>(model + 0xB8));
+        J3DModel* model = fm_main::currentModel();
+        daFm_c* i_this = fm_main::model(model)->mUserArea;
         if (i_this != nullptr) {
-            i_this->_nodeControl(node, gabi::at<J3DModel>(model));
+            i_this->_nodeControl(node, model);
         }
     }
     return TRUE;
 }
-VERIFY(0x0214075C, nodeControl_CB);
 
 /* 021407A4 */
 bool daFm_c::holeCreateHeap() {
-    WWHD_FUNC(0x021407A4, bool, this);
-    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BDL_YPIT00_e, SAFESTRING_VTBL);
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BDL_YPIT00_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1000F37C), 0x2CB, STR(0x1000F388)); /* modelData != NULL */
+        JUT_ASSERT_fail("d_a_fm.cpp", 0x2CB, "modelData != (0)"); /* modelData != NULL */
     }
 
     mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x19001222);
@@ -112,25 +151,23 @@ bool daFm_c::holeCreateHeap() {
         return false;
     }
 
-    J3DAnmTextureSRTKey* btk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BTK_YPIT00_e, SAFESTRING_VTBL);
+    J3DAnmTextureSRTKey* btk = (J3DAnmTextureSRTKey*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BTK_YPIT00_e);
     if (btk == nullptr) {
-        JUT_ASSERT_fail(STR(0x1000F37C), 0x2D4, STR(0x1000F39C)); /* btk != NULL */
+        JUT_ASSERT_fail("d_a_fm.cpp", 0x2D4, "btk != 0"); /* btk != NULL */
     }
     if (!mBtkAnm.init(modelData, btk, true, 2 /* J3DFrameCtrl::EMode_LOOP */, 1.0f, 0, -1, false, 0)) {
         return false;
     }
     return true;
 }
-VERIFY(0x021407A4, &daFm_c::holeCreateHeap);
 
 /* 021408C0 */
 bool daFm_c::bodyCreateHeap() {
-    WWHD_FUNC(0x021408C0, bool, this);
-    J3DModelData* fmModelData = (J3DModelData*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BDL_FM_e, SAFESTRING_VTBL);
+    J3DModelData* fmModelData = (J3DModelData*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BDL_FM_e);
     if (fmModelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1000F3A8), 0x2E1, STR(0x1000F3B4)); /* fmModelData != NULL */
+        JUT_ASSERT_fail("d_a_fm.cpp", 0x2E1, "fmModelData != (0)"); /* fmModelData != NULL */
     }
-    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BCK_MODORU_e, SAFESTRING_VTBL);
+    J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(m_arc_name, dRes_INDEX_FM_BCK_MODORU_e);
     mpMorf = mDoExt_McaMorf::create(nullptr, fmModelData, nullptr, nullptr, anm, 2 /* EMode_LOOP */, 1.0f, 0, -1, 1, nullptr,
                                     0x80000, 0x37441422);
     if (mpMorf == nullptr || mpMorf->getModel() == nullptr) {
@@ -139,16 +176,14 @@ bool daFm_c::bodyCreateHeap() {
     if (!invisibleModel_create(mInvisibleModel, mpMorf->getModel())) {
         return false;
     }
-    gabi::store<u32>(gabi::ea(mpMorf->getModel()) + 0xB8, gabi::ea(this)); /* setUserArea */
+    fm_main::model(mpMorf->getModel())->mUserArea = this; /* setUserArea */
     return true;
 }
-VERIFY(0x021408C0, &daFm_c::bodyCreateHeap);
 
 /* 021409E8 */
 bool daFm_c::jntHitCreateHeap() {
-    WWHD_FUNC(0x021409E8, bool, this);
     /* search_data (15 joint-hit shapes) in .data */
-    mpJntHit = JntHit_create(mpMorf->getModel(), 0x101B512C, 0xF);
+    mpJntHit = JntHit_create(mpMorf->getModel(), gabi::ea(search_data), 0xF);
     if (mpJntHit) {
         jntHit = gabi::ea(mpJntHit.get()); /* fopAcM_SetJntHit */
     } else {
@@ -156,11 +191,9 @@ bool daFm_c::jntHitCreateHeap() {
     }
     return true;
 }
-VERIFY(0x021409E8, &daFm_c::jntHitCreateHeap);
 
 /* 02140A54 */
 BOOL daFm_c::_createHeap() {
-    WWHD_FUNC(0x02140A54, BOOL, this);
     if (holeCreateHeap() == false) {
         return FALSE;
     }
@@ -169,34 +202,17 @@ BOOL daFm_c::_createHeap() {
     }
     return jntHitCreateHeap() ? TRUE : FALSE;
 }
-VERIFY(0x02140A54, &daFm_c::_createHeap);
 
 /* 02140AC4 */
 static BOOL createHeap_CB(fopAc_ac_c* i_this) {
-    WWHD_FUNC(0x02140AC4, BOOL, i_this);
     return ((daFm_c*)i_this)->_createHeap();
 }
-VERIFY(0x02140AC4, createHeap_CB);
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 0201B12C cXyz::normZP() (this, hidden result) */
-static inline void cXyz_normZP(const cXyz* a, cXyz* res) { gabi::call(0x0201B12C, a, res); }
-/* 028E8DE8 PSVECSquareDistance(a, b) */
-static inline f32 PSVECSquareDistance(const cXyz* a, const cXyz* b) { return gabi::call<f32>(0x028E8DE8, a, b); }
-/* 020CB92C daBomb_c::chk_state(state) */
-static inline bool daBomb_chk_state(fopAc_ac_c* b, s32 st) { return gabi::call<bool>(0x020CB92C, b, st); }
-/* 02048038 daObj::PrmAbstract(actor, width, shift) */
-static inline u32 daObj_PrmAbstract(fopAc_ac_c* a, s32 w, s32 s) { return gabi::call<u32>(0x02048038, a, w, s); }
 /* daPy_py_c::getGrabActorID (virtual, HD vtable +0xBC) */
-static inline u32 daPy_getGrabActorID(fopAc_ac_c* p) { return gabi::call_ptr<u32>(gabi::load<u32>(p->__vtbl + 0xBC), p); }
 /* fopAcM_GetName / fopAcM_GetID with the HD null checks */
-static inline s32 fm_GetName(fopAc_ac_c* a) { return a != nullptr ? (s32)fpcM_GetName(a) : -1; }
-static inline u32 fm_GetID(fopAc_ac_c* a) { return a != nullptr ? gabi::load<u32>(gabi::ea(a) + 4) : 0xFFFFFFFFu; }
-enum { fpcNm_FM_e = 0x77, fpcNm_BOMB_e = 0x126, fpcNm_TSUBO_e = 0x1C5 };
 
 /* 02140AC8 */
 BOOL daFm_c::_pathMove(cXyz* param_1, cXyz* param_2, cXyz* param_3) {
-    WWHD_FUNC(0x02140AC8, BOOL, this, param_1, param_2, param_3);
     field_0x398.copy(*param_3);
     field_0x3A4.copy(*param_2);
     gabi::Local<cXyz> d, temp, rel;
@@ -205,11 +221,11 @@ BOOL daFm_c::_pathMove(cXyz* param_1, cXyz* param_2, cXyz* param_3) {
 
     cXyz_mi(&current.pos, rel, param_1);
     f32 dist = std_sqrtf(PSVECSquareMag(rel));
-    if (dist < hio_f(0xD4) + 1.0f) {
+    if (dist < fm_main::hio().field_0x0D4 + 1.0f) {
         f32 temp2 = cM_rndF(9.0f) + 1.0f;
         field_0x394 = cM_rndF(9.0f) + 1.0f;
         gabi::Local<cXyz> a, b, c;
-        cXyz_ml(temp, a, hio_f(0xD8));
+        cXyz_ml(temp, a, fm_main::hio().field_0x0D8);
         cXyz_ml(a, b, temp2);
         cXyz_pl(param_1, c, b);
         param_1->copy(*c);
@@ -223,29 +239,23 @@ BOOL daFm_c::_pathMove(cXyz* param_1, cXyz* param_2, cXyz* param_3) {
     }
     return FALSE;
 }
-VERIFY(0x02140AC8, &daFm_c::_pathMove);
 
 /* 02140CA8 */
 static BOOL pathMove_CB(cXyz* param_1, cXyz* param_2, cXyz* param_3, void* i_this) {
-    WWHD_FUNC(0x02140CA8, BOOL, param_1, param_2, param_3, i_this);
     return ((daFm_c*)i_this)->_pathMove(param_1, param_2, param_3);
 }
-VERIFY(0x02140CA8, pathMove_CB);
 
 /* 02140CC0 */
 bool daFm_c::checkHeight(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x02140CC0, bool, this, i_actor);
     if (i_actor == nullptr) {
         return false;
     }
     f32 dy = i_actor->current.pos.y - current.pos.y;
-    return !(std::fabs(dy) > hio_f(0xA8) * 0.5f); /* GHS: ble */
+    return !(std::fabs(dy) > fm_main::hio().field_0x0A8 * 0.5f); /* GHS: ble */
 }
-VERIFY(0x02140CC0, &daFm_c::checkHeight);
 
 /* 02140D04 */
 fopAc_ac_c* daFm_c::searchNearOtherActor(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x02140D04, fopAc_ac_c*, this, i_actor);
     if (dComIfGp_event_runCheck()) {
         return nullptr;
     }
@@ -254,18 +264,18 @@ fopAc_ac_c* daFm_c::searchNearOtherActor(fopAc_ac_c* i_actor) {
             return nullptr;
         }
         f32 dist = fopAcM_searchActorDistanceXZ(this, i_actor);
-        if (dist < hio_f(0xE4)) {
-            if (fm_GetName(i_actor) == fpcNm_BOMB_e) {
+        if (dist < fm_main::hio().field_0x0E4) {
+            if (fopAcM_GetName(i_actor) == fpcNm_BOMB_e) {
                 mpActorTarget = i_actor;
                 if (!daBomb_chk_state(i_actor, 0)) {
                     return i_actor;
                 }
-            } else if (fm_GetName(i_actor) == fpcNm_TSUBO_e) {
+            } else if (fopAcM_GetName(i_actor) == fpcNm_TSUBO_e) {
                 fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
                 f32 dist2 = fopAcM_searchPlayerDistanceXZ(this);
                 f32 dist3 = fopAcM_searchPlayerDistanceXZ(i_actor);
-                if (dist2 < hio_f(0xE8)) {
-                    if (dist3 > REG_F(12, 0) + 80.0f || fm_GetID(i_actor) == daPy_getGrabActorID(pLink)) {
+                if (dist2 < fm_main::hio().field_0x0E8) {
+                    if (dist3 > REG_F(12, 0) + 80.0f || fopAcM_GetID(i_actor) == daPy_getGrabActorID(pLink)) {
                         u32 type = daObj_PrmAbstract(i_actor, 4, 0x18); /* daTsubo::Act_c::prm_get_type */
                         switch (type) {
                         case 0: case 1: case 2: case 4: case 5: case 6:
@@ -279,19 +289,15 @@ fopAc_ac_c* daFm_c::searchNearOtherActor(fopAc_ac_c* i_actor) {
     }
     return nullptr;
 }
-VERIFY(0x02140D04, &daFm_c::searchNearOtherActor);
 
 /* 02140F04 */
 static void* searchNearOtherActor_CB(void* param_1, void* param_2) {
-    WWHD_FUNC(0x02140F04, void*, param_1, param_2);
     return ((daFm_c*)param_2)->searchNearOtherActor((fopAc_ac_c*)param_1);
 }
-VERIFY(0x02140F04, searchNearOtherActor_CB);
 
 /* 02140F14 */
 void* daFm_c::searchNearFm(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x02140F14, void*, this, i_actor);
-    if (fopAc_IsActor(i_actor) && fopAc_IsActor(i_actor) && fm_GetName(i_actor) == fpcNm_FM_e) {
+    if (fopAc_IsActor(i_actor) && fopAc_IsActor(i_actor) && fopAcM_GetName(i_actor) == fpcNm_FM_e) {
         gabi::Local<cXyz> rel, xz;
         cXyz_mi(&field_0x3E4, rel, &current.pos);
         xz->y = 0.0f;
@@ -311,79 +317,39 @@ void* daFm_c::searchNearFm(fopAc_ac_c* i_actor) {
     }
     return nullptr;
 }
-VERIFY(0x02140F14, &daFm_c::searchNearFm);
 
 /* 02141064 */
 static void* searchNearFm_CB(void* param_1, void* param_2) {
-    WWHD_FUNC(0x02141064, void*, param_1, param_2);
     return ((daFm_c*)param_2)->searchNearFm((fopAc_ac_c*)param_1);
 }
-VERIFY(0x02141064, searchNearFm_CB);
-
-static const dBgS_ObjAcch_vt FM_OBJACCH_VT = {0x1000F2A0, 0x1000F2C0, 0x1000F2B0};
-static const dBgS_LinChk_vt FM_OBJLINCHK_VT = {0x1000F310, 0x1000F320, 0x1000F340, 0x1000F330};
-#define FM_AAB_VTBL 0x1000F270 /* this TU's cM3dGAab vtable */
-#define FM_MODE_TBL 0x1000F3E0 /* modeProc::mode_tbl (init PTMF +0, run PTMF +8, name +0x10) */
-
-/* 02141074: daFm_c::daFm_c (compiler-generated) */
-static daFm_c* daFm_c_ct(daFm_c* p) {
-    WWHD_FUNC(0x02141074, daFm_c*, p);
-    if (p == nullptr) {
-        p = (daFm_c*)operator_new(0x101C);
-        if (p == nullptr) return p;
-    }
-    fopAc_ac_c_ct(p);
-    p->__vtbl = FM_VTBL;
-    dPa_followEcallBack_ct(&p->mpFollowEcallBack, 0, 0);
-    mDoExt_btkAnm::ct(&p->mBtkAnm);
-    dBgS_ObjAcch_ct(&p->mObjAcch, FM_OBJACCH_VT);
-    dBgS_AcchCir_ct(&p->mAcchCir);
-    gabi::call(0x025E895C, p->mInvisibleModel); /* mDoExt_invisibleModel::mDoExt_invisibleModel */
-    dCcD_Stts_ct(&p->mStts);
-    dCcD_Stts_ct(&p->mStts2);
-    gabi::call(0x025166F0, &p->mSph); /* dCcD_Sph::dCcD_Sph */
-    dCcD_Cyl_ct(&p->mCyl, FM_AAB_VTBL);
-    dBgS_LinChk_ct(&p->mLinChk, FM_OBJLINCHK_VT, true); /* dBgS_ObjLinChk */
-    dCcD_Stts_ct(&p->mEnemyIce.mStts);
-    dCcD_Cyl_ct(&p->mEnemyIce.mCyl, FM_AAB_VTBL);
-    dBgS_AcchCir_ct(&p->mEnemyIce.mBgAcchCir);
-    dBgS_ObjAcch_ct(&p->mEnemyIce.mBgAcch, FM_OBJACCH_VT);
-    return p;
-}
-VERIFY(0x02141074, daFm_c_ct);
 
 /* 02141280 */
 bool daFm_c::isLink(fopAc_ac_c* i_actor) {
-    WWHD_FUNC(0x02141280, bool, this, i_actor);
     return i_actor == dComIfGp_getLinkPlayer();
 }
-VERIFY(0x02141280, &daFm_c::isLink);
 
 /* 021412BC */
 void daFm_c::modeProc(daFm_c::Proc_e proc, int newMode) {
-    WWHD_FUNC(0x021412BC, void, this, proc, newMode);
     if (proc == PROC_INIT_e) {
         switch ((u32)newMode) {
-        case 0: case 1: case 2: case 3: case 4: case 6: case 0xB: case 0xC:
-        case 0xE: case 0xF: case 0x10: case 0x11: case 0x12:
-            *attention_flags(this) &= ~4u; /* LOCKON_BATTLE */
+        case MODE_SW_WAIT: case MODE_HIDE: case MODE_UNDERFOOT: case MODE_PATH_MOVE: case MODE_GOAL_KEEPER: case MODE_DISAPPEAR: case MODE_PREPARE_ITEM: case MODE_DEATH:
+        case MODE_GRAB_DEMO: case MODE_GRAB_FOOT_DEMO: case MODE_GRAB_NPC_DEMO: case MODE_PLAYER_START_DEMO: case MODE_DELETE:
+            attention_info.flags &= ~u32(fopAc_Attn_LOCKON_BATTLE_e);
             break;
         default:
-            *attention_flags(this) |= 4u;
+            attention_info.flags |= fopAc_Attn_LOCKON_BATTLE_e;
             break;
         }
         mMode = newMode;
-        ptmf_call(FM_MODE_TBL + 0x14 * newMode, this); /* (this->*mode_tbl[mMode].init)() */
+        (this->*fm_main::initFunction(mode_tbl[newMode]))(); /* (this->*mode_tbl[mMode].init)() */
     } else if (proc == PROC_EXEC_e) {
-        ptmf_call(FM_MODE_TBL + 0x14 * mMode + 8, this); /* (this->*mode_tbl[mMode].run)() */
+        (this->*fm_main::runFunction(mode_tbl[mMode]))(); /* (this->*mode_tbl[mMode].run)() */
     }
 }
-VERIFY(0x021412BC, &daFm_c::modeProc);
 
 /* 021413E0 */
 void daFm_c::getArg() {
-    WWHD_FUNC(0x021413E0, void, this);
-    u32 params = gabi::load<u32>(gabi::ea(this) + 0xB0); /* fopAcM_GetParam */
+    u32 params = fopAcM_GetParam(this); /* fopAcM_GetParam */
     s16 homeAngleX = home.angle.x;
     s16 homeAngleZ = home.angle.z;
     field_0x2C7 = (u8)params;
@@ -421,50 +387,40 @@ void daFm_c::getArg() {
     current.angle.x = 0;
     shape_angle.x = 0;
 }
-VERIFY(0x021413E0, &daFm_c::getArg);
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
 /* fopAcM_SearchByName (HD inline): fopAcIt_Judge(fpcSch_JudgeForPName, &name) */
 static inline fopAc_ac_c* fopAcM_SearchByName(s16 name) {
     gabi::Local<be<s16>> key;
     *key = name;
     return fopAcIt_Judge(0x025E121C, key.get());
 }
-/* 027F3F94: J3DModelData joint-tree header (HD; +8 joint count) */
-static inline u16 J3DModelData_getJointNum(J3DModelData* d) { return gabi::load<u16>(gabi::call<u32>(0x027F3F94, d) + 8); }
-enum { fpcNm_NPC_CB1_e = 0x14E, fpcNm_NPC_MD_e = 0x16F };
 
 /* 0214153C */
 void daFm_c::bodySetMtx() {
-    WWHD_FUNC(0x0214153C, void, this);
     J3DModel* pModel = mpMorf->getModel();
     J3DModel_setBaseScale(pModel, &scale);
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(shape_angle.y);
     mDoMtx_stack_transM(field_0x610.x, field_0x610.y, field_0x610.z);
-    J3DModel_setBaseTRMtx(pModel, mtx_now());
+    J3DModel_setBaseTRMtx(pModel, fm_main::stackMtx());
 }
-VERIFY(0x0214153C, &daFm_c::bodySetMtx);
 
 /* 0214162C */
 void daFm_c::holeSetMtx() {
-    WWHD_FUNC(0x0214162C, void, this);
     f32 s = field_0x3E0;
     J3DModel* m = mpModel;
-    gabi::store<f32>(gabi::ea(m) + 0xC0, s); /* setBaseScale({s, s, s}) */
-    gabi::store<f32>(gabi::ea(m) + 0xC4, s);
-    gabi::store<f32>(gabi::ea(m) + 0xBC, s);
+    fm_main::model(m)->mBaseScale.y = s; /* setBaseScale({s, s, s}) */
+    fm_main::model(m)->mBaseScale.z = s;
+    fm_main::model(m)->mBaseScale.x = s;
     mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_stack_c::YrotM(current.angle.y);
-    cXyz* o = hio_xyz(0x20);
+    cXyz* o = (&fm_main::hio().field_0x020);
     mDoMtx_stack_transM(o->x, o->y, o->z);
-    J3DModel_setBaseTRMtx(mpModel, mtx_now());
+    J3DModel_setBaseTRMtx(mpModel, fm_main::stackMtx());
 }
-VERIFY(0x0214162C, &daFm_c::holeSetMtx);
 
 /* 02141714 */
 void daFm_c::setBaseTarget() {
-    WWHD_FUNC(0x02141714, void, this);
     switch ((u32)field_0x2DC) {
     case 0: {
         fopAcM_SearchByName(fpcNm_NPC_CB1_e);
@@ -475,9 +431,9 @@ void daFm_c::setBaseTarget() {
         } else if (field_0x2D0 == 1 || field_0x2D0 == 2) {
             f32 dist = fopAcM_searchActorDistanceXZ(this, pLink);
             f32 dist2 = fopAcM_searchActorDistanceXZ(this, pMdActor);
-            if (dist2 < hio_f(0xE8)) {
+            if (dist2 < fm_main::hio().field_0x0E8) {
                 mBaseTarget = pMdActor;
-            } else if (dist < hio_f(0xE8)) {
+            } else if (dist < fm_main::hio().field_0x0E8) {
                 mBaseTarget = pLink;
             }
         } else {
@@ -510,27 +466,23 @@ void daFm_c::setBaseTarget() {
         field_0x9D4 = fopAcM_searchActorDistanceXZ(this, mBaseTarget);
     }
 }
-VERIFY(0x02141714, &daFm_c::setBaseTarget);
 
-/* 021418D0 (matcher: checkPlayerGrabBomb) */
+/* 021418D0 */
 void daFm_c::setAnm(s8 anmPrmIdx, bool force) {
-    WWHD_FUNC(0x021418D0, void, this, anmPrmIdx, force);
     if (anmPrmIdx != 0xF) {
         mAnmPrmIdx = anmPrmIdx;
     }
-    dLib_bcks_setAnm(m_arc_name, mpMorf, &mBckIdx, &mAnmPrmIdx, &mOldAnmPrmIdx, 0x1000F680 /* a_anm_bcks_tbl */,
-                     0x1000F6B4 /* a_anm_prm_tbl */, force);
+    fm_setAnmTables(m_arc_name, mpMorf, &mBckIdx, &mAnmPrmIdx, &mOldAnmPrmIdx, gabi::ea(a_anm_bcks_tbl),
+                     gabi::ea(a_anm_prm_tbl), force, 0);
 }
-VERIFY(0x021418D0, &daFm_c::setAnm);
 
-/* 02141930 (matcher: isGrabPos) */
+/* 02141930 */
 void daFm_c::createInit() {
-    WWHD_FUNC(0x02141930, void, this);
     mStts2.Init(200, 0, this);
-    mSph.Set(gabi::at<dCcD_SrcSph>(0x1000FA40) /* m_sph_src */);
+    mSph.Set(reinterpret_cast<const dCcD_SrcSph*>(&m_sph_src) /* m_sph_src */);
     mSph.SetStts(&mStts2);
     mStts.Init(200, 0, this);
-    mCyl.Set(gabi::at<dCcD_SrcCyl>(0x1000FA80) /* m_cyl_src */);
+    mCyl.Set(reinterpret_cast<const dCcD_SrcCyl*>(&m_cyl_src) /* m_cyl_src */);
     mCyl.SetStts(&mStts);
     mAcchCir.SetWall(30.0f, 200.0f);
     mObjAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCir, &speed, nullptr, nullptr);
@@ -539,20 +491,21 @@ void daFm_c::createInit() {
         mObjAcch.SetWallNone();
     }
 
-    J3DModelData* modelData = fm_modelData(mpMorf->getModel());
-    for (u16 i = 0; i < J3DModelData_getJointNum(modelData); i++) {
+    J3DModelData* modelData = fm_main::model(mpMorf->getModel())->mModelData.get();
+    for (u16 i = 0; i < fm_jointTree(modelData)->mJointCount; i++) {
         switch (i) {
         case 0: case 1: case 2: case 3: case FM_JNT_TE_e: /* CENTER, UDEA, UDEB, UDEC, TE */
-            gabi::store<u32>(fm_jointNode(modelData, i) + 8, 0x0214075C /* nodeControl_CB */);
+            fm_main::jointNode(modelData, i)->mCallBack = gabi::guest_fn((const void*)&nodeControl_CB);
             break;
         }
     }
 
     for (int i = 0; i < 6; i++) {
-        gabi::store<u32>(gabi::ea(&field_0x330[i]) + 0, gabi::load<u32>(0x101E9C38)); /* ZeroQuat */
-        gabi::store<u32>(gabi::ea(&field_0x330[i]) + 4, gabi::load<u32>(0x101E9C3C));
-        gabi::store<u32>(gabi::ea(&field_0x330[i]) + 8, gabi::load<u32>(0x101E9C40));
-        gabi::store<u32>(gabi::ea(&field_0x330[i]) + 12, gabi::load<u32>(0x101E9C44));
+        auto* q = reinterpret_cast<fm_main::QuaternionWords*>(&field_0x330[i]);
+        q->x = fm_main::zeroQuat().x; /* ZeroQuat */
+        q->y = fm_main::zeroQuat().y;
+        q->z = fm_main::zeroQuat().z;
+        q->w = fm_main::zeroQuat().w;
     }
 
     bodySetMtx();
@@ -561,11 +514,11 @@ void daFm_c::createInit() {
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &current.pos, &tevStr);
 
     if (field_0x2D0 == 0) {
-        itemTableIdx = dComIfGp_CharTbl_GetNameIndex(STR(0x1000F7C0) /* "Fmaster" */, 0);
+        itemTableIdx = fm_charNameIndex("Fmaster" /* "Fmaster" */, 0);
     } else if (field_0x2D0 == 1) {
-        itemTableIdx = dComIfGp_CharTbl_GetNameIndex(STR(0x1000F7C8) /* "Fmastr1" */, 0);
+        itemTableIdx = fm_charNameIndex("Fmastr1" /* "Fmastr1" */, 0);
     } else if (field_0x2D0 == 2) {
-        itemTableIdx = dComIfGp_CharTbl_GetNameIndex(STR(0x1000F7D0) /* "Fmastr2" */, 0);
+        itemTableIdx = fm_charNameIndex("Fmastr2" /* "Fmastr2" */, 0);
     }
 
     cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel)); /* fopAcM_SetMtx */
@@ -582,9 +535,9 @@ void daFm_c::createInit() {
 
     mBtHeight = 240.0f;
     mBtBodyR = 100.0f;
-    *attention_flags(this) = 0;
+    attention_info.flags = 0;
     stealItemLeft = 3;
-    max_health = (s8)hio_s(0x64); /* mMaxHealth */
+    max_health = (s8)fm_main::hio().mMaxHealth; /* mMaxHealth */
     health = max_health;
     mGrabPos.copy(current.pos);
 
@@ -595,33 +548,31 @@ void daFm_c::createInit() {
     field_0x690.copy(current.pos);
     setAnm(8, false);
     field_0x394 = cM_rndF(9.0f) + 1.0f;
-    field_0x610.copy(*hio_xyz(0x2C));
-    if (mMode != 0x11) {
+    field_0x610.copy(*(&fm_main::hio().field_0x02C));
+    if (mMode != MODE_PLAYER_START_DEMO) {
         if (field_0x2D4 != 0xFF && !dComIfGs_isSwitch(field_0x2D4, current.roomNo)) {
-            modeProc(PROC_INIT_e, 0);
+            modeProc(PROC_INIT_e, MODE_SW_WAIT);
         } else {
             switch ((u32)field_0x2D0) {
             case 0:
-                modeProc(PROC_INIT_e, 2);
+                modeProc(PROC_INIT_e, MODE_UNDERFOOT);
                 break;
             case 1:
-                modeProc(PROC_INIT_e, 3);
+                modeProc(PROC_INIT_e, MODE_PATH_MOVE);
                 if (m_path_no == 0xFF) {
-                    JUT_ASSERT_fail(STR(0x1000F7EC), 0x146B, STR(0x1000F7D8)); /* m_path_no != 0xff */
+                    JUT_ASSERT_fail("d_a_fm.cpp", 0x146B, "m_path_no != 0xff"); /* m_path_no != 0xff */
                 }
                 break;
             case 2:
-                modeProc(PROC_INIT_e, 4);
+                modeProc(PROC_INIT_e, MODE_GOAL_KEEPER);
                 break;
             }
         }
     }
 }
-VERIFY(0x02141930, &daFm_c::createInit);
 
 /* 02141E40 */
 cPhs_State daFm_c::_create() {
-    WWHD_FUNC(0x02141E40, cPhs_State, this);
     /* fopAcM_ct(this, daFm_c) */
     if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
         if (this != nullptr) {
@@ -635,11 +586,11 @@ cPhs_State daFm_c::_create() {
         if (parentActorID != 0xFFFFFFFFu) {
             fopAc_ac_c* ac = fopAcM_SearchByID(parentActorID);
             if (ac != nullptr && fopAc_IsActor(ac) && isLink(ac)) {
-                modeProc(PROC_INIT_e, 0x11);
+                modeProc(PROC_INIT_e, MODE_PLAYER_START_DEMO);
             }
         }
 
-        if (mMode != 0x11) {
+        if (mMode != MODE_PLAYER_START_DEMO) {
             getArg();
             if (field_0x2D8 != 0xFF && dComIfGs_isSwitch(field_0x2D8, current.roomNo)) {
                 return cPhs_ERROR_e;
@@ -649,33 +600,27 @@ cPhs_State daFm_c::_create() {
             }
         }
 
-        if (!fopAcM_entrySolidHeap(this, 0x02140AC4 /* createHeap_CB */, 0x2100)) {
+        if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)&createHeap_CB), 0x2100)) {
             return cPhs_ERROR_e;
         }
         createInit();
     }
     return phase_state;
 }
-VERIFY(0x02141E40, &daFm_c::_create);
 
 /* 02141FD4 */
 static cPhs_State daFmCreate(void* i_this) {
-    WWHD_FUNC(0x02141FD4, cPhs_State, i_this);
     return ((daFm_c*)i_this)->_create();
 }
-VERIFY(0x02141FD4, daFmCreate);
 
 /* 02141FD8 */
 u8 daFm_c::checkPlayerGrabTarget() {
-    WWHD_FUNC(0x02141FD8, u8, this);
     fopAc_ac_c* pLink = dComIfGp_getLinkPlayer();
     return daPy_getGrabActorID(pLink) == mProcId;
 }
-VERIFY(0x02141FD8, &daFm_c::checkPlayerGrabTarget);
 
 /* 02142028 */
 void daFm_c::cancelGrab() {
-    WWHD_FUNC(0x02142028, void, this);
     if (mpActorTarget != nullptr) {
         if (field_0x684 != 0 && (mpActorTarget->actor_status & 0x2000) /* fopAcM_checkCarryNow */ && !checkPlayerGrabTarget()) {
             mpActorTarget->gravity = 0.0f;
@@ -692,35 +637,28 @@ void daFm_c::cancelGrab() {
         field_0x684 = 0;
     }
 }
-VERIFY(0x02142028, &daFm_c::cancelGrab);
 
 /* 021420EC */
 bool daFm_c::_delete() {
-    WWHD_FUNC(0x021420EC, bool, this);
     cancelGrab();
     dComIfG_resDelete(&mPhs, m_arc_name);
-    u32 cb = gabi::ea(&mpFollowEcallBack);
-    gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(cb) + 0x44), cb); /* mpFollowEcallBack.remove() (virtual) */
+    auto* cb = reinterpret_cast<fm_main::Follow*>(&mpFollowEcallBack);
+    gabi::call_ptr(cb->mVtable->remove, cb); /* mpFollowEcallBack.remove() (virtual) */
     if (heap) {
         mpMorf->stopZelAnime();
     }
     return true;
 }
-VERIFY(0x021420EC, &daFm_c::_delete);
 
 /* 02142154 */
 static BOOL daFmDelete(void* i_this) {
-    WWHD_FUNC(0x02142154, BOOL, i_this);
     return ((daFm_c*)i_this)->_delete();
 }
-VERIFY(0x02142154, daFmDelete);
 
 enum { JA_SE_CM_FM_SPOT = 0x7032 };
-static inline bool fm_checkPlayerStatus0(u32 mask) { return (gabi::load<u32>(dComIfGp_ea() + 0x5CD8) & mask) != 0; }
 
 /* 02142158 */
 void daFm_c::setHoleEffect() {
-    WWHD_FUNC(0x02142158, void, this);
     if (mpFollowEcallBack.getEmitter() == nullptr) {
         /* dComIfGp_particle_setShipTail(ID_AK_SN_PITFALL00, &current.pos, NULL, NULL, 0xFF, &mpFollowEcallBack, roomNo) */
         s8 roomNo = current.roomNo;
@@ -730,20 +668,18 @@ void daFm_c::setHoleEffect() {
     JPABaseEmitter* emitter = mpFollowEcallBack.getEmitter();
     if (emitter != nullptr) {
         f32 s = field_0x3E0; /* emitter->setGlobalScale({s, s, s}) */
-        u32 e = gabi::ea(emitter);
-        gabi::store<f32>(e + 0x23C, s);
-        gabi::store<f32>(e + 0x220, s);
-        gabi::store<f32>(e + 0x228, s);
-        gabi::store<f32>(e + 0x224, s);
-        gabi::store<f32>(e + 0x240, s);
-        gabi::store<f32>(e + 0x238, s);
+        auto* e = reinterpret_cast<fm_main::Emitter*>(emitter);
+        e->mGlobalParticleScale.y = s;
+        e->mGlobalScale.x = s;
+        e->mGlobalScale.z = s;
+        e->mGlobalScale.y = s;
+        e->mGlobalParticleScale.z = s;
+        e->mGlobalParticleScale.x = s;
     }
 }
-VERIFY(0x02142158, &daFm_c::setHoleEffect);
 
 /* 02142200 */
 void daFm_c::holeExecute() {
-    WWHD_FUNC(0x02142200, void, this);
     if (field_0x3E0 > 0.015f) { /* isHoleAppear */
         mBtkAnm.play();
         fm_seStart(this, JA_SE_CM_FM_SPOT, 0);
@@ -754,18 +690,16 @@ void daFm_c::holeExecute() {
         dPa_followEcallBack_end(&mpFollowEcallBack);
     }
 }
-VERIFY(0x02142200, &daFm_c::holeExecute);
 
 /* 021422A4 */
 void daFm_c::setAttention() {
-    WWHD_FUNC(0x021422A4, void, this);
     s32 m = mMode;
     if (field_0x2E4 != 0 || (u32)m == 0 || ((u32)m >= 0xE && (u32)m <= 0x11)) {
-        attention_pos(this)->copy(current.pos);
+        (&attention_info.position)->copy(current.pos);
         eyePos.copy(current.pos);
         return;
     }
-    cXyz* att = attention_pos(this);
+    cXyz* att = (&attention_info.position);
     f32 ax = field_0x61C.x;
     f32 ay = field_0x61C.y;
     f32 az = field_0x61C.z;
@@ -780,7 +714,7 @@ void daFm_c::setAttention() {
     head->z = top->z;
     cXyz_mi(head, d, &field_0x61C);
     f32 abs = std_sqrtf(PSVECSquareMag(d));
-    if (!fm_checkPlayerStatus0(0x402) && mMode == 8 && !(abs > hio_f(0xEC))) {
+    if (!dComIfGp_checkPlayerStatus0(0, 0x402) && mMode == MODE_ATTACK && !(abs > fm_main::hio().field_0x0EC)) {
         f32 x = current.pos.x;
         f32 y = current.pos.y;
         f32 z = current.pos.z;
@@ -791,57 +725,49 @@ void daFm_c::setAttention() {
         eyePos.copy(field_0x61C);
     }
 }
-VERIFY(0x021422A4, &daFm_c::setAttention);
 
 /* 02142450 */
 bool daFm_c::setHoleScale(f32 param_1, f32 param_2, f32 param_3) {
-    WWHD_FUNC(0x02142450, bool, this, param_1, param_2, param_3);
     cLib_addCalc2(&field_0x3E0, param_1, param_2, param_3);
     return !(std::fabs(field_0x3E0 - param_1) > param_3);
 }
-VERIFY(0x02142450, &daFm_c::setHoleScale);
 
 /* 021424D0 */
 void daFm_c::iceProc() {
-    WWHD_FUNC(0x021424D0, void, this);
     setAttention();
     J3DModel* pModel = mpMorf->getModel();
-    J3DModel_setBaseTRMtx(pModel, mtx_now());
+    J3DModel_setBaseTRMtx(pModel, fm_main::stackMtx());
     mpMorf->calc();
     if (mEnemyIce.mLightShrinkTimer != 0 || !(health > 0)) {
-        setHoleScale(hio_f(0x120), 0.1f, hio_f(0x128));
+        setHoleScale(fm_main::hio().field_0x120, 0.1f, fm_main::hio().field_0x128);
     }
     holeSetMtx();
     cancelGrab();
 }
-VERIFY(0x021424D0, &daFm_c::iceProc);
 
 /* 021425BC */
 bool daFm_c::lineCheck(cXyz* param_1, cXyz* param_2) {
-    WWHD_FUNC(0x021425BC, bool, this, param_1, param_2);
     dBgS_LinChk_Set(&mLinChk, param_1, param_2, this);
     if (cBgS_LineCross(dComIfG_Bgsp(), &mLinChk)) {
-        param_2->copy(*gabi::at<cXyz>(gabi::ea(&mLinChk) + 0x30)); /* GetCross */
+        param_2->copy(*(&reinterpret_cast<fm_main::LineCheck*>(&mLinChk)->mCross)); /* GetCross */
         return true;
     }
     return false;
 }
-VERIFY(0x021425BC, &daFm_c::lineCheck);
 
 /* 0214264C */
 bool daFm_c::areaCheck() {
-    WWHD_FUNC(0x0214264C, bool, this);
     bool ret = true;
     for (int i = 0; i < 12; i++) {
-        f32 r = hio_f(0xE0);
+        f32 r = fm_main::hio().field_0x0E0;
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_stack_c::YrotM((s16)(i * 0x1555));
         mDoMtx_stack_transM(r, -30.0f, 0.0f);
         cXyz* p = &field_0xA48[i];
-        f32 x = mtx_now()->m[0][3];
+        f32 x = fm_main::stackMtx()->m[0][3];
         p->x = x;
-        p->y = mtx_now()->m[1][3];
-        p->z = mtx_now()->m[2][3];
+        p->y = fm_main::stackMtx()->m[1][3];
+        p->z = fm_main::stackMtx()->m[2][3];
 
         gabi::Local<cXyz> temp2;
         temp2->x = x;
@@ -873,212 +799,270 @@ bool daFm_c::areaCheck() {
     }
     return ret;
 }
-VERIFY(0x0214264C, &daFm_c::areaCheck);
 
-/* 02142870 (unnamed) */
+/* 02142870 */
 void daFm_c::spAttackVJump() {
-    WWHD_FUNC(0x02142870, void, this);
-    mBtHeight = hio_f(0x6C); /* initBt(mSpAttackVJumpHeight, mSpAttackVJumpRadius) */
-    mBtBodyR = hio_f(0x70);
-    f32 frame = gabi::load<f32>(gabi::ea(mpMorf.get()) + 0x9C); /* mpMorf->getFrame() */
+    mBtHeight = fm_main::hio().mSpAttackVJumpHeight; /* initBt(mSpAttackVJumpHeight, mSpAttackVJumpRadius) */
+    mBtBodyR = fm_main::hio().mSpAttackVJumpRadius;
+    f32 frame = mpMorf->getFrame(); /* mpMorf->getFrame() */
     mBtAttackType = 3; /* setBtAttackData(start, end, 700.0f, 3) */
-    mBtStartFrame = (f32)hio_s(0x74);
-    mBtEndFrame = (f32)hio_s(0x76);
+    mBtStartFrame = (f32)fm_main::hio().mSpAttackVJumpStartFrame;
+    mBtEndFrame = (f32)fm_main::hio().mSpAttackVJumpEndFrame;
     mBtMaxDis = 700.0f;
     mBtNowFrame = frame;
 }
-VERIFY(0x02142870, &daFm_c::spAttackVJump);
 
-/* 021428FC (unnamed) */
+/* 021428FC */
 void daFm_c::spAttackJump() {
-    WWHD_FUNC(0x021428FC, void, this);
-    mBtHeight = hio_f(0x78);
-    mBtBodyR = hio_f(0x7C);
-    f32 frame = gabi::load<f32>(gabi::ea(mpMorf.get()) + 0x9C);
+    mBtHeight = fm_main::hio().mSpAttackJumpHeight;
+    mBtBodyR = fm_main::hio().mSpAttackJumpRadius;
+    f32 frame = mpMorf->getFrame();
     mBtAttackType = 1;
-    mBtStartFrame = (f32)hio_s(0x80);
-    mBtEndFrame = (f32)hio_s(0x82);
+    mBtStartFrame = (f32)fm_main::hio().mSpAttackJumpStartFrame;
+    mBtEndFrame = (f32)fm_main::hio().mSpAttackJumpEndFrame;
     mBtMaxDis = 700.0f;
     mBtNowFrame = frame;
 }
-VERIFY(0x021428FC, &daFm_c::spAttackJump);
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02141074 */
+static daFm_c* daFm_c_ct(daFm_c* p) {
+    if (p == nullptr) {
+        p = (daFm_c*)operator_new(0x101C);
+        if (p == nullptr) return p;
+    }
+    fopAc_ac_c_ct(p);
+    p->__vtbl = fm_main::ActorVtable;
+    dPa_followEcallBack_ct(&p->mpFollowEcallBack, 0, 0);
+    mDoExt_btkAnm::ct(&p->mBtkAnm);
+    dBgS_ObjAcch_ct(&p->mObjAcch, FM_OBJACCH_VT);
+    dBgS_AcchCir_ct(&p->mAcchCir);
+    fm_invisible_ct(p->mInvisibleModel); /* mDoExt_invisibleModel::mDoExt_invisibleModel */
+    dCcD_Stts_ct(&p->mStts);
+    dCcD_Stts_ct(&p->mStts2);
+    fm_sphere_ct(&p->mSph); /* dCcD_Sph::dCcD_Sph */
+    dCcD_Cyl_ct(&p->mCyl, fm_main::AabVtable);
+    dBgS_LinChk_ct(&p->mLinChk, FM_OBJLINCHK_VT, true); /* dBgS_ObjLinChk */
+    dCcD_Stts_ct(&p->mEnemyIce.mStts);
+    dCcD_Cyl_ct(&p->mEnemyIce.mCyl, fm_main::AabVtable);
+    dBgS_AcchCir_ct(&p->mEnemyIce.mBgAcchCir);
+    dBgS_ObjAcch_ct(&p->mEnemyIce.mBgAcch, FM_OBJACCH_VT);
+    return p;
+}
+
+/* 02149D78 */
+static void fm_SafeString_dtor(void* p, s32 flags) {
+    if (p != nullptr && (flags & 1))
+        operator_delete(p);
+}
 
 /* 0214996C */
 static void* daFm_HIO_c_ct(void* p) {
-    WWHD_FUNC(0x0214996C, void*, p);
     if (p == nullptr) {
         p = operator_new(0x15C);
         if (p == nullptr) return p;
     }
-    u32 h = gabi::ea(p);
-    gabi::store<u32>(h, 0x1000F360);   /* vtable */
-    gabi::call(0x02552BE8, h + 0x130); /* JntHit_HIO_c::JntHit_HIO_c */
-    gabi::store<u8>(h + 0x006, 0);
-    gabi::store<u8>(h + 0x007, 0);
-    gabi::store<u8>(h + 0x008, 0);
-    gabi::store<u8>(h + 0x004, 0);
-    gabi::store<u8>(h + 0x01F, 0);
-    gabi::store<u8>(h + 0x00B, 0);
-    gabi::store<u8>(h + 0x009, 0);
-    gabi::store<u8>(h + 0x00A, 0);
-    gabi::store<u8>(h + 0x00C, 0);
-    gabi::store<u8>(h + 0x005, 0);
+    auto* h = reinterpret_cast<fm_main::HIO*>(p);
+    h->__vtbl = fm_main::HIOVtable;   /* vtable */
+    fm_jointHitHIO_ct(h->field_0x130); /* JntHit_HIO_c::JntHit_HIO_c */
+    h->field_0x006 = 0;
+    h->field_0x007 = 0;
+    h->field_0x008 = 0;
+    h->field_0x004 = 0;
+    h->field_0x01F = 0;
+    h->field_0x00B = 0;
+    h->field_0x009 = 0;
+    h->field_0x00A = 0;
+    h->field_0x00C = 0;
+    h->field_0x005 = 0;
 
-    gabi::store<s16>(h + 0x068, 0x1E);
-    gabi::store<f32>(h + 0x06C, 240.0f); /* mSpAttackVJumpHeight */
-    gabi::store<f32>(h + 0x070, 100.0f);
-    gabi::store<s16>(h + 0x074, 0);
-    gabi::store<s16>(h + 0x076, 0xF);
-    gabi::store<f32>(h + 0x078, 120.0f); /* mSpAttackJumpHeight */
-    gabi::store<f32>(h + 0x07C, 100.0f);
-    gabi::store<s16>(h + 0x080, 5);
-    gabi::store<s16>(h + 0x082, 0xF);
-    gabi::store<s16>(h + 0x11C, 100);
-    gabi::store<u8>(h + 0x00E, 0);
-    gabi::store<u8>(h + 0x00D, 0);
-    gabi::store<s16>(h + 0x062, 0x78); /* mFreezeDuration */
+    h->field_0x068 = 0x1E;
+    h->mSpAttackVJumpHeight = 240.0f; /* mSpAttackVJumpHeight */
+    h->mSpAttackVJumpRadius = 100.0f;
+    h->mSpAttackVJumpStartFrame = 0;
+    h->mSpAttackVJumpEndFrame = 0xF;
+    h->mSpAttackJumpHeight = 120.0f; /* mSpAttackJumpHeight */
+    h->mSpAttackJumpRadius = 100.0f;
+    h->mSpAttackJumpStartFrame = 5;
+    h->mSpAttackJumpEndFrame = 0xF;
+    h->field_0x11C = 100;
+    h->field_0x00E = 0;
+    h->field_0x00D = 0;
+    h->mFreezeDuration = 0x78; /* mFreezeDuration */
 
     for (int i = 0; i < 6; i++) {
         switch (i) {
         case 0: case 1: case 2: case 3: case 5:
-            gabi::store<u8>(h + 0x0F + i, 1);
+            h->field_0x00F[i] = 1;
             break;
         default:
-            gabi::store<u8>(h + 0x0F + i, 0);
+            h->field_0x00F[i] = 0;
             break;
         }
     }
-    gabi::store<f32>(h + 0x050, 0.0f);
-    gabi::store<f32>(h + 0x054, 0.0f);
-    gabi::store<f32>(h + 0x058, 0.0f);
-    gabi::store<s16>(h + 0x05C, 0);
-    gabi::store<s16>(h + 0x05E, 0);
-    gabi::store<s16>(h + 0x060, 0);
-    gabi::store<f32>(h + 0x020, -10.0f);
-    gabi::store<f32>(h + 0x024, 5.0f);
-    gabi::store<f32>(h + 0x028, -10.0f);
-    gabi::store<f32>(h + 0x02C, 0.0f);
-    gabi::store<f32>(h + 0x030, 0.0f);
-    gabi::store<f32>(h + 0x034, -30.0f);
-    gabi::store<f32>(h + 0x038, 40.0f);
-    gabi::store<f32>(h + 0x03C, -20.0f);
-    gabi::store<f32>(h + 0x040, 0.0f);
-    gabi::store<f32>(h + 0x044, 0.0f);
-    gabi::store<f32>(h + 0x048, 0.0f);
-    gabi::store<f32>(h + 0x04C, 0.0f);
-    gabi::store<f32>(h + 0x104, 0.0f);
-    gabi::store<f32>(h + 0x108, -20.0f);
-    gabi::store<f32>(h + 0x10C, -0.0f);
+    h->field_0x050.x = 0.0f;
+    h->field_0x050.y = 0.0f;
+    h->field_0x050.z = 0.0f;
+    h->field_0x05C.x = 0;
+    h->field_0x05C.y = 0;
+    h->field_0x05C.z = 0;
+    h->field_0x020.x = -10.0f;
+    h->field_0x020.y = 5.0f;
+    h->field_0x020.z = -10.0f;
+    h->field_0x02C.x = 0.0f;
+    h->field_0x02C.y = 0.0f;
+    h->field_0x02C.z = -30.0f;
+    h->field_0x038.x = 40.0f;
+    h->field_0x038.y = -20.0f;
+    h->field_0x038.z = 0.0f;
+    h->field_0x044.x = 0.0f;
+    h->field_0x044.y = 0.0f;
+    h->field_0x044.z = 0.0f;
+    h->field_0x104.x = 0.0f;
+    h->field_0x104.y = -20.0f;
+    h->field_0x104.z = -0.0f;
 
-    gabi::store<f32>(h + 0x0A8, 600.0f);
-    gabi::store<s16>(h + 0x064, 0xC); /* mMaxHealth */
-    gabi::store<s16>(h + 0x066, 0x28);
-    gabi::store<s16>(h + 0x084, 0x5A);
-    gabi::store<s16>(h + 0x086, 0xF0);
-    gabi::store<s16>(h + 0x088, 0x3C);
-    gabi::store<s16>(h + 0x08A, 1);
-    gabi::store<s16>(h + 0x08C, 0x3C);
-    gabi::store<s16>(h + 0x08E, 0x78);
-    gabi::store<s16>(h + 0x090, 10);
-    gabi::store<s16>(h + 0x092, 0x11);
-    gabi::store<s16>(h + 0x094, 0);
-    gabi::store<s16>(h + 0x096, 500);
-    gabi::store<s16>(h + 0x098, 18000);
-    gabi::store<s16>(h + 0x09A, 7000);
-    gabi::store<f32>(h + 0x0C0, 15.0f);
-    gabi::store<f32>(h + 0x120, 0.01f);
-    gabi::store<f32>(h + 0x124, 1.0f);
-    gabi::store<f32>(h + 0x128, 0.1f);
-    gabi::store<f32>(h + 0x12C, 0.02f);
-    gabi::store<f32>(h + 0x0C4, 290.0f);
-    gabi::store<f32>(h + 0x0C8, 50.0f); /* HD: GameCube 80.0f (body sphere radius in setCollision) */
-    gabi::store<f32>(h + 0x0CC, 7.0f);
-    gabi::store<f32>(h + 0x0D0, 2.0f);
-    gabi::store<f32>(h + 0x0D4, 5.0f);
-    gabi::store<f32>(h + 0x0D8, 80.0f);
-    gabi::store<f32>(h + 0x0DC, 100.0f);
-    gabi::store<f32>(h + 0x0E0, 150.0f);
-    gabi::store<f32>(h + 0x0E4, 500.0f);
-    gabi::store<f32>(h + 0x0E8, 800.0f);
-    gabi::store<f32>(h + 0x0EC, 30.0f);
-    gabi::store<f32>(h + 0x0F0, 25.0f);
-    gabi::store<f32>(h + 0x0F4, 9.0f);
-    gabi::store<f32>(h + 0x0F8, -2.5f);
-    gabi::store<f32>(h + 0x0FC, 16.0f);
-    gabi::store<s16>(h + 0x09C, 5);
-    gabi::store<s16>(h + 0x100, 0x1E);
-    gabi::store<f32>(h + 0x110, 20.0f);
-    gabi::store<f32>(h + 0x114, 50.0f);
-    gabi::store<f32>(h + 0x118, -20.0f);
-    gabi::store<f32>(h + 0x0B0, 30.0f);
-    gabi::store<s16>(h + 0x0A0, 0x14);
-    gabi::store<s16>(h + 0x0A2, 0x96);
-    gabi::store<f32>(h + 0x0B4, 1000.0f);
-    gabi::store<f32>(h + 0x0B8, 1000.0f);
-    gabi::store<s16>(h + 0x09E, 0x96);
-    gabi::store<f32>(h + 0x0AC, 300.0f);
-    gabi::store<f32>(h + 0x0BC, 750.0f);
-    gabi::store<s16>(h + 0x0A6, 10);
+    h->field_0x0A8 = 600.0f;
+    h->mMaxHealth = 0xC; /* mMaxHealth */
+    h->field_0x066 = 0x28;
+    h->field_0x084 = 0x5A;
+    h->field_0x086 = 0xF0;
+    h->field_0x088 = 0x3C;
+    h->field_0x08A = 1;
+    h->field_0x08C = 0x3C;
+    h->field_0x08E = 0x78;
+    h->field_0x090 = 10;
+    h->field_0x092 = 0x11;
+    h->field_0x094 = 0;
+    h->field_0x096 = 500;
+    h->field_0x098 = 18000;
+    h->field_0x09A = 7000;
+    h->field_0x0C0 = 15.0f;
+    h->field_0x120 = 0.01f;
+    h->field_0x124 = 1.0f;
+    h->field_0x128 = 0.1f;
+    h->field_0x12C = 0.02f;
+    h->field_0x0C4 = 290.0f;
+    // HD: GameCube uses 80.0f for the body sphere radius.
+    h->field_0x0C8 = 50.0f;
+    h->field_0x0CC = 7.0f;
+    h->field_0x0D0 = 2.0f;
+    h->field_0x0D4 = 5.0f;
+    h->field_0x0D8 = 80.0f;
+    h->field_0x0DC = 100.0f;
+    h->field_0x0E0 = 150.0f;
+    h->field_0x0E4 = 500.0f;
+    h->field_0x0E8 = 800.0f;
+    h->field_0x0EC = 30.0f;
+    h->field_0x0F0 = 25.0f;
+    h->field_0x0F4 = 9.0f;
+    h->field_0x0F8 = -2.5f;
+    h->field_0x0FC = 16.0f;
+    h->field_0x09C = 5;
+    h->field_0x100 = 0x1E;
+    h->field_0x110 = 20.0f;
+    h->field_0x114 = 50.0f;
+    h->field_0x118 = -20.0f;
+    h->field_0x0B0 = 30.0f;
+    h->field_0x0A0 = 0x14;
+    h->field_0x0A2 = 0x96;
+    h->field_0x0B4 = 1000.0f;
+    h->field_0x0B8 = 1000.0f;
+    h->field_0x09E = 0x96;
+    h->field_0x0AC = 300.0f;
+    h->field_0x0BC = 750.0f;
+    h->field_0x0A6 = 10;
     return p;
 }
-VERIFY(0x0214996C, daFm_HIO_c_ct);
 
-/* 02149CD8: static initialisation (header statics, then l_HIO) */
+/* 02149CD8 */
 static void __sinit_d_a_fm_cpp() {
-    WWHD_FUNC(0x02149CD8, void, (u32)0);
-    sinit_header_statics(0x10463DF0, 0x101B5228);
-    daFm_HIO_c_ct(gabi::at<void>(L_HIO));
+    sinit_header_statics(fm_main::headerGuards(), fm_main::headerDestructors());
+    daFm_HIO_c_ct(&fm_main::hio());
 }
-VERIFY(0x02149CD8, __sinit_d_a_fm_cpp);
 
 /* 02149D8C */
 static BOOL daFmIsDelete(void* i_this) {
-    WWHD_FUNC(0x02149D8C, BOOL, (u32)0);
     return TRUE;
 }
-VERIFY(0x02149D8C, daFmIsDelete);
 
-/* 02149D94 (unnamed) */
+/* 02149D94 */
 void daFm_c::modeDeleteInit() {
-    WWHD_FUNC(0x02149D94, void, this);
 }
-VERIFY(0x02149D94, &daFm_c::modeDeleteInit);
 
 /* dBgS_ObjAcch destructor (inline): this TU's vtables back, then dBgS_Acch::~dBgS_Acch */
 static inline void fm_objacch_dt(dBgS_ObjAcch* a) {
-    gabi::store<u32>(gabi::ea(a) + 0x20, 0x1000F2B0);
-    gabi::store<u32>(gabi::ea(a) + 0x14, 0x1000F2C0);
-    gabi::call(0x024EFD9C, a, 0);
+    reinterpret_cast<fm_main::Acch*>(a)->mVtable20 = fm_main::AcchVtable20;
+    reinterpret_cast<fm_main::Acch*>(a)->mVtable14 = fm_main::AcchVtable14;
+    fm_acch_dt(a, 0);
 }
 
-/* 02149D98: daFm_c deleting destructor (compiler-generated; HD virtual destructor) */
+/* 02149D98 */
 static void daFm_c_dt(daFm_c* self, s32 flags) {
-    WWHD_FUNC(0x02149D98, void, self, flags);
     if (self == nullptr) return;
     fm_objacch_dt(&self->mEnemyIce.mBgAcch);
-    gabi::call(0x02018034, gabi::ea(&self->mEnemyIce.mBgAcchCir) + 0x14, 2); /* cM3dGCir::~cM3dGCir */
+    fm_circle_dt(reinterpret_cast<fm_main::AcchCir*>(&self->mEnemyIce.mBgAcchCir)->mCircle, 2); /* cM3dGCir::~cM3dGCir */
     dCcD_Cyl_dt(&self->mEnemyIce.mCyl, 2);
     dCcD_Stts_dt(&self->mEnemyIce.mStts, 2);
     /* dBgS_ObjLinChk::~dBgS_ObjLinChk (inline): this TU's vtables back, then cBgS_LinChk::~cBgS_LinChk */
-    u32 lc = gabi::ea(&self->mLinChk);
-    gabi::store<u32>(lc + 0x58, 0x1000F300);
-    gabi::store<u32>(lc + 0x64, 0x1000F290);
-    gabi::store<u32>(lc + 0x20, 0x1000F280);
-    gabi::call(0x02008B4C, lc, 0);
+    auto* lc = reinterpret_cast<fm_main::LineCheck*>(&self->mLinChk);
+    lc->mVtable58 = fm_main::LineVtable58;
+    lc->mVtable64 = fm_main::LineVtable64;
+    lc->mVtable20 = fm_main::LineVtable20;
+    fm_line_dt(lc, 0);
     dCcD_Cyl_dt(&self->mCyl, 2);
-    gabi::call(0x02515AE8, &self->mSph, 2); /* dCcD_Sph::~dCcD_Sph */
+    fm_sphere_dt(&self->mSph, 2); /* dCcD_Sph::~dCcD_Sph */
     dCcD_Stts_dt(&self->mStts2, 2);
     dCcD_Stts_dt(&self->mStts, 2);
-    gabi::call(0x025E89F8, self->mInvisibleModel, 2); /* mDoExt_invisibleModel::~mDoExt_invisibleModel */
-    gabi::call(0x02018034, gabi::ea(&self->mAcchCir) + 0x14, 2);
+    fm_invisible_dt(self->mInvisibleModel, 2); /* mDoExt_invisibleModel::~mDoExt_invisibleModel */
+    fm_circle_dt(reinterpret_cast<fm_main::AcchCir*>(&self->mAcchCir)->mCircle, 2);
     fm_objacch_dt(&self->mObjAcch);
-    gabi::call(0x025D50BC, self, 0); /* fopAc_ac_c::~fopAc_ac_c */
+    fm_actor_dt(self, 0); /* fopAc_ac_c::~fopAc_ac_c */
     if (flags & 1) operator_delete(self);
 }
-VERIFY(0x02149D98, daFm_c_dt);
 
-/* 02149ED0: empty virtual (sead::SafeString::assureTerminationImpl_, this TU's vtable + 0x14) */
+/* 02149ED0 */
 static void fm_SafeString_assureTermination(void*) {
-    WWHD_FUNC(0x02149ED0, void, (u32)0);
 }
-VERIFY(0x02149ED0, fm_SafeString_assureTermination);
+
+/* WWHD glue
+data a_anm_bcks_tbl 1000F680
+data a_anm_prm_tbl 1000F6B4
+data mode_tbl 1000F3E0
+data search_data 101B512C
+data m_sph_src 1000FA40
+data m_cyl_src 1000FA80
+ext 025E8A48 bool invisibleModel_create(void* inv, J3DModel* model)
+ext 02552B60 JntHit_c* JntHit_create(J3DModel* model, u32 data, s16 count)
+str 1000F37C "d_a_fm.cpp" in 021407A4
+str 1000F388 "modelData != (0)"
+str 1000F39C "btk != 0"
+str 1000F3A8 "d_a_fm.cpp" in 021408C0
+str 1000F3B4 "fmModelData != (0)"
+str 1000F7C0 "Fmaster"
+str 1000F7C8 "Fmastr1"
+str 1000F7D0 "Fmastr2"
+str 1000F7D8 "m_path_no != 0xff"
+str 1000F7EC "d_a_fm.cpp" in 02141930
+ext 024EFD9C void fm_acch_dt(dBgS_ObjAcch* p, s32 flags)
+ext 02018034 void fm_circle_dt(void* p, s32 flags)
+ext 02008B4C void fm_line_dt(void* p, s32 flags)
+ext 02515AE8 void fm_sphere_dt(dCcD_Sph* p, s32 flags)
+ext 025E89F8 void fm_invisible_dt(void* p, s32 flags)
+ext 025D50BC void fm_actor_dt(fopAc_ac_c* p, s32 flags)
+ext 0211D2F8 s32 fm_calcTimer(be<s32>* timer)
+ext 0200E814 s32 fm_nameIndex(void* table, const char* name, s32 type)
+ext 025F25CC void mDoMtx_stack_quatM(Quaternion_fm* q)
+ext 028E9108 void PSMTXConcat_g(Mtx34* a, Mtx34* b, Mtx34* ab)
+ext 0201B12C void cXyz_normZP(const cXyz* a, cXyz* res)
+ext 028E8DE8 f32 PSVECSquareDistance(const cXyz* a, const cXyz* b)
+ext 020CB92C bool daBomb_chk_state(fopAc_ac_c* b, s32 st)
+ext 02048038 u32 daObj_PrmAbstract(fopAc_ac_c* a, s32 w, s32 s)
+ext 027F3F94 fm_main::JointTree* fm_jointTree(J3DModelData* d)
+ext 02552BE8 void fm_jointHitHIO_ct(void* h)
+ext 025E895C void fm_invisible_ct(void* p)
+ext 025166F0 void fm_sphere_ct(dCcD_Sph* p)
+ext 02587A0C void fm_setAnmTables(const char* arc, mDoExt_McaMorf* morf, be<s8>* bck, be<s8>* prm, be<s8>* old, u32 bcks, u32 prms, bool force, s32 hd)
+str 1000FA3C "fm"
+*/

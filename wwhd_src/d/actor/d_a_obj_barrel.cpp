@@ -1,7 +1,24 @@
-// Barrel actor: GameCube behavior adapted to the original HD functions.
+/** Barrel actor: tww state machine on the verified WWHD layout.
+ * HD: SafeString calls, full-register returns, float copies and guest Local order
+ * retain the original behavior. The draw path has no GameCube cutoff or shadow. */
 #include "d/actor/d_a_obj_barrel.h"
 using daObjBarrel::Act_c;
-static void collision_mode(Act_c *a, bool carry = false) {
+
+const gc_tu_data gc_tu = {
+    .safeString = 0x10025558,
+    .objAcch = {0x10025580, 0x100255A0, 0x10025590},
+    .objAcchDt = {0x10025590, 0x100255A0},
+    .headerStatics = {0x104691E0, 0x101C7E8C, 0x104691EC},
+};
+static const char M_arcname[] = "Ktaru_01";
+static BarrelResPointer l_resControl;
+static BarrelStringVtable l_stringVtable;
+static BarrelWord l_scaleInitialized;
+static cXyz l_emitterScale;
+static BarrelModeTable mode_proc;
+static dCcD_SrcCyl M_cyl_src;
+
+static void collision_mode(Act_c* a, bool carry = false) {
     a->mCyl.mObjAt.mSPrm &= ~1u;
     a->mCyl.mObjTg.mSPrm |= 1u;
     if (carry)
@@ -9,515 +26,463 @@ static void collision_mode(Act_c *a, bool carry = false) {
     else
         a->mCyl.mObjCo.mSPrm |= 1u;
 }
-static void clear_carry_attention(Act_c *a) { *gabi::at<be<u32>>(gabi::ea(a) + 0x39C) &= ~0x10u; }
-static bool create_heap(Act_c *a) {
-    WWHD_FUNC(0x0231C2AC, bool, a);
+static void clear_carry_attention(Act_c* a) {
+    a->attention_info.flags &= ~(u32)fopAc_Attn_ACTION_CARRY_e;
+}
+/* 0231C2AC */
+bool daObjBarrel::Act_c::create_heap() {
     gabi::Local<be<u32>[2]> name;
-    (*name)[0] = 0x100256E4;
-    (*name)[1] = 0x10025558;
-    auto *model = gabi::call<J3DModelData *>(0x026066C4, gabi::at<u8>(gabi::load<u32>(0x101F4F28)),
-                                             name.get(), 3);
+    (*name)[0] = gabi::guest_addr(M_arcname);
+    (*name)[1] = gc_tu.safeString;
+    auto* model = Barrel_getRes(l_resControl.get(), name.get(), dRes_INDEX_KTARU_01_BDL_KTARU_01_e);
     if (!model)
-        gabi::call(0x0273AA24, STR(0x100255D0), 0x17A, STR(0x100255C0));
-    a->mpModel = mDoExt_J3DModel__create(model, 0x80000, 0x11000022);
-    return a->mpModel != nullptr;
+        Barrel_assert("d_a_obj_barrel.cpp", 0x17A, "mdl_data != 0");
+    this->mpModel = mDoExt_J3DModel__create(model, 0x80000, 0x11000022);
+    return this->mpModel != nullptr;
 }
-VERIFY(0x0231C2AC, create_heap);
-static bool solid_heap(Act_c *a) {
-    WWHD_FUNC(0x0231C35C, bool, a);
-    return create_heap(a);
-}
-VERIFY(0x0231C35C, solid_heap);
-static void cull_set_draw(Act_c *a) {
-    WWHD_FUNC(0x0231C360, void, a);
-    gabi::call(0x025D6768, a, 0.f, 50.f, 0.f, 75.f);
-}
-VERIFY(0x0231C360, cull_set_draw);
-static void cull_set_move(Act_c *a) {
-    WWHD_FUNC(0x0231CA9C, void, a);
-    gabi::call(0x025D6768, a, 0.f, 50.f, 0.f, 300.f);
-}
-VERIFY(0x0231CA9C, cull_set_move);
-static void set_mtx(Act_c *a) {
-    WWHD_FUNC(0x0231C380, void, a);
-    auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-    gabi::call(0x028E93CC, matrix, (f32)a->current.pos.x, (f32)a->current.pos.y,
-               (f32)a->current.pos.z);
-    u32 mode = a->mMode;
-    if (mode <= 6) {
-        bool vibrate = mode >= 2 && mode <= 4;
-        f32 height =
-            vibrate
-                ? 50.f
-                : gabi::fmadds(5.f, gabi::load<f32>(0x104A44FC + ((u16)a->shape_angle.z >> 3) * 8),
-                               45.f);
-        gabi::call(0x025F24E0, 0.f, height, 0.f);
-        gabi::call(0x025F1B48, matrix, 0, (s16)a->shape_angle.y, (s16)a->shape_angle.z);
-        gabi::call(0x025F1C28, matrix, (s16)a->mRotationAngle);
-        gabi::call(0x025F1BF4, matrix, (s16)a->mVibrationAngle);
-        gabi::call(0x025F1C28, matrix, (s16) - (s16)a->mRotationAngle);
+/* 0231C35C */
+static bool solidHeapCB(Act_c* a) { return a->create_heap(); }
+/* 0231C360 */
+void daObjBarrel::Act_c::cull_set_draw() { Barrel_setCullSphere(this, 0.f, 50.f, 0.f, 75.f); }
+/* 0231CA9C */
+void daObjBarrel::Act_c::cull_set_move() { Barrel_setCullSphere(this, 0.f, 50.f, 0.f, 300.f); }
+/* 0231C380 */
+void daObjBarrel::Act_c::set_mtx() {
+    auto* matrix = mDoMtx_stack_c::get();
+    Barrel_transS(matrix, (f32)this->current.pos.x, (f32)this->current.pos.y,
+                  (f32)this->current.pos.z);
+    u32 mode = this->mMode;
+    if (mode <= MODE_WALK) {
+        bool vibrate = mode >= MODE_VIB0 && mode <= MODE_VIB2;
+        f32 height = vibrate ? 50.f : gabi::fmadds(5.f, cM_scos(this->shape_angle.z), 45.f);
+        Barrel_transM(0.f, height, 0.f);
+        Barrel_ZXYrotM(matrix, 0, (s16)this->shape_angle.y, (s16)this->shape_angle.z);
+        Barrel_YrotM(matrix, (s16)this->m612);
+        Barrel_XrotM(matrix, (s16)this->m610);
+        Barrel_YrotM(matrix, (s16) - (s16)this->m612);
         if (!vibrate)
-            gabi::call(0x025F1C28, matrix, (s16)a->mWalkAngle);
-        gabi::call(0x025F24E0, 0.f, -50.f, 0.f);
+            Barrel_YrotM(matrix, (s16)this->m630);
+        Barrel_transM(0.f, -50.f, 0.f);
     }
-    u32 model = gabi::ea((J3DModel *)a->mpModel);
+    J3DModel* model = this->mpModel;
+    // HD: float loads/stores preserve the original matrix copy's NaN behavior.
     for (u32 i = 0; i < 12; i++)
-        gabi::store<f32>(model + 0xC8 + i * 4, gabi::load<f32>(0x1048D0CC + i * 4));
+        model->mBaseTransformMtx.m[i / 4][i % 4] = matrix->m[i / 4][i % 4];
 }
-VERIFY(0x0231C380, set_mtx);
-static void init_mtx(Act_c *a) {
-    WWHD_FUNC(0x0231C5D4, void, a);
-    u32 model = gabi::ea((J3DModel *)a->mpModel);
-    gabi::store<f32>(model + 0xBC, a->scale.x);
-    gabi::store<f32>(model + 0xC0, a->scale.y);
-    gabi::store<f32>(model + 0xC4, a->scale.z);
-    set_mtx(a);
+/* 0231C5D4 */
+void daObjBarrel::Act_c::init_mtx() {
+    J3DModel* model = this->mpModel;
+    model->mBaseScale.x = this->scale.x;
+    model->mBaseScale.y = this->scale.y;
+    model->mBaseScale.z = this->scale.z;
+    this->set_mtx();
 }
-VERIFY(0x0231C5D4, init_mtx);
-static void mode_wait_init(Act_c *a) {
-    WWHD_FUNC(0x0231C5F4, void, a);
-    collision_mode(a);
-    a->speedF = 0.f;
-    a->gravity = -6.f;
-    a->mStts.Init(200, 255, a);
-    a->mMode = 0;
+/* 0231C5F4 */
+void daObjBarrel::Act_c::mode_wait_init() {
+    collision_mode(this);
+    this->speedF = 0.f;
+    this->gravity = -6.f;
+    this->mStts.Init(200, 255, this);
+    this->mMode = MODE_WAIT;
 }
-VERIFY(0x0231C5F4, mode_wait_init);
-static bool actor_delete(Act_c *a) {
-    WWHD_FUNC(0x0231CA6C, bool, a);
-    dComIfG_resDelete(&a->mPhase, STR(0x100256E4));
+/* 0231CA6C */
+bool daObjBarrel::Act_c::_delete() {
+    dComIfG_resDelete(&this->mPhs, M_arcname);
     return true;
 }
-VERIFY(0x0231CA6C, actor_delete);
-static u32 get_se_map_hit(Act_c *a) {
-    WWHD_FUNC(0x0231CABC, u32, a);
-    return 11;
-}
-VERIFY(0x0231CABC, get_se_map_hit);
-static void set_senv(Act_c *a, s32 p1, s32 p2) {
-    WWHD_FUNC(0x0231CBE0, void, a, p1, p2);
+/* 0231CABC */
+u32 daObjBarrel::Act_c::get_se_map_hit() { return 11; }
+/* 0231CBE0 */
+void daObjBarrel::Act_c::set_senv(s32 p1, s32 p2) {
     gabi::Local<cXyz> position;
-    *position = a->current.pos;
-    gabi::call(0x0255F458, position.get(), p1, gabi::load<u32>(gabi::ea(a) + 4), p2);
+    *position = this->current.pos;
+    Barrel_Sound_set(position.get(), p1, (u32)this->mBsPcId, p2);
 }
-VERIFY(0x0231CBE0, set_senv);
-static void mode_jump_init(Act_c *a) {
-    WWHD_FUNC(0x0231CC9C, void, a);
-    collision_mode(a);
-    clear_carry_attention(a);
-    a->shape_angle.y = 0;
-    a->shape_angle.z = 0;
-    a->mVibrationAngle = 0;
-    a->mRotationAngle = 0;
-    a->mWalkAngle = 0;
-    a->gravity = -6.f;
-    a->speed.y = 30.f;
-    a->mMode = 5;
+/* 0231CC9C */
+void daObjBarrel::Act_c::mode_jump_init() {
+    collision_mode(this);
+    clear_carry_attention(this);
+    this->shape_angle.y = 0;
+    this->shape_angle.z = 0;
+    this->m610 = 0;
+    this->m612 = 0;
+    this->m630 = 0;
+    this->gravity = -6.f;
+    this->speed.y = 30.f;
+    this->mMode = MODE_JUMP;
 }
-VERIFY(0x0231CC9C, mode_jump_init);
-static void mode_walk_init(Act_c *a) {
-    WWHD_FUNC(0x0231CD08, void, a);
-    collision_mode(a);
-    clear_carry_attention(a);
-    a->gravity = -6.f;
-    a->mMode = 6;
+/* 0231CD08 */
+void daObjBarrel::Act_c::mode_walk_init() {
+    collision_mode(this);
+    clear_carry_attention(this);
+    this->gravity = -6.f;
+    this->mMode = MODE_WALK;
 }
-VERIFY(0x0231CD08, mode_walk_init);
-static bool chk_sink_water(Act_c *a) {
-    WWHD_FUNC(0x0231D0F0, bool, a);
-    return a->mAcch.ChkWaterHit() &&
-           gabi::load<f32>(gabi::ea(a) + 0x574) > (f32)a->current.pos.y + 50.f;
+/* 0231D0F0 */
+bool daObjBarrel::Act_c::chk_sink_water() {
+    return this->mAcch.ChkWaterHit() &&
+           (f32)this->mAcch.m_wtr.m_height > (f32)this->current.pos.y + 50.f;
 }
-VERIFY(0x0231D0F0, chk_sink_water);
-static bool chk_sinkdown_water(Act_c *a) {
-    WWHD_FUNC(0x0231D25C, bool, a);
-    return a->mAcch.ChkWaterHit() &&
-           gabi::load<f32>(gabi::ea(a) + 0x574) > ((f32)a->current.pos.y + 100.f) + 50.f;
+/* 0231D25C */
+bool daObjBarrel::Act_c::chk_sinkdown_water() {
+    return this->mAcch.ChkWaterHit() &&
+           (f32)this->mAcch.m_wtr.m_height > ((f32)this->current.pos.y + 100.f) + 50.f;
 }
-VERIFY(0x0231D25C, chk_sinkdown_water);
-static void eff_hit_water_splash(Act_c *a) {
-    WWHD_FUNC(0x0231D20C, void, a);
+/* 0231D20C */
+void daObjBarrel::Act_c::eff_hit_water_splash() {
     gabi::Local<cXyz> position;
-    position->x = a->current.pos.x;
-    position->y = gabi::load<f32>(gabi::ea(a) + 0x574);
-    position->z = a->current.pos.z;
+    position->x = this->current.pos.x;
+    position->y = (f32)this->mAcch.m_wtr.m_height;
+    position->z = this->current.pos.z;
     fopKyM_createWpillar(position.get(), 1.f, 0.75f, 0);
 }
-VERIFY(0x0231D20C, eff_hit_water_splash);
-static void mode_vib0_init(Act_c *a) {
-    WWHD_FUNC(0x0231D344, void, a);
-    collision_mode(a);
-    clear_carry_attention(a);
-    a->gravity = -14.f;
-    a->speed.y = 80.f;
-    a->shape_angle.y = 0;
-    a->shape_angle.z = 0;
-    a->mVibrationAngle = 3500;
-    a->mRotationAngle = 0;
-    a->mWalkAngle = 0;
-    a->mTimer = 5;
-    a->mMode = 2;
+/* 0231D344 */
+void daObjBarrel::Act_c::mode_vib0_init() {
+    collision_mode(this);
+    clear_carry_attention(this);
+    this->gravity = -14.f;
+    this->speed.y = 80.f;
+    this->shape_angle.y = 0;
+    this->shape_angle.z = 0;
+    this->m610 = 3500;
+    this->m612 = 0;
+    this->m630 = 0;
+    this->mTimer = 5;
+    this->mMode = MODE_VIB0;
 }
-VERIFY(0x0231D344, mode_vib0_init);
-static void eff_land_smoke(Act_c *a) {
-    WWHD_FUNC(0x0231D5B4, void, a);
-    gabi::call(0x02311CD8, a, gabi::at<u8>(gabi::ea(a) + 0x48C), 1.f);
+/* 0231D5B4 */
+void daObjBarrel::Act_c::eff_land_smoke() {
+    Barrel_make_land_effect(this, &this->mAcch.m_gnd, 1.f);
 }
-VERIFY(0x0231D5B4, eff_land_smoke);
-static void mode_vib1_init(Act_c *a) {
-    WWHD_FUNC(0x0231E08C, void, a);
-    a->gravity = -1.f;
-    a->mTimer = 12;
-    a->mMode = 3;
+/* 0231E08C */
+void daObjBarrel::Act_c::mode_vib1_init() {
+    this->gravity = -1.f;
+    this->mTimer = 12;
+    this->mMode = MODE_VIB1;
 }
-VERIFY(0x0231E08C, mode_vib1_init);
-static void mode_vib2_init(Act_c *a) {
-    WWHD_FUNC(0x0231E0F0, void, a);
-    a->gravity = -12.f;
-    a->mTimer = 20;
-    a->mMode = 4;
+/* 0231E0F0 */
+void daObjBarrel::Act_c::mode_vib2_init() {
+    this->gravity = -12.f;
+    this->mTimer = 20;
+    this->mMode = MODE_VIB2;
 }
-VERIFY(0x0231E0F0, mode_vib2_init);
-static void global_init() {
-    WWHD_FUNC(0x0231E504, void);
-    for (u32 i = 0; i < 4; i++)
-        gabi::store<u32>(0x104691EC + i * 4, 0);
-    gabi::call(0x028F026C, gabi::at<u8>(0x101C7E8C));
-    gabi::store<f32>(0x104691E0, -3.1415927410125732f);
-    gabi::store<f32>(0x104691E4, 3.1415927410125732f);
-    gabi::call(0x028ED6F8, gabi::at<u8>(0x104691E8));
-    gabi::call(0x028F026C, gabi::at<u8>(0x101C7E98));
-    gabi::call(0x028EAB2C, gabi::at<u8>(0x104691E9));
-    gabi::call(0x028F026C, gabi::at<u8>(0x101C7EA4));
+// HD: compiler-generated common-header initialization and destructors.
+/* 0231E504 */
+static void __sinit_d_a_obj_barrel_cpp() {
+    sinit_header_statics_z(gc_tu.headerStatics[0], gc_tu.headerStatics[1], gc_tu.headerStatics[2]);
 }
-VERIFY(0x0231E504, global_init);
-static void static_dtor(void *object, u32 flags) {
-    WWHD_FUNC(0x0231E598, void, object, flags);
+/* 0231E598 */
+static void BarrelHeaderStatic__dt(void* object, u32 flags) {
     if (object && (flags & 1))
-        gabi::call(0x0273AF40, object);
+        Barrel_operator_delete(object);
 }
-VERIFY(0x0231E598, static_dtor);
-static void empty_dtor(void *object, u32 flags) { WWHD_FUNC(0x0231E5AC, void, object, flags); }
-VERIFY(0x0231E5AC, empty_dtor);
-static void actor_dtor(Act_c *a, u32 flags) {
-    WWHD_FUNC(0x0231E5B0, void, a, flags);
+/* 0231E5AC */
+static void BarrelHeaderEmpty__dt(void* object, u32 flags) {}
+/* 0231E5B0 */
+static void Act_c__dt(Act_c* a, u32 flags) {
     if (a) {
-        gabi::call(0x02515A70, &a->mCyl, 2);
-        gabi::call(0x02515860, &a->mStts, 2);
-        gabi::call(0x02018034, gabi::at<u8>(gabi::ea(a) + 0x590), 2);
-        gabi::store<u32>(gabi::ea(a) + 0x3D8, 0x10025590);
-        gabi::store<u32>(gabi::ea(a) + 0x3CC, 0x100255A0);
-        gabi::call(0x024EFD9C, &a->mAcch, 0);
-        gabi::call(0x025D50BC, a, 0);
+        Barrel_Cyl_dt(&a->mCyl, 2);
+        Barrel_Stts_dt(&a->mStts, 2);
+        Barrel_AcchCirShape_dt(&a->mAcchCir.m_cir, 2);
+        a->mAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcchDt[0];
+        a->mAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcchDt[1];
+        Barrel_Acch_dt(&a->mAcch, 0);
+        Barrel_actor_dt(a, 0);
         if (flags & 1)
-            gabi::call(0x0273AF40, a);
+            Barrel_operator_delete(a);
     }
 }
-VERIFY(0x0231E5B0, actor_dtor);
-static bool is_delete(Act_c *a) {
-    WWHD_FUNC(0x0231E64C, bool, a);
-    return true;
-}
-VERIFY(0x0231E64C, is_delete);
-static u32 parameter(Act_c *a, u32 width, u32 shift) {
-    WWHD_FUNC(0x0231E654, u32, a, width, shift);
+/* 0231E64C */
+bool daObjBarrel_Method_IsDelete(Act_c* a) { return true; }
+/* 0231E654 */
+static u32 PrmAbstract(Act_c* a, u32 width, u32 shift) {
     u32 shifted = (shift & 63) >= 32 ? 0 : (u32)a->mParameters >> (shift & 31);
     u32 limit = (width & 63) >= 32 ? 0 : 1u << (width & 31);
     return shifted & (limit - 1u);
 }
-VERIFY(0x0231E654, parameter);
-static void eff_break(Act_c *a) {
-    WWHD_FUNC(0x0231CAC4, void, a);
+/* 0231CAC4 */
+void daObjBarrel::Act_c::eff_break() {
     gabi::Local<cXyz> position;
-    position->x = a->current.pos.x;
-    position->y = (f32)a->current.pos.y + 50.f;
-    position->z = a->current.pos.z;
-    u32 play = gabi::ea(dComIfGp_get());
-    auto *emitter =
-        gabi::call<u8 *>(0x025A847C, gabi::at<u8>(gabi::load<u32>(play + 0x5AB0)), 0, 0x3E5,
-                         position.get(), nullptr, nullptr, 255, nullptr, -1,
-                         gabi::at<u8>(gabi::ea(a) + 0x1A8), gabi::at<u8>(gabi::ea(a) + 0x1A8), 0);
+    position->x = this->current.pos.x;
+    position->y = (f32)this->current.pos.y + 50.f;
+    position->z = this->current.pos.z;
+    auto* play = dComIfGp_get();
+    auto* emitter = Barrel_particle_set(
+        Barrel_gameInfo(play)->play.mParticle.get(), 0, BARREL_PARTICLE_BREAK, position.get(),
+        nullptr, nullptr, 255, nullptr, -1, &this->tevStr.mColorK0, &this->tevStr.mColorK0, 0);
     if (emitter) {
-        if (!gabi::load<u32>(0x104691FC)) {
-            gabi::store<u32>(0x104691FC, 1);
-            gabi::store<f32>(0x10469200, 1.f);
-            gabi::store<f32>(0x10469204, 0.8f);
-            gabi::store<f32>(0x10469208, 1.f);
+        if (!(u32)l_scaleInitialized) {
+            l_scaleInitialized = 1;
+            l_emitterScale.x = 1.f;
+            l_emitterScale.y = 0.8f;
+            l_emitterScale.z = 1.f;
         }
-        gabi::store<f32>(gabi::ea(emitter) + 8, gabi::load<f32>(0x10469200));
-        gabi::store<f32>(gabi::ea(emitter) + 12, gabi::load<f32>(0x10469204));
-        gabi::store<f32>(gabi::ea(emitter) + 16, gabi::load<f32>(0x10469208));
+        emitter->mScale.x = l_emitterScale.x;
+        emitter->mScale.y = l_emitterScale.y;
+        emitter->mScale.z = l_emitterScale.z;
     }
-    gabi::call(0x025D5834, 0x1D3, 0, position.get(), -1, nullptr, nullptr, -1, nullptr);
+    Barrel_createSmoke(BARREL_SMOKE_PROCESS, 0, position.get(), -1, nullptr, nullptr, -1, nullptr);
 }
-VERIFY(0x0231CAC4, eff_break);
-static void damaged(Act_c *a, s32 animate) {
-    WWHD_FUNC(0x0231CC24, void, a, animate);
-    gabi::call(0x025D9D24, a);
+/* 0231CC24 */
+void daObjBarrel::Act_c::damaged(s32 animate) {
+    Barrel_cancelCarryNow(this);
     if (animate) {
-        eff_break(a);
-        s32 reverb = gabi::call<s32>(0x02520540, (s8)a->current.roomNo);
-        gabi::call(0x025E1A40, 0x6805, &a->eyePos, 0, reverb);
-        set_senv(a, 150, 5);
+        this->eff_break();
+        s32 reverb = Barrel_getReverb((s8)this->current.roomNo);
+        Barrel_seStart(BARREL_SE_BREAK, &this->eyePos, 0, reverb);
+        this->set_senv(150, 5);
     }
 }
-VERIFY(0x0231CC24, damaged);
-static void se_fall_water(Act_c *a) {
-    WWHD_FUNC(0x0231D128, void, a);
+/* 0231D128 */
+void daObjBarrel::Act_c::se_fall_water() {
     u32 sound = 0x13;
-    u32 polygons[2] = {gabi::ea(a) + 0x52C, gabi::ea(a) + 0x4A0};
-    for (u32 polygon : polygons) {
-        if (gabi::load<u16>(polygon + 2) < 256) {
-            auto *play = dComIfGp_get();
-            sound = gabi::call<u32>(0x024EECAC, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                                    gabi::at<u8>(polygon));
+    cBgS_PolyInfo* polygons[2] = {
+        reinterpret_cast<cBgS_PolyInfo*>(&this->mAcch.m_wtr),
+        static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd),
+    };
+    for (cBgS_PolyInfo* polygon : polygons) {
+        if (polygon->mBgIndex < 256) {
+            auto* play = dComIfGp_get();
+            sound = Barrel_GetMtrlSndId(&Barrel_gameInfo(play)->play.mBgS, polygon);
             break;
         }
     }
-    s32 reverb = gabi::call<s32>(0x02520540, (s8)a->current.roomNo);
-    gabi::call(0x025E1A40, 0x6919, &a->eyePos, sound, reverb);
-    set_senv(a, 125, 5);
+    s32 reverb = Barrel_getReverb((s8)this->current.roomNo);
+    Barrel_seStart(BARREL_SE_WATER, &this->eyePos, sound, reverb);
+    this->set_senv(125, 5);
 }
-VERIFY(0x0231D128, se_fall_water);
-static bool damage_bg_proc(Act_c *a) {
-    WWHD_FUNC(0x0231D2A0, bool, a);
-    bool sunk = chk_sink_water(a);
+/* 0231D2A0 */
+bool daObjBarrel::Act_c::damage_bg_proc() {
+    bool sunk = this->chk_sink_water();
     bool broken = false;
-    if (((s32)a->mMode == 0 || (s32)a->mMode == 5 || (s32)a->mMode == 6) && sunk) {
-        if (!a->mSunk) {
-            se_fall_water(a);
-            eff_hit_water_splash(a);
-            a->mSunk = 1;
+    if (((s32)this->mMode == MODE_WAIT || (s32)this->mMode == MODE_JUMP ||
+         (s32)this->mMode == MODE_WALK) &&
+        sunk) {
+        if (!this->mSunk) {
+            this->se_fall_water();
+            this->eff_hit_water_splash();
+            this->mSunk = 1;
         }
-        if (chk_sinkdown_water(a)) {
-            damaged(a, 0);
+        if (this->chk_sinkdown_water()) {
+            this->damaged(0);
             broken = true;
         }
     }
     return broken;
 }
-VERIFY(0x0231D2A0, damage_bg_proc);
-static bool damage_bg_proc_directly(Act_c *a) {
-    WWHD_FUNC(0x0231D5C4, bool, a);
-    bool landing = a->mAcch.ChkGroundLanding();
-    bool ground = a->mAcch.ChkGroundHit();
+/* 0231D5C4 */
+bool daObjBarrel::Act_c::damage_bg_proc_directly() {
+    bool landing = this->mAcch.ChkGroundLanding();
+    bool ground = this->mAcch.ChkGroundHit();
     bool broken = false;
-    if ((s32)a->mMode == 0 || (s32)a->mMode == 5 || (s32)a->mMode == 6) {
-        if (landing && ((f32)a->mLastGroundY - (f32)a->current.pos.y) > 200.f) {
-            damaged(a, 1);
+    if ((s32)this->mMode == MODE_WAIT || (s32)this->mMode == MODE_JUMP ||
+        (s32)this->mMode == MODE_WALK) {
+        if (landing && ((f32)this->mLastGroundY - (f32)this->current.pos.y) > 200.f) {
+            this->damaged(1);
             broken = true;
         }
         if (ground)
-            a->mLastGroundY = a->current.pos.y;
+            this->mLastGroundY = this->current.pos.y;
     }
-    if ((s8)a->mInitTimer > 0)
-        a->mInitTimer = (s8)a->mInitTimer - 1;
+    if ((s8)this->mInitTimer > 0)
+        this->mInitTimer = (s8)this->mInitTimer - 1;
     else {
-        if (a->mAcch.ChkGroundHit()) {
-            if (!a->mOnGround && (s32)a->mMode != 1) {
-                auto *play = dComIfGp_get();
-                u32 material = gabi::call<u32>(0x024EECAC, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                                               gabi::at<u8>(gabi::ea(a) + 0x4A0));
-                s32 reverb = gabi::call<s32>(0x02520540, (s8)a->current.roomNo);
-                gabi::call(0x025E1A40, 0x282A, &a->eyePos, material, reverb);
-                a->mOnGround = 1;
+        if (this->mAcch.ChkGroundHit()) {
+            if (!this->mOnGround && (s32)this->mMode != MODE_CARRY) {
+                auto* play = dComIfGp_get();
+                u32 material = Barrel_GetMtrlSndId(&Barrel_gameInfo(play)->play.mBgS,
+                                                   static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd));
+                s32 reverb = Barrel_getReverb((s8)this->current.roomNo);
+                Barrel_seStart(BARREL_SE_TAKE_OFF, &this->eyePos, material, reverb);
+                this->mOnGround = 1;
             }
         } else
-            a->mOnGround = 0;
-        if (landing && ((s32)a->mMode != 1 || (s32)a->mTimer <= 0))
-            eff_land_smoke(a);
+            this->mOnGround = 0;
+        if (landing && ((s32)this->mMode != MODE_CARRY || (s32)this->mTimer <= 0))
+            this->eff_land_smoke();
     }
     return broken;
 }
-VERIFY(0x0231D5C4, damage_bg_proc_directly);
-static bool actor_draw(Act_c *a) {
-    WWHD_FUNC(0x0231DAE0, bool, a);
-    auto *light = dKy_getEnvlight();
-    settingTevStruct(light, 0, &a->current.pos, &a->tevStr);
+/* 0231DAE0 */
+bool daObjBarrel::Act_c::_draw() {
+    auto* light = dKy_getEnvlight();
+    settingTevStruct(light, 0, &this->current.pos, &this->tevStr);
     light = dKy_getEnvlight();
-    setLightTevColorType(light, a->mpModel, &a->tevStr);
-    gabi::call(0x025E2DE0, (J3DModel *)a->mpModel, 0);
+    setLightTevColorType(light, this->mpModel, &this->tevStr);
+    Barrel_modelUpdateDL((J3DModel*)this->mpModel, 0);
     return true;
 }
-VERIFY(0x0231DAE0, actor_draw);
-static void mode_carry(Act_c *a) {
-    WWHD_FUNC(0x0231DE48, void, a);
-    s16 angle = a->mCarryAngle;
-    if ((s32)a->mTimer > 0)
-        a->mTimer = (s32)a->mTimer - 1;
-    gabi::call(0x0200F8D0, &a->shape_angle.z, angle, 0x1000);
-    if (!((u32)a->actor_status & 0x102000)) {
-        a->mLastGroundY = a->current.pos.y;
-        gabi::call(0x02312968, a, gabi::at<u8>(gabi::ea(a) + 0x48C));
-        a->mVibrationAngle = 0;
-        a->mRotationAngle = 0;
-        mode_wait_init(a);
+/* 0231DE48 */
+void daObjBarrel::Act_c::mode_carry() {
+    s16 angle = this->m61C;
+    if ((s32)this->mTimer > 0)
+        this->mTimer = (s32)this->mTimer - 1;
+    Barrel_chaseAngleS(&this->shape_angle.z, angle, 0x1000);
+    if (!((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e))) {
+        this->mLastGroundY = this->current.pos.y;
+        Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
+        this->m610 = 0;
+        this->m612 = 0;
+        this->mode_wait_init();
     }
 }
-VERIFY(0x0231DE48, mode_carry);
-static void vib_pos_ang(Act_c *a) {
-    WWHD_FUNC(0x0231DED0, void, a);
-    f32 factor = a->mAcch.ChkGroundHit() ? 0.8f : 1.f;
-    f32 angle = gabi::fmadds((f32)(s16)a->mVibrationAngle, 8.544921729480848e-05f, 0.3f);
+/* 0231DED0 */
+void daObjBarrel::Act_c::vib_pos_ang() {
+    f32 factor = this->mAcch.ChkGroundHit() ? 0.8f : 1.f;
+    f32 angle = gabi::fmadds((f32)(s16)this->m610, 8.544921729480848e-05f, 0.3f);
     angle = ((16000.f * angle) * 0.1f) * factor;
-    gabi::call(0x025D6870, a, &a->mStts.m_cc_move);
-    a->shape_angle.y = (s16)a->shape_angle.y + (s16)gabi::ftoi(angle);
-    a->mRotationAngle = (s16)a->mRotationAngle + (s16)gabi::ftoi(14400.f * factor);
+    Barrel_posMoveF(this, &this->mStts.m_cc_move);
+    this->shape_angle.y = (s16)this->shape_angle.y + (s16)gabi::ftoi(angle);
+    this->m612 = (s16)this->m612 + (s16)gabi::ftoi(14400.f * factor);
 }
-VERIFY(0x0231DED0, vib_pos_ang);
-static void mode_vib0(Act_c *a) {
-    WWHD_FUNC(0x0231E0AC, void, a);
-    vib_pos_ang(a);
-    a->mTimer = (u32)a->mTimer - 1u;
-    if ((s32)a->mTimer <= 0)
-        mode_vib1_init(a);
+/* 0231E0AC */
+void daObjBarrel::Act_c::mode_vib0() {
+    this->vib_pos_ang();
+    this->mTimer = (u32)this->mTimer - 1u;
+    if ((s32)this->mTimer <= 0)
+        this->mode_vib1_init();
 }
-VERIFY(0x0231E0AC, mode_vib0);
-static void mode_vib1(Act_c *a) {
-    WWHD_FUNC(0x0231E110, void, a);
-    vib_pos_ang(a);
-    a->mTimer = (u32)a->mTimer - 1u;
-    if ((s32)a->mTimer <= 0)
-        mode_vib2_init(a);
+/* 0231E110 */
+void daObjBarrel::Act_c::mode_vib1() {
+    this->vib_pos_ang();
+    this->mTimer = (u32)this->mTimer - 1u;
+    if ((s32)this->mTimer <= 0)
+        this->mode_vib2_init();
 }
-VERIFY(0x0231E110, mode_vib1);
-static void mode_vib2(Act_c *a) {
-    WWHD_FUNC(0x0231E154, void, a);
-    gabi::call(0x0200F8D0, &a->mVibrationAngle, 0, 150);
-    vib_pos_ang(a);
-    a->mTimer = (u32)a->mTimer - 1u;
-    if ((s32)a->mTimer <= 0) {
-        a->shape_angle.x = 0;
-        a->mVibrationAngle = 0;
-        a->mRotationAngle = 0;
-        mode_wait_init(a);
+/* 0231E154 */
+void daObjBarrel::Act_c::mode_vib2() {
+    Barrel_chaseAngleS(&this->m610, 0, 150);
+    this->vib_pos_ang();
+    this->mTimer = (u32)this->mTimer - 1u;
+    if ((s32)this->mTimer <= 0) {
+        this->shape_angle.x = 0;
+        this->m610 = 0;
+        this->m612 = 0;
+        this->mode_wait_init();
     }
 }
-VERIFY(0x0231E154, mode_vib2);
-static bool draw_wrapper(Act_c *a) {
-    WWHD_FUNC(0x0231E500, bool, a);
-    return actor_draw(a);
-}
-VERIFY(0x0231E500, draw_wrapper);
-static void set_walk_rot(Act_c *a) {
-    WWHD_FUNC(0x0231DB3C, void, a);
+/* 0231E500 */
+bool daObjBarrel_Method_Draw(Act_c* a) { return a->_draw(); }
+/* 0231DB3C */
+void daObjBarrel::Act_c::set_walk_rot() {
     gabi::Local<cXyz> delta;
-    gabi::call(0x0201ADE0, &a->current.pos, delta.get(), &a->old.pos);
+    Barrel_xyzSubtract(&this->current.pos, delta.get(), &this->old.pos);
     gabi::Local<cXyz> horizontal;
     horizontal->x = delta->x;
     horizontal->y = 0.f;
     horizontal->z = delta->z;
-    f32 magnitude = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    magnitude = gabi::call<f32>(0x028F4384, magnitude);
-    s32 target = gabi::call<s32>(0x020195B0, (f32)delta->x, (f32)delta->z);
-    a->current.angle.y = target;
+    f32 magnitude = Barrel_xyzAbs2(horizontal.get());
+    magnitude = Barrel_sqrtf(magnitude);
+    // HD: the caller keeps atan2s's full return register until the explicit s16 casts.
+    s32 target = Barrel_atan2s((f32)delta->x, (f32)delta->z);
+    this->current.angle.y = target;
     bool negative = target < 0;
     if (negative)
         target = (s16)(target - 0x8000);
-    if (magnitude > 5.f || ((s32)a->mMode == 0 && magnitude > 2.5f))
-        gabi::call(0x0200F8D0, &a->shape_angle.y, target, 0x600);
-    f32 cosine = gabi::load<f32>(0x104A44FC + ((u16)a->shape_angle.z >> 3) * 8);
+    if (magnitude > 5.f || ((s32)this->mMode == MODE_WAIT && magnitude > 2.5f))
+        Barrel_chaseAngleS(&this->shape_angle.y, target, 0x600);
+    f32 cosine = cM_scos(this->shape_angle.z);
     f32 roll = (magnitude / (6.28f * gabi::fmadds(5.f, cosine, 45.f))) * 65535.f;
     s16 rotation = gabi::ftoi(roll * 3.f);
     s16 walk = gabi::ftoi(roll);
     if (negative) {
-        a->mRotationAngle = (s16)a->mRotationAngle + rotation;
-        a->mWalkAngle = (s16)a->mWalkAngle + walk;
+        this->m612 = (s16)this->m612 + rotation;
+        this->m630 = (s16)this->m630 + walk;
     } else {
-        a->mRotationAngle = (s16)a->mRotationAngle - rotation;
-        a->mWalkAngle = (s16)a->mWalkAngle - walk;
+        this->m612 = (s16)this->m612 - rotation;
+        this->m630 = (s16)this->m630 - walk;
     }
     f32 factor = magnitude / 30.f;
     if (factor > 1.f)
         factor = 1.f;
-    a->mVibrationAngle = gabi::ftoi(2048.f * factor);
+    this->m610 = gabi::ftoi(2048.f * factor);
 }
-VERIFY(0x0231DB3C, set_walk_rot);
-static void mode_wait(Act_c *a) {
-    WWHD_FUNC(0x0231DD40, void, a);
-    gabi::call(0x025D6870, a, &a->mStts.m_cc_move);
-    gabi::call(0x0200F8D0, &a->shape_angle.z, (s16)a->shape_angle.z > 0x1000 ? 0x4000 : 0, 0xC00);
-    set_walk_rot(a);
-    if (a->mAcch.ChkGroundHit()) {
-        *gabi::at<be<u32>>(gabi::ea(a) + 0x39C) |= 0x10u;
-        if ((s16)a->shape_angle.z == 0x4000) {
-            auto *play = dComIfGp_get();
-            auto *normal = gabi::call<cXyz *>(0x020084C8, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                                              gabi::load<u16>(gabi::ea(a) + 0x4A2),
-                                              gabi::load<u16>(gabi::ea(a) + 0x4A0));
+/* 0231DD40 */
+void daObjBarrel::Act_c::mode_wait() {
+    Barrel_posMoveF(this, &this->mStts.m_cc_move);
+    Barrel_chaseAngleS(&this->shape_angle.z, (s16)this->shape_angle.z > 0x1000 ? 0x4000 : 0, 0xC00);
+    this->set_walk_rot();
+    if (this->mAcch.ChkGroundHit()) {
+        this->attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
+        if ((s16)this->shape_angle.z == 0x4000) {
+            auto* play = dComIfGp_get();
+            auto* normal =
+                Barrel_GetTriNormal(&Barrel_gameInfo(play)->play.mBgS,
+                                    static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)->mBgIndex,
+                                    static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)->mPolyIndex);
             if (normal &&
                 (std::fabs((f32)normal->x) > 0.001f || std::fabs((f32)normal->z) > 0.001f))
-                mode_walk_init(a);
-            a->mStts.m_weight = 140;
+                this->mode_walk_init();
+            this->mStts.m_weight = 140;
         } else
-            a->mStts.m_weight = 200;
+            this->mStts.m_weight = 200;
     } else
-        clear_carry_attention(a);
+        clear_carry_attention(this);
 }
-VERIFY(0x0231DD40, mode_wait);
-static void mode_jump(Act_c *a) {
-    WWHD_FUNC(0x0231E1BC, void, a);
-    gabi::call(0x02312968, a, gabi::at<u8>(gabi::ea(a) + 0x48C));
-    if (a->mAcch.ChkGroundLanding())
-        mode_walk_init(a);
+/* 0231E1BC */
+void daObjBarrel::Act_c::mode_jump() {
+    Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
+    if (this->mAcch.ChkGroundLanding())
+        this->mode_walk_init();
     else {
-        gabi::call(0x023123C0, a, &a->mStts.m_cc_move, &a->mMove, 0.006f, 0.001f);
-        gabi::call(0x0200F8D0, &a->shape_angle.z, 0x4000, 0xC00);
-        set_walk_rot(a);
+        Barrel_posMoveF_stream(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
+        Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
+        this->set_walk_rot();
     }
 }
-VERIFY(0x0231E1BC, mode_jump);
-static void mode_walk(Act_c *a) {
-    WWHD_FUNC(0x0231E248, void, a);
-    gabi::call(0x02312968, a, gabi::at<u8>(gabi::ea(a) + 0x48C));
-    if (a->mAcch.ChkGroundHit()) {
-        auto *play = dComIfGp_get();
-        auto *normal = gabi::call<cXyz *>(0x020084C8, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                                          gabi::load<u16>(gabi::ea(a) + 0x4A2),
-                                          gabi::load<u16>(gabi::ea(a) + 0x4A0));
+/* 0231E248 */
+void daObjBarrel::Act_c::mode_walk() {
+    Barrel_SetCurrentRoomNo(this, &this->mAcch.m_gnd);
+    if (this->mAcch.ChkGroundHit()) {
+        auto* play = dComIfGp_get();
+        auto* normal =
+            Barrel_GetTriNormal(&Barrel_gameInfo(play)->play.mBgS,
+                                static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)->mBgIndex,
+                                static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)->mPolyIndex);
         gabi::Local<cXyz> acceleration;
-        *acceleration = *gabi::at<cXyz>(0x101FFBA8);
+        *acceleration = cXyz::Zero;
         f32 friction = 0.f, cosine = 0.f;
         if (normal) {
             acceleration->x = normal->x;
             acceleration->y = 0.f;
             acceleration->z = normal->z;
             friction = 0.1f;
-            cosine = gabi::load<f32>(0x104A4F44);
+            cosine = cM_scos(0xA4F);
         }
-        gabi::call(0x023121C4, a, &a->mStts.m_cc_move, &a->mMove, 0.006f, 0.001f, normal, friction,
-                   cosine, acceleration.get());
-        gabi::call(0x0200F8D0, &a->shape_angle.z, 0x4000, 0xC00);
-        set_walk_rot(a);
-        *gabi::at<be<u32>>(gabi::ea(a) + 0x39C) |= 0x10u;
+        Barrel_posMoveF_grade(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f, normal,
+                              friction, cosine, acceleration.get());
+        Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
+        this->set_walk_rot();
+        this->attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
         if (normal) {
             gabi::Local<cXyz> horizontal;
-            horizontal->x = a->speed.x;
+            horizontal->x = this->speed.x;
             horizontal->y = 0.f;
-            horizontal->z = a->speed.z;
-            f32 magnitude = gabi::call<f32>(0x028E8DD0, horizontal.get());
+            horizontal->z = this->speed.z;
+            f32 magnitude = Barrel_xyzAbs2(horizontal.get());
             if (magnitude < 0.1f && !(std::fabs((f32)normal->x) < 0.001f) &&
                 !(std::fabs((f32)normal->z) < 0.001f))
-                mode_wait_init(a);
+                this->mode_wait_init();
         }
     } else {
-        gabi::call(0x023123C0, a, &a->mStts.m_cc_move, &a->mMove, 0.006f, 0.001f);
-        gabi::call(0x0200F8D0, &a->shape_angle.z, 0x4000, 0xC00);
-        set_walk_rot(a);
+        Barrel_posMoveF_stream(this, &this->mStts.m_cc_move, &this->mMove, 0.006f, 0.001f);
+        Barrel_chaseAngleS(&this->shape_angle.z, 0x4000, 0xC00);
+        this->set_walk_rot();
     }
 }
-VERIFY(0x0231E248, mode_walk);
-static bool stage_matches(u32 literal) {
+/* inlined into Act_c::_create and Act_c::mode_carry_init */
+// HD: both strings use native eight-byte stack slots and repeated termination calls.
+static bool stage_matches(const char* literal) {
     gabi::Local<be<u32>[2]> expected, stage;
-    (*expected)[0] = literal;
-    (*expected)[1] = 0x10025558;
-    (*stage)[0] = gabi::ea(dComIfGp_get()) + 0x5134;
-    (*stage)[1] = 0x10025558;
-    u32 ensure = gabi::load<u32>(0x1002556C);
-    gabi::call(ensure, expected.get());
-    gabi::call(ensure, expected.get());
+    (*expected)[0] = gabi::guest_addr(literal);
+    (*expected)[1] = gc_tu.safeString;
+    (*stage)[0] = gabi::ea(Barrel_gameInfo(dComIfGp_get())->play.mCurStage.mName);
+    (*stage)[1] = gc_tu.safeString;
+    u32 ensure = l_stringVtable.mAssureTermination.get();
+    Barrel_assureTermination(ensure, expected.get());
+    Barrel_assureTermination(ensure, expected.get());
     u32 left = (*expected)[0];
-    gabi::call(ensure, stage.get());
+    Barrel_assureTermination(ensure, stage.get());
     u32 right = (*stage)[0];
     if (left == right)
         return true;
@@ -530,237 +495,271 @@ static bool stage_matches(u32 literal) {
     }
     return false;
 }
-static void mode_carry_init(Act_c *a) {
-    WWHD_FUNC(0x0231D3BC, void, a);
-    collision_mode(a, true);
-    clear_carry_attention(a);
-    a->mMode = 1;
-    if (stage_matches(0x10025644) || stage_matches(0x1002564C))
-        gabi::call(0x025B8B68, gabi::at<u8>(gabi::load<u32>(0x101F84DC) + 0x644), 0x401);
-    a->mTimer = 15;
+/* 0231D3BC */
+void daObjBarrel::Act_c::mode_carry_init() {
+    collision_mode(this, true);
+    clear_carry_attention(this);
+    this->mMode = MODE_CARRY;
+    if (stage_matches("majroom") || stage_matches("MajyuE"))
+        Barrel_onEventBit(&dComIfGs_info()->mSavedata.mEvent, 0x401);
+    this->mTimer = 15;
 }
-VERIFY(0x0231D3BC, mode_carry_init);
-static bool mode_proc_call(Act_c *a) {
-    WWHD_FUNC(0x0231D724, bool, a);
-    if (((u32)a->actor_status & 0x102000) && (s32)a->mMode != 1)
-        mode_carry_init(a);
-    u32 entry = 0x10025660 + (u32)a->mMode * 8;
-    u32 object = gabi::ea(a) + (s32)gabi::load<s16>(entry);
-    s16 index = gabi::load<s16>(entry + 2);
-    u32 target;
-    if (index < 0)
-        target = gabi::load<u32>(entry + 4);
-    else
-        target =
-            gabi::load<u32>(gabi::load<u32>(object + gabi::load<s16>(entry + 6)) + index * 8 + 4);
-    gabi::call(target, gabi::at<Act_c>(object));
-    f32 y = a->current.pos.y, z = a->current.pos.z, x = a->current.pos.x;
-    auto *play = dComIfGp_get();
-    a->mAcch.CrrPos(gabi::at<dBgS>(gabi::ea(play) + 0x12A0));
+/* 0231D724 */
+bool daObjBarrel::Act_c::mode_proc_call() {
+    if (((u32)this->actor_status & (fopAcStts_CARRY_e | fopAcStts_HOOK_CARRY_e)) &&
+        (s32)this->mMode != MODE_CARRY)
+        this->mode_carry_init();
+    (this->*mode_proc.mProc[(u32)this->mMode])();
+    f32 y = this->current.pos.y, z = this->current.pos.z, x = this->current.pos.x;
+    auto* play = dComIfGp_get();
+    this->mAcch.CrrPos(&Barrel_gameInfo(play)->play.mBgS);
     play = dComIfGp_get();
-    if (gabi::call<s32>(0x024EEABC, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                        gabi::at<u8>(gabi::ea(a) + 0x4A0)))
-        a->mForceExec = 1;
-    if ((s32)a->mMode == 1) {
-        a->current.pos.y = y;
-        a->current.pos.x = x;
-        a->current.pos.z = z;
+    if (Barrel_ChkMoveBG(&Barrel_gameInfo(play)->play.mBgS,
+                         static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)))
+        this->mForceExec = 1;
+    if ((s32)this->mMode == MODE_CARRY) {
+        this->current.pos.y = y;
+        this->current.pos.x = x;
+        this->current.pos.z = z;
     }
-    if (damage_bg_proc_directly(a))
+    if (this->damage_bg_proc_directly())
         return false;
-    if ((s32)a->mMode != 1) {
-        a->tevStr.mRoomNo = a->current.roomNo;
+    if ((s32)this->mMode != MODE_CARRY) {
+        this->tevStr.mRoomNo = this->current.roomNo;
         play = dComIfGp_get();
-        gabi::store<u8>(gabi::ea(a) + 0x1CA,
-                        gabi::call<u32>(0x024EEEB8, gabi::at<u8>(gabi::ea(play) + 0x12A0),
-                                        gabi::at<u8>(gabi::ea(a) + 0x4A0)));
+        this->tevStr.mEnvrIdxOverride = (u8)(Barrel_GetPolyColor(
+            &Barrel_gameInfo(play)->play.mBgS, static_cast<cBgS_PolyInfo*>(&this->mAcch.m_gnd)));
     }
-    gabi::call(0x028E8E64, &a->mMove, &a->mMove, 0.95f);
-    if (gabi::call<f32>(0x028E8DD0, &a->mMove) < 0.1f) {
-        a->mMove.x = 0.f;
-        a->mMove.z = 0.f;
-        a->mMove.y = 0.f;
+    Barrel_xyzScale(&this->mMove, &this->mMove, 0.95f);
+    if (Barrel_xyzAbs2(&this->mMove) < 0.1f) {
+        this->mMove.x = 0.f;
+        this->mMove.z = 0.f;
+        this->mMove.y = 0.f;
     }
     return true;
 }
-VERIFY(0x0231D724, mode_proc_call);
-static s32 actor_create(Act_c *a) {
-    WWHD_FUNC(0x0231C674, s32, a);
-    if (!((u32)a->actor_condition & 8)) {
-        if (a) {
-            fopAc_ac_c_ct(a);
-            a->__vtbl = 0x100255B0;
-            gabi::call(0x024F0474, &a->mAcch);
-            gabi::store<u8>(gabi::ea(a) + 0x3D0, 1);
-            gabi::store<u32>(gabi::ea(a) + 0x3C8, 0x10025580);
-            gabi::store<u32>(gabi::ea(a) + 0x3D8, 0x10025590);
-            gabi::store<u32>(gabi::ea(a) + 0x3CC, 0x100255A0);
-            gabi::call(0x024EFE94, &a->mAcchCir);
-            dCcD_Stts_ct(&a->mStts);
-            dCcD_Cyl_ct(&a->mCyl, 0x10025570);
+/* 0231C674 */
+s32 daObjBarrel::Act_c::_create() {
+    if (!((u32)this->actor_condition & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            fopAc_ac_c_ct(this);
+            this->__vtbl = BARREL_ACTOR_VTABLE;
+            dBgS_ObjAcch_ct(&this->mAcch, gc_tu.objAcch);
+            Barrel_AcchCir_ct(&this->mAcchCir);
+            dCcD_Stts_ct(&this->mStts);
+            dCcD_Cyl_ct(&this->mCyl, BARREL_AAB_VTABLE);
         }
-        a->actor_condition |= 8u;
+        this->actor_condition |= fopAcCnd_INIT_e;
     }
-    s32 phase = gabi::call<s32>(0x02520460, &a->mPhase, STR(0x100256E4));
-    if (phase != 4)
+    s32 phase = Barrel_resLoad(&this->mPhs, M_arcname);
+    if (phase != cPhs_COMPLEATE_e)
         return phase;
-    if (!gabi::call<s32>(0x025D63E8, a, 0x0231C35C, 0x820))
-        return 5;
-    a->mAcchCir.SetWall(30.f, 50.f);
-    a->mAcch.Set(&a->current.pos, &a->old.pos, a, 1, &a->mAcchCir, &a->speed, &a->current.angle,
-                 &a->shape_angle);
-    a->mAcch.m_flags &= ~1024u;
-    u32 model = gabi::ea((J3DModel *)a->mpModel);
-    a->cullMtx = model ? model + 0xC8 : 0;
-    cull_set_draw(a);
-    if (stage_matches(0x10025614)) {
-        auto *play = dComIfGp_get();
-        u32 accessor = gabi::load<u32>(gabi::ea(play) + 0x5150);
-        u32 info = gabi::call<u32>(gabi::load<u32>(accessor + 0x15C),
-                                   gabi::at<u8>(gabi::ea(play) + 0x5150));
-        f32 far = gabi::load<u16>(info + 0x12);
+    if (!Barrel_entrySolidHeap(this, gabi::guest_fn((const void*)solidHeapCB), 0x820))
+        return cPhs_ERROR_e;
+    this->mAcchCir.SetWall(30.f, 50.f);
+    this->mAcch.Set(&this->current.pos, &this->old.pos, this, 1, &this->mAcchCir, &this->speed,
+                    &this->current.angle, &this->shape_angle);
+    this->mAcch.m_flags &= ~dBgS_Acch::WATER_NONE;
+    J3DModel* model = this->mpModel;
+    this->cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    this->cull_set_draw();
+    if (stage_matches("sea")) {
+        auto* play = dComIfGp_get();
+        auto* stage = reinterpret_cast<BarrelStageDt*>(Barrel_gameInfo(play)->play.mStageData);
+        BarrelStageInfo* info = stage->getStagInfo();
+        f32 far = info->mCullPoint;
         if (far > 1.f)
-            a->cullSizeFar = 8000.f / far;
+            this->cullSizeFar = 8000.f / far;
     }
-    a->mStts.Init(200, 255, a);
-    a->mCyl.Set(gabi::at<dCcD_SrcCyl>(0x100256F0));
-    *gabi::at<be<u32>>(gabi::ea(a) + 0x39C) |= 0x10u;
-    a->mCyl.SetStts(&a->mStts);
-    a->gravity = -6.f;
-    gabi::store<f32>(gabi::ea(a) + 0x390, a->current.pos.x);
-    gabi::store<f32>(gabi::ea(a) + 0x394, (f32)a->current.pos.y + 50.f);
-    gabi::store<f32>(gabi::ea(a) + 0x398, a->current.pos.z);
-    a->mForceExec = 1;
-    gabi::store<u8>(gabi::ea(a) + 0x38C, 9);
-    gabi::call(0x025D6870, a, nullptr);
-    auto *play = dComIfGp_get();
-    a->mAcch.CrrPos(gabi::at<dBgS>(gabi::ea(play) + 0x12A0));
-    a->mOnGround = 1;
-    a->mInitTimer = 20;
-    a->mSunk = 0;
-    a->mAcch.m_flags &= ~128u;
-    a->mLastGroundY = a->current.pos.y;
-    init_mtx(a);
-    a->mMove = *gabi::at<cXyz>(0x101FFBA8);
-    mode_wait_init(a);
+    this->mStts.Init(200, 255, this);
+    this->mCyl.Set(&M_cyl_src);
+    this->attention_info.flags |= fopAc_Attn_ACTION_CARRY_e;
+    this->mCyl.SetStts(&this->mStts);
+    this->gravity = -6.f;
+    this->attention_info.position.x = this->current.pos.x;
+    this->attention_info.position.y = (f32)this->current.pos.y + 50.f;
+    this->attention_info.position.z = this->current.pos.z;
+    this->mForceExec = 1;
+    this->attention_info.distances[fopAc_Attn_TYPE_CARRY_e] = 9;
+    Barrel_posMoveF(this, nullptr);
+    auto* play = dComIfGp_get();
+    this->mAcch.CrrPos(&Barrel_gameInfo(play)->play.mBgS);
+    this->mOnGround = 1;
+    this->mInitTimer = 20;
+    this->mSunk = 0;
+    this->mAcch.m_flags &= ~dBgS_Acch::GROUND_LANDING;
+    this->mLastGroundY = this->current.pos.y;
+    this->init_mtx();
+    this->mMove = cXyz::Zero;
+    this->mode_wait_init();
     return phase;
 }
-VERIFY(0x0231C674, actor_create);
-static bool damage_cc_proc(Act_c *a) {
-    WWHD_FUNC(0x0231CD50, bool, a);
-    if (a->mCyl.ChkAtHit()) {
-        damaged(a, 1);
-        a->mCyl.ClrAtHit();
+/* 0231CD50 */
+bool daObjBarrel::Act_c::damage_cc_proc() {
+    if (this->mCyl.ChkAtHit()) {
+        this->damaged(1);
+        this->mCyl.ClrAtHit();
         return true;
     }
-    if (!a->mCyl.ChkTgHit())
+    if (!this->mCyl.ChkTgHit())
         return false;
-    void *hit = a->mCyl.GetTgHitObj();
-    u32 sound = get_se_map_hit(a);
+    auto* hit = static_cast<dCcD_GObjInf*>(this->mCyl.GetTgHitObj());
+    u32 sound = this->get_se_map_hit();
     if (hit) {
-        u32 type = gabi::load<u32>(gabi::ea(hit) + 0x10);
-        if ((type & 0x10028) ||
-            ((gabi::load<u32>(gabi::ea(hit)) & 4) && ((u8)a->mStts.mAtSpl & 3))) {
-            damaged(a, 1);
-            a->mCyl.ClrTgHit();
+        u32 type = (u32)hit->mAtType;
+        if ((type & (BARREL_AT_BOMB | BARREL_AT_UNKNOWN8 | BARREL_AT_SKULL_HAMMER)) ||
+            (((u32)hit->mObjAt.mSPrm & 4) && ((u8)this->mStts.mAtSpl & 3))) {
+            this->damaged(1);
+            this->mCyl.ClrTgHit();
             return true;
         }
-        if (((s32)a->mMode == 0 || (s32)a->mMode == 6) && (type & 0x200000)) {
+        if (((s32)this->mMode == MODE_WAIT || (s32)this->mMode == MODE_WALK) &&
+            (type & BARREL_AT_WIND)) {
             gabi::Local<cXyz> wind, normal;
-            *wind = *gabi::at<cXyz>(gabi::ea(a) + 0x6B8);
-            f32 magnitude = gabi::call<f32>(0x028E8DD0, wind.get());
+            *wind = this->mCyl.mGObjTg.mRVec;
+            f32 magnitude = Barrel_xyzAbs2(wind.get());
             if (magnitude > 31684.f) {
-                f32 root = gabi::call<f32>(0x028F4384, magnitude);
-                gabi::call(0x028E8E64, wind.get(), wind.get(), 178.f / root);
+                f32 root = Barrel_sqrtf(magnitude);
+                Barrel_xyzScale(wind.get(), wind.get(), 178.f / root);
             }
-            u32 shape =
-                gabi::call<u32>(gabi::load<u32>(gabi::load<u32>(gabi::ea(hit) + 0x3C) + 0x2C), hit);
-            *normal = *gabi::at<cXyz>(0x101FFBA8);
+            BarrelShape* shape = Barrel_getShapeAttr(hit);
+            *normal = cXyz::Zero;
             f32 strength = 1.f;
-            u32 callback = gabi::load<u32>(gabi::load<u32>(shape + 0x1C) + 0x9C);
-            if (gabi::call<s32>(callback, gabi::at<u8>(shape), &a->current.pos, normal.get())) {
-                gabi::call(0x028E8E64, normal.get(), normal.get(), 25.f);
-                gabi::call<f32>(0x028E8DD0, &a->mMove);
-                auto *actor = gabi::call<fopAc_ac_c *>(0x02515BBC, &a->mCyl.mGObjTg);
-                if (actor && gabi::load<s16>(gabi::ea(actor) + 0xE) == 0xA8) {
-                    s32 angle = gabi::call<s32>(0x020195B0, (f32)normal->x, (f32)normal->z);
+            if (shape->getNVec(&this->current.pos, normal.get())) {
+                Barrel_xyzScale(normal.get(), normal.get(), 25.f);
+                Barrel_xyzAbs2(&this->mMove);
+                auto* actor = Barrel_GetAc(&this->mCyl.mGObjTg);
+                if (actor && (s16)actor->mProfName == 0xA8) {
+                    s32 angle = Barrel_atan2s((f32)normal->x, (f32)normal->z);
                     u16 difference = (s16)actor->shape_angle.y - angle;
-                    f32 cosine = gabi::load<f32>(0x104A44FC + (difference >> 3) * 8);
+                    f32 cosine = cM_scos(difference);
                     if (cosine > 0.f)
                         strength = (cosine + cosine) + 1.f;
                 }
             }
             f32 ratio = (0.01f - magnitude) >= 0.f ? 0.f : 0.5f;
             gabi::Local<cXyz> windPart, normalPart, scaledNormal, result;
-            gabi::call(0x0201AE48, wind.get(), windPart.get(), ratio);
-            gabi::call(0x0201AE48, normal.get(), normalPart.get(), 1.f - ratio);
-            gabi::call(0x0201AE48, normalPart.get(), scaledNormal.get(), strength);
-            gabi::call(0x0201AD78, windPart.get(), result.get(), scaledNormal.get());
-            a->mMove = *result;
-            if ((s32)a->mMode == 0) {
-                if ((s16)a->shape_angle.z == 0)
-                    mode_jump_init(a);
+            Barrel_xyzMultiply(wind.get(), windPart.get(), ratio);
+            Barrel_xyzMultiply(normal.get(), normalPart.get(), 1.f - ratio);
+            Barrel_xyzMultiply(normalPart.get(), scaledNormal.get(), strength);
+            Barrel_xyzAdd(windPart.get(), result.get(), scaledNormal.get());
+            this->mMove = *result;
+            if ((s32)this->mMode == MODE_WAIT) {
+                if ((s16)this->shape_angle.z == 0)
+                    this->mode_jump_init();
                 else
-                    mode_walk_init(a);
+                    this->mode_walk_init();
             }
         }
     }
-    gabi::call(0x023129C4, &a->eyePos, (s8)a->current.roomNo, &a->mCyl, sound);
-    set_senv(a, 100, 4);
-    gabi::call(0x02312C8C, a, &a->mCyl);
-    a->mCyl.ClrTgHit();
+    Barrel_HitSeStart(&this->eyePos, (s8)this->current.roomNo, &this->mCyl, sound);
+    this->set_senv(100, 4);
+    Barrel_HitEff_kikuzu(this, &this->mCyl);
+    this->mCyl.ClrTgHit();
     return false;
 }
-VERIFY(0x0231CD50, damage_cc_proc);
-static bool actor_execute(Act_c *a) {
-    WWHD_FUNC(0x0231D944, bool, a);
-    cull_set_move(a);
-    bool execute = a->mForceExec || (s32)a->mMode != 0 || !a->mAcch.ChkGroundHit() ||
-                   a->mAcch.ChkGroundLanding();
+/* 0231D944 */
+bool daObjBarrel::Act_c::_execute() {
+    this->cull_set_move();
+    bool execute = this->mForceExec || (s32)this->mMode != MODE_WAIT ||
+                   !this->mAcch.ChkGroundHit() || this->mAcch.ChkGroundLanding();
     if (!execute) {
-        execute = !parameter(a, 3, 28) || !((u32)a->actor_condition & 4) ||
-                  !gabi::call<s32>(0x025D6CE8, a);
+        execute = !PrmAbstract(this, PRM_CULL_W, PRM_CULL_S) ||
+                  !((u32)this->actor_condition & fopAcCnd_NODRAW_e) || !Barrel_cullingCheck(this);
     }
     if (execute) {
-        a->mForceExec = 0;
+        this->mForceExec = 0;
         bool broken = true;
-        if (!damage_cc_proc(a) && !damage_bg_proc(a)) {
-            s32 mode = a->mMode;
-            if (mode != 2 && mode != 3 && mode != 4 && mode != 5 && mode != 6 &&
-                !((u32)a->actor_status & 0x2000) && (s16)a->shape_angle.x != 0)
-                mode_vib0_init(a);
-            if (mode_proc_call(a)) {
+        if (!this->damage_cc_proc() && !this->damage_bg_proc()) {
+            s32 mode = this->mMode;
+            if (mode != MODE_VIB0 && mode != MODE_VIB1 && mode != MODE_VIB2 && mode != MODE_JUMP &&
+                mode != MODE_WALK && !((u32)this->actor_status & fopAcStts_CARRY_e) &&
+                (s16)this->shape_angle.x != 0)
+                this->mode_vib0_init();
+            if (this->mode_proc_call()) {
                 broken = false;
-                set_mtx(a);
-                a->mStts.mRoomId = a->current.roomNo;
-                gabi::call(0x020182E0, &a->mCyl.mCyl, &a->current.pos);
-                auto *play = dComIfGp_get();
-                gabi::call(0x0200E240, gabi::at<u8>(gabi::ea(play) + 0x26A4), &a->mCyl);
-                a->eyePos.x = a->current.pos.x;
-                a->eyePos.y = (f32)a->current.pos.y + 50.f;
-                a->eyePos.z = a->current.pos.z;
-                *gabi::at<cXyz>(gabi::ea(a) + 0x390) = a->eyePos;
+                this->set_mtx();
+                this->mStts.mRoomId = this->current.roomNo;
+                Barrel_Cyl_SetC(&this->mCyl.mCyl, &this->current.pos);
+                auto* play = dComIfGp_get();
+                Barrel_Cc_Set(&Barrel_gameInfo(play)->play.mCcS, &this->mCyl);
+                this->eyePos.x = this->current.pos.x;
+                this->eyePos.y = (f32)this->current.pos.y + 50.f;
+                this->eyePos.z = this->current.pos.z;
+                this->attention_info.position = this->eyePos;
             }
         }
         if (broken)
-            fopAcM_delete(a);
+            fopAcM_delete(this);
     }
-    cull_set_draw(a);
+    this->cull_set_draw();
     return true;
 }
-VERIFY(0x0231D944, actor_execute);
-static s32 create_wrapper(Act_c *a) {
-    WWHD_FUNC(0x0231E4F4, s32, a);
-    return actor_create(a);
-}
-VERIFY(0x0231E4F4, create_wrapper);
-static bool delete_wrapper(Act_c *a) {
-    WWHD_FUNC(0x0231E4F8, bool, a);
-    return actor_delete(a);
-}
-VERIFY(0x0231E4F8, delete_wrapper);
-static bool execute_wrapper(Act_c *a) {
-    WWHD_FUNC(0x0231E4FC, bool, a);
-    return actor_execute(a);
-}
-VERIFY(0x0231E4FC, execute_wrapper);
+/* 0231E4F4 */
+s32 daObjBarrel_Method_Create(Act_c* a) { return a->_create(); }
+/* 0231E4F8 */
+bool daObjBarrel_Method_Delete(Act_c* a) { return a->_delete(); }
+/* 0231E4FC */
+bool daObjBarrel_Method_Execute(Act_c* a) { return a->_execute(); }
+/* WWHD glue (tools/verify/autoglue.py): barrel translation unit
+data l_resControl 101F4F28
+data l_stringVtable 10025558
+data l_scaleInitialized 104691FC
+data l_emitterScale 10469200
+data mode_proc 10025660
+data M_cyl_src 100256F0
+str 100256E4 "Ktaru_01"
+str 100255D0 "d_a_obj_barrel.cpp"
+str 100255C0 "mdl_data != 0"
+str 10025644 "majroom"
+str 1002564C "MajyuE"
+str 10025614 "sea"
+ext 026066C4 J3DModelData* Barrel_getRes(void*, void*, s32)
+ext 0273AA24 void Barrel_assert(const char*, s32, const char*)
+ext 025D6768 void Barrel_setCullSphere(fopAc_ac_c*, f32, f32, f32, f32)
+ext 028E93CC void Barrel_transS(Mtx34*, f32, f32, f32)
+ext 025F24E0 void Barrel_transM(f32, f32, f32)
+ext 025F1B48 void Barrel_ZXYrotM(Mtx34*, s32, s16, s16)
+ext 025F1C28 void Barrel_YrotM(Mtx34*, s16)
+ext 025F1BF4 void Barrel_XrotM(Mtx34*, s16)
+ext 0255F458 void Barrel_Sound_set(cXyz*, s32, u32, s32)
+ext 02311CD8 void Barrel_make_land_effect(fopAc_ac_c*, dBgS_GndChk*, f32)
+ext 0273AF40 void Barrel_operator_delete(void*)
+ext 02515A70 void Barrel_Cyl_dt(dCcD_Cyl*, s32)
+ext 02515860 void Barrel_Stts_dt(dCcD_Stts*, s32)
+ext 02018034 void Barrel_AcchCirShape_dt(void*, s32)
+ext 024EFD9C void Barrel_Acch_dt(dBgS_Acch*, s32)
+ext 025D50BC void Barrel_actor_dt(fopAc_ac_c*, s32)
+ext 025A847C BarrelEmitter* Barrel_particle_set(dPa_control_c*, s32, s32, cXyz*, csXyz*, cXyz*, s32, void*, s32, GXColor*, GXColor*, s32)
+ext 025D5834 void Barrel_createSmoke(s32, s32, cXyz*, s32, csXyz*, cXyz*, s32, void*)
+ext 025D9D24 void Barrel_cancelCarryNow(fopAc_ac_c*)
+ext 02520540 s32 Barrel_getReverb(s8)
+ext 025E1A40 void Barrel_seStart(u32, cXyz*, u32, s32)
+ext 024EECAC u32 Barrel_GetMtrlSndId(dBgS*, cBgS_PolyInfo*)
+ext 025E2DE0 void Barrel_modelUpdateDL(J3DModel*, s32)
+ext 0200F8D0 void Barrel_chaseAngleS(be<s16>*, s32, s32)
+ext 02312968 void Barrel_SetCurrentRoomNo(fopAc_ac_c*, dBgS_GndChk*)
+ext 025D6870 void Barrel_posMoveF(fopAc_ac_c*, cXyz*)
+ext 0201ADE0 void Barrel_xyzSubtract(cXyz*, cXyz*, cXyz*)
+ext 028E8DD0 f32 Barrel_xyzAbs2(cXyz*)
+ext 028F4384 f32 Barrel_sqrtf(f32)
+ext 020195B0 s32 Barrel_atan2s(f32, f32)
+ext 020084C8 cXyz* Barrel_GetTriNormal(dBgS*, u16, u16)
+ext 023123C0 void Barrel_posMoveF_stream(fopAc_ac_c*, cXyz*, cXyz*, f32, f32)
+ext 023121C4 void Barrel_posMoveF_grade(fopAc_ac_c*, cXyz*, cXyz*, f32, f32, cXyz*, f32, f32, cXyz*)
+ext 025B8B68 void Barrel_onEventBit(void*, s32)
+ext 024EEABC s32 Barrel_ChkMoveBG(dBgS*, cBgS_PolyInfo*)
+ext 024EEEB8 u32 Barrel_GetPolyColor(dBgS*, cBgS_PolyInfo*)
+ext 024EFE94 void Barrel_AcchCir_ct(dBgS_AcchCir*)
+ext 02520460 s32 Barrel_resLoad(request_of_phase_process_class*, const char*)
+ext 025D63E8 s32 Barrel_entrySolidHeap(fopAc_ac_c*, u32, u32)
+ext 028E8E64 void Barrel_xyzScale(cXyz*, cXyz*, f32)
+ext 02515BBC fopAc_ac_c* Barrel_GetAc(dCcD_GObjTg*)
+ext 0201AE48 void Barrel_xyzMultiply(cXyz*, cXyz*, f32)
+ext 0201AD78 void Barrel_xyzAdd(cXyz*, cXyz*, cXyz*)
+ext 023129C4 void Barrel_HitSeStart(cXyz*, s8, dCcD_Cyl*, u32)
+ext 02312C8C void Barrel_HitEff_kikuzu(fopAc_ac_c*, dCcD_Cyl*)
+ext 025D6CE8 s32 Barrel_cullingCheck(fopAc_ac_c*)
+ext 020182E0 void Barrel_Cyl_SetC(cM3dGCyl*, cXyz*)
+ext 0200E240 void Barrel_Cc_Set(cCcS*, dCcD_Cyl*)
+*/

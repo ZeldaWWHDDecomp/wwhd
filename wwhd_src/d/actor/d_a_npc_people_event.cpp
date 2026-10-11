@@ -9,74 +9,54 @@
  * eventGetItem and eventCameraStop (GameCube: `return true`) have no WWHD copy: privateCut
  * inlines them (their cases end the cut directly).
  */
-#include "d/actor/d_a_npc_people.h"
+#include "d/actor/d_a_npc_people_event.h"
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 02520C0C dComIfGs_checkGetItem(u8) */
-static inline BOOL dComIfGs_checkGetItem_e(u8 item) { return gabi::call<BOOL>(0x02520C0C, item); }
-/* dEvt_control_c (play + 0x51D0): mPtTalk at +0xCC, mPtItem at +0xD0; 0253F124 getPId(actor),
- * 0253EE04 convPId(id) */
-static inline void dComIfGp_event_setTalkPartner(void* actor) {
-    u32 evt = dComIfGp_ea() + 0x51D0;
-    u32 id = gabi::call<u32>(0x0253F124, evt, actor);
-    gabi::store<u32>(evt + 0xCC, id);
-}
-static inline fopAc_ac_c* dComIfGp_event_getTalkPartner() {
-    u32 play = dComIfGp_ea();
-    return gabi::call<fopAc_ac_c*>(0x0253EE04, play + 0x51D0, gabi::load<u32>(play + 0x529C));
-}
-static inline void dComIfGp_event_setItemPartnerId(u32 id) { gabi::store<u32>(dComIfGp_ea() + 0x52A0, id); }
-/* 025D9F38 fopAcM_searchFromName(name, param mask, param) */
-static inline fopAc_ac_c* fopAcM_searchFromName_e(const char* name, u32 mask, u32 prm) {
-    return gabi::call<fopAc_ac_c*>(0x025D9F38, name, mask, prm);
-}
-/* 025D7970 fopAcM_orderChangeEventId(actor, partner, s16 eventIdx, u16 flag, u16 hind) */
-static inline BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind) {
-    return gabi::call<BOOL>(0x025D7970, a, b, ev, flag, hind);
-}
-/* 025D7DEC fopAcM_createItemForPresentDemo(pos, itemNo, argFlag, itemBitNo, roomNo, angle, scale) */
-static inline u32 fopAcM_createItemForPresentDemo(cXyz* pos, s32 itemNo, u8 flag, s32 bitNo, s32 roomNo, csXyz* angle, cXyz* scale) {
-    return gabi::call<u32>(0x025D7DEC, pos, itemNo, flag, bitNo, roomNo, angle, scale);
-}
-/* 0259D624 dNpc_calc_DisXZ_AngY(cXyz, cXyz (pointers to copies), f32* dist, s16* angle) */
-static inline void dNpc_calc_DisXZ_AngY(cXyz* a, cXyz* b, be<f32>* dist, be<s16>* angle) {
-    gabi::call(0x0259D624, a, b, dist, angle);
-}
-/* camera: 024F8044 dCam_getBody(); dCamera_c::SubjectLockOn 02515434, SubjectLockOff 0251544C,
- * SetExtendedPosition 025154C4, ScopeViewMsgModeOff 025154B0; Stick/CStickUse(less) are inline
- * (flag word +0x510, bits 0x01800000) */
-static inline u32 dCam_getBody() { return gabi::call<u32>(0x024F8044); }
-/* dKy_get_moon_pos / orion / hokuto: cXyz through a hidden result pointer */
-static inline void dKy_get_moon_pos(cXyz* out) { gabi::call(0x02560BCC, out); }
-static inline void dKy_get_orion_pos(cXyz* out) { gabi::call(0x0256099C, out); }
-static inline void dKy_get_hokuto_pos(cXyz* out) { gabi::call(0x02560AB4, out); }
+enum { dItemNo_PICTO_BOX_e = 0x23, dItemNo_DELUXE_PICTO_BOX_e = 0x26, dItemNo_MAGIC_ARMOR_e = 0x2A, dItemNo_SWIFT_SAIL_e = 0x77 };
 
-/* ---- statics ---- */
-enum : u32 {
-    l_npc_staff_id = 0x101C3E7C, /* const char*[19] */
-    l_get_item_no = 0x101C3998,  /* int[] */
-    l_ug_no = 0x101C4C68,        /* u8[2] (initUgSearchArea's static) */
-    cut_name_tbl = 0x101C4C6C,   /* const char*[16] (privateCut's static) */
-    l_anm_set_sub = 0x101C40DC,  /* pointers to member functions [19] */
-    l_pig_para = 0x1002014C,     /* int[3] */
-    l_npc_anm_ub1_tbl = 0x101C3460,
-    l_npc_anm_ub2_tbl = 0x101C3480,
+enum PeopleCut_e {
+    CUT_MES_SET_e = 0,
+    CUT_MES_SET_TP_e = 1,
+    CUT_MES_SET2_e = 2,
+    CUT_FLAG_SET_e = 3,
+    CUT_GET_ITEM_e = 4,
+    CUT_TURN_TO_PLAYER_e = 5,
+    CUT_UB1_TALK_e = 6,
+    CUT_UB1_TALK_XY_e = 7,
+    CUT_UB2_TALK_e = 8,
+    CUT_UB_SET_ANM_e = 9,
+    CUT_AREA_MAX_e = 10,
+    CUT_CAMERA_STOP_e = 11,
+    CUT_CAMERA_START_e = 12,
+    CUT_CO_CYL_R_e = 13,
+    CUT_LOOK_PO_e = 14,
+    CUT_MES_SET_PO_e = 15,
 };
-static inline const char* staff_id(u32 i) { return gabi::at<const char>(gabi::load<u32>(l_npc_staff_id + i * 4)); }
-static inline sPeopleAnmDat* anm(u32 ea) { return gabi::at<sPeopleAnmDat>(ea); }
-/* m73C: sUbMsgDat** (cursor in a null-terminated list), m738 = *m73C */
-static inline void set_ub_list(daNpcPeople_c* i_this, u32 list) {
-    i_this->m73C = gabi::at<gptr<sUbMsgDat>>(list);
-}
-static inline sUbMsgDat* ub_cur(daNpcPeople_c* i_this) {
-    return gabi::at<sUbMsgDat>(gabi::load<u32>(gabi::ea(i_this->m73C.get())));
-}
+
+static u8 l_ug_no[] = {0x11, 0x12};
+static char* cut_name_tbl[] = {
+        "MES_SET",
+        "MES_SET_TP",
+        "MES_SET2",
+        "FLAG_SET",
+        "GET_ITEM",
+        "TURN_TO_PLAYER",
+        "UB1_TALK",
+        "UB1_TALK_XY",
+        "UB2_TALK",
+        "UB_SET_ANM",
+        "AREA_MAX",
+        "CAMERA_STOP",
+        "CAMERA_START",
+        "CO_CYL_R",
+        "LOOK_PO",
+        "MES_SET_PO",
+    };
+static PeopleAnmSetProc l_anm_set_sub[] = {{&daNpcPeople_c::setAnmFromMsgTagUo}, {&daNpcPeople_c::setAnmFromMsgTagUo}, {&daNpcPeople_c::setAnmFromMsgTagUo}, {&daNpcPeople_c::setAnmFromMsgTagUb}, {&daNpcPeople_c::setAnmFromMsgTagUb}, {&daNpcPeople_c::setAnmFromMsgTagUb}, {&daNpcPeople_c::setAnmFromMsgTagUb}, {&daNpcPeople_c::setAnmFromMsgTagUw}, {&daNpcPeople_c::setAnmFromMsgTagUw}, {&daNpcPeople_c::setAnmFromMsgTagUm}, {&daNpcPeople_c::setAnmFromMsgTagUm}, {&daNpcPeople_c::setAnmFromMsgTagUm}, {&daNpcPeople_c::setAnmFromMsgTagSa}, {&daNpcPeople_c::setAnmFromMsgTagSa}, {&daNpcPeople_c::setAnmFromMsgTagSa}, {&daNpcPeople_c::setAnmFromMsgTagSa}, {&daNpcPeople_c::setAnmFromMsgTagSa}, {&daNpcPeople_c::setAnmFromMsgTagUg}, {&daNpcPeople_c::setAnmFromMsgTagUg}};
 
 /* 022C045C */
 void daNpcPeople_c::checkOrder() {
-    WWHD_FUNC(0x022C045C, void, this);
-    u16 cmd = gabi::load<u16>(gabi::ea(this) + 0xF8); /* eventInfo.mCommand */
-    if (cmd == 2) { /* checkCommandDemoAccrpt() */
+    u16 cmd = eventInfo.getCommand(); /* eventInfo.mCommand */
+    if (cmd == dEvtCmd_INDEMO_e) { /* checkCommandDemoAccrpt() */
         if (dComIfGp_evmng_startCheck(m766[0]) && mOrderEventNum == 3) {
             mOrderEventNum = 0;
         } else if (dComIfGp_evmng_startCheck(m766[0]) && mOrderEventNum == 7) {
@@ -94,14 +74,14 @@ void daNpcPeople_c::checkOrder() {
         } else if (dComIfGp_evmng_startCheck(m766[1]) && mOrderEventNum == 0xF) {
             mOrderEventNum = 0;
         }
-    } else if (cmd == 1) { /* checkCommandTalk() */
+    } else if (cmd == dEvtCmd_INTALK_e) { /* checkCommandTalk() */
         if (mOrderEventNum == 2 || mOrderEventNum == 1) {
             if (mTalk == 0) {
                 /* HD: the l_npc_dat index assertion of the inlined accessor */
                 bool ok = true;
-                if (mNpcNo >= 0x13) {
-                    JUT_ASSERT_fail(STR(0x1002063C), 0x19C6, STR(0x10020608));
-                    ok = mNpcNo < 0x13;
+                if (mNpcNo > NPC_UG2) {
+                    JUT_ASSERT_fail("d_a_npc_people.cpp", 0x19C6, "mNpcNo >= 0 && mNpcNo < daNpcPeople_c::Npc_No_Max");
+                    ok = mNpcNo <= NPC_UG2;
                 }
                 if (ok) {
                     m79E = 1;
@@ -113,24 +93,22 @@ void daNpcPeople_c::checkOrder() {
         }
     } else if (mNpcNo == NPC_UM1) {
         if (!mbIsNight) {
-            gabi::store<s16>(gabi::ea(this) + 0xFC, -1); /* eventInfo.setEventId(-1) */
+            eventInfo.setEventId(-1); /* eventInfo.setEventId(-1) */
             m79C = 1;
         } else {
-            gabi::store<s16>(gabi::ea(this) + 0xFC, m766[1]);
+            eventInfo.setEventId(m766[1]);
             m79C = 0;
             m79D = 0;
             m79E = 0;
         }
     }
 }
-VERIFY(0x022C045C, &daNpcPeople_c::checkOrder);
 
 /* 022C077C */
 void daNpcPeople_c::initUgSearchArea() {
-    WWHD_FUNC(0x022C077C, void, this);
     for (int i = 0; i < 2; i++) {
-        u8 temp = gabi::load<u8>(l_ug_no + i);
-        daNpcPeople_c* pActor = (daNpcPeople_c*)fopAcM_searchFromName_e(staff_id(temp), 0, 0);
+        u8 temp = l_ug_no[i];
+        daNpcPeople_c* pActor = (daNpcPeople_c*)peopleSearchFromName(peopleEventData().l_npc_staff_id[temp], 0, 0);
         if (pActor) {
             pActor->executeSetMode(0);
             /* GHS order: mAnmFlag is read before the stores */
@@ -143,17 +121,15 @@ void daNpcPeople_c::initUgSearchArea() {
             pActor->m79E = 1;
             /* lfs/stfs without arithmetic: the recompiled code keeps a signalling NaN's bits,
              * and an overlapping store (a degenerate pActor) defeats the harness's NaN tolerance */
-            gabi::store<u32>(gabi::ea(&pActor->m748), gabi::load<u32>(gabi::ea(&mpNpcDat->field_0x28)));
+            peopleEventWord(pActor->m748) = (u32)peopleEventWord(mpNpcDat->field_0x28);
             pActor->m776 = mpNpcDat->field_0x34;
             pActor->m778 = mpNpcDat->field_0x36;
         }
     }
 }
-VERIFY(0x022C077C, &daNpcPeople_c::initUgSearchArea);
 
 /* 022C0840 */
 BOOL daNpcPeople_c::chkEndEvent() {
-    WWHD_FUNC(0x022C0840, BOOL, this);
     switch (mNpcNo) {
     case NPC_UO1:
         if (dComIfGp_evmng_endCheck(m766[0])) {
@@ -200,7 +176,7 @@ BOOL daNpcPeople_c::chkEndEvent() {
         break;
     case NPC_UM3:
         if (dComIfGp_evmng_endCheck(m766[0])) {
-            gabi::call(0x025154B0, dCam_getBody()); /* dCam_getBody()->ScopeViewMsgModeOff() */
+            peopleCameraScopeViewMsgModeOff(peopleCameraBody()); /* peopleCameraBody()->ScopeViewMsgModeOff() */
             m77E = m77E | 0x8000;
             return true;
         }
@@ -219,7 +195,7 @@ BOOL daNpcPeople_c::chkEndEvent() {
         if (dComIfGp_evmng_endCheck(m766[0]) || dComIfGp_evmng_endCheck(m766[1])) {
             if (mEtcFlag & 0x100000) {
                 mEtcFlag = mEtcFlag & ~0x100000;
-                gabi::store<u8>(dComIfGp_ea() + 0x5BDF, 1); /* dComIfGp_startItemTimer() */
+                peopleEventGame()->play.mStartItemTimer = 1; /* dComIfGp_startItemTimer() */
             }
             m77E = m77E | 0x8000;
             m79C = 1;
@@ -237,25 +213,21 @@ BOOL daNpcPeople_c::chkEndEvent() {
     }
     return false;
 }
-VERIFY(0x022C0840, &daNpcPeople_c::chkEndEvent);
 
 /* 022C0BF0 */
 void daNpcPeople_c::setMessage(u32 msgNo) {
-    WWHD_FUNC(0x022C0BF0, void, this, msgNo);
     mCurrMsgNo = msgNo;
 }
-VERIFY(0x022C0BF0, &daNpcPeople_c::setMessage);
 
 /* 022C0BF8 */
 void daNpcPeople_c::eventMesSetInit(int staffIdx) {
-    WWHD_FUNC(0x022C0BF8, void, this, staffIdx);
-    be<u32>* pMsgNo = (be<u32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10020650) /* "MsgNo" */);
+    be<u32>* pMsgNo = (be<u32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "MsgNo" /* "MsgNo" */);
     if (pMsgNo) {
         m734 = nullptr;
         u32 no = *pMsgNo;
         if (no == 0x1) {
-            /* HD: getMsg is virtual (vtable slot +0x1C) */
-            u32 msg = gabi::call_ptr<u32>(gabi::load<u32>(__vtbl + 0x1C), this);
+            // HD: getMsg is virtual, at slot 0x1C.
+            u32 msg = peopleEventGetMsg(this);
             setMessage(msg);
         } else if (no == 0x358C) {
             if (mCurrMsgNo != 0x358D) {
@@ -264,16 +236,16 @@ void daNpcPeople_c::eventMesSetInit(int staffIdx) {
         } else if (no == 0x3594) {
             mEtcFlag = mEtcFlag | 0x800;
             dComIfGs_onTmpBit(0x0208);
-            /* HD: the checks are in a different order */
+            // HD: reorder the checks and use the Swift Sail.
             if (!dComIfGs_isEventBit(0x0B80)) {
                 setMessage(0x3595);
-            } else if (!dComIfGs_checkGetItem_e(0x26 /* DELUXE_PICTO_BOX */)) {
+            } else if (!dComIfGs_checkGetItem(dItemNo_DELUXE_PICTO_BOX_e)) {
                 setMessage(0x3597);
-            } else if (!dComIfGs_checkGetItem_e(0x77 /* SAIL */)) {
+            } else if (!dComIfGs_checkGetItem(dItemNo_SWIFT_SAIL_e)) {
                 setMessage(0x3594);
             } else if (!dComIfGs_isEventBit(0x1C08)) {
                 setMessage(0x3598);
-            } else if (!dComIfGs_checkGetItem_e(0x2A /* MAGIC_ARMOR */)) {
+            } else if (!dComIfGs_checkGetItem(dItemNo_MAGIC_ARMOR_e)) {
                 setMessage(0x3596);
             } else {
                 mEtcFlag = mEtcFlag & ~0x800;
@@ -287,27 +259,23 @@ void daNpcPeople_c::eventMesSetInit(int staffIdx) {
             setMessage(no);
         }
     } else {
-        be<u32>* p = gabi::at<be<u32>>(gabi::ea(m734.get()) + 4);
+        be<u32>* p = m734.get() + 1;
         m734 = p;
         setMessage(*p);
     }
 }
-VERIFY(0x022C0BF8, &daNpcPeople_c::eventMesSetInit);
 
 /* 022C0EC0 */
 void daNpcPeople_c::eventMesSetTpInit(int param_1) {
-    WWHD_FUNC(0x022C0EC0, void, this, param_1);
     dComIfGp_event_setTalkPartner(this);
     eventMesSetInit(param_1);
 }
-VERIFY(0x022C0EC0, &daNpcPeople_c::eventMesSetTpInit);
 
 /* 022C0F20 */
 void daNpcPeople_c::eventFlagSetInit(int staffIdx) {
-    WWHD_FUNC(0x022C0F20, void, this, staffIdx);
-    be<s32>* pTurn = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10020658) /* "Turn" */);
-    be<s32>* pLook = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10020660) /* "Look" */);
-    /* HD: null checks */
+    be<s32>* pTurn = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "Turn" /* "Turn" */);
+    be<s32>* pLook = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "Look" /* "Look" */);
+    // HD: check both optional event arguments for null.
     if (pTurn && *pTurn != 0) {
         m79D = *pTurn;
     }
@@ -315,29 +283,25 @@ void daNpcPeople_c::eventFlagSetInit(int staffIdx) {
         m79E = *pLook;
     }
 }
-VERIFY(0x022C0F20, &daNpcPeople_c::eventFlagSetInit);
 
 /* 022C0FC8 */
 void daNpcPeople_c::eventGetItemInit(int staffIdx) {
-    WWHD_FUNC(0x022C0FC8, void, this, staffIdx);
     int itemNo;
-    be<s32>* pItemIdx = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10020668) /* "ItemNo" */);
+    be<s32>* pItemIdx = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "ItemNo" /* "ItemNo" */);
     s8 roomNo = current.roomNo;
     if (pItemIdx) {
-        itemNo = gabi::load<s32>(l_get_item_no + *pItemIdx * 4);
+        itemNo = peopleEventData().l_get_item_no[*pItemIdx];
     } else {
         itemNo = m75C;
     }
-    fpc_ProcID itemPID = fopAcM_createItemForPresentDemo(&current.pos, itemNo, 0, -1, roomNo, nullptr, nullptr);
+    fpc_ProcID itemPID = peopleCreateItemForPresentDemo(&current.pos, itemNo, 0, -1, roomNo, nullptr, nullptr);
     if (itemPID != fpcM_ERROR_PROCESS_ID_e) {
         dComIfGp_event_setItemPartnerId(itemPID);
     }
 }
-VERIFY(0x022C0FC8, &daNpcPeople_c::eventGetItemInit);
 
 /* 022C1094 */
 void daNpcPeople_c::eventTurnToPlayerInit() {
-    WWHD_FUNC(0x022C1094, void, this);
     fopAc_ac_c* link = dComIfGp_getLinkPlayer();
     gabi::Local<cXyz> a, b;
     a->x = current.pos.x;
@@ -346,24 +310,24 @@ void daNpcPeople_c::eventTurnToPlayerInit() {
     b->x = link->current.pos.x;
     b->y = link->current.pos.y;
     b->z = link->current.pos.z;
-    dNpc_calc_DisXZ_AngY(a.get(), b.get(), nullptr, &m77A);
+    peopleCalcDisXZAngY(a.get(), b.get(), nullptr, &m77A);
 }
-VERIFY(0x022C1094, &daNpcPeople_c::eventTurnToPlayerInit);
 
 /* 022C1148 */
 u32 daNpcPeople_c::setAnmFromMsgTagUb(int param_1) {
-    WWHD_FUNC(0x022C1148, u32, this, param_1);
-    /* switch -> table: wait, ub_wait2, talk, ub_yada, ub_kuyasi */
-    if ((u32)param_1 <= 4) {
-        return setAnmTbl(anm(gabi::load<u32>(0x10020670 + param_1 * 4)), 1);
+    switch (param_1) {
+    case 0: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 1: return setAnmTbl(peopleEventData().l_ub_anm_wait2, 1);
+    case 2: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 3: return setAnmTbl(peopleEventData().l_ub_anm_yada, 1);
+    case 4: return setAnmTbl(peopleEventData().l_ub_anm_kuyasi, 1);
     }
-    return (u32)gabi::ea(this); /* original: r3 still this */
+    // HD: unmatched tags leave the this register as the return value.
+    return (u32)gabi::ea(this);
 }
-VERIFY(0x022C1148, &daNpcPeople_c::setAnmFromMsgTagUb);
 
 /* 022C1168 */
 void daNpcPeople_c::setMessageUb(sUbMsgDat* param_1) {
-    WWHD_FUNC(0x022C1168, void, this, param_1);
     setAnmFromMsgTagUb(param_1->field_0x04);
     m7A2 = param_1->field_0x05;
     m79D = param_1->field_0x06;
@@ -380,86 +344,79 @@ void daNpcPeople_c::setMessageUb(sUbMsgDat* param_1) {
     m7A0 = param_1->field_0x06;
     setMessage(param_1->field_0x00);
 }
-VERIFY(0x022C1168, &daNpcPeople_c::setMessageUb);
 
 /* 022C1228 */
 void daNpcPeople_c::eventUb1TalkInit(int staffIdx) {
-    WWHD_FUNC(0x022C1228, void, this, staffIdx);
     if (!dComIfGs_isEventBit(0x0A40)) {
-        set_ub_list(this, 0x101C3A38); /* l_msg_ub1_1st_talk */
+        m73C = peopleEventData().l_msg_ub1_1st_talk;
         dComIfGs_onEventBit(0x0A40);
-    } else if (!dComIfGs_checkGetItem_e(0x23 /* PICTO_BOX */) && !dComIfGs_checkGetItem_e(0x26 /* DELUXE_PICTO_BOX */)) {
-        set_ub_list(this, 0x101C3A4C); /* l_msg_ub1_no_camera */
+    } else if (!dComIfGs_checkGetItem(dItemNo_PICTO_BOX_e) && !dComIfGs_checkGetItem(dItemNo_DELUXE_PICTO_BOX_e)) {
+        m73C = peopleEventData().l_msg_ub1_no_camera;
     } else if (!is1GetMap20()) {
-        set_ub_list(this, 0x101C3A58); /* l_msg_ub1_no_collect_map20 */
+        m73C = peopleEventData().l_msg_ub1_no_collect_map20;
         dComIfGs_onEventBit(0x2102);
     } else if (!is1DayGetMap20()) {
-        set_ub_list(this, 0x101C2F24); /* l_msg_ub1_collect_map20 */
+        m73C = peopleEventData().l_msg_ub1_collect_map20;
     } else {
-        set_ub_list(this, 0x101C35F8); /* l_msg_ub1_collect_map20_1day */
+        m73C = peopleEventData().l_msg_ub1_collect_map20_1day;
     }
-    m738 = ub_cur(this);
+    m738 = *m73C;
     setMessageUb(m738);
     m730 = this;
     dComIfGp_event_setTalkPartner(this);
     m730 = nullptr;
 }
-VERIFY(0x022C1228, &daNpcPeople_c::eventUb1TalkInit);
 
 /* 022C1384 */
 void daNpcPeople_c::eventUb1TalkXyInit(int staffIdx) {
-    WWHD_FUNC(0x022C1384, void, this, staffIdx);
-    be<s32>* pMsgNo = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x1002068C) /* "MsgNo" */);
+    be<s32>* pMsgNo = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "MsgNo" /* "MsgNo" */);
     BOOL temp = false;
     if (pMsgNo) {
         switch ((u32)*pMsgNo) {
         case 0:
-            set_ub_list(this, 0x101C3678); /* l_msg_xy_ub1_get_map20_2 */
+            m73C = peopleEventData().l_msg_xy_ub1_get_map20_2;
             temp = true;
             break;
         case 1:
-            set_ub_list(this, 0x101C2F44); /* l_msg_xy_ub1_get_map20_3 */
+            m73C = peopleEventData().l_msg_xy_ub1_get_map20_3;
             temp = true;
             break;
         }
     } else {
-        dComIfGp_get(); /* HD: dComIfGp_getPictureResult() calls the accessor twice */
-        if (gabi::load<u8>(dComIfGp_ea() + 0x5BE6) != 5) {
-            set_ub_list(this, 0x101C2F2C); /* l_msg_xy_ub1_no_photo */
+        // HD: dComIfGp_getPictureResult reads the play accessor twice.
+        dComIfGp_get();
+        if (peopleEventGame()->play.mPictureResult != 5) {
+            m73C = peopleEventData().l_msg_xy_ub1_no_photo;
         } else if (is1GetMap20()) {
-            set_ub_list(this, 0x101C2F34); /* l_msg_xy_ub1_have_map20 */
+            m73C = peopleEventData().l_msg_xy_ub1_have_map20;
             temp = true;
         } else {
-            set_ub_list(this, 0x101C2F3C); /* l_msg_xy_ub1_get_map20_1 */
+            m73C = peopleEventData().l_msg_xy_ub1_get_map20_1;
             dComIfGs_setEventReg(0xC103, 1);
         }
     }
-    m738 = ub_cur(this);
+    m738 = *m73C;
     setMessageUb(m738);
     if (temp) {
-        m730 = (daNpcPeople_c*)fopAcM_searchFromName_e(STR(0x10020688) /* "Ub2" */, 0, 0);
+        m730 = (daNpcPeople_c*)peopleSearchFromName("Ub2" /* "Ub2" */, 0, 0);
     } else {
         m730 = this;
     }
     dComIfGp_event_setTalkPartner(m730);
     m730 = nullptr;
 }
-VERIFY(0x022C1384, &daNpcPeople_c::eventUb1TalkXyInit);
 
 /* 022C167C */
 void daNpcPeople_c::eventAreaMaxInit() {
-    WWHD_FUNC(0x022C167C, void, this);
     m748 = 1000.0f;
     m776 = 0x7FFF;
     m778 = 0x7FFF;
     m740 = 0.0f;
 }
-VERIFY(0x022C167C, &daNpcPeople_c::eventAreaMaxInit);
 
 /* 022C16A4 */
 void daNpcPeople_c::eventCameraStopInit() {
-    WWHD_FUNC(0x022C16A4, void, this);
-    u32 camera = dCam_getBody();
+    PeopleEventCamera* camera = peopleCameraBody();
     gabi::Local<cXyz> pos;
     pos->x = m71C.x;
     pos->y = m71C.y;
@@ -479,95 +436,80 @@ void daNpcPeople_c::eventCameraStopInit() {
         pos->copy(*tmp);
         break;
     }
-    gabi::call(0x02515434, camera, 0);         /* SubjectLockOn(NULL) */
-    gabi::call(0x025154C4, camera, pos.get()); /* SetExtendedPosition(&pos) */
-    gabi::store<u32>(camera + 0x510, gabi::load<u32>(camera + 0x510) | 0x01800000); /* StickUseless(), CStickUseless() */
+    peopleCameraSubjectLockOn(camera, 0);         /* SubjectLockOn(NULL) */
+    peopleCameraSetExtendedPosition(camera, pos.get()); /* SetExtendedPosition(&pos) */
+    camera->mFlags = camera->mFlags | 0x01800000; /* StickUseless(), CStickUseless() */
 }
-VERIFY(0x022C16A4, &daNpcPeople_c::eventCameraStopInit);
 
 /* 022C17C0 */
 void daNpcPeople_c::eventCameraStartInit() {
-    WWHD_FUNC(0x022C17C0, void, this);
-    u32 camera = dCam_getBody();
-    gabi::call(0x0251544C, camera); /* SubjectLockOff() */
-    gabi::store<u32>(camera + 0x510, gabi::load<u32>(camera + 0x510) & ~0x01800000); /* StickUse(), CStickUse() */
+    PeopleEventCamera* camera = peopleCameraBody();
+    peopleCameraSubjectLockOff(camera); /* SubjectLockOff() */
+    camera->mFlags = camera->mFlags & ~0x01800000; /* StickUse(), CStickUse() */
 }
-VERIFY(0x022C17C0, &daNpcPeople_c::eventCameraStartInit);
 
 /* 022C17FC */
 void daNpcPeople_c::eventCoCylRInit(int staffIdx) {
-    WWHD_FUNC(0x022C17FC, void, this, staffIdx);
-    be<s32>* pRad = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10020694) /* "CoCylR" */);
+    be<s32>* pRad = (be<s32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "CoCylR" /* "CoCylR" */);
     if (pRad) {
         m74C = (f32)(s32)*pRad;
     } else {
         m74C = mpNpcDat->field_0x3C;
     }
 }
-VERIFY(0x022C17FC, &daNpcPeople_c::eventCoCylRInit);
 
 /* 022C1894 */
 void daNpcPeople_c::resetPig() {
-    WWHD_FUNC(0x022C1894, void, this);
     for (int i = 0; i < 3; i++) {
-        fopAc_ac_c* pig = fopAcM_searchFromName_e(STR(0x1002069C) /* "Pig" */, 0xF00, gabi::load<s32>(l_pig_para + i * 4));
+        PeopleEventPig* pig = static_cast<PeopleEventPig*>(peopleSearchFromName("Pig" /* "Pig" */, 0xF00, peoplePigParams()[i]));
         if (pig != nullptr) {
             pig->current.pos.copy(pig->home.pos);
-            gabi::store<u8>(gabi::ea(pig) + 0x750, 0); /* kb_class::m408 */
+            pig->m408 = 0; /* kb_class::m408 */
         }
     }
     dComIfGs_setTmpReg(0xFD07, 0);
 }
-VERIFY(0x022C1894, &daNpcPeople_c::resetPig);
 
 /* 022C1B24 */
 void daNpcPeople_c::setAnmFromMsgTag() {
-    WWHD_FUNC(0x022C1B24, void, this);
     int temp = dComIfGp_getMesgAnimeAttrInfo();
     if (temp != 0x32) {
         /* (this->*l_anm_set_sub[mNpcNo])(temp) */
-        people_pmf_call(this, gabi::at<PeoplePmf_l>(l_anm_set_sub + mNpcNo * 8), temp);
+        (this->*l_anm_set_sub[mNpcNo].fn)(temp);
     }
-    gabi::store<u8>(dComIfGp_ea() + PLAY_BGS + 0x4925, 0x32); /* dComIfGp_setMesgAnimeAttrInfo(0x32) */
+    dComIfGp_setMesgAnimeAttrInfo(0x32); /* dComIfGp_setMesgAnimeAttrInfo(0x32) */
 }
-VERIFY(0x022C1B24, &daNpcPeople_c::setAnmFromMsgTag);
 
 /* 022C1EEC */
 bool daNpcPeople_c::eventMesSet() {
-    WWHD_FUNC(0x022C1EEC, bool, this);
-    return talk2(0, this) == 0x12 /* fopMsgStts_BOX_CLOSED_e */;
+    return talk2(0, this) == fopMsgStts_BOX_CLOSED_e;
 }
-VERIFY(0x022C1EEC, &daNpcPeople_c::eventMesSet);
 
 /* 022C2170 */
 bool daNpcPeople_c::eventMesSet2() {
-    WWHD_FUNC(0x022C2170, bool, this);
-    /* the PAL version's scope check */
-    if (gabi::load<u8>(dComIfGp_ea() + 0x5BCF) == 0) { /* dComIfGp_getScopeType() */
+    // HD: keep the PAL scope check.
+    if (peopleEventGame()->play.mScopeType == 0) { /* dComIfGp_getScopeType() */
         return true;
     }
-    return talk3(1) == 0x12;
+    return talk3(1) == fopMsgStts_BOX_CLOSED_e;
 }
-VERIFY(0x022C2170, &daNpcPeople_c::eventMesSet2);
 
 /* 022C21D8 */
 bool daNpcPeople_c::eventTurnToPlayer() {
-    WWHD_FUNC(0x022C21D8, bool, this);
     return current.angle.y == m77A ? TRUE : FALSE;
 }
-VERIFY(0x022C21D8, &daNpcPeople_c::eventTurnToPlayer);
 
-static inline bool ub1_talk_step(daNpcPeople_c* i_this, u32 ub2_name) {
+static inline bool ub1_talk_step(daNpcPeople_c* i_this, const char* ub2_name) {
     u16 status = i_this->talk2(0, dComIfGp_event_getTalkPartner());
-    if (status == 0x12) {
-        i_this->m73C = gabi::at<gptr<sUbMsgDat>>(gabi::ea(i_this->m73C.get()) + 4);
-        i_this->m738 = ub_cur(i_this);
+    if (status == fopMsgStts_BOX_CLOSED_e) {
+        i_this->m73C = i_this->m73C.get() + 1;
+        i_this->m738 = *i_this->m73C;
         if (i_this->m738.get() == nullptr) {
             return true;
         }
         i_this->setMessageUb(i_this->m738);
         if (dComIfGp_event_getTalkPartner() == i_this) {
-            i_this->m730 = (daNpcPeople_c*)fopAcM_searchFromName_e(STR(ub2_name), 0, 0);
+            i_this->m730 = (daNpcPeople_c*)peopleSearchFromName(ub2_name, 0, 0);
         } else {
             i_this->m730 = i_this;
         }
@@ -577,22 +519,17 @@ static inline bool ub1_talk_step(daNpcPeople_c* i_this, u32 ub2_name) {
 
 /* 022C21F0 */
 bool daNpcPeople_c::eventUb1Talk() {
-    WWHD_FUNC(0x022C21F0, bool, this);
-    return ub1_talk_step(this, 0x100206A4 /* "Ub2" */);
+    return ub1_talk_step(this, "Ub2");
 }
-VERIFY(0x022C21F0, &daNpcPeople_c::eventUb1Talk);
 
 /* 022C22B8 */
 bool daNpcPeople_c::eventUb1TalkXy() {
-    WWHD_FUNC(0x022C22B8, bool, this);
-    return ub1_talk_step(this, 0x100206A8 /* "Ub2" */);
+    return ub1_talk_step(this, "Ub2");
 }
-VERIFY(0x022C22B8, &daNpcPeople_c::eventUb1TalkXy);
 
 /* 022C2380 */
 bool daNpcPeople_c::eventUb2Talk() {
-    WWHD_FUNC(0x022C2380, bool, this);
-    daNpcPeople_c* pActor = (daNpcPeople_c*)fopAcM_searchFromName_e(staff_id(3), 0, 0);
+    daNpcPeople_c* pActor = (daNpcPeople_c*)peopleSearchFromName(peopleEventData().l_npc_staff_id[3], 0, 0);
     if (pActor) {
         m79D = pActor->m7A0;
         m79E = pActor->m7A0;
@@ -613,33 +550,29 @@ bool daNpcPeople_c::eventUb2Talk() {
     mEtcFlag = mEtcFlag | 0x200000;
     return 0;
 }
-VERIFY(0x022C2380, &daNpcPeople_c::eventUb2Talk);
 
 /* 022C2458 */
 bool daNpcPeople_c::eventUbSetAnm() {
-    WWHD_FUNC(0x022C2458, bool, this);
     switch (mNpcNo) {
     case NPC_UB1:
         if (mAnmFlag & 3) {
             mAnmFlag = mAnmFlag & ~0x3;
-            setAnmTbl(anm(gabi::load<u32>(l_npc_anm_ub1_tbl + getRand(8) * 4)), 1);
+            setAnmTbl(peopleEventData().l_npc_anm_ub1_tbl[getRand(8)], 1);
         }
         break;
     case NPC_UB2:
         if (mAnmFlag & 3) {
             mAnmFlag = mAnmFlag & ~0x3;
-            setAnmTbl(anm(gabi::load<u32>(l_npc_anm_ub2_tbl + getRand(8) * 4)), 1);
+            setAnmTbl(peopleEventData().l_npc_anm_ub2_tbl[getRand(8)], 1);
         }
         break;
     }
     return 0;
 }
-VERIFY(0x022C2458, &daNpcPeople_c::eventUbSetAnm);
 
 /* 022C2518 */
 bool daNpcPeople_c::eventLookPo() {
-    WWHD_FUNC(0x022C2518, bool, this);
-    fopAc_ac_c* pActor = fopAcM_searchFromName_e(STR(0x100206AC) /* "Po" */, 0, 0);
+    fopAc_ac_c* pActor = peopleSearchFromName("Po" /* "Po" */, 0, 0);
     if (pActor) {
         mLookAtPos.copy(pActor->eyePos);
         m799 = 1;
@@ -647,11 +580,9 @@ bool daNpcPeople_c::eventLookPo() {
     }
     return true;
 }
-VERIFY(0x022C2518, &daNpcPeople_c::eventLookPo);
 
 /* 022C2588 */
 bool daNpcPeople_c::eventMesSetPo() {
-    WWHD_FUNC(0x022C2588, bool, this);
     eventLookPo();
     if (eventMesSet()) {
         setWaitAnm();
@@ -659,52 +590,50 @@ bool daNpcPeople_c::eventMesSetPo() {
     }
     return false;
 }
-VERIFY(0x022C2588, &daNpcPeople_c::eventMesSetPo);
 
 /* 022C25E8 */
 void daNpcPeople_c::privateCut() {
-    WWHD_FUNC(0x022C25E8, void, this);
-    if (mNpcNo >= 0x13) {
-        JUT_ASSERT_fail(STR(0x100206E4), 0x1A84, STR(0x100206B0)); /* HD: l_npc_staff_id index */
+    if (mNpcNo > NPC_UG2) {
+        JUT_ASSERT_fail("d_a_npc_people.cpp", 0x1A84, "mNpcNo >= 0 && mNpcNo < daNpcPeople_c::Npc_No_Max"); /* HD: l_npc_staff_id index */
     }
-    int staffIdx = dComIfGp_evmng_getMyStaffId(staff_id(mNpcNo), nullptr, 0);
+    int staffIdx = dComIfGp_evmng_getMyStaffId(peopleEventData().l_npc_staff_id[mNpcNo], nullptr, 0);
     if (staffIdx != -1) {
-        s8 idx = dComIfGp_evmng_getMyActIdx(staffIdx, cut_name_tbl, 16, TRUE, 0);
+        s8 idx = (s8)dComIfGp_evmng_getMyActIdx(staffIdx, cut_name_tbl, 16, TRUE, 0);
         m797 = idx;
         if (idx == -1) {
             dComIfGp_evmng_cutEnd(staffIdx);
         } else {
             if (dComIfGp_evmng_getIsAddvance(staffIdx)) {
                 switch (m797) {
-                case 0: eventMesSetInit(staffIdx); break;
-                case 1: eventMesSetTpInit(staffIdx); break;
-                case 3: eventFlagSetInit(staffIdx); break;
-                case 4: eventGetItemInit(staffIdx); break;
-                case 5: eventTurnToPlayerInit(); break;
-                case 6: eventUb1TalkInit(staffIdx); break;
-                case 7: eventUb1TalkXyInit(staffIdx); break;
-                case 0xA: eventAreaMaxInit(); break;
-                case 0xB: eventCameraStopInit(); break;
-                case 0xC: eventCameraStartInit(); break;
-                case 0xD: eventCoCylRInit(staffIdx); break;
-                case 0xF: eventMesSetPoInit(staffIdx); break;
+                case CUT_MES_SET_e: eventMesSetInit(staffIdx); break;
+                case CUT_MES_SET_TP_e: eventMesSetTpInit(staffIdx); break;
+                case CUT_FLAG_SET_e: eventFlagSetInit(staffIdx); break;
+                case CUT_GET_ITEM_e: eventGetItemInit(staffIdx); break;
+                case CUT_TURN_TO_PLAYER_e: eventTurnToPlayerInit(); break;
+                case CUT_UB1_TALK_e: eventUb1TalkInit(staffIdx); break;
+                case CUT_UB1_TALK_XY_e: eventUb1TalkXyInit(staffIdx); break;
+                case CUT_AREA_MAX_e: eventAreaMaxInit(); break;
+                case CUT_CAMERA_STOP_e: eventCameraStopInit(); break;
+                case CUT_CAMERA_START_e: eventCameraStartInit(); break;
+                case CUT_CO_CYL_R_e: eventCoCylRInit(staffIdx); break;
+                case CUT_MES_SET_PO_e: eventMesSetPoInit(staffIdx); break;
                 }
             }
             bool end;
             switch (m797) {
-            case 0: end = eventMesSet(); break;
-            case 1: end = eventMesSet(); break;
-            case 2: end = eventMesSet2(); break;
-            case 5: end = eventTurnToPlayer(); break;
-            case 6: end = eventUb1Talk(); break;
-            case 7: end = eventUb1TalkXy(); break;
-            case 8: end = eventUb2Talk(); break;
-            case 9: end = eventUbSetAnm(); break;
-            case 0xE: end = eventLookPo(); break;
-            case 0xF: end = eventMesSetPo(); break;
-            case 4:   /* eventGetItem(): inlined, true */
-            case 0xB: /* eventCameraStop(): inlined, true */
-            case 3:
+            case CUT_MES_SET_e: end = eventMesSet(); break;
+            case CUT_MES_SET_TP_e: end = eventMesSet(); break;
+            case CUT_MES_SET2_e: end = eventMesSet2(); break;
+            case CUT_TURN_TO_PLAYER_e: end = eventTurnToPlayer(); break;
+            case CUT_UB1_TALK_e: end = eventUb1Talk(); break;
+            case CUT_UB1_TALK_XY_e: end = eventUb1TalkXy(); break;
+            case CUT_UB2_TALK_e: end = eventUb2Talk(); break;
+            case CUT_UB_SET_ANM_e: end = eventUbSetAnm(); break;
+            case CUT_LOOK_PO_e: end = eventLookPo(); break;
+            case CUT_MES_SET_PO_e: end = eventMesSetPo(); break;
+            case CUT_GET_ITEM_e:   /* eventGetItem(): inlined, true */
+            case CUT_CAMERA_STOP_e: /* eventCameraStop(): inlined, true */
+            case CUT_FLAG_SET_e:
             default: end = true; break;
             }
             if (end) {
@@ -713,11 +642,9 @@ void daNpcPeople_c::privateCut() {
         }
     }
 }
-VERIFY(0x022C25E8, &daNpcPeople_c::privateCut);
 
 /* 022C2958 */
 void daNpcPeople_c::eventMove() {
-    WWHD_FUNC(0x022C2958, void, this);
     if (chkEndEvent()) {
         setWaitAnm();
     } else {
@@ -732,11 +659,9 @@ void daNpcPeople_c::eventMove() {
         }
     }
 }
-VERIFY(0x022C2958, &daNpcPeople_c::eventMove);
 
 /* 022C2A04 */
 void daNpcPeople_c::eventOrder() {
-    WWHD_FUNC(0x022C2A04, void, this);
     if (m77E & 0x8000) {
         m77E = m77E & ~0x8000;
         m79D = mpNpcDat->field_0x5A;
@@ -751,7 +676,7 @@ void daNpcPeople_c::eventOrder() {
         }
     }
     if (mOrderEventNum == 2 || mOrderEventNum == 1) {
-        eventInfo_onCondition(this, 0x21); /* dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e */
+        eventInfo.onCondition(dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e); /* dEvtCnd_CANTALK_e | dEvtCnd_CANTALKITEM_e */
         if (mOrderEventNum == 2) {
             fopAcM_orderSpeakEvent(this);
         }
@@ -773,92 +698,136 @@ void daNpcPeople_c::eventOrder() {
         fopAcM_orderChangeEventId(dComIfGp_getPlayer(0), this, m766[1], 0, 0xFFFF);
     }
 }
-VERIFY(0x022C2A04, &daNpcPeople_c::eventOrder);
 
 /* 022C8550 */
 u32 daNpcPeople_c::setAnmFromMsgTagUo(int param_1) {
-    WWHD_FUNC(0x022C8550, u32, this, param_1);
-    /* switch -> table: wait, wait, talk, talk, bikkuri, furue, miburui, kyoro2 */
-    if ((u32)param_1 <= 7) {
-        return setAnmTbl(anm(gabi::load<u32>(0x10020944 + param_1 * 4)), 1);
+    switch (param_1) {
+    case 0: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 1: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 2: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 3: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 4: return setAnmTbl(peopleEventData().l_npc_anm_bikkuri, 1);
+    case 5: return setAnmTbl(peopleEventData().l_npc_anm_furue, 1);
+    case 6: return setAnmTbl(peopleEventData().l_npc_anm_miburui, 1);
+    case 7: return setAnmTbl(peopleEventData().l_npc_anm_kyoro2, 1);
     }
-    return (u32)gabi::ea(this); /* original: r3 still this */
+    // HD: unmatched tags leave the this register as the return value.
+    return (u32)gabi::ea(this);
 }
-VERIFY(0x022C8550, &daNpcPeople_c::setAnmFromMsgTagUo);
 
 /* 022C8570 */
 u32 daNpcPeople_c::setAnmFromMsgTagUw(int param_1) {
-    WWHD_FUNC(0x022C8570, u32, this, param_1);
     m77A = home.angle.y;
     m79E = 1;
-    if ((u32)param_1 < 7) {
-        /* wait, wait, talk, talk, talk3, talk4, talkH */
-        return setAnmTbl(anm(gabi::load<u32>(0x10020964 + param_1 * 4)), 1);
-    } else if (param_1 == 7) {
+    switch (param_1) {
+    case 0: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 1: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 2: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 3: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 4: return setAnmTbl(peopleEventData().l_npc_anm_talk3, 1);
+    case 5: return setAnmTbl(peopleEventData().l_npc_anm_talk4, 1);
+    case 6: return setAnmTbl(peopleEventData().l_npc_anm_talkH, 1);
+    case 7:
         m77A = current.angle.y;
         m79E = 0;
-        return setAnmTbl(anm(0x101C31C9) /* l_npc_anm_Mojimoji */, 1);
-    } else if (param_1 == 8) {
-        return setAnmTbl(anm(0x101C31CC) /* l_npc_anm_happy */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_Mojimoji, 1);
+    case 8: return setAnmTbl(peopleEventData().l_npc_anm_happy, 1);
     }
-    return (u32)gabi::ea(this); /* original: r3 still this */
+    // HD: unmatched tags leave the this register as the return value.
+    return (u32)gabi::ea(this);
 }
-VERIFY(0x022C8570, &daNpcPeople_c::setAnmFromMsgTagUw);
 
 /* 022C85DC */
 u32 daNpcPeople_c::setAnmFromMsgTagUm(int param_1) {
-    WWHD_FUNC(0x022C85DC, u32, this, param_1);
     m79E = 1;
     switch (param_1) {
     case 0:
-        return setAnmTbl(anm(0x101C31B4) /* l_npc_anm_wait */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
         break;
     case 1:
     case 7:
-        return setAnmTbl(anm(0x101C31B7) /* l_npc_anm_talk */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
         break;
     case 2:
-        return setAnmTbl(anm(0x101C31CF) /* l_npc_anm_shobon_um */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_shobon_um, 1);
         break;
     case 3:
-        return setAnmTbl(anm(0x101C31D2) /* l_npc_anm_happy_um */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_happy_um, 1);
         break;
     case 4:
         m79E = 0;
-        return setAnmTbl(anm(0x101C31D8) /* l_npc_anm_um3_wait3 */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_um3_wait3, 1);
         break;
     case 5:
-        return setAnmTbl(anm(0x101C31DB) /* l_npc_anm_um3_talk2 */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_um3_talk2, 1);
         break;
     case 6:
-        return setAnmTbl(anm(0x101C31DE) /* l_npc_anm_um3_talk3 */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_um3_talk3, 1);
         break;
     case 8:
-        return setAnmTbl(anm(0x101C31D5) /* l_npc_anm_happy2_um */, 1);
+        return setAnmTbl(peopleEventData().l_npc_anm_happy2_um, 1);
         break;
     }
     return (u32)gabi::ea(this); /* original: r3 still this */
 }
-VERIFY(0x022C85DC, &daNpcPeople_c::setAnmFromMsgTagUm);
 
 /* 022C86D0 */
 u32 daNpcPeople_c::setAnmFromMsgTagSa(int param_1) {
-    WWHD_FUNC(0x022C86D0, u32, this, param_1);
-    /* switch -> table: wait, talk, talk2_sa, wait, talk3_sa, kiai_sa, talk, talk, talk_sa, talk */
-    if ((u32)param_1 <= 9) {
-        return setAnmTbl(anm(gabi::load<u32>(0x10020980 + param_1 * 4)), 1);
+    switch (param_1) {
+    case 0: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 1: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 2: return setAnmTbl(peopleEventData().l_npc_anm_talk2_sa, 1);
+    case 3: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 4: return setAnmTbl(peopleEventData().l_npc_anm_talk3_sa, 1);
+    case 5: return setAnmTbl(peopleEventData().l_npc_anm_kiai_sa, 1);
+    case 6: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 7: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 8: return setAnmTbl(peopleEventData().l_npc_anm_talk_sa, 1);
+    case 9: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
     }
-    return (u32)gabi::ea(this); /* original: r3 still this */
+    // HD: unmatched tags leave the this register as the return value.
+    return (u32)gabi::ea(this);
 }
-VERIFY(0x022C86D0, &daNpcPeople_c::setAnmFromMsgTagSa);
 
 /* 022C86F0 */
 u32 daNpcPeople_c::setAnmFromMsgTagUg(int param_1) {
-    WWHD_FUNC(0x022C86F0, u32, this, param_1);
-    /* switch -> table: wait, talk, talk2_ug */
-    if ((u32)param_1 <= 2) {
-        return setAnmTbl(anm(gabi::load<u32>(0x100209A8 + param_1 * 4)), 1);
+    switch (param_1) {
+    case 0: return setAnmTbl(peopleEventData().l_npc_anm_wait, 1);
+    case 1: return setAnmTbl(peopleEventData().l_npc_anm_talk, 1);
+    case 2: return setAnmTbl(peopleEventData().l_npc_anm_talk2_ug, 1);
     }
-    return (u32)gabi::ea(this); /* original: r3 still this */
+    // HD: unmatched tags leave the this register as the return value.
+    return (u32)gabi::ea(this);
 }
-VERIFY(0x022C86F0, &daNpcPeople_c::setAnmFromMsgTagUg);
+
+/* WWHD glue
+data l_ug_no 101C4C68
+data cut_name_tbl 101C4C6C
+data l_anm_set_sub 101C40DC nocheck
+ext 025D9F38 fopAc_ac_c* peopleSearchFromName(const char*, u32, u32)
+ext 025D7DEC u32 peopleCreateItemForPresentDemo(cXyz*, s32, u8, s32, s32, csXyz*, cXyz*)
+ext 0259D624 void peopleCalcDisXZAngY(cXyz*, cXyz*, be<f32>*, be<s16>*)
+ext 024F8044 PeopleEventCamera* peopleCameraBody()
+ext 025154B0 void peopleCameraScopeViewMsgModeOff(PeopleEventCamera*)
+ext 02515434 void peopleCameraSubjectLockOn(PeopleEventCamera*, u32)
+ext 025154C4 void peopleCameraSetExtendedPosition(PeopleEventCamera*, cXyz*)
+ext 0251544C void peopleCameraSubjectLockOff(PeopleEventCamera*)
+ext 02560BCC void dKy_get_moon_pos(cXyz*)
+ext 0256099C void dKy_get_orion_pos(cXyz*)
+ext 02560AB4 void dKy_get_hokuto_pos(cXyz*)
+str 10020608 "mNpcNo >= 0 && mNpcNo < daNpcPeople_c::Npc_No_Max" in 022C045C
+str 1002063C "d_a_npc_people.cpp" in 022C045C
+str 10020650 "MsgNo" in 022C0BF8
+str 10020658 "Turn"
+str 10020660 "Look"
+str 10020668 "ItemNo"
+str 10020688 "Ub2" in 022C1384
+str 1002068C "MsgNo" in 022C1384
+str 10020694 "CoCylR"
+str 1002069C "Pig"
+str 100206AC "Po"
+str 100206B0 "mNpcNo >= 0 && mNpcNo < daNpcPeople_c::Npc_No_Max" in 022C25E8
+str 100206E4 "d_a_npc_people.cpp" in 022C25E8
+str 100206A4 "Ub2" in 022C21F0
+str 100206A8 "Ub2" in 022C22B8
+*/

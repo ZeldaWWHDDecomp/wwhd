@@ -1,548 +1,551 @@
-/* Generic ice block. HD adds actor-owned effect matrices and material uniforms.
- * Actual TU0235D460..0235EAFF includes leading RGBA conversion used in
- * create/draw. */
+/* Generic ice block, GameCube names and layout ported to the verified WWHD code.
+ * HD adds actor-owned effect matrices and shader/material uniforms. All marked functions
+ * are verified against the recompiled original. */
 #include "d/actor/d_a_obj_ice.h"
 #include "bindings.h"
+const gc_tu_data gc_tu = {.safeString = 0x1002B0F4};
+static const char l_arcname[] = "Ikori";
+static dCcD_SrcCyl l_cyl_src;
+static f32 l_co_radius_table[3] = {};
+static f32 l_co_height_table[3] = {};
+static f32 cylinderRadius;
+static f32 cylinderHeight;
+static f32 widthFade;
+static f32 alphaFade;
+static Mtx34 mtx_adj;
+static Mtx34 initialAdjustment;
+static u32 adjustmentInitialized;
+static cXyz zeroVector;
+static cXyz upVector;
+static f32 minimumPi;
+static f32 maximumPi;
+static u8 staticCharacter;
+static u8 staticByte;
+static IceHeaderData headerData;
+static u32 staticRegistration0[3] = {};
+static u32 staticRegistration1[3] = {};
+static u32 staticRegistration2[3] = {};
+
+void ice_normalizeColor(IceColor *, void *);
+u32 objIceParameter(daObjIce_c *, u32, u32);
+void tg_hitCallback(daObjIce_c *, void *, void *, void *);
 namespace {
-template <class T> T read(u32 a, u32 o = 0) { return *gabi::at<be<T>>(a + o); }
-template <class T> void write(u32 a, u32 o, T v) {
-  *gabi::at<be<T>>(a + o) = v;
+f32 cosine(s16 a) { return cM_scos(a); }
+f32 sine(s16 a) { return cM_ssin(a); }
+J3DModelData *resource(s32 index) {
+    return static_cast<J3DModelData *>(dComIfG_getObjectRes(l_arcname, index));
 }
-void *ptr(u32 a, u32 o = 0) { return gabi::at<void>(a + o); }
-f32 cosine(s16 a) { return read<f32>(0x104A44FC, ((u16)a >> 3) * 8); }
-f32 sine(s16 a) { return read<f32>(0x104A44F8, ((u16)a >> 3) * 8); }
-struct IceColor {
-  be<f32> r, g, b, a;
-};
-struct IceArchive {
-  be<u32> name, vt;
-};
-u32 resource(s32 index) {
-  gabi::Local<IceArchive> arc;
-  arc->name = 0x1002B0EC;
-  arc->vt = 0x1002B0F4;
-  return gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), arc.get(),
-                         index);
-}
-u32 play() { return gabi::call<u32>(0x025200D4); }
 void setAction(daObjIce_c *ice, u32 fn) {
-  ice->actionDelta = 0;
-  ice->actionIndex = -1;
-  ice->actionTarget = fn;
+    ice->m43C.delta = 0;
+    ice->m43C.index = -1;
+    ice->m43C.target = fn;
 }
-void particle(daObjIce_c *ice, u32 id, void *position, void *angle,
-              void *scale) {
-  u32 manager = read<u32>(play(), 0x5AB0);
-  gabi::call(0x025A847C, ptr(manager), 0, id, position, angle, scale, 255,
-             ptr(0), -1, ptr(gabi::ea(ice), 0x1A8), 0, 0);
+void particle(daObjIce_c *ice, u32 id, cXyz *position, csXyz *angle, cXyz *scale) {
+    dComIfGp_getParticle()->set(0, id, position, angle, scale, 255, nullptr, -1,
+                                &ice->tevStr.mColorK0, nullptr, nullptr);
 }
-u32 materialAt(u32 model, u16 i) {
-  u32 data = read<u32>(model, 0xAC), material = read<u32>(data, 0x10);
-  if (i < read<u32>(data, 0xC))
-    material += i * 0x39C;
-  return material;
+IceMaterial *materialAt(J3DModel *model, u16 i) {
+    return reinterpret_cast<IceMaterial *>(model->getModelData()->getMaterialNodePointer(i));
 }
-void setRenderList(u32 first, u32 second) {
-  write<u32>(0x104B4634, 0, read<u32>(play(), first));
-  write<u32>(0x104B4634, 4, read<u32>(play(), second));
-}
+IceModel *hdModel(J3DModel *model) { return reinterpret_cast<IceModel *>(model); }
 } // namespace
-void ice_normalizeColor(IceColor *out, void *rgba) {
-  WWHD_FUNC(0x0235D460, void, out, rgba);
-  u32 a = gabi::ea(rgba);
-  f32 r = read<u8>(a), g = read<u8>(a, 1), b = read<u8>(a, 2),
-      alpha = read<u8>(a, 3);
-  out->r = r / 255.f;
-  out->g = g / 255.f;
-  out->b = b / 255.f;
-  out->a = alpha / 255.f;
+/* 0235D514 */
+u8 daObjIce_c::chk_appear() {
+    auto *ice = this;
+    u32 sw = objIceParameter(ice, 8, 0);
+    if (sw == 255)
+        return 1;
+    return dComIfGs_isSwitch(sw, ice->home.roomNo) ? 0 : 1;
 }
-VERIFY(0x0235D460, ice_normalizeColor);
-u32 ice_parameter(daObjIce_c *ice, u32 width, u32 shift) {
-  WWHD_FUNC(0x0235EAE4, u32, ice, width, shift);
-  u32 mask = (width & 32) ? 0 : (1u << (width & 31));
-  u32 value = (shift & 32) ? 0 : ((u32)ice->mParameters >> (shift & 31));
-  return value & (mask - 1);
+/* 0235D664 */
+void daObjIce_c::set_mtx() {
+    auto *ice = this;
+    mDoMtx_stack_c::transS(ice->current.pos.x, ice->current.pos.y, ice->current.pos.z);
+    iceXYZrotM(mDoMtx_stack_c::get(), (s16)ice->shape_angle.x, (s16)ice->shape_angle.y,
+               (s16)ice->shape_angle.z);
+    mDoMtx_stack_c::scaleM(ice->m44C, ice->m450, ice->m44C);
+    J3DModel_setBaseTRMtx(ice->mModel.get(), mDoMtx_stack_c::get());
+    mDoMtx_stack_c::scaleM(ice->scale.x, ice->scale.y, ice->scale.z);
+    PSMTXCopy(mDoMtx_stack_c::get(), &ice->m40C);
 }
-VERIFY(0x0235EAE4, ice_parameter);
-u8 ice_checkAppear(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235D514, u8, ice);
-  u32 sw = ice_parameter(ice, 8, 0);
-  if (sw == 255)
-    return 1;
-  u32 save = read<u32>(0x101F84DC);
-  return gabi::call<s32>(0x025BA0C0, ptr(save, 0x20), sw,
-                         (s32)(s8)ice->home.roomNo)
-             ? 0
-             : 1;
+/* 0235D754 */
+void daObjIce_c::init_mtx() {
+    auto *ice = this;
+    J3DModel_setBaseScale(ice->mModel.get(), &ice->scale);
+    ice->set_mtx();
 }
-VERIFY(0x0235D514, ice_checkAppear);
-BOOL ice_createHeap(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235D588, BOOL, ice);
-  u32 data = resource(4);
-  if (!data) {
-    gabi::call(0x0273AA24, ptr(0x1002B174), 395, ptr(0x1002B170));
-    return 0;
-  }
-  ice->iceModel = gabi::call<u32>(0x025E38E0, ptr(data), 0x80000, 0x11000222);
-  u32 collision = resource(7);
-  ice->background =
-      gabi::call<u32>(0x024F2478, ptr(collision), 1, &ice->backgroundMatrix);
-  return ice->iceModel && ice->background;
-}
-VERIFY(0x0235D588, ice_createHeap);
-BOOL ice_heapCallback(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235D660, BOOL, ice);
-  return ice_createHeap(ice);
-}
-VERIFY(0x0235D660, ice_heapCallback);
-void ice_setMatrix(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235D664, void, ice);
-  mDoMtx_stack_c::transS(ice->current.pos.x, ice->current.pos.y,
-                         ice->current.pos.z);
-  gabi::call(0x025F19F8, mDoMtx_stack_c::get(), (s16)ice->shape_angle.x,
-             (s16)ice->shape_angle.y, (s16)ice->shape_angle.z);
-  mDoMtx_stack_c::scaleM(ice->width, ice->height, ice->width);
-  J3DModel_setBaseTRMtx(gabi::at<J3DModel>((u32)ice->iceModel),
-                        mDoMtx_stack_c::get());
-  mDoMtx_stack_c::scaleM(ice->scale.x, ice->scale.y, ice->scale.z);
-  gabi::call(0x028E90D4, mDoMtx_stack_c::get(), &ice->backgroundMatrix);
-}
-VERIFY(0x0235D664, ice_setMatrix);
-void ice_initMatrix(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235D754, void, ice);
-  J3DModel_setBaseScale(gabi::at<J3DModel>((u32)ice->iceModel), &ice->scale);
-  ice_setMatrix(ice);
-}
-VERIFY(0x0235D754, ice_initMatrix);
-void ice_hitCallback(daObjIce_c *ice, void *collider, void *other,
-                     void *otherCollider) {
-  WWHD_FUNC(0x0235D774, void, ice, collider, other, otherCollider);
-  u32 hit = gabi::call<u32>(0x02516300, collider);
-  if (!hit)
-    return;
-  u32 col = gabi::ea(collider);
-  s16 angle = (s16) - (s16)ice->shape_angle.y;
-  f32 sin = sine(angle), cos = cosine(angle);
-  f32 dx = read<f32>(col, 0xCC) - (f32)ice->current.pos.x,
-      dz = read<f32>(col, 0xD4) - (f32)ice->current.pos.z;
-  f32 x = gabi::fmadds(dx, cos, dz * sin), z = gabi::fmsubs(dz, cos, dx * sin),
-      y = read<f32>(col, 0xD0) - (f32)ice->current.pos.y;
-  ice->hitState = 0;
-  for (u32 i = 0; i < 3; i++) {
-    f32 radius = read<f32>(0x1046A068, i * 4),
-        height = read<f32>(0x1046A074, i * 4);
-    f32 rx = (radius * (f32)ice->scale.x) * (f32)ice->width,
-        rz = (radius * (f32)ice->scale.z) * (f32)ice->width,
-        hy = (height * (f32)ice->scale.y) * (f32)ice->height;
-    if (y < hy && ((x * x) / (rx * rx) + (z * z) / (rz * rz)) < 1.f) {
-      u32 type = read<u32>(hit, 0x10);
-      if (type == 0x200 || type == 0x20000 || type == 0x40000) {
-        ice->hitState = 2;
-        write<u32>(col, 0x94, read<u32>(col, 0x94) | 2);
-        return;
-      }
-      if (type != 0x20) {
-        f32 width = (f32)ice->width - .0009f;
-        if (width < 0.f)
-          width = 0.f;
-        ice->width = width;
-        ice->height = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
-        if (width < .1f)
-          ice->hitState = 1;
-        gabi::Local<csXyz> rot;
-        gabi::call(0x0201A478, rot.get(), 0, 0, 0);
-        rot->x = gabi::call<s16>(
-            0x020195B0, (f32)ice->current.pos.y - read<f32>(col, 0xD0),
-            read<f32>(col, 0xD4) - (f32)ice->current.pos.z);
-        rot->y = gabi::call<s16>(
-            0x020195B0, read<f32>(col, 0xCC) - (f32)ice->current.pos.x,
-            read<f32>(col, 0xD4) - (f32)ice->current.pos.z);
-        particle(ice, 0x465, ptr(col, 0xCC), rot.get(), ptr(0));
-        if (ice->hitState) {
-          write<u32>(col, 0x94, read<u32>(col, 0x94) | 2);
-          return;
-        }
-      }
+/* 0235D660 */
+BOOL solidHeapCB(daObjIce_c *ice) { return ice->create_heap(); }
+/* 0235D588 */
+BOOL daObjIce_c::create_heap() {
+    auto *ice = this;
+    J3DModelData *data = resource(dRes_INDEX_IKORI_BDL_VICE_e);
+    if (!data) {
+        JUT_ASSERT_fail("d_a_obj_ice.cpp", 395, "0");
+        return 0;
     }
-  }
+    ice->mModel = mDoExt_J3DModel__create(data, 0x80000, 0x11000222);
+    auto *collision = reinterpret_cast<cBgD_t *>(resource(dRes_INDEX_IKORI_DZB_VICE_e));
+    ice->mBgw = iceNewBackground(collision, 1, &ice->m40C);
+    return ice->mModel && ice->mBgw;
 }
-VERIFY(0x0235D774, ice_hitCallback);
+/* 0235D774 */
+void tg_hitCallback(daObjIce_c *ice, void *collider, void *other, void *otherCollider) {
+    auto *col = static_cast<dCcD_GObjInf *>(collider);
+    auto *hit = static_cast<dCcD_GObjInf *>(col->GetTgHitObj());
+    if (!hit)
+        return;
+    s16 angle = (s16) - (s16)ice->shape_angle.y;
+    f32 sin = sine(angle), cos = cosine(angle);
+    f32 dx = col->mGObjTg.mHitPos.x - (f32)ice->current.pos.x,
+        dz = col->mGObjTg.mHitPos.z - (f32)ice->current.pos.z;
+    f32 x = gabi::fmadds(dx, cos, dz * sin), z = gabi::fmsubs(dz, cos, dx * sin),
+        y = col->mGObjTg.mHitPos.y - (f32)ice->current.pos.y;
+    ice->m45C = 0;
+    for (u32 i = 0; i < 3; i++) {
+        f32 radius = l_co_radius_table[i], height = l_co_height_table[i];
+        f32 rx = (radius * (f32)ice->scale.x) * (f32)ice->m44C,
+            rz = (radius * (f32)ice->scale.z) * (f32)ice->m44C,
+            hy = (height * (f32)ice->scale.y) * (f32)ice->m450;
+        if (y < hy && ((x * x) / (rx * rx) + (z * z) / (rz * rz)) < 1.f) {
+            u32 type = hit->mAtType;
+            if (type == 0x200 || type == 0x20000 || type == 0x40000) {
+                ice->m45C = 2;
+                col->mGObjTg.mSPrm |= 2;
+                return;
+            }
+            if (type != 0x20) {
+                f32 width = (f32)ice->m44C - .0009f;
+                if (width < 0.f)
+                    width = 0.f;
+                ice->m44C = width;
+                ice->m450 = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
+                if (width < .1f)
+                    ice->m45C = 1;
+                gabi::Local<csXyz> rot;
+                csXyz_ct(rot.get(), 0, 0, 0);
+                rot->x = cM_atan2s((f32)ice->current.pos.y - col->mGObjTg.mHitPos.y,
+                                   col->mGObjTg.mHitPos.z - (f32)ice->current.pos.z);
+                rot->y = cM_atan2s(col->mGObjTg.mHitPos.x - (f32)ice->current.pos.x,
+                                   col->mGObjTg.mHitPos.z - (f32)ice->current.pos.z);
+                particle(ice, 0x465, &col->mGObjTg.mHitPos, rot.get(), nullptr);
+                if (ice->m45C) {
+                    col->mGObjTg.mSPrm |= 2;
+                    return;
+                }
+            }
+        }
+    }
+}
 namespace {
-void updateUniform(u32 material, void *rgba) {
-  gabi::Local<IceColor> normalized;
-  ice_normalizeColor(normalized.get(), rgba);
-  gabi::Local<IceColor> converted;
-  gabi::call(0x0274D458, converted.get(), normalized.get(), 1.f);
-  write<u32>(material, 0xA0, read<u32>(material, 0xA0) | 0x400);
-  u32 uniform = gabi::call<u32>(0x027F9F0C, ptr(material, 0xA0), 10);
-  f32 r = converted->r, g = converted->g, b = converted->b;
-  f32 alpha = (f32)read<u8>(gabi::ea(rgba), 3) / 255.f;
-  write<f32>(uniform, 0, r);
-  write<f32>(uniform, 4, g);
-  write<f32>(uniform, 8, b);
-  write<f32>(uniform, 12, alpha);
+void updateUniform(IceMaterial *material, void *rgba) {
+    gabi::Local<IceColor> normalized;
+    ice_normalizeColor(normalized.get(), rgba);
+    gabi::Local<IceColor> converted;
+    iceConvertColor(converted.get(), normalized.get(), 1.f);
+    material->mFlags |= 0x400;
+    IceColor *uniform = iceGetUniform(&material->mFlags, 10);
+    f32 r = converted->r, g = converted->g, b = converted->b;
+    f32 alpha = (f32) static_cast<IceRgba *>(rgba)->a / 255.f;
+    uniform->r = r;
+    uniform->g = g;
+    uniform->b = b;
+    uniform->a = alpha;
 }
 void constructCollision(daObjIce_c *ice) {
-  u32 a = gabi::ea(ice);
-  fopAc_ac_c_ct(ice);
-  ice->__vtbl = 0x1002B11C;
-  gabi::call(0x0200BD2C, ice->collisionStatus);
-  gabi::call(0x02515DA0, ptr(a, 0x3D4));
-  write<u32>(a, 0x3D0, 0x1004AE88);
-  write<u32>(a, 0x3D4, 0x1004AEC0);
-  gabi::call(0x02515FB8, ice->cylinder);
-  write<u32>(a, 0x508, 0x100015A8);
-  write<u32>(a, 0x504, 0x1002B10C);
-  gabi::call(0x02018590, ptr(a, 0x50C));
-  write<u32>(a, 0x430, 0x1004B108);
-  write<u32>(a, 0x520, 0x1004B150);
-  write<u32>(a, 0x508, 0x1004B160);
-  // Default matrix constructors do nothing for a valid embedded object.
-  if (a + 0x578 == 0)
-    gabi::call(0x0273AD10, 0x30);
-  if (a + 0x5A8 == 0)
-    gabi::call(0x0273AD10, 0x30);
+    u32 a = gabi::ea(ice);
+    fopAc_ac_c_ct(ice);
+    ice->__vtbl = ICE_ACTOR_VTABLE;
+    dCcD_Stts_ct(&ice->mStts);
+    iceConstructGObj(&ice->mCyl);
+    auto *shape = reinterpret_cast<IceShapeVtables *>(&ice->mCyl);
+    shape->mShapeVtable = ICE_SHAPE_BASE_VTABLE;
+    shape->mAabVtable = ICE_AAB_VTABLE;
+    iceConstructCylinder(&ice->mCyl.mCyl);
+    ice->mCyl.__vtbl_hitinf = ICE_HIT_VTABLE;
+    ice->mCyl.mCyl.__vtbl = ICE_CYL_VTABLE;
+    shape->mShapeVtable = ICE_SHAPE_CYL_VTABLE;
+    // Default matrix constructors do nothing for a valid embedded object.
+    if (a + 0x578 == 0)
+        iceAllocateMatrix(0x30);
+    if (a + 0x5A8 == 0)
+        iceAllocateMatrix(0x30);
 }
 } // namespace
-s32 ice_create(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235DB5C, s32, ice);
-  if (!(ice->actor_condition & 8)) {
-    if (ice)
-      constructCollision(ice);
-    ice->actor_condition = ice->actor_condition | 8;
-  }
-  u32 a = gabi::ea(ice);
-  s32 phase = 5;
-  if (read<u8>(a, 0xC) == 0)
-    ice->appears = ice_checkAppear(ice);
-  if (!ice->appears)
+/* 0235DB5C */
+s32 daObjIce_c::_create() {
+    auto *ice = this;
+    if (!(ice->actor_condition & 8)) {
+        if (gabi::ea(ice) != 0)
+            constructCollision(ice);
+        ice->actor_condition = ice->actor_condition | 8;
+    }
+    s32 phase = 5;
+    if ((u8)ice->mInitState == 0)
+        ice->m448 = ice->chk_appear();
+    if (!ice->m448)
+        return phase;
+    phase = dComIfG_resLoad(&ice->mPhase, l_arcname);
+    if (phase != 4)
+        return phase;
+    if (!fopAcM_entrySolidHeap(ice, gabi::guest_fn((const void *)solidHeapCB), 0x1A20))
+        return 5;
+    if (dComIfG_Bgsp()->Regist(ice->mBgw, ice))
+        return 5;
+    J3DModel *model = ice->mModel;
+    ice->cullMtx = gabi::ea(model->getBaseTRMtx());
+    ice->m44C = 1.f;
+    ice->m450 = 1.f;
+    ice->init_mtx();
+    f32 radiusScale = ice->scale.x;
+    if (radiusScale < (f32)ice->scale.z)
+        radiusScale = ice->scale.z;
+    ice->mStts.Init(255, 255, ice);
+    ice->mCyl.Set(&l_cyl_src);
+    ice->mCyl.SetStts(&ice->mStts);
+    ice->mCyl.SetC(&ice->current.pos);
+    ice->mCyl.SetR(cylinderRadius * radiusScale);
+    ice->mCyl.SetH(cylinderHeight * (f32)ice->scale.y);
+    ice->mCyl.mObjTg.mSPrm |= 0x10;
+    ice->mCyl.mGObjTg.mHitCallback = gabi::guest_fn((const void *)tg_hitCallback);
+    model = ice->mModel;
+    for (s32 i = 0; i < hdModel(model)->mMaterialNum; i++) {
+        IceMaterial *material = materialAt(model, (u16)i);
+        IceShaderEntry *materials = hdModel(model)->mShaderEntries;
+        gabi::Local<IceRgba> color;
+        iceReadColor(color.get(), &materials[i], 3);
+        IceTevBlock *block = material->mTevBlock;
+        IceTevVtable *vt = block->mVtable;
+        gabi::call_ptr(vt->setKonstColor.get(), block, 3, color.get());
+        updateUniform(material, color.get());
+        model = ice->mModel;
+    }
+    ice->m454 = 255.f;
+    fopAcM_setCullSizeBox(ice, -80.f * (f32)ice->scale.x, 0.f * (f32)ice->scale.y,
+                          -80.f * (f32)ice->scale.z, 80.f * (f32)ice->scale.x,
+                          150.f * (f32)ice->scale.y, 80.f * (f32)ice->scale.z);
+    f32 x = ice->current.pos.x, y = gabi::fmadds(60.f, ice->scale.y, ice->current.pos.y),
+        z = ice->current.pos.z;
+    ice->eyePos.set(x, y, z);
+    ice->attention_info.position.x = x;
+    ice->attention_info.position.y = y;
+    ice->attention_info.position.z = z;
+    setAction(ice, ICE_WAIT_ACTION);
     return phase;
-  phase = gabi::call<s32>(0x02520460, &ice->phase, ptr(0x1002B0EC));
-  if (phase != 4)
-    return phase;
-  if (!gabi::call<s32>(0x025D63E8, ice, ptr(0x0235D660), 0x1A20))
-    return 5;
-  if (gabi::call<s32>(0x024EEA6C, ptr(play(), 0x12A0), ptr(ice->background),
-                      ice))
-    return 5;
-  u32 model = ice->iceModel;
-  ice->cullMtx = model ? model + 0xC8 : 0;
-  ice->width = 1.f;
-  ice->height = 1.f;
-  ice_initMatrix(ice);
-  f32 radiusScale = ice->scale.x;
-  if (radiusScale < (f32)ice->scale.z)
-    radiusScale = ice->scale.z;
-  gabi::call(0x02515F14, ice->collisionStatus, 255, 255, ice);
-  gabi::call(0x02516518, ice->cylinder, ptr(0x1002B12C));
-  write<u32>(a, 0x438, a + 0x3B8);
-  gabi::call(0x020182E0, ptr(a, 0x50C), &ice->current.pos);
-  gabi::call(0x020184DC, ptr(a, 0x50C), read<f32>(0x1046A044) * radiusScale);
-  gabi::call(0x02018428, ptr(a, 0x50C),
-             read<f32>(0x1046A048) * (f32)ice->scale.y);
-  write<u32>(a, 0x40C, read<u32>(a, 0x40C) | 0x10);
-  write<u32>(a, 0x490, 0x0235D774);
-  model = ice->iceModel;
-  for (s32 i = 0; i < read<u16>(model, 0x2A); i++) {
-    u32 material = materialAt(model, (u16)i),
-        materials = read<u32>(model, 0x34);
-    gabi::Local<u8[4]> color;
-    gabi::call(0x027FA3F4, color.get(), ptr(materials, i * 0x3C), 3);
-    u32 block = read<u32>(material, 0x18), vt = read<u32>(block, 4);
-    gabi::call_ptr(read<u32>(vt, 0x3C), ptr(block), 3, color.get());
-    updateUniform(material, color.get());
-    model = ice->iceModel;
-  }
-  ice->alpha = 255.f;
-  gabi::call(0x025D674C, ice, -80.f * (f32)ice->scale.x,
-             0.f * (f32)ice->scale.y, -80.f * (f32)ice->scale.z,
-             80.f * (f32)ice->scale.x, 150.f * (f32)ice->scale.y,
-             80.f * (f32)ice->scale.z);
-  f32 x = ice->current.pos.x,
-      y = gabi::fmadds(60.f, ice->scale.y, ice->current.pos.y),
-      z = ice->current.pos.z;
-  ice->eyePos.set(x, y, z);
-  write<f32>(a, 0x390, x);
-  write<f32>(a, 0x394, y);
-  write<f32>(a, 0x398, z);
-  setAction(ice, 0x0235E6C4);
-  return phase;
 }
-VERIFY(0x0235DB5C, ice_create);
-s32 ice_Create(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235DF6C, s32, ice);
-  return ice_create(ice);
-}
-VERIFY(0x0235DF6C, ice_Create);
-BOOL ice_delete(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235DF70, BOOL, ice);
-  if (ice->appears) {
-    gabi::call(0x025204C8, &ice->phase, ptr(0x1002B0EC));
-    if (ice->heap && ice->background) {
-      if (read<u32>(ice->background) < 0x100)
-        gabi::call(0x020087EC, ptr(play(), 0x12A0), ptr(ice->background));
-      ice->background = 0;
+/* 0235DF70 */
+BOOL daObjIce_c::_delete() {
+    auto *ice = this;
+    if (ice->m448) {
+        dComIfG_resDelete(&ice->mPhase, l_arcname);
+        if (ice->heap && ice->mBgw) {
+            if (ice->mBgw->ChkUsed())
+                cBgS_Release(dComIfG_Bgsp(), ice->mBgw);
+            ice->mBgw = 0;
+        }
     }
-  }
-  return 1;
+    return 1;
 }
-VERIFY(0x0235DF70, ice_delete);
-BOOL ice_Delete(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235DFF4, BOOL, ice);
-  return ice_delete(ice);
-}
-VERIFY(0x0235DFF4, ice_Delete);
-BOOL ice_execute(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235DFF8, BOOL, ice);
-  u32 a = gabi::ea(ice);
-  gabi::call(0x020184DC, ptr(a, 0x50C),
-             (75.f * (f32)ice->scale.x) * (f32)ice->width);
-  gabi::call(0x02018428, ptr(a, 0x50C),
-             (120.f * (f32)ice->scale.y) * (f32)ice->height);
-  ice_setMatrix(ice);
-  u32 bg = ice->background;
-  if (bg && read<u32>(bg) < 0x100)
-    gabi::call(0x024F43DC, ptr(bg));
-  ptmf_call(a + 0x558, ice);
-  return 1;
-}
-VERIFY(0x0235DFF8, ice_execute);
-BOOL ice_Execute(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E0CC, BOOL, ice);
-  return ice_execute(ice);
-}
-VERIFY(0x0235E0CC, ice_Execute);
-void ice_wait(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E6C4, void, ice);
-  u32 a = gabi::ea(ice);
-  if (!gabi::call<s32>(0x025162A4, ice->cylinder) ||
-      read<u32>(a, 0x3E8) != read<u32>(a, 0x3EC))
-    write<u32>(a, 0x444, read<u32>(a, 0x444) & ~1u);
-  gabi::call(0x02515E50, ptr(a, 0x3D4));
-  gabi::call(0x0251621C, ice->cylinder);
-  s32 state = ice->hitState;
-  if (state == 2) {
-    s32 reverb = gabi::call<s32>(0x02520540, (s32)(s8)ice->current.roomNo);
-    gabi::call(0x025E1A40, 0x6A16, &ice->current.pos, 0, reverb);
-  }
-  if (state == 1 || state == 2) {
-    ice->fadeTimer = 90;
-    u32 manager = read<u32>(play(), 0x5AB0);
-    u32 emitter = gabi::call<u32>(0x025A847C, ptr(manager), 0, 0x464,
-                                  &ice->current.pos, ptr(0), &ice->scale, 255,
-                                  ptr(0), -1, ptr(a, 0x1A8), 0, 0);
-    if (emitter) {
-      f32 x = ice->scale.x, y = ice->scale.y, z = ice->scale.z;
-      write<f32>(emitter, 0x220, x);
-      write<f32>(emitter, 0x224, y);
-      write<f32>(emitter, 0x228, z);
-      x = ice->scale.x;
-      write<f32>(emitter, 0x238, x);
-      write<f32>(emitter, 0x23C, x);
-      write<f32>(emitter, 0x240, x);
+/* 0235E6C4 */
+void daObjIce_c::wait_act_proc() {
+    auto *ice = this;
+    if (!ice->mCyl.ChkTgHit() || ice->mStts.mTgApid != ice->mStts.mTgOldApid)
+        ice->mCyl.mGObjAt.mSPrm &= ~1u;
+    ice->mStts.Move();
+    ice->mCyl.ClrTgHit();
+    s32 state = ice->m45C;
+    if (state == 2) {
+        s32 reverb = iceGetReverb((s32)(s8)ice->current.roomNo);
+        mDoAud_seStart(0x6A16, &ice->current.pos, 0, reverb);
     }
-    setAction(ice, 0x0235E820);
-  } else
-    gabi::call(0x0200E240, ptr(play(), 0x26A4), ice->cylinder);
+    if (state == 1 || state == 2) {
+        ice->m458 = 90;
+        auto *emitter = reinterpret_cast<IceEmitter *>(
+            dComIfGp_getParticle()->set(0, 0x464, &ice->current.pos, nullptr, &ice->scale, 255,
+                                        nullptr, -1, &ice->tevStr.mColorK0, nullptr, nullptr));
+        if (emitter) {
+            f32 x = ice->scale.x, y = ice->scale.y, z = ice->scale.z;
+            emitter->mGlobalDynamicsScale.x = x;
+            emitter->mGlobalDynamicsScale.y = y;
+            emitter->mGlobalDynamicsScale.z = z;
+            x = ice->scale.x;
+            emitter->mGlobalParticleScale.x = x;
+            emitter->mGlobalParticleScale.y = x;
+            emitter->mGlobalParticleScale.z = x;
+        }
+        setAction(ice, ICE_FADE_ACTION);
+    } else
+        dComIfG_Ccsp_Set(&ice->mCyl);
 }
-VERIFY(0x0235E6C4, ice_wait);
-void ice_fade(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E820, void, ice);
-  f32 alpha = (f32)ice->alpha - read<f32>(0x1046A050),
-      width = (f32)ice->width - read<f32>(0x1046A04C);
-  ice->alpha = alpha;
-  if (alpha < 0.f)
-    ice->alpha = 0.f;
-  width = width >= 0.f ? width : 0.f;
-  ice->width = width;
-  ice->height = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
-  if (width < .4f && ice->background && read<u32>(ice->background) < 0x100) {
-    gabi::call(0x020087EC, ptr(play(), 0x12A0), ptr(ice->background));
-    u32 sw = ice_parameter(ice, 8, 0);
-    if (sw != 255) {
-      u32 save = read<u32>(0x101F84DC);
-      gabi::call(0x025B9E38, ptr(save, 0x20), sw, (s32)(s8)ice->home.roomNo);
+/* 0235E820 */
+void daObjIce_c::fade_out_retire_act_proc() {
+    auto *ice = this;
+    f32 alpha = (f32)ice->m454 - alphaFade, width = (f32)ice->m44C - widthFade;
+    ice->m454 = alpha;
+    if (alpha < 0.f)
+        ice->m454 = 0.f;
+    width = width >= 0.f ? width : 0.f;
+    ice->m44C = width;
+    ice->m450 = 1.f - cosine((s16)gabi::ftoi(width * 16384.f));
+    if (width < .4f && ice->mBgw && ice->mBgw->ChkUsed()) {
+        cBgS_Release(dComIfG_Bgsp(), ice->mBgw);
+        u32 sw = objIceParameter(ice, 8, 0);
+        if (sw != 255) {
+            dComIfGs_onSwitch(sw, ice->home.roomNo);
+        }
     }
-  }
-  ice->fadeTimer = (s32)((u32)ice->fadeTimer - 1);
-  if (ice->fadeTimer <= 0)
-    gabi::call(0x025D57E0, ice);
+    ice->m458 = (s32)((u32)ice->m458 - 1);
+    if (ice->m458 <= 0)
+        fopAcM_delete(ice);
 }
-VERIFY(0x0235E820, ice_fade);
 namespace {
-void setAlpha(u32 data, u8 alpha) {
-  u16 i = 0;
-  u32 header = gabi::call<u32>(0x027F3F94, ptr(data));
-  while (i < read<u16>(header, 8)) {
-    u32 joint = read<u32>(data, 8);
-    if (i < read<u32>(data, 4))
-      joint += i * 0x1C;
-    u32 material = read<u32>(joint, 0x10);
-    while (material) {
-      u32 shape = read<u32>(material, 8);
-      write<u8>(shape, 4, alpha ? 1 : 0);
-      if (alpha) {
-        u32 block = read<u32>(material, 0x18), vt = read<u32>(block, 4);
-        u32 color = gabi::call_ptr<u32>(read<u32>(vt, 0x4C), ptr(block), 3);
-        write<u8>(color, 3, alpha);
-        block = read<u32>(material, 0x18);
-        vt = read<u32>(block, 4);
-        color = gabi::call_ptr<u32>(read<u32>(vt, 0x4C), ptr(block), 3);
-        block = read<u32>(material, 0x18);
-        vt = read<u32>(block, 4);
-        gabi::call_ptr(read<u32>(vt, 0x3C), ptr(block), 3, ptr(color));
-        updateUniform(material, ptr(color));
-      }
-      material = read<u32>(material, 4);
+void setAlpha(J3DModelData *data, u8 alpha) {
+    u16 i = 0;
+    IceJointTree *header = iceGetJointTree(data);
+    while (i < header->mJointNum) {
+        auto *joint = reinterpret_cast<IceJoint *>(data->getJointNodePointer(i));
+        IceMaterial *material = joint->mMesh;
+        while (material) {
+            J3DShape *shape = material->mShape;
+            shape->mVisible = alpha ? 1 : 0;
+            if (alpha) {
+                IceTevBlock *block = material->mTevBlock;
+                IceTevVtable *vt = block->mVtable;
+                IceRgba *color = gabi::call_ptr<IceRgba *>(vt->getKonstColor.get(), block, 3);
+                color->a = alpha;
+                block = material->mTevBlock;
+                vt = block->mVtable;
+                color = gabi::call_ptr<IceRgba *>(vt->getKonstColor.get(), block, 3);
+                block = material->mTevBlock;
+                vt = block->mVtable;
+                gabi::call_ptr(vt->setKonstColor.get(), block, 3, color);
+                updateUniform(material, color);
+            }
+            material = material->mNext;
+        }
+        i = (u16)(i + 1);
+        header = iceGetJointTree(data);
     }
-    i = (u16)(i + 1);
-    header = gabi::call<u32>(0x027F3F94, ptr(data));
-  }
 }
-u32 shaderVariableTable(u32 header) {
-  s32 relative = read<s32>(header, 0x34);
-  return relative ? header + 0x34 + relative : 0;
+IceShaderVariable *shaderVariableTable(IceShaderHeader *header) {
+    s32 relative = header->mRelativeVariables;
+    // HD: relative resource pointers and variable indices use 32-bit wraparound.
+    return relative ? gabi::at<IceShaderVariable>(gabi::ea(&header->mRelativeVariables) + relative)
+                    : nullptr;
 }
-void dirtyVariable(u32 entry, s32 index, u32 variable) {
-  if (read<s32>(variable, 4) < 0)
-    return;
-  write<u16>(entry, 4, read<u16>(entry, 4) | 4);
-  u32 words = read<u32>(entry, 0xC) + (u32)(index >> 5) * 4;
-  write<u32>(words, 0, read<u32>(words) | (1u << ((u32)index & 31)));
+void dirtyVariable(IceShaderEntry *entry, s32 index, IceShaderVariable *variable) {
+    if (variable->mLocation < 0)
+        return;
+    entry->mDirtyFlags |= 4;
+    auto *word = gabi::at<be<u32>>(gabi::ea(entry->mDirtyWords.get()) + (u32)(index >> 5) * 4);
+    *word |= 1u << ((u32)index & 31);
 }
 void effectMatrices(daObjIce_c *ice) {
-  if (!read<u32>(0x101FDBD4)) {
-    write<u32>(0x101FDBD4, 0, 1);
-    memcpy_g(ptr(0x101FDBD8), ptr(0x101CA364), 48);
-  }
-  f32 sx = 1.8f / (f32)ice->scale.x, sy = 1.8f / (f32)ice->scale.y;
-  u32 camera = gabi::call<u32>(0x024F8020);
-  gabi::Local<cXyz> view, light, half;
-  gabi::Local<Mtx34> look;
-  gabi::call(0x0201ADE0, &ice->eyePos, view.get(), ptr(camera, 0xDC));
-  gabi::call(0x02563F64, ptr(gabi::ea(ice), 0x194), &ice->eyePos, light.get());
-  gabi::call(0x028E9E88, view.get(), light.get(), half.get());
-  gabi::call(0x028E9684, look.get(), ptr(0x101FFBA8), ptr(0x101FFBC0),
-             half.get());
-  Mtx34 *matrix = mDoMtx_stack_c::get();
-  gabi::call(0x028E945C, matrix, sx, sy, 1.f);
-  gabi::call(0x028E9108, matrix, ptr(0x101FDBD8), matrix);
-  gabi::call(0x028E9108, matrix, look.get(), matrix);
-  matrix->m[0][3] = 0.f;
-  matrix->m[1][3] = 0.f;
-  matrix->m[2][3] = 0.f;
-  gabi::call(0x028E90D4, matrix, &ice->effectLarge);
-  gabi::call(0x028E945C, matrix, .5f, .5f, 1.f);
-  gabi::call(0x028E9108, matrix, ptr(0x101FDBD8), matrix);
-  gabi::call(0x028E9108, matrix, look.get(), matrix);
-  matrix->m[0][3] = 0.f;
-  matrix->m[1][3] = 0.f;
-  matrix->m[2][3] = 0.f;
-  gabi::call(0x028E90D4, matrix, &ice->effectSmall);
-  u32 model = ice->iceModel;
-  u16 count = read<u16>(model, 0x2A);
-  for (u16 i = 0; i < count; i++) {
-    u32 entry = read<u32>(model, 0x34) + i * 0x3C;
-    for (u32 j = 0; j < 8; j++) {
-      gabi::Local<be<s32>> index;
-      *index.get() = -1;
-      u32 info = gabi::call<u32>(0x027FA974, ptr(entry), j, index.get());
-      if (!info)
-        continue;
-      u32 type = read<u32>(info);
-      if (type < 10 || type > 11)
-        continue;
-      u32 header = read<u32>(entry), variables = shaderVariableTable(header);
-      s32 n = *index.get();
-      u32 variable = variables + (u32)n * 0x14;
-      dirtyVariable(entry, n, variable);
-      header = read<u32>(entry);
-      variables = shaderVariableTable(header);
-      u16 linked = read<u16>(variable, 0xC);
-      dirtyVariable(entry, linked, variables + linked * 0x14);
-      u32 destination = gabi::call<u32>(0x027FA678, ptr(entry), j);
-      if (destination && read<u32>(destination)) {
-        if (i == 0)
-          write<u32>(destination, 0, gabi::ea(&ice->effectSmall));
-        else if (i == 1)
-          write<u32>(destination, 0, gabi::ea(&ice->effectLarge));
-      }
+    if (!adjustmentInitialized) {
+        adjustmentInitialized = 1;
+        memcpy_g(&mtx_adj, &initialAdjustment, sizeof(Mtx34));
     }
-  }
+    f32 sx = 1.8f / (f32)ice->scale.x, sy = 1.8f / (f32)ice->scale.y;
+    IceCamera *camera = iceGetCamera();
+    gabi::Local<cXyz> view, light, half;
+    gabi::Local<Mtx34> look;
+    iceSubtractVector(&ice->eyePos, view.get(), &camera->mEye);
+    iceLightVector(&ice->tevStr.mLightPosWorld, &ice->eyePos, light.get());
+    iceHalfAngle(view.get(), light.get(), half.get());
+    iceLookAt(look.get(), &zeroVector, &upVector, half.get());
+    Mtx34 *matrix = mDoMtx_stack_c::get();
+    iceScaleMatrix(matrix, sx, sy, 1.f);
+    iceConcatMatrix(matrix, &mtx_adj, matrix);
+    iceConcatMatrix(matrix, look.get(), matrix);
+    matrix->m[0][3] = 0.f;
+    matrix->m[1][3] = 0.f;
+    matrix->m[2][3] = 0.f;
+    PSMTXCopy(matrix, &ice->mEffectLarge);
+    iceScaleMatrix(matrix, .5f, .5f, 1.f);
+    iceConcatMatrix(matrix, &mtx_adj, matrix);
+    iceConcatMatrix(matrix, look.get(), matrix);
+    matrix->m[0][3] = 0.f;
+    matrix->m[1][3] = 0.f;
+    matrix->m[2][3] = 0.f;
+    PSMTXCopy(matrix, &ice->mEffectSmall);
+    J3DModel *model = ice->mModel;
+    u16 count = hdModel(model)->mMaterialNum;
+    for (u16 i = 0; i < count; i++) {
+        IceShaderEntry *entry = &hdModel(model)->mShaderEntries[i];
+        for (u32 j = 0; j < 8; j++) {
+            gabi::Local<be<s32>> index;
+            *index.get() = -1;
+            IceTextureInfo *info = iceGetTextureInfo(entry, j, index.get());
+            if (!info)
+                continue;
+            u32 type = info->mInfo;
+            if (type < 10 || type > 11)
+                continue;
+            IceShaderHeader *header = entry->mHeader;
+            IceShaderVariable *variables = shaderVariableTable(header);
+            s32 n = *index.get();
+            auto *variable = gabi::at<IceShaderVariable>(gabi::ea(variables) +
+                                                         (u32)n * sizeof(IceShaderVariable));
+            dirtyVariable(entry, n, variable);
+            header = entry->mHeader;
+            variables = shaderVariableTable(header);
+            u16 linked = variable->mLinked;
+            dirtyVariable(entry, linked, &variables[linked]);
+            gptr<Mtx34> *destination = iceGetTextureMatrix(entry, j);
+            if (destination && destination->get()) {
+                if (i == 0)
+                    *destination = &ice->mEffectSmall;
+                else if (i == 1)
+                    *destination = &ice->mEffectLarge;
+            }
+        }
+    }
 }
 } // namespace
-BOOL ice_draw(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E0D0, BOOL, ice);
-  auto light = dKy_getEnvlight();
-  settingTevStruct(light, 0, &ice->current.pos, &ice->tevStr);
-  light = dKy_getEnvlight();
-  setLightTevColorType(light, gabi::at<J3DModel>((u32)ice->iceModel),
-                       &ice->tevStr);
-  gabi::call(0x02543F10, ptr(play(), 0x52C4), ptr(0x1002B1B8), 255);
-  if (read<u8>(play(), 0x5292) &&
-      gabi::call<s32>(0x025445B8, ptr(play(), 0x52C4), ptr(0x1002B1B8)))
-    setRenderList(0x5D78, 0x5D7C);
-  else
-    setRenderList(0x5D84, 0x5D88);
-  u32 data = read<u32>(ice->iceModel, 0xAC);
-  u8 alpha = (u8)gabi::ftoi(ice->alpha);
-  setAlpha(data, alpha);
-  effectMatrices(ice);
-  mDoExt_modelUpdateDL(gabi::at<J3DModel>((u32)ice->iceModel), 0);
-  setRenderList(0x5D78, 0x5D7C);
-  return 1;
+/* 0235DFF8 */
+BOOL daObjIce_c::_execute() {
+    auto *ice = this;
+    ice->mCyl.SetR((75.f * (f32)ice->scale.x) * (f32)ice->m44C);
+    ice->mCyl.SetH((120.f * (f32)ice->scale.y) * (f32)ice->m450);
+    ice->set_mtx();
+    dBgW *bg = ice->mBgw;
+    if (bg && bg->ChkUsed())
+        bg->Move();
+    ptmf_call(gabi::ea(&ice->m43C), ice);
+    return 1;
 }
-VERIFY(0x0235E0D0, ice_draw);
-BOOL ice_Draw(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E6B8, BOOL, ice);
-  return ice_draw(ice);
+/* 0235E0D0 */
+BOOL daObjIce_c::_draw() {
+    auto *ice = this;
+    auto light = dKy_getEnvlight();
+    settingTevStruct(light, 0, &ice->current.pos, &ice->tevStr);
+    light = dKy_getEnvlight();
+    setLightTevColorType(light, ice->mModel.get(), &ice->tevStr);
+    iceSetEvent(dComIfGp_getPEvtManager(), "FREEZE_ICE", 255);
+    if (dComIfGp_event_runCheck() && iceCheckEvent(dComIfGp_getPEvtManager(), "FREEZE_ICE"))
+        dComIfGd_setList();
+    else
+        dComIfGd_setListMaskOff();
+    J3DModelData *data = ice->mModel->getModelData();
+    u8 alpha = (u8)gabi::ftoi(ice->m454);
+    setAlpha(data, alpha);
+    effectMatrices(ice);
+    mDoExt_modelUpdateDL(ice->mModel.get(), 0);
+    dComIfGd_setList();
+    return 1;
 }
-VERIFY(0x0235E6B8, ice_Draw);
-BOOL ice_IsDelete(daObjIce_c *ice) {
-  WWHD_FUNC(0x0235E6BC, BOOL, ice);
-  return 1;
+/* 0235DF6C */
+s32 daObjIce_Create(daObjIce_c *ice) { return ice->_create(); }
+/* 0235DFF4 */
+BOOL daObjIce_Delete(daObjIce_c *ice) { return ice->_delete(); }
+/* 0235E0CC */
+BOOL daObjIce_Execute(daObjIce_c *ice) { return ice->_execute(); }
+/* 0235E6B8 */
+BOOL daObjIce_Draw(daObjIce_c *ice) { return ice->_draw(); }
+/* 0235E6BC */
+BOOL daObjIce_IsDelete(daObjIce_c *ice) { return 1; }
+/* 0235D460 */
+void ice_normalizeColor(IceColor *out, void *rgba) {
+    auto *color = static_cast<IceRgba *>(rgba);
+    f32 r = color->r, g = color->g, b = color->b, alpha = color->a;
+    out->r = r / 255.f;
+    out->g = g / 255.f;
+    out->b = b / 255.f;
+    out->a = alpha / 255.f;
 }
-VERIFY(0x0235E6BC, ice_IsDelete);
+/* 0235E94C */
 void ice_staticInit() {
-  WWHD_FUNC(0x0235E94C, void);
-  for (u32 i = 0; i < 16; i += 4)
-    write<u32>(0x1046A058, i, 0);
-  gabi::call(0x028F026C, ptr(0x101CA3B4));
-  write<f32>(0x1046A03C, 0, -3.1415927410125732f);
-  write<f32>(0x1046A040, 0, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x1046A054));
-  gabi::call(0x028F026C, ptr(0x101CA3C0));
-  gabi::call(0x028EAB2C, ptr(0x1046A055));
-  gabi::call(0x028F026C, ptr(0x101CA3CC));
-  write<f32>(0x1046A068, 0, 40.f);
-  write<f32>(0x1046A068, 4, 65.f);
-  write<f32>(0x1046A068, 8, 75.f);
-  write<f32>(0x1046A074, 0, 120.f);
-  write<f32>(0x1046A074, 4, 90.f);
-  write<f32>(0x1046A074, 8, 60.f);
-  write<f32>(0x1046A044, 0, 75.f);
-  write<f32>(0x1046A048, 0, 120.f);
-  write<f32>(0x1046A04C, 0, .011111111f);
-  write<f32>(0x1046A050, 0, 2.8333333f);
+    for (u32 i = 0; i < 4; i++)
+        headerData.words[i] = 0;
+    __register_global_object(gabi::ea(staticRegistration0));
+    minimumPi = -3.1415927410125732f;
+    maximumPi = 3.1415927410125732f;
+    iceInitCharacter(&staticCharacter);
+    __register_global_object(gabi::ea(staticRegistration1));
+    iceInitByte(&staticByte);
+    __register_global_object(gabi::ea(staticRegistration2));
+    l_co_radius_table[0] = 40.f;
+    l_co_radius_table[1] = 65.f;
+    l_co_radius_table[2] = 75.f;
+    l_co_height_table[0] = 120.f;
+    l_co_height_table[1] = 90.f;
+    l_co_height_table[2] = 60.f;
+    cylinderRadius = 75.f;
+    cylinderHeight = 120.f;
+    widthFade = .011111111f;
+    alphaFade = 2.8333333f;
 }
-VERIFY(0x0235E94C, ice_staticInit);
+/* 0235EA60 */
 void ice_staticDtor(void *object, u32 flags) {
-  WWHD_FUNC(0x0235EA60, void, object, flags);
-  if (object && (flags & 1))
-    gabi::call(0x0273AF40, object);
+    if (object && (flags & 1))
+        operator_delete(object);
 }
-VERIFY(0x0235EA60, ice_staticDtor);
+/* 0235EA74 */
 void ice_destructor(daObjIce_c *ice, u32 flags) {
-  WWHD_FUNC(0x0235EA74, void, ice, flags);
-  if (ice) {
-    gabi::call(0x02515A70, ice->cylinder, 2);
-    gabi::call(0x02515860, ice->collisionStatus, 2);
-    gabi::call(0x025D50BC, ice, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, ice);
-  }
+    if (ice) {
+        dCcD_Cyl_dt(&ice->mCyl, 2);
+        dCcD_Stts_dt(&ice->mStts, 2);
+        iceDestroyActor(ice, 0);
+        if (flags & 1)
+            operator_delete(ice);
+    }
 }
-VERIFY(0x0235EA74, ice_destructor);
-void ice_stringNoop(void *object) { WWHD_FUNC(0x0235EAE0, void, object); }
-VERIFY(0x0235EAE0, ice_stringNoop);
+/* 0235EAE0 */
+void ice_stringNoop(void *object) {}
+
+/* 0235EAE4 */
+u32 objIceParameter(daObjIce_c *ice, u32 width, u32 shift) {
+    u32 mask = (width & 32) ? 0 : (1u << (width & 31));
+    u32 value = (shift & 32) ? 0 : ((u32)ice->mParameters >> (shift & 31));
+    return value & (mask - 1);
+}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_cyl_src 1002B12C nocheck
+data l_co_radius_table 1046A068 nocheck
+data l_co_height_table 1046A074 nocheck
+data cylinderRadius 1046A044 nocheck
+data cylinderHeight 1046A048 nocheck
+data widthFade 1046A04C nocheck
+data alphaFade 1046A050 nocheck
+data mtx_adj 101FDBD8 nocheck
+data initialAdjustment 101CA364 nocheck
+data adjustmentInitialized 101FDBD4 nocheck
+data zeroVector 101FFBA8 nocheck
+data upVector 101FFBC0 nocheck
+data minimumPi 1046A03C nocheck
+data maximumPi 1046A040 nocheck
+data staticCharacter 1046A054 nocheck
+data staticByte 1046A055 nocheck
+data headerData 1046A058 nocheck
+data staticRegistration0 101CA3B4 nocheck
+data staticRegistration1 101CA3C0 nocheck
+data staticRegistration2 101CA3CC nocheck
+str 1002B0EC
+str 1002B174
+str 1002B170
+str 1002B1B8
+ext 025F19F8 void iceXYZrotM(Mtx34*, s16, s16, s16)
+ext 024F2478 dBgW* iceNewBackground(cBgD_t*, u32, Mtx34*)
+ext 0274D458 void iceConvertColor(IceColor*, IceColor*, f32)
+ext 027F9F0C IceColor* iceGetUniform(be<u32>*, s32)
+ext 02515FB8 void iceConstructGObj(dCcD_Cyl*)
+ext 02018590 void iceConstructCylinder(cM3dGCyl*)
+ext 0273AD10 void* iceAllocateMatrix(u32)
+ext 027FA3F4 void iceReadColor(IceRgba*, IceShaderEntry*, s32)
+ext 027F3F94 IceJointTree* iceGetJointTree(J3DModelData*)
+ext 024F8020 IceCamera* iceGetCamera()
+ext 0201ADE0 void iceSubtractVector(cXyz*, cXyz*, cXyz*)
+ext 02563F64 void iceLightVector(cXyz*, cXyz*, cXyz*)
+ext 028E9E88 void iceHalfAngle(cXyz*, cXyz*, cXyz*)
+ext 028E9684 void iceLookAt(Mtx34*, cXyz*, cXyz*, cXyz*)
+ext 028E945C void iceScaleMatrix(Mtx34*, f32, f32, f32)
+ext 028E9108 void iceConcatMatrix(Mtx34*, Mtx34*, Mtx34*)
+ext 027FA974 IceTextureInfo* iceGetTextureInfo(IceShaderEntry*, u32, be<s32>*)
+ext 027FA678 gptr<Mtx34>* iceGetTextureMatrix(IceShaderEntry*, u32)
+ext 02543F10 void iceSetEvent(dEvent_manager_c*, const char*, s32)
+ext 025445B8 s32 iceCheckEvent(dEvent_manager_c*, const char*)
+ext 02520540 s32 iceGetReverb(s32)
+ext 025D50BC void iceDestroyActor(fopAc_ac_c*, s32)
+ext 028ED6F8 void iceInitCharacter(be<u8>*)
+ext 028EAB2C void iceInitByte(be<u8>*)
+*/

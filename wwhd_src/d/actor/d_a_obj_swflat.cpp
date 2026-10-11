@@ -1,276 +1,577 @@
-// WWHD Tower of the Gods statue floor switch. Binary-derived source: private.
-#include "bindings.h"
+/**
+ * d_a_obj_swflat.cpp (WWHD)
+ * Object - Tower of the Gods floor switch.
+ *
+ * Written in the style of zeldaret/tww and verified against the recompiled original.
+ * HD-specific layout and ABI are explicit.
+ */
 #include "d/actor/d_a_obj_swflat.h"
+#include "bindings.h"
+#include "gc_api/f_op/f_op_actor_mng.h"
 using daObjSwflat::Act_c;
-static constexpr u32 HIO=0x1046BF4C, MTX=0x1046BF68;
-static const char* arc() { return STR(0x1002F928); }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static void set_mtx(Act_c* a) {
- WWHD_FUNC(0x02391AC4,void,a);
- auto mtx=gabi::at<Mtx34>(0x1048D0CC);
- f32 x=a->current.pos.x,z=a->current.pos.z,y=a->current.pos.y;
- gabi::call(0x028E93CC,mtx,x,y,z);
- s16 rx=a->shape_angle.x,rz=a->shape_angle.z,ry=a->shape_angle.y;
- gabi::call(0x025F1B48,mtx,rx,ry,rz);
- f32 values[12]; for(u32 i=0;i<12;i++) values[i]=gabi::load<f32>(0x1048D0CC+4*i);
- u32 model=gabi::ea((J3DModel*)a->mpModel);
- for(u32 i=0;i<12;i++) gabi::store<f32>(model+0xC8+4*i,values[i]);
- gabi::call(0x028E90D4,mtx,gabi::at<Mtx34>(MTX));
+static u32 PrmAbstract(Act_c*, s32, s32);
+static daObjSwflat_HIO_c l_HIO;
+static Mtx34 mtx;
+static dCcD_SrcCyl l_cyl_src;
+static constexpr u32 DCCD_STTS_VTBL = 0x1004AE88, DCCD_GSTTS_VTBL = 0x1004AEC0;
+static constexpr u32 DCCD_HITINF_VTBL = 0x1004B108, DCCD_SHAPE_VTBL = 0x1004B160;
+static constexpr u32 DCCD_CYL_VTBL = 0x1004B150, SHAPE_BASE_VTBL = 0x100015A8;
+static constexpr u32 SAFE_STRING_VTBL = 0x1002F84C;
+static constexpr u32 ACT_VTBL = 0x1002F930;
+static constexpr u32 AAB_VTBL = 0x1002F864;
+static constexpr u32 HIO_VTBL = 0x1002F874;
+
+enum {
+    ID_ACTIVE = 0x8164,
+    ID_INACTIVE = 0x8163,
+    JA_SE_SWITCH_PRESS = 0x6960,
+    JA_SE_SWITCH_ACTIVE = 0x7027
+};
+enum { EVENT_WAIT, EVENT_ORDER, EVENT_RUN };
+enum { PLAYER_PROFILE = 0xA8, CONTACT_SWITCH_WEIGHT = 0x400 };
+// HD: these bindings retain the complete guest return widths and nullable allocation ABI.
+SwflatBrk* swflatBrkConstruct(SwflatBrk*);
+BOOL swflatBrkInit(SwflatBrk*, void*, void*, s32, s32, f32, s32, s32, s32, s32);
+void swflatStatusBaseConstruct(dCcD_Stts*);
+void swflatGStatusConstruct(be<u32>*);
+void swflatGObjConstruct(dCcD_Cyl*);
+void swflatCylinderConstruct(cM3dGCyl*);
+void swflatSeStart(u32, cXyz*);
+void swflatActorDestruct(fopAc_ac_c*, s32);
+void swflatBrkEntry(SwflatBrk*, J3DModelData*, f32);
+s32 swflatHioCreate(const char*, daObjSwflat_HIO_c*);
+void swflatHioDelete(s32);
+void* swflatHioConstruct(void*);
+void swflatSetCullSphere(fopAc_ac_c*, f32, f32, f32, f32);
+void swflatOrderPotentialEvent(fopAc_ac_c*, u16, u16, u16);
+
+static const char* arc() {
+    return "Hfbot";
 }
-VERIFY(0x02391AC4,set_mtx);
-static void init_mtx(Act_c* a) {
- WWHD_FUNC(0x02391B98,void,a); // Matcher calls this PrmAbstract, but it copies the model scale.
- u32 model=gabi::ea((J3DModel*)a->mpModel);
- f32 y=a->scale.y,x=a->scale.x,z=a->scale.z;
- gabi::store<f32>(model+0xBC,x);gabi::store<f32>(model+0xC0,y);gabi::store<f32>(model+0xC4,z);
- set_mtx(a);
+
+static void invalidateEmitter(SwflatEmitter* emitter) {
+    u32 flags = emitter->mFlags;
+    emitter->mMaxFrame = -1;
+    emitter->mFlags = flags | 1;
 }
-VERIFY(0x02391B98,init_mtx);
-static u32 PrmAbstract(Act_c* a,s32 width,s32 shift) {
- WWHD_FUNC(0x02392864,u32,a,width,shift);
- u32 value=a->mParameters,sh=(u32)shift&63,w=(u32)width&63;
- u32 bits=sh<32?value>>sh:0; return bits&((w<32?1u<<w:0)-1);
-}
-VERIFY(0x02392864,PrmAbstract);
-static BOOL CreateHeap(Act_c* a) {
- WWHD_FUNC(0x023919B8,BOOL,a);
- auto data=dComIfG_getObjectRes(arc(),5,0x1002F84C); if(!data) return FALSE;
- a->mpModel=mDoExt_J3DModel__create((J3DModelData*)data,0,0x11020203);
- auto animation=dComIfG_getObjectRes(arc(),8,0x1002F84C); if(!animation) return FALSE;
- u32 brk=gabi::call<u32>(0x025E80D0,0);a->mpBrk=brk;if(!brk) return FALSE;
- BOOL result=gabi::call<BOOL>(0x025E8154,gabi::at<void>(brk),data,animation,1,0,1.0f,0,-1,0,0);
- return a->mpModel!=nullptr&&result!=0;
-}
-VERIFY(0x023919B8,CreateHeap);
-static s32 Mthd_Create(Act_c* a) {
- WWHD_FUNC(0x023917A0,s32,a);
- u32 condition=a->actor_condition;
- if(!(condition&8)) {
- if(a) {
- dBgS_MoveBgActor::ct(a); a->__vtbl=0x1002F930;
- gabi::call(0x0200BD2C,a->mStts);
- gabi::call(0x02515DA0,gabi::at<u8>(gabi::ea(a)+0x40C));
- gabi::store<u32>(gabi::ea(a)+0x408,0x1004AE88);gabi::store<u32>(gabi::ea(a)+0x40C,0x1004AEC0);
- gabi::call(0x02515FB8,a->mCyl);
- gabi::store<u32>(gabi::ea(a)+0x540,0x100015A8);gabi::store<u32>(gabi::ea(a)+0x53C,0x1002F864);
- gabi::call(0x02018590,gabi::at<u8>(gabi::ea(a)+0x544));
- gabi::store<u32>(gabi::ea(a)+0x468,0x1004B108);gabi::store<u32>(gabi::ea(a)+0x540,0x1004B160);
- condition=a->actor_condition;gabi::store<u32>(gabi::ea(a)+0x558,0x1004B150);
- }
- a->actor_condition=condition|8;
- }
- s32 phase=dComIfG_resLoad(&a->mPhase,arc());
- if(phase==4) {
- phase=gabi::call<s32>(0x024F1D9C,a,arc(),11,0,-1);
- if(phase!=4&&phase!=5) JUT_ASSERT_fail(STR(0x1002F894),0x182,STR(0x1002F8A8));
- }
- return phase;
-}
-VERIFY(0x023917A0,Mthd_Create);
-static void invalidateEmitter(u32 emitter) {
- u32 flags=gabi::load<u32>(emitter+0x254);
- gabi::store<u32>(emitter+0x5C,0xFFFFFFFF);gabi::store<u32>(emitter+0x254,flags|1);
-}
-static BOOL Mthd_Delete(Act_c* a) {
- WWHD_FUNC(0x023918E4,BOOL,a);
- if(a->heap) {
- u32 inactive=a->mpInactiveEmitter;
- if(inactive) { invalidateEmitter(inactive);a->mpInactiveEmitter=0; }
- u32 active=a->mpActiveEmitter;
- if(active) { invalidateEmitter(active);a->mpActiveEmitter=0; }
- }
- s8 child=gabi::load<s8>(HIO);
- if(child>=0) { s32 count=gabi::load<s32>(HIO+4)-1;gabi::store<s32>(HIO+4,count);
- if(!count) { gabi::call(0x025F0A18,child);gabi::store<s8>(HIO,-1); }
- }
- BOOL result=a->MoveBGDelete(); dComIfG_resDelete(&a->mPhase,arc());return result;
-}
-VERIFY(0x023918E4,Mthd_Delete);
-static BOOL Draw(Act_c* a) {
- WWHD_FUNC(0x02392658,BOOL,a);
- settingTevStruct(dKy_getEnvlight(),1,&a->current.pos,&a->tevStr);
- auto env=dKy_getEnvlight();auto model=(J3DModel*)a->mpModel;setLightTevColorType(env,model,&a->tevStr);
- model=a->mpModel;u32 brk=a->mpBrk,data=gabi::load<u32>(gabi::ea(model)+0xAC);f32 frame=gabi::load<f32>(brk+4);
- gabi::call(0x025E83FC,gabi::at<u8>(brk),gabi::at<u8>(data),frame);
- u32 p=play();gabi::store<u32>(0x104B4634,gabi::load<u32>(p+0x5D70));
- p=play();gabi::store<u32>(0x104B4638,gabi::load<u32>(p+0x5D74));
- model=a->mpModel;gabi::call(0x025E2DE0,model,0);
- p=play();gabi::store<u32>(0x104B4634,gabi::load<u32>(p+0x5D78));
- p=play();gabi::store<u32>(0x104B4638,gabi::load<u32>(p+0x5D7C));return TRUE;
-}
-VERIFY(0x02392658,Draw);
-static s32 CreateWrapper(Act_c* a) { WWHD_FUNC(0x02392704,s32,a);return Mthd_Create(a); }
-VERIFY(0x02392704,CreateWrapper);
-static BOOL DeleteWrapper(Act_c* a) { WWHD_FUNC(0x02392708,BOOL,a);return Mthd_Delete(a); }
-VERIFY(0x02392708,DeleteWrapper);
-static BOOL ExecuteWrapper(Act_c* a) { WWHD_FUNC(0x0239270C,BOOL,a);return a->MoveBGExecute(); }
-VERIFY(0x0239270C,ExecuteWrapper);
-static BOOL DrawWrapper(Act_c* a) { WWHD_FUNC(0x02392710,BOOL,a);return a->Draw_v(); }
-VERIFY(0x02392710,DrawWrapper);
-static BOOL IsDeleteWrapper(Act_c* a) { WWHD_FUNC(0x02392720,BOOL,a);return a->IsDelete_v(); }
-VERIFY(0x02392720,IsDeleteWrapper);
-static void sinit() { WWHD_FUNC(0x02392730,void,(u32)0);sinit_header_statics(0x1046BF30,0x101CCDB0);gabi::call(0x02391724,gabi::at<u8>(HIO)); }
-VERIFY(0x02392730,sinit);
-static void trivialDestructor(void* a,s32 flags) { WWHD_FUNC(0x023927D0,void,a,flags);if(a&&(flags&1)) operator_delete(a); }
-VERIFY(0x023927D0,trivialDestructor);
-static void emptyVirtual(void* a) { WWHD_FUNC(0x023927E4,void,a); }
-VERIFY(0x023927E4,emptyVirtual);
-static BOOL Delete(Act_c* a) { WWHD_FUNC(0x023927E8,BOOL,a);return TRUE; }
-VERIFY(0x023927E8,Delete);
-static BOOL IsDelete(Act_c* a) { WWHD_FUNC(0x023927F0,BOOL,a);return TRUE; }
-VERIFY(0x023927F0,IsDelete);
-static void destructor(Act_c* a,s32 flags) {
- WWHD_FUNC(0x023927F8,void,a,flags);
- if(a) { gabi::call(0x02515A70,a->mCyl,2);gabi::call(0x02515860,a->mStts,2);gabi::call(0x025D50BC,a,0);if(flags&1) operator_delete(a); }
-}
-VERIFY(0x023927F8,destructor);
-static void* HIOConstructor(void* a) {
- WWHD_FUNC(0x02391724,void*,a);
- if(!a) { a=gabi::call<void*>(0x0273AD10,0x1C);if(!a) return a; }
- u32 p=gabi::ea(a);gabi::store<f32>(p+8,10.0f);gabi::store<u32>(p+4,0);
- gabi::store<s16>(p+0x10,30);gabi::store<u32>(p+0x18,0x1002F874);
- gabi::store<s16>(p+0x12,30);gabi::store<s8>(p,-1);gabi::store<u8>(p+0x15,0);gabi::store<u8>(p+0x14,0);gabi::store<f32>(p+0xC,20.0f);return a;
-}
-VERIFY(0x02391724,HIOConstructor);
-static BOOL isSwitch(Act_c* a,u8 sw) {
- u32 save=gabi::load<u32>(0x101F84DC);s8 room=a->home.roomNo;
- return gabi::call<BOOL>(0x025BA0C0,gabi::at<u8>(save+0x20),sw,room);
+
+// HD: capture the save pointer before the room load; onSwitch uses the reverse order.
+static BOOL isSwitch(Act_c* a, u8 sw) {
+    dSv_info_c* save = dComIfGs_info();
+    s8 room = a->home.roomNo;
+    return save->isSwitch(sw, room);
 }
 static void onSwitch(Act_c* a) {
- s8 room=a->home.roomNo;u32 save=gabi::load<u32>(0x101F84DC);u8 sw=a->mSwitch;
- gabi::call(0x025B9E38,gabi::at<u8>(save+0x20),sw,room);
+    s8 room = a->home.roomNo;
+    dSv_info_c* save = dComIfGs_info();
+    u8 sw = a->mSwitch;
+    save->onSwitch(sw, room);
 }
-static void offSwitch(Act_c* a,u8 sw) {
- u32 save=gabi::load<u32>(0x101F84DC);s8 room=a->home.roomNo;
- gabi::call(0x025B9F7C,gabi::at<u8>(save+0x20),sw,room);
+static void offSwitch(Act_c* a, u8 sw) {
+    dSv_info_c* save = dComIfGs_info();
+    s8 room = a->home.roomNo;
+    save->offSwitch(sw, room);
 }
-static u32 spawnEmitter(Act_c* a,u16 id) {
- u32 p=play();u32 particles=gabi::load<u32>(p+0x5AB0);
- return gabi::call<u32>(0x025A847C,gabi::at<u8>(particles),0,id,&a->mEffectPos,&a->shape_angle,0,255,0,-1,0,0,0);
+static SwflatEmitter* spawnEmitter(Act_c* a, u16 id) {
+    return reinterpret_cast<SwflatEmitter*>(
+        dComIfGp_particle_set(id, &a->mEffectPos, &a->shape_angle));
 }
-static BOOL Create(Act_c* a) {
- WWHD_FUNC(0x02391BB8,BOOL,a);
- auto model=(J3DModel*)a->mpModel;a->cullMtx=model?gabi::ea(model)+0xC8:0;
- init_mtx(a);gabi::call(0x025D6768,a,0.0f,0.0f,0.0f,90.0f);
- gabi::call(0x02515F14,a->mStts,255,255,a);
- gabi::call(0x02516518,a->mCyl,gabi::at<u8>(0x101CCD6C));
- gabi::store<u32>(gabi::ea(a)+0x470,gabi::ea(a)+0x3F0);
- a->mType=PrmAbstract(a,2,0);a->mSwitch=PrmAbstract(a,8,8);a->mSwitch2=PrmAbstract(a,8,16);
- u32 brk=a->mpBrk;a->mFrame=0;s16 end=gabi::load<s16>(brk+0xA);
- // GHS copies position with integer words and takes the low signed half of fctiwz.
- u32 x=gabi::load<u32>(gabi::ea(a)+0x314),y=gabi::load<u32>(gabi::ea(a)+0x318),z=gabi::load<u32>(gabi::ea(a)+0x31C);
- gabi::store<u32>(gabi::ea(a)+0x564,x);gabi::store<u32>(gabi::ea(a)+0x568,y);gabi::store<u32>(gabi::ea(a)+0x56C,z);
- a->mLocked=0;a->mPressEndFrame=(s16)gabi::ftoi((f32)end-5.0f);
- if(gabi::load<u8>(HIO+0x15)==1) {
- u8 sw=a->mSwitch;if(sw!=255) offSwitch(a,sw);
- sw=a->mSwitch2;if(sw!=255) offSwitch(a,sw);
- }
- u8 type=a->mType,cachedSw=a->mSwitch;BOOL active;
- if(type==2&&isSwitch(a,a->mSwitch2)) { a->mType=0;active=isSwitch(a,a->mSwitch2); }
- else { if(type==2) a->mType=1;active=isSwitch(a,cachedSw); }
- if(active) {
- a->mWasPressed=1;a->mPressed=1;
- if(a->mType!=0) {
- a->mpActiveEmitter=spawnEmitter(a,0x8164);
- a->mInactiveAlpha=0;a->mActiveAlpha=250;a->mEventTimer=0;a->mEventState=0;a->mLockTimer=0;a->mpInactiveEmitter=0;
- } else {
- a->mActiveAlpha=0;a->mLocked=1;a->mpActiveEmitter=0;
- brk=a->mpBrk;gabi::store<f32>(brk+4,(f32)gabi::load<s16>(brk+0xA));
- a->mpInactiveEmitter=0;a->mInactiveAlpha=0;a->mEventState=0;a->mEventTimer=0;a->mLockTimer=0;
- }
- } else {
- a->mWasPressed=0;a->mPressed=0;
- a->mpInactiveEmitter=spawnEmitter(a,0x8163);
- a->mActiveAlpha=0;a->mInactiveAlpha=250;a->mEventTimer=0;a->mEventState=0;a->mLockTimer=0;a->mpActiveEmitter=0;
- }
- if(gabi::load<s8>(HIO)<0) { s32 child=gabi::call<s32>(0x025F0A10,STR(0x1002F904),gabi::at<u8>(HIO));gabi::store<s8>(HIO,child); }
- s32 count=gabi::load<s32>(HIO+4);gabi::store<s32>(HIO+4,count+1);return TRUE;
+
+static void setFrame(Act_c* a, s16 frame) {
+    SwflatBrk* brk = a->mpBrk;
+    a->mFrame = frame;
+    brk->mFrameCtrl.mFrame = (f32)frame;
 }
-VERIFY(0x02391BB8,Create);
-static void setFrame(Act_c* a,s16 frame) { u32 brk=a->mpBrk;a->mFrame=frame;gabi::store<f32>(brk+4,(f32)frame); }
-static void setEmitterAlpha(u32 emitter,u8 alpha) { gabi::store<u8>(emitter+0x247,alpha); }
-static BOOL Execute(Act_c* a,Mtx34** output) {
- WWHD_FUNC(0x02391F58,BOOL,a,output);
- BOOL statue=FALSE,contact=FALSE,spawned=FALSE;
- gabi::call(0x020182E0,gabi::at<u8>(gabi::ea(a)+0x544),&a->current.pos);
- if(gabi::load<u8>(HIO+0x14)) {
- gabi::call(0x020184DC,gabi::at<u8>(gabi::ea(a)+0x544),gabi::load<f32>(HIO+8));
- gabi::call(0x02018428,gabi::at<u8>(gabi::ea(a)+0x544),gabi::load<f32>(HIO+12));
- }
- u32 p=play();gabi::call(0x0200E240,gabi::at<u8>(p+0x26A4),a->mCyl);
- if(gabi::call<BOOL>(0x02516464,a->mCyl)) {
- u32 actor=gabi::call<u32>(0x02515BBC,gabi::at<u8>(gabi::ea(a)+0x508));
- if(actor&&(gabi::load<u32>(actor+0x2E0)&0x400)) {
- contact=TRUE;
- if(gabi::load<s16>(actor+0xE)==0xA8) statue=TRUE;
- else if(gabi::load<s16>(actor+0xE)==0x1C5) gabi::store<u8>(actor+0x79E,1);
- }
- }
- if(a->mEventTimer==0) {
- if(contact) { a->mPressed=1;gabi::call(0x020184DC,gabi::at<u8>(gabi::ea(a)+0x544),15.0f); }
- else if(a->mType==1) { a->mPressed=0;gabi::call(0x020184DC,gabi::at<u8>(gabi::ea(a)+0x544),10.0f); }
- }
- if(PrmAbstract(a,2,0)==2&&isSwitch(a,a->mSwitch2)) {
- u8 locked=a->mLocked;a->mType=0;
- if(!locked) { a->mLocked=1;a->mLockTimer=gabi::load<s16>(HIO+0x12); }
- }
- if(a->mPressed==1) {
- if(!a->mWasPressed) gabi::call(0x025E19CC,0x6960,&a->current.pos);
- if(!a->mLocked) gabi::call(0x025E19CC,0x7027,&a->current.pos);
- s16 frame=a->mFrame,end=a->mPressEndFrame;if(frame<end) setFrame(a,(s16)(frame+1));
- if(!statue) onSwitch(a);
- if(!a->mLocked) {
- if(!a->mpActiveEmitter) {
- a->mpActiveEmitter=spawnEmitter(a,0x8164);a->mActiveAlpha=250;spawned=TRUE;
- if(PrmAbstract(a,2,0)==0) { a->mLocked=1;a->mLockTimer=gabi::load<s16>(HIO+0x12); }
- } else if(a->mActiveAlpha<250) {
- u8 alpha=(u8)a->mActiveAlpha+25;a->mActiveAlpha=alpha;setEmitterAlpha(a->mpActiveEmitter,alpha);onSwitch(a);
- }
- }
- if(a->mpInactiveEmitter) {
- u8 alpha=(u8)a->mInactiveAlpha-25;a->mInactiveAlpha=alpha;setEmitterAlpha(a->mpInactiveEmitter,alpha);
- if(a->mInactiveAlpha==0) { invalidateEmitter(a->mpInactiveEmitter);a->mpInactiveEmitter=0; }
- }
- } else {
- s16 frame=a->mFrame;if(frame>0) setFrame(a,(s16)(frame-1));
- offSwitch(a,a->mSwitch);
- if(!a->mpInactiveEmitter) { a->mpInactiveEmitter=spawnEmitter(a,0x8163);a->mInactiveAlpha=250; }
- else if(a->mInactiveAlpha<250) { u8 alpha=(u8)a->mInactiveAlpha+25;a->mInactiveAlpha=alpha;setEmitterAlpha(a->mpInactiveEmitter,alpha); }
- if(a->mpActiveEmitter) {
- u8 alpha=(u8)a->mActiveAlpha-25;a->mActiveAlpha=alpha;setEmitterAlpha(a->mpActiveEmitter,alpha);
- if(a->mActiveAlpha==0) { invalidateEmitter(a->mpActiveEmitter);a->mpActiveEmitter=0; }
- }
- }
- switch((u8)a->mEventState) {
- case 0:
- a->mEventTimer=0;
- if(spawned&&statue) { a->mEventState=1;a->mEventTimer=30; } break;
- case 1:
- if(gabi::load<u16>(gabi::ea(a)+0xF8)==2) {
- a->mEventState=2;
- if(gabi::load<u8>(HIO+0x14)) a->mEventTimer=gabi::load<s16>(HIO+0x10);
- } else { gabi::call(0x025D7B24,a,1,0,0);u16 condition=gabi::load<u16>(gabi::ea(a)+0xFA);gabi::store<u16>(gabi::ea(a)+0xFA,condition|2); }
- break;
- case 2: {
- s16 timer=(s16)a->mEventTimer-1;a->mEventTimer=timer;
- if(timer<=1) { p=play();gabi::store<u16>(p+0x52B8,gabi::load<u16>(p+0x52B8)|8);a->mEventState=0;onSwitch(a); } break;
- }
- }
- if(a->mLocked) {
- a->mPressed=1;
- s16 lockTimer=a->mLockTimer;
- if(lockTimer!=0) { a->mLockTimer=lockTimer-1;set_mtx(a);gabi::store<u32>(gabi::ea(output),MTX);a->mWasPressed=a->mPressed;return TRUE; }
- if(a->mpActiveEmitter) {
- u8 alpha=(u8)a->mActiveAlpha-25;a->mActiveAlpha=alpha;setEmitterAlpha(a->mpActiveEmitter,alpha);
- if(a->mActiveAlpha==0) { invalidateEmitter(a->mpActiveEmitter);a->mpActiveEmitter=0; }
- }
- if(a->mpInactiveEmitter) {
- u8 alpha=(u8)a->mInactiveAlpha-25;a->mInactiveAlpha=alpha;setEmitterAlpha(a->mpInactiveEmitter,alpha);
- if(a->mInactiveAlpha==0) { invalidateEmitter(a->mpInactiveEmitter);a->mpInactiveEmitter=0; }
- }
- s16 end=a->mPressEndFrame,frame=a->mFrame;
- if((s32)frame<(s32)end+5) setFrame(a,(s16)(frame+1));
- }
- set_mtx(a);gabi::store<u32>(gabi::ea(output),MTX);a->mWasPressed=a->mPressed;return TRUE;
+static void setEmitterAlpha(SwflatEmitter* emitter, u8 alpha) {
+    emitter->mAlpha = alpha;
 }
-VERIFY(0x02391F58,Execute);
+
+/* 02391724 */
+static void* daObjSwflat_HIO_c__ct(void* a) {
+    if (!a) {
+        a = operator_new(sizeof(daObjSwflat_HIO_c));
+        if (!a)
+            return a;
+    }
+    auto hio = static_cast<daObjSwflat_HIO_c*>(a);
+    hio->mRadius = 10.0f;
+    hio->mCount = 0;
+    hio->mEventTime = 30;
+    hio->__vtbl = HIO_VTBL;
+    hio->mLockTime = 30;
+    hio->mNo = -1;
+    hio->mbResetSwitch = 0;
+    hio->mbDebug = 0;
+    hio->mHeight = 20.0f;
+    return a;
+}
+
+/* 023919B8 */
+BOOL daObjSwflat::Act_c::CreateHeap() {
+    auto data = dComIfG_getObjectRes(arc(), dRes_INDEX_HFBOT_BDL_HFBOT_e, SAFE_STRING_VTBL);
+    if (!data)
+        return FALSE;
+    mpModel = mDoExt_J3DModel__create((J3DModelData*)data, 0, 0x11020203);
+    auto animation = dComIfG_getObjectRes(arc(), dRes_INDEX_HFBOT_BRK_HFBOT_e, SAFE_STRING_VTBL);
+    if (!animation)
+        return FALSE;
+    SwflatBrk* brk = swflatBrkConstruct(nullptr);
+    mpBrk = brk;
+    if (!brk)
+        return FALSE;
+    BOOL result = swflatBrkInit(brk, data, animation, 1, 0, 1.0f, 0, -1, 0, 0);
+    return mpModel != nullptr && result != 0;
+}
+
+/* 02391BB8 */
+BOOL daObjSwflat::Act_c::Create() {
+    auto model = (J3DModel*)mpModel;
+    cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    init_mtx();
+    swflatSetCullSphere(this, 0.0f, 0.0f, 0.0f, 90.0f);
+    mStts.Init(255, 255, this);
+    mCyl.Set(&l_cyl_src);
+    mCyl.SetStts(&mStts);
+    mType = PrmAbstract(this, 2, 0);
+    mSwitch = PrmAbstract(this, 8, 8);
+    mSwitch2 = PrmAbstract(this, 8, 16);
+    SwflatBrk* brk = mpBrk;
+    mFrame = 0;
+    s16 end = brk->mFrameCtrl.mEnd;
+    // HD: copy all position words before stores; retain the low signed half of fctiwz.
+    auto from = reinterpret_cast<SwflatPositionWords*>(&current.pos);
+    auto to = reinterpret_cast<SwflatPositionWords*>(&mEffectPos);
+    u32 x = from->x, y = from->y, z = from->z;
+    to->x = x;
+    to->y = y;
+    to->z = z;
+    mLocked = 0;
+    mPressEndFrame = (s16)gabi::ftoi((f32)end - 5.0f);
+    if (l_HIO.mbResetSwitch == 1) {
+        u8 sw = mSwitch;
+        if (sw != 255)
+            offSwitch(this, sw);
+        sw = mSwitch2;
+        if (sw != 255)
+            offSwitch(this, sw);
+    }
+    u8 type = mType, cachedSw = mSwitch;
+    BOOL active;
+    if (type == 2 && isSwitch(this, mSwitch2)) {
+        mType = 0;
+        active = isSwitch(this, mSwitch2);
+    } else {
+        if (type == 2)
+            mType = 1;
+        active = isSwitch(this, cachedSw);
+    }
+    if (active) {
+        mWasPressed = 1;
+        mPressed = 1;
+        if (mType != 0) {
+            mpActiveEmitter = spawnEmitter(this, ID_ACTIVE);
+            mInactiveAlpha = 0;
+            mActiveAlpha = 250;
+            mEventTimer = 0;
+            mEventState = EVENT_WAIT;
+            mLockTimer = 0;
+            mpInactiveEmitter = 0;
+        } else {
+            mActiveAlpha = 0;
+            mLocked = 1;
+            mpActiveEmitter = 0;
+            brk = mpBrk;
+            brk->mFrameCtrl.mFrame = (f32)brk->mFrameCtrl.mEnd;
+            mpInactiveEmitter = 0;
+            mInactiveAlpha = 0;
+            mEventState = EVENT_WAIT;
+            mEventTimer = 0;
+            mLockTimer = 0;
+        }
+    } else {
+        mWasPressed = 0;
+        mPressed = 0;
+        mpInactiveEmitter = spawnEmitter(this, ID_INACTIVE);
+        mActiveAlpha = 0;
+        mInactiveAlpha = 250;
+        mEventTimer = 0;
+        mEventState = EVENT_WAIT;
+        mLockTimer = 0;
+        mpActiveEmitter = 0;
+    }
+    // HD: HIO uses the Shift-JIS label フラットスイッチ; glue maps the readable spelling.
+    if (l_HIO.mNo < 0) {
+        s32 child = swflatHioCreate("Flat switch", &l_HIO);
+        l_HIO.mNo = child;
+    }
+    s32 count = l_HIO.mCount;
+    l_HIO.mCount = count + 1;
+    return TRUE;
+}
+
+/* 023917A0 */
+s32 daObjSwflat::Act_c::Mthd_Create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            dBgS_MoveBgActor::ct(this);
+            __vtbl = ACT_VTBL;
+            swflatStatusBaseConstruct(&mStts);
+            swflatGStatusConstruct(&mStts.__vtbl_gstts);
+            mStts.__vtbl = DCCD_STTS_VTBL;
+            mStts.__vtbl_gstts = DCCD_GSTTS_VTBL;
+            swflatGObjConstruct(&mCyl);
+            auto shape = reinterpret_cast<SwflatShapeView*>(&mCyl);
+            shape->__vtbl = SHAPE_BASE_VTBL;
+            shape->mAabVtable = AAB_VTBL;
+            swflatCylinderConstruct(&mCyl.mCyl);
+            mCyl.__vtbl_hitinf = DCCD_HITINF_VTBL;
+            shape->__vtbl = DCCD_SHAPE_VTBL;
+            condition = actor_condition;
+            mCyl.mCyl.__vtbl = DCCD_CYL_VTBL;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
+    }
+    s32 phase = dComIfG_resLoad(&mPhase, arc());
+    if (phase == cPhs_COMPLEATE_e) {
+        phase = MoveBGCreate(arc(), dRes_INDEX_HFBOT_DZB_HFBOT_e, 0, -1);
+        if (phase != cPhs_COMPLEATE_e && phase != cPhs_ERROR_e)
+            JUT_ASSERT_fail("d_a_obj_swflat.cpp", 0x182,
+                            "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
+    }
+    return phase;
+}
+
+/* 023927E8 */
+BOOL daObjSwflat::Act_c::Delete() {
+    return TRUE;
+}
+
+/* 023918E4 */
+BOOL daObjSwflat::Act_c::Mthd_Delete() {
+    if (heap) {
+        SwflatEmitter* inactive = mpInactiveEmitter;
+        if (inactive) {
+            invalidateEmitter(inactive);
+            mpInactiveEmitter = 0;
+        }
+        SwflatEmitter* active = mpActiveEmitter;
+        if (active) {
+            invalidateEmitter(active);
+            mpActiveEmitter = 0;
+        }
+    }
+    s8 child = l_HIO.mNo;
+    if (child >= 0) {
+        s32 count = l_HIO.mCount - 1;
+        l_HIO.mCount = count;
+        if (!count) {
+            swflatHioDelete(child);
+            l_HIO.mNo = -1;
+        }
+    }
+    BOOL result = MoveBGDelete();
+    dComIfG_resDelete(&mPhase, arc());
+    return result;
+}
+
+/* 02391AC4 */
+void daObjSwflat::Act_c::set_mtx() {
+    auto stackMtx = mDoMtx_stack_c::get();
+    f32 x = current.pos.x, z = current.pos.z, y = current.pos.y;
+    PSMTXTrans(stackMtx, x, y, z);
+    s16 rx = shape_angle.x, rz = shape_angle.z, ry = shape_angle.y;
+    mDoMtx_ZXYrotM(stackMtx, rx, ry, rz);
+    // HD: retain float loads of all twelve entries before the model stores.
+    f32 values[12];
+    for (u32 i = 0; i < 12; i++)
+        values[i] = stackMtx->m[i / 4][i % 4];
+    J3DModel* model = mpModel;
+    for (u32 i = 0; i < 12; i++)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    PSMTXCopy(stackMtx, &mtx);
+}
+
+/* 02391B98 */
+void daObjSwflat::Act_c::init_mtx() {
+    // HD: the matcher labels this function PrmAbstract; it initializes model scale.
+    J3DModel* model = mpModel;
+    f32 y = scale.y, x = scale.x, z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    set_mtx();
+}
+
+/* 02391F58 */
+BOOL daObjSwflat::Act_c::Execute(Mtx34** output) {
+    BOOL statue = FALSE, contact = FALSE, spawned = FALSE;
+    mCyl.mCyl.SetC(&current.pos);
+    if (l_HIO.mbDebug) {
+        mCyl.mCyl.SetR(l_HIO.mRadius);
+        mCyl.mCyl.SetH(l_HIO.mHeight);
+    }
+    dComIfG_Ccsp_Set(&mCyl);
+    if (mCyl.ChkCoHit()) {
+        auto actor = reinterpret_cast<SwflatContactView*>(mCyl.GetCoHitAc());
+        if (actor && (actor->actor_status & CONTACT_SWITCH_WEIGHT)) {
+            contact = TRUE;
+            if (actor->mProfName == PLAYER_PROFILE)
+                statue = TRUE;
+            else if (actor->mProfName == fpcNm_TSUBO_e)
+                actor->mPressed = 1;
+        }
+    }
+    if (mEventTimer == 0) {
+        if (contact) {
+            mPressed = 1;
+            mCyl.mCyl.SetR(15.0f);
+        } else if (mType == 1) {
+            mPressed = 0;
+            mCyl.mCyl.SetR(10.0f);
+        }
+    }
+    if (PrmAbstract(this, 2, 0) == 2 && isSwitch(this, mSwitch2)) {
+        u8 locked = mLocked;
+        mType = 0;
+        if (!locked) {
+            mLocked = 1;
+            mLockTimer = l_HIO.mLockTime;
+        }
+    }
+    if (mPressed == 1) {
+        if (!mWasPressed)
+            swflatSeStart(JA_SE_SWITCH_PRESS, &current.pos);
+        if (!mLocked)
+            swflatSeStart(JA_SE_SWITCH_ACTIVE, &current.pos);
+        s16 frame = mFrame, end = mPressEndFrame;
+        if (frame < end)
+            setFrame(this, (s16)(frame + 1));
+        if (!statue)
+            onSwitch(this);
+        if (!mLocked) {
+            if (!mpActiveEmitter) {
+                mpActiveEmitter = spawnEmitter(this, ID_ACTIVE);
+                mActiveAlpha = 250;
+                spawned = TRUE;
+                if (PrmAbstract(this, 2, 0) == 0) {
+                    mLocked = 1;
+                    mLockTimer = l_HIO.mLockTime;
+                }
+            } else if (mActiveAlpha < 250) {
+                u8 alpha = (u8)mActiveAlpha + 25;
+                mActiveAlpha = alpha;
+                setEmitterAlpha(mpActiveEmitter, alpha);
+                onSwitch(this);
+            }
+        }
+        if (mpInactiveEmitter) {
+            u8 alpha = (u8)mInactiveAlpha - 25;
+            mInactiveAlpha = alpha;
+            setEmitterAlpha(mpInactiveEmitter, alpha);
+            if (mInactiveAlpha == 0) {
+                invalidateEmitter(mpInactiveEmitter);
+                mpInactiveEmitter = 0;
+            }
+        }
+    } else {
+        s16 frame = mFrame;
+        if (frame > 0)
+            setFrame(this, (s16)(frame - 1));
+        offSwitch(this, mSwitch);
+        if (!mpInactiveEmitter) {
+            mpInactiveEmitter = spawnEmitter(this, ID_INACTIVE);
+            mInactiveAlpha = 250;
+        } else if (mInactiveAlpha < 250) {
+            u8 alpha = (u8)mInactiveAlpha + 25;
+            mInactiveAlpha = alpha;
+            setEmitterAlpha(mpInactiveEmitter, alpha);
+        }
+        if (mpActiveEmitter) {
+            u8 alpha = (u8)mActiveAlpha - 25;
+            mActiveAlpha = alpha;
+            setEmitterAlpha(mpActiveEmitter, alpha);
+            if (mActiveAlpha == 0) {
+                invalidateEmitter(mpActiveEmitter);
+                mpActiveEmitter = 0;
+            }
+        }
+    }
+    switch ((u8)mEventState) {
+    case EVENT_WAIT:
+        mEventTimer = 0;
+        if (spawned && statue) {
+            mEventState = EVENT_ORDER;
+            mEventTimer = 30;
+        }
+        break;
+    case EVENT_ORDER:
+        if (eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+            mEventState = EVENT_RUN;
+            if (l_HIO.mbDebug)
+                mEventTimer = l_HIO.mEventTime;
+        } else {
+            swflatOrderPotentialEvent(this, 1, 0, 0);
+            eventInfo.onCondition(2);
+        }
+        break;
+    case EVENT_RUN: {
+        s16 timer = (s16)mEventTimer - 1;
+        mEventTimer = timer;
+        if (timer <= 1) {
+            dComIfGp_event_reset();
+            mEventState = EVENT_WAIT;
+            onSwitch(this);
+        }
+        break;
+    }
+    }
+    if (mLocked) {
+        mPressed = 1;
+        s16 lockTimer = mLockTimer;
+        if (lockTimer != 0) {
+            mLockTimer = lockTimer - 1;
+            set_mtx();
+            // HD: the output slot holds a four-byte guest pointer.
+            *reinterpret_cast<gptr<Mtx34>*>(output) = &mtx;
+            mWasPressed = mPressed;
+            return TRUE;
+        }
+        if (mpActiveEmitter) {
+            u8 alpha = (u8)mActiveAlpha - 25;
+            mActiveAlpha = alpha;
+            setEmitterAlpha(mpActiveEmitter, alpha);
+            if (mActiveAlpha == 0) {
+                invalidateEmitter(mpActiveEmitter);
+                mpActiveEmitter = 0;
+            }
+        }
+        if (mpInactiveEmitter) {
+            u8 alpha = (u8)mInactiveAlpha - 25;
+            mInactiveAlpha = alpha;
+            setEmitterAlpha(mpInactiveEmitter, alpha);
+            if (mInactiveAlpha == 0) {
+                invalidateEmitter(mpInactiveEmitter);
+                mpInactiveEmitter = 0;
+            }
+        }
+        s16 end = mPressEndFrame, frame = mFrame;
+        if ((s32)frame < (s32)end + 5)
+            setFrame(this, (s16)(frame + 1));
+    }
+    set_mtx();
+    *reinterpret_cast<gptr<Mtx34>*>(output) = &mtx;
+    mWasPressed = mPressed;
+    return TRUE;
+}
+
+/* 02392658 */
+BOOL daObjSwflat::Act_c::Draw() {
+    settingTevStruct(dKy_getEnvlight(), 1, &current.pos, &tevStr);
+    auto env = dKy_getEnvlight();
+    auto model = (J3DModel*)mpModel;
+    setLightTevColorType(env, model, &tevStr);
+    model = mpModel;
+    SwflatBrk* brk = mpBrk;
+    J3DModelData* data = model->mModelData;
+    f32 frame = brk->mFrameCtrl.mFrame;
+    swflatBrkEntry(brk, data, frame);
+    dComIfGd_setListBG();
+    model = mpModel;
+    mDoExt_modelUpdateDL(model);
+    dComIfGd_setList();
+    return TRUE;
+}
+
+/* 023927F0 */
+BOOL daObjSwflat::Act_c::IsDelete() {
+    return TRUE;
+}
+
+/* 02392704 */
+static s32 Mthd_Create(Act_c* a) {
+    return a->Mthd_Create();
+}
+
+/* 02392708 */
+static BOOL Mthd_Delete(Act_c* a) {
+    return a->Mthd_Delete();
+}
+
+/* 0239270C */
+static BOOL Mthd_Execute(Act_c* a) {
+    return a->MoveBGExecute();
+}
+
+/* 02392710 */
+static BOOL Mthd_Draw(Act_c* a) {
+    return a->Draw_v();
+}
+
+/* 02392720 */
+static BOOL Mthd_IsDelete(Act_c* a) {
+    return a->IsDelete_v();
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02392730 */
+static void __sinit_d_a_obj_swflat_cpp() {
+    sinit_header_statics(0x1046BF30, 0x101CCDB0);
+    swflatHioConstruct(&l_HIO);
+}
+
+/* 023927D0 */
+static void trivialDestructor(void* a, s32 flags) {
+    if (a && (flags & 1))
+        operator_delete(a);
+}
+
+/* 023927E4 */
+static void emptyVirtual(void* a) {
+}
+
+/* 023927F8 */
+static void destructor(Act_c* a, s32 flags) {
+    if (a) {
+        dCcD_Cyl_dt(&a->mCyl, 2);
+        dCcD_Stts_dt(&a->mStts, 2);
+        swflatActorDestruct(a, 0);
+        if (flags & 1)
+            operator_delete(a);
+    }
+}
+
+/* 02392864 */
+static u32 PrmAbstract(Act_c* a, s32 width, s32 shift) {
+    u32 value = a->mParameters, sh = (u32)shift & 63, w = (u32)width & 63;
+    u32 bits = sh < 32 ? value >> sh : 0;
+    return bits & ((w < 32 ? 1u << w : 0) - 1);
+}
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+data l_HIO 1046BF4C
+data mtx 1046BF68
+data l_cyl_src 101CCD6C
+str 1002F928
+str 1002F894
+str 1002F8A8
+str 1002F904 "Flat switch" renamed
+ext 025E80D0 SwflatBrk *swflatBrkConstruct(SwflatBrk *)
+ext 025E8154 BOOL swflatBrkInit(SwflatBrk *, void *, void *, s32, s32, f32, s32, s32, s32, s32)
+ext 0200BD2C void swflatStatusBaseConstruct(dCcD_Stts *)
+ext 02515DA0 void swflatGStatusConstruct(be<u32> *)
+ext 02515FB8 void swflatGObjConstruct(dCcD_Cyl *)
+ext 02018590 void swflatCylinderConstruct(cM3dGCyl *)
+
+ext 025E19CC void swflatSeStart(u32, cXyz *)
+ext 025D50BC void swflatActorDestruct(fopAc_ac_c *, s32)
+ext 025E83FC void swflatBrkEntry(SwflatBrk *, J3DModelData *, f32)
+ext 025F0A10 s32 swflatHioCreate(const char *, daObjSwflat_HIO_c *)
+ext 025F0A18 void swflatHioDelete(s32)
+ext 02391724 void *swflatHioConstruct(void *)
+ext 025D6768 void swflatSetCullSphere(fopAc_ac_c*,f32,f32,f32,f32)
+ext 025D7B24 void swflatOrderPotentialEvent(fopAc_ac_c*,u16,u16,u16)
+*/
+// clang-format on

@@ -1,307 +1,248 @@
-/* hd_ui_020032F4: five HD UI TUs (no GameCube source).
- *
- * 020032F4..0200349F: an 8-byte list visitor (vtable 10000560): visit every element of a pointer array
- *                     {count +0, data +8} through virtual +0x1C; __sinit 02003404
- * 020034A0..020037CF: a named animation entry (0x3C: owner +0, rate +4, FixedSafeString<32> name +8,
- *                     frame controller +0x34, vtable 100005F8 at +0x38) and its play/stop/isStopped helpers;
- *                     __sinit 020036D0 (+ deleting-dtor / SafeString companions)
- * 020037D0..0200393B: a 0xB0 NW4F-lyt-derived object (02874894 / 02874918, vtable 10000610); __sinit 020038A8
- * 0200393C..02003AEB: a lyt adaptor (8 bytes, vtable 100006C8, target +4) with its sead RTTI static;
- *                     __sinit 02003A44
- * 02003AEC..02003C57: a 0xD8 NW4F-lyt-derived object (02878F9C / 02879474, vtable 100006F8); __sinit 02003BC4
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD list visitor, named animation entries and layout companions. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_ui_020032F4.h"
+static hdUiVisitorTable sVisitorTable;
+static hdUiStringTable sBaseStringTable;
+static hdUiStringTable sBufferedStringTable;
+static hdUiStringTable sFixedStringTable;
+static f32 sInitialRate;
+static f32 sStoppedFrame;
+static u32 sAdaptorTypeInitialized;
+static u32 sAdaptorParentInitialized;
+static u32 sAdaptorRootInitialized;
+static hdUiAdaptorType sAdaptorType;
+static hdUiAdaptorType sAdaptorParent;
+static hdUiAdaptorType sAdaptorRoot;
 
-namespace hd_ui_020032F4 {
-
-static u32 Visitor_ct(u32 self) {
-    WWHD_FUNC(0x020032F4, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(8);
-        if (t == 0) return 0;
+/* 020032F4 */
+static hdUiVisitor* constructVisitor(hdUiVisitor* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdUiVisitor*)operator_new(sizeof(hdUiVisitor));
+        if (i_this == NULL) return NULL;
     }
-    st(t + 0, 0);
-    st(t + 4, 0x10000560);
-    return t;
+    i_this->field_0x0 = 0;
+    i_this->mVtable = &sVisitorTable;
+    return i_this;
 }
-VERIFY(0x020032F4, Visitor_ct);
-
-static void Visitor_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0200333C, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0200333C */
+static void destroyVisitor(hdUiVisitor* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0200333C, Visitor_dt);
-
-/* 02003350: visit all elements of LIST {count +0, data +8}; stops (false) at the first refusal */
-static u32 Visitor_visitAll(u32 self, u32 list) {
-    WWHD_FUNC(0x02003350, u32, self, list);
-    u32 p = ld(list + 8);
-    u32 end = p + ld(list + 0) * 4;
-    while (p != end) {
-        u32 fn = vfn(self, 4, 0x1C);
-        if (gabi::call_ptr<u32>(fn, self, ld(p)) == 0) return 0;
-        p += 4;
-        end = ld(list + 8) + ld(list + 0) * 4;
+/* 02003350 */
+static u32 visitAll(hdUiVisitor* i_this, hdUiVisitorList* list) {
+    gptr<void>* element = list->mElements;
+    u32 end = gabi::ea(element) + (u32)list->mCount * sizeof(gptr<void>);
+    while (gabi::ea(element) != end) {
+        if (i_this->visit(*element) == 0) return 0;
+        element = hdUiEntryAdvanceElement(element);
+        end = gabi::ea(list->mElements.get()) + (u32)list->mCount * sizeof(gptr<void>);
     }
     return 1;
 }
-VERIFY(0x02003350, Visitor_visitAll);
-
-static void sinit_02003404() {
-    WWHD_FUNC(0x02003404, void);
-    header_sinit(0x101FF1D8, 0x1018C29C, 0x10000558);
+/* 02003404 */
+static void __sinit_hd_ui_visitor_cpp() {
+    sinit_header_statics_rodata(0x101FF1CC, 0x1018C29C, 0x101FF1D8, 0x10000558);
 }
-VERIFY(0x02003404, sinit_02003404);
-
-static u32 Visitor_true() {
-    WWHD_FUNC(0x02003498, u32);
-    return 1;
-}
-VERIFY(0x02003498, Visitor_true);
-
-/* 020034A0: animation entry constructor (owner, name, frame controller) */
-static u32 AnimEntry_ct(u32 self, u32 owner, u32 name, u32 ctrl) {
-    WWHD_FUNC(0x020034A0, u32, self, owner, name, ctrl);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x3C);
-        if (t == 0) return 0;
+/* 02003498 */
+static u32 acceptVisitorElement() { return 1; }
+/* 020034A0 */
+static hdUiAnimationEntry* constructAnimationEntry(hdUiAnimationEntry* i_this, void* owner, hdUiSafeString* name, hdUiFrameController* controller) {
+    if (i_this == NULL) {
+        i_this = (hdUiAnimationEntry*)operator_new(sizeof(hdUiAnimationEntry));
+        if (i_this == NULL) return NULL;
     }
-    st(t + 0, owner);
-    st(t + 0x38, 0x100005F8);
-    stf(t + 4, ldf(0x10000580));
-    u32 s = t + 8;
-    if (s == 0) s = op_new(0x2C);
-    if (s != 0) {
-        /* inline FixedSafeString<32> constructor (its own null check is dead) */
-        st(s + 0, s + 0xC);
-        st(s + 4, 0x100005A0);
-        st(s + 8, 0x20);
-        stb(s + 0x2B, 0);
-        st(s + 4, 0x100005B8);
-        /* copy(name) */
-        u32 nvt = ld(name + 4);
-        u32 buf = ld(s + 0);
-        gabi::call_ptr(ld(nvt + 0x14), name);
-        u32 c = ld(name + 0);
-        s32 len = 0;
-        if (lbz(c) != 0) {
+    i_this->mOwner = owner;
+    i_this->mVtable = 0x100005F8;
+    i_this->mRate = sInitialRate;
+    hdUiFixedString* string = i_this->nameForConstruction();
+    if (string == NULL) string = (hdUiFixedString*)operator_new(sizeof(hdUiFixedString));
+    if (string != NULL) {
+        string->mText = string->mBuffer;
+        string->mVtable = &sBaseStringTable;
+        string->mCapacity = 32;
+        string->mBuffer[31] = 0;
+        string->mVtable = &sBufferedStringTable;
+        be<u8>* buffer = string->mText;
+        name->assureTermination();
+        be<u8>* text = name->mText;
+        s32 length = 0;
+        if (*text != 0) {
             for (;;) {
-                ++len;
-                ++c;
-                if (len > 0x40000) { len = 0; break; }
-                if (lbz(c) == 0) break;
+                ++length;
+                text = hdUiEntryAdvanceByte(text, 1);
+                if (length > 0x40000) { length = 0; break; }
+                if (*text == 0) break;
             }
         }
-        s32 cap = (s32)ld(s + 8);
-        u32 nvt2 = ld(name + 4);
-        if (!(len < cap)) len = cap - 1;
-        gabi::call_ptr(ld(nvt2 + 0x14), name);
-        gabi::call(OSBlockMove, buf, ld(name + 0), len, 0);
-        stb(buf + len, 0);
-        st(s + 4, 0x100005D0);
+        s32 capacity = string->mCapacity;
+        hdUiStringTable* sourceTable = name->mVtable;
+        if (!(length < capacity)) length = capacity - 1;
+        gabi::call_ptr(sourceTable->mAssureTermination.get(), name);
+        hdUiEntryCopyBytes(buffer, name->mText, length, 0);
+        *hdUiEntryAdvanceByte(buffer, length) = 0;
+        string->mVtable = &sFixedStringTable;
     }
-    st(t + 0x34, ctrl);
-    return t;
+    i_this->mController = controller;
+    return i_this;
 }
-VERIFY(0x020034A0, AnimEntry_ct);
-
-static void AnimEntry_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003608, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 02003608 */
+static void destroyAnimationEntry(hdUiAnimationEntry* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003608, AnimEntry_dt);
-
-/* 0200361C / 02003654: set the rate and start / stop the frame controller (loop flag from its resource) */
-static u32 AnimEntry_play(u32 self, f32 rate) {
-    WWHD_FUNC(0x0200361C, u32, self, rate);
-    u32 o = ld(self + 0x34);
-    stf(self + 4, rate);
-    u32 fn = vfn(o, 0x14, 0xA4);
-    u32 loop = lbz(ld(o + 8) + 0xA) == 1 ? 1 : 0;
-    return gabi::call_ptr<u32>(fn, o, loop);
+/* 0200361C */
+static u32 playAnimationEntry(hdUiAnimationEntry* i_this, f32 rate) {
+    hdUiFrameController* controller = i_this->mController;
+    i_this->mRate = rate;
+    return controller->play();
 }
-VERIFY(0x0200361C, AnimEntry_play);
-
-static u32 AnimEntry_play2(u32 self, f32 rate) {
-    WWHD_FUNC(0x02003654, u32, self, rate);
-    u32 o = ld(self + 0x34);
-    stf(self + 4, rate);
-    u32 fn = vfn(o, 0x14, 0xB4);
-    u32 loop = lbz(ld(o + 8) + 0xA) == 1 ? 1 : 0;
-    return gabi::call_ptr<u32>(fn, o, loop);
+/* 02003654 */
+static u32 playAnimationEntryAlternate(hdUiAnimationEntry* i_this, f32 rate) {
+    hdUiFrameController* controller = i_this->mController;
+    i_this->mRate = rate;
+    return controller->playAlternate();
 }
-VERIFY(0x02003654, AnimEntry_play2);
-
-/* 0200368C: finished: not looping, frame 0 and not playing */
-static u32 AnimEntry_isEnd(u32 self) {
-    WWHD_FUNC(0x0200368C, u32, self);
-    u32 o = ld(self + 0x34);
-    if (lbz(ld(o + 8) + 0xA) == 1) return 0;
-    if (!(ldf(o + 0x24) == ldf(0x100005E8))) return 0;
-    if (ld(o + 0x2C) & 1) return 0;
+/* 0200368C */
+static u32 isAnimationEntryEnd(hdUiAnimationEntry* i_this) {
+    hdUiFrameController* controller = i_this->mController;
+    if (controller->mResource->mLoopMode == 1) return 0;
+    if (!((f32)controller->mFrame == sStoppedFrame)) return 0;
+    if (controller->mFlags & 1) return 0;
     return 1;
 }
-VERIFY(0x0200368C, AnimEntry_isEnd);
-
-static void sinit_020036D0() {
-    WWHD_FUNC(0x020036D0, void);
-    header_sinit(0x101FF1F4, 0x1018C2C0, 0x100005EC);
+/* 020036D0 */
+static void __sinit_hd_ui_animation_entry_cpp() {
+    sinit_header_statics_rodata(0x101FF1E8, 0x1018C2C0, 0x101FF1F4, 0x100005EC);
 }
-VERIFY(0x020036D0, sinit_020036D0);
-
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003764, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 02003764 */
+static void destroyFirstStringCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003764, Comp_dt1);
-
-static void Comp_dt2(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003778, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 02003778 */
+static void destroySecondStringCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003778, Comp_dt2);
-
-static void Comp_empty() {
-    WWHD_FUNC(0x0200378C, void);
+/* 0200378C */
+static void emptyStringCompanion() {}
+/* 02003790 */
+static void assureEntryStringTermination(hdUiFixedString* i_this) { i_this->terminate(); }
+/* 020037A8 */
+static void destroyThirdStringCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0200378C, Comp_empty);
-
-/* sead BufferedSafeString::assureTerminationImpl_ instance */
-static void SafeString_assureTermination(u32 self) {
-    WWHD_FUNC(0x02003790, void, self);
-    stb(ld(self + 0) + ld(self + 8) - 1, 0);
+/* 020037BC */
+static void destroyFourthStringCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003790, SafeString_assureTermination);
-
-static void Comp_dt3(u32 self, s32 flags) {
-    WWHD_FUNC(0x020037A8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x020037A8, Comp_dt3);
-
-static void Comp_dt4(u32 self, s32 flags) {
-    WWHD_FUNC(0x020037BC, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x020037BC, Comp_dt4);
-
-static u32 LytC_ct(u32 self, u32 a0, u32 a1, u32 a2) {
-    WWHD_FUNC(0x020037D0, u32, self, a0, a1, a2);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xB0);
-        if (t == 0) return 0;
+/* 020037D0 */
+static hdUiPartsPane* constructPartsPane(hdUiPartsPane* i_this, u32 resource, u32 option, u32 argument) {
+    if (i_this == NULL) {
+        i_this = (hdUiPartsPane*)operator_new(sizeof(hdUiPartsPane));
+        if (i_this == NULL) return NULL;
     }
-    gabi::call(0x02874894, t, a0, a1, a2);
-    st(t + 8, 0x10000610);
-    return t;
+    hdUiEntryConstructPartsBase(i_this, resource, option, argument);
+    i_this->mVtable = 0x10000610;
+    return i_this;
 }
-VERIFY(0x020037D0, LytC_ct);
-
-static void LytC_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003854, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02874918, self, 0);
-    if (flags & 1) op_delete(self);
+/* 02003854 */
+static void destroyPartsPane(hdUiPartsPane* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    hdUiEntryDestroyPartsBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02003854, LytC_dt);
-
-static void sinit_020038A8() {
-    WWHD_FUNC(0x020038A8, void);
-    header_sinit(0x101FF210, 0x1018C2E4, 0x10000608);
+/* 020038A8 */
+static void __sinit_hd_ui_parts_pane_cpp() {
+    sinit_header_statics_rodata(0x101FF204, 0x1018C2E4, 0x101FF210, 0x10000608);
 }
-VERIFY(0x020038A8, sinit_020038A8);
-
-static u32 Adaptor_rtti() {
-    WWHD_FUNC(0x0200393C, u32);
-    return rtti_static3(0x101FD914, 0x101FD918, 0x101FD890, 0x101FD91C, 0x101FD888, 0x101FD8FC);
-}
-VERIFY(0x0200393C, Adaptor_rtti);
-
-static u32 Adaptor_ct(u32 self, u32 target) {
-    WWHD_FUNC(0x020039C0, u32, self, target);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(8);
-        if (t == 0) return 0;
+/* 0200393C */
+static hdUiAdaptorType* getAdaptorType() {
+    if (sAdaptorTypeInitialized != 0) return &sAdaptorType;
+    u32 parentInitialized = sAdaptorParentInitialized;
+    sAdaptorTypeInitialized = 1;
+    if (parentInitialized != 0) {
+        sAdaptorType.mParent = &sAdaptorParent;
+        return &sAdaptorType;
     }
-    st(t + 4, target);
-    st(t + 0, 0x100006C8);
-    return t;
-}
-VERIFY(0x020039C0, Adaptor_ct);
-
-/* 02003A10: forward to the target's virtual +0x34 (argument: A, or B when A is 0) */
-static u32 Adaptor_fwd34(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x02003A10, u32, self, a, b, c);
-    u32 o = ld(self + 4);
-    u32 fn = vfn(o, 0xC, 0x34);
-    return gabi::call_ptr<u32>(fn, o, a != 0 ? a : b, b, c);
-}
-VERIFY(0x02003A10, Adaptor_fwd34);
-
-/* 02003A30: forward to the target's virtual +0x3C (other arguments passed through) */
-static u32 Adaptor_fwd3C(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x02003A30, u32, self, a, b, c);
-    u32 o = ld(self + 4);
-    return gabi::call_ptr<u32>(vfn(o, 0xC, 0x3C), o, a, b, c);
-}
-VERIFY(0x02003A30, Adaptor_fwd3C);
-
-static void sinit_02003A44() {
-    WWHD_FUNC(0x02003A44, void);
-    header_sinit(0x101FF22C, 0x1018C308, 0x100006C0);
-}
-VERIFY(0x02003A44, sinit_02003A44);
-
-static void Comp_dt5(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003AD8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x02003AD8, Comp_dt5);
-
-static u32 LytD_ct(u32 self, u32 a0, u32 a1, u32 a2) {
-    WWHD_FUNC(0x02003AEC, u32, self, a0, a1, a2);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xD8);
-        if (t == 0) return 0;
+    u32 rootInitialized = sAdaptorRootInitialized;
+    sAdaptorParentInitialized = 1;
+    if (rootInitialized == 0) {
+        sAdaptorRootInitialized = 1;
+        sAdaptorRoot.mParent = NULL;
     }
-    gabi::call(0x02878F9C, t, a0, a1, a2);
-    st(t + 8, 0x100006F8);
-    return t;
+    sAdaptorType.mParent = &sAdaptorParent;
+    sAdaptorParent.mParent = &sAdaptorRoot;
+    return &sAdaptorType;
 }
-VERIFY(0x02003AEC, LytD_ct);
-
-static void LytD_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003B70, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02879474, self, 0);
-    if (flags & 1) op_delete(self);
+/* 020039C0 */
+static hdUiAdaptor* constructAdaptor(hdUiAdaptor* i_this, hdUiAdaptorTarget* target) {
+    if (i_this == NULL) {
+        i_this = (hdUiAdaptor*)operator_new(sizeof(hdUiAdaptor));
+        if (i_this == NULL) return NULL;
+    }
+    i_this->mTarget = target;
+    i_this->mVtable = 0x100006C8;
+    return i_this;
 }
-VERIFY(0x02003B70, LytD_dt);
-
-static void sinit_02003BC4() {
-    WWHD_FUNC(0x02003BC4, void);
-    header_sinit(0x101FF248, 0x1018C32C, 0x100006F0);
+/* 02003A10 */
+static u32 forwardAdaptorFirst(hdUiAdaptor* i_this, u32 first, u32 fallback, u32 third) {
+    hdUiAdaptorTarget* target = i_this->mTarget;
+    return gabi::call_ptr<u32>(target->mVtable->mForwardFirst.get(), target, first != 0 ? first : fallback, fallback, third);
 }
-VERIFY(0x02003BC4, sinit_02003BC4);
-
-}  // namespace hd_ui_020032F4
+/* 02003A30 */
+static u32 forwardAdaptorSecond(hdUiAdaptor* i_this, u32 first, u32 second, u32 third) {
+    hdUiAdaptorTarget* target = i_this->mTarget;
+    return gabi::call_ptr<u32>(target->mVtable->mForwardSecond.get(), target, first, second, third);
+}
+/* 02003A44 */
+static void __sinit_hd_ui_adaptor_cpp() {
+    sinit_header_statics_rodata(0x101FF220, 0x1018C308, 0x101FF22C, 0x100006C0);
+}
+/* 02003AD8 */
+static void destroyAdaptorCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
+}
+/* 02003AEC */
+static hdUiWindowPane* constructWindowPane(hdUiWindowPane* i_this, u32 resource, u32 option, u32 argument) {
+    if (i_this == NULL) {
+        i_this = (hdUiWindowPane*)operator_new(sizeof(hdUiWindowPane));
+        if (i_this == NULL) return NULL;
+    }
+    hdUiEntryConstructWindowBase(i_this, resource, option, argument);
+    i_this->mVtable = 0x100006F8;
+    return i_this;
+}
+/* 02003B70 */
+static void destroyWindowPane(hdUiWindowPane* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    hdUiEntryDestroyWindowBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
+}
+/* 02003BC4 */
+static void __sinit_hd_ui_window_pane_cpp() {
+    sinit_header_statics_rodata(0x101FF23C, 0x1018C32C, 0x101FF248, 0x100006F0);
+}
+/* WWHD glue (tools/verify/autoglue.py): private UI constants and external base calls
+ data sVisitorTable 10000560
+ data sBaseStringTable 100005A0
+ data sBufferedStringTable 100005B8
+ data sFixedStringTable 100005D0
+ data sInitialRate 10000580
+ data sStoppedFrame 100005E8
+ data sAdaptorTypeInitialized 101FD914
+ data sAdaptorParentInitialized 101FD890
+ data sAdaptorRootInitialized 101FD888
+ data sAdaptorType 101FD918
+ data sAdaptorParent 101FD91C
+ data sAdaptorRoot 101FD8FC
+ ext C0009988 void hdUiEntryCopyBytes(void*, const void*, u32, u32)
+ ext 02874894 void hdUiEntryConstructPartsBase(hdUiPartsPane*, u32, u32, u32)
+ ext 02874918 void hdUiEntryDestroyPartsBase(hdUiPartsPane*, u32)
+ ext 02878F9C void hdUiEntryConstructWindowBase(hdUiWindowPane*, u32, u32, u32)
+ ext 02879474 void hdUiEntryDestroyWindowBase(hdUiWindowPane*, u32)
+*/

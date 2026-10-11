@@ -1,42 +1,106 @@
-// HD HUD head helpers.
-#include "gabi.h"
-using namespace gabi;
-void meterShow(){WWHD_FUNC(0x0259169C,void);store<u8>(call<u32>(0x025200D4)+0x5C22,1);}
-VERIFY(0x0259169C,meterShow);
-void meterHide(){WWHD_FUNC(0x025916C4,void);store<u8>(call<u32>(0x025200D4)+0x5C22,0);}
-VERIFY(0x025916C4,meterHide);
-void meterFlagOn(){WWHD_FUNC(0x025916EC,void);store<u8>(0x101EA06C,1);}
-VERIFY(0x025916EC,meterFlagOn);
-void meterFlagOff(){WWHD_FUNC(0x025916FC,void);store<u8>(0x101EA06C,0);}
-VERIFY(0x025916FC,meterFlagOff);
-void meterMenuStatus(u32 status){WWHD_FUNC(0x0259170C,void,status);store<u8>(0x101EA069,status);}
-VERIFY(0x0259170C,meterMenuStatus);
-u32 meterBitTest(u32 p,u32 mask){WWHD_FUNC(0x02591718,u32,p,mask);return (load<u8>(p)&mask)!=0;}
-VERIFY(0x02591718,meterBitTest);
-void meterBitSet(u32 p,u32 mask){WWHD_FUNC(0x0259172C,void,p,mask);store<u8>(p,load<u8>(p)|mask);}
-VERIFY(0x0259172C,meterBitSet);
-void meterBitClear(u32 p,u32 mask){WWHD_FUNC(0x0259173C,void,p,mask);store<u8>(p,load<u8>(p)&~mask);}
-VERIFY(0x0259173C,meterBitClear);
-f32 meterFadeOut(u32 state,u32 counter){
- WWHD_FUNC(0x0259174C,f32,state,counter);
- s32 mode=load<s16>(state);f32 one=load<f32>(0x100512B4);
- if(mode==8){store<u16>(state,9);store<u16>(counter,1);return one;}
- f32 result=load<f32>(0x100512B8);
- if(mode==9){s32 phase=load<s16>(counter);if(phase<6){
-  result=call<f32>(0x025DB6F4,6,phase,1);
-  u16 next=(u16)(load<s16>(counter)+1);result=fsubs_ppc(one,result);store<u16>(counter,next);
- }else store<u16>(state,0);}
- return result;
+/* HUD visibility, byte flags and HD fade transitions, verified against WWHD. */
+#include "d/d_meter_head.h"
+
+static u8 l_hudFlag = 0;
+static u8 menu_status = 0;
+static const f32 l_alphaOpaque = 1.0f;
+static const f32 l_alphaTransparent = 0.0f;
+
+/* 0259169C */
+void dMeter_mtrShow() {
+    ((dMeter_gameInfoView*)dComIfGp_get())->m2dShow = 1;
 }
-VERIFY(0x0259174C,meterFadeOut);
-f32 meterFadeIn(u32 state,u32 counter){
- WWHD_FUNC(0x025917FC,f32,state,counter);
- s32 mode=load<s16>(state);
- if(mode==0){f32 zero=load<f32>(0x100512B8);store<u16>(state,7);store<u16>(counter,0);return zero;}
- f32 result=load<f32>(0x100512B4);
- if(mode==7){s32 phase=load<s16>(counter);if(phase<6){
-  result=call<f32>(0x025DB6F4,6,phase,1);store<u16>(counter,(u16)(load<s16>(counter)+1));
- }else store<u16>(state,8);}
- return result;
+
+/* 025916C4 */
+void dMeter_mtrHide() {
+    ((dMeter_gameInfoView*)dComIfGp_get())->m2dShow = 0;
 }
-VERIFY(0x025917FC,meterFadeIn);
+
+// HD: additional HUD flag, independent of the GameCube menu status.
+/* 025916EC */
+void dMeter_onHudFlag() {
+    l_hudFlag = 1;
+}
+
+/* 025916FC */
+void dMeter_offHudFlag() {
+    l_hudFlag = 0;
+}
+
+/* 0259170C */
+void dMenu_setMenuStatus(u32 status) {
+    // HD: the entry accepts a full register, then narrows to the menu byte.
+    menu_status = status;
+}
+
+/* 02591718 */
+u32 dMeter_isBit8(be<u8>* flag, u32 bit) {
+    // HD: preserve the full mask register rather than taking the GameCube u8.
+    return (*flag & bit) != 0;
+}
+
+/* 0259172C */
+void dMeter_onBit8(be<u8>* flag, u32 bit) {
+    *flag |= bit;
+}
+
+/* 0259173C */
+void dMeter_offBit8(be<u8>* flag, u32 bit) {
+    *flag &= ~bit;
+}
+
+// HD: six-frame fade state machines absent from the GameCube HUD head.
+/* 0259174C */
+f32 dMeter_fadeOut(be<s16>* state, be<s16>* counter) {
+    s32 mode = *state;
+    f32 one = l_alphaOpaque;
+    if (mode == dMeter_FADE_VISIBLE_e) {
+        *state = dMeter_FADE_OUT_e;
+        *counter = 1;
+        return one;
+    }
+    f32 result = l_alphaTransparent;
+    if (mode == dMeter_FADE_OUT_e) {
+        s32 phase = *counter;
+        if (phase < 6) {
+            result = fopMsgM_valueIncrease(6, phase, 1);
+            // HD: reload the counter after the easing call, before storing it.
+            u16 next = (u16)(*counter + 1);
+            result = gabi::fsubs_ppc(one, result);
+            *counter = next;
+        } else {
+            *state = dMeter_FADE_HIDDEN_e;
+        }
+    }
+    return result;
+}
+
+/* 025917FC */
+f32 dMeter_fadeIn(be<s16>* state, be<s16>* counter) {
+    s32 mode = *state;
+    if (mode == dMeter_FADE_HIDDEN_e) {
+        f32 zero = l_alphaTransparent;
+        *state = dMeter_FADE_IN_e;
+        *counter = 0;
+        return zero;
+    }
+    f32 result = l_alphaOpaque;
+    if (mode == dMeter_FADE_IN_e) {
+        s32 phase = *counter;
+        if (phase < 6) {
+            result = fopMsgM_valueIncrease(6, phase, 1);
+            *counter = (u16)(*counter + 1);
+        } else {
+            *state = dMeter_FADE_VISIBLE_e;
+        }
+    }
+    return result;
+}
+
+/* WWHD glue
+data l_hudFlag 101EA06C
+data menu_status 101EA069
+data l_alphaOpaque 100512B4
+data l_alphaTransparent 100512B8
+ext 025DB6F4 f32 fopMsgM_valueIncrease(s32 i_max, s32 i_value, u8 i_mode)
+*/

@@ -1,28 +1,686 @@
-#include "gabi.h"
-using namespace gabi;
-static u32 slot(u32 table,u32 index,u32 stride){u32 count=load<u32>(table),base=load<u32>(table+4);return index<count?base+index*stride:base;}
-u32 ext_lineInit(void* self,u32 count,u32 optional){WWHD_FUNC(0x025E8FA8,u32,self,count,optional);u32 o=ea(self),p=call<u32>(0x028EFFD0,0,count,12,0);store<u32>(o,p);if(!p)return 0;if(optional){p=call<u32>(0x0273ADAC,count);store<u32>(o+4,p);if(!p)return 0;}else store<u32>(o+4,0);p=call<u32>(0x027FE64C,0);u32 doubled=count*2;store<u32>(o+8,p);if(!p)return 0;call(0x027FE6BC,at<void>(p),1,doubled,0);p=load<u32>(o+8);u32 table=load<u32>(p+load<u32>(p+0x1C)*8+4);if((s32)doubled>0){for(u32 i=0;i<doubled;i++){u32 q=slot(table,i,0x98);store<f32>(q+0x14,load<f32>(0x100586DC));store<f32>(q+0x10,load<f32>(0x100586DC));q=slot(table,i,0x98);store<f32>(q+0x38,load<f32>((i&1)?0x100586DC:0x100586D4));q=slot(table,i,0x98);store<f32>(q+0xC,load<f32>((i&1)?0x10058AE0:0x10058ADC));q=slot(table,i,0x98);store<f32>(q+0x10,load<f32>(0x100586D4));q=slot(table,i,0x98);store<f32>(q+0x3C,load<f32>(0x100586D4));}p=load<u32>(o+8);}call(0x027FF260,at<void>(p));return 1;}
-VERIFY(0x025E8FA8,ext_lineInit);
-void ext_lineDtor(void* self,u32 flag){WWHD_FUNC(0x025E91C8,void,self,flag);u32 o=ea(self);if(!o)return;store<u32>(o+0xC,0x10058E50);u32 p=load<u32>(o);if(p){call(0x028F0164,at<void>(p),-1,12,0,1,0);store<u32>(o,0);}p=load<u32>(o+4);if(p){call(0x0273AFC8,at<void>(p));store<u32>(o+4,0);}u32 root=load<u32>(o+8);if(root){for(u32 i=0;i<load<u32>(root+0x10);i++){for(u32 off: {0u,8u}){u32 q=slot(root+off,i,0x250);call(0x027BF7E8,at<void>(q+0x15C));q=slot(root+off,i,0x250);u32 buffer=load<u32>(q+4);if(buffer){u32 manager=call<u32>(0x02755FEC,at<void>(load<u32>(0x101F8B4C)),at<void>(buffer));call_ptr(load<u32>(load<u32>(manager+0xC)+0x3C),at<void>(manager),at<void>(load<u32>(q+4)));store<u32>(q,0);store<u32>(q+4,0);}}}for(u32 off:{0u,8u}){u32 base=load<u32>(root+off+4);if(base){u32 i=0,n=load<u32>(root+off);while((s32)i<(s32)n){u32 q=base+i*0x250;if(q){call(0x027BF880,at<void>(q+0x15C),2);call(0x027B5CBC,at<void>(q+8),2);n=load<u32>(root+off);base=load<u32>(root+off+4);}i++;}u32 manager=call<u32>(0x02755FEC,at<void>(load<u32>(0x101F8B4C)),at<void>(base));call_ptr(load<u32>(load<u32>(manager+0xC)+0x3C),at<void>(manager),at<void>(load<u32>(root+off+4)));store<u32>(root+off,0);store<u32>(root+off+4,0);}}store<u8>(root+0x19,0);store<u32>(root+0x10,0);store<u32>(root+0x14,0);call(0x027FEB60,at<void>(load<u32>(o+8)),3);store<u32>(o+8,0);}if(flag&1)call(0x0273AF40,self);}
-VERIFY(0x025E91C8,ext_lineDtor);
-void* ext_lineBaseCtor(void* self){WWHD_FUNC(0x025E947C,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x134);if(!o)return nullptr;}store<u32>(o+8,0);store<u32>(o+0x130,0x1005876C);store<u32>(o+0xC,0);store<u32>(o,0);store<u32>(o+4,0);call(0x027BE6B8,at<void>(o+0x10));call(0x027BE6B8,at<void>(o+0xA0));return at<void>(o);}
-VERIFY(0x025E947C,ext_lineBaseCtor);
-void ext_lineBaseDtor(void* self,u32 flag){WWHD_FUNC(0x025E94EC,void,self,flag);u32 o=ea(self);if(!o)return;store<u32>(o+0x130,0x1005876C);if(load<u32>(o+4))call(0x0273AA24,at<void>(0x10058AFC),0x19C8,at<void>(0x10058AE4));if(load<u32>(o+8))call(0x0273AA24,at<void>(0x10058AFC),0x19C9,at<void>(0x10058B0C));if(load<u32>(o+0xC))call(0x0273AA24,at<void>(0x10058AFC),0x19CA,at<void>(0x10058B1C));if(flag&1)call(0x0273AF40,self);}
-VERIFY(0x025E94EC,ext_lineBaseDtor);
-void ext_lineColor(void* output,void* input){WWHD_FUNC(0x025E95AC,void,output,input);u32 o=ea(output),p=ea(input);f32 a=(f32)load<s16>(p),c=(f32)load<s16>(p+4),b=(f32)load<s16>(p+2),d=(f32)load<s16>(p+6),div=load<f32>(0x10058B30);store<f32>(o,a/div);store<f32>(o+4,b/div);store<f32>(o+8,c/div);store<f32>(o+0xC,d/div);}
-VERIFY(0x025E95AC,ext_lineColor);
-void ext_lineMaterial(void* self,void* lighting,void* color){WWHD_FUNC(0x025E9670,void,self,lighting,color);u32 o=ea(self),l=ea(lighting),c=ea(color),root=load<u32>(o+8),info=root+0x128;store<u32>(root+0xB0,0);call(0x028E9098,at<void>(root+0x80));f32 zero=load<f32>(0x100586DC),one=load<f32>(0x100586D4),div=load<f32>(0x10058B30);store<f32>(root+0x12C,one);store<f32>(root+0x148,zero);store<f32>(root+0x130,one);store<f32>(root+0x134,one);store<f32>(root+0x14C,zero);store<f32>(root+0x150,zero);store<f32>(root+0x128,one);store<f32>(root+0x154,zero);if(l){f32 ca=(f32)load<s16>(l+0x90),cb=(f32)load<s16>(l+0x92),cc=(f32)load<s16>(l+0x94),cd=(f32)load<s16>(l+0x96);store<f32>(info+0x44,cb);store<f32>(info+0x40,ca);store<f32>(info+0x48,cc);store<f32>(info+0x4C,cd);call(0x0274D2E0,at<void>(info+0x40),div);ca=(f32)load<u8>(l+0x98);cb=(f32)load<u8>(l+0x99);cc=(f32)load<u8>(l+0x9A);cd=(f32)load<u8>(l+0x9B);store<f32>(info+0x50,ca);store<f32>(info+0x54,cb);store<f32>(info+0x58,cc);store<f32>(info+0x5C,cd);call(0x0274D2AC,at<void>(info+0x50),load<f32>(l+0x24));call(0x0274D2E0,at<void>(info+0x50),div);}f32 ca=(f32)load<u8>(c),cb=(f32)load<u8>(c+1),cc=(f32)load<u8>(c+2),cd=(f32)load<u8>(c+3);store<f32>(info+0x60,ca);store<f32>(info+0x64,cb);store<f32>(info+0x68,cc);store<f32>(info+0x6C,cd);call(0x0274D2E0,at<void>(info+0x60),div);if(l){Local<u8[128]> scratch;u32 base=ea(scratch.get()),matrix=base+16,lights=base+64;call(0x0255F8F4,lighting);call(0x025E2B54,at<void>(matrix),at<void>(0x104B45F8),at<void>(0x104B45C0));u32 live5=cpu->r[5];for(u32 i=0;i<16;i++)store<u32>(lights+i*4,load<u32>(live5+0x14C+i*4));u32 extra=load<u32>(live5+0x148);call(0x027FDA54,at<void>(load<u32>(o+8)),0,at<void>(matrix),at<void>(lights),at<void>(extra+0x240));root=load<u32>(load<u32>(o+8)+4);call(0x025E95AC,at<void>(base),at<void>(l+0x90));call(0x0274D458,at<void>(root+0x1C4),at<void>(base),load<f32>(l+0x28));call(0x025E95AC,at<void>(base),at<void>(l+0x160));call(0x0274D458,at<void>(root+0x1D4),at<void>(base),load<f32>(l+0x16C));call(0x0255F84C);}call(0x027FE0DC,at<void>(load<u32>(o+8)),0);}
-VERIFY(0x025E9670,ext_lineMaterial);
-void* ext_lineMat0Ctor(void* self){WWHD_FUNC(0x025E9960,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x148);if(!o)return nullptr;}call(0x025E947C,at<void>(o));store<u32>(o+0x130,0x10058DC0);call(0x028F521C,at<void>(o+0x134),4);store<u8>(o+0x142,0);store<u8>(o+0x143,0);store<u16>(o+0x13C,0);store<u16>(o+0x140,0);store<u32>(o+0x144,0);store<u16>(o+0x13E,0);store<u32>(o+0x138,0);return at<void>(o);}
-VERIFY(0x025E9960,ext_lineMat0Ctor);
-void ext_lineMat0Dtor(void* self,u32 flag){WWHD_FUNC(0x025E99E0,void,self,flag);u32 o=ea(self);if(!o)return;store<u32>(o+0x130,0x10058DC0);u32 p=load<u32>(o+0x144);if(p){call(0x028F0164,at<void>(p),-1,16,0x025E91C8,1,0);store<u32>(o+0x144,0);}p=load<u32>(o+4);if(p){call(0x028F0164,at<void>(p),-1,12,0x025EE34C,1,0);store<u32>(o+4,0);}u32 root=load<u32>(o+8);if(root){for(u32 i=0;(s32)i<(s32)load<u32>(root);i++){u32 q=slot(root,i,0x23C)+0x10;call(0x027BEBEC,at<void>(q));call(0x027BEBEC,at<void>(q+0x1C));}for(u32 off:{0x1Cu,0xC4u}){call(0x027BEBEC,at<void>(root+off));call(0x027BEBEC,at<void>(root+off+0x1C));}root=load<u32>(o+8);if(root){call(0x027FB528,at<void>(root+0xB4),0);call(0x027FB528,at<void>(root+0xC),0);call(0x027FD764,at<void>(root),2);call(0x0273AF40,at<void>(root));}store<u32>(o+8,0);}p=load<u32>(o+0xC);if(p){call(0x027FE4B0,at<void>(p),3);store<u32>(o+0xC,0);}call(0x025E94EC,self,0);if(flag&1)call(0x0273AF40,self);}
-VERIFY(0x025E99E0,ext_lineMat0Dtor);
-void ext_lineSetMaterial(void* self){WWHD_FUNC(0x025EA154,void,self);u32 o=ea(self);call(0x0255F160);u32 p=load<u32>(o+0x138);if(p)call(0x0255F8F4,at<void>(p));else call(0x0255F84C);}
-VERIFY(0x025EA154,ext_lineSetMaterial);
-u32 ext_lineThreshold(f32 value){WWHD_FUNC(0x025EA530,u32,value);return value>load<f32>(0x10058B98);}
-VERIFY(0x025EA530,ext_lineThreshold);
-u32 ext_lineMat0Init(void* self,u32 count,u32 points,u32 optional){WWHD_FUNC(0x025E9B80,u32,self,count,points,optional);u32 o=ea(self),global=0x1048CEE8; if(!load<u32>(0x1048CF18)){store<u32>(0x1048CF18,1);store<u32>(global+4,0x10058704);store<u32>(global,0x10058B44);store<u32>(global+12,0x10058704);store<u32>(global+8,0x10058B34);call(0x028F026C,at<void>(0x101F4764));}store<u16>(o+0x13C,(u16)count);store<u16>(o+0x13E,(u16)points);u32 p=call<u32>(0x028EFFD0,0,count,16,0x025E8F58);store<u32>(o+0x144,p);p=call<u32>(0x028EFFD0,0,count,12,0x025EE4E8);store<u32>(o+4,p);if(!load<u32>(o+0x144)||!p)return 0;if((s32)count>0){for(u32 i=0;i<count;i++){u32 registry=call<u32>(0x027FFCBC),id=call<u32>(0x027B90AC,at<void>(load<u32>(registry+4)),at<void>(global+8)),resource=0;if((s32)id>=0){u32 n=load<u32>(registry+8),base=load<u32>(registry+0xC),q=id<n?base+id*0x24:base;if(!load<u8>(q+0x20)){u32 owner=load<u32>(registry+4),total=load<u32>(owner+0x1C),extra=0;q=id<n?base+id*0x24:base;if(id<total)extra=load<u32>(owner+0x20)+id*0x84;call(0x02800B0C,at<void>(q),at<void>(extra),0);n=load<u32>(registry+8);base=load<u32>(registry+0xC);}resource=id<n?base+id*0x24:base;}call(0x0280068C,at<void>(load<u32>(o+4)+i*12),at<void>(resource),0);if(!call<u32>(0x025E8FA8,at<void>(load<u32>(o+0x144)+i*16),points,optional,0))return 0;call(0x027FF078,at<void>(load<u32>(load<u32>(o+0x144)+i*16+8)),0,1,0);u32 table=load<u32>(o+4)+i*12,buffer=load<u32>(load<u32>(o+0x144)+i*16+8);for(u32 j=0;j<load<u32>(table);j++){u32 n=load<u32>(table+4),base=load<u32>(table+8),q=j<n?base+j*0x14:base;call(0x028003E8,at<void>(q),at<void>(load<u32>(q)),at<void>(buffer),0);}}}store<u32>(o,0);store<u8>(o+0x142,0);u32 root=call<u32>(0x0273AD10,0x41C);if(root){call(0x027FD6F4,at<void>(root));call(0x027FB40C,at<void>(root+0xC));store<u32>(root+0x18,0x1016EF84);call(0x028F521C,at<void>(root+0x80),0x34);if(!(root+0x80))call(0x0273AD10,0x30);call(0x027FB40C,at<void>(root+0xB4));store<u32>(root+0xC0,0x1016EFB4);call(0x028F521C,at<void>(root+0x128),0x2F0);
-store<f32>(root+0x128,load<f32>(0x10145180));store<f32>(root+0x12c,load<f32>(0x10145180));store<f32>(root+0x130,load<f32>(0x10145180));store<f32>(root+0x138,load<f32>(0x10145180));store<f32>(root+0x154,load<f32>(0x1014517C));store<f32>(root+0x160,load<f32>(0x10145180));store<f32>(root+0x144,load<f32>(0x1014517C));store<f32>(root+0x140,load<f32>(0x10145180));store<f32>(root+0x190,load<f32>(0x10145180));store<f32>(root+0x1b0,load<f32>(0x10145180));store<f32>(root+0x180,load<f32>(0x10145180));store<f32>(root+0x1a4,load<f32>(0x1014517C));store<f32>(root+0x158,load<f32>(0x10145180));store<f32>(root+0x17c,load<f32>(0x10145180));store<f32>(root+0x1ac,load<f32>(0x10145180));store<f32>(root+0x19c,load<f32>(0x10145180));store<f32>(root+0x16c,load<f32>(0x10145180));store<f32>(root+0x148,load<f32>(0x10145180));store<f32>(root+0x15c,load<f32>(0x10145180));store<f32>(root+0x164,load<f32>(0x1014517C));store<f32>(root+0x14c,load<f32>(0x10145180));store<f32>(root+0x170,load<f32>(0x10145180));store<f32>(root+0x13c,load<f32>(0x10145180));store<f32>(root+0x198,load<f32>(0x10145180));store<f32>(root+0x1a0,load<f32>(0x10145180));store<f32>(root+0x1b4,load<f32>(0x1014517C));store<f32>(root+0x184,load<f32>(0x1014517C));store<f32>(root+0x194,load<f32>(0x1014517C));store<f32>(root+0x18c,load<f32>(0x10145180));store<f32>(root+0x178,load<f32>(0x10145180));store<f32>(root+0x1a8,load<f32>(0x10145180));store<f32>(root+0x150,load<f32>(0x10145180));store<f32>(root+0x188,load<f32>(0x10145180));store<f32>(root+0x134,load<f32>(0x1014517C));store<f32>(root+0x168,load<f32>(0x10145180));store<f32>(root+0x174,load<f32>(0x1014517C));store<f32>(root+0x1b8,load<f32>(0x10145180));store<f32>(root+0x1bc,load<f32>(0x10145180));store<f32>(root+0x1c0,load<f32>(0x10145180));store<f32>(root+0x1c4,load<f32>(0x1014517C));store<f32>(root+0x1c8,load<f32>(0x10145180));store<f32>(root+0x1cc,load<f32>(0x10145180));store<f32>(root+0x1d0,load<f32>(0x10145180));store<f32>(root+0x1d4,load<f32>(0x1014517C));for(u32 off:{0x1D8u,0x1F8u,0x218u})call(0x028EFFD0,at<void>(root+off),2,16,0x025EE558);for(u32 off:{0x238u,0x268u,0x298u,0x2C8u,0x2F8u,0x328u,0x358u,0x388u})if(!(root+off))call(0x0273AD10,0x30);for(u32 off:{0x3B8u,0x3C8u,0x3D8u,0x3E8u,0x3F8u,0x408u})if(!(root+off))call(0x0273AD10,16);store<u8>(root+0x418,0);}store<u32>(o+8,root);call(0x027FE084,at<void>(root),1,0);u32 other=call<u32>(0x027FE344,0);store<u32>(o+0xC,other);Local<u8[16]> strings;u32 a=ea(strings.get());store<u32>(a+4,0x10058704);store<u32>(a+12,0x10058704);store<u32>(a+8,0x10058B60);store<u32>(a,0x10058B50);u32 res=call<u32>(0x026124B0,at<void>(load<u32>(0x101F4F7C)),at<void>(a),at<void>(a+8),0);call(0x02773870,at<void>(o+0xA0),at<void>(res),at<void>(0x10058B78));call(0x027FE500,at<void>(load<u32>(o+0xC)),1,at<void>(o+0xA0),0);return 1;}
-VERIFY(0x025E9B80,ext_lineMat0Init);
-void ext_lineMat0Draw(void* self,void* arguments){WWHD_FUNC(0x025EA1A8,void,self,arguments);u32 o=ea(self),a=ea(arguments),length=(load<u16>(o+0x140)*2)&0xFFFF,buffer=load<u32>(o+0x144);Local<u8[284]> state;u32 st=ea(state.get());if(!load<u32>(0x1048CF1C)){store<u32>(0x1048CF1C,1);store<u32>(0x1048CECC,0x10058704);store<u32>(0x1048CEC8,0x10058B84);call(0x028F026C,at<void>(0x101F4770));}for(u32 i=0;i<load<u16>(o+0x13C);i++,buffer+=16){u32 kind=load<u32>(a+0xC),packet=0;if((s32)kind<4){u32 table=load<u32>(o+4)+i*12,n=load<u32>(table+4),base=load<u32>(table+8);if(kind<n)base+=kind*0x14;packet=load<u32>(base);}u32 cache=call<u32>(0x027F29D4,at<void>(0x104B45C0)),material=load<u32>(packet);if(material!=load<u32>(cache+4)){u8 flags=load<u8>(material);u32 previous=load<u32>(cache);if(flags&2){store<u8>(material,flags&~2);call(0x027BB9E0,at<void>(material),0);}u32 program=load<u32>(load<u32>(material+0x7C)+0x28);if(previous!=program)call(0x027B9F68,at<void>(program));u32 bytes=load<u32>(material+0xC);if(bytes){call(0xC00060E0,at<void>(load<u32>(material+4)),bytes);store<u32>(cache,program);store<u32>(cache+4,material);}else{call(0x027BB7CC,at<void>(material));store<u32>(cache+4,material);store<u32>(cache,program);}}kind=load<u32>(a+0xC);if(!kind){u32 root=load<u32>(o+8);call_ptr(load<u32>(load<u32>(root+0x18)+0x2C),at<void>(root+0xC),at<void>(packet));u32 controller=load<u32>(a+0x14);if(controller){u32 index=load<u32>(a+4),entry=slot(controller,index,0x23C),record=entry+0x10+load<u32>(entry+0x4C)*0x1C,info=load<u32>(packet+0xC)?load<u32>(packet+0x10):0;s32 x=load<s16>(info+0xC),y=load<s16>(info+0xE),z=load<s16>(info+0x10);if(x!=-1||y!=-1||z!=-1){u32 vertices=load<u32>(record+4),data=load<u32>(record+0xC);if(y!=-1)call(0xC0006900,y,at<void>(data),at<void>(vertices));if(x!=-1)call(0xC0006A38,x,at<void>(data),at<void>(vertices));if(z!=-1)call(0xC00068A8,z,at<void>(data),at<void>(vertices));}}}else if(kind==1){call(0x027FE118,at<void>(load<u32>(o+8)),at<void>(packet),0);call(0x027FE5B8,at<void>(load<u32>(o+0xC)),at<void>(packet));}else if(kind==2){call(0x027FE118,at<void>(load<u32>(o+8)),at<void>(packet),0);u32 renderer=load<u32>(a+0x30);if(renderer)call_ptr(load<u32>(load<u32>(renderer+0xC)+0x2C),at<void>(renderer),at<void>(packet));call(0x027FE5B8,at<void>(load<u32>(o+0xC)),at<void>(packet));call(0x027FFE54,arguments,at<void>(packet));}call(0x02750250,state.get());u32 flags=load<u32>(st+0xEC);store<u32>(st+0xC,2);store<u32>(st+8,2);store<u32>(st+0xEC,(((flags&0xFFFFFFF0)+7)&0xFFFFFF0F)+0x10);call(0x0280037C,load<u32>(a+0xC),state.get());call(0x02750370,state.get());u32 table=load<u32>(o+4)+i*12,n=load<u32>(table+4),kind2=load<u32>(a+0xC),base=load<u32>(table+8);if(kind2<n)base+=kind2*0x14;u32 bit=load<u32>(load<u32>(buffer+8)+0x1C),offset=(bit==0?32:__builtin_clz(bit))>>2;offset&=0x3FFFFFF8;call(0x027BFE5C,at<void>(load<u32>(base+offset+8)));call(0x027FEDB0,at<void>(load<u32>(buffer+8)),at<void>(0x104B4A84),1,length);}store<u8>(o+0x142,load<u8>(o+0x142)^1);}
-VERIFY(0x025EA1A8,ext_lineMat0Draw);
+/**
+ * 3D line geometry, lighting and untextured material, following zeldaret/tww m_Do_ext names.
+ * HD uses shader packets, mesh buffers and normal attributes in place of GX
+ * arrays. Verified against WWHD by m_Do_ext_11. Private game-derived source.
+ */
+#include "m_Do/m_Do_ext_line.h"
+using namespace line_mat0;
+static ShaderNames l_shaderNames;
+static SafeString l_packetName;
+static u32 l_shaderNamesInitialized;
+static u32 l_packetNameInitialized;
+static DestructorRecord l_shaderNamesDestructor;
+static DestructorRecord l_packetNameDestructor;
+static ResourceControl* l_resourceControl;
+static J3DSysView l_j3dSys;
+static DrawPrimitive l_drawPrimitive;
+static f32 l_rendererZero;
+static f32 l_rendererOne;
+// HD: per-TU vtables and compiler array callbacks.
+static constexpr u32 l_materialVtable = 0x10058DC0;
+static constexpr u32 l_safeStringVtable = 0x10058704;
+static constexpr u32 l_primaryVtable = 0x1016EF84;
+static constexpr u32 l_secondaryVtable = 0x1016EFB4;
+enum {
+    LINE_ARRAY_CONSTRUCTOR = 0x025E8F58,
+    LINE_ARRAY_DESTRUCTOR = 0x025E91C8,
+    SHADER_ARRAY_CONSTRUCTOR = 0x025EE4E8,
+    SHADER_ARRAY_DESTRUCTOR = 0x025EE34C,
+    PARAMETER_ARRAY_CONSTRUCTOR = 0x025EE558,
+};
+
+static f32 l_lineZero;
+static f32 l_lineOne;
+static f32 l_tangentPositive;
+static f32 l_tangentNegative;
+static f32 l_colorDivisor;
+static f32 l_threshold;
+static HeapRegistry* l_heapRegistry;
+static Mtx34 l_viewMatrix;
+// HD: deleting destructors install the translation unit's own vtables.
+static constexpr u32 l_lineVtable = 0x10058E50;
+static constexpr u32 l_baseVtable = 0x1005876C;
+
+// HD: bind the three shader attributes in their original normal/position/UV
+// order.
+static void bindPacketAttributes(RendererRecord* entry, DrawPacket* packet) {
+    GraphicsBuffer* record = &entry->mBuffers[entry->mCurArr];
+    ShaderInfo* info = packet->getShaderInfo();
+    s32 position = info->mPositionIndex;
+    s32 normal = info->mNormalIndex;
+    s32 texCoord = info->mTexCoordIndex;
+    if (position != -1 || normal != -1 || texCoord != -1) {
+        void* vertices = record->mpVertices;
+        void* data = record->mpData;
+        if (normal != -1)
+            texturedLineBindNormal(normal, data, vertices);
+        if (position != -1)
+            texturedLineBindPosition(position, data, vertices);
+        if (texCoord != -1)
+            texturedLineBindTexCoord(texCoord, data, vertices);
+    }
+}
+
+/* 025E8FA8 */
+u32 line_mat0::mDoExt_3Dline_c::init(u32 count, u32 optional) {
+    mpSegments = (cXyz*)texturedLineAllocArray(nullptr, count, sizeof(cXyz), 0);
+    if (!mpSegments)
+        return 0;
+    if (optional) {
+        mpSize = (be<u8>*)lineAllocateBytes(count);
+        if (!mpSize)
+            return 0;
+    } else {
+        mpSize = nullptr;
+    }
+    MeshBuffer* mesh = lineCreateMesh(0);
+    u32 doubled = count * 2;
+    mpMeshBuffer = mesh;
+    if (mesh == nullptr)
+        return 0;
+    lineAllocateMesh(mesh, 1, doubled, 0);
+    mesh = mpMeshBuffer;
+    VertexTable* table = mesh->getVertices();
+    if ((s32)doubled > 0) {
+        for (u32 i = 0; i < doubled; i++) {
+            Vertex* vertex = table->getVertex(i);
+            vertex->mTangent.z = l_lineZero;
+            vertex->mTangent.y = l_lineZero;
+            vertex = table->getVertex(i);
+            vertex->mTexX = (i & 1) ? l_lineZero : l_lineOne;
+            vertex = table->getVertex(i);
+            vertex->mTangent.x = (i & 1) ? l_tangentNegative : l_tangentPositive;
+            vertex = table->getVertex(i);
+            vertex->mTangent.y = l_lineOne;
+            vertex = table->getVertex(i);
+            vertex->mTexY = l_lineOne;
+        }
+        mesh = mpMeshBuffer;
+    }
+    lineUploadMesh(mesh);
+    return 1;
+}
+
+/* 025E91C8 */
+static void mDoExt_3Dline_c_dtor(void* self, u32 flag) {
+    auto* line = (line_mat0::mDoExt_3Dline_c*)self;
+    if (line == nullptr)
+        return;
+    line->__vtbl = l_lineVtable;
+    cXyz* segments = line->mpSegments;
+    if (segments != nullptr) {
+        texturedLineDestroyArray(segments, -1, sizeof(cXyz), 0, 1, 0);
+        line->mpSegments = nullptr;
+    }
+    be<u8>* sizes = line->mpSize;
+    if (sizes != nullptr) {
+        lineFreeBytes(sizes);
+        line->mpSize = nullptr;
+    }
+    MeshBuffer* root = line->mpMeshBuffer;
+    if (root != nullptr) {
+        for (u32 i = 0; i < (u32)root->mNumBuffers; i++) {
+            for (u32 array = 0; array < 2; array++) {
+                MeshRecord* entry = root->mBuffers[array].getEntry(i);
+                lineReleaseBuffer(&entry->mBuffer);
+                entry = root->mBuffers[array].getEntry(i);
+                Vertex* buffer = entry->mVertices.mpVertices;
+                if (buffer != nullptr) {
+                    HeapManager* manager = lineFindHeap(l_heapRegistry, buffer);
+                    manager->free(entry->mVertices.mpVertices);
+                    entry->mVertices.mCount = 0;
+                    entry->mVertices.mpVertices = nullptr;
+                }
+            }
+        }
+        for (u32 array = 0; array < 2; array++) {
+            MeshRecord* base = root->mBuffers[array].mpEntries;
+            if (base != nullptr) {
+                u32 i = 0;
+                u32 count = root->mBuffers[array].mCount;
+                while ((s32)i < (s32)count) {
+                    MeshRecord* entry = &base[i];
+                    // HD: test the wrapped guest address, including a wrapped NULL entry.
+                    if (gabi::ea(entry) != 0) {
+                        lineBuffer_dt(&entry->mBuffer, 2);
+                        lineResource_dt(&entry->mResource, 2);
+                        count = root->mBuffers[array].mCount;
+                        base = root->mBuffers[array].mpEntries;
+                    }
+                    i++;
+                }
+                HeapManager* manager = lineFindHeap(l_heapRegistry, base);
+                manager->free(root->mBuffers[array].mpEntries);
+                root->mBuffers[array].mCount = 0;
+                root->mBuffers[array].mpEntries = nullptr;
+            }
+        }
+        root->mReady = 0;
+        root->mNumBuffers = 0;
+        root->mCapacity = 0;
+        lineMesh_dt(line->mpMeshBuffer, 3);
+        line->mpMeshBuffer = nullptr;
+    }
+    if (flag & 1)
+        operator_delete(self);
+}
+
+/* 025E947C */
+static void* mDoExt_3DlineMat_c_ct(void* self) {
+    auto* material = (line_mat0::mDoExt_3DlineMat0_c*)self;
+    if (material == nullptr) {
+        material = (line_mat0::mDoExt_3DlineMat0_c*)operator_new(0x134);
+        if (material == nullptr)
+            return nullptr;
+    }
+    material->mpRenderer = nullptr;
+    material->__vtbl = l_baseVtable;
+    material->mpTextures = nullptr;
+    material->mpNextLineMat = nullptr;
+    material->mpShaders = nullptr;
+    lineTexture_ct(&material->mTexObj);
+    lineTexture_ct(&material->mToonTexObj);
+    return material;
+}
+
+/* 025E94EC */
+static void mDoExt_3DlineMat_c_dtor(void* self, u32 flag) {
+    auto* material = (line_mat0::mDoExt_3DlineMat0_c*)self;
+    if (material == nullptr)
+        return;
+    material->__vtbl = l_baseVtable;
+    if (material->mpShaders)
+        lineAssert("m_Do_ext.cpp", 0x19C8, "mShaderAssignSet == (0)");
+    if (material->mpRenderer)
+        lineAssert("m_Do_ext.cpp", 0x19C9, "mUBOSet == (0)");
+    if (material->mpTextures)
+        lineAssert("m_Do_ext.cpp", 0x19CA, "mSamplerSet == (0)");
+    if (flag & 1)
+        operator_delete(self);
+}
+
+/* 025E95AC */
+static void lineColorS10ToFloat(Float4* output, GXColorS10* input) {
+    f32 red = (f32)input->r;
+    f32 blue = (f32)input->b;
+    f32 green = (f32)input->g;
+    f32 alpha = (f32)input->a;
+    f32 divisor = l_colorDivisor;
+    output->values[0] = red / divisor;
+    output->values[1] = green / divisor;
+    output->values[2] = blue / divisor;
+    output->values[3] = alpha / divisor;
+}
+
+/* 025E9670 */
+static void mDoExt_3DlineMat_c_setColor(void* self, void* lighting, void* color) {
+    gabi::AutoFrame frame{gabi::current_function()};
+    auto* material = (line_mat0::mDoExt_3DlineMat0_c*)self;
+    auto* tev = (LightingView*)lighting;
+    auto* gxColor = (GXColor*)color;
+    RendererManager* root = material->mpRenderer;
+    auto* info = (MaterialUniforms*)&root->mTransforms;
+    root->mMatrixDirty = 0;
+    lineMatrixIdentity(&root->mScratchMatrix);
+    f32 zero = l_lineZero;
+    f32 one = l_lineOne;
+    f32 divisor = l_colorDivisor;
+    info->mRows[0].values[1] = one;
+    info->mRows[2].values[0] = zero;
+    info->mRows[0].values[2] = one;
+    info->mRows[0].values[3] = one;
+    info->mRows[2].values[1] = zero;
+    info->mRows[2].values[2] = zero;
+    info->mRows[0].values[0] = one;
+    info->mRows[2].values[3] = zero;
+    if (tev != nullptr) {
+        f32 red = (f32)tev->mColorC0.r;
+        f32 green = (f32)tev->mColorC0.g;
+        f32 blue = (f32)tev->mColorC0.b;
+        f32 alpha = (f32)tev->mColorC0.a;
+        info->mColorC0.values[1] = green;
+        info->mColorC0.values[0] = red;
+        info->mColorC0.values[2] = blue;
+        info->mColorC0.values[3] = alpha;
+        lineDivideColor(&info->mColorC0, divisor);
+        red = (f32)tev->mColorK0.r;
+        green = (f32)tev->mColorK0.g;
+        blue = (f32)tev->mColorK0.b;
+        alpha = (f32)tev->mColorK0.a;
+        info->mColorK0.values[0] = red;
+        info->mColorK0.values[1] = green;
+        info->mColorK0.values[2] = blue;
+        info->mColorK0.values[3] = alpha;
+        lineScaleColor(&info->mColorK0, tev->mColorK0Scale);
+        lineDivideColor(&info->mColorK0, divisor);
+    }
+    f32 red = (f32)gxColor->r;
+    f32 green = (f32)gxColor->g;
+    f32 blue = (f32)gxColor->b;
+    f32 alpha = (f32)gxColor->a;
+    info->mColor.values[0] = red;
+    info->mColor.values[1] = green;
+    info->mColor.values[2] = blue;
+    info->mColor.values[3] = alpha;
+    lineDivideColor(&info->mColor, divisor);
+    if (tev != nullptr) {
+        gabi::Local<LightingWork> work;
+        texturedLineSetFog((dKy_tevstr_c*)lighting);
+        lineBuildLightingMatrix(&work->matrix, &l_viewMatrix, &l_j3dSys);
+        // HD: the matrix helper leaves the lighting source in live GPR5.
+        LightingSource* source = gabi::at<LightingSource>(gabi::cpu->r[5]);
+        for (u32 i = 0; i < 16; i++)
+            work->lights.words[i] = (u32)source->mLights.words[i];
+        LightExtra* extra = source->mpExtra;
+        lineApplyLighting(material->mpRenderer, 0, &work->matrix, &work->lights, &extra->mExtra);
+        RendererRecord* record = material->mpRenderer->mpEntries;
+        lineColorS10ToFloat(&work->color, &tev->mColorC0);
+        lineMixColor(&record->mAmbient, &work->color, tev->mAmbientScale);
+        lineColorS10ToFloat(&work->color, &tev->mAmbientColor);
+        lineMixColor(&record->mFog, &work->color, tev->mFogScale);
+        texturedLineSetDefaultFog();
+    }
+    lineCommitRenderer(material->mpRenderer, 0);
+}
+
+/* 025E9960 */
+static void* mDoExt_3DlineMat0_c_ct(void* self) {
+    auto* material = (line_mat0::mDoExt_3DlineMat0_c*)self;
+    if (material == nullptr) {
+        material = (line_mat0::mDoExt_3DlineMat0_c*)operator_new(sizeof(*material));
+        if (material == nullptr)
+            return nullptr;
+    }
+    texturedLineBase_ct(material);
+    material->__vtbl = l_materialVtable;
+    texturedLineZeroBytes(&material->mColor, sizeof(material->mColor));
+    material->mCurArr = 0;
+    material->mFlags = 0;
+    material->mNumLines = 0;
+    material->mNumSegments = 0;
+    material->mpLines = nullptr;
+    material->mMaxSegments = 0;
+    material->mpTevStr = nullptr;
+    return material;
+}
+
+/* 025E99E0 */
+static void mDoExt_3DlineMat0_c_dtor(void* self, u32 flag) {
+    auto* material = (line_mat0::mDoExt_3DlineMat0_c*)self;
+    if (material == nullptr)
+        return;
+    material->__vtbl = l_materialVtable;
+    line_mat0::mDoExt_3Dline_c* lines = material->mpLines;
+    if (lines != nullptr) {
+        texturedLineDestroyArray(lines, -1, sizeof(*lines), LINE_ARRAY_DESTRUCTOR, 1, 0);
+        material->mpLines = nullptr;
+    }
+    ShaderBinding* shaders = material->mpShaders;
+    if (shaders != nullptr) {
+        texturedLineDestroyArray(shaders, -1, sizeof(*shaders), SHADER_ARRAY_DESTRUCTOR, 1, 0);
+        material->mpShaders = nullptr;
+    }
+    RendererManager* root = material->mpRenderer;
+    if (root != nullptr) {
+        for (u32 i = 0; (s32)i < (s32)(u32)root->mCount; i++) {
+            GraphicsBuffer* buffers = root->getEntry(i)->mBuffers;
+            texturedLineBufferDestroy(&buffers[0]);
+            texturedLineBufferDestroy(&buffers[1]);
+        }
+        texturedLineBufferDestroy(&root->mPrimary.mBuffers[0]);
+        texturedLineBufferDestroy(&root->mPrimary.mBuffers[1]);
+        texturedLineBufferDestroy(&root->mSecondary.mBuffers[0]);
+        texturedLineBufferDestroy(&root->mSecondary.mBuffers[1]);
+        root = material->mpRenderer;
+        if (root != nullptr) {
+            texturedLineUniform_dt(&root->mSecondary, 0);
+            texturedLineUniform_dt(&root->mPrimary, 0);
+            texturedLineRenderer_dt(root, 2);
+            operator_delete(root);
+        }
+        material->mpRenderer = nullptr;
+    }
+    TextureManager* textures = material->mpTextures;
+    if (textures != nullptr) {
+        texturedLineTextureManager_dt(textures, 3);
+        material->mpTextures = nullptr;
+    }
+    texturedLineBase_dt(self, 0);
+    if (flag & 1)
+        operator_delete(self);
+}
+
+/* 025E9B80 */
+u32 line_mat0::mDoExt_3DlineMat0_c::init(u32 count, u32 points, u32 optional) {
+    gabi::AutoFrame frame{gabi::current_function()};
+    if (!l_shaderNamesInitialized) {
+        l_shaderNamesInitialized = 1;
+        l_shaderNames.names[0].__vtbl = l_safeStringVtable;
+        l_shaderNames.names[0].mStringTop = gabi::guest_addr("line_mat");
+        l_shaderNames.names[1].__vtbl = l_safeStringVtable;
+        l_shaderNames.names[1].mStringTop = gabi::guest_addr("line_toon_mat");
+        __register_global_object(gabi::ea(&l_shaderNamesDestructor));
+    }
+    mNumLines = (u16)count;
+    mMaxSegments = (u16)points;
+    mpLines = (line_mat0::mDoExt_3Dline_c*)texturedLineAllocArray(
+        nullptr, count, sizeof(line_mat0::mDoExt_3Dline_c), LINE_ARRAY_CONSTRUCTOR);
+    ShaderBinding* shaders = (ShaderBinding*)texturedLineAllocArray(
+        nullptr, count, sizeof(ShaderBinding), SHADER_ARRAY_CONSTRUCTOR);
+    mpShaders = shaders;
+    if (!mpLines || shaders == nullptr)
+        return 0;
+    if ((s32)count > 0) {
+        for (u32 i = 0; i < count; i++) {
+            ShaderRegistry* registry = texturedLineGetShaderRegistry();
+            u32 id = texturedLineFindShader(registry->mpArchive, &l_shaderNames.names[1]);
+            ShaderResource* resource = nullptr;
+            if ((s32)id >= 0) {
+                u32 capacity = registry->mCount;
+                ShaderResource* resources = registry->mpResources;
+                ShaderResource* entry = id < capacity ? &resources[id] : resources;
+                if (!entry->mInitialized) {
+                    ShaderArchive* owner = registry->mpArchive;
+                    u32 total = owner->mCount;
+                    ShaderArchiveEntry* extra = nullptr;
+                    entry = id < capacity ? &resources[id] : resources;
+                    if (id < total)
+                        extra = &owner->mpEntries[id];
+                    texturedLineInitializeShader(entry, extra, 0);
+                    capacity = registry->mCount;
+                    resources = registry->mpResources;
+                }
+                resource = id < capacity ? &resources[id] : resources;
+            }
+            texturedLineBindShader(&mpShaders[i], resource, 0);
+            if (!texturedLineInitGeometry(&mpLines[i], points, optional, 0))
+                return 0;
+            texturedLineInitMesh(mpLines[i].mpMeshBuffer, 0, 1, 0);
+            ShaderBinding* table = &mpShaders[i];
+            MeshBuffer* buffer = mpLines[i].mpMeshBuffer;
+            for (u32 j = 0; j < (u32)table->mCount; j++) {
+                ShaderBindingEntry* entry = table->getEntry(j);
+                texturedLineBindMesh(entry, entry->mpPacket, buffer, 0);
+            }
+        }
+    }
+    mpNextLineMat = nullptr;
+    mCurArr = 0;
+    RendererManager* root = (RendererManager*)operator_new(sizeof(RendererManager));
+    if (root != nullptr) {
+        texturedLineRenderer_ct(root);
+        texturedLineUniform_ct(&root->mPrimary);
+        root->mPrimary.__vtbl = (RenderVtable*)gabi::at<void>(l_primaryVtable);
+        texturedLineZeroBytes(&root->mScratchMatrix,
+                              sizeof(root->mScratchMatrix) + sizeof(root->mMatrixDirty));
+        // HD: preserve the nullable embedded constructors, including address
+        // wrapping.
+        if (gabi::ea(&root->mScratchMatrix) == 0)
+            operator_new(sizeof(Mtx34));
+        texturedLineUniform_ct(&root->mSecondary);
+        root->mSecondary.__vtbl = (RenderVtable*)gabi::at<void>(l_secondaryVtable);
+        texturedLineZeroBytes(&root->mTransforms, sizeof(root->mTransforms));
+        root->mTransforms.mBaseMatrices[0].m[0][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[0][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[0][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[1][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[2][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[1].m[0][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[1][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[0].m[1][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[0][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[2][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[2][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[1][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[1].m[0][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[2][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[2][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[1][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[1][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[2][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[0][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[0][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[0].m[2][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[1][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[1][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[1][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[1][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[2][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[1].m[2][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[2].m[0][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[2].m[0][1] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[2][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[2][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[2][2] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[2].m[0][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[0].m[0][3] = l_rendererOne;
+        root->mTransforms.mBaseMatrices[1].m[1][0] = l_rendererZero;
+        root->mTransforms.mBaseMatrices[1].m[1][3] = l_rendererOne;
+        root->mTransforms.mDefaultVectors[0].values[0] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[0].values[1] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[0].values[2] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[0].values[3] = l_rendererOne;
+        root->mTransforms.mDefaultVectors[1].values[0] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[1].values[1] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[1].values[2] = l_rendererZero;
+        root->mTransforms.mDefaultVectors[1].values[3] = l_rendererOne;
+        for (u32 i = 0; i < 3; i++)
+            texturedLineAllocArray(root->mTransforms.mParameterPairs[i], 2, sizeof(Float4),
+                                   PARAMETER_ARRAY_CONSTRUCTOR);
+        for (u32 i = 0; i < 8; i++)
+            if (gabi::ea(&root->mTransforms.mExtraMatrices[i]) == 0)
+                operator_new(sizeof(Mtx34));
+        for (u32 i = 0; i < 6; i++)
+            if (gabi::ea(&root->mTransforms.mExtraVectors[i]) == 0)
+                operator_new(sizeof(Float4));
+        root->mFlags = 0;
+    }
+    mpRenderer = root;
+    texturedLineRendererInit(root, 1, 0);
+    TextureManager* textures = texturedLineTextureManager_ct(0);
+    mpTextures = textures;
+    gabi::Local<ResourceNames> names;
+    names->archive.__vtbl = l_safeStringVtable;
+    names->resource.__vtbl = l_safeStringVtable;
+    names->resource.mStringTop = gabi::guest_addr("ProgramTexture.bfres");
+    names->archive.mStringTop = gabi::guest_addr("ProgramTexture");
+    void* resource =
+        texturedLineGetResource(l_resourceControl, &names->archive, &names->resource, 0);
+    texturedLineLoadTexture(&mToonTexObj, resource, "himo_nml");
+    texturedLineSetTexture(mpTextures, 1, &mToonTexObj, 0);
+    return 1;
+}
+
+/* 025EA154 */
+void line_mat0::mDoExt_3DlineMat0_c::setMaterial() {
+    texturedLineSetLighting();
+    dKy_tevstr_c* lighting = mpTevStr;
+    if (lighting != nullptr)
+        texturedLineSetFog(lighting);
+    else
+        texturedLineSetDefaultFog();
+}
+
+/* 025EA1A8 */
+void line_mat0::mDoExt_3DlineMat0_c::draw(DrawContext* arguments) {
+    gabi::AutoFrame frame{gabi::current_function()};
+    u32 length = (mNumSegments * 2) & 0xFFFF;
+    line_mat0::mDoExt_3Dline_c* buffer = mpLines;
+    gabi::Local<RenderState> state;
+    if (!l_packetNameInitialized) {
+        l_packetNameInitialized = 1;
+        l_packetName.__vtbl = l_safeStringVtable;
+        l_packetName.mStringTop = gabi::guest_addr("line_packet_mat0");
+        __register_global_object(gabi::ea(&l_packetNameDestructor));
+    }
+    for (u32 i = 0; i < (u32)mNumLines; i++, buffer++) {
+        u32 kind = arguments->mPass;
+        DrawPacket* packet = nullptr;
+        if ((s32)kind < 4)
+            packet = mpShaders[i].getEntry(kind)->mpPacket;
+        ShaderCache* cache = texturedLineGetShaderCache(&l_j3dSys);
+        ShaderMaterial* material = packet->mpMaterial;
+        if (material != cache->mpMaterial.get()) {
+            u8 flags = material->mFlags;
+            ShaderProgram* previous = cache->mpShaderProgram;
+            if (flags & 2) {
+                material->mFlags = flags & ~2;
+                texturedLineInvalidateMaterial(material, 0);
+            }
+            ShaderProgram* program = material->mpParameters->mpShaderProgram;
+            if (previous != program)
+                texturedLineUseShader(program);
+            u32 bytes = material->mDisplayListSize;
+            if (bytes) {
+                texturedLineCallDisplayList(material->mpDisplayList, bytes);
+                cache->mpShaderProgram = program;
+                cache->mpMaterial = material;
+            } else {
+                texturedLineUseMaterial(material);
+                cache->mpMaterial = material;
+                cache->mpShaderProgram = program;
+            }
+        }
+        kind = arguments->mPass;
+        if (kind == 0) {
+            RendererManager* root = mpRenderer;
+            root->mPrimary.apply(packet);
+            RendererManager* controller = arguments->mpController;
+            if (controller != nullptr) {
+                u32 index = arguments->mMode;
+                bindPacketAttributes(controller->getEntry(index), packet);
+            }
+        } else if (kind == 1) {
+            texturedLineRendererPrepare(mpRenderer, packet, 0);
+            texturedLinePrepareTextures(mpTextures, packet);
+        } else if (kind == 2) {
+            texturedLineRendererPrepare(mpRenderer, packet, 0);
+            RenderInterface* renderer = arguments->mpRenderer;
+            if (renderer != nullptr)
+                renderer->apply(packet);
+            texturedLinePrepareTextures(mpTextures, packet);
+            texturedLinePrepareContext(arguments, packet);
+        }
+        texturedLineInitRenderState(state.get());
+        u32 flags = state->mFlags;
+        state->mPassMode = 2;
+        state->mDrawMode = 2;
+        state->mFlags = (((flags & 0xFFFFFFF0) + 7) & 0xFFFFFF0F) + 0x10;
+        texturedLineSetRenderState(arguments->mPass, state.get());
+        texturedLineApplyRenderState(state.get());
+        ShaderBinding* table = &mpShaders[i];
+        u32 capacity = table->mCapacity;
+        u32 pass = arguments->mPass;
+        ShaderBindingEntry* entry = table->mpEntries;
+        if (pass < capacity)
+            entry += pass;
+        u32 bit = buffer->mpMeshBuffer->mCurArr;
+        u32 offset = ((bit == 0 ? 32 : __builtin_clz(bit)) >> 2) & 0x3FFFFFF8;
+        texturedLineUseVertexBuffer(entry->mVertexBindings[offset / sizeof(gptr<void>)]);
+        texturedLineDrawMesh(buffer->mpMeshBuffer, &l_drawPrimitive, 1, length);
+    }
+    mCurArr = mCurArr ^ 1;
+}
+
+using namespace line_mat0;
+
+/* 025EA530 */
+static u32 mDoExt_3Dline_nonzero(f32 value) { return value > l_threshold; }
+
+// clang-format off
+/* WWHD glue: HD rendering bindings, per-TU data and original strings.
+data l_shaderNames 1048CEE8
+data l_packetName 1048CEC8
+data l_shaderNamesInitialized 1048CF18
+data l_packetNameInitialized 1048CF1C
+data l_shaderNamesDestructor 101F4764
+data l_packetNameDestructor 101F4770
+data l_resourceControl 101F4F7C
+data l_j3dSys 104B45C0
+data l_drawPrimitive 104B4A84
+data l_rendererZero 10145180
+data l_rendererOne 1014517C
+ext 025E947C void texturedLineBase_ct(void*)
+ext 025E94EC void texturedLineBase_dt(void*, u32)
+ext 028F521C void texturedLineZeroBytes(void*, u32)
+ext 028EFFD0 void* texturedLineAllocArray(void*, u32, u32, u32)
+ext 028F0164 void texturedLineDestroyArray(void*, s32, u32, u32, u32, u32)
+ext 027BEBEC void texturedLineBufferDestroy(line_mat0::GraphicsBuffer*)
+ext 027FB40C void texturedLineUniform_ct(line_mat0::UniformBlock*)
+ext 027FB528 void texturedLineUniform_dt(line_mat0::UniformBlock*, u32)
+ext 027FD6F4 void texturedLineRenderer_ct(line_mat0::RendererManager*)
+ext 027FD764 void texturedLineRenderer_dt(line_mat0::RendererManager*, u32)
+ext 027FE084 void texturedLineRendererInit(line_mat0::RendererManager*, u32, u32)
+ext 027FE118 void texturedLineRendererPrepare(line_mat0::RendererManager*, line_mat0::DrawPacket*, u32)
+ext 027FE344 line_mat0::TextureManager* texturedLineTextureManager_ct(u32)
+ext 027FE4B0 void texturedLineTextureManager_dt(line_mat0::TextureManager*, u32)
+ext 027FE500 void texturedLineSetTexture(line_mat0::TextureManager*, u32, line_mat0::TextureHandle*, u32)
+ext 027FE5B8 void texturedLinePrepareTextures(line_mat0::TextureManager*, line_mat0::DrawPacket*)
+ext 027FE640 line_mat0::TextureBinding* texturedLineGetTexture(line_mat0::TextureManager*, u32)
+ext 027FFCBC line_mat0::ShaderRegistry* texturedLineGetShaderRegistry()
+ext 027B90AC u32 texturedLineFindShader(line_mat0::ShaderArchive*, SafeString*)
+ext 02800B0C void texturedLineInitializeShader(line_mat0::ShaderResource*, line_mat0::ShaderArchiveEntry*, u32)
+ext 0280068C void texturedLineBindShader(line_mat0::ShaderBinding*, line_mat0::ShaderResource*, u32)
+ext 025E8FA8 u32 texturedLineInitGeometry(line_mat0::mDoExt_3Dline_c*, u32, u32, u32)
+ext 027FF078 void texturedLineInitMesh(line_mat0::MeshBuffer*, u32, u32, u32)
+ext 028003E8 void texturedLineBindMesh(line_mat0::ShaderBindingEntry*, line_mat0::DrawPacket*, line_mat0::MeshBuffer*, u32)
+ext 026124B0 void* texturedLineGetResource(line_mat0::ResourceControl*, SafeString*, SafeString*, u32)
+ext 02773870 void texturedLineLoadTexture(line_mat0::TextureHandle*, void*, const char*)
+ext 02773798 void texturedLineUseImage(line_mat0::TextureHandle*, void*)
+ext 0274FBF8 void texturedLineTextureLock(line_mat0::TextureLock*)
+ext 0274FCCC void texturedLineTextureUnlock(line_mat0::TextureLock*)
+ext 0255F160 void texturedLineSetLighting()
+ext 0255F8F4 void texturedLineSetFog(dKy_tevstr_c*)
+ext 0255F84C void texturedLineSetDefaultFog()
+ext 027F29D4 line_mat0::ShaderCache* texturedLineGetShaderCache(line_mat0::J3DSysView*)
+ext 027BB9E0 void texturedLineInvalidateMaterial(line_mat0::ShaderMaterial*, u32)
+ext 027B9F68 void texturedLineUseShader(line_mat0::ShaderProgram*)
+ext 027BB7CC void texturedLineUseMaterial(line_mat0::ShaderMaterial*)
+ext C00060E0 void texturedLineCallDisplayList(void*, u32)
+ext C0006900 void texturedLineBindNormal(s32, void*, void*)
+ext C0006A38 void texturedLineBindPosition(s32, void*, void*)
+ext C00068A8 void texturedLineBindTexCoord(s32, void*, void*)
+ext 02750250 void texturedLineInitRenderState(line_mat0::RenderState*)
+ext 0280037C void texturedLineSetRenderState(u32, line_mat0::RenderState*)
+ext 02750370 void texturedLineApplyRenderState(line_mat0::RenderState*)
+ext 027BFE5C void texturedLineUseVertexBuffer(void*)
+ext 027FEDB0 void texturedLineDrawMesh(line_mat0::MeshBuffer*, line_mat0::DrawPrimitive*, u32, u32)
+ext 027FFE54 void texturedLinePrepareContext(line_mat0::DrawContext*, line_mat0::DrawPacket*)
+str 10058B44 "line_mat"
+str 10058B34 "line_toon_mat"
+str 10058B50 "ProgramTexture"
+str 10058B60 "ProgramTexture.bfres"
+str 10058B84 "line_packet_mat0"
+str 10058B78 "himo_nml"
+ext 0273ADAC void* lineAllocateBytes(u32)
+ext 0273AFC8 void lineFreeBytes(void*)
+ext 027FE64C line_mat0::MeshBuffer* lineCreateMesh(u32)
+ext 027FE6BC void lineAllocateMesh(line_mat0::MeshBuffer*,u32,u32,u32)
+ext 027FF260 void lineUploadMesh(line_mat0::MeshBuffer*)
+ext 027BF7E8 void lineReleaseBuffer(line_mat0::BufferState*)
+ext 027BF880 void lineBuffer_dt(line_mat0::BufferState*,u32)
+ext 027B5CBC void lineResource_dt(line_mat0::VertexResource*,u32)
+ext 02755FEC line_mat0::HeapManager* lineFindHeap(line_mat0::HeapRegistry*,void*)
+ext 027FEB60 void lineMesh_dt(line_mat0::MeshBuffer*,u32)
+ext 027BE6B8 void lineTexture_ct(line_mat0::TextureHandle*)
+ext 0273AA24 void lineAssert(const char*,u32,const char*)
+ext 028E9098 void lineMatrixIdentity(Mtx34*)
+ext 0274D2E0 void lineDivideColor(line_mat0::Float4*,f32)
+ext 0274D2AC void lineScaleColor(line_mat0::Float4*,f32)
+ext 025E2B54 void lineBuildLightingMatrix(Mtx34*,Mtx34*,line_mat0::J3DSysView*)
+ext 027FDA54 void lineApplyLighting(line_mat0::RendererManager*,u32,Mtx34*,line_mat0::LightWords*,void*)
+ext 0274D458 void lineMixColor(line_mat0::Float4*,line_mat0::Float4*,f32)
+ext 027FE0DC void lineCommitRenderer(line_mat0::RendererManager*,u32)
+data l_lineZero 100586DC
+data l_lineOne 100586D4
+data l_tangentPositive 10058ADC
+data l_tangentNegative 10058AE0
+data l_colorDivisor 10058B30
+data l_threshold 10058B98
+data l_heapRegistry 101F8B4C
+data l_viewMatrix 104B45F8
+str 10058AFC "m_Do_ext.cpp"
+str 10058AE4 "mShaderAssignSet == (0)"
+str 10058B0C "mUBOSet == (0)"
+str 10058B1C "mSamplerSet == (0)"
+*/

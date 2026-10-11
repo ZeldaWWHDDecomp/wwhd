@@ -1,37 +1,62 @@
-#include "gabi.h"
-using namespace gabi;
-namespace f_op_scene_pause {
-s32 enable(void *scene) {
- WWHD_FUNC(0x025DCA64,s32,scene);
- if(!scene)return 0;
- call<void>(0x025DFB20,scene,u32(1));
- call<void>(0x025DFB20,scene,u32(2));
- return 1;
+/** Scene Process Pause. */
+#include "f_op/f_op_scene_pause.h"
+
+static ScenePauseHeaderStatics l_headerStatics;
+static const ScenePausePiPair l_piPair;
+
+/* 025DCA64 */
+int fopScnPause_Enable(scene_class* i_scene) {
+    if (i_scene) {
+        fpcM_PauseEnable(i_scene, 1);
+        fpcM_PauseEnable(i_scene, 2);
+        return 1;
+    }
+    return 0;
 }
-VERIFY(0x025DCA64,enable);
-s32 disable(void *scene) {
- WWHD_FUNC(0x025DCAC4,s32,scene);
- if(!scene)return 0;
- u32 layer=load<u32>(ea(scene)+0x2C);
- u32 parent=load<u32>(layer+0x18);
- if(!parent){
-  call<void>(0x025DFB24,scene,u32(1));
-  call<void>(0x025DFB24,scene,u32(2));
- }else if(call<s32>(0x025DE564,load<u32>(parent+4))==1){
-  if(call<s32>(0x025DFB1C,at<void>(parent),u32(1))==0)call<void>(0x025DFB24,scene,u32(1));
-  if(call<s32>(0x025DFB1C,at<void>(parent),u32(2))==0)call<void>(0x025DFB24,scene,u32(2));
- }
- return 1;
+
+/* 025DCAC4 */
+int fopScnPause_Disable(scene_class* i_scene) {
+    if (i_scene) {
+        base_process_class* parent = i_scene->mLyTg.mpLayer->mpPcNode;
+        if (!parent) {
+            fpcM_PauseDisable(i_scene, 1);
+            fpcM_PauseDisable(i_scene, 2);
+        } else if (fpcEx_IsExist((s32)parent->mBsPcId) == 1) {
+            if (!fpcM_IsPause(parent, 1)) {
+                fpcM_PauseDisable(i_scene, 1);
+            }
+            if (!fpcM_IsPause(parent, 2)) {
+                fpcM_PauseDisable(i_scene, 2);
+            }
+        }
+        return 1;
+    }
+    return 0;
 }
-VERIFY(0x025DCAC4,disable);
-void static_init() {
-  WWHD_FUNC(0x025DCB94,void);
-  store<u32>(0x1048A60C,0);store<u32>(0x1048A604,0);store<u32>(0x1048A610,0);store<u32>(0x1048A608,0);
-  call<void>(0x028F026C,at<void>(0x101F37BC));
-  f32 first=load<f32>(0x10057D90),second=load<f32>(0x10057D94);
-  store<f32>(0x1048A5F8,first);store<f32>(0x1048A5FC,second);
-  call<void>(0x028ED6F8,at<void>(0x1048A600));call<void>(0x028F026C,at<void>(0x101F37C8));
-  call<void>(0x028EAB2C,at<void>(0x1048A601));call<void>(0x028F026C,at<void>(0x101F37D4));
+
+/* 025DCB94 */
+static void __sinit_f_op_scene_pause_cpp() {
+    // HD: preserve header construction, including zero-store and registration order.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F37BC);
+    l_headerStatics.negativePi = l_piPair.negativePi;
+    l_headerStatics.positivePi = l_piPair.positivePi;
+    ScenePauseFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F37C8);
+    ScenePauseSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F37D4);
 }
-VERIFY(0x025DCB94,static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data l_headerStatics 1048A5F8
+data l_piPair 10057D90
+ext 025DFB20 void fpcM_PauseEnable(base_process_class*, u32)
+ext 025DFB24 void fpcM_PauseDisable(base_process_class*, u32)
+ext 025DFB1C s32 fpcM_IsPause(base_process_class*, u32)
+ext 025DE564 s32 fpcEx_IsExist(s32)
+ext 028ED6F8 void ScenePauseFirstHeaderObject_ct(u8*)
+ext 028EAB2C void ScenePauseSecondHeaderObject_ct(u8*)
+*/

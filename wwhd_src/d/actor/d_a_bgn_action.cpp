@@ -7,44 +7,37 @@
  * (zeldaret/tww src/d/actor/d_a_bgn.cpp) to the WWHD layout and verified against cking.rpx.
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_bgn.h"
+#include "d/actor/d_a_bgn_action.h"
 
-void start(bgn_class* i_this);
-void tail_attack(bgn_class* i_this);
-void damage(bgn_class* i_this);
-void head_recover(bgn_class* i_this);
-void hensin(bgn_class* i_this);
-void action_s(bgn_class* i_this, move_s* param_2, int param_3);
+void start(bgn_class *i_this);
+void tail_attack(bgn_class *i_this);
+void damage(bgn_class *i_this);
+void head_recover(bgn_class *i_this);
+void hensin(bgn_class *i_this);
+void action_s(bgn_class *i_this, move_s *param_2, int param_3);
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline s16 bgn_cM_rad2s_a(f32 x) { return gabi::call<s16>(0x02019510, x); }
-/* fopAcM_monsSeStart (HD inline): 025E1AA4 mDoAud_monsSeStart(id, pos, actorId, param, reverb) [as in d_a_am] */
-static inline void bgn_monsSeStart(fopAc_ac_c* a, u32 id, u32 param) {
+/* fopAcM_monsSeStart (HD inline): 025E1AA4 mDoAud_monsSeStart(id, pos, actorId, param, reverb) [as
+ * in d_a_am] */
+static inline void fopAcM_monsSeStart(fopAc_ac_c *a, u32 id, u32 param) {
     if (a != nullptr && gabi::ea(&a->eyePos) != 0) {
         s8 room = fopAcM_GetRoomNo(a);
         u32 pid = fopAcM_GetID(a);
-        gabi::call(0x025E1AA4, id, &a->eyePos, pid, param, dComIfGp_getReverb(room));
+        mDoAud_monsSeStart(id, &a->eyePos, pid, param, dComIfGp_getReverb(room));
     }
 }
-/* pose tables (this TU's statics, eight csXyz each) */
-enum : u32 {
-    DANCE_PAUSE_1 = 0x10461A5C, DANCE_PAUSE_2 = 0x10461A8C, DANCE_PAUSE_3 = 0x10461ABC, DANCE_PAUSE_4 = 0x10461AEC,
-    PUNCH_LR1_D = 0x10461B1C, PUNCH_LR12_D = 0x10461B4C, PUNCH_LR2_D = 0x10461B7C, PUNCH_R1_D = 0x10461BAC,
-    PUNCH_R2_D = 0x10461BDC, PUNCH_L1_D = 0x10461C0C, PUNCH_L2_D = 0x10461C3C,
-};
-static inline void bgn_pose(move_s* m, u32 tbl, s32 i) {
-    u32 s = tbl + 6 * i;
-    u32 d = gabi::ea(&m->m2E0);
-    gabi::store<u16>(d, gabi::load<u16>(s));
-    gabi::store<u16>(d + 2, gabi::load<u16>(s + 2));
-    gabi::store<u16>(d + 4, gabi::load<u16>(s + 4));
+// HD: these mutable poses are constructed by the owning d_a_bgn source, not copied here.
+static inline void bgn_pose(move_s *m, csXyz *tbl, s32 i) {
+    m->m2E0.x = (s16)tbl[i].x;
+    m->m2E0.y = (s16)tbl[i].y;
+    m->m2E0.z = (s16)tbl[i].z;
 }
 
-/* dance_A (inline) */
-static inline void dance_A(bgn_class* i_this) {
-    fopAc_ac_c* actor = i_this;
+/* inlined into action_main */
+static inline void dance_A(bgn_class *i_this) {
+    fopAc_ac_c *actor = i_this;
     for (s32 i = 0; i < 8; i++) {
-        move_s* tmp = &i_this->mAAA8[i];
+        move_s *tmp = &i_this->mAAA8[i];
         s16 st = i_this->mC74E;
         if ((u32)(s32)st > 2)
             continue;
@@ -54,13 +47,13 @@ static inline void dance_A(bgn_class* i_this) {
             st = 1;
         }
         if (st == 1) {
-            bgn_pose(tmp, DANCE_PAUSE_1, i);
+            bgn_pose(tmp, bgn_action::dance_pause_1(), i);
             if (i_this->mC7AC[3] == 0) {
                 i_this->mC74E = (s16)(i_this->mC74E + 1);
                 i_this->mC7AC[3] = l_HIO().m0DA;
             }
         } else {
-            bgn_pose(tmp, DANCE_PAUSE_2, i);
+            bgn_pose(tmp, bgn_action::dance_pause_2(), i);
             if (i_this->mC7AC[3] == 0) {
                 i_this->mC74E = 1;
                 i_this->mC7AC[3] = l_HIO().m0DA;
@@ -73,7 +66,8 @@ static inline void dance_A(bgn_class* i_this) {
     i_this->mC750 = now;
     if ((uVar2 > 0 && now <= i_this->mC752) ||
         ((u16)uVar2 > 0x8000 && (u16)now <= (u16)(i_this->mC752 + 0x8000))) {
-        mDoAud_seStart(0x5973 /* JA_SE_CM_BGN_D_KAZEKIRI */, &i_this->mCA54, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
+        mDoAud_seStart(bgn_action::JA_SE_CM_BGN_D_KAZEKIRI, &i_this->mCA54, 0,
+                       dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
     }
     s8 health = actor->health;
     s16 target;
@@ -86,7 +80,7 @@ static inline void dance_A(bgn_class* i_this) {
     cLib_addCalcAngleS2(&i_this->mC752, target, 1, 0x10);
 }
 
-static inline s16 bgn_dance_B_time(fopAc_ac_c* actor) {
+static inline s16 bgn_dance_B_time(fopAc_ac_c *actor) {
     s8 health = actor->health;
     if (health == 3)
         return l_HIO().m0E8;
@@ -95,23 +89,23 @@ static inline s16 bgn_dance_B_time(fopAc_ac_c* actor) {
     return l_HIO().m0EC;
 }
 
-/* dance_B (inline) */
-static inline void dance_B(bgn_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    fopAcM_seStart(actor, 0x516F /* JA_SE_CM_BGN_D_DANCE */, 0);
+/* inlined into action_main */
+static inline void dance_B(bgn_class *i_this) {
+    fopAc_ac_c *actor = i_this;
+    fopAcM_seStart(actor, bgn_action::JA_SE_CM_BGN_D_DANCE, 0);
     s16 st = i_this->mC74E;
     for (s32 i = 0; i < 8; i++) {
-        move_s* tmp = &i_this->mAAA8[i];
+        move_s *tmp = &i_this->mAAA8[i];
         if ((u32)(s32)st > 1)
             continue;
         if (st == 0) {
-            bgn_pose(tmp, DANCE_PAUSE_3, i);
+            bgn_pose(tmp, bgn_action::dance_pause_3(), i);
             if (i_this->mC7AC[3] == 0) {
                 i_this->mC74E = (s16)(i_this->mC74E + 1);
                 i_this->mC7AC[3] = bgn_dance_B_time(actor);
             }
         } else {
-            bgn_pose(tmp, DANCE_PAUSE_4, i);
+            bgn_pose(tmp, bgn_action::dance_pause_4(), i);
             if (i_this->mC7AC[3] == 0) {
                 i_this->mC74E = 0;
                 i_this->mC7AC[3] = bgn_dance_B_time(actor);
@@ -122,9 +116,10 @@ static inline void dance_B(bgn_class* i_this) {
     cLib_addCalcAngleS2(&i_this->mC750, st == 1 ? 0x1555 : -0x1555, 8, l_HIO().m0EE);
 }
 
-/* dance_0 (inline); returns false where the GameCube returns early (the head recovery starts) */
-static inline bool dance_0(bgn_class* i_this) {
-    fopAc_ac_c* actor = i_this;
+/* inlined into action_main */
+// HD: the head-recovery return exits only this inlined helper.
+static inline bool dance_0(bgn_class *i_this) {
+    fopAc_ac_c *actor = i_this;
     if (i_this->mC7AC[1] == 0) {
         i_this->mC7AC[1] = (s16)gabi::ftoi(gabi::fadds_ppc(cM_rndF(150.0f), 50.0f));
         i_this->mC758.x = cM_rndFX(1500.0f);
@@ -134,8 +129,10 @@ static inline bool dance_0(bgn_class* i_this) {
     cLib_addCalc2(&actor->current.pos.x, i_this->mC758.x, 0.05f, i_this->mC76C);
     cLib_addCalc2(&actor->current.pos.z, i_this->mC758.z, 0.05f, i_this->mC76C);
     cLib_addCalc2(&i_this->mC76C, gabi::fadds_ppc(REG0_F(19), 20.0f), 1.0f, 0.5f);
-    cLib_addCalc2(&i_this->mC728.y, gabi::fmuls_ppc(cM_ssin(i_this->mC746 * (REG0_S(9) + 500)), gabi::fadds_ppc(REG0_F(9), 50.0f)), 0.5f,
-                  gabi::fadds_ppc(REG0_F(8), 20.0f));
+    cLib_addCalc2(&i_this->mC728.y,
+                  gabi::fmuls_ppc(cM_ssin(i_this->mC746 * (REG0_S(9) + 500)),
+                                  gabi::fadds_ppc(REG0_F(9), 50.0f)),
+                  0.5f, gabi::fadds_ppc(REG0_F(8), 20.0f));
     if (i_this->mAAA8[0].m2D0 == 0 || i_this->mAAA8[1].m2D0 == 0)
         cLib_addCalcAngleS2(&actor->shape_angle.y, fopAcM_searchPlayerAngleY(actor), 10, 0x400);
     s16 a = i_this->mC74A;
@@ -167,7 +164,8 @@ static inline bool dance_0(bgn_class* i_this) {
         if (i_this->mC7AC[0] == 0 && ki_check(i_this) == 0 && l_HIO().m028 != 0) {
             s16 n = i_this->mC754;
             if (n == 1 || n == 2 || n == 3) {
-                if (i_this->mAAA8[0].m2D0 != 0 && i_this->mAAA8[1].m2D0 != 0 && i_this->mC7AC[2] == 0) {
+                if (i_this->mAAA8[0].m2D0 != 0 && i_this->mAAA8[1].m2D0 != 0 &&
+                    i_this->mC7AC[2] == 0) {
                     i_this->mC748 = 4;
                     i_this->mC74A = 0;
                     i_this->mCA98 = 0.0f;
@@ -184,10 +182,10 @@ static inline bool dance_0(bgn_class* i_this) {
                     } else {
                         i_this->mC74A = 3;
                     }
-                    bgn_monsSeStart(actor, 0x4971 /* JA_SE_CV_BGN_D_ATTACK */, 0);
+                    fopAcM_monsSeStart(actor, bgn_action::JA_SE_CV_BGN_D_ATTACK, 0);
                 } else if (u4 == 0) {
                     i_this->mC74A = 1;
-                    bgn_monsSeStart(actor, 0x4971 /* JA_SE_CV_BGN_D_ATTACK */, 0);
+                    fopAcM_monsSeStart(actor, bgn_action::JA_SE_CV_BGN_D_ATTACK, 0);
                 } else if (i_this->mAAA8[7].m2D0 == 0) {
                     i_this->mC748 = 3;
                     i_this->mC74A = 0;
@@ -212,7 +210,7 @@ static inline bool dance_0(bgn_class* i_this) {
         dance_A(i_this);
     else if (c == 1)
         dance_B(i_this);
-    move_s* pmVar8 = i_this->mAAA8;
+    move_s *pmVar8 = i_this->mAAA8;
     gabi::Local<cXyz> local_34;
     for (s32 i = 0; i < 8; i++, pmVar8++) {
         if (pmVar8->m2D0 == 0) {
@@ -222,7 +220,9 @@ static inline bool dance_0(bgn_class* i_this) {
             f32 fVar9 = std_sqrtf(PSVECSquareMag(local_34));
             f32 t = gabi::fadds_ppc(REG0_F(0), 100.0f);
             if (fVar9 > t) {
-                f32 f = gabi::fadds_ppc(gabi::fmadds(gabi::fsubs_ppc(fVar9, t), gabi::fadds_ppc(REG0_F(1), 0.06f), 50.0f), REG0_F(2));
+                f32 f = gabi::fadds_ppc(gabi::fmadds(gabi::fsubs_ppc(fVar9, t),
+                                                     gabi::fadds_ppc(REG0_F(1), 0.06f), 50.0f),
+                                        REG0_F(2));
                 s16 v = (s16)gabi::ftoi(f);
                 if (v > pmVar8->m2F8)
                     pmVar8->m2F8 = v;
@@ -233,65 +233,73 @@ static inline bool dance_0(bgn_class* i_this) {
 }
 
 /* the punch aim (inline in punch_LR): the arm's start, the direction to the target, the step */
-static inline void bgn_punch_aim(bgn_class* i_this, cXyz* target, cXyz* from, cXyz* step) {
+static inline void bgn_punch_aim(bgn_class *i_this, cXyz *target, cXyz *from, cXyz *step) {
     gabi::Local<cXyz> local_84;
     gabi::Local<cXyz> local_6c;
     cXyz_mi(target, local_84, from);
     f32 x = local_84->x;
     f32 z = local_84->z;
-    u32 m = gabi::load<u32>(0x1018C7B0);
+    Mtx34 *m = calc_mtx();
     f32 y = local_84->y;
-    cMtx_YrotS(gabi::at<Mtx34>(m), cM_atan2s(x, z));
+    cMtx_YrotS(m, cM_atan2s(x, z));
     f32 d = gabi::fmadds(x, x, gabi::fmuls_ppc(z, z));
-    m = gabi::load<u32>(0x1018C7B0);
+    m = calc_mtx();
     f32 s = std_sqrtf(d);
-    cMtx_XrotM(gabi::at<Mtx34>(m), (s16)-cM_atan2s(y, s));
+    cMtx_XrotM(m, (s16)-cM_atan2s(y, s));
     local_6c->x = 0.0f;
     local_6c->y = 0.0f;
     local_6c->z = gabi::fadds_ppc(REG0_F(7), 200.0f);
     MtxPosition(local_6c, step);
 }
-static inline void bgn_copy_pos(cXyz* dst, cXyz* src) {
-    u32 d = gabi::ea(dst), s = gabi::ea(src);
-    gabi::store<u32>(d, gabi::load<u32>(s));
-    gabi::store<u32>(d + 4, gabi::load<u32>(s + 4));
-    gabi::store<u32>(d + 8, gabi::load<u32>(s + 8));
+static inline void bgn_copy_pos(cXyz *dst, cXyz *src) {
+    // HD: integer copies preserve signaling-NaN payloads, with each load before its store.
+    auto *d = bgn_action::words(dst);
+    auto *s = bgn_action::words(src);
+    d->x = (u32)s->x;
+    d->y = (u32)s->y;
+    d->z = (u32)s->z;
 }
-static inline part_s* bgn_rhand(bgn_class* i_this) { return &i_this->mRightArmParts[BGN_HAND_MAX() - 1]; }
-static inline part_s* bgn_lhand(bgn_class* i_this) { return &i_this->mLeftArmParts[BGN_HAND_MAX() - 1]; }
-/* the hit: the string's target pose is where the hand landed (s16), and the hit effect at a copy of it */
-static inline void bgn_punch_land(move_s* m, bgn_class* i_this, bool right) {
+static inline part_s *bgn_rhand(bgn_class *i_this) {
+    return &i_this->mRightArmParts[BGN_HAND_MAX() - 1];
+}
+static inline part_s *bgn_lhand(bgn_class *i_this) {
+    return &i_this->mLeftArmParts[BGN_HAND_MAX() - 1];
+}
+/* the hit: the string's target pose is where the hand landed (s16), and the hit effect at a copy of
+ * it */
+static inline void bgn_punch_land(move_s *m, bgn_class *i_this, bool right) {
     m->m2E0.x = (s16)gabi::ftoi((right ? bgn_rhand(i_this) : bgn_lhand(i_this))->m0D4.x);
     m->m2E0.y = (s16)gabi::ftoi((right ? bgn_rhand(i_this) : bgn_lhand(i_this))->m0D4.y);
     m->m2E0.z = (s16)gabi::ftoi((right ? bgn_rhand(i_this) : bgn_lhand(i_this))->m0D4.z);
 }
-static inline void bgn_punch_eff(bgn_class* i_this, bool right, s32 type, cXyz* tmp) {
-    part_s* p = right ? bgn_rhand(i_this) : bgn_lhand(i_this);
+static inline void bgn_punch_eff(bgn_class *i_this, bool right, s32 type, cXyz *tmp) {
+    part_s *p = right ? bgn_rhand(i_this) : bgn_lhand(i_this);
     tmp->x = p->m0D4.x;
     tmp->y = p->m0D4.y;
     tmp->z = p->m0D4.z;
     attack_eff_set(i_this, tmp, type);
 }
 /* dComIfGp_getVibration().StartShock(REG0_S(2) + add, -0x21, cXyz(0, 1, 0)) */
-static inline void bgn_shock(s32 add, cXyz* up) {
-    dVibration_c* vib = dComIfGp_getVibration();
+static inline void bgn_shock(s32 add, cXyz *up) {
+    dVibration_c *vib = dComIfGp_getVibration();
     up->x = 0.0f;
     up->y = 1.0f;
     up->z = 0.0f;
-    StartShock(vib, REG0_S(2) + add, -0x21, up);
+    vib->StartShock(REG0_S(2) + add, -0x21, up);
 }
 
-/* punch_LR (inline). HD: the hit happens in place (the GameCube collects it in bVar2) */
-static inline void punch_LR(bgn_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    u32 player = gabi::load<u32>(dComIfGp_ea() + PLAY_PLAYER);
+/* inlined into action_main */
+// HD: the hit happens in place; GameCube collects it in bVar2.
+static inline void punch_LR(bgn_class *i_this) {
+    fopAc_ac_c *actor = i_this;
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
     cLib_addCalc0(&i_this->mC728.y, 0.5f, 20.0f);
     gabi::Local<cXyz> local_90;
     gabi::Local<cXyz> local_6c;
     gabi::Local<cXyz> tmp;
-    local_90->x = gabi::at<fopAc_ac_c>(player)->current.pos.x;
-    local_90->y = gabi::at<fopAc_ac_c>(player)->current.pos.y;
-    local_90->z = gabi::at<fopAc_ac_c>(player)->current.pos.z;
+    local_90->x = player->current.pos.x;
+    local_90->y = player->current.pos.y;
+    local_90->z = player->current.pos.z;
     if (i_this->mAAA8[0].m2D0 != 0 && i_this->mAAA8[1].m2D0 != 0) {
         cMtx_YrotS(calc_mtx(), actor->shape_angle.y);
         local_6c->x = cM_rndFX(1000.0f);
@@ -320,7 +328,7 @@ static inline void punch_LR(bgn_class* i_this) {
             i_this->mC779 = 1;
             i_this->mC74A = (s16)(i_this->mC74A + 1);
             i_this->mC7AC[0] = (s16)(REG0_S(1) + 0x32);
-            fopAcM_seStart(actor, 0x5971 /* JA_SE_CM_BGN_D_PUNCH_FIRE */, 0);
+            fopAcM_seStart(actor, bgn_action::JA_SE_CM_BGN_D_PUNCH_FIRE, 0);
             i_this->mC338 = 200.0f;
             i_this->mC334 = 200.0f;
             OnAtSetBit(&bgn_rhand(i_this)->mPartSph);
@@ -332,7 +340,8 @@ static inline void punch_LR(bgn_class* i_this) {
         uVar11 = 2;
         PSVECAdd(&i_this->mC788, &i_this->mC7A0, &i_this->mC788);
         i_this->mAAA8[4].m2E8 = 100.0f;
-        if (i_this->mC7AC[0] == 0 || bgn_rhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
+        if (i_this->mC7AC[0] == 0 ||
+            bgn_rhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
             bgn_shock(5, tmp);
             i_this->mC779 = 0;
             i_this->mAAA8[4].m2F4 = gabi::fadds_ppc(REG0_F(15), 5000.0f);
@@ -358,13 +367,14 @@ static inline void punch_LR(bgn_class* i_this) {
             i_this->mC74A = (s16)(i_this->mC74A + 1);
             i_this->mC7AC[0] = (s16)(REG0_S(1) + 0x32);
             i_this->mC778 = 1;
-            fopAcM_seStart(actor, 0x5971 /* JA_SE_CM_BGN_D_PUNCH_FIRE */, 0);
+            fopAcM_seStart(actor, bgn_action::JA_SE_CM_BGN_D_PUNCH_FIRE, 0);
         }
         uVar11 = 1;
         OnAtSetBit(&bgn_lhand(i_this)->mPartSph);
         PSVECAdd(&i_this->mC77C, &i_this->mC794, &i_this->mC77C);
         i_this->mC338 = 200.0f;
-        if (i_this->mC7AC[0] == 0 || bgn_lhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
+        if (i_this->mC7AC[0] == 0 ||
+            bgn_lhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
             bgn_shock(5, tmp);
             i_this->mAAA8[3].m2F4 = gabi::fadds_ppc(REG0_F(15), 5000.0f);
             i_this->mC778 = 0;
@@ -392,7 +402,7 @@ static inline void punch_LR(bgn_class* i_this) {
             i_this->mC779 = 1;
             i_this->mC74A = (s16)(i_this->mC74A + 1);
             i_this->mC7AC[0] = (s16)(REG0_S(1) + 0x32);
-            fopAcM_seStart(actor, 0x5971 /* JA_SE_CM_BGN_D_PUNCH_FIRE */, 0);
+            fopAcM_seStart(actor, bgn_action::JA_SE_CM_BGN_D_PUNCH_FIRE, 0);
         }
         uVar11 = 3;
         OnAtSetBit(&bgn_rhand(i_this)->mPartSph);
@@ -401,7 +411,8 @@ static inline void punch_LR(bgn_class* i_this) {
         PSVECAdd(&i_this->mC788, &i_this->mC7A0, &i_this->mC788);
         i_this->mC338 = 200.0f;
         i_this->mC334 = 200.0f;
-        if (i_this->mC7AC[0] == 0 || bgn_lhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
+        if (i_this->mC7AC[0] == 0 ||
+            bgn_lhand(i_this)->m0D4.y < gabi::fadds_ppc(i_this->mC7BC, 30.0f)) {
             bgn_shock(8, tmp);
             i_this->mAAA8[3].m2F4 = gabi::fadds_ppc(REG0_F(15), 5000.0f);
             i_this->mAAA8[4].m2F4 = gabi::fadds_ppc(REG0_F(15), 5000.0f);
@@ -420,7 +431,8 @@ static inline void punch_LR(bgn_class* i_this) {
     }
     if (uVar11 != 0) {
         if (uVar11 <= 2) {
-            cLib_addCalc2(&i_this->mC32C[uVar11 - 1], gabi::fadds_ppc(REG0_F(14), 1.0f), 0.2f, 0.05f);
+            cLib_addCalc2(&i_this->mC32C[uVar11 - 1], gabi::fadds_ppc(REG0_F(14), 1.0f), 0.2f,
+                          0.05f);
         } else {
             for (s32 i = 0; i < 2; i++)
                 cLib_addCalc2(&i_this->mC32C[i], gabi::fadds_ppc(REG0_F(14), 1.0f), 0.2f, 0.05f);
@@ -429,34 +441,44 @@ static inline void punch_LR(bgn_class* i_this) {
             cLib_addCalcAngleS2(&actor->shape_angle.y, fopAcM_searchPlayerAngleY(actor), 10, 0x400);
     }
     for (s32 i = 0; i < 8; i++) {
-        move_s* m = &i_this->mAAA8[i];
+        move_s *m = &i_this->mAAA8[i];
         switch (i_this->mC74A) {
-        case 1: bgn_pose(m, PUNCH_R1_D, i); break;
-        case 2: bgn_pose(m, PUNCH_R2_D, i); break;
-        case 3: bgn_pose(m, PUNCH_L1_D, i); break;
-        case 4: bgn_pose(m, PUNCH_L2_D, i); break;
+        case 1:
+            bgn_pose(m, bgn_action::punch_r1_d(), i);
+            break;
+        case 2:
+            bgn_pose(m, bgn_action::punch_r2_d(), i);
+            break;
+        case 3:
+            bgn_pose(m, bgn_action::punch_l1_d(), i);
+            break;
+        case 4:
+            bgn_pose(m, bgn_action::punch_l2_d(), i);
+            break;
         case 5:
             if ((i_this->mC7AC[0] & 0x10) != 0)
-                bgn_pose(m, PUNCH_LR1_D, i);
+                bgn_pose(m, bgn_action::punch_lr1_d(), i);
             else
-                bgn_pose(m, PUNCH_LR12_D, i);
+                bgn_pose(m, bgn_action::punch_lr12_d(), i);
             break;
-        case 6: bgn_pose(m, PUNCH_LR2_D, i); break;
+        case 6:
+            bgn_pose(m, bgn_action::punch_lr2_d(), i);
+            break;
         }
     }
 }
 
-static inline void bgn_strings_wave(bgn_class* i_this, s16 add) {
+static inline void bgn_strings_wave(bgn_class *i_this, s16 add) {
     for (s32 i = 0; i < 8; i++) {
         i_this->mAAA8[i].m2F8 = (s16)(REG0_S(7) + add);
         i_this->mAAA8[i].m2F4 = gabi::fadds_ppc(REG0_F(15), 5000.0f);
     }
 }
 
-/* body_attack (inline) */
-static inline void body_attack(bgn_class* i_this) {
-    fopAc_ac_c* actor = i_this;
-    u32 player = gabi::load<u32>(dComIfGp_ea() + PLAY_PLAYER);
+/* inlined into action_main */
+static inline void body_attack(bgn_class *i_this) {
+    fopAc_ac_c *actor = i_this;
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
     gabi::Local<cXyz> local_50;
     gabi::Local<cXyz> tmp;
     cXyz_mi(&i_this->mC758, local_50, &actor->current.pos);
@@ -466,7 +488,7 @@ static inline void body_attack(bgn_class* i_this) {
     switch (i_this->mC74A) {
     case 0:
         i_this->mC76C = 0.0f;
-        bgn_copy_pos(&i_this->mC758, &gabi::at<fopAc_ac_c>(player)->current.pos);
+        bgn_copy_pos(&i_this->mC758, &player->current.pos);
         i_this->mC758.y = 0.0f;
         if (i_this->mAAA8[0].m2D0 == 0 || i_this->mAAA8[1].m2D0 == 0)
             i_this->mC764 = fopAcM_searchPlayerAngleY(actor);
@@ -496,7 +518,8 @@ static inline void body_attack(bgn_class* i_this) {
         OnAtSetBit(&i_this->mPelvisParts[0].mPartSph);
         if (!(i_this->mC728.y > -1000.0f)) {
             i_this->mC728.y = -1000.0f;
-            actor->speed.y = -(f32)gabi::fmuls_ppc(actor->speed.y, gabi::fadds_ppc(REG0_F(19), 0.4f));
+            actor->speed.y =
+                -(f32)gabi::fmuls_ppc(actor->speed.y, gabi::fadds_ppc(REG0_F(19), 0.4f));
             bgn_strings_wave(i_this, 0x28);
             i_this->mC770 = (s16)(REG0_S(0) + 0x14);
             i_this->mC7AC[0] = 0x46;
@@ -516,9 +539,11 @@ static inline void body_attack(bgn_class* i_this) {
             actor->speed.y = 0.0f;
         }
         if (i_this->mC7AC[0] > 10) {
-            cLib_addCalc2(&i_this->mC774, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f, gabi::fadds_ppc(REG0_F(10), 50.0f));
+            cLib_addCalc2(&i_this->mC774, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f,
+                          gabi::fadds_ppc(REG0_F(10), 50.0f));
             for (s32 i = 0; i < 8; i++)
-                cLib_addCalc2(&i_this->mAAA8[i].m2EC, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f, gabi::fadds_ppc(REG0_F(10), 50.0f));
+                cLib_addCalc2(&i_this->mAAA8[i].m2EC, gabi::fadds_ppc(REG0_F(9), 250.0f), 1.0f,
+                              gabi::fadds_ppc(REG0_F(10), 50.0f));
         }
         if (i_this->mC7AC[0] == 0) {
             i_this->mC748 = 0;
@@ -536,9 +561,9 @@ static inline void body_attack(bgn_class* i_this) {
     }
 }
 
-/* 02086130 action_main. HD: the rope update of action_s runs later (020859AC, from shape_calc). */
-void action_main(bgn_class* i_this) {
-    WWHD_FUNC(0x02086130, void, i_this);
+/* 02086130 */
+// HD: action_s rope updates run later from move().
+void action_main(bgn_class *i_this) {
     gabi::Local<cXyz> local_9c;
     gabi::Local<cXyz> local_90;
     gabi::Local<cXyz> sum;
@@ -546,20 +571,23 @@ void action_main(bgn_class* i_this) {
     local_9c->z = i_this->mC308.z;
     local_9c->x = i_this->mC308.x;
     cLib_addCalc0(&i_this->mC774, 1.0f, 25.0f);
-    u32 lines = i_this->mRedRopeMat.mpLines;
-    u32 size = gabi::load<u32>(lines + 4);
-    u32 pos = gabi::load<u32>(lines);
-    for (s32 i = 0; i < 60; i++, pos += 0xC, size++) {
-        f32 s = cM_ssin(bgn_cM_rad2s_a(gabi::fmuls_ppc((f32)i, 0.053247336f)));
-        f32 dVar9 = gabi::fmuls_ppc(gabi::fmuls_ppc(s, i_this->mC774), gabi::fmuls_ppc((f32)(59 - i), 0.01666667f));
+    auto *lines = gabi::at<bgn_action::Line>(i_this->mRedRopeMat.mpLines);
+    be<u8> *pcVar5 = gabi::at<be<u8>>(lines->mpSize);
+    bgn_action::Words *pcVar7 = gabi::at<bgn_action::Words>(lines->mpPos);
+    for (s32 i = 0; i < 60; i++, pcVar7++, pcVar5++) {
+        f32 s = cM_ssin(cM_rad2s(gabi::fmuls_ppc((f32)i, 0.053247336f)));
+        f32 dVar9 = gabi::fmuls_ppc(gabi::fmuls_ppc(s, i_this->mC774),
+                                    gabi::fmuls_ppc((f32)(59 - i), 0.01666667f));
         s16 c746 = i_this->mC746;
-        local_90->x = gabi::fmuls_ppc(cM_ssin(c746 * (REG0_S(3) + 300) + i * (REG0_S(4) + 2000)), dVar9);
-        local_90->z = gabi::fmuls_ppc(cM_ssin(c746 * (REG0_S(5) + 0xFA) + i * (REG0_S(6) + 2000)), dVar9);
+        local_90->x =
+            gabi::fmuls_ppc(cM_ssin(c746 * (REG0_S(3) + 300) + i * (REG0_S(4) + 2000)), dVar9);
+        local_90->z =
+            gabi::fmuls_ppc(cM_ssin(c746 * (REG0_S(5) + 0xFA) + i * (REG0_S(6) + 2000)), dVar9);
         cXyz_pl(local_9c, sum, local_90);
-        gabi::store<u32>(pos, gabi::load<u32>(sum.a));
-        gabi::store<u32>(pos + 4, gabi::load<u32>(sum.a + 4));
-        gabi::store<u32>(pos + 8, gabi::load<u32>(sum.a + 8));
-        gabi::store<u8>(size, (u8)(REG0_S(3) + 10));
+        pcVar7->x = (u32)bgn_action::words(sum.get())->x;
+        pcVar7->y = (u32)bgn_action::words(sum.get())->y;
+        pcVar7->z = (u32)bgn_action::words(sum.get())->z;
+        *pcVar5 = (u8)(REG0_S(3) + 10);
         local_9c->y = gabi::fadds_ppc(local_9c->y, 50.0f);
     }
     if (l_HIO().m025 == 0) {
@@ -613,4 +641,9 @@ void action_main(bgn_class* i_this) {
     cLib_addCalc2(&i_this->mC334, i_this->mC338, 1.0f, 10.0f);
     i_this->mC338 = l_HIO().m0D4;
 }
-VERIFY(0x02086130, action_main);
+
+// clang-format off
+/* WWHD glue
+ext 02019510 s16 cM_rad2s(f32)
+ext 025E1AA4 void mDoAud_monsSeStart(u32,cXyz*,u32,u32,s32)
+*/

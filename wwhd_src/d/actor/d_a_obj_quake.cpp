@@ -1,219 +1,239 @@
-/* HD Quake full actor reconstruction derived from zeldaret/tww. */
+/** Scheduled quake/sound actor. */
 #include "d/actor/d_a_obj_quake.h"
-u32 prmAbstract(daObjQuake_c *actor, u32 width, u32 shift) {
-  WWHD_FUNC(0x02387230, u32, actor, width, shift);
-  u32 parameters = gabi::load<u32>(gabi::ea(actor) + 0xB0);
-  width &= 63;
-  shift &= 63;
-  u32 mask = (width < 32 ? 1u << width : 0u) - 1u;
-  return (shift < 32 ? parameters >> shift : 0u) & mask;
-}
-VERIFY(0x02387230, prmAbstract);
+static daObjQuake_HIO_c l_HIO;
+static QuakeHeaderStatics l_headerStatics;
+static const f32 l_cycleLength = 6.0f;
+static const f32 l_zero = 0.0f;
+static const f32 l_one = 1.0f;
 
-static QuakeHIO *hio() { return gabi::at<QuakeHIO>(0x1046BD08); }
+/* 02387230 */
+u32 PrmAbstract(daObjQuake_c *actor, u32 width, u32 shift) {
+    u32 parameters = actor->mParameters;
+    width &= 63;
+    shift &= 63;
+    u32 mask = (width < 32 ? 1u << width : 0u) - 1u;
+    return (shift < 32 ? parameters >> shift : 0u) & mask;
+}
+
+/* 02386B20 */
 u8 daObjQuake_c::getPrmType() {
-  WWHD_FUNC(0x02386B20, u8, this);
-  return (u8)prmAbstract(this, 3, 8);
+    return (u8)PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
 }
-VERIFY(0x02386B20, &daObjQuake_c::getPrmType);
-s32 daObjQuake_c::Create() {
-  WWHD_FUNC(0x02386B4C, s32, this);
-  u32 base = gabi::ea(this), flags = gabi::load<u32>(base + 0x2E4);
-  if (!(flags & 8)) {
-    if (this) {
-      gabi::call(0x025D4ED0, this);
-      flags = gabi::load<u32>(base + 0x2E4);
-      gabi::store<u32>(base + 0xB4, 0x1002EBDC);
+
+/* 02386B4C */
+cPhs_State daObjQuake_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (this) {
+            fopAc_ac_c_ct(this);
+            flags = actor_condition;
+            __vtbl = VTABLE;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
     }
-    gabi::store<u32>(base + 0x2E4, flags | 8);
-  }
-  u32 save = gabi::load<u32>(0x101F84DC);
-  if (gabi::call<s32>(0x025B7D90, gabi::at<u8>(save + 0xD4), 1))
-    return 3;
-  if (getPrmType() >= 3)
-    return 5;
-  gabi::call(0x025DA884, gabi::at<u8>(base + 0xDC));
-  mType = getPrmType();
-  mActive = 0;
-  u32 play = gabi::call<u32>(0x025200D4), object = play + 0x5150;
-  u32 table = gabi::load<u32>(object);
-  u32 info =
-      gabi::call_ptr<u32>(gabi::load<u32>(table + 0x15C), gabi::at<u8>(object));
-  f32 seconds = (f32)gabi::load<u8>(info + 0xF);
-  mDuration = seconds * 30.0f;
-  u8 type = mType;
-  if (type == 0 || type == 2) {
-    mStart = 4.0f;
-    mEnd = 6.0f;
-  } else if (type == 1) {
-    mStart = 0.0f;
-    mEnd = 6.0f;
-  }
-  if (hio()->mNo < 0)
-    hio()->mNo = (s8)gabi::call<s32>(0x025F0A10, STR(0x1002EC08), hio());
-  hio()->mCount = (u32)hio()->mCount + 1u;
-  return 4;
+    if (dComIfGs_isSymbol(dSymbol_DIN_e))
+        return cPhs_STOP_e;
+    if (getPrmType() >= 3)
+        return cPhs_ERROR_e;
+    fopDwTg_DrawQTo(&draw_tag);
+    mType = getPrmType();
+    mActive = 0;
+    // HD: obtain schedule seconds through the stage object's virtual method.
+    QuakeStageInfo* info = static_cast<QuakeStageInfo*>(dComIfGp_getStageStagInfo());
+    f32 seconds = static_cast<f32>(info->mSchSec);
+    mDuration = seconds * 30.0f;
+    u8 type = mType;
+    if (type == TYPE_QUAKE || type == TYPE_CAMERA) {
+        mStart = 4.0f;
+        mEnd = 6.0f;
+    } else if (type == TYPE_SOUND) {
+        mStart = 0.0f;
+        mEnd = 6.0f;
+    }
+    if (l_HIO.mNo < 0)
+        l_HIO.mNo = mDoHIO_createChild("Vibration Effect", &l_HIO); // "振動効果" (Vibration Effect)
+    l_HIO.mCount = (u32)l_HIO.mCount + 1u;
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x02386B4C, &daObjQuake_c::Create);
-s32 wrapperCreate(daObjQuake_c *actor) {
-  WWHD_FUNC(0x02386CE8, s32, actor);
-  return actor->Create();
+
+/* 02386CE8 */
+cPhs_State daObjQuakeCreate(daObjQuake_c *actor) {
+    return actor->_create();
 }
-VERIFY(0x02386CE8, wrapperCreate);
-BOOL Delete(daObjQuake_c *actor) {
-  WWHD_FUNC(0x02386CEC, BOOL, actor);
-  return TRUE;
+
+/* 02386CEC */
+BOOL daObjQuakeDelete(daObjQuake_c *actor) {
+    return TRUE;
 }
-VERIFY(0x02386CEC, Delete);
+
+/* 02386CF4 */
 s32 daObjQuake_c::getPrmPower() {
-  WWHD_FUNC(0x02386CF4, s32, this);
-  return (s32)(prmAbstract(this, 3, 11) + 1u);
+    return (s32)(PrmAbstract(this, PRM_POWER_W, PRM_POWER_S) + 1u);
 }
-VERIFY(0x02386CF4, &daObjQuake_c::getPrmPower);
+
+/* 02386D20 */
 u8 daObjQuake_c::getPrmSch() {
-  WWHD_FUNC(0x02386D20, u8, this);
-  return (u8)prmAbstract(this, 8, 0);
+    return (u8)PrmAbstract(this, PRM_SCH_W, PRM_SCH_S);
 }
-VERIFY(0x02386D20, &daObjQuake_c::getPrmSch);
-BOOL daObjQuake_c::Execute() {
-  WWHD_FUNC(0x02386D4C, BOOL, this);
-  mTimer = (f32)gabi::call<s32>(0x025602CC);
-  u32 mask = 0x2E;
-  s32 power = getPrmPower(), cameraPower = power, motorPower = power;
-  u8 cameraOverride = hio()->mCameraOverride,
-     motorOverride = hio()->mMotorOverride;
-  if (cameraOverride)
-    cameraPower = (u8)hio()->mCameraPower + 1;
-  if (motorOverride) {
-    motorPower = (u8)hio()->mMotorPower + 1;
-    mask = hio()->mCamera ? (mask | 2u) : (mask & ~2u);
-    mask = hio()->mSound ? (mask | 4u) : (mask & ~4u);
-    mask = hio()->mMotor ? (mask | 8u) : (mask & ~8u);
-    mask = hio()->mExtra ? (mask | 0x10u) : (mask & ~0x10u);
-  }
-  u8 schedule = getPrmSch();
-  BOOL active = FALSE;
-  if (schedule & gabi::call<u32>(0x025602A8)) {
-    u32 play = gabi::call<u32>(0x025200D4);
-    if (!(gabi::load<u16>(play + 0x52B8) & 4)) {
-      f32 end = mEnd, divisor = gabi::load<f32>(0x1002EC04);
-      end = end / divisor;
-      f32 start = mStart;
-      start = start / divisor;
-      f32 duration = mDuration, lower = start * duration, timer = mTimer,
-          upper = end * duration;
-      if (!(timer < lower) && timer < upper)
-        active = TRUE;
+
+/* 02386D4C */
+BOOL daObjQuake_c::_execute() {
+    mTimer = (f32)dKy_get_schbit_timer();
+    u32 mask = QuakeFlag_BASE | QuakeFlag_CAMERA | QuakeFlag_SOUND | QuakeFlag_MOTOR;
+    // HD: evaluate parameter power once, then share it between camera and motor.
+    s32 power = getPrmPower(), cameraPower = power, motorPower = power;
+    u8 cameraOverride = l_HIO.mCameraOverride,
+          motorOverride = l_HIO.mMotorOverride;
+    if (cameraOverride)
+        cameraPower = (u8)l_HIO.mCameraPower + 1;
+    if (motorOverride) {
+        motorPower = (u8)l_HIO.mMotorPower + 1;
+        mask = l_HIO.mCamera ? (mask | QuakeFlag_CAMERA) : (mask & ~QuakeFlag_CAMERA);
+        mask = l_HIO.mSound ? (mask | QuakeFlag_SOUND) : (mask & ~QuakeFlag_SOUND);
+        mask = l_HIO.mMotor ? (mask | QuakeFlag_MOTOR) : (mask & ~QuakeFlag_MOTOR);
+        mask = l_HIO.mExtra ? (mask | QuakeFlag_EXTRA) : (mask & ~QuakeFlag_EXTRA);
     }
-  }
-  if (mActive) {
-    if (mType == 1)
-      gabi::call(0x025E1988, 0x105E);
-    if (!active) {
-      u8 type = mType;
-      if (type == 0 || type == 2) {
-        u32 play = gabi::call<u32>(0x025200D4);
-        gabi::call(0x025CB610, gabi::at<u8>(play + 0x599C),
-                   type == 0 ? mask : 1u);
-      }
-      mActive = 0;
+    u8 schedule = getPrmSch();
+    BOOL active = FALSE;
+    if (schedule & dKy_get_schbit()) {
+        dComIfG_inf_c* gameInfo = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        if (!(gameInfo->play.mEvtCtrl.mEventFlag & dEvtFlag_TALK_e)) {
+            f32 end = mEnd, divisor = l_cycleLength;
+            end = end / divisor;
+            f32 start = mStart;
+            start = start / divisor;
+            f32 duration = mDuration, lower = start * duration, timer = mTimer,
+                    upper = end * duration;
+            // HD: GHS uses a negated lower comparison, retaining its NaN behaviour.
+            if (!(timer < lower) && timer < upper)
+                active = TRUE;
+        }
     }
-  } else if (active) {
-    u8 type = mType;
-    f32 zero = gabi::load<f32>(0x1002EC00), one = gabi::load<f32>(0x1002EC20);
-    if (type == 0 || type == 2) {
-      u32 play = gabi::call<u32>(0x025200D4);
-      gabi::Local<cXyz> direction;
-      direction->x = zero;
-      direction->y = one;
-      direction->z = zero;
-      gabi::call(0x025CB408, gabi::at<u8>(play + 0x599C),
-                 type == 0 ? motorPower : cameraPower, type == 0 ? mask : 1u,
-                 direction.get());
+    if (mActive) {
+        if (mType == TYPE_SOUND)
+            mDoAud_seStartQuake(JA_SE_ATM_JINARI);
+        if (!active) {
+            u8 type = mType;
+            if (type == TYPE_QUAKE || type == TYPE_CAMERA) {
+                dVibration_c* vibration = dComIfGp_getVibration();
+                dVibration_StopQuake(vibration, type == TYPE_QUAKE ? mask : QuakeFlag_CAMERA_ONLY);
+            }
+            mActive = 0;
+        }
+    } else if (active) {
+        u8 type = mType;
+        f32 zero = l_zero, one = l_one;
+        if (type == TYPE_QUAKE || type == TYPE_CAMERA) {
+            dVibration_c* vibration = dComIfGp_getVibration();
+            cXyz direction;
+            direction.x = zero;
+            direction.y = one;
+            direction.z = zero;
+            dVibration_StartQuake(vibration, type == TYPE_QUAKE ? motorPower : cameraPower,
+                                                      type == TYPE_QUAKE ? mask : QuakeFlag_CAMERA_ONLY, &direction);
+        }
+        mActive = 1;
     }
-    mActive = 1;
-  }
-  return TRUE;
+    return TRUE;
 }
-VERIFY(0x02386D4C, &daObjQuake_c::Execute);
-BOOL wrapperExecute(daObjQuake_c *actor) {
-  WWHD_FUNC(0x02387008, BOOL, actor);
-  return actor->Execute();
+
+/* 02387008 */
+BOOL daObjQuakeExecute(daObjQuake_c *actor) {
+    return actor->_execute();
 }
-VERIFY(0x02387008, wrapperExecute);
-BOOL daObjQuake_c::IsDelete() {
-  WWHD_FUNC(0x0238700C, BOOL, this);
-  if (mActive) {
-    u8 type = mType;
-    if (type == 0 || type == 2) {
-      u32 play = gabi::call<u32>(0x025200D4);
-      gabi::call(0x025CB610, gabi::at<u8>(play + 0x599C), type == 0 ? 0x3E : 1);
+
+/* 0238700C */
+BOOL daObjQuake_c::_is_delete() {
+    if (mActive) {
+        u8 type = mType;
+        if (type == TYPE_QUAKE || type == TYPE_CAMERA) {
+            dVibration_c* vibration = dComIfGp_getVibration();
+            dVibration_StopQuake(vibration, type == TYPE_QUAKE ? QuakeFlag_ALL : QuakeFlag_CAMERA_ONLY);
+        }
     }
-  }
-  s32 number = (s8)hio()->mNo;
-  if (number >= 0) {
-    u32 count = (u32)hio()->mCount - 1u;
-    hio()->mCount = count;
-    if (count == 0) {
-      gabi::call(0x025F0A18, number);
-      hio()->mNo = -1;
+    s32 number = (s8)l_HIO.mNo;
+    if (number >= 0) {
+        u32 count = (u32)l_HIO.mCount - 1u;
+        l_HIO.mCount = count;
+        if (count == 0) {
+            mDoHIO_deleteChild(number);
+            l_HIO.mNo = -1;
+        }
     }
-  }
-  return TRUE;
+    return TRUE;
 }
-VERIFY(0x0238700C, &daObjQuake_c::IsDelete);
-BOOL wrapperIsDelete(daObjQuake_c *actor) {
-  WWHD_FUNC(0x023870B8, BOOL, actor);
-  return actor->IsDelete();
+
+/* 023870B8 */
+BOOL daObjQuakeIsDelete(daObjQuake_c *actor) {
+    return actor->_is_delete();
 }
-VERIFY(0x023870B8, wrapperIsDelete);
-QuakeHIO *constructHIO(QuakeHIO *p) {
-  WWHD_FUNC(0x023870BC, QuakeHIO *, p);
-  if (!p)
-    p = gabi::call<QuakeHIO *>(0x0273AD10, 0x14);
-  if (p) {
-    p->mCount = 0;
-    p->mNo = -1;
-    p->mVtable = 0x1002EBCC;
-    p->mMotorOverride = 0;
-    p->mSound = 1;
-    p->mMotorPower = 3;
-    p->mMotor = 1;
-    p->mCameraPower = 3;
-    p->mCamera = 1;
-    p->mExtra = 0;
-    p->mCameraOverride = 0;
-  }
-  return p;
+
+// HD: constructor may allocate and returns the HIO pointer; its vtable is the last word.
+/* 023870BC */
+daObjQuake_HIO_c* daObjQuake_HIO_c__ct(daObjQuake_HIO_c* p) {
+    if (!p)
+        p = static_cast<daObjQuake_HIO_c*>(operator_new(sizeof(daObjQuake_HIO_c)));
+    if (p) {
+        p->mCount = 0;
+        p->mNo = -1;
+        p->mVtable = daObjQuake_HIO_c::VTABLE;
+        p->mMotorOverride = 0;
+        p->mSound = 1;
+        p->mMotorPower = 3;
+        p->mMotor = 1;
+        p->mCameraPower = 3;
+        p->mCamera = 1;
+        p->mExtra = 0;
+        p->mCameraOverride = 0;
+    }
+    return p;
 }
-VERIFY(0x023870BC, constructHIO);
-void staticInitialize() {
-  WWHD_FUNC(0x02387134, void);
-  gabi::store<u32>(0x1046BD00, 0);
-  gabi::store<u32>(0x1046BCF8, 0);
-  gabi::store<u32>(0x1046BD04, 0);
-  gabi::store<u32>(0x1046BCFC, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CC718));
-  gabi::store<f32>(0x1046BCEC, -3.1415927410125732f);
-  gabi::store<f32>(0x1046BCF0, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x1046BCF4));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CC724));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x1046BCF5));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CC730));
-  constructHIO(hio());
+
+// HD: compiler-generated and template code of this translation unit.
+/* 02387134 */
+static void __sinit_d_a_obj_quake_cpp() {
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101CC718);
+    l_headerStatics.negativePi = -3.1415927410125732f;
+    l_headerStatics.positivePi = 3.1415927410125732f;
+    QuakeFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101CC724);
+    QuakeSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101CC730);
+    daObjQuake_HIO_c__ct(&l_HIO);
 }
-VERIFY(0x02387134, staticInitialize);
-BOOL Draw(daObjQuake_c *actor) {
-  WWHD_FUNC(0x023871D4, BOOL, actor);
-  return TRUE;
+
+/* 023871D4 */
+BOOL daObjQuakeDraw(daObjQuake_c *actor) {
+    return TRUE;
 }
-VERIFY(0x023871D4, Draw);
-void destruct(daObjQuake_c *actor, s32 flags) {
-  WWHD_FUNC(0x023871DC, void, actor, flags);
-  if (actor) {
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, actor);
-  }
+
+// HD: deleting destructor for the virtual actor base.
+/* 023871DC */
+void daObjQuake_c__dt(daObjQuake_c *actor, s32 flags) {
+    if (actor) {
+        __dt(actor);
+        if (flags & 1)
+            operator_delete(actor);
+    }
 }
-VERIFY(0x023871DC, destruct);
+
+/* WWHD glue (tools/verify/autoglue.py): HIO, constants and external calls
+  data l_HIO 1046BD08
+  data l_headerStatics 1046BCEC
+  data l_zero 1002EC00
+  data l_cycleLength 1002EC04
+  data l_one 1002EC20
+  str 1002EC08 "Vibration Effect" renamed # HD: Shift-JIS "振動効果", translated source label; guest bytes unchanged.
+  ext 025DA884 void fopDwTg_DrawQTo(void*)
+  ext 025602CC s32 dKy_get_schbit_timer()
+  ext 025602A8 u32 dKy_get_schbit()
+  ext 025CB610 void dVibration_StopQuake(dVibration_c*, u32)
+  ext 025CB408 void dVibration_StartQuake(dVibration_c*, s32, u32, cXyz*)
+  ext 025E1988 void mDoAud_seStartQuake(u32)
+  ext 028ED6F8 void QuakeFirstHeaderObject_ct(u8*)
+  ext 028EAB2C void QuakeSecondHeaderObject_ct(u8*)
+*/

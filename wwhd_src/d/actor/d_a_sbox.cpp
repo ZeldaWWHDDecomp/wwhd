@@ -1,56 +1,143 @@
 /** Salvaged treasure box. Ported from zeldaret/tww, checked against WWHD cking.rpx.
  * HD animation/light layouts and emitter inline writes differ. */
 #include "d/actor/d_a_sbox.h"
-static u32 eventManager() { return gabi::ea(dComIfGp_get()) + 0x52C4; }
-static void cutEnd(s32 staff) {
-    u32 mgr = eventManager();
-    gabi::call(0x02543280, mgr, staff);
+// HD: per-TU SafeString and common-header static copies.
+const gc_tu_data gc_tu = {
+    .safeString = 0x10039CB4,
+    .headerStatics = {0x1046D86C, 0x101D000C, 0},
+};
+const char daSbox_c::M_arcname[] = "Dalways";
+static u32 action_table[3] = {};
+static dEvent_manager_c *eventManager() { return dComIfGp_getPEvtManager(); }
+static void cutEnd(s32 staff) { sboxCutEnd(eventManager(), staff); }
+static void invalidateEmitter(SboxEmitter *emitter) {
+    u32 flags = emitter->mStatus;
+    emitter->mMaxFrame = -1;
+    emitter->mStatus = flags | 1;
 }
-static void invalidateEmitter(void *e) {
-    u32 p = gabi::ea(e);
-    u32 flags = gabi::load<u32>(p + 0x254);
-    gabi::store<s32>(p + 0x5C, -1);
-    gabi::store<u32>(p + 0x254, flags | 1);
+static daSbox_c *daSbox_ctor(daSbox_c *);
+
+/* 02469DA0 */
+static BOOL CheckCreateHeap(daSbox_c *self) { return self->CreateHeap(); }
+/* 02469B40 */
+BOOL daSbox_c::CreateHeap() {
+    auto res = [](s32 index) { return dComIfG_getObjectRes("Dalways", index); };
+    J3DModelData *data = (J3DModelData *)res(dRes_INDEX_DALWAYS_BDL_BOXSEA_e);
+    if (!data)
+        JUT_ASSERT_fail("d_a_sbox.cpp", 113, "modelData != (0)");
+    J3DAnmTransform *anm = (J3DAnmTransform *)res(dRes_INDEX_DALWAYS_BCK_BOXOPENBOX_e);
+    if (!mBck1.init(data, anm, true, 0, 1.0f, 0, -1, false))
+        return FALSE;
+    mpModel1 = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
+    if (!mpModel1)
+        return FALSE;
+    data = (J3DModelData *)res(dRes_INDEX_DALWAYS_BDL_IT_TAKARA_FLASH_e);
+    if (!data)
+        JUT_ASSERT_fail("d_a_sbox.cpp", 140, "flashModelData != (0)");
+    mpModel2 = mDoExt_J3DModel__create(data, 0x80000, 0x01000200);
+    if (!mpModel2)
+        return FALSE;
+    anm = (J3DAnmTransform *)res(dRes_INDEX_DALWAYS_BCK_IT_TAKARA_FLASH2_e);
+    if (!mBck2.init(data, anm, true, 0, 1.0f, 0, -1, false))
+        return FALSE;
+    auto btk = (J3DAnmTextureSRTKey *)res(dRes_INDEX_DALWAYS_BTK_IT_TAKARA_FLASH_e);
+    if (!mBtk.init(data, btk, true, 0, 1.0f, 0, -1, false, 0))
+        return FALSE;
+    auto *brk = reinterpret_cast<J3DAnmTevRegKey *>(res(dRes_INDEX_DALWAYS_BRK_IT_TAKARA_FLASH_e));
+    if (!mBrk.init(data, brk, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0))
+        return FALSE;
+    calcMtx();
+    return TRUE;
 }
+/* 024699BC */
+void daSbox_c::calcMtx() {
+    J3DModel_setBaseScale(mpModel1, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    J3DModel_setBaseTRMtx(mpModel1, mDoMtx_stack_c::get());
+    J3DModel_setBaseScale(mpModel2, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, (f32)current.pos.y + 50.0f, current.pos.z);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    J3DModel_setBaseTRMtx(mpModel2, mDoMtx_stack_c::get());
+}
+/* 02469EB0 */
+void daSbox_c::shipMtx() {
+    auto *ship = reinterpret_cast<SboxShip *>(dComIfGp_getShipActor());
+    if (!ship)
+        JUT_ASSERT_fail("d_a_sbox.cpp", 220, "0");
+    auto body = [ship]() { return ship->mMorf->getModel()->getBaseTRMtx(); };
+    Mtx34 *matrix = mDoMtx_stack_c::get();
+    PSMTXCopy(body(), matrix);
+    mDoMtx_stack_c::transM(0.0f, 22.35f, 20.0f);
+    mDoMtx_stack_c::YrotM(0x7FFF);
+    J3DModel_setBaseTRMtx(mpModel1, matrix);
+    /* HD recompiled lfs/stfs transport preserves SNaN bits for x/y here,
+     * whereas z is quieted. Keep those bits before the integer eyePos copies;
+     * normal gabi::load<f32> would quiet x/y prematurely. */
+    auto rawFloat = [](const be<f32> *a) {
+        u32 bits = *reinterpret_cast<const be<u32> *>(a);
+        f32 f;
+        memcpy(&f, &bits, 4);
+        return f;
+    };
+    f32 x = rawFloat(&matrix->m[0][3]);
+    current.pos.x = x;
+    f32 y = rawFloat(&matrix->m[1][3]);
+    current.pos.y = y;
+    f32 z = matrix->m[2][3];
+    attention_info.position.x = x;
+    u32 ybits = *reinterpret_cast<be<u32> *>(&current.pos.y);
+    current.pos.z = z;
+    u32 zbits = *reinterpret_cast<be<u32> *>(&current.pos.z);
+    *reinterpret_cast<be<u32> *>(&eyePos.y) = ybits;
+    *reinterpret_cast<be<u32> *>(&eyePos.z) = zbits;
+    u32 xbits = *reinterpret_cast<be<u32> *>(&current.pos.x);
+    attention_info.position.y = y;
+    *reinterpret_cast<be<u32> *>(&eyePos.x) = xbits;
+    attention_info.position.z = z;
+    current.angle.y = ship->shape_angle.y + 0x7FFF;
+    shape_angle.y = ship->shape_angle.y;
+    PSMTXCopy(body(), matrix);
+    mDoMtx_stack_c::transM(0.0f, 72.35f, 20.0f);
+    J3DModel_setBaseTRMtx(mpModel2, matrix);
+}
+/* 0246A744 */
 BOOL daSbox_c::volmProc() {
-    WWHD_FUNC(0x0246A744, BOOL, this);
     if (!mEmitter)
         return TRUE;
     s16 timer = (s16)(mVolumeTimer + 1);
     mVolumeTimer = timer;
     if (timer == 36)
-        gabi::store<u8>(gabi::ea((void *)mEmitter) + 0x247, 255);
+        mEmitter->mGlobalAlpha = 255;
     else if (timer >= 181) {
-        gabi::store<u8>(gabi::ea((void *)mEmitter) + 0x247, 0);
+        mEmitter->mGlobalAlpha = 0;
         invalidateEmitter(mEmitter);
         mEmitter = nullptr;
         return TRUE;
     } else if (timer > 156)
-        gabi::store<u8>(gabi::ea((void *)mEmitter) + 0x247, (181 - timer) * 10);
+        mEmitter->mGlobalAlpha = (181 - timer) * 10;
     return FALSE;
 }
-VERIFY(0x0246A744, &daSbox_c::volmProc);
+/* 0246A7E0 */
 BOOL daSbox_c::darkProc() {
-    WWHD_FUNC(0x0246A7E0, BOOL, this);
-    if (!chkFlag(0x10))
+    if (!chkFlag(DARKEN_SCENE))
         return TRUE;
     s16 timer = (s16)(mDarkTimer + 1);
     mDarkTimer = timer;
     if (timer > 150) {
         mDarkRatio = 1.0f;
-        gabi::call(0x02560444, 1.0f);
-        clrFlag(0x10);
+        sboxSetAllColorRatio(1.0f);
+        clrFlag(DARKEN_SCENE);
         return TRUE;
     }
     if (timer > 120)
         mDarkRatio = gabi::fmadds(((f32)timer - 120.0f) / 30.0f, 0.6f, 0.4f);
-    gabi::call(0x02560444, (f32)mDarkRatio);
+    sboxSetAllColorRatio((f32)mDarkRatio);
     return FALSE;
 }
-VERIFY(0x0246A7E0, &daSbox_c::darkProc);
+/* 0246A8EC */
 BOOL daSbox_c::lightProc() {
-    WWHD_FUNC(0x0246A8EC, BOOL, this);
-    if (!chkFlag(0x20))
+    if (!chkFlag(EFFECT_LIGHT))
         return TRUE;
     s16 timer = (s16)(mLightTimer + 1);
     f32 p = mLight.mPower;
@@ -68,15 +155,14 @@ BOOL daSbox_c::lightProc() {
         f32 first = mLight.mPower;
         mEffectLight.mPower = next;
         if (first == 0.0f && next == 0.0f) {
-            clrFlag(0x20);
+            clrFlag(EFFECT_LIGHT);
             return TRUE;
         }
     }
     return FALSE;
 }
-VERIFY(0x0246A8EC, &daSbox_c::lightProc);
+/* 0246A1EC */
 void daSbox_c::lightInit() {
-    WWHD_FUNC(0x0246A1EC, void, this);
     f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
     mLight.mPos.set(x, y + 55.0f, z);
     mEffectLight.mPos.set(x, y + 50.0f, z);
@@ -91,29 +177,42 @@ void daSbox_c::lightInit() {
     mEffectLight.mPower = 0;
     mEffectLight.mFluctuation = 0;
     mLightTimer = 0;
-    setFlag(0x20);
-    gabi::call(0x0255A2B8, &mLight);
-    gabi::call(0x0255B9C8, &mEffectLight);
+    setFlag(EFFECT_LIGHT);
+    sboxSetPriorityLight(&mLight);
+    dKy_efplight_set(&mEffectLight);
 }
-VERIFY(0x0246A1EC, &daSbox_c::lightInit);
-void daSbox_c::demoInitCom() {
-    WWHD_FUNC(0x0246A124, void, this);
-    s32 staff = mStaff;
-    u32 mgr = eventManager();
-    if (gabi::call<void *>(0x0254487C, mgr, staff, gabi::at<char>(0x10039D8C), 3))
-        setFlag(8);
+/* 0246AE28 */
+BOOL daSbox_c::CreateInit() {
+    s8 room = current.roomNo;
+    mAction = 0;
+    tevStr.mRoomNo = room;
+    calcMtx();
+    return TRUE;
 }
-VERIFY(0x0246A124, &daSbox_c::demoInitCom);
+/* 0246AE5C */
+cPhs_State daSbox_c::create() {
+    if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0)
+            daSbox_ctor(this);
+        fopAcM_OnCondition(this, fopAcCnd_INIT_e);
+    }
+    cPhs_State phase = dComIfG_resLoad(&mPhase, M_arcname);
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void *)CheckCreateHeap), 0x15C0))
+        return cPhs_ERROR_e;
+    CreateInit();
+    return cPhs_COMPLEATE_e;
+}
+/* 0246A188 */
 void daSbox_c::demoInitWait() {
-    WWHD_FUNC(0x0246A188, void, this);
     s32 staff = mStaff;
-    u32 mgr = eventManager();
-    void *p = gabi::call<void *>(0x0254487C, mgr, staff, gabi::at<char>(0x10039D94), 3);
-    mTimer = p ? gabi::load<s16>(gabi::ea(p) + 2) : 0;
+    dEvent_manager_c *mgr = eventManager();
+    void *p = sboxGetSubstance(mgr, staff, "Timer", 3);
+    mTimer = p ? reinterpret_cast<be<s16> *>(p)[1] : 0;
 }
-VERIFY(0x0246A188, &daSbox_c::demoInitWait);
+/* 0246A5FC */
 BOOL daSbox_c::demoProcWait() {
-    WWHD_FUNC(0x0246A5FC, BOOL, this);
     s16 timer = mTimer;
     if (timer > 0)
         mTimer = timer - 1;
@@ -121,93 +220,143 @@ BOOL daSbox_c::demoProcWait() {
         cutEnd(mStaff);
     return FALSE;
 }
-VERIFY(0x0246A5FC, &daSbox_c::demoProcWait);
-void daSbox_c::demoProcDelete() {
-    WWHD_FUNC(0x0246A70C, void, this);
-    cutEnd(mStaff);
-}
-VERIFY(0x0246A70C, &daSbox_c::demoProcDelete);
-void daSbox_c::demoInitDelete() {
-    WWHD_FUNC(0x0246A56C, void, this);
-    if (chkFlag(2)) {
-        if (mEmitter) {
-            invalidateEmitter(mEmitter);
-            mEmitter = nullptr;
-        }
-        if (chkFlag(0x10)) {
-            gabi::call(0x02560444, 1.0f);
-            clrFlag(0x10);
-        }
+/* 0246A2AC */
+void daSbox_c::demoInitOpen() {
+    s8 room = current.roomNo;
+    mBck1.mFrameCtrl.mRate = 1.0f;
+    mBck2.mFrameCtrl.mRate = 1.0f;
+    mBrk.mFrameCtrl.mRate = 1.0f;
+    mBtk.mFrameCtrl.mRate = 1.0f;
+    s32 reverb = sboxGetReverb(room);
+    mDoAud_seStart(JA_SE_OBJ_TBOX_OPEN_S1, &eyePos, 0, reverb);
+    reverb = sboxGetReverb((s8)current.roomNo);
+    mDoAud_seStart(JA_SE_OBJ_TBOX_UNLOCK, &eyePos, 0, reverb);
+    sboxStartSubBgm(JA_BGM_OPEN_BOX);
+    setFlag(OPEN_EFFECT);
+    auto particle = [this](u16 id) {
+        return reinterpret_cast<SboxEmitter *>(
+            dComIfGp_getParticle()->set(0, id, &current.pos, &current.angle, nullptr, 255, nullptr,
+                                        -1, nullptr, nullptr, nullptr));
+    };
+    particle(dPa_name::ID_IT_JN_TAKARA_PAKAF);
+    particle(dPa_name::ID_IT_JN_TAKARA_NAKAF);
+    particle(dPa_name::ID_IT_JN_TAKARA_PAKAF_SOTO);
+    SboxEmitter *e = particle(dPa_name::ID_IT_JN_TAKARA_UEF);
+    if (e) {
+        e->mGlobalParticleScale.y = 1.0f;
+        e->mEmitterScale.z = 1.0f;
+        e->mEmitterScale.x = 0.7f;
+        e->mGlobalScale.x = 0.7f;
+        e->mGlobalParticleScale.x = 0.7f;
+        e->mGlobalScale.z = 1.0f;
+        e->mEmitterScale.y = 1.0f;
+        e->mGlobalParticleScale.z = 1.0f;
+        e->mGlobalScale.y = 1.0f;
     }
-    dKy_plight_cut(&mLight);
-    gabi::call(0x0255BA9C, &mEffectLight);
+    e = particle(dPa_name::ID_IT_JN_TAKARA_TSUBU);
+    if (e) {
+        e->mEmitterScale.y = 1.0f;
+        e->mEmitterScale.x = 0.7f;
+        e->mEmitterScale.z = 1.0f;
+    }
+    e = particle(dPa_name::ID_IT_JN_TAKARA_VOLM);
+    mEmitter = e;
+    if (e) {
+        mVolumeTimer = 0;
+        mEmitter->mGlobalAlpha = 0;
+        mEmitter->mGlobalParticleScale.y = 0.7f;
+    }
+    setFlag(DARKEN_SCENE);
+    mDarkTimer = 0;
+    mDarkRatio = 0.4f;
+    lightInit();
 }
-VERIFY(0x0246A56C, &daSbox_c::demoInitDelete);
+/* 0246A654 */
 void daSbox_c::demoProcOpen() {
-    WWHD_FUNC(0x0246A654, void, this);
-    if (chkFlag(1)) {
+    if (chkFlag(OPEN_ANIMATION)) {
         if (mBck1.play()) {
-            s32 reverb = gabi::call<s32>(0x02520540, (s8)current.roomNo);
-            mDoAud_seStart(0x690D, &eyePos, 0, reverb);
+            s32 reverb = sboxGetReverb((s8)current.roomNo);
+            mDoAud_seStart(JA_SE_OBJ_TBOX_OPEN_S2, &eyePos, 0, reverb);
             cutEnd(mStaff);
-            clrFlag(1);
+            clrFlag(OPEN_ANIMATION);
         }
     } else
         cutEnd(mStaff);
 }
-VERIFY(0x0246A654, &daSbox_c::demoProcOpen);
+/* 0246A56C */
+void daSbox_c::demoInitDelete() {
+    if (chkFlag(OPEN_EFFECT)) {
+        if (mEmitter) {
+            invalidateEmitter(mEmitter);
+            mEmitter = nullptr;
+        }
+        if (chkFlag(DARKEN_SCENE)) {
+            sboxSetAllColorRatio(1.0f);
+            clrFlag(DARKEN_SCENE);
+        }
+    }
+    dKy_plight_cut(&mLight);
+    dKy_efplight_cut(&mEffectLight);
+}
+/* 0246A70C */
+void daSbox_c::demoProcDelete() { cutEnd(mStaff); }
+/* 0246A124 */
+void daSbox_c::demoInitCom() {
+    s32 staff = mStaff;
+    dEvent_manager_c *mgr = eventManager();
+    if (sboxGetSubstance(mgr, staff, "DISP", 3))
+        setFlag(BOX_VISIBLE);
+}
+/* 0246AA0C */
 void daSbox_c::demoProcCom() {
-    WWHD_FUNC(0x0246AA0C, void, this);
-    if (chkFlag(2)) {
+    if (chkFlag(OPEN_EFFECT)) {
         BOOL a = mBck2.play(), b = mBtk.play(), c = mBrk.play();
         if (gabi::ftoi(mBck2.getFrame()) == 36)
-            setFlag(4);
+            setFlag(EFFECT_VISIBLE);
         BOOL d = volmProc(), e = darkProc(), f = lightProc();
         if (a && b && c && d && e && f)
-            clrFlag(6);
+            clrFlag(OPEN_EFFECT | EFFECT_VISIBLE);
     }
 }
-VERIFY(0x0246AA0C, &daSbox_c::demoProcCom);
+/* 0246A0D8 */
 s32 daSbox_c::getNowEventAction() {
-    WWHD_FUNC(0x0246A0D8, s32, this);
     s32 staff = mStaff;
-    u32 mgr = eventManager();
-    return gabi::call<s32>(0x02542EDC, mgr, staff, gabi::at<void>(0x101D0000), 3, 0, 1);
+    dEvent_manager_c *mgr = eventManager();
+    return sboxGetAction(mgr, staff, action_table, 3, 0, 1);
 }
-VERIFY(0x0246A0D8, &daSbox_c::getNowEventAction);
+/* 0246AAE8 */
 BOOL daSbox_c::demoProc() {
-    WWHD_FUNC(0x0246AAE8, BOOL, this);
-    u32 mgr = eventManager();
-    s32 staff = gabi::call<s32>(0x02542D88, mgr, gabi::at<char>(0x10039DD0), 0, 0);
+    dEvent_manager_c *mgr = eventManager();
+    s32 staff = sboxGetStaff(mgr, "tkrSlv", 0, 0);
     mStaff = staff;
     if (staff == -1)
         return FALSE;
     s32 action = getNowEventAction();
     staff = mStaff;
     mgr = eventManager();
-    if (gabi::call<BOOL>(0x025447C8, mgr, staff)) {
-        setFlag(1);
+    if (sboxIsAdvance(mgr, staff)) {
+        setFlag(OPEN_ANIMATION);
         demoInitCom();
         switch (action) {
-        case 0:
+        case ACT_WAIT:
             demoInitWait();
             break;
-        case 1:
+        case ACT_OPEN:
             demoInitOpen();
             break;
-        case 2:
+        case ACT_DELETE:
             demoInitDelete();
             break;
         }
     }
     switch (action) {
-    case 0:
+    case ACT_WAIT:
         demoProcWait();
         break;
-    case 1:
+    case ACT_OPEN:
         demoProcOpen();
         break;
-    case 2:
+    case ACT_DELETE:
         demoProcDelete();
         break;
     default:
@@ -216,135 +365,17 @@ BOOL daSbox_c::demoProc() {
     demoProcCom();
     return TRUE;
 }
-VERIFY(0x0246AAE8, &daSbox_c::demoProc);
+/* 0246AC6C */
 BOOL daSbox_c::actionWait() {
-    WWHD_FUNC(0x0246AC6C, BOOL, this);
     shipMtx();
     if (!demoProc())
         fopAcM_delete(this);
     return TRUE;
 }
-VERIFY(0x0246AC6C, &daSbox_c::actionWait);
-static BOOL daSbox_Execute(daSbox_c *self) {
-    WWHD_FUNC(0x0246ACB4, BOOL, self);
-    if (self->mAction == 0)
-        self->actionWait();
-    return TRUE;
-}
-VERIFY(0x0246ACB4, daSbox_Execute);
-static BOOL daSbox_IsDelete(daSbox_c *self) {
-    WWHD_FUNC(0x0246ACE4, BOOL, self);
-    return TRUE;
-}
-VERIFY(0x0246ACE4, daSbox_IsDelete);
-static BOOL daSbox_Delete(daSbox_c *self) {
-    WWHD_FUNC(0x0246ACEC, BOOL, self);
-    gabi::call(0x025204C8, &self->mPhase, gabi::at<char>(0x10039DE0));
-    mDoAud_seDeleteObject(&self->eyePos);
-    return TRUE;
-}
-VERIFY(0x0246ACEC, daSbox_Delete);
-void daSbox_c::calcMtx() {
-    WWHD_FUNC(0x024699BC, void, this);
-    J3DModel_setBaseScale(mpModel1, &scale);
-    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
-    mDoMtx_stack_c::YrotM(current.angle.y);
-    J3DModel_setBaseTRMtx(mpModel1, mDoMtx_stack_c::get());
-    J3DModel_setBaseScale(mpModel2, &scale);
-    mDoMtx_stack_c::transS(current.pos.x, (f32)current.pos.y + 50.0f, current.pos.z);
-    mDoMtx_stack_c::YrotM(current.angle.y);
-    J3DModel_setBaseTRMtx(mpModel2, mDoMtx_stack_c::get());
-}
-VERIFY(0x024699BC, &daSbox_c::calcMtx);
-BOOL daSbox_c::CreateHeap() {
-    WWHD_FUNC(0x02469B40, BOOL, this);
-    auto res = [](s32 index) {
-        return dComIfG_getObjectRes(gabi::at<char>(0x10039D0C), index, 0x10039CB4);
-    };
-    J3DModelData *data = (J3DModelData *)res(0x15);
-    if (!data)
-        JUT_ASSERT_fail(gabi::at<char>(0x10039D2C), 113, gabi::at<char>(0x10039D3C));
-    J3DAnmTransform *anm = (J3DAnmTransform *)res(8);
-    if (!mBck1.init(data, anm, true, 0, 1.0f, 0, -1, false))
-        return FALSE;
-    mpModel1 = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
-    if (!mpModel1)
-        return FALSE;
-    data = (J3DModelData *)res(0x16);
-    if (!data)
-        JUT_ASSERT_fail(gabi::at<char>(0x10039D2C), 140, gabi::at<char>(0x10039D14));
-    mpModel2 = mDoExt_J3DModel__create(data, 0x80000, 0x01000200);
-    if (!mpModel2)
-        return FALSE;
-    anm = (J3DAnmTransform *)res(0xB);
-    if (!mBck2.init(data, anm, true, 0, 1.0f, 0, -1, false))
-        return FALSE;
-    auto btk = (J3DAnmTextureSRTKey *)res(0x25);
-    if (!mBtk.init(data, btk, true, 0, 1.0f, 0, -1, false, 0))
-        return FALSE;
-    void *brk = res(0x1E);
-    if (!gabi::call<BOOL>(0x025E8154, &mBrk, data, brk, true, 0, 1.0f, (s16)0, (s16)-1, false, 0))
-        return FALSE;
-    calcMtx();
-    return TRUE;
-}
-VERIFY(0x02469B40, &daSbox_c::CreateHeap);
-static BOOL CheckCreateHeap(daSbox_c *self) {
-    WWHD_FUNC(0x02469DA0, BOOL, self);
-    return self->CreateHeap();
-}
-VERIFY(0x02469DA0, CheckCreateHeap);
-void daSbox_c::shipMtx() {
-    WWHD_FUNC(0x02469EB0, void, this);
-    u32 play = gabi::ea(dComIfGp_get());
-    u32 ship = gabi::load<u32>(play + 0x5B3C);
-    if (!ship)
-        JUT_ASSERT_fail(gabi::at<char>(0x10039D64), 220, gabi::at<char>(0x10039D60));
-    auto body = [ship]() {
-        u32 morf = gabi::load<u32>(ship + 0x3B4);
-        u32 model = gabi::load<u32>(morf + 0x90);
-        return model ? model + 0xC8 : 0;
-    };
-    Mtx34 *matrix = mDoMtx_stack_c::get();
-    gabi::call(0x028E90D4, gabi::at<Mtx34>(body()), matrix);
-    mDoMtx_stack_c::transM(0.0f, 22.35f, 20.0f);
-    mDoMtx_stack_c::YrotM(0x7FFF);
-    J3DModel_setBaseTRMtx(mpModel1, matrix);
-    /* HD recompiled lfs/stfs transport preserves SNaN bits for x/y here,
-     * whereas z is quieted. Keep those bits before the integer eyePos copies;
-     * normal gabi::load<f32> would quiet x/y prematurely. */
-    auto rawFloat = [](u32 a) {
-        u32 bits = gabi::load<u32>(a);
-        f32 f;
-        memcpy(&f, &bits, 4);
-        return f;
-    };
-    f32 x = rawFloat(gabi::ea(matrix) + 0xC);
-    current.pos.x = x;
-    f32 y = rawFloat(gabi::ea(matrix) + 0x1C);
-    current.pos.y = y;
-    f32 z = matrix->m[2][3];
-    gabi::store<f32>(gabi::ea(this) + 0x390, x);
-    u32 ybits = gabi::load<u32>(gabi::ea(&current.pos.y));
-    current.pos.z = z;
-    u32 zbits = gabi::load<u32>(gabi::ea(&current.pos.z));
-    gabi::store<u32>(gabi::ea(&eyePos.y), ybits);
-    gabi::store<u32>(gabi::ea(&eyePos.z), zbits);
-    u32 xbits = gabi::load<u32>(gabi::ea(&current.pos.x));
-    gabi::store<f32>(gabi::ea(this) + 0x394, y);
-    gabi::store<u32>(gabi::ea(&eyePos.x), xbits);
-    gabi::store<f32>(gabi::ea(this) + 0x398, z);
-    current.angle.y = gabi::load<s16>(ship + 0x32A) + 0x7FFF;
-    shape_angle.y = gabi::load<s16>(ship + 0x32A);
-    gabi::call(0x028E90D4, gabi::at<Mtx34>(body()), matrix);
-    mDoMtx_stack_c::transM(0.0f, 72.35f, 20.0f);
-    J3DModel_setBaseTRMtx(mpModel2, matrix);
-}
-VERIFY(0x02469EB0, &daSbox_c::shipMtx);
+/* 02469DA4 */
 static BOOL daSbox_Draw(daSbox_c *self) {
-    WWHD_FUNC(0x02469DA4, BOOL, self);
-    J3DModelData *data = J3DModel_getModelData(self->mpModel1);
-    if (!self->chkFlag(8))
+    J3DModelData *data = self->mpModel1->getModelData();
+    if (!self->chkFlag(BOX_VISIBLE))
         return TRUE;
     auto env = dKy_getEnvlight();
     settingTevStruct(env, 0, &self->current.pos, &self->tevStr);
@@ -352,166 +383,116 @@ static BOOL daSbox_Draw(daSbox_c *self) {
     setLightTevColorType(env, self->mpModel1, &self->tevStr);
     self->mBck1.entry(data, self->mBck1.getFrame());
     mDoExt_modelUpdateDL(self->mpModel1);
-    if (self->chkFlag(4)) {
-        data = J3DModel_getModelData(self->mpModel2);
+    if (self->chkFlag(EFFECT_VISIBLE)) {
+        data = self->mpModel2->getModelData();
         self->mBck2.entry(data, self->mBck2.getFrame());
         self->mBtk.entry(data, self->mBtk.getFrame());
-        gabi::call(0x025E83FC, &self->mBrk, data, self->mBrk.getFrame());
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D84));
-        play = gabi::ea(dComIfGp_get());
-        gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D88));
+        self->mBrk.entry(data, self->mBrk.getFrame());
+        dComIfGd_setListMaskOff();
         mDoExt_modelUpdateDL(self->mpModel2);
-        play = gabi::ea(dComIfGp_get());
-        gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D78));
-        play = gabi::ea(dComIfGp_get());
-        gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D7C));
+        dComIfGd_setList();
     }
     return TRUE;
 }
-VERIFY(0x02469DA4, daSbox_Draw);
-void daSbox_c::demoInitOpen() {
-    WWHD_FUNC(0x0246A2AC, void, this);
-    s8 room = current.roomNo;
-    mBck1.mFrameCtrl.mRate = 1.0f;
-    mBck2.mFrameCtrl.mRate = 1.0f;
-    mBrk.mFrameCtrl.mRate = 1.0f;
-    mBtk.mFrameCtrl.mRate = 1.0f;
-    s32 reverb = gabi::call<s32>(0x02520540, room);
-    mDoAud_seStart(0x690C, &eyePos, 0, reverb);
-    reverb = gabi::call<s32>(0x02520540, (s8)current.roomNo);
-    mDoAud_seStart(0x690B, &eyePos, 0, reverb);
-    gabi::call(0x025E1918, 0x80000009u);
-    setFlag(2);
-    auto particle = [this](u16 id) {
-        u32 play = gabi::ea(dComIfGp_get());
-        u32 control = gabi::load<u32>(play + 0x5AB0);
-        return gabi::call<void *>(0x025A847C, control, 0, id, &current.pos, &current.angle, 0,
-                                  (u8)255, 0, (s8)-1, 0, 0, 0);
-    };
-    particle(0x1F1);
-    particle(0x1F2);
-    particle(0x1F6);
-    void *e = particle(0x1F3);
-    if (e) {
-        u32 p = gabi::ea(e);
-        gabi::store<f32>(p + 0x23C, 1.0f);
-        gabi::store<f32>(p + 0x10, 1.0f);
-        gabi::store<f32>(p + 8, 0.7f);
-        gabi::store<f32>(p + 0x220, 0.7f);
-        gabi::store<f32>(p + 0x238, 0.7f);
-        gabi::store<f32>(p + 0x228, 1.0f);
-        gabi::store<f32>(p + 0xC, 1.0f);
-        gabi::store<f32>(p + 0x240, 1.0f);
-        gabi::store<f32>(p + 0x224, 1.0f);
-    }
-    e = particle(0x1F4);
-    if (e) {
-        u32 p = gabi::ea(e);
-        gabi::store<f32>(p + 0xC, 1.0f);
-        gabi::store<f32>(p + 8, 0.7f);
-        gabi::store<f32>(p + 0x10, 1.0f);
-    }
-    e = particle(0x1F5);
-    mEmitter = e;
-    if (e) {
-        mVolumeTimer = 0;
-        gabi::store<u8>(gabi::ea((void *)mEmitter) + 0x247, 0);
-        gabi::store<f32>(gabi::ea((void *)mEmitter) + 0x23C, 0.7f);
-    }
-    setFlag(0x10);
-    mDarkTimer = 0;
-    mDarkRatio = 0.4f;
-    lightInit();
+/* 0246ACB4 */
+static BOOL daSbox_Execute(daSbox_c *self) {
+    if (self->mAction == 0)
+        self->actionWait();
+    return TRUE;
 }
-VERIFY(0x0246A2AC, &daSbox_c::demoInitOpen);
+/* 0246ACE4 */
+static BOOL daSbox_IsDelete(daSbox_c *self) { return TRUE; }
+/* 0246ACEC */
+static BOOL daSbox_Delete(daSbox_c *self) {
+    dComIfG_resDelete(&self->mPhase, daSbox_c::M_arcname);
+    mDoAud_seDeleteObject(&self->eyePos);
+    return TRUE;
+}
+/* 0246AF04 */
+static cPhs_State daSbox_Create(daSbox_c *self) { return self->create(); }
+// HD: compiler-generated and template code of this translation unit.
+/* 0246AD30 */
 static daSbox_c *daSbox_ctor(daSbox_c *self) {
-    WWHD_FUNC(0x0246AD30, daSbox_c *, self);
     if (!self)
-        self = gabi::call<daSbox_c *>(0x0273AD10, 0x62C);
+        self = sboxAllocate(sizeof(daSbox_c));
     if (self) {
         fopAc_ac_c_ct(self);
-        self->__vtbl = 0x10039CF4;
-        auto word = [self](u32 off, u32 v) { gabi::store<u32>(gabi::ea(self) + off, v); };
-        gabi::call(0x027F2BC0, &self->mBck1, 0);
-        word(0x3C8, 0x1016E54C);
-        gabi::call(0x027DA984, gabi::at<void>(gabi::ea(self) + 0x3CC));
-        word(0x400, 0x1016D820);
-        word(0x440, 0);
-        word(0x434, 0);
-        word(0x43C, 0);
-        word(0x3C8, 0x10039CCC);
-        word(0x438, 0);
-        word(0x410, 0);
-        gabi::call(0x027F2BC0, &self->mBck2, 0);
-        word(0x458, 0x1016E54C);
-        gabi::call(0x027DA984, gabi::at<void>(gabi::ea(self) + 0x45C));
-        word(0x4C4, 0);
-        word(0x4CC, 0);
-        word(0x4C8, 0);
-        word(0x4D0, 0);
-        word(0x4A0, 0);
-        word(0x490, 0x1016D820);
-        word(0x458, 0x10039CCC);
+        self->__vtbl = SBOX_VTABLE;
+        auto *first = reinterpret_cast<SboxBckAnm *>(&self->mBck1);
+        first->mFrameCtrl.init(0);
+        first->mVtable = SBOX_ANM_BASE_VTABLE;
+        sboxInitTransformCache(first->mTransformCache);
+        first->mCacheVtable = SBOX_CACHE_VTABLE;
+        first->mFlags = 0;
+        first->mCacheCount = 0;
+        first->mResource = 0;
+        first->mVtable = SBOX_BCK_VTABLE;
+        first->mData = 0;
+        first->mCacheData = 0;
+        auto *second = reinterpret_cast<SboxBckAnm *>(&self->mBck2);
+        second->mFrameCtrl.init(0);
+        second->mVtable = SBOX_ANM_BASE_VTABLE;
+        sboxInitTransformCache(second->mTransformCache);
+        second->mCacheCount = 0;
+        second->mResource = 0;
+        second->mData = 0;
+        second->mFlags = 0;
+        second->mCacheData = 0;
+        second->mCacheVtable = SBOX_CACHE_VTABLE;
+        second->mVtable = SBOX_BCK_VTABLE;
         mDoExt_btkAnm::ct(&self->mBtk);
-        gabi::call(0x025E80D0, &self->mBrk);
+        mDoExt_brkAnm::ct(&self->mBrk);
         self->mEffectLight.mHD20 = 1.0f;
         self->mLight.mHD20 = 1.0f;
     }
     return self;
 }
-VERIFY(0x0246AD30, daSbox_ctor);
-BOOL daSbox_c::CreateInit() {
-    WWHD_FUNC(0x0246AE28, BOOL, this);
-    s8 room = current.roomNo;
-    mAction = 0;
-    tevStr.mRoomNo = room;
-    calcMtx();
-    return TRUE;
-}
-VERIFY(0x0246AE28, &daSbox_c::CreateInit);
-cPhs_State daSbox_c::create() {
-    WWHD_FUNC(0x0246AE5C, cPhs_State, this);
-    if (!fopAcM_CheckCondition(this, fopAcCnd_INIT_e)) {
-        if (this)
-            daSbox_ctor(this);
-        fopAcM_OnCondition(this, fopAcCnd_INIT_e);
-    }
-    cPhs_State phase = gabi::call<cPhs_State>(0x02520460, &mPhase, gabi::at<char>(0x10039DE0));
-    if (phase != cPhs_COMPLEATE_e)
-        return phase;
-    if (!gabi::call<BOOL>(0x025D63E8, this, 0x02469DA0, 0x15C0))
-        return cPhs_ERROR_e;
-    CreateInit();
-    return cPhs_COMPLEATE_e;
-}
-VERIFY(0x0246AE5C, &daSbox_c::create);
-static cPhs_State daSbox_Create(daSbox_c *self) {
-    WWHD_FUNC(0x0246AF04, cPhs_State, self);
-    return self->create();
-}
-VERIFY(0x0246AF04, daSbox_Create);
+/* 0246AF08 */
 static void __sinit_d_a_sbox_cpp() {
-    WWHD_FUNC(0x0246AF08, void, 0);
-    sinit_header_statics(0x1046D86C, 0x101D000C);
+    sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
 }
-VERIFY(0x0246AF08, __sinit_d_a_sbox_cpp);
+/* 0246AF9C */
 static void light_dtor_sbox(void *self, s32 flags) {
-    WWHD_FUNC(0x0246AF9C, void, self, flags);
     if (self && (flags & 1))
-        gabi::call(0x0273AF40, self);
+        operator_delete(self);
 }
-VERIFY(0x0246AF9C, light_dtor_sbox);
+/* 0246AFB0 */
 static void daSbox_dtor(daSbox_c *self, s32 flags) {
-    WWHD_FUNC(0x0246AFB0, void, self, flags);
     if (self) {
-        gabi::call(0x027F3628, gabi::at<void>(gabi::ea(self) + 0x458), 0);
-        gabi::call(0x027F3628, gabi::at<void>(gabi::ea(self) + 0x3C8), 0);
-        gabi::call(0x025D50BC, self, 0);
+        sboxDestroyBckCache(&reinterpret_cast<SboxBckAnm *>(&self->mBck2)->mVtable, 0);
+        sboxDestroyBckCache(&reinterpret_cast<SboxBckAnm *>(&self->mBck1)->mVtable, 0);
+        sboxDestroyActor(self, 0);
         if (flags & 1)
-            gabi::call(0x0273AF40, self);
+            operator_delete(self);
     }
 }
-VERIFY(0x0246AFB0, daSbox_dtor);
-static void daSbox_emptyVirtual(daSbox_c *self) { WWHD_FUNC(0x0246B01C, void, self); }
-VERIFY(0x0246B01C, daSbox_emptyVirtual);
+/* 0246B01C */
+static void daSbox_emptyVirtual(daSbox_c *self) {}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data action_table 101D0000 nocheck
+str 10039D0C in 02469B40
+str 10039DE0 in 0246AE5C
+str 10039DE0 in 0246ACEC
+str 10039D2C in 02469B40
+str 10039D3C
+str 10039D14
+str 10039D64 in 02469EB0
+str 10039D60
+str 10039D8C
+str 10039D94
+str 10039DD0
+ext 02543280 void sboxCutEnd(dEvent_manager_c*, s32)
+ext 0254487C void* sboxGetSubstance(dEvent_manager_c*, s32, const char*, s32)
+ext 02542EDC s32 sboxGetAction(dEvent_manager_c*, s32, be<u32>*, s32, s32, s32)
+ext 02542D88 s32 sboxGetStaff(dEvent_manager_c*, const char*, u32, s32)
+ext 025447C8 BOOL sboxIsAdvance(dEvent_manager_c*, s32)
+ext 02560444 void sboxSetAllColorRatio(f32)
+ext 0255A2B8 void sboxSetPriorityLight(LIGHT_INFLUENCE*)
+ext 02520540 s32 sboxGetReverb(s8)
+ext 025E1918 void sboxStartSubBgm(u32)
+ext 0273AD10 daSbox_c* sboxAllocate(u32)
+ext 027DA984 void sboxInitTransformCache(void*)
+ext 027F3628 void sboxDestroyBckCache(void*, s32)
+ext 025D50BC void sboxDestroyActor(fopAc_ac_c*, s32)
+*/

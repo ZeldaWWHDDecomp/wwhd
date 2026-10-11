@@ -1,173 +1,125 @@
-/* HD Xfuta full actor reconstruction derived from zeldaret/tww. */
+/**
+ * d_a_obj_xfuta.cpp (WWHD) - X_futa object.
+ * Ported from zeldaret/tww with WWHD layout and verified semantics.
+ * "HD:" marks differences from the GameCube source.
+ */
 #include "d/actor/d_a_obj_xfuta.h"
-namespace daObjXfuta {
-BOOL Act_c::create_heap() {
-  WWHD_FUNC(0x023BBF28, BOOL, this);
-  gabi::Local<SafeString> name;
-  name->__vtbl = 0x100338B8;
-  name->mStringTop = 0x10033910;
-  void *data = gabi::call<void *>(
-      0x026066C4, gabi::at<u8>(gabi::load<u32>(0x101F4F28)), name.get(), 3);
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x100338E0), 0x105, STR(0x100338F4));
-  mModel = gabi::call<J3DModel *>(0x025E38E0, data, 0, 0x11000002);
-  return data && mModel != nullptr;
+using daObjXfuta::Act_c;
+const gc_tu_data gc_tu = { .safeString = 0x100338B8,
+    .headerStatics = {0x1046CA34, 0x101CDEE8, 0x1046CA40} };
+const char Act_c::M_arcname[] = "X_futa";
+// HD: retain the guest demo mode and lighting table reads.
+static s32 l_demoMode;
+static int dComIfGp_demo_mode() { return l_demoMode; }
+static s32 tev_mode[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 91, 92, 93, 94};
+
+/* 023BBF28 */
+bool Act_c::create_heap() {
+    J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_X_FUTA_BDL_X_FUTA_e);
+    JUT_ASSERT(0x105, mdl_data != NULL);
+    mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11000002);
+    return mdl_data != NULL && mpModel != NULL;
 }
-VERIFY(0x023BBF28, &Act_c::create_heap);
-BOOL solidHeapCB(Act_c *actor) {
-  WWHD_FUNC(0x023BBFD8, BOOL, actor);
-  return actor->create_heap();
+
+/* 023BBFD8 */
+static BOOL solidHeapCB(fopAc_ac_c* i_this) {
+    // HD: tail branch preserves the full result register of create_heap.
+    return Xfuta_create_heap_result((Act_c*)i_this);
 }
-VERIFY(0x023BBFD8, solidHeapCB);
+
+/* 023BBFDC */
 void Act_c::set_mtx() {
-  WWHD_FUNC(0x023BBFDC, void, this);
-  f32 x = scale.x, y = scale.y;
-  u32 model = gabi::ea((J3DModel *)mModel);
-  f32 z = scale.z;
-  gabi::store<f32>(model + 0xBC, x);
-  gabi::store<f32>(model + 0xC0, y);
-  gabi::store<f32>(model + 0xC4, z);
-  x = current.pos.x;
-  y = current.pos.y;
-  z = current.pos.z;
-  auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-  gabi::call(0x028E93CC, matrix, x, y, z);
-  gabi::call(0x025F1B48, matrix, (s16)shape_angle.x, (s16)shape_angle.y,
-             (s16)shape_angle.z);
-  f32 values[12];
-  for (u32 i = 0; i < 12; ++i)
-    values[i] = gabi::load<f32>(0x1048D0CC + 4 * i);
-  model = gabi::ea((J3DModel *)mModel);
-  for (u32 i = 0; i < 12; ++i)
-    gabi::store<f32>(model + 0xC8 + 4 * i, values[i]);
-  gabi::call(0x028E90D4, matrix, &mMatrix);
-  gabi::call(0x027F4D5C, (J3DModel *)mModel);
+    J3DModel_setBaseScale(mpModel, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
+    J3DModel_calc(mpModel);
 }
-VERIFY(0x023BBFDC, &Act_c::set_mtx);
-s32 Act_c::Create() {
-  WWHD_FUNC(0x023BC0D0, s32, this);
-  u32 base = gabi::ea(this), flags = gabi::load<u32>(base + 0x2E4);
-  if (!(flags & 8)) {
-    if (this) {
-      gabi::call(0x025D4ED0, this);
-      flags = gabi::load<u32>(base + 0x2E4);
-      gabi::store<u32>(base + 0xB4, 0x100338D0);
+
+/* 023BC0D0 */
+cPhs_State Act_c::_create() {
+    fopAcM_ct(this, Act_c);
+    cPhs_State phase_state = dComIfG_resLoad(&mPhs, M_arcname);
+    if (phase_state == cPhs_COMPLEATE_e) {
+        if (fopAcM_entrySolidHeap(this, solidHeapCB, 0)) {
+            set_mtx();
+            fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(mpModel));
+        } else {
+            phase_state = cPhs_ERROR_e;
+        }
     }
-    gabi::store<u32>(base + 0x2E4, flags | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, &mPhase, STR(0x10033910));
-  if (phase == 4) {
-    if (gabi::call<s32>(0x025D63E8, this, 0x023BBFD8, 0)) {
-      set_mtx();
-      u32 model = gabi::ea((J3DModel *)mModel);
-      gabi::store<u32>(base + 0x348, model ? model + 0xC8 : 0);
-    } else
-      phase = 5;
-  }
-  return phase;
+    return phase_state;
 }
-VERIFY(0x023BC0D0, &Act_c::Create);
-BOOL Act_c::Delete() {
-  WWHD_FUNC(0x023BC194, BOOL, this);
-  gabi::call(0x025204C8, &mPhase, STR(0x10033910));
-  return TRUE;
+
+/* 023BC194 */
+bool Act_c::_delete() {
+    dComIfG_resDelete(&mPhs, M_arcname);
+    return true;
 }
-VERIFY(0x023BC194, &Act_c::Delete);
-BOOL Act_c::Execute() {
-  WWHD_FUNC(0x023BC1C4, BOOL, this);
-  f32 x = gabi::load<f32>(gabi::ea(this) + 0x2EC),
-      y = gabi::load<f32>(gabi::ea(this) + 0x2F0),
-      z = gabi::load<f32>(gabi::ea(this) + 0x2F4);
-  current.pos.y = y;
-  current.pos.z = z;
-  current.pos.x = x;
-  set_mtx();
-  return TRUE;
+
+/* 023BC1C4 */
+bool Act_c::_execute() {
+    f32 x = home.pos.x, y = home.pos.y, z = home.pos.z;
+    // HD: assignment order of the inlined cXyz copy.
+    current.pos.y = y;
+    current.pos.z = z;
+    current.pos.x = x;
+    set_mtx();
+    return true;
 }
-VERIFY(0x023BC1C4, &Act_c::Execute);
-BOOL Act_c::Draw() {
-  WWHD_FUNC(0x023BC200, BOOL, this);
-  if (gabi::load<s32>(0x101D6010) != 1) {
-    f32 zero = gabi::load<f32>(0x10033904);
-    gabi::Local<cXyz> pos;
-    pos->x = zero;
-    pos->y = zero;
-    pos->z = zero;
-    u32 light = gabi::call<u32>(0x02555D0C);
-    s32 mode = gabi::load<s32>(0x101CDEB4);
-    gabi::call(0x025626A4, gabi::at<u8>(light), mode, pos.get(),
-               gabi::at<u8>(gabi::ea(this) + 0x110));
-    u32 play = gabi::call<u32>(0x025200D4);
-    gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D70));
-    play = gabi::call<u32>(0x025200D4);
-    gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D74));
-    light = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, gabi::at<u8>(light), (J3DModel *)mModel,
-               gabi::at<u8>(gabi::ea(this) + 0x110));
-    gabi::call(0x025E2DE0, (J3DModel *)mModel, 0);
-    play = gabi::call<u32>(0x025200D4);
-    gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D78));
-    play = gabi::call<u32>(0x025200D4);
-    gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D7C));
-  }
-  return TRUE;
+
+/* 023BC200 */
+bool Act_c::_draw() {
+    if (dComIfGp_demo_mode() != 1) {
+        gabi::Local<cXyz> pos;
+        pos->set(0.0f, 0.0f, 0.0f);
+        g_env_light.settingTevStruct(tev_mode[1], pos.get(), &tevStr);
+        dComIfGd_setListBG();
+        g_env_light.setLightTevColorType(mpModel, &tevStr);
+        mDoExt_modelUpdateDL(mpModel);
+        dComIfGd_setList();
+    }
+    return true;
 }
-VERIFY(0x023BC200, &Act_c::Draw);
-s32 wrapperCreate(Act_c *actor) {
-  WWHD_FUNC(0x023BC2C0, s32, actor);
-  return actor->Create();
+
+/* 023BC2C0 */
+static cPhs_State Mthd_Create(void* i_this) { return static_cast<Act_c*>(i_this)->_create(); }
+/* 023BC2C4 */
+static bool Mthd_Delete(void* i_this) { return static_cast<Act_c*>(i_this)->_delete(); }
+/* 023BC2C8 */
+static bool Mthd_Execute(void* i_this) { return static_cast<Act_c*>(i_this)->_execute(); }
+/* 023BC2CC */
+static bool Mthd_Draw(void* i_this) { return static_cast<Act_c*>(i_this)->_draw(); }
+
+/* 023BC2D0 */
+static void __sinit_d_a_obj_xfuta_cpp() { __sinit_header_statics(); }
+/* 023BC364 */
+// HD: compiler-emitted deleting destructor of a header static.
+static void header_static_dt(void* i_this, s32 flags) {
+    if (i_this != nullptr && (flags & 1))
+        operator_delete(i_this);
 }
-VERIFY(0x023BC2C0, wrapperCreate);
-BOOL wrapperDelete(Act_c *actor) {
-  WWHD_FUNC(0x023BC2C4, BOOL, actor);
-  return actor->Delete();
+/* 023BC37C */
+// HD: actor deleting destructor.
+static void Act_c_dt(Act_c* i_this, s32 flags) {
+    if (i_this != nullptr) {
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
+    }
 }
-VERIFY(0x023BC2C4, wrapperDelete);
-BOOL wrapperExecute(Act_c *actor) {
-  WWHD_FUNC(0x023BC2C8, BOOL, actor);
-  return actor->Execute();
-}
-VERIFY(0x023BC2C8, wrapperExecute);
-BOOL wrapperDraw(Act_c *actor) {
-  WWHD_FUNC(0x023BC2CC, BOOL, actor);
-  return actor->Draw();
-}
-VERIFY(0x023BC2CC, wrapperDraw);
-void staticInitialize() {
-  WWHD_FUNC(0x023BC2D0, void);
-  gabi::store<u32>(0x1046CA48, 0);
-  gabi::store<u32>(0x1046CA40, 0);
-  gabi::store<u32>(0x1046CA4C, 0);
-  gabi::store<u32>(0x1046CA44, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CDEE8));
-  gabi::store<f32>(0x1046CA34, -3.1415927410125732f);
-  gabi::store<f32>(0x1046CA38, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x1046CA3C));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CDEF4));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x1046CA3D));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101CDF00));
-}
-VERIFY(0x023BC2D0, staticInitialize);
-void deleteStatic(void *p, s32 flags) {
-  WWHD_FUNC(0x023BC364, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
-}
-VERIFY(0x023BC364, deleteStatic);
-void destruct(Act_c *actor, s32 flags) {
-  WWHD_FUNC(0x023BC37C, void, actor, flags);
-  if (actor) {
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, actor);
-  }
-}
-VERIFY(0x023BC37C, destruct);
-void emptyVirtual() { WWHD_FUNC(0x023BC378, void); }
-VERIFY(0x023BC378, emptyVirtual);
-BOOL IsDelete(Act_c *actor) {
-  WWHD_FUNC(0x023BC3D0, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x023BC3D0, IsDelete);
-} // namespace daObjXfuta
+/* 023BC378 */
+// HD: SafeString::assureTerminationImpl_ companion.
+static void assureTerminationImpl_() {}
+/* 023BC3D0 */
+static BOOL Mthd_IsDelete(void*) { return TRUE; }
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data
+str 10033910 # "X_futa"
+str 100338E0 # "d_a_obj_xfuta.cpp"
+str 100338F4 "mdl_data != NULL" renamed # HD: assertion prints null as 0
+data l_demoMode 101D6010
+data tev_mode 101CDEB0
+ext 023BBF28 u32 Xfuta_create_heap_result(Act_c*)
+*/

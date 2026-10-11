@@ -1,101 +1,176 @@
-/**
- * d_a_btd_damage.cpp (WWHD)
- * Boss - Gohma: damage_check
- *
- * Written against the WWHD code with the GameCube
- * decompilation (zeldaret/tww src/d/actor/d_a_btd.cpp) as reference, and verified against
- * cking.rpx.
- */
-#include "d/actor/d_a_btd.h"
-#include "gabi.h"
-namespace {
-template<class T> T rd(u32 p,u32 off=0) {return gabi::load<T>(p+off);}
-template<class T> void wr(u32 p,u32 off,T v) {gabi::store<T>(p+off,v);}
-u32 play() {return gabi::call<u32>(0x025200D4);}
-void actorSound(u32 p,u32 id) {
-    if(!(p+0x37C)) return;
-    s32 actorId=p?(s32)rd<u32>(p,4):-1;
-    s32 room=rd<s8>(p,0x326);s32 reverb=gabi::call<s32>(0x02520540,room);
-    gabi::call<void>(0x025E1AA4,id,p+0x37C,actorId,0,reverb);
-}
+/** Gohma damage processing. Private WWHD decomp; verified against cking.rpx.
+ * tww d_a_btd.cpp names and control flow, with HD call/store order retained. */
+#include "d/actor/d_a_btd_damage.h"
+
+static BtdHioDamageHD l_HIO;
+static s16 l_pauseRegister;
+static u8 l_pauseTimer;
+
+enum BtdDamageAnimation {
+    dRes_INDEX_BTD_BCK_HIT_L_e = 0x12,
+    dRes_INDEX_BTD_BCK_HIT_M_e = 0x13,
+    dRes_INDEX_BTD_BCK_HIT_R_e = 0x14
+};
+enum BtdDamageSound {
+    JA_SE_CV_BTD_DMG_ROCK = 0x483B,
+    JA_SE_CV_BTD_DAMAGE = 0x4836,
+    JA_SE_LK_LAST_HIT = 0x2828
+};
+enum BtdDamageParticle { ID_AK_JN_CRITICALHITFLASH = 0x10, ID_AK_JN_OK = 0xD };
+
+// HD: reverb forwarding retains the full register result.
+static void monsSeStart(fopAc_ac_c* actor, u32 id) {
+    if (gabi::ea(&actor->eyePos) == 0)
+        return;
+    s32 actorId = actor != nullptr ? (s32)(u32)actor->mBsPcId : -1;
+    s32 room = actor->current.roomNo;
+    s32 reverb = btdGetReverb(room);
+    btdMonsSeStart(id, &actor->eyePos, actorId, 0, reverb);
 }
 
+/* 020F4D80 */
 void damage_check(btd_class* self) {
-    WWHD_FUNC(0x020F4D80,void,self);
-    u32 p=gabi::ea(self);play();
-    if(rd<u8>(p,0x41E)==1) {
-        wr<u8>(p,0x41E,2);wr<s16>(p,0x40E,20);wr<s16>(p,0x40C,2);
-        if(p) actorSound(p,0x483B);
-        gabi::call<void>(0x020F0C38,self);return;
+    BtdDamageViewHD* i_this = reinterpret_cast<BtdDamageViewHD*>(self);
+    fopAc_ac_c* actor = &i_this->actor;
+    // HD: retain the initial play accessor even though its result is unused.
+    dComIfGp_get();
+    if (i_this->m02F6 == 1) {
+        i_this->m02F6 = 2;
+        i_this->mGohmaState = 20;
+        i_this->m02E4 = 2;
+        if (actor != nullptr)
+            monsSeStart(actor, JA_SE_CV_BTD_DMG_ROCK);
+        eff_off(self);
+        return;
     }
-    s32 hit=gabi::call<s32>(0x025162A4,p+0x1B94);
-    if(hit && rd<u8>(p,0x408)==0 && rd<s16>(p,0x41C)==0) {
-        wr<s16>(p,0x41C,10);u32 obj=gabi::call<u32>(0x02516300,p+0x1B94);
-        gabi::call<void>(0x02518CC8,p,obj,0x40);
+    s32 hit = i_this->mEyeSph.ChkTgHit();
+    if (hit && i_this->m02E0 == 0 && i_this->mActionState == 0) {
+        i_this->mActionState = 10;
+        void* obj = i_this->mEyeSph.GetTgHitObj();
+        def_se_set(actor, obj, 0x40);
     }
-    hit=gabi::call<s32>(0x025162A4,p+0x1B94);
-    if(hit && rd<u8>(p,0x408)==1) {
-        u32 flags=rd<u32>(p,0x1C28);s16 cooldown=rd<s16>(p,0x41C);wr<u32>(p,0x1C28,flags|2);
-        if(cooldown==0) {
-            wr<s16>(p,0x41C,7);u32 obj=gabi::call<u32>(0x02516300,p+0x1B94);
-            struct AttackInfo_l {be<u32> object,actor;be<u8> damage,dead,type,pad;be<s16> angle[3];be<u16> cut;be<u32> position;be<s32> sound;};
-            gabi::Local<AttackInfo_l> info;
-            info->object=obj;info->position=p+0x1C60;
-            gabi::call<void>(0x02518DB0,info.get());
-            u8 health=rd<u8>(p,0x3A1),damage=info->damage,total=rd<u8>(p,0x5FAD);
-            s8 remaining=(s8)(health-damage);
-            wr<u8>(p,0x5FAD,(u8)(total+damage));wr<s8>(p,0x3A1,remaining);
-            if(remaining<=0 || rd<u8>(0x104629FC,2)!=0) {
-                u32 game=play();wr<f32>(game,0x5B44,0.0f);
-                s16 pause=rd<s16>(0x1047B696);wr<u8>(0x101EACB7,0,(u8)(pause+8));
-                u32 control=rd<u32>(play(),0x5AB0);
-                gabi::call<void>(0x025A847C,control,0,0x10,p+0x508,0,0,255,0,-1,0,0,0);
-                gabi::Local<csXyz> angles;gabi::Local<cXyz> scale;
-                angles->x=0;angles->z=0;scale->z=2.0f;scale->y=2.0f;scale->x=2.0f;
-                u32 player=rd<u32>(play(),0x5B2C);s16 angle=gabi::call<s16>(0x025D6894,p,player);angles->y=angle;
-                control=rd<u32>(play(),0x5AB0);
-                gabi::call<void>(0x025A847C,control,0,0xD,p+0x508,angles.get(),scale.get(),255,0,-1,0,0,0);
-                wr<s16>(p,0x40C,11);wr<s16>(p,0x40E,50);
-                if(p+0x37C) {s32 room=rd<s8>(p,0x326),reverb=gabi::call<s32>(0x02520540,room);gabi::call<void>(0x025E1A40,0x2828,p+0x37C,0,reverb);}
+    hit = i_this->mEyeSph.ChkTgHit();
+    if (hit && i_this->m02E0 == 1) {
+        u32 flags = i_this->mEyeSph.mGObjTg.mSPrm;
+        s16 cooldown = i_this->mActionState;
+        i_this->mEyeSph.mGObjTg.mSPrm = flags | 2; // OnTgNoConHit
+        if (cooldown == 0) {
+            i_this->mActionState = 7;
+            void* obj = i_this->mEyeSph.GetTgHitObj();
+            CcAtInfoBtdHD atInfo;
+            atInfo.mpObj = obj;
+            atInfo.pParticlePos = i_this->mEyeSph.GetTgHitPosP();
+            at_power_check(&atInfo);
+            u8 health = actor->health;
+            u8 damage = atInfo.mDamage;
+            u8 total = i_this->mTotalDamage;
+            s8 remaining = (s8)(health - damage);
+            i_this->mTotalDamage = (u8)(total + damage);
+            actor->health = remaining;
+            if (remaining <= 0 || l_HIO.m06 != 0) {
+                // HD: reset precedes the pause and two independently fetched particle controls.
+                reinterpret_cast<BtdPlayDamageHD*>(dComIfGp_get())->mDeathReset = 0.0f;
+                s16 pause = l_pauseRegister;
+                l_pauseTimer = (u8)(pause + 8);
+                dPa_control_c* control = dComIfGp_getParticle();
+                btdParticleSet(control, 0, ID_AK_JN_CRITICALHITFLASH, &i_this->m03E0, nullptr,
+                               nullptr, 255, nullptr, -1, nullptr, nullptr, nullptr);
+                csXyz angle;
+                cXyz pos;
+                angle.x = 0;
+                angle.z = 0;
+                pos.z = 2.0f;
+                pos.y = 2.0f;
+                pos.x = 2.0f;
+                fopAc_ac_c* player = dComIfGp_getPlayer(0);
+                angle.y = fopAcM_searchActorAngleY(actor, player);
+                control = dComIfGp_getParticle();
+                btdParticleSet(control, 0, ID_AK_JN_OK, &i_this->m03E0, &angle, &pos, 255, nullptr,
+                               -1, nullptr, nullptr, nullptr);
+                i_this->m02E4 = 11;
+                i_this->mGohmaState = 50;
+                if (gabi::ea(&actor->eyePos) != 0) {
+                    s32 room = actor->current.roomNo;
+                    s32 reverb = btdGetReverb(room);
+                    mDoAud_seStart(JA_SE_LK_LAST_HIT, &actor->eyePos, 0, reverb);
+                }
                 return;
             }
-            if(rd<s16>(p,0x40C)==2) {
-                s8 totalDamage=rd<s8>(p,0x5FAD);s16 threshold=rd<s16>(0x104629FC,0xA);
-                if(totalDamage>=threshold) {wr<u8>(p,0x5FAD,0);wr<s16>(p,0x40E,10);}
-                else {
-                    s32 animation=0x13;
-                    if(info->type==1) {
-                        u32 player=rd<u32>(play(),0x5B2C);s16 angle=gabi::call<s16>(0x025D6894,p,player);
-                        s16 facing=rd<s16>(p,0x322),delta=(s16)(angle-facing);
-                        if((u32)((s32)delta+255)>=511) animation=delta>0?0x14:0x12;
+            if (i_this->m02E4 == 2) {
+                s8 totalDamage = (s8)(u8)i_this->mTotalDamage;
+                s16 threshold = l_HIO.m0E;
+                if (totalDamage >= threshold) {
+                    i_this->mTotalDamage = 0;
+                    i_this->mGohmaState = 10;
+                } else {
+                    s32 anm = dRes_INDEX_BTD_BCK_HIT_M_e;
+                    if (atInfo.mResultingAttackType == 1) {
+                        fopAc_ac_c* player = dComIfGp_getPlayer(0);
+                        s16 angle = fopAcM_searchActorAngleY(actor, player);
+                        s16 facing = actor->current.angle.y;
+                        s16 delta = (s16)(angle - facing);
+                        if ((u32)((s32)delta + 255) >= 511)
+                            anm =
+                                delta > 0 ? dRes_INDEX_BTD_BCK_HIT_R_e : dRes_INDEX_BTD_BCK_HIT_L_e;
                     }
-                    gabi::call<void>(0x020F03BC,self,animation,1.0f,u8(0),1.0f,-1);wr<s16>(p,0x40E,3);
+                    anm_init(self, anm, 1.0f, 0, 1.0f, -1);
+                    i_this->mGohmaState = 3;
                 }
-            } else {wr<s16>(p,0x40E,0);wr<s16>(p,0x40C,2);}
-            actorSound(p,0x4836);gabi::call<void>(0x020F0C38,self);
+            } else {
+                i_this->mGohmaState = 0;
+                i_this->m02E4 = 2;
+            }
+            monsSeStart(actor, JA_SE_CV_BTD_DAMAGE);
+            eff_off(self);
         }
     }
-    for(u32 i=0;i<19;++i) {
-        s16 cooldown=rd<s16>(p,0x60EC+2*i);
-        if(cooldown) {wr<s16>(p,0x60EC+2*i,(s16)(cooldown-1));continue;}
-        u32 sph=p+0x550+0x12C*i;
-        if(gabi::call<s32>(0x025162A4,sph)) {
-            u32 flags=rd<u32>(sph,0x94);wr<u32>(sph,0x94,flags|2);wr<s16>(p,0x60EC+2*i,10);
-            u32 src=p+0x424+12*i,dst=p+0x5FC0+12*i;
-            // Native component copies are sequential, including any guest aliases.
-            wr<u32>(dst,0,rd<u32>(src));wr<u32>(dst,4,rd<u32>(src,4));wr<u32>(dst,8,rd<u32>(src,8));
-            u32 obj=gabi::call<u32>(0x02516300,sph);gabi::call<void>(0x02518D40,p,dst,obj,0x42);
+    for (u32 i = 0; i < 19; ++i) {
+        s16 cooldown = i_this->m5FC4[i];
+        if (cooldown) {
+            i_this->m5FC4[i] = (s16)(cooldown - 1);
+            continue;
+        }
+        dCcD_Sph* sph = &i_this->mAtSphs[i];
+        if (sph->ChkTgHit()) {
+            u32 flags = sph->mGObjTg.mSPrm;
+            sph->mGObjTg.mSPrm = flags | 2;
+            i_this->m5FC4[i] = 10;
+            // HD: sequential word copies retain signaling NaNs and possible guest aliases.
+            i_this->m5E98[i] = i_this->m02FC[i];
+            void* obj = sph->GetTgHitObj();
+            def_se_set_p(actor, &i_this->m5E98[i], obj, 0x42);
             break;
         }
     }
-    for(u32 i=0;i<6;++i) {
-        s16 cooldown=rd<s16>(p,0x6112+2*i);
-        if(cooldown) {wr<s16>(p,0x6112+2*i,(s16)(cooldown-1));continue;}
-        u32 cyl=p+0x5884+0x130*i;
-        if(gabi::call<s32>(0x025162A4,cyl)) {
-            u32 flags=rd<u32>(cyl,0x94);wr<u32>(cyl,0x94,flags|2);wr<s16>(p,0x6112+2*i,10);
-            u32 obj=gabi::call<u32>(0x02516300,cyl);gabi::call<void>(0x02518D40,p,p+0x60A4+12*i,obj,0x42);return;
+    for (u32 i = 0; i < 6; ++i) {
+        s16 cooldown = i_this->m5FEA[i];
+        if (cooldown) {
+            i_this->m5FEA[i] = (s16)(cooldown - 1);
+            continue;
+        }
+        dCcD_Cyl* cyl = &i_this->mHandCyls[i];
+        if (cyl->ChkTgHit()) {
+            u32 flags = cyl->mGObjTg.mSPrm;
+            cyl->mGObjTg.mSPrm = flags | 2;
+            i_this->m5FEA[i] = 10;
+            void* obj = cyl->GetTgHitObj();
+            def_se_set_p(actor, &i_this->m5E98[i + 19], obj, 0x42);
+            return;
         }
     }
 }
-VERIFY(0x020F4D80,damage_check);
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py):
+data l_HIO 104629FC
+data l_pauseRegister 1047B696
+data l_pauseTimer 101EACB7
+ext 02520540 s32 btdGetReverb(s32)
+ext 025E1AA4 void btdMonsSeStart(u32,cXyz*,s32,u32,s32)
+ext 020F0C38 void eff_off(btd_class*)
+ext 02518CC8 void def_se_set(fopAc_ac_c*,void*,u32)
+ext 02518D40 void def_se_set_p(fopAc_ac_c*,cXyz*,void*,u32)
+ext 02518DB0 void at_power_check(CcAtInfoBtdHD*)
+ext 020F03BC void anm_init(btd_class*,s32,f32,u8,f32,s32)
+ext 025A847C void btdParticleSet(dPa_control_c*,u32,u32,cXyz*,csXyz*,cXyz*,u32,void*,s32,void*,void*,void*)
+*/
+// clang-format on

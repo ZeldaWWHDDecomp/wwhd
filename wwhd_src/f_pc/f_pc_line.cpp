@@ -1,19 +1,24 @@
-#include "wwhd.h"
-#include "gabi.h"
+/** Process-line queue initialization. Private decomp source. */
+#include "bindings.h"
+#include "f_pc/f_pc_line.h"
+
+static fpcLn_LineArray l_fpcLn_Line;
+
+/* 025DF468 */
 void fpcLn_Create() {
- WWHD_FUNC(0x025DF468,void);
- for(u32 i=0;i<16;++i) gabi::call<void>(0x02010008,gabi::at<void>(0x1048A87C+i*12));
+    s32 i = 16;
+    node_list_class* pLine = l_fpcLn_Line;
+    while (i-- > 0) {
+        cLs_Create(pLine++);
+    }
 }
-VERIFY(0x025DF468,fpcLn_Create);
-void f_pc_line_static_init() {
- WWHD_FUNC(0x025DF4B4,void);
- gabi::store<u32>(0x1048A874,0);gabi::store<u32>(0x1048A86C,0);gabi::store<u32>(0x1048A878,0);gabi::store<u32>(0x1048A870,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3BF0));
- f32 lo=gabi::load<f32>(0x1005833C),hi=gabi::load<f32>(0x10058340);
- gabi::store<f32>(0x1048A860,lo);gabi::store<f32>(0x1048A864,hi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1048A868));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3BFC));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1048A869));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3C08));
+
+/* 025DF4B4 */
+static void __sinit_f_pc_line_cpp() {
+    sinit_header_statics_rodata(0x1048A860, 0x101F3BF0, 0x1048A86C, 0x1005833C);
 }
-VERIFY(0x025DF4B4,f_pc_line_static_init);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ data l_fpcLn_Line 1048A87C
+ ext 02010008 void cLs_Create(node_list_class*)
+*/

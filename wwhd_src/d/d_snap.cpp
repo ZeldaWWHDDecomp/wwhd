@@ -1,1758 +1,1923 @@
-#include "wwhd.h"
-#include "gabi.h"
-s32 Snap_PhotoIndex(s32 index) {
-
- WWHD_FUNC(0x025BD600,s32,index);
-
- u32 n=u32(index)-73;
- if(n>=134)gabi::call<void>(0x0273AA24,0x10054618,0x1A7,0x10054624);
-return s32(n);
-
-}
-
-VERIFY(0x025BD600,Snap_PhotoIndex);
-
-u32 Snap_Room(s32 index) {
-
- WWHD_FUNC(0x025BD64C,u32,index);
-
- if(index>=134)return 255;
-return gabi::load<u8>(0x10054718+u32(index)*18);
-
-}
-
-VERIFY(0x025BD64C,Snap_Room);
-
-void Snap_Project(u32 in,u32 dst) {
-
- WWHD_FUNC(0x025BD670,void,in,dst);
-
- u32 packet=gabi::load<u32>(0x1047C9BC);
-u32 projection=gabi::load<u32>(packet+0xF84),viewport=gabi::load<u32>(packet+0xF88),camera=gabi::load<u32>(packet+0xF80);
-gabi::Local<u8[24]> params;
-gabi::call<void>(0x0274F5F0,params.a,viewport);
-gabi::Local<u8[12]> vec;
-f32 z=gabi::load<f32>(in+8),x=gabi::load<f32>(in),y=gabi::load<f32>(in+4);
-gabi::store<f32>(vec.a+8,z);
-gabi::store<f32>(vec.a+4,y);
-gabi::store<f32>(vec.a,x);
-gabi::Local<u8[8]> xy;
-gabi::call<void>(0x0274CB50,camera,xy.a,vec.a,projection,params.a);
-f32 xx=gabi::load<f32>(xy.a),yy=gabi::load<f32>(xy.a+4);
-gabi::store<f32>(dst,xx);
-gabi::store<f32>(dst+4,yy);
-gabi::store<f32>(dst+8,0.0f);
-
-}
-
-VERIFY(0x025BD670,Snap_Project);
-
-u32 Snap_ObjCtor(u32 s) {
-
- WWHD_FUNC(0x025BD71C,u32,s);
-
- if(!s)s=gabi::call<u32>(0x0273AD10,0x34);
-if(s){
-gabi::store<u16>(s+0x2E,0);
-gabi::store<u16>(s+0x2C,0);
-gabi::store<u32>(s+0x14,0xFFFFFFFF);
-gabi::store<u32>(s+0x30,0x100546AC);
-gabi::store<s16>(s+0x1C,32767);
-gabi::store<u16>(s+0x2A,0);
-gabi::store<f32>(s+0xC,0);
-gabi::store<u8>(s+0x1B,0);
-gabi::store<f32>(s+0x24,0);
-gabi::store<u8>(s+0x18,0);
-gabi::store<f32>(s+0x10,0);
-gabi::store<u32>(s+0x20,0);
-gabi::store<u8>(s+0x19,4);
-gabi::store<u16>(s+0x1E,0);
-gabi::store<u16>(s+0x28,0);
-gabi::store<u8>(s+0x1A,255);
-}
-return s;
-
-}
-
-VERIFY(0x025BD71C,Snap_ObjCtor);
-
-u32 Snap_ElmCtor(u32 s) {
-
- WWHD_FUNC(0x025BD7B4,u32,s);
-
- if(!s)s=gabi::call<u32>(0x0273AD10,0x3C);
-if(s){
-gabi::store<u32>(s+0x38,0x100546BC);
-gabi::call<void>(0x025BD71C,s);
-gabi::store<f32>(s+0x34,0);
-}
-return s;
-
-}
-
-VERIFY(0x025BD7B4,Snap_ElmCtor);
-
-void Snap_Init(u32 heap) {
-
- WWHD_FUNC(0x025BDBB0,void,heap);
-
- u32 packet=gabi::load<u32>(0x1047C9BC);
-if(!packet){
-if(!gabi::load<u32>(0x1047D974)){
-gabi::store<u32>(0x1047D974,1);
-gabi::call<void>(0x025BD814,0x1047C9E0);
-gabi::call<void>(0x028F026C,0x101EBA28);
-}
-packet=0x1047C9E0;
-gabi::store<u32>(0x1047C9BC,packet);
-}
-gabi::call<void>(0x025BD8E4,packet,heap);
-
-}
-
-VERIFY(0x025BDBB0,Snap_Init);
-
-void Snap_Enable(u32 s) {
-
- WWHD_FUNC(0x025BDC38,void,s);
-
- gabi::store<u32>(s+0xF64,gabi::load<u32>(s+0xF64)|1);
-
-}
-
-VERIFY(0x025BDC38,Snap_Enable);
-
-void Snap_EnableGlobal() {
-
- WWHD_FUNC(0x025BDC48,void);
-
- gabi::call<void>(0x025BDC38,gabi::load<u32>(0x1047C9BC));
-
-}
-
-VERIFY(0x025BDC48,Snap_EnableGlobal);
-
-u32 Snap_Enabled(u32 s) {
-
- WWHD_FUNC(0x025BDC54,u32,s);
-
- return gabi::load<u32>(s+0xF64)&1;
-
-}
-
-VERIFY(0x025BDC54,Snap_Enabled);
-
-u32 Snap_EnabledGlobal() {
-
- WWHD_FUNC(0x025BDC60,u32);
-
- return gabi::call<u32>(0x025BDC54,gabi::load<u32>(0x1047C9BC));
-
-}
-
-VERIFY(0x025BDC60,Snap_EnabledGlobal);
-
-u32 Snap_Released(u32 s) {
-
- WWHD_FUNC(0x025BDC6C,u32,s);
-
- return gabi::load<u32>(s+0xF64)&2;
-
-}
-
-VERIFY(0x025BDC6C,Snap_Released);
-
-void Snap_AreaClear(u32 s) {
-
- WWHD_FUNC(0x025BE208,void,s);
-
- gabi::store<s16>(s+0x28,2048);
-gabi::store<s16>(s+0x2C,-2048);
-gabi::store<s16>(s+0x2A,2048);
-gabi::store<s16>(s+0x2E,-2048);
-
-}
-
-VERIFY(0x025BE208,Snap_AreaClear);
-
-void Snap_SetArea(u32 s,s16 x,s16 y) {
-
- WWHD_FUNC(0x025BE224,void,s,x,y);
-
- s16 minx=gabi::load<s16>(s+0x28),miny=gabi::load<s16>(s+0x2A);
-if(minx>x)gabi::store<s16>(s+0x28,x);
-s16 maxx=gabi::load<s16>(s+0x2C);
-if(miny>y)gabi::store<s16>(s+0x2A,y);
-s16 maxy=gabi::load<s16>(s+0x2E);
-if(maxx<x)gabi::store<s16>(s+0x2C,x);
-if(maxy<y)gabi::store<s16>(s+0x2E,y);
-
-}
-
-VERIFY(0x025BE224,Snap_SetArea);
-
-u32 Snap_Cull(u32 s) {
-
- WWHD_FUNC(0x025BE268,u32,s);
-
- if(!(gabi::load<u8>(s+0x1B)&1)&&gabi::load<s16>(s+0x1C)!=32767){
-u32 play=gabi::call<u32>(0x025200D4);
-s32 index=gabi::load<s8>(play+0x5B30);
-play=gabi::call<u32>(0x025200D4);
-u32 camera=gabi::load<u32>(play+u32(index)*0x34+0x5AF8);
-gabi::Local<u8[12]> diff;
-gabi::call<void>(0x028E8DAC,camera+0xDC,s,diff.a);
-f32 z=gabi::load<f32>(diff.a+8),x=gabi::load<f32>(diff.a);
-s32 angle=gabi::call<s32>(0x020195B0,x,z);
-s32 distance=gabi::call<s32>(0x0200FAAC,angle,gabi::load<s16>(s+0x1E));
-if(distance>gabi::load<s16>(s+0x1C))return 1;
-}
-return 0;
-
-}
-
-VERIFY(0x025BE268,Snap_Cull);
-
-void Snap_Execute(u32 s) {
-
- WWHD_FUNC(0x025BE870,void,s);
-
- if(gabi::call<u32>(0x025BDC6C,s)){
-gabi::call<void>(0x025BE664,s);
-gabi::store<u32>(s+0xF64,gabi::load<u32>(s+0xF64)&~2u);
-for(u32 i=0;i<63;++i)gabi::store<f32>(s+0xD4+60*i,1000000000.0f);
-gabi::store<u32>(s+0x9C,0);
-}
-
-}
-
-VERIFY(0x025BE870,Snap_Execute);
-
-void Snap_ExecuteGlobal() {
-
- WWHD_FUNC(0x025BE8DC,void);
-
- gabi::call<void>(0x025BE870,gabi::load<u32>(0x1047C9BC));
-
-}
-
-VERIFY(0x025BE8DC,Snap_ExecuteGlobal);
-
-u32 Snap_Result() {
-
- WWHD_FUNC(0x025BE8E8,u32);
-
- u32 s=gabi::load<u32>(0x1047C9BC);
-return gabi::load<u32>(s+0xF68);
-
-}
-
-VERIFY(0x025BE8E8,Snap_Result);
-
-u32 Snap_SpecialResult() {
-
- WWHD_FUNC(0x025BE8F8,u32);
-
- u32 s=gabi::load<u32>(0x1047C9BC);
-return gabi::load<u8>(s+0xF6C);
-
-}
-
-VERIFY(0x025BE8F8,Snap_SpecialResult);
-
-u32 Snap_ElmRegist(u32 s,u32 src) {
-
- WWHD_FUNC(0x025BE908,u32,s,src);
-
- gabi::store<u32>(s+0,gabi::load<u32>(src+0));
-gabi::store<u32>(s+4,gabi::load<u32>(src+4));
-gabi::store<u32>(s+8,gabi::load<u32>(src+8));
-gabi::store<f32>(s+12,gabi::load<f32>(src+12));
-gabi::store<f32>(s+16,gabi::load<f32>(src+16));
-gabi::store<u32>(s+20,gabi::load<u32>(src+20));
-gabi::store<u8>(s+24,gabi::load<u8>(src+24));
-gabi::store<u8>(s+25,gabi::load<u8>(src+25));
-gabi::store<u8>(s+26,gabi::load<u8>(src+26));
-gabi::store<u8>(s+27,gabi::load<u8>(src+27));
-gabi::store<s16>(s+28,gabi::load<s16>(src+28));
-gabi::store<s16>(s+30,gabi::load<s16>(src+30));
-gabi::store<u32>(s+32,gabi::load<u32>(src+32));
-gabi::store<f32>(s+36,gabi::load<f32>(src+36));
-gabi::store<s16>(s+40,gabi::load<s16>(src+40));
-gabi::store<s16>(s+42,gabi::load<s16>(src+42));
-gabi::store<s16>(s+44,gabi::load<s16>(src+44));
-gabi::store<s16>(s+46,gabi::load<s16>(src+46));
-return s;
-
-}
-
-VERIFY(0x025BE908,Snap_ElmRegist);
-
-u32 Snap_RegistGlobal(u32 obj) {
-
- WWHD_FUNC(0x025BEB4C,u32,obj);
-
- return gabi::call<u32>(0x025BE99C,gabi::load<u32>(0x1047C9BC),obj);
-
-}
-
-VERIFY(0x025BEB4C,Snap_RegistGlobal);
-
-void Snap_SetGeo(u32 s,u32 v,f32 radius,f32 height,s16 angle) {
-
- WWHD_FUNC(0x025BEB5C,void,s,v,radius,height,angle);
-
- gabi::store<u8>(s+0x1B,gabi::load<u8>(s+0x1B)&0xFE);
-gabi::store<f32>(s,gabi::load<f32>(v));
-gabi::store<f32>(s+4,gabi::load<f32>(v+4));
-f32 z=gabi::load<f32>(v+8);
-gabi::store<f32>(s+0xC,radius);
-gabi::store<f32>(s+8,z);
-gabi::store<f32>(s+0x10,height);
-gabi::store<s16>(s+0x1E,angle);
-
-}
-
-VERIFY(0x025BEB5C,Snap_SetGeo);
-
-void Snap_SetInf(u32 s,u32 type,u32 actor,u32 room,u32 points,s16 angle) {
-
- WWHD_FUNC(0x025BEB90,void,s,type,actor,room,points,angle);
-
- gabi::store<u8>(s+0x18,u8(type));
-u32 id=actor?gabi::load<u32>(actor+4):0xFFFFFFFF;
-gabi::store<u8>(s+0x19,u8(points));
-gabi::store<u8>(s+0x1A,u8(room));
-gabi::store<s16>(s+0x1C,angle);
-gabi::store<u32>(s+0x14,id);
-
-}
-
-VERIFY(0x025BEB90,Snap_SetInf);
-
-void Snap_RegistFigActor(u32 type,u32 actor,f32 x,f32 y,f32 z) {
-
- WWHD_FUNC(0x025BED80,void,type,actor,x,y,z);
-
- s16 angle=gabi::load<s16>(actor+0x32A);
-gabi::call<void>(0x025BEBB8,type,actor,actor+0x314,angle,x,y,z);
-
-}
-
-VERIFY(0x025BED80,Snap_RegistFigActor);
-
-void Snap_Entry() {
-
- WWHD_FUNC(0x025BED8C,void);
-
- if(gabi::call<u32>(0x025BDC54,gabi::load<u32>(0x1047C9BC))){
-u32 p=gabi::call<u32>(0x025200D4);
-u32 buffer=gabi::load<u32>(p+0x5D9C);
-gabi::store<u32>(0x104B4638,buffer);
-gabi::call<void>(0x027F0E04,buffer,gabi::load<u32>(0x1047C9BC),0);
-p=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(0x104B4634,gabi::load<u32>(p+0x5D78));
-p=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(0x104B4638,gabi::load<u32>(p+0x5D7C));
-}
-
-}
-
-VERIFY(0x025BED8C,Snap_Entry);
-
-void Snap_RemoveGlobal() {
-
- WWHD_FUNC(0x025BEF30,void);
-
- gabi::call<void>(0x025BEE04,gabi::load<u32>(0x1047C9BC));
-
-}
-
-VERIFY(0x025BEF30,Snap_RemoveGlobal);
-
-void Snap_SetSphere(u32 s,u32 v,f32 radius) {
-
- WWHD_FUNC(0x025BEF3C,void,s,v,radius);
-
- gabi::store<u8>(s+0x1B,gabi::load<u8>(s+0x1B)|1);
-gabi::store<f32>(s,gabi::load<f32>(v));
-gabi::store<f32>(s+4,gabi::load<f32>(v+4));
-f32 z=gabi::load<f32>(v+8);
-gabi::store<f32>(s+0x10,0);
-gabi::store<f32>(s+8,z);
-gabi::store<u16>(s+0x1E,0);
-gabi::store<f32>(s+0xC,radius);
-
-}
-
-VERIFY(0x025BEF3C,Snap_SetSphere);
-
-void Snap_MtxCopy(u32 dst,u32 src) {
-
- WWHD_FUNC(0x025BEF7C,void,dst,src);
-
- f32 a[12];
-for(u32 i=0;i<12;++i)a[i]=gabi::load<f32>(src+4*i);
-for(u32 i=0;i<12;++i)gabi::store<f32>(dst+4*i,a[i]);
-
-}
-
-VERIFY(0x025BEF7C,Snap_MtxCopy);
-
-u32 Snap_IsType(u32 s,u32 type) {
-
- WWHD_FUNC(0x025BF1C8,u32,s,type);
-
- return u32(gabi::load<u8>(s+0x18))==type;
-
-}
-
-VERIFY(0x025BF1C8,Snap_IsType);
-
-u32 Snap_Threshold(u32 s,s32 area,f32 ratio) {
-
- WWHD_FUNC(0x025BF1DC,u32,s,area,ratio);
-
- s32 threshold=gabi::ftoi(f32(area)*gabi::load<f32>(0x1047C9C8));
-if(gabi::load<s32>(s+0x20)<=threshold)return 0;
-return gabi::load<f32>(s+0x24)>ratio;
-
-}
-
-VERIFY(0x025BF1DC,Snap_Threshold);
-
-s32 Snap_FindType(u32 s,s32 start,u32 type) {
-
- WWHD_FUNC(0x025C019C,s32,s,start,type);
-
- if(start<0)return -1;
-s32 count=gabi::load<s32>(s+0x9C);
-if(start>=count)return -1;
-u32 ptr=s+0xA0+u32(start)*60;
-for(s32 i=start;i<count;++i,ptr+=60)if(gabi::call<u32>(0x025BF1C8,ptr,type))return i;
-return -1;
-
-}
-
-VERIFY(0x025C019C,Snap_FindType);
-
-u32 Snap_JudgePost(u32 s) {
-
- WWHD_FUNC(0x025C020C,u32,s);
-
- s32 index=gabi::call<s32>(0x025C019C,s,0,1);
-if(index==-1)return 0;
-if(gabi::call<u32>(0x025BF1DC,s+0xA0+u32(index)*60,2000,0.55f)){
-gabi::store<u8>(s+0xF6C,0);
-return 1;
-}
-return 0;
-
-}
-
-VERIFY(0x025C020C,Snap_JudgePost);
-
-u32 Snap_JudgeScared(u32 s) {
-
- WWHD_FUNC(0x025C0284,u32,s);
-
- s32 index=gabi::call<s32>(0x025C019C,s,0,2);
-if(index==-1)return 0;
-if(gabi::call<u32>(0x025BF1DC,s+0xA0+u32(index)*60,5000,0.55f))return 2;
-gabi::store<u8>(s+0xF6C,0);
-return 0;
-
-}
-
-VERIFY(0x025C0284,Snap_JudgeScared);
-
-u32 Snap_JudgeType4(u32 s) {
-
- WWHD_FUNC(0x025C03D0,u32,s);
-
- s32 index=gabi::call<s32>(0x025C019C,s,0,4);
-if(index==-1)return 0;
-if(gabi::call<u32>(0x025BF1DC,s+0xA0+u32(index)*60,5000,0.55f)){
-gabi::store<u8>(s+0xF6C,0);
-return 4;
-}
-return 0;
-
-}
-
-VERIFY(0x025C03D0,Snap_JudgeType4);
-
-u32 Snap_JudgeCouple(u32 s) {
-
- WWHD_FUNC(0x025C030C,u32,s);
-
- s32 a=gabi::call<s32>(0x025C019C,s,0,3);
-if(a==-1)return 0;
-s32 b=gabi::call<s32>(0x025C019C,s,u32(a)+1,3);
-if(b==-1)return 0;
-u32 base=s+0xA0;
-if(!gabi::call<u32>(0x025BF1DC,base+u32(a)*60,2000,0.55f))return 0;
-if(!gabi::call<u32>(0x025BF1DC,base+u32(b)*60,2000,0.55f))return 0;
-gabi::store<u8>(s+0xF6C,0);
-return 3;
-
-}
-
-VERIFY(0x025C030C,Snap_JudgeCouple);
-
-u32 Snap_JudgeType5(u32 s) {
-
- WWHD_FUNC(0x025C0448,u32,s);
-
- s32 a=gabi::call<s32>(0x025C019C,s,0,5);
-if(a==-1)return 0;
-s32 b=gabi::call<s32>(0x025C019C,s,0,109);
-if(b==-1)return 0;
-u32 base=s+0xA0;
-if(!gabi::call<u32>(0x025BF1DC,base+u32(a)*60,1500,0.55f))return 0;
-if(!gabi::call<u32>(0x025BF1DC,base+u32(b)*60,1500,0.55f))return 0;
-gabi::store<u8>(s+0xF6C,0);
-return 5;
-
-}
-
-VERIFY(0x025C0448,Snap_JudgeType5);
-
-u32 Snap_JudgeType6(u32 s) {
-
- WWHD_FUNC(0x025C0500,u32,s);
-
- s32 a=gabi::call<s32>(0x025C019C,s,0,6);
-if(a==-1)return 0;
-if(gabi::call<s32>(0x025C019C,s,0,5)!=-1)return 0;
-if(!gabi::call<u32>(0x025BF1DC,s+0xA0+u32(a)*60,3000,0.55f))return 0;
-gabi::store<u8>(s+0xF6C,0);
-return 6;
-
-}
-
-VERIFY(0x025C0500,Snap_JudgeType6);
-
-u32 Snap_JudgeSelected(u32 s) {
-
- WWHD_FUNC(0x025C0594,u32,s);
-
- s32 a=gabi::call<s32>(0x025C019C,s,0,gabi::load<u32>(s+0x98));
-if(a==-1)return 0;
-if(!gabi::call<u32>(0x025BF1DC,s+0xA0+u32(a)*60,3000,0.55f))return 0;
-gabi::store<u8>(s+0xF6C,0);
-return gabi::load<u32>(s+0x98);
-
-}
-
-VERIFY(0x025C0594,Snap_JudgeSelected);
-
-void Snap_PacketDtor(u32 s,u32 flags) {
-
- WWHD_FUNC(0x025C0734,void,s,flags);
-
- if(s){
-gabi::call<void>(0x027F13DC,s,0);
-if(flags&1)gabi::call<void>(0x0273AF40,s);
-}
-
-}
-
-VERIFY(0x025C0734,Snap_PacketDtor);
-
-u32 Snap_EmptyResult(u32 s) {
-
- WWHD_FUNC(0x025C0788,u32,s);
-
- return 0;
-
-}
-
-VERIFY(0x025C0788,Snap_EmptyResult);
-
-void Snap_ObjDtor(u32 s,u32 flags) {
-
- WWHD_FUNC(0x025C0790,void,s,flags);
-
- if(s&&(flags&1))gabi::call<void>(0x0273AF40,s);
-
-}
-
-VERIFY(0x025C0790,Snap_ObjDtor);
-
-void Snap_TextureCreate(u32 s,u32 src,u32 mode,u32 alloc) {
-
- WWHD_FUNC(0x025C07A4,void,s,src,mode,alloc);
-
- for(u32 i=0;i<30;++i)gabi::store<u32>(s+4*i,gabi::load<u32>(src+4*i));
-for(u32 i=0x78;i<0x7C;++i)gabi::store<u8>(s+i,gabi::load<u8>(src+i));
-for(u32 i=0x7C;i<0x88;i+=4)gabi::store<u32>(s+i,gabi::load<u32>(src+i));
-u32 word=gabi::load<u32>(src+0x88);
-gabi::store<u32>(s+0x98,alloc);
-gabi::store<u32>(s+0x88,word);
-gabi::store<u32>(s+0x94,mode);
-gabi::call<void>(0x027B6C60,s);
-gabi::store<u8>(s+0x90,1);
-
-}
-
-VERIFY(0x025C07A4,Snap_TextureCreate);
-
-void Snap_Texture2Create(u32 s,u32 src,u32 mode,u32 alloc) {
-
- WWHD_FUNC(0x025C0934,void,s,src,mode,alloc);
-
- for(u32 i=0;i<30;++i)gabi::store<u32>(s+4*i,gabi::load<u32>(src+4*i));
-for(u32 i=0x78;i<0x7C;++i)gabi::store<u8>(s+i,gabi::load<u8>(src+i));
-for(u32 i=0x7C;i<0x88;i+=4)gabi::store<u32>(s+i,gabi::load<u32>(src+i));
-u32 word=gabi::load<u32>(src+0x88);
-gabi::store<u32>(s+0x98,alloc);
-gabi::store<u32>(s+0x88,word);
-gabi::store<u32>(s+0x94,mode);
-gabi::call<void>(0x027B6E2C,s);
-gabi::store<u8>(s+0x90,1);
-
-}
-
-VERIFY(0x025C0934,Snap_Texture2Create);
-
-void Snap_TextureUpdate(u32 s,u32 src,u32 mode,u32 alloc) {
-
- WWHD_FUNC(0x025C0848,void,s,src,mode,alloc);
-
- const u32 keys[]={
-4,8,12,16,20,24,56,52,28}
-;
-for(u32 off:keys)if(gabi::load<u32>(s+off)!=gabi::load<u32>(src+off)){
-gabi::call<void>(0x025C07A4,s,src,mode,alloc);
-return;
-}
-u32 image=gabi::load<u32>(src+0x30),mip=gabi::load<u32>(src+0x28);
-gabi::store<u32>(s+0xd8,image);
-gabi::store<u32>(s+0xd0,mip);
-u32 oldAlloc=gabi::load<u32>(s+0x98);
-gabi::store<u32>(s+0x28,mip);
-u32 oldMode=gabi::load<u32>(s+0x94);
-gabi::store<u32>(s+0x30,image);
-if(oldAlloc!=alloc){
-gabi::store<u32>(s+0x98,alloc);
-gabi::store<u8>(s+0x90,1);
-}
-if(oldMode!=mode){
-gabi::store<u32>(s+0x94,mode);
-gabi::store<u8>(s+0x90,1);
-}
-
-}
-
-VERIFY(0x025C0848,Snap_TextureUpdate);
-
-void Snap_Texture2Update(u32 s,u32 src,u32 mode,u32 alloc) {
-
- WWHD_FUNC(0x025C09D8,void,s,src,mode,alloc);
-
- const u32 keys[]={
-4,8,12,16,20,24,56,52,28}
-;
-for(u32 off:keys)if(gabi::load<u32>(s+off)!=gabi::load<u32>(src+off)){
-gabi::call<void>(0x025C0934,s,src,mode,alloc);
-return;
-}
-u32 image=gabi::load<u32>(src+0x30),mip=gabi::load<u32>(src+0x28);
-gabi::store<u32>(s+0xd4,image);
-gabi::store<u32>(s+0xcc,mip);
-u32 oldAlloc=gabi::load<u32>(s+0x98);
-gabi::store<u32>(s+0x28,mip);
-u32 oldMode=gabi::load<u32>(s+0x94);
-gabi::store<u32>(s+0x30,image);
-if(oldAlloc!=alloc){
-gabi::store<u32>(s+0x98,alloc);
-gabi::store<u8>(s+0x90,1);
-}
-if(oldMode!=mode){
-gabi::store<u32>(s+0x94,mode);
-gabi::store<u8>(s+0x90,1);
-}
-
-}
-
-VERIFY(0x025C09D8,Snap_Texture2Update);
-
-void Snap_TextureAssign(u32 s,u32 src) {
-
- WWHD_FUNC(0x025C0928,void,s,src);
-
- u32 alloc=gabi::load<u32>(s+0x98),mode=gabi::load<u32>(s+0x94);
-gabi::call<void>(0x025C0848,s,src,mode,alloc);
-
-}
-
-VERIFY(0x025C0928,Snap_TextureAssign);
-
-void Snap_Texture2Assign(u32 s,u32 src) {
-
- WWHD_FUNC(0x025C0AB8,void,s,src);
-
- u32 alloc=gabi::load<u32>(s+0x98),mode=gabi::load<u32>(s+0x94);
-gabi::call<void>(0x025C09D8,s,src,mode,alloc);
-
-}
-
-VERIFY(0x025C0AB8,Snap_Texture2Assign);
-
-// Pure float copies preserve the reference store bits; arithmetic loads use gabi::load<f32>.
-static f32 snap_raw_float(u32 p){u32 bits=gabi::load<u32>(p);f32 value;memcpy(&value,&bits,4);return value;}
-void Snap_ScaleTransMtx(u32 dst,u32 scale,u32 pos) {
-
- WWHD_FUNC(0x025C0AC4,void,dst,scale,pos);
-
- f32 x=snap_raw_float(scale);
-gabi::store<f32>(dst,x);
-gabi::store<f32>(dst+0x10,0);
-gabi::store<f32>(dst+0x20,0);
-gabi::store<f32>(dst+4,0);
-f32 y=snap_raw_float(scale+4);
-gabi::store<f32>(dst+0x24,0);
-gabi::store<f32>(dst+0x14,y);
-gabi::store<f32>(dst+8,0);
-gabi::store<f32>(dst+0x18,0);
-gabi::store<f32>(dst+0x28,snap_raw_float(scale+8));
-gabi::store<f32>(dst+0xC,snap_raw_float(pos));
-gabi::store<f32>(dst+0x1C,snap_raw_float(pos+4));
-gabi::store<f32>(dst+0x2C,snap_raw_float(pos+8));
-
-}
-
-VERIFY(0x025C0AC4,Snap_ScaleTransMtx);
-
-u32 Snap_PacketCtor(u32 s) {
-
- WWHD_FUNC(0x025BD814,u32,s);
-
- if(!s)s=gabi::call<u32>(0x0273AD10,0xF94);
-if(s){
-gabi::call<void>(0x027F1278,s);
-gabi::store<u32>(s+0x98,0);
-gabi::store<u32>(s+0xC,0x100552B0);
-gabi::store<u32>(s+0x9C,0);
-gabi::call<void>(0x028EFFD0,s+0xA0,63,60,0x025BD7B4);
-const u32 offs[]={
-0xF74,0xF88,0xF84,0xF78,0xF80}
-;
-for(u32 o:offs)gabi::store<u32>(s+o,0);
-gabi::store<u8>(s+0xF6C,0);
-gabi::store<u32>(s+0xF68,0);
-gabi::store<u32>(s+0xF7C,0);
-gabi::store<u32>(s+0xF64,0);
-gabi::store<u32>(s+0xF70,0);
-if(s+0xF8C==0)gabi::call<u32>(0x0273AD10,8);
-gabi::store<u32>(s+0xF8C,0);
-gabi::store<u32>(s+0xF90,0);
-}
-return s;
-
-}
-
-VERIFY(0x025BD814,Snap_PacketCtor);
-
-u32 Snap_JudgeFigure(u32 s,u32 index) {
-
- WWHD_FUNC(0x025BE31C,u32,s,index);
-
- s32 photo=gabi::load<s32>(s+0x98);
-if(photo>=208||u32(photo)-73>=134)return 0;
-u32 table=0x10054708+u32(gabi::call<s32>(0x025BD600,photo))*18;
-u32 pixels=gabi::load<u16>(table+14);
-s32 threshold=gabi::ftoi(f32(pixels)*gabi::load<f32>(0x1047C9C8));
-f32 ratio=f32(gabi::load<u16>(table+10))/1000.0f;
-u32 elem=s+0xA0+index*60;
-if(gabi::load<s32>(elem+0x20)<threshold)return 0;
-f32 actual=gabi::load<f32>(elem+0x24);
-u8 flags=gabi::load<u8>(s+0xF6C);
-if(actual<ratio)flags|=2;
-else flags&=0xFD;
-gabi::store<u8>(s+0xF6C,flags);
-u32 culled=gabi::call<u32>(0x025BE268,elem);
-flags=gabi::load<u8>(s+0xF6C);
-u32 result=gabi::load<u32>(s+0x98);
-if(culled)flags|=1;
-else flags&=0xFE;
-gabi::store<u8>(s+0xF6C,flags);
-return result;
-
-}
-
-VERIFY(0x025BE31C,Snap_JudgeFigure);
-
-void Snap_RegistFig(u32 type,u32 actor,u32 pos,s16 angle,f32 rScale,f32 hScale,f32 pScale) {
-
- WWHD_FUNC(0x025BEBB8,void,type,actor,pos,angle,rScale,hScale,pScale);
-
- if(!gabi::call<u32>(0x025BDC54,gabi::load<u32>(0x1047C9BC))||type>=207)return;
-u32 index=gabi::call<u32>(0x025BD600,type);
-u32 table=0x10054708+index*18;
-gabi::call<void>(0x025F1884,0x1048D0CC,angle);
-gabi::Local<u8[12]> offset,world;
-f32 x=f32(gabi::load<s16>(table))*pScale,y=f32(gabi::load<s16>(table+2))*pScale,z=f32(gabi::load<s16>(table+4))*pScale;
-gabi::store<f32>(offset.a,x);
-gabi::store<f32>(offset.a+4,y);
-gabi::store<f32>(offset.a+8,z);
-gabi::call<void>(0x028E8F64,0x1048D0CC,offset.a,world.a);
-gabi::call<void>(0x028E8D88,world.a,pos,world.a);
-gabi::Local<u8[52]> obj;
-gabi::call<void>(0x025BD71C,obj.a);
-f32 radius=f32(gabi::load<s16>(table+6))*hScale,height=f32(gabi::load<s16>(table+8))*rScale;
-gabi::call<void>(0x025BEB5C,obj.a,world.a,angle,radius,height);
-gabi::call<void>(0x025BEB90,obj.a,type,actor,0,4,gabi::load<s16>(table+12));
-gabi::call<void>(0x025BEB4C,obj.a);
-
-}
-
-VERIFY(0x025BEBB8,Snap_RegistFig);
-
-void Snap_Remove(u32 s) {
-
- WWHD_FUNC(0x025BEE04,void,s);
-
- for(u32 off: {
-0xF70u,0xF74u}
-){
-u32 p=gabi::load<u32>(s+off);
-if(p){
-gabi::call<void>(0x0273AF40,p);
-gabi::store<u32>(s+off,0);
-}
-}
-const u32 offsets[]={
-0xF78,0xF80,0xF84,0xF88}
-;
-const u32 vts[]={
-0x18,0x30,0x90,0x18}
-;
-for(u32 i=0;i<4;++i){
-u32 p=gabi::load<u32>(s+offsets[i]);
-if(p){
-u32 vt=gabi::load<u32>(p+vts[i]);
-u32 target=gabi::load<u32>(vt+0x1C);
-gabi::call_ptr<void>(target,p,3);
-gabi::store<u32>(s+offsets[i],0);
-}
-}
-gabi::store<u32>(s+0xF8C,0);
-gabi::store<u32>(s+0xF90,0);
-gabi::call<void>(0x027F88C8,gabi::load<u32>(0x101F9968),9);
-gabi::call<void>(0x027F88C8,gabi::load<u32>(0x101F9968),10);
-gabi::call<void>(0x027F88C8,gabi::load<u32>(0x101F9968),11);
-
-}
-
-VERIFY(0x025BEE04,Snap_Remove);
-
-void Snap_ObjDraw(u32 s,s32 alpha) {
-
- WWHD_FUNC(0x025BF01C,void,s,alpha);
-
- gabi::Local<u8[16]> color;
-gabi::store<f32>(color.a,1);
-gabi::store<f32>(color.a+4,0);
-gabi::store<f32>(color.a+8,0);
-gabi::store<f32>(color.a+12,f32(alpha)/255.0f);
-f32 diameter=gabi::load<f32>(s+0xC)*2;
-bool sphere=(gabi::load<u8>(s+0x1B)&1)!=0;
-f32 x=gabi::load<f32>(s),y=gabi::load<f32>(s+4),z=gabi::load<f32>(s+8);
-if(!sphere){
-f32 h=gabi::load<f32>(s+0x10);
-gabi::call<void>(0x028E93CC,0x1048D0CC,x,gabi::fmadds(h,0.5f,y),z);
-gabi::call<void>(0x025F2518,diameter,h,diameter);
-gabi::call<void>(0x025F1C28,0x1048D0CC,gabi::load<s16>(s+0x1E));
-}
-else{
-gabi::call<void>(0x028E93CC,0x1048D0CC,x,y,z);
-gabi::call<void>(0x025F2518,diameter,diameter,diameter);
-}
-u32 drawer=gabi::load<u32>(0x101F8B28);
-gabi::Local<u8[48]> mtx;
-gabi::call<void>(0x025BEF7C,mtx.a,0x1048D0CC);
-gabi::call<void>(0x027509C8,drawer,mtx.a);
-gabi::call<void>(sphere?0x02750A00:0x02750A24,drawer,color.a,color.a);
-
-}
-
-VERIFY(0x025BF01C,Snap_ObjDraw);
-
-void Snap_StaticInit() {
-
- WWHD_FUNC(0x025C060C,void);
-
- gabi::store<u32>(0x1047C9DC,0);
-gabi::store<u32>(0x1047C9D8,0);
-gabi::store<u32>(0x1047C9D4,0);
-gabi::store<u32>(0x1047C9D0,0);
-gabi::call<void>(0x028F026C,0x101EBA34);
-gabi::store<f32>(0x1047C9C0,-3.1415927410125732f);
-gabi::store<f32>(0x1047C9C4,3.1415927410125732f);
-gabi::call<void>(0x028ED6F8,0x1047C9CC);
-gabi::call<void>(0x028F026C,0x101EBA40);
-gabi::call<void>(0x028EAB2C,0x1047C9CD);
-gabi::call<void>(0x028F026C,0x101EBA4C);
-gabi::store<f32>(0x1047C9A4,1600);
-gabi::store<f32>(0x1047C9AC,560);
-gabi::store<f32>(0x1047C9B0,315);
-gabi::store<f32>(0x1047C99C,800);
-gabi::store<f32>(0x1047C9B4,360);
-gabi::store<f32>(0x1047C9B8,203);
-gabi::store<f32>(0x1047C9A0,450);
-gabi::store<f32>(0x1047C9A8,900);
-gabi::store<f32>(0x1047C9C8,(800.0f/294.0f)*(450.0f/198.0f));
-
-}
-
-VERIFY(0x025C060C,Snap_StaticInit);
-
-u32 Snap_Regist(u32 s,u32 obj) {
-
- WWHD_FUNC(0x025BE99C,u32,s,obj);
-
- if(!gabi::call<u32>(0x025BDC54,s)||gabi::call<u32>(0x025BDC6C,s))return 0;
-u32 play=gabi::call<u32>(0x025200D4);
-s32 count=gabi::load<s32>(s+0x9C);
-u32 actor=gabi::load<u32>(play+0x5B2C),base=s+0xA0;
-if(count>=63){
-f32 far=-1000000000.0f;
-u32 best=0;
-bool found=false;
-for(u32 i=0;i<63;++i){
-u32 elem=base+60*i;
-f32 distance=gabi::load<f32>(elem+0x34);
-if(far<distance&&gabi::load<u8>(elem+0x18)>=72){
-far=distance;
-best=i;
-found=true;
-}
-}
-if(!found)return 0;
-f32 distance=gabi::call<f32>(0x028E8DE8,actor+0x314,obj);
-if(gabi::load<u8>(obj+0x18)>=72&&distance>far)return 0;
-u32 elem=gabi::call<u32>(0x025BE908,base+best*60,obj);
-gabi::store<f32>(elem+0x34,distance);
-return 0;
-}
-gabi::call<void>(0x025BE908,base+u32(count)*60,obj);
-count=gabi::load<s32>(s+0x9C);
-f32 distance=gabi::call<f32>(0x028E8DE8,actor+0x314,base+u32(count)*60);
-count=gabi::load<s32>(s+0x9C);
-gabi::store<f32>(base+u32(count)*60+0x34,distance);
-gabi::store<u32>(s+0x9C,gabi::load<u32>(s+0x9C)+1);
-return 1;
-
-}
-
-VERIFY(0x025BE99C,Snap_Regist);
-
-void Snap_SetResult(u32 s) {
-
- WWHD_FUNC(0x025BE480,void,s);
-
- gabi::store<u8>(s+0xF6C,0);
-gabi::store<u32>(s+0xF68,0);
-gabi::Local<u8[11]> seen;
-for(u32 k=0;k<11;++k)gabi::store<u8>(seen.a+k,0);
-
- for(s32 i=0;i<gabi::load<s32>(s+0x9C);++i){
-u32 elem=s+0xA0+u32(i)*60;
-if(!gabi::load<u32>(elem+0x20))continue;
-u32 type=gabi::load<u8>(elem+0x18);
-if(!type)continue;
-if(type>=208)gabi::call<void>(0x0273AA24,0x10055250,0xBD4,0x1005521C);
-if(type>=11)continue;
-if(gabi::load<u8>(seen.a+type))continue;
-u32 desc=0x101EBA58+type*8;
-s16 vindex=gabi::load<s16>(desc+2);
-if(vindex){
-gabi::store<u32>(s+0x98,type);
-vindex=gabi::load<s16>(desc+2);
-u32 self=s+s32(gabi::load<s16>(desc));
-u32 target;
-if(vindex<0)target=gabi::load<u32>(desc+4);
-else{
-u32 vt=gabi::load<u32>(self+s32(gabi::load<s16>(desc+6)));
-target=gabi::load<u32>(vt+u32(s32(vindex))*8+4);
-}
-u32 result=gabi::call_ptr<u32>(target,self);
-gabi::store<u32>(s+0xF68,result);
-if(result)return;
-}
-gabi::store<u8>(seen.a+type,1);
-}
-
- for(s32 i=0;i<gabi::load<s32>(s+0x9C);++i){
-u32 elem=s+0xA0+u32(i)*60;
-s32 pixels=gabi::load<s32>(elem+0x20);
-if(!pixels)continue;
-u32 type=gabi::load<u8>(elem+0x18);
-if(!type||type<11)continue;
-if(type>=208)gabi::call<void>(0x0273AA24,0x10055250,0xC03,0x1005521C);
-pixels=gabi::load<s32>(elem+0x20);
-if(pixels<0)continue;
-gabi::store<u32>(s+0x98,type);
-u32 result=gabi::call<u32>(0x025BE31C,s,i);
-gabi::store<u32>(s+0xF68,result);
-if(result&&!gabi::load<u8>(s+0xF6C))return;
-}
-
-
-}
-
-VERIFY(0x025BE480,Snap_SetResult);
-
-void Snap_Judge(u32 s) {
-
- WWHD_FUNC(0x025BE664,void,s);
-
- gabi::store<u32>(s+0xF68,0);
-for(u32 i=0;i<63;++i){
-u32 elem=s+0xA0+i*60;
-gabi::store<u32>(elem+0x20,0);
-gabi::call<void>(0x025BE208,elem);
-}
-u32 tex=gabi::call<u32>(0x027F81A4,gabi::load<u32>(0x101F9968),9);
-gabi::Local<u8[0x158]> reader;
-gabi::call<void>(0x027BF144,reader.a);
-gabi::call<void>(0x027BF3FC,reader.a,tex,gabi::load<u32>(s+0xF7C));
-gabi::call<void>(0x027BF598,reader.a,tex);
-gabi::call<void>(0x027BF730,reader.a);
-gabi::Local<u8[16]> sample;
-
- u32 y=0;
-for(;;){
-s32 height=gabi::load<s32>(tex+0xC);
-u32 small=gabi::load<u8>(tex+0x79);
-if(s32(small)>height)height=s32(small);
-if(y>=u32(height))break;
-u32 x=0;
-for(;;){
-s32 width=gabi::load<s32>(tex+8);
-small=gabi::load<u8>(tex+0x78);
-if(s32(small)>width)width=s32(small);
-if(x>=u32(width))break;
-gabi::call<void>(0x027BF244,reader.a,sample.a,x,y);
-u32 index=gabi::load<u32>(sample.a+12)>>2;
-if(index<63){
-u32 elem=s+0xA0+index*60;
-gabi::store<u32>(elem+0x20,gabi::load<u32>(elem+0x20)+1);
-gabi::call<void>(0x025BE224,elem,s16(x),s16(y));
-}
-++x;
-}
-++y;
-}
-
- gabi::call<void>(0x027BF1A4,reader.a);
-for(s32 i=0;i<gabi::load<s32>(s+0x9C);++i){
-u32 elem=s+0xA0+u32(i)*60;
-if(!gabi::load<u32>(elem+0x20))continue;
-f32 area=gabi::call<f32>(0x025BDC78,elem);
-if(!(std::fabs(area)<3.814697265625e-06f))gabi::store<f32>(elem+0x24,f32(gabi::load<s32>(elem+0x20))/area);
-}
-gabi::call<void>(0x025BE480,s);
-gabi::call<void>(0x027BF1E8,reader.a,2);
-
-
-}
-
-VERIFY(0x025BE664,Snap_Judge);
-
-f32 Snap_CalcArea(u32 s) {
-
- WWHD_FUNC(0x025BDC78,f32,s);
-
- f32 total=0;
-
- f32 x=gabi::load<f32>(s),y=gabi::load<f32>(s+4),z=gabi::load<f32>(s+8);
-
- bool sphere=(gabi::load<u8>(s+0x1B)&1)!=0;
-
- f32 radius=gabi::load<f32>(s+0xC),height=gabi::load<f32>(s+0x10);
-
- gabi::call<void>(0x028E93CC,0x1048D0CC,x,y,z);
-
- gabi::Local<u8[12]> input,world,p0,p1,p2,p3,base,top,c0,c1,c2,c3;
-
- auto vset=[&](u32 a,f32 vx,f32 vy,f32 vz){
-gabi::store<f32>(a,vx);
-gabi::store<f32>(a+4,vy);
-gabi::store<f32>(a+8,vz);
-}
-;
-
- auto project=[&](u32 dst){
-gabi::call<void>(0x028E8F64,0x1048D0CC,input.a,world.a);
-gabi::call<void>(0x025BD670,world.a,dst);
-}
-;
-
- auto tri=[&](u32 a,u32 b,u32 c){
-f32 a0=gabi::load<f32>(a),a1=gabi::load<f32>(a+4),b0=gabi::load<f32>(b),b1=gabi::load<f32>(b+4),c0=gabi::load<f32>(c),c1=gabi::load<f32>(c+4);
-f32 product=gabi::call<f32>(0x02010CFC,a0,a1,b0,b1,c0,c1);
-f32 area=0.5f*product;
-if(area>0)total+=area;
-}
-;
-
- if(!sphere) {
-
-  gabi::call<void>(0x025F2518,radius,height,radius);
-
-  gabi::call<void>(0x025F1C28,0x1048D0CC,gabi::load<s16>(s+0x1E));
-
-  vset(base.a,0,0,0);
-gabi::call<void>(0x028E8F64,0x1048D0CC,base.a,base.a);
-
-  vset(top.a,0,1,0);
-gabi::call<void>(0x028E8F64,0x1048D0CC,top.a,top.a);
-
-  for(u32 i=0;i<gabi::load<u8>(s+0x19);++i) {
-
-   u32 curr=0x100546CC+i*12,next=curr+12;
-
-   f32 cx=gabi::load<f32>(curr),cz=gabi::load<f32>(curr+8);
-
-   vset(input.a,cx,0,cz);
-project(p0.a);
-gabi::store<f32>(input.a+4,1);
-project(p1.a);
-
-   f32 nx=gabi::load<f32>(next),nz=gabi::load<f32>(next+8);
-
-   gabi::store<f32>(input.a,nx);
-gabi::store<f32>(input.a+8,nz);
-project(p2.a);
-gabi::store<f32>(input.a+4,0);
-project(p3.a);
-
-   tri(p0.a,p1.a,p2.a);
-tri(p0.a,p2.a,p3.a);
-
-   gabi::call<void>(0x025BD670,top.a,c0.a);
-tri(c0.a,p2.a,p1.a);
-
-   gabi::call<void>(0x025BD670,base.a,c1.a);
-tri(c1.a,p0.a,p3.a);
-
-   vset(input.a,-cx,1,cz);
-project(p0.a);
-gabi::store<f32>(input.a+4,0);
-project(p1.a);
-
-   gabi::store<f32>(input.a,-nx);
-gabi::store<f32>(input.a+8,nz);
-project(p2.a);
-gabi::store<f32>(input.a+4,1);
-project(p3.a);
-
-   tri(p0.a,p1.a,p2.a);
-tri(p0.a,p2.a,p3.a);
-
-   gabi::call<void>(0x025BD670,top.a,c2.a);
-tri(c2.a,p0.a,p3.a);
-
-   gabi::call<void>(0x025BD670,base.a,c3.a);
-tri(c3.a,p2.a,p1.a);
-
-  }
-
- }
- else {
-
-  gabi::call<void>(0x025F2518,radius,radius,radius);
-
-  for(u32 i=0;i<20;++i) {
-
-   u32 outputs[]={
-p0.a,p1.a,p2.a}
-;
-
-   for(u32 j=0;j<3;++j){
-u32 index=gabi::load<u32>(0x10055104+i*12+j*4);
-u32 vert=0x10055074+index*12;
-vset(input.a,gabi::load<f32>(vert),gabi::load<f32>(vert+4),gabi::load<f32>(vert+8));
-project(outputs[j]);
-}
-
-   tri(p0.a,p1.a,p2.a);
-
-  }
-
- }
-
- return total;
-
-}
-
-VERIFY(0x025BDC78,Snap_CalcArea);
-
-void Snap_Create(u32 s,u32 heap) {
-
- WWHD_FUNC(0x025BD8E4,void,s,heap);
-
- gabi::store<u32>(s+0xF7C,heap);
-gabi::store<u32>(s+0xF68,0);
-gabi::store<u8>(s+0xF6C,0);
-gabi::store<u32>(s+0xF64,0);
-
- u32 p=gabi::call<u32>(0x0273B050,0x148,heap,4);
-if(p)p=gabi::call<u32>(0x027B6CB8,p);
-
- heap=gabi::load<u32>(s+0xF7C);
-gabi::store<u32>(s+0xF70,p);
-
- p=gabi::call<u32>(0x0273B050,0x154,heap,4);
-if(p)p=gabi::call<u32>(0x027B6E64,p);
-
- heap=gabi::load<u32>(s+0xF7C);
-gabi::store<u32>(s+0xF74,p);
-
- p=gabi::call<u32>(0x0273B050,0x40,heap,4);
-if(p)p=gabi::call<u32>(0x027B95B4,p);
-
- heap=gabi::load<u32>(s+0xF7C);
-gabi::store<u32>(s+0xF78,p);
-
- p=gabi::call<u32>(0x0273B050,0x58,heap,4);
-
- if(p) {
-
-  gabi::store<u32>(p+0x30,0x101450D0);
-for(u32 i=0;i<12;++i)gabi::store<u32>(p+i*4,gabi::load<u32>(0x104A041C+i*4));
-
-  gabi::store<u32>(p+0x30,0x101450F8);
-
-  u32 v=p+0x34;
-if(!v)v=gabi::call<u32>(0x0273AD10,12);
-if(v){
-gabi::store<f32>(v+4,0);
-gabi::store<f32>(v,0);
-gabi::store<f32>(v+8,10);
-}
-
-  v=p+0x40;
-if(!v)v=gabi::call<u32>(0x0273AD10,12);
-if(v){
-gabi::store<f32>(v+4,0);
-gabi::store<f32>(v,0);
-gabi::store<f32>(v+8,0);
-}
-
-  v=p+0x4C;
-if(!v)v=gabi::call<u32>(0x0273AD10,12);
-if(v){
-gabi::store<f32>(v+4,1);
-gabi::store<f32>(v,0);
-gabi::store<f32>(v+8,0);
-}
-
- }
-
- heap=gabi::load<u32>(s+0xF7C);
-gabi::store<u32>(s+0xF80,p);
-
- p=gabi::call<u32>(0x0273B050,0xD4,heap,4);
-if(p)p=gabi::call<u32>(0x0274E87C,p);
-
- heap=gabi::load<u32>(s+0xF7C);
-gabi::store<u32>(s+0xF84,p);
-
- p=gabi::call<u32>(0x0273B050,0x1C,heap,4);
-
- if(p){
-gabi::store<u32>(p+0x18,0x1005466C);
-gabi::store<f32>(p+4,1);
-gabi::store<f32>(p,1);
-u32 v=p+8;
-if(!v)v=gabi::call<u32>(0x0273AD10,16);
-if(v){
-gabi::store<f32>(v+8,1);
-gabi::store<f32>(v+4,0);
-gabi::store<f32>(v,0);
-gabi::store<f32>(v+12,1);
-}
-}
-
- gabi::store<u32>(s+0xF88,p);
-
- u32 service=gabi::load<u32>(0x101F86E8),graphics=gabi::load<u32>(0x101F8664);
-u32 first=service+0x190;
-
- gabi::store<u32>(s+0xF8C,first);
-u32 vt=gabi::load<u32>(service+0x1F4);
-u32 desc=gabi::load<u32>(graphics+0x28);
-u32 target=gabi::load<u32>(vt+0x54);
-
- gabi::Local<u32> token,arg1,arg2;
-u32 ref=gabi::call<u32>(0x027A7558,token.a,desc);
-gabi::store<u32>(arg1.a,gabi::load<u32>(ref));
-gabi::call_ptr<void>(target,first+4,arg1.a);
-
- u32 second=service+0xC00;
-gabi::store<u32>(s+0xF90,second);
-desc=gabi::load<u32>(graphics+0x24);
-vt=gabi::load<u32>(service+0xC64);
-target=gabi::load<u32>(vt+0x54);
-
- ref=gabi::call<u32>(0x027A7558,token.a,desc);
-gabi::store<u32>(arg2.a,gabi::load<u32>(ref));
-gabi::call_ptr<void>(target,second+4,arg2.a);
-
-}
-
-VERIFY(0x025BD8E4,Snap_Create);
-
-static void snap_texture_copy(u32 dst,u32 src) {
-
- for(u32 i=0;i<0x78;i+=4)gabi::store<u32>(dst+i,gabi::load<u32>(src+i));
-
- for(u32 i=0x78;i<0x7C;++i)gabi::store<u8>(dst+i,gabi::load<u8>(src+i));
-
- for(u32 i=0x7C;i<=0x88;i+=4)gabi::store<u32>(dst+i,gabi::load<u32>(src+i));
-
- gabi::store<u8>(dst+0x90,gabi::load<u8>(src+0x90));
-gabi::store<u8>(dst+0x91,gabi::load<u8>(src+0x91));
-
- for(u32 i=0x94;i<=0x148;i+=4)gabi::store<u32>(dst+i,gabi::load<u32>(src+i));
-
- gabi::store<u8>(dst+0x14C,gabi::load<u8>(src+0x14C));
-
- for(u32 i=0x150;i<=0x18C;i+=4)gabi::store<u32>(dst+i,gabi::load<u32>(src+i));
-
-}
-
-void Snap_DrawPacket(u32 s,u32 context) {
-
- WWHD_FUNC(0x025BF250,void,s,context);
-
- u32 manager=gabi::load<u32>(0x101F9968);
-
- u32 large=gabi::call<u32>(0x027F81A4,manager,11),depth=gabi::call<u32>(0x027F81A4,manager,10),small=gabi::call<u32>(0x027F81A4,manager,9);
-
- if(!large){
-large=gabi::call<u32>(0x027F81C0,manager,11,0x1047C9A4);
-depth=gabi::call<u32>(0x027F81C0,manager,10,0x1047C99C);
-small=gabi::call<u32>(0x027F81C0,manager,9,0x1047C99C);
-}
-
- u32 frame=gabi::load<u32>(context),source=gabi::load<u32>(frame+8);
-
- if(!gabi::load<u32>(0x101FD7BC)){
-gabi::store<u32>(0x101FD7BC,1);
-gabi::store<u32>(0x101FDCF8,0x1005469C);
-}
-
- if(source){
-u32 vt=gabi::load<u32>(source+0x18),target=gabi::load<u32>(vt+12);
-if(!gabi::call_ptr<u32>(target,source,0x101FDCF8))source=0;
-}
-
- gabi::call<void>(0x027B6D64,gabi::load<u32>(source+0x1C));
-gabi::call<void>(0x027BE794,gabi::load<u32>(source+0x1C));
-
- gabi::Local<u8[408]> firstView,secondView,texture;
-
- gabi::Local<u8[116]> stateA,stateB;
-
- gabi::Local<u8[24]> viewport;
-
- gabi::Local<u8[8]> scale,origin,extent,position;
-
- gabi::Local<u8[48]> matrix;
-
- gabi::Local<u8[172]> camera;
-
- gabi::call<void>(0x027BE114,firstView.a,gabi::load<u32>(source+0x1C));
-
- gabi::call<void>(0x0274FDBC,stateA.a);
-gabi::store<u8>(stateA.a,0);
-gabi::store<u8>(stateA.a+0x47,0);
-gabi::store<u8>(stateA.a+0x45,1);
-gabi::store<u8>(stateA.a+12,0);
-gabi::store<u8>(stateA.a+0x46,1);
-gabi::store<u8>(stateA.a+0x44,1);
-gabi::store<u8>(stateA.a+1,0);
-gabi::call<void>(0x0274FEB0,stateA.a);
-
- auto dimensions=[&](u32 tex){
-s32 w=gabi::load<s32>(tex+8),wb=gabi::load<u8>(tex+0x78),h=gabi::load<s32>(tex+12),hb=gabi::load<u8>(tex+0x79);
-return std::pair<f32,f32>(f32(u32(w>wb?w:wb)),f32(u32(h>hb?h:hb)));
-}
-;
-
- auto sizeViewport=[&](f32 w,f32 h,f32 ox,f32 oy){
-u32 p=gabi::load<u32>(s+0xF78);
-gabi::store<f32>(p,w);
-gabi::store<f32>(p+4,h);
-p=gabi::load<u32>(s+0xF78);
-gabi::store<f32>(p+8,ox);
-gabi::store<f32>(p+12,oy);
-gabi::store<f32>(p+16,w);
-gabi::store<f32>(p+20,h);
-}
-;
-
- auto wh=dimensions(large);
-f32 w=wh.first,h=wh.second;
-
- gabi::call<void>(0x025C0928,gabi::load<u32>(s+0xF70),large);
-
- u32 p=gabi::load<u32>(s+0xF78);
-gabi::store<f32>(p,w);
-gabi::store<f32>(p+4,h);
-
- f32 ox=gabi::load<f32>(0x104A0908),oy=gabi::load<f32>(0x104A090C);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::store<f32>(p+8,ox);
-gabi::store<f32>(p+12,oy);
-gabi::store<f32>(p+16,w);
-gabi::store<f32>(p+20,h);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B954C,p);
-gabi::store<u32>(p+0x3C,0);
-p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x1C,gabi::load<u32>(s+0xF70));
-gabi::call<void>(0x0274D690,gabi::load<u32>(s+0xF78));
-
- gabi::call<void>(0x0274F5F0,viewport.a,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x0274F964,viewport.a,gabi::load<u32>(s+0xF78));
-
- u32 initX=gabi::load<u32>(0x104A0920),initY=gabi::load<u32>(0x104A0924);
-gabi::store<u32>(scale.a,initX);
-gabi::store<u32>(scale.a+4,initY);
-
- u32 bitsX=gabi::load<u32>(source+0x10);
-f32 viewportX=gabi::load<f32>(0x1047C9AC);
-f32 sourceX;
-memcpy(&sourceX,&bitsX,4);
-u32 bitsY=gabi::load<u32>(source+0x14);(void)bitsY;
-f32 fraction=sourceX/1280.0f;
-f32 extentX=(viewportX+viewportX)*fraction,viewportY=gabi::load<f32>(0x1047C9B0);
-f32 extentY=(viewportY+viewportY)*fraction;
-
- gabi::store<f32>(scale.a,extentX/w);
-gabi::store<f32>(scale.a+4,extentY/h);
-gabi::store<f32>(extent.a,extentX);
-gabi::store<f32>(extent.a+4,extentY);
-
- u32 screen=gabi::call<u32>(0x02739728);
-f32 screenX=gabi::load<f32>(screen),screenY=gabi::load<f32>(screen+4);
-
- f32 positionX=gabi::fnmsubs(gabi::load<f32>(0x1047C9AC),0.5f,gabi::load<f32>(0x1047C9B4))/screenX;
-
- f32 positionY=gabi::fnmsubs(gabi::load<f32>(0x1047C9B0),0.5f,gabi::load<f32>(0x1047C9B8))/screenY;
-
- gabi::store<f32>(position.a,positionX);
-gabi::store<f32>(position.a+4,positionY);
-
- u32 ref=gabi::call<u32>(0x027F29D4,0x104B45C0);
-u32 old=gabi::load<u32>(ref);
-u32 renderer=gabi::load<u32>(0x101F8710);
-
- u32 handle=gabi::call<u32>(0x0272C898,renderer,firstView.a,viewport.a,scale.a,position.a,old);
-
- gabi::call<void>(0x027B6F18,gabi::load<u32>(source+0x3C));
-u32 tex=gabi::load<u32>(source+0x3C);
-
- if(gabi::load<u32>(tex+0xA4)){
-if(gabi::load<u8>(tex+0x90)){
-gabi::call<void>(0x027B6F90,tex);
-gabi::store<u8>(tex+0x90,0);
-}
-gabi::call<void>(0xC00061A0,tex+0xA8);
-gabi::call<void>(0x0276B114,gabi::load<u32>(0x101F8BD8));
-tex=gabi::load<u32>(source+0x3C);
-}
-
- gabi::call<void>(0x027BE794,tex);
-
- wh=dimensions(depth);
-f32 dw=wh.first,dh=wh.second;
-gabi::call<void>(0x025C0AB8,gabi::load<u32>(s+0xF74),depth);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B954C,p);
-gabi::store<u32>(p+0x3C,0);
-p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x3C,gabi::load<u32>(s+0xF74));
-sizeViewport(dw,dh,ox,oy);
-gabi::call<void>(0x0274D690,gabi::load<u32>(s+0xF78));
-
- gabi::call<void>(0x027BE114,secondView.a,gabi::load<u32>(source+0x3C));
-gabi::store<u32>(secondView.a+0x158,0);
-gabi::store<u32>(secondView.a+0x154,0);
-gabi::store<u32>(secondView.a+0x150,0);
-gabi::store<u8>(secondView.a+0x190,gabi::load<u8>(secondView.a+0x190)|4);
-
- gabi::call<void>(0x0274F53C,viewport.a,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x0274F964,viewport.a,gabi::load<u32>(s+0xF78));
-
- wh=dimensions(secondView.a);
-gabi::store<f32>(scale.a,gabi::load<f32>(extent.a)/wh.first);
-gabi::store<f32>(scale.a+4,gabi::load<f32>(extent.a+4)/wh.second);
-
- handle=gabi::call<u32>(0x0272C6C0,gabi::load<u32>(0x101F8710),secondView.a,viewport.a,scale.a,position.a,handle);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B6F18,gabi::load<u32>(p+0x3C));
-p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027BE794,gabi::load<u32>(p+0x3C));
-gabi::call<void>(0x027BE2B0,secondView.a,2);
-
- gabi::call<void>(0x027B6D64,gabi::load<u32>(s+0xF70));
-gabi::call<void>(0x027BE794,gabi::load<u32>(s+0xF70));
-gabi::call<void>(0x027BDF7C,texture.a);
-
- u32 save=gabi::load<u32>(0x101F84DC);
-u32 effect=gabi::load<u32>(s+(gabi::load<u8>(save+0x64)==38?0xF90:0xF8C));
-
- auto effectReady=[&](){
-if(!effect||!gabi::load<u8>(effect+0x8BC))return false;
-if(gabi::load<s32>(effect+0x1D4)>0&&gabi::load<u32>(effect+0x1D0))return true;
-return gabi::load<u8>(effect+0xA20)!=0;
-}
-;
-
- u8 flags;
-
- if(effectReady()){
-handle=gabi::call<u32>(0x0279DB64,effect,gabi::load<u32>(s+0xF70),handle);
-if(gabi::load<u32>(effect+0x55C)&&effect+0x564){
-u32 copy=effect+0x564;
-snap_texture_copy(texture.a,copy);
-flags=gabi::load<u8>(copy+0x190);
-}
-else{
-bool same=true;
-for(u32 off:{
-4u,8u,12u,16u,20u,24u,56u,52u,28u}
-)if(gabi::load<u32>(texture.a+off)!=gabi::load<u32>(large+off)){
-same=false;
-break;
-}
-if(!same)gabi::call<void>(0x027BDEB4,texture.a,large);
-else{
-u32 image=gabi::load<u32>(large+0x30),mip=gabi::load<u32>(large+0x28);
-gabi::store<u32>(texture.a+0x30,image);
-gabi::store<u32>(texture.a+0xDC,image);
-gabi::store<u32>(texture.a+0xD4,mip);
-gabi::store<u32>(texture.a+0x28,mip);
-}
-flags=gabi::load<u8>(texture.a+0x190);
-}
-}
-
- else{
-bool same=true;
-for(u32 off:{
-4u,8u,12u,16u,20u,24u,56u,52u,28u}
-)if(gabi::load<u32>(texture.a+off)!=gabi::load<u32>(large+off)){
-same=false;
-break;
-}
-if(!same)gabi::call<void>(0x027BDEB4,texture.a,large);
-else{
-u32 mip=gabi::load<u32>(large+0x28),image=gabi::load<u32>(large+0x30);
-gabi::store<u32>(texture.a+0x28,mip);
-gabi::store<u32>(texture.a+0xD4,mip);
-gabi::store<u32>(texture.a+0xDC,image);
-gabi::store<u32>(texture.a+0x30,image);
-}
-flags=gabi::load<u8>(texture.a+0x190);
-}
-
- gabi::store<u32>(texture.a+0x150,0);
-gabi::store<u32>(texture.a+0x154,0);
-gabi::store<u32>(texture.a+0x158,0);
-gabi::store<u8>(texture.a+0x190,flags|4);
-
- wh=dimensions(small);
-f32 sw=wh.first,sh=wh.second;
-gabi::call<void>(0x025C0928,gabi::load<u32>(s+0xF70),small);
-sizeViewport(sw,sh,ox,oy);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B954C,p);
-gabi::store<u32>(p+0x3C,0);
-p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x1C,gabi::load<u32>(s+0xF70));
-p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x3C,0);
-gabi::call<void>(0x027B9D00,gabi::load<u32>(s+0xF78),255);
-
- gabi::call<void>(0x0274F5F0,secondView.a,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x0274F964,secondView.a,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x027B997C,gabi::load<u32>(s+0xF78),0,1,0x104A01CC,0,1.0f);
-
- gabi::call<void>(0x0274FDBC,stateB.a);
-gabi::store<u8>(stateB.a+0x47,0);
-gabi::store<u8>(stateB.a+12,0);
-gabi::store<u8>(stateB.a+0x46,1);
-gabi::store<u32>(stateB.a+4,7);
-gabi::store<u8>(stateB.a+0x44,1);
-gabi::store<u8>(stateB.a,0);
-gabi::store<u8>(stateB.a+0x45,1);
-gabi::store<u8>(stateB.a+1,0);
-gabi::call<void>(0x0274FEB0,stateB.a);
-
- gabi::call<void>(0x025C0AC4,matrix.a,0x104A0958,0x104A0928);
-gabi::call<void>(0x0274E1C8,camera.a);
-u32 projection=gabi::call<u32>(0x0274D83C,camera.a);
-
- handle=gabi::call<u32>(0x027AAD8C,texture.a,matrix.a,projection,0x104A01EC,handle);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B6D64,gabi::load<u32>(p+0x1C));
-p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027BE794,gabi::load<u32>(p+0x1C));
-gabi::call<void>(0x0274D690,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x0274E474,camera.a,2);
-
- if(effectReady())gabi::call<void>(0x0279D8E0,effect);
-
- ref=gabi::call<u32>(0x027F29D4,0x104B45C0);
-gabi::store<u32>(ref,handle);
-gabi::store<u32>(ref+4,0);
-gabi::call<void>(0x027BE2B0,texture.a,2);
-gabi::call<void>(0x027BE2B0,firstView.a,2);
-
-}
-
-VERIFY(0x025BF250,Snap_DrawPacket);
-
-
-// VERIFY
-void Snap_DebugDraw(u32 s,u32 context){
-
- WWHD_FUNC(0x025BFDC0,void,s,context);
-
- if(!gabi::call<u32>(0x025BDC54,s))return;
-
- gabi::call<void>(0x025BF250,s,context);
-
- u32 p=gabi::load<u32>(s+0xF78);
-gabi::call<void>(0x027B954C,p);
-gabi::store<u32>(p+0x3C,0);
-
- p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x1C,gabi::load<u32>(s+0xF70));
-p=gabi::load<u32>(s+0xF78);
-gabi::store<u32>(p+0x3C,gabi::load<u32>(s+0xF74));
-
- gabi::call<void>(0x0274D690,gabi::load<u32>(s+0xF78));
-
- gabi::Local<u8[24]> params;
-gabi::call<void>(0x0274F5F0,params.a,gabi::load<u32>(s+0xF78));
-gabi::call<void>(0x0274F964,params.a,gabi::load<u32>(s+0xF78));
-
- gabi::Local<u8[116]> state;
-gabi::call<void>(0x0274FDBC,state.a);
-gabi::store<u8>(state.a+0x44,0);
-gabi::store<u32>(state.a+0x1C,0);
-gabi::store<u8>(state.a+0x47,1);
-gabi::store<u32>(state.a+0x14,1);
-gabi::store<u8>(state.a+0x45,0);
-gabi::store<u8>(state.a+0x46,0);
-gabi::call<void>(0x0274FEB0,state.a);
-
- u32 drawer=gabi::load<u32>(0x101F8B28);
-
- if(drawer){
-
-  u32 frame=gabi::load<u32>(context);
-gabi::call<void>(0x027509A0,drawer,gabi::load<u32>(frame+0x14));
-frame=gabi::load<u32>(context);
-u32 camera=gabi::load<u32>(frame+0x18),projection=gabi::call<u32>(0x0274D83C,camera);
-
-  gabi::Local<u8[64]> matrix;
-for(u32 i=0;i<64;i+=4)gabi::store<u32>(matrix.a+i,gabi::load<u32>(projection+i));
-
-  frame=gabi::load<u32>(context);
-u32 buffer=gabi::load<u32>(frame+8);
-f32 screenX=gabi::load<f32>(0x1047C9AC),screenY=gabi::load<f32>(0x1047C9B0);
-
-  f32 width=gabi::load<f32>(buffer+0x10),scaledX=screenX*(width/1280.0f),height=gabi::load<f32>(buffer+0x14),scaledY=screenY*(height/720.0f);
-
-  f32 scaleX=(gabi::load<f32>(buffer+0x10)/scaledX)*0.5f;
-gabi::store<f32>(matrix.a,gabi::load<f32>(matrix.a)*scaleX);
-
-  f32 scaleY=(gabi::load<f32>(buffer+0x14)/scaledY)*0.5f;
-gabi::store<f32>(matrix.a+8,0.0f);
-gabi::store<f32>(matrix.a+0x14,gabi::load<f32>(matrix.a+0x14)*scaleY);
-
-  height=gabi::load<f32>(buffer+0x14);
-f32 ratio=height/720.0f;
-screenY=gabi::load<f32>(0x1047C9B0);
-f32 center=gabi::fmadds(screenY,0.5f,140.0f)*ratio;
-f32 delta=gabi::fmsubs(height,0.5f,center);
-gabi::store<f32>(matrix.a+0x18,(delta+delta)/(screenY*ratio));
-
-  gabi::Local<u8[212]> adjusted;
-gabi::call<void>(0x0274EAF0,adjusted.a,matrix.a,0);
-gabi::call<void>(0x0274D80C,adjusted.a);
-gabi::call<void>(0x027509B4,drawer,adjusted.a);
-gabi::call<void>(0x027509D8,drawer);
-
-  projection=gabi::call<u32>(0x0274D83C,camera);
-gabi::call<void>(0x028E8970,projection,matrix.a);
-gabi::store<f32>(matrix.a,gabi::load<f32>(matrix.a)*0.5f);
-gabi::store<f32>(matrix.a+0x14,gabi::load<f32>(matrix.a+0x14)*0.5f);
-
-  gabi::call<void>(0x0274E910,gabi::load<u32>(s+0xF84),matrix.a,0);
-gabi::call<void>(0x0274EB7C,adjusted.a,2);
-
- }
-
- gabi::call<void>(0x027B9F68,0);
-u32 flags=gabi::call<u32>(0x027F29D4,0x104B45C0);
-gabi::store<u32>(flags+4,0);
-gabi::store<u32>(flags,3);
-
- for(s32 i=0;i<gabi::load<s32>(s+0x9C);++i)gabi::call<void>(0x025BF01C,s+0xA0+u32(i)*0x3C,u32(i)*4);
-
- if(drawer)gabi::call<void>(0x027509EC,drawer);
-
- gabi::call<void>(0x027F88C8,gabi::load<u32>(0x101F9968),11);
-gabi::call<void>(0x027F88C8,gabi::load<u32>(0x101F9968),10);
-
- u32 frame=gabi::load<u32>(context),view=gabi::load<u32>(frame+0x14),dest=gabi::load<u32>(s+0xF80);
-
- for(u32 off=0x34;off<0x40;off+=4)gabi::store<f32>(dest+off,snap_raw_float(view+off));
-f32 fourth=gabi::load<f32>(view+0x40);
-dest=gabi::load<u32>(s+0xF80);
-gabi::store<f32>(dest+0x40,fourth);
-for(u32 off=0x44;off<0x4C;off+=4)gabi::store<f32>(dest+off,snap_raw_float(view+off));
-dest=gabi::load<u32>(s+0xF80);
-for(u32 off=0x4C;off<0x58;off+=4)gabi::store<f32>(dest+off,snap_raw_float(view+off));
-gabi::call<void>(0x025155D8,dest+0x4C);
-
- dest=gabi::load<u32>(s+0xF80);
-u32 table=gabi::load<u32>(dest+0x30);
-gabi::call_ptr<void>(gabi::load<u32>(table+0x24),dest,dest);
-
- frame=gabi::load<u32>(context);
-u32 buffer=gabi::load<u32>(frame+8);
-dest=gabi::load<u32>(s+0xF88);
-gabi::store<f32>(dest,snap_raw_float(buffer));
-gabi::store<f32>(dest+4,snap_raw_float(buffer+4));
-
- frame=gabi::load<u32>(context);
-buffer=gabi::load<u32>(frame+8);
-dest=gabi::load<u32>(s+0xF88);
-for(u32 off=8;off<24;off+=4)gabi::store<f32>(dest+off,snap_raw_float(buffer+off));
-gabi::store<u32>(s+0xF64,(gabi::load<u32>(s+0xF64)&~1u)|2u);
-frame=gabi::load<u32>(context);
-gabi::call<void>(0x0274D690,gabi::load<u32>(frame+8));
-
-}
-
-
-VERIFY(0x025BFDC0,Snap_DebugDraw);
-
+/** Picto Box photo registration, geometry and HD texture capture.
+ * Verified against the original WWHD unit. */
+#include "d/d_snap.h"
+
+static u32 l_snapAddress;
+static u32 l_snapInitialized;
+static f32 l_pixelScale;
+static f32 l_captureWidth;
+static f32 l_captureHeight;
+static f32 l_largeCaptureWidth;
+static f32 l_largeCaptureHeight;
+static f32 l_shutterWidth;
+static f32 l_shutterHeight;
+static f32 l_shutterCenterX;
+static f32 l_shutterCenterY;
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static u32 l_stateWord0;
+static u32 l_stateWord1;
+static u32 l_stateWord2;
+static u32 l_stateWord3;
+static u32 l_opaDrawList;
+static u32 l_xluDrawList;
+static u32 l_textureManager;
+static u32 l_debugDrawer;
+static u32 l_postProcessService;
+static u32 l_graphicsResource;
+static u32 l_textureNameInitialized;
+static u32 l_textureNameVtable;
+static u32 l_textureRenderer;
+static u32 l_renderContext;
+static u32 l_saveData;
+static f32 l_viewportOriginX;
+static f32 l_viewportOriginY;
+static u32 l_initialScaleX;
+static u32 l_initialScaleY;
+static const dSnap_CharaData l_CharaData[] = {
+    {0, 10, 0, 25, 80, 500, 8192, 5000, 3, 2},      {0, 20, 20, 40, 90, 500, 8192, 5000, 3, 2},
+    {0, 10, 0, 35, 130, 500, 8192, 5000, 3, 2},     {0, 10, 10, 50, 130, 300, 32767, 3000, 3, 2},
+    {0, 20, 0, 45, 160, 500, 10000, 2000, 3, 2},    {0, -30, 0, 30, 60, 500, 16383, 2000, 3, 2},
+    {0, 20, 20, 55, 140, 500, 10000, 5000, 3, 2},   {0, 20, 20, 35, 150, 500, 10000, 5000, 3, 2},
+    {0, 10, 0, 25, 70, 500, 8192, 5000, 3, 2},      {0, 10, 0, 25, 70, 500, 8192, 5000, 3, 2},
+    {0, 0, 0, 50, 150, 550, 8192, 5000, 3, 12},     {0, 0, 0, 50, 60, 400, 16000, 4000, 3, 0},
+    {0, -40, 0, 60, 80, 300, 32767, 3000, 3, 0},    {0, 0, 0, 20, 20, 400, 32000, 3000, 3, 0},
+    {0, 30, 0, 50, 120, 200, 18000, 3000, 2, 2},    {0, 10, 0, 35, 120, 500, 8192, 5000, 2, 2},
+    {0, 10, 20, 60, 160, 500, 10000, 5000, 2, 2},   {0, 10, 0, 50, 140, 500, 22000, 5000, 2, 2},
+    {0, 10, 20, 60, 200, 500, 10000, 5000, 2, 2},   {0, 90, 30, 60, 120, 550, 8192, 5000, 2, 2},
+    {0, 75, 30, 40, 80, 550, 10000, 5000, 2, 2},    {0, 20, 0, 80, 180, 550, 19000, 5000, 2, 2},
+    {0, 15, 0, 60, 135, 550, 13000, 5000, 2, 2},    {0, 15, 0, 50, 155, 550, 10000, 5000, 2, 2},
+    {0, 10, 0, 30, 80, 550, 13000, 5000, 2, 2},     {0, 5, 0, 30, 80, 550, 10000, 5000, 2, 2},
+    {0, 5, 10, 45, 180, 550, 10000, 5000, 2, 2},    {0, 20, 0, 45, 160, 550, 21000, 5000, 2, 2},
+    {0, 10, 10, 45, 130, 550, 11000, 5000, 2, 2},   {0, 80, 0, 35, 80, 500, 18000, 5000, 2, 2},
+    {0, 80, 0, 40, 85, 550, 10000, 5000, 2, 2},     {0, 30, 10, 45, 115, 550, 22000, 5000, 2, 2},
+    {0, 10, 0, 45, 150, 550, 17000, 5000, 2, 2},    {0, 10, 10, 45, 150, 550, 10000, 5000, 2, 2},
+    {0, 10, 10, 45, 145, 550, 15000, 5000, 2, 2},   {0, 20, 10, 45, 145, 550, 16000, 5000, 2, 2},
+    {0, 20, 10, 45, 145, 550, 16000, 5000, 2, 2},   {0, 30, 35, 80, 160, 550, 15000, 5000, 2, 2},
+    {0, 30, 30, 75, 170, 550, 9000, 5000, 2, 2},    {0, 30, 30, 75, 170, 550, 9000, 5000, 2, 2},
+    {0, 30, 30, 75, 170, 550, 9000, 5000, 2, 2},    {0, 20, 0, 30, 100, 500, 10000, 4000, 1, 2},
+    {0, 30, 0, 50, 160, 500, 12000, 4500, 1, 2},    {0, 30, 0, 50, 160, 500, 12000, 4500, 1, 2},
+    {0, 30, 0, 50, 160, 500, 10000, 4500, 1, 2},    {0, 20, 10, 50, 80, 500, 12000, 4500, 1, 2},
+    {0, 10, 0, 50, 90, 500, 13000, 5000, 1, 2},     {0, 20, 10, 50, 80, 500, 12000, 4500, 1, 2},
+    {0, 10, 0, 55, 120, 550, 22000, 5000, 1, 2},    {0, 10, 0, 55, 120, 550, 22000, 5000, 1, 2},
+    {0, 10, 0, 55, 120, 550, 22000, 5000, 1, 2},    {0, 10, 0, 55, 120, 550, 22000, 5000, 1, 2},
+    {0, 0, 0, 80, 120, 200, 32767, 2000, 1, 0},     {0, 30, 10, 80, 150, 500, 10000, 3000, 1, 2},
+    {0, 20, 20, 40, 120, 500, 8192, 5000, 1, 2},    {0, 20, 30, 40, 90, 500, 8192, 5000, 1, 2},
+    {0, 100, 40, 50, 60, 500, 17000, 5000, 1, 2},   {0, 10, 0, 65, 200, 550, 11000, 5000, 1, 2},
+    {0, 50, 0, 300, 400, 100, 32767, 4000, 1, 0},   {0, 0, 0, 25, 25, 550, 11000, 5000, 1, 0},
+    {0, 0, 0, 50, 150, 550, 8192, 5000, 1, 12},     {0, 0, 0, 50, 150, 550, 8192, 5000, 1, 12},
+    {0, 10, 0, 35, 120, 550, 11000, 5000, 1, 2},    {0, 0, 0, 50, 150, 550, 8192, 5000, 1, 14},
+    {0, 0, 0, 50, 150, 550, 8192, 5000, 1, 12},     {0, 20, 0, 30, 100, 500, 10000, 4000, 6, 2},
+    {0, 10, 0, 30, 60, 500, 8192, 2000, 6, 2},      {0, 20, 0, 60, 200, 500, 8192, 5000, 6, 2},
+    {0, 20, 0, 50, 150, 500, 12000, 5000, 6, 2},    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},
+    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},
+    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},
+    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},    {0, 20, 10, 50, 170, 500, 8192, 5000, 6, 2},
+    {0, 20, 10, 50, 170, 500, 8192, 5000, 6, 2},    {0, 90, 30, 60, 90, 500, 24576, 5000, 6, 2},
+    {0, 20, 25, 70, 170, 500, 8192, 5000, 6, 2},    {0, 30, 0, 50, 150, 500, 8192, 5000, 6, 2},
+    {0, -300, 0, 870, 700, 100, 24576, 3000, 6, 0}, {0, 0, 0, 1000, 800, 100, 18000, 1000, 6, 0},
+    {0, 0, 0, 50, 150, 550, 8192, 5000, 6, 14},     {0, 0, 0, 40, 55, 500, 11000, 4000, 7, 0},
+    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},
+    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},
+    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},
+    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},
+    {0, 15, 0, 40, 100, 500, 11000, 4000, 7, 0},    {0, 700, 800, 200, 200, 300, 32767, 3000, 7, 0},
+    {0, 85, 0, 70, 80, 550, 8192, 5000, 7, 2},      {0, 0, 0, 50, 150, 550, 8192, 5000, 7, 6},
+    {0, 0, 0, 50, 150, 550, 8192, 5000, 7, 14},     {0, 20, 80, 60, 100, 500, 8192, 5000, 5, 0},
+    {0, 10, 20, 60, 100, 400, 16000, 4000, 5, 0},   {0, 20, 20, 40, 50, 500, 8192, 3000, 5, 0},
+    {0, 0, 0, 60, 60, 200, 30000, 3000, 5, 0},      {0, -25, 30, 40, 60, 300, 20000, 3000, 5, 0},
+    {0, -40, 50, 50, 80, 300, 12000, 3000, 5, 0},   {0, -50, 0, 50, 100, 200, 16384, 3000, 5, 0},
+    {0, -80, 0, 80, 120, 300, 32767, 2000, 5, 0},   {0, 30, 0, 120, 50, 100, 11000, 2000, 5, 0},
+    {0, -30, 0, 30, 60, 300, 32767, 3000, 5, 0},    {0, -20, 0, 60, 100, 400, 32767, 3000, 5, 0},
+    {10, -50, 0, 60, 100, 500, 11000, 3000, 5, 0},  {0, 10, 10, 60, 130, 500, 11000, 4000, 5, 0},
+    {0, 20, 20, 130, 300, 500, 12000, 5000, 5, 0},  {0, 20, 20, 80, 160, 400, 12000, 3000, 5, 0},
+    {0, 20, 50, 70, 170, 300, 18000, 3000, 5, 0},   {0, 20, 50, 70, 170, 200, 18000, 2000, 5, 0},
+    {0, 0, 0, 400, 400, 200, 30000, 3000, 5, 0},    {0, 0, 0, 200, 170, 300, 32700, 2000, 5, 0},
+    {0, 20, 50, 100, 140, 300, 11000, 2000, 4, 0},  {0, -120, 0, 100, 100, 300, 11000, 2000, 4, 0},
+    {0, 10, 10, 100, 200, 300, 11000, 2000, 4, 0},  {0, 10, 10, 100, 200, 300, 11000, 2000, 4, 0},
+    {0, 10, 10, 100, 200, 300, 11000, 2000, 4, 0},  {0, 10, 10, 100, 250, 300, 11000, 2000, 4, 0},
+    {0, 20, 10, 70, 210, 300, 11000, 3000, 4, 0},   {0, 20, 30, 70, 150, 300, 11000, 3000, 4, 0},
+    {0, 20, 30, 70, 150, 300, 11000, 3000, 4, 0},   {0, 200, 0, 1000, 1200, 100, 28000, 1000, 4, 0},
+    {0, -200, 0, 360, 450, 500, 20000, 500, 4, 0},  {0, 0, 0, 400, 380, 300, 32000, 2000, 4, 0},
+    {0, 0, 50, 350, 400, 100, 18000, 1000, 4, 0},   {0, 200, 50, 300, 550, 200, 16000, 2000, 4, 0},
+    {0, 200, 50, 350, 400, 200, 16000, 4000, 4, 0}, {0, 100, 30, 500, 300, 200, 16000, 2000, 4, 0},
+    {0, 400, 0, 800, 800, 200, 18000, 1500, 4, 0},  {0, 10, 0, 130, 280, 200, 18000, 1200, 4, 10},
+};
+static const cXyz cylvtx[] = {
+    {0.0f, 0.0f, 1.0f},  {0.707099974155426f, 0.0f, 0.707099974155426f},
+    {1.0f, 0.0f, 0.0f},  {0.707099974155426f, 0.0f, -0.707099974155426f},
+    {0.0f, 0.0f, -1.0f},
+};
+static const cXyz vdata[] = {
+    {-0.525731086730957f, 0.0f, 0.8506507873535156f},
+    {0.525731086730957f, 0.0f, 0.8506507873535156f},
+    {-0.525731086730957f, 0.0f, -0.8506507873535156f},
+    {0.525731086730957f, 0.0f, -0.8506507873535156f},
+    {0.0f, 0.8506507873535156f, 0.525731086730957f},
+    {0.0f, 0.8506507873535156f, -0.525731086730957f},
+    {0.0f, -0.8506507873535156f, 0.525731086730957f},
+    {0.0f, -0.8506507873535156f, -0.525731086730957f},
+    {0.8506507873535156f, 0.525731086730957f, 0.0f},
+    {-0.8506507873535156f, 0.525731086730957f, 0.0f},
+    {0.8506507873535156f, -0.525731086730957f, 0.0f},
+    {-0.8506507873535156f, -0.525731086730957f, 0.0f},
+};
+static const u32 tindices[][3] = {
+    {0, 4, 1}, {0, 9, 4},  {9, 5, 4},  {4, 5, 8},  {4, 8, 1},  {8, 10, 1}, {8, 3, 10},
+    {5, 3, 8}, {5, 2, 3},  {2, 7, 3},  {7, 10, 3}, {7, 6, 10}, {7, 11, 6}, {11, 0, 6},
+    {0, 1, 6}, {6, 1, 10}, {9, 0, 11}, {9, 11, 2}, {9, 2, 5},  {7, 2, 11},
+};
+static const dSnap_JudgeEntry m_judge_tbl[] = {
+    {&dSnap_packet::JudgePost},  {&dSnap_packet::JudgeBikutsuki}, {&dSnap_packet::JudgeCoupleLook},
+    {&dSnap_packet::JudgeGF},    {&dSnap_packet::JudgeGenzo},     {&dSnap_packet::JudgeObasan4},
+    {&dSnap_packet::JudgeGene},  {&dSnap_packet::JudgeGene},      {&dSnap_packet::JudgeGene},
+    {&dSnap_packet::JudgeTestM},
+};
+
+static dSnapHD_IdentityWords l_identityWords;
+static dSnap_packet l_snap;
+
+// GHS float copy pairs retain the exact word bits; arithmetic fields still use normal f32 loads.
+static f32 dSnapHD_copyFloatBits(const be<f32> &value) {
+    u32 bits = snapFieldBits<u32>(value);
+    f32 result;
+    memcpy(&result, &bits, 4);
+    return result;
+}
+
+static void snap_texture_copy(u32 dst, u32 src) {
+    dSnapHD_Texture *destination = gabi::at<dSnapHD_Texture>(dst);
+    dSnapHD_Texture *source = gabi::at<dSnapHD_Texture>(src);
+
+    for (u32 i = 0; i < 0x78; i += 4)
+        destination->mWords[i / 4] = source->mWords[i / 4];
+
+    for (u32 i = 0x78; i < 0x7C; ++i)
+        destination->mBytes[i] = source->mBytes[i];
+
+    for (u32 i = 0x7C; i <= 0x88; i += 4)
+        destination->mWords[i / 4] = source->mWords[i / 4];
+
+    destination->mBytes[0x90] = source->mBytes[0x90];
+    destination->mBytes[0x91] = source->mBytes[0x91];
+
+    for (u32 i = 0x94; i <= 0x148; i += 4)
+        destination->mWords[i / 4] = source->mWords[i / 4];
+
+    destination->mBytes[0x14C] = source->mBytes[0x14C];
+
+    for (u32 i = 0x150; i <= 0x18C; i += 4)
+        destination->mWords[i / 4] = source->mWords[i / 4];
+}
+
+/* 025BD600 */
+s32 dSnap_PhotoIndex2TableIndex(s32 index) {
+
+    u32 n = u32(index) - DSNAP_TYPE_NPC_LS1;
+    if (n >= CharaDataTblSize)
+        JUTAssertion::showAssert("d_snap.cpp", 0x1A7, "index >= 0 && index < CharaDataTblSize");
+    return s32(n);
+}
+
+/* 025BD64C */
+u32 dSnap_GetFigRoomId(s32 index) {
+
+    if (index >= CharaDataTblSize)
+        return 255;
+    return l_CharaData[index].figRoom;
+}
+
+/* 025BD71C */
+u32 dSnap_Obj_ctor(u32 s) {
+
+    if (!s)
+        s = snap_api::alloc(0x34);
+    if (s) {
+        dSnap_RegistObjElm *object = gabi::at<dSnap_RegistObjElm>(s);
+        object->mMaxY = 0;
+        object->mMaxX = 0;
+        object->mActorPID = 0xFFFFFFFF;
+        object->__vtbl = 0x100546AC;
+        object->mCullAngle = 32767;
+        object->mMinY = 0;
+        object->mRadius = 0;
+        object->field_0x1b = 0;
+        object->mCapturedRatio = 0;
+        object->mPhotoNo = 0;
+        object->mHeight = 0;
+        object->mCapturedPixels = 0;
+        object->field_0x19 = 4;
+        object->mAngleY = 0;
+        object->mMinX = 0;
+        object->field_0x1a = 255;
+    }
+    return s;
+}
+
+/* 025BDC78 */
+f32 dSnap_Obj::CalcArea2D() {
+
+    f32 total = 0;
+
+    f32 x = (f32)mCenter.x, y = (f32)mCenter.y, z = (f32)mCenter.z;
+
+    bool sphere = ((u8)field_0x1b & 1) != 0;
+
+    f32 radius = (f32)mRadius, height = (f32)mHeight;
+
+    snap_api::MTXTrans(gabi::ea(mDoMtx_stack_c::get()), x, y, z);
+
+    gabi::Local<cXyz> input, world, p0, p1, p2, p3, base, top, c0, c1, c2, c3;
+
+    auto vset = [&](u32 a, f32 vx, f32 vy, f32 vz) {
+        cXyz *v = gabi::at<cXyz>(a);
+        v->x = vx;
+        v->y = vy;
+        v->z = vz;
+    };
+
+    auto project = [&](u32 dst) {
+        snap_api::MTXMultVec(gabi::ea(mDoMtx_stack_c::get()), input.a, world.a);
+        dSnap_project(world.a, dst);
+    };
+
+    auto tri = [&](u32 a, u32 b, u32 c) {
+        f32 a0 = (f32)gabi::at<cXyz>(a)->x, a1 = (f32)gabi::at<cXyz>(a)->y,
+            b0 = (f32)gabi::at<cXyz>(b)->x, b1 = (f32)gabi::at<cXyz>(b)->y,
+            c0 = (f32)gabi::at<cXyz>(c)->x, c1 = (f32)gabi::at<cXyz>(c)->y;
+        f32 product = snap_api::vectorProduct2d(a0, a1, b0, b1, c0, c1);
+        f32 area = 0.5f * product;
+        if (area > 0)
+            total += area;
+    };
+
+    if (!sphere) {
+
+        snap_api::scaleM(radius, height, radius);
+
+        snap_api::YrotM(gabi::ea(mDoMtx_stack_c::get()), (s16)mAngleY);
+
+        vset(base.a, 0, 0, 0);
+        snap_api::MTXMultVec(gabi::ea(mDoMtx_stack_c::get()), base.a, base.a);
+
+        vset(top.a, 0, 1, 0);
+        snap_api::MTXMultVec(gabi::ea(mDoMtx_stack_c::get()), top.a, top.a);
+
+        for (u32 i = 0; i < (u8)field_0x19; ++i) {
+
+            const cXyz *curr = &cylvtx[i];
+            const cXyz *next = &cylvtx[i + 1];
+
+            f32 cx = (f32)curr->x, cz = (f32)curr->z;
+
+            vset(input.a, cx, 0, cz);
+            project(p0.a);
+            input->y = 1;
+            project(p1.a);
+
+            f32 nx = (f32)next->x, nz = (f32)next->z;
+
+            input->x = nx;
+            input->z = nz;
+            project(p2.a);
+            input->y = 0;
+            project(p3.a);
+
+            tri(p0.a, p1.a, p2.a);
+            tri(p0.a, p2.a, p3.a);
+
+            dSnap_project(top.a, c0.a);
+            tri(c0.a, p2.a, p1.a);
+
+            dSnap_project(base.a, c1.a);
+            tri(c1.a, p0.a, p3.a);
+
+            vset(input.a, -cx, 1, cz);
+            project(p0.a);
+            input->y = 0;
+            project(p1.a);
+
+            input->x = -nx;
+            input->z = nz;
+            project(p2.a);
+            input->y = 1;
+            project(p3.a);
+
+            tri(p0.a, p1.a, p2.a);
+            tri(p0.a, p2.a, p3.a);
+
+            dSnap_project(top.a, c2.a);
+            tri(c2.a, p0.a, p3.a);
+
+            dSnap_project(base.a, c3.a);
+            tri(c3.a, p2.a, p1.a);
+        }
+
+    } else {
+
+        snap_api::scaleM(radius, radius, radius);
+
+        for (u32 i = 0; i < 20; ++i) {
+
+            u32 outputs[] = {p0.a, p1.a, p2.a};
+
+            for (u32 j = 0; j < 3; ++j) {
+                u32 index = tindices[i][j];
+                const cXyz *vert = &vdata[index];
+                vset(input.a, (f32)vert->x, (f32)vert->y, (f32)vert->z);
+                project(outputs[j]);
+            }
+
+            tri(p0.a, p1.a, p2.a);
+        }
+    }
+
+    return total;
+}
+
+/* 025BF01C */
+void dSnap_Obj::draw(s32 alpha) {
+
+    gabi::Local<dSnapHD_Color> color;
+    color->r = 1;
+    color->g = 0;
+    color->b = 0;
+    color->a = f32(alpha) / 255.0f;
+    f32 diameter = (f32)mRadius * 2;
+    bool sphere = ((u8)field_0x1b & 1) != 0;
+    f32 x = (f32)mCenter.x, y = (f32)mCenter.y, z = (f32)mCenter.z;
+    if (!sphere) {
+        f32 h = (f32)mHeight;
+        snap_api::MTXTrans(gabi::ea(mDoMtx_stack_c::get()), x, gabi::fmadds(h, 0.5f, y), z);
+        snap_api::scaleM(diameter, h, diameter);
+        snap_api::YrotM(gabi::ea(mDoMtx_stack_c::get()), (s16)mAngleY);
+    } else {
+        snap_api::MTXTrans(gabi::ea(mDoMtx_stack_c::get()), x, y, z);
+        snap_api::scaleM(diameter, diameter, diameter);
+    }
+    u32 drawer = (u32)l_debugDrawer;
+    gabi::Local<u8[48]> mtx;
+    dSnap_MtxCopy(mtx.a, gabi::ea(mDoMtx_stack_c::get()));
+    snap_api::setDebugModelMtx(drawer, mtx.a);
+    if (sphere)
+        snap_api::drawSphere(drawer, color.a, color.a);
+    else
+        snap_api::drawCylinder(drawer, color.a, color.a);
+}
+
+/* 025BEB5C */
+void dSnap_Obj::SetGeo(u32 v, f32 radius, f32 height, s16 angle) {
+    cXyz *center = gabi::at<cXyz>(v);
+
+    field_0x1b = (u8)field_0x1b & 0xFE;
+    mCenter.x = (f32)center->x;
+    mCenter.y = (f32)center->y;
+    f32 z = (f32)center->z;
+    mRadius = radius;
+    mCenter.z = z;
+    mHeight = height;
+    mAngleY = angle;
+}
+
+/* 025BEF3C */
+void dSnap_Obj::SetGeoSph(u32 v, f32 radius) {
+    cXyz *center = gabi::at<cXyz>(v);
+
+    field_0x1b = (u8)field_0x1b | 1;
+    mCenter.x = (f32)center->x;
+    mCenter.y = (f32)center->y;
+    f32 z = (f32)center->z;
+    mHeight = 0;
+    mCenter.z = z;
+    mAngleY = 0;
+    mRadius = radius;
+}
+
+/* 025BEB90 */
+void dSnap_Obj::SetInf(u32 type, u32 actor, u32 room, u32 points, s16 angle) {
+
+    mPhotoNo = u8(type);
+    u32 id = actor ? (u32)gabi::at<fopAc_ac_c>(actor)->mBsPcId : 0xFFFFFFFF;
+    field_0x19 = u8(points);
+    field_0x1a = u8(room);
+    mCullAngle = angle;
+    mActorPID = id;
+}
+
+/* 025BE208 */
+void dSnap_Obj::SetAreaClear() {
+
+    mMinX = 2048;
+    mMaxX = -2048;
+    mMinY = 2048;
+    mMaxY = -2048;
+}
+
+/* 025BE224 */
+void dSnap_Obj::SetArea(s16 x, s16 y) {
+
+    s16 minx = (s16)mMinX, miny = (s16)mMinY;
+    if (minx > x)
+        mMinX = x;
+    s16 maxx = (s16)mMaxX;
+    if (miny > y)
+        mMinY = y;
+    s16 maxy = (s16)mMaxY;
+    if (maxx < x)
+        mMaxX = x;
+    if (maxy < y)
+        mMaxY = y;
+}
+
+/* 025BF1C8 */
+u32 dSnap_Obj::ChkPhoto(u32 type) { return u32((u8)mPhotoNo) == type; }
+
+// HD: scale the pixel threshold by the capture resolution.
+/* 025BF1DC */
+u32 dSnap_Obj::ChkSuccess(s32 area, f32 ratio) {
+
+    s32 threshold = gabi::ftoi(f32(area) * (f32)l_pixelScale);
+    if ((s32)mCapturedPixels <= threshold)
+        return 0;
+    return (f32)mCapturedRatio > ratio;
+}
+
+// HD: retain the full callee register for the angle-distance comparison.
+/* 025BE268 */
+u32 dSnap_Obj::ChkCamCull() {
+
+    if (!((u8)field_0x1b & 1) && (s16)mCullAngle != 32767) {
+        u32 play = snap_api::getPlay();
+        s32 index = (s8)gabi::at<dComIfG_play_c>(play + 0x12A0)->mPlayerInfo[0].mCameraID;
+        play = snap_api::getPlay();
+        u32 camera = (u32)gabi::at<dComIfG_play_c>(play + 0x12A0)->mCameraInfo[u32(index)].mpCamera;
+        gabi::Local<cXyz> diff;
+        snap_api::VECSubtract(camera + 0xDC, gabi::ea(this), diff.a);
+        f32 z = (f32)diff->z, x = (f32)diff->x;
+        s32 angle = snap_api::atan2s(x, z);
+        s32 distance = snap_api::distanceAngleS(angle, (s16)mAngleY);
+        if (distance > (s16)mCullAngle)
+            return 1;
+    }
+    return 0;
+}
+
+/* 025BD7B4 */
+u32 dSnap_RegistObjElm_ctor(u32 s) {
+
+    if (!s)
+        s = snap_api::alloc(0x3C);
+    if (s) {
+        dSnap_RegistObjElm *object = gabi::at<dSnap_RegistObjElm>(s);
+        object->__elmVtable = 0x100546BC;
+        dSnap_Obj_ctor(s);
+        object->field_0x34 = 0;
+    }
+    return s;
+}
+
+/* 025BE908 */
+u32 dSnap_RegistObjElm::Regist(u32 src) {
+    const dSnap_Obj *source = gabi::at<dSnap_Obj>(src);
+
+    // GHS copies the center as integer words, preserving signalling NaNs.
+    mCenter = source->mCenter;
+    mRadius = (f32)source->mRadius;
+    mHeight = (f32)source->mHeight;
+    mActorPID = (u32)source->mActorPID;
+    mPhotoNo = (u8)source->mPhotoNo;
+    field_0x19 = (u8)source->field_0x19;
+    field_0x1a = (u8)source->field_0x1a;
+    field_0x1b = (u8)source->field_0x1b;
+    mCullAngle = (s16)source->mCullAngle;
+    mAngleY = (s16)source->mAngleY;
+    mCapturedPixels = (u32)source->mCapturedPixels;
+    mCapturedRatio = (f32)source->mCapturedRatio;
+    mMinX = (s16)source->mMinX;
+    mMinY = (s16)source->mMinY;
+    mMaxX = (s16)source->mMaxX;
+    mMaxY = (s16)source->mMaxY;
+    return gabi::ea(this);
+}
+
+// HD: allocate capture targets, camera, projection and post-process resources from the supplied heap.
+/* 025BD8E4 */
+void dSnap_packet::Create(u32 heap) {
+
+    mpHeap = heap;
+    mResult = 0;
+    mResultDetail = 0;
+    mFlag = 0;
+
+    u32 p = snap_api::allocFromHeap(0x148, heap, 4);
+    if (p)
+        p = snap_api::colorTargetCtor(p);
+
+    heap = (u32)mpHeap;
+    mpColorTexture = p;
+
+    p = snap_api::allocFromHeap(0x154, heap, 4);
+    if (p)
+        p = snap_api::depthTargetCtor(p);
+
+    heap = (u32)mpHeap;
+    mpDepthTexture = p;
+
+    p = snap_api::allocFromHeap(0x40, heap, 4);
+    if (p)
+        p = snap_api::renderBufferCtor(p);
+
+    heap = (u32)mpHeap;
+    mpRenderBuffer = p;
+
+    p = snap_api::allocFromHeap(0x58, heap, 4);
+
+    if (p) {
+
+        gabi::at<dSnapHD_Camera>(p)->mVtable = 0x101450D0;
+        for (u32 i = 0; i < 12; ++i)
+            gabi::at<dSnapHD_Camera>(p)->mMatrixWords[i] = l_identityWords.mWords[i];
+
+        gabi::at<dSnapHD_Camera>(p)->mVtable = 0x101450F8;
+
+        u32 v = p + 0x34;
+        if (!v)
+            v = snap_api::alloc(12);
+        if (v) {
+            gabi::at<Quaternion>(v)->y = 0;
+            gabi::at<Quaternion>(v)->x = 0;
+            gabi::at<Quaternion>(v)->z = 10;
+        }
+
+        v = p + 0x40;
+        if (!v)
+            v = snap_api::alloc(12);
+        if (v) {
+            gabi::at<Quaternion>(v)->y = 0;
+            gabi::at<Quaternion>(v)->x = 0;
+            gabi::at<Quaternion>(v)->z = 0;
+        }
+
+        v = p + 0x4C;
+        if (!v)
+            v = snap_api::alloc(12);
+        if (v) {
+            gabi::at<Quaternion>(v)->y = 1;
+            gabi::at<Quaternion>(v)->x = 0;
+            gabi::at<Quaternion>(v)->z = 0;
+        }
+    }
+
+    heap = (u32)mpHeap;
+    mpCamera = p;
+
+    p = snap_api::allocFromHeap(0xD4, heap, 4);
+    if (p)
+        p = snap_api::projectionCtor(p);
+
+    heap = (u32)mpHeap;
+    mpProjection = p;
+
+    p = snap_api::allocFromHeap(0x1C, heap, 4);
+
+    if (p) {
+        gabi::at<dSnapHD_Buffer>(p)->mVtable = 0x1005466C;
+        gabi::at<dSnapHD_Buffer>(p)->mHeight = 1;
+        gabi::at<dSnapHD_Buffer>(p)->mWidth = 1;
+        u32 v = p + 8;
+        if (!v)
+            v = snap_api::alloc(16);
+        if (v) {
+            gabi::at<Quaternion>(v)->z = 1;
+            gabi::at<Quaternion>(v)->y = 0;
+            gabi::at<Quaternion>(v)->x = 0;
+            gabi::at<Quaternion>(v)->w = 1;
+        }
+    }
+
+    mpViewport = p;
+
+    u32 service = (u32)l_postProcessService, graphics = (u32)l_graphicsResource;
+
+    u32 first = service + 0x190;
+
+    mpEffect = first;
+    u32 vt = (u32)gabi::at<dSnapHD_Service>(service)->mVtable;
+    dSnapHD_Vtable *vtView = gabi::at<dSnapHD_Vtable>(vt);
+
+    u32 desc = (u32)gabi::at<dSnapHD_Graphics>(graphics)->mpTexture;
+    u32 target = (u32)vtView->mSetTexture;
+
+    gabi::Local<be<u32>> token, arg1, arg2;
+    u32 ref = snap_api::getTextureResource(token.a, desc);
+    be<u32> *refView = gabi::at<be<u32>>(ref);
+
+    *arg1 = (u32)*refView;
+    gabi::call_ptr<void>(target, first + 4, arg1.a);
+
+    u32 second = service + 0xC00;
+    mpAlternateEffect = second;
+    desc = (u32)gabi::at<dSnapHD_Graphics>(graphics)->mpAlternateTexture;
+    vt = (u32)gabi::at<dSnapHD_Service>(service)->mAlternateVtable;
+    vtView = gabi::at<dSnapHD_Vtable>(vt);
+
+    target = (u32)vtView->mSetTexture;
+
+    ref = snap_api::getTextureResource(token.a, desc);
+
+    refView = gabi::at<be<u32>>(ref);
+
+    *arg2 = (u32)*refView;
+    gabi::call_ptr<void>(target, second + 4, arg2.a);
+}
+
+/* 025BDC38 */
+void dSnap_packet::ReleaseShutter() { mFlag = (u32)mFlag | SnapCapture; }
+
+/* 025BDC54 */
+u32 dSnap_packet::ChkCapture() { return (u32)mFlag & SnapCapture; }
+
+/* 025BDC6C */
+u32 dSnap_packet::ChkReleaseShutter() { return (u32)mFlag & SnapShutterReleased; }
+
+/* 025BE870 */
+void dSnap_packet::Execute() {
+
+    if (ChkReleaseShutter()) {
+        Judge();
+        mFlag = (u32)mFlag & ~2u;
+        for (u32 i = 0; i < SnapObjectCount; ++i)
+            m_tbl[i].field_0x34 = 1000000000.0f;
+        field_0x14 = 0;
+    }
+}
+
+/* 025BE99C */
+u32 dSnap_packet::Regist(u32 obj) {
+
+    if (!ChkCapture() || ChkReleaseShutter())
+        return 0;
+    u32 play = snap_api::getPlay();
+    s32 count = (s32)field_0x14;
+    u32 actor = gabi::ea(gabi::at<dComIfG_play_c>(play + 0x12A0)->mPlayerInfo[0].mpPlayer.get()),
+        base = gabi::ea(this) + 0xA0;
+    if (count >= SnapObjectCount) {
+        f32 far = -1000000000.0f;
+        u32 best = 0;
+        bool found = false;
+        for (u32 i = 0; i < SnapObjectCount; ++i) {
+            dSnap_RegistObjElm *elem = &m_tbl[i];
+            f32 distance = (f32)elem->field_0x34;
+            if (far < distance && (u8)elem->mPhotoNo >= 72) {
+                far = distance;
+                best = i;
+                found = true;
+            }
+        }
+        if (!found)
+            return 0;
+        f32 distance = snap_api::VECSquareDistance(actor + 0x314, obj);
+        if ((u8)gabi::at<dSnap_Obj>(obj)->mPhotoNo >= 72 && distance > far)
+            return 0;
+        u32 registered = gabi::at<dSnap_RegistObjElm>(base + best * 60)->Regist(obj);
+        dSnap_RegistObjElm *registeredView = gabi::at<dSnap_RegistObjElm>(registered);
+
+        registeredView->field_0x34 = distance;
+        return 0;
+    }
+    gabi::at<dSnap_RegistObjElm>(base + u32(count) * 60)->Regist(obj);
+    count = (s32)field_0x14;
+    f32 distance = snap_api::VECSquareDistance(actor + 0x314, base + u32(count) * 60);
+    count = (s32)field_0x14;
+    m_tbl[u32(count)].field_0x34 = distance;
+    field_0x14 = (u32)field_0x14 + 1;
+    return 1;
+}
+
+// HD: texture targets and post-processing replace the GC alpha-buffer display-list path.
+/* 025BF250 */
+void dSnap_packet::draw(u32 context) {
+
+    u32 manager = (u32)l_textureManager;
+
+    u32 large = snap_api::getTexture(manager, SnapLargeTexture),
+        depth = snap_api::getTexture(manager, SnapDepthTexture),
+        small = snap_api::getTexture(manager, SnapColorTexture);
+
+    if (!large) {
+        large = snap_api::createTexture(manager, SnapLargeTexture, gabi::ea(&l_largeCaptureWidth));
+
+        depth = snap_api::createTexture(manager, SnapDepthTexture, gabi::ea(&l_captureWidth));
+        small = snap_api::createTexture(manager, SnapColorTexture, gabi::ea(&l_captureWidth));
+    }
+
+    u32 frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+    dSnapHD_Frame *frameView = gabi::at<dSnapHD_Frame>(frame);
+    u32 source = frameView->mpBuffer;
+    dSnapHD_Buffer *sourceView = gabi::at<dSnapHD_Buffer>(source);
+
+    if (!(u32)l_textureNameInitialized) {
+        l_textureNameInitialized = 1;
+        l_textureNameVtable = 0x1005469C;
+    }
+
+    if (source) {
+        u32 vt = (u32)sourceView->mVtable, target = (u32)gabi::at<dSnapHD_Vtable>(vt)->mIsTexture;
+
+        if (!gabi::call_ptr<u32>(target, source, gabi::ea(&l_textureNameVtable))) {
+            source = 0;
+            sourceView = gabi::at<dSnapHD_Buffer>(source);
+        }
+    }
+
+    snap_api::prepareColorTarget((u32)sourceView->mpColorTarget);
+    snap_api::invalidateTexture((u32)sourceView->mpColorTarget);
+
+    gabi::Local<dSnapHD_Texture> firstView, secondView, texture;
+
+    gabi::Local<dSnapHD_RenderState> stateA, stateB;
+
+    gabi::Local<u8[24]> viewport;
+
+    gabi::Local<dSnapHD_Float2> scale, origin, extent, position;
+
+    gabi::Local<u8[48]> matrix;
+
+    gabi::Local<u8[172]> camera;
+
+    snap_api::createTextureView(firstView.a, (u32)sourceView->mpColorTarget);
+
+    snap_api::renderStateCtor(stateA.a);
+    stateA->mCullEnabled = 0;
+    stateA->mAlphaWriteEnabled = 0;
+    stateA->mDepthWriteEnabled = 1;
+    stateA->mAlphaTestEnabled = 0;
+    stateA->mColorWriteEnabled = 1;
+    stateA->mDepthTestEnabled = 1;
+    stateA->mBlendEnabled = 0;
+    snap_api::applyRenderState(stateA.a);
+
+    auto dimensions = [&](u32 tex) {
+        const dSnapHD_Texture *descriptor = gabi::at<dSnapHD_Texture>(tex);
+        s32 w = (s32)descriptor->mWidth, wb = (u8)descriptor->mMinWidth,
+            h = (s32)descriptor->mHeight, hb = (u8)descriptor->mMinHeight;
+        return std::pair<f32, f32>(f32(u32(w > wb ? w : wb)), f32(u32(h > hb ? h : hb)));
+    };
+
+    auto sizeViewport = [&](f32 w, f32 h, f32 ox, f32 oy) {
+        u32 p = (u32)mpRenderBuffer;
+        dSnapHD_Buffer *renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+        renderBuffer->mWidth = w;
+        renderBuffer->mHeight = h;
+        p = (u32)mpRenderBuffer;
+        renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+        renderBuffer->mOriginX = ox;
+        renderBuffer->mOriginY = oy;
+        renderBuffer->mViewportWidth = w;
+        renderBuffer->mViewportHeight = h;
+    };
+
+    auto wh = dimensions(large);
+    f32 w = wh.first, h = wh.second;
+
+    dSnapHD_assignColorTexture((u32)mpColorTexture, large);
+
+    u32 p = (u32)mpRenderBuffer;
+    dSnapHD_Buffer *renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mWidth = w;
+    renderBuffer->mHeight = h;
+
+    f32 ox = (f32)l_viewportOriginX, oy = (f32)l_viewportOriginY;
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mOriginX = ox;
+    renderBuffer->mOriginY = oy;
+    renderBuffer->mViewportWidth = w;
+    renderBuffer->mViewportHeight = h;
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::clearRenderTargets(p);
+    renderBuffer->mpDepthTarget = 0;
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mpColorTarget = (u32)mpColorTexture;
+    snap_api::applyRenderBuffer((u32)mpRenderBuffer);
+
+    snap_api::getColorViewport(viewport.a, (u32)mpRenderBuffer);
+    snap_api::applyViewport(viewport.a, (u32)mpRenderBuffer);
+
+    u32 initX = (u32)l_initialScaleX, initY = (u32)l_initialScaleY;
+    snapFieldBits<u32>(scale->x) = initX;
+    snapFieldBits<u32>(scale->y) = initY;
+
+    u32 bitsX = (u32)snapFieldBits<u32>(sourceView->mViewportWidth);
+    f32 viewportX = (f32)l_shutterWidth;
+    f32 sourceX;
+    memcpy(&sourceX, &bitsX, 4);
+    u32 bitsY = (u32)snapFieldBits<u32>(sourceView->mViewportHeight);
+    (void)bitsY;
+    f32 fraction = sourceX / 1280.0f;
+    f32 extentX = (viewportX + viewportX) * fraction, viewportY = (f32)l_shutterHeight;
+    f32 extentY = (viewportY + viewportY) * fraction;
+
+    scale->x = extentX / w;
+    scale->y = extentY / h;
+    extent->x = extentX;
+    extent->y = extentY;
+
+    u32 screen = snap_api::getScreenSize();
+
+    dSnapHD_Float2 *screenView = gabi::at<dSnapHD_Float2>(screen);
+
+    f32 screenX = (f32)screenView->x, screenY = (f32)screenView->y;
+
+    f32 positionX = gabi::fnmsubs((f32)l_shutterWidth, 0.5f, (f32)l_shutterCenterX) / screenX;
+
+    f32 positionY = gabi::fnmsubs((f32)l_shutterHeight, 0.5f, (f32)l_shutterCenterY) / screenY;
+
+    position->x = positionX;
+    position->y = positionY;
+
+    u32 ref = snap_api::getDrawFlags(0x104B45C0);
+
+    dSnapHD_DrawFlags *refView = gabi::at<dSnapHD_DrawFlags>(ref);
+
+    u32 old = (u32)refView->mFlags;
+    u32 renderer = (u32)l_textureRenderer;
+
+    u32 handle =
+        snap_api::drawColorTexture(renderer, firstView.a, viewport.a, scale.a, position.a, old);
+
+    snap_api::prepareDepthTarget((u32)sourceView->mpDepthTarget);
+    u32 tex = (u32)sourceView->mpDepthTarget;
+    dSnapHD_Texture *depthTarget = gabi::at<dSnapHD_Texture>(tex);
+
+    if ((u32)depthTarget->mDepthBuffer) {
+        if ((u8)depthTarget->mDirty) {
+            snap_api::updateDepthTarget(tex);
+            depthTarget->mDirty = 0;
+        }
+        snap_api::invalidateDepthBuffer(tex + 0xA8);
+        snap_api::flushRenderContext((u32)l_renderContext);
+        tex = (u32)sourceView->mpDepthTarget;
+        depthTarget = gabi::at<dSnapHD_Texture>(tex);
+    }
+
+    snap_api::invalidateTexture(tex);
+
+    wh = dimensions(depth);
+    f32 dw = wh.first, dh = wh.second;
+    dSnapHD_assignDepthTexture((u32)mpDepthTexture, depth);
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::clearRenderTargets(p);
+    renderBuffer->mpDepthTarget = 0;
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mpDepthTarget = (u32)mpDepthTexture;
+    sizeViewport(dw, dh, ox, oy);
+    snap_api::applyRenderBuffer((u32)mpRenderBuffer);
+
+    snap_api::createTextureView(secondView.a, (u32)sourceView->mpDepthTarget);
+    secondView->mLayer = 0;
+    secondView->mSlice = 0;
+    secondView->mLevel = 0;
+    secondView->mViewFlags = (u8)secondView->mViewFlags | 4;
+
+    snap_api::getDepthViewport(viewport.a, (u32)mpRenderBuffer);
+    snap_api::applyViewport(viewport.a, (u32)mpRenderBuffer);
+
+    wh = dimensions(secondView.a);
+    scale->x = (f32)extent->x / wh.first;
+    scale->y = (f32)extent->y / wh.second;
+
+    handle = snap_api::drawDepthTexture((u32)l_textureRenderer, secondView.a, viewport.a, scale.a,
+                                        position.a, handle);
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::prepareDepthTarget((u32)renderBuffer->mpDepthTarget);
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::invalidateTexture((u32)renderBuffer->mpDepthTarget);
+    snap_api::textureViewDtor(secondView.a, 2);
+
+    snap_api::prepareColorTarget((u32)mpColorTexture);
+    snap_api::invalidateTexture((u32)mpColorTexture);
+    snap_api::textureViewCtor(texture.a);
+
+    u32 save = (u32)l_saveData;
+
+    dSnapHD_SaveView *saveView = gabi::at<dSnapHD_SaveView>(save);
+
+    u32 effect = (u8)saveView->mStageType == 38 ? (u32)mpAlternateEffect : (u32)mpEffect;
+
+    dSnapHD_PostProcess *effectView = gabi::at<dSnapHD_PostProcess>(effect);
+
+    auto effectReady = [&]() {
+        if (!effect || !(u8)effectView->mEnabled)
+            return false;
+        if ((s32)effectView->mEffectCount > 0 && (u32)effectView->mpEffect)
+            return true;
+        return (u8)effectView->mFallbackEnabled != 0;
+    };
+
+    u8 flags;
+
+    if (effectReady()) {
+        handle = snap_api::applyPostProcess(effect, (u32)mpColorTexture, handle);
+        if ((u32)effectView->mpTexture && effect + 0x564) {
+            u32 copy = effect + 0x564;
+            dSnapHD_Texture *copyView = gabi::at<dSnapHD_Texture>(copy);
+
+            snap_texture_copy(texture.a, copy);
+            flags = (u8)copyView->mViewFlags;
+        } else {
+            bool same = texture->hasSameDescriptor(*gabi::at<dSnapHD_Texture>(large));
+            if (!same)
+                snap_api::assignTextureView(texture.a, large);
+            else {
+                u32 image = (u32)gabi::at<dSnapHD_Texture>(large)->mImageData,
+                    mip = (u32)gabi::at<dSnapHD_Texture>(large)->mMipData;
+                texture->mImageData = image;
+                texture->mViewImageData = image;
+                texture->mViewMipData = mip;
+                texture->mMipData = mip;
+            }
+            flags = (u8)texture->mViewFlags;
+        }
+    }
+
+    else {
+        bool same = texture->hasSameDescriptor(*gabi::at<dSnapHD_Texture>(large));
+        if (!same)
+            snap_api::assignTextureView(texture.a, large);
+        else {
+            u32 mip = (u32)gabi::at<dSnapHD_Texture>(large)->mMipData,
+                image = (u32)gabi::at<dSnapHD_Texture>(large)->mImageData;
+            texture->mMipData = mip;
+            texture->mViewMipData = mip;
+            texture->mViewImageData = image;
+            texture->mImageData = image;
+        }
+        flags = (u8)texture->mViewFlags;
+    }
+
+    texture->mLevel = 0;
+    texture->mSlice = 0;
+    texture->mLayer = 0;
+    texture->mViewFlags = flags | 4;
+
+    wh = dimensions(small);
+    f32 sw = wh.first, sh = wh.second;
+    dSnapHD_assignColorTexture((u32)mpColorTexture, small);
+    sizeViewport(sw, sh, ox, oy);
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::clearRenderTargets(p);
+    renderBuffer->mpDepthTarget = 0;
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mpColorTarget = (u32)mpColorTexture;
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    renderBuffer->mpDepthTarget = 0;
+    snap_api::setRenderAlpha((u32)mpRenderBuffer, 255);
+
+    snap_api::getColorViewport(secondView.a, (u32)mpRenderBuffer);
+    snap_api::applyViewport(secondView.a, (u32)mpRenderBuffer);
+    snap_api::clearRenderBuffer((u32)mpRenderBuffer, 0, 1, 0x104A01CC, 0, 1.0f);
+
+    snap_api::renderStateCtor(stateB.a);
+    stateB->mAlphaWriteEnabled = 0;
+    stateB->mAlphaTestEnabled = 0;
+    stateB->mColorWriteEnabled = 1;
+    stateB->mDepthFunction = 7;
+    stateB->mDepthTestEnabled = 1;
+    stateB->mCullEnabled = 0;
+    stateB->mDepthWriteEnabled = 1;
+    stateB->mBlendEnabled = 0;
+    snap_api::applyRenderState(stateB.a);
+
+    dSnapHD_scaleTransMtx(matrix.a, 0x104A0958, 0x104A0928);
+    snap_api::orthoCameraCtor(camera.a);
+    u32 projection = snap_api::getProjectionMtx(camera.a);
+
+    handle = snap_api::drawTextureQuad(texture.a, matrix.a, projection, 0x104A01EC, handle);
+
+    p = (u32)mpRenderBuffer;
+
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::prepareColorTarget((u32)renderBuffer->mpColorTarget);
+    p = (u32)mpRenderBuffer;
+    renderBuffer = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::invalidateTexture((u32)renderBuffer->mpColorTarget);
+    snap_api::applyRenderBuffer((u32)mpRenderBuffer);
+    snap_api::orthoCameraDtor(camera.a, 2);
+
+    if (effectReady())
+        snap_api::resetPostProcess(effect);
+
+    ref = snap_api::getDrawFlags(0x104B45C0);
+
+    refView = gabi::at<dSnapHD_DrawFlags>(ref);
+
+    refView->mFlags = handle;
+    refView->mSecondaryFlags = 0;
+    snap_api::textureViewDtor(texture.a, 2);
+    snap_api::textureViewDtor(firstView.a, 2);
+}
+
+// HD: read the capture texture across its full dimensions, retaining bounds reloads after pixel calls.
+/* 025BE664 */
+void dSnap_packet::Judge() {
+
+    mResult = 0;
+    for (u32 i = 0; i < SnapObjectCount; ++i) {
+        dSnap_RegistObjElm *elem = &m_tbl[i];
+        elem->mCapturedPixels = 0;
+        elem->SetAreaClear();
+    }
+    u32 tex = snap_api::getTexture((u32)l_textureManager, SnapColorTexture);
+
+    gabi::Local<u8[0x158]> reader;
+    snap_api::textureReaderCtor(reader.a);
+    snap_api::allocateTextureReader(reader.a, tex, (u32)mpHeap);
+    snap_api::setReadTexture(reader.a, tex);
+    snap_api::beginTextureRead(reader.a);
+    gabi::Local<dSnapHD_Pixel> sample;
+
+    u32 y = 0;
+    for (;;) {
+        s32 height = (s32)gabi::at<dSnapHD_Texture>(tex)->mHeight;
+        u32 small = (u8)gabi::at<dSnapHD_Texture>(tex)->mMinHeight;
+        if (s32(small) > height)
+            height = s32(small);
+        if (y >= u32(height))
+            break;
+        u32 x = 0;
+        for (;;) {
+            s32 width = (s32)gabi::at<dSnapHD_Texture>(tex)->mWidth;
+            small = (u8)gabi::at<dSnapHD_Texture>(tex)->mMinWidth;
+            if (s32(small) > width)
+                width = s32(small);
+            if (x >= u32(width))
+                break;
+            snap_api::readPixel(reader.a, sample.a, x, y);
+            u32 index = (u32)sample->a >> 2;
+            if (index < SnapObjectCount) {
+                dSnap_RegistObjElm *elem = &m_tbl[index];
+                elem->mCapturedPixels = (u32)elem->mCapturedPixels + 1;
+                elem->SetArea(s16(x), s16(y));
+            }
+            ++x;
+        }
+        ++y;
+    }
+
+    snap_api::endTextureRead(reader.a);
+    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+        dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
+        if (!(u32)elem->mCapturedPixels)
+            continue;
+        f32 area = elem->CalcArea2D();
+        if (!(std::fabs(area) < 3.814697265625e-06f))
+            elem->mCapturedRatio = f32((s32)elem->mCapturedPixels) / area;
+    }
+    SetResult();
+    snap_api::textureReaderDtor(reader.a, 2);
+}
+
+/* 025C019C */
+s32 dSnap_packet::FindPhoto(s32 start, u32 type) {
+
+    if (start < 0)
+        return -1;
+    s32 count = (s32)field_0x14;
+    if (start >= count)
+        return -1;
+    dSnap_RegistObjElm *object = &m_tbl[u32(start)];
+    for (s32 i = start; i < count; ++i, ++object)
+        if (object->ChkPhoto(type))
+            return i;
+    return -1;
+}
+
+/* 025C020C */
+u32 dSnap_packet::JudgePost() {
+
+    s32 index = FindPhoto(0, DSNAP_TYPE_POST);
+    if (index == -1)
+        return 0;
+    if (gabi::at<dSnap_Obj>(gabi::ea(this) + 0xA0 + u32(index) * 60)->ChkSuccess(2000, 0.55f)) {
+        mResultDetail = 0;
+        return 1;
+    }
+    return 0;
+}
+
+/* 025C0284 */
+u32 dSnap_packet::JudgeBikutsuki() {
+
+    s32 index = FindPhoto(0, DSNAP_TYPE_BIKUTSUKI);
+    if (index == -1)
+        return 0;
+    if (gabi::at<dSnap_Obj>(gabi::ea(this) + 0xA0 + u32(index) * 60)->ChkSuccess(5000, 0.55f))
+        return 2;
+    mResultDetail = 0;
+    return 0;
+}
+
+/* 025C030C */
+u32 dSnap_packet::JudgeCoupleLook() {
+
+    s32 a = FindPhoto(0, DSNAP_TYPE_COUPLE_LOOK);
+    if (a == -1)
+        return 0;
+    s32 b = FindPhoto(u32(a) + 1, DSNAP_TYPE_COUPLE_LOOK);
+    if (b == -1)
+        return 0;
+    u32 base = gabi::ea(this) + 0xA0;
+    if (!gabi::at<dSnap_Obj>(base + u32(a) * 60)->ChkSuccess(2000, 0.55f))
+        return 0;
+    if (!gabi::at<dSnap_Obj>(base + u32(b) * 60)->ChkSuccess(2000, 0.55f))
+        return 0;
+    mResultDetail = 0;
+    return 3;
+}
+
+/* 025C03D0 */
+u32 dSnap_packet::JudgeGF() {
+
+    s32 index = FindPhoto(0, DSNAP_TYPE_UNK04);
+    if (index == -1)
+        return 0;
+    if (gabi::at<dSnap_Obj>(gabi::ea(this) + 0xA0 + u32(index) * 60)->ChkSuccess(5000, 0.55f)) {
+        mResultDetail = 0;
+        return 4;
+    }
+    return 0;
+}
+
+// HD: the second subject is NPC_UB4; keep its HD threshold and partner selection.
+/* 025C0448 */
+u32 dSnap_packet::JudgeGenzo() {
+
+    s32 a = FindPhoto(0, DSNAP_TYPE_UNK05);
+    if (a == -1)
+        return 0;
+    s32 b = FindPhoto(0, DSNAP_TYPE_NPC_UB4);
+    if (b == -1)
+        return 0;
+    u32 base = gabi::ea(this) + 0xA0;
+    if (!gabi::at<dSnap_Obj>(base + u32(a) * 60)->ChkSuccess(1500, 0.55f))
+        return 0;
+    if (!gabi::at<dSnap_Obj>(base + u32(b) * 60)->ChkSuccess(1500, 0.55f))
+        return 0;
+    mResultDetail = 0;
+    return 5;
+}
+
+// HD: the minimum captured-pixel threshold is 3000 rather than GC 4000.
+/* 025C0500 */
+u32 dSnap_packet::JudgeObasan4() {
+
+    s32 a = FindPhoto(0, DSNAP_TYPE_UNK06);
+    if (a == -1)
+        return 0;
+    if (FindPhoto(0, DSNAP_TYPE_UNK05) != -1)
+        return 0;
+    if (!gabi::at<dSnap_Obj>(gabi::ea(this) + 0xA0 + u32(a) * 60)->ChkSuccess(3000, 0.55f))
+        return 0;
+    mResultDetail = 0;
+    return 6;
+}
+
+/* 025C0788 */
+u32 dSnap_packet::JudgeTestM() { return 0; }
+
+// HD: the minimum captured-pixel threshold is 3000 rather than GC 4000.
+/* 025C0594 */
+u32 dSnap_packet::JudgeGene() {
+
+    s32 a = FindPhoto(0, (u32)mPhotoNo);
+    if (a == -1)
+        return 0;
+    if (!gabi::at<dSnap_Obj>(gabi::ea(this) + 0xA0 + u32(a) * 60)->ChkSuccess(3000, 0.55f))
+        return 0;
+    mResultDetail = 0;
+    return (u32)mPhotoNo;
+}
+
+/* 025BE31C */
+u32 dSnap_packet::JudgeFigure(u32 index) {
+
+    s32 photo = (s32)mPhotoNo;
+    if (photo >= 208 || u32(photo) - 73 >= 134)
+        return 0;
+    const dSnap_CharaData *table = &l_CharaData[dSnap_PhotoIndex2TableIndex(photo)];
+    u32 pixels = (u16)table->minPixels;
+    s32 threshold = gabi::ftoi(f32(pixels) * (f32)l_pixelScale);
+    f32 ratio = f32((u16)table->minRatio) / 1000.0f;
+    dSnap_RegistObjElm *elem = &m_tbl[index];
+    if ((s32)elem->mCapturedPixels < threshold)
+        return 0;
+    f32 actual = (f32)elem->mCapturedRatio;
+    u8 flags = (u8)mResultDetail;
+    if (actual < ratio)
+        flags |= 2;
+    else
+        flags &= 0xFD;
+    mResultDetail = flags;
+    u32 culled = elem->ChkCamCull();
+    flags = (u8)mResultDetail;
+    u32 result = (u32)mPhotoNo;
+    if (culled)
+        flags |= 1;
+    else
+        flags &= 0xFE;
+    mResultDetail = flags;
+    return result;
+}
+
+// HD: judge special subjects first, then figure subjects in registration order.
+/* 025BE480 */
+void dSnap_packet::SetResult() {
+
+    mResultDetail = 0;
+    mResult = 0;
+    gabi::Local<be<u8>[SnapJudgeCount]> seen;
+    for (u32 k = 0; k < SnapJudgeCount; ++k)
+        (*seen)[k] = 0;
+
+    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+        dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
+        if (!(u32)elem->mCapturedPixels)
+            continue;
+        u32 type = (u8)elem->mPhotoNo;
+        if (!type)
+            continue;
+        if (type >= DSNAP_TYPE_LAST_INDEX)
+            JUTAssertion::showAssert("d_snap.cpp", 0xBD4,
+                                     "0 <= photo_no && photo_no < DSNAP_TYPE_LAST_INDEX");
+        if (type >= SnapJudgeCount)
+            continue;
+        if ((u8)(*seen)[type])
+            continue;
+        const dSnap_JudgeEntry &judge = m_judge_tbl[type - 1];
+        if (judge.fn.i) {
+            mPhotoNo = type;
+            u32 result = (this->*judge.fn)();
+            mResult = result;
+            if (result)
+                return;
+        }
+        (*seen)[type] = 1;
+    }
+
+    for (s32 i = 0; i < (s32)field_0x14; ++i) {
+        dSnap_RegistObjElm *elem = &m_tbl[u32(i)];
+        s32 pixels = (s32)elem->mCapturedPixels;
+        if (!pixels)
+            continue;
+        u32 type = (u8)elem->mPhotoNo;
+        if (!type || type < SnapJudgeCount)
+            continue;
+        if (type >= DSNAP_TYPE_LAST_INDEX)
+            JUTAssertion::showAssert("d_snap.cpp", 0xC03,
+                                     "0 <= photo_no && photo_no < DSNAP_TYPE_LAST_INDEX");
+        pixels = (s32)elem->mCapturedPixels;
+        if (pixels < 0)
+            continue;
+        mPhotoNo = type;
+        u32 result = JudgeFigure(i);
+        mResult = result;
+        if (result && !(u8)mResultDetail)
+            return;
+    }
+}
+
+/* 025BDBB0 */
+void dSnap_Create(u32 heap) {
+
+    u32 packet = (u32)l_snapAddress;
+
+    dSnap_packet *packetView = gabi::at<dSnap_packet>(packet);
+
+    if (!packet) {
+        if (!(u32)l_snapInitialized) {
+            l_snapInitialized = 1;
+            dSnap_packet_ctor(gabi::ea(&l_snap));
+            snap_api::registerGlobalObject(0x101EBA28);
+        }
+        packet = gabi::ea(&l_snap);
+        packetView = gabi::at<dSnap_packet>(packet);
+
+        l_snapAddress = packet;
+    }
+    packetView->Create(heap);
+}
+
+/* 025BDC48 */
+void dSnap_ReleaseShutter() { gabi::at<dSnap_packet>((u32)l_snapAddress)->ReleaseShutter(); }
+
+/* 025BDC60 */
+u32 dSnap_ChkCapture() { return gabi::at<dSnap_packet>((u32)l_snapAddress)->ChkCapture(); }
+
+/* 025BE8DC */
+void dSnap_Execute() { gabi::at<dSnap_packet>((u32)l_snapAddress)->Execute(); }
+
+/* 025BE8E8 */
+u32 dSnap_GetResult() {
+
+    u32 s = (u32)l_snapAddress;
+    return (u32)gabi::at<dSnap_packet>(s)->mResult;
+}
+
+/* 025BE8F8 */
+u32 dSnap_GetResultDetail() {
+
+    u32 s = (u32)l_snapAddress;
+    return (u8)gabi::at<dSnap_packet>(s)->mResultDetail;
+}
+
+/* 025BEB4C */
+u32 dSnap_RegistSnapObj(u32 obj) { return gabi::at<dSnap_packet>((u32)l_snapAddress)->Regist(obj); }
+
+/* 025BED80 */
+void dSnap_RegistFigActor(u32 type, u32 actor, f32 x, f32 y, f32 z) {
+
+    s16 angle = (s16)gabi::at<fopAc_ac_c>(actor)->shape_angle.y;
+    dSnap_RegistFigGuest(type, actor, actor + 0x314, angle, x, y, z);
+}
+
+// HD: guest-address overload avoids the shared actor-pointer overload during harness registration.
+/* 025BEBB8 */
+void dSnap_RegistFigGuest(u32 type, u32 actor, u32 pos, s16 angle, f32 rScale, f32 hScale,
+                          f32 pScale) {
+
+    if (!gabi::at<dSnap_packet>((u32)l_snapAddress)->ChkCapture() || type >= DSNAP_TYPE_UNKCF)
+        return;
+    u32 index = dSnap_PhotoIndex2TableIndex(type);
+    const dSnap_CharaData *table = &l_CharaData[index];
+    snap_api::YrotS(gabi::ea(mDoMtx_stack_c::get()), angle);
+    gabi::Local<cXyz> offset, world;
+    f32 x = f32((s16)table->offsetX) * pScale, y = f32((s16)table->offsetY) * pScale,
+        z = f32((s16)table->offsetZ) * pScale;
+    offset->x = x;
+    offset->y = y;
+    offset->z = z;
+    snap_api::MTXMultVec(gabi::ea(mDoMtx_stack_c::get()), offset.a, world.a);
+    snap_api::VECAdd(world.a, pos, world.a);
+    gabi::Local<dSnap_Obj> obj;
+    dSnap_Obj_ctor(obj.a);
+    f32 radius = f32((s16)table->radius) * hScale, height = f32((s16)table->height) * rScale;
+    obj->SetGeo(world.a, radius, height, angle);
+    obj->SetInf(type, actor, 0, 4, (s16)table->cullAngle);
+    dSnap_RegistSnapObj(obj.a);
+}
+
+/* 025BED8C */
+void dSnap_DebugDraw() {
+
+    if (gabi::at<dSnap_packet>((u32)l_snapAddress)->ChkCapture()) {
+        u32 p = snap_api::getPlay();
+        dSnapHD_GameDrawLists *pView = gabi::at<dSnapHD_GameDrawLists>(p);
+
+        u32 buffer = (u32)pView->mpSnapList;
+        l_xluDrawList = buffer;
+        snap_api::entryImm(buffer, (u32)l_snapAddress, 0);
+        p = snap_api::getPlay();
+        pView = gabi::at<dSnapHD_GameDrawLists>(p);
+
+        l_opaDrawList = (u32)pView->mpOpaList;
+        p = snap_api::getPlay();
+        pView = gabi::at<dSnapHD_GameDrawLists>(p);
+
+        l_xluDrawList = (u32)pView->mpXluList;
+    }
+}
+
+/* 025BEF30 */
+void dSnap_Delete() { gabi::at<dSnap_packet>((u32)l_snapAddress)->Remove(); }
+
+// HD: project through the packet camera and viewport rather than the GC screen matrix.
+/* 025BD670 */
+void dSnap_project(u32 in, u32 dst) {
+    cXyz *source = gabi::at<cXyz>(in);
+    cXyz *destination = gabi::at<cXyz>(dst);
+
+    u32 packet = (u32)l_snapAddress;
+
+    dSnap_packet *packetView = gabi::at<dSnap_packet>(packet);
+
+    u32 projection = (u32)packetView->mpProjection, viewport = (u32)packetView->mpViewport,
+        camera = (u32)packetView->mpCamera;
+    gabi::Local<u8[24]> params;
+    snap_api::getColorViewport(params.a, viewport);
+    gabi::Local<cXyz> vec;
+    f32 z = (f32)source->z, x = (f32)source->x, y = (f32)source->y;
+    vec->z = z;
+    vec->y = y;
+    vec->x = x;
+    gabi::Local<dSnapHD_Float2> xy;
+    snap_api::project(camera, xy.a, vec.a, projection, params.a);
+    f32 xx = (f32)xy->x, yy = (f32)xy->y;
+    destination->x = xx;
+    destination->y = yy;
+    destination->z = 0.0f;
+}
+
+/* 025BEF7C */
+void dSnap_MtxCopy(u32 dst, u32 src) {
+    Mtx34 *destination = gabi::at<Mtx34>(dst);
+    Mtx34 *source = gabi::at<Mtx34>(src);
+
+    f32 a[12];
+    for (u32 i = 0; i < 12; ++i)
+        a[i] = source->m[i / 4][i % 4];
+    for (u32 i = 0; i < 12; ++i)
+        destination->m[i / 4][i % 4] = a[i];
+}
+
+/* 025BEE04 */
+void dSnap_packet::Remove() {
+
+    if (mpColorTexture) {
+        snap_api::free(mpColorTexture);
+        mpColorTexture = 0;
+    }
+    if (mpDepthTexture) {
+        snap_api::free(mpDepthTexture);
+        mpDepthTexture = 0;
+    }
+    if (mpRenderBuffer) {
+        dSnapHD_destroy(gabi::at<dSnapHD_Buffer>(mpRenderBuffer));
+        mpRenderBuffer = 0;
+    }
+    if (mpCamera) {
+        dSnapHD_destroy(gabi::at<dSnapHD_Camera>(mpCamera));
+        mpCamera = 0;
+    }
+    if (mpProjection) {
+        dSnapHD_destroy(gabi::at<dSnapHD_ProjectionView>(mpProjection));
+        mpProjection = 0;
+    }
+    if (mpViewport) {
+        dSnapHD_destroy(gabi::at<dSnapHD_Buffer>(mpViewport));
+        mpViewport = 0;
+    }
+    mpEffect = 0;
+    mpAlternateEffect = 0;
+    snap_api::removeTexture((u32)l_textureManager, SnapColorTexture);
+    snap_api::removeTexture((u32)l_textureManager, SnapDepthTexture);
+    snap_api::removeTexture((u32)l_textureManager, SnapLargeTexture);
+}
+
+// HD: debug geometry uses the current render context camera and projection.
+/* 025BFDC0 */
+void dSnap_packet::DebugDraw(u32 context) {
+
+    if (!ChkCapture())
+        return;
+
+    draw(context);
+
+    u32 p = (u32)mpRenderBuffer;
+
+    dSnapHD_Buffer *pView = gabi::at<dSnapHD_Buffer>(p);
+
+    snap_api::clearRenderTargets(p);
+    pView->mpDepthTarget = 0;
+
+    p = (u32)mpRenderBuffer;
+
+    pView = gabi::at<dSnapHD_Buffer>(p);
+
+    pView->mpColorTarget = (u32)mpColorTexture;
+    p = (u32)mpRenderBuffer;
+    pView = gabi::at<dSnapHD_Buffer>(p);
+
+    pView->mpDepthTarget = (u32)mpDepthTexture;
+
+    snap_api::applyRenderBuffer((u32)mpRenderBuffer);
+
+    gabi::Local<u8[24]> params;
+    snap_api::getColorViewport(params.a, (u32)mpRenderBuffer);
+    snap_api::applyViewport(params.a, (u32)mpRenderBuffer);
+
+    gabi::Local<dSnapHD_RenderState> state;
+    snap_api::renderStateCtor(state.a);
+    state->mDepthTestEnabled = 0;
+    state->mBlendMode = 0;
+    state->mAlphaWriteEnabled = 1;
+    state->mColorMask = 1;
+    state->mDepthWriteEnabled = 0;
+    state->mColorWriteEnabled = 0;
+    snap_api::applyRenderState(state.a);
+
+    u32 drawer = (u32)l_debugDrawer;
+
+    if (drawer) {
+
+        u32 frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+        snap_api::setDebugCamera(drawer, (u32)gabi::at<dSnapHD_Frame>(frame)->mpCamera);
+        frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+        u32 camera = (u32)gabi::at<dSnapHD_Frame>(frame)->mpProjection,
+            projection = snap_api::getProjectionMtx(camera);
+
+        gabi::Local<dSnapHD_Mtx44> matrix;
+        for (u32 i = 0; i < 64; i += 4)
+            snapFieldBits<u32>(matrix->m[i / 16][(i % 16) / 4]) =
+                snapFieldBits<u32>(gabi::at<dSnapHD_Mtx44>(projection)->m[i / 16][(i % 16) / 4]);
+
+        frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+        u32 buffer = (u32)gabi::at<dSnapHD_Frame>(frame)->mpBuffer;
+
+        f32 screenX = (f32)l_shutterWidth, screenY = (f32)l_shutterHeight;
+
+        f32 width = (f32)gabi::at<dSnapHD_Buffer>(buffer)->mViewportWidth,
+            scaledX = screenX * (width / 1280.0f),
+            height = (f32)gabi::at<dSnapHD_Buffer>(buffer)->mViewportHeight,
+            scaledY = screenY * (height / 720.0f);
+
+        f32 scaleX = ((f32)gabi::at<dSnapHD_Buffer>(buffer)->mViewportWidth / scaledX) * 0.5f;
+        matrix->m[0][0] = (f32)matrix->m[0][0] * scaleX;
+
+        f32 scaleY = ((f32)gabi::at<dSnapHD_Buffer>(buffer)->mViewportHeight / scaledY) * 0.5f;
+        matrix->m[0][2] = 0.0f;
+        matrix->m[1][1] = (f32)matrix->m[1][1] * scaleY;
+
+        height = (f32)gabi::at<dSnapHD_Buffer>(buffer)->mViewportHeight;
+        f32 ratio = height / 720.0f;
+        screenY = (f32)l_shutterHeight;
+        f32 center = gabi::fmadds(screenY, 0.5f, 140.0f) * ratio;
+        f32 delta = gabi::fmsubs(height, 0.5f, center);
+        matrix->m[1][2] = (delta + delta) / (screenY * ratio);
+
+        gabi::Local<u8[212]> adjusted;
+        snap_api::matrixProjectionCtor(adjusted.a, matrix.a, 0);
+        snap_api::updateProjection(adjusted.a);
+        snap_api::setDebugProjection(drawer, adjusted.a);
+        snap_api::beginDebugDraw(drawer);
+
+        projection = snap_api::getProjectionMtx(camera);
+
+        snap_api::copyProjectionMtx(projection, matrix.a);
+        matrix->m[0][0] = (f32)matrix->m[0][0] * 0.5f;
+        matrix->m[1][1] = (f32)matrix->m[1][1] * 0.5f;
+
+        snap_api::setProjectionMtx((u32)mpProjection, matrix.a, 0);
+        snap_api::matrixProjectionDtor(adjusted.a, 2);
+    }
+
+    snap_api::setRenderMode(0);
+    u32 flags = snap_api::getDrawFlags(0x104B45C0);
+    dSnapHD_DrawFlags *flagsView = gabi::at<dSnapHD_DrawFlags>(flags);
+
+    flagsView->mSecondaryFlags = 0;
+    flagsView->mFlags = 3;
+
+    for (s32 i = 0; i < (s32)field_0x14; ++i)
+        m_tbl[u32(i)].draw(u32(i) * 4);
+
+    if (drawer)
+        snap_api::endDebugDraw(drawer);
+
+    snap_api::removeTexture((u32)l_textureManager, SnapLargeTexture);
+    snap_api::removeTexture((u32)l_textureManager, SnapDepthTexture);
+
+    u32 frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame,
+        view = (u32)gabi::at<dSnapHD_Frame>(frame)->mpCamera, dest = (u32)mpCamera;
+
+    gabi::at<dSnapHD_Camera>(dest)->mEyeX =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mEyeX);
+    gabi::at<dSnapHD_Camera>(dest)->mEyeY =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mEyeY);
+    gabi::at<dSnapHD_Camera>(dest)->mEyeZ =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mEyeZ);
+    f32 fourth = (f32)gabi::at<dSnapHD_Camera>(view)->mAtX;
+    dest = (u32)mpCamera;
+    gabi::at<dSnapHD_Camera>(dest)->mAtX = fourth;
+    gabi::at<dSnapHD_Camera>(dest)->mAtY =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mAtY);
+    gabi::at<dSnapHD_Camera>(dest)->mAtZ =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mAtZ);
+    dest = (u32)mpCamera;
+    gabi::at<dSnapHD_Camera>(dest)->mUpX =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mUpX);
+    gabi::at<dSnapHD_Camera>(dest)->mUpY =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mUpY);
+    gabi::at<dSnapHD_Camera>(dest)->mUpZ =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Camera>(view)->mUpZ);
+    snap_api::normalizeVec(dest + 0x4C);
+
+    dest = (u32)mpCamera;
+    u32 table = (u32)gabi::at<dSnapHD_Camera>(dest)->mVtable;
+    dSnapHD_Vtable *tableView = gabi::at<dSnapHD_Vtable>(table);
+
+    gabi::call_ptr<void>((u32)tableView->mUpdateCamera, dest, dest);
+
+    frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+    u32 buffer = (u32)gabi::at<dSnapHD_Frame>(frame)->mpBuffer;
+
+    dest = (u32)mpViewport;
+    gabi::at<dSnapHD_Buffer>(dest)->mWidth =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mWidth);
+    gabi::at<dSnapHD_Buffer>(dest)->mHeight =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mHeight);
+
+    frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+    buffer = (u32)gabi::at<dSnapHD_Frame>(frame)->mpBuffer;
+
+    dest = (u32)mpViewport;
+    gabi::at<dSnapHD_Buffer>(dest)->mOriginX =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mOriginX);
+    gabi::at<dSnapHD_Buffer>(dest)->mOriginY =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mOriginY);
+    gabi::at<dSnapHD_Buffer>(dest)->mViewportWidth =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mViewportWidth);
+    gabi::at<dSnapHD_Buffer>(dest)->mViewportHeight =
+        dSnapHD_copyFloatBits(gabi::at<dSnapHD_Buffer>(buffer)->mViewportHeight);
+    mFlag = ((u32)mFlag & ~1u) | 2u;
+    frame = (u32)gabi::at<dSnapHD_Context>(context)->mpFrame;
+
+    snap_api::applyRenderBuffer((u32)gabi::at<dSnapHD_Frame>(frame)->mpBuffer);
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 025C0734 */
+void dSnap_packet_dt(u32 s, u32 flags) {
+
+    if (s) {
+        snap_api::packetDtor(s, 0);
+        if (flags & 1)
+            snap_api::free(s);
+    }
+}
+
+/* 025C0790 */
+void dSnap_Obj_dt(u32 s, u32 flags) {
+
+    if (s && (flags & 1))
+        snap_api::free(s);
+}
+
+/* 025C07A4 */
+void dSnapHD_createColorTexture(u32 s, u32 src, u32 mode, u32 alloc) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+    dSnapHD_Texture *source = gabi::at<dSnapHD_Texture>(src);
+
+    for (u32 i = 0; i < 30; ++i)
+        target->mWords[i] = source->mWords[i];
+    for (u32 i = 0x78; i < 0x7C; ++i)
+        target->mBytes[i] = source->mBytes[i];
+    for (u32 i = 0x7C; i < 0x88; i += 4)
+        target->mWords[i / 4] = source->mWords[i / 4];
+    u32 word = (u32)source->mWords[0x88 / 4];
+    target->mAllocator = alloc;
+    target->mWords[0x88 / 4] = word;
+    target->mMode = mode;
+    snap_api::createColorTarget(s);
+    target->mDirty = 1;
+}
+
+/* 025C0934 */
+void dSnapHD_createDepthTexture(u32 s, u32 src, u32 mode, u32 alloc) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+    dSnapHD_Texture *source = gabi::at<dSnapHD_Texture>(src);
+
+    for (u32 i = 0; i < 30; ++i)
+        target->mWords[i] = source->mWords[i];
+    for (u32 i = 0x78; i < 0x7C; ++i)
+        target->mBytes[i] = source->mBytes[i];
+    for (u32 i = 0x7C; i < 0x88; i += 4)
+        target->mWords[i / 4] = source->mWords[i / 4];
+    u32 word = (u32)source->mWords[0x88 / 4];
+    target->mAllocator = alloc;
+    target->mWords[0x88 / 4] = word;
+    target->mMode = mode;
+    snap_api::createDepthTarget(s);
+    target->mDirty = 1;
+}
+
+/* 025C0848 */
+void dSnapHD_updateColorTexture(u32 s, u32 src, u32 mode, u32 alloc) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+    dSnapHD_Texture *source = gabi::at<dSnapHD_Texture>(src);
+
+    if (!target->hasSameDescriptor(*source)) {
+        dSnapHD_createColorTexture(s, src, mode, alloc);
+        return;
+    }
+    u32 image = (u32)source->mImageData, mip = (u32)source->mMipData;
+    target->mColorImageData = image;
+    target->mColorMipData = mip;
+    u32 oldAlloc = (u32)target->mAllocator;
+    target->mMipData = mip;
+    u32 oldMode = (u32)target->mMode;
+    target->mImageData = image;
+    if (oldAlloc != alloc) {
+        target->mAllocator = alloc;
+        target->mDirty = 1;
+    }
+    if (oldMode != mode) {
+        target->mMode = mode;
+        target->mDirty = 1;
+    }
+}
+
+/* 025C09D8 */
+void dSnapHD_updateDepthTexture(u32 s, u32 src, u32 mode, u32 alloc) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+    dSnapHD_Texture *source = gabi::at<dSnapHD_Texture>(src);
+
+    if (!target->hasSameDescriptor(*source)) {
+        dSnapHD_createDepthTexture(s, src, mode, alloc);
+        return;
+    }
+    u32 image = (u32)source->mImageData, mip = (u32)source->mMipData;
+    target->mViewMipData = image;
+    target->mDepthMipData = mip;
+    u32 oldAlloc = (u32)target->mAllocator;
+    target->mMipData = mip;
+    u32 oldMode = (u32)target->mMode;
+    target->mImageData = image;
+    if (oldAlloc != alloc) {
+        target->mAllocator = alloc;
+        target->mDirty = 1;
+    }
+    if (oldMode != mode) {
+        target->mMode = mode;
+        target->mDirty = 1;
+    }
+}
+
+/* 025C0928 */
+void dSnapHD_assignColorTexture(u32 s, u32 src) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+
+    u32 alloc = (u32)target->mAllocator, mode = (u32)target->mMode;
+    dSnapHD_updateColorTexture(s, src, mode, alloc);
+}
+
+/* 025C0AB8 */
+void dSnapHD_assignDepthTexture(u32 s, u32 src) {
+    dSnapHD_Texture *target = gabi::at<dSnapHD_Texture>(s);
+
+    u32 alloc = (u32)target->mAllocator, mode = (u32)target->mMode;
+    dSnapHD_updateDepthTexture(s, src, mode, alloc);
+}
+
+/* 025C0AC4 */
+void dSnapHD_scaleTransMtx(u32 dst, u32 scale, u32 pos) {
+    Mtx34 *matrix = gabi::at<Mtx34>(dst);
+    cXyz *scaleVec = gabi::at<cXyz>(scale);
+    cXyz *position = gabi::at<cXyz>(pos);
+
+    f32 x = dSnapHD_copyFloatBits(scaleVec->x);
+    matrix->m[0][0] = x;
+    matrix->m[1][0] = 0;
+    matrix->m[2][0] = 0;
+    matrix->m[0][1] = 0;
+    f32 y = dSnapHD_copyFloatBits(scaleVec->y);
+    matrix->m[2][1] = 0;
+    matrix->m[1][1] = y;
+    matrix->m[0][2] = 0;
+    matrix->m[1][2] = 0;
+    matrix->m[2][2] = dSnapHD_copyFloatBits(scaleVec->z);
+    matrix->m[0][3] = dSnapHD_copyFloatBits(position->x);
+    matrix->m[1][3] = dSnapHD_copyFloatBits(position->y);
+    matrix->m[2][3] = dSnapHD_copyFloatBits(position->z);
+}
+
+/* 025BD814 */
+u32 dSnap_packet_ctor(u32 s) {
+
+    if (!s)
+        s = snap_api::alloc(0xF94);
+    if (s) {
+        dSnap_packet *object = gabi::at<dSnap_packet>(s);
+        snap_api::packetCtor(s);
+        object->mPhotoNo = 0;
+        object->__vtbl = 0x100552B0;
+        object->field_0x14 = 0;
+        snap_api::constructArray(s + 0xA0, 63, 60, 0x025BD7B4);
+        object->mpDepthTexture = 0;
+        object->mpViewport = 0;
+        object->mpProjection = 0;
+        object->mpRenderBuffer = 0;
+        object->mpCamera = 0;
+        object->mResultDetail = 0;
+        object->mResult = 0;
+        object->mpHeap = 0;
+        object->mFlag = 0;
+        object->mpColorTexture = 0;
+        if (s + 0xF8C == 0)
+            snap_api::alloc(8);
+        object->mpEffect = 0;
+        object->mpAlternateEffect = 0;
+    }
+    return s;
+}
+
+/* 025C060C */
+void __sinit_d_snap_cpp() {
+
+    l_stateWord3 = 0;
+    l_stateWord2 = 0;
+    l_stateWord1 = 0;
+    l_stateWord0 = 0;
+    snap_api::registerGlobalObject(0x101EBA34);
+    l_minAngle = -3.1415927410125732f;
+    l_maxAngle = 3.1415927410125732f;
+    snap_api::initializeAngleState(0x1047C9CC);
+    snap_api::registerGlobalObject(0x101EBA40);
+    snap_api::initializeByteState(0x1047C9CD);
+    snap_api::registerGlobalObject(0x101EBA4C);
+    l_largeCaptureWidth = 1600;
+    l_shutterWidth = 560;
+    l_shutterHeight = 315;
+    l_captureWidth = 800;
+    l_shutterCenterX = 360;
+    l_shutterCenterY = 203;
+    l_captureHeight = 450;
+    l_largeCaptureHeight = 900;
+    l_pixelScale = (800.0f / 294.0f) * (450.0f / 198.0f);
+}
+
+/* WWHD glue
+str 10054618 in 025BD600
+str 10054624 in 025BD600
+str 10055250 in 025BE480
+str 1005521C in 025BE480
+data l_snapAddress 1047C9BC
+data l_snapInitialized 1047D974
+data l_pixelScale 1047C9C8
+data l_captureWidth 1047C99C
+data l_captureHeight 1047C9A0
+data l_largeCaptureWidth 1047C9A4
+data l_largeCaptureHeight 1047C9A8
+data l_shutterWidth 1047C9AC
+data l_shutterHeight 1047C9B0
+data l_shutterCenterX 1047C9B4
+data l_shutterCenterY 1047C9B8
+data l_minAngle 1047C9C0
+data l_maxAngle 1047C9C4
+data l_stateWord0 1047C9D0
+data l_stateWord1 1047C9D4
+data l_stateWord2 1047C9D8
+data l_stateWord3 1047C9DC
+data l_opaDrawList 104B4634
+data l_xluDrawList 104B4638
+data l_textureManager 101F9968
+data l_debugDrawer 101F8B28
+data l_postProcessService 101F86E8
+data l_graphicsResource 101F8664
+data l_textureNameInitialized 101FD7BC
+data l_textureNameVtable 101FDCF8
+data l_textureRenderer 101F8710
+data l_renderContext 101F8BD8
+data l_saveData 101F84DC
+data l_viewportOriginX 104A0908
+data l_viewportOriginY 104A090C
+data l_initialScaleX 104A0920
+data l_initialScaleY 104A0924
+data l_CharaData 10054708
+data cylvtx 100546CC
+data vdata 10055074
+data tindices 10055104
+data l_snap 1047C9E0
+data l_identityWords 104A041C
+data m_judge_tbl 101EBA60
+*/

@@ -1,53 +1,55 @@
-#include "wwhd.h"
-#include "gabi.h"
+/** List iteration. WWHD, verified unit c_list_iter. */
+#include "SSystem/SComponent/c_list_iter.h"
 
-s32 cLsIt_Method(void* list,u32 method,u32 userData) {
- WWHD_FUNC(0x020100A0,s32,list,method,userData);
- if(gabi::load<s32>(gabi::ea(list)+8)>0)
-  return gabi::call<s32>(0x02019D50,gabi::at<void>(gabi::load<u32>(gabi::ea(list))),method,userData);
- return 1;
+/* 020100A0 */
+s32 cLsIt_Method(node_list_class* pList, u32 pMethod, void* pUserData) {
+    if (pList->mSize > 0) {
+        return cNdIt_Method(pList->mpHead, pMethod, pUserData);
+    }
+    return TRUE;
 }
-VERIFY(0x020100A0,cLsIt_Method);
-void* cLsIt_Judge(void* list,u32 judge,u32 userData) {
- WWHD_FUNC(0x020100BC,void*,list,judge,userData);
- if(gabi::load<s32>(gabi::ea(list)+8)>0)
-  return gabi::call<void*>(0x02019DE8,gabi::at<void>(gabi::load<u32>(gabi::ea(list))),judge,userData);
- return nullptr;
-}
-VERIFY(0x020100BC,cLsIt_Judge);
-void c_list_iter_static_init() {
- WWHD_FUNC(0x020100D8,void);
- gabi::store<u32>(0x101FF800,0);gabi::store<u32>(0x101FF7F8,0);gabi::store<u32>(0x101FF804,0);gabi::store<u32>(0x101FF7FC,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7D8));
- f32 negativePi=gabi::load<f32>(0x10001EE0),positivePi=gabi::load<f32>(0x10001EE4);
- gabi::store<f32>(0x101FF7EC,negativePi);gabi::store<f32>(0x101FF7F0,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF7F4));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7E4));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF7F5));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7F0));
-}
-VERIFY(0x020100D8,c_list_iter_static_init);
 
-/* ---- hosted here: a separate TU linked between c_list_iter and
- * c_m2d (name unknown): a 12-byte class of three words with an out-of-line constructor, and its
- * static initializer (header statics + one instance at 101FF824 built from (0,0,0)). ---- */
-u32 hd_word3_ctor(u32 self,u32 a,u32 b,u32 c) {
- WWHD_FUNC(0x0201016C,u32,self,a,b,c);
- if(!self){self=gabi::call<u32>(0x0273AD10,12u);if(!self)return 0;}
- gabi::store<u32>(self+4,b);gabi::store<u32>(self+0,a);gabi::store<u32>(self+8,c);
- return self;
+/* 020100BC */
+void* cLsIt_Judge(node_list_class* pList, u32 pJudge, void* pUserData) {
+    if (pList->mSize > 0) {
+        return cNdIt_Judge(pList->mpHead, pJudge, pUserData);
+    }
+    return NULL;
 }
-VERIFY(0x0201016C,hd_word3_ctor);
-void hd_static_init_020101D0() {
- WWHD_FUNC(0x020101D0,void);
- gabi::store<u32>(0x101FF81C,0);gabi::store<u32>(0x101FF814,0);gabi::store<u32>(0x101FF820,0);gabi::store<u32>(0x101FF818,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7FC));
- f32 negativePi=gabi::load<f32>(0x10001EEC),positivePi=gabi::load<f32>(0x10001EF0);
- gabi::store<f32>(0x101FF808,negativePi);gabi::store<f32>(0x101FF80C,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF810));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C808));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF811));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C814));
- gabi::call<u32>(0x0201016C,0x101FF824u,0u,0u,0u);
+
+/* 020100D8 */
+// HD: header statics and their destructor registrations.
+static void __sinit_c_list_iter_cpp() {
+    sinit_header_statics_rodata(0x101FF7EC, 0x1018C7D8, 0x101FF7F8, 0x10001EE0);
 }
-VERIFY(0x020101D0,hd_static_init_020101D0);
+
+/* 0201016C */
+// HD: unidentified adjacent translation unit, allocating constructor form.
+hd_word3* hd_word3_ctor(hd_word3* pObject, u32 first, u32 second, u32 third) {
+    if (pObject == NULL) {
+        pObject = static_cast<hd_word3*>(hd_allocate(sizeof(hd_word3)));
+        if (pObject == NULL) {
+            return NULL;
+        }
+    }
+    pObject->second = second;
+    pObject->first = first;
+    pObject->third = third;
+    return pObject;
+}
+
+static hd_word3 defaultWords;
+
+/* 020101D0 */
+// HD: adjacent translation unit's header statics and three-word instance.
+static void __sinit_adjacent_word3_cpp() {
+    sinit_header_statics_rodata(0x101FF808, 0x1018C7FC, 0x101FF814, 0x10001EEC);
+    hd_word3_ctor(&defaultWords, 0, 0, 0);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): external node iteration and HD allocation
+ext 02019D50 s32 cNdIt_Method(node_class*, u32, void*)
+ext 02019DE8 void* cNdIt_Judge(node_class*, u32, void*)
+ext 0273AD10 void* hd_allocate(u32)
+data defaultWords 101FF824
+*/

@@ -1,22 +1,264 @@
-#include "gabi.h"
-using namespace gabi;
-u32 ext_baseInit(void* self,s32 length,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E72D4,u32,self,length,mode,start,end,existing,rate);u32 o=ea(self);if(!existing&&!call<u32>(0x025E2AF8))call(0x0273AA24,at<void>(0x10058A2C),0x1CA,at<void>(0x10058A3C));f32 frame=(f32)start;store<s16>(o+8,(s16)start);store<f32>(o+4,frame);call(0x027F2BC0,self,end<0?length:end);f32 zero=load<f32>(0x100586DC);store<f32>(o,rate);store<u8>(o+0xE,(u8)mode);if(rate<zero)frame=(f32)load<s16>(o+0xA);store<f32>(o+4,frame);store<s16>(o+0xC,(s16)ftoi(frame));return 1;}
-VERIFY(0x025E72D4,ext_baseInit);
-u32 ext_basePlay(void* self){WWHD_FUNC(0x025E742C,u32,self);call(0x027F2FC4,self);return (load<u8>(ea(self)+0xF)&1)||load<f32>(ea(self))==load<f32>(0x100586DC);}
-VERIFY(0x025E742C,ext_basePlay);
-void* ext_bpkCtor(void* self){WWHD_FUNC(0x025E7480,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x74);if(!o)return nullptr;}call(0x027F2BC0,at<void>(o),0);store<u32>(o+0x10,0);store<u32>(o+0x14,0);call(0x027DA984,at<void>(o+0x18));store<u16>(o+0x70,0);store<u32>(o+0x5C,0);store<u32>(o+0x4C,0x1016D7E0);return at<void>(o);}
-VERIFY(0x025E7480,ext_bpkCtor);
-void* ext_btpCtor(void* self){WWHD_FUNC(0x025E7820,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x74);if(!o)return nullptr;}call(0x027F2BC0,at<void>(o),0);store<u32>(o+0x14,0);store<u16>(o+0x18,0);store<u32>(o+0x10,0);call(0x027DA984,at<void>(o+0x1C));store<u32>(o+0x60,0);store<u32>(o+0x50,0x1016D860);return at<void>(o);}
-VERIFY(0x025E7820,ext_btpCtor);
-u32 ext_bpkInit(void* self,void* model,void* animation,u32 play,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E74FC,u32,self,model,animation,play,mode,start,end,existing,rate);const bool pattern=false;u32 o=ea(self),a=ea(animation),off=pattern?0x1C:0x18;if(!a){store<u32>(o+0x10,0);return 1;}store<u32>(o+0x10,a);if(!existing){Local<u8[0x40]> descriptor; /* game test 2026-10-05: the size query/init fill descriptor+0x14..+0x3C; the original reserves sp+0x18..0x58 */u32 d=ea(descriptor.get());for(u32 j=0;j<4;j++)store<s32>(d+j*4,-1);store<u8>(d+0x10,1);store<u8>(d+0x11,0);store<u32>(d+0x14,0);store<u32>(d+0x18,0);u32 data=call<u32>(0x027F3F8C,model);s32 count=load<u16>(data+0x24);if(load<s32>(d)>=count){}else store<s32>(d,count);u32 resource=load<u32>(a+0xC);count=load<u16>(resource+(pattern?0x16:0x14));if(load<s32>(d+4)<count)store<s32>(d+4,count);s32 first=load<s32>(resource+0x18);if(load<s32>(d+8)<first)store<s32>(d+8,first);s32 second=load<s32>(resource+0x1C);if(load<s32>(d+0xC)<second)store<s32>(d+0xC,second);u32 flags=pattern?load<u16>(resource+0xC):load<u32>(resource+0xC);store<u8>(d+0x11,(u8)(load<u8>(d+0x11)|((flags&1)^1)));s32 size=load<s32>(resource+0x18);if(size<4)size=4;store<s32>(d+0xC,size);store<u8>(d+0x11,1);u32 bytes=call<u32>(pattern?0x027E0AF0:0x027DEFB8,descriptor.get());u32 buffer=call<u32>(0x025E3A34,bytes,4);if(!buffer)return 0;call(pattern?0x027E09B8:0x027DEE5C,at<void>(o+off),descriptor.get(),at<void>(buffer),bytes);}
- call(pattern?0x027E12B4:0x027DF7F4,at<void>(o+off),at<void>(load<u32>(a+0xC)));u32 data=call<u32>(0x027F3F8C,model);call(pattern?0x027E0C88:0x027DF240,at<void>(o+off),at<void>(data));if(play){a=load<u32>(o+0x10);s32 length=call_ptr<s32>(load<u32>(load<u32>(a+4)+0x14),at<void>(a));a=load<u32>(o+0x10);u32 r=load<u32>(a+0xC),flags=pattern?load<u16>(r+0xC):load<u32>(r+0xC);f32 f=(f32)length;if(flags&4)f=fsubs_ppc(f,load<f32>(0x100586D4));if(!call<u32>(0x025E72D4,self,(s32)(s16)ftoi(f),mode,start,end,existing,rate))return 0;}return 1;}
-VERIFY(0x025E74FC,ext_bpkInit);
-u32 ext_btpInit(void* self,void* model,void* animation,u32 play,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E789C,u32,self,model,animation,play,mode,start,end,existing,rate);const bool pattern=true;u32 o=ea(self),a=ea(animation),off=pattern?0x1C:0x18;if(!a){store<u32>(o+0x10,0);return 1;}store<u32>(o+0x10,a);if(!existing){Local<u8[0x40]> descriptor; /* game test 2026-10-05: the size query/init fill descriptor+0x14..+0x3C; the original reserves sp+0x18..0x58 */u32 d=ea(descriptor.get());for(u32 j=0;j<4;j++)store<s32>(d+j*4,-1);store<u8>(d+0x10,1);store<u8>(d+0x11,0);store<u32>(d+0x14,0);store<u32>(d+0x18,0);u32 data=call<u32>(0x027F3F8C,model);s32 count=load<u16>(data+0x24);if(load<s32>(d)>=count){}else store<s32>(d,count);u32 resource=load<u32>(a+0xC);count=load<u16>(resource+(pattern?0x16:0x14));if(load<s32>(d+4)<count)store<s32>(d+4,count);s32 first=load<s32>(resource+0x18);if(load<s32>(d+8)<first)store<s32>(d+8,first);s32 second=load<s32>(resource+0x1C);if(load<s32>(d+0xC)<second)store<s32>(d+0xC,second);u32 flags=pattern?load<u16>(resource+0xC):load<u32>(resource+0xC);store<u8>(d+0x11,(u8)(load<u8>(d+0x11)|((flags&1)^1)));s32 size=load<s32>(resource+0x18);if(size<4)size=4;store<s32>(d+0xC,size);store<u8>(d+0x11,1);u32 bytes=call<u32>(pattern?0x027E0AF0:0x027DEFB8,descriptor.get());u32 buffer=call<u32>(0x025E3A34,bytes,4);if(!buffer)return 0;call(pattern?0x027E09B8:0x027DEE5C,at<void>(o+off),descriptor.get(),at<void>(buffer),bytes);}
- call(pattern?0x027E12B4:0x027DF7F4,at<void>(o+off),at<void>(load<u32>(a+0xC)));u32 data=call<u32>(0x027F3F8C,model);call(pattern?0x027E0C88:0x027DF240,at<void>(o+off),at<void>(data));if(play){a=load<u32>(o+0x10);s32 length=call_ptr<s32>(load<u32>(load<u32>(a+4)+0x14),at<void>(a));a=load<u32>(o+0x10);u32 r=load<u32>(a+0xC),flags=pattern?load<u16>(r+0xC):load<u32>(r+0xC);f32 f=(f32)length;if(flags&4)f=fsubs_ppc(f,load<f32>(0x100586D4));if(!call<u32>(0x025E72D4,self,(s32)(s16)ftoi(f),mode,start,end,existing,rate))return 0;}return 1;}
-VERIFY(0x025E789C,ext_btpInit);
-void ext_bpkEntry(void* self,void* model,f32 frame){WWHD_FUNC(0x025E779C,void,self,model,frame);const bool pattern=false,bind=true;u32 o=ea(self),a=load<u32>(o+0x10),off=pattern?0x1C:0x18;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+(pattern?0x38:0x40),o+off);else call(0x027E1234,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E779C,ext_bpkEntry);
-void ext_btpEntry(void* self,void* model,s32 frameInt){WWHD_FUNC(0x025E7B3C,void,self,model,frameInt);f32 frame=(f32)frameInt;const bool pattern=true,bind=true;u32 o=ea(self),a=load<u32>(o+0x10),off=pattern?0x1C:0x18;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+(pattern?0x38:0x40),o+off);else call(0x027E1234,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E7B3C,ext_btpEntry);
-void ext_btpCalc(void* self,void* model,f32 frame){WWHD_FUNC(0x025E7BE4,void,self,model,frame);const bool pattern=true,bind=false;u32 o=ea(self),a=load<u32>(o+0x10),off=pattern?0x1C:0x18;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+(pattern?0x38:0x40),o+off);else call(0x027E1234,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E7BE4,ext_btpCalc);
+/** m_Do_ext_material_anm.cpp — color and texture-pattern animation.
+ * Based on tww m_Do/m_Do_ext.cpp.
+ */
+#include "m_Do/m_Do_ext_material_anm.h"
+using material_layout::Descriptor;
+using material_layout::Resource;
+using material_layout::Animation;
+using material_layout::Model;
+using material_layout::ModelData;
+using material_layout::MaterialWork;
+using material_layout::FrameBlend;
+static f32 materialZero;
+static f32 materialFrameAdjustment;
+
+/* 025E72D4 */
+u32 material_layout::mDoExt_baseAnm::initPlay(s32 length, s32 mode, s32 start, s32 end, u32 existing, f32 rate) {
+    if (!existing && !materialIsCurrentSolidHeap())
+        JUTAssertion_showAssert("m_Do_ext.cpp", 0x1CA, "i_modify || isCurrentSolidHeap()");
+    f32 frame = static_cast<f32>(start);
+    mFrameCtrl.mStart = start;
+    mFrameCtrl.mFrame = frame;
+    materialFrameInit(&mFrameCtrl, end < 0 ? length : end);
+    f32 zero = materialZero;
+    mFrameCtrl.mRate = rate;
+    mFrameCtrl.mAttribute = mode;
+    if (rate < zero)
+        frame = static_cast<f32>(mFrameCtrl.mEnd);
+    mFrameCtrl.mFrame = frame;
+    mFrameCtrl.mLoop = static_cast<s16>(gabi::ftoi(frame));
+    return 1;
+}
+
+/* 025E742C */
+u32 material_layout::mDoExt_baseAnm::play() {
+    materialFrameUpdate(&mFrameCtrl);
+    return (mFrameCtrl.mState & J3DFrameCtrl::STATE_STOP_E) || mFrameCtrl.mRate == materialZero;
+}
+
+/* 025E7480 */
+material_layout::mDoExt_bpkAnm* mDoExt_bpkAnm_ct(material_layout::mDoExt_bpkAnm* self) {
+    if (!self) {
+        self = static_cast<material_layout::mDoExt_bpkAnm*>(operator_new(0x74));
+        if (!self)
+            return nullptr;
+    }
+    materialFrameInit(&self->mFrameCtrl, 0);
+    self->mpAnm = nullptr;
+    self->field_0x14 = nullptr;
+    materialWorkConstruct(&self->mAnimator);
+    self->mUpdateMaterialNum = 0;
+    self->mAnimator.field_0x44 = 0;
+    self->mAnimator.__vtbl = MaterialWork::COLOR_VT; // HD: color animator vtable.
+    return self;
+}
+
+/* 025E7820 */
+material_layout::mDoExt_btpAnm* mDoExt_btpAnm_ct(material_layout::mDoExt_btpAnm* self) {
+    if (!self) {
+        self = static_cast<material_layout::mDoExt_btpAnm*>(operator_new(0x74));
+        if (!self)
+            return nullptr;
+    }
+    materialFrameInit(&self->mFrameCtrl, 0);
+    self->field_0x14 = nullptr;
+    self->mUpdateMaterialNum = 0;
+    self->mpAnm = nullptr;
+    materialWorkConstruct(&self->mAnimator);
+    self->mAnimator.field_0x44 = 0;
+    self->mAnimator.__vtbl = MaterialWork::PATTERN_VT; // HD: texture-pattern animator vtable.
+    return self;
+}
+
+/* 025E74FC */
+u32 material_layout::mDoExt_bpkAnm::init(Model* model, Animation* animation, u32 play, s32 mode, s32 start, s32 end, u32 existing, f32 rate) {
+    if (!animation) {
+        mpAnm = nullptr;
+        return 1;
+    }
+    mpAnm = animation;
+    if (!existing) {
+        // HD: reserve all 64 descriptor bytes; the size query and initializer write its tail.
+        Descriptor descriptor;
+        descriptor.mMaterialCount = -1;
+        descriptor.mAnimationCount = -1;
+        descriptor.mResourceCountA = -1;
+        descriptor.mResourceCountB = -1;
+        descriptor.mEnabled = 1;
+        descriptor.mStorageFlags = 0;
+        descriptor.mBufferA = 0;
+        descriptor.mBufferB = 0;
+        ModelData* data = materialGetModelData(model);
+        s32 count = data->mMaterialCount;
+        if (descriptor.mMaterialCount < count)
+            descriptor.mMaterialCount = count;
+        Resource* resource = animation->mpResource;
+        count = resource->mColorCount;
+        if (descriptor.mAnimationCount < count)
+            descriptor.mAnimationCount = count;
+        s32 first = resource->mCountA;
+        if (descriptor.mResourceCountA < first)
+            descriptor.mResourceCountA = first;
+        s32 second = resource->mCountB;
+        if (descriptor.mResourceCountB < second)
+            descriptor.mResourceCountB = second;
+        u32 flags = resource->mColorFlags;
+        descriptor.mStorageFlags = descriptor.mStorageFlags | ((flags & 1) ^ 1);
+        s32 size = resource->mCountA;
+        if (size < 4)
+            size = 4;
+        descriptor.mResourceCountB = size;
+        descriptor.mStorageFlags = 1;
+        u32 bytes = materialColorBufferSize(&descriptor);
+        void* buffer = materialAllocate(bytes, 4);
+        if (!buffer)
+            return 0;
+        materialColorInit(&mAnimator, &descriptor, buffer, bytes);
+    }
+    materialColorSetResource(&mAnimator, animation->mpResource);
+    ModelData* data = materialGetModelData(model);
+    materialColorAttach(&mAnimator, data);
+    if (play) {
+        Animation* current = mpAnm;
+        s32 length = current->getFrameMax();
+        current = mpAnm; // HD: the virtual callback can replace the animation.
+        Resource* resource = current->mpResource;
+        u32 flags = resource->mColorFlags;
+        f32 frame = static_cast<f32>(length);
+        if (flags & 4)
+            frame = gabi::fsubs_ppc(frame, materialFrameAdjustment);
+        if (!initPlay(static_cast<s16>(gabi::ftoi(frame)), mode, start, end, existing, rate))
+            return 0;
+    }
+    return 1;
+}
+
+/* 025E789C */
+u32 material_layout::mDoExt_btpAnm::init(Model* model, Animation* animation, u32 play, s32 mode, s32 start, s32 end, u32 existing, f32 rate) {
+    if (!animation) {
+        mpAnm = nullptr;
+        return 1;
+    }
+    mpAnm = animation;
+    if (!existing) {
+        // HD: reserve all 64 descriptor bytes; the size query and initializer write its tail.
+        Descriptor descriptor;
+        descriptor.mMaterialCount = -1;
+        descriptor.mAnimationCount = -1;
+        descriptor.mResourceCountA = -1;
+        descriptor.mResourceCountB = -1;
+        descriptor.mEnabled = 1;
+        descriptor.mStorageFlags = 0;
+        descriptor.mBufferA = 0;
+        descriptor.mBufferB = 0;
+        ModelData* data = materialGetModelData(model);
+        s32 count = data->mMaterialCount;
+        if (descriptor.mMaterialCount < count)
+            descriptor.mMaterialCount = count;
+        Resource* resource = animation->mpResource;
+        count = resource->mPatternCount;
+        if (descriptor.mAnimationCount < count)
+            descriptor.mAnimationCount = count;
+        s32 first = resource->mCountA;
+        if (descriptor.mResourceCountA < first)
+            descriptor.mResourceCountA = first;
+        s32 second = resource->mCountB;
+        if (descriptor.mResourceCountB < second)
+            descriptor.mResourceCountB = second;
+        u32 flags = resource->mPatternFlags;
+        descriptor.mStorageFlags = descriptor.mStorageFlags | ((flags & 1) ^ 1);
+        s32 size = resource->mCountA;
+        if (size < 4)
+            size = 4;
+        descriptor.mResourceCountB = size;
+        descriptor.mStorageFlags = 1;
+        u32 bytes = materialPatternBufferSize(&descriptor);
+        void* buffer = materialAllocate(bytes, 4);
+        if (!buffer)
+            return 0;
+        materialPatternInit(&mAnimator, &descriptor, buffer, bytes);
+    }
+    materialPatternSetResource(&mAnimator, animation->mpResource);
+    ModelData* data = materialGetModelData(model);
+    materialPatternAttach(&mAnimator, data);
+    if (play) {
+        Animation* current = mpAnm;
+        s32 length = current->getFrameMax();
+        current = mpAnm; // HD: the virtual callback can replace the animation.
+        Resource* resource = current->mpResource;
+        u32 flags = resource->mPatternFlags;
+        f32 frame = static_cast<f32>(length);
+        if (flags & 4)
+            frame = gabi::fsubs_ppc(frame, materialFrameAdjustment);
+        if (!initPlay(static_cast<s16>(gabi::ftoi(frame)), mode, start, end, existing, rate))
+            return 0;
+    }
+    return 1;
+}
+
+/* 025E779C */
+void material_layout::mDoExt_bpkAnm::entry(Model* model, f32 frame) {
+    Animation* animation = mpAnm;
+    if (!animation)
+        return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    FrameBlend* blend = mAnimator.mpFrame;
+    f32 result = blend->evaluate(frame);
+    blend->mFrame = result;
+    materialColorCalc(&mAnimator);
+    model->mpColorAnimator = &mAnimator;
+}
+
+/* 025E7B3C */
+void material_layout::mDoExt_btpAnm::entry(Model* model, s32 frameInt) {
+    f32 frame = static_cast<f32>(frameInt);
+    Animation* animation = mpAnm;
+    if (!animation)
+        return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    FrameBlend* blend = mAnimator.mpFrame;
+    f32 result = blend->evaluate(frame);
+    blend->mFrame = result;
+    materialPatternCalc(&mAnimator);
+    model->mpTextureAnimator = &mAnimator;
+}
+
+/* 025E7BE4 */
+void material_layout::mDoExt_btpAnm::calc(Model* model, f32 frame) {
+    Animation* animation = mpAnm;
+    if (!animation)
+        return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    FrameBlend* blend = mAnimator.mpFrame;
+    f32 result = blend->evaluate(frame);
+    blend->mFrame = result;
+    materialPatternCalc(&mAnimator);
+    materialPatternApply(&mAnimator, model->mMaterialTable);
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data materialZero 100586DC
+data materialFrameAdjustment 100586D4
+str 10058A2C
+str 10058A3C
+ext 025E2AF8 u32 materialIsCurrentSolidHeap()
+ext 027F2BC0 void materialFrameInit(J3DFrameCtrl* control, s32 end)
+ext 027F2FC4 void materialFrameUpdate(J3DFrameCtrl* control)
+ext 027DA984 void materialWorkConstruct(material_layout::MaterialWork* work)
+ext 027F3F8C material_layout::ModelData* materialGetModelData(material_layout::Model* model)
+ext 025E3A34 void* materialAllocate(u32 size, s32 alignment)
+ext 027DEFB8 u32 materialColorBufferSize(material_layout::Descriptor* descriptor)
+ext 027E0AF0 u32 materialPatternBufferSize(material_layout::Descriptor* descriptor)
+ext 027DEE5C void materialColorInit(material_layout::MaterialWork* work, material_layout::Descriptor* descriptor, void* buffer, u32 size)
+ext 027E09B8 void materialPatternInit(material_layout::MaterialWork* work, material_layout::Descriptor* descriptor, void* buffer, u32 size)
+ext 027DF7F4 void materialColorSetResource(material_layout::MaterialWork* work, material_layout::Resource* resource)
+ext 027E12B4 void materialPatternSetResource(material_layout::MaterialWork* work, material_layout::Resource* resource)
+ext 027DF240 void materialColorAttach(material_layout::MaterialWork* work, material_layout::ModelData* model)
+ext 027E0C88 void materialPatternAttach(material_layout::MaterialWork* work, material_layout::ModelData* model)
+ext 027DF40C void materialColorCalc(material_layout::MaterialWork* work)
+ext 027E1038 void materialPatternCalc(material_layout::MaterialWork* work)
+ext 027E1234 void materialPatternApply(material_layout::MaterialWork* work, void* materialTable)
+*/

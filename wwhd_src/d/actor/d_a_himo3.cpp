@@ -6,177 +6,96 @@
  * (zeldaret/tww src/d/actor/d_a_himo3.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "bindings.h"
+#include "d/actor/d_a_himo3.h"
 
 #define SAFESTRING_VTBL 0x10011170
 #define HIMO3_VTBL 0x100111C8 /* HD: himo3_class vtable */
 
-enum {
-    dRes_INDEX_HIMO3_BMD_H3_GA_e = 3,
-    dRes_INDEX_BGN_BTI_NOT_CUT1_e = 0x2E,
-    dRes_INDEX_ALWAYS_BTI_ROPE_e = 0x7E,
-};
-enum { AT_TYPE_WIND = 0x00200000 };
-enum { dPa_name_ID_AK_JN_TORCH = 0x1EA, dPa_name_ID_AK_JP_O_KAGEROU00 = 0x4004 };
+static himo3HIO_c himo3HIO;
+static f32 himo3Scale;
+static u8 himo3HioSet;
+static cXyz himo3FireScale;
+static u32 himo3FireScaleGuard;
+static himo3HD::SaveBlock* himo3Save;
+static GXColor himo3LineColor;
+static himo3HD::LightBlock himo3LightTemplate;
+static dCcD_SrcCyl himo3CylinderSource;
+static dCcD_SrcSph himo3SphereSource;
+static dCcD_SrcSph himo3HangSphereSource;
+// HD: resLoad and getObjectRes use distinct copies of the same archive name.
+static char himo3LoadArchive[6] = {72, 105, 109, 111, 51, 0};
+// SLAMP_00, Link ROPEEND, then three more SLAMP_00 entries.
+static s32 hook_bmd[5] = {4, 46, 4, 4, 4};
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline BOOL fopAcM_createHeap(fopAc_ac_c* a, u32 size, u32 align) { return gabi::call<BOOL>(0x025D5FEC, a, size, align); }
-static inline void fopAcM_adjustHeap(fopAc_ac_c* a) { gabi::call(0x025D6100, a); }
-static inline cXyz* dKyw_get_wind_vec() { return gabi::call<cXyz*>(0x0257DAA8); }
-static inline u32 dKyw_get_wind_power() { return gabi::call<u32>(0x0257DB04); }
-static inline void mDoMtx_XrotS(Mtx34* m, s16 x) { gabi::call(0x025F18EC, m, x); }
-static inline void __construct_array(void* p, u32 n, u32 size, u32 ctor) { gabi::call(0x028EFFD0, p, n, size, ctor); }
-static inline void __destroy_arr(void* p, u32 n, u32 size, u32 dtor, u32 flags) { gabi::call(0x028F0164, p, n, size, dtor, flags); }
+// HD: native adapters preserve the verified register types.
+void himo3UpdateLine(void*, u16, f32, GXColor*, u16, dKy_tevstr_c*);
+void himo3SetLineMaterial(u32, void*);
+void himo3ConstructLine(void*);
+void himo3ConstructPacket(void*);
+void himo3ConstructAcch(void*);
+void himo3ConstructSphere(void*);
+BOOL himo3InitLine(void*, s32, s32, void*, s32);
+void himo3SetupPacket(void*, s32);
+void himo3ClearRope(void*, u32);
+void himo3DestroySphere(void*, s32);
+void himo3DestroyAcch(void*, s32);
+void himo3DestroyCircle(void*, s32);
+void himo3DestroyPacket(void*, s32);
+void himo3DestroyLine(void*, s32);
+void himo3DestroyActor(void*, s32);
+
+BOOL himo3FopAcM_createHeap(fopAc_ac_c*, u32, u32);
+void himo3FopAcM_adjustHeap(fopAc_ac_c*);
+cXyz* himo3DKyw_get_wind_vec();
+be<f32>* himo3DKyw_get_wind_power();
+void himo3MDoMtx_XrotS(Mtx34*, s16);
+void himo3ConstructArray(void*, u32, u32, u32);
+void himo3DestroyArray(void*, u32, u32, u32, u32);
 /* sead::SafeString equality (HD inline): both sides' virtual assureTermination (+0x14), then a
  * byte compare bounded by 0x40001 (as d_a_kb) */
-static inline bool SafeString_eq(SafeString* a, SafeString* b) {
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    u32 s1 = a->mStringTop;
-    gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b);
-    if (s1 == b->mStringTop) return true;
-    u32 p = a->mStringTop, q = b->mStringTop;
+static inline bool SafeString_eq(himo3HD::String* a, himo3HD::String* b) {
+    gabi::call_ptr(a->__vtbl->assureTermination.get(), a);
+    gabi::call_ptr(a->__vtbl->assureTermination.get(), a);
+    be<u8>* s1 = a->mStringTop;
+    gabi::call_ptr(b->__vtbl->assureTermination.get(), b);
+    if (s1 == b->mStringTop)
+        return true;
+    be<u8>* p = a->mStringTop;
+    be<u8>* q = b->mStringTop;
     for (u32 i = 0; i < 0x40001; i++) {
-        u8 c = gabi::load<u8>(p + i);
-        if (c != gabi::load<u8>(q + i)) return false;
-        if (c == 0) return true;
+        u8 c = p[i];
+        if (c != q[i])
+            return false;
+        if (c == 0)
+            return true;
     }
     return false;
 }
-/* strcmp(dComIfGp_getStartStageName(), lit) == 0 (HD: SafeString comparison; the start stage name at play+0x5134) */
-static inline bool dComIfGp_isStartStage(u32 lit) {
+/* strcmp(dComIfGp_getStartStageName(), lit) == 0 (HD: SafeString comparison; the start stage name
+ * at play+0x5134) */
+static inline bool himo3IsStartStage(const char* lit) {
     gabi::Local<SafeString> a;
-    a->mStringTop = lit;
+    a->mStringTop = gabi::guest_addr(lit);
     a->__vtbl = SAFESTRING_VTBL;
     gabi::Local<SafeString> b;
     b->mStringTop = dComIfGp_ea() + 0x5134;
     b->__vtbl = SAFESTRING_VTBL;
-    return SafeString_eq(a.get(), b.get());
+    return SafeString_eq(reinterpret_cast<himo3HD::String*>(a.get()),
+                         reinterpret_cast<himo3HD::String*>(b.get()));
 }
 
-/* himo3HIO_c (HD: vtable after the members) */
-struct himo3HIO_c {
-    /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ u8 _01;
-    /* 0x02 */ be<s16> m06;
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<f32> m0C;
-    /* 0x0C */ be<s16> m10;
-    /* 0x0E */ be<s16> m12;
-    /* 0x10 */ be<s16> m14;
-    /* 0x12 */ u8 _12[2];
-    /* 0x14 */ be<f32> m18;
-    /* 0x18 */ be<u32> __vtbl;
-};
-WWHD_SIZE(himo3HIO_c, 0x1C);
-static himo3HIO_c& l_HIO() { return *gabi::at<himo3HIO_c>(0x104646E0); }
-static be<f32>& HIMO3_SCALE() { return *gabi::at<be<f32>>(0x104646C0); }
-static be<u8>& hio_set() { return *gabi::at<be<u8>>(0x101B6EAC); }
+/* dPath (HD layout as GameCube): m_num u16 +0, m_nextID u16 +2, loop flag byte +5, points +8 (0x10
+ * each: mArg3 +3, position +4) */
+static inline himo3HD::PathPoint* dPath_point(himo3HD::Path* ppd, s32 i) {
+    return ppd->m_points.get() + i;
+}
 
-struct himo3_s {
-    /* 0x00 */ cXyz m00;
-    /* 0x0C */ cXyz m0C;
-};
-WWHD_SIZE(himo3_s, 0x18);
-
-struct h3_ga_s {
-    /* 0x00 */ gptr<J3DModel> mpModel;
-    /* 0x04 */ cXyz mPos;
-    /* 0x10 */ cXyz m10;
-    /* 0x1C */ csXyz m1C;
-    /* 0x22 */ u8 _22[2];
-    /* 0x24 */ be<f32> m24;
-    /* 0x28 */ be<f32> m28;
-    /* 0x2C */ be<s16> m2C;
-    /* 0x2E */ be<u8> m2E;
-    /* 0x2F */ be<u8> m2F;
-};
-WWHD_SIZE(h3_ga_s, 0x30);
-
-/* GameCube +0x11C up to m15C0; HD inserts a mDoExt_J3DModelPacketS (0xB0) after m15C0 and the
- * line material grew (0x3C -> 0x18C); m20F8 (shadow size) is gone. Size 0x2634. */
-struct himo3_class : fopAc_ac_c {
-    /* 0x03AC */ request_of_phase_process_class mPhase;
-    /* 0x03B4 */ be<u8> m0298;
-    /* 0x03B5 */ be<u8> m0299;
-    /* 0x03B6 */ be<u8> m029A;
-    /* 0x03B7 */ be<s8> m029B;
-    /* 0x03B8 */ be<s8> m029C;
-    /* 0x03B9 */ be<s8> m029D;
-    /* 0x03BA */ u8 _3BA[2];
-    /* 0x03BC */ be<u32> ppd; /* dPath* */
-    /* 0x03C0 */ be<s8> m02A4;
-    /* 0x03C1 */ u8 _3C1[3];
-    /* 0x03C4 */ cXyz m02A8;
-    /* 0x03D0 */ be<s16> m02B4[3];
-    /* 0x03D6 */ be<s16> m02BA;
-    /* 0x03D8 */ be<s16> m02BC;
-    /* 0x03DA */ be<u8> m02BE;
-    /* 0x03DB */ u8 _3DB;
-    /* 0x03DC */ himo3_s m02C0[200];
-    /* 0x169C */ u8 mLineMat[0x18C]; /* mDoExt_3DlineMat1_c (HD 0x18C; vtable at +0x130, positions at +0x184) */
-    /* 0x1828 */ be<s32> m15C0;
-    /* 0x182C */ u8 mPacket[0xB0]; /* HD: mDoExt_J3DModelPacketS */
-    /* 0x18DC */ cXyz m15C4;
-    /* 0x18E8 */ be<f32> m15D0;
-    /* 0x18EC */ be<f32> m15D4;
-    /* 0x18F0 */ be<f32> m15D8;
-    /* 0x18F4 */ be<f32> m15DC;
-    /* 0x18F8 */ be<f32> m15E0;
-    /* 0x18FC */ be<f32> m15E4;
-    /* 0x1900 */ be<f32> m15E8;
-    /* 0x1904 */ u8 _1904[4];
-    /* 0x1908 */ be<f32> m15F0;
-    /* 0x190C */ be<f32> m15F4;
-    /* 0x1910 */ be<s16> m15F8;
-    /* 0x1912 */ be<s16> m15FA;
-    /* 0x1914 */ be<f32> m15FC;
-    /* 0x1918 */ LIGHT_INFLUENCE m1600;
-    /* 0x193C */ be<f32> m1620;
-    /* 0x1940 */ cXyz m1624;
-    /* 0x194C */ cXyz m1630;
-    /* 0x1958 */ dBgS_AcchCir mAcchCir;
-    /* 0x1998 */ dBgS_ObjAcch mAcch;
-    /* 0x1B5C */ Mtx34 m1840;
-    /* 0x1B8C */ be<f32> m1870;
-    /* 0x1B90 */ u8 _1B90[4];
-    /* 0x1B94 */ be<f32> m1878;
-    /* 0x1B98 */ be<f32> m187C;
-    /* 0x1B9C */ gptr<J3DModel> mpModel;
-    /* 0x1BA0 */ dCcD_Stts mStts;
-    /* 0x1BDC */ dCcD_Sph mSphs[5];
-    /* 0x21B8 */ dCcD_Sph mSph;
-    /* 0x22E4 */ dCcD_Cyl mCyl;
-    /* 0x2414 */ dPa_followEcallBack m20FC;
-    /* 0x2428 */ be<u8> m2110;
-    /* 0x2429 */ be<u8> m2111;
-    /* 0x242A */ u8 _242A[2];
-    /* 0x242C */ h3_ga_s m2114[1];
-    /* 0x245C */ dKy_tevstr_c m2144;
-    /* 0x2624 */ cXyz m21F4;
-    /* 0x2630 */ be<s16> m2200;
-    /* 0x2632 */ u8 _2632[2];
-};
-WWHD_OFFSET(himo3_class, m02C0, 0x3DC);
-WWHD_OFFSET(himo3_class, m15C0, 0x1828);
-WWHD_OFFSET(himo3_class, m15C4, 0x18DC);
-WWHD_OFFSET(himo3_class, m1600, 0x1918);
-WWHD_OFFSET(himo3_class, mAcch, 0x1998);
-WWHD_OFFSET(himo3_class, mpModel, 0x1B9C);
-WWHD_OFFSET(himo3_class, mCyl, 0x22E4);
-WWHD_OFFSET(himo3_class, m2114, 0x242C);
-WWHD_OFFSET(himo3_class, m21F4, 0x2624);
-WWHD_SIZE(himo3_class, 0x2634);
-
-/* dPath (HD layout as GameCube): m_num u16 +0, m_nextID u16 +2, loop flag byte +5, points +8 (0x10 each:
- * mArg3 +3, position +4) */
-static inline u32 dPath_point(u32 ppd, s32 i) { return gabi::load<u32>(ppd + 8) + i * 16; }
-
-/* daPy_py_c (HD): status word 2 at +0x3C0 (rope grab right hand: 4), left hand +0x3F0, right hand +0x3FC */
-static inline void copy_f3(cXyz* dst, u32 src) {
-    f32 z = gabi::load<f32>(src + 8);
-    f32 y = gabi::load<f32>(src + 4);
-    f32 x = gabi::load<f32>(src + 0);
+/* daPy_py_c (HD): status word 2 at +0x3C0 (rope grab right hand: 4), left hand +0x3F0, right hand
+ * +0x3FC */
+static inline void copy_f3(cXyz* dst, const cXyz* src) {
+    f32 z = src->z;
+    f32 y = src->y;
+    f32 x = src->x;
     dst->y = y;
     dst->x = x;
     dst->z = z;
@@ -186,7 +105,6 @@ static inline void copy_f3(cXyz* dst, u32 src) {
 
 /* 021727D4 */
 static BOOL daHimo3_Draw(himo3_class* i_this) {
-    WWHD_FUNC(0x021727D4, BOOL, i_this);
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &i_this->current.pos, &i_this->tevStr);
     f32 fVar1;
     if (i_this->m0298 == 0xF) {
@@ -196,12 +114,15 @@ static BOOL daHimo3_Draw(himo3_class* i_this) {
     }
 
     /* i_this->mLineMat.update(m15C0, fVar1, (GXColor){200, 150, 50, 255}, 0, &tevStr) */
-    gabi::call(0x025EC62C, i_this->mLineMat, (u16)gabi::load<u16>(gabi::ea(i_this) + 0x182A), fVar1, (u32)0x101B6EE4, (u16)0,
-               &i_this->tevStr);
+    himo3UpdateLine(&i_this->mLineMat,
+                    reinterpret_cast<himo3HD::SegmentCount*>(&i_this->m15C0)->low, fVar1,
+                    &himo3LineColor, (u16)0, &i_this->tevStr);
     /* dComIfGd_set3DlineMat(&mLineMat): the sort packet of the line material's id */
     u32 packets = dComIfGp_ea() + 0x5FB4;
-    s32 matId = gabi::call_ptr<s32>(gabi::load<u32>(gabi::load<u32>(gabi::ea(i_this) + 0x17CC) + 0x14), i_this->mLineMat);
-    gabi::call(0x025EDD04, packets + matId * 0x9C, i_this->mLineMat); /* mDoExt_3DlineMatSortPacket::setMat */
+    s32 matId =
+        gabi::call_ptr<s32>(i_this->mLineMat.__vtbl->getMaterialId.get(), &i_this->mLineMat);
+    himo3SetLineMaterial(packets + matId * 0x9C,
+                         &i_this->mLineMat); /* mDoExt_3DlineMatSortPacket::setMat */
 
     if (i_this->m0298 != 0xF) {
         J3DModel* model = i_this->mpModel;
@@ -226,7 +147,6 @@ static BOOL daHimo3_Draw(himo3_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x021727D4, daHimo3_Draw);
 
 /* path_move (inlined into daHimo3_Execute) */
 static inline void path_move(himo3_class* i_this) {
@@ -235,21 +155,23 @@ static inline void path_move(himo3_class* i_this) {
     switch (i_this->m02A4) {
     case 0: {
         i_this->m029C = (s8)(i_this->m029C + i_this->m029D);
-        u32 ppd = i_this->ppd;
-        if (i_this->m029C >= (s8)gabi::load<u8>(ppd + 1) /* (s8)ppd->m_num */) {
-            u32 p7 = i_this->ppd;
-            if (gabi::load<u8>(ppd + 5) & 1 /* dPath_ChkClose */) {
+        himo3HD::Path* ppd = i_this->ppd;
+        // HD: only the low byte of the path count is compared.
+        if (i_this->m029C >= (s8)ppd->countBytes.low) {
+            himo3HD::Path* p7 = i_this->ppd;
+            if (ppd->m_closed & 1 /* dPath_ChkClose */) {
                 i_this->m029C = 0;
             } else {
                 i_this->m029D = -1;
-                i_this->m029C = (s8)(gabi::load<u16>(i_this->ppd) - 2);
+                i_this->m029C = (s8)(i_this->ppd->m_num - 2);
             }
 
-            u16 next = gabi::load<u16>(p7 + 2);
+            u16 next = p7->m_nextID;
             if (next != 0xFFFF) {
-                i_this->ppd = gabi::ea(dPath_GetRoomPath(next, fopAcM_GetRoomNo(actor)));
-                if (i_this->ppd == 0) /* JUT_ASSERT(732, i_this->ppd != NULL) */
-                    JUT_ASSERT_fail(STR(0x100111E8), 0x2DC, STR(0x10011208));
+                i_this->ppd = reinterpret_cast<himo3HD::Path*>(
+                    dPath_GetRoomPath(next, fopAcM_GetRoomNo(actor)));
+                if (i_this->ppd == nullptr) /* JUT_ASSERT(732, i_this->ppd != NULL) */
+                    JUT_ASSERT_fail("d_a_himo3.cpp", 0x2DC, "i_this->ppd != (0)");
             }
         } else if (i_this->m029C < 0) {
             i_this->m029D = 1;
@@ -257,10 +179,10 @@ static inline void path_move(himo3_class* i_this) {
         }
 
         i_this->m02A4 = 1;
-        u32 pnt = dPath_point(i_this->ppd, i_this->m029C);
-        i_this->m02A8.x = gabi::load<f32>(pnt + 4);
-        i_this->m02A8.y = gabi::load<f32>(pnt + 8);
-        i_this->m02A8.z = gabi::load<f32>(pnt + 0xC);
+        himo3HD::PathPoint* pnt = dPath_point(i_this->ppd, i_this->m029C);
+        i_this->m02A8.x = pnt->m_position.x;
+        i_this->m02A8.y = pnt->m_position.y;
+        i_this->m02A8.z = pnt->m_position.z;
     }
         // Fall-through
     case 1: {
@@ -269,7 +191,7 @@ static inline void path_move(himo3_class* i_this) {
         gabi::Local<cXyz> sp10;
         sp10->copy(*tmp);
         if (i_this->m02BE == 0) {
-            u8 uStack_14 = gabi::load<u8>(dPath_point(i_this->ppd, i_this->m029C) + 3);
+            u8 uStack_14 = dPath_point(i_this->ppd, i_this->m029C)->mArg3;
             if (uStack_14 != 0 && uStack_14 != 0xFF) {
                 f32 f = (f32)uStack_14;
                 cLib_addCalc2(&actor->speedF, f, 1.0f, f * 0.1f);
@@ -309,7 +231,7 @@ static inline void path_move(himo3_class* i_this) {
 /* himo3_control (inlined into daHimo3_Execute); r31 = i_this->m02C0 */
 static inline void himo3_control(himo3_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    himo3HD::Player* player = reinterpret_cast<himo3HD::Player*>(dComIfGp_getPlayer(0));
     s32 i = 1;
     himo3_s* r31 = &i_this->m02C0[1];
     f32 f28 = 0.0f;
@@ -320,10 +242,10 @@ static inline void himo3_control(himo3_class* i_this) {
         gabi::Local<cXyz> spAC;
         s16 target;
         if (i_this->m02BE == 1) {
-            if (gabi::load<u32>(gabi::ea(player) + 0x3C0) & 4 /* getRopeGrabRightHand */) {
-                copy_f3(spAC.get(), gabi::ea(player) + 0x3FC); /* getRightHandPos */
+            if (player->mStatus & 4 /* getRopeGrabRightHand */) {
+                copy_f3(spAC.get(), &player->mRightHandPos); /* getRightHandPos */
             } else {
-                copy_f3(spAC.get(), gabi::ea(player) + 0x3F0); /* getLeftHandPos */
+                copy_f3(spAC.get(), &player->mLeftHandPos); /* getLeftHandPos */
             }
             target = player->shape_angle.y;
         } else {
@@ -340,7 +262,7 @@ static inline void himo3_control(himo3_class* i_this) {
         gabi::Local<cXyz> sp88;
         sp88->copy(*tmp);
         f32 sqrt = std_sqrtf(PSVECSquareMag(sp88.get())); /* sp88.abs() */
-        f32 q = sqrt / HIMO3_SCALE();
+        f32 q = sqrt / himo3Scale;
         s32 iVar8_2 = gabi::ftoi(q);
         f28 = q - (f32)iVar8_2;
         if (iVar8_2 >= i_this->m15C0 - 1) {
@@ -394,10 +316,10 @@ static inline void himo3_control(himo3_class* i_this) {
         if (fopAcM_GetParam(actor) == 1) {
             i_this->m15E0 = 1.0f;
             i_this->m02BE = 1;
-            if (dComIfGp_isStartStage(0x10011130) /* "majroom" */ || dComIfGp_isStartStage(0x10011138) /* "Majroom" */ ||
-                dComIfGp_isStartStage(0x10011150) /* "MajyuE" */)
-            {
-                dSv_event_onEventBit(gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644), 0x402 /* UNK_0402 */);
+            if (himo3IsStartStage("majroom") /* "majroom" */ ||
+                himo3IsStartStage("Majroom") /* "Majroom" */ ||
+                himo3IsStartStage("MajyuE") /* "MajyuE" */) {
+                dSv_event_onEventBit(&himo3Save->mEvent, 0x402 /* UNK_0402 */);
             }
         } else if (fopAcM_GetParam(actor) == 2) {
             i_this->m15E0 = 1.0f;
@@ -412,19 +334,19 @@ static inline void himo3_control(himo3_class* i_this) {
     spA0->z = i_this->m15D0;
     gabi::Local<cXyz> sp7C;
     MtxPosition(spA0.get(), sp7C.get());
-    cXyz* pcVar7 = dKyw_get_wind_vec();
+    cXyz* pcVar7 = himo3DKyw_get_wind_vec();
     s16 iVar8 = cM_atan2s(pcVar7->x, pcVar7->z);
-    u32 pfVar9 = dKyw_get_wind_power();
+    be<f32>* pfVar9 = himo3DKyw_get_wind_power();
 
     if (i_this->m02BE != 0) {
-        cLib_addCalc2(&i_this->m15E8, gabi::load<f32>(pfVar9) * 0.5f, 1.0f, 0.05f);
+        cLib_addCalc2(&i_this->m15E8, f32(*pfVar9) * 0.5f, 1.0f, 0.05f);
         if (i_this->m15F0 > 0.01f) {
             i_this->m15FA = (s16)(i_this->m15FA + 1);
         } else {
             i_this->m15FA = 0;
         }
     } else {
-        cLib_addCalc2(&i_this->m15E8, gabi::load<f32>(pfVar9), 1.0f, 0.001f);
+        cLib_addCalc2(&i_this->m15E8, f32(*pfVar9), 1.0f, 0.001f);
         if (i_this->m15F0 > 0.01f) {
             i_this->m15FA = (s16)(i_this->m15FA + 1);
         } else {
@@ -470,10 +392,10 @@ static inline void himo3_control(himo3_class* i_this) {
 
         unaff_r24 = (s16)-cM_atan2s(y, z);
         unaff_r23 = cM_atan2s(x, std_sqrtf(gabi::fmadds(y, y, z * z)));
-        mDoMtx_XrotS(calc_mtx(), unaff_r24);
+        himo3MDoMtx_XrotS(calc_mtx(), unaff_r24);
         cMtx_YrotM(calc_mtx(), unaff_r23);
 
-        f32 sc = HIMO3_SCALE();
+        f32 sc = himo3Scale;
         if (bVar4 == 0) {
             spA0->z = gabi::fnmsubs(f28, sc, sc); /* HIMO3_SCALE - f28 * HIMO3_SCALE */
             bVar4++;
@@ -517,10 +439,10 @@ static inline void himo3_control(himo3_class* i_this) {
     }
 
     /* mLineMat.getPos(0) */
-    u32 pcVar10 = gabi::load<u32>(gabi::load<u32>(gabi::ea(i_this) + 0x1820));
+    cXyz* pcVar10 = *i_this->mLineMat.mPositions;
     r31 = i_this->m02C0;
-    for (i = 0; i < i_this->m15C0; i++, r31++, pcVar10 += 12) {
-        cXyz* pos = gabi::at<cXyz>(pcVar10);
+    for (i = 0; i < i_this->m15C0; i++, r31++, pcVar10++) {
+        cXyz* pos = pcVar10;
         if (!(i_this->m15E0 < 0.999f)) {
             pos->copy(r31->m00);
         } else {
@@ -533,10 +455,10 @@ static inline void himo3_control(himo3_class* i_this) {
             MtxTrans(pos->x, pos->y, pos->z, 0);
             cMtx_XrotM(calc_mtx(), unaff_r24);
             cMtx_YrotM(calc_mtx(), unaff_r23);
-            f32 fVar14 = l_HIO().m08;
+            f32 fVar14 = himo3HIO.m08;
             if (i_this->m0298 != 1) {
                 cMtx_XrotM(calc_mtx(), -0x4000);
-                fVar14 = l_HIO().m0C;
+                fVar14 = himo3HIO.m0C;
             }
             MtxScale(fVar14, fVar14, fVar14, true);
             J3DModel_setBaseTRMtx(i_this->mpModel, calc_mtx());
@@ -566,7 +488,8 @@ static inline void ga_move(himo3_class* i_this, cXyz* sp30) {
         cXyz_mi(&ga->m10, sp0C.get(), &ga->mPos);
         f32 x = sp0C->x, z = sp0C->z, y = sp0C->y;
         cLib_addCalcAngleS2(&ga->m1C.y, cM_atan2s(x, z), 2, 0x1000);
-        cLib_addCalcAngleS2(&ga->m1C.x, (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z))), 2, 0x1000);
+        cLib_addCalcAngleS2(&ga->m1C.x, (s16)-cM_atan2s(y, std_sqrtf(gabi::fmadds(x, x, z * z))), 2,
+                            0x1000);
         cMtx_YrotS(calc_mtx(), ga->m1C.y);
         cMtx_XrotM(calc_mtx(), ga->m1C.x);
         gabi::Local<cXyz> sp24;
@@ -579,9 +502,8 @@ static inline void ga_move(himo3_class* i_this, cXyz* sp30) {
 
 /* 02172A00 */
 static BOOL daHimo3_Execute(himo3_class* i_this) {
-    WWHD_FUNC(0x02172A00, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
-    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    himo3HD::Player* player = reinterpret_cast<himo3HD::Player*>(dComIfGp_getPlayer(0));
 
     if (i_this->m02BC != 0) {
         i_this->m02BC = (s16)(i_this->m02BC - 1);
@@ -607,7 +529,7 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
         dBgS* bgs = dComIfG_Bgsp();
         i_this->mAcch.CrrPos(bgs);
         J3DModel* model = i_this->mpModel;
-        i_this->m1870 = l_HIO().m18;
+        i_this->m1870 = himo3HIO.m18;
         PSMTXCopy(J3DModel_getBaseTRMtx(model), calc_mtx());
 
         if (i_this->m0298 == 0) {
@@ -647,15 +569,15 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
             JPABaseEmitter* pJVar6 = i_this->m20FC.getEmitter();
             if (pJVar6 == nullptr) {
                 /* static cXyz fire_scale(0.7f, 0.7f, 0.7f); (guard 0x10464708) */
-                cXyz* fire_scale = gabi::at<cXyz>(0x104646FC);
-                if (gabi::load<u32>(0x10464708) == 0) {
-                    gabi::store<u32>(0x10464708, 1);
+                cXyz* fire_scale = &himo3FireScale;
+                if (himo3FireScaleGuard == 0) {
+                    himo3FireScaleGuard = 1;
                     fire_scale->x = 0.7f;
                     fire_scale->y = 0.7f;
                     fire_scale->z = 0.7f;
                 }
-                dComIfGp_particle_set(dPa_name_ID_AK_JN_TORCH, &i_this->m1624, nullptr, fire_scale, 0xFF,
-                                      (dPa_levelEcallBack*)&i_this->m20FC);
+                dComIfGp_particle_set(dPa_name_ID_AK_JN_TORCH, &i_this->m1624, nullptr, fire_scale,
+                                      0xFF, (dPa_levelEcallBack*)&i_this->m20FC);
                 pJVar6 = i_this->m20FC.getEmitter();
                 i_this->m1620 = 1.0f;
             }
@@ -675,10 +597,10 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
                     z = -1.0f;
                 }
 
-                u32 e = gabi::ea(pJVar6);
-                gabi::store<f32>(e + 0x28, x); /* setDirection */
-                gabi::store<f32>(e + 0x2C, 0.1f);
-                gabi::store<f32>(e + 0x30, z);
+                himo3HD::Emitter* e = reinterpret_cast<himo3HD::Emitter*>(pJVar6);
+                e->mDirection.x = x; /* setDirection */
+                e->mDirection.y = 0.1f;
+                e->mDirection.z = z;
 
                 f32 s = std_sqrtf(gabi::fmadds(x, x, z * z));
                 f32 y = (s + s) + 1.0f;
@@ -686,9 +608,9 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
                     y = 4.0f;
                 }
 
-                gabi::store<f32>(e + 0x238, 1.0f); /* setGlobalParticleScale */
-                gabi::store<f32>(e + 0x23C, y);
-                gabi::store<f32>(e + 0x240, 1.0f);
+                e->mGlobalParticleScale.x = 1.0f; /* setGlobalParticleScale */
+                e->mGlobalParticleScale.y = y;
+                e->mGlobalParticleScale.z = 1.0f;
                 cLib_addCalc2(&i_this->m1620, cM_rndF(0.2f) + 1.0f, 0.5f, 0.02f);
             } else {
                 i_this->m1620 = 0.0f;
@@ -717,37 +639,32 @@ static BOOL daHimo3_Execute(himo3_class* i_this) {
 
     return TRUE;
 }
-VERIFY(0x02172A00, daHimo3_Execute);
 
 /* 021743E8 */
-static BOOL daHimo3_IsDelete(himo3_class*) {
-    WWHD_FUNC(0x021743E8, BOOL, (u32)0);
+static BOOL daHimo3_IsDelete(himo3_class* i_this) {
     return TRUE;
 }
-VERIFY(0x021743E8, daHimo3_IsDelete);
 
 /* 021743F0 */
 static BOOL daHimo3_Delete(himo3_class* i_this) {
-    WWHD_FUNC(0x021743F0, BOOL, i_this);
-    dComIfG_resDelete(&i_this->mPhase, STR(0x100112C8) /* "Himo3" */);
+    dComIfG_resDelete(&i_this->mPhase, "Himo3" /* "Himo3" */);
     if (i_this->m0298 == 0) {
         dKy_plight_cut(&i_this->m1600);
     }
 
     if (i_this->m2110 != 0) {
-        s8 no = l_HIO().mNo;
-        hio_set() = false;
+        s8 no = himo3HIO.mNo;
+        himo3HioSet = false;
         mDoHIO_deleteChild(no);
     }
 
     i_this->m20FC.remove();
     return TRUE;
 }
-VERIFY(0x021743F0, daHimo3_Delete);
 
-/* 0217447C himo3_class::himo3_class (HD: out of line; allocates when this == NULL) */
+/* 0217447C */
+/* himo3_class::himo3_class (HD: out of line; allocates when this == NULL) */
 static himo3_class* himo3_class_ct(himo3_class* i_this) {
-    WWHD_FUNC(0x0217447C, himo3_class*, i_this);
     if (i_this == nullptr) {
         i_this = (himo3_class*)operator_new(0x2634);
         if (i_this == nullptr)
@@ -755,33 +672,36 @@ static himo3_class* himo3_class_ct(himo3_class* i_this) {
     }
     fopAc_ac_c_ct(i_this);
     i_this->__vtbl = HIMO3_VTBL;
-    gabi::call(0x025EB82C, i_this->mLineMat); /* mDoExt_3DlineMat1_c::mDoExt_3DlineMat1_c */
-    gabi::call(0x02080404, i_this->mPacket);  /* mDoExt_J3DModelPacketS (HD) */
-    i_this->m1600.mHD20 = 1.0f;               /* LIGHT_INFLUENCE (inline) */
+    himo3ConstructLine(&i_this->mLineMat); /* mDoExt_3DlineMat1_c::mDoExt_3DlineMat1_c */
+    himo3ConstructPacket(i_this->mPacket); /* mDoExt_J3DModelPacketS (HD) */
+    i_this->m1600.mHD20 = 1.0f;            /* LIGHT_INFLUENCE (inline) */
     dBgS_AcchCir_ct(&i_this->mAcchCir);
-    gabi::call(0x024F0474, &i_this->mAcch); /* dBgS_Acch::dBgS_Acch; then the ObjAcch vtables */
-    u32 a = gabi::ea(&i_this->mAcch);
-    gabi::store<u32>(a + 0x10, 0x10011198);
-    gabi::store<u32>(a + 0x20, 0x100111A8);
-    gabi::store<u32>(a + 0x14, 0x100111B8);
-    gabi::store<u8>(a + 0x18, 1);
+    himo3ConstructAcch(&i_this->mAcch); /* dBgS_Acch::dBgS_Acch; then the ObjAcch vtables */
+    i_this->mAcch.cBgS_Chk::__vtbl = 0x10011198;
+    i_this->mAcch.dBgS_GrpPassChk::__vtbl = 0x100111A8;
+    i_this->mAcch.dBgS_PolyPassChk::__vtbl = 0x100111B8;
+    i_this->mAcch.mbObjThrough = 1;
     dCcD_Stts_ct(&i_this->mStts);
-    __construct_array(i_this->mSphs, 5, 0x12C, 0x025166F0 /* dCcD_Sph::dCcD_Sph */);
-    gabi::call(0x025166F0, &i_this->mSph);
+    himo3ConstructArray(i_this->mSphs, 5, 0x12C, 0x025166F0 /* dCcD_Sph::dCcD_Sph */);
+    himo3ConstructSphere(&i_this->mSph);
     dCcD_Cyl_ct(&i_this->mCyl, 0x10011188);
     dPa_followEcallBack_ct(&i_this->m20FC, 0, 0);
-    /* dKy_tevstr_c m2144: three copies of a 0x44-byte light block (template 0x1016E414) at +0, +0xC0, +0x144 */
-    const u32 T = 0x1016E414;
-    const u32 d[3] = {gabi::ea(&i_this->m2144), gabi::ea(&i_this->m2144) + 0xC0, gabi::ea(&i_this->m2144) + 0x144};
+    /* dKy_tevstr_c m2144: three copies of a 0x44-byte light block (template 0x1016E414) at +0,
+     * +0xC0, +0x144 */
+    himo3HD::TevLightBlocks* lights = reinterpret_cast<himo3HD::TevLightBlocks*>(&i_this->m2144);
+    himo3HD::LightBlock* blocks[3] = {&lights->first, &lights->second, &lights->third};
     for (int k = 0; k < 3; k++) {
-        for (u32 o = 0; o < 0x18; o += 4) gabi::store<f32>(d[k] + o, gabi::load<f32>(T + o));
-        for (u32 o = 0x18; o < 0x1C; o++) gabi::store<u8>(d[k] + o, gabi::load<u8>(T + o));
-        for (u32 o = 0x1C; o < 0x24; o += 2) gabi::store<s16>(d[k] + o, gabi::load<s16>(T + o));
-        for (u32 o = 0x24; o < 0x44; o += 4) gabi::store<f32>(d[k] + o, gabi::load<f32>(T + o));
+        for (u32 j = 0; j < 6; j++)
+            blocks[k]->positionAndDirection[j] = himo3LightTemplate.positionAndDirection[j];
+        for (u32 j = 0; j < 4; j++)
+            blocks[k]->color[j] = himo3LightTemplate.color[j];
+        for (u32 j = 0; j < 4; j++)
+            blocks[k]->attenuation[j] = himo3LightTemplate.attenuation[j];
+        for (u32 j = 0; j < 8; j++)
+            blocks[k]->factors[j] = himo3LightTemplate.factors[j];
     }
     return i_this;
 }
-VERIFY(0x0217447C, himo3_class_ct);
 
 /* useHeapInit (inlined into daHimo3_Create) */
 static inline cPhs_State useHeapInit(himo3_class* i_this) {
@@ -790,25 +710,28 @@ static inline cPhs_State useHeapInit(himo3_class* i_this) {
 
     void* res;
     if (i_this->m0298 == 0xF) {
-        res = dComIfG_getObjectRes(STR(0x10011144) /* "Bgn" */, dRes_INDEX_BGN_BTI_NOT_CUT1_e, SAFESTRING_VTBL);
+        res =
+            dComIfG_getObjectRes("Bgn" /* "Bgn" */, dRes_INDEX_BGN_BTI_NOT_CUT1_e, SAFESTRING_VTBL);
     } else {
-        res = dComIfG_getObjectRes(STR(0x10011158) /* "Always" */, dRes_INDEX_ALWAYS_BTI_ROPE_e, SAFESTRING_VTBL);
+        res = dComIfG_getObjectRes("Always" /* "Always" */, dRes_INDEX_ALWAYS_BTI_ROPE_e,
+                                   SAFESTRING_VTBL);
     }
-    if (!gabi::call<BOOL>(0x025EBA58, i_this->mLineMat, 1, 200, res, 0)) { /* mLineMat.init */
+    if (!himo3InitLine(&i_this->mLineMat, 1, 200, res, 0)) { /* mLineMat.init */
         return cPhs_ERROR_e;
     }
 
     J3DModelData* modelData = nullptr;
     if (i_this->m0298 != 0xF) {
         if (i_this->m0298 == 1) {
-            modelData = (J3DModelData*)dComIfG_getObjectRes(STR(0x10011160) /* "Link" */, gabi::load<s32>(0x101B6ED4), SAFESTRING_VTBL);
+            modelData = (J3DModelData*)dComIfG_getObjectRes("Link" /* "Link" */, hook_bmd[1],
+                                                            SAFESTRING_VTBL);
         } else if (i_this->m0298 <= 4) {
-            modelData = (J3DModelData*)dComIfG_getObjectRes(STR(0x10011148) /* "Himo3" */,
-                                                            gabi::load<s32>(0x101B6ED0 + 4 * i_this->m0298), SAFESTRING_VTBL);
+            modelData = (J3DModelData*)dComIfG_getObjectRes(
+                "Himo3" /* "Himo3" */, hook_bmd[i_this->m0298], SAFESTRING_VTBL);
         }
 
         if (modelData == nullptr) /* JUT_ASSERT(1063, modelData != NULL) */
-            JUT_ASSERT_fail(STR(0x100111F8), 0x427, STR(0x1001121C));
+            JUT_ASSERT_fail("d_a_himo3.cpp", 0x427, "modelData != (0)");
 
         i_this->mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (i_this->mpModel == nullptr) {
@@ -816,9 +739,10 @@ static inline cPhs_State useHeapInit(himo3_class* i_this) {
         }
 
         if (i_this->m0298 == 0) {
-            modelData = (J3DModelData*)dComIfG_getObjectRes(STR(0x10011148), dRes_INDEX_HIMO3_BMD_H3_GA_e, SAFESTRING_VTBL);
+            modelData = (J3DModelData*)dComIfG_getObjectRes("Himo3", dRes_INDEX_HIMO3_BMD_H3_GA_e,
+                                                            SAFESTRING_VTBL);
             if (modelData == nullptr) /* JUT_ASSERT(1076, modelData != NULL) */
-                JUT_ASSERT_fail(STR(0x100111F8), 0x434, STR(0x1001121C));
+                JUT_ASSERT_fail("d_a_himo3.cpp", 0x434, "modelData != (0)");
 
             i_this->m2114[0].mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
             if (i_this->m2114[0].mpModel == nullptr) {
@@ -833,16 +757,15 @@ static inline cPhs_State useHeapInit(himo3_class* i_this) {
         }
     }
 
-    /* HD: in stage 0x10011168 the shadow packet is set up */
-    if (dComIfGp_isStartStage(0x10011168)) {
-        gabi::call(0x0207FD38, i_this->mPacket, 0);
+    // HD: GanonK uses the model shadow packet.
+    if (himo3IsStartStage("GanonK")) {
+        himo3SetupPacket(i_this->mPacket, 0);
     }
     return cPhs_COMPLEATE_e;
 }
 
 /* 02174730 */
 static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x02174730, cPhs_State, a_this);
     himo3_class* i_this = (himo3_class*)a_this;
 
     /* fopAcM_ct(a_this, himo3_class) */
@@ -852,9 +775,10 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
         }
         fopAcM_OnCondition(a_this, fopAcCnd_INIT_e);
     }
-    gabi::call(0x028F5914, i_this->m02C0, 0x4B0); /* HD: clears the first 0x4B0 bytes of m02C0 */
+    himo3ClearRope(i_this->m02C0, 0x4B0); /* HD: clears the first 0x4B0 bytes of m02C0 */
 
-    cPhs_State PVar1 = dComIfG_resLoad(&i_this->mPhase, STR(0x100112EC) /* "Himo3" */);
+    cPhs_State PVar1 = dComIfG_resLoad(
+        &i_this->mPhase, reinterpret_cast<const char*>(himo3LoadArchive) /* "Himo3" */);
     if (PVar1 == cPhs_COMPLEATE_e) {
         u32 prm = fopAcM_GetParam(a_this);
         i_this->m0298 = (u8)prm;
@@ -865,12 +789,12 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
             i_this->m0298 = 0;
         }
 
-        if (fopAcM_createHeap(a_this, 0x86220, 0) == 0) {
+        if (himo3FopAcM_createHeap(a_this, 0x86220, 0) == 0) {
             return cPhs_ERROR_e;
         }
 
         PVar1 = useHeapInit(i_this);
-        fopAcM_adjustHeap(a_this);
+        himo3FopAcM_adjustHeap(a_this);
 
         if (PVar1 == cPhs_ERROR_e) {
             return cPhs_ERROR_e;
@@ -878,16 +802,16 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
 
         i_this->m15C0 = (fopAcM_GetParam(a_this) >> 8) & 0xFF;
         if (i_this->m0298 == 0xF) {
-            HIMO3_SCALE() = 22.0f;
+            himo3Scale = 22.0f;
             i_this->m15C0 = 200;
             i_this->m029A = 0xFF;
         } else {
-            HIMO3_SCALE() = 20.0f;
+            himo3Scale = 20.0f;
         }
 
-        /* HD: in stage 0x100112F4, a rope near x = 500 is lowered */
+        // HD: a rope near x = 500 in Asoko is lowered.
         bool lower = false;
-        if (dComIfGp_isStartStage(0x100112F4)) {
+        if (himo3IsStartStage("Asoko")) {
             if (std::fabs(500.0f - a_this->current.pos.x) < 50.0f) {
                 lower = true;
             }
@@ -897,7 +821,7 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
         }
 
         s32 n = i_this->m15C0;
-        f32 len = gabi::fmsubs((f32)n, HIMO3_SCALE(), 50.0f);
+        f32 len = gabi::fmsubs((f32)n, himo3Scale, 50.0f);
         i_this->m15FC = len;
         if (i_this->m0298 == 0) {
             i_this->m15FC = len - 50.0f;
@@ -908,8 +832,9 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
         }
 
         if (i_this->m029A != 0xFF) {
-            i_this->ppd = gabi::ea(dPath_GetRoomPath(i_this->m029A, fopAcM_GetRoomNo(a_this)));
-            if (i_this->ppd == 0) {
+            i_this->ppd = reinterpret_cast<himo3HD::Path*>(
+                dPath_GetRoomPath(i_this->m029A, fopAcM_GetRoomNo(a_this)));
+            if (i_this->ppd == nullptr) {
                 return cPhs_ERROR_e;
             }
             i_this->m029B = (s8)(i_this->m029A + 1);
@@ -920,17 +845,18 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
         i_this->mStts.Init(0xFF, 0xFF, a_this);
 
         if (i_this->m0298 == 0xF) {
-            i_this->mCyl.Set(gabi::at<dCcD_SrcCyl>(0x101B6F68) /* cc_cyl_src */);
+            i_this->mCyl.Set(&himo3CylinderSource /* cc_cyl_src */);
             i_this->mCyl.SetStts(&i_this->mStts);
         } else {
             for (int i = 0; i < 5; i++) {
-                i_this->mSphs[i].Set(gabi::at<dCcD_SrcSph>(0x101B6EE8) /* sph_src */);
+                i_this->mSphs[i].Set(&himo3SphereSource /* sph_src */);
                 i_this->mSphs[i].SetStts(&i_this->mStts);
             }
 
-            i_this->mSph.Set(gabi::at<dCcD_SrcSph>(0x101B6F28) /* sph2_src */);
+            i_this->mSph.Set(&himo3HangSphereSource /* sph2_src */);
             i_this->mSph.SetStts(&i_this->mStts);
-            i_this->mAcch.Set(&i_this->m1624, &i_this->m1630, a_this, 1, &i_this->mAcchCir, &a_this->speed);
+            i_this->mAcch.Set(&i_this->m1624, &i_this->m1630, a_this, 1, &i_this->mAcchCir,
+                              &a_this->speed);
 
             if (i_this->m0298 == 0) {
                 i_this->mAcchCir.SetWall(40.0f, 50.0f);
@@ -942,10 +868,10 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
             }
         }
 
-        if (!hio_set()) {
-            hio_set() = true;
+        if (!himo3HioSet) {
+            himo3HioSet = true;
             i_this->m2110 = 0;
-            l_HIO().mNo = mDoHIO_createChild(STR(0x100112FC) /* "ぶら下がりロープ" */, &l_HIO());
+            himo3HIO.mNo = mDoHIO_createChild("Climbable Rope" /* "ぶら下がりロープ" */, &himo3HIO);
         }
 
         for (int i = 0; i < 10; i++) {
@@ -954,22 +880,20 @@ static cPhs_State daHimo3_Create(fopAc_ac_c* a_this) {
     }
     return PVar1;
 }
-VERIFY(0x02174730, daHimo3_Create);
 
+// HD: the hang position is passed by pointer instead of the GameCube value parameter.
 /* 02174F44 */
 static void setActorHang(himo3_class* i_this, cXyz* arg1, s16 arg2) {
-    WWHD_FUNC(0x02174F44, void, i_this, arg1, arg2);
     i_this->m21F4.copy(*arg1);
     i_this->m2200 = arg2;
 }
-VERIFY(0x02174F44, setActorHang);
 
+// HD: compiler-generated and template code of this translation unit.
 /* 02174F64 */
 static void __sinit_d_a_himo3_cpp() {
-    WWHD_FUNC(0x02174F64, void, (u32)0);
     sinit_header_statics(0x104646C4, 0x101B6FAC);
     /* static himo3HIO_c l_HIO (inline constructor; mNo is not set) */
-    himo3HIO_c& h = l_HIO();
+    himo3HIO_c& h = himo3HIO;
     h.m06 = 0;
     h.m10 = 0xEB;
     h.m08 = 0.75f;
@@ -979,41 +903,87 @@ static void __sinit_d_a_himo3_cpp() {
     h.m14 = 0;
     h.m18 = 5.0f;
 }
-VERIFY(0x02174F64, __sinit_d_a_himo3_cpp);
 
-/* 02175050: deleting destructor of a class with a trivial destructor (himo3HIO_c) */
+/* 02175050 */
+/*: deleting destructor of a class with a trivial destructor (himo3HIO_c) */
 static void trivial_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x02175050, void, p, flags);
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x02175050, trivial_dt);
 
-/* 02175064: himo3_class deleting destructor (HD) */
+/* 02175064 */
+/*: himo3_class deleting destructor (HD) */
 static void himo3_class_dt(himo3_class* p, s32 flags) {
-    WWHD_FUNC(0x02175064, void, p, flags);
     if (p != nullptr) {
         dCcD_Cyl_dt(&p->mCyl, 2);
-        gabi::call(0x02515AE8, &p->mSph, 2); /* dCcD_Sph::~dCcD_Sph */
-        __destroy_arr(p->mSphs, 5, 0x12C, 0x02515AE8, 0);
+        himo3DestroySphere(&p->mSph, 2); /* dCcD_Sph::~dCcD_Sph */
+        himo3DestroyArray(p->mSphs, 5, 0x12C, 0x02515AE8, 0);
         dCcD_Stts_dt(&p->mStts, 2);
         /* dBgS_ObjAcch::~dBgS_ObjAcch (inline): the base vtables, then dBgS_Acch::~dBgS_Acch */
-        u32 a = gabi::ea(&p->mAcch);
-        gabi::store<u32>(a + 0x20, 0x100111A8);
-        gabi::store<u32>(a + 0x14, 0x100111B8);
-        gabi::call(0x024EFD9C, &p->mAcch, 0);
-        gabi::call(0x02018034, gabi::at<u8>(gabi::ea(&p->mAcchCir) + 0x14), 2); /* mAcchCir's cM3dGCir */
-        gabi::call(0x02082DDC, p->mPacket, 2);                                 /* mDoExt_J3DModelPacketS::~ */
-        gabi::call(0x025EB8B8, p->mLineMat, 2);                                /* mDoExt_3DlineMat1_c::~ (matcher: draw) */
-        gabi::call(0x025D50BC, p, 0);                                          /* fopAc_ac_c::~fopAc_ac_c */
+        p->mAcch.dBgS_GrpPassChk::__vtbl = 0x100111A8;
+        p->mAcch.dBgS_PolyPassChk::__vtbl = 0x100111B8;
+        himo3DestroyAcch(&p->mAcch, 0);
+        himo3DestroyCircle(&p->mAcchCir.m_cir, 2); /* mAcchCir's cM3dGCir */
+        himo3DestroyPacket(p->mPacket, 2);         /* mDoExt_J3DModelPacketS::~ */
+        himo3DestroyLine(&p->mLineMat, 2);         /* mDoExt_3DlineMat1_c::~ (matcher: draw) */
+        himo3DestroyActor(p, 0);                   /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);
     }
 }
-VERIFY(0x02175064, himo3_class_dt);
 
-/* 02175144: empty virtual */
-static void empty_virtual(void* p) {
-    WWHD_FUNC(0x02175144, void, p);
-}
-VERIFY(0x02175144, empty_virtual);
+/* 02175144 */
+/*: empty virtual */
+static void empty_virtual(void* p) {}
+/* WWHD glue (tools/verify/autoglue.py)
+data himo3LoadArchive 100112EC
+str 100111E8 in 02172A00
+str 10011208
+str 100112C8 in 021743F0
+str 10011144
+str 10011158
+str 10011160
+str 10011148 in 02174730
+str 100111F8 in 02174730
+str 1001121C
+str 100112FC "Climbable Rope" renamed # Japanese HIO label retained at its guest address
+str 10011130
+str 10011138
+str 10011150
+str 10011168
+str 100112F4
+data himo3HIO 104646E0
+data himo3Scale 104646C0
+data himo3HioSet 101B6EAC
+data himo3FireScale 104646FC
+data himo3FireScaleGuard 10464708
+data himo3Save 101F84DC
+data himo3LineColor 101B6EE4
+data himo3LightTemplate 1016E414
+data himo3CylinderSource 101B6F68
+data himo3SphereSource 101B6EE8
+data himo3HangSphereSource 101B6F28
+data hook_bmd 101B6ED0
+ext 025D5FEC BOOL himo3FopAcM_createHeap(fopAc_ac_c*, u32, u32)
+ext 025D6100 void himo3FopAcM_adjustHeap(fopAc_ac_c*)
+ext 0257DAA8 cXyz* himo3DKyw_get_wind_vec()
+ext 0257DB04 be<f32>* himo3DKyw_get_wind_power()
+ext 025F18EC void himo3MDoMtx_XrotS(Mtx34*, s16)
+ext 028EFFD0 void himo3ConstructArray(void*, u32, u32, u32)
+ext 028F0164 void himo3DestroyArray(void*, u32, u32, u32, u32)
+ext 025EC62C void himo3UpdateLine(void*, u16, f32, GXColor*, u16, dKy_tevstr_c*)
+ext 025EDD04 void himo3SetLineMaterial(u32, void*)
+ext 025EB82C void himo3ConstructLine(void*)
+ext 02080404 void himo3ConstructPacket(void*)
+ext 024F0474 void himo3ConstructAcch(void*)
+ext 025166F0 void himo3ConstructSphere(void*)
+ext 025EBA58 BOOL himo3InitLine(void*, s32, s32, void*, s32)
+ext 0207FD38 void himo3SetupPacket(void*, s32)
+ext 028F5914 void himo3ClearRope(void*, u32)
+ext 02515AE8 void himo3DestroySphere(void*, s32)
+ext 024EFD9C void himo3DestroyAcch(void*, s32)
+ext 02018034 void himo3DestroyCircle(void*, s32)
+ext 02082DDC void himo3DestroyPacket(void*, s32)
+ext 025EB8B8 void himo3DestroyLine(void*, s32)
+ext 025D50BC void himo3DestroyActor(void*, s32)
+*/

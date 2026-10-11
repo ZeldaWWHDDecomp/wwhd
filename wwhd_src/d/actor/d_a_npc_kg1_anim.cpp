@@ -1,60 +1,79 @@
 /* Salvatore (Squid-Hunt), reconstructed from WWHD. */
-#include "d/actor/d_a_npc_kg1.h"
+#include "d/actor/d_a_npc_kg1_anim.h"
 
-template<class T> static T readAt(u32 p,u32 off) { return gabi::load<T>(p+off); }
-template<class T> static void writeAt(u32 p,u32 off,T v) { gabi::store<T>(p+off,v); }
-static u32 playObject() { return gabi::call<u32>(0x025200D4); }
-static u32 modelOf(daNpc_Kg1_c* a) { return readAt<u32>(readAt<u32>(gabi::ea(a),0x44C),0x90); }
-static u32 objectResource(s32 id) {
-    struct ResourceName_l { u8 padding[8]; SafeString name; };
-    gabi::Local<ResourceName_l> storage; SafeString* name=&storage->name;
-    name->mStringTop=0x1001BF4C; name->__vtbl=0x1001BC44;
-    u32 control=gabi::load<u32>(0x101F4F28);
-    return gabi::call<u32>(0x026066C4,control,name,id);
+const gc_tu_data gc_tu = {.safeString = 0x1001BC44};
+static Kg1AnimationWords anm_prm;
+static Kg1ResourceIndices bcks_tbl;
+static Kg1TextureIndices btp_tbl;
+static Kg1ResourceControl resources;
+
+static J3DAnmTransform *objectResource(s32 index) {
+    gabi::Local<Kg1ResourceName> storage;
+    SafeString *name = &storage->name;
+    name->mStringTop = gabi::guest_addr("Kg");
+    name->__vtbl = gc_tu.safeString;
+    return Kg1_getResource(resources.control, name, index);
 }
-void daNpc_Kg1_setAnm(daNpc_Kg1_c* a) {
-    WWHD_FUNC(0x02265E24,void,a);
-    // A private copy preserves the GHS animation table across arbitrary callee effects.
-    struct AnimationTable_l { u8 callFrame[32]; be<u32> values[48]; };
-    gabi::Local<AnimationTable_l> table;
-    u32 tableAddress=gabi::ea(table->values);
-    for(int i=0;i<48;++i) gabi::store<u32>(tableAddress+4*i,gabi::load<u32>(0x1001BDA0+4*i));
-    auto byte=[&](s32 anim,int off)->s8 { return gabi::load<s8>(tableAddress+(u32)anim*16+off); };
-    auto word=[&](s32 anim,int off)->u32 { return gabi::load<u32>(tableAddress+(u32)anim*16+off); };
-    auto number=[&](s32 anim,int off)->f32 { return std::bit_cast<f32>(word(anim,off)); };
-    s8 previous=a->mPreviousAnimation,requested=a->mRequestedAnimation;
-    if(previous!=requested) gabi::call<BOOL>(0x0226586C,a,gabi::load<s16>(0x1001BD88+2*(u32)(s32)requested),1);
-    s8 animation=a->mAnimation;
-    u32 morf;
-    if(animation==2 || ((u32)(s32)animation>=4 && (u32)(s32)animation<=9)) {
-        a->mSpecialAnimation=1;
-        if(a->mAnimation==9) {
-            morf=readAt<u32>(gabi::ea(a),0x44C);
-            if(readAt<f32>(morf,0x9C)==31.0f) writeAt<f32>(gabi::ea(a),0x7E4,1.0f);
-            morf=readAt<u32>(gabi::ea(a),0x44C);
-        } else morf=readAt<u32>(gabi::ea(a),0x44C);
-    } else { a->mSpecialAnimation=0; morf=readAt<u32>(gabi::ea(a),0x44C); }
-    previous=a->mPreviousAnimation; requested=a->mRequestedAnimation;
-    if(previous!=requested) {
-        s8 bck=byte(requested,0);
-        if(bck!=-1) {
-            a->mAnimation=bck;
-            u32 animationResource=objectResource(gabi::load<s32>(0x1001BD60+4*(u32)(s32)bck));
-            requested=a->mRequestedAnimation;
-            gabi::call(0x025E4A98,morf,animationResource,(s32)word(requested,12),number(requested,4),number(requested,8),0.0f,-1.0f,0);
-            requested=a->mRequestedAnimation;
-            f32 speed=number(requested,8);
-            if(speed<0.0f) {
-                writeAt<f32>(morf,0x9C,(f32)readAt<s16>(morf,0xA2));
-                requested=a->mRequestedAnimation;
+
+/* 02265E24 */
+void daNpc_Kg1_setAnm(daNpc_Kg1_c *actor) {
+    Kg1Actor *a = reinterpret_cast<Kg1Actor *>(actor);
+    // HD: retain the private table copy across arbitrary callee effects.
+    gabi::Local<Kg1LocalAnimationWords> table;
+    for (int i = 0; i < 48; ++i)
+        table->words[i] = u32(anm_prm.words[i]);
+    Kg1AnimationParameter *parameters = reinterpret_cast<Kg1AnimationParameter *>(table->words);
+    s8 previous = a->mPreviousAnimation, requested = a->mRequestedAnimation;
+    if (previous != requested)
+        daNpc_Kg1_initTexPatternAnm(actor, btp_tbl.values[requested], 1);
+    s8 animation = a->mAnimation;
+    Kg1Morf *morf;
+    if (animation == 2 || ((u32)(s32)animation >= 4 && (u32)(s32)animation <= 9)) {
+        a->mSpecialAnimation = 1;
+        if (a->mAnimation == 9) {
+            morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
+            if (f32(morf->mFrame) == 31.0f)
+                a->mTalkAnimationWeight = 1.0f;
+            morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
+        } else
+            morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
+    } else {
+        a->mSpecialAnimation = 0;
+        morf = reinterpret_cast<Kg1Morf *>(a->mpMorf.get());
+    }
+    previous = a->mPreviousAnimation;
+    requested = a->mRequestedAnimation;
+    if (previous != requested) {
+        s8 bck = parameters[requested].mAnmIdx;
+        if (bck != -1) {
+            a->mAnimation = bck;
+            J3DAnmTransform *animationResource = objectResource(bcks_tbl.values[bck]);
+            requested = a->mRequestedAnimation;
+            Kg1_setMorfAnm(morf, animationResource, parameters[requested].mLoopMode, parameters[requested].mMorf,
+                           parameters[requested].mPlaySpeed, 0.0f, -1.0f, 0);
+            requested = a->mRequestedAnimation;
+            f32 speed = parameters[requested].mPlaySpeed;
+            if (speed < 0.0f) {
+                morf->mFrame = f32(s16(morf->mEnd));
+                requested = a->mRequestedAnimation;
             }
         }
     }
-    a->mPreviousAnimation=requested;
-    if((readAt<u8>(morf,0xA7)&1) || readAt<f32>(morf,0x98)==0.0f) {
-        requested=a->mRequestedAnimation;
-        s8 next=byte(requested,1);
-        if(next!=-1 && word(requested,12)==0) a->mRequestedAnimation=next;
+    a->mPreviousAnimation = requested;
+    if ((u8(morf->mFlags) & 1) || f32(morf->mRate) == 0.0f) {
+        requested = a->mRequestedAnimation;
+        s8 next = parameters[requested].mNextPrmIdx;
+        if (next != -1 && u32(s32(parameters[requested].mLoopMode)) == 0)
+            a->mRequestedAnimation = next;
     }
 }
-VERIFY(0x02265E24,daNpc_Kg1_setAnm);
+/* WWHD glue
+ data anm_prm 1001BDA0
+ data bcks_tbl 1001BD60
+ data btp_tbl 1001BD88
+ data resources 101F4F28
+ ext 0226586C BOOL daNpc_Kg1_initTexPatternAnm(daNpc_Kg1_c*, s32, s32)
+ ext 026066C4 J3DAnmTransform* Kg1_getResource(void*, SafeString*, s32)
+ ext 025E4A98 void Kg1_setMorfAnm(Kg1Morf*, J3DAnmTransform*, s32, f32, f32, f32, f32, u32)
+ str 1001BF4C "Kg"
+*/

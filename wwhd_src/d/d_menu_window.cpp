@@ -1,752 +1,483 @@
-/* Native HD PlaceName screen and retained menu event helper. */
-#include "wwhd.h"
-u32 place_026C97E4(u32 a3,u32 a4) {
-WWHD_FUNC(0x026C97E4,u32,a3,a4);
-u32 v0=0,v3=a3,v4=a4,v12=0,v30=0,v31=0;
-bool equal=false;
-v31 = v4;
-v30 = v3; equal=v30==0;
-if (equal) { goto L_026C9838; }
-v0 = 0u + 0x10100000u;
-v3 = v30;
-{ uint64_t t = (uint64_t)v0 + 0x00001A18u; v0 = (uint32_t)t; }
-v12 = 0u + 0x10100000u;
-gabi::store<u32>(v30 + 0x0000002Cu, v0);
-v12 = v12 + 0x00001A28u;
-v4 = 0u + 0x00000000u;
-gabi::store<u32>(v30 + 0x00000030u, v12);
-v3=gabi::call<u32>(0x026F88F0,v3,v4);
-v0 = v31 & 0x00000001u; equal=v0==0;
-if (equal) { goto L_026C9838; }
-v3 = v30;
-v3=gabi::call<u32>(0x0273AF40,v3);
-L_026C9838: ;
-return v3;
-return v3;
-}
-VERIFY(0x026C97E4,place_026C97E4);
-u32 place_026C9850(u32 a3) {
-WWHD_FUNC(0x026C9850,u32,a3);
-u32 v0=0,v3=a3,v4=0,v12=0,v31=0;
-bool equal=false;u32 count=0;
-v31 = v3;
-v3=gabi::call<u32>(0x025200D4);
-v0 = gabi::load<u8>(v3 + 0x00005BE2u);
-equal=((int32_t)v0)==(2);
-if (!equal) { goto L_026C9884; }
-v4 = 0u + 0x104A0000u;
-v3 = v31 + 0x00000018u;
-v4 = v4 + 0xFFFFA138u;
-v3=gabi::call<u32>(0x020063C0,v3,v4);
-L_026C9884: ;
-v12 = gabi::load<u32>(v31 + 0x00000004u);
-v0 = gabi::load<u32>(v12 + 0x0000008Cu);
-count = v0;
-v3 = v31;
-v3=gabi::call_ptr<u32>(count,v3);
-return v3;
-return v3;
-}
-VERIFY(0x026C9850,place_026C9850);
-u32 place_026C98AC(u32 a3) {
-WWHD_FUNC(0x026C98AC,u32,a3);
-gabi::Local<u8[48]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=0,v5=0,v7=0,v8=0,v9=0,v12=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
-f64 q1=0;
-bool less=false;
-v30 = v3;
-v3=gabi::call<u32>(0x025200D4);
-v0 = gabi::load<u8>(v3 + 0x00005BE1u);
-less=(v0)<(0x0013u);
-if (less) { goto L_026C98D4; }
-v0 = 0u + 0x00000000u;
-L_026C98D4: ;
-v25 = 0u + 0x00000000u;
-v28 = 0u + 0x104A0000u;
-v29 = v30 + 0x00000050u;
-v27 = 0u + 0x10100000u;
-v31 = rotl32(v0, 3) & 0xFFFFFFF8u;
-v26 = v29;
-v28 = v28 + 0xFFFFA070u;
-v27 = v27 + 0x0000163Cu;
-goto L_026C9900;
-L_026C98F8: ;
-less=(v25)<(0x0002u);
-if (!less) { goto L_026C9908; }
-L_026C9900: ;
-v9 = v26;
-goto L_026C990C;
-L_026C9908: ;
-v9 = v29;
-L_026C990C: ;
-v7 = gabi::load<u32>(v30 + 0x00000044u);
-v8 = gabi::load<u32>(v7 + 0x00000004u);
-v0 = gabi::load<u32>(v8 + 0x0000001Cu);
-gabi::store<u32>(v1+0x0C,v27);
-gabi::store<u32>(v1+0x08,v0);
-v5 = v28 + v31;
-v3 = gabi::load<u32>(v9 + 0x00000000u);
-v4 = v1 + 0x00000008u;
-v3=gabi::call<u32>(0x027045B0,v3,v4,v5);
-v25 = v25 + 0x00000001u;
-less=((int32_t)v25)<(2);
-v26 = v26 + 0x00000004u;
-if (less) { goto L_026C98F8; }
-v5 = gabi::load<u32>(v30 + 0x00000044u);
-v12 = 0u + 0x10100000u;
-q1=gabi::load<f32>(v12 + 0x000016E8u);
-v4 = 0u + 0x00000000u;
-v3 = gabi::load<u32>(v5 + 0x000000D4u);
-v5 = 0u + 0x00000001u;
-v3=gabi::call<u32>(0x020053E4,v3,v4,v5,q1);
-v0 = 0u + 0x00000001u;
-gabi::store<u8>(v30 + 0x00000058u, v0);
-return v3;
-return v3;
-}
-VERIFY(0x026C98AC,place_026C98AC);
-u32 place_026C9978(u32 a3) {
-WWHD_FUNC(0x026C9978,u32,a3);
-u32 v0=0,v3=a3,v4=0,v12=0,v31=0;
-bool equal=false;u32 count=0;
-v31 = v3;
-v3=gabi::call<u32>(0x025200D4);
-v0 = gabi::load<u8>(v3 + 0x00005BE2u);
-equal=((int32_t)v0)==(1);
-if (!equal) { goto L_026C99AC; }
-v4 = 0u + 0x104A0000u;
-v3 = v31 + 0x00000018u;
-v4 = v4 + 0xFFFFA168u;
-v3=gabi::call<u32>(0x020063C0,v3,v4);
-L_026C99AC: ;
-v12 = gabi::load<u32>(v31 + 0x00000004u);
-v0 = gabi::load<u32>(v12 + 0x0000008Cu);
-count = v0;
-v3 = v31;
-v3=gabi::call_ptr<u32>(count,v3);
-return v3;
-return v3;
-}
-VERIFY(0x026C9978,place_026C9978);
-u32 place_026C99D4(u32 a3) {
-WWHD_FUNC(0x026C99D4,u32,a3);
-u32 v3=a3,v4=0,v5=0,v12=0;
-f64 q1=0;
+/* dMenu_PlaceName_c screen and the retained placename event helper.
+ * GameCube event naming; HD uses a native layout, two text boxes and state delegates.
+ * All fifteen entry points retain their verified register returns and call/load ordering. */
+#include "d/d_menu_window.h"
+using namespace MenuHD;
 
-v12 = 0u + 0x10100000u;
-q1=gabi::load<f32>(v12 + 0x000016E8u);
-v12 = gabi::load<u32>(v3 + 0x00000044u);
-v4 = 0u + 0x00000001u;
-v3 = gabi::load<u32>(v12 + 0x000000D4u);
-v5 = v4;
-v3=gabi::call<u32>(0x020053E4,v3,v4,v5,q1);
-return v3;
-return v3;
-}
-VERIFY(0x026C99D4,place_026C99D4);
-u32 place_026C99F0(u32 a3) {
-WWHD_FUNC(0x026C99F0,u32,a3);
-u32 v0=0,v3=a3,v4=0,v11=0,v12=0,v31=0;
-bool equal=false;u32 count=0;
-v31 = v3;
-v11 = gabi::load<u32>(v31 + 0x00000044u);
-v3 = gabi::load<u32>(v11 + 0x000000D4u);
-v4 = 0u + 0x00000001u;
-v3=gabi::call<u32>(0x02005840,v3,v4);
-equal=((int32_t)v3)==(0);
-if (equal) { goto L_026C9A2C; }
-v4 = 0u + 0x104A0000u;
-v3 = v31 + 0x00000018u;
-v4 = v4 + 0xFFFFA108u;
-v3=gabi::call<u32>(0x020063C0,v3,v4);
-L_026C9A2C: ;
-v12 = gabi::load<u32>(v31 + 0x00000004u);
-v0 = gabi::load<u32>(v12 + 0x0000008Cu);
-count = v0;
-v3 = v31;
-v3=gabi::call_ptr<u32>(count,v3);
-return v3;
-return v3;
-}
-VERIFY(0x026C99F0,place_026C99F0);
-u32 place_026C9A54(u32 a3) {
-WWHD_FUNC(0x026C9A54,u32,a3);
-u32 v3=a3,v12=0,v31=0;
+static DestructorRecord l_destructorList;
+static DestructorRecord l_globalDestructor;
+static DestructorRecord l_headerDestructor;
+static DestructorRecord l_archiveDestructor;
+static f32 l_initialX;
+static f32 l_initialY;
+static f32 mInitialX;
+static f32 mInitialY;
+static u8 l_headerByte;
+static u8 l_archiveByte;
+static SafeString l_moduleName;
+static StringPair l_animationNames;
+static StringPair l_animationRoots;
+static StringPair l_textBoxNames;
+static LocationNames l_locationNames;
+static SafeString l_layoutName;
+static StateID StateID_Wait;
+static StateID StateID_InAll;
+static StateID StateID_OutAll;
+static AnimationIndices l_animationIndices;
+static f32 l_animationZero;
+static f32 l_animationEnd;
+static u32 l_stateIdGuard;
+static u32 l_nextStateId;
+static u32 mDemoFrame;
+static u32 mDemoMode;
+static u32 mSave;
+static u32 mAllocationManager;
 
-v31 = v3;
-v3=gabi::call<u32>(0x025200D4);
-v12 = 0u + 0x00000000u;
-gabi::store<u8>(v3 + 0x00005BE2u, v12);
-gabi::store<u8>(v31 + 0x00000058u, v12);
-return v3;
-return v3;
+/* 026C9CE4 */
+u32 dMs_placenameMove() {
+    auto* play = gabi::at<Play>(menuHD_getPlay());
+    if (!play->mEventRunning.get())
+        return gabi::ea(play);
+
+    play = gabi::at<Play>(menuHD_getPlay());
+    u32 result = menuHD_startCheck(&play->mEventManager, "awake");
+    if (s32(result) != 0) {
+        const u32 frame = mDemoFrame.get();
+        if (s32(frame) == 200) {
+            play = gabi::at<Play>(menuHD_getPlay());
+            play->mStageNameIndex = 0;
+            play->mStageNameStatus = StageNameOpen;
+            auto* save = gabi::at<Save>(mSave.get());
+            return menuHD_onEventBit(&save->mEvent, 0x3510);
+        }
+        if (s32(frame) == 350) {
+            play = gabi::at<Play>(menuHD_getPlay());
+            play->mStageNameStatus = StageNameClose;
+            return gabi::ea(play);
+        }
+        return result;
+    }
+
+    play = gabi::at<Play>(menuHD_getPlay());
+    result = menuHD_startCheck(&play->mEventManager, "majyuu_shinnyuu");
+    if (s32(result) == 0)
+        return result;
+    const u32 frame = mDemoFrame.get();
+    if (s32(frame) == 2900) {
+        play = gabi::at<Play>(menuHD_getPlay());
+        play->mStageNameIndex = 1;
+        play->mStageNameStatus = StageNameOpen;
+        return gabi::ea(play);
+    }
+    if (s32(frame) == 3050) {
+        play = gabi::at<Play>(menuHD_getPlay());
+        play->mStageNameStatus = StageNameClose;
+        return gabi::ea(play);
+    }
+    // HD: the last event-query register is observable even when no stage-name flag changes.
+    return result;
 }
-VERIFY(0x026C9A54,place_026C9A54);
-u32 place_026C9A8C(u32 a3) {
-WWHD_FUNC(0x026C9A8C,u32,a3);
-u32 v0=0,v3=a3,v10=0,v11=0,v12=0,v31=0;
-bool equal=false;
-v31 = v3; equal=v31==0;
-if (!equal) { goto L_026C9AB4; }
-v3 = 0u + 0x0000005Cu;
-v3=gabi::call<u32>(0x0273AD10,v3);
-v31 = v3; equal=v31==0;
-if (equal) { goto L_026C9AF8; }
-L_026C9AB4: ;
-v3 = v31;
-v3=gabi::call<u32>(0x026F89E8,v3);
-v0 = 0u + 0x10100000u;
-v11 = 0u + 0x10100000u;
-{ uint64_t t = (uint64_t)v0 + 0x00001908u; v0 = (uint32_t)t; }
-v11 = v11 + 0x00001A28u;
-gabi::store<u32>(v31 + 0x00000004u, v0);
-v10 = 0u + 0x10100000u;
-gabi::store<u32>(v31 + 0x00000030u, v11);
-v10 = v10 + 0x00001A18u;
-{ uint64_t t = (uint64_t)v31 + 0x00000050u; v12 = (uint32_t)t; } equal=v12==0;
-gabi::store<u32>(v31 + 0x0000002Cu, v10);
-if (!equal) { goto L_026C9AF0; }
-v3 = 0u + 0x00000008u;
-v3=gabi::call<u32>(0x0273AD10,v3);
-L_026C9AF0: ;
-v0 = 0u + 0x00000000u;
-gabi::store<u8>(v31 + 0x00000058u, v0);
-L_026C9AF8: ;
-v3 = v31;
-return v3;
-return v3;
+
+// HD: native dMenu_PlaceName_c screen and its StateProcessor lifecycle.
+/* 026C97E4 */
+u32 dMenu_PlaceName_c__dt(dMenu_PlaceName_c* object, u32 flags) {
+    if (!object)
+        return gabi::ea(object);
+    object->mStateInterfaceVtable = kStateInterfaceVtable;
+    object->mDrawInterfaceVtable = kDrawInterfaceVtable;
+    u32 result = menuHD_baseDestruct(object, 0);
+    if (flags & 1)
+        result = menuHD_operatorDelete(object);
+    return result;
 }
-VERIFY(0x026C9A8C,place_026C9A8C);
-u32 place_026C9B10(u32 a3,u32 a4,u32 a5,u32 a6) {
-WWHD_FUNC(0x026C9B10,u32,a3,a4,a5,a6);
-u32 v0=0,v3=a3,v4=a4,v5=a5,v6=a6,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v22=0,v23=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
-f64 q1=0;
-bool less=false,equal=false;u32 count=0;
-v30 = v5;
-v31 = v6;
-v29 = v4;
-v4 = 0u + 0x104A0000u;
-v4 = v4 + 0xFFFFA01Cu;
-v5 = 0u + 0x00000001u;
-v22 = v3;
-v3=gabi::call<u32>(0x026F90D8,v3,v4,v5);
-v7 = gabi::load<u32>(v22 + 0x00000004u);
-v0 = gabi::load<u32>(v7 + 0x0000007Cu);
-v4 = 0u + 0x104A0000u;
-count = v0;
-v5 = gabi::load<u32>(v22 + 0x00000034u);
-v7 = v30;
-v6 = v29;
-v4 = v4 + 0xFFFFA198u;
-v3 = v22;
-v8 = v31;
-v3=gabi::call_ptr<u32>(count,v3,v4,v5,v6,v7,v8);
-less=((int32_t)v3)<(0);equal=((int32_t)v3)==(0);
-if (!equal) { goto L_026C9B8C; }
-v3 = 0u + 0x00000000u;
-return v3;
-L_026C9B8C: ;
-v10 = gabi::load<u32>(v22 + 0x00000044u);
-v31 = v22 + 0x00000050u;
-v30 = 0u + 0x104A0000u;
-v24 = 0u + 0x00000000u;
-v12 = gabi::load<u32>(v10 + 0x00000004u);
-v29 = v31;
-v30 = v30 + 0xFFFFA060u;
-v28 = v24;
-v23 = gabi::load<u32>(v12 + 0x0000000Cu);
-goto L_026C9BBC;
-L_026C9BB4: ;
-less=(v24)<(0x0002u);equal=(v24)==(0x0002u);
-if (!less) { goto L_026C9BC8; }
-L_026C9BBC: ;
-v25 = v29;
-v27 = v28;
-goto L_026C9BCC;
-L_026C9BC8: ;
-v25 = v31;
-L_026C9BCC: ;
-v3 = v30 + v27;
-v9 = gabi::load<u32>(v3 + 0x00000004u);
-v0 = gabi::load<u32>(v9 + 0x00000014u);
-count = v0;
-v26 = gabi::load<u32>(v23 + 0x00000008u);
-v3=gabi::call_ptr<u32>(count,v3);
-v0 = gabi::load<u32>(v26 + 0x0000005Cu);
-count = v0;
-v4 = gabi::load<u32>(v30 + v27);
-v3 = v23;
-v5 = 0u + 0x00000001u;
-v3=gabi::call_ptr<u32>(count,v3,v4,v5);
-v24 = v24 + 0x00000001u;
-v28 = v28 + 0x00000008u;
-v27 = v27 + 0x00000008u;
-less=((int32_t)v24)<(2);equal=((int32_t)v24)==(2);
-gabi::store<u32>(v25 + 0x00000000u, v3);
-v29 = v29 + 0x00000004u;
-if (less) { goto L_026C9BB4; }
-v12 = 0u + 0x10100000u;
-v10 = gabi::load<u32>(v22 + 0x00000044u);
-q1=gabi::load<f32>(v12 + 0x000016ECu);
-v4 = 0u + 0x00000000u;
-v3 = gabi::load<u32>(v10 + 0x000000D4u);
-v5 = 0u + 0x00000001u;
-v3=gabi::call<u32>(0x0200552C,v3,v4,v5,q1);
-v8 = gabi::load<u32>(v22 + 0x00000004u);
-v0 = gabi::load<u32>(v8 + 0x0000008Cu);
-count = v0;
-v3 = v22;
-v3=gabi::call_ptr<u32>(count,v3);
-v3 = gabi::load<u32>(v22 + 0x00000018u);
-v11 = gabi::load<u32>(v3 + 0x00000000u);
-v0 = gabi::load<u32>(v11 + 0x00000014u);
-v4 = 0u + 0x104A0000u;
-count = v0;
-v4 = v4 + 0xFFFFA108u;
-v3=gabi::call_ptr<u32>(count,v3,v4);
-gabi::store<u32>(v22 + 0x00000020u, v3);
-v5 = gabi::load<u32>(v3 + 0x00000000u);
-v6 = gabi::load<u32>(v5 + 0x0000001Cu);
-count = v6;
-v3=gabi::call_ptr<u32>(count,v3);
-v3 = 0u + 0x00000001u;
-return v3;
-return v3;
+
+/* 026C9850 */
+u32 dMenu_PlaceName_c::executeWait() {
+    auto* play = gabi::at<Play>(menuHD_getPlay());
+    if (s32(play->mStageNameStatus.get()) == StageNameOpen)
+        menuHD_changeState(&mStateProcessor, &StateID_InAll);
+    const u32 target = gabi::at<PlaceVtable>(mVtable.get())->mInitialize.get();
+    return gabi::call_ptr<u32>(target, this);
 }
-VERIFY(0x026C9B10,place_026C9B10);
-u32 place_026C9C90(u32 a3) {
-WWHD_FUNC(0x026C9C90,u32,a3);
-u32 v0=0,v3=a3,v12=0,v31=0;
-u32 count=0;
-v12 = gabi::load<u32>(v3 + 0x00000004u);
-v0 = gabi::load<u32>(v12 + 0x000000ACu);
-count = v0;
-v31 = v3;
-v3=gabi::call_ptr<u32>(count,v3);
-v12 = gabi::load<u32>(v31 + 0x00000004u);
-v0 = gabi::load<u32>(v12 + 0x00000084u);
-count = v0;
-v3 = v31;
-v3=gabi::call_ptr<u32>(count,v3);
-v3 = v31;
-v3=gabi::call<u32>(0x026F91F8,v3);
-return v3;
-return v3;
+
+/* 026C98AC */
+u32 dMenu_PlaceName_c::initializeInAll() {
+    gabi::Local<StringFrame> frame;
+    auto* play = gabi::at<Play>(menuHD_getPlay());
+    u32 index = play->mStageNameIndex.get();
+    if (index >= kLocationCount)
+        index = 0;
+    // Cache the two pane slots, but reload the layout and archive for each text call.
+    const u32 paneSlots = gabi::ea(&mpTextBox);
+    u32 slot = paneSlots;
+    for (u32 i = 0; i < 2; ++i, slot += 4) {
+        const u32 selectedSlot = i < 2 ? slot : paneSlots;
+        auto* layout = gabi::at<Layout>(mpLayout.get());
+        auto* data = gabi::at<LayoutData>(layout->mpData.get());
+        const u32 archive = data->mpMessageArchive.get();
+        frame->mArchiveName.mVtable = kSafeStringVtable;
+        frame->mArchiveName.mpText = archive;
+        const u32 pane = gabi::at<be<u32>>(selectedSlot)->get();
+        menuHD_setText(gabi::at<u8>(pane), &frame->mArchiveName, &l_locationNames.mEntries[index]);
+    }
+    auto* layout = gabi::at<Layout>(mpLayout.get());
+    const f64 animationFrame = l_animationZero.get();
+    auto* animation = gabi::at<u8>(layout->mpAnimation.get());
+    const u32 result = menuHD_setAnimationEnabled(animation, 0, 1, animationFrame);
+    mVisible = 1;
+    return result;
 }
-VERIFY(0x026C9C90,place_026C9C90);
-u32 place_026C9CE4() {
-WWHD_FUNC(0x026C9CE4,u32);
-u32 v0=0,v3=0,v4=0,v12=0,v31=0;
-bool equal=false;
-v3=gabi::call<u32>(0x025200D4);
-v12 = gabi::load<u8>(v3 + 0x00005292u);
-equal=((int32_t)v12)==(0);
-if (equal) { goto L_026C9DF8; }
-v3=gabi::call<u32>(0x025200D4);
-v4 = 0u + 0x10100000u;
-v3 = v3 + 0x000052C4u;
-v4 = v4 + 0x000016F0u;
-v3=gabi::call<u32>(0x025445B8,v3,v4);
-equal=((int32_t)v3)==(0);
-v31 = 0u + 0x101D0000u;
-if (equal) { goto L_026C9D94; }
-v0 = gabi::load<u32>(v31 + 0x0000600Cu);
-equal=((int32_t)v0)==(200);
-if (!equal) { goto L_026C9D6C; }
-v3=gabi::call<u32>(0x025200D4);
-v12 = 0u + 0x00000000u;
-v0 = 0u + 0x00000002u;
-gabi::store<u8>(v3 + 0x00005BE1u, v12);
-v12 = 0u + 0x10200000u;
-gabi::store<u8>(v3 + 0x00005BE2u, v0);
-v12 = gabi::load<u32>(v12 + 0xFFFF84DCu);
-v4 = 0u + 0x00003510u;
-v3 = v12 + 0x00000644u;
-v3=gabi::call<u32>(0x025B8B68,v3,v4);
-return v3;
-L_026C9D6C: ;
-equal=((int32_t)v0)==(350);
-if (!equal) { goto L_026C9DF8; }
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x00000001u;
-gabi::store<u8>(v3 + 0x00005BE2u, v0);
-return v3;
-L_026C9D94: ;
-v3=gabi::call<u32>(0x025200D4);
-v4 = 0u + 0x10100000u;
-v3 = v3 + 0x000052C4u;
-v4 = v4 + 0x000016F8u;
-v3=gabi::call<u32>(0x025445B8,v3,v4);
-equal=((int32_t)v3)==(0);
-if (equal) { goto L_026C9DF8; }
-v0 = gabi::load<u32>(v31 + 0x0000600Cu);
-equal=((int32_t)v0)==(2900);
-if (!equal) { goto L_026C9DE4; }
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x00000001u;
-v12 = 0u + 0x00000002u;
-gabi::store<u8>(v3 + 0x00005BE1u, v0);
-gabi::store<u8>(v3 + 0x00005BE2u, v12);
-return v3;
-L_026C9DE4: ;
-equal=((int32_t)v0)==(3050);
-if (!equal) { goto L_026C9DF8; }
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x00000001u;
-gabi::store<u8>(v3 + 0x00005BE2u, v0);
-L_026C9DF8: ;
-return v3;
-return v3;
+
+/* 026C9978 */
+u32 dMenu_PlaceName_c::executeInAll() {
+    auto* play = gabi::at<Play>(menuHD_getPlay());
+    if (s32(play->mStageNameStatus.get()) == StageNameClose)
+        menuHD_changeState(&mStateProcessor, &StateID_OutAll);
+    const u32 target = gabi::at<PlaceVtable>(mVtable.get())->mInitialize.get();
+    return gabi::call_ptr<u32>(target, this);
 }
-VERIFY(0x026C9CE4,place_026C9CE4);
-u32 place_026C9E0C(u32 a3) {
-WWHD_FUNC(0x026C9E0C,u32,a3);
-u32 v3=a3,v12=0,v31=0;
-bool equal=false;
-v31 = v3;
-v12 = 0u + 0x101D0000u;
-v12 = gabi::load<u32>(v12 + 0x00006010u);
-equal=((int32_t)v12)==(1);
-if (!equal) { goto L_026C9E38; }
-v3 = v31;
-v3=gabi::call<u32>(0x026C9CE4);
-L_026C9E38: ;
-v3 = v31 + 0x00000018u;
-v3=gabi::call<u32>(0x02006364,v3);
-return v3;
-return v3;
+
+/* 026C99D4 */
+u32 dMenu_PlaceName_c::initializeOutAll() {
+    const f64 frame = l_animationZero.get();
+    auto* layout = gabi::at<Layout>(mpLayout.get());
+    return menuHD_setAnimationEnabled(gabi::at<u8>(layout->mpAnimation.get()), 1, 1, frame);
 }
-VERIFY(0x026C9E0C,place_026C9E0C);
-u32 place_026C9E54(u32 a3) {
-WWHD_FUNC(0x026C9E54,u32,a3);
-u32 v0=0,v3=a3,v11=0,v12=0;
-bool equal=false;u32 count=0;
-v12 = gabi::load<u8>(v3 + 0x00000058u);
-equal=((int32_t)v12)==(0);
-if (equal) { return v3; }
-v11 = gabi::load<u32>(v3 + 0x00000004u);
-v0 = gabi::load<u32>(v11 + 0x0000009Cu);
-count = v0;
-v3=gabi::call_ptr<u32>(count,v3);
-return v3;
-return v3;
+
+/* 026C99F0 */
+u32 dMenu_PlaceName_c::executeOutAll() {
+    auto* layout = gabi::at<Layout>(mpLayout.get());
+    const u32 finished = menuHD_isAnimationFinished(gabi::at<u8>(layout->mpAnimation.get()), 1);
+    if (s32(finished) != 0)
+        menuHD_changeState(&mStateProcessor, &StateID_Wait);
+    const u32 target = gabi::at<PlaceVtable>(mVtable.get())->mInitialize.get();
+    return gabi::call_ptr<u32>(target, this);
 }
-VERIFY(0x026C9E54,place_026C9E54);
-u32 place_026C9E70(u32 a3,u32 a4,u32 a5,u32 a6,u32 a7,u32 a8) {
-WWHD_FUNC(0x026C9E70,u32,a3,a4,a5,a6,a7,a8);
-u32 v0=0,v3=a3,v4=a4,v5=a5,v6=a6,v7=a7,v8=a8,v9=0,v10=0,v11=0,v12=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
-bool equal=false;u32 count=0;
-v26 = v3;
-v27 = v4;
-v28 = v5;
-v30 = v7;
-v31 = v8;
-v29 = v6;
-v12 = 0u + 0x10190000u;
-v12 = gabi::load<u32>(v12 + 0xFFFFC404u);
-v3 = 0u + 0x00000110u;
-v4 = gabi::load<u32>(v12 + 0x00000010u);
-v5 = 0u + 0x00000004u;
-v3=gabi::call<u32>(0x0273B050,v3,v4,v5);
-equal=((int32_t)v3)==(0);
-if (equal) { goto L_026C9EBC; }
-v3=gabi::call<u32>(0x026FADB0,v3);
-L_026C9EBC: ;
-equal=((int32_t)v3)==(0);
-gabi::store<u32>(v26 + 0x00000044u, v3);
-if (!equal) { goto L_026C9EE0; }
-v3 = 0u + 0x00000000u;
-return v3;
-L_026C9EE0: ;
-v12 = gabi::load<u32>(v3 + 0x000000E0u);
-v0 = gabi::load<u32>(v12 + 0x00000014u);
-v8 = 0u + 0x00000002u;
-count = v0;
-v7 = v30;
-v10 = v31;
-v9 = v8;
-v5 = v28;
-v6 = v29;
-v4 = v27;
-v3=gabi::call_ptr<u32>(count,v3,v4,v5,v6,v7,v8,v9,v10);
-v30 = 0u + 0x104A0000u;
-v29 = 0u + 0x10100000u;
-v24 = 0u + 0x00000000u;
-v30 = v30 + 0xFFFFA040u;
-v27 = v24;
-v29 = v29 + 0x00001630u;
-v31 = 0u + 0x104A0000u;
-v28 = v27;
-v31 = v31 + 0xFFFFA050u;
-v25 = 0u + 0x00000002u;
-L_026C9F34: ;
-v11 = gabi::load<u32>(v26 + 0x00000044u);
-v0 = gabi::load<u32>(v29 + v27);
-v4 = v24;
-v3 = gabi::load<u32>(v11 + 0x000000D4u);
-v0 = rotl32(v0, 3) & 0xFFFFFFF8u;
-v5 = v31 + v28;
-v6 = v30 + v0;
-v3=gabi::call<u32>(0x02004E04,v3,v4,v5,v6);
-v27 = v27 + 0x00000004u;
-{ uint64_t t = (uint64_t)v25 + 0xFFFFFFFFu; v25 = (uint32_t)t; } equal=v25==0;
-v24 = v24 + 0x00000001u;
-v28 = v28 + 0x00000008u;
-if (!equal) { goto L_026C9F34; }
-v10 = gabi::load<u32>(v26 + 0x00000004u);
-v0 = gabi::load<u32>(v10 + 0x0000008Cu);
-count = v0;
-v3 = v26;
-v3=gabi::call_ptr<u32>(count,v3);
-v3 = 0u + 0x00000001u;
-return v3;
-return v3;
+
+/* 026C9A54 */
+u32 dMenu_PlaceName_c::finalizeOutAll() {
+    auto* play = gabi::at<Play>(menuHD_getPlay());
+    play->mStageNameStatus = StageNameIdle;
+    mVisible = 0;
+    return gabi::ea(play);
 }
-VERIFY(0x026C9E70,place_026C9E70);
-u32 place_026C9F94() {
-WWHD_FUNC(0x026C9F94,u32);
-u32 v0=0,v3=0,v4=0,v5=0,v6=0,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v31=0;
-f64 q0=0,q13=0;
-bool equal=false;
-v7 = 0u + 0x104A0000u;
-v31 = 0u + 0x00000000u;
-v7 = v7 + 0xFFFFA030u;
-gabi::store<u32>(v7 + 0x0000000Cu, v31);
-gabi::store<u32>(v7 + 0x00000008u, v31);
-v3 = 0u + 0x101F0000u;
-gabi::store<u32>(v7 + 0x00000004u, v31);
-v3 = v3 + 0x00006950u;
-gabi::store<u32>(v7 + 0x00000000u, v31);
-v3=gabi::call<u32>(0x028F026C,v3);
-v9 = 0u + 0x10100000u;
-q13=gabi::load<f32>(v9 + 0x00001708u);
-v8 = 0u + 0x10100000u;
-v3 = 0u + 0x104A0000u;
-v7 = 0u + 0x104A0000u;
-q0=gabi::load<f32>(v8 + 0x0000170Cu);
-v6 = 0u + 0x104A0000u;
-{ uint32_t ea = v7 + 0xFFFFA024u; gabi::store<f32>(ea, q13); }
-v3 = v3 + 0xFFFFA02Cu;
-{ uint32_t ea = v6 + 0xFFFFA028u; gabi::store<f32>(ea, q0); }
-v3=gabi::call<u32>(0x028ED6F8,v3);
-v3 = 0u + 0x101F0000u;
-v3 = v3 + 0x0000695Cu;
-v3=gabi::call<u32>(0x028F026C,v3);
-v3 = 0u + 0x104A0000u;
-v3 = v3 + 0xFFFFA02Du;
-v3=gabi::call<u32>(0x028EAB2C,v3);
-v3 = 0u + 0x101F0000u;
-v3 = v3 + 0x00006968u;
-v3=gabi::call<u32>(0x028F026C,v3);
-v11 = 0u + 0x104A0000u;
-v6 = 0u + 0x10100000u;
-v11 = v11 + 0xFFFFA050u;
-v6 = v6 + 0x0000163Cu;
-v5 = 0u + 0x10100000u;
-gabi::store<u32>(v11 + 0x00000004u, v6);
-v5 = v5 + 0x00001710u;
-v12 = 0u + 0x104A0000u;
-gabi::store<u32>(v11 + 0x00000000u, v5);
-v12 = v12 + 0xFFFFA040u;
-v10 = 0u + 0x10100000u;
-gabi::store<u32>(v11 + 0x0000000Cu, v6);
-v10 = v10 + 0x00001730u;
-gabi::store<u32>(v12 + 0x00000004u, v6);
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v12 + 0x00000000u, v10);
-{ uint64_t t = (uint64_t)v0 + 0x000018A4u; v0 = (uint32_t)t; }
-v7 = 0u + 0x10100000u;
-gabi::store<u32>(v12 + 0x0000000Cu, v6);
-v5 = 0u + 0x104A0000u;
-v7 = v7 + 0x00001718u;
-gabi::store<u32>(v12 + 0x00000008u, v0);
-v5 = v5 + 0xFFFFA070u;
-v8 = 0u + 0x10100000u;
-gabi::store<u32>(v11 + 0x00000008u, v7);
-v8 = v8 + 0x0000173Cu;
-gabi::store<u32>(v5 + 0x00000004u, v6);
-v9 = 0u + 0x104A0000u;
-gabi::store<u32>(v5 + 0x00000000u, v8);
-v10 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x0000000Cu, v6);
-v10 = v10 + 0x00001750u;
-v12 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000008u, v10);
-v9 = v9 + 0xFFFFA060u;
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000014u, v6);
-v12 = v12 + 0x00001764u;
-{ uint64_t t = (uint64_t)v0 + 0x000018B0u; v0 = (uint32_t)t; }
-gabi::store<u32>(v9 + 0x00000004u, v6);
-v10 = 0u + 0x104A0000u;
-v7 = 0u + 0x10100000u;
-gabi::store<u32>(v9 + 0x00000000u, v0);
-gabi::store<u32>(v5 + 0x00000010u, v12);
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x0000001Cu, v6);
-{ uint64_t t = (uint64_t)v0 + 0x00001778u; v0 = (uint32_t)t; }
-v11 = 0u + 0x10100000u;
-gabi::store<u32>(v9 + 0x0000000Cu, v6);
-v11 = v11 + 0x000018C0u;
-gabi::store<u32>(v5 + 0x00000018u, v0);
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v9 + 0x00000008u, v11);
-{ uint64_t t = (uint64_t)v0 + 0x0000178Cu; v0 = (uint32_t)t; }
-v12 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000024u, v6);
-v12 = v12 + 0x000017A0u;
-gabi::store<u32>(v5 + 0x00000020u, v0);
-v11 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x0000002Cu, v6);
-v10 = v10 + 0xFFFFA01Cu;
-gabi::store<u32>(v5 + 0x00000028u, v12);
-v7 = v7 + 0x000017B4u;
-gabi::store<u32>(v5 + 0x00000034u, v6);
-v11 = v11 + 0x000017C8u;
-gabi::store<u32>(v5 + 0x00000030u, v7);
-gabi::store<u32>(v10 + 0x00000004u, v6);
-gabi::store<u32>(v5 + 0x0000003Cu, v6);
-v12 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000038u, v11);
-v12 = v12 + 0x000017DCu;
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000044u, v6);
-{ uint64_t t = (uint64_t)v0 + 0x00001840u; v0 = (uint32_t)t; }
-gabi::store<u32>(v5 + 0x00000040u, v12);
-v7 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x0000004Cu, v6);
-v7 = v7 + 0x000017F0u;
-v9 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000048u, v7);
-v9 = v9 + 0x00001804u;
-gabi::store<u32>(v5 + 0x00000054u, v6);
-v11 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000050u, v9);
-v11 = v11 + 0x00001818u;
-gabi::store<u32>(v5 + 0x0000005Cu, v6);
-gabi::store<u32>(v5 + 0x00000058u, v11);
-v11 = 0u + 0x10200000u;
-gabi::store<u32>(v5 + 0x00000064u, v6);
-v12 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000060u, v8);
-v12 = v12 + 0x0000182Cu;
-gabi::store<u32>(v5 + 0x0000006Cu, v6);
-gabi::store<u32>(v5 + 0x00000068u, v12);
-v8 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000074u, v6);
-v8 = v8 + 0x00001854u;
-gabi::store<u32>(v5 + 0x00000070u, v0);
-v9 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x0000007Cu, v6);
-v9 = v9 + 0x00001868u;
-gabi::store<u32>(v5 + 0x00000078u, v8);
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000084u, v6);
-{ uint64_t t = (uint64_t)v0 + 0x0000187Cu; v0 = (uint32_t)t; }
-gabi::store<u32>(v5 + 0x00000080u, v9);
-v12 = 0u + 0x10200000u;
-v7 = 0u + 0x104A0000u;
-gabi::store<u32>(v5 + 0x0000008Cu, v6);
-v7 = v7 + 0xFFFFA198u;
-{ uint32_t ea = v12 + 0xFFFFD8E4u; v9 = gabi::load<u32>(ea); v12 = ea; }
-v8 = 0u + 0x104A0000u;
-gabi::store<u32>(v5 + 0x00000088u, v0);
-v0 = 0u + 0x10100000u;
-gabi::store<u32>(v5 + 0x00000094u, v6);
-{ uint64_t t = (uint64_t)v0 + 0x000018D0u; v0 = (uint32_t)t; }
-gabi::store<u32>(v7 + 0x00000004u, v6);
-v6 = 0u + 0x10100000u;
-gabi::store<u32>(v10 + 0x00000000u, v0);
-v6 = v6 + 0x00001890u;
-equal=((int32_t)v9)==(0);
-gabi::store<u32>(v7 + 0x00000000u, v0);
-v8 = v8 + 0xFFFFA108u;
-gabi::store<u32>(v5 + 0x00000090u, v6);
-if (equal) { goto L_026CA218; }
-v9 = gabi::load<u32>(v11 + 0xFFFFDD50u);
-goto L_026CA224;
-L_026CA218: ;
-v10 = 0u + 0x00000001u;
-v9 = 0u + 0x00000000u;
-gabi::store<u32>(v12 + 0x00000000u, v10);
-L_026CA224: ;
-gabi::store<u16>(v8 + 0x0000000Cu, v31);
-v0 = 0u + 0x00000019u;
-v5 = 0u + 0x0000001Au;
-gabi::store<u16>(v8 + 0x0000000Eu, v0);
-v12 = 0u + 0x10100000u;
-gabi::store<u16>(v8 + 0x00000014u, v31);
-v9 = v9 + 0x00000001u;
-gabi::store<u16>(v8 + 0x00000016u, v5);
-v12 = v12 + 0x000018E0u;
-gabi::store<u32>(v8 + 0x00000000u, v9);
-v6 = 0u + 0x0000001Cu;
-gabi::store<u32>(v8 + 0x00000004u, v12);
-v0 = 0u + 0x10100000u;
-v4 = 0u + 0x00000004u;
-gabi::store<u16>(v8 + 0x0000001Cu, v31);
-gabi::store<u32>(v8 + 0x00000010u, v4);
-v9 = v9 + 0x00000001u;
-gabi::store<u32>(v8 + 0x00000018u, v4);
-v7 = 0u + 0x0000001Bu;
-gabi::store<u32>(v8 + 0x00000020u, v4);
-v10 = 0u + 0x104A0000u;
-gabi::store<u16>(v8 + 0x0000001Eu, v7);
-v10 = v10 + 0xFFFFA138u;
-gabi::store<u16>(v8 + 0x00000024u, v31);
-{ uint64_t t = (uint64_t)v0 + 0x00001720u; v0 = (uint32_t)t; }
-gabi::store<u32>(v10 + 0x00000000u, v9);
-gabi::store<u32>(v10 + 0x00000004u, v0);
-gabi::store<u32>(v10 + 0x00000010u, v4);
-v0 = 0u + 0x0000001Du;
-gabi::store<u16>(v10 + 0x0000000Cu, v31);
-gabi::store<u16>(v10 + 0x0000000Eu, v6);
-gabi::store<u16>(v10 + 0x00000014u, v31);
-gabi::store<u16>(v10 + 0x00000016u, v0);
-gabi::store<u32>(v10 + 0x00000018u, v4);
-v6 = 0u + 0x10100000u;
-gabi::store<u32>(v10 + 0x00000020u, v4);
-v6 = v6 + 0x0000169Cu;
-gabi::store<u32>(v10 + 0x00000028u, v31);
-v5 = 0u + 0x10200000u;
-gabi::store<u32>(v10 + 0x00000008u, v6);
-v5 = v5 + 0xFFFFF32Cu;
-gabi::store<u32>(v8 + 0x00000028u, v31);
-v12 = 0u + 0x104A0000u;
-gabi::store<u16>(v10 + 0x0000001Cu, v31);
-v9 = v9 + 0x00000001u;
-gabi::store<u16>(v8 + 0x00000026u, v31);
-v12 = v12 + 0xFFFFA168u;
-gabi::store<u32>(v8 + 0x00000008u, v6);
-gabi::store<u32>(v8 + 0x0000002Cu, v5);
-v0 = 0u + 0x0000001Eu;
-gabi::store<u32>(v11 + 0xFFFFDD50u, v9);
-v11 = 0u + 0x10100000u;
-gabi::store<u16>(v10 + 0x0000001Eu, v0);
-v11 = v11 + 0x000018F0u;
-gabi::store<u16>(v12 + 0x0000000Cu, v31);
-gabi::store<u16>(v10 + 0x00000024u, v31);
-v7 = 0u + 0x0000001Fu;
-gabi::store<u16>(v10 + 0x00000026u, v31);
-gabi::store<u32>(v12 + 0x00000000u, v9);
-v0 = 0u + 0x00000020u;
-gabi::store<u16>(v12 + 0x0000000Eu, v7);
-gabi::store<u32>(v12 + 0x00000004u, v11);
-gabi::store<u32>(v12 + 0x00000010u, v4);
-gabi::store<u32>(v12 + 0x00000018u, v4);
-gabi::store<u32>(v12 + 0x00000020u, v4);
-gabi::store<u32>(v12 + 0x00000028u, v31);
-gabi::store<u32>(v12 + 0x00000008u, v6);
-gabi::store<u32>(v10 + 0x0000002Cu, v5);
-gabi::store<u16>(v12 + 0x00000014u, v31);
-gabi::store<u16>(v12 + 0x00000016u, v0);
-v8 = 0u + 0x00000021u;
-gabi::store<u16>(v12 + 0x0000001Cu, v31);
-gabi::store<u16>(v12 + 0x0000001Eu, v8);
-gabi::store<u16>(v12 + 0x00000024u, v31);
-gabi::store<u16>(v12 + 0x00000026u, v31);
-gabi::store<u32>(v12 + 0x0000002Cu, v5);
-return v3;
-return v3;
+
+/* 026C9A8C */
+u32 dMenu_PlaceName_c__ct(dMenu_PlaceName_c* object) {
+    if (!object)
+        object = gabi::at<dMenu_PlaceName_c>(menuHD_operatorNew(sizeof(dMenu_PlaceName_c)));
+    if (!object)
+        return 0;
+    menuHD_baseConstruct(object);
+    object->mVtable = kPlaceVtable;
+    object->mDrawInterfaceVtable = kDrawInterfaceVtable;
+    object->mStateInterfaceVtable = kStateInterfaceVtable;
+    // HD: preserve the GHS address-wrap allocation branch for the inline pane-pointer array.
+    if (!gabi::ea(&object->mpTextBox))
+        menuHD_operatorNew(8);
+    object->mVisible = 0;
+    return gabi::ea(object);
 }
-VERIFY(0x026C9F94,place_026C9F94);
+
+/* 026C9B10 */
+u32 dMenu_PlaceName_c::create(u32 archive, u32 heap, u32 parent) {
+    const u32 savedArchive = archive, savedHeap = heap, savedParent = parent;
+    menuHD_setModuleName(this, &l_moduleName, 1);
+    u32 target = gabi::at<PlaceVtable>(mVtable.get())->mCreateLayout.get();
+    const u32 created = gabi::call_ptr<u32>(target, this, &l_layoutName, mpHeap.get(), savedArchive,
+                                            savedHeap, savedParent);
+    if (s32(created) == 0)
+        return 0;
+
+    auto* layout = gabi::at<Layout>(mpLayout.get());
+    auto* data = gabi::at<LayoutData>(layout->mpData.get());
+    const u32 root = data->mpRootPane.get();
+    const u32 paneSlots = gabi::ea(&mpTextBox);
+    u32 slot = paneSlots;
+    for (u32 i = 0; i < 2; ++i, slot += 4) {
+        const u32 selectedSlot = i < 2 ? slot : paneSlots;
+        SafeString* name = &l_textBoxNames.mEntries[i];
+        target = gabi::at<SafeStringVtable>(name->mVtable.get())->mAssureTermination.get();
+        const u32 rootVtable = gabi::at<Pane>(root)->mPaneVtable.get();
+        gabi::call_ptr<u32>(target, name);
+        target = gabi::at<PaneVtable>(rootVtable)->mFindPane.get();
+        const u32 text = name->mpText.get();
+        const u32 pane = gabi::call_ptr<u32>(target, gabi::at<u8>(root), text, 1);
+        *gabi::at<be<u32>>(selectedSlot) = pane;
+    }
+    layout = gabi::at<Layout>(mpLayout.get());
+    const f64 endFrame = l_animationEnd.get();
+    menuHD_setAnimationFrame(gabi::at<u8>(layout->mpAnimation.get()), 0, 1, endFrame);
+    target = gabi::at<PlaceVtable>(mVtable.get())->mInitialize.get();
+    gabi::call_ptr<u32>(target, this);
+
+    const u32 processor = mStateProcessor.mpProcessor.get();
+    target = gabi::at<StateVtable>(gabi::at<be<u32>>(processor)->get())->mFindState.get();
+    const u32 state = gabi::call_ptr<u32>(target, gabi::at<u8>(processor), &StateID_Wait);
+    mpState = state;
+    target = gabi::at<StateVtable>(gabi::at<be<u32>>(state)->get())->mInitialize.get();
+    gabi::call_ptr<u32>(target, gabi::at<u8>(state));
+    return 1;
+}
+
+/* 026C9C90 */
+u32 dMenu_PlaceName_c::calc() {
+    u32 target = gabi::at<PlaceVtable>(mVtable.get())->mCalc.get();
+    gabi::call_ptr<u32>(target, this);
+    target = gabi::at<PlaceVtable>(mVtable.get())->mClose.get();
+    gabi::call_ptr<u32>(target, this);
+    return menuHD_baseCalc(this);
+}
+
+/* 026C9E0C */
+u32 dMenu_PlaceName_c::update() {
+    if (s32(mDemoMode.get()) == 1)
+        menuHD_placenameMoveEntry();
+    return menuHD_updateState(&mStateProcessor);
+}
+
+/* 026C9E54 */
+u32 dMenu_PlaceName_c::draw() {
+    if (!mVisible.get())
+        return gabi::ea(this);
+    const u32 target = gabi::at<PlaceVtable>(mVtable.get())->mDraw.get();
+    return gabi::call_ptr<u32>(target, this);
+}
+
+/* 026C9E70 */
+u32 dMenu_PlaceName_c::createLayout(u32 archive, u32 heap, u32 parent, u32 root, u32 flags) {
+    auto* manager = gabi::at<AllocationManager>(mAllocationManager.get());
+    u32 allocation = menuHD_heapNew(sizeof(Layout), gabi::at<u8>(manager->mpHeap.get()), 4);
+    if (s32(allocation) != 0)
+        allocation = menuHD_layoutConstruct(gabi::at<u8>(allocation));
+    mpLayout = allocation;
+    if (s32(allocation) == 0)
+        return 0;
+    const u32 target =
+        gabi::at<LayoutVtable>(gabi::at<Layout>(allocation)->mVtable.get())->mCreate.get();
+    gabi::call_ptr<u32>(target, gabi::at<u8>(allocation), archive, heap, parent, root, 2, 2, flags);
+    for (u32 i = 0; i < 2; ++i) {
+        auto* layout = gabi::at<Layout>(mpLayout.get());
+        const u32 animationIndex = rotl32(l_animationIndices.mValues[i].get(), 3) & 0xFFFFFFF8u;
+        menuHD_bindAnimation(gabi::at<u8>(layout->mpAnimation.get()), i,
+                             &l_animationNames.mEntries[i],
+                             gabi::at<u8>(gabi::ea(&l_animationRoots) + animationIndex));
+    }
+    const u32 initialize = gabi::at<PlaceVtable>(mVtable.get())->mInitialize.get();
+    gabi::call_ptr<u32>(initialize, this);
+    return 1;
+}
+
+// HD: compiler-generated initialization of SafeStrings and native state delegates.
+/* 026C9F94 */
+u32 __sinit_d_menu_window_cpp() {
+    u32 result = 0;
+    l_destructorList.mFlags = 0;
+    l_destructorList.mpDestructor = 0;
+    l_destructorList.mpObject = 0;
+    l_destructorList.mNext = 0;
+    result = menuHD_registerGlobal(&l_globalDestructor.mNext);
+    const f64 initialX = l_initialX.get();
+    const f64 initialY = l_initialY.get();
+    mInitialX = initialX;
+    mInitialY = initialY;
+    result = menuHD_constructHeaderByte(&l_headerByte);
+    result = menuHD_registerGlobal(&l_headerDestructor.mNext);
+    result = menuHD_constructArchiveByte(&l_archiveByte);
+    result = menuHD_registerGlobal(&l_archiveDestructor.mNext);
+    l_animationNames.mEntries[0].mVtable = kSafeStringVtable;
+    l_animationNames.mEntries[0].mpText = gabi::guest_addr("InAll");
+    l_animationNames.mEntries[1].mVtable = kSafeStringVtable;
+    l_animationRoots.mEntries[0].mVtable = kSafeStringVtable;
+    l_animationRoots.mEntries[0].mpText = gabi::guest_addr("G_Text_00");
+    l_animationRoots.mEntries[1].mVtable = kSafeStringVtable;
+    l_animationRoots.mEntries[1].mpText = gabi::guest_addr("G_All_00");
+    l_animationNames.mEntries[1].mpText = gabi::guest_addr("OutAll");
+    l_locationNames.mEntries[0].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[0].mpText = gabi::guest_addr("T_PlaceName_00_01");
+    l_locationNames.mEntries[1].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[1].mpText = gabi::guest_addr("T_PlaceName_00_02");
+    l_locationNames.mEntries[2].mVtable = kSafeStringVtable;
+    l_textBoxNames.mEntries[0].mVtable = kSafeStringVtable;
+    l_textBoxNames.mEntries[0].mpText = gabi::guest_addr("T_PlaceName_00");
+    l_locationNames.mEntries[2].mpText = gabi::guest_addr("T_PlaceName_00_03");
+    l_locationNames.mEntries[3].mVtable = kSafeStringVtable;
+    l_textBoxNames.mEntries[1].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[3].mpText = gabi::guest_addr("T_PlaceName_00_04");
+    l_textBoxNames.mEntries[1].mpText = gabi::guest_addr("T_PlaceName_01");
+    l_locationNames.mEntries[4].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[4].mpText = gabi::guest_addr("T_PlaceName_00_05");
+    l_locationNames.mEntries[5].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[5].mpText = gabi::guest_addr("T_PlaceName_00_06");
+    l_locationNames.mEntries[6].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[6].mpText = gabi::guest_addr("T_PlaceName_00_07");
+    l_moduleName.mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[7].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[7].mpText = gabi::guest_addr("T_PlaceName_00_08");
+    l_locationNames.mEntries[8].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[8].mpText = gabi::guest_addr("T_PlaceName_00_09");
+    l_locationNames.mEntries[9].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[9].mpText = gabi::guest_addr("T_PlaceName_00_10");
+    l_locationNames.mEntries[10].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[10].mpText = gabi::guest_addr("T_PlaceName_00_11");
+    l_locationNames.mEntries[11].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[11].mpText = gabi::guest_addr("T_PlaceName_00_12");
+    l_locationNames.mEntries[12].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[12].mpText = gabi::guest_addr("T_PlaceName_00_01");
+    l_locationNames.mEntries[13].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[13].mpText = gabi::guest_addr("T_PlaceName_00_14");
+    l_locationNames.mEntries[14].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[14].mpText = gabi::guest_addr("T_PlaceName_00_15");
+    l_locationNames.mEntries[15].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[15].mpText = gabi::guest_addr("T_PlaceName_00_16");
+    l_locationNames.mEntries[16].mVtable = kSafeStringVtable;
+    l_locationNames.mEntries[16].mpText = gabi::guest_addr("T_PlaceName_00_17");
+    l_locationNames.mEntries[17].mVtable = kSafeStringVtable;
+    const u32 guardValue = l_stateIdGuard.get();
+    l_locationNames.mEntries[17].mpText = gabi::guest_addr("T_PlaceName_00_18");
+    l_locationNames.mEntries[18].mVtable = kSafeStringVtable;
+    l_layoutName.mVtable = kSafeStringVtable;
+    l_moduleName.mpText = gabi::guest_addr("PlaceName_00");
+    l_layoutName.mpText = gabi::guest_addr("PlaceName_00");
+    l_locationNames.mEntries[18].mpText = gabi::guest_addr("T_PlaceName_00_19");
+    u32 stateId;
+    if (guardValue != 0) {
+        stateId = l_nextStateId.get();
+    } else {
+        l_stateIdGuard = 1;
+        stateId = 0;
+    }
+    StateID_Wait.mInitialize.mThisAdjust = 0;
+    StateID_Wait.mInitialize.mVirtualSlot = 25;
+    StateID_Wait.mExecute.mThisAdjust = 0;
+    StateID_Wait.mExecute.mVirtualSlot = 26;
+    StateID_Wait.mId = (stateId + 1);
+    StateID_Wait.mpName = gabi::guest_addr("::StateID_Wait");
+    StateID_Wait.mFinalize.mThisAdjust = 0;
+    StateID_Wait.mInitialize.mFlags = kStateCallbackFlags;
+    StateID_Wait.mExecute.mFlags = kStateCallbackFlags;
+    StateID_Wait.mFinalize.mFlags = kStateCallbackFlags;
+    StateID_Wait.mFinalize.mVirtualSlot = 27;
+    StateID_Wait.mReserved.mThisAdjust = 0;
+    StateID_InAll.mId = ((stateId + 1) + 1);
+    StateID_InAll.mpName = gabi::guest_addr("::StateID_InAll");
+    StateID_InAll.mInitialize.mFlags = kStateCallbackFlags;
+    StateID_InAll.mInitialize.mThisAdjust = 0;
+    StateID_InAll.mInitialize.mVirtualSlot = 28;
+    StateID_InAll.mExecute.mThisAdjust = 0;
+    StateID_InAll.mExecute.mVirtualSlot = 29;
+    StateID_InAll.mExecute.mFlags = kStateCallbackFlags;
+    StateID_InAll.mFinalize.mFlags = kStateCallbackFlags;
+    StateID_InAll.mReserved.mFlags = 0;
+    StateID_InAll.mVtable = kStateVtable;
+    StateID_Wait.mReserved.mFlags = 0;
+    StateID_InAll.mFinalize.mThisAdjust = 0;
+    StateID_Wait.mReserved.mVirtualSlot = 0;
+    StateID_Wait.mVtable = kStateVtable;
+    StateID_Wait.mpNullState = kNullState;
+    l_nextStateId = (((stateId + 1) + 1) + 1);
+    StateID_InAll.mFinalize.mVirtualSlot = 30;
+    StateID_OutAll.mInitialize.mThisAdjust = 0;
+    StateID_InAll.mReserved.mThisAdjust = 0;
+    StateID_InAll.mReserved.mVirtualSlot = 0;
+    StateID_OutAll.mId = (((stateId + 1) + 1) + 1);
+    StateID_OutAll.mInitialize.mVirtualSlot = 31;
+    StateID_OutAll.mpName = gabi::guest_addr("::StateID_OutAll");
+    StateID_OutAll.mInitialize.mFlags = kStateCallbackFlags;
+    StateID_OutAll.mExecute.mFlags = kStateCallbackFlags;
+    StateID_OutAll.mFinalize.mFlags = kStateCallbackFlags;
+    StateID_OutAll.mReserved.mFlags = 0;
+    StateID_OutAll.mVtable = kStateVtable;
+    StateID_InAll.mpNullState = kNullState;
+    StateID_OutAll.mExecute.mThisAdjust = 0;
+    StateID_OutAll.mExecute.mVirtualSlot = 32;
+    StateID_OutAll.mFinalize.mThisAdjust = 0;
+    StateID_OutAll.mFinalize.mVirtualSlot = 33;
+    StateID_OutAll.mReserved.mThisAdjust = 0;
+    StateID_OutAll.mReserved.mVirtualSlot = 0;
+    StateID_OutAll.mpNullState = kNullState;
+    return result;
+}
+
+/* WWHD glue
+data l_moduleName 1049A01C
+data mInitialX 1049A024
+data mInitialY 1049A028
+data l_headerByte 1049A02C
+data l_archiveByte 1049A02D
+data l_destructorList 1049A030
+data l_animationRoots 1049A040
+data l_animationNames 1049A050
+data l_textBoxNames 1049A060
+data l_locationNames 1049A070
+data StateID_Wait 1049A108
+data StateID_InAll 1049A138
+data StateID_OutAll 1049A168
+data l_layoutName 1049A198
+data l_globalDestructor 101F6950
+data l_headerDestructor 101F695C
+data l_archiveDestructor 101F6968
+data l_initialX 10101708
+data l_initialY 1010170C
+data l_animationZero 101016E8
+data l_animationEnd 101016EC
+data l_animationIndices 10101630
+data l_stateIdGuard 101FD8E4
+data l_nextStateId 101FDD50
+data mDemoFrame 101D600C
+data mDemoMode 101D6010
+data mSave 101F84DC
+data mAllocationManager 1018C404
+str 101016F0 "awake"
+str 101016F8 "majyuu_shinnyuu"
+str 10101710 "InAll"
+str 10101718 "OutAll"
+str 10101720 "::StateID_InAll"
+str 10101730 "G_Text_00"
+str 1010173C "T_PlaceName_00_01"
+str 10101750 "T_PlaceName_00_02"
+str 10101764 "T_PlaceName_00_03"
+str 10101778 "T_PlaceName_00_04"
+str 1010178C "T_PlaceName_00_05"
+str 101017A0 "T_PlaceName_00_06"
+str 101017B4 "T_PlaceName_00_07"
+str 101017C8 "T_PlaceName_00_08"
+str 101017DC "T_PlaceName_00_09"
+str 101017F0 "T_PlaceName_00_10"
+str 10101804 "T_PlaceName_00_11"
+str 10101818 "T_PlaceName_00_12"
+str 1010182C "T_PlaceName_00_14"
+str 10101840 "T_PlaceName_00_15"
+str 10101854 "T_PlaceName_00_16"
+str 10101868 "T_PlaceName_00_17"
+str 1010187C "T_PlaceName_00_18"
+str 10101890 "T_PlaceName_00_19"
+str 101018A4 "G_All_00"
+str 101018B0 "T_PlaceName_00"
+str 101018C0 "T_PlaceName_01"
+str 101018D0 "PlaceName_00"
+str 101018E0 "::StateID_Wait"
+str 101018F0 "::StateID_OutAll"
+ext 025200D4 u32 menuHD_getPlay()
+ext 026F88F0 u32 menuHD_baseDestruct(void*, u32)
+ext 0273AF40 u32 menuHD_operatorDelete(void*)
+ext 020063C0 u32 menuHD_changeState(void*, void*)
+ext 027045B0 u32 menuHD_setText(void*, void*, void*)
+ext 020053E4 u32 menuHD_setAnimationEnabled(void*, u32, u32, f64)
+ext 02005840 u32 menuHD_isAnimationFinished(void*, u32)
+ext 0273AD10 u32 menuHD_operatorNew(u32)
+ext 026F89E8 u32 menuHD_baseConstruct(void*)
+ext 026F90D8 u32 menuHD_setModuleName(void*, void*, u32)
+ext 0200552C u32 menuHD_setAnimationFrame(void*, u32, u32, f64)
+ext 026F91F8 u32 menuHD_baseCalc(void*)
+ext 025445B8 u32 menuHD_startCheck(void*, const char*)
+ext 025B8B68 u32 menuHD_onEventBit(void*, u32)
+ext 026C9CE4 u32 menuHD_placenameMoveEntry()
+ext 02006364 u32 menuHD_updateState(void*)
+ext 0273B050 u32 menuHD_heapNew(u32, void*, u32)
+ext 026FADB0 u32 menuHD_layoutConstruct(void*)
+ext 02004E04 u32 menuHD_bindAnimation(void*, u32, void*, void*)
+ext 028F026C u32 menuHD_registerGlobal(void*)
+ext 028ED6F8 u32 menuHD_constructHeaderByte(void*)
+ext 028EAB2C u32 menuHD_constructArchiveByte(void*)
+*/

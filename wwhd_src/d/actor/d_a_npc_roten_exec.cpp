@@ -8,19 +8,15 @@
  */
 #include "d/actor/d_a_npc_roten.h"
 
-/* static InitFunc_t l_execute_init[5] (.data 0x101C59C8), MoveFunc_t moveProc[5] (0x101C59F0):
- * GHS pointers to member functions, 8 bytes each */
-enum : u32 { l_execute_init = 0x101C59C8, moveProc = 0x101C59F0 };
-
-static inline u16 eventInfo_getCommand(fopAc_ac_c* a) { return gabi::load<u16>(gabi::ea(a) + 0xF8); }
+// HD: the action tables use GHS eight-byte member pointers.
 
 /* 022D5580 */
 bool daNpcRoten_c::_execute() {
-    WWHD_FUNC(0x022D5580, bool, this);
     chkAttention();
     checkOrder();
-    if (!dComIfGp_event_runCheck() || (eventInfo_getCommand(this) == 1 /* dEvtCmd_INTALK_e */ && (field_0x9B2 & 0x8000) == 0)) {
-        roten_pmf_call(this, moveProc + field_0x9BB * 8); /* (this->*moveProc[field_0x9BB])() */
+    if (!roten_dComIfGp_event_runCheck() ||
+        (eventInfo.getCommand() == dEvtCmd_INTALK_e && (field_0x9B2 & 0x8000) == 0)) {
+        (this->*moveProc.entries[field_0x9BB])(); /* (this->*moveProc[field_0x9BB])() */
     } else {
         eventMove();
     }
@@ -32,86 +28,68 @@ bool daNpcRoten_c::_execute() {
     mObjAcch.CrrPos(dComIfG_Bgsp());
     setCollision(npc_dat(mNpcNo).field_0x2C, 200.0f);
     setCollisionH();
-    RotenNpcDat& dat = npc_dat(mNpcNo);
-    cXyz* attPos = gabi::at<cXyz>(gabi::ea(this) + 0x390); /* attention_info.position */
+    NpcDatStruct& dat = npc_dat(mNpcNo);
+    cXyz* attPos = &attention_info.position; /* attention_info.position */
     attPos->set(current.pos.x, current.pos.y + dat.field_0x1C, current.pos.z);
     eyePos.set(current.pos.x, current.pos.y + dat.field_0x28, current.pos.z);
     if (field_0x9C7) {
-        m_jnt.setParam(0, 0, 0, 0, dat.field_0x04, dat.field_0x08, dat.field_0x0C, dat.field_0x10, dat.field_0x14);
+        m_jnt.setParam(0, 0, 0, 0, dat.field_0x04, dat.field_0x08, dat.field_0x0C, dat.field_0x10,
+                       dat.field_0x14);
     } else {
-        m_jnt.setParam(dat.field_0x06, dat.field_0x0A, dat.field_0x0E, dat.field_0x12, dat.field_0x04, dat.field_0x08,
-                       dat.field_0x0C, dat.field_0x10, dat.field_0x14);
+        m_jnt.setParam(dat.field_0x06, dat.field_0x0A, dat.field_0x0E, dat.field_0x12,
+                       dat.field_0x04, dat.field_0x08, dat.field_0x0C, dat.field_0x10,
+                       dat.field_0x14);
     }
     lookBack();
     setCollisionB();
     setMtx();
     return false;
 }
-VERIFY(0x022D5580, &daNpcRoten_c::_execute);
-
 /* 022D58F4 */
 u8 daNpcRoten_c::executeCommon() {
-    WWHD_FUNC(0x022D58F4, u8, this);
-    if (field_0x9B6 != 0 && field_0x9BB != 4) {
+    if (field_0x9B6 != 0 && field_0x9BB != MODE_WIND) {
         field_0x9B7 = 1;
     } else {
         field_0x9B7 = 0;
     }
     if (field_0x9B4 == 1) {
-        executeSetMode(1);
+        executeSetMode(MODE_TALK);
     }
     return field_0x9B4;
 }
-VERIFY(0x022D58F4, &daNpcRoten_c::executeCommon);
-
 /* 022D3FDC */
 void daNpcRoten_c::executeSetMode(u8 param_1) {
-    WWHD_FUNC(0x022D3FDC, void, this, param_1);
     field_0x990 = 0.0f;
-    field_0x9BB = (u8)roten_pmf_call(this, l_execute_init + param_1 * 8); /* (this->*l_execute_init[param_1])() */
+    field_0x9BB =
+        (u8)(this->*l_execute_init.entries[param_1])(); /* (this->*l_execute_init[param_1])() */
 }
-VERIFY(0x022D3FDC, &daNpcRoten_c::executeSetMode);
-
-
 /* 022D5970 */
 s32 daNpcRoten_c::executeWaitInit() {
-    WWHD_FUNC(0x022D5970, s32, this);
-    setAnmTbl(gabi::at<sRotenAnmDat>(l_npc_anm_wait));
-    RotenNpcDat& dat = npc_dat(mNpcNo);
+    setAnmTbl(&l_npc_anm_wait);
+    NpcDatStruct& dat = npc_dat(mNpcNo);
     f32 rnd = cM_rndF((f32)(dat.field_0x4E - dat.field_0x4C));
     field_0x9A6 = (s16)gabi::ftoi(rnd + (f32)npc_dat(mNpcNo).field_0x4C);
     return 0;
 }
-VERIFY(0x022D5970, &daNpcRoten_c::executeWaitInit);
-
 /* 022D5A48 */
 void daNpcRoten_c::executeWait() {
-    WWHD_FUNC(0x022D5A48, void, this);
     if (!executeCommon() && mPathRun.isPath() && field_0x9A6 != 0 && !field_0x9B5) {
         s16 t = (s16)(field_0x9A6 - 1);
         field_0x9A6 = t;
         if (t == 0) {
-            executeSetMode(3);
+            executeSetMode(MODE_TURN);
         }
     }
 }
-VERIFY(0x022D5A48, &daNpcRoten_c::executeWait);
-
-/* 022D674C (unnamed by the matcher) */
-s32 daNpcRoten_c::executeTalkInit() {
-    WWHD_FUNC(0x022D674C, s32, this);
-    return 1;
-}
-VERIFY(0x022D674C, &daNpcRoten_c::executeTalkInit);
-
+/* 022D674C */
+s32 daNpcRoten_c::executeTalkInit() { return 1; }
 /* 022D5ABC */
 void daNpcRoten_c::executeTalk() {
-    WWHD_FUNC(0x022D5ABC, void, this);
     executeCommon();
     if (!dComIfGp_event_chkTalkXY() || dComIfGp_evmng_ChkPresentEnd()) {
-        if (talk(1) == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
+        if (talk(1) == fopMsgStts_BOX_CLOSED_e) {
             field_0x9B4 = 0;
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
             dComIfGp_event_reset();
             field_0x9B2 = field_0x9B2 & ~0x4000;
             field_0x9C6 = 0;
@@ -120,23 +98,18 @@ void daNpcRoten_c::executeTalk() {
         }
     }
 }
-VERIFY(0x022D5ABC, &daNpcRoten_c::executeTalk);
-
 /* 022D5B7C */
 s32 daNpcRoten_c::executeWalkInit() {
-    WWHD_FUNC(0x022D5B7C, s32, this);
-    setAnmTbl(gabi::at<sRotenAnmDat>(l_npc_anm_walk));
-    RotenNpcDat& dat = npc_dat(mNpcNo);
+    setAnmTbl(&l_npc_anm_walk);
+    NpcDatStruct& dat = npc_dat(mNpcNo);
     f32 rnd = cM_rndF((f32)(dat.field_0x52 - dat.field_0x50));
     field_0x9A6 = (s16)gabi::ftoi(rnd + (f32)npc_dat(mNpcNo).field_0x50);
     return 2;
 }
-VERIFY(0x022D5B7C, &daNpcRoten_c::executeWalkInit);
-
 /* angle from the actor to the current path point (dNpc_calc_DisXZ_AngY on copies) */
 static inline s16 roten_pathAngle(daNpcRoten_c* i_this) {
     gabi::Local<cXyz> point;
-    dNpc_PathRun_getPoint(&i_this->mPathRun, point, i_this->mPathRun.mIdx);
+    roten_dNpc_PathRun_getPoint(&i_this->mPathRun, point, i_this->mPathRun.mIdx);
     gabi::Local<cXyz> a, b;
     gabi::Local<be<s16>> angle;
     a->x = i_this->current.pos.x;
@@ -151,21 +124,21 @@ static inline s16 roten_pathAngle(daNpcRoten_c* i_this) {
 
 /* 022D5C54 */
 void daNpcRoten_c::executeWalk() {
-    WWHD_FUNC(0x022D5C54, void, this);
     if (!executeCommon()) {
         bool temp = false;
         gabi::Local<cXyz> pos;
         pos->x = current.pos.x;
         pos->y = current.pos.y;
         pos->z = current.pos.z;
-        if (dNpc_PathRun_chkPointPass(&mPathRun, pos, mPathRun.getDir()) && !dNpc_PathRun_nextIdxAuto(&mPathRun)) {
+        if (roten_dNpc_PathRun_chkPointPass(&mPathRun, pos, mPathRun.getDir()) &&
+            !roten_dNpc_PathRun_nextIdxAuto(&mPathRun)) {
             temp = true;
         }
         if (field_0x9B5 != 0) {
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
         } else if (!temp) {
             s16 angle = roten_pathAngle(this);
-            RotenNpcDat& dat = npc_dat(mNpcNo);
+            NpcDatStruct& dat = npc_dat(mNpcNo);
             field_0x9B0 = angle;
             field_0x99C = 0;
             field_0x9AC = dat.field_0x18;
@@ -176,76 +149,61 @@ void daNpcRoten_c::executeWalk() {
                 s16 t = (s16)(field_0x9A6 - 1);
                 field_0x9A6 = t;
                 if (t == 0) {
-                    executeSetMode(0);
+                    executeSetMode(MODE_WAIT);
                 }
             }
         } else {
             mPathRun.turnDir();
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
         }
     }
 }
-VERIFY(0x022D5C54, &daNpcRoten_c::executeWalk);
-
 /* 022D5DC0 */
 s32 daNpcRoten_c::executeTurnInit() {
-    WWHD_FUNC(0x022D5DC0, s32, this);
     s32 ret = 3;
     s16 angle = roten_pathAngle(this);
     if (angle == current.angle.y) {
         ret = 2;
-        setAnmTbl(gabi::at<sRotenAnmDat>(l_npc_anm_walk));
-        RotenNpcDat& dat = npc_dat(mNpcNo);
+        setAnmTbl(&l_npc_anm_walk);
+        NpcDatStruct& dat = npc_dat(mNpcNo);
         f32 rnd = cM_rndF((f32)(dat.field_0x52 - dat.field_0x50));
         field_0x9A6 = (s16)gabi::ftoi(rnd + (f32)npc_dat(mNpcNo).field_0x50);
     }
     return ret;
 }
-VERIFY(0x022D5DC0, &daNpcRoten_c::executeTurnInit);
-
 /* 022D5F10 */
 void daNpcRoten_c::executeTurn() {
-    WWHD_FUNC(0x022D5F10, void, this);
     if (!executeCommon()) {
         s16 angle = roten_pathAngle(this);
         field_0x9B0 = angle;
         field_0x99C = 0;
         field_0x9C4 = 2;
         if (!m_jnt.mbTrn) { /* !m_jnt.trnChk() */
-            executeSetMode(2);
+            executeSetMode(MODE_WALK);
         }
     }
 }
-VERIFY(0x022D5F10, &daNpcRoten_c::executeTurn);
-
 /* 022D5FC8 */
 s32 daNpcRoten_c::executeWindInit() {
-    WWHD_FUNC(0x022D5FC8, s32, this);
-    setAnmTbl(gabi::at<sRotenAnmDat>(l_npc_anm_wind));
-    J3DAnmTransform* pAnmRes =
-        (J3DAnmTransform*)dComIfG_getObjectIDRes(arcname(mNpcNo), gabi::load<s32>(l_head_bck_ix_tbl + mNpcNo * 4));
+    setAnmTbl(l_npc_anm_wind.entries);
+    J3DAnmTransform* pAnmRes = (J3DAnmTransform*)dComIfG_getObjectIDRes(
+        arcname(mNpcNo), l_head_bck_ix_tbl.entries[mNpcNo]);
     field_0x6D8->setAnm(pAnmRes, 0 /* EMode_NONE */, 14.0f, 1.0f, 0.0f, 39.0f, nullptr);
     return 4;
 }
-VERIFY(0x022D5FC8, &daNpcRoten_c::executeWindInit);
-
 /* 022D6074 */
 void daNpcRoten_c::executeWind() {
-    WWHD_FUNC(0x022D6074, void, this);
     if (!executeCommon()) {
         field_0x6D8->play(nullptr, 0, 0);
         if (field_0x9C1 & 1) {
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
             field_0x9CA = 0;
         }
     }
 }
-VERIFY(0x022D6074, &daNpcRoten_c::executeWind);
-
 /* 022D3EA0 */
 void daNpcRoten_c::checkOrder() {
-    WWHD_FUNC(0x022D3EA0, void, this);
-    u16 command = eventInfo_getCommand(this);
+    u16 command = eventInfo.getCommand();
     if (command == 2 /* checkCommandDemoAccrpt() */) {
         if (dComIfGp_evmng_startCheck(field_0x99E) && field_0x9B7 == 3) {
             field_0x9B7 = 0;
@@ -256,22 +214,20 @@ void daNpcRoten_c::checkOrder() {
         } else if (dComIfGp_evmng_startCheck(field_0x9A4) && field_0x9B7 == 6) {
             field_0x9B7 = 0;
         }
-    } else if (command == 1 /* checkCommandTalk() */ && (field_0x9B7 == 2 || field_0x9B7 == 1) && field_0x9B4 == 0) {
+    } else if (command == 1 /* checkCommandTalk() */ && (field_0x9B7 == 2 || field_0x9B7 == 1) &&
+               field_0x9B4 == 0) {
         field_0x9B4 = 1;
         field_0x990 = 0.0f;
         field_0x9C6 = 1;
     }
 }
-VERIFY(0x022D3EA0, &daNpcRoten_c::checkOrder);
-
 /* 022D4EF0 */
 void daNpcRoten_c::eventOrder() {
-    WWHD_FUNC(0x022D4EF0, void, this);
     u8 order = field_0x9B7;
     if (order == 2 || order == 1) {
-        eventInfo_onCondition(this, 1 /* dEvtCnd_CANTALK_e */);
+        eventInfo.onCondition(dEvtCnd_CANTALK_e);
         if (dComIfGs_isEventBit(save_dat(mNpcNo, 0))) {
-            eventInfo_onCondition(this, 0x20 /* dEvtCnd_CANTALKITEM_e */);
+            eventInfo.onCondition(dEvtCnd_CANTALKITEM_e);
         }
         if (field_0x9B7 == 2) {
             fopAcM_orderSpeakEvent(this);
@@ -286,21 +242,18 @@ void daNpcRoten_c::eventOrder() {
         fopAcM_orderOtherEventId(this, field_0x9A2, 0xFF, 0xFF7F, 0, 1);
         field_0x9B2 = field_0x9B2 | 0x4000;
     } else if (order == 6) {
-        fopAcM_orderChangeEventId(dComIfGp_getPlayer(0), this, field_0x9A4, 0, 0xFFFF);
+        roten_fopAcM_orderChangeEventId(dComIfGp_getPlayer(0), this, field_0x9A4, 0, 0xFFFF);
         field_0x9B2 = field_0x9B2 | 0x4000;
         dComIfGs_setReserveItemEmpty();
     }
 }
-VERIFY(0x022D4EF0, &daNpcRoten_c::eventOrder);
-
 /* 022D4C40 */
 void daNpcRoten_c::eventMove() {
-    WWHD_FUNC(0x022D4C40, void, this);
     if (field_0x9B2 & 0x4000) {
         if (dComIfGp_evmng_endCheck(field_0x99E)) {
             dComIfGp_event_reset();
             field_0x9B2 = field_0x9B2 & ~0xC000;
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
             field_0x9B4 = 0;
             if (field_0x9B2 & 8) {
                 field_0x9B7 = 2;
@@ -311,7 +264,7 @@ void daNpcRoten_c::eventMove() {
         } else if (dComIfGp_evmng_endCheck(field_0x9A0)) {
             dComIfGp_event_reset();
             field_0x9B2 = field_0x9B2 & ~0x4000;
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
             u16 f = field_0x9B2;
             if (f & 0x40) {
                 field_0x9B2 = f & ~0x40;
@@ -326,13 +279,13 @@ void daNpcRoten_c::eventMove() {
             field_0x9C6 = 0;
             dComIfGp_event_reset();
             field_0x9B2 = field_0x9B2 & ~0x4000;
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
         } else if (dComIfGp_evmng_endCheck(field_0x9A4)) {
             field_0x9B4 = 0;
             field_0x9C6 = 0;
             dComIfGp_event_reset();
             field_0x9B2 = field_0x9B2 & ~0xC000;
-            executeSetMode(0);
+            executeSetMode(MODE_WAIT);
         } else {
             u8 oldFlag = mEventCut.mbAttention;
             if (mEventCut.cutProc()) {
@@ -346,19 +299,16 @@ void daNpcRoten_c::eventMove() {
         }
     }
 }
-VERIFY(0x022D4C40, &daNpcRoten_c::eventMove);
-
 /* 022D4828 */
 void daNpcRoten_c::privateCut() {
-    WWHD_FUNC(0x022D4828, void, this);
-    /* static char* cut_name_tbl[8] (.data 0x101C600C): INIT, MES_SET, SET_ITEM, CLR_ITEM, GET_ITEM,
-     * SET_ANGLE, ON_PLR, OFF_PLR */
-    const char* staffName = gabi::at<const char>(gabi::load<u32>(l_npc_staff_id + mNpcNo * 4));
+
+    const char* staffName = l_npc_staff_id.entries[mNpcNo].get();
     s32 staffIdx = dComIfGp_evmng_getMyStaffId(staffName, nullptr, 0);
     if (staffIdx == -1) {
         return;
     }
-    s8 actIdx = dComIfGp_evmng_getMyActIdx(staffIdx, 0x101C600C, 8, TRUE, 0);
+    s8 actIdx =
+        roten_dComIfGp_evmng_getMyActIdx(staffIdx, gabi::ea(cut_name_tbl.entries), 8, TRUE, 0);
     field_0x9C3 = actIdx;
     if (actIdx == -1) {
         dComIfGp_evmng_cutEnd(staffIdx);
@@ -407,27 +357,27 @@ void daNpcRoten_c::privateCut() {
         dComIfGp_evmng_cutEnd(staffIdx);
     }
     gabi::Local<gptr<fopAc_ac_c>> pItem;
-    if (fopAcM_SearchByID_o(field_0x6F8, pItem) && pItem->get() != nullptr) {
-        if (field_0x9C0 == 7) {
+    if (roten_fopAcM_SearchByID_o(field_0x6F8, pItem) && pItem->get() != nullptr) {
+        if (field_0x9C0 == ANM_WATASU) {
             if ((s16)gabi::ftoi(mpMorf->getFrame()) >= 0x3C) {
                 Mtx34* mtx = getAnmMtx(mpMorf->getModel(), m_hand_L_jnt_num);
                 PSMTXCopy(mtx, calc_mtx());
                 mDoMtx_stack_c::transS(20.0f, -30.0f, -30.0f);
-                PSMTXConcat(calc_mtx(), mDoMtx_stack_c::get(), calc_mtx());
+                roten_PSMTXConcat(calc_mtx(), mDoMtx_stack_c::get(), calc_mtx());
                 Mtx34* m = calc_mtx();
                 f32 x = m->m[0][3]; /* mDoMtx_multVecZero */
                 f32 y = m->m[1][3];
                 f32 z = m->m[2][3];
-                u32 item = gabi::ea(pItem->get());
-                gabi::store<f32>(item + 0x760, x); /* pItem->setOffsetPos(offset) */
-                gabi::store<f32>(item + 0x764, y);
-                gabi::store<f32>(item + 0x768, z);
+                RotenPresentItem* item = static_cast<RotenPresentItem*>(pItem->get());
+                item->mOffsetPos.x = x; /* pItem->setOffsetPos(offset) */
+                item->mOffsetPos.y = y;
+                item->mOffsetPos.z = z;
                 daItemBase_show(pItem->get());
                 field_0x714.x = x;
                 field_0x714.y = y;
                 field_0x714.z = z;
             }
-        } else if (field_0x9C0 == 8) {
+        } else if (field_0x9C0 == ANM_ITEMWAIT) {
             field_0x708.copy(field_0x714);
             field_0x99C = 1;
             field_0x9C4 = 1;
@@ -436,40 +386,37 @@ void daNpcRoten_c::privateCut() {
         }
     }
 }
-VERIFY(0x022D4828, &daNpcRoten_c::privateCut);
-
 /* 022D40A4 */
 void daNpcRoten_c::eventMesSetInit(int staffIdx) {
-    WWHD_FUNC(0x022D40A4, void, this, staffIdx);
-    be<u32>* pData = (be<u32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x1002155C) /* "MsgNo" */);
+    be<u32>* pData = (be<u32>*)dComIfGp_evmng_getMyIntegerP(staffIdx, "MsgNo" /* "MsgNo" */);
     if (pData) {
         u32 msgNo = *pData;
         switch (msgNo) {
         case 0x0:
-            field_0x98C = gabi::at<be<u32>>(gabi::load<u32>(0x101C5E50 + (mNpcNo * 12 + field_0x9BE) * 4)); /* l_msg_xy_koukan_item */
+            field_0x98C = l_msg_xy_koukan_item.entries[mNpcNo][field_0x9BE].get();
             setMessage(*field_0x98C);
             dComIfGs_onEventBit(save_dat(mNpcNo, 6));
             break;
         case 0x1:
-            field_0x98C = gabi::at<be<u32>>(gabi::load<u32>(0x101C5EE0 + (mNpcNo * 12 + field_0x9BE) * 4)); /* l_msg_xy_koukan_item2 */
+            field_0x98C = l_msg_xy_koukan_item2.entries[mNpcNo][field_0x9BE].get();
             setMessage(*field_0x98C);
             break;
         case 0xA:
-            field_0x98C = gabi::at<be<u32>>(gabi::load<u32>(0x101C5F70 + (mNpcNo * 12 + field_0x9BE) * 4)); /* l_msg_xy_koukan_item3 */
+            field_0x98C = l_msg_xy_koukan_item3.entries[mNpcNo][field_0x9BE].get();
             setMessage(*field_0x98C);
             break;
         case 0x14:
-            field_0x98C = gabi::at<be<u32>>(gabi::load<u32>(0x101C5D08 + mNpcNo * 4)); /* l_msg_xy_after_get_demo */
+            field_0x98C = l_msg_xy_after_get_demo.entries[mNpcNo].get();
             setMessage(*field_0x98C);
             break;
         case 0x15:
-            field_0x98C = gabi::at<be<u32>>(gabi::load<u32>(0x101C5D14 + mNpcNo * 4)); /* l_msg_xy_after_get_demo2 */
+            field_0x98C = l_msg_xy_after_get_demo2.entries[mNpcNo].get();
             setMessage(*field_0x98C);
             break;
         case 0x63: {
             /* getMsg() is virtual (vtable +0x1C) */
             u32 vt = __vtbl;
-            u32 no = gabi::call_ptr<u32>(gabi::load<u32>(vt + 0x1C), this);
+            u32 no = gabi::call_ptr<u32>(gabi::at<RotenActorVtable>(vt)->getMsg, this);
             setMessage(no);
             break;
         }
@@ -478,37 +425,29 @@ void daNpcRoten_c::eventMesSetInit(int staffIdx) {
             break;
         }
     } else {
-        field_0x98C = gabi::at<be<u32>>(gabi::ea(field_0x98C.get()) + 4);
+        field_0x98C = field_0x98C.get() + 1;
         setMessage(*field_0x98C);
     }
 }
-VERIFY(0x022D40A4, &daNpcRoten_c::eventMesSetInit);
-
 /* 022D47A4 */
 bool daNpcRoten_c::eventMesSet() {
-    WWHD_FUNC(0x022D47A4, bool, this);
-    return talk(0) == 0x12; /* fopMsgStts_BOX_CLOSED_e */
+    return talk(0) == fopMsgStts_BOX_CLOSED_e; /* fopMsgStts_BOX_CLOSED_e */
 }
-VERIFY(0x022D47A4, &daNpcRoten_c::eventMesSet);
-
 /* 022D4330 */
 void daNpcRoten_c::eventSetItemInit() {
-    WWHD_FUNC(0x022D4330, void, this);
     u8 itemIdx = item_dat(mNpcNo, field_0x9BE);
     gabi::Local<cXyz> pos;
     pos->x = 0.0f;
     pos->z = 0.0f;
     pos->y = 0.0f;
-    field_0x6F8 = fopAcM_createItemForPresentDemo(pos, (u8)(itemIdx + 0x8C /* dItemNo_TOWN_FLOWER_e */),
-                                                  9 /* FLAG_UNK01 | FLAG_UNK08 */, -1, current.roomNo);
+    field_0x6F8 =
+        roten_fopAcM_createItemForPresentDemo(pos, (u8)(itemIdx + dItemNo_TOWN_FLOWER_e),
+                                              9 /* FLAG_UNK01 | FLAG_UNK08 */, -1, current.roomNo);
 }
-VERIFY(0x022D4330, &daNpcRoten_c::eventSetItemInit);
-
 /* 022D47D4 */
 bool daNpcRoten_c::eventSetItem() {
-    WWHD_FUNC(0x022D47D4, bool, this);
     gabi::Local<gptr<fopAc_ac_c>> pActor;
-    if (fopAcM_SearchByID_o(field_0x6F8, pActor)) {
+    if (roten_fopAcM_SearchByID_o(field_0x6F8, pActor)) {
         if (pActor->get() != nullptr) {
             return true;
         }
@@ -516,71 +455,56 @@ bool daNpcRoten_c::eventSetItem() {
     }
     return true;
 }
-VERIFY(0x022D47D4, &daNpcRoten_c::eventSetItem);
-
 /* 022D45B4 */
 void daNpcRoten_c::eventClrItemInit() {
-    WWHD_FUNC(0x022D45B4, void, this);
     gabi::Local<gptr<fopAc_ac_c>> pItem;
-    if (fopAcM_SearchByID_o(field_0x6F8, pItem) && pItem->get() != nullptr) {
+    if (roten_fopAcM_SearchByID_o(field_0x6F8, pItem) && pItem->get() != nullptr) {
         daItemBase_dead(pItem->get());
     }
     field_0x9C6 = 1;
     field_0x9C7 = 0;
-    setAnmTbl(gabi::at<sRotenAnmDat>(l_npc_anm_wait));
+    setAnmTbl(&l_npc_anm_wait);
 }
-VERIFY(0x022D45B4, &daNpcRoten_c::eventClrItemInit);
-
 /* 022D4620 */
 void daNpcRoten_c::eventGetItemInit(int staffIdx) {
-    WWHD_FUNC(0x022D4620, void, this, staffIdx);
     u32 pcId;
-    void* pData = dComIfGp_evmng_getMyIntegerP(staffIdx, STR(0x10021570) /* "ItemNo" */);
+    void* pData = dComIfGp_evmng_getMyIntegerP(staffIdx, "ItemNo" /* "ItemNo" */);
     if (pData != nullptr) {
-        /* HD: l_get_item_no has one entry, read without the index (GameCube l_get_item_no[*pData]) */
-        u32 itemNo = gabi::load<u32>(0x101C546C);
-        pcId = gabi::call<u32>(0x025D7DEC, &current.pos, itemNo, 0, -1, (s32)current.roomNo, (u32)0, (u32)0);
+        // HD: l_get_item_no has one entry, read without the index (GameCube l_get_item_no[*pData])
+        u32 itemNo = (u32)l_get_item_no.itemNo;
+        pcId = roten_createPresentItem(&current.pos, itemNo, 0, -1, (s32)current.roomNo, 0, 0);
     } else {
         u8 temp = item_dat(mNpcNo, field_0x9BE);
         dComIfGs_onGetItemReserve(temp);
-        pcId = fopAcM_createItemForPresentDemo(&current.pos, (u8)(temp + 0x8C), 1 /* FLAG_UNK01 */, -1, current.roomNo);
+        pcId =
+            roten_fopAcM_createItemForPresentDemo(&current.pos, (u8)(temp + dItemNo_TOWN_FLOWER_e),
+                                                  1 /* FLAG_UNK01 */, -1, current.roomNo);
     }
-    if (pcId != 0xFFFFFFFF) {
+    if (pcId != fpcM_ERROR_PROCESS_ID_e) {
         dComIfGp_event_setItemPartnerId(pcId);
     }
 }
-VERIFY(0x022D4620, &daNpcRoten_c::eventGetItemInit);
-
 /* 022D471C */
 void daNpcRoten_c::eventSetAngleInit() {
-    WWHD_FUNC(0x022D471C, void, this);
     fopAc_ac_c* player = dComIfGp_getLinkPlayer(); /* daPy_getPlayerLinkActorClass() */
     gabi::Local<cXyz> delta;
     cXyz_mi(&current.pos, delta, &player->current.pos);
     s16 angle = cM_atan2s(delta->x, delta->z);
-    gabi::store<s16>(gabi::ea(player) + 0x422, angle); /* player->changeDemoMoveAngle(angle) */
+    static_cast<daPy_py_c*>(player)->mDemo.mDemoMoveAngle =
+        angle; /* player->changeDemoMoveAngle(angle) */
 }
-VERIFY(0x022D471C, &daNpcRoten_c::eventSetAngleInit);
-
-/* 022D4064 (the matcher calls it daDitem_c::setOffsetPos) */
+/* 022D4064 */
 void daNpcRoten_c::eventOnPlrInit() {
-    WWHD_FUNC(0x022D4064, void, this);
-    u32 player = gabi::ea(dComIfGp_getLinkPlayer());
-    gabi::store<u32>(player + 0x3B8, gabi::load<u32>(player + 0x3B8) & ~0x08000000u); /* offPlayerNoDraw() */
+    daPy_py_c* player = static_cast<daPy_py_c*>(dComIfGp_getLinkPlayer());
+    player->mNoResetFlg0 = (u32)player->mNoResetFlg0 & ~0x08000000u; /* offPlayerNoDraw() */
 }
-VERIFY(0x022D4064, &daNpcRoten_c::eventOnPlrInit);
-
 /* 022D4774 */
 void daNpcRoten_c::eventOffPlrInit() {
-    WWHD_FUNC(0x022D4774, void, this);
-    u32 player = gabi::ea(dComIfGp_getLinkPlayer());
-    gabi::store<u32>(player + 0x3B8, gabi::load<u32>(player + 0x3B8) | 0x08000000u); /* onPlayerNoDraw() */
+    daPy_py_c* player = static_cast<daPy_py_c*>(dComIfGp_getLinkPlayer());
+    player->mNoResetFlg0 = (u32)player->mNoResetFlg0 | 0x08000000u; /* onPlayerNoDraw() */
 }
-VERIFY(0x022D4774, &daNpcRoten_c::eventOffPlrInit);
-
 /* 022D3B9C */
 void daNpcRoten_c::chkAttention() {
-    WWHD_FUNC(0x022D3B9C, void, this);
     if (mEventCut.mbAttention) {
         field_0x708.x = mEventCut.mPos.x; /* mEventCut.getAttnPos() */
         field_0x708.y = mEventCut.mPos.y;
@@ -598,7 +522,7 @@ void daNpcRoten_c::chkAttention() {
         }
     } else {
         fopAc_ac_c* player = dComIfGp_getPlayer(0);
-        RotenNpcDat& dat = npc_dat(mNpcNo);
+        NpcDatStruct& dat = npc_dat(mNpcNo);
         f32 temp = dat.field_0x24;
         s32 temp2 = dat.field_0x20;
         s32 temp3 = 0x4000;
@@ -626,7 +550,7 @@ void daNpcRoten_c::chkAttention() {
         f32 d = *dist;
         if (temp > d && field_0x9CA == 0 && temp3 > absAngle) {
             gabi::Local<cXyz> eye;
-            dNpc_playerEyePos_r(eye, npc_dat(mNpcNo).field_0x00);
+            dNpc_playerEyePos(eye, npc_dat(mNpcNo).field_0x00);
             field_0x99C = field_0x9C6 == 0;
             field_0x708.copy(*eye);
             field_0x9C4 = 1;
@@ -663,11 +587,8 @@ void daNpcRoten_c::chkAttention() {
     }
     field_0x9AC = npc_dat(mNpcNo).field_0x16;
 }
-VERIFY(0x022D3B9C, &daNpcRoten_c::chkAttention);
-
 /* 022D5374 */
 void daNpcRoten_c::lookBack() {
-    WWHD_FUNC(0x022D5374, void, this);
     f32 eyeX = eyePos.x;
     f32 eyeY = eyePos.y;
     f32 eyeZ = eyePos.z;
@@ -702,9 +623,14 @@ void daNpcRoten_c::lookBack() {
     eye->x = eyeX;
     eye->y = eyeY;
     eye->z = eyeZ;
-    dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, eye, targetY, field_0x9AE, temp3);
+    roten_dNpc_JntCtrl_lookAtTarget(&m_jnt, &current.angle.y, dstPos, eye, targetY, field_0x9AE,
+                                    temp3);
     shape_angle.x = current.angle.x;
     shape_angle.y = current.angle.y;
     shape_angle.z = current.angle.z;
 }
-VERIFY(0x022D5374, &daNpcRoten_c::lookBack);
+
+/* WWHD glue
+str 1002155C "MsgNo" in 022D40A4
+str 10021570 "ItemNo" in 022D4620
+*/

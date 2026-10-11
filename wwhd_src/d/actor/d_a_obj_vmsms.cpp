@@ -1,146 +1,131 @@
-// Master Sword pedestal sword, HD TU 023B37E0..023B3B90.
-// Matcher 023B388C says check_demo; the instructions implement init_mtx.
+/** Master Sword pedestal sword. */
 #include "d/actor/d_a_obj_vmsms.h"
-#include "bindings.h"
-namespace {
-template<class T> T read(u32 address) { return *gabi::at<be<T>>(address); }
-template<class T> void write(u32 address, T value) { *gabi::at<be<T>>(address) = value; }
-void* ptr(u32 address) { return gabi::at<void>(address); }
-struct ArchiveName { be<u32> name, vtable; };
+
+// HD: archive resources use this translation unit's SafeString vtable.
+const gc_tu_data gc_tu = { .safeString = 0x10032ED4 };
+const char daObjVmsms_c::M_arcname[] = "VmsMS";
+enum { dRes_INDEX_VMSMS_BDL_VMSMS_e = 3 };
+using vmsms_save_ptr = gptr<vmsms_save_c>;
+static vmsms_save_ptr l_save;
+
+/* 023B37E0 */
+BOOL daObjVmsms_c::create_heap() {
+    J3DModelData* mdl_data =
+        (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_VMSMS_BDL_VMSMS_e);
+    JUT_ASSERT(0x5B, mdl_data != NULL);
+    if (mdl_data == NULL)
+        return FALSE;
+    mModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
+    return mModel != NULL;
 }
-BOOL vmsms_create_heap(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B37E0, BOOL, sword);
-    gabi::Local<ArchiveName> archive;
-    archive->vtable = 0x10032ED4;
-    archive->name = 0x10032F40;
-    u32 data = gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), archive.get(), 3);
-    if (!data) {
-        gabi::call(0x0273AA24, ptr(0x10032EFC), 0x5B, ptr(0x10032F10));
-        return 0;
+
+/* 023B3888 */
+static BOOL solidHeapCB(fopAc_ac_c* i_this) {
+    return ((daObjVmsms_c*)i_this)->create_heap();
+}
+
+/* 023B388C */
+// HD: the matcher labels this check_demo; the function implements init_mtx.
+void daObjVmsms_c::init_mtx() {
+    mModel->setBaseScale(scale);
+}
+
+bool daObjVmsms_c::check_demo() const {
+    // HD: save event flags begin at 0x644.
+    return vmsms_isEventBit(&l_save->mEvent,
+                           dSv_event_flag_c::MASTER_SWORD_CUTSCENE);
+}
+
+/* 023B38AC */
+cPhs_State daObjVmsms_c::_create() {
+    fopAcM_ct(this, daObjVmsms_c);
+    if (check_demo())
+        return cPhs_ERROR_e;
+    cPhs_State ret = dComIfG_resLoad(&mPhs, M_arcname);
+    if (ret == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0))
+            return cPhs_ERROR_e;
+        fopAcM_SetMtx(this, mModel->getBaseTRMtx());
+        init_mtx();
     }
-    sword->mModel = gabi::call<J3DModel*>(0x025E38E0, ptr(data), 0, 0x11020203);
-    return sword->mModel.get() != nullptr;
+    return ret;
 }
-VERIFY(0x023B37E0, vmsms_create_heap);
-BOOL vmsms_solidHeapCB(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3888, BOOL, sword);
-    return vmsms_create_heap(sword);
-}
-VERIFY(0x023B3888, vmsms_solidHeapCB);
-void vmsms_init_mtx(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B388C, void, sword);
-    u32 model = gabi::ea(sword->mModel.get());
-    f32 z = sword->scale.z;
-    f32 x = sword->scale.x;
-    f32 y = sword->scale.y;
-    write<f32>(model + 0xBC, x);
-    write<f32>(model + 0xC4, z);
-    write<f32>(model + 0xC0, y);
-}
-VERIFY(0x023B388C, vmsms_init_mtx);
-s32 vmsms_create(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B38AC, s32, sword);
-    u32 condition = sword->actor_condition;
-    if (!(condition & 8)) {
-        if (sword) {
-            fopAc_ac_c_ct(sword);
-            condition = sword->actor_condition;
-            sword->__vtbl = 0x10032EEC;
-        }
-        sword->actor_condition = condition | 8;
-    }
-    u32 save = read<u32>(0x101F84DC);
-    if (gabi::call<s32>(0x025B8B94, ptr(save + 0x644), 0x2D04)) return 5;
-    s32 phase = gabi::call<s32>(0x02520460, &sword->mPhs, ptr(0x10032F40));
-    if (phase == 4) {
-        if (!gabi::call<s32>(0x025D63E8, sword, ptr(0x023B3888), 0)) return 5;
-        u32 model = gabi::ea(sword->mModel.get());
-        sword->cullMtx = model ? model + 0xC8 : 0;
-        vmsms_init_mtx(sword);
-        return 4;
-    }
-    return phase;
-}
-VERIFY(0x023B38AC, vmsms_create);
-bool vmsms_delete(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3990, bool, sword);
-    gabi::call(0x025204C8, &sword->mPhs, ptr(0x10032F40));
+
+/* 023B3990 */
+bool daObjVmsms_c::_delete() {
+    dComIfG_resDelete(&mPhs, M_arcname);
     return true;
 }
-VERIFY(0x023B3990, vmsms_delete);
-bool vmsms_execute(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B39C0, bool, sword);
-    u32 play = gabi::call<u32>(0x025200D4);
-    if (read<u8>(play + 0x5292)) {
-        play = gabi::call<u32>(0x025200D4);
-        if (gabi::call<s32>(0x025445B8, ptr(play + 0x52C4), ptr(0x10032F20)))
-            gabi::call(0x025D57E0, sword);
+
+/* 023B39C0 */
+bool daObjVmsms_c::_execute() {
+    if (dComIfGp_event_runCheck()) {
+        // HD: the old event-manager entry point takes only the event name.
+        if (vmsms_startCheckOld(dComIfGp_getPEvtManager(), "master_sword"))
+            fopAcM_delete(this);
     }
     return true;
 }
-VERIFY(0x023B39C0, vmsms_execute);
-bool vmsms_draw(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3A20, bool, sword);
-    auto light = dKy_getEnvlight();
-    settingTevStruct(light, 0, &sword->current.pos, &sword->tevStr);
-    light = dKy_getEnvlight();
-    setLightTevColorType(light, sword->mModel.get(), &sword->tevStr);
-    mDoExt_modelUpdateDL(sword->mModel.get(), 0);
+
+/* 023B3A20 */
+bool daObjVmsms_c::_draw() {
+    g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &current.pos, &tevStr);
+    g_env_light.setLightTevColorType(mModel, &tevStr);
+    mDoExt_modelUpdateDL(mModel);
     return true;
 }
-VERIFY(0x023B3A20, vmsms_draw);
-s32 vmsms_Mthd_Create(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3A7C, s32, sword);
-    return vmsms_create(sword);
+
+/* 023B3A7C */
+static cPhs_State Mthd_Create(daObjVmsms_c* i_this) { return i_this->_create(); }
+/* 023B3A80 */
+static bool Mthd_Delete(daObjVmsms_c* i_this) { return i_this->_delete(); }
+/* 023B3A84 */
+static bool Mthd_Execute(daObjVmsms_c* i_this) { return i_this->_execute(); }
+/* 023B3A88 */
+static bool Mthd_Draw(daObjVmsms_c* i_this) { return i_this->_draw(); }
+
+/* 023B3A8C */
+// HD: translation-unit static initialisation.
+static void __sinit_d_a_obj_vmsms_cpp() {
+    sinit_header_statics(0x1046C8CC, 0x101CDB30);
 }
-VERIFY(0x023B3A7C, vmsms_Mthd_Create);
-bool vmsms_Mthd_Delete(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3A80, bool, sword);
-    return vmsms_delete(sword);
+
+/* 023B3B20 */
+// HD: empty SafeString deleting destructor.
+static void SafeString_dt(void* object, u32 flags) {
+    if (object && (flags & 1))
+        operator_delete(object);
 }
-VERIFY(0x023B3A80, vmsms_Mthd_Delete);
-bool vmsms_Mthd_Execute(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3A84, bool, sword);
-    return vmsms_execute(sword);
-}
-VERIFY(0x023B3A84, vmsms_Mthd_Execute);
-bool vmsms_Mthd_Draw(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3A88, bool, sword);
-    return vmsms_draw(sword);
-}
-VERIFY(0x023B3A88, vmsms_Mthd_Draw);
-void vmsms_staticInit() {
-    WWHD_FUNC(0x023B3A8C, void);
-    write<u32>(0x1046C8E0, 0);
-    write<u32>(0x1046C8D8, 0);
-    write<u32>(0x1046C8E4, 0);
-    write<u32>(0x1046C8DC, 0);
-    gabi::call(0x028F026C, ptr(0x101CDB30));
-    write<f32>(0x1046C8CC, -3.1415927410125732f);
-    write<f32>(0x1046C8D0, 3.1415927410125732f);
-    gabi::call(0x028ED6F8, ptr(0x1046C8D4));
-    gabi::call(0x028F026C, ptr(0x101CDB3C));
-    gabi::call(0x028EAB2C, ptr(0x1046C8D5));
-    gabi::call(0x028F026C, ptr(0x101CDB48));
-}
-VERIFY(0x023B3A8C, vmsms_staticInit);
-void vmsms_staticDtor(void* object, u32 flags) {
-    WWHD_FUNC(0x023B3B20, void, object, flags);
-    if (object && (flags & 1)) gabi::call(0x0273AF40, object);
-}
-VERIFY(0x023B3B20, vmsms_staticDtor);
-void vmsms_destructor(daObjVmsms_c* sword, u32 flags) {
-    WWHD_FUNC(0x023B3B34, void, sword, flags);
-    if (sword) {
-        gabi::call(0x025D50BC, sword, 0);
-        if (flags & 1) gabi::call(0x0273AF40, sword);
+
+/* 023B3B34 */
+// HD: actor deleting destructor.
+static void daObjVmsms_c_dt(daObjVmsms_c* i_this, u32 flags) {
+    if (i_this) {
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
     }
 }
-VERIFY(0x023B3B34, vmsms_destructor);
-void vmsms_staticNoop(void* object) { WWHD_FUNC(0x023B3B88, void, object); }
-VERIFY(0x023B3B88, vmsms_staticNoop);
-BOOL vmsms_IsDelete(daObjVmsms_c* sword) {
-    WWHD_FUNC(0x023B3B8C, BOOL, sword);
-    return 1;
+
+/* 023B3B88 */
+// HD: empty SafeString termination method.
+static void SafeString_assureTerminationImpl(void*) {}
+
+/* 023B3B8C */
+static BOOL Mthd_IsDelete(daObjVmsms_c*) { return TRUE; }
+
+daObjVmsms_c::daObjVmsms_c() {
+    // HD: explicit base construction and virtual destructor table.
+    fopAc_ac_c_ct(this);
+    __vtbl = __vt;
 }
-VERIFY(0x023B3B8C, vmsms_IsDelete);
+
+/* WWHD glue (tools/verify/autoglue.py): private bindings
+data l_save 101F84DC
+str 10032F40 "VmsMS"
+str 10032EFC "d_a_obj_vmsms.cpp"
+str 10032F10 "mdl_data != NULL" renamed # HD spells NULL as 0
+str 10032F20 "master_sword"
+ext 025B8B94 BOOL vmsms_isEventBit(void*, u16)
+ext 025445B8 BOOL vmsms_startCheckOld(void*, const char*)
+*/

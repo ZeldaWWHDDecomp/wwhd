@@ -1,551 +1,591 @@
+/* Forest Haven lilypad lift. */
 #include "d/actor/d_a_leaflift.h"
-#include "bindings.h"
-using Actor = daLlift_c;
-template <unsigned N> struct Opaque {
-  be<u8> bytes[N];
-};
-// Keep the current guest frame linkage area clear for actual nonleaf callees.
+// HD: keep the linkage area clear for the nonleaf guest callees used by this actor.
 template <class T> struct ProtectedLocal {
-  struct Frame {
-    u8 linkage[16];
-    T value;
-  };
-  gabi::Local<Frame> storage;
-  T *get() const { return gabi::at<T>(storage.a + offsetof(Frame, value)); }
-  T *operator->() const { return get(); }
-  T &operator*() const { return *get(); }
-  operator T *() const { return get(); }
+    struct Frame {
+        u8 linkage[16];
+        T value;
+    };
+    gabi::Local<Frame> storage;
+    T* get() const {
+        return gabi::at<T>(storage.a + offsetof(Frame, value));
+    }
+    T* operator->() const {
+        return get();
+    }
+    T& operator*() const {
+        return *get();
+    }
 };
-static constexpr u32 MTX = 0x1048D0CC, SINCOS = 0x104A44F8;
-template <class T> static T read(u32 p, u32 off) {
-  return gabi::load<T>(p + off);
-}
-template <class T> static void write(u32 p, u32 off, T v) {
-  gabi::store<T>(p + off, v);
-}
-static void *ptr(u32 a) { return gabi::at<void>(a); }
-static u32 address(Actor *a, u32 off) { return gabi::ea(a) + off; }
-static f32 sine(s16 a) { return gabi::load<f32>(SINCOS + (u16(a) >> 3) * 8); }
-static f32 cosine(s16 a) {
-  return gabi::load<f32>(SINCOS + (u16(a) >> 3) * 8 + 4);
-}
-static void resetRotation(Actor *a) {
-  u32 x = gabi::load<u32>(0x101E9C38), y = gabi::load<u32>(0x101E9C3C);
-  u32 z = gabi::load<u32>(0x101E9C40), w = gabi::load<u32>(0x101E9C44);
-  write<u32>(gabi::ea(a), 0x574, x);
-  write<u32>(gabi::ea(a), 0x578, y);
-  write<u32>(gabi::ea(a), 0x57C, z);
-  write<u32>(gabi::ea(a), 0x580, w);
-}
-static u32 animationMatrix(u32 model, u32 joint) {
-  u32 buffer = read<u32>(model, 0x2C), matrices = read<u32>(buffer, 0x10);
-  u16 flags = read<u16>(buffer, 4);
-  write<u16>(buffer, 4, flags | 0x10);
-  return matrices + joint * 0x30;
-}
-static void invalidate(u32 emitter) {
-  u32 flags = read<u32>(emitter, 0x254);
-  write<s32>(emitter, 0x5C, -1);
-  write<u32>(emitter, 0x254, flags | 1);
-}
-static void stop(u32 emitter) {
-  write<u32>(emitter, 0x254, read<u32>(emitter, 0x254) | 1);
-}
-static void play(u32 emitter) {
-  write<u32>(emitter, 0x254, read<u32>(emitter, 0x254) & ~1u);
-}
-static u32 particle(u16 id, void *pos, void *angle) {
-  u32 playObject = gabi::call<u32>(0x025200D4),
-      control = read<u32>(playObject, 0x5AB0);
-  return gabi::call<u32>(0x025A847C, ptr(control), u32(0), id, pos, angle,
-                         u32(0), u8(255), u32(0), s8(-1), u32(0), u32(0),
-                         u32(0));
-}
-static void colorEmitter(Actor *a, u32 off, void *color) {
-  u32 emitter = read<u32>(gabi::ea(a), off);
-  if (!emitter)
-    return;
-  u8 r = read<u8>(gabi::ea(color), 0), g = read<u8>(gabi::ea(color), 1),
-     b = read<u8>(gabi::ea(color), 2);
-  write<u8>(emitter, 0x244, r);
-  write<u8>(emitter, 0x245, g);
-  write<u8>(emitter, 0x246, b);
-  emitter = read<u32>(gabi::ea(a), off);
-  write<u8>(emitter, 0x248, r);
-  write<u8>(emitter, 0x249, g);
-  write<u8>(emitter, 0x24A, b);
-}
-static void rideCallback(void *bg, Actor *a, fopAc_ac_c *other) {
-  WWHD_FUNC(0x021B3028, void, bg, a, other);
-  ProtectedLocal<cXyz> offset, cross;
-  gabi::call(0x0201ADE0, gabi::at<cXyz>(gabi::ea(other) + 0x314), offset.get(),
-             &a->current.pos);
-  f32 factor = 2.f;
-  if (other && gabi::load<s16>(gabi::ea(other) + 8) == 0xA8) {
-    a->ridden = 1;
-    a->hasRider = 1;
-    gabi::call(0x0201B080, offset.get(), cross.get(), ptr(0x10464E0C));
-    offset->copy(*cross);
-    gabi::call(0x025F1884, ptr(MTX), s16(-s16(a->current.angle.y)));
-    gabi::call(0x028E8F64, ptr(MTX), offset.get(), offset.get());
-    if (a->risingTilt) {
-      offset->x = f32(other->current.pos.x) + 200.f;
-      offset->y = other->current.pos.y;
-      offset->z = other->current.pos.z;
-      gabi::call(0x0201B080, offset.get(), cross.get(), ptr(0x10464E0C));
-      offset->copy(*cross);
-      gabi::call(0x025F1884, ptr(MTX), s16(-s16(a->current.angle.y)));
-      gabi::call(0x028E8F64, ptr(MTX), offset.get(), offset.get());
-      u16 angle = u16(u16(a->lifetime) << 11);
-      factor = (sine(s16(angle)) + sine(s16(angle))) * 0.25f;
-      f32 random = gabi::call<f32>(0x02019918, 0.2f);
-      factor *= random + 1.f;
+struct LeafColor {
+    be<u8> r, g, b, a;
+};
+// HD: fields beyond the shared emitter view, with HD global transform/color offsets.
+struct LeafEmitter : JPABaseEmitter {
+    u8 _70[0x1F0 - 0x70];
+    Mtx34 mGlobalRotation;
+    u8 _220[0x22C - 0x220];
+    cXyz mGlobalTranslation;
+    u8 _238[0x244 - 0x238];
+    LeafColor mGlobalPrmColor, mGlobalEnvColor;
+    u8 _24C[8];
+    be<u32> mStatus;
+    void becomeInvalidEmitter() {
+        u32 flags = mStatus;
+        mMaxFrame = -1;
+        mStatus = flags | 1;
     }
-    f32 sq = gabi::call<f32>(0x028E8DD0, offset.get());
-    f32 length = gabi::call<f32>(0x028F4384, sq);
-    if (!gabi::call<s32>(0x0201B47C, offset.get()))
-      return;
-    s16 target = s16(gabi::ftoi(-(length * factor)));
-    gabi::call(0x0200F428, &a->tilt, target, s16(8), s16(0x200));
-    f32 tilt = sine(a->tilt);
-    a->targetRotation[0] = f32(offset->x) * tilt;
-    a->targetRotation[1] = f32(offset->y) * tilt;
-    a->targetRotation[2] = f32(offset->z) * tilt;
-    a->targetRotation[3] = cosine(a->tilt);
-  }
-  a->risingTilt = 0;
-}
-VERIFY(0x021B3028, rideCallback);
-static s32 createHeap(Actor *a) {
-  WWHD_FUNC(0x021B3260, s32, a);
-  ProtectedLocal<SafeString> name;
-  name->mStringTop = 0x10013F20;
-  name->__vtbl = 0x10013E78;
-  u32 resources = gabi::load<u32>(0x101F4F28);
-  u32 data = gabi::call<u32>(0x026066C4, ptr(resources), name.get(), s32(4));
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x10013EC0), s32(0x14E), STR(0x10013ED4));
-  u32 model =
-      gabi::call<u32>(0x025E38E0, ptr(data), u32(0x80000), u32(0x11000022));
-  a->model = ptr(model);
-  if (!model)
-    return 0;
-  write<u32>(model, 0xB8, gabi::ea(a));
-  u32 bg = gabi::call<u32>(0x024F23F4, u32(0));
-  a->background = ptr(bg);
-  if (!bg)
-    return 0;
-  ProtectedLocal<SafeString> bgname;
-  bgname->__vtbl = 0x10013E78;
-  bgname->mStringTop = 0x10013F20;
-  resources = gabi::load<u32>(0x101F4F28);
-  data = gabi::call<u32>(0x026066C4, ptr(resources), bgname.get(), s32(7));
-  bg = gabi::ea(a->background.get());
-  if (gabi::call<s32>(0x0200A030, ptr(bg), ptr(data), u32(1), &a->transform) !=
-      0)
-    return 0;
-  bg = gabi::ea(a->background.get());
-  write<u32>(bg, 0xA8, 0x024EE708);
-  bg = gabi::ea(a->background.get());
-  write<u32>(bg, 0xB0, 0x021B3028);
-  return 1;
-}
-VERIFY(0x021B3260, createHeap);
-static s32 heapCallback(Actor *a) {
-  WWHD_FUNC(0x021B337C, s32, a);
-  return createHeap(a);
-}
-VERIFY(0x021B337C, heapCallback);
-static s32 nodeCallback(void *node, s32 timing) {
-  WWHD_FUNC(0x021B3380, s32, node, timing);
-  if (timing == 0) {
-    u32 joint = gabi::call<u32>(0x027F7878, node),
-        model = gabi::load<u32>(0x104B462C), actor = read<u32>(model, 0xB8);
-    u32 index = read<u16>(joint, 4);
-    if (actor) {
-      u32 matrix = animationMatrix(model, index);
-      gabi::call(0x028E90D4, ptr(matrix), ptr(MTX));
-      gabi::call(0x025F25CC, ptr(actor + 0x564));
-      gabi::call(0x028E90D4, ptr(MTX), ptr(0x104B4868));
-      matrix = animationMatrix(model, index);
-      mtx_copy(gabi::at<Mtx34>(matrix), gabi::at<Mtx34>(MTX));
-      gabi::call(0x028E90D4, ptr(MTX), ptr(actor + 0x588));
+    void stopCreateParticle() {
+        mStatus = (u32)mStatus | 1;
     }
-  }
-  return 1;
+    void playCreateParticle() {
+        mStatus = (u32)mStatus & ~1u;
+    }
+};
+WWHD_OFFSET(LeafEmitter, mStatus, 0x254);
+struct LeafBgWorld : dBgW {
+    u8 _04[0xA8 - 4];
+    be<u32> mCrrFunc;
+    u8 _AC[4];
+    be<u32> mRideCallback;
+};
+struct QuatWords {
+    be<u32> x, y, z, w;
+};
+static QuatWords ZeroQuat;
+static cXyz up_vec;
+static dCcD_SrcCyl l_cyl_src;
+static void resetRotation(daLlift_c* a) {
+    u32 x = ZeroQuat.x, y = ZeroQuat.y, z = ZeroQuat.z, w = ZeroQuat.w;
+    auto* target = reinterpret_cast<QuatWords*>(&a->mTargetRotation);
+    target->x = x;
+    target->y = y;
+    target->z = z;
+    target->w = w;
 }
-VERIFY(0x021B3380, nodeCallback);
-static void setMoveBGMtx(Actor *a) {
-  WWHD_FUNC(0x021B34AC, void, a);
-  f32 x = a->current.pos.x, y = a->current.pos.y, z = a->current.pos.z;
-  gabi::call(0x028E93CC, ptr(MTX), x, y, z);
-  gabi::call(0x025F1C28, ptr(MTX), s16(a->current.angle.y));
-  gabi::call(0x025F25CC, &a->rotation);
-  gabi::call(0x028E90D4, ptr(MTX), &a->transform);
+static void copyRotation(Quaternion* dst, const Quaternion* src) {
+    auto* d = reinterpret_cast<QuatWords*>(dst);
+    const auto* s = reinterpret_cast<const QuatWords*>(src);
+    d->x = (u32)s->x;
+    d->y = (u32)s->y;
+    d->z = (u32)s->z;
+    d->w = (u32)s->w;
 }
-VERIFY(0x021B34AC, setMoveBGMtx);
-static void setMtx(Actor *a) {
-  WWHD_FUNC(0x021B3514, void, a);
-  f32 x = a->scale.x, y = a->scale.y, z = a->scale.z;
-  u32 model = gabi::ea(a->model.get());
-  write<f32>(model, 0xBC, x);
-  write<f32>(model, 0xC0, y);
-  write<f32>(model, 0xC4, z);
-  x = a->current.pos.x;
-  y = a->current.pos.y;
-  z = a->current.pos.z;
-  gabi::call(0x028E93CC, ptr(MTX), x, y, z);
-  s16 rx = a->current.angle.x, ry = a->current.angle.y, rz = a->current.angle.z;
-  gabi::call(0x025F1B48, ptr(MTX), rx, ry, rz);
-  model = gabi::ea(a->model.get());
-  mtx_copy(gabi::at<Mtx34>(model + 0xC8), gabi::at<Mtx34>(MTX));
+struct LeafJointInfo {
+    u8 _00[4];
+    be<u16> mJntNo;
+};
+extern void* jointData(J3DNode*);
+extern void seStartLevel(u32, cXyz*, u32, s32);
+extern void operatorDelete(void*);
+extern s32 normalizeRS(cXyz*);
+extern f32 sqrtf_guest(f32);
+extern f32 addCalc(be<f32>*, f32, f32, f32, f32);
+extern f32 waterHeight(cXyz*);
+extern void getParticleColors(LeafColor*, LeafColor*);
+extern void JPASetRMtxTVecfromMtx(const Mtx34*, Mtx34*, cXyz*);
+extern void dBgS_MoveBGProc_TypicalRotY(dBgW*, fopAc_ac_c*, fopAc_ac_c*);
+extern void constructHeader0(void*);
+extern void constructHeader1(void*);
+extern void registerHeader(void*);
+static void rideCallBack(dBgW*, daLlift_c*, fopAc_ac_c*);
+static s32 nodeCallBack(J3DNode*, s32);
+static s32 CheckCreateHeap(fopAc_ac_c*);
+static LeafEmitter* particle(u16 id, cXyz* pos, csXyz* angle) {
+    return reinterpret_cast<LeafEmitter*>(
+        dComIfGp_getParticle()->set(0, id, pos, angle, nullptr, 255, nullptr, -1, nullptr, nullptr, nullptr));
 }
-VERIFY(0x021B3514, setMtx);
-static void createInit(Actor *a) {
-  WWHD_FUNC(0x021B35F4, void, a);
-  u32 model = gabi::ea(a->model.get());
-  a->cullMtx = model ? model + 0xC8 : 0;
-  gabi::call(0x025D674C, a, -300.f, -600.f, -300.f, 300.f, 100.f, 300.f);
-  write<f32>(gabi::ea(a), 0x364, 1.f);
-  gabi::call(0x02515F14, ptr(address(a, 0x3B8)), u8(255), u8(255), a);
-  gabi::call(0x02516518, ptr(address(a, 0x3F4)), ptr(0x101B8F90));
-  ProtectedLocal<cXyz> water, particlePosition;
-  water->x = a->current.pos.x;
-  water->z = a->current.pos.z;
-  water->y = f32(a->current.pos.y) + 200.f;
-  write<u32>(gabi::ea(a), 0x438, address(a, 0x3B8));
-  f32 height = gabi::call<f32>(0x024F1478, water.get());
-  a->waterY = height;
-  if (height != -1000000000.f) {
-    particlePosition->x = a->current.pos.x;
-    particlePosition->z = a->current.pos.z;
-    particlePosition->y = height + 1.f;
-    u32 emitter = particle(0x82AA, particlePosition.get(), &a->current.angle);
-    a->emitter3 = ptr(emitter);
+static void colorEmitter(gptr<LeafEmitter>* slot, LeafColor* color) {
+    LeafEmitter* emitter = *slot;
+    if (!emitter)
+        return;
+    u8 r = color->r, g = color->g, b = color->b;
+    emitter->mGlobalPrmColor.r = r;
+    emitter->mGlobalPrmColor.g = g;
+    emitter->mGlobalPrmColor.b = b;
+    emitter = *slot;
+    emitter->mGlobalEnvColor.r = r;
+    emitter->mGlobalEnvColor.g = g;
+    emitter->mGlobalEnvColor.b = b;
+}
+extern void* getObjectRes(dRes_control_c*, SafeString*, s32);
+extern s32 SetBackground(dBgW*, cBgD_t*, u32, Mtx34*);
+static gabi::HostFn typicalRotYBinding(reinterpret_cast<const void*>(&dBgS_MoveBGProc_TypicalRotY), 0x024EE708);
+/* 021B3260 */
+s32 daLlift_c::CreateHeap() {
+    ProtectedLocal<SafeString> name;
+    name->mStringTop = gabi::guest_addr("Olift");
+    name->__vtbl = 0x10013E78;
+    auto* data = static_cast<J3DModelData*>(getObjectRes(dComIfG_resControl(), name.get(), 4));
+    if (!data)
+        JUT_ASSERT_fail("d_a_leaflift.cpp", 0x14E, "modelData != NULL");
+    J3DModel* model = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
+    mpModel = model;
+    if (!model)
+        return FALSE;
+    model->mUserArea = gabi::ea(this);
+    mpBgW = static_cast<LeafBgWorld*>(new_dBgW());
+    if (!mpBgW)
+        return FALSE;
+    ProtectedLocal<SafeString> bgname;
+    bgname->__vtbl = 0x10013E78;
+    bgname->mStringTop = gabi::guest_addr("Olift");
+    auto* collision = static_cast<cBgD_t*>(getObjectRes(dComIfG_resControl(), bgname.get(), 7));
+    LeafBgWorld* bg = mpBgW;
+    if (SetBackground(bg, collision, dBgW::MOVE_BG_e, &mMtx))
+        return FALSE;
+    bg = mpBgW;
+    bg->mCrrFunc = gabi::guest_fn(reinterpret_cast<const void*>(&dBgS_MoveBGProc_TypicalRotY));
+    bg = mpBgW;
+    bg->mRideCallback = gabi::guest_fn(reinterpret_cast<const void*>(&rideCallBack));
+    return TRUE;
+}
+/* 021B34AC */
+void daLlift_c::setMoveBGMtx() {
+    f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    mDoMtx_stack_c::quatM(&mCurrentRotation);
+    MTXCopy(mDoMtx_stack_c::get(), &mMtx);
+}
+/* 021B3514 */
+void daLlift_c::set_mtx() {
+    f32 x = scale.x, y = scale.y, z = scale.z;
+    J3DModel* model = mpModel;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = current.pos.x;
+    y = current.pos.y;
+    z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    mDoMtx_stack_c::ZXYrotM(current.angle);
+    model = mpModel;
+    model->setBaseTRMtx(mDoMtx_stack_c::get());
+}
+/* 021B35F4 */
+void daLlift_c::CreateInit() {
+    J3DModel* model = mpModel;
+    fopAcM_SetMtx(this, model->getBaseTRMtx());
+    fopAcM_setCullSizeBox(this, -300.f, -600.f, -300.f, 300.f, 100.f, 300.f);
+    fopAcM_setCullSizeFar(this, 1.f);
+    mStts.Init(255, 255, this);
+    mCyl.Set(&l_cyl_src);
+    ProtectedLocal<cXyz> water, particlePosition;
+    water->x = current.pos.x;
+    water->z = current.pos.z;
+    water->y = f32(current.pos.y) + 200.f;
+    mCyl.SetStts(&mStts);
+    f32 height = waterHeight(water.get());
+    mWaterY = height;
+    if (height != -1000000000.f) {
+        particlePosition->x = current.pos.x;
+        particlePosition->z = current.pos.z;
+        particlePosition->y = height + 1.f;
+        LeafEmitter* emitter = particle(0x82AA, particlePosition.get(), &current.angle);
+        mEmitter3 = emitter;
+        if (emitter)
+            emitter->stopCreateParticle();
+    }
+    f32 y = f32(home.pos.y) + 15.f;
+    model = mpModel;
+    home.pos.y = y;
+    current.pos.y = y;
+    J3DModelData* data = model->getModelData();
+    JUTNameTab* stringTable = data->getJointName();
+    s32 index = stringTable->getIndex("j_happa");
+    if (index >= 0) {
+        model = mpModel;
+        data = model->getModelData();
+        data->getJointNodePointer(u16(index))->setCallBack(nodeCallBack);
+    }
+    resetRotation(this);
+    copyRotation(&mCurrentRotation, &mTargetRotation);
+    if ((u32(mParameters) & 15) == 1)
+        current.pos.y = f32(home.pos.y) + 560.f;
+    else {
+        LeafEmitter* emitter = mEmitter3;
+        if (emitter)
+            emitter->playCreateParticle();
+    }
+    model = mpModel;
+    m43F = 30;
+    model->calc();
+    setMoveBGMtx();
+    dComIfG_Bgsp()->Regist(mpBgW, this);
+    set_mtx();
+    mpBgW->Move();
+}
+/* 021B38D0 */
+s32 daLlift_c::_create() {
+    if (!(u32(actor_condition) & fopAcCnd_INIT_e)) {
+        fopAc_ac_c_ct(this);
+        __vtbl = 0x10013EA0;
+        dCcD_Stts_ct(&mStts);
+        dCcD_Cyl_ct(&mCyl, 0x10013E90);
+        actor_condition = u32(actor_condition) | fopAcCnd_INIT_e;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, "Olift");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, CheckCreateHeap, 0xF40))
+            return cPhs_ERROR_e;
+        CreateInit();
+    }
+    return phase;
+}
+/* 021B3A0C */
+s32 daLlift_c::_delete() {
+    LeafEmitter* emitter = mEmitter1;
+    if (emitter) {
+        emitter->becomeInvalidEmitter();
+        mEmitter1 = nullptr;
+    }
+    emitter = mEmitter2;
+    if (emitter) {
+        emitter->becomeInvalidEmitter();
+        mEmitter2 = nullptr;
+    }
+    emitter = mEmitter3;
+    if (emitter) {
+        emitter->becomeInvalidEmitter();
+        mEmitter3 = nullptr;
+    }
+    if (heap)
+        dComIfG_Bgsp()->Release(mpBgW);
+    dComIfG_resDelete(&mPhs, "Olift");
+    return TRUE;
+}
+/* 021B3AD8 */
+s32 daLlift_c::_draw() {
+    dScnKy_env_light_c* env = dKy_getEnvlight();
+    settingTevStruct(env, 1, &current.pos, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mpModel, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelEntryDL(mpModel);
+    dComIfGd_setList();
+    return TRUE;
+}
+/* 021B3B70 */
+s32 daLlift_c::MoveDownLift() {
+    if (!mbIsDescending)
+        return 1;
+    f32 delta = addCalc(&current.pos.y, f32(home.pos.y), 0.1f, 10.f, 5.f);
+    if (delta == 0.f) {
+        LeafEmitter* e = mEmitter3;
+        mbIsAscending = 0;
+        mbIsDescending = 0;
+        if (e)
+            e->playCreateParticle();
+        return 1;
+    }
+    if (!mbIsAscending) {
+        s32 reverb = dComIfGp_getReverb(current.roomNo);
+        seStartLevel(0x6980, &eyePos, 0, reverb);
+        mbIsAscending = 1;
+    }
+    return 0;
+}
+/* 021B3C4C */
+void daLlift_c::emitterCtrl() {
+    if (s32(mEmitterTimer) == 200) {
+        LeafEmitter* emitter = mEmitter1;
+        if (emitter) {
+            emitter->becomeInvalidEmitter();
+            mEmitter1 = nullptr;
+        }
+        emitter = mEmitter2;
+        if (emitter) {
+            emitter->becomeInvalidEmitter();
+            mEmitter2 = nullptr;
+        }
+    }
+    LeafEmitter* emitter = mEmitter1;
     if (emitter)
-      stop(emitter);
-  }
-  f32 y = f32(a->home.pos.y) + 15.f;
-  model = gabi::ea(a->model.get());
-  a->home.pos.y = y;
-  a->current.pos.y = y;
-  u32 data = read<u32>(model, 0xAC),
-      names = gabi::call<u32>(0x027F68FC, ptr(data));
-  u32 relative = read<u32>(names, 0x10),
-      stringTable = relative ? names + 0x10 + relative : 0;
-  s32 index = gabi::call<s32>(0x027DF9B0, ptr(stringTable), STR(0x10013F00));
-  if (index >= 0) {
-    model = gabi::ea(a->model.get());
-    data = read<u32>(model, 0xAC);
-    u32 count = read<u32>(data, 4), joints = read<u32>(data, 8);
-    u32 n = u16(index);
-    if (n < count)
-      joints += n * 0x1C;
-    write<u32>(joints, 8, 0x021B3380);
-  }
-  resetRotation(a);
-  for (u32 i = 0; i < 4; i++)
-    write<u32>(gabi::ea(a), 0x564 + i * 4,
-               read<u32>(gabi::ea(a), 0x574 + i * 4));
-  if ((u32(a->mParameters) & 15) == 1)
-    a->current.pos.y = f32(a->home.pos.y) + 560.f;
-  else {
-    u32 emitter = gabi::ea(a->emitter3.get());
+        JPASetRMtxTVecfromMtx(&mBGMtx, &emitter->mGlobalRotation, &emitter->mGlobalTranslation);
+    emitter = mEmitter2;
     if (emitter)
-      play(emitter);
-  }
-  model = gabi::ea(a->model.get());
-  a->settleTimer = 30;
-  gabi::call(0x027F4D5C, ptr(model));
-  setMoveBGMtx(a);
-  u32 p = gabi::call<u32>(0x025200D4);
-  void *bg = a->background.get();
-  gabi::call(0x024EEA6C, ptr(p + 0x12A0), bg, a);
-  setMtx(a);
-  gabi::call(0x024F43DC, a->background.get());
+        JPASetRMtxTVecfromMtx(&mBGMtx, &emitter->mGlobalRotation, &emitter->mGlobalTranslation);
 }
-VERIFY(0x021B35F4, createInit);
-static s32 create(Actor *a) {
-  WWHD_FUNC(0x021B38D0, s32, a);
-  if (!(u32(a->actor_condition) & 8)) {
-    gabi::call(0x025D4ED0, a);
-    write<u32>(gabi::ea(a), 0xB4, 0x10013EA0);
-    gabi::call(0x0200BD2C, ptr(address(a, 0x3B8)));
-    gabi::call(0x02515DA0, ptr(address(a, 0x3D4)));
-    write<u32>(gabi::ea(a), 0x3D0, 0x1004AE88);
-    write<u32>(gabi::ea(a), 0x3D4, 0x1004AEC0);
-    gabi::call(0x02515FB8, ptr(address(a, 0x3F4)));
-    write<u32>(gabi::ea(a), 0x508, 0x100015A8);
-    write<u32>(gabi::ea(a), 0x504, 0x10013E90);
-    gabi::call(0x02018590, ptr(address(a, 0x50C)));
-    write<u32>(gabi::ea(a), 0x430, 0x1004B108);
-    write<u32>(gabi::ea(a), 0x508, 0x1004B160);
-    write<u32>(gabi::ea(a), 0x520, 0x1004B150);
-    a->actor_condition = u32(a->actor_condition) | 8;
-  }
-  s32 phase = gabi::call<s32>(0x02520460, &a->phase, STR(0x10013F20));
-  if (phase == 4) {
-    if (!gabi::call<s32>(0x025D63E8, a, u32(0x021B337C), u32(0xF40)))
-      return 5;
-    createInit(a);
-  }
-  return phase;
-}
-VERIFY(0x021B38D0, create);
-static s32 createWrapper(Actor *a) {
-  WWHD_FUNC(0x021B3A08, s32, a);
-  return create(a);
-}
-VERIFY(0x021B3A08, createWrapper);
-static s32 remove(Actor *a) {
-  WWHD_FUNC(0x021B3A0C, s32, a);
-  u32 e = gabi::ea(a->emitter1.get());
-  if (e) {
-    invalidate(e);
-    a->emitter1 = nullptr;
-  }
-  e = gabi::ea(a->emitter2.get());
-  if (e) {
-    invalidate(e);
-    a->emitter2 = nullptr;
-  }
-  e = gabi::ea(a->emitter3.get());
-  if (e) {
-    invalidate(e);
-    a->emitter3 = nullptr;
-  }
-  if (a->heap) {
-    u32 p = gabi::call<u32>(0x025200D4);
-    gabi::call(0x020087EC, ptr(p + 0x12A0), a->background.get());
-  }
-  gabi::call(0x025204C8, &a->phase, STR(0x10013F20));
-  return 1;
-}
-VERIFY(0x021B3A0C, remove);
-static s32 deleteWrapper(Actor *a) {
-  WWHD_FUNC(0x021B3AD4, s32, a);
-  return remove(a);
-}
-VERIFY(0x021B3AD4, deleteWrapper);
-static s32 draw(Actor *a) {
-  WWHD_FUNC(0x021B3AD8, s32, a);
-  u32 env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, ptr(env), s32(1), &a->current.pos, &a->tevStr);
-  env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, ptr(env), a->model.get(), &a->tevStr);
-  u32 p = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634, read<u32>(p, 0x5D70));
-  p = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638, read<u32>(p, 0x5D74));
-  gabi::call(0x025E2E5C, a->model.get());
-  p = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634, read<u32>(p, 0x5D78));
-  p = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638, read<u32>(p, 0x5D7C));
-  return 1;
-}
-VERIFY(0x021B3AD8, draw);
-static s32 drawWrapper(Actor *a) {
-  WWHD_FUNC(0x021B3B6C, s32, a);
-  return draw(a);
-}
-VERIFY(0x021B3B6C, drawWrapper);
-static s32 moveDown(Actor *a) {
-  WWHD_FUNC(0x021B3B70, s32, a);
-  if (!a->descending)
-    return 1;
-  f32 delta = gabi::call<f32>(0x0200ECD4, &a->current.pos.y, f32(a->home.pos.y),
-                              0.1f, 10.f, 5.f);
-  if (delta == 0.f) {
-    u32 e = gabi::ea(a->emitter3.get());
-    a->moving = 0;
-    a->descending = 0;
-    if (e)
-      play(e);
-    return 1;
-  }
-  if (!a->moving) {
-    s32 reverb = gabi::call<s32>(0x02520540, s32(a->current.roomNo));
-    gabi::call(0x025E1A40, u32(0x6980), &a->eyePos, u32(0), reverb);
-    a->moving = 1;
-  }
-  return 0;
-}
-VERIFY(0x021B3B70, moveDown);
-static void emitterCtrl(Actor *a) {
-  WWHD_FUNC(0x021B3C4C, void, a);
-  if (s32(a->emitterTimer) == 200) {
-    u32 e = gabi::ea(a->emitter1.get());
-    if (e) {
-      invalidate(e);
-      a->emitter1 = nullptr;
+/* 021B3D04 */
+s32 daLlift_c::_execute() {
+    f32 distance = fopAcM_searchActorDistanceXZ(this, dComIfGp_getPlayer(0));
+    s16 life = s16(s16(mActorLifetimeFrameCount) + 1);
+    u8 timer = m43F, ridden = m43C;
+    mActorLifetimeFrameCount = life;
+    if (timer) {
+        timer--;
+        m43F = timer;
+        if (!timer)
+            m43E = 1;
     }
-    e = gabi::ea(a->emitter2.get());
-    if (e) {
-      invalidate(e);
-      a->emitter2 = nullptr;
+    if (!ridden && m43E) {
+        resetRotation(this);
+        if (distance > 270.f)
+            mbIsDescending = 1;
     }
-  }
-  u32 e = gabi::ea(a->emitter1.get());
-  if (e)
-    gabi::call(0x028249B0, &a->particleTransform, ptr(e + 0x1F0),
-               ptr(e + 0x22C));
-  e = gabi::ea(a->emitter2.get());
-  if (e)
-    gabi::call(0x028249B0, &a->particleTransform, ptr(e + 0x1F0),
-               ptr(e + 0x22C));
-}
-VERIFY(0x021B3C4C, emitterCtrl);
-static s32 execute(Actor *a) {
-  WWHD_FUNC(0x021B3D04, s32, a);
-  u32 p = gabi::call<u32>(0x025200D4);
-  f32 distance = gabi::call<f32>(0x025D6958, a, ptr(read<u32>(p, 0x5B2C)));
-  s16 life = s16(s16(a->lifetime) + 1);
-  u8 timer = a->settleTimer, ridden = a->ridden;
-  a->lifetime = life;
-  if (timer) {
-    timer--;
-    a->settleTimer = timer;
-    if (!timer)
-      a->hasRider = 1;
-  }
-  if (!ridden && a->hasRider) {
-    resetRotation(a);
-    if (distance > 270.f)
-      a->descending = 1;
-  }
-  ProtectedLocal<Opaque<4>> color, secondary;
-  gabi::call(0x025602F0, color.get(), secondary.get());
-  colorEmitter(a, 0x5C4, color.get());
-  colorEmitter(a, 0x5C8, color.get());
-  colorEmitter(a, 0x5BC, color.get());
-  moveDown(a);
-  setMtx(a);
-  setMoveBGMtx(a);
-  void *model = a->model.get();
-  a->ridden = 0;
-  gabi::call(0x027F4D5C, model);
-  ProtectedLocal<Opaque<16>> rotation;
-  gabi::call(0x028E9BC0, &a->rotation, &a->targetRotation, rotation.get(),
-             0.25f);
-  for (u32 i = 0; i < 4; i++)
-    write<u32>(gabi::ea(a), 0x564 + i * 4,
-               read<u32>(gabi::ea(rotation.get()), i * 4));
-  gabi::call(0x024F43DC, a->background.get());
-  ProtectedLocal<cXyz> pos;
-  pos->x = a->current.pos.x;
-  pos->y = f32(a->current.pos.y) - 560.f;
-  pos->z = a->current.pos.z;
-  gabi::call(0x020182E0, ptr(address(a, 0x50C)), pos.get());
-  p = gabi::call<u32>(0x025200D4);
-  gabi::call(0x0200E240, ptr(p + 0x26A4), ptr(address(a, 0x3F4)));
-  emitterCtrl(a);
-  return 1;
-}
-VERIFY(0x021B3D04, execute);
-static s32 executeWrapper(Actor *a) {
-  WWHD_FUNC(0x021B3F4C, s32, a);
-  return execute(a);
-}
-VERIFY(0x021B3F4C, executeWrapper);
-static void staticInit() {
-  WWHD_FUNC(0x021B3F50, void);
-  gabi::store<u32>(0x10464E04, 0);
-  gabi::store<u32>(0x10464DFC, 0);
-  gabi::store<u32>(0x10464E08, 0);
-  gabi::store<u32>(0x10464E00, 0);
-  gabi::call(0x028F026C, ptr(0x101B8FD4));
-  gabi::store<f32>(0x10464DF0, -3.1415927410125732f);
-  gabi::store<f32>(0x10464DF4, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x10464DF8));
-  gabi::call(0x028F026C, ptr(0x101B8FE0));
-  gabi::call(0x028EAB2C, ptr(0x10464DF9));
-  gabi::call(0x028F026C, ptr(0x101B8FEC));
-  gabi::store<f32>(0x10464E0C, 0.f);
-  gabi::store<f32>(0x10464E10, 1.f);
-  gabi::store<f32>(0x10464E14, 0.f);
-}
-VERIFY(0x021B3F50, staticInit);
-static void deletingStatic(void *p, s32 flags) {
-  WWHD_FUNC(0x021B4004, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
-}
-VERIFY(0x021B4004, deletingStatic);
-static s32 isDelete(Actor *a) {
-  WWHD_FUNC(0x021B4018, s32, a);
-  return 1;
-}
-VERIFY(0x021B4018, isDelete);
-static void destructor(Actor *a, s32 flags) {
-  WWHD_FUNC(0x021B4020, void, a, flags);
-  if (a) {
-    gabi::call(0x02515A70, ptr(address(a, 0x3F4)), s32(2));
-    gabi::call(0x02515860, ptr(address(a, 0x3B8)), s32(2));
-    gabi::call(0x025D50BC, a, s32(0));
-    if (flags & 1)
-      gabi::call(0x0273AF40, a);
-  }
-}
-VERIFY(0x021B4020, destructor);
-static void empty() { WWHD_FUNC(0x021B408C, void); }
-VERIFY(0x021B408C, empty);
-static s32 moveUp(Actor *a) {
-  WWHD_FUNC(0x021B4090, s32, a);
-  f32 target = f32(a->home.pos.y) + 560.f, y = a->current.pos.y;
-  a->emitterTimer = s32(u32(a->emitterTimer) + 1);
-  if (y != target) {
-    target = f32(a->home.pos.y) + 560.f;
-    a->risingTilt = 1;
-  }
-  f32 delta =
-      gabi::call<f32>(0x0200ECD4, &a->current.pos.y, target, 0.1f, 10.f, 5.f);
-  s32 result = 0;
-  ProtectedLocal<Opaque<4>> color, secondary;
-  if (delta == 0.f) {
-    a->moving = 0;
-    result = 1;
-  } else if (!a->moving) {
-    s32 reverb = gabi::call<s32>(0x02520540, s32(a->current.roomNo));
-    gabi::call(0x025E1A40, u32(0x697F), &a->eyePos, u32(0), reverb);
-    a->moving = 1;
-    a->emitter1 = ptr(particle(0x82AC, &a->current.pos, &a->current.angle));
+    ProtectedLocal<LeafColor> color, secondary;
+    getParticleColors(color.get(), secondary.get());
+    colorEmitter(&mEmitter3, color.get());
+    colorEmitter(&mEmitter4, color.get());
+    colorEmitter(&mEmitter1, color.get());
+    MoveDownLift();
+    set_mtx();
+    setMoveBGMtx();
+    J3DModel* model = mpModel;
+    m43C = 0;
+    model->calc();
+    ProtectedLocal<Quaternion> interpolatedRotation;
+    mDoMtx_quatSlerp(&mCurrentRotation, &mTargetRotation, interpolatedRotation.get(), 0.25f);
+    copyRotation(&mCurrentRotation, interpolatedRotation.get());
+    mpBgW->Move();
     ProtectedLocal<cXyz> pos;
-    pos->z = a->current.pos.z;
-    pos->x = a->current.pos.x;
-    pos->y = a->waterY;
-    a->emitter2 = nullptr;
-    a->emitter4 = ptr(particle(0x82AB, pos.get(), &a->current.angle));
-    u32 e = gabi::ea(a->emitter3.get());
-    a->emitterTimer = 0;
-    if (e)
-      stop(e);
-  }
-  gabi::call(0x025602F0, color.get(), secondary.get());
-  colorEmitter(a, 0x5C4, color.get());
-  colorEmitter(a, 0x5C8, color.get());
-  colorEmitter(a, 0x5BC, color.get());
-  return result;
+    pos->x = current.pos.x;
+    pos->y = f32(current.pos.y) - 560.f;
+    pos->z = current.pos.z;
+    mCyl.SetC(pos.get());
+    cCcS_Set(dComIfG_Ccsp(), &mCyl);
+    emitterCtrl();
+    return 1;
 }
-VERIFY(0x021B4090, moveUp);
-static s32 checkEndDown(Actor *a) {
-  WWHD_FUNC(0x021B430C, s32, a);
-  return !(f32(a->current.pos.y) > f32(a->home.pos.y));
+/* 021B4090 */
+s32 daLlift_c::MoveUpLift() {
+    f32 target = f32(home.pos.y) + 560.f, y = current.pos.y;
+    mEmitterTimer = s32(u32(mEmitterTimer) + 1);
+    if (y != target) {
+        target = f32(home.pos.y) + 560.f;
+        m43D = 1;
+    }
+    f32 delta = addCalc(&current.pos.y, target, 0.1f, 10.f, 5.f);
+    s32 result = 0;
+    ProtectedLocal<LeafColor> color, secondary;
+    if (delta == 0.f) {
+        mbIsAscending = 0;
+        result = 1;
+    } else if (!mbIsAscending) {
+        s32 reverb = dComIfGp_getReverb(current.roomNo);
+        seStartLevel(0x697F, &eyePos, 0, reverb);
+        mbIsAscending = 1;
+        mEmitter1 = particle(0x82AC, &current.pos, &current.angle);
+        ProtectedLocal<cXyz> pos;
+        pos->z = current.pos.z;
+        pos->x = current.pos.x;
+        pos->y = mWaterY;
+        mEmitter2 = nullptr;
+        mEmitter4 = particle(0x82AB, pos.get(), &current.angle);
+        LeafEmitter* e = mEmitter3;
+        mEmitterTimer = 0;
+        if (e)
+            e->stopCreateParticle();
+    }
+    getParticleColors(color.get(), secondary.get());
+    colorEmitter(&mEmitter3, color.get());
+    colorEmitter(&mEmitter4, color.get());
+    colorEmitter(&mEmitter1, color.get());
+    return result;
 }
-VERIFY(0x021B430C, checkEndDown);
+/* 021B430C */
+s32 daLlift_c::checkEndDownLift() {
+    return !(f32(current.pos.y) > f32(home.pos.y));
+}
+/* 021B3028 */
+static void rideCallBack(dBgW* bg, daLlift_c* a, fopAc_ac_c* other) {
 
-static void staticInitStaticTU() {
-  WWHD_FUNC(0x021B4328, void);
-  gabi::store<u32>(0x10464E2C, 0);
-  gabi::store<u32>(0x10464E24, 0);
-  gabi::store<u32>(0x10464E30, 0);
-  gabi::store<u32>(0x10464E28, 0);
-  gabi::call(0x028F026C, ptr(0x101B9028));
-  gabi::store<f32>(0x10464E18, -3.1415927410125732f);
-  gabi::store<f32>(0x10464E1C, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x10464E20));
-  gabi::call(0x028F026C, ptr(0x101B9034));
-  gabi::call(0x028EAB2C, ptr(0x10464E21));
-  gabi::call(0x028F026C, ptr(0x101B9040));
+    ProtectedLocal<cXyz> offset, cross;
+    *offset = other->current.pos - a->current.pos;
+    f32 factor = 2.f;
+    if (other && fopAcM_GetName(other) == 0xA8) {
+        a->m43C = 1;
+        a->m43E = 1;
+        *cross = offset->outprod(up_vec);
+        offset->copy(*cross);
+        mDoMtx_stack_c::YrotS(s16(-s16(a->current.angle.y)));
+        mDoMtx_stack_c::multVec(offset.get(), offset.get());
+        if (a->m43D) {
+            offset->x = f32(other->current.pos.x) + 200.f;
+            offset->y = other->current.pos.y;
+            offset->z = other->current.pos.z;
+            *cross = offset->outprod(up_vec);
+            offset->copy(*cross);
+            mDoMtx_stack_c::YrotS(s16(-s16(a->current.angle.y)));
+            mDoMtx_stack_c::multVec(offset.get(), offset.get());
+            u16 angle = u16(u16(a->mActorLifetimeFrameCount) << 11);
+            factor = (cM_ssin(s16(angle)) + cM_ssin(s16(angle))) * 0.25f;
+            f32 random = cM_rndFX(0.2f);
+            factor *= random + 1.f;
+        }
+        f32 sq = PSVECSquareMag(offset.get());
+        // HD: round the square root to f32 at this callsite.
+        f32 length = sqrtf_guest(sq);
+        if (!normalizeRS(offset.get()))
+            return;
+        s16 target = s16(gabi::ftoi(-(length * factor)));
+        cLib_addCalcAngleS2(&a->mTiltAngle, target, 8, 0x200);
+        f32 tilt = cM_ssin(a->mTiltAngle);
+        a->mTargetRotation.x = f32(offset->x) * tilt;
+        a->mTargetRotation.y = f32(offset->y) * tilt;
+        a->mTargetRotation.z = f32(offset->z) * tilt;
+        a->mTargetRotation.w = cM_scos(a->mTiltAngle);
+    }
+    a->m43D = 0;
 }
-VERIFY(0x021B4328, staticInitStaticTU);
+/* 021B3380 */
+static s32 nodeCallBack(J3DNode* node, s32 timing) {
+    if (timing == J3DNodeCBCalcTiming_In) {
+        auto* joint = static_cast<LeafJointInfo*>(jointData(node));
+        J3DModel* model = j3dSys.getModel();
+        auto* actor = static_cast<daLlift_c*>(model->getUserArea());
+        u32 index = joint->mJntNo;
+        if (actor) {
+            Mtx34* matrix = model->getAnmMtx(index);
+            MTXCopy(matrix, mDoMtx_stack_c::get());
+            mDoMtx_stack_c::quatM(&actor->mCurrentRotation);
+            MTXCopy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
+            matrix = model->getAnmMtx(index);
+            mtx_copy(matrix, mDoMtx_stack_c::get());
+            MTXCopy(mDoMtx_stack_c::get(), &actor->mBGMtx);
+        }
+    }
+    return TRUE;
+}
+/* 021B337C */
+static s32 CheckCreateHeap(fopAc_ac_c* a) {
+    return static_cast<daLlift_c*>(a)->CreateHeap();
+}
+/* 021B3A08 */
+static s32 daLlift_Create(daLlift_c* a) {
+    return a->_create();
+}
+/* 021B3AD4 */
+static s32 daLlift_Delete(daLlift_c* a) {
+    return a->_delete();
+}
+/* 021B3B6C */
+static s32 daLlift_Draw(daLlift_c* a) {
+    return a->_draw();
+}
+/* 021B3F4C */
+static s32 daLlift_Execute(daLlift_c* a) {
+    return a->_execute();
+}
+/* 021B4018 */
+static s32 daLlift_IsDelete(daLlift_c* a) {
+    return TRUE;
+}
+/* 021B4004 */
+static void deletingStatic(void* p, s32 flags) {
+    if (p && (flags & 1))
+        operatorDelete(p);
+}
+/* 021B4020 */
+static void daLlift_destruct(daLlift_c* a, s32 flags) {
+    if (a) {
+        dCcD_Cyl_dt(&a->mCyl, 2);
+        dCcD_Stts_dt(&a->mStts, 2);
+        __dt(static_cast<fopAc_ac_c*>(a));
+        if (flags & 1)
+            operatorDelete(a);
+    }
+}
+/* 021B408C */
+static void SafeString_assureTerminationImpl() {}
+struct HeaderZeros {
+    be<u32> words[4];
+};
+struct HeaderFloat {
+    be<f32> value;
+};
+struct HeaderByte {
+    u8 value;
+};
+struct HeaderRecord {
+    u8 bytes[12];
+};
+static HeaderZeros zeros;
+static HeaderFloat minimum;
+static HeaderFloat maximum;
+static HeaderByte flag0;
+static HeaderByte flag1;
+static HeaderRecord record0;
+static HeaderRecord record1;
+static HeaderRecord record2;
+/* 021B3F50 */
+static void __sinit_d_a_leaflift_cpp() {
+    zeros.words[2] = 0;
+    zeros.words[0] = 0;
+    zeros.words[3] = 0;
+    zeros.words[1] = 0;
+    registerHeader(&record0);
+    minimum.value = -3.1415927410125732f;
+    maximum.value = 3.1415927410125732f;
+    constructHeader0(&flag0);
+    registerHeader(&record1);
+    constructHeader1(&flag1);
+    registerHeader(&record2);
+    up_vec.x = 0.f;
+    up_vec.y = 1.f;
+    up_vec.z = 0.f;
+}
+static HeaderZeros zerosStaticTU;
+static HeaderFloat minimumStaticTU;
+static HeaderFloat maximumStaticTU;
+static HeaderByte flag0StaticTU;
+static HeaderByte flag1StaticTU;
+static HeaderRecord record0StaticTU;
+static HeaderRecord record1StaticTU;
+static HeaderRecord record2StaticTU;
+/* 021B4328 */
+static void __sinit_d_a_leafliftStaticTU_cpp() {
+    zerosStaticTU.words[2] = 0;
+    zerosStaticTU.words[0] = 0;
+    zerosStaticTU.words[3] = 0;
+    zerosStaticTU.words[1] = 0;
+    registerHeader(&record0StaticTU);
+    minimumStaticTU.value = -3.1415927410125732f;
+    maximumStaticTU.value = 3.1415927410125732f;
+    constructHeader0(&flag0StaticTU);
+    registerHeader(&record1StaticTU);
+    constructHeader1(&flag1StaticTU);
+    registerHeader(&record2StaticTU);
+}
+
+/* WWHD glue
+data ZeroQuat 101E9C38
+data up_vec 10464E0C
+data l_cyl_src 101B8F90
+data zeros 10464DFC
+data minimum 10464DF0
+data maximum 10464DF4
+data flag0 10464DF8
+data flag1 10464DF9
+data record0 101B8FD4
+data record1 101B8FE0
+data record2 101B8FEC
+data zerosStaticTU 10464E24
+data minimumStaticTU 10464E18
+data maximumStaticTU 10464E1C
+data flag0StaticTU 10464E20
+data flag1StaticTU 10464E21
+data record0StaticTU 101B9028
+data record1StaticTU 101B9034
+data record2StaticTU 101B9040
+str 10013F20 "Olift"
+str 10013EC0 "d_a_leaflift.cpp"
+str 10013ED4 "modelData != NULL"
+str 10013F00 "j_happa"
+ext 0273AF40 void operatorDelete(void*)
+ext 0201B47C s32 normalizeRS(cXyz*)
+ext 028F4384 f32 sqrtf_guest(f32)
+ext 0200ECD4 f32 addCalc(be<f32>*, f32, f32, f32, f32)
+ext 024F1478 f32 waterHeight(cXyz*)
+ext 025602F0 void getParticleColors(LeafColor*, LeafColor*)
+ext 028249B0 void JPASetRMtxTVecfromMtx(const Mtx34*, Mtx34*, cXyz*)
+ext 024EE708 void dBgS_MoveBGProc_TypicalRotY(dBgW*, fopAc_ac_c*, fopAc_ac_c*)
+ext 028ED6F8 void constructHeader0(void*)
+ext 028EAB2C void constructHeader1(void*)
+ext 028F026C void registerHeader(void*)
+ext 026066C4 void* getObjectRes(dRes_control_c*, SafeString*, s32)
+ext 0200A030 s32 SetBackground(dBgW*, cBgD_t*, u32, Mtx34*)
+ext 025E1A40 void seStartLevel(u32, cXyz*, u32, s32)
+ext 027F7878 void* jointData(J3DNode*)
+*/

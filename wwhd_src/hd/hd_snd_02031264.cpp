@@ -1,287 +1,245 @@
-/* hd_snd_02031264: two HD sound TUs (no GameCube source).
- *
- * 02031264..020317BF: the HD BGM / JAudio controller (0x6C, vtable 100048D0): two output faders +0x14 /
- *                     +0x2C, BGM fader +0x44, JAIZelBasic instance +0xC (0x21F4), JA->NW4F bridge +0x5C,
- *                     initialised flag +0x10, output-on flag +0x60, pause +0x64, delayed-SE timer +0x68:
- *                     ctor/dtor, init, per-frame update (TV/DRC volumes to the NW4F output object
- *                     101F9FF4, delayed SE 0x806, JAIZelBasic frame), fades; __sinit 020316EC + companions
- * 020317C0..02031A97: the SE player wrapper (4 bytes: NW4F player): ctor/dtor, start SE by id / by name
- *                     (two start modes); __sinit 02031A04
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD BGM/JAudio controller and SE wrapper. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_snd_02031264.h"
+// HD: original external array-constructor callback.
+static constexpr u32 BGM_FADER_CONSTRUCTOR = 0x02031258;
+static f32 sOne;
+static f32 sZero;
+static f32 sDrcScale;
+static f32 sMinusOne;
+static char sBgmNameText;
+static hdBgmOutput* sOutput;
+static hdBgmSafeString sBgmName;
 
-namespace hd_snd_02031264 {
-
-static void Ctl_fadeOut(u32 self, u32 frames, f32 tv, f32 drc) {
-    WWHD_FUNC(0x02031264, void, self, frames, tv, drc);
-    gabi::call(0x02762258, self + 0x14, frames, tv);
-    gabi::call(0x02762258, self + 0x2C, frames, drc);
+/* 02031264 */
+static void fadeOutput(hdBgmController* i_this, u32 frames, f32 tv, f32 drc) {
+    hdBgmFade(&i_this->mOutputFaders[0], frames, tv);
+    hdBgmFade(&i_this->mOutputFaders[1], frames, drc);
 }
-VERIFY(0x02031264, Ctl_fadeOut);
-
-static u32 Ctl_ct(u32 self) {
-    WWHD_FUNC(0x020312CC, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x6C);
-        if (t == 0) return 0;
+/* 020312CC */
+static hdBgmController* constructBgmController(hdBgmController* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdBgmController*)operator_new(sizeof(hdBgmController));
+        if (i_this == NULL) return NULL;
     }
-    st(t + 8, 0);
-    stb(t + 0x10, 0);
-    st(t + 4, 0);
-    st(t + 0, 0x100048D0);
-    st(t + 0xC, 0);
-    gabi::call(0x028EFFD0, t + 0x14, 2, 0x18, 0x02031258);
-    f32 one = ldf(0x10004850);
-    gabi::call(0x02762170, t + 0x44, one);
-    st(t + 0x5C, 0);
-    u32 p = t + 0x64;
-    stb(t + 0x60, 0);
-    if (p == 0) p = op_new(4);
-    if (p != 0) st(p, 0);
-    st(t + 0x68, 0xFFFFFFFF);
-    u32 j = op_new(0x21F4);
-    if (j != 0) j = gabi::call<u32>(0x02025B44, j);
-    st(t + 0xC, j);
-    u32 b = op_new(0x44);
-    if (b != 0) b = gabi::call<u32>(0x0202C27C, b);
-    st(t + 0x5C, b);
-    gabi::call(0x02031264, t, 0, one, ldf(0x100048AC));
-    gabi::call(0x02762258, t + 0x44, 0, one);
-    st(t + 0x64, 0);
-    return t;
+    i_this->field_0x8 = 0;
+    i_this->mInitialized = 0;
+    i_this->field_0x4 = 0;
+    i_this->mVtable = 0x100048D0;
+    i_this->mJAudio = NULL;
+    hdBgmConstructArray(i_this->mOutputFaders, 2, sizeof(hdBgmFader), BGM_FADER_CONSTRUCTOR);
+    f32 one = sOne;
+    hdBgmInitializeFader(&i_this->mBgmFader, one);
+    i_this->mBridge = NULL;
+    be<u32>* pause = i_this->pauseForConstruction();
+    i_this->mOutputOff = 0;
+    if (pause == NULL) pause = (be<u32>*)operator_new(sizeof(be<u32>));
+    if (pause != NULL) *pause = 0;
+    i_this->mDelayedSeTimer = -1;
+    hdBgmJAudio* jaudio = (hdBgmJAudio*)operator_new(sizeof(hdBgmJAudio));
+    if (jaudio != NULL) jaudio = hdBgmConstructJAudio(jaudio);
+    i_this->mJAudio = jaudio;
+    hdBgmBridge* bridge = (hdBgmBridge*)operator_new(sizeof(hdBgmBridge));
+    if (bridge != NULL) bridge = hdBgmConstructBridge(bridge);
+    i_this->mBridge = bridge;
+    fadeOutput(i_this, 0, one, sZero);
+    hdBgmFade(&i_this->mBgmFader, 0, one);
+    i_this->mPaused = 0;
+    return i_this;
 }
-VERIFY(0x020312CC, Ctl_ct);
-
-static void Ctl_clearInit(u32 self) {
-    WWHD_FUNC(0x02031408, void, self);
-    stb(self + 0x10, 0);
-}
-VERIFY(0x02031408, Ctl_clearInit);
-
-static void Ctl_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02031414, void, self, flags);
-    if (self == 0) return;
-    st(self + 0, 0x100048D0);
-    gabi::call(0x02031408, self);
-    u32 j = ld(self + 0xC);
-    if (j != 0) {
-        gabi::call_ptr(vfn(j, 0x2C, 0xC), j, 3);
-        st(self + 0xC, 0);
+/* 02031408 */
+static void clearBgmInitialization(hdBgmController* i_this) { i_this->mInitialized = 0; }
+/* 02031414 */
+static void destroyBgmController(hdBgmController* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    i_this->mVtable = 0x100048D0;
+    clearBgmInitialization(i_this);
+    hdBgmJAudio* jaudio = i_this->mJAudio;
+    if (jaudio != NULL) {
+        jaudio->mVtable->destroy(jaudio);
+        i_this->mJAudio = NULL;
     }
-    u32 b = ld(self + 0x5C);
-    if (b != 0) {
-        gabi::call_ptr(vfn(b, 0, 0xC), b, 3);
-        st(self + 0x5C, 0);
+    hdBgmBridge* bridge = i_this->mBridge;
+    if (bridge != NULL) {
+        bridge->mVtable->destroy(bridge);
+        i_this->mBridge = NULL;
     }
-    if (flags & 1) op_delete(self);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02031414, Ctl_dt);
-
-/* 020314C4: init the JAIZelBasic instance (once) and hand it the bridge */
-static void Ctl_init(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x020314C4, void, self, a, b);
-    (void)a;
-    if (lbz(self + 0x10) != 0) return;
-    gabi::call(0x02026044, ld(self + 0xC), b, 0x3000000);
-    gabi::call(0x0280348C, ld(self + 0xC), ld(self + 0x5C));
-    stb(self + 0x10, 1);
+/* 020314C4 */
+static void initializeBgmController(hdBgmController* i_this, u32 unused, u32 option) {
+    (void)unused;
+    if (i_this->mInitialized != 0) return;
+    hdBgmInitializeJAudio(i_this->mJAudio, option, 0x3000000);
+    hdBgmAttachBridge(i_this->mJAudio, i_this->mBridge);
+    i_this->mInitialized = 1;
 }
-VERIFY(0x020314C4, Ctl_init);
-
-/* 0203151C: faders, then TV / DRC output volumes to the NW4F output object */
-static void Ctl_updateOutput(u32 self) {
-    WWHD_FUNC(0x0203151C, void, self);
-    gabi::call(0x027621EC, self + 0x14);
-    gabi::call(0x027621EC, self + 0x2C);
-    gabi::call(0x027621EC, self + 0x44);
-    u32 out = ld(0x101F9FF4);
-    if (out == 0) return;
-    f32 a = ldf(self + 0x14);
-    f32 m = ldf(self + 0x44);
-    f32 a2 = gabi::fmuls_ppc(a, a);
-    f32 b = ldf(self + 0x2C);
-    f32 k = ldf(0x100048B0);
-    f32 b2 = gabi::fmuls_ppc(b, b);
-    f32 tv = gabi::fmuls_ppc(a2, m);
-    f32 drc = gabi::fmuls_ppc(gabi::fmuls_ppc(b2, k), m);
-    gabi::call(0x0281A2D0, out, tv, drc);
-    stb(self + 0x60, m > ldf(0x100048AC) ? 0 : 1); /* mfcr + CR0[GT]: "not positive" */
+/* 0203151C */
+static void updateBgmOutput(hdBgmController* i_this) {
+    hdBgmUpdateFader(&i_this->mOutputFaders[0]);
+    hdBgmUpdateFader(&i_this->mOutputFaders[1]);
+    hdBgmUpdateFader(&i_this->mBgmFader);
+    hdBgmOutput* output = sOutput;
+    if (output == NULL) return;
+    f32 tvLevel = i_this->mOutputFaders[0].mVolume;
+    f32 bgmLevel = i_this->mBgmFader.mVolume;
+    f32 tvSquared = gabi::fmuls_ppc(tvLevel, tvLevel);
+    f32 drcLevel = i_this->mOutputFaders[1].mVolume;
+    f32 scale = sDrcScale;
+    f32 drcSquared = gabi::fmuls_ppc(drcLevel, drcLevel);
+    f32 tv = gabi::fmuls_ppc(tvSquared, bgmLevel);
+    f32 drc = gabi::fmuls_ppc(gabi::fmuls_ppc(drcSquared, scale), bgmLevel);
+    hdBgmSetOutputVolumes(output, tv, drc);
+    // HD: unordered (NaN) also selects output-off.
+    i_this->mOutputOff = bgmLevel > sZero ? 0 : 1;
 }
-VERIFY(0x0203151C, Ctl_updateOutput);
-
-/* 020315CC: per frame: output, delayed SE 0x806, JAIZelBasic frame */
-static void Ctl_update(u32 self) {
-    WWHD_FUNC(0x020315CC, void, self);
-    if (lbz(self + 0x10) == 0) return;
-    gabi::call(0x0203151C, self);
-    u32 j = ld(self + 0xC);
-    if (j == 0) return;
-    s32 c = (s32)ld(self + 0x68);
-    if (c > 0) {
-        if (ld(self + 0x64) != 0 || lbz(j + 0x30) != 0) {
-            gabi::call(0x0202636C, j);
+/* 020315CC */
+static void updateBgmController(hdBgmController* i_this) {
+    if (i_this->mInitialized == 0) return;
+    updateBgmOutput(i_this);
+    hdBgmJAudio* jaudio = i_this->mJAudio;
+    if (jaudio == NULL) return;
+    s32 timer = i_this->mDelayedSeTimer;
+    if (timer > 0) {
+        if (i_this->mPaused != 0 || jaudio->mPaused != 0) {
+            hdBgmUpdateJAudio(jaudio);
             return;
         }
-        --c;
-        st(self + 0x68, (u32)c);
-        if (c > 0) {
-            gabi::call(0x0202636C, ld(self + 0xC));
+        --timer;
+        i_this->mDelayedSeTimer = timer;
+        if (timer > 0) {
+            hdBgmUpdateJAudio(i_this->mJAudio);
             return;
         }
-        f32 one = ldf(0x10004850), m1 = ldf(0x100048B4);
-        gabi::call(0x0201EBA0, ld(self + 0xC), 0x806, 0, 0, 0, 0, one, one, m1, m1);
+        f32 one = sOne;
+        f32 minusOne = sMinusOne;
+        // HD: delayed SE identifier and original floating argument order.
+        hdBgmStartDelayedSe(i_this->mJAudio, 0x806, 0, 0, 0, 0, one, one, minusOne, minusOne);
     }
-    st(self + 0x68, 0xFFFFFFFF);
-    gabi::call(0x0202636C, ld(self + 0xC));
+    i_this->mDelayedSeTimer = -1;
+    hdBgmUpdateJAudio(i_this->mJAudio);
 }
-VERIFY(0x020315CC, Ctl_update);
-
-static u32 Ctl_bgmFadeOut(u32 self, u32 frames) {
-    WWHD_FUNC(0x02031688, u32, self, frames);
-    return gabi::call<u32>(0x02762258, self + 0x44, frames, ldf(0x100048AC));
+/* 02031688 */
+static u32 fadeBgmOut(hdBgmController* i_this, u32 frames) {
+    return hdBgmFade(&i_this->mBgmFader, frames, sZero);
 }
-VERIFY(0x02031688, Ctl_bgmFadeOut);
-
-static u32 Ctl_bgmPause(u32 self, u32 frames) {
-    WWHD_FUNC(0x02031698, u32, self, frames);
-    if (ld(self + 0x64) != 0) return self;
-    return gabi::call<u32>(0x02031688, self, frames);
+/* 02031698 */
+static u32 pauseBgm(hdBgmController* i_this, u32 frames) {
+    if (i_this->mPaused != 0) return gabi::ea(i_this);
+    return fadeBgmOut(i_this, frames);
 }
-VERIFY(0x02031698, Ctl_bgmPause);
-
-static u32 Ctl_bgmFadeIn(u32 self, u32 frames) {
-    WWHD_FUNC(0x020316A8, u32, self, frames);
-    return gabi::call<u32>(0x02762258, self + 0x44, frames, ldf(0x10004850));
+/* 020316A8 */
+static u32 fadeBgmIn(hdBgmController* i_this, u32 frames) {
+    return hdBgmFade(&i_this->mBgmFader, frames, sOne);
 }
-VERIFY(0x020316A8, Ctl_bgmFadeIn);
-
-static u32 Ctl_bgmResume(u32 self, u32 frames) {
-    WWHD_FUNC(0x020316B8, u32, self, frames);
-    if (ld(self + 0x64) != 0) return self;
-    return gabi::call<u32>(0x020316A8, self, frames);
+/* 020316B8 */
+static u32 resumeBgm(hdBgmController* i_this, u32 frames) {
+    if (i_this->mPaused != 0) return gabi::ea(i_this);
+    return fadeBgmIn(i_this, frames);
 }
-VERIFY(0x020316B8, Ctl_bgmResume);
-
-static u32 Ctl_bgmUnpause(u32 self, u32 frames) {
-    WWHD_FUNC(0x020316C8, u32, self, frames);
-    st(self + 0x64, 0);
-    return gabi::call<u32>(0x020316A8, self, frames);
+/* 020316C8 */
+static u32 unpauseBgm(hdBgmController* i_this, u32 frames) {
+    i_this->mPaused = 0;
+    return fadeBgmIn(i_this, frames);
 }
-VERIFY(0x020316C8, Ctl_bgmUnpause);
-
-static void Ctl_armSe(u32 self) {
-    WWHD_FUNC(0x020316D4, void, self);
-    st(self + 0x68, 0x28);
+/* 020316D4 */
+static void armDelayedSe(hdBgmController* i_this) { i_this->mDelayedSeTimer = 0x28; }
+/* 020316E0 */
+static void disarmDelayedSe(hdBgmController* i_this) { i_this->mDelayedSeTimer = -1; }
+/* 020316EC */
+static void __sinit_hd_bgm_cpp() {
+    sinit_header_statics_rodata(0x1020046C, 0x1018EE2C, 0x10200478, 0x100048B8);
+    sBgmName.mVtable = 0x10004864;
+    sBgmName.mText = (const char*)&sBgmNameText;
 }
-VERIFY(0x020316D4, Ctl_armSe);
-
-static void Ctl_disarmSe(u32 self) {
-    WWHD_FUNC(0x020316E0, void, self);
-    st(self + 0x68, 0xFFFFFFFF);
+/* 020317A0 */
+static void destroyBgmCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020316E0, Ctl_disarmSe);
-
-static void sinit_020316EC() {
-    WWHD_FUNC(0x020316EC, void);
-    header_sinit(0x10200478, 0x1018EE2C, 0x100048B8);
-    st(0x10200468, 0x10004864);
-    st(0x10200464, 0x100048C0);
-}
-VERIFY(0x020316EC, sinit_020316EC);
-
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x020317A0, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x020317A0, Comp_dt1);
-
-static void Comp_empty() {
-    WWHD_FUNC(0x020317B4, void);
-}
-VERIFY(0x020317B4, Comp_empty);
-
-static u32 Comp_zero() {
-    WWHD_FUNC(0x020317B8, u32);
-    return 0;
-}
-VERIFY(0x020317B8, Comp_zero);
-
-static u32 SePlayer_ct(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x020317C0, u32, self, a, b);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(4);
-        if (t == 0) return 0;
+/* 020317B4 */
+static void emptyBgmCompanion() {}
+/* 020317B8 */
+static u32 getBgmCompanionZero() { return 0; }
+/* 020317C0 */
+static hdBgmSePlayer* constructSePlayer(hdBgmSePlayer* i_this, u32 firstOption, u32 secondOption) {
+    if (i_this == NULL) {
+        i_this = (hdBgmSePlayer*)operator_new(sizeof(hdBgmSePlayer));
+        if (i_this == NULL) return NULL;
     }
-    st(t, 0);
-    st(t, gabi::call<u32>(0x02761D48, 0, a, b));
-    return t;
+    i_this->mPlayer = NULL;
+    i_this->mPlayer = hdBgmConstructNwPlayer(NULL, firstOption, secondOption);
+    return i_this;
 }
-VERIFY(0x020317C0, SePlayer_ct);
-
-static u32 SePlayer_stopAll(u32 self, u32 x) {
-    WWHD_FUNC(0x02031830, u32, self, x);
-    return gabi::call<u32>(0x02761E2C, ld(self), x);
+/* 02031830 */
+static u32 stopAllSe(hdBgmSePlayer* i_this, u32 frames) {
+    return hdBgmStopAllSounds(i_this->mPlayer, frames);
 }
-VERIFY(0x02031830, SePlayer_stopAll);
-
-static void SePlayer_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02031838, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02031830, self, 0);
-    u32 p = ld(self);
-    if (p != 0) {
-        gabi::call_ptr(vfn(p, 0xC, 0xC), p, 3);
-        st(self, 0);
+/* 02031838 */
+static void destroySePlayer(hdBgmSePlayer* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    stopAllSe(i_this, 0);
+    hdBgmNwPlayer* player = i_this->mPlayer;
+    if (player != NULL) {
+        player->mVtable->destroy(player);
+        i_this->mPlayer = NULL;
     }
-    if (flags & 1) op_delete(self);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02031838, SePlayer_dt);
-
-/* 020318B4: start sound ID (handle mode 1); the handle, or null when the start failed */
-static u32 SePlayer_start_020318B4(u32 self, u32 id) {
-    WWHD_FUNC(0x020318B4, u32, self, id);
-    u32 h = gabi::call<u32>(0x027620A8, ld(self), id, 1);
-    if (h == 0) return 0;
-    u32 p = gabi::call<u32>(0x0202DAD0);
-    if (gabi::call<u32>(0x02897C94, p + 4, h, id, 0) != 0) return 0;
-    return h;
+/* 020318B4 */
+static void* startSe(hdBgmSePlayer* i_this, u32 id) {
+    void* handle = hdBgmAllocateSoundHandle(i_this->mPlayer, id, 1);
+    if (handle == NULL) return NULL;
+    u32 archive = hdBgmGetSoundArchive();
+    if (hdBgmBindSound(hdBgmArchiveInterface(archive), handle, id, 0) != 0) return NULL;
+    return handle;
 }
-VERIFY(0x020318B4, SePlayer_start_020318B4);
-
-/* 0203195C: start sound ID (handle mode 0); the handle, or null when the start failed */
-static u32 SePlayer_start_0203195C(u32 self, u32 id) {
-    WWHD_FUNC(0x0203195C, u32, self, id);
-    u32 h = gabi::call<u32>(0x027620A8, ld(self), id, 0);
-    if (h == 0) return 0;
-    u32 p = gabi::call<u32>(0x0202DAD0);
-    if (gabi::call<u32>(0x02897DE4, p + 4, h, id, 0) != 0) return 0;
-    return h;
+/* 0203195C */
+static void* prepareSe(hdBgmSePlayer* i_this, u32 id) {
+    void* handle = hdBgmAllocateSoundHandle(i_this->mPlayer, id, 0);
+    if (handle == NULL) return NULL;
+    u32 archive = hdBgmGetSoundArchive();
+    if (hdBgmBindPreparedSound(hdBgmArchiveInterface(archive), handle, id, 0) != 0) return NULL;
+    return handle;
 }
-VERIFY(0x0203195C, SePlayer_start_0203195C);
-
-static u32 SePlayer_startByName_02031920(u32 self, u32 name) {
-    WWHD_FUNC(0x02031920, u32, self, name);
-    u32 id = gabi::call<u32>(0x0202DC30, name);
-    return gabi::call<u32>(0x020318B4, self, id);
+/* 02031920 */
+static void* startSeByName(hdBgmSePlayer* i_this, const char* name) {
+    u32 id = hdBgmLookupSoundName(name);
+    return startSe(i_this, id);
 }
-VERIFY(0x02031920, SePlayer_startByName_02031920);
-
-static u32 SePlayer_startByName_020319C8(u32 self, u32 name) {
-    WWHD_FUNC(0x020319C8, u32, self, name);
-    u32 id = gabi::call<u32>(0x0202DC30, name);
-    return gabi::call<u32>(0x0203195C, self, id);
+/* 020319C8 */
+static void* prepareSeByName(hdBgmSePlayer* i_this, const char* name) {
+    u32 id = hdBgmLookupSoundName(name);
+    return prepareSe(i_this, id);
 }
-VERIFY(0x020319C8, SePlayer_startByName_020319C8);
-
-static void sinit_02031A04() {
-    WWHD_FUNC(0x02031A04, void);
-    header_sinit(0x10200494, 0x1018EE50, 0x10004970);
+/* 02031A04 */
+static void __sinit_hd_se_player_cpp() {
+    sinit_header_statics_rodata(0x10200488, 0x1018EE50, 0x10200494, 0x10004970);
 }
-VERIFY(0x02031A04, sinit_02031A04);
-
-}  // namespace hd_snd_02031264
+/* WWHD glue (tools/verify/autoglue.py): private HD controller calls and constants
+ data sOne 10004850
+ data sZero 100048AC
+ data sDrcScale 100048B0
+ data sMinusOne 100048B4
+ data sOutput 101F9FF4
+ data sBgmName 10200464
+ data sBgmNameText 100048C0
+ ext 028EFFD0 void hdBgmConstructArray(void*, u32, u32, u32)
+ ext 02762258 u32 hdBgmFade(hdBgmFader*, u32, f32)
+ ext 02762170 void hdBgmInitializeFader(hdBgmFader*, f32)
+ ext 027621EC void hdBgmUpdateFader(hdBgmFader*)
+ ext 02025B44 hdBgmJAudio* hdBgmConstructJAudio(hdBgmJAudio*)
+ ext 0202C27C hdBgmBridge* hdBgmConstructBridge(hdBgmBridge*)
+ ext 02026044 void hdBgmInitializeJAudio(hdBgmJAudio*, u32, u32)
+ ext 0280348C void hdBgmAttachBridge(hdBgmJAudio*, hdBgmBridge*)
+ ext 0281A2D0 void hdBgmSetOutputVolumes(hdBgmOutput*, f32, f32)
+ ext 0202636C void hdBgmUpdateJAudio(hdBgmJAudio*)
+ ext 0201EBA0 void hdBgmStartDelayedSe(hdBgmJAudio*, u32, u32, u32, u32, u32, f32, f32, f32, f32)
+ ext 02761D48 hdBgmNwPlayer* hdBgmConstructNwPlayer(hdBgmNwPlayer*, u32, u32)
+ ext 02761E2C u32 hdBgmStopAllSounds(hdBgmNwPlayer*, u32)
+ ext 027620A8 void* hdBgmAllocateSoundHandle(hdBgmNwPlayer*, u32, u32)
+ ext 0202DAD0 u32 hdBgmGetSoundArchive()
+ ext 02897C94 u32 hdBgmBindSound(void*, void*, u32, u32)
+ ext 02897DE4 u32 hdBgmBindPreparedSound(void*, void*, u32, u32)
+ ext 0202DC30 u32 hdBgmLookupSoundName(const char*)
+*/

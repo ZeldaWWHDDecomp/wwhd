@@ -1,0 +1,116 @@
+#ifndef F_AP_GAME_H
+#define F_AP_GAME_H
+#include "bindings.h"
+
+// HD: packed HIO fields and the guest vtable at the end replace the GC base layout.
+struct fapGm_HIO_c {
+    be<s8> mNo;
+    be<u8> mUsingHostIO;
+    be<u8> mDisplayMeter;
+    be<u8> mDisplayFlag;
+    be<u8> field_0x08;
+    be<u8> field_0x09;
+    be<u8> field_0x0a;
+    be<u8> field_0x0b;
+    be<f32> mAspectRatio;
+    be<u8> field_0x10;
+    be<u8> field_0x11;
+    be<u8> field_0x12;
+    be<u8> field_0x13;
+    be<u8> field_0x14;
+    be<u8> field_0x15;
+    be<u8> field_0x16;
+    be<u8> field_0x17;
+    be<u8> field_0x18;
+    be<s8> field_0x19;
+    be<u8> field_0x1a;
+    be<u8> field_0x1b;
+    be<u8> field_0x1c;
+    be<u32> mColor;
+    u8 padding_1d[3];
+    be<f32> mTriggerThreshLo;
+    be<f32> mTriggerThreshHi;
+    be<s16> mFbWidth;
+    be<s16> mEfbHeight;
+    be<u8> field_0x30;
+    u8 padding_2d[9];
+    be<u32> mLetterTopColor;
+    be<u32> mLetterBottomColor;
+    be<u32> mLetterTopShadowColor;
+    be<u32> mLetterBottomShadowColor;
+    be<u16> mLetterPositionX;
+    be<u16> mLetterPositionY;
+    be<u16> mLineSpacing;
+    be<u16> mLetterSpacing;
+    be<u16> mLetterFontSize;
+    be<u8> mBackgroundAlpha;
+    u8 padding_51[3];
+    be<u32> __vtbl;
+};
+WWHD_SIZE(fapGm_HIO_c, 0x58);
+WWHD_OFFSET(fapGm_HIO_c, mNo, 0x00);
+WWHD_OFFSET(fapGm_HIO_c, mUsingHostIO, 0x01);
+WWHD_OFFSET(fapGm_HIO_c, mDisplayMeter, 0x02);
+WWHD_OFFSET(fapGm_HIO_c, mDisplayFlag, 0x03);
+WWHD_OFFSET(fapGm_HIO_c, field_0x08, 0x04);
+WWHD_OFFSET(fapGm_HIO_c, field_0x09, 0x05);
+WWHD_OFFSET(fapGm_HIO_c, field_0x0a, 0x06);
+WWHD_OFFSET(fapGm_HIO_c, field_0x0b, 0x07);
+WWHD_OFFSET(fapGm_HIO_c, mAspectRatio, 0x08);
+WWHD_OFFSET(fapGm_HIO_c, field_0x10, 0x0C);
+WWHD_OFFSET(fapGm_HIO_c, field_0x11, 0x0D);
+WWHD_OFFSET(fapGm_HIO_c, field_0x12, 0x0E);
+WWHD_OFFSET(fapGm_HIO_c, field_0x13, 0x0F);
+WWHD_OFFSET(fapGm_HIO_c, field_0x14, 0x10);
+WWHD_OFFSET(fapGm_HIO_c, field_0x15, 0x11);
+WWHD_OFFSET(fapGm_HIO_c, field_0x16, 0x12);
+WWHD_OFFSET(fapGm_HIO_c, field_0x17, 0x13);
+WWHD_OFFSET(fapGm_HIO_c, field_0x18, 0x14);
+WWHD_OFFSET(fapGm_HIO_c, field_0x19, 0x15);
+WWHD_OFFSET(fapGm_HIO_c, field_0x1a, 0x16);
+WWHD_OFFSET(fapGm_HIO_c, field_0x1b, 0x17);
+WWHD_OFFSET(fapGm_HIO_c, field_0x1c, 0x18);
+WWHD_OFFSET(fapGm_HIO_c, mColor, 0x19);
+WWHD_OFFSET(fapGm_HIO_c, mTriggerThreshLo, 0x20);
+WWHD_OFFSET(fapGm_HIO_c, mTriggerThreshHi, 0x24);
+WWHD_OFFSET(fapGm_HIO_c, mFbWidth, 0x28);
+WWHD_OFFSET(fapGm_HIO_c, mEfbHeight, 0x2A);
+WWHD_OFFSET(fapGm_HIO_c, field_0x30, 0x2C);
+WWHD_OFFSET(fapGm_HIO_c, mLetterTopColor, 0x36);
+WWHD_OFFSET(fapGm_HIO_c, mLetterBottomColor, 0x3A);
+WWHD_OFFSET(fapGm_HIO_c, mLetterTopShadowColor, 0x3E);
+WWHD_OFFSET(fapGm_HIO_c, mLetterBottomShadowColor, 0x42);
+WWHD_OFFSET(fapGm_HIO_c, mLetterPositionX, 0x46);
+WWHD_OFFSET(fapGm_HIO_c, mLetterPositionY, 0x48);
+WWHD_OFFSET(fapGm_HIO_c, mLineSpacing, 0x4A);
+WWHD_OFFSET(fapGm_HIO_c, mLetterSpacing, 0x4C);
+WWHD_OFFSET(fapGm_HIO_c, mLetterFontSize, 0x4E);
+WWHD_OFFSET(fapGm_HIO_c, mBackgroundAlpha, 0x50);
+WWHD_OFFSET(fapGm_HIO_c, __vtbl, 0x54);
+
+struct GameApplicationConstants {
+    be<f32> aspectRatio, triggerThreshLo, triggerThreshHi;
+    u8 padding[4];
+    be<f32> negativePi, positivePi;
+};
+struct GameApplicationHeaderStatics {
+    be<f32> negativePi, positivePi;
+    u8 firstObject, secondObject, padding[2];
+    be<u32> zero[4];
+};
+using fapGm_AfterCallback = void (*)();
+void fopScnM_Management();
+void fopOvlpM_Management();
+void fopCamM_Management();
+void fpcM_Management(u32, fapGm_AfterCallback);
+void cCt_Counter(u32);
+void fpcM_Init();
+void fopScnM_Init();
+void fopOvlpM_Init();
+void fopCamM_Init();
+void fopDwTg_CreateQueue();
+void fopScnM_CreateReq(u32, u32, u32, u32);
+void GameApplicationFirstHeaderObject_ct(u8*);
+void GameApplicationSecondHeaderObject_ct(u8*);
+enum { fpcNm_LOGO_SCENE_e = 5, fpcNm_INVALID_e = 0x7FFF };
+#endif

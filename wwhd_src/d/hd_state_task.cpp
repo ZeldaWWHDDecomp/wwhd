@@ -1,275 +1,344 @@
-/* hd_state_task: HD background task with a worker thread (states Wait / InProgress / Finish; started by
- * an 'updt' message), WWHD. HD-only code (no GameCube source):
- * written from the WWHD code. Range 025F9644..025FA0EF (static initialiser 025F9CD0 builds the three
- * StateIDs). Library companions (not verified): 025F9EE4..025F9EF8, 025F9F58..025F9F60 (empty sead
- * virtuals), 025F9EFC (sead Delegate invoke), 025F9F50 (StateID getter), 025F9F64, 025F9FA4, 025F9FE4
- * (state Delegate invokers: enter/exec/exit), 025FA024, 025FA050, 025FA05C, 025FA068, 025FA070,
- * 025FA08C, 025FA0A8 (sead state-machine glue).
- *
- * Task (0x15B0), singleton 101F4BD8 (disposer at +0x28, holder 101F4BDC; the disposer's vtable
- * 100E0EF8): +0 base (vtables 100E0E00/100E0DC0, +8 self, +0x10 state machine 020062E8 with factory
- * 101FF32C, +0x24 vtable), +0x18/+0x20 current/next state, +0x38 heap, +0x3C message queue,
- * +0x64 thread, +0x1588 worker object, +0x158C shared data, +0x1590 'updt' message Delegate
- * (vtable 100E0DB0, handler 025F9BC4), +0x15A0 object, +0x15A4 progress (0 idle, 1 working,
- * 2 done), +0x15A8 flag, +0x15AC busy counter.
- */
-#include "gabi.h"
+/* HD background worker task, driven by the 'updt' message. Private reconstruction. */
+#include "d/hd_state_task.h"
 using namespace gabi;
+extern void* hdTaskAllocate(u32);
+extern HdStateTask* hdTaskAllocateInstance(u32,void*,u32);
+extern HdStateVTableObject* hdTaskAllocateWorker(u32,void*,u32);
+extern void hdTaskDelete(void*);
+extern void hdTaskStateConstruct(HdStateMachine*,HdStateTask*,void*);
+extern void hdTaskChangeState(HdStateMachine*,HdStateId*);
+extern void hdTaskStateExecute(HdStateMachine*);
+extern void hdTaskQueueConstruct(HdStateQueue*);
+extern void hdTaskThreadConstruct(HdStateThread*);
+extern void hdTaskDisposerConstruct(HdStateDisposer*,void*,u32);
+extern void hdTaskDisposerDestroy(HdStateDisposer*,u32);
+extern void hdTaskThreadStep(HdStateThread*);
+extern void hdTaskThreadJoin(HdStateThread*,HdStateVTableObject*);
+extern void hdTaskThreadDestroy(HdStateThread*,u32);
+extern void hdTaskQueueDestroy(HdStateQueue*,u32);
+extern void hdTaskSharedData(u32,u32,be<u32>*,be<u32>*);
+extern void hdTaskParamsConstruct(HdStateThreadParams*);
+extern void hdTaskThreadStart(HdStateThread*,HdStateThreadParams*);
+extern void hdTaskMessageConstruct(HdStateMessage*);
+extern void hdTaskQueueSend(HdStateQueue*,HdStateMessage*);
+extern HdStateVTableObject* hdTaskWorkerConstruct(HdStateVTableObject*,void*);
+extern void hdTaskThreadRequest(HdStateThread*);
+extern void hdTaskThreadWake(HdStateThread*);
+extern void hdTaskRunObject(void*);
+extern void hdTaskRegister(void*);
+extern void hdTaskInitSigned(be<u8>*);
+extern void hdTaskInitUnsigned(be<u8>*);
+static HdStateSingleton l_singleton;
+static HdStateDisposerHolder l_disposerHolder;
+static u32 l_baseVTable;
+static u32 l_objectVTable;
+static u32 l_initialTaskVTable;
+static u32 l_taskVTable;
+static u32 l_delegateVTable;
+static u32 l_disposerVTable;
+static u32 l_stateIdVTable;
+static u32 l_factory;
+static u32 l_updateHandler;
+static HdStateId l_waitState;
+static HdStateId l_workState;
+static HdStateId l_finishState;
+static HdStateStatics l_statics;
+static HdStateRange l_range;
+static f32 l_lower;
+static f32 l_upper;
+static HdStateRegistration l_registration1;
+static HdStateRegistration l_registration2;
+static HdStateRegistration l_registration3;
+static u32 l_stateIdInitialized;
+static u32 l_lastStateId;
 
-namespace hd_state_task {
-
-static const u32 kInstance = 0x101F4BD8;
-
-void clearFlag(u32 p) { WWHD_FUNC(0x025F9644, void, p); store<u8>(p + 0x15A8, 0); }
-VERIFY(0x025F9644, clearFlag);
-
-/* 025F9650: not working (progress != 1) */
-u32 isIdle(u32 p) {
-    WWHD_FUNC(0x025F9650, u32, p);
-    return load<u32>(p + 0x15A4) != 1 ? 1u : 0u;
+/* 025F9644 */
+void hdStateTaskClearFlag(HdStateTask* self) {
+    self->mFlag = 0;
 }
-VERIFY(0x025F9650, isIdle);
 
-/* 025F9664: per-frame: when idle, runs the thread step and the state machine (state Finish) */
-void update(u32 p) {
-    WWHD_FUNC(0x025F9664, void, p);
-    if (!isIdle(p)) return;
-    store<u32>(p + 0x15AC, load<u32>(p + 0x15AC) + 1);
-    call<void>(0x028B3E8C, p + 0x64);
-    store<u32>(p + 0x15AC, load<u32>(p + 0x15AC) - 1);
-    call<void>(0x020063C0, p + 0x10, 0x1048D834u);
+/* 025F9650 */
+u32 hdStateTaskIsIdle(HdStateTask* self) {
+    return self->mProgress != HD_TASK_WORKING ? 1u : 0u;
 }
-VERIFY(0x025F9664, update);
 
-void setFlag(u32 p) { WWHD_FUNC(0x025F96E0, void, p); store<u8>(p + 0x15A8, 1); }
-VERIFY(0x025F96E0, setFlag);
-
-/* 025F96EC: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x025F96EC, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x15B0u);
-        if (!p) return 0;
-    }
-    u32 q = p;
-    if (!q) q = call<u32>(0x0273AD10, 0x28u);
-    if (q) {
-        store<u32>(q + 8, p);
-        store<u32>(q + 0xC, 0);
-        store<u32>(q + 4, 0x100E0DC0);
-        store<u32>(q, 0x100E0E00);
-        store<u32>(q + 0x24, 0x100E0DA0);
-        call<void>(0x020062E8, q + 0x10, q, 0x101FF32Cu);
-    }
-    store<u32>(p + 0x38, 0);
-    store<u32>(p + 0x24, 0x100E0F08);
-    call<void>(0x028B2204, p + 0x3C);
-    call<void>(0x028B28F8, p + 0x64);
-    store<u32>(p + 0x1588, 0);
-    store<u32>(p + 0x158C, 0);
-    u32 d = p + 0x1590;
-    if (!d) d = call<u32>(0x0273AD10, 0x10u);
-    if (d) {
-        store<u32>(d + 4, p);
-        store<u16>(d + 8, 0);
-        store<u32>(d, 0x100E0DB0);
-        store<u32>(d + 0xC, 0x025F9BC4);
-        store<u16>(d + 0xA, 0xFFFF);
-    }
-    store<u32>(p + 0x15A4, 0);
-    store<u8>(p + 0x15A8, 0);
-    store<u32>(p + 0x15A0, 0);
-    u32 c = p + 0x15AC;
-    if (!c) {
-        c = call<u32>(0x0273AD10, 4u);
-        if (!c) return p;
-    }
-    store<u32>(c, 0);
-    return p;
+/* 025F9664 */
+void hdStateTaskUpdate(HdStateTask* self) {
+    if (!hdStateTaskIsIdle(self)) return;
+    self->mBusyCount = self->mBusyCount + 1;
+    hdTaskThreadStep(&self->mThread);
+    self->mBusyCount = self->mBusyCount - 1;
+    hdTaskChangeState(&self->mState,&l_finishState);
 }
-VERIFY(0x025F96EC, ctor);
 
-/* 025F9818: creates the singleton with its disposer */
-void createInstance(u32 heap) {
-    WWHD_FUNC(0x025F9818, void, heap);
-    if (load<u32>(kInstance)) return;
-    const u32 p = call<u32>(0x0273B0D4, 0x15B0u, heap, 4u);
-    const u32 d = p + 0x28;
-    if (d) {
-        call<void>(0x02752B0C, d, heap, 3u);
-        store<u32>(d + 0xC, 0x100E0EF8);
+/* 025F96E0 */
+void hdStateTaskSetFlag(HdStateTask* self) {
+    self->mFlag = 1;
+}
+
+/* 025F96EC */
+HdStateTask* hdStateTaskConstruct(HdStateTask* self) {
+    if (!self) {
+        self = static_cast<HdStateTask*>(hdTaskAllocate(sizeof(HdStateTask)));
+        if (!self) return NULL;
     }
-    store<u32>(0x101F4BDC, d);
-    store<u32>(kInstance, p ? ctor(p) : 0u);
-}
-VERIFY(0x025F9818, createInstance);
-
-/* 025F98B8: destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x025F98B8, void, p, flags);
-    if (!p) return;
-    const u32 w = load<u32>(p + 0x1588);
-    store<u32>(p + 0x24, 0x100E0F08);
-    call<void>(0x028B3124, p + 0x64, w);
-    const u32 t = load<u32>(p + 0x1588);
-    if (t) {
-        call_ptr<void>(load<u32>(load<u32>(t) + 0x14), t, 3u);
-        store<u32>(p + 0x1588, 0);
+    HdStateTask* base = self;
+    if (!base) base = static_cast<HdStateTask*>(hdTaskAllocate(0x28));
+    if (base) {
+        base->mSelf = self;
+        base->mReserved = 0;
+        base->mObjectVTable = reinterpret_cast<gfn*>(&l_objectVTable);
+        base->mVTable = reinterpret_cast<gfn*>(&l_baseVTable);
+        base->mTaskVTable = reinterpret_cast<gfn*>(&l_initialTaskVTable);
+        hdTaskStateConstruct(&base->mState,base,&l_factory);
     }
-    const u32 u = load<u32>(p + 0x15A0);
-    if (u) {
-        call_ptr<void>(load<u32>(load<u32>(u + 0xC) + 0xC), u, 3u);
-        store<u32>(p + 0x15A0, 0);
+    self->mHeap = NULL;
+    self->mTaskVTable = reinterpret_cast<gfn*>(&l_taskVTable);
+    hdTaskQueueConstruct(&self->mQueue);
+    hdTaskThreadConstruct(&self->mThread);
+    self->mWorker = NULL;
+    self->mSharedData = 0;
+    // HD: preserve the embedded delegate's wrapping guest-address allocation check.
+    HdStateDelegate* delegate = gabi::at<HdStateDelegate>(gabi::ea(self)+offsetof(HdStateTask,mUpdateDelegate));
+    if (!delegate) delegate = static_cast<HdStateDelegate*>(hdTaskAllocate(sizeof(HdStateDelegate)));
+    if (delegate) {
+        delegate->mObject = self;
+        delegate->mThisAdjustment = 0;
+        delegate->mVTable = reinterpret_cast<gfn*>(&l_delegateVTable);
+        delegate->mFunction = &l_updateHandler;
+        delegate->mVirtualOffset = 0xFFFF;
     }
-    call<void>(0x028B2A40, p + 0x64, 2u);
-    call<void>(0x028B229C, p + 0x3C, 2u);
-    if (p) {
-        u32 o = load<u32>(p + 0x10);
-        call_ptr<void>(load<u32>(load<u32>(o) + 0x1C), o, p + 0x20);
-        o = load<u32>(p + 0x10);
-        call_ptr<void>(load<u32>(load<u32>(o) + 0x1C), o, p + 0x18);
+    self->mProgress = HD_TASK_IDLE;
+    self->mFlag = 0;
+    self->mObject = NULL;
+    be<u32>* counter = gabi::at<be<u32>>(gabi::ea(self)+offsetof(HdStateTask,mBusyCount));
+    if (!counter) {
+        counter = static_cast<be<u32>*>(hdTaskAllocate(sizeof(be<u32>)));
+        if (!counter) return self;
     }
-    if (flags & 1) call<void>(0x0273AF40, p);
+    *counter = 0;
+    return self;
 }
-VERIFY(0x025F98B8, dtor);
 
-/* 025F99BC: starts the worker thread (shared data 2 for its stack, message queue) */
-void start(u32 p) {
-    WWHD_FUNC(0x025F99BC, void, p);
-    Local<u8[0x48]> F; /* +0 message (0xC), +0xC shared-data size, +0x10 word, +0x14 thread params */
-    const u32 msg = F.a, size = F.a + 0xC, word = F.a + 0x10, prm = F.a + 0x14;
-    call<void>(0xC0009C58, 2u, 0u, p + 0x158C, size);
-    store<u32>(word, 0);
-    call<void>(0x028B4230, prm);
-    const u32 w = load<u32>(p + 0x1588);
-    store<u32>(prm + 4, 0x800);
-    store<u32>(prm + 0xC, p + 0x158C);
-    store<u32>(prm + 0x1C, word);
-    store<u32>(prm, 0x400);
-    store<u32>(prm + 0x20, 1);
-    store<u32>(prm + 8, w);
-    store<u32>(prm + 0x10, size);
-    store<u32>(prm + 0x2C, 0x1400);
-    call<void>(0x028B2B64, p + 0x64, prm);
-    call<void>(0x028B289C, msg);
-    store<u8>(msg + 0xB, 1);
-    store<u16>(msg + 8, 0);
-    store<u32>(msg, p + 0x64);
-    store<u32>(msg + 4, 0x19);
-    call<void>(0x028B239C, p + 0x3C, msg);
+/* 025F9818 */
+void hdStateTaskCreateInstance(void* heap) {
+    if (l_singleton.mInstance) return;
+    HdStateTask* task = hdTaskAllocateInstance(sizeof(HdStateTask),heap,4);
+    // HD: even a failed allocation passes the wrapped embedded disposer address onward.
+    HdStateDisposer* disposer = gabi::at<HdStateDisposer>(gabi::ea(task)+offsetof(HdStateTask,mDisposer));
+    if (disposer) {
+        hdTaskDisposerConstruct(disposer,heap,3);
+        disposer->mVTable = reinterpret_cast<gfn*>(&l_disposerVTable);
+    }
+    l_disposerHolder.mDisposer = disposer;
+    l_singleton.mInstance = task ? hdStateTaskConstruct(task) : NULL;
 }
-VERIFY(0x025F99BC, start);
 
-/* 025F9A90: creates the worker object, starts the thread and enters state Wait */
-void init(u32 p, u32 heap) {
-    WWHD_FUNC(0x025F9A90, void, p, heap);
-    store<u32>(p + 0x38, heap);
-    u32 m = call<u32>(0x0273B050, 8u, heap, 4u);
-    if (m) m = call<u32>(0x020039C0, m, load<u32>(p + 0x38));
-    store<u32>(p + 0x1588, m);
-    start(p);
-    const u32 o = load<u32>(p + 0x10);
-    const u32 s = call_ptr<u32>(load<u32>(load<u32>(o) + 0x14), o, 0x1048D7D4u);
-    store<u32>(p + 0x18, s);
-    call_ptr<void>(load<u32>(load<u32>(s) + 0x1C), s);
+/* 025F98B8 */
+void hdStateTaskDestroy(HdStateTask* self,u32 flags) {
+    if (!self) return;
+    HdStateVTableObject* worker = self->mWorker;
+    self->mTaskVTable = reinterpret_cast<gfn*>(&l_taskVTable);
+    hdTaskThreadJoin(&self->mThread,worker);
+    worker = self->mWorker;
+    if (worker) {
+        gabi::call_ptr<void>(worker->mVTable[5].get(),worker,3u);
+        self->mWorker = NULL;
+    }
+    HdStateObject* object = self->mObject;
+    if (object) {
+        gabi::call_ptr<void>(object->mVTable[3].get(),object,3u);
+        self->mObject = NULL;
+    }
+    hdTaskThreadDestroy(&self->mThread,2);
+    hdTaskQueueDestroy(&self->mQueue,2);
+    if (self) {
+        HdStateVTableObject* factory = self->mState.mFactory;
+        gabi::call_ptr<void>(factory->mVTable[7].get(),factory,&self->mState.mNext);
+        factory = self->mState.mFactory;
+        gabi::call_ptr<void>(factory->mVTable[7].get(),factory,&self->mState.mCurrent);
+    }
+    if (flags&1) hdTaskDelete(self);
 }
-VERIFY(0x025F9A90, init);
 
-/* 025F9B14: runs the state machine */
-void execute(u32 p) {
-    WWHD_FUNC(0x025F9B14, void, p);
-    call<void>(0x02006364, p + 0x10);
+/* 025F99BC */
+void hdStateTaskStart(HdStateTask* self) {
+    // HD: retain original frame allocation and the partially initialized parameter/message bytes.
+    gabi::AutoFrame automatic{gabi::Activation::current};
+    gabi::Local<HdStateStartFrame> storage;
+    HdStateStartFrame* frame = storage.get();
+    hdTaskSharedData(2,0,&self->mSharedData,&frame->mSize);
+    frame->mWord = 0;
+    hdTaskParamsConstruct(&frame->mParams);
+    HdStateVTableObject* worker = self->mWorker;
+    frame->mParams.mMessageSize = 0x800;
+    frame->mParams.mSharedData = &self->mSharedData;
+    frame->mParams.mWord = &frame->mWord;
+    frame->mParams.mStackSize = 0x400;
+    frame->mParams.mPriority = 1;
+    frame->mParams.mWorker = worker;
+    frame->mParams.mSharedDataSize = &frame->mSize;
+    frame->mParams.mAffinity = 0x1400;
+    hdTaskThreadStart(&self->mThread,&frame->mParams);
+    hdTaskMessageConstruct(&frame->mMessage);
+    frame->mMessage.mBlocking = 1;
+    frame->mMessage.mFlags = 0;
+    frame->mMessage.mThread = &self->mThread;
+    frame->mMessage.mKind = 0x19;
+    hdTaskQueueSend(&self->mQueue,&frame->mMessage);
 }
-VERIFY(0x025F9B14, execute);
 
-/* 025F9B1C / 025F9B68: thread requests when idle (the second only when not busy) */
-u32 request1(u32 p) {
-    WWHD_FUNC(0x025F9B1C, u32, p);
-    if (!isIdle(p)) return 0;
-    call<void>(0x028B3540, p + 0x64);
+/* 025F9A90 */
+void hdStateTaskInit(HdStateTask* self,void* heap) {
+    self->mHeap = heap;
+    HdStateVTableObject* worker = hdTaskAllocateWorker(8,heap,4);
+    if (worker) worker = hdTaskWorkerConstruct(worker,self->mHeap);
+    self->mWorker = worker;
+    hdStateTaskStart(self);
+    HdStateVTableObject* factory = self->mState.mFactory;
+    HdStateVTableObject* state = gabi::call_ptr<HdStateVTableObject*>(factory->mVTable[5].get(),factory,&l_waitState);
+    self->mState.mCurrent = state;
+    gabi::call_ptr<void>(state->mVTable[7].get(),state);
+}
+
+/* 025F9B14 */
+void hdStateTaskExecute(HdStateTask* self) {
+    hdTaskStateExecute(&self->mState);
+}
+
+/* 025F9B1C */
+u32 hdStateTaskRequest(HdStateTask* self) {
+    if (!hdStateTaskIsIdle(self)) return 0;
+    hdTaskThreadRequest(&self->mThread);
     return 1;
 }
-VERIFY(0x025F9B1C, request1);
-u32 request2(u32 p) {
-    WWHD_FUNC(0x025F9B68, u32, p);
-    if (load<u32>(p + 0x15AC)) return 0;
-    if (!isIdle(p)) return 0;
-    call<void>(0x028B3804, p + 0x64);
+
+/* 025F9B68 */
+u32 hdStateTaskRequestWhenNotBusy(HdStateTask* self) {
+    if (self->mBusyCount) return 0;
+    if (!hdStateTaskIsIdle(self)) return 0;
+    hdTaskThreadWake(&self->mThread);
     return 1;
 }
-VERIFY(0x025F9B68, request2);
 
-/* 025F9BC4: 'updt' message handler (worker side): marks the work in progress, then done */
-void onMessage(u32 p, u32 obj, u32 msg) {
-    WWHD_FUNC(0x025F9BC4, void, p, obj, msg);
-    if (msg != 0x75706474) return;
-    store<u32>(p + 0x15A4, 1);
-    call<void>(0x028B3804, p + 0x64);
-    call<void>(0x0275FFC8, obj);
-    store<u32>(p + 0x15A4, 2);
+/* 025F9BC4 */
+void hdStateTaskOnMessage(HdStateTask* self,void* object,u32 message) {
+    if (message != HD_TASK_UPDATE) return;
+    self->mProgress = HD_TASK_WORKING;
+    hdTaskThreadWake(&self->mThread);
+    hdTaskRunObject(object);
+    self->mProgress = HD_TASK_DONE;
 }
-VERIFY(0x025F9BC4, onMessage);
 
-/* 025F9C28: disposer destructor (deletes the instance when it is the registered one) */
-void disposerDtor(u32 d, u32 flags) {
-    WWHD_FUNC(0x025F9C28, void, d, flags);
-    if (!d) return;
-    store<u32>(d + 0xC, 0x100E0EF8);
-    if (d == load<u32>(0x101F4BDC)) {
-        const u32 inst = load<u32>(kInstance);
-        store<u32>(0x101F4BDC, 0);
-        call_ptr<void>(load<u32>(load<u32>(inst + 0x24) + 0xC), inst, 2u);
-        store<u32>(kInstance, 0);
+/* 025F9C28 */
+void hdStateTaskDisposerDestroy(HdStateDisposer* disposer,u32 flags) {
+    if (!disposer) return;
+    disposer->mVTable = reinterpret_cast<gfn*>(&l_disposerVTable);
+    if (disposer == l_disposerHolder.mDisposer) {
+        HdStateTask* instance = l_singleton.mInstance;
+        l_disposerHolder.mDisposer = NULL;
+        gabi::call_ptr<void>(instance->mTaskVTable[3].get(),instance,2u);
+        l_singleton.mInstance = NULL;
     }
-    call<void>(0x02752BEC, d, 0u);
-    if (flags & 1) call<void>(0x0273AF40, d);
-}
-VERIFY(0x025F9C28, disposerDtor);
-
-/* a sead StateID with its three state Delegates (enter/exec/exit) */
-static void stateId(u32 s, u32 id, u32 name, u16 a, u16 b, u16 c) {
-    store<u16>(s + 0xC, 0);
-    store<u32>(s, id);
-    store<u32>(s + 4, name);
-    store<u32>(s + 0x10, 0x24);
-    store<u16>(s + 0xE, a);
-    store<u16>(s + 0x14, 0);
-    store<u16>(s + 0x16, b);
-    store<u32>(s + 0x18, 0x24);
-    store<u32>(s + 0x20, 0x24);
-    store<u32>(s + 0x28, 0);
-    store<u16>(s + 0x1C, 0);
-    store<u16>(s + 0x1E, c);
-    store<u32>(s + 8, 0x100E0E68);
-    store<u16>(s + 0x24, 0);
-    store<u32>(s + 0x2C, 0x101FF32C);
-    store<u16>(s + 0x26, 0);
+    hdTaskDisposerDestroy(disposer,0);
+    if (flags&1) hdTaskDelete(disposer);
 }
 
-/* 025F9CD0: static initialiser: header statics and StateID_Wait / InProgress / Finish */
-void staticInit() {
-    WWHD_FUNC(0x025F9CD0, void);
-    const u32 b = 0x1048D7C4;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F4BB4u);
-    const f32 lo = load<f32>(0x100E0EB0), hi = load<f32>(0x100E0EB4);
-    store<f32>(0x1048D7B8, lo);
-    store<f32>(0x1048D7BC, hi);
-    call<void>(0x028ED6F8, 0x1048D7C0u);
-    call<void>(0x028F026C, 0x101F4BC0u);
-    call<void>(0x028EAB2C, 0x1048D7C1u);
-    call<void>(0x028F026C, 0x101F4BCCu);
-    u32 n = 0;
-    if (load<u32>(0x101FD8E4)) n = load<u32>(0x101FDD50);
-    else store<u32>(0x101FD8E4, 1);
-    stateId(0x1048D7D4, n + 1, 0x100E0EB8, 2, 3, 4);
-    stateId(0x1048D804, n + 2, 0x100E0EC8, 5, 6, 7);
-    store<u32>(0x101FDD50, n + 3);
-    stateId(0x1048D834, n + 3, 0x100E0EE0, 8, 9, 0xA);
+static void setStateId(HdStateId* state,u32 id,const char* name,u16 enter,u16 execute,u16 exit) {
+    state->mEnterAdjustment = 0;
+    state->mId = id;
+    state->mName = name;
+    state->mEnterOffset = 0x24;
+    state->mEnterIndex = enter;
+    state->mExecuteAdjustment = 0;
+    state->mExecuteIndex = execute;
+    state->mExecuteOffset = 0x24;
+    state->mExitOffset = 0x24;
+    state->mReserved28 = 0;
+    state->mExitAdjustment = 0;
+    state->mExitIndex = exit;
+    state->mVTable = reinterpret_cast<gfn*>(&l_stateIdVTable);
+    state->mReserved24 = 0;
+    state->mFactory = &l_factory;
+    state->mReserved26 = 0;
 }
-VERIFY(0x025F9CD0, staticInit);
 
-} // namespace hd_state_task
+/* 025F9CD0 */
+void hdStateTaskStaticInit() {
+    l_statics.mWords[2] = 0;
+    l_statics.mWords[0] = 0;
+    l_statics.mWords[3] = 0;
+    l_statics.mWords[1] = 0;
+    hdTaskRegister(&l_registration1);
+    const f32 lower = l_lower;
+    const f32 upper = l_upper;
+    l_range.mLower = lower;
+    l_range.mUpper = upper;
+    hdTaskInitSigned(&l_range.mSigned);
+    hdTaskRegister(&l_registration2);
+    hdTaskInitUnsigned(&l_range.mUnsigned);
+    hdTaskRegister(&l_registration3);
+    u32 id = 0;
+    if (l_stateIdInitialized) id = l_lastStateId;
+    else l_stateIdInitialized = 1;
+    setStateId(&l_waitState,id+1,gabi::at<const char>(gabi::guest_addr("Wait")),2,3,4);
+    setStateId(&l_workState,id+2,gabi::at<const char>(gabi::guest_addr("InProgress")),5,6,7);
+    l_lastStateId = id+3;
+    setStateId(&l_finishState,id+3,gabi::at<const char>(gabi::guest_addr("Finish")),8,9,10);
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_singleton 101F4BD8
+data l_disposerHolder 101F4BDC
+data l_baseVTable 100E0E00
+data l_objectVTable 100E0DC0
+data l_initialTaskVTable 100E0DA0
+data l_taskVTable 100E0F08
+data l_delegateVTable 100E0DB0
+data l_disposerVTable 100E0EF8
+data l_stateIdVTable 100E0E68
+data l_factory 101FF32C
+data l_updateHandler 025F9BC4
+data l_waitState 1048D7D4
+data l_workState 1048D804
+data l_finishState 1048D834
+data l_statics 1048D7C4
+data l_range 1048D7B8
+data l_lower 100E0EB0
+data l_upper 100E0EB4
+data l_registration1 101F4BB4
+data l_registration2 101F4BC0
+data l_registration3 101F4BCC
+data l_stateIdInitialized 101FD8E4
+data l_lastStateId 101FDD50
+str 100E0EB8 "Wait" renamed
+str 100E0EC8 "InProgress" renamed
+str 100E0EE0 "Finish" renamed
+ext 0273AD10 void* hdTaskAllocate(u32)
+ext 0273B0D4 HdStateTask* hdTaskAllocateInstance(u32,void*,u32)
+ext 0273B050 HdStateVTableObject* hdTaskAllocateWorker(u32,void*,u32)
+ext 0273AF40 void hdTaskDelete(void*)
+ext 020062E8 void hdTaskStateConstruct(HdStateMachine*,HdStateTask*,void*)
+ext 020063C0 void hdTaskChangeState(HdStateMachine*,HdStateId*)
+ext 02006364 void hdTaskStateExecute(HdStateMachine*)
+ext 028B2204 void hdTaskQueueConstruct(HdStateQueue*)
+ext 028B28F8 void hdTaskThreadConstruct(HdStateThread*)
+ext 02752B0C void hdTaskDisposerConstruct(HdStateDisposer*,void*,u32)
+ext 02752BEC void hdTaskDisposerDestroy(HdStateDisposer*,u32)
+ext 028B3E8C void hdTaskThreadStep(HdStateThread*)
+ext 028B3124 void hdTaskThreadJoin(HdStateThread*,HdStateVTableObject*)
+ext 028B2A40 void hdTaskThreadDestroy(HdStateThread*,u32)
+ext 028B229C void hdTaskQueueDestroy(HdStateQueue*,u32)
+ext C0009C58 void hdTaskSharedData(u32,u32,be<u32>*,be<u32>*)
+ext 028B4230 void hdTaskParamsConstruct(HdStateThreadParams*)
+ext 028B2B64 void hdTaskThreadStart(HdStateThread*,HdStateThreadParams*)
+ext 028B289C void hdTaskMessageConstruct(HdStateMessage*)
+ext 028B239C void hdTaskQueueSend(HdStateQueue*,HdStateMessage*)
+ext 020039C0 HdStateVTableObject* hdTaskWorkerConstruct(HdStateVTableObject*,void*)
+ext 028B3540 void hdTaskThreadRequest(HdStateThread*)
+ext 028B3804 void hdTaskThreadWake(HdStateThread*)
+ext 0275FFC8 void hdTaskRunObject(void*)
+ext 028F026C void hdTaskRegister(void*)
+ext 028ED6F8 void hdTaskInitSigned(be<u8>*)
+ext 028EAB2C void hdTaskInitUnsigned(be<u8>*)
+*/

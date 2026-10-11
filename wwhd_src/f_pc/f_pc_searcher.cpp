@@ -1,24 +1,27 @@
-#include "gabi.h"
-using namespace gabi;
-u32 fpcSch_JudgeForPName_hd(u32 p,u32 data) {
- WWHD_FUNC(0x025E121C,u32,p,data);
- const s16 name=load<s16>(p+8),want=load<s16>(data);
- return name==want ? p : 0;
+/** Process search callbacks. */
+#include "bindings.h"
+#include "f_pc/f_pc_base.h"
+
+/* 025E121C */
+static void* fpcSch_JudgeForPName(void* i_proc, be<s16>* i_data) {
+    if (((base_process_class*)i_proc)->mProcName == *i_data) {
+        return i_proc;
+    }
+    return NULL;
 }
-VERIFY(0x025E121C,fpcSch_JudgeForPName_hd);
-u32 fpcSch_JudgeByID_hd(u32 p,u32 data) {
- WWHD_FUNC(0x025E1234,u32,p,data);
- const u32 id=load<u32>(p+4),want=load<u32>(data);
- return id==want ? p : 0;
+
+/* 025E1234 */
+static void* fpcSch_JudgeByID(void* i_proc, be<fpc_ProcID>* i_data) {
+    if (((base_process_class*)i_proc)->mBsPcId == *i_data) {
+        return i_proc;
+    }
+    return NULL;
 }
-VERIFY(0x025E1234,fpcSch_JudgeByID_hd);
-void fpcSch_sinit_hd() {
- WWHD_FUNC(0x025E124C,void);
- store<u32>(0x1048AB98,0);store<u32>(0x1048AB90,0);store<u32>(0x1048AB9C,0);store<u32>(0x1048AB94,0);
- call<void>(0x028F026C,0x101F4674u);
- const f32 a=load<f32>(0x1005848C),b=load<f32>(0x10058490);
- store<f32>(0x1048AB84,a);store<f32>(0x1048AB88,b);
- call<void>(0x028ED6F8,0x1048AB8Cu);call<void>(0x028F026C,0x101F4680u);
- call<void>(0x028EAB2C,0x1048AB8Du);call<void>(0x028F026C,0x101F468Cu);
+
+/* 025E124C */
+// HD: this translation unit's header statics copy their pi pair from rodata.
+static void __sinit_f_pc_searcher_cpp() {
+    sinit_header_statics_rodata(0x1048AB84, 0x101F4674, 0x1048AB90, 0x1005848C);
 }
-VERIFY(0x025E124C,fpcSch_sinit_hd);
+
+/* WWHD glue (tools/verify/autoglue.py): no data bindings. */

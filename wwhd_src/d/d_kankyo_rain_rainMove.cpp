@@ -1,157 +1,337 @@
-#include "d_kankyo_rain_private.h"
-namespace d_kankyo_rain_cpp {
-static void rainMove() {
-    WWHD_FUNC(0x02566B88,void);
-    u32 packet=ld(environment()+0xA44),camera=ld(gameInfo()+0x5AF8);gameInfo();
-    gabi::Local<Vec_l> wind,center,direction,position,forward1,forward2;
-    gabi::call(0x0257DB28,wind.get());
-    auto stageEquals=[&](u32 literal) {
-        gabi::Local<SafeString_l> name,current;
-        name->text=literal;name->vtable=0x1004F3AC;
-        current->text=gameInfo()+0x5134;current->vtable=0x1004F3AC;
-        safe_string_callback(name.get());safe_string_callback(name.get());
-        u32 left=name->text;safe_string_callback(current.get());u32 right=current->text;
-        return left==right||equal_terminated_strings(left,right);
+// HD: preserve rain collision checks, camera fades and the expanded particle packet layout.
+#include "d/d_kankyo_rain_kazanbai_move.h"
+namespace RainMotion {
+/* 02566B88 */
+void dKyr_rain_move() {
+    u32 packet = (u32)at<Environment>(sdk::getEnvironment<u32>())->mpRainPacket,
+        camera = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mCamera;
+    sdk::getGameInfo<u32>();
+    gabi::Local<cXyz> wind, center, direction, position, forward1, forward2;
+    sdk::dKyw_get_wind_vecpow(wind.get());
+    auto stageEquals = [&](u32 literal) {
+        gabi::Local<SafeString> name, current;
+        name->text = literal;
+        name->vtable = SafeStringVtableAddress;
+        current->text = ea(at<GameInfo>(sdk::getGameInfo<u32>())->mStartStageName);
+        current->vtable = SafeStringVtableAddress;
+        safe_string_callback(name.get());
+        safe_string_callback(name.get());
+        u32 left = name->text;
+        safe_string_callback(current.get());
+        u32 right = current->text;
+        return left == right || equal_terminated_strings(left, right);
     };
-    u32 stageType=0;
-    if(!stageEquals(0x1004F700)) {
-        u32 stage=gameInfo()+0x5150;
-        stage=gabi::call_ptr<u32>(ld(ld(stage)+0x15C),stage);
-        stageType=(ld(stage+12)>>16)&7;
+    u32 stageType = 0;
+    if (!stageEquals(RainSpecialStage)) {
+        u32 stage = ea(&at<GameInfo>(sdk::getGameInfo<u32>())->mStageVtable);
+        stage = gabi::call_ptr<u32>((u32)at<StageVtable>((u32)*at<be<u32>>(stage))->getInfo, stage);
+        stageType = ((u32)at<StageInfo>(stage)->flags >> 16) & 7;
     }
-    s32 count=gabi::load<s16>(packet+0x3758);
-    if(count>(s32)ld(environment()+0xA40)) {if(gabi::load<s16>(packet+0x3758)==0)return;}
-    else {s16 wanted=gabi::load<s16>(environment()+0xA42);gabi::store<s16>(packet+0x3758,wanted);if(wanted==0)return;}
-    gabi::call(0x02563F64,camera+0xE8,packet+0x376C,direction.get());
-    auto distance=[&](u32 a,u32 b) {gabi::call(0x028E8DE8,a,b);return gabi::call<f32>(0x028F4384);};
-    f32 eyeChange=distance(packet+0x3760,camera+0xDC),zero=lf(0x1004F528),one=lf(0x1004F550),step;
-    const f32 ten=lf(0x1004F6B8),fifty=lf(0x1004F564);
-    if(eyeChange>ten)eyeChange=gabi::fsubs_ppc(eyeChange,ten)/fifty;else eyeChange=zero;
-    if(eyeChange>one) {
-        for(u32 off=0;off<12;off+=4)gabi::store<u32>(packet+0x3760+off,ld(camera+0xDC+off));
-        eyeChange=one;
-        f32 centerChange=distance(packet+0x376C,camera+0xE8);
-        if(centerChange>ten) {
-            centerChange=gabi::fsubs_ppc(centerChange,ten)/fifty;
-            if(centerChange>one)centerChange=one;
-        }else centerChange=zero;
-        step=lf(0x1004F580);
-        gabi::call(0x0200ECD4,packet+0x3784,gabi::fmuls_ppc(eyeChange,centerChange),lf(0x1004F554),lf(0x1004F588),step);
+    s32 count = (s16)at<RainPacket>(packet)->mRainCount;
+    if (count > (s32)(u32)at<Environment>(sdk::getEnvironment<u32>())->mRainCount.word) {
+        if ((s16)at<RainPacket>(packet)->mRainCount == 0)
+            return;
     } else {
-        for(u32 off=0;off<12;off+=4)gabi::store<u32>(packet+0x3760+off,ld(camera+0xDC+off));
-        f32 centerChange=distance(packet+0x376C,camera+0xE8);
-        if(centerChange>ten) {centerChange=gabi::fsubs_ppc(centerChange,ten)/fifty;if(centerChange>one)centerChange=one;}else centerChange=zero;
-        step=lf(0x1004F580);
-        gabi::call(0x0200ECD4,packet+0x3784,gabi::fmuls_ppc(eyeChange,centerChange),lf(0x1004F554),lf(0x1004F588),step);
+        s16 wanted = (s16)at<Environment>(sdk::getEnvironment<u32>())->mRainCount.halves.lower;
+        at<RainPacket>(packet)->mRainCount = wanted;
+        if (wanted == 0)
+            return;
     }
-    const f32 small=lf(0x1004F588);
-    if(lf(packet+0x3784)>lf(0x1004F584))sf(packet+0x3784,lf(0x1004F584));
-    gabi::call(0x0200ECD4,packet+0x3778,(f32)direction->x,lf(0x1004F554),small,step);
-    gabi::call(0x0200ECD4,packet+0x377C,(f32)direction->y,lf(0x1004F554),small,step);
-    gabi::call(0x0200ECD4,packet+0x3780,(f32)direction->z,lf(0x1004F554),small,step);
-    for(u32 off=0;off<12;off+=4)gabi::store<u32>(packet+0x376C+off,ld(camera+0xE8+off));
-    gabi::call(0x0256401C,camera,center.get(),lf(0x1004F6BC),lf(0x1004F5D0));
-    gabi::call<u32>(0x0257DAA8);gabi::call<f32>(0x02578348);
-    sf(packet+0x3754,zero);sf(packet+0x3750,zero);gabi::store<u8>(packet+0x379C,0);
-    u32 overhead=0,front=0,farFront=0,radial=0;f32 radialLimit=0;
-    bool special=stageType==2&&!stageEquals(0x1004F708)&&!stageEquals(0x1004F6F8);
-    if(!special) {
-        u32 checkCamera=ld(gameInfo()+0x5AF8);gameInfo();
-        gabi::Local<GroundCheck_l> ground;gabi::Local<RoofCheck_l> roof;gabi::Local<Vec_l> cameraPoint;
-        u32 g=gabi::ea(ground.get()),r=gabi::ea(roof.get());
-        gabi::call(0x02008E0C,ground.get());
-        gabi::store<u8>(g+0x45,0);gabi::store<u32>(g+0x4C,0x1004F494);
-        gabi::store<u8>(g+0x46,0);gabi::store<u32>(g,g+0x40);gabi::store<u8>(g+0x47,0);
-        gabi::store<u8>(g+0x48,0);gabi::store<u8>(g+0x49,0);gabi::store<u32>(g+4,g+0x4C);
-        gabi::store<u32>(g+0x40,0x1004F4A4);gabi::store<u8>(g+0x4A,0);gabi::store<u32>(g+0x50,15);
-        gabi::store<u32>(g+0x20,0x1004F484);gabi::store<u32>(g+0x10,0x1004F474);gabi::store<u8>(g+0x44,1);
-        gabi::call(0x024EE7AC,roof.get(),1);
-        cameraPoint->x=lf(checkCamera+0xDC);cameraPoint->z=lf(checkCamera+0xE4);
-        f32 y=gabi::fadds_ppc(lf(checkCamera+0xE0),fifty);
-        sf(r+0x38,(f32)cameraPoint->x);sf(r+0x3C,y);sf(r+0x40,(f32)cameraPoint->z);
-        overhead=gabi::call<f32>(0x024EF6E8,gameInfo()+0x12A0,roof.get())!=lf(0x1004F630);
-        sf(g+0x24,(f32)cameraPoint->x);sf(g+0x28,gabi::fadds_ppc(y,lf(0x1004F594)));sf(g+0x2C,(f32)cameraPoint->z);
-        if(gabi::call<f32>(0x02008974,gameInfo()+0x12A0,ground.get())>gabi::fadds_ppc(lf(checkCamera+0xE0),fifty))overhead=1;
-        gabi::store<u32>(r+0x30,0x1004F3E4);gabi::store<u32>(r+0x20,0x1004F4B4);gabi::store<u32>(r+0x24,0x1004F4D4);
-        gabi::call(0x02008B4C,r+0x10,0);gabi::store<u32>(g+0x40,0x1004F424);gabi::store<u32>(g+0x4C,0x1004F3E4);gabi::store<u32>(g+0x20,0x1004F404);
-        gabi::call(0x02008DAC,ground.get(),0);
-        front=gabi::call<u32>(0x02566974,forward1.get(),lf(0x1004F6BC));
-        farFront=gabi::call<u32>(0x02566974,forward2.get(),lf(0x1004F6C0));
-        if(overhead)gabi::store<u8>(packet+0x379C,gabi::load<u8>(packet+0x379C)|1);
-        else if(front)gabi::store<u8>(packet+0x379C,gabi::load<u8>(packet+0x379C)|2);
-        if(stageEquals(0x1004F708)) {gabi::store<u8>(packet+0x379C,0);overhead=front=farFront=0;}
-    }else {
-        gabi::store<u8>(packet+0x379C,gabi::load<u8>(packet+0x379C)|1);radial=1;
-        if(stageEquals(0x1004F710))radialLimit=lf(0x1004F6C4);
-        else if(stageEquals(0x1004F718))radialLimit=lf(0x1004F6C8);
-        else radialLimit=lf(0x1004F6CC);
-        if(stageEquals(0x1004F6F0))radial=2;
-    }
-    auto fade=[&](u32 off,u32 blocked) {
-        if(blocked)gabi::call(0x0200ECD4,packet+off,zero,lf(0x1004F57C),lf(0x1004F554),step);
-        else gabi::call(0x0200ECD4,packet+off,one,small,small,lf(0x1004F58C));
+    sdk::dKyr_get_vectle_calc(ea(&at<Camera>(camera)->mCenter), ea(&at<RainPacket>(packet)->mCamCenterPos),
+                              direction.get());
+    auto distance = [&](u32 a, u32 b) {
+        sdk::distanceSquared(a, b);
+        return sdk::squareRoot<f32>();
     };
-    fade(0x3790,overhead);fade(0x3794,front);fade(0x3798,farFront);
-    count=gabi::load<s16>(packet+0x3758);if(count<=0)return;
-    const f32 scatter=lf(0x1004F6D0),fallBase=lf(0x1004F6E0),bottom=lf(0x1004F52C),accel=lf(0x1004F6D4),jitter=lf(0x1004F6DC),vertical=lf(0x1004F6E4);
-    auto sumPosition=[&](u32 p) {position->x=gabi::fadds_ppc(lf(p+0x10),lf(p+4));position->y=gabi::fadds_ppc(lf(p+0x14),lf(p+8));position->z=gabi::fadds_ppc(lf(p+0x18),lf(p+12));};
-    auto copyCenter=[&](u32 p) {gabi::store<u32>(p+0x10,ld(gabi::ea(center.get())));gabi::store<u32>(p+0x14,ld(gabi::ea(center.get())+4));gabi::store<u32>(p+0x18,ld(gabi::ea(center.get())+8));};
-    for(s32 i=count-1;i>=0;--i) {
-        u32 p=packet+0xA0+(u32)i*56;u8 state=gabi::load<u8>(p);sf(p+0x14,(f32)center->y);
-        if(state==0) {
-            sf(p+0x24,-gabi::fadds_ppc(gabi::call<f32>(0x020198D8,ten),fallBase));gabi::store<u16>(p+0x34,0);copyCenter(p);
-            sf(p+4,gabi::call<f32>(0x02019918,scatter));sf(p+8,gabi::call<f32>(0x020198D8,lf(0x1004F5D0)));sf(p+12,gabi::call<f32>(0x02019918,scatter));sf(p+0x28,one);
-            sf(p+0x1C,gabi::call<f32>(0x020198D8,lf(0x1004F6D8)));sf(p+0x20,gabi::call<f32>(0x020198D8,lf(0x1004F6D8)));
-            gabi::call(0x0256691C,packet,i);gabi::store<u8>(p,gabi::load<u8>(p)+1);sumPosition(p);
-        }else if(state<=3) {
-            f32 random=gabi::call<f32>(0x02019918,small);
-            gabi::call(0x0200ECD4,p+0x24,gabi::fsubs_ppc(lf(p+0x24),random),lf(0x1004F57C),small,step);
-            f32 a=gabi::fmuls_ppc(lf(packet+0x3778),lf(packet+0x3784));a=gabi::fmadds(a,ten,(f32)wind->x);a=gabi::fmadds((f32)(i&7),jitter,a);sf(p+4,gabi::fmadds(a,accel,lf(p+4)));
-            a=gabi::fmuls_ppc(lf(packet+0x377C),lf(packet+0x3784));a=gabi::fmadds(a,ten,(f32)wind->y);a=gabi::fadds_ppc(a,vertical);sf(p+8,gabi::fmadds(a,accel,lf(p+8)));
-            a=gabi::fmuls_ppc(lf(packet+0x3780),lf(packet+0x3784));a=gabi::fmadds(a,ten,(f32)wind->z);a=gabi::fmadds((f32)(i&3),jitter,a);sf(p+12,gabi::fmadds(a,accel,lf(p+12)));
-            position->x=gabi::fadds_ppc(lf(p+0x10),lf(p+4));position->y=center->y;position->z=gabi::fadds_ppc(lf(p+0x18),lf(p+12));
-            f32 dist=distance(gabi::ea(position.get()),gabi::ea(center.get()));s16 timer=gabi::load<s16>(p+0x34);
-            if(timer!=0)gabi::store<u16>(p+0x34,(u16)(timer-1));
+    f32 eyeChange = distance(ea(&at<RainPacket>(packet)->mCamEyePos), ea(&at<Camera>(camera)->mEye)),
+        zero = (f32)*at<be<f32>>(Zero), one = (f32)*at<be<f32>>(One), step;
+    const f32 ten = (f32)*at<be<f32>>(RainEyeChangeThreshold), fifty = (f32)*at<be<f32>>(AshOffsetStep);
+    if (eyeChange > ten)
+        eyeChange = gabi::fsubs_ppc(eyeChange, ten) / fifty;
+    else
+        eyeChange = zero;
+    if (eyeChange > one) {
+        for (u32 component = 0; component < 3; component++)
+            at<RainPacket>(packet)->mCamEyePos.words[component] =
+                (u32)at<Camera>(camera)->mEye.words[component];
+        eyeChange = one;
+        f32 centerChange =
+            distance(ea(&at<RainPacket>(packet)->mCamCenterPos), ea(&at<Camera>(camera)->mCenter));
+        if (centerChange > ten) {
+            centerChange = gabi::fsubs_ppc(centerChange, ten) / fifty;
+            if (centerChange > one)
+                centerChange = one;
+        } else
+            centerChange = zero;
+        step = (f32)*at<be<f32>>(Increment);
+        sdk::cLib_addCalc(ea(&at<RainPacket>(packet)->mCenterDeltaMul),
+                          gabi::fmuls_ppc(eyeChange, centerChange), (f32)*at<be<f32>>(Rate),
+                          (f32)*at<be<f32>>(Drag), step);
+    } else {
+        for (u32 component = 0; component < 3; component++)
+            at<RainPacket>(packet)->mCamEyePos.words[component] =
+                (u32)at<Camera>(camera)->mEye.words[component];
+        f32 centerChange =
+            distance(ea(&at<RainPacket>(packet)->mCamCenterPos), ea(&at<Camera>(camera)->mCenter));
+        if (centerChange > ten) {
+            centerChange = gabi::fsubs_ppc(centerChange, ten) / fifty;
+            if (centerChange > one)
+                centerChange = one;
+        } else
+            centerChange = zero;
+        step = (f32)*at<be<f32>>(Increment);
+        sdk::cLib_addCalc(ea(&at<RainPacket>(packet)->mCenterDeltaMul),
+                          gabi::fmuls_ppc(eyeChange, centerChange), (f32)*at<be<f32>>(Rate),
+                          (f32)*at<be<f32>>(Drag), step);
+    }
+    const f32 small = (f32)*at<be<f32>>(Drag);
+    if ((f32)at<RainPacket>(packet)->mCenterDeltaMul > (f32)*at<be<f32>>(ThunderFogScale))
+        at<RainPacket>(packet)->mCenterDeltaMul = (f32)*at<be<f32>>(ThunderFogScale);
+    sdk::cLib_addCalc(ea(&at<RainPacket>(packet)->mCenterDelta), (f32)direction->x, (f32)*at<be<f32>>(Rate),
+                      small, step);
+    sdk::cLib_addCalc(packet + 0x377C, (f32)direction->y, (f32)*at<be<f32>>(Rate), small, step);
+    sdk::cLib_addCalc(packet + 0x3780, (f32)direction->z, (f32)*at<be<f32>>(Rate), small, step);
+    for (u32 component = 0; component < 3; component++)
+        at<RainPacket>(packet)->mCamCenterPos.words[component] =
+            (u32)at<Camera>(camera)->mCenter.words[component];
+    sdk::dKy_set_eyevect_calc2(camera, center.get(), (f32)*at<be<f32>>(MoonDistanceGain),
+                               (f32)*at<be<f32>>(ScalarOne));
+    sdk::dKyw_get_wind_vec<u32>();
+    sdk::dKyw_get_wind_pow<f32>();
+    at<RainPacket>(packet)->field_0x36cc = zero;
+    at<RainPacket>(packet)->field_0x36c8 = zero;
+    at<RainPacket>(packet)->mStatus = ParticleInactive;
+    u32 overhead = 0, front = 0, farFront = 0, radial = 0;
+    f32 radialLimit = 0;
+    bool special = stageType == 2 && !stageEquals(RainUnblockedStage) && !stageEquals(RainOutdoorStage);
+    if (!special) {
+        u32 checkCamera = (u32)at<GameInfo>(sdk::getGameInfo<u32>())->mCamera;
+        sdk::getGameInfo<u32>();
+        gabi::Local<GroundCheck> ground;
+        gabi::Local<RoofCheck> roof;
+        gabi::Local<cXyz> cameraPoint;
+        u32 g = gabi::ea(ground.get()), r = gabi::ea(roof.get());
+        sdk::constructGroundBase(ground.get());
+        at<GroundCheck>(g)->pass.flags[1] = 0;
+        at<GroundCheck>(g)->group.__vtbl = GroundGroupVtable;
+        at<GroundCheck>(g)->pass.flags[2] = 0;
+        at<GroundCheck>(g)->base.mPolyPassChk = ea(&at<GroundCheck>(g)->pass);
+        at<GroundCheck>(g)->pass.flags[3] = 0;
+        at<GroundCheck>(g)->pass.flags[4] = 0;
+        at<GroundCheck>(g)->pass.flags[5] = 0;
+        at<GroundCheck>(g)->base.mGrpPassChk = ea(&at<GroundCheck>(g)->group);
+        at<GroundCheck>(g)->pass.vtable = ObjectPassVtable;
+        at<GroundCheck>(g)->pass.flags[6] = 0;
+        at<GroundCheck>(g)->group.mGrp = 15;
+        at<GroundCheck>(g)->base.cBgS_PolyInfo::__vtbl = GroundPolyVtable;
+        at<GroundCheck>(g)->base.cBgS_Chk::__vtbl = GroundBaseVtable;
+        at<GroundCheck>(g)->pass.flags[0] = 1;
+        sdk::constructRoofCheck(roof.get(), 1);
+        cameraPoint->x = (f32)at<Camera>(checkCamera)->mEye.channels[0];
+        cameraPoint->z = (f32)at<Camera>(checkCamera)->mEye.channels[2];
+        f32 y = gabi::fadds_ppc((f32)at<Camera>(checkCamera)->mEye.channels[1], fifty);
+        at<RoofCheck>(r)->base.m_pos.x = (f32)cameraPoint->x;
+        at<RoofCheck>(r)->base.m_pos.y = y;
+        at<RoofCheck>(r)->base.m_pos.z = (f32)cameraPoint->z;
+        overhead = sdk::roofCheck<f32>(ea(at<GameInfo>(sdk::getGameInfo<u32>())->mBgSpace), roof.get()) !=
+                   (f32)*at<be<f32>>(NoGroundHeight);
+        at<GroundCheck>(g)->base.m_pos.x = (f32)cameraPoint->x;
+        at<GroundCheck>(g)->base.m_pos.y = gabi::fadds_ppc(y, (f32)*at<be<f32>>(FarPlaneInset));
+        at<GroundCheck>(g)->base.m_pos.z = (f32)cameraPoint->z;
+        if (sdk::groundCross<f32>(ea(at<GameInfo>(sdk::getGameInfo<u32>())->mBgSpace), ground.get()) >
+            gabi::fadds_ppc((f32)at<Camera>(checkCamera)->mEye.channels[1], fifty))
+            overhead = 1;
+        at<RoofCheck>(r)->base.dBgS_GrpPassChk::__vtbl = BaseGroupVtable;
+        at<RoofCheck>(r)->base.cBgS_Chk::__vtbl = RoofBaseVtable;
+        at<RoofCheck>(r)->base.dBgS_PolyPassChk::__vtbl = RoofPassVtable;
+        sdk::destroyCheckBase(ea(&at<RoofCheck>(r)->base.cBgS_Chk::mPolyPassChk), 0);
+        at<GroundCheck>(g)->pass.vtable = PolyPassVtable;
+        at<GroundCheck>(g)->group.__vtbl = BaseGroupVtable;
+        at<GroundCheck>(g)->base.cBgS_PolyInfo::__vtbl = BasePolyVtable;
+        sdk::destroyGroundBase(ground.get(), 0);
+        front = sdk::dKyr_get_rain_pos<u32>(forward1.get(), (f32)*at<be<f32>>(MoonDistanceGain));
+        farFront = sdk::dKyr_get_rain_pos<u32>(forward2.get(), (f32)*at<be<f32>>(RainFarFrontDistance));
+        if (overhead)
+            at<RainPacket>(packet)->mStatus = (u8)at<RainPacket>(packet)->mStatus | 1;
+        else if (front)
+            at<RainPacket>(packet)->mStatus = (u8)at<RainPacket>(packet)->mStatus | 2;
+        if (stageEquals(RainUnblockedStage)) {
+            at<RainPacket>(packet)->mStatus = ParticleInactive;
+            overhead = front = farFront = 0;
+        }
+    } else {
+        at<RainPacket>(packet)->mStatus = (u8)at<RainPacket>(packet)->mStatus | 1;
+        radial = 1;
+        if (stageEquals(RainRadialStageA))
+            radialLimit = (f32)*at<be<f32>>(RainRadialLimitA);
+        else if (stageEquals(RainRadialStageB))
+            radialLimit = (f32)*at<be<f32>>(RainRadialLimitB);
+        else
+            radialLimit = (f32)*at<be<f32>>(RainRadialLimitDefault);
+        if (stageEquals(RainHeightFadeStage))
+            radial = 2;
+    }
+    auto fade = [&](be<f32> *amount, u32 blocked) {
+        if (blocked)
+            sdk::cLib_addCalc(ea(amount), zero, (f32)*at<be<f32>>(Half), (f32)*at<be<f32>>(Rate), step);
+        else
+            sdk::cLib_addCalc(ea(amount), one, small, small, (f32)*at<be<f32>>(SprayMinimumStep));
+    };
+    fade(&at<RainPacket>(packet)->mOverheadFade, overhead);
+    fade(&at<RainPacket>(packet)->mFwdFade1, front);
+    fade(&at<RainPacket>(packet)->mFwdFade2, farFront);
+    count = (s16)at<RainPacket>(packet)->mRainCount;
+    if (count <= 0)
+        return;
+    const f32 scatter = (f32)*at<be<f32>>(RainScatterRadius), fallBase = (f32)*at<be<f32>>(RainFallBase),
+              bottom = (f32)*at<be<f32>>(RainResetHeight), accel = (f32)*at<be<f32>>(RainMotionGain),
+              jitter = (f32)*at<be<f32>>(RainShift), vertical = (f32)*at<be<f32>>(RainVerticalMotion);
+    auto sumPosition = [&](u32 p) {
+        position->x = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[0],
+                                      (f32)at<RAIN_EFF>(p)->mPos.channels[0]);
+        position->y = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[1],
+                                      (f32)at<RAIN_EFF>(p)->mPos.channels[1]);
+        position->z = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[2],
+                                      (f32)at<RAIN_EFF>(p)->mPos.channels[2]);
+    };
+    auto copyCenter = [&](u32 p) {
+        at<RAIN_EFF>(p)->mBasePos.words[0] = (u32)(*at<Vector>(gabi::ea(center.get()))).words[0];
+        at<RAIN_EFF>(p)->mBasePos.words[1] = (u32)(*at<Vector>(gabi::ea(center.get()))).words[1];
+        at<RAIN_EFF>(p)->mBasePos.words[2] = (u32)(*at<Vector>(gabi::ea(center.get()))).words[2];
+    };
+    for (s32 i = count - 1; i >= 0; --i) {
+        u32 p = ea(&at<RainPacket>(packet)->mEff[(u32)i]);
+        u8 state = (u8)at<RAIN_EFF>(p)->mStatus;
+        at<RAIN_EFF>(p)->mBasePos.channels[1] = (f32)center->y;
+        if (state == ParticleInactive) {
+            at<RAIN_EFF>(p)->field_0x24 = -gabi::fadds_ppc(sdk::cM_rndF<f32>(ten), fallBase);
+            at<RAIN_EFF>(p)->mTimer = 0;
+            copyCenter(p);
+            at<RAIN_EFF>(p)->mPos.channels[0] = sdk::cM_rndFX<f32>(scatter);
+            at<RAIN_EFF>(p)->mPos.channels[1] = sdk::cM_rndF<f32>((f32)*at<be<f32>>(ScalarOne));
+            at<RAIN_EFF>(p)->mPos.channels[2] = sdk::cM_rndFX<f32>(scatter);
+            at<RAIN_EFF>(p)->mAlpha = one;
+            at<RAIN_EFF>(p)->field_0x1c = sdk::cM_rndF<f32>((f32)*at<be<f32>>(RainAngleRange));
+            at<RAIN_EFF>(p)->field_0x20 = sdk::cM_rndF<f32>((f32)*at<be<f32>>(RainAngleRange));
+            sdk::dKyr_set_rain_base(packet, i);
+            at<RAIN_EFF>(p)->mStatus = (u8)at<RAIN_EFF>(p)->mStatus + 1;
+            sumPosition(p);
+        } else if (state <= ParticleSpecial) {
+            f32 random = sdk::cM_rndFX<f32>(small);
+            sdk::cLib_addCalc(ea(&at<RAIN_EFF>(p)->field_0x24),
+                              gabi::fsubs_ppc((f32)at<RAIN_EFF>(p)->field_0x24, random),
+                              (f32)*at<be<f32>>(Half), small, step);
+            f32 a = gabi::fmuls_ppc((f32)at<RainPacket>(packet)->mCenterDelta.channels[0],
+                                    (f32)at<RainPacket>(packet)->mCenterDeltaMul);
+            a = gabi::fmadds(a, ten, (f32)wind->x);
+            a = gabi::fmadds((f32)(i & 7), jitter, a);
+            at<RAIN_EFF>(p)->mPos.channels[0] =
+                gabi::fmadds(a, accel, (f32)at<RAIN_EFF>(p)->mPos.channels[0]);
+            a = gabi::fmuls_ppc((f32)at<RainPacket>(packet)->mCenterDelta.channels[1],
+                                (f32)at<RainPacket>(packet)->mCenterDeltaMul);
+            a = gabi::fmadds(a, ten, (f32)wind->y);
+            a = gabi::fadds_ppc(a, vertical);
+            at<RAIN_EFF>(p)->mPos.channels[1] =
+                gabi::fmadds(a, accel, (f32)at<RAIN_EFF>(p)->mPos.channels[1]);
+            a = gabi::fmuls_ppc((f32)at<RainPacket>(packet)->mCenterDelta.channels[2],
+                                (f32)at<RainPacket>(packet)->mCenterDeltaMul);
+            a = gabi::fmadds(a, ten, (f32)wind->z);
+            a = gabi::fmadds((f32)(i & 3), jitter, a);
+            at<RAIN_EFF>(p)->mPos.channels[2] =
+                gabi::fmadds(a, accel, (f32)at<RAIN_EFF>(p)->mPos.channels[2]);
+            position->x = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[0],
+                                          (f32)at<RAIN_EFF>(p)->mPos.channels[0]);
+            position->y = center->y;
+            position->z = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[2],
+                                          (f32)at<RAIN_EFF>(p)->mPos.channels[2]);
+            f32 dist = distance(gabi::ea(position.get()), gabi::ea(center.get()));
+            s16 timer = (s16)at<RAIN_EFF>(p)->mTimer;
+            if (timer != 0)
+                at<RAIN_EFF>(p)->mTimer = (u16)(timer - 1);
             else {
-                if(dist>scatter) {
-                    gabi::store<u16>(p+0x34,10);sf(p+0x24,-gabi::fadds_ppc(gabi::call<f32>(0x020198D8,ten),fallBase));copyCenter(p);
-                    if(distance(gabi::ea(position.get()),gabi::ea(center.get()))>lf(0x1004F6E8)) {
-                        sf(p+4,gabi::call<f32>(0x02019918,scatter));sf(p+8,gabi::call<f32>(0x02019918,scatter));sf(p+12,gabi::call<f32>(0x02019918,scatter));
-                    }else {
-                        f32 radius=gabi::fadds_ppc(gabi::call<f32>(0x02019918,lf(0x1004F6EC)),scatter);
-                        gabi::call(0x02563F0C,position.get(),center.get(),direction.get());
-                        sf(p+4,gabi::fmuls_ppc((f32)direction->x,radius));sf(p+8,gabi::fmuls_ppc((f32)direction->y,radius));sf(p+12,gabi::fmuls_ppc((f32)direction->z,radius));
+                if (dist > scatter) {
+                    at<RAIN_EFF>(p)->mTimer = 10;
+                    at<RAIN_EFF>(p)->field_0x24 = -gabi::fadds_ppc(sdk::cM_rndF<f32>(ten), fallBase);
+                    copyCenter(p);
+                    if (distance(gabi::ea(position.get()), gabi::ea(center.get())) >
+                        (f32)*at<be<f32>>(RainResetDistance)) {
+                        at<RAIN_EFF>(p)->mPos.channels[0] = sdk::cM_rndFX<f32>(scatter);
+                        at<RAIN_EFF>(p)->mPos.channels[1] = sdk::cM_rndFX<f32>(scatter);
+                        at<RAIN_EFF>(p)->mPos.channels[2] = sdk::cM_rndFX<f32>(scatter);
+                    } else {
+                        f32 radius =
+                            gabi::fadds_ppc(sdk::cM_rndFX<f32>((f32)*at<be<f32>>(RainShellJitter)), scatter);
+                        sdk::dKyr_get_vectle_calc2(position.get(), center.get(), direction.get());
+                        at<RAIN_EFF>(p)->mPos.channels[0] = gabi::fmuls_ppc((f32)direction->x, radius);
+                        at<RAIN_EFF>(p)->mPos.channels[1] = gabi::fmuls_ppc((f32)direction->y, radius);
+                        at<RAIN_EFF>(p)->mPos.channels[2] = gabi::fmuls_ppc((f32)direction->z, radius);
                     }
-                    gabi::store<u8>(p,1);gabi::call(0x0256691C,packet,i);
+                    at<RAIN_EFF>(p)->mStatus = ParticleMoving;
+                    sdk::dKyr_set_rain_base(packet, i);
                 }
-                position->y=gabi::fadds_ppc(lf(p+0x14),lf(p+8));
-                if((f32)position->y<gabi::fadds_ppc(lf(p+0x30),accel)) {
-                    copyCenter(p);sf(p+4,gabi::call<f32>(0x02019918,scatter));sf(p+8,bottom);sf(p+12,gabi::call<f32>(0x02019918,scatter));gabi::call(0x0256691C,packet,i);gabi::store<u16>(p+0x34,10);
+                position->y = gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->mBasePos.channels[1],
+                                              (f32)at<RAIN_EFF>(p)->mPos.channels[1]);
+                if ((f32)position->y < gabi::fadds_ppc((f32)at<RAIN_EFF>(p)->field_0x30, accel)) {
+                    copyCenter(p);
+                    at<RAIN_EFF>(p)->mPos.channels[0] = sdk::cM_rndFX<f32>(scatter);
+                    at<RAIN_EFF>(p)->mPos.channels[1] = bottom;
+                    at<RAIN_EFF>(p)->mPos.channels[2] = sdk::cM_rndFX<f32>(scatter);
+                    sdk::dKyr_set_rain_base(packet, i);
+                    at<RAIN_EFF>(p)->mTimer = 10;
                 }
             }
             sumPosition(p);
-        }else sumPosition(p);
-        if(i>(s32)(ld(environment()+0xA40)-1)&&(u32)i==(u32)(gabi::load<s16>(packet+0x3758)-1))gabi::store<u16>(packet+0x3758,(u16)(gabi::load<s16>(packet+0x3758)-1));
-        f32 alpha=one;
-        if(overhead||lf(packet+0x3790)<one) {
-            gabi::Local<Vec_l> horizontal;horizontal->x=position->x;horizontal->y=lf(camera+0xE0);horizontal->z=position->z;
-            if(distance(camera+0xDC,gabi::ea(horizontal.get()))<scatter)alpha=lf(packet+0x3790);
+        } else
+            sumPosition(p);
+        if (i > (s32)((u32)at<Environment>(sdk::getEnvironment<u32>())->mRainCount.word - 1) &&
+            (u32)i == (u32)((s16)at<RainPacket>(packet)->mRainCount - 1))
+            at<RainPacket>(packet)->mRainCount = (u16)((s16)at<RainPacket>(packet)->mRainCount - 1);
+        f32 alpha = one;
+        if (overhead || (f32)at<RainPacket>(packet)->mOverheadFade < one) {
+            gabi::Local<cXyz> horizontal;
+            horizontal->x = position->x;
+            horizontal->y = (f32)at<Camera>(camera)->mEye.channels[1];
+            horizontal->z = position->z;
+            if (distance(ea(&at<Camera>(camera)->mEye), gabi::ea(horizontal.get())) < scatter)
+                alpha = (f32)at<RainPacket>(packet)->mOverheadFade;
         }
-        if(front||lf(packet+0x3794)<one) {
-            gabi::Local<Vec_l> horizontal;horizontal->x=position->x;horizontal->y=forward1->y;horizontal->z=position->z;
-            if(distance(gabi::ea(forward1.get()),gabi::ea(horizontal.get()))<lf(0x1004F5FC))alpha=gabi::fmuls_ppc(alpha,lf(packet+0x3794));
+        if (front || (f32)at<RainPacket>(packet)->mFwdFade1 < one) {
+            gabi::Local<cXyz> horizontal;
+            horizontal->x = position->x;
+            horizontal->y = forward1->y;
+            horizontal->z = position->z;
+            if (distance(gabi::ea(forward1.get()), gabi::ea(horizontal.get())) <
+                (f32)*at<be<f32>>(FlareSizeGain))
+                alpha = gabi::fmuls_ppc(alpha, (f32)at<RainPacket>(packet)->mFwdFade1);
         }
-        if(farFront||lf(packet+0x3798)<one) {
-            gabi::Local<Vec_l> horizontal;horizontal->x=position->x;horizontal->y=forward2->y;horizontal->z=position->z;
-            if(distance(gabi::ea(forward2.get()),gabi::ea(horizontal.get()))<lf(0x1004F5FC))alpha=gabi::fmuls_ppc(alpha,lf(packet+0x3798));
+        if (farFront || (f32)at<RainPacket>(packet)->mFwdFade2 < one) {
+            gabi::Local<cXyz> horizontal;
+            horizontal->x = position->x;
+            horizontal->y = forward2->y;
+            horizontal->z = position->z;
+            if (distance(gabi::ea(forward2.get()), gabi::ea(horizontal.get())) <
+                (f32)*at<be<f32>>(FlareSizeGain))
+                alpha = gabi::fmuls_ppc(alpha, (f32)at<RainPacket>(packet)->mFwdFade2);
         }
-        if(radial) {
-            gabi::Local<Vec_l> horizontal;horizontal->x=position->x;horizontal->y=zero;horizontal->z=position->z;
-            gabi::call(0x028E8DD0,horizontal.get());f32 d=gabi::fsubs_ppc(gabi::call<f32>(0x028F4384),radialLimit);alpha=d>=0?alpha:zero;
-            if(radial==2){d=gabi::fsubs_ppc((f32)position->y,lf(0x1004F6C8));alpha=d>=0?alpha:zero;}
+        if (radial) {
+            gabi::Local<cXyz> horizontal;
+            horizontal->x = position->x;
+            horizontal->y = zero;
+            horizontal->z = position->z;
+            sdk::vectorSquareMagnitude(horizontal.get());
+            f32 d = gabi::fsubs_ppc(sdk::squareRoot<f32>(), radialLimit);
+            alpha = d >= 0 ? alpha : zero;
+            if (radial == 2) {
+                d = gabi::fsubs_ppc((f32)position->y, (f32)*at<be<f32>>(RainRadialLimitB));
+                alpha = d >= 0 ? alpha : zero;
+            }
         }
-        sf(p+0x28,alpha);
+        at<RAIN_EFF>(p)->mAlpha = alpha;
     }
 }
-VERIFY(0x02566B88,rainMove);
-}
+
+} // namespace RainMotion
+
+using namespace RainMotion;
+/* WWHD glue (tools/verify/autoglue.py)
+ */

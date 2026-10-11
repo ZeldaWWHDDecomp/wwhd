@@ -1,215 +1,164 @@
-/* Brown wooden tables: HD removes the GC attribute checks and simple shadow.
- * TU02380D28..0238149F includes heap callback, initialization and destructors.
+/**
+ * d_a_obj_otble.cpp (WWHD) - generic brown wooden tables.
+ * Ported from zeldaret/tww with WWHD layout and verified semantics.
+ * "HD:" marks differences from the GameCube source.
  */
 #include "d/actor/d_a_obj_otble.h"
-#include "bindings.h"
 using daObj_Otble::Act_c;
-namespace {
-template <class T> T read(u32 a, u32 o = 0) { return *gabi::at<be<T>>(a + o); }
-template <class T> void write(u32 a, u32 o, T v) {
-  *gabi::at<be<T>>(a + o) = v;
-}
-void *ptr(u32 a, u32 o = 0) { return gabi::at<void>(a + o); }
-struct ArchiveName {
-  be<u32> name, vt;
-};
-WWHD_SIZE(ArchiveName, 8);
-u32 resource(s32 index) {
-  gabi::Local<ArchiveName> archive;
-  archive->name = 0x1002E394;
-  archive->vt = 0x1002E32C;
-  return gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), archive.get(),
-                         index);
-}
-} // namespace
+const gc_tu_data gc_tu = { .safeString = 0x1002E32C,
+    .objAcch = {0x1002E344, 0x1002E364, 0x1002E354},
+    .objAcchDt = {0x1002E354, 0x1002E364},
+    .headerStatics = {0x1046BB84, 0x101CC1D8, 0x1046BB90} };
+static const u32 l_heapsize_init[2] = {0x1240, 0x1240};
 
-BOOL otble_createHeap(Act_c *table) {
-  WWHD_FUNC(0x02380D28, BOOL, table);
-  u32 modelData = resource(read<s32>(0x1002E384, (u32)table->variant * 4));
-  if (!modelData)
-    gabi::call(0x0273AA24, ptr(0x1002E39C), 193, ptr(0x1002E3B0));
-  table->tableModel =
-      gabi::call<u32>(0x025E38E0, ptr(modelData), 0x80000, 0x11000022);
-  if (!table->tableModel)
-    return 0;
-  mDoMtx_stack_c::transS(table->current.pos.x, table->current.pos.y,
-                         table->current.pos.z);
-  mDoMtx_stack_c::YrotM(table->current.angle.y);
-  gabi::call(0x028E90D4, mDoMtx_stack_c::get(), &table->backgroundMatrix);
-  table->background = gabi::call<u32>(0x024F23F4, ptr(0));
-  if (!table->background)
-    return 0;
-  u32 collision = resource(read<s32>(0x1002E38C, (u32)table->variant * 4));
-  if (gabi::call<s32>(0x0200A030, ptr(table->background), ptr(collision), 1,
-                      &table->backgroundMatrix))
-    return 0;
-  return 1;
+/* 02380D28 */
+BOOL Act_c::_createHeap() {
+    // dRes_INDEX_OKMONO_BDL_OTABLE_e, dRes_INDEX_OKMONO_BDL_OTABLEL_e
+    static const s32 bdl[2] = {5, 6};
+    // dRes_INDEX_OKMONO_DZB_OTBLE_e, dRes_INDEX_OKMONO_DZB_OTBLE_L_e
+    static const s32 dzb[2] = {9, 10};
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Okmono", bdl[m294]);
+    JUT_ASSERT(0xC1, modelData != NULL); // HD: assertion line differs from GameCube.
+    mModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000022);
+    if (mModel == NULL)
+        return FALSE;
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    PSMTXCopy(mDoMtx_stack_c::get(), &m2A4);
+    mBgW = new_dBgW();
+    if (mBgW == NULL)
+        return FALSE;
+    cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes("Okmono", dzb[m294]);
+    if (mBgW->Set(bgw_data, dBgW::MOVE_BG_e, &m2A4))
+        return FALSE;
+    return TRUE;
 }
-VERIFY(0x02380D28, otble_createHeap);
-BOOL otble_createHeapCallback(Act_c *table) {
-  WWHD_FUNC(0x02380E70, BOOL, table);
-  return otble_createHeap(table);
+
+/* 02380E70 */
+static BOOL createHeap_CB(fopAc_ac_c* i_this) { return ((Act_c*)i_this)->_createHeap(); }
+
+/* 02380E74 */
+void Act_c::set_mtx() {
+    mObjAcch.CrrPos(*dComIfG_Bgsp());
+    tevStr.mRoomNo = current.roomNo;
+    tevStr.mEnvrIdxOverride = dBgS_GetPolyColor(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&mObjAcch.m_gnd));
+    J3DModel_setBaseScale(mModel, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::YrotM(current.angle.y);
+    J3DModel_setBaseTRMtx(mModel, mDoMtx_stack_c::get());
+    PSMTXCopy(mDoMtx_stack_c::get(), &m2A4);
+    mBgW->Move();
 }
-VERIFY(0x02380E70, otble_createHeapCallback);
-void otble_setMatrix(Act_c *table) {
-  WWHD_FUNC(0x02380E74, void, table);
-  u32 play = gabi::call<u32>(0x025200D4);
-  gabi::call(0x024F08A8, table->acch, ptr(play, 0x12A0));
-  table->tevStr.mRoomNo = table->current.roomNo;
-  play = gabi::call<u32>(0x025200D4);
-  u32 color = gabi::call<u32>(0x024EEEB8, ptr(play, 0x12A0),
-                              ptr(gabi::ea(table), 0x4D8));
-  write<u8>(gabi::ea(table), 0x1CA, color);
-  J3DModel *model = gabi::at<J3DModel>((u32)table->tableModel);
-  J3DModel_setBaseScale(model, &table->scale);
-  mDoMtx_stack_c::transS(table->current.pos.x, table->current.pos.y,
-                         table->current.pos.z);
-  mDoMtx_stack_c::YrotM(table->current.angle.y);
-  model = gabi::at<J3DModel>((u32)table->tableModel);
-  J3DModel_setBaseTRMtx(model, mDoMtx_stack_c::get());
-  gabi::call(0x028E90D4, mDoMtx_stack_c::get(), &table->backgroundMatrix);
-  gabi::call(0x024F43DC, ptr(table->background));
+
+/* 02380F8C */
+void Act_c::CreateInit() {
+    dComIfG_Bgsp()->Regist(mBgW, this);
+    mObjAcchCir.SetWall(30.0f, 30.0f);
+    mObjAcch.Set(&current.pos, &old.pos, this, 1, &mObjAcchCir, &speed, nullptr, nullptr);
+    // HD: the three disabled collision checks are folded into one flags update.
+    mObjAcch.m_flags |= dBgS_Acch::WALL_NONE | dBgS_Acch::WATER_NONE | dBgS_Acch::ROOF_NONE;
+    gravity = -6.5f;
+    fopAcM_posMoveF(this, nullptr);
+    set_mtx();
+    fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(mModel));
+    if (m294 == 1)
+        fopAcM_setCullSizeBox(this, -100.0f, -0.0f, -200.0f, 100.0f, 150.0f, 200.0f);
+    else
+        fopAcM_setCullSizeBox(this, -100.0f, -0.0f, -100.0f, 100.0f, 150.0f, 100.0f);
+    fopAcM_setCullSizeFar(this, 10.0f);
 }
-VERIFY(0x02380E74, otble_setMatrix);
-void otble_createInit(Act_c *table) {
-  WWHD_FUNC(0x02380F8C, void, table);
-  u32 play = gabi::call<u32>(0x025200D4);
-  gabi::call(0x024EEA6C, ptr(play, 0x12A0), ptr(table->background), table);
-  gabi::call(0x024EFF44, table->acchCircle, 30.f, 30.f);
-  gabi::call(0x024F06B4, table->acch, &table->current.pos, &table->old.pos,
-             table, 1, table->acchCircle, &table->speed, ptr(0), ptr(0));
-  u32 a = gabi::ea(table);
-  write<u32>(a, 0x418, read<u32>(a, 0x418) | 0x40C);
-  table->gravity = -6.5f;
-  gabi::call(0x025D6870, table, ptr(0));
-  otble_setMatrix(table);
-  u32 model = table->tableModel;
-  table->cullMtx = model ? model + 0xC8 : 0;
-  if (table->variant == 1)
-    gabi::call(0x025D674C, table, -100.f, -0.f, -200.f, 100.f, 150.f, 200.f);
-  else
-    gabi::call(0x025D674C, table, -100.f, -0.f, -100.f, 100.f, 150.f, 100.f);
-  table->cullSizeFar = 10.f;
+
+/* 023810CC */
+// HD: the M_attr execution check was removed.
+BOOL Act_c::_execute() {
+    fopAcM_posMoveF(this, nullptr);
+    set_mtx();
+    return TRUE;
 }
-VERIFY(0x02380F8C, otble_createInit);
-BOOL otble_execute(Act_c *table) {
-  WWHD_FUNC(0x023810CC, BOOL, table);
-  gabi::call(0x025D6870, table, ptr(0));
-  otble_setMatrix(table);
-  return 1;
+
+/* 02381108 */
+// HD: the M_attr draw check and simple shadow were removed.
+BOOL Act_c::_draw() {
+    g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &current.pos, &tevStr);
+    g_env_light.setLightTevColorType(mModel, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelUpdateDL(mModel);
+    dComIfGd_setList();
+    return TRUE;
 }
-VERIFY(0x023810CC, otble_execute);
-BOOL otble_draw(Act_c *table) {
-  WWHD_FUNC(0x02381108, BOOL, table);
-  auto light = dKy_getEnvlight();
-  settingTevStruct(light, 0, &table->current.pos, &table->tevStr);
-  light = dKy_getEnvlight();
-  setLightTevColorType(light, gabi::at<J3DModel>((u32)table->tableModel),
-                       &table->tevStr);
-  u32 play = gabi::call<u32>(0x025200D4);
-  write<u32>(0x104B4634, 0, read<u32>(play, 0x5D70));
-  play = gabi::call<u32>(0x025200D4);
-  write<u32>(0x104B4634, 4, read<u32>(play, 0x5D74));
-  mDoExt_modelUpdateDL(gabi::at<J3DModel>((u32)table->tableModel), 0);
-  play = gabi::call<u32>(0x025200D4);
-  write<u32>(0x104B4634, 0, read<u32>(play, 0x5D78));
-  play = gabi::call<u32>(0x025200D4);
-  write<u32>(0x104B4634, 4, read<u32>(play, 0x5D7C));
-  return 1;
-}
-VERIFY(0x02381108, otble_draw);
-s32 otble_create(Act_c *table) {
-  WWHD_FUNC(0x023811A0, s32, table);
-  if (!read<u32>(0x101FDC40)) {
-    write<u32>(0x101FDC40, 0, 1);
-    memcpy_g(ptr(0x101FDC44), ptr(0x1002E318), 8);
-  }
-  if (!(table->actor_condition & 8)) {
-    if (table) {
-      fopAc_ac_c_ct(table);
-      table->__vtbl = 0x1002E374;
-      gabi::call(0x024F0474, table->acch);
-      u32 a = gabi::ea(table);
-      write<u32>(a, 0x400, 0x1002E344);
-      write<u32>(a, 0x410, 0x1002E354);
-      write<u32>(a, 0x404, 0x1002E364);
-      write<u8>(a, 0x408, 1);
-      gabi::call(0x024EFE94, table->acchCircle);
+
+/* 023811A0 */
+// HD: _create is emitted directly as the method-table entry.
+cPhs_State Act_c::_create() {
+    static u32 heapsize_initialized;
+    static OtbleHeapSizes heapsize;
+    // HD: set the guard before the memcpy call, whose side effects are observable.
+    if (!heapsize_initialized) {
+        heapsize_initialized = 1;
+        memcpy_g(&heapsize, l_heapsize_init, sizeof(heapsize));
     }
-    table->actor_condition = table->actor_condition | 8;
-  }
-  u8 variant = (u32)table->mParameters & 255;
-  if (variant > 1)
-    variant = 1;
-  table->variant = variant;
-  s32 phase = gabi::call<s32>(0x02520460, &table->phase, ptr(0x1002E324));
-  if (phase == 4) {
-    u32 heapSize = read<u32>(0x101FDC44, (u32)table->variant * 4);
-    if (!gabi::call<s32>(0x025D63E8, table, ptr(0x02380E70), heapSize))
-      return 5;
-    otble_createInit(table);
-  }
-  return phase;
+    fopAcM_ct(this, Act_c);
+    u8 variant = u32(mParameters) & 0xFF;
+    if (variant > 1)
+        variant = 1;
+    m294 = variant;
+    cPhs_State ret = dComIfG_resLoad(&mPhase, "Okmono");
+    if (ret == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, createHeap_CB, heapsize.values[m294]))
+            return cPhs_ERROR_e;
+        CreateInit();
+    }
+    return ret;
 }
-VERIFY(0x023811A0, otble_create);
-BOOL otble_delete(Act_c *table) {
-  WWHD_FUNC(0x023812FC, BOOL, table);
-  gabi::call(0x025204C8, &table->phase, ptr(0x1002E3F0));
-  u32 background = table->background;
-  if (background && read<u32>(background) < 0x100) {
-    u32 play = gabi::call<u32>(0x025200D4);
-    gabi::call(0x020087EC, ptr(play, 0x12A0), ptr(table->background));
-  }
-  return 1;
+
+/* 023812FC */
+// HD: _delete is emitted directly as the method-table entry.
+bool Act_c::_delete() {
+    dComIfG_resDelete(&mPhase, "Okmono");
+    if (mBgW != NULL && mBgW->ChkUsed())
+        dComIfG_Bgsp()->Release(mBgW);
+    return true;
 }
-VERIFY(0x023812FC, otble_delete);
-BOOL otble_Execute(Act_c *table) {
-  WWHD_FUNC(0x02381360, BOOL, table);
-  return otble_execute(table);
+
+/* 02381360 */
+static BOOL Mthd_Execute(void* i_this) { return ((Act_c*)i_this)->_execute(); }
+/* 02381364 */
+static BOOL Mthd_Draw(void* i_this) { return ((Act_c*)i_this)->_draw(); }
+/* 02381368 */
+static void __sinit_d_a_obj_otble_cpp() { __sinit_header_statics(); }
+/* 023813FC */
+// HD: compiler-emitted deleting destructor of a header static.
+static void header_static_dt(void* i_this, s32 flags) {
+    if (i_this != nullptr && (flags & 1))
+        operator_delete(i_this);
 }
-VERIFY(0x02381360, otble_Execute);
-BOOL otble_Draw(Act_c *table) {
-  WWHD_FUNC(0x02381364, BOOL, table);
-  return otble_draw(table);
+/* 02381410 */
+// HD: SafeString::assureTerminationImpl_ companion.
+static void assureTerminationImpl_(void*) {}
+/* 02381414 */
+// HD: destructor of the embedded collision helpers and actor base.
+static void Act_c_dt(Act_c* i_this, s32 flags) {
+    if (i_this != nullptr) {
+        __dt(&i_this->mObjAcchCir);
+        __dt(&i_this->mObjAcch);
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
+    }
 }
-VERIFY(0x02381364, otble_Draw);
-void otble_staticInit() {
-  WWHD_FUNC(0x02381368, void);
-  for (u32 offset = 0; offset < 16; offset += 4)
-    write<u32>(0x1046BB90, offset, 0);
-  gabi::call(0x028F026C, ptr(0x101CC1D8));
-  write<f32>(0x1046BB84, 0, -3.1415927410125732f);
-  write<f32>(0x1046BB88, 0, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x1046BB8C));
-  gabi::call(0x028F026C, ptr(0x101CC1E4));
-  gabi::call(0x028EAB2C, ptr(0x1046BB8D));
-  gabi::call(0x028F026C, ptr(0x101CC1F0));
-}
-VERIFY(0x02381368, otble_staticInit);
-void otble_staticDtor(void *object, u32 flags) {
-  WWHD_FUNC(0x023813FC, void, object, flags);
-  if (object && (flags & 1))
-    gabi::call(0x0273AF40, object);
-}
-VERIFY(0x023813FC, otble_staticDtor);
-void otble_staticNoop(void *object) { WWHD_FUNC(0x02381410, void, object); }
-VERIFY(0x02381410, otble_staticNoop);
-void otble_destructor(Act_c *table, u32 flags) {
-  WWHD_FUNC(0x02381414, void, table, flags);
-  if (table) {
-    u32 a = gabi::ea(table);
-    gabi::call(0x02018034, ptr(a, 0x5C8), 2);
-    write<u32>(a, 0x410, 0x1002E354);
-    write<u32>(a, 0x404, 0x1002E364);
-    gabi::call(0x024EFD9C, table->acch, 0);
-    gabi::call(0x025D50BC, table, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, table);
-  }
-}
-VERIFY(0x02381414, otble_destructor);
-BOOL otble_IsDelete(Act_c *table) {
-  WWHD_FUNC(0x02381498, BOOL, table);
-  return 1;
-}
-VERIFY(0x02381498, otble_IsDelete);
+/* 02381498 */
+static BOOL Mthd_IsDelete(void*) { return TRUE; }
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data
+str 1002E394 in 02380D28 # "Okmono"
+str 1002E324 in 023811A0 # "Okmono"
+str 1002E3F0 in 023812FC # "Okmono"
+str 1002E39C # "d_a_obj_otble.cpp"
+str 1002E3B0 "modelData != NULL" renamed # HD: assertion prints null as 0
+data bdl 1002E384
+data dzb 1002E38C
+data l_heapsize_init 1002E318
+data heapsize 101FDC44
+data heapsize_initialized 101FDC40
+ext 024EEEB8 u32 dBgS_GetPolyColor(dBgS*, cBgS_PolyInfo*)
+*/

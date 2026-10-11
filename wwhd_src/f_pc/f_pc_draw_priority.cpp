@@ -1,30 +1,46 @@
-#include "wwhd.h"
-#include "gabi.h"
-// HD draw priority is a signed halfword at+0; preserve full r4 through Init.
-s16 fpcDwPi_Get(void* priority) {
- WWHD_FUNC(0x025DE460,s16,priority);
- return gabi::load<s16>(gabi::ea(priority));
+/** Draw priority. */
+#include "f_pc/f_pc_draw_priority.h"
+
+static DrawPriorityHeaderStatics l_headerStatics;
+static const DrawPriorityPiPair l_piPair;
+
+/* 025DE460 */
+s16 fpcDwPi_Get(draw_priority_class* i_drawPrioClass) {
+    return i_drawPrioClass->mPriority;
 }
-VERIFY(0x025DE460,fpcDwPi_Get);
-void fpcDwPi_Set(void* priority,u32 value) {
- WWHD_FUNC(0x025DE468,void,priority,value);
- gabi::store<u16>(gabi::ea(priority),u16(value));
+
+/* 025DE468 */
+void fpcDwPi_Set(draw_priority_class* i_drawPrioClass, u32 i_priority) {
+    // HD: keep the full argument register until the halfword store.
+    i_drawPrioClass->mPriority = static_cast<u16>(i_priority);
 }
-VERIFY(0x025DE468,fpcDwPi_Set);
-void fpcDwPi_Init(void* priority,u32 value) {
- WWHD_FUNC(0x025DE470,void,priority,value);
- fpcDwPi_Set(priority,value);
+
+/* 025DE470 */
+void fpcDwPi_Init(draw_priority_class* i_drawPrioClass, u32 i_priority) {
+    fpcDwPi_Set(i_drawPrioClass, i_priority);
 }
-VERIFY(0x025DE470,fpcDwPi_Init);
-void f_pc_draw_priority_static_init() {
- WWHD_FUNC(0x025DE474,void);
- gabi::store<u32>(0x1048A7B0,0);gabi::store<u32>(0x1048A7A8,0);gabi::store<u32>(0x1048A7B4,0);gabi::store<u32>(0x1048A7AC,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3A70));
- f32 negativePi=gabi::load<f32>(0x100582C8),positivePi=gabi::load<f32>(0x100582CC);
- gabi::store<f32>(0x1048A79C,negativePi);gabi::store<f32>(0x1048A7A0,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1048A7A4));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3A7C));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1048A7A5));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3A88));
+
+// HD: compiler-generated and template code of this translation unit.
+/* 025DE474 */
+static void __sinit_f_pc_draw_priority_cpp() {
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F3A70);
+    f32 negativePi = l_piPair.negativePi;
+    f32 positivePi = l_piPair.positivePi;
+    l_headerStatics.negativePi = negativePi;
+    l_headerStatics.positivePi = positivePi;
+    DrawPriorityFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F3A7C);
+    DrawPrioritySecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F3A88);
 }
-VERIFY(0x025DE474,f_pc_draw_priority_static_init);
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data and other-unit calls
+ data l_headerStatics 1048A79C
+ data l_piPair 100582C8
+ ext 028ED6F8 void DrawPriorityFirstHeaderObject_ct(u8*)
+ ext 028EAB2C void DrawPrioritySecondHeaderObject_ct(u8*)
+*/

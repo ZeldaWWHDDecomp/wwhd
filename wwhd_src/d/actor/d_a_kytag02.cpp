@@ -1,156 +1,136 @@
-/** Wind rail tag (WWHD). */
-#include "bindings.h"
+/** d_a_kytag02.cpp — wind rail tag.
+ * Based on tww d/actor/d_a_kytag02.cpp.
+ */
 #include "d/actor/d_a_kytag02.h"
+#include "gc_api/f_op/f_op_actor_mng.h"
+#include "gc_api/JSystem/JUTAssert.h"
+using Path = kytag02_path::dPath;
+using kytag02_path::dPnt;
 
-struct Kytag02Path_l {
-    be<u16> mNum;
-    be<u16> mNextID;
-    be<u8> mArg0;
-    u8 pad[3];
-    gptr<void> mPoints;
-};
-
+/* 021AF97C */
 static BOOL daKytag02_Draw(kytag02_class*) {
-    WWHD_FUNC(0x021AF97C, BOOL, (u32)0);
     return TRUE;
 }
-VERIFY(0x021AF97C, daKytag02_Draw);
 
+/* 021AF984 */
 static BOOL daKytag02_Execute(kytag02_class* actor) {
-    WWHD_FUNC(0x021AF984, BOOL, actor);
-    u32 play = dComIfGp_ea();
-    Kytag02Path_l* initial = gabi::at<Kytag02Path_l>(gabi::ea(actor->mpPath.get()));
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    if (initial != nullptr) {
+    auto* play = reinterpret_cast<kytag02_play_view*>(dComIfGp_get());
+    Path* initial = actor->mpPath;
+    fopAc_ac_c* player = play->mPlayer;
+    if (initial) {
         u32 bestIndex = 0;
-        Kytag02Path_l* bestPath = initial;
-        Kytag02Path_l* path = initial;
+        Path* bestPath = initial;
+        Path* path = initial;
         f32 best = 1000000000.0f;
+        // HD: get_nearpos_rail inlines the GameCube rail traversal.
         for (;;) {
             s32 index = 0;
-            if (index < (s32)(u16)path->mNum) {
-                u32 offset = 0;
+            if (index < path->m_num) {
                 do {
-                    u32 points = gabi::ea(path->mPoints.get());
-                    f32 px = gabi::load<f32>(player + 0x314);
-                    f32 pz = gabi::load<f32>(player + 0x31C);
-                    f32 z = gabi::load<f32>(points + offset + 0xC);
-                    f32 x = gabi::load<f32>(points + offset + 4);
+                    dPnt* points = path->m_points;
+                    f32 px = player->current.pos.x;
+                    f32 pz = player->current.pos.z;
+                    f32 z = points[index].m_position.z;
+                    f32 x = points[index].m_position.x;
                     f32 dz = z - pz;
                     f32 dx = x - px;
-                    f32 distance = gabi::call<f32>(0x028F4384,
-                                                  gabi::fmadds(dx, dx, dz * dz));
-                    u16 count = path->mNum;
+                    f32 distance = std_sqrtf(gabi::fmadds(dx, dx, dz * dz)); // HD: fused single precision.
+                    u16 count = path->m_num;
                     if (best > distance) {
                         best = distance;
                         bestPath = path;
-                        bestIndex = (u32)index;
+                        bestIndex = index;
                     }
                     ++index;
-                    offset += 16;
-                    if (!(index < (s32)count)) break;
+                    if (index >= count)
+                        break;
                 } while (true);
             }
-            if ((u16)path->mNextID == 0xFFFF) break;
+            if (path->m_nextID == 0xFFFF)
+                break;
             s32 room = actor->current.roomNo;
-            path = gabi::call<Kytag02Path_l*>(0x025AB070, path, room);
-            if (path == nullptr)
-                gabi::call(0x0273AA24, STR(0x10013AB8), 0x6C, STR(0x10013AC8));
+            path = kytag02_nextPath(path, room);
+            if (!path)
+                JUTAssertion_showAssert("d_a_kytag02.cpp", 0x6C, "calc_path_pt != (0)");
         }
-        // HD retains GC's comparison against the initial path's count.
-        if (bestIndex == (u32)(u16)initial->mNum - 1) --bestIndex;
-        u32 offset = bestIndex << 4;
-        gabi::Local<cXyz> from, to, direction;
-        u32 points = gabi::ea(bestPath->mPoints.get());
-        from->x = gabi::load<f32>(points + offset + 4);
-        points = gabi::ea(bestPath->mPoints.get());
-        from->y = gabi::load<f32>(points + offset + 8);
-        points = gabi::ea(bestPath->mPoints.get());
-        from->z = gabi::load<f32>(points + offset + 0xC);
-        points = gabi::ea(bestPath->mPoints.get());
-        to->x = gabi::load<f32>(points + offset + 0x14);
-        points = gabi::ea(bestPath->mPoints.get());
-        to->y = gabi::load<f32>(points + offset + 0x18);
-        points = gabi::ea(bestPath->mPoints.get());
-        to->z = gabi::load<f32>(points + offset + 0x1C);
-        gabi::call(0x02563F64, from.get(), to.get(), direction.get());
-        f32 z = direction->z;
-        f32 x = direction->x;
-        f32 y = direction->y;
+        // HD: retains GC's comparison against the initial path's count.
+        if (bestIndex == static_cast<u32>(initial->m_num) - 1)
+            --bestIndex;
+        cXyz from;
+        cXyz to;
+        cXyz direction;
+        // get_railwind_vec: retain the six separate point-pointer reads and float copies.
+        from.x = bestPath->m_points[bestIndex].m_position.x;
+        from.y = bestPath->m_points[bestIndex].m_position.y;
+        from.z = bestPath->m_points[bestIndex].m_position.z;
+        to.x = bestPath->m_points[bestIndex + 1].m_position.x;
+        to.y = bestPath->m_points[bestIndex + 1].m_position.y;
+        to.z = bestPath->m_points[bestIndex + 1].m_position.z;
+        dKyr_get_vectle_calc(&from, &to, &direction);
+        f32 z = direction.z;
+        f32 x = direction.x;
+        f32 y = direction.y;
         actor->mWindVec.x = x;
         actor->mWindVec.y = y;
         actor->mWindVec.z = z;
-        u32 env = gabi::ea(dKy_getEnvlight());
-        gabi::store<u32>(env + 0xA08, gabi::ea(&actor->mWindVec));
-        points = gabi::ea(bestPath->mPoints.get());
-        u32 strength = gabi::load<u8>(points + offset + 3);
-        if (strength == 0xFF) strength = bestPath->mArg0;
-        env = gabi::ea(dKy_getEnvlight());
-        gabi::store<f32>(env + 0xA1C, (f32)strength / 100.0f);
+        kytag02_getEnvlight()->mWind.mpWindVecOverride = &actor->mWindVec;
+        dPnt* points = bestPath->m_points;
+        u32 strength = points[bestIndex].mArg3;
+        if (strength == 0xFF)
+            strength = bestPath->mArg0;
+        kytag02_getEnvlight()->mWind.mWindStrengthOverride = static_cast<f32>(strength) / 100.0f;
     }
     return TRUE;
 }
-VERIFY(0x021AF984, daKytag02_Execute);
 
+/* 021AFB94 */
 static BOOL daKytag02_IsDelete(kytag02_class*) {
-    WWHD_FUNC(0x021AFB94, BOOL, (u32)0);
     return TRUE;
 }
-VERIFY(0x021AFB94, daKytag02_IsDelete);
 
+/* 021AFB9C */
 static BOOL daKytag02_Delete(kytag02_class*) {
-    WWHD_FUNC(0x021AFB9C, BOOL, (u32)0);
-    u32 env = gabi::ea(dKy_getEnvlight());
-    gabi::store<u32>(env + 0xA08, 0);
+    kytag02_getEnvlight()->mWind.mpWindVecOverride = nullptr;
     return TRUE;
 }
-VERIFY(0x021AFB9C, daKytag02_Delete);
 
+/* 021AFBC8 */
 static cPhs_State daKytag02_Create(kytag02_class* actor) {
-    WWHD_FUNC(0x021AFBC8, cPhs_State, actor);
     dKy_getEnvlight();
     if (!fopAcM_CheckCondition(actor, fopAcCnd_INIT_e)) {
-        if (actor != nullptr) {
+        if (actor) {
             fopAc_ac_c_ct(actor);
-            actor->__vtbl = 0x10013AA8;
+            actor->__vtbl = kytag02_class::__vt;
         }
         fopAcM_OnCondition(actor, fopAcCnd_INIT_e);
     }
-    u32 index = ((u32)actor->mParameters >> 16) & 0xFF;
-    u32 path = 0;
+    u32 index = (fopAcM_GetParam(actor) >> 16) & 0xFF;
+    Path* path = nullptr;
     if (index != 0xFF) {
         s32 room = actor->current.roomNo;
-        path = gabi::ea(dPath_GetRoomPath((s32)index, room));
+        path = reinterpret_cast<Path*>(dPath_GetRoomPath(index, room));
     }
-    actor->mpPath = gabi::at<void>(path);
+    actor->mpPath = path;
     return cPhs_COMPLEATE_e;
 }
-VERIFY(0x021AFBC8, daKytag02_Create);
 
+/* 021AFC60 */
 static void __sinit_d_a_kytag02_cpp() {
-    WWHD_FUNC(0x021AFC60, void, (u32)0);
-    // This TU's copies of the common header statics.
-    const u32 values = 0x10464D00;
-    const u32 descriptors = 0x101B8BB0;
-    gabi::store<u32>(values + 0x14, 0);
-    gabi::store<u32>(values + 0xC, 0);
-    gabi::store<u32>(values + 0x18, 0);
-    gabi::store<u32>(values + 0x10, 0);
-    __register_global_object(descriptors);
-    gabi::store<f32>(values, -3.1415927f);
-    gabi::store<f32>(values + 4, 3.1415927f);
-    gabi::call(0x028ED6F8, values + 8);
-    __register_global_object(descriptors + 0xC);
-    gabi::call(0x028EAB2C, values + 9);
-    __register_global_object(descriptors + 0x18);
+    sinit_header_statics(0x10464D00, 0x101B8BB0);
 }
-VERIFY(0x021AFC60, __sinit_d_a_kytag02_cpp);
 
+/* 021AFCF4 */
 static void kytag02_class_dt(kytag02_class* actor, s32 flags) {
-    WWHD_FUNC(0x021AFCF4, void, actor, flags);
-    if (actor != nullptr) {
-        gabi::call(0x025D50BC, actor, 0);
-        if (flags & 1) operator_delete(actor);
+    if (actor) {
+        __dt(static_cast<fopAc_ac_c*>(actor));
+        if (flags & 1)
+            operator_delete(actor);
     }
 }
-VERIFY(0x021AFCF4, kytag02_class_dt);
+
+/* WWHD glue (tools/verify/autoglue.py)
+str 10013AB8
+str 10013AC8
+ext 025AB070 kytag02_path::dPath* kytag02_nextPath(kytag02_path::dPath* path, s32 room)
+ext 02563F64 void dKyr_get_vectle_calc(cXyz* from, cXyz* to, cXyz* direction)
+*/

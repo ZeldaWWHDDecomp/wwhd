@@ -1,50 +1,281 @@
-#include "bindings.h"
-namespace doorhk{template<class T>T ld(u32 a,u32 o=0){return gabi::load<T>(a+o);}template<class T>void st(u32 a,u32 o,T v){gabi::store<T>(a+o,v);}void* p(u32 a){return gabi::at<void>(a);}struct Name{be<u32>data,vt;};struct Vec{be<f32>x,y,z;};}
-using namespace doorhk;
-void door_msg_init(void* self,s32 id){WWHD_FUNC(0x0252BEC4,void,self,id);u32 a=gabi::ea(self);st<s16>(a,0x10A,s16(id));st<u32>(a,0,0xFFFFFFFF);st<u8>(a,0x108,0);}
-VERIFY(0x0252BEC4,door_msg_init);
-BOOL door_msg_proc(void* self,void* arg){
- WWHD_FUNC(0x0252BEDC,BOOL,self,arg);u32 a=gabi::ea(self),msg=ld<u32>(0x101F4B5C);u8 state=ld<u8>(a,0x108);
- if(state==0){s32 result=gabi::call<s32>(0x025F7DB0,p(msg),ld<s16>(a,0x10A),arg);st<s32>(a,0,result);if(result!=-1)st<u8>(a,0x108,u8(ld<u8>(a,0x108)+1));}
- else if(state==1){st<u8>(a,4,1);st<u8>(a,0x108,u8(state+1));if(gabi::call<u32>(0x025F795C,p(msg))!=0x12)return 0;gabi::call<void>(0x025F74D0,p(msg),0x13);return 1;}
- else if(state==2){if(gabi::call<u32>(0x025F795C,p(msg))==6){s32 id=ld<s16>(a,0x10A);if(id==0x6A8||id==0x1BBD){u32 game=gabi::call<u32>(0x025200D4);gabi::Local<Vec> v;v->x=ld<f32>(0x1004C590);v->y=ld<f32>(0x1004C7C8);v->z=ld<f32>(0x1004C590);gabi::call<void>(0x025CB374,p(game+0x599C),7,-33,v.get());}st<u8>(a,0x108,u8(ld<u8>(a,0x108)+1));}}
- else if(state==3){if(gabi::call<u32>(0x025F795C,p(msg))==0xE){s32 id=ld<s16>(a,0x10A);if(id==0x1BBD||(u32(id)>=0x1BC0&&u32(id)<=0x1BC2)){st<s16>(a,0x10A,s16(id+1));gabi::call<void>(0x025F74D0,p(msg),0xF);gabi::call<void>(0x025F7DB0,p(msg),ld<s16>(a,0x10A),0);}else{st<u8>(a,0x108,u8(ld<u8>(a,0x108)+1));gabi::call<void>(0x025F74D0,p(msg),0x10);}}}
- if(!ld<u8>(a,4))return 0;if(gabi::call<u32>(0x025F795C,p(msg))!=0x12)return 0;gabi::call<void>(0x025F74D0,p(msg),0x13);return 1;
+/** Door messages and Triforce crest effects. GameCube-style source verified as d_door_06. */
+#include "d/d_door_hkyo.h"
+
+const gc_tu_data gc_tu = { .safeString = 0x1004C524 };
+static dDoor_messageManagerGlobal_c sMessageManager = {};
+
+/* 0252BEC4 */
+void dDoor_msg_c::init(s32 msg_id) {
+    mMsgId = s16(msg_id);
+    mMsgPId = -1;
+    mState = 0;
+    // HD: mReady is retained across init.
 }
-VERIFY(0x0252BEDC,door_msg_proc);
-void* door_hk_ctor(void* self){WWHD_FUNC(0x0252C0BC,void*,self);u32 a=gabi::ea(self);if(!a){a=gabi::call<u32>(0x0273AD10,20);if(!a)return nullptr;}gabi::call<void>(0x028F521C,p(a),8);st<u8>(a,0x11,0);st<u32>(a,8,0);st<u8>(a,0x10,0);st<u32>(a,0xC,0);return p(a);}
-VERIFY(0x0252C0BC,door_hk_ctor);
-s32 door_hk_load(void* self){WWHD_FUNC(0x0252C11C,s32,self);if(!ld<u8>(gabi::ea(self),0x11))return 4;return gabi::call<s32>(0x02520460,self,p(0x1004C858));}
-VERIFY(0x0252C11C,door_hk_load);
-void door_hk_delete(void* self){WWHD_FUNC(0x0252C13C,void,self);if(ld<u8>(gabi::ea(self),0x11))gabi::call<void>(0x025204C8,self,p(0x1004C860));}
-VERIFY(0x0252C13C,door_hk_delete);
-BOOL door_hk_create(void* self){WWHD_FUNC(0x0252C154,BOOL,self);u32 a=gabi::ea(self);if(!ld<u8>(a,0x11))return 1;gabi::Local<Name> n;n->data=0x1004C868;n->vt=0x1004C524;u32 data=gabi::call<u32>(0x026066C4,p(ld<u32>(0x101F4F28)),n.get(),4);if(!data)gabi::call<void>(0x0273AA24,p(0x1004C870),0x4A7,p(0x1004C87C));u32 model=gabi::call<u32>(0x025E38E0,p(data),0x80000,0x11000202);st<u32>(a,8,model);if(!model)return 0;u32 anm=gabi::call<u32>(0x025E80D0,0);st<u32>(a,0xC,anm);if(!anm)return 0;gabi::Local<Name> m;m->data=0x1004C868;m->vt=0x1004C524;u32 res=gabi::call<u32>(0x026066C4,p(ld<u32>(0x101F4F28)),m.get(),8);return gabi::call<u32>(0x025E8154,p(ld<u32>(a,0xC)),p(data),p(res),1,2,0,-1,0,0,ld<f32>(0x1004C7C8))!=0;}
-VERIFY(0x0252C154,door_hk_create);
-void door_hk_init(void* self){WWHD_FUNC(0x0252C274,void,self);st<u8>(gabi::ea(self),0x10,0);}
-VERIFY(0x0252C274,door_hk_init);
-void door_hk_matrix(void* self,void* door,f32 height){WWHD_FUNC(0x0252C280,void,self,door,height);u32 a=gabi::ea(self),b=gabi::ea(door),matrix=0x1048D0CC;if(!ld<u8>(a,0x11)||!ld<u32>(a,8))return;gabi::call<void>(0x028E93CC,p(matrix),ld<f32>(b,0x314),ld<f32>(b,0x318),ld<f32>(b,0x31C));gabi::call<void>(0x025F1C28,p(matrix),ld<s16>(b,0x322));f32 zero=ld<f32>(0x1004C590);gabi::call<void>(0x025F24E0,zero,height,zero);f32 values[12];for(u32 i=0;i<12;++i)values[i]=ld<f32>(matrix,i*4);u32 model=ld<u32>(a,8);for(u32 i=0;i<12;++i)st<f32>(model,0xC8+i*4,values[i]);}
-VERIFY(0x0252C280,door_hk_matrix);
-BOOL door_hk_first(void* self){WWHD_FUNC(0x0252C390,BOOL,self);u32 a=gabi::ea(self);if(ld<u8>(a,0x11)!=1||ld<u8>(a,0x10)!=1)return 0;return !gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x644),0x2602);}
-VERIFY(0x0252C390,door_hk_first);
-void door_hk_draw(void* self,void* door){WWHD_FUNC(0x0252C3F8,void,self,door);u32 a=gabi::ea(self),b=gabi::ea(door);if(!ld<u8>(a,0x11)||!ld<u8>(a,0x10)||!ld<u32>(a,8))return;if(gabi::call<u32>(0x0252C390,self))return;u32 data=ld<u32>(ld<u32>(a,8),0xAC),env=gabi::call<u32>(0x02555D0C);gabi::call<void>(0x02562F5C,p(env),p(ld<u32>(a,8)),p(b+0x110));u32 anm=ld<u32>(a,0xC);gabi::call<void>(0x025E83FC,p(anm),p(data),ld<f32>(anm,4));gabi::call<void>(0x025E2DE0,p(ld<u32>(a,8)),0);}
-VERIFY(0x0252C3F8,door_hk_draw);
-void door_hk_set(void* self,u32 state){WWHD_FUNC(0x0252C49C,void,self,state);u32 a=gabi::ea(self);if(ld<u8>(a,0x10)==state)return;st<u8>(a,0x10,u8(state));if(!state)return;u32 data=ld<u32>(ld<u32>(a,8),0xAC);gabi::Local<Name> n;n->data=0x1004C890;n->vt=0x1004C524;u32 res=gabi::call<u32>(0x026066C4,p(ld<u32>(0x101F4F28)),n.get(),state==1?7:state==2?8:9);gabi::call<void>(0x025E8154,p(ld<u32>(a,0xC)),p(data),p(res),1,2,0,-1,1,0,ld<f32>(0x1004C7C8));}
-VERIFY(0x0252C49C,door_hk_set);
-void door_hk_proc(void* self,void* door){WWHD_FUNC(0x0252C574,void,self,door);u32 a=gabi::ea(self),b=gabi::ea(door);u8 mode=ld<u8>(a,0x11);if(!mode||!ld<u32>(a,8))return;u32 state=0;if(mode==1){if(gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x1178),0x108))state=1;else if(gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x1178),0x110))state=2;}else if(mode==4){if(!gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x644),0x1710))state=3;}else if(mode==3){if(gabi::call<u32>(0x025B7B10,p(ld<u32>(0x101F84DC)+0xD4),2)&&!gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x644),0x1704))state=3;}else if(mode==2){if(gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x644),0x1704)&&!gabi::call<u32>(0x025B8B94,p(ld<u32>(0x101F84DC)+0x644),0x1B01))state=3;}gabi::call<void>(0x0252C49C,self,state);if(!ld<u8>(a,0x10))return;gabi::call<void>(0x025E742C,p(ld<u32>(a,0xC)));if(b&&b+0x37C){u32 reverb=gabi::call<u32>(0x02520540,ld<s8>(b,0x326));gabi::call<void>(0x025E1A40,0x61D4,p(b+0x37C),0,reverb);}}
-VERIFY(0x0252C574,door_hk_proc);
-void door_hk_on_first(void* self){WWHD_FUNC(0x0252C748,void,self);u8 s=ld<u8>(gabi::ea(self),0x10);if(s==1||s==2)gabi::call<void>(0x025B8B68,p(ld<u32>(0x101F84DC)+0x644),s==1?0x2602:0x2601);}
-VERIFY(0x0252C748,door_hk_on_first);
-u32 door_player_flag(){WWHD_FUNC(0x0252C788,u32);u32 game=gabi::call<u32>(0x025200D4);return(ld<u32>(ld<u32>(game,0x5B2C),0x3C0)>>5)&1;}
-VERIFY(0x0252C788,door_player_flag);
-void door_static_init(){WWHD_FUNC(0x0252C7B4,void);st<u32>(0x10475710,8,0);st<u32>(0x10475710,0,0);st<u32>(0x10475710,12,0);st<u32>(0x10475710,4,0);gabi::call<void>(0x028F026C,p(0x101D60E8));st<f32>(0x10475704,0,ld<f32>(0x1004C898));st<f32>(0x10475708,0,ld<f32>(0x1004C89C));gabi::call<void>(0x028ED6F8,p(0x1047570C));gabi::call<void>(0x028F026C,p(0x101D60F4));gabi::call<void>(0x028EAB2C,p(0x1047570D));gabi::call<void>(0x028F026C,p(0x101D6100));}
-VERIFY(0x0252C7B4,door_static_init);
-void door_simple_dtor(void* self,u32 flags){WWHD_FUNC(0x0252C848,void,self,flags);if(self&&(flags&1))gabi::call<void>(0x0273AF40,self);}
-VERIFY(0x0252C848,door_simple_dtor);
-void door_actor_dtor(void* self,u32 flags){WWHD_FUNC(0x0252C85C,void,self,flags);if(!self)return;gabi::call<void>(0x025D50BC,self,0);if(flags&1)gabi::call<void>(0x0273AF40,self);}
-VERIFY(0x0252C85C,door_actor_dtor);
-void door_string_assure(void* self){WWHD_FUNC(0x0252C8B0,void,self);}
-VERIFY(0x0252C8B0,door_string_assure);
-void* door_archive_open(void* archive,void* name){
- WWHD_FUNC(0x0252C8B4,void*,archive,name);u32 owner=gabi::ea(archive),s=gabi::ea(name),a=gabi::call<u32>(0x0273AD10,64);if(a){u32 base=a;if(!base)base=gabi::call<u32>(0x0273AD10,8);if(base){st<u32>(base,4,0);st<u32>(base,0,0);}u32 buffer=a+0x24;if(!buffer)buffer=gabi::call<u32>(0x0273AD10,28);if(buffer){u32 prefix=buffer;if(!prefix)prefix=gabi::call<u32>(0x0273AD10,12);if(prefix){st<u32>(prefix,0,buffer+12);st<u32>(prefix,4,0x1004C8B8);st<u32>(prefix,8,16);st<u8>(buffer,0x1B,0);}u32 data=ld<u32>(buffer);st<u32>(buffer,4,0x1004C948);st<u8>(data,0,0);st<u32>(buffer,4,0x1004C960);}gabi::call<void>(0x027F0A9C,p(a));u32 vt=ld<u32>(s,4),target=ld<u32>(vt,0x14),dest=ld<u32>(a,0x24);gabi::call_ptr<void>(target,name);u32 data=ld<u32>(s);s32 count=0;if(ld<u8>(data)){do{++count;++data;if(count>0x40000){count=0;break;}}while(ld<u8>(data));}s32 capacity=ld<s32>(a,0x2C);vt=ld<u32>(s,4);target=ld<u32>(vt,0x14);if(count>=capacity)count=capacity-1;gabi::call_ptr<void>(target,name);gabi::call<void>(0xC0009988,p(dest),p(ld<u32>(s)),count,0);st<u8>(dest,u32(count),0);}if(!a)return nullptr;if(gabi::call<u32>(0x027F0B04,p(a),p(owner))){gabi::call<void>(0x027F0A0C,p(a),3);return nullptr;}return p(a);
+
+/* 0252BEDC */
+BOOL dDoor_msg_c::proc(cXyz* pos) {
+    // HD: messages use the global manager and numeric status instead of a msg_class pointer.
+    void* manager = sMessageManager.mpManager;
+    switch (mState) {
+    case 0:
+        mMsgPId = dDoor_messageSet(manager, mMsgId, pos);
+        if (mMsgPId != -1) mState = u8(mState + 1);
+        break;
+    case 1:
+        mReady = 1;
+        mState = 2;
+        if (dDoor_messageStatus(manager) != BOX_CLOSED) return FALSE;
+        dDoor_messageSetStatus(manager, MSG_DESTROYED);
+        return TRUE;
+    case 2:
+        if (dDoor_messageStatus(manager) == MSG_TYPING) {
+            s32 id = mMsgId;
+            if (id == 0x6A8 || id == 0x1BBD) {
+                // HD: obtain the game object before building the shock vector.
+                dVibration_c* vibration = dComIfGp_getVibration();
+                cXyz direction(0.0f, 1.0f, 0.0f);
+                vibration->StartShock(7, -33, &direction);
+            }
+            mState = u8(mState + 1);
+        }
+        break;
+    case 3:
+        if (dDoor_messageStatus(manager) == MSG_DISPLAYED) {
+            s32 id = mMsgId;
+            if (id == 0x1BBD || (u32(id) >= 0x1BC0 && u32(id) <= 0x1BC2)) {
+                mMsgId = s16(id + 1);
+                dDoor_messageSetStatus(manager, MSG_CONTINUES);
+                dDoor_messageSet(manager, mMsgId, nullptr);
+            } else {
+                mState = u8(mState + 1);
+                dDoor_messageSetStatus(manager, MSG_ENDS);
+            }
+        }
+        break;
+    }
+    if (!mReady || dDoor_messageStatus(manager) != BOX_CLOSED) return FALSE;
+    dDoor_messageSetStatus(manager, MSG_DESTROYED);
+    return TRUE;
 }
-VERIFY(0x0252C8B4,door_archive_open);
+
+/* 0252C0BC */
+static dDoor_hkyo_c* dDoor_hkyo_construct(dDoor_hkyo_c* i_this) {
+    // HD: GHS allocates on a null placement argument, then constructs the phase request.
+    if (!i_this) {
+        i_this = (dDoor_hkyo_c*)operator_new(sizeof(dDoor_hkyo_c));
+        if (!i_this) return nullptr;
+    }
+    dDoor_phaseConstruct(&i_this->mPhs, sizeof(i_this->mPhs));
+    i_this->m11 = 0;
+    i_this->mpModel = nullptr;
+    i_this->mAnmIdx = 0;
+    i_this->mpBrkAnm = nullptr;
+    return i_this;
+}
+
+/* 0252C11C */
+s32 dDoor_hkyo_c::resLoad() {
+    if (!m11) return cPhs_COMPLEATE_e;
+    return dComIfG_resLoad(&mPhs, "Hkyo");
+}
+
+/* 0252C13C */
+void dDoor_hkyo_c::resDelete() {
+    if (m11) dComIfG_resDelete(&mPhs, "Hkyo");
+}
+
+/* 0252C154 */
+BOOL dDoor_hkyo_c::create() {
+    if (!m11) return TRUE;
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Hkyo", dRes_INDEX_HKYO_BDL_HKYO1_e);
+    if (!modelData) dDoor_assert("d_door.cpp", 0x4A7, "modelData != (0)");
+    mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000202);
+    if (!mpModel) return FALSE;
+    mpBrkAnm = dDoor_brkConstruct(nullptr);
+    if (!mpBrkAnm) return FALSE;
+    void* brk = dComIfG_getObjectRes("Hkyo", dRes_INDEX_HKYO_BRK_HKYO1B_e);
+    return dDoor_brkInit(mpBrkAnm, modelData, brk, 1, J3DFrameCtrl::EMode_LOOP,
+                        0, -1, 0, 0, 1.0f) != 0;
+}
+
+/* 0252C274 */
+void dDoor_hkyo_c::init() { mAnmIdx = NONE; }
+
+/* 0252C280 */
+void dDoor_hkyo_c::calcMtx(fopAc_ac_c* door, f32 offsY) {
+    if (!m11 || !mpModel) return;
+    mDoMtx_stack_c::transS(door->current.pos.x, door->current.pos.y, door->current.pos.z);
+    mDoMtx_stack_c::YrotM(door->current.angle.y);
+    mDoMtx_stack_c::transM(0.0f, offsY, 0.0f);
+    // HD: snapshot all twelve values before re-reading mpModel (matrix can alias it).
+    f32 values[12];
+    for (int i = 0; i < 12; ++i) values[i] = mDoMtx_stack_c::get()->m[i / 4][i % 4];
+    J3DModel* model = mpModel;
+    for (int i = 0; i < 12; ++i) model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+}
+
+/* 0252C390 */
+BOOL dDoor_hkyo_c::chkFirst() {
+    if (m11 != 1 || mAnmIdx != FIRST) return FALSE;
+    return !dComIfGs_isEventBit(0x2602);
+}
+
+/* 0252C3F8 */
+void dDoor_hkyo_c::draw(fopAc_ac_c* door) {
+    if (!m11 || !mAnmIdx || !mpModel || chkFirst()) return;
+    J3DModelData* modelData = mpModel->getModelData();
+    dScnKy_env_light_c* light = dKy_getEnvlight();
+    setLightTevColorType(light, mpModel, &door->tevStr);
+    mDoExt_brkAnm* anm = mpBrkAnm;
+    f32 frame = ((dDoor_brkFrame_c*)anm)->mFrameCtrl.getFrame();
+    mDoExt_brkAnm_entry(anm, modelData, frame);
+    mDoExt_modelUpdateDL(mpModel);
+}
+
+/* 0252C49C */
+void dDoor_hkyo_c::setAnm(u32 idx) {
+    if (mAnmIdx == idx) return;
+    mAnmIdx = u8(idx);
+    if (!idx) return;
+    J3DModelData* modelData = mpModel->getModelData();
+    s32 fileIndex = idx == FIRST ? dRes_INDEX_HKYO_BRK_HKYO1A_e : idx == SECOND ? dRes_INDEX_HKYO_BRK_HKYO1B_e : dRes_INDEX_HKYO_BRK_HKYO1C_e;
+    void* brk = dComIfG_getObjectRes("Hkyo", fileIndex);
+    dDoor_brkInit(mpBrkAnm, modelData, brk, 1, J3DFrameCtrl::EMode_LOOP,
+                 0, -1, 1, 0, 1.0f);
+}
+
+/* 0252C574 */
+void dDoor_hkyo_c::proc(fopAc_ac_c* door) {
+    u8 mode = m11;
+    if (!mode || !mpModel) return;
+    u32 idx = NONE;
+    switch (mode) {
+    case 1:
+        if (dComIfGs_isTmpBit(0x0108)) idx = FIRST;
+        else if (dComIfGs_isTmpBit(0x0110)) idx = SECOND;
+        break;
+    case 4:
+        if (!dComIfGs_isEventBit(0x1710)) idx = THIRD;
+        break;
+    case 3:
+        if (dDoor_isTact(&dComIfGs_info()->mSavedata.mPlayer.mCollect, 2) &&
+            !dComIfGs_isEventBit(0x1704)) idx = THIRD;
+        break;
+    case 2:
+        if (dComIfGs_isEventBit(0x1704) && !dComIfGs_isEventBit(0x1B01)) idx = THIRD;
+        break;
+    }
+    setAnm(idx);
+    if (!mAnmIdx) return;
+    mDoExt_baseAnm_play(mpBrkAnm);
+    // HD: retain the null check on the wrapped eye-position address.
+    if (door && gabi::ea(door) + (u32)offsetof(fopAc_ac_c, eyePos)) {
+        s32 reverb = dComIfGp_getReverb(door->current.roomNo);
+        mDoAud_seStart(0x61D4, &door->eyePos, 0, reverb);
+    }
+}
+
+/* 0252C748 */
+void dDoor_hkyo_c::onFirst() {
+    u8 idx = mAnmIdx;
+    if (idx == FIRST || idx == SECOND) dComIfGs_onEventBit(idx == FIRST ? 0x2602 : 0x2601);
+}
+
+/* 0252C788 */
+static u32 dDoor_hkyo_chkStart() {
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    return (((dDoor_playerFlags_c*)player)->mGrabUpEnd >> 5) & 1;
+}
+
+/* ---------------- HD: compiler-generated and template code ---------------- */
+
+/* 0252C7B4 */
+static void __sinit_d_door_cpp() {
+    sinit_header_statics_rodata(0x10475704, 0x101D60E8, 0x10475710, 0x1004C898);
+}
+
+/* 0252C848 */
+static void dDoor_hkyo_destroy(dDoor_hkyo_c* i_this, u32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
+}
+
+/* 0252C85C */
+static void dDoor_info_destroy(fopAc_ac_c* i_this, u32 flags) {
+    if (!i_this) return;
+    dDoor_actorDestroy(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
+}
+
+/* 0252C8B0 */
+static void dDoor_safeString_assureTermination(dDoor_safeString_c* i_this) {}
+
+/* 0252C8B4 */
+static dDoor_archiveStream_c* dDoor_archiveOpen(void* archive, dDoor_safeString_c* name) {
+    dDoor_archiveStream_c* stream = (dDoor_archiveStream_c*)operator_new(sizeof(dDoor_archiveStream_c));
+    if (!stream) return nullptr;
+    stream->mBase[1] = 0;
+    stream->mBase[0] = 0;
+    // HD: unsigned guest addition can wrap the embedded-buffer address to null.
+    u32 bufferAddress = gabi::ea(stream) + offsetof(dDoor_archiveStream_c, mName);
+    dDoor_bufferString_c* buffer = gabi::at<dDoor_bufferString_c>(bufferAddress);
+    if (!buffer) buffer = (dDoor_bufferString_c*)operator_new(sizeof(dDoor_bufferString_c));
+    if (buffer) {
+        buffer->mStringTop = buffer->mBuffer;
+        buffer->__vtbl = 0x1004C8B8;
+        buffer->mBufferSize = 16;
+        buffer->mBuffer[15] = 0;
+        be<u8>* data = buffer->mStringTop;
+        buffer->__vtbl = 0x1004C948;
+        *data = 0;
+        buffer->__vtbl = 0x1004C960;
+    }
+    dDoor_streamConstruct(stream);
+    u32 assure = name->__vtbl->assureTermination;
+    be<u8>* dest = stream->mName.mStringTop;
+    gabi::call_ptr<void>(assure, name);
+    be<u8>* data = name->mStringTop;
+    s32 count = 0;
+    if (*data) {
+        do {
+            ++count;
+            ++data;
+            // HD: safety limit in the verified archive-name copy.
+            if (count > 0x40000) { count = 0; break; }
+        } while (*data);
+    }
+    s32 capacity = stream->mName.mBufferSize;
+    assure = name->__vtbl->assureTermination;
+    if (count >= capacity) count = capacity - 1;
+    gabi::call_ptr<void>(assure, name);
+    dDoor_copyBytes(dest, name->mStringTop, count, 0);
+    // HD: signed count is added with 32-bit address wrap, including -1.
+    *gabi::at<be<u8>>(gabi::ea(dest) + u32(count)) = 0;
+    if (dDoor_streamOpen(stream, archive)) {
+        dDoor_streamDestroy(stream, 3);
+        return nullptr;
+    }
+    return stream;
+}
+
+/* WWHD glue
+data sMessageManager 101F4B5C nocheck
+str 1004C858 "Hkyo" in 0252C11C
+str 1004C860 "Hkyo" in 0252C13C
+str 1004C868 "Hkyo" in 0252C154
+str 1004C890 "Hkyo" in 0252C49C
+str 1004C870 "d_door.cpp"
+str 1004C87C "modelData != (0)"
+ext 025F7DB0 s32 dDoor_messageSet(void* manager, s32 id, cXyz* pos)
+ext 025F795C u32 dDoor_messageStatus(void* manager)
+ext 025F74D0 void dDoor_messageSetStatus(void* manager, u32 status)
+ext 028F521C void dDoor_phaseConstruct(request_of_phase_process_class* phase, u32 size)
+ext 025E80D0 mDoExt_brkAnm* dDoor_brkConstruct(mDoExt_brkAnm* anm)
+ext 025E8154 u32 dDoor_brkInit(mDoExt_brkAnm* anm, J3DModelData* data, void* key, u32 play, s32 mode, s32 start, s32 end, u32 enable, s32 extra, f32 speed)
+ext 025B7B10 BOOL dDoor_isTact(dSv_player_collect_c* collect, u32 tact)
+ext 025D50BC void dDoor_actorDestroy(fopAc_ac_c* actor, u32 flags)
+ext 027F0A9C void dDoor_streamConstruct(dDoor_archiveStream_c* stream)
+ext 027F0B04 u32 dDoor_streamOpen(dDoor_archiveStream_c* stream, void* archive)
+ext 027F0A0C void dDoor_streamDestroy(dDoor_archiveStream_c* stream, u32 flags)
+ext C0009988 void dDoor_copyBytes(be<u8>* dest, be<u8>* source, s32 count, u32 flags)
+ext 0273AA24 void dDoor_assert(const char* file, s32 line, const char* expression)
+*/

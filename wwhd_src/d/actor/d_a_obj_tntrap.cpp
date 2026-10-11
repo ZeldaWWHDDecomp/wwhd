@@ -1,640 +1,669 @@
-// Full actual HD TU 023A2598..023A3CC3, including unnamed helpers/tails.
+/**
+ * d_a_obj_tntrap.cpp
+ * Object - Tingle traps
+ * HD implementation verified against the original; tww provides names and order.
+ */
 #include "d/actor/d_a_obj_tntrap.h"
 #include "bindings.h"
 using Trap = daObjTnTrap_c;
-namespace {
-template <class T> T read(u32 a, u32 o = 0) { return *gabi::at<be<T>>(a + o); }
-template <class T> void write(u32 a, u32 o, T v) {
-  *gabi::at<be<T>>(a + o) = v;
-}
-void *ptr(u32 a, u32 o = 0) { return gabi::at<void>(a + o); }
-u32 play() { return gabi::call<u32>(0x025200D4); }
-u32 save() { return read<u32>(0x101F84DC); }
-s32 switchOn(Trap *trap, u32 id) {
-  return gabi::call<s32>(0x025BA0C0, ptr(save(), 0x20), id,
-                         (s32)(s8)read<u8>(gabi::ea(trap), 0x2FE));
-}
-s32 eventOn(u32 id) {
-  return gabi::call<s32>(0x025B8B94, ptr(save(), 0x644), id);
-}
-u32 memberTarget(u32 descriptor, u32 &self) {
-  self += (s32)read<s16>(descriptor);
-  s16 slot = read<s16>(descriptor, 2);
-  return slot < 0 ? read<u32>(descriptor, 4)
-                  : read<u32>(read<u32>(self, (s32)read<s16>(descriptor, 6)),
-                              (u32)slot * 8 + 4);
-}
-struct Archive {
-  be<u32> name, vtable;
-};
-} // namespace
-BOOL tntrap_checkAppear(Trap *trap) {
-  WWHD_FUNC(0x023A2598, BOOL, trap);
-  trap->switchSave = gabi::call<u32>(0x023A3CA8, trap, 8, 0);
-  trap->switchSave2 = gabi::call<u32>(0x023A3CA8, trap, 8, 8);
-  trap->argument = gabi::call<u32>(0x023A3CA8, trap, 1, 16);
-  u32 type = gabi::call<u32>(0x023A3CA8, trap, 2, 17);
-  trap->mapType = type;
-  if (type == 0) {
-    if (eventOn(0x3A04) != 1)
-      return 0;
-    u32 sw = trap->switchSave;
-    if (sw == 255 || switchOn(trap, sw) != 1) {
-      trap->trapType = 0;
-      return 1;
+TnTrapTriangle* TnTrapTriangle_construct(TnTrapTriangle*);
+static TnTrapMathStatics l_math;
+static TnTrapDescriptors l_descriptors;
+static TnTrapTriSource l_tri_src;
+static TnTrapInitEntry l_actionInit[7] = {{&daObjTnTrap_c::trap_off_wait_act_init_proc},
+                                          {&daObjTnTrap_c::trap_on_wait_act_init_proc},
+                                          {&daObjTnTrap_c::demo_regist_wait_act_init_proc},
+                                          {&daObjTnTrap_c::dummy_proc},
+                                          {&daObjTnTrap_c::demo_wait2_act_init_proc},
+                                          {&daObjTnTrap_c::demo_end_wait_act_init_proc},
+                                          {&daObjTnTrap_c::dummy_proc}};
+
+static TnTrapProcEntry l_actionProc[7] = {
+    {&daObjTnTrap_c::trap_off_wait_act_proc},    {&daObjTnTrap_c::trap_on_wait_act_proc},
+    {&daObjTnTrap_c::demo_regist_wait_act_proc}, {&daObjTnTrap_c::demo_wait_act_proc},
+    {&daObjTnTrap_c::demo_wait2_act_proc},       {&daObjTnTrap_c::demo_end_wait_act_proc},
+    {&daObjTnTrap_c::hide_wait_act_proc}};
+
+static u32 l_tri_indices[12] = {0, 1, 2, 0, 2, 3, 3, 2, 5, 3, 5, 4};
+static cXyz l_tri_points[6] = {{300, -70, 0}, {-300, -70, 0}, {-300, 55, 0},
+                               {300, 55, 0},  {300, 180, 0},  {-300, 180, 0}};
+static cXyz l_emitter_offsetA[2] = {{-300, 90, 0}, {300, 90, 0}};
+static cXyz l_emitter_offsetB[3] = {{0, 25, 0}, {0, 85, 0}, {0, 145, 0}};
+// HD: cut names and the checked literals are guest byte strings.
+static bool sameString(const char* a, const char* b) {
+    const be<u8>* left = reinterpret_cast<const be<u8>*>(a);
+    const be<u8>* right = gabi::at<be<u8>>(gabi::guest_addr(b));
+    while (true) {
+        u8 x = *left++, y = *right++;
+        if (x != y)
+            return false;
+        if (!x)
+            return true;
     }
-    if (gabi::call<s32>(0x025B7E00, ptr(save(), 0xD4)) != 8 ||
-        trap->argument != 0)
-      return 0;
-    if (eventOn(0x2C01) == 1) {
-      sw = trap->switchSave2;
-      if (sw == 255 || switchOn(trap, sw) != 0)
-        return 0;
-      trap->trapType = 2;
-      return 1;
+}
+
+/* 023A2598 */
+BOOL daObjTnTrap_c::chk_appear() {
+    mSwSave = getPrm(8, 0);
+    mSwSave2 = getPrm(8, 8);
+    mArg0 = getPrm(1, 16);
+    u32 type = getPrm(2, 17);
+    mMapType = type;
+    if (type == MAP_EVENT) {
+        if (dComIfGs_isEventBit(dSv_event_flag_UNK_3A04) != 1)
+            return 0;
+        u32 sw = mSwSave;
+        if (sw == 255 || dComIfGs_isSwitch(sw, home.roomNo) != 1) {
+            mTrapType = TYPE_SWITCH;
+            return 1;
+        }
+        if (dComIfGs_getTriforceNum() != 8 || mArg0 != 0)
+            return 0;
+        if (dComIfGs_isEventBit(dSv_event_flag_UNK_2C01) == 1) {
+            sw = mSwSave2;
+            if (sw == 255 || dComIfGs_isSwitch(sw, home.roomNo) != 0)
+                return 0;
+            mTrapType = TYPE_EVENT2;
+            return 1;
+        }
+        mTrapType = TYPE_EVENT;
+        return 1;
     }
-    trap->trapType = 1;
-    return 1;
-  }
-  if (type == 1) {
-    u32 sw = trap->switchSave;
-    if (sw == 255 || switchOn(trap, sw) != 0)
-      return 0;
-    trap->trapType = 3;
-    return 1;
-  }
-  if (type == 2) {
-    u32 sw = trap->switchSave;
-    if (sw != 255 && switchOn(trap, sw) != 0)
-      return 0;
-    trap->trapType = 5;
-    return 1;
-  }
-  gabi::call(0x0273AA24, ptr(0x10031180), 0x17C, ptr(0x1003117C));
-  return 0;
-}
-VERIFY(0x023A2598, tntrap_checkAppear);
-BOOL tntrap_createHeap(Trap *trap) {
-  WWHD_FUNC(0x023A2794, BOOL, trap);
-  gabi::Local<Archive> archive;
-  archive->name = 0x10031064;
-  archive->vtable = 0x1003106C;
-  u32 data =
-      gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), archive.get(), 3);
-  u32 background = gabi::call<u32>(0x024F2478, ptr(data), 1, &trap->matrix);
-  trap->background = background;
-  return background != 0;
-}
-VERIFY(0x023A2794, tntrap_createHeap);
-BOOL tntrap_heapCallback(Trap *trap) {
-  WWHD_FUNC(0x023A2814, BOOL, trap);
-  return gabi::call<s32>(0x023A2794, trap);
-}
-VERIFY(0x023A2814, tntrap_heapCallback);
-void tntrap_setParticleOffset(Trap *trap) {
-  WWHD_FUNC(0x023A2818, void, trap);
-  if (trap->trapType == 5) {
-    u32 player = read<u32>(play(), 0x5B2C);
-    if (player) {
-      f32 difference = read<f32>(player, 0x380) - (f32)trap->home.pos.y;
-      f32 rows = difference / 180.f;
-      trap->particleOffsetY[0] = (f32)gabi::ftoi(rows) * 180.f;
+    if (type == MAP_SHIP) {
+        u32 sw = mSwSave;
+        if (sw == 255 || dComIfGs_isSwitch(sw, home.roomNo) != 0)
+            return 0;
+        mTrapType = TYPE_SHIP;
+        return 1;
     }
-  } else
-    trap->particleOffsetY[0] = 0.f;
-}
-VERIFY(0x023A2818, tntrap_setParticleOffset);
-void tntrap_setMatrix(Trap *trap) {
-  WWHD_FUNC(0x023A28C0, void, trap);
-  gabi::call(0x028E93CC, mDoMtx_stack_c::get(), (f32)trap->home.pos.x,
-             (f32)trap->home.pos.y, (f32)trap->home.pos.z);
-  gabi::call(0x025F19F8, mDoMtx_stack_c::get(), (s32)(s16)trap->shape_angle.x,
-             (s32)(s16)trap->shape_angle.y, (s32)(s16)trap->shape_angle.z);
-  gabi::call(0x025F24E0, 0.f, -9000.f, -94.f);
-  gabi::call(0x025F2518, (f32)trap->scale.x, 100.f, (f32)trap->scale.z);
-  gabi::call(0x028E90D4, mDoMtx_stack_c::get(), &trap->matrix);
-}
-VERIFY(0x023A28C0, tntrap_setMatrix);
-void tntrap_setTriangles(Trap *trap, s32 group) {
-  WWHD_FUNC(0x023A2958, void, trap, group);
-  f32 y = (f32)trap->home.pos.y + (f32)trap->particleOffsetY[group];
-  gabi::call(0x028E93CC, mDoMtx_stack_c::get(), (f32)trap->home.pos.x, y,
-             (f32)trap->home.pos.z);
-  gabi::call(0x025F19F8, mDoMtx_stack_c::get(), (s32)(s16)trap->shape_angle.x,
-             (s32)(s16)trap->shape_angle.y, (s32)(s16)trap->shape_angle.z);
-  gabi::Local<cXyz[3]> points;
-  for (u32 triangle = 0; triangle < 4; ++triangle) {
-    for (u32 vertex = 0; vertex < 3; ++vertex) {
-      u32 index = read<u32>(0x101CD344, (triangle * 3 + vertex) * 4),
-          source = 0x10031134 + index * 12;
-      cXyz *point = &(*points)[vertex];
-      point->x = read<f32>(source);
-      point->y = read<f32>(source, 4);
-      point->z = read<f32>(source, 8);
-      gabi::call(0x028E8F64, mDoMtx_stack_c::get(), point, point);
+    if (type == MAP_VERTICAL) {
+        u32 sw = mSwSave;
+        if (sw != 255 && dComIfGs_isSwitch(sw, home.roomNo) != 0)
+            return 0;
+        mTrapType = TYPE_VERTICAL;
+        return 1;
     }
-    gabi::call(0x0201924C,
-               ptr(gabi::ea(&trap->triangles[group * 4 + triangle]), 0x118),
-               &(*points)[0], &(*points)[1], &(*points)[2]);
-  }
+    JUT_ASSERT_fail("d_a_obj_tntrap.cpp", 0x17C, "0");
+    return 0;
 }
-VERIFY(0x023A2958, tntrap_setTriangles);
-void tntrap_setupAction(Trap *trap, s32 action) {
-  WWHD_FUNC(0x023A2A5C, void, trap, action);
-  u32 self = gabi::ea(trap), descriptor = 0x101CD3AC + (u32)action * 8;
-  u32 target = memberTarget(descriptor, self);
-  gabi::call_ptr(target, ptr(self));
-  descriptor = 0x101CD374 + (u32)action * 8;
-  write<u32>(gabi::ea(trap), 0xED0, read<u32>(descriptor));
-  trap->action = action;
-  write<u32>(gabi::ea(trap), 0xED4, read<u32>(descriptor, 4));
+
+/* 023A28C0 */
+void daObjTnTrap_c::set_mtx() {
+    PSMTXTrans(mDoMtx_stack_c::get(), (f32)home.pos.x, (f32)home.pos.y, (f32)home.pos.z);
+    mDoMtx_XYZrotM(mDoMtx_stack_c::get(), (s32)(s16)shape_angle.x, (s32)(s16)shape_angle.y,
+                   (s32)(s16)shape_angle.z);
+    mDoMtx_stack_c::transM(0.f, -9000.f, -94.f);
+    mDoMtx_stack_c::scaleM((f32)scale.x, 100.f, (f32)scale.z);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mBgMtx);
 }
-VERIFY(0x023A2A5C, tntrap_setupAction);
-s32 tntrap_Create(Trap *trap) {
-  WWHD_FUNC(0x023A2B14, s32, trap);
-  u32 a = gabi::ea(trap), flags = read<u32>(a, 0x2E4);
-  s32 phase = 5;
-  if (!(flags & 8)) {
-    if (trap) {
-      gabi::call(0x025D4ED0, trap);
-      write<u32>(a, 0xB4, 0x10031094);
-      gabi::call(0x0200BD2C, &trap->status);
-      gabi::call(0x02515DA0, ptr(a, 0x3D4));
-      write<u32>(a, 0x3D0, 0x1004AE88);
-      write<u32>(a, 0x3D4, 0x1004AEC0);
-      gabi::call(0x028EFFD0, trap->triangles, 8, 0x150, ptr(0x023A3B80));
-      flags = read<u32>(a, 0x2E4);
+
+/* 023A2814 */
+static BOOL solidHeapCB(Trap* trap) {
+    return trap->create_heap();
+}
+
+/* 023A2794 */
+BOOL daObjTnTrap_c::create_heap() {
+    cBgD_t* data = static_cast<cBgD_t*>(dComIfG_getObjectRes("TnTrap", TNTRAP_DZB, VT_ARCHIVE));
+    dBgW* background = dBgW_NewSet(data, 1, &mBgMtx);
+    mpBgW = background;
+    return background != 0;
+}
+
+/* 023A2FA4 */
+void daObjTnTrap_c::particle_set(s32 group, f32 height) {
+    if (mParticleActive[group]) {
+        if ((f32)mEmSetOffsetY[group] == height)
+            return;
+        particle_delete(group);
     }
-    write<u32>(a, 0x2E4, flags | 8);
-  }
-  if (read<u8>(a, 0xC) == 0) {
-    s32 appears = gabi::call<s32>(0x023A2598, trap);
-    trap->appears = (u8)appears;
-    if (!appears)
-      return phase;
-  } else if (!trap->appears)
-    return phase;
-  phase = gabi::call<s32>(0x02520460, &trap->phase, ptr(0x10031064));
-  if (phase == 4) {
-    if (!gabi::call<s32>(0x025D63E8, trap, ptr(0x023A2814), 0x2E0))
-      return 5;
-    if (trap->trapType != 3) {
-      u32 world = play();
-      if (gabi::call<s32>(0x024EEA6C, ptr(world, 0x12A0), ptr(trap->background),
-                          trap))
-        return 5;
-    }
-    gabi::call(0x023A2818, trap);
-    gabi::call(0x023A28C0, trap);
-    gabi::call(0x02515F14, &trap->status, 255, 255, trap);
-    for (u32 group = 0; group < 2; ++group) {
-      for (u32 i = 0; i < 4; ++i) {
-        auto *triangle = &trap->triangles[group * 4 + i];
-        gabi::call(0x0251650C, triangle, ptr(0x100310E0));
-        triangle->status = gabi::ea(&trap->status);
-      }
-      gabi::call(0x023A2958, trap, group);
-    }
-    gabi::call(0x023A2A5C, trap, trap->trapType == 3 ? 6 : 0);
-  }
-  return phase;
-}
-VERIFY(0x023A2B14, tntrap_Create);
-s32 tntrap_createWrapper(Trap *trap) {
-  WWHD_FUNC(0x023A2CE8, s32, trap);
-  return gabi::call<s32>(0x023A2B14, trap);
-}
-VERIFY(0x023A2CE8, tntrap_createWrapper);
-void tntrap_clearParticles(Trap *trap, s32 group) {
-  WWHD_FUNC(0x023A2CEC, void, trap, group);
-  if (trap->particlesActive[group]) {
     for (u32 i = 0; i < 2; ++i) {
-      u32 emitter = trap->emittersA[group][i];
-      if (emitter) {
-        u32 flags = read<u32>(emitter, 0x254);
-        write<s32>(emitter, 0x5C, -1);
-        write<u32>(emitter, 0x254, flags | 1);
-        trap->emittersA[group][i] = 0;
-      }
+        if (!mpEmitterA[group][i]) {
+            const cXyz* offset = &l_emitter_offsetA[i];
+            f32 y = f32(offset->y) + height, z = f32(offset->z), x = f32(offset->x);
+            dPa_control_c* controller = dComIfGp_getParticle();
+            TnTrapEmitter* emitter = reinterpret_cast<TnTrapEmitter*>(
+                controller->set(0, PARTICLE_SIDE, &home.pos, &shape_angle, 0, 255, 0, -1, 0, 0, 0));
+            mpEmitterA[group][i] = emitter;
+            emitter->mEmitterTranslation[0] = x;
+            emitter->mEmitterTranslation[2] = z;
+            emitter->mEmitterTranslation[1] = y;
+        }
     }
     for (u32 i = 0; i < 3; ++i) {
-      u32 emitter = trap->emittersB[group][i];
-      if (emitter) {
-        u32 flags = read<u32>(emitter, 0x254);
-        write<s32>(emitter, 0x5C, -1);
-        write<u32>(emitter, 0x254, flags | 1);
-        trap->emittersB[group][i] = 0;
-      }
-    }
-  }
-  trap->particlesActive[group] = 0;
-}
-VERIFY(0x023A2CEC, tntrap_clearParticles);
-BOOL tntrap_Delete(Trap *trap) {
-  WWHD_FUNC(0x023A2D88, BOOL, trap);
-  if (trap->appears) {
-    gabi::call(0x025204C8, &trap->phase, ptr(0x10031064));
-    u32 a = gabi::ea(trap), background = trap->background;
-    if (read<u32>(a, 0xF4) && background) {
-      if (read<u32>(background) < 256) {
-        u32 world = play();
-        gabi::call(0x020087EC, ptr(world, 0x12A0), ptr(trap->background));
-      }
-      trap->background = 0;
-    }
-    for (u32 i = 0; i < 2; ++i)
-      gabi::call(0x023A2CEC, trap, i);
-  }
-  return 1;
-}
-VERIFY(0x023A2D88, tntrap_Delete);
-BOOL tntrap_deleteWrapper(Trap *trap) {
-  WWHD_FUNC(0x023A2E30, BOOL, trap);
-  return gabi::call<s32>(0x023A2D88, trap);
-}
-VERIFY(0x023A2E30, tntrap_deleteWrapper);
-void tntrap_setSound(Trap *trap) {
-  WWHD_FUNC(0x023A2E34, void, trap);
-  u32 action = trap->action;
-  if (action >= 1 && action <= 4) {
-    s32 reverb =
-        gabi::call<s32>(0x02520540, (s32)(s8)read<u8>(gabi::ea(trap), 0x326));
-    gabi::call(0x025E1A40, 0x6239, &trap->current.pos, 0, reverb);
-  }
-}
-VERIFY(0x023A2E34, tntrap_setSound);
-BOOL tntrap_Execute(Trap *trap) {
-  WWHD_FUNC(0x023A2E90, BOOL, trap);
-  u32 background = trap->background;
-  if (background && read<u32>(background) < 256)
-    gabi::call(0x024F43DC, ptr(background));
-  for (u32 i = 0; i < 2; ++i)
-    gabi::call(0x023A2958, trap, i);
-  gabi::call(0x02515E50, ptr(gabi::ea(trap), 0x3D4));
-  u32 self = gabi::ea(trap),
-      target = memberTarget(gabi::ea(&trap->actionMethod), self);
-  if (gabi::call_ptr<s32>(target, ptr(self))) {
-    for (u32 group = 0; group < 2; ++group)
-      for (u32 i = 0; i < 4; ++i) {
-        u32 world = play();
-        gabi::call(0x0200E240, ptr(world, 0x26A4),
-                   &trap->triangles[group * 4 + i]);
-      }
-    gabi::call(0x023A2E34, trap);
-  }
-  return 1;
-}
-VERIFY(0x023A2E90, tntrap_Execute);
-BOOL tntrap_executeWrapper(Trap *trap) {
-  WWHD_FUNC(0x023A2F90, BOOL, trap);
-  return gabi::call<s32>(0x023A2E90, trap);
-}
-VERIFY(0x023A2F90, tntrap_executeWrapper);
-BOOL tntrap_draw(Trap *trap) {
-  WWHD_FUNC(0x023A2F94, BOOL, trap);
-  return 1;
-}
-VERIFY(0x023A2F94, tntrap_draw);
-BOOL tntrap_isDelete(Trap *trap) {
-  WWHD_FUNC(0x023A2F9C, BOOL, trap);
-  return 1;
-}
-VERIFY(0x023A2F9C, tntrap_isDelete);
-void tntrap_setParticles(Trap *trap, s32 group, f32 height) {
-  WWHD_FUNC(0x023A2FA4, void, trap, group, height);
-  if (trap->particlesActive[group]) {
-    if ((f32)trap->particleOffsetY[group] == height)
-      return;
-    gabi::call(0x023A2CEC, trap, group);
-  }
-  for (u32 i = 0; i < 2; ++i) {
-    if (!trap->emittersA[group][i]) {
-      u32 offset = 0x100310A4 + i * 12;
-      f32 y = read<f32>(offset, 4) + height, z = read<f32>(offset, 8),
-          x = read<f32>(offset);
-      u32 controller = read<u32>(play(), 0x5AB0);
-      u32 emitter = gabi::call<u32>(0x025A847C, ptr(controller), 0, 0x82EA,
-                                    &trap->home.pos, &trap->shape_angle, 0, 255,
-                                    0, -1, 0, 0, 0);
-      trap->emittersA[group][i] = emitter;
-      write<f32>(emitter, 0x14, x);
-      write<f32>(emitter, 0x1C, z);
-      write<f32>(emitter, 0x18, y);
-    }
-  }
-  for (u32 i = 0; i < 3; ++i) {
-    if (!trap->emittersB[group][i]) {
-      u32 offset = 0x100310BC + i * 12;
-      f32 y = read<f32>(offset, 4) + height, z = read<f32>(offset, 8),
-          x = read<f32>(offset);
-      u32 controller = read<u32>(play(), 0x5AB0);
-      u32 emitter = gabi::call<u32>(0x025A847C, ptr(controller), 0, 0x82EB,
-                                    &trap->home.pos, &trap->shape_angle, 0, 255,
-                                    0, -1, 0, 0, 0);
-      trap->emittersB[group][i] = emitter;
-      write<f32>(emitter, 0x14, x);
-      write<f32>(emitter, 0x1C, z);
-      write<f32>(emitter, 0x18, y);
-    }
-  }
-  trap->particleOffsetY[group] = height;
-  trap->particlesActive[group] = 1;
-}
-VERIFY(0x023A2FA4, tntrap_setParticles);
-BOOL tntrap_checkEvents(Trap *trap) {
-  WWHD_FUNC(0x023A319C, BOOL, trap);
-  u32 type = trap->trapType;
-  if (type == 0) {
-    u32 sw = trap->switchSave;
-    if (sw != 255 && switchOn(trap, sw) == 1) {
-      s32 action = 4;
-      if (trap->argument == 0) {
-        action = 2;
-        gabi::call(0x025B8B68, ptr(save(), 0x644), 0x3B40);
-      }
-      gabi::call(0x023A2A5C, trap, action);
-    }
-  } else if (type == 2) {
-    if (trap->action == 1)
-      gabi::call(0x023A2A5C, trap, 2);
-  } else if (type == 3) {
-    u32 sw = trap->switchSave;
-    if (sw != 255 && switchOn(trap, sw) == 1) {
-      u32 boat = read<u32>(play(), 0x5B3C);
-      if (boat) {
-        write<u32>(boat, 0x644, read<u32>(boat, 0x644) & ~0x00800000u);
-        gabi::call(0x025D57E0, trap);
-        return 0;
-      }
-    }
-  } else if (type == 5) {
-    u32 sw = trap->switchSave;
-    if (sw != 255 && switchOn(trap, sw) == 1) {
-      gabi::call(0x025D57E0, trap);
-      return 0;
-    }
-  }
-  return 1;
-}
-VERIFY(0x023A319C, tntrap_checkEvents);
-void tntrap_offInit(Trap *trap) {
-  WWHD_FUNC(0x023A3310, void, trap);
-  for (u32 i = 0; i < 2; ++i)
-    gabi::call(0x023A2CEC, trap, i);
-}
-VERIFY(0x023A3310, tntrap_offInit);
-void tntrap_onInit(Trap *trap) {
-  WWHD_FUNC(0x023A334C, void, trap);
-  gabi::call(0x023A2818, trap);
-  gabi::call(0x023A2FA4, trap, 0, (f32)trap->particleOffsetY[0]);
-}
-VERIFY(0x023A334C, tntrap_onInit);
-void tntrap_registerInit(Trap *trap) {
-  WWHD_FUNC(0x023A3388, void, trap);
-  trap->particleOffsetY[0] = 0.f;
-  gabi::call(0x023A2FA4, trap, 0, 0.f);
-  s32 type = trap->trapType;
-  u32 world = play();
-  trap->eventId =
-      (s16)gabi::call<s32>(0x02543F10, ptr(world, 0x52C4),
-                           ptr(type == 2 ? 0x100311B0 : 0x100311C0), 255);
-}
-VERIFY(0x023A3388, tntrap_registerInit);
-void tntrap_wait2Init(Trap *trap) {
-  WWHD_FUNC(0x023A3408, void, trap);
-  trap->particleOffsetY[0] = 0.f;
-  gabi::call(0x023A2FA4, trap, 0, 0.f);
-}
-VERIFY(0x023A3408, tntrap_wait2Init);
-void tntrap_endInit(Trap *trap) {
-  WWHD_FUNC(0x023A341C, void, trap);
-  for (u32 i = 0; i < 2; ++i)
-    gabi::call(0x023A2CEC, trap, i);
-}
-VERIFY(0x023A341C, tntrap_endInit);
-BOOL tntrap_offWait(Trap *trap) {
-  WWHD_FUNC(0x023A3458, BOOL, trap);
-  u32 player = read<u32>(play(), 0x5B2C);
-  if (player) {
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, ptr(player, 0x314), difference.get(),
-               &trap->home.pos);
-    gabi::Local<cXyz> horizontal;
-    horizontal->x = difference->x;
-    horizontal->y = 0.f;
-    horizontal->z = difference->z;
-    f64 square = gabi::call<f64>(0x028E8DD0, horizontal.get());
-    f64 distance = gabi::call<f64>(0x028F4384, square);
-    if (distance < 500.f)
-      gabi::call(0x023A2A5C, trap, 1);
-  }
-  return gabi::call<s32>(0x023A319C, trap);
-}
-VERIFY(0x023A3458, tntrap_offWait);
-BOOL tntrap_onWait(Trap *trap) {
-  WWHD_FUNC(0x023A34EC, BOOL, trap);
-  u32 player = read<u32>(play(), 0x5B2C);
-  if (player) {
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, ptr(player, 0x314), difference.get(),
-               &trap->home.pos);
-    gabi::Local<cXyz> horizontal;
-    horizontal->x = difference->x;
-    horizontal->y = 0.f;
-    horizontal->z = difference->z;
-    f64 square = gabi::call<f64>(0x028E8DD0, horizontal.get());
-    f64 distance = gabi::call<f64>(0x028F4384, square);
-    if (distance > 500.f) {
-      gabi::call(0x023A2A5C, trap, 0);
-      return gabi::call<s32>(0x023A319C, trap);
-    }
-    if (trap->trapType == 5) {
-      f32 distances[2];
-      for (u32 i = 0; i < 2; ++i) {
-        f32 center =
-            ((f32)trap->home.pos.y + (f32)trap->particleOffsetY[i]) + 90.f;
-        f32 delta = read<f32>(player, 0x318) - center;
-        distances[i] = delta;
-        if (std::fabs((f64)delta) > 150.f)
-          gabi::call(0x023A2CEC, trap, i);
-      }
-      for (u32 i = 0; i < 2; ++i) {
-        f32 delta = distances[i];
-        if (std::fabs((f64)delta) > 80.f) {
-          f32 home = trap->home.pos.y, offset = trap->particleOffsetY[i];
-          f32 next = delta > 0.f ? offset + 180.f : offset - 180.f;
-          f32 center = (home + next) + 90.f,
-              further = read<f32>(player, 0x318) - center;
-          if (!(std::fabs((f64)further) > 150.f))
-            gabi::call(0x023A2FA4, trap, i ^ 1, next);
+        if (!mpEmitterB[group][i]) {
+            const cXyz* offset = &l_emitter_offsetB[i];
+            f32 y = f32(offset->y) + height, z = f32(offset->z), x = f32(offset->x);
+            dPa_control_c* controller = dComIfGp_getParticle();
+            TnTrapEmitter* emitter = reinterpret_cast<TnTrapEmitter*>(controller->set(
+                0, PARTICLE_CENTER, &home.pos, &shape_angle, 0, 255, 0, -1, 0, 0, 0));
+            mpEmitterB[group][i] = emitter;
+            emitter->mEmitterTranslation[0] = x;
+            emitter->mEmitterTranslation[2] = z;
+            emitter->mEmitterTranslation[1] = y;
         }
-      }
     }
-  }
-  return gabi::call<s32>(0x023A319C, trap);
+    mEmSetOffsetY[group] = height;
+    mParticleActive[group] = 1;
 }
-VERIFY(0x023A34EC, tntrap_onWait);
-BOOL tntrap_registerWait(Trap *trap) {
-  WWHD_FUNC(0x023A3710, BOOL, trap);
-  s32 event = trap->eventId;
-  if (event != -1) {
-    if (read<u16>(gabi::ea(trap), 0xF8) == 2)
-      gabi::call(0x023A2A5C, trap, 3);
-    else
-      gabi::call(0x025D7A58, trap, event, 255, 65535, 0, 1);
-  } else {
-    s32 type = trap->trapType;
-    u32 world = play();
-    trap->eventId =
-        (s16)gabi::call<s32>(0x02543F10, ptr(world, 0x52C4),
-                             ptr(type == 2 ? 0x100311E0 : 0x100311F0), 255);
-  }
-  return 1;
-}
-VERIFY(0x023A3710, tntrap_registerWait);
-namespace {
-bool sameString(u32 a, u32 b) {
-  while (true) {
-    u8 x = read<u8>(a++), y = read<u8>(b++);
-    if (x != y)
-      return false;
-    if (!x)
-      return true;
-  }
-}
-} // namespace
-BOOL tntrap_demoWait(Trap *trap) {
-  WWHD_FUNC(0x023A37D0, BOOL, trap);
-  s32 event = trap->eventId;
-  u32 world = play();
-  if (gabi::call<u32>(0x02544044, ptr(world, 0x52C4), event)) {
-    u32 manager = play();
-    s32 staff = gabi::call<s32>(0x02542D88, ptr(manager, 0x52C4),
-                                ptr(0x10031200), 0, 0);
-    if (staff != -1) {
-      manager = play();
-      u32 cut = gabi::call<u32>(0x02544830, ptr(manager, 0x52C4), staff);
-      if (sameString(cut, 0x10031208))
-        gabi::call(0x023A2A5C, trap, 5);
+
+/* 023A2CEC */
+void daObjTnTrap_c::particle_delete(s32 group) {
+    if (mParticleActive[group]) {
+        for (u32 i = 0; i < 2; ++i) {
+            TnTrapEmitter* emitter = mpEmitterA[group][i];
+            if (emitter) {
+                u32 flags = u32(emitter->mFlags);
+                emitter->mMaxFrame = -1;
+                emitter->mFlags = flags | jpa_emitter_calc::JPAEmtrStts_StopEmit;
+                mpEmitterA[group][i] = 0;
+            }
+        }
+        for (u32 i = 0; i < 3; ++i) {
+            TnTrapEmitter* emitter = mpEmitterB[group][i];
+            if (emitter) {
+                u32 flags = u32(emitter->mFlags);
+                emitter->mMaxFrame = -1;
+                emitter->mFlags = flags | jpa_emitter_calc::JPAEmtrStts_StopEmit;
+                mpEmitterB[group][i] = 0;
+            }
+        }
     }
-  }
-  return 1;
+    mParticleActive[group] = 0;
 }
-VERIFY(0x023A37D0, tntrap_demoWait);
-BOOL tntrap_demoWait2(Trap *trap) {
-  WWHD_FUNC(0x023A3894, BOOL, trap);
-  u32 first = play(), manager = play();
-  s32 event =
-      gabi::call<s32>(0x02543F10, ptr(manager, 0x52C4), ptr(0x10031220), 255);
-  if (gabi::call<u32>(0x02544044, ptr(first, 0x52C4), event)) {
-    manager = play();
-    s32 staff = gabi::call<s32>(0x02542D88, ptr(manager, 0x52C4),
-                                ptr(0x10031218), 0, 0);
-    if (staff != -1) {
-      manager = play();
-      u32 cut = gabi::call<u32>(0x02544830, ptr(manager, 0x52C4), staff);
-      if (sameString(cut, 0x10031210)) {
-        gabi::call(0x025D57E0, trap);
-        return 0;
-      }
+
+/* 023A2E34 */
+void daObjTnTrap_c::set_se() {
+    u32 action = mAction;
+    if (action >= ACT_TRAP_ON_WAIT && action <= ACT_DEMO_WAIT2) {
+        s32 reverb = dComIfGp_getReverb(s32(s8(current.roomNo)));
+        mDoAud_seStart(0x6239, &current.pos, 0, reverb);
     }
-  }
-  return 1;
 }
-VERIFY(0x023A3894, tntrap_demoWait2);
-BOOL tntrap_endWait(Trap *trap) {
-  WWHD_FUNC(0x023A3978, BOOL, trap);
-  s32 event = trap->eventId;
-  u32 world = play();
-  if (!gabi::call<s32>(0x025440C8, ptr(world, 0x52C4), event))
+
+/* 023A2958 */
+void daObjTnTrap_c::set_tri(s32 group) {
+    f32 y = (f32)home.pos.y + (f32)mEmSetOffsetY[group];
+    PSMTXTrans(mDoMtx_stack_c::get(), (f32)home.pos.x, y, (f32)home.pos.z);
+    mDoMtx_XYZrotM(mDoMtx_stack_c::get(), (s32)(s16)shape_angle.x, (s32)(s16)shape_angle.y,
+                   (s32)(s16)shape_angle.z);
+    gabi::Local<cXyz[3]> points;
+    for (u32 triangle = 0; triangle < 4; ++triangle) {
+        for (u32 vertex = 0; vertex < 3; ++vertex) {
+            u32 index = l_tri_indices[triangle * 3 + vertex];
+            const cXyz* source = &l_tri_points[index];
+            cXyz* point = &(*points)[vertex];
+            point->x = f32(source->x);
+            point->y = f32(source->y);
+            point->z = f32(source->z);
+            PSMTXMultVec(mDoMtx_stack_c::get(), point, point);
+        }
+        mTri[group * 4 + triangle].mTri.setPos(&(*points)[0], &(*points)[1], &(*points)[2]);
+    }
+}
+
+/* 023A319C */
+BOOL daObjTnTrap_c::chk_event_flg() {
+    u32 type = mTrapType;
+    if (type == TYPE_SWITCH) {
+        u32 sw = mSwSave;
+        if (sw != 255 && dComIfGs_isSwitch(sw, home.roomNo) == 1) {
+            s32 action = ACT_DEMO_WAIT2;
+            if (mArg0 == 0) {
+                action = ACT_DEMO_REGIST_WAIT;
+                dComIfGs_onEventBit(dSv_event_flag_UNK_3B40);
+            }
+            setup_action(action);
+        }
+    } else if (type == TYPE_EVENT2) {
+        if (mAction == ACT_TRAP_ON_WAIT)
+            setup_action(ACT_DEMO_REGIST_WAIT);
+    } else if (type == TYPE_SHIP) {
+        u32 sw = mSwSave;
+        if (sw != 255 && dComIfGs_isSwitch(sw, home.roomNo) == 1) {
+            TnTrapShip* boat = reinterpret_cast<TnTrapShip*>(dComIfGp_getPlayer(2));
+            if (boat) {
+                boat->mStateFlag &= ~u32(TnTrapShip::daSFLG_UNK800000_e);
+                fopAcM_delete(this);
+                return 0;
+            }
+        }
+    } else if (type == TYPE_VERTICAL) {
+        u32 sw = mSwSave;
+        if (sw != 255 && dComIfGs_isSwitch(sw, home.roomNo) == 1) {
+            fopAcM_delete(this);
+            return 0;
+        }
+    }
     return 1;
-  world = play();
-  write<u16>(world, 0x52B8, read<u16>(world, 0x52B8) | 8);
-  u32 type = trap->trapType;
-  if (type == 0)
-    gabi::call(0x025E1988, 0x806);
-  else if (type == 2) {
-    u32 sw = trap->switchSave2;
-    if (sw != 255)
-      gabi::call(0x025B9E38, ptr(save(), 0x20), sw,
-                 (s32)(s8)read<u8>(gabi::ea(trap), 0x2FE));
-  }
-  gabi::call(0x025D57E0, trap);
-  return 0;
 }
-VERIFY(0x023A3978, tntrap_endWait);
-BOOL tntrap_hideWait(Trap *trap) {
-  WWHD_FUNC(0x023A3A50, BOOL, trap);
-  u32 sw = trap->switchSave2;
-  if (sw != 255 && switchOn(trap, sw) == 1) {
-    u32 boat = read<u32>(play(), 0x5B3C);
-    if (boat) {
-      write<u32>(boat, 0x644, read<u32>(boat, 0x644) | 0x00800000u);
-      u32 world = play();
-      if (!gabi::call<s32>(0x024EEA6C, ptr(world, 0x12A0),
-                           ptr(trap->background), trap))
-        gabi::call(0x023A2A5C, trap, 0);
+
+/* 023A2818 */
+void daObjTnTrap_c::set_em_set_offsetY() {
+    if (mTrapType == TYPE_VERTICAL) {
+        fopAc_ac_c* player = dComIfGp_getPlayer(0);
+        if (player) {
+            f32 difference = f32(player->eyePos.y) - (f32)home.pos.y;
+            f32 rows = difference / 180.f;
+            mEmSetOffsetY[0] = (f32)gabi::ftoi(rows) * 180.f;
+        }
+    } else
+        mEmSetOffsetY[0] = 0.f;
+}
+
+/* 023A3CA8 */
+u32 daObjTnTrap_c::getPrm(u32 bits, u32 shift) {
+    u32 value = mParameters, one = bits & 32 ? 0u : 1u << (bits & 31);
+    u32 mask = one - 1;
+    return (shift & 32 ? 0u : value >> (shift & 31)) & mask;
+}
+
+/* 023A2B14 */
+s32 daObjTnTrap_c::_create() {
+    u32 flags = actor_condition;
+    s32 phase = cPhs_ERROR_e;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (this) {
+            fopAc_ac_c_ct(this);
+            __vtbl = VT_ACTOR;
+            tntrapStatusConstruct(&mStts);
+            tntrapGlobalStatusConstruct(&mStts.__vtbl_gstts);
+            mStts.__vtbl = VT_STATUS;
+            mStts.__vtbl_gstts = VT_GLOBAL_STATUS;
+            tntrapConstructArray(mTri, 8, sizeof(TnTrapTriangle),
+                                 gabi::guest_fn((const void*)TnTrapTriangle_construct));
+            flags = u32(actor_condition);
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
     }
-  }
-  return 0;
+    if (u8(mInitState) == 0) {
+        s32 appears = chk_appear();
+        mAppears = (u8)appears;
+        if (!appears)
+            return phase;
+    } else if (!mAppears)
+        return phase;
+    phase = dComIfG_resLoad(&mPhase, "TnTrap");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)solidHeapCB), 0x2E0))
+            return cPhs_ERROR_e;
+        if (mTrapType != TYPE_SHIP) {
+            dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            if (world->play.mBgS.Regist(mpBgW, this))
+                return cPhs_ERROR_e;
+        }
+        set_em_set_offsetY();
+        set_mtx();
+        mStts.Init(255, 255, this);
+        for (u32 group = 0; group < 2; ++group) {
+            for (u32 i = 0; i < 4; ++i) {
+                auto* triangle = &mTri[group * 4 + i];
+                triangle->Set(reinterpret_cast<dCcD_SrcTri*>(&l_tri_src));
+                triangle->SetStts(&mStts);
+            }
+            set_tri(group);
+        }
+        setup_action(mTrapType == TYPE_SHIP ? ACT_HIDE_WAIT : ACT_TRAP_OFF_WAIT);
+    }
+    return phase;
 }
-VERIFY(0x023A3A50, tntrap_hideWait);
-void tntrap_staticInit() {
-  WWHD_FUNC(0x023A3AEC, void);
-  for (u32 i = 0; i < 4; ++i)
-    write<u32>(0x1046C514, i * 4, 0);
-  gabi::call(0x028F026C, ptr(0x101CD3E4));
-  write<f32>(0x1046C508, 0, -3.1415927410125732f);
-  write<f32>(0x1046C50C, 0, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x1046C510));
-  gabi::call(0x028F026C, ptr(0x101CD3F0));
-  gabi::call(0x028EAB2C, ptr(0x1046C511));
-  gabi::call(0x028F026C, ptr(0x101CD3FC));
+
+/* 023A2D88 */
+BOOL daObjTnTrap_c::_delete() {
+    if (mAppears) {
+        dComIfG_resDelete(&mPhase, "TnTrap");
+        dBgW* background = mpBgW;
+        if (heap.get() && background) {
+            if (background->ChkUsed()) {
+                dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+                world->play.mBgS.Release(mpBgW);
+            }
+            mpBgW = 0;
+        }
+        for (u32 i = 0; i < 2; ++i)
+            particle_delete(i);
+    }
+    return 1;
 }
-VERIFY(0x023A3AEC, tntrap_staticInit);
-void *tntrap_triangleCtor(void *self) {
-  WWHD_FUNC(0x023A3B80, void *, self);
-  if (!self)
-    self = gabi::call<void *>(0x0273AD10, 0x150);
-  if (self) {
-    u32 a = gabi::ea(self);
-    gabi::call(0x02515FB8, self);
-    write<u32>(a, 0x114, 0x100015A8);
-    write<u32>(a, 0x110, 0x10031084);
-    gabi::call(0x02019040, ptr(a, 0x118));
-    write<u32>(a, 0x3C, 0x1004B010);
-    write<u32>(a, 0x128, 0x1004B058);
-    write<u32>(a, 0x114, 0x1004B068);
-  }
-  return self;
+
+/* 023A3458 */
+BOOL daObjTnTrap_c::trap_off_wait_act_proc() {
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    if (player) {
+        gabi::Local<cXyz> difference;
+        cXyz_mi(&player->current.pos, difference.get(), &home.pos);
+        gabi::Local<cXyz> horizontal;
+        horizontal->x = difference->x;
+        horizontal->y = 0.f;
+        horizontal->z = difference->z;
+        // HD: the distance comparison consumes the full floating-point result register.
+        f64 square = tntrapSquareRegister(horizontal.get());
+        f64 distance = tntrapSqrtRegister(square);
+        if (distance < 500.f)
+            setup_action(ACT_TRAP_ON_WAIT);
+    }
+    return chk_event_flg();
 }
-VERIFY(0x023A3B80, tntrap_triangleCtor);
-void tntrap_staticDestructor(void *self, s32 flags) {
-  WWHD_FUNC(0x023A3C0C, void, self, flags);
-  if (self && (flags & 1))
-    gabi::call(0x0273AF40, self);
+
+/* 023A34EC */
+BOOL daObjTnTrap_c::trap_on_wait_act_proc() {
+    fopAc_ac_c* player = dComIfGp_getPlayer(0);
+    if (player) {
+        gabi::Local<cXyz> difference;
+        cXyz_mi(&player->current.pos, difference.get(), &home.pos);
+        gabi::Local<cXyz> horizontal;
+        horizontal->x = difference->x;
+        horizontal->y = 0.f;
+        horizontal->z = difference->z;
+        // HD: the distance comparison consumes the full floating-point result register.
+        f64 square = tntrapSquareRegister(horizontal.get());
+        f64 distance = tntrapSqrtRegister(square);
+        if (distance > 500.f) {
+            setup_action(ACT_TRAP_OFF_WAIT);
+            return chk_event_flg();
+        }
+        if (mTrapType == TYPE_VERTICAL) {
+            f32 distances[2];
+            for (u32 i = 0; i < 2; ++i) {
+                f32 center = ((f32)home.pos.y + (f32)mEmSetOffsetY[i]) + 90.f;
+                f32 delta = f32(player->current.pos.y) - center;
+                distances[i] = delta;
+                if (std::fabs((f64)delta) > 150.f)
+                    particle_delete(i);
+            }
+            for (u32 i = 0; i < 2; ++i) {
+                f32 delta = distances[i];
+                if (std::fabs((f64)delta) > 80.f) {
+                    f32 homeY = home.pos.y, offset = mEmSetOffsetY[i];
+                    f32 next = delta > 0.f ? offset + 180.f : offset - 180.f;
+                    f32 center = (homeY + next) + 90.f,
+                        further = f32(player->current.pos.y) - center;
+                    if (!(std::fabs((f64)further) > 150.f))
+                        particle_set(i ^ 1, next);
+                }
+            }
+        }
+    }
+    return chk_event_flg();
 }
-VERIFY(0x023A3C0C, tntrap_staticDestructor);
-void tntrap_dummy(Trap *trap) { WWHD_FUNC(0x023A3C20, void, trap); }
-VERIFY(0x023A3C20, tntrap_dummy);
-void tntrap_actorDestructor(Trap *trap, s32 flags) {
-  WWHD_FUNC(0x023A3C24, void, trap, flags);
-  if (trap) {
-    gabi::call(0x028F0164, trap->triangles, 8, 0x150, ptr(0x025159F8), 0, 0);
-    gabi::call(0x02515860, &trap->status, 2);
-    gabi::call(0x025D50BC, trap, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, trap);
-  }
+
+/* 023A3710 */
+BOOL daObjTnTrap_c::demo_regist_wait_act_proc() {
+    s32 event = mEventIdx;
+    if (event != -1) {
+        if (eventInfo.checkCommandDemoAccrpt())
+            setup_action(ACT_DEMO_WAIT);
+        else
+            tntrapOrderEventRegister(this, event, 255, 65535, 0, 1);
+    } else {
+        s32 type = mTrapType;
+        dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        mEventIdx = (s16)tntrapEventIndexRegister(
+            &world->play.mEvtManager, type == TYPE_EVENT2 ? "break_tntrap2" : "break_tntrap", 255);
+    }
+    return 1;
 }
-VERIFY(0x023A3C24, tntrap_actorDestructor);
-void tntrap_baseNoop(Trap *trap) { WWHD_FUNC(0x023A3CA4, void, trap); }
-VERIFY(0x023A3CA4, tntrap_baseNoop);
-u32 tntrap_parameter(Trap *trap, u32 bits, u32 shift) {
-  WWHD_FUNC(0x023A3CA8, u32, trap, bits, shift);
-  u32 value = read<u32>(gabi::ea(trap), 0xB0),
-      one = bits & 32 ? 0u : 1u << (bits & 31);
-  u32 mask = one - 1;
-  return (shift & 32 ? 0u : value >> (shift & 31)) & mask;
+
+/* 023A37D0 */
+BOOL daObjTnTrap_c::demo_wait_act_proc() {
+    s32 event = mEventIdx;
+    dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    if (tntrapEventData(&world->play.mEvtManager, event)) {
+        dComIfG_inf_c* manager = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        s32 staff = tntrapStaffId(&manager->play.mEvtManager, "TnTrap", 0, 0);
+        if (staff != -1) {
+            manager = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            const char* cut = tntrapCutName(&manager->play.mEvtManager, staff);
+            if (sameString(cut, "Delete"))
+                setup_action(ACT_DEMO_END_WAIT);
+        }
+    }
+    return 1;
 }
-VERIFY(0x023A3CA8, tntrap_parameter);
+
+/* 023A3894 */
+BOOL daObjTnTrap_c::demo_wait2_act_proc() {
+    dComIfG_inf_c* first = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    dComIfG_inf_c* manager = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    // HD: preserve the full index register before the event-data lookup.
+    s32 event = tntrapEventIndexRegister(&manager->play.mEvtManager, "break_tntrap", 255);
+    if (tntrapEventData(&first->play.mEvtManager, event)) {
+        manager = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        s32 staff = tntrapStaffId(&manager->play.mEvtManager, "TnTrap", 0, 0);
+        if (staff != -1) {
+            manager = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            const char* cut = tntrapCutName(&manager->play.mEvtManager, staff);
+            if (sameString(cut, "Delete2")) {
+                fopAcM_delete(this);
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+/* 023A3978 */
+BOOL daObjTnTrap_c::demo_end_wait_act_proc() {
+    s32 event = mEventIdx;
+    dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    if (!tntrapEventEnd(&world->play.mEvtManager, event))
+        return 1;
+    world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    world->play.mEvtCtrl.mEventFlag |= 8;
+    u32 type = mTrapType;
+    if (type == TYPE_SWITCH)
+        mDoAud_seStartCom(0x806);
+    else if (type == TYPE_EVENT2) {
+        u32 sw = mSwSave2;
+        if (sw != 255)
+            dComIfGs_onSwitch(sw, home.roomNo);
+    }
+    fopAcM_delete(this);
+    return 0;
+}
+
+/* 023A3A50 */
+BOOL daObjTnTrap_c::hide_wait_act_proc() {
+    u32 sw = mSwSave2;
+    if (sw != 255 && dComIfGs_isSwitch(sw, home.roomNo) == 1) {
+        TnTrapShip* boat = reinterpret_cast<TnTrapShip*>(dComIfGp_getPlayer(2));
+        if (boat) {
+            boat->mStateFlag |= TnTrapShip::daSFLG_UNK800000_e;
+            dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            if (!world->play.mBgS.Regist(mpBgW, this))
+                setup_action(ACT_TRAP_OFF_WAIT);
+        }
+    }
+    return 0;
+}
+
+/* 023A3C20 */
+void daObjTnTrap_c::dummy_proc() {}
+
+/* 023A3310 */
+void daObjTnTrap_c::trap_off_wait_act_init_proc() {
+    for (u32 i = 0; i < 2; ++i)
+        particle_delete(i);
+}
+
+/* 023A334C */
+void daObjTnTrap_c::trap_on_wait_act_init_proc() {
+    set_em_set_offsetY();
+    particle_set(0, (f32)mEmSetOffsetY[0]);
+}
+
+/* 023A3388 */
+void daObjTnTrap_c::demo_regist_wait_act_init_proc() {
+    mEmSetOffsetY[0] = 0.f;
+    particle_set(0, 0.f);
+    s32 type = mTrapType;
+    dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    mEventIdx = (s16)tntrapEventIndexRegister(
+        &world->play.mEvtManager, type == TYPE_EVENT2 ? "break_tntrap2" : "break_tntrap", 255);
+}
+
+/* 023A3408 */
+void daObjTnTrap_c::demo_wait2_act_init_proc() {
+    mEmSetOffsetY[0] = 0.f;
+    particle_set(0, 0.f);
+}
+
+/* 023A341C */
+void daObjTnTrap_c::demo_end_wait_act_init_proc() {
+    for (u32 i = 0; i < 2; ++i)
+        particle_delete(i);
+}
+
+/* 023A2A5C */
+void daObjTnTrap_c::setup_action(s32 action) {
+    (this->*l_actionInit[action].fn)();
+    tntrapCopyPtmfHead(mActionProc, l_actionProc[action].fn);
+    mAction = action;
+    mActionProc.f = l_actionProc[action].fn.f;
+}
+
+/* 023A2E90 */
+BOOL daObjTnTrap_c::_execute() {
+    dBgW* background = mpBgW;
+    if (background && background->ChkUsed())
+        background->Move();
+    for (u32 i = 0; i < 2; ++i)
+        set_tri(i);
+    mStts.Move();
+    if ((this->*mActionProc)()) {
+        for (u32 group = 0; group < 2; ++group)
+            for (u32 i = 0; i < 4; ++i) {
+                dComIfG_inf_c* world = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+                cCcS_Set(&world->play.mCcS, &mTri[group * 4 + i]);
+            }
+        set_se();
+    }
+    return 1;
+}
+
+/* 023A2F94 */
+BOOL daObjTnTrap_c::_draw() {
+    return 1;
+}
+
+/* 023A2CE8 */
+static s32 daObjTnTrap_Create(Trap* trap) {
+    return trap->_create();
+}
+
+/* 023A2E30 */
+static BOOL daObjTnTrap_Delete(Trap* trap) {
+    return trap->_delete();
+}
+
+/* 023A2F90 */
+static BOOL daObjTnTrap_Execute(Trap* trap) {
+    return trap->_execute();
+}
+
+/* 023A2F9C */
+static BOOL daObjTnTrap_IsDelete(Trap* trap) {
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit
+/* 023A3AEC */
+void __sinit_d_a_obj_tntrap_cpp() {
+    for (u32 i = 0; i < 4; ++i)
+        l_math.mZero[i] = 0;
+    __register_global_object(gabi::ea(l_descriptors.mEntries[0]));
+    l_math.mMinAngle = -3.1415927410125732f;
+    l_math.mMaxAngle = 3.1415927410125732f;
+    tntrapInitSinTable(&l_math.mSinTable);
+    __register_global_object(gabi::ea(l_descriptors.mEntries[1]));
+    tntrapInitAtanTable(&l_math.mAtanTable);
+    __register_global_object(gabi::ea(l_descriptors.mEntries[2]));
+}
+
+// HD: allocating GHS triangle constructor and TU-specific vtable installation.
+/* 023A3B80 */
+TnTrapTriangle* TnTrapTriangle_construct(TnTrapTriangle* self) {
+    if (!self)
+        self = static_cast<TnTrapTriangle*>(operator_new(sizeof(TnTrapTriangle)));
+    if (self) {
+        tntrapTriangleConstruct(self);
+        self->mShape.mShapeVtable = VT_SHAPE;
+        self->mShape.mBoundsVtable = VT_BOUNDS;
+        tntrapGeometryConstruct(&self->mTri);
+        self->__vtbl_hitinf = VT_TRI_HIT;
+        self->mTri.__vtbl = VT_TRI_PLANE;
+        self->mShape.mShapeVtable = VT_TRI_SHAPE;
+    }
+    return self;
+}
+
+// HD: scalar deleting destructor for the header object.
+/* 023A3C0C */
+void TnTrap_headerStatics_destruct(void* self, s32 flags) {
+    if (self && (flags & 1))
+        operator_delete(self);
+}
+
+// HD: array destruction precedes the actor base destructor.
+/* 023A3C24 */
+void daObjTnTrap_destruct(Trap* trap, s32 flags) {
+    if (trap) {
+        tntrapDestroyArray(trap->mTri, 8, sizeof(TnTrapTriangle), FN_TRI_DESTRUCTOR, 0, 0);
+        dCcD_Stts_dt(&trap->mStts, 2);
+        tntrapActorDestruct(trap, 0);
+        if (flags & 1)
+            operator_delete(trap);
+    }
+}
+
+// HD: empty virtual base entry retained.
+/* 023A3CA4 */
+void daObjTnTrap_baseNoop(Trap* trap) {}
+
+/* WWHD glue
+data l_math 1046C508
+data l_descriptors 101CD3E4
+data l_tri_src 100310E0
+data l_tri_indices 101CD344
+data l_tri_points 10031134
+data l_emitter_offsetA 100310A4
+data l_emitter_offsetB 100310BC
+data l_actionProc 101CD374
+data l_actionInit 101CD3AC
+ext 025F19F8 void mDoMtx_XYZrotM(Mtx34*, s32, s32, s32)
+ext 025E1988 void mDoAud_seStartCom(u32)
+ext 028E8DD0 f64 tntrapSquareRegister(const cXyz*)
+ext 028F4384 f64 tntrapSqrtRegister(f64)
+ext 02543F10 s32 tntrapEventIndexRegister(dEvent_manager_c*, const char*, u32)
+ext 02544044 void* tntrapEventData(dEvent_manager_c*, s32)
+ext 02544830 const char* tntrapCutName(dEvent_manager_c*, s32)
+ext 02542D88 s32 tntrapStaffId(dEvent_manager_c*, const char*, fopAc_ac_c*, s32)
+ext 025440C8 BOOL tntrapEventEnd(dEvent_manager_c*, s32)
+ext 025D7A58 void tntrapOrderEventRegister(fopAc_ac_c*, s32, u32, u32, u32, u32)
+ext 028EFFD0 void tntrapConstructArray(void*, s32, u32, u32)
+ext 028F0164 void tntrapDestroyArray(void*, s32, u32, u32, u32, u32)
+ext 02515DA0 void tntrapGlobalStatusConstruct(be<u32>*)
+ext 0200BD2C void tntrapStatusConstruct(dCcD_Stts*)
+ext 02515FB8 void tntrapTriangleConstruct(dCcD_GObjInf*)
+ext 02019040 void tntrapGeometryConstruct(cM3dGTri*)
+ext 024F2478 dBgW* dBgW_NewSet(cBgD_t*, u32, Mtx34*)
+ext 028ED6F8 void tntrapInitSinTable(u8*)
+ext 028EAB2C void tntrapInitAtanTable(u8*)
+ext 025D50BC void tntrapActorDestruct(fopAc_ac_c*, s32)
+ext 0251650C void TnTrapTriangle::Set(const dCcD_SrcTri*)
+ext 0201924C void cM3dGTri::setPos(const cXyz*, const cXyz*, const cXyz*)
+str 10031064 "TnTrap" in 023A2794
+str 10031064 "TnTrap" in 023A2B14
+str 10031064 "TnTrap" in 023A2D88
+str 10031180 "d_a_obj_tntrap.cpp" in 023A2598
+str 1003117C "0" in 023A2598
+str 100311B0 "break_tntrap2" in 023A3388
+str 100311C0 "break_tntrap" in 023A3388
+str 100311E0 "break_tntrap2" in 023A3710
+str 100311F0 "break_tntrap" in 023A3710
+str 10031200 "TnTrap" in 023A37D0
+str 10031208 "Delete" in 023A37D0
+str 10031210 "Delete2" in 023A3894
+str 10031218 "TnTrap" in 023A3894
+str 10031220 "break_tntrap" in 023A3894
+*/

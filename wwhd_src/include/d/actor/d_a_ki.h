@@ -6,6 +6,9 @@
  * 4 bytes (0x22C, constructor 0219D368). Size 0x10BC (constructor 0219D3F4; GameCube 0xF04). */
 #pragma once
 #include "bindings.h"
+#include "gc_api/JSystem/J3DModelData.h"
+#include "gc_api/f_op/f_op_actor.h"
+#include "gc_api/d/d_com_inf_game.h"
 
 #ifndef WWHD_ENEMYICE_FIRE_L
 #define WWHD_ENEMYICE_FIRE_L
@@ -219,31 +222,29 @@ enum { fpcNm_KI_e = 0xD7 };
 enum { DSNAP_TYPE_KI = 0xAE };
 enum { JA_SE_CV_KI_ATTACK = 0x481D };
 
-/* ---- file statics ---- */
-static kiHIO_c& l_kiHIO() { return *gabi::at<kiHIO_c>(0x10464B4C); }
-static be<u8>& hio_set() { return *gabi::at<be<u8>>(0x101B8168); } /* HD: in .data */
-static be<s32>& ki_all_count() { return *gabi::at<be<s32>>(0x10464B28); }
-static be<s32>& ki_fight_count() { return *gabi::at<be<s32>>(0x10464B2C); }
-/* static u16 ki_tex_anm_idx[4] (HD: plus a second table for the fire keese), ki_tex_max_frame[4],
- * ki_tex_loop[4] */
-static u16 ki_tex_anm_idx(u32 i) { return gabi::load<u16>(0x101B816C + 2 * i); }
-static u16 fk_tex_anm_idx(u32 i) { return gabi::load<u16>(0x101B8174 + 2 * i); }
-static u16 ki_tex_max_frame(u32 i) { return gabi::load<u16>(0x101B8158 + 2 * i); }
-static u8 ki_tex_loop(u32 i) { return gabi::load<u8>(0x101B8160 + i); }
-
-
+extern kiHIO_c& l_kiHIO;
+extern be<u8>& hio_set;
+extern be<s32>& ki_all_count;
+extern be<s32>& ki_fight_count;
+extern be<u16> (&ki_tex_anm_idx)[4];
+extern be<u16> (&fk_tex_anm_idx)[4];
+extern be<u16> (&ki_tex_max_frame)[4];
+extern be<u8> (&ki_tex_loop)[4];
+extern be<u8> (&ki_item_tbl)[4];
+extern be<u32>& ki_emitterManager;
+void kiMonsSe(u32 sound, cXyz* position, u32 actorID, u32 param, s32 reverb);
 /* HD: fopAcM_monsSeStart inline (the process id is read before the reverb call) */
 static inline void fopAcM_monsSeStart(fopAc_ac_c* a, u32 se, u32 param) {
     if (a != nullptr && gabi::ea(&a->eyePos) != 0) {
         s32 room = fopAcM_GetRoomNo(a);
         u32 id = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, se, &a->eyePos, id, param, reverb); /* mDoAud_monsSeStart */
+        kiMonsSe(se, &a->eyePos, id, param, reverb); /* mDoAud_monsSeStart */
     }
 }
 
 /* dBgS_LinChk (stack object), HD layout as in d_a_kamome (this TU's vtables) */
-struct dBgS_LinChk_l {
+struct KiLineCheck {
     /* 0x00 */ be<u32> mpPolyPassChk;
     /* 0x04 */ be<u32> mpGrpPassChk;
     /* 0x08 */ u8 _08[8];
@@ -257,8 +258,8 @@ struct dBgS_LinChk_l {
     /* 0x64 */ be<u32> __vtbl_64;
     /* 0x68 */ be<u32> mGrp;
 };
-WWHD_SIZE(dBgS_LinChk_l, 0x6C);
-static inline void ki_LinChk_ct(dBgS_LinChk_l* c) {
+WWHD_SIZE(KiLineCheck, 0x6C);
+static inline void ki_LinChk_ct(KiLineCheck* c) {
     cBgS_LinChk_ct(c);
     for (int i = 0; i < 7; i++) c->mPass[i] = 0;
     c->mGrp = 1;
@@ -269,10 +270,273 @@ static inline void ki_LinChk_ct(dBgS_LinChk_l* c) {
     c->__vtbl_58 = 0x10012C04;
     c->__vtbl_20 = 0x10012BE4;
 }
-static inline void ki_LinChk_dt(dBgS_LinChk_l* c) {
+static inline void ki_LinChk_dt(KiLineCheck* c) {
     c->__vtbl_58 = 0x10012C04;
     c->__vtbl_64 = 0x10012B94;
     c->__vtbl_20 = 0x10012B84;
     cBgS_LinChk_dt(c, 0);
 }
 
+
+// HD: these private views preserve the signed low-byte path-count test and pattern frame order.
+struct KiPathPoint { be<u8> mArg0, mArg1, mArg2, mArg3; cXyz m_position; };
+WWHD_OFFSET(KiPathPoint,mArg3,3); WWHD_OFFSET(KiPathPoint,m_position,4); WWHD_SIZE(KiPathPoint,0x10);
+struct KiPath { union { be<u16> m_num; be<s8> mCountBytes[2]; }; be<u16> m_nextID; be<u8> mArg0,m_closed,mArg2,mArg3; gptr<KiPathPoint> m_points; };
+WWHD_OFFSET(KiPath,m_nextID,2); WWHD_OFFSET(KiPath,m_closed,5); WWHD_OFFSET(KiPath,m_points,8); WWHD_SIZE(KiPath,12);
+inline KiPath* kiPath(dPath* path) { return reinterpret_cast<KiPath*>(path); }
+inline cXyz* kiLineCross(KiLineCheck* check) { return &reinterpret_cast<dBgS_LinChk*>(check)->mLin.mEnd; }
+struct KiTexturePattern { be<f32> mFrame; be<u32> mVtable; };
+WWHD_OFFSET(KiTexturePattern,mFrame,0); WWHD_OFFSET(KiTexturePattern,mVtable,4); WWHD_SIZE(KiTexturePattern,8);
+inline KiTexturePattern* kiPattern(J3DAnmTexPattern* pattern) { return reinterpret_cast<KiTexturePattern*>(pattern); }
+struct KiPlayer { u8 mUnaccessed[0x3CC]; be<f32> mGrabWear; };
+WWHD_OFFSET(KiPlayer,mGrabWear,0x3CC); WWHD_SIZE(KiPlayer,0x3D0);
+inline KiPlayer* kiPlayer(fopAc_ac_c* actor) { return reinterpret_cast<KiPlayer*>(actor); }
+
+// HD: named bindings keep the verified GHS register and stack signatures.
+void kiMain_removeFire(enemyfire_l* fire);
+void kiMain_iceEntry(mDoExt_McaMorf* morph, s32 mode, void* data);
+BOOL kiMain_initPattern(mDoExt_btpAnm* animation, J3DModelData* model, J3DAnmTexPattern* pattern, s32 play, s32 mode, s16 start, s16 end, bool modify, s32 entry, f32 speed);
+mDoExt_btpAnm* kiMain_createPattern(u32 storage);
+mDoExt_btkAnm* kiMain_createTexture(void* storage);
+BOOL kiMain_initTexture(mDoExt_btkAnm* animation, J3DModelData* model, void* key, s32 play, s32 mode, s16 start, s16 end, bool modify, s32 entry, f32 speed);
+s32 kiMain_nameIndex(u32 table, u32 name);
+void kiMain_jointEntry(J3DModel* model, u32 joint);
+s32 kiMain_characterIndex(u32 table, const char* name, s32 mode);
+void kiMain_packetInit(void* packet, u32 mode);
+void kiMain_assureString(SafeString* string);
+void kiMain_sphereCtor(dCcD_Sph* sphere);
+void kiMain_acchCtor(dBgS_ObjAcch* acch);
+void kiMain_packetCtor(void* packet);
+void kiMain_circleCtor(dBgS_AcchCir* circle);
+void kiMain_followCtor(dPa_followEcallBack_l* callback, u32 pos, u32 angle);
+BOOL kiMain_execute(ki_class* actor);
+void kiMain_acchDtor(dBgS_ObjAcch* acch, s32 flags);
+void kiMain_sphereDtor(dCcD_Sph* sphere, s32 flags);
+void kiMain_circleDtor(void* circle, s32 flags);
+void kiMain_packetDtor(void* packet, s32 flags);
+void kiMain_actorDtor(ki_class* actor, s32 flags);
+void kiAttack_check(ki_class* actor);
+void kiAttack_animation(ki_class* actor, int resource, f32 blend, u8 loop, f32 speed, int sound);
+void kiAttack_texture(ki_class* actor, u16 index);
+BOOL kiAttack_playerBackground(ki_class* actor);
+void kiAttack_position(ki_class* actor, s8 mode);
+void kiExecute_check(ki_class* actor);
+void kiExecute_animation(ki_class* actor, int resource, f32 blend, u8 loop, f32 speed, int sound);
+void kiExecute_texture(ki_class* actor, u16 index);
+BOOL kiExecute_playerBackground(ki_class* actor);
+void kiExecute_position(ki_class* actor, s8 mode);
+void kiExecute_attack(ki_class* actor);
+void kiExecute_removeFire(enemyfire_l* fire);
+BOOL kiExecute_ice(enemyice_l* ice);
+void kiExecute_fire(enemyfire_l* fire);
+void kiExecute_report(s32 x, s32 y, const char* text, s32 count);
+fopAc_ac_c* kiExecute_checkAttack(fopAc_ac_c* actor, void* info);
+void kiExecute_deleteEmitter(u32 manager, u32 emitter, s32 mode);
+
+struct KiJointData { u8 mUnaccessed[4]; be<u16> mJntNo; };
+WWHD_OFFSET(KiJointData,mJntNo,4); WWHD_SIZE(KiJointData,6);
+inline KiJointData* kiJoint(J3DJoint* joint) { return reinterpret_cast<KiJointData*>(joint); }
+
+struct KiStringVtable { u8 mUnaccessed[0x14]; be<u32> assureTermination; };
+WWHD_OFFSET(KiStringVtable,assureTermination,0x14); WWHD_SIZE(KiStringVtable,0x18);
+inline void kiAssureString(u32 table, SafeString* string) { gabi::call_ptr(gabi::load<u32>(table + offsetof(KiStringVtable,assureTermination)),string); }
+// HD: integer addresses preserve zero-address reads and 32-bit wrap in the bounded string comparison.
+inline u8 kiStringByte(u32 address) { return gabi::load<u8>(address); }
+struct KiFollowVtable { u8 mUnaccessed[0x44]; be<u32> remove; };
+WWHD_OFFSET(KiFollowVtable,remove,0x44); WWHD_SIZE(KiFollowVtable,0x48);
+inline void kiRemoveFollow(dPa_followEcallBack_l* callback) { gabi::call_ptr(gabi::load<u32>(callback->__vtbl + offsetof(KiFollowVtable,remove)),callback); }
+struct KiPatternVtable { u8 mUnaccessed[0x1C]; be<u32> searchUpdateMaterialID; };
+WWHD_OFFSET(KiPatternVtable,searchUpdateMaterialID,0x1C); WWHD_SIZE(KiPatternVtable,0x20);
+inline u32 kiSearchPattern(J3DAnmTexPattern* pattern) { return gabi::load<u32>(kiPattern(pattern)->mVtable + offsetof(KiPatternVtable,searchUpdateMaterialID)); }
+struct KiAcchPrefix { u8 mUnaccessed[0x10]; be<u32> mCheckVtable; be<u32> mPassVtable; be<u8> mObjectThrough; u8 mUnaccessed2[7]; be<u32> mGroupVtable; };
+WWHD_OFFSET(KiAcchPrefix,mCheckVtable,0x10); WWHD_OFFSET(KiAcchPrefix,mPassVtable,0x14); WWHD_OFFSET(KiAcchPrefix,mObjectThrough,0x18); WWHD_OFFSET(KiAcchPrefix,mGroupVtable,0x20); WWHD_SIZE(KiAcchPrefix,0x24);
+inline KiAcchPrefix* kiAcch(dBgS_ObjAcch* acch) { return reinterpret_cast<KiAcchPrefix*>(acch); }
+enum : u32 { KI_SAFESTRING_VTABLE=0x10012B5C, KI_ACTOR_VTABLE=0x10012C24, KI_HIO_VTABLE=0x10012C14, KI_ACCH_CHECK_VTABLE=0x10012BA4, KI_ACCH_PASS_VTABLE=0x10012BC4, KI_ACCH_GROUP_VTABLE=0x10012BB4, KI_CYLINDER_VTABLE=0x10012B74, KI_HEADER_STATICS=0x10464B30, KI_HEADER_RECORDS=0x101B8290 };
+
+struct KiCtorFrame { be<u32> w[4]; };
+WWHD_SIZE(KiCtorFrame,16);
+
+/* CcAtInfo (stack object passed to cc_at_check) */
+struct KiAttackInfo {
+    /* 0x00 */ be<u32> mpObj;
+    /* 0x04 */ gptr<fopAc_ac_c> mpActor;
+    /* 0x08 */ be<u8> mDamage;
+    /* 0x09 */ be<u8> mbDead;
+    /* 0x0A */ be<u8> mResultingAttackType;
+    /* 0x0B */ u8 _0B;
+    /* 0x0C */ csXyz m0C;
+    /* 0x12 */ be<u16> mPlCutBit;
+    /* 0x14 */ gptr<cXyz> pParticlePos;
+    /* 0x18 */ be<s32> mHitSoundId;
+};
+WWHD_SIZE(KiAttackInfo, 0x1C);
+
+
+WWHD_OFFSET(enemyice_l, mpActor, 0x000);
+WWHD_OFFSET(enemyice_l, mFreezeDuration, 0x004);
+WWHD_OFFSET(enemyice_l, mLightShrinkTimer, 0x006);
+WWHD_OFFSET(enemyice_l, _007, 0x007);
+WWHD_OFFSET(enemyice_l, mYOffset, 0x008);
+WWHD_OFFSET(enemyice_l, m00C, 0x00C);
+WWHD_OFFSET(enemyice_l, mMode, 0x00D);
+WWHD_OFFSET(enemyice_l, mFreezeTimer, 0x00E);
+WWHD_OFFSET(enemyice_l, mMoveDelayTimer, 0x010);
+WWHD_OFFSET(enemyice_l, mAngleY, 0x012);
+WWHD_OFFSET(enemyice_l, mAngularVelY, 0x014);
+WWHD_OFFSET(enemyice_l, _016, 0x016);
+WWHD_OFFSET(enemyice_l, mSpeed, 0x018);
+WWHD_OFFSET(enemyice_l, mSpeedF, 0x024);
+WWHD_OFFSET(enemyice_l, m028, 0x028);
+WWHD_OFFSET(enemyice_l, m02C, 0x02C);
+WWHD_OFFSET(enemyice_l, mStts, 0x030);
+WWHD_OFFSET(enemyice_l, mCyl, 0x06C);
+WWHD_OFFSET(enemyice_l, mCylHeight, 0x19C);
+WWHD_OFFSET(enemyice_l, mWallRadius, 0x1A0);
+WWHD_OFFSET(enemyice_l, mScaleXZ, 0x1A4);
+WWHD_OFFSET(enemyice_l, mScaleY, 0x1A8);
+WWHD_OFFSET(enemyice_l, mParticleScale, 0x1AC);
+WWHD_OFFSET(enemyice_l, m1B0, 0x1B0);
+WWHD_OFFSET(enemyice_l, mDeathSwitch, 0x1B1);
+WWHD_OFFSET(enemyice_l, _1B2, 0x1B2);
+WWHD_OFFSET(enemyice_l, mBgAcchCir, 0x1B4);
+WWHD_OFFSET(enemyice_l, mBgAcch, 0x1F4);
+
+WWHD_OFFSET(enemyfire_l, mpActor, 0x000);
+WWHD_OFFSET(enemyfire_l, mFireDuration, 0x004);
+WWHD_OFFSET(enemyfire_l, mMode, 0x006);
+WWHD_OFFSET(enemyfire_l, _007, 0x007);
+WWHD_OFFSET(enemyfire_l, mFireTimer, 0x008);
+WWHD_OFFSET(enemyfire_l, _00A, 0x00A);
+WWHD_OFFSET(enemyfire_l, mpMcaMorf, 0x00C);
+WWHD_OFFSET(enemyfire_l, mFlameJntIdxs, 0x010);
+WWHD_OFFSET(enemyfire_l, _01A, 0x01A);
+WWHD_OFFSET(enemyfire_l, mParticleScale, 0x01C);
+WWHD_OFFSET(enemyfire_l, mFlameTimers, 0x044);
+WWHD_OFFSET(enemyfire_l, mpFlameEmitters, 0x058);
+WWHD_OFFSET(enemyfire_l, mPrevPos, 0x080);
+WWHD_OFFSET(enemyfire_l, mDirection, 0x08C);
+WWHD_OFFSET(enemyfire_l, mFlameScaleY, 0x098);
+WWHD_OFFSET(enemyfire_l, _09C, 0x09C);
+WWHD_OFFSET(enemyfire_l, mHitboxFlameIdx, 0x09D);
+WWHD_OFFSET(enemyfire_l, _09E, 0x09E);
+WWHD_OFFSET(enemyfire_l, mStts, 0x0A0);
+WWHD_OFFSET(enemyfire_l, mSph, 0x0DC);
+WWHD_OFFSET(enemyfire_l, mLight, 0x208);
+WWHD_OFFSET(enemyfire_l, m228, 0x228);
+
+WWHD_OFFSET(ki_class, actor, 0x000);
+WWHD_OFFSET(ki_class, mPhase, 0x3C8);
+WWHD_OFFSET(ki_class, mpMorf, 0x3D0);
+WWHD_OFFSET(ki_class, m2B8, 0x3D4);
+WWHD_OFFSET(ki_class, m2CD, 0x485);
+WWHD_OFFSET(ki_class, mKiPathIndex, 0x486);
+WWHD_OFFSET(ki_class, m2CF, 0x487);
+WWHD_OFFSET(ki_class, _488, 0x488);
+WWHD_OFFSET(ki_class, mAction, 0x489);
+WWHD_OFFSET(ki_class, _48A, 0x48A);
+WWHD_OFFSET(ki_class, mBehaviorType, 0x48B);
+WWHD_OFFSET(ki_class, m2D4, 0x48C);
+WWHD_OFFSET(ki_class, mCurrKiPathIndex, 0x48D);
+WWHD_OFFSET(ki_class, m2D6, 0x48E);
+WWHD_OFFSET(ki_class, m2D7, 0x48F);
+WWHD_OFFSET(ki_class, ppd, 0x490);
+WWHD_OFFSET(ki_class, m2DC, 0x494);
+WWHD_OFFSET(ki_class, _495, 0x495);
+WWHD_OFFSET(ki_class, mPosMove, 0x49C);
+WWHD_OFFSET(ki_class, mPosMoveTarget, 0x4A8);
+WWHD_OFFSET(ki_class, mPosMoveMaxSpeed, 0x4AC);
+WWHD_OFFSET(ki_class, mPosMoveDist, 0x4B0);
+WWHD_OFFSET(ki_class, _4B4, 0x4B4);
+WWHD_OFFSET(ki_class, m304, 0x4B8);
+WWHD_OFFSET(ki_class, _4BC, 0x4BC);
+WWHD_OFFSET(ki_class, mTimers, 0x4C0);
+WWHD_OFFSET(ki_class, m314, 0x4C8);
+WWHD_OFFSET(ki_class, m316, 0x4CA);
+WWHD_OFFSET(ki_class, mRand2000, 0x4CC);
+WWHD_OFFSET(ki_class, _4CE, 0x4CE);
+WWHD_OFFSET(ki_class, m31C, 0x4D0);
+WWHD_OFFSET(ki_class, m320, 0x4D4);
+WWHD_OFFSET(ki_class, m322, 0x4D6);
+WWHD_OFFSET(ki_class, m324, 0x4D8);
+WWHD_OFFSET(ki_class, m326, 0x4DA);
+WWHD_OFFSET(ki_class, m328, 0x4DC);
+WWHD_OFFSET(ki_class, _4DE, 0x4DE);
+WWHD_OFFSET(ki_class, m330, 0x4E4);
+WWHD_OFFSET(ki_class, m334, 0x4E8);
+WWHD_OFFSET(ki_class, m335, 0x4E9);
+WWHD_OFFSET(ki_class, m336, 0x4EA);
+WWHD_OFFSET(ki_class, m337, 0x4EB);
+WWHD_OFFSET(ki_class, m338, 0x4EC);
+WWHD_OFFSET(ki_class, m339, 0x4ED);
+WWHD_OFFSET(ki_class, _4EE, 0x4EE);
+WWHD_OFFSET(ki_class, m540, 0x6F4);
+WWHD_OFFSET(ki_class, _6F5, 0x6F5);
+WWHD_OFFSET(ki_class, m580, 0x734);
+WWHD_OFFSET(ki_class, m6AC, 0x860);
+WWHD_OFFSET(ki_class, m904, 0xAB8);
+WWHD_OFFSET(ki_class, mDamageType, 0xAB9);
+WWHD_OFFSET(ki_class, _ABA, 0xABA);
+WWHD_OFFSET(ki_class, m91C, 0xAD0);
+WWHD_OFFSET(ki_class, m920, 0xAD4);
+
+WWHD_OFFSET(kiHIO_c, mNo, 0x00);
+WWHD_OFFSET(kiHIO_c, m05, 0x01);
+WWHD_OFFSET(kiHIO_c, m06, 0x02);
+WWHD_OFFSET(kiHIO_c, m07, 0x03);
+WWHD_OFFSET(kiHIO_c, m08, 0x04);
+WWHD_OFFSET(kiHIO_c, m0C, 0x08);
+WWHD_OFFSET(kiHIO_c, m10, 0x0C);
+WWHD_OFFSET(kiHIO_c, m14, 0x10);
+WWHD_OFFSET(kiHIO_c, m18, 0x14);
+WWHD_OFFSET(kiHIO_c, m1C, 0x18);
+WWHD_OFFSET(kiHIO_c, m20, 0x1C);
+WWHD_OFFSET(kiHIO_c, m24, 0x20);
+WWHD_OFFSET(kiHIO_c, m28, 0x24);
+WWHD_OFFSET(kiHIO_c, m2C, 0x28);
+WWHD_OFFSET(kiHIO_c, m30, 0x2C);
+WWHD_OFFSET(kiHIO_c, m34, 0x30);
+WWHD_OFFSET(kiHIO_c, m38, 0x34);
+WWHD_OFFSET(kiHIO_c, m3C, 0x38);
+WWHD_OFFSET(kiHIO_c, m40, 0x3C);
+WWHD_OFFSET(kiHIO_c, m44, 0x40);
+WWHD_OFFSET(kiHIO_c, m48, 0x44);
+WWHD_OFFSET(kiHIO_c, m4C, 0x48);
+WWHD_OFFSET(kiHIO_c, m4E, 0x4A);
+WWHD_OFFSET(kiHIO_c, m50, 0x4C);
+WWHD_OFFSET(kiHIO_c, m52, 0x4E);
+WWHD_OFFSET(kiHIO_c, m54, 0x50);
+WWHD_OFFSET(kiHIO_c, _52, 0x52);
+WWHD_OFFSET(kiHIO_c, m58, 0x54);
+WWHD_OFFSET(kiHIO_c, __vtbl, 0x58);
+
+WWHD_OFFSET(dPa_followEcallBack_l, __vtbl, 0x00);
+WWHD_OFFSET(dPa_followEcallBack_l, _04, 0x04);
+
+WWHD_OFFSET(KiLineCheck, mpPolyPassChk, 0x00);
+WWHD_OFFSET(KiLineCheck, mpGrpPassChk, 0x04);
+WWHD_OFFSET(KiLineCheck, _08, 0x08);
+WWHD_OFFSET(KiLineCheck, __vtbl_10, 0x10);
+WWHD_OFFSET(KiLineCheck, _14, 0x14);
+WWHD_OFFSET(KiLineCheck, __vtbl_20, 0x20);
+WWHD_OFFSET(KiLineCheck, _24, 0x24);
+WWHD_OFFSET(KiLineCheck, __vtbl_58, 0x58);
+WWHD_OFFSET(KiLineCheck, mPass, 0x5C);
+WWHD_OFFSET(KiLineCheck, _63, 0x63);
+WWHD_OFFSET(KiLineCheck, __vtbl_64, 0x64);
+WWHD_OFFSET(KiLineCheck, mGrp, 0x68);
+
+WWHD_OFFSET(KiAttackInfo, mpObj, 0x00);
+WWHD_OFFSET(KiAttackInfo, mpActor, 0x04);
+WWHD_OFFSET(KiAttackInfo, mDamage, 0x08);
+WWHD_OFFSET(KiAttackInfo, mbDead, 0x09);
+WWHD_OFFSET(KiAttackInfo, mResultingAttackType, 0x0A);
+WWHD_OFFSET(KiAttackInfo, _0B, 0x0B);
+WWHD_OFFSET(KiAttackInfo, m0C, 0x0C);
+WWHD_OFFSET(KiAttackInfo, mPlCutBit, 0x12);
+WWHD_OFFSET(KiAttackInfo, pParticlePos, 0x14);
+WWHD_OFFSET(KiAttackInfo, mHitSoundId, 0x18);
+
+namespace KiAttackType { enum : u32 { LIGHT_ARROW=0x100000, ICE_ARROW=0x80000, FIRE_ARROW=0x40000, FIRE=0x200, WIND=0x200000 }; }
+enum { KI_JNT_J_KI_HEAD_e=0xE, fpcNm_BGN_e=0xF3, fpcNm_BGN2_e=0xF4, fpcNm_BGN3_e=0xF5 };
+
+WWHD_SIZE(dPa_followEcallBack_l,0x14);

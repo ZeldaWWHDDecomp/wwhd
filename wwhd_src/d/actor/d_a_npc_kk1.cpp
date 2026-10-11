@@ -11,35 +11,28 @@
 
 /* 0226C434 */
 static cPhs_State daNpc_Kk1_Create(fopAc_ac_c* i_this) {
-    WWHD_FUNC(0x0226C434, cPhs_State, i_this);
     return ((daNpc_Kk1_c*)i_this)->_create();
 }
-VERIFY(0x0226C434, daNpc_Kk1_Create);
 
 /* 0226C4C0 */
 static BOOL daNpc_Kk1_Delete(daNpc_Kk1_c* i_this) {
-    WWHD_FUNC(0x0226C4C0, BOOL, i_this);
     return i_this->_delete();
 }
-VERIFY(0x0226C4C0, daNpc_Kk1_Delete);
 
 /* 0226ECA4 */
 static BOOL daNpc_Kk1_Execute(daNpc_Kk1_c* i_this) {
-    WWHD_FUNC(0x0226ECA4, BOOL, i_this);
     return i_this->_execute();
 }
-VERIFY(0x0226ECA4, daNpc_Kk1_Execute);
 
 /* 0226EF40 */
 static BOOL daNpc_Kk1_Draw(daNpc_Kk1_c* i_this) {
-    WWHD_FUNC(0x0226EF40, BOOL, i_this);
     return i_this->_draw();
 }
-VERIFY(0x0226EF40, daNpc_Kk1_Draw);
 
 /* 0226EF44 */
 static BOOL daNpc_Kk1_IsDelete(daNpc_Kk1_c*) {
-    WWHD_FUNC(0x0226EF44, BOOL, (daNpc_Kk1_c*)nullptr);
     return TRUE;
 }
-VERIFY(0x0226EF44, daNpc_Kk1_IsDelete);
+
+/* WWHD glue (tools/verify/autoglue.py): method implementations are supplied by the part files.
+*/

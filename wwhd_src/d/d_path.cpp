@@ -1,105 +1,132 @@
-// Full HD path TU025AAEB8..025AB363; adjacent sinit inferred.
-#include "bindings.h"
-namespace d_path_cpp {
-static u32 pathInfo(u32 obj) {
- u32 vt = gabi::load<u32>(obj);
- return gabi::call_ptr<u32>(gabi::load<u32>(vt + 0x1AC), obj);
+/** d_path.cpp — stage and room paths.
+ * Based on tww d/d_path.cpp.
+ */
+#include "d/d_path.h"
+using Path = path_layout::dPath;
+using path_layout::dPnt;
+using path_layout::dStage_dPath_c;
+
+// HD: preserve this translation unit's original assertion strings and zero constant.
+static f32 pathZero;
+
+/* 025AAEB8 */
+dPnt* dPath_GetPnt(Path* path, s32 index) {
+    if (!path)
+        JUTAssertion_showAssert("d_path.cpp", 30, "path != (0)");
+    bool valid = index >= 0 && index < path->m_num;
+    if (!valid) {
+        JUTAssertion_showAssert("d_path.cpp", 31, "0 <= pnt_index && pnt_index < path->m_num");
+        if (!path)
+            return nullptr;
+    }
+    dPnt* points = path->m_points;
+    if (!points || index < 0 || index >= path->m_num)
+        return nullptr;
+    return &points[index];
 }
-static u32 GetPnt(u32 path, s32 index) {
- WWHD_FUNC(0x025AAEB8, u32, path, index);
- if (path == 0) gabi::call<void>(0x0273AA24, 0x10052498u, 30u, 0x10052460u);
- bool valid = index >= 0 && index < gabi::load<u16>(path);
- if (!valid) {
-  gabi::call<void>(0x0273AA24, 0x10052498u, 31u, 0x1005246Cu);
-  if (path == 0) return 0;
- }
- u32 points = gabi::load<u32>(path + 8);
- if (points == 0 || index < 0 || index >= gabi::load<u16>(path)) return 0;
- return points + (u32)index * 16;
+
+/* 025AAF88 */
+Path* dPath_GetRoomPathGuest(s32 index, s32 room) {
+    // HD: Guest suffix avoids the existing opaque-return binding of this name.
+    dStage_dPath_c* info;
+    if (room == -1) {
+        info = dPath_getStage()->getPath2Inf();
+    } else {
+        if (static_cast<u32>(room) >= 64)
+            JUTAssertion_showAssert("d_path.cpp", 61, "0 <= room_no && room_no < 64");
+        auto* roomData = dPath_getRoomControl()->getStatusRoomDt(room);
+        if (!roomData)
+            return nullptr;
+        info = roomData->getPath2Inf();
+    }
+    if (!info || index < 0 || index >= info->num)
+        return nullptr;
+    return &info->m_path[index];
 }
-VERIFY(0x025AAEB8, GetPnt);
-static u32 GetRoomPath(s32 index, s32 room) {
- WWHD_FUNC(0x025AAF88, u32, index, room);
- u32 info;
- if (room == -1) {
-  u32 game = gabi::call<u32>(0x025200D4);
-  info = pathInfo(game + 0x5150);
- } else {
-  if ((u32)room >= 64) gabi::call<void>(0x0273AA24, 0x100524A4u, 61u, 0x100524B0u);
-  u32 game = gabi::call<u32>(0x025200D4);
-  u32 obj = gabi::call<u32>(0x025C11DC, game + 0x51CC, room);
-  if (obj == 0) return 0;
-  info = pathInfo(obj);
- }
- if (info == 0 || index < 0 || index >= gabi::load<s32>(info)) return 0;
- return gabi::load<u32>(info + 4) + (u32)index * 12;
+
+/* 025AB070 */
+Path* dPath_GetNextRoomPath(Path* path, s32 room) {
+    // HD: get the play object once, before the room branch.
+    auto* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    dStage_dPath_c* info;
+    u32 next;
+    if (room == -1) {
+        info = reinterpret_cast<path_layout::dStage_dt_c*>(game->play.mStageData)->getPath2Inf();
+        next = path->m_nextID;
+    } else {
+        auto* control = reinterpret_cast<path_layout::roomControl_view*>(&game->play.mRoomCtrl);
+        auto* roomData = control->getStatusRoomDt(room);
+        if (!roomData)
+            return nullptr;
+        info = roomData->getPath2Inf();
+        next = path->m_nextID;
+    }
+    if (!info || next == 0xFFFF)
+        return nullptr;
+    if (static_cast<s32>(next) >= info->num) {
+        JUTAssertion_showAssert("d_path.cpp", 114, "0 <= next_id && next_id < pd->num");
+        if (static_cast<s32>(next) >= info->num)
+            return nullptr;
+    }
+    return &info->m_path[next];
 }
-VERIFY(0x025AAF88, GetRoomPath);
-static u32 GetNextRoomPath(u32 path, s32 room) {
- WWHD_FUNC(0x025AB070, u32, path, room);
- u32 game = gabi::call<u32>(0x025200D4);
- u32 info;
- u32 next;
- if (room == -1) {
-  info = pathInfo(game + 0x5150);
-  next = gabi::load<u16>(path + 2);
- } else {
-  u32 obj = gabi::call<u32>(0x025C11DC, game + 0x51CC, room);
-  if (obj == 0) return 0;
-  info = pathInfo(obj);
-  next = gabi::load<u16>(path + 2);
- }
- if (info == 0 || next == 0xFFFF) return 0;
- if ((s32)next >= gabi::load<s32>(info)) {
-  gabi::call<void>(0x0273AA24, 0x100524F8u, 114u, 0x100524D4u);
-  if ((s32)next >= gabi::load<s32>(info)) return 0;
- }
- return gabi::load<u32>(info + 4) + next * 12;
+
+/* 025AB184 */
+s32 dPath_GetPolyRoomPathVec(cBgS_PolyInfo* poly, cXyz* out, be<s32>* arg) {
+    // HD: pointer ABI for polyInfo; retain the original 32-bit result.
+    s32 room = dPath_getBgsp()->GetRoomId(poly);
+    s32 index = dPath_getBgsp()->GetRoomPathId(poly);
+    f32 zero = pathZero;
+    out->y = zero;
+    out->z = zero;
+    out->x = zero;
+    *arg = 0;
+    if (room == -1)
+        return 0;
+    Path* path = dPath_GetRoomPathGuest(index, room);
+    if (!path)
+        return 0;
+    u32 sw = path->field4_0x6;
+    if (sw != 0xFF && dComIfGs_isSwitch(sw, room))
+        return 0;
+    s32 point = dPath_getBgsp()->GetRoomPathPntNo(poly);
+    if (point == 0xFF || point < 0)
+        return 0;
+    u32 count = path->m_num;
+    if (static_cast<u32>(point) >= count)
+        return 0;
+    dPnt* points = path->m_points;
+    dPnt* current = &points[point];
+    dPnt* next = static_cast<u32>(point) == count - 1 ? points : current + 1;
+    f32 a = current->m_position.x;
+    f32 b = next->m_position.x;
+    out->x = b - a;
+    b = next->m_position.y;
+    a = current->m_position.y;
+    out->y = b - a;
+    b = next->m_position.z;
+    a = current->m_position.z;
+    out->z = b - a;
+    *arg = path->mArg0;
+    return 1;
 }
-VERIFY(0x025AB070, GetNextRoomPath);
-static s32 GetPolyRoomPathVec(u32 poly, u32 out, u32 arg) {
- WWHD_FUNC(0x025AB184, s32, poly, out, arg);
- u32 game = gabi::call<u32>(0x025200D4);
- s32 room = gabi::call<s32>(0x024EF130, game + 0x12A0, poly);
- game = gabi::call<u32>(0x025200D4);
- s32 index = gabi::call<s32>(0x024EF360, game + 0x12A0, poly);
- f32 zero = gabi::load<f32>(0x10052504);
- gabi::store<f32>(out + 4, zero);
- gabi::store<f32>(out + 8, zero);
- gabi::store<f32>(out, zero);
- gabi::store<u32>(arg, 0);
- if (room == -1) return 0;
- u32 path = GetRoomPath(index, room);
- if (path == 0) return 0;
- u32 sw = gabi::load<u8>(path + 6);
- if (sw != 255) {
-  u32 save = gabi::load<u32>(0x101F84DC);
-  if (gabi::call<s32>(0x025BA0C0, save + 0x20, sw, room) != 0) return 0;
- }
- game = gabi::call<u32>(0x025200D4);
- s32 point = gabi::call<s32>(0x024EF37C, game + 0x12A0, poly);
- if (point == 255 || point < 0) return 0;
- u32 count = gabi::load<u16>(path);
- if ((u32)point >= count) return 0;
- u32 points = gabi::load<u32>(path + 8);
- u32 cur = points + (u32)point * 16;
- u32 next = (u32)point == count - 1 ? points : cur + 16;
- f32 a = gabi::load<f32>(cur + 4);
- f32 b = gabi::load<f32>(next + 4);
- gabi::store<f32>(out, b - a);
- b = gabi::load<f32>(next + 8);
- a = gabi::load<f32>(cur + 8);
- gabi::store<f32>(out + 4, b - a);
- b = gabi::load<f32>(next + 12);
- a = gabi::load<f32>(cur + 12);
- gabi::store<f32>(out + 8, b - a);
- gabi::store<u32>(arg, gabi::load<u8>(path + 4));
- return 1;
-}
-VERIFY(0x025AB184, GetPolyRoomPathVec);
+
+/* 025AB2D0 */
 static void __sinit_d_path_cpp() {
- WWHD_FUNC(0x025AB2D0, void, (u32)0);
- sinit_header_statics(0x1047B30C, 0x101EA560);
+    sinit_header_statics(0x1047B30C, 0x101EA560);
 }
-VERIFY(0x025AB2D0, __sinit_d_path_cpp);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+str 10052498 in 025AAEB8
+str 10052460 in 025AAEB8
+str 1005246C in 025AAEB8
+str 100524A4 in 025AAF88
+str 100524B0 in 025AAF88
+str 100524F8 in 025AB070
+str 100524D4 in 025AB070
+data pathZero 10052504
+ext 025C11DC path_layout::dStage_dt_c* path_layout::roomControl_view::getStatusRoomDt(s32 room)
+ext 024EF130 s32 path_layout::dBgS_view::GetRoomId(cBgS_PolyInfo* poly)
+ext 024EF360 s32 path_layout::dBgS_view::GetRoomPathId(cBgS_PolyInfo* poly)
+ext 024EF37C s32 path_layout::dBgS_view::GetRoomPathPntNo(cBgS_PolyInfo* poly)
+*/

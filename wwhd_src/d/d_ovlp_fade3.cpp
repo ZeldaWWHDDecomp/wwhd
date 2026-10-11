@@ -1,97 +1,178 @@
-#include "bindings.h"
-namespace {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static s16 sh(u32 a){return gabi::load<s16>(a);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static f32 lf(u32 a){return gabi::load<f32>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void ss(u32 a,u16 v){gabi::store<u16>(a,v);}
-static void sb(u32 a,u8 v){gabi::store<u8>(a,v);}
-static void sf(u32 a,f32 v){gabi::store<f32>(a,v);}
-static void phase(u32 self,u32 f){ss(self+0xD0,0);ss(self+0xD2,0xFFFF);st(self+0xD4,f);}
-static BOOL Execute(u32 self){
-    WWHD_FUNC(0x025A2514,BOOL,self);
-    s16 index=sh(self+0xD2);u32 receiver=self+(s32)sh(self+0xD0);
-    u32 target=index<0?ld(self+0xD4):ld(ld(receiver+(s32)sh(self+0xD6))+(u32)(s32)index*8+4);
-    return gabi::call_ptr<BOOL>(target,receiver);
+/** Snapshot fade overlap. */
+#include "d/d_ovlp_fade3.h"
+
+// HD: This TU's derived process and draw-packet vtables.
+enum : u32 {
+    overlapVtable = 0x1005191C,
+    snapshotVtable = 0x10051940,
+    texturePacketVtable = 0x1004CBC0,
+};
+
+static dOvlpFadeRenderer_c* l_renderer;
+static dOvlpDrawRegistry_c* l_drawRegistry;
+static f32 mFadeRate;
+static u8 mFade;
+static f32 l_fadeReset = 1.0f;
+static f32 l_fadeBias = -0.04f;
+static f32 l_fadeComplete = 0.0f;
+static f32 l_fadeSpeed;
+
+static BOOL dOvlpFd3_execFirstSnap(u32);
+static BOOL dOvlpFd3_execFadeOut(u32);
+static BOOL dOvlpFd3_execNextSnap(u32);
+static BOOL dOvlpFd3_execFadeIn(u32);
+
+/* 025A2514 */
+static BOOL dOvlpFd3_Execute(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    return (i_this->*i_this->mExecuteFn)();
 }
-VERIFY(0x025A2514,Execute);
-static BOOL Delete(u32 self){
-    WWHD_FUNC(0x025A2558,BOOL,self);
-    if(self){gabi::call(0x0252CCFC,self+0x14C,0);gabi::call(0x0252CCFC,self+0xDC,0);gabi::call(0x0252CCFC,self+0xD8,0);gabi::call(0x025DD630,self,0);}
-    f32 value=lf(0x1005192C);u32 renderer=ld(0x101F9968);sb(0x101D616C,0);sf(0x101D6160,value);
-    gabi::call(0x027F88C8,renderer,4);gabi::call(0x02728EE0,ld(0x101F86B4));return TRUE;
-}
-VERIFY(0x025A2558,Delete);
-static u32 constructor(u32 self){
-    WWHD_FUNC(0x025A25F0,u32,self);
-    if(!self)self=gabi::call<u32>(0x0273AD10,0x1C0);
-    if(self){gabi::call(0x025DD5F0,self);st(self+0xB4,0x1005191C);gabi::call(0x0252CCBC,self+0xD8);st(self+0xD8,0x10051940);
-        gabi::call(0x0252CCBC,self+0xDC);st(self+0xDC,0x1004CBC0);gabi::call(0x0252CCBC,self+0x14C);
-        phase(self,0x025A26D8);st(self+0x14C,0x1004CBC0);gabi::call(0x02728DE8,ld(0x101F86B4),self);
-    }return self;
-}
-VERIFY(0x025A25F0,constructor);
-static u32 Create(u32 self){
-    WWHD_FUNC(0x025A26AC,u32,self);
-    if(self)gabi::call(0x025A25F0,self);return 4;
-}
-VERIFY(0x025A26AC,Create);
-static BOOL firstSnap(u32 self){
-    WWHD_FUNC(0x025A26D8,BOOL,self);
-    if(lb(self+0x1BC)){phase(self,0x025A2750);gabi::call(0x025DBDDC,self);sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);
-        f32 a=lf(0x1047BA0C),b=lf(0x10051930);gabi::call(0x0252F590,-gabi::fadds_ppc(a,b));}
+
+/* 025A2558 */
+static BOOL dOvlpFd3_Delete(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    if (self) {
+        dDlst_base_destroy(&i_this->field_0x120, 0);
+        dDlst_base_destroy(&i_this->field_0xdc, 0);
+        dDlst_base_destroy(&i_this->mSnapshot_c, 0);
+        fpcBs_destruct(&i_this->base, 0);
+    }
+    f32 value = l_fadeReset;
+    dOvlpFadeRenderer_c* renderer = l_renderer;
+    mFade = 0;
+    mFadeRate = value;
+    renderer->release(4);
+    l_drawRegistry->clear();
     return TRUE;
 }
-VERIFY(0x025A26D8,firstSnap);
-static BOOL fadeOut(u32 self){
-    WWHD_FUNC(0x025A2750,BOOL,self);
-    sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);
-    if(lb(0x101D616C)&&lf(0x101D6160)==lf(0x10051934)&&gabi::call<u32>(0x025DBDC4,self)){
-        gabi::call(0x025DBD74);phase(self,0x025A27E4);
-    }return TRUE;
+
+/* 025A25F0 */
+static u32 dOvlpFd3_construct(u32 self) {
+    if (!self) self = gabi::ea(operator_new(sizeof(dOvlpFd3_c)));
+    if (self) {
+        dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+        fpcBs_construct(&i_this->base);
+        i_this->base.__vtbl = overlapVtable;
+        dDlst_base_construct(&i_this->mSnapshot_c);
+        i_this->mSnapshot_c.__vtbl = snapshotVtable;
+        dDlst_base_construct(&i_this->field_0xdc);
+        i_this->field_0xdc.__vtbl = texturePacketVtable;
+        dDlst_base_construct(&i_this->field_0x120);
+        i_this->setExecute(dOvlpFd3_execFirstSnap);
+        i_this->field_0x120.__vtbl = texturePacketVtable;
+        l_drawRegistry->add(i_this);
+    }
+    return self;
 }
-VERIFY(0x025A2750,fadeOut);
-static BOOL nextSnap(u32 self){
-    WWHD_FUNC(0x025A27E4,BOOL,self);
-    ss(self+0xD2,0xFFFF);st(self+0xD4,0x025A2850);sb(self+0x1BC,0);ss(self+0xD0,0);
-    u32 play=gabi::call<u32>(0x025200D4);f32 a=lf(0x10051930);sb(play+0x5AC9,1);f32 b=lf(0x1047BA0C);
-    gabi::call(0x0252F590,gabi::fadds_ppc(a,b));return TRUE;
+
+/* 025A26AC */
+static u32 dOvlpFd3_Create(u32 self) {
+    if (self) dOvlpFd3_construct(self);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x025A27E4,nextSnap);
-static BOOL fadeIn(u32 self){
-    WWHD_FUNC(0x025A2850,BOOL,self);
-    gabi::call(0x025DBD24);sb(gabi::call<u32>(0x025200D4)+0x5AC9,0);
-    if(!lb(0x101D616C)){gabi::call(0x025DBDDC,self);sb(gabi::call<u32>(0x025200D4)+0x5AC9,1);}
+
+/* 025A26D8 */
+static BOOL dOvlpFd3_execFirstSnap(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    if (i_this->field_0x164) {
+        i_this->setExecute(dOvlpFd3_execFadeOut);
+        fopOvlpM_Done(i_this);
+        dComIfGp_setWindowNum(0);
+        f32 speed = l_fadeSpeed;
+        f32 bias = l_fadeBias;
+        // HD: Snapshot fades use a configurable, single-precision speed.
+        mDoGph_gInf_c::fadeOut(-gabi::fadds_ppc(speed, bias));
+    }
     return TRUE;
 }
-VERIFY(0x025A2850,fadeIn);
-static void nativeDraw(u32 self,u32 context){
-    WWHD_FUNC(0x025A28B0,void,self,context);
-    u8 first=lb(self+0x1BC);u32 renderer=ld(0x101F9968);
-    if(!first){gabi::call(0x027F84A4,renderer,4,context);sb(self+0x1BC,1);return;}
-    gabi::call(0x027F8974,renderer,4,context,1);
-}
-VERIFY(0x025A28B0,nativeDraw);
-static void sinit(){
-    WWHD_FUNC(0x025A291C,void,(u32)0);
-    st(0x1047B130,0);st(0x1047B128,0);st(0x1047B134,0);st(0x1047B12C,0);
-    gabi::call(0x028F026C,0x101EA34C);f32 a=lf(0x10051938),b=lf(0x1005193C);sf(0x1047B11C,a);sf(0x1047B120,b);
-    gabi::call(0x028ED6F8,0x1047B124);gabi::call(0x028F026C,0x101EA358);gabi::call(0x028EAB2C,0x1047B125);gabi::call(0x028F026C,0x101EA364);
-}
-VERIFY(0x025A291C,sinit);
-static BOOL Draw(){
-    WWHD_FUNC(0x025A29B0,BOOL,(u32)0);
+
+/* 025A2750 */
+static BOOL dOvlpFd3_execFadeOut(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    dComIfGp_setWindowNum(0);
+    if (mFade && mFadeRate == l_fadeComplete && fopOvlpM_IsOutReq(i_this)) {
+        fopOvlpM_SceneIsStart();
+        i_this->setExecute(dOvlpFd3_execNextSnap);
+    }
     return TRUE;
 }
-VERIFY(0x025A29B0,Draw);
-static BOOL IsDelete(){
-    WWHD_FUNC(0x025A29B8,BOOL,(u32)0);
+
+/* 025A27E4 */
+static BOOL dOvlpFd3_execNextSnap(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    i_this->mExecuteFn.i = -1;
+    i_this->mExecuteFn.f = gabi::guest_fn((const void*)dOvlpFd3_execFadeIn);
+    i_this->field_0x164 = 0;
+    i_this->mExecuteFn.d = 0;
+    dOvlp_play_c* play = dOvlp_getPlay();
+    f32 bias = l_fadeBias;
+    play->mWindowNum = 1;
+    f32 speed = l_fadeSpeed;
+    mDoGph_gInf_c::fadeOut(gabi::fadds_ppc(bias, speed));
     return TRUE;
 }
-VERIFY(0x025A29B8,IsDelete);
-static void packetStub(){
-    WWHD_FUNC(0x025A29C0,void,(u32)0);
+
+/* 025A2850 */
+static BOOL dOvlpFd3_execFadeIn(u32 self) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    fopOvlpM_SceneIsStop();
+    dComIfGp_setWindowNum(0);
+    if (!mFade) {
+        fopOvlpM_Done(i_this);
+        dComIfGp_setWindowNum(1);
+    }
+    return TRUE;
 }
-VERIFY(0x025A29C0,packetStub);
+
+/* 025A28B0 */
+static void dOvlpFd3_nativeDraw(u32 self, u32 context) {
+    dOvlpFd3_c* i_this = gabi::at<dOvlpFd3_c>(self);
+    u8 first = i_this->field_0x164;
+    dOvlpFadeRenderer_c* renderer = l_renderer;
+    if (!first) {
+        renderer->capture(4, context);
+        i_this->field_0x164 = 1;
+        return;
+    }
+    renderer->draw(4, context, 1);
 }
+
+/* 025A291C */
+static void __sinit_d_ovlp_fade3_cpp() {
+    sinit_header_statics_rodata(0x1047B11C, 0x101EA34C, 0x1047B128, 0x10051938);
+}
+
+/* 025A29B0 */
+static BOOL dOvlpFd3_Draw() { return TRUE; }
+
+/* 025A29B8 */
+static BOOL dOvlpFd3_IsDelete() { return TRUE; }
+
+/* 025A29C0 */
+// HD: Snapshot work is handled by the native renderer callback.
+static void dDlst_snapShot_draw() {}
+
+/* WWHD glue
+data l_renderer 101F9968
+data l_drawRegistry 101F86B4
+data mFadeRate 101D6160
+data mFade 101D616C
+data l_fadeReset 1005192C
+data l_fadeBias 10051930
+data l_fadeComplete 10051934
+data l_fadeSpeed 1047BA0C
+ext 0252CCBC void dDlst_base_construct(dDlst_base_c*)
+ext 0252CCFC void dDlst_base_destroy(dDlst_base_c*, s32)
+ext 025DD5F0 void fpcBs_construct(base_process_class*)
+ext 025DD630 void fpcBs_destruct(base_process_class*, s32)
+ext 025DBDDC void fopOvlpM_Done(dOvlpFd3_c*)
+ext 025DBDC4 u32 fopOvlpM_IsOutReq(dOvlpFd3_c*)
+ext 025DBD74 void fopOvlpM_SceneIsStart()
+ext 025DBD24 void fopOvlpM_SceneIsStop()
+ext 0252F590 void mDoGph_fadeOut(f32)
+ext 027F84A4 void dOvlpFadeRenderer_c::capture(s32, u32)
+ext 027F8974 void dOvlpFadeRenderer_c::draw(s32, u32, s32)
+ext 027F88C8 void dOvlpFadeRenderer_c::release(s32)
+ext 02728DE8 void dOvlpDrawRegistry_c::add(dOvlpFd3_c*)
+ext 02728EE0 void dOvlpDrawRegistry_c::clear()
+*/

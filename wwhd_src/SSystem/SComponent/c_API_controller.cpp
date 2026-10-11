@@ -1,268 +1,330 @@
-#include "gabi.h"
-using namespace gabi;
-namespace c_API_controller {
-u32 api_020075C0(s32 port) {
- WWHD_FUNC(0x020075C0,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return buttons;
+#include "SSystem/SComponent/c_API_controller.h"
+using gabi::fmadds;
+using gabi::fmuls_ppc;
+using gabi::fnmsubs;
+using gabi::frsqrte;
+using gabi::fsubs_ppc;
+using gabi::ftoi;
+// HD: only port zero exists; pad words and stick positions use the HD layout.
+// HD: retain the two different stick magnitude algorithms and PPC intermediate rounding.
+static cAPIController::PadPointer l_pad;
+static f32 l_zero;
+static f32 l_one;
+static f32 l_positiveHalfPi;
+static f32 l_negativeHalfPi;
+static f32 l_angleScale;
+static f32 l_half;
+static f32 l_three;
+static f32 l_negativePi;
+static f32 l_pi;
+static cAPIController::HeaderStatics l_headerStatics;
+static cAPIController::StaticRecords l_records;
+/* 020075C0 */
+u32 cAPICPad_ANY_BUTTON(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return buttons;
 }
-VERIFY(0x020075C0,api_020075C0);
-u32 api_020075E0(s32 port) {
- WWHD_FUNC(0x020075E0,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00010000)!=0;
+/* 020075E0 */
+u32 CPad_CHECK_HOLD_UP(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_UP) != 0;
 }
-VERIFY(0x020075E0,api_020075E0);
-u32 api_0200760C(s32 port) {
- WWHD_FUNC(0x0200760C,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00020000)!=0;
+/* 0200760C */
+u32 CPad_CHECK_HOLD_DOWN(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_DOWN) != 0;
 }
-VERIFY(0x0200760C,api_0200760C);
-u32 api_02007638(s32 port) {
- WWHD_FUNC(0x02007638,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00004000)!=0;
+/* 02007638 */
+u32 CPad_CHECK_HOLD_Z(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_Z) != 0;
 }
-VERIFY(0x02007638,api_02007638);
-u32 api_02007664(s32 port) {
- WWHD_FUNC(0x02007664,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00000020)!=0;
+/* 02007664 */
+u32 CPad_CHECK_HOLD_R(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_R) != 0;
 }
-VERIFY(0x02007664,api_02007664);
-u32 api_02007690(s32 port) {
- WWHD_FUNC(0x02007690,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00000004)!=0;
+/* 02007690 */
+u32 CPad_CHECK_HOLD_L(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_L) != 0;
 }
-VERIFY(0x02007690,api_02007690);
-u32 api_020076BC(s32 port) {
- WWHD_FUNC(0x020076BC,u32,port);
- if(port)return 0;
- return load<u32>(load<u32>(0x101F5088)+0x124) & 1;
+/* 020076BC */
+u32 CPad_CHECK_HOLD_B(s32 port) {
+  if (port)
+    return 0;
+  return l_pad.mpPad->mButtonHold & cAPIController::BUTTON_B;
 }
-VERIFY(0x020076BC,api_020076BC);
-u32 api_020076E0(s32 port) {
- WWHD_FUNC(0x020076E0,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00000002)!=0;
+/* 020076E0 */
+u32 CPad_CHECK_HOLD_A(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_A) != 0;
 }
-VERIFY(0x020076E0,api_020076E0);
-u32 api_0200770C(s32 port) {
- WWHD_FUNC(0x0200770C,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00000008)!=0;
+/* 0200770C */
+u32 CPad_CHECK_HOLD_X(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_X) != 0;
 }
-VERIFY(0x0200770C,api_0200770C);
-u32 api_02007738(s32 port) {
- WWHD_FUNC(0x02007738,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x124);
- return (buttons & 0x00000010)!=0;
+/* 02007738 */
+u32 CPad_CHECK_HOLD_Y(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonHold;
+  return (buttons & cAPIController::BUTTON_Y) != 0;
 }
-VERIFY(0x02007738,api_02007738);
-u32 api_02007764(s32 port) {
- WWHD_FUNC(0x02007764,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00010000)!=0;
+/* 02007764 */
+u32 CPad_CHECK_TRIG_UP(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_UP) != 0;
 }
-VERIFY(0x02007764,api_02007764);
-u32 api_02007790(s32 port) {
- WWHD_FUNC(0x02007790,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00020000)!=0;
+/* 02007790 */
+u32 CPad_CHECK_TRIG_DOWN(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_DOWN) != 0;
 }
-VERIFY(0x02007790,api_02007790);
-u32 api_020077BC(s32 port) {
- WWHD_FUNC(0x020077BC,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00040000)!=0;
+/* 020077BC */
+u32 CPad_CHECK_TRIG_LEFT(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_LEFT) != 0;
 }
-VERIFY(0x020077BC,api_020077BC);
-u32 api_020077E8(s32 port) {
- WWHD_FUNC(0x020077E8,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00080000)!=0;
+/* 020077E8 */
+u32 CPad_CHECK_TRIG_RIGHT(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_RIGHT) != 0;
 }
-VERIFY(0x020077E8,api_020077E8);
-u32 api_02007814(s32 port) {
- WWHD_FUNC(0x02007814,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00004000)!=0;
+/* 02007814 */
+u32 CPad_CHECK_TRIG_Z(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_Z) != 0;
 }
-VERIFY(0x02007814,api_02007814);
-u32 api_02007840(s32 port) {
- WWHD_FUNC(0x02007840,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000020)!=0;
+/* 02007840 */
+u32 CPad_CHECK_TRIG_R(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_R) != 0;
 }
-VERIFY(0x02007840,api_02007840);
-u32 api_0200786C(s32 port) {
- WWHD_FUNC(0x0200786C,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000004)!=0;
+/* 0200786C */
+u32 CPad_CHECK_TRIG_L(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_L) != 0;
 }
-VERIFY(0x0200786C,api_0200786C);
-u32 api_02007898(s32 port) {
- WWHD_FUNC(0x02007898,u32,port);
- if(port)return 0;
- return load<u32>(load<u32>(0x101F5088)+0x18) & 1;
+/* 02007898 */
+u32 CPad_CHECK_TRIG_B(s32 port) {
+  if (port)
+    return 0;
+  return l_pad.mpPad->mButtonTrig & cAPIController::BUTTON_B;
 }
-VERIFY(0x02007898,api_02007898);
-u32 api_020078BC(s32 port) {
- WWHD_FUNC(0x020078BC,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000002)!=0;
+/* 020078BC */
+u32 CPad_CHECK_TRIG_A(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_A) != 0;
 }
-VERIFY(0x020078BC,api_020078BC);
-u32 api_020078E8(s32 port) {
- WWHD_FUNC(0x020078E8,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000008)!=0;
+/* 020078E8 */
+u32 CPad_CHECK_TRIG_X(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_X) != 0;
 }
-VERIFY(0x020078E8,api_020078E8);
-u32 api_02007914(s32 port) {
- WWHD_FUNC(0x02007914,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000010)!=0;
+/* 02007914 */
+u32 CPad_CHECK_TRIG_Y(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_Y) != 0;
 }
-VERIFY(0x02007914,api_02007914);
-u32 api_02007940(s32 port) {
- WWHD_FUNC(0x02007940,u32,port);
- if(port)return 0;
- u32 buttons=load<u32>(load<u32>(0x101F5088)+0x18);
- return (buttons & 0x00000800)!=0;
+/* 02007940 */
+u32 CPad_CHECK_TRIG_START(s32 port) {
+  if (port)
+    return 0;
+  u32 buttons = l_pad.mpPad->mButtonTrig;
+  return (buttons & cAPIController::BUTTON_START) != 0;
 }
-VERIFY(0x02007940,api_02007940);
-f32 api_0200796C(s32 port) {
- WWHD_FUNC(0x0200796C,f32,port);
- if(port)return load<f32>(0x10000B24);
- return load<f32>(load<u32>(0x101F5088)+0x130);
+/* 0200796C */
+f32 CPad_GET_STICK_POS_X(s32 port) {
+  if (port)
+    return l_zero;
+  return l_pad.mpPad->mMainStickPosX;
 }
-VERIFY(0x0200796C,api_0200796C);
-f32 api_02007990(s32 port) {
- WWHD_FUNC(0x02007990,f32,port);
- if(port)return load<f32>(0x10000B24);
- return load<f32>(load<u32>(0x101F5088)+0x134);
+/* 02007990 */
+f32 CPad_GET_STICK_POS_Y(s32 port) {
+  if (port)
+    return l_zero;
+  return l_pad.mpPad->mMainStickPosY;
 }
-VERIFY(0x02007990,api_02007990);
-f32 api_02007AFC(s32 port) {
- WWHD_FUNC(0x02007AFC,f32,port);
- if(port)return load<f32>(0x10000B24);
- return load<f32>(load<u32>(0x101F5088)+0x138);
+/* 02007AFC */
+f32 CPad_GET_SUBSTICK_POS_X(s32 port) {
+  if (port)
+    return l_zero;
+  return l_pad.mpPad->mCStickPosX;
 }
-VERIFY(0x02007AFC,api_02007AFC);
-f32 api_02007B20(s32 port) {
- WWHD_FUNC(0x02007B20,f32,port);
- if(port)return load<f32>(0x10000B24);
- return load<f32>(load<u32>(0x101F5088)+0x13C);
+/* 02007B20 */
+f32 CPad_GET_SUBSTICK_POS_Y(s32 port) {
+  if (port)
+    return l_zero;
+  return l_pad.mpPad->mCStickPosY;
 }
-VERIFY(0x02007B20,api_02007B20);
-f32 api_020079B4(s32 port) {
- WWHD_FUNC(0x020079B4,f32,port);
- if(port)return load<f32>(0x10000B24);
- u32 pad=load<u32>(0x101F5088);f32 y=load<f32>(pad+0x134),x=load<f32>(pad+0x130);
- f32 squared=fmadds(x,x,fmuls_ppc(y,y));
- f32 magnitude=call<f32>(0x028F4384,squared);
- f32 bound=load<f32>(0x10000B28);
- return fsubs_ppc(bound,magnitude)>=0?magnitude:bound;
+/* 020079B4 */
+f32 CPad_GET_STICK_VALUE(s32 port) {
+  if (port)
+    return l_zero;
+  auto *pad = l_pad.mpPad.get();
+  f32 y = pad->mMainStickPosY, x = pad->mMainStickPosX;
+  f32 squared = fmadds(x, x, fmuls_ppc(y, y));
+  f32 magnitude = cAPIController_sqrt(squared);
+  f32 bound = l_one;
+  return fsubs_ppc(bound, magnitude) >= 0 ? magnitude : bound;
 }
-VERIFY(0x020079B4,api_020079B4);
-s16 api_02007A1C(s32 port) {
- WWHD_FUNC(0x02007A1C,s16,port);
- if(port)return 0;
- u32 pad=load<u32>(0x101F5088);f32 zero=load<f32>(0x10000B24),y=load<f32>(pad+0x134),x=load<f32>(pad+0x130);
- f32 angle;
- if(y!=zero)angle=call<f32>(0x028F4D28,x,-y);
- else if(x>zero)angle=load<f32>(0x10000B2C);
- else {f32 again=load<f32>(pad+0x130);angle=again>=0?zero:load<f32>(0x10000B30);}
- return s16(ftoi(fmuls_ppc(angle,load<f32>(0x10000B34))));
+/* 02007A1C */
+s16 CPad_GET_STICK_ANGLE(s32 port) {
+  if (port)
+    return 0;
+  auto *pad = l_pad.mpPad.get();
+  f32 zero = l_zero, y = pad->mMainStickPosY, x = pad->mMainStickPosX;
+  f32 angle;
+  if (y != zero)
+    angle = cAPIController_atan2(x, -y);
+  else if (x > zero)
+    angle = l_positiveHalfPi;
+  else {
+    f32 again = pad->mMainStickPosX;
+    angle = again >= 0 ? zero : l_negativeHalfPi;
+  }
+  return s16(ftoi(fmuls_ppc(angle, l_angleScale)));
 }
-VERIFY(0x02007A1C,api_02007A1C);
-f32 api_02007B44(s32 port) {
- WWHD_FUNC(0x02007B44,f32,port);
- f32 zero=load<f32>(0x10000B24);if(port)return zero;
- u32 pad=load<u32>(0x101F5088);f32 y=load<f32>(pad+0x13C),x=load<f32>(pad+0x138);
- f32 squared=fmadds(x,x,fmuls_ppc(y,y));f64 estimate=zero;
- if(squared>zero){
-  f32 three=load<f32>(0x10000B3C),half=load<f32>(0x10000B38);estimate=frsqrte(squared);
-  f32 esq=f32(estimate*round25(estimate));f32 eh=f32(estimate*round25(half));
-  f32 correction=fnmsubs(esq,squared,three);estimate=fmuls_ppc(correction,eh);
- }
- return f32(estimate*round25(squared));
+/* 02007B44 */
+f32 CPad_GET_SUBSTICK_VALUE(s32 port) {
+  f32 zero = l_zero;
+  if (port)
+    return zero;
+  auto *pad = l_pad.mpPad.get();
+  f32 y = pad->mCStickPosY, x = pad->mCStickPosX;
+  f32 squared = fmadds(x, x, fmuls_ppc(y, y));
+  f64 estimate = zero;
+  if (squared > zero) {
+    f32 three = l_three, half = l_half;
+    estimate = frsqrte(squared);
+    f32 esq = f32(estimate * round25(estimate));
+    f32 eh = f32(estimate * round25(half));
+    f32 correction = fnmsubs(esq, squared, three);
+    estimate = fmuls_ppc(correction, eh);
+  }
+  return f32(estimate * round25(squared));
 }
-VERIFY(0x02007B44,api_02007B44);
-s16 api_02007BA0(s32 port) {
- WWHD_FUNC(0x02007BA0,s16,port);
- if(port)return 0;
- f32 y=call<f32>(0x02007B20,s32(0));f32 x=call<f32>(0x02007AFC,s32(0));
- f32 angle=call<f32>(0x028F4D28,x,-y);
- return s16(ftoi(fmuls_ppc(load<f32>(0x10000B34),angle)));
+/* 02007BA0 */
+s16 CPad_GET_SUBSTICK_ANGLE(s32 port) {
+  if (port)
+    return 0;
+  f32 y = CPad_GET_SUBSTICK_POS_YCall(s32(0));
+  f32 x = CPad_GET_SUBSTICK_POS_XCall(s32(0));
+  f32 angle = cAPIController_atan2(x, -y);
+  return s16(ftoi(fmuls_ppc(l_angleScale, angle)));
 }
-VERIFY(0x02007BA0,api_02007BA0);
-f32 api_02007BFC(s32 port) {
- WWHD_FUNC(0x02007BFC,f32,port);
- if(!port && call<u32>(0x02007690,s32(0)))return load<f32>(0x10000B28);
- return load<f32>(0x10000B24);
+/* 02007BFC */
+f32 CPad_GET_ANALOG_L(s32 port) {
+  if (!port && CPad_CHECK_HOLD_LCall(s32(0)))
+    return l_one;
+  return l_zero;
 }
-VERIFY(0x02007BFC,api_02007BFC);
-f32 api_02007C50(s32 port) {
- WWHD_FUNC(0x02007C50,f32,port);
- if(!port && call<u32>(0x02007664,s32(0)))return load<f32>(0x10000B28);
- return load<f32>(0x10000B24);
+/* 02007C50 */
+f32 CPad_GET_ANALOG_R(s32 port) {
+  if (!port && CPad_CHECK_HOLD_RCall(s32(0)))
+    return l_one;
+  return l_zero;
 }
-VERIFY(0x02007C50,api_02007C50);
-u32 api_02007CA4(s32 port) {
- WWHD_FUNC(0x02007CA4,u32,port);
- if(port)return 0;
- return call<u32>(0x02007690,s32(0))!=0;
+/* 02007CA4 */
+u32 mDoCPd_L_LOCK_BUTTON(s32 port) {
+  if (port)
+    return 0;
+  return CPad_CHECK_HOLD_LCall(s32(0)) != 0;
 }
-VERIFY(0x02007CA4,api_02007CA4);
-u32 api_02007CDC(s32 port) {
- WWHD_FUNC(0x02007CDC,u32,port);
- if(port)return 0;
- return call<u32>(0x02007664,s32(0))!=0;
+/* 02007CDC */
+u32 mDoCPd_R_LOCK_BUTTON(s32 port) {
+  if (port)
+    return 0;
+  return CPad_CHECK_HOLD_RCall(s32(0)) != 0;
 }
-VERIFY(0x02007CDC,api_02007CDC);
-u32 api_02007D14(s32 port) {
- WWHD_FUNC(0x02007D14,u32,port);
- if(port)return 0;
- return call<u32>(0x0200786C,s32(0))!=0;
+/* 02007D14 */
+u32 mDoCPd_L_LOCK_TRIGGER(s32 port) {
+  if (port)
+    return 0;
+  return CPad_CHECK_TRIG_LCall(s32(0)) != 0;
 }
-VERIFY(0x02007D14,api_02007D14);
-u32 api_02007D4C(s32 port) {
- WWHD_FUNC(0x02007D4C,u32,port);
- if(port)return 0;
- return call<u32>(0x02007840,s32(0))!=0;
+/* 02007D4C */
+u32 mDoCPd_R_LOCK_TRIGGER(s32 port) {
+  if (port)
+    return 0;
+  return CPad_CHECK_TRIG_RCall(s32(0)) != 0;
 }
-VERIFY(0x02007D4C,api_02007D4C);
-void static_init() {
-  WWHD_FUNC(0x02007D84,void);
-  store<u32>(0x101FF390,0);store<u32>(0x101FF388,0);store<u32>(0x101FF394,0);store<u32>(0x101FF38C,0);
-  call<void>(0x028F026C,at<void>(0x1018C4B4));
-  f32 first=load<f32>(0x10000B40),second=load<f32>(0x10000B44);
-  store<f32>(0x101FF37C,first);store<f32>(0x101FF380,second);
-  call<void>(0x028ED6F8,at<void>(0x101FF384));call<void>(0x028F026C,at<void>(0x1018C4C0));
-  call<void>(0x028EAB2C,at<void>(0x101FF385));call<void>(0x028F026C,at<void>(0x1018C4CC));
+/* 02007D84 */
+void cAPICPad_staticInit() {
+  l_headerStatics.mZeroWords[2] = 0;
+  l_headerStatics.mZeroWords[0] = 0;
+  l_headerStatics.mZeroWords[3] = 0;
+  l_headerStatics.mZeroWords[1] = 0;
+  cAPIController_registerStatic(&l_records.mFirst);
+  f32 first = l_negativePi, second = l_pi;
+  l_headerStatics.mNegativePi = first;
+  l_headerStatics.mPi = second;
+  cAPIController_initFlag(&l_headerStatics.mFlag);
+  cAPIController_registerStatic(&l_records.mSecond);
+  cAPIController_initByte(&l_headerStatics.mByte);
+  cAPIController_registerStatic(&l_records.mThird);
 }
-VERIFY(0x02007D84,static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 028F4384 f32 cAPIController_sqrt(f32)
+ext 028F4D28 f32 cAPIController_atan2(f32, f32)
+ext 028F026C void cAPIController_registerStatic(void*)
+ext 028ED6F8 void cAPIController_initFlag(void*)
+ext 028EAB2C void cAPIController_initByte(void*)
+ext 02007B20 f32 CPad_GET_SUBSTICK_POS_YCall(s32)
+ext 02007AFC f32 CPad_GET_SUBSTICK_POS_XCall(s32)
+ext 02007690 u32 CPad_CHECK_HOLD_LCall(s32)
+ext 02007664 u32 CPad_CHECK_HOLD_RCall(s32)
+ext 0200786C u32 CPad_CHECK_TRIG_LCall(s32)
+ext 02007840 u32 CPad_CHECK_TRIG_RCall(s32)
+data l_zero 10000B24
+data l_one 10000B28
+data l_positiveHalfPi 10000B2C
+data l_negativeHalfPi 10000B30
+data l_angleScale 10000B34
+data l_half 10000B38
+data l_three 10000B3C
+data l_negativePi 10000B40
+data l_pi 10000B44
+data l_pad 101F5088
+data l_headerStatics 101FF37C
+data l_records 1018C4B4
+*/

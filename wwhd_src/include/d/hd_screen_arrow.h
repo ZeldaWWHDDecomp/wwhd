@@ -1,0 +1,146 @@
+/* HD: arrow-type icon, two element emitters and layout states; no GameCube counterpart. */
+#pragma once
+#include "bindings.h"
+struct hdArrow_emitter_c {
+    u8 _000[0x5C]; be<s32> mMaxFrame;
+    u8 _060[0x22C-0x60]; cXyz mGlobalTranslation;
+    u8 _238[0x247-0x238]; be<u8> mGlobalAlpha;
+    u8 _248[0x254-0x248]; be<u32> mFlags;
+    u8 _258[0x262-0x258]; be<u8> mCoordinateMode;
+};
+WWHD_OFFSET(hdArrow_emitter_c, mMaxFrame, 0x5C);
+WWHD_OFFSET(hdArrow_emitter_c, mGlobalTranslation, 0x22C);
+WWHD_OFFSET(hdArrow_emitter_c, mGlobalAlpha, 0x247);
+WWHD_OFFSET(hdArrow_emitter_c, mFlags, 0x254);
+WWHD_OFFSET(hdArrow_emitter_c, mCoordinateMode, 0x262);
+WWHD_SIZE(hdArrow_emitter_c, 0x263);
+struct hdArrow_paneVtable_c { u8 _00[0x5C]; be<u32> mFindPane; };
+struct hdArrow_pane_c { u8 _00[8]; gptr<hdArrow_paneVtable_c> mVtable; u8 _0C[0x46-0xC]; be<u8> mAlpha; };
+WWHD_OFFSET(hdArrow_pane_c, mVtable, 8);
+WWHD_OFFSET(hdArrow_pane_c, mAlpha, 0x46);
+WWHD_SIZE(hdArrow_pane_c, 0x47);
+WWHD_SIZE(hdArrow_paneVtable_c, 0x60);
+WWHD_OFFSET(hdArrow_paneVtable_c, mFindPane, 0x5C);
+struct hdArrow_stringVtable_c { u8 _00[0x14]; be<u32> mAssureTermination; };
+struct hdArrow_string_c {
+    gptr<be<u8>> mStringTop;
+    gptr<hdArrow_stringVtable_c> mVtable;
+    void setVtable(u32 address) { mVtable.v = address; }
+    void setText(const char* text) { mStringTop.v = gabi::guest_addr(text); }
+    void assureTermination() { gabi::call_ptr<void>(mVtable->mAssureTermination, this); }
+};
+WWHD_SIZE(hdArrow_stringVtable_c, 0x18);
+WWHD_OFFSET(hdArrow_stringVtable_c, mAssureTermination, 0x14);
+WWHD_SIZE(hdArrow_string_c, 8);
+WWHD_OFFSET(hdArrow_string_c, mVtable, 4);
+struct hdArrow_callback_c { be<s16> mThisDelta, mVirtualIndex; be<u32> mFunction; };
+struct hdArrow_state_c {
+    be<u32> mId;
+    gptr<be<u8>> mName;
+    be<u32> mVtable;
+    hdArrow_callback_c mEnter, mMove, mLeave, mUnused;
+    gptr<void> mContext;
+    void setName(const char* name) { mName.v = gabi::guest_addr(name); }
+};
+WWHD_SIZE(hdArrow_callback_c, 8);
+WWHD_OFFSET(hdArrow_callback_c, mVirtualIndex, 2);
+WWHD_OFFSET(hdArrow_callback_c, mFunction, 4);
+WWHD_SIZE(hdArrow_state_c, 0x30);
+WWHD_OFFSET(hdArrow_state_c, mName, 4);
+WWHD_OFFSET(hdArrow_state_c, mVtable, 8);
+WWHD_OFFSET(hdArrow_state_c, mEnter, 0xC);
+WWHD_OFFSET(hdArrow_state_c, mMove, 0x14);
+WWHD_OFFSET(hdArrow_state_c, mLeave, 0x1C);
+WWHD_OFFSET(hdArrow_state_c, mUnused, 0x24);
+WWHD_OFFSET(hdArrow_state_c, mContext, 0x2C);
+struct hdArrow_actionVtable_c { u8 _00[0x1C]; be<u32> mEnter; };
+struct hdArrow_action_c { gptr<hdArrow_actionVtable_c> mVtable; };
+struct hdArrow_machineVtable_c { u8 _00[0x14]; be<u32> mSetState; };
+struct hdArrow_machine_c { gptr<hdArrow_machineVtable_c> mVtable; };
+WWHD_SIZE(hdArrow_actionVtable_c, 0x20);
+WWHD_OFFSET(hdArrow_actionVtable_c, mEnter, 0x1C);
+WWHD_SIZE(hdArrow_action_c, 4);
+WWHD_SIZE(hdArrow_machineVtable_c, 0x18);
+WWHD_OFFSET(hdArrow_machineVtable_c, mSetState, 0x14);
+WWHD_SIZE(hdArrow_machine_c, 4);
+struct hdArrow_layoutVtable_c { u8 _00[0x14]; be<u32> mLoad; };
+struct hdArrow_layoutInfo_c { u8 _00[0xC]; gptr<hdArrow_pane_c> mpRoot; };
+struct hdArrow_layout_c {
+    u8 _00[4]; gptr<hdArrow_layoutInfo_c> mpInfo;
+    u8 _08[0xD4-8]; gptr<void> mpAnimation;
+    u8 _D8[8]; gptr<hdArrow_layoutVtable_c> mVtable;
+    u8 _E4[0x110-0xE4];
+};
+WWHD_SIZE(hdArrow_layoutVtable_c, 0x18);
+WWHD_OFFSET(hdArrow_layoutVtable_c, mLoad, 0x14);
+WWHD_SIZE(hdArrow_layoutInfo_c, 0x10);
+WWHD_OFFSET(hdArrow_layoutInfo_c, mpRoot, 0xC);
+WWHD_OFFSET(hdArrow_layout_c, mpInfo, 4);
+WWHD_OFFSET(hdArrow_layout_c, mpAnimation, 0xD4);
+WWHD_OFFSET(hdArrow_layout_c, mVtable, 0xE0);
+WWHD_SIZE(hdArrow_layout_c, 0x110);
+struct hdArrow_screenVtable_c { u8 _00[0x8C]; be<u32> mUpdate; };
+struct hdArrow_screen_c {
+    u8 _00[4]; gptr<hdArrow_screenVtable_c> mVtable;
+    u8 _08[0x10]; gptr<hdArrow_machine_c> mpStateMachine;
+    u8 _1C[4]; gptr<hdArrow_action_c> mpCurrentState;
+    u8 _24[8]; be<u32> mFirstBaseVtable, mSecondBaseVtable;
+    u8 _34[0x10]; gptr<hdArrow_layout_c> mpLayout;
+    u8 _48[8]; gptr<hdArrow_pane_c> mpPane[2];
+    gptr<hdArrow_emitter_c> mpEmitter[2]; cXyz mParticlePos;
+    be<u8> mArrowType, mDisplayRequested, mShown;
+    u8 _6F;
+    void* animation() { return mpLayout->mpAnimation; }
+    void killParticles();
+    void hide();
+    void setType();
+    void waitMove();
+    void changeInit();
+    void changeMove();
+    void killCurrent();
+    u32 setup(u32 a, u32 b, u32 c);
+    void hideParticles();
+    void stateExecute();
+    void toWait();
+    u32 loadScreen(u32 a, u32 b, u32 c, u32 d, u32 e);
+};
+WWHD_SIZE(hdArrow_screenVtable_c, 0x90);
+WWHD_OFFSET(hdArrow_screenVtable_c, mUpdate, 0x8C);
+WWHD_SIZE(hdArrow_screen_c, 0x70);
+WWHD_OFFSET(hdArrow_screen_c, mVtable, 4);
+WWHD_OFFSET(hdArrow_screen_c, mpStateMachine, 0x18);
+WWHD_OFFSET(hdArrow_screen_c, mpCurrentState, 0x20);
+WWHD_OFFSET(hdArrow_screen_c, mFirstBaseVtable, 0x2C);
+WWHD_OFFSET(hdArrow_screen_c, mSecondBaseVtable, 0x30);
+WWHD_OFFSET(hdArrow_screen_c, mpLayout, 0x44);
+WWHD_OFFSET(hdArrow_screen_c, mpPane, 0x50);
+WWHD_OFFSET(hdArrow_screen_c, mpEmitter, 0x58);
+WWHD_OFFSET(hdArrow_screen_c, mParticlePos, 0x60);
+WWHD_OFFSET(hdArrow_screen_c, mArrowType, 0x6C);
+WWHD_OFFSET(hdArrow_screen_c, mDisplayRequested, 0x6D);
+WWHD_OFFSET(hdArrow_screen_c, mShown, 0x6E);
+struct hdArrow_positionFrame_c { cXyz mPosition; u8 _0C[4]; };
+struct hdArrow_changeFrame_c { cXyz mSpawnPosition; u8 _0C[4]; hdArrow_positionFrame_c mPanePosition; };
+WWHD_SIZE(hdArrow_positionFrame_c, 0x10);
+WWHD_SIZE(hdArrow_changeFrame_c, 0x20);
+WWHD_OFFSET(hdArrow_changeFrame_c, mPanePosition, 0x10);
+struct hdArrow_heapManager_c { u8 _00[0x10]; gptr<void> mpHeap; };
+struct hdArrow_heapManagerPointer_c { gptr<hdArrow_heapManager_c> mpManager; };
+WWHD_SIZE(hdArrow_heapManager_c, 0x14);
+WWHD_OFFSET(hdArrow_heapManager_c, mpHeap, 0x10);
+WWHD_SIZE(hdArrow_heapManagerPointer_c, 4);
+void hdArrow_destroyBase(hdArrow_screen_c* screen, u32 flags);
+void hdArrow_constructBase(hdArrow_screen_c* screen);
+u32 hdArrow_arrowType();
+void hdArrow_setAnimationFrame(void* animation, u32 track, u32 mode, f32 frame);
+void hdArrow_startAnimation(void* animation, u32 track, u32 flags, f32 frame);
+u32 hdArrow_animationDone(void* animation, u32 track);
+hdArrow_emitter_c* hdArrow_spawnEmitter(dPa_control_c* manager, u32 group, u32 id, const cXyz* pos, u32 angle, u32 scale, u32 alpha, u32 callback, u32 setup, u32 primary, u32 environment, u32 scale2D);
+void hdArrow_panePosition(cXyz* out, hdArrow_pane_c* pane);
+u32 hdArrow_setupBase(hdArrow_screen_c* screen, hdArrow_string_c* name, u32 a, u32 b, u32 c);
+void hdArrow_hideBase(hdArrow_screen_c* screen);
+void hdArrow_executeState(gptr<hdArrow_machine_c>* machine);
+void hdArrow_changeState(gptr<hdArrow_machine_c>* machine, hdArrow_state_c* state);
+hdArrow_layout_c* hdArrow_allocLayout(u32 size, void* heap, u32 alignment);
+hdArrow_layout_c* hdArrow_constructLayout(hdArrow_layout_c* layout);
+void hdArrow_bindAnimation(void* animation, u32 track, hdArrow_string_c* name, hdArrow_string_c* archive);

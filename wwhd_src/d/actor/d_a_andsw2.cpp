@@ -1,252 +1,239 @@
+/**
+ * AND switch actor 2: six states for switch conditions, delays and events.
+ * GameCube names with HD behavior and layouts; verified against WWHD.
+ */
 #include "d/actor/d_a_andsw2.h"
-#include "bindings.h"
-// Reserve the outgoing linkage below the caller, including real nested helpers.
-template<class R = void, class... A>
-static R andsw2Call(u32 target, A... args) {
-    u32 callerSp = gabi::cpu->r[1];
-    gabi::Local<be<u32>[4]> linkage;
-    gabi::store<u32>(linkage.a, callerSp);
-    return gabi::call<R>(target, args...);
-}
-template<class R = void, class... A>
-static R andsw2CallPtr(u32 target, A... args) {
-    u32 callerSp = gabi::cpu->r[1];
-    gabi::Local<be<u32>[4]> linkage;
-    gabi::store<u32>(linkage.a, callerSp);
-    return gabi::call_ptr<R>(target, args...);
-}
-#undef WWHD_FUNC
-#define WWHD_FUNC(addr, R, ...) \
-    if (gabi::Activation::nested()) return andsw2Call<R>(addr __VA_OPT__(, ) __VA_ARGS__); \
-    gabi::Activation wwhd_activation_
 
-enum { ACT_ON_ALL, ACT_TIMER, ACT_ORDER, ACT_EVENT, ACT_OFF, ACT_WAIT };
-u8 andsw2GetSwbit2(daAndsw2_c* a) {
-    WWHD_FUNC(0x020519EC,u8,a);
-    return u32(a->mParameters)>>24;
+static Andsw2SaveData* l_saveInfo;
+static u32 l_actionGuard;
+static Andsw2ActionTable l_action;
+// HD: checked immutable function-pointer words copied into the guarded action table.
+static Andsw2Action l_actionInit[] = {
+    {0x02051B24}, {0x02051BD8}, {0x02051CB0}, {0x02051D6C}, {0x02051DE8}, {0x02051E4C},
+};
+static Andsw2HeaderStatics l_headerStatics;
+static Andsw2HeaderRecords l_headerRecords;
+
+/* 020519EC */
+u8 daAndsw2_c::getSwbit2() {
+    return u32(mParameters) >> 24;
 }
-VERIFY(0x020519EC,andsw2GetSwbit2);
-u8 andsw2GetSwbit(daAndsw2_c* a) {
-    WWHD_FUNC(0x020519F8,u8,a);
-    return u32(a->mParameters)>>16;
+/* 020519F8 */
+u8 daAndsw2_c::getSwbit() {
+    return u32(mParameters) >> 16;
 }
-VERIFY(0x020519F8,andsw2GetSwbit);
-u8 andsw2GetTopSw(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051A04,u8,a);
-    u8 sw=andsw2GetSwbit2(a);
-    if (sw!=0xFF) return sw;
-    sw=andsw2GetSwbit(a);
-    return sw!=0xFF ? u8(sw+1) : u8(0xFF);
+/* 02051A04 */
+u8 daAndsw2_c::getTopSw() {
+    // HD: cache each getter result; GameCube calls the selected getter twice.
+    u8 sw = getSwbit2();
+    if (sw != 0xFF)
+        return sw;
+    sw = getSwbit();
+    return sw != 0xFF ? u8(sw + 1) : u8(0xFF);
 }
-VERIFY(0x02051A04,andsw2GetTopSw);
-u8 andsw2GetNum(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051A54,u8,a);
-    return u32(a->mParameters);
+/* 02051A54 */
+u8 daAndsw2_c::getNum() {
+    return u32(mParameters);
 }
-VERIFY(0x02051A54,andsw2GetNum);
-BOOL andsw2ChkAllSw2(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051A60,BOOL,a);
-    s32 top=andsw2GetTopSw(a);
-    s32 remaining=andsw2GetNum(a);
-    if (remaining==0xFF || remaining==0 || top==0xFF) return FALSE;
-    for (s32 i=0; remaining>0; i++,remaining--) {
-        u32 save=gabi::load<u32>(0x101F84DC);
-        s32 room=a->current.roomNo;
-        if (!andsw2Call<s32>(0x025BA0C0,save+0x20,top+i,room)) return FALSE;
+/* 02051A60 */
+BOOL daAndsw2_c::chkAllSw2() {
+    s32 top = getTopSw();
+    s32 remaining = getNum();
+    if (remaining == 0xFF || remaining == 0 || top == 0xFF)
+        return FALSE;
+    for (s32 i = 0; remaining > 0; i++, remaining--) {
+        Andsw2SaveData* save = l_saveInfo;
+        s32 room = current.roomNo;
+        if (!Andsw2HD::isSwitch(&save->info, top + i, room))
+            return FALSE;
     }
     return TRUE;
 }
-VERIFY(0x02051A60,andsw2ChkAllSw2);
-u8 andsw2GetTimer(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051B0C,u8,a);
-    return u16(a->home.angle.z);
+/* 02051B0C */
+u8 daAndsw2_c::getTimer() {
+    return u16(home.angle.z);
 }
-VERIFY(0x02051B0C,andsw2GetTimer);
-u8 andsw2GetType(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051B18,u8,a);
-    return u32(a->mParameters)>>8;
+/* 02051B18 */
+u8 daAndsw2_c::getType() {
+    return u32(mParameters) >> 8;
 }
-VERIFY(0x02051B18,andsw2GetType);
-BOOL andsw2ActionOnAll(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051B24,BOOL,a);
-    if (andsw2ChkAllSw2(a)) {
-        u8 timer=andsw2GetTimer(a);
-        if (timer!=0xFF) {
-            a->mAction=ACT_TIMER;
-            a->mTimer=s16(u32(timer)*15);
-        } else if (s16(a->mEventIdx)!=-1) {
-            a->mAction=ACT_ORDER;
+/* 02051B24 */
+BOOL daAndsw2_actionOnAll(daAndsw2_c* i_this) {
+    if (i_this->chkAllSw2()) {
+        u8 timer = i_this->getTimer();
+        if (timer != 0xFF) {
+            // HD: store the action before the timer value.
+            i_this->mAction = ACT_TIMER;
+            i_this->mTimer = s16(u32(timer) * 15);
+        } else if (s16(i_this->mEventIdx) != -1) {
+            i_this->mAction = ACT_ORDER;
         } else {
-            u8 sw=andsw2GetSwbit(a);
-            u32 save=gabi::load<u32>(0x101F84DC);
-            s32 room=a->current.roomNo;
-            andsw2Call<void>(0x025B9E38,save+0x20,sw,room);
-            u8 type=andsw2GetType(a);
-            a->mAction=type==1 ? ACT_OFF : ACT_WAIT;
+            u8 sw = i_this->getSwbit();
+            Andsw2SaveData* save = l_saveInfo;
+            s32 room = i_this->current.roomNo;
+            Andsw2HD::onSwitch(&save->info, sw, room);
+            u8 type = i_this->getType();
+            i_this->mAction = type == TYPE_CONTINUOUS ? ACT_OFF : ACT_WAIT;
         }
     }
     return TRUE;
 }
-VERIFY(0x02051B24,andsw2ActionOnAll);
-BOOL andsw2ActionTimer(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051BD8,BOOL,a);
-    if (andsw2GetType(a)==1 && !andsw2ChkAllSw2(a)) {
-        a->mAction=ACT_ON_ALL;
-    } else if (s16(a->mTimer)>0) {
-        a->mTimer=s16(s16(a->mTimer)-1);
-    } else if (s16(a->mEventIdx)!=-1) {
-        a->mAction=ACT_ORDER;
+/* 02051BD8 */
+BOOL daAndsw2_actionTimer(daAndsw2_c* i_this) {
+    if (i_this->getType() == TYPE_CONTINUOUS && !i_this->chkAllSw2()) {
+        i_this->mAction = ACT_ON_ALL;
+    } else if (s16(i_this->mTimer) > 0) {
+        i_this->mTimer = s16(s16(i_this->mTimer) - 1);
+    } else if (s16(i_this->mEventIdx) != -1) {
+        i_this->mAction = ACT_ORDER;
     } else {
-        u8 sw=andsw2GetSwbit(a);
-        u32 save=gabi::load<u32>(0x101F84DC);
-        s32 room=a->current.roomNo;
-        andsw2Call<void>(0x025B9E38,save+0x20,sw,room);
-        if (andsw2GetType(a)==1) a->mAction=ACT_WAIT;
+        u8 sw = i_this->getSwbit();
+        Andsw2SaveData* save = l_saveInfo;
+        s32 room = i_this->current.roomNo;
+        Andsw2HD::onSwitch(&save->info, sw, room);
+        if (i_this->getType() == TYPE_CONTINUOUS)
+            i_this->mAction = ACT_WAIT;
     }
     return TRUE;
 }
-VERIFY(0x02051BD8,andsw2ActionTimer);
-u8 andsw2GetEventNo(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051CA4,u8,a);
-    return u16(a->home.angle.x);
+/* 02051CA4 */
+u8 daAndsw2_c::getEventNo() {
+    return u16(home.angle.x);
 }
-VERIFY(0x02051CA4,andsw2GetEventNo);
-BOOL andsw2ActionOrder(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051CB0,BOOL,a);
-    if (gabi::load<u16>(gabi::ea(a)+0xF8)==2) {
-        a->mAction=ACT_EVENT;
-        u8 sw=andsw2GetSwbit(a);
-        u32 save=gabi::load<u32>(0x101F84DC);
-        s32 room=a->current.roomNo;
-        andsw2Call<void>(0x025B9E38,save+0x20,sw,room);
-    } else if (andsw2GetType(a)==1 && !andsw2ChkAllSw2(a)) {
-        a->mAction=ACT_ON_ALL;
+/* 02051CB0 */
+BOOL daAndsw2_actionOrder(daAndsw2_c* i_this) {
+    if (i_this->eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        i_this->mAction = ACT_EVENT;
+        u8 sw = i_this->getSwbit();
+        Andsw2SaveData* save = l_saveInfo;
+        s32 room = i_this->current.roomNo;
+        Andsw2HD::onSwitch(&save->info, sw, room);
+    } else if (i_this->getType() == TYPE_CONTINUOUS && !i_this->chkAllSw2()) {
+        i_this->mAction = ACT_ON_ALL;
     } else {
-        u8 ev=andsw2GetEventNo(a);
-        s32 idx=a->mEventIdx;
-        andsw2Call<void>(0x025D7A58,a,idx,ev,0xFFFF,0,1);
+        u8 ev = i_this->getEventNo();
+        s32 idx = i_this->mEventIdx;
+        Andsw2HD::orderOtherEventId(i_this, idx, ev);
     }
     return TRUE;
 }
-VERIFY(0x02051CB0,andsw2ActionOrder);
-BOOL andsw2ActionEvent(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051D6C,BOOL,a);
-    s32 idx=a->mEventIdx;
-    u32 play=andsw2Call<u32>(0x025200D4);
-    if (andsw2Call<s32>(0x025440C8,play+0x52C4,idx)) {
-        u8 type=andsw2GetType(a);
-        a->mAction=type==1 ? ACT_OFF : ACT_WAIT;
-        play=andsw2Call<u32>(0x025200D4);
-        u16 state=gabi::load<u16>(play+0x52B8);
-        gabi::store<u16>(play+0x52B8,state|8);
+/* 02051D6C */
+BOOL daAndsw2_actionEvent(daAndsw2_c* i_this) {
+    s32 idx = i_this->mEventIdx;
+    dComIfG_inf_c* play = Andsw2HD::getGameInfo();
+    if (Andsw2HD::endCheck(&play->play.mEvtManager, idx)) {
+        u8 type = i_this->getType();
+        i_this->mAction = type == TYPE_CONTINUOUS ? ACT_OFF : ACT_WAIT;
+        play = Andsw2HD::getGameInfo();
+        play->play.mEvtCtrl.reset();
     }
     return TRUE;
 }
-VERIFY(0x02051D6C,andsw2ActionEvent);
-BOOL andsw2ActionOff(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051DE8,BOOL,a);
-    if (!andsw2ChkAllSw2(a)) {
-        a->mAction=ACT_ON_ALL;
-        u8 sw=andsw2GetSwbit(a);
-        u32 save=gabi::load<u32>(0x101F84DC);
-        s32 room=a->current.roomNo;
-        andsw2Call<void>(0x025B9F7C,save+0x20,sw,room);
+/* 02051DE8 */
+BOOL daAndsw2_actionOff(daAndsw2_c* i_this) {
+    if (!i_this->chkAllSw2()) {
+        i_this->mAction = ACT_ON_ALL;
+        u8 sw = i_this->getSwbit();
+        Andsw2SaveData* save = l_saveInfo;
+        s32 room = i_this->current.roomNo;
+        Andsw2HD::offSwitch(&save->info, sw, room);
     }
     return TRUE;
 }
-VERIFY(0x02051DE8,andsw2ActionOff);
-BOOL andsw2ActionWait(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051E4C,BOOL,a);
+/* 02051E4C */
+BOOL daAndsw2_actionWait(daAndsw2_c* i_this) {
     return TRUE;
 }
-VERIFY(0x02051E4C,andsw2ActionWait);
-BOOL andsw2Execute(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051E54,BOOL,a);
-    if (!gabi::load<u32>(0x101FD9F4)) {
-        gabi::store<u32>(0x101FD9F4,1);
-        andsw2Call<void>(0xC000A848,0x101FD9F8,0x1018FD18,24);
+/* 02051E54 */
+BOOL daAndsw2_c::execute() {
+    if (!l_actionGuard) {
+        l_actionGuard = 1;
+        Andsw2HD::copyActionTable(&l_action, l_actionInit);
     }
-    u8 action=a->mAction;
-    u32 fn=gabi::load<u32>(0x101FD9F8+u32(action)*4);
-    andsw2CallPtr<void>(fn,a);
+    u8 action = mAction;
+    l_action[action](this);
     return TRUE;
 }
-VERIFY(0x02051E54,andsw2Execute);
-BOOL andsw2IsDelete(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051ED4,BOOL,a);
+/* 02051ED4 */
+BOOL daAndsw2_IsDelete(daAndsw2_c* i_this) {
     return TRUE;
 }
-VERIFY(0x02051ED4,andsw2IsDelete);
-BOOL andsw2Delete(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051EDC,BOOL,a);
+/* 02051EDC */
+// HD: this entry is empty; the compiler-generated deleting destructor is separate.
+BOOL daAndsw2_Delete(daAndsw2_c* i_this) {
     return TRUE;
 }
-VERIFY(0x02051EDC,andsw2Delete);
-s32 andsw2Create(daAndsw2_c* a) {
-    WWHD_FUNC(0x02051EE4,s32,a);
-    u8 sw=andsw2GetSwbit(a);
-    if (!(u32(a->actor_condition)&8)) {
-        if (a) {
-            andsw2Call<void>(0x025D4ED0,a);
-            a->__vtbl=0x100071D4;
+/* 02051EE4 */
+s32 daAndsw2_c::create() {
+    u8 sw = getSwbit();
+    fopAcM_ct(this, daAndsw2_c);
+    u8 type = getType();
+    if (type == TYPE_ONE_OFF) {
+        BOOL on = FALSE;
+        if (sw != 0xFF) {
+            Andsw2SaveData* save = l_saveInfo;
+            s32 room = current.roomNo;
+            on = Andsw2HD::isSwitch(&save->info, sw, room);
         }
-        a->actor_condition=u32(a->actor_condition)|8;
-    }
-    u8 type=andsw2GetType(a);
-    if (type==0) {
-        BOOL on=FALSE;
-        if (sw!=0xFF) {
-            u32 save=gabi::load<u32>(0x101F84DC);
-            s32 room=a->current.roomNo;
-            on=andsw2Call<s32>(0x025BA0C0,save+0x20,sw,room);
-        }
-        a->mAction=(sw==0xFF || on) ? ACT_WAIT : ACT_ON_ALL;
-        u8 ev=andsw2GetEventNo(a);
-        u32 play=andsw2Call<u32>(0x025200D4);
-        a->mEventIdx=s16(andsw2Call<s32>(0x02543F10,play+0x52C4,0,ev));
-    } else if (type==1) {
-        if (sw==0xFF) a->mAction=ACT_WAIT;
+        mAction = (sw == 0xFF || on) ? ACT_WAIT : ACT_ON_ALL;
+        u8 ev = getEventNo();
+        dComIfG_inf_c* play = Andsw2HD::getGameInfo();
+        mEventIdx = s16(Andsw2HD::getEventIdx(&play->play.mEvtManager, 0, ev));
+    } else if (type == TYPE_CONTINUOUS) {
+        if (sw == 0xFF)
+            mAction = ACT_WAIT;
         else {
-            s32 room=a->current.roomNo;
-            u32 save=gabi::load<u32>(0x101F84DC);
-            BOOL on=andsw2Call<s32>(0x025BA0C0,save+0x20,sw,room);
-            a->mAction=on ? ACT_OFF : ACT_ON_ALL;
+            s32 room = current.roomNo;
+            Andsw2SaveData* save = l_saveInfo;
+            BOOL on = Andsw2HD::isSwitch(&save->info, sw, room);
+            mAction = on ? ACT_OFF : ACT_ON_ALL;
         }
-        u8 ev=andsw2GetEventNo(a);
-        u32 play=andsw2Call<u32>(0x025200D4);
-        a->mEventIdx=s16(andsw2Call<s32>(0x02543F10,play+0x52C4,0,ev));
-    } else a->mAction=ACT_WAIT;
-    a->shape_angle.z=0;
-    a->current.angle.z=0;
-    a->current.angle.x=0;
-    a->shape_angle.x=0;
-    return 4;
+        u8 ev = getEventNo();
+        dComIfG_inf_c* play = Andsw2HD::getGameInfo();
+        mEventIdx = s16(Andsw2HD::getEventIdx(&play->play.mEvtManager, 0, ev));
+    } else
+        mAction = ACT_WAIT;
+    // HD: retain the rotation-store order used by this build.
+    shape_angle.z = 0;
+    current.angle.z = 0;
+    current.angle.x = 0;
+    shape_angle.x = 0;
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x02051EE4,andsw2Create);
-void andsw2StaticInit() {
-    WWHD_FUNC(0x020520CC,void);
-    gabi::store<u32>(0x10461464,0);
-    gabi::store<u32>(0x1046145C,0);
-    gabi::store<u32>(0x10461468,0);
-    gabi::store<u32>(0x10461460,0);
-    andsw2Call<void>(0x028F026C,0x1018FD50);
-    gabi::store<f32>(0x10461450,-3.1415927410125732f);
-    gabi::store<f32>(0x10461454,3.1415927410125732f);
-    andsw2Call<void>(0x028ED6F8,0x10461458);
-    andsw2Call<void>(0x028F026C,0x1018FD5C);
-    andsw2Call<void>(0x028EAB2C,0x10461459);
-    andsw2Call<void>(0x028F026C,0x1018FD68);
+// HD: compiler-generated common-header initializer; preserve its nonsequential zero-store order.
+/* 020520CC */
+void __sinit_d_a_andsw2_cpp() {
+    l_headerStatics.mZero[2] = 0;
+    l_headerStatics.mZero[0] = 0;
+    l_headerStatics.mZero[3] = 0;
+    l_headerStatics.mZero[1] = 0;
+    Andsw2HD::registerGlobalObject(l_headerRecords.records[0]);
+    l_headerStatics.mPiLo = -3.1415927410125732f;
+    l_headerStatics.mPiHi = 3.1415927410125732f;
+    Andsw2HD::initHeaderObjectA(&l_headerStatics.mObjectA);
+    Andsw2HD::registerGlobalObject(l_headerRecords.records[1]);
+    Andsw2HD::initHeaderObjectB(&l_headerStatics.mObjectB);
+    Andsw2HD::registerGlobalObject(l_headerRecords.records[2]);
 }
-VERIFY(0x020520CC,andsw2StaticInit);
-BOOL andsw2Draw(daAndsw2_c* a) {
-    WWHD_FUNC(0x02052160,BOOL,a);
+/* 02052160 */
+BOOL daAndsw2_Draw(daAndsw2_c* i_this) {
     return TRUE;
 }
-VERIFY(0x02052160,andsw2Draw);
-void andsw2Destructor(daAndsw2_c* a,u32 flags) {
-    WWHD_FUNC(0x02052168,void,a,flags);
-    if (!a) return;
-    andsw2Call<void>(0x025D50BC,a,0);
-    if (flags&1) andsw2Call<void>(0x0273AF40,a);
+// HD: compiler-generated deleting destructor.
+/* 02052168 */
+void daAndsw2_c_dtor(daAndsw2_c* i_this, u32 flags) {
+    if (!i_this)
+        return;
+    Andsw2HD::destroyActor(i_this);
+    if (flags & 1)
+        Andsw2HD::deleteActor(i_this);
 }
-VERIFY(0x02052168,andsw2Destructor);
+
+/* WWHD glue (tools/verify/autoglue.py):
+data l_saveInfo 101F84DC
+data l_actionGuard 101FD9F4
+data l_action 101FD9F8
+data l_actionInit 1018FD18
+data l_headerStatics 10461450
+data l_headerRecords 1018FD50
+*/

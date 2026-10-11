@@ -12,6 +12,9 @@
  * Size 0xFB0 (GameCube 0xD88). */
 #pragma once
 #include "bindings.h"
+#ifdef DA_NPC_JI1_USE_SHARED_GAME_API
+#include "gc_api/d/d_com_inf_game.h"
+#endif
 
 /* GHS pointer to member function (8 bytes): this adjustment, virtual index (0: null, < 0: not
  * virtual), then the function address, or (virtual) the vtable pointer's offset at +6 */
@@ -221,7 +224,7 @@ struct daNpc_Ji1_c : fopEn_enemy_c {
     /* 0xE58 */ be<s32> field_0xC34;
     /* 0xE5C */ be<s32> field_0xC38;
     /* 0xE60 */ be<s32> field_0xC3C;
-    /* 0xE64 */ be<u8> mHD_E64;                /* HD only */
+    /* 0xE64 */ union { be<u8> mHitCooldownHD; be<u8> mHD_E64; };                /* HD only */
     /* 0xE65 */ u8 _E65[3];
     /* 0xE68 */ cXyz field_0xC40;
     /* 0xE74 */ be<f32> field_0xC4C;
@@ -299,6 +302,7 @@ WWHD_SIZE(daNpc_Ji1_c, 0xFB0);
 /* daNpc_Ji1_HIO_c, HD: the vtable pointer follows the members (0xFC), so every GameCube offset
  * is -4. l_HIO is at 0x104672AC. Names are the GameCube offsets. */
 struct daNpc_Ji1_HIO_c {
+    void genMessage(void* context);
     /* 0x000 */ be<s8> mNo;
     /* 0x001 */ u8 _001[3];
     /* 0x004 */ be<f32> field_0x08;
@@ -427,10 +431,13 @@ template <class... A> static inline BOOL ptmf_invoke(ProcFunc_l& p, void* self, 
 static inline fopAc_ac_c* daPy_getPlayerActorClass() { return dComIfGp_getPlayer(0); }
 /* save events: dSv_event_c at *(0x101F84DC) + 0x644 (re-read at each use) */
 static inline dSv_event_c* dComIfGs_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
+// HD: the other split sources still use these legacy accessors.
+#ifndef DA_NPC_JI1_USE_SHARED_GAME_API
 static inline BOOL dComIfGs_isEventBit(u16 f) { return dSv_event_isEventBit(dComIfGs_event(), f); }
 static inline void dComIfGs_onEventBit(u16 f) { dSv_event_onEventBit(dComIfGs_event(), f); }
 static inline u8 dComIfGs_getEventReg(u16 r) { return dSv_event_getEventReg(dComIfGs_event(), r); }
 static inline void dComIfGs_setEventReg(u16 r, u8 v) { dSv_event_setEventReg(dComIfGs_event(), r, v); }
+#endif
 /* fopAcM_seStart on this actor: GHS drops the inline's NULL checks (this and &eyePos non-NULL) */
 static inline void ji1_seStart(fopAc_ac_c* a, u32 id, u32 param = 0) {
     mDoAud_seStart(id, &a->eyePos, param, dComIfGp_getReverb(fopAcM_GetRoomNo(a)));
@@ -488,3 +495,29 @@ enum : u32 {
     SUB_battleSubActionJpGuard = 0x0225C660,
     SUB_battleSubActionGuard = 0x0225C7EC,
 };
+
+/* HD: core-unit player accessors use a typed view; the full player header is
+ * intentionally independent of this split NPC's common header. */
+struct Ji1PlayerHD {
+    u8 mUnaccessed[0x3AC];
+    be<u8> mCutType;
+    u8 mUnaccessed3AD[0xB];
+    be<u32> mNoResetFlg0;
+    enum : u32 { daPyFlg0_CUT_AT_FLG = 0x40 };
+    u8 getCutType() const { return mCutType; }
+    u32 getCutAtFlg() const { return mNoResetFlg0 & daPyFlg0_CUT_AT_FLG; }
+};
+WWHD_OFFSET(Ji1PlayerHD, mCutType, 0x3AC);
+WWHD_OFFSET(Ji1PlayerHD, mNoResetFlg0, 0x3B8);
+WWHD_SIZE(Ji1PlayerHD, 0x3BC);
+WWHD_OFFSET(daNpc_Ji1_c, mHitCooldownHD, 0xE64);
+enum Ji1AnimationIndexHD : s32 {
+    Ji1_ANM_WAIT01=0, Ji1_ANM_INASI=7, Ji1_ANM_TATEGUARD=8,
+    Ji1_ANM_YKGUARD=9, Ji1_ANM_JPGUARD=10, Ji1_ANM_TOKAMAE=11,
+    Ji1_ANM_REI=12, Ji1_ANM_WARAI=13, Ji1_ANM_GUARD=15,
+    Ji1_ANM_TATEATTACK=19, Ji1_ANM_YOKOATTACK=20,
+    Ji1_ANM_NUGUI=24, Ji1_ANM_DAMAGE=25
+};
+namespace ji1Event {
+ enum : u16 { UNK_0F20=0x0F20, UNK_D003=0xD003, UNK_0520=0x0520 };
+}

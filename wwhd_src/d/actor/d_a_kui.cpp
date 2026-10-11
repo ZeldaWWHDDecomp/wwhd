@@ -9,185 +9,89 @@
  */
 #include <cmath>
 
-#include "bindings.h"
+#include "d/actor/d_a_kui.h"
 
-#define M_arcname_res STR(0x1001396C) /* "Kui" (getRes) */
-#define SAFESTRING_VTBL 0x100138E4    /* this TU's sead::SafeString vtable */
-#define KUI_VTBL 0x100138FC           /* kui_class vtable (HD virtual destructor) */
-#define FILE_NAME STR(0x10013970)
-#define ASSERT_MSG STR(0x1001397C)    /* "modelData != NULL" */
-
-enum { fpcNm_DR2_e = 0xDF, fpcNm_BTD_e = 0xEA };
-enum { JA_SE_OBJ_ROPE_SW_ON = 0x69D2, JA_SE_OBJ_ST_CHIME = 0x69D3, JA_SE_READ_RIDDLE_1 = 0x806 };
-
-#define mtx_adj gabi::at<Mtx34>(0x101B8A20)
-#define bure_xa_d(i) gabi::load<s16>(0x101B8A50 + 2 * (i))
-#define REG_S_(c, i) REG_S(c, i)
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* HD: fopAcM_SetMin / fopAcM_SetMax are out of line (025D672C / 025D673C) */
-static inline void fopAcM_SetMin(fopAc_ac_c* a, f32 x, f32 y, f32 z) { gabi::call(0x025D672C, a, x, y, z); }
-static inline void fopAcM_SetMax(fopAc_ac_c* a, f32 x, f32 y, f32 z) { gabi::call(0x025D673C, a, x, y, z); }
-/* HD fopAcM_seStartCurrent inline where the actor is known non-null (only &current.pos is checked) */
-static inline void fopAcM_seStartCurrent_nn(fopAc_ac_c* a, u32 id, u32 param) {
-    if (gabi::ea(&a->current.pos) != 0)
-        mDoAud_seStart(id, &a->current.pos, param, dComIfGp_getReverb(fopAcM_GetRoomNo(a)));
-}
-/* 025E1988 mDoAud_seStart(id) (HD: no position, reads r3 only) */
-static inline void mDoAud_seStart_id(u32 id) { gabi::call(0x025E1988, id); }
-/* dVibration_c::StartShock(int, int, cXyz) with cXyz(0, 1, 0); the play object is fetched first, then
- * the strength (REG0_S(2) + 5 when reg, else 3) */
-static inline void StartShock_up(bool reg) {
-    u32 play = dComIfGp_ea();
-    s32 s = reg ? REG0_S(2) + 5 : 3;
-    gabi::Local<cXyz> up;
-    up->set(0.0f, 1.0f, 0.0f);
-    gabi::call<BOOL>(0x025CB374, play + PLAY_VIBRATION, s, -0x21, up.get());
-}
-/* camera_class: dComIfGp_getCamera(id) at play+0x5AF8 + id*0x34; its dCamera_c at +0x248; eye at +0xDC */
-static inline u32 dComIfGp_getPlayerCameraID0() { return (u32)(s32)gabi::load<s8>(dComIfGp_ea() + 0x5B30); }
-static inline u32 dCam_getCamera() { return gabi::call<u32>(0x024F8020); }
-static inline void dCamera_Stop(u32 cam) { gabi::call(0x02514F2C, cam); }
-static inline void dCamera_SetTrimSize(u32 cam, s32 s) { gabi::call(0x02515280, cam, s); }
-static inline void dCamera_Start(u32 cam) { gabi::call(0x02514F38, cam); }
-/* Reset / Set take two cXyz by value (pointers to copies) */
-static inline void dCamera_Reset(u32 cam, cXyz* center, cXyz* eye) { gabi::call(0x0251510C, cam, center, eye); }
-static inline void dCamera_Set(u32 cam, cXyz* center, cXyz* eye) { gabi::call(0x02514F50, cam, center, eye); }
-static inline BOOL fopAcM_orderPotentialEvent(fopAc_ac_c* a, u16 flag, u16 p2, u16 p3) {
-    return gabi::call<BOOL>(0x025D7B24, a, flag, p2, p3);
-}
-/* 027EC9E8 JUTReport(x, y, fmt, ...) */
-static inline void JUTReport(s32 x, s32 y, const char* fmt, s32 v) { gabi::call(0x027EC9E8, x, y, fmt, v); }
-/* dComIfGp_roomControl_getStayNo: s8 at 0x1047E6C8 (HD) */
-static inline s32 dComIfGp_roomControl_getStayNo() { return gabi::load<s8>(0x1047E6C8); }
-static inline void dBgW_SetCrrFunc(dBgW* w, u32 fn) { gabi::store<u32>(gabi::ea(w) + 0xA8, fn); }
-inline void PSMTXScale(Mtx34* m, f32 x, f32 y, f32 z) { gabi::call(0x028E945C, m, x, y, z); }
-inline void PSMTXConcat(const Mtx34* a, const Mtx34* b, Mtx34* ab) { gabi::call(0x028E9108, a, b, ab); }
-/* float copy of a cXyz through FPRs (GHS struct copies used for computation) */
-static inline void cXyz_fcopy(cXyz* d, const cXyz* s) {
-    f32 x = s->x, y = s->y, z = s->z;
-    d->x = x;
-    d->y = y;
-    d->z = z;
-}
-
-struct kui_class : fopAc_ac_c {
-    /* 0x3AC */ request_of_phase_process_class mPhs;
-    /* 0x3B4 */ gptr<J3DModel> mpModel2;
-    /* 0x3B8 */ gptr<J3DModel> mpModel;
-    /* 0x3BC */ be<u8> type;
-    /* 0x3BD */ be<u8> field_0x2A1;
-    /* 0x3BE */ be<u8> field_0x2A2;
-    /* 0x3BF */ be<u8> mSwitchNo;
-    /* 0x3C0 */ u8 _3C0[4];
-    /* 0x3C4 */ Mtx34 field_0x2A8;
-    /* 0x3F4 */ gptr<dBgW> field_0x2D8;
-    /* 0x3F8 */ be<s16> field_0x2DC[3];
-    /* 0x3FE */ be<s16> field_0x2E2;
-    /* 0x400 */ be<s16> field_0x2E4;
-    /* 0x402 */ be<s16> field_0x2E6;
-    /* 0x404 */ be<s8> field_0x2E8;
-    /* 0x405 */ u8 _405;
-    /* 0x406 */ be<s16> field_0x2EA;
-    /* 0x408 */ cXyz field_0x2EC;
-    /* 0x414 */ cXyz field_0x2F8;
-    /* 0x420 */ u8 _420[4];
-    /* 0x424 */ be<s16> field_0x308;
-    /* 0x426 */ u8 _426[2];
-    /* 0x428 */ be<f32> field_0x30C;
+// HD: compiler data belongs to this translation unit.
+const gc_tu_data gc_tu = {
+    .safeString = 0x100138E4,
+    .headerStatics = {0x10464CAC, 0x101B8A54, 0x10464CB8},
 };
-WWHD_OFFSET(kui_class, field_0x2A8, 0x3C4);
-WWHD_OFFSET(kui_class, field_0x2D8, 0x3F4);
-WWHD_OFFSET(kui_class, field_0x2EC, 0x408);
-WWHD_OFFSET(kui_class, field_0x30C, 0x428);
-WWHD_SIZE(kui_class, 0x42C);
+static const Mtx34 mtx_adj = {
+    {{0.5f, 0.0f, 0.0f, 0.5f}, {0.0f, -0.5f, 0.0f, 0.5f}, {0.0f, 0.0f, 1.0f, 0.0f}}};
+static const s16 bure_xa_d[] = {0x1000, -0x1000};
 
 /* 021AC660 */
 static void* s_a_i_sub(void* search, void* user) {
-    WWHD_FUNC(0x021AC660, void*, search, user);
     if (fopAc_IsActor(search) && search != nullptr && fpcM_GetName(search) == fpcNm_DR2_e)
         return search;
     return nullptr;
 }
-VERIFY(0x021AC660, s_a_i_sub);
 
 /* 021AC6B0 */
 static void* b_a_i_sub(void* search, void* user) {
-    WWHD_FUNC(0x021AC6B0, void*, search, user);
     if (fopAc_IsActor(search) && search != nullptr && fpcM_GetName(search) == fpcNm_BTD_e)
         return search;
     return nullptr;
 }
-VERIFY(0x021AC6B0, b_a_i_sub);
 
-/* 021AC700. HD: takes the J3DModel; the effect matrix is written to the model (+0xF8) and every
- * material instance's texture-matrix slots of type 10/11 point to it (marking them dirty) */
+/* 021AC700 */
+// HD: HD: takes the J3DModel; the effect matrix is written to the model (+0xF8) and every *
+// material instance's texture-matrix slots of type 10/11 point to it (marking them dirty)
 static void setEffectMtx(fopAc_ac_c* a_this, J3DModel* model, f32 scale) {
-    WWHD_FUNC(0x021AC700, void, a_this, model, scale);
     cXyz* eyePos = &a_this->eyePos;
-    u32 camera = dCam_getCamera();
-
+    KuiCameraView* camera = dCam_getCamera();
     gabi::Local<cXyz> look_dir, light_dir, refl;
-    cXyz_mi(eyePos, look_dir, gabi::at<cXyz>(camera + 0xDC));
-    u32 mb = gabi::ea(model);
-    gabi::call(0x02563F64, gabi::ea(a_this) + 0x194 /* tevStr.mLightPosWorld */, eyePos, light_dir.get()); /* dKyr_get_vectle_calc */
-    gabi::call(0x028E9E88, look_dir.get(), light_dir.get(), refl.get()); /* C_VECHalfAngle */
+    cXyz_mi(eyePos, look_dir, &camera->mEye);
+    KuiModelView* hdModel = reinterpret_cast<KuiModelView*>(model);
+    dKyr_get_vectle_calc(&a_this->tevStr.mLightPosWorld, eyePos, light_dir.get());
+    C_VECHalfAngle(look_dir.get(), light_dir.get(), refl.get());
     gabi::Local<Mtx34> reflMtx;
-    gabi::call(0x028E9684, reflMtx.get(), 0x101FFBA8u /* cXyz::Zero */, 0x101FFBC0u /* cXyz::BaseY */, refl.get()); /* C_MTXLookAt */
+    C_MTXLookAt(reflMtx.get(), &cXyz::Zero, &kui_baseY, refl.get());
 
     Mtx34* now = mDoMtx_stack_c::get();
-    PSMTXScale(now, scale, scale, 1.0f); /* mDoMtx_stack_c::scaleS */
-    PSMTXConcat(now, mtx_adj, now);
+    PSMTXScale(now, scale, scale, 1.0f);
+    PSMTXConcat(now, &mtx_adj, now);
     PSMTXConcat(now, reflMtx, now);
     now->m[0][3] = 0.0f;
     now->m[2][3] = 0.0f;
     now->m[1][3] = 0.0f;
 
-    Mtx34* effMtx = gabi::at<Mtx34>(mb + 0xF8);
+    Mtx34* effMtx = &hdModel->mEffectMtx;
     PSMTXCopy(now, effMtx);
-
-    u16 n = gabi::load<u16>(mb + 0x2A);
+    u16 n = hdModel->mMaterialNum;
     for (u16 i = 0; i < n; i++) {
-        u32 mat = gabi::load<u32>(mb + 0x34) + i * 0x3C;
+        KuiMaterialInstance* mat = &hdModel->mMaterials.get()[i];
         for (u32 j = 0; j < 8; j++) {
             gabi::Local<be<s32>> slot;
             *slot = -1;
-            u32 texMtx = gabi::call<u32>(0x027FA974, mat, j, slot.get());
-            if (texMtx != 0) {
-                u32 info = gabi::load<u32>(texMtx);
+            KuiTextureInfo* texMtx = mat->getTexMtx(j, slot.get());
+            if (texMtx != nullptr) {
+                u32 info = texMtx->mInfo;
                 if (info >= 10 && info <= 11) {
-                    u32 m = gabi::load<u32>(mat);
-                    s32 off = gabi::load<s32>(m + 0x34);
-                    u32 tbl = off != 0 ? m + 0x34 + off : 0;
+                    KuiTextureEntry* tbl = mat->mpData->textureTable();
                     s32 idx = *slot;
-                    u32 e = tbl + idx * 0x14;
-                    if (gabi::load<s32>(e + 4) >= 0) {
-                        gabi::store<u16>(mat + 4, (u16)(gabi::load<u16>(mat + 4) | 4));
-                        u32 bits = gabi::load<u32>(mat + 0xC) + ((idx >> 5) << 2);
-                        gabi::store<u32>(bits, gabi::load<u32>(bits) | (1u << (idx & 31)));
+                    KuiTextureEntry* entry = &tbl[idx];
+                    if (entry->mIndex >= 0) {
+                        mat->markDirty(idx);
                     }
-                    m = gabi::load<u32>(mat);
-                    off = gabi::load<s32>(m + 0x34);
-                    u32 tbl2 = off != 0 ? m + 0x34 + off : 0;
-                    u32 idx2 = gabi::load<u16>(e + 0xC);
-                    if (gabi::load<s32>(tbl2 + idx2 * 0x14 + 4) >= 0) {
-                        gabi::store<u16>(mat + 4, (u16)(gabi::load<u16>(mat + 4) | 4));
-                        u32 bits = gabi::load<u32>(mat + 0xC) + (((s32)idx2 >> 5) << 2);
-                        gabi::store<u32>(bits, gabi::load<u32>(bits) | (1u << (idx2 & 31)));
+                    // HD: fetch the relative table again after the dirty-bit writes.
+                    KuiTextureEntry* tbl2 = mat->mpData->textureTable();
+                    u32 idx2 = entry->mParentIndex;
+                    if (tbl2[idx2].mIndex >= 0) {
+                        mat->markDirty(idx2);
                     }
-                    u32 p = gabi::call<u32>(0x027FA678, mat, j);
-                    if (p != 0)
-                        gabi::store<u32>(p, gabi::ea(effMtx));
+                    gptr<Mtx34>* effect = mat->getEffectSlot(j);
+                    if (effect != nullptr) {
+                        *effect = effMtx;
+                    }
                 }
             }
         }
     }
 }
-VERIFY(0x021AC700, setEffectMtx);
 
 /* 021AC94C */
 static BOOL daKui_Draw(kui_class* i_this) {
-    WWHD_FUNC(0x021AC94C, BOOL, i_this);
     if (i_this->type == 3) {
         u32 light_type = 0;
         if (REG0_S(0) != 0) {
@@ -225,13 +129,13 @@ static BOOL daKui_Draw(kui_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x021AC94C, daKui_Draw);
 
-/* demo_camera (inlined into daKui_Execute) */
+/* inlined into daKui_Execute */
 static inline void demo_camera(kui_class* i_this) {
-    s32 camId = (s8)dComIfGp_getPlayerCameraID0();
-    u32 camera = gabi::load<u32>(dComIfGp_ea() + 0x5AF8 + camId * 0x34);
-    u32 dcam = camera + 0x248;
+    s32 camId = dComIfGp_getPlayerCameraID(0);
+    KuiCameraProcessView* camera =
+        reinterpret_cast<KuiCameraProcessView*>(dComIfGp_getCamera(camId));
+    KuiCameraControl* dcam = &camera->mCamera;
     s8 bVar2 = true;
 
     s8 st = i_this->field_0x2E8;
@@ -239,15 +143,15 @@ static inline void demo_camera(kui_class* i_this) {
     case 0:
         break;
     case 1:
-        if (!eventInfo_checkCommandDemoAccrpt(i_this)) {
-            fopAcM_orderPotentialEvent(i_this, 2 /* dEvtFlag_STAFF_ALL_e */, 0xFFFF, 0);
-            eventInfo_onCondition(i_this, 2 /* dEvtCnd_UNK2_e */);
+        if (!i_this->eventInfo.checkCommandDemoAccrpt()) {
+            fopAcM_orderPotentialEvent(i_this, dEvtFlag_STAFF_ALL_e, 0xFFFF, 0);
+            i_this->eventInfo.onCondition(dEvtCnd_UNK2_e);
             bVar2 = false;
             break;
         }
         i_this->field_0x2E8 = (s8)(st + 1);
-        dCamera_Stop(dcam);
-        dCamera_SetTrimSize(dcam, 2);
+        dcam->Stop();
+        dcam->SetTrimSize(2);
         i_this->field_0x2EA = 0;
         /* fallthrough */
     case 2: {
@@ -286,9 +190,9 @@ static inline void demo_camera(kui_class* i_this) {
             cXyz_fcopy(c, &i_this->field_0x2F8);
             cXyz_fcopy(e, &i_this->field_0x2EC);
             i_this->field_0x2E8 = 0;
-            dCamera_Reset(dcam, c, e);
-            dCamera_Start(dcam);
-            dCamera_SetTrimSize(dcam, 0);
+            dcam->Reset(c, e);
+            dcam->Start();
+            dcam->SetTrimSize(0);
 
             dComIfGp_event_reset();
 
@@ -303,19 +207,21 @@ static inline void demo_camera(kui_class* i_this) {
         gabi::Local<cXyz> c, e;
         cXyz_fcopy(e, &i_this->field_0x2EC);
         cXyz_fcopy(c, &i_this->field_0x2F8);
-        dCamera_Set(dcam, c, e);
-        JUTReport(0x19a, 0x1ae, STR(0x1001390C) /* "K SUB  COUNT  %d" */, i_this->field_0x2EA);
+        dcam->Set(c, e);
+        JUTReport(0x19a, 0x1ae, "K SUB  COUNT  %d", i_this->field_0x2EA);
         i_this->field_0x2EA = i_this->field_0x2EA + 1;
     }
 }
 
-/* type 3 (the bell): swing from the grappling hook */
+/* inlined into daKui_Execute */
+// Type 3 is the bell, swinging from the grappling hook.
 static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
     fopAc_ac_c* actor = i_this;
     s16 target_x_angle;
     if (actor->health == 3) {
         gabi::Local<cXyz> hand, diff, temp2, temp;
-        cXyz_fcopy(hand, gabi::at<cXyz>(gabi::ea(player) + 0x3F0)); /* daPy_py_c::getLeftHandPos() (HD +0x3F0) */
+        cXyz_fcopy(hand, &static_cast<daPy_py_c*>(player)
+                              ->mLeftHandPos); /* daPy_py_c::getLeftHandPos() (HD +0x3F0) */
         cXyz_mi(hand, diff, &actor->home.pos);
         temp2->copy(*diff);
         cMtx_YrotS(calc_mtx(), (s16)-player->shape_angle.y);
@@ -344,12 +250,13 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
         if (unk_flag != 0) {
             if (i_this->field_0x2DC[unk_flag] == 0) {
                 i_this->field_0x2DC[unk_flag] = 0x50;
-                i_this->field_0x2DC[0] = (s16)(REG_S_(10, 3) + 40); /* HD: REG10_S(3) (GameCube REG0_S(3)) */
+                i_this->field_0x2DC[0] =
+                    (s16)(REG_S_(10, 3) + 40); /* HD: REG10_S(3) (GameCube REG0_S(3)) */
 
                 StartShock_up(true);
                 fopAcM_seStartCurrent_nn(actor, JA_SE_OBJ_ST_CHIME, 0);
 
-                s16 v = bure_xa_d(unk_flag - 1);
+                s16 v = bure_xa_d[unk_flag - 1];
                 i_this->field_0x2E4 = v;
                 i_this->field_0x2E4 = (s16)(v * (REG_S_(17, 4) + 1));
                 i_this->field_0x2E6 = (s16)(REG_S_(17, 5) + 0x400);
@@ -402,7 +309,8 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
     cLib_addCalcAngleS2(&i_this->field_0x2E2, i_this->field_0x2E4, 4, i_this->field_0x2E6);
     cLib_addCalcAngleS2(&i_this->field_0x2E4, 0, 1, (s16)(REG_S_(17, 6) + 0x80));
-    cLib_addCalcAngleS2(&i_this->field_0x2E6, (s16)(REG_S_(17, 7) + 0x100), 1, (s16)(REG_S_(17, 8) + 0x40));
+    cLib_addCalcAngleS2(&i_this->field_0x2E6, (s16)(REG_S_(17, 7) + 0x100), 1,
+                        (s16)(REG_S_(17, 8) + 0x40));
 
     MtxTrans(actor->home.pos.x, actor->home.pos.y, actor->home.pos.z, FALSE);
     cMtx_YrotM(calc_mtx(), actor->current.angle.y);
@@ -420,7 +328,7 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
     cMtx_XrotM(calc_mtx(), (s16)(actor->current.angle.x + REG0_S(6)));
     {
         s16 r = REG0_S(5);
-        cMtx_YrotM(calc_mtx(), (s16)-(actor->shape_angle.y + r + 0x4000));
+        cMtx_YrotM(calc_mtx(), (s16) - (actor->shape_angle.y + r + 0x4000));
     }
 
     MtxScale(unk_f, 1.0f, unk_f, TRUE);
@@ -440,20 +348,19 @@ static inline void kui_bell(kui_class* i_this, fopAc_ac_c* player) {
 
 /* 021ACB0C */
 static BOOL daKui_Execute(kui_class* i_this) {
-    WWHD_FUNC(0x021ACB0C, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
 
     if (i_this->field_0x2A2 != 0) {
-        fopAc_ac_c* dragon_tail = (fopAc_ac_c*)fpcM_Search(0x021AC660 /* s_a_i_sub */, i_this);
-        fopAc_ac_c* btd = (fopAc_ac_c*)fpcM_Search(0x021AC6B0 /* b_a_i_sub */, i_this);
+        KuiDragonTailView* dragon_tail =
+            (KuiDragonTailView*)fpcM_Search(gabi::guest_fn((const void*)s_a_i_sub), i_this);
+        KuiBtdView* btd = (KuiBtdView*)fpcM_Search(gabi::guest_fn((const void*)b_a_i_sub), i_this);
 
         if (dragon_tail != nullptr && btd != nullptr) {
-            u32 dt = gabi::ea(dragon_tail);
-            s16 u4BA = gabi::load<s16>(dt + 0x5D6); /* dr2_class::unk_4BA */
-            if ((u4BA == 0 || u4BA >= 10) && gabi::load<s16>(gabi::ea(btd) + 0x40C) < 10) { /* btd_class::m02E4 */
-                actor->current.pos.copy(*gabi::at<cXyz>(dt + 0x4CC)); /* dr2_class::unk_3B0 */
+            s16 u4BA = dragon_tail->unk_4BA;                    /* dr2_class::unk_4BA */
+            if ((u4BA == 0 || u4BA >= 10) && btd->m02E4 < 10) { /* btd_class::m02E4 */
+                actor->current.pos.copy(dragon_tail->unk_3B0);  /* dr2_class::unk_3B0 */
                 actor->current.angle.x = dragon_tail->current.angle.x;
                 actor->current.angle.y = dragon_tail->current.angle.y;
                 actor->current.angle.z = dragon_tail->current.angle.z;
@@ -517,35 +424,27 @@ static BOOL daKui_Execute(kui_class* i_this) {
     actor->eyePos.copy(actor->current.pos);
     return TRUE;
 }
-VERIFY(0x021ACB0C, daKui_Execute);
 
 /* 021ADAF4 */
-static BOOL daKui_IsDelete(kui_class*) {
-    WWHD_FUNC(0x021ADAF4, BOOL, (u32)0);
-    return TRUE;
-}
-VERIFY(0x021ADAF4, daKui_IsDelete);
+static BOOL daKui_IsDelete(kui_class*) { return TRUE; }
 
 /* 021ADAFC */
 static BOOL daKui_Delete(kui_class* i_this) {
-    WWHD_FUNC(0x021ADAFC, BOOL, i_this);
-    dComIfG_resDelete(&i_this->mPhs, STR(0x10013968)); /* dComIfG_resDeleteDemo */
+    dComIfG_resDelete(&i_this->mPhs, "Kui"); /* dComIfG_resDeleteDemo */
     cBgS_Release(dComIfG_Bgsp(), i_this->field_0x2D8);
     return TRUE;
 }
-VERIFY(0x021ADAFC, daKui_Delete);
 
 /* 021ADB48 */
+// HD: assertion text spells NULL as (0).
 static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x021ADB48, BOOL, a_this);
     kui_class* i_this = (kui_class*)a_this;
     J3DModelData* modelData;
 
     if (i_this->type == 3) {
         /* Bell body */
-        modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname_res, 4 /* BDL_HKANE1 */, SAFESTRING_VTBL);
-        if (modelData == nullptr) /* JUT_ASSERT(851, modelData != NULL) */
-            JUT_ASSERT_fail(FILE_NAME, 0x391, ASSERT_MSG);
+        modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_HKANE1_e);
+        JUT_ASSERT(0x391, modelData != NULL);
 
         i_this->mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (!i_this->mpModel) {
@@ -553,9 +452,8 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
         }
 
         /* Bell handle */
-        modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname_res, 5 /* BDL_HKANE2 */, SAFESTRING_VTBL);
-        if (modelData == nullptr) /* JUT_ASSERT(863, modelData != NULL) */
-            JUT_ASSERT_fail(FILE_NAME, 0x39D, ASSERT_MSG);
+        modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_HKANE2_e);
+        JUT_ASSERT(0x39D, modelData != NULL);
 
         i_this->mpModel2 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (!i_this->mpModel2) {
@@ -563,9 +461,8 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
         }
     } else {
         /* Wooden post */
-        modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname_res, 7 /* BDL_OBI_ROPETAG */, SAFESTRING_VTBL);
-        if (modelData == nullptr) /* JUT_ASSERT(875, modelData != NULL) */
-            JUT_ASSERT_fail(FILE_NAME, 0x3A9, ASSERT_MSG);
+        modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_OBI_ROPETAG_e);
+        JUT_ASSERT(0x3A9, modelData != NULL);
 
         i_this->mpModel2 = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
         if (!i_this->mpModel2) {
@@ -574,9 +471,8 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
 
         if (i_this->type == 2 || i_this->type == 4) {
             /* Device that holds the post */
-            modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname_res, 6 /* BDL_MROPESW */, SAFESTRING_VTBL);
-            if (modelData == nullptr) /* JUT_ASSERT(887, modelData != NULL) */
-                JUT_ASSERT_fail(FILE_NAME, 0x3B5, ASSERT_MSG);
+            modelData = (J3DModelData*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_BDL_MROPESW_e);
+            JUT_ASSERT(0x3B5, modelData != NULL);
 
             i_this->mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
             if (!i_this->mpModel) {
@@ -591,7 +487,7 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
         return FALSE;
     }
 
-    cBgD_t* pData = (cBgD_t*)dComIfG_getObjectRes(M_arcname_res, 0xA /* DZB_OBI_ROPETAG */, SAFESTRING_VTBL);
+    cBgD_t* pData = (cBgD_t*)dComIfG_getObjectRes("Kui", dRes_INDEX_KUI_DZB_OBI_ROPETAG_e);
     if (cBgW_Set(i_this->field_0x2D8, pData, cBgW_MOVE_BG_e, &i_this->field_0x2A8) == true) {
         return FALSE;
     }
@@ -600,11 +496,9 @@ static BOOL daKui_CreateHeap(fopAc_ac_c* a_this) {
 
     return TRUE;
 }
-VERIFY(0x021ADB48, daKui_CreateHeap);
 
 /* 021ADD6C */
 static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x021ADD6C, cPhs_State, a_this);
     kui_class* i_this = (kui_class*)a_this;
     cPhs_State result;
 
@@ -617,7 +511,7 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
         fopAcM_OnCondition(a_this, fopAcCnd_INIT_e);
     }
 
-    result = dComIfG_resLoad(&i_this->mPhs, STR(0x100139A4));
+    result = dComIfG_resLoad(&i_this->mPhs, "Kui");
     if (result == cPhs_COMPLEATE_e) {
         dComIfGp_get(); /* HD: result unused */
 
@@ -669,7 +563,7 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
             break;
         }
 
-        if (!fopAcM_entrySolidHeap(i_this, 0x021ADB48 /* daKui_CreateHeap */, 0x29f4)) {
+        if (!fopAcM_entrySolidHeap(i_this, daKui_CreateHeap, 0x29f4)) {
             return cPhs_ERROR_e;
         }
 
@@ -677,7 +571,7 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
             return cPhs_ERROR_e;
         }
 
-        i_this->cullMtx = gabi::ea(J3DModel_getBaseTRMtx(i_this->mpModel2)); /* fopAcM_SetMtx */
+        fopAcM_SetMtx(i_this, i_this->mpModel2->getBaseTRMtx());
         if (i_this->type >= 2) {
             fopAcM_SetMin(i_this, -200.0f, -1000.0f, -200.0f);
             fopAcM_SetMax(i_this, 200.0f, 2000.0f, 200.0f);
@@ -688,36 +582,44 @@ static cPhs_State daKui_Create(fopAc_ac_c* a_this) {
     }
     return result;
 }
-VERIFY(0x021ADD6C, daKui_Create);
+
+// HD: compiler-generated and inline copies of this translation unit.
 
 /* 021AE0EC */
-static void __sinit_d_a_kui_cpp() {
-    WWHD_FUNC(0x021AE0EC, void, (u32)0);
-    sinit_header_statics(0x10464CAC, 0x101B8A54);
-}
-VERIFY(0x021AE0EC, __sinit_d_a_kui_cpp);
+static void __sinit_d_a_kui_cpp() { __sinit_header_statics(); }
 
-/* 021AE180: deleting destructor of a class with a trivial destructor */
+/* 021AE180 */
+// HD: deleting destructor of a class with a trivial destructor
 static void trivial_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x021AE180, void, p, flags);
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x021AE180, trivial_dt);
 
-/* 021AE194: kui_class deleting destructor */
+/* 021AE194 */
+// HD: kui_class deleting destructor
 static void kui_class_dt(kui_class* i_this, s32 flags) {
-    WWHD_FUNC(0x021AE194, void, i_this, flags);
     if (i_this != nullptr) {
-        gabi::call(0x025D50BC, i_this, 0); /* fopAc_ac_c::~fopAc_ac_c */
+        __dt(static_cast<fopAc_ac_c*>(i_this));
         if (flags & 1)
             operator_delete(i_this);
     }
 }
-VERIFY(0x021AE194, kui_class_dt);
 
-/* 021AE1E8: an empty virtual (per-TU copy) */
-static void empty_virtual(void* p) {
-    WWHD_FUNC(0x021AE1E8, void, p);
-}
-VERIFY(0x021AE1E8, empty_virtual);
+/* 021AE1E8 */
+// HD: an empty virtual (per-TU copy)
+static void empty_virtual(void* p) {}
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+ext 028E9E88 void C_VECHalfAngle(const cXyz*, const cXyz*, cXyz*)
+ext 028E9684 void C_MTXLookAt(Mtx34*, const cXyz*, const cXyz*, const cXyz*)
+str 1001390C "K SUB  COUNT  %d"
+str 10013968 "Kui" in 021ADAFC
+str 1001396C "Kui" in 021ADB48
+str 10013970 "d_a_kui.cpp"
+str 1001397C "modelData != NULL" renamed
+str 100139A4 "Kui" in 021ADD6C
+data mtx_adj 101B8A20
+data bure_xa_d 101B8A50
+*/
+// clang-format on

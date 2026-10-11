@@ -1,63 +1,213 @@
-#include "wwhd.h"
-#include "gabi.h"
-void CharTbl_SetUpIndex(u32 self){
- WWHD_FUNC(0x025AB7C4,void,self);
- const u32 keys[]={0x100525C0,0x10052568,0x10052570,0x10052578,0x10052580,0x10052588,0x10052590,0x10052598,0x100525A0,0x100525A8,0x100525B0,0x10052604,0x10052610,0x1005261C,0x10052628,0x10052634,0x10052640,0x100525B8,0x100525C4,0x100525CC,0x100525D4,0x100525DC,0x100525E4,0x100525EC,0x100525F4,0x100525FC};
- for(u32 i=0;i<26;++i){u32 index=gabi::call<u32>(0x0200E814,self,gabi::at<void>(keys[i]),0);gabi::store<u32>(self+0x28+4*i,index);}
+/** Actor data manager. WWHD, verified unit d_s_actor_data_mng. */
+#include "d/d_s_actor_data_mng.h"
+
+/* 025AB7C4 */
+void dADM_CharTbl::SetUpIndex() {
+    mIndex_ARG = cDT_NamePTbl_GetIndex(&mFmt, "ARG", 0);
+    mIndex_N_ITEM[0] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM0", 0);
+    mIndex_N_ITEM[1] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM1", 0);
+    mIndex_N_ITEM[2] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM2", 0);
+    mIndex_N_ITEM[3] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM3", 0);
+    mIndex_N_ITEM[4] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM4", 0);
+    mIndex_N_ITEM[5] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM5", 0);
+    mIndex_N_ITEM[6] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM6", 0);
+    mIndex_N_ITEM[7] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM7", 0);
+    mIndex_N_ITEM[8] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM8", 0);
+    mIndex_N_ITEM[9] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM9", 0);
+    mIndex_N_ITEM[10] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM10", 0);
+    mIndex_N_ITEM[11] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM11", 0);
+    mIndex_N_ITEM[12] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM12", 0);
+    mIndex_N_ITEM[13] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM13", 0);
+    mIndex_N_ITEM[14] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM14", 0);
+    mIndex_N_ITEM[15] = cDT_NamePTbl_GetIndex(&mFmt, "N_ITEM15", 0);
+    mIndex_percent = cDT_NamePTbl_GetIndex(&mFmt, "percent", 0);
+    mIndex_ITEM[0] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM0", 0);
+    mIndex_ITEM[1] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM1", 0);
+    mIndex_ITEM[2] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM2", 0);
+    mIndex_ITEM[3] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM3", 0);
+    mIndex_ITEM[4] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM4", 0);
+    mIndex_ITEM[5] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM5", 0);
+    mIndex_ITEM[6] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM6", 0);
+    mIndex_ITEM[7] = cDT_NamePTbl_GetIndex(&mFmt, "ITEM7", 0);
 }
-VERIFY(0x025AB7C4,CharTbl_SetUpIndex);
-u32 CharTbl_ctor(u32 self){WWHD_FUNC(0x025ABA58,u32,self);if(!self)self=gabi::call<u32>(0x0273AD10,0x90);if(self)gabi::call<void>(0x0200E9BC,self);return self;}
-VERIFY(0x025ABA58,CharTbl_ctor);
-void CharTbl_dtor(u32 self,u32 flags){WWHD_FUNC(0x025ABAA0,void,self,flags);if(self){gabi::call<void>(0x0200EA14,self,0);if(flags&1)gabi::call<void>(0x0273AF40,self);}}
-VERIFY(0x025ABAA0,CharTbl_dtor);
-void CharTbl_SetData(u32 self,u32 base,u32 n1,u32 p1,u32 n2,u32 p2,u32 count,u32 data){
- WWHD_FUNC(0x025ABAF4,void,self,base,n1,p1,n2,p2,count,data);
- for(u32 i=0;i<n1;++i){u32 a=p1+i*4;gabi::store<u32>(a,gabi::load<u32>(a)+base);}
- for(u32 i=0;i<n2;++i){u32 a=p2+i*4;gabi::store<u32>(a,gabi::load<u32>(a)+base);}
- if(count!=n1*n2)gabi::call<void>(0x0273AA24,gabi::at<void>(0x1005266C),0x3A,gabi::at<void>(0x1005264C));
- gabi::call<void>(0x0200EA28,self,n1,p1,n2,p2,data);CharTbl_SetUpIndex(self);
+
+/* 025ABA58 */
+dADM_CharTbl* dADM_CharTbl__ct(dADM_CharTbl* i_this) {
+    if (i_this == NULL) {
+        i_this = static_cast<dADM_CharTbl*>(ADM_allocate(sizeof(dADM_CharTbl)));
+    }
+    if (i_this != NULL) {
+        cDT__ct(i_this);
+    }
+    return i_this;
 }
-VERIFY(0x025ABAF4,CharTbl_SetData);
-s32 CharTbl_GetNameIndex2(u32 self,u32 name,u32 match){
- WWHD_FUNC(0x025ABBBC,s32,self,name,match);
- u32 start=0;
- for(;;){s32 found=gabi::call<s32>(0x0200E814,gabi::at<void>(self+0xC),name,start);if(found==-1)return found;
-  u32 field=gabi::load<u32>(self+0x28);if(gabi::call<u32>(0x0200EA74,self,field,u32(found))==match)return found;start=u32(found)+1;
- }
+
+/* 025ABAA0 */
+void dADM_CharTbl__dt(dADM_CharTbl* i_this, u32 flags) {
+    if (i_this != NULL) {
+        cDT__dt(i_this, 0);
+        if (flags & 1) {
+            ADM_delete(i_this);
+        }
+    }
 }
-VERIFY(0x025ABBBC,CharTbl_GetNameIndex2);
-u32 ADM_ctor(u32 self){WWHD_FUNC(0x025ABC48,u32,self);if(!self)self=gabi::call<u32>(0x0273AD10,0x9C);if(self){gabi::store<u32>(self+0x98,0x100526C8);CharTbl_ctor(self+8);gabi::store<u32>(self+4,0);gabi::store<u32>(self,0);}return self;}
-VERIFY(0x025ABC48,ADM_ctor);
-void ADM_dtor(u32 self,u32 flags){WWHD_FUNC(0x025ABCA8,void,self,flags);if(self){CharTbl_dtor(self+8,2);if(flags&1)gabi::call<void>(0x0273AF40,self);}}
-VERIFY(0x025ABCA8,ADM_dtor);
-s32 ADM_FindTag(u32 self,u32 tag,u32 outCount,u32 outData){
- WWHD_FUNC(0x025ABCFC,s32,self,tag,outCount,outData);
- s32 count=gabi::load<s32>(self);u32 entry=gabi::load<u32>(self+4);
- for(s32 i=0;i<count;++i,entry+=12){if(gabi::load<u32>(entry)==tag){u32 n=gabi::load<u32>(entry+4);gabi::store<u32>(outCount,n);u32 p=gabi::load<u32>(entry+8);gabi::store<u32>(outData,p);return 1;}}return 0;
+
+/* 025ABAF4 */
+void dADM_CharTbl::SetData(u32 offs, u32 row_num, u32 row_offs, u32 colum_num,
+                           u32 colum_offs, u32 dat_size, u32 data_offs) {
+    be<u32>* row = gabi::at<be<u32>>(row_offs);
+    for (u32 i = 0; i < row_num; ++i) {
+        row[i] = u32(row[i]) + offs;
+    }
+    be<u32>* colum = gabi::at<be<u32>>(colum_offs);
+    for (u32 i = 0; i < colum_num; ++i) {
+        colum[i] = u32(colum[i]) + offs;
+    }
+    if (dat_size != row_num * colum_num) {
+        // HD: assertion line 0x3A rather than GameCube's 0x39.
+        ADM_assert("d_s_actor_data_mng.cpp: dADM_CharTbl", 0x3A, "dat_size == row_num * colum_num");
+    }
+    cDT_Set(this, row_num, row_offs, colum_num, colum_offs, data_offs);
+    SetUpIndex();
 }
-VERIFY(0x025ABCFC,ADM_FindTag);
-void ADM_SetData(u32 self,u32 data){
- WWHD_FUNC(0x025ABD4C,void,self,data);
- s32 count=gabi::load<s32>(data);gabi::store<s32>(self,count);u32 entry=data+4;gabi::store<u32>(self+4,entry);
- for(s32 i=0;i<count;++i,entry+=12){gabi::store<u32>(entry+8,gabi::load<u32>(entry+8)+data);count=gabi::load<s32>(self);}
- struct Outputs{be<u32> n1,n2,n3,p1,p2,p3;};gabi::Local<Outputs> out;
- if(!ADM_FindTag(self,0x4143464E,gabi::ea(&out->n1),gabi::ea(&out->p1)))return;
- if(!ADM_FindTag(self,0x41434E41,gabi::ea(&out->n2),gabi::ea(&out->p2)))return;
- if(!ADM_FindTag(self,0x41434453,gabi::ea(&out->n3),gabi::ea(&out->p3)))return;
- u32 n1=out->n1,n2=out->n2,n3=out->n3;
- if(n1*n2!=n3){gabi::call<void>(0x0273AA24,gabi::at<void>(0x10052688),0xD7,gabi::at<void>(0x100526A0));n1=out->n1;n2=out->n2;n3=out->n3;}
- u32 p2=out->p2,p1=out->p1,p3=out->p3;CharTbl_SetData(self+8,data,n1,p1,n2,p2,n3,p3);
+
+/* 025ABBBC */
+s32 dADM_CharTbl::GetNameIndex2(u32 pName, u32 index) {
+    u32 start = 0;
+    for (;;) {
+        s32 found = cDT_NamePTbl_GetIndex(&mName, gabi::at<const char>(pName), start);
+        if (found == -1) {
+            return -1;
+        }
+        if (cDT_GetInf(this, mIndex_ARG, u32(found)) == index) {
+            return found;
+        }
+        start = u32(found) + 1;
+    }
 }
-VERIFY(0x025ABD4C,ADM_SetData);
-void d_s_actor_data_mng_static_init() {
- WWHD_FUNC(0x025ABE6C,void);
- gabi::store<u32>(0x1047B374,0);gabi::store<u32>(0x1047B36C,0);gabi::store<u32>(0x1047B378,0);gabi::store<u32>(0x1047B370,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101EA5CC));
- f32 lo=gabi::load<f32>(0x100526BC),hi=gabi::load<f32>(0x100526C0);
- gabi::store<f32>(0x1047B360,lo);gabi::store<f32>(0x1047B364,hi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1047B368));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101EA5D8));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1047B369));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101EA5E4));
+
+static u32 ADM_vtable;
+
+/* 025ABC48 */
+dADM* dADM__ct(dADM* i_this) {
+    if (i_this == NULL) {
+        i_this = static_cast<dADM*>(ADM_allocate(sizeof(dADM)));
+    }
+    if (i_this != NULL) {
+        // HD: install the vtable before constructing the embedded character table.
+        i_this->__vtbl = gabi::ea(&ADM_vtable);
+        dADM_CharTbl__ct(&i_this->mCharTbl);
+        i_this->mpData = NULL;
+        i_this->mBlockCount = 0;
+    }
+    return i_this;
 }
-VERIFY(0x025ABE6C,d_s_actor_data_mng_static_init);
+
+/* 025ABCA8 */
+void dADM__dt(dADM* i_this, u32 flags) {
+    if (i_this != NULL) {
+        dADM_CharTbl__dt(&i_this->mCharTbl, 2);
+        if (flags & 1) {
+            ADM_delete(i_this);
+        }
+    }
+}
+
+/* 025ABCFC */
+s32 dADM::FindTag(u32 tag, be<u32>* pSize, be<u32>* pOffs) {
+    s32 count = mBlockCount;
+    ADM_Block* pData = mpData;
+    for (s32 i = 0; i < count; ++i, ++pData) {
+        if (pData->mTag == tag) {
+            *pSize = pData->mSize;
+            *pOffs = pData->mOffset;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* 025ABD4C */
+void dADM::SetData(void* pData) {
+    s32 count = *static_cast<be<s32>*>(pData);
+    mBlockCount = count;
+    ADM_Block* pHeader = reinterpret_cast<ADM_Block*>(static_cast<be<u32>*>(pData) + 1);
+    mpData = pHeader;
+    for (s32 i = 0; i < count; ++i, ++pHeader) {
+        pHeader->mOffset = u32(pHeader->mOffset) + gabi::ea(pData);
+        // HD: overlapping input may change the loop bound while relocating blocks.
+        count = mBlockCount;
+    }
+    gabi::Local<ADM_Outputs> out;
+    if (!FindTag(ADM_ACFN, &out->row, &out->rowOffs)) {
+        return;
+    }
+    if (!FindTag(ADM_ACNA, &out->name, &out->nameOffs)) {
+        return;
+    }
+    if (!FindTag(ADM_ACDS, &out->dat_size, &out->dataOffs)) {
+        return;
+    }
+    u32 row = out->row;
+    u32 name = out->name;
+    u32 dat_size = out->dat_size;
+    if (row * name != dat_size) {
+        // HD: assertion line 0xD7 rather than GameCube's 202.
+        ADM_assert("d_s_actor_data_mng.cpp: dADM", 0xD7, "row * name == dat_size");
+        row = out->row;
+        name = out->name;
+        dat_size = out->dat_size;
+    }
+    u32 nameOffs = out->nameOffs;
+    u32 rowOffs = out->rowOffs;
+    u32 dataOffs = out->dataOffs;
+    mCharTbl.SetData(gabi::ea(pData), row, rowOffs, name, nameOffs, dat_size, dataOffs);
+}
+
+/* 025ABE6C */
+// HD: this translation unit's header statics and destructor registrations.
+static void __sinit_d_s_actor_data_mng_cpp() {
+    sinit_header_statics_rodata(0x1047B360, 0x101EA5CC, 0x1047B36C, 0x100526BC);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): format-name strings, vtable, and cDT runtime calls
+str 100525C0
+str 10052568
+str 10052570
+str 10052578
+str 10052580
+str 10052588
+str 10052590
+str 10052598
+str 100525A0
+str 100525A8
+str 100525B0
+str 10052604
+str 10052610
+str 1005261C
+str 10052628
+str 10052634
+str 10052640
+str 100525B8
+str 100525C4
+str 100525CC
+str 100525D4
+str 100525DC
+str 100525E4
+str 100525EC
+str 100525F4
+str 100525FC
+str 1005266C "d_s_actor_data_mng.cpp: dADM_CharTbl" renamed
+str 10052688 "d_s_actor_data_mng.cpp: dADM" renamed
+str 1005264C "dat_size == row_num * colum_num" renamed
+str 100526A0 "row * name == dat_size" renamed
+data ADM_vtable 100526C8
+ext 0273AD10 void* ADM_allocate(u32)
+ext 0273AF40 void ADM_delete(void*)
+ext 0200E9BC void cDT__ct(cDT*)
+ext 0200EA14 void cDT__dt(cDT*, u32)
+ext 0200E814 s32 cDT_NamePTbl_GetIndex(cDT_NamePTbl*, const char*, u32)
+ext 0200EA28 void cDT_Set(cDT*, u32, u32, u32, u32, u32)
+ext 0200EA74 u32 cDT_GetInf(cDT*, u32, u32)
+ext 0273AA24 void ADM_assert(const char*, s32, const char*)
+*/

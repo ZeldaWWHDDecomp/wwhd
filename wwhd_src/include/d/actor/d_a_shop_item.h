@@ -25,6 +25,7 @@ struct daShopItem_c : daItemBase_c {
     cXyz* getScaleP();
     csXyz* getRotateP();
     cXyz* getPosP();
+    void setTevType(s32 type) { mTevType = type; } /* [v nz] */
 
     /* 0x750 */ request_of_phase_process_class mPhase;   /* GameCube 0x63C */
     /* 0x758 */ gptr<dCloth_packet_c> field_0x644;

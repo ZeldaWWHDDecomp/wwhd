@@ -1,7 +1,7 @@
 /* pt_class (Miniblin), WWHD layout. 
  *
  * GameCube -> WWHD: +0x11C up to the timers (the GameCube header's m2C0.. are +0x11C); four bytes
- * fewer before the collision members (+0x118 from mAcchCir on: GameCube 0x328 -> 0x440).
+ * fewer before the collision members (+0x118 from m328 on: GameCube 0x328 -> 0x440).
  * enemyice keeps its GameCube layout (0x3B8); enemyfire is 0x22C (GameCube 0x228: one float
  * appended, set to 1.0 by its constructor). Size 0xEE4 (constructor 02446CF4).
  * Offsets from the verified functions. */
@@ -15,11 +15,15 @@ struct mDoExt_baseAnm_l {
     void setFrame(f32 f) { mFrameCtrl.mFrame = f; }
 };
 
+using PtMaterialAnimation = mDoExt_baseAnm_l;
+
 /* dPa_smokeEcallBack (HD 0x20): vtable first */
 struct dPa_smokeEcallBack_l {
     /* 0x00 */ be<u32> __vtbl;
     /* 0x04 */ u8 _04[0x1C];
 };
+
+using PtSmokeCallback = dPa_smokeEcallBack_l;
 
 /* enemyice (c_damagereaction), GameCube layout */
 struct enemyice {
@@ -55,7 +59,7 @@ struct enemyice {
 WWHD_OFFSET(enemyice, mCylHeight, 0x19C);
 WWHD_SIZE(enemyice, 0x3B8);
 
-/* enemyfire (c_damagereaction), HD 0x22C */
+// HD: enemyfire adds a particle scale multiplier to the GameCube layout.
 struct enemyfire {
     /* 0x000 */ gptr<fopAc_ac_c> mpActor;
     /* 0x004 */ be<s16> mFireDuration;
@@ -78,7 +82,7 @@ struct enemyfire {
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
     /* 0x208 */ u8 mLight[0x20]; /* LIGHT_INFLUENCE */
-    /* 0x228 */ be<f32> m228;    /* HD */
+    /* 0x228 */ union { be<f32> mParticleScaleMultiplier; be<f32> m228; }; // HD: legacy field name kept for dependent actors.
 };
 WWHD_OFFSET(enemyfire, mSph, 0xDC);
 WWHD_SIZE(enemyfire, 0x22C);
@@ -90,51 +94,51 @@ struct pt_class : fopEn_enemy_c {
     /* 0x3D2 */ be<u8> mRespawnDelay;
     /* 0x3D3 */ be<u8> mEnableSpawnSwitch;
     /* 0x3D4 */ be<u8> mDisableRespawnSwitch;
-    /* 0x3D5 */ be<s8> mbHide;          /* GameCube 0x2B9: not drawn, no action (waits for its spawn switch) */
-    /* 0x3D6 */ be<s8> mbRespawn;       /* GameCube 0x2BA: Delete creates a new Miniblin */
+    /* 0x3D5 */ be<s8> mInitialSpawnWaitsUntilOffScreen;          /* GameCube 0x2B9: not drawn, no action (waits for its spawn switch) */
+    /* 0x3D6 */ be<s8> m2BA;       /* GameCube 0x2BA: Delete creates a new Miniblin */
     /* 0x3D7 */ u8 _3D7[0x3DC - 0x3D7];
-    /* 0x3DC */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3E0 */ gptr<mDoExt_baseAnm_l> mpBtp;
-    /* 0x3E4 */ gptr<mDoExt_baseAnm_l> mpBrk;
-    /* 0x3E8 */ be<s32> mBrkFrame;      /* body colour (random 0..3) */
-    /* 0x3EC */ be<s16> mCounter;
-    /* 0x3EE */ be<s16> mAction;        /* GameCube 0x2D2 */
+    /* 0x3DC */ gptr<mDoExt_McaMorf> m2C0;
+    /* 0x3E0 */ gptr<PtMaterialAnimation> m2C4;
+    /* 0x3E4 */ gptr<PtMaterialAnimation> m2C8;
+    /* 0x3E8 */ be<s32> m2CC;      /* body colour (random 0..3) */
+    /* 0x3EC */ be<s16> m2D0;
+    /* 0x3EE */ be<s16> m2D2;        /* GameCube 0x2D2 */
     /* 0x3F0 */ be<s16> mMode;
-    /* 0x3F2 */ be<s16> mBlinkTimer;
+    /* 0x3F2 */ be<s16> m2D6;
     /* 0x3F4 */ be<s16> mInitialSpawnDelay; /* home angle.x */
     /* 0x3F6 */ u8 _3F6[0x404 - 0x3F6];
     /* 0x404 */ cXyz mJumpTarget;       /* landing point found by next_pos_set */
-    /* 0x410 */ gptr<cXyz> mpTargetPos;  /* bait (esa) or player position */
-    /* 0x414 */ be<s16> mTargetAngleY;
+    /* 0x410 */ gptr<cXyz> m2F8;  /* bait (esa) or player position */
+    /* 0x414 */ be<s16> m2FC;
     /* 0x416 */ u8 _416[2];
-    /* 0x418 */ be<f32> mTargetDist;
-    /* 0x41C */ be<f32> mTargetDistXZ;
+    /* 0x418 */ be<f32> m300;
+    /* 0x41C */ be<f32> m304;
     /* 0x420 */ be<s16> mTimers[3];
-    /* 0x426 */ be<s16> mDamageTimer;
+    /* 0x426 */ be<s16> m30E;
     /* 0x428 */ be<s16> mSpinSpeed;     /* pt_koke modes 10..12 */
     /* 0x42A */ u8 _42A[2];
-    /* 0x42C */ be<f32> mOldSpeedY;
-    /* 0x430 */ be<f32> mDrawYOffset;
-    /* 0x434 */ be<f32> mDrawYSpeed;
-    /* 0x438 */ be<f32> mKnockSpeed;
-    /* 0x43C */ be<s16> mKnockAngle;
+    /* 0x42C */ be<f32> m314;
+    /* 0x430 */ be<f32> m318;
+    /* 0x434 */ be<f32> m31C;
+    /* 0x438 */ be<f32> m320;
+    /* 0x43C */ be<s16> m324;
     /* 0x43E */ be<s8> mbBgCheck;       /* cleared by Draw */
     /* 0x43F */ be<s8> mbAttack;
-    /* 0x440 */ dBgS_AcchCir mAcchCir;
-    /* 0x480 */ dBgS_ObjAcch mAcch;
+    /* 0x440 */ dBgS_AcchCir m328;
+    /* 0x480 */ dBgS_ObjAcch m368;
     /* 0x644 */ dCcD_Stts mStts;
     /* 0x680 */ dCcD_Sph mSph;          /* body (tg/co) */
     /* 0x7AC */ dCcD_Sph mAtSph;        /* attack */
     /* 0x8D8 */ be<s8> mSmokeType;
     /* 0x8D9 */ u8 _8D9[3];
-    /* 0x8DC */ dPa_smokeEcallBack_l mSmokeCb;
+    /* 0x8DC */ PtSmokeCallback mSmokeCb;
     /* 0x8FC */ enemyice mEnemyIce;
     /* 0xCB4 */ enemyfire mEnemyFire;
-    /* 0xEE0 */ be<u8> mbHioSet;
+    /* 0xEE0 */ be<u8> mDC4;
     /* 0xEE1 */ u8 _EE1[3];
 };
-WWHD_OFFSET(pt_class, mpMorf, 0x3DC);
-WWHD_OFFSET(pt_class, mAcchCir, 0x440);
+WWHD_OFFSET(pt_class, m2C0, 0x3DC);
+WWHD_OFFSET(pt_class, m328, 0x440);
 WWHD_OFFSET(pt_class, mStts, 0x644);
 WWHD_OFFSET(pt_class, mSmokeCb, 0x8DC);
 WWHD_OFFSET(pt_class, mEnemyIce, 0x8FC);
@@ -151,58 +155,22 @@ struct daPt_HIO_c {
 };
 WWHD_SIZE(daPt_HIO_c, 8);
 
-/* ---- file statics ---- */
-static inline daPt_HIO_c& l_HIO() { return *gabi::at<daPt_HIO_c>(0x1046D334); }
-static inline be<u8>& hio_set() { return *gabi::at<be<u8>>(0x101CEF78); }
-/* direction tables (initialised by __sinit) */
-static inline cXyz* l_dir100() { return gabi::at<cXyz>(0x1046D358); }   /* [6]: +-100 on each axis */
-static inline cXyz* l_dir3() { return gabi::at<cXyz>(0x1046D3A0); }     /* [6]: -+3 on each axis */
-/* enemyfire joint and particle-scale tables (.data) */
-static inline s8 fire_jnt(int i) { return gabi::load<s8>(0x101CF044 + i); }
-static inline f32 fire_scale(int i) { return gabi::load<f32>(0x101CF01C + 4 * i); }
-
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* dStage_roomControl_c::mStayNo (s8 at 0x1047E6C8) */
-static inline s8 dComIfGp_roomControl_getStayNo() { return gabi::load<s8>(0x1047E6C8); }
-/* 0200E814 cDT_NamePTbl::GetIndex(name, 0) on play+0x50AC (dComIfGp_CharTbl) */
-static inline s32 dComIfGp_CharTbl_GetIndex(const char* name, s32 p) {
-    return gabi::call<s32>(0x0200E814, gabi::at<u8>(dComIfGp_ea() + PLAY_NAMETBL), name, p);
-}
-/* c_damagereaction */
-static inline BOOL enemy_ice(enemyice* ice) { return gabi::call<BOOL>(0x020402C8, ice); }
-static inline void enemy_fire(enemyfire* fire) { gabi::call(0x02041570, fire); }
-static inline void enemy_fire_remove(enemyfire* fire) { gabi::call(0x02041C30, fire); }
 /* process creation (fopAcM_create's inline body in HD) */
-struct fopAcM_prm_class_l {
+struct PtCreateAppend {
     /* 0x00 */ be<u32> mParameter;
     /* 0x04 */ cXyz mPos;
     /* 0x10 */ csXyz mAngle;
     /* 0x16 */ u8 _16[0x21 - 0x16];
     /* 0x21 */ be<s8> mRoomNo;
 };
-static inline fopAcM_prm_class_l* fopAcM_CreateAppend() { return gabi::call<fopAcM_prm_class_l*>(0x025D5600); }
-static inline void* fpcLy_CurrentLayer() { return gabi::call<void*>(0x025DED64); }
-static inline u32 fpcSCtRq_Request(void* layer, s16 name, u32 cb, void* data, void* append) {
-    return gabi::call<u32>(0x025E14A8, layer, name, cb, data, append);
-}
-/* mDoExt_btpAnm / mDoExt_brkAnm (HD sizes 0x74 / 0x78) */
-static inline mDoExt_baseAnm_l* mDoExt_btpAnm_ct(void* p) { return gabi::call<mDoExt_baseAnm_l*>(0x025E7820, p); }
-static inline BOOL mDoExt_btpAnm_init(mDoExt_baseAnm_l* a, J3DModelData* d, void* btp, s32 anmPlay, s32 mode, f32 rate,
-                                      s16 start, s16 end, bool modify, s32 entry) {
-    return gabi::call<BOOL>(0x025E789C, a, d, btp, anmPlay, mode, rate, start, end, modify, entry);
-}
-/* HARNESS WORKAROUND: the matcher names 025E80D0 mDoExt_brkAnm::init (it is the constructor), so the
+/* HD: HARNESS WORKAROUND: the matcher names 025E80D0 mDoExt_brkAnm::init (it is the constructor), so the
  * harness compares the GameCube init's stack argument; the original's outgoing-argument word is
  * still 0 from the preceding btpAnm::init call: give the call the same word. */
-static inline mDoExt_baseAnm_l* mDoExt_brkAnm_ct(void* p) {
+PtMaterialAnimation* pt_brkCtor(void* animation);
+static inline PtMaterialAnimation* mDoExt_brkAnm_ct(void* p) {
     gabi::Local<be<u32>[4]> outArgs;
     (*outArgs)[2] = 0;
-    return gabi::call<mDoExt_baseAnm_l*>(0x025E80D0, p);
-}
-static inline BOOL mDoExt_brkAnm_init(mDoExt_baseAnm_l* a, J3DModelData* d, void* brk, s32 anmPlay, s32 mode, f32 rate,
-                                      s16 start, s16 end, bool modify, s32 entry) {
-    return gabi::call<BOOL>(0x025E8154, a, d, brk, anmPlay, mode, rate, start, end, modify, entry);
+    return pt_brkCtor(p);
 }
 /* J3DModel (HD): model data at +0xAC; joint matrices in the block at +0x2C (flags +4, matrices +0x10) */
 struct J3DMtxBlock_l {
@@ -211,16 +179,18 @@ struct J3DMtxBlock_l {
     /* 0x06 */ u8 _06[0x10 - 6];
     /* 0x10 */ gptr<Mtx34> mpMtx;
 };
+using PtJointMatrixBlock = J3DMtxBlock_l;
 struct J3DModel_l {
     /* 0x00 */ u8 _00[0x2C];
-    /* 0x2C */ gptr<J3DMtxBlock_l> mpMtxBlock;
+    /* 0x2C */ gptr<PtJointMatrixBlock> mpMtxBlock;
     /* 0x30 */ u8 _30[0xAC - 0x30];
     /* 0xAC */ gptr<J3DModelData> mModelData;
 };
-static inline J3DModelData* getModelData(J3DModel* m) { return ((J3DModel_l*)m)->mModelData; }
+using PtModel = J3DModel_l;
+static inline J3DModelData* getModelData(J3DModel* m) { return ((PtModel*)m)->mModelData; }
 /* J3DModel::getAnmMtx (HD: marks the joint matrices dirty) */
 static inline Mtx34* getAnmMtx(J3DModel* m, s32 jnt) {
-    J3DMtxBlock_l* blk = ((J3DModel_l*)m)->mpMtxBlock;
+    PtJointMatrixBlock* blk = ((PtModel*)m)->mpMtxBlock;
     blk->mFlags |= 0x10;
     return gabi::at<Mtx34>(gabi::ea(blk->mpMtx.get()) + jnt * 0x30);
 }
@@ -234,32 +204,34 @@ struct dBgS_LinChk_l {
     /* 0x10 */ be<u32> __vtbl_10;
     /* 0x14 */ u8 _14[0x20 - 0x14];
     /* 0x20 */ be<u32> __vtbl_20;
-    /* 0x24 */ u8 _24[0x58 - 0x24];
+    /* 0x24 */ cXyz mStart;
+    /* 0x30 */ cXyz mCross;
+    /* 0x3C */ u8 _3C[0x58 - 0x3C];
     /* 0x58 */ be<u32> __vtbl_58;
     /* 0x5C */ be<u8> mPass[7];
     /* 0x63 */ u8 _63;
     /* 0x64 */ be<u32> __vtbl_64;
     /* 0x68 */ be<u32> mGrp;
 };
-WWHD_SIZE(dBgS_LinChk_l, 0x6C);
-static inline void dBgS_LinChk_ct(dBgS_LinChk_l* c) {
+using PtLineCheck = dBgS_LinChk_l;
+WWHD_SIZE(PtLineCheck, 0x6C);
+static inline void dBgS_LinChk_ct(PtLineCheck* c) {
     cBgS_LinChk_ct(c);
-    c->mpGrpPassChk = gabi::ea(c) + 0x64;
+    c->mpGrpPassChk = gabi::ea(&c->__vtbl_64);
     for (int i = 0; i < 7; i++) c->mPass[i] = 0;
     c->__vtbl_58 = 0x10038214;
     c->__vtbl_20 = 0x100381F4;
     c->__vtbl_10 = 0x100381E4;
     c->__vtbl_64 = 0x10038204;
     c->mGrp = 1;
-    c->mpPolyPassChk = gabi::ea(c) + 0x58;
+    c->mpPolyPassChk = gabi::ea(&c->__vtbl_58);
 }
-static inline void dBgS_LinChk_dt(dBgS_LinChk_l* c) {
+static inline void dBgS_LinChk_dt(PtLineCheck* c) {
     c->__vtbl_58 = 0x10038214;
     c->__vtbl_64 = 0x100380E4;
     c->__vtbl_20 = 0x100380D4;
     cBgS_LinChk_dt(c, 0);
 }
-
 
 /* dBgS_GndChk on the stack (layout) */
 struct dBgS_GndChk_l {
@@ -277,6 +249,117 @@ struct dBgS_GndChk_l {
     /* 0x4C */ be<u32> __vtbl_4C;
     /* 0x50 */ be<u32> mGrp;
 };
-WWHD_SIZE(dBgS_GndChk_l, 0x54);
+using PtGroundCheck = dBgS_GndChk_l;
+WWHD_SIZE(PtGroundCheck, 0x54);
 /* cBgS_LinChk::GetCross (lin end) */
-static inline cXyz* LinChk_GetCross(dBgS_LinChk_l* c) { return gabi::at<cXyz>(gabi::ea(c) + 0x30); }
+static inline cXyz* LinChk_GetCross(PtLineCheck* c) { return gabi::at<cXyz>(gabi::ea(c) + 0x30); }
+
+// HD: guest-backed views used by the inlined camera, player and smoke operations.
+struct PtCamera { u8 mPadding[0xDC]; cXyz mEye; cXyz mCenter; };
+WWHD_OFFSET(PtCamera, mEye, 0xDC);
+struct PtPlayer { u8 mPadding[0x3AC]; be<u8> mCutType; u8 mPad[0x13]; be<u32> mStateFlags; };
+WWHD_OFFSET(PtPlayer, mCutType, 0x3AC);
+WWHD_OFFSET(PtPlayer, mStateFlags, 0x3C0);
+struct PtPlayerVtable { u8 mPadding[0x3C]; be<u32> mCheckGuard; };
+struct PtSmokeVtable { u8 mPadding[0x44]; be<u32> mRemove; };
+struct PtEmitter {
+    u8 mPadding[0x34]; be<f32> mRate; u8 mPad38[0x20]; be<f32> mSpread;
+    u8 mPad5C[0x220-0x5C]; cXyz mGlobalScale;
+    u8 mPad22C[0xC]; cXyz mGlobalParticleScale;
+};
+WWHD_OFFSET(PtEmitter, mSpread, 0x58);
+WWHD_OFFSET(PtEmitter, mGlobalScale, 0x220);
+WWHD_OFFSET(PtEmitter, mGlobalParticleScale, 0x238);
+enum PtAction { PT_WAIT, PT_MOVE, PT_ATTACK, PT_KOKE, PT_PLES, PT_BAT };
+constexpr u32 PT_ESA_SEARCH_CALLBACK = 0x02446324;
+struct PtAttackInfo {
+    /* 0x00 */ be<u32> mpObj;
+    /* 0x04 */ be<u32> mpActor;
+    /* 0x08 */ be<u8> mDamage;
+    /* 0x09 */ be<u8> mbDead;
+    /* 0x0A */ be<u8> mResultingAttackType;
+    /* 0x0B */ u8 _0B;
+    /* 0x0C */ csXyz mHitAngle;
+    /* 0x12 */ be<u16> mPlCutBit;
+    /* 0x14 */ be<u32> pParticlePos;
+    /* 0x18 */ be<s32> mHitSoundId;
+};
+WWHD_SIZE(PtAttackInfo, 0x1C);
+BOOL pt_enemyIce(enemyice* ice);
+void pt_enemyFire(enemyfire* fire);
+void pt_enemyFireRemove(enemyfire* fire);
+PtCreateAppend* pt_createAppend();
+void* pt_currentLayer();
+u32 pt_createRequest(void* layer, s16 name, u32 callback, void* data, void* append);
+PtMaterialAnimation* pt_btpCtor(void* animation);
+BOOL pt_btpInit(PtMaterialAnimation* animation, J3DModelData* model, void* resource, s32 play, s32 mode, f32 rate, s16 start, s16 end, bool modify, s32 entry);
+PtMaterialAnimation* pt_brkCtor(void* animation);
+BOOL pt_brkInit(PtMaterialAnimation* animation, J3DModelData* model, void* resource, s32 play, s32 mode, f32 rate, s16 start, s16 end, bool modify, s32 entry);
+s32 pt_nameIndex(void* table, const char* name, s32 parameter);
+void pt_sphereCtor(dCcD_Sph* sphere);
+void pt_circleCtor(dBgS_AcchCir* circle);
+void pt_acchCtor(dBgS_ObjAcch* collision);
+void pt_smokeCtor(PtSmokeCallback* callback, s32 mode);
+void pt_sphereDtor(dCcD_Sph* sphere, s32 flags);
+void pt_acchDtor(dBgS_ObjAcch* collision, s32 flags);
+void pt_circleDtor(cM3dGCir_l* circle, s32 flags);
+void pt_actorDtor(fopAc_ac_c* actor, s32 flags);
+void pt_action(pt_class* actor);
+void* pt_atHitObj(dCcD_GObjInf* collision);
+void pt_checkAttack(fopAc_ac_c* actor, PtAttackInfo* info);
+void pt_monsterSound(u32 sound, cXyz* position, u32 processId, u32 parameter, s32 reverb);
+void pt_groundCtor(PtGroundCheck* check);
+void pt_groundDtor(PtGroundCheck* check, s32 flags);
+void pt_anmInit(pt_class* actor, int animation, f32 morph, u8 loop, f32 rate, int sound);
+void pt_smokeSet(pt_class* actor, s8 type);
+s16 pt_wallAngle(pt_class* actor);
+
+enum {
+    dRes_INDEX_PT_BCK_WAIT_e = 0xC,   /* used by useHeapInit */
+    dRes_INDEX_PT_BDL_PT_e = 0xF,
+    dRes_INDEX_PT_BRK_e = 0x12,
+    dRes_INDEX_PT_BTP_e = 0x15,
+};
+
+inline BOOL pt_checkGuard(fopAc_ac_c* player) {
+    u32 function = gabi::at<PtPlayerVtable>(player->__vtbl)->mCheckGuard;
+    return gabi::call_ptr<BOOL>(function, player);
+}
+inline void pt_removeSmoke(PtSmokeCallback* callback) {
+    gabi::call_ptr(gabi::at<PtSmokeVtable>(callback->__vtbl)->mRemove, callback);
+}
+inline s32 pt_characterIndex(const char* name, s32 parameter) {
+    return pt_nameIndex(gabi::at<u8>(dComIfGp_ea() + PLAY_NAMETBL), name, parameter);
+}
+WWHD_SIZE(PtMaterialAnimation, 0x10);
+WWHD_SIZE(PtSmokeCallback, 0x20);
+WWHD_SIZE(PtCreateAppend, 0x22);
+WWHD_SIZE(PtJointMatrixBlock, 0x14);
+WWHD_SIZE(PtModel, 0xB0);
+WWHD_SIZE(PtCamera, 0xF4);
+WWHD_SIZE(PtPlayer, 0x3C4);
+WWHD_SIZE(PtPlayerVtable, 0x40);
+WWHD_SIZE(PtSmokeVtable, 0x48);
+WWHD_SIZE(PtEmitter, 0x244);
+WWHD_OFFSET(PtLineCheck, mCross, 0x30);
+
+struct PtSphereSource {
+    be<u32> mFlags, mAttackType, mAttackPower, mAttackPrm;
+    be<u32> mTargetType, mTargetPrm, mCollisionPrm;
+    be<u32> mAttackInfo, mAttackFlags, mTargetInfo, mTargetFlags, mCollisionFlags;
+    be<f32> mCenter[3]; be<f32> mRadius;
+};
+WWHD_SIZE(PtSphereSource, 0x40);
+
+WWHD_OFFSET(PtCreateAppend, mParameter, 0);
+WWHD_OFFSET(PtCreateAppend, mPos, 4);
+WWHD_OFFSET(PtCreateAppend, mAngle, 0x10);
+WWHD_OFFSET(PtCreateAppend, mRoomNo, 0x21);
+WWHD_OFFSET(PtAttackInfo, pParticlePos, 0x14);
+WWHD_OFFSET(PtJointMatrixBlock, mpMtx, 0x10);
+WWHD_OFFSET(PtModel, mModelData, 0xAC);
+
+// HD: preserve existing damage-reaction bindings used by dependent actor sources.
+static inline BOOL enemy_ice(enemyice* ice) { return gabi::call<BOOL>(0x020402C8, ice); }
+static inline void enemy_fire(enemyfire* fire) { gabi::call(0x02041570, fire); }
+static inline void enemy_fire_remove(enemyfire* fire) { gabi::call(0x02041C30, fire); }

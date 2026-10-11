@@ -1,429 +1,543 @@
-/* f_op_actor_mng: actor manager helpers (fopAcM), WWHD. 
- *
- * Translation unit 025D537C..025DA2F4 (f_op_actor_iter and a function-less unit's __sinit
- * 025D52E8 precede it; the unit's own __sinit 025DA1B4 sits after fpoAcM_absolutePos and is
- * followed by its per-TU inline destructors 025DA254/025DA268/025DA2E0 and an empty function
- * 025DA2F4; f_op_actor_tag starts at 025DA2F8).
- * Part 1 (this file): 025D52E8..025D63E4 — layers, search, create/append, heaps.
- * Ported from the GameCube f_op_actor_mng.cpp. fpcM_Create is inlined as
- * fpcSCtRq_Request(fpcLy_CurrentLayer(), name, createFunc, NULL, append); fopAcM_SearchByID(id)
- * is inlined as (id == -1 ? NULL : fopAcIt_Judge(fpcSch_JudgeByID, &id)).
- *
- * fopAcM_prm_class (0x24) as on GameCube: parameters +0, pos +4, angle +0x10, setID +0x16,
- * scale (u8 x3) +0x18, gbaName +0x1B, parent id +0x1C, argument +0x20, room +0x21. */
-#include "bindings.h"
+/** Actor manager: layers, actor lookup, creation parameters and solid heaps.
+ * WWHD source, verified against the native unit.
+ */
+// HD: entry signatures retain verified register widths; *Register entries are distinct
+// from shared typed or overloaded GameCube wrappers.
+#include "f_op/f_op_actor_mng.h"
 
-namespace f_op_actor_mng_cpp {
+// One definition of every TU-wide object; the other source parts use the header declarations.
+static ActorManagerSinCosTable sincosTable;
+static cXyz zeroPosition;
+static csXyz zeroAngle;
+static u32 HeapAlign;
+static u8 HeapAdjustVerbose;
+static u8 HeapAdjustQuiet;
+static ActorManagerRoomStatuses roomStatuses;
+static u32 nodeProcessType;
+static u32 stageProcessID;
+static ActorManagerMatrix viewMtx;
+static ActorManagerClipper clipper;
+static f32 systemFar;
+static ActorManagerCullBoxes l_cullSizeBox;
+static ActorManagerCullSpheres l_cullSizeSphere;
+static u32 stageHeapFlags;
+static u32 specialActorHeap;
+static ActorManagerViewRoot* viewRoot;
+static u32 saveSingleton;
+static ActorManagerFairyOffsets fairy_offset_tbl;
+static u32 fairy_offset_initialized;
+static ActorManagerWaterCheck water_check;
+static ActorManagerHeaderStatics headerStatics;
+static u32 water_check_initialized;
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void JUT_ASSERT_l(u32 file, s32 line, u32 msg) { gabi::call(0x0273AA24, file, line, msg); }
-static inline void JUT_CONFIRM_l(u32 file, s32 line, u32 msg) { gabi::call(0x0273AA38, file, line, msg); }
-static inline void OSReport_Error_l(u32 fmt) { gabi::call(0x025F2710, fmt); }
-static inline void OSReport_Error_l(u32 fmt, u32 a, u32 b) { gabi::call(0x025F2710, fmt, a, b); }
-static inline void OSReport_Warning_l(u32 fmt) { gabi::call(0x025F27E8, fmt); }
-static inline void OSReport_Warning_l(u32 fmt, u32 a, u32 b) { gabi::call(0x025F27E8, fmt, a, b); }
-static inline u32 fopScnM_SearchByID_l(u32 id) { return gabi::call<u32>(0x025DC80C, id); }
-static inline BOOL fpcBs_Is_JustOfType_l(s32 a, s32 b) { return gabi::call<BOOL>(0x025DD258, a, b); }
-static inline void fpcPi_Change_l(u32 pi, u32 layer, u32 listId, u32 listPrio) { gabi::call(0x025E0D38, pi, layer, listId, listPrio); }
-static inline BOOL fpcM_IsCreating_l(u32 id) { return gabi::call<BOOL>(0x025DD868, id); }
-static inline u32 fopAcIt_Judge_l(u32 fn, u32 data) { return gabi::call<u32>(0x025D5218, fn, data); }
-static inline u32 cMl_memalignB_l(s32 align, u32 size) { return gabi::call<u32>(0x02019430, align, size); }
-static inline void cLib_memSet_l(u32 p, s32 v, u32 n) { gabi::call(0x0200ECCC, p, v, n); }
-static inline s32 fpcM_Delete_l(u32 a) { return gabi::call<s32>(0x025DF944, a); }
-static inline u32 fpcLy_CurrentLayer_l() { return gabi::call<u32>(0x025DED64); }
-static inline u32 fpcSCtRq_Request_l(u32 layer, u32 name, u32 fn, u32 data, u32 append) {
-    return gabi::call<u32>(0x025E14A8, layer, name, fn, data, append);
-}
-static inline u32 fpcM_FastCreate_l(u32 name, u32 fn, u32 data, u32 append) { return gabi::call<u32>(0x025DFAB8, name, fn, data, append); }
-static inline u32 dStage_searchName_l(u32 name) { return gabi::call<u32>(0x025C109C, name); }
-static inline u32 dStage_getName_l(s16 procName, s8 arg) { return gabi::call<u32>(0x025C1150, procName, arg); }
-static inline u32 mDoExt_createSolidHeapFromGameToCurrent_l(u32 size, u32 align) { return gabi::call<u32>(0x025E3630, size, align); }
-static inline u32 mDoExt_createSolidHeapToCurrent_l(u32 size, u32 parent, u32 align) { return gabi::call<u32>(0x025E35BC, size, parent, align); }
-static inline void mDoExt_restoreCurrentHeap_l() { gabi::call(0x025E37D8); }
-static inline void mDoExt_adjustSolidHeap_l(u32 h) { gabi::call(0x025E3678, h); }
-static inline void mDoExt_destroySolidHeap_l(u32 h) { gabi::call(0x025E3868, h); }
-static inline void JKRHeap_alloc_l(u32 size, s32 align) { gabi::call(0x027EC0AC, size, align); }
+const gc_tu_data gc_tu = {.safeString = 0x1005716C,
+                          .gndChk = {0x100571A4, 0x100571B4, 0x100571D4, 0x100571C4},
+                          .gndChkDt = {0x100571B4, 0x100571D4, 0x10057194},
+                          .headerStatics = {0x1048745C, 0x101F30CC, 0}};
+const ActorManagerTuData actorManagerTu = {
+    0x100571E4, 0x10057204, 0x10057194, {0x101F32C0, 0x101F32CC, 0x101F32D8, 0x101F32E4, 0x101F32F0}};
 
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u16 ld16(u32 a) { return gabi::load<u16>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
 
-static constexpr u32 kZeroXyz = 0x101FFBA8;
-static constexpr u32 kZeroSXyz = 0x101FFB14;
 static constexpr u32 fpcSch_JudgeByID = 0x025E1234;
 static constexpr u32 fpcSch_JudgeForPName = 0x025E121C;
-static constexpr u32 g_fpcNd_type = 0x101F3D60;
-static constexpr u32 sincosTable = 0x104A44F8; /* JMath sin/cos table: {sin, cos} per (u16)angle >> 3 */
-static constexpr u32 HeapAlign = 0x101F32FC;   /* HD: heap alignment for the entry heaps */
-static constexpr u32 HeapAdjustVerbose = 0x101F3300;
-static constexpr u32 HeapAdjustQuiet = 0x101F3301;
 
-struct u32_l { be<u32> v; };
-struct s16_l { be<s16> v; };
-struct cXyz_l { be<f32> x, y, z; };
-struct csXyz_l { be<s16> x, y, z; };
-
-/* 025D52E8: the __sinit of a unit without functions between f_op_actor_iter and f_op_actor_mng */
-static void __sinit_025D52E8() {
-    WWHD_FUNC(0x025D52E8, void, (u32)0);
-    sinit_header_statics(0x1048745C, 0x101F30CC);
+/* the __sinit of a unit without functions between f_op_actor_iter and f_op_actor_mng */
+/* 025D52E8 */
+static void __sinit_actorManagerHeader() {
+    sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
 }
-VERIFY(0x025D52E8, __sinit_025D52E8);
 
 /* fopScnM_LayerID (inline): the scene's layer id, -1 if it is not a node process */
 static inline u32 scene_layer(u32 scn) {
     u32 layer = (u32)-1;
-    if (fpcBs_Is_JustOfType_l(ld(g_fpcNd_type), ld(scn + 0xB8))) layer = ld(scn + 0xCC);
+    if (actMngGuest_fpcBs_Is_JustOfType((u32)nodeProcessType,
+                                        (u32)actorMngView<process_node_class>(scn)->mSubType))
+        layer = (u32)actorMngView<process_node_class>(scn)->mLayer.mLayerID;
     return layer;
 }
 
 /* 025D537C */
-static void fopAcM_setStageLayer(u32 pProc) {
-    WWHD_FUNC(0x025D537C, void, pProc);
-    u32 stageProc = fopScnM_SearchByID_l(ld(0x1047E6C4)); /* dStage_roomControl_c::getProcID() */
-    if (stageProc == 0) JUT_ASSERT_l(0x10057284, 0xF1, 0x10057298);
+static void fopAcM_setStageLayerRegister(u32 pProc) {
+    u32 stageProc =
+        actMngGuest_fopScnM_SearchByID((u32)stageProcessID); /* dStage_roomControl_c::getProcID() */
+    if (stageProc == 0)
+        actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0xF1,
+                               gabi::guest_addr("stageProc != (0)"));
     u32 layer = scene_layer(stageProc);
-    fpcPi_Change_l(pProc + 0x68, layer, 0xFFFD, 0xFFFD); /* fpcM_ChangeLayerID */
+    actMngGuest_fpcPi_Change(gabi::ea(&actorMngView<base_process_class>(pProc)->mPi), layer, 0xFFFD,
+                             0xFFFD); /* fpcM_ChangeLayerID */
 }
-VERIFY(0x025D537C, fopAcM_setStageLayer);
 
 /* 025D5418 */
 static void fopAcM_setRoomLayer(u32 pProc, s32 room_no) {
-    WWHD_FUNC(0x025D5418, void, pProc, room_no);
     if (room_no >= 0) {
-        u32 roomProc = fopScnM_SearchByID_l(ld(0x1047E8F0 + room_no * 0x22C)); /* getStatusProcID */
-        if (roomProc == 0) JUT_ASSERT_l(0x100572BC, 0x108, 0x100572AC);
+        u32 roomProc = actMngGuest_fopScnM_SearchByID(
+            (u32)roomStatuses.rooms[room_no].mProcID); /* getStatusProcID */
+        if (roomProc == 0)
+            actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x108,
+                                   gabi::guest_addr("roomProc != (0)"));
         u32 layer = scene_layer(roomProc);
-        fpcPi_Change_l(pProc + 0x68, layer, 0xFFFD, 0xFFFD);
+        actMngGuest_fpcPi_Change(gabi::ea(&actorMngView<base_process_class>(pProc)->mPi), layer, 0xFFFD,
+                                 0xFFFD);
     }
 }
-VERIFY(0x025D5418, fopAcM_setRoomLayer);
 
-/* 025D54C4: HD: an id of -1 finds nothing (FALSE) */
-static BOOL fopAcM_SearchByID(u32 actorID, u32 pDstActor) {
-    WWHD_FUNC(0x025D54C4, BOOL, actorID, pDstActor);
-    gabi::Local<u32_l> id;
-    id->v = actorID;
+// HD: an id of -1 finds nothing (FALSE)
+/* 025D54C4 */
+static BOOL fopAcM_SearchByIDRegister(u32 actorID, u32 pDstActor) {
+    gabi::Local<ActorManagerGuestID> id;
+    id->value = actorID;
     if ((s32)actorID == -1) {
-        st(pDstActor, 0);
+        *actorMngView<be<u32>>(pDstActor) = 0;
         return FALSE;
     }
-    if (fpcM_IsCreating_l(actorID)) {
-        st(pDstActor, 0);
+    if (actMngGuest_fpcM_IsCreating(actorID)) {
+        *actorMngView<be<u32>>(pDstActor) = 0;
         return TRUE;
     }
-    u32 a = fopAcIt_Judge_l(fpcSch_JudgeByID, gabi::ea(id.get()));
-    st(pDstActor, a);
+    u32 a = actMngGuest_fopAcIt_Judge(fpcSch_JudgeByID, gabi::ea(id.get()));
+    *actorMngView<be<u32>>(pDstActor) = a;
     if (a == 0) return FALSE;
     return TRUE;
 }
-VERIFY(0x025D54C4, fopAcM_SearchByID);
 
 /* 025D5578 */
 static BOOL fopAcM_SearchByName(s16 procName, u32 pDstActor) {
-    WWHD_FUNC(0x025D5578, BOOL, procName, pDstActor);
-    gabi::Local<s16_l> name;
-    name->v = procName;
-    u32 a = fopAcIt_Judge_l(fpcSch_JudgeForPName, gabi::ea(name.get()));
-    st(pDstActor, a);
+    gabi::Local<ActorManagerGuestName> name;
+    name->value = procName;
+    u32 a = actMngGuest_fopAcIt_Judge(fpcSch_JudgeForPName, gabi::ea(name.get()));
+    *actorMngView<be<u32>>(pDstActor) = a;
     if (a == 0) return FALSE;
-    u32 id = a != 0 ? ld(a + 4) : (u32)-1; /* fopAcM_GetID */
-    if (fpcM_IsCreating_l(id)) st(pDstActor, 0);
+    u32 id = a != 0 ? (u32)actorMngActor(a)->mBsPcId : (u32)-1; /* fopAcM_GetID */
+    if (actMngGuest_fpcM_IsCreating(id)) *actorMngView<be<u32>>(pDstActor) = 0;
     return TRUE;
 }
-VERIFY(0x025D5578, fopAcM_SearchByName);
 
 /* 025D5600 */
 static u32 fopAcM_CreateAppend() {
-    WWHD_FUNC(0x025D5600, u32);
-    u32 params = cMl_memalignB_l(-4, 0x24);
+    u32 params = actMngGuest_cMl_memalignB(-4, 0x24);
+    fopAcM_prm_class* append = actorMngView<fopAcM_prm_class>(params);
     if (params != 0) {
-        cLib_memSet_l(params, 0, 0x24);
-        st16(params + 0x16, 0xFFFF);
-        st8(params + 0x21, 0xFF);
-        st8(params + 0x18, 10);
-        st8(params + 0x19, 10);
-        st8(params + 0x1A, 10);
-        st(params + 0x1C, (u32)-1);
-        st8(params + 0x20, 0xFF);
+        actMngGuest_cLib_memSet(params, 0, 0x24);
+        append->base.setID = 0xFFFF;
+        append->room_no = 0xFF;
+        append->scale.x = 10;
+        append->scale.y = 10;
+        append->scale.z = 10;
+        append->parent_id = (u32)-1;
+        append->argument = 0xFF;
     }
     return params;
 }
-VERIFY(0x025D5600, fopAcM_CreateAppend);
 
 /* 025D5678 */
-static u32 createAppend(u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, s32 i_argument, u32 parentPcId) {
-    WWHD_FUNC(0x025D5678, u32, parameter, pPos, roomNo, pAngle, pScale, i_argument, parentPcId);
+static u32 createAppend(u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, s32 i_argument,
+                        u32 parentPcId) {
     u32 params = fopAcM_CreateAppend();
+    fopAcM_prm_class* append = actorMngView<fopAcM_prm_class>(params);
     if (params == 0) return 0;
-    u32 src = pPos != 0 ? pPos : kZeroXyz;
-    st(params + 4, ld(src + 0));
-    st(params + 8, ld(src + 4));
-    u32 z = ld(src + 8);
-    st8(params + 0x21, (u8)roomNo);
-    st(params + 0xC, z);
-    u32 asrc = pAngle != 0 ? pAngle : kZeroSXyz;
-    st16(params + 0x10, ld16(asrc + 0));
-    st16(params + 0x12, ld16(asrc + 2));
-    st16(params + 0x14, ld16(asrc + 4));
+    u32 src = pPos != 0 ? pPos : gabi::ea(&zeroPosition);
+    actorMngBits(append->base.position.x) = (u32)(actorMngBits(actorMngView<cXyz>(src)->x));
+    actorMngBits(append->base.position.y) = (u32)(actorMngBits(actorMngView<cXyz>(src)->y));
+    u32 z = (u32)(actorMngBits(actorMngView<cXyz>(src)->z));
+    append->room_no = (u8)roomNo;
+    actorMngBits(append->base.position.z) = z;
+    u32 asrc = pAngle != 0 ? pAngle : gabi::ea(&zeroAngle);
+    append->base.angle.x = (u16)(actorMngView<csXyz>(asrc)->x);
+    append->base.angle.y = (u16)(actorMngView<csXyz>(asrc)->y);
+    append->base.angle.z = (u16)(actorMngView<csXyz>(asrc)->z);
     if (pScale != 0) {
-        st8(params + 0x18, (u8)gabi::ftoi(ldf(pScale + 0) * 10.0f));
-        st8(params + 0x19, (u8)gabi::ftoi(ldf(pScale + 4) * 10.0f));
-        u8 sz = (u8)gabi::ftoi(ldf(pScale + 8) * 10.0f);
-        st(params + 0, parameter);
-        st8(params + 0x1A, sz);
+        append->scale.x = (u8)gabi::ftoi((f32)(actorMngView<cXyz>(pScale)->x) * 10.0f);
+        append->scale.y = (u8)gabi::ftoi((f32)(actorMngView<cXyz>(pScale)->y) * 10.0f);
+        u8 sz = (u8)gabi::ftoi((f32)(actorMngView<cXyz>(pScale)->z) * 10.0f);
+        append->base.parameters = parameter;
+        append->scale.z = sz;
     } else {
-        st(params + 0, parameter);
-        st8(params + 0x18, 10);
-        st8(params + 0x19, 10);
-        st8(params + 0x1A, 10);
+        append->base.parameters = parameter;
+        append->scale.x = 10;
+        append->scale.y = 10;
+        append->scale.z = 10;
     }
-    st(params + 0x1C, parentPcId);
-    st8(params + 0x20, (u8)i_argument);
+    append->parent_id = parentPcId;
+    append->argument = (u8)i_argument;
     return params;
 }
-VERIFY(0x025D5678, createAppend);
 
 /* 025D57E0 */
 static s32 fopAcM_delete_actor(u32 pActor) {
-    WWHD_FUNC(0x025D57E0, s32, pActor);
-    return fpcM_Delete_l(pActor);
+    return actMngGuest_fpcM_Delete(pActor);
 }
-VERIFY(0x025D57E0, fopAcM_delete_actor);
 
 /* 025D57E4 */
 static s32 fopAcM_delete_id(u32 actorID) {
-    WWHD_FUNC(0x025D57E4, s32, actorID);
-    gabi::Local<u32_l> id;
-    id->v = actorID;
+    gabi::Local<ActorManagerGuestID> id;
+    id->value = actorID;
     u32 a = 0;
-    if ((s32)actorID != -1) a = fopAcIt_Judge_l(fpcSch_JudgeByID, gabi::ea(id.get()));
-    if (a != 0) return fpcM_Delete_l(a);
+    if ((s32)actorID != -1) a = actMngGuest_fopAcIt_Judge(fpcSch_JudgeByID, gabi::ea(id.get()));
+    if (a != 0) return actMngGuest_fpcM_Delete(a);
     return TRUE;
 }
-VERIFY(0x025D57E4, fopAcM_delete_id);
 
 /* 025D5834 */
-static u32 fopAcM_create(u32 procName, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 i_argument, u32 createFunc) {
-    WWHD_FUNC(0x025D5834, u32, procName, parameter, pPos, roomNo, pAngle, pScale, i_argument, createFunc);
+static u32 fopAcM_createRegister(u32 procName, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale,
+                                 u32 i_argument, u32 createFunc) {
     u32 params = createAppend(parameter, pPos, roomNo, pAngle, pScale, i_argument, (u32)-1);
     if (params == 0) return (u32)-1;
-    return fpcSCtRq_Request_l(fpcLy_CurrentLayer_l(), procName, createFunc, 0, params);
+    return actMngGuest_fpcSCtRq_Request(actMngGuest_fpcLy_CurrentLayer(), procName, createFunc, 0, params);
 }
-VERIFY(0x025D5834, fopAcM_create);
 
 /* 025D58B4 */
-static u32 fopAcM_create_str(u32 pProcNameString, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 createFunc) {
-    WWHD_FUNC(0x025D58B4, u32, pProcNameString, parameter, pPos, roomNo, pAngle, pScale, createFunc);
-    u32 nameInf = dStage_searchName_l(pProcNameString);
+static u32 fopAcM_create_str(u32 pProcNameString, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale,
+                             u32 createFunc) {
+    u32 nameInf = actMngGuest_dStage_searchName(pProcNameString);
     if (nameInf == 0) return (u32)-1;
-    return fopAcM_create((u32)(s32)(s16)ld16(nameInf + 8), parameter, pPos, roomNo, pAngle, pScale,
-                         (u32)(s32)(s8)ld8(nameInf + 0xA), createFunc);
+    return fopAcM_createRegister((u32)(s32)(s16)(u16)(actorMngView<ActorManagerNameInfo>(nameInf)->mProcName),
+                                 parameter, pPos, roomNo, pAngle, pScale,
+                                 (u32)(s32)(s8)(u8)(actorMngView<ActorManagerNameInfo>(nameInf)->mArgument),
+                                 createFunc);
 }
-VERIFY(0x025D58B4, fopAcM_create_str);
 
 /* 025D5928 */
-static u32 fopAcM_fastCreate(u32 procName, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 i_argument, u32 createFunc) {
-    WWHD_FUNC(0x025D5928, u32, procName, parameter, pPos, roomNo, pAngle, pScale, i_argument, createFunc);
-    u32 pUserData = ld(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
+static u32 fopAcM_fastCreate(u32 procName, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale,
+                             u32 i_argument, u32 createFunc) {
+    u32 pUserData = *actorMngView<be<u32>>(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
     u32 params = createAppend(parameter, pPos, roomNo, pAngle, pScale, i_argument, (u32)-1);
     if (params == 0) return 0;
-    return fpcM_FastCreate_l(procName, createFunc, pUserData, params);
+    return actMngGuest_fpcM_FastCreate(procName, createFunc, pUserData, params);
 }
-VERIFY(0x025D5928, fopAcM_fastCreate);
 
 /* 025D59A8 */
-static u32 fopAcM_fastCreate_str(u32 pProcNameString, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 createFunc, u32 pUserData) {
-    WWHD_FUNC(0x025D59A8, u32, pProcNameString, parameter, pPos, roomNo, pAngle, pScale, createFunc, pUserData);
-    u32 nameInf = dStage_searchName_l(pProcNameString);
+static u32 fopAcM_fastCreate_str(u32 pProcNameString, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle,
+                                 u32 pScale, u32 createFunc, u32 pUserData) {
+    u32 nameInf = actMngGuest_dStage_searchName(pProcNameString);
     if (nameInf == 0) return 0;
-    return gabi::call<u32>(0x025D5928, (u32)(s32)(s16)ld16(nameInf + 8), parameter, pPos, roomNo, pAngle, pScale,
-                           (u32)(s32)(s8)ld8(nameInf + 0xA), createFunc, pUserData); /* fopAcM_fastCreate */
+    return actMngGuest_fopAcM_fastCreate(
+        (u32)(s32)(s16)(u16)(actorMngView<ActorManagerNameInfo>(nameInf)->mProcName), parameter, pPos, roomNo,
+        pAngle, pScale, (u32)(s32)(s8)(u8)(actorMngView<ActorManagerNameInfo>(nameInf)->mArgument),
+        createFunc, pUserData); /* fopAcM_fastCreate */
 }
-VERIFY(0x025D59A8, fopAcM_fastCreate_str);
 
 /* 025D5A20 */
-static u32 fopAcM_createChild(u32 procName, u32 parentPcId, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 i_argument) {
-    WWHD_FUNC(0x025D5A20, u32, procName, parentPcId, parameter, pPos, roomNo, pAngle, pScale, i_argument);
-    u32 createFunc = ld(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
+static u32 fopAcM_createChild(u32 procName, u32 parentPcId, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle,
+                              u32 pScale, u32 i_argument) {
+    u32 createFunc = *actorMngView<be<u32>>(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
     u32 params = createAppend(parameter, pPos, roomNo, pAngle, pScale, i_argument, parentPcId);
     if (params == 0) return (u32)-1;
-    return fpcSCtRq_Request_l(fpcLy_CurrentLayer_l(), procName, createFunc, 0, params);
+    return actMngGuest_fpcSCtRq_Request(actMngGuest_fpcLy_CurrentLayer(), procName, createFunc, 0, params);
 }
-VERIFY(0x025D5A20, fopAcM_createChild);
 
 /* 025D5AA4 */
-static u32 fopAcM_createChild_str(u32 pProcNameString, u32 parentPcId, u32 parameter, u32 pPos, s32 roomNo, u32 pAngle, u32 pScale, u32 createFunc) {
-    WWHD_FUNC(0x025D5AA4, u32, pProcNameString, parentPcId, parameter, pPos, roomNo, pAngle, pScale, createFunc);
-    u32 nameInf = dStage_searchName_l(pProcNameString);
+static u32 fopAcM_createChild_str(u32 pProcNameString, u32 parentPcId, u32 parameter, u32 pPos, s32 roomNo,
+                                  u32 pAngle, u32 pScale, u32 createFunc) {
+    u32 nameInf = actMngGuest_dStage_searchName(pProcNameString);
     if (nameInf == 0) return (u32)-1;
-    return gabi::call<u32>(0x025D5A20, (u32)(s32)(s16)ld16(nameInf + 8), parentPcId, parameter, pPos, roomNo, pAngle, pScale,
-                           (u32)(s32)(s8)ld8(nameInf + 0xA), createFunc); /* fopAcM_createChild */
+    return actorMngCreateChild((u32)(s32)(s16)(u16)(actorMngView<ActorManagerNameInfo>(nameInf)->mProcName),
+                               parentPcId, parameter, pPos, roomNo, pAngle, pScale,
+                               (u32)(s32)(s8)(u8)(actorMngView<ActorManagerNameInfo>(nameInf)->mArgument),
+                               createFunc); /* fopAcM_createChild */
 }
-VERIFY(0x025D5AA4, fopAcM_createChild_str);
 
 /* the child's position and angle from the parent's (createChildFromOffset) */
 static inline void child_offset(u32 parent, u32 pPosOffs, u32 pAngleOffs, u32 pos, u32 angle) {
-    s16 parentAngleY = (s16)ld16(parent + 0x322);
-    u32 po = pPosOffs != 0 ? pPosOffs : kZeroXyz;
-    u32 ao = pAngleOffs != 0 ? pAngleOffs : kZeroSXyz;
-    f32 ox = ldf(po + 0), oy = ldf(po + 4), oz = ldf(po + 8);
-    f32 px = ldf(parent + 0x314), py = ldf(parent + 0x318), pz = ldf(parent + 0x31C);
-    u32 t = sincosTable + ((u32)((u16)parentAngleY >> 3) << 3);
-    f32 s = ldf(t), c = ldf(t + 4);
-    stf(pos + 0, gabi::fadds_ppc(px, gabi::fmadds(oz, s, gabi::fmuls_ppc(ox, c))));
-    stf(pos + 4, gabi::fadds_ppc(py, oy));
-    stf(pos + 8, gabi::fadds_ppc(pz, gabi::fmsubs(oz, c, gabi::fmuls_ppc(ox, s))));
-    st16(angle + 0, ld16(ao + 0));
-    st16(angle + 2, (u16)(ld16(ao + 2) + parentAngleY));
-    st16(angle + 4, ld16(ao + 4));
+    s16 parentAngleY = (s16)(u16)actorMngActor(parent)->current.angle.y;
+    u32 po = pPosOffs != 0 ? pPosOffs : gabi::ea(&zeroPosition);
+    u32 ao = pAngleOffs != 0 ? pAngleOffs : gabi::ea(&zeroAngle);
+    f32 ox = (f32)(actorMngView<cXyz>(po)->x), oy = (f32)(actorMngView<cXyz>(po)->y),
+        oz = (f32)(actorMngView<cXyz>(po)->z);
+    f32 px = (f32)actorMngActor(parent)->current.pos.x, py = (f32)actorMngActor(parent)->current.pos.y,
+        pz = (f32)actorMngActor(parent)->current.pos.z;
+    u32 t = gabi::ea(&sincosTable) + ((u32)((u16)parentAngleY >> 3) << 3);
+    f32 s = (f32)(actorMngView<ActorManagerSinCos>(t)->sin),
+        c = (f32)(actorMngView<ActorManagerSinCos>(t)->cos);
+    actorMngView<cXyz>(pos)->x = gabi::fadds_ppc(px, gabi::fmadds(oz, s, gabi::fmuls_ppc(ox, c)));
+    actorMngView<cXyz>(pos)->y = gabi::fadds_ppc(py, oy);
+    actorMngView<cXyz>(pos)->z = gabi::fadds_ppc(pz, gabi::fmsubs(oz, c, gabi::fmuls_ppc(ox, s)));
+    actorMngView<csXyz>(angle)->x = (u16)(actorMngView<csXyz>(ao)->x);
+    actorMngView<csXyz>(angle)->y = (u16)((u16)(actorMngView<csXyz>(ao)->y) + parentAngleY);
+    actorMngView<csXyz>(angle)->z = (u16)(actorMngView<csXyz>(ao)->z);
 }
 
-/* 025D5B20: HD: asserts and fails when the parent is not found */
-static u32 fopAcM_createChildFromOffset(u32 procName, u32 parentPcId, u32 parameter, u32 pPosOffs, s32 roomNo, u32 pAngleOffs, u32 pScale, u32 i_argument) {
-    WWHD_FUNC(0x025D5B20, u32, procName, parentPcId, parameter, pPosOffs, roomNo, pAngleOffs, pScale, i_argument);
-    u32 createFunc = ld(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
-    gabi::Local<u32_l> id;
-    id->v = parentPcId;
+// HD: asserts and fails when the parent is not found
+/* 025D5B20 */
+static u32 fopAcM_createChildFromOffset(u32 procName, u32 parentPcId, u32 parameter, u32 pPosOffs, s32 roomNo,
+                                        u32 pAngleOffs, u32 pScale, u32 i_argument) {
+    u32 createFunc = *actorMngView<be<u32>>(gabi::cpu->r[1] + 8); /* 9th argument, on the stack */
+    gabi::Local<ActorManagerGuestID> id;
+    id->value = parentPcId;
     u32 pParent = 0;
-    if ((s32)parentPcId != -1) pParent = fopAcIt_Judge_l(fpcSch_JudgeByID, gabi::ea(id.get()));
+    if ((s32)parentPcId != -1) pParent = actMngGuest_fopAcIt_Judge(fpcSch_JudgeByID, gabi::ea(id.get()));
     if (pParent == 0) {
-        JUT_ASSERT_l(0x100572E4, 0x2F0, 0x100572D4);
+        actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x2F0,
+                               gabi::guest_addr("mother != (0)"));
         return (u32)-1;
     }
-    gabi::Local<cXyz_l> pos;
-    gabi::Local<csXyz_l> angle;
+    gabi::Local<cXyz> pos;
+    gabi::Local<csXyz> angle;
     child_offset(pParent, pPosOffs, pAngleOffs, gabi::ea(pos.get()), gabi::ea(angle.get()));
-    u32 params = createAppend(parameter, gabi::ea(pos.get()), roomNo, gabi::ea(angle.get()), pScale, i_argument, parentPcId);
+    u32 params = createAppend(parameter, gabi::ea(pos.get()), roomNo, gabi::ea(angle.get()), pScale,
+                              i_argument, parentPcId);
     if (params == 0) return (u32)-1;
-    return fpcSCtRq_Request_l(fpcLy_CurrentLayer_l(), procName, createFunc, 0, params);
+    return actMngGuest_fpcSCtRq_Request(actMngGuest_fpcLy_CurrentLayer(), procName, createFunc, 0, params);
 }
-VERIFY(0x025D5B20, fopAcM_createChildFromOffset);
 
 /* 025D5D88 */
-static u32 fopAcM_createChildFromOffset_str(u32 pProcNameString, u32 parentPcId, u32 parameter, u32 pPosOffs, s32 roomNo, u32 pAngleOffs, u32 pScale, u32 createFunc) {
-    WWHD_FUNC(0x025D5D88, u32, pProcNameString, parentPcId, parameter, pPosOffs, roomNo, pAngleOffs, pScale, createFunc);
-    gabi::Local<u32_l> id;
-    id->v = parentPcId;
+static u32 fopAcM_createChildFromOffset_str(u32 pProcNameString, u32 parentPcId, u32 parameter, u32 pPosOffs,
+                                            s32 roomNo, u32 pAngleOffs, u32 pScale, u32 createFunc) {
+    gabi::Local<ActorManagerGuestID> id;
+    id->value = parentPcId;
     u32 pParent = 0;
-    if ((s32)parentPcId != -1) pParent = fopAcIt_Judge_l(fpcSch_JudgeByID, gabi::ea(id.get()));
+    if ((s32)parentPcId != -1) pParent = actMngGuest_fopAcIt_Judge(fpcSch_JudgeByID, gabi::ea(id.get()));
     if (pParent == 0) {
-        JUT_ASSERT_l(0x10057308, 0x320, 0x100572F8);
+        actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x320,
+                               gabi::guest_addr("mother != (0)"));
         return (u32)-1;
     }
-    gabi::Local<cXyz_l> pos;
-    gabi::Local<csXyz_l> angle;
+    gabi::Local<cXyz> pos;
+    gabi::Local<csXyz> angle;
     child_offset(pParent, pPosOffs, pAngleOffs, gabi::ea(pos.get()), gabi::ea(angle.get()));
-    return fopAcM_createChild_str(pProcNameString, parentPcId, parameter, gabi::ea(pos.get()), roomNo, gabi::ea(angle.get()), pScale, createFunc);
+    return fopAcM_createChild_str(pProcNameString, parentPcId, parameter, gabi::ea(pos.get()), roomNo,
+                                  gabi::ea(angle.get()), pScale, createFunc);
 }
-VERIFY(0x025D5D88, fopAcM_createChildFromOffset_str);
 
 /* 025D5FA4 */
 static u32 fopAcM_getProcNameString(u32 i_this) {
-    WWHD_FUNC(0x025D5FA4, u32, i_this);
-    s8 arg = (s8)ld8(i_this + 0x2DD);
-    s16 name = i_this != 0 ? (s16)ld16(i_this + 0xE) : 0x7FFF; /* fopAcM_GetProfName */
-    u32 s = dStage_getName_l(name, arg);
-    if (s == 0) s = 0x1005731C; /* "NONAME" */
+    fopAc_ac_c* actorView = actorMngActor(i_this);
+    s8 arg = (s8)(u8)actorView->argument;
+    s16 name = i_this != 0 ? (s16)(u16)actorView->mProfName : 0x7FFF; /* fopAcM_GetProfName */
+    u32 s = actMngGuest_dStage_getName(name, arg);
+    if (s == 0) s = gabi::guest_addr("UNKOWN");
     return s;
 }
-VERIFY(0x025D5FA4, fopAcM_getProcNameString);
 
 /* 025D5FEC */
 static BOOL fopAcM_createHeap(u32 i_this, u32 size, u32 align) {
-    WWHD_FUNC(0x025D5FEC, BOOL, i_this, size, align);
-    if (i_this == 0) JUT_ASSERT_l(0x10057370, 0x34C, 0x10057324);
-    if (ld(i_this + 0xF4) != 0) JUT_ASSERT_l(0x10057370, 0x34D, 0x1005732C);
+    fopAc_ac_c* actorView = actorMngActor(i_this);
+    if (i_this == 0)
+        actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x34C, gabi::guest_addr("i_this"));
+    if ((u32)actorView->heap.v != 0)
+        actMngGuest_JUT_ASSERT(gabi::guest_addr("f_op_actor_mng.cpp"), 0x34D,
+                               gabi::guest_addr("i_this->heap == (0)"));
     if (align == 0) align = 0x20;
-    u32 heap = mDoExt_createSolidHeapFromGameToCurrent_l(size, align);
-    st(i_this + 0xF4, heap);
+    u32 heap = actMngGuest_mDoExt_createSolidHeapFromGameToCurrent(size, align);
+    actorView->heap.v = heap;
     if (heap == 0) {
-        OSReport_Error_l(0x10057340);
-        if (ld(i_this + 0xF4) == 0) JUT_CONFIRM_l(0x10057370, 0x35D, 0x1005735C);
+        actorMngReportError(gabi::guest_addr("fopAcM_createHeap \212m\225\333\216\270\224s\012"));
+        if ((u32)actorView->heap.v == 0)
+            actMngGuest_JUT_CONFIRM(gabi::guest_addr("f_op_actor_mng.cpp"), 0x35D,
+                                    gabi::guest_addr("i_this->heap != (0)"));
         return FALSE;
     }
     u32 name = fopAcM_getProcNameString(i_this);
-    st(ld(i_this + 0xF4) + 0x10, name); /* HD: the heap is named after the actor */
+    actorMngView<ActorManagerHeap>(actorView->heap.v)->mName = name; // HD: the heap is named after the actor
     return TRUE;
 }
-VERIFY(0x025D5FEC, fopAcM_createHeap);
 
 /* 025D6100 */
 static void fopAcM_adjustHeap(u32 i_this) {
-    WWHD_FUNC(0x025D6100, void, i_this);
-    mDoExt_restoreCurrentHeap_l();
-    mDoExt_adjustSolidHeap_l(ld(i_this + 0xF4));
+    actMngGuest_mDoExt_restoreCurrentHeap();
+    actMngGuest_mDoExt_adjustSolidHeap((u32)actorMngActor(i_this)->heap.v);
 }
-VERIFY(0x025D6100, fopAcM_adjustHeap);
 
 /* 025D6134 */
 static void fopAcM_DeleteHeap(u32 i_this) {
-    WWHD_FUNC(0x025D6134, void, i_this);
-    u32 heap = ld(i_this + 0xF4);
+    fopAc_ac_c* actorView = actorMngActor(i_this);
+    u32 heap = (u32)actorView->heap.v;
     if (heap != 0) {
-        mDoExt_destroySolidHeap_l(heap);
-        st(i_this + 0xF4, 0);
+        actMngGuest_mDoExt_destroySolidHeap(heap);
+        actorView->heap.v = 0;
     }
 }
-VERIFY(0x025D6134, fopAcM_DeleteHeap);
 
-/* 025D6174 (matcher: dRes_info_c::setRes): HD-only fopAcM_entrySolidHeap_(actor, cb, size,
- * parent heap): the solid heap is made in the given parent heap with the global alignment; an
- * estimate that is too small falls back to the largest free block (size 0). */
+// HD: the supplied parent heap and global alignment are used; an undersized estimate retries the largest block.
+/* 025D6174 */
 static BOOL fopAcM_entrySolidHeap_(u32 i_this, u32 createHeapCB, u32 estimatedHeapSize, u32 parentHeap) {
-    WWHD_FUNC(0x025D6174, BOOL, i_this, createHeapCB, estimatedHeapSize, parentHeap);
+    fopAc_ac_c* actorView = actorMngActor(i_this);
     u32 name = fopAcM_getProcNameString(i_this);
     u32 heap;
     if (estimatedHeapSize != 0) {
-        heap = mDoExt_createSolidHeapToCurrent_l(estimatedHeapSize, parentHeap, ld(HeapAlign));
+        heap = actMngGuest_mDoExt_createSolidHeapToCurrent(estimatedHeapSize, parentHeap, (u32)(HeapAlign));
         if (heap == 0) {
-            if (ld8(HeapAdjustQuiet) == 0) OSReport_Warning_l(0x100573C0);
+            if ((u8)(HeapAdjustQuiet) == 0)
+                actorMngReportWarning(gabi::guest_addr(
+                    "\214\251\220\317\202\340\202\350\203q\201[\203v\203T\203C\203Y\202\305\203q\201["
+                    "\203v\202\252\212m\225\333\202\305\202\253\202\334\202\271\202\361\202\305\202\265\202"
+                    "\275\201B\012"));
             return FALSE;
         }
-        st(heap + 0x10, name);
+        actorMngView<ActorManagerHeap>(heap)->mName = name;
         bool result = gabi::call_ptr<s32>(createHeapCB, i_this) != 0;
-        u32 vt = ld(heap + 0xC);
-        u32 freeSize = gabi::call_ptr<u32>(ld(vt + 0x74), heap); /* getFreeSize */
-        if (freeSize >= 0x20) JKRHeap_alloc_l(0x20, 4);
-        mDoExt_restoreCurrentHeap_l();
+        u32 vt = (u32)(actorMngView<ActorManagerHeap>(heap)->mVtable);
+        u32 freeSize = gabi::call_ptr<u32>((u32)(actorMngView<ActorManagerHeapVtable>(vt)->getFreeSize),
+                                           heap); /* getFreeSize */
+        if (freeSize >= 0x20) actMngGuest_JKRHeap_alloc(0x20, 4);
+        actMngGuest_mDoExt_restoreCurrentHeap();
         if (result) {
-            u32 vt2 = ld(heap + 0xC);
-            u32 heapSize = gabi::call_ptr<u32>(ld(vt2 + 0x6C), heap); /* getHeapSize */
-            u32 freeSize2 = gabi::call_ptr<u32>(ld(vt2 + 0x74), heap);
-            u32 al = ld(HeapAlign) - 1;
+            u32 vt2 = (u32)(actorMngView<ActorManagerHeap>(heap)->mVtable);
+            u32 heapSize = gabi::call_ptr<u32>((u32)(actorMngView<ActorManagerHeapVtable>(vt2)->getHeapSize),
+                                               heap); /* getHeapSize */
+            u32 freeSize2 =
+                gabi::call_ptr<u32>((u32)(actorMngView<ActorManagerHeapVtable>(vt2)->getFreeSize), heap);
+            u32 al = (u32)(HeapAlign)-1;
             u32 allocSize = (heapSize - freeSize2 + al) & ~al;
-            mDoExt_adjustSolidHeap_l(heap);
-            if (estimatedHeapSize >= allocSize + 0x40 && ld8(HeapAdjustVerbose) != 0)
-                OSReport_Warning_l(0x100573F8, allocSize, estimatedHeapSize);
-            st(i_this + 0xF4, heap);
+            actMngGuest_mDoExt_adjustSolidHeap(heap);
+            if (estimatedHeapSize >= allocSize + 0x40 && (u8)(HeapAdjustVerbose) != 0)
+                actorMngReportWarningHeaps(
+                    gabi::guest_addr("\214\251\220\317\202\340\202\350\203q\201["
+                                     "\203v\203T\203C\203Y\202\305\202\315\213\363\202\253\202\252\221\275"
+                                     "\202\267\202\254\202\334\202\267\201B %08x %08x\012\033[m"),
+                    allocSize, estimatedHeapSize);
+            actorView->heap.v = heap;
             return TRUE;
         }
-        if (ld8(HeapAdjustQuiet) == 0) OSReport_Error_l(0x1005738C, estimatedHeapSize, name);
-        mDoExt_destroySolidHeap_l(heap);
+        if ((u8)(HeapAdjustQuiet) == 0)
+            actorMngReportErrorHeap(
+                gabi::guest_addr(
+                    "\214\251\220\317\202\340\202\350\203q\201[\203v\203T\203C\203Y(%08x)\202\305\223o\230^"
+                    "\216\270\224s\202\265\202\334\202\265\202\275\201B[%s]\012"),
+                estimatedHeapSize, name);
+        actMngGuest_mDoExt_destroySolidHeap(heap);
     }
-    heap = mDoExt_createSolidHeapToCurrent_l(0, parentHeap, ld(HeapAlign));
+    heap = actMngGuest_mDoExt_createSolidHeapToCurrent(0, parentHeap, (u32)(HeapAlign));
     if (heap == 0) return FALSE;
-    st(heap + 0x10, name);
+    actorMngView<ActorManagerHeap>(heap)->mName = name;
     bool result = gabi::call_ptr<s32>(createHeapCB, i_this) != 0;
-    mDoExt_restoreCurrentHeap_l();
+    actMngGuest_mDoExt_restoreCurrentHeap();
     if (!result) {
-        mDoExt_destroySolidHeap_l(heap);
+        actMngGuest_mDoExt_destroySolidHeap(heap);
         return FALSE;
     }
-    if (ld8(HeapAdjustQuiet) == 0) {
-        u32 vt = ld(heap + 0xC);
-        gabi::call_ptr<u32>(ld(vt + 0x6C), heap);
-        gabi::call_ptr<u32>(ld(vt + 0x74), heap);
+    if ((u8)(HeapAdjustQuiet) == 0) {
+        u32 vt = (u32)(actorMngView<ActorManagerHeap>(heap)->mVtable);
+        gabi::call_ptr<u32>((u32)(actorMngView<ActorManagerHeapVtable>(vt)->getHeapSize), heap);
+        gabi::call_ptr<u32>((u32)(actorMngView<ActorManagerHeapVtable>(vt)->getFreeSize), heap);
     }
-    mDoExt_adjustSolidHeap_l(heap);
-    st(i_this + 0xF4, heap);
+    actMngGuest_mDoExt_adjustSolidHeap(heap);
+    actorView->heap.v = heap;
     return TRUE;
 }
-VERIFY(0x025D6174, fopAcM_entrySolidHeap_);
 
-} // namespace f_op_actor_mng_cpp
+/* WWHD glue
+data sincosTable 104A44F8
+data zeroPosition 101FFBA8
+data zeroAngle 101FFB14
+data HeapAlign 101F32FC
+data HeapAdjustVerbose 101F3300
+data HeapAdjustQuiet 101F3301
+data roomStatuses 1047E8F0
+data nodeProcessType 101F3D60
+data stageProcessID 1047E6C4
+data viewMtx 104B45F8
+data clipper 1048CFF0
+data systemFar 1048D04C
+data l_cullSizeBox 101F30F0
+data l_cullSizeSphere 101F3240
+data stageHeapFlags 1047E6C0
+data specialActorHeap 1047C8B4
+data viewRoot 101F95D0
+data saveSingleton 101F84DC
+data fairy_offset_tbl 10487494
+data fairy_offset_initialized 10487508
+data water_check 104874B8
+data headerStatics 10487478
+data water_check_initialized 1048750C
+str 10057284 in 025D537C
+str 10057298 in 025D537C
+str 100572AC in 025D5418
+str 100572BC in 025D5418
+str 100572D4 in 025D5B20
+str 100572E4 in 025D5B20
+str 100572F8 in 025D5D88
+str 10057308 in 025D5D88
+str 1005731C in 025D5FA4
+str 10057324 in 025D5FEC
+str 1005732C in 025D5FEC
+str 10057340 in 025D5FEC
+str 1005735C in 025D5FEC
+str 10057370 in 025D5FEC
+str 1005738C in 025D6174
+str 100573C0 in 025D6174
+str 100573F8 in 025D6174
+ext 025F2710 void actorMngReportError(u32 format)
+ext 025F2710 void actorMngReportErrorHeap(u32 format, u32 size, u32 name)
+ext 025F27E8 void actorMngReportWarning(u32 format)
+ext 025F27E8 void actorMngReportWarningHeaps(u32 format, u32 first, u32 second)
+ext 025D5A20 u32 actorMngCreateChild(u32 name, u32 parent, u32 parameters, u32 position, s32 room, u32 angle, u32 scale, u32 argument, u32 callback)
+ext 025DA2F4 void actorMngAssureTermination(u32 string)
+ext 028ED6F8 void actorMngRandConstructor(u32 object)
+ext 028EAB2C void actorMngListConstructor(u32 object)
+ext 02008B4C void actorMngSplGroupDestructor(u32 object, s32 flags)
+ext 0273AA24 void actMngGuest_JUT_ASSERT(u32 file, s32 line, u32 msg)
+ext 0273AA38 void actMngGuest_JUT_CONFIRM(u32 file, s32 line, u32 msg)
+ext 025DC80C u32 actMngGuest_fopScnM_SearchByID(u32 id)
+ext 025DD258 BOOL actMngGuest_fpcBs_Is_JustOfType(s32 a, s32 b)
+ext 025E0D38 void actMngGuest_fpcPi_Change(u32 pi, u32 layer, u32 listId, u32 listPrio)
+ext 025DD868 BOOL actMngGuest_fpcM_IsCreating(u32 id)
+ext 025D5218 u32 actMngGuest_fopAcIt_Judge(u32 fn, u32 data)
+ext 02019430 u32 actMngGuest_cMl_memalignB(s32 align, u32 size)
+ext 0200ECCC void actMngGuest_cLib_memSet(u32 p, s32 v, u32 n)
+ext 025DF944 s32 actMngGuest_fpcM_Delete(u32 a)
+ext 025DED64 u32 actMngGuest_fpcLy_CurrentLayer()
+ext 025E14A8 u32 actMngGuest_fpcSCtRq_Request(u32 layer, u32 name, u32 fn, u32 data, u32 append)
+ext 025DFAB8 u32 actMngGuest_fpcM_FastCreate(u32 name, u32 fn, u32 data, u32 append)
+ext 025C109C u32 actMngGuest_dStage_searchName(u32 name)
+ext 025C1150 u32 actMngGuest_dStage_getName(s16 procName, s8 arg)
+ext 025E3630 u32 actMngGuest_mDoExt_createSolidHeapFromGameToCurrent(u32 size, u32 align)
+ext 025E35BC u32 actMngGuest_mDoExt_createSolidHeapToCurrent(u32 size, u32 parent, u32 align)
+ext 025E37D8 void actMngGuest_mDoExt_restoreCurrentHeap()
+ext 025E3678 void actMngGuest_mDoExt_adjustSolidHeap(u32 h)
+ext 025E3868 void actMngGuest_mDoExt_destroySolidHeap(u32 h)
+ext 027EC0AC void actMngGuest_JKRHeap_alloc(u32 size, s32 align)
+ext 025E2F64 u32 actMngGuest_mDoExt_getHeap(s32 i)
+ext 025D6174 BOOL actMngGuest_fopAcM_entrySolidHeap_(u32 a, u32 cb, u32 size, u32 heap)
+ext 025D5FA4 u32 actMngGuest_fopAcM_getProcNameString(u32 a)
+ext 0200F8D0 BOOL actMngGuest_cLib_chaseAngleS(u32 p, u32 target, u32 step)
+ext 0200F93C s16 actMngGuest_cLib_targetAngleY(u32 a, u32 b)
+ext 0201ADE0 void actMngGuest_cXyz_mi(u32 self, u32 out, u32 other)
+ext 028E8DD0 f32 actMngGuest_PSVECSquareMag(u32 v)
+ext 028E9108 void actMngGuest_PSMTXConcat(u32 a, u32 b, u32 out)
+ext 028E8F64 void actMngGuest_PSMTXMultVec(u32 m, u32 in, u32 out)
+ext 02838274 BOOL actMngGuest_J3DUClipper_clipBox(u32 self, u32 mtx, u32 max, u32 min)
+ext 02838148 BOOL actMngGuest_J3DUClipper_clipSphere(u32 self, u32 mtx, u32 c, f32 r)
+ext 0283801C void actMngGuest_J3DUClipper_calcViewFrustum(u32 self)
+ext 0286DE88 void actMngGuest_box_init(u32 box)
+ext 0286DC38 void actMngGuest_box_transform(u32 out, u32 in, u32 mtx)
+ext 0253EC0C s32 actMngGuest_dEvt_order(u32 evt, u32 type, u32 prio, u32 flag, u32 hind, u32 a1, u32 a2, u32 evId, u32 info)
+ext 0253ED80 s32 actMngGuest_dEvt_orderOld(u32 evt, u32 type, u32 prio, u32 flag, u32 hind, u32 a1, u32 a2, u32 name)
+ext 0253EE04 u32 actMngGuest_dEvt_convPId(u32 evt, u32 id)
+ext 02543F10 u32 actMngGuest_dEvmng_getEventIdx(u32 mng, u32 name, u32 room)
+ext 025445F4 u32 actMngGuest_dEvmng_getEventPrio(u32 mng, u32 idx)
+ext 025D5834 u32 actMngGuest_fopAcM_create(u32 name, u32 prm, u32 pos, u32 room, u32 angle, u32 scale, u32 arg, u32 fn)
+ext 025D5928 u32 actMngGuest_fopAcM_fastCreate(u32 name, u32 prm, u32 pos, u32 room, u32 angle, u32 scale, u32 arg, u32 fn, u32 data)
+ext 02551150 u32 actMngGuest_check_itemno(u32 itemNo)
+ext 02551108 u32 actMngGuest_getItemNoByLife(u32 itemNo)
+ext 025510E8 BOOL actMngGuest_isHeart(u32 itemNo)
+ext 0201A478 void actMngGuest_csXyz_ct(u32 p, s16 x, s16 y, s16 z)
+ext 028E8D88 void actMngGuest_PSVECAdd(u32 a, u32 b, u32 out)
+ext 027200D0 u32 actMngGuest_save_sub(u32 p)
+ext 0271FC5C BOOL actMngGuest_heroMode(u32 p)
+ext 025D8AB0 u32 actMngGuest_fopAcM_fastCreateItem(u32 pos, u32 itemNo, u32 room, u32 angle, u32 scale, f32 sF, f32 sY, f32 g, u32 bit, u32 fn)
+ext 025D8120 u32 actMngGuest_fopAcM_createItemFromTable(u32 pos, u32 tbl, u32 bit, u32 room, u32 type, u32 angle, u32 action, u32 scale)
+ext 025512A4 u32 actMngGuest_getEmonoItemFromLifeBallTable(u32 t)
+ext 02551684 u32 actMngGuest_getItemFromLifeBallTableWithoutEmono(u32 t)
+ext 0255106C BOOL actMngGuest_isLimitedItem(u32 i)
+ext 02551080 BOOL actMngGuest_isNonSavedEmono(u32 i)
+ext 025B8DC8 BOOL actMngGuest_dSv_memBit_isSwitch(u32 p, u32 bit, s32 room)
+ext 025BA494 BOOL actMngGuest_dSv_info_isItem(u32 p, u32 bit, s32 room)
+ext 0200EA74 s32 actMngGuest_cDT_GetInf(u32 tbl, u32 field, u32 idx)
+ext 025261C0 void actMngGuest_daIball_remove_old()
+ext 025D4604 BOOL actMngGuest_fopAc_IsActor(u32 p)
+ext 025DFB28 u32 actMngGuest_fpcM_JudgeInLayer(u32 layer, u32 fn, u32 data)
+ext 02008E0C void actMngGuest_cBgS_GndChk_ct(u32 p)
+ext 02008DAC void actMngGuest_cBgS_Chk_dt(u32 p, s32 f)
+ext 02008974 f32 actMngGuest_cBgS_GroundCross(u32 bgs, u32 chk)
+ext 020195B0 s16 actMngGuest_cM_atan2s(f32 y, f32 x)
+ext 0200F378 void actMngGuest_cLib_addCalcAngleS(u32 p, u32 target, s32 scale, s32 maxStep, s32 minStep)
+ext 025D537C void actMngGuest_fopAcM_setStageLayer(u32 a)
+ext 025D5418 void actMngGuest_fopAcM_setRoomLayer(u32 a, s32 room)
+ext 0255F530 u32 actMngGuest_dKy_Sound_get()
+ext 024F22DC void actMngGuest_dBgS_WtrChk_ct(u32 p)
+ext 028F026C void actMngGuest___register_global_object(u32 d)
+ext 024EF7C0 BOOL actMngGuest_dBgS_SplGrpChk(u32 bgs, u32 chk)
+ext 02520C0C BOOL actMngGuest_dComIfGs_checkGetItem(u32 i)
+ext 0273AF40 void actMngGuest_operator_delete(u32 p)
+*/

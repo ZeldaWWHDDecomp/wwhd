@@ -1,183 +1,985 @@
-#include "gabi.h"
+/** Background mesh geometry. */
+#include "SSystem/SComponent/c_bg_w.h"
 #include <cmath>
 using namespace gabi;
-struct BgVec { be<f32> x,y,z; };
-struct BgMtx { be<f32> a[12]; };
-static u32 word(u32 p,u32 off=0){return load<u32>(p+off);}
-static u16 half(u32 p,u32 off=0){return load<u16>(p+off);}
-static u8 byte(u32 p,u32 off=0){return load<u8>(p+off);}
-static void put(u32 p,u32 off,u32 v){store<u32>(p+off,v);}
-static void puth(u32 p,u32 off,u32 v){store<u16>(p+off,(u16)v);}
-static void putb(u32 p,u32 off,u32 v){store<u8>(p+off,(u8)v);}
-static f32 fl(u32 p,u32 off=0){return load<f32>(p+off);}
-static void pf(u32 p,u32 off,f32 v){store<f32>(p+off,v);}
-void ASSERT_SOLDHEAP_hd(){WWHD_FUNC(0x02009380,void);u32 heap=call<u32>(0x027EC230);u32 type=call<u32>(0x027EC23C,at<void>(heap));if(type!=0x534C4944)call<void>(0x025F2710,at<void>(0x10001000));}
-VERIFY(0x02009380,ASSERT_SOLDHEAP_hd);
-void* cBgW_Rwg_ctor_hd(void*p){WWHD_FUNC(0x020093C4,void*,p);u32 a=ea(p);if(!a)a=call<u32>(0x0273AD10,8);if(a){puth(a,0,0);put(a,4,0x100011EC);}return at<void>(a);}
-VERIFY(0x020093C4,cBgW_Rwg_ctor_hd);
-void* cBgW_Node_ctor_hd(void*p){WWHD_FUNC(0x0200940C,void*,p);u32 a=ea(p);if(!a)a=call<u32>(0x0273AD10,0x20);if(a){put(a,0x1C,0x1000120C);put(a,0x18,0x100011CC);}return at<void>(a);}
-VERIFY(0x0200940C,cBgW_Node_ctor_hd);
-void* cBgW_Base_ctor_hd(void*p){WWHD_FUNC(0x02009458,void*,p);u32 a=ea(p);if(!a)a=call<u32>(0x0273AD10,8);if(a){put(a,0,0x100);put(a,4,0x1000121C);}return at<void>(a);}
-VERIFY(0x02009458,cBgW_Base_ctor_hd);
-void* cBgW_ctor_hd(void*p){
- WWHD_FUNC(0x020094A0,void*,p);u32 a=ea(p);if(!a)a=call<u32>(0x0273AD10,0xA8);if(!a)return nullptr;
- call<void>(0x02009458,at<void>(a));put(a,8,0);put(a,4,0x10001308);call<void>(0x028F521C,at<void>(a+0xC),0x30);call<void>(0x028F521C,at<void>(a+0x3C),0x30);
- put(a,0x9C,0);put(a,0x98,0);put(a,0xA4,0);f32 zero=fl(0x1000122C);put(a,0x70,0);pf(a,0x7C,zero);pf(a,0x80,zero);put(a,8,0);put(a,0x8C,0);putb(a,0x75,0);put(a,0x88,0);put(a,0x94,0);put(a,0x78,0);put(a,0x90,0);putb(a,0x74,0);putb(a,0x6D,1);put(a,0xA0,0);putb(a,0x6C,0x20);pf(a,0x84,zero);
- call<void>(0x028E9098,at<void>(a+0xC));call<void>(0x028E9098,at<void>(a+0x3C));put(a,0x78,0);putb(a,0x75,2);put(a,0xA4,0xFFFF);return at<void>(a);
+
+void *operator_new(u32);
+void *operator_new_array(u32);
+void *constructArray(void *, u32, u32, void *);
+void *JKRHeap_getCurrentHeap();
+u32 JKRHeap_getHeapType(void *);
+void OSReport_Error(const char *);
+void JUT_ASSERT_fail(const char *, s32, const char *);
+void initializeMatrixStorage(BgMtx *, u32);
+void PSMTXIdentity(BgMtx *);
+void PSMTXCopy(const BgMtx *, BgMtx *);
+void PSVECAdd(const cXyz *, const cXyz *, cXyz *);
+void PSMTXMultVec(const BgMtx *, const cXyz *, cXyz *);
+f32 PSVECDotProduct(const cXyz *, const cXyz *);
+f32 cM_rndF(f32);
+void clearBounds(cBgW_NodeTree *);
+void setBoundsMin(cBgW_NodeTree *, const cXyz *);
+void setBoundsMax(cBgW_NodeTree *, const cXyz *);
+void expandBounds(cBgW_NodeTree *, const cXyz *);
+s32 boundsCrossY(const cBgW_NodeTree *, const cXyz *);
+s32 boundsUnderY(const cBgW_NodeTree *, f32);
+s32 boundsTopY(const cBgW_NodeTree *, f32);
+void cM3d_CalcPla(const cXyz *, const cXyz *, const cXyz *, cXyz *, be<f32> *);
+void constructTriangle(cBgW_Triangle *);
+void setTriangleBg(cBgW_Triangle *, const cXyz *, const cXyz *, const cXyz *, const cBgW_Plane *);
+s32 cM3d_Cross_LinTri(const cBgW_Line *, const cBgW_Triangle *, cXyz *, u32, u32);
+void setLineEnd(cBgW_Line *, const cXyz *);
+s32 cM3d_Cross_MinMaxBoxLine(const cXyz *, const cXyz *, const cXyz *, const cXyz *);
+s32 cM3d_CrossY_Tri_Front(const cXyz *, const cXyz *, const cXyz *, const cXyz *);
+void registerGlobalObject(void *);
+void initializeHeaderByte(void *);
+void initializeHeaderFlag(void *);
+
+// HD: these call sites consume the complete r3 word of boolean entries.
+s32 cBgW_SetVtxEntry(cBgWMesh *);
+s32 cBgW_SetTriEntry(cBgWMesh *);
+s32 cBgW_RwgLineCheckEntry(cBgWMesh *, s32, cBgW_LinChk *);
+s32 cBgW_LineCheckRpEntry(cBgWMesh *, cBgW_LinChk *, u32);
+s32 cBgW_LineCheckGrpRpEntry(cBgWMesh *, cBgW_LinChk *, u32, u32);
+s32 cBgW_RwgGroundCheckCommonEntry(cBgWMesh *, s32, cBgW_GndChk *, f32);
+s32 cBgW_RwgGroundCheckGndEntry(cBgWMesh *, u32, cBgW_GndChk *);
+s32 cBgW_RwgGroundCheckWallEntry(cBgWMesh *, u32, cBgW_GndChk *);
+s32 cBgW_GroundCrossRpEntry(cBgWMesh *, cBgW_GndChk *, u32);
+s32 cBgW_GroundCrossGrpRpEntry(cBgWMesh *, cBgW_GndChk *, u32, u32);
+
+static const f32 zero = 0.0f;
+static const f32 boundsMin = 1000000000.0f;
+static const f32 boundsMax = -1000000000.0f;
+static const f32 boundsMargin = 1.0f;
+static const f32 moveCounterRange = 128.0f;
+static const f32 groundNormalY = 0.5f;
+static const f32 roofNormalY = -0.8f;
+static const f32 normalEpsilon = 0.000003814697265625f;
+static const f32 wallNormalY = 0.014f;
+static const f32 headerPiMin = -3.1415927;
+static const f32 headerPiMax = 3.1415927;
+// HD: GHS constructor/vtable entry addresses, passed to the array constructor.
+enum : u32 {
+    rwgVtable = 0x100011EC,
+    nodeVtable = 0x1000120C,
+    boxVtable = 0x100011CC,
+    baseVtable = 0x1000121C,
+    bgVtable = 0x10001308,
+    triConstructor = 0x0200B56C,
+    rwgConstructor = 0x020093C4,
+    nodeConstructor = 0x0200B5C0,
+    groupConstructor = 0x0200940C
+};
+
+/* 02009380 */
+void ASSERT_SOLDHEAP() {
+    void *heap = JKRHeap_getCurrentHeap();
+    u32 type = JKRHeap_getHeapType(heap);
+    if (type != 0x534C4944)
+        OSReport_Error(at<char>(0x10001000));
 }
-VERIFY(0x020094A0,cBgW_ctor_hd);
-void cBgW_FreeArea_hd(u32 a){WWHD_FUNC(0x0200959C,void,a);put(a,0x90,0);put(a,0x8C,0);put(a,0x9C,0);put(a,0x98,0);put(a,0xA0,0);put(a,0x88,0);}
-VERIFY(0x0200959C,cBgW_FreeArea_hd);
-void cBgW_GlobalVtx_hd(u32 a){
- WWHD_FUNC(0x020095BC,void,a);u32 matrix=word(a,8);if(!matrix)return;bool full=byte(a,0x6D)!=0;u32 bg=word(a,0x94);s32 count=(s32)word(bg);
- if(!full){for(u32 i=0;(s32)i<count;i++){u32 dst=word(a,0x90)+i*12;call<void>(0x028E8D88,at<void>(dst),at<void>(a+0x7C),at<void>(dst));bg=word(a,0x94);count=(s32)word(bg);}}
- else{for(u32 i=0;(s32)i<count;i++){u32 src=word(bg,4),dst=word(a,0x90);call<void>(0x028E8F64,at<void>(matrix),at<void>(src+i*12),at<void>(dst+i*12));bg=word(a,0x94);count=(s32)word(bg);if((s32)(i+1)<count)matrix=word(a,8);}}
+
+/* 020093C4 */
+// HD: allocating GHS constructor; the GameCube inline constructor only clears next.
+static cBgW_RwgElm *cBgW_RwgElm__ct(cBgW_RwgElm *object) {
+    if (object == NULL)
+        object = (cBgW_RwgElm *)operator_new(sizeof(cBgW_RwgElm));
+    if (object != NULL) {
+        object->next = 0;
+        object->__vtbl = rwgVtable;
+    }
+    return object;
 }
-VERIFY(0x020095BC,cBgW_GlobalVtx_hd);
-void cBgW_CopyOldMtx_hd(u32 a){WWHD_FUNC(0x020096B0,void,a);if(word(a,8)){call<void>(0x028E90D4,at<void>(a+0x3C),at<void>(a+0xC));call<void>(0x028E90D4,at<void>(word(a,8)),at<void>(a+0x3C));}}
-VERIFY(0x020096B0,cBgW_CopyOldMtx_hd);
-void cBgW_MakeBlckTransMinMax_hd(u32 a,u32 lo,u32 hi){WWHD_FUNC(0x020096FC,void,a,lo,hi);call<void>(0x028E8D88,at<void>(lo),at<void>(a+0x7C),at<void>(lo));call<void>(0x028E8D88,at<void>(hi),at<void>(a+0x7C),at<void>(hi));}
-VERIFY(0x020096FC,cBgW_MakeBlckTransMinMax_hd);
-void cBgW_MakeBlckMinMax_hd(u32 a,s32 i,u32 lo,u32 hi){
- WWHD_FUNC(0x02009750,void,a,i,lo,hi);u32 v=word(a,0x90)+(u32)i*12;
- for(u32 o=0;o<12;o+=4){f32 point=fl(v,o),low=fl(lo,o);if(low>point){pf(lo,o,point);point=fl(v,o);}f32 high=fl(hi,o);if(high<point)pf(hi,o,point);}
+
+/* 0200940C */
+static cBgW_GrpElm *cBgW_GrpElm__ct(cBgW_GrpElm *object) {
+    if (object == NULL)
+        object = (cBgW_GrpElm *)operator_new(sizeof(cBgW_GrpElm));
+    if (object != NULL) {
+        object->__vtbl = nodeVtable;
+        object->aab.__vtbl = boxVtable;
+    }
+    return object;
 }
-VERIFY(0x02009750,cBgW_MakeBlckMinMax_hd);
-void cBgW_MakeBlckBnd_hd(u32 a,u32 block,u32 lo,u32 hi){
- WWHD_FUNC(0x020097D8,void,a,block,lo,hi);u32 bg=word(a,0x94),num=word(bg,0x10),tab=word(bg,0x14)+block*2;u32 start=half(tab);u8 full=byte(a,0x6D);s32 last=block==num-1?(s32)(word(bg,8)-1):(s32)(half(tab,2)-1);
- if(!full){call<void>(0x020096FC,at<void>(a),at<void>(lo),at<void>(hi));return;}
- f32 low=fl(0x10001230),high=fl(0x10001234);pf(lo,0,low);pf(lo,8,low);pf(lo,4,low);pf(hi,8,high);pf(hi,0,high);pf(hi,4,high);
- for(u32 i=start;(s32)i<=last;i++){u32 off=i*10;for(u32 j=0;j<6;j+=2){u32 data=word(a,0x94),tris=word(data,0xC);u32 vertex=half(tris+off,j);call<void>(0x02009750,at<void>(a),vertex,at<void>(lo),at<void>(hi));}}
- f32 margin=fl(0x10001238),lx=fl(lo),ly=fl(lo,4);lx=fsubs_ppc(lx,margin);f32 lz=fl(lo,8);ly=fsubs_ppc(ly,margin);lz=fsubs_ppc(lz,margin);pf(lo,0,lx);pf(lo,4,ly);pf(lo,8,lz);f32 hx=fl(hi),hy=fl(hi,4);hx=fadds_ppc(hx,margin);f32 hz=fl(hi,8);hy=fadds_ppc(hy,margin);hz=fadds_ppc(hz,margin);pf(hi,0,hx);pf(hi,4,hy);pf(hi,8,hz);
+
+/* 02009458 */
+static cBgWMesh *cBgW_BgId__ct(cBgWMesh *object) {
+    if (object == NULL)
+        object = (cBgWMesh *)operator_new(8);
+    if (object != NULL) {
+        object->m_id = 0x100;
+        object->__vtbl = at<cBgW_Vtable>(baseVtable);
+    }
+    return object;
 }
-VERIFY(0x020097D8,cBgW_MakeBlckBnd_hd);
-void cBgW_MakeNodeTreeRp_hd(u32 a,u32 i){
- WWHD_FUNC(0x02009930,void,a,i);u32 bg=word(a,0x94),node=word(bg,0x1C)+i*20;
- if(half(node)&1){u32 block=half(node,4);if(block!=0xFFFF){u32 box=word(a,0xA0)+i*28;call<void>(0x020097D8,at<void>(a),block,at<void>(box),at<void>(box+12));}return;}
- call<void>(0x02017DAC,at<void>(word(a,0xA0)+i*28));for(u32 j=0;j<8;j++){u32 child=half(node,4+j*2);if(child==0xFFFF)continue;call<void>(0x02009930,at<void>(a),child);u32 boxes=word(a,0xA0);call<void>(0x02017E74,at<void>(boxes+i*28),at<void>(boxes+child*28));boxes=word(a,0xA0);call<void>(0x02017E74,at<void>(boxes+i*28),at<void>(boxes+child*28+12));}
+
+/* 020094A0 */
+// HD: explicit GHS allocation, matrix storage initialization and store ordering.
+static cBgWMesh *cBgW__ct(cBgWMesh *object) {
+    if (object == NULL)
+        object = (cBgWMesh *)operator_new(sizeof(cBgWMesh));
+    if (object == NULL)
+        return NULL;
+    cBgW_BgId__ct(object);
+    object->pm_base = NULL;
+    object->__vtbl = at<cBgW_Vtable>(bgVtable);
+    initializeMatrixStorage(&object->mOldMtx, sizeof(BgMtx));
+    initializeMatrixStorage(&object->mCurMtx, sizeof(BgMtx));
+    object->pm_grp = NULL;
+    object->pm_blk = NULL;
+    object->m_rootGrpIdx = 0;
+    f32 initial = zero;
+    // HD: an otherwise unused word of the base padding is cleared.
+    object->unusedHeaderWord = 0;
+    object->mTransVel.x = initial;
+    object->mTransVel.y = initial;
+    object->pm_base = NULL;
+    object->pm_rwg = NULL;
+    object->mWallCorrectPriority = 0;
+    object->pm_tri = NULL;
+    object->pm_bgd = NULL;
+    object->mIgnorePlaneType = 0;
+    object->pm_vtx_tbl = NULL;
+    object->mMoveCounter = 0;
+    object->mbNeedsFullTransform = 1;
+    object->m_nt_tbl = NULL;
+    object->mFlags = cBgWMesh::GLOBAL_e;
+    object->mTransVel.z = initial;
+    PSMTXIdentity(&object->mOldMtx);
+    PSMTXIdentity(&object->mCurMtx);
+    object->mIgnorePlaneType = 0;
+    object->mWallCorrectPriority = 2;
+    object->m_rootGrpIdx = 0xFFFF;
+    return object;
 }
-VERIFY(0x02009930,cBgW_MakeNodeTreeRp_hd);
-void cBgW_MakeNodeTreeGrpRp_hd(u32 a,u32 i){
- WWHD_FUNC(0x02009A10,void,a,i);u32 off=i*52,boxoff=i*32;u32 group=word(word(a,0x94),0x24)+off;u32 node=half(group,0x2E);
- if(node!=0xFFFF){call<void>(0x02009930,at<void>(a),node);group=word(word(a,0x94),0x24)+off;node=half(group,0x2E);u32 boxes=word(a,0x9C),nodes=word(a,0xA0);call<void>(0x02017DF4,at<void>(boxes+boxoff),at<void>(nodes+node*28));group=word(word(a,0x94),0x24)+off;node=half(group,0x2E);nodes=word(a,0xA0);boxes=word(a,0x9C);call<void>(0x02017E34,at<void>(boxes+boxoff),at<void>(nodes+node*28+12));group=word(word(a,0x94),0x24)+off;}
- for(u32 child=half(group,0x28);child!=0xFFFF;){call<void>(0x02009A10,at<void>(a),child);u32 boxes=word(a,0x9C),childoff=child*32;call<void>(0x02017DF4,at<void>(boxes+boxoff),at<void>(boxes+childoff));boxes=word(a,0x9C);call<void>(0x02017E34,at<void>(boxes+boxoff),at<void>(boxes+childoff+12));group=word(word(a,0x94),0x24)+child*52;child=half(group,0x26);}
+
+/* 0200959C */
+void cBgWMesh::FreeArea() {
+    pm_vtx_tbl = NULL;
+    pm_rwg = NULL;
+    pm_grp = NULL;
+    pm_blk = NULL;
+    m_nt_tbl = NULL;
+    pm_tri = NULL;
 }
-VERIFY(0x02009A10,cBgW_MakeNodeTreeGrpRp_hd);
-void cBgW_MakeNodeTree_hd(u32 a){
- WWHD_FUNC(0x02009B38,void,a);bool has=word(a,0x90)!=0;u32 bg=word(a,0x94);s32 n=(s32)word(bg,0x20);
- if(has){for(u32 i=0;(s32)i<n;i++){call<void>(0x02017DAC,at<void>(word(a,0x9C)+i*32));bg=word(a,0x94);n=(s32)word(bg,0x20);}}
- if(n<=0)return;u32 groups=word(bg,0x24);for(u32 i=0;(s32)i<n;i++){if(half(groups+i*52,0x24)==0xFFFF){put(a,0xA4,i);if(has)call<void>(0x02009A10,at<void>(a),i);return;}}
+
+/* 020095BC */
+void cBgWMesh::GlobalVtx() {
+    BgMtx *matrix = pm_base.get();
+    if (matrix == NULL)
+        return;
+    bool full = mbNeedsFullTransform != 0;
+    cBgD_Mesh *bg = pm_bgd.get();
+    s32 count = bg->m_v_num;
+    if (!full) {
+        for (u32 i = 0; (s32)i < count; ++i) {
+            cXyz *vertex = &pm_vtx_tbl[i];
+            PSVECAdd(vertex, &mTransVel, vertex);
+            bg = pm_bgd.get();
+            count = bg->m_v_num;
+        }
+    } else {
+        for (u32 i = 0; (s32)i < count; ++i) {
+            cXyz *source = bg->m_v_tbl.get();
+            cXyz *vertices = pm_vtx_tbl.get();
+            PSMTXMultVec(matrix, &source[i], &vertices[i]);
+            bg = pm_bgd.get();
+            count = bg->m_v_num;
+            if ((s32)(i + 1) < count)
+                matrix = pm_base.get();
+        }
+    }
 }
-VERIFY(0x02009B38,cBgW_MakeNodeTree_hd);
-void cBgW_Move_hd(u32 a){
- WWHD_FUNC(0x02009C84,void,a);u8 flags=byte(a,0x6C);if((flags&0x80)||!(flags&1))return;
- if(!(flags&2)){
- bool full=byte(a,0x74)==255;u32 matrix=0;
- if(!full){matrix=word(a,8);for(u32 off=0;off<48;off+=4){if(off%16==12)continue;if(!(fl(a,0x3C+off)==fl(matrix,off))){full=true;break;}}}
- if(full)putb(a,0x6D,1);
- else{f32 oldx=fl(a,0x48),newx=fl(matrix,12);bool same=oldx==newx;if(same){same=fl(a,0x58)==fl(matrix,28);if(same)same=fl(a,0x68)==fl(matrix,44);}
- if(same){call<void>(0x028E90D4,at<void>(matrix),at<void>(a+12));if(!(word(a,0x78)&8))return;}
- else{f32 dx=fsubs_ppc(newx,oldx);matrix=word(a,8);f32 oy=fl(a,0x58);pf(a,0x7C,dx);f32 ny=fl(matrix,28),dy=fsubs_ppc(ny,oy),oz=fl(a,0x68);pf(a,0x80,dy);f32 nz=fl(matrix,44),dz=fsubs_ppc(nz,oz);putb(a,0x6D,0);pf(a,0x84,dz);}}
- u8 count=byte(a,0x74);putb(a,0x74,count==255?0:count+1);call<void>(0x020095BC,at<void>(a));}
- call<void>(0x020096B0,at<void>(a));u32 target=word(word(a,4),0x1C);call_ptr<void>(target,at<void>(a));target=word(word(a,4),0x24);call_ptr<void>(target,at<void>(a));call<void>(0x02009B38,at<void>(a));
+
+/* 020096B0 */
+void cBgWMesh::CopyOldMtx() {
+    if (pm_base) {
+        PSMTXCopy(&mCurMtx, &mOldMtx);
+        PSMTXCopy(pm_base.get(), &mCurMtx);
+    }
 }
-VERIFY(0x02009C84,cBgW_Move_hd);
-u8 cBgW_ChkMemoryError_hd(u32 a){WWHD_FUNC(0x02009E58,u8,a);return !word(a,0x88)||!word(a,0x8C)||!word(a,0x98)||!word(a,0xA0)||!word(a,0x9C);}
-VERIFY(0x02009E58,cBgW_ChkMemoryError_hd);
-u8 cBgW_SetVtx_hd(u32 a){
- WWHD_FUNC(0x02009EA4,u8,a);call<void>(0x02009380);u8 flags=byte(a,0x6C);if(flags&0x10){put(a,0x90,0);return 0;}u32 bg=word(a,0x94);if(!(flags&1)){put(a,0x90,word(bg,4));return 0;}u32 dst=call<u32>(0x0273ADAC,word(bg)*12);put(a,0x90,dst);if(!dst)return 1;
- if(byte(a,0x6C)&0x40){s32 count=(s32)word(word(a,0x94));f32 zero=fl(0x1000122C);for(u32 i=0;(s32)i<count;i++){pf(dst,i*12,zero);dst=word(a,0x90);pf(dst,i*12+4,zero);dst=word(a,0x90);pf(dst,i*12+8,zero);count=(s32)word(word(a,0x94));if((s32)(i+1)<count)dst=word(a,0x90);}}
- call<void>(0x020095BC,at<void>(a));return 0;
+
+/* 020096FC */
+void cBgWMesh::MakeBlckTransMinMax(cXyz *min, cXyz *max) {
+    PSVECAdd(min, &mTransVel, min);
+    PSVECAdd(max, &mTransVel, max);
 }
-VERIFY(0x02009EA4,cBgW_SetVtx_hd);
-u8 cBgW_SetTri_hd(u32 a){WWHD_FUNC(0x02009FAC,u8,a);call<void>(0x02009380);u32 bg=word(a,0x94),dst=call<u32>(0x028EFFD0,0,word(bg,8),0x18,at<void>(0x0200B56C));put(a,0x88,dst);if(!dst)return 1;u32 target=word(word(a,4),0x1C);call_ptr<void>(target,at<void>(a));return 0;}
-VERIFY(0x02009FAC,cBgW_SetTri_hd);
-u8 cBgW_Set_hd(u32 a,u32 bg,u32 flags,u32 matrix){
- WWHD_FUNC(0x0200A030,u8,a,bg,flags,matrix);call<void>(0x02009380);f32 range=fl(0x1000123C);putb(a,0x6C,0x20);for(u32 off:{0x90u,0x88u,0x8Cu,0x98u,0xA0u,0x9Cu})put(a,off,0);f32 random=call<f32>(0x020198D8,range);putb(a,0x74,(u32)ftoi(random));if(!bg)return 1;
- putb(a,0x6C,flags);if(flags&0x20){put(a,8,0);call<void>(0x028E9098,at<void>(a+12));call<void>(0x028E9098,at<void>(a+0x3C));}
- else{put(a,8,matrix);call<void>(0x028E90D4,at<void>(matrix),at<void>(a+12));call<void>(0x028E90D4,at<void>(word(a,8)),at<void>(a+0x3C));}
- put(a,0x94,bg);bool error=call<s32>(0x02009EA4,at<void>(a))!=0;
- if(!error)error=call<s32>(0x02009FAC,at<void>(a))!=0;
- if(!error){u32 n=word(word(a,0x94),8),dst=call<u32>(0x028EFFD0,0,n,8,at<void>(0x020093C4));put(a,0x8C,dst);error=!dst;}
- if(!error){u32 n=word(word(a,0x94),0x10),dst=call<u32>(0x0273ADAC,n*6);put(a,0x98,dst);error=!dst;}
- if(!error){u32 n=word(word(a,0x94),0x18),dst=call<u32>(0x028EFFD0,0,n,0x1C,at<void>(0x0200B5C0));put(a,0xA0,dst);error=!dst;}
- if(!error){u32 n=word(word(a,0x94),0x20),dst=call<u32>(0x028EFFD0,0,n,0x20,at<void>(0x0200940C));put(a,0x9C,dst);error=!dst;}
- if(error){call<void>(0x0200959C,at<void>(a));return 1;}u32 target=word(word(a,4),0x24);call_ptr<void>(target,at<void>(a));putb(a,0x6D,1);call<void>(0x02009B38,at<void>(a));return 0;
+
+/* 02009750 */
+void cBgWMesh::MakeBlckMinMax(s32 index, cXyz *min, cXyz *max) {
+    cXyz *point = &pm_vtx_tbl[(u32)index];
+    // HD: reload the point after each minimum store, preserving possible aliasing.
+    f32 x = point->x;
+    if ((f32)min->x > x) {
+        min->x = x;
+        x = point->x;
+    }
+    if ((f32)max->x < x)
+        max->x = x;
+    f32 y = point->y;
+    if ((f32)min->y > y) {
+        min->y = y;
+        y = point->y;
+    }
+    if ((f32)max->y < y)
+        max->y = y;
+    f32 z = point->z;
+    if ((f32)min->z > z) {
+        min->z = z;
+        z = point->z;
+    }
+    if ((f32)max->z < z)
+        max->z = z;
 }
-VERIFY(0x0200A030,cBgW_Set_hd);
-static void copy_vec(u32 d,u32 s){for(u32 o=0;o<12;o+=4)put(d,o,word(s,o));}
-void cBgW_GetTriPnt_hd(u32 a,u32 i,u32 p0,u32 p1,u32 p2){
- WWHD_FUNC(0x0200A220,void,a,i,p0,p1,p2);u32 bg=word(a,0x94);if(!bg){call<void>(0x0273AA24,at<void>(0x10001258),0xCE0,at<void>(0x10001248));bg=word(a,0x94);}u32 tri=word(bg,12)+i*10;u32 i0=half(tri),vertices=word(a,0x90);copy_vec(p0,vertices+i0*12);u32 i1=half(tri,2);vertices=word(a,0x90);copy_vec(p1,vertices+i1*12);u32 i2=half(tri,4);vertices=word(a,0x90);copy_vec(p2,vertices+i2*12);
+
+/* 020097D8 */
+void cBgWMesh::MakeBlckBnd(u32 block, cXyz *min, cXyz *max) {
+    cBgD_Mesh *bg = pm_bgd.get();
+    u32 num = bg->m_b_num;
+    cBgD_Blk_t *entry = &bg->m_b_tbl[block];
+    u32 start = entry->startTri;
+    u8 full = mbNeedsFullTransform;
+    s32 last = block == num - 1 ? (s32)((u32)bg->m_t_num - 1) : (s32)((u32)entry[1].startTri - 1);
+    if (!full) {
+        MakeBlckTransMinMax(min, max);
+        return;
+    }
+    f32 low = boundsMin, high = boundsMax;
+    min->x = low;
+    min->z = low;
+    min->y = low;
+    max->z = high;
+    max->x = high;
+    max->y = high;
+    for (u32 i = start; (s32)i <= last; ++i) {
+        for (u32 corner = 0; corner < 3; ++corner) {
+            cBgD_Tri_t *tri = &pm_bgd->m_t_tbl[i];
+            // The verified code reloads mesh storage between corner calls.
+            be<u16> *indices = &tri->vtx0;
+            u32 vertex = indices[corner];
+            MakeBlckMinMax(vertex, min, max);
+        }
+    }
+    f32 margin = boundsMargin, lx = min->x, ly = min->y;
+    lx = fsubs_ppc(lx, margin);
+    f32 lz = min->z;
+    ly = fsubs_ppc(ly, margin);
+    lz = fsubs_ppc(lz, margin);
+    min->x = lx;
+    min->y = ly;
+    min->z = lz;
+    f32 hx = max->x, hy = max->y;
+    hx = fadds_ppc(hx, margin);
+    f32 hz = max->z;
+    hy = fadds_ppc(hy, margin);
+    hz = fadds_ppc(hz, margin);
+    max->x = hx;
+    max->y = hy;
+    max->z = hz;
 }
-VERIFY(0x0200A220,cBgW_GetTriPnt_hd);
-u32 cBgW_GetRoomId_hd(u32 a,s32 i){WWHD_FUNC(0x0200A300,u32,a,i);u32 bg=0;if(i<0){call<void>(0x0273AA24,at<void>(0x10001294),0xCA4,at<void>(0x10001264));bg=word(a,0x94);}else{bg=word(a,0x94);if(i>=(s32)word(bg,0x20)){call<void>(0x0273AA24,at<void>(0x10001294),0xCA4,at<void>(0x10001264));bg=word(a,0x94);}}u32 groups=word(bg,0x24),parent=half(groups+(u32)i*52,0x24);if(parent==0xFFFF)return 0xFFFF;parent=half(groups+parent*52,0x24);if(parent==0xFFFF)return 0xFFFF;return half(groups+parent*52,0x2A);}
-VERIFY(0x0200A300,cBgW_GetRoomId_hd);
-void cBgW_GetTrans_hd(u32 a,u32 d){WWHD_FUNC(0x0200A3BC,void,a,d);u32 matrix=word(a,8);f32 old=fl(a,0x18),now=fl(matrix,12);pf(d,0,fsubs_ppc(now,old));matrix=word(a,8);now=fl(matrix,28);old=fl(a,0x28);pf(d,4,fsubs_ppc(now,old));matrix=word(a,8);now=fl(matrix,44);old=fl(a,0x38);pf(d,8,fsubs_ppc(now,old));}
-VERIFY(0x0200A3BC,cBgW_GetTrans_hd);
-void cBgW_GetTopUnder_hd(u32 a,u32 top,u32 under){WWHD_FUNC(0x0200A3FC,void,a,top,under);u32 idx=word(a,0xA4),boxes=word(a,0x9C);pf(under,0,fl(boxes+idx*32,4));idx=word(a,0xA4);boxes=word(a,0x9C);pf(top,0,fl(boxes+idx*32,0x10));}
-VERIFY(0x0200A3FC,cBgW_GetTopUnder_hd);
-void cBgW_CalcPlane_hd(u32 a){
- WWHD_FUNC(0x0200A430,void,a);u32 vertices=word(a,0x90),bg=word(a,0x94),tris=word(bg,12);if(!vertices)return;bool full=byte(a,0x6D)!=0;s32 count=(s32)word(bg,8);
- if(!full){for(u32 i=0;(s32)i<count;i++){u32 plane=word(a,0x88)+i*24;f32 dot=call<f32>(0x028E8F44,at<void>(plane),at<void>(a+0x7C));pf(plane,12,fsubs_ppc(fl(plane,12),dot));count=(s32)word(word(a,0x94),8);}}
- else{for(u32 i=0;(s32)i<count;i++){u32 tri=tris+i*10;u32 i0=half(tri),planes=word(a,0x88),i1=half(tri,2),i2=half(tri,4),plane=planes+i*24;call<void>(0x02010D18,at<void>(vertices+i0*12),at<void>(vertices+i1*12),at<void>(vertices+i2*12),at<void>(plane),at<void>(plane+12));count=(s32)word(word(a,0x94),8);if((s32)(i+1)<count)vertices=word(a,0x90);}}
+
+/* 02009930 */
+void cBgWMesh::MakeNodeTreeRp(u32 index) {
+    cBgD_Tree_t *tree = &pm_bgd->m_tree_tbl[index];
+    if ((u16)tree->mFlag & 1) {
+        u32 block = tree->mChild[0];
+        if (block != 0xFFFF) {
+            cBgW_NodeTree *box = &m_nt_tbl[index];
+            MakeBlckBnd(block, &box->mMin, &box->mMax);
+        }
+        return;
+    }
+    clearBounds(&m_nt_tbl[index]);
+    for (u32 child = 0; child < 8; ++child) {
+        u32 next = tree->mChild[child];
+        if (next == 0xFFFF)
+            continue;
+        MakeNodeTreeRp(next);
+        cBgW_NodeTree *boxes = m_nt_tbl.get();
+        expandBounds(&boxes[index], &boxes[next].mMin);
+        boxes = m_nt_tbl.get();
+        expandBounds(&boxes[index], &boxes[next].mMax);
+    }
 }
-VERIFY(0x0200A430,cBgW_CalcPlane_hd);
-void cBgW_BlckConnect_hd(u32 a,u32 head,u32 prev,u32 i){WWHD_FUNC(0x0200A564,void,a,head,prev,i);if(half(head)==0xFFFF)puth(head,0,i);u32 p=word(prev);if(p!=0xFFFF)puth(word(a,0x8C)+p*8,0,i);put(prev,0,i);puth(word(a,0x8C)+i*8,0,0xFFFF);}
-VERIFY(0x0200A564,cBgW_BlckConnect_hd);
-void cBgW_ClassifyPlane_hd(u32 a){
- WWHD_FUNC(0x0200A5A8,void,a);if(!word(a,0x90))return;u32 bg=word(a,0x94);s32 count=(s32)word(bg,0x10);if(count<=0)return;f32 roof=fl(0x100012A4),ground=fl(0x100012A0),epsilon=fl(0x100030B8);
- for(u32 block=0;(s32)block<count;block++){
- u32 starttable=word(bg,0x14)+block*2,start=half(starttable);s32 last=block==(u32)count-1?(s32)(word(bg,8)-1):(s32)(half(starttable,2)-1);
- puth(word(a,0x98)+block*6,0,0xFFFF);puth(word(a,0x98)+block*6,2,0xFFFF);puth(word(a,0x98)+block*6,4,0xFFFF);
- Local<be<s32>> prevRoof,prevWall,prevGround;*prevGround=0xFFFF;*prevRoof=0xFFFF;*prevWall=0xFFFF;
- for(u32 i=start;(s32)i<=last;i++){u32 plane=word(a,0x88)+i*24;f32 nx=fl(plane),ny=fl(plane,4);bool tiny=std::fabs(nx)<epsilon;if(tiny){tiny=std::fabs(fl(plane,4))<epsilon;if(tiny)tiny=std::fabs(fl(plane,8))<epsilon;}if(tiny)continue;u32 ignore=word(a,0x78),kind,previous;
- if(!(ny<ground)){if(ignore&1)continue;kind=4;previous=prevGround.a;}
- else if(ny<roof){if(ignore&4)continue;kind=0;previous=prevRoof.a;}
- else{if(ignore&2)continue;kind=2;previous=prevWall.a;}
- u32 head=word(a,0x98)+block*6+kind;call<void>(0x0200A564,at<void>(a),at<void>(head),at<void>(previous),i);
- }
- bg=word(a,0x94);count=(s32)word(bg,0x10);
- }
+
+/* 02009A10 */
+void cBgWMesh::MakeNodeTreeGrpRp(u32 index) {
+    cBgD_Grp_t *group = &pm_bgd->m_g_tbl[index];
+    u32 node = group->m_tree_idx;
+    if (node != 0xFFFF) {
+        MakeNodeTreeRp(node);
+        group = &pm_bgd->m_g_tbl[index];
+        node = group->m_tree_idx;
+        cBgW_GrpElm *groups = pm_grp.get();
+        cBgW_NodeTree *nodes = m_nt_tbl.get();
+        setBoundsMin(&groups[index].aab, &nodes[node].mMin);
+        group = &pm_bgd->m_g_tbl[index];
+        node = group->m_tree_idx;
+        nodes = m_nt_tbl.get();
+        groups = pm_grp.get();
+        setBoundsMax(&groups[index].aab, &nodes[node].mMax);
+        group = &pm_bgd->m_g_tbl[index];
+    }
+    for (u32 child = group->m_first_child; child != 0xFFFF;) {
+        MakeNodeTreeGrpRp(child);
+        cBgW_GrpElm *groups = pm_grp.get();
+        setBoundsMin(&groups[index].aab, &groups[child].aab.mMin);
+        groups = pm_grp.get();
+        setBoundsMax(&groups[index].aab, &groups[child].aab.mMax);
+        group = &pm_bgd->m_g_tbl[child];
+        child = group->m_next_sibling;
+    }
 }
-VERIFY(0x0200A5A8,cBgW_ClassifyPlane_hd);
-struct BgTri { u8 bytes[0x38]; };
-u8 cBgW_RwgLineCheck_hd(u32 a,s32 index,u32 chk){
- WWHD_FUNC(0x0200A78C,u8,a,index,chk);Local<BgTri> triangle;Local<BgVec> point;call<void>(0x02019040,triangle.get());u32 found=0;
- do{u32 tri=word(word(a,0x94),12)+(u32)index*10;u32 i1=half(tri,2),i0=half(tri),i2=half(tri,4),planes=word(a,0x88),vertices=word(a,0x90);
- call<void>(0x020192AC,triangle.get(),at<void>(vertices+i0*12),at<void>(vertices+i1*12),at<void>(vertices+i2*12),at<void>(planes+(u32)index*24));
- u32 front=byte(chk,0x53),back=byte(chk,0x54);s32 hit=call<s32>(0x02012AE8,at<void>(chk+0x24),triangle.get(),point.get(),front,back);
- if(hit){u32 target=word(word(a,4),0x2C),pass=word(chk);s32 through=call_ptr<s32>(target,at<void>(a),index,at<void>(pass));if(!through){call<void>(0x02018870,at<void>(chk+0x24),point.get());if(index<0)call<void>(0x0273AA24,at<void>(0x100012B8),0x7B,at<void>(0x100012A8));puth(chk,0x14,(u32)index);found=1;}}
- index=half(word(a,0x8C)+(u32)index*8);
- }while(index!=0xFFFF);return (u8)found;
+
+/* 02009B38 */
+void cBgWMesh::MakeNodeTree() {
+    bool hasVertices = bool(pm_vtx_tbl);
+    cBgD_Mesh *bg = pm_bgd.get();
+    s32 count = bg->m_g_num;
+    if (hasVertices) {
+        for (u32 i = 0; (s32)i < count; ++i) {
+            clearBounds(&pm_grp[i].aab);
+            bg = pm_bgd.get();
+            count = bg->m_g_num;
+        }
+    }
+    if (count <= 0)
+        return;
+    cBgD_Grp_t *groups = bg->m_g_tbl.get();
+    for (u32 i = 0; (s32)i < count; ++i) {
+        if ((u16)groups[i].m_parent == 0xFFFF) {
+            m_rootGrpIdx = i;
+            if (hasVertices)
+                MakeNodeTreeGrpRp(i);
+            return;
+        }
+    }
 }
-VERIFY(0x0200A78C,cBgW_RwgLineCheck_hd);
-u8 cBgW_LineCheckRp_hd(u32 a,u32 chk,u32 i){
- WWHD_FUNC(0x0200A8BC,u8,a,chk,i);u32 box=word(a,0xA0)+i*28;if(!call<s32>(0x02010FFC,at<void>(box),at<void>(box+12),at<void>(chk+0x24),at<void>(chk+0x30)))return 0;u32 node=word(word(a,0x94),0x1C)+i*20;u32 found=0;
- if(half(node)&1){for(u32 kind=0;kind<3;kind++){if(!byte(chk,0x50+kind))continue;u32 block=half(node,4),head=word(a,0x98)+block*6+(kind==0?2:kind==1?4:0),index=half(head);if(index!=0xFFFF && call<s32>(0x0200A78C,at<void>(a),index,at<void>(chk)))found=1;}}
- else{for(u32 child=0;child<8;child++){u32 index=half(node,4+child*2);if(index!=0xFFFF && call<s32>(0x0200A8BC,at<void>(a),at<void>(chk),index))found=1;}}return (u8)found;
+
+/* 02009C84 */
+void cBgWMesh::Move() {
+    u8 flags = mFlags;
+    if ((flags & LOCK_e) || !(flags & MOVE_BG_e))
+        return;
+    if (!(flags & NO_CALC_VTX_e)) {
+        bool full = mMoveCounter == 255;
+        BgMtx *matrix = NULL;
+        if (!full) {
+            matrix = pm_base.get();
+            for (u32 row = 0; row < 3 && !full; ++row) {
+                for (u32 col = 0; col < 3; ++col) {
+                    if (!((f32)mCurMtx.rows[row][col] == (f32)matrix->rows[row][col])) {
+                        full = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (full)
+            mbNeedsFullTransform = 1;
+        else {
+            f32 oldX = mCurMtx.rows[0][3], newX = matrix->rows[0][3];
+            bool same = oldX == newX;
+            if (same) {
+                same = (f32)mCurMtx.rows[1][3] == (f32)matrix->rows[1][3];
+                if (same)
+                    same = (f32)mCurMtx.rows[2][3] == (f32)matrix->rows[2][3];
+            }
+            if (same) {
+                PSMTXCopy(matrix, &mOldMtx);
+                if (!((u32)mIgnorePlaneType & FLUSH))
+                    return;
+            } else {
+                f32 dx = fsubs_ppc(newX, oldX);
+                matrix = pm_base.get();
+                f32 oldY = mCurMtx.rows[1][3];
+                mTransVel.x = dx;
+                f32 newY = matrix->rows[1][3], dy = fsubs_ppc(newY, oldY),
+                    oldZ = mCurMtx.rows[2][3];
+                mTransVel.y = dy;
+                f32 newZ = matrix->rows[2][3], dz = fsubs_ppc(newZ, oldZ);
+                mbNeedsFullTransform = 0;
+                mTransVel.z = dz;
+            }
+        }
+        u8 counter = mMoveCounter;
+        mMoveCounter = counter == 255 ? 0 : counter + 1;
+        GlobalVtx();
+    }
+    CopyOldMtx();
+    DispatchCalcPlane();
+    DispatchClassifyPlane();
+    MakeNodeTree();
 }
-VERIFY(0x0200A8BC,cBgW_LineCheckRp_hd);
-u8 cBgW_LineCheckGrpRp_hd(u32 a,u32 chk,u32 i,u32 depth){
- WWHD_FUNC(0x0200AB4C,u8,a,chk,i,depth);u32 target=word(word(a,4),0x3C),pass=word(chk,4);if(call_ptr<s32>(target,at<void>(a),i,at<void>(pass),depth))return 0;u32 box=word(a,0x9C)+i*32;if(!call<s32>(0x02010FFC,at<void>(box),at<void>(box+12),at<void>(chk+0x24),at<void>(chk+0x30)))return 0;
- u32 group=word(word(a,0x94),0x24)+i*52,node=half(group,0x2E),found=0;if(node!=0xFFFF){if(call<s32>(0x0200A8BC,at<void>(a),at<void>(chk),node))found=1;group=word(word(a,0x94),0x24)+i*52;}
- depth++;for(u32 child=half(group,0x28);child!=0xFFFF;){if(call<s32>(0x0200AB4C,at<void>(a),at<void>(chk),child,depth))found=1;group=word(word(a,0x94),0x24)+child*52;child=half(group,0x26);}return (u8)found;
+
+/* 02009E58 */
+u8 cBgWMesh::ChkMemoryError() {
+    return !pm_tri || !pm_rwg || !pm_blk || !m_nt_tbl || !pm_grp;
 }
-VERIFY(0x0200AB4C,cBgW_LineCheckGrpRp_hd);
-u8 cBgW_RwgGroundCheckCommon_hd(u32 a,s32 i,u32 c,f32 h){WWHD_FUNC(0x0200AC70,u8,a,i,c,h);if(!(h<fl(c,0x28))||!(h>fl(c,0x34)))return 0;u32 t=word(word(a,0x94),12)+(u32)i*10,v=word(a,0x90);if(!call<s32>(0x02012504,at<void>(v+half(t)*12),at<void>(v+half(t,2)*12),at<void>(v+half(t,4)*12),at<void>(c+0x24)))return 0;if(call_ptr<s32>(word(word(a,4),0x2C),at<void>(a),i,at<void>(word(c))))return 0;pf(c,0x34,h);if(i<0)call<void>(0x0273AA24,at<void>(0x100012DC),0x7B,at<void>(0x100012CC));puth(c,0x14,i);return 1;}
-VERIFY(0x0200AC70,cBgW_RwgGroundCheckCommon_hd);
-static u8 ground_list(u32 a,u32 i,u32 c,bool wall){u32 found=0;f32 threshold=fl(0x100012F0);do{u32 p=word(a,0x88)+i*24,r=word(a,0x8C)+i*8;f32 ny=fl(p,4);if(!wall||!(ny<threshold)){f32 term=-fmuls_ppc(fl(p),fl(c,0x24));f32 sum=(f32)(-((f64)fl(p,8)*(f64)fl(c,0x2C)-(f64)term));f32 h=fsubs_ppc(sum,fl(p,12))/ny;if(call<s32>(0x0200AC70,at<void>(a),i,at<void>(c),h))found=1;}i=half(r);}while(i!=0xFFFF);return found;}
-u8 cBgW_RwgGroundCheckGnd_hd(u32 a,u32 i,u32 c){WWHD_FUNC(0x0200ADA4,u8,a,i,c);return ground_list(a,i,c,false);}
-VERIFY(0x0200ADA4,cBgW_RwgGroundCheckGnd_hd);
-u8 cBgW_RwgGroundCheckWall_hd(u32 a,u32 i,u32 c){WWHD_FUNC(0x0200AE54,u8,a,i,c);return ground_list(a,i,c,true);}
-VERIFY(0x0200AE54,cBgW_RwgGroundCheckWall_hd);
-static bool ground_box(u32 box,u32 c){if(!call<s32>(0x02017D3C,at<void>(box),at<void>(c+0x24)))return false;if(!call<s32>(0x02017D84,at<void>(box),fl(c,0x28)))return false;return !call<s32>(0x02017D98,at<void>(box),fl(c,0x34));}
-u8 cBgW_GroundCrossRp_hd(u32 a,u32 c,u32 i){WWHD_FUNC(0x0200AF30,u8,a,c,i);u32 n=word(word(a,0x94),0x1C)+i*20,found=0;if(half(n)&1){if(word(c,0x3C)){u32 h=half(word(a,0x98)+half(n,4)*6,4);if(h!=0xFFFF&&call<s32>(0x0200ADA4,at<void>(a),h,at<void>(c)))found=1;}if(word(c,0x38)){u32 h=half(word(a,0x98)+half(n,4)*6,2);if(h!=0xFFFF&&call<s32>(0x0200AE54,at<void>(a),h,at<void>(c)))found=1;}}else{for(u32 j=0;j<8;j++){static const u32 offsets[8]={8,10,16,18,4,6,12,14};u32 off=offsets[j],child=half(n,off);if(child==0xFFFF)continue;u32 b=word(a,0xA0)+child*28;if(ground_box(b,c)&&call<s32>(0x0200AF30,at<void>(a),at<void>(c),half(n,off)))found=1;}}return found;}
-VERIFY(0x0200AF30,cBgW_GroundCrossRp_hd);
-u8 cBgW_GroundCrossGrpRp_hd(u32 a,u32 c,u32 i,u32 depth){WWHD_FUNC(0x0200B380,u8,a,c,i,depth);if(call_ptr<s32>(word(word(a,4),0x3C),at<void>(a),i,at<void>(word(c,4)),depth))return 0;if(!ground_box(word(a,0x9C)+i*32,c))return 0;u32 g=word(word(a,0x94),0x24)+i*52,n=half(g,0x2E),found=0;if(n!=0xFFFF){if(call<s32>(0x0200AF30,at<void>(a),at<void>(c),n))found=1;g=word(word(a,0x94),0x24)+i*52;}depth++;for(u32 child=half(g,0x28);child!=0xFFFF;){if(call<s32>(0x0200B380,at<void>(a),at<void>(c),child,depth))found=1;child=half(word(word(a,0x94),0x24)+child*52,0x26);}return found;}
-VERIFY(0x0200B380,cBgW_GroundCrossGrpRp_hd);
-u8 cBgW_ChkPolyThrough_hd(){WWHD_FUNC(0x0200B4C8,u8);return 0;}
-VERIFY(0x0200B4C8,cBgW_ChkPolyThrough_hd);
-u8 cBgW_ChkGrpThrough_hd(){WWHD_FUNC(0x0200B4D0,u8);return 0;}
-VERIFY(0x0200B4D0,cBgW_ChkGrpThrough_hd);
-void cBgW_StaticInit_hd(){WWHD_FUNC(0x0200B4D8,void);for(u32 o:{8u,0u,12u,4u})put(0x101FF4D8,o,0);call<void>(0x028F026C,at<void>(0x1018C66C));pf(0x101FF4CC,0,fl(0x10001300));pf(0x101FF4D0,0,fl(0x10001304));call<void>(0x028ED6F8,at<void>(0x101FF4D4));call<void>(0x028F026C,at<void>(0x1018C678));call<void>(0x028EAB2C,at<void>(0x101FF4D5));call<void>(0x028F026C,at<void>(0x1018C684));}
-VERIFY(0x0200B4D8,cBgW_StaticInit_hd);
+
+/* 02009EA4 */
+u8 cBgWMesh::SetVtx() {
+    ASSERT_SOLDHEAP();
+    u8 flags = mFlags;
+    if (flags & NO_VTX_TBL_e) {
+        pm_vtx_tbl = NULL;
+        return 0;
+    }
+    cBgD_Mesh *bg = pm_bgd.get();
+    if (!(flags & MOVE_BG_e)) {
+        pm_vtx_tbl = bg->m_v_tbl.get();
+        return 0;
+    }
+    cXyz *vertices = (cXyz *)operator_new_array((u32)bg->m_v_num * sizeof(cXyz));
+    pm_vtx_tbl = vertices;
+    if (vertices == NULL)
+        return 1;
+    if (mFlags & UNK40_e) {
+        s32 count = pm_bgd->m_v_num;
+        f32 initial = zero;
+        for (u32 i = 0; (s32)i < count; ++i) {
+            vertices[i].x = initial;
+            vertices = pm_vtx_tbl.get();
+            vertices[i].y = initial;
+            vertices = pm_vtx_tbl.get();
+            vertices[i].z = initial;
+            count = pm_bgd->m_v_num;
+            if ((s32)(i + 1) < count)
+                vertices = pm_vtx_tbl.get();
+        }
+    }
+    GlobalVtx();
+    return 0;
+}
+
+/* 02009FAC */
+u8 cBgWMesh::SetTri() {
+    ASSERT_SOLDHEAP();
+    cBgD_Mesh *bg = pm_bgd.get();
+    cBgW_TriElm *triangles = (cBgW_TriElm *)constructArray(
+        NULL, (u32)bg->m_t_num, sizeof(cBgW_TriElm), at<void>(triConstructor));
+    pm_tri = triangles;
+    if (triangles == NULL)
+        return 1;
+    DispatchCalcPlane();
+    return 0;
+}
+
+/* 0200A030 */
+u8 cBgWMesh::Set(cBgD_Mesh *bg, u32 flags, BgMtx *matrix) {
+    ASSERT_SOLDHEAP();
+    f32 range = moveCounterRange;
+    mFlags = GLOBAL_e;
+    pm_vtx_tbl = NULL;
+    pm_tri = NULL;
+    pm_rwg = NULL;
+    pm_blk = NULL;
+    m_nt_tbl = NULL;
+    pm_grp = NULL;
+    f32 random = cM_rndF(range);
+    mMoveCounter = (u32)ftoi(random);
+    if (bg == NULL)
+        return 1;
+    mFlags = flags;
+    if (flags & GLOBAL_e) {
+        pm_base = NULL;
+        PSMTXIdentity(&mOldMtx);
+        PSMTXIdentity(&mCurMtx);
+    } else {
+        pm_base = matrix;
+        PSMTXCopy(matrix, &mOldMtx);
+        PSMTXCopy(pm_base.get(), &mCurMtx);
+    }
+    pm_bgd = bg;
+    bool error = cBgW_SetVtxEntry(this) != 0;
+    if (!error)
+        error = cBgW_SetTriEntry(this) != 0;
+    if (!error) {
+        u32 count = pm_bgd->m_t_num;
+        cBgW_RwgElm *storage = (cBgW_RwgElm *)constructArray(NULL, count, sizeof(cBgW_RwgElm),
+                                                             at<void>(rwgConstructor));
+        pm_rwg = storage;
+        error = storage == NULL;
+    }
+    if (!error) {
+        u32 count = pm_bgd->m_b_num;
+        cBgW_BlkElm *storage = (cBgW_BlkElm *)operator_new_array(count * sizeof(cBgW_BlkElm));
+        pm_blk = storage;
+        error = storage == NULL;
+    }
+    if (!error) {
+        u32 count = pm_bgd->m_tree_num;
+        cBgW_NodeTree *storage = (cBgW_NodeTree *)constructArray(NULL, count, sizeof(cBgW_NodeTree),
+                                                                 at<void>(nodeConstructor));
+        m_nt_tbl = storage;
+        error = storage == NULL;
+    }
+    if (!error) {
+        u32 count = pm_bgd->m_g_num;
+        cBgW_GrpElm *storage = (cBgW_GrpElm *)constructArray(NULL, count, sizeof(cBgW_GrpElm),
+                                                             at<void>(groupConstructor));
+        pm_grp = storage;
+        error = storage == NULL;
+    }
+    if (error) {
+        FreeArea();
+        return 1;
+    }
+    DispatchClassifyPlane();
+    mbNeedsFullTransform = 1;
+    MakeNodeTree();
+    return 0;
+}
+
+/* 0200A220 */
+void cBgWMesh::GetTriPnt(u32 index, cXyz *p0, cXyz *p1, cXyz *p2) {
+    cBgD_Mesh *bg = pm_bgd.get();
+    if (bg == NULL) {
+        JUT_ASSERT_fail(at<char>(0x10001258), 0xCE0, at<char>(0x10001248));
+        bg = pm_bgd.get();
+    }
+    cBgD_Tri_t *tri = &bg->m_t_tbl[index];
+    u32 i0 = tri->vtx0;
+    cXyz *vertices = pm_vtx_tbl.get();
+    p0->copy(vertices[i0]);
+    u32 i1 = tri->vtx1;
+    vertices = pm_vtx_tbl.get();
+    p1->copy(vertices[i1]);
+    u32 i2 = tri->vtx2;
+    vertices = pm_vtx_tbl.get();
+    p2->copy(vertices[i2]);
+}
+
+/* 0200A300 */
+u32 cBgWMesh::GetGrpToRoomIndex(s32 index) {
+    cBgD_Mesh *bg = NULL;
+    if (index < 0) {
+        JUT_ASSERT_fail(at<char>(0x10001294), 0xCA4, at<char>(0x10001264));
+        bg = pm_bgd.get();
+    } else {
+        bg = pm_bgd.get();
+        if (index >= (s32)bg->m_g_num) {
+            JUT_ASSERT_fail(at<char>(0x10001294), 0xCA4, at<char>(0x10001264));
+            bg = pm_bgd.get();
+        }
+    }
+    cBgD_Grp_t *groups = bg->m_g_tbl.get();
+    u32 parent = groups[(u32)index].m_parent;
+    if (parent == 0xFFFF)
+        return 0xFFFF;
+    parent = groups[parent].m_parent;
+    if (parent == 0xFFFF)
+        return 0xFFFF;
+    return groups[parent].m_room_id;
+}
+
+/* 0200A3BC */
+void cBgWMesh::GetTrans(cXyz *dst) {
+    BgMtx *matrix = pm_base.get();
+    f32 old = mOldMtx.rows[0][3], now = matrix->rows[0][3];
+    dst->x = fsubs_ppc(now, old);
+    matrix = pm_base.get();
+    now = matrix->rows[1][3];
+    old = mOldMtx.rows[1][3];
+    dst->y = fsubs_ppc(now, old);
+    matrix = pm_base.get();
+    now = matrix->rows[2][3];
+    old = mOldMtx.rows[2][3];
+    dst->z = fsubs_ppc(now, old);
+}
+
+/* 0200A3FC */
+void cBgWMesh::GetTopUnder(be<f32> *top, be<f32> *under) {
+    u32 index = m_rootGrpIdx;
+    cBgW_GrpElm *groups = pm_grp.get();
+    *under = groups[index].aab.mMin.y;
+    index = m_rootGrpIdx;
+    groups = pm_grp.get();
+    *top = groups[index].aab.mMax.y;
+}
+
+/* 0200A430 */
+void cBgWMesh::CalcPlane() {
+    cXyz *vertices = pm_vtx_tbl.get();
+    cBgD_Mesh *bg = pm_bgd.get();
+    cBgD_Tri_t *tris = bg->m_t_tbl.get();
+    if (vertices == NULL)
+        return;
+    bool full = mbNeedsFullTransform != 0;
+    s32 count = bg->m_t_num;
+    if (!full) {
+        for (u32 i = 0; (s32)i < count; ++i) {
+            cBgW_Plane *plane = &pm_tri[i].m_plane;
+            f32 dot = PSVECDotProduct(&plane->mNormal, &mTransVel);
+            plane->mD = fsubs_ppc(plane->mD, dot);
+            count = pm_bgd->m_t_num;
+        }
+    } else {
+        for (u32 i = 0; (s32)i < count; ++i) {
+            cBgD_Tri_t *tri = &tris[i];
+            u32 i0 = tri->vtx0;
+            cBgW_TriElm *planes = pm_tri.get();
+            u32 i1 = tri->vtx1, i2 = tri->vtx2;
+            cBgW_Plane *plane = &planes[i].m_plane;
+            cM3d_CalcPla(&vertices[i0], &vertices[i1], &vertices[i2], &plane->mNormal, &plane->mD);
+            count = pm_bgd->m_t_num;
+            if ((s32)(i + 1) < count)
+                vertices = pm_vtx_tbl.get();
+        }
+    }
+}
+
+/* 0200A564 */
+void cBgWMesh::BlckConnect(be<u16> *head, be<s32> *previous, u32 index) {
+    if ((u16)*head == 0xFFFF)
+        *head = index;
+    u32 prev = *previous;
+    if (prev != 0xFFFF)
+        pm_rwg[prev].next = index;
+    *previous = index;
+    pm_rwg[index].next = 0xFFFF;
+}
+
+/* 0200A5A8 */
+void cBgWMesh::ClassifyPlane() {
+    if (!pm_vtx_tbl)
+        return;
+    cBgD_Mesh *bg = pm_bgd.get();
+    s32 count = bg->m_b_num;
+    if (count <= 0)
+        return;
+    f32 roof = roofNormalY, ground = groundNormalY, epsilon = normalEpsilon;
+    for (u32 block = 0; (s32)block < count; ++block) {
+        cBgD_Blk_t *entry = &bg->m_b_tbl[block];
+        u32 start = entry->startTri;
+        s32 last = block == (u32)count - 1 ? (s32)((u32)bg->m_t_num - 1)
+                                           : (s32)((u32)entry[1].startTri - 1);
+        pm_blk[block].roof = 0xFFFF;
+        pm_blk[block].wall = 0xFFFF;
+        pm_blk[block].ground = 0xFFFF;
+        Stack<be<s32>> prevRoof, prevWall, prevGround;
+        *prevGround = 0xFFFF;
+        *prevRoof = 0xFFFF;
+        *prevWall = 0xFFFF;
+        for (u32 i = start; (s32)i <= last; ++i) {
+            cBgW_Plane *plane = &pm_tri[i].m_plane;
+            f32 nx = plane->mNormal.x, ny = plane->mNormal.y;
+            bool tiny = std::fabs(nx) < epsilon;
+            if (tiny) {
+                tiny = std::fabs((f32)plane->mNormal.y) < epsilon;
+                if (tiny)
+                    tiny = std::fabs((f32)plane->mNormal.z) < epsilon;
+            }
+            if (tiny)
+                continue;
+            u32 ignore = mIgnorePlaneType;
+            be<u16> *head;
+            be<s32> *previous;
+            if (!(ny < ground)) {
+                if (ignore & IGNORE_GROUND)
+                    continue;
+                previous = prevGround.get();
+                head = &pm_blk[block].ground;
+            } else if (ny < roof) {
+                if (ignore & IGNORE_ROOF)
+                    continue;
+                previous = prevRoof.get();
+                head = &pm_blk[block].roof;
+            } else {
+                if (ignore & IGNORE_WALL)
+                    continue;
+                previous = prevWall.get();
+                head = &pm_blk[block].wall;
+            }
+            BlckConnect(head, previous, i);
+        }
+        bg = pm_bgd.get();
+        count = bg->m_b_num;
+    }
+}
+
+/* 0200A78C */
+u8 cBgWMesh::RwgLineCheck(s32 index, cBgW_LinChk *chk) {
+    Stack<cBgW_Triangle> triangle;
+    Stack<cXyz> point;
+    constructTriangle(triangle.get());
+    u32 found = 0;
+    do {
+        cBgD_Tri_t *tri = &pm_bgd->m_t_tbl[(u32)index];
+        u32 i1 = tri->vtx1, i0 = tri->vtx0, i2 = tri->vtx2;
+        cBgW_TriElm *planes = pm_tri.get();
+        cXyz *vertices = pm_vtx_tbl.get();
+        setTriangleBg(triangle.get(), &vertices[i0], &vertices[i1], &vertices[i2],
+                      &planes[(u32)index].m_plane);
+        u32 front = chk->mFrontFlag, back = chk->mBackFlag;
+        s32 hit = cM3d_Cross_LinTri(&chk->mLin, triangle.get(), point.get(), front, back);
+        if (hit) {
+            void *pass = chk->mPolyPassChk.get();
+            s32 through = DispatchPolyThrough(index, pass);
+            if (!through) {
+                setLineEnd(&chk->mLin, point.get());
+                if (index < 0)
+                    JUT_ASSERT_fail(at<char>(0x100012B8), 0x7B, at<char>(0x100012A8));
+                chk->mPolyIndex = (u32)index;
+                found = 1;
+            }
+        }
+        index = pm_rwg[(u32)index].next;
+    } while (index != 0xFFFF);
+    return (u8)found;
+}
+
+/* 0200A8BC */
+u8 cBgWMesh::LineCheckRp(cBgW_LinChk *chk, u32 index) {
+    cBgW_NodeTree *box = &m_nt_tbl[index];
+    if (!cM3d_Cross_MinMaxBoxLine(&box->mMin, &box->mMax, &chk->mLin.mStart, &chk->mLin.mEnd))
+        return 0;
+    cBgD_Tree_t *tree = &pm_bgd->m_tree_tbl[index];
+    u32 found = 0;
+    if ((u16)tree->mFlag & 1) {
+        for (u32 kind = 0; kind < 3; ++kind) {
+            u8 enabled = kind == 0   ? chk->mPreWallChk
+                         : kind == 1 ? chk->mPreGroundChk
+                                     : chk->mPreRoofChk;
+            if (!enabled)
+                continue;
+            u32 block = tree->mChild[0];
+            be<u16> *head = kind == 0   ? &pm_blk[block].wall
+                            : kind == 1 ? &pm_blk[block].ground
+                                        : &pm_blk[block].roof;
+            u32 next = *head;
+            if (next != 0xFFFF && cBgW_RwgLineCheckEntry(this, next, chk))
+                found = 1;
+        }
+    } else {
+        for (u32 child = 0; child < 8; ++child) {
+            u32 next = tree->mChild[child];
+            if (next != 0xFFFF && cBgW_LineCheckRpEntry(this, chk, next))
+                found = 1;
+        }
+    }
+    return (u8)found;
+}
+
+/* 0200AB4C */
+u8 cBgWMesh::LineCheckGrpRp(cBgW_LinChk *chk, u32 index, u32 depth) {
+    void *pass = chk->mGrpPassChk.get();
+    if (DispatchGrpThrough(index, pass, depth))
+        return 0;
+    cBgW_NodeTree *box = &pm_grp[index].aab;
+    if (!cM3d_Cross_MinMaxBoxLine(&box->mMin, &box->mMax, &chk->mLin.mStart, &chk->mLin.mEnd))
+        return 0;
+    cBgD_Grp_t *group = &pm_bgd->m_g_tbl[index];
+    u32 node = group->m_tree_idx, found = 0;
+    if (node != 0xFFFF) {
+        if (cBgW_LineCheckRpEntry(this, chk, node))
+            found = 1;
+        group = &pm_bgd->m_g_tbl[index];
+    }
+    ++depth;
+    for (u32 child = group->m_first_child; child != 0xFFFF;) {
+        if (cBgW_LineCheckGrpRpEntry(this, chk, child, depth))
+            found = 1;
+        group = &pm_bgd->m_g_tbl[child];
+        child = group->m_next_sibling;
+    }
+    return (u8)found;
+}
+
+/* 0200AC70 */
+// HD: parameter order is index, check, height; comparisons retain unordered behavior.
+u8 cBgWMesh::RwgGroundCheckCommon(s32 index, cBgW_GndChk *chk, f32 height) {
+    if (!(height < (f32)chk->m_pos.y) || !(height > (f32)chk->mNowY))
+        return 0;
+    cBgD_Tri_t *tri = &pm_bgd->m_t_tbl[(u32)index];
+    cXyz *vertices = pm_vtx_tbl.get();
+    if (!cM3d_CrossY_Tri_Front(&vertices[(u16)tri->vtx0], &vertices[(u16)tri->vtx1],
+                               &vertices[(u16)tri->vtx2], &chk->m_pos))
+        return 0;
+    if (DispatchPolyThrough(index, chk->mPolyPassChk.get()))
+        return 0;
+    chk->mNowY = height;
+    if (index < 0)
+        JUT_ASSERT_fail(at<char>(0x100012DC), 0x7B, at<char>(0x100012CC));
+    chk->mPolyIndex = index;
+    return 1;
+}
+
+static u8 groundList(cBgWMesh *mesh, u32 index, cBgW_GndChk *chk, bool wall) {
+    u32 found = 0;
+    f32 threshold = wallNormalY;
+    do {
+        cBgW_Plane *plane = &mesh->pm_tri[index].m_plane;
+        cBgW_RwgElm *link = &mesh->pm_rwg[index];
+        f32 ny = plane->mNormal.y;
+        if (!wall || !(ny < threshold)) {
+            // HD: preserve the PPC multiply/subtract evaluation and double intermediate.
+            f32 term = -fmuls_ppc(plane->mNormal.x, chk->m_pos.x);
+            f32 sum = (f32)(-((f64)(f32)plane->mNormal.z * (f64)(f32)chk->m_pos.z - (f64)term));
+            f32 height = fsubs_ppc(sum, plane->mD) / ny;
+            if (cBgW_RwgGroundCheckCommonEntry(mesh, index, chk, height))
+                found = 1;
+        }
+        index = link->next;
+    } while (index != 0xFFFF);
+    return found;
+}
+
+/* 0200ADA4 */
+u8 cBgWMesh::RwgGroundCheckGnd(u32 index, cBgW_GndChk *chk) {
+    return groundList(this, index, chk, false);
+}
+/* 0200AE54 */
+u8 cBgWMesh::RwgGroundCheckWall(u32 index, cBgW_GndChk *chk) {
+    return groundList(this, index, chk, true);
+}
+
+static bool groundBox(cBgW_NodeTree *box, cBgW_GndChk *chk) {
+    if (!boundsCrossY(box, &chk->m_pos))
+        return false;
+    if (!boundsUnderY(box, chk->m_pos.y))
+        return false;
+    return !boundsTopY(box, chk->mNowY);
+}
+
+/* 0200AF30 */
+u8 cBgWMesh::GroundCrossRp(cBgW_GndChk *chk, u32 index) {
+    cBgD_Tree_t *tree = &pm_bgd->m_tree_tbl[index];
+    u32 found = 0;
+    if ((u16)tree->mFlag & 1) {
+        if ((u32)chk->mGndPrecheck) {
+            u32 head = pm_blk[(u16)tree->mChild[0]].ground;
+            if (head != 0xFFFF && cBgW_RwgGroundCheckGndEntry(this, head, chk))
+                found = 1;
+        }
+        if ((u32)chk->mWallPrecheck) {
+            u32 head = pm_blk[(u16)tree->mChild[0]].wall;
+            if (head != 0xFFFF && cBgW_RwgGroundCheckWallEntry(this, head, chk))
+                found = 1;
+        }
+    } else {
+        // GameCube's deliberately ordered octree traversal: 2,3,6,7,0,1,4,5.
+        const u32 childOrder[8] = {2, 3, 6, 7, 0, 1, 4, 5};
+        for (u32 child : childOrder) {
+            u32 next = tree->mChild[child];
+            if (next == 0xFFFF)
+                continue;
+            cBgW_NodeTree *box = &m_nt_tbl[next];
+            if (groundBox(box, chk) && cBgW_GroundCrossRpEntry(this, chk, tree->mChild[child]))
+                found = 1;
+        }
+    }
+    return found;
+}
+
+/* 0200B380 */
+u8 cBgWMesh::GroundCrossGrpRp(cBgW_GndChk *chk, u32 index, u32 depth) {
+    if (DispatchGrpThrough(index, chk->mGrpPassChk.get(), depth))
+        return 0;
+    if (!groundBox(&pm_grp[index].aab, chk))
+        return 0;
+    cBgD_Grp_t *group = &pm_bgd->m_g_tbl[index];
+    u32 node = group->m_tree_idx, found = 0;
+    if (node != 0xFFFF) {
+        if (cBgW_GroundCrossRpEntry(this, chk, node))
+            found = 1;
+        group = &pm_bgd->m_g_tbl[index];
+    }
+    ++depth;
+    for (u32 child = group->m_first_child; child != 0xFFFF;) {
+        if (cBgW_GroundCrossGrpRpEntry(this, chk, child, depth))
+            found = 1;
+        child = pm_bgd->m_g_tbl[child].m_next_sibling;
+    }
+    return found;
+}
+
+/* 0200B4C8 */
+// HD: the base virtual implementation has no live arguments.
+static u8 cBgW_ChkPolyThrough() {
+    return 0;
+}
+/* 0200B4D0 */
+static u8 cBgW_ChkGrpThrough() {
+    return 0;
+}
+
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject;
+    u8 padding[2];
+};
+struct HeaderZeroObject {
+    be<u32> words[4];
+};
+#define headerStatics (*at<HeaderStatics>(0x101FF4CC))
+#define headerZeroObject (*at<HeaderZeroObject>(0x101FF4D8))
+/* 0200B4D8 */
+static void __sinit_c_bg_w_cpp() {
+    headerZeroObject.words[2] = 0;
+    headerZeroObject.words[0] = 0;
+    headerZeroObject.words[3] = 0;
+    headerZeroObject.words[1] = 0;
+    registerGlobalObject(at<void>(0x1018C66C));
+    headerStatics.piMin = headerPiMin;
+    headerStatics.piMax = headerPiMax;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(at<void>(0x1018C678));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(at<void>(0x1018C684));
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data zero 1000122C
+data boundsMin 10001230
+data boundsMax 10001234
+data boundsMargin 10001238
+data moveCounterRange 1000123C
+data groundNormalY 100012A0
+data roofNormalY 100012A4
+data normalEpsilon 100030B8
+data wallNormalY 100012F0
+data headerPiMin 10001300
+data headerPiMax 10001304
+ext 02009EA4 s32 cBgW_SetVtxEntry(cBgWMesh*)
+ext 02009FAC s32 cBgW_SetTriEntry(cBgWMesh*)
+ext 0200A78C s32 cBgW_RwgLineCheckEntry(cBgWMesh*,s32,cBgW_LinChk*)
+ext 0200A8BC s32 cBgW_LineCheckRpEntry(cBgWMesh*,cBgW_LinChk*,u32)
+ext 0200AB4C s32 cBgW_LineCheckGrpRpEntry(cBgWMesh*,cBgW_LinChk*,u32,u32)
+ext 0200AC70 s32 cBgW_RwgGroundCheckCommonEntry(cBgWMesh*,s32,cBgW_GndChk*,f32)
+ext 0200ADA4 s32 cBgW_RwgGroundCheckGndEntry(cBgWMesh*,u32,cBgW_GndChk*)
+ext 0200AE54 s32 cBgW_RwgGroundCheckWallEntry(cBgWMesh*,u32,cBgW_GndChk*)
+ext 0200AF30 s32 cBgW_GroundCrossRpEntry(cBgWMesh*,cBgW_GndChk*,u32)
+ext 0200B380 s32 cBgW_GroundCrossGrpRpEntry(cBgWMesh*,cBgW_GndChk*,u32,u32)
+ext 0273AD10 void* operator_new(u32)
+ext 0273ADAC void* operator_new_array(u32)
+ext 028EFFD0 void* constructArray(void*,u32,u32,void*)
+ext 027EC230 void* JKRHeap_getCurrentHeap()
+ext 027EC23C u32 JKRHeap_getHeapType(void*)
+ext 025F2710 void OSReport_Error(const char*)
+ext 0273AA24 void JUT_ASSERT_fail(const char*,s32,const char*)
+ext 028F521C void initializeMatrixStorage(BgMtx*,u32)
+ext 028E9098 void PSMTXIdentity(BgMtx*)
+ext 028E90D4 void PSMTXCopy(const BgMtx*,BgMtx*)
+ext 028E8D88 void PSVECAdd(const cXyz*,const cXyz*,cXyz*)
+ext 028E8F64 void PSMTXMultVec(const BgMtx*,const cXyz*,cXyz*)
+ext 028E8F44 f32 PSVECDotProduct(const cXyz*,const cXyz*)
+ext 020198D8 f32 cM_rndF(f32)
+ext 02017DAC void clearBounds(cBgW_NodeTree*)
+ext 02017DF4 void setBoundsMin(cBgW_NodeTree*,const cXyz*)
+ext 02017E34 void setBoundsMax(cBgW_NodeTree*,const cXyz*)
+ext 02017E74 void expandBounds(cBgW_NodeTree*,const cXyz*)
+ext 02017D3C s32 boundsCrossY(const cBgW_NodeTree*,const cXyz*)
+ext 02017D84 s32 boundsUnderY(const cBgW_NodeTree*,f32)
+ext 02017D98 s32 boundsTopY(const cBgW_NodeTree*,f32)
+ext 02010D18 void cM3d_CalcPla(const cXyz*,const cXyz*,const cXyz*,cXyz*,be<f32>*)
+ext 02019040 void constructTriangle(cBgW_Triangle*)
+ext 020192AC void setTriangleBg(cBgW_Triangle*,const cXyz*,const cXyz*,const cXyz*,const cBgW_Plane*)
+ext 02012AE8 s32 cM3d_Cross_LinTri(const cBgW_Line*,const cBgW_Triangle*,cXyz*,u32,u32)
+ext 02018870 void setLineEnd(cBgW_Line*,const cXyz*)
+ext 02010FFC s32 cM3d_Cross_MinMaxBoxLine(const cXyz*,const cXyz*,const cXyz*,const cXyz*)
+ext 02012504 s32 cM3d_CrossY_Tri_Front(const cXyz*,const cXyz*,const cXyz*,const cXyz*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

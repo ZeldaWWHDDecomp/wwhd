@@ -1,215 +1,185 @@
-/* WWHD Akabe full actor port derived from zeldaret/tww. */
+/**
+ * d_a_obj_akabe.cpp (WWHD) - collision-only walls and box.
+ * Ported from zeldaret/tww with WWHD layout and verified semantics.
+ * "HD:" marks differences from the GameCube source.
+ */
 #include "d/actor/d_a_obj_akabe.h"
-namespace daObjAkabe {
-u32 prmAbstract(Act_c *actor, u32 width, u32 shift) {
-  WWHD_FUNC(0x02316A94, u32, actor, width, shift);
-  u32 parameters = gabi::load<u32>(gabi::ea(actor) + 0xB0);
-  width &= 63;
-  shift &= 63;
-  u32 mask = (width < 32 ? 1u << width : 0u) - 1u;
-  return (shift < 32 ? parameters >> shift : 0u) & mask;
-}
-VERIFY(0x02316A94, prmAbstract);
+using daObjAkabe::Act_c;
+const gc_tu_data gc_tu = { .safeString = 0x10024A60,
+    .headerStatics = {0x104690A0, 0x101C7B4C, 0x104690AC} };
+static const char* M_arcname[4] = {"Akabe", "AkabeD", "AkabeK", "NBOX"};
+static const AkabeCullAttr l_cull_attr = {-51.0f, -1.0f, 51.0f, 101.0f};
+static const f32 l_cull_depth = 1.0f;
 
-static u32 archive(s32 type) {
-  return gabi::load<u32>(0x10024AE0 + (u32)type * 4u);
+namespace daObj {
+/* 02316A94 */
+// HD: preserve the PPC shift behavior for widths and shifts outside 0..31.
+u32 PrmAbstract(const fopAc_ac_c* actor, u32 width, u32 shift) {
+    u32 parameters = actor->mParameters;
+    width &= 63;
+    shift &= 63;
+    u32 mask = (width < 32 ? 1u << width : 0u) - 1u;
+    return (shift < 32 ? parameters >> shift : 0u) & mask;
 }
-BOOL Act_c::chk_appear() {
-  WWHD_FUNC(0x0231645C, BOOL, this);
-  if (prmAbstract(this, 1, 12))
-    return TRUE;
-  u32 sw = prmAbstract(this, 8, 0), save = gabi::load<u32>(0x101F84DC);
-  if (sw == 255)
-    return gabi::load<u8>(save + 0xD4) == 0;
-  s32 room = gabi::load<s8>(gabi::ea(this) + 0x2FE);
-  return !gabi::call<s32>(0x025BA0C0, gabi::at<u8>(save + 0x20), sw, room);
 }
-VERIFY(0x0231645C, &Act_c::chk_appear);
+using daObj::PrmAbstract;
+
+/* 0231645C */
+bool Act_c::chk_appear() {
+    if (prm_get_always())
+        return true;
+    s32 swSaveNo = prm_get_swSave();
+    if (swSaveNo == 0xFF)
+        return dComIfGs_checkCollect(0) == 0;
+    return !fopAcM_isSwitch(this, swSaveNo);
+}
+
+/* 0231650C */
 void Act_c::init_scale() {
-  WWHD_FUNC(0x0231650C, void, this);
-  u32 mode = prmAbstract(this, 2, 8);
-  if (mode == 1) {
-    f32 x = scale.x, y = scale.y;
-    x = x * 10.0f;
-    scale.z = 1.0f;
-    y = y * 10.0f;
-    scale.x = x;
-    scale.y = y;
-  } else if (mode == 3)
-    gabi::call(0x028E8E64, &scale, &scale, 10.0f);
-  else if (mode != 2)
-    scale.z = 1.0f;
+    s32 scl = prm_get_scl();
+    if (scl == 1) {
+        f32 x = scale.x, y = scale.y;
+        x *= 10.0f;
+        // HD: the Z store precedes X and Y.
+        scale.z = 1.0f;
+        y *= 10.0f;
+        scale.x = x;
+        scale.y = y;
+    } else if (scl == 3) {
+        scale *= 10.0f;
+    } else if (scl != 2) {
+        scale.z = 1.0f;
+    }
 }
-VERIFY(0x0231650C, &Act_c::init_scale);
+
+/* 023165BC */
 void Act_c::init_mtx() {
-  WWHD_FUNC(0x023165BC, void, this);
-  auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-  f32 x = current.pos.x, z = current.pos.z, y = current.pos.y;
-  gabi::call(0x028E93CC, matrix, x, y, z);
-  gabi::call(0x025F1B48, matrix, (s16)shape_angle.x, (s16)shape_angle.y,
-             (s16)shape_angle.z);
-  y = scale.y;
-  x = scale.x;
-  z = scale.z;
-  gabi::call(0x025F2518, x, y, z);
-  gabi::call(0x028E90D4, matrix, &mMatrix);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    mDoMtx_stack_c::scaleM(scale.x, scale.y, scale.z);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
 }
-VERIFY(0x023165BC, &Act_c::init_mtx);
-BOOL Act_c::create_heap() {
-  WWHD_FUNC(0x02316634, BOOL, this);
-  BOOL success = FALSE;
-  mBgW = gabi::call<dBgW *>(0x024F23F4, 0);
-  if (mBgW) {
-    s32 type = mType;
-    u32 controller = gabi::load<u32>(0x101F4F28);
-    u32 name = archive(type);
-    s32 index = gabi::load<s16>(0x10024A8C + (u32)type * 2u);
-    gabi::Local<SafeString> key;
-    key->mStringTop = name;
-    key->__vtbl = 0x10024A60;
-    void *data = gabi::call<void *>(0x026066C4, gabi::at<u8>(controller),
-                                    key.get(), index);
-    if (!data)
-      gabi::call(0x0273AA24, STR(0x10024A94), 0x82, STR(0x10024AA8));
-    if (!gabi::call<s32>(0x0200A030, (dBgW *)mBgW, data, 1, &mMatrix))
-      success = TRUE;
-  }
-  if (!success)
-    mBgW = nullptr;
-  return success;
-}
-VERIFY(0x02316634, &Act_c::create_heap);
-BOOL solidHeapCB(Act_c *actor) {
-  WWHD_FUNC(0x02316718, BOOL, actor);
-  return actor->create_heap();
-}
-VERIFY(0x02316718, solidHeapCB);
-s32 Act_c::Create() {
-  WWHD_FUNC(0x0231671C, s32, this);
-  u32 type = prmAbstract(this, 4, 16);
-  if (type != 1 && type != 2 && type != 3)
-    type = 0;
-  u32 base = gabi::ea(this), flags = gabi::load<u32>(base + 0x2E4);
-  mType = (s32)type;
-  if (!(flags & 8)) {
-    if (this) {
-      gabi::call(0x025D4ED0, this);
-      flags = gabi::load<u32>(base + 0x2E4);
-      gabi::store<u32>(base + 0xB4, 0x10024A78);
+
+/* 02316634 */
+u8 Act_c::create_heap() {
+    static const s16 dzb[4] = {3, 3, 3, 3};
+    bool ret = false;
+    mpBgW = (AkabeBgW*)new_dBgW();
+    if (mpBgW != NULL) {
+        cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes(M_arcname[mType], dzb[mType]);
+        JUT_ASSERT(0x82, bgw_data != NULL);
+        if (!mpBgW->Set(bgw_data, dBgW::MOVE_BG_e, &mMtx))
+            ret = true;
     }
-    gabi::store<u32>(base + 0x2E4, flags | 8);
-  }
-  BOOL appear = chk_appear();
-  mAppear = (u8)appear;
-  s32 phase = 5;
-  if (appear) {
-    u32 name = archive(mType);
-    phase = gabi::call<s32>(0x02520460, &mPhase, STR(name));
-    if (phase == 4) {
-      init_scale();
-      init_mtx();
-      u32 size = gabi::load<u32>(0x10024AC8 + (u32)(s32)mType * 4u);
-      if (gabi::call<s32>(0x025D63E8, this, 0x02316718, size)) {
-        u32 play = gabi::call<u32>(0x025200D4);
-        gabi::call(0x024EEA6C, gabi::at<u8>(play + 0x12A0), (dBgW *)mBgW, this);
-        u32 bg = gabi::ea((dBgW *)mBgW);
-        f32 lowX = gabi::load<f32>(0x10024AB8);
-        gabi::store<u32>(bg + 0xA8, 0);
-        bg = gabi::ea((dBgW *)mBgW);
-        f32 highZ = gabi::load<f32>(0x10024AC0);
-        gabi::store<u8>(bg + 0x75, 1);
-        f32 highY = gabi::load<f32>(0x10024AC4);
-        s32 kind = mType;
-        f32 lowY = gabi::load<f32>(0x10024ABC);
-        gabi::store<u32>(base + 0x348, base + 0x3B8);
-        if (kind == 3)
-          gabi::call(0x025D674C, this, lowX, lowY, lowX, highZ, highY, highZ);
-        else
-          gabi::call(0x025D674C, this, lowX, lowY, lowY, highZ, highY,
-                     gabi::load<f32>(0x10024A38));
-      } else
-        phase = 5;
+    if (!ret)
+        mpBgW = NULL;
+    return ret;
+}
+
+/* 02316718 */
+static BOOL solidHeapCB(fopAc_ac_c* i_this) {
+    // HD: tail branch preserves the full result register.
+    return Akabe_create_heap_result((Act_c*)i_this);
+}
+
+/* 0231671C */
+cPhs_State Act_c::_create() {
+    s32 arg0 = prm_get_arg0();
+    mType = (arg0 == 1 || arg0 == 2 || arg0 == 3) ? arg0 : 0;
+    fopAcM_ct(this, Act_c);
+    // HD: retain the full register, then store its low byte without normalizing it.
+    u32 appear = Akabe_chk_appear_result(this);
+    mbAppear = u8(appear);
+    cPhs_State rt = cPhs_ERROR_e;
+    if (appear) {
+        rt = dComIfG_resLoad(&mPhs, M_arcname[mType]);
+        if (rt == cPhs_COMPLEATE_e) {
+            init_scale();
+            init_mtx();
+            static const u32 heap_size[4] = {0x200, 0x200, 0x200, 0x3E0};
+            if (fopAcM_entrySolidHeap(this, solidHeapCB, heap_size[mType])) {
+                dComIfG_Bgsp()->Regist(mpBgW, this);
+                AkabeBgW* bgw = mpBgW;
+                // HD: load cull extents between collision field stores, retaining alias behavior.
+                f32 lowX = l_cull_attr.lowX;
+                bgw->SetCrrFunc(0);
+                bgw = mpBgW;
+                f32 highZ = l_cull_attr.highZ;
+                bgw->SetPriority(1);
+                f32 highY = l_cull_attr.highY;
+                s32 kind = mType;
+                f32 lowY = l_cull_attr.lowY;
+                fopAcM_SetMtx(this, &mMtx);
+                if (kind == 3)
+                    fopAcM_setCullSizeBox(this, lowX, lowY, lowX, highZ, highY, highZ);
+                else
+                    fopAcM_setCullSizeBox(this, lowX, lowY, lowY, highZ, highY, l_cull_depth);
+            } else {
+                rt = cPhs_ERROR_e;
+            }
+        }
     }
-  }
-  return phase;
+    return rt;
 }
-VERIFY(0x0231671C, &Act_c::Create);
-BOOL Act_c::Delete() {
-  WWHD_FUNC(0x023168BC, BOOL, this);
-  if (mAppear) {
-    u32 bg = gabi::ea((dBgW *)mBgW);
-    if (bg && gabi::load<u32>(bg) < 256) {
-      u32 play = gabi::call<u32>(0x025200D4);
-      gabi::call(0x020087EC, gabi::at<u8>(play + 0x12A0), (dBgW *)mBgW);
+
+/* 023168BC */
+bool Act_c::_delete() {
+    if (mbAppear) {
+        if (mpBgW != NULL && mpBgW->ChkUsed())
+            dComIfG_Bgsp()->Release(mpBgW);
+        dComIfG_resDelete(&mPhs, M_arcname[mType]);
     }
-    u32 name = archive(mType);
-    gabi::call(0x025204C8, &mPhase, STR(name));
-  }
-  return TRUE;
+    return true;
 }
-VERIFY(0x023168BC, &Act_c::Delete);
-BOOL Act_c::Execute() {
-  WWHD_FUNC(0x02316938, BOOL, this);
-  if (!chk_appear())
-    gabi::call(0x025D57E0, this);
-  return TRUE;
+
+/* 02316938 */
+bool Act_c::_execute() {
+    // HD: test the full result register of chk_appear.
+    if (!Akabe_chk_appear_result(this))
+        fopAcM_delete(this);
+    return true;
 }
-VERIFY(0x02316938, &Act_c::Execute);
-s32 wrapperCreate(Act_c *actor) {
-  WWHD_FUNC(0x02316978, s32, actor);
-  return actor->Create();
+
+/* 02316978 */
+static cPhs_State Mthd_Create(void* i_this) { return ((Act_c*)i_this)->_create(); }
+/* 0231697C */
+static bool Mthd_Delete(void* i_this) { return ((Act_c*)i_this)->_delete(); }
+/* 02316980 */
+static bool Mthd_Execute(void* i_this) { return ((Act_c*)i_this)->_execute(); }
+/* 02316984 */
+// HD: _draw is folded into the method-table entry.
+static BOOL Mthd_Draw(void*) { return TRUE; }
+/* 0231698C */
+static void __sinit_d_a_obj_akabe_cpp() { __sinit_header_statics(); }
+/* 02316A20 */
+// HD: compiler-emitted deleting destructor of a header static.
+static void header_static_dt(void* i_this, s32 flags) {
+    if (i_this != nullptr && (flags & 1))
+        operator_delete(i_this);
 }
-VERIFY(0x02316978, wrapperCreate);
-BOOL Delete(Act_c *actor) {
-  WWHD_FUNC(0x0231697C, BOOL, actor);
-  return actor->Delete();
+/* 02316A34 */
+// HD: SafeString::assureTerminationImpl_ companion.
+static void assureTerminationImpl_() {}
+/* 02316A38 */
+// HD: actor deleting destructor.
+static void Act_c_dt(Act_c* i_this, s32 flags) {
+    if (i_this != nullptr) {
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
+    }
 }
-VERIFY(0x0231697C, Delete);
-BOOL wrapperExecute(Act_c *actor) {
-  WWHD_FUNC(0x02316980, BOOL, actor);
-  return actor->Execute();
-}
-VERIFY(0x02316980, wrapperExecute);
-void staticInitialize() {
-  WWHD_FUNC(0x0231698C, void);
-  gabi::store<u32>(0x104690B4, 0);
-  gabi::store<u32>(0x104690AC, 0);
-  gabi::store<u32>(0x104690B8, 0);
-  gabi::store<u32>(0x104690B0, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C7B4C));
-  gabi::store<f32>(0x104690A0, -3.1415927410125732f);
-  gabi::store<f32>(0x104690A4, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x104690A8));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C7B58));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x104690A9));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C7B64));
-}
-VERIFY(0x0231698C, staticInitialize);
-void destruct(Act_c *actor, s32 flags) {
-  WWHD_FUNC(0x02316A38, void, actor, flags);
-  if (actor) {
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, actor);
-  }
-}
-VERIFY(0x02316A38, destruct);
-BOOL Draw(Act_c *actor) {
-  WWHD_FUNC(0x02316984, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x02316984, Draw);
-BOOL IsDelete(Act_c *actor) {
-  WWHD_FUNC(0x02316A8C, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x02316A8C, IsDelete);
-void deleteStatic(void *p, s32 flags) {
-  WWHD_FUNC(0x02316A20, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
-}
-VERIFY(0x02316A20, deleteStatic);
-void emptyVirtual() { WWHD_FUNC(0x02316A34, void); }
-VERIFY(0x02316A34, emptyVirtual);
-} // namespace daObjAkabe
+/* 02316A8C */
+static BOOL Mthd_IsDelete(void*) { return TRUE; }
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data
+str 10024A94 # "d_a_obj_akabe.cpp"
+str 10024AA8 "bgw_data != NULL" renamed # HD: assertion prints null as 0
+data M_arcname 10024AE0
+data l_cull_attr 10024AB8
+data l_cull_depth 10024A38
+data dzb 10024A8C
+data heap_size 10024AC8
+ext 02316634 u32 Akabe_create_heap_result(Act_c*)
+ext 0231645C u32 Akabe_chk_appear_result(Act_c*)
+*/

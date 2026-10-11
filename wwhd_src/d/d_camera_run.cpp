@@ -7,58 +7,91 @@
  * (zeldaret/tww src/d/d_camera.cpp) to the WWHD layout and code, verified against cking.rpx.
  * "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/d_camera.h"
-#include <bit>
+#include "d/d_camera_run.h"
 
-static inline f32 envZoom_get() { return gabi::load<f32>(gabi::ea(dKy_getEnvlight()) + 0x104C); }
-
-/* dCamera_c::engine_tbl[alg] (pointer to member function: s16 this delta, s16 vtable index,
- * function or vtable offset) */
-static u32 callEngine(dCamera_c* cam, u32 alg, s32 style) {
-    u32 e = 0x101D5678 + alg * 8;
-    s16 vidx = gabi::load<s16>(e + 2);
-    u32 self = cam->ea() + gabi::load<s16>(e);
-    if (vidx < 0) return gabi::call_ptr<u32>(gabi::load<u32>(e + 4), self, style);
-    u32 vtbl = gabi::load<u32>(self + gabi::load<s16>(e + 6));
-    return gabi::call_ptr<u32>(gabi::load<u32>(vtbl + vidx * 8 + 4), self, style);
+namespace camera_run {
+static DemoPointer demoObject;
+static PadPointer padObject;
+static RunName assertFile;
+static RunName assertDemo;
+static RunName tornadoName;
+static RunName cameraName;
+static RunName trimName;
+static RunName trimDefault;
+static RunName waitAnyKeyName;
+static RunName bgCheckName;
+static RunName autoForcusName;
+static RunName moveBgCheckName;
+static EventActions ActionNames;
+static BackgroundMasks backgroundMasks;
+static f32 envZoom() {
+    return cameraRunEnv()->mHDZoom;
 }
-
-/* 024FE3E8. HD: the field of view is scaled by an environment-light zoom factor (0.7 / 1.0 /
- * eased to 0.8 or 1.0 by the light's state byte); the floor clamp keeps the subject camera's
- * centre except in the "Tornado" type; switching to a subject style calls 026185BC; the pad is
- * also updated in minigame 8; m514 is a byte */
+static u32 readFloatBits(GuestFloat* value) {
+    return (u32) * reinterpret_cast<GuestWord*>(value);
+}
+static void writeFloatBits(GuestFloat* value, u32 bits) {
+    *reinterpret_cast<GuestWord*>(value) = bits;
+}
+static u32 callEngine(dCamera_c* camera, u32 algorithm, s32 style) {
+    EngineEntry* entry = runEngineEntry(algorithm);
+    s16 index = entry->mVtableIndex;
+    u8* self = adjustThis(camera, entry->mThisDelta);
+    if (index < 0)
+        return gabi::call_ptr<u32>(entry->mFunction, self, style);
+    EngineObject* object = engineObject(self, entry->mVtableOffset);
+    return gabi::call_ptr<u32>(object->mpVtable[index].mFunction.get(), self, style);
+}
+static bool callEventEngine(dCamera_c* camera, u32 action) {
+    EngineEntry* entry = eventEngineEntry(action);
+    s16 index = entry->mVtableIndex;
+    u8* self = adjustThis(camera, entry->mThisDelta);
+    if (index < 0)
+        return gabi::call_ptr<bool>(entry->mFunction, self);
+    EngineObject* object = engineObject(self, entry->mVtableOffset);
+    return gabi::call_ptr<bool>(object->mpVtable[index].mFunction.get(), self);
+}
+} // namespace camera_run
+using namespace camera_run;
+/* 024FE3E8 */
+// HD: the field of view is scaled by an environment-light zoom factor (0.7 / 1.0 /
+// eased to 0.8 or 1.0 by the light's state byte); the floor clamp keeps the subject camera's
+// centre except in the "Tornado" type; switching to a subject style calls 026185BC; the pad is
+// also updated in minigame 8; m514 is a byte
 u32 dCamera_c::Run() {
-    WWHD_FUNC(0x024FE3E8, u32, this);
-    u32 res = 0; /* the engine's r3, returned unmasked */
-    gabi::call<bool>(0x024F8D4C, &mForcusLine); /* mForcusLine.Off() */
+    u32 res = 0;                     /* the engine's r3, returned unmasked */
+    cameraRunFocusOff(&mForcusLine); /* mForcusLine.Off() */
     mEventFlags = mEventFlags & ~0x10149C01u;
     checkSpecialArea();
     checkGroundInfo();
     s32 ship = m530;
-    if (ship != 0 && !chkFlag(0x200000) && gabi::load<s32>(dComIfGp_ea() + 0x52E4) == 0 && !chkFlag(0x20000000)) {
-        f32 ofs = gabi::call<f32>(0x025269A8, &m534, &m536, 130.0f); /* daObjPirateship::getShipOffsetY */
+    if (ship != 0 && !chkFlag(0x200000) && !cameraRunIsPlaying() && !chkFlag(0x20000000)) {
+        f32 ofs = cameraRunShipOffsetY(&m534, &m536, 130.0f); /* daObjPirateship::getShipOffsetY */
         f32 y = ofs * m540;
         f32 dy = y - m538;
-        if (m530 == 1 && m53C < 0.0f && dy > 0.0f) m254 = m254 | 4;
+        if (m530 == 1 && m53C < 0.0f && dy > 0.0f)
+            m254 = m254 | 4;
         f32 cy = mViewCache.mCenter.y;
-        f32 k = gabi::load<f32>(ea() + 0x7FC); /* mCamSetup.m0B8 */
+        f32 k = (f32)cameraRunSetup(this)->m0B8; /* mCamSetup.m0B8 */
         m53C = dy;
         m538 = y;
         mViewCache.mCenter.y = gabi::fnmsubs(dy, k, cy);
     }
     updateMonitor();
     Att();
-    clrComStat(0x3400);
-    if (gabi::load<s32>(dComIfGp_ea() + 0x52E4) == 0 && !chkFlag(0x20000000)) {
+    clrComStat(dCamAttnStts_00000400_e | dCamAttnStts_00001000_e | dCamAttnStts_00002000_e);
+    if (!cameraRunIsPlaying() && !chkFlag(0x20000000)) {
         updatePad();
-        gabi::call(0x024F6E54, ea() + 0x82C, (s32)mPadId); /* mCamSetup.mCstick.Shift(mPadId) */
+        cameraRunCstickShift(cameraRunSetup(this)->mCstick,
+                             mPadId); /* mCamSetup.mCstick.Shift(mPadId) */
     }
-    if (gabi::load<u8>(dComIfGp_ea() + 0x5CEA) == 8) { /* dComIfGp_getMiniGameType() */
+    if (dComIfGp_getMiniGameType() == 8) { /* dComIfGp_getMiniGameType() */
         updatePad();
-        gabi::call(0x024F6E54, ea() + 0x82C, (s32)mPadId);
+        cameraRunCstickShift(cameraRunSetup(this)->mCstick, mPadId);
     }
     dAttention_c* attn = dComIfGp_getAttention();
-    if (gabi::call<bool>(0x024EDFCC, attn) || (gabi::load<u32>(gabi::ea(attn) + 0x20) & 0x20000000)) {
+    if (cameraRunLockonTruth(attn) ||
+        ((u32) reinterpret_cast<AttentionView*>(attn)->mFlags & 0x20000000)) {
         mEventFlags = mEventFlags | 0x1000; /* attention Lockon() */
     }
     bool forceLock = checkForceLockTarget();
@@ -71,7 +104,8 @@ u32 dCamera_c::Run() {
     s32 next = nextType(curType);
     mNextType = next;
     if ((u32)next != (u32)(s32)mCurType) {
-        if (onTypeChange(mCurType, next)) mCurType = (s32)mNextType;
+        if (onTypeChange(mCurType, next))
+            mCurType = (s32)mNextType;
     }
 
     s32 nextM = nextMode(mCurMode);
@@ -96,14 +130,15 @@ u32 dCamera_c::Run() {
         type = mCurType;
         mCurMode = 0;
         style = camTypeStyle(type, 0);
-        if (style < 0) styleOk = false;
+        if (style < 0)
+            styleOk = false;
     }
     if (styleOk && (u32)(s32)mCurStyle != (u32)style) {
         if (onStyleChange(mCurStyle, style)) {
             mCurStyle = (s32)camTypeStyle(mCurType, mCurMode);
-            gabi::call(0x024F727C, ea() + 0x8A4, (s32)mCurStyle); /* mCamParam.Change(mCurStyle) */
-            if (camStyleAlg(mCurStyle) == 4 /* SUBJECT */) {
-                gabi::call(0x026185BC, gabi::load<u32>(0x101F5088));
+            cameraRunParamChange(mCamParam, mCurStyle); /* mCamParam.Change(mCurStyle) */
+            if (camStyleAlg(mCurStyle) == dCamAlg_SUBJECT_CAMERA_e /* SUBJECT */) {
+                cameraRunSubjectStart(padObject);
                 m154 = 0.0f;
             }
         }
@@ -111,48 +146,54 @@ u32 dCamera_c::Run() {
     u32 flags = mEventFlags & ~0x20u;
     s32 m = mCurMode;
     mEventFlags = flags;
-    if (m == 12) flags |= 0x20;
+    if (m == 12)
+        flags |= 0x20;
     mEventFlags = flags & 0x7FFFFFFF;
-    clrComStat(0x80);
+    clrComStat(dCamAttnStts_00000080_e);
 
     bool fwd = false;
     if (camStyleFlags() & 4) {
         s32 pad = mPadId;
-        if (!(gabi::load<u32>(dComIfGp_ea() + pad * 0x10 + 0x5CD8) & 0x4000000)) { /* check_owner_action */
+        if (!(dComIfGp_getPlayerStatus0(pad) & daPyStts0_UNK4000000_e)) { /* check_owner_action */
             pad = mPadId;
-            if (!(gabi::load<u32>(dComIfGp_ea() + pad * 0x10 + 0x5CDC) & 0x40000)) fwd = true; /* check_owner_action1 */
+            if (!(dComIfGp_getPlayerStatus1(pad) & daPyStts1_UNK40000_e))
+                fwd = true; /* check_owner_action1 */
         }
     }
     if (fwd) {
-        gabi::Local<cSAngle_l> a, d, s;
-        gabi::call(0x024FB930, this, a.get()); /* forwardCheckAngle() */
-        gabi::call(0x020068B0, a.get(), d.get(), &m148); /* - m148 */
-        gabi::call(0x0200693C, d.get(), s.get(), gabi::load<f32>(ea() + 0x86C)); /* * FwdCushion */
-        gabi::call(0x020068CC, &m148, s.get()); /* m148 += */
+        cSAngle_l a;
+        cSAngle_l d;
+        cSAngle_l s;
+        forwardCheckAngle(&a);                                          /* forwardCheckAngle() */
+        cameraRunAngleSubtract(&a, &d, &m148);                          /* - m148 */
+        cameraRunAngleScale(&d, &s, cameraRunSetup(this)->mFwdCushion); /* * FwdCushion */
+        cameraRunAngleAddAssign(&m148, &s);                             /* m148 += */
     } else {
-        m148 = gabi::load<s16>(0x101FF354); /* cSAngle::_0 */
+        m148 = (s16)zeroAngle(); /* cSAngle::_0 */
     }
     defaultTriming();
     mTrimTypeForce = -1;
     m068 = 9;
 
-    if (chkFlag(0x200000) && camStyleAlg(mCurStyle) != 11 /* EVENT */) {
+    if (chkFlag(0x200000) && camStyleAlg(mCurStyle) != dCamAlg_EVENT_CAMERA_e /* EVENT */) {
         s32 pad = mPadId;
-        if (gabi::call<f32>(0x020079B4, pad) > 0.001f || gabi::call<f32>(0x02007B44, pad) > 0.001f ||
-            gabi::call<u32>(0x020075C0, pad) != 0 || mMonitor.field_0x0C.x > 10.0f || m360 == 0 || m31C != 0) {
-            gabi::store<u8>(ea() + 0x518, 0); /* m514 */
+        if (cameraRunStickValue(pad) > 0.001f || cameraRunSubstickValue(pad) > 0.001f ||
+            cameraRunTrigger(pad) != 0 || mMonitor.field_0x0C.x > 10.0f || m360 == 0 || m31C != 0) {
+            *reinterpret_cast<GuestByte*>(&m514) = 0; /* m514 */
             mEventFlags = mEventFlags & ~0x200000u;
         } else {
-            gabi::store<u8>(ea() + 0x518, 0);
+            *reinterpret_cast<GuestByte*>(&m514) = 0;
         }
     } else {
-        u32 demo = gabi::load<u32>(0x101D5FFC);
+        DemoToken* demo = demoObject;
         if (demo == 0) {
-            JUT_ASSERT_fail(STR(0x1004A898), 0x23E, STR(0x1004A888));
-            demo = gabi::load<u32>(0x101D5FFC);
+            JUT_ASSERT_fail(assertFile.text, 0x23E, assertDemo.text);
+            demo = demoObject;
         }
-        if (gabi::call<u32>(0x025283F8, demo) != 0 && gabi::load<u32>(gabi::load<u32>(ea() + 0x8A8) + 4) != 11) {
-            res = gabi::call<u32>(0x024FC0A8, this, 0); /* demoCamera(0) */
+        if (cameraRunActiveDemoCamera(demo) != 0 &&
+            (u32) reinterpret_cast<ParamView*>(mCamParam)->mpStyle->mAlgorithm !=
+                dCamAlg_EVENT_CAMERA_e) {
+            res = cameraRunDemoCamera(this, 0); /* demoCamera(0) */
         } else {
             res = callEngine(this, camStyleAlg(mCurStyle), mCurStyle);
             m07C = m07C + 1;
@@ -161,15 +202,16 @@ u32 dCamera_c::Run() {
             m080 = m080 + 1;
             m108 = m108 + 1;
         }
-        if (!res) gabi::store<u8>(ea() + 0x518, 0);
+        if (!res)
+            *reinterpret_cast<GuestByte*>(&m514) = 0;
     }
 
     if (!chkFlag(0x400)) {
-        gabi::Local<cSAngle_l> t;
-        gabi::call(0x0200693C, &mViewCache.mBank, t.get(), 0.05f); /* mBank * 0.05 */
-        gabi::call(0x020068E0, &mViewCache.mBank, t.get());        /* mBank -= */
+        cSAngle_l t;
+        cameraRunAngleScale(&mViewCache.mBank, &t, 0.05f);   /* mBank * 0.05 */
+        cameraRunAngleSubtractAssign(&mViewCache.mBank, &t); /* mBank -= */
     }
-    gabi::call<f32>(0x024FC108, this); /* shakeCamera() */
+    cameraRunShake(this); /* shakeCamera() */
     mEventFlags = mEventFlags & ~0x90080u;
     u16 pf = camStyleFlags();
     if (pf & 1) {
@@ -180,73 +222,86 @@ u32 dCamera_c::Run() {
         pf = camStyleFlags();
     }
     f32 floorY = m354;
-    u32 cyBits = gabi::load<u32>(ea() + 0x48); /* mViewCache.mCenter.y (copied bit-exact) */
+    u32 cyBits = readFloatBits(&mViewCache.mCenter.y); /* mViewCache.mCenter.y (copied bit-exact) */
     f32 cy = std::bit_cast<f32>(cyBits);
-    f32 margin = gabi::load<f32>(ea() + 0x844); /* mCamSetup.mBGChk.FloorMargin() */
-    if (pf & 0x400) m068 = m068 | 0x40;
+    f32 margin = (f32)cameraRunSetup(this)->mFloorMargin; /* mCamSetup.mBGChk.FloorMargin() */
+    if (pf & 0x400)
+        m068 = m068 | 0x40;
     floorY = floorY + margin;
-    gabi::store<u32>(ea() + 0x10, gabi::load<u32>(ea() + 0x44)); /* mCenter.x = mViewCache.mCenter.x */
+    writeFloatBits(&mCenter.x,
+                   readFloatBits(&mViewCache.mCenter.x)); /* mCenter.x = mViewCache.mCenter.x */
     if (cy < floorY) {
-        gabi::store<u32>(ea() + 0x18, gabi::load<u32>(ea() + 0x4C)); /* mCenter.z */
-        if (camStyleAlg(mCurStyle) == 4 && (mEventFlags & 0x10000800) &&
-            GetCameraTypeFromCameraName(STR(0x1004A880) /* "Tornado" */) != (s32)mCurType) {
+        writeFloatBits(&mCenter.z, readFloatBits(&mViewCache.mCenter.z)); /* mCenter.z */
+        if (camStyleAlg(mCurStyle) == dCamAlg_SUBJECT_CAMERA_e && (mEventFlags & 0x10000800) &&
+            GetCameraTypeFromCameraName(tornadoName.text /* "Tornado" */) != (s32)mCurType) {
             m068 = m068 & ~8u;
-            gabi::store<u32>(ea() + 0x14, gabi::load<u32>(ea() + 0x48));
+            writeFloatBits(&mCenter.y, readFloatBits(&mViewCache.mCenter.y));
         } else {
             mCenter.y = floorY;
         }
     } else {
-        gabi::store<u32>(ea() + 0x14, cyBits);
-        gabi::store<u32>(ea() + 0x18, gabi::load<u32>(ea() + 0x4C));
+        writeFloatBits(&mCenter.y, cyBits);
+        writeFloatBits(&mCenter.z, readFloatBits(&mViewCache.mCenter.z));
     }
 
-    /* HD: environment-light zoom factor */
-    u32 el = gabi::ea(dKy_getEnvlight());
-    if (gabi::load<u8>(el + 0x10A4) == 2) {
-        el = gabi::ea(dKy_getEnvlight());
-        gabi::store<f32>(el + 0x104C, 0.7f);
+    // HD: environment-light zoom factor
+    EnvLightView* el = cameraRunEnv();
+    if ((u8)el->mHDZoomState == 2) {
+        el = cameraRunEnv();
+        el->mHDZoom = 0.7f;
     } else {
-        el = gabi::ea(dKy_getEnvlight());
-        if (gabi::load<u8>(el + 0x10A4) == 0xFF) {
-            el = gabi::ea(dKy_getEnvlight());
-            gabi::store<f32>(el + 0x104C, 1.0f);
+        el = cameraRunEnv();
+        if ((u8)el->mHDZoomState == 0xFF) {
+            el = cameraRunEnv();
+            el->mHDZoom = 1.0f;
         } else {
-            el = gabi::ea(dKy_getEnvlight());
-            f32 target = gabi::load<u8>(el + 0x10A4) != 0 ? 0.8f : 1.0f;
-            el = gabi::ea(dKy_getEnvlight());
-            gabi::call<f32>(0x0200ECD4, el + 0x104C, target, 0.05f, 0.05f, 0.01f); /* cLib_addCalc */
+            el = cameraRunEnv();
+            f32 target = (u8)el->mHDZoomState != 0 ? 0.8f : 1.0f;
+            el = cameraRunEnv();
+            cameraRunAddCalc(&el->mHDZoom, target, 0.05f, 0.05f, 0.01f); /* cLib_addCalc */
         }
     }
-    f32 zoom = envZoom_get();
+    f32 zoom = envZoom();
     s16 bank = mViewCache.mBank;
     mBank = bank;
     mFovy = gabi::fmuls_ppc(mViewCache.mFovy, zoom);
-    gabi::call<bool>(0x024FD11C, this, (u32)m068); /* bumpCheck(m068) */
+    cameraRunBumpCheck(this, m068); /* bumpCheck(m068) */
 
-    gabi::Local<cSAngle_l> stick, diff, lim1, lim2, inv, stick2, dmc, vlo, vhi;
-    cSAngle_l* sa = gabi::call<cSAngle_l*>(0x0200658C, stick.get(), CPad_GET_STICK_ANGLE(mPadId));
-    gabi::call(0x020068B0, sa, diff.get(), &mDMCSystem.field_0x4);
+    cSAngle_l stick;
+    cSAngle_l diff;
+    cSAngle_l lim1;
+    cSAngle_l lim2;
+    cSAngle_l inv;
+    cSAngle_l stick2;
+    cSAngle_l dmc;
+    cSAngle_l vlo;
+    cSAngle_l vhi;
+    cSAngle_l* sa = cameraRunAngleShortCtor(&stick, CPad_GET_STICK_ANGLE(mPadId));
+    cameraRunAngleSubtract(sa, &diff, &mDMCSystem.field_0x4);
     bool reset = false;
-    if (mStickMainValueLast < gabi::load<f32>(ea() + 0x7CC) /* DMCValue */) {
+    if (mStickMainValueLast < (f32)cameraRunSetup(this)->mDMCValue /* DMCValue */) {
         reset = true;
     } else {
-        cSAngle_l* hi = gabi::call<cSAngle_l*>(0x020066C0, lim1.get(), gabi::load<f32>(ea() + 0x7D0)); /* DMCAngle */
-        if ((s16)*diff > (s16)*hi) {
+        cSAngle_l* hi =
+            cameraRunAngleFloatCtor(&lim1, cameraRunSetup(this)->mDMCAngle); /* DMCAngle */
+        if ((s16)diff > (s16)*hi) {
             reset = true;
         } else {
-            cSAngle_l* lo = gabi::call<cSAngle_l*>(0x020066C0, lim2.get(), -gabi::load<f32>(ea() + 0x7D0));
-            if ((s16)*diff < (s16)*lo) reset = true;
+            cSAngle_l* lo = cameraRunAngleFloatCtor(&lim2, -(f32)cameraRunSetup(this)->mDMCAngle);
+            if ((s16)diff < (s16)*lo)
+                reset = true;
         }
     }
     s16 angleY;
-    if (reset) mDMCSystem.field_0x0 = 0;
+    if (reset)
+        mDMCSystem.field_0x0 = 0;
     if (!reset && mDMCSystem.field_0x0 != 0) {
-        cSAngle_l* s2 = gabi::call<cSAngle_l*>(0x0200658C, stick2.get(), CPad_GET_STICK_ANGLE(mPadId));
-        getDMCAngle(dmc, s2);
-        angleY = *dmc;
+        cSAngle_l* s2 = cameraRunAngleShortCtor(&stick2, CPad_GET_STICK_ANGLE(mPadId));
+        getDMCAngle(&dmc, s2);
+        angleY = dmc;
     } else {
         s16 v = cSAngle_Inv(&mDirection.mU);
-        cSAngle_l* a = gabi::call<cSAngle_l*>(0x0200658C, inv.get(), v);
+        cSAngle_l* a = cameraRunAngleShortCtor(&inv, v);
         angleY = *a;
     }
     mAngleY = angleY;
@@ -256,11 +311,12 @@ u32 dCamera_c::Run() {
         mUp.y = 1.0f;
         mUp.x = 0.01f;
     } else {
-        cSAngle_l* lo = gabi::call<cSAngle_l*>(0x020066C0, vlo.get(), -90.0f);
+        cSAngle_l* lo = cameraRunAngleFloatCtor(&vlo, -90.0f);
         bool down = true;
         if (!((s16)mDirection.mV < (s16)*lo)) {
-            cSAngle_l* hi = gabi::call<cSAngle_l*>(0x020066C0, vhi.get(), 90.0f);
-            if (!((s16)mDirection.mV > (s16)*hi)) down = false;
+            cSAngle_l* hi = cameraRunAngleFloatCtor(&vhi, 90.0f);
+            if (!((s16)mDirection.mV > (s16)*hi))
+                down = false;
         }
         if (down) {
             mUp.x = 0.0f;
@@ -277,7 +333,7 @@ u32 dCamera_c::Run() {
     for (u32 i = 0; i < 3; i++) {
         u32 bit = 1u << i;
         if ((cur & bit) && !((u32)m258 & bit)) {
-            gabi::call(0x025E1988, (s32)m248[i]); /* mDoAud_seStart(m248[i]) */
+            cameraRunSoundStart(m248[i]); /* mDoAud_seStart(m248[i]) */
             cur = (u32)m254;
         }
     }
@@ -285,51 +341,52 @@ u32 dCamera_c::Run() {
     m254 = 0;
 
     if (m100 != 0 && m101 != 0 && m102 != 0) {
-        setComStat(0x10);
+        setComStat(dCamAttnStts_00000010_e);
     } else {
-        clrComStat(0x10);
+        clrComStat(dCamAttnStts_00000010_e);
     }
     u32 f = mEventFlags;
     if (f & 0x40000) {
-        setComStat(2);
-    } else if (mDirection.mRadius < gabi::load<f32>(ea() + 0x788) /* PlayerHideDist */) {
+        setComStat(dCamAttnStts_SUBJECT_e);
+    } else if (mDirection.mRadius <
+               (f32)cameraRunSetup(this)->mPlayerHideDist /* PlayerHideDist */) {
         if (f & 0x800) {
-            setComStat(2);
+            setComStat(dCamAttnStts_SUBJECT_e);
             f = mEventFlags;
         }
-        if (f & 0x10000000) setComStat(0x20);
+        if (f & 0x10000000)
+            setComStat(dCamAttnStts_00000020_e);
     }
     return res;
 }
-VERIFY(0x024FE3E8, &dCamera_c::Run);
 
-/* 024FF164. HD: the "AutoForcus" event data no longer switches auto focus off; leaving a
- * subject->event style (mHD610) is cancelled by any action other than PAUSE/WAIT */
+/* 024FF164 */
+// HD: the "AutoForcus" event data no longer switches auto focus off; leaving a
+// subject->event style (mHD610) is cancelled by any action other than PAUSE/WAIT
 bool dCamera_c::eventCamera(s32) {
-    WWHD_FUNC(0x024FF164, bool, this, 0);
     if (m118 == 0) {
         PosSet* p0 = &m0A4[0];
         PosSet* p1 = &m0A4[1];
-        u32 fovy = gabi::load<u32>(ea() + 0x38);
-        gabi::store<u32>(gabi::ea(&p1->mFovY), fovy);
+        u32 fovy = readFloatBits(&mFovy);
+        writeFloatBits(&p1->mFovY, fovy);
         p0->mEye.copy(mEye);
         p1->mEye.copy(mEye);
-        u16 bank = gabi::load<u16>(ea() + 0x34);
-        gabi::store<u16>(gabi::ea(&p1->mBank), bank);
-        gabi::store<u16>(gabi::ea(&p0->mBank), bank);
+        u16 bank = (u16)(s16)mBank;
+        p1->mBank = (s16)bank;
+        p0->mBank = (s16)bank;
         p0->mCenter.copy(mCenter);
         p1->mCenter.copy(mCenter);
         p0->m1E = 0;
-        gabi::store<u32>(gabi::ea(&p0->mFovY), fovy);
+        writeFloatBits(&p0->mFovY, fovy);
         p1->m1E = 0;
     }
-    u32 evmng = 0;
     s32 act;
     if (!chkFlag(0x20000000)) {
-        if (gabi::load<s32>(dComIfGp_ea() + 0x52E4) == 0) return false; /* dComIfGp_evmng_cameraPlay() */
-        evmng = dComIfGp_ea() + 0x52C4;
-        s32 staff = gabi::call<s32>(0x02542D88, evmng, STR(0x1004A8B8) /* "CAMERA" */, 0, 0); /* getMyStaffId */
-        if (staff < 0) return false;
+        if (!cameraRunIsPlaying())
+            return false; /* dComIfGp_evmng_cameraPlay() */
+        s32 staff = dComIfGp_evmng_getMyStaffId(cameraName.text, nullptr, 0); /* getMyStaffId */
+        if (staff < 0)
+            return false;
         if ((u32)mEventData.mStaffIdx != (u32)staff) {
             m108 = 0;
             m11C = 0;
@@ -337,22 +394,24 @@ bool dCamera_c::eventCamera(s32) {
             m118 = 0;
         }
         mEventData.mStaffIdx = staff;
-        if (gabi::call<bool>(0x025447C8, dComIfGp_ea() + 0x52C4, staff)) { /* getIsAddvance */
+        if (dComIfGp_evmng_getIsAddvance(staff)) { /* getIsAddvance */
             m101 = 0;
             m100 = 0;
             m102 = 0;
             m11C = 0;
         }
         s32 idx = mEventData.mStaffIdx;
-        act = gabi::call<s32>(0x02542EDC, dComIfGp_ea() + 0x52C4, idx, 0x101D5550u /* ActionNames */, 0x1C, 0, 0); /* getMyActIdx */
+        act = dComIfGp_evmng_getMyActIdx(idx, ActionNames.mNames, EVENT_ACTION_COUNT, 0,
+                                         0); /* getMyActIdx */
     } else {
         mEventData.mStaffIdx = -1;
-        if (m118 == 0) m11C = 0;
+        if (m118 == 0)
+            m11C = 0;
         act = mEventData.field_0x18;
     }
-    if ((u32)act >= 0x1C) {
+    if ((u32)act >= EVENT_ACTION_COUNT) {
         s32 idx = mEventData.mStaffIdx;
-        gabi::call(0x02543280, dComIfGp_ea() + 0x52C4, idx); /* cutEnd */
+        dComIfGp_evmng_cutEnd(idx); /* cutEnd */
         return false;
     }
     if (m11C == 0) {
@@ -360,72 +419,109 @@ bool dCamera_c::eventCamera(s32) {
             mEventData.field_0x1c = 2;
             mEventFlags = mEventFlags & ~0x200000u;
         }
-        if (mHD610 != 0 && act != 0 && act != 1) mHD610 = 0;
-        gabi::Local<u8[12]> trim;
-        if (gabi::call<bool>(0x02530998, this, trim.get(), STR(0x1004A8C0) /* "Trim" */, STR(0x1004A8A4) /* "CINESCO" */)) {
-            u32 w = gabi::load<u32>(gabi::ea(trim.get()));
-            if (w == 0x5354414E) mEventData.field_0x1c = 0;        /* 'STAN' */
-            else if (w == 0x56495354) mEventData.field_0x1c = 1;   /* 'VIST' */
-            else if (w == 0x44454D4F) mEventData.field_0x1c = 3;   /* 'DEMO' */
-            else if (w == 0x4E4F4E45) mEventData.field_0x1c = 4;   /* 'NONE' */
-            else if (w == 0x4B454550) mEventData.field_0x1c = 999; /* 'KEEP' */
+        if (mHD610 != 0 && act != EVENT_PAUSE && act != EVENT_WAIT)
+            mHD610 = 0;
+        EventString trim;
+        if (cameraRunGetString(this, &trim, trimName.text, trimDefault.text)) {
+            u32 w = (u32)trim.mPrefix;
+            if (w == TRIM_STANDARD)
+                mEventData.field_0x1c = 0; /* 'STAN' */
+            else if (w == TRIM_VISTA)
+                mEventData.field_0x1c = 1; /* 'VIST' */
+            else if (w == TRIM_DEMO)
+                mEventData.field_0x1c = 3; /* 'DEMO' */
+            else if (w == TRIM_NONE)
+                mEventData.field_0x1c = 4; /* 'NONE' */
+            else if (w == TRIM_KEEP)
+                mEventData.field_0x1c = 999; /* 'KEEP' */
         }
-        gabi::call(0x02530634, this, &mEventData.field_0x24, STR(0x1004A8D4) /* "WaitAnyKey" */, 0); /* getEvIntData */
-        if (mEventData.field_0x24 != 0) mEventFlags = mEventFlags | 0x200000;
-        gabi::call(0x02530634, this, &mEventData.field_0x20, STR(0x1004A8AC) /* "BGCheck" */, 1);
-        gabi::call(0x02530634, this, &mEventData.field_0x24, STR(0x1004A8E0) /* "AutoForcus" */, 1);
-        gabi::call(0x02530634, this, &mEventData.field_0x28, STR(0x1004A8C8) /* "MoveBGCheck" */, 1);
+        cameraRunGetInt(this, &mEventData.field_0x24, waitAnyKeyName.text /* "WaitAnyKey" */,
+                        0); /* getEvIntData */
+        if (mEventData.field_0x24 != 0)
+            mEventFlags = mEventFlags | 0x200000;
+        cameraRunGetInt(this, &mEventData.field_0x20, bgCheckName.text /* "BGCheck" */, 1);
+        cameraRunGetInt(this, &mEventData.field_0x24, autoForcusName.text /* "AutoForcus" */, 1);
+        cameraRunGetInt(this, &mEventData.field_0x28, moveBgCheckName.text /* "MoveBGCheck" */, 1);
     }
     u32 bg = (u32)(s32)mEventData.field_0x20;
     s32 trimSize = mEventData.field_0x1c;
-    m068 = (bg >= 1 && bg <= 4) ? gabi::load<u8>(0x1004A8B3 + bg) : 9;
+    m068 = (bg >= 1 && bg <= 4) ? (u8)backgroundMasks.mValues[bg] : 9;
     mTrimSize = trimSize;
     if (m100 != 0 && m101 != 0 && m102 != 0) {
-        setComStat(4);
+        setComStat(dCamAttnStts_00000004_e);
     } else {
-        clrComStat(4);
+        clrComStat(dCamAttnStts_00000004_e);
     }
-    /* (this->*l_func[act])() */
-    u32 e = 0x1004A8EC + act * 8;
-    s16 vidx = gabi::load<s16>(e + 2);
-    u32 self = ea() + gabi::load<s16>(e);
-    bool done;
-    if (vidx < 0) {
-        done = gabi::call_ptr<bool>(gabi::load<u32>(e + 4), self);
-    } else {
-        u32 vtbl = gabi::load<u32>(self + gabi::load<s16>(e + 6));
-        done = gabi::call_ptr<bool>(gabi::load<u32>(vtbl + vidx * 8 + 4), self);
-    }
+    bool done = callEventEngine(this, act);
     if (done) {
         s32 idx = mEventData.mStaffIdx;
-        gabi::call(0x02543280, dComIfGp_ea() + 0x52C4, idx); /* cutEnd */
+        dComIfGp_evmng_cutEnd(idx); /* cutEnd */
     }
     if (mEventData.field_0x20 == 4) {
-        gabi::Local<u8[0x6C]> linChk; /* dBgS_LinChk */
-        u32 o = gabi::ea(linChk.get());
-        gabi::call(0x02008FEC, o);
-        gabi::store<u32>(o + 0x00, o + 0x58);
-        gabi::store<u32>(o + 0x04, o + 0x64);
-        gabi::store<u32>(o + 0x10, 0x1004A5EC);
-        gabi::store<u32>(o + 0x20, 0x1004A5FC);
-        gabi::store<u32>(o + 0x58, 0x1004A61C);
-        gabi::store<u32>(o + 0x64, 0x1004A60C);
-        gabi::store<u8>(o + 0x5C, 0);
-        gabi::store<u8>(o + 0x5D, 0);
-        gabi::store<u8>(o + 0x5E, 0);
-        gabi::store<u8>(o + 0x5F, 0);
-        gabi::store<u8>(o + 0x60, 0);
-        gabi::store<u8>(o + 0x61, 0);
-        gabi::store<u8>(o + 0x62, 0);
-        gabi::store<u32>(o + 0x68, 1);
-        if (lineBGCheck(&mViewCache.mCenter, &mViewCache.mEye, (u8*)linChk.get(), 4)) {
-            mViewCache.mEye.copy(*gabi::at<cXyz>(o + 0x30)); /* lin_chk.GetCross() */
-        }
-        gabi::store<u32>(o + 0x58, 0x1004A61C);
-        gabi::store<u32>(o + 0x64, 0x1004A4EC);
-        gabi::store<u32>(o + 0x20, 0x1004A4DC);
-        gabi::call(0x02008B4C, o, 0);
+        dBgS_LinChk linChk;
+        cameraRunLineCtor(&linChk);
+        linChk.mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk*>(&linChk));
+        linChk.mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk*>(&linChk));
+        linChk.cBgS_Chk::__vtbl = LINE_CHECK;
+        linChk.cBgS_PolyInfo::__vtbl = LINE_POLY_INFO;
+        linChk.dBgS_PolyPassChk::__vtbl = LINE_POLY_PASS;
+        linChk.dBgS_GrpPassChk::__vtbl = LINE_GROUP_PASS;
+        linChk.mbObjThrough = 0;
+        linChk.mbCamThrough = 0;
+        linChk.mbLinkThrough = 0;
+        linChk.mbArrowThrough = 0;
+        linChk.mbBombThrough = 0;
+        linChk.mbBoomerangThrough = 0;
+        linChk.mbRopeThrough = 0;
+        linChk.mGrp = 1;
+        if (lineBGCheck(&mViewCache.mCenter, &mViewCache.mEye, reinterpret_cast<u8*>(&linChk), 4))
+            mViewCache.mEye.copy(linChk.mLin.mEnd);
+        linChk.dBgS_PolyPassChk::__vtbl = LINE_POLY_PASS;
+        linChk.dBgS_GrpPassChk::__vtbl = BASE_GROUP_PASS;
+        linChk.cBgS_PolyInfo::__vtbl = BASE_POLY_INFO;
+        cameraRunLineDtor(&linChk, 0);
     }
     return true;
 }
-VERIFY(0x024FF164, &dCamera_c::eventCamera);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data demoObject 101D5FFC
+data padObject 101F5088
+data assertFile 1004A898
+data assertDemo 1004A888
+data tornadoName 1004A880
+data cameraName 1004A8B8
+data trimName 1004A8C0
+data trimDefault 1004A8A4
+data waitAnyKeyName 1004A8D4
+data bgCheckName 1004A8AC
+data autoForcusName 1004A8E0
+data moveBgCheckName 1004A8C8
+data ActionNames 101D5550
+data backgroundMasks 1004A8B3
+ext 024F8D4C bool cameraRunFocusOff(dCamForcusLine*)
+ext 025269A8 f32 cameraRunShipOffsetY(be<s16>*,be<s16>*,f32)
+ext 024F6E54 void cameraRunCstickShift(u8*,s32)
+ext 024EDFCC bool cameraRunLockonTruth(dAttention_c*)
+ext 024F727C void cameraRunParamChange(u8*,s32)
+ext 026185BC void cameraRunSubjectStart(PadToken*)
+ext 020068B0 void cameraRunAngleSubtract(cSAngle_l*,cSAngle_l*,cSAngle_l*)
+ext 0200693C void cameraRunAngleScale(cSAngle_l*,cSAngle_l*,f32)
+ext 020068CC void cameraRunAngleAddAssign(cSAngle_l*,cSAngle_l*)
+ext 020079B4 f32 cameraRunStickValue(s32)
+ext 02007B44 f32 cameraRunSubstickValue(s32)
+ext 020075C0 u32 cameraRunTrigger(s32)
+ext 025283F8 u32 cameraRunActiveDemoCamera(DemoToken*)
+ext 024FC0A8 u32 cameraRunDemoCamera(dCamera_c*,s32)
+ext 020068E0 void cameraRunAngleSubtractAssign(cSAngle_l*,cSAngle_l*)
+ext 024FC108 f32 cameraRunShake(dCamera_c*)
+ext 0200ECD4 f32 cameraRunAddCalc(GuestFloat*,f32,f32,f32,f32)
+ext 024FD11C bool cameraRunBumpCheck(dCamera_c*,u32)
+ext 0200658C cSAngle_l* cameraRunAngleShortCtor(cSAngle_l*,s32)
+ext 020066C0 cSAngle_l* cameraRunAngleFloatCtor(cSAngle_l*,f32)
+ext 025E1988 void cameraRunSoundStart(s32)
+ext 02530998 bool cameraRunGetString(dCamera_c*,EventString*,const char*,const char*)
+ext 02530634 void cameraRunGetInt(dCamera_c*,be<s32>*,const char*,s32)
+ext 02008FEC void cameraRunLineCtor(dBgS_LinChk*)
+ext 02008B4C void cameraRunLineDtor(dBgS_LinChk*,s32)
+*/

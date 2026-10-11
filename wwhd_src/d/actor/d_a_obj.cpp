@@ -1,67 +1,244 @@
-/* WWHD source-only draft. Utility ownership: 02311AB8..<02312FB8.
- * Based on tww/src/d/d_a_obj.cpp; no compiler/runtime verification claimed.
- * The neighboring Nzg termination and following Adnno entry are excluded.
- * The final entry initializes this translation unit's HD header statics.
+/* Object utility functions: movement resistance, wind/path velocity, quaternion rotation,
+ * collision sound and hit particles. GameCube names follow tww/src/d/d_a_obj.cpp.
+ * Verified against the private WWHD image.
+ * HD: native vector/math calls, particle layout and header initialization differ from GameCube.
  */
-#include "bindings.h"
 #include "d/actor/d_a_obj.h"
+#include "bindings.h"
+#include "gc_api/JSystem/JUTAssert.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/d/d_kankyo_wether.h"
 #include <cmath>
 
+using namespace gabi;
+using namespace objHD;
+using namespace daObj;
+
+static f32 sOne;
+static f32 sNegativeOne;
+static f32 sZero;
+static f32 sParticleSpeed;
+static f32 sWaterScale;
+static f32 sWaterDirectionalSpeed;
+static f32 sGrassRate;
+static f32 sGrassHeight;
+static f32 sSmokeScale;
+static f32 sHalf;
+static f32 sPathPowerScale;
+static f32 sQuaternionEpsilon;
+static f32 sQuaternionRootEpsilon;
+static f32 sWoodRate;
+static f32 sWoodSpread;
+static f32 sWoodSweep;
+static f32 sHitDirectionEpsilon;
+static f32 sNegativePi;
+static f32 sPositivePi;
+static QuaternionWords sIdentityY;
+static QuaternionWords sIdentityY2;
+static QuaternionWords sIdentityZ;
+static cXyz sBaseY;
+static cXyz sBaseZ;
+static cXyz sTotalSpeed;
+static cXyz sPathSpeed;
+static u32 sTotalSpeedGuard;
+static u32 sPathSpeedGuard;
+static SinCosTable sSinCos;
+static HeaderStatics sHeaderStatics;
+static HeaderVector sHeaderVector0;
+static HeaderVector sHeaderVector1;
+static HeaderVector sHeaderVector2;
+extern s32 objNormalize(cXyz*);
+extern f32 objSqrt(f32);
+extern void objCross(const cXyz*, cXyz*, const cXyz*);
+extern void objSubtract(const cXyz*, cXyz*, const cXyz*);
+extern void objCrawVec(const cXyz*, const cXyz*, cXyz*);
+extern void objScale(const cXyz*, cXyz*, f32);
+extern void objPSSubtract(const cXyz*, const cXyz*, cXyz*);
+extern void objAdd(const cXyz*, cXyz*, const cXyz*);
+extern void objDivide(const cXyz*, cXyz*, f32);
+extern f32 objAcos(f32);
+extern void objQuatRotAxis(daObj::ObjQuaternion*, cXyz*, f32);
+extern s32 objGetHitSound(const dCcD_GObjInf*);
+extern fopAc_ac_c* objGetHitActor(const dCcD_GObjTg*);
+extern dCcD_GObjInf* objGetHitObject(const dCcD_GObjInf*);
+extern u32 objGetAttribute(dBgS*, cBgS_PolyInfo*);
+extern s32 objGetRoom(dBgS*, cBgS_PolyInfo*);
+extern void objLandSmoke(u32, u32, cXyz*, s32, void*, cXyz*, s32, void*);
+extern Emitter* objParticleSet(dPa_control_c*, u32, u32, const cXyz*, const csXyz*, const cXyz*,
+                               u32, void*, s32, const void*, const void*, u32);
+extern void objPointWind(cXyz*, cXyz*, be<f32>*);
+extern s32 objPathVector(cBgS_PolyInfo*, cXyz*, be<s32>*);
+extern void objRegisterGlobalObject(HeaderVector*);
+extern void objHeaderAngleConstruct(u8*);
+extern void objHeaderByteConstruct(u8*);
+
 namespace {
-template<class T> struct ObjLocal {
-    gabi::Local<T> payload;
-    struct Linkage { u32 words[8]; };
-    gabi::Local<Linkage> linkage;
-    T* get() const { return gabi::at<T>(payload.a); }
+// HD: the verified wrappers reserve a vector slot and 32 bytes of linkage scratch.
+template <class T> struct ObjLocal {
+    gabi::Stack<T> payload;
+    gabi::Stack<Linkage> linkage;
+    T* get() const {
+        return payload.get();
+    }
 };
-inline f32 objFloat(u32 a) { return gabi::load<f32>(a); }
 inline void objZero(cXyz* out) {
-    const f32 x = objFloat(0x101FFBA8), y = objFloat(0x101FFBAC), z = objFloat(0x101FFBB0);
-    out->x = x; out->z = z; out->y = y;
+    const f32 x = cXyz::Zero.x, y = cXyz::Zero.y, z = cXyz::Zero.z;
+    out->x = x;
+    out->z = z;
+    out->y = y;
 }
-inline void objIdentity(daObj::ObjQuaternion* out, u32 address) {
+inline void objIdentity(daObj::ObjQuaternion* out, const QuaternionWords* identity) {
+    QuaternionWords* result = (QuaternionWords*)out;
     for (u32 i = 0; i < 4; ++i)
-        gabi::store<u32>(gabi::ea(out) + i * 4, gabi::load<u32>(address + i * 4));
+        result->mWord[i] = identity->mWord[i];
 }
-static void quatFromBase(daObj::ObjQuaternion* out, const cXyz* input, u32 baseAddress, u32 identityAddress) {
+/* inlined into quat_rotBaseY2 and quat_rotBaseZ */
+static void quatFromBase(daObj::ObjQuaternion* out, const cXyz* input, const cXyz* base,
+                         const QuaternionWords* identity) {
     ObjLocal<cXyz> normalized, cross;
     const f32 x = input->x, y = input->y, z = input->z;
-    normalized.get()->x = x; normalized.get()->z = z; normalized.get()->y = y;
-    if (!gabi::call<s32>(0x0201B47C, normalized.get())) { objIdentity(out, identityAddress); return; }
-    auto* base = gabi::at<cXyz>(baseAddress);
-    const f32 dot = gabi::call<f32>(0x028E8F44, base, normalized.get());
-    const f32 one = objFloat(0x10024610);
+    normalized.get()->x = x;
+    normalized.get()->z = z;
+    normalized.get()->y = y;
+    if (!objNormalize(normalized.get())) {
+        objIdentity(out, identity);
+        return;
+    }
+    const f32 dot = PSVECDotProduct(base, normalized.get());
+    const f32 one = sOne;
     const f32 sum = gabi::fadds_ppc(dot, one);
-    const f32 root = gabi::call<f32>(0x028F4384, gabi::fadds_ppc(sum, sum));
-    gabi::call<void>(0x0201B080, base, cross.get(), normalized.get());
-    if (!(std::fabs(root) > objFloat(0x100246D8))) { objIdentity(out, identityAddress); return; }
+    const f32 root = objSqrt(gabi::fadds_ppc(sum, sum));
+    objCross(base, cross.get(), normalized.get());
+    if (!(std::fabs(root) > sQuaternionRootEpsilon)) {
+        objIdentity(out, identity);
+        return;
+    }
     const f32 reciprocal = f32(f64(one) / f64(root));
     const f32 cx = cross.get()->x, cy = cross.get()->y, cz = cross.get()->z;
     out->x = gabi::fmuls_ppc(cx, reciprocal);
     out->y = gabi::fmuls_ppc(cy, reciprocal);
     out->z = gabi::fmuls_ppc(cz, reciprocal);
-    out->w = gabi::fmuls_ppc(root, objFloat(0x10024638));
+    out->w = gabi::fmuls_ppc(root, sHalf);
 }
+/* inlined into HitEff_kikuzu and HitEff_hibana */
 static void hitDirection(cXyz* out, const dCcD_Cyl* cylinder) {
-    const u32 c = gabi::ea(cylinder);
-    gabi::call<void>(0x0201AE48, gabi::at<cXyz>(c + 0xC0), out, objFloat(0x10024614));
-    const f32 square = gabi::call<f32>(0x028E8DD0, out);
-    if (square < objFloat(0x100246F8)) {
-        u32 table = gabi::load<u32>(c + 0x114);
-        auto* center = gabi::call_ptr<cXyz*>(gabi::load<u32>(table + 0x8C), gabi::at<void>(c + 0xF8));
-        out->y = objFloat(0x1002461C);
-        out->x = gabi::fsubs_ppc(objFloat(c + 0xCC), f32(center->x));
-        table = gabi::load<u32>(c + 0x114);
-        center = gabi::call_ptr<cXyz*>(gabi::load<u32>(table + 0x8C), gabi::at<void>(c + 0xF8));
-        out->z = gabi::fsubs_ppc(objFloat(c + 0xD4), f32(center->z));
+    const dCcD_Cyl* c = cylinder;
+    objScale(&c->mGObjTg.mRVec, out, sNegativeOne);
+    const f32 square = PSVECSquareMag(out);
+    if (square < sHitDirectionEpsilon) {
+        CylinderShape* shape = (CylinderShape*)c->mShapeAttr;
+        auto* center = call_ptr<cXyz*>(shape->__vtbl->getCoCP.get(), shape);
+        out->y = sZero;
+        out->x = gabi::fsubs_ppc((f32)c->mGObjTg.mHitPos.x, f32(center->x));
+        center = call_ptr<cXyz*>(shape->__vtbl->getCoCP.get(), shape);
+        out->z = gabi::fsubs_ppc((f32)c->mGObjTg.mHitPos.z, f32(center->z));
+    }
+}
+} // namespace
+
+namespace daObj {
+
+/* 02311CD8 */
+void make_land_effect(fopAc_ac_c* i_actor, dBgS_GndChk* chk, f32 scale) {
+    dComIfG_inf_c* play = (dComIfG_inf_c*)dComIfGp_get();
+    cBgS_PolyInfo* poly = chk ? static_cast<cBgS_PolyInfo*>(chk) : nullptr;
+    const u32 attribute = objGetAttribute(&play->play.mBgS, poly);
+    const f32 spread = sOne, speed = sParticleSpeed;
+    if (attribute == dBgS_Attr_GIANT_FLOWER_e || attribute == dBgS_Attr_CARPET_e || attribute == dBgS_Attr_ICE_e || attribute == dBgS_Attr_UNK1B_e)
+        return;
+    ObjLocal<cXyz> scaleV;
+    auto* position = &i_actor->current.pos;
+    if (attribute != dBgS_Attr_GRASS_e && attribute != dBgS_Attr_WATER_e) {
+        scaleV.get()->x = scale;
+        scaleV.get()->z = scale;
+        scaleV.get()->y = scale;
+        PSVECScale(scaleV.get(), scaleV.get(), sSmokeScale);
+        objLandSmoke(OBJECT_EFFECT_PROCESS, LAND_SMOKE, position, -1, nullptr, scaleV.get(), -1, nullptr);
+        return;
+    }
+    const f32 particleSize = attribute == dBgS_Attr_WATER_e ? gabi::fmuls_ppc(scale, sWaterScale) : scale;
+    scaleV.get()->x = particleSize;
+    scaleV.get()->y = particleSize;
+    scaleV.get()->z = particleSize;
+    dComIfG_inf_c* particlePlay = (dComIfG_inf_c*)dComIfGp_get();
+    dPa_control_c* controller = particlePlay->play.mParticle;
+    Emitter* emitter =
+        objParticleSet(controller, 0u, attribute == dBgS_Attr_WATER_e ? ID_AK_JN_ELEMENTSHIBUKI00 : ID_AK_JN_ELEMENTKUSA00, position, nullptr,
+                       scaleV.get(), 0xFFu, nullptr, -1, nullptr, nullptr, 0u);
+    if (!emitter)
+        return;
+    emitter->mSpread = spread;
+    emitter->mMaxFrame = 1;
+    if (attribute == dBgS_Attr_WATER_e) {
+        emitter->mRate = speed;
+        emitter->mInitialVelDir = sWaterDirectionalSpeed;
+    } else {
+        emitter->mInitialVelDir = speed;
+        emitter->mLifeTime = 20;
+        const f32 zero = sZero;
+        emitter->mTranslation.x = zero;
+        emitter->mTranslation.y = sGrassHeight;
+        emitter->mTranslation.z = zero;
+        emitter->mRate = sGrassRate;
     }
 }
 
-static void posMoveF_resist_acc(cXyz* out, fopAc_ac_c* actor, const cXyz* stream,
-                               f32 linear, f32 quadratic) {
-    WWHD_FUNC(0x02311AB8, void, out, actor, stream, linear, quadratic);
+/* 02311F80 */
+cXyz* get_wind_spd(fopAc_ac_c* i_actor, f32 param_2) {
+    cXyz* result = &sTotalSpeed;
+    if (!sTotalSpeedGuard) {
+        sTotalSpeedGuard = 1;
+        objZero(result);
+    }
+    ObjLocal<cXyz> wind, savedWind, point, combined, output;
+    ObjLocal<be<f32>> pointPower;
+    const f32 power = dKyw_get_wind_pow();
+    cXyz* direction = dKyw_get_wind_vec();
+    objScale(direction, wind.get(), power);
+    savedWind.get()->copy(*wind.get());
+    objPointWind(&i_actor->current.pos, point.get(), pointPower.get());
+    PSVECScale(point.get(), point.get(), f32(*pointPower.get()));
+    objAdd(savedWind.get(), combined.get(), point.get());
+    const f32 scale = gabi::fmuls_ppc(param_2, sHalf);
+    objScale(combined.get(), output.get(), scale);
+    result->copy(*output.get());
+    return result;
+}
+
+/* 023120B4 */
+cXyz* get_path_spd(cBgS_PolyInfo* poly, f32 param_2) {
+    cXyz* result = &sPathSpeed;
+    if (!sPathSpeedGuard) {
+        objZero(result);
+        sPathSpeedGuard = 1;
+    }
+    ObjLocal<be<s32>> pathPower;
+    if (objPathVector(poly, result, pathPower.get())) {
+        if (objNormalize(result)) {
+            const f32 power = f32(s32(*pathPower.get()));
+            const f32 scale = gabi::fmuls_ppc(gabi::fmuls_ppc(param_2, power), sPathPowerScale);
+            PSVECScale(result, result, scale);
+        } else {
+            objZero(result);
+        }
+    }
+    return result;
+}
+
+/* 023123C0 */
+void posMoveF_stream(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* stream, f32 linear,
+                     f32 quadratic) {
+    const f32 zero = sZero;
+    posMoveF_grade(i_actor, addVelocity, stream, linear, quadratic, nullptr, zero, zero, nullptr);
+}
+
+namespace {
+
+/* 02311AB8 */
+static void posMoveF_resist_acc(cXyz* pDst, fopAc_ac_c* i_actor, const cXyz* stream, f32 linear,
+                                f32 quadratic) {
     ObjLocal<cXyz> delta, resistance;
-    gabi::call<void>(0x0201ADE0, gabi::at<cXyz>(gabi::ea(actor) + 0x33C), delta.get(), stream);
+    objSubtract(&i_actor->speed, delta.get(), stream);
     const f32 x = delta.get()->x, y = delta.get()->y, z = delta.get()->z;
     const f32 qx = gabi::fmuls_ppc(gabi::fmuls_ppc(std::fabs(x), x), quadratic);
     const f32 qy = gabi::fmuls_ppc(gabi::fmuls_ppc(std::fabs(y), y), quadratic);
@@ -69,361 +246,344 @@ static void posMoveF_resist_acc(cXyz* out, fopAc_ac_c* actor, const cXyz* stream
     resistance.get()->x = gabi::fmadds(x, linear, qx);
     resistance.get()->y = gabi::fmadds(y, linear, qy);
     resistance.get()->z = gabi::fmadds(z, linear, qz);
-    gabi::call<void>(0x028E8E64, resistance.get(), resistance.get(), objFloat(0x10024614));
+    PSVECScale(resistance.get(), resistance.get(), sNegativeOne);
     const f32 rx = resistance.get()->x, ry = resistance.get()->y, rz = resistance.get()->z;
-    out->x = rx; out->z = rz; out->y = ry;
+    pDst->x = rx;
+    pDst->z = rz;
+    pDst->y = ry;
 }
-VERIFY(0x02311AB8, posMoveF_resist_acc);
 
-static void posMoveF_grade_acc(cXyz* out, fopAc_ac_c* actor, const cXyz* normal,
-                              f32 friction, f32 noGradeCos,
-                              const cXyz* acceleration, const cXyz* extra) {
-    WWHD_FUNC(0x02311B94, void, out, actor, normal, friction, noGradeCos, acceleration, extra);
-    objZero(out);
-    if (!normal) return;
+/* 02311B94 */
+static void posMoveF_grade_acc(cXyz* pDst, fopAc_ac_c* i_actor, const cXyz* normal, f32 friction,
+                               f32 noGradeCos, const cXyz* acceleration, const cXyz* extra) {
+    objZero(pDst);
+    if (!normal)
+        return;
     ObjLocal<cXyz> total, cross, scaled;
     total.get()->x = acceleration->x;
-    total.get()->y = gabi::fadds_ppc(acceleration->y, objFloat(gabi::ea(actor) + 0x374));
+    total.get()->y = gabi::fadds_ppc(acceleration->y, (f32)i_actor->gravity);
     total.get()->z = acceleration->z;
-    if (extra) gabi::call<void>(0x028E8D88, total.get(), extra, total.get());
-    const f32 dot = gabi::call<f32>(0x028E8F44, total.get(), normal);
-    if (!(dot < objFloat(0x1002461C))) return;
-    if (!(f32(normal->y) > noGradeCos)) {
-        gabi::call<void>(0x02017B6C, normal, total.get(), cross.get());
-        gabi::call<void>(0x028E8D88, out, cross.get(), out);
-    }
-    gabi::call<void>(0x02017B6C, normal, gabi::at<cXyz>(gabi::ea(actor) + 0x33C), cross.get());
-    gabi::call<void>(0x0201AE48, cross.get(), scaled.get(), friction);
-    gabi::call<void>(0x028E8DAC, out, scaled.get(), out);
-}
-VERIFY(0x02311B94, posMoveF_grade_acc);
-}
-
-namespace daObj {
-void HitSeStart(const cXyz* position, s32 room, const dCcD_GObjInf* object, u32 parameter) {
-    WWHD_FUNC(0x023129C4, void, position, room, object, parameter);
-    const s32 hitSound = gabi::call<s32>(0x0251638C, object);
-    const u32 hitActor = gabi::call<u32>(0x02515BBC, gabi::at<void>(gabi::ea(object) + 0x94));
-    const u32 hitObject = gabi::call<u32>(0x02516300, object);
-    // HD returns without playing when any of these three values is absent.
-    if (!hitSound || !hitActor || !hitObject) return;
-    const u32 type = gabi::load<u32>(hitObject + 0x10);
-    u32 sound;
-    if (type & 0x10000u) sound = 0x2855;
-    else if (type & 0x1C4000u) sound = 0x287A;
-    else if (type & 0x8000u) sound = 0x287B;
-    else {
-        bool masterSword = false;
-        if (gabi::load<s16>(hitActor + 0xE) == 0xA8) {
-            const u32 equipment = gabi::load<u32>(0x101F84DC);
-            const u8 sword = gabi::load<u8>(equipment + 0x2E);
-            masterSword = sword == 57 || sword == 58 || sword == 62;
-        }
-        if (hitSound == 4) sound = 0x2833;
-        else if (hitSound == 5) sound = 0x2834;
-        else sound = masterSword ? 0x2805 : 0x2803;
-    }
-    const s32 reverb = gabi::call<s32>(0x02520540, room);
-    gabi::call<void>(0x025E1A40, sound, position, parameter & 0xFFu, reverb);
-}
-VERIFY(0x023129C4, HitSeStart);
-
-void make_land_effect(fopAc_ac_c* actor, dBgS_GndChk* ground, f32 size) {
-    WWHD_FUNC(0x02311CD8, void, actor, ground, size);
-    const u32 play = gabi::call<u32>(0x025200D4);
-    auto* poly = gabi::at<cBgS_PolyInfo>(ground ? gabi::ea(ground) + 0x14 : 0);
-    const u32 attribute = gabi::call<u32>(0x024EF0F4, gabi::at<void>(play + 0x12A0), poly);
-    const f32 spread = objFloat(0x10024610), speed = objFloat(0x10024620);
-    if (attribute == 5 || attribute == 10 || attribute == 15 || attribute == 27) return;
-    ObjLocal<cXyz> scale;
-    auto* position = gabi::at<cXyz>(gabi::ea(actor) + 0x314);
-    if (attribute != 4 && attribute != 19) {
-        scale.get()->x = size; scale.get()->z = size; scale.get()->y = size;
-        gabi::call<void>(0x028E8E64, scale.get(), scale.get(), objFloat(0x10024634));
-        gabi::call<void>(0x025D5834, 0x1D3u, 3u, position, -1, nullptr, scale.get(), -1, nullptr);
+    if (extra)
+        PSVECAdd(total.get(), extra, total.get());
+    const f32 dot = PSVECDotProduct(total.get(), normal);
+    if (!(dot < sZero))
         return;
+    if (!(f32(normal->y) > noGradeCos)) {
+        objCrawVec(normal, total.get(), cross.get());
+        PSVECAdd(pDst, cross.get(), pDst);
     }
-    const f32 particleSize = attribute == 19 ? gabi::fmuls_ppc(size, objFloat(0x10024624)) : size;
-    scale.get()->x = particleSize; scale.get()->y = particleSize; scale.get()->z = particleSize;
-    const u32 particlePlay = gabi::call<u32>(0x025200D4);
-    const u32 controller = gabi::load<u32>(particlePlay + 0x5AB0);
-    const u32 emitter = gabi::call<u32>(0x025A847C, gabi::at<void>(controller), 0u,
-        attribute == 19 ? 0x23u : 0x24u, position, nullptr, scale.get(), 0xFFu, nullptr,
-        -1, nullptr, nullptr, 0u);
-    if (!emitter) return;
-    gabi::store<f32>(emitter + 0x58, spread);
-    gabi::store<u32>(emitter + 0x5C, 1);
-    if (attribute == 19) {
-        gabi::store<f32>(emitter + 0x34, speed);
-        gabi::store<f32>(emitter + 0x70, objFloat(0x10024628));
-    } else {
-        gabi::store<f32>(emitter + 0x70, speed);
-        gabi::store<u16>(emitter + 0x60, 20);
-        const f32 zero = objFloat(0x1002461C);
-        gabi::store<f32>(emitter + 0x14, zero);
-        gabi::store<f32>(emitter + 0x18, objFloat(0x10024630));
-        gabi::store<f32>(emitter + 0x1C, zero);
-        gabi::store<f32>(emitter + 0x34, objFloat(0x1002462C));
-    }
+    objCrawVec(normal, &i_actor->speed, cross.get());
+    objScale(cross.get(), scaled.get(), friction);
+    objPSSubtract(pDst, scaled.get(), pDst);
 }
-VERIFY(0x02311CD8, make_land_effect);
 
-void HitEff_kikuzu(const fopAc_ac_c* actor, const dCcD_Cyl* cylinder) {
-    WWHD_FUNC(0x02312C8C, void, actor, cylinder);
-    if (!gabi::call<s32>(0x0251638C, cylinder)) return;
-    ObjLocal<cXyz> direction;
-    hitDirection(direction.get(), cylinder);
-    HitEff_sub_kikuzu(gabi::at<cXyz>(gabi::ea(cylinder) + 0xCC), direction.get(),
-                      gabi::at<dKy_tevstr_c>(gabi::ea(actor) + 0x110));
-}
-VERIFY(0x02312C8C, HitEff_kikuzu);
-void HitEff_hibana(const fopAc_ac_c* actor, const dCcD_Cyl* cylinder) {
-    WWHD_FUNC(0x02312E54, void, actor, cylinder);
-    if (!gabi::call<s32>(0x0251638C, cylinder)) return;
-    ObjLocal<cXyz> direction;
-    hitDirection(direction.get(), cylinder);
-    HitEff_hibana(gabi::at<cXyz>(gabi::ea(cylinder) + 0xCC), direction.get());
-}
-VERIFY(0x02312E54, static_cast<void(*)(const fopAc_ac_c*, const dCcD_Cyl*)>(HitEff_hibana));
+} // namespace
 
-void HitEff_sub_kikuzu(const cXyz* position, const cXyz* direction, const dKy_tevstr_c* tev) {
-    WWHD_FUNC(0x02312B88, void, position, direction, tev);
-    ObjLocal<cXyz> horizontal;
-    ObjLocal<csXyz> angle;
-    horizontal.get()->x = direction->x;
-    horizontal.get()->z = direction->z;
-    horizontal.get()->y = objFloat(0x1002461C);
-    const f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    const f32 radius = gabi::call<f32>(0x028F4384, square);
-    angle.get()->x = gabi::call<s16>(0x020195B0, f32(direction->y), radius);
-    angle.get()->y = gabi::call<s16>(0x020195B0, f32(direction->x), f32(direction->z));
-    angle.get()->z = 0;
-    const u32 play = gabi::call<u32>(0x025200D4);
-    const u32 controller = gabi::load<u32>(play + 0x5AB0);
-    auto* color = gabi::at<void>(gabi::ea(tev) + 0x98);
-    const u32 emitter = gabi::call<u32>(0x025A847C, gabi::at<void>(controller), 0u, 0x2Bu,
-        position, angle.get(), nullptr, 0xFFu, nullptr, -1, color, color, 0u);
-    if (emitter) {
-        gabi::store<f32>(emitter + 0x34, objFloat(0x100246EC));
-        gabi::store<f32>(emitter + 0x58, objFloat(0x100246F0));
-        gabi::store<f32>(emitter + 0x7C, objFloat(0x100246F4));
-        gabi::store<u32>(emitter + 0x5C, 1);
-    }
-}
-VERIFY(0x02312B88, HitEff_sub_kikuzu);
-
-void HitEff_hibana(const cXyz* position, const cXyz* direction) {
-    WWHD_FUNC(0x02312D6C, void, position, direction);
-    ObjLocal<cXyz> horizontal;
-    ObjLocal<csXyz> angle;
-    horizontal.get()->x = direction->x;
-    horizontal.get()->y = objFloat(0x1002461C);
-    horizontal.get()->z = direction->z;
-    const f32 square = gabi::call<f32>(0x028E8DD0, horizontal.get());
-    const f32 radius = gabi::call<f32>(0x028F4384, square);
-    const s16 pitch = gabi::call<s16>(0x020195B0, f32(direction->y), radius);
-    angle.get()->x = s16(u16(pitch) + 0x4000u);
-    angle.get()->y = gabi::call<s16>(0x020195B0, f32(direction->x), f32(direction->z));
-    angle.get()->z = 0;
-    const u32 play = gabi::call<u32>(0x025200D4);
-    const u32 controller = gabi::load<u32>(play + 0x5AB0);
-    const u32 emitter = gabi::call<u32>(0x025A847C, gabi::at<void>(controller), 0u, 0x2Cu,
-        position, angle.get(), nullptr, 0xFFu, nullptr, -1, nullptr, nullptr, 0u);
-    if (emitter) {
-        gabi::store<u32>(emitter + 0x5C, 1);
-        const f32 rate = objFloat(0x10024620);
-        gabi::store<f32>(emitter + 0x34, rate);
-        gabi::store<f32>(emitter + 0x6C, rate);
-        gabi::store<f32>(emitter + 0x70, rate);
-    }
-}
-VERIFY(0x02312D6C, static_cast<void(*)(const cXyz*, const cXyz*)>(HitEff_hibana));
-
-void quat_rotVec(ObjQuaternion* out, const cXyz* from, const cXyz* to) {
-    WWHD_FUNC(0x023127F8, void, out, from, to);
-    ObjLocal<cXyz> first, second, cross;
-    const f32 tx = to->x, ty = to->y, tz = to->z;
-    second.get()->x = tx; second.get()->y = ty; second.get()->z = tz;
-    const f32 fx = from->x, fy = from->y, fz = from->z;
-    first.get()->z = fz; first.get()->x = fx; first.get()->y = fy;
-    if (!gabi::call<s32>(0x0201B47C, second.get()) ||
-        !gabi::call<s32>(0x0201B47C, first.get())) {
-        objIdentity(out, 0x101E9C38); return;
-    }
-    const f32 dot = gabi::call<f32>(0x028E8F44, first.get(), second.get());
-    const f32 one = objFloat(0x10024610);
-    const f32 sum = gabi::fadds_ppc(dot, one);
-    const f32 root = gabi::call<f32>(0x028F4384, gabi::fadds_ppc(sum, sum));
-    gabi::call<void>(0x0201B080, first.get(), cross.get(), second.get());
-    if (!(std::fabs(root) > objFloat(0x100246D8))) {
-        objIdentity(out, 0x101E9C38); return;
-    }
-    const f32 reciprocal = f32(f64(one) / f64(root));
-    const f32 x = cross.get()->x, y = cross.get()->y, z = cross.get()->z;
-    out->x = gabi::fmuls_ppc(x, reciprocal);
-    out->y = gabi::fmuls_ppc(y, reciprocal);
-    out->z = gabi::fmuls_ppc(z, reciprocal);
-    out->w = gabi::fmuls_ppc(root, objFloat(0x10024638));
-}
-VERIFY(0x023127F8, quat_rotVec);
-
-void quat_rotBaseY(ObjQuaternion* out, const cXyz* input) {
-    WWHD_FUNC(0x023123D8, void, out, input);
-    ObjLocal<cXyz> cross, normalized;
-    const f32 lengthSquared = gabi::call<f32>(0x028E8DD0, input);
-    const f32 epsilon = objFloat(0x100246C4);
-    if (!(lengthSquared > epsilon)) { objIdentity(out, 0x100246C8); return; }
-    auto* base = gabi::at<cXyz>(0x101FFBC0);
-    gabi::call<void>(0x0201B080, base, cross.get(), input);
-    const f32 crossSquared = gabi::call<f32>(0x028E8DD0, cross.get());
-    if (!(crossSquared > epsilon)) { objIdentity(out, 0x100246C8); return; }
-    gabi::call<void>(0x0201AEAC, input, normalized.get(), lengthSquared);
-    const f32 dot = gabi::call<f32>(0x028E8F44, base, normalized.get());
-    const f32 angle = gabi::call<f32>(0x028F4FAC, dot);
-    const f32 crossLength = gabi::call<f32>(0x028F4384, crossSquared);
-    const f32 reciprocal = f32(f64(objFloat(0x10024610)) / f64(crossLength));
-    gabi::call<void>(0x028E8E64, cross.get(), cross.get(), reciprocal);
-    gabi::call<void>(0x028E9B14, out, cross.get(), angle);
-}
-VERIFY(0x023123D8, quat_rotBaseY);
-
-void quat_rotBaseY2(ObjQuaternion* out, const cXyz* input) {
-    WWHD_FUNC(0x02312548, void, out, input);
-    quatFromBase(out, input, 0x101FFBC0, 0x100246DC);
-}
-VERIFY(0x02312548, quat_rotBaseY2);
-void quat_rotBaseZ(ObjQuaternion* out, const cXyz* input) {
-    WWHD_FUNC(0x023126A0, void, out, input);
-    quatFromBase(out, input, 0x101FFBCC, 0x101E9C38);
-}
-VERIFY(0x023126A0, quat_rotBaseZ);
-
-void posMoveF_grade(fopAc_ac_c* actor, const cXyz* addVelocity, const cXyz* stream,
-                     f32 linear, f32 quadratic, const cXyz* normal,
-                     f32 friction, f32 noGradeCos, const cXyz* addAcceleration) {
-    WWHD_FUNC(0x023121C4, void, actor, addVelocity, stream, linear, quadratic,
-              normal, friction, noGradeCos, addAcceleration);
+/* 023121C4 */
+void posMoveF_grade(fopAc_ac_c* i_actor, const cXyz* addVelocity, const cXyz* stream, f32 linear,
+                    f32 quadratic, const cXyz* normal, f32 friction, f32 noGradeCos,
+                    const cXyz* addAcceleration) {
     if (!stream)
-        gabi::call<void>(0x0273AA24, gabi::at<const char>(0x1002465C), 0x118,
-                         gabi::at<const char>(0x1002464C));
+        JUTAssertion::showAssert("d_a_obj.cpp", 0x118, "stream_spd != 0");
     ObjLocal<cXyz> resistance, grade;
-    posMoveF_resist_acc(resistance.get(), actor, stream, linear, quadratic);
-    const f32 zero = objFloat(0x1002461C), one = objFloat(0x10024610);
+    posMoveF_resist_acc(resistance.get(), i_actor, stream, linear, quadratic);
+    const f32 zero = sZero, one = sOne;
     if (friction < zero || !(friction < one) || noGradeCos < zero || noGradeCos > one)
-        gabi::call<void>(0x0273AA24, gabi::at<const char>(0x1002465C), 0x120,
-                         gabi::at<const char>(0x10024668));
-    posMoveF_grade_acc(grade.get(), actor, normal, friction, noGradeCos,
-                      resistance.get(), addAcceleration);
-    const u32 a = gabi::ea(actor);
-    const u16 angle = gabi::load<u16>(a + 0x322);
-    const u32 trig = 0x104A44F8 + (u32(angle >> 3) * 8);
-    const f32 speed = objFloat(a + 0x370);
-    f32 x = gabi::fadds_ppc(gabi::fmadds(speed, objFloat(trig), resistance.get()->x), grade.get()->x);
-    f32 y = gabi::fadds_ppc(gabi::fadds_ppc(gabi::fadds_ppc(objFloat(a + 0x340), objFloat(a + 0x374)),
-                                         resistance.get()->y), grade.get()->y);
-    f32 z = gabi::fadds_ppc(gabi::fmadds(speed, objFloat(trig + 4), resistance.get()->z), grade.get()->z);
-    const f32 maxFall = objFloat(a + 0x378);
+        JUTAssertion::showAssert("d_a_obj.cpp", 0x120,
+                                 "(friction >= 0.0f) && (friction < 1.0f) && (no_grade_cos >= "
+                                 "0.0f) && (no_grade_cos <= 1.0f)");
+    posMoveF_grade_acc(grade.get(), i_actor, normal, friction, noGradeCos, resistance.get(),
+                       addAcceleration);
+    const u16 angle = i_actor->current.angle.y;
+    const SinCos* trig = &sSinCos.mValues[angle >> 3];
+    const f32 speed = (f32)i_actor->speedF;
+    f32 x =
+        gabi::fadds_ppc(gabi::fmadds(speed, (f32)trig->mSin, resistance.get()->x), grade.get()->x);
+    f32 y =
+        gabi::fadds_ppc(gabi::fadds_ppc(gabi::fadds_ppc((f32)i_actor->speed.y, (f32)i_actor->gravity),
+                                        resistance.get()->y),
+                        grade.get()->y);
+    f32 z =
+        gabi::fadds_ppc(gabi::fmadds(speed, (f32)trig->mCos, resistance.get()->z), grade.get()->z);
+    const f32 maxFall = (f32)i_actor->maxFallSpeed;
     if (addAcceleration) {
         x = gabi::fadds_ppc(x, addAcceleration->x);
         y = gabi::fadds_ppc(y, addAcceleration->y);
         z = gabi::fadds_ppc(z, addAcceleration->z);
     }
-    if (y < maxFall) y = maxFall;
-    gabi::store<f32>(a + 0x340, y);
-    gabi::store<f32>(a + 0x33C, x);
-    gabi::store<f32>(a + 0x344, z);
-    const f32 length = gabi::call<f32>(0x028F4384, gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
-    gabi::store<f32>(a + 0x370, length);
-    const s16 yaw = gabi::call<s16>(0x020195B0, x, z);
-    gabi::store<u16>(a + 0x322, u16(yaw));
-    gabi::call<void>(0x025D6800, actor, addVelocity);
+    if (y < maxFall)
+        y = maxFall;
+    i_actor->speed.y = y;
+    i_actor->speed.x = x;
+    i_actor->speed.z = z;
+    const f32 length = objSqrt(gabi::fmadds(x, x, gabi::fmuls_ppc(z, z)));
+    i_actor->speedF = length;
+    const s16 yaw = cM_atan2s(x, z);
+    i_actor->current.angle.y = u16(yaw);
+    fopAcM_posMove(i_actor, addVelocity);
 }
-VERIFY(0x023121C4, posMoveF_grade);
 
-void posMoveF_stream(fopAc_ac_c* actor, const cXyz* addVelocity, const cXyz* stream,
-                      f32 linear, f32 quadratic) {
-    WWHD_FUNC(0x023123C0, void, actor, addVelocity, stream, linear, quadratic);
-    const f32 zero = objFloat(0x1002461C);
-    posMoveF_grade(actor, addVelocity, stream, linear, quadratic, nullptr, zero, zero, nullptr);
-}
-VERIFY(0x023123C0, posMoveF_stream);
-
-cXyz* get_wind_spd(fopAc_ac_c* actor, f32 factor) {
-    WWHD_FUNC(0x02311F80, cXyz*, actor, factor);
-    cXyz* result = gabi::at<cXyz>(0x10468EE4);
-    if (!gabi::load<u32>(0x10468EFC)) {
-        gabi::store<u32>(0x10468EFC, 1);
-        objZero(result);
+/* 023123D8 */
+void quat_rotBaseY(ObjQuaternion* quat, const cXyz* param_1) {
+    ObjLocal<cXyz> cross, normalized;
+    const f32 lengthSquared = PSVECSquareMag(param_1);
+    const f32 epsilon = sQuaternionEpsilon;
+    if (!(lengthSquared > epsilon)) {
+        objIdentity(quat, &sIdentityY);
+        return;
     }
-    ObjLocal<cXyz> wind, savedWind, point, combined, output;
-    ObjLocal<be<f32>> pointPower;
-    const f32 power = gabi::call<f32>(0x02578348);
-    cXyz* direction = gabi::call<cXyz*>(0x0257DAA8);
-    gabi::call<void>(0x0201AE48, direction, wind.get(), power);
-    for (u32 i = 0; i < 3; ++i)
-        gabi::store<u32>(gabi::ea(savedWind.get()) + i * 4,
-                        gabi::load<u32>(gabi::ea(wind.get()) + i * 4));
-    gabi::call<void>(0x0257DE68, gabi::at<cXyz>(gabi::ea(actor) + 0x314), point.get(), pointPower.get());
-    gabi::call<void>(0x028E8E64, point.get(), point.get(), f32(*pointPower.get()));
-    gabi::call<void>(0x0201AD78, savedWind.get(), combined.get(), point.get());
-    const f32 scale = gabi::fmuls_ppc(factor, objFloat(0x10024638));
-    gabi::call<void>(0x0201AE48, combined.get(), output.get(), scale);
-    const u32 x = gabi::load<u32>(gabi::ea(output.get()));
-    const u32 y = gabi::load<u32>(gabi::ea(output.get()) + 4);
-    const u32 z = gabi::load<u32>(gabi::ea(output.get()) + 8);
-    gabi::store<u32>(gabi::ea(result), x);
-    gabi::store<u32>(gabi::ea(result) + 8, z);
-    gabi::store<u32>(gabi::ea(result) + 4, y);
-    return result;
-}
-VERIFY(0x02311F80, get_wind_spd);
-
-cXyz* get_path_spd(cBgS_PolyInfo* poly, f32 factor) {
-    WWHD_FUNC(0x023120B4, cXyz*, poly, factor);
-    cXyz* result = gabi::at<cXyz>(0x10468EF0);
-    if (!gabi::load<u32>(0x10468F00)) {
-        objZero(result);
-        gabi::store<u32>(0x10468F00, 1);
+    const cXyz* base = &sBaseY;
+    objCross(base, cross.get(), param_1);
+    const f32 crossSquared = PSVECSquareMag(cross.get());
+    if (!(crossSquared > epsilon)) {
+        objIdentity(quat, &sIdentityY);
+        return;
     }
-    ObjLocal<be<s32>> pathPower;
-    if (gabi::call<s32>(0x025AB184, poly, result, pathPower.get())) {
-        if (gabi::call<s32>(0x0201B47C, result)) {
-            const f32 power = f32(s32(*pathPower.get()));
-            const f32 scale = gabi::fmuls_ppc(gabi::fmuls_ppc(factor, power), objFloat(0x10024648));
-            gabi::call<void>(0x028E8E64, result, result, scale);
-        } else {
-            objZero(result);
+    objDivide(param_1, normalized.get(), lengthSquared);
+    const f32 dot = PSVECDotProduct(base, normalized.get());
+    const f32 angle = objAcos(dot);
+    const f32 crossLength = objSqrt(crossSquared);
+    const f32 reciprocal = f32(f64(sOne) / f64(crossLength));
+    PSVECScale(cross.get(), cross.get(), reciprocal);
+    objQuatRotAxis(quat, cross.get(), angle);
+}
+
+/* 02312548 */
+void quat_rotBaseY2(ObjQuaternion* quat, const cXyz* param_1) {
+    quatFromBase(quat, param_1, &sBaseY, &sIdentityY2);
+}
+
+/* 023126A0 */
+void quat_rotBaseZ(ObjQuaternion* quat, const cXyz* param_1) {
+    quatFromBase(quat, param_1, &sBaseZ, &sIdentityZ);
+}
+
+/* 023127F8 */
+void quat_rotVec(ObjQuaternion* quat, const cXyz* from, const cXyz* to) {
+    ObjLocal<cXyz> first, second, cross;
+    const f32 tx = to->x, ty = to->y, tz = to->z;
+    second.get()->x = tx;
+    second.get()->y = ty;
+    second.get()->z = tz;
+    const f32 fx = from->x, fy = from->y, fz = from->z;
+    first.get()->z = fz;
+    first.get()->x = fx;
+    first.get()->y = fy;
+    if (!objNormalize(second.get()) || !objNormalize(first.get())) {
+        objIdentity(quat, &sIdentityZ);
+        return;
+    }
+    const f32 dot = PSVECDotProduct(first.get(), second.get());
+    const f32 one = sOne;
+    const f32 sum = gabi::fadds_ppc(dot, one);
+    const f32 root = objSqrt(gabi::fadds_ppc(sum, sum));
+    objCross(first.get(), cross.get(), second.get());
+    if (!(std::fabs(root) > sQuaternionRootEpsilon)) {
+        objIdentity(quat, &sIdentityZ);
+        return;
+    }
+    const f32 reciprocal = f32(f64(one) / f64(root));
+    const f32 x = cross.get()->x, y = cross.get()->y, z = cross.get()->z;
+    quat->x = gabi::fmuls_ppc(x, reciprocal);
+    quat->y = gabi::fmuls_ppc(y, reciprocal);
+    quat->z = gabi::fmuls_ppc(z, reciprocal);
+    quat->w = gabi::fmuls_ppc(root, sHalf);
+}
+
+/* 02312968 */
+void SetCurrentRoomNo(fopAc_ac_c* i_actor, dBgS_GndChk* chk) {
+    dComIfG_inf_c* play = (dComIfG_inf_c*)dComIfGp_get();
+    cBgS_PolyInfo* poly = chk ? static_cast<cBgS_PolyInfo*>(chk) : nullptr;
+    const s32 room = objGetRoom(&play->play.mBgS, poly);
+    if (room >= 0)
+        i_actor->current.roomNo = u8(room);
+}
+
+/* 023129C4 */
+void HitSeStart(const cXyz* position, s32 room, const dCcD_GObjInf* object, u32 parameter) {
+    const s32 hitSound = objGetHitSound(object);
+    const fopAc_ac_c* hitActor = objGetHitActor(&object->mGObjTg);
+    const dCcD_GObjInf* hitObject = objGetHitObject(object);
+    // HD: returns without playing when any of these three values is absent.
+    if (!hitSound || !hitActor || !hitObject)
+        return;
+    const u32 type = (u32)hitObject->mAtType;
+    u32 sound;
+    if (type & AT_TYPE_SKULL_HAMMER)
+        sound = JA_SE_LK_HAMMER_HIT;
+    else if (type & AT_TYPE_ARROWS)
+        sound = JA_SE_LK_ARROW_REBOUND;
+    else if (type & AT_TYPE_HOOKSHOT)
+        sound = JA_SE_LK_HS_REBOUND;
+    else {
+        bool masterSword = false;
+        if ((s16)hitActor->mProfName == fpcNm_PLAYER_e) {
+            const u8 sword = dComIfGs_getSelectEquip(0);
+            masterSword = sword == dItemNo_MASTER_SWORD_1_e || sword == dItemNo_MASTER_SWORD_2_e || sword == dItemNo_MASTER_SWORD_3_e;
         }
+        if (hitSound == dCcG_SE_WOOD)
+            sound = JA_SE_LK_W_WEP_HIT;
+        else if (hitSound == dCcG_SE_METAL)
+            sound = JA_SE_LK_MS_WEP_HIT;
+        else
+            sound = masterSword ? JA_SE_LK_SW_HIT_M : JA_SE_LK_SW_HIT_S;
     }
-    return result;
-}
-VERIFY(0x023120B4, get_path_spd);
-
-void SetCurrentRoomNo(fopAc_ac_c* actor, dBgS_GndChk* ground) {
-    WWHD_FUNC(0x02312968, void, actor, ground);
-    const u32 play = gabi::call<u32>(0x025200D4);
-    auto* poly = gabi::at<cBgS_PolyInfo>(ground ? gabi::ea(ground) + 0x14 : 0);
-    const s32 room = gabi::call<s32>(0x024EF130, gabi::at<void>(play + 0x12A0), poly);
-    if (room >= 0) gabi::store<u8>(gabi::ea(actor) + 0x326, u8(room));
-}
-VERIFY(0x02312968, SetCurrentRoomNo);
+    const s32 reverb = dComIfGp_getReverb(room);
+    mDoAud_seStart(sound, const_cast<cXyz*>(position), parameter & 0xFFu, reverb);
 }
 
+/* 02312B88 */
+void HitEff_sub_kikuzu(const cXyz* position, const cXyz* direction, const dKy_tevstr_c* tev) {
+    ObjLocal<cXyz> horizontal;
+    ObjLocal<csXyz> angle;
+    horizontal.get()->x = direction->x;
+    horizontal.get()->z = direction->z;
+    horizontal.get()->y = sZero;
+    const f32 square = PSVECSquareMag(horizontal.get());
+    const f32 radius = objSqrt(square);
+    angle.get()->x = cM_atan2s(f32(direction->y), radius);
+    angle.get()->y = cM_atan2s(f32(direction->x), f32(direction->z));
+    angle.get()->z = 0;
+    dComIfG_inf_c* play = (dComIfG_inf_c*)dComIfGp_get();
+    dPa_control_c* controller = play->play.mParticle;
+    const GXColor* color = &tev->mColorK0;
+    Emitter* emitter = objParticleSet(controller, 0u, ID_AK_JN_ELEMENTKIKUZU00, position, angle.get(), nullptr, 0xFFu,
+                                      nullptr, -1, color, color, 0u);
+    if (emitter) {
+        emitter->mRate = sWoodRate;
+        emitter->mSpread = sWoodSpread;
+        emitter->mVolumeSweep = sWoodSweep;
+        emitter->mMaxFrame = 1;
+    }
+}
+
+/* 02312C8C */
+void HitEff_kikuzu(const fopAc_ac_c* i_actor, const dCcD_Cyl* i_cyl) {
+    if (!objGetHitSound(i_cyl))
+        return;
+    ObjLocal<cXyz> direction;
+    hitDirection(direction.get(), i_cyl);
+    HitEff_sub_kikuzu(&i_cyl->mGObjTg.mHitPos, direction.get(), &i_actor->tevStr);
+}
+
+// HD: explicit registrations preserve the two overloaded GameCube signatures.
+void HitEff_hibana(const cXyz* position, const cXyz* direction) {
+    WWHD_FUNC(0x02312D6C, void, position, direction);
+    ObjLocal<cXyz> horizontal;
+    ObjLocal<csXyz> angle;
+    horizontal.get()->x = direction->x;
+    horizontal.get()->y = sZero;
+    horizontal.get()->z = direction->z;
+    const f32 square = PSVECSquareMag(horizontal.get());
+    const f32 radius = objSqrt(square);
+    const s16 pitch = cM_atan2s(f32(direction->y), radius);
+    angle.get()->x = s16(u16(pitch) + 0x4000u);
+    angle.get()->y = cM_atan2s(f32(direction->x), f32(direction->z));
+    angle.get()->z = 0;
+    dComIfG_inf_c* play = (dComIfG_inf_c*)dComIfGp_get();
+    dPa_control_c* controller = play->play.mParticle;
+    Emitter* emitter = objParticleSet(controller, 0u, ID_AK_JN_ELEMENTHIBANA00, position, angle.get(), nullptr, 0xFFu,
+                                      nullptr, -1, nullptr, nullptr, 0u);
+    if (emitter) {
+        emitter->mMaxFrame = 1;
+        const f32 rate = sParticleSpeed;
+        emitter->mRate = rate;
+        emitter->mInitialVelAxis = rate;
+        emitter->mInitialVelDir = rate;
+    }
+}
+VERIFY(0x02312D6C, static_cast<void(*)(const cXyz*, const cXyz*)>(HitEff_hibana));
+
+// HD: explicit registrations preserve the two overloaded GameCube signatures.
+void HitEff_hibana(const fopAc_ac_c* i_actor, const dCcD_Cyl* i_cyl) {
+    WWHD_FUNC(0x02312E54, void, i_actor, i_cyl);
+    if (!objGetHitSound(i_cyl))
+        return;
+    ObjLocal<cXyz> direction;
+    hitDirection(direction.get(), i_cyl);
+    HitEff_hibana(&i_cyl->mGObjTg.mHitPos, direction.get());
+}
+VERIFY(0x02312E54, static_cast<void(*)(const fopAc_ac_c*, const dCcD_Cyl*)>(HitEff_hibana));
+
+} // namespace daObj
+
+// HD: compiler-generated header initialization and global destructor registration.
 namespace {
+/* 02312F24 */
 static void obj_header_staticInitialize() {
-    WWHD_FUNC(0x02312F24, void);
-    gabi::store<u32>(0x10468EDC, 0);
-    gabi::store<u32>(0x10468ED4, 0);
-    gabi::store<u32>(0x10468EE0, 0);
-    gabi::store<u32>(0x10468ED8, 0);
-    gabi::call<void>(0x028F026C, gabi::at<void>(0x101C78C8));
-    const f32 negativePi = objFloat(0x10024700), positivePi = objFloat(0x10024704);
-    gabi::store<f32>(0x10468EC8, negativePi);
-    gabi::store<f32>(0x10468ECC, positivePi);
-    gabi::call<void>(0x028ED6F8, gabi::at<void>(0x10468ED0));
-    gabi::call<void>(0x028F026C, gabi::at<void>(0x101C78D4));
-    gabi::call<void>(0x028EAB2C, gabi::at<void>(0x10468ED1));
-    gabi::call<void>(0x028F026C, gabi::at<void>(0x101C78E0));
+    sHeaderStatics.mZero[2] = 0;
+    sHeaderStatics.mZero[0] = 0;
+    sHeaderStatics.mZero[3] = 0;
+    sHeaderStatics.mZero[1] = 0;
+    objRegisterGlobalObject(&sHeaderVector0);
+    const f32 negativePi = sNegativePi, positivePi = sPositivePi;
+    sHeaderStatics.mNegativePi = negativePi;
+    sHeaderStatics.mPositivePi = positivePi;
+    objHeaderAngleConstruct(&sHeaderStatics.mAngleTag);
+    objRegisterGlobalObject(&sHeaderVector1);
+    objHeaderByteConstruct(&sHeaderStatics.mByteTag);
+    objRegisterGlobalObject(&sHeaderVector2);
 }
-VERIFY(0x02312F24, obj_header_staticInitialize);
-}
+} // namespace
+
+/* WWHD glue
+str 1002464C
+str 1002465C
+str 10024668
+data sOne 10024610
+data sNegativeOne 10024614
+data sZero 1002461C
+data sParticleSpeed 10024620
+data sWaterScale 10024624
+data sWaterDirectionalSpeed 10024628
+data sGrassRate 1002462C
+data sGrassHeight 10024630
+data sSmokeScale 10024634
+data sHalf 10024638
+data sPathPowerScale 10024648
+data sQuaternionEpsilon 100246C4
+data sQuaternionRootEpsilon 100246D8
+data sWoodRate 100246EC
+data sWoodSpread 100246F0
+data sWoodSweep 100246F4
+data sHitDirectionEpsilon 100246F8
+data sNegativePi 10024700
+data sPositivePi 10024704
+data sIdentityY 100246C8
+data sIdentityY2 100246DC
+data sIdentityZ 101E9C38
+data sBaseY 101FFBC0
+data sBaseZ 101FFBCC
+data sTotalSpeed 10468EE4
+data sPathSpeed 10468EF0
+data sTotalSpeedGuard 10468EFC
+data sPathSpeedGuard 10468F00
+data sSinCos 104A44F8
+data sHeaderStatics 10468EC8
+data sHeaderVector0 101C78C8
+data sHeaderVector1 101C78D4
+data sHeaderVector2 101C78E0
+ext 0201B47C s32 objNormalize(cXyz*)
+ext 028F4384 f32 objSqrt(f32)
+ext 0201B080 void objCross(const cXyz*, cXyz*, const cXyz*)
+ext 0201ADE0 void objSubtract(const cXyz*, cXyz*, const cXyz*)
+ext 02017B6C void objCrawVec(const cXyz*, const cXyz*, cXyz*)
+ext 0201AE48 void objScale(const cXyz*, cXyz*, f32)
+ext 028E8DAC void objPSSubtract(const cXyz*, const cXyz*, cXyz*)
+ext 0201AD78 void objAdd(const cXyz*, cXyz*, const cXyz*)
+ext 0201AEAC void objDivide(const cXyz*, cXyz*, f32)
+ext 028F4FAC f32 objAcos(f32)
+ext 028E9B14 void objQuatRotAxis(daObj::ObjQuaternion*, cXyz*, f32)
+ext 0251638C s32 objGetHitSound(const dCcD_GObjInf*)
+ext 02515BBC fopAc_ac_c* objGetHitActor(const dCcD_GObjTg*)
+ext 02516300 dCcD_GObjInf* objGetHitObject(const dCcD_GObjInf*)
+ext 024EF0F4 u32 objGetAttribute(dBgS*, cBgS_PolyInfo*)
+ext 024EF130 s32 objGetRoom(dBgS*, cBgS_PolyInfo*)
+ext 025D5834 void objLandSmoke(u32, u32, cXyz*, s32, void*, cXyz*, s32, void*)
+ext 025A847C Emitter* objParticleSet(dPa_control_c*, u32, u32, const cXyz*, const csXyz*, const cXyz*, u32, void*, s32, const void*, const void*, u32)
+ext 0257DE68 void objPointWind(cXyz*, cXyz*, be<f32>*)
+ext 025AB184 s32 objPathVector(cBgS_PolyInfo*, cXyz*, be<s32>*)
+ext 028F026C void objRegisterGlobalObject(HeaderVector*)
+ext 028ED6F8 void objHeaderAngleConstruct(u8*)
+ext 028EAB2C void objHeaderByteConstruct(u8*)
+*/

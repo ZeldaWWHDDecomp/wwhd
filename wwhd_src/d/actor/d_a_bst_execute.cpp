@@ -1,482 +1,755 @@
-#include "d/actor/d_a_bst.h"
-static void bstResumePedestal(u32 global,u32 controllerOffset,u32 resourceId,bool brk,f32 one) {
-    u32 owner=gabi::load<u32>(global),model=gabi::load<u32>(owner+0x3E4);
-    u32 resources=gabi::load<u32>(0x101F4F28);
-    gabi::Local<be<u32>[2]> name;
-    (*name)[0]=0x1000B70C;(*name)[1]=0x1000B714;
-    void* resource=gabi::call<void*>(0x026066C4,gabi::at<void>(resources),name.get(),resourceId);
-    u32 data=gabi::load<u32>(model+0xAC);owner=gabi::load<u32>(global);
-    u32 controller=gabi::load<u32>(owner+controllerOffset);
-    gabi::call(brk?0x025E8154:0x025E7CE0,gabi::at<void>(controller),gabi::at<void>(data),resource,1,2,0,-1,1,one,0);
+// Gohdan per-frame head control, animation, transforms, and collision.
+#include "d/actor/d_a_bst_execute.h"
+using namespace bst_execute_names;
+const gc_tu_data gc_tu = {.safeString = 0x1000B714};
+
+/* inlined into daBst_Execute */
+static void bstResumePedestal(be<u32>* global, u32 resourceId, bool brk, f32 one) {
+    bst_class* owner = bstExecuteActor(*global);
+    J3DModel* model = owner->m02C8;
+    void* resources = bstExecuteResources(bstExecuteResourceTable());
+    SafeString name;
+    name.mStringTop = gabi::guest_addr("Bst");
+    name.__vtbl = gc_tu.safeString;
+    void* resource = BstExecute_getResource(resources, &name, resourceId);
+    J3DModelData* data = model->mModelData.get();
+    owner = bstExecuteActor(*global);
+    J3DFrameCtrl* controller = brk ? &owner->mpBrkAnm->mFrameCtrl : &owner->mpBtkAnm->mFrameCtrl;
+    (brk ? BstExecute_initBrk : BstExecute_initBtk)(controller, data, resource, 1, 2, 0, -1, 1, one,
+                                                    0);
 }
-static void bstExecuteHeadControl(bst_class* actor,f32 half,f32 one) {
-    u32 a=gabi::ea(actor),t=0x1047B608;
-    void* play=gabi::call<void*>(0x025200D4);
-    s8 demo=gabi::load<s8>(a+0x30CE);u32 player=gabi::load<u32>(gabi::ea(play)+0x5B2C);
-    if(demo) return;
-    s16 timer=gabi::load<s16>(a+0x30B8);
-    if(timer) gabi::store<s16>(a+0x30B8,(s16)(timer-1));
-    for(u32 i=0;i<3;++i) {
-        s16 value=gabi::load<s16>(a+0x30B2+i*2);
-        if(value) gabi::store<s16>(a+0x30B2+i*2,(s16)(value-1));
+/* inlined into daBst_Execute */
+static void main_cont(bst_class* actor, f32 half, f32 one) {
+    bst_class* a = actor;
+    dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+    s8 demo = static_cast<s8>(a->m2E9A);
+    fopAc_ac_c* player = reinterpret_cast<fopAc_ac_c*>(play->play.mPlayerInfo[0].mpPlayer.get());
+    if (demo)
+        return;
+    s16 timer = static_cast<s16>(a->mBombArrowDropTimer);
+    if (timer)
+        a->mBombArrowDropTimer = (s16)(timer - 1);
+    for (u32 i = 0; i < 3; ++i) {
+        s16 value = static_cast<s16>(a->m2E7E[i]);
+        if (value)
+            a->m2E7E[i] = (s16)(value - 1);
     }
-    s8 phase=gabi::load<s8>(a+0x30B0);
-    if(phase==0) {gabi::store<s8>(a+0x30B0,1);return;}
-    if(phase==1) {
-        u32 save=gabi::load<u32>(0x101F84DC);
-        BOOL complete=gabi::call<BOOL>(0x025B9100,gabi::at<void>(save+0x798),3);
-        if(complete && gabi::load<s16>(t+4+0x86)==0) return;
-        gabi::store<u32>(a+0x2E0,gabi::load<u32>(a+0x2E0)|0x20);
-        save=gabi::load<u32>(0x101F84DC);
-        if(gabi::call<BOOL>(0x025B9100,gabi::at<void>(save+0x798),5)) {
-            gabi::store<u8>(a+0x3330,1);gabi::call(0x025E18EC,0x80000023);
-            gabi::store<s16>(gabi::load<u32>(0x10462988)+0x130A,1);
-            gabi::store<s16>(gabi::load<u32>(0x10462978)+0x130A,1);
-            gabi::store<s16>(gabi::load<u32>(0x1046297C)+0x130A,1);
-            gabi::store<s16>(gabi::load<u32>(0x10462988)+0x130E,0);
-            gabi::store<s16>(gabi::load<u32>(0x1046297C)+0x130E,0);
-            gabi::store<s16>(gabi::load<u32>(0x10462978)+0x130E,0);
-            gabi::store<s8>(a+0x30B0,10);
-            bstResumePedestal(0x10462978,0x3EC,0x4A,true,one);
-            bstResumePedestal(0x10462978,0x3E8,0x64,false,one);
-            bstResumePedestal(0x1046297C,0x3EC,0x4D,true,one);
-            bstResumePedestal(0x1046297C,0x3E8,0x67,false,one);
-            bstResumePedestal(0x10462988,0x3EC,0x42,true,one);
-            bstResumePedestal(0x10462988,0x3E8,0x5C,false,one);
-            u32 controller=gabi::load<u32>(a+0x332C);
-            gabi::store<s16>(a+0x30B8,400);gabi::store<f32>(controller,one);
+    s8 phase = static_cast<s8>(a->m2E7C);
+    if (phase == 0) {
+        a->m2E7C = 1;
+        return;
+    }
+    if (phase == 1) {
+        // HD: this call site uses a stage-memory base 32 bytes after the shared layout.
+        u32 save = static_cast<u32>(bstExecuteSaveTable());
+        BOOL complete =
+            BstExecute_isDungeonItem(bstExecuteStageBits(save), dSv_memBit_c::STAGE_BOSS_ENEMY);
+        if (complete && static_cast<s16>(bstExecuteTuning().mRegS[5]) == 0)
+            return;
+        a->actor_status = static_cast<u32>(a->actor_status) | fopAcStts_SHOWMAP_e;
+        save = static_cast<u32>(bstExecuteSaveTable());
+        if (BstExecute_isDungeonItem(bstExecuteStageBits(save), dSv_memBit_c::STAGE_BOSS_DEMO)) {
+            a->m2FE4 = 1;
+            BstExecute_bgmStart(JA_BGM_BST_BATTLE);
+            bstExecuteActor(bstExecuteGlobals().boss)->mActionType = ACTION_FLY_e;
+            bstExecuteActor(bstExecuteGlobals().hand[0])->mActionType = ACTION_FLY_e;
+            bstExecuteActor(bstExecuteGlobals().hand[1])->mActionType = ACTION_FLY_e;
+            bstExecuteActor(bstExecuteGlobals().boss)->mDamage = 0;
+            bstExecuteActor(bstExecuteGlobals().hand[1])->mDamage = 0;
+            bstExecuteActor(bstExecuteGlobals().hand[0])->mDamage = 0;
+            a->m2E7C = 10;
+            bstResumePedestal(&bstExecuteGlobals().hand[0], 0x4A, true, one);
+            bstResumePedestal(&bstExecuteGlobals().hand[0], 0x64, false, one);
+            bstResumePedestal(&bstExecuteGlobals().hand[1], 0x4D, true, one);
+            bstResumePedestal(&bstExecuteGlobals().hand[1], 0x67, false, one);
+            bstResumePedestal(&bstExecuteGlobals().boss, 0x42, true, one);
+            bstResumePedestal(&bstExecuteGlobals().boss, 0x5C, false, one);
+            J3DFrameCtrl* controller = &a->m2FE0->mFrameCtrl;
+            a->mBombArrowDropTimer = 400;
+            controller->mRate = one;
         } else {
-            gabi::store<s16>(gabi::load<u32>(0x1046297C)+0x133C,10);
-            gabi::store<s16>(gabi::load<u32>(0x10462978)+0x133C,10);
-            gabi::store<s16>(gabi::load<u32>(0x10462988)+0x133C,10);
-            f32 square=gabi::call<f32>(0x028E8DD0,gabi::at<void>(player+0x314));
-            f32 distance=gabi::call<f32>(0x028F4384,square);
-            if(distance<gabi::load<f32>(0x1000B870)) {
-                gabi::store<s8>(a+0x30CE,10);gabi::store<s8>(a+0x30B0,2);
+            bstExecuteActor(bstExecuteGlobals().hand[1])->mState = 10;
+            bstExecuteActor(bstExecuteGlobals().hand[0])->mState = 10;
+            bstExecuteActor(bstExecuteGlobals().boss)->mState = 10;
+            f32 square = BstExecute_magnitudeSquared(&player->current.pos);
+            f32 distance = BstExecute_sqrt(square);
+            if (distance < static_cast<f32>(bstExecuteConstants().mApproachDistance)) {
+                a->m2E9A = 10;
+                a->m2E7C = 2;
             }
         }
         return;
     }
-    if(phase==10) {
-        u32 status=gabi::load<u32>(a+0x2E0);
-        gabi::store<s8>(a+0x30B0,(s8)(phase+1));
-        gabi::store<u32>(a+0x2E0,status&~0x4000u);gabi::store<s16>(a+0x30B2,100);return;
+    if (phase == 10) {
+        u32 status = static_cast<u32>(a->actor_status);
+        a->m2E7C = (s8)(phase + 1);
+        a->actor_status = status & ~fopAcStts_UNK4000_e;
+        a->m2E7E[0] = 100;
+        return;
     }
-    if(phase==11) {
-        s16 timer=gabi::load<s16>(a+0x30B2);u32 head=gabi::load<u32>(0x10462988);
-        if(timer==0 && gabi::load<s16>(head+0x130A)!=14) {
-            f32 twoHundred=gabi::load<f32>(0x1000B874),threeHundred=gabi::load<f32>(0x1000B878);
-            gabi::call(0x024EFF44,gabi::at<void>(head+0x1364),twoHundred,threeHundred);
-            twoHundred=gabi::load<f32>(0x1000B874);u32 hand=gabi::load<u32>(0x10462978);
-            gabi::call(0x024EFF44,gabi::at<void>(hand+0x1364),twoHundred,twoHundred);
-            twoHundred=gabi::load<f32>(0x1000B874);hand=gabi::load<u32>(0x1046297C);
-            gabi::call(0x024EFF44,gabi::at<void>(hand+0x1364),twoHundred,twoHundred);
-            f32 random=gabi::call<f32>(0x020198D8,one),threshold=gabi::load<f32>(0x1000B87C);
-            auto setHand=[](u32 global,s16 action) {
-                u32 hand=gabi::load<u32>(global);gabi::store<s16>(hand+0x130A,action);
-                hand=gabi::load<u32>(global);gabi::store<s16>(hand+0x130E,0);
+    if (phase == 11) {
+        s16 timer = static_cast<s16>(a->m2E7E[0]);
+        bst_class* head = bstExecuteActor(bstExecuteGlobals().boss);
+        if (timer == 0 && static_cast<s16>(head->mActionType) != ACTION_BEAM_ATTACK_e) {
+            f32 twoHundred = static_cast<f32>(bstExecuteConstants().mWallRadius),
+                threeHundred = static_cast<f32>(bstExecuteConstants().mHeadWallHeight);
+            BstExecute_setWall(&head->mAcchCir, twoHundred, threeHundred);
+            twoHundred = static_cast<f32>(bstExecuteConstants().mWallRadius);
+            bst_class* hand = bstExecuteActor(bstExecuteGlobals().hand[0]);
+            BstExecute_setWall(&hand->mAcchCir, twoHundred, twoHundred);
+            twoHundred = static_cast<f32>(bstExecuteConstants().mWallRadius);
+            hand = bstExecuteActor(bstExecuteGlobals().hand[1]);
+            BstExecute_setWall(&hand->mAcchCir, twoHundred, twoHundred);
+            f32 random = cM_rndF(one),
+                threshold = static_cast<f32>(bstExecuteConstants().mHaraiChance);
+            auto setHand = [](be<u32>* global, s16 action) {
+                bst_class* hand = bstExecuteActor(*global);
+                hand->mActionType = action;
+                hand = bstExecuteActor(*global);
+                hand->mDamage = 0;
             };
-            if(random<threshold || gabi::load<s16>(t+4+0x7E)!=0) {
-                random=gabi::call<f32>(0x020198D8,one);u32 global=random<half?0x10462978:0x1046297C;
-                hand=gabi::load<u32>(global);
-                if(gabi::load<s16>(hand+0x130A)<10 && gabi::load<s16>(hand+0x133E)==0) setHand(global,13);
+            if (random < threshold || static_cast<s16>(bstExecuteTuning().mRegS[1]) != 0) {
+                random = cM_rndF(one);
+                be<u32>* global =
+                    random < half ? &bstExecuteGlobals().hand[0] : &bstExecuteGlobals().hand[1];
+                hand = bstExecuteActor(*global);
+                if (static_cast<s16>(hand->mActionType) < ACTION_DOWN_ATTACK_e &&
+                    static_cast<s16>(hand->mStateTimer) == 0)
+                    setHand(global, ACTION_HARAI_ATTACK_e);
             } else {
-                s8 health=gabi::load<s8>(a+0x3A1);threshold=gabi::load<f32>(0x1000B880);
-                if(health==2) threshold=gabi::load<f32>(0x1000B884);
-                else if(health==3) threshold=gabi::load<f32>(0x1000B87C);
-                random=gabi::call<f32>(0x020198D8,one);
-                bool pair=random<(health==1?half:threshold) || gabi::load<s16>(t+4+0x7C)!=0;
-                s16 action=12;
-                if(!pair) {
-                    random=gabi::call<f32>(0x020198D8,one);pair=random<half;action=11;
+                s8 health = static_cast<s8>(a->health);
+                threshold = static_cast<f32>(bstExecuteConstants().mPairChance);
+                if (health == 2)
+                    threshold = static_cast<f32>(bstExecuteConstants().mTwoHealthChance);
+                else if (health == 3)
+                    threshold = static_cast<f32>(bstExecuteConstants().mHaraiChance);
+                random = cM_rndF(one);
+                bool pair = random < (health == 1 ? half : threshold) ||
+                            static_cast<s16>(bstExecuteTuning().mRegS[0]) != 0;
+                s16 action = ACTION_KUMI_ATTACK_e;
+                if (!pair) {
+                    random = cM_rndF(one);
+                    pair = random < half;
+                    action = ACTION_PAA_ATTACK_e;
                 }
-                if(pair) {
-                    u32 first=gabi::load<u32>(0x10462978);
-                    if(gabi::load<s16>(first+0x130A)<5) {
-                        u32 second=gabi::load<u32>(0x1046297C);
-                        if(gabi::load<s16>(second+0x130A)<5 && gabi::load<s16>(first+0x133E)==0 && gabi::load<s16>(second+0x133E)==0) {
-                            setHand(0x10462978,action);setHand(0x1046297C,action);
+                if (pair) {
+                    bst_class* first = bstExecuteActor(bstExecuteGlobals().hand[0]);
+                    if (static_cast<s16>(first->mActionType) < ACTION_DAMAGE_e) {
+                        bst_class* second = bstExecuteActor(bstExecuteGlobals().hand[1]);
+                        if (static_cast<s16>(second->mActionType) < ACTION_DAMAGE_e &&
+                            static_cast<s16>(first->mStateTimer) == 0 &&
+                            static_cast<s16>(second->mStateTimer) == 0) {
+                            setHand(&bstExecuteGlobals().hand[0], action);
+                            setHand(&bstExecuteGlobals().hand[1], action);
                         }
                     }
                 } else {
-                    random=gabi::call<f32>(0x020198D8,one);u32 global=random<half?0x10462978:0x1046297C;
-                    hand=gabi::load<u32>(global);
-                    if(gabi::load<s16>(hand+0x130A)<5 && gabi::load<s16>(hand+0x133E)==0) setHand(global,10);
+                    random = cM_rndF(one);
+                    be<u32>* global =
+                        random < half ? &bstExecuteGlobals().hand[0] : &bstExecuteGlobals().hand[1];
+                    hand = bstExecuteActor(*global);
+                    if (static_cast<s16>(hand->mActionType) < ACTION_DAMAGE_e &&
+                        static_cast<s16>(hand->mStateTimer) == 0)
+                        setHand(global, ACTION_DOWN_ATTACK_e);
                 }
             }
-            s8 health=gabi::load<s8>(a+0x3A1);u32 maxAddress=health==0?0x1000B888:health==1?0x1000B88C:0x1000B890;
-            f32 randomWait=gabi::call<f32>(0x020198D8,gabi::load<f32>(maxAddress));
-            f32 base=gabi::load<f32>(health==0?0x1000B888:health==1?0x1000B890:0x1000B894);
-            gabi::store<s16>(a+0x30B2,(s16)gabi::ftoi(gabi::fadds_ppc(randomWait,base)));
-            head=gabi::load<u32>(0x10462988);
+            s8 health = static_cast<s8>(a->health);
+            be<f32>* maxWait = health == 0   ? &bstExecuteConstants().mThirty
+                               : health == 1 ? &bstExecuteConstants().mForty
+                                             : &bstExecuteConstants().mFifty;
+            f32 randomWait = cM_rndF(static_cast<f32>(*maxWait));
+            f32 base = static_cast<f32>(health == 0   ? bstExecuteConstants().mThirty
+                                        : health == 1 ? bstExecuteConstants().mFifty
+                                                      : bstExecuteConstants().mSeventy);
+            a->m2E7E[0] = (s16)gabi::ftoi(gabi::fadds_ppc(randomWait, base));
+            head = bstExecuteActor(bstExecuteGlobals().boss);
         }
-        gabi::store<s16>(head+0x30AA,10);head=gabi::load<u32>(0x10462988);gabi::store<s16>(head+0x30A8,10);
-        if(gabi::load<s16>(a+0x30B6)==0) {
-            u32 hand=gabi::load<u32>(0x10462978);
-            if(gabi::load<s16>(hand+0x130A)==6) {
-                hand=gabi::load<u32>(0x1046297C);
-                if(gabi::load<s16>(hand+0x130A)==6) {
-                    gabi::store<s8>(a+0x30B0,12);
-                    gabi::store<s16>(gabi::load<u32>(0x10462978)+0x1332,100);
-                    gabi::store<s16>(gabi::load<u32>(0x1046297C)+0x1332,100);
-                    head=gabi::load<u32>(0x10462988);
-                    if(head && head+0x37C) {
-                        s8 room=gabi::load<s8>(head+0x326),reverb=gabi::call<s8>(0x02520540,room);
-                        gabi::call(0x025E1A40,0x58D7,gabi::at<void>(head+0x37C),0,reverb);
+        head->m2E74[1] = 10;
+        head = bstExecuteActor(bstExecuteGlobals().boss);
+        head->m2E74[0] = 10;
+        if (static_cast<s16>(a->m2E7E[2]) == 0) {
+            bst_class* hand = bstExecuteActor(bstExecuteGlobals().hand[0]);
+            if (static_cast<s16>(hand->mActionType) == ACTION_SLEEP_e) {
+                hand = bstExecuteActor(bstExecuteGlobals().hand[1]);
+                if (static_cast<s16>(hand->mActionType) == ACTION_SLEEP_e) {
+                    a->m2E7C = 12;
+                    bstExecuteActor(bstExecuteGlobals().hand[0])->m10FC[1] = 100;
+                    bstExecuteActor(bstExecuteGlobals().hand[1])->m10FC[1] = 100;
+                    head = bstExecuteActor(bstExecuteGlobals().boss);
+                    if (head && gabi::ea(&head->eyePos)) {
+                        s8 room = static_cast<s8>(head->current.roomNo),
+                           reverb = dComIfGp_getReverb(room);
+                        mDoAud_seStart(JA_SE_CM_BST_HEAD_EYE_OPEN, &head->eyePos, 0, reverb);
                     }
-                    gabi::call(0x025E18EC,0x80000122);
-                    f32 randomWait=gabi::call<f32>(0x020198D8,gabi::load<f32>(0x1000B890));
-                    gabi::store<s16>(a+0x30B4,(s16)gabi::ftoi(gabi::fadds_ppc(randomWait,gabi::load<f32>(0x1000B898))));
+                    BstExecute_bgmStart(JA_BGM_UNK_122);
+                    f32 randomWait = cM_rndF(static_cast<f32>(bstExecuteConstants().mFifty));
+                    (a->m2E7E[1] = (s16)gabi::ftoi(gabi::fadds_ppc(
+                         randomWait, static_cast<f32>(bstExecuteConstants().mOneFifty))));
                 }
             }
         }
-    } else if(phase==12) {
-        u32 head;
-        if(gabi::load<s16>(a+0x30B4)==0) {
-            head=gabi::load<u32>(0x10462988);
-            if(gabi::load<s16>(head+0x130A)==1) {
-                gabi::store<s16>(head+0x130A,14);head=gabi::load<u32>(0x10462988);
-                f32 minusFiveHundred=gabi::load<f32>(0x1000B89C);gabi::store<s16>(head+0x130E,0);
-                f32 target=gabi::fadds_ppc(gabi::load<f32>(t+0x24),minusFiveHundred);
-                head=gabi::load<u32>(0x10462988);gabi::store<f32>(head+0x1304,target);
+    } else if (phase == 12) {
+        bst_class* head;
+        if (static_cast<s16>(a->m2E7E[1]) == 0) {
+            head = bstExecuteActor(bstExecuteGlobals().boss);
+            if (static_cast<s16>(head->mActionType) == ACTION_FLY_e) {
+                head->mActionType = ACTION_BEAM_ATTACK_e;
+                head = bstExecuteActor(bstExecuteGlobals().boss);
+                f32 minusFiveHundred = static_cast<f32>(bstExecuteConstants().mMinusFiveHundred);
+                head->mDamage = 0;
+                f32 target = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[7]),
+                                             minusFiveHundred);
+                head = bstExecuteActor(bstExecuteGlobals().boss);
+                head->m10D0 = target;
             }
         }
-        gabi::store<s16>(gabi::load<u32>(0x10462978)+0x130A,6);
-        gabi::store<s16>(gabi::load<u32>(0x10462978)+0x1332,3);
-        gabi::store<s16>(gabi::load<u32>(0x1046297C)+0x1332,3);
-        head=gabi::load<u32>(0x10462988);
-        if(gabi::load<s16>(head+0x130A)==7 && gabi::load<s16>(head+0x130E)>=7) {
-            gabi::store<s8>(a+0x30B0,11);gabi::store<s16>(a+0x30B6,50);
+        // HD: only the left hand action is reset here; both sleep timers are refreshed.
+        bstExecuteActor(bstExecuteGlobals().hand[0])->mActionType = ACTION_SLEEP_e;
+        bstExecuteActor(bstExecuteGlobals().hand[0])->m10FC[1] = 3;
+        bstExecuteActor(bstExecuteGlobals().hand[1])->m10FC[1] = 3;
+        head = bstExecuteActor(bstExecuteGlobals().boss);
+        if (static_cast<s16>(head->mActionType) == ACTION_HEAD_DAMAGE_e &&
+            static_cast<s16>(head->mDamage) >= 7) {
+            a->m2E7C = 11;
+            a->m2E7E[2] = 50;
         }
     }
 }
-#include "d/actor/d_a_bst.h"
-static f32 bstSin(s32 angle) { return gabi::load<f32>(0x104A44F8+((u16)angle>>3)*8); }
-static f32 bstCos(s32 angle) { return gabi::load<f32>(0x104A44FC+((u16)angle>>3)*8); }
-static void bstExecuteTransformAndCollision(bst_class* actor,f32 zero,f32 half,f32 one) {
-    u32 a=gabi::ea(actor),t=0x1047B608,matrix=0x1048D0CC;
-    s16 frequency=gabi::load<s16>(t+4+0x88),frame=gabi::load<s16>(a+0x1308);
-    f32 sx=bstSin(frame*(frequency+700));
-    f32 magnitude=gabi::load<f32>(a+0x1328);
-    f32 sy=bstSin(frame*(frequency+750)),cz=bstCos(frame*(frequency+720));
-    gabi::call(0x0200EDC8,gabi::at<void>(a+0x1328),one,one);
-    u32 morph=gabi::load<u32>(a+0x3D4);
-    f32 scaleZ=gabi::load<f32>(a+0x338);u32 model=gabi::load<u32>(morph+0x90);
-    f32 scaleX=gabi::load<f32>(a+0x330),scaleY=gabi::load<f32>(a+0x334);
-    gabi::store<f32>(model+0xBC,scaleX);gabi::store<f32>(model+0xC0,scaleY);gabi::store<f32>(model+0xC4,scaleZ);
-    f32 x=gabi::load<f32>(a+0x314),y=gabi::load<f32>(a+0x318),z=gabi::load<f32>(a+0x31C);
-    gabi::call(0x028E93CC,gabi::at<void>(matrix),gabi::fmadds(sx,magnitude,x),gabi::fmadds(sy,magnitude,y),gabi::fmadds(cz,magnitude,z));
-    s16 first=gabi::load<s16>(a+0x135C);frame=gabi::load<s16>(a+0x1308);
-    f32 fiveHundred=gabi::load<f32>(0x1000B8B0),tuning=gabi::load<f32>(t+0x40);
-    f32 firstStrength=gabi::fmuls_ppc((f32)first,gabi::fadds_ppc(tuning,fiveHundred));
-    f32 sine=bstSin(frame*0x2100),cosine=bstCos(frame*0x2300);
-    s16 second=gabi::load<s16>(a+0x135E);u32 head=gabi::load<u32>(0x10462988);
-    s16 yaw=(s16)gabi::ftoi(gabi::fmuls_ppc(sine,firstStrength));
-    s16 pitch=(s16)gabi::ftoi(gabi::fmuls_ppc(cosine,firstStrength));
-    f32 oneFifty=gabi::load<f32>(0x1000B898);
-    s16 headFrame=gabi::load<s16>(head+0x1308);
-    f32 secondStrength=gabi::fmuls_ppc((f32)second,gabi::fadds_ppc(tuning,oneFifty));
-    sine=bstSin(headFrame*0x3600);cosine=bstCos(headFrame*0x4300);
-    s16 third=gabi::load<s16>(a+0x1360);
-    s16 extraYaw=(s16)gabi::ftoi(gabi::fmuls_ppc(sine,secondStrength));
-    s16 extraPitch=(s16)gabi::ftoi(gabi::fmuls_ppc(cosine,secondStrength));
-    f32 hundred=gabi::load<f32>(0x1000B8B4);cosine=bstCos(headFrame*0x3A00);
-    f32 thirdStrength=gabi::fmuls_ppc((f32)third,gabi::fadds_ppc(tuning,hundred));
-    s16 lastPitch=(s16)gabi::ftoi(gabi::fmuls_ppc(cosine,thirdStrength));
-    f32 thirty=gabi::load<f32>(0x1000B888),decay=gabi::load<f32>(t+4+0x10);
-    yaw=(s16)(yaw+extraYaw);pitch=(s16)(pitch+extraPitch+lastPitch);
-    gabi::call(0x0200EDC8,gabi::at<void>(a+0x132C),one,gabi::fadds_ppc(decay,thirty));
-    s16 shape=gabi::load<s16>(a+0x32A);gabi::call(0x025F1C28,gabi::at<void>(matrix),(s16)(shape+yaw));
-    shape=gabi::load<s16>(a+0x328);gabi::call(0x025F1BF4,gabi::at<void>(matrix),(s16)(shape+pitch));
-    shape=gabi::load<s16>(a+0x32C);gabi::call(0x025F1C5C,gabi::at<void>(matrix),shape);
-    x=gabi::load<f32>(a+0x1344);f32 ty=gabi::load<f32>(t+4+0x1C),tx=gabi::load<f32>(t+4+0x18);
-    y=gabi::load<f32>(a+0x1348);f32 tz=gabi::load<f32>(t+4+0x20);z=gabi::load<f32>(a+0x134C);
-    gabi::call(0x025F24E0,gabi::fadds_ppc(tx,x),gabi::fadds_ppc(ty,y),gabi::fadds_ppc(tz,z));
-    gabi::call(0x0200EDC8,gabi::at<void>(a+0x1344),one,gabi::load<f32>(0x1000B8B8));
-    gabi::call(0x0200EDC8,gabi::at<void>(a+0x1348),one,gabi::load<f32>(0x1000B8BC));
-    gabi::call(0x0200EDC8,gabi::at<void>(a+0x134C),one,gabi::load<f32>(0x1000B8B8));
-    f32 values[12];for(u32 i=0;i<12;++i) values[i]=gabi::load<f32>(matrix+i*4);
-    for(u32 i=0;i<12;++i) gabi::store<f32>(model+0xC8+i*4,values[i]);
-    for(u32 i=0;i<12;++i) values[i]=gabi::load<f32>(matrix+i*4);
-    u32 decoration=gabi::load<u32>(a+0x5BC);
-    for(u32 i=0;i<12;++i) gabi::store<f32>(decoration+0xC8+i*4,values[i]);
-    morph=gabi::load<u32>(a+0x3D4);gabi::call(0x025E55A0,gabi::at<void>(morph));
-    x=gabi::load<f32>(a+0x2EC);z=gabi::load<f32>(a+0x2F4);y=gabi::load<f32>(a+0x2F0);
-    gabi::call(0x0200FAD8,x,y,z,0);
-    shape=gabi::load<s16>(a+0x2FA);matrix=gabi::load<u32>(0x1018C7B0);
-    gabi::call(0x025F1C28,gabi::at<void>(matrix),shape);
-    shape=gabi::load<s16>(a+0x2F8);matrix=gabi::load<u32>(0x1018C7B0);
-    gabi::call(0x025F1BF4,gabi::at<void>(matrix),shape);
-    shape=gabi::load<s16>(a+0x2FC);matrix=gabi::load<u32>(0x1018C7B0);
-    gabi::call(0x025F1C5C,gabi::at<void>(matrix),shape);
-    matrix=gabi::load<u32>(0x1018C7B0);u32 pedestal=gabi::load<u32>(a+0x3E4);
-    for(u32 i=0;i<12;++i) values[i]=gabi::load<f32>(matrix+i*4);
-    for(u32 i=0;i<12;++i) gabi::store<f32>(pedestal+0xC8+i*4,values[i]);
-    if(gabi::load<u8>(a+0x3D0)==0) {
-        morph=gabi::load<u32>(a+0x3D4);model=gabi::load<u32>(morph+0x90);
-        u32 block=gabi::load<u32>(model+0x2C);u16 flags=gabi::load<u16>(block+4);
-        u32 matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,flags|0x10);
-        matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x028E90D4,gabi::at<void>(matrices+0x180),gabi::at<void>(matrix));
-        f32 tx=gabi::load<f32>(t+4+4),minusThirty=gabi::load<f32>(0x1000B8C0),minusHundred=gabi::load<f32>(0x1000B8C4);
-        f32 tz=gabi::load<f32>(t+4+0xC),ty=gabi::load<f32>(t+4+8);
-        gabi::Local<cXyz> local,transformed;local->y=ty;local->x=gabi::fadds_ppc(tx,minusThirty);local->z=gabi::fadds_ppc(tz,minusHundred);
-        gabi::call(0x0200FCD8,local.get(),transformed.get());
-        gabi::call(0x020182E0,gabi::at<void>(a+0x16BC),transformed.get());
-        f32 height=gabi::load<f32>(t+4+0x10),sixHundred=gabi::load<f32>(0x1000B8C8);
-        gabi::call(0x02018428,gabi::at<void>(a+0x16BC),gabi::fadds_ppc(height,sixHundred));
-        f32 radius=gabi::load<f32>(t+4+0x14),oneEighty=gabi::load<f32>(0x1000B8CC);
-        gabi::call(0x020184DC,gabi::at<void>(a+0x16BC),gabi::fadds_ppc(radius,oneEighty));
-        void* play=gabi::call<void*>(0x025200D4);
-        gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(a+0x15A4));
-        u32 collisionFlags=gabi::load<u32>(a+0x16EC);
-        f32 oneFifty=gabi::load<f32>(0x1000B898),seventy=gabi::load<f32>(0x1000B894);
-        gabi::store<u32>(a+0x16EC,collisionFlags&~1u);
-        tx=gabi::load<f32>(t+4+0x18);ty=gabi::load<f32>(t+4+0x1C);tz=gabi::load<f32>(t+4+0x20);
-        local->y=ty;local->x=gabi::fadds_ppc(tx,oneFifty);local->z=gabi::fadds_ppc(tz,seventy);
-        gabi::call(0x0200FCD8,local.get(),transformed.get());
-        gabi::call(0x020182E0,gabi::at<void>(a+0x17EC),transformed.get());
-        height=gabi::load<f32>(t+4+0x24);gabi::call(0x02018428,gabi::at<void>(a+0x17EC),gabi::fadds_ppc(height,hundred));
-        radius=gabi::load<f32>(t+4+0x28);gabi::call(0x020184DC,gabi::at<void>(a+0x17EC),gabi::fadds_ppc(radius,hundred));
-        play=gabi::call<void*>(0x025200D4);gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(a+0x16D4));
-        f32 eyeOffset=gabi::load<f32>(t+4+0x30),twoFifty=gabi::load<f32>(0x1000B8D0);
-        local->z=zero;local->y=zero;local->x=gabi::fadds_ppc(eyeOffset,twoFifty);
-        gabi::call(0x0200FCD8,local.get(),gabi::at<void>(a+0x37C));
-        local->x=zero;local->y=zero;local->z=zero;
-        f32 hiddenHeight=gabi::load<f32>(0x1000B8D8),sixty=gabi::load<f32>(0x1000B8D4);
-        for(u32 i=0;i<2;++i) {
-            morph=gabi::load<u32>(a+0x3D4);model=gabi::load<u32>(morph+0x90);block=gabi::load<u32>(model+0x2C);
-            flags=gabi::load<u16>(block+4);matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,flags|0x10);
-            matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x028E90D4,gabi::at<void>(matrices+(i+4)*0x30),gabi::at<void>(matrix));
-            gabi::call(0x0200FCD8,local.get(),transformed.get());
-            s16 timer=gabi::load<s16>(a+0x30A8+i*2);bool open=false;
-            if(!timer) open=gabi::load<s8>(a+0x30A6+i)>0;
-            else gabi::store<s16>(a+0x30A8+i*2,(s16)(timer-1));
-            if(open) gabi::call(0x0200F428,gabi::at<void>(a+0x30AC+i*2),0,8,0x200);
+
+static f32 bstSin(s32 angle) { return cM_ssin(static_cast<s16>(angle)); }
+static f32 bstCos(s32 angle) { return cM_scos(static_cast<s16>(angle)); }
+/* inlined into daBst_Execute */
+static void bstExecuteTransformAndCollision(bst_class* actor, f32 zero, f32 half, f32 one) {
+    bst_class* a = actor;
+    Mtx34* matrix = bstExecuteFixedMatrix();
+    s16 frequency = static_cast<s16>(bstExecuteTuning().mRegS[6]),
+        frame = static_cast<s16>(a->mUpdateLastFacingDirIfMultipleOf32);
+    f32 sx = bstSin(frame * (frequency + 700));
+    f32 magnitude = static_cast<f32>(a->m10EC.z);
+    f32 sy = bstSin(frame * (frequency + 750)), cz = bstCos(frame * (frequency + 720));
+    cLib_addCalc0(&a->m10EC.z, one, one);
+    mDoExt_McaMorf* morph = a->m02B8;
+    f32 scaleZ = static_cast<f32>(a->scale.z);
+    J3DModel* model = morph->mpModel.get();
+    f32 scaleX = static_cast<f32>(a->scale.x), scaleY = static_cast<f32>(a->scale.y);
+    model->mBaseScale.x = scaleX;
+    model->mBaseScale.y = scaleY;
+    model->mBaseScale.z = scaleZ;
+    f32 x = static_cast<f32>(a->current.pos.x), y = static_cast<f32>(a->current.pos.y),
+        z = static_cast<f32>(a->current.pos.z);
+    BstExecute_matrixTranslate(matrix, gabi::fmadds(sx, magnitude, x),
+                               gabi::fmadds(sy, magnitude, y), gabi::fmadds(cz, magnitude, z));
+    s16 first = static_cast<s16>(a->mHeadHurtAngle);
+    frame = static_cast<s16>(a->mUpdateLastFacingDirIfMultipleOf32);
+    f32 fiveHundred = static_cast<f32>(bstExecuteConstants().mFiveHundred),
+        tuning = static_cast<f32>(bstExecuteTuning().mRegF[14]);
+    f32 firstStrength = gabi::fmuls_ppc((f32)first, gabi::fadds_ppc(tuning, fiveHundred));
+    f32 sine = bstSin(frame * 0x2100), cosine = bstCos(frame * 0x2300);
+    s16 second = static_cast<s16>(a->m112A);
+    bst_class* head = bstExecuteActor(bstExecuteGlobals().boss);
+    s16 yaw = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, firstStrength));
+    s16 pitch = (s16)gabi::ftoi(gabi::fmuls_ppc(cosine, firstStrength));
+    f32 oneFifty = static_cast<f32>(bstExecuteConstants().mOneFifty);
+    s16 headFrame = static_cast<s16>(head->mUpdateLastFacingDirIfMultipleOf32);
+    f32 secondStrength = gabi::fmuls_ppc((f32)second, gabi::fadds_ppc(tuning, oneFifty));
+    sine = bstSin(headFrame * 0x3600);
+    cosine = bstCos(headFrame * 0x4300);
+    s16 third = static_cast<s16>(a->m112C);
+    s16 extraYaw = (s16)gabi::ftoi(gabi::fmuls_ppc(sine, secondStrength));
+    s16 extraPitch = (s16)gabi::ftoi(gabi::fmuls_ppc(cosine, secondStrength));
+    f32 hundred = static_cast<f32>(bstExecuteConstants().mHundred);
+    cosine = bstCos(headFrame * 0x3A00);
+    f32 thirdStrength = gabi::fmuls_ppc((f32)third, gabi::fadds_ppc(tuning, hundred));
+    s16 lastPitch = (s16)gabi::ftoi(gabi::fmuls_ppc(cosine, thirdStrength));
+    f32 thirty = static_cast<f32>(bstExecuteConstants().mThirty),
+        decay = static_cast<f32>(bstExecuteTuning().mRegF[3]);
+    yaw = (s16)(yaw + extraYaw);
+    pitch = (s16)(pitch + extraPitch + lastPitch);
+    cLib_addCalc0(&a->m10F8, one, gabi::fadds_ppc(decay, thirty));
+    s16 shape = static_cast<s16>(a->shape_angle.y);
+    cMtx_YrotM(matrix, (s16)(shape + yaw));
+    shape = static_cast<s16>(a->shape_angle.x);
+    cMtx_XrotM(matrix, (s16)(shape + pitch));
+    shape = static_cast<s16>(a->shape_angle.z);
+    cMtx_ZrotM(matrix, shape);
+    x = static_cast<f32>(a->m1110);
+    f32 ty = static_cast<f32>(bstExecuteTuning().mRegF[6]),
+        tx = static_cast<f32>(bstExecuteTuning().mRegF[5]);
+    y = static_cast<f32>(a->m1114);
+    f32 tz = static_cast<f32>(bstExecuteTuning().mRegF[7]);
+    z = static_cast<f32>(a->m1118);
+    BstExecute_translateMultiply(gabi::fadds_ppc(tx, x), gabi::fadds_ppc(ty, y),
+                                 gabi::fadds_ppc(tz, z));
+    cLib_addCalc0(&a->m1110, one, static_cast<f32>(bstExecuteConstants().mFive));
+    cLib_addCalc0(&a->m1114, one, static_cast<f32>(bstExecuteConstants().mTen));
+    cLib_addCalc0(&a->m1118, one, static_cast<f32>(bstExecuteConstants().mFive));
+    // GHS loads all twelve floats before writing a matrix copy.
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = static_cast<f32>(matrix->m[i / 4][i % 4]);
+    for (u32 i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = static_cast<f32>(matrix->m[i / 4][i % 4]);
+    J3DModel* decoration = a->m0388;
+    for (u32 i = 0; i < 12; ++i)
+        decoration->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    morph = a->m02B8;
+    BstExecute_morphCalc(morph);
+    x = static_cast<f32>(a->home.pos.x);
+    z = static_cast<f32>(a->home.pos.z);
+    y = static_cast<f32>(a->home.pos.y);
+    BstExecute_translate(x, y, z, 0);
+    shape = static_cast<s16>(a->home.angle.y);
+    // HD: reload the mutable calculation matrix after each callee.
+    matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+    cMtx_YrotM(matrix, shape);
+    shape = static_cast<s16>(a->home.angle.x);
+    matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+    cMtx_XrotM(matrix, shape);
+    shape = static_cast<s16>(a->home.angle.z);
+    matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+    cMtx_ZrotM(matrix, shape);
+    matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+    J3DModel* pedestal = a->m02C8;
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = static_cast<f32>(matrix->m[i / 4][i % 4]);
+    for (u32 i = 0; i < 12; ++i)
+        pedestal->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    if (static_cast<u8>(a->mBstPartType) == Type_HEAD_e) {
+        morph = a->m02B8;
+        model = morph->mpModel.get();
+        J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
+        u16 flags = static_cast<u16>(block->mFlags);
+        Mtx34* matrices = bstExecuteMatrix(block->mpAnmMtx);
+        block->mFlags = flags | 0x10;
+        matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+        BstExecute_matrixCopy(&matrices[8], matrix);
+        f32 tx = static_cast<f32>(bstExecuteTuning().mRegF[0]),
+            minusThirty = static_cast<f32>(bstExecuteConstants().mMinusThirty),
+            minusHundred = static_cast<f32>(bstExecuteConstants().mMinusHundred);
+        f32 tz = static_cast<f32>(bstExecuteTuning().mRegF[2]),
+            ty = static_cast<f32>(bstExecuteTuning().mRegF[1]);
+        cXyz local;
+        cXyz transformed;
+        local.y = ty;
+        local.x = gabi::fadds_ppc(tx, minusThirty);
+        local.z = gabi::fadds_ppc(tz, minusHundred);
+        MtxPosition(&local, &transformed);
+        BstExecute_setCylinderCenter(&a->mHeadHurtCyl.mCyl, &transformed);
+        f32 height = static_cast<f32>(bstExecuteTuning().mRegF[3]),
+            sixHundred = static_cast<f32>(bstExecuteConstants().mSixHundred);
+        BstExecute_setCylinderHeight(&a->mHeadHurtCyl.mCyl, gabi::fadds_ppc(height, sixHundred));
+        f32 radius = static_cast<f32>(bstExecuteTuning().mRegF[4]),
+            oneEighty = static_cast<f32>(bstExecuteConstants().mOneEighty);
+        BstExecute_setCylinderRadius(&a->mHeadHurtCyl.mCyl, gabi::fadds_ppc(radius, oneEighty));
+        dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+        BstExecute_setCollision(&play->play.mCcS, &a->mHeadHurtCyl);
+        u32 collisionFlags = static_cast<u32>(a->mHandHurtCyl.mObjTg.mSPrm);
+        f32 oneFifty = static_cast<f32>(bstExecuteConstants().mOneFifty),
+            seventy = static_cast<f32>(bstExecuteConstants().mSeventy);
+        a->mHandHurtCyl.mObjTg.mSPrm = collisionFlags & ~1u;
+        tx = static_cast<f32>(bstExecuteTuning().mRegF[5]);
+        ty = static_cast<f32>(bstExecuteTuning().mRegF[6]);
+        tz = static_cast<f32>(bstExecuteTuning().mRegF[7]);
+        local.y = ty;
+        local.x = gabi::fadds_ppc(tx, oneFifty);
+        local.z = gabi::fadds_ppc(tz, seventy);
+        MtxPosition(&local, &transformed);
+        BstExecute_setCylinderCenter(&a->mHandHurtCyl.mCyl, &transformed);
+        height = static_cast<f32>(bstExecuteTuning().mRegF[8]);
+        BstExecute_setCylinderHeight(&a->mHandHurtCyl.mCyl, gabi::fadds_ppc(height, hundred));
+        radius = static_cast<f32>(bstExecuteTuning().mRegF[9]);
+        BstExecute_setCylinderRadius(&a->mHandHurtCyl.mCyl, gabi::fadds_ppc(radius, hundred));
+        play = bstExecutePlay(BstExecute_play());
+        BstExecute_setCollision(&play->play.mCcS, &a->mHandHurtCyl);
+        f32 eyeOffset = static_cast<f32>(bstExecuteTuning().mRegF[11]),
+            twoFifty = static_cast<f32>(bstExecuteConstants().mTwoFifty);
+        local.z = zero;
+        local.y = zero;
+        local.x = gabi::fadds_ppc(eyeOffset, twoFifty);
+        MtxPosition(&local, &a->eyePos);
+        local.x = zero;
+        local.y = zero;
+        local.z = zero;
+        f32 hiddenHeight = static_cast<f32>(bstExecuteConstants().mHiddenHeight),
+            sixty = static_cast<f32>(bstExecuteConstants().mSixty);
+        for (u32 i = 0; i < 2; ++i) {
+            morph = a->m02B8;
+            model = morph->mpModel.get();
+            block = model->mpMtxBuffer.get();
+            flags = static_cast<u16>(block->mFlags);
+            matrices = bstExecuteMatrix(block->mpAnmMtx);
+            block->mFlags = flags | 0x10;
+            matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+            BstExecute_matrixCopy(&matrices[i + 4], matrix);
+            MtxPosition(&local, &transformed);
+            s16 timer = static_cast<s16>(a->m2E74[i]);
+            bool open = false;
+            if (!timer)
+                open = static_cast<s8>(a->mEyeHealth[i]) > 0;
+            else
+                a->m2E74[i] = (s16)(timer - 1);
+            if (open)
+                cLib_addCalcAngleS2(&a->m2E78[i], 0, 8, 0x200);
             else {
-                s16 target=(s16)(gabi::load<s16>(t+4+0x8C)+11000);
-                transformed->y=gabi::fadds_ppc((f32)transformed->y,hiddenHeight);
-                gabi::call(0x0200F428,gabi::at<void>(a+0x30AC+i*2),target,1,0x400);
+                s16 target = (s16)(static_cast<s16>(bstExecuteTuning().mRegS[8]) + 11000);
+                transformed.y = gabi::fadds_ppc((f32)transformed.y, hiddenHeight);
+                cLib_addCalcAngleS2(&a->m2E78[i], target, 1, 0x400);
             }
-            u32 sphere=a+0x2E48+i*0x12C;
-            gabi::call(0x02018D40,gabi::at<void>(sphere+0x118),transformed.get());
-            radius=gabi::load<f32>(t+4+0x3C);gabi::call(0x02018C8C,gabi::at<void>(sphere+0x118),gabi::fadds_ppc(radius,sixty));
-            play=gabi::call<void*>(0x025200D4);gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(sphere));
+            dCcD_Sph* sphere = &a->mEyeSphs[i];
+            BstExecute_setSphereCenter(&sphere->mSph, &transformed);
+            radius = static_cast<f32>(bstExecuteTuning().mRegF[14]);
+            BstExecute_setSphereRadius(&sphere->mSph, gabi::fadds_ppc(radius, sixty));
+            play = bstExecutePlay(BstExecute_play());
+            BstExecute_setCollision(&play->play.mCcS, sphere);
         }
     } else {
-        s16 action=gabi::load<s16>(a+0x130A);gabi::Local<cXyz> local,transformed;
-        local->y=zero;local->z=zero;local->x=zero;f32 extraRadius=zero;
-        if(action==13) extraRadius=gabi::fadds_ppc(gabi::load<f32>(t+4+0x44),gabi::load<f32>(0x1000B890));
-        f32 fifty=gabi::load<f32>(0x1000B890);
-        for(u32 i=0;i<15;++i) {
-            morph=gabi::load<u32>(a+0x3D4);model=gabi::load<u32>(morph+0x90);
-            u32 block=gabi::load<u32>(model+0x2C);u16 flags=gabi::load<u16>(block+4);
-            u32 matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,flags|0x10);
-            matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x028E90D4,gabi::at<void>(matrices+(i+2)*0x30),gabi::at<void>(matrix));
-            gabi::call(0x0200FCD8,local.get(),transformed.get());u32 sphere=a+0x1804+i*0x12C;
-            gabi::call(0x02018D40,gabi::at<void>(sphere+0x118),transformed.get());
-            f32 radius=gabi::fadds_ppc(gabi::load<f32>(t+4+0x3C),fifty);
-            gabi::call(0x02018C8C,gabi::at<void>(sphere+0x118),gabi::fadds_ppc(radius,extraRadius));
-            void* play=gabi::call<void*>(0x025200D4);
-            gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(sphere));
+        s16 action = static_cast<s16>(a->mActionType);
+        cXyz local;
+        cXyz transformed;
+        local.y = zero;
+        local.z = zero;
+        local.x = zero;
+        f32 extraRadius = zero;
+        if (action == ACTION_HARAI_ATTACK_e)
+            extraRadius = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[16]),
+                                          static_cast<f32>(bstExecuteConstants().mFifty));
+        f32 fifty = static_cast<f32>(bstExecuteConstants().mFifty);
+        for (u32 i = 0; i < 15; ++i) {
+            morph = a->m02B8;
+            model = morph->mpModel.get();
+            J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
+            u16 flags = static_cast<u16>(block->mFlags);
+            Mtx34* matrices = bstExecuteMatrix(block->mpAnmMtx);
+            block->mFlags = flags | 0x10;
+            matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+            BstExecute_matrixCopy(&matrices[i + 2], matrix);
+            MtxPosition(&local, &transformed);
+            dCcD_Sph* sphere = &a->mFingerSphs[i];
+            BstExecute_setSphereCenter(&sphere->mSph, &transformed);
+            f32 radius = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[14]), fifty);
+            BstExecute_setSphereRadius(&sphere->mSph, gabi::fadds_ppc(radius, extraRadius));
+            dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+            BstExecute_setCollision(&play->play.mCcS, sphere);
         }
-        morph=gabi::load<u32>(a+0x3D4);model=gabi::load<u32>(morph+0x90);
-        u32 block=gabi::load<u32>(model+0x2C);u16 flags=gabi::load<u16>(block+4);
-        u32 matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,flags|0x10);
-        matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x028E90D4,gabi::at<void>(matrices+0x330),gabi::at<void>(matrix));
-        f32 sixtyFive=gabi::load<f32>(0x1000B8DC);
-        for(u32 i=0;i<4;++i) {
-            u8 part=gabi::load<u8>(a+0x3D0);f32 localX=gabi::load<f32>(0x10192934+i*4);
-            f32 localY=gabi::load<f32>(0x10192944+i*4),localZ=gabi::load<f32>(0x10192954+i*4);
-            local->x=part==2?-localX:localX;local->y=localY;local->z=localZ;
-            gabi::call(0x0200FCD8,local.get(),transformed.get());u32 sphere=a+0x2998+i*0x12C;
-            gabi::call(0x02018D40,gabi::at<void>(sphere+0x118),transformed.get());
-            f32 radius=gabi::fadds_ppc(gabi::load<f32>(t+4+0x40),sixtyFive);
-            gabi::call(0x02018C8C,gabi::at<void>(sphere+0x118),gabi::fadds_ppc(radius,extraRadius));
-            void* play=gabi::call<void*>(0x025200D4);
-            gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(sphere));
+        morph = a->m02B8;
+        model = morph->mpModel.get();
+        J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
+        u16 flags = static_cast<u16>(block->mFlags);
+        Mtx34* matrices = bstExecuteMatrix(block->mpAnmMtx);
+        block->mFlags = flags | 0x10;
+        matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+        BstExecute_matrixCopy(&matrices[17], matrix);
+        f32 sixtyFive = static_cast<f32>(bstExecuteConstants().mSixtyFive);
+        for (u32 i = 0; i < 4; ++i) {
+            u8 part = static_cast<u8>(a->mBstPartType);
+            f32 localX = static_cast<f32>(bstExecutePalmOffsets().x[i]);
+            f32 localY = static_cast<f32>(bstExecutePalmOffsets().y[i]),
+                localZ = static_cast<f32>(bstExecutePalmOffsets().z[i]);
+            local.x = part == Type_RIGHT_HAND_e ? -localX : localX;
+            local.y = localY;
+            local.z = localZ;
+            MtxPosition(&local, &transformed);
+            dCcD_Sph* sphere = &a->mFingerSphs[i + 15];
+            BstExecute_setSphereCenter(&sphere->mSph, &transformed);
+            f32 radius = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[15]), sixtyFive);
+            BstExecute_setSphereRadius(&sphere->mSph, gabi::fadds_ppc(radius, extraRadius));
+            dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+            BstExecute_setCollision(&play->play.mCcS, sphere);
         }
-        u8 part=gabi::load<u8>(a+0x3D0);f32 tx=gabi::fadds_ppc(gabi::load<f32>(t+4+0x40),hundred);
-        f32 tz=gabi::fadds_ppc(gabi::load<f32>(t+4+0x48),gabi::load<f32>(0x1000B88C));
-        local->x=part==2?-tx:tx;local->y=gabi::load<f32>(t+4+0x44);local->z=part==2?-tz:tz;
-        gabi::call(0x0200FCD8,local.get(),transformed.get());
-        tx=gabi::fadds_ppc(gabi::load<f32>(t+4+0x40),hundred);f32 ty=gabi::load<f32>(t+4+0x44);
-        tz=gabi::fadds_ppc(gabi::load<f32>(t+4+0x4C),gabi::load<f32>(0x1000B8BC));
-        local->x=part==2?-tx:tx;local->y=ty;local->z=part==2?tz:-tz;
-        gabi::call(0x0200FCD8,local.get(),gabi::at<void>(a+0x37C));
-        gabi::call(0x020182E0,gabi::at<void>(a+0x17EC),transformed.get());
-        f32 height=gabi::load<f32>(t+4+0x24),oneForty=gabi::load<f32>(0x1000B8E0);
-        gabi::call(0x02018428,gabi::at<void>(a+0x17EC),gabi::fadds_ppc(height,oneForty));
-        f32 radius=gabi::load<f32>(t+4+0x28),oneFifty=gabi::load<f32>(0x1000B898);
-        gabi::call(0x020184DC,gabi::at<void>(a+0x17EC),gabi::fadds_ppc(radius,oneFifty));
-        void* play=gabi::call<void*>(0x025200D4);gabi::call(0x0200E240,gabi::at<void>(gabi::ea(play)+0x26A4),gabi::at<void>(a+0x16D4));
+        u8 part = static_cast<u8>(a->mBstPartType);
+        f32 tx = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[15]), hundred);
+        f32 tz = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[17]),
+                                 static_cast<f32>(bstExecuteConstants().mForty));
+        local.x = part == Type_RIGHT_HAND_e ? -tx : tx;
+        local.y = static_cast<f32>(bstExecuteTuning().mRegF[16]);
+        local.z = part == Type_RIGHT_HAND_e ? -tz : tz;
+        MtxPosition(&local, &transformed);
+        tx = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[15]), hundred);
+        f32 ty = static_cast<f32>(bstExecuteTuning().mRegF[16]);
+        tz = gabi::fadds_ppc(static_cast<f32>(bstExecuteTuning().mRegF[18]),
+                             static_cast<f32>(bstExecuteConstants().mTen));
+        local.x = part == Type_RIGHT_HAND_e ? -tx : tx;
+        local.y = ty;
+        local.z = part == Type_RIGHT_HAND_e ? tz : -tz;
+        MtxPosition(&local, &a->eyePos);
+        BstExecute_setCylinderCenter(&a->mHandHurtCyl.mCyl, &transformed);
+        f32 height = static_cast<f32>(bstExecuteTuning().mRegF[8]),
+            oneForty = static_cast<f32>(bstExecuteConstants().mOneForty);
+        BstExecute_setCylinderHeight(&a->mHandHurtCyl.mCyl, gabi::fadds_ppc(height, oneForty));
+        f32 radius = static_cast<f32>(bstExecuteTuning().mRegF[9]),
+            oneFifty = static_cast<f32>(bstExecuteConstants().mOneFifty);
+        BstExecute_setCylinderRadius(&a->mHandHurtCyl.mCyl, gabi::fadds_ppc(radius, oneFifty));
+        dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+        BstExecute_setCollision(&play->play.mCcS, &a->mHandHurtCyl);
     }
-    u32 eyeX=gabi::load<u32>(a+0x37C),eyeY=gabi::load<u32>(a+0x380);
-    gabi::store<u32>(a+0x390,eyeX);u8 part=gabi::load<u8>(a+0x3D0);u32 eyeZ=gabi::load<u32>(a+0x384);
-    gabi::store<u32>(a+0x394,eyeY);gabi::store<u32>(a+0x398,eyeZ);
-    if(part==0) {
-        gabi::call(0x020EDC8C,actor);gabi::call(0x020EE200,actor);
-        s8 roomState=gabi::load<s8>(a+0x3108);
-        if(roomState==0) gabi::call(0x0255FDA4,3,0,zero);
-        else if((u32)roomState<=8) {
-            s32 first=1,second=0;
-            switch(roomState) {
-            case 1:first=3;break;case 2:first=0;second=4;break;
-            case 3:first=3;second=4;break;case 4:first=5;second=3;break;
-            case 6:case 7:second=2;break;
+    u32 eyeX = static_cast<u32>(bstExecuteWords(&a->eyePos.x));
+    u32 eyeY = static_cast<u32>(bstExecuteWords(&a->eyePos.y));
+    bstExecuteWords(&a->attention_info.position.x) = eyeX;
+    u8 part = static_cast<u8>(a->mBstPartType);
+    u32 eyeZ = static_cast<u32>(bstExecuteWords(&a->eyePos.z));
+    bstExecuteWords(&a->attention_info.position.y) = eyeY;
+    bstExecuteWords(&a->attention_info.position.z) = eyeZ;
+    if (part == Type_HEAD_e) {
+        BstExecute_beamMove(actor);
+        BstExecute_demoCamera(actor);
+        s8 roomState = static_cast<s8>(a->mRoomState);
+        if (roomState == 0)
+            BstExecute_customColor(3, 0, zero);
+        else if ((u32)roomState <= 8) {
+            s32 first = 1, second = 0;
+            switch (roomState) {
+            case 1:
+                first = 3;
+                break;
+            case 2:
+                first = 0;
+                second = 4;
+                break;
+            case 3:
+                first = 3;
+                second = 4;
+                break;
+            case 4:
+                first = 5;
+                second = 3;
+                break;
+            case 6:
+            case 7:
+                second = 2;
+                break;
             }
-            f32 color=gabi::load<f32>(a+0x3104);
-            gabi::call(0x0255FDA4,first,second,color);
-            if(roomState==1 || roomState==2 || roomState==6 || roomState==8) {
-                f32 step=half;
-                if(roomState!=6) step=gabi::load<f32>(roomState==2?0x1000B8E8:0x1000B8E4);
-                gabi::call(0x0200ED84,gabi::at<void>(a+0x3104),one,one,step);
-                if(roomState==6 || roomState==8) {
-                    color=gabi::load<f32>(a+0x3104);
-                    if(!(color<one)) gabi::store<s8>(a+0x3108,roomState==6?7:1);
+            f32 color = static_cast<f32>(a->m2ED0);
+            BstExecute_customColor(first, second, color);
+            if (roomState == 1 || roomState == 2 || roomState == 6 || roomState == 8) {
+                f32 step = half;
+                if (roomState != 6)
+                    step = static_cast<f32>(roomState == 2 ? bstExecuteConstants().mColorRise
+                                                           : bstExecuteConstants().mColorStep);
+                cLib_addCalc2(&a->m2ED0, one, one, step);
+                if (roomState == 6 || roomState == 8) {
+                    color = static_cast<f32>(a->m2ED0);
+                    if (!(color < one))
+                        a->mRoomState = roomState == 6 ? 7 : 1;
                 }
             } else {
-                f32 step=half;
-                if(roomState!=7) step=gabi::load<f32>(roomState==3?0x1000B8EC:roomState==4?0x1000B864:0x1000B8E4);
-                gabi::call(0x0200EDC8,gabi::at<void>(a+0x3104),one,step);
+                f32 step = half;
+                if (roomState != 7)
+                    step = static_cast<f32>(roomState == 3   ? bstExecuteConstants().mColorFall
+                                            : roomState == 4 ? bstExecuteConstants().mDecay
+                                                             : bstExecuteConstants().mColorStep);
+                cLib_addCalc0(&a->m2ED0, one, step);
             }
         }
-        u32 messageState=gabi::load<u32>(0x1046298C);
-        u32 message=gabi::load<u32>(0x101F4B5C);
-        if(messageState!=0xFFFFFFFF) {
-            s32 state=gabi::call<s32>(0x025F795C,gabi::at<void>(message));
-            if(state==14) {
-                if(gabi::load<s8>(0x10462998)) {
-                    gabi::call(0x025F74D0,gabi::at<void>(message),16);
-                    gabi::store<u8>(message+0x921,1);
+        u32 messageState = static_cast<u32>(bstExecuteGlobals().msg);
+        BstExecuteMessage* message = bstExecuteMessage(bstExecuteMessageTable());
+        if (messageState != 0xFFFFFFFF) {
+            s32 state = BstExecute_messageStatus(message);
+            if (state == 14) {
+                if (static_cast<s8>(bstExecuteGlobals().msg_end)) {
+                    BstExecute_messageState(message, 16);
+                    message->mSend = 1;
                 }
-            } else if(gabi::call<s32>(0x025F795C,gabi::at<void>(message))==18) {
-                gabi::call(0x025F74D0,gabi::at<void>(message),19);
-                gabi::store<u32>(0x1046298C,0xFFFFFFFF);
+            } else if (BstExecute_messageStatus(message) == 18) {
+                BstExecute_messageState(message, 19);
+                bstExecuteGlobals().msg = 0xFFFFFFFF;
             }
         }
-        bool soundStarted=false;
-        for(u32 i=0;i<2;++i) {
-            gabi::Local<be<u32>> id;*id=gabi::load<u32>(a+0x30C4+i*4);u32 attached=0;
-            if((u32)*id!=0xFFFFFFFF) attached=gabi::call<u32>(0x025D5218,gabi::at<void>(0x025E1234),id.get());
-            if(!attached) continue;
-            morph=gabi::load<u32>(a+0x3D4);model=gabi::load<u32>(morph+0x90);
-            u32 block=gabi::load<u32>(model+0x2C);u16 flags=gabi::load<u16>(block+4);
-            u32 matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,flags|0x10);
-            matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x028E90D4,gabi::at<void>(matrices+(i+4)*0x30),gabi::at<void>(matrix));
-            gabi::Local<cXyz> origin;origin->x=zero;origin->y=zero;origin->z=zero;
-            gabi::call(0x0200FCD8,origin.get(),gabi::at<void>(attached+0x314));
-            gabi::store<u8>(attached+0x3A0,2);u8 health=gabi::load<u8>(a+0x30A6+i);gabi::store<u8>(attached+0x3A1,health);
-            bool active=false;
-            if(gabi::load<s16>(a+0x30A8+i*2)==0 && gabi::load<s8>(a+0x30A6+i)>0) {
-                s16 action=gabi::load<s16>(a+0x130A);active=action!=7 && action!=22 && action!=0;
+        bool soundStarted = false;
+        for (u32 i = 0; i < 2; ++i) {
+            BstExecuteID id;
+            id = static_cast<u32>(a->m2E90[i]);
+            bst_class* attached = nullptr;
+            if ((u32)id != 0xFFFFFFFF)
+                attached = bstExecuteActor(BstExecute_searchActor(bstExecuteSearchCallback(), &id));
+            if (!attached)
+                continue;
+            morph = a->m02B8;
+            model = morph->mpModel.get();
+            J3DMtxBuffer_hd* block = model->mpMtxBuffer.get();
+            u16 flags = static_cast<u16>(block->mFlags);
+            Mtx34* matrices = bstExecuteMatrix(block->mpAnmMtx);
+            block->mFlags = flags | 0x10;
+            matrix = bstExecuteMatrix(bstExecuteCalcMatrix());
+            BstExecute_matrixCopy(&matrices[i + 4], matrix);
+            cXyz origin;
+            origin.x = zero;
+            origin.y = zero;
+            origin.z = zero;
+            MtxPosition(&origin, &attached->current.pos);
+            attached->max_health = 2;
+            u8 health = static_cast<u8>(a->mEyeHealth[i]);
+            attached->health = health;
+            bool active = false;
+            if (static_cast<s16>(a->m2E74[i]) == 0 && static_cast<s8>(a->mEyeHealth[i]) > 0) {
+                s16 action = static_cast<s16>(a->mActionType);
+                active = action != ACTION_HEAD_DAMAGE_e && action != ACTION_END_DEMO_e &&
+                         action != ACTION_STAY_e;
             }
-            if(!active) gabi::store<u32>(attached+0x39C,0);
+            if (!active)
+                attached->attention_info.flags = 0;
             else {
-                gabi::store<u32>(attached+0x39C,4);gabi::store<u8>(attached+0x38A,4);
-                if(!soundStarted) {
-                    soundStarted=true;
-                    if(a+0x37C) {
-                        s8 room=gabi::load<s8>(a+0x326);s8 reverb=gabi::call<s8>(0x02520540,room);
-                        gabi::call(0x025E1A40,0x7038,gabi::at<void>(a+0x37C),0,reverb);
+                attached->attention_info.flags = 4;
+                attached->attention_info.distances[2] = 4;
+                if (!soundStarted) {
+                    soundStarted = true;
+                    if (gabi::ea(&a->eyePos)) {
+                        s8 room = static_cast<s8>(a->current.roomNo);
+                        s8 reverb = dComIfGp_getReverb(room);
+                        mDoAud_seStart(JA_SE_CM_BST_HEAD_WORKING, &a->eyePos, 0, reverb);
                     }
                 }
             }
         }
     }
-    // 020E7134 returns TRUE in the outer execute function.
+    // HD: this helper belongs to the single verified execute function.
 }
-#include "d/actor/d_a_bst.h"
 
-static void bstExecuteHeadControl(bst_class*,f32,f32);
-static void bstExecuteTransformAndCollision(bst_class*,f32,f32,f32);
+static void main_cont(bst_class*, f32, f32);
+static void bstExecuteTransformAndCollision(bst_class*, f32, f32, f32);
 
+/* 020E54A0 */
 static BOOL daBst_Execute(bst_class* actor) {
-    WWHD_FUNC(0x020E54A0,BOOL,actor);
-    u32 a=gabi::ea(actor);
-    void* play=gabi::call<void*>(0x025200D4);
-    f32 zero=gabi::load<f32>(0x1000B854);
-    s16 frame=gabi::load<s16>(a+0x1308);
-    u32 player=gabi::load<u32>(gabi::ea(play)+0x5B2C);
-    gabi::Local<cXyz> origin;origin->x=zero;origin->y=zero;origin->z=zero;
-    gabi::store<s16>(a+0x1308,(s16)(frame+1));
-    for(u32 i=0;i<5;++i) {
-        s16 value=gabi::load<s16>(a+0x1330+i*2);
-        if(value) gabi::store<s16>(a+0x1330+i*2,(s16)(value-1));
+
+    bst_class* a = actor;
+    dComIfG_inf_c* play = bstExecutePlay(BstExecute_play());
+    f32 zero = static_cast<f32>(bstExecuteConstants().mZero);
+    s16 frame = static_cast<s16>(a->mUpdateLastFacingDirIfMultipleOf32);
+    fopAc_ac_c* player = reinterpret_cast<fopAc_ac_c*>(play->play.mPlayerInfo[0].mpPlayer.get());
+    cXyz origin;
+    origin.x = zero;
+    origin.y = zero;
+    origin.z = zero;
+    a->mUpdateLastFacingDirIfMultipleOf32 = (s16)(frame + 1);
+    for (u32 i = 0; i < 5; ++i) {
+        s16 value = static_cast<s16>(a->m10FC[i]);
+        if (value)
+            a->m10FC[i] = (s16)(value - 1);
     }
-    s16 invulnerability=gabi::load<s16>(a+0x133C);
-    s16 damage=gabi::load<s16>(a+0x133A);
-    if(invulnerability) gabi::store<s16>(a+0x133C,(s16)(invulnerability-1));
-    s16 firstHurt=gabi::load<s16>(a+0x135C);
-    if(damage) gabi::store<s16>(a+0x133A,(s16)(damage-1));
-    s16 secondHurt=gabi::load<s16>(a+0x135E);
-    if(firstHurt) gabi::store<s16>(a+0x135C,(s16)(firstHurt-1));
-    s16 thirdHurt=gabi::load<s16>(a+0x1360);
-    if(secondHurt) gabi::store<s16>(a+0x135E,(s16)(secondHurt-1));
-    s16 stateTimer=gabi::load<s16>(a+0x133E);
-    if(thirdHurt) gabi::store<s16>(a+0x1360,(s16)(thirdHurt-1));
-    if(stateTimer) gabi::store<s16>(a+0x133E,(s16)(stateTimer-1));
-    u8 paused=gabi::load<u8>(0x10462981);
-    f32 half=gabi::load<f32>(0x1000B86C),one=gabi::load<f32>(0x1000B860);
-    if(!paused) {
-        gabi::store<u32>(a+0x39C,4);
-        if(gabi::load<u8>(a+0x3D0)==0) {
-            if(gabi::load<s8>(a+0x3330)) {
-                void* camera=gabi::call<void*>(0x024F8044);
-                gabi::call(0x02514EE4,camera,gabi::at<void>(0x1000B8F0),nullptr);
+    s16 invulnerability = static_cast<s16>(a->mState);
+    s16 damage = static_cast<s16>(a->mDamageTimer);
+    if (invulnerability)
+        a->mState = (s16)(invulnerability - 1);
+    s16 firstHurt = static_cast<s16>(a->mHeadHurtAngle);
+    if (damage)
+        a->mDamageTimer = (s16)(damage - 1);
+    s16 secondHurt = static_cast<s16>(a->m112A);
+    if (firstHurt)
+        a->mHeadHurtAngle = (s16)(firstHurt - 1);
+    s16 thirdHurt = static_cast<s16>(a->m112C);
+    if (secondHurt)
+        a->m112A = (s16)(secondHurt - 1);
+    s16 stateTimer = static_cast<s16>(a->mStateTimer);
+    if (thirdHurt)
+        a->m112C = (s16)(thirdHurt - 1);
+    if (stateTimer)
+        a->mStateTimer = (s16)(stateTimer - 1);
+    u8 paused = static_cast<u8>(bstExecuteGlobals().mPause);
+    f32 half = static_cast<f32>(bstExecuteConstants().mHalf),
+        one = static_cast<f32>(bstExecuteConstants().mOne);
+    if (!paused) {
+        a->attention_info.flags = 4;
+        if (static_cast<u8>(a->mBstPartType) == Type_HEAD_e) {
+            if (static_cast<s8>(a->m2FE4)) {
+                void* camera = BstExecute_cameraBody();
+                BstExecute_cameraType(camera, "Test01", nullptr);
             }
-            bstExecuteHeadControl(actor,half,one);
-            // 020E5FCC: drop head attention and retire charge effects when appropriate.
-            if(gabi::load<s16>(a+0x130A)!=7) {
-                gabi::store<u32>(a+0x39C,0);
+            main_cont(actor, half, one);
+            // Retire head attention and charge effects outside their active actions.
+            if (static_cast<s16>(a->mActionType) != ACTION_HEAD_DAMAGE_e) {
+                a->attention_info.flags = 0;
             }
-            if(gabi::load<s16>(a+0x130A)!=14) {
-                for(u32 i=0;i<2;++i) {
-                    u32 emitter=gabi::load<u32>(a+0x310C+i*4);
-                    if(emitter) {
-                        u32 flags=gabi::load<u32>(emitter+0x254);
-                        gabi::store<u32>(emitter+0x5C,0xFFFFFFFF);
-                        gabi::store<u32>(emitter+0x254,flags|1);
-                        gabi::store<u32>(a+0x310C+i*4,0);
+            if (static_cast<s16>(a->mActionType) != ACTION_BEAM_ATTACK_e) {
+                for (u32 i = 0; i < 2; ++i) {
+                    BstEmitter* emitter = bstEmitter(a->m2ED8[i]);
+                    if (emitter) {
+                        emitter->becomeInvalidEmitter();
+                        a->m2ED8[i] = 0;
                     }
                 }
-                if(gabi::load<s8>(a+0x3108)==7) gabi::store<s8>(a+0x3108,8);
+                if (static_cast<s8>(a->mRoomState) == 7)
+                    a->mRoomState = 8;
             }
-            f32 playerHeight=gabi::load<f32>(player+0x318),limit=gabi::load<f32>(0x1000B8A0);
-            u32 controller=gabi::load<u32>(a+0x3324);
-            if(!(playerHeight>limit)) {
-                gabi::store<f32>(controller,one);
-                controller=gabi::load<u32>(a+0x3324);gabi::store<u8>(controller+0xE,2);
-            } else gabi::store<u8>(controller+0xE,0);
-            for(u32 offset:{0x332Cu,0x3324u,0x3320u}) {
-                u32 animation=gabi::load<u32>(a+offset);gabi::call(0x025E742C,gabi::at<void>(animation));
-            }
-            gabi::call(0x028E93CC,gabi::at<void>(0x1048D0CC),zero,zero,zero);
+            f32 playerHeight = static_cast<f32>(player->current.pos.y),
+                limit = static_cast<f32>(bstExecuteConstants().mPlayerHeightLimit);
+            J3DFrameCtrl* controller = &a->m2FD8->mFrameCtrl;
+            if (!(playerHeight > limit)) {
+                controller->mRate = one;
+                controller = &a->m2FD8->mFrameCtrl;
+                controller->mAttribute = J3DFrameCtrl::EMode_LOOP;
+            } else
+                controller->mAttribute = J3DFrameCtrl::EMode_NONE;
+            BstExecute_animatorPlay(a->m2FE0);
+            BstExecute_animatorPlay(a->m2FD8);
+            BstExecute_animatorPlay(a->m2FD4);
+            BstExecute_matrixTranslate(bstExecuteFixedMatrix(), zero, zero, zero);
             // Matrix copies retain all twelve loaded values before their writes.
-            for(u32 offset:{0x331Cu,0x3328u}) {
-                f32 matrix[12];for(u32 i=0;i<12;++i) matrix[i]=gabi::load<f32>(0x1048D0CC+i*4);
-                u32 model=gabi::load<u32>(a+offset);
-                for(u32 i=0;i<12;++i) gabi::store<f32>(model+0xC8+i*4,matrix[i]);
+            for (gptr<J3DModel>* modelField : {&a->m2FD0, &a->m2FDC}) {
+                f32 matrix[12];
+                for (u32 i = 0; i < 12; ++i)
+                    matrix[i] = static_cast<f32>(bstExecuteFixedMatrix()->m[i / 4][i % 4]);
+                J3DModel* model = *modelField;
+                for (u32 i = 0; i < 12; ++i)
+                    model->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
             }
         }
-        gabi::call(0x020EB4BC,actor);
-        s16 action=gabi::load<s16>(a+0x130A);
-        if(action!=0 && action!=22) {
-            play=gabi::call<void*>(0x025200D4);
-            gabi::call(0x024F08A8,gabi::at<void>(a+0x13A4),gabi::at<void>(gabi::ea(play)+0x12A0));
-            gabi::call(0x024F12A8,gabi::at<void>(a+0x13A4),zero);
+        BstExecute_move(actor);
+        s16 action = static_cast<s16>(a->mActionType);
+        if (action != ACTION_STAY_e && action != ACTION_END_DEMO_e) {
+            play = bstExecutePlay(BstExecute_play());
+            BstExecute_correctPosition(&a->mAcch, &play->play.mBgS);
+            BstExecute_setGroundUpY(&a->mAcch, zero);
         }
-        u32 morph=gabi::load<u32>(a+0x3D4);
-        gabi::call(0x025E535C,gabi::at<void>(morph),gabi::at<void>(a+0x37C),0,0);
-        if(gabi::load<s8>(a+0x3E0)) {
-            gabi::call(0x025E742C,gabi::at<void>(gabi::load<u32>(a+0x3DC)));
-            gabi::call(0x025E742C,gabi::at<void>(gabi::load<u32>(a+0x3D8)));
+        mDoExt_McaMorf* morph = a->m02B8;
+        BstExecute_morphPlay(morph, &a->eyePos, 0, 0);
+        if (static_cast<s8>(a->m02C4)) {
+            BstExecute_animatorPlay(a->mpTevRegAnimator);
+            BstExecute_animatorPlay(a->mpTexMtxAnimator);
         }
-        if(gabi::load<s8>(a+0x3F0)) {
-            gabi::call(0x025E742C,gabi::at<void>(gabi::load<u32>(a+0x3EC)));
-            gabi::call(0x025E742C,gabi::at<void>(gabi::load<u32>(a+0x3E8)));
+        if (static_cast<s8>(a->m02D4)) {
+            BstExecute_animatorPlay(a->mpBrkAnm);
+            BstExecute_animatorPlay(a->mpBtkAnm);
         }
     }
-    bstExecuteTransformAndCollision(actor,zero,half,one);
+    bstExecuteTransformAndCollision(actor, zero, half, one);
     return TRUE;
 }
-VERIFY(0x020E54A0,daBst_Execute);
+
+/* WWHD glue (tools/verify/autoglue.py)
+str 1000B70C "Bst"
+str 1000B8F0 "Test01"
+ext 0200E240 void BstExecute_setCollision(cCcS*,dCcD_GObjInf*)
+ext 0200FAD8 void BstExecute_translate(f32,f32,f32,s32)
+ext 020182E0 void BstExecute_setCylinderCenter(cM3dGCyl*,cXyz*)
+ext 02018428 void BstExecute_setCylinderHeight(cM3dGCyl*,f32)
+ext 020184DC void BstExecute_setCylinderRadius(cM3dGCyl*,f32)
+ext 02018C8C void BstExecute_setSphereRadius(cM3dGSph*,f32)
+ext 02018D40 void BstExecute_setSphereCenter(cM3dGSph*,cXyz*)
+ext 020EB4BC void BstExecute_move(bst_class*)
+ext 020EDC8C void BstExecute_beamMove(bst_class*)
+ext 020EE200 void BstExecute_demoCamera(bst_class*)
+ext 024EFF44 void BstExecute_setWall(dBgS_AcchCir*,f32,f32)
+ext 024F08A8 void BstExecute_correctPosition(dBgS_ObjAcch*,dBgS*)
+ext 024F12A8 void BstExecute_setGroundUpY(dBgS_ObjAcch*,f32)
+ext 024F8044 void* BstExecute_cameraBody()
+ext 02514EE4 void BstExecute_cameraType(void*,const char*,void*)
+ext 025200D4 void* BstExecute_play()
+ext 0255FDA4 void BstExecute_customColor(s32,s32,f32)
+ext 025B9100 BOOL BstExecute_isDungeonItem(dSv_memBit_c*,s32)
+ext 025D5218 u32 BstExecute_searchActor(void*,be<u32>*)
+ext 025E18EC void BstExecute_bgmStart(u32)
+ext 025E535C void BstExecute_morphPlay(mDoExt_McaMorf*,cXyz*,s32,s32)
+ext 025E55A0 void BstExecute_morphCalc(mDoExt_McaMorf*)
+ext 025E742C void BstExecute_animatorPlay(mDoExt_baseAnm*)
+ext 025F24E0 void BstExecute_translateMultiply(f32,f32,f32)
+ext 025F74D0 void BstExecute_messageState(BstExecuteMessage*,s32)
+ext 025F795C s32 BstExecute_messageStatus(BstExecuteMessage*)
+ext 026066C4 void* BstExecute_getResource(void*,SafeString*,u32)
+ext 028E8DD0 f32 BstExecute_magnitudeSquared(cXyz*)
+ext 028E90D4 void BstExecute_matrixCopy(Mtx34*,Mtx34*)
+ext 028E93CC void BstExecute_matrixTranslate(Mtx34*,f32,f32,f32)
+ext 028F4384 f32 BstExecute_sqrt(f32)
+ext 025E8154 void BstExecute_initBrk(J3DFrameCtrl*,J3DModelData*,void*,s32,s32,s32,s32,s32,f32,s32)
+ext 025E7CE0 void BstExecute_initBtk(J3DFrameCtrl*,J3DModelData*,void*,s32,s32,s32,s32,s32,f32,s32)
+*/

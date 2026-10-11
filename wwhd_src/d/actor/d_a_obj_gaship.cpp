@@ -1,213 +1,181 @@
 /* HD Gaship full actor reconstruction derived from zeldaret/tww. */
 #include "d/actor/d_a_obj_gaship.h"
-BOOL daObjGaship::Act_c::CreateHeap() {
-  WWHD_FUNC(0x0234A3E4, BOOL, this);
-  gabi::Local<SafeString> name;
-  name->__vtbl = 0x100295B8;
-  name->mStringTop = 0x10029628;
-  void *data = gabi::call<void *>(
-      0x026066C4, gabi::at<u8>(gabi::load<u32>(0x101F4F28)), name.get(), 3);
-  if (!data)
-    gabi::call(0x0273AA24, STR(0x100295F0), 0x8C, STR(0x100295E0));
-  if (data)
-    mModel = gabi::call<J3DModel *>(0x025E38E0, data, 0, 0x11000002);
-  set_mtx();
-  return data && mModel != nullptr;
+const gc_tu_data gc_tu = {.safeString = 0x100295B8};
+enum { dRes_INDEX_GASHIP_BDL_GASHIP_e = 3, fpcNm_MAJUU_FLAG_e = 0xAE };
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static u8 l_initA;
+static u8 l_initB;
+static GashipHeaderZeros l_headerZeros;
+static GashipFlagOffsets l_flagOffsets;
+static GashipFlagAngles l_flagAngles;
+static GashipFlagLiteral l_flagLiteral;
+static u32 l_offsetGuard;
+static u32 l_angleGuard;
+/* 0234A3E4 */
+BOOL daObjGaship::Act_c::create_heap() {
+    auto *data = (J3DModelData *)dComIfG_getObjectRes("GaShip", dRes_INDEX_GASHIP_BDL_GASHIP_e);
+    if (!data)
+        JUT_ASSERT_fail(STR(0x100295F0), 0x8C, STR(0x100295E0));
+    if (data)
+        mModel = mDoExt_J3DModel__create(data, 0, 0x11000002);
+    set_mtx();
+    return data && mModel != nullptr;
 }
-VERIFY(0x0234A3E4, &daObjGaship::Act_c::CreateHeap);
-BOOL solidHeapCB(daObjGaship::Act_c *actor) {
-  WWHD_FUNC(0x0234A4B8, BOOL, actor);
-  return actor->CreateHeap();
+/* 0234A4B8 */
+BOOL solidHeapCB(fopAc_ac_c *actor) {
+    return ((daObjGaship::Act_c *)actor)->create_heap();
 }
-VERIFY(0x0234A4B8, solidHeapCB);
+/* 0234A2F0 */
 void daObjGaship::Act_c::set_mtx() {
-  WWHD_FUNC(0x0234A2F0, void, this);
-  f32 x = scale.x, y = scale.y;
-  u32 model = gabi::ea((J3DModel *)mModel);
-  f32 z = scale.z;
-  gabi::store<f32>(model + 0xBC, x);
-  gabi::store<f32>(model + 0xC0, y);
-  gabi::store<f32>(model + 0xC4, z);
-  x = current.pos.x;
-  y = current.pos.y;
-  z = current.pos.z;
-  auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-  gabi::call(0x028E93CC, matrix, x, y, z);
-  s16 xAngle = gabi::load<s16>(gabi::ea(this) + 0x328),
-      yAngle = gabi::load<s16>(gabi::ea(this) + 0x32A),
-      zAngle = gabi::load<s16>(gabi::ea(this) + 0x32C);
-  gabi::call(0x025F1B48, matrix, xAngle, yAngle, zAngle);
-  f32 m00 = gabi::load<f32>(0x1048D0CC);
-  f32 m01 = gabi::load<f32>(0x1048D0D0);
-  f32 m02 = gabi::load<f32>(0x1048D0D4);
-  f32 m03 = gabi::load<f32>(0x1048D0D8);
-  f32 m10 = gabi::load<f32>(0x1048D0DC);
-  f32 m11 = gabi::load<f32>(0x1048D0E0);
-  f32 m12 = gabi::load<f32>(0x1048D0E4);
-  f32 m13 = gabi::load<f32>(0x1048D0E8);
-  f32 m20 = gabi::load<f32>(0x1048D0EC);
-  f32 m21 = gabi::load<f32>(0x1048D0F0);
-  f32 m22 = gabi::load<f32>(0x1048D0F4);
-  f32 m23 = gabi::load<f32>(0x1048D0F8);
-  model = gabi::ea((J3DModel *)mModel);
-  gabi::store<f32>(model + 0xC8, m00);
-  gabi::store<f32>(model + 0xCC, m01);
-  gabi::store<f32>(model + 0xD0, m02);
-  gabi::store<f32>(model + 0xD4, m03);
-  gabi::store<f32>(model + 0xD8, m10);
-  gabi::store<f32>(model + 0xDC, m11);
-  gabi::store<f32>(model + 0xE0, m12);
-  gabi::store<f32>(model + 0xE4, m13);
-  gabi::store<f32>(model + 0xE8, m20);
-  gabi::store<f32>(model + 0xEC, m21);
-  gabi::store<f32>(model + 0xF0, m22);
-  gabi::store<f32>(model + 0xF4, m23);
-  gabi::call(0x028E90D4, matrix, &mMatrix);
-  gabi::call(0x027F4D5C, (J3DModel *)mModel);
+    J3DModel_setBaseScale(mModel, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    J3DModel_setBaseTRMtx(mModel, mDoMtx_stack_c::get());
+    MTXCopy(mDoMtx_stack_c::get(), &mtx);
+    gashipModelCalc(mModel);
 }
-VERIFY(0x0234A2F0, &daObjGaship::Act_c::set_mtx);
-s32 daObjGaship::Act_c::Create() {
-  WWHD_FUNC(0x0234A4BC, s32, this);
-  u32 base = gabi::ea(this), flags = gabi::load<u32>(base + 0x2E4);
-  if (!(flags & 8)) {
-    if (this) {
-      gabi::call(0x025D4ED0, this);
-      flags = gabi::load<u32>(base + 0x2E4);
-      gabi::store<u32>(base + 0xB4, 0x100295D0);
+/* 0234A4BC */
+s32 daObjGaship::Act_c::_create() {
+    fopAcM_ct(this, Act_c);
+    s32 phase = dComIfG_resLoad(&mPhs, "GaShip");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0))
+            return cPhs_ERROR_e;
+        J3DModel *model = mModel;
+        cullMtx = model ? gabi::ea(J3DModel_getBaseTRMtx(model)) : 0;
     }
-    gabi::store<u32>(base + 0x2E4, flags | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, &mPhase, STR(0x10029628));
-  if (phase == 4) {
-    if (!gabi::call<s32>(0x025D63E8, this, 0x0234A4B8, 0))
-      return 5;
-    u32 model = gabi::ea((J3DModel *)mModel);
-    gabi::store<u32>(base + 0x348, model ? model + 0xC8 : 0);
-  }
-  return phase;
+    return phase;
 }
-VERIFY(0x0234A4BC, &daObjGaship::Act_c::Create);
-BOOL daObjGaship::Act_c::Delete() {
-  WWHD_FUNC(0x0234A578, BOOL, this);
-  gabi::call(0x025204C8, &mPhase, STR(0x10029628));
-  return TRUE;
+/* 0234A578 */
+BOOL daObjGaship::Act_c::_delete() {
+    dComIfG_resDelete(&mPhs, "GaShip");
+    return TRUE;
 }
-VERIFY(0x0234A578, &daObjGaship::Act_c::Delete);
-BOOL daObjGaship::Act_c::Draw() {
-  WWHD_FUNC(0x0234A7C8, BOOL, this);
-  u32 light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, gabi::at<u8>(light), 1, &current.pos,
-             gabi::at<u8>(gabi::ea(this) + 0x110));
-  light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, gabi::at<u8>(light), (J3DModel *)mModel,
-             gabi::at<u8>(gabi::ea(this) + 0x110));
-  gabi::call(0x025E2DE0, (J3DModel *)mModel, 0);
-  return TRUE;
+/* 0234A7C8 */
+BOOL daObjGaship::Act_c::_draw() {
+    auto *light = dKy_getEnvlight();
+    settingTevStruct(light, 1, &current.pos, &tevStr);
+    light = dKy_getEnvlight();
+    setLightTevColorType(light, mModel, &tevStr);
+    mDoExt_modelUpdateDL(mModel, 0);
+    return TRUE;
 }
-VERIFY(0x0234A7C8, &daObjGaship::Act_c::Draw);
-BOOL daObjGaship::Act_c::Execute() {
-  WWHD_FUNC(0x0234A790, BOOL, this);
-  set_mtx();
-  birth_flag();
-  return TRUE;
+/* 0234A790 */
+BOOL daObjGaship::Act_c::_execute() {
+    set_mtx();
+    birth_flag();
+    return TRUE;
 }
-VERIFY(0x0234A790, &daObjGaship::Act_c::Execute);
+/* 0234A834 */
 void staticInitialize() {
-  WWHD_FUNC(0x0234A834, void);
-  gabi::store<u32>(0x10469C20, 0);
-  gabi::store<u32>(0x10469C18, 0);
-  gabi::store<u32>(0x10469C24, 0);
-  gabi::store<u32>(0x10469C1C, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C9770));
-  gabi::store<f32>(0x10469BF4, -3.1415927410125732f);
-  gabi::store<f32>(0x10469BF8, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x10469BFC));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C977C));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x10469BFD));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C9788));
-}
-VERIFY(0x0234A834, staticInitialize);
-void deleteStatic(void *p, s32 flags) {
-  WWHD_FUNC(0x0234A8C8, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
-}
-VERIFY(0x0234A8C8, deleteStatic);
-void destruct(daObjGaship::Act_c *actor, s32 flags) {
-  WWHD_FUNC(0x0234A8E0, void, actor, flags);
-  if (actor) {
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, actor);
-  }
-}
-VERIFY(0x0234A8E0, destruct);
-void emptyVirtual() { WWHD_FUNC(0x0234A8DC, void); }
-VERIFY(0x0234A8DC, emptyVirtual);
-BOOL IsDelete(daObjGaship::Act_c *actor) {
-  WWHD_FUNC(0x0234A934, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x0234A934, IsDelete);
 
-void daObjGaship::Act_c::birth_flag() {
-  WWHD_FUNC(0x0234A5A8, void, this);
-  f32 a = gabi::load<f32>(0x10029604), b = gabi::load<f32>(0x10029608),
-      c = gabi::load<f32>(0x1002960C), d = gabi::load<f32>(0x10029610),
-      e = gabi::load<f32>(0x10029614), f = gabi::load<f32>(0x10029618);
-  for (s32 i = 0; i < 2; ++i) {
-    if (!birthFlag[i]) {
-      u32 angleGuard = gabi::load<u32>(0x10469C38);
-      if (!gabi::load<u32>(0x10469C34)) {
-        gabi::store<f32>(0x10469C10, b);
-        gabi::store<f32>(0x10469C00, f);
-        gabi::store<f32>(0x10469C04, e);
-        gabi::store<f32>(0x10469C14, a);
-        gabi::store<f32>(0x10469C0C, c);
-        gabi::store<f32>(0x10469C08, d);
-        gabi::store<u32>(0x10469C34, 1);
-      }
-      if (!angleGuard) {
-        gabi::store<u32>(0x10469C38, 1);
-        gabi::call(0x0201A478, gabi::at<csXyz>(0x10469C28), 0x222, 0, 0xAAA);
-        gabi::call(0x0201A478, gabi::at<csXyz>(0x10469C2E), -0x38E, 0, 0xCCC);
-      }
-      gabi::Local<cXyz> offset;
-      gabi::call(0x028E8F64, &mMatrix, gabi::at<cXyz>(0x10469C00 + 12 * i),
-                 offset.get());
-      s8 room = gabi::load<s8>(gabi::ea(this) + 0x326);
-      u32 angleBase = 0x10469C28 + 6 * i;
-      u16 x = gabi::load<u16>(angleBase), y = gabi::load<u16>(angleBase + 2),
-          z = gabi::load<u16>(angleBase + 4);
-      gabi::Local<csXyz> angle;
-      angle->x = x;
-      angle->y = y;
-      angle->z = z;
-      s32 pid = gabi::call<s32>(0x025D5834, 0xAE, 1, offset.get(), room,
-                                angle.get(), 0, -1, 0);
-      if (pid != -1)
-        birthFlag[i] = 1;
+    // HD: preserve the translation unit's header-static zeroing order.
+    l_headerZeros.words[2] = 0;
+    l_headerZeros.words[0] = 0;
+    l_headerZeros.words[3] = 0;
+    l_headerZeros.words[1] = 0;
+    __register_global_object(0x101C9770);
+    l_minAngle = -3.1415927410125732f;
+    l_maxAngle = 3.1415927410125732f;
+    gashipInitA(&l_initA);
+    __register_global_object(0x101C977C);
+    gashipInitB(&l_initB);
+    __register_global_object(0x101C9788);
+}
+/* 0234A8C8 */
+void deleteStatic(void *p, s32 flags) {
+    if (p && (flags & 1))
+        operator_delete(p);
+}
+/* 0234A8E0 */
+void destruct(daObjGaship::Act_c *actor, s32 flags) {
+    if (actor) {
+        gashipActorDt(actor, 0);
+        if (flags & 1)
+            operator_delete(actor);
     }
-  }
 }
-VERIFY(0x0234A5A8, &daObjGaship::Act_c::birth_flag);
+/* 0234A8DC */
+void emptyVirtual() {
+}
+/* 0234A934 */
+BOOL IsDelete(daObjGaship::Act_c *actor) {
+    return TRUE;
+}
+
+/* 0234A5A8 */
+void daObjGaship::Act_c::birth_flag() {
+    // HD: snapshot all literal values before either flag's guarded initialization.
+    f32 a = l_flagLiteral.secondZ, b = l_flagLiteral.secondY, c = l_flagLiteral.secondX;
+    f32 d = l_flagLiteral.firstZ, e = l_flagLiteral.firstY, f = l_flagLiteral.firstX;
+    for (s32 i = 0; i < 2; ++i) {
+        if (!birthFlag[i]) {
+            u32 angleGuard = l_angleGuard;
+            if (!l_offsetGuard) {
+                l_flagOffsets.values[1].y = b;
+                l_flagOffsets.values[0].x = f;
+                l_flagOffsets.values[0].y = e;
+                l_flagOffsets.values[1].z = a;
+                l_flagOffsets.values[1].x = c;
+                l_flagOffsets.values[0].z = d;
+                l_offsetGuard = 1;
+            }
+            if (!angleGuard) {
+                l_angleGuard = 1;
+                csXyz_ct(&l_flagAngles.values[0], 0x222, 0, 0xAAA);
+                csXyz_ct(&l_flagAngles.values[1], -0x38E, 0, 0xCCC);
+            }
+            gabi::Local<cXyz> offset;
+            PSMTXMultVec(&mtx, &l_flagOffsets.values[i], offset);
+            s8 room = current.roomNo;
+            u16 x = l_flagAngles.values[i].x, y = l_flagAngles.values[i].y,
+                z = l_flagAngles.values[i].z;
+            gabi::Local<csXyz> angle;
+            angle->x = x;
+            angle->y = y;
+            angle->z = z;
+            s32 pid = fopAcM_create(fpcNm_MAJUU_FLAG_e, 1, offset, room, angle, nullptr, -1, 0);
+            if (pid != -1)
+                birthFlag[i] = 1;
+        }
+    }
+}
+/* 0234A824 */
 s32 createWrapper(daObjGaship::Act_c *p) {
-  WWHD_FUNC(0x0234A824, s32, p);
-  return p->Create();
+    return p->_create();
 }
-VERIFY(0x0234A824, createWrapper);
+/* 0234A828 */
 BOOL deleteWrapper(daObjGaship::Act_c *p) {
-  WWHD_FUNC(0x0234A828, BOOL, p);
-  return p->Delete();
+    return p->_delete();
 }
-VERIFY(0x0234A828, deleteWrapper);
+/* 0234A82C */
 BOOL executeWrapper(daObjGaship::Act_c *p) {
-  WWHD_FUNC(0x0234A82C, BOOL, p);
-  return p->Execute();
+    return p->_execute();
 }
-VERIFY(0x0234A82C, executeWrapper);
+/* 0234A830 */
 BOOL drawWrapper(daObjGaship::Act_c *p) {
-  WWHD_FUNC(0x0234A830, BOOL, p);
-  return p->Draw();
+    return p->_draw();
 }
-VERIFY(0x0234A830, drawWrapper);
+
+daObjGaship::Act_c::Act_c() {
+    fopAc_ac_c_ct(this);
+    __vtbl = __vt;
+}
+/* WWHD glue
+str 10029628 "GaShip"
+data l_minAngle 10469BF4
+data l_maxAngle 10469BF8
+data l_initA 10469BFC
+data l_initB 10469BFD
+data l_flagOffsets 10469C00
+data l_headerZeros 10469C18
+data l_flagAngles 10469C28
+data l_offsetGuard 10469C34
+data l_angleGuard 10469C38
+data l_flagLiteral 10029604
+ext 027F4D5C void gashipModelCalc(J3DModel*)
+ext 025D50BC void gashipActorDt(void*, s32)
+ext 028ED6F8 void gashipInitA(void*)
+ext 028EAB2C void gashipInitB(void*)
+*/

@@ -1,230 +1,247 @@
-/* hd_snd_0202BD3C: two HD sound TUs (no GameCube source).
- *
- * 0202BD3C..0202C0CF: the HD sound manager singleton (0x18: sound system container +0x10, the NW4F
- *                     sound-archive player 0x24 (02761BD8) +0x14; instance 1018EC64, disposer 1018EC68):
- *                     wiring of the five sub-systems into the player, constructor, createInstance,
- *                     destructor, forwarding accessors, disposer destructor; __sinit 0202C03C
- * 0202C0D0..0202C27B: a sound-handle holder (0x14, vtable 100040D0; NW4F handle +4, id +0xC = -1)
- *                     with null-safe forwarders to the handle; __sinit 0202C1E0 (+ an accessor companion)
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD sound-manager singleton and sound-handle holder. No GameCube counterpart.
+ * Private decomp source; subsystem and two handle-forwarder names remain descriptive. */
+#include "bindings.h"
+#include "hd/hd_snd_0202BD3C.h"
+static hdSoundManager* sSoundManager;
+static hdSoundManager* sSoundManagerDisposer;
 
-namespace hd_snd_0202BD3C {
+/* 0202BD3C */
+static void connectSoundManager(hdSoundManager* i_this) {
+    void* subsystem = hdSoundManagerGetFirstSubsystem(i_this->mContainer);
+    hdSoundManagerSetFirstSubsystem(i_this->mPlayer, subsystem);
+    subsystem = hdSoundManagerGetSecondSubsystem(i_this->mContainer);
+    hdSoundManagerSetSecondSubsystem(i_this->mPlayer, subsystem);
+    subsystem = hdSoundManagerGetThirdSubsystem(i_this->mContainer);
+    hdSoundManagerSetThirdSubsystem(i_this->mPlayer, subsystem);
+    subsystem = hdSoundManagerGetFifthSubsystem(i_this->mContainer);
+    hdSoundManagerSetLastSubsystem(i_this->mPlayer, subsystem);
+    // HD: both final container entries use the same player setter.
+    subsystem = hdSoundManagerGetSixthSubsystem(i_this->mContainer);
+    hdSoundManagerSetLastSubsystem(i_this->mPlayer, subsystem);
+}
 
-/* 0202BD3C: hand the container's sub-systems to the sound-archive player */
-static void SndMgr_connect(u32 self) {
-    WWHD_FUNC(0x0202BD3C, void, self);
-    {
-        u32 x = gabi::call<u32>(0x0202BC78, ld(self + 0x10));
-        gabi::call(0x02761C74, ld(self + 0x14), x);
+/* 0202BDC8 */
+static hdSoundManager* constructSoundManager(hdSoundManager* i_this) {
+    hdSoundManager* manager = i_this;
+    if (manager == NULL) {
+        manager = (hdSoundManager*)operator_new(sizeof(hdSoundManager));
+        if (manager == NULL) {
+            return NULL;
+        }
     }
-    {
-        u32 x = gabi::call<u32>(0x0202BC80, ld(self + 0x10));
-        gabi::call(0x02761C7C, ld(self + 0x14), x);
+    manager->mContainer = NULL;
+    manager->mPlayer = NULL;
+    hdSoundManagerContainer* container = (hdSoundManagerContainer*)operator_new(sizeof(hdSoundManagerContainer));
+    if (container != NULL) {
+        container = hdSoundManagerConstructContainer(container, NULL);
     }
-    {
-        u32 x = gabi::call<u32>(0x0202BC88, ld(self + 0x10));
-        gabi::call(0x02761C84, ld(self + 0x14), x);
+    manager->mContainer = container;
+    hdSoundManagerPlayer* player = (hdSoundManagerPlayer*)operator_new(sizeof(hdSoundManagerPlayer));
+    if (player != NULL) {
+        player = hdSoundManagerConstructPlayer(player);
     }
-    {
-        u32 x = gabi::call<u32>(0x0202BC98, ld(self + 0x10));
-        gabi::call(0x02761C8C, ld(self + 0x14), x);
+    manager->mPlayer = player;
+    // HD: connect has a void entry, but this call forwards its resulting r3 to path initialization.
+    u32 result = hdSoundManagerConnectResult(manager);
+    hdSoundManagerBuildPaths(result);
+    return manager;
+}
+
+/* 0202BE64 */
+static hdSoundManager* createSoundManager(void* heap) {
+    hdSoundManager* existing = sSoundManager;
+    if (existing != NULL) {
+        return existing;
     }
-    {
-        u32 x = gabi::call<u32>(0x0202BCA0, ld(self + 0x10));
-        gabi::call(0x02761C8C, ld(self + 0x14), x);
+    hdSoundManager* disposer = (hdSoundManager*)hdSoundManagerAllocate(sizeof(hdSoundManager), heap, 4);
+    if (disposer != NULL) {
+        hdSoundManagerConstructDisposer(disposer, heap, 3);
+        disposer->mDisposerVtable = 0x100040B8;
+    }
+    sSoundManagerDisposer = disposer;
+    hdSoundManager* manager = disposer;
+    if (disposer != NULL) {
+        manager = constructSoundManager(disposer);
+    }
+    sSoundManager = manager;
+    return manager;
+}
+
+/* 0202BEF8 */
+static void destroySoundManager(hdSoundManager* i_this, s32 flags) {
+    if (i_this == NULL) {
+        return;
+    }
+    hdSoundManagerContainer* container = i_this->mContainer;
+    if (container != NULL) {
+        hdSoundManagerDestroyContainer(container, 3);
+        i_this->mContainer = NULL;
+    }
+    hdSoundManagerPlayer* player = i_this->mPlayer;
+    if (player != NULL) {
+        operator_delete(player);
+        i_this->mPlayer = NULL;
+    }
+    if (flags & 1) {
+        operator_delete(i_this);
     }
 }
-VERIFY(0x0202BD3C, SndMgr_connect);
 
-/* 0202BDC8: constructor: container (default heap), player, wiring, sound tables */
-static u32 SndMgr_ct(u32 self) {
-    WWHD_FUNC(0x0202BDC8, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x18);
-        if (t == 0) return 0;
+/* 0202BF78 */
+static void* getSoundManagerSecondSubsystem(hdSoundManager* i_this) {
+    return hdSoundManagerGetSecondSubsystem(i_this->mContainer);
+}
+
+/* 0202BF80 */
+static void* getSoundManagerThirdSubsystem(hdSoundManager* i_this) {
+    return hdSoundManagerGetThirdSubsystem(i_this->mContainer);
+}
+
+/* 0202BF88 */
+static void* getSoundManagerFourthSubsystem(hdSoundManager* i_this) {
+    return hdSoundManagerGetFourthSubsystem(i_this->mContainer);
+}
+
+/* 0202BF90 */
+static void* getSoundManagerSixthSubsystem(hdSoundManager* i_this) {
+    return hdSoundManagerGetSixthSubsystem(i_this->mContainer);
+}
+
+/* 0202BF98 */
+static void* getSoundManagerFifthSubsystem(hdSoundManager* i_this) {
+    return hdSoundManagerGetFifthSubsystem(i_this->mContainer);
+}
+
+/* 0202BFA0 */
+static void destroySoundManagerDisposer(hdSoundManager* i_this, s32 flags) {
+    if (i_this == NULL) {
+        return;
     }
-    st(t + 0x10, 0);
-    st(t + 0x14, 0);
-    u32 p = op_new(0x18);
-    if (p != 0) p = gabi::call<u32>(0x0202BA00, p, 0);
-    st(t + 0x10, p);
-    u32 q = op_new(0x24);
-    if (q != 0) q = gabi::call<u32>(0x02761BD8, q);
-    st(t + 0x14, q);
-    u32 r = gabi::call<u32>(0x0202BD3C, t);
-    gabi::call(0x0202DD2C, r);
-    return t;
-}
-VERIFY(0x0202BDC8, SndMgr_ct);
-
-/* 0202BE64: createInstance(heap) (sead singleton): returns the instance (the existing one, or the
- * newly constructed one / 0); the caller 0203E9EC stores it */
-static u32 SndMgr_createInstance(u32 heap) {
-    WWHD_FUNC(0x0202BE64, u32, heap);
-    if (u32 existing = ld(0x1018EC64)) return existing;
-    u32 d = gabi::call<u32>(0x0273B0D4, 0x18, heap, 4);
-    if (d != 0) {
-        gabi::call(0x02752B0C, d, heap, 3);
-        st(d + 0xC, 0x100040B8);
+    i_this->mDisposerVtable = 0x100040B8;
+    if (i_this == sSoundManagerDisposer) {
+        hdSoundManager* manager = sSoundManager;
+        sSoundManagerDisposer = NULL;
+        destroySoundManager(manager, 2);
+        sSoundManager = NULL;
     }
-    st(0x1018EC68, d);
-    u32 r = d;
-    if (d != 0) r = gabi::call<u32>(0x0202BDC8, d);
-    st(0x1018EC64, r);
-    return r;
-}
-VERIFY(0x0202BE64, SndMgr_createInstance);
-
-static void SndMgr_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202BEF8, void, self, flags);
-    if (self == 0) return;
-    u32 x = ld(self + 0x10);
-    if (x != 0) {
-        gabi::call(0x0202BB58, x, 3);
-        st(self + 0x10, 0);
+    hdSoundManagerDestroyDisposer(i_this, 0);
+    if (flags & 1) {
+        operator_delete(i_this);
     }
-    u32 y = ld(self + 0x14);
-    if (y != 0) {
-        op_delete(y);
-        st(self + 0x14, 0);
+}
+
+/* 0202C03C */
+static void __sinit_hd_sound_manager_cpp() {
+    sinit_header_statics_rodata(0x101FFD80, 0x1018EC40, 0x101FFD8C, 0x100040B0);
+}
+
+/* 0202C0D0 */
+static hdSoundHandleHolder* constructSoundHandle(hdSoundHandleHolder* i_this) {
+    hdSoundHandleHolder* holder = i_this;
+    if (holder == NULL) {
+        holder = (hdSoundHandleHolder*)operator_new(sizeof(hdSoundHandleHolder));
+        if (holder == NULL) {
+            return NULL;
+        }
     }
-    if (flags & 1) op_delete(self);
+    holder->field_0x8 = 0;
+    holder->mHandle = NULL;
+    holder->field_0x10 = 0;
+    holder->mVtable = 0x100040D0;
+    holder->mId = -1;
+    return holder;
 }
-VERIFY(0x0202BEF8, SndMgr_dt);
 
-static u32 SndMgr_fwd_0202BF78(u32 self) {
-    WWHD_FUNC(0x0202BF78, u32, self);
-    return gabi::call<u32>(0x0202BC80, ld(self + 0x10));
-}
-VERIFY(0x0202BF78, SndMgr_fwd_0202BF78);
-
-static u32 SndMgr_fwd_0202BF80(u32 self) {
-    WWHD_FUNC(0x0202BF80, u32, self);
-    return gabi::call<u32>(0x0202BC88, ld(self + 0x10));
-}
-VERIFY(0x0202BF80, SndMgr_fwd_0202BF80);
-
-static u32 SndMgr_fwd_0202BF88(u32 self) {
-    WWHD_FUNC(0x0202BF88, u32, self);
-    return gabi::call<u32>(0x0202BC90, ld(self + 0x10));
-}
-VERIFY(0x0202BF88, SndMgr_fwd_0202BF88);
-
-static u32 SndMgr_fwd_0202BF90(u32 self) {
-    WWHD_FUNC(0x0202BF90, u32, self);
-    return gabi::call<u32>(0x0202BCA0, ld(self + 0x10));
-}
-VERIFY(0x0202BF90, SndMgr_fwd_0202BF90);
-
-static u32 SndMgr_fwd_0202BF98(u32 self) {
-    WWHD_FUNC(0x0202BF98, u32, self);
-    return gabi::call<u32>(0x0202BC98, ld(self + 0x10));
-}
-VERIFY(0x0202BF98, SndMgr_fwd_0202BF98);
-
-/* 0202BFA0: singleton disposer destructor */
-static void SndMgrDisposer_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202BFA0, void, self, flags);
-    if (self == 0) return;
-    st(self + 0xC, 0x100040B8);
-    if (self == ld(0x1018EC68)) {
-        u32 inst = ld(0x1018EC64);
-        st(0x1018EC68, 0);
-        gabi::call(0x0202BEF8, inst, 2);
-        st(0x1018EC64, 0);
+/* 0202C128 */
+static u32 stopSoundHandle(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+    void* handle = i_this->mHandle;
+    if (handle == NULL) {
+        return 0;
     }
-    gabi::call(0x02752BEC, self, 0);
-    if (flags & 1) op_delete(self);
+    return hdSoundHandleStop(handle, argument, option);
 }
-VERIFY(0x0202BFA0, SndMgrDisposer_dt);
 
-static void sinit_0202C03C() {
-    WWHD_FUNC(0x0202C03C, void);
-    header_sinit(0x101FFD8C, 0x1018EC40, 0x100040B0);
-}
-VERIFY(0x0202C03C, sinit_0202C03C);
-
-static u32 Handle_ct(u32 self) {
-    WWHD_FUNC(0x0202C0D0, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x14);
-        if (t == 0) return 0;
+/* 0202C1A0 */
+static u32 pauseSoundHandle(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+    void* handle = i_this->mHandle;
+    if (handle == NULL) {
+        return 0;
     }
-    st(t + 8, 0);
-    st(t + 4, 0);
-    st(t + 0x10, 0);
-    st(t + 0, 0x100040D0);
-    st(t + 0xC, 0xFFFFFFFF);
-    return t;
+    return hdSoundHandlePause(handle, argument, option);
 }
-VERIFY(0x0202C0D0, Handle_ct);
 
-/* 0202C128: stop on the NW4F handle when there is one */
-static u32 Handle_0202C128(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0202C128, u32, self, a, b);
-    u32 h = ld(self + 4);
-    if (h == 0) return 0;
-    return gabi::call<u32>(0x02883FA8, h, a, b);
+/* 0202C1C0 */
+static u32 firstSoundHandleForward(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+    void* handle = i_this->mHandle;
+    if (handle == NULL) {
+        return 0;
+    }
+    return hdSoundHandleFirstForward(handle, argument, option);
 }
-VERIFY(0x0202C128, Handle_0202C128);
 
-/* 0202C1A0: pause on the NW4F handle when there is one */
-static u32 Handle_0202C1A0(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0202C1A0, u32, self, a, b);
-    u32 h = ld(self + 4);
-    if (h == 0) return 0;
-    return gabi::call<u32>(0x028850D4, h, a, b);
+/* 0202C1D0 */
+static u32 secondSoundHandleForward(hdSoundHandleHolder* i_this, u32 argument, u32 option) {
+    void* handle = i_this->mHandle;
+    if (handle == NULL) {
+        return 0;
+    }
+    return hdSoundHandleSecondForward(handle, argument, option);
 }
-VERIFY(0x0202C1A0, Handle_0202C1A0);
 
-/* 0202C1C0: fwd 02885914 on the NW4F handle when there is one */
-static u32 Handle_0202C1C0(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0202C1C0, u32, self, a, b);
-    u32 h = ld(self + 4);
-    if (h == 0) return 0;
-    return gabi::call<u32>(0x02885914, h, a, b);
+/* 0202C138 */
+static void destroySoundHandle(hdSoundHandleHolder* i_this, s32 flags) {
+    if (i_this == NULL) {
+        return;
+    }
+    i_this->mVtable = 0x100040D0;
+    // HD: only r3/r4 are supplied here; the thunk forwards the existing r5 register.
+    hdSoundHandleStopForDestroy(i_this, 0);
+    hdSoundHandleDestroy(&i_this->mHandle);
+    if (flags & 1) {
+        operator_delete(i_this);
+    }
 }
-VERIFY(0x0202C1C0, Handle_0202C1C0);
 
-/* 0202C1D0: fwd 028859A0 on the NW4F handle when there is one */
-static u32 Handle_0202C1D0(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0202C1D0, u32, self, a, b);
-    u32 h = ld(self + 4);
-    if (h == 0) return 0;
-    return gabi::call<u32>(0x028859A0, h, a, b);
+/* 0202C1B0 */
+static u32 isSoundHandleValid(hdSoundHandleHolder* i_this) {
+    return i_this->mHandle != NULL ? 1 : 0;
 }
-VERIFY(0x0202C1D0, Handle_0202C1D0);
 
-static void Handle_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202C138, void, self, flags);
-    if (self == 0) return;
-    st(self + 0, 0x100040D0);
-    gabi::call(0x0202C128, self, 0);
-    gabi::call(0x02896CD8, self + 4);
-    if (flags & 1) op_delete(self);
+/* 0202C1E0 */
+static void __sinit_hd_sound_handle_cpp() {
+    sinit_header_statics_rodata(0x101FFD9C, 0x1018EC6C, 0x101FFDA8, 0x100040C8);
 }
-VERIFY(0x0202C138, Handle_dt);
 
-static u32 Handle_isValid(u32 self) {
-    WWHD_FUNC(0x0202C1B0, u32, self);
-    return ld(self + 4) != 0 ? 1 : 0;
+/* 0202C274 */
+static u32 getSoundHandleId(hdSoundHandleHolder* i_this) {
+    return i_this->mId;
 }
-VERIFY(0x0202C1B0, Handle_isValid);
 
-static void sinit_0202C1E0() {
-    WWHD_FUNC(0x0202C1E0, void);
-    header_sinit(0x101FFDA8, 0x1018EC6C, 0x100040C8);
-}
-VERIFY(0x0202C1E0, sinit_0202C1E0);
-
-static u32 Comp_getC(u32 self) {
-    WWHD_FUNC(0x0202C274, u32, self);
-    return ld(self + 0xC);
-}
-VERIFY(0x0202C274, Comp_getC);
-
-}  // namespace hd_snd_0202BD3C
+/* WWHD glue (tools/verify/autoglue.py): private sound APIs and singleton state
+ data sSoundManager 1018EC64
+ data sSoundManagerDisposer 1018EC68
+ ext 0202BA00 hdSoundManagerContainer* hdSoundManagerConstructContainer(hdSoundManagerContainer*, void*)
+ ext 0202BB58 void hdSoundManagerDestroyContainer(hdSoundManagerContainer*, s32)
+ ext 02761BD8 hdSoundManagerPlayer* hdSoundManagerConstructPlayer(hdSoundManagerPlayer*)
+ ext 0202BC78 void* hdSoundManagerGetFirstSubsystem(hdSoundManagerContainer*)
+ ext 0202BC80 void* hdSoundManagerGetSecondSubsystem(hdSoundManagerContainer*)
+ ext 0202BC88 void* hdSoundManagerGetThirdSubsystem(hdSoundManagerContainer*)
+ ext 0202BC90 void* hdSoundManagerGetFourthSubsystem(hdSoundManagerContainer*)
+ ext 0202BC98 void* hdSoundManagerGetFifthSubsystem(hdSoundManagerContainer*)
+ ext 0202BCA0 void* hdSoundManagerGetSixthSubsystem(hdSoundManagerContainer*)
+ ext 02761C74 void hdSoundManagerSetFirstSubsystem(hdSoundManagerPlayer*, void*)
+ ext 02761C7C void hdSoundManagerSetSecondSubsystem(hdSoundManagerPlayer*, void*)
+ ext 02761C84 void hdSoundManagerSetThirdSubsystem(hdSoundManagerPlayer*, void*)
+ ext 02761C8C void hdSoundManagerSetLastSubsystem(hdSoundManagerPlayer*, void*)
+ ext 0273B0D4 void* hdSoundManagerAllocate(u32, void*, u32)
+ ext 02752B0C void hdSoundManagerConstructDisposer(hdSoundManager*, void*, u32)
+ ext 02752BEC void hdSoundManagerDestroyDisposer(hdSoundManager*, u32)
+ ext 0202BD3C u32 hdSoundManagerConnectResult(hdSoundManager*)
+ ext 0202DD2C void hdSoundManagerBuildPaths(u32)
+ ext 02883FA8 u32 hdSoundHandleStop(void*, u32, u32)
+ ext 028850D4 u32 hdSoundHandlePause(void*, u32, u32)
+ ext 02885914 u32 hdSoundHandleFirstForward(void*, u32, u32)
+ ext 028859A0 u32 hdSoundHandleSecondForward(void*, u32, u32)
+ ext 0202C128 void hdSoundHandleStopForDestroy(hdSoundHandleHolder*, u32)
+ ext 02896CD8 void hdSoundHandleDestroy(gptr<void>*)
+*/

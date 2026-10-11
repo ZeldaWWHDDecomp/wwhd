@@ -1,177 +1,267 @@
-#include "d/actor/d_a_bst.h"
+// Gohdan clasps both hands around Link, then drops them together.
+#include "d/actor/d_a_bst_hana.h"
+#include "d/d_com_inf_game.h"
+#include <cmath>
 
-static void kumiSound(u32 actor,u32 sound,bool checkActor=false) {
-    if ((!checkActor || actor) && actor+0x314) {
-        s8 room=gabi::load<s8>(actor+0x326);
-        s8 reverb=gabi::call<s8>(0x02520540,room);
-        gabi::call(0x025E1A40,sound,gabi::at<void>(actor+0x314),0,reverb);
+using namespace bst_attack_names;
+
+/* inlined into kumi_attack */
+static void kumiSound(fopAc_ac_c* actor, u32 sound, bool checkActor = false) {
+    if ((!checkActor || actor) && gabi::ea(&actor->current.pos)) {
+        s8 room = static_cast<s8>(actor->current.roomNo);
+        s8 reverb = dComIfGp_getReverb(room);
+        mDoAud_seStart(sound, &actor->current.pos, 0, reverb);
     }
 }
 
-static f32 kumiDistance(u32 first,u32 second) {
-    gabi::Local<cXyz> result,difference;
-    gabi::call(0x0201ADE0,gabi::at<void>(first),result.get(),gabi::at<void>(second));
-    difference->copy(*result);
-    f32 square=gabi::call<f32>(0x028E8DD0,difference.get());
-    return gabi::call<f32>(0x028F4384,square);
+/* inlined into kumi_attack */
+static f32 kumiDistance(cXyz* first, cXyz* second) {
+    cXyz result;
+    cXyz difference;
+    cXyz_mi(first, &result, second);
+    difference.copy(result);
+    f32 square = PSVECSquareMag(&difference);
+    return BstAttack_sqrtf(square);
 }
 
+/* 020E90F0 */
 static void kumi_attack(bst_class* actor) {
-    WWHD_FUNC(0x020E90F0,void,actor);
-    u32 address=gabi::ea(actor),tuning=0x1047B608;
-    void* play=gabi::call<void*>(0x025200D4);
-    u32 player=gabi::load<u32>(gabi::ea(play)+0x5B2C);
-    gabi::call(0x0200F428,gabi::at<void>(address+0x328),0,10,0x200);
-    f32 one=gabi::load<f32>(0x1000B860),ten=gabi::load<f32>(0x1000B8BC);
-    f32 thirty=gabi::load<f32>(0x1000B888);
-    gabi::call(0x0200ED84,gabi::at<void>(address+0x1344),thirty,one,ten);
-    f32 target=gabi::load<f32>(0x1000B934);
-    gabi::call(0x0200ED84,gabi::at<void>(address+0x134C),target,one,ten);
-    thirty=gabi::load<f32>(0x1000B888);target=gabi::load<f32>(0x1000B938);
-    gabi::call(0x0200ED84,gabi::at<void>(address+0x1348),target,one,thirty);
-    s16 state=gabi::load<s16>(address+0x130E);
-    f32 zero=gabi::load<f32>(0x1000B854),hundred=gabi::load<f32>(0x1000B8B4);
-    bool move=true,success=false;
+    bst_class* i_this = actor;
+
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
+    cLib_addCalcAngleS2(&i_this->shape_angle.x, 0, 10, 0x200);
+    f32 one = 1.0f, ten = 10.0f;
+    f32 thirty = 30.0f;
+    cLib_addCalc2(&i_this->m1110, thirty, one, ten);
+    f32 target = -80.0f;
+    cLib_addCalc2(&i_this->m1118, target, one, ten);
+    thirty = 30.0f;
+    target = -200.0f;
+    cLib_addCalc2(&i_this->m1114, target, one, thirty);
+    s16 state = static_cast<s16>(i_this->mDamage);
+    f32 zero = 0.0f, hundred = 100.0f;
+    bool move = true, success = false;
     switch (state) {
     case 0: {
-        u8 part=gabi::load<u8>(address+0x3D0);
-        gabi::store<f32>(address+0x1324,zero);gabi::store<s16>(address+0x130E,(s16)(state+1));
-        s16 yaw=gabi::load<s16>(player+0x32A);gabi::store<s16>(address+0x1350,yaw);
-        u16 animation=gabi::load<u16>(0x101928D8+part*2);
-        gabi::call(0x020E47D0,actor,animation,ten,2,one,-1);
-        s16 duration=gabi::load<s16>(tuning+0x82);gabi::store<s16>(address+0x1330,(s16)(duration+70));
+        u8 part = static_cast<u8>(i_this->mBstPartType);
+        i_this->m10EC.y = zero;
+        i_this->mDamage = (s16)(state + 1);
+        s16 yaw = static_cast<s16>(player->shape_angle.y);
+        i_this->m111C = yaw;
+        u16 animation = bstKumiAnimations()->mAnimation[part];
+        BstAttack_anm_init(actor, animation, ten, J3DFrameCtrl::EMode_LOOP, one, -1);
+        s16 duration = REG0_S(1);
+        i_this->m10FC[0] = (s16)(duration + 70);
         [[fallthrough]];
     }
     case 1: {
-        f32 distance=kumiDistance(address+0x1310,address+0x314);
-        f32 boundary=gabi::load<f32>(tuning+0x38)+gabi::load<f32>(0x1000B874);
-        f32 acceleration=gabi::load<f32>(tuning+0x3C);
-        if (distance>boundary) {
-            f32 two=gabi::load<f32>(0x1000B924),forty=gabi::load<f32>(0x1000B88C);
-            gabi::call(0x0200ED84,gabi::at<void>(address+0x370),forty,one,acceleration+two);
+        f32 distance = kumiDistance(&i_this->mTargetPos, &actor->current.pos);
+        f32 boundary = REG0_F(12) + 200.0f;
+        f32 acceleration = REG0_F(13);
+        if (distance > boundary) {
+            f32 two = 2.0f, forty = 40.0f;
+            cLib_addCalc2(&i_this->speedF, forty, one, acceleration + two);
         } else {
-            f32 two=gabi::load<f32>(0x1000B924);
-            gabi::call(0x0200EDC8,gabi::at<void>(address+0x370),one,acceleration+two);
+            f32 two = 2.0f;
+            cLib_addCalc0(&i_this->speedF, one, acceleration + two);
         }
-        f32 turn=gabi::load<f32>(tuning+0x1C)+gabi::load<f32>(0x1000B928);
-        s16 yaw=gabi::load<s16>(address+0x1350);gabi::store<f32>(address+0x1320,turn);
-        u32 matrix=gabi::load<u32>(0x1018C7B0);gabi::call(0x025F1884,gabi::at<void>(matrix),yaw);
-        u8 part=gabi::load<u8>(address+0x3D0);
-        f32 x=gabi::load<f32>(tuning+0x10)+gabi::load<f32>(0x1000B8B0);
-        if (part==1) x=-x;
-        f32 y=gabi::load<f32>(tuning+0x14)+gabi::load<f32>(0x1000B93C);
-        gabi::Local<cXyz> local,transformed,result;
-        local->x=x;local->z=zero;local->y=y;
-        gabi::call(0x0200FCD8,local.get(),transformed.get());
-        gabi::call(0x0201AD78,gabi::at<void>(player+0x314),result.get(),transformed.get());
-        yaw=gabi::load<s16>(address+0x1350);
-        actor->mTargetPos.copy(*result);
-        gabi::call(0x0200F428,gabi::at<void>(address+0x32A),(s16)(yaw+(part==1 ? 0x4000 : -0x4000)),10,0x800);
-        if (gabi::load<s16>(address+0x1330)==0) {
-            s16 current=gabi::load<s16>(address+0x130E);f32 fiveHundred=gabi::load<f32>(0x1000B8B0);
-            gabi::store<s16>(address+0x130E,(s16)(current+1));
-            f32 px=gabi::load<f32>(player+0x314);gabi::store<f32>(address+0x1310,px);
-            f32 py=gabi::load<f32>(player+0x318);gabi::store<f32>(address+0x1314,py);
-            f32 pz=gabi::load<f32>(player+0x31C);gabi::store<f32>(address+0x1318,pz);
-            f32 height=gabi::load<f32>(tuning+0x14)+fiveHundred;
-            gabi::store<f32>(address+0x1314,py+height);
-            play=gabi::call<void*>(0x025200D4);u32 currentPlayer=gabi::load<u32>(gabi::ea(play)+0x5B2C);
-            s16 angle=gabi::call<s16>(0x025D6894,actor,gabi::at<void>(currentPlayer));
-            gabi::store<s16>(address+0x322,angle);
+        f32 turn = REG0_F(5) + 8000.0f;
+        s16 yaw = static_cast<s16>(i_this->m111C);
+        i_this->m10EC.x = turn;
+        Mtx34* matrix = calc_mtx();
+        cMtx_YrotS(matrix, yaw);
+        u8 part = static_cast<u8>(i_this->mBstPartType);
+        f32 x = REG0_F(2) + 500.0f;
+        if (part == bst_class::Type_LEFT_HAND_e)
+            x = -x;
+        f32 y = REG0_F(3) + 400.0f;
+        cXyz local;
+        cXyz transformed;
+        cXyz result;
+        local.x = x;
+        local.z = zero;
+        local.y = y;
+        MtxPosition(&local, &transformed);
+        cXyz_pl(&player->current.pos, &result, &transformed);
+        yaw = static_cast<s16>(i_this->m111C);
+        i_this->mTargetPos.copy(result);
+        cLib_addCalcAngleS2(
+            &i_this->shape_angle.y,
+            (s16)(yaw + (part == bst_class::Type_LEFT_HAND_e ? 0x4000 : -0x4000)), 10, 0x800);
+        if (static_cast<s16>(i_this->m10FC[0]) == 0) {
+            s16 current = static_cast<s16>(i_this->mDamage);
+            f32 fiveHundred = 500.0f;
+            i_this->mDamage = (s16)(current + 1);
+            f32 px = static_cast<f32>(player->current.pos.x);
+            i_this->mTargetPos.x = px;
+            f32 py = static_cast<f32>(player->current.pos.y);
+            i_this->mTargetPos.y = py;
+            f32 pz = static_cast<f32>(player->current.pos.z);
+            i_this->mTargetPos.z = pz;
+            f32 height = REG0_F(3) + fiveHundred;
+            i_this->mTargetPos.y = py + height;
+            play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            fopAc_ac_c* currentPlayer = play->play.mPlayerInfo[0].mpPlayer;
+            s16 angle = fopAcM_searchActorAngleY(actor, currentPlayer);
+            i_this->current.angle.y = angle;
         }
         break;
     }
     case 2: {
-        f32 speed=gabi::load<f32>(tuning+0x40),acceleration=gabi::load<f32>(tuning+0x44);
-        f32 eight=gabi::load<f32>(0x1000B940);
-        gabi::call(0x0200ED84,gabi::at<void>(address+0x370),speed+hundred,one,acceleration+eight);
-        f32 turn=gabi::load<f32>(tuning+0x1C)+gabi::load<f32>(0x1000B8D8);gabi::store<f32>(address+0x1320,turn);
-        f32 distance=kumiDistance(address+0x1310,address+0x314);
-        f32 boundary=gabi::load<f32>(tuning+0x48)+hundred;
-        if (distance<boundary) {
-            s16 current=gabi::load<s16>(address+0x130E);gabi::store<s16>(address+0x130E,(s16)(current+1));
+        f32 speed = REG0_F(14), acceleration = REG0_F(15);
+        f32 eight = 8.0f;
+        cLib_addCalc2(&i_this->speedF, speed + hundred, one, acceleration + eight);
+        f32 turn = REG0_F(5) + 10000.0f;
+        i_this->m10EC.x = turn;
+        f32 distance = kumiDistance(&i_this->mTargetPos, &actor->current.pos);
+        f32 boundary = REG0_F(16) + hundred;
+        if (distance < boundary) {
+            s16 current = static_cast<s16>(i_this->mDamage);
+            i_this->mDamage = (s16)(current + 1);
         }
         break;
     }
     case 3: {
-        u8 part=gabi::load<u8>(address+0x3D0);s16 yaw=gabi::load<s16>(address+0x1350);
-        gabi::call(0x0200F428,gabi::at<void>(address+0x32A),(s16)(yaw+(part==1 ? 0x4000 : -0x4000)),1,0x1000);
-        f32 speed=gabi::load<f32>(address+0x33C),goal=gabi::load<f32>(address+0x1310);
-        gabi::call(0x0200ED84,gabi::at<void>(address+0x314),goal,one,std::fabs(speed));
-        speed=gabi::load<f32>(address+0x340);goal=gabi::load<f32>(address+0x1314);
-        gabi::call(0x0200ED84,gabi::at<void>(address+0x318),goal,one,std::fabs(speed)+ten);
-        speed=gabi::load<f32>(address+0x344);goal=gabi::load<f32>(address+0x1318);
-        gabi::call(0x0200ED84,gabi::at<void>(address+0x31C),goal,one,std::fabs(speed));
-        u32 left=gabi::load<u32>(0x10462978),right=gabi::load<u32>(0x1046297C);
-        f32 distance=kumiDistance(left+0x314,right+0x314);
-        if (distance<one) {
-            s16 current=gabi::load<s16>(address+0x130E);gabi::store<s16>(address+0x130E,(s16)(current+1));
-            s16 duration=gabi::load<s16>(tuning+0x86);gabi::store<s16>(address+0x1330,(s16)(duration+10));
-            kumiSound(address,0x58DA);gabi::store<f32>(address+0x340,zero);
+        u8 part = static_cast<u8>(i_this->mBstPartType);
+        s16 yaw = static_cast<s16>(i_this->m111C);
+        cLib_addCalcAngleS2(
+            &i_this->shape_angle.y,
+            (s16)(yaw + (part == bst_class::Type_LEFT_HAND_e ? 0x4000 : -0x4000)), 1, 0x1000);
+        f32 speed = static_cast<f32>(i_this->speed.x),
+            goal = static_cast<f32>(i_this->mTargetPos.x);
+        cLib_addCalc2(&i_this->current.pos.x, goal, one, std::fabs(speed));
+        speed = static_cast<f32>(i_this->speed.y);
+        goal = static_cast<f32>(i_this->mTargetPos.y);
+        cLib_addCalc2(&i_this->current.pos.y, goal, one, std::fabs(speed) + ten);
+        speed = static_cast<f32>(i_this->speed.z);
+        goal = static_cast<f32>(i_this->mTargetPos.z);
+        cLib_addCalc2(&i_this->current.pos.z, goal, one, std::fabs(speed));
+        bst_class* left = bstAttackHands()->mHand[0];
+        bst_class* right = bstAttackHands()->mHand[1];
+        f32 distance = kumiDistance(&left->current.pos, &right->current.pos);
+        if (distance < one) {
+            s16 current = static_cast<s16>(i_this->mDamage);
+            i_this->mDamage = (s16)(current + 1);
+            s16 duration = REG0_S(3);
+            i_this->m10FC[0] = (s16)(duration + 10);
+            kumiSound(actor, JA_SE_CM_BST_HAND_SHAKE);
+            i_this->speed.y = zero;
         }
-        move=false;break;
+        move = false;
+        break;
     }
     case 4: {
-        f32 velocity=gabi::load<f32>(address+0x340),y=gabi::load<f32>(address+0x318);
-        s16 timer=gabi::load<s16>(address+0x1330);gabi::store<f32>(address+0x318,y+velocity);
-        if (timer>1) {
-            f32 acceleration=gabi::load<f32>(tuning+0x40),current=gabi::load<f32>(address+0x340);
-            u8 part=gabi::load<u8>(address+0x3D0);gabi::store<f32>(address+0x340,current+(acceleration+one));
-            s16 roll=part==2 ? -0x1000 : 0x1000;gabi::store<s16>(address+0x30A4,roll);
-            gabi::call(0x0200F428,gabi::at<void>(address+0x32C),roll,10,0x200);
+        f32 velocity = static_cast<f32>(i_this->speed.y),
+            y = static_cast<f32>(i_this->current.pos.y);
+        s16 timer = static_cast<s16>(i_this->m10FC[0]);
+        i_this->current.pos.y = y + velocity;
+        if (timer > 1) {
+            f32 acceleration = REG0_F(14), current = static_cast<f32>(i_this->speed.y);
+            u8 part = static_cast<u8>(i_this->mBstPartType);
+            i_this->speed.y = current + (acceleration + one);
+            s16 roll = part == bst_class::Type_RIGHT_HAND_e ? -0x1000 : 0x1000;
+            i_this->mFacingDir = roll;
+            cLib_addCalcAngleS2(&i_this->shape_angle.z, roll, 10, 0x200);
         } else {
-            u8 part=gabi::load<u8>(address+0x3D0);s16 roll=part==2 ? 0x4000 : -0x4000;
-            gabi::store<s16>(address+0x30A4,roll);gabi::call(0x0200F428,gabi::at<void>(address+0x32C),roll,1,0x1000);
-            gabi::call(0x020E474C,actor,1);
-            f32 acceleration=gabi::load<f32>(tuning+0x14)+gabi::load<f32>(0x1000B8D4);
-            velocity=gabi::load<f32>(address+0x340);gabi::store<f32>(address+0x340,velocity-acceleration);
-            f32 floor=gabi::load<f32>(tuning+0x18)+gabi::load<f32>(0x1000B898);
-            y=gabi::load<f32>(address+0x318);
-            if (!(y>floor)) {
-                gabi::store<f32>(address+0x318,floor);part=gabi::load<u8>(address+0x3D0);gabi::store<f32>(address+0x340,zero);
-                if (part==1) {
-                    gabi::Local<cXyz> impact,impulse;
-                    impact->x=gabi::load<f32>(address+0x1310);impact->y=one;impact->z=gabi::load<f32>(address+0x1318);
-                    play=gabi::call<void*>(0x025200D4);u32 particles=gabi::load<u32>(gabi::ea(play)+0x5AB0);
-                    gabi::call(0x025A847C,gabi::at<void>(particles),4,0xC1D6,impact.get(),nullptr,nullptr,255,nullptr,-1,0,nullptr,nullptr);
-                    s8 room=gabi::load<s8>(address+0x326);play=gabi::call<void*>(0x025200D4);particles=gabi::load<u32>(gabi::ea(play)+0x5AB0);
-                    gabi::call(0x025A847C,gabi::at<void>(particles),2,0xA1D9,impact.get(),nullptr,nullptr,185,gabi::at<void>(address+0x3134),room,0,nullptr,nullptr);
-                    play=gabi::call<void*>(0x025200D4);s32 strength=gabi::load<s16>(tuning+0x84)+5;
-                    impulse->x=zero;impulse->y=one;impulse->z=zero;
-                    gabi::call(0x025CB374,gabi::at<void>(gabi::ea(play)+0x599C),strength,-33,impulse.get());
-                    kumiSound(address,0x6993);
+            u8 part = static_cast<u8>(i_this->mBstPartType);
+            s16 roll = part == bst_class::Type_RIGHT_HAND_e ? 0x4000 : -0x4000;
+            i_this->mFacingDir = roll;
+            cLib_addCalcAngleS2(&i_this->shape_angle.z, roll, 1, 0x1000);
+            BstAttack_set_hand_AT(actor, 1);
+            f32 acceleration = REG0_F(3) + 60.0f;
+            velocity = static_cast<f32>(i_this->speed.y);
+            i_this->speed.y = velocity - acceleration;
+            f32 floor = REG0_F(4) + 150.0f;
+            y = static_cast<f32>(i_this->current.pos.y);
+            // HD: unordered heights take the landing path.
+            if (!(y > floor)) {
+                i_this->current.pos.y = floor;
+                part = static_cast<u8>(i_this->mBstPartType);
+                i_this->speed.y = zero;
+                if (part == bst_class::Type_LEFT_HAND_e) {
+                    cXyz impact;
+                    cXyz impulse;
+                    impact.x = static_cast<f32>(i_this->mTargetPos.x);
+                    impact.y = one;
+                    impact.z = static_cast<f32>(i_this->mTargetPos.z);
+                    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+                    dPa_control_c* particles = play->play.mParticle.get();
+                    particles->set(4, ID_AK_SP_BSTSHOCKWAVEH00, &impact, nullptr, nullptr, 255,
+                                   nullptr, -1, 0, nullptr, nullptr);
+                    s8 room = static_cast<s8>(i_this->current.roomNo);
+                    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+                    particles = play->play.mParticle.get();
+                    particles->set(
+                        2, ID_AK_ST_BSTATTACK2HSMOKE00, &impact, nullptr, nullptr, 185,
+                        reinterpret_cast<dPa_levelEcallBack*>(&i_this->mPa_smokeEcallBack), room, 0,
+                        nullptr, nullptr);
+                    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+                    s32 strength = REG0_S(2) + 5;
+                    impulse.x = zero;
+                    impulse.y = one;
+                    impulse.z = zero;
+                    play->play.mVibration.StartShock(strength, -33, &impulse);
+                    kumiSound(actor, JA_SE_CM_BST_2_HAND_ATTACK);
                 }
-                s16 current=gabi::load<s16>(address+0x130E),duration=gabi::load<s16>(tuning+0x8E);
-                gabi::store<s16>(address+0x130E,(s16)(current+1));gabi::store<s16>(address+0x135E,(s16)(duration+10));
-                gabi::store<s16>(address+0x1330,40);
+                s16 current = static_cast<s16>(i_this->mDamage), duration = REG0_S(7);
+                i_this->mDamage = (s16)(current + 1);
+                i_this->m112A = (s16)(duration + 10);
+                i_this->m10FC[0] = 40;
             }
         }
-        move=false;break;
+        move = false;
+        break;
     }
     case 5:
-        if (gabi::load<s16>(address+0x1330)==0) success=true;
-        move=false;break;
+        if (static_cast<s16>(i_this->m10FC[0]) == 0)
+            success = true;
+        move = false;
+        break;
     }
-    if (move) gabi::call(0x020E4CD0,actor,0);
-    bool collision=false;
-    if (!success) collision=(gabi::load<u32>(address+0x13CC)&0x10)!=0;
-    if (!success && !collision) return;
-    s16 yaw=gabi::load<s16>(address+0x322);
-    gabi::store<f32>(address+0x370,zero);gabi::store<s16>(address+0x130A,1);
-    gabi::store<s16>(address+0x130E,0);gabi::store<s16>(address+0x322,(s16)(yaw-0x8000));
-    f32 random=gabi::call<f32>(0x020198D8,hundred);
-    gabi::store<s16>(address+0x133E,(s16)gabi::ftoi(random+hundred));gabi::store<s16>(address+0x133C,40);
-    kumiSound(address,0x58DB);
-    if (success) return;
-    u32 other=2u-gabi::load<u8>(address+0x3D0);
-    if (other>=2) return;
-    u32 global=0x10462978+other*4,hand=gabi::load<u32>(global);
-    if (gabi::load<s16>(hand+0x130A)!=12) return;
-    gabi::store<s16>(hand+0x130A,1);hand=gabi::load<u32>(global);gabi::store<s16>(hand+0x130E,0);
-    hand=gabi::load<u32>(global);gabi::store<f32>(hand+0x370,zero);
-    hand=gabi::load<u32>(global);yaw=gabi::load<s16>(hand+0x322);gabi::store<s16>(hand+0x322,(s16)(yaw-0x8000));
-    hand=gabi::load<u32>(global);random=gabi::call<f32>(0x020198D8,hundred);
-    gabi::store<s16>(hand+0x133E,(s16)gabi::ftoi(random+hundred));hand=gabi::load<u32>(global);gabi::store<s16>(hand+0x133C,40);
-    hand=gabi::load<u32>(global);kumiSound(hand,0x58DB,true);
+    if (move)
+        BstAttack_pos_move(actor, 0);
+    bool collision = false;
+    if (!success)
+        collision = (i_this->mAcch.ChkWallHit()) != 0;
+    if (!success && !collision)
+        return;
+    s16 yaw = static_cast<s16>(i_this->current.angle.y);
+    i_this->speedF = zero;
+    i_this->mActionType = bst_class::ACTION_FLY_e;
+    i_this->mDamage = 0;
+    i_this->current.angle.y = (s16)(yaw - 0x8000);
+    f32 random = cM_rndF(hundred);
+    i_this->mStateTimer = (s16)gabi::ftoi(random + hundred);
+    i_this->mState = 40;
+    kumiSound(actor, JA_SE_CM_BST_HAND_RELEASE);
+    if (success)
+        return;
+    u32 other = 2u - static_cast<u8>(i_this->mBstPartType);
+    // HD: malformed part values do not index the partner table.
+    if (other >= 2)
+        return;
+    gptr<bst_class>* partner = &bstAttackHands()->mHand[other];
+    bst_class* hand = *partner;
+    if (static_cast<s16>(hand->mActionType) != bst_class::ACTION_KUMI_ATTACK_e)
+        return;
+    // HD: each write/call may replace the partner pointer; reload the slot.
+    hand->mActionType = bst_class::ACTION_FLY_e;
+    hand = *partner;
+    hand->mDamage = 0;
+    hand = *partner;
+    hand->speedF = zero;
+    hand = *partner;
+    yaw = static_cast<s16>(hand->current.angle.y);
+    hand->current.angle.y = (s16)(yaw - 0x8000);
+    hand = *partner;
+    random = cM_rndF(hundred);
+    hand->mStateTimer = (s16)gabi::ftoi(random + hundred);
+    hand = *partner;
+    hand->mState = 40;
+    hand = *partner;
+    kumiSound(hand, JA_SE_CM_BST_HAND_RELEASE, true);
 }
-VERIFY(0x020E90F0,kumi_attack);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ */

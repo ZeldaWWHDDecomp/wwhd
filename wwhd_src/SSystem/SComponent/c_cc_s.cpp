@@ -1,358 +1,725 @@
-/* WWHD collision system, raw verified implementation. */
-#include "gabi.h"
-using namespace gabi;
-namespace ccs_cpp {
-static u32 ld(u32 a) { return load<u32>(a); }
-static void st(u32 a,u32 x) { store<u32>(a,x); }
-static void* p(u32 a) { return at<void>(a); }
-static u32 target(u32 obj,u32 vtoff,u32 slot) { return ld(ld(obj+vtoff)+slot); }
-static u32 getter(u32 obj,u32 vtoff,u32 slot) { return call_ptr<u32>(target(obj,vtoff,slot),p(obj)); }
-struct Aab { be<f32> lo[3],hi[3]; be<u32> vt; };
-struct Vec { be<f32> v[3]; };
-void clr_at(void* self) {
- WWHD_FUNC(0x0200CD0C,void,self);
- u32 s=ea(self),end=ld(s+0x2800);
- for(s32 i=0;i<(s32)end;i++) {
-  u32 o=ld(s+(u32)i*4);
-  if(o) {
-   u32 inf=getter(o,0x3c,0x1c);
-   call_ptr<void>(target(inf,0x3c,0x34),p(inf));
-   o=ld(s+(u32)i*4);u32 status=ld(o+0x44);
-   if(status) { status=ld(o+0x44);call_ptr<void>(target(status,0x18,0x2c),p(status)); }
-   end=ld(s+0x2800);
-  }
- }
+/* Collision-object registration, dispatch and correction. Verified HD behavior. */
+#include "SSystem/SComponent/c_cc_s.h"
+using gabi::call_ptr;
+static const f32 zero = 0.0f;
+static const f32 rangeMin = -100000000000000000000000000000000.0f;
+static const f32 rangeMax = 100000000000000000000000000000000.0f;
+static const f32 minCorrection = 0.008f;
+static const f32 tiny = 0.000003814697265625f;
+static const f32 one = 1.0f;
+static const f32 two = 2.0f;
+static const f32 half = 0.5f;
+static const f32 piMin = -3.1415927410125732f;
+static const f32 piMax = 3.1415927410125732f;
+static cCcD_GObjInf *getGObjInf(cCcD_Obj *obj, CcObjectVtable *vtable) {
+    return call_ptr<cCcD_GObjInf *>(vtable->GetGObjInf, obj);
 }
-VERIFY(0x0200CD0C,clr_at);
-void clr_tg(void* self) {
- WWHD_FUNC(0x0200CDBC,void,self);
- u32 s=ea(self),end=ld(s+0x2804);
- for(s32 i=0;i<(s32)end;i++) {
-  u32 o=ld(s+0x400+(u32)i*4);
-  if(o) {
-   u32 inf=getter(o,0x3c,0x1c);
-   call_ptr<void>(target(inf,0x3c,0x3c),p(inf));
-   o=ld(s+0x400+(u32)i*4);u32 status=ld(o+0x44);
-   if(status) { status=ld(o+0x44);call_ptr<void>(target(status,0x18,0x34),p(status)); }
-   end=ld(s+0x2804);
-  }
- }
+static cCcD_ShapeAttr *getShapeAttr(cCcD_Obj *obj) {
+    return call_ptr<cCcD_ShapeAttr *>(obj->__vtbl->GetShapeAttr, obj);
 }
-VERIFY(0x0200CDBC,clr_tg);
-u32 no_at_tg(void* self,void* attack,void* receive) {
- WWHD_FUNC(0x0200CE78,u32,self,attack,receive);
- u32 s=ea(self),a=ea(attack),b=ea(receive),sa=ld(a+0x44),sb=ld(b+0x44);
- u32 ac=sa?ld(sa+12):0,bc=sb?ld(sb+12):0;
- if(ac&&bc&&ac==bc) return 1;
- if(!(ld(a)&ld(b+0x18)&14)) return 1;
- if(!(ld(a+0x10)&ld(b+0x28))) return 1;
- u32 av=ld(a+0x3c),bv=ld(b+0x3c),sv=ld(s+0x2850),sav=ld(sa+0x18),sbv=ld(sb+0x18);
- u32 ai=call_ptr<u32>(ld(av+0x1c),p(a));
- u32 bi=call_ptr<u32>(ld(bv+0x1c),p(b));
- u32 ag=call_ptr<u32>(ld(sav+0x1c),p(sa));
- u32 bg=call_ptr<u32>(ld(sbv+0x1c),p(sb));
- return call_ptr<u32>(ld(sv+0x2c),self,p(ai),p(bi),p(ag),p(bg));
+static cCcD_GStts *getGStts(cCcD_Stts *status, CcStatusVtable *vtable) {
+    return call_ptr<cCcD_GStts *>(vtable->GetGStts, status);
 }
-VERIFY(0x0200CE78,no_at_tg);
-void set_at_tg(void* self,void* attack,void* receive,void* xyz) {
- WWHD_FUNC(0x0200CFA8,void,self,attack,receive,xyz);
- u32 s=ea(self),a=ea(attack),b=ea(receive);
- u32 av=ld(a+0x3c),bv=ld(b+0x3c),sb=ld(b+0x44),sa=ld(a+0x44),sv=ld(s+0x2850),sav=ld(sa+0x18),sbv=ld(sb+0x18);
- u32 ai=call_ptr<u32>(ld(av+0x1c),p(a));
- u32 bi=call_ptr<u32>(ld(bv+0x1c),p(b));
- u32 ag=call_ptr<u32>(ld(sav+0x1c),p(sa));
- u32 bg=call_ptr<u32>(ld(sbv+0x1c),p(sb));
- u32 ba=ld(b+0x18),aa=ld(a);
- if(call_ptr<u32>(ld(sv+0x34),self,((ba>>4)&1)^1,((aa>>4)&1)^1,p(ai),p(bi),p(sa),p(sb),p(ag),p(bg))) return;
- ba=ld(b+0x18);aa=ld(a);
- if(!(ba&16)) {st(a+8,b);st(a+4,1);}
- if(!(aa&16)) {
-  st(b+0x20,a);st(b+0x1c,1);
-  call_ptr<void>(target(s,0x2850,12),self,attack,receive,p(sa),p(sb));
-  aa=ld(a);
- }
- av=ld(a+0x3c);sbv=ld(sb+0x18);sav=ld(sa+0x18);bv=ld(b+0x3c);sv=ld(s+0x2850);
- ai=call_ptr<u32>(ld(av+0x1c),p(a));
- bi=call_ptr<u32>(ld(bv+0x1c),p(b));
- ag=call_ptr<u32>(ld(sav+0x1c),p(sa));
- bg=call_ptr<u32>(ld(sbv+0x1c),p(sb));
- ba=ld(b+0x18);
- call_ptr<void>(ld(sv+0x24),self,((ba>>4)&1)^1,((aa>>4)&1)^1,attack,receive,p(ai),p(bi),p(sa),p(sb),p(ag),p(bg),xyz);
+static WeightType GetWt(u32 weight) {
+    return weight == 255 ? WeightType_0 : weight == 254 ? WeightType_1 : WeightType_2;
 }
-VERIFY(0x0200CFA8,set_at_tg);
-void check_at_tg(void* self) {
- WWHD_FUNC(0x0200D19C,void,self);
- u32 s=ea(self),tgbase=s+0x400,tgend=tgbase+(ld(s+0x2804)<<2);
- call<void>(0x0200CD0C,self);call<void>(0x0200CDBC,self);
- u32 at=s,end=s+(ld(s+0x2800)<<2);
- f32 zero=load<f32>(0x1000181c);
- for(;at<end;at+=4) {
-  u32 a=ld(at);
-  if(!a||!(ld(a)&1)) continue;
-  u32 ash=getter(a,0x3c,0x2c);
-  if(ash) for(u32 tg=tgbase;tg<tgend;tg+=4) {
-   u32 b=ld(tg);if(!b||!(ld(b+0x18)&1)) continue;
-   if(!call<u32>(0x0200B71C,p(ld(at)+0x48),p(b+0x48))) continue;
-   b=ld(tg);a=ld(at);
-   if(call<u32>(0x0200CE78,self,p(a),p(b))) continue;
-   b=ld(tg);u32 bsh=getter(b,0x3c,0x2c);if(!bsh) continue;
-   if(!ld(0x101ff538)) st(0x101ff538,1);
-   u32 cross=0x101ff52c;
-   u32 hit=call_ptr<u32>(target(ash,0x1c,0x14),p(ash),p(bsh),p(cross));
-   a=ld(at);bool rev=(ld(a+0x40)&2)!=0;
-   if(!rev){b=ld(tg);rev=(ld(b+0x40)&2)!=0;}
-   if(!rev) {if(!hit)continue;}
-   else {
-    if(hit)continue;
-    u32 sh=getter(a,0x3c,0x2c);
-    if(!sh){store<f32>(cross+8,zero);store<f32>(cross,zero);store<f32>(cross+4,zero);}
-    else call<void>(0x02017F0C,p(sh),p(cross));
-    b=ld(tg);a=ld(at);
-   }
-   call<void>(0x0200CFA8,self,p(a),p(b),p(cross));
-  }
-  end=s+(ld(s+0x2800)<<2);
- }
+
+/* 0200CD0C */
+void cCcSState::ClrAtHitInf() {
+    s32 end = mObjAtCount;
+    for (s32 i = 0; i < end; ++i) {
+        cCcD_Obj *obj = mpObjAt[i].get();
+        if (obj != NULL) {
+            cCcD_GObjInf *info = getGObjInf(obj, obj->__vtbl.get());
+            call_ptr<void>(info->__vtbl->ClrAtHit, info);
+            obj = mpObjAt[i].get();
+            cCcD_Stts *status = obj->mStts.get();
+            if (status != NULL) {
+                status = obj->mStts.get();
+                call_ptr<void>(status->__vtbl->ClrAt, status);
+            }
+            end = mObjAtCount;
+        }
+    }
 }
-VERIFY(0x0200D19C,check_at_tg);
-void clr_co(void* self) {
- WWHD_FUNC(0x0200D3B8,void,self);
- u32 s=ea(self),end=ld(s+0x2808);f32 zero=load<f32>(0x1000181c);
- for(s32 i=0;i<(s32)end;i++) {
-  u32 o=ld(s+0x1000+(u32)i*4);
-  if(o) {
-   u32 inf=getter(o,0x3c,0x1c);call_ptr<void>(target(inf,0x3c,0x44),p(inf));
-   o=ld(s+0x1000+(u32)i*4);u32 status=ld(o+0x44);
-   if(status){status=ld(o+0x44);store<f32>(status+8,zero);store<f32>(status,zero);store<f32>(status+4,zero);}
-   end=ld(s+0x2808);
-  }
- }
+
+/* 0200CDBC */
+void cCcSState::ClrTgHitInf() {
+    s32 end = mObjTgCount;
+    for (s32 i = 0; i < end; ++i) {
+        cCcD_Obj *obj = mpObjTg[i].get();
+        if (obj != NULL) {
+            cCcD_GObjInf *info = getGObjInf(obj, obj->__vtbl.get());
+            call_ptr<void>(info->__vtbl->ClrTgHit, info);
+            obj = mpObjTg[i].get();
+            cCcD_Stts *status = obj->mStts.get();
+            if (status != NULL) {
+                status = obj->mStts.get();
+                call_ptr<void>(status->__vtbl->ClrTg, status);
+            }
+            end = mObjTgCount;
+        }
+    }
 }
-VERIFY(0x0200D3B8,clr_co);
-u32 no_co(void* self,void* first,void* second) {
- WWHD_FUNC(0x0200D490,u32,self,first,second);
- u32 a=ea(first),b=ea(second),sa=ld(a+0x44),sb=ld(b+0x44);
- u32 ac=sa?ld(sa+12):0,bc=sb?ld(sb+12):0;
- if(ac&&bc&&ac==bc)return 1;
- u32 af=ld(a+0x2c),bf=ld(b+0x2c);
- if(!(af&((bf>>3)&14)&14))return 1;
- if(!(((af>>3)&14)&bf))return 1;
- return call_ptr<u32>(target(ea(self),0x2850,0x3c),self,first,second)!=0;
+
+/* 0200D3B8 */
+void cCcSState::ClrCoHitInf() {
+    s32 end = mObjCoCount;
+    for (s32 i = 0; i < end; ++i) {
+        cCcD_Obj *obj = mpObjCo[i].get();
+        if (obj != NULL) {
+            cCcD_GObjInf *info = getGObjInf(obj, obj->__vtbl.get());
+            call_ptr<void>(info->__vtbl->ClrCoHit, info);
+            obj = mpObjCo[i].get();
+            cCcD_Stts *status = obj->mStts.get();
+            if (status != NULL) {
+                status = obj->mStts.get();
+                status->m_cc_move.z = zero;
+                status->m_cc_move.x = zero;
+                status->m_cc_move.y = zero;
+            }
+            end = mObjCoCount;
+        }
+    }
 }
-VERIFY(0x0200D490,no_co);
-void set_co(void* self,void* first,void* pos1,void* second,void* pos2,f32 distance) {
- WWHD_FUNC(0x0200D54C,void,self,first,pos1,second,pos2,distance);
- u32 s=ea(self),a=ea(first),b=ea(second);
- u32 bf=ld(b+0x2c),af=ld(a+0x2c),ba=((bf>>9)&1)^1,aa=((af>>9)&1)^1;
- if(ba){st(a+0x34,b);st(a+0x30,1);}
- if(aa){st(b+0x34,a);st(b+0x30,1);}
- if(ba&&aa)call_ptr<void>(target(s,0x2850,0x14),self,first,pos1,second,pos2,distance);
- u32 av=ld(a+0x3c),sb=ld(b+0x44),sa=ld(a+0x44),bv=ld(b+0x3c),sav=ld(sa+0x18),sv=ld(s+0x2850),sbv=ld(sb+0x18);
- u32 ai=call_ptr<u32>(ld(av+0x1c),first);
- u32 bi=call_ptr<u32>(ld(bv+0x1c),second);
- u32 ag=call_ptr<u32>(ld(sav+0x1c),p(sa));
- u32 bg=call_ptr<u32>(ld(sbv+0x1c),p(sb));
- call_ptr<void>(ld(sv+0x1c),self,ba,aa,p(ai),p(bi),p(sa),p(sb),p(ag),p(bg));
+
+/* 0200CE78 */
+u32 cCcSState::ChkNoHitAtTg(cCcD_Obj *at, cCcD_Obj *tg) {
+    cCcD_Stts *atStts = at->mStts.get();
+    cCcD_Stts *tgStts = tg->mStts.get();
+    void *acAt = atStts ? atStts->mp_actor.get() : NULL;
+    void *acTg = tgStts ? tgStts->mp_actor.get() : NULL;
+    if (acAt && acTg && acAt == acTg)
+        return 1;
+    if (!((u32)at->mObjAt.mSPrm & (u32)tg->mObjTg.mSPrm & cCcD_AtSPrm_GrpAll_e))
+        return 1;
+    if (!((u32)at->mObjAt.mType & (u32)tg->mObjTg.mType))
+        return 1;
+    CcObjectVtable *atVt = at->__vtbl.get();
+    CcObjectVtable *tgVt = tg->__vtbl.get();
+    CcServerVtable *serverVt = __vtbl.get();
+    CcStatusVtable *atSttsVt = atStts->__vtbl.get();
+    CcStatusVtable *tgSttsVt = tgStts->__vtbl.get();
+    cCcD_GObjInf *atInfo = getGObjInf(at, atVt);
+    cCcD_GObjInf *tgInfo = getGObjInf(tg, tgVt);
+    cCcD_GStts *atGStts = getGStts(atStts, atSttsVt);
+    cCcD_GStts *tgGStts = getGStts(tgStts, tgSttsVt);
+    return call_ptr<u32>(serverVt->ChkNoHitGAtTg, this, atInfo, tgInfo, atGStts, tgGStts);
 }
-VERIFY(0x0200D54C,set_co);
-void check_co(void* self) {
- WWHD_FUNC(0x0200D684,void,self);
- u32 s=ea(self);call<void>(0x0200D3B8,self);u32 count=ld(s+0x2808);if((s32)count<=1)return;
- u32 begin=s+0x1000,end=begin+(count<<2);f32 zero=load<f32>(0x1000181c);
- Local<be<f32>> distance;
- for(u32 at=begin;at<end-4;at+=4) {
-  u32 a=ld(at);if(!a||!(ld(a+0x2c)&1))continue;
-  u32 ash=getter(a,0x3c,0x2c);if(!ash)continue;
-  for(u32 tg=at+4;tg<end;tg+=4) {
-   u32 b=ld(tg);if(!b||!(ld(b+0x2c)&1))continue;
-   if(!call<u32>(0x0200B71C,p(ld(at)+0x48),p(b+0x48)))continue;
-   b=ld(tg);a=ld(at);if(call<u32>(0x0200D490,self,p(a),p(b)))continue;
-   b=ld(tg);u32 bsh=getter(b,0x3c,0x2c);if(!bsh)continue;
-   *distance.get()=zero;
-   if(!call_ptr<u32>(target(ash,0x1c,0x4c),p(ash),p(bsh),distance.get()))continue;
-   u32 av=ld(ash+0x1c),bv=ld(bsh+0x1c);
-   u32 ap=call_ptr<u32>(ld(av+0x8c),p(ash));
-   u32 bp=call_ptr<u32>(ld(bv+0x8c),p(bsh));
-   f32 d=*distance.get();b=ld(tg);a=ld(at);
-   call<void>(0x0200D54C,self,p(a),p(ap),p(b),p(bp),d);
-  }
- }
+/* 0200CFA8 */
+void cCcSState::SetAtTgCommonHitInf(cCcD_Obj *obj1, cCcD_Obj *obj2, cXyz *xyz) {
+    CcObjectVtable *obj1Vt = obj1->__vtbl.get();
+    CcObjectVtable *obj2Vt = obj2->__vtbl.get();
+    cCcD_Stts *obj2Stts = obj2->mStts.get();
+    cCcD_Stts *obj1Stts = obj1->mStts.get();
+    CcServerVtable *serverVt = __vtbl.get();
+    CcStatusVtable *stts1Vt = obj1Stts->__vtbl.get();
+    CcStatusVtable *stts2Vt = obj2Stts->__vtbl.get();
+    cCcD_GObjInf *info1 = getGObjInf(obj1, obj1Vt);
+    cCcD_GObjInf *info2 = getGObjInf(obj2, obj2Vt);
+    cCcD_GStts *gStts1 = getGStts(obj1Stts, stts1Vt);
+    cCcD_GStts *gStts2 = getGStts(obj2Stts, stts2Vt);
+    u32 tgFlags = obj2->mObjTg.mSPrm, atFlags = obj1->mObjAt.mSPrm;
+    if (call_ptr<u32>(serverVt->ChkAtTgHitAfterCross, this, ((tgFlags >> 4) & 1) ^ 1,
+                      ((atFlags >> 4) & 1) ^ 1, info1, info2, obj1Stts, obj2Stts, gStts1, gStts2))
+        return;
+    tgFlags = obj2->mObjTg.mSPrm;
+    atFlags = obj1->mObjAt.mSPrm;
+    if (!(tgFlags & cCcD_TgSPrm_NoAtHitInfSet_e)) {
+        obj1->mObjAt.mHitObj = obj2;
+        obj1->mObjAt.mRPrm = 1;
+    }
+    if (!(atFlags & cCcD_AtSPrm_NoTgHitInfSet_e)) {
+        obj2->mObjTg.mHitObj = obj1;
+        obj2->mObjTg.mRPrm = 1;
+        call_ptr<void>(__vtbl->CalcTgPlusDmg, this, obj1, obj2, obj1Stts, obj2Stts);
+        atFlags = obj1->mObjAt.mSPrm;
+    }
+    // HD: reload vtables in callback order, retaining full r3 results from virtual getters.
+    obj1Vt = obj1->__vtbl.get();
+    stts2Vt = obj2Stts->__vtbl.get();
+    stts1Vt = obj1Stts->__vtbl.get();
+    obj2Vt = obj2->__vtbl.get();
+    serverVt = __vtbl.get();
+    info1 = getGObjInf(obj1, obj1Vt);
+    info2 = getGObjInf(obj2, obj2Vt);
+    gStts1 = getGStts(obj1Stts, stts1Vt);
+    gStts2 = getGStts(obj2Stts, stts2Vt);
+    tgFlags = obj2->mObjTg.mSPrm;
+    call_ptr<void>(serverVt->SetAtTgGObjInf, this, ((tgFlags >> 4) & 1) ^ 1,
+                   ((atFlags >> 4) & 1) ^ 1, obj1, obj2, info1, info2, obj1Stts, obj2Stts, gStts1,
+                   gStts2, xyz);
 }
-VERIFY(0x0200D684,check_co);
-void plus_damage(void* self,void* attack,void* receive,void* status1,void* status2) {
- WWHD_FUNC(0x0200D834,void,self,attack,receive,status1,status2);
- u8 power=load<u8>(ea(attack)+0x14),dmg=load<u8>(ea(status2)+0x16);
- if(dmg<power)store<u8>(ea(status2)+0x16,power);
+struct CrossState {
+    cXyz cross;
+    be<u32> initialized;
+};
+#define crossState (*gabi::at<CrossState>(0x101FF52C))
+/* 0200D19C */
+void cCcSState::ChkAtTg() {
+    gptr<cCcD_Obj> *objTgEnd = mpObjTg + (u32)mObjTgCount;
+    ClrAtHitInf();
+    ClrTgHitInf();
+    gptr<cCcD_Obj> *end = mpObjAt + (u32)mObjAtCount;
+    for (gptr<cCcD_Obj> *pObjAt = mpObjAt; pObjAt < end; ++pObjAt) {
+        cCcD_Obj *at = pObjAt->get();
+        if (!at || !((u32)at->mObjAt.mSPrm & cCcD_AtSPrm_Set_e))
+            continue;
+        cCcD_ShapeAttr *atShapeAttr = getShapeAttr(at);
+        if (!atShapeAttr)
+            continue;
+        for (gptr<cCcD_Obj> *pObjTg = mpObjTg; pObjTg < objTgEnd; ++pObjTg) {
+            cCcD_Obj *tg = pObjTg->get();
+            if (!tg || !((u32)tg->mObjTg.mSPrm & cCcD_TgSPrm_Set_e))
+                continue;
+            if (!cCcD_DivideInfo_Chk(&pObjAt->get()->mDivideInfo, &tg->mDivideInfo))
+                continue;
+            tg = pObjTg->get();
+            at = pObjAt->get();
+            if (ChkNoHitAtTg(at, tg))
+                continue;
+            tg = pObjTg->get();
+            cCcD_ShapeAttr *tgShapeAttr = getShapeAttr(tg);
+            if (!tgShapeAttr)
+                continue;
+            if (!crossState.initialized)
+                crossState.initialized = 1;
+            u32 didCross = call_ptr<u32>(atShapeAttr->__vtbl->CrossAtTg, atShapeAttr, tgShapeAttr,
+                                         &crossState.cross);
+            at = pObjAt->get();
+            bool anyBsRevHit = ((u32)at->mFlags & cCcD_BsRevHit_e) != 0;
+            if (!anyBsRevHit) {
+                tg = pObjTg->get();
+                anyBsRevHit = ((u32)tg->mFlags & cCcD_BsRevHit_e) != 0;
+            }
+            if (!anyBsRevHit) {
+                if (!didCross)
+                    continue;
+            } else {
+                if (didCross)
+                    continue;
+                cCcD_ShapeAttr *atShape2 = getShapeAttr(at);
+                if (!atShape2) {
+                    crossState.cross.z = zero;
+                    crossState.cross.x = zero;
+                    crossState.cross.y = zero;
+                } else
+                    cM3dGAab_CalcCenter(&atShape2->mAab, &crossState.cross);
+                tg = pObjTg->get();
+                at = pObjAt->get();
+            }
+            SetAtTgCommonHitInf(at, tg, &crossState.cross);
+        }
+        end = mpObjAt + (u32)mObjAtCount;
+    }
 }
-VERIFY(0x0200D834,plus_damage);
-static void assertion(u32 line,u32 text){call<void>(0x0273AA24,p(0x10001870),line,p(text));}
-static bool nan_bits(f32 x){u32 bits;memcpy(&bits,&x,4);return (bits<<1)>0xff000000u;}
-static bool range_bad(u32 v,f32 lo,f32 hi){
- f32 x=load<f32>(v);if(!(lo<x&&x<hi))return true;
- f32 y=load<f32>(v+4);if(!(lo<y&&y<hi))return true;
- f32 z=load<f32>(v+8);return !(lo<z&&z<hi);
+/* 0200D490 */
+u32 cCcSState::ChkNoHitCo(cCcD_Obj *obj1, cCcD_Obj *obj2) {
+    cCcD_Stts *stts1 = obj1->mStts.get();
+    cCcD_Stts *stts2 = obj2->mStts.get();
+    void *ac1 = stts1 ? stts1->mp_actor.get() : NULL;
+    void *ac2 = stts2 ? stts2->mp_actor.get() : NULL;
+    if (ac1 && ac2 && ac1 == ac2)
+        return 1;
+    u32 flags1 = obj1->mObjCo.mSPrm, flags2 = obj2->mObjCo.mSPrm;
+    if (!(flags1 & ((flags2 >> 3) & cCcD_CoSPrm_IGrpAll_e) & cCcD_CoSPrm_IGrpAll_e))
+        return 1;
+    if (!(((flags1 >> 3) & cCcD_CoSPrm_IGrpAll_e) & flags2))
+        return 1;
+    return call_ptr<u32>(__vtbl->ChkNoHitGCo, this, obj1, obj2) != 0;
 }
-void pos_correct(void* self,void* first,void* pos1,void* second,void* pos2,f32 distance){
- WWHD_FUNC(0x0200D84C,void,self,first,pos1,second,pos2,distance);
- u32 s=ea(self),a=ea(first),b=ea(second),p1=ea(pos1),p2=ea(pos2);
- if(nan_bits(distance))assertion(0x26d,0x100019fc);
- f32 lo=load<f32>(0x10001824),hi=load<f32>(0x10001820);
- if(!(lo<distance&&distance<hi))assertion(0x26e,0x10001844);
- if(ld(a+0x2c)&0x100)return;
- if(ld(b+0x2c)&0x100)return;
- u32 sa=ld(a+0x44);if(!sa)return;u32 sb=ld(b+0x44);if(!sb)return;
- if(ld(sa+12)&&ld(sa+12)==ld(sb+12))return;
- f32 absolute=std::fabs(distance);if(absolute<load<f32>(0x10001828))return;
- call_ptr<void>(target(s,0x2850,0x54),self,first,second);
- u32 af=ld(a+0x2c);sa=ld(a+0x44);u32 wa=load<u8>(sa+0x14);
- bool correct_y=false;if(af&0x80)correct_y=(ld(b+0x2c)&0x80)!=0;
- sb=ld(b+0x44);u32 wb=load<u8>(sb+0x14);
- u32 ta=wa==255?0:wa==254?1:2,tb=wb==255?0:wb==254?1:2;
- f32 fa=(f32)load<u8>(sa+0x14),fb=(f32)load<u8>(sb+0x14),total=fa+fb;
- f32 tiny=load<f32>(0x100030b8),one=load<f32>(0x10001838);
- if(std::fabs(total)<tiny){fa=one;fb=one;total=load<f32>(0x1000183c);}
- f32 inverse=one/total,zero=load<f32>(0x1000181c),push_a,push_b;
- if(ta==0){if(tb==0)return;push_a=zero;push_b=one;}
- else if(ta==1){if(tb==0){push_a=one;push_b=zero;}else if(tb==1){push_a=load<f32>(0x10001840);push_b=push_a;}else{push_a=zero;push_b=one;}}
- else{if(tb==2){push_b=fa*inverse;push_a=fb*inverse;}else{push_a=one;push_b=zero;}}
- f32 dx=load<f32>(p2)-load<f32>(p1),dz=load<f32>(p2+8)-load<f32>(p1+8),dy=zero,squared;
- if(correct_y){dy=load<f32>(p2+4)-load<f32>(p1+4);squared=fmadds(dz,dz,fmadds(dx,dx,dy*dy));}
- else squared=fmadds(dx,dx,dz*dz);
- f64 len=call<f64>(0x028F4384,(f64)squared);
- Local<Vec> vec_a,vec_b;u32 va=ea(vec_a.get()),vb=ea(vec_b.get());
- if(!(std::fabs(len)<tiny)){
-  f32 factor=(f32)((f64)distance/len);dx*=factor;dz*=factor;
-  store<f32>(vb,dx*push_b);store<f32>(va,-(dx*push_a));store<f32>(va+8,-(dz*push_a));store<f32>(vb+8,dz*push_b);
-  if(correct_y){dy*=factor;store<f32>(va+4,-(dy*push_a));store<f32>(vb+4,dy*push_b);}
-  else{store<f32>(vb+4,zero);store<f32>(va+4,zero);}
- }else{
-  store<f32>(vb+4,zero);store<f32>(va+8,zero);store<f32>(vb+8,zero);store<f32>(va+4,zero);
-  if(!(absolute<tiny)){store<f32>(va,-(distance*push_a));store<f32>(vb,distance*push_b);}
-  else{store<f32>(vb,push_b);store<f32>(va,-push_a);}
- }
- if(nan_bits(load<f32>(va)))assertion(0x32b,0x1000187c);
- if(nan_bits(load<f32>(va+4)))assertion(0x32c,0x100018bc);
- if(nan_bits(load<f32>(va+8)))assertion(0x32d,0x100018fc);
- if(nan_bits(load<f32>(vb)))assertion(0x32f,0x1000193c);
- if(nan_bits(load<f32>(vb+4)))assertion(0x330,0x1000197c);
- if(nan_bits(load<f32>(vb+8)))assertion(0x331,0x100019bc);
- if(range_bad(va,lo,hi))assertion(0x333,0x10001a40);
- if(range_bad(vb,lo,hi))assertion(0x337,0x10001ab8);
- call<void>(0x0200BE28,p(ld(a+0x44)),load<f32>(va),load<f32>(va+4),load<f32>(va+8));
- call<void>(0x0200BE28,p(ld(b+0x44)),load<f32>(vb),load<f32>(vb+4),load<f32>(vb+8));
- call<void>(0x028E8D88,pos1,vec_a.get(),pos1);
- call<void>(0x028E8D88,pos2,vec_b.get(),pos2);
- if(nan_bits(load<f32>(p1)))assertion(0x342,0x10001b30);
- if(nan_bits(load<f32>(p1+4)))assertion(0x343,0x10001b74);
- if(nan_bits(load<f32>(p1+8)))assertion(0x344,0x10001bb8);
- if(nan_bits(load<f32>(p2)))assertion(0x346,0x10001bfc);
- if(nan_bits(load<f32>(p2+4)))assertion(0x347,0x10001c40);
- if(nan_bits(load<f32>(p2+8)))assertion(0x348,0x10001c84);
- if(range_bad(p1,lo,hi))assertion(0x34a,0x10001cc8);
- if(range_bad(p2,lo,hi))assertion(0x34e,0x10001d4c);
+/* 0200D54C */
+void cCcSState::SetCoCommonHitInf(cCcD_Obj *obj1, cXyz *pos1, cCcD_Obj *obj2, cXyz *pos2,
+                                  f32 distance) {
+    u32 flags2 = obj2->mObjCo.mSPrm, flags1 = obj1->mObjCo.mSPrm;
+    u32 obj2CoHitInfSet = ((flags2 >> 9) & 1) ^ 1, obj1CoHitInfSet = ((flags1 >> 9) & 1) ^ 1;
+    if (obj2CoHitInfSet) {
+        obj1->mObjCo.mHitObj = obj2;
+        obj1->mObjCo.mRPrm = 1;
+    }
+    if (obj1CoHitInfSet) {
+        obj2->mObjCo.mHitObj = obj1;
+        obj2->mObjCo.mRPrm = 1;
+    }
+    if (obj2CoHitInfSet && obj1CoHitInfSet)
+        call_ptr<void>(__vtbl->SetPosCorrect, this, obj1, pos1, obj2, pos2, distance);
+    CcObjectVtable *obj1Vt = obj1->__vtbl.get();
+    cCcD_Stts *stts2 = obj2->mStts.get();
+    cCcD_Stts *stts1 = obj1->mStts.get();
+    CcObjectVtable *obj2Vt = obj2->__vtbl.get();
+    CcStatusVtable *stts1Vt = stts1->__vtbl.get();
+    CcServerVtable *serverVt = __vtbl.get();
+    CcStatusVtable *stts2Vt = stts2->__vtbl.get();
+    cCcD_GObjInf *info1 = getGObjInf(obj1, obj1Vt);
+    cCcD_GObjInf *info2 = getGObjInf(obj2, obj2Vt);
+    cCcD_GStts *gStts1 = getGStts(stts1, stts1Vt);
+    cCcD_GStts *gStts2 = getGStts(stts2, stts2Vt);
+    call_ptr<void>(serverVt->SetCoGObjInf, this, obj2CoHitInfSet, obj1CoHitInfSet, info1, info2,
+                   stts1, stts2, gStts1, gStts2);
 }
-VERIFY(0x0200D84C,pos_correct);
-void* ctor(void* self) {
- WWHD_FUNC(0x0200E138,void*,self);
- u32 s=ea(self);if(!s)s=call<u32>(0x0273AD10,0x2854u);
- if(s){
-  st(s+0x2850,0x10001dd8);
-  call<void>(0x028F521C,p(s+0x400),0xc00u);
-  call<void>(0x028F521C,p(s+0x1000),0x400u);
-  call<void>(0x028F521C,p(s+0x1400),0x1400u);
-  st(s+0x2800,0);st(s+0x2804,0);st(s+0x2808,0);st(s+0x280c,0);
-  call<void>(0x0200B750,p(s+0x2810));
- }
- return p(s);
+struct CrossLength {
+    be<f32> value;
+};
+/* 0200D684 */
+void cCcSState::ChkCo() {
+    ClrCoHitInf();
+    s32 count = mObjCoCount;
+    if (count <= 1)
+        return;
+    gptr<cCcD_Obj> *end = mpObjCo + (u32)count;
+    CrossLength crossLen;
+    for (gptr<cCcD_Obj> *objCo1 = mpObjCo; objCo1 < end - 1; ++objCo1) {
+        cCcD_Obj *obj1 = objCo1->get();
+        if (!obj1 || !((u32)obj1->mObjCo.mSPrm & cCcD_CoSPrm_Set_e))
+            continue;
+        cCcD_ShapeAttr *shape1 = getShapeAttr(obj1);
+        if (!shape1)
+            continue;
+        for (gptr<cCcD_Obj> *objCo2 = objCo1 + 1; objCo2 < end; ++objCo2) {
+            cCcD_Obj *obj2 = objCo2->get();
+            if (!obj2 || !((u32)obj2->mObjCo.mSPrm & cCcD_CoSPrm_Set_e))
+                continue;
+            if (!cCcD_DivideInfo_Chk(&objCo1->get()->mDivideInfo, &obj2->mDivideInfo))
+                continue;
+            obj2 = objCo2->get();
+            obj1 = objCo1->get();
+            if (ChkNoHitCo(obj1, obj2))
+                continue;
+            obj2 = objCo2->get();
+            cCcD_ShapeAttr *shape2 = getShapeAttr(obj2);
+            if (!shape2)
+                continue;
+            crossLen.value = zero;
+            if (!call_ptr<u32>(shape1->__vtbl->CrossCo, shape1, shape2, &crossLen.value))
+                continue;
+            CcShapeVtable *vt1 = shape1->__vtbl.get();
+            CcShapeVtable *vt2 = shape2->__vtbl.get();
+            cXyz *pos1 = call_ptr<cXyz *>(vt1->GetCoCP, shape1);
+            cXyz *pos2 = call_ptr<cXyz *>(vt2->GetCoCP, shape2);
+            f32 distance = crossLen.value;
+            obj2 = objCo2->get();
+            obj1 = objCo1->get();
+            SetCoCommonHitInf(obj1, pos1, obj2, pos2, distance);
+        }
+    }
 }
-VERIFY(0x0200E138,ctor);
-void ct(void* self) {
- WWHD_FUNC(0x0200E1C4,void,self);
- u32 s=ea(self);
- for(u32 i=0;i<0x400;i+=4)st(s+i,0);
- for(u32 i=0x400;i<0x1000;i+=4)st(s+i,0);
- for(u32 i=0x1000;i<0x1400;i+=4)st(s+i,0);
- for(u32 i=0x1400;i<0x2800;i+=4)st(s+i,0);
- st(s+0x2800,0);st(s+0x280c,0);st(s+0x2804,0);st(s+0x2808,0);
+/* 0200D834 */
+void cCcSState::CalcTgPlusDmg(cCcD_Obj *at, cCcD_Obj *, cCcD_Stts *, cCcD_Stts *tgStts) {
+    u8 power = at->mObjAt.mAtp, damage = tgStts->m_dmg;
+    if (damage < power)
+        tgStts->m_dmg = power;
 }
-VERIFY(0x0200E1C4,ct);
-void dt(void* self) {WWHD_FUNC(0x0200E23C,void,self);call<void>(0x0200E1C4,self);}
-VERIFY(0x0200E23C,dt);
-void set(void* self,void* object) {
- WWHD_FUNC(0x0200E240,void,self,object);
- u32 s=ea(self),o=ea(object);
- if(ld(o)&1){u32 n=ld(s+0x2800);if((s32)n<0x100){st(s+(n<<2),o);st(s+0x2800,ld(s+0x2800)+1);}}
- if(ld(o+0x18)&1){u32 n=ld(s+0x2804);if((s32)n<0x300){st(s+0x400+(n<<2),o);st(s+0x2804,ld(s+0x2804)+1);}}
- if(ld(o+0x2c)&1){u32 n=ld(s+0x2808);if((s32)n<0x100){st(s+0x1000+(n<<2),o);st(s+0x2808,ld(s+0x2808)+1);}}
- u32 n=ld(s+0x280c);if((s32)n<0x500){st(s+0x1400+(n<<2),o);st(s+0x280c,ld(s+0x280c)+1);}
+static bool nan_bits(f32 x) {
+    u32 bits;
+    memcpy(&bits, &x, 4);
+    return (bits << 1) > 0xff000000u;
 }
-VERIFY(0x0200E240,set);
-void remove(void* self,void* object) {
- WWHD_FUNC(0x0200E2F4,void,self,object);
- u32 s=ea(self),o=ea(object);
- for(u32 i=s;i<s+(ld(s+0x2800)<<2);i+=4)if(ld(i)==o)st(i,0);
- for(u32 i=s+0x400;i<s+0x400+(ld(s+0x2804)<<2);i+=4)if(ld(i)==o)st(i,0);
- for(u32 i=s+0x1000;i<s+0x1000+(ld(s+0x2808)<<2);i+=4)if(ld(i)==o)st(i,0);
- for(u32 i=s+0x1400;i<s+0x1400+(ld(s+0x280c)<<2);i+=4)if(ld(i)==o)st(i,0);
+static bool range_bad(cXyz *v, f32 lo, f32 hi) {
+    f32 x = (f32)v->x;
+    if (!(lo < x && x < hi))
+        return true;
+    f32 y = (f32)v->y;
+    if (!(lo < y && y < hi))
+        return true;
+    f32 z = (f32)v->z;
+    return !(lo < z && z < hi);
 }
-VERIFY(0x0200E2F4,remove);
-void area(void* self) {
- WWHD_FUNC(0x0200E414,void,self);
- u32 s=ea(self);Local<Aab> aab;st(ea(aab.get())+24,0x1000180c);call<void>(0x02017DAC,aab.get());
- u32 base=s+0x1400,end=base+(ld(s+0x280c)<<2);
- for(u32 i=base;i<end;i+=4){
-  u32 o=ld(i);if(!o)continue;
-  u32 shape=getter(o,0x3c,0x2c);
-  if(shape){call_ptr<void>(target(shape,0x1c,0x94),p(shape));call<void>(0x02017E98,aab.get(),p(shape));}
-  end=base+(ld(s+0x280c)<<2);
- }
- call<void>(0x0200B7D4,p(s+0x2810),aab.get());
- end=base+(ld(s+0x280c)<<2);
- for(u32 i=base;i<end;i+=4){
-  u32 o=ld(i);if(!o)continue;
-  u32 shape=getter(o,0x3c,0x2c);
-  if(shape){o=ld(i);u32 flag=ld(o+0x40)&2;call<void>(0x0200B8CC,p(s+0x2810),p(o+0x48),p(shape),flag);}
-  end=base+(ld(s+0x280c)<<2);
- }
+/* 0200D84C */
+// HD: fused products and the double-precision square root retain the verified rounding.
+void cCcSState::SetPosCorrect(cCcD_Obj *obj1, cXyz *ppos1, cCcD_Obj *obj2, cXyz *ppos2,
+                              f32 cross_len) {
+    if (nan_bits(cross_len))
+        assertion("c_cc_s.cpp", 0x26d,
+                  "!__generic(cross_len, , ,__isnand,__isnanf,__isnanl,,,)(cross_len)");
+    f32 lo = rangeMin, hi = rangeMax;
+    if (!(lo < cross_len && cross_len < hi))
+        assertion("c_cc_s.cpp", 0x26e, "-1.0e32f < cross_len && cross_len < 1.0e32f");
+    if ((u32)obj1->mObjCo.mSPrm & cCcD_CoSPrm_NoCrr_e)
+        return;
+    if ((u32)obj2->mObjCo.mSPrm & cCcD_CoSPrm_NoCrr_e)
+        return;
+    cCcD_Stts *obj1Stts = obj1->mStts.get();
+    if (!obj1Stts)
+        return;
+    cCcD_Stts *obj2Stts = obj2->mStts.get();
+    if (!obj2Stts)
+        return;
+    if (obj1Stts->mp_actor.get() && obj1Stts->mp_actor.get() == obj2Stts->mp_actor.get())
+        return;
+    f32 absCrossLen = std::fabs(cross_len);
+    if (absCrossLen < minCorrection)
+        return;
+    call_ptr<void>(__vtbl->SetCoGCorrectProc, this, obj1, obj2);
+    u32 obj1CoFlags = (u32)obj1->mObjCo.mSPrm;
+    obj1Stts = obj1->mStts.get();
+    u32 obj1WeightUc = obj1Stts->m_weight;
+    bool correctY = false;
+    if (obj1CoFlags & cCcD_CoSPrm_Sph3DCrr_e)
+        correctY = ((u32)obj2->mObjCo.mSPrm & cCcD_CoSPrm_Sph3DCrr_e) != 0;
+    obj2Stts = obj2->mStts.get();
+    u32 obj2WeightUc = obj2Stts->m_weight;
+    WeightType obj1WeightType = GetWt(obj1WeightUc);
+    WeightType obj2WeightType = GetWt(obj2WeightUc);
+    f32 obj1SrcWeight = (f32)obj1Stts->m_weight, obj2SrcWeight = (f32)obj2Stts->m_weight,
+        combinedWeight = obj1SrcWeight + obj2SrcWeight;
+
+    if (std::fabs(combinedWeight) < tiny) {
+        obj1SrcWeight = one;
+        obj2SrcWeight = one;
+        combinedWeight = two;
+    }
+    f32 invCombinedWeight = one / combinedWeight, obj2Weight, obj1Weight;
+    if (obj1WeightType == WeightType_0) {
+        if (obj2WeightType == WeightType_0)
+            return;
+        obj2Weight = zero;
+        obj1Weight = one;
+    } else if (obj1WeightType == WeightType_1) {
+        if (obj2WeightType == WeightType_0) {
+            obj2Weight = one;
+            obj1Weight = zero;
+        } else if (obj2WeightType == WeightType_1) {
+            obj2Weight = half;
+            obj1Weight = obj2Weight;
+        } else {
+            obj2Weight = zero;
+            obj1Weight = one;
+        }
+    } else {
+        if (obj2WeightType == WeightType_2) {
+            obj1Weight = obj1SrcWeight * invCombinedWeight;
+            obj2Weight = obj2SrcWeight * invCombinedWeight;
+        } else {
+            obj2Weight = one;
+            obj1Weight = zero;
+        }
+    }
+    f32 dx = (f32)ppos2->x - (f32)ppos1->x, dz = (f32)ppos2->z - (f32)ppos1->z, dy = zero, squared;
+    if (correctY) {
+        dy = (f32)ppos2->y - (f32)ppos1->y;
+        squared = gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy));
+    } else
+        squared = gabi::fmadds(dx, dx, dz * dz);
+    f64 objDistLen = squareRoot((f64)squared);
+    cXyz vec1;
+    cXyz vec2;
+    cXyz *vec1Ptr = &vec1;
+    cXyz *vec2Ptr = &vec2;
+    if (!(std::fabs(objDistLen) < tiny)) {
+        f32 pushFactor = (f32)((f64)cross_len / objDistLen);
+        dx *= pushFactor;
+        dz *= pushFactor;
+        vec2Ptr->x = dx * obj1Weight;
+        vec1Ptr->x = -(dx * obj2Weight);
+        vec1Ptr->z = -(dz * obj2Weight);
+        vec2Ptr->z = dz * obj1Weight;
+        if (correctY) {
+            dy *= pushFactor;
+            vec1Ptr->y = -(dy * obj2Weight);
+            vec2Ptr->y = dy * obj1Weight;
+        } else {
+            vec2Ptr->y = zero;
+            vec1Ptr->y = zero;
+        }
+    } else {
+        vec2Ptr->y = zero;
+        vec1Ptr->z = zero;
+        vec2Ptr->z = zero;
+        vec1Ptr->y = zero;
+        if (!(absCrossLen < tiny)) {
+            vec1Ptr->x = -(cross_len * obj2Weight);
+            vec2Ptr->x = cross_len * obj1Weight;
+        } else {
+            vec2Ptr->x = obj1Weight;
+            vec1Ptr->x = -obj2Weight;
+        }
+    }
+    if (nan_bits((f32)vec1Ptr->x))
+        assertion("c_cc_s.cpp", 0x32b,
+                  "!__generic(vec1.x, , ,__isnand,__isnanf,__isnanl,,,)(vec1.x)");
+    if (nan_bits((f32)vec1Ptr->y))
+        assertion("c_cc_s.cpp", 0x32c,
+                  "!__generic(vec1.y, , ,__isnand,__isnanf,__isnanl,,,)(vec1.y)");
+    if (nan_bits((f32)vec1Ptr->z))
+        assertion("c_cc_s.cpp", 0x32d,
+                  "!__generic(vec1.z, , ,__isnand,__isnanf,__isnanl,,,)(vec1.z)");
+    if (nan_bits((f32)vec2Ptr->x))
+        assertion("c_cc_s.cpp", 0x32f,
+                  "!__generic(vec2.x, , ,__isnand,__isnanf,__isnanl,,,)(vec2.x)");
+    if (nan_bits((f32)vec2Ptr->y))
+        assertion("c_cc_s.cpp", 0x330,
+                  "!__generic(vec2.y, , ,__isnand,__isnanf,__isnanl,,,)(vec2.y)");
+    if (nan_bits((f32)vec2Ptr->z))
+        assertion("c_cc_s.cpp", 0x331,
+                  "!__generic(vec2.z, , ,__isnand,__isnanf,__isnanl,,,)(vec2.z)");
+    if (range_bad(vec1Ptr, lo, hi))
+        assertion("c_cc_s.cpp", 0x333,
+                  "-1.0e32f < vec1.x && vec1.x < 1.0e32f && -1.0e32f < vec1.y && vec1.y < 1.0e32f "
+                  "&& -1.0e32f < vec1.z && vec1.z < 1.0e32f");
+    if (range_bad(vec2Ptr, lo, hi))
+        assertion("c_cc_s.cpp", 0x337,
+                  "-1.0e32f < vec2.x && vec2.x < 1.0e32f && -1.0e32f < vec2.y && vec2.y < 1.0e32f "
+                  "&& -1.0e32f < vec2.z && vec2.z < 1.0e32f");
+    cCcD_Stts_PlusCcMove(obj1->mStts.get(), (f32)vec1Ptr->x, (f32)vec1Ptr->y, (f32)vec1Ptr->z);
+    cCcD_Stts_PlusCcMove(obj2->mStts.get(), (f32)vec2Ptr->x, (f32)vec2Ptr->y, (f32)vec2Ptr->z);
+    PSVECAdd(ppos1, &vec1, ppos1);
+    PSVECAdd(ppos2, &vec2, ppos2);
+    if (nan_bits((f32)ppos1->x))
+        assertion("c_cc_s.cpp", 0x342,
+                  "!__generic(ppos1->x, , ,__isnand,__isnanf,__isnanl,,,)(ppos1->x)");
+    if (nan_bits((f32)ppos1->y))
+        assertion("c_cc_s.cpp", 0x343,
+                  "!__generic(ppos1->y, , ,__isnand,__isnanf,__isnanl,,,)(ppos1->y)");
+    if (nan_bits((f32)ppos1->z))
+        assertion("c_cc_s.cpp", 0x344,
+                  "!__generic(ppos1->z, , ,__isnand,__isnanf,__isnanl,,,)(ppos1->z)");
+    if (nan_bits((f32)ppos2->x))
+        assertion("c_cc_s.cpp", 0x346,
+                  "!__generic(ppos2->x, , ,__isnand,__isnanf,__isnanl,,,)(ppos2->x)");
+    if (nan_bits((f32)ppos2->y))
+        assertion("c_cc_s.cpp", 0x347,
+                  "!__generic(ppos2->y, , ,__isnand,__isnanf,__isnanl,,,)(ppos2->y)");
+    if (nan_bits((f32)ppos2->z))
+        assertion("c_cc_s.cpp", 0x348,
+                  "!__generic(ppos2->z, , ,__isnand,__isnanf,__isnanl,,,)(ppos2->z)");
+    if (range_bad(ppos1, lo, hi))
+        assertion("c_cc_s.cpp", 0x34a,
+                  "-1.0e32f < ppos1->x && ppos1->x < 1.0e32f && -1.0e32f < ppos1->y && ppos1->y < "
+                  "1.0e32f && -1.0e32f < ppos1->z && ppos1->z < 1.0e32f");
+    if (range_bad(ppos2, lo, hi))
+        assertion("c_cc_s.cpp", 0x34e,
+                  "-1.0e32f < ppos2->x && ppos2->x < 1.0e32f && -1.0e32f < ppos2->y && ppos2->y < "
+                  "1.0e32f && -1.0e32f < ppos2->z && ppos2->z < 1.0e32f");
 }
-VERIFY(0x0200E414,area);
-void move(void* self) {
- WWHD_FUNC(0x0200E558,void,self);
- call<void>(0x0200E414,self);call<void>(0x0200D19C,self);call<void>(0x0200D684,self);
- u32 s=ea(self);call_ptr<void>(target(s,0x2850,0x4c),self);
- st(s+0x2800,0);st(s+0x280c,0);st(s+0x2804,0);st(s+0x2808,0);
+
+/* 0200E138 */
+static cCcSState *cCcS__ct(cCcSState *object) {
+    if (!object)
+        object = (cCcSState *)operator_new(sizeof(cCcSState));
+    if (object) {
+        object->__vtbl = gabi::at<CcServerVtable>(0x10001DD8);
+        zeroMemory(object->mpObjTg, sizeof(object->mpObjTg));
+        zeroMemory(object->mpObjCo, sizeof(object->mpObjCo));
+        zeroMemory(object->mpObj, sizeof(object->mpObj));
+        object->mObjAtCount = 0;
+        object->mObjTgCount = 0;
+        object->mObjCoCount = 0;
+        object->mObjCount = 0;
+        cCcD_DivideArea__ct(&object->mDivideArea);
+    }
+    return object;
 }
-VERIFY(0x0200E558,move);
-void draw_clear(void* self) {
- WWHD_FUNC(0x0200E5BC,void,self);
- u32 s=ea(self);
- for(u32 i=0;i<0x400;i+=4)st(s+i,0);st(s+0x2800,0);
- for(u32 i=0x400;i<0x1000;i+=4)st(s+i,0);st(s+0x2804,0);
- for(u32 i=0x1000;i<0x1400;i+=4)st(s+i,0);st(s+0x2808,0);
- for(u32 i=0x1400;i<0x2800;i+=4)st(s+i,0);st(s+0x280c,0);
+/* 0200E1C4 */
+void cCcSState::Ct() {
+    for (u32 i = 0; i < 0x100; ++i)
+        mpObjAt[i] = NULL;
+    for (u32 i = 0; i < 0x300; ++i)
+        mpObjTg[i] = NULL;
+    for (u32 i = 0; i < 0x100; ++i)
+        mpObjCo[i] = NULL;
+    for (u32 i = 0; i < 0x500; ++i)
+        mpObj[i] = NULL;
+    mObjAtCount = 0;
+    mObjCount = 0;
+    mObjTgCount = 0;
+    mObjCoCount = 0;
 }
-VERIFY(0x0200E5BC,draw_clear);
-void correct_proc(void* self,void* first,void* second){WWHD_FUNC(0x0200E630,void,self,first,second);}
-VERIFY(0x0200E630,correct_proc);
-void sinit(){
- WWHD_FUNC(0x0200E634,void);
- st(0x101ff524,0);st(0x101ff51c,0);st(0x101ff528,0);st(0x101ff520,0);
- call<void>(0x028F026C,p(0x1018c6b4));f32 a=load<f32>(0x10001dd0),b=load<f32>(0x10001dd4);
- store<f32>(0x101ff510,a);store<f32>(0x101ff514,b);
- call<void>(0x028ED6F8,p(0x101ff518));call<void>(0x028F026C,p(0x1018c6c0));
- call<void>(0x028EAB2C,p(0x101ff519));call<void>(0x028F026C,p(0x1018c6cc));
+/* 0200E23C */
+void cCcSState::Dt() { Ct(); }
+/* 0200E240 */
+void cCcSState::Set(cCcD_Obj *obj) {
+    if ((u32)obj->mObjAt.mSPrm & cCcD_AtSPrm_Set_e) {
+        s32 n = mObjAtCount;
+        if (n < 0x100) {
+            mpObjAt[(u32)n] = obj;
+            mObjAtCount = (u32)mObjAtCount + 1;
+        }
+    }
+    if ((u32)obj->mObjTg.mSPrm & cCcD_TgSPrm_Set_e) {
+        s32 n = mObjTgCount;
+        if (n < 0x300) {
+            mpObjTg[(u32)n] = obj;
+            mObjTgCount = (u32)mObjTgCount + 1;
+        }
+    }
+    if ((u32)obj->mObjCo.mSPrm & cCcD_CoSPrm_Set_e) {
+        s32 n = mObjCoCount;
+        if (n < 0x100) {
+            mpObjCo[(u32)n] = obj;
+            mObjCoCount = (u32)mObjCoCount + 1;
+        }
+    }
+    s32 n = mObjCount;
+    if (n < 0x500) {
+        mpObj[(u32)n] = obj;
+        mObjCount = (u32)mObjCount + 1;
+    }
 }
-VERIFY(0x0200E634,sinit);
-void co_ginfo(void* self,u32 a,u32 b,void* i1,void* i2,void* s1,void* s2,void* g1,void* g2){WWHD_FUNC(0x0200E6C8,void,self,a,b,i1,i2,s1,s2,g1,g2);}
-VERIFY(0x0200E6C8,co_ginfo);
-void at_tg_ginfo(void* self,u32 a,u32 b,void* o1,void* o2,void* i1,void* i2,void* s1,void* s2,void* g1,void* g2,void* xyz){WWHD_FUNC(0x0200E6CC,void,self,a,b,o1,o2,i1,i2,s1,s2,g1,g2,xyz);}
-VERIFY(0x0200E6CC,at_tg_ginfo);
-u32 no_g_at_tg(void* self,void* i1,void* i2,void* g1,void* g2){WWHD_FUNC(0x0200E6D0,u32,self,i1,i2,g1,g2);return 0;}
-VERIFY(0x0200E6D0,no_g_at_tg);
-u32 hit_after(void* self,u32 a,u32 b,void* i1,void* i2,void* s1,void* s2,void* g1,void* g2){WWHD_FUNC(0x0200E6D8,u32,self,a,b,i1,i2,s1,s2,g1,g2);return 0;}
-VERIFY(0x0200E6D8,hit_after);
-u32 no_g_co(void* self,void* first,void* second){WWHD_FUNC(0x0200E6E0,u32,self,first,second);return 0;}
-VERIFY(0x0200E6E0,no_g_co);
-void move_after(void* self){WWHD_FUNC(0x0200E6E8,void,self);}
-VERIFY(0x0200E6E8,move_after);
+/* 0200E2F4 */
+// HD: removal leaves holes and retains the registered list counts.
+void cCcSState::Remove(cCcD_Obj *obj) {
+    for (gptr<cCcD_Obj> *p = mpObjAt; p < mpObjAt + (u32)mObjAtCount; ++p)
+        if (p->get() == obj)
+            *p = NULL;
+    for (gptr<cCcD_Obj> *p = mpObjTg; p < mpObjTg + (u32)mObjTgCount; ++p)
+        if (p->get() == obj)
+            *p = NULL;
+    for (gptr<cCcD_Obj> *p = mpObjCo; p < mpObjCo + (u32)mObjCoCount; ++p)
+        if (p->get() == obj)
+            *p = NULL;
+    for (gptr<cCcD_Obj> *p = mpObj; p < mpObj + (u32)mObjCount; ++p)
+        if (p->get() == obj)
+            *p = NULL;
 }
+/* 0200E414 */
+void cCcSState::CalcArea() {
+    CcAab aab;
+    aab.__vtbl = 0x1000180C;
+    cM3dGAab_ClearForMinMax(&aab);
+    gptr<cCcD_Obj> *end = mpObj + (u32)mObjCount;
+    for (gptr<cCcD_Obj> *pObj = mpObj; pObj < end; ++pObj) {
+        cCcD_Obj *obj = pObj->get();
+        if (!obj)
+            continue;
+        cCcD_ShapeAttr *shape = getShapeAttr(obj);
+        if (shape) {
+            call_ptr<void>(shape->__vtbl->CalcAabBox, shape);
+            cM3dGAab_SetMinMaxAab(&aab, &shape->mAab);
+        }
+        end = mpObj + (u32)mObjCount;
+    }
+    cCcD_DivideArea_SetArea(&mDivideArea, &aab);
+    end = mpObj + (u32)mObjCount;
+    for (gptr<cCcD_Obj> *pObj = mpObj; pObj < end; ++pObj) {
+        cCcD_Obj *obj = pObj->get();
+        if (!obj)
+            continue;
+        cCcD_ShapeAttr *shape = getShapeAttr(obj);
+        if (shape) {
+            obj = pObj->get();
+            u32 flag = (u32)obj->mFlags & cCcD_BsRevHit_e;
+            cCcD_DivideArea_CalcDivideInfo(&mDivideArea, &obj->mDivideInfo, &shape->mAab, flag);
+        }
+        end = mpObj + (u32)mObjCount;
+    }
+}
+/* 0200E558 */
+void cCcSState::Move() {
+    CalcArea();
+    ChkAtTg();
+    ChkCo();
+    call_ptr<void>(__vtbl->MoveAfterCheck, this);
+    mObjAtCount = 0;
+    mObjCount = 0;
+    mObjTgCount = 0;
+    mObjCoCount = 0;
+}
+/* 0200E5BC */
+void cCcSState::DrawClear() {
+    for (u32 i = 0; i < 0x100; ++i)
+        mpObjAt[i] = NULL;
+    mObjAtCount = 0;
+    for (u32 i = 0; i < 0x300; ++i)
+        mpObjTg[i] = NULL;
+    mObjTgCount = 0;
+    for (u32 i = 0; i < 0x100; ++i)
+        mpObjCo[i] = NULL;
+    mObjCoCount = 0;
+    for (u32 i = 0; i < 0x500; ++i)
+        mpObj[i] = NULL;
+    mObjCount = 0;
+}
+/* 0200E630 */
+void cCcSState::SetCoGCorrectProc(cCcD_Obj *, cCcD_Obj *) {}
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject, pad[2];
+    be<u32> words[4];
+};
+#define headerStatics (*gabi::at<HeaderStatics>(0x101FF510))
+/* 0200E634 */
+static void __sinit_c_cc_s_cpp() {
+    headerStatics.words[2] = 0;
+    headerStatics.words[0] = 0;
+    headerStatics.words[3] = 0;
+    headerStatics.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C6B4));
+    f32 first = piMin, second = piMax;
+    headerStatics.piMin = first;
+    headerStatics.piMax = second;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C6C0));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C6CC));
+}
+/* 0200E6C8 */
+void cCcSState::SetCoGObjInf(u32 obj2HitInfSet, u32 obj1HitInfSet, cCcD_GObjInf *info1,
+                             cCcD_GObjInf *info2, cCcD_Stts *stts1, cCcD_Stts *stts2,
+                             cCcD_GStts *gStts1, cCcD_GStts *gStts2) {}
+/* 0200E6CC */
+void cCcSState::SetAtTgGObjInf(u32 obj2HitInfSet, u32 obj1HitInfSet, cCcD_Obj *obj1, cCcD_Obj *obj2,
+                               cCcD_GObjInf *info1, cCcD_GObjInf *info2, cCcD_Stts *stts1,
+                               cCcD_Stts *stts2, cCcD_GStts *gStts1, cCcD_GStts *gStts2,
+                               cXyz *xyz1) {}
+/* 0200E6D0 */
+u32 cCcSState::ChkNoHitGAtTg(cCcD_GObjInf *, cCcD_GObjInf *, cCcD_GStts *, cCcD_GStts *) {
+    return 0;
+}
+/* 0200E6D8 */
+u32 cCcSState::ChkAtTgHitAfterCross(u32 obj2HitInfSet, u32 obj1HitInfSet, cCcD_GObjInf *info1,
+                                    cCcD_GObjInf *info2, cCcD_Stts *stts1, cCcD_Stts *stts2,
+                                    cCcD_GStts *gStts1, cCcD_GStts *gStts2) {
+    return 0;
+}
+/* 0200E6E0 */
+u32 cCcSState::ChkNoHitGCo(cCcD_Obj *, cCcD_Obj *) { return 0; }
+/* 0200E6E8 */
+void cCcSState::MoveAfterCheck() {}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data zero 1000181C
+data rangeMin 10001824
+data rangeMax 10001820
+data minCorrection 10001828
+data tiny 100030B8
+data one 10001838
+data two 1000183C
+data half 10001840
+data piMin 10001DD0
+data piMax 10001DD4
+str 10001870 in 0200D84C
+str 10001844 in 0200D84C
+str 1000187C in 0200D84C
+str 100018BC in 0200D84C
+str 100018FC in 0200D84C
+str 1000193C in 0200D84C
+str 1000197C in 0200D84C
+str 100019BC in 0200D84C
+str 100019FC in 0200D84C
+str 10001A40 in 0200D84C
+str 10001AB8 in 0200D84C
+str 10001B30 in 0200D84C
+str 10001B74 in 0200D84C
+str 10001BB8 in 0200D84C
+str 10001BFC in 0200D84C
+str 10001C40 in 0200D84C
+str 10001C84 in 0200D84C
+str 10001CC8 in 0200D84C
+str 10001D4C in 0200D84C
+ext 0200B71C u32 cCcD_DivideInfo_Chk(cCcD_DivideInfo*,cCcD_DivideInfo*)
+ext 02017F0C void cM3dGAab_CalcCenter(CcAab*,cXyz*)
+ext 0200BE28 void cCcD_Stts_PlusCcMove(cCcD_Stts*,f32,f32,f32)
+ext 028E8D88 void PSVECAdd(cXyz*,cXyz*,cXyz*)
+ext 028F4384 f64 squareRoot(f64)
+ext 0273AD10 void* operator_new(u32)
+ext 028F521C void zeroMemory(void*,u32)
+ext 0200B750 void cCcD_DivideArea__ct(cCcD_DivideArea*)
+ext 02017DAC void cM3dGAab_ClearForMinMax(CcAab*)
+ext 02017E98 void cM3dGAab_SetMinMaxAab(CcAab*,CcAab*)
+ext 0200B7D4 void cCcD_DivideArea_SetArea(cCcD_DivideArea*,CcAab*)
+ext 0200B8CC void cCcD_DivideArea_CalcDivideInfo(cCcD_DivideArea*,cCcD_DivideInfo*,CcAab*,u32)
+ext 0273AA24 void assertion(const char*,u32,const char*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

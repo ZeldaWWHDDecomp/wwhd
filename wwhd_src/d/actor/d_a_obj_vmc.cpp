@@ -1,478 +1,496 @@
-/* Soft soil mound and Makar tree, ported from GameCube source and HD
- * disassembly. */
-#include "gabi.h"
-namespace vmc {
-using gabi::call;
-using gabi::load;
-using gabi::store;
-static u32 play() { return call<u32>(0x025200D4); }
-static void copyMatrix(u32 src, u32 dst) {
-  f32 v[12];
-  for (int i = 0; i < 12; ++i)
-    v[i] = load<f32>(src + 4 * i);
-  for (int i = 0; i < 12; ++i)
-    store<f32>(dst + 4 * i, v[i]);
+// Soft soil and Makar tree.
+#include "d/actor/d_a_obj_vmc.h"
+using daObjVmc::Act_c;
+const gc_tu_data gc_tu = {.safeString = 0x10032D48, .headerStatics = {0x1046C894, 0x101CDA48, 0x1046C8A0}};
+enum { STATE_BASE_MAIN, STATE_TREE_DEMO_WAIT, STATE_TREE_DEMO_MAIN, STATE_TREE_MAIN };
+enum {
+    dRes_INDEX_VMC_BDL_VMCBS_e = 10,
+    dRes_INDEX_VMC_BDL_VMCWD_e = 13,
+    dRes_INDEX_VMC_BCK_VMCWG_e = 6,
+    dRes_INDEX_VMC_BCK_VMCWH_e = 7,
+    dRes_INDEX_VMC_DZB_VMCBS_e = 16,
+    dRes_INDEX_VMC_DZB_VMCWD_e = 17
+};
+enum {
+    JA_SE_OBJ_CB_SEED_GERMIN = 0x6A13,
+    JA_SE_OBJ_CB_SEED_GROW = 0x6A14,
+    fpcNm_HOOKSHOT_e = 0xA9,
+    fpcNm_NPC_CB1_e = 0x14E
+};
+namespace dPa_name {
+enum { ID_AK_ST_MACORETREESMOKE00 = 0xA1BC };
 }
-static u32 resource(s32 index) {
-  gabi::Local<u32[2]> name;
-  store<u32>(name.a, 0x10032E60);
-  store<u32>(name.a + 4, 0x10032D48);
-  return call<u32>(0x026066C4, load<u32>(0x101F4F28), name.a, index);
-}
-static void assertResource(u32 ptr, s32 line, u32 msg) {
-  if (!ptr)
-    call<void>(0x0273AA24, 0x10032DACu, line, msg);
-}
-u32 PrmAbstract(u32 a, s32 width, s32 shift) {
-  WWHD_FUNC(0x023B3450, u32, a, width, shift);
-  u32 w = (u32)width & 63, s = (u32)shift & 63;
-  return (s < 32 ? load<u32>(a + 0xB0) >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
-}
-VERIFY(0x023B3450, PrmAbstract);
-bool create_heap(u32 a) {
-  WWHD_FUNC(0x023B2294, bool, a);
-  u32 base = resource(10);
-  assertResource(base, 200, 0x10032DD4);
-  u32 model = call<u32>(0x025E38E0, base, 0, 0x11020203u);
-  store<u32>(a + 0x3BC, model);
-  if (!model)
-    return false;
-  u32 tree = resource(13);
-  assertResource(tree, 207, 0x10032DE8);
-  model = call<u32>(0x025E38E0, tree, 0, 0x11020203u);
-  store<u32>(a + 0x3C0, model);
-  if (!model)
-    return false;
-  u32 grow = resource(6);
-  assertResource(grow, 215, 0x10032DBC);
-  s32 ok = call<s32>(0x025E8508, a + 0x3C4, tree, grow, 1, 0, 0, -1, 0, 1.0f);
-  store<f32>(a + 0x3C4, 0.75f);
-  if (!ok)
-    return false;
-  u32 hook = resource(7);
-  assertResource(hook, 226, 0x10032DC8);
-  ok = call<s32>(0x025E8508, a + 0x450, tree, hook, 1, 0, 0, -1, 0, 1.0f);
-  if (!ok)
-    return false;
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318),
-      z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  call<void>(0x025F1C28, 0x1048D0CCu, load<s16>(a + 0x32A));
-  call<void>(0x028E90D4, 0x1048D0CCu, a + 0x648);
-  call<void>(0x028E90D4, 0x1048D0CCu, a + 0x678);
-  bool success = true;
-  u32 bg = call<u32>(0x024F23F4, 0);
-  store<u32>(a + 0x3B4, bg);
-  if (!bg)
-    success = false;
-  else {
-    u32 mesh = resource(16);
-    s32 r = call<s32>(0x0200A030, load<u32>(a + 0x3B4), mesh, 1, a + 0x648);
-    if (r)
-      success = false;
-  }
-  bg = call<u32>(0x024F23F4, 0);
-  store<u32>(a + 0x3B8, bg);
-  if (!bg)
-    return false;
-  u32 mesh = resource(17);
-  s32 r = call<s32>(0x0200A030, load<u32>(a + 0x3B8), mesh, 1, a + 0x678);
-  return r == 0 && success;
-}
-VERIFY(0x023B2294, create_heap);
-bool solidHeapCB(u32 a) {
-  WWHD_FUNC(0x023B2574, bool, a);
-  return create_heap(a);
-}
-VERIFY(0x023B2574, solidHeapCB);
-void set_mtx(u32 a) {
-  WWHD_FUNC(0x023B2578, void, a);
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318),
-      z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  s16 rx = load<s16>(a + 0x320), ry = load<s16>(a + 0x322),
-      rz = load<s16>(a + 0x324);
-  call<void>(0x025F1B48, 0x1048D0CCu, rx, ry, rz);
-  copyMatrix(0x1048D0CC, load<u32>(a + 0x3BC) + 0xC8);
-  x = load<f32>(a + 0x314);
-  y = load<f32>(a + 0x318);
-  z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  rx = load<s16>(a + 0x328);
-  ry = load<s16>(a + 0x32A);
-  rz = load<s16>(a + 0x32C);
-  call<void>(0x025F1B48, 0x1048D0CCu, rx, ry, rz);
-  copyMatrix(0x1048D0CC, load<u32>(a + 0x3C0) + 0xC8);
-}
-VERIFY(0x023B2578, set_mtx);
-void init_mtx(u32 a) {
-  WWHD_FUNC(0x023B26C8, void, a);
-  u32 model = load<u32>(a + 0x3BC);
-  f32 x = load<f32>(a + 0x330), y = load<f32>(a + 0x334),
-      z = load<f32>(a + 0x338);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  store<f32>(model + 0xC4, z);
-  model = load<u32>(a + 0x3C0);
-  x = load<f32>(a + 0x330);
-  y = load<f32>(a + 0x334);
-  z = load<f32>(a + 0x338);
-  store<f32>(model + 0xC4, z);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  set_mtx(a);
-}
-VERIFY(0x023B26C8, init_mtx);
-void CreateInit(u32 a) {
-  WWHD_FUNC(0x023B2704, void, a);
-  u32 model = load<u32>(a + 0x3BC);
-  store<u32>(a + 0x348, model ? model + 0xC8 : 0);
-  call<void>(0x025D674C, a, -300.0f, -0.0f, -300.0f, 300.0f, 500.0f, 300.0f);
-  call<void>(0x02515F14, a + 0x4DC, 255, 255, a);
-  call<void>(0x02516518, a + 0x518, 0x101CDA04u);
-  store<u32>(a + 0x55C, a + 0x4DC);
-  u32 p = play();
-  call<void>(0x024EEA6C, p + 0x12A0, load<u32>(a + 0x3B4), a);
-  u32 sw = PrmAbstract(a, 8, 8);
-  s32 room = (s8)load<u8>(a + 0x2FE);
-  u32 save = load<u32>(0x101F84DC);
-  if (call<s32>(0x025BA0C0, save + 0x20, sw, room)) {
-    p = play();
-    s32 r = call<s32>(0x024EEA6C, p + 0x12A0, load<u32>(a + 0x3B8), a);
-    if (!r)
-      store<u8>(a + 0x6D5, 1);
-    f32 end = (f32)load<s16>(a + 0x3CE);
-    store<u8>(a + 0x6D6, 1);
-    store<s32>(a + 0x6CC, 3);
-    store<f32>(a + 0x3C8, end);
-  } else {
-    store<s32>(a + 0x6CC, 0);
-    store<u8>(a + 0x6D6, 0);
-  }
-  init_mtx(a);
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318) + 40.0f,
-      z = load<f32>(a + 0x31C);
-  store<f32>(a + 0x390, x);
-  store<f32>(a + 0x394, y);
-  store<f32>(a + 0x398, z);
-  store<f32>(a + 0x37C, x);
-  store<f32>(a + 0x380, y);
-  store<f32>(a + 0x384, z);
-  store<u8>(a + 0x389, 0xA7);
-  store<u8>(a + 0x38B, 0xA7);
-  store<u8>(a + 0x6D4, 0);
-  store<u8>(a + 0x6B9, 0);
-  store<u8>(a + 0x6C8, 1);
-  call<void>(0x0253E9B0, a + 0xF8, 0x10032E1Cu);
-}
-VERIFY(0x023B2704, CreateInit);
-s32 create(u32 a) {
-  WWHD_FUNC(0x023B2928, s32, a);
-  u32 flags = load<u32>(a + 0x2E4);
-  if (!(flags & 8)) {
-    if (a) {
-      call<void>(0x025D4ED0, a);
-      store<u32>(a + 0xB4, 0x10032D98);
-      call<void>(0x027F2BC0, a + 0x3C4, 0);
-      store<u32>(a + 0x3D4, 0x1016E54C);
-      call<void>(0x027DA984, a + 0x3D8);
-      store<u32>(a + 0x44C, 0);
-      store<u32>(a + 0x41C, 0);
-      store<u32>(a + 0x440, 0);
-      store<u32>(a + 0x448, 0);
-      store<u32>(a + 0x40C, 0x1016D820);
-      store<u32>(a + 0x444, 0);
-      store<u32>(a + 0x3D4, 0x10032D70);
-      call<void>(0x027F2BC0, a + 0x450, 0);
-      store<u32>(a + 0x460, 0x1016E54C);
-      call<void>(0x027DA984, a + 0x464);
-      store<u32>(a + 0x460, 0x10032D70);
-      store<u32>(a + 0x4D0, 0);
-      store<u32>(a + 0x4D8, 0);
-      store<u32>(a + 0x4D4, 0);
-      store<u32>(a + 0x4CC, 0);
-      store<u32>(a + 0x498, 0x1016D820);
-      store<u32>(a + 0x4A8, 0);
-      call<void>(0x0200BD2C, a + 0x4DC);
-      call<void>(0x02515DA0, a + 0x4F8);
-      store<u32>(a + 0x4F4, 0x1004AE88);
-      store<u32>(a + 0x4F8, 0x1004AEC0);
-      call<void>(0x02515FB8, a + 0x518);
-      store<u32>(a + 0x62C, 0x100015A8);
-      store<u32>(a + 0x628, 0x10032D60);
-      call<void>(0x02018590, a + 0x630);
-      store<u32>(a + 0x554, 0x1004B108);
-      store<u32>(a + 0x644, 0x1004B150);
-      store<u32>(a + 0x62C, 0x1004B160);
-      call<void>(0x025A5B18, a + 0x6A8, 1);
-      flags = load<u32>(a + 0x2E4);
+// HD: private constructor views expose the embedded material table and compiler vtables.
+struct VmcMaterialTable {
+    u8 _00[0x34];
+    be<u32> __vtbl;
+    u8 _38[0xC];
+    be<u32> field_0x44;
+    u8 _48[0x20];
+};
+struct VmcBckConstruction {
+    J3DFrameCtrl mFrameCtrl;
+    be<u32> __vtbl;
+    VmcMaterialTable mMaterial;
+    be<u32> field_0x7C, field_0x80, field_0x84, field_0x88;
+};
+WWHD_SIZE(VmcBckConstruction, 0x8C);
+struct VmcVtable {
+    be<u32> mEntry;
+};
+struct VmcJointAnimation {
+    u8 _00[0x14];
+    be<u32> mpMtxCalc;
+};
+struct VmcModelData {
+    u8 _00[8];
+    gptr<VmcJointAnimation> mJointNodes;
+};
+static VmcVtable l_actorVtable;
+static VmcVtable l_aabVtable;
+static VmcVtable l_bckVtable;
+static VmcVtable l_bckBaseVtable;
+static VmcVtable l_materialVtable;
+static dCcD_SrcCyl cyl_src_base;
+u32 Vmc_PrmAbstract(Act_c*, s32, s32);
+s32 Vmc_bgSet(dBgW*, cBgD_t*, u32, Mtx34*);
+void Vmc_materialCtor(VmcMaterialTable*);
+void Vmc_bckTailDtor(be<u32>*, s32);
+void Vmc_setEventName(dEvt_info_c*, const char*);
+f64 Vmc_sqrt(f64);
+
+static void constructBck(mDoExt_bckAnm* animation, bool grow) {
+    auto* view = reinterpret_cast<VmcBckConstruction*>(animation);
+    view->mFrameCtrl.init(0);
+    view->__vtbl = gabi::ea(&l_bckBaseVtable);
+    Vmc_materialCtor(&view->mMaterial);
+    if (grow) {
+        view->field_0x88 = 0;
+        view->mMaterial.field_0x44 = 0;
+        view->field_0x7C = 0;
+        view->field_0x84 = 0;
+        view->mMaterial.__vtbl = gabi::ea(&l_materialVtable);
+        view->field_0x80 = 0;
+        view->__vtbl = gabi::ea(&l_bckVtable);
+    } else {
+        view->__vtbl = gabi::ea(&l_bckVtable);
+        view->field_0x80 = 0;
+        view->field_0x88 = 0;
+        view->field_0x84 = 0;
+        view->field_0x7C = 0;
+        view->mMaterial.__vtbl = gabi::ea(&l_materialVtable);
+        view->mMaterial.field_0x44 = 0;
     }
-    store<u32>(a + 0x2E4, flags | 8);
-  }
-  store<u8>(a + 0x6D5, 0);
-  s32 phase = call<s32>(0x02520460, a + 0x3AC, 0x10032E60u);
-  if (phase == 4) {
-    if (call<s32>(0x025D63E8, a, 0x023B2574u, 0x32A0))
-      CreateInit(a);
-    else
-      phase = 5;
-  }
-  return phase;
 }
-VERIFY(0x023B2928, create);
-bool remove(u32 a) {
-  WWHD_FUNC(0x023B2ADC, bool, a);
-  u32 p = play();
-  call<void>(0x020087EC, p + 0x12A0, load<u32>(a + 0x3B4));
-  if (load<u8>(a + 0x6D5)) {
-    p = play();
-    call<void>(0x020087EC, p + 0x12A0, load<u32>(a + 0x3B8));
-  }
-  u32 vt = load<u32>(a + 0x6A8), fn = load<u32>(vt + 0x44);
-  call<void>(fn, a + 0x6A8);
-  call<void>(0x025204C8, a + 0x3AC, 0x10032E60u);
-  return true;
+/* 023B2574 */
+// HD: tww Act_c::solidHeapCB is a free binding until autoglue supports static methods.
+BOOL Vmc_solidHeapCB(fopAc_ac_c* actor) {
+    return static_cast<Act_c*>(actor)->create_heap();
 }
-VERIFY(0x023B2ADC, remove);
-void base_main(u32 a) {
-  WWHD_FUNC(0x023B2B58, void, a);
-  if (load<u8>(a + 0x6D6)) {
-    s32 room = (s8)load<u8>(a + 0x326);
-    u32 p = play(), particles = load<u32>(p + 0x5AB0);
-    call<void>(0x025A847C, particles, 2, 0xA1BC, a + 0x314, a + 0x320, 0, 255,
-               a + 0x6A8, room, 0, 0, 0);
-    u32 flags = load<u32>(a + 0x39C);
-    store<u32>(a + 0x6CC, 1);
-    store<u32>(a + 0x39C, flags & ~0x10000000u);
-    p = play();
-    u32 player = load<u32>(p + 0x5B2C);
-    s32 angle = call<s32>(0x025D6894, a, player);
-    store<s32>(a + 0x6D0, 0);
-    store<s16>(a + 0x32A, angle + 0x1800);
-  }
-}
-VERIFY(0x023B2B58, base_main);
-void tree_demo_wait(u32 a) {
-  WWHD_FUNC(0x023B2C18, void, a);
-  store<s32>(a + 0x6CC, 2);
-}
-VERIFY(0x023B2C18, tree_demo_wait);
-void tree_demo_main(u32 a) {
-  WWHD_FUNC(0x023B2C24, void, a);
-  u32 timer = load<u32>(a + 0x6D0) + 1;
-  store<u32>(a + 0x6D0, timer);
-  if (timer == 10 || timer == 40) {
-    s32 reverb = call<s32>(0x02520540, (s8)load<u8>(a + 0x326));
-    call<void>(0x025E1A40, timer == 10 ? 0x6A13 : 0x6A14, a + 0x314, 0, reverb);
-  }
-  call<void>(0x025E742C, a + 0x3C4);
-  if ((load<u8>(a + 0x3D3) & 1) || load<f32>(a + 0x3C4) == 0.0f) {
-    store<s32>(a + 0x6CC, 3);
-    u32 p = play();
-    s32 r = call<s32>(0x024EEA6C, p + 0x12A0, load<u32>(a + 0x3B8), a);
-    u32 status = load<u32>(a + 0x2E0);
-    if (!r)
-      store<u8>(a + 0x6D5, 1);
-    store<u32>(a + 0x2E0, status | 0x200000);
-    u32 sw = PrmAbstract(a, 8, 8);
-    s32 room = (s8)load<u8>(a + 0x2FE);
-    u32 save = load<u32>(0x101F84DC);
-    call<void>(0x025B9E38, save + 0x20, sw, room);
-  }
-}
-VERIFY(0x023B2C24, tree_demo_main);
-void tree_main(u32 a) {
-  WWHD_FUNC(0x023B2D50, void, a);
-  if (!load<u8>(a + 0x6D4)) {
-    if (call<s32>(0x02516464, a + 0x518)) {
-      u32 anim = resource(7);
-      if (!anim)
-        call<void>(0x0273AA24, 0x10032E28u, 429, 0x10032E38u);
-      u32 model = load<u32>(a + 0x3C0), data = load<u32>(model + 0xAC);
-      call<void>(0x025E8508, a + 0x450, data, anim, 1, 0, 0, -1, 1, 1.0f);
-      store<u8>(a + 0x6D4, 1);
+/* 023B2294 */
+bool Act_c::create_heap() {
+    auto* mdl_bs_data =
+        static_cast<J3DModelData*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_BDL_VMCBS_e, gc_tu.safeString));
+    if (!mdl_bs_data)
+        JUT_ASSERT_fail("d_a_obj_vmc.cpp", 200, "mdl_bs_data != 0");
+    J3DModel* model = mDoExt_J3DModel__create(mdl_bs_data, 0, 0x11020203);
+    mModelBase = model;
+    if (!model)
+        return false;
+    auto* mdl_wd_data =
+        static_cast<J3DModelData*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_BDL_VMCWD_e, gc_tu.safeString));
+    if (!mdl_wd_data)
+        JUT_ASSERT_fail("d_a_obj_vmc.cpp", 207, "mdl_wd_data != 0");
+    model = mDoExt_J3DModel__create(mdl_wd_data, 0, 0x11020203);
+    mModelTree = model;
+    if (!model)
+        return false;
+    auto* bck_wg =
+        static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_BCK_VMCWG_e, gc_tu.safeString));
+    if (!bck_wg)
+        JUT_ASSERT_fail("d_a_obj_vmc.cpp", 215, "bck_wg != 0");
+    BOOL ok = mBckAnmGrow.init(mdl_wd_data, bck_wg, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false);
+    mBckAnmGrow.setPlaySpeed(0.75f);
+    if (!ok)
+        return false;
+    auto* bck_wh =
+        static_cast<J3DAnmTransform*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_BCK_VMCWH_e, gc_tu.safeString));
+    if (!bck_wh)
+        JUT_ASSERT_fail("d_a_obj_vmc.cpp", 226, "bck_wh != 0");
+    ok = mBckAnmHookshot.init(mdl_wd_data, bck_wh, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false);
+    if (!ok)
+        return false;
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::YrotM(shape_angle.y);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtxBase);
+    PSMTXCopy(mDoMtx_stack_c::get(), &mMtxTree);
+    bool success = true;
+    mpBgBase = new_dBgW();
+    if (!mpBgBase)
+        success = false;
+    else {
+        auto* mesh = static_cast<cBgD_t*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_DZB_VMCBS_e, gc_tu.safeString));
+        if (Vmc_bgSet(mpBgBase, mesh, dBgW::MOVE_BG_e, &mMtxBase))
+            success = false;
     }
-  } else {
-    if ((load<u8>(a + 0x45F) & 1) || load<f32>(a + 0x450) == 0.0f)
-      store<u8>(a + 0x6D4, 0);
-    else
-      call<void>(0x025E742C, a + 0x450);
-  }
-  if (call<s32>(0x025162A4, a + 0x518)) {
-    u32 hit = call<u32>(0x02516300, a + 0x518);
-    if (hit) {
-      u32 stts = load<u32>(hit + 0x44);
-      if (!stts)
-        return;
-      u32 actor = load<u32>(stts + 0xC);
-      if (actor && load<s16>(actor + 8) == 0xA9)
-        call<void>(0x025B8B68, load<u32>(0x101F84DC) + 0x644, 0x3420);
-    }
-  }
+    mpBgTree = new_dBgW();
+    if (!mpBgTree)
+        return false;
+    auto* mesh = static_cast<cBgD_t*>(dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_DZB_VMCWD_e, gc_tu.safeString));
+    s32 result = Vmc_bgSet(mpBgTree, mesh, dBgW::MOVE_BG_e, &mMtxTree);
+    return result == 0 && success;
 }
-VERIFY(0x023B2D50, tree_main);
-bool execute(u32 a) {
-  WWHD_FUNC(0x023B2EF4, bool, a);
-  call<void>(0x020182E0, a + 0x630, a + 0x314);
-  u32 state = load<u32>(a + 0x6CC);
-  if (state == 0) {
-    u32 p = play();
-    call<void>(0x0200E240, p + 0x26A4, a + 0x518);
-    state = load<u32>(a + 0x6CC);
-  }
-  switch (state) {
-  case 0:
-    base_main(a);
-    break;
-  case 1:
-    tree_demo_wait(a);
-    break;
-  case 2:
-    tree_demo_main(a);
-    break;
-  case 3:
-    tree_main(a);
-    break;
-  }
-  set_mtx(a);
-  u32 p = play(), player = load<u32>(p + 0x5B34);
-  gabi::Local<f32[3]> dist;
-  call<void>(0x0201ADE0, player + 0x314, dist.a, a + 0x314);
-  bool range = load<u8>(a + 0x6C8) != 0;
-  f32 x = load<f32>(dist.a), z = load<f32>(dist.a + 8);
-  gabi::Local<f32[3]> xz;
-  store<f32>(xz.a, x);
-  store<f32>(xz.a + 4, 0.0f);
-  store<f32>(xz.a + 8, z);
-  f32 mag = call<f32>(0x028E8DD0, xz.a);
-  f64 distance = call<f64>(0x028F4384, (f64)mag);
-  if (!range) {
-    bool away = distance > 110.0;
-    if (!away) {
-      f32 y = load<f32>(dist.a + 4);
-      away = y < -500.0f || y > 500.0f;
+/* 023B2704 */
+void Act_c::CreateInit() {
+    J3DModel* model = mModelBase;
+    cullMtx = model ? gabi::ea(model->getBaseTRMtx()) : 0;
+    fopAcM_setCullSizeBox(this, -300.0f, -0.0f, -300.0f, 300.0f, 500.0f, 300.0f);
+    mStts.Init(255, 255, this);
+    mCyl.Set(&cyl_src_base);
+    mCyl.SetStts(&mStts);
+    auto* bg = dComIfG_Bgsp();
+    bg->Regist(mpBgBase, this);
+    u32 sw = Vmc_PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+    s8 room = home.roomNo;
+    if (dComIfGs_isSwitch(sw, room)) {
+        bg = dComIfG_Bgsp();
+        s32 result = bg->Regist(mpBgTree, this);
+        if (!result)
+            mHasTreeBg = 1;
+        f32 end = mBckAnmGrow.getEndFrame();
+        mHasTree = 1;
+        mState = STATE_TREE_MAIN;
+        mBckAnmGrow.setFrame(end);
+    } else {
+        mState = STATE_BASE_MAIN;
+        mHasTree = 0;
     }
-    if (away) {
-      store<u8>(a + 0x6C8, 1);
-      range = true;
-    } else
-      range = load<u8>(a + 0x6C8) != 0;
-  } else {
-    if (distance < 100.0) {
-      f32 y = load<f32>(dist.a + 4);
-      if (y > -490.0f && y < 490.0f) {
-        store<u8>(a + 0x6C8, 0);
-        range = false;
-      } else
-        range = load<u8>(a + 0x6C8) != 0;
-    } else
-      range = load<u8>(a + 0x6C8) != 0;
-  }
-  if (!range) {
-    store<u32>(a + 0x39C, load<u32>(a + 0x39C) & ~0x1000000Au);
+    init_mtx();
+    f32 x = current.pos.x, y = f32(current.pos.y) + 40.0f, z = current.pos.z;
+    attention_info.position.x = x;
+    attention_info.position.y = y;
+    attention_info.position.z = z;
+    eyePos.x = x;
+    eyePos.y = y;
+    eyePos.z = z;
+    attention_info.distances[fopAc_Attn_TYPE_TALK_e] = 0xA7;
+    attention_info.distances[fopAc_Attn_TYPE_SPEAK_e] = 0xA7;
+    mHookshotAnim = 0;
+    mSmoke.m11 = 0;
+    mLinkRangeCheck = 1;
+    Vmc_setEventName(&eventInfo, "cb_sow");
+}
+/* 023B2928 */
+cPhs_State Act_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (this) {
+            fopAc_ac_c_ct(this);
+            __vtbl = gabi::ea(&l_actorVtable);
+            constructBck(&mBckAnmGrow, true);
+            constructBck(&mBckAnmHookshot, false);
+            dCcD_Stts_ct(&mStts);
+            dCcD_Cyl_ct(&mCyl, gabi::ea(&l_aabVtable));
+            __ct(&mSmoke, 1);
+            flags = actor_condition;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    mHasTreeBg = 0;
+    cPhs_State phase = dComIfG_resLoad(&mPhs, "Vmc");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (fopAcM_entrySolidHeap(this, Vmc_solidHeapCB, 0x32A0))
+            CreateInit();
+        else
+            phase = cPhs_ERROR_e;
+    }
+    return phase;
+}
+/* 023B2ADC */
+bool Act_c::_delete() {
+    auto* bg = dComIfG_Bgsp();
+    bg->Release(mpBgBase);
+    if (mHasTreeBg) {
+        bg = dComIfG_Bgsp();
+        bg->Release(mpBgTree);
+    }
+    mSmoke.remove();
+    dComIfG_resDelete(&mPhs, "Vmc");
     return true;
-  }
-  p = play();
-  u32 cb = load<u32>(p + 0x5B38);
-  if (cb) {
-    p = play();
-    cb = load<u32>(p + 0x5B38);
-    if (cb && load<s16>(cb + 8) == 0x14E)
-      store<u16>(a + 0xFA, load<u16>(a + 0xFA) | 1);
-  }
-  if (load<u8>(a + 0x6C8) && !load<u8>(a + 0x6D6)) {
-    p = play();
-    u32 controlled = load<u32>(p + 0x5B2C);
-    if (controlled && load<s16>(controlled + 8) == 0x14E) {
-      store<u32>(a + 0x39C, load<u32>(a + 0x39C) | 0x1000000Au);
-      return true;
+}
+/* 023B2578 */
+void Act_c::set_mtx() {
+    f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    s16 rx = current.angle.x, ry = current.angle.y, rz = current.angle.z;
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), rx, ry, rz);
+    mModelBase->setBaseTRMtx(mDoMtx_stack_c::get());
+    x = current.pos.x;
+    y = current.pos.y;
+    z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    rx = shape_angle.x;
+    ry = shape_angle.y;
+    rz = shape_angle.z;
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), rx, ry, rz);
+    mModelTree->setBaseTRMtx(mDoMtx_stack_c::get());
+}
+/* 023B26C8 */
+void Act_c::init_mtx() {
+    J3DModel* model = mModelBase;
+    f32 x = scale.x, y = scale.y, z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    model = mModelTree;
+    x = scale.x;
+    y = scale.y;
+    z = scale.z;
+    // HD: retain the second scale reload and z/x/y store order when fields overlap.
+    model->mBaseScale.z = z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    set_mtx();
+}
+/* 023B2B58 */
+void Act_c::daObjVmc_base_main() {
+    if (mHasTree) {
+        dComIfGp_particle_setToon(dPa_name::ID_AK_ST_MACORETREESMOKE00, &current.pos, &current.angle, nullptr, 255,
+                                  &mSmoke, current.roomNo);
+        u32 flags = attention_info.flags;
+        mState = STATE_TREE_DEMO_WAIT;
+        attention_info.flags = flags & ~fopAc_Attn_UNK10000000_e;
+        s16 angle = fopAcM_searchActorAngleY(this, dComIfGp_getPlayer(0));
+        mTimer = 0;
+        shape_angle.y = angle + 0x1800;
     }
-  }
-  store<u32>(a + 0x39C, load<u32>(a + 0x39C) & ~0x1000000Au);
-  return true;
 }
-VERIFY(0x023B2EF4, execute);
-bool draw(u32 a) {
-  WWHD_FUNC(0x023B320C, bool, a);
-  u32 env = call<u32>(0x02555D0C);
-  call<void>(0x025626A4, env, 1, a + 0x314, a + 0x110);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(a + 0x3BC), a + 0x110);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(a + 0x3C0), a + 0x110);
-  s32 state = load<s32>(a + 0x6CC);
-  u32 model = load<u32>(a + 0x3C0), data = load<u32>(model + 0xAC);
-  u32 anim = state < 3 ? a + 0x3C4 : a + 0x450;
-  f32 frame = load<f32>(anim + 4);
-  call<void>(0x025E86B8, anim, data, frame);
-  call<void>(0x025E2DE0, load<u32>(a + 0x3C0), 0);
-  state = load<s32>(a + 0x6CC);
-  model = load<u32>(a + 0x3C0);
-  data = load<u32>(model + 0xAC);
-  store<u32>(load<u32>(data + 8) + 0x14, 0);
-  call<void>(0x025E2DE0, load<u32>(a + 0x3BC), 0);
-  return true;
+/* 023B2C18 */
+void Act_c::daObjVmc_tree_demo_wait() {
+    mState = STATE_TREE_DEMO_MAIN;
 }
-VERIFY(0x023B320C, draw);
-s32 wrapperCreate(u32 a) {
-  WWHD_FUNC(0x023B3308, s32, a);
-  return create(a);
+/* 023B2C24 */
+void Act_c::daObjVmc_tree_demo_main() {
+    u32 timer = u32(mTimer) + 1;
+    mTimer = static_cast<s32>(timer);
+    if (timer == 10 || timer == 40) {
+        s32 reverb = dComIfGp_getReverb(current.roomNo);
+        mDoAud_seStart(timer == 10 ? JA_SE_OBJ_CB_SEED_GERMIN : JA_SE_OBJ_CB_SEED_GROW, &current.pos, 0, reverb);
+    }
+    mBckAnmGrow.play();
+    if (mBckAnmGrow.isStop()) {
+        mState = STATE_TREE_MAIN;
+        s32 result = dComIfG_Bgsp()->Regist(mpBgTree, this);
+        u32 status = actor_status;
+        if (!result)
+            mHasTreeBg = 1;
+        actor_status = status | fopAcStts_UNK200000_e;
+        u32 sw = Vmc_PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+        s32 room = home.roomNo;
+        dComIfGs_onSwitch(sw, room);
+    }
 }
-VERIFY(0x023B3308, wrapperCreate);
-bool wrapperDelete(u32 a) {
-  WWHD_FUNC(0x023B330C, bool, a);
-  return remove(a);
+/* 023B2D50 */
+void Act_c::daObjVmc_tree_main() {
+    if (!mHookshotAnim) {
+        if (mCyl.ChkCoHit()) {
+            auto* bck_wh = static_cast<J3DAnmTransform*>(
+                dComIfG_getObjectRes("Vmc", dRes_INDEX_VMC_BCK_VMCWH_e, gc_tu.safeString));
+            if (!bck_wh)
+                JUT_ASSERT_fail("d_a_obj_vmc.cpp", 429, "bck_wh != 0");
+            mBckAnmHookshot.init(mModelTree->getModelData(), bck_wh, true, J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, true);
+            mHookshotAnim = 1;
+        }
+    } else {
+        if (mBckAnmHookshot.isStop())
+            mHookshotAnim = 0;
+        else
+            mBckAnmHookshot.play();
+    }
+    if (mCyl.ChkTgHit()) {
+        auto* hit = static_cast<dCcD_GObjInf*>(mCyl.GetTgHitObj());
+        if (hit) {
+            dCcD_Stts* stts = hit->mStts;
+            if (!stts)
+                return;
+            fopAc_ac_c* actor = stts->mp_actor;
+            if (actor && actor->mProcName == fpcNm_HOOKSHOT_e)
+                dComIfGs_onEventBit(0x3420);
+        }
+    }
 }
-VERIFY(0x023B330C, wrapperDelete);
-bool wrapperExecute(u32 a) {
-  WWHD_FUNC(0x023B3310, bool, a);
-  return execute(a);
+/* 023B2EF4 */
+bool Act_c::_execute() {
+    mCyl.SetC(&current.pos);
+    s32 state = mState;
+    if (state == STATE_BASE_MAIN) {
+        cCcS_Set(dComIfG_Ccsp(), &mCyl);
+        state = mState;
+    }
+    switch (state) {
+    case STATE_BASE_MAIN:
+        daObjVmc_base_main();
+        break;
+    case STATE_TREE_DEMO_WAIT:
+        daObjVmc_tree_demo_wait();
+        break;
+    case STATE_TREE_DEMO_MAIN:
+        daObjVmc_tree_demo_main();
+        break;
+    case STATE_TREE_MAIN:
+        daObjVmc_tree_main();
+        break;
+    }
+    set_mtx();
+    fopAc_ac_c* player = dComIfGp_getLinkPlayer();
+    gabi::Local<cXyz> dist;
+    cXyz_mi(&player->current.pos, dist.get(), &current.pos);
+    bool range = mLinkRangeCheck != 0;
+    f32 x = dist->x, z = dist->z;
+    gabi::Local<cXyz> xz;
+    xz->x = x;
+    xz->y = 0.0f;
+    xz->z = z;
+    f32 mag = PSVECSquareMag(xz.get());
+    // HD: preserve the double-precision square-root call and range thresholds.
+    f64 distance = Vmc_sqrt(static_cast<f64>(mag));
+    if (!range) {
+        bool away = distance > 110.0;
+        if (!away) {
+            f32 y = dist->y;
+            away = y < -500.0f || y > 500.0f;
+        }
+        if (away) {
+            mLinkRangeCheck = 1;
+            range = true;
+        } else
+            range = mLinkRangeCheck != 0;
+    } else {
+        if (distance < 100.0) {
+            f32 y = dist->y;
+            if (y > -490.0f && y < 490.0f) {
+                mLinkRangeCheck = 0;
+                range = false;
+            } else
+                range = mLinkRangeCheck != 0;
+        } else
+            range = mLinkRangeCheck != 0;
+    }
+    constexpr u32 attentionMask = fopAc_Attn_UNK10000000_e | fopAc_Attn_ACTION_SPEAK_e | fopAc_Attn_LOCKON_TALK_e;
+    if (!range) {
+        attention_info.flags = u32(attention_info.flags) & ~attentionMask;
+        return true;
+    }
+    fopAc_ac_c* cb = dComIfGp_getCb1Player();
+    if (cb) {
+        cb = dComIfGp_getCb1Player();
+        if (cb && cb->mProcName == fpcNm_NPC_CB1_e)
+            eventInfo.mCondition = u16(eventInfo.mCondition) | dEvtCnd_CANTALK_e;
+    }
+    if (mLinkRangeCheck && !mHasTree) {
+        fopAc_ac_c* controlled = dComIfGp_getPlayer(0);
+        if (controlled && controlled->mProcName == fpcNm_NPC_CB1_e) {
+            attention_info.flags = u32(attention_info.flags) | attentionMask;
+            return true;
+        }
+    }
+    attention_info.flags = u32(attention_info.flags) & ~attentionMask;
+    return true;
 }
-VERIFY(0x023B3310, wrapperExecute);
-bool wrapperDraw(u32 a) {
-  WWHD_FUNC(0x023B3314, bool, a);
-  return draw(a);
+/* 023B320C */
+bool Act_c::_draw() {
+    auto* env = dKy_getEnvlight();
+    settingTevStruct(env, 1, &current.pos, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mModelBase, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mModelTree, &tevStr);
+    s32 state = mState;
+    J3DModel* model = mModelTree;
+    J3DModelData* data = model->getModelData();
+    mDoExt_bckAnm* animation = state < STATE_TREE_MAIN ? &mBckAnmGrow : &mBckAnmHookshot;
+    f32 frame = animation->getFrame();
+    animation->entry(data, frame);
+    mDoExt_modelUpdateDL(mModelTree);
+    state = mState;
+    model = mModelTree;
+    data = model->getModelData();
+    // HD: both animation remove paths clear the first joint's matrix calculator directly.
+    reinterpret_cast<VmcModelData*>(data)->mJointNodes->mpMtxCalc = 0;
+    mDoExt_modelUpdateDL(mModelBase);
+    return true;
 }
-VERIFY(0x023B3314, wrapperDraw);
+/* 023B3308 */
+s32 Vmc_Mthd_Create(Act_c* actor) {
+    return actor->_create();
+}
+/* 023B330C */
+bool Vmc_Mthd_Delete(Act_c* actor) {
+    return actor->_delete();
+}
+/* 023B3310 */
+bool Vmc_Mthd_Execute(Act_c* actor) {
+    return actor->_execute();
+}
+/* 023B3314 */
+bool Vmc_Mthd_Draw(Act_c* actor) {
+    return actor->_draw();
+}
+/* 023B3448 */
+s32 isDelete(Act_c*) {
+    return 1;
+}
+
+/* 023B3318 */
 void staticInit() {
-  WWHD_FUNC(0x023B3318, void);
-  store<u32>(0x1046C8A8, 0);
-  store<u32>(0x1046C8A0, 0);
-  store<u32>(0x1046C8AC, 0);
-  store<u32>(0x1046C8A4, 0);
-  call<void>(0x028F026C, 0x101CDA48u);
-  store<f32>(0x1046C894, -3.1415927410125732f);
-  store<f32>(0x1046C898, 3.1415927410125732f);
-  call<void>(0x028ED6F8, 0x1046C89Cu);
-  call<void>(0x028F026C, 0x101CDA54u);
-  call<void>(0x028EAB2C, 0x1046C89Du);
-  call<void>(0x028F026C, 0x101CDA60u);
+    __sinit_header_statics();
 }
-VERIFY(0x023B3318, staticInit);
-void staticDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x023B33AC, void, a, flags);
-  if (a && (flags & 1))
-    call<void>(0x0273AF40, a);
+/* 023B33AC */
+void staticDtor(void* actor, s32 flags) {
+    if (actor && (flags & 1))
+        operator_delete(actor);
 }
-VERIFY(0x023B33AC, staticDtor);
-void empty(u32 a) { WWHD_FUNC(0x023B33C0, void, a); }
-VERIFY(0x023B33C0, empty);
-void actorDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x023B33C4, void, a, flags);
-  if (a) {
-    call<void>(0x02515A70, a + 0x518, 2);
-    call<void>(0x02515860, a + 0x4DC, 2);
-    call<void>(0x027F3628, a + 0x460, 0);
-    call<void>(0x027F3628, a + 0x3D4, 0);
-    call<void>(0x025D50BC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
+/* 023B33C0 */
+void empty(void*) {}
+/* 023B33C4 */
+void actorDtor(Act_c* actor, s32 flags) {
+    if (actor) {
+        __dt(&actor->mCyl);
+        __dt(&actor->mStts);
+        auto* hook = reinterpret_cast<VmcBckConstruction*>(&actor->mBckAnmHookshot);
+        Vmc_bckTailDtor(&hook->__vtbl, 0);
+        auto* grow = reinterpret_cast<VmcBckConstruction*>(&actor->mBckAnmGrow);
+        Vmc_bckTailDtor(&grow->__vtbl, 0);
+        __dt(static_cast<fopAc_ac_c*>(actor));
+        if (flags & 1)
+            operator_delete(actor);
+    }
 }
-VERIFY(0x023B33C4, actorDtor);
-s32 isDelete(u32 a) {
-  WWHD_FUNC(0x023B3448, s32, a);
-  return 1;
+/* 023B3450 */
+u32 Vmc_PrmAbstract(Act_c* actor, s32 width, s32 shift) {
+
+    u32 w = (u32)width & 63, s = (u32)shift & 63;
+    return (s < 32 ? u32(actor->mParameters) >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
 }
-VERIFY(0x023B3448, isDelete);
-} // namespace vmc
+/* WWHD glue
+data l_actorVtable 10032D98
+data l_aabVtable 10032D60
+data l_bckVtable 10032D70
+data l_bckBaseVtable 1016E54C
+data l_materialVtable 1016D820
+data cyl_src_base 101CDA04
+str 10032E60
+str 10032DAC in 023B2294
+str 10032E28 in 023B2D50
+str 10032DD4
+str 10032DE8
+str 10032DBC
+str 10032DC8 in 023B2294
+str 10032E38 in 023B2D50
+str 10032E1C
+ext 0200A030 s32 Vmc_bgSet(dBgW*,cBgD_t*,u32,Mtx34*)
+ext 027DA984 void Vmc_materialCtor(VmcMaterialTable*)
+ext 027F3628 void Vmc_bckTailDtor(be<u32>*,s32)
+ext 0253E9B0 void Vmc_setEventName(dEvt_info_c*,const char*)
+ext 028F4384 f64 Vmc_sqrt(f64)
+*/

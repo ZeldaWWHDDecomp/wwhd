@@ -1,111 +1,244 @@
-#include "d_kankyo_rain_private.h"
-namespace d_kankyo_rain_cpp {
-static void sunMove() {
-    WWHD_FUNC(0x02565E0C,void);
-    u32 sun=ld(environment()+0xA34),flare=ld(environment()+0xA38),camera=ld(gameInfo()+0x5AF8);
-    gameInfo();u32 info=gameInfo();u32 secondaryCamera=ld(info+0x5AF8);
-    f32 zero=lf(0x1004F528),blend=zero;
-    u32 stageMode=0,centralVisible=0,visible=0;
-    gabi::Local<SafeString_l> stage,current;
-    gabi::Local<Vec_l> direction,screen,point;
-    gabi::Local<ProjectParams_l> params;
-    stage->text=0x1004F64C;stage->vtable=0x1004F3AC;
-    current->text=gameInfo()+0x5134;current->vtable=0x1004F3AC;
-    safe_string_callback(stage.get());safe_string_callback(stage.get());
-    u32 expected=(u32)stage->text;
-    safe_string_callback(current.get());
-    bool same=equal_terminated_strings(expected,(u32)current->text);
-    bool alternate;
-    if(same)alternate=gabi::load<s16>(environment()+0x20)!=0;
+/* Sun and lens visibility movement. HD widescreen occlusion and lighting.
+ * Preserves native call order, double distance compares and fused arithmetic. */
+#include "d/d_kankyo_rain_weather.h"
+using namespace weather_move;
+static SafeStringVtableHD sunSafeStringVtable;
+struct SunCheckPointHD {
+  be<f32> x, y;
+};
+static SunCheckPointHD sunSun_chkpnt[5] = {{0.0f, 0.0f},
+                                        {-25.0f, -25.0f},
+                                        {25.0f, -25.0f},
+                                        {-25.0f, 25.0f},
+                                        {25.0f, 25.0f}};
+static bool equalWeatherStrings(be<u8> *left, be<u8> *right) {
+  if (left == right)
+    return true;
+  for (u32 i = 0; i < 0x40001; i++) {
+    u8 a = left[i], b = right[i];
+    if (a != b)
+      return false;
+    if (!a)
+      return true;
+  }
+  return false;
+}
+// HD: SafeString stage-name override, widescreen sample positions and a short
+// fully-visible delay replace the GameCube visibility ramp. Projection uses
+// explicit HD parameters; the two screen-axis falloffs remain separate.
+/* 02565E0C */
+void dKyr_sun_move() {
+  SunPacketHD *pSunPkt = weatherEnvironment()->mpSunPacket;
+  SunLenzPacketHD *pLenzPkt = weatherEnvironment()->mpSunlenzPacket;
+  WeatherCameraHD *pCamera = weatherPlay()->mpCamera;
+  weatherPlay();
+  WeatherPlayHD *info = weatherPlay();
+  WeatherCameraHD *secondaryCamera = info->mpCamera;
+  f32 zero = 0.0f, staringAtSunAmount = zero;
+  u32 stageMode = 0, numCenterPointsVisible = 0, numPointsVisible = 0;
+  WeatherSafeStringHD stage;
+  WeatherSafeStringHD current;
+  WeatherVectorHD direction;
+  WeatherVectorHD screen;
+  WeatherVectorHD point;
+  WeatherProjectParamsHD params;
+  stage.mStringTop = gabi::at<be<u8>>(gabi::guest_addr("Name"));
+  stage.__vtbl = &sunSafeStringVtable;
+  current.mStringTop = weatherPlay()->mStageName;
+  current.__vtbl = &sunSafeStringVtable;
+  stage.assureTermination();
+  stage.assureTermination();
+  be<u8> *expected = stage.mStringTop;
+  current.assureTermination();
+  bool same = equalWeatherStrings(expected, current.mStringTop);
+  bool alternate;
+  if (same)
+    alternate = (s16)weatherEnvironment()->mBaseLightRed != 0;
+  else {
+    WeatherStageDtHD *object = &weatherPlay()->mStage;
+    StageInfoHD *returned = object->getStagInfo();
+    stageMode = (returned->mTypeFlags.get() >> 16) & 7;
+    alternate = (s16)weatherEnvironment()->mBaseLightRed != 0;
+  }
+  if (stageMode == 2)
+    alternate = true;
+  WeatherEnvironmentHD *env = weatherEnvironment();
+  dKyr_get_vectle_calcHD(&pCamera->mEye,
+                         alternate ? &env->mSunPos2 : &env->mBaseLightPos,
+                         &direction);
+  f32 distanceScale = 8e+03f;
+  pSunPkt->mPos[0].x =
+      gabi::fmadds((f32)direction.x, distanceScale, (f32)pCamera->mEye.x);
+  f32 sunY =
+      gabi::fmadds((f32)direction.y, distanceScale, (f32)pCamera->mEye.y);
+  pSunPkt->mPos[0].y = sunY;
+  pSunPkt->mPos[0].z =
+      gabi::fmadds((f32)direction.z, distanceScale, (f32)pCamera->mEye.z);
+  f32 height = gabi::fsubs_ppc(sunY, (f32)pCamera->mEye.y) / distanceScale,
+      one = 1.0f;
+  if (height < zero)
+    height = gabi::fsubs_ppc(one, zero);
+  else {
+    if (!(height < one))
+      height = one;
+    height = gabi::fsubs_ppc(one, height);
+  }
+  height = gabi::fnmsubs(height, height, one);
+  u8 delay = (u8)pSunPkt->mOcclusionDelayHD;
+  if (delay)
+    pSunPkt->mOcclusionDelayHD = delay - 1;
+  pSunPkt->mHasVisiblePointHD = 0;
+  f32 half = 0.5f, small = 0.01f;
+  if ((f32)weatherEnvironment()->mCurTime > 97.5f &&
+      (f32)weatherEnvironment()->mCurTime < 292.5f) {
+    weatherProjectParams(&params);
+    weatherAddCalc(&pSunPkt->mSunAlpha, one, half, 0.1f, small);
+    f32 top = secondaryCamera
+                  ? gabi::fmuls_ppc((f32)secondaryCamera->mFovy, 0.44444445f)
+                  : zero;
+    weatherProject(&pSunPkt->mPos[0], &screen, &params);
+    f32 depthLimitZero = zero, bottom = gabi::fsubs_ppc(4.8e+02f, top);
+    f64 horizontalLimit = 640.0;
+    u32 misses = 0;
+    for (u32 i = 0; i < 5; i++) {
+      f32 x = gabi::fsubs_ppc((f32)screen.x, (f32)sunSun_chkpnt[i].x);
+      f32 y = gabi::fsubs_ppc((f32)screen.y, (f32)sunSun_chkpnt[i].y);
+      if (x > depthLimitZero && (f64)x < horizontalLimit && y > top &&
+          y < bottom) {
+        be<u32> *result = &pSunPkt->mVizChkData[i];
+        if (result->get() >= 0xFFFFFF) {
+          numPointsVisible = (numPointsVisible + 1) & 255;
+          if (i == 0)
+            numCenterPointsVisible = (numCenterPointsVisible + 1) & 255;
+        }
+        weatherPeekZ(weatherPlay()->mPeekZService, (s32)(s16)gabi::ftoi(x),
+                     (s32)(s16)gabi::ftoi(y), result);
+      } else
+        misses++;
+    }
+    if (numPointsVisible) {
+      delay = (u8)pSunPkt->mOcclusionDelayHD;
+      if (misses && numCenterPointsVisible) {
+        numPointsVisible = 5;
+        numCenterPointsVisible = 1;
+      }
+      if (delay < 5)
+        pSunPkt->mOcclusionDelayHD = delay + 2;
+      pSunPkt->mHasVisiblePointHD = 1;
+    }
+    pLenzPkt->mPreviousDistanceHD = (f32)pLenzPkt->mDistanceHD;
+    pLenzPkt->mPreviousDepthHD = (f32)pLenzPkt->mDepthHD;
+    pLenzPkt->mDistanceHD = 1e+09f;
+    pLenzPkt->mDepthHD = zero;
+    point.x = (f32)screen.x;
+    point.y = 2.4e+02f;
+    point.z = zero;
+    f32 squared = weatherDistanceSquared(&point, &screen);
+    staringAtSunAmount = (f32)(weatherSqrtDouble((f64)squared) / (f64)5.5e+02f);
+    if (staringAtSunAmount > one)
+      staringAtSunAmount = one;
+    point.x = 3.2e+02f;
+    point.y = (f32)screen.y;
+    squared = weatherDistanceSquared(&point, &screen);
+    f32 side = (f32)(weatherSqrtDouble((f64)squared) / (f64)6.5e+02f);
+    if (side > one)
+      side = one;
+    f32 edge =
+        gabi::fnmsubs(gabi::fadds_ppc(side, staringAtSunAmount), half, one);
+    staringAtSunAmount = gabi::fmuls_ppc(edge, edge);
+    pLenzPkt->mDistFalloff = gabi::fsubs_ppc(one, staringAtSunAmount);
+    staringAtSunAmount =
+        gabi::fmuls_ppc(staringAtSunAmount, staringAtSunAmount);
+  } else {
+    weatherAddCalc(&pSunPkt->mSunAlpha, zero, half, 0.1f, small);
+    pSunPkt->mOcclusionDelayHD = 0;
+    pSunPkt->mHasVisiblePointHD = 0;
+    numPointsVisible = 0;
+  }
+  if ((u8)weatherEnvironment()->mColpatWeather)
+    numCenterPointsVisible = numPointsVisible = 0;
+  else if ((u8)weatherEnvironment()->mColpatCurr &&
+           (f32)weatherEnvironment()->mColPatBlend > half)
+    numCenterPointsVisible = numPointsVisible = 0;
+  if (stageMode == 2)
+    numCenterPointsVisible = numPointsVisible = 0;
+  bool daylight = (f32)weatherEnvironment()->mCurTime < 1.2e+02f;
+  if (!daylight)
+    daylight = (f32)weatherEnvironment()->mCurTime > 2.7e+02f;
+  u32 noFlare;
+  if (daylight) {
+    weatherAddCalc(&pSunPkt->mVisibility, zero, half, 0.4f, 0.1f);
+    numPointsVisible = 0;
+    pSunPkt->mVisibility = zero;
+    pSunPkt->mFullyVisibleDelayHD = 3;
+    noFlare = 1;
+  } else if (numCenterPointsVisible && numPointsVisible == 5) {
+    weatherAddCalc(&pSunPkt->mVisibility, one, half, half, 0.1f);
+    u32 wait = (u32)pSunPkt->mFullyVisibleDelayHD;
+    if (wait) {
+      wait--;
+      pSunPkt->mFullyVisibleDelayHD = wait;
+    }
+    if (wait)
+      noFlare = 0;
     else {
-        u32 object=gameInfo()+0x5150;
-        u32 returned=gabi::call_ptr<u32>(ld(ld(object)+0x15C),object);
-        stageMode=(ld(returned+12)>>16)&7;
-        alternate=gabi::load<s16>(environment()+0x20)!=0;
+      weatherAddCalc(&pSunPkt->mVisibility, 0.75f, 0.2f, 0.2f, small);
+      noFlare = 0;
     }
-    if(stageMode==2)alternate=true;
-    u32 env=environment();
-    gabi::call(0x02563F64,camera+0xDC,env+(alternate?0xB38:0x14),direction.get());
-    f32 distanceScale=lf(0x1004F614);
-    sf(sun+0x98,gabi::fmadds((f32)direction->x,distanceScale,lf(camera+0xDC)));
-    f32 sunY=gabi::fmadds((f32)direction->y,distanceScale,lf(camera+0xE0));sf(sun+0x9C,sunY);
-    sf(sun+0xA0,gabi::fmadds((f32)direction->z,distanceScale,lf(camera+0xE4)));
-    f32 height=gabi::fsubs_ppc(sunY,lf(camera+0xE0))/distanceScale,one=lf(0x1004F550);
-    if(height<zero)height=gabi::fsubs_ppc(one,zero);
-    else {if(!(height<one))height=one;height=gabi::fsubs_ppc(one,height);}
-    height=gabi::fnmsubs(height,height,one);
-    u8 delay=gabi::load<u8>(sun+0xC4);if(delay)gabi::store<u8>(sun+0xC4,delay-1);
-    gabi::store<u8>(sun+0xC5,0);
-    f32 half=lf(0x1004F57C),small=lf(0x1004F580);
-    if(lf(environment()+0x1020)>lf(0x1004F618)&&lf(environment()+0x1020)<lf(0x1004F61C)) {
-        gabi::call(0x02563DD8,params.get());
-        gabi::call(0x0200ECD4,sun+0xCC,one,half,lf(0x1004F588),small);
-        f32 top=secondaryCamera?gabi::fmuls_ppc(lf(secondaryCamera+0x844),lf(0x1004F620)):zero;
-        gabi::call(0x025F1018,sun+0x98,screen.get(),params.get());
-        f32 depthLimitZero=zero,bottom=gabi::fsubs_ppc(lf(0x1004F624),top);
-        f64 horizontalLimit=ldbl(0x1004F628);
-        u32 misses=0;
-        for(u32 i=0;i<5;i++) {
-            f32 x=gabi::fsubs_ppc((f32)screen->x,lf(0x1004F654+i*8));
-            f32 y=gabi::fsubs_ppc((f32)screen->y,lf(0x1004F658+i*8));
-            if(x>depthLimitZero&&(f64)x<horizontalLimit&&y>top&&y<bottom) {
-                u32 result=sun+0xB0+i*4;
-                if(ld(result)>=0xFFFFFF) {visible=(visible+1)&255;if(i==0)centralVisible=(centralVisible+1)&255;}
-                gabi::call(0x0252E34C,gameInfo()+0x60EC,(s32)(s16)gabi::ftoi(x),(s32)(s16)gabi::ftoi(y),result);
-            } else misses++;
-        }
-        if(visible) {
-            delay=gabi::load<u8>(sun+0xC4);
-            if(misses&&centralVisible) {visible=5;centralVisible=1;}
-            if(delay<5)gabi::store<u8>(sun+0xC4,delay+2);
-            gabi::store<u8>(sun+0xC5,1);
-        }
-        sf(flare+0x110,lf(flare+0x118));sf(flare+0x114,lf(flare+0x11C));
-        sf(flare+0x118,lf(0x1004F630));sf(flare+0x11C,zero);
-        point->x=(f32)screen->x;point->y=lf(0x1004F5F4);point->z=zero;
-        f32 squared=gabi::call<f32>(0x028E8DE8,point.get(),screen.get());
-        blend=(f32)(gabi::call<f64>(0x028F4384,(f64)squared)/(f64)lf(0x1004F5FC));if(blend>one)blend=one;
-        point->x=lf(0x1004F5F0);point->y=(f32)screen->y;
-        squared=gabi::call<f32>(0x028E8DE8,point.get(),screen.get());
-        f32 side=(f32)(gabi::call<f64>(0x028F4384,(f64)squared)/(f64)lf(0x1004F634));if(side>one)side=one;
-        f32 edge=gabi::fnmsubs(gabi::fadds_ppc(side,blend),half,one);
-        blend=gabi::fmuls_ppc(edge,edge);sf(flare+0x124,gabi::fsubs_ppc(one,blend));blend=gabi::fmuls_ppc(blend,blend);
-    } else {
-        gabi::call(0x0200ECD4,sun+0xCC,zero,half,lf(0x1004F588),small);
-        gabi::store<u8>(sun+0xC4,0);gabi::store<u8>(sun+0xC5,0);visible=0;
-    }
-    if(gabi::load<u8>(environment()+0x1092))centralVisible=visible=0;
-    else if(gabi::load<u8>(environment()+0x108D)&&lf(environment()+0xFC8)>half)centralVisible=visible=0;
-    if(stageMode==2)centralVisible=visible=0;
-    bool daylight=lf(environment()+0x1020)<lf(0x1004F638);
-    if(!daylight)daylight=lf(environment()+0x1020)>lf(0x1004F63C);
-    u32 noFlare;
-    if(daylight) {
-        gabi::call(0x0200ECD4,sun+0xC8,zero,half,lf(0x1004F598),lf(0x1004F588));visible=0;
-        sf(sun+0xC8,zero);gabi::store<u32>(sun+0xE8,3);noFlare=1;
-    } else if(centralVisible&&visible==5) {
-        gabi::call(0x0200ECD4,sun+0xC8,one,half,half,lf(0x1004F588));
-        u32 wait=ld(sun+0xE8);
-        if(wait) {wait--;gabi::store<u32>(sun+0xE8,wait);}
-        if(wait)noFlare=0;
-        else {gabi::call(0x0200ECD4,sun+0xC8,lf(0x1004F640),lf(0x1004F554),lf(0x1004F554),small);noFlare=0;}
-    } else if(!centralVisible) {
-        gabi::call(0x0200ECD4,sun+0xC8,zero,half,lf(0x1004F598),lf(0x1004F588));
-        if(!visible) {sf(sun+0xC8,zero);gabi::store<u32>(sun+0xE8,3);noFlare=1;}
-        else noFlare=visible<2?1:0;
-    } else noFlare=visible<2?1:0;
-    gabi::store<u8>(ld(environment()+0xA38)+0x12A,noFlare);
-    if(lf(sun+0x9C)>zero&&!gabi::load<u8>(ld(environment()+0xA38)+0x12A)) {
-        gabi::call(0x0255A3D8,gabi::fnmsubs(blend,lf(sun+0xC8),one));
-        gabi::call(0x0255A418,gabi::fnmsubs(blend,lf(sun+0xC8),one));
-        gabi::call(0x0255A458,gabi::fmadds(gabi::fmuls_ppc(gabi::fmuls_ppc(blend,lf(sun+0xC8)),height),half,one));
-        gabi::call(0x0255A51C,gabi::fmadds(gabi::fmuls_ppc(gabi::fmuls_ppc(blend,lf(sun+0xC8)),height),half,one));
-    }
-    if(gabi::call<u32>(0x02565DAC)) {
-        height=gabi::fsubs_ppc(lf(sun+0x9C),lf(camera+0xE0))/lf(0x1004F644);
-        height=gabi::fmuls_ppc(gabi::fmuls_ppc(height,height),lf(0x1004F648));if(height>one)height=one;
-        gabi::call(0x0200ECD4,sun+0xD0,height,lf(0x1004F554),small,lf(0x1004F58C));
-    } else gabi::call(0x0200ECD4,sun+0xD0,zero,lf(0x1004F554),small,lf(0x1004F58C));
+  } else if (!numCenterPointsVisible) {
+    weatherAddCalc(&pSunPkt->mVisibility, zero, half, 0.4f, 0.1f);
+    if (!numPointsVisible) {
+      pSunPkt->mVisibility = zero;
+      pSunPkt->mFullyVisibleDelayHD = 3;
+      noFlare = 1;
+    } else
+      noFlare = numPointsVisible < 2 ? 1 : 0;
+  } else
+    noFlare = numPointsVisible < 2 ? 1 : 0;
+  weatherEnvironment()->mpSunlenzPacket->mbDrawLenzInSky = noFlare;
+  if ((f32)pSunPkt->mPos[0].y > zero &&
+      !(u8)weatherEnvironment()->mpSunlenzPacket->mbDrawLenzInSky) {
+    dKy_set_actcol_ratioHD(
+        gabi::fnmsubs(staringAtSunAmount, (f32)pSunPkt->mVisibility, one));
+    dKy_set_bgcol_ratioHD(
+        gabi::fnmsubs(staringAtSunAmount, (f32)pSunPkt->mVisibility, one));
+    dKy_set_fogcol_ratioHD(
+        gabi::fmadds(gabi::fmuls_ppc(gabi::fmuls_ppc(staringAtSunAmount,
+                                                     (f32)pSunPkt->mVisibility),
+                                     height),
+                     half, one));
+    dKy_set_vrboxcol_ratioHD(
+        gabi::fmadds(gabi::fmuls_ppc(gabi::fmuls_ppc(staringAtSunAmount,
+                                                     (f32)pSunPkt->mVisibility),
+                                     height),
+                     half, one));
+  }
+  if (dKyr_moon_arrival_checkHD()) {
+    height = gabi::fsubs_ppc((f32)pSunPkt->mPos[0].y, (f32)pCamera->mEye.y) /
+             -8e+03f;
+    height = gabi::fmuls_ppc(gabi::fmuls_ppc(height, height), 6.0f);
+    if (height > one)
+      height = one;
+    weatherAddCalc(&pSunPkt->mMoonAlpha, height, 0.2f, small, 0.001f);
+  } else
+    weatherAddCalc(&pSunPkt->mMoonAlpha, zero, 0.2f, small, 0.001f);
 }
-VERIFY(0x02565E0C,sunMove);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+str 1004F64C "Name"
+data sunSafeStringVtable 1004F3AC
+data sunSun_chkpnt 1004F654
+ext 02555D0C WeatherEnvironmentHD *weatherEnvironment()
+ext 025200D4 WeatherPlayHD *weatherPlay()
+ext 02563F64 void dKyr_get_vectle_calcHD(WeatherVectorHD*, WeatherVectorHD*, WeatherVectorHD*)
+ext 02563DD8 void weatherProjectParams(WeatherProjectParamsHD*)
+ext 0200ECD4 void weatherAddCalc(be<f32> *, f32, f32, f32, f32)
+ext 025F1018 void weatherProject(WeatherVectorHD*, WeatherVectorHD*, WeatherProjectParamsHD*)
+ext 0252E34C void weatherPeekZ(void*, s32, s32, be<u32>*)
+ext 028E8DE8 f32 weatherDistanceSquared(WeatherVectorHD *, WeatherVectorHD *)
+ext 028F4384 f64 weatherSqrtDouble(f64)
+ext 0255A3D8 void dKy_set_actcol_ratioHD(f32)
+ext 0255A418 void dKy_set_bgcol_ratioHD(f32)
+ext 0255A458 void dKy_set_fogcol_ratioHD(f32)
+ext 0255A51C void dKy_set_vrboxcol_ratioHD(f32)
+ext 02565DAC u32 dKyr_moon_arrival_checkHD()
+*/

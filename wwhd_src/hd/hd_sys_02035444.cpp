@@ -1,45 +1,58 @@
-/* hd_sys_02035444: an HD root-task factory TU (no GameCube source).
- *
- * TU 02035444..020355A3 (__sinit 02035510): the RTTI check of a task class (101FD998 / parent
- * 101FD994) and its sead TaskFactory function (0xE8 bytes from the current heap of the task
- * construction argument, constructor 0273C734).
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD root-task factory and runtime type check. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_sys_02035444.h"
 
-namespace hd_sys_02035444 {
+// HD: these are this task's own and parent type records, initialized lazily.
+static u32 sTaskTypeInitialized;
+static u32 sParentTypeInitialized;
+static hdTaskRuntimeTypeInfo sTaskType;
+static hdTaskRuntimeTypeInfo sParentType;
+enum : u32 {
+    TASK_TYPE_NAME_ADDRESS = 0x10004E24,
+    PARENT_TYPE_NAME_ADDRESS = 0x10004E14,
+    TASK_SIZE = 0xE8,
+};
 
-/* 02035444: checkDerivedRuntimeTypeInfo: this class or its parent */
-static u32 isDerived(u32 self, u32 ti) {
-    WWHD_FUNC(0x02035444, u32, self, ti);
-    if (ld(0x101FD658) == 0) {
-        st(0x101FD658, 1);
-        st(0x101FD998, 0x10004E24);
+/* 02035444 */
+// HD: accept this task's type record or its parent's type record.
+static u32 checkDerivedRuntimeTypeInfo(void* i_this, hdTaskRuntimeTypeInfo* typeInfo) {
+    if (sTaskTypeInitialized == 0) {
+        sTaskTypeInitialized = 1;
+        sTaskType.mTypeNameAddress = TASK_TYPE_NAME_ADDRESS;
     }
-    if (ti == 0x101FD998) return 1;
-    if (ld(0x101FD2E0) == 0) {
-        st(0x101FD2E0, 1);
-        st(0x101FD994, 0x10004E14);
+    if (typeInfo == &sTaskType) {
+        return TRUE;
     }
-    return ti == 0x101FD994 ? 1 : 0;
+    if (sParentTypeInitialized == 0) {
+        sParentTypeInitialized = 1;
+        sParentType.mTypeNameAddress = PARENT_TYPE_NAME_ADDRESS;
+    }
+    return typeInfo == &sParentType ? TRUE : FALSE;
 }
-VERIFY(0x02035444, isDerived);
 
-/* 020354BC: task factory: new (heap of ARG's heap array at index +0x14, alignment 4) Task(ARG) */
-static u32 factory(u32 arg) {
-    WWHD_FUNC(0x020354BC, u32, arg);
-    u32 c = ld(arg);
-    u32 heap = ld(c + ld(c + 0x14) * 4);
-    u32 p = gabi::call<u32>(0x0273B050, 0xE8, heap, 4);
-    if (p == 0) return 0;
-    return gabi::call<u32>(0x0273C734, p, arg);
+/* 020354BC */
+// HD: allocate the task from the construction argument's current heap, aligned to four bytes.
+static void* createRootTask(hdTaskConstructArg* argument) {
+    hdTaskHeapArray* heapArray = argument->mHeapArray;
+    void* heap = heapArray->mHeaps[heapArray->mCurrentHeapIndex];
+    void* task = hdTaskAllocate(TASK_SIZE, heap, 4);
+    if (task == NULL) {
+        return NULL;
+    }
+    return hdRootTaskConstruct(task, argument);
 }
-VERIFY(0x020354BC, factory);
 
-static void sinit_02035510() {
-    WWHD_FUNC(0x02035510, void);
-    header_sinit(0x10200900, 0x1018F314, 0x10004F80);
+/* 02035510 */
+// HD: this translation unit's header statics copy the pi pair from rodata.
+static void __sinit_hd_root_task_cpp() {
+    sinit_header_statics_rodata(0x102008F4, 0x1018F314, 0x10200900, 0x10004F80);
 }
-VERIFY(0x02035510, sinit_02035510);
 
-}  // namespace hd_sys_02035444
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data and local HD calls
+ data sTaskTypeInitialized 101FD658
+ data sParentTypeInitialized 101FD2E0
+ data sTaskType 101FD998
+ data sParentType 101FD994
+ ext 0273B050 void* hdTaskAllocate(u32, void*, s32)
+ ext 0273C734 void* hdRootTaskConstruct(void*, hdTaskConstructArg*)
+*/

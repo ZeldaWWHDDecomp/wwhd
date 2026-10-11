@@ -1,213 +1,234 @@
-/* hd_screen_auction_number: HD auction counter digit screen (one rolling digit "AuctionNumber_00"
- * of the hd_screen_auction_rupy counter), WWHD. 
- * HD-only code (no GameCube source): written from the WWHD code. Range 0261D088..0261D8CF; static
- * initialiser 0261D5BC. Not verified here (sead library template instances): 0261D7B4/0261D7C8
- * (SafeString), 0261D7D0 (StateID getter), 0261D7E4/0261D824/0261D864 (state delegate invokers),
- * 0261D8A4 (StateID).
- *
- * Screen (0x5C): base 02700ADC (+0x18 state machine, +0x20 current state, +0x44 layout with its
- * animation at +0xD4), +4 vtable 100E3270, +0x2C/+0x30 vtables, +0x50 roll frame, +0x54 s16 shown
- * digit, +0x56 s16 target digit, +0x58 u8 rolling up. State 1048E140 (Roll); 1049DD60 is the
- * shared idle state.
- */
-#include "gabi.h"
-using namespace gabi;
+/* HD-only auction digit roll screen, animation binding and state initialization. */
+#include "d/hd_screen_auction_number.h"
 
-namespace hd_screen_auction_number {
+static HdAuctionHeapPointer l_heap;
+static u32 l_screenVtable;
+static u32 l_memberVtable;
+static u32 l_secondaryVtable;
+static u32 l_stringVtable;
+static u32 l_stateVtable;
+static u32 l_stateParent;
+static HdAuctionState l_idle;
+static HdAuctionState l_roll;
+static HdAuctionNames l_animationNames;
+static HdAuctionSafeString l_layoutName;
+static u32 l_animationNameIndex;
+static u32 l_stateGuard;
+static u32 l_lastStateID;
+static f32 l_three;
+static HdAuctionGlobals l_globals;
+static HdAuctionRange l_range;
+static f32 l_lower;
+static f32 l_upper;
+static HdAuctionRegistration l_registration;
+static HdAuctionRegistration l_signedRegistration;
+static HdAuctionRegistration l_unsignedRegistration;
 
-static const u32 kIdle = 0x1049DD60, kRoll = 0x1048E140;
+enum HdAuctionSlots : u32 { HdAuction_GetState = 5, HdAuction_EnterState = 7, HdAuction_LoadLayout = 5 };
+enum HdAuctionConstants : u32 { HdAuction_Delete = 1, HdAuction_DigitCount = 10, HdAuction_RollFrames = 3 };
 
-static u32 anim(u32 self) { return load<u32>(load<u32>(self + 0x44) + 0xD4); }
+static HdAuctionNumber* HdAuctionNumber__ct(HdAuctionNumber*);
 
-/* 0261D088: creates a digit screen for a layout part */
-u32 create(u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x0261D088, u32, a, b, c);
-    u32 p = call<u32>(0x0273B050, 0x5Cu, load<u32>(load<u32>(0x1018C404) + 0x10), 4u);
-    if (!p) return 0;
-    p = call<u32>(0x0261D340, p);
-    if (!p) return 0;
-    call<u32>(0x0261D3C0, p, a, b, c);
-    return p;
+/* 0261D088 */
+static HdAuctionNumber* hdAuction_createDigit(u32 a, u32 b, u32 c) {
+    HdAuctionNumber* screen = static_cast<HdAuctionNumber*>(hdAuctionAllocateOnHeap(sizeof(HdAuctionNumber), l_heap.mpOwner->mpHeap, 4));
+    if (screen == NULL) return NULL;
+    screen = HdAuctionNumber__ct(screen);
+    if (screen == NULL) return NULL;
+    screen->setup(a, b, c);
+    return screen;
 }
-VERIFY(0x0261D088, create);
 
-/* 0261D138: deleting destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x0261D138, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0x2C, 0x100E3350);
-    store<u32>(p + 0x30, 0x100E3360);
-    call<void>(0x02700A70, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+/* 0261D138 */
+static void HdAuctionNumber__dt(HdAuctionNumber* self, u32 flags) {
+    if (self == NULL) return;
+    self->mMemberVtable = &l_memberVtable;
+    self->mSecondaryVtable = &l_secondaryVtable;
+    hdAuctionBaseDestroy(self, 0);
+    if (flags & HdAuction_Delete) hdAuctionDelete(self);
 }
-VERIFY(0x0261D138, dtor);
 
-/* 0261D1A4: state Roll init */
-void rollInit(u32 self) {
-    WWHD_FUNC(0x0261D1A4, void, self);
-    store<u32>(self + 0x50, 0);
-}
-VERIFY(0x0261D1A4, rollInit);
+/* 0261D1A4 */
+void HdAuctionNumber::rollInit() { mRollFrame = 0; }
 
-/* 0261D1B0: state Roll: turns the digit over three frames, then steps it (wrapping 0..9) */
-void rollMove(u32 self) {
-    WWHD_FUNC(0x0261D1B0, void, self);
-    const u32 n = load<u32>(self + 0x50) + 1;
-    s32 d = s16(load<u16>(self + 0x54));
-    const f32 three = load<f32>(0x100E321C);
-    store<u32>(self + 0x50, n);
-    if (load<u8>(self + 0x58)) {
-        const f32 t = f32(f64(n)) / three;
-        call<void>(0x0200552C, anim(self), 0u, 0u, fadds_ppc(f32(f64(d)), t));
+/* 0261D1B0 */
+void HdAuctionNumber::rollMove() {
+    u32 frame = mRollFrame + 1;
+    s32 digit = mShownDigit;
+    f32 three = l_three;
+    mRollFrame = frame;
+    if (mRollingUp) {
+        f32 progress = f32(f64(frame)) / three;
+        hdAuctionSetFrame(mpLayout->mpAnimation, 0, 0, gabi::fadds_ppc(f32(f64(digit)), progress));
     } else {
-        if (d == 0) d = 10;
-        const f32 t = f32(f64(n)) / three;
-        call<void>(0x0200552C, anim(self), 0u, 0u, fsubs_ppc(f32(f64(d)), t));
+        if (digit == 0) digit = HdAuction_DigitCount;
+        f32 progress = f32(f64(frame)) / three;
+        hdAuctionSetFrame(mpLayout->mpAnimation, 0, 0, gabi::fsubs_ppc(f32(f64(digit)), progress));
     }
-    if (load<u32>(self + 0x50) < 3) return;
-    const u32 up = load<u8>(self + 0x58);
-    const s32 tgt = s16(load<u16>(self + 0x56));
+    if (mRollFrame < HdAuction_RollFrames) return;
+    u32 up = mRollingUp;
+    s32 target = mTargetDigit;
     if (up) {
-        d = s16(d + 1);
-        if (d >= 10) {
-            d = 0;
-            store<u16>(self + 0x54, 0);
-            store<u32>(self + 0x50, 0);
-            if (u32(d) != u32(tgt)) return;
-            call<void>(0x020063C0, self + 0x18, kIdle);
+        digit = s16(digit + 1);
+        if (digit >= (s32)HdAuction_DigitCount) {
+            digit = 0;
+            mShownDigit = 0;
+            mRollFrame = 0;
+            if (u32(digit) != u32(target)) return;
+            hdAuctionChangeState(&mpStateMachine, &l_idle);
             return;
         }
-    } else {
-        d = s16(d - 1);
-    }
-    store<u16>(self + 0x54, u16(d));
-    store<u32>(self + 0x50, 0);
-    if (u32(d) != u32(tgt)) return;
-    call<void>(0x020063C0, self + 0x18, kIdle);
+    } else digit = s16(digit - 1);
+    mShownDigit = (s16)digit;
+    mRollFrame = 0;
+    if (u32(digit) != u32(target)) return;
+    hdAuctionChangeState(&mpStateMachine, &l_idle);
 }
-VERIFY(0x0261D1B0, rollMove);
 
-/* 0261D340: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x0261D340, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x5Cu);
-        if (!p) return 0;
+/* 0261D340 */
+static HdAuctionNumber* HdAuctionNumber__ct(HdAuctionNumber* self) {
+    if (self == NULL) {
+        self = static_cast<HdAuctionNumber*>(hdAuctionAllocate(sizeof(HdAuctionNumber)));
+        if (self == NULL) return NULL;
     }
-    call<void>(0x02700ADC, p);
-    store<u32>(p + 0x2C, 0x100E3350);
-    store<u32>(p + 4, 0x100E3270);
-    store<u32>(p + 0x30, 0x100E3360);
-    store<u16>(p + 0x56, 0);
-    store<u8>(p + 0x58, 0);
-    store<u32>(p + 0x50, 0);
-    store<u16>(p + 0x54, 0);
-    return p;
+    hdAuctionBaseConstruct(self);
+    self->mMemberVtable = &l_memberVtable;
+    self->mVtable = &l_screenVtable;
+    self->mSecondaryVtable = &l_secondaryVtable;
+    self->mTargetDigit = 0;
+    self->mRollingUp = 0;
+    self->mRollFrame = 0;
+    self->mShownDigit = 0;
+    return self;
 }
-VERIFY(0x0261D340, ctor);
 
-/* 0261D3C0: screen setup and the idle state */
-u32 setup(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x0261D3C0, u32, self, a, b, c);
-    if (!call<u32>(0x02700B48, self, 0x1048E170u, a, b, c)) return 0;
-    const u32 st = load<u32>(self + 0x18);
-    const u32 action = call_ptr<u32>(load<u32>(load<u32>(st) + 0x14), st, kIdle);
-    store<u32>(self + 0x20, action);
-    call_ptr<void>(load<u32>(load<u32>(action) + 0x1C), action);
+/* 0261D3C0 */
+u32 HdAuctionNumber::setup(u32 a, u32 b, u32 c) {
+    if (!hdAuctionBaseSetup(this, &l_layoutName, a, b, c)) return 0;
+    HdAuctionStateMachine* state = mpStateMachine;
+    HdAuctionAction* action = gabi::call_ptr<HdAuctionAction*>(state->mVtable[HdAuction_GetState].get(), state, &l_idle);
+    mpCurrentAction = action;
+    gabi::call_ptr(action->mVtable[HdAuction_EnterState].get(), action);
     return 1;
 }
-VERIFY(0x0261D3C0, setup);
 
-/* 0261D454: shows a digit at once */
-void setDigit(u32 self, u32 d) {
-    WWHD_FUNC(0x0261D454, void, self, d);
-    call<void>(0x0200552C, anim(self), 0u, 0u, f32(f64(s32(d))));
+/* 0261D454 */
+void HdAuctionNumber::setDigit(u32 digit) {
+    hdAuctionSetFrame(mpLayout->mpAnimation, 0, 0, f32(f64(s32(digit))));
 }
-VERIFY(0x0261D454, setDigit);
 
-/* 0261D4A8: starts rolling from the old to the new digit */
-void roll(u32 self, u32 from, u32 to, u32 up) {
-    WWHD_FUNC(0x0261D4A8, void, self, from, to, up);
+/* 0261D4A8 */
+void HdAuctionNumber::roll(u32 from, u32 to, u32 up) {
     if (from == to) return;
-    store<u16>(self + 0x54, u16(from));
-    store<u16>(self + 0x56, u16(to));
-    store<u8>(self + 0x58, u8(up));
-    call<void>(0x020063C0, self + 0x18, kRoll);
+    mShownDigit = (s16)from;
+    mTargetDigit = (s16)to;
+    mRollingUp = (u8)up;
+    hdAuctionChangeState(&mpStateMachine, &l_roll);
 }
-VERIFY(0x0261D4A8, roll);
 
-/* 0261D4D0: loads the layout and binds its animation */
-u32 loadScreen(u32 self, u32 a, u32 b, u32 c, u32 d, u32 e) {
-    WWHD_FUNC(0x0261D4D0, u32, self, a, b, c, d, e);
-    u32 scr = call<u32>(0x0273B050, 0x110u, load<u32>(load<u32>(0x1018C404) + 0x10), 4u);
-    if (scr) scr = call<u32>(0x026FADB0, scr);
-    store<u32>(self + 0x44, scr);
-    if (!scr) return 0;
-    if (!call_ptr<u32>(load<u32>(load<u32>(scr + 0xE0) + 0x14), scr, a, b, c, d, 1u, 1u, e)) return 0;
-    call<void>(0x02004E04, anim(self), 0u, 0x1048E11Cu, 0x1048E114 + 8 * load<u32>(0x100E316C));
+/* 0261D4D0 */
+u32 HdAuctionNumber::loadScreen(u32 a, u32 b, u32 c, u32 d, u32 e) {
+    HdAuctionLayout* screen = static_cast<HdAuctionLayout*>(hdAuctionAllocateOnHeap(sizeof(HdAuctionLayout), l_heap.mpOwner->mpHeap, 4));
+    if (screen != NULL) screen = hdAuctionLayoutConstruct(screen);
+    mpLayout = screen;
+    if (screen == NULL) return 0;
+    if (!gabi::call_ptr<u32>(screen->mVtable[HdAuction_LoadLayout].get(), screen, a, b, c, d, 1u, 1u, e)) return 0;
+    hdAuctionBindAnimation(mpLayout->mpAnimation, 0, &l_animationNames.mNames[1], &l_animationNames.mNames[l_animationNameIndex]);
     return 1;
 }
-VERIFY(0x0261D4D0, loadScreen);
 
-/* 0261D5BC: static initialiser: shared objects, names and the Roll state */
-void staticInit() {
-    WWHD_FUNC(0x0261D5BC, void);
-    const u32 b = 0x1048E130;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F5170u);
-    const f32 hi = load<f32>(0x100E3234), lo = load<f32>(0x100E3230);
-    store<f32>(0x1048E128, hi);
-    store<f32>(0x1048E124, lo);
-    call<void>(0x028ED6F8, 0x1048E12Cu);
-    call<void>(0x028F026C, 0x101F517Cu);
-    call<void>(0x028EAB2C, 0x1048E12Du);
-    call<void>(0x028F026C, 0x101F5188u);
-    const u32 guard = load<u32>(0x101FD8E4);
-    const u32 vt = 0x100E3170, X = 0x1048E11C, Y = 0x1048E114, Z = 0x1048E170;
-    store<u32>(X + 4, vt);
-    store<u32>(Y + 4, vt);
-    store<u32>(Y, 0x100E3250);
-    store<u32>(X, 0x100E3238);
-    store<u32>(Z + 4, vt);
-    store<u32>(Z, 0x100E325C);
-    const u32 S = kRoll;
+/* 0261D5BC */
+static void __sinit_hd_screen_auction_number_cpp() {
+    l_globals.mThird = 0;
+    l_globals.mFirst = 0;
+    l_globals.mFourth = 0;
+    l_globals.mSecond = 0;
+    hdAuctionRegister(&l_registration);
+    f32 upper = l_upper;
+    f32 lower = l_lower;
+    l_range.mUpper = upper;
+    l_range.mLower = lower;
+    hdAuctionInitSigned(&l_range.mSignedInitialized);
+    hdAuctionRegister(&l_signedRegistration);
+    hdAuctionInitUnsigned(&l_range.mUnsignedInitialized);
+    hdAuctionRegister(&l_unsignedRegistration);
+    u32 guard = l_stateGuard;
+    l_animationNames.mNames[1].mVtable = &l_stringVtable;
+    l_animationNames.mNames[0].mVtable = &l_stringVtable;
+    l_animationNames.mNames[0].mpString = gabi::at<void>(gabi::guest_addr("digit animation"));
+    l_animationNames.mNames[1].mpString = gabi::at<void>(gabi::guest_addr("digit layout part"));
+    l_layoutName.mVtable = &l_stringVtable;
+    l_layoutName.mpString = gabi::at<void>(gabi::guest_addr("AuctionNumber_00"));
     u32 id;
-    if (guard) id = load<u32>(0x101FDD50) + 1;
-    else {
-        id = 1;
-        store<u32>(0x101FD8E4, 1);
-    }
-    store<u16>(S + 0xC, 0);
-    store<u16>(S + 0xE, 0x19);
-    store<u16>(S + 0x14, 0);
-    store<u16>(S + 0x16, 0x1A);
-    store<u16>(S + 0x1C, 0);
-    store<u32>(S, id);
-    store<u32>(S + 4, 0x100E3240);
-    store<u32>(S + 0x10, 4);
-    store<u32>(S + 0x18, 4);
-    store<u32>(S + 0x20, 4);
-    store<u32>(0x101FDD50, id);
-    store<u32>(S + 0x28, 0);
-    store<u32>(S + 8, 0x100E31D0);
-    store<u16>(S + 0x1E, 0x1B);
-    store<u16>(S + 0x24, 0);
-    store<u16>(S + 0x26, 0);
-    store<u32>(S + 0x2C, 0x101FF32C);
+    if (guard) id = l_lastStateID + 1;
+    else { id = 1; l_stateGuard = 1; }
+    l_roll.mInit.mAdjust = 0;
+    l_roll.mInit.mSlot = 0x19;
+    l_roll.mMove.mAdjust = 0;
+    l_roll.mMove.mSlot = 0x1A;
+    l_roll.mExit.mAdjust = 0;
+    l_roll.mID = id;
+    l_roll.mName = gabi::at<void>(gabi::guest_addr("Roll"));
+    l_roll.mInit.mKind = 4;
+    l_roll.mMove.mKind = 4;
+    l_roll.mExit.mKind = 4;
+    l_lastStateID = id;
+    l_roll.mFlags = 0;
+    l_roll.mVtable = &l_stateVtable;
+    l_roll.mExit.mSlot = 0x1B;
+    l_roll.mEmptyAdjust = 0;
+    l_roll.mEmptySlot = 0;
+    // HD: the last empty delegate's halfwords are stored separately before the parent link.
+    l_roll.mpParent = &l_stateParent;
 }
-VERIFY(0x0261D5BC, staticInit);
 
-/* empty state enter/exit functions */
-void nop1() { WWHD_FUNC(0x0261D7CC, void); }
-VERIFY(0x0261D7CC, nop1);
-void nop2() { WWHD_FUNC(0x0261D7D8, void); }
-VERIFY(0x0261D7D8, nop2);
-void nop3() { WWHD_FUNC(0x0261D7DC, void); }
-VERIFY(0x0261D7DC, nop3);
-void nop4() { WWHD_FUNC(0x0261D7E0, void); }
-VERIFY(0x0261D7E0, nop4);
+/* 0261D7CC */
+static void hdAuction_emptyCompanion() {}
+/* 0261D7D8 */
+static void hdAuction_emptyRollInit() {}
+/* 0261D7DC */
+static void hdAuction_emptyRollMove() {}
+/* 0261D7E0 */
+static void hdAuction_emptyRollExit() {}
 
-} // namespace hd_screen_auction_number
+/* WWHD glue (tools/verify/autoglue.py): HD screen, states and animation names.
+data l_heap 1018C404
+data l_screenVtable 100E3270
+data l_memberVtable 100E3350
+data l_secondaryVtable 100E3360
+data l_stringVtable 100E3170
+data l_stateVtable 100E31D0
+data l_stateParent 101FF32C
+data l_idle 1049DD60
+data l_roll 1048E140
+data l_animationNames 1048E114
+data l_layoutName 1048E170
+data l_animationNameIndex 100E316C
+data l_stateGuard 101FD8E4
+data l_lastStateID 101FDD50
+data l_three 100E321C
+data l_globals 1048E130
+data l_range 1048E124
+data l_lower 100E3230
+data l_upper 100E3234
+data l_registration 101F5170
+data l_signedRegistration 101F517C
+data l_unsignedRegistration 101F5188
+str 100E3250 "digit animation" renamed
+str 100E3238 "digit layout part" renamed
+str 100E325C "AuctionNumber_00" renamed
+str 100E3240 "Roll" renamed
+ext 0273AD10 void* hdAuctionAllocate(u32)
+ext 0273B050 void* hdAuctionAllocateOnHeap(u32, void*, u32)
+ext 0273AF40 void hdAuctionDelete(void*)
+ext 02700ADC void hdAuctionBaseConstruct(HdAuctionNumber*)
+ext 02700A70 void hdAuctionBaseDestroy(HdAuctionNumber*, u32)
+ext 02700B48 u32 hdAuctionBaseSetup(HdAuctionNumber*, HdAuctionSafeString*, u32, u32, u32)
+ext 0200552C void hdAuctionSetFrame(void*, u32, u32, f32)
+ext 020063C0 void hdAuctionChangeState(void*, HdAuctionState*)
+ext 026FADB0 HdAuctionLayout* hdAuctionLayoutConstruct(HdAuctionLayout*)
+ext 02004E04 void hdAuctionBindAnimation(void*, u32, HdAuctionSafeString*, HdAuctionSafeString*)
+ext 028F026C void hdAuctionRegister(void*)
+ext 028ED6F8 void hdAuctionInitSigned(be<u8>*)
+ext 028EAB2C void hdAuctionInitUnsigned(be<u8>*)
+*/

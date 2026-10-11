@@ -1,34 +1,30 @@
-#include "gabi.h"
+/**
+ * d_bg_w_deform.cpp - Deformable background collision.
+ * WWHD, written in GameCube decompilation style and verified against the original
+ * (tools/verify, d_bg_w_deform).
+ */
+#include "d/d_bg_w_deform.h"
 
-// HD passes three integer arguments: this, collision data, correction flags.
-BOOL dBgWDeform_Set(u32 self, u32 data, u32 flags) {
-    WWHD_FUNC(0x024F49E8, BOOL, self, data, flags);
-    if (gabi::call<BOOL>(0x0200A030, self, data, 0x33, 0)) return 1;
-    gmem_st32(self + 0xBC, flags);
-    if (flags & 1) return 0;
-    u32 collision = gmem_ld32(self + 0x94);
-    u32 count = gmem_ld32(collision);
-    u32 vertices = gabi::call<u32>(0x0273ADAC, count * 12);
-    gmem_st32(self + 0xC0, vertices);
-    return vertices == 0;
+/* 024F49E8 */
+BOOL dBgWDeform::Set(cBgD_t* bgd, u32 flag) {
+    // HD: no J3DModel parameter, skin-deform setup, or model flag changes.
+    if (cBgW_Set((dBgW*)this, bgd, MOVE_BG_e | NO_CALC_VTX_e | NO_VTX_TBL_e | GLOBAL_e, NULL)) {
+        return TRUE;
+    }
+    SetFlag(flag);
+    if (ChkNoCrrPos()) {
+        return FALSE;
+    }
+    SetBackVtx((cXyz*)operator_new_array(pm_bgd->m_v_num * sizeof(cXyz)));
+    return GetBackVtx() == NULL;
 }
-VERIFY(0x024F49E8, dBgWDeform_Set);
 
-// Adjacent header math initializer; precise generating-header attribution qualified.
-void dBgWDeform_StaticInit() {
-    WWHD_FUNC(0x024F4A78, void);
-    gmem_st32(0x1046EE00, 0);
-    gmem_st32(0x1046EDF8, 0);
-    gmem_st32(0x1046EE04, 0);
-    gmem_st32(0x1046EDFC, 0);
-    gabi::call<void>(0x028F026C, 0x101D5378u);
-    u32 lower = gmem_ld32(0x10044070);
-    u32 upper = gmem_ld32(0x10044074);
-    gmem_stf32(0x1046EDEC, lower);
-    gmem_stf32(0x1046EDF0, upper);
-    gabi::call<void>(0x028ED6F8, 0x1046EDF4u);
-    gabi::call<void>(0x028F026C, 0x101D5384u);
-    gabi::call<void>(0x028EAB2C, 0x1046EDF5u);
-    gabi::call<void>(0x028F026C, 0x101D5390u);
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 024F4A78 */
+static void __sinit_d_bg_w_deform_cpp() {
+    sinit_header_statics_rodata(0x1046EDEC, 0x101D5378, 0x1046EDF8, 0x10044070);
 }
-VERIFY(0x024F4A78, dBgWDeform_StaticInit);
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

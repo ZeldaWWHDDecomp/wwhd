@@ -3,587 +3,789 @@
  * d_ev_camera.cpp is all "Nonmatching" stubs). The per-item offset tables live in the stack frame
  * as in the original (built field by field from .rodata); the frame is reproduced at the same
  * offsets (F). */
-#include "bindings.h"
+#include "d/d_ev_camera_8.h"
 
-namespace d_ev_camera_8_cpp {
+using namespace gabi;
+namespace ev8Detail {
+enum ItemCameraState { ITEM_INIT, ITEM_BLEND, ITEM_HOLD, ITEM_WAIT = 0xA, ITEM_DONE = 0x63 };
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
+static ItemCameraRodataHD itemCameraData;
+static const f32 itemValue15 = 15.0f;
+static const f32 itemValue0 = 0.0f;
+static const f32 itemValue70 = 70.0f;
+static const f32 itemValue100 = 100.0f;
+static const f32 itemValueMinus70 = -70.0f;
+static const f32 itemValueMinus90 = -90.0f;
+static const f32 itemValue55 = 55.0f;
+static const f32 itemValueMinus50 = -50.0f;
+static const f32 itemValue115 = 115.0f;
+static const f32 itemValue60 = 60.0f;
+static const f32 itemValue5 = 5.0f;
+static const f32 itemValue110 = 110.0f;
+static const f32 itemValueMinus40 = -40.0f;
+static const f32 itemValueMinus25 = -25.0f;
+static const f32 itemValueMinus10 = -10.0f;
+static const f32 itemValueMinus5 = -5.0f;
+static const f32 itemValueMinus30 = -30.0f;
+static const f32 itemValue10 = 10.0f;
+static const f32 itemValue85 = 85.0f;
+static const f32 itemValue45 = 45.0f;
+
+// HD: all indexed table arithmetic stays in 32-bit guest addresses. An unchecked Type can
+// reach saved GPR/FPR or caller-frame words; do not replace it with bounded native indexing.
+/* inlined into useItem0EvCamera/useItem1EvCamera */
 static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
+    *at<be<u32>>(d + 0) = at<be<u32>>(s + 0)->get();
+    *at<be<u32>>(d + 4) = at<be<u32>>(s + 4)->get();
+    *at<be<u32>>(d + 8) = at<be<u32>>(s + 8)->get();
 }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline void positionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8D5C, c, out, actor); }
-static inline bool lineBGCheck(u32 c, u32 a, u32 b, u32 flags) { return gabi::call<bool>(0x024FCBE8, c, a, b, flags); }
-static inline void cXyz_mi(u32 a, u32 out, u32 b) { gabi::call(0x0201ADE0, a, out, b); }
-static inline void cXyz_pl(u32 a, u32 out, u32 b) { gabi::call(0x0201AD78, a, out, b); }
-static inline void cXyz_ml(u32 a, u32 out, f32 s) { gabi::call(0x0201AE48, a, out, s); }
-static inline void cSGlobe_Val(u32 g, u32 v) { gabi::call(0x020072E0, g, v); }
-static inline void cSGlobe_Xyz(u32 g, u32 out) { gabi::call(0x020073AC, g, out); }
-static inline void cSAngle_mi(u32 a, u32 out, u32 b) { gabi::call(0x020068B0, a, out, b); }
-static inline void cSAngle_ml(u32 a, u32 out, f32 f) { gabi::call(0x0200693C, a, out, f); }
-static inline void cSAngle_addeq(u32 a, u32 b) { gabi::call(0x020068CC, a, b); }
+
+// HD: these copies retain float access, while copy3 retains word access/NaN payloads.
+/* inlined into useItem0EvCamera/useItem1EvCamera */
+static inline void copy3f(u32 destination, u32 source) {
+    auto& dst = *at<cXyz>(destination);
+    auto& src = *at<cXyz>(source);
+    dst.x = src.x.get();
+    dst.y = src.y.get();
+    dst.z = src.z.get();
+}
+/* inlined into useItem0EvCamera/useItem1EvCamera */
 static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
+    at<dCamera_c>(c)->m102 = 1;
+    at<dCamera_c>(c)->m101 = 1;
+    at<dCamera_c>(c)->m100 = 1;
 }
 /* centre from the item's centre offset, eye = centre + direction */
+/* inlined into useItem0EvCamera/useItem1EvCamera */
 static inline void holdView(u32 c, u32 w, u32 F) {
-    relationalPos(c, F + 0x44, ld(c + 0x128), ld(F + 0x200 + (ld(w + 8) << 2)));
-    copy3(c + 0x44, F + 0x44);
-    cSGlobe_Xyz(c + 0x3C, F + 0x38);
-    cXyz_pl(c + 0x44, F + 0x44, F + 0x38);
-    copy3(c + 0x50, F + 0x44);
+    ev8_relationalPos(c, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint),
+                      at<dCamera_c>(c)->mpPlayerActor.v.get(),
+                      at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mCenterOffsets[0]) +
+                                  (at<ItemCameraWork>(w)->mType << 2))
+                          ->get());
+    copy3(gabi::ea(&at<dCamera_c>(c)->mViewCache.mCenter),
+          gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint));
+    ev8_cSGlobe_Xyz(gabi::ea(&at<dCamera_c>(c)->mViewCache.mDirection),
+                    gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+    ev8_cXyz_pl(gabi::ea(&at<dCamera_c>(c)->mViewCache.mCenter),
+                gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint),
+                gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+    copy3(gabi::ea(&at<dCamera_c>(c)->mViewCache.mEye),
+          gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint));
 }
 
-/* 02538DB4: useItem0EvCamera (showing an item in use; "Type" selects one of seven offset sets).
+/* useItem0EvCamera (showing an item in use; "Type" selects one of seven offset sets).
  * work: +0 state (0xA: wait, then pick the first clear eye of the type's list; 1: blend over
  * work+4 frames; 2: hold (type 0 once more as type 4); 0x63: done), +8 Type, +0xC centre,
  * +0x18 target fovy, +0x1C/+0x20 counters, +0x24 target direction */
-static u32 dCamera_c_useItem0EvCamera(u32 i_this) {
-    WWHD_FUNC(0x02538DB4, u32, i_this);
+} // namespace ev8Detail
+using namespace ev8Detail;
+/* 02538DB4 */
+u32 ItemEventCamera_c::useItem0EvCamera() {
+    const u32 i_this = ea();
     u32 entry = gabi::cpu->r[1];
-    gabi::Local<u8[0x288]> frame; /* reserves the original frame [entry - 0x288, entry) */
+    gabi::Local<ItemCameraFrame0HD> frame; /* reserves the original frame [entry - 0x288, entry) */
     u32 F = entry - 0x288;
     (void)frame;
-    st(F, entry);                  /* back chain (stwu) */
-    st(entry + 4, gabi::cpu->lr);  /* LR save word in the caller's frame */
+    *at<be<u32>>(F) =
+        entry; // HD: original stwu back chain.                  /* back chain (stwu) */
+    *at<be<u32>>(entry + 4) = gabi::cpu->lr; /* LR save word in the caller's frame */
     /* the register save area (stmw r20 at +0x238, f30/f31 at +0x268/+0x278): an out-of-range
      * "Type" indexes the tables into it as in the original */
-    for (u32 i = 20; i < 32; i++) st(F + 0x238 + (i - 20) * 4, gabi::cpu->r[i]);
+    for (u32 i = 20; i < 32; i++)
+        *at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mSavedGpr[0]) + (i - 20) * 4) =
+            gabi::cpu->r[i];
     {
         u64 b;
         f64 d = gabi::cpu->f[30].ps0;
         memcpy(&b, &d, 8);
-        gabi::store<u64>(F + 0x268, b);
-        stf(F + 0x270, (f32)gabi::cpu->f[30].ps1);
+        at<ItemCameraFrame0HD>(F)->mSavedFpr[0].mDouble = b;
+        at<ItemCameraFrame0HD>(F)->mSavedFpr[0].mPairedSingle = (f32)gabi::cpu->f[30].ps1;
         d = gabi::cpu->f[31].ps0;
         memcpy(&b, &d, 8);
-        gabi::store<u64>(F + 0x278, b);
-        stf(F + 0x280, (f32)gabi::cpu->f[31].ps1);
+        at<ItemCameraFrame0HD>(F)->mSavedFpr[1].mDouble = b;
+        at<ItemCameraFrame0HD>(F)->mSavedFpr[1].mPairedSingle = (f32)gabi::cpu->f[31].ps1;
     }
-    u32 w = i_this + 0x37C;
-    stf(F + 0x84, ldf(0x1004CF80));
-    stf(F + 0x7C, ldf(0x1004CE58));
-    stf(F + 0x80, ldf(0x1004D2CC));
-    stf(F + 0xE0, ldf(0x1004D2C4));
-    stf(F + 0xD4, ldf(0x1004D2B8));
-    stf(F + 0x78, ldf(0x1004D2B0));
-    stf(F + 0xD8, ldf(0x1004D2BC));
-    stf(F + 0x74, ldf(0x1004D2AC));
-    stf(F + 0xD0, ldf(0x1004D2B4));
-    stf(F + 0xDC, ldf(0x1004D2C0));
-    stf(F + 0x70, ldf(0x1004D2A8));
-    stf(F + 0xE4, ldf(0x1004D2C8));
-    stf(F + 0x13C, ldf(0x1004D2D8));
-    stf(F + 0x14C, ldf(0x1004D2E0));
-    stf(F + 0x130, ldf(0x1004D2D0));
-    stf(F + 0x144, ldf(0x1004D2D0));
-    stf(F + 0x15C, ldf(0x1004CF70));
-    stf(F + 0x154, ldf(0x1004D2E4));
-    stf(F + 0x150, ldf(0x1004CEB4));
-    stf(F + 0x164, ldf(0x1004D0D4));
-    stf(F + 0x140, ldf(0x1004D2DC));
-    stf(F + 0x158, ldf(0x1004D2E8));
-    stf(F + 0x160, ldf(0x1004D1CC));
-    stf(F + 0xAC, ldf(0x1004D2F0));
-    stf(F + 0x148, ldf(0x1004D1C0));
-    stf(F + 0x134, ldf(0x1004D0BC));
-    stf(F + 0xC0, ldf(0x1004D0E8));
-    stf(F + 0xB0, ldf(0x1004D004));
-    stf(F + 0x138, ldf(0x1004D2D4));
-    stf(F + 0xC4, ldf(0x1004CEB8));
-    stf(F + 0x180, ldf(0x1004D0D8));
-    stf(F + 0x5C, ldf(0x1004CE58));
-    stf(F + 0x178, ldf(0x1004CEB8));
-    stf(F + 0xB4, ldf(0x1004D2F4));
-    stf(F + 0x168, ldf(0x1004D300));
-    stf(F + 0x17C, ldf(0x1004D2F8));
-    stf(F + 0x184, ldf(0x1004D30C));
-    stf(F + 0x18C, ldf(0x1004D310));
-    stf(F + 0x60, ldf(0x1004D0DC));
-    stf(F + 0xBC, ldf(0x1004D0B4));
-    stf(F + 0x16C, ldf(0x1004D2F8));
-    stf(F + 0xB8, ldf(0x1004D2F8));
-    stf(F + 0x174, ldf(0x1004D308));
-    stf(F + 0x188, ldf(0x1004D0BC));
-    stf(F + 0x170, ldf(0x1004D304));
-    stf(F + 0x88, ldf(0x1004CE58));
-    stf(F + 0x8C, ldf(0x1004D2FC));
-    stf(F + 0x90, ldf(0x1004D2EC));
-    stf(F + 0x64, ldf(0x1004D2EC));
-    stf(F + 0x94, ldf(0x1004D314));
-    stf(F + 0xCC, ldf(0x1004D0D8));
-    stf(F + 0x98, ldf(0x1004D318));
-    stf(F + 0xF4, ldf(0x1004D32C));
-    stf(F + 0xC8, ldf(0x1004D2F8));
-    stf(F + 0xF8, ldf(0x1004D330));
-    stf(F + 0xF0, ldf(0x1004D328));
-    stf(F + 0xE8, ldf(0x1004D320));
-    stf(F + 0x9C, ldf(0x1004D31C));
-    stf(F + 0x100, ldf(0x1004D320));
-    stf(F + 0x10C, ldf(0x1004D340));
-    stf(F + 0x118, ldf(0x1004D34C));
-    stf(F + 0x11C, ldf(0x1004D350));
-    stf(F + 0x120, ldf(0x1004D354));
-    stf(F + 0xEC, ldf(0x1004D324));
-    stf(F + 0x104, ldf(0x1004D324));
-    stf(F + 0xFC, ldf(0x1004D334));
-    stf(F + 0x110, ldf(0x1004D344));
-    stf(F + 0x114, ldf(0x1004D348));
-    stf(F + 0x124, ldf(0x1004D358));
-    stf(F + 0x128, ldf(0x1004D35C));
-    stf(F + 0x12C, ldf(0x1004D360));
-    stf(F + 0xA0, ldf(0x1004D338));
-    stf(F + 0x108, ldf(0x1004D328));
-    st(F + 0x214, F + 0x94);
-    st(F + 0x200, F + 0x5C);
-    st(F + 0x208, F + 0x5C);
-    st(F + 0x21C, F + 0xAC);
-    st(F + 0x20C, F + 0x88);
-    st(F + 0x204, F + 0x7C);
-    stf(F + 0xA8, ldf(0x1004D2D4));
-    st(F + 0x220, F + 0x130);
-    st(F + 0x228, F + 0x160);
-    st(F + 0x210, F + 0x70);
-    st(F + 0x22C, F + 0xD0);
-    st(F + 0x218, F + 0xA0);
-    st(F + 0x224, F + 0xAC);
-    stf(F + 0xA4, ldf(0x1004D33C));
-    st(F + 0x190, 0x2);
-    st(F + 0x194, 0x4);
-    st(F + 0x198, 0x3);
-    st(F + 0x19C, 0x4);
-    st(F + 0x1A0, 0x3);
-    st(F + 0x1AC, ld(0x1004D36C));
-    st(F + 0x1B0, ld(0x1004D370));
-    st(F + 0x1B4, ld(0x1004D374));
-    st(F + 0x1B8, ld(0x1004D378));
-    st(F + 0x1BC, ld(0x1004D37C));
-    st(F + 0x1A4, 0x3);
-    st(F + 0x1C8, 0x2D);
-    st(F + 0x1C0, ld(0x1004D380));
-    st(F + 0x1C4, ld(0x1004D384));
-    st(F + 0x1A8, 0x3);
-    st(F + 0x1CC, 0x28);
-    st(F + 0x1D0, 0x28);
-    st(F + 0x1D4, 0x28);
-    st(F + 0x230, F + 0xE8);
-    st(F + 0x1D8, 0xA);
-    st(F + 0x1DC, 0x2D);
-    st(F + 0x1E0, 0x37);
-    st(F + 0x1E4, 0x0);
-    st(F + 0x1E8, 0x0);
-    st(F + 0x1EC, 0x0);
-    st(F + 0x1F0, 0x0);
-    st(F + 0x1F4, 0x0);
-    st(F + 0x1F8, 0x49);
-    st(F + 0x234, F + 0x10C);
-    st(F + 0x1FC, 0x0);
-    gabi::call(0x020065FC, F + 0x22); /* cSAngle() */
-    gabi::call(0x020065FC, F + 0x30);
+    u32 w = gabi::ea(mWork);
+    auto& work = *at<ItemCameraWork>(w);
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[10] = itemValue15;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[8] = itemValue0;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[9] = itemCameraData.mItem0Values[9].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[33] = itemCameraData.mItem0Values[7].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[30] = itemCameraData.mItem0Values[4].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[7] = itemCameraData.mItem0Values[2].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[31] = itemCameraData.mItem0Values[5].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[6] = itemCameraData.mItem0Values[1].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[29] = itemCameraData.mItem0Values[3].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[32] = itemCameraData.mItem0Values[6].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[5] = itemCameraData.mItem0Values[0].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[34] = itemCameraData.mItem0Values[8].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[56] = itemCameraData.mItem0Values[12].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[60] = itemCameraData.mItem0Values[14].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[53] = itemCameraData.mItem0Values[10].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[58] = itemCameraData.mItem0Values[10].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[64] = itemValue70;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[62] = itemCameraData.mItem0Values[15].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[61] = itemValue100;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[66] = itemValueMinus70;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[57] = itemCameraData.mItem0Values[13].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[63] = itemCameraData.mItem0Values[16].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[65] = itemValueMinus90;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[20] = itemCameraData.mItem0Values[18].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[59] = itemValue55;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[54] = itemValueMinus50;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[25] = itemValue115;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[21] = itemValue60;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[55] = itemCameraData.mItem0Values[11].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[26] = itemValue5;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[73] = itemValue110;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[0] = itemValue0;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[71] = itemValue5;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[22] = itemCameraData.mItem0Values[19].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[67] = itemCameraData.mItem0Values[22].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[72] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[74] = itemCameraData.mItem0Values[25].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[76] = itemCameraData.mItem0Values[26].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[1] = itemValueMinus40;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[24] = itemValueMinus25;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[68] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[23] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[70] = itemCameraData.mItem0Values[24].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[75] = itemValueMinus50;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[69] = itemCameraData.mItem0Values[23].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[11] = itemValue0;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[12] = itemCameraData.mItem0Values[21].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[13] = itemCameraData.mItem0Values[17].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[2] = itemCameraData.mItem0Values[17].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[14] = itemCameraData.mItem0Values[27].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[28] = itemValue110;
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[15] = itemCameraData.mItem0Values[28].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[38] = itemCameraData.mItem0Values[33].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[27] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[39] = itemCameraData.mItem0Values[34].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[37] = itemCameraData.mItem0Values[32].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[35] = itemCameraData.mItem0Values[30].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[16] = itemCameraData.mItem0Values[29].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[41] = itemCameraData.mItem0Values[30].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[44] = itemCameraData.mItem0Values[38].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[47] = itemCameraData.mItem0Values[41].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[48] = itemCameraData.mItem0Values[42].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[49] = itemCameraData.mItem0Values[43].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[36] = itemCameraData.mItem0Values[31].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[42] = itemCameraData.mItem0Values[31].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[40] = itemCameraData.mItem0Values[35].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[45] = itemCameraData.mItem0Values[39].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[46] = itemCameraData.mItem0Values[40].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[50] = itemCameraData.mItem0Values[44].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[51] = itemCameraData.mItem0Values[45].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[52] = itemCameraData.mItem0Values[46].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[17] = itemCameraData.mItem0Values[36].get();
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[43] = itemCameraData.mItem0Values[32].get();
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[5] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[14]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[0] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[0]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[2] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[0]);
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[0] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[20]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[3] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[11]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[1] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[8]);
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[19] = itemCameraData.mItem0Values[11].get();
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[1] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[53]);
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[3] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[65]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[4] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[5]);
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[4] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[29]);
+    at<ItemCameraFrame0HD>(F)->mCenterOffsets[6] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[17]);
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[2] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[20]);
+    at<ItemCameraFrame0HD>(F)->mOffsetValues[18] = itemCameraData.mItem0Values[37].get();
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[0] = 0x2;
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[1] = 0x4;
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[2] = 0x3;
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[3] = 0x4;
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[4] = 0x3;
+    at<ItemCameraFrame0HD>(F)->mFovyBits[0] = itemCameraData.mFovy0[0].get();
+    at<ItemCameraFrame0HD>(F)->mFovyBits[1] = itemCameraData.mFovy0[1].get();
+    at<ItemCameraFrame0HD>(F)->mFovyBits[2] = itemCameraData.mFovy0[2].get();
+    at<ItemCameraFrame0HD>(F)->mFovyBits[3] = itemCameraData.mFovy0[3].get();
+    at<ItemCameraFrame0HD>(F)->mFovyBits[4] = itemCameraData.mFovy0[4].get();
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[5] = 0x3;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[0] = 0x2D;
+    at<ItemCameraFrame0HD>(F)->mFovyBits[5] = itemCameraData.mFovy0[5].get();
+    at<ItemCameraFrame0HD>(F)->mFovyBits[6] = itemCameraData.mFovy0[6].get();
+    at<ItemCameraFrame0HD>(F)->mEyeCounts[6] = 0x3;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[1] = 0x28;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[2] = 0x28;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[3] = 0x28;
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[5] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[35]);
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[4] = 0xA;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[5] = 0x2D;
+    at<ItemCameraFrame0HD>(F)->mBlendFrames[6] = 0x37;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[0] = 0x0;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[1] = 0x0;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[2] = 0x0;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[3] = 0x0;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[4] = 0x0;
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[5] = 0x49;
+    at<ItemCameraFrame0HD>(F)->mEyeOffsets[6] =
+        gabi::ea(&at<ItemCameraFrame0HD>(F)->mOffsetValues[44]);
+    at<ItemCameraFrame0HD>(F)->mWaitFrames[6] = 0x0;
+    ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame0HD>(F)->mYaw)); /* cSAngle() */
+    ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame0HD>(F)->mPitch));
     u32 s;
-    if (ld(i_this + 0x11C) == 0) {
-        s = 0;
-        st(w + 0, 0);
+    if (this->m11C == 0) {
+        s = ITEM_INIT;
+        work.mState = ITEM_INIT;
     } else {
-        s = ld(w + 0);
+        s = work.mState;
     }
-    if (s == 1) {
+    if (s == ITEM_BLEND) {
         /* blend towards the chosen view */
-        f32 t = (f32)(f64)(s32)ld(w + 0x20) / (f32)(f64)(s32)ld(w + 4);
-        f32 fv = ldf(i_this + 0x60);
-        stf(i_this + 0x60, gabi::fmadds(ldf(w + 0x18) - fv, t, fv));
-        relationalPos(i_this, F + 0x38, ld(i_this + 0x128), ld(F + 0x200 + (ld(w + 8) << 2)));
-        copy3(w + 0xC, F + 0x38);
-        cXyz_mi(w + 0xC, F + 0x44, i_this + 0x44);
-        cXyz_ml(F + 0x44, F + 0x38, t);
-        gabi::call(0x028E8D88, i_this + 0x44, F + 0x38, i_this + 0x44); /* PSVECAdd */
-        st16(F + 0x30, (u16)lds16(i_this + 0x40));
-        st16(F + 0x22, (u16)lds16(i_this + 0x42));
-        f32 r0 = ldf(i_this + 0x3C);
-        f32 rad = gabi::fmadds(ldf(w + 0x24) - r0, t, r0);
-        cSAngle_mi(w + 0x28, F + 0x34, F + 0x30);
-        cSAngle_ml(F + 0x34, F + 0x32, t);
-        cSAngle_addeq(F + 0x30, F + 0x32);
-        cSAngle_mi(w + 0x2A, F + 0x32, F + 0x22);
-        cSAngle_ml(F + 0x32, F + 0x34, t);
-        cSAngle_addeq(F + 0x22, F + 0x34);
-        gabi::call(0x020071E0, i_this + 0x3C, rad, F + 0x30, F + 0x22); /* cSGlobe::Val(r, V, U) */
-        cSGlobe_Xyz(i_this + 0x3C, F + 0x38);
-        cXyz_pl(i_this + 0x44, F + 0x44, F + 0x38);
-        copy3(i_this + 0x50, F + 0x44);
-        u32 c = ld(w + 0x20);
-        if ((s32)c < (s32)ld(w + 4)) {
-            st(w + 0x20, c + 1);
+        f32 t = (f32)(f64)(s32)work.mFrame / (f32)(f64)(s32)work.mBlendFrames;
+        f32 fv = this->mViewCache.mFovy;
+        this->mViewCache.mFovy = gabi::fmadds(work.mFovy - fv, t, fv);
+        ev8_relationalPos(
+            i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta), this->mpPlayerActor.v.get(),
+            at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mCenterOffsets[0]) + (work.mType << 2))
+                ->get());
+        copy3(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+        ev8_cXyz_mi(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint),
+                    gabi::ea(&this->mViewCache.mCenter));
+        ev8_cXyz_ml(gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint),
+                    gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta), t);
+        ev8_PSVECAdd(gabi::ea(&this->mViewCache.mCenter),
+                     gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta),
+                     gabi::ea(&this->mViewCache.mCenter)); /* PSVECAdd */
+        at<ItemCameraFrame0HD>(F)->mPitch = (u16)this->mViewCache.mDirection.mV;
+        at<ItemCameraFrame0HD>(F)->mYaw = (u16)this->mViewCache.mDirection.mU;
+        f32 r0 = this->mViewCache.mDirection.mRadius;
+        f32 rad = gabi::fmadds(work.mTargetDirection.mRadius - r0, t, r0);
+        ev8_cSAngle_mi(gabi::ea(&work.mTargetDirection.mV),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleB),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mPitch));
+        ev8_cSAngle_ml(gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleB),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleA), t);
+        ev8_cSAngle_addeq(gabi::ea(&at<ItemCameraFrame0HD>(F)->mPitch),
+                          gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleA));
+        ev8_cSAngle_mi(gabi::ea(&work.mTargetDirection.mU),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleA),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mYaw));
+        ev8_cSAngle_ml(gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleA),
+                       gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleB), t);
+        ev8_cSAngle_addeq(gabi::ea(&at<ItemCameraFrame0HD>(F)->mYaw),
+                          gabi::ea(&at<ItemCameraFrame0HD>(F)->mAngleB));
+        ev8_cSGlobe_ValRVU(gabi::ea(&this->mViewCache.mDirection), rad,
+                           gabi::ea(&at<ItemCameraFrame0HD>(F)->mPitch),
+                           gabi::ea(&at<ItemCameraFrame0HD>(F)->mYaw)); /* cSGlobe::Val(r, V, U) */
+        ev8_cSGlobe_Xyz(gabi::ea(&this->mViewCache.mDirection),
+                        gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+        ev8_cXyz_pl(gabi::ea(&this->mViewCache.mCenter),
+                    gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint),
+                    gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+        copy3(gabi::ea(&this->mViewCache.mEye), gabi::ea(&at<ItemCameraFrame0HD>(F)->mPoint));
+        u32 c = work.mFrame;
+        if ((s32)c < (s32)work.mBlendFrames) {
+            work.mFrame = c + 1;
             return 0;
         }
-        st(w + 0, 2);
-        s = 2;
+        work.mState = ITEM_HOLD;
+        s = ITEM_HOLD;
     }
-    if (s == 2) {
+    if (s == ITEM_HOLD) {
         holdView(i_this, w, F);
-        u32 n = ld(w + 0x1C) + 1;
-        u32 type = ld(w + 8);
-        st(w + 0x1C, n);
+        u32 n = work.mHoldFrames + 1;
+        u32 type = work.mType;
+        work.mHoldFrames = n;
         if (type == 0 && n == 1) {
-            u32 c = ld(w + 0x20);
-            st(w + 0, 0xA);
-            st(w + 8, 4);
-            st(w + 0x20, c + 1);
+            u32 c = work.mFrame;
+            work.mState = ITEM_WAIT;
+            work.mType = 4;
+            work.mFrame = c + 1;
             return 0;
         }
-        st(w + 0, 0x63);
-        s = 0x63;
+        work.mState = ITEM_DONE;
+        s = ITEM_DONE;
     }
-    if (s == 0x63) {
+    if (s == ITEM_DONE) {
         setDone(i_this);
         holdView(i_this, w, F);
-        st(w + 0x20, ld(w + 0x20) + 1);
+        work.mFrame = work.mFrame + 1;
         return 1;
     }
-    if (s != 0xA) {
-        getEvIntData(i_this, w + 8, 0x1004D364 /* "Type" */, 0);
-        st(w + 0x1C, 0);
-        st(w + 0x20, 0);
+    if (s != ITEM_WAIT) {
+        ev8_getEvIntData(i_this, gabi::ea(&work.mType),
+                         gabi::ea(itemCameraData.mType0) /* "Type" */, 0);
+        work.mHoldFrames = ITEM_INIT;
+        work.mFrame = 0;
     }
     /* state 0xA: wait the type's frames, then choose the eye */
-    u32 c = ld(w + 0x20) + 1;
-    st(w + 0, 0xA);
-    st(w + 0x20, c);
-    if ((s32)c < (s32)ld(F + 0x1E4 + (ld(w + 8) << 2))) {
-        st(w + 0x20, c + 1);
+    u32 c = work.mFrame + 1;
+    work.mState = ITEM_WAIT;
+    work.mFrame = c;
+    if ((s32)c <
+        (s32)at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mWaitFrames[0]) + (work.mType << 2))
+            ->get()) {
+        work.mFrame = c + 1;
         return 0;
     }
-    st(w + 0x20, 0);
-    if ((ld(i_this + 0x7C) & 7) == 0) {
-        u32 type = ld(w + 8);
+    work.mFrame = 0;
+    if ((this->m07C & 7) == 0) {
+        u32 type = work.mType;
         if (type >= 2 && type <= 3) { /* swap the first two eye offsets */
-            u32 p = ld(F + 0x21C + (type << 2));
-            u32 x1 = ld(p + 0x10), x0 = ld(p + 0xC);
-            f32 a0 = ldf(p + 0);
-            st(p + 0, x0);
-            f32 a1 = ldf(p + 4);
-            st(p + 4, x1);
-            u32 x2 = ld(p + 0x14);
-            f32 a2 = ldf(p + 8);
-            st(p + 8, x2);
-            u32 q = ld(F + 0x21C + (ld(w + 8) << 2));
-            stf(q + 0x10, a1);
-            stf(q + 0x14, a2);
-            stf(q + 0xC, a0);
+            u32 p = at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mEyeOffsets[0]) + (type << 2))
+                        ->get();
+            u32 x1 = at<be<u32>>(p + 0x10)->get(), x0 = at<be<u32>>(p + 0xC)->get();
+            f32 a0 = at<cXyz>(p)[0].x.get();
+            *at<be<u32>>(p + 0) = x0;
+            f32 a1 = at<cXyz>(p)[0].y.get();
+            *at<be<u32>>(p + 4) = x1;
+            u32 x2 = at<be<u32>>(p + 0x14)->get();
+            f32 a2 = at<cXyz>(p)[0].z.get();
+            *at<be<u32>>(p + 8) = x2;
+            u32 q = at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mEyeOffsets[0]) +
+                                (work.mType << 2))
+                        ->get();
+            at<cXyz>(q)[1].y = a1;
+            at<cXyz>(q)[1].z = a2;
+            at<cXyz>(q)[1].x = a0;
         }
     }
-    relationalPos(i_this, F + 0x38, ld(i_this + 0x128), ld(F + 0x200 + (ld(w + 8) << 2)));
-    copy3(w + 0xC, F + 0x38);
-    u32 E = F + 0x14;
-    for (s32 i = 0; i < (s32)ld(F + 0x190 + (ld(w + 8) << 2)); i++) {
-        relationalPos(i_this, F + 8, ld(i_this + 0x128), ld(F + 0x21C + (ld(w + 8) << 2)) + (u32)i * 12);
-        copy3(E, F + 8);
-        positionOf(i_this, F + 8, ld(i_this + 0x128));
-        if (ldf(E + 4) < ldf(F + 0xC) + ldf(i_this + 0x36C)) { /* bge: taken on NaN */
-            positionOf(i_this, F + 0x50, ld(i_this + 0x128));
-            stf(E + 4, ldf(F + 0x54) + ldf(i_this + 0x36C));
+    ev8_relationalPos(
+        i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta), this->mpPlayerActor.v.get(),
+        at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mCenterOffsets[0]) + (work.mType << 2))
+            ->get());
+    copy3(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+    u32 E = gabi::ea(&at<ItemCameraFrame0HD>(F)->mEye);
+    for (s32 i = 0; i < (s32)at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mEyeCounts[0]) +
+                                         (work.mType << 2))
+                            ->get();
+         i++) {
+        ev8_relationalPos(
+            i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition), this->mpPlayerActor.v.get(),
+            at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mEyeOffsets[0]) + (work.mType << 2))
+                    ->get() +
+                (u32)i * 12);
+        copy3(E, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition));
+        ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition),
+                       this->mpPlayerActor.v.get());
+        if (at<cXyz>(E)[0].y.get() <
+            at<ItemCameraFrame0HD>(F)->mPosition.y + this->m368) { /* bge: taken on NaN */
+            ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame0HD>(F)->mPlayerPosition),
+                           this->mpPlayerActor.v.get());
+            at<cXyz>(E)[0].y = at<ItemCameraFrame0HD>(F)->mPlayerPosition.y + this->m368;
         }
         u32 item = 0;
-        s32 pad = (s32)ld(i_this + 0x124);
-        u32 g = gi();
-        if (ld(g + 0x5CD8 + ((u32)pad << 4)) & 0x10000) {
-            st16(F + 0x20, 0xA5);
-            item = gabi::call<u32>(0x025D5218, 0x025E121C, F + 0x20); /* fopAcIt_Judge(fpcSch_JudgeForPName) */
+        s32 pad = (s32)this->mPadId;
+        u32 g = dComIfGp_ea();
+        if (at<dComIfG_inf_c>(g)->play.mPlayerStatus[pad][0].get() & 0x10000) {
+            at<ItemCameraFrame0HD>(F)->mItemProfile = 0xA5;
+            item = ev8_JudgeActor(
+                0x025E121C,
+                gabi::ea(&at<ItemCameraFrame0HD>(F)
+                              ->mItemProfile)); /* fopAcIt_Judge(fpcSch_JudgeForPName) */
         }
-        if (lineBGCheck(i_this, w + 0xC, E, 0x8F)) continue;
-        for (u32 k = 0; k < 3; k++) stf(F + 8 + 4 * k, ldf(w + 0xC + 4 * k));
-        for (u32 k = 0; k < 3; k++) stf(F + 0x24 + 4 * k, ldf(E + 4 * k));
-        u32 pl = ld(i_this + 0x128);
-        g = gi();
-        if (!gabi::call<bool>(0x025187D8, g + 0x26A4, F + 8, F + 0x24, ldf(0x1004CF80), pl, item)) break; /* dCcS::ChkCamera */
+        if (ev8_lineBGCheck(i_this, gabi::ea(&work.mCenter), E, 0x8F))
+            continue;
+        copy3f(gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition), gabi::ea(&work.mCenter));
+        copy3f(gabi::ea(&at<ItemCameraFrame0HD>(F)->mCollisionEye), E);
+        u32 pl = this->mpPlayerActor.v.get();
+        g = dComIfGp_ea();
+        if (!ev8_ChkCamera(gabi::ea(&at<dComIfG_inf_c>(g)->play.mCcS),
+                           gabi::ea(&at<ItemCameraFrame0HD>(F)->mPosition),
+                           gabi::ea(&at<ItemCameraFrame0HD>(F)->mCollisionEye), itemValue15, pl,
+                           item))
+            break; /* dCcS::ChkCamera */
     }
-    cXyz_mi(E, F + 0x38, w + 0xC);
-    cSGlobe_Val(w + 0x24, F + 0x38);
-    u32 type = ld(w + 8);
-    u32 cnt = ld(w + 0x20);
-    stf(w + 0x18, ldf(F + 0x1AC + (type << 2)));
-    u32 fr = ld(F + 0x1C8 + (type << 2));
-    st(w + 0, 1);
-    st(w + 4, fr);
-    st(w + 0x20, cnt + 1);
+    ev8_cXyz_mi(E, gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta), gabi::ea(&work.mCenter));
+    ev8_cSGlobe_Val(gabi::ea(&work.mTargetDirection), gabi::ea(&at<ItemCameraFrame0HD>(F)->mDelta));
+    u32 type = work.mType;
+    u32 cnt = work.mFrame;
+    work.mFovy =
+        at<be<f32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mFovyBits[0]) + (type << 2))->get();
+    u32 fr =
+        at<be<u32>>(gabi::ea(&at<ItemCameraFrame0HD>(F)->mBlendFrames[0]) + (type << 2))->get();
+    work.mState = ITEM_BLEND;
+    work.mBlendFrames = fr;
+    work.mFrame = cnt + 1;
     return 0;
 }
-VERIFY(0x02538DB4, dCamera_c_useItem0EvCamera);
+namespace ev8Detail {
 
 /* the original's register save area at the top of a frame (stmw rFirst at saveOff; f30/f31 as
  * stfd + the paired-single slot) */
+/* inlined into useItem0EvCamera/useItem1EvCamera */
 static inline void frameSaves(u32 F, u32 first, u32 saveOff, u32 f30Off) {
-    for (u32 i = first; i < 32; i++) st(F + saveOff + (i - first) * 4, gabi::cpu->r[i]);
+    for (u32 i = first; i < 32; i++)
+        *at<be<u32>>(F + saveOff + (i - first) * 4) = gabi::cpu->r[i];
     u64 b;
     f64 d = gabi::cpu->f[30].ps0;
     memcpy(&b, &d, 8);
-    gabi::store<u64>(F + f30Off, b);
-    stf(F + f30Off + 8, (f32)gabi::cpu->f[30].ps1);
+    at<ItemCameraFprSaveHD>(F + f30Off)[0].mDouble = b;
+    at<ItemCameraFprSaveHD>(F + f30Off)[0].mPairedSingle = (f32)gabi::cpu->f[30].ps1;
     d = gabi::cpu->f[31].ps0;
     memcpy(&b, &d, 8);
-    gabi::store<u64>(F + f30Off + 0x10, b);
-    stf(F + f30Off + 0x18, (f32)gabi::cpu->f[31].ps1);
+    at<ItemCameraFprSaveHD>(F + f30Off)[1].mDouble = b;
+    at<ItemCameraFprSaveHD>(F + f30Off)[1].mPairedSingle = (f32)gabi::cpu->f[31].ps1;
 }
 
-/* 0253986C: useItem1EvCamera: as useItem0EvCamera without the initial wait and without the item
+/* useItem1EvCamera: as useItem0EvCamera without the initial wait and without the item
  * actor in the view check; tables: centre offsets +0x1E4, eye offsets +0x200, counts +0x190,
  * fovy +0x1AC, frames +0x1C8 */
-static u32 dCamera_c_useItem1EvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253986C, u32, i_this);
+} // namespace ev8Detail
+using namespace ev8Detail;
+/* 0253986C */
+u32 ItemEventCamera_c::useItem1EvCamera() {
+    const u32 i_this = ea();
     u32 entry = gabi::cpu->r[1];
-    gabi::Local<u8[0x260]> frame;
+    gabi::Local<ItemCameraFrame1HD> frame;
     u32 F = entry - 0x260;
     (void)frame;
-    st(F, entry);                  /* back chain (stwu) */
-    st(entry + 4, gabi::cpu->lr);  /* LR save word in the caller's frame */
+    *at<be<u32>>(F) =
+        entry; // HD: original stwu back chain.                  /* back chain (stwu) */
+    *at<be<u32>>(entry + 4) = gabi::cpu->lr; /* LR save word in the caller's frame */
     frameSaves(F, 24, 0x220, 0x240);
-    u32 w = i_this + 0x37C;
-    stf(F + 0xD4, ldf(0x1004D1C0));
-    stf(F + 0x70, ldf(0x1004CE58));
-    stf(F + 0xD0, ldf(0x1004D390));
-    stf(F + 0xE8, ldf(0x1004D1C8));
-    stf(F + 0xF0, ldf(0x1004CF68));
-    stf(F + 0xDC, ldf(0x1004D390));
-    stf(F + 0xD8, ldf(0x1004D394));
-    stf(F + 0xE0, ldf(0x1004D398));
-    stf(F + 0x7C, ldf(0x1004CE58));
-    stf(F + 0x80, ldf(0x1004D2CC));
-    stf(F + 0xEC, ldf(0x1004D39C));
-    stf(F + 0xE4, ldf(0x1004D1D4));
-    stf(F + 0x84, ldf(0x1004CF80));
-    stf(F + 0x78, ldf(0x1004D38C));
-    stf(F + 0x74, ldf(0x1004D388));
-    stf(F + 0x170, ldf(0x1004D2DC));
-    stf(F + 0x168, ldf(0x1004D2D4));
-    stf(F + 0x164, ldf(0x1004D0BC));
-    stf(F + 0x88, ldf(0x1004CE58));
-    stf(F + 0x174, ldf(0x1004D2D0));
-    stf(F + 0x17C, ldf(0x1004D2E0));
-    stf(F + 0x160, ldf(0x1004D2D0));
-    stf(F + 0x180, ldf(0x1004CEB4));
-    stf(F + 0x16C, ldf(0x1004D2D8));
-    stf(F + 0x5C, ldf(0x1004D0DC));
-    stf(F + 0x178, ldf(0x1004D1C0));
-    stf(F + 0x8C, ldf(0x1004D2FC));
-    stf(F + 0x60, ldf(0x1004D2EC));
-    stf(F + 0xAC, ldf(0x1004D2F0));
-    stf(F + 0x58, ldf(0x1004CE58));
-    stf(F + 0xB0, ldf(0x1004D004));
-    stf(F + 0x184, ldf(0x1004D2E4));
-    stf(F + 0xB4, ldf(0x1004D2F4));
-    stf(F + 0xC0, ldf(0x1004D0E8));
-    stf(F + 0xBC, ldf(0x1004D0B4));
-    stf(F + 0x18C, ldf(0x1004CF70));
-    stf(F + 0x90, ldf(0x1004D2EC));
-    stf(F + 0xF4, ldf(0x1004D1CC));
-    stf(F + 0xF8, ldf(0x1004D0D4));
-    stf(F + 0xB8, ldf(0x1004D2F8));
-    stf(F + 0xFC, ldf(0x1004D300));
-    stf(F + 0x118, ldf(0x1004CF80));
-    stf(F + 0x188, ldf(0x1004D2E8));
-    stf(F + 0x11C, ldf(0x1004D2D0));
-    stf(F + 0x94, ldf(0x1004CF74));
-    stf(F + 0x108, ldf(0x1004D308));
-    stf(F + 0x100, ldf(0x1004D2F8));
-    stf(F + 0x98, ldf(0x1004D3A0));
-    stf(F + 0xA4, ldf(0x1004D33C));
-    stf(F + 0x134, ldf(0x1004D0BC));
-    stf(F + 0xC4, ldf(0x1004CEB8));
-    stf(F + 0x10C, ldf(0x1004CEB8));
-    stf(F + 0x124, ldf(0x1004D3A4));
-    stf(F + 0x128, ldf(0x1004D0B8));
-    stf(F + 0x130, ldf(0x1004D3AC));
-    stf(F + 0x104, ldf(0x1004D304));
-    stf(F + 0x13C, ldf(0x1004D340));
-    stf(F + 0x120, ldf(0x1004D008));
-    stf(F + 0x9C, ldf(0x1004D3A0));
-    stf(F + 0x138, ldf(0x1004D2EC));
-    stf(F + 0x110, ldf(0x1004D2F8));
-    stf(F + 0xC8, ldf(0x1004D2F8));
-    stf(F + 0xCC, ldf(0x1004D0D8));
-    stf(F + 0xA8, ldf(0x1004D2D4));
-    stf(F + 0x114, ldf(0x1004D0D8));
-    stf(F + 0x12C, ldf(0x1004D3A8));
-    stf(F + 0xA0, ldf(0x1004D338));
-    stf(F + 0x140, ldf(0x1004D344));
-    stf(F + 0x144, ldf(0x1004D348));
-    st(F + 0x1F0, F + 0x88);
-    st(F + 0x1E4, F + 0x58);
-    st(F + 0x1F8, F + 0x94);
-    st(F + 0x200, F + 0xAC);
-    stf(F + 0x148, ldf(0x1004D34C));
-    stf(F + 0x154, ldf(0x1004D358));
-    st(F + 0x204, F + 0x160);
-    st(F + 0x208, F + 0xAC);
-    stf(F + 0x14C, ldf(0x1004D350));
-    stf(F + 0x150, ldf(0x1004D354));
-    st(F + 0x1EC, F + 0x58);
-    st(F + 0x190, 0x3);
-    st(F + 0x194, 0x4);
-    st(F + 0x1F4, F + 0x70);
-    st(F + 0x1E8, F + 0x7C);
-    st(F + 0x198, 0x3);
-    st(F + 0x210, F + 0xD0);
-    stf(F + 0x15C, ldf(0x1004D360));
-    st(F + 0x20C, F + 0xF4);
-    st(F + 0x1AC, ld(0x1004D3B8));
-    st(F + 0x1B0, ld(0x1004D3BC));
-    st(F + 0x1B4, ld(0x1004D3C0));
-    st(F + 0x1B8, ld(0x1004D3C4));
-    st(F + 0x1BC, ld(0x1004D3C8));
-    st(F + 0x19C, 0x3);
-    st(F + 0x1A0, 0x3);
-    st(F + 0x1A4, 0x3);
-    st(F + 0x1FC, F + 0xA0);
-    st(F + 0x214, F + 0x118);
-    st(F + 0x1C0, ld(0x1004D3CC));
-    stf(F + 0x158, ldf(0x1004D35C));
-    st(F + 0x1C8, 0x2D);
-    st(F + 0x1CC, 0x28);
-    st(F + 0x1D0, 0x28);
-    st(F + 0x1D4, 0x28);
-    st(F + 0x1D8, 0xA);
-    st(F + 0x1DC, 0x2D);
-    st(F + 0x1E0, 0x28);
-    st(F + 0x1A8, 0x3);
-    st(F + 0x218, F + 0x13C);
-    st(F + 0x1C4, ld(0x1004D3D0));
-    gabi::call(0x020065FC, F + 0x2C); /* cSAngle() */
-    gabi::call(0x020065FC, F + 0x2E);
-    u32 ctrTab = F + 0x1E4, eyeTab = F + 0x200;
+    u32 w = gabi::ea(mWork);
+    auto& work = *at<ItemCameraWork>(w);
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[31] = itemValue55;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[6] = itemValue0;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[30] = itemCameraData.mItem1Values[2].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[36] = itemValueMinus10;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[38] = itemValueMinus5;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[33] = itemCameraData.mItem1Values[2].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[32] = itemCameraData.mItem1Values[3].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[34] = itemCameraData.mItem1Values[4].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[9] = itemValue0;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[10] = itemCameraData.mItem0Values[9].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[37] = itemCameraData.mItem1Values[5].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[35] = itemValueMinus30;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[11] = itemValue15;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[8] = itemCameraData.mItem1Values[1].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[7] = itemCameraData.mItem1Values[0].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[70] = itemCameraData.mItem0Values[13].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[68] = itemCameraData.mItem0Values[11].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[67] = itemValueMinus50;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[12] = itemValue0;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[71] = itemCameraData.mItem0Values[10].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[73] = itemCameraData.mItem0Values[14].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[66] = itemCameraData.mItem0Values[10].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[74] = itemValue100;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[69] = itemCameraData.mItem0Values[12].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[1] = itemValueMinus40;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[72] = itemValue55;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[13] = itemCameraData.mItem0Values[21].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[2] = itemCameraData.mItem0Values[17].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[21] = itemCameraData.mItem0Values[18].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[0] = itemValue0;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[22] = itemValue60;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[75] = itemCameraData.mItem0Values[15].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[23] = itemCameraData.mItem0Values[19].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[26] = itemValue115;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[25] = itemValueMinus25;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[77] = itemValue70;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[14] = itemCameraData.mItem0Values[17].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[39] = itemValueMinus90;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[40] = itemValueMinus70;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[24] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[41] = itemCameraData.mItem0Values[22].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[48] = itemValue15;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[76] = itemCameraData.mItem0Values[16].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[49] = itemCameraData.mItem0Values[10].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[15] = itemValue10;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[44] = itemCameraData.mItem0Values[24].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[42] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[16] = itemCameraData.mItem1Values[6].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[19] = itemCameraData.mItem0Values[37].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[55] = itemValueMinus50;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[27] = itemValue5;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[45] = itemValue5;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[51] = itemCameraData.mItem1Values[7].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[52] = itemValue85;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[54] = itemCameraData.mItem1Values[9].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[43] = itemCameraData.mItem0Values[23].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[57] = itemCameraData.mItem0Values[38].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[50] = itemValue45;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[17] = itemCameraData.mItem1Values[6].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[56] = itemCameraData.mItem0Values[17].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[46] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[28] = itemCameraData.mItem0Values[20].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[29] = itemValue110;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[20] = itemCameraData.mItem0Values[11].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[47] = itemValue110;
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[53] = itemCameraData.mItem1Values[8].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[18] = itemCameraData.mItem0Values[36].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[58] = itemCameraData.mItem0Values[39].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[59] = itemCameraData.mItem0Values[40].get();
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[3] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[12]);
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[0] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[0]);
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[5] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[15]);
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[0] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[21]);
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[60] = itemCameraData.mItem0Values[41].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[63] = itemCameraData.mItem0Values[44].get();
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[1] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[66]);
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[2] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[21]);
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[61] = itemCameraData.mItem0Values[42].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[62] = itemCameraData.mItem0Values[43].get();
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[2] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[0]);
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[0] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[1] = 0x4;
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[4] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[6]);
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[1] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[9]);
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[2] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[4] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[30]);
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[65] = itemCameraData.mItem0Values[46].get();
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[3] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[39]);
+    at<ItemCameraFrame1HD>(F)->mFovyBits[0] = itemCameraData.mFovy1[0].get();
+    at<ItemCameraFrame1HD>(F)->mFovyBits[1] = itemCameraData.mFovy1[1].get();
+    at<ItemCameraFrame1HD>(F)->mFovyBits[2] = itemCameraData.mFovy1[2].get();
+    at<ItemCameraFrame1HD>(F)->mFovyBits[3] = itemCameraData.mFovy1[3].get();
+    at<ItemCameraFrame1HD>(F)->mFovyBits[4] = itemCameraData.mFovy1[4].get();
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[3] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[4] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[5] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mCenterOffsets[6] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[18]);
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[5] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[48]);
+    at<ItemCameraFrame1HD>(F)->mFovyBits[5] = itemCameraData.mFovy1[5].get();
+    at<ItemCameraFrame1HD>(F)->mOffsetValues[64] = itemCameraData.mItem0Values[45].get();
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[0] = 0x2D;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[1] = 0x28;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[2] = 0x28;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[3] = 0x28;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[4] = 0xA;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[5] = 0x2D;
+    at<ItemCameraFrame1HD>(F)->mBlendFrames[6] = 0x28;
+    at<ItemCameraFrame1HD>(F)->mEyeCounts[6] = 0x3;
+    at<ItemCameraFrame1HD>(F)->mEyeOffsets[6] =
+        gabi::ea(&at<ItemCameraFrame1HD>(F)->mOffsetValues[57]);
+    at<ItemCameraFrame1HD>(F)->mFovyBits[6] = itemCameraData.mFovy1[6].get();
+    ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame1HD>(F)->mYaw)); /* cSAngle() */
+    ev8_cSAngle_default(gabi::ea(&at<ItemCameraFrame1HD>(F)->mPitch));
+    u32 ctrTab = gabi::ea(&at<ItemCameraFrame1HD>(F)->mCenterOffsets[0]),
+        eyeTab = gabi::ea(&at<ItemCameraFrame1HD>(F)->mEyeOffsets[0]);
     u32 s;
-    if (ld(i_this + 0x11C) == 0) {
-        s = 0;
-        st(w + 0, 0);
+    if (this->m11C == 0) {
+        s = ITEM_INIT;
+        work.mState = ITEM_INIT;
     } else {
-        s = ld(w + 0);
+        s = work.mState;
     }
-    if (s == 1) {
-        f32 t = (f32)(f64)(s32)ld(w + 0x20) / (f32)(f64)(s32)ld(w + 4);
-        f32 fv = ldf(i_this + 0x60);
-        stf(i_this + 0x60, gabi::fmadds(ldf(w + 0x18) - fv, t, fv));
-        relationalPos(i_this, F + 0x34, ld(i_this + 0x128), ld(ctrTab + (ld(w + 8) << 2)));
-        copy3(w + 0xC, F + 0x34);
-        cXyz_mi(w + 0xC, F + 0x40, i_this + 0x44);
-        cXyz_ml(F + 0x40, F + 0x34, t);
-        gabi::call(0x028E8D88, i_this + 0x44, F + 0x34, i_this + 0x44); /* PSVECAdd */
-        s16 v = lds16(i_this + 0x40), u = lds16(i_this + 0x42);
-        st16(F + 0x2C, (u16)u);
-        st16(F + 0x2E, (u16)v);
-        f32 r0 = ldf(i_this + 0x3C);
-        f32 rad = gabi::fmadds(ldf(w + 0x24) - r0, t, r0);
-        cSAngle_mi(w + 0x28, F + 0x32, F + 0x2E);
-        cSAngle_ml(F + 0x32, F + 0x30, t);
-        cSAngle_addeq(F + 0x2E, F + 0x30);
-        cSAngle_mi(w + 0x2A, F + 0x30, F + 0x2C);
-        cSAngle_ml(F + 0x30, F + 0x32, t);
-        cSAngle_addeq(F + 0x2C, F + 0x32);
-        gabi::call(0x020071E0, i_this + 0x3C, rad, F + 0x2E, F + 0x2C); /* cSGlobe::Val(r, V, U) */
-        cSGlobe_Xyz(i_this + 0x3C, F + 0x34);
-        cXyz_pl(i_this + 0x44, F + 0x40, F + 0x34);
-        copy3(i_this + 0x50, F + 0x40);
-        u32 c = ld(w + 0x20);
-        if ((s32)c < (s32)ld(w + 4)) {
-            st(w + 0x20, c + 1);
+    if (s == ITEM_BLEND) {
+        f32 t = (f32)(f64)(s32)work.mFrame / (f32)(f64)(s32)work.mBlendFrames;
+        f32 fv = this->mViewCache.mFovy;
+        this->mViewCache.mFovy = gabi::fmadds(work.mFovy - fv, t, fv);
+        ev8_relationalPos(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta),
+                          this->mpPlayerActor.v.get(),
+                          at<be<u32>>(ctrTab + (work.mType << 2))->get());
+        copy3(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+        ev8_cXyz_mi(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                    gabi::ea(&this->mViewCache.mCenter));
+        ev8_cXyz_ml(gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                    gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta), t);
+        ev8_PSVECAdd(gabi::ea(&this->mViewCache.mCenter),
+                     gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta),
+                     gabi::ea(&this->mViewCache.mCenter)); /* PSVECAdd */
+        s16 v = this->mViewCache.mDirection.mV, u = this->mViewCache.mDirection.mU;
+        at<ItemCameraFrame1HD>(F)->mYaw = (u16)u;
+        at<ItemCameraFrame1HD>(F)->mPitch = (u16)v;
+        f32 r0 = this->mViewCache.mDirection.mRadius;
+        f32 rad = gabi::fmadds(work.mTargetDirection.mRadius - r0, t, r0);
+        ev8_cSAngle_mi(gabi::ea(&work.mTargetDirection.mV),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleB),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mPitch));
+        ev8_cSAngle_ml(gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleB),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleA), t);
+        ev8_cSAngle_addeq(gabi::ea(&at<ItemCameraFrame1HD>(F)->mPitch),
+                          gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleA));
+        ev8_cSAngle_mi(gabi::ea(&work.mTargetDirection.mU),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleA),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mYaw));
+        ev8_cSAngle_ml(gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleA),
+                       gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleB), t);
+        ev8_cSAngle_addeq(gabi::ea(&at<ItemCameraFrame1HD>(F)->mYaw),
+                          gabi::ea(&at<ItemCameraFrame1HD>(F)->mAngleB));
+        ev8_cSGlobe_ValRVU(gabi::ea(&this->mViewCache.mDirection), rad,
+                           gabi::ea(&at<ItemCameraFrame1HD>(F)->mPitch),
+                           gabi::ea(&at<ItemCameraFrame1HD>(F)->mYaw)); /* cSGlobe::Val(r, V, U) */
+        ev8_cSGlobe_Xyz(gabi::ea(&this->mViewCache.mDirection),
+                        gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+        ev8_cXyz_pl(gabi::ea(&this->mViewCache.mCenter),
+                    gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                    gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+        copy3(gabi::ea(&this->mViewCache.mEye), gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint));
+        u32 c = work.mFrame;
+        if ((s32)c < (s32)work.mBlendFrames) {
+            work.mFrame = c + 1;
             return 0;
         }
-        st(w + 0, 2);
-        s = 2;
+        work.mState = ITEM_HOLD;
+        s = ITEM_HOLD;
     }
-    if (s == 2 || s == 0x63) {
-        if (s == 2) {
-            relationalPos(i_this, F + 0x40, ld(i_this + 0x128), ld(ctrTab + (ld(w + 8) << 2)));
-            copy3(i_this + 0x44, F + 0x40);
-            cSGlobe_Xyz(i_this + 0x3C, F + 0x34);
-            cXyz_pl(i_this + 0x44, F + 0x40, F + 0x34);
-            copy3(i_this + 0x50, F + 0x40);
-            u32 n = ld(w + 0x1C) + 1;
-            u32 type = ld(w + 8);
-            st(w + 0x1C, n);
+    if (s == ITEM_HOLD || s == ITEM_DONE) {
+        if (s == ITEM_HOLD) {
+            ev8_relationalPos(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                              this->mpPlayerActor.v.get(),
+                              at<be<u32>>(ctrTab + (work.mType << 2))->get());
+            copy3(gabi::ea(&this->mViewCache.mCenter),
+                  gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint));
+            ev8_cSGlobe_Xyz(gabi::ea(&this->mViewCache.mDirection),
+                            gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+            ev8_cXyz_pl(gabi::ea(&this->mViewCache.mCenter),
+                        gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                        gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+            copy3(gabi::ea(&this->mViewCache.mEye), gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint));
+            u32 n = work.mHoldFrames + 1;
+            u32 type = work.mType;
+            work.mHoldFrames = n;
             if (type == 0 && n == 1) {
-                st(w + 8, 4);
-                u32 c = ld(w + 0x20);
-                st(w + 0, 0xA);
-                st(w + 0x20, c + 1);
+                work.mType = 4;
+                u32 c = work.mFrame;
+                work.mState = ITEM_WAIT;
+                work.mFrame = c + 1;
                 return 0;
             }
-            st(w + 0, 0x63);
+            work.mState = ITEM_DONE;
         }
         setDone(i_this);
-        relationalPos(i_this, F + 0x40, ld(i_this + 0x128), ld(ctrTab + (ld(w + 8) << 2)));
-        copy3(i_this + 0x44, F + 0x40);
-        cSGlobe_Xyz(i_this + 0x3C, F + 0x34);
-        cXyz_pl(i_this + 0x44, F + 0x40, F + 0x34);
-        copy3(i_this + 0x50, F + 0x40);
-        st(w + 0x20, ld(w + 0x20) + 1);
+        ev8_relationalPos(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                          this->mpPlayerActor.v.get(),
+                          at<be<u32>>(ctrTab + (work.mType << 2))->get());
+        copy3(gabi::ea(&this->mViewCache.mCenter), gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint));
+        ev8_cSGlobe_Xyz(gabi::ea(&this->mViewCache.mDirection),
+                        gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+        ev8_cXyz_pl(gabi::ea(&this->mViewCache.mCenter),
+                    gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint),
+                    gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+        copy3(gabi::ea(&this->mViewCache.mEye), gabi::ea(&at<ItemCameraFrame1HD>(F)->mPoint));
+        work.mFrame = work.mFrame + 1;
         return 1;
     }
-    if (s != 0xA) {
-        getEvIntData(i_this, w + 8, 0x1004D3B0 /* "Type" */, 0);
-        st(w + 0x1C, 0);
+    if (s != ITEM_WAIT) {
+        ev8_getEvIntData(i_this, gabi::ea(&work.mType),
+                         gabi::ea(itemCameraData.mType1) /* "Type" */, 0);
+        work.mHoldFrames = ITEM_INIT;
     }
-    st(w + 0x20, 0);
-    if ((ld(i_this + 0x7C) & 7) == 0) {
-        u32 type = ld(w + 8);
+    work.mFrame = 0;
+    if ((this->m07C & 7) == 0) {
+        u32 type = work.mType;
         if (type >= 2 && type <= 3) {
-            u32 p = ld(eyeTab + (type << 2));
-            u32 x1 = ld(p + 0x10), x0 = ld(p + 0xC);
-            f32 a0 = ldf(p + 0);
-            st(p + 0, x0);
-            f32 a1 = ldf(p + 4);
-            st(p + 4, x1);
-            u32 x2 = ld(p + 0x14);
-            f32 a2 = ldf(p + 8);
-            st(p + 8, x2);
-            u32 q = ld(eyeTab + (ld(w + 8) << 2));
-            stf(q + 0x10, a1);
-            stf(q + 0x14, a2);
-            stf(q + 0xC, a0);
+            u32 p = at<be<u32>>(eyeTab + (type << 2))->get();
+            u32 x1 = at<be<u32>>(p + 0x10)->get(), x0 = at<be<u32>>(p + 0xC)->get();
+            f32 a0 = at<cXyz>(p)[0].x.get();
+            *at<be<u32>>(p + 0) = x0;
+            f32 a1 = at<cXyz>(p)[0].y.get();
+            *at<be<u32>>(p + 4) = x1;
+            u32 x2 = at<be<u32>>(p + 0x14)->get();
+            f32 a2 = at<cXyz>(p)[0].z.get();
+            *at<be<u32>>(p + 8) = x2;
+            u32 q = at<be<u32>>(eyeTab + (work.mType << 2))->get();
+            at<cXyz>(q)[1].y = a1;
+            at<cXyz>(q)[1].z = a2;
+            at<cXyz>(q)[1].x = a0;
         }
     }
-    relationalPos(i_this, F + 0x34, ld(i_this + 0x128), ld(ctrTab + (ld(w + 8) << 2)));
-    copy3(w + 0xC, F + 0x34);
-    u32 E = F + 0x14;
-    for (s32 i = 0; i < (s32)ld(F + 0x190 + (ld(w + 8) << 2)); i++) {
-        relationalPos(i_this, F + 8, ld(i_this + 0x128), ld(eyeTab + (ld(w + 8) << 2)) + (u32)i * 12);
-        copy3(E, F + 8);
-        positionOf(i_this, F + 8, ld(i_this + 0x128));
-        if (ldf(E + 4) < ldf(F + 0xC) + ldf(i_this + 0x36C)) { /* bge: taken on NaN */
-            positionOf(i_this, F + 0x4C, ld(i_this + 0x128));
-            stf(E + 4, ldf(F + 0x50) + ldf(i_this + 0x36C));
+    ev8_relationalPos(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta),
+                      this->mpPlayerActor.v.get(), at<be<u32>>(ctrTab + (work.mType << 2))->get());
+    copy3(gabi::ea(&work.mCenter), gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+    u32 E = gabi::ea(&at<ItemCameraFrame1HD>(F)->mEye);
+    for (s32 i = 0; i < (s32)at<be<u32>>(gabi::ea(&at<ItemCameraFrame1HD>(F)->mEyeCounts[0]) +
+                                         (work.mType << 2))
+                            ->get();
+         i++) {
+        ev8_relationalPos(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition),
+                          this->mpPlayerActor.v.get(),
+                          at<be<u32>>(eyeTab + (work.mType << 2))->get() + (u32)i * 12);
+        copy3(E, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition));
+        ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition),
+                       this->mpPlayerActor.v.get());
+        if (at<cXyz>(E)[0].y.get() <
+            at<ItemCameraFrame1HD>(F)->mPosition.y + this->m368) { /* bge: taken on NaN */
+            ev8_positionOf(i_this, gabi::ea(&at<ItemCameraFrame1HD>(F)->mPlayerPosition),
+                           this->mpPlayerActor.v.get());
+            at<cXyz>(E)[0].y = at<ItemCameraFrame1HD>(F)->mPlayerPosition.y + this->m368;
         }
-        if (lineBGCheck(i_this, w + 0xC, E, 0x8F)) continue;
-        for (u32 k = 0; k < 3; k++) stf(F + 8 + 4 * k, ldf(w + 0xC + 4 * k));
-        for (u32 k = 0; k < 3; k++) stf(F + 0x20 + 4 * k, ldf(E + 4 * k));
-        u32 pl = ld(i_this + 0x128);
-        u32 g = gi();
-        if (!gabi::call<bool>(0x025187D8, g + 0x26A4, F + 8, F + 0x20, ldf(0x1004CF80), pl, 0)) break; /* dCcS::ChkCamera */
+        if (ev8_lineBGCheck(i_this, gabi::ea(&work.mCenter), E, 0x8F))
+            continue;
+        copy3f(gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition), gabi::ea(&work.mCenter));
+        copy3f(gabi::ea(&at<ItemCameraFrame1HD>(F)->mCollisionEye), E);
+        u32 pl = this->mpPlayerActor.v.get();
+        u32 g = dComIfGp_ea();
+        if (!ev8_ChkCamera(gabi::ea(&at<dComIfG_inf_c>(g)->play.mCcS),
+                           gabi::ea(&at<ItemCameraFrame1HD>(F)->mPosition),
+                           gabi::ea(&at<ItemCameraFrame1HD>(F)->mCollisionEye), itemValue15, pl, 0))
+            break; /* dCcS::ChkCamera */
     }
-    cXyz_mi(E, F + 0x34, w + 0xC);
-    cSGlobe_Val(w + 0x24, F + 0x34);
-    u32 type = ld(w + 8);
-    u32 cnt = ld(w + 0x20);
-    stf(w + 0x18, ldf(F + 0x1AC + (type << 2)));
-    u32 fr = ld(F + 0x1C8 + (type << 2));
-    st(w + 0, 1);
-    st(w + 4, fr);
-    st(w + 0x20, cnt + 1);
+    ev8_cXyz_mi(E, gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta), gabi::ea(&work.mCenter));
+    ev8_cSGlobe_Val(gabi::ea(&work.mTargetDirection), gabi::ea(&at<ItemCameraFrame1HD>(F)->mDelta));
+    u32 type = work.mType;
+    u32 cnt = work.mFrame;
+    work.mFovy =
+        at<be<f32>>(gabi::ea(&at<ItemCameraFrame1HD>(F)->mFovyBits[0]) + (type << 2))->get();
+    u32 fr =
+        at<be<u32>>(gabi::ea(&at<ItemCameraFrame1HD>(F)->mBlendFrames[0]) + (type << 2))->get();
+    work.mState = ITEM_BLEND;
+    work.mBlendFrames = fr;
+    work.mFrame = cnt + 1;
     return 0;
 }
-VERIFY(0x0253986C, dCamera_c_useItem1EvCamera);
 
-} // namespace d_ev_camera_8_cpp
+/* WWHD glue
+ext 02530634 u32 ev8_getEvIntData(u32 c, u32 out, u32 name, s32 def)
+ext 0250242C void ev8_relationalPos(u32 c, u32 out, u32 actor, u32 ofs)
+ext 024F8D5C void ev8_positionOf(u32 c, u32 out, u32 actor)
+ext 024FCBE8 bool ev8_lineBGCheck(u32 c, u32 a, u32 b, u32 flags)
+ext 0201ADE0 void ev8_cXyz_mi(u32 a, u32 out, u32 b)
+ext 0201AD78 void ev8_cXyz_pl(u32 a, u32 out, u32 b)
+ext 0201AE48 void ev8_cXyz_ml(u32 a, u32 out, f32 s)
+ext 020072E0 void ev8_cSGlobe_Val(u32 g, u32 v)
+ext 020073AC void ev8_cSGlobe_Xyz(u32 g, u32 out)
+ext 020068B0 void ev8_cSAngle_mi(u32 a, u32 out, u32 b)
+ext 0200693C void ev8_cSAngle_ml(u32 a, u32 out, f32 f)
+ext 020068CC void ev8_cSAngle_addeq(u32 a, u32 b)
+ext 020065FC void ev8_cSAngle_default(u32)
+ext 028E8D88 void ev8_PSVECAdd(u32,u32,u32)
+ext 020071E0 void ev8_cSGlobe_ValRVU(u32,f32,u32,u32)
+ext 025D5218 u32 ev8_JudgeActor(u32,u32)
+ext 025187D8 bool ev8_ChkCamera(u32,u32,u32,f32,u32,u32)
+data itemCameraData 1004D2A8
+data itemValue15 1004CF80
+data itemValue0 1004CE58
+data itemValue70 1004CF70
+data itemValue100 1004CEB4
+data itemValueMinus70 1004D0D4
+data itemValueMinus90 1004D1CC
+data itemValue55 1004D1C0
+data itemValueMinus50 1004D0BC
+data itemValue115 1004D0E8
+data itemValue60 1004D004
+data itemValue5 1004CEB8
+data itemValue110 1004D0D8
+data itemValueMinus40 1004D0DC
+data itemValueMinus25 1004D0B4
+data itemValueMinus10 1004D1C8
+data itemValueMinus5 1004CF68
+data itemValueMinus30 1004D1D4
+data itemValue10 1004CF74
+data itemValue85 1004D0B8
+data itemValue45 1004D008
+*/

@@ -1,614 +1,721 @@
-/* JAIZelBasic (WWHD), part 8: talkIn .. the unit's trailing copies (02027D4C..02029C9F).
- * Ported from the GameCube decompilation where it has
- * bodies, else written from the WWHD code; verified against cking.rpx. See JAIZelBasic.cpp. */
-#include "bindings.h"
+/** JAIZelBasic dialogue, battle and positional voice/ship sound control.
+ * Verified HD implementation with tww names. */
+#include "JAZelAudio/JAIZelBasic_8.h"
+using namespace jaizel8;
+namespace {
+constexpr u32 JA_SE_SHIP_GO_NORMAL = 0x3004;
+constexpr u32 JA_SE_SHIP_WAVE_L = 0x3005;
+constexpr u32 JA_SE_SHIP_WAVE_S = 0x3006;
+constexpr u32 JA_SE_CV_COMMON_PEOPLE = 0x481F;
+constexpr u32 JA_SE_CV_KS_ATTACK = 0x486D;
+constexpr u32 JA_SE_CV_PW_RUN = 0x48F1;
+constexpr u32 JA_SE_CV_PW_DIE = 0x48F6;
+constexpr u32 JA_SE_CV_PT_ATTACK = 0x48F7;
+constexpr u32 JA_SE_CV_PW_CURSE_IN = 0x48FD;
+constexpr u32 JA_BGM_GOMA = 0x80000003;
+constexpr u32 JA_BGM_BATTLE_NORM = 0x80000004;
+constexpr u32 JA_BGM_KINDAN_BOSS = 0x80000005;
+constexpr u32 JA_BGM_DIE_LINK = 0x8000000A;
+constexpr u32 JA_BGM_SEA_GAME = 0x8000000B;
+constexpr u32 JA_BGM_GOMA_2 = 0x80000010;
+constexpr u32 JA_BGM_MBOSS = 0x80000019;
+constexpr u32 JA_BGM_MBOSS_S = 0x8000001A;
+constexpr u32 JA_BGM_SEA_ENEMY = 0x8000001C;
+constexpr u32 JA_BGM_TAKT_MAKORE = 0x80000021;
+constexpr u32 JA_BGM_TAKT_MEDRI = 0x80000022;
+constexpr u32 JA_BGM_KAMI_TOWER = 0x80000028;
+constexpr u32 JA_BGM_DIOCTA_BATTLE = 0x8000002B;
+constexpr u32 JA_BGM_SEA = 0x8000002E;
+constexpr u32 JA_BGM_TAKT_KAZE = 0x80000031;
+constexpr u32 JA_BGM_CB_NEXTYEAR = 0x80000036;
+constexpr u32 JA_BGM_CB_NEXTYEAR_W = 0x80000037;
+constexpr u32 JA_BGM_ISLAND_WOOD = 0x80000039;
+constexpr u32 JA_BGM_ISLAND_DRAGON = 0x8000003A;
+constexpr u32 JA_BGM_SEA_STORM = 0x8000003C;
+constexpr u32 JA_BGM_P_GANON_1 = 0x80000041;
+constexpr u32 JA_BGM_DIOCTA_2 = 0x80000046;
+constexpr u32 JA_BGM_P_GANON_2 = 0x80000047;
+constexpr u32 JA_BGM_BIRDMAN_GOAL = 0x80000051;
+constexpr u32 JA_BGM_BIRDMAN_FAIL = 0x80000052;
+constexpr u32 JA_BGM_UNK_105 = 0x80000105;
+constexpr u32 JA_BGM_UNK_125 = 0x80000125;
+constexpr u32 JA_BGM_UNK_126 = 0x80000126;
+constexpr u32 JA_STRM_PROLOGUE = 0xC0000000;
+constexpr u32 JA_STRM_DEMO_TETRA_FLY = 0xC0000001;
+constexpr u32 JA_STRM_DEMO_GO_MAJU = 0xC0000005;
+} // namespace
+namespace {
+struct CategoryVolumes {
+    GuestByte entries[8];
+};
+static GuestFloat VOL_BGM_TALKING;
+static GuestFloat ENEMY_NEARBY_DIST;
+static GuestWord ENEMY_NEARBY_FADEIN_TIME;
+static GuestWord ENEMY_NEARBY_FADEOUT_TIME;
+static GuestWord BTL_KAITENGIRI_FADEIN_TIME;
+static GuestWord BTL_SWORD_USING_FADE_TIME;
+static GuestByte ENEMY_NEARBY_TRACK;
+static GuestByte ENEMY_NEARBY_TRACK_2;
+static GuestByte BTL_KAITENGIRI_TRACK;
+static GuestByte SWORD_USING_TRACK;
+static GuestByte SWORD_NOT_USING_TRACK;
+static GuestByte COMMON_BATTLE_FO_DELAY;
+static GuestByte MBOSS_BTL_KAITENGIRI_TRACK;
+static GuestWord jai_rng_seed;
+static GuestFloat l_zero;
+static CategoryVolumes l_talkingCategoryVolumes;
+static VectorWords l_practicePosition;
+static VectorWords l_shipPosition;
+static MessageVoiceTable messageSeTable;
+static LinkVoiceTable linkVoiceTable;
+static HeaderStatics l_headerStatics;
+static FloatRange l_headerRange;
+static DestructionRecord l_headerRecord;
+static DestructionRecord l_byte0Record;
+static DestructionRecord l_byte1Record;
+} // namespace
 
-namespace JAIZelBasic_8_cpp {
-#include "jaizel_local.h"
-#include "jaizel_basic_local.h"
-
-static inline f32 calcPosVolume_l(u32 b, u32 pos, f32 s) { return gabi::call<f32>(0x0201C360, b, pos, s); }
-static inline f32 calcPosPanLR_l(u32 b, u32 pos) { return gabi::call<f32>(0x0201C0E8, b, pos); }
-static inline f32 calcPosPanSR_l(u32 b, u32 pos, f32 s) { return gabi::call<f32>(0x0201C228, b, pos, s); }
-static inline void JAISound_setPan_l(u32 s, f32 v, u32 t, u32 k) { gabi::call(0x0280BA28, s, t, k, v); }
-static inline void JAISound_setDolby_l(u32 s, f32 v, u32 t, u32 k) { gabi::call(0x0280C248, s, t, k, v); }
-static inline s32 isDemo_l(u32 b) { return gabi::call<s32>(0x0201E5CC, b); }
-static inline void bgmStart_l(u32 b, u32 id, u32 fade, u32 keep) { gabi::call(0x0202204C, b, id, fade, keep); }
-static inline void bgmStop_l(u32 b, u32 fade, u32 keep) { gabi::call(0x02021F28, b, fade, keep); }
-static inline void bgmMute_l(u32 b, u32 h, u32 bgm, u32 set, u32 fade) { gabi::call(0x0201DD18, b, h, bgm, set, fade); }
-static inline void hdStreamVolume_l(u32 b, u32 fade, f32 v) { gabi::call(0x02021B10, b, fade, v); }
-static inline void enemyNearBy_l(u32 b) { gabi::call(0x020259E8, b); }
-static inline void mbossBgmNearByProcess_l(u32 b, f32 d) { gabi::call(0x02025940, b, d); }
-static inline s32 checkLinkOnSea_l(u32 b) { return gabi::call<s32>(0x02025AC0, b); }
-static inline s32 checkLinkOnBoardSea_l(u32 b) { return gabi::call<s32>(0x02025AF4, b); }
-static inline void kuroboVoicePlay_l(u32 b, u32 id, u32 pos, u32 reverb) { gabi::call(0x0202587C, b, id, pos, reverb); }
-static inline f32 TRandom_get_l(u32 r) { return gabi::call<f32>(0x027ED7E0, r); }
-
-/* 02027D4C JAIZelBasic::talkIn() */
-void talkIn(u32 self) {
-    WWHD_FUNC(0x02027D4C, void, self);
-    if (ld8(self + 0x74) == 1) return;
-    if (isDemo_l(self) == 1) return;
-    if (ldf(self + 0xA8) == 0.0f) return;
-    u32 m = ld(self + 0x78);
-    f32 t = ldf(0x1018DC6C); /* JAIZelParam::VOL_BGM_TALKING */
-    stf(self + 0x94, t);
-    if (m != 0 && ld(self + 0x88) != 0x80000051 && ld(self + 0x88) != 0x80000052) {
-        f32 v = mul(ldf(self + 0x90), t);
-        v = mul(v, ldf(self + 0x98));
-        v = mul(v, ldf(self + 0x9C));
-        v = mul(v, ldf(self + 0xA0));
-        v = mul(v, ldf(self + 0xA4));
-        v = mul(v, ldf(self + 0xA8));
-        v = mul(v, ldf(self + 0xAC));
-        v = mul(v, ldf(self + 0xBC));
-        JAISound_setVolume_l(m, v, 0xF, 0);
+// HD: dialogue fades over15frames instead of the GameCube2.
+/* 02027D4C */
+void JAIZelBasic::talkIn() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x0064 == 1)
+        return;
+    if (isDemo() == 1)
+        return;
+    if (field_0x0098 == 0.0f)
+        return;
+    Sound *m = mpMainBgmSound.get();
+    f32 t = VOL_BGM_TALKING; /* JAIZelParam::VOL_BGM_TALKING */
+    field_0x0084 = t;
+    if (m != 0 && mMainBgmNum != JA_BGM_BIRDMAN_GOAL && mMainBgmNum != JA_BGM_BIRDMAN_FAIL) {
+        f32 v = gabi::fmuls_ppc(field_0x0080, t);
+        v = gabi::fmuls_ppc(v, field_0x0088);
+        v = gabi::fmuls_ppc(v, field_0x008c);
+        v = gabi::fmuls_ppc(v, field_0x0090);
+        v = gabi::fmuls_ppc(v, field_0x0094);
+        v = gabi::fmuls_ppc(v, field_0x0098);
+        v = gabi::fmuls_ppc(v, field_0x009c);
+        v = gabi::fmuls_ppc(v, field_0x00ac);
+        m->setVolume(v, 0xF, 0);
     }
-    u32 sub = ld(self + 0x7C);
-    f32 t2 = ldf(0x1018DC6C);
-    stf(self + 0xB0, t2);
-    if (sub != 0) JAISound_setSeqInterVolume_l(sub, 0, mul(mul(t2, ldf(self + 0xB4)), ldf(self + 0xB8)), 0xF);
-    for (u32 c = 0; c < 8; c++) JAIBasic_setSeCategoryVolume_l(self, c, ld8(0x1018DC9F + c));
+    Sound *sub = mpSubBgmSound.get();
+    f32 t2 = VOL_BGM_TALKING;
+    field_0x00a0 = t2;
+    if (sub != 0)
+        sub->setSeqInterVolume(0, gabi::fmuls_ppc(gabi::fmuls_ppc(t2, field_0x00a4), field_0x00a8),
+                               0xF);
+    for (u32 c = 0; c < 8; c++)
+        setSeCategoryVolume(c, l_talkingCategoryVolumes.entries[c]);
 }
-VERIFY(0x02027D4C, talkIn);
 
-/* 02027F04 JAIZelBasic::bgmStreamPlay() */
-void bgmStreamPlay(u32 self) {
-    WWHD_FUNC(0x02027F04, void, self);
-    if (ld8(self + 0x73) != 0) return;
-    u32 s = ld(self + 0x80);
-    if (s != 0) gabi::call(0x0280B160, s, 0); /* JAISound::start */
-    u32 n = ld(self + 0x8C);
-    if (n == 0xC0000001) {
-        u32 m = ld(self + 0x78);
-        st8(self + 0xCA, 1);
-        if (m != 0) JAISound_stop_l(m, 0x1E);
-        st8(self + 0x1FAC, 0);
-        st8(self + 0xC8, 1);
-        st8(self + 0x271, 1);
-    } else if (n == 0xC0000000) {
-        u32 m = ld(self + 0x78);
-        if (m != 0) JAISound_stop_l(m, 0x1E);
-        st8(self + 0x1FAC, 0);
-        st8(self + 0xC8, 1);
+/* 02027F04 */
+void JAIZelBasic::bgmStreamPlay() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x0063 != 0)
+        return;
+    Sound *s = mpStreamBgmSound.get();
+    if (s != 0)
+        s->start(0); /* JAISound::start */
+    u32 n = mStreamBgmNum;
+    if (n == JA_STRM_DEMO_TETRA_FLY) {
+        Sound *m = mpMainBgmSound.get();
+        field_0x00ba = 1;
+        if (m != 0)
+            m->stop(0x1E);
+        field_0x1f3c = 0;
+        field_0x00b8 = 1;
+        field_0x0201 = 1;
+    } else if (n == JA_STRM_PROLOGUE) {
+        Sound *m = mpMainBgmSound.get();
+        if (m != 0)
+            m->stop(0x1E);
+        field_0x1f3c = 0;
+        field_0x00b8 = 1;
     } else {
-        st8(self + 0xC8, 1);
+        field_0x00b8 = 1;
     }
 }
-VERIFY(0x02027F04, bgmStreamPlay);
 
-/* 02027FD4 JAIZelBasic::changeBgmStatus(s32) */
-void changeBgmStatus(u32 self, u32 v) {
-    WWHD_FUNC(0x02027FD4, void, self, v);
-    u32 m = ld(self + 0x78);
-    if (m != 0) JAISound_setPortData_l(m, 9, v & 0xFFFF);
+/* 02027FD4 */
+void JAIZelBasic::changeBgmStatus(u32 v) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *m = mpMainBgmSound.get();
+    if (m != 0)
+        m->setPortData(9, v & 0xFFFF);
 }
-VERIFY(0x02027FD4, changeBgmStatus);
 
-/* 02027FF0 JAIZelBasic::changeSubBgmStatus(s32) */
-void changeSubBgmStatus(u32 self, u32 v) {
-    WWHD_FUNC(0x02027FF0, void, self, v);
-    u32 sub = ld(self + 0x7C);
-    if (sub == 0) return;
-    TTrack_writePortApp_l(JAISound_getSeqParameter_l(sub) + 0x1360, 0x00090000, v & 0xFFFF);
+/* 02027FF0 */
+void JAIZelBasic::changeSubBgmStatus(u32 v) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *sub = mpSubBgmSound.get();
+    if (sub == 0)
+        return;
+    rootTrack(sub->getSeqParameter())->writePortApp(0x00090000, v & 0xFFFF);
 }
-VERIFY(0x02027FF0, changeSubBgmStatus);
 
-/* 02028038 JAIZelBasic::cbPracticePlay(Vec*): HD: a different tune in scene 0x39 */
-void cbPracticePlay(u32 self, u32 pos) {
-    WWHD_FUNC(0x02028038, void, self, pos);
-    u32 cam = ld(self);
-    st(self + 0xE0, pos);
-    u32 mtx = ld(cam + 8);
-    gabi::Local<Vec_l> vv;
-    u32 v = gabi::ea(vv.get());
-    st(v, ld(0x100039DC));
-    st(v + 4, ld(0x100039E0));
-    st(v + 8, ld(0x100039E4));
-    u32 src = pos != 0 ? pos : ld(cam);
-    if (src != 0) {
-        st(v, ld(src));
-        st(v + 4, ld(src + 4));
-        st(v + 8, ld(src + 8));
+// HD: this scene selects the alternate practice tune; scene27 reduces main-BGM ducking.
+/* 02028038 */
+void JAIZelBasic::cbPracticePlay(VectorWords *pos) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    field_0x00d0 = pos;
+    void *matrix = cameraMatrix();
+    gabi::Local<VectorWords> position;
+    position->w[0] = l_practicePosition.w[0];
+    position->w[1] = l_practicePosition.w[1];
+    position->w[2] = l_practicePosition.w[2];
+    VectorWords *source = pos != nullptr ? pos : cameraPosition();
+    if (source != nullptr) {
+        position->w[0] = source->w[0];
+        position->w[1] = source->w[1];
+        position->w[2] = source->w[2];
     }
-    if (mtx != 0) PSMTXMultVec_l(mtx, v, v);
-    u32 id = (s32)ld(self + 0x294) == 0x39 ? 0x80000037 : 0x80000036;
-    JAIBasic_startSoundVec_l(self, id, self + 0x7C, 0, 0, 0, 4);
-    u32 sub = ld(self + 0x7C);
-    st(self + 0x84, id);
-    if (sub != 0) JAISound_setSeqInterVolume_l(sub, 0, ldf(self + 0xB0), 0);
-    f32 vol = calcPosVolume_l(self, v, 2.0f);
-    f32 lr = calcPosPanLR_l(self, v);
-    f32 sr = calcPosPanSR_l(self, v, 1.0f);
-    sub = ld(self + 0x7C);
-    stf(self + 0xB8, vol);
+    if (matrix != nullptr)
+        jaizelTransform(matrix, position.get(), position.get());
+
+    u32 id = (s32)field_0x0224 == 0x39 ? JA_BGM_CB_NEXTYEAR_W : JA_BGM_CB_NEXTYEAR;
+    startSoundVec(id, &mpSubBgmSound, 0, 0, 0, 4);
+    Sound *sub = mpSubBgmSound.get();
+    mSubBgmNum = id;
+    if (sub != 0)
+        sub->setSeqInterVolume(0, field_0x00a0, 0);
+    f32 vol = calcPosVolume(position.get(), 2.0f);
+    f32 lr = calcPosPanLR(position.get());
+    f32 sr = calcPosPanSR(position.get(), 1.0f);
+    sub = mpSubBgmSound.get();
+    field_0x00a8 = vol;
     if (sub != 0) {
-        JAISound_setVolume_l(sub, mul(mul(ldf(self + 0xB0), ldf(self + 0xB4)), vol), 0, 0);
-        JAISound_setPan_l(ld(self + 0x7C), lr, 0, 0);
-        JAISound_setDolby_l(ld(self + 0x7C), sr, 0, 0);
+        sub->setVolume(gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x00a0, field_0x00a4), vol), 0, 0);
+        mpSubBgmSound.get()->setPan(lr, 0, 0);
+        mpSubBgmSound.get()->setDolby(sr, 0, 0);
     }
-    s32 sc = ld(self + 0x294);
-    u32 m = ld(self + 0x78);
+    s32 sc = field_0x0224;
+    Sound *m = mpMainBgmSound.get();
     f32 duck = sc == 0x27 ? gabi::fnmsubs(vol, 0.4f, 1.0f) : gabi::fsubs_ppc(1.0f, vol);
-    stf(self + 0xAC, duck);
+    field_0x009c = duck;
     if (m != 0) {
-        f32 t = mul(ldf(self + 0x90), ldf(self + 0x94));
-        t = mul(t, ldf(self + 0x98));
-        t = mul(t, ldf(self + 0x9C));
-        t = mul(t, ldf(self + 0xA0));
-        t = mul(t, ldf(self + 0xA4));
-        t = mul(t, ldf(self + 0xA8));
-        t = mul(t, duck);
-        t = mul(t, ldf(self + 0xBC));
-        JAISound_setVolume_l(m, t, 0x1E, 0);
+        f32 t = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+        t = gabi::fmuls_ppc(t, field_0x0088);
+        t = gabi::fmuls_ppc(t, field_0x008c);
+        t = gabi::fmuls_ppc(t, field_0x0090);
+        t = gabi::fmuls_ppc(t, field_0x0094);
+        t = gabi::fmuls_ppc(t, field_0x0098);
+        t = gabi::fmuls_ppc(t, duck);
+        t = gabi::fmuls_ppc(t, field_0x00ac);
+        m->setVolume(t, 0x1E, 0);
     }
 }
-VERIFY(0x02028038, cbPracticePlay);
 
-/* 020282F8 JAIZelBasic::cbPracticeStop() */
-void cbPracticeStop(u32 self) {
-    WWHD_FUNC(0x020282F8, void, self);
-    u32 sub = ld(self + 0x7C);
+/* 020282F8 */
+void JAIZelBasic::cbPracticeStop() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *sub = mpSubBgmSound.get();
     if (sub != 0) {
-        u32 n = ld(self + 0x84);
-        if (n == 0x80000036 || n == 0x80000037) {
-            JAISound_stop_l(sub, 0xF);
-            st(self + 0x7C, 0);
-            st(self + 0x84, (u32)-1);
+        u32 n = mSubBgmNum;
+        if (n == JA_BGM_CB_NEXTYEAR || n == JA_BGM_CB_NEXTYEAR_W) {
+            sub->stop(0xF);
+            mpSubBgmSound = nullptr;
+            mSubBgmNum = (u32)-1;
         }
     }
-    u32 m = ld(self + 0x78);
-    stf(self + 0xB8, 1.0f);
-    stf(self + 0xAC, 1.0f);
+    Sound *m = mpMainBgmSound.get();
+    field_0x00a8 = 1.0f;
+    field_0x009c = 1.0f;
     if (m != 0) {
-        f32 t = mul(ldf(self + 0x90), ldf(self + 0x94));
-        t = mul(t, ldf(self + 0x98));
-        t = mul(t, ldf(self + 0x9C));
-        t = mul(t, ldf(self + 0xA0));
-        t = mul(t, ldf(self + 0xA4));
-        t = mul(t, ldf(self + 0xA8));
-        t = mul(t, ldf(self + 0xBC));
-        JAISound_setVolume_l(m, t, 0x5A, 0);
+        f32 t = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+        t = gabi::fmuls_ppc(t, field_0x0088);
+        t = gabi::fmuls_ppc(t, field_0x008c);
+        t = gabi::fmuls_ppc(t, field_0x0090);
+        t = gabi::fmuls_ppc(t, field_0x0094);
+        t = gabi::fmuls_ppc(t, field_0x0098);
+        t = gabi::fmuls_ppc(t, field_0x00ac);
+        m->setVolume(t, 0x5A, 0);
     }
-    st(self + 0xE0, 0);
+    field_0x00d0 = nullptr;
 }
-VERIFY(0x020282F8, cbPracticeStop);
 
-/* 020283D8 JAIZelBasic::bgmMuteMtDragon() (unnamed by the matcher) */
-void bgmMuteMtDragon(u32 self) {
-    WWHD_FUNC(0x020283D8, void, self);
-    st8(self + 0x75, 1);
+/* 020283D8 */
+void JAIZelBasic::bgmMuteMtDragon() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    field_0x0065 = 1;
 }
-VERIFY(0x020283D8, bgmMuteMtDragon);
 
-/* 020283E4 JAIZelBasic::stSkyCloisters() (unnamed by the matcher) */
-void stSkyCloisters(u32 self) {
-    WWHD_FUNC(0x020283E4, void, self);
-    if (ld(self + 0x88) != 0x80000028) return;
-    if (ld8(self + 0xC7) == 0) bgmStart_l(self, 0x80000126, 1, 0);
-    st8(self + 0xC7, 4);
+/* 020283E4 */
+void JAIZelBasic::stSkyCloisters() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mMainBgmNum != JA_BGM_KAMI_TOWER)
+        return;
+    if (field_0x00b7 == 0)
+        bgmStart(JA_BGM_UNK_126, 1, 0);
+    field_0x00b7 = 4;
 }
-VERIFY(0x020283E4, stSkyCloisters);
 
-/* 0202844C JAIZelBasic::bgmAllMute(u32 fade) */
-void bgmAllMute(u32 self, u32 fade) {
-    WWHD_FUNC(0x0202844C, void, self, fade);
-    u32 m = ld(self + 0x78);
-    stf(self + 0x90, 0.0f);
-    if (m == 0) return;
-    f32 v = mul(0.0f, ldf(self + 0x94));
-    v = mul(v, ldf(self + 0x98));
-    v = mul(v, ldf(self + 0x9C));
-    v = mul(v, ldf(self + 0xA0));
-    v = mul(v, ldf(self + 0xA4));
-    v = mul(v, ldf(self + 0xA8));
-    v = mul(v, ldf(self + 0xAC));
-    v = mul(v, ldf(self + 0xBC));
-    JAISound_setVolume_l(m, v, fade, 0);
+/* 0202844C */
+void JAIZelBasic::bgmAllMute(u32 fade) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *m = mpMainBgmSound.get();
+    field_0x0080 = 0.0f;
+    if (m == 0)
+        return;
+    f32 v = gabi::fmuls_ppc(0.0f, field_0x0084);
+    v = gabi::fmuls_ppc(v, field_0x0088);
+    v = gabi::fmuls_ppc(v, field_0x008c);
+    v = gabi::fmuls_ppc(v, field_0x0090);
+    v = gabi::fmuls_ppc(v, field_0x0094);
+    v = gabi::fmuls_ppc(v, field_0x0098);
+    v = gabi::fmuls_ppc(v, field_0x009c);
+    v = gabi::fmuls_ppc(v, field_0x00ac);
+    m->setVolume(v, fade, 0);
 }
-VERIFY(0x0202844C, bgmAllMute);
 
-/* 020284B0 JAIZelBasic::stWaterLevelUp() (unnamed by the matcher) */
-void stWaterLevelUp(u32 self) {
-    WWHD_FUNC(0x020284B0, void, self);
-    if (ld8(self + 0xC7) != 0) return;
-    if (ld(self + 0x88) != 0x80000028) return;
-    bgmStart_l(self, 0x80000125, 1, 0);
+/* 020284B0 */
+void JAIZelBasic::stWaterLevelUp() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x00b7 != 0)
+        return;
+    if (mMainBgmNum != JA_BGM_KAMI_TOWER)
+        return;
+    bgmStart(JA_BGM_UNK_125, 1, 0);
 }
-VERIFY(0x020284B0, stWaterLevelUp);
 
-/* 020284E4 JAIZelBasic::stWaterLevelDown() (unnamed by the matcher) */
-void stWaterLevelDown(u32 self) {
-    WWHD_FUNC(0x020284E4, void, self);
-    if (ld8(self + 0xC7) != 0) return;
-    if (ld(self + 0x88) != 0x80000028) return;
-    bgmStart_l(self, 0x80000028, 1, 0);
+/* 020284E4 */
+void JAIZelBasic::stWaterLevelDown() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x00b7 != 0)
+        return;
+    if (mMainBgmNum != JA_BGM_KAMI_TOWER)
+        return;
+    bgmStart(JA_BGM_KAMI_TOWER, 1, 0);
 }
-VERIFY(0x020284E4, stWaterLevelDown);
 
-/* 02028518 JAIZelBasic::taktModeMute() */
-void taktModeMute(u32 self) {
-    WWHD_FUNC(0x02028518, void, self);
-    u32 m = ld(self + 0x78);
-    stf(self + 0xA8, 0.0f);
+/* 02028518 */
+void JAIZelBasic::taktModeMute() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *m = mpMainBgmSound.get();
+    field_0x0098 = 0.0f;
     if (m != 0) {
-        u32 n = ld(self + 0x88);
-        if (n == 0x80000021 || n == 0x80000022) {
-            stf(self + 0xA8, 1.0f);
+        u32 n = mMainBgmNum;
+        if (n == JA_BGM_TAKT_MAKORE || n == JA_BGM_TAKT_MEDRI) {
+            field_0x0098 = 1.0f;
         } else {
-            f32 v = mul(ldf(self + 0x90), ldf(self + 0x94));
-            v = mul(v, ldf(self + 0x98));
-            v = mul(v, ldf(self + 0x9C));
-            v = mul(v, ldf(self + 0xA0));
-            v = mul(v, ldf(self + 0xA4));
-            v = mul(v, 0.0f);
-            v = mul(v, ldf(self + 0xAC));
-            v = mul(v, ldf(self + 0xBC));
-            JAISound_setVolume_l(m, v, 0xA, 0);
+            f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+            v = gabi::fmuls_ppc(v, field_0x0088);
+            v = gabi::fmuls_ppc(v, field_0x008c);
+            v = gabi::fmuls_ppc(v, field_0x0090);
+            v = gabi::fmuls_ppc(v, field_0x0094);
+            v = gabi::fmuls_ppc(v, 0.0f);
+            v = gabi::fmuls_ppc(v, field_0x009c);
+            v = gabi::fmuls_ppc(v, field_0x00ac);
+            m->setVolume(v, 0xA, 0);
         }
     }
-    u32 sub = ld(self + 0x7C);
-    stf(self + 0xB4, 0.0f);
-    if (sub != 0) JAISound_setVolume_l(sub, mul(mul(ldf(self + 0xB0), 0.0f), ldf(self + 0xB8)), 0xA, 0);
+    Sound *sub = mpSubBgmSound.get();
+    field_0x00a4 = 0.0f;
+    if (sub != 0)
+        sub->setVolume(gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x00a0, 0.0f), field_0x00a8), 0xA, 0);
 }
-VERIFY(0x02028518, taktModeMute);
 
-/* 0202862C JAIZelBasic::taktModeMuteOff() */
-void taktModeMuteOff(u32 self) {
-    WWHD_FUNC(0x0202862C, void, self);
-    u32 m = ld(self + 0x78);
-    stf(self + 0xA8, 1.0f);
+/* 0202862C */
+void JAIZelBasic::taktModeMuteOff() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *m = mpMainBgmSound.get();
+    field_0x0098 = 1.0f;
     if (m != 0) {
-        f32 v = mul(ldf(self + 0x90), ldf(self + 0x94));
-        v = mul(v, ldf(self + 0x98));
-        v = mul(v, ldf(self + 0x9C));
-        v = mul(v, ldf(self + 0xA0));
-        v = mul(v, ldf(self + 0xA4));
-        v = mul(v, ldf(self + 0xAC));
-        v = mul(v, ldf(self + 0xBC));
-        JAISound_setVolume_l(m, v, 0xA, 0);
+        f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+        v = gabi::fmuls_ppc(v, field_0x0088);
+        v = gabi::fmuls_ppc(v, field_0x008c);
+        v = gabi::fmuls_ppc(v, field_0x0090);
+        v = gabi::fmuls_ppc(v, field_0x0094);
+        v = gabi::fmuls_ppc(v, field_0x009c);
+        v = gabi::fmuls_ppc(v, field_0x00ac);
+        m->setVolume(v, 0xA, 0);
     }
-    f32 c = ldf(self + 0x9C);
-    if (!(c == 0.0f)) hdStreamVolume_l(self, 0xA, mul(mul(ldf(self + 0x94), c), ldf(self + 0xA8)));
-    if (ld(self + 0x84) == 0x80000031 && ld8(self + 0xC6) == 0) {
-        u32 m2 = ld(self + 0x78);
-        stf(self + 0x9C, 1.0f);
+    f32 c = field_0x008c;
+    if (!(c == 0.0f))
+        hdStreamVolume(0xA, gabi::fmuls_ppc(gabi::fmuls_ppc(field_0x0084, c), field_0x0098));
+    if (mSubBgmNum == JA_BGM_TAKT_KAZE && mLastMinibossSubBGMType == 0) {
+        Sound *m2 = mpMainBgmSound.get();
+        field_0x008c = 1.0f;
         if (m2 != 0) {
-            f32 v = mul(ldf(self + 0x90), ldf(self + 0x94));
-            v = mul(v, ldf(self + 0x98));
-            v = mul(v, ldf(self + 0xA0));
-            v = mul(v, ldf(self + 0xA4));
-            v = mul(v, ldf(self + 0xA8));
-            v = mul(v, ldf(self + 0xAC));
-            v = mul(v, ldf(self + 0xBC));
-            JAISound_setVolume_l(m2, v, 0x2D, 0);
+            f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+            v = gabi::fmuls_ppc(v, field_0x0088);
+            v = gabi::fmuls_ppc(v, field_0x0090);
+            v = gabi::fmuls_ppc(v, field_0x0094);
+            v = gabi::fmuls_ppc(v, field_0x0098);
+            v = gabi::fmuls_ppc(v, field_0x009c);
+            v = gabi::fmuls_ppc(v, field_0x00ac);
+            m2->setVolume(v, 0x2D, 0);
         }
     }
-    u32 sub = ld(self + 0x7C);
-    stf(self + 0xB4, 1.0f);
-    if (sub != 0) JAISound_setVolume_l(sub, mul(ldf(self + 0xB0), ldf(self + 0xB8)), 0xA, 0);
+    Sound *sub = mpSubBgmSound.get();
+    field_0x00a4 = 1.0f;
+    if (sub != 0)
+        sub->setVolume(gabi::fmuls_ppc(field_0x00a0, field_0x00a8), 0xA, 0);
 }
-VERIFY(0x0202862C, taktModeMuteOff);
 
-/* 0202879C JAIZelBasic::bgmNowBattle(f32 dist): starts the battle bgm (HD: the sea battle bgm on the
- * sea) and fades its "enemy near" tracks by distance */
-void bgmNowBattle(u32 self, f32 dist) {
-    WWHD_FUNC(0x0202879C, void, self, dist);
-    if (ld8(self + 0x73) != 0) return;
-    if (ld8(self + 0xDA) == 1) return;
-    if (ldf(self + 0xA8) == 0.0f) return;
-    if (ld8(self + 0x29D) == 0) return;
-    if (ld(gabi::ea(dComIfGp_get()) + 0x5B34) != 0 && ld8(gabi::ea(dComIfGp_get()) + 0x5292) != 0) return;
-    u32 sc = ld(self + 0x294);
+// HD: sea battles use their own BGM and distance-dependent enemy tracks.
+/* 0202879C */
+void JAIZelBasic::bgmNowBattle(f32 dist) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x0063 != 0)
+        return;
+    if (field_0x00ca == 1)
+        return;
+    if (field_0x0098 == 0.0f)
+        return;
+    if (field_0x022d == 0)
+        return;
+    if (audioPlayerPresent() && dComIfGp_event_runCheck())
+        return;
+    u32 sc = field_0x0224;
     if (sc < 0x24) {
-        if (sc == 2 || sc == 7 || sc == 0x18) return;
+        if (sc == 2 || sc == 7 || sc == 0x18)
+            return;
         if (sc == 9) {
-            enemyNearBy_l(self);
+            enemyNearBy();
             return;
         }
     } else if (sc < 0x3A) {
-        if (sc <= 0x25 || sc == 0x28 || sc == 0x2D || sc == 0x37) return;
+        if (sc <= 0x25 || sc == 0x28 || sc == 0x2D || sc == 0x37)
+            return;
     } else {
-        if (sc <= 0x3B) return;
+        if (sc <= 0x3B)
+            return;
         if (sc == 0x40) {
-            enemyNearBy_l(self);
+            enemyNearBy();
             return;
         }
-        if (sc >= 0x5B && (sc <= 0x5C || sc == 0x69)) return;
+        if (sc >= 0x5B && (sc <= 0x5C || sc == 0x69))
+            return;
     }
-    if (ld8(self + 0xC5) == 1) return;
-    if (ld8(self + 0x276) == 1) return;
-    u32 n88 = ld(self + 0x88);
-    if (n88 < 0x8000000A) {
-        if (n88 == 0x80000005 || n88 == 0x80000003) return;
-    } else if (n88 == 0x80000105 || n88 == 0x80000010 || n88 == 0x8000000A) {
+    if (mSomeSpecialBGMFlag == 1)
+        return;
+    if (field_0x0206 == 1)
+        return;
+    u32 n88 = mMainBgmNum;
+    if (n88 < JA_BGM_DIE_LINK) {
+        if (n88 == JA_BGM_KINDAN_BOSS || n88 == JA_BGM_GOMA)
+            return;
+    } else if (n88 == JA_BGM_UNK_105 || n88 == JA_BGM_GOMA_2 || n88 == JA_BGM_DIE_LINK) {
         return;
     }
-    if (ld8(self + 0x277) != 0) return;
-    u32 sub = ld(self + 0x7C);
-    if (sub != 0 && (ld(self + 0x84) == 0x8000002B || ld(self + 0x84) == 0x80000046)) return;
-    if (n88 == 0x80000021 || n88 == 0x80000022) return;
-    if (sub != 0 && (ld(self + 0x84) == 0x80000041 || ld(self + 0x84) == 0x80000047)) return;
-    if (ld8(self + 0xDE) != 0) return;
-    u32 n84 = ld(self + 0x84);
-    if (n84 == 0x80000019 || n84 == 0x8000001A) {
-        mbossBgmNearByProcess_l(self, dist);
+    if (field_0x0207 != 0)
+        return;
+    Sound *sub = mpSubBgmSound.get();
+    if (sub != 0 && (mSubBgmNum == JA_BGM_DIOCTA_BATTLE || mSubBgmNum == JA_BGM_DIOCTA_2))
+        return;
+    if (n88 == JA_BGM_TAKT_MAKORE || n88 == JA_BGM_TAKT_MEDRI)
+        return;
+    if (sub != 0 && (mSubBgmNum == JA_BGM_P_GANON_1 || mSubBgmNum == JA_BGM_P_GANON_2))
+        return;
+    if (field_0x00ce != 0)
+        return;
+    u32 n84 = mSubBgmNum;
+    if (n84 == JA_BGM_MBOSS || n84 == JA_BGM_MBOSS_S) {
+        mbossBgmNearByProcess(dist);
         return;
     }
-    if (ld8(self + 0xCB) != 0) return;
-    if (ld8(self + 0xC6) != 0) return;
-    sub = ld(self + 0x7C);
-    st8(self + 0xD0, ld8(0x1018DCB4));
+    if (field_0x00bb != 0)
+        return;
+    if (mLastMinibossSubBGMType != 0)
+        return;
+    sub = mpSubBgmSound.get();
+    field_0x00c0 = COMMON_BATTLE_FO_DELAY;
     bool start = true;
     if (sub != 0) {
-        n84 = ld(self + 0x84);
-        if (n84 == 0x80000004) start = false;
-        else if (n84 == 0x8000001C) return;
+        n84 = mSubBgmNum;
+        if (n84 == JA_BGM_BATTLE_NORM)
+            start = false;
+        else if (n84 == JA_BGM_SEA_ENEMY)
+            return;
     }
     if (start) {
-        u32 id = checkLinkOnSea_l(self) == 1 ? 0x8000001C : 0x80000004;
-        JAIBasic_startSoundVec_l(self, id, self + 0x7C, 0, 0x3C, 0, 4);
-        u32 s = ld(self + 0x7C);
-        st(self + 0x84, id);
-        if (s != 0) JAISound_setSeqInterVolume_l(s, 0, ldf(self + 0xB0), 0);
-        u32 m = ld(self + 0x78);
-        stf(self + 0x9C, 0.0f);
+        u32 id = checkLinkOnSea() == 1 ? JA_BGM_SEA_ENEMY : JA_BGM_BATTLE_NORM;
+        startSoundVec(id, &mpSubBgmSound, 0, 0x3C, 0, 4);
+        Sound *s = mpSubBgmSound.get();
+        mSubBgmNum = id;
+        if (s != 0)
+            s->setSeqInterVolume(0, field_0x00a0, 0);
+        Sound *m = mpMainBgmSound.get();
+        field_0x008c = 0.0f;
         if (m != 0) {
-            f32 v = mul(ldf(self + 0x90), ldf(self + 0x94));
-            v = mul(v, ldf(self + 0x98));
-            v = mul(v, 0.0f);
-            v = mul(v, ldf(self + 0xA0));
-            v = mul(v, ldf(self + 0xA4));
-            v = mul(v, ldf(self + 0xA8));
-            v = mul(v, ldf(self + 0xAC));
-            v = mul(v, ldf(self + 0xBC));
-            JAISound_setVolume_l(m, v, 0x3C, 0);
+            f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+            v = gabi::fmuls_ppc(v, field_0x0088);
+            v = gabi::fmuls_ppc(v, 0.0f);
+            v = gabi::fmuls_ppc(v, field_0x0090);
+            v = gabi::fmuls_ppc(v, field_0x0094);
+            v = gabi::fmuls_ppc(v, field_0x0098);
+            v = gabi::fmuls_ppc(v, field_0x009c);
+            v = gabi::fmuls_ppc(v, field_0x00ac);
+            m->setVolume(v, 0x3C, 0);
         }
-        if (checkLinkOnSea_l(self) == 1) {
-            s32 on = checkLinkOnBoardSea_l(self);
-            bgmMute_l(self, self + 0x7C, 0x8000001C, (on ^ 1) != 0 ? 1 : 0, 0);
+        if (checkLinkOnSea() == 1) {
+            s32 on = checkLinkOnBoardSea();
+            bgmMute(&mpSubBgmSound, JA_BGM_SEA_ENEMY, (on ^ 1) != 0 ? 1 : 0, 0);
         } else {
-            bgmMute_l(self, self + 0x7C, 0x80000004, 0, 0);
+            bgmMute(&mpSubBgmSound, JA_BGM_BATTLE_NORM, 0, 0);
         }
-        sub = ld(self + 0x7C);
-        if (sub == 0) return;
-        if (ld(self + 0x84) == 0x8000001C) return;
+        sub = mpSubBgmSound.get();
+        if (sub == 0)
+            return;
+        if (mSubBgmNum == JA_BGM_SEA_ENEMY)
+            return;
     }
     /* enemy near / far tracks */
-    if (!(dist > ldf(0x1018DC78))) {
-        s32 d1 = (s8)ld8(self + 0xD1);
-        st(self + 0xD4, 0);
+    if (!(dist > ENEMY_NEARBY_DIST)) {
+        s32 d1 = (s8)field_0x00c1;
+        field_0x00c4 = 0;
         if (d1 == 0) {
-            JAISound_setTrackVolume_l(ld(self + 0x7C), ld8(0x1018DCAF), 1.0f, ld(0x1018DC7C));
-            JAISound_setTrackVolume_l(ld(self + 0x7C), ld8(0x1018DCB0), 1.0f, ld(0x1018DC7C));
-            st8(self + 0xD1, 1);
+            mpSubBgmSound.get()->setTrackVolume(ENEMY_NEARBY_TRACK, 1.0f, ENEMY_NEARBY_FADEIN_TIME);
+            mpSubBgmSound.get()->setTrackVolume(ENEMY_NEARBY_TRACK_2, 1.0f,
+                                                ENEMY_NEARBY_FADEIN_TIME);
+            field_0x00c1 = 1;
         }
-        sub = ld(self + 0x7C);
-    } else if ((s8)ld8(self + 0xD1) == 1) {
-        u32 t = ld(0x1018DC80);
-        st8(self + 0xD1, 0);
-        st(self + 0xD4, t);
-        sub = ld(self + 0x7C);
+        sub = mpSubBgmSound.get();
+    } else if ((s8)field_0x00c1 == 1) {
+        u32 t = ENEMY_NEARBY_FADEOUT_TIME;
+        field_0x00c1 = 0;
+        field_0x00c4 = t;
+        sub = mpSubBgmSound.get();
     }
-    u32 d9 = ld8(self + 0xD9);
-    u32 fade = ld(0x1018DC8C);
+    u32 d9 = field_0x00c9;
+    u32 fade = BTL_SWORD_USING_FADE_TIME;
     if (d9 == 0) {
-        JAISound_setTrackVolume_l(sub, ld8(0x1018DCB3), 1.0f, fade);
-        JAISound_setTrackVolume_l(ld(self + 0x7C), ld8(0x1018DCB2), 0.0f, ld(0x1018DC8C));
+        sub->setTrackVolume(SWORD_NOT_USING_TRACK, 1.0f, fade);
+        mpSubBgmSound.get()->setTrackVolume(SWORD_USING_TRACK, 0.0f, BTL_SWORD_USING_FADE_TIME);
     } else {
-        JAISound_setTrackVolume_l(sub, ld8(0x1018DCB2), 1.0f, fade);
-        JAISound_setTrackVolume_l(ld(self + 0x7C), ld8(0x1018DCB3), 0.0f, ld(0x1018DC8C));
+        sub->setTrackVolume(SWORD_USING_TRACK, 1.0f, fade);
+        mpSubBgmSound.get()->setTrackVolume(SWORD_NOT_USING_TRACK, 0.0f, BTL_SWORD_USING_FADE_TIME);
     }
 }
-VERIFY(0x0202879C, bgmNowBattle);
 
-/* 02028D6C JAIZelBasic::bgmNowKaitengiri() */
-void bgmNowKaitengiri(u32 self) {
-    WWHD_FUNC(0x02028D6C, void, self);
-    if (ld8(self + 0xD8) == 0) {
-        u32 sub = ld(self + 0x7C);
+/* 02028D6C */
+void JAIZelBasic::bgmNowKaitengiri() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x00c8 == 0) {
+        Sound *sub = mpSubBgmSound.get();
         if (sub != 0) {
-            u32 n = ld(self + 0x84);
-            if (n > 0x8000001A) {
-            } else if (n >= 0x80000019) {
-                JAISound_setTrackVolume_l(sub, ld8(0x1018DCB6), 1.0f, ld(0x1018DC84));
-            } else if (n == 0x80000004) {
-                JAISound_setTrackVolume_l(sub, ld8(0x1018DCB1), 1.0f, ld(0x1018DC84));
+            u32 n = mSubBgmNum;
+            if (n > JA_BGM_MBOSS_S) {
+            } else if (n >= JA_BGM_MBOSS) {
+                sub->setTrackVolume(MBOSS_BTL_KAITENGIRI_TRACK, 1.0f, BTL_KAITENGIRI_FADEIN_TIME);
+            } else if (n == JA_BGM_BATTLE_NORM) {
+                sub->setTrackVolume(BTL_KAITENGIRI_TRACK, 1.0f, BTL_KAITENGIRI_FADEIN_TIME);
             }
         }
     }
-    st8(self + 0xD8, 2);
+    field_0x00c8 = 2;
 }
-VERIFY(0x02028D6C, bgmNowKaitengiri);
 
-/* 02028E24 JAIZelBasic::getRandomU32(u32 n): the shift-register generator at 1018D4F0 */
-u32 getRandomU32(u32 self, u32 n) {
-    WWHD_FUNC(0x02028E24, u32, self, n);
-    u32 t = ld(0x1018D4F0);
-    u32 s = (t << 1) + ((t >> 31) ^ ((t >> 6) & 0x10));
-    st(0x1018D4F0, s);
-    u32 q = n != 0 ? s / n : 0;
-    return s - q * n;
+/* 02028E24 */
+u32 JAIZelBasic::getRandomU32(u32 n) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 t = jai_rng_seed;
+    u32 seed = (t << 1) + ((t >> 31) ^ ((t >> 6) & 0x10));
+    jai_rng_seed = seed;
+    u32 q = n != 0 ? seed / n : 0;
+    return seed - q * n;
 }
-VERIFY(0x02028E24, getRandomU32);
 
-/* 02028E54 JAIZelBasic::bgmHitSound(s32 kind) */
-void bgmHitSound(u32 self, u32 kind) {
-    WWHD_FUNC(0x02028E54, void, self, kind);
-    u32 n = ld(self + 0x84);
-    if (n > 0x8000001A) return;
-    if (n < 0x80000019 && n != 0x80000004) return;
-    if (ld8(self + 0xD9) == 0) return;
+/* 02028E54 */
+void JAIZelBasic::bgmHitSound(u32 kind) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 n = mSubBgmNum;
+    if (n > JA_BGM_MBOSS_S)
+        return;
+    if (n < JA_BGM_MBOSS && n != JA_BGM_BATTLE_NORM)
+        return;
+    if (field_0x00c9 == 0)
+        return;
     u16 v;
     switch (kind) {
-    case 1: v = (u16)(getRandomU32(self, 2) + 5); break;
-    case 2: v = 9; break;
-    case 3: v = (u16)(getRandomU32(self, 2) + 10); break;
-    case 4: v = (u16)(getRandomU32(self, 2) + 7); break;
-    default: v = (u16)((u16)getRandomU32(self, 4) + 1); break;
+    case 1:
+        v = (u16)(getRandomU32(2) + 5);
+        break;
+    case 2:
+        v = 9;
+        break;
+    case 3:
+        v = (u16)(getRandomU32(2) + 10);
+        break;
+    case 4:
+        v = (u16)(getRandomU32(2) + 7);
+        break;
+    default:
+        v = (u16)((u16)getRandomU32(4) + 1);
+        break;
     }
-    u32 sub = ld(self + 0x7C);
-    if (sub == 0) return;
-    u32 track = JAISound_getSeqParameter_l(sub) + 0x1360;
+    Sound *sub = mpSubBgmSound.get();
+    if (sub == 0)
+        return;
+    Track *track = rootTrack(sub->getSeqParameter());
     gabi::Local<be<u16>> tmp;
-    u32 tp = gabi::ea(tmp.get());
-    st16(tp, 0);
-    gabi::call(0x02818C68, track, 0x100A0001, tp); /* TTrack::readPortApp */
-    TTrack_writePortApp_l(track, 0x00090000, v);
-    TTrack_writePortApp_l(track, 0x000A0000, ld16(tp));
+    *tmp = 0;
+    track->readPortApp(0x100A0001, tmp.get()); /* TTrack::readPortApp */
+    track->writePortApp(0x00090000, v);
+    track->writePortApp(0x000A0000, u16(*tmp));
 }
-VERIFY(0x02028E54, bgmHitSound);
 
-/* 02028FE0 JAIZelBasic::bgmSetSwordUsing(s32) (unnamed by the matcher; 025E1D08 is the m_Do_audio shim) */
-void bgmSetSwordUsing(u32 self, u32 v) {
-    WWHD_FUNC(0x02028FE0, void, self, v);
-    st8(self + 0xD9, v);
+/* 02028FE0 */
+void JAIZelBasic::bgmSetSwordUsing(u32 v) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    field_0x00c9 = v;
 }
-VERIFY(0x02028FE0, bgmSetSwordUsing);
 
-/* 02028FE8 JAIZelBasic::prepareLandingDemo(s32) (unnamed by the matcher) */
-void prepareLandingDemo(u32 self, u32 v) {
-    WWHD_FUNC(0x02028FE8, void, self, v);
-    st8(self + 0x70, v);
-    bgmStop_l(self, 0x5A, 0);
+/* 02028FE8 */
+void JAIZelBasic::prepareLandingDemo(u32 v) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mbLandingDemoStarted = v;
+    bgmStop(0x5A, 0);
 }
-VERIFY(0x02028FE8, prepareLandingDemo);
 
-/* 02028FF8 JAIZelBasic::startLandingDemo() */
-void startLandingDemo(u32 self) {
-    WWHD_FUNC(0x02028FF8, void, self);
-    u32 c = ld8(self + 0x70);
-    if (c == 2) bgmStart_l(self, 0x8000003A, 0, 0);
-    else if (c == 3) bgmStart_l(self, 0x80000039, 0, 0);
+/* 02028FF8 */
+void JAIZelBasic::startLandingDemo() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    u32 c = mbLandingDemoStarted;
+    if (c == 2)
+        bgmStart(JA_BGM_ISLAND_DRAGON, 0, 0);
+    else if (c == 3)
+        bgmStart(JA_BGM_ISLAND_WOOD, 0, 0);
 }
-VERIFY(0x02028FF8, startLandingDemo);
 
-/* 02029038 JAIZelBasic::endLandingDemo() (unnamed by the matcher) */
-void endLandingDemo(u32 self) {
-    WWHD_FUNC(0x02029038, void, self);
-    st8(self + 0x70, 0);
+/* 02029038 */
+void JAIZelBasic::endLandingDemo() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mbLandingDemoStarted = 0;
 }
-VERIFY(0x02029038, endLandingDemo);
 
-/* 02029044 JAIZelBasic::seStopActor(Vec*, u32) (unnamed by the matcher) */
-void seStopActor(u32 self, u32 pos, u32 id) {
-    WWHD_FUNC(0x02029044, void, self, pos, id);
+/* 02029044 */
+void JAIZelBasic::seStopActor(VectorWords *pos, u32 id) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if ((s32)id == -1) {
-        gabi::call(0x02802994, self, pos); /* JAIBasic::stopAllSound(pos) */
+        stopAllSound(pos); /* JAIBasic::stopAllSound(pos) */
     } else if (pos == 0) {
-        gabi::call(0x02802AEC, self, id);
+        stopAllSoundID(id);
     } else {
-        gabi::call(0x02802C60, self, id, pos);
+        stopActorSound(id, pos);
     }
 }
-VERIFY(0x02029044, seStopActor);
 
-/* 02029070 JAIZelBasic::seDeleteObject(Vec*) (unnamed by the matcher) */
-void seDeleteObject(u32 self, u32 pos) {
-    WWHD_FUNC(0x02029070, void, self, pos);
-    gabi::call(0x02802E00, self, pos); /* JAIBasic::deleteObject */
+/* 02029070 */
+void JAIZelBasic::seDeleteObject(VectorWords *pos) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    deleteObject(pos); /* JAIBasic::deleteObject */
 }
-VERIFY(0x02029070, seDeleteObject);
 
-/* 02029074 JAIZelBasic::charVoicePlay(s32, s32, Vec*, s8): HD skips the voice already playing */
-void charVoicePlay(u32 self, u32 a, u32 b, u32 pos, u32 reverb) {
-    WWHD_FUNC(0x02029074, void, self, a, b, pos, reverb);
-    if (ld8(self + 0x271) == 1) return;
+// HD: the cached voice index prevents restarting the same voice.
+/* 02029074 */
+void JAIZelBasic::charVoicePlay(u32 a, u32 b, VectorWords *pos, u32 reverb) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x0201 == 1)
+        return;
     u32 v = ((a << 8) + b) & 0xFFFF;
-    if (v == ld16(self + 0x20D4)) return;
-    u32 s = ld(self + 0x20D0);
+    if (v == mVoiceIndexHD)
+        return;
+    Sound *s = field_0x2060.get();
     if (s != 0) {
-        JAISound_stop_l(s, 0);
-        st16(self + 0x20D4, 0xFFFF);
+        s->stop(0);
+        mVoiceIndexHD = 0xFFFF;
     }
-    JAIBasic_startSoundVec_l(self, 0x481F, self + 0x20D0, pos, 0, 0, 4);
-    if (ld(self + 0x20D0) == 0) return;
-    JAISound_setPortData_l(ld(self + 0x20D0), 8, v);
-    JAISound_setPortData_l(ld(self + 0x20D0), 9, reverb & 0xFFFF);
-    st16(self + 0x20D4, v);
+    startSoundVec(JA_SE_CV_COMMON_PEOPLE, &field_0x2060, pos, 0, 0, 4);
+    if (field_0x2060.get() == 0)
+        return;
+    field_0x2060.get()->setPortData(8, v);
+    field_0x2060.get()->setPortData(9, reverb & 0xFFFF);
+    mVoiceIndexHD = v;
 }
-VERIFY(0x02029074, charVoicePlay);
 
-/* 0202914C JAIZelBasic::messageSePlay(u16 msg, Vec* pos, s8 reverb): table at 1018D53C {u16 a, u16 b} */
-void messageSePlay(u32 self, u32 msg, u32 pos, u32 reverb) {
-    WWHD_FUNC(0x0202914C, void, self, msg, pos, reverb);
-    u32 p = pos;
+// HD: copy the message position as words; dialogue exclusions keep the original IDs.
+/* 0202914C */
+void JAIZelBasic::messageSePlay(u32 msg, VectorWords *pos, u32 reverb) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    VectorWords *p = pos;
     if (pos != 0) {
-        st(self + 0x20D8, ld(pos));
-        st(self + 0x20DC, ld(pos + 4));
-        st(self + 0x20E0, ld(pos + 8));
-        p = self + 0x20D8;
+        auto source = pos;
+        mMessagePositionHD.w[0] = source->w[0];
+        mMessagePositionHD.w[1] = source->w[1];
+        mMessagePositionHD.w[2] = source->w[2];
+        p = &mMessagePositionHD;
     }
-    if (msg >= 0x118) return;
-    if (msg == 0x9F || (msg >= 0xB4 && msg <= 0xBA) || msg == 0x102 || msg == 0x104) p = 0;
-    if (msg == 0x10D || msg == 0x115) return;
-    u32 e = 0x1018D53C + msg * 4;
-    u32 a = ld16(e), b = ld16(e + 2);
-    if (a == 0xFFFF || b == 0xFFFF) return;
+    if (msg >= 0x118)
+        return;
+    if (msg == 0x9F || (msg >= 0xB4 && msg <= 0xBA) || msg == 0x102 || msg == 0x104)
+        p = 0;
+    if (msg == 0x10D || msg == 0x115)
+        return;
+    MessageVoice &entry = messageSeTable.entries[msg];
+    u32 a = entry.character, b = entry.sound;
+    if (a == 0xFFFF || b == 0xFFFF)
+        return;
     u32 t = a & 0xF000;
     if (t == 0) {
-        charVoicePlay(self, a, b, p, reverb);
+        charVoicePlay(a, b, p, reverb);
     } else if (t == 0x1000 || t == 0x2000 || t == 0x3000 || t == 0x8000) {
-        JAIZelBasic_seStart_l(self, b, p, 0, reverb, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+        seStart(b, p, 0, reverb, 1.0f, 1.0f, -1.0f, -1.0f, 0);
     }
 }
-VERIFY(0x0202914C, messageSePlay);
 
 /* a random entry of a voice table (8 bytes per voice, {sel, vowel} pairs): TRandom * 4 */
-static inline u32 randomIndex(u32 self) {
-    f32 f = TRandom_get_l(self + 0x216C) * 4.0f;
-    if (!(f < 2147483648.0f)) return (u32)gabi::ftoi(f - 2147483648.0f) + 0x80000000;
+// HD: float-to-unsigned conversion keeps the GHS signed conversion split.
+u32 JAIZelBasic::randomIndex() {
+    f32 f = mVoiceRandomHD.get() * 4.0f;
+    if (!(f < 2147483648.0f))
+        return (u32)gabi::ftoi(f - 2147483648.0f) + 0x80000000;
     return (u32)gabi::ftoi(f);
 }
 
-/* 020292B4 JAIZelBasic::getLinkVoiceVowel(u32): linkVoiceTable at 1018D99C */
-u32 getLinkVoiceVowel(u32 self, u32 n) {
-    WWHD_FUNC(0x020292B4, u32, self, n);
-    u32 tab = 0x1018D99C + n * 8;
+/* 020292B4 */
+u32 JAIZelBasic::getLinkVoiceVowel(u32 n) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    LinkVoice &voice = *voiceAt(&linkVoiceTable, n);
     u32 i, k = 0;
     for (i = 0; i < 400; i++) {
-        k = randomIndex(self);
-        if (ld8(tab + k * 2) != 0xFF) break;
+        k = randomIndex();
+        if (voice.entries[k].sound != 0xFF)
+            break;
     }
-    if (i == 400) return 0xFF;
-    return ld8(tab + k * 2 + 1);
+    if (i == 400)
+        return 0xFF;
+    return voice.entries[k].vowel;
 }
-VERIFY(0x020292B4, getLinkVoiceVowel);
 
-/* 020293CC JAIZelBasic::linkVoiceStart(u32 n, Vec* pos, u8 vowel, s8 reverb) */
-void linkVoiceStart(u32 self, u32 n, u32 pos, u32 vowel, u32 reverb) {
-    WWHD_FUNC(0x020293CC, void, self, n, pos, vowel, reverb);
-    if (ld8(self + 0x29D) == 0) return;
-    if (ld(self + 0x8C) == 0xC0000005 && (s32)n == 0x10) {
-        if (ld8(self + 0xC8) != 0) return;
-        if (getRandomU32(self, 3) != 0) return;
+/* 020293CC */
+void JAIZelBasic::linkVoiceStart(u32 n, VectorWords *pos, u32 vowel, u32 reverb) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x022d == 0)
+        return;
+    if (mStreamBgmNum == JA_STRM_DEMO_GO_MAJU && (s32)n == 0x10) {
+        if (field_0x00b8 != 0)
+            return;
+        if (getRandomU32(3) != 0)
+            return;
     }
-    if (ld(self + 0x88) == 0x8000000B && (s32)n == 3) {
-        u32 m = ld(self + 0x78);
-        f32 t = ldf(0x1018DC6C);
-        stf(self + 0xA0, t);
-        if (m != 0 && ld(self + 0x7C) == 0) {
-            f32 v = mul(ldf(self + 0x90), ldf(self + 0x94));
-            v = mul(v, ldf(self + 0x98));
-            v = mul(v, ldf(self + 0x9C));
-            v = mul(v, t);
-            v = mul(v, ldf(self + 0xA4));
-            v = mul(v, ldf(self + 0xA8));
-            v = mul(v, ldf(self + 0xAC));
-            v = mul(v, ldf(self + 0xBC));
-            JAISound_setVolume_l(m, v, 2, 0);
+    if (mMainBgmNum == JA_BGM_SEA_GAME && (s32)n == 3) {
+        Sound *m = mpMainBgmSound.get();
+        f32 t = VOL_BGM_TALKING;
+        field_0x0090 = t;
+        if (m != 0 && mpSubBgmSound.get() == 0) {
+            f32 v = gabi::fmuls_ppc(field_0x0080, field_0x0084);
+            v = gabi::fmuls_ppc(v, field_0x0088);
+            v = gabi::fmuls_ppc(v, field_0x008c);
+            v = gabi::fmuls_ppc(v, t);
+            v = gabi::fmuls_ppc(v, field_0x0094);
+            v = gabi::fmuls_ppc(v, field_0x0098);
+            v = gabi::fmuls_ppc(v, field_0x009c);
+            v = gabi::fmuls_ppc(v, field_0x00ac);
+            m->setVolume(v, 2, 0);
         }
     } else if ((s32)n == 0xC) {
         pos = 0;
     }
-    u32 tab = 0x1018D99C + n * 8;
+    LinkVoice &voice = *voiceAt(&linkVoiceTable, n);
     u32 sel = 0;
     bool found = false;
     if ((s32)vowel != 0xFF) {
         for (u32 i = 0; i < 400; i++) {
-            u32 k = randomIndex(self);
-            if (ld8(tab + k * 2 + 1) == vowel) {
-                u32 c = ld8(tab + k * 2);
+            u32 k = randomIndex();
+            if (voice.entries[k].vowel == vowel) {
+                u32 c = voice.entries[k].sound;
                 if (c != 0xFF) {
                     sel = c;
                     found = true;
@@ -618,47 +725,51 @@ void linkVoiceStart(u32 self, u32 n, u32 pos, u32 vowel, u32 reverb) {
         }
     }
     if (!found) {
-        sel = ld8(tab);
-        if (sel == 0xFF) return;
+        sel = voice.entries[0].sound;
+        if (sel == 0xFF)
+            return;
     }
-    JAIZelBasic_seStart_l(self, sel + 0x1800, pos, 0, reverb, 1.0f, 1.0f, -1.0f, -1.0f, 0);
+    seStart(sel + 0x1800, pos, 0, reverb, 1.0f, 1.0f, -1.0f, -1.0f, 0);
 }
-VERIFY(0x020293CC, linkVoiceStart);
 
-/* 02029638 JAIZelBasic::shipCruiseSePlay(Vec* pos, f32 speed) */
-void shipCruiseSePlay(u32 self, u32 pos, f32 speed) {
-    WWHD_FUNC(0x02029638, void, self, pos, speed);
-    u32 m = ld(self + 0x78);
-    stf(self + 0x1FB0, speed);
+/* 02029638 */
+void JAIZelBasic::shipCruiseSePlay(VectorWords *pos, f32 speed) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    Sound *m = mpMainBgmSound.get();
+    field_0x1f40 = speed;
     if (m != 0) {
-        u32 n = ld(self + 0x88);
-        if (n == 0x8000002E || n == 0x8000003C) {
-            u32 set = ld8(self + 0x1FAD) == 0 && speed < 0.2f ? 1 : 0;
-            bgmMute_l(self, self + 0x78, n == 0x8000002E ? 0x8000002E : 0x8000003C, set, 0x1E);
+        u32 n = mMainBgmNum;
+        if (n == JA_BGM_SEA || n == JA_BGM_SEA_STORM) {
+            u32 set = mIsSailing == 0 && speed < 0.2f ? 1 : 0;
+            bgmMute(&mpMainBgmSound, n == JA_BGM_SEA ? JA_BGM_SEA : JA_BGM_SEA_STORM, set, 0x1E);
         }
     }
-    if (ld8(self + 0x271) == 1) return;
-    u32 cam = ld(self);
-    u32 mtx = ld(cam + 8);
-    gabi::Local<Vec_l> vv;
-    u32 v = gabi::ea(vv.get());
-    st(v, ld(0x100039F0));
-    st(v + 4, ld(0x100039F4));
-    st(v + 8, ld(0x100039F8));
-    u32 src = pos != 0 ? pos : ld(cam);
-    if (src != 0) {
-        st(v, ld(src));
-        st(v + 4, ld(src + 4));
-        st(v + 8, ld(src + 8));
+    if (field_0x0201 == 1)
+        return;
+    void *matrix = cameraMatrix();
+    gabi::Local<VectorWords> position;
+    position->w[0] = l_shipPosition.w[0];
+    position->w[1] = l_shipPosition.w[1];
+    position->w[2] = l_shipPosition.w[2];
+    VectorWords *source = pos != nullptr ? pos : cameraPosition();
+    if (source != nullptr) {
+        position->w[0] = source->w[0];
+        position->w[1] = source->w[1];
+        position->w[2] = source->w[2];
     }
-    if (mtx != 0) PSMTXMultVec_l(mtx, v, v);
-    f32 y = ldf(v + 4), x = ldf(v), z = ldf(v + 8);
-    f32 d = sqrtf_l(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
-    if (!(d < JAIGlobalParameter_getParamDistanceMax_l())) return;
+    if (matrix != nullptr)
+        jaizelTransform(matrix, position.get(), position.get());
+
+    auto transformed = reinterpret_cast<cXyz *>(position.get());
+    f32 y = transformed->y, x = transformed->x, z = transformed->z;
+    f32 d = std_sqrtf(gabi::fmadds(z, z, gabi::fmadds(x, x, y * y)));
+    if (!(d < getParamDistanceMax()))
+        return;
     f32 vol2 = 1.0f;
     if (!(speed > 0.1f)) {
-        JAIBasic_startSoundVec_l(self, 0x3006, self + 0x1FB8, pos, 0, 0, 4);
-        if (ld(self + 0x1FB8) != 0) JAISound_setVolume_l(ld(self + 0x1FB8), 1.0f, 0, 0);
+        startSoundVec(JA_SE_SHIP_WAVE_S, &field_0x1f48, pos, 0, 0, 4);
+        if (field_0x1f48.get() != 0)
+            field_0x1f48.get()->setVolume(1.0f, 0, 0);
         return;
     }
     u32 id2;
@@ -667,53 +778,58 @@ void shipCruiseSePlay(u32 self, u32 pos, f32 speed) {
     if (!(speed > 0.5f)) {
         vol1 = (speed - 0.1f) / 0.4f;
         vol2 = 1.0f - vol1;
-        id2 = 0x3006;
-        if (vol1 == 0.0f) play1 = false;
+        id2 = JA_SE_SHIP_WAVE_S;
+        if (vol1 == 0.0f)
+            play1 = false;
     } else if (!(speed > 0.8f) || !(speed > 0.9f)) {
-        id2 = 0x3005;
+        id2 = JA_SE_SHIP_WAVE_L;
         vol1 = 1.0f;
         vol2 = (speed - 0.5f) / 0.4f;
     } else {
         vol1 = 1.0f;
-        id2 = 0x3005;
+        id2 = JA_SE_SHIP_WAVE_L;
     }
     if (play1) {
-        JAIBasic_startSoundVec_l(self, 0x3004, self + 0x1FB4, pos, 0, 0, 4);
-        if (ld(self + 0x1FB4) != 0) JAISound_setVolume_l(ld(self + 0x1FB4), vol1, 0, 0);
+        startSoundVec(JA_SE_SHIP_GO_NORMAL, &field_0x1f44, pos, 0, 0, 4);
+        if (field_0x1f44.get() != 0)
+            field_0x1f44.get()->setVolume(vol1, 0, 0);
     }
-    if (vol2 == 0.0f) return;
-    JAIBasic_startSoundVec_l(self, id2, self + 0x1FB8, pos, 0, 0, 4);
-    if (ld(self + 0x1FB8) != 0) JAISound_setVolume_l(ld(self + 0x1FB8), vol2, 0, 0);
+    if (vol2 == 0.0f)
+        return;
+    startSoundVec(id2, &field_0x1f48, pos, 0, 0, 4);
+    if (field_0x1f48.get() != 0)
+        field_0x1f48.get()->setVolume(vol2, 0, 0);
 }
-VERIFY(0x02029638, shipCruiseSePlay);
 
-/* 020299D0 JAIZelBasic::setShipSailState(s32) (unnamed by the matcher) */
-void setShipSailState(u32 self, u32 v) {
-    WWHD_FUNC(0x020299D0, void, self, v);
-    st8(self + 0x1FAD, v);
+/* 020299D0 */
+void JAIZelBasic::setShipSailState(u32 v) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mIsSailing = v;
 }
-VERIFY(0x020299D0, setShipSailState);
 
-/* 020299D8 JAIZelBasic::monsSeStart(u32 id, Vec* pos, u32 obj, u32 info, s8 reverb): 30 monster
- * sound slots {obj, sound} at +0x1FBC */
-void monsSeStart(u32 self, u32 id, u32 pos, u32 obj, u32 info, u32 reverb) {
-    WWHD_FUNC(0x020299D8, void, self, id, pos, obj, info, reverb);
-    if (ld8(self + 0x271) == 1) return;
-    if (pos != 0) ptr_check_l(pos);
-    bool kurobo = id - 0x486D < 3 || id - 0x48F7 < 6;
-    if (!kurobo && (s32)ld(self + 0x294) == 0x2D) kurobo = (id >= 0x48F1 && id <= 0x48F6) || id == 0x48FD;
+/* 020299D8 */
+void JAIZelBasic::monsSeStart(u32 id, VectorWords *pos, u32 obj, u32 info, u32 reverb) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (field_0x0201 == 1)
+        return;
+    if (pos != 0)
+        checkBasicPointer(pos);
+    bool kurobo = id - JA_SE_CV_KS_ATTACK < 3 || id - JA_SE_CV_PT_ATTACK < 6;
+    if (!kurobo && (s32)field_0x0224 == 0x2D)
+        kurobo = (id >= JA_SE_CV_PW_RUN && id <= JA_SE_CV_PW_DIE) || id == JA_SE_CV_PW_CURSE_IN;
     if (kurobo) {
-        kuroboVoicePlay_l(self, id, pos, reverb);
+        kuroboVoicePlay(id, pos, reverb);
         return;
     }
-    const u32 tab = self + 0x1FBC;
     u32 slot = 0;
     bool assigned = false;
     u32 i;
     for (i = 0; i < 30; i++) {
-        if (ld(tab + i * 8) != obj) continue;
-        u32 s = ld(tab + i * 8 + 4);
-        if (s != 0) JAISound_stop_l(s, 0);
+        if (field_0x1f4c[i].field_0x00 != obj)
+            continue;
+        Sound *s = field_0x1f4c[i].field_0x04.get();
+        if (s != 0)
+            s->stop(0);
         slot = i;
         assigned = true;
         break;
@@ -721,82 +837,148 @@ void monsSeStart(u32 self, u32 id, u32 pos, u32 obj, u32 info, u32 reverb) {
     if (!assigned) {
         slot = 0x1D;
         for (u32 k = 0; k < 30; k++) {
-            if ((s32)ld(tab + k * 8) == -1) {
-                st(tab + k * 8, obj);
+            if (s32(field_0x1f4c[k].field_0x00) == -1) {
+                field_0x1f4c[k].field_0x00 = obj;
                 slot = k;
                 break;
             }
         }
     }
-    if (info > 9) info = obj % 10;
-    u32 h = tab + slot * 8 + 4;
-    JAIBasic_startSoundVec_l(self, id, h, pos, 0, info, 4);
-    if (ld(h) != 0) JAISound_setPortData_l(ld(h), 9, reverb & 0xFFFF);
+    if (info > 9)
+        info = obj % 10;
+    gptr<Sound> *handle = &field_0x1f4c[slot].field_0x04;
+    startSoundVec(id, handle, pos, 0, info, 4);
+    if (handle->get() != nullptr)
+        handle->get()->setPortData(9, reverb & 0xFFFF);
 }
-VERIFY(0x020299D8, monsSeStart);
 
-/* 02029B88 __sinit_JAIZelBasic_cpp (header statics) */
-void __sinit_JAIZelBasic_cpp() {
-    WWHD_FUNC(0x02029B88, void);
-    header_sinit(0x101FFC5C, 0x1018D4F4, 0x10003A00);
+/* 02029B88 */
+void initializeBasicHeaderStatics() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    l_headerStatics.words[2] = 0;
+    l_headerStatics.words[0] = 0;
+    l_headerStatics.words[3] = 0;
+    l_headerStatics.words[1] = 0;
+    registerBasicGlobal(&l_headerRecord);
+    f32 low = l_headerRange.low, high = l_headerRange.high;
+    l_headerStatics.low = low;
+    l_headerStatics.high = high;
+    constructBasicByte0(&l_headerStatics.byte0);
+    registerBasicGlobal(&l_byte0Record);
+    constructBasicByte1(&l_headerStatics.byte1);
+    registerBasicGlobal(&l_byte1Record);
 }
-VERIFY(0x02029B88, __sinit_JAIZelBasic_cpp);
-
-/* 02029C1C: this TU's sead::SafeString deleting destructor (vtable 1000382C) */
-void basic_safestring_deleting_dtor(u32 self, u32 flags) {
-    WWHD_FUNC(0x02029C1C, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    gabi::call(0x0273AF40, self); /* __dl */
+/* 02029C1C */
+void destroyBasicSafeString(void *object, u32 flags) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (object == nullptr || (flags & 1) == 0)
+        return;
+    deleteBasicObject(object);
 }
-VERIFY(0x02029C1C, basic_safestring_deleting_dtor);
-
-/* 02029C30 JAIZelBasic::getMapInfoFxParameter(u32) (virtual) */
-f32 getMapInfoFxParameter(u32 self, u32 n) {
-    WWHD_FUNC(0x02029C30, f32, self, n);
-    return ldf(0x10003898); /* 0.0 */
+/* 02029C30 */
+f32 JAIZelBasic::getMapInfoFxParameter(u32 n) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return l_zero;
 }
-VERIFY(0x02029C30, getMapInfoFxParameter);
-
-/* 02029C3C JAIZelBasic::getMapInfoGround(u32) (virtual) */
-u32 getMapInfoGround(u32 self, u32 n) {
-    WWHD_FUNC(0x02029C3C, u32, self, n);
+/* 02029C3C */
+u32 JAIZelBasic::getMapInfoGround(u32 n) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     return 0;
 }
-VERIFY(0x02029C3C, getMapInfoGround);
-
-/* 02029C44: constructor of the 8-byte allocation record (+0x20E8 table) */
-u32 allocRecord_ct(u32 self) {
-    WWHD_FUNC(0x02029C44, u32, self);
-    if (self == 0) {
-        self = gabi::call<u32>(0x0273AD10, 8);
-        if (self == 0) return 0;
+/* 02029C44 */
+AllocationRecord *createBasicAllocationRecord(AllocationRecord *record) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (record == nullptr) {
+        record = static_cast<AllocationRecord *>(allocateBasicRecord(8));
+        if (record == nullptr)
+            return nullptr;
     }
-    st(self + 4, 0);
-    st(self, 0);
-    return self;
+    record->sound = nullptr;
+    record->count = 0;
+    return record;
 }
-VERIFY(0x02029C44, allocRecord_ct);
-
-/* 02029C84 JAIZelBasic deleting destructor (vtable 10003A08 slot 0xC) */
-void JAIZelBasic_deleting_dtor(u32 self, u32 flags) {
-    WWHD_FUNC(0x02029C84, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    gabi::call(0x0273AF40, self);
+/* 02029C84 */
+void destroyBasicObject(JAIZelBasic *object, u32 flags) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (object == nullptr || (flags & 1) == 0)
+        return;
+    deleteBasicObject(object);
 }
-VERIFY(0x02029C84, JAIZelBasic_deleting_dtor);
-
-/* 02029C98: an empty per-TU function */
-void basic_empty_02029C98(u32 a) {
-    WWHD_FUNC(0x02029C98, void, a);
+/* 02029C98 */
+void basicFinalizeStub(u32 argument) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
 }
-VERIFY(0x02029C98, basic_empty_02029C98);
-
-/* 02029C9C: this TU's SafeString slot-0x14 function (empty; called before string comparisons) */
-void basic_safestring_02029C9C(u32 a) {
-    WWHD_FUNC(0x02029C9C, void, a);
+/* 02029C9C */
+void basicAssureTerminationStub(u32 argument) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
 }
-VERIFY(0x02029C9C, basic_safestring_02029C9C);
 
-} // namespace JAIZelBasic_8_cpp
+// clang-format off
+/* WWHD glue:
+data VOL_BGM_TALKING 1018DC6C
+data ENEMY_NEARBY_DIST 1018DC78
+data ENEMY_NEARBY_FADEIN_TIME 1018DC7C
+data ENEMY_NEARBY_FADEOUT_TIME 1018DC80
+data BTL_KAITENGIRI_FADEIN_TIME 1018DC84
+data BTL_SWORD_USING_FADE_TIME 1018DC8C
+data ENEMY_NEARBY_TRACK 1018DCAF
+data ENEMY_NEARBY_TRACK_2 1018DCB0
+data BTL_KAITENGIRI_TRACK 1018DCB1
+data SWORD_USING_TRACK 1018DCB2
+data SWORD_NOT_USING_TRACK 1018DCB3
+data COMMON_BATTLE_FO_DELAY 1018DCB4
+data MBOSS_BTL_KAITENGIRI_TRACK 1018DCB6
+data jai_rng_seed 1018D4F0
+data l_zero 10003898
+data l_talkingCategoryVolumes 1018DC9F
+data l_practicePosition 100039DC
+data l_shipPosition 100039F0
+data messageSeTable 1018D53C
+data linkVoiceTable 1018D99C
+data l_headerStatics 101FFC5C
+data l_headerRange 10003A00
+data l_headerRecord 1018D4F4
+data l_byte0Record 1018D500
+data l_byte1Record 1018D50C
+ext 0201E5CC s32 jaizel8::JAIZelBasic::isDemo()
+ext 0202204C void jaizel8::JAIZelBasic::bgmStart(u32,u32,u32)
+ext 02021F28 void jaizel8::JAIZelBasic::bgmStop(u32,u32)
+ext 0201DD18 void jaizel8::JAIZelBasic::bgmMute(gptr<jaizel8::Sound>*,u32,u32,u32)
+ext 02021B10 void jaizel8::JAIZelBasic::hdStreamVolume(u32,f32)
+ext 020259E8 void jaizel8::JAIZelBasic::enemyNearBy()
+ext 02025940 void jaizel8::JAIZelBasic::mbossBgmNearByProcess(f32)
+ext 02025AC0 s32 jaizel8::JAIZelBasic::checkLinkOnSea()
+ext 02025AF4 s32 jaizel8::JAIZelBasic::checkLinkOnBoardSea()
+ext 0202587C void jaizel8::JAIZelBasic::kuroboVoicePlay(u32,jaizel8::VectorWords*,u32)
+ext 0201EBA0 u32 jaizel8::JAIZelBasic::seStart(u32,jaizel8::VectorWords*,u32,u32,f32,f32,f32,f32,u32)
+ext 0201C360 f32 jaizel8::JAIZelBasic::calcPosVolume(jaizel8::VectorWords*,f32)
+ext 0201C0E8 f32 jaizel8::JAIZelBasic::calcPosPanLR(jaizel8::VectorWords*)
+ext 0201C228 f32 jaizel8::JAIZelBasic::calcPosPanSR(jaizel8::VectorWords*,f32)
+ext 02802848 void jaizel8::JAIZelBasic::startSoundVec(u32,gptr<jaizel8::Sound>*,jaizel8::VectorWords*,u32,u32,u32)
+ext 02803138 void jaizel8::JAIZelBasic::setSeCategoryVolume(u32,u32)
+ext 02802994 void jaizel8::JAIZelBasic::stopAllSound(jaizel8::VectorWords*)
+ext 02802AEC void jaizel8::JAIZelBasic::stopAllSoundID(u32)
+ext 02802C60 void jaizel8::JAIZelBasic::stopActorSound(u32,jaizel8::VectorWords*)
+ext 02802E00 void jaizel8::JAIZelBasic::deleteObject(jaizel8::VectorWords*)
+ext 0280B160 void jaizel8::Sound::start(u32)
+ext 0280B1D8 void jaizel8::Sound::stop(u32)
+ext 0280B68C void jaizel8::Sound::setVolume(f32,u32,u32)
+ext 0280B2AC void jaizel8::Sound::setSeqInterVolume(u32,f32,u32)
+ext 0280BA28 void jaizel8::Sound::setPan(f32,u32,u32)
+ext 0280C248 void jaizel8::Sound::setDolby(f32,u32,u32)
+ext 0280C6D8 void jaizel8::Sound::setPortData(u32,u32)
+ext 0280C9E4 void jaizel8::Sound::setTrackVolume(u32,f32,u32)
+ext 0280B05C jaizel8::Sequence* jaizel8::Sound::getSeqParameter()
+ext 02818C20 void jaizel8::Track::writePortApp(u32,u32)
+ext 02818C68 void jaizel8::Track::readPortApp(u32,be<u16>*)
+ext 027ED7E0 f32 jaizel8::Random::get()
+ext 02804718 f32 getParamDistanceMax()
+ext 028F4384 f32 std_sqrtf(f32)
+ext 028E8F64 void jaizelTransform(void*,jaizel8::VectorWords*,jaizel8::VectorWords*)
+ext 0273AD10 void* allocateBasicRecord(u32)
+ext 0273AF40 void deleteBasicObject(void*)
+ext 0275CC9C u32 checkBasicPointer(void*)
+ext 028F026C void registerBasicGlobal(jaizel8::DestructionRecord*)
+ext 028ED6F8 void constructBasicByte0(jaizel8::GuestByte*)
+ext 028EAB2C void constructBasicByte1(jaizel8::GuestByte*)
+*/

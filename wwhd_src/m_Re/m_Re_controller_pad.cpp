@@ -1,147 +1,122 @@
-/* m_Re_controller_pad: HD controller-pad rumble patterns (file name from the assert strings; the
- * Twilight Princess Wii file of that name, ported to HD), WWHD. HD-only code (no GameCube source): written from the WWHD code.
- * Range 025F29F0..025F2D77 (static initialiser 025F2CDC, two empty companions 025F2D70/025F2D74),
- * plus the two initialiser-only TUs that follow (025F2D78, 025F2E0C).
- *
- * Pattern player (0xC), 4 of them at 101F499C (one per pad):
- *   +0 bit pattern (MSB first; 0 = idle), +4 u16 length in bits, +6 u16 position, +8 u8 loop.
- * A pattern resource starts with its u16 length, the bits follow.
- * 101F5088 -> +0x1D0: nonzero when the GamePad is the rumble target (the whole pattern is then
- * handed to the native motor call 028FB848 at the start of each run; only player 0 is used).
- * Native motor calls: WPADControlMotor (pad, on), VPADStopMotor (pad), VPADControlMotor (pad, pattern, length).
- */
-#include "gabi.h"
-using namespace gabi;
+/** HD rumble-pattern playback for Wii remotes and the GamePad.
+ * GameCube-style source verified as m_Re_controller_pad; no GameCube pattern-player equivalent. */
+#include "m_Re/m_Re_controller_pad.h"
 
-namespace m_Re_controller_pad {
+static mReCPd_patternPlayer_c sPatternPlayers[4] = {};
+static mReCPd_controllerGlobal_c sController = {};
 
-static const u32 kPlayers = 0x101F499C;
+enum { PAD_COUNT = 4 };
 
-/* 025F29F0: player start (pattern resource, loop) */
-void playerStart(u32 p, u32 res, u32 loop) {
-    WWHD_FUNC(0x025F29F0, void, p, res, loop);
-    const u16 len = load<u16>(res);
-    store<u8>(p + 8, u8(loop));
-    store<u16>(p + 6, 0);
-    store<u32>(p, res + 2);
-    store<u16>(p + 4, len);
+/* 025F29F0 */
+void mReCPd_playerStart(mReCPd_patternPlayer_c* player, mReCPd_pattern_c* resource, u32 loop) {
+    u16 length = resource->mLength;
+    player->mLoop = u8(loop);
+    player->mPosition = 0;
+    player->mpPattern = resource->mBits;
+    player->mLength = length;
 }
-VERIFY(0x025F29F0, playerStart);
 
-/* 025F2A10: player stop at the end of the current run (no loop, position = length) */
-void playerStop(u32 p) {
-    WWHD_FUNC(0x025F2A10, void, p);
-    if (!load<u32>(p)) return;
-    const u16 len = load<u16>(p + 4);
-    store<u8>(p + 8, 0);
-    store<u16>(p + 6, len);
+/* 025F2A10 */
+void mReCPd_playerStop(mReCPd_patternPlayer_c* player) {
+    if (!player->mpPattern) return;
+    u16 length = player->mLength;
+    player->mLoop = 0;
+    player->mPosition = length;
 }
-VERIFY(0x025F2A10, playerStop);
 
-/* 025F2A30: start a rumble pattern on pad n */
-void startPattern(u32 n, u32 res, u32 loop) {
-    WWHD_FUNC(0x025F2A30, void, n, res, loop);
-    if (n >= 4) call<void>(0x0273AA24, 0x100590ECu, 0x34u, 0x10059104u);
-    playerStart(kPlayers + n * 0xC, res, loop);
+/* 025F2A30 */
+void mReCPd_startPattern(u32 padNo, mReCPd_pattern_c* resource, u32 loop) {
+    if (padNo >= PAD_COUNT) mReCPd_assert("m_Re_controller_pad.cpp", 0x34, "0 <= i_n && i_n < 4");
+    mReCPd_playerStart(&sPatternPlayers[padNo], resource, loop);
 }
-VERIFY(0x025F2A30, startPattern);
 
-/* 025F2AAC: stop the rumble pattern of pad n */
-void stopPattern(u32 n) {
-    WWHD_FUNC(0x025F2AAC, void, n);
-    if (n >= 4) call<void>(0x0273AA24, 0x10059118u, 0x47u, 0x10059130u);
-    playerStop(kPlayers + n * 0xC);
+/* 025F2AAC */
+void mReCPd_stopPattern(u32 padNo) {
+    if (padNo >= PAD_COUNT) mReCPd_assert("m_Re_controller_pad.cpp", 0x47, "0 <= i_n && i_n < 4");
+    mReCPd_playerStop(&sPatternPlayers[padNo]);
 }
-VERIFY(0x025F2AAC, stopPattern);
 
-/* 025F2B08: per-frame update of the four players */
-void update() {
-    WWHD_FUNC(0x025F2B08, void);
-    u32 p = kPlayers;
-    if (!load<u32>(load<u32>(0x101F5088) + 0x1D0)) {
-        for (u32 i = 0; i < 4; i++, p += 0xC) {
-            u32 pat = load<u32>(p);
-            if (!pat) return;
-            u32 pos = load<u16>(p + 6);
-            if (pos >= load<u16>(p + 4)) {
-                if (!load<u8>(p + 8)) {
-                    store<u32>(p, 0);
-                    call<void>(0xC0008398, i, 0u);
+/* 025F2B08 */
+void mReCPd_update() {
+    mReCPd_patternPlayer_c* player = sPatternPlayers;
+    if (!sController.mpState->mGamePadRumble) {
+        for (u32 i = 0; i < PAD_COUNT; ++i, ++player) {
+            be<u8>* pattern = player->mpPattern;
+            // HD: an idle player ends the entire update, including subsequent pads.
+            if (!pattern) return;
+            u32 position = player->mPosition;
+            if (position >= player->mLength) {
+                if (!player->mLoop) {
+                    player->mpPattern = nullptr;
+                    WPADControlMotor(i, 0);
                     continue;
                 }
-                pat = load<u32>(p);
-                pos = 0;
-                store<u16>(p + 6, 0);
+                pattern = player->mpPattern;
+                position = 0;
+                player->mPosition = 0;
             }
-            const u32 bit = load<u8>(pat + (s32(pos) >> 3)) & u32(0x80 >> (pos & 7));
-            call<void>(0xC0008398, 0u, u32(bit != 0));
-            store<u16>(p + 6, u16(load<u16>(p + 6) + 1));
+            u32 bit = pattern[s32(position) >> 3] & u32(0x80 >> (position & 7));
+            // HD: active patterns drive remote 0; finished patterns stop their own remote.
+            WPADControlMotor(0, bit != 0);
+            player->mPosition = u16(player->mPosition + 1);
         }
         return;
     }
-    const u32 pat = load<u32>(p);
-    if (!pat) return;
-    const u32 len = load<u16>(p + 4);
-    if (load<u16>(p + 6) >= len) {
-        if (!load<u8>(p + 8)) {
-            store<u32>(p, 0);
-            call<void>(0xC0007720, 0u);
+    be<u8>* pattern = player->mpPattern;
+    if (!pattern) return;
+    u32 length = player->mLength;
+    if (player->mPosition >= length) {
+        if (!player->mLoop) {
+            player->mpPattern = nullptr;
+            VPADStopMotor(0);
             return;
         }
-        store<u16>(p + 6, 0);
-        call<void>(0xC0007510, 0u, pat, len & 0xFF);
-    } else if (!load<u16>(p + 6)) {
-        call<void>(0xC0007510, 0u, pat, len & 0xFF);
+        player->mPosition = 0;
+        VPADControlMotor(0, pattern, length & 0xFF);
+    } else if (!player->mPosition) {
+        VPADControlMotor(0, pattern, length & 0xFF);
     }
-    store<u16>(p + 6, u16(load<u16>(p + 6) + 1));
+    player->mPosition = u16(player->mPosition + 1);
 }
-VERIFY(0x025F2B08, update);
 
-/* 025F2C88: stop every motor */
-void stopAll() {
-    WWHD_FUNC(0x025F2C88, void);
-    for (u32 i = 0; i < 4; i++) call<void>(0xC0008398, i, 0u);
-    call<void>(0xC0007720, 0u);
+/* 025F2C88 */
+void mReCPd_stopAll() {
+    for (u32 i = 0; i < PAD_COUNT; ++i) WPADControlMotor(i, 0);
+    VPADStopMotor(0);
 }
-VERIFY(0x025F2C88, stopAll);
 
-/* header-level static objects of every HD TU (as in hd_input_misc) */
-static void stdInit(u32 b, u32 r1, u32 lo, u32 hi, u32 f, u32 r2, u32 r3) {
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, r1);
-    const f32 a = load<f32>(lo), c = load<f32>(hi);
-    store<f32>(f, a);
-    store<f32>(f + 4, c);
-    call<void>(0x028ED6F8, f + 8);
-    call<void>(0x028F026C, r2);
-    call<void>(0x028EAB2C, f + 9);
-    call<void>(0x028F026C, r3);
-}
-void staticInit() {
-    WWHD_FUNC(0x025F2CDC, void);
-    stdInit(0x1048D568, 0x101F4978, 0x1005914C, 0x10059150, 0x1048D55C, 0x101F4984, 0x101F4990);
-}
-VERIFY(0x025F2CDC, staticInit);
+/* ---------------- HD: compiler-generated companion translation units ---------------- */
 
-/* 025F2D70 / 025F2D74: empty companions (inline empty destructors/ callbacks) */
-void empty1() { WWHD_FUNC(0x025F2D70, void); }
-VERIFY(0x025F2D70, empty1);
-void empty2() { WWHD_FUNC(0x025F2D74, void); }
-VERIFY(0x025F2D74, empty2);
-
-/* 025F2D78 / 025F2E0C: two initialiser-only TUs */
-void staticInitTu2() {
-    WWHD_FUNC(0x025F2D78, void);
-    stdInit(0x1048D584, 0x101F49CC, 0x10080144, 0x10080148, 0x1048D578, 0x101F49D8, 0x101F49E4);
+/* 025F2CDC */
+void __sinit_m_Re_controller_pad_cpp() {
+    sinit_header_statics_rodata(0x1048D55C, 0x101F4978, 0x1048D568, 0x1005914C);
 }
-VERIFY(0x025F2D78, staticInitTu2);
-void staticInitTu3() {
-    WWHD_FUNC(0x025F2E0C, void);
-    stdInit(0x1048D5A0, 0x101F49F0, 0x100C4594, 0x100C4598, 0x1048D594, 0x101F49FC, 0x101F4A08);
-}
-VERIFY(0x025F2E0C, staticInitTu3);
 
-} // namespace m_Re_controller_pad
+/* 025F2D70 */
+void mReCPd_emptyCallback1() {}
+
+/* 025F2D74 */
+void mReCPd_emptyCallback2() {}
+
+/* 025F2D78 */
+void __sinit_controller_pad_companion1_cpp() {
+    sinit_header_statics_rodata(0x1048D578, 0x101F49CC, 0x1048D584, 0x10080144);
+}
+
+/* 025F2E0C */
+void __sinit_controller_pad_companion2_cpp() {
+    sinit_header_statics_rodata(0x1048D594, 0x101F49F0, 0x1048D5A0, 0x100C4594);
+}
+
+/* WWHD glue
+data sPatternPlayers 101F499C nocheck
+data sController 101F5088 nocheck
+str 100590EC "m_Re_controller_pad.cpp" in 025F2A30
+str 10059104 "0 <= i_n && i_n < 4" in 025F2A30
+str 10059118 "m_Re_controller_pad.cpp" in 025F2AAC
+str 10059130 "0 <= i_n && i_n < 4" in 025F2AAC
+ext C0008398 void WPADControlMotor(u32 pad, u32 on)
+ext C0007720 void VPADStopMotor(u32 pad)
+ext C0007510 void VPADControlMotor(u32 pad, be<u8>* pattern, u32 length)
+ext 0273AA24 void mReCPd_assert(const char* file, u32 line, const char* expression)
+*/

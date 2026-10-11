@@ -1,58 +1,83 @@
-// Full HD message lifecycle TU025DB050..025DB2BB, adjacent initializer attribution inferred.
-#include "bindings.h"
-namespace f_op_msg_cpp {
-static s32 Draw(u32 msg) {
- WWHD_FUNC(0x025DB050, s32, msg);
- return gabi::call<s32>(0x025DF2C0, gabi::load<u32>(msg + 0xDC), msg);
+/** f_op_msg.cpp — message process lifecycle.
+ * Based on tww f_op/f_op_msg.cpp.
+ */
+#include "f_op/f_op_msg.h"
+
+static s32 fopMsg_MSG_TYPE;
+
+/* 025DB050 */
+int fopMsg_Draw(void* i_this) {
+    fopMsgLifecycle::msg_class* self = static_cast<fopMsgLifecycle::msg_class*>(i_this);
+    return fpcLf_DrawMethod(self->sub_method, self);
 }
-VERIFY(0x025DB050, Draw);
-static s32 Execute(u32 msg) {
- WWHD_FUNC(0x025DB05C, s32, msg);
- s32 result = 1;
- if (gabi::call<s32>(0x025AF2A4) == 0)
-  result = gabi::call<s32>(0x025DFCC4, gabi::load<u32>(msg + 0xDC), msg);
- return result;
+
+/* 025DB05C */
+int fopMsg_Execute(void* i_this) {
+    fopMsgLifecycle::msg_class* self = static_cast<fopMsgLifecycle::msg_class*>(i_this);
+    int status = 1;
+    if (!dScnPly_ply_c::isPause())
+        status = fpcMtd_Execute(self->sub_method, self);
+    return status;
 }
-VERIFY(0x025DB05C, Execute);
-static s32 IsDelete(u32 msg) {
- WWHD_FUNC(0x025DB0B0, s32, msg);
- s32 result = gabi::call<s32>(0x025DFCCC, gabi::load<u32>(msg + 0xDC), msg);
- if (result == 1) gabi::call<void>(0x025DA884, msg + 0xC8);
- return result;
+
+/* 025DB0B0 */
+int fopMsg_IsDelete(void* i_this) {
+    fopMsgLifecycle::msg_class* self = static_cast<fopMsgLifecycle::msg_class*>(i_this);
+    int status = fpcMtd_IsDelete(self->sub_method, self);
+    if (status == 1)
+        fopDwTg_DrawQTo(&self->draw_tag);
+    return status;
 }
-VERIFY(0x025DB0B0, IsDelete);
-static s32 Delete(u32 msg) {
- WWHD_FUNC(0x025DB104, s32, msg);
- s32 result = gabi::call<s32>(0x025DFCD4, gabi::load<u32>(msg + 0xDC), msg);
- gabi::call<void>(0x025DA884, msg + 0xC8);
- return result;
+
+/* 025DB104 */
+int fopMsg_Delete(void* i_this) {
+    fopMsgLifecycle::msg_class* self = static_cast<fopMsgLifecycle::msg_class*>(i_this);
+    int status = fpcMtd_Delete(self->sub_method, self);
+    fopDwTg_DrawQTo(&self->draw_tag);
+    return status;
 }
-VERIFY(0x025DB104, Delete);
-static s32 Create(u32 msg) {
- WWHD_FUNC(0x025DB150, s32, msg);
- if (gabi::load<u8>(msg + 0xC) == 0) {
-  u32 profile = gabi::load<u32>(msg + 0x10);
-  u32 type = gabi::call<u32>(0x025DD268, 0x101F3468u);
-  gabi::store<u32>(msg + 0xC4, type);
-  gabi::store<u32>(msg + 0xDC, gabi::load<u32>(profile + 0x24));
-  gabi::call<void>(0x025DA888, msg + 0xC8, msg);
-  u32 append = gabi::load<u32>(msg + 0xAC);
-  if (append != 0) {
-   for (u32 i = 0; i < 7; i++)
-    gabi::store<u32>(msg + 0xE0 + 4 * i, gabi::load<u32>(append + 4 * i));
-  }
- }
- s32 result = gabi::call<s32>(0x025DFCDC, gabi::load<u32>(msg + 0xDC), msg);
- if (result == 4) {
-  s32 priority = gabi::call<s32>(0x025DF2B8, msg);
-  gabi::call<void>(0x025DA874, msg + 0xC8, priority);
- }
- return result;
+
+/* 025DB150 */
+cPhs_State fopMsg_Create(void* i_this) {
+    fopMsgLifecycle::msg_class* self = static_cast<fopMsgLifecycle::msg_class*>(i_this);
+    if (self->mInitState == 0) {
+        fopMsgLifecycle::msg_process_profile_definition* profile =
+            reinterpret_cast<fopMsgLifecycle::msg_process_profile_definition*>(self->mpProf.get());
+        self->mMsgType = fpcBs_MakeOfType(&fopMsg_MSG_TYPE);
+        self->sub_method = profile->sub_method;
+        fopDwTg_Init(&self->draw_tag, self);
+        fopMsgLifecycle::fopMsg_prm_class* prm = static_cast<fopMsgLifecycle::fopMsg_prm_class*>(self->mpUserData.get());
+        if (prm) {
+            // HD: integer word copies retain signaling NaNs and the original copy order.
+            self->mpActor = prm->mpActor;
+            self->mPosWords.x = prm->mPosWords.x;
+            self->mPosWords.y = prm->mPosWords.y;
+            self->mPosWords.z = prm->mPosWords.z;
+            self->mMsgNo = prm->mMsgNo;
+            self->field_0xf0 = prm->field_0x14;
+            self->field_0xf4 = prm->field_0x18;
+        }
+    }
+    cPhs_State status = static_cast<cPhs_State>(fpcMtd_Create(self->sub_method, self));
+    if (status == cPhs_COMPLEATE_e) {
+        s32 priority = fpcM_DrawPriority(self);
+        fopDwTg_ToDrawQ(&self->draw_tag, priority);
+    }
+    return status;
 }
-VERIFY(0x025DB150, Create);
+
+/* 025DB228 */
 static void __sinit_f_op_msg_cpp() {
- WWHD_FUNC(0x025DB228, void, (u32)0);
- sinit_header_statics(0x1048A4C4, 0x101F3444);
+    sinit_header_statics(0x1048A4C4, 0x101F3444);
 }
-VERIFY(0x025DB228, __sinit_f_op_msg_cpp);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data fopMsg_MSG_TYPE 101F3468
+ext 025DF2C0 int fpcLf_DrawMethod(process_method_class* methods, void* process)
+ext 025DF2B8 s32 fpcM_DrawPriority(leafdraw_class* process)
+ext 025DD268 u32 fpcBs_MakeOfType(be<s32>* type)
+ext 025DA884 void fopDwTg_DrawQTo(create_tag_class* tag)
+ext 025DA888 void fopDwTg_Init(create_tag_class* tag, void* data)
+ext 025DA874 void fopDwTg_ToDrawQ(create_tag_class* tag, s32 priority)
+ext 025AF2A4 s32 dScnPly_isPause()
+*/

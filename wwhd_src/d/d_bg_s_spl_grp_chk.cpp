@@ -1,37 +1,109 @@
-#include "wwhd.h"
-#include "gabi.h"
-void dBgS_SplGrpChk_empty(){WWHD_FUNC(0x024F2100,void);}
-VERIFY(0x024F2100,dBgS_SplGrpChk_empty);
-u32 dBgS_SplGrpChk_ctor(u32 self){
- WWHD_FUNC(0x024F2104,u32,self);
- if(!self)self=gabi::call<u32>(0x0273AD10,0x50);
- if(self){
-  gabi::store<u16>(self+2,0x100);gabi::store<u32>(self+8,0xFFFFFFFF);gabi::store<u32>(self+4,0);gabi::store<u32>(self+0xC,0x10043C2C);gabi::store<u16>(self,0xFFFF);
-  gabi::call<void>(0x02008B60,gabi::at<void>(self+0x10));
-  gabi::store<u8>(self+0x2B,0);f32 z=gabi::load<f32>(0x10043C8C);
-  gabi::store<u8>(self+0x2D,0);gabi::store<f32>(self+0x48,z);gabi::store<u8>(self+0x29,0);
-  f32 f=gabi::load<f32>(0x10043C90);
-  gabi::store<u8>(self+0x28,0);gabi::store<u8>(self+0x2E,0);gabi::store<u32>(self+0x20,0x10043C5C);gabi::store<u8>(self+0x2C,0);gabi::store<f32>(self+0x44,f);gabi::store<u8>(self+0x2A,0);gabi::store<u32>(self+0x4C,0);
-  gabi::store<f32>(self+0x38,z);gabi::store<u32>(self+0x14,self+0x30);gabi::store<u32>(self+0x10,self+0x24);gabi::store<f32>(self+0x40,z);gabi::store<f32>(self+0x3C,z);
-  gabi::store<u32>(self+0xC,0x10043C4C);gabi::store<u32>(self+0x30,0x10043C6C);gabi::store<u32>(self+0x34,0);gabi::store<u32>(self+0x24,0x10043C7C);
- }return self;
+/** Special-group collision query. */
+#include "d/d_bg_s_spl_grp_chk.h"
+
+static const f32 initialZero = 0.0f;
+static const f32 initialRoof = 1000000000.0f;
+static const f32 headerPiMin = -3.1415927;
+static const f32 headerPiMax = 3.1415927;
+// HD: per-translation-unit GHS vtable copies.
+enum : u32 {
+    polyInfoVtable = 0x10043C2C,
+    specialVtable = 0x10043C4C,
+    checkVtable = 0x10043C5C,
+    groupPassVtable = 0x10043C6C,
+    polyPassVtable = 0x10043C7C
+};
+
+/* 024F2100 */
+// HD: emitted empty base destructor has no live arguments.
+static void dBgS_SplGrpChk_empty() {
 }
-VERIFY(0x024F2104,dBgS_SplGrpChk_ctor);
-void dBgS_SplGrpChk_Init(void* p){
- WWHD_FUNC(0x024F220C,void,p);u32 self=gabi::ea(p);
- u32 flags=gabi::load<u32>(self+0x4C)&0xFFFFFFFC;f32 height=gabi::load<f32>(self+0x3C);
- gabi::store<u32>(self+4,0);gabi::store<u32>(self+8,0xFFFFFFFF);gabi::store<f32>(self+0x48,height);gabi::store<u32>(self+0x4C,flags);gabi::store<u16>(self+2,0x100);gabi::store<u16>(self,0xFFFF);
+
+/* 024F2104 */
+// HD: GHS allocation and explicit base vtables, with verified initialization order.
+static dBgS_SplGrpChk *dBgS_SplGrpChk__ct(dBgS_SplGrpChk *i_this) {
+    if (i_this == NULL)
+        i_this = (dBgS_SplGrpChk *)operator_new(sizeof(dBgS_SplGrpChk));
+    if (i_this != NULL) {
+        i_this->mPolyInfo.mBgIndex = 0x100;
+        i_this->mPolyInfo.mActorId = fpcM_ERROR_PROCESS_ID_e;
+        i_this->mPolyInfo.mpBgW = NULL;
+        i_this->mPolyInfo.__vtbl = polyInfoVtable;
+        i_this->mPolyInfo.mPolyIndex = 0xFFFF;
+        constructBgCheck(&i_this->mCheck);
+        i_this->mPolyPass.mbArrowThrough = 0;
+        f32 zero = initialZero;
+        i_this->mPolyPass.mbBoomerangThrough = 0;
+        i_this->m_height = zero;
+        i_this->mPolyPass.mbCamThrough = 0;
+        f32 roof = initialRoof;
+        i_this->mPolyPass.mbObjThrough = 0;
+        i_this->mPolyPass.mbRopeThrough = 0;
+        i_this->mCheck.__vtbl = checkVtable;
+        i_this->mPolyPass.mbBombThrough = 0;
+        i_this->m_roof = roof;
+        i_this->mPolyPass.mbLinkThrough = 0;
+        i_this->m_flags = 0;
+        i_this->m_ground.x = zero;
+        i_this->mCheck.mGrpPassChk = &i_this->mGrpPass;
+        i_this->mCheck.mPolyPassChk = &i_this->mPolyPass;
+        i_this->m_ground.z = zero;
+        i_this->m_ground.y = zero;
+        i_this->mPolyInfo.__vtbl = specialVtable;
+        i_this->mGrpPass.__vtbl = groupPassVtable;
+        i_this->mGrpPass.mGrp = 0;
+        i_this->mPolyPass.__vtbl = polyPassVtable;
+    }
+    return i_this;
 }
-VERIFY(0x024F220C,dBgS_SplGrpChk_Init);
-void d_bg_s_spl_grp_chk_static_init() {
- WWHD_FUNC(0x024F2248,void);
- gabi::store<u32>(0x1046EDAC,0);gabi::store<u32>(0x1046EDA4,0);gabi::store<u32>(0x1046EDB0,0);gabi::store<u32>(0x1046EDA8,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D530C));
- f32 lo=gabi::load<f32>(0x10043C9C),hi=gabi::load<f32>(0x10043CA0);
- gabi::store<f32>(0x1046ED98,lo);gabi::store<f32>(0x1046ED9C,hi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1046EDA0));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D5318));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1046EDA1));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D5324));
+
+/* 024F220C */
+void dBgS_SplGrpChk::Init() {
+    u32 flags = (u32)m_flags & ~(FIND | IN);
+    f32 height = m_ground.y;
+    mPolyInfo.mpBgW = NULL;
+    mPolyInfo.mActorId = fpcM_ERROR_PROCESS_ID_e;
+    m_height = height;
+    m_flags = flags;
+    mPolyInfo.mBgIndex = 0x100;
+    mPolyInfo.mPolyIndex = 0xFFFF;
 }
-VERIFY(0x024F2248,d_bg_s_spl_grp_chk_static_init);
+
+// HD: compiler-generated initialization of this translation unit's header statics.
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject;
+    u8 padding[2];
+};
+struct HeaderZeroObject {
+    be<u32> words[4];
+};
+#define headerStatics (*gabi::at<HeaderStatics>(0x1046ED98))
+#define headerZeroObject (*gabi::at<HeaderZeroObject>(0x1046EDA4))
+/* 024F2248 */
+static void __sinit_d_bg_s_spl_grp_chk_cpp() {
+    headerZeroObject.words[2] = 0;
+    headerZeroObject.words[0] = 0;
+    headerZeroObject.words[3] = 0;
+    headerZeroObject.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x101D530C));
+    f32 lo = headerPiMin, hi = headerPiMax;
+    headerStatics.piMin = lo;
+    headerStatics.piMax = hi;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x101D5318));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x101D5324));
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data initialZero 10043C8C
+data initialRoof 10043C90
+data headerPiMin 10043C9C
+data headerPiMax 10043CA0
+ext 0273AD10 void* operator_new(u32)
+ext 02008B60 void constructBgCheck(SplBgCheck*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

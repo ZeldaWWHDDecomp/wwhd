@@ -6,7 +6,10 @@
  * everything from mPathRun (GameCube 0x6F0) on is +0x174. 0xB4E is an HD-only byte (zeroed by
  * the constructor). Size 0xB50 (GameCube 0x9DC). */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
+#include "d/d_path.h"
+#include "d/d_mesg_core.h"
+#include "d/actor/d_a_tag_photo.h"
 
 #define PHOTO_SAFESTRING_VTBL 0x10020C40 /* this TU's sead::SafeString vtable */
 #define PHOTO_VTBL 0x10020FFC            /* daNpcPhoto_c vtable (constructor) */
@@ -20,7 +23,7 @@ struct sPhotoAnmDat {
 WWHD_SIZE(sPhotoAnmDat, 3);
 
 /* l_npc_dat (.data 0x101C521C) */
-struct PhotoNpcDat_l {
+struct NpcDatStruct {
     /* 0x00 */ be<f32> field_0x00;
     /* 0x04 */ be<s16> field_0x04;
     /* 0x06 */ be<s16> field_0x06;
@@ -33,12 +36,12 @@ struct PhotoNpcDat_l {
     /* 0x14 */ be<s16> field_0x14;
     /* 0x16 */ be<s16> field_0x16;
     /* 0x18 */ be<s16> field_0x18;
-    /* 0x1A */ u8 _1A[2];
+    /* 0x1A */ u8 mPadding1A[2];
     /* 0x1C */ be<f32> field_0x1C;
     /* 0x20 */ be<f32> field_0x20;
     /* 0x24 */ be<f32> field_0x24;
     /* 0x28 */ be<s16> field_0x28;
-    /* 0x2A */ u8 _2A[2];
+    /* 0x2A */ u8 mPadding2A[2];
     /* 0x2C */ be<f32> field_0x2C;
     /* 0x30 */ be<f32> field_0x30;
     /* 0x34 */ be<f32> field_0x34;
@@ -55,17 +58,7 @@ struct PhotoNpcDat_l {
     /* 0x52 */ be<u8> field_0x52;
     /* 0x53 */ be<u8> field_0x53;
 };
-WWHD_SIZE(PhotoNpcDat_l, 0x54);
-
-/* dNpc_PathRun_c (8 bytes, unchanged) */
-struct PhotoPathRun_l {
-    /* 0x00 */ gptr<dPath> mPath;
-    /* 0x04 */ be<u8> field_0x04;
-    /* 0x05 */ be<u8> mIdx;
-    /* 0x06 */ be<u8> mbDir;
-    /* 0x07 */ be<u8> field_0x07;
-};
-WWHD_SIZE(PhotoPathRun_l, 8);
+WWHD_SIZE(NpcDatStruct, 0x54);
 
 struct daNpcPhoto_c : fopNpc_npc_c {
     enum Prm_e {
@@ -135,8 +128,8 @@ struct daNpcPhoto_c : fopNpc_npc_c {
     /* 0x7DC */ request_of_phase_process_class mPhs1;
     /* 0x7E4 */ request_of_phase_process_class mPhs2;
     /* 0x7EC */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0x7F0 */ u8 mBtpAnm[0x74];          /* mDoExt_btpAnm (HD 0x74) */
-    /* 0x864 */ PhotoPathRun_l mPathRun;   /* HD: no mShadowId before it */
+    /* 0x7F0 */ mDoExt_btpAnm mBtpAnm;          /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x864 */ dNpc_PathRun_c mPathRun;   // HD: no mShadowId before it
     /* 0x86C */ dCcD_Cyl field_0x6F8[2];
     /* 0xACC */ cXyz field_0x958;
     /* 0xAD8 */ cXyz mLookAtPos;
@@ -187,14 +180,14 @@ struct daNpcPhoto_c : fopNpc_npc_c {
     /* 0xB40 */ be<u8> field_0x9CC;
     /* 0xB41 */ be<u8> field_0x9CD;
     /* 0xB42 */ u8 _B42[2];
-    /* 0xB44 */ be<u32> field_0x9D0;       /* u8* (camera index list) */
+    /* 0xB44 */ gptr<be<s8>> field_0x9D0;       /* u8* (camera index list) */
     /* 0xB48 */ be<u8> field_0x9D4;
     /* 0xB49 */ be<u8> field_0x9D5;
     /* 0xB4A */ be<s8> field_0x9D6;
     /* 0xB4B */ be<u8> field_0x9D7;
     /* 0xB4C */ be<u8> field_0x9D8;
     /* 0xB4D */ u8 _B4D;
-    /* 0xB4E */ be<u8> mHD_B4E;            /* HD only: zeroed by the constructor */
+    /* 0xB4E */ be<u8> mReplaceDateMessages;            /* HD only: zeroed by the constructor */
     /* 0xB4F */ u8 _B4F;
 };
 WWHD_OFFSET(daNpcPhoto_c, mPhs1, 0x7DC);
@@ -206,116 +199,240 @@ WWHD_OFFSET(daNpcPhoto_c, mMsgNno, 0xB04);
 WWHD_OFFSET(daNpcPhoto_c, field_0x9AE, 0xB22);
 WWHD_OFFSET(daNpcPhoto_c, mFrame, 0xB33);
 WWHD_OFFSET(daNpcPhoto_c, field_0x9D0, 0xB44);
-WWHD_OFFSET(daNpcPhoto_c, mHD_B4E, 0xB4E);
+WWHD_OFFSET(daNpcPhoto_c, mReplaceDateMessages, 0xB4E);
 WWHD_SIZE(daNpcPhoto_c, 0xB50);
 
-/* ---- translation-unit statics (.data / .rodata addresses) ---- */
-enum : u32 {
-    PHOTO_l_arcname_tbl = 0x101C4F4C, /* const char*[1]: "Po" */
-    PHOTO_l_npc_staff_id = 0x101C4F54,
-    PHOTO_l_npc_dat = 0x101C521C,
-    PHOTO_l_cyl_src2 = 0x101C5270,
-    PHOTO_l_method = 0x101C52B4,
-    PHOTO_l_bck_ix_tbl = 0x10020CD8,
-    PHOTO_l_btp_ix_tbl = 0x10020C30,
+
+// HD fields beyond the shared declarations, measured from the original accesses.
+struct PhotoSelectedPicture {
+    u8 mReserved[0x5BEB];
+    be<u8> mSlot;
 };
-static inline const char* photo_arcname() { return gabi::at<const char>(gabi::load<u32>(PHOTO_l_arcname_tbl)); }
-static inline PhotoNpcDat_l& l_npc_dat() { return *gabi::at<PhotoNpcDat_l>(PHOTO_l_npc_dat); }
+struct PhotoPlayerDemoAngle {
+    u8 mReserved[0x422];
+    be<s16> mDemoMoveAngle;
+};
+struct PhotoModelMaterialState {
+    u8 mReserved[0x38];
+    be<u32> mTexturePattern;
+};
+struct PhotoPictureSave {
+    u8 mReserved[0x12C0];
+    u8 mPictureData;
+};
+struct PhotoPictureAlbum {
+    u8 mReserved[0x3C030C];
+    be<u8> mPictureNum;
+};
+u32 photo_getPictureSave(u32);
+u32 photo_getFreePictureSlot(u32);
+void photo_markPictureSlot(u32, u32);
+u32 photo_getPicture(u32, u32);
+void photo_setPictureDay(u32, s32);
+void photo_erasePicture(u32, u8);
+u32 photo_eventMesSetRegister(daNpcPhoto_c*);
+void photo_actorConstruct(fopNpc_npc_c*);
+void photo_destroyArray(void*, u32, u32, u32, u32, u32);
+void photo_actorDestroy(fopAc_ac_c*, s32);
+s8 photo_eventGetActIdx(dEvent_manager_c*, s32, u32, s32, BOOL, s32);
+u32 photo_runEventName(dEvent_manager_c*);
+inline u32 photo_album() {
+    return photo_getPictureSave(gabi::ea(&gabi::object_at<PhotoPictureSave>(dComIfGs_ea()).mPictureData));
+}
 
 /* ---- local bindings (SHARED-CANDIDATE; the same as in d_a_npc_people.h) ---- */
 /* save info: event flags at *(0x101F84DC) + 0x644, temporary flags at + 0x1178 */
-static inline u32 dComIfGs_save() { return gabi::load<u32>(0x101F84DC); }
-static inline dSv_event_c* dComIfGs_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
-static inline BOOL dComIfGs_isEventBit(u16 f) { return dSv_event_isEventBit(dComIfGs_event(), f); }
-static inline void dComIfGs_onEventBit(u16 f) { dSv_event_onEventBit(dComIfGs_event(), f); }
-static inline u8 dComIfGs_getEventReg(u16 reg) { return dSv_event_getEventReg(dComIfGs_event(), reg); }
-static inline void dComIfGs_setEventReg(u16 reg, u8 v) { dSv_event_setEventReg(dComIfGs_event(), reg, v); }
-static inline dSv_event_c* dComIfGs_tmpEvent() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x1178); }
-static inline BOOL dComIfGs_isTmpBit(u16 f) { return dSv_event_isEventBit(dComIfGs_tmpEvent(), f); }
-static inline void dComIfGs_onTmpBit(u16 f) { dSv_event_onEventBit(dComIfGs_tmpEvent(), f); }
+
+
 /* 02520C0C dComIfGs_checkGetItem(u8) */
-static inline BOOL dComIfGs_checkGetItem(u8 item) { return gabi::call<BOOL>(0x02520C0C, item); }
-/* HD: dComIfGs_getPictureNum() is a byte of the picture save data (02720144 returns it) */
-static inline u8 dComIfGs_getPictureNum() { return gabi::load<u8>(gabi::call<u32>(0x02720144, dComIfGs_save() + 0x12C0) + 0x3C030C); }
-static inline s16 dComIfGp_getStartStagePoint() { return gabi::load<s16>(dComIfGp_ea() + 0x513C); }
-static inline u8 dComIfGp_getSelectItem(int btn) { return gabi::load<u8>(dComIfGp_ea() + btn + 0x5BBB); }
-static inline u8 dComIfGp_event_runCheck() { return gabi::load<u8>(dComIfGp_ea() + 0x5292); }
-static inline BOOL dComIfGp_event_chkTalkXY() { return (u32)(gabi::load<u8>(dComIfGp_ea() + 0x52B0) - 1) <= 3; }
-static inline u8 dComIfGp_event_getPreItemNo() { return gabi::load<u8>(dComIfGp_ea() + 0x52B1); }
-static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfGp_ea() + PLAY_BGS + 0x4925); }
-static inline u8 dComIfGp_getPictureResult() { return gabi::load<u8>(dComIfGp_ea() + 0x5BE6); }
-static inline BOOL dComIfGp_evmng_ChkPresentEnd() { return gabi::call<BOOL>(0x02544950, dComIfGp_getPEvtManager()); }
-static inline void* dComIfGp_evmng_getMyIntegerP(s32 staffId, const char* name) { return dComIfGp_evmng_getMySubstanceP(staffId, name, 3); }
-static inline s8 dComIfGp_evmng_getMyActIdx(s32 staffId, u32 tbl, s32 n, BOOL force, s32 nameType) {
-    return gabi::call<s8>(0x02542EDC, dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
+
+// HD: dComIfGs_getPictureNum() is a byte of the picture save data (02720144 returns it)
+static inline u8 photo_getPictureNum() { return gabi::object_at<PhotoPictureAlbum>(photo_album()).mPictureNum; }
+
+
+static inline s8 photo_getMyActIdx(s32 staffId, u32 tbl, s32 n, BOOL force, s32 nameType) {
+    return photo_eventGetActIdx(dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
 }
 /* resources by id (HD: sead::SafeString key, per-TU vtable) */
-static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
-    gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
-    key->__vtbl = PHOTO_SAFESTRING_VTBL;
-    return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
-}
-static inline s32 J3DAnm_getFrameMax(void* p) {
-    u32 vt = gabi::load<u32>(gabi::ea(p) + 4);
-    return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x14), p);
-}
-static inline s16 cLib_calcTimer(be<s16>* t) { return gabi::call<s16>(0x02055B64, t); }
-static inline s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, void* p, s32 play, s32 attr, f32 rate, s32 start,
-                                     s32 end, u32 modify, s32 entry) {
-    return gabi::call<s32>(0x025E789C, anm, d, p, play, attr, rate, start, end, modify, entry);
-}
-static inline J3DModelData* J3DModel_getModelData_l(J3DModel* m) { return gabi::at<J3DModelData>(gabi::load<u32>(gabi::ea(m) + 0xAC)); }
-static inline void dNpc_playerEyePos_l(cXyz* out, f32 offs) { gabi::call(0x0259D54C, out, offs); }
-static inline void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot, s16 vel, u8 headOnly) {
-    gabi::call(0x0259DED0, j, outY, target, eye, yrot, vel, headOnly);
-}
-/* 0259D624 dNpc_calc_DisXZ_AngY(cXyz, cXyz (pointers to copies), f32* dist, s16* angle) */
-static inline void dNpc_calc_DisXZ_AngY(cXyz* a, cXyz* b, void* dist, void* ang) { gabi::call(0x0259D624, a, b, dist, ang); }
-/* dNpc_PathRun_c */
-static inline void dNpc_PathRun_getPoint(PhotoPathRun_l* r, cXyz* out, u8 idx) { gabi::call(0x0259E778, r, out, idx); }
-static inline BOOL dNpc_PathRun_incIdxLoop(PhotoPathRun_l* r) { return gabi::call<BOOL>(0x0259EB60, r); }
-static inline bool dNpc_PathRun_setInf(PhotoPathRun_l* r, u8 idx, s8 room, u8 fwd) { return gabi::call<bool>(0x0259E6D0, r, idx, room, fwd); }
-static inline BOOL dNpc_PathRun_chkPointPass(PhotoPathRun_l* r, cXyz* pos, u32 dir) { return gabi::call<BOOL>(0x0259E838, r, pos, dir); }
-static inline BOOL dNpc_PathRun_nextIdxAuto(PhotoPathRun_l* r) { return gabi::call<BOOL>(0x0259ED58, r); }
-/* HD message manager (*(0x101F4B5C)) */
-static inline u32 photo_msgManager() { return gabi::load<u32>(0x101F4B5C); }
-static inline u32 msgMng_getStatus(u32 mgr) { return gabi::call<u32>(0x025F795C, mgr); }
-static inline void msgMng_setStatus(u32 mgr, u32 st) { gabi::call(0x025F74D0, mgr, st); }
-static inline u32 msgMng_messageSet(u32 mgr, u32 msgNo, cXyz* pos) { return gabi::call<u32>(0x025F7DB0, mgr, msgNo, pos); }
-/* J3DModelData (HD) */
-static inline u32 J3DModelData_getJointName(J3DModelData* d) {
-    u32 h = gabi::call<u32>(0x027F68FC, d);
-    u32 off = gabi::load<u32>(h + 0x10);
-    return off != 0 ? h + 0x10 + off : 0;
-}
-static inline s8 JUTNameTab_getIndex(u32 tab, const char* name) { return gabi::call<s8>(0x027DF9B0, tab, name); }
-static inline u16 J3DModelData_getJointNum_l(J3DModelData* d) { return gabi::load<u16>(gabi::call<u32>(0x027F3F94, d) + 8); }
-static inline void J3DModelData_setJointCallBack_l(J3DModelData* d, u32 i, u32 cb) {
-    u32 n = gabi::load<u32>(gabi::ea(d) + 4);
-    u32 p = gabi::load<u32>(gabi::ea(d) + 8);
-    if (i < n) {
-        p += i * 0x1C;
-    }
-    gabi::store<u32>(p + 8, cb);
-}
-struct J3DMtxBlock_l {
-    /* 0x00 */ u8 _00[4];
-    /* 0x04 */ be<u16> mFlags;
-    /* 0x06 */ u8 _06[0x10 - 6];
-    /* 0x10 */ gptr<Mtx34> mpMtx;
+
+struct PhotoAnimationVtable {
+    u8 mReserved[0x14];
+    gfn getFrameMax;
 };
-static inline Mtx34* j3dSys_mCurrentMtx() { return gabi::at<Mtx34>(0x104B4868); }
-/* eventInfo (fopAc_ac_c + 0xF8): mCommand u16 at 0xF8, mEventId s16 at 0xFC */
-static inline u16 eventInfo_getCommand(fopAc_ac_c* a) { return gabi::load<u16>(gabi::ea(a) + 0xF8); }
-static inline void eventInfo_setEventId(fopAc_ac_c* a, s16 id) { gabi::store<s16>(gabi::ea(a) + 0xFC, id); }
-/* 025D9F38 fopAcM_searchFromName(name, param mask, param) */
-static inline fopAc_ac_c* fopAcM_searchFromName(const char* name, u32 mask, u32 prm) { return gabi::call<fopAc_ac_c*>(0x025D9F38, name, mask, prm); }
-/* 02554288 dKy_get_dayofweek */
-static inline s32 dKy_get_dayofweek() { return gabi::call<s32>(0x02554288); }
-/* dEvt_control_c (play + 0x51D0): mPtTalk at +0xCC; 0253F124 getPId */
-static inline void dComIfGp_event_setTalkPartner(fopAc_ac_c* a) {
-    u32 evt = dComIfGp_ea() + PLAY_EVTCTRL;
-    gabi::store<u32>(evt + 0xCC, gabi::call<u32>(0x0253F124, evt, a));
+struct PhotoAnimation {
+    be<f32> mFrame;
+    gptr<PhotoAnimationVtable> __vtbl;
+};
+
+static inline s32 J3DAnm_getFrameMax(void* p) {
+    auto& animation = gabi::object_at<PhotoAnimation>(gabi::ea(p));
+    return gabi::call_ptr<s32>(animation.__vtbl->getFrameMax.get(), p);
 }
-static inline void dComIfGp_event_setItemPartnerId(u32 id) { gabi::store<u32>(dComIfGp_ea() + 0x52A0, id); }
+
+s32 mDoExt_btpAnm_init(void*, J3DModelData*, void*, s32, s32, f32, s32, s32, u32, s32);
+
+
+void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c*, be<s16>*, cXyz*, cXyz*, s16, s16, u8);
+/* 0259D624 dNpc_calc_DisXZ_AngY(cXyz, cXyz (pointers to copies), f32* dist, s16* angle) */
+
+/* dNpc_PathRun_c */
+
+
+/* HD message manager (*(0x101F4B5C)) */
+static inline u32 photo_msgManager() { return gabi::object_at<be<u32>>(0x101F4B5C); }
+u32 msgMng_getStatus(u32);
+void msgMng_setStatus(u32, u32);
+u32 msgMng_messageSet(u32, u32, cXyz*);
+/* J3DModelData (HD) */
+
+s8 JUTNameTab_getIndex(u32, const char*);
+
+
+/* eventInfo (fopAc_ac_c + 0xF8): mCommand u16 at 0xF8, mEventId s16 at 0xFC */
+static inline u16 eventInfo_getCommand(fopAc_ac_c* a) { return a->eventInfo.mCommand; }
+static inline void eventInfo_setEventId(fopAc_ac_c* a, s16 id) { a->eventInfo.mEventId = id; }
+/* 025D9F38 fopAcM_searchFromName(name, param mask, param) */
+fopAc_ac_c* fopAcM_searchFromName(const char*, u32, u32);
+/* 02554288 dKy_get_dayofweek */
+s32 dKy_get_dayofweek();
+/* dEvt_control_c (play + 0x51D0): mPtTalk at +0xCC; 0253F124 getPId */
+
+
+// HD: one TU owns these guest tables; all four source parts share their references.
+extern be<s32> (&l_bck_ix_tbl)[5];
+extern be<s32> (&l_btp_ix_tbl)[2];
+extern sPhotoAnmDat (&l_npc_anm_wait)[1];
+extern sPhotoAnmDat (&l_npc_anm_talk)[1];
+extern sPhotoAnmDat (&l_npc_anm_walk)[1];
+extern sPhotoAnmDat (&l_npc_anm_spit)[2];
+extern sPhotoAnmDat (&l_npc_anm_talk2)[2];
+
+extern be<u32> (&l_msg_1st_talk)[4];
+extern be<u32> (&l_msg_2nd_talk)[2];
+extern be<u32> (&l_msg_1st_photo)[3];
+extern be<u32> (&l_msg_2nd_photo)[3];
+extern be<u32> (&l_msg_1st_order)[11];
+extern be<s16> (&l_msg_1st_order_c)[5];
+extern be<u32> (&l_msg_1st_order_not_end)[3];
+extern be<u16> (&l_msg_1st_order_not_end_c)[1];
+extern be<u32> (&l_msg_2nd_order)[4];
+extern be<u8> (&l_msg_2nd_order_c)[3];
+extern be<u32> (&l_msg_2nd_order_not_end)[3];
+extern be<u16> (&l_msg_2nd_order_not_end_c)[1];
+extern be<u32> (&l_msg_3rd_order)[5];
+extern be<u32> (&l_msg_3rd_order_c)[1];
+extern be<u32> (&l_msg_3rd_order_not_end)[3];
+extern be<u16> (&l_msg_3rd_order_not_end_c)[1];
+extern be<u32> (&l_msg_color)[3];
+extern be<u16> (&l_msg_color_c)[1];
+extern be<u32> (&l_msg_week_1st)[6];
+extern be<u32> (&l_msg_week)[7];
+extern be<u32> (&l_msg_buy_photo)[2];
+extern be<u32> (&l_msg_get_photo)[2];
+extern be<u32> (&l_msg_down)[2];
+extern be<u32> (&l_msg_ub4)[2];
+extern be<u32> (&l_msg_1st_order_xy)[4];
+extern be<u32> (&l_msg_2nd_order_xy)[4];
+extern be<u32> (&l_msg_3rd_order_xy)[3];
+extern be<u32> (&l_msg_color_xy)[4];
+extern be<u32> (&l_msg_xy_buy_photo)[9];
+extern cXyz (&l_counter_pos)[2];
+extern cXyz (&l_gallery_pos)[2];
+extern cXyz (&l_msg_camera)[6];
+
+// Component access keeps sinit's original scalar store order.
+inline be<f32>& photo_positionComponent(cXyz& position, int axis) {
+    if (axis == 0) return position.x;
+    if (axis == 1) return position.y;
+    return position.z;
+}
+
+enum dRes_ID_PO {
+    dRes_ID_PO_BCK_WAIT01_e = 0,
+    dRes_ID_PO_BCK_SPIT_e = 4,
+    dRes_ID_PO_BCK_TALK01_e = 5,
+    dRes_ID_PO_BCK_TALK02_e = 6,
+    dRes_ID_PO_BCK_WALK01_e = 7,
+    dRes_ID_PO_BDL_PO_e = 1,
+    dRes_ID_PO_BTP_MABA01_e = 2,
+    dRes_ID_PO_BTP_MABA02_e = 3,
+};
+extern NpcDatStruct& l_npc_dat;
+extern const gptr<char> (&l_arcname_tbl)[1];
+extern const gptr<char>& l_npc_staff_id;
+
+// HD out-of-line bindings retain the verified widths of this unit.
+struct dSnap_Obj;
+void dSnap_Obj_ct(dSnap_Obj*);
+void dSnap_Obj_SetInf(dSnap_Obj*, u8, fopAc_ac_c*, u8, u8, s16);
+void dSnap_Obj_SetGeo(dSnap_Obj*, cXyz*, f32, f32, s16);
+void dSnap_RegistSnapObj(dSnap_Obj*);
+cPhs_State dComLbG_PhaseHandler(request_of_phase_process_class*, u32, void*);
+void __construct_array(void*, u32, u32, u32);
+void __destroy_arr(void*, u32, u32, u32, u32);
+void mDoAud_seStart_1(u32);
+dPath* dPath_GetNextRoomPath(dPath*, s32);
+u32 dPath_GetPnt(dPath*, s32);
+u32 fopAcM_createItemForPresentDemo(cXyz*, s32, u8, s32, s32, csXyz*, cXyz*);
+void cLib_addCalcPosXZ(cXyz*, const cXyz*, f32, f32, f32);
+u32 dCam_getBody();
+void dCamera_Stop(u32);
+void dCamera_Start(u32);
+void dCamera_Set(u32, cXyz*, cXyz*, f32, s16);
+
+// HD: the joint returned by J3DNode_toJoint exposes its number at this offset.
+struct PhotoJointNumber {
+    be<u32> mData;
+    be<u16> mNumber;
+};
+struct PhotoSafeStringVtable {
+    u8 mReserved[0x14];
+    gfn assureTermination;
+};
+
+
+struct PhotoMessageVtable {
+    u8 mReserved[0x14];
+    gfn nextMsgStatus;
+    u8 mReserved18[4];
+    gfn getMsg;
+    u8 mReserved20[4];
+    gfn setAnmAtr;
+};
+
+extern be<u32> (&l_msg_1st_talk_photo)[5];
+extern be<u32> (&l_msg_talk_photo)[7];
+extern be<u32> (&l_msg_2F)[3];
+
+struct PsoData {
+    /* 0x00 */ be<f32> field_0x00;
+    /* 0x04 */ be<f32> field_0x04;
+    /* 0x08 */ be<f32> field_0x08;
+    /* 0x0C */ be<f32> field_0x0C;
+    /* 0x10 */ be<f32> field_0x10;
+    /* 0x14 */ be<s16> field_0x14;
+    /* 0x16 */ be<u8> field_0x16;
+    /* 0x17 */ be<u8> field_0x17;
+};
+WWHD_SIZE(PsoData, 0x18);
+extern PsoData& l_pso_photo;
+struct PhotoCylinderSource { be<u32> mWords[17]; };
+extern PhotoCylinderSource& l_cyl_src2;
+struct PhotoPhaseHandler { gfn handler; };
+extern PhotoPhaseHandler (&l_method)[3];
+void photo_cylElementDestroy(dCcD_Cyl*, s32);
+
+// GameCube enum entries used here but not yet present in the shared subsets.
+enum {
+    fpcNm_PLAYER_e = 0xA8,
+    dItemNo_PICTO_BOX_e = 0x23,
+    dItemNo_DELUXE_PICTO_BOX_e = 0x26,
+    dItemNo_FIREFLY_BOTTLE_e = 0x58,
+    dItemNo_COLLECT_MAP_20_e = 0xEB,
+    fopMsgStts_MSG_TYPING_e = 6,
+    fopMsgStts_MSG_DISPLAYED_e = 0xE,
+    fopMsgStts_MSG_DESTROYED_e = 0x13,
+    DSNAP_TYPE_UNK05 = 5,
+    DSNAP_TYPE_NPC_PHOTO = 0x5E,
+    PHOTO_HD_ATTENTION = 0x01000000,
+};

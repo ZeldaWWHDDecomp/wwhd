@@ -14,7 +14,7 @@
 #include "bindings.h"
 
 WWHD_OPAQUE(JntHit_c);
-WWHD_OPAQUE(J3DMaterial);
+/* J3DMaterial: JSystem/J3DGraph.h */
 struct mDoExt_btpAnm_l { u8 _[0x74]; };          /* HD size (constructor 025E7820) */
 struct mDoExt_3DlineMat0_l { u8 _[0x148]; };     /* HD size (constructor 025E9960) */
 struct dPa_smokeEcallBack_l { u8 _[0x20]; };

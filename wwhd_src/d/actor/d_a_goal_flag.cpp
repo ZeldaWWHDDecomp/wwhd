@@ -1,1061 +1,1721 @@
 /** Finish-line flag, cloth simulation and boat-race controller (WWHD).
  * See wwhd_src/README.md. */
 #include "d/actor/d_a_goal_flag.h"
-namespace {
-constexpr u32 RopePaths=offsetof(GoalFlagActorLayout,ropePaths), BuoyCounts=offsetof(GoalFlagActorLayout,buoyCounts), RopeCount=offsetof(GoalFlagActorLayout,ropeCount), RopeLines=offsetof(GoalFlagActorLayout,ropeLines);
-constexpr u32 Packet=offsetof(GoalFlagActorLayout,packet), TimerId=offsetof(GoalFlagActorLayout,timerId), RaceState=offsetof(GoalFlagActorLayout,raceEndState), CameraFrames=offsetof(GoalFlagActorLayout,cameraFrames), StartState=offsetof(GoalFlagActorLayout,raceStartState), PreviousSide=offsetof(GoalFlagActorLayout,previousSide), TimerEnded=offsetof(GoalFlagActorLayout,timerEnded);
-constexpr u32 ActionAdjustment=offsetof(GoalFlagActorLayout,actionAdjustment), ActionDispatch=offsetof(GoalFlagActorLayout,actionDispatch), ActionTarget=offsetof(GoalFlagActorLayout,actionTarget);
-template<class T> T read(void* p,u32 off) { return gabi::load<T>(gabi::ea(p)+off); }
-template<class T> void write(void* p,u32 off,T value) { gabi::store<T>(gabi::ea(p)+off,value); }
-void* member(void* p,u32 off) { return gabi::at<void>(gabi::ea(p)+off); }
+
+// HD: this TU owns its HIO. Shared matrix state is referenced without duplicating storage.
+static daGFlag_HIO_c l_HIO;
+static constexpr u32 l_hio_vtable = 0x1001037C;
+static gptr<Mtx34>& l_calc_mtx = gabi::object_at<gptr<Mtx34>>(0x1018C7B0);
+
+// HD: references to retained engine objects and this unit's constructor data.
+static gptr<GoalMinigameScreens>& l_minigameScreens = gabi::object_at<gptr<GoalMinigameScreens>>(0x101F8344);
+static gptr<void>& l_graphicsLock = gabi::object_at<gptr<void>>(0x101F8B18);
+static gptr<void>& l_heapManager = gabi::object_at<gptr<void>>(0x101F8B4C);
+static gptr<void>& l_resourceControl = gabi::object_at<gptr<void>>(0x101F4F28);
+static gptr<dSv_info_c>& l_saveInfo = gabi::object_at<gptr<dSv_info_c>>(0x101F84DC);
+static gptr<void>& l_opaqueDrawBuffer = gabi::object_at<gptr<void>>(0x104B4634);
+static Mtx34& l_matrixStack = gabi::object_at<Mtx34>(0x1048D0CC);
+static GoalJ3DSys& l_j3dSys = gabi::object_at<GoalJ3DSys>(0x104B45C0);
+static GoalRenderState& l_defaultRenderState = gabi::object_at<GoalRenderState>(0x104B474C);
+static be<s32>& l_minigameRupee = gabi::object_at<be<s32>>(0x101D5F18);
+static be<u32>& l_minigameResult = gabi::object_at<be<u32>>(0x101D5F1C);
+static be<f32>& l_zero = gabi::object_at<be<f32>>(0x10145180);
+static be<f32>& l_one = gabi::object_at<be<f32>>(0x1014517C);
+static be<f32>& l_minWindMagnitude = gabi::object_at<be<f32>>(0x100030B8);
+static be<f32>& l_minAngle = gabi::object_at<be<f32>>(0x10464148);
+static be<f32>& l_maxAngle = gabi::object_at<be<f32>>(0x1046414C);
+static be<f32>& l_flagCullMax = gabi::object_at<be<f32>>(0x10464150);
+static be<f32>& l_flagCullMin = gabi::object_at<be<f32>>(0x10464154);
+static be<f32>& l_ropeCullMax = gabi::object_at<be<f32>>(0x10464158);
+static be<f32>& l_ropeCullMin = gabi::object_at<be<f32>>(0x1046415C);
+static be<u8>& l_staticByte = gabi::object_at<be<u8>>(0x10464160);
+static be<u8>& l_staticByteFlag = gabi::object_at<be<u8>>(0x10464161);
+static auto& l_staticDtorSlots = gabi::object_at<be<u32>[4]>(0x104641A4);
+static auto& l_globalDtorRecords = gabi::object_at<be<u32>[12]>(0x101B5D1C);
+static char* sub_arcname_tbl[2] = {"Gflag", "Tgflag"};
+// Model data (vertex positions, texture coordinates, index lists) generated from your copy of the
+// game at build time (tools/verify/assets.py, build/verify/include/assets/); never committed.
+#include "assets/l_pos__d_a_goal_flag.h"
+#include "assets/l_texCoord__d_a_goal_flag.h"
+static auto& l_zeroVectorWords = gabi::object_at<be<u32>[3]>(0x101FFBA8);
+static const f32 down_offset[4] = {0.0f, 150.0f, 225.0f, 150.0f};
+static char* ActionNames[5] = {"00_dummy", "01_dummy", "02_dummy", "03_dummy", "04_dummy"};
+static char* l_endEventNames[2] = {"race_goal_cam", "race_fail_cam"};
+static char* l_orderEventNames[2] = {"race_goal_cam", "race_fail_cam"};
+static constexpr u32 l_packetVtable = 0x1001061C, l_safeStringVtable = 0x10010334, l_actorVtable = 0x1001036C;
+static const char l_clothDeleteName[] = "Cloth";
+static const char arcname[] = "Cloth";
+static const char l_flagArchiveName[] = "Gflag";
+static const char l_boatingStage[] = "Ocean";
+static const char l_flightArchiveName[] = "Tgflag";
+static const char l_shaderName[] = "flag_default";
+static const char l_shaderFile[] = "d_a_goal_flag.cpp";
+static const char l_textureResourceAssert[] = "tmp_img != (0)";
+static const char l_actorFile[] = "d_a_goal_flag.h";
+static const char l_ropeIndexAssert[] = "(line >= 0) && (line < 4)";
+static const char l_toonArchiveName[] = "Cloth";
+static const char l_toonFile[] = "d_a_goal_flag.cpp";
+static const char l_toonResourceAssert[] = "tmp_img != (0)";
+static const char l_startStaff[] = "Gflag";
+static const char l_startEvent[] = "race_start_cam";
+static const char l_timerFile[] = "d_a_goal_flag.cpp";
+static const char l_timerAssert[] = "timer != (0)";
+static const char l_nextStage[] = "sea";
+static const char l_endStaff[] = "Gflag";
+
+static auto& l_startSequence = gabi::object_at<u8>(0x1048F27C);
+static auto& l_endSequence = gabi::object_at<u8>(0x1049DD60);
+static auto& l_matrixUniformVtable = gabi::object_at<GoalUniformVtable>(0x1016EF84);
+static auto& l_materialUniformVtable = gabi::object_at<GoalUniformVtable>(0x1016EFB4);
+static auto& l_vertexFormat = gabi::object_at<u8>(0x10010610);
+// model data, generated from the game (tools/verify/assets.py)
+#include "assets/l_flagIndices__d_a_goal_flag.h"
+
+// Forward declarations for this translation unit's generated callbacks.
+static void get_cloth_anim_sub_factor(cXyz* position, cXyz* neighbor, cXyz* correction, f32 idealDistance);
+static BOOL checkCreateHeap(fopAc_ac_c* actor);
+static BOOL daGoal_FlagIsDelete(void* actor);
+static void goalFlag_copyMatrix(void* destination, void* source);
+static void goalFlag_colorS10ToFloat(void* destination, void* source);
+static void goalFlag_colorToFloat(void* destination, void* source);
+static void* GoalVertexBuffer_ctor(void* buffer);
+static void* GoalBufferEntry_ctor(void* entry);
+static void GoalBufferEntry_dtor(void* entry, s32 flags);
+static void GoalVertexBuffer_dtor(void* buffer, s32 flags);
+static void daGFlag_HIO_c_dtor(daGFlag_HIO_c* hio, s32 flags);
+static void daGFlag_HIO_c_callback(void* hio);
+static void __sinit_d_a_goal_flag();
+static void daGFlag_packet_c_dtor(void* packet, s32 flags);
+static void daGoal_Flag_c_dtor(void* actor, s32 flags);
+static void daGFlag_packet_c_empty(void* packet);
+static void* daGFlag_packet_c_ctor(void* packet);
+
+static void* Goal_eventManager() { return &goalFlag_gameInfo(goalFlag_playObject())->play.mEvtManager; }
+
+static void Goal_cutEnd(s32 staff) { goalFlag_eventCutEnd(Goal_eventManager(), staff); }
+
+static void Goal_assertRopeIndex(u32 rope) {
+    if (rope >= 4)
+        goalFlag_assertionFail(l_actorFile, 0x9B, l_ropeIndexAssert);
 }
-static BOOL Goal_CreateHeap(void* actor) {
-    WWHD_FUNC(0x0215D304,BOOL,actor);
-    for(s32 rope=0;rope<read<s32>(actor,RopeCount);++rope) {
-        u16 points=(u16)(read<u32>(actor,BuoyCounts+4*rope)*4+1);
-        if(!gabi::call<s32>(0x025E9B80,member(actor,RopeLines+0x148*rope),1,points,0)) return FALSE;
+
+static void* Goal_ropePoint(void* line, s32 anchor) {
+    return goalFlag_guestAddress(goalFlag_ropeLine(line)->mpPositions.get()->get() + (u32)anchor * 4);
+}
+
+template <class T> static void Goal_freeAllocation(gptr<T>* allocation) {
+    void* heap = goalFlag_findAllocationHeap(l_heapManager.get(), allocation->get());
+    goalFlag_heap(heap)->free(allocation->get());
+}
+
+static void Goal_releaseVertices(void* vertices) {
+    for (s32 pair = 0; pair < 2; ++pair)
+        for (s32 side = 0; side < 2; ++side) {
+            void* buffer = &goalFlag_vertexBuffers(vertices)->mBuffers[pair][side];
+            goalFlag_textureRelease(&goalFlag_vertexBuffer(buffer)->mTexture);
+            bool allocated = gabi::ea(goalFlag_vertexBuffer(buffer)->mpAllocation.get()) != 0;
+            goalFlag_vertexBuffer(buffer)->mpData = nullptr;
+            if (allocated) {
+                (void)(u32)goalFlag_vertexBuffer(buffer)->mVertexCount;
+                Goal_freeAllocation(&goalFlag_vertexBuffer(buffer)->mpAllocation);
+                goalFlag_vertexBuffer(buffer)->mVertexCount = 0;
+                goalFlag_vertexBuffer(buffer)->mpAllocation = nullptr;
+            }
+        }
+    goalFlag_vertexBuffers(vertices)->mFlags = 0;
+}
+
+static void Goal_releaseTextures(void* table) {
+    if (!gabi::ea(goalFlag_textureTable(table)->mpPairs.get()))
+        return;
+    for (s32 entry = 0; entry < (s32)goalFlag_textureTable(table)->mCount; ++entry) {
+        void* pair = goalFlag_guestAddress(goalFlag_textureTable(table)->mpPairs.get() + entry);
+        if (!pair)
+            continue;
+        bool allocated = gabi::ea(goalFlag_texturePair(pair)->mpFrontTextures.get()) != 0;
+        goalFlag_texturePair(pair)->mMaterialId = 0;
+        if (allocated) {
+            for (s32 i = 0; i < (s32)goalFlag_texturePair(pair)->mFrontCount; ++i) {
+                void* texture = goalFlag_guestAddress(goalFlag_texturePair(pair)->mpFrontTextures.get() + i);
+                goalFlag_texture(texture)->destroy(2);
+            }
+            Goal_freeAllocation(&goalFlag_texturePair(pair)->mpFrontTextures);
+            goalFlag_texturePair(pair)->mFrontCount = 0;
+            goalFlag_texturePair(pair)->mpFrontTextures = nullptr;
+        }
+        if (gabi::ea(goalFlag_texturePair(pair)->mpBackTextures.get())) {
+            for (s32 i = 0; i < (s32)goalFlag_texturePair(pair)->mBackCount; ++i) {
+                void* texture = goalFlag_guestAddress(goalFlag_texturePair(pair)->mpBackTextures.get() + i);
+                goalFlag_texture(texture)->destroy(2);
+            }
+            Goal_freeAllocation(&goalFlag_texturePair(pair)->mpBackTextures);
+            goalFlag_texturePair(pair)->mBackCount = 0;
+            goalFlag_texturePair(pair)->mpBackTextures = nullptr;
+        }
+    }
+    Goal_freeAllocation(&goalFlag_textureTable(table)->mpPairs);
+    goalFlag_textureTable(table)->mCount = 0;
+    goalFlag_textureTable(table)->mpPairs = nullptr;
+}
+
+static void Goal_materialOwnerDtor(void* owner) {
+    gabi::Local<be<u32>[4]> callFrame;
+    goalFlag_materialOwnerDestroy(owner, 2);
+}
+
+static void Goal_releasePacketMembers(void* packet) {
+    void* vertices = goalFlag_guestAddress(&goalFlag_packet(packet)->mVertexBuffers);
+    Goal_releaseVertices(vertices);
+    for (s32 material = 0; material < (s32)goalFlag_packet(packet)->mShaderMaterialCount; ++material) {
+        u32 data = gabi::ea(goalFlag_packet(packet)->mpShaderMaterials.get());
+        if ((u32)material < (u32)goalFlag_packet(packet)->mShaderMaterialCount)
+            data += (u32)material * 0x23C;
+        auto* uniforms = &gabi::object_at<GoalShaderMaterial>(data).mUniforms;
+        goalFlag_uniformBufferRelease(&uniforms->mBuffers[0]);
+        goalFlag_uniformBufferRelease(&uniforms->mBuffers[1]);
+    }
+    for (GoalUniformBlock* block :
+         {&goalFlag_packet(packet)->mMatrixBlock, &goalFlag_packet(packet)->mMaterialBlock})
+        for (auto& buffer : block->mBuffers)
+            goalFlag_uniformBufferRelease(goalFlag_guestAddress(&buffer));
+    goalFlag_textureObjectDestroy(goalFlag_guestAddress(&goalFlag_packet(packet)->mToonTexture), 2);
+    goalFlag_textureObjectDestroy(goalFlag_guestAddress(&goalFlag_packet(packet)->mFlagTexture), 2);
+    goalFlag_indexBufferDestroy(goalFlag_guestAddress(&goalFlag_packet(packet)->mIndices), 2);
+    goalFlag_uniformBlockDestroy(goalFlag_guestAddress(&goalFlag_packet(packet)->mMaterialBlock), 0);
+    goalFlag_uniformBlockDestroy(goalFlag_guestAddress(&goalFlag_packet(packet)->mMatrixBlock), 0);
+    Goal_materialOwnerDtor(goalFlag_guestAddress(&goalFlag_packet(packet)->mShaderMaterialCount));
+    if (vertices) {
+        Goal_releaseVertices(vertices);
+        goalFlag_arrayDestroy(vertices, 4, 0x254, GoalVertexBuffer_dtor, 0, 0);
+    }
+    Goal_releaseTextures(goalFlag_guestAddress(&goalFlag_packet(packet)->mTexturePairCount));
+}
+
+static void* Goal_allocate(u32 size, u32 alignment) {
+    void* heap = goalFlag_currentHeap(l_heapManager.get());
+    return goalFlag_heap(heap)->allocate(size, alignment);
+}
+
+static void Goal_releaseTexturePair(void* pair) {
+    auto* textures = goalFlag_texturePair(pair);
+    bool allocated = textures->mpFrontTextures.get() != nullptr;
+    textures->mMaterialId = 0;
+    for (u32 side = 0; side < 2; ++side) {
+        be<s32>* count = side ? &textures->mBackCount : &textures->mFrontCount;
+        gptr<GoalTexture>* data = side ? &textures->mpBackTextures : &textures->mpFrontTextures;
+        if (side ? data->get() != nullptr : allocated) {
+            for (s32 i = 0; i < (s32)*count; ++i)
+                goalFlag_guestAddress(data->get() + i)->destroy(2);
+            Goal_freeAllocation(data);
+            *count = 0;
+            *data = nullptr;
+        }
+    }
+}
+
+static void Goal_bindUniforms(void* shader, void* material) {
+    GoalUniformDescriptor* descriptor =
+        goalFlag_material(material)->mUniformCount ? goalFlag_material(material)->mpUniforms.get() : nullptr;
+    s16 vertex = descriptor->mVertexSlot, pixel = descriptor->mPixelSlot,
+        geometry = descriptor->mGeometrySlot;
+    GoalUniformBuffer* block = goalFlag_guestAddress(
+        &goalFlag_uniformBlock(shader)->mBuffers[(u32)goalFlag_uniformBlock(shader)->mCurrentBuffer]);
+    u32 size = block->mSize;
+    void* data = block->mpData.get();
+    if (pixel != -1)
+        goalFlag_pixelUniformBlock(pixel, size, data);
+    if (vertex != -1)
+        goalFlag_vertexUniformBlock(vertex, size, data);
+    if (geometry != -1)
+        goalFlag_geometryUniformBlock(geometry, size, data);
+}
+
+static void Goal_loadTexture(void* packet, void* material, u32 textureIndex) {
+    u32 count = goalFlag_material(material)->mTextureCount;
+    GoalMaterialTexture* descriptor = nullptr;
+    if (count > textureIndex)
+        descriptor = goalFlag_guestAddress(goalFlag_material(material)->mpTextures.get() + textureIndex);
+    goalFlag_textureBind(textureIndex ? static_cast<void*>(&goalFlag_packet(packet)->mToonTexture)
+                                      : static_cast<void*>(&goalFlag_packet(packet)->mFlagTexture),
+                         goalFlag_guestAddress(&descriptor->mBinding), -1, 0);
+}
+
+/* 0215DFB4 */
+void daGFlag_packet_c::setTexObj(u32 archive) {
+    // HD: keep the full archive index and update native resource bindings under the graphics lock.
+    gabi::Local<SafeString> name;
+    goalFlag_graphicsLock(l_graphicsLock.get());
+    name->mStringTop = gabi::ea(sub_arcname_tbl[archive].get());
+    name->__vtbl = l_safeStringVtable;
+    void* resource = goalFlag_objectResource(l_resourceControl.get(), name.get(), 3);
+    if (!resource)
+        goalFlag_assertionFail(l_shaderFile, 0xDC, l_textureResourceAssert);
+    goalFlag_textureResourceLoad(&mFlagResource, goalFlag_resource(resource)->mpTexture.get());
+    goalFlag_graphicsUnlock(l_graphicsLock.get());
+    const be<u32> GoalTextureDescription::* fields[] = {
+        &GoalTextureDescription::mDimension, &GoalTextureDescription::mWidth,
+        &GoalTextureDescription::mHeight,    &GoalTextureDescription::mDepth,
+        &GoalTextureDescription::mMipLevels, &GoalTextureDescription::mFormat,
+        &GoalTextureDescription::mAlignment, &GoalTextureDescription::mPitch,
+        &GoalTextureDescription::mTileMode};
+    bool equal = true;
+    for (auto field : fields)
+        if (mFlagTexture.mDescription.*field != mFlagResource.mDescription.*field) {
+            equal = false;
+            break;
+        }
+    if (!equal) {
+        goalFlag_textureAssign(goalFlag_guestAddress(&mFlagTexture), goalFlag_guestAddress(&mFlagResource));
+        u8 flags = (u8)mFlagTexture.mFlags | 2;
+        mFlagTexture.mMipDirty = 2;
+        mFlagTexture.mImageDirty = 2;
+        mFlagTexture.mSamplerDirty = 2;
+        mFlagTexture.mFlags = flags;
+    } else {
+        void* image = mFlagResource.mDescription.mpImage.get();
+        void* mips = mFlagResource.mDescription.mpMipImage.get();
+        mFlagTexture.mpNativeImage = image;
+        u8 flags = (u8)mFlagTexture.mFlags | 2;
+        mFlagTexture.mDescription.mpMipImage = mips;
+        mFlagTexture.mpNativeMipImage = mips;
+        mFlagTexture.mImageDirty = 2;
+        mFlagTexture.mMipDirty = 2;
+        mFlagTexture.mFlags = flags;
+        mFlagTexture.mDescription.mpImage = image;
+        mFlagTexture.mSamplerDirty = 2;
+    }
+}
+
+/* 02160018 */
+void daGFlag_packet_c::draw(void* drawInfo) {
+    gabi::Local<GoalRenderState> renderState; // HD: native alpha-test and culling state.
+    void* material = nullptr;
+    s32 index = (s32)goalFlag_drawInfo(drawInfo)->mMaterialIndex;
+    if (index < 4) {
+        u32 data = gabi::ea(mpTexturePairs.get());
+        if ((u32)index < (u32)mTexturePairCount)
+            data += (u32)index * 0x14;
+        material = goalFlag_texturePair(&gabi::object_at<GoalTexturePair>(data))->mpMaterial.get();
+    }
+    void* cache = goalFlag_shaderCache(&l_j3dSys);
+    void* shader = goalFlag_material(material)->mpShader.get();
+    if (gabi::ea(shader) != gabi::ea(goalFlag_cache(cache)->mpShader.get())) {
+        void* oldShader = goalFlag_cache(cache)->mpNativeShader.get();
+        u8 flags = (u8)goalFlag_shader(shader)->mFlags;
+        if (flags & 2) {
+            goalFlag_shader(shader)->mFlags = flags & ~2;
+            goalFlag_shaderRefresh(shader, 0);
+        }
+        void* nativeShader = goalFlag_shader(shader)->mpNative->mpShader.get();
+        if (oldShader != nativeShader)
+            goalFlag_nativeShaderBind(nativeShader);
+        void* fetch = goalFlag_shader(shader)->mpFetchShader.get();
+        if (fetch)
+            goalFlag_fetchShaderBind(goalFlag_shader(shader)->mpFetchData.get(), fetch);
+        else
+            goalFlag_shaderBind(shader);
+        goalFlag_cache(cache)->mpShader = shader;
+        goalFlag_cache(cache)->mpNativeShader = nativeShader;
+    }
+    index = (s32)goalFlag_drawInfo(drawInfo)->mMaterialIndex;
+    auto upload = [&](GoalUniformBlock* block) { block->upload(material); };
+    if (index == 0) {
+        upload(&mMatrixBlock);
+        void* pass = goalFlag_drawInfo(drawInfo)->mpPass.get();
+        if (pass)
+            Goal_bindUniforms(static_cast<GoalDrawPass*>(pass)->mpUniformBlock.get(), material);
+        Goal_loadTexture(this, material, 0);
+    } else if (index == 1 || index == 2) {
+        Goal_bindUniforms(mpShaderMaterials.get(), material);
+        upload(&mMaterialBlock);
+        upload(&mMatrixBlock);
+        if (index == 2) {
+            void* extra = goalFlag_drawInfo(drawInfo)->mpExtraUniforms.get();
+            if (extra)
+                goalFlag_uniformBlock(extra)->upload(material);
+        }
+        Goal_loadTexture(this, material, 0);
+        Goal_loadTexture(this, material, 1);
+    }
+    if (index == 2)
+        goalFlag_drawInfoPrepare(drawInfo, material);
+    goalFlag_renderStateConstruct(renderState.get());
+    renderState->mCullMode = 0;
+    s32 pass = (s32)goalFlag_drawInfo(drawInfo)->mMaterialIndex;
+    renderState->mMode = 2;
+    u32 flags = (u32)renderState->mFlags;
+    renderState->mAlphaEnabled = 1;
+    renderState->mAlphaThreshold = 0.5f;
+    renderState->mAlphaFunction = 4;
+    renderState->mFlags = (((flags & 0xFFFFFFF0) + 7) & 0xFFFFFF0F) + 0x10;
+    goalFlag_renderStateConfigure(pass, renderState.get());
+    goalFlag_renderStateApply(renderState.get());
+    for (u32 side = 0; side < 2; ++side) {
+        if (side) {
+            renderState->mCullMode = 1;
+            goalFlag_renderStateApply(renderState.get());
+        }
+        u32 data = gabi::ea(mpTexturePairs.get()), entry = (u32)goalFlag_drawInfo(drawInfo)->mMaterialIndex;
+        if (entry < (u32)mTexturePairCount)
+            data += entry * 0x14;
+        auto* textures = goalFlag_texturePair(&gabi::object_at<GoalTexturePair>(data));
+        bool back = mVertexBuffers.mCurrentBuffer == 0;
+        GoalTexture* texture = back ? textures->mpBackTextures.get() : textures->mpFrontTextures.get();
+        if (side && (u32)(back ? textures->mBackCount : textures->mFrontCount) > 1)
+            texture = goalFlag_guestAddress(texture + 1);
+        goalFlag_textureApply(texture);
+        for (u32 row = 0; row < 4; ++row) {
+            u32 stride = mIndices.mStride, mode = mIndices.mMode;
+            u8* indices = mIndices.mpIndices.get();
+            u32 type = mIndices.mType;
+            goalFlag_drawIndexed(mode, 0x12, type, goalFlag_guestAddress(indices + stride * row * 0x12), 0,
+                                 1);
+        }
+    }
+    goalFlag_renderStateApply(&l_defaultRenderState);
+}
+
+/* 0215E964 */
+void daGFlag_packet_c::setBackNrm() {
+    cXyz* front = mNrm[mCurrArr];
+    cXyz* back = mBackNrm[mCurrArr];
+    for (s32 i = 0; i < 45; ++i) {
+        back->x = 0.0f;
+        back->y = 0.0f;
+        back->z = 0.0f;
+        goalFlag_vectorSubtractPS(back, front, back);
+        ++back;
+        ++front;
+    }
+}
+
+/* 0215E520 */
+void daGFlag_packet_c::setNrmVtx(cXyz* output, s32 column, s32 row) {
+    gabi::Local<cXyz> center, average, horizontal, vertical, triangle, temp, normalized;
+    cXyz* positions = mDPos[mCurrArr];
+    s32 index = row * 9 + column;
+    center->set(positions[index].x, positions[index].y, positions[index].z);
+    average->set(0, 0, 0);
+    auto edge = [&](s32 neighbor, cXyz* destination) {
+        goalFlag_vectorSubtract(&positions[neighbor], temp.get(), center.get());
+        destination->copy(*temp);
+    };
+    auto accumulate = [&](cXyz* a, cXyz* b) {
+        goalFlag_vectorCross(a, temp.get(), b);
+        triangle->copy(*temp);
+        goalFlag_vectorNormalizeZP(triangle.get(), temp.get());
+        triangle->copy(*temp);
+        goalFlag_vectorAdd(average.get(), triangle.get(), average.get());
+    };
+    if (column != 0) {
+        edge(index - 1, horizontal.get());
+        if (row != 0) {
+            edge(index - 9, vertical.get());
+            accumulate(vertical.get(), horizontal.get());
+        }
+        if (row != 4) {
+            edge(index + 9, vertical.get());
+            accumulate(horizontal.get(), vertical.get());
+        }
+    }
+    if (column != 8) {
+        edge(index + 1, horizontal.get());
+        if (row != 0) {
+            edge(index - 9, vertical.get());
+            accumulate(horizontal.get(), vertical.get());
+        }
+        if (row != 4) {
+            edge(index + 9, vertical.get());
+            accumulate(vertical.get(), horizontal.get());
+        }
+    }
+    goalFlag_vectorNormalizeZC(average.get(), normalized.get());
+    average->copy(*normalized);
+    goalFlag_matrixPush();
+    s32 phase = column * -0x400 + row * 0x100;
+    u16 angle = (u16)(phase + mNormalFlutterPhase);
+    f32 sine = cM_ssin(angle);
+    goalFlag_matrixYRotate(l_calc_mtx.get(), (s16)gabi::ftoi(512.0f * sine));
+    angle = (u16)(phase + mNormalFlutterPhase);
+    f32 cosine = cM_scos(angle);
+    goalFlag_matrixXRotate(l_calc_mtx.get(), (s16)gabi::ftoi(512.0f * cosine));
+    goalFlag_matrixPosition(average.get(), triangle.get());
+    goalFlag_vectorNormalizeZP(triangle.get(), normalized.get());
+    output->copy(*normalized);
+    goalFlag_matrixPull();
+}
+
+/* 0215DD94 */
+BOOL daGoal_Flag_c::getRacePath(u8 pathId) {
+    void* path = goalFlag_roomPath(pathId, current.roomNo);
+    mpRopePaths[0] = path;
+    if (!path)
+        return FALSE;
+    s32 rope = 0;
+    do {
+        mNumRopeBuoys[rope] = goalFlag_path(path)->m_num;
+        ++rope;
+        pathId = goalFlag_path(mpRopePaths[rope - 1].get())->m_nextID;
+        if (rope >= 4 || pathId == 0xFF)
+            break;
+        path = goalFlag_roomPath(pathId, current.roomNo);
+        mpRopePaths[rope] = path;
+    } while (true);
+    mNumRopes = rope;
+    return TRUE;
+}
+
+/* 0215F4D0 */
+void daGoal_Flag_c::RopeMove() {
+    gabi::Local<cXyz> from, to, sum;
+    for (s32 rope = 0; rope < mNumRopes; ++rope) {
+        s32 count = mNumRopeBuoys[rope];
+        Goal_assertRopeIndex(rope);
+        void* line = &mRopeLines[rope];
+        void* end = Goal_ropePoint(line, count);
+        Goal_assertRopeIndex(rope);
+        void* first = Goal_ropePoint(line, 0);
+        for (u32 i = 0; i < 3; ++i)
+            goalFlag_vectorWords(end)->mComponents[i] = goalFlag_vectorWords(first)->mComponents[i];
+        for (s32 segment = 0; segment < (s32)(mNumRopeBuoys[rope] * 4); ++segment) {
+            s32 subdivision = segment & 3, anchor = segment >> 2;
+            if (subdivision) {
+                Goal_assertRopeIndex(rope);
+                void* a = Goal_ropePoint(line, anchor);
+                Goal_assertRopeIndex(rope);
+                void* b = Goal_ropePoint(line, anchor + 1);
+                cXyz* destination = goalFlag_guestAddress(static_cast<cXyz*>(a) + subdivision);
+                f32 t = (f32)subdivision * 0.25f;
+                goalFlag_vectorMultiply(a, from.get(), 1.0f - t);
+                goalFlag_vectorMultiply(b, to.get(), t);
+                goalFlag_vectorSum(from.get(), sum.get(), to.get());
+                // lfs/stfs copy the bits (signalling NaNs stay signalling); only the sag subtraction rounds.
+                goalFlag_vectorWords(destination)->mComponents[0] =
+                    goalFlag_vectorWords(sum.get())->mComponents[0];
+                u32 y = goalFlag_vectorWords(sum.get())->mComponents[1];
+                goalFlag_vectorWords(destination)->mComponents[1] = y;
+                goalFlag_vectorWords(destination)->mComponents[2] =
+                    goalFlag_vectorWords(sum.get())->mComponents[2];
+                destination->y = gabi::fsubs_ppc(gabi::f32_from_bits(y), (f32)down_offset[subdivision]);
+            }
+        }
+    }
+}
+
+/* 0215DE4C */
+BOOL daGoal_Flag_c::CreateBuoyRaces() {
+    gabi::Local<cXyz> position;
+    for (s32 rope = 0; rope < mNumRopes; ++rope) {
+        void* path = mpRopePaths[rope].get();
+        GoalPathPoint* points = goalFlag_pathPoints(path);
+        void* line = &mRopeLines[rope];
+        void* segment = goalFlag_ropeLine(line)->mpPositions.get()->get();
+        s32 buoy = 0;
+        for (; buoy < mNumRopeBuoys[rope]; ++buoy) {
+            position->x = (f32)points->m_position.x;
+            position->y = (f32)points->m_position.y;
+            position->z = (f32)points->m_position.z;
+            goalFlag_createChild(fpcNm_Obj_Buoyrace_e, (u32)mBsPcId, buoy | (rope << 8), position.get(),
+                                 current.roomNo, 0, 0, -1, 0);
+            f32 x = (f32)points->m_position.x, y = (f32)points->m_position.y + 250.0f,
+                z = (f32)points->m_position.z;
+            static_cast<cXyz*>(segment)->x = x;
+            static_cast<cXyz*>(segment)->z = z;
+            static_cast<cXyz*>(segment)->y = y;
+            segment = goalFlag_guestAddress(static_cast<cXyz*>(segment) + 1);
+            points = goalFlag_guestAddress(points + 1);
+        }
+        void* first = goalFlag_ropeLine(line)->mpPositions.get()->get();
+        for (u32 component = 0; component < 3; ++component)
+            goalFlag_vectorWords(segment)->mComponents[component] =
+                goalFlag_vectorWords(first)->mComponents[component];
     }
     return TRUE;
 }
-VERIFY(0x0215D304,Goal_CreateHeap);
-static BOOL Goal_checkCreateHeap(void* actor) {
-    WWHD_FUNC(0x0215D3C0,BOOL,actor);
-    return Goal_CreateHeap(actor);
+
+/* 02160618 */
+s32 daGoal_Flag_c::goal_check() {
+    gabi::Local<cXyz> playerOffset, line, normalized, rawLine, horizontal, normal;
+    u32 play = goalFlag_playObject();
+    void* player = goalFlag_gameInfo(play)->play.mPlayerInfo[0].mpPlayer.get();
+    goalFlag_vectorSubtract(&static_cast<fopAc_ac_c*>(player)->current.pos, playerOffset.get(),
+                            &mGoalFlagPolePos[0]);
+    goalFlag_vectorSubtract(&mGoalFlagPolePos[1], line.get(), &mGoalFlagPolePos[0]);
+    line->y = 0.0f;
+    goalFlag_vectorNormalizeZP(line.get(), normalized.get());
+    line->copy(*normalized);
+    playerOffset->y = 0.0f;
+    goalFlag_vectorSubtract(&mGoalFlagPolePos[1], rawLine.get(), &mGoalFlagPolePos[0]);
+    horizontal->set(rawLine->x, 0.0f, rawLine->z);
+    f32 square = goalFlag_vectorSquareMagnitude(horizontal.get());
+    f32 length = goalFlag_squareRoot(square);
+    f32 along = goalFlag_vectorDot(line.get(), playerOffset.get());
+    normal->set(line->z, 0.0f, -(f32)line->x);
+    f32 side = goalFlag_vectorDot(normal.get(), playerOffset.get());
+    s32 result = 0;
+    if (along > 0.0f && along < length) {
+        f32 previous = mPrevPlayerLineSide;
+        if (previous > 0.0f) {
+            if (!(side > 0.0f))
+                result = 1;
+        } else if (side > 0.0f)
+            result = -1;
+    }
+    mPrevPlayerLineSide = side;
+    return result;
 }
-VERIFY(0x0215D3C0,Goal_checkCreateHeap);
-static BOOL Goal_getRacePath(void* actor,u8 pathId) {
-    WWHD_FUNC(0x0215DD94,BOOL,actor,pathId);
-    void* path=gabi::call<void*>(0x025AAF88,pathId,read<s8>(actor,0x326));
-    write<u32>(actor,RopePaths,gabi::ea(path));
-    if(!path) return FALSE;
-    s32 rope=0;
-    do {
-        write<u32>(actor,BuoyCounts+4*rope,read<u16>(path,0));
-        ++rope;
-        pathId=read<u8>(gabi::at<void>(read<u32>(actor,RopePaths+4*(rope-1))),3);
-        if(rope>=4 || pathId==0xFF) break;
-        path=gabi::call<void*>(0x025AAF88,pathId,read<s8>(actor,0x326));
-        write<u32>(actor,RopePaths+4*rope,gabi::ea(path));
-    } while(true);
-    write<s32>(actor,RopeCount,rope);
+
+/* 0215EA00 */
+void daGoal_Flag_c::flag_move() {
+    gabi::Local<cXyz> wind, normalized, factor, temp;
+    u8 oldArray = mFlagPacket.mCurrArr, newArray = (oldArray ^ 1) & 1;
+    s16 normalPhase = mFlagPacket.mNormalFlutterPhase, windPhase = mWindScalePhase,
+        wavePhase = mFlagPacket.mFlagWavePhase;
+    mFlagPacket.mCurrArr = newArray;
+    windPhase = (s16)(windPhase + l_HIO.mWindScalePhaseInc);
+    mWindScalePhase = windPhase;
+    mFlagPacket.mNormalFlutterPhase = (s16)(normalPhase + l_HIO.mNormalFlutterPhaseInc);
+    mFlagPacket.mFlagWavePhase = (s16)(wavePhase + l_HIO.mFlagWavePhaseInc);
+    f32 blend = gabi::fmadds(0.5f, cM_ssin((u16)windPhase), 0.5f);
+    f32 windScale = gabi::fmadds(l_HIO.mWindScale1, blend, l_HIO.mWindScale2 * (1.0f - blend));
+    cXyz* previous = mFlagPacket.mPos[oldArray];
+    cXyz* previousNormals = mFlagPacket.mNrm[oldArray];
+    cXyz* current = mFlagPacket.mPos[newArray];
+    cXyz* velocity = mFlagPacket.mVelocity;
+    goalFlag_matrixYSet(l_calc_mtx.get(), (s16) - this->current.angle.y);
+    void* worldWind = goalFlag_windVector();
+    goalFlag_matrixPosition(worldWind, wind.get());
+    f32 magnitude = goalFlag_vectorSquareMagnitude(wind.get());
+    if (std::fabs(magnitude) < (f32)l_minWindMagnitude) {
+        for (u32 i = 0; i < 3; ++i)
+            goalFlag_vectorWords(wind.get())->mComponents[i] = l_zeroVectorWords[i];
+    } else {
+        goalFlag_vectorNormalize(wind.get(), normalized.get());
+        wind->y = normalized->y;
+        wind->z = normalized->z;
+        wind->x = (f32)normalized->x * 0.2f;
+        goalFlag_vectorScale(wind.get(), wind.get(), windScale);
+    }
+    for (s32 column = 0; column < 9; ++column)
+        for (s32 row = 0; row < 5; ++row) {
+            s32 index = column + row * 9;
+            current[index].copy(previous[index]);
+            this->get_cloth_anim_factor(factor.get(), previous, previousNormals, wind.get(), column, row);
+            temp->copy(*factor);
+            goalFlag_vectorAdd(&velocity[index], temp.get(), &velocity[index]);
+            goalFlag_vectorScale(&velocity[index], &velocity[index], 0.85f);
+            goalFlag_vectorAdd(&current[index], &velocity[index], &current[index]);
+        }
+    cXyz* display = mFlagPacket.mDPos[(u32)mFlagPacket.mCurrArr];
+    for (s32 column = 0; column < 9; ++column)
+        for (s32 row = 0; row < 5; ++row) {
+            s32 index = column + row * 9;
+            f32 distance = std::fabs(4.5f - (f32)column);
+            f32 falloff = gabi::fnmsubs(distance, distance, 20.25f) / 20.25f;
+            display[index].set(current[index].x, current[index].y, current[index].z);
+            f32 sine = cM_ssin((u16)(column * 0x4000 + row * 0x2000 + mFlagPacket.mFlagWavePhase));
+            display[index].z = gabi::fmadds(40.0f * falloff, sine, (f32)display[index].z);
+        }
+    cXyz* normals = mFlagPacket.mNrm[(u32)mFlagPacket.mCurrArr];
+    for (s32 row = 0; row < 5; ++row)
+        for (s32 column = 0; column < 9; ++column)
+            this->mFlagPacket.setNrmVtx(&normals[row * 9 + column], column, row);
+    this->mFlagPacket.setBackNrm();
+    goalFlag_cacheStoreRange(mFlagPacket.mDPos[(u32)mFlagPacket.mCurrArr], 0x21C);
+    goalFlag_cacheStoreRange(mFlagPacket.mNrm[(u32)mFlagPacket.mCurrArr], 0x21C);
+    goalFlag_cacheStoreRange(mFlagPacket.mBackNrm[(u32)mFlagPacket.mCurrArr], 0x21C);
+}
+
+/* 0215EDF8 */
+s32 daGoal_Flag_c::_create() {
+    gabi::Local<SafeString> expectedStage, currentStage;
+    gabi::Local<cXyz> playerOffset, line, normalized, normal;
+    if (!(actor_condition & fopAcCnd_INIT_e)) {
+        if (this) {
+            goalFlag_actorBaseConstruct(this);
+            __vtbl = l_actorVtable;
+            daGFlag_packet_c_ctor(&mFlagPacket);
+            goalFlag_arrayConstruct(mRopeLines, 4, 0x148, goalFlag_ropeLineConstruct);
+        }
+        actor_condition = actor_condition | fopAcCnd_INIT_e;
+    }
+    u8 variant = (u8)mParameters;
+    s32 phase = goalFlag_resourceLoad(&mClothPhs, arcname);
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    u8 archive = (variant == 0 || variant == 255) ? 0 : 1;
+    phase = goalFlag_resourceLoad(&mFlagPhs, archive ? l_flightArchiveName : l_flagArchiveName);
+    scale.x = archive ? 0.98f : 1.05f;
+    scale.z = 1;
+    scale.y = 1;
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    u8 pathId = mParameters >> 16;
+    if (pathId == 255)
+        return cPhs_ERROR_e;
+    void* path = goalFlag_roomPath(pathId, current.roomNo);
+    if (!path)
+        return cPhs_ERROR_e;
+    if (this->getRacePath(goalFlag_path(path)->m_nextID)) {
+        if (!fopAcM_entrySolidHeap(this, checkCreateHeap, 0x10000))
+            return cPhs_ERROR_e;
+        this->CreateBuoyRaces();
+    }
+    cXyz* positions = mFlagPacket.mPos[(u32)mFlagPacket.mCurrArr];
+    for (u32 vertex = 0; vertex < 45; ++vertex)
+        positions[vertex].set((f32)l_pos[vertex].x, (f32)l_pos[vertex].y, (f32)l_pos[vertex].z);
+    this->mFlagPacket.setTexObj(archive);
+    pathId = mParameters >> 16;
+    path = goalFlag_roomPath(pathId, current.roomNo);
+    f32 x = current.pos.x;
+    if (path) {
+        GoalPathPoint* points = goalFlag_pathPoints(path);
+        mGoalFlagPolePos[0].set(points[0].m_position.x, points[0].m_position.y, points[0].m_position.z);
+        points = goalFlag_pathPoints(path);
+        mGoalFlagPolePos[1].set(points[1].m_position.x, points[1].m_position.y, points[1].m_position.z);
+    }
+    goalFlag_matrixSetTranslate(&l_matrixStack, x, current.pos.y, current.pos.z);
+    goalFlag_matrixYRotate(&l_matrixStack, shape_angle.y);
+    goalFlag_matrixStackScale(scale.x, scale.y, scale.z);
+    goalFlag_matrixCopy(&l_matrixStack, &mMtx);
+    expectedStage->mStringTop = gabi::guest_addr(l_boatingStage);
+    expectedStage->__vtbl = l_safeStringVtable;
+    u32 play = goalFlag_playObject();
+    currentStage->mStringTop = gabi::ea(goalFlag_gameInfo(play)->play.mCurStage.mName);
+    currentStage->__vtbl = l_safeStringVtable;
+    auto validateString = [](SafeString* string) {
+        gabi::call_ptr(gabi::object_at<GoalSafeStringVtable>((u32)string->__vtbl).assureTermination.get(),
+                       string);
+    };
+    validateString(expectedStage.get());
+    validateString(expectedStage.get());
+    u32 expected = expectedStage->mStringTop;
+    validateString(currentStage.get());
+    u32 current = currentStage->mStringTop;
+    bool equal = expected == current;
+    if (!equal) {
+        expected = expectedStage->mStringTop;
+        current = currentStage->mStringTop;
+        for (u32 i = 0; i < 0x40001; ++i) {
+            u8 a = (&gabi::object_at<be<u8>>(expected))[i], b = (&gabi::object_at<be<u8>>(current))[i];
+            if (a != b)
+                break;
+            if (a == 0) {
+                equal = true;
+                break;
+            }
+        }
+    }
+    bool start = false;
+    if (equal) {
+        play = goalFlag_playObject();
+        start = (s16)goalFlag_gameInfo(play)->play.mCurStage.mPoint == 1;
+    }
+    if (start) {
+        u32 save = gabi::ea(l_saveInfo.get());
+        u16 limit = (u16)l_HIO.mTimeLimit;
+        // HD: scale the full event-register result before truncation; subtract only when below the limit.
+        u16 modifier = (u16)(goalFlag_eventRegister(
+                                 &gabi::object_at<GoalSaveRoot>(save).mSave.mSavedata.mEvent, 0xAAFF) *
+                             10);
+        if (limit > modifier)
+            limit -= modifier;
+        s32 timer = goalFlag_timerCreate(fpcNm_TIMER_e, 2, limit, 3, 0, 0, 221.0f, 439.0f, 32.0f, 419.0f);
+        mTimerProcID = timer;
+        u32 singleton = gabi::ea(l_minigameScreens.get());
+        void* starter = goalFlag_screens(singleton)->mpStarter.get();
+        if (starter) {
+            goalFlag_starter(starter)->mReset = 0;
+            goalFlag_starter(starter)->mStatus = 0;
+            singleton = gabi::ea(l_minigameScreens.get());
+        }
+        void* terminater = goalFlag_screens(singleton)->mpTerminator.get();
+        if (terminater) {
+            goalFlag_terminator(terminater)->mReset = 0;
+            goalFlag_startSequence(goalFlag_terminator(terminater)->mSequence, &l_endSequence);
+            singleton = gabi::ea(l_minigameScreens.get());
+        }
+        void* failure = goalFlag_screens(singleton)->mpFailure.get();
+        if (failure)
+            goalFlag_resetFailureSequence(failure);
+        play = goalFlag_playObject();
+        u16 flags = (u16)goalFlag_gameInfo(play)->play.mMinigameFlags;
+        goalFlag_gameInfo(play)->play.mMiniGameType = 1;
+        goalFlag_gameInfo(play)->play.mMinigameFlags = flags | 1;
+        play = goalFlag_playObject();
+        goalFlag_gameInfo(play)->play.mMiniGameRupee = 0;
+        play = goalFlag_playObject();
+        gabi::object_at<GoalGameAux>(play).mMiniGameReset = 0;
+        mRaceStartState = 0;
+        mActionAdjustment = 0;
+        mActionDispatch = -1;
+        mActionTarget = 0x021607D4;
+    }
+    play = goalFlag_playObject();
+    void* player = goalFlag_gameInfo(play)->play.mPlayerInfo[0].mpPlayer.get();
+    goalFlag_vectorSubtract(&static_cast<fopAc_ac_c*>(player)->current.pos, playerOffset.get(),
+                            &mGoalFlagPolePos[0]);
+    goalFlag_vectorSubtract(&mGoalFlagPolePos[1], line.get(), &mGoalFlagPolePos[0]);
+    line->y = 0;
+    goalFlag_vectorNormalizeZP(line.get(), normalized.get());
+    line->set(normalized->x, normalized->y, normalized->z);
+    normal->set(line->z, 0, -(f32)line->x);
+    f32 side = goalFlag_vectorDot(normal.get(), playerOffset.get());
+    mRaceEndState = 0;
+    mPrevPlayerLineSide = side;
+    for (u32 i = 0; i < 20; ++i)
+        this->flag_move();
+    mTimerEnded = 0;
+    return cPhs_COMPLEATE_e;
+}
+
+/* 0215D26C */
+static void get_cloth_anim_sub_factor(cXyz* position, cXyz* neighbor, cXyz* correction, f32 idealDistance) {
+    gabi::Local<cXyz> delta, direction;
+    goalFlag_vectorSubtract(neighbor, delta.get(), position);
+    goalFlag_vectorNormalizeZP(delta.get(), direction.get());
+    f32 square = goalFlag_vectorSquareMagnitude(delta.get());
+    f32 length = goalFlag_squareRoot(square);
+    f32 stiffness = l_HIO.mClothStiffness;
+    goalFlag_vectorScale(direction.get(), direction.get(), (length - idealDistance) * stiffness);
+    goalFlag_vectorAdd(correction, direction.get(), correction);
+}
+
+/* 0215E154 */
+void daGoal_Flag_c::get_cloth_anim_factor(cXyz* output, cXyz* positions, cXyz* normals, cXyz* wind,
+                                          s32 column, s32 row) {
+    gabi::Local<cXyz> center, scaled, correction;
+    s32 index = row * 9 + column;
+    center->set(positions[index].x, positions[index].y, positions[index].z);
+    f32 pressure = goalFlag_vectorDot(wind, &normals[index]);
+    if ((row == 0 || row == 4) && (column == 0 || column == 8)) {
+        if (!output)
+            output = static_cast<cXyz*>(goalFlag_allocateObject(12));
+        if (output)
+            for (u32 i = 0; i < 3; ++i)
+                static_cast<be<f32>*>(static_cast<void*>(output))[i] =
+                    gabi::f32_from_bits(l_zeroVectorWords[i]);
+        return;
+    }
+    goalFlag_vectorMultiply(&normals[index], scaled.get(), pressure);
+    correction->x = scaled->x;
+    correction->z = scaled->z;
+    correction->y = gabi::fmadds(l_HIO.mFlagSagFactor, 0.25f * (f32)row, (f32)scaled->y);
+    auto spring = [&](s32 neighbor, f32 distance) {
+        get_cloth_anim_sub_factor(center.get(), &positions[neighbor], correction.get(), distance);
+    };
+    if (column != 0) {
+        spring(index - 1, 250.0f);
+        if (row != 0) {
+            spring(index - 9, 120.0f);
+            spring(index - 10, 277.3085021972656f);
+        }
+        if (row != 4) {
+            spring(index + 9, 120.0f);
+            spring(index + 8, 277.3085021972656f);
+        }
+        if (column != 8) {
+            spring(index + 1, 250.0f);
+            if (row != 0)
+                spring(index - 8, 277.3085021972656f);
+            if (row != 4)
+                spring(index + 10, 277.3085021972656f);
+        }
+    } else {
+        spring(index + 1, 250.0f);
+        if (row != 0) {
+            spring(index - 9, 120.0f);
+            spring(index - 8, 277.3085021972656f);
+        }
+        if (row != 4) {
+            spring(index + 9, 120.0f);
+            spring(index + 10, 277.3085021972656f);
+        }
+    }
+    if (!output)
+        output = static_cast<cXyz*>(goalFlag_allocateObject(12));
+    if (output)
+        output->set(correction->x, correction->y, correction->z);
+    return;
+}
+
+/* 0215D3C0 */
+static BOOL checkCreateHeap(fopAc_ac_c* actor) { return static_cast<daGoal_Flag_c*>(actor)->CreateHeap(); }
+
+/* 0215D304 */
+BOOL daGoal_Flag_c::CreateHeap() {
+    for (s32 rope = 0; rope < mNumRopes; ++rope) {
+        u16 points = (u16)(mNumRopeBuoys[rope] * 4 + 1);
+        if (!goalFlag_lineInit(&mRopeLines[rope], 1, points, 0))
+            return FALSE;
+    }
     return TRUE;
 }
-VERIFY(0x0215DD94,Goal_getRacePath);
-static void Goal_copyMatrix(void* destination,void* source) {
-    WWHD_FUNC(0x0215F7CC,void,destination,source);
+
+/* 0215F3B4 */
+BOOL daGoal_Flag_c::_delete() {
+    u32 parameter = mParameters;
+    goalFlag_resourceDelete(&mClothPhs, l_clothDeleteName);
+    char* name = sub_arcname_tbl[parameter & 1].get();
+    goalFlag_resourceDelete(&mFlagPhs, name);
+    u32 play = goalFlag_playObject();
+    if ((u8)goalFlag_gameInfo(play)->play.mMiniGameType == 1) {
+        play = goalFlag_playObject();
+        if ((u8)goalFlag_gameInfo(play)->play.mMinigameResult == 1) {
+            l_minigameResult = 2;
+            play = goalFlag_playObject();
+            l_minigameRupee = (s16)goalFlag_gameInfo(play)->play.mMiniGameRupee;
+        } else {
+            play = goalFlag_playObject();
+            if ((u8)goalFlag_gameInfo(play)->play.mMinigameResult == 2) {
+                l_minigameResult = 1;
+                play = goalFlag_playObject();
+                l_minigameRupee = (s16)goalFlag_gameInfo(play)->play.mMiniGameRupee;
+            }
+        }
+        play = goalFlag_playObject();
+        u16 state = (u16)goalFlag_gameInfo(play)->play.mMinigameFlags;
+        goalFlag_gameInfo(play)->play.mMinigameResult = 0;
+        goalFlag_gameInfo(play)->play.mMiniGameType = 0;
+        goalFlag_gameInfo(play)->play.mMinigameFlags = state ^ 1;
+    }
+    u32 singleton = gabi::ea(l_minigameScreens.get());
+    void* terminater = goalFlag_screens(singleton)->mpTerminator.get();
+    if (terminater) {
+        goalFlag_terminator(terminater)->mReset = 0;
+        goalFlag_startSequence(goalFlag_terminator(terminater)->mSequence, &l_endSequence);
+        singleton = gabi::ea(l_minigameScreens.get());
+    }
+    void* another = goalFlag_screens(singleton)->mpFailure.get();
+    if (another)
+        goalFlag_resetFailureSequence(another);
+    return TRUE;
+}
+
+/* 02160788 */
+s32 daGoal_Flag_c::getDemoAction(s32 staff) {
+    u32 play = goalFlag_playObject();
+    return goalFlag_eventActionIndex(&goalFlag_gameInfo(play)->play.mEvtManager, staff, ActionNames, 5, 0, 0);
+}
+
+/* 021607D4 */
+BOOL daGoal_Flag_c::RaceStart() {
+    s32 staff = goalFlag_eventStaffId(Goal_eventManager(), l_startStaff, 0, 0);
+    s32 action = this->getDemoAction(staff);
+    if (!mRaceStartState) {
+        if (staff == -1 || action != 0)
+            return TRUE;
+        Goal_cutEnd(staff);
+        mRaceStartState = mRaceStartState + 1;
+        return TRUE;
+    }
+    void* timer = goalFlag_messageById((s32)mTimerProcID);
+    u32 singleton = gabi::ea(l_minigameScreens.get());
+    void* starter = goalFlag_screens(singleton)->mpStarter.get();
+    goalFlag_playObject(); // HD retains this accessor before the starter action.
+    if (action == 1 && starter) {
+        goalFlag_startSequence(goalFlag_starter(starter)->mSequence, &l_startSequence);
+        Goal_cutEnd(staff);
+    }
+    if (timer && starter && (u8)goalFlag_starter(starter)->mStatus) {
+        Goal_cutEnd(staff);
+        goalFlag_timerStart(timer, 7);
+        if (mRaceStartState == 1) {
+            goalFlag_bgmStart(0x8000000Bu);
+            mRaceStartState = mRaceStartState + 1;
+        }
+    }
+    if (goalFlag_eventEndCheck(Goal_eventManager(), l_startEvent)) {
+        mActionDispatch = -1;
+        mActionTarget = 0x02160954;
+        mRaceStartState = 0;
+        mActionAdjustment = 0;
+    }
+    return TRUE;
+}
+
+/* 02160954 */
+BOOL daGoal_Flag_c::TimerExecute() {
+    void* timer = goalFlag_messageById((s32)mTimerProcID);
+    if (!timer)
+        goalFlag_assertionFail(l_timerFile, 0x59B, l_timerAssert);
+    s32 crossing = this->goal_check();
+    if (crossing == 1) {
+        if (mRaceEndState == 1) {
+            if (!mTimerEnded) {
+                mTimerEnded = 1;
+                goalFlag_timerEnd(timer, -1);
+                u32 play = goalFlag_playObject();
+                mRaceEndState = (s16)goalFlag_gameInfo(play)->play.mMiniGameRupee == 0 ? 2 : 3;
+            }
+        } else
+            mRaceEndState = 1;
+    } else if (crossing == -1 && !mTimerEnded) {
+        mTimerEnded = 1;
+        goalFlag_timerEnd(timer, -1);
+        goalFlag_soundStart(0x847);
+        mRaceEndState = 2;
+    }
+    if (goalFlag_timerRemaining(timer) <= 0 && !mTimerEnded) {
+        mTimerEnded = 1;
+        goalFlag_timerEnd(timer, -1);
+        if (mRaceEndState != 3) {
+            mRaceEndState = 2;
+            goalFlag_soundStart(0x847);
+        }
+    }
+    s16 state = mRaceEndState;
+    if (state != 3 && state != 2)
+        return TRUE;
+    if (eventInfo.mCommand != dEvtCmd_INDEMO_e) {
+        char* name = l_orderEventNames[state != 3].get();
+        goalFlag_orderOtherEvent(this, name, 1, 0xFFFF);
+        eventInfo.mCondition = eventInfo.mCondition | dEvtCnd_UNK2_e;
+        return TRUE;
+    }
+    goalFlag_timerHide(timer);
+    s32 finish = 0;
+    if (mRaceEndState == 3) {
+        u32 play = goalFlag_playObject();
+        finish = (s16)goalFlag_gameInfo(play)->play.mMiniGameRupee < l_HIO.mPerfectRupeeScore ? 1 : 2;
+        play = goalFlag_playObject();
+        goalFlag_gameInfo(play)->play.mMinigameResult = 1;
+    } else {
+        u32 play = goalFlag_playObject();
+        goalFlag_gameInfo(play)->play.mMinigameResult = 2;
+        goalFlag_playObject();
+    }
+    goalFlag_bgmStart((finish == 1 || finish == 2) ? 0x8000000Cu : 0x8000000Du);
+    u32 play = goalFlag_playObject();
+    goalFlag_gameInfo(play)->play.mPlayerStatus[0][0] =
+        (u32)goalFlag_gameInfo(play)->play.mPlayerStatus[0][0] & ~0x00200000u;
+    s16 finalState = mRaceEndState;
+    u32 singleton = gabi::ea(l_minigameScreens.get());
+    if (finalState == 3) {
+        void* terminater = goalFlag_screens(singleton)->mpTerminator.get();
+        if (terminater)
+            goalFlag_finishSequence(terminater, finish);
+    } else {
+        void* failure = goalFlag_screens(singleton)->mpFailure.get();
+        if (failure)
+            goalFlag_failure(failure)->mShow = 1;
+    }
+    mCamFramesPassed = 0;
+    mActionDispatch = -1;
+    mActionTarget = 0x02160C50;
+    mActionAdjustment = 0;
+    mRaceStartState = 0;
+    return TRUE;
+}
+
+/* 02160C50 */
+BOOL daGoal_Flag_c::RaceEnd() {
+    s32 id = mTimerProcID;
+    mCamFramesPassed = (s16)(mCamFramesPassed + 1);
+    if (id != -1) {
+        void* timer = goalFlag_messageById(id);
+        if (timer && goalFlag_timerDeleteCheck(timer)) {
+            goalFlag_messageDelete(timer);
+            mTimerProcID = -1;
+        }
+    }
+    s32 staff = goalFlag_eventStaffId(Goal_eventManager(), l_endStaff, 0, 0);
+    if (staff != -1)
+        Goal_cutEnd(staff);
+    char* name = l_endEventNames[mRaceEndState != 3].get();
+    bool end = goalFlag_eventEndCheck(Goal_eventManager(), name) != 0;
+    if (!end && mCamFramesPassed > l_HIO.mEndCamEarlyFrame) {
+        end = goalFlag_triggerA(0) != 0;
+        if (!end)
+            end = goalFlag_triggerB(0) != 0;
+        if (!end)
+            end = goalFlag_triggerStart(0) != 0;
+    }
+    if (end)
+        goalFlag_nextStage(l_nextStage, 1, 0x30, -1, 0, 1, 0, 0.0f);
+    return TRUE;
+}
+
+/* 0215F748 */
+BOOL daGoal_Flag_c::_execute() {
+    if (mActionDispatch)
+        (this->*mCurrProc)();
+    this->flag_move();
+    this->RopeMove();
+    return TRUE;
+}
+
+/* 0215FE9C */
+BOOL daGoal_Flag_c::_draw() {
+    gabi::Local<be<f32>[12]> identity;
+    gabi::Local<be<u8>[4]> color;
+    void* light = goalFlag_environmentLight();
+    void* tev = &tevStr;
+    goalFlag_settingTevStruct(light, 0, &current.pos, tev);
+    f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+    goalFlag_matrixTranslate(0, x, y, z);
+    goalFlag_matrixYRotate(l_calc_mtx.get(), current.angle.y);
+    x = scale.x;
+    y = scale.y;
+    z = scale.z;
+    goalFlag_matrixScale(1, x, y, z);
+    goalFlag_matrixIdentity(identity.get());
+    goalFlag_matrixConcat(identity.get(), l_calc_mtx.get(), &mFlagPacket.mMtx);
+    mFlagPacket.mpTevStr = tev;
+    goalFlag_drawBufferEntry(l_opaqueDrawBuffer.get(), &mFlagPacket, 0);
+    mFlagPacket.update();
+    for (s32 rope = 0; rope < mNumRopes; ++rope) {
+        u16 count = (u16)(mNumRopeBuoys[rope] * 4 + 1);
+        (*color)[0] = (u8)l_HIO.mRopeColorR;
+        (*color)[1] = (u8)l_HIO.mRopeColorG;
+        (*color)[2] = (u8)l_HIO.mRopeColorB;
+        (*color)[3] = 255;
+        void* line = &mRopeLines[rope];
+        goalFlag_lineUpdate(line, count, color.get(), 0, tev, 20.0f);
+        u32 play = goalFlag_playObject();
+        s32 type = goalFlag_ropeLine(line)->getMaterialType();
+        goalFlag_linePacketSetMaterial(
+            reinterpret_cast<GoalDrawList*>(&goalFlag_gameInfo(play)->drawlist)->mLineMaterials[(u32)type],
+            line);
+    }
+    return TRUE;
+}
+
+/* 02160FC0 */
+static BOOL daGoal_FlagIsDelete(void* actor) { return TRUE; }
+
+/* 0215D3C4 */
+void daGFlag_packet_c::init() {
+    // HD: initialize the shader archive, paired vertex textures and native index buffer.
+    gabi::Local<SafeString> name;
+    name->mStringTop = gabi::guest_addr(l_shaderName);
+    name->__vtbl = l_safeStringVtable;
+    void* archive = goalFlag_shaderArchive(this);
+    s32 index = goalFlag_shaderIndex(goalFlag_archive(archive)->mpRoot.get(), name.get());
+    void* resource = nullptr;
+    if (index >= 0) {
+        u32 count = goalFlag_archive(archive)->mCount;
+        GoalShaderEntry* data = goalFlag_archive(archive)->mpEntries.get();
+        GoalShaderEntry* entry = goalFlag_guestAddress(data + ((u32)index < count ? (u32)index : 0));
+        if (!(u8) static_cast<GoalShaderEntry*>(entry)->mInitialized) {
+            void* root = goalFlag_archive(archive)->mpRoot.get();
+            u32 max = (u32) static_cast<GoalShaderRoot*>(root)->mCount;
+            void* shader =
+                (u32)index < max
+                    ? goalFlag_guestAddress(static_cast<GoalShaderRoot*>(root)->mpShaders.get() + (u32)index)
+                    : nullptr;
+            goalFlag_shaderResourceInitialize(entry, shader, 0);
+            count = goalFlag_archive(archive)->mCount;
+            data = goalFlag_archive(archive)->mpEntries.get();
+        }
+        resource = goalFlag_guestAddress(data + ((u32)index < count ? (u32)index : 0));
+    }
+    {
+        gabi::Local<be<u32>[4]> callFrame;
+        goalFlag_materialTableInitialize(&mMaterialCount, resource, 0);
+    }
+    mVertexBuffers.mStride = 0x13;
+    mVertexBuffers.mpVertexFormat = &l_vertexFormat;
+    void* vertices = goalFlag_guestAddress(&mVertexBuffers);
+    for (u32 side = 0; side < 2; ++side)
+        for (u32 pair = 0; pair < 2; ++pair) {
+            void* buffer = &goalFlag_vertexBuffers(vertices)->mBuffers[pair][side];
+            u32 vertexData = gabi::ea(goalFlag_vertexBuffer(buffer)->mpData.get());
+            if (!vertexData) {
+                void* allocation = Goal_allocate(0x5A0, 0x40);
+                if (allocation) {
+                    goalFlag_vertexBuffer(buffer)->mpAllocation = allocation;
+                    goalFlag_vertexBuffer(buffer)->mVertexCount = 45;
+                }
+                vertexData = gabi::ea(goalFlag_vertexBuffer(buffer)->mpAllocation.get());
+                goalFlag_vertexBuffer(buffer)->mpData = goalFlag_vertex(vertexData);
+            }
+            goalFlag_vertexBufferInitialize(&goalFlag_vertexBuffer(buffer)->mNativeVertexBuffer,
+                                            goalFlag_vertex(vertexData), 45,
+                                            &goalFlag_vertexBuffers(vertices)->mStride);
+        }
+    goalFlag_vertexBuffers(vertices)->mFlags = 0;
+    goalFlag_vertexBuffers(vertices)->mInitialized = 1;
+    for (u32 material = 0; material < (u32)mMaterialCount; ++material) {
+        u32 data = gabi::ea(mpTexturePairs.get());
+        if (material < (u32)mTexturePairCount)
+            data += material * 0x14;
+        void* pair = &gabi::object_at<GoalTexturePair>(data);
+        u32 materialId = (u32)goalFlag_texturePair(pair)->mMaterialId;
+        Goal_releaseTexturePair(pair);
+        goalFlag_texturePair(pair)->mMaterialId = materialId;
+        for (u32 countOffset : {4u, 12u}) {
+            void* textures = Goal_allocate(0x1E8, 4);
+            for (u32 i = 0; i < 2; ++i)
+                if (goalFlag_guestAddress(static_cast<GoalTexture*>(textures) + i))
+                    goalFlag_textureConstruct(goalFlag_guestAddress(static_cast<GoalTexture*>(textures) + i));
+            if (textures) {
+                if (countOffset == 4) {
+                    goalFlag_texturePair(pair)->mpFrontTextures = static_cast<GoalTexture*>(textures);
+                    goalFlag_texturePair(pair)->mFrontCount = 2;
+                } else {
+                    goalFlag_texturePair(pair)->mpBackTextures = static_cast<GoalTexture*>(textures);
+                    goalFlag_texturePair(pair)->mBackCount = 2;
+                }
+            }
+        }
+        for (u32 side = 0; side < 2; ++side)
+            for (u32 pairIndex = 0; pairIndex < 2; ++pairIndex) {
+                u32 countOffset = 4 + side * 8;
+                void* texture =
+                    goalFlag_guestAddress((side ? goalFlag_texturePair(pair)->mpBackTextures
+                                                : goalFlag_texturePair(pair)->mpFrontTextures)
+                                              .get() +
+                                          (pairIndex < (u32)(side ? goalFlag_texturePair(pair)->mBackCount
+                                                                  : goalFlag_texturePair(pair)->mFrontCount)
+                                               ? pairIndex
+                                               : 0));
+                goalFlag_texturePairInitialize(
+                    materialId, texture,
+                    &goalFlag_vertexBuffers(vertices)->mBuffers[pairIndex][side].mNativeVertexBuffer,
+                    &goalFlag_vertexBuffers(vertices)->mStride, 0);
+            }
+    }
+    goalFlag_shaderMaterialInitialize(goalFlag_guestAddress(&mShaderMaterialCount), 1, 0);
+    goalFlag_indexBufferInitialize(goalFlag_guestAddress(&mIndices), &l_flagIndices, 4, 0x48);
+    mIndices.mMode = 6;
+    for (u32 side = 0; side < 2; ++side) {
+        u32 active = (u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer;
+        u32 destination = gabi::ea(goalFlag_vertexBuffers(vertices)->mBuffers[side][active].mpData.get());
+        u32 end = destination + 0x5A0;
+        for (u32 block = destination; block < end; block += sizeof(GoalCacheLine))
+            for (auto& word : gabi::object_at<GoalCacheLine>(block & ~31u).mWords)
+                word = 0;
+        destination = gabi::ea(goalFlag_vertexBuffers(vertices)
+                                   ->mBuffers[side][(u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer]
+                                   .mpData.get());
+        for (u32 vertex = 0; vertex < 45; ++vertex) {
+            GoalVertex* target = goalFlag_vertex(destination + vertex * sizeof(GoalVertex));
+            f32 x = (f32)l_pos[vertex].x, y = (f32)l_pos[vertex].y, z = (f32)l_pos[vertex].z;
+            target->mPosition[0] = x;
+            target->mNormal[0] = 0;
+            target->mPosition[2] = z;
+            target->mNormal[1] = 0;
+            target->mPosition[1] = y;
+            target->mNormal[2] = 0;
+            target->mTexCoord[0] = (f32)l_texCoord[vertex][0];
+            target->mTexCoord[1] = (f32)l_texCoord[vertex][1];
+        }
+    }
+    u32 active = (u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer, inactive = active == 0 ? 1 : 0;
+    for (u32 side = 0; side < 2; ++side) {
+        for (u32 vertex = 0; vertex < 45; ++vertex) {
+            GoalVertex* source = goalFlag_guestAddress(
+                goalFlag_vertexBuffers(vertices)->mBuffers[side][active].mpData.get() + vertex);
+            GoalVertex* target = goalFlag_guestAddress(
+                goalFlag_vertexBuffers(vertices)->mBuffers[side][inactive].mpData.get() + vertex);
+            for (u32 i = 0; i < 8; ++i)
+                target->mComponents[i] = source->mComponents[i];
+        }
+        active = (u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer;
+    }
+    u32 flushIndex = goalFlag_vertexBuffers(vertices)->mCurrentBuffer;
+    for (u32 side = 0; side < 2; ++side) {
+        goalFlag_vertexBufferFlush(
+            &goalFlag_vertexBuffers(vertices)->mBuffers[side][flushIndex].mNativeVertexBuffer, 0,
+            goalFlag_vertexBuffers(vertices)->mBuffers[side][flushIndex].mNativeVertexBuffer.mFlushSize);
+    }
+    goalFlag_vertexBuffers(vertices)->mCurrentBuffer =
+        (u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer == 0 ? 1 : 0;
+}
+
+/* 0215F9E4 */
+void daGFlag_packet_c::update() {
+    // HD: upload animated cloth vertices, lighting uniforms and the toon texture.
+    gabi::Local<SafeString> name;
+    gabi::Local<be<f32>[12]> matrix;
+    gabi::Local<be<f32>[4]> color, scaledColor;
+    goalFlag_graphicsLock(l_graphicsLock.get());
+    if (!(u8)mToonLoaded) {
+        name->mStringTop = gabi::guest_addr(l_toonArchiveName);
+        name->__vtbl = l_safeStringVtable;
+        void* resource = goalFlag_objectResource(l_resourceControl.get(), name.get(), 3);
+        if (!resource)
+            goalFlag_assertionFail(l_toonFile, 0x236, l_toonResourceAssert);
+        goalFlag_textureResourceLoad(&mToonResource, goalFlag_resource(resource)->mpTexture.get());
+        bool equal = true;
+        const be<u32> GoalTextureDescription::* fields[] = {
+            &GoalTextureDescription::mDimension, &GoalTextureDescription::mWidth,
+            &GoalTextureDescription::mHeight,    &GoalTextureDescription::mDepth,
+            &GoalTextureDescription::mMipLevels, &GoalTextureDescription::mFormat,
+            &GoalTextureDescription::mAlignment, &GoalTextureDescription::mPitch,
+            &GoalTextureDescription::mTileMode};
+        for (auto field : fields)
+            if (mToonTexture.mDescription.*field != mToonResource.mDescription.*field) {
+                equal = false;
+                break;
+            }
+        if (!equal) {
+            goalFlag_textureAssign(goalFlag_guestAddress(&mToonTexture),
+                                   goalFlag_guestAddress(&mToonResource));
+            u8 flags = (u8)mToonTexture.mFlags | 2;
+            mToonTexture.mMipDirty = 2;
+            mToonTexture.mImageDirty = 2;
+            mToonTexture.mSamplerDirty = 2;
+            mToonTexture.mFlags = flags;
+        } else {
+            void* image = mToonResource.mDescription.mpImage.get();
+            void* mips = mToonResource.mDescription.mpMipImage.get();
+            mToonTexture.mpNativeImage = image;
+            u8 flags = (u8)mToonTexture.mFlags | 2;
+            mToonTexture.mDescription.mpMipImage = mips;
+            mToonTexture.mpNativeMipImage = mips;
+            mToonTexture.mImageDirty = 2;
+            mToonTexture.mMipDirty = 2;
+            mToonTexture.mFlags = flags;
+            mToonTexture.mDescription.mpImage = image;
+            mToonTexture.mSamplerDirty = 2;
+        }
+        mToonLoaded = 1;
+    }
+    goalFlag_graphicsUnlock(l_graphicsLock.get());
+    void* vertices = goalFlag_guestAddress(&mVertexBuffers);
+    for (u32 side = 0; side < 2; ++side) {
+        u32 destination = gabi::ea(goalFlag_vertexBuffers(vertices)
+                                       ->mBuffers[side][(u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer]
+                                       .mpData.get());
+        for (u32 vertex = 0; vertex < 45; ++vertex) {
+            cXyz* position = &mPos[(u32)mCurrArr][vertex];
+            f32 x = position->x, y = position->y, z = position->z;
+            GoalVertex* target = goalFlag_vertex(destination + vertex * sizeof(GoalVertex));
+            target->mPosition[0] = x;
+            target->mPosition[1] = y;
+            target->mPosition[2] = z;
+            cXyz* normal = side ? &mBackNrm[(u32)mCurrArr][vertex] : &mNrm[(u32)mCurrArr][vertex];
+            x = normal->x;
+            y = normal->y;
+            z = normal->z;
+            target->mNormal[2] = z;
+            target->mNormal[0] = x;
+            target->mNormal[1] = y;
+        }
+    }
+    u32 flushIndex = goalFlag_vertexBuffers(vertices)->mCurrentBuffer;
+    for (u32 side = 0; side < 2; ++side)
+        goalFlag_vertexBufferFlush(
+            &goalFlag_vertexBuffers(vertices)->mBuffers[side][flushIndex].mNativeVertexBuffer, 0,
+            goalFlag_vertexBuffers(vertices)->mBuffers[side][flushIndex].mNativeVertexBuffer.mFlushSize);
+    goalFlag_vertexBuffers(vertices)->mCurrentBuffer =
+        (u32)goalFlag_vertexBuffers(vertices)->mCurrentBuffer == 0 ? 1 : 0;
+    goalFlag_setFog(mpTevStr.get());
+    goalFlag_setLights(mpTevStr.get());
+    goalFlag_copyMatrix(matrix.get(), &l_j3dSys.mViewMtx);
+    goalFlag_materialMatrices(goalFlag_guestAddress(&mShaderMaterialCount), 0, matrix.get(),
+                              &l_j3dSys.mProjection, &l_j3dSys.mpView->mProjection);
+    for (u32 lightIndex = 0; lightIndex < 2; ++lightIndex) {
+        void* tev = mpTevStr.get();
+        u32 material = gabi::ea(mpShaderMaterials.get());
+        goalFlag_colorS10ToFloat(color.get(), lightIndex ? goalFlag_tevColors(tev)->mSecondLightColor
+                                                         : goalFlag_tevColors(tev)->mMaterialColor);
+        tev = mpTevStr.get();
+        goalFlag_colorMultiply(scaledColor.get(), color.get(),
+                               (f32)(lightIndex ? goalFlag_tevColors(tev)->mSecondLightScale
+                                                : goalFlag_tevColors(tev)->mMaterialScale));
+        for (u32 component = 0; component < 4; ++component)
+            gabi::object_at<GoalShaderMaterial>(material).mLightColors[lightIndex][component] =
+                (*reinterpret_cast<be<u32>(*)[4]>(scaledColor.get()))[component];
+    }
+    goalFlag_materialFlush(goalFlag_guestAddress(&mShaderMaterialCount), 0);
+    void* tev = mpTevStr.get();
+    goalFlag_colorS10ToFloat(goalFlag_guestAddress(&mMaterialUniforms.mMaterialColor),
+                             goalFlag_tevColors(tev)->mMaterialColor);
+    goalFlag_colorToFloat(goalFlag_guestAddress(&mMaterialUniforms.mAmbientColor),
+                          goalFlag_tevColors(tev)->mAmbientColor);
+    void* currentTev = mpTevStr.get();
+    goalFlag_colorScale(goalFlag_guestAddress(&mMaterialUniforms.mAmbientColor),
+                        (f32)goalFlag_tevColors(currentTev)->mAmbientScale);
+    if ((u8)goalFlag_tevColors(tev)->mEffectColor[3])
+        goalFlag_colorToFloat(goalFlag_guestAddress(&mMaterialUniforms.mEffectColor),
+                              goalFlag_tevColors(tev)->mEffectColor);
+    else
+        for (u32 component : {1u, 0u, 2u, 3u})
+            mMaterialUniforms.mEffectColor[component] = 0;
+    goalFlag_uniformBlockFlush(goalFlag_guestAddress(&mMaterialBlock));
+    goalFlag_copyMatrix(matrix.get(), goalFlag_guestAddress(&mMtx));
+    goalFlag_matrixCopy(matrix.get(), goalFlag_guestAddress(&mShaderMatrix));
+    goalFlag_uniformBlockFlush(goalFlag_guestAddress(&mMatrixBlock));
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 0215F7CC */
+static void goalFlag_copyMatrix(void* destination, void* source) {
     f32 values[12];
-    for(u32 i=0;i<12;++i) values[i]=read<f32>(source,4*i);
-    for(u32 i=0;i<12;++i) write<f32>(destination,4*i,values[i]);
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = static_cast<be<f32>*>(source)[i];
+    for (u32 i = 0; i < 12; ++i)
+        static_cast<be<f32>*>(destination)[i] = values[i];
 }
-VERIFY(0x0215F7CC,Goal_copyMatrix);
-static void Goal_colorS10ToFloat(void* destination,void* source) {
-    WWHD_FUNC(0x0215F86C,void,destination,source);
+
+/* 0215F86C */
+static void goalFlag_colorS10ToFloat(void* destination, void* source) {
     f32 values[4];
-    for(u32 i=0;i<4;++i) values[i]=(f32)read<s16>(source,2*i)/255.0f;
-    for(u32 i=0;i<4;++i) write<f32>(destination,4*i,values[i]);
+    for (u32 i = 0; i < 4; ++i)
+        values[i] = (f32) static_cast<be<s16>*>(source)[i] / 255.0f;
+    for (u32 i = 0; i < 4; ++i)
+        static_cast<be<f32>*>(destination)[i] = values[i];
 }
-VERIFY(0x0215F86C,Goal_colorS10ToFloat);
-static void Goal_colorToFloat(void* destination,void* source) {
-    WWHD_FUNC(0x0215F930,void,destination,source);
+
+/* 0215F930 */
+static void goalFlag_colorToFloat(void* destination, void* source) {
     f32 values[4];
-    for(u32 i=0;i<4;++i) values[i]=(f32)read<u8>(source,i)/255.0f;
-    for(u32 i=0;i<4;++i) write<f32>(destination,4*i,values[i]);
+    for (u32 i = 0; i < 4; ++i)
+        values[i] = (f32) static_cast<be<u8>*>(source)[i] / 255.0f;
+    for (u32 i = 0; i < 4; ++i)
+        static_cast<be<f32>*>(destination)[i] = values[i];
 }
-VERIFY(0x0215F930,Goal_colorToFloat);
-static void* Goal_vertexBufferCtor(void* buffer) {
-    WWHD_FUNC(0x02160F24,void*,buffer);
-    if(!buffer) buffer=gabi::call<void*>(0x0273AD10,0x254);
-    if(buffer) {
-        gabi::call(0x027B5BD8,member(buffer,4));
-        gabi::call(0x027BF734,member(buffer,0x158));
-        write<u32>(buffer,0x250,0);write<u32>(buffer,0x24C,0);
+
+/* 02160F24 */
+static void* GoalVertexBuffer_ctor(void* buffer) {
+    if (!buffer)
+        buffer = goalFlag_allocateObject(0x254);
+    if (buffer) {
+        goalFlag_vertexBufferConstruct(&goalFlag_vertexBuffer(buffer)->mNativeVertexBuffer);
+        goalFlag_textureConstruct(&goalFlag_vertexBuffer(buffer)->mTexture);
+        goalFlag_vertexBuffer(buffer)->mpAllocation = nullptr;
+        goalFlag_vertexBuffer(buffer)->mVertexCount = 0;
     }
     return buffer;
 }
-VERIFY(0x02160F24,Goal_vertexBufferCtor);
-static void* Goal_bufferEntryCtor(void* entry) {
-    WWHD_FUNC(0x02160F80,void*,entry);
-    return entry?entry:gabi::call<void*>(0x0273AD10,0x10);
+
+/* 02160F80 */
+static void* GoalBufferEntry_ctor(void* entry) { return entry ? entry : goalFlag_allocateObject(0x10); }
+
+/* 02160FAC */
+static void GoalBufferEntry_dtor(void* entry, s32 flags) {
+    if (entry && (flags & 1))
+        goalFlag_deleteObject(entry);
 }
-VERIFY(0x02160F80,Goal_bufferEntryCtor);
-static void Goal_bufferEntryDtor(void* entry,s32 flags) {
-    WWHD_FUNC(0x02160FAC,void,entry,flags);
-    if(entry && (flags&1)) gabi::call(0x0273AF40,entry);
-}
-VERIFY(0x02160FAC,Goal_bufferEntryDtor);
-static BOOL Goal_IsDelete(void* actor) {
-    WWHD_FUNC(0x02160FC0,BOOL,actor);
-    return TRUE;
-}
-VERIFY(0x02160FC0,Goal_IsDelete);
-static void Goal_vertexBufferDtor(void* buffer,s32 flags) {
-    WWHD_FUNC(0x02160FC8,void,buffer,flags);
-    if(buffer) {
-        gabi::call(0x027BF880,member(buffer,0x158),2);
-        gabi::call(0x027B5CBC,member(buffer,4),2);
-        if(flags&1) gabi::call(0x0273AF40,buffer);
+
+/* 02160FC8 */
+static void GoalVertexBuffer_dtor(void* buffer, s32 flags) {
+    if (buffer) {
+        goalFlag_textureDestroy(&goalFlag_vertexBuffer(buffer)->mTexture, 2);
+        goalFlag_vertexBufferDestroy(&goalFlag_vertexBuffer(buffer)->mNativeVertexBuffer, 2);
+        if (flags & 1)
+            goalFlag_deleteObject(buffer);
     }
 }
-VERIFY(0x02160FC8,Goal_vertexBufferDtor);
-static void Goal_HIODtor(void* hio,s32 flags) {
-    WWHD_FUNC(0x021618A4,void,hio,flags);
-    if(hio) {
-        write<u8>(hio,4,0xFF);write<u32>(hio,0,0x1001037C);
-        if(flags&1) gabi::call(0x0273AF40,hio);
+
+/* 021618A4 */
+static void daGFlag_HIO_c_dtor(daGFlag_HIO_c* hio, s32 flags) {
+    if (hio) {
+        hio->m04 = 0xFF;
+        hio->__vtbl = l_hio_vtable;
+        if (flags & 1)
+            goalFlag_deleteObject(hio);
     }
 }
-VERIFY(0x021618A4,Goal_HIODtor);
-static void Goal_HIOCallback(void* hio) {
-    WWHD_FUNC(0x021618CC,void,hio);
+
+/* 021618CC */
+static void daGFlag_HIO_c_callback(void* hio) {}
+
+/* 02160DA4 */
+static void __sinit_d_a_goal_flag() {
+    for (s32 i = 3; i >= 0; --i)
+        l_staticDtorSlots[i] = 0;
+    goalFlag_registerGlobalObject(&l_globalDtorRecords[0]);
+    l_minAngle = -3.1415927410125732f;
+    l_maxAngle = 3.1415927410125732f;
+    goalFlag_staticByteConstruct(&l_staticByte);
+    goalFlag_registerGlobalObject(&l_globalDtorRecords[3]);
+    goalFlag_staticByteFlagConstruct(&l_staticByteFlag);
+    goalFlag_registerGlobalObject(&l_globalDtorRecords[6]);
+
+    l_HIO.m04 = 0xFF;
+    l_ropeCullMax = 10000.0f;
+    l_HIO.mDrawCelShaded = 1;
+    l_HIO.__vtbl = l_hio_vtable;
+    l_ropeCullMin = 10000.0f;
+    l_HIO.mWindScalePhaseInc = 750;
+    l_flagCullMax = 50000.0f;
+    l_HIO.mNormalFlutterPhaseInc = 0x800;
+    l_HIO.mFlagWavePhaseInc = 0xBD1;
+    l_HIO.mTimeLimit = 240;
+    l_HIO.mPerfectRupeeScore = 150;
+    l_HIO.mEndCamEarlyFrame = 150;
+    l_HIO.mWindScale1 = 12.0f;
+    l_HIO.mRopeColorR = 255;
+    l_HIO.mRopeColorG = 128;
+    l_HIO.mRopeColorB = 128;
+    l_HIO.m07 = 0;
+    l_HIO.m06 = 0;
+    l_HIO.m08 = 0;
+    l_HIO.m09 = 0;
+    l_HIO.mDebugFlag = 0;
+    l_HIO.mWindScale2 = 4.0f;
+    l_HIO.mFlagSagFactor = -1.0f;
+    l_flagCullMin = 50000.0f;
+    l_HIO.mClothStiffness = 0.4f;
+    goalFlag_registerGlobalObject(&l_globalDtorRecords[9]);
 }
-VERIFY(0x021618CC,Goal_HIOCallback);
-static s32 Goal_getDemoAction(void* actor,s32 staff) {
-    WWHD_FUNC(0x02160788,s32,actor,staff);
-    u32 play=gabi::call<u32>(0x025200D4);
-    return gabi::call<s32>(0x02542EDC,gabi::at<void>(play+0x52C4),staff,gabi::at<void>(0x101B5CF8),5,0,0);
-}
-VERIFY(0x02160788,Goal_getDemoAction);
-static BOOL Goal_Execute(void* actor) {
-    WWHD_FUNC(0x0215F748,BOOL,actor);
-    s16 dispatch=read<s16>(actor,ActionDispatch);
-    if(dispatch) {
-        void* adjusted=member(actor,read<s16>(actor,ActionAdjustment));
-        u32 target;
-        if(dispatch<0) target=read<u32>(actor,ActionTarget);
-        else {
-            u32 table=read<u32>(adjusted,read<s16>(actor,0x2FB2));
-            target=gabi::load<u32>(table+(u32)dispatch*8+4);
-        }
-        gabi::call(target,adjusted);
-    }
-    gabi::call(0x0215EA00,actor);
-    gabi::call(0x0215F4D0,actor);
-    return TRUE;
-}
-VERIFY(0x0215F748,Goal_Execute);
-static BOOL Goal_CreateBuoyRaces(void* actor) {
-    WWHD_FUNC(0x0215DE4C,BOOL,actor);
-    gabi::Local<cXyz> position;
-    for(s32 rope=0;rope<read<s32>(actor,RopeCount);++rope) {
-        void* path=gabi::at<void>(read<u32>(actor,RopePaths+rope*4));
-        void* points=gabi::at<void>(read<u32>(path,8));
-        void* line=member(actor,RopeLines+rope*0x148);
-        void* segment=gabi::at<void>(gabi::load<u32>(read<u32>(line,0x144)));
-        s32 buoy=0;
-        for(;buoy<read<s32>(actor,BuoyCounts+rope*4);++buoy) {
-            position->x=read<f32>(points,4);position->y=read<f32>(points,8);position->z=read<f32>(points,12);
-            gabi::call<s32>(0x025D5A20,0x10C,read<u32>(actor,4),buoy|(rope<<8),position.get(),read<s8>(actor,0x326),0,0,-1,0);
-            f32 x=read<f32>(points,4),y=read<f32>(points,8)+250.0f,z=read<f32>(points,12);
-            write<f32>(segment,0,x);write<f32>(segment,8,z);write<f32>(segment,4,y);
-            segment=member(segment,12);points=member(points,16);
-        }
-        void* first=gabi::at<void>(gabi::load<u32>(read<u32>(line,0x144)));
-        for(u32 component=0;component<3;++component) write<u32>(segment,component*4,read<u32>(first,component*4));
-    }
-    return TRUE;
-}
-VERIFY(0x0215DE4C,Goal_CreateBuoyRaces);
-static void Goal_clothSpring(cXyz* position,cXyz* neighbor,cXyz* correction,f32 idealDistance) {
-    WWHD_FUNC(0x0215D26C,void,position,neighbor,correction,idealDistance);
-    gabi::Local<cXyz> delta,direction;
-    gabi::call(0x0201ADE0,neighbor,delta.get(),position);
-    gabi::call(0x0201B12C,delta.get(),direction.get());
-    f32 square=gabi::call<f32>(0x028E8DD0,delta.get());
-    f32 length=gabi::call<f32>(0x028F4384,square);
-    f32 stiffness=gabi::load<f32>(0x104641A0);
-    gabi::call(0x028E8E64,direction.get(),direction.get(),(length-idealDistance)*stiffness);
-    gabi::call(0x028E8D88,correction,direction.get(),correction);
-}
-VERIFY(0x0215D26C,Goal_clothSpring);
-static void Goal_setBackNrm(void* packet) {
-    WWHD_FUNC(0x0215E964,void,packet);
-    u32 array=(u32)read<u8>(packet,0x2648)*0x21C;
-    void* front=member(packet,0x1BBC+array);
-    void* back=member(packet,0x1FF4+array);
-    for(s32 i=0;i<45;++i) {
-        for(u32 component=0;component<3;++component) write<f32>(back,component*4,0.0f);
-        gabi::call(0x028E8DAC,back,front,back);
-        back=member(back,12);front=member(front,12);
+
+/* 02161028 */
+static void daGFlag_packet_c_dtor(void* packet, s32 flags) {
+    if (packet) {
+        goalFlag_packet(packet)->mVtable = l_packetVtable;
+        Goal_releasePacketMembers(packet);
+        goalFlag_packetBaseDestroy(packet, 0);
+        if (flags & 1)
+            goalFlag_deleteObject(packet);
     }
 }
-VERIFY(0x0215E964,Goal_setBackNrm);
-static s32 Goal_goalCheck(void* actor) {
-    WWHD_FUNC(0x02160618,s32,actor);
-    gabi::Local<cXyz> playerOffset,line,normalized,rawLine,horizontal,normal;
-    u32 play=gabi::call<u32>(0x025200D4);
-    void* player=gabi::at<void>(gabi::load<u32>(play+0x5B2C));
-    gabi::call(0x0201ADE0,member(player,0x314),playerOffset.get(),member(actor,0x2A38));
-    gabi::call(0x0201ADE0,member(actor,0x2A44),line.get(),member(actor,0x2A38));
-    line->y=0.0f;
-    gabi::call(0x0201B12C,line.get(),normalized.get());
-    line->copy(*normalized);
-    playerOffset->y=0.0f;
-    gabi::call(0x0201ADE0,member(actor,0x2A44),rawLine.get(),member(actor,0x2A38));
-    horizontal->set(rawLine->x,0.0f,rawLine->z);
-    f32 square=gabi::call<f32>(0x028E8DD0,horizontal.get());
-    f32 length=gabi::call<f32>(0x028F4384,square);
-    f32 along=gabi::call<f32>(0x028E8F44,line.get(),playerOffset.get());
-    normal->set(line->z,0.0f,-(f32)line->x);
-    f32 side=gabi::call<f32>(0x028E8F44,normal.get(),playerOffset.get());
-    s32 result=0;
-    if(along>0.0f && along<length) {
-        f32 previous=read<f32>(actor,PreviousSide);
-        if(previous>0.0f) { if(!(side>0.0f)) result=1; }
-        else if(side>0.0f) result=-1;
-    }
-    write<f32>(actor,PreviousSide,side);
-    return result;
-}
-VERIFY(0x02160618,Goal_goalCheck);
-static void* Goal_eventManager() { return gabi::at<void>(gabi::call<u32>(0x025200D4)+0x52C4); }
-static void Goal_cutEnd(s32 staff) { gabi::call(0x02543280,Goal_eventManager(),staff); }
-static BOOL Goal_RaceStart(void* actor) {
-    WWHD_FUNC(0x021607D4,BOOL,actor);
-    s32 staff=gabi::call<s32>(0x02542D88,Goal_eventManager(),gabi::at<void>(0x10010564),0,0);
-    s32 action=Goal_getDemoAction(actor,staff);
-    if(!read<u8>(actor,StartState)) {
-        if(staff==-1 || action!=0) return TRUE;
-        Goal_cutEnd(staff);
-        write<u8>(actor,StartState,read<u8>(actor,StartState)+1);
-        return TRUE;
-    }
-    void* timer=gabi::call<void*>(0x025DE50C,read<u32>(actor,TimerId));
-    u32 singleton=gabi::load<u32>(0x101F8344);
-    void* starter=gabi::at<void>(gabi::load<u32>(singleton+0x204));
-    gabi::call<u32>(0x025200D4); // HD retains this accessor before the starter action.
-    if(action==1 && starter) {
-        gabi::call(0x020063C0,member(starter,0x18),gabi::at<void>(0x1048F27C));
-        Goal_cutEnd(staff);
-    }
-    if(timer && starter && read<u8>(starter,0x51)) {
-        Goal_cutEnd(staff);gabi::call(0x025C6250,timer,7);
-        if(read<u8>(actor,StartState)==1) {
-            gabi::call(0x025E18EC,0x8000000Bu);
-            write<u8>(actor,StartState,read<u8>(actor,StartState)+1);
-        }
-    }
-    if(gabi::call<s32>(0x0254457C,Goal_eventManager(),gabi::at<void>(0x1001056C))) {
-        write<s16>(actor,ActionDispatch,-1);write<u32>(actor,ActionTarget,0x02160954);
-        write<u8>(actor,StartState,0);write<s16>(actor,ActionAdjustment,0);
-    }
-    return TRUE;
-}
-VERIFY(0x021607D4,Goal_RaceStart);
-static BOOL Goal_RaceEnd(void* actor) {
-    WWHD_FUNC(0x02160C50,BOOL,actor);
-    s32 id=read<s32>(actor,TimerId);
-    write<s16>(actor,CameraFrames,(s16)(read<s16>(actor,CameraFrames)+1));
-    if(id!=-1) {
-        void* timer=gabi::call<void*>(0x025DE50C,id);
-        if(timer && gabi::call<s32>(0x025C6278,timer)) {
-            gabi::call(0x025DF944,timer);write<s32>(actor,TimerId,-1);
-        }
-    }
-    s32 staff=gabi::call<s32>(0x02542D88,Goal_eventManager(),gabi::at<void>(0x100105C4),0,0);
-    if(staff!=-1) Goal_cutEnd(staff);
-    u32 name=gabi::load<u32>(0x101B5D14+(read<s16>(actor,RaceState)!=3?4:0));
-    bool end=gabi::call<s32>(0x0254457C,Goal_eventManager(),gabi::at<void>(name))!=0;
-    if(!end && read<s16>(actor,CameraFrames)>gabi::load<s32>(0x10464184)) {
-        end=gabi::call<s32>(0x02007898,0)!=0;
-        if(!end) end=gabi::call<s32>(0x020078BC,0)!=0;
-        if(!end) end=gabi::call<s32>(0x02007940,0)!=0;
-    }
-    if(end) gabi::call(0x0252012C,gabi::at<void>(0x100105C0),1,0x30,-1,0,1,0,0.0f);
-    return TRUE;
-}
-VERIFY(0x02160C50,Goal_RaceEnd);
-static BOOL Goal_Delete(void* actor) {
-    WWHD_FUNC(0x0215F3B4,BOOL,actor);
-    u32 parameter=read<u32>(actor,0xB0);
-    gabi::call(0x025204C8,member(actor,0x29F8),gabi::at<void>(0x100102FC));
-    u32 name=gabi::load<u32>(0x101B594C+((parameter&1)*4));
-    gabi::call(0x025204C8,member(actor,0x2A00),gabi::at<void>(name));
-    u32 play=gabi::call<u32>(0x025200D4);
-    if(gabi::load<u8>(play+0x5CEA)==1) {
-        play=gabi::call<u32>(0x025200D4);
-        if(gabi::load<u8>(play+0x5CEE)==1) {
-            gabi::store<u32>(0x101D5F1C,2);
-            play=gabi::call<u32>(0x025200D4);
-            gabi::store<s32>(0x101D5F18,gabi::load<s16>(play+0x5CEC));
-        } else {
-            play=gabi::call<u32>(0x025200D4);
-            if(gabi::load<u8>(play+0x5CEE)==2) {
-                gabi::store<u32>(0x101D5F1C,1);
-                play=gabi::call<u32>(0x025200D4);
-                gabi::store<s32>(0x101D5F18,gabi::load<s16>(play+0x5CEC));
-            }
-        }
-        play=gabi::call<u32>(0x025200D4);
-        u16 state=gabi::load<u16>(play+0x5CE8);
-        gabi::store<u8>(play+0x5CEE,0);gabi::store<u8>(play+0x5CEA,0);gabi::store<u16>(play+0x5CE8,state^1);
-    }
-    u32 singleton=gabi::load<u32>(0x101F8344);
-    void* terminater=gabi::at<void>(gabi::load<u32>(singleton+0x200));
-    if(terminater) {
-        write<u8>(terminater,0x64,0);
-        gabi::call(0x020063C0,member(terminater,0x18),gabi::at<void>(0x1049DD60));
-        singleton=gabi::load<u32>(0x101F8344);
-    }
-    void* another=gabi::at<void>(gabi::load<u32>(singleton+0x1FC));
-    if(another) gabi::call(0x026266C8,another);
-    return TRUE;
-}
-VERIFY(0x0215F3B4,Goal_Delete);
-static void Goal_clothFactor(void* actor,cXyz* output,cXyz* positions,cXyz* normals,cXyz* wind,s32 column,s32 row) {
-    WWHD_FUNC(0x0215E154,void,actor,output,positions,normals,wind,column,row);
-    gabi::Local<cXyz> center,scaled,correction;
-    s32 index=row*9+column;
-    center->set(positions[index].x,positions[index].y,positions[index].z);
-    f32 pressure=gabi::call<f32>(0x028E8F44,wind,&normals[index]);
-    if((row==0 || row==4) && (column==0 || column==8)) {
-        if(!output) output=gabi::call<cXyz*>(0x0273AD10,12);
-        if(output) for(u32 i=0;i<3;++i) write<f32>(output,i*4,gabi::load<f32>(0x101FFBA8+i*4));
-        return;
-    }
-    gabi::call(0x0201AE48,&normals[index],scaled.get(),pressure);
-    correction->x=scaled->x;correction->z=scaled->z;
-    correction->y=gabi::fmadds(gabi::load<f32>(0x1046419C),0.25f*(f32)row,(f32)scaled->y);
-    auto spring=[&](s32 neighbor,f32 distance) { Goal_clothSpring(center.get(),&positions[neighbor],correction.get(),distance); };
-    if(column!=0) {
-        spring(index-1,250.0f);
-        if(row!=0) { spring(index-9,120.0f);spring(index-10,277.3085021972656f); }
-        if(row!=4) { spring(index+9,120.0f);spring(index+8,277.3085021972656f); }
-        if(column!=8) {
-            spring(index+1,250.0f);
-            if(row!=0) spring(index-8,277.3085021972656f);
-            if(row!=4) spring(index+10,277.3085021972656f);
-        }
-    } else {
-        spring(index+1,250.0f);
-        if(row!=0) {spring(index-9,120.0f);spring(index-8,277.3085021972656f);}
-        if(row!=4) {spring(index+9,120.0f);spring(index+10,277.3085021972656f);}
-    }
-    if(!output) output=gabi::call<cXyz*>(0x0273AD10,12);
-    if(output) output->set(correction->x,correction->y,correction->z);
-    return;
-}
-VERIFY(0x0215E154,Goal_clothFactor);
-static void Goal_assertRopeIndex(u32 rope) {
-    if(rope>=4) gabi::call(0x0273AA24,gabi::at<void>(0x100104B0),0x9B,gabi::at<void>(0x100104D0));
-}
-static void* Goal_ropePoint(void* line,s32 anchor) {
-    return gabi::at<void>(gabi::load<u32>(read<u32>(line,0x144))+(u32)anchor*0x30);
-}
-static void Goal_RopeMove(void* actor) {
-    WWHD_FUNC(0x0215F4D0,void,actor);
-    gabi::Local<cXyz> from,to,sum;
-    for(s32 rope=0;rope<read<s32>(actor,RopeCount);++rope) {
-        s32 count=read<s32>(actor,BuoyCounts+rope*4);
-        Goal_assertRopeIndex(rope);
-        void* line=member(actor,RopeLines+rope*0x148);
-        void* end=Goal_ropePoint(line,count);
-        Goal_assertRopeIndex(rope);
-        void* first=Goal_ropePoint(line,0);
-        for(u32 i=0;i<3;++i) write<u32>(end,i*4,read<u32>(first,i*4));
-        for(s32 segment=0;segment<(s32)(read<u32>(actor,BuoyCounts+rope*4)*4);++segment) {
-            s32 subdivision=segment&3,anchor=segment>>2;
-            if(subdivision) {
-                Goal_assertRopeIndex(rope);
-                void* a=Goal_ropePoint(line,anchor);
-                Goal_assertRopeIndex(rope);
-                void* b=Goal_ropePoint(line,anchor+1);
-                void* destination=member(a,subdivision*12);
-                f32 t=(f32)subdivision*0.25f;
-                gabi::call(0x0201AE48,a,from.get(),1.0f-t);
-                gabi::call(0x0201AE48,b,to.get(),t);
-                gabi::call(0x0201AD78,from.get(),sum.get(),to.get());
-                // lfs/stfs copy the bits (signalling NaNs stay signalling); only the sag subtraction rounds.
-                write<u32>(destination,0,read<u32>(sum.get(),0));
-                u32 y=read<u32>(sum.get(),4);write<u32>(destination,4,y);
-                write<u32>(destination,8,read<u32>(sum.get(),8));
-                write<f32>(destination,4,gabi::fsubs_ppc(gabi::f32_from_bits(y),gabi::load<f32>(0x100104C0+subdivision*4)));
-            }
-        }
+
+/* 02161454 */
+static void daGoal_Flag_c_dtor(void* actor, s32 flags) {
+    if (actor) {
+        goalFlag_arrayDestroy(static_cast<daGoal_Flag_c*>(actor)->mRopeLines, 4, 0x148,
+                              goalFlag_ropeLineDestroy, 0, 0);
+        void* packet = goalFlag_guestAddress(&static_cast<daGoal_Flag_c*>(actor)->mFlagPacket);
+        goalFlag_packet(packet)->mVtable = l_packetVtable;
+        Goal_releasePacketMembers(packet);
+        goalFlag_packetBaseDestroy(packet, 0);
+        goalFlag_actorBaseDestroy(actor, 0);
+        if (flags & 1)
+            goalFlag_deleteObject(actor);
     }
 }
-VERIFY(0x0215F4D0,Goal_RopeMove);
-static BOOL Goal_TimerExecute(void* actor) {
-    WWHD_FUNC(0x02160954,BOOL,actor);
-    void* timer=gabi::call<void*>(0x025DE50C,read<u32>(actor,TimerId));
-    if(!timer) gabi::call(0x0273AA24,gabi::at<void>(0x1001057C),0x59B,gabi::at<void>(0x10010590));
-    s32 crossing=Goal_goalCheck(actor);
-    if(crossing==1) {
-        if(read<s16>(actor,RaceState)==1) {
-            if(!read<u8>(actor,TimerEnded)) {
-                write<u8>(actor,TimerEnded,1);gabi::call(0x025C58A8,timer,-1);
-                u32 play=gabi::call<u32>(0x025200D4);
-                write<s16>(actor,RaceState,gabi::load<s16>(play+0x5CEC)==0?2:3);
-            }
-        } else write<s16>(actor,RaceState,1);
-    } else if(crossing==-1 && !read<u8>(actor,TimerEnded)) {
-        write<u8>(actor,TimerEnded,1);gabi::call(0x025C58A8,timer,-1);
-        gabi::call(0x025E1988,0x847);write<s16>(actor,RaceState,2);
+
+/* 02161450 */
+static void daGFlag_packet_c_empty(void* packet) {}
+
+/* 0215D9D4 */
+static void* daGFlag_packet_c_ctor(void* packet) {
+    if (!packet)
+        packet = goalFlag_allocateObject(0x264C);
+    if (!packet)
+        return nullptr;
+    goalFlag_packetBaseConstruct(packet);
+    goalFlag_packet(packet)->mNormalFlutterPhase = 0;
+    goalFlag_packet(packet)->mMaterialCount = 0;
+    goalFlag_packet(packet)->mVtable = l_packetVtable;
+    void* table = goalFlag_guestAddress(&goalFlag_packet(packet)->mTexturePairCount);
+    if (!table)
+        table = goalFlag_allocateObject(8);
+    if (table) {
+        goalFlag_textureTable(table)->mpPairs = nullptr;
+        goalFlag_textureTable(table)->mCount = 0;
     }
-    if(gabi::call<s32>(0x025C5814,timer)<=0 && !read<u8>(actor,TimerEnded)) {
-        write<u8>(actor,TimerEnded,1);gabi::call(0x025C58A8,timer,-1);
-        if(read<s16>(actor,RaceState)!=3) {
-            write<s16>(actor,RaceState,2);gabi::call(0x025E1988,0x847);
-        }
+    void* vertices = goalFlag_guestAddress(&goalFlag_packet(packet)->mVertexBuffers);
+    if (!vertices)
+        vertices = goalFlag_allocateObject(0x968);
+    if (vertices) {
+        goalFlag_arrayConstruct(vertices, 4, 0x254, GoalVertexBuffer_ctor);
+        goalFlag_vertexBuffers(vertices)->mCurrentBuffer = 0;
+        goalFlag_vertexBuffers(vertices)->mFlags = 0;
+        goalFlag_vertexBuffers(vertices)->mAlignment = 0x20;
+        goalFlag_vertexBuffers(vertices)->mStride = 0;
+        goalFlag_vertexBuffers(vertices)->mInitialized = 0;
+        for (auto& pair : goalFlag_vertexBuffers(vertices)->mBuffers)
+            for (auto& buffer : pair)
+                buffer.mpData = nullptr;
     }
-    s16 state=read<s16>(actor,RaceState);
-    if(state!=3 && state!=2) return TRUE;
-    if(read<u16>(actor,0xF8)!=2) {
-        u32 name=gabi::load<u32>(0x101B5D0C+(state!=3?4:0));
-        gabi::call(0x025D77DC,actor,gabi::at<void>(name),1,0xFFFF);
-        write<u16>(actor,0xFA,read<u16>(actor,0xFA)|2);return TRUE;
-    }
-    gabi::call(0x025C577C,timer);
-    s32 finish=0;
-    if(read<s16>(actor,RaceState)==3) {
-        u32 play=gabi::call<u32>(0x025200D4);
-        finish=gabi::load<s16>(play+0x5CEC)<gabi::load<s32>(0x10464180)?1:2;
-        play=gabi::call<u32>(0x025200D4);gabi::store<u8>(play+0x5CEE,1);
-    } else {
-        u32 play=gabi::call<u32>(0x025200D4);gabi::store<u8>(play+0x5CEE,2);
-        gabi::call<u32>(0x025200D4);
-    }
-    gabi::call(0x025E18EC,(finish==1 || finish==2)?0x8000000Cu:0x8000000Du);
-    u32 play=gabi::call<u32>(0x025200D4);
-    gabi::store<u32>(play+0x5CD8,gabi::load<u32>(play+0x5CD8)&~0x00200000u);
-    s16 finalState=read<s16>(actor,RaceState);
-    u32 singleton=gabi::load<u32>(0x101F8344);
-    if(finalState==3) {
-        void* terminater=gabi::at<void>(gabi::load<u32>(singleton+0x200));
-        if(terminater) gabi::call(0x02627E14,terminater,finish);
-    } else {
-        void* failure=gabi::at<void>(gabi::load<u32>(singleton+0x1FC));
-        if(failure) write<u8>(failure,0x60,1);
-    }
-    write<s16>(actor,CameraFrames,0);write<s16>(actor,ActionDispatch,-1);
-    write<u32>(actor,ActionTarget,0x02160C50);write<s16>(actor,ActionAdjustment,0);write<u8>(actor,StartState,0);
-    return TRUE;
-}
-VERIFY(0x02160954,Goal_TimerExecute);
-static void Goal_setNrmVtx(void* packet,cXyz* output,s32 column,s32 row) {
-    WWHD_FUNC(0x0215E520,void,packet,output,column,row);
-    gabi::Local<cXyz> center,average,horizontal,vertical,triangle,temp,normalized;
-    cXyz* positions=gabi::at<cXyz>(gabi::ea(packet)+0x1784+(u32)read<u8>(packet,0x2648)*0x21C);
-    s32 index=row*9+column;
-    center->set(positions[index].x,positions[index].y,positions[index].z);
-    average->set(0,0,0);
-    auto edge=[&](s32 neighbor,cXyz* destination) {
-        gabi::call(0x0201ADE0,&positions[neighbor],temp.get(),center.get());destination->copy(*temp);
-    };
-    auto accumulate=[&](cXyz* a,cXyz* b) {
-        gabi::call(0x0201B080,a,temp.get(),b);triangle->copy(*temp);
-        gabi::call(0x0201B12C,triangle.get(),temp.get());triangle->copy(*temp);
-        gabi::call(0x028E8D88,average.get(),triangle.get(),average.get());
-    };
-    if(column!=0) {
-        edge(index-1,horizontal.get());
-        if(row!=0) {edge(index-9,vertical.get());accumulate(vertical.get(),horizontal.get());}
-        if(row!=4) {edge(index+9,vertical.get());accumulate(horizontal.get(),vertical.get());}
-    }
-    if(column!=8) {
-        edge(index+1,horizontal.get());
-        if(row!=0) {edge(index-9,vertical.get());accumulate(horizontal.get(),vertical.get());}
-        if(row!=4) {edge(index+9,vertical.get());accumulate(vertical.get(),horizontal.get());}
-    }
-    gabi::call(0x0201B1E4,average.get(),normalized.get());average->copy(*normalized);
-    gabi::call(0x0200FCF0);
-    s32 phase=column*-0x400+row*0x100;
-    u16 angle=(u16)(phase+read<s16>(packet,0x98));
-    f32 sine=gabi::load<f32>(0x104A44F8+(angle>>3)*8);
-    gabi::call(0x025F1C28,gabi::at<void>(gabi::load<u32>(0x1018C7B0)),(s16)gabi::ftoi(512.0f*sine));
-    angle=(u16)(phase+read<s16>(packet,0x98));
-    f32 cosine=gabi::load<f32>(0x104A44FC+(angle>>3)*8);
-    gabi::call(0x025F1BF4,gabi::at<void>(gabi::load<u32>(0x1018C7B0)),(s16)gabi::ftoi(512.0f*cosine));
-    gabi::call(0x0200FCD8,average.get(),triangle.get());
-    gabi::call(0x0201B12C,triangle.get(),normalized.get());output->copy(*normalized);
-    gabi::call(0x0200FD38);
-}
-VERIFY(0x0215E520,Goal_setNrmVtx);
-static f32 Goal_sine(u16 angle) {return gabi::load<f32>(0x104A44F8+(angle>>3)*8);}
-static void Goal_flagMove(void* actor) {
-    WWHD_FUNC(0x0215EA00,void,actor);
-    gabi::Local<cXyz> wind,normalized,factor,temp;
-    u8 oldArray=read<u8>(actor,0x29F4),newArray=(oldArray^1)&1;
-    s16 normalPhase=read<s16>(actor,0x444),windPhase=read<s16>(actor,0x2A50),wavePhase=read<s16>(actor,0x446);
-    write<u8>(actor,0x29F4,newArray);
-    windPhase=(s16)(windPhase+gabi::load<u32>(0x10464170));write<s16>(actor,0x2A50,windPhase);
-    write<s16>(actor,0x444,(s16)(normalPhase+gabi::load<u32>(0x10464174)));
-    write<s16>(actor,0x446,(s16)(wavePhase+gabi::load<u32>(0x10464178)));
-    f32 blend=gabi::fmadds(0.5f,Goal_sine((u16)windPhase),0.5f);
-    f32 windScale=gabi::fmadds(gabi::load<f32>(0x10464194),blend,gabi::load<f32>(0x10464198)*(1.0f-blend));
-    cXyz* previous=gabi::at<cXyz>(gabi::ea(actor)+0x16F8+oldArray*0x21C);
-    cXyz* previousNormals=gabi::at<cXyz>(gabi::ea(actor)+0x1F68+oldArray*0x21C);
-    cXyz* current=gabi::at<cXyz>(gabi::ea(actor)+0x16F8+newArray*0x21C);
-    cXyz* velocity=gabi::at<cXyz>(gabi::ea(actor)+0x27D8);
-    gabi::call(0x025F1884,gabi::at<void>(gabi::load<u32>(0x1018C7B0)),(s16)-read<s16>(actor,0x322));
-    void* worldWind=gabi::call<void*>(0x0257DAA8);
-    gabi::call(0x0200FCD8,worldWind,wind.get());
-    f32 magnitude=gabi::call<f32>(0x028E8DD0,wind.get());
-    if(std::fabs(magnitude)<gabi::load<f32>(0x100030B8)) {
-        for(u32 i=0;i<3;++i) write<u32>(wind.get(),i*4,gabi::load<u32>(0x101FFBA8+i*4));
-    } else {
-        gabi::call(0x0201B084,wind.get(),normalized.get());
-        wind->y=normalized->y;wind->z=normalized->z;wind->x=(f32)normalized->x*0.2f;
-        gabi::call(0x028E8E64,wind.get(),wind.get(),windScale);
-    }
-    for(s32 column=0;column<9;++column) for(s32 row=0;row<5;++row) {
-        s32 index=column+row*9;
-        current[index].copy(previous[index]);
-        Goal_clothFactor(actor,factor.get(),previous,previousNormals,wind.get(),column,row);
-        temp->copy(*factor);
-        gabi::call(0x028E8D88,&velocity[index],temp.get(),&velocity[index]);
-        gabi::call(0x028E8E64,&velocity[index],&velocity[index],0.85f);
-        gabi::call(0x028E8D88,&current[index],&velocity[index],&current[index]);
-    }
-    cXyz* display=gabi::at<cXyz>(gabi::ea(actor)+0x1B30+(u32)read<u8>(actor,0x29F4)*0x21C);
-    for(s32 column=0;column<9;++column) for(s32 row=0;row<5;++row) {
-        s32 index=column+row*9;
-        f32 distance=std::fabs(4.5f-(f32)column);
-        f32 falloff=gabi::fnmsubs(distance,distance,20.25f)/20.25f;
-        display[index].set(current[index].x,current[index].y,current[index].z);
-        f32 sine=Goal_sine((u16)(column*0x4000+row*0x2000+read<s16>(actor,0x446)));
-        display[index].z=gabi::fmadds(40.0f*falloff,sine,(f32)display[index].z);
-    }
-    cXyz* normals=gabi::at<cXyz>(gabi::ea(actor)+0x1F68+(u32)read<u8>(actor,0x29F4)*0x21C);
-    for(s32 row=0;row<5;++row) for(s32 column=0;column<9;++column) Goal_setNrmVtx(member(actor,Packet),&normals[row*9+column],column,row);
-    Goal_setBackNrm(member(actor,Packet));
-    gabi::call(0xC00088B8,member(actor,0x1B30+(u32)read<u8>(actor,0x29F4)*0x21C),0x21C);
-    gabi::call(0xC00088B8,member(actor,0x1F68+(u32)read<u8>(actor,0x29F4)*0x21C),0x21C);
-    gabi::call(0xC00088B8,member(actor,0x23A0+(u32)read<u8>(actor,0x29F4)*0x21C),0x21C);
-}
-VERIFY(0x0215EA00,Goal_flagMove);
-static void Goal_staticInit() {
-    WWHD_FUNC(0x02160DA4,void,(u32)0);
-    for(s32 i=3;i>=0;--i) gabi::store<u32>(0x104641A4+i*4,0);
-    gabi::call(0x028F026C,gabi::at<void>(0x101B5D1C));
-    gabi::store<f32>(0x10464148,-3.1415927410125732f);gabi::store<f32>(0x1046414C,3.1415927410125732f);
-    gabi::call(0x028ED6F8,gabi::at<void>(0x10464160));
-    gabi::call(0x028F026C,gabi::at<void>(0x101B5D28));
-    gabi::call(0x028EAB2C,gabi::at<void>(0x10464161));
-    gabi::call(0x028F026C,gabi::at<void>(0x101B5D34));
-    void* hio=gabi::at<void>(0x10464164);
-    write<u8>(hio,4,0xFF);gabi::store<f32>(0x10464158,10000.0f);
-    write<u8>(hio,5,1);write<u32>(hio,0,0x1001037C);
-    gabi::store<f32>(0x1046415C,10000.0f);write<u32>(hio,0xC,750);
-    gabi::store<f32>(0x10464150,50000.0f);write<u32>(hio,0x10,0x800);
-    write<u32>(hio,0x14,0xBD1);write<u32>(hio,0x18,240);
-    write<u32>(hio,0x1C,150);write<u32>(hio,0x20,150);
-    write<f32>(hio,0x30,12.0f);write<u32>(hio,0x24,255);write<u32>(hio,0x28,128);write<u32>(hio,0x2C,128);
-    write<u8>(hio,7,0);write<u8>(hio,6,0);write<u8>(hio,8,0);write<u8>(hio,9,0);write<u8>(hio,10,0);
-    write<f32>(hio,0x34,4.0f);write<f32>(hio,0x38,-1.0f);gabi::store<f32>(0x10464154,50000.0f);write<f32>(hio,0x3C,0.4f);
-    gabi::call(0x028F026C,gabi::at<void>(0x101B5D40));
-}
-VERIFY(0x02160DA4,Goal_staticInit);
-static BOOL Goal_Draw(void* actor) {
-    WWHD_FUNC(0x0215FE9C,BOOL,actor);
-    gabi::Local<be<f32>[12]> identity;
-    gabi::Local<be<u8>[4]> color;
-    void* light=gabi::call<void*>(0x02555D0C);
-    void* tev=member(actor,0x110);
-    gabi::call(0x025626A4,light,0,member(actor,0x314),tev);
-    f32 x=read<f32>(actor,0x314),y=read<f32>(actor,0x318),z=read<f32>(actor,0x31C);
-    gabi::call(0x0200FAD8,0,x,y,z);
-    gabi::call(0x025F1C28,gabi::at<void>(gabi::load<u32>(0x1018C7B0)),read<s16>(actor,0x322));
-    x=read<f32>(actor,0x330);y=read<f32>(actor,0x334);z=read<f32>(actor,0x338);
-    gabi::call(0x0200FC74,1,x,y,z);
-    gabi::call(0x028E9098,identity.get());
-    gabi::call(0x028E9108,identity.get(),gabi::at<void>(gabi::load<u32>(0x1018C7B0)),member(actor,0x16C4));
-    write<u32>(actor,0x16F4,gabi::ea(tev));
-    gabi::call(0x027F0E04,gabi::at<void>(gabi::load<u32>(0x104B4634)),member(actor,Packet),0);
-    gabi::call(0x0215F9E4,member(actor,Packet));
-    for(s32 rope=0;rope<read<s32>(actor,RopeCount);++rope) {
-        u16 count=(u16)(read<u32>(actor,BuoyCounts+rope*4)*4+1);
-        (*color)[0]=(u8)gabi::load<u32>(0x10464188);(*color)[1]=(u8)gabi::load<u32>(0x1046418C);
-        (*color)[2]=(u8)gabi::load<u32>(0x10464190);(*color)[3]=255;
-        void* line=member(actor,RopeLines+rope*0x148);
-        gabi::call(0x025EA548,line,count,color.get(),0,tev,20.0f);
-        u32 play=gabi::call<u32>(0x025200D4);
-        u32 target=gabi::load<u32>(read<u32>(line,0x130)+0x14);
-        s32 type=gabi::call<s32>(target,line);
-        gabi::call(0x025EDD04,gabi::at<void>(play+0x5FB4+(u32)type*0x9C),line);
-    }
-    return TRUE;
-}
-VERIFY(0x0215FE9C,Goal_Draw);
-static void Goal_setTexObj(void* packet,u32 archive) {
-    WWHD_FUNC(0x0215DFB4,void,packet,archive);
-    gabi::Local<SafeString> name;
-    gabi::call(0x0274FBF8,gabi::at<void>(gabi::load<u32>(0x101F8B18)));
-    name->mStringTop=gabi::load<u32>(0x101B594C+(u32)archive*4);name->__vtbl=0x10010334;
-    void* resource=gabi::call<void*>(0x026066C4,gabi::at<void>(gabi::load<u32>(0x101F4F28)),name.get(),3);
-    if(!resource) gabi::call(0x0273AA24,gabi::at<void>(0x1001043C),0xDC,gabi::at<void>(0x10010450));
-    gabi::call(0x02773798,member(packet,0xE44),gabi::at<void>(read<u32>(resource,0x20)));
-    gabi::call(0x0274FCCC,gabi::at<void>(gabi::load<u32>(0x101F8B18)));
-    const u32 fields[]={4,8,12,16,20,24,56,52,28};
-    bool equal=true;
-    for(u32 offset:fields) if(read<u32>(packet,0xF64+offset)!=read<u32>(packet,0xE44+offset)) {equal=false;break;}
-    if(!equal) {
-        gabi::call(0x027BDEB4,member(packet,0xF64),member(packet,0xE44));
-        u8 flags=read<u8>(packet,0x10F4)|2;
-        write<u32>(packet,0x10C4,2);write<u32>(packet,0x10C0,2);write<u32>(packet,0x10C8,2);write<u8>(packet,0x10F4,flags);
-    } else {
-        u32 image=read<u32>(packet,0xE6C),mips=read<u32>(packet,0xE74);
-        write<u32>(packet,0x1038,image);
-        u8 flags=read<u8>(packet,0x10F4)|2;
-        write<u32>(packet,0xF94,mips);write<u32>(packet,0x1040,mips);
-        write<u32>(packet,0x10C0,2);write<u32>(packet,0x10C4,2);write<u8>(packet,0x10F4,flags);
-        write<u32>(packet,0xF8C,image);write<u32>(packet,0x10C8,2);
-    }
-}
-VERIFY(0x0215DFB4,Goal_setTexObj);
-static void Goal_freeAt(void* owner,u32 offset) {
-    void* heap=gabi::call<void*>(0x02755FEC,gabi::at<void>(gabi::load<u32>(0x101F8B4C)),gabi::at<void>(read<u32>(owner,offset)));
-    u32 target=gabi::load<u32>(read<u32>(heap,0xC)+0x3C);
-    gabi::call(target,heap,gabi::at<void>(read<u32>(owner,offset)));
-}
-static void Goal_releaseVertices(void* vertices) {
-    for(s32 pair=0;pair<2;++pair) for(s32 side=0;side<2;++side) {
-        void* buffer=member(vertices,pair*0x4A8+side*0x254);
-        gabi::call(0x027BF7E8,member(buffer,0x158));
-        bool allocated=read<u32>(buffer,0x250)!=0;
-        write<u32>(buffer,0,0);
-        if(allocated) { (void)read<u32>(buffer,0x24C);Goal_freeAt(buffer,0x250);write<u32>(buffer,0x24C,0);write<u32>(buffer,0x250,0); }
-    }
-    write<u32>(vertices,0x960,0);
-}
-static void Goal_releaseTextures(void* table) {
-    if(!read<u32>(table,4)) return;
-    for(s32 entry=0;entry<read<s32>(table,0);++entry) {
-        void* pair=member(gabi::at<void>(read<u32>(table,4)),entry*0x14);
-        if(!pair) continue;
-        bool allocated=read<u32>(pair,8)!=0;
-        write<u32>(pair,0,0);
-        if(allocated) {
-            for(s32 i=0;i<read<s32>(pair,4);++i) {
-                void* texture=member(gabi::at<void>(read<u32>(pair,8)),i*0xF4);
-                gabi::call(gabi::load<u32>(read<u32>(texture,0xF0)+0xC),texture,2);
-            }
-            Goal_freeAt(pair,8);write<u32>(pair,4,0);write<u32>(pair,8,0);
-        }
-        if(read<u32>(pair,0x10)) {
-            for(s32 i=0;i<read<s32>(pair,0xC);++i) {
-                void* texture=member(gabi::at<void>(read<u32>(pair,0x10)),i*0xF4);
-                gabi::call(gabi::load<u32>(read<u32>(texture,0xF0)+0xC),texture,2);
-            }
-            Goal_freeAt(pair,0x10);write<u32>(pair,0xC,0);write<u32>(pair,0x10,0);
-        }
-    }
-    Goal_freeAt(table,4);write<u32>(table,0,0);write<u32>(table,4,0);
-}
-static void Goal_materialOwnerDtor(void* owner) {
-    gabi::Local<be<u32>[4]> callFrame;
-    gabi::call(0x027FD764,owner,2);
-}
-static void Goal_releasePacketMembers(void* packet) {
-    void* vertices=member(packet,0xA8);
-    Goal_releaseVertices(vertices);
-    for(s32 material=0;material<read<s32>(packet,0xA10);++material) {
-        u32 data=read<u32>(packet,0xA14);
-        if((u32)material<read<u32>(packet,0xA10)) data+=(u32)material*0x23C;
-        gabi::call(0x027BEBEC,gabi::at<void>(data+0x10));
-        gabi::call(0x027BEBEC,gabi::at<void>(data+0x2C));
-    }
-    for(u32 block:{0xA2Cu,0xAD4u}) for(u32 i=0;i<2;++i) gabi::call(0x027BEBEC,member(packet,block+i*0x1C));
-    gabi::call(0x027BE2B0,member(packet,0x10FC),2);gabi::call(0x027BE2B0,member(packet,0xF64),2);
-    gabi::call(0x027B54A0,member(packet,0xE2C),2);
-    gabi::call(0x027FB528,member(packet,0xAC4),0);gabi::call(0x027FB528,member(packet,0xA1C),0);
-    Goal_materialOwnerDtor(member(packet,0xA10));
-    if(vertices) {
-        Goal_releaseVertices(vertices);
-        gabi::call(0x028F0164,vertices,4,0x254,gabi::at<void>(0x02160FC8),0,0);
-    }
-    Goal_releaseTextures(member(packet,0xA0));
-}
-static void Goal_packetDtor(void* packet,s32 flags) {
-    WWHD_FUNC(0x02161028,void,packet,flags);
-    if(packet) {
-        write<u32>(packet,0xC,0x1001061C);Goal_releasePacketMembers(packet);
-        gabi::call(0x027F13DC,packet,0);if(flags&1) gabi::call(0x0273AF40,packet);
-    }
-}
-VERIFY(0x02161028,Goal_packetDtor);
-static void Goal_actorDtor(void* actor,s32 flags) {
-    WWHD_FUNC(0x02161454,void,actor,flags);
-    if(actor) {
-        gabi::call(0x028F0164,member(actor,RopeLines),4,0x148,gabi::at<void>(0x025E99E0),0,0);
-        void* packet=member(actor,Packet);
-        write<u32>(packet,0xC,0x1001061C);Goal_releasePacketMembers(packet);
-        gabi::call(0x027F13DC,packet,0);gabi::call(0x025D50BC,actor,0);
-        if(flags&1) gabi::call(0x0273AF40,actor);
-    }
-}
-VERIFY(0x02161454,Goal_actorDtor);
-static void Goal_packetEmpty(void* packet) {WWHD_FUNC(0x02161450,void,packet);}
-VERIFY(0x02161450,Goal_packetEmpty);
-static void* Goal_packetCtor(void* packet) {
-    WWHD_FUNC(0x0215D9D4,void*,packet);
-    if(!packet) packet=gabi::call<void*>(0x0273AD10,0x264C);
-    if(!packet) return nullptr;
-    gabi::call(0x027F1278,packet);
-    write<s16>(packet,0x98,0);write<u32>(packet,0x9C,0);write<u32>(packet,0xC,0x1001061C);
-    void* table=member(packet,0xA0);
-    if(!table) table=gabi::call<void*>(0x0273AD10,8);
-    if(table) {write<u32>(table,4,0);write<u32>(table,0,0);}
-    void* vertices=member(packet,0xA8);
-    if(!vertices) vertices=gabi::call<void*>(0x0273AD10,0x968);
-    if(vertices) {
-        gabi::call(0x028EFFD0,vertices,4,0x254,gabi::at<void>(0x02160F24));
-        write<u32>(vertices,0x950,0);write<u32>(vertices,0x960,0);write<u32>(vertices,0x958,0x20);
-        write<u32>(vertices,0x954,0);write<u8>(vertices,0x964,0);
-        for(u32 i=0;i<4;++i) write<u32>(vertices,i*0x254,0);
-    }
-    gabi::call(0x027FD6F4,member(packet,0xA10));
-    gabi::call(0x027FB40C,member(packet,0xA1C));write<u32>(packet,0xA28,0x1016EF84);
-    gabi::call(0x028F521C,member(packet,0xA90),0x34);
-    if(!member(packet,0xA90)) gabi::call<void*>(0x0273AD10,0x30);
-    gabi::call(0x027FB40C,member(packet,0xAC4));write<u32>(packet,0xAD0,0x1016EFB4);
-    gabi::call(0x028F521C,member(packet,0xB38),0x2F0);
+    goalFlag_materialOwnerConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mShaderMaterialCount));
+    goalFlag_uniformBlockConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mMatrixBlock));
+    goalFlag_packet(packet)->mMatrixBlock.mVtable = &l_matrixUniformVtable;
+    goalFlag_memoryClear(goalFlag_guestAddress(&goalFlag_packet(packet)->mShaderMatrix), 0x34);
+    if (!goalFlag_guestAddress(&goalFlag_packet(packet)->mShaderMatrix))
+        goalFlag_allocateObject(0x30);
+    goalFlag_uniformBlockConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mMaterialBlock));
+    goalFlag_packet(packet)->mMaterialBlock.mVtable = &l_materialUniformVtable;
+    goalFlag_memoryClear(goalFlag_guestAddress(&goalFlag_packet(packet)->mMaterialUniforms), 0x2F0);
     // Identity matrices and default material vectors in the shader uniform block.
-    const u32 zeroOffsets[]={0xB38,0xB3C,0xB40,0xB48,0xB70,0xB50,0xBA0,0xBC0,0xB90,0xB68,0xB8C,0xBBC,0xBAC,0xB7C,0xB58,0xB6C,0xB5C,0xB80,0xB4C,0xBA8,0xBB0,0xB9C,0xB88,0xBB8,0xB60,0xB98,0xB78,0xBC8,0xBCC,0xBD0,0xBD8,0xBDC,0xBE0};
-    f32 zero=gabi::load<f32>(0x10145180),one=gabi::load<f32>(0x1014517C);
-    for(u32 offset:zeroOffsets) write<f32>(packet,offset,zero);
-    for(u32 offset:{0xB64u,0xB54u,0xBB4u,0xB74u,0xBC4u,0xB94u,0xBA4u,0xB44u,0xB84u,0xBD4u,0xBE4u}) write<f32>(packet,offset,one);
-    for(u32 offset:{0xBE8u,0xC08u,0xC28u}) gabi::call(0x028EFFD0,member(packet,offset),2,0x10,gabi::at<void>(0x02160F80));
-    for(u32 offset=0xC48;offset<=0xD98;offset+=0x30) if(!member(packet,offset)) gabi::call<void*>(0x0273AD10,0x30);
-    for(u32 offset=0xDC8;offset<=0xE18;offset+=0x10) if(!member(packet,offset)) gabi::call<void*>(0x0273AD10,0x10);
-    write<u8>(packet,0xE28,0);gabi::call(0x027B5430,member(packet,0xE2C));
-    gabi::call(0x027BE6B8,member(packet,0xE44));gabi::call(0x027BE6B8,member(packet,0xED4));
-    gabi::call(0x027BDF7C,member(packet,0xF64));gabi::call(0x027BDF7C,member(packet,0x10FC));
-    write<u8>(packet,0x1294,0);write<u8>(packet,0x2648,0);
-    gabi::call(0x0215D3C4,packet);
+    const u32 zeroComponents[] = {0,  1, 2,  4,  14, 6,  26, 34, 22, 12, 21, 33, 29, 17, 8,  13, 9,
+                                  18, 5, 28, 30, 25, 20, 32, 10, 24, 16, 36, 37, 38, 40, 41, 42};
+    f32 zero = (f32)l_zero, one = (f32)l_one;
+    // HD: retain the compiler's uniform-default store order.
+    for (u32 component : zeroComponents)
+        goalFlag_packet(packet)->mMaterialUniforms.mInitialValues[component] = zero;
+    for (u32 component : {11u, 7u, 31u, 15u, 35u, 23u, 27u, 3u, 19u, 39u, 43u})
+        goalFlag_packet(packet)->mMaterialUniforms.mInitialValues[component] = one;
+    for (auto& entries : goalFlag_packet(packet)->mMaterialUniforms.mBufferEntries)
+        goalFlag_arrayConstruct(goalFlag_guestAddress(&entries), 2, 0x10, GoalBufferEntry_ctor);
+    for (auto& matrix : goalFlag_packet(packet)->mMaterialUniforms.mMatrices)
+        if (!goalFlag_guestAddress(&matrix))
+            goalFlag_allocateObject(0x30);
+    for (auto& vector : goalFlag_packet(packet)->mMaterialUniforms.mVectors)
+        if (!goalFlag_guestAddress(&vector))
+            goalFlag_allocateObject(0x10);
+    goalFlag_packet(packet)->mFlagLoaded = 0;
+    goalFlag_indexBufferConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mIndices));
+    goalFlag_textureResourceConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mFlagResource));
+    goalFlag_textureResourceConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mToonResource));
+    goalFlag_textureObjectConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mFlagTexture));
+    goalFlag_textureObjectConstruct(goalFlag_guestAddress(&goalFlag_packet(packet)->mToonTexture));
+    goalFlag_packet(packet)->mToonLoaded = 0;
+    goalFlag_packet(packet)->mCurrArr = 0;
+    goalFlag_packetInitialize(packet);
     return packet;
 }
-VERIFY(0x0215D9D4,Goal_packetCtor);
-static void* Goal_allocate(u32 size,u32 alignment) {
-    void* heap=gabi::call<void*>(0x02756140,gabi::at<void>(gabi::load<u32>(0x101F8B4C)));
-    return gabi::call<void*>(gabi::load<u32>(read<u32>(heap,12)+0x34),heap,size,alignment);
-}
-static void Goal_releaseTexturePair(void* pair) {
-    bool allocated=read<u32>(pair,8)!=0;write<u32>(pair,0,0);
-    for(u32 countOffset:{4u,12u}) {
-        if((countOffset==4?allocated:read<u32>(pair,countOffset+4)!=0)) {
-            for(s32 i=0;i<read<s32>(pair,countOffset);++i) {
-                void* texture=member(gabi::at<void>(read<u32>(pair,countOffset+4)),i*0xF4);
-                gabi::call(gabi::load<u32>(read<u32>(texture,0xF0)+0xC),texture,2);
-            }
-            Goal_freeAt(pair,countOffset+4);write<u32>(pair,countOffset,0);write<u32>(pair,countOffset+4,0);
-        }
-    }
-}
-static void Goal_packetInit(void* packet) {
-    WWHD_FUNC(0x0215D3C4,void,packet);
-    gabi::Local<SafeString> name;
-    name->mStringTop=0x10010428;name->__vtbl=0x10010334;
-    void* archive=gabi::call<void*>(0x027FFCBC,packet);
-    s32 index=gabi::call<s32>(0x027B90AC,gabi::at<void>(read<u32>(archive,4)),name.get());
-    void* resource=nullptr;
-    if(index>=0) {
-        u32 count=read<u32>(archive,8),data=read<u32>(archive,12);
-        void* entry=gabi::at<void>(data+((u32)index<count?(u32)index*0x24:0));
-        if(!read<u8>(entry,0x20)) {
-            void* root=gabi::at<void>(read<u32>(archive,4));
-            u32 max=read<u32>(root,0x1C);
-            void* shader=(u32)index<max?gabi::at<void>(read<u32>(root,0x20)+(u32)index*0x84):nullptr;
-            gabi::call(0x02800B0C,entry,shader,0);
-            count=read<u32>(archive,8);data=read<u32>(archive,12);
-        }
-        resource=gabi::at<void>(data+((u32)index<count?(u32)index*0x24:0));
-    }
-    { gabi::Local<be<u32>[4]> callFrame; gabi::call(0x0280068C,member(packet,0x9C),resource,0); }
-    write<u32>(packet,0x9FC,0x13);write<u32>(packet,0xA04,0x10010610);
-    void* vertices=member(packet,0xA8);
-    for(u32 side=0;side<2;++side) for(u32 pair=0;pair<2;++pair) {
-        void* buffer=member(vertices,side*0x254+pair*0x4A8);
-        u32 vertexData=read<u32>(buffer,0);
-        if(!vertexData) {
-            void* allocation=Goal_allocate(0x5A0,0x40);
-            if(allocation) {write<u32>(buffer,0x250,gabi::ea(allocation));write<u32>(buffer,0x24C,45);}
-            vertexData=read<u32>(buffer,0x250);write<u32>(buffer,0,vertexData);
-        }
-        gabi::call(0x027FF478,member(buffer,4),gabi::at<void>(vertexData),45,member(vertices,0x954));
-    }
-    write<u32>(vertices,0x960,0);write<u8>(vertices,0x964,1);
-    for(u32 material=0;material<read<u32>(packet,0x9C);++material) {
-        u32 data=read<u32>(packet,0xA4);
-        if(material<read<u32>(packet,0xA0)) data+=material*0x14;
-        void* pair=gabi::at<void>(data);u32 materialId=read<u32>(pair,0);
-        Goal_releaseTexturePair(pair);write<u32>(pair,0,materialId);
-        for(u32 countOffset:{4u,12u}) {
-            void* textures=Goal_allocate(0x1E8,4);
-            for(u32 i=0;i<2;++i) if(member(textures,i*0xF4)) gabi::call(0x027BF734,member(textures,i*0xF4));
-            if(textures) {write<u32>(pair,countOffset+4,gabi::ea(textures));write<u32>(pair,countOffset,2);}
-        }
-        for(u32 side=0;side<2;++side) for(u32 pairIndex=0;pairIndex<2;++pairIndex) {
-            u32 countOffset=4+side*8;
-            void* texture=gabi::at<void>(read<u32>(pair,countOffset+4)+(pairIndex<read<u32>(pair,countOffset)?pairIndex*0xF4:0));
-            gabi::call(0x027FF530,materialId,texture,member(vertices,4+side*0x254+pairIndex*0x4A8),member(vertices,0x954),0);
-        }
-    }
-    gabi::call(0x027FE084,member(packet,0xA10),1,0);
-    gabi::call(0x027B54E0,member(packet,0xE2C),gabi::at<void>(0x10010394),4,0x48);
-    write<u32>(packet,0xE30,6);
-    for(u32 side=0;side<2;++side) {
-        u32 active=read<u32>(vertices,0x950);
-        u32 destination=read<u32>(vertices,(side*2+active)*0x254);
-        u32 end=destination+0x5A0;
-        for(u32 block=destination;block<end;block+=32) for(u32 i=0;i<32;i+=4) gabi::store<u32>((block&~31u)+i,0);
-        destination=read<u32>(vertices,(side*2+read<u32>(vertices,0x950))*0x254);
-        for(u32 vertex=0;vertex<45;++vertex) {
-            u32 target=destination+vertex*32;
-            f32 x=gabi::load<f32>(0x101B5974+vertex*12),y=gabi::load<f32>(0x101B5978+vertex*12),z=gabi::load<f32>(0x101B597C+vertex*12);
-            gabi::store<f32>(target,x);gabi::store<f32>(target+12,0);gabi::store<f32>(target+8,z);gabi::store<f32>(target+16,0);gabi::store<f32>(target+4,y);gabi::store<f32>(target+20,0);
-            gabi::store<f32>(target+24,gabi::load<f32>(0x101B5B90+vertex*8));gabi::store<f32>(target+28,gabi::load<f32>(0x101B5B94+vertex*8));
-        }
-    }
-    u32 active=read<u32>(vertices,0x950),inactive=active==0?1:0;
-    for(u32 side=0;side<2;++side) {
-        for(u32 vertex=0;vertex<45;++vertex) {
-            u32 source=read<u32>(vertices,(side*2+active)*0x254)+vertex*32;
-            u32 target=read<u32>(vertices,(side*2+inactive)*0x254)+vertex*32;
-            for(u32 i=0;i<8;++i) gabi::store<f32>(target+i*4,gabi::load<f32>(source+i*4));
-        }
-        active=read<u32>(vertices,0x950);
-    }
-    void* flush=member(vertices,read<u32>(vertices,0x950)*0x254+4);
-    for(u32 side=0;side<2;++side) {gabi::call(0x027B5E94,member(flush,side*0x4A8),0,read<u32>(flush,side*0x4A8+0x14C));}
-    write<u32>(vertices,0x950,read<u32>(vertices,0x950)==0?1:0);
-}
-VERIFY(0x0215D3C4,Goal_packetInit);
-static s32 Goal_Create(void* actor) {
-    WWHD_FUNC(0x0215EDF8,s32,actor);
-    gabi::Local<SafeString> expectedStage,currentStage;
-    gabi::Local<cXyz> playerOffset,line,normalized,normal;
-    if(!(read<u32>(actor,0x2E4)&8)) {
-        if(actor) {
-            gabi::call(0x025D4ED0,actor);write<u32>(actor,0xB4,0x1001036C);
-            Goal_packetCtor(member(actor,Packet));
-            gabi::call(0x028EFFD0,member(actor,RopeLines),4,0x148,gabi::at<void>(0x025E9960));
-        }
-        write<u32>(actor,0x2E4,read<u32>(actor,0x2E4)|8);
-    }
-    u8 variant=read<u8>(actor,0xB3);
-    s32 phase=gabi::call<s32>(0x02520460,member(actor,0x29F8),gabi::at<void>(0x1001030C));
-    if(phase!=4) return phase;
-    u8 archive=(variant==0 || variant==255)?0:1;
-    phase=gabi::call<s32>(0x02520460,member(actor,0x2A00),gabi::at<void>(archive?0x1001032C:0x10010314));
-    write<f32>(actor,0x330,archive?0.98f:1.05f);write<f32>(actor,0x338,1);write<f32>(actor,0x334,1);
-    if(phase!=4) return phase;
-    u8 pathId=read<u32>(actor,0xB0)>>16;
-    if(pathId==255) return 5;
-    void* path=gabi::call<void*>(0x025AAF88,pathId,read<s8>(actor,0x326));
-    if(!path) return 5;
-    if(Goal_getRacePath(actor,read<u8>(path,3))) {
-        if(!gabi::call<s32>(0x025D63E8,actor,gabi::at<void>(0x0215D3C0),0x10000)) return 5;
-        Goal_CreateBuoyRaces(actor);
-    }
-    cXyz* positions=gabi::at<cXyz>(gabi::ea(actor)+0x16F8+(u32)read<u8>(actor,0x29F4)*0x21C);
-    for(u32 vertex=0;vertex<45;++vertex) positions[vertex].set(gabi::load<f32>(0x101B5974+vertex*12),gabi::load<f32>(0x101B5978+vertex*12),gabi::load<f32>(0x101B597C+vertex*12));
-    Goal_setTexObj(member(actor,Packet),archive);
-    pathId=read<u32>(actor,0xB0)>>16;
-    path=gabi::call<void*>(0x025AAF88,pathId,read<s8>(actor,0x326));
-    f32 x=read<f32>(actor,0x314);
-    if(path) {
-        void* points=gabi::at<void>(read<u32>(path,8));
-        for(u32 i=0;i<3;++i) write<f32>(actor,0x2A38+i*4,read<f32>(points,4+i*4));
-        points=gabi::at<void>(read<u32>(path,8));
-        for(u32 i=0;i<3;++i) write<f32>(actor,0x2A44+i*4,read<f32>(points,0x14+i*4));
-    }
-    gabi::call(0x028E93CC,gabi::at<void>(0x1048D0CC),x,read<f32>(actor,0x318),read<f32>(actor,0x31C));
-    gabi::call(0x025F1C28,gabi::at<void>(0x1048D0CC),read<s16>(actor,0x32A));
-    gabi::call(0x025F2518,read<f32>(actor,0x330),read<f32>(actor,0x334),read<f32>(actor,0x338));
-    gabi::call(0x028E90D4,gabi::at<void>(0x1048D0CC),member(actor,0x2A08));
-    expectedStage->mStringTop=0x1001031C;expectedStage->__vtbl=0x10010334;
-    u32 play=gabi::call<u32>(0x025200D4);
-    currentStage->mStringTop=play+0x5134;currentStage->__vtbl=0x10010334;
-    auto validateString=[](SafeString* string) {gabi::call(gabi::load<u32>((u32)string->__vtbl+0x14),string);};
-    validateString(expectedStage.get());validateString(expectedStage.get());
-    u32 expected=expectedStage->mStringTop;
-    validateString(currentStage.get());u32 current=currentStage->mStringTop;
-    bool equal=expected==current;
-    if(!equal) {
-        expected=expectedStage->mStringTop;current=currentStage->mStringTop;
-        for(u32 i=0;i<0x40001;++i) {
-            u8 a=gabi::load<u8>(expected+i),b=gabi::load<u8>(current+i);
-            if(a!=b) break;
-            if(a==0) {equal=true;break;}
-        }
-    }
-    bool start=false;
-    if(equal) {play=gabi::call<u32>(0x025200D4);start=gabi::load<s16>(play+0x513C)==1;}
-    if(start) {
-        u32 save=gabi::load<u32>(0x101F84DC);
-        u16 limit=gabi::load<u16>(0x1046417E);
-        u16 modifier=(u16)(gabi::call<u32>(0x025B8BB0,gabi::at<void>(save+0x644),0xAAFF)*10);
-        if(limit>modifier) limit-=modifier;
-        s32 timer=gabi::call<s32>(0x025DB468,0x1E0,2,limit,3,0,0,221.0f,439.0f,32.0f,419.0f);
-        write<s32>(actor,TimerId,timer);
-        u32 singleton=gabi::load<u32>(0x101F8344);
-        void* starter=gabi::at<void>(gabi::load<u32>(singleton+0x204));
-        if(starter) {write<u8>(starter,0x50,0);write<u8>(starter,0x51,0);singleton=gabi::load<u32>(0x101F8344);}
-        void* terminater=gabi::at<void>(gabi::load<u32>(singleton+0x200));
-        if(terminater) {write<u8>(terminater,0x64,0);gabi::call(0x020063C0,member(terminater,0x18),gabi::at<void>(0x1049DD60));singleton=gabi::load<u32>(0x101F8344);}
-        void* failure=gabi::at<void>(gabi::load<u32>(singleton+0x1FC));if(failure) gabi::call(0x026266C8,failure);
-        play=gabi::call<u32>(0x025200D4);u16 flags=gabi::load<u16>(play+0x5CE8);gabi::store<u8>(play+0x5CEA,1);gabi::store<u16>(play+0x5CE8,flags|1);
-        play=gabi::call<u32>(0x025200D4);gabi::store<u16>(play+0x5CEC,0);
-        play=gabi::call<u32>(0x025200D4);gabi::store<u8>(play+0x5D2C,0);
-        write<u8>(actor,StartState,0);write<s16>(actor,ActionAdjustment,0);write<s16>(actor,ActionDispatch,-1);write<u32>(actor,ActionTarget,0x021607D4);
-    }
-    play=gabi::call<u32>(0x025200D4);
-    void* player=gabi::at<void>(gabi::load<u32>(play+0x5B2C));
-    gabi::call(0x0201ADE0,member(player,0x314),playerOffset.get(),member(actor,0x2A38));
-    gabi::call(0x0201ADE0,member(actor,0x2A44),line.get(),member(actor,0x2A38));line->y=0;
-    gabi::call(0x0201B12C,line.get(),normalized.get());
-    line->set(normalized->x,normalized->y,normalized->z);normal->set(line->z,0,-(f32)line->x);
-    f32 side=gabi::call<f32>(0x028E8F44,normal.get(),playerOffset.get());
-    write<s16>(actor,RaceState,0);write<f32>(actor,PreviousSide,side);
-    for(u32 i=0;i<20;++i) Goal_flagMove(actor);
-    write<u8>(actor,TimerEnded,0);
-    return 4;
-}
-VERIFY(0x0215EDF8,Goal_Create);
-static void Goal_packetUpdate(void* packet) {
-    WWHD_FUNC(0x0215F9E4,void,packet);
-    gabi::Local<SafeString> name;
-    gabi::Local<be<f32>[12]> matrix;
-    gabi::Local<be<f32>[4]> color,scaledColor;
-    gabi::call(0x0274FBF8,gabi::at<void>(gabi::load<u32>(0x101F8B18)));
-    if(!read<u8>(packet,0x1294)) {
-        name->mStringTop=0x100104F8;name->__vtbl=0x10010334;
-        void* resource=gabi::call<void*>(0x026066C4,gabi::at<void>(gabi::load<u32>(0x101F4F28)),name.get(),3);
-        if(!resource) gabi::call(0x0273AA24,gabi::at<void>(0x10010500),0x236,gabi::at<void>(0x10010514));
-        gabi::call(0x02773798,member(packet,0xED4),gabi::at<void>(read<u32>(resource,0x20)));
-        bool equal=true;
-        for(u32 offset:{4u,8u,12u,16u,20u,24u,56u,52u,28u}) if(read<u32>(packet,0x10FC+offset)!=read<u32>(packet,0xED4+offset)) {equal=false;break;}
-        if(!equal) {
-            gabi::call(0x027BDEB4,member(packet,0x10FC),member(packet,0xED4));
-            u8 flags=read<u8>(packet,0x128C)|2;
-            write<u32>(packet,0x125C,2);write<u32>(packet,0x1258,2);write<u32>(packet,0x1260,2);write<u8>(packet,0x128C,flags);
-        } else {
-            u32 image=read<u32>(packet,0xEFC),mips=read<u32>(packet,0xF04);
-            write<u32>(packet,0x11D0,image);u8 flags=read<u8>(packet,0x128C)|2;
-            write<u32>(packet,0x112C,mips);write<u32>(packet,0x11D8,mips);
-            write<u32>(packet,0x1258,2);write<u32>(packet,0x125C,2);write<u8>(packet,0x128C,flags);
-            write<u32>(packet,0x1124,image);write<u32>(packet,0x1260,2);
-        }
-        write<u8>(packet,0x1294,1);
-    }
-    gabi::call(0x0274FCCC,gabi::at<void>(gabi::load<u32>(0x101F8B18)));
-    void* vertices=member(packet,0xA8);
-    for(u32 side=0;side<2;++side) {
-        u32 destination=read<u32>(vertices,(side*2+read<u32>(vertices,0x950))*0x254);
-        for(u32 vertex=0;vertex<45;++vertex) {
-            u32 array=read<u8>(packet,0x2648)*0x21C;
-            cXyz* position=gabi::at<cXyz>(gabi::ea(packet)+0x134C+array+vertex*12);
-            f32 x=position->x,y=position->y,z=position->z;
-            u32 target=destination+vertex*32;
-            gabi::store<f32>(target,x);gabi::store<f32>(target+4,y);gabi::store<f32>(target+8,z);
-            array=read<u8>(packet,0x2648)*0x21C;
-            cXyz* normal=gabi::at<cXyz>(gabi::ea(packet)+(side?0x1FF4:0x1BBC)+array+vertex*12);
-            x=normal->x;y=normal->y;z=normal->z;
-            gabi::store<f32>(target+20,z);gabi::store<f32>(target+12,x);gabi::store<f32>(target+16,y);
-        }
-    }
-    void* flush=member(vertices,read<u32>(vertices,0x950)*0x254+4);
-    for(u32 side=0;side<2;++side) gabi::call(0x027B5E94,member(flush,side*0x4A8),0,read<u32>(flush,side*0x4A8+0x14C));
-    write<u32>(vertices,0x950,read<u32>(vertices,0x950)==0?1:0);
-    gabi::call(0x0255F8F4,gabi::at<void>(read<u32>(packet,0x1348)));
-    gabi::call(0x0255FE90,gabi::at<void>(read<u32>(packet,0x1348)));
-    Goal_copyMatrix(matrix.get(),gabi::at<void>(0x104B45F8));
-    gabi::call(0x027FDA54,member(packet,0xA10),0,matrix.get(),gabi::at<void>(0x104B470C),gabi::at<void>(gabi::load<u32>(0x104B4708)+0x240));
-    for(u32 lightIndex=0;lightIndex<2;++lightIndex) {
-        void* tev=gabi::at<void>(read<u32>(packet,0x1348));u32 material=read<u32>(packet,0xA14);
-        Goal_colorS10ToFloat(color.get(),member(tev,lightIndex?0x160:0x90));
-        tev=gabi::at<void>(read<u32>(packet,0x1348));
-        gabi::call(0x0274D458,scaledColor.get(),color.get(),read<f32>(tev,lightIndex?0x16C:0x28));
-        for(u32 component=0;component<4;++component) gabi::store<u32>(material+0x1C4+lightIndex*16+component*4,read<u32>(scaledColor.get(),component*4));
-    }
-    gabi::call(0x027FDFF4,member(packet,0xA10),0);
-    void* tev=gabi::at<void>(read<u32>(packet,0x1348));
-    Goal_colorS10ToFloat(member(packet,0xB78),member(tev,0x90));
-    Goal_colorToFloat(member(packet,0xB88),member(tev,0x98));
-    void* currentTev=gabi::at<void>(read<u32>(packet,0x1348));
-    gabi::call(0x0274D2AC,member(packet,0xB88),read<f32>(currentTev,0x24));
-    if(read<u8>(tev,0x9F)) Goal_colorToFloat(member(packet,0xB98),member(tev,0x9C));
-    else for(u32 offset:{0xB9Cu,0xB98u,0xBA0u,0xBA4u}) write<f32>(packet,offset,0);
-    gabi::call(0x027FB678,member(packet,0xAC4));
-    Goal_copyMatrix(matrix.get(),member(packet,0x1318));
-    gabi::call(0x028E90D4,matrix.get(),member(packet,0xA90));
-    gabi::call(0x027FB678,member(packet,0xA1C));
-}
-VERIFY(0x0215F9E4,Goal_packetUpdate);
-static void Goal_bindUniforms(void* shader,void* material) {
-    void* descriptor=read<u32>(material,0xC)?gabi::at<void>(read<u32>(material,0x10)):nullptr;
-    s16 vertex=read<s16>(descriptor,0xC),pixel=read<s16>(descriptor,0xE),geometry=read<s16>(descriptor,0x10);
-    void* block=member(shader,0x10+read<u32>(shader,0x4C)*0x1C);
-    u32 size=read<u32>(block,0xC),data=read<u32>(block,4);
-    if(pixel!=-1) gabi::call(0xC0006900,pixel,size,gabi::at<void>(data));
-    if(vertex!=-1) gabi::call(0xC0006A38,vertex,size,gabi::at<void>(data));
-    if(geometry!=-1) gabi::call(0xC00068A8,geometry,size,gabi::at<void>(data));
-}
-static void Goal_loadTexture(void* packet,void* material,u32 textureIndex) {
-    u32 count=read<u32>(material,0x14);
-    u32 descriptor=0;
-    if(count>textureIndex) descriptor=read<u32>(material,0x18)+textureIndex*0x14;
-    gabi::call(0x027BE53C,member(packet,textureIndex?0x10FC:0xF64),gabi::at<void>(descriptor+4),-1,0);
-}
-static void Goal_packetDraw(void* packet,void* drawInfo) {
-    WWHD_FUNC(0x02160018,void,packet,drawInfo);
-    gabi::Local<be<u8>[0x11C]> renderState; /* HD sizeof of the 02750250 draw state (vtable at +0x118); was 0x118 — strict constructor-size check 2026-10-05 */
-    void* material=nullptr;
-    s32 index=read<s32>(drawInfo,0xC);
-    if(index<4) {
-        u32 data=read<u32>(packet,0xA4);
-        if((u32)index<read<u32>(packet,0xA0)) data+=(u32)index*0x14;
-        material=gabi::at<void>(gabi::load<u32>(data));
-    }
-    void* cache=gabi::call<void*>(0x027F29D4,gabi::at<void>(0x104B45C0));
-    void* shader=gabi::at<void>(read<u32>(material,0));
-    if(gabi::ea(shader)!=read<u32>(cache,4)) {
-        u32 oldShader=read<u32>(cache,0);u8 flags=read<u8>(shader,0);
-        if(flags&2) {write<u8>(shader,0,flags&~2);gabi::call(0x027BB9E0,shader,0);}
-        u32 nativeShader=gabi::load<u32>(read<u32>(shader,0x7C)+0x28);
-        if(oldShader!=nativeShader) gabi::call(0x027B9F68,gabi::at<void>(nativeShader));
-        u32 fetch=read<u32>(shader,0xC);
-        if(fetch) gabi::call(0xC00060E0,gabi::at<void>(read<u32>(shader,4)),gabi::at<void>(fetch));
-        else gabi::call(0x027BB7CC,shader);
-        write<u32>(cache,4,gabi::ea(shader));write<u32>(cache,0,nativeShader);
-    }
-    index=read<s32>(drawInfo,0xC);
-    auto upload=[&](u32 offset) {u32 target=gabi::load<u32>(read<u32>(packet,offset+12)+0x2C);gabi::call(target,member(packet,offset),material);};
-    if(index==0) {
-        upload(0xA1C);
-        void* pass=gabi::at<void>(read<u32>(drawInfo,0x14));
-        if(pass) Goal_bindUniforms(gabi::at<void>(read<u32>(pass,4)),material);
-        Goal_loadTexture(packet,material,0);
-    } else if(index==1 || index==2) {
-        Goal_bindUniforms(gabi::at<void>(read<u32>(packet,0xA14)),material);
-        upload(0xAC4);upload(0xA1C);
-        if(index==2) {
-            void* extra=gabi::at<void>(read<u32>(drawInfo,0x30));
-            if(extra) gabi::call(gabi::load<u32>(read<u32>(extra,12)+0x2C),extra,material);
-        }
-        Goal_loadTexture(packet,material,0);Goal_loadTexture(packet,material,1);
-    }
-    if(index==2) gabi::call(0x027FFE54,drawInfo,material);
-    gabi::call(0x02750250,renderState.get());write<u32>(renderState.get(),8,0);
-    s32 pass=read<s32>(drawInfo,0xC);
-    write<u32>(renderState.get(),12,2);
-    u32 flags=read<u32>(renderState.get(),0xEC);
-    write<u8>(renderState.get(),0xE0,1);write<f32>(renderState.get(),0xE8,0.5f);write<u32>(renderState.get(),0xE4,4);
-    write<u32>(renderState.get(),0xEC,(((flags&0xFFFFFFF0)+7)&0xFFFFFF0F)+0x10);
-    gabi::call(0x0280037C,pass,renderState.get());gabi::call(0x02750370,renderState.get());
-    for(u32 side=0;side<2;++side) {
-        if(side) {write<u32>(renderState.get(),8,1);gabi::call(0x02750370,renderState.get());}
-        u32 data=read<u32>(packet,0xA4),entry=read<u32>(drawInfo,0xC);
-        if(entry<read<u32>(packet,0xA0)) data+=entry*0x14;
-        u32 countOffset=4+(read<u32>(packet,0x9F8)==0?8:0);
-        u32 texture=gabi::load<u32>(data+countOffset+4);
-        if(side && gabi::load<u32>(data+countOffset)>1) texture+=0xF4;
-        gabi::call(0x027BFE5C,gabi::at<void>(texture));
-        for(u32 row=0;row<4;++row) {
-            u32 stride=read<u32>(packet,0xE3C),mode=read<u32>(packet,0xE30),indices=read<u32>(packet,0xE34),type=read<u32>(packet,0xE2C);
-            gabi::call(0xC0006178,mode,0x12,type,gabi::at<void>(indices+stride*row*0x12),0,1);
-        }
-    }
-    gabi::call(0x02750370,gabi::at<void>(0x104B474C));
-}
-VERIFY(0x02160018,Goal_packetDraw);
+
+// HD: external rope constructor/destructor callbacks need their original guest entries.
+static gabi::HostFn l_ropeCtorEntry((const void*)&goalFlag_ropeLineConstruct, 0x025E9960);
+static gabi::HostFn l_ropeDtorEntry((const void*)&goalFlag_ropeLineDestroy, 0x025E99E0);
+
+/* WWHD glue
+data l_pos 101B5974
+data l_texCoord 101B5B90
+data down_offset 100104C0
+data l_flagIndices 10010394
+data sub_arcname_tbl 101B594C
+data ActionNames 101B5CF8
+data l_endEventNames 101B5D14
+data l_orderEventNames 101B5D0C
+ext 025E9960 void* goalFlag_ropeLineConstruct(void*)
+ext 025E99E0 void goalFlag_ropeLineDestroy(void*,s32)
+str 100102FC in 0215F3B4
+str 1001030C in 0215EDF8
+str 10010314 in 0215EDF8
+str 1001031C
+str 1001032C
+str 10010428
+str 1001043C in 0215DFB4
+str 10010450 in 0215DFB4
+str 100104B0
+str 100104D0
+str 100104F8 in 0215F9E4
+str 10010500 in 0215F9E4
+str 10010514 in 0215F9E4
+str 10010564 in 021607D4
+str 1001056C
+str 1001057C in 02160954
+str 10010590
+str 100105C0
+str 100105C4 in 02160C50
+data l_HIO 10464164
+ext 027F29D4 void* goalFlag_shaderCache(void*)
+ext 027BB9E0 void goalFlag_shaderRefresh(void*, s32)
+ext 027B9F68 void goalFlag_nativeShaderBind(void*)
+ext C00060E0 void goalFlag_fetchShaderBind(void*, void*)
+ext 027BB7CC void goalFlag_shaderBind(void*)
+ext 027FFE54 void goalFlag_drawInfoPrepare(void*, void*)
+ext 02750250 void goalFlag_renderStateConstruct(void*)
+ext 0280037C void goalFlag_renderStateConfigure(s32, void*)
+ext 02750370 void goalFlag_renderStateApply(void*)
+ext 027BFE5C void goalFlag_textureApply(void*)
+ext C0006178 void goalFlag_drawIndexed(u32, s32, u32, void*, s32, s32)
+ext 025AAF88 void * goalFlag_roomPath(u8, s8)
+ext 0273AD10 void * goalFlag_allocateObject(s32)
+ext 025DE50C void * goalFlag_messageById(s32)
+ext 0257DAA8 void * goalFlag_windVector()
+ext 02555D0C void * goalFlag_environmentLight()
+ext 026066C4 void * goalFlag_objectResource(void *, SafeString *, s32)
+ext 02755FEC void * goalFlag_findAllocationHeap(void *, void *)
+ext 02756140 void * goalFlag_currentHeap(void *)
+ext 027FFCBC void * goalFlag_shaderArchive(void *)
+ext 025E9B80 s32 goalFlag_lineInit(void *, s32, u16, s32)
+ext 027B5BD8 void goalFlag_vertexBufferConstruct(void *)
+ext 027BF734 void goalFlag_textureConstruct(void *)
+ext 0273AF40 void goalFlag_deleteObject(void *)
+ext 027BF880 void goalFlag_textureDestroy(void *, s32)
+ext 027B5CBC void goalFlag_vertexBufferDestroy(void *, s32)
+ext 025200D4 u32 goalFlag_playObject()
+ext 02542EDC s32 goalFlag_eventActionIndex(void *, s32, void *, s32, s32, s32)
+ext 025D5A20 s32 goalFlag_createChild(s32, u32, s32, void *, s8, s32, s32, s32, s32)
+ext 0201ADE0 void goalFlag_vectorSubtract(void *, void *, void *)
+ext 0201B12C void goalFlag_vectorNormalizeZP(void *, void *)
+ext 028E8DD0 f32 goalFlag_vectorSquareMagnitude(void *)
+ext 028F4384 f32 goalFlag_squareRoot(f32)
+ext 028E8E64 void goalFlag_vectorScale(void *, void *, f32)
+ext 028E8D88 void goalFlag_vectorAdd(void *, void *, void *)
+ext 028E8DAC void goalFlag_vectorSubtractPS(void *, void *, void *)
+ext 028E8F44 f32 goalFlag_vectorDot(void *, void *)
+ext 02543280 void goalFlag_eventCutEnd(void *, s32)
+ext 02542D88 s32 goalFlag_eventStaffId(void *,const char*, s32, s32)
+ext 020063C0 void goalFlag_startSequence(void *, void *)
+ext 025C6250 void goalFlag_timerStart(void *, s32)
+ext 025E18EC void goalFlag_bgmStart(u32)
+ext 0254457C s32 goalFlag_eventEndCheck(void *,const char*)
+ext 025C6278 s32 goalFlag_timerDeleteCheck(void *)
+ext 025DF944 void goalFlag_messageDelete(void *)
+ext 02007898 s32 goalFlag_triggerA(s32)
+ext 020078BC s32 goalFlag_triggerB(s32)
+ext 02007940 s32 goalFlag_triggerStart(s32)
+ext 0252012C void goalFlag_nextStage(const char*, s32, s32, s32, s32, s32, s32, f32)
+ext 025204C8 void goalFlag_resourceDelete(void *,const char*)
+ext 026266C8 void goalFlag_resetFailureSequence(void *)
+ext 0201AE48 void goalFlag_vectorMultiply(void *, void *, f32)
+ext 0273AA24 void goalFlag_assertionFail(const char*, s32,const char*)
+ext 0201AD78 void goalFlag_vectorSum(void *, void *, void *)
+ext 025C58A8 void goalFlag_timerEnd(void *, s32)
+ext 025E1988 void goalFlag_soundStart(s32)
+ext 025C5814 s32 goalFlag_timerRemaining(void *)
+ext 025D77DC void goalFlag_orderOtherEvent(void *, void *, s32, s32)
+ext 025C577C void goalFlag_timerHide(void *)
+ext 02627E14 void goalFlag_finishSequence(void *, s32)
+ext 0201B080 void goalFlag_vectorCross(void *, void *, void *)
+ext 0201B1E4 void goalFlag_vectorNormalizeZC(void *, void *)
+ext 0200FCF0 void goalFlag_matrixPush()
+ext 025F1C28 void goalFlag_matrixYRotate(void *, s16)
+ext 025F1BF4 void goalFlag_matrixXRotate(void *, s16)
+ext 0200FCD8 void goalFlag_matrixPosition(void *, void *)
+ext 0200FD38 void goalFlag_matrixPull()
+ext 025F1884 void goalFlag_matrixYSet(void *, s16)
+ext 0201B084 void goalFlag_vectorNormalize(void *, void *)
+ext C00088B8 void goalFlag_cacheStoreRange(void *, s32)
+ext 028F026C void goalFlag_registerGlobalObject(void *)
+ext 028ED6F8 void goalFlag_staticByteConstruct(void *)
+ext 028EAB2C void goalFlag_staticByteFlagConstruct(void *)
+ext 025626A4 void goalFlag_settingTevStruct(void *, s32, void *, void *)
+ext 0200FAD8 void goalFlag_matrixTranslate(s32, f32, f32, f32)
+ext 0200FC74 void goalFlag_matrixScale(s32, f32, f32, f32)
+ext 028E9098 void goalFlag_matrixIdentity(void *)
+ext 028E9108 void goalFlag_matrixConcat(void *, void *, void *)
+ext 027F0E04 void goalFlag_drawBufferEntry(void *, void *, s32)
+ext 025EA548 void goalFlag_lineUpdate(void *, u16, void *, s32, void *, f32)
+ext 025EDD04 void goalFlag_linePacketSetMaterial(void *, void *)
+ext 0274FBF8 void goalFlag_graphicsLock(void *)
+ext 02773798 void goalFlag_textureResourceLoad(void *, void *)
+ext 0274FCCC void goalFlag_graphicsUnlock(void *)
+ext 027BDEB4 void goalFlag_textureAssign(void *, void *)
+ext 027BF7E8 void goalFlag_textureRelease(void *)
+ext 027FD764 void goalFlag_materialOwnerDestroy(void *, s32)
+ext 027BEBEC void goalFlag_uniformBufferRelease(void *)
+ext 027BE2B0 void goalFlag_textureObjectDestroy(void *, s32)
+ext 027B54A0 void goalFlag_indexBufferDestroy(void *, s32)
+ext 027FB528 void goalFlag_uniformBlockDestroy(void *, s32)
+ext 028F0164 void goalFlag_arrayDestroy(void *, s32, s32, GoalArrayDtor, s32, s32)
+ext 027F13DC void goalFlag_packetBaseDestroy(void *, s32)
+ext 025D50BC void goalFlag_actorBaseDestroy(void *, s32)
+ext 027F1278 void goalFlag_packetBaseConstruct(void *)
+ext 028EFFD0 void goalFlag_arrayConstruct(void *, s32, s32, GoalArrayCtor)
+ext 027FD6F4 void goalFlag_materialOwnerConstruct(void *)
+ext 027FB40C void goalFlag_uniformBlockConstruct(void *)
+ext 028F521C void goalFlag_memoryClear(void *, s32)
+ext 027B5430 void goalFlag_indexBufferConstruct(void *)
+ext 027BE6B8 void goalFlag_textureResourceConstruct(void *)
+ext 027BDF7C void goalFlag_textureObjectConstruct(void *)
+ext 0215D3C4 void goalFlag_packetInitialize(void *)
+ext 027B90AC s32 goalFlag_shaderIndex(void *, SafeString *)
+ext 02800B0C void goalFlag_shaderResourceInitialize(void *, void *, s32)
+ext 0280068C void goalFlag_materialTableInitialize(void *, void *, s32)
+ext 027FF478 void goalFlag_vertexBufferInitialize(void *, void *, s32, void *)
+ext 027FF530 void goalFlag_texturePairInitialize(u32, void *, void *, void *, s32)
+ext 027FE084 void goalFlag_shaderMaterialInitialize(void *, s32, s32)
+ext 027B54E0 void goalFlag_indexBufferInitialize(void *, const void *, s32, s32)
+ext 027B5E94 void goalFlag_vertexBufferFlush(void *, s32, u32)
+ext 025D4ED0 void goalFlag_actorBaseConstruct(void *)
+ext 02520460 s32 goalFlag_resourceLoad(void *,const char*)
+ext 025D63E8 s32 goalFlag_entrySolidHeap(void *, void *, s32)
+ext 028E93CC void goalFlag_matrixSetTranslate(void *, f32, f32, f32)
+ext 025F2518 void goalFlag_matrixStackScale(f32, f32, f32)
+ext 028E90D4 void goalFlag_matrixCopy(void *, void *)
+ext 025B8BB0 u32 goalFlag_eventRegister(void *, s32)
+ext 025DB468 s32 goalFlag_timerCreate(s32, s32, u16, s32, s32, s32, f32, f32, f32, f32)
+ext 0255F8F4 void goalFlag_setFog(void *)
+ext 0255FE90 void goalFlag_setLights(void *)
+ext 027FDA54 void goalFlag_materialMatrices(void *, s32, void *, void *, void *)
+ext 0274D458 void goalFlag_colorMultiply(void *, void *, f32)
+ext 027FDFF4 void goalFlag_materialFlush(void *, s32)
+ext 0274D2AC void goalFlag_colorScale(void *, f32)
+ext 027FB678 void goalFlag_uniformBlockFlush(void *)
+ext C0006900 void goalFlag_pixelUniformBlock(s16, u32, void *)
+ext C0006A38 void goalFlag_vertexUniformBlock(s16, u32, void *)
+ext C00068A8 void goalFlag_geometryUniformBlock(s16, u32, void *)
+ext 027BE53C void goalFlag_textureBind(void *, void *, s32, s32)
+*/

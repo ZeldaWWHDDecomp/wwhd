@@ -1,485 +1,525 @@
-/* hd_msg_text: HD message text state (current message id/label, text box line metrics), WWHD.
- * HD-only code (no GameCube source): written from the WWHD
- * code. Range 025F65F4..025F7423 (static initialiser 025F7304). Library companions (not verified):
- * 025F7398, 025F73C8, 025F73FC, 025F7410 (sead string deleting dtors), 025F73AC, 025F73DC (empty
- * SafeString assureTermination), 025F73B0 (BufferedSafeString assureTermination), 025F73E0
- * (WBufferedSafeString assureTermination).
- *
- * MsgText (0x924): +0/+4 state words, +8 message set, +0xC FixedSafeString<256> set name (size +0x14),
- * +0x118 label index (-1 none), +0x11C message number, +0x120 FixedSafeString<256> label (size +0x128),
- * +0x22C MSBT entry, +0x230 WFixedSafeString<512>, +0x63C..+0x65C counters/flags, +0x660 u32[5] and
- * +0x674 f32[5] (line widths, +0x644 count), +0x688..+0x6BC layout state, +0x6A0 sound position (3 f32),
- * +0x6C0/+0x7CC WFixedSafeString<128>, +0x8D8..+0x8F4 font/scale state (+0x8E0/+0x8E4 scale,
- * +0x8E8 1.0, +0x8EC current line width, +0x8F0 -1.0), +0x8F8 u32[5], +0x90C..+0x923 flags.
- * Font manager 101F4A50 (hd_font_mgr), message manager 101F4AE8 (hd_msg_res_mgr).
- */
-#include "gabi.h"
+/* HD message text state. */
+// HD: message text layout, safe-string storage and five-line metrics have no GC counterpart.
+#include "d/hd_msg_text.h"
 using namespace gabi;
-
-namespace hd_msg_text {
-
-static s32 cstrLength(u32 p) {
-    s32 n = 0;
-    if (!load<u8>(p)) return 0;
-    for (;;) {
-        n++;
-        if (n > 0x40000) return 0;
-        p++;
-        if (!load<u8>(p)) return n;
+static u32 l_hdMsgStringVTable;
+static u32 l_hdMsgBufferedVTable;
+static u32 l_hdMsgFixedVTable;
+static u32 l_hdMsgRubyVTable;
+static u32 l_hdMsgTextVTable;
+static f32 l_hdMsgZero;
+static f32 l_hdMsgOne;
+static f32 l_hdMsgMinusOne;
+static u32 l_hdMsgSoundX;
+static u32 l_hdMsgSoundY;
+static u32 l_hdMsgSoundZ;
+static HdMsgVoidPointer l_hdMsgManager;
+static HdMsgVoidPointer l_hdMsgFontManager;
+static HdMsgSystemPointer l_hdMsgSystem;
+static HdMsgStaticWords l_hdMsgWords;
+static HdMsgRange l_hdMsgRange;
+static f32 l_hdMsgLow;
+static f32 l_hdMsgHigh;
+static HdMsgRegistration l_hdMsgRegisterA;
+static HdMsgRegistration l_hdMsgRegisterB;
+static HdMsgRegistration l_hdMsgRegisterC;
+static u8 l_hdMsgObjectA;
+static u8 l_hdMsgObjectB;
+extern void *hdMsgText_allocate(u32);
+extern void hdMsgText_copyBytes(char *, const char *, u32, u32);
+extern void hdMsgText_format(HdMsgString *, const char *, u32);
+extern HdMsgPlayState *hdMsgText_getPlay();
+extern s32 hdMsgText_getStyle(void *, u32);
+extern HdMsgProject *hdMsgText_getProject(void *);
+extern HdMsgFont *hdMsgText_getFont(void *, u32);
+extern void hdMsgText_register(HdMsgRegistration *);
+extern void hdMsgText_constructFirst(be<u8> *);
+extern void hdMsgText_constructSecond(be<u8> *);
+// HD: inline safe-string construction preserves the emitted wrapping placement checks.
+static s32 textLength(const char *text) {
+    s32 length = 0;
+    if (!*gabi::at<be<u8>>(gabi::ea(text)))
+        return 0;
+    while (true) {
+        ++length;
+        if (length > 0x40000)
+            return 0;
+        ++text;
+        if (!*gabi::at<be<u8>>(gabi::ea(text)))
+            return length;
     }
 }
-
-static void vAssure(u32 s) { call_ptr<void>(load<u32>(load<u32>(s + 4) + 0x14), s); }
-
-/* buffered dst (header at dst, buffer given) = string src */
-static void copyStr(u32 dst, u32 buf, u32 src) {
-    vAssure(src);
-    s32 n = cstrLength(load<u32>(src));
-    const s32 size = s32(load<u32>(dst + 8));
-    const u32 fn = load<u32>(load<u32>(src + 4) + 0x14);
-    if (n >= size) n = size - 1;
-    call_ptr<void>(fn, src);
-    call<void>(0xC0009988, buf, load<u32>(src), u32(n), 0u);
-    store<u8>(buf + n, 0);
+static void assureTermination(HdMsgString *string) {
+    gabi::call_ptr<void>(string->mpVTable[5].get(), string);
 }
-
-/* inline FixedSafeString<256> constructor (placement-new null checks as GHS emits them) */
-static void fixed256(u32 q) {
-    if (!q) {
-        q = call<u32>(0x0273AD10, 0x10Cu);
-        if (!q) return;
+static void copyString(HdMsgString *destination, char *buffer, HdMsgString *source) {
+    assureTermination(source);
+    s32 length = textLength(source->mpBuffer.get());
+    const s32 capacity = destination->mCapacity;
+    const u32 terminate = source->mpVTable[5].get();
+    if (length >= capacity)
+        length = capacity - 1;
+    gabi::call_ptr<void>(terminate, source);
+    hdMsgText_copyBytes(buffer, source->mpBuffer.get(), u32(length), 0);
+    *gabi::at<be<u8>>(gabi::ea(buffer) + u32(length)) = 0;
+}
+static void fixed256(HdMsgFixedString *string) {
+    if (!string) {
+        string = static_cast<HdMsgFixedString *>(hdMsgText_allocate(sizeof(HdMsgFixedString)));
+        if (!string)
+            return;
     }
-    u32 b = q;
-    if (!b) b = call<u32>(0x0273AD10, 0xCu);
-    if (b) {
-        store<u32>(b, q + 0xC);
-        store<u32>(b + 4, 0x100E0A20);
-        store<u32>(b + 8, 0x100);
-        store<u8>(q + 0x10B, 0);
+    HdMsgString *base = gabi::at<HdMsgString>(gabi::ea(string));
+    if (!base)
+        base = static_cast<HdMsgString *>(hdMsgText_allocate(sizeof(HdMsgString)));
+    if (base) {
+        base->mpBuffer = gabi::at<char>(gabi::ea(string) + 12);
+        base->mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgStringVTable);
+        base->mCapacity = 256;
+        string->mBuffer[255] = 0;
     }
-    const u32 top = load<u32>(q);
-    store<u32>(q + 4, 0x100E0A50);
-    store<u8>(top, 0);
-    store<u32>(q + 4, 0x100E0A68);
+    char *top = string->mString.mpBuffer.get();
+    string->mString.mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgBufferedVTable);
+    *gabi::at<be<u8>>(gabi::ea(top)) = 0;
+    string->mString.mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgFixedVTable);
 }
-
-/* inline WFixedSafeString<128> constructor */
-static void wfixed128(u32 q) {
-    if (!q) {
-        q = call<u32>(0x0273AD10, 0x10Cu);
-        if (!q) return;
+static void wide128(HdMsgWideRuby *string) {
+    if (!string) {
+        string = static_cast<HdMsgWideRuby *>(hdMsgText_allocate(sizeof(HdMsgWideRuby)));
+        if (!string)
+            return;
     }
-    store<u32>(q + 4, 0x100E0A98);
-    store<u16>(q + 0x10A, 0);
-    store<u16>(q + 0xC, 0);
-    store<u32>(q + 8, 0x80);
-    store<u32>(q, q + 0xC);
+    string->mString.mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgRubyVTable);
+    string->mBuffer[127] = 0;
+    string->mBuffer[0] = 0;
+    string->mString.mCapacity = 128;
+    string->mString.mpBuffer = reinterpret_cast<char *>(&string->mBuffer[0]);
 }
-
-static void fill5(u32 p, u32 v) {
-    for (u32 i = 0; i < 5; i++) store<u32>(p + 4 * i, v);
+static void fillLines(gabi::be<u32> *lines, u32 value) {
+    for (u32 i = 0; i < 5; ++i)
+        lines[i] = value;
 }
-
 /* 025F65F4: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x025F65F4, u32, p);
+/* 025F65F4 */
+u32 hdMsgText_ctor(HdMsgText *p) {
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x924u);
-        if (!p) return 0;
+        p = static_cast<HdMsgText *>(hdMsgText_allocate(sizeof(HdMsgText)));
+        if (!p)
+            return 0;
     }
-    store<u32>(p + 4, 6);
-    store<u32>(p + 8, 0);
-    store<u32>(p, 6);
-    fixed256(p + 0xC);
-    store<u32>(p + 0x11C, 0);
-    store<u32>(p + 0x118, 0xFFFFFFFF);
-    fixed256(p + 0x120);
-    store<u32>(p + 0x22C, 0);
+    p->mNextState = HD_MSG_TEXT_WAIT;
+    p->mpMessageSet = 0;
+    p->mState = HD_MSG_TEXT_WAIT;
+    fixed256(gabi::at<HdMsgFixedString>(gabi::ea(p) + 0xC));
+    p->mMessageNumber = 0;
+    p->mLabelIndex = 0xFFFFFFFF;
+    fixed256(gabi::at<HdMsgFixedString>(gabi::ea(p) + 0x120));
+    p->mpEntry = 0;
     {
-        u32 q = p + 0x230;
-        bool ok = true;
-        if (!q) {
-            q = call<u32>(0x0273AD10, 0x40Cu);
-            if (!q) ok = false;
-        }
-        if (ok) {
-            store<u16>(q + 0x40A, 0);
-            store<u32>(q, q + 0xC);
-            store<u16>(q + 0xC, 0);
-            store<u32>(q + 4, 0x100E0A80);
-            store<u32>(q + 8, 0x200);
+        HdMsgWideText *text = gabi::at<HdMsgWideText>(gabi::ea(p) + 0x230);
+        if (!text)
+            text = static_cast<HdMsgWideText *>(hdMsgText_allocate(sizeof(HdMsgWideText)));
+        if (text) {
+            text->mBuffer[511] = 0;
+            text->mString.mpBuffer = reinterpret_cast<char *>(&text->mBuffer[0]);
+            text->mBuffer[0] = 0;
+            text->mString.mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgTextVTable);
+            text->mString.mCapacity = 512;
         }
     }
-    store<u8>(p + 0x648, 0);
-    store<u32>(p + 0x650, 0);
-    store<u32>(p + 0x64C, 0);
-    store<u32>(p + 0x65C, 0xFFFFFFFF);
-    store<u32>(p + 0x640, 0);
-    store<u8>(p + 0x659, 0);
-    store<u32>(p + 0x63C, 0);
-    store<u8>(p + 0x658, 0);
-    store<u32>(p + 0x654, 0x14F);
-    store<u32>(p + 0x644, 0);
-    if (!(p + 0x660)) call<u32>(0x0273AD10, 0x14u);
-    if (!(p + 0x674)) call<u32>(0x0273AD10, 0x14u);
-    store<u32>(p + 0x6BC, 0);
-    store<u8>(p + 0x698, 0);
-    store<u32>(p + 0x6B4, 0);
-    store<u32>(p + 0x6B0, 1);
-    store<u8>(p + 0x695, 0);
-    store<u32>(p + 0x68C, 0);
-    store<u8>(p + 0x696, 0);
-    store<u8>(p + 0x694, 0);
-    store<u8>(p + 0x69A, 0);
-    store<u8>(p + 0x69B, 0);
-    store<u32>(p + 0x6AC, 0);
-    store<u32>(p + 0x690, 0);
-    store<u32>(p + 0x6B8, 0);
-    store<u8>(p + 0x69C, 0);
-    store<u8>(p + 0x697, 0);
-    const f32 zero = load<f32>(0x100E0AB0);
-    store<u8>(p + 0x699, 0);
-    store<f32>(p + 0x688, zero);
-    wfixed128(p + 0x6C0);
-    wfixed128(p + 0x7CC);
-    store<f32>(p + 0x8E0, zero);
-    store<u32>(p + 0x8D8, 0);
-    const f32 one = load<f32>(0x100E0A00);
-    store<f32>(p + 0x8E4, zero);
-    const f32 minus1 = load<f32>(0x100E0AB4);
-    store<u32>(p + 0x8F4, 0xFFFFFFFF);
-    store<f32>(p + 0x8E8, one);
-    store<f32>(p + 0x8EC, zero);
-    store<u8>(p + 0x8DC, 0);
-    store<f32>(p + 0x8F0, minus1);
-    if (!(p + 0x8F8)) call<u32>(0x0273AD10, 0x14u);
-    store<u8>(p + 0x90C, 0);
-    store<u8>(p + 0x90D, 0);
-    store<u32>(p + 0x91D, 0xFFFFFFFF);
-    store<u32>(p + 0x915, 0xFFFFFFFF);
-    store<u8>(p + 0x90F, 0);
-    store<u32>(p + 0x919, 0xFFFFFFFF);
-    store<u8>(p + 0x922, 0);
-    store<u32>(p + 0x910, 0);
-    store<u8>(p + 0x914, 0);
-    store<u8>(p + 0x90E, 0);
-    store<u8>(p + 0x923, 0);
-    const u32 s1 = load<u32>(p + 0xC);
-    store<u8>(p + 0x921, 0);
-    store<u8>(s1, 0);
-    store<u8>(load<u32>(p + 0x120), 0);
-    store<u16>(load<u32>(p + 0x230), 0);
-    fill5(p + 0x660, 0xFFFFFFFF);
-    for (u32 i = 0; i < 5; i++) store<f32>(p + 0x674 + 4 * i, minus1);
-    store<u16>(load<u32>(p + 0x6C0), 0);
-    store<u16>(load<u32>(p + 0x7CC), 0);
-    fill5(p + 0x8F8, 0);
-    return p;
+    p->mLineReady = 0;
+    p->mLayoutProgress = 0;
+    p->mLayoutMode = 0;
+    p->mCurrentTag = 0xFFFFFFFF;
+    p->mTextStyle = 0;
+    p->mWaitComplete = 0;
+    p->mCharacterIndex = 0;
+    p->mLayoutComplete = 0;
+    p->mLayoutLimit = 0x14F;
+    p->mLineCount = 0;
+    if (!(gabi::ea(p) + 0x660))
+        hdMsgText_allocate(0x14u);
+    if (!(gabi::ea(p) + 0x674))
+        hdMsgText_allocate(0x14u);
+    p->mRubyState = 0;
+    p->mFlag698 = 0;
+    p->mSoundIndex = 0;
+    p->mSoundMode = 1;
+    p->mFlag695 = 0;
+    p->mDrawIndex = 0;
+    p->mFlag696 = 0;
+    p->mDrawEnabled = 0;
+    p->mFlag69A = 0;
+    p->mFlag69B = 0;
+    p->mSoundState = 0;
+    p->mpFont = 0;
+    p->mCurrentRuby = 0;
+    p->mFlag69C = 0;
+    p->mFlag697 = 0;
+    const f32 zero = l_hdMsgZero;
+    p->mFlag699 = 0;
+    p->mLayoutWidth = zero;
+    wide128(gabi::at<HdMsgWideRuby>(gabi::ea(p) + 0x6C0));
+    wide128(gabi::at<HdMsgWideRuby>(gabi::ea(p) + 0x7CC));
+    p->mScaleX = zero;
+    p->mFontState = 0;
+    const f32 one = l_hdMsgOne;
+    p->mScaleY = zero;
+    const f32 minus1 = l_hdMsgMinusOne;
+    p->mCurrentLine = 0xFFFFFFFF;
+    p->mFontScale = one;
+    p->mCurrentLineWidth = zero;
+    p->mPictographFont = 0;
+    p->mPreviousLineWidth = minus1;
+    if (!(gabi::ea(p) + 0x8F8))
+        hdMsgText_allocate(0x14u);
+    p->mFlag90C = 0;
+    p->mFlag90D = 0;
+    p->mPackedValue3 = 0xFFFFFFFF;
+    p->mPackedValue1 = 0xFFFFFFFF;
+    p->mFlag90F = 0;
+    p->mPackedValue2 = 0xFFFFFFFF;
+    p->mFlag922 = 0;
+    p->mWaitState = 0;
+    p->mFlag914 = 0;
+    p->mFlag90E = 0;
+    p->mFlag923 = 0;
+    char *s1 = p->mSetName.mString.mpBuffer.get();
+    p->mFlag921 = 0;
+    *gabi::at<be<u8>>(gabi::ea(s1)) = 0;
+    *gabi::at<be<u8>>(gabi::ea(p->mLabel.mString.mpBuffer.get())) = 0;
+    *gabi::at<gabi::be<u16>>(gabi::ea(p->mText.mString.mpBuffer.get())) = 0;
+    fillLines(p->mLineValues, 0xFFFFFFFF);
+    for (u32 i = 0; i < 5; i++)
+        p->mLineWidths[i] = minus1;
+    *gabi::at<gabi::be<u16>>(gabi::ea(p->mRubyText.mString.mpBuffer.get())) = 0;
+    *gabi::at<gabi::be<u16>>(gabi::ea(p->mRubyReading.mString.mpBuffer.get())) = 0;
+    fillLines(p->mLineFlags, 0);
+    return gabi::ea(p);
 }
-VERIFY(0x025F65F4, ctor);
 
 /* 025F69A4: clears the message (strings, ids, layout state) */
-void clear(u32 p) {
-    WWHD_FUNC(0x025F69A4, void, p);
-    const u32 s1 = load<u32>(p + 0xC);
-    store<u32>(p + 8, 0);
-    store<u8>(s1, 0);
-    const u32 s2 = load<u32>(p + 0x120);
-    store<u32>(p + 0x11C, 0);
-    store<u32>(p + 0x118, 0xFFFFFFFF);
-    store<u8>(s2, 0);
-    const u32 s3 = load<u32>(p + 0x230);
-    store<u32>(p + 0x22C, 0);
-    store<u16>(s3, 0);
-    store<u8>(p + 0x694, 0);
-    store<u8>(p + 0x648, 0);
-    store<u8>(p + 0x69C, 0);
-    store<u8>(p + 0x658, 0);
-    store<u32>(p + 0x644, 0);
-    store<u32>(p + 0x640, 4);
-    store<u8>(p + 0x69A, 0);
-    store<u8>(p + 0x698, 0);
-    store<u8>(p + 0x699, 0);
-    store<u8>(p + 0x697, 0);
-    store<u8>(p + 0x659, 0);
-    store<u32>(p + 0x65C, 0xFFFFFFFF);
-    store<u32>(p + 0x650, 0);
-    store<u8>(p + 0x696, 0);
-    store<u8>(p + 0x695, 0);
-    store<u32>(p + 0x63C, 0);
-    store<u32>(p + 0x64C, 0);
-    store<u32>(p + 0x654, 0x14F);
-    store<u8>(p + 0x69B, 0);
-    store<u32>(p + 0x6A0, load<u32>(0x101FFBA8));
-    store<u32>(p + 0x6A4, load<u32>(0x101FFBAC));
-    const u32 c2 = load<u32>(0x101FFBB0);
-    store<u32>(p + 0x6AC, 0);
-    store<u32>(p + 0x6A8, c2);
-    store<u32>(p + 0x6B0, 1);
-    store<u32>(p + 0x6B4, 0);
-    store<u32>(p + 0x6BC, 0);
-    const u32 w1 = load<u32>(p + 0x6C0);
-    store<u32>(p + 0x6B8, 0);
-    store<u16>(w1, 0);
-    store<u32>(p + 0x8D8, 0);
-    store<u8>(p + 0x90D, 0);
-    const f32 zero = load<f32>(0x100E0AB0), one = load<f32>(0x100E0A00);
-    store<f32>(p + 0x8E4, zero);
-    store<f32>(p + 0x8E0, zero);
-    store<f32>(p + 0x8EC, zero);
-    store<u8>(p + 0x90F, 0);
-    const f32 minus1 = load<f32>(0x100E0AB4);
-    store<f32>(p + 0x8E8, one);
-    store<f32>(p + 0x8F0, minus1);
-    store<u8>(p + 0x90C, 0);
-    store<u32>(p + 0x8F4, 0xFFFFFFFF);
-    store<u8>(p + 0x90E, 0);
-    store<u8>(p + 0x914, 0);
-    fill5(p + 0x660, 0xFFFFFFFF);
-    for (u32 i = 0; i < 5; i++) store<f32>(p + 0x674 + 4 * i, minus1);
-    fill5(p + 0x8F8, 0);
-    store<u8>(p + 0x922, 0);
-    store<u8>(p + 0x921, 0);
-    store<u8>(p + 0x923, 0);
-    store<u8>(p + 0x8DC, 0);
+/* 025F69A4 */
+void hdMsgText_clear(HdMsgText *p) {
+    char *s1 = p->mSetName.mString.mpBuffer.get();
+    p->mpMessageSet = 0;
+    *gabi::at<be<u8>>(gabi::ea(s1)) = 0;
+    char *s2 = p->mLabel.mString.mpBuffer.get();
+    p->mMessageNumber = 0;
+    p->mLabelIndex = 0xFFFFFFFF;
+    *gabi::at<be<u8>>(gabi::ea(s2)) = 0;
+    char *s3 = p->mText.mString.mpBuffer.get();
+    p->mpEntry = 0;
+    *gabi::at<gabi::be<u16>>(gabi::ea(s3)) = 0;
+    p->mDrawEnabled = 0;
+    p->mLineReady = 0;
+    p->mFlag69C = 0;
+    p->mLayoutComplete = 0;
+    p->mLineCount = 0;
+    p->mTextStyle = 4;
+    p->mFlag69A = 0;
+    p->mFlag698 = 0;
+    p->mFlag699 = 0;
+    p->mFlag697 = 0;
+    p->mWaitComplete = 0;
+    p->mCurrentTag = 0xFFFFFFFF;
+    p->mLayoutProgress = 0;
+    p->mFlag696 = 0;
+    p->mFlag695 = 0;
+    p->mCharacterIndex = 0;
+    p->mLayoutMode = 0;
+    p->mLayoutLimit = 0x14F;
+    p->mFlag69B = 0;
+    p->mSoundPosition[0] = l_hdMsgSoundX;
+    p->mSoundPosition[1] = l_hdMsgSoundY;
+    const u32 c2 = l_hdMsgSoundZ;
+    p->mSoundState = 0;
+    p->mSoundPosition[2] = c2;
+    p->mSoundMode = 1;
+    p->mSoundIndex = 0;
+    p->mRubyState = 0;
+    char *w1 = p->mRubyText.mString.mpBuffer.get();
+    p->mCurrentRuby = 0;
+    *gabi::at<gabi::be<u16>>(gabi::ea(w1)) = 0;
+    p->mFontState = 0;
+    p->mFlag90D = 0;
+    const f32 zero = l_hdMsgZero, one = l_hdMsgOne;
+    p->mScaleY = zero;
+    p->mScaleX = zero;
+    p->mCurrentLineWidth = zero;
+    p->mFlag90F = 0;
+    const f32 minus1 = l_hdMsgMinusOne;
+    p->mFontScale = one;
+    p->mPreviousLineWidth = minus1;
+    p->mFlag90C = 0;
+    p->mCurrentLine = 0xFFFFFFFF;
+    p->mFlag90E = 0;
+    p->mFlag914 = 0;
+    fillLines(p->mLineValues, 0xFFFFFFFF);
+    for (u32 i = 0; i < 5; i++)
+        p->mLineWidths[i] = minus1;
+    fillLines(p->mLineFlags, 0);
+    p->mFlag922 = 0;
+    p->mFlag921 = 0;
+    p->mFlag923 = 0;
+    p->mPictographFont = 0;
 }
-VERIFY(0x025F69A4, clear);
 
 /* 025F6B04 / 025F6C40: clear with the two state words set */
-void reset(u32 p) {
-    WWHD_FUNC(0x025F6B04, void, p);
-    store<u32>(p, 6);
-    store<u32>(p + 4, 0);
-    clear(p);
+/* 025F6B04 */
+void hdMsgText_reset(HdMsgText *p) {
+    p->mState = HD_MSG_TEXT_WAIT;
+    p->mNextState = HD_MSG_TEXT_IDLE;
+    hdMsgText_clear(p);
 }
-VERIFY(0x025F6B04, reset);
-void resetIdle(u32 p) {
-    WWHD_FUNC(0x025F6C40, void, p);
-    store<u32>(p, 0);
-    store<u32>(p + 4, 6);
-    clear(p);
+
+/* 025F6C40 */
+void hdMsgText_resetIdle(HdMsgText *p) {
+    p->mState = HD_MSG_TEXT_IDLE;
+    p->mNextState = HD_MSG_TEXT_WAIT;
+    hdMsgText_clear(p);
 }
-VERIFY(0x025F6C40, resetIdle);
 
 /* label = "%05d" of the message number */
-static void setNumberLabel(u32 p, u32 num, u32 fmt) {
-    Local<u8[0x110]> F;
-    const u32 L = F.a, buf = F.a + 0xC;
-    store<u8>(buf + 0xFF, 0);
-    store<u32>(L, buf);
-    store<u32>(L + 8, 0x100);
-    store<u8>(buf, 0);
-    store<u32>(L + 4, 0x100E0A68);
-    call<void>(0x02759C28, L, fmt, num & 0xFFFF);
-    store<u32>(p + 0x11C, num);
-    const u32 dst = load<u32>(p + 0x120);
-    copyStr(p + 0x120, dst, L);
+static void setNumberLabel(HdMsgText *p, u32 number, const char *format) {
+    // HD: the formatter receives the same 0x110-byte stack allocation and string header.
+    gabi::Local<HdMsgLabelFrame> storage;
+    HdMsgLabelFrame &label = *gabi::at<HdMsgLabelFrame>(storage.a);
+    label.mString.mBuffer[255] = 0;
+    label.mString.mString.mpBuffer = reinterpret_cast<char *>(&label.mString.mBuffer[0]);
+    label.mString.mString.mCapacity = 256;
+    label.mString.mBuffer[0] = 0;
+    label.mString.mString.mpVTable = reinterpret_cast<gabi::gfn *>(&l_hdMsgFixedVTable);
+    hdMsgText_format(&label.mString.mString, format, number & 0xFFFF);
+    p->mMessageNumber = number;
+    char *destination = p->mLabel.mString.mpBuffer.get();
+    copyString(&p->mLabel.mString, destination, &label.mString.mString);
 }
 
 /* 025F6B18: message by number, with an optional sound position */
-void setNumber(u32 p, u32 num, u32 sePos) {
-    WWHD_FUNC(0x025F6B18, void, p, num, sePos);
-    reset(p);
-    setNumberLabel(p, num, 0x100E0AB8);
+/* 025F6B18 */
+void hdMsgText_setNumber(HdMsgText *p, u32 num, const HdMsgSoundPosition *sePos) {
+    hdMsgText_reset(p);
+    setNumberLabel(p, num, "message number format");
     if (sePos) {
-        store<u32>(p + 0x6A0, load<u32>(sePos));
-        store<u32>(p + 0x6A4, load<u32>(sePos + 4));
-        store<u32>(p + 0x6A8, load<u32>(sePos + 8));
+        p->mSoundPosition[0] = sePos->mBits[0];
+        p->mSoundPosition[1] = sePos->mBits[1];
+        p->mSoundPosition[2] = sePos->mBits[2];
     }
 }
-VERIFY(0x025F6B18, setNumber);
 
 /* 025F6C54: message by number (idle state) */
-void setNumberIdle(u32 p, u32 num) {
-    WWHD_FUNC(0x025F6C54, void, p, num);
-    resetIdle(p);
-    setNumberLabel(p, num, 0x100E0AC0);
+/* 025F6C54 */
+void hdMsgText_setNumberIdle(HdMsgText *p, u32 num) {
+    hdMsgText_resetIdle(p);
+    setNumberLabel(p, num, "idle message number format");
 }
-VERIFY(0x025F6C54, setNumberIdle);
 
 /* 025F6D70: message by set name and label */
-void setLabel(u32 p, u32 name, u32 label) {
-    WWHD_FUNC(0x025F6D70, void, p, name, label);
-    reset(p);
-    copyStr(p + 0xC, load<u32>(p + 0xC), name);
-    copyStr(p + 0x120, load<u32>(p + 0x120), label);
+/* 025F6D70 */
+void hdMsgText_setLabel(HdMsgText *p, HdMsgString *name, HdMsgString *label) {
+    hdMsgText_reset(p);
+    copyString(&p->mSetName.mString, p->mSetName.mString.mpBuffer.get(), name);
+    copyString(&p->mLabel.mString, p->mLabel.mString.mpBuffer.get(), label);
 }
-VERIFY(0x025F6D70, setLabel);
 
 /* 025F6EC8: reset */
-void reset2(u32 p) {
-    WWHD_FUNC(0x025F6EC8, void, p);
-    reset(p);
-}
-VERIFY(0x025F6EC8, reset2);
+/* 025F6EC8 */
+void hdMsgText_reset2(HdMsgText *p) { hdMsgText_reset(p); }
 
 /* 025F6ECC: restarts the text layout (keeps the message) */
-u32 restartLayout(u32 p, u32 a, u32 b) {
-    WWHD_FUNC(0x025F6ECC, u32, p, a, b);
-    store<u32>(p + 0x654, b);
-    store<u32>(p + 0x650, 0);
-    const f32 zero = load<f32>(0x100E0AB0);
-    store<u8>(p + 0x90F, 0);
-    store<f32>(p + 0x8E0, zero);
-    store<u32>(p + 0x64C, a);
-    store<f32>(p + 0x8E4, zero);
-    store<u8>(p + 0x648, 0);
-    store<u8>(p + 0x658, 0);
-    store<u8>(p + 0x90E, 0);
-    store<u8>(p + 0x659, 0);
-    store<u8>(p + 0x914, 0);
-    store<u8>(p + 0x90D, 0);
-    store<u32>(p + 0x644, 0);
-    store<u8>(p + 0x90C, 0);
-    fill5(p + 0x660, 0xFFFFFFFF);
-    const f32 minus1 = load<f32>(0x100E0AB4);
-    for (u32 i = 0; i < 5; i++) store<f32>(p + 0x674 + 4 * i, minus1);
-    fill5(p + 0x8F8, 0);
-    store<u8>(p + 0x922, 0);
-    store<u8>(p + 0x923, 0);
-    return p;
+/* 025F6ECC */
+u32 hdMsgText_restartLayout(HdMsgText *p, u32 layoutMode, u32 layoutLimit) {
+    p->mLayoutLimit = layoutLimit;
+    p->mLayoutProgress = 0;
+    const f32 zero = l_hdMsgZero;
+    p->mFlag90F = 0;
+    p->mScaleX = zero;
+    p->mLayoutMode = layoutMode;
+    p->mScaleY = zero;
+    p->mLineReady = 0;
+    p->mLayoutComplete = 0;
+    p->mFlag90E = 0;
+    p->mWaitComplete = 0;
+    p->mFlag914 = 0;
+    p->mFlag90D = 0;
+    p->mLineCount = 0;
+    p->mFlag90C = 0;
+    fillLines(p->mLineValues, 0xFFFFFFFF);
+    const f32 minus1 = l_hdMsgMinusOne;
+    for (u32 i = 0; i < 5; i++)
+        p->mLineWidths[i] = minus1;
+    fillLines(p->mLineFlags, 0);
+    p->mFlag922 = 0;
+    p->mFlag923 = 0;
+    return gabi::ea(p);
 }
-VERIFY(0x025F6ECC, restartLayout);
 
 /* 025F6F68: restarts the layout and the font/scale state */
-void restart(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x025F6F68, void, self, a, b);
-    const u32 p = restartLayout(self, a, b);
-    const u32 w = load<u32>(p + 0x6C0);
-    const f32 minus1 = load<f32>(0x100E0AB4);
-    store<u32>(p + 0x6B8, 0);
-    store<u32>(p + 0x6BC, 0);
-    store<u16>(w, 0);
-    store<u32>(p + 0x8D8, 0);
-    store<f32>(p + 0x8F0, minus1);
-    const f32 zero = load<f32>(0x100E0AB0), one = load<f32>(0x100E0A00);
-    store<f32>(p + 0x8EC, zero);
-    store<f32>(p + 0x8E8, one);
-    store<u32>(p + 0x8F4, 0xFFFFFFFF);
+/* 025F6F68 */
+void hdMsgText_restart(HdMsgText *self, u32 layoutMode, u32 layoutLimit) {
+    HdMsgText *p = gabi::at<HdMsgText>(hdMsgText_restartLayout(self, layoutMode, layoutLimit));
+    char *w = p->mRubyText.mString.mpBuffer.get();
+    const f32 minus1 = l_hdMsgMinusOne;
+    p->mCurrentRuby = 0;
+    p->mRubyState = 0;
+    *gabi::at<gabi::be<u16>>(gabi::ea(w)) = 0;
+    p->mFontState = 0;
+    p->mPreviousLineWidth = minus1;
+    const f32 zero = l_hdMsgZero, one = l_hdMsgOne;
+    p->mCurrentLineWidth = zero;
+    p->mFontScale = one;
+    p->mCurrentLine = 0xFFFFFFFF;
 }
-VERIFY(0x025F6F68, restart);
 
 /* 025F6FCC: restart in state 6 */
-void restart6(u32 p, u32 a, u32 b) {
-    WWHD_FUNC(0x025F6FCC, void, p, a, b);
-    store<u32>(p, 6);
-    restart(p, a, b);
+/* 025F6FCC */
+void hdMsgText_restart6(HdMsgText *p, u32 layoutMode, u32 layoutLimit) {
+    p->mState = HD_MSG_TEXT_WAIT;
+    hdMsgText_restart(p, layoutMode, layoutLimit);
 }
-VERIFY(0x025F6FCC, restart6);
 
 /* 025F6FD8: restart, also setting the play object's message state byte (+0x5BB3) */
-void restartPlay(u32 p, u32 a, u32 b) {
-    WWHD_FUNC(0x025F6FD8, void, p, a, b);
-    store<u32>(p + 4, 6);
-    const u32 g = call<u32>(0x025200D4);
-    store<u8>(g + 0x5BB3, 6);
-    restart(p, a, b);
+/* 025F6FD8 */
+void hdMsgText_restartPlay(HdMsgText *p, u32 layoutMode, u32 layoutLimit) {
+    p->mNextState = HD_MSG_TEXT_WAIT;
+    hdMsgText_getPlay()->mMessageState = 6;
+    hdMsgText_restart(p, layoutMode, layoutLimit);
 }
-VERIFY(0x025F6FD8, restartPlay);
 
 /* 025F7040: restart the layout in state 6 */
-void restartLayout6(u32 p, u32 a, u32 b) {
-    WWHD_FUNC(0x025F7040, void, p, a, b);
-    store<u32>(p, 6);
-    restartLayout(p, a, b);
+/* 025F7040 */
+void hdMsgText_restartLayout6(HdMsgText *p, u32 layoutMode, u32 layoutLimit) {
+    p->mState = HD_MSG_TEXT_WAIT;
+    hdMsgText_restartLayout(p, layoutMode, layoutLimit);
 }
-VERIFY(0x025F7040, restartLayout6);
 
 /* 025F704C: the message's text style from its MSBT attribute (project style table) */
-void updateStyle(u32 p) {
-    WWHD_FUNC(0x025F704C, void, p);
-    const u32 set = load<u32>(p + 8);
-    const u32 idx = load<u32>(p + 0x118);
-    if (idx >= load<u32>(set + 4)) return;
-    const s32 st = s32(call<u32>(0x0273A598, load<u32>(set), idx));
-    if (st < 0) return;
-    const u32 prj = call<u32>(0x025F4BC0, load<u32>(0x101F4AE8));
-    u32 e = load<u32>(prj + 0x10);
-    if (u32(st) < load<u32>(prj + 0xC)) e += u32(st) << 4;
-    store<u32>(p + 0x640, load<u32>(e + 4));
+/* 025F704C */
+void hdMsgText_updateStyle(HdMsgText *p) {
+    HdMsgSet *set = p->mpMessageSet.get();
+    const u32 index = u32(s32(p->mLabelIndex));
+    if (index >= set->mEntryCount)
+        return;
+    const s32 style = hdMsgText_getStyle(set->mpData.get(), index);
+    if (style < 0)
+        return;
+    HdMsgProject *project = hdMsgText_getProject(l_hdMsgManager.get());
+    u32 entry = gabi::ea(project->mpStyles.get());
+    if (u32(style) < project->mStyleCount)
+        entry += u32(style) << 4;
+    p->mTextStyle = gabi::at<HdMsgStyle>(entry)->mStyle;
 }
-VERIFY(0x025F704C, updateStyle);
 
 /* 025F70CC: starts drawing: font (the pictograph font for 0x0C-tag entries), style, scale */
-void beginDraw(u32 p, u32 font, u32 scale) {
-    WWHD_FUNC(0x025F70CC, void, p, font, scale);
-    const s32 idx = s32(load<u32>(p + 0x118));
-    store<u32>(p + 0x68C, 0);
-    store<u32>(p + 0x690, font);
+/* 025F70CC */
+void hdMsgText_beginDraw(HdMsgText *p, HdMsgFont *font, const HdMsgScale *scale) {
+    const s32 idx = s32(p->mLabelIndex);
+    p->mDrawIndex = 0;
+    p->mpFont = font;
     if (idx >= 0) {
-        const u32 e = load<u32>(p + 0x22C);
-        if (e && load<u8>(e + 1) == 0xC && !load<u8>(load<u32>(0x101F84DC) + 0x1C0)) {
-            store<u32>(p + 0x690, call<u32>(0x025F36B8, load<u32>(0x101F4A50), 3u));
-            store<u8>(p + 0x8DC, 1);
+        HdMsgEntry *e = p->mpEntry.get();
+        if (e && e->mTag == 0xC && !l_hdMsgSystem.get()->mNoPictographFont) {
+            p->mpFont = hdMsgText_getFont(l_hdMsgFontManager.get(), 3);
+            p->mPictographFont = 1;
         }
-        updateStyle(p);
+        hdMsgText_updateStyle(p);
     }
-    store<f32>(p + 0x8E0, load<f32>(scale));
-    store<f32>(p + 0x8E4, load<f32>(scale + 4));
+    p->mScaleX = scale->mX;
+    p->mScaleY = scale->mY;
 }
-VERIFY(0x025F70CC, beginDraw);
 
 /* 025F7178: advances the current line width by a character of the given font */
-void advance(u32 p, u32 ch, u32 font) {
-    WWHD_FUNC(0x025F7178, void, p, ch, font);
-    const s32 w = s32(call_ptr<u32>(load<u32>(load<u32>(font + 4) + 0x7C), font, ch));
-    const u32 cur = load<u32>(p + 0x690);
-    const u32 fn = load<u32>(load<u32>(cur + 4) + 0x1C);
-    const f32 sc = fmuls_ppc(load<f32>(p + 0x8E0), load<f32>(p + 0x8E8));
+/* 025F7178 */
+void hdMsgText_advance(HdMsgText *p, u32 ch, HdMsgFont *font) {
+    const s32 w = s32(call_ptr<u32>(font->mpVTable[31].get(), font, ch));
+    HdMsgFont *cur = p->mpFont.get();
+    const u32 fn = cur->mpVTable[7].get();
+    const f32 sc = fmuls_ppc(p->mScaleX, p->mFontScale);
     const s32 h = s32(call_ptr<u32>(fn, cur));
     const f32 hf = f32(f64(h)), wf = f32(f64(w));
     const f32 q = sc / hf;
-    store<f32>(p + 0x8EC, fmadds(wf, q, load<f32>(p + 0x8EC)));
+    p->mCurrentLineWidth = fmadds(wf, q, p->mCurrentLineWidth);
 }
-VERIFY(0x025F7178, advance);
 
 /* 025F7240: advance by a character of the current font */
-void advanceCur(u32 p, u32 chp) {
-    WWHD_FUNC(0x025F7240, void, p, chp);
-    advance(p, load<u16>(chp), load<u32>(p + 0x690));
+/* 025F7240 */
+void hdMsgText_advanceCur(HdMsgText *p, const gabi::be<u16> *chp) {
+    hdMsgText_advance(p, *chp, p->mpFont.get());
 }
-VERIFY(0x025F7240, advanceCur);
 
 /* 025F724C: advance by a character of the pictograph font */
-void advancePic(u32 p, u32 chp) {
-    WWHD_FUNC(0x025F724C, void, p, chp);
-    const u32 f = call<u32>(0x025F36B8, load<u32>(0x101F4A50), 4u);
-    advance(p, load<u16>(chp), f);
+/* 025F724C */
+void hdMsgText_advancePic(HdMsgText *p, const gabi::be<u16> *chp) {
+    HdMsgFont *f = hdMsgText_getFont(l_hdMsgFontManager.get(), 4);
+    hdMsgText_advance(p, *chp, f);
 }
-VERIFY(0x025F724C, advancePic);
 
-/* 025F72A0: ends a line: records its value and width (at most 5 lines) */
-void endLine(u32 p, u32 v) {
-    WWHD_FUNC(0x025F72A0, void, p, v);
-    u32 i = load<u32>(p + 0x644);
-    store<u32>(i < 5 ? p + 0x660 + 4 * i : p + 0x660, v);
-    i = load<u32>(p + 0x644);
-    const f32 w = load<f32>(p + 0x8EC);
-    store<f32>(i < 5 ? p + 0x674 + 4 * i : p + 0x674, w);
-    s32 n = s32(load<u32>(p + 0x644)) + 1;
-    if (n > 5) n = 5;
-    const f32 zero = load<f32>(0x100E0AB0);
-    store<u32>(p + 0x644, u32(n));
-    store<f32>(p + 0x8EC, zero);
+/* 025F72A0: ends layoutMode line: records its value and width (at most 5 lines) */
+/* 025F72A0 */
+void hdMsgText_endLine(HdMsgText *p, u32 v) {
+    u32 i = p->mLineCount;
+    p->mLineValues[i < 5 ? i : 0] = v;
+    i = p->mLineCount;
+    const f32 w = p->mCurrentLineWidth;
+    p->mLineWidths[i < 5 ? i : 0] = w;
+    s32 n = s32(p->mLineCount) + 1;
+    if (n > 5)
+        n = 5;
+    const f32 zero = l_hdMsgZero;
+    p->mLineCount = u32(n);
+    p->mCurrentLineWidth = zero;
 }
-VERIFY(0x025F72A0, endLine);
 
-void staticInit() {
-    WWHD_FUNC(0x025F7304, void);
-    const u32 b = 0x1048D70C;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F4AF0u);
-    const f32 lo = load<f32>(0x100E0AD0), hi = load<f32>(0x100E0AD4);
-    store<f32>(0x1048D700, lo);
-    store<f32>(0x1048D704, hi);
-    call<void>(0x028ED6F8, 0x1048D708u);
-    call<void>(0x028F026C, 0x101F4AFCu);
-    call<void>(0x028EAB2C, 0x1048D709u);
-    call<void>(0x028F026C, 0x101F4B08u);
+/* 025F7304 */
+void hdMsgText_staticInit() {
+    l_hdMsgWords.mWords[2] = 0;
+    l_hdMsgWords.mWords[0] = 0;
+    l_hdMsgWords.mWords[3] = 0;
+    l_hdMsgWords.mWords[1] = 0;
+    hdMsgText_register(&l_hdMsgRegisterA);
+    const f32 low = l_hdMsgLow, high = l_hdMsgHigh;
+    l_hdMsgRange.mLow = low;
+    l_hdMsgRange.mHigh = high;
+    hdMsgText_constructFirst(&l_hdMsgObjectA);
+    hdMsgText_register(&l_hdMsgRegisterB);
+    hdMsgText_constructSecond(&l_hdMsgObjectB);
+    hdMsgText_register(&l_hdMsgRegisterC);
 }
-VERIFY(0x025F7304, staticInit);
-
-} // namespace hd_msg_text
+/* WWHD glue (tools/verify/autoglue.py)
+data l_hdMsgStringVTable 100E0A20
+data l_hdMsgBufferedVTable 100E0A50
+data l_hdMsgFixedVTable 100E0A68
+data l_hdMsgRubyVTable 100E0A98
+data l_hdMsgTextVTable 100E0A80
+data l_hdMsgZero 100E0AB0
+data l_hdMsgOne 100E0A00
+data l_hdMsgMinusOne 100E0AB4
+data l_hdMsgSoundX 101FFBA8
+data l_hdMsgSoundY 101FFBAC
+data l_hdMsgSoundZ 101FFBB0
+data l_hdMsgManager 101F4AE8
+data l_hdMsgFontManager 101F4A50
+data l_hdMsgSystem 101F84DC
+data l_hdMsgWords 1048D70C
+data l_hdMsgRange 1048D700
+data l_hdMsgLow 100E0AD0
+data l_hdMsgHigh 100E0AD4
+data l_hdMsgRegisterA 101F4AF0
+data l_hdMsgRegisterB 101F4AFC
+data l_hdMsgRegisterC 101F4B08
+data l_hdMsgObjectA 1048D708
+data l_hdMsgObjectB 1048D709
+str 100E0AB8 "message number format" renamed
+str 100E0AC0 "idle message number format" renamed
+ext 0273AD10 void* hdMsgText_allocate(u32)
+ext C0009988 void hdMsgText_copyBytes(char*, const char*, u32, u32)
+ext 02759C28 void hdMsgText_format(HdMsgString*, const char*, u32)
+ext 025200D4 HdMsgPlayState* hdMsgText_getPlay()
+ext 0273A598 s32 hdMsgText_getStyle(void*, u32)
+ext 025F4BC0 HdMsgProject* hdMsgText_getProject(void*)
+ext 025F36B8 HdMsgFont* hdMsgText_getFont(void*, u32)
+ext 028F026C void hdMsgText_register(HdMsgRegistration*)
+ext 028ED6F8 void hdMsgText_constructFirst(be<u8>*)
+ext 028EAB2C void hdMsgText_constructSecond(be<u8>*)
+*/

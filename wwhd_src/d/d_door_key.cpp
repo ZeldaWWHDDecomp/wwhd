@@ -1,60 +1,191 @@
-#include "bindings.h"
-namespace doorkey{template<class T>T ld(u32 a,u32 o=0){return gabi::load<T>(a+o);}template<class T>void st(u32 a,u32 o,T v){gabi::store<T>(a+o,v);}void* p(u32 a){return gabi::at<void>(a);}struct Name{be<u32>data,vt;};}
-using namespace doorkey;
-s32 door_key_res_load(void* self){WWHD_FUNC(0x0252B484,s32,self);return gabi::call<s32>(0x02520460,p(gabi::ea(self)+0x94),p(0x1004C7D8));}
-VERIFY(0x0252B484,door_key_res_load);
-void door_key_res_delete(void* self){WWHD_FUNC(0x0252B494,void,self);gabi::call<void>(0x025204C8,p(gabi::ea(self)+0x94),p(0x1004C7DC));}
-VERIFY(0x0252B494,door_key_res_delete);
-void door_key_init(void* self,void* door){
- WWHD_FUNC(0x0252B4A4,void,self,door);
- u32 a=gabi::ea(self),b=gabi::ea(door);if(ld<u32>(a,4)&&ld<u8>(a)&&!ld<u8>(b,0x3BC)){
-  s32 bit=gabi::call<s32>(0x0252AA14,door);if(bit<128){u32 save=ld<u32>(0x101F84DC);gabi::call<void>(0x025B9E38,p(save+0x20),bit,-1);}
-  if(!ld<u8>(a,0x9D)){u32 game=gabi::call<u32>(0x025200D4);s32 count=ld<s16>(game,0x5B5C);st<u16>(game,0x5B5C,u16(count-1));}
-  if(b&&b+0x37C){u8 big=ld<u8>(a,0x9D);s32 room=ld<s8>(b,0x326);u32 sound=big==1?0x69AE:0x6948;u32 reverb=gabi::call<u32>(0x02520540,room);gabi::call<void>(0x025E1A40,sound,p(b+0x37C),0,reverb);}
-  st<u8>(a,0x9C,1);
- }else st<u8>(a,0x9C,0);
+/**
+ * Door key locks and the HD door-stop constructor.
+ * Based on zeldaret/tww d/d_door.cpp; verified against WWHD.
+ */
+#include "d/d_door_key.h"
+
+const gc_tu_data gc_tu = {.safeString = 0x1004C524};
+
+static f32 l_zero = 0.0f;
+static f32 l_keyRate = 1.0f;
+static f32 l_bossKeyHeight = 230.0f;
+static f32 l_keyHeight = 150.0f;
+static f32 l_keyDepth = 20.0f;
+
+/* 0252B484 */
+s32 dDoor_key2_c::keyResLoad() {
+    return dComIfG_resLoad(&mPhs, "Key");
 }
-VERIFY(0x0252B4A4,door_key_init);
-void door_key_disable(void* self){WWHD_FUNC(0x0252B5A8,void,self);st<u8>(gabi::ea(self),0,0);}
-VERIFY(0x0252B5A8,door_key_disable);
-BOOL door_key_proc(void* self){
- WWHD_FUNC(0x0252B5B4,BOOL,self);
- u32 a=gabi::ea(self);if(!ld<u8>(a,0x9C))return 1;if(!gabi::call<u32>(0x025E742C,p(a+8)))return 0;gabi::call<void>(0x0252B5A8,self);st<u8>(a,0x9C,0);return 1;
+
+/* 0252B494 */
+void dDoor_key2_c::keyResDelete() {
+    dComIfG_resDelete(&mPhs, "Key");
 }
-VERIFY(0x0252B5B4,door_key_proc);
-namespace doorkey{
-BOOL create(u32 a,bool big){
- u32 name=big?0x1004C7E0:0x1004C804;gabi::Local<Name> first,second;first->data=name;first->vt=0x1004C524;
- u32 data=gabi::call<u32>(0x026066C4,p(ld<u32>(0x101F4F28)),first.get(),big?8:9);
- if(!data)gabi::call<void>(0x0273AA24,p(big?0x1004C7E4:0x1004C808),big?0x35A:0x342,p(big?0x1004C7F0:0x1004C814));
- u32 model=gabi::call<u32>(0x025E38E0,p(data),0,0x11020203);st<u32>(a,4,model);if(!model)return 0;
- second->data=name;second->vt=0x1004C524;u32 animation=gabi::call<u32>(0x026066C4,p(ld<u32>(0x101F4F28)),second.get(),big?4:5);f32 rate=ld<f32>(0x1004C7C8);
- return gabi::call<u32>(0x025E8508,p(a+8),p(data),p(animation),1,0,0,-1,0,rate)!=0;
+
+/* 0252B4A4 */
+void dDoor_key2_c::keyInit(dDoor_info_c* door) {
+    if (mpModel != NULL && mbEnabled && !door->mFrontCheck) {
+        // HD: getSwbit is called once; the save call forwards the full result.
+        s32 bit = door->getSwbit();
+        if (bit < 0x80) {
+            dComIfGs_onSwitch(bit, -1);
+        }
+        if (!mbIsBossDoor) {
+            DoorKeyGameInfo* game = dComIfGp_getDoorKeyInfo();
+            s32 count = game->mItemKeyNumCount;
+            game->mItemKeyNumCount = (u16)(count - 1);
+        }
+        // HD: select the sound before the reverb callback, retaining its full return register.
+        if (door != NULL && gabi::ea(&door->eyePos) != 0) {
+            u8 big = mbIsBossDoor;
+            s32 room = fopAcM_GetRoomNo(door);
+            u32 sound = big == 1 ? JA_SE_OBJ_BOSS_LOCK_OPEN : JA_SE_OBJ_DOOR_CHAIN_OPEN;
+            s32 reverb = dComIfGp_getReverb(room);
+            mDoAud_seStart(sound, &door->eyePos, 0, reverb);
+        }
+        m20 = 1;
+    } else {
+        m20 = 0;
+    }
 }
+
+/* 0252B5A8 */
+void dDoor_key2_c::keyOff() {
+    mbEnabled = false;
 }
-BOOL door_key_big(void* self){WWHD_FUNC(0x0252B63C,BOOL,self);return create(gabi::ea(self),true);}
-VERIFY(0x0252B63C,door_key_big);
-BOOL door_key_normal(void* self){WWHD_FUNC(0x0252B738,BOOL,self);return create(gabi::ea(self),false);}
-VERIFY(0x0252B738,door_key_normal);
-BOOL door_key_create(void* self,s32 type){WWHD_FUNC(0x0252B834,BOOL,self,type);st<u8>(gabi::ea(self),0x9D,u8(type));return gabi::call<BOOL>(type==1?0x0252B63C:0x0252B738,self);}
-VERIFY(0x0252B834,door_key_create);
-void door_key_enable(void* self){WWHD_FUNC(0x0252B848,void,self);st<u8>(gabi::ea(self),0,1);}
-VERIFY(0x0252B848,door_key_enable);
-void door_key_matrix(void* self,void* door){
- WWHD_FUNC(0x0252B854,void,self,door);
- u32 a=gabi::ea(self),b=gabi::ea(door);if(!ld<u8>(a))return;u32 matrix=0x1048D0CC;f32 x=ld<f32>(b,0x314),y=ld<f32>(b,0x318),z=ld<f32>(b,0x31C);gabi::call<void>(0x028E93CC,p(matrix),x,y,z);gabi::call<void>(0x025F1C28,p(matrix),ld<s16>(b,0x322));
- bool big=ld<u8>(a,0x9D)==1;f32 height=ld<f32>(big?0x1004C828:0x1004C698),depth=ld<f32>(0x1004C82C),zero=ld<f32>(0x1004C590);gabi::call<void>(0x025F24E0,zero,height,depth);
- f32 values[12];for(u32 i=0;i<12;++i)values[i]=ld<f32>(matrix,i*4);u32 model=ld<u32>(a,4);for(u32 i=0;i<12;++i)st<f32>(model,0xC8+i*4,values[i]);
+
+/* 0252B5B4 */
+BOOL dDoor_key2_c::keyProc() {
+    if (!m20) {
+        return TRUE;
+    }
+    if (!mBckAnim.play()) {
+        return FALSE;
+    }
+    keyOff();
+    m20 = 0;
+    return TRUE;
 }
-VERIFY(0x0252B854,door_key_matrix);
-void door_key_draw(void* self,void* door){
- WWHD_FUNC(0x0252B9D4,void,self,door);
- u32 a=gabi::ea(self),b=gabi::ea(door),model=ld<u32>(a,4),data=ld<u32>(model,0xAC);u32 env=gabi::call<u32>(0x02555D0C);model=ld<u32>(a,4);gabi::call<void>(0x02562F5C,p(env),p(model),p(b+0x110));f32 frame=ld<f32>(a,0xC);gabi::call<void>(0x025E86B8,p(a+8),p(data),frame);gabi::call<void>(0x025E2DE0,p(ld<u32>(a,4)),0);
+
+/* inlined into dDoor_key2_c::keyCreate_Bkey and dDoor_key2_c::keyCreate_Nkey */
+static BOOL keyCreate(dDoor_key2_c* key, bool big, const char* name,
+                      const char* file, const char* assertion) {
+    // HD: both SafeString stack slots live across both resource calls.
+    SafeString first;
+    SafeString second;
+    first.mStringTop = gabi::guest_addr(name);
+    first.__vtbl = gc_tu.safeString;
+    J3DModelData* modelData = (J3DModelData*)dDoor_getObjectRes(
+        dComIfG_resControl(), &first, big ? dRes_INDEX_KEY_BDL_VLOCB_e : dRes_INDEX_KEY_BDL_VLOCN_e);
+    if (modelData == NULL) {
+        // HD: shorten the path; each branch keeps its original assert-string address.
+        JUT_ASSERT_fail(file, big ? 0x35A : 0x342, assertion);
+    }
+    key->mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+    if (key->mpModel == NULL) {
+        return FALSE;
+    }
+    second.mStringTop = gabi::guest_addr(name);
+    second.__vtbl = gc_tu.safeString;
+    J3DAnmTransform* bck = (J3DAnmTransform*)dDoor_getObjectRes(
+        dComIfG_resControl(), &second, big ? dRes_INDEX_KEY_BCK_VLOCB_e : dRes_INDEX_KEY_BCK_VLOCN_e);
+    // HD: boss keys have no skin-deform allocation; the animation result is normalized to BOOL.
+    f32 rate = l_keyRate;
+    return dDoor_initBck(&key->mBckAnim, modelData, bck, 1, 0, 0, -1, 0, rate) != 0;
 }
-VERIFY(0x0252B9D4,door_key_draw);
-void* door_stop_ctor(void* self){
- WWHD_FUNC(0x0252BA44,void*,self);
- u32 a=gabi::ea(self);if(!a){a=gabi::call<u32>(0x0273AD10,12);if(!a)return nullptr;}
- f32 zero=ld<f32>(0x1004C590);st<u8>(a,0xA,0);st<f32>(a,4,zero);st<u8>(a,0xB,0);st<u8>(a,9,0);st<u32>(a,0,0);st<u8>(a,8,0);return p(a);
+
+/* 0252B63C */
+BOOL dDoor_key2_c::keyCreate_Bkey() {
+    return ::keyCreate(this, true, "Key", "d_door.cpp", "modelData != NULL");
 }
-VERIFY(0x0252BA44,door_stop_ctor);
+
+/* 0252B738 */
+BOOL dDoor_key2_c::keyCreate_Nkey() {
+    return ::keyCreate(this, false, "Key", "d_door.cpp", "modelData != NULL");
+}
+
+/* 0252B834 */
+BOOL dDoor_key2_c::keyCreate(s32 type) {
+    mbIsBossDoor = (u8)type;
+    return type == 1 ? keyCreate_Bkey() : keyCreate_Nkey();
+}
+
+/* 0252B848 */
+void dDoor_key2_c::keyOn() {
+    mbEnabled = true;
+}
+
+/* 0252B854 */
+void dDoor_key2_c::calcMtx(dDoor_info_c* door) {
+    if (!mbEnabled) {
+        return;
+    }
+    mDoMtx_stack_c::transS(door->current.pos.x, door->current.pos.y, door->current.pos.z);
+    mDoMtx_stack_c::YrotM(door->current.angle.y);
+    // HD: read the tuning values after YrotM, then copy all twelve floats before storing any.
+    bool big = mbIsBossDoor == 1;
+    f32 height = big ? l_bossKeyHeight : l_keyHeight;
+    f32 depth = l_keyDepth;
+    f32 zero = l_zero;
+    mDoMtx_stack_c::transM(zero, height, depth);
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i) {
+        values[i] = mDoMtx_stack_c::get()->m[i / 4][i % 4];
+    }
+    J3DModel* model = mpModel;
+    for (u32 i = 0; i < 12; ++i) {
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    }
+}
+
+/* 0252B9D4 */
+void dDoor_key2_c::draw(dDoor_info_c* door) {
+    J3DModel* model = mpModel;
+    J3DModelData* modelData = model->getModelData();
+    // HD: the environment callback can replace mpModel; modelData remains the pre-call value.
+    dScnKy_env_light_c* env = dKy_getEnvlight();
+    model = mpModel;
+    setLightTevColorType(env, model, &door->tevStr);
+    f32 frame = mBckAnim.getFrame();
+    mBckAnim.entry(modelData, frame);
+    mDoExt_modelUpdateDL(mpModel, 0);
+}
+
+// HD: compiler-generated door-stop constructor allocates when this is NULL.
+/* 0252BA44 */
+static dDoor_stop_c* dDoor_stop_c_ctor(dDoor_stop_c* i_this) {
+    if (i_this == NULL) {
+        i_this = (dDoor_stop_c*)operator_new(sizeof(dDoor_stop_c));
+        if (i_this == NULL) {
+            return NULL;
+        }
+    }
+    f32 zero = l_zero;
+    i_this->mA = 0;
+    i_this->mOffsY = zero;
+    i_this->mB = 0;
+    i_this->mFrontCheck = 0;
+    i_this->mpModel = NULL;
+    i_this->m8 = 0;
+    return i_this;
+}
+
+/* WWHD glue (tools/verify/autoglue.py):
+str 1004C7D8 "Key" in 0252B484
+str 1004C7DC "Key" in 0252B494
+str 1004C7E0 "Key" in 0252B63C
+str 1004C804 "Key" in 0252B738
+str 1004C7E4 "d_door.cpp" renamed in 0252B63C
+str 1004C808 "d_door.cpp" renamed in 0252B738
+str 1004C7F0 "modelData != NULL" renamed in 0252B63C
+str 1004C814 "modelData != NULL" renamed in 0252B738
+data l_zero 1004C590
+data l_keyRate 1004C7C8
+data l_bossKeyHeight 1004C828
+data l_keyHeight 1004C698
+data l_keyDepth 1004C82C
+ext 0252AA14 s32 dDoor_info_c::getSwbit()
+ext 025200D4 DoorKeyGameInfo* dComIfGp_getDoorKeyInfo()
+ext 026066C4 void* dDoor_getObjectRes(dRes_control_c*, SafeString*, s32)
+ext 025E8508 BOOL dDoor_initBck(mDoExt_bckAnm*, J3DModelData*, J3DAnmTransform*, s32, s32, s32, s32, s32, f32)
+*/

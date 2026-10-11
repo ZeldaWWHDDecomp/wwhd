@@ -1,219 +1,211 @@
+/* Warp departure effect: tww actor methods with verified HD event and particle semantics. */
 #include "d/actor/d_a_warpfout.h"
-#include "bindings.h"
-// Reserve the outgoing linkage below the caller, including real nested helpers.
-template<class R = void, class... A>
-static R warpfoutCall(u32 target, A... args) {
-    u32 callerSp = gabi::cpu->r[1];
-    gabi::Local<be<u32>[4]> linkage;
-    gabi::store<u32>(linkage.a, callerSp);
-    return gabi::call<R>(target, args...);
-}
-template<class R = void, class... A>
-static R warpfoutCallPtr(u32 target, A... args) {
-    u32 callerSp = gabi::cpu->r[1];
-    gabi::Local<be<u32>[4]> linkage;
-    gabi::store<u32>(linkage.a, callerSp);
-    return gabi::call_ptr<R>(target, args...);
-}
-#undef WWHD_FUNC
-#define WWHD_FUNC(addr, R, ...) \
-    if (gabi::Activation::nested()) return warpfoutCall<R>(addr __VA_OPT__(, ) __VA_ARGS__); \
-    gabi::Activation wwhd_activation_
 
-void warpfoutOrderNoop(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D8198,void,a);
-}
-VERIFY(0x024D8198,warpfoutOrderNoop);
-void warpfoutCreateInit(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D819C,void,a);
-    a->mInitFlag=-1;
-}
-VERIFY(0x024D819C,warpfoutCreateInit);
-s32 warpfoutCreate(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D81A8,s32,a);
-    u32 condition=a->actor_condition;
-    if (!(condition&8)) {
-        if (a) { warpfoutCall<void>(0x025D4ED0,a); a->__vtbl=0x10042474; condition=a->actor_condition; }
-        a->actor_condition=condition|8;
+// HD: table storage is GHS's eight-byte member-pointer representation. Dispatch preserves linkage.
+static WarpfoutAction event_init_tbl[] = {{&daWarpfout_c::initWarp1},
+                                          {&daWarpfout_c::initWarp2},
+                                          {&daWarpfout_c::initWarp3},
+                                          {&daWarpfout_c::initWarp4},
+                                          {&daWarpfout_c::initEnd}};
+static WarpfoutAction event_action_tbl[] = {{&daWarpfout_c::actWarp1},
+                                            {&daWarpfout_c::actWarp2},
+                                            {&daWarpfout_c::actWarp3},
+                                            {&daWarpfout_c::actWarp4},
+                                            {&daWarpfout_c::actEnd}};
+static const char* action_table[] = {"WARP1", "WARP2", "WARP3", "WARP4", "END"};
+static headerZeroStorage headerZero;
+static headerPiStorage headerPi;
+static headerObjectsStorage headerObjects;
+static headerRecordsStorage headerRecords;
+/* 024D8198 */
+void daWarpfout_c::eventOrder() {}
+/* 024D819C */
+void daWarpfout_c::CreateInit() { unknownInitFlag = -1; }
+/* 024D81A8 */
+s32 daWarpfout_c::_create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this)) {
+            Warpfout_actorConstruct(this);
+            __vtbl = 0x10042474;
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
     }
-    warpfoutCreateInit(a); return 4;
+    CreateInit();
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x024D81A8,warpfoutCreate);
-s32 warpfoutCreateWrapper(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D8210,s32,a);
-    return warpfoutCreate(a);
-}
-VERIFY(0x024D8210,warpfoutCreateWrapper);
-s32 warpfoutDelete(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D8214,s32,a);
-    return 1;
-}
-VERIFY(0x024D8214,warpfoutDelete);
-s32 warpfoutDraw(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D821C,s32,a);
-    return 1;
-}
-VERIFY(0x024D821C,warpfoutDraw);
-static u32 warpfoutPlay() { return warpfoutCall<u32>(0x025200D4); }
-// HD stores its two-part member pointers as adjustment, virtual index, target/offset.
-static s32 warpfoutDispatch(u32 entry,daWarpfout_c* a,s32 staff) {
-    s16 virtualIndex=gabi::load<s16>(entry+2);
-    s16 adjustment=gabi::load<s16>(entry);
-    u32 object=gabi::ea(a)+s32(adjustment);
-    u32 target;
-    if (virtualIndex<0) target=gabi::load<u32>(entry+4);
-    else {
-        s16 vtableOffset=gabi::load<s16>(entry+6);
-        u32 table=gabi::load<u32>(object+s32(vtableOffset));
-        target=gabi::load<u32>(table+u32(s32(virtualIndex))*8+4);
+/* 024D8210 */
+s32 daWarpfout_Create(daWarpfout_c* a) { return a->_create(); }
+/* 024D8214 */
+s32 daWarpfout_Delete(daWarpfout_c* a) { return 1; }
+/* 024D821C */
+s32 daWarpfout_Draw(daWarpfout_c* a) { return 1; }
+/* 024D8224 */
+void daWarpfout_c::demo_proc() {
+    WarpfoutGameInfo* game = Warpfout_getGame();
+    mStaffId = Warpfout_getMyStaffId(&game->eventManager, "Warpfo", 0, 0);
+    game = Warpfout_getGame();
+    if (!game->eventControl.mMode || eventInfo.mCommand == 1)
+        return;
+    s32 staff = mStaffId;
+    if (staff == -1)
+        return;
+    game = Warpfout_getGame();
+    s32 action = Warpfout_getMyActIdx(&game->eventManager, staff, action_table, 5, 0, 0);
+    staff = mStaffId;
+    if (action == -1) {
+        game = Warpfout_getGame();
+        Warpfout_cutEnd(&game->eventManager, staff);
+        return;
     }
-    return warpfoutCallPtr<s32>(target,gabi::at<daWarpfout_c>(object),staff);
+    game = Warpfout_getGame();
+    s32 advance = Warpfout_getIsAddvance(&game->eventManager, staff);
+    if (advance)
+        warpfoutDispatch(&event_init_tbl[action], this, mStaffId);
+    s32 done = warpfoutDispatch(&event_action_tbl[action], this, mStaffId);
+    if (done) {
+        staff = mStaffId;
+        game = Warpfout_getGame();
+        Warpfout_cutEnd(&game->eventManager, staff);
+    }
 }
-void warpfoutDemo(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D8224,void,a);
-    u32 play=warpfoutPlay();
-    a->mStaffId=warpfoutCall<s32>(0x02542D88,play+0x52C4,STR(0x10042484),0,0);
-    play=warpfoutPlay();
-    if (!gabi::load<u8>(play+0x5292) || gabi::load<u16>(gabi::ea(a)+0xF8)==1) return;
-    s32 staff=a->mStaffId; if (staff==-1) return;
-    play=warpfoutPlay();
-    s32 action=warpfoutCall<s32>(0x02542EDC,play+0x52C4,staff,0x101D2FB4,5,0,0);
-    staff=a->mStaffId;
-    if (action==-1) { play=warpfoutPlay(); warpfoutCall<void>(0x02543280,play+0x52C4,staff); return; }
-    play=warpfoutPlay();
-    s32 advance=warpfoutCall<s32>(0x025447C8,play+0x52C4,staff);
-    u32 offset=u32(action)*8;
-    if (advance) warpfoutDispatch(0x101D2F44+offset,a,a->mStaffId);
-    s32 done=warpfoutDispatch(0x101D2F6C+offset,a,a->mStaffId);
-    if (done) { staff=a->mStaffId; play=warpfoutPlay(); warpfoutCall<void>(0x02543280,play+0x52C4,staff); }
-}
-VERIFY(0x024D8224,warpfoutDemo);
-s32 warpfoutExecute(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D83E8,s32,a);
-    warpfoutDemo(a);
+
+/* 024D83E8 */
+s32 daWarpfout_c::_execute() {
+    // HD: checkOrder/eventOrder were folded away; only demo_proc remains.
+    demo_proc();
     return 1;
 }
-VERIFY(0x024D83E8,warpfoutExecute);
-s32 warpfoutExecuteWrapper(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D840C,s32,a);
-    return warpfoutExecute(a);
+/* 024D840C */
+s32 daWarpfout_Execute(daWarpfout_c* a) { return a->_execute(); }
+/* 024D8410 */
+u32 daWarpfout_c::initWarp1(s32 staff) {
+    // HD: keep the sound call's full return register; tww declares initWarp1 void.
+    mTimer = 5;
+    return Warpfout_seStart(JA_SE_LK_BOSS_WARP_EFF_ED);
 }
-VERIFY(0x024D840C,warpfoutExecuteWrapper);
-u32 warpfoutInitWarp1(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D8410,u32,a,staff);
-    a->mTimer=5; return warpfoutCall<u32>(0x025E1988,0x2887);
+// HD: the small-structure ABI returns x/y in r3 and z/padding in r4.
+/* 024D8420 */
+u32 daWarpfout_c::get_effect_angle() {
+    WarpfoutGameInfo* game = Warpfout_getGame();
+    void* camera = game->camera;
+    s16 x = Warpfout_cameraAngleX(camera);
+    game = Warpfout_getGame();
+    camera = game->camera;
+    s16 y = Warpfout_cameraAngleY(camera);
+    gabi::Local<WarpfoutAngle> angle;
+    angle->components[2] = 0;
+    u32 second = angle->words[1];
+    angle->components[0] = u16(x);
+    angle->components[1] = u16(u32(s32(y)) + 0x8000);
+    warpfoutSetSecondResult(second);
+    return angle->words[0];
 }
-VERIFY(0x024D8410,warpfoutInitWarp1);
-// The HD small-structure ABI returns x/y in r3 and z/padding in r4.
-u32 warpfoutEffectAngle(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D8420,u32,a);
-    u32 play=warpfoutPlay(); u32 camera=gabi::load<u32>(play+0x5AF8);
-    s16 x=warpfoutCall<s16>(0x024F8008,camera);
-    play=warpfoutPlay(); camera=gabi::load<u32>(play+0x5AF8);
-    s16 y=warpfoutCall<s16>(0x024F8000,camera);
-    gabi::Local<be<u16>[4]> angle;
-    gabi::store<u16>(angle.a+4,0);
-    u32 second=gabi::load<u32>(angle.a+4);
-    gabi::store<u16>(angle.a,u16(x));
-    gabi::store<u16>(angle.a+2,u16(u32(s32(y))+0x8000));
-    gabi::cpu->r[4]=second;
-    return gabi::load<u32>(angle.a);
+static void warpfoutParticle(void* particle, u32 id, cXyz* pos, csXyz* angle) {
+    Warpfout_particleSet(particle, 0, id, pos, angle, 0, 0xFF, 0, -1, 0, 0, 0);
 }
-VERIFY(0x024D8420,warpfoutEffectAngle);
-static void warpfoutParticle(u32 particle,u32 id,cXyz* pos,csXyz* angle) {
-    warpfoutCall<void>(0x025A847C,particle,0,id,pos,angle,0,0xFF,0,-1,0,0,0);
+/* 024D8480 */
+void daWarpfout_c::set_effect_wind01(cXyz* position, s16 offset) {
+    u32 xy = get_effect_angle();
+    u32 second = warpfoutSecondResult();
+    gabi::Local<WarpfoutAngle> angle;
+    angle->words[1] = second;
+    s16 z = angle->components[2];
+    angle->words[0] = xy;
+    angle->components[2] = u16(s32(z) + s32(offset));
+    WarpfoutGameInfo* game = Warpfout_getGame();
+    void* particle = game->particle;
+    warpfoutParticle(particle, ID_AK_SN_DEMOWARPWIND01, position, &angle->rotation);
 }
-void warpfoutWind(daWarpfout_c* a,cXyz* position,s16 offset) {
-    WWHD_FUNC(0x024D8480,void,a,position,offset);
-    u32 xy=warpfoutEffectAngle(a); u32 second=gabi::cpu->r[4];
-    gabi::Local<be<u32>[2]> angle;
-    gabi::store<u32>(angle.a+4,second);
-    s16 z=gabi::load<s16>(angle.a+4);
-    gabi::store<u32>(angle.a,xy);
-    gabi::store<u16>(angle.a+4,u16(s32(z)+s32(offset)));
-    u32 play=warpfoutPlay(); u32 particle=gabi::load<u32>(play+0x5AB0);
-    warpfoutParticle(particle,0x830F,position,gabi::at<csXyz>(angle.a));
-}
-VERIFY(0x024D8480,warpfoutWind);
-static void warpfoutRaisedEffect(daWarpfout_c* a,f32 height,s16 angle) {
-    u32 play=warpfoutPlay(); u32 player=gabi::load<u32>(play+0x5B34);
-    f32 y=gabi::load<f32>(player+0x318);
-    f32 x=gabi::load<f32>(player+0x314);
-    y=y+height;
-    f32 z=gabi::load<f32>(player+0x31C);
+/* inlined into initWarp2, initWarp3 and actWarp1 */
+static void warpfoutRaisedEffect(daWarpfout_c* a, f32 height, s16 angle) {
+    WarpfoutGameInfo* game = Warpfout_getGame();
+    fopAc_ac_c* player = game->link;
+    f32 y = player->current.pos.y;
+    f32 x = player->current.pos.x;
+    y = y + height;
+    f32 z = player->current.pos.z;
     gabi::Local<cXyz> position;
-    position->x=x; position->y=y; position->z=z;
-    warpfoutWind(a,position,angle);
+    position->x = x;
+    position->y = y;
+    position->z = z;
+    a->set_effect_wind01(position, angle);
 }
-void warpfoutInitWarp2(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D850C,void,a,staff);
-    warpfoutRaisedEffect(a,60.0f,0x38E);
-    a->mTimer=5;
+/* 024D850C */
+void daWarpfout_c::initWarp2(s32 staff) {
+    warpfoutRaisedEffect(this, 60.0f, 0x38E);
+    mTimer = 5;
 }
-VERIFY(0x024D850C,warpfoutInitWarp2);
-void warpfoutInitWarp3(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D8578,void,a,staff);
-    warpfoutRaisedEffect(a,80.0f,0x71C);
-    a->mTimer=5;
+/* 024D8578 */
+void daWarpfout_c::initWarp3(s32 staff) {
+    warpfoutRaisedEffect(this, 80.0f, 0x71C);
+    mTimer = 5;
 }
-VERIFY(0x024D8578,warpfoutInitWarp3);
-void warpfoutInitWarp4(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D85E4,void,a,staff);
-    u32 play=warpfoutPlay(); u32 player=gabi::load<u32>(play+0x5B34);
-    for (s32 count=6;count;--count) {
-        play=warpfoutPlay(); u32 particle=gabi::load<u32>(play+0x5AB0);
-        warpfoutParticle(particle,0x830E,gabi::at<cXyz>(player+0x314),nullptr);
+/* 024D85E4 */
+void daWarpfout_c::initWarp4(s32 staff) {
+    WarpfoutGameInfo* game = Warpfout_getGame();
+    fopAc_ac_c* player = game->link;
+    for (s32 count = 6; count; --count) {
+        game = Warpfout_getGame();
+        void* particle = game->particle;
+        warpfoutParticle(particle, ID_AK_SN_DEMOWARPWIND00, &player->current.pos, nullptr);
     }
 }
-VERIFY(0x024D85E4,warpfoutInitWarp4);
-s32 warpfoutActWarp1(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D8664,s32,a,staff);
-    if (s32(a->mTimer)==4) warpfoutRaisedEffect(a,40.0f,0);
-    return warpfoutCall<s32>(0x0211D2F8,&a->mTimer)==0;
+/* 024D8664 */
+s32 daWarpfout_c::actWarp1(s32 staff) {
+    if (s32(mTimer) == 4)
+        warpfoutRaisedEffect(this, 40.0f, 0);
+    return Warpfout_calcTimer(&mTimer) == 0;
 }
-VERIFY(0x024D8664,warpfoutActWarp1);
-s32 warpfoutActWarp2(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D86E4,s32,a,staff);
-    return warpfoutCall<s32>(0x0211D2F8,&a->mTimer)==0;
-}
-VERIFY(0x024D86E4,warpfoutActWarp2);
-s32 warpfoutActWarp3(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D8710,s32,a,staff);
-    return warpfoutCall<s32>(0x0211D2F8,&a->mTimer)==0;
-}
-VERIFY(0x024D8710,warpfoutActWarp3);
-s32 warpfoutActEnd(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D873C,s32,a,staff);
-    warpfoutCall<void>(0x025D57E0,a);
+/* 024D86E4 */
+s32 daWarpfout_c::actWarp2(s32 staff) { return Warpfout_calcTimer(&mTimer) == 0; }
+/* 024D8710 */
+s32 daWarpfout_c::actWarp3(s32 staff) { return Warpfout_calcTimer(&mTimer) == 0; }
+/* 024D873C */
+s32 daWarpfout_c::actEnd(s32 staff) {
+    Warpfout_deleteActor(this);
     return 1;
 }
-VERIFY(0x024D873C,warpfoutActEnd);
-void warpfoutStaticInit() {
-    WWHD_FUNC(0x024D8760,void);
-    gabi::store<u32>(0x1046EB40,0); gabi::store<u32>(0x1046EB38,0);
-    gabi::store<u32>(0x1046EB44,0); gabi::store<u32>(0x1046EB3C,0);
-    warpfoutCall<void>(0x028F026C,0x101D2FC8);
-    gabi::store<f32>(0x1046EB2C,-3.1415927410125732f); gabi::store<f32>(0x1046EB30,3.1415927410125732f);
-    warpfoutCall<void>(0x028ED6F8,0x1046EB34); warpfoutCall<void>(0x028F026C,0x101D2FD4);
-    warpfoutCall<void>(0x028EAB2C,0x1046EB35); warpfoutCall<void>(0x028F026C,0x101D2FE0);
+// HD: compiler-generated header statics, with GHS's zero-before-construction order.
+/* 024D8760 */
+void __sinit_d_a_warpfout_cpp() {
+    headerZero[2] = 0;
+    headerZero[0] = 0;
+    headerZero[3] = 0;
+    headerZero[1] = 0;
+    Warpfout_registerDestructor(&headerRecords[0]);
+    headerPi[0] = -3.1415927410125732f;
+    headerPi[1] = 3.1415927410125732f;
+    Warpfout_headerConstructA(&headerObjects[0]);
+    Warpfout_registerDestructor(&headerRecords[1]);
+    Warpfout_headerConstructB(&headerObjects[1]);
+    Warpfout_registerDestructor(&headerRecords[2]);
 }
-VERIFY(0x024D8760,warpfoutStaticInit);
-s32 warpfoutIsDelete(daWarpfout_c* a) {
-    WWHD_FUNC(0x024D87F4,s32,a);
-    return 1;
+/* 024D87F4 */
+s32 daWarpfout_IsDelete(daWarpfout_c* a) { return 1; }
+/* 024D87FC */
+s32 daWarpfout_c::actWarp4(s32 staff) { return 1; }
+/* 024D8804 */
+void daWarpfout_c::initEnd(s32 staff) {}
+/* 024D8808 */
+void daWarpfout_c_dtor(daWarpfout_c* a, s32 flags) {
+    if (a) {
+        Warpfout_actorDestroy(a, 0);
+        if (u32(flags) & 1)
+            Warpfout_free(a);
+    }
 }
-VERIFY(0x024D87F4,warpfoutIsDelete);
-s32 warpfoutActWarp4(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D87FC,s32,a,staff);
-    return 1;
-}
-VERIFY(0x024D87FC,warpfoutActWarp4);
-void warpfoutInitEnd(daWarpfout_c* a,s32 staff) {
-    WWHD_FUNC(0x024D8804,void,a,staff);
-}
-VERIFY(0x024D8804,warpfoutInitEnd);
-void warpfoutDestructor(daWarpfout_c* a,s32 flags) {
-    WWHD_FUNC(0x024D8808,void,a,flags);
-    if (a) { warpfoutCall<void>(0x025D50BC,a,0); if (u32(flags)&1) warpfoutCall<void>(0x0273AF40,a); }
-}
-VERIFY(0x024D8808,warpfoutDestructor);
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+str 10042484
+data event_init_tbl 101D2F44
+data event_action_tbl 101D2F6C
+data action_table 101D2FB4
+data headerZero 1046EB38
+data headerPi 1046EB2C
+data headerObjects 1046EB34
+data headerRecords 101D2FC8
+*/
+// clang-format on

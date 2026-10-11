@@ -1,38 +1,65 @@
-#include "gabi.h"
-namespace {
-using namespace gabi;
-void cMl_Init(void* heap) {
-    WWHD_FUNC(0x02019424,void,heap);
-    store<u32>(0x1018CA3C,ea(heap));
+/**
+ * c_malloc.cpp: allocation through the selected game heap.
+ * GameCube names and control flow; verified against the HD implementation.
+ */
+#include "SSystem/SComponent/c_malloc.h"
+
+static CmlHeapPtr l_heap;
+static CmlHeaderStatics l_headerStatics;
+static CmlDestructorDescriptors l_destructors;
+static CmlAngleBounds l_angleBounds;
+
+// HD: a reference exposes the tww static member over the single guest-storage definition.
+CmlHeapPtr& cMl::Heap = l_heap;
+
+/* 02019424 */
+void cMl::init(JKRHeap* heap) { Heap = heap; }
+
+/* 02019430 */
+void* cMl::memalignB(int alignment, u32 size) {
+    if (size == 0) {
+        return nullptr;
+    }
+    // HD: the allocator's virtual table and slots differ from the GameCube layout.
+    auto* heap = reinterpret_cast<heap_adapters::Heap*>(Heap.get());
+    return gabi::at<void>(heap->alloc(size, alignment));
 }
-VERIFY(0x02019424,cMl_Init);
-void* cMl_MemalignB(s32 alignment,u32 size) {
-    WWHD_FUNC(0x02019430,void*,alignment,size);
-    if(size==0) return nullptr;
-    u32 heap=load<u32>(0x1018CA3C);
-    u32 table=load<u32>(heap+0xC);
-    return call_ptr<void*>(load<u32>(table+0x34),at<void>(heap),size,alignment);
+
+/* 0201945C */
+void cMl::free(void* memory) {
+    if (memory != nullptr) {
+        auto* heap = reinterpret_cast<heap_adapters::Heap*>(Heap.get());
+        heap->free(gabi::ea(memory));
+    }
 }
-VERIFY(0x02019430,cMl_MemalignB);
-void cMl_Free(void* memory) {
-    WWHD_FUNC(0x0201945C,void,memory);
-    if(!memory) return;
-    u32 heap=load<u32>(0x1018CA3C);
-    u32 table=load<u32>(heap+0xC);
-    call_ptr<void>(load<u32>(table+0x3C),at<void>(heap),memory);
+
+// HD: compiler-generated and template code of this translation unit.
+/* 0201947C */
+static void __sinit_c_malloc_cpp() {
+    l_headerStatics.mZeroWords[2] = 0;
+    l_headerStatics.mZeroWords[0] = 0;
+    l_headerStatics.mZeroWords[3] = 0;
+    l_headerStatics.mZeroWords[1] = 0;
+    Cml_registerGlobalObject(&l_destructors.mEntries[0]);
+    f32 lower = l_angleBounds.mLower;
+    f32 upper = l_angleBounds.mUpper;
+    l_headerStatics.mLowerAngle = lower;
+    l_headerStatics.mUpperAngle = upper;
+    Cml_constructFirstHeaderObject(&l_headerStatics.mFirstObject);
+    Cml_registerGlobalObject(&l_destructors.mEntries[1]);
+    Cml_constructSecondHeaderObject(&l_headerStatics.mSecondObject);
+    Cml_registerGlobalObject(&l_destructors.mEntries[2]);
 }
-VERIFY(0x0201945C,cMl_Free);
-void cMl_StaticInit() {
-    WWHD_FUNC(0x0201947C,void);
-    store<u32>(0x101FF9CC,0);store<u32>(0x101FF9C4,0);
-    store<u32>(0x101FF9D0,0);store<u32>(0x101FF9C8,0);
-    call<void>(0x028F026C,at<void>(0x1018CA18));
-    f32 lower=load<f32>(0x100035B0),upper=load<f32>(0x100035B4);
-    store<f32>(0x101FF9B8,lower);store<f32>(0x101FF9BC,upper);
-    call<void>(0x028ED6F8,at<void>(0x101FF9C0));
-    call<void>(0x028F026C,at<void>(0x1018CA24));
-    call<void>(0x028EAB2C,at<void>(0x101FF9C1));
-    call<void>(0x028F026C,at<void>(0x1018CA30));
-}
-VERIFY(0x0201947C,cMl_StaticInit);
-}
+
+// clang-format off
+/* WWHD glue
+data l_heap 1018CA3C
+data l_headerStatics 101FF9B8
+data l_destructors 1018CA18
+data l_angleBounds 100035B0
+ext 028F026C void Cml_registerGlobalObject(CmlDestructorDescriptor* descriptor)
+ext 028ED6F8 void Cml_constructFirstHeaderObject(u8* object)
+ext 028EAB2C void Cml_constructSecondHeaderObject(u8* object)
+*/
+
+// clang-format on

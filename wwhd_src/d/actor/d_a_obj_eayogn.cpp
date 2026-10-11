@@ -1,176 +1,112 @@
-/* WWHD Eayogn. Ported from zeldaret/tww with audited HD layout/behavior.
+/**
+ * d_a_obj_eayogn.cpp (WWHD).
+ * Ported from zeldaret/tww with WWHD layout and verified semantics.
+ * "HD:" marks differences from the GameCube source.
  */
 #include "d/actor/d_a_obj_eayogn.h"
-namespace daObjEayogn {
-static void *resource(s32 index) {
-  gabi::Local<SafeString> name;
-  name->mStringTop = 0x10027950;
-  name->__vtbl = 0x100278DC;
-  return gabi::call<void *>(
-      0x026066C4, gabi::at<u8>(gabi::load<u32>(0x101F4F28)), name.get(), index);
+const gc_tu_data gc_tu = { .safeString = 0x100278DC,
+    .headerStatics = {0x104696C0, 0x101C8E50, 0x104696CC} };
+const char daObjEayogn_c::M_arcname[7] = "Eayogn";
+
+/* 02339330 */
+BOOL daObjEayogn_c::create_heap() {
+    J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_EAYOGN_BDL_EAYOGN_e);
+    JUT_ASSERT(0x5C, mdl_data != NULL);
+    if (mdl_data == NULL)
+        return FALSE;
+    mpModel = mDoExt_J3DModel__create(mdl_data, 0, 0x11020203);
+    if (mpModel == NULL)
+        return FALSE;
+    cBgD_t* bgw_data = (cBgD_t*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_EAYOGN_DZB_EAYOGN_e);
+    mpBgW = dBgW_NewSet(bgw_data, dBgW::MOVE_BG_e, J3DModel_getBaseTRMtx(mpModel));
+    return mpBgW != NULL;
 }
-BOOL Act_c::create_heap() {
-  WWHD_FUNC(0x02339330, BOOL, this);
-  void *data = resource(4);
-  if (!data) {
-    gabi::call(0x0273AA24, STR(0x10027914), 0x5C, STR(0x10027904));
-    return FALSE;
-  }
-  mModel = gabi::call<J3DModel *>(0x025E38E0, data, 0, 0x11020203);
-  if (!mModel)
-    return FALSE;
-  data = resource(7);
-  u32 model = gabi::ea((J3DModel *)mModel);
-  mBgW = gabi::call<dBgW *>(0x024F2478, data, 1,
-                            gabi::at<Mtx34>(model ? model + 0xC8 : 0));
-  return mBgW != nullptr;
+
+/* 02339410 */
+static BOOL solidHeapCB(fopAc_ac_c* i_this) {
+    return ((daObjEayogn_c*)i_this)->create_heap();
 }
-VERIFY(0x02339330, &Act_c::create_heap);
-BOOL solidHeapCB(Act_c *actor) {
-  WWHD_FUNC(0x02339410, BOOL, actor);
-  return actor->create_heap();
+
+/* 02339414 */
+void daObjEayogn_c::init_mtx() {
+    J3DModel_setBaseScale(mpModel, &scale);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
-VERIFY(0x02339410, solidHeapCB);
-void Act_c::init_mtx() {
-  WWHD_FUNC(0x02339414, void, this);
-  f32 x = scale.x, y = scale.y, z = scale.z;
-  u32 model = gabi::ea((J3DModel *)mModel);
-  gabi::store<f32>(model + 0xBC, x);
-  gabi::store<f32>(model + 0xC0, y);
-  gabi::store<f32>(model + 0xC4, z);
-  auto *matrix = gabi::at<Mtx34>(0x1048D0CC);
-  x = current.pos.x;
-  y = current.pos.y;
-  z = current.pos.z;
-  gabi::call(0x028E93CC, matrix, x, y, z);
-  gabi::call(0x025F1B48, matrix, (s16)shape_angle.x, (s16)shape_angle.y,
-             (s16)shape_angle.z);
-  f32 values[12];
-  for (u32 i = 0; i < 12; ++i)
-    values[i] = gabi::load<f32>(0x1048D0CC + 4 * i);
-  model = gabi::ea((J3DModel *)mModel);
-  for (u32 i = 0; i < 12; ++i)
-    gabi::store<f32>(model + 0xC8 + 4 * i, values[i]);
+
+/* 023394F4 */
+cPhs_State daObjEayogn_c::_create() {
+    fopAcM_ct(this, daObjEayogn_c);
+    if (!check_ev_bit())
+        return cPhs_ERROR_e;
+    cPhs_State ret = dComIfG_resLoad(&mPhs, M_arcname);
+    if (ret != cPhs_COMPLEATE_e)
+        return ret;
+    if (!fopAcM_entrySolidHeap(this, solidHeapCB, 0))
+        return cPhs_ERROR_e;
+    fopAcM_SetMtx(this, J3DModel_getBaseTRMtx(mpModel));
+    init_mtx();
+    dComIfG_Bgsp()->Regist(mpBgW, this);
+    mpBgW->Move();
+    fopAcM_setCullSizeBox(this, -550.0f, -50.0f, -600.0f, 550.0f, 50.0f, 600.0f);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x02339414, &Act_c::init_mtx);
-s32 Act_c::Create() {
-  WWHD_FUNC(0x023394F4, s32, this);
-  u32 base = gabi::ea(this), flags = gabi::load<u32>(base + 0x2E4);
-  if (!(flags & 8)) {
-    if (this) {
-      gabi::call(0x025D4ED0, this);
-      gabi::store<u32>(base + 0xB4, 0x100278F4);
-      flags = gabi::load<u32>(base + 0x2E4);
+
+/* 0233962C */
+bool daObjEayogn_c::_delete() {
+    if (heap != NULL && mpBgW != NULL && mpBgW->ChkUsed()) {
+        dComIfG_Bgsp()->Release(mpBgW);
+        mpBgW = NULL;
     }
-    gabi::store<u32>(base + 0x2E4, flags | 8);
-  }
-  u32 save = gabi::load<u32>(0x101F84DC);
-  if (!gabi::call<s32>(0x025B7D90, gabi::at<u8>(save + 0xD4), 1))
-    return 5;
-  s32 phase = gabi::call<s32>(0x02520460, &mPhase, STR(0x10027950));
-  if (phase != 4)
-    return phase;
-  if (!gabi::call<s32>(0x025D63E8, this, 0x02339410, 0))
-    return 5;
-  u32 model = gabi::ea((J3DModel *)mModel);
-  gabi::store<u32>(base + 0x348, model ? model + 0xC8 : 0);
-  init_mtx();
-  u32 play = gabi::call<u32>(0x025200D4);
-  gabi::call(0x024EEA6C, gabi::at<u8>(play + 0x12A0), (dBgW *)mBgW, this);
-  gabi::call(0x024F43DC, (dBgW *)mBgW);
-  gabi::call(0x025D674C, this, -550.0f, -50.0f, -600.0f, 550.0f, 50.0f, 600.0f);
-  return 4;
+    dComIfG_resDeleteDemo(&mPhs, M_arcname);
+    return true;
 }
-VERIFY(0x023394F4, &Act_c::Create);
-BOOL Act_c::Delete() {
-  WWHD_FUNC(0x0233962C, BOOL, this);
-  if (gabi::load<u32>(gabi::ea(this) + 0xF4)) {
-    u32 bg = gabi::ea((dBgW *)mBgW);
-    if (bg && gabi::load<u32>(bg) < 256) {
-      u32 play = gabi::call<u32>(0x025200D4);
-      gabi::call(0x020087EC, gabi::at<u8>(play + 0x12A0), (dBgW *)mBgW);
-      mBgW = nullptr;
+
+/* 023396A4 */
+bool daObjEayogn_c::_draw() {
+    g_env_light.settingTevStruct(TEV_TYPE_BG0, &current.pos, &tevStr);
+    g_env_light.setLightTevColorType(mpModel, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelUpdateDL(mpModel);
+    dComIfGd_setList();
+    return true;
+}
+
+/* 0233973C */
+static cPhs_State Mthd_Create(void* i_this) { return ((daObjEayogn_c*)i_this)->_create(); }
+/* 02339740 */
+static bool Mthd_Delete(void* i_this) { return ((daObjEayogn_c*)i_this)->_delete(); }
+/* 02339744 */
+// HD: _execute is folded into the method-table entry.
+static BOOL Mthd_Execute(void*) { return TRUE; }
+/* 0233974C */
+static bool Mthd_Draw(void* i_this) { return ((daObjEayogn_c*)i_this)->_draw(); }
+/* 02339750 */
+static void __sinit_d_a_obj_eayogn_cpp() { __sinit_header_statics(); }
+/* 023397E4 */
+// HD: compiler-emitted deleting destructor of a header static.
+static void header_static_dt(void* i_this, s32 flags) {
+    if (i_this != nullptr && (flags & 1))
+        operator_delete(i_this);
+}
+/* 023397F8 */
+// HD: actor deleting destructor.
+static void daObjEayogn_c_dt(daObjEayogn_c* i_this, s32 flags) {
+    if (i_this != nullptr) {
+        __dt(static_cast<fopAc_ac_c*>(i_this));
+        if (flags & 1)
+            operator_delete(i_this);
     }
-  }
-  gabi::call(0x025204C8, &mPhase, STR(0x10027950));
-  return TRUE;
 }
-VERIFY(0x0233962C, &Act_c::Delete);
-BOOL Act_c::Draw() {
-  WWHD_FUNC(0x023396A4, BOOL, this);
-  u32 base = gabi::ea(this), light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, gabi::at<u8>(light), 1, &current.pos,
-             gabi::at<u8>(base + 0x110));
-  light = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C, gabi::at<u8>(light), (J3DModel *)mModel,
-             gabi::at<u8>(base + 0x110));
-  u32 play = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D70));
-  play = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D74));
-  gabi::call(0x025E2DE0, (J3DModel *)mModel, 0);
-  play = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D78));
-  play = gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D7C));
-  return TRUE;
-}
-VERIFY(0x023396A4, &Act_c::Draw);
-s32 wrapperCreate(Act_c *actor) {
-  WWHD_FUNC(0x0233973C, s32, actor);
-  return actor->Create();
-}
-VERIFY(0x0233973C, wrapperCreate);
-BOOL wrapperDelete(Act_c *actor) {
-  WWHD_FUNC(0x02339740, BOOL, actor);
-  return actor->Delete();
-}
-VERIFY(0x02339740, wrapperDelete);
-BOOL Execute(Act_c *actor) {
-  WWHD_FUNC(0x02339744, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x02339744, Execute);
-BOOL wrapperDraw(Act_c *actor) {
-  WWHD_FUNC(0x0233974C, BOOL, actor);
-  return actor->Draw();
-}
-VERIFY(0x0233974C, wrapperDraw);
-void staticInitialize() {
-  WWHD_FUNC(0x02339750, void);
-  gabi::store<u32>(0x104696D4, 0);
-  gabi::store<u32>(0x104696CC, 0);
-  gabi::store<u32>(0x104696D8, 0);
-  gabi::store<u32>(0x104696D0, 0);
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C8E50));
-  gabi::store<f32>(0x104696C0, -3.1415927410125732f);
-  gabi::store<f32>(0x104696C4, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, gabi::at<u8>(0x104696C8));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C8E5C));
-  gabi::call(0x028EAB2C, gabi::at<u8>(0x104696C9));
-  gabi::call(0x028F026C, gabi::at<u8>(0x101C8E68));
-}
-VERIFY(0x02339750, staticInitialize);
-void deleteStatic(void *p, s32 flags) {
-  WWHD_FUNC(0x023397E4, void, p, flags);
-  if (p && (flags & 1))
-    gabi::call(0x0273AF40, p);
-}
-VERIFY(0x023397E4, deleteStatic);
-void destruct(Act_c *actor, s32 flags) {
-  WWHD_FUNC(0x023397F8, void, actor, flags);
-  if (actor) {
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, actor);
-  }
-}
-VERIFY(0x023397F8, destruct);
-void emptyVirtual() { WWHD_FUNC(0x0233984C, void); }
-VERIFY(0x0233984C, emptyVirtual);
-BOOL IsDelete(Act_c *actor) {
-  WWHD_FUNC(0x02339850, BOOL, actor);
-  return TRUE;
-}
-VERIFY(0x02339850, IsDelete);
-} // namespace daObjEayogn
+/* 0233984C */
+// HD: SafeString::assureTerminationImpl_ companion.
+static void assureTerminationImpl_() {}
+/* 02339850 */
+static BOOL Mthd_IsDelete(void*) { return TRUE; }
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data
+str 10027950 # "Eayogn"
+str 10027914 # "d_a_obj_eayogn.cpp"
+str 10027904 "mdl_data != NULL" renamed # HD: assertion prints null as 0
+*/

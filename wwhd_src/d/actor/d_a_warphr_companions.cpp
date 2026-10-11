@@ -7,19 +7,27 @@
  * reference, verified against cking.rpx.
  */
 #include "d/actor/d_a_warphr.h"
+void warphrActorDestroy(daWarphr_c*, u32);
+void warphrDelete(void*);
 namespace {
-static void actor_deleting_destructor(daWarphr_c *actor, s32 flags) {
-  WWHD_FUNC(0x024DBADC, void, actor, flags);
-  if (!actor)
-    return;
-  gabi::call(0x025D50BC, actor, 0);
-  if (flags & 1)
-    gabi::call(0x0273AF40, actor);
+/* 024DBADC */
+static void WarphrActorDtor(daWarphr_c* actor, s32 flags) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!actor)
+        return;
+    warphrActorDestroy(actor, 0);
+    if (flags & 1)
+        warphrDelete(actor);
 }
-VERIFY(0x024DBADC, actor_deleting_destructor);
 
-static void safestring_assure_termination(u8 *name) {
-  WWHD_FUNC(0x024DBB30, void, name);
+/* 024DBB30 */
+static void WarphrSafeStringAssure(u8* name) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
 }
-VERIFY(0x024DBB30, safestring_assure_termination);
 } // namespace
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+ext 025D50BC void warphrActorDestroy(daWarphr_c*, u32)
+*/
+// clang-format on

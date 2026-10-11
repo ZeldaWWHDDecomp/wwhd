@@ -1,352 +1,314 @@
-/* d_save part 3: dSv_player_map_c, dSv_player_info_c, dSv_player_config_c, dSv_player_priest_c,
- * dSv_player_c, dSv_ocean_c, dSv_event_c (025B7E74..025B8BC3). WWHD. See d_save.cpp for the unit's range and the save layout.
- *
- * dSv_player_c (HD offsets): status a 0, status b 0x18, return place 0x30, item 0x3C, get item
- * 0x51, item record 0x66, item max 0x6E, bag item 0x76, get bag item 0x90, bag item record 0x9C,
- * collect 0xB4, map 0xC4, info 0x148, config 0x1A4.
- * dSv_player_map_c: four u32[4] bit arrays at 0 / 0x10 (got) / 0x20 (opened) / 0x30 (completed),
- * fmap bits [0x31] at 0x40, 0x71 [16], triforce charts 0x81 (HD initial 0xEA, GameCube 0).
- * dSv_player_info_c: name 0x14 [17], 0x10, 0x12, names 0x25 / 0x36 [17], puzzle 0x47 [17],
- * 0x58, random salvage point 0x59. dSv_player_config_c: ruby 0, sound mode 1 (HD 2), 2, 3. */
+/* d_save — Maps, player configuration, event flags and player initialization.
+ * GameCube names with verified WWHD layouts and behavior. Unit: d_save. */
 #include "bindings.h"
+#include "d/d_save_readable.h"
 
-namespace d_save_3_cpp {
-#include "d_save_local.h"
+namespace d_save_cpp {
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline f32 cM_rndF_l(f32 max) { return gabi::call<f32>(0x020198D8, max); }
-/* 025E1C74 probably mDoAud_setOutputMode (HD: called with 2) */
-static inline void mDoAud_setOutputMode_l(u32 mode) { gabi::call(0x025E1C74, mode); }
+#include "d/d_save_local.h"
 
-/* the map bit arrays: word (no >> 5), bit (no & 31) */
-static inline void mapOn_l(u32 a, u32 no, u32 file, s32 line, u32 msg) {
-    if (no >= 0x80) JUT_ASSERT_l(file, line, msg);
-    u32 w = a + (u32)(((s32)no >> 5) << 2);
-    st(w, ld(w) | (1u << (no & 31)));
+static inline void setMapBit(u32 a, u32 no, const char* file, s32 line, const char* msg) {
+    if (no >= 0x80) saveAssert(file, line, msg);
+    be<u32>& flags = indexed(view<be<u32>>(a), (u32)((s32)no >> 5));
+    flags = (u32)flags | (1u << (no & 31));
 }
-static inline void mapOff_l(u32 a, u32 no, u32 file, s32 line, u32 msg) {
-    if (no >= 0x80) JUT_ASSERT_l(file, line, msg);
-    u32 w = a + (u32)(((s32)no >> 5) << 2);
-    st(w, ld(w) & ~(1u << (no & 31)));
+static inline void clearMapBit(u32 a, u32 no, const char* file, s32 line, const char* msg) {
+    if (no >= 0x80) saveAssert(file, line, msg);
+    be<u32>& flags = indexed(view<be<u32>>(a), (u32)((s32)no >> 5));
+    flags = (u32)flags & ~(1u << (no & 31));
 }
-static inline BOOL mapIs_l(u32 a, u32 no, u32 file, s32 line, u32 msg) {
-    if (no >= 0x80) JUT_ASSERT_l(file, line, msg);
-    u32 w = a + (u32)(((s32)no >> 5) << 2);
-    return (ld(w) & (1u << (no & 31))) ? TRUE : FALSE;
+static inline BOOL testMapBit(u32 a, u32 no, const char* file, s32 line, const char* msg) {
+    if (no >= 0x80) saveAssert(file, line, msg);
+    be<u32>& flags = indexed(view<be<u32>>(a), (u32)((s32)no >> 5));
+    return ((u32)flags & (1u << (no & 31))) ? TRUE : FALSE;
 }
 
-/* 025B7E74: HD marks triforce charts 1, 3, 5, 6, 7 (0xEA) from the start */
-static void dSv_player_map_c_init(u32 t) {
-    WWHD_FUNC(0x025B7E74, void, t);
+// HD: starts with Triforce charts 1, 3, 5, 6 and 7 already owned.
+/* 025B7E74 */
+void d_save_cpp::dSv_player_map_c::init() {
     for (u32 i = 0; i < 4; i++) {
-        st(t + 4 * i, 0);
-        st(t + 0x10 + 4 * i, 0);
-        st(t + 0x20 + 4 * i, 0);
-        st(t + 0x30 + 4 * i, 0);
+        indexed(field_0x0[0], i) = 0;
+        indexed(field_0x0[1], i) = 0;
+        indexed(field_0x0[2], i) = 0;
+        indexed(field_0x0[3], i) = 0;
     }
-    for (u32 i = 0; i < 0x31; i++) st8(t + 0x40 + i, 0);
-    st8(t + 0x81, 0xEA);
-    st8(t + 0x40 + 0xA, 3);
-    st8(t + 0x40 + 0, 3);
-    st8(t + 0x40 + 0x2B, 3);
-    for (u32 i = 0; i < 0x10; i++) st8(t + 0x71 + i, 0);
+    for (u32 i = 0; i < 0x31; i++) indexed(mFmapBits, i) = 0;
+    field_0x81 = 0xEA;
+    indexed(mFmapBits, 0xA) = 3;
+    indexed(mFmapBits, 0) = 3;
+    indexed(mFmapBits, 0x2B) = 3;
+    for (u32 i = 0; i < 0x10; i++) indexed(field_0x71, i) = 0;
 }
-VERIFY(0x025B7E74, dSv_player_map_c_init);
 
-/* 025B7EF4 dSv_player_map_c::onGetMap (not named by the matcher) */
-static void dSv_player_map_c_onGetMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B7EF4, void, t, no);
-    mapOn_l(t + 0x10, no, 0x10053944, 0x6C9, 0x1005392C);
+/* 025B7EF4 */
+void d_save_cpp::dSv_player_map_c::onGetMap(u32 no) {
+    setMapBit(gabi::ea(field_0x0[1]), no, "d_save.cpp", 0x6C9, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B7EF4, dSv_player_map_c_onGetMap);
 
 /* 025B7F68 */
-static BOOL dSv_player_map_c_isGetMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B7F68, BOOL, t, no);
-    return mapIs_l(t + 0x10, no, 0x1005396C, 0x6E5, 0x10053954);
+BOOL d_save_cpp::dSv_player_map_c::isGetMap(u32 no) {
+    return testMapBit(gabi::ea(field_0x0[1]), no, "d_save.cpp", 0x6E5, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B7F68, dSv_player_map_c_isGetMap);
 
-/* 025B7FE0 dSv_player_map_c::onOpenMap (not named by the matcher) */
-static void dSv_player_map_c_onOpenMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B7FE0, void, t, no);
-    mapOn_l(t + 0x20, no, 0x10053994, 0x706, 0x1005397C);
+/* 025B7FE0 */
+void d_save_cpp::dSv_player_map_c::onOpenMap(u32 no) {
+    setMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x706, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B7FE0, dSv_player_map_c_onOpenMap);
 
-/* 025B8054 dSv_player_map_c::offOpenMap (not named by the matcher) */
-static void dSv_player_map_c_offOpenMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8054, void, t, no);
-    mapOff_l(t + 0x20, no, 0x100539B8, 0x714, 0x100539A0);
+/* 025B8054 */
+void d_save_cpp::dSv_player_map_c::offOpenMap(u32 no) {
+    clearMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x714, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B8054, dSv_player_map_c_offOpenMap);
 
 /* 025B80C8 */
-static BOOL dSv_player_map_c_isOpenMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B80C8, BOOL, t, no);
-    return mapIs_l(t + 0x20, no, 0x100539DC, 0x722, 0x100539C4);
+BOOL d_save_cpp::dSv_player_map_c::isOpenMap(u32 no) {
+    return testMapBit(gabi::ea(field_0x0[2]), no, "d_save.cpp", 0x722, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B80C8, dSv_player_map_c_isOpenMap);
 
 /* 025B8140 */
-static void dSv_player_map_c_onCompleteMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8140, void, t, no);
-    mapOn_l(t + 0x30, no, 0x10053A04, 0x743, 0x100539EC);
+void d_save_cpp::dSv_player_map_c::onCompleteMap(u32 no) {
+    setMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x743, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B8140, dSv_player_map_c_onCompleteMap);
 
-/* 025B81B4 dSv_player_map_c::offCompleteMap (not named by the matcher) */
-static void dSv_player_map_c_offCompleteMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B81B4, void, t, no);
-    mapOff_l(t + 0x30, no, 0x10053A28, 0x751, 0x10053A10);
+/* 025B81B4 */
+void d_save_cpp::dSv_player_map_c::offCompleteMap(u32 no) {
+    clearMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x751, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B81B4, dSv_player_map_c_offCompleteMap);
 
 /* 025B8228 */
-static BOOL dSv_player_map_c_isCompleteMap(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8228, BOOL, t, no);
-    return mapIs_l(t + 0x30, no, 0x10053A4C, 0x75F, 0x10053A34);
+BOOL d_save_cpp::dSv_player_map_c::isCompleteMap(u32 no) {
+    return testMapBit(gabi::ea(field_0x0[3]), no, "d_save.cpp", 0x75F, "0 <= i_no && i_no < 128");
 }
-VERIFY(0x025B8228, dSv_player_map_c_isCompleteMap);
 
-/* 025B82A0 dSv_player_map_c::onTriforce (not named by the matcher; no offTriforce in HD) */
-static void dSv_player_map_c_onTriforce(u32 t, u32 no) {
-    WWHD_FUNC(0x025B82A0, void, t, no);
-    bitOn8_l(t + 0x81, no, 8, 0x10053A74, 0x781, 0x10053A5C);
+/* 025B82A0 */
+void d_save_cpp::dSv_player_map_c::onTriforce(u32 no) {
+    setByteBit(gabi::ea(&field_0x81), no, 8, "d_save.cpp", 0x781, "0 <= i_no && i_no < 8");
 }
-VERIFY(0x025B82A0, dSv_player_map_c_onTriforce);
 
 /* 025B8308 */
-static BOOL dSv_player_map_c_isTriforce(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8308, BOOL, t, no);
-    return bitIs8_l(t + 0x81, no, 8, 0x10053A9C, 0x79D, 0x10053A84);
+BOOL d_save_cpp::dSv_player_map_c::isTriforce(u32 no) {
+    return testByteBit(gabi::ea(&field_0x81), no, 8, "d_save.cpp", 0x79D, "0 <= i_no && i_no < 8");
 }
-VERIFY(0x025B8308, dSv_player_map_c_isTriforce);
 
 /* 025B8378 */
-static s32 dSv_player_map_c_getCollectMapNum(u32 t) {
-    WWHD_FUNC(0x025B8378, s32, t);
+s32 d_save_cpp::dSv_player_map_c::getCollectMapNum() {
     s32 num = 0;
     for (s32 i = 1; i <= 61; i++) {
-        if (i != 35 && i != 36 && i < 52 && dSv_player_map_c_isGetMap(t, (u32)(i - 1))) num++;
+        if (i != 35 && i != 36 && i < 52 && isGetMap((u32)(i - 1))) num++;
     }
     return num;
 }
-VERIFY(0x025B8378, dSv_player_map_c_getCollectMapNum);
 
-/* 025B840C dSv_player_map_c::onFmapBit (not named by the matcher) */
-static void dSv_player_map_c_onFmapBit(u32 t, u32 idx, u32 no) {
-    WWHD_FUNC(0x025B840C, void, t, idx, no);
-    bitOn8_l(t + 0x40 + idx, no, 8, 0x10053AC4, 0x7D4, 0x10053AAC);
+/* 025B840C */
+void d_save_cpp::dSv_player_map_c::onFmapBit(u32 idx, u32 no) {
+    setByteBit(gabi::ea(&indexed(mFmapBits, idx)), no, 8, "d_save.cpp", 0x7D4, "0 <= i_no && i_no < 8");
 }
-VERIFY(0x025B840C, dSv_player_map_c_onFmapBit);
 
-/* 025B8484 dSv_player_map_c::onSaveArriveGrid (not named by the matcher) */
-static void dSv_player_map_c_onSaveArriveGrid(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8484, void, t, no);
-    if (no >= 0x31) JUT_ASSERT_l(0x10053AD0, 0x7FB, 0x10053ADC);
-    dSv_player_map_c_onFmapBit(t, no, 0);
+/* 025B8484 */
+void d_save_cpp::dSv_player_map_c::onSaveArriveGrid(u32 no) {
+    if (no >= 0x31) saveAssert("d_save.cpp", 0x7FB, "(no >= 0) && (no < 49)");
+    onFmapBit(no, 0);
 }
-VERIFY(0x025B8484, dSv_player_map_c_onSaveArriveGrid);
 
-/* 025B84E8 dSv_player_map_c::isFmapBit (not named by the matcher) */
-static BOOL dSv_player_map_c_isFmapBit(u32 t, u32 idx, u32 no) {
-    WWHD_FUNC(0x025B84E8, BOOL, t, idx, no);
-    return bitIs8_l(t + idx + 0x40, no, 8, 0x10053B14, 0x7F2, 0x10053AFC);
+/* 025B84E8 */
+BOOL d_save_cpp::dSv_player_map_c::isFmapBit(u32 idx, u32 no) {
+    return testByteBit(gabi::ea(&indexed(mFmapBits, idx)), no, 8, "d_save.cpp", 0x7F2, "0 <= i_no && i_no < 8");
 }
-VERIFY(0x025B84E8, dSv_player_map_c_isFmapBit);
 
-/* 025B8568 dSv_player_map_c::isSaveArriveGrid (not named by the matcher) */
-static BOOL dSv_player_map_c_isSaveArriveGrid(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8568, BOOL, t, no);
-    if (no >= 0x31) JUT_ASSERT_l(0x10053B20, 0x809, 0x10053B2C);
-    return dSv_player_map_c_isFmapBit(t, no, 0);
+/* 025B8568 */
+BOOL d_save_cpp::dSv_player_map_c::isSaveArriveGrid(u32 no) {
+    if (no >= 0x31) saveAssert("d_save.cpp", 0x809, "(no >= 0) && (no < 49)");
+    return isFmapBit(no, 0);
 }
-VERIFY(0x025B8568, dSv_player_map_c_isSaveArriveGrid);
 
-/* 025B85CC dSv_player_map_c::onSaveArriveGridForAgb (not named by the matcher; no
- * isSaveArriveGridForAgb in HD) */
-static void dSv_player_map_c_onSaveArriveGridForAgb(u32 t, u32 no) {
-    WWHD_FUNC(0x025B85CC, void, t, no);
-    if (no >= 0x31) JUT_ASSERT_l(0x10053B44, 0x810, 0x10053B50);
-    dSv_player_map_c_onFmapBit(t, no, 1);
+/* 025B85CC */
+void d_save_cpp::dSv_player_map_c::onSaveArriveGridForAgb(u32 no) {
+    if (no >= 0x31) saveAssert("d_save.cpp", 0x810, "(no >= 0) && (no < 49)");
+    onFmapBit(no, 1);
 }
-VERIFY(0x025B85CC, dSv_player_map_c_onSaveArriveGridForAgb);
 
 /* strncpy(dst, src, 17) (inline) */
-static inline void strncpy17_inl(u32 dst, u32 src) {
+static inline void copyPlayerName(u32 dst, u32 src) {
     u32 i = 0;
     for (; i < 0x11; i++) {
-        u8 c = ld8(src + i);
-        st8(dst + i, c);
+        u8 c = (u8)indexed(view<be<u8>>(src), i);
+        indexed(view<be<u8>>(dst), i) = c;
         if (c == 0) break;
     }
-    for (; i < 0x11; i++) st8(dst + i, 0);
+    for (; i < 0x11; i++) indexed(view<be<u8>>(dst), i) = 0;
 }
 
 /* 025B8630 */
-static void dSv_player_info_c_init(u32 t) {
-    WWHD_FUNC(0x025B8630, void, t);
-    const u32 l_defaultName = 0x101EADA0;
-    strncpy17_inl(t + 0x14, l_defaultName);
-    st16(t + 0x10, 0);
-    strncpy17_inl(t + 0x25, l_defaultName);
-    strncpy17_inl(t + 0x36, l_defaultName);
-    st16(t + 0x12, 0);
-    st8(t + 0x58, 0);
-    for (u32 i = 0; i < 0x11; i++) st8(t + 0x47 + i, 0);
-    u8 pt = (u8)gabi::ftoi(cM_rndF_l(3.0f));
+void d_save_cpp::dSv_player_info_c::init() {
+
+    copyPlayerName(gabi::ea(mPlayerName), gabi::ea(l_defaultName));
+    field_0x10 = 0;
+    copyPlayerName(gabi::ea(field_0x25), gabi::ea(l_defaultName));
+    copyPlayerName(gabi::ea(field_0x36), gabi::ea(l_defaultName));
+    mDeathCount = 0;
+    mClearCount = 0;
+    for (u32 i = 0; i < 0x11; i++) indexed(mPuzzleData, i) = 0;
+    u8 pt = (u8)gabi::ftoi(saveRandom(3.0f));
     if (pt >= 3) pt = 2;
-    st8(t + 0x59, pt);
+    mRandomSalvagePoint = pt;
 }
-VERIFY(0x025B8630, dSv_player_info_c_init);
 
-/* 025B8800: HD sound mode 2 without the OSGetSoundMode test */
-static void dSv_player_config_c_init(u32 t) {
-    WWHD_FUNC(0x025B8800, void, t);
-    st8(t + 0, 1);
-    st8(t + 1, 2);
-    mDoAud_setOutputMode_l(2);
-    st8(t + 3, 1);
-    st8(t + 2, 0);
+// HD: selects sound mode 2 without consulting OSGetSoundMode.
+/* 025B8800 */
+void d_save_cpp::dSv_player_config_c::init() {
+    mRuby = 1;
+    mSoundMode = 2;
+    saveAudioOutput(2);
+    mVibration = 1;
+    mAttentionType = 0;
 }
-VERIFY(0x025B8800, dSv_player_config_c_init);
 
-/* 025B8850: HD returns the play object's vibration setting without the rumble check */
-static u8 dSv_player_config_c_checkVibration(u32 t) {
-    WWHD_FUNC(0x025B8850, u8, t);
-    return ld8(play() + 0x5BED);
+// HD: returns the play setting without the GameCube rumble availability check.
+/* 025B8850 */
+u8 d_save_cpp::dSv_player_config_c::checkVibration() {
+    return (u8)view<HdVibrationView>(play())->mSetting;
 }
-VERIFY(0x025B8850, dSv_player_config_c_checkVibration);
 
 /* 025B8874 */
-static void dSv_player_priest_c_init(u32 t) {
-    WWHD_FUNC(0x025B8874, void, t);
-    st8(t + 0xF, 0);
+void d_save_cpp::dSv_player_priest_c::init() {
+    field_0xf = 0;
 }
-VERIFY(0x025B8874, dSv_player_priest_c_init);
 
 /* 025B8880 */
-static void dSv_player_priest_c_set(u32 t, u32 a, u32 pos, u32 angle, u32 roomNo) {
-    WWHD_FUNC(0x025B8880, void, t, a, pos, angle, roomNo);
-    st8(t + 0xF, (u8)a);
-    st(t + 0, ld(pos + 0)); /* cXyz copied as words */
-    st(t + 4, ld(pos + 4));
-    u32 z = ld(pos + 8);
-    st8(t + 0xE, (u8)roomNo);
-    st(t + 8, z);
-    st16(t + 0xC, (u16)angle);
+void d_save_cpp::dSv_player_priest_c::set(u32 a, const cXyz* pos, u32 angle, u32 roomNo) {
+    field_0xf = (u8)a;
+    wordPosition(&field_0x0).x = wordPosition(pos).x;
+    wordPosition(&field_0x0).y = wordPosition(pos).y;
+    u32 z = wordPosition(pos).z;
+    field_0xe = (s8)roomNo;
+    wordPosition(&field_0x0).z = z;
+    field_0xc = (s16)angle;
 }
-VERIFY(0x025B8880, dSv_player_priest_c_set);
 
-/* 025B88A8 HD-only: initialises a compact copy of the player item data (status a, items, two
- * 3-byte records, bag items, bag item record, collect); purpose unknown */
-static void dSv_player_sub_init(u32 t) {
-    WWHD_FUNC(0x025B88A8, void, t);
-    gabi::call(0x025B4DC0, t);        /* dSv_player_status_a_c::init */
-    gabi::call(0x025B51BC, t + 0x18); /* dSv_player_item_c::init */
-    gabi::call(0x025B60D8, t + 0x2D);
-    gabi::call(0x025B61D0, t + 0x30);
-    gabi::call(0x025B6214, t + 0x33); /* dSv_player_bag_item_c::init */
-    gabi::call(0x025B78AC, t + 0x4B); /* dSv_player_bag_item_record_c::init */
-    gabi::call(0x025B790C, t + 0x63); /* dSv_player_collect_c::init */
+// HD: initializes all seven components of the compact player-state copy.
+/* 025B88A8 */
+void d_save_cpp::dSv_player_status_c_c::init() {
+    view<dSv_player_status_a_c>(gabi::ea(&mRecollectStatusA))->init();
+    view<dSv_player_item_c>(gabi::ea(&mRecollectItem))->init();
+    view<dSv_player_item_record2_c>(gabi::ea(&mRecollectItemRecord))->init();
+    view<dSv_player_item_max2_c>(gabi::ea(&mRecollectItemMax))->init();
+    view<dSv_player_bag_item_c>(gabi::ea(&mRecollectBagItem))->init();
+    view<dSv_player_bag_item_record_c>(gabi::ea(&mRecollectBagItemRecord))->init();
+    view<dSv_player_collect_c>(gabi::ea(&mRecollectCollect))->init();
 }
-VERIFY(0x025B88A8, dSv_player_sub_init);
 
 /* 025B8904 */
-static void dSv_player_c_init(u32 t) {
-    WWHD_FUNC(0x025B8904, void, t);
-    gabi::call(0x025B4DC0, t);         /* mPlayerStatusA */
-    gabi::call(0x025B5028, t + 0x18);  /* mPlayerStatusB */
-    gabi::call(0x025B5060, t + 0x30);  /* mReturnPlace */
-    gabi::call(0x025B51BC, t + 0x3C);  /* mPlayerItem */
-    gabi::call(0x025B5CAC, t + 0x51);  /* mGetItem */
-    gabi::call(0x025B60EC, t + 0x66);  /* mItemRecord */
-    gabi::call(0x025B61E4, t + 0x6E);  /* mItemMax */
-    gabi::call(0x025B6214, t + 0x76);  /* mBagItem */
-    gabi::call(0x025B7614, t + 0x90);  /* mGetBagItem */
-    gabi::call(0x025B78AC, t + 0x9C);  /* mBagItemRecord */
-    gabi::call(0x025B790C, t + 0xB4);  /* mCollect */
-    dSv_player_map_c_init(t + 0xC4);   /* mMap */
-    dSv_player_info_c_init(t + 0x148); /* mInfo */
-    dSv_player_config_c_init(t + 0x1A4); /* mConfig */
+void d_save_cpp::dSv_player_c::init() {
+    view<dSv_player_status_a_c>(gabi::ea(&mPlayerStatusA))->init();
+    view<dSv_player_status_b_c>(gabi::ea(&mPlayerStatusB))->init();
+    view<dSv_player_return_place_c>(gabi::ea(&mReturnPlace))->init();
+    view<dSv_player_item_c>(gabi::ea(&mPlayerItem))->init();
+    view<dSv_player_get_item_c>(gabi::ea(&mGetItem))->init();
+    view<dSv_player_item_record_c>(gabi::ea(&mItemRecord))->init();
+    view<dSv_player_item_max_c>(gabi::ea(&mItemMax))->init();
+    view<dSv_player_bag_item_c>(gabi::ea(&mBagItem))->init();
+    view<dSv_player_get_bag_item_c>(gabi::ea(&mGetBagItem))->init();
+    view<dSv_player_bag_item_record_c>(gabi::ea(&mBagItemRecord))->init();
+    view<dSv_player_collect_c>(gabi::ea(&mCollect))->init();
+    view<dSv_player_map_c>(gabi::ea(&mMap))->init();   /* mMap */
+    view<dSv_player_info_c>(gabi::ea(&mInfo))->init(); /* mInfo */
+    view<dSv_player_config_c>(gabi::ea(&mConfig))->init(); /* mConfig */
 }
-VERIFY(0x025B8904, dSv_player_c_init);
 
 /* 025B8998 */
-static void dSv_ocean_c_init(u32 t) {
-    WWHD_FUNC(0x025B8998, void, t);
-    for (u32 i = 0; i < 50; i++) st16(t + 2 * i, 0);
+void d_save_cpp::dSv_ocean_c::init() {
+    for (u32 i = 0; i < 50; i++) indexed(field_0x0, i) = 0;
 }
-VERIFY(0x025B8998, dSv_ocean_c_init);
 
 /* 025B89B4 */
-static void dSv_ocean_c_onOceanSvBit(u32 t, u32 grid, u32 bit) {
-    WWHD_FUNC(0x025B89B4, void, t, grid, bit);
-    if (grid > 0x31) JUT_ASSERT_l(0x10053B98, 0xA96, 0x10053B74);
-    if (bit >= 0x10) JUT_ASSERT_l(0x10053B98, 0xA97, 0x10053BA4);
-    u32 a = t + (grid << 1);
-    st16(a, (u16)(ld16(a) | slw(1, bit)));
+void d_save_cpp::dSv_ocean_c::onOceanSvBit(u32 grid, u32 bit) {
+    if (grid > 0x31) saveAssert("d_save.cpp", 0xA96, "(0 <= i_grid) && (i_grid <= 0x31)");
+    if (bit >= 0x10) saveAssert("d_save.cpp", 0xA97, "(0 <= i_bit) && (i_bit < 16)");
+    be<u16>& flags = indexed(field_0x0, grid);
+    flags = (u16)((u16)flags | slw(1, bit));
 }
-VERIFY(0x025B89B4, dSv_ocean_c_onOceanSvBit);
 
 /* 025B8A50 */
-static BOOL dSv_ocean_c_isOceanSvBit(u32 t, u32 grid, u32 bit) {
-    WWHD_FUNC(0x025B8A50, BOOL, t, grid, bit);
-    if (grid > 0x31) JUT_ASSERT_l(0x10053BF0, 0xAB6, 0x10053BCC);
-    if (bit >= 0x10) JUT_ASSERT_l(0x10053BF0, 0xAB7, 0x10053BFC);
-    return (ld16((grid << 1) + t) & (u16)slw(1, bit)) ? TRUE : FALSE;
+BOOL d_save_cpp::dSv_ocean_c::isOceanSvBit(u32 grid, u32 bit) {
+    if (grid > 0x31) saveAssert("d_save.cpp", 0xAB6, "(0 <= i_grid) && (i_grid <= 0x31)");
+    if (bit >= 0x10) saveAssert("d_save.cpp", 0xAB7, "(0 <= i_bit) && (i_bit < 16)");
+    return ((u16)indexed(field_0x0, grid) & (u16)slw(1, bit)) ? TRUE : FALSE;
 }
-VERIFY(0x025B8A50, dSv_ocean_c_isOceanSvBit);
 
-static inline u32 evIdx(u32 no) { return (u32)((s32)no >> 8); }
+static inline u32 eventByteIndex(u32 no) { return (u32)((s32)no >> 8); }
 
 /* 025B8AF4 */
-static void dSv_event_c_setEventReg(u32 t, u32 reg, u32 no) {
-    WWHD_FUNC(0x025B8AF4, void, t, reg, no);
-    u32 a = t + evIdx(reg);
-    st8(a, (u8)((ld8(a) & ~(reg & 0xFF)) | no));
+void d_save_cpp::dSv_event_c::setEventReg(u32 reg, u32 no) {
+    be<u8>& flags = indexed(mFlags, eventByteIndex(reg));
+    flags = (u8)(((u8)flags & ~(reg & 0xFF)) | no);
 }
-VERIFY(0x025B8AF4, dSv_event_c_setEventReg);
 
-/* 025B8B10: setInitEventBit (d_save_init) inlined: the Kg1 high score (constant 1004BD18) and
- * register 0x7EFF = 0xE */
-static void dSv_event_c_init(u32 t) {
-    WWHD_FUNC(0x025B8B10, void, t);
-    for (u32 i = 0; i < 0x100; i++) st8(t + i, 0);
-    dSv_event_c_setEventReg(t, 0xBEFF, ld8(0x1004BD18));
-    dSv_event_c_setEventReg(t, 0x7EFF, 0xE);
+/* 025B8B10 */
+void d_save_cpp::dSv_event_c::init() {
+    for (u32 i = 0; i < 0x100; i++) indexed(mFlags, i) = 0;
+    setEventReg(0xBEFF, (u8)l_kg1HighScore);
+    setEventReg(0x7EFF, 0xE);
 }
-VERIFY(0x025B8B10, dSv_event_c_init);
 
 /* 025B8B68 */
-static void dSv_event_c_onEventBit(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8B68, void, t, no);
-    u32 a = t + evIdx(no);
-    st8(a, (u8)(ld8(a) | no));
+void d_save_cpp::dSv_event_c::onEventBit(u32 no) {
+    be<u8>& flags = indexed(mFlags, eventByteIndex(no));
+    flags = (u8)((u8)flags | no);
 }
-VERIFY(0x025B8B68, dSv_event_c_onEventBit);
 
 /* 025B8B7C */
-static void dSv_event_c_offEventBit(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8B7C, void, t, no);
-    u32 a = t + evIdx(no);
-    st8(a, (u8)(ld8(a) & ~(no & 0xFF)));
+void d_save_cpp::dSv_event_c::offEventBit(u32 no) {
+    be<u8>& flags = indexed(mFlags, eventByteIndex(no));
+    flags = (u8)((u8)flags & ~(no & 0xFF));
 }
-VERIFY(0x025B8B7C, dSv_event_c_offEventBit);
 
 /* 025B8B94 */
-static BOOL dSv_event_c_isEventBit(u32 t, u32 no) {
-    WWHD_FUNC(0x025B8B94, BOOL, t, no);
-    return (ld8(t + evIdx(no)) & (no & 0xFF)) ? TRUE : FALSE;
+BOOL d_save_cpp::dSv_event_c::isEventBit(u32 no) {
+    return ((u8)indexed(mFlags, eventByteIndex(no)) & (no & 0xFF)) ? TRUE : FALSE;
 }
-VERIFY(0x025B8B94, dSv_event_c_isEventBit);
 
 /* 025B8BB0 */
-static u8 dSv_event_c_getEventReg(u32 t, u32 reg) {
-    WWHD_FUNC(0x025B8BB0, u8, t, reg);
-    return (u8)(ld8(t + evIdx(reg)) & reg);
+u8 d_save_cpp::dSv_event_c::getEventReg(u32 reg) {
+    return (u8)((u8)indexed(mFlags, eventByteIndex(reg)) & reg);
 }
-VERIFY(0x025B8BB0, dSv_event_c_getEventReg);
 
-}  // namespace d_save_3_cpp
+}  // namespace d_save_cpp
+
+/* WWHD glue
+str 10053944 "d_save.cpp" in 025B7EF4
+str 1005392C "0 <= i_no && i_no < 128" in 025B7EF4
+str 1005396C "d_save.cpp" in 025B7F68
+str 10053954 "0 <= i_no && i_no < 128" in 025B7F68
+str 10053994 "d_save.cpp" in 025B7FE0
+str 1005397C "0 <= i_no && i_no < 128" in 025B7FE0
+str 100539B8 "d_save.cpp" in 025B8054
+str 100539A0 "0 <= i_no && i_no < 128" in 025B8054
+str 100539DC "d_save.cpp" in 025B80C8
+str 100539C4 "0 <= i_no && i_no < 128" in 025B80C8
+str 10053A04 "d_save.cpp" in 025B8140
+str 100539EC "0 <= i_no && i_no < 128" in 025B8140
+str 10053A28 "d_save.cpp" in 025B81B4
+str 10053A10 "0 <= i_no && i_no < 128" in 025B81B4
+str 10053A4C "d_save.cpp" in 025B8228
+str 10053A34 "0 <= i_no && i_no < 128" in 025B8228
+str 10053A74 "d_save.cpp" in 025B82A0
+str 10053A5C "0 <= i_no && i_no < 8" in 025B82A0
+str 10053A9C "d_save.cpp" in 025B8308
+str 10053A84 "0 <= i_no && i_no < 8" in 025B8308
+str 10053AC4 "d_save.cpp" in 025B840C
+str 10053AAC "0 <= i_no && i_no < 8" in 025B840C
+str 10053AD0 "d_save.cpp" in 025B8484
+str 10053ADC "(no >= 0) && (no < 49)" in 025B8484
+str 10053B14 "d_save.cpp" in 025B84E8
+str 10053AFC "0 <= i_no && i_no < 8" in 025B84E8
+str 10053B20 "d_save.cpp" in 025B8568
+str 10053B2C "(no >= 0) && (no < 49)" in 025B8568
+str 10053B44 "d_save.cpp" in 025B85CC
+str 10053B50 "(no >= 0) && (no < 49)" in 025B85CC
+str 10053B98 "d_save.cpp" in 025B89B4
+str 10053B74 "(0 <= i_grid) && (i_grid <= 0x31)" in 025B89B4
+str 10053BA4 "(0 <= i_bit) && (i_bit < 16)" in 025B89B4
+str 10053BF0 "d_save.cpp" in 025B8A50
+str 10053BCC "(0 <= i_grid) && (i_grid <= 0x31)" in 025B8A50
+str 10053BFC "(0 <= i_bit) && (i_bit < 16)" in 025B8A50
+*/

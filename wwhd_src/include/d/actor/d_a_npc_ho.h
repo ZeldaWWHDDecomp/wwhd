@@ -28,13 +28,29 @@ struct daNpc_Ho_c : fopAc_ac_c {
         HO_STATE_PREACH = 7,
     };
 
-    u32 ChkOrder(u8 flag) { return (u8)mOrderFlags & flag; }
-    void ClrOrder() { mOrderFlags = 0; }
-    void SetOrder(u8 v) { mOrderFlags = (s8)((u8)mOrderFlags | v); }
-    bool chkFlag(u16 flag) { return (mFlags & flag) == flag; }
-    void clrFlag(u16 flag) { mFlags = (u16)(mFlags & ~flag); }
-    void setFlag(u16 flag) { mFlags = (u16)(mFlags | flag); }
-    bool isMorf(); /* mDoExt_McaMorf::isMorf: mCurMorf (+0xB0) < 1.0 */
+    enum ActionStatus { ACTION_STARTING = 0, ACTION_ONGOING = 1, ACTION_ENDING = -1 };
+    enum TalkStates { TALK_INIT = 0, TALK_MSG_CREATE = 1, TALK_ACTIVE = 2, TALK_FINISHED = -1 };
+    u32 ChkOrder(u8 flag) {
+        return (u8)mOrderFlags & flag;
+    }
+    void ClrOrder() {
+        mOrderFlags = 0;
+    }
+    void SetOrder(u8 v) {
+        mOrderFlags = (s8)((u8)mOrderFlags | v);
+    }
+    bool chkFlag(u16 flag) {
+        return (mFlags & flag) == flag;
+    }
+    void clrFlag(u16 flag) {
+        mFlags = (u16)(mFlags & ~flag);
+    }
+    void setFlag(u16 flag) {
+        mFlags = (u16)(mFlags | flag);
+    }
+    bool isMorf() {
+        return mpMorf->mCurMorf < 1.0f;
+    } /* mDoExt_McaMorf::isMorf: mCurMorf (+0xB0) < 1.0 */
 
     s16 XyCheckCB(int);
     void receivePendant(int);
@@ -75,7 +91,7 @@ struct daNpc_Ho_c : fopAc_ac_c {
     /* 0x3B4 */ gptr<mDoExt_McaMorf> mpMorf;
     /* 0x3B8 */ gptr<J3DModel> mpJoyPendentModel;
     /* 0x3BC */ gptr<J3DAnmTexPattern> m_head_tex_pattern; /* HD: no mShadowId before it */
-    /* 0x3C0 */ u8 mBtpAnm[0x74];                           /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x3C0 */ mDoExt_btpAnm mBtpAnm;                     /* mDoExt_btpAnm (HD 0x74) */
     /* 0x434 */ be<u8> mBlinkFrame;
     /* 0x435 */ u8 _435;
     /* 0x436 */ be<s16> mBlinkTimer;
@@ -120,3 +136,105 @@ WWHD_OFFSET(daNpc_Ho_c, m_jnt, 0x7A8);
 WWHD_OFFSET(daNpc_Ho_c, mCurrActionFunc, 0x810);
 WWHD_OFFSET(daNpc_Ho_c, mReverb, 0x824);
 WWHD_SIZE(daNpc_Ho_c, 0x828);
+
+#include "gc_api/d/d_com_inf_game.h"
+#include "d/d_item.h"
+#include "gc_api/d/d_npc.h"
+#include "gc_api/SSystem/c_lib.h"
+
+// HD: these adapters retain the original ABI widths, including unnormalised bool arguments.
+BOOL hoNightStop();
+BOOL hoEndCheck(dEvent_manager_c*, const char*);
+BOOL hoTriggerA(s32);
+BOOL hoTriggerB(s32);
+bool hoLockonTruth(dAttention_c*);
+fopAc_ac_c* hoLockonTarget(dAttention_c*, s32);
+fopAc_ac_c* hoActionTarget(dAttention_c*, s32);
+void hoPlayerEyePos(cXyz*, f32);
+void hoLookAtTarget(dNpc_JntCtrl_c*, be<s16>*, cXyz*, cXyz*, s16, s16, u8);
+s32 hoBtpInit(void*, J3DModelData*, J3DAnmTexPattern*, s32, s32, f32, s32, s32, u32, s32);
+s8 hoNameIndex(JUTNameTab*, const char*);
+s8 hoRoomId(dBgS*, void*);
+u8 hoPolyColor(dBgS*, void*);
+u32 hoMaterialSound(dBgS*, void*);
+void hoMorfEntry(mDoExt_McaMorf*);
+u16 hoMessageStatus(msg_class*);
+void hoSetMessageStatus(msg_class*, u32);
+u32 hoMessageSet(msg_class*, u32, cXyz*);
+void hoActorCtor(fopAc_ac_c*);
+void hoBtpCtor(void*);
+void hoJointCtor(dNpc_JntCtrl_c*);
+void hoCircleDtor(void*, s32);
+void hoAcchDtor(dBgS_ObjAcch*, s32);
+void hoActorDtor(fopAc_ac_c*, s32);
+
+namespace ho_cpp {
+enum { dItemNo_NONE_e = 0xFF, fopMsgStts_MSG_DISPLAYED_e = 0xE, fopMsgStts_MSG_DESTROYED_e = 0x13 };
+struct CylinderSource {
+    u8 _bytes[0x44];
+};
+WWHD_SIZE(CylinderSource, 0x44);
+enum : u32 { HO_VTABLE = 0x1001A5D0, CYL_VTABLE = 0x1001A590, WAIT_ACTION_ADDRESS = 0x02240B18 };
+// HD: a NULL model-data pointer still addresses the animation slot at +0x38.
+struct ModelDataView {
+    u8 _00[0x38];
+    gptr<J3DAnmTexPattern> mpAnmTexPattern;
+};
+WWHD_OFFSET(ModelDataView, mpAnmTexPattern, 0x38);
+WWHD_SIZE(ModelDataView, 0x3C);
+inline void removeTexPattern(J3DModelData* p) {
+    gabi::store<u32>(gabi::ea(p) + offsetof(ModelDataView, mpAnmTexPattern), 0);
+}
+struct AcchVtables {
+    u8 _00[0x14];
+    be<u32> mCheckVtable;
+    u8 _18[8];
+    be<u32> mActorVtable;
+};
+WWHD_OFFSET(AcchVtables, mCheckVtable, 0x14);
+WWHD_OFFSET(AcchVtables, mActorVtable, 0x20);
+WWHD_SIZE(AcchVtables, 0x24);
+inline AcchVtables* acch(dBgS_ObjAcch* p) {
+    return reinterpret_cast<AcchVtables*>(p);
+}
+inline void* circle(dBgS_AcchCir* p) {
+    return gabi::at<void>(gabi::ea(p) + 0x14);
+}
+struct AnimationVtable {
+    u8 _00[0x14];
+    be<u32> mGetFrameMax;
+};
+struct AnimationView {
+    u8 _00[4];
+    gptr<AnimationVtable> mpVtable;
+};
+WWHD_OFFSET(AnimationVtable, mGetFrameMax, 0x14);
+WWHD_SIZE(AnimationVtable, 0x18);
+WWHD_OFFSET(AnimationView, mpVtable, 4);
+WWHD_SIZE(AnimationView, 8);
+inline s32 getFrameMax(J3DAnmTexPattern* p) {
+    auto* v = reinterpret_cast<AnimationView*>(p);
+    return gabi::call_ptr<s32>(v->mpVtable->mGetFrameMax, p);
+}
+// HD: index arithmetic wraps in the guest's 32-bit address space.
+template <class T> inline const T& entry(const T* table, s32 index) {
+    return *gabi::at<T>(gabi::ea(table) + (u32)index * sizeof(T));
+}
+// HD: GHS member pointers carry a signed adjustment and an 8-byte virtual slot index.
+inline void callAction(void* self, ProcFunc_l* pmf, void* arg) {
+    s16 i = pmf->i;
+    u32 thisp = gabi::ea(self) + (s32)(s16)pmf->d;
+    if (i < 0) {
+        gabi::call_ptr<BOOL>(pmf->f, thisp, arg);
+    } else {
+        s16 voff = (s16)gabi::load<s16>(gabi::ea(pmf) + 6);
+        u32 vt = gabi::load<u32>(thisp + voff);
+        gabi::call_ptr<BOOL>(gabi::load<u32>(vt + i * 8 + 4), thisp, arg);
+    }
+}
+inline BOOL hoEndCheck(const char* name) {
+    return ::hoEndCheck(dComIfGp_getPEvtManager(), name);
+}
+} // namespace ho_cpp
+
+BOOL hoOrderChangeEvent(fopAc_ac_c*, fopAc_ac_c*, const char*, u16, u16);

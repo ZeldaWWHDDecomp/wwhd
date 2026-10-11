@@ -5,9 +5,29 @@
  * function of the unit: size 0x944 (profile at 0x101C53DC, process name 0x162). Field names follow
  * the GameCube Km1 header. */
 #pragma once
-#include "d/actor/d_a_npc_ba1.h" /* fopNpc_npc_l, ProcFunc_l (shared NPC base, measured) */
+#include "gc_api/gc_api.h"
 
-struct daNpc_Pm1_c : fopNpc_npc_l {
+struct daNpc_Pm1_c;
+using Pm1Action = gabi::ptmf<BOOL (daNpc_Pm1_c::*)(void *)>;
+WWHD_SIZE(Pm1Action, 8);
+
+// HD: getObjectIDRes uses archive IDs, rather than GameCube resource indices.
+enum dRes_ID_PM {
+    dRes_ID_PM_BAS_FIND_e = 0,
+    dRes_ID_PM_BAS_TALK01_e = 1,
+    dRes_ID_PM_BAS_WAIT01_e = 2,
+    dRes_ID_PM_BCK_FIND_e = 3,
+    dRes_ID_PM_BCK_TALK01_e = 4,
+    dRes_ID_PM_BCK_WAIT01_e = 5,
+    dRes_ID_PM_BDL_PM_e = 6,
+    dRes_ID_PM_BTP_MABA01_e = 7,
+};
+struct daNpc_Pm1_c : fopNpc_npc_c {
+    enum Animation { ANM_WAIT, ANM_TALK, ANM_END };
+    enum TexPattern { TEXPATTERN_MABA, TEXPATTERN_END };
+    enum State { STATE_WAIT = 1, STATE_TALK = 2 };
+    enum LookMode { LOOK_PLAYER = 1, LOOK_POSITION = 2, LOOK_ANGLE = 3 };
+    enum MessageStatus { MSG_TYPING = 6, MSG_DISPLAYED = 14, MSG_DESTROYED = 19 };
     struct anm_prm_c {
         /* 0x00 */ be<s8> bckNum;
         /* 0x01 */ be<s8> btpNum;
@@ -19,19 +39,19 @@ struct daNpc_Pm1_c : fopNpc_npc_l {
 
     bool createInit();
     void setMtx();
-    bool anmResID(int, be<s32>*, be<s32>*);
-    void BtpNum2ResID(int, be<s32>*);
+    bool anmResID(int, be<s32> *, be<s32> *);
+    void BtpNum2ResID(int, be<s32> *);
     u32 setAnm_tex(s8);
     bool init_btp(u32, int);
     bool initTexPatternAnm(u32);
     void playTexPatternAnm();
-    s32 setAnm_anm(anm_prm_c*);
+    s32 setAnm_anm(anm_prm_c *);
     void setAnm();
     void chngAnmAtr(u32);
     void setAnm_ATR(int);
     void anmAtr(u16);
     void setStt(s8);
-    u16 next_msgStatus(be<u32>*);
+    u16 next_msgStatus(be<u32> *);
     u32 getMsg();
     void eventOrder();
     void checkOrder();
@@ -44,10 +64,10 @@ struct daNpc_Pm1_c : fopNpc_npc_l {
     void privateCut();
     void endEvent();
     void event_proc();
-    bool set_action(ProcFunc_l*, void*);
+    bool set_action(Pm1Action *, void *);
     BOOL wait01();
     BOOL talk01();
-    BOOL wait_action1(void*);
+    BOOL wait_action1(void *);
     u8 demo();
     BOOL _draw();
     BOOL _execute();
@@ -59,12 +79,13 @@ struct daNpc_Pm1_c : fopNpc_npc_l {
     /* 0x7E4 */ be<s8> m_head_jnt_num;
     /* 0x7E5 */ be<s8> m_backbone_jnt_num;
     /* 0x7E6 */ u8 _7E6[2];
-    /* 0x7E8 */ gptr<J3DAnmTexPattern> m_head_tex_pattern; /* HD: no mShadowId / shadow model before it */
-    /* 0x7EC */ u8 mBtpAnm[0x74];                           /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x7E8 */ gptr<J3DAnmTexPattern>
+        m_head_tex_pattern;            /* HD: no mShadowId / shadow model before it */
+    /* 0x7EC */ mDoExt_btpAnm mBtpAnm; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x860 */ be<u8> mBtpFrame;
     /* 0x861 */ be<u8> field_0x6F1;
     /* 0x862 */ be<s16> field_0x6F2;
-    /* 0x864 */ ProcFunc_l mAction;                         /* field_0x6F4 */
+    /* 0x864 */ Pm1Action mAction; /* field_0x6F4 */
     /* 0x86C */ dNpc_EventCut_c mEventCut;
     /* 0x8D8 */ csXyz field_0x76C;
     /* 0x8DE */ u8 _8DE[2];
@@ -113,3 +134,94 @@ WWHD_OFFSET(daNpc_Pm1_c, mEyePos, 0x8F8);
 WWHD_OFFSET(daNpc_Pm1_c, field_0x7BC, 0x928);
 WWHD_OFFSET(daNpc_Pm1_c, field_0x7CD, 0x939);
 WWHD_SIZE(daNpc_Pm1_c, 0x944);
+
+// HD: these signatures preserve byte/word arguments instead of the GameCube bool forms.
+struct Pm1PatternVtable {
+    u8 padding[0x14];
+    gfn getFrameMax;
+};
+struct Pm1Pattern {
+    be<f32> frame;
+    gptr<Pm1PatternVtable> vtable;
+};
+WWHD_OFFSET(Pm1Pattern, vtable, 4);
+inline s32 pm1_J3DAnm_getFrameMax(J3DAnmTexPattern *p) {
+    return gabi::call_ptr<s32>(reinterpret_cast<Pm1Pattern *>(p)->vtable->getFrameMax.get(), p);
+}
+s32 pm1_mDoExt_btpAnm_init(void *, J3DModelData *, J3DAnmTexPattern *, s32, s32, f32, s32, s32, u32,
+                           s32);
+bool pm1_dAttention_LockonTruth(dAttention_c *);
+fopAc_ac_c *pm1_dAttention_LockonTarget(dAttention_c *, s32);
+fopAc_ac_c *pm1_dAttention_ActionTarget(dAttention_c *, s32);
+s8 pm1_getMyActIdx(dEvent_manager_c *, s32, const gptr<char> *, s32, BOOL, s32);
+static inline s8 pm1_dComIfGp_evmng_getMyActIdx(s32 staffId, const gptr<char> *tbl, s32 n,
+                                                BOOL force, s32 nameType) {
+    return pm1_getMyActIdx(dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
+}
+void pm1_dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c *, be<s16> *, cXyz *, cXyz *, s16, s16, u8);
+u32 pm1_messageStatus(msg_class *);
+static inline u32 pm1_fopMsgM_getStatus() {
+    return pm1_messageStatus(fopNpc_npc_c::mpCurrMsg.get());
+}
+s8 pm1_JUTNameTab_getIndex(u32, const char *);
+s8 pm1_dBgS_GetRoomId(dBgS *, void *);
+u8 pm1_dBgS_GetPolyColor(dBgS *, void *);
+BOOL pm1_dDemo_setDemoData(fopAc_ac_c *, u8, mDoExt_McaMorf *, const char *, s32, void *, u32, s8);
+struct Pm1ActionWords {
+    be<u32> words[2];
+};
+WWHD_SIZE(Pm1ActionWords, 8);
+inline void pm1_pmf_load(Pm1Action *dst, const be<u32> *src) {
+    auto *out = reinterpret_cast<Pm1ActionWords *>(dst);
+    out->words[0] = src[0];
+    out->words[1] = src[1];
+}
+static inline void pm1_pmf_call(daNpc_Pm1_c *self, Pm1Action *action, void *arg) {
+    (self->*(*action))(arg);
+}
+
+void pm1_constructNpc(fopNpc_npc_c *);
+void pm1_constructBtp(void *);
+void pm1_constructEventCut(dNpc_EventCut_c *);
+struct Pm1ModelDataView {
+    u8 padding[0x38];
+    be<u32> patternAnimation;
+};
+WWHD_OFFSET(Pm1ModelDataView, patternAnimation, 0x38);
+inline void pm1_removePattern(J3DModelData *p) {
+    reinterpret_cast<Pm1ModelDataView *>(p)->patternAnimation = 0;
+}
+void *pm1_getDemoActor(void *, u8);
+
+struct daNpc_Pm1_HIO_c {
+    struct hio_prm_c {
+        /* 0x00 */ be<s16> field_0;
+        /* 0x02 */ be<s16> field_2;
+        /* 0x04 */ be<s16> field_4;
+        /* 0x06 */ be<s16> field_6;
+        /* 0x08 */ be<s16> field_8;
+        /* 0x0A */ be<s16> field_A;
+        /* 0x0C */ be<s16> field_C;
+        /* 0x0E */ be<s16> field_E;
+        /* 0x10 */ be<s16> field_10;
+        /* 0x12 */ be<s16> field_12;
+        /* 0x14 */ be<f32> mAttentionArrowYOffset;
+        /* 0x18 */ be<u8> field_18; /* HD: a byte flag (debug colours in _draw) */
+        /* 0x19 */ u8 _19[3];
+    };
+    /* 0x00 */ be<s8> mNo;
+    /* 0x01 */ u8 _01[3];
+    /* 0x04 */ be<s32> field_0x8;
+    /* 0x08 */ hio_prm_c mPrmTbl;
+    /* 0x24 */ be<u32> __vtbl;
+};
+WWHD_SIZE(daNpc_Pm1_HIO_c, 0x28);
+
+WWHD_OFFSET(Pm1PatternVtable, getFrameMax, 0x14);
+WWHD_SIZE(Pm1PatternVtable, 0x18);
+WWHD_SIZE(Pm1Pattern, 8);
+WWHD_SIZE(Pm1ModelDataView, 0x3C);
+WWHD_OFFSET(daNpc_Pm1_HIO_c, mPrmTbl, 8);
+WWHD_OFFSET(daNpc_Pm1_HIO_c, __vtbl, 0x24);
+WWHD_SIZE(daNpc_Pm1_c::anm_prm_c, 0x10);
+WWHD_OFFSET(daNpc_Pm1_c, mBtpAnm, 0x7EC);

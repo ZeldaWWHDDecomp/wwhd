@@ -1,41 +1,40 @@
-#include "gabi.h"
-namespace {
-using namespace gabi;
-int cTrIt_Method(void* tree,void* callback,void* data) {
-    WWHD_FUNC(0x0201ABF0,int,tree,callback,data);
-    s32 count=load<s32>(ea(tree)+4);
-    u32 list=load<u32>(ea(tree)); int result=1;
-    for(s32 remaining=count;remaining>0;--remaining) {
-        int sub=call<int>(0x020100A0,at<void>(list),callback,data);
-        list+=12u;
-        if(sub==0) result=0;
+/** Node-list tree iteration. WWHD, verified unit c_tree_iter. */
+#include "SSystem/SComponent/c_tree_iter.h"
+
+/* 0201ABF0 */
+s32 cTrIt_Method(node_lists_tree_class* tree, u32 method, void* data) {
+    s32 count = tree->mNumLists;
+    node_list_class* pList = tree->mpLists;
+    s32 ret = TRUE;
+    for (s32 remaining = count; remaining > 0; --remaining) {
+        s32 sub = cLsIt_Method(pList++, method, data);
+        if (sub == FALSE) {
+            ret = FALSE;
+        }
     }
-    return result;
+    return ret;
 }
-VERIFY(0x0201ABF0,cTrIt_Method);
-void* cTrIt_Judge(void* tree,void* callback,void* data) {
-    WWHD_FUNC(0x0201AC60,void*,tree,callback,data);
-    s32 count=load<s32>(ea(tree)+4);
-    u32 list=load<u32>(ea(tree));
-    for(s32 remaining=count;remaining>0;--remaining) {
-        void* result=call<void*>(0x020100BC,at<void>(list),callback,data);
-        list+=12u;
-        if(result) return result;
+
+/* 0201AC60 */
+void* cTrIt_Judge(node_lists_tree_class* tree, u32 judge, void* data) {
+    s32 count = tree->mNumLists;
+    node_list_class* pList = tree->mpLists;
+    for (s32 remaining = count; remaining > 0; --remaining) {
+        void* pJudgeRet = cLsIt_Judge(pList++, judge, data);
+        if (pJudgeRet != NULL) {
+            return pJudgeRet;
+        }
     }
-    return nullptr;
+    return NULL;
 }
-VERIFY(0x0201AC60,cTrIt_Judge);
-void cTrIt_StaticInit() {
-    WWHD_FUNC(0x0201ACE4,void);
-    store<u32>(0x101FFB84,0);store<u32>(0x101FFB7C,0);
-    store<u32>(0x101FFB88,0);store<u32>(0x101FFB80,0);
-    call<void>(0x028F026C,at<void>(0x1018D43C));
-    f32 lower=load<f32>(0x100036E0),upper=load<f32>(0x100036E4);
-    store<f32>(0x101FFB70,lower);store<f32>(0x101FFB74,upper);
-    call<void>(0x028ED6F8,at<void>(0x101FFB78));
-    call<void>(0x028F026C,at<void>(0x1018D448));
-    call<void>(0x028EAB2C,at<void>(0x101FFB79));
-    call<void>(0x028F026C,at<void>(0x1018D454));
+
+/* 0201ACE4 */
+// HD: header statics and destructor registrations.
+static void __sinit_c_tree_iter_cpp() {
+    sinit_header_statics_rodata(0x101FFB70, 0x1018D43C, 0x101FFB7C, 0x100036E0);
 }
-VERIFY(0x0201ACE4,cTrIt_StaticInit);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): external list iteration
+ext 020100A0 s32 cLsIt_Method(node_list_class*, u32, void*)
+ext 020100BC void* cLsIt_Judge(node_list_class*, u32, void*)
+*/

@@ -1,87 +1,202 @@
-#include "wwhd.h"
-#include "gabi.h"
-static u32 vcall(u32 self,u32 slot){u32 table=gabi::load<u32>(self+0xB4);return gabi::load<u32>(table+slot);}
-static void matrix(u32 self){
- f32 x=gabi::load<f32>(self+0x314),z=gabi::load<f32>(self+0x31C),y=gabi::load<f32>(self+0x318);
- gabi::call<void>(0x028E93CC,gabi::at<void>(0x1048D0CC),x,y,z);
- s32 angle=gabi::load<s16>(self+0x32A);gabi::call<void>(0x025F1C28,gabi::at<void>(0x1048D0CC),angle);
- f32 sy=gabi::load<f32>(self+0x334),sx=gabi::load<f32>(self+0x330),sz=gabi::load<f32>(self+0x338);
- gabi::call<void>(0x025F2518,sx,sy,sz);
- gabi::call<void>(0x028E90D4,gabi::at<void>(0x1048D0CC),gabi::at<void>(self+0x3B0));
+/** Moving-background actor lifecycle and collision matrix. */
+#include "d/d_bg_s_movebg_actor.h"
+
+static const f32 headerPiMin = -3.1415927;
+static const f32 headerPiMax = 3.1415927;
+// HD: per-unit vtable and resource-name type descriptor.
+enum : u32 { actorVtable = 0x10043BC4, resourceNameType = 0x10043BAC };
+#define moveBgSetup (*gabi::at<MoveBgSetup>(0x101D5300))
+#define resourceController (*gabi::at<gptr<void>>(0x101F4F28))
+#define matrixStack (*gabi::at<Mtx34>(0x1048D0CC))
+
+/* inlined into MoveBGCreate and MoveBGExecute */
+static void setBgMtx(dBgS_MoveBgActor *actor) {
+    f32 x = actor->current.pos.x, z = actor->current.pos.z, y = actor->current.pos.y;
+    PSMTXTrans(&matrixStack, x, y, z);
+    s32 angle = actor->shape_angle.y;
+    mDoMtx_YrotM(&matrixStack, angle);
+    f32 sy = actor->scale.y, sx = actor->scale.x, sz = actor->scale.z;
+    mDoMtx_stack_scaleM(sx, sy, sz);
+    PSMTXCopy(&matrixStack, &actor->mBgMtx);
 }
-s32 MoveBG_heap(u32 self){
- WWHD_FUNC(0x024F1C44,s32,self);
- if(gabi::call_ptr<s32>(vcall(self,0x14),self)==0)return 0;
- u32 bg=gabi::call<u32>(0x024F23F4,0);
- if(bg){
-  gabi::store<u32>(self+0x3AC,bg);
-  u32 resourceIndex=gabi::load<u32>(0x101D5304);u32 controller=gabi::load<u32>(0x101F4F28);u32 name=gabi::load<u32>(0x101D5300);
-  struct Key{be<u32> name,table;};gabi::Local<Key> key;key->name=name;key->table=0x10043BAC;
-  u32 resource=gabi::call<u32>(0x026066C4,controller,key.get(),resourceIndex);
-  bg=gabi::load<u32>(self+0x3AC);
-  if(gabi::call<s32>(0x0200A030,bg,resource,1,gabi::at<void>(self+0x3B0))==0){
-   u32 callback=gabi::load<u32>(0x101D5308);
-   if(callback){bg=gabi::load<u32>(self+0x3AC);gabi::store<u32>(bg+0xA8,callback);}return 1;
-  }
- }
- gabi::store<u32>(self+0x3AC,0);return 0;
+
+/* 024F1D40 */
+// HD: GHS allocating constructor and explicit inherited vtable.
+static dBgS_MoveBgActor *dBgS_MoveBgActor__ct(dBgS_MoveBgActor *i_this) {
+    if (i_this == NULL)
+        i_this = (dBgS_MoveBgActor *)operator_new(sizeof(dBgS_MoveBgActor));
+    if (i_this != NULL) {
+        constructActor(i_this);
+        i_this->mpBgW = NULL;
+        i_this->__vtbl = actorVtable;
+    }
+    return i_this;
 }
-VERIFY(0x024F1C44,MoveBG_heap);
-s32 MoveBG_heap_callback(u32 self){WWHD_FUNC(0x024F1D3C,s32,self);return MoveBG_heap(self);}
-VERIFY(0x024F1D3C,MoveBG_heap_callback);
-u32 MoveBG_ctor(u32 self){
- WWHD_FUNC(0x024F1D40,u32,self);if(!self)self=gabi::call<u32>(0x0273AD10,0x3E0);
- if(self){gabi::call<void>(0x025D4ED0,self);gabi::store<u32>(self+0x3AC,0);gabi::store<u32>(self+0xB4,0x10043BC4);}return self;
+
+/* 024F1D3C */
+static s32 CheckCreateHeap(dBgS_MoveBgActor *i_actor) {
+    return i_actor->MoveBGCreateHeap();
 }
-VERIFY(0x024F1D40,MoveBG_ctor);
-s32 MoveBG_Create(u32 self,u32 name,u32 index,u32 callback,u32 heapSize){
- WWHD_FUNC(0x024F1D9C,s32,self,name,index,callback,heapSize);matrix(self);
- gabi::store<u32>(0x101D5300,name);gabi::store<u32>(0x101D5304,index);gabi::store<u32>(0x101D5308,callback);
- if(gabi::call<s32>(0x025D63E8,self,gabi::at<void>(0x024F1D3C),heapSize)!=0){
-  u32 game=gabi::call<u32>(0x025200D4);u32 bg=gabi::load<u32>(self+0x3AC);
-  if(gabi::call<s32>(0x024EEA6C,gabi::at<void>(game+0x12A0),bg,self)==0 && gabi::call_ptr<s32>(vcall(self,0x1C),self)!=0)return 4;
- }return 5;
+
+/* 024F1C44 */
+s32 dBgS_MoveBgActor::MoveBGCreateHeap() {
+    if (DispatchCreateHeap() == 0)
+        return 0;
+    dBgW *bg = constructBackground(NULL);
+    if (bg != NULL) {
+        mpBgW = bg;
+        u32 resourceIndex = moveBgSetup.m_dzb_id;
+        void *controller = resourceController.get();
+        const char *name = moveBgSetup.m_name.get();
+        gabi::Stack<MoveBgResourceKey> key;
+        key->name = name;
+        key->table = resourceNameType;
+        void *resource = getObjectResource(controller, key.get(), resourceIndex);
+        bg = mpBgW.get();
+        if (SetBackground(bg, resource, dBgW::MOVE_BG_e, &mBgMtx) == 0) {
+            u32 callback = moveBgSetup.m_set_func;
+            if (callback != 0) {
+                bg = mpBgW.get();
+                bg->m_crr_func = callback;
+            }
+            return 1;
+        }
+    }
+    mpBgW = NULL;
+    return 0;
 }
-VERIFY(0x024F1D9C,MoveBG_Create);
-s32 MoveBG_Execute(u32 self){
- WWHD_FUNC(0x024F1E9C,s32,self);
- gabi::Local<be<u32>> output;*output=0;
- s32 result=gabi::call_ptr<s32>(vcall(self,0x24),self,output.get());u32 m=*output;
- if(!m)matrix(self);else gabi::call<void>(0x028E90D4,gabi::at<void>(m),gabi::at<void>(self+0x3B0));
- gabi::call<void>(0x024F43DC,gabi::load<u32>(self+0x3AC));return result;
+
+/* 024F1D9C */
+s32 dBgS_MoveBgActor::MoveBGCreate(const char *i_arcName, u32 i_dzb_id, u32 i_setFunc,
+                                   u32 i_heapSize) {
+    setBgMtx(this);
+    moveBgSetup.m_name = i_arcName;
+    moveBgSetup.m_dzb_id = i_dzb_id;
+    moveBgSetup.m_set_func = i_setFunc;
+    if (fopAcM_entrySolidHeap(this, CheckCreateHeap, i_heapSize) != 0) {
+        MoveBgGameInfo *game = dComIfGp_getGameInfo();
+        dBgW *bg = mpBgW.get();
+        if (RegisterBackground(&game->mBgS, bg, this) == 0 && DispatchCreate() != 0)
+            return cPhs_COMPLEATE_e;
+    }
+    return cPhs_ERROR_e;
 }
-VERIFY(0x024F1E9C,MoveBG_Execute);
-s32 MoveBG_Delete(u32 self){
- WWHD_FUNC(0x024F1F64,s32,self);
- s32 result=gabi::call_ptr<s32>(vcall(self,0x34),self);u32 bg=gabi::load<u32>(self+0x3AC);
- if(bg && gabi::load<u32>(bg)<0x100){u32 game=gabi::call<u32>(0x025200D4);bg=gabi::load<u32>(self+0x3AC);gabi::call<void>(0x020087EC,gabi::at<void>(game+0x12A0),bg);}return result;
+
+/* 024F1F64 */
+s32 dBgS_MoveBgActor::MoveBGDelete() {
+    s32 result = DispatchDelete();
+    dBgW *bg = mpBgW.get();
+    if (bg != NULL && (u32)bg->m_id < 0x100) {
+        MoveBgGameInfo *game = dComIfGp_getGameInfo();
+        bg = mpBgW.get();
+        ReleaseBackground(&game->mBgS, bg);
+    }
+    return result;
 }
-VERIFY(0x024F1F64,MoveBG_Delete);
-void MoveBG_empty_delete(u32 self,u32 flags){WWHD_FUNC(0x024F2068,void,self,flags);if(self&&(flags&1))gabi::call<void>(0x0273AF40,self);}
-VERIFY(0x024F2068,MoveBG_empty_delete);
-s32 MoveBG_CreateHeap(){WWHD_FUNC(0x024F207C,s32);return 1;}
-VERIFY(0x024F207C,MoveBG_CreateHeap);
-s32 MoveBG_CreateDefault(){WWHD_FUNC(0x024F2084,s32);return 1;}
-VERIFY(0x024F2084,MoveBG_CreateDefault);
-s32 MoveBG_DrawDefault(){WWHD_FUNC(0x024F208C,s32);return 1;}
-VERIFY(0x024F208C,MoveBG_DrawDefault);
-s32 MoveBG_ExecuteDefault(){WWHD_FUNC(0x024F2094,s32);return 1;}
-VERIFY(0x024F2094,MoveBG_ExecuteDefault);
-s32 MoveBG_IsDeleteDefault(){WWHD_FUNC(0x024F209C,s32);return 1;}
-VERIFY(0x024F209C,MoveBG_IsDeleteDefault);
-s32 MoveBG_DeleteDefault(){WWHD_FUNC(0x024F20A4,s32);return 1;}
-VERIFY(0x024F20A4,MoveBG_DeleteDefault);
-void MoveBG_dtor(u32 self,u32 flags){WWHD_FUNC(0x024F20AC,void,self,flags);if(self){gabi::call<void>(0x025D50BC,self,0);if(flags&1)gabi::call<void>(0x0273AF40,self);}}
-VERIFY(0x024F20AC,MoveBG_dtor);
-void d_bg_s_movebg_actor_static_init() {
- WWHD_FUNC(0x024F1FD4,void);
- gabi::store<u32>(0x1046ED90,0);gabi::store<u32>(0x1046ED88,0);gabi::store<u32>(0x1046ED94,0);gabi::store<u32>(0x1046ED8C,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D52DC));
- f32 lo=gabi::load<f32>(0x10043C1C),hi=gabi::load<f32>(0x10043C20);
- gabi::store<f32>(0x1046ED7C,lo);gabi::store<f32>(0x1046ED80,hi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1046ED84));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D52E8));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1046ED85));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101D52F4));
+
+/* 024F1E9C */
+s32 dBgS_MoveBgActor::MoveBGExecute() {
+    gabi::Stack<be<u32>> output;
+    *output = 0;
+    s32 result = DispatchExecute(output.get());
+    u32 matrix = *output;
+    if (matrix == 0)
+        setBgMtx(this);
+    else
+        PSMTXCopy(gabi::at<Mtx34>(matrix), &mBgMtx);
+    MoveBackground(mpBgW.get());
+    return result;
 }
-VERIFY(0x024F1FD4,d_bg_s_movebg_actor_static_init);
+
+// HD: compiler-generated base entries have no live arguments.
+/* 024F207C */
+static s32 dBgS_MoveBgActor_CreateHeap() {
+    return 1;
+}
+/* 024F2084 */
+static s32 dBgS_MoveBgActor_Create() {
+    return 1;
+}
+/* 024F208C */
+static s32 dBgS_MoveBgActor_Draw() {
+    return 1;
+}
+/* 024F2094 */
+static s32 dBgS_MoveBgActor_Execute() {
+    return 1;
+}
+/* 024F209C */
+static s32 dBgS_MoveBgActor_IsDelete() {
+    return 1;
+}
+/* 024F20A4 */
+static s32 dBgS_MoveBgActor_Delete() {
+    return 1;
+}
+
+/* 024F2068 */
+// HD: deleting destructor for the empty base tests the low GHS flag bit.
+static void dBgS_MoveBgActor_empty__dt(dBgS_MoveBgActor *i_this, u32 flags) {
+    if (i_this != NULL && (flags & 1))
+        operator_delete(i_this);
+}
+
+/* 024F20AC */
+static void dBgS_MoveBgActor__dt(dBgS_MoveBgActor *i_this, u32 flags) {
+    if (i_this != NULL) {
+        destroyActor(i_this, 0);
+        if (flags & 1)
+            operator_delete(i_this);
+    }
+}
+
+// HD: compiler-generated initialization of this translation unit's header statics.
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject;
+    u8 padding[2];
+};
+struct HeaderZeroObject {
+    be<u32> words[4];
+};
+#define headerStatics (*gabi::at<HeaderStatics>(0x1046ED7C))
+#define headerZeroObject (*gabi::at<HeaderZeroObject>(0x1046ED88))
+/* 024F1FD4 */
+static void __sinit_d_bg_s_movebg_actor_cpp() {
+    headerZeroObject.words[2] = 0;
+    headerZeroObject.words[0] = 0;
+    headerZeroObject.words[3] = 0;
+    headerZeroObject.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x101D52DC));
+    f32 lo = headerPiMin, hi = headerPiMax;
+    headerStatics.piMin = lo;
+    headerStatics.piMax = hi;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x101D52E8));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x101D52F4));
+}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data headerPiMin 10043C1C
+data headerPiMax 10043C20
+ext 0273AD10 void* operator_new(u32)
+ext 0273AF40 void operator_delete(void*)
+ext 025D4ED0 void constructActor(dBgS_MoveBgActor*)
+ext 025D50BC void destroyActor(dBgS_MoveBgActor*,u32)
+ext 024F23F4 dBgW* constructBackground(dBgW*)
+ext 026066C4 void* getObjectResource(void*,MoveBgResourceKey*,u32)
+ext 0200A030 s32 SetBackground(dBgW*,void*,u32,Mtx34*)
+ext 025D63E8 s32 fopAcM_entrySolidHeap(dBgS_MoveBgActor*,MoveBgHeapCallback,u32)
+ext 025200D4 MoveBgGameInfo* dComIfGp_getGameInfo()
+ext 024EEA6C s32 RegisterBackground(void*,dBgW*,dBgS_MoveBgActor*)
+ext 020087EC void ReleaseBackground(void*,dBgW*)
+ext 024F43DC void MoveBackground(dBgW*)
+ext 028E93CC void PSMTXTrans(Mtx34*,f32,f32,f32)
+ext 025F1C28 void mDoMtx_YrotM(Mtx34*,s32)
+ext 025F2518 void mDoMtx_stack_scaleM(f32,f32,f32)
+ext 028E90D4 void PSMTXCopy(const Mtx34*,Mtx34*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+*/

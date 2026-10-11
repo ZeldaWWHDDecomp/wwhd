@@ -1,1014 +1,1068 @@
 /* Nintendo Gallery figurines and pedestal. */
-#include "gabi.h"
+#include "d/actor/d_a_obj_figure.h"
 #include <cmath>
-#include <limits>
-namespace figure {
 using gabi::call;
-using gabi::load;
-using gabi::store;
-static u32 play() { return call<u32>(0x025200D4); }
-static u32 resource(u32 name, s32 index) {
-  gabi::Local<u32[2]> text;
-  store<u32>(text.a, name);
-  store<u32>(text.a + 4, 0x100282AC);
-  return call<u32>(0x026067F4, load<u32>(0x101F4F28), text.a, index);
+const gc_tu_data gc_tu = {.safeString = 0x100282AC};
+static FigureLightParametersHD l_lightDefaults;
+static FigureDataTableHD l_figure_dat_tbl;
+static FigureArchiveTableHD l_arcname_tbl;
+static FigureCompletionTableHD l_figure_comp;
+static Mtx34 l_mtxStack;
+static Mtx34 l_identityMtx;
+static dCcD_SrcCyl l_cyl_src;
+static FigurePhaseTableHD l_method;
+static FigureCutNameTableHD cut_name_tbl;
+static FigureMoveTableHD moveProc;
+static FigureMessagePointerHD l_messageManager;
+static FigureJ3DSysHD l_renderState;
+static FigureDrawPacketHD l_offCupOnAupPacket1;
+static u32 l_offCupOnAupPacket1Guard;
+static FigureDtorRecordHD l_offCupOnAupPacket1Dtor;
+static FigureDrawPacketHD l_offCupOnAupPacket2;
+static u32 l_offCupOnAupPacket2Guard;
+static FigureDtorRecordHD l_offCupOnAupPacket2Dtor;
+static FigureDrawPacketHD l_onCupOffAupPacket1;
+static u32 l_onCupOffAupPacket1Guard;
+static FigureDtorRecordHD l_onCupOffAupPacket1Dtor;
+static FigureDrawPacketHD l_onCupOffAupPacket2;
+static u32 l_onCupOffAupPacket2Guard;
+static FigureDtorRecordHD l_onCupOffAupPacket2Dtor;
+
+// HD: preserve this translation unit's common-header initialization order.
+static FigureHeaderStaticsHD l_headerStatics;
+static FigureHeaderZerosHD l_headerZeros;
+static FigureDtorRecordHD l_headerDtor;
+static FigureDtorRecordHD l_firstHeaderDtor;
+static FigureDtorRecordHD l_secondHeaderDtor;
+u32 PrmAbstract(u32 a, s32 width, s32 shift);
+static daPy_py_c* figureLinkPlayerHD() {
+    return reinterpret_cast<daPy_py_c*>(
+        reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mpPlayerPtr[0].get());
 }
-static void copyMatrix(u32 src, u32 dst) {
-  f32 v[12];
-  for (int i = 0; i < 12; ++i)
-    v[i] = load<f32>(src + 4 * i);
-  for (int i = 0; i < 12; ++i)
-    store<f32>(dst + 4 * i, v[i]);
-}
+// HD: the resource name occupies the same eight-byte guest temporary as the original.
+static u32 resource(const char* name, s32 index) { return gabi::ea(dComIfG_getObjectIDRes(name, index)); }
+static void copyMatrix(const Mtx34* src, Mtx34* dst) { J3DModel::mtx_assign(dst, src); }
 static s32 truncWord(f64 value) {
-  if (!std::isfinite(value) || value >= 2147483648.0 || value < -2147483648.0)
-    return (s32)0x80000000u;
-  return (s32)value;
+    if (!std::isfinite(value) || value >= 2147483648.0 || value < -2147483648.0)
+        return (s32)0x80000000u;
+    return (s32)value;
 }
-s32 getFigureBmd(u32 a, u32 no) {
-  WWHD_FUNC(0x0233F2F0, s32, a, no);
-  s32 index = load<s32>(0x10028330 + 12 * no);
-  if (no == 0x10 || no == 0x12) {
-    if (call<s32>(0x025B8B94, load<u32>(0x101F84DC) + 0x644, 0x2D01))
-      index = no == 0x10 ? 3 : 6;
-  }
-  return index;
-}
-VERIFY(0x0233F2F0, getFigureBmd);
-bool createHeap(u32 a) {
-  WWHD_FUNC(0x0233F37C, bool, a);
-  s32 room = call<s32>(0x025BD64C, load<u8>(a + 0xA31));
-  u32 no = load<u8>(a + 0xA31);
-  s32 overrideRoom = load<s32>(0x10028338 + 12 * no);
-  if (overrideRoom >= 0)
-    room = overrideRoom;
-  u32 arc = load<u32>(0x101C927C + 4 * (u32)room);
-  s32 index = getFigureBmd(a, no);
-  u32 data = resource(arc, index);
-  if (!data)
-    return false;
-  no = load<u8>(a + 0xA31);
-  u32 model =
-      call<u32>(0x025E38E0, data, 0x80000, load<u32>(0x10028334 + 12 * no));
-  store<u32>(a + 0x3C4, model);
-  if (!model)
-    return false;
-  no = load<u8>(a + 0xA31);
-  if (no == 0x3D) {
-    u32 animation = resource(arc, 0x1A);
-    if (!animation)
-      return false;
-    u32 controller = call<u32>(0x025E80D0, 0);
-    store<u32>(a + 0x4C0, controller);
-    if (!controller)
-      return false;
-    if (!call<s32>(0x025E8154, controller, data, animation, 1, 2, 0, -1, 0,
-                   1.0f, 0))
-      return false;
-    no = load<u8>(a + 0xA31);
-  }
-  if (no == 0x40) {
-    u32 pedestal = resource(arc, 0x15);
-    u32 animation = resource(arc, 0);
-    u32 morf = call<u32>(0x025E4F64, 0, pedestal, 0, 0, animation, 2, 0, -1,
-                         1.0f, 1, 0, 0x80000, 0x11001222);
-    store<u32>(a + 0x4BC, morf);
-    if (!morf || !load<u32>(morf + 0x90))
-      return false;
-  }
-  u32 pedestal = resource(0x1002897C, 1);
-  if (!pedestal)
-    return false;
-  model = call<u32>(0x025E38E0, pedestal, 0x80000, 0x11020022);
-  store<u32>(a + 0x3C8, model);
-  if (!model)
-    return false;
-  u32 pattern = resource(0x1002897C, 2);
-  store<u32>(a + 0x3CC, pattern);
-  if (!pattern)
-    return false;
-  return call<s32>(0x025E789C, a + 0x3D0, pedestal, pattern, 1, 2, 0, -1, 0,
-                   1.0f, 0) != 0;
-}
-VERIFY(0x0233F37C, createHeap);
-bool heapCallback(u32 a) {
-  WWHD_FUNC(0x0233F630, bool, a);
-  return createHeap(a);
-}
-VERIFY(0x0233F630, heapCallback);
-u32 PrmAbstract(u32 a, s32 width, s32 shift) {
-  WWHD_FUNC(0x023415F8, u32, a, width, shift);
-  u32 w = (u32)width & 63, s = (u32)shift & 63;
-  return (s < 32 ? load<u32>(a + 0xB0) >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
-}
-VERIFY(0x023415F8, PrmAbstract);
-u8 getPrmFigureNo(u32 a) {
-  WWHD_FUNC(0x0233F634, u8, a);
-  return (u8)PrmAbstract(a, 8, 0);
-}
-VERIFY(0x0233F634, getPrmFigureNo);
-u8 isFigureGet(u32 a, u32 no) {
-  WWHD_FUNC(0x0233F660, u8, a, no);
-  u32 byte = no >> 3;
-  if ((s32)byte >= 17)
-    return 0;
-  u16 event = load<u16>(0x101C92E0 + 2 * byte);
-  return (u8)(call<u32>(0x025B8BB0, load<u32>(0x101F84DC) + 0x644, event) &
-              (1u << (no & 7)));
-}
-VERIFY(0x0233F660, isFigureGet);
-u32 constructor(u32 a) {
-  WWHD_FUNC(0x0233F6DC, u32, a);
-  if (!a) {
-    a = call<u32>(0x0273AD10, 0xA38);
-    if (!a)
-      return 0;
-  }
-  call<void>(0x025D4ED0, a);
-  store<u32>(a + 0xB4, 0x100282D4);
-  call<void>(0x025E7820, a + 0x3D0);
-  call<void>(0x025E7820, a + 0x448);
-  f32 defaultf10 = load<f32>(0x1016E414);
-  f32 defaultf9 = load<f32>(0x1016E418);
-  f32 defaultf8 = load<f32>(0x1016E41C);
-  f32 defaultf7 = load<f32>(0x1016E420);
-  f32 defaultf12 = load<f32>(0x1016E424);
-  f32 defaultf11 = load<f32>(0x1016E428);
-  u8 defaultr0 = load<u8>(0x1016E42C);
-  u8 defaultr9 = load<u8>(0x1016E42D);
-  u8 defaultr7 = load<u8>(0x1016E42E);
-  u8 defaultr6 = load<u8>(0x1016E42F);
-  s16 defaultr10 = load<s16>(0x1016E430);
-  s16 defaultr5 = load<s16>(0x1016E432);
-  s16 defaultr12 = load<s16>(0x1016E434);
-  s16 defaultr11 = load<s16>(0x1016E436);
-  f32 defaultf6 = load<f32>(0x1016E438);
-  f32 defaultf5 = load<f32>(0x1016E43C);
-  f32 defaultf4 = load<f32>(0x1016E440);
-  f32 defaultf3 = load<f32>(0x1016E444);
-  f32 defaultf2 = load<f32>(0x1016E448);
-  f32 defaultf1 = load<f32>(0x1016E44C);
-  f32 defaultf0 = load<f32>(0x1016E450);
-  f32 defaultf13 = load<f32>(0x1016E454);
-  store<f32>(a + 0x4C4, defaultf10);
-  store<f32>(a + 0x4C8, defaultf9);
-  store<f32>(a + 0x4CC, defaultf8);
-  store<f32>(a + 0x4D0, defaultf7);
-  store<f32>(a + 0x4D4, defaultf12);
-  store<f32>(a + 0x4D8, defaultf11);
-  store<u8>(a + 0x4DC, defaultr0);
-  store<u8>(a + 0x4DD, defaultr9);
-  store<u8>(a + 0x4DE, defaultr7);
-  store<u8>(a + 0x4DF, defaultr6);
-  store<s16>(a + 0x4E0, defaultr10);
-  store<s16>(a + 0x4E2, defaultr5);
-  store<s16>(a + 0x4E4, defaultr12);
-  store<s16>(a + 0x4E6, defaultr11);
-  store<f32>(a + 0x4E8, defaultf6);
-  store<f32>(a + 0x4EC, defaultf5);
-  store<f32>(a + 0x4F0, defaultf4);
-  store<f32>(a + 0x4F4, defaultf3);
-  store<f32>(a + 0x4F8, defaultf2);
-  store<f32>(a + 0x4FC, defaultf1);
-  store<f32>(a + 0x500, defaultf0);
-  store<u8>(a + 0x59E, defaultr7);
-  store<f32>(a + 0x5C4, defaultf13);
-  store<f32>(a + 0x598, defaultf11);
-  store<f32>(a + 0x504, defaultf13);
-  store<u8>(a + 0x620, defaultr0);
-  store<f32>(a + 0x584, defaultf10);
-  store<s16>(a + 0x62A, defaultr11);
-  store<f32>(a + 0x5B4, defaultf3);
-  store<s16>(a + 0x5A2, defaultr5);
-  store<f32>(a + 0x590, defaultf7);
-  store<f32>(a + 0x5A8, defaultf6);
-  store<f32>(a + 0x5BC, defaultf1);
-  store<f32>(a + 0x614, defaultf7);
-  store<f32>(a + 0x634, defaultf4);
-  store<f32>(a + 0x594, defaultf12);
-  store<u8>(a + 0x622, defaultr7);
-  store<f32>(a + 0x5B0, defaultf4);
-  store<u8>(a + 0x59F, defaultr6);
-  store<f32>(a + 0x58C, defaultf8);
-  store<s16>(a + 0x624, defaultr10);
-  store<f32>(a + 0x60C, defaultf9);
-  store<f32>(a + 0x588, defaultf9);
-  store<u8>(a + 0x59D, defaultr9);
-  store<s16>(a + 0x626, defaultr5);
-  store<f32>(a + 0x638, defaultf3);
-  store<f32>(a + 0x618, defaultf12);
-  store<f32>(a + 0x5C0, defaultf0);
-  store<u8>(a + 0x623, defaultr6);
-  store<f32>(a + 0x610, defaultf8);
-  store<f32>(a + 0x630, defaultf5);
-  store<s16>(a + 0x628, defaultr12);
-  store<s16>(a + 0x5A4, defaultr12);
-  store<u8>(a + 0x59C, defaultr0);
-  store<s16>(a + 0x5A0, defaultr10);
-  store<f32>(a + 0x5B8, defaultf2);
-  store<s16>(a + 0x5A6, defaultr11);
-  store<f32>(a + 0x63C, defaultf2);
-  store<f32>(a + 0x5AC, defaultf5);
-  store<u8>(a + 0x621, defaultr9);
-  store<f32>(a + 0x62C, defaultf6);
-  store<f32>(a + 0x640, defaultf1);
-  store<f32>(a + 0x61C, defaultf11);
-  store<f32>(a + 0x608, defaultf10);
-  store<f32>(a + 0x644, defaultf0);
-  store<f32>(a + 0x648, defaultf13);
-  call<void>(0x0200BD2C, a + 0x6EC);
-  call<void>(0x02515DA0, a + 0x708);
-  store<u32>(a + 0x704, 0x1004AE88);
-  store<u32>(a + 0x708, 0x1004AEC0);
-  call<void>(0x02515FB8, a + 0x728);
-  store<u32>(a + 0x83C, 0x100015A8);
-  store<u32>(a + 0x838, 0x100282C4);
-  call<void>(0x02018590, a + 0x840);
-  store<u32>(a + 0x764, 0x1004B108);
-  store<u32>(a + 0x83C, 0x1004B160);
-  store<u32>(a + 0x854, 0x1004B150);
-  call<void>(0x02515FB8, a + 0x858);
-  store<u32>(a + 0x96C, 0x100015A8);
-  store<u32>(a + 0x968, 0x100282C4);
-  call<void>(0x02018590, a + 0x970);
-  store<u32>(a + 0x894, 0x1004B108);
-  store<u32>(a + 0x984, 0x1004B150);
-  store<u32>(a + 0x96C, 0x1004B160);
-  call<void>(0x0259F740, a + 0x994);
-  u32 no = getPrmFigureNo(a);
-  if (no != 0xFF && no < 0x86) {
-    s16 angle = load<s16>(a + 0x322);
-    store<u8>(a + 0xA31, no);
-    store<s16>(a + 0xA28, angle);
-    u8 display = isFigureGet(a, (u8)no);
-    store<u16>(a + 0xA28, 0);
-    store<u8>(a + 0xA32, display);
-    store<u16>(a + 0xA26, 0);
-    angle = load<s16>(a + 0x322);
-    store<u8>(a + 0xA30, 0);
-    store<s16>(a + 0xA2A, angle);
-  } else {
-    s16 angle = load<s16>(a + 0x322);
-    store<u8>(a + 0xA31, 0);
-    store<s16>(a + 0xA28, angle);
-    u8 display = isFigureGet(a, 0);
-    angle = load<s16>(a + 0x322);
-    store<u8>(a + 0xA32, display);
-    store<s16>(a + 0xA2A, angle);
-    store<u16>(a + 0xA28, 0);
-    store<u16>(a + 0xA26, 0);
-    store<u8>(a + 0xA30, 0);
-  }
-  return a;
-}
-VERIFY(0x0233F6DC, constructor);
-s32 phase1(u32 a) {
-  WWHD_FUNC(0x0233F9C4, s32, a);
-  u32 flags = load<u32>(a + 0x2E4);
-  if (!(flags & 8)) {
-    if (a) {
-      constructor(a);
-      flags = load<u32>(a + 0x2E4);
-    }
-    store<u32>(a + 0x2E4, flags | 8);
-  }
-  store<u8>(a + 0xA36, load<u8>(a + 0xA36) | 1);
-  s32 phase = call<s32>(0x02520460, a + 0x3B4, 0x10028984);
-  return phase == 4 ? 2 : phase;
-}
-VERIFY(0x0233F9C4, phase1);
-void setMtx(u32 a) {
-  WWHD_FUNC(0x0233FA44, void, a);
-  f32 x = load<f32>(a + 0x330), y = load<f32>(a + 0x334);
-  u32 model = load<u32>(a + 0x3C8);
-  f32 z = load<f32>(a + 0x338);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  store<f32>(model + 0xC4, z);
-  x = load<f32>(a + 0x314);
-  y = load<f32>(a + 0x318);
-  z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  call<void>(0x025F1C28, 0x1048D0CCu, load<s16>(a + 0x322));
-  copyMatrix(0x1048D0CC, load<u32>(a + 0x3C8) + 0xC8);
-  model = load<u32>(a + 0x3C4);
-  store<f32>(model + 0xC4, 1.0f);
-  store<f32>(model + 0xC0, 1.0f);
-  store<f32>(model + 0xBC, 1.0f);
-  y = load<f32>(a + 0x318);
-  x = load<f32>(a + 0x314);
-  z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, (f32)(y + 100.0f), z);
-  call<void>(0x025F1C28, 0x1048D0CCu, load<s16>(a + 0xA2A));
-  copyMatrix(0x1048D0CC, load<u32>(a + 0x3C4) + 0xC8);
-  u32 morf = load<u32>(a + 0x4BC);
-  if (morf) {
-    model = load<u32>(morf + 0x90);
-    store<f32>(model + 0xBC, 1.0f);
-    store<f32>(model + 0xC0, 1.0f);
-    store<f32>(model + 0xC4, 1.0f);
-    morf = load<u32>(a + 0x4BC);
-    model = load<u32>(morf + 0x90);
-    copyMatrix(0x1048D0CC, model + 0xC8);
-  }
-}
-VERIFY(0x0233FA44, setMtx);
-s32 createInit(u32 a) {
-  WWHD_FUNC(0x0233FC60, s32, a);
-  call<void>(0x02515F14, a + 0x6EC, 0xFF, 0xFF, a);
-  call<void>(0x02516518, a + 0x728, 0x101C9304);
-  store<u32>(a + 0x76C, a + 0x6EC);
-  call<void>(0x02516518, a + 0x858, 0x101C9304);
-  store<u32>(a + 0x89C, a + 0x6EC);
-  store<u32>(a + 0x884, 0x129);
-  call<void>(0x020184DC, a + 0x970, 200.0f);
-  call<void>(0x02018428, a + 0x970, 100.0f);
-  u32 matrix = load<u32>(a + 0x3C8);
-  if (matrix)
-    matrix += 0xC8;
-  store<u32>(a + 0x348, matrix);
-  call<void>(0x025D674C, a, -50.0f, 0.0f, -50.0f, 50.0f, 450.0f, 50.0f);
-  s32 event = call<s32>(0x02543F10, play() + 0x52C4, 0x100289ACu, 0xFF);
-  store<s16>(a + 0xA24, event);
-  call<void>(0x0259F7D4, a + 0x994, 0x100289A4u, a);
-  s16 id = load<s16>(a + 0xA24);
-  s8 room = load<s8>(a + 0x2FE);
-  store<s16>(a + 0xFC, id);
-  store<u32>(a + 0x39C, 0x2000000A);
-  u16 rz = load<u16>(a + 0x324), rx = load<u16>(a + 0x320),
-      ry = load<u16>(a + 0x322);
-  store<u8>(a + 0x38B, 0xA8);
-  store<u8>(a + 0x389, 0xA8);
-  store<u16>(a + 0x328, rx);
-  store<u16>(a + 0x32C, rz);
-  store<u16>(a + 0x32A, ry);
-  call<void>(0x0255FFF4, a + 0x4C4, room, 0xFF);
-  call<void>(0x028E90D4, 0x101F48F0u, a + 0x6BC);
-  setMtx(a);
-  return 4;
-}
-VERIFY(0x0233FC60, createInit);
-s32 phase2(u32 a) {
-  WWHD_FUNC(0x0233FDD8, s32, a);
-  u8 flags = load<u8>(a + 0xA36), no = load<u8>(a + 0xA31);
-  store<u8>(a + 0xA36, flags | 2);
-  s32 room = call<s32>(0x025BD64C, no);
-  s32 overrideRoom = load<s32>(0x10028338 + 12 * (u32)no);
-  if (overrideRoom >= 0)
-    room = overrideRoom;
-  s32 phase =
-      call<s32>(0x02520460, a + 0x3BC, load<u32>(0x101C927C + 4 * (u32)room));
-  if (phase == 4) {
-    if (!call<s32>(0x025D63E8, a, 0x0233F630u, no == 0x40 ? 0x25000 : 0xCD90))
-      return 5;
-    return createInit(a);
-  }
-  return phase;
-}
-VERIFY(0x0233FDD8, phase2);
-s32 create(u32 a) {
-  WWHD_FUNC(0x0233FEB0, s32, a);
-  return call<s32>(0x02525FE4, a + 0x3AC, 0x101C9348u, a);
-}
-VERIFY(0x0233FEB0, create);
-s32 wrapperCreate(u32 a) {
-  WWHD_FUNC(0x0233FEC4, s32, a);
-  return create(a);
-}
-VERIFY(0x0233FEC4, wrapperCreate);
-bool remove(u32 a) {
-  WWHD_FUNC(0x0233FEC8, bool, a);
-  call<void>(0x025204C8, a + 0x3B4, 0x100289BCu);
-  s32 room = call<s32>(0x025BD64C, load<u8>(a + 0xA31));
-  s32 overrideRoom = load<s32>(0x10028338 + 12 * (u32)load<u8>(a + 0xA31));
-  if (overrideRoom >= 0)
-    room = overrideRoom;
-  call<void>(0x025204C8, a + 0x3BC, load<u32>(0x101C927C + 4 * (u32)room));
-  return true;
-}
-VERIFY(0x0233FEC8, remove);
-bool wrapperDelete(u32 a) {
-  WWHD_FUNC(0x0233FF40, bool, a);
-  return remove(a);
-}
-VERIFY(0x0233FF40, wrapperDelete);
-void setMessage(u32 a, u32 message) {
-  WWHD_FUNC(0x0233FF44, void, a, message);
-  store<u32>(a + 0x990, message);
-  store<u32>(a + 0x988, 0xFFFFFFFF);
-}
-VERIFY(0x0233FF44, setMessage);
-u32 getMsg(u32 a) {
-  WWHD_FUNC(0x0233FF54, u32, a);
-  u8 no = load<u8>(a + 0xA31);
-  store<u32>(a + 0xA20, 0);
-  return 0x37DD + no;
-}
-VERIFY(0x0233FF54, getMsg);
-void eventMesSetInit(u32 a, s32 staff) {
-  WWHD_FUNC(0x0233FF68, void, a, staff);
-  u32 message = call<u32>(0x0254487C, play() + 0x52C4, staff, 0x100289C8u, 3);
-  if (message) {
-    store<u32>(a + 0xA20, 0);
-    u32 value = load<u32>(message);
-    if (value != 1) {
-      if (value == 0)
-        value = getMsg(a);
-      setMessage(a, value);
-      u32 list = load<u32>(a + 0xA20);
-      if (list)
-        setMessage(a, load<u32>(list));
-    }
-  } else {
-    u32 list = load<u32>(a + 0xA20) + 4;
-    store<u32>(a + 0xA20, list);
-    setMessage(a, load<u32>(list));
-  }
-  store<u16>(a + 0xA2E, 10);
-  store<f32>(a + 0xA18, 50.0f);
-  store<u16>(a + 0xA2C, 0);
-  store<u8>(a + 0xA33, 0);
-  store<f32>(a + 0xA1C, 118.0f);
-}
-VERIFY(0x0233FF68, eventMesSetInit);
-void eventOnPlrInit(u32 a) {
-  WWHD_FUNC(0x02340040, void, a);
-  u32 player = load<u32>(play() + 0x5B34);
-  store<u32>(player + 0x3B8, load<u32>(player + 0x3B8) & ~0x08000000u);
-  call<void>(0x02515048, call<u32>(0x024F8044));
-  call<void>(0x02514F38, call<u32>(0x024F8044));
-  call<void>(0x025B8B7C, load<u32>(0x101F84DC) + 0x1178, 0x408);
-}
-VERIFY(0x02340040, eventOnPlrInit);
-void eventOffPlrInit(u32 a) {
-  WWHD_FUNC(0x02340094, void, a);
-  u32 player = load<u32>(play() + 0x5B34);
-  store<u32>(player + 0x3B8, load<u32>(player + 0x3B8) | 0x08000000u);
-  call<void>(0x02514F2C, call<u32>(0x024F8044));
-  call<void>(0x025B8B68, load<u32>(0x101F84DC) + 0x1178, 0x408);
-}
-VERIFY(0x02340094, eventOffPlrInit);
-u16 next_msgStatus(u32 a, u32 message) {
-  WWHD_FUNC(0x023400E0, u16, a, message);
-  u32 list = load<u32>(a + 0xA20);
-  if (!list)
-    return 0x10;
-  list += 4;
-  store<u32>(a + 0xA20, list);
-  u32 value = load<u32>(list);
-  if (!value) {
-    store<u32>(a + 0xA20, 0);
-    return 0x10;
-  }
-  store<u32>(message, value);
-  return 0xF;
-}
-VERIFY(0x023400E0, next_msgStatus);
-u16 talk(u32 a, s32 param) {
-  WWHD_FUNC(0x02340128, u16, a, param);
-  u32 id = load<u32>(a + 0x988), message = load<u32>(0x101F4B5C);
-  u16 status = 0xFF;
-  if (id == 0xFFFFFFFF) {
-    u32 text;
-    if (param == 1) {
-      text = getMsg(a);
-      store<u32>(a + 0x990, text);
-    } else
-      text = load<u32>(a + 0x990);
-    u32 newId = call<u32>(0x025F7DB0, message, text, a + 0x37C);
-    store<u32>(a + 0x988, newId);
-    if (newId != 0xFFFFFFFF)
-      store<u8>(a + 0x98C, 0);
-  } else if (load<u8>(a + 0x98C)) {
-    status = (u16)call<u32>(0x025F795C, message);
-    if (status == 0xE) {
-      u16 next = next_msgStatus(a, a + 0x990);
-      call<void>(0x025F74D0, message, next);
-      if (call<u32>(0x025F795C, message) == 0xF)
-        call<void>(0x025F7DB0, message, load<u32>(a + 0x990), 0);
-    } else if (status == 0x12) {
-      call<void>(0x025F74D0, message, 0x13);
-      store<u32>(a + 0x988, 0xFFFFFFFF);
-    }
-  } else
-    store<u8>(a + 0x98C, 1);
-  return status;
-}
-VERIFY(0x02340128, talk);
-bool eventMesSet(u32 a) {
-  WWHD_FUNC(0x0234025C, bool, a);
-  s16 timer = load<s16>(a + 0xA2E);
-  if (timer)
-    store<u16>(a + 0xA2E, (u16)(timer - 1));
-  else {
-    bool input = call<f32>(0x0200796C, 0) != 0.0f;
-    if (!input)
-      input = call<f32>(0x02007990, 0) != 0.0f;
-    if (!input)
-      input = call<f32>(0x02007B20, 0) != 0.0f;
-    if (input) {
-      store<u16>(a + 0xA2C, 0);
-      f32 stick = call<f32>(0x0200796C, 0);
-      s16 delta = (s16)truncWord((f32)(stick * 512.0f));
-      store<u16>(a + 0xA28, (u16)(load<s16>(a + 0xA28) + delta));
-      stick = call<f32>(0x02007990, 0);
-      delta = (s16)truncWord((f32)(stick * 5.0f));
-      f32 height = (f32)(load<f32>(a + 0xA1C) + (f32)delta);
-      if (height < 80.0f)
-        height = 80.0f;
-      else if (height > 150.0f)
-        height = 150.0f;
-      store<f32>(a + 0xA1C, height);
-      stick = call<f32>(0x02007B20, 0);
-      f32 twice = (f32)(stick + stick);
-      f32 zoom = (f32)(load<f32>(a + 0xA18) - twice);
-      if (zoom < 20.0f)
-        zoom = 20.0f;
-      else if (zoom > 60.0f)
-        zoom = 60.0f;
-      store<f32>(a + 0xA18, zoom);
-    } else {
-      s16 wait = load<s16>(a + 0xA2C);
-      if (wait)
-        store<u16>(a + 0xA2C, (u16)(wait - 1));
-    }
-  }
-  u8 state = load<u8>(a + 0xA33);
-  if (state == 0) {
-    store<u8>(play() + 0x5BBA, 0x21);
-    store<u8>(play() + 0x5BB9, 0x27);
-    if (load<s16>(a + 0xA2E) == 0) {
-      store<u8>(play() + 0x5BBA, 0x21);
-      store<u8>(play() + 0x5BB9, 0x27);
-      if (call<s32>(0x020078BC, 0)) {
-        s16 angle = load<s16>(a + 0x322);
-        store<u16>(a + 0xA26, 0);
-        store<u16>(a + 0xA28, 0);
-        store<s16>(a + 0xA2A, angle);
-        return true;
-      }
-      if (call<s32>(0x02007898, 0))
-        store<u8>(a + 0xA33, 1);
-    }
-  } else if (state == 1) {
-    talk(a, 0);
-    if (load<u32>(a + 0x988) != 0xFFFFFFFF)
-      store<u8>(a + 0xA33, 2);
-  } else if (state == 2) {
-    if (talk(a, 0) == 0x12)
-      store<u8>(a + 0xA33, 0);
-  }
-  f32 height = load<f32>(a + 0xA1C);
-  s16 angle = load<s16>(a + 0x322);
-  f32 cameraHeight = (f32)(height + 30.0f);
-  store<f32>(a + 0xA00, 0.0f);
-  s16 rotation = load<s16>(a + 0xA28);
-  store<f32>(a + 0xA04, cameraHeight);
-  store<f32>(a + 0xA08, 0.0f);
-  store<f32>(a + 0xA0C, 0.0f);
-  store<f32>(a + 0xA10, cameraHeight);
-  store<f32>(a + 0xA14, 200.0f);
-  call<void>(0x025F1884, 0x1048D0CCu, (s16)(angle + rotation));
-  call<void>(0x028E8F64, 0x1048D0CCu, a + 0xA0C, a + 0xA0C);
-  call<void>(0x028E8D88, a + 0xA00, a + 0x314, a + 0xA00);
-  call<void>(0x028E8D88, a + 0xA0C, a + 0x314, a + 0xA0C);
-  f32 tx = load<f32>(a + 0xA00), ex = load<f32>(a + 0xA0C);
-  f32 tz = load<f32>(a + 0xA08), ez = load<f32>(a + 0xA14);
-  f32 ty = load<f32>(a + 0xA04), ey = load<f32>(a + 0xA10);
-  gabi::Local<f32[3]> target, eye;
-  store<f32>(target.a, tx);
-  store<f32>(target.a + 4, ty);
-  store<f32>(target.a + 8, tz);
-  store<f32>(eye.a, ex);
-  store<f32>(eye.a + 4, ey);
-  store<f32>(eye.a + 8, ez);
-  u32 camera = call<u32>(0x024F8044);
-  call<void>(0x02514F88, camera, target.a, eye.a, load<f32>(a + 0xA18), 0);
-  return false;
-}
-VERIFY(0x0234025C, eventMesSet);
-void privateCut(u32 a) {
-  WWHD_FUNC(0x02340664, void, a);
-  s32 staff = call<s32>(0x02542D88, play() + 0x52C4, 0x100289F4u, 0, 0);
-  if (staff == -1)
-    return;
-  s8 action =
-      (s8)call<s32>(0x02542EDC, play() + 0x52C4, staff, 0x101C9354u, 3, 1, 0);
-  store<s8>(a + 0xA35, action);
-  u32 manager = play() + 0x52C4;
-  if (action == -1) {
-    call<void>(0x02543280, manager, staff);
-    return;
-  }
-  if (call<s32>(0x025447C8, manager, staff)) {
-    action = load<s8>(a + 0xA35);
-    if (action == 0)
-      eventMesSetInit(a, staff);
-    else if (action == 1)
-      eventOnPlrInit(a);
-    else if (action == 2)
-      eventOffPlrInit(a);
-  }
-  action = load<s8>(a + 0xA35);
-  if (action == 0 && !eventMesSet(a))
-    return;
-  call<void>(0x02543280, play() + 0x52C4, staff);
-}
-VERIFY(0x02340664, privateCut);
-void eventMove(u32 a) {
-  WWHD_FUNC(0x023407A0, void, a);
-  s16 event = load<s16>(a + 0xA24);
-  if (call<s32>(0x025440C8, play() + 0x52C4, event)) {
-    u32 p = play();
-    store<u16>(p + 0x52B8, load<u16>(p + 0x52B8) | 8);
-    return;
-  }
-  u8 attention = load<u8>(a + 0x9F4);
-  if (call<s32>(0x0259F858, a + 0x994)) {
-    if (!load<u8>(a + 0x9F4))
-      store<u8>(a + 0x9F4, attention);
-  } else
-    privateCut(a);
-}
-VERIFY(0x023407A0, eventMove);
-bool execute(u32 a) {
-  WWHD_FUNC(0x02340858, bool, a);
-  if (!load<u8>(play() + 0x5292)) {
-    s16 offset = load<s16>(0x101C9254), index = load<s16>(0x101C9256);
-    u32 object = a + (u32)(s32)offset;
-    if (index < 0)
-      call<void>(load<u32>(0x101C9258), object);
-    else {
-      s16 vptr = load<s16>(0x101C925A);
-      u32 vtable = load<u32>(object + (u32)(s32)vptr);
-      call<void>(load<u32>(vtable + 8 * (u32)(s32)index + 4), object);
-    }
-  } else
-    eventMove(a);
-  if (load<u8>(a + 0xA32) || load<u8>(a + 0xA31) != 0x40) {
-    call<void>(0x020182E0, a + 0x840, a + 0x314);
-    call<void>(0x020182E0, a + 0x970, a + 0x314);
-    call<void>(0x0200E240, play() + 0x26A4, a + 0x728);
-    call<void>(0x0200E240, play() + 0x26A4, a + 0x858);
-  }
-  f32 y = load<f32>(a + 0x318), x = load<f32>(a + 0x314),
-      z = load<f32>(a + 0x31C);
-  u32 animation = load<u32>(a + 0x4C0);
-  store<f32>(a + 0x37C, x);
-  store<f32>(a + 0x380, (f32)(y + 150.0f));
-  store<f32>(a + 0x390, x);
-  store<f32>(a + 0x384, z);
-  store<f32>(a + 0x398, z);
-  store<f32>(a + 0x394, (f32)(y + 200.0f));
-  if (animation)
-    call<void>(0x025E742C, animation);
-  setMtx(a);
-  return true;
-}
-VERIFY(0x02340858, execute);
-bool wrapperExecute(u32 a) {
-  WWHD_FUNC(0x023409BC, bool, a);
-  return execute(a);
-}
-VERIFY(0x023409BC, wrapperExecute);
 static bool equalText(u32 left, u32 right) {
-  if (left == right)
-    return true;
-  for (u32 i = 0; i < 0x40001; ++i) {
-    u8 a = load<u8>(left + i), b = load<u8>(right + i);
-    if (a != b)
-      return false;
-    if (!a)
-      return true;
-  }
-  return false;
-}
-static bool rootNameMatches(u32 strings, u32 name, u32 incoming) {
-  store<u32>(strings + incoming, name);
-  store<u32>(strings + incoming + 4, 0x100282AC);
-  u32 target = load<u32>(load<u32>(strings + 4) + 0x14);
-  call<void>(target, strings, 0);
-  target = load<u32>(load<u32>(strings + 4) + 0x14);
-  call<void>(target, strings);
-  target = load<u32>(load<u32>(strings + incoming + 4) + 0x14);
-  u32 left = load<u32>(strings);
-  call<void>(target, strings + incoming);
-  if (equalText(left, load<u32>(strings + incoming)))
-    return true;
-  store<u32>(strings + incoming + 0x10, name);
-  store<u32>(strings + incoming + 0x14, 0x100282AC);
-  target = load<u32>(load<u32>(strings + 12) + 0x14);
-  call<void>(target, strings + 8, 1);
-  target = load<u32>(load<u32>(strings + 12) + 0x14);
-  call<void>(target, strings + 8);
-  target = load<u32>(load<u32>(strings + incoming + 0x14) + 0x14);
-  left = load<u32>(strings + 8);
-  call<void>(target, strings + incoming + 0x10);
-  return equalText(left, load<u32>(strings + incoming + 0x10));
-}
-bool draw(u32 a) {
-  WWHD_FUNC(0x023409C0, bool, a);
-  u32 env = call<u32>(0x02555D0C);
-  call<void>(0x025626A4, env, 3, a + 0x314, a + 0x4C4);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(a + 0x3C4), a + 0x4C4);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x025626A4, env, 1, a + 0x314, a + 0x110);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(a + 0x3C8), a + 0x110);
-  u32 model = load<u32>(a + 0x3C8);
-  u8 display = load<u8>(a + 0xA32);
-  u32 data = load<u32>(model + 0xAC);
-  if (!display) {
-    if (load<u8>(a + 0xA31) != 0x40) {
-      call<void>(0x025E7B3C, a + 0x3D0, data, 0);
-      call<void>(0x025E2DE0, load<u32>(a + 0x3C8), 0);
-      store<u32>(data + 0x38, 0);
+    if (left == right)
+        return true;
+    // HD: SafeString compares at most 0x40001 bytes, preserving wrapped guest addresses.
+    for (u32 i = 0; i < 0x40001; ++i) {
+        u8 a = *gabi::at<const be<u8>>(left + i), b = *gabi::at<const be<u8>>(right + i);
+        if (a != b)
+            return false;
+        if (!a)
+            return true;
     }
-    return true;
-  }
-  u32 anim = load<u32>(a + 0x4C0);
-  if (anim) {
-    model = load<u32>(a + 0x3C4);
-    f32 frame = load<f32>(anim + 4);
-    call<void>(0x025E83FC, anim, load<u32>(model + 0xAC), frame);
-  }
-  call<void>(0x025E7B3C, a + 0x3D0, data, 1);
-  call<void>(0x025E2DE0, load<u32>(a + 0x3C8), 0);
-  call<void>(0x025E2DE0, load<u32>(a + 0x3C4), 0);
-  store<u32>(data + 0x38, 0);
-  if (load<u32>(a + 0x4C0))
-    store<u32>(load<u32>(load<u32>(a + 0x3C4) + 0xAC) + 0x48, 0);
-  u32 morf = load<u32>(a + 0x4BC);
-  if (!morf)
-    return true;
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(morf + 0x90), a + 0x4C4);
-  morf = load<u32>(a + 0x4BC);
-  call<void>(0x025E55A0, morf);
-  model = load<u32>(morf + 0x90);
-  u32 flag = load<u32>(0x104698FC);
-  data = load<u32>(model + 0xAC);
-  store<u32>(0x104B462C, model);
-  if (!flag) {
-    store<u32>(0x104698FC, 1);
-    call<void>(0x027F1278, 0x10469920u);
-    store<u32>(0x1046992C, 0x10058D10);
-    call<void>(0x028F026C, 0x101C92B0u);
-  }
-  if (!load<u32>(0x10469900)) {
-    store<u32>(0x10469900, 1);
-    call<void>(0x027F1278, 0x104699B8u);
-    store<u32>(0x104699C4, 0x10058D10);
-    call<void>(0x028F026C, 0x101C92BCu);
-  }
-  if (!load<u32>(0x10469904)) {
-    store<u32>(0x10469904, 1);
-    call<void>(0x027F1278, 0x10469A50u);
-    store<u32>(0x10469A5C, 0x10058D40);
-    call<void>(0x028F026C, 0x101C92C8u);
-  }
-  if (!load<u32>(0x10469908)) {
-    store<u32>(0x10469908, 1);
-    call<void>(0x027F1278, 0x10469AE8u);
-    store<u32>(0x10469AF4, 0x10058D40);
-    call<void>(0x028F026C, 0x101C92D4u);
-  }
-  u32 count = load<u32>(data + 4), joints = load<u32>(data + 8);
-  u32 root = joints, eye = count > 0x13 ? joints + 0x214 : joints,
-      eyebrow = count > 0x15 ? joints + 0x24C : joints;
-  u32 material = load<u32>((count > 0x13 ? joints + 0x214 : joints) + 0x10);
-  // Keep the three adjacent guest shape lists and SafeStrings in their HD frame slots.
-  gabi::Local<u32[44]> guestFrame;
-  store<u32>(guestFrame.a, morf);
-  u32 shapes = guestFrame.a + 0x34;
-  for (u32 i = 0; i < 12; ++i)
-    store<u32>(shapes + 4 * i, 0);
-  u32 blends = 0, solids = 0, depths = 0;
-  for (int pass = 0; pass < 2; ++pass) {
-    while (material) {
-      u32 block = load<u32>(material + 0x20);
-      u32 mode = call<u32>(load<u32>(load<u32>(block) + 0x44), block);
-      if (!load<u8>(mode)) {
-        block = load<u32>(material + 0x20);
-        mode = call<u32>(load<u32>(load<u32>(block) + 0x2C), block);
-        u8 blend = load<u8>(mode);
-        u32 shape = load<u32>(material + 8);
-        if (blend == 1) {
-          store<u32>(shapes + 4 * blends, shape);
-          ++blends;
-          if ((s32)blends > 4)
-            call<void>(0x0273AA24, 0x100282F8u, 0x748, 0x100282E4u);
-        } else {
-          store<u32>(shapes + 16 + 4 * solids, shape);
-          ++solids;
-          if ((s32)solids > 4)
-            call<void>(0x0273AA24, 0x100282F8u, 0x74B, 0x1002830Cu);
+    return false;
+}
+static u32 assureTerminationTarget(SafeString* string) {
+    return gabi::at<FigureSafeStringVtableHD>(string->__vtbl)->mAssureTermination.get();
+}
+static bool rootNameMatches(SafeString* strings, u32 name, u32 incoming) {
+    u32 slot = incoming / sizeof(SafeString);
+    strings[slot].mStringTop = name;
+    strings[slot].__vtbl = gc_tu.safeString;
+    u32 target = assureTerminationTarget(&strings[0]);
+    call<void>(target, &strings[0], 0);
+    target = assureTerminationTarget(&strings[0]);
+    call<void>(target, &strings[0]);
+    target = assureTerminationTarget(&strings[slot]);
+    u32 left = strings[0].mStringTop;
+    call<void>(target, &strings[slot]);
+    if (equalText(left, strings[slot].mStringTop))
+        return true;
+    strings[slot + 2].mStringTop = name;
+    strings[slot + 2].__vtbl = gc_tu.safeString;
+    target = assureTerminationTarget(&strings[1]);
+    call<void>(target, &strings[1], 1);
+    target = assureTerminationTarget(&strings[1]);
+    call<void>(target, &strings[1]);
+    target = assureTerminationTarget(&strings[slot + 2]);
+    left = strings[1].mStringTop;
+    call<void>(target, &strings[slot + 2]);
+    return equalText(left, strings[slot + 2].mStringTop);
+}
+static FigureDrawListHD* figureDrawList() {
+    // HD: these Gallery lists precede the normal lists in dDlst_list_c.
+    return reinterpret_cast<FigureDrawListHD*>(&reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->drawlist);
+}
+
+/* 0233F6DC */
+u32 daObjFigure_constructHD(u32 a) {
+    if (!a) {
+        a = gabi::ea(operator_new(sizeof(daObjFigure_c)));
+        if (!a)
+            return 0;
+    }
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    fopAc_ac_c_ct(actor);
+    actor->__vtbl = daObjFigure_c::__vt;
+    mDoExt_btpAnm::ct(&actor->mBtpAnm1);
+    mDoExt_btpAnm::ct(&actor->mBtpAnm2);
+    auto* light = reinterpret_cast<FigureLightParametersHD*>(&actor->mTevStrBG2.mLightObj);
+    auto* lightCopy1 = reinterpret_cast<FigureLightParametersHD*>(&actor->mTevStrBG2.mHdLightParam[0]);
+    auto* lightCopy2 = reinterpret_cast<FigureLightParametersHD*>(&actor->mTevStrBG2.mHdLightParam[0x84]);
+    f32 defaultPositionX = (f32)l_lightDefaults.mPosition.x;
+    f32 defaultPositionY = (f32)l_lightDefaults.mPosition.y;
+    f32 defaultPositionZ = (f32)l_lightDefaults.mPosition.z;
+    f32 defaultDirectionX = (f32)l_lightDefaults.mDirection.x;
+    f32 defaultDirectionY = (f32)l_lightDefaults.mDirection.y;
+    f32 defaultDirectionZ = (f32)l_lightDefaults.mDirection.z;
+    u8 defaultColorR = (u8)l_lightDefaults.mColor.r;
+    u8 defaultColorG = (u8)l_lightDefaults.mColor.g;
+    u8 defaultColorB = (u8)l_lightDefaults.mColor.b;
+    u8 defaultColorA = (u8)l_lightDefaults.mColor.a;
+    s16 defaultColorS10R = (s16)l_lightDefaults.mColorS10.r;
+    s16 defaultColorS10G = (s16)l_lightDefaults.mColorS10.g;
+    s16 defaultColorS10B = (s16)l_lightDefaults.mColorS10.b;
+    s16 defaultColorS10A = (s16)l_lightDefaults.mColorS10.a;
+    f32 defaultCosAtten0 = (f32)l_lightDefaults.mCosAtten[0];
+    f32 defaultCosAtten1 = (f32)l_lightDefaults.mCosAtten[1];
+    f32 defaultCosAtten2 = (f32)l_lightDefaults.mCosAtten[2];
+    f32 defaultDistAtten0 = (f32)l_lightDefaults.mDistAtten[0];
+    f32 defaultDistAtten1 = (f32)l_lightDefaults.mDistAtten[1];
+    f32 defaultDistAtten2 = (f32)l_lightDefaults.mDistAtten[2];
+    f32 defaultCutoff = (f32)l_lightDefaults.mCutoff;
+    f32 defaultReferenceBrightness = (f32)l_lightDefaults.mReferenceBrightness;
+    light->mPosition.x = defaultPositionX;
+    light->mPosition.y = defaultPositionY;
+    light->mPosition.z = defaultPositionZ;
+    light->mDirection.x = defaultDirectionX;
+    light->mDirection.y = defaultDirectionY;
+    light->mDirection.z = defaultDirectionZ;
+    light->mColor.r = defaultColorR;
+    light->mColor.g = defaultColorG;
+    light->mColor.b = defaultColorB;
+    light->mColor.a = defaultColorA;
+    light->mColorS10.r = defaultColorS10R;
+    light->mColorS10.g = defaultColorS10G;
+    light->mColorS10.b = defaultColorS10B;
+    light->mColorS10.a = defaultColorS10A;
+    light->mCosAtten[0] = defaultCosAtten0;
+    light->mCosAtten[1] = defaultCosAtten1;
+    light->mCosAtten[2] = defaultCosAtten2;
+    light->mDistAtten[0] = defaultDistAtten0;
+    light->mDistAtten[1] = defaultDistAtten1;
+    light->mDistAtten[2] = defaultDistAtten2;
+    light->mCutoff = defaultCutoff;
+    lightCopy1->mColor.b = defaultColorB;
+    lightCopy1->mReferenceBrightness = defaultReferenceBrightness;
+    lightCopy1->mDirection.z = defaultDirectionZ;
+    light->mReferenceBrightness = defaultReferenceBrightness;
+    lightCopy2->mColor.r = defaultColorR;
+    lightCopy1->mPosition.x = defaultPositionX;
+    lightCopy2->mColorS10.a = defaultColorS10A;
+    lightCopy1->mDistAtten[0] = defaultDistAtten0;
+    lightCopy1->mColorS10.g = defaultColorS10G;
+    lightCopy1->mDirection.x = defaultDirectionX;
+    lightCopy1->mCosAtten[0] = defaultCosAtten0;
+    lightCopy1->mDistAtten[2] = defaultDistAtten2;
+    lightCopy2->mDirection.x = defaultDirectionX;
+    lightCopy2->mCosAtten[2] = defaultCosAtten2;
+    lightCopy1->mDirection.y = defaultDirectionY;
+    lightCopy2->mColor.b = defaultColorB;
+    lightCopy1->mCosAtten[2] = defaultCosAtten2;
+    lightCopy1->mColor.a = defaultColorA;
+    lightCopy1->mPosition.z = defaultPositionZ;
+    lightCopy2->mColorS10.r = defaultColorS10R;
+    lightCopy2->mPosition.y = defaultPositionY;
+    lightCopy1->mPosition.y = defaultPositionY;
+    lightCopy1->mColor.g = defaultColorG;
+    lightCopy2->mColorS10.g = defaultColorS10G;
+    lightCopy2->mDistAtten[0] = defaultDistAtten0;
+    lightCopy2->mDirection.y = defaultDirectionY;
+    lightCopy1->mCutoff = defaultCutoff;
+    lightCopy2->mColor.a = defaultColorA;
+    lightCopy2->mPosition.z = defaultPositionZ;
+    lightCopy2->mCosAtten[1] = defaultCosAtten1;
+    lightCopy2->mColorS10.b = defaultColorS10B;
+    lightCopy1->mColorS10.b = defaultColorS10B;
+    lightCopy1->mColor.r = defaultColorR;
+    lightCopy1->mColorS10.r = defaultColorS10R;
+    lightCopy1->mDistAtten[1] = defaultDistAtten1;
+    lightCopy1->mColorS10.a = defaultColorS10A;
+    lightCopy2->mDistAtten[1] = defaultDistAtten1;
+    lightCopy1->mCosAtten[1] = defaultCosAtten1;
+    lightCopy2->mColor.g = defaultColorG;
+    lightCopy2->mCosAtten[0] = defaultCosAtten0;
+    lightCopy2->mDistAtten[2] = defaultDistAtten2;
+    lightCopy2->mDirection.z = defaultDirectionZ;
+    lightCopy2->mPosition.x = defaultPositionX;
+    lightCopy2->mCutoff = defaultCutoff;
+    lightCopy2->mReferenceBrightness = defaultReferenceBrightness;
+    dCcD_Stts_ct(&actor->mStts);
+    dCcD_Cyl_ct(&actor->mCyl1, daObjFigure_c::CYL_AAB_VTABLE_HD);
+    Figure_secondCyl_ctorHD(&actor->mCyl2);
+    Figure_eventCut_ctorHD(&actor->mEventCut);
+    u32 no = actor->getPrmFigureNo();
+    if (no != 0xFF && no < 0x86) {
+        s16 angle = (s16)actor->current.angle.y;
+        actor->mFigureNo = no;
+        actor->m734 = angle;
+        u8 display = actor->isFigureGet((u8)no);
+        actor->m734 = 0;
+        actor->mbDisplay = display;
+        actor->m732 = 0;
+        angle = (s16)actor->current.angle.y;
+        actor->m73C = 0;
+        actor->m736 = angle;
+    } else {
+        s16 angle = (s16)actor->current.angle.y;
+        actor->mFigureNo = 0;
+        actor->m734 = angle;
+        u8 display = actor->isFigureGet(0);
+        angle = (s16)actor->current.angle.y;
+        actor->mbDisplay = display;
+        actor->m736 = angle;
+        actor->m734 = 0;
+        actor->m732 = 0;
+        actor->m73C = 0;
+    }
+    return a;
+}
+/* 0233F630 */
+bool CheckCreateHeap(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    return actor->createHeap();
+}
+/* 0233F9C4 */
+s32 phase_1(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    u32 flags = (u32)actor->actor_condition;
+    if (!(flags & 8)) {
+        if (a) {
+            daObjFigure_constructHD(a);
+            flags = (u32)actor->actor_condition;
         }
-      } else {
-        store<u32>(shapes + 32 + 4 * depths, load<u32>(material + 8));
-        ++depths;
-        if ((s32)depths > 4)
-          call<void>(0x0273AA24, 0x100282F8u, 0x74F, 0x10028320u);
-      }
-      material = load<u32>(material + 4);
+        actor->actor_condition = flags | 8;
     }
-    count = load<u32>(data + 4);
-    joints = load<u32>(data + 8);
-    material = load<u32>((count > 0x15 ? joints + 0x24C : joints) + 0x10);
-  }
-  store<u32>(0x104B4634, load<u32>(play() + 0x5D54));
-  u32 buffer = load<u32>(play() + 0x5D54);
-  u32 opaque = load<u32>(0x104B4634);
-  store<u32>(0x104B4638, buffer);
-  call<void>(0x027F0E04, opaque, 0x10469AE8u, 0);
-  for (u32 i = 0; i < 4; ++i) {
-    u32 shape = load<u32>(shapes + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-    shape = load<u32>(shapes + 32 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-    shape = load<u32>(shapes + 16 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 1);
-  }
-  call<void>(0x027F583C, model, eye);
-  call<void>(0x027F583C, model, eyebrow);
-  call<void>(0x027F0E04, load<u32>(0x104B4634), 0x104699B8u, 0);
-  for (u32 i = 0; i < 4; ++i) {
-    u32 shape = load<u32>(shapes + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 1);
-    shape = load<u32>(shapes + 16 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-  }
-  call<void>(0x027F583C, model, eye);
-  call<void>(0x027F583C, model, eyebrow);
-  material = load<u32>(root + 0x10);
-  u32 strings = guestFrame.a + 4;
-  store<u32>(strings, 0x1002829C);
-  store<u32>(strings + 4, 0x100282AC);
-  store<u32>(strings + 8, 0x100282A4);
-  store<u32>(strings + 12, 0x100282AC);
-  while (material) {
-    u32 record = load<u32>(material), offset = load<u32>(record + 4);
-    u32 name = offset ? record + 4 + offset : 0;
-    if (!rootNameMatches(strings, name, 16))
-      store<u8>(load<u32>(material + 8) + 4, 0);
-    material = load<u32>(material + 4);
-  }
-  call<void>(0x027F583C, model, root);
-  material = load<u32>(root + 0x10);
-  while (material) {
-    u32 record = load<u32>(material), offset = load<u32>(record + 4);
-    u32 name = offset ? record + 4 + offset : 0;
-    bool match = rootNameMatches(strings, name, 24);
-    store<u8>(load<u32>(material + 8) + 4, match ? 0 : 1);
-    material = load<u32>(material + 4);
-  }
-  store<u32>(0x104B4634, load<u32>(play() + 0x5D5C));
-  buffer = load<u32>(play() + 0x5D5C);
-  opaque = load<u32>(0x104B4634);
-  store<u32>(0x104B4638, buffer);
-  call<void>(0x027F0E04, opaque, 0x10469A50u, 0);
-  for (u32 i = 0; i < 4; ++i) {
-    u32 shape = load<u32>(shapes + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-    shape = load<u32>(shapes + 32 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 1);
-    shape = load<u32>(shapes + 16 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-  }
-  call<void>(0x027F583C, model, eye);
-  call<void>(0x027F583C, model, eyebrow);
-  call<void>(0x027F0E04, load<u32>(0x104B4634), 0x10469920u, 0);
-  for (u32 i = 0; i < 4; ++i) {
-    u32 shape = load<u32>(shapes + 32 + 4 * i);
-    if (shape)
-      store<u8>(shape + 4, 0);
-  }
-  store<u32>(0x104B4634, load<u32>(play() + 0x5D78));
-  store<u32>(0x104B4638, load<u32>(play() + 0x5D7C));
-  call<void>(0x025E2E5C, load<u32>(load<u32>(guestFrame.a) + 0x90));
-  material = load<u32>(root + 0x10);
-  while (material) {
-    store<u8>(load<u32>(material + 8) + 4, 1);
-    material = load<u32>(material + 4);
-  }
-  count = load<u32>(data + 4);
-  joints = load<u32>(data + 8);
-  store<u8>(
-      load<u32>(load<u32>((count > 0x14 ? joints + 0x230 : joints) + 0x10) +
-                8) +
-          4,
-      1);
-  count = load<u32>(data + 4);
-  joints = load<u32>(data + 8);
-  store<u8>(
-      load<u32>(load<u32>((count > 0x29 ? joints + 0x47C : joints) + 0x10) +
-                8) +
-          4,
-      1);
-  return true;
+    actor->mLoadFlags = (u8)actor->mLoadFlags | 1;
+    s32 phase = dComIfG_resLoad(&actor->mPhsFigure, "Figure");
+    return phase == 4 ? 2 : phase;
 }
-VERIFY(0x023409C0, draw);
-bool wrapperDraw(u32 a) {
-  WWHD_FUNC(0x0234135C, bool, a);
-  return draw(a);
+/* 0233FDD8 */
+s32 phase_2(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    u8 flags = (u8)actor->mLoadFlags, no = (u8)actor->mFigureNo;
+    actor->mLoadFlags = flags | 2;
+    s32 room = Figure_getFigureRoomHD(no);
+    s32 overrideRoom = (s32)l_figure_dat_tbl.mData[(u32)no].mRoomId;
+    if (overrideRoom >= 0)
+        room = overrideRoom;
+    s32 phase = dComIfG_resLoad(&actor->mPhsRoomArc, l_arcname_tbl.mNames[(u32)room]);
+    if (phase == 4) {
+        if (!fopAcM_entrySolidHeap(actor, reinterpret_cast<BOOL (*)(fopAc_ac_c*)>(CheckCreateHeap),
+                                   no == 0x40 ? 0x25000 : 0xCD90))
+            return 5;
+        return actor->createInit();
+    }
+    return phase;
 }
-VERIFY(0x0234135C, wrapperDraw);
-void executeNormal(u32 a) {
-  WWHD_FUNC(0x02341360, void, a);
-  if (!load<u8>(a + 0xA32))
-    return;
-  u32 p = play();
-  f32 x = load<f32>(a + 0x314);
-  u32 player = load<u32>(p + 0x5B34);
-  f32 y = load<f32>(a + 0x318), z = load<f32>(a + 0x31C);
-  gabi::Local<f32[3]> source, target;
-  store<f32>(source.a, x);
-  store<f32>(source.a + 4, y);
-  store<f32>(source.a + 8, z);
-  x = load<f32>(player + 0x314);
-  y = load<f32>(player + 0x318);
-  z = load<f32>(player + 0x31C);
-  store<f32>(target.a, x);
-  store<f32>(target.a + 4, y);
-  store<f32>(target.a + 8, z);
-  gabi::Local<f32> distance;
-  gabi::Local<s16> angle;
-  call<void>(0x0259D624, source.a, target.a, distance.a, angle.a);
-  s16 facing = load<s16>(a + 0x322), heading = load<s16>(angle.a);
-  s16 delta = (s16)(heading - facing);
-  f32 length = load<f32>(distance.a);
-  if (150.0f > length) {
-    s32 magnitude = delta < 0 ? -(s32)delta : (s32)delta;
-    if (magnitude < 13000)
-      store<u16>(a + 0xFA, load<u16>(a + 0xFA) | 1);
-  }
+/* 0233FEB0 */
+s32 daObjFigure_c::_create() { return Figure_phaseHandlerHD(&mPhsLoad, &l_method, this); }
+/* 0233F37C */
+bool daObjFigure_c::createHeap() {
+    s32 room = Figure_getFigureRoomHD((u8)mFigureNo);
+    u32 no = (u8)mFigureNo;
+    s32 overrideRoom = (s32)l_figure_dat_tbl.mData[no].mRoomId;
+    if (overrideRoom >= 0)
+        room = overrideRoom;
+    const char* arc = l_arcname_tbl.mNames[(u32)room];
+    s32 index = getFigureBmd(no);
+    u32 data = resource(arc, index);
+    if (!data)
+        return false;
+    no = (u8)mFigureNo;
+    u32 model = gabi::ea(mDoExt_J3DModel__create(gabi::at<J3DModelData>(data), 0x80000,
+                                                 (u32)l_figure_dat_tbl.mData[no].mModelAttr));
+    mpModel.v = model;
+    if (!model)
+        return false;
+    no = (u8)mFigureNo;
+    if (no == 0x3D) {
+        u32 animation = resource(arc, 0x1A);
+        if (!animation)
+            return false;
+        u32 controller = gabi::ea(Figure_newBrkHD(nullptr));
+        mpBrkAnm.v = controller;
+        if (!controller)
+            return false;
+        if (!gabi::at<mDoExt_brkAnm>(controller)
+                 ->init(gabi::at<J3DModelData>(data), gabi::at<J3DAnmTevRegKey>(animation), true,
+                        J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0))
+            return false;
+        no = (u8)mFigureNo;
+    }
+    if (no == 0x40) {
+        u32 pedestal = resource(arc, 0x15);
+        u32 animation = resource(arc, 0);
+        u32 morf = gabi::ea(mDoExt_McaMorf::create(
+            nullptr, gabi::at<J3DModelData>(pedestal), nullptr, nullptr, gabi::at<J3DAnmTransform>(animation),
+            J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 1, nullptr, 0x80000, 0x11001222));
+        mpMorf.v = morf;
+        if (!morf || !gabi::at<mDoExt_McaMorf>(morf)->mpModel.v)
+            return false;
+    }
+    u32 pedestal = resource("Figure", 1);
+    if (!pedestal)
+        return false;
+    model = gabi::ea(mDoExt_J3DModel__create(gabi::at<J3DModelData>(pedestal), 0x80000, 0x11020022));
+    mpPedestalModel.v = model;
+    if (!model)
+        return false;
+    u32 pattern = resource("Figure", 2);
+    mpPedestalBtp.v = pattern;
+    if (!pattern)
+        return false;
+    return mBtpAnm1.init(gabi::at<J3DModelData>(pedestal), gabi::at<J3DAnmTexPattern>(pattern), true,
+                         J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0) != 0;
 }
-VERIFY(0x02341360, executeNormal);
-void staticInit() {
-  WWHD_FUNC(0x02341424, void);
-  store<u32>(0x10469918, 0);
-  store<u32>(0x10469910, 0);
-  store<u32>(0x1046991C, 0);
-  store<u32>(0x10469914, 0);
-  call<void>(0x028F026C, 0x101C9360u);
-  store<f32>(0x104698F4, -3.1415927410125732f);
-  store<f32>(0x104698F8, 3.1415927410125732f);
-  call<void>(0x028ED6F8, 0x1046990Cu);
-  call<void>(0x028F026C, 0x101C936Cu);
-  call<void>(0x028EAB2C, 0x1046990Du);
-  call<void>(0x028F026C, 0x101C9378u);
+/* 0233FC60 */
+s32 daObjFigure_c::createInit() {
+    mStts.Init(0xFF, 0xFF, this);
+    mCyl1.Set(&l_cyl_src);
+    mCyl1.SetStts(&mStts);
+    mCyl2.Set(&l_cyl_src);
+    mCyl2.SetStts(&mStts);
+    mCyl2.mObjCo.mSPrm = 0x129;
+    mCyl2.SetR(200.0f);
+    mCyl2.SetH(100.0f);
+    u32 matrix = (u32)mpPedestalModel.v;
+    if (matrix)
+        matrix += 0xC8;
+    cullMtx = matrix;
+    // HD: the cull box extends to 450 rather than the GC height of 200.
+    fopAcM_setCullSizeBox(this, -50.0f, 0.0f, -50.0f, 50.0f, 450.0f, 50.0f);
+    s32 event = dComIfGp_evmng_getEventIdx("FIGURE_CHECK", 0xFF);
+    mFigureCheckEvtIdx = event;
+    mEventCut.setActorInfo("Figure", this);
+    s16 id = (s16)mFigureCheckEvtIdx;
+    s8 room = (s8)home.roomNo;
+    eventInfo.mEventId = id;
+    attention_info.flags = 0x2000000A;
+    u16 rz = (u16)current.angle.z, rx = (u16)current.angle.x, ry = (u16)current.angle.y;
+    attention_info.distances[3] = 0xA8;
+    attention_info.distances[1] = 0xA8;
+    shape_angle.x = rx;
+    shape_angle.z = rz;
+    shape_angle.y = ry;
+    Figure_tevInitHD(&mTevStrBG2, room, 0xFF);
+    MTXCopy(&l_identityMtx, &mMtx);
+    setMtx();
+    return 4;
 }
-VERIFY(0x02341424, staticInit);
-void staticDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x023414B8, void, a, flags);
-  if (a && (flags & 1))
-    call<void>(0x0273AF40, a);
+/* 0233FEC8 */
+bool daObjFigure_c::_delete() {
+    dComIfG_resDelete(&mPhsFigure, "Figure");
+    s32 room = Figure_getFigureRoomHD((u8)mFigureNo);
+    s32 overrideRoom = (s32)l_figure_dat_tbl.mData[(u32)(u8)mFigureNo].mRoomId;
+    if (overrideRoom >= 0)
+        room = overrideRoom;
+    dComIfG_resDelete(&mPhsRoomArc, l_arcname_tbl.mNames[(u32)room]);
+    return true;
 }
-VERIFY(0x023414B8, staticDtor);
-bool isDelete(u32 a) {
-  WWHD_FUNC(0x023414CC, bool, a);
-  return true;
+/* 023409C0 */
+bool daObjFigure_c::_draw() {
+    dScnKy_env_light_c* env = dKy_getEnvlight();
+    settingTevStruct(env, 3, &current.pos, &mTevStrBG2);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mpModel, &mTevStrBG2);
+    env = dKy_getEnvlight();
+    settingTevStruct(env, TEV_TYPE_BG0, &current.pos, &tevStr);
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, mpPedestalModel, &tevStr);
+    J3DModel* model = mpPedestalModel;
+    u8 display = mbDisplay;
+    auto* data = reinterpret_cast<FigureModelDataHD*>(model->mModelData.get());
+    if (!display) {
+        // HD: only the Link figurine suppresses its pedestal here.
+        if ((u8)mFigureNo != 0x40) {
+            mBtpAnm1.entry(data, 0);
+            mDoExt_modelUpdateDL(mpPedestalModel, 0);
+            data->mpBtp = 0;
+        }
+        return true;
+    }
+    mDoExt_brkAnm* anim = mpBrkAnm;
+    if (anim) {
+        model = mpModel;
+        f32 frame = anim->mFrameCtrl.mFrame;
+        anim->entry(model->mModelData, frame);
+    }
+    mBtpAnm1.entry(data, 1);
+    mDoExt_modelUpdateDL(mpPedestalModel, 0);
+    mDoExt_modelUpdateDL(mpModel, 0);
+    data->mpBtp = 0;
+    if (mpBrkAnm.v)
+        reinterpret_cast<FigureModelDataHD*>(mpModel->mModelData.get())->mpBrk = 0;
+    mDoExt_McaMorf* morf = mpMorf;
+    if (!morf)
+        return true;
+    env = dKy_getEnvlight();
+    setLightTevColorType(env, morf->mpModel, &mTevStrBG2);
+    morf = mpMorf;
+    morf->calc();
+    model = morf->mpModel;
+    u32 flag = l_offCupOnAupPacket1Guard;
+    data = reinterpret_cast<FigureModelDataHD*>(model->mModelData.get());
+    l_renderState.mpModel = model;
+    if (!flag) {
+        l_offCupOnAupPacket1Guard = 1;
+        Figure_packetConstructHD(&l_offCupOnAupPacket1);
+        l_offCupOnAupPacket1.mVtable = FigureDrawPacketHD::OFF_CUP_ON_AUP_VTABLE;
+        Figure_registerDtorHD(&l_offCupOnAupPacket1Dtor);
+    }
+    if (!l_offCupOnAupPacket2Guard) {
+        l_offCupOnAupPacket2Guard = 1;
+        Figure_packetConstructHD(&l_offCupOnAupPacket2);
+        l_offCupOnAupPacket2.mVtable = FigureDrawPacketHD::OFF_CUP_ON_AUP_VTABLE;
+        Figure_registerDtorHD(&l_offCupOnAupPacket2Dtor);
+    }
+    if (!l_onCupOffAupPacket1Guard) {
+        l_onCupOffAupPacket1Guard = 1;
+        Figure_packetConstructHD(&l_onCupOffAupPacket1);
+        l_onCupOffAupPacket1.mVtable = FigureDrawPacketHD::ON_CUP_OFF_AUP_VTABLE;
+        Figure_registerDtorHD(&l_onCupOffAupPacket1Dtor);
+    }
+    if (!l_onCupOffAupPacket2Guard) {
+        l_onCupOffAupPacket2Guard = 1;
+        Figure_packetConstructHD(&l_onCupOffAupPacket2);
+        l_onCupOffAupPacket2.mVtable = FigureDrawPacketHD::ON_CUP_OFF_AUP_VTABLE;
+        Figure_registerDtorHD(&l_onCupOffAupPacket2Dtor);
+    }
+    u32 count = data->mJointNum;
+    auto* joints = gabi::at<FigureJointHD>(data->mJointNodes);
+    FigureJointHD* root = joints;
+    FigureJointHD* eye = count > 0x13 ? &joints[0x13] : joints;
+    FigureJointHD* eyebrow = count > 0x15 ? &joints[0x15] : joints;
+    FigureMaterialHD* material = (count > 0x13 ? &joints[0x13] : joints)->mpMesh;
+    // HD: retain the original 0xB0 guest frame, with adjacent SafeStrings and shape lists.
+    gabi::Local<FigureDrawFrameHD> guestFrame;
+    guestFrame->mpMorf = morf;
+    gptr<J3DShape>* shapes = guestFrame->mShapes;
+    for (u32 i = 0; i < 12; ++i)
+        shapes[i].v = 0;
+    u32 zoff_blend_cnt = 0, zoff_none_cnt = 0, zon_cnt = 0;
+    for (int pass = 0; pass < 2; ++pass) {
+        while (material) {
+            FigurePEBlockHD* block = material->mpPEBlock;
+            const be<u8>* mode = call<const be<u8>*>(block->mVtable->mGetZMode.get(), block);
+            if (!*mode) {
+                block = material->mpPEBlock;
+                mode = call<const be<u8>*>(block->mVtable->mGetBlend.get(), block);
+                u8 blend = *mode;
+                J3DShape* shape = material->mpShape;
+                if (blend == 1) {
+                    shapes[zoff_blend_cnt] = shape;
+                    ++zoff_blend_cnt;
+                    if ((s32)zoff_blend_cnt > 4)
+                        JUTAssertion_showAssert("d_a_obj_figure.cpp", 0x748, "zoff_blend_cnt <= 4");
+                } else {
+                    shapes[4 + zoff_none_cnt] = shape;
+                    ++zoff_none_cnt;
+                    if ((s32)zoff_none_cnt > 4)
+                        JUTAssertion_showAssert("d_a_obj_figure.cpp", 0x74B, "zoff_none_cnt <= 4");
+                }
+            } else {
+                shapes[8 + zon_cnt] = material->mpShape;
+                ++zon_cnt;
+                if ((s32)zon_cnt > 4)
+                    JUTAssertion_showAssert("d_a_obj_figure.cpp", 0x74F, "zon_cnt <= 4");
+            }
+            material = material->mpNext;
+        }
+        count = data->mJointNum;
+        joints = gabi::at<FigureJointHD>(data->mJointNodes);
+        material = (count > 0x15 ? &joints[0x15] : joints)->mpMesh;
+    }
+    l_renderState.mpOpaBuffer = figureDrawList()->mpListP0;
+    J3DDrawBuffer* buffer = figureDrawList()->mpListP0;
+    J3DDrawBuffer* opaque = l_renderState.mpOpaBuffer;
+    l_renderState.mpXluBuffer = buffer;
+    opaque->entryImm(reinterpret_cast<J3DPacket*>(&l_onCupOffAupPacket2), 0);
+    for (u32 i = 0; i < 4; ++i) {
+        J3DShape* shape = shapes[i];
+        if (shape)
+            shape->hide();
+        shape = shapes[8 + i];
+        if (shape)
+            shape->hide();
+        shape = shapes[4 + i];
+        if (shape)
+            shape->show();
+    }
+    reinterpret_cast<J3DJoint*>(eye)->entryIn(model);
+    reinterpret_cast<J3DJoint*>(eyebrow)->entryIn(model);
+    l_renderState.mpOpaBuffer->entryImm(reinterpret_cast<J3DPacket*>(&l_offCupOnAupPacket2), 0);
+    for (u32 i = 0; i < 4; ++i) {
+        J3DShape* shape = shapes[i];
+        if (shape)
+            shape->show();
+        shape = shapes[4 + i];
+        if (shape)
+            shape->hide();
+    }
+    reinterpret_cast<J3DJoint*>(eye)->entryIn(model);
+    reinterpret_cast<J3DJoint*>(eyebrow)->entryIn(model);
+    material = root->mpMesh;
+    SafeString* strings = guestFrame->mStrings;
+    strings[0].mStringTop = gabi::guest_str("face");
+    strings[0].__vtbl = gc_tu.safeString;
+    strings[1].mStringTop = gabi::guest_str("ear_2_");
+    strings[1].__vtbl = gc_tu.safeString;
+    while (material) {
+        FigureMaterialRecordHD* record = material->mpData;
+        u32 offset = record->mNameOffset;
+        u32 name = offset ? gabi::ea(&record->mNameOffset) + offset : 0;
+        if (!rootNameMatches(strings, name, 16))
+            material->mpShape->hide();
+        material = material->mpNext;
+    }
+    reinterpret_cast<J3DJoint*>(root)->entryIn(model);
+    material = root->mpMesh;
+    while (material) {
+        FigureMaterialRecordHD* record = material->mpData;
+        u32 offset = record->mNameOffset;
+        u32 name = offset ? gabi::ea(&record->mNameOffset) + offset : 0;
+        bool match = rootNameMatches(strings, name, 24);
+        material->mpShape->mVisible = match ? 0 : 1;
+        material = material->mpNext;
+    }
+    l_renderState.mpOpaBuffer = figureDrawList()->mpListP1;
+    buffer = figureDrawList()->mpListP1;
+    opaque = l_renderState.mpOpaBuffer;
+    l_renderState.mpXluBuffer = buffer;
+    opaque->entryImm(reinterpret_cast<J3DPacket*>(&l_onCupOffAupPacket1), 0);
+    for (u32 i = 0; i < 4; ++i) {
+        J3DShape* shape = shapes[i];
+        if (shape)
+            shape->hide();
+        shape = shapes[8 + i];
+        if (shape)
+            shape->show();
+        shape = shapes[4 + i];
+        if (shape)
+            shape->hide();
+    }
+    reinterpret_cast<J3DJoint*>(eye)->entryIn(model);
+    reinterpret_cast<J3DJoint*>(eyebrow)->entryIn(model);
+    l_renderState.mpOpaBuffer->entryImm(reinterpret_cast<J3DPacket*>(&l_offCupOnAupPacket1), 0);
+    for (u32 i = 0; i < 4; ++i) {
+        J3DShape* shape = shapes[8 + i];
+        if (shape)
+            shape->hide();
+    }
+    l_renderState.mpOpaBuffer = figureDrawList()->mpOpa;
+    l_renderState.mpXluBuffer = figureDrawList()->mpXlu;
+    mDoExt_modelEntryDL(guestFrame->mpMorf->mpModel);
+    material = root->mpMesh;
+    while (material) {
+        material->mpShape->show();
+        material = material->mpNext;
+    }
+    count = data->mJointNum;
+    joints = gabi::at<FigureJointHD>(data->mJointNodes);
+    (count > 0x14 ? &joints[0x14] : joints)->mpMesh->mpShape->show();
+    count = data->mJointNum;
+    joints = gabi::at<FigureJointHD>(data->mJointNodes);
+    (count > 0x29 ? &joints[0x29] : joints)->mpMesh->mpShape->show();
+    return true;
 }
-VERIFY(0x023414CC, isDelete);
-void packetDtor1(u32 a, s32 flags) {
-  WWHD_FUNC(0x023414D4, void, a, flags);
-  if (a) {
-    call<void>(0x027F13DC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
+/* 02340858 */
+bool daObjFigure_c::_execute() {
+    if (!dComIfGp_event_runCheck()) {
+        (this->*moveProc.mProc)();
+    } else
+        eventMove();
+    if ((u8)mbDisplay || (u8)mFigureNo != 0x40) {
+        mCyl1.SetC(&current.pos);
+        mCyl2.SetC(&current.pos);
+        cCcS_Set(dComIfG_Ccsp(), &mCyl1);
+        cCcS_Set(dComIfG_Ccsp(), &mCyl2);
+    }
+    f32 y = (f32)current.pos.y, x = (f32)current.pos.x, z = (f32)current.pos.z;
+    u32 animation = (u32)mpBrkAnm.v;
+    eyePos.x = x;
+    eyePos.y = (f32)(y + 150.0f);
+    attention_info.position.x = x;
+    eyePos.z = z;
+    attention_info.position.z = z;
+    attention_info.position.y = (f32)(y + 200.0f);
+    if (animation)
+        gabi::at<mDoExt_brkAnm>(animation)->play();
+    setMtx();
+    return true;
 }
-VERIFY(0x023414D4, packetDtor1);
-void packetDtor2(u32 a, s32 flags) {
-  WWHD_FUNC(0x02341528, void, a, flags);
-  if (a) {
-    call<void>(0x027F13DC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
+/* 02341360 */
+void daObjFigure_c::executeNormal() {
+    if (!(u8)mbDisplay)
+        return;
+    auto* info = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    f32 x = current.pos.x;
+    fopAc_ac_c* player = info->play.mpPlayerPtr[0];
+    f32 y = current.pos.y, z = current.pos.z;
+    gabi::Local<cXyz> source, target;
+    source->x = x;
+    source->y = y;
+    source->z = z;
+    x = player->current.pos.x;
+    y = player->current.pos.y;
+    z = player->current.pos.z;
+    target->x = x;
+    target->y = y;
+    target->z = z;
+    gabi::Local<be<f32>> distance;
+    gabi::Local<be<s16>> angle;
+    dNpc_calc_DisXZ_AngY(source.get(), target.get(), distance.get(), angle.get());
+    s16 facing = current.angle.y, heading = *angle.get();
+    s16 delta = (s16)(heading - facing);
+    f32 length = *distance.get();
+    if (150.0f > length) {
+        s32 magnitude = delta < 0 ? -(s32)delta : (s32)delta;
+        if (magnitude < 13000)
+            eventInfo.onCondition(dEvtCnd_CANTALK_e);
+    }
 }
-VERIFY(0x02341528, packetDtor2);
-void actorDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x0234157C, void, a, flags);
-  if (a) {
-    call<void>(0x02515A70, a + 0x858, 2);
-    call<void>(0x02515A70, a + 0x728, 2);
-    call<void>(0x02515860, a + 0x6EC, 2);
-    call<void>(0x025D50BC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
+/* 023407A0 */
+void daObjFigure_c::eventMove() {
+    s16 event = (s16)mFigureCheckEvtIdx;
+    if (dComIfGp_evmng_endCheck(event)) {
+        dComIfGp_event_reset();
+        return;
+    }
+    u8 attention = (u8)mEventCut.mbAttention;
+    if (mEventCut.cutProc()) {
+        if (!(u8)mEventCut.mbAttention)
+            mEventCut.mbAttention = attention;
+    } else
+        privateCut();
 }
-VERIFY(0x0234157C, actorDtor);
-void empty(u32 a) { WWHD_FUNC(0x023415F4, void, a); }
-VERIFY(0x023415F4, empty);
-} // namespace figure
+/* 02340664 */
+void daObjFigure_c::privateCut() {
+    s32 staff = dComIfGp_evmng_getMyStaffId("Figure", nullptr, 0);
+    if (staff == -1)
+        return;
+    s8 action = (s8)dComIfGp_evmng_getMyActIdx(staff, cut_name_tbl.mNames, 3, TRUE, 0);
+    m741 = action;
+    dEvent_manager_c* manager = dComIfGp_getPEvtManager();
+    if (action == -1) {
+        Figure_cutEndHD(manager, staff);
+        return;
+    }
+    if (Figure_getIsAdvanceHD(manager, staff)) {
+        action = (s8)m741;
+        if (action == 0)
+            eventMesSetInit(staff);
+        else if (action == 1)
+            eventOnPlrInit();
+        else if (action == 2)
+            eventOffPlrInit();
+    }
+    action = (s8)m741;
+    if (action == 0 && !eventMesSet())
+        return;
+    dComIfGp_evmng_cutEnd(staff);
+}
+/* 0233FF68 */
+void daObjFigure_c::eventMesSetInit(s32 staff) {
+    auto* message = reinterpret_cast<be<u32>*>(dComIfGp_evmng_getMySubstanceP(staff, "MsgNo", 3));
+    if (message) {
+        m72C.v = 0;
+        u32 value = *message;
+        if (value != 1) {
+            if (value == 0)
+                value = getMsg();
+            setMessage(value);
+            be<u32>* list = m72C;
+            if (list)
+                setMessage((u32)*list);
+        }
+    } else {
+        be<u32>* list = Figure_nextMessageHD(m72C);
+        m72C = list;
+        setMessage((u32)*list);
+    }
+    m73A = 10;
+    m724 = 50.0f;
+    m738 = 0;
+    m73F = 0;
+    m728 = 118.0f;
+}
+/* 0234025C */
+bool daObjFigure_c::eventMesSet() {
+    s16 timer = (s16)m73A;
+    if (timer)
+        m73A = (u16)(timer - 1);
+    else {
+        bool input = Figure_stickXHD(0) != 0.0f;
+        if (!input)
+            input = Figure_stickYHD(0) != 0.0f;
+        if (!input)
+            input = Figure_substickYHD(0) != 0.0f;
+        if (input) {
+            m738 = 0;
+            f32 stick = Figure_stickXHD(0);
+            s16 delta = (s16)truncWord((f32)(stick * 512.0f));
+            m734 = (u16)((s16)m734 + delta);
+            stick = Figure_stickYHD(0);
+            delta = (s16)truncWord((f32)(stick * 5.0f));
+            f32 height = (f32)((f32)m728 + (f32)delta);
+            if (height < 80.0f)
+                height = 80.0f;
+            else if (height > 150.0f)
+                height = 150.0f;
+            m728 = height;
+            stick = Figure_substickYHD(0);
+            f32 twice = (f32)(stick + stick);
+            f32 zoom = (f32)((f32)m724 - twice);
+            if (zoom < 20.0f)
+                zoom = 20.0f;
+            else if (zoom > 60.0f)
+                zoom = 60.0f;
+            m724 = zoom;
+        } else {
+            s16 wait = (s16)m738;
+            if (wait)
+                m738 = (u16)(wait - 1);
+        }
+    }
+    u8 state = (u8)m73F;
+    if (state == 0) {
+        dComIfGp_setDoStatusForce(0x21);
+        dComIfGp_setAStatusForce(0x27);
+        if ((s16)m73A == 0) {
+            dComIfGp_setDoStatusForce(0x21);
+            dComIfGp_setAStatusForce(0x27);
+            if (Figure_triggerBHD(0)) {
+                s16 angle = (s16)current.angle.y;
+                m732 = 0;
+                m734 = 0;
+                m736 = angle;
+                return true;
+            }
+            if (Figure_triggerAHD(0))
+                m73F = 1;
+        }
+    } else if (state == 1) {
+        talk(0);
+        if ((u32)m694 != 0xFFFFFFFF)
+            m73F = 2;
+    } else if (state == 2) {
+        if (talk(0) == 0x12)
+            m73F = 0;
+    }
+    f32 height = (f32)m728;
+    s16 angle = (s16)current.angle.y;
+    f32 cameraHeight = (f32)(height + 30.0f);
+    m70C.x = 0.0f;
+    s16 rotation = (s16)m734;
+    m70C.y = cameraHeight;
+    m70C.z = 0.0f;
+    m718.x = 0.0f;
+    m718.y = cameraHeight;
+    m718.z = 200.0f;
+    mDoMtx_stack_c::YrotS((s16)(angle + rotation));
+    PSMTXMultVec(&l_mtxStack, &m718, &m718);
+    PSVECAdd(&m70C, &current.pos, &m70C);
+    PSVECAdd(&m718, &current.pos, &m718);
+    f32 tx = (f32)m70C.x, ex = (f32)m718.x;
+    f32 tz = (f32)m70C.z, ez = (f32)m718.z;
+    f32 ty = (f32)m70C.y, ey = (f32)m718.y;
+    gabi::Local<cXyz> target, eye;
+    target->x = tx;
+    target->y = ty;
+    target->z = tz;
+    eye->x = ex;
+    eye->y = ey;
+    eye->z = ez;
+    FigureCameraHD* camera = Figure_getCameraHD();
+    Figure_cameraSetHD(camera, target.get(), eye.get(), (f32)m724, 0);
+    return false;
+}
+/* 02340040 */
+void daObjFigure_c::eventOnPlrInit() {
+    auto* player = figureLinkPlayerHD();
+    player->offNoResetFlg0(daPy_py_c::daPyFlg0_NO_DRAW);
+    Figure_cameraResetHD(Figure_getCameraHD());
+    Figure_cameraStartHD(Figure_getCameraHD());
+    dComIfGs_offTmpBit(0x408);
+}
+/* 02340094 */
+void daObjFigure_c::eventOffPlrInit() {
+    auto* player = figureLinkPlayerHD();
+    player->onNoResetFlg0(daPy_py_c::daPyFlg0_NO_DRAW);
+    Figure_cameraStopHD(Figure_getCameraHD());
+    dComIfGs_onTmpBit(0x408);
+}
+/* 02340128 */
+u16 daObjFigure_c::talk(s32 param) {
+    u32 id = m694;
+    FigureMessageManagerHD* message = l_messageManager.mpManager;
+    u16 status = 0xFF;
+    if (id == 0xFFFFFFFF) {
+        u32 text;
+        if (param == 1) {
+            text = getMsg();
+            m69C = text;
+        } else
+            text = (u32)m69C;
+        u32 newId = Figure_messageSetHD(message, text, &eyePos);
+        m694 = newId;
+        if (newId != 0xFFFFFFFF)
+            mHasMessageHD = 0;
+    } else if ((u8)mHasMessageHD) {
+        status = (u16)Figure_messageGetStatusHD(message);
+        if (status == 0xE) {
+            u16 next = next_msgStatus(&m69C);
+            Figure_messageSetStatusHD(message, next);
+            if (Figure_messageGetStatusHD(message) == 0xF)
+                Figure_messageSetHD(message, (u32)m69C, nullptr);
+        } else if (status == 0x12) {
+            Figure_messageSetStatusHD(message, 0x13);
+            m694 = 0xFFFFFFFF;
+        }
+    } else
+        mHasMessageHD = 1;
+    return status;
+}
+/* 023400E0 */
+u16 daObjFigure_c::next_msgStatus(be<u32>* message) {
+    be<u32>* list = m72C;
+    if (!list)
+        return 0x10;
+    list = Figure_nextMessageHD(list);
+    m72C = list;
+    u32 value = (u32)*list;
+    if (!value) {
+        m72C.v = 0;
+        return 0x10;
+    }
+    *message = value;
+    return 0xF;
+}
+/* 0233FF54 */
+u32 daObjFigure_c::getMsg() {
+    u8 no = (u8)mFigureNo;
+    m72C.v = 0;
+    return 0x37DD + no;
+}
+/* 0233FF44 */
+void daObjFigure_c::setMessage(u32 message) {
+    m69C = message;
+    m694 = 0xFFFFFFFF;
+}
+/* 0233F634 */
+u8 daObjFigure_c::getPrmFigureNo() {
+    u32 a = gabi::ea(this);
+    return (u8)PrmAbstract(a, PRM_FIGURE_NO_W, PRM_FIGURE_NO_S);
+}
+/* 0233FA44 */
+void daObjFigure_c::setMtx() {
+    f32 x = scale.x, y = scale.y;
+    J3DModel* model = mpPedestalModel;
+    f32 z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = current.pos.x;
+    y = current.pos.y;
+    z = current.pos.z;
+    PSMTXTrans(&l_mtxStack, x, y, z);
+    mDoMtx_YrotM(&l_mtxStack, (s16)current.angle.y);
+    copyMatrix(&l_mtxStack, &mpPedestalModel->mBaseTransformMtx);
+    model = mpModel;
+    model->mBaseScale.z = 1.0f;
+    model->mBaseScale.y = 1.0f;
+    model->mBaseScale.x = 1.0f;
+    y = current.pos.y;
+    x = current.pos.x;
+    z = current.pos.z;
+    PSMTXTrans(&l_mtxStack, x, (f32)(y + 100.0f), z);
+    mDoMtx_YrotM(&l_mtxStack, (s16)m736);
+    copyMatrix(&l_mtxStack, &mpModel->mBaseTransformMtx);
+    mDoExt_McaMorf* morf = mpMorf;
+    if (morf) {
+        model = morf->mpModel;
+        model->mBaseScale.x = 1.0f;
+        model->mBaseScale.y = 1.0f;
+        model->mBaseScale.z = 1.0f;
+        morf = mpMorf;
+        model = morf->mpModel;
+        copyMatrix(&l_mtxStack, &model->mBaseTransformMtx);
+    }
+}
+/* 0233F660 */
+u8 daObjFigure_c::isFigureGet(u32 no) {
+    u32 byte = no >> 3;
+    if ((s32)byte >= 17)
+        return 0;
+    u16 event = (u16)l_figure_comp.mEvents[byte];
+    return (u8)(dComIfGs_getEventRegHD(event) & (1u << (no & 7)));
+}
+/* 0233F2F0 */
+s32 daObjFigure_c::getFigureBmd(u32 no) {
+    s32 index = (s32)l_figure_dat_tbl.mData[no].mBmdId;
+    if (no == 0x10 || no == 0x12) {
+        if (dComIfGs_isEventBit(0x2D01))
+            index = no == 0x10 ? 3 : 6;
+    }
+    return index;
+}
+/* 0233FEC4 */
+s32 daSampleCreate(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    return actor->_create();
+}
+/* 0233FF40 */
+bool daSampleDelete(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    return actor->_delete();
+}
+/* 023409BC */
+bool daSampleExecute(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    return actor->_execute();
+}
+/* 0234135C */
+bool daSampleDraw(u32 a) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    return actor->_draw();
+}
+/* 023414CC */
+bool daSampleIsDelete(u32 a) { return true; }
+// HD: compiler-generated and template code of this translation unit.
+/* 02341424 */
+void __sinit_d_a_obj_figure_cpp() {
+    l_headerZeros.mWords[2] = 0;
+    l_headerZeros.mWords[0] = 0;
+    l_headerZeros.mWords[3] = 0;
+    l_headerZeros.mWords[1] = 0;
+    Figure_registerDtorHD(&l_headerDtor);
+    l_headerStatics.mLower = -3.1415927410125732f;
+    l_headerStatics.mUpper = 3.1415927410125732f;
+    Figure_headerConstruct1HD(&l_headerStatics.mFirst);
+    Figure_registerDtorHD(&l_firstHeaderDtor);
+    Figure_headerConstruct2HD(&l_headerStatics.mSecond);
+    Figure_registerDtorHD(&l_secondHeaderDtor);
+}
+/* 023414B8 */
+void SafeString_dtor(u32 a, s32 flags) {
+    if (a && (flags & 1))
+        operator_delete(gabi::at<void>(a));
+}
+/* 023414D4 */
+void offCupOnAupPacket_dtor(u32 a, s32 flags) {
+    if (a) {
+        Figure_packetDestructHD(gabi::at<FigureDrawPacketHD>(a), 0);
+        if (flags & 1)
+            operator_delete(gabi::at<void>(a));
+    }
+}
+/* 02341528 */
+void onCupOffAupPacket_dtor(u32 a, s32 flags) {
+    if (a) {
+        Figure_packetDestructHD(gabi::at<FigureDrawPacketHD>(a), 0);
+        if (flags & 1)
+            operator_delete(gabi::at<void>(a));
+    }
+}
+/* 0234157C */
+void daObjFigure_dtor(u32 a, s32 flags) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    if (a) {
+        dCcD_Cyl_dt(&actor->mCyl2, 2);
+        dCcD_Cyl_dt(&actor->mCyl1, 2);
+        dCcD_Stts_dt(&actor->mStts, 2);
+        __dt(static_cast<fopAc_ac_c*>(actor));
+        if (flags & 1)
+            operator_delete(gabi::at<void>(a));
+    }
+}
+/* 023415F4 */
+void SafeString_assureTerminationImpl(u32 a) {}
+
+/* 023415F8 */
+u32 PrmAbstract(u32 a, s32 width, s32 shift) {
+    daObjFigure_c* actor = gabi::at<daObjFigure_c>(a);
+    u32 w = (u32)width & 63, s = (u32)shift & 63;
+    return (s < 32 ? (u32)actor->mParameters >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
+}
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data l_headerStatics 104698F4
+data l_headerZeros 10469910
+data l_headerDtor 101C9360
+data l_firstHeaderDtor 101C936C
+data l_secondHeaderDtor 101C9378
+ext 028ED6F8 void Figure_headerConstruct1HD(be<u8>* object)
+ext 028EAB2C void Figure_headerConstruct2HD(be<u8>* object)
+data l_lightDefaults 1016E414
+data l_figure_dat_tbl 10028330
+data l_arcname_tbl 101C927C
+data l_figure_comp 101C92E0
+data l_mtxStack 1048D0CC
+data l_identityMtx 101F48F0
+data l_cyl_src 101C9304
+data l_method 101C9348
+data cut_name_tbl 101C9354
+data moveProc 101C9254
+str 1002897C "Figure" in 0233F37C
+str 10028984 "Figure" in 0233F9C4
+str 100289A4 "Figure" in 0233FC60
+str 100289BC "Figure" in 0233FEC8
+str 100289F4 "Figure" in 02340664
+str 100289AC "FIGURE_CHECK"
+ext 025BD64C s32 Figure_getFigureRoomHD(u32 figureNo)
+ext 025E80D0 mDoExt_brkAnm* Figure_newBrkHD(mDoExt_brkAnm* self)
+ext 02515FB8 void Figure_GObjInf_ctorHD(dCcD_GObjInf* object)
+ext 02018590 void Figure_cylShape_ctorHD(cM3dGCyl* cylinder)
+ext 0259F740 void Figure_eventCut_ctorHD(dNpc_EventCut_c* cut)
+ext 0255FFF4 void Figure_tevInitHD(dKy_tevstr_c* tev, s32 room, u32 type)
+ext 02525FE4 s32 Figure_phaseHandlerHD(request_of_phase_process_class* phase, FigurePhaseTableHD* table, daObjFigure_c* actor)
+ext 02543280 void Figure_cutEndHD(dEvent_manager_c* manager, s32 staff)
+ext 025447C8 s32 Figure_getIsAdvanceHD(dEvent_manager_c* manager, s32 staff)
+ext 027F13DC void Figure_packetDestructHD(FigureDrawPacketHD* packet, s32 flags)
+data l_messageManager 101F4B5C
+str 100289C8 "MsgNo"
+ext 025F795C u32 Figure_messageGetStatusHD(FigureMessageManagerHD* manager)
+ext 025F74D0 void Figure_messageSetStatusHD(FigureMessageManagerHD* manager, u32 status)
+ext 025F7DB0 u32 Figure_messageSetHD(FigureMessageManagerHD* manager, u32 message, cXyz* pos)
+ext 024F8044 FigureCameraHD* Figure_getCameraHD()
+ext 02515048 void Figure_cameraResetHD(FigureCameraHD* camera)
+ext 02514F38 void Figure_cameraStartHD(FigureCameraHD* camera)
+ext 02514F2C void Figure_cameraStopHD(FigureCameraHD* camera)
+ext 02514F88 void Figure_cameraSetHD(FigureCameraHD* camera, cXyz* target, cXyz* eye, f32 zoom, s32 flags)
+ext 0200796C f32 Figure_stickXHD(s32 port)
+ext 02007990 f32 Figure_stickYHD(s32 port)
+ext 02007B20 f32 Figure_substickYHD(s32 port)
+ext 02007898 s32 Figure_triggerAHD(s32 port)
+ext 020078BC s32 Figure_triggerBHD(s32 port)
+data l_renderState 104B462C
+data l_offCupOnAupPacket1 10469920
+data l_offCupOnAupPacket1Guard 104698FC
+data l_offCupOnAupPacket1Dtor 101C92B0
+data l_offCupOnAupPacket2 104699B8
+data l_offCupOnAupPacket2Guard 10469900
+data l_offCupOnAupPacket2Dtor 101C92BC
+data l_onCupOffAupPacket1 10469A50
+data l_onCupOffAupPacket1Guard 10469904
+data l_onCupOffAupPacket1Dtor 101C92C8
+data l_onCupOffAupPacket2 10469AE8
+data l_onCupOffAupPacket2Guard 10469908
+data l_onCupOffAupPacket2Dtor 101C92D4
+str 1002829C "face"
+str 100282A4 "ear_2_"
+str 100282F8 "d_a_obj_figure.cpp"
+str 100282E4 "zoff_blend_cnt <= 4"
+str 1002830C "zoff_none_cnt <= 4"
+str 10028320 "zon_cnt <= 4"
+ext 027F1278 void Figure_packetConstructHD(FigureDrawPacketHD* packet)
+ext 028F026C void Figure_registerDtorHD(FigureDtorRecordHD* record)
+*/
+// clang-format on

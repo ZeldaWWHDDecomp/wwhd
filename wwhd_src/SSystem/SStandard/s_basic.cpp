@@ -1,40 +1,34 @@
-/* s_basic: memory fill helpers (SSystem), WWHD. 
- * Translation unit 0201B664..0201B718: sBs_FillArea_s, sBs_ClearArea, and the header __sinit every
- * game TU gets. Ported from the GameCube s_basic.cpp. */
-#include "bindings.h"
+/**
+ * s_basic.cpp
+ * System standard - memory fill and clear
+ *
+ * WWHD, written in the style of zeldaret/tww and verified function by function against the
+ * recompiled original (tools/verify, unit s_basic).
+ */
 
-namespace s_basic_cpp {
+#include "SSystem/SStandard/s_basic.h"
 
-/* 0201B664: fill (bytes / 2) halfwords with value (bdnz loop; nothing for fewer than 2 bytes) */
-static void sBs_FillArea_s(void* pPtr, u32 pNumBytes, s16 pValue) {
-    WWHD_FUNC(0x0201B664, void, pPtr, pNumBytes, pValue);
-    u32 p = gabi::ea(pPtr);
+/* 0201B664 */
+void sBs_FillArea_s(void* pPtr, u32 pNumBytes, s16 pValue) {
+    be<s16>* castPtr = (be<s16>*)pPtr;
+    // HD: keep the unsigned word loop count for sizes above the signed range.
     for (u32 i = 0; i < pNumBytes / 2; i++) {
-        gabi::store<s16>(p, pValue);
-        p += 2;
+        *castPtr = pValue;
+        castPtr++;
     }
 }
-VERIFY(0x0201B664, sBs_FillArea_s);
 
-/* 0201B680: tail call of sBs_FillArea_s with value 0 */
-static void sBs_ClearArea(void* pPtr, u32 pNumBytes) {
-    WWHD_FUNC(0x0201B680, void, pPtr, pNumBytes);
+/* 0201B680 */
+void sBs_ClearArea(void* pPtr, u32 pNumBytes) {
     sBs_FillArea_s(pPtr, pNumBytes, 0);
 }
-VERIFY(0x0201B680, sBs_ClearArea);
 
-/* 0201B688 __sinit: header statics block at 101FFC08 ({-pi, pi} from 10003758, two one-byte objects
- * at +8/+9, zeroed 16-byte object at +0xC), each registered for destruction (records 1018D484, +0xC, +0x18) */
-static void s_basic_sinit() {
-    WWHD_FUNC(0x0201B688, void);
-    gabi::store<u32>(0x101FFC1C, 0); gabi::store<u32>(0x101FFC14, 0);
-    gabi::store<u32>(0x101FFC20, 0); gabi::store<u32>(0x101FFC18, 0);
-    gabi::call(0x028F026C, 0x1018D484u);
-    f32 lo = gabi::load<f32>(0x10003758), hi = gabi::load<f32>(0x1000375C);
-    gabi::store<f32>(0x101FFC08, lo); gabi::store<f32>(0x101FFC0C, hi);
-    gabi::call(0x028ED6F8, 0x101FFC10u); gabi::call(0x028F026C, 0x1018D490u);
-    gabi::call(0x028EAB2C, 0x101FFC11u); gabi::call(0x028F026C, 0x1018D49Cu);
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 0201B688 */
+static void __sinit_s_basic_cpp() {
+    sinit_header_statics_rodata(0x101FFC08, 0x1018D484, 0x101FFC14, 0x10003758);
 }
-VERIFY(0x0201B688, s_basic_sinit);
 
-} // namespace s_basic_cpp
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

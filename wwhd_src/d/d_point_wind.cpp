@@ -1,149 +1,179 @@
 /** Point-wind utility, WWHD. */
 #include "d/d_point_wind.h"
 
-static void set_pwind_init(dPointWind_c* wind, void* capsule) {
-    WWHD_FUNC(0x025AB3F8, void, wind, capsule);
-    wind->mpCps = capsule;
-    u32 cps = gabi::ea(capsule);
-    wind->mWind.mPos.x = gabi::load<f32>(cps);
-    wind->mWind.mPos.y = gabi::load<f32>(cps + 4);
-    wind->mWind.mPos.z = gabi::load<f32>(cps + 8);
-    wind->mWind.mDir.x = gabi::load<f32>(cps + 0xC);
-    wind->mWind.mDir.y = gabi::load<f32>(cps + 0x10);
-    wind->mWind.mDir.z = gabi::load<f32>(cps + 0x14);
-    f32 radius = gabi::load<f32>(cps + 0x18);
-    wind->mWind.field_0x20 = 0.0f;
-    wind->mWind.mRadius = radius;
-    wind->mWind.mStrength = 1.0f;
-    gabi::call(0x0257DE5C, &wind->mWind);
-}
-VERIFY(0x025AB3F8, set_pwind_init);
+// HD: guest bytes for the stage name "sea".
+static const char l_sea[4] = {0x73, 0x65, 0x61, 0};
+static const PointWindSafeStringVtable l_safeStringVtable;
+static s8 l_stayNo;
+static PointWindHeaderStatics l_headerStatics;
 
-static void set_pwind_move(dPointWind_c* wind) {
-    WWHD_FUNC(0x025AB454, void, wind);
-    gabi::Local<cXyz> p0, p1, direction, sum, scaled;
-    struct WindSafeString_l { be<u32> top; be<u32> vtable; };
-    gabi::Local<WindSafeString_l> sea, stage;
-    u32 cps = gabi::ea(wind->mpCps.get());
-    p0->x = gabi::load<f32>(cps);
-    p0->y = gabi::load<f32>(cps + 4);
-    p0->z = gabi::load<f32>(cps + 8);
-    p1->x = gabi::load<f32>(cps + 0xC);
-    p1->y = gabi::load<f32>(cps + 0x10);
-    p1->z = gabi::load<f32>(cps + 0x14);
+/* 025AB3F8 */
+void dPointWind_c::set_pwind_init(PointWind::cM3dGCpsS* capsule) {
+    mpCps = capsule;
+    PointWind::cM3dGCpsS* cps = capsule;
+    mWind.mPos.x = f32(cps->mStart.x);
+    mWind.mPos.y = f32(cps->mStart.y);
+    mWind.mPos.z = f32(cps->mStart.z);
+    mWind.mDir.x = f32(cps->mEnd.x);
+    mWind.mDir.y = f32(cps->mEnd.y);
+    mWind.mDir.z = f32(cps->mEnd.z);
+    f32 radius = f32(cps->mRadius);
+    mWind.field_0x20 = 0.0f;
+    mWind.mRadius = radius;
+    mWind.mStrength = 1.0f;
+    dKyw_pwind_cylinder_set(&mWind);
+}
+
+/* 025AB454 */
+void dPointWind_c::set_pwind_move() {
+    cXyz p0;
+    cXyz p1;
+    cXyz direction;
+    cXyz sum;
+    cXyz scaled;
+    PointWindSafeString sea;
+    PointWindSafeString stage;
+    PointWind::cM3dGCpsS* cps = mpCps;
+    p0.x = f32(cps->mStart.x);
+    p0.y = f32(cps->mStart.y);
+    p0.z = f32(cps->mStart.z);
+    p1.x = f32(cps->mEnd.x);
+    p1.y = f32(cps->mEnd.y);
+    p1.z = f32(cps->mEnd.z);
     f32 radScale = 1.8f;
     bool animate = true;
-    gabi::call(0x02563F64, p0.get(), p1.get(), direction.get());
-    sea->top = 0x10052558;
-    sea->vtable = 0x10052530;
+    dKyr_get_vectle_calc(&p0, &p1, &direction);
+    sea.mStringTop = reinterpret_cast<const be<char>*>(l_sea);
+    sea.__vtbl = &l_safeStringVtable;
     bool special = false;
-    u32 play = dComIfGp_ea();
-    stage->vtable = 0x10052530;
-    stage->top = play + 0x5134;
-    u32 vt = sea->vtable;
-    u32 terminate = gabi::load<u32>(vt + 0x14);
-    gabi::call_ptr(terminate, sea.get());
-    vt = sea->vtable;
-    terminate = gabi::load<u32>(vt + 0x14);
-    gabi::call_ptr(terminate, sea.get());
-    vt = stage->vtable;
-    terminate = gabi::load<u32>(vt + 0x14);
-    u32 seaTop = sea->top;
-    gabi::call_ptr(terminate, stage.get());
-    u32 stageTop = stage->top;
+    PointWindPlayView* play = reinterpret_cast<PointWindPlayView*>(dComIfGp_get());
+    stage.__vtbl = &l_safeStringVtable;
+    stage.mStringTop = play->mStartStageName;
+    sea.assureTermination();
+    sea.assureTermination();
+    // HD: fetch the stage virtual target before reading the sea string pointer.
+    u32 terminate = stage.__vtbl->assureTerminationImpl.get();
+    const be<char>* seaTop = sea.mStringTop;
+    gabi::call_ptr(terminate, &stage);
+    const be<char>* stageTop = stage.mStringTop;
     bool equal = seaTop == stageTop;
     if (!equal) {
-        u32 a = sea->top;
-        u32 b = stage->top;
+        const be<char>* a = sea.mStringTop;
+        const be<char>* b = stage.mStringTop;
+        // HD: retain SafeString's bounded byte comparison.
         for (u32 count = 0x40001; count != 0; --count) {
-            u32 x = gabi::load<u8>(a);
-            u32 y = gabi::load<u8>(b);
-            if (x != y) break;
-            if (x == 0) { equal = true; break; }
+            u32 x = u8(*a);
+            u32 y = u8(*b);
+            if (x != y) {
+                break;
+            }
+            if (x == 0) {
+                equal = true;
+                break;
+            }
             ++a;
             ++b;
         }
     }
-    if (equal && gabi::load<s8>(0x1047E6C8) == 4) special = true;
+    if (equal && l_stayNo == 4) {
+        special = true;
+    }
     if (special) {
         radScale = 11.0f;
         animate = false;
-        gabi::call(0x0201AE48, direction.get(), scaled.get(), -100.0f);
-        gabi::call(0x0201AD78, p0.get(), sum.get(), scaled.get());
-        u32 x = gabi::load<u32>(gabi::ea(sum.get()));
-        u32 z = gabi::load<u32>(gabi::ea(sum.get()) + 8);
-        gabi::store<u32>(gabi::ea(wind) + 4, x);
-        u32 y = gabi::load<u32>(gabi::ea(sum.get()) + 4);
-        gabi::store<u32>(gabi::ea(wind) + 0xC, z);
-        gabi::store<u32>(gabi::ea(wind) + 8, y);
+        cXyz_ml(&direction, &scaled, -100.0f);
+        cXyz_pl(&p0, &sum, &scaled);
+        // HD: integer word copies preserve NaN payloads and the emitted x/z/y store order.
+        const PointWindVectorWords* sumWords = reinterpret_cast<const PointWindVectorWords*>(&sum);
+        PointWindVectorWords* posWords = reinterpret_cast<PointWindVectorWords*>(&mWind.mPos);
+        u32 x = sumWords->x;
+        u32 z = sumWords->z;
+        posWords->x = x;
+        u32 y = sumWords->y;
+        posWords->z = z;
+        posWords->y = y;
     }
-    u32 dy = gabi::load<u32>(gabi::ea(direction.get()) + 4);
-    cps = gabi::ea(wind->mpCps.get());
-    gabi::store<u32>(gabi::ea(wind) + 0x14, dy);
-    u32 dx = gabi::load<u32>(gabi::ea(direction.get()));
-    u32 dz = gabi::load<u32>(gabi::ea(direction.get()) + 8);
-    gabi::store<u32>(gabi::ea(wind) + 0x10, dx);
-    gabi::store<u32>(gabi::ea(wind) + 0x18, dz);
-    f32 radius = gabi::load<f32>(cps + 0x18) * radScale;
-    wind->mWind.field_0x20 = 0.0f;
-    wind->mWind.mRadius = radius;
+    const PointWindVectorWords* directionWords = reinterpret_cast<const PointWindVectorWords*>(&direction);
+    PointWindVectorWords* dirWords = reinterpret_cast<PointWindVectorWords*>(&mWind.mDir);
+    u32 dy = directionWords->y;
+    cps = mpCps;
+    dirWords->y = dy;
+    u32 dx = directionWords->x;
+    u32 dz = directionWords->z;
+    dirWords->x = dx;
+    dirWords->z = dz;
+    f32 radius = f32(cps->mRadius) * radScale;
+    mWind.field_0x20 = 0.0f;
+    mWind.mRadius = radius;
     if (animate) {
-        f32 currentRadius = wind->mWind.mRadius;
+        f32 currentRadius = mWind.mRadius;
         f32 half = currentRadius * 0.5f;
-        cps = gabi::ea(wind->mpCps.get());
-        f32 end = gabi::load<f32>(cps + 0xC);
-        gabi::call(0x0200ECD4, &wind->mWind.mPos.x, end, 0.1f, currentRadius, half);
-        currentRadius = wind->mWind.mRadius;
-        cps = gabi::ea(wind->mpCps.get());
+        cps = mpCps;
+        f32 end = f32(cps->mEnd.x);
+        cLib_addCalc(&mWind.mPos.x, end, 0.1f, currentRadius, half);
+        currentRadius = mWind.mRadius;
+        cps = mpCps;
         half = currentRadius * 0.5f;
-        end = gabi::load<f32>(cps + 0x10);
-        gabi::call(0x0200ECD4, &wind->mWind.mPos.y, end, 0.1f, currentRadius, half);
-        currentRadius = wind->mWind.mRadius;
-        cps = gabi::ea(wind->mpCps.get());
+        end = f32(cps->mEnd.y);
+        cLib_addCalc(&mWind.mPos.y, end, 0.1f, currentRadius, half);
+        currentRadius = mWind.mRadius;
+        cps = mpCps;
         half = currentRadius * 0.5f;
-        end = gabi::load<f32>(cps + 0x14);
-        gabi::call(0x0200ECD4, &wind->mWind.mPos.z, end, 0.1f, currentRadius, half);
-        f32 distance = gabi::call<f32>(0x028E8DE8, &wind->mWind.mPos, p1.get());
-        distance = gabi::call<f32>(0x028F4384, distance);
-        if (distance < (f32)wind->mWind.mRadius) {
-            cps = gabi::ea(wind->mpCps.get());
-            wind->mWind.mPos.x = gabi::load<f32>(cps);
-            wind->mWind.mPos.y = gabi::load<f32>(cps + 4);
-            wind->mWind.mPos.z = gabi::load<f32>(cps + 8);
+        end = f32(cps->mEnd.z);
+        cLib_addCalc(&mWind.mPos.z, end, 0.1f, currentRadius, half);
+        f32 distance = PSVECSquareDistance(&mWind.mPos, &p1);
+        distance = std_sqrtf(distance);
+        if (distance < (f32)mWind.mRadius) {
+            cps = mpCps;
+            mWind.mPos.x = f32(cps->mStart.x);
+            mWind.mPos.y = f32(cps->mStart.y);
+            mWind.mPos.z = f32(cps->mStart.z);
         }
     }
 }
-VERIFY(0x025AB454, set_pwind_move);
 
-static void set_pwind_delete(dPointWind_c* wind) {
-    WWHD_FUNC(0x025AB710, void, wind);
-    gabi::call(0x0257D1B8, &wind->mWind);
+/* 025AB710 */
+void dPointWind_c::set_pwind_delete() {
+    dKyw_pntwind_cut(&mWind);
 }
-VERIFY(0x025AB710, set_pwind_delete);
 
-static void point_wind_header_static() {
-    WWHD_FUNC(0x025AB718, void);
-    gabi::store<u32>(0x1047B358, 0);
-    gabi::store<u32>(0x1047B350, 0);
-    gabi::store<u32>(0x1047B35C, 0);
-    gabi::store<u32>(0x1047B354, 0);
-    gabi::call(0x028F026C, (u32)0x101EA5A8);
-    gabi::store<f32>(0x1047B344, -3.141592741012573242f);
-    gabi::store<f32>(0x1047B348, 3.141592741012573242f);
-    gabi::call(0x028ED6F8, (u32)0x1047B34C);
-    gabi::call(0x028F026C, (u32)0x101EA5B4);
-    gabi::call(0x028EAB2C, (u32)0x1047B34D);
-    gabi::call(0x028F026C, (u32)0x101EA5C0);
+/* 025AB718 */
+static void __sinit_d_point_wind_cpp() {
+    // HD: keep common-header initialization and constructor registrations in order.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101EA5A8);
+    l_headerStatics.negativePi = -3.141592741012573242f;
+    l_headerStatics.positivePi = 3.141592741012573242f;
+    PointWindFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101EA5B4);
+    PointWindSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101EA5C0);
 }
-VERIFY(0x025AB718, point_wind_header_static);
 
-static void point_wind_string_destructor(void* string, u32 flags) {
-    WWHD_FUNC(0x025AB7AC, void, string, flags);
-    if (string != nullptr && (flags & 1)) gabi::call(0x0273AF40, string);
+/* 025AB7AC */
+static void SafeString_dtor(PointWindSafeString* string, u32 flags) {
+    if (string != nullptr && (flags & 1)) {
+        operator_delete(string);
+    }
 }
-VERIFY(0x025AB7AC, point_wind_string_destructor);
 
-static void point_wind_string_terminate(void* string) {
-    WWHD_FUNC(0x025AB7C0, void, string);
+/* 025AB7C0 */
+static void SafeString_assureTerminationImpl(PointWindSafeString* string) {
 }
-VERIFY(0x025AB7C0, point_wind_string_terminate);
+
+/* WWHD glue (tools/verify/autoglue.py):
+data l_sea 10052558
+data l_safeStringVtable 10052530
+data l_stayNo 1047E6C8
+data l_headerStatics 1047B344
+ext 0257DE5C void dKyw_pwind_cylinder_set(PointWind::WIND_INFLUENCE*)
+ext 0257D1B8 void dKyw_pntwind_cut(PointWind::WIND_INFLUENCE*)
+ext 02563F64 void dKyr_get_vectle_calc(cXyz*, cXyz*, cXyz*)
+ext 028E8DE8 f32 PSVECSquareDistance(cXyz*, cXyz*)
+ext 0200ECD4 f32 cLib_addCalc(be<f32>*, f32, f32, f32, f32)
+ext 028ED6F8 void PointWindFirstHeaderObject_ct(u8*)
+ext 028EAB2C void PointWindSecondHeaderObject_ct(u8*)
+*/

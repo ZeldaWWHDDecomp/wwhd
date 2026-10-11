@@ -9,20 +9,17 @@
  * Offsets from the verified functions. */
 #pragma once
 #include "bindings.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "d/d_cc_uty.h"
+#include "gc_api/JSystem/JPAEmitter.h"
 
-/* ---- shared classes, local layouts (SHARED-CANDIDATE, as in d_a_bk.h) ---- */
+// Private HD views; canonical shared animation and callback classes are used directly.
 #ifndef WWHD_BB_SHARED_L
 #define WWHD_BB_SHARED_L
-struct dPa_followEcallBack_l {
-    /* 0x00 */ be<u32> __vtbl;
-    /* 0x04 */ u8 _04[0x14 - 0x04];
-};
-WWHD_SIZE(dPa_followEcallBack_l, 0x14);
 
-struct mDoExt_btpAnm_l { u8 _[0x74]; }; /* HD size (constructor 025E7820) */
 
 /* enemyice (unchanged size 0x3B8) */
-struct enemyice_l {
+struct enemyice {
     /* 0x000 */ gptr<fopAc_ac_c> mpActor;
     /* 0x004 */ be<s16> mFreezeDuration;
     /* 0x006 */ be<s8> mLightShrinkTimer;
@@ -52,10 +49,19 @@ struct enemyice_l {
     /* 0x1B4 */ dBgS_AcchCir mBgAcchCir;
     /* 0x1F4 */ dBgS_ObjAcch mBgAcch;
 };
-WWHD_SIZE(enemyice_l, 0x3B8);
+WWHD_SIZE(enemyice, 0x3B8);
 
 /* enemyfire, HD 0x22C (constructor 02061BE4 in this TU) */
-struct enemyfire_l {
+struct BbLightInfluence {
+    cXyz mPos;
+    GXColorS10 mColor;
+    be<f32> mPower, mFluctuation;
+    be<s32> mIdx;
+    be<f32> mHD20;
+};
+WWHD_SIZE(BbLightInfluence, 0x24);
+
+struct enemyfire {
     /* 0x000 */ gptr<fopAc_ac_c> mpActor;
     /* 0x004 */ be<s16> mFireDuration;
     /* 0x006 */ be<s8> mMode;
@@ -67,7 +73,7 @@ struct enemyfire_l {
     /* 0x01A */ u8 m01A[2];
     /* 0x01C */ be<f32> mParticleScale[10];
     /* 0x044 */ be<s16> mFlameTimers[10];
-    /* 0x058 */ be<u32> mpFlameEmitters[10];
+    /* 0x058 */ gptr<JPABaseEmitter> mpFlameEmitters[10];
     /* 0x080 */ cXyz mPrevPos;
     /* 0x08C */ cXyz mDirection;
     /* 0x098 */ be<f32> mFlameScaleY;
@@ -76,23 +82,24 @@ struct enemyfire_l {
     /* 0x09E */ u8 m09E[2];
     /* 0x0A0 */ dCcD_Stts mStts;
     /* 0x0DC */ dCcD_Sph mSph;
-    /* 0x208 */ u8 mLight[0x24];         /* LIGHT_INFLUENCE (HD 0x24; +0x20 = 1.0f) */
+    /* 0x208 */ BbLightInfluence mLight;         /* LIGHT_INFLUENCE (HD 0x24; +0x20 = 1.0f) */
 };
-WWHD_SIZE(enemyfire_l, 0x22C);
+WWHD_SIZE(enemyfire, 0x22C);
 
 /* dPath / dPnt (unchanged from GameCube) */
-struct dPnt_l {
+struct BbPoint {
     /* 0x0 */ u8 _0[3];
     /* 0x3 */ be<u8> mArg3;
     /* 0x4 */ cXyz m_position;
 };
-struct dPath_l {
+struct BbPath {
     /* 0x0 */ be<u16> m_num;
     /* 0x2 */ be<u16> m_nextID;
     /* 0x4 */ u8 _4;
     /* 0x5 */ be<u8> m_closed;
     /* 0x6 */ u8 _6[2];
-    /* 0x8 */ gptr<dPnt_l> m_points;
+    /* 0x8 */ gptr<BbPoint> m_points;
+    BbPoint* getPoint(s32 i) { return gabi::at<BbPoint>(gabi::ea(m_points.get()) + i * 0x10); }
 };
 #endif
 
@@ -148,7 +155,7 @@ WWHD_SIZE(bbHIO_c, 0x80);
 struct bb_class : fopEn_enemy_c {
     /* 0x3C8 */ request_of_phase_process_class mPhase;
     /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D4 */ mDoExt_btpAnm_l mBtpAnm;
+    /* 0x3D4 */ mDoExt_btpAnm mBtpAnm;
     /* 0x448 */ be<u8> unk_2CC;
     /* 0x449 */ be<u8> unk_2CD;
     /* 0x44A */ be<u8> unk_2CE;
@@ -205,7 +212,7 @@ struct bb_class : fopEn_enemy_c {
     /* 0x4D1 */ be<s8> unk_35D;
     /* 0x4D2 */ be<s8> unk_35E;
     /* 0x4D3 */ be<s8> unk_35F;
-    /* 0x4D4 */ gptr<dPath_l> ppd;
+    /* 0x4D4 */ gptr<BbPath> ppd;
     /* 0x4D8 */ be<u8> unk_364;
     /* 0x4D9 */ u8 _4D9;
     /* 0x4DA */ be<s16> unk_366;
@@ -241,13 +248,13 @@ struct bb_class : fopEn_enemy_c {
     /* 0xDD2 */ be<s16> unk_C5E;
     /* 0xDD4 */ be<u8> unk_C60;
     /* 0xDD5 */ u8 unkC61[7];
-    /* 0xDDC */ dPa_followEcallBack_l mParticleCallBack;
+    /* 0xDDC */ dPa_followEcallBack mParticleCallBack;
     /* 0xDF0 */ be<s8> unk_C7C;
     /* 0xDF1 */ u8 unkC7D;
     /* 0xDF2 */ be<u8> unk_C7E;
     /* 0xDF3 */ u8 _DF3;
-    /* 0xDF4 */ enemyice_l mEnemyIce;
-    /* 0x11AC */ enemyfire_l mEnemyFire;
+    /* 0xDF4 */ enemyice mEnemyIce;
+    /* 0x11AC */ enemyfire mEnemyFire;
 };
 WWHD_OFFSET(bb_class, mpMorf, 0x3D0);
 WWHD_OFFSET(bb_class, unk_2CC, 0x448);
@@ -275,11 +282,45 @@ struct esa_class : fopAc_ac_c {
 
 /* ---- resources / enums ---- */
 enum {
+    /* BAS  */
+    dRes_INDEX_BB_BAS_ATACK01_e = 0x6,
+    dRes_INDEX_BB_BAS_EAT_e = 0x7,
+    dRes_INDEX_BB_BAS_FLY01_e = 0x8,
     dRes_INDEX_BB_BAS_FLY02_e = 0x9,
+    dRes_INDEX_BB_BAS_FLY03_e = 0xA,
+    dRes_INDEX_BB_BAS_FLYB01_e = 0xB,
+    dRes_INDEX_BB_BAS_FLYC_e = 0xC,
+    dRes_INDEX_BB_BAS_FURA01_e = 0xD,
+    dRes_INDEX_BB_BAS_GUSYA01_e = 0xE,
+    dRes_INDEX_BB_BAS_LAND01_e = 0xF,
+    dRes_INDEX_BB_BAS_LAND02_e = 0x10,
+    dRes_INDEX_BB_BAS_WAIT_e = 0x11,
+    dRes_INDEX_BB_BAS_WALK_e = 0x12,
+    /* BCK  */
+    dRes_INDEX_BB_BCK_ATACK01_e = 0x15,
+    dRes_INDEX_BB_BCK_DAMAGEP_e = 0x16,
+    dRes_INDEX_BB_BCK_EAT_e = 0x17,
+    dRes_INDEX_BB_BCK_FLY01_e = 0x18,
     dRes_INDEX_BB_BCK_FLY02_e = 0x19,
+    dRes_INDEX_BB_BCK_FLY03_e = 0x1A,
+    dRes_INDEX_BB_BCK_FLYB01_e = 0x1B,
+    dRes_INDEX_BB_BCK_FLYC_e = 0x1C,
+    dRes_INDEX_BB_BCK_FURA01_e = 0x1D,
+    dRes_INDEX_BB_BCK_GUSYA01_e = 0x1E,
+    dRes_INDEX_BB_BCK_LAND01_e = 0x1F,
+    dRes_INDEX_BB_BCK_LAND02_e = 0x20,
+    dRes_INDEX_BB_BCK_WAIT_e = 0x21,
+    dRes_INDEX_BB_BCK_WALK_e = 0x22,
+    /* BDLM */
     dRes_INDEX_BB_BDL_BB_e = 0x25,
     dRes_INDEX_BB_BDL_BB_TAIL_e = 0x26,
-    dRes_INDEX_BB_BCK_DAMAGEP_e = 0x16, /* [g] confirm in damage_check */
+    /* BTP  */
+    dRes_INDEX_BB_BTP_TATACK_e = 0x29,
+    dRes_INDEX_BB_BTP_TCLOSE_e = 0x2A,
+    dRes_INDEX_BB_BTP_TDAMAGE_e = 0x2B,
+    dRes_INDEX_BB_BTP_TKAIJO_e = 0x2C,
+    dRes_INDEX_BB_BTP_TMABATAKI_e = 0x2D,
+    dRes_INDEX_BB_BTP_TOPEN_e = 0x2E,
 };
 enum {
     BB_JNT_FOOTL_e = 0x3,
@@ -295,46 +336,43 @@ enum { fpcNm_ESA_e = 0xDD, fpcNm_MO2_e = 0xBC, fpcNm_BK_e = 0xBD };
 
 /* ---- file statics (.data/.bss) ---- */
 #define SAFESTRING_VTBL 0x10007BC4 /* this TU's sead::SafeString vtable */
-#define BB_ARC STR(0x10007D20)     /* "Bb" (anm_init's copy; each use has its own literal) */
-inline bbHIO_c& l_bbHIO() { return *gabi::at<bbHIO_c>(0x104615AC); }
-inline be<s32>& esa_check_count() { return *gabi::at<be<s32>>(0x1046158C); }
-inline gptr<esa_class>* esa_info() { return gabi::at<gptr<esa_class>>(0x1046162C); } /* [100] */
-inline be<u8>* check_index() { return gabi::at<be<u8>>(0x104617BC); }               /* path_check: static u8[255] */
-inline s8 callback_check_index(s32 i) { return gabi::load<s8>(0x101904AC + i); }
-inline f32 tial_scale(s32 i) { return gabi::load<f32>(0x10190470 + 4 * i); }
-inline u16 bb_tex_anm_idx(s32 i) { return gabi::load<u16>(0x10190494 + 2 * i); }
-inline u16 bb_tex_max_frame(s32 i) { return gabi::load<u16>(0x101904A0 + 2 * i); }
+#define BB_ARC "Bb"     /* "Bb" (anm_init's copy; each use has its own literal) */
+typedef gptr<esa_class> BbBaitPointer;
+extern bbHIO_c& l_bbHIO;
+extern be<s32>& esa_check_count;
+extern BbBaitPointer (&esa_info)[100];
+extern be<u8> (&check_index)[255];
+extern be<s8> (&callback_check_index)[31];
+extern be<f32> (&tial_scale)[9];
+extern be<u16> (&bb_tex_anm_idx)[6];
+extern be<u16> (&bb_tex_max_frame)[6];
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 025E789C mDoExt_btpAnm::init(modelData, btp, anmPlay, attr, speed, start, end, modify, entry) */
-inline BOOL mDoExt_btpAnm_init(mDoExt_btpAnm_l* a, J3DModelData* d, J3DAnmTexPattern* btp, s32 anmPlay, s32 attr, f32 speed,
-                               s16 start, s16 end, s32 modify, s32 entry) {
-    return gabi::call<BOOL>(0x025E789C, a, d, btp, anmPlay, attr, speed, start, end, modify, entry);
-}
 /* 025E7B3C mDoExt_btpAnm::entry(modelData, s16 frame) */
-inline void mDoExt_btpAnm_entry_l(mDoExt_btpAnm_l* a, J3DModelData* d, s16 frame) { gabi::call(0x025E7B3C, a, d, frame); }
 /* mDoExt_btpAnm::remove(modelData) (HD inline): clears the model data's texture-pattern slot (+0x38) */
-inline void mDoExt_btpAnm_remove_l(J3DModelData* d) { gabi::store<u32>(gabi::ea(d) + 0x38, 0); }
+struct BbModelDataTexture : J3DModelData {
+    u8 mUnaccessed[0x38 - sizeof(J3DModelData)];
+    gptr<J3DAnmTexPattern> mpTexturePattern;
+};
+WWHD_OFFSET(BbModelDataTexture, mpTexturePattern, 0x38);
+inline void bbRemoveTexPattern(J3DModelData* data) { static_cast<BbModelDataTexture*>(data)->mpTexturePattern = nullptr; }
 /* JPACallBackBase::remove: HD virtual (vtable slot 0x44) */
-inline void dPa_EcallBack_remove(void* cb) { gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(cb)) + 0x44), cb); }
 /* 02041C30 enemy_fire_remove(enemyfire*) */
-inline void enemy_fire_remove(enemyfire_l* f) { gabi::call(0x02041C30, f); }
+inline void enemy_fire_remove(enemyfire* f) { gabi::call(0x02041C30, f); }
 inline void dMat_ice_entryDL(mDoExt_McaMorf* m, s32 a, void* b) { gabi::call(0x0259138C, m, a, b); }
 /* 025E2DA8 mDoExt_modelUpdate(J3DModel*) */
 inline void mDoExt_modelUpdate(J3DModel* m) { gabi::call(0x025E2DA8, m); }
 /* 025BEBB8 dSnap_RegistFig (USA/HD signature: type, actor, cXyz* pos, s16 angleY, x, y, z) */
-inline void dSnap_RegistFig_l(s32 type, fopAc_ac_c* a, cXyz* pos, s16 angY, f32 x, f32 y, f32 z) {
+inline void bbRegistFig(s32 type, fopAc_ac_c* a, cXyz* pos, s16 angY, f32 x, f32 y, f32 z) {
     gabi::call(0x025BEBB8, type, a, pos, angY, x, y, z);
 }
 /* 0200F428 cLib_addCalcAngleS2(s16*, s16 target, s16 scale, s16 maxStep) */
-inline void cLib_addCalcAngleS2_l(be<s16>* v, s16 target, s16 scale, s16 maxStep) { gabi::call(0x0200F428, v, target, scale, maxStep); }
 /* 0200ED84 cLib_addCalc2(f32*, target, scale, maxStep) */
-inline void cLib_addCalc2_l(be<f32>* v, f32 target, f32 scale, f32 maxStep) { gabi::call(0x0200ED84, v, target, scale, maxStep); }
-inline bool dBgS_Acch_ChkGroundHit(dBgS_Acch* a) { return (gabi::load<u32>(gabi::ea(a) + 0x28) & 0x20) != 0; }
-inline f32 dBgS_Acch_GetGroundH(dBgS_Acch* a) { return gabi::load<f32>(gabi::ea(a) + 0x94); }
+inline bool dBgS_Acch_ChkGroundHit(dBgS_Acch* a) { return a->ChkGroundHit(); }
+inline f32 dBgS_Acch_GetGroundH(dBgS_Acch* a) { return a->GetGroundH(); }
 
 /* dBgS_LinChk on the stack (HD layout, as in d_a_kamome; this TU's vtables) */
-struct dBgS_LinChk_l {
+struct BbLineCheck {
     /* 0x00 */ be<u32> mpPolyPassChk; /* -> +0x58 */
     /* 0x04 */ be<u32> mpGrpPassChk;  /* -> +0x64 */
     /* 0x08 */ u8 _08[8];
@@ -348,8 +386,8 @@ struct dBgS_LinChk_l {
     /* 0x64 */ be<u32> __vtbl_64;     /* dBgS_GrpPassChk */
     /* 0x68 */ be<u32> mGrp;
 };
-WWHD_SIZE(dBgS_LinChk_l, 0x6C);
-inline void dBgS_LinChk_ct(dBgS_LinChk_l* c) {
+WWHD_SIZE(BbLineCheck, 0x6C);
+inline void dBgS_LinChk_ct(BbLineCheck* c) {
     cBgS_LinChk_ct(c);
     for (int i = 0; i < 7; i++) c->mPass[i] = 0;
     c->mGrp = 1;
@@ -360,50 +398,35 @@ inline void dBgS_LinChk_ct(dBgS_LinChk_l* c) {
     c->__vtbl_58 = 0x10007C6C;
     c->__vtbl_20 = 0x10007C4C;
 }
-inline void dBgS_LinChk_dt(dBgS_LinChk_l* c) {
+inline void dBgS_LinChk_dt(BbLineCheck* c) {
     c->__vtbl_58 = 0x10007C6C;
     c->__vtbl_64 = 0x10007BFC;
     c->__vtbl_20 = 0x10007BEC;
     cBgS_LinChk_dt(c, 0);
 }
 
-/* HD J3D (as in d_a_kamome / d_a_mo2): j3dSys.mModel at 0x104B462C, J3DSys::mCurrentMtx at
- * 0x104B4868; a model's joint matrices live in a block at +0x2C (+0x4 flags, +0x10 matrices) */
-struct J3DMtxBlock_l {
-    /* 0x00 */ u8 _00[4];
-    /* 0x04 */ be<u16> mFlags;
-    /* 0x06 */ u8 _06[0x10 - 6];
-    /* 0x10 */ gptr<Mtx34> mpMtx;
+struct BbAppendBase {
+    be<u32> parameters;
+    cXyz position;
+    csXyz angle;
 };
-struct J3DModel_l {
-    /* 0x00 */ u8 _00[0x2C];
-    /* 0x2C */ gptr<J3DMtxBlock_l> mpMtxBlock;
-    /* 0x30 */ u8 _30[0xB8 - 0x30];
-    /* 0xB8 */ be<u32> mUserArea;
+struct BbCreateAppend {
+    BbAppendBase base;
+    u8 mUnused[0x21 - sizeof(BbAppendBase)];
+    be<s8> room_no;
 };
-inline J3DModel_l* j3dSys_getModel() { return gabi::at<J3DModel_l>(gabi::load<u32>(0x104B462C)); }
-inline Mtx34* J3DSys_mCurrentMtx() { return gabi::at<Mtx34>(0x104B4868); }
-/* getAnmMtx: HD marks the joint matrices dirty */
-inline Mtx34* model_getAnmMtx(J3DModel_l* model, s32 jntNo) {
-    J3DMtxBlock_l* blk = model->mpMtxBlock;
-    blk->mFlags |= 0x10;
-    return gabi::at<Mtx34>(gabi::ea(blk->mpMtx.get()) + jntNo * 0x30);
-}
-
+WWHD_OFFSET(BbCreateAppend, room_no, 0x21);
 /* ---- Create / constructors ---- */
 inline void fopAcM_SetMin(fopAc_ac_c* a, f32 x, f32 y, f32 z) { gabi::call(0x025D672C, a, x, y, z); }
 inline void fopAcM_SetMax(fopAc_ac_c* a, f32 x, f32 y, f32 z) { gabi::call(0x025D673C, a, x, y, z); }
-inline u8* fopAcM_CreateAppend() { return gabi::call<u8*>(0x025D5600); }
+inline BbCreateAppend* fopAcM_CreateAppend() { return gabi::call<BbCreateAppend*>(0x025D5600); }
 inline u32 fpcLy_CurrentLayer() { return gabi::call<u32>(0x025DED64); }
 inline u32 fpcSCtRq_Request(u32 layer, s16 name, u32 a, u32 b, void* params) { return gabi::call<u32>(0x025E14A8, layer, name, a, b, params); }
-inline dSv_event_c* dComIfGs_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
-inline BOOL dComIfGs_isEventBit(u16 flag) { return dSv_event_isEventBit(dComIfGs_event(), flag); }
-inline s32 dComIfGp_CharTbl_GetNameIndex(const char* name, s32 n) { return gabi::call<s32>(0x0200E814, gabi::at<u8>(dComIfGp_ea() + 0x50AC), name, n); }
-inline u32 modelData_getJointTree(u32 md) { return gabi::call<u32>(0x027F3F94, md); }
+inline s32 bbCharTblGetNameIndex(const char* name, s32 n) { return gabi::call<s32>(0x0200E814, gabi::at<u8>(dComIfGp_ea() + 0x50AC), name, n); }
 inline void dCcD_Sph_ct(void* p) { gabi::call(0x025166F0, p); }
-inline void dPa_followEcallBack_ct_l(void* p, u8 a, u8 b) { gabi::call(0x025A5894, p, a, b); }
+inline void bbFollowCallbackConstruct(void* p, u8 a, u8 b) { gabi::call(0x025A5894, p, a, b); }
 /* dBgS_ObjAcch: dBgS_Acch::dBgS_Acch + this TU's inline vtables */
-inline void dBgS_ObjAcch_ct_l(dBgS_ObjAcch* p) {
+inline void bbAcchConstruct(dBgS_ObjAcch* p) {
     gabi::call(0x024F0474, p);
     u32 a = gabi::ea(p);
     gabi::store<u32>(a + 0x10, 0x10007C0C);
@@ -447,3 +470,84 @@ void bb_water_check(bb_class* i_this);
 void bb_wait_move(bb_class* i_this);
 void bb_su_wait_move(bb_class* i_this);
 void damage_check(bb_class* i_this);
+
+struct BbSearchKey { be<u32> mId; };
+
+struct BbJointData { be<u32> mData; be<u16> mNumber; };
+struct BbSinCosEntry { be<f32> mSin, mCos; };
+inline BbSinCosEntry* bbSinCosTable(void* table) { return gabi::at<BbSinCosEntry>(gabi::ea(table)); }
+
+// HD: private views of colors not exposed in the shared opaque lighting/emitter ABI.
+struct BbTevColors { u8 mPrefix[0x98]; GXColor mColorK0; };
+struct BbEmitter : JPABaseEmitter {
+    u8 mUnaccessed[0x244 - sizeof(JPABaseEmitter)];
+    GXColor mGlobalPrmColor, mGlobalEnvColor;
+};
+WWHD_OFFSET(BbTevColors, mColorK0, 0x98);
+WWHD_OFFSET(BbEmitter, mGlobalPrmColor, 0x244);
+WWHD_OFFSET(BbEmitter, mGlobalEnvColor, 0x248);
+void bbAcchCircleConstruct(dBgS_AcchCir* circle);
+void bbSphereDestroy(dCcD_Sph* sphere, s32 flags);
+void bbCircleDestroy(cM3dGCir_l* circle, s32 flags);
+void bbActorDestroy(fopAc_ac_c* actor, s32 flags);
+
+void at_power_check(CcAtInfo* info);
+fopAc_ac_c* cc_at_check(fopAc_ac_c* actor, CcAtInfo* info);
+void dKy_Sound_set(cXyz* position, s32 range, u32 id, s32 type);
+void bbAcchBaseDestroy(dBgS_ObjAcch* acch, s32 flags);
+inline void bbAcchDestroy(dBgS_ObjAcch* p) {
+    p->dBgS_GrpPassChk::__vtbl = 0x10007C1C;
+    p->dBgS_PolyPassChk::__vtbl = 0x10007C2C;
+    bbAcchBaseDestroy(p, 0);
+}
+
+// HD: Kargaroc carries the two enemy kinds through their tww damage-reaction fields.
+struct BbDamageReaction {
+    u8 mPrefix[6]; be<s16> mAction;
+    // HD: the damage-reaction prefix grows by 0x34.
+    u8 mUnused[0x49C - 8]; be<f32> m468, m46C;
+};
+struct BbCarriedMo2 : fopAc_ac_c { u8 mUnused[0x8BC - sizeof(fopAc_ac_c)]; BbDamageReaction mDamageReaction; };
+struct BbCarriedBk : fopAc_ac_c { u8 mUnused[0x49C - sizeof(fopAc_ac_c)]; BbDamageReaction dr; };
+WWHD_OFFSET(BbCarriedMo2, mDamageReaction, 0x8BC);
+WWHD_OFFSET(BbCarriedBk, dr, 0x49C);
+WWHD_OFFSET(BbDamageReaction, m468, 0x49C);
+WWHD_OFFSET(BbDamageReaction, mAction, 6);
+inline BOOL bbPlayerGuard(fopAc_ac_c* player) { return gabi::call_ptr<BOOL>(gabi::load<u32>(player->__vtbl + 0x3C), player); }
+inline void* bbTrigTable() { return gabi::at<void>(0x104A44F8); }
+BOOL enemy_ice(enemyice* ice);
+void enemy_fire(enemyfire* fire);
+fopAc_ac_c* bbSearchByIdCopy(u32 id);
+f32 bbSinShortCopy(void* table, s16 angle);
+f32 bbCosShortCopy(void* table, s16 angle);
+using BbSearchCallback = void* (*)(void*, void*);
+inline void* bbSearch(BbSearchCallback callback, void* data) { return gabi::call<void*>(0x025DE508, callback, data); }
+using BbHeapCallback = BOOL (*)(fopAc_ac_c*);
+inline BOOL bbEntrySolidHeap(fopAc_ac_c* actor, BbHeapCallback callback, u32 size) { return gabi::call<BOOL>(0x025D63E8, actor, callback, size); }
+
+// The execution spec links the player search callback as an original guest callback.
+inline void* bbFindPlayerActor(void* actor) { return fpcM_Search(0x0205EA08, actor); }
+
+enum BbBehavior {
+    BB_MODE_ATTACK = 3,
+    BB_MODE_WAIT = 4,
+    BB_MODE_CARRY_MOBLIN = 5,
+    BB_MODE_CARRY_BOKOBLIN = 6,
+    BB_MODE_NEST_WAIT = 7,
+};
+enum BbPathAction { BB_PATH_LAND = 1, BB_PATH_TAKEOFF = 2, BB_PATH_WAIT = 3, BB_PATH_RELEASE = 5, BB_PATH_DELETE = 6 };
+enum { DSNAP_TYPE_BB = 0xB0, ID_AK_JN_NG = 0xC, ID_AK_JN_OK = 0xD,
+       ID_AK_JN_CRITICALHIT = 0xF, ID_AK_JN_CRITICALHITFLASH = 0x10,
+       ID_IT_JN_PIYOHIT00 = 0x27B, ID_IT_JN_KG_HANE_A = 0x438, ID_IT_JN_KG_HANE_B = 0x439 };
+
+enum {
+    JA_SE_CV_BB_NORMAL = 0x4813,
+    JA_SE_CV_BB_FIND = 0x4814,
+    JA_SE_CV_BB_ATTACK = 0x4815,
+    JA_SE_CV_BB_DAMAGE = 0x4816,
+    JA_SE_CV_BB_FURAFURA = 0x4818,
+    JA_SE_LK_ROPE_HOOK_METAL = 0x281D,
+    JA_SE_OBJ_FALL_WATER_S = 0x6918,
+};
+enum { JA_SE_CV_BB_FAINTED = 0x4817 };
+enum { AT_TYPE_LIGHT_ICE_ARROW = 0x180000, AT_TYPE_ICE_ARROW = 0x80000, AT_TYPE_FIRE_ARROW_FIRE = 0x40200 };

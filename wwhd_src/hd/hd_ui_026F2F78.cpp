@@ -1,136 +1,181 @@
-/* HD UI part item scheduler and animation completion path, binary-derived.
- * Original behaviour only. */
-#include "gabi.h"
+/* HD message states. */
+#include "d/hd_msg_window_base.h"
 using namespace gabi;
-namespace hd_ui_026F2F78 {
-static s32 divided(s32 a,s32 b) {
- if(!b || (a==s32(0x80000000u) && b==-1)) return a<0?-1:0;
- return a/b;
+static f32 l_windowPartOne;
+static f32 l_windowPartZero;
+extern void windowUpdateItem(WindowPart *, u32);
+extern f32 windowRandomDelay(f32);
+extern void windowFinishPart(WindowPart *, WindowPartConfig *);
+
+static s32 divided(s32 a, s32 b) {
+    if (!b || (a == s32(0x80000000u) && b == -1))
+        return a < 0 ? -1 : 0;
+    return a / b;
 }
-static s32 sub(s32 a,s32 b) { return s32(u32(a)-u32(b)); }
-static void item(u32 self,s32 index) { call<void>(0x026F47D0,self,u32(index)); }
-u32 updateItems(u32 self,f32 before,f32 now) {
- WWHD_FUNC(0x026F48A4,u32,self,before,now);
- s32 count=load<s32>(self+0xD00);
- if(count==0) return 1;
- f32 one=load<f32>(0x10109A98),zero=load<f32>(0x10109AA4),progress=zero;
- u32 config=load<u32>(self+0xCF4);
- if(count==1) {
-  u32 animator=0;
-  if(load<u32>(config+0x60)) animator=load<u32>(load<u32>(config+0x68));
-  if(load<f32>(animator+0x24)==zero)
-   call_ptr<void>(load<u32>(load<u32>(animator+0x14)+0xAC),animator,one);
-  return 1;
- }
- s32 first=0,last=0;
- if(load<s32>(config+0x4C)<=0) {
-  progress=one;first=0;last=sub(count,1);
- } else {
-  u32 mode=load<u32>(config+0x58);
-  if(mode==0 || mode==4) {
-   s32 duration=load<s32>(config+0x4C);
-   s32 end=sub(count,1);
-   if(mode==4) end=s32(u32(end)+load<u32>(config+0x50));
-   // GHS first divides time by duration, then by 1/(count-1 or extended end).
-   f32 divisor=one/f32(end);
-   progress=before/f32(duration);
-   first=ftoi(progress/divisor);
-   last=ftoi((now/f32(duration))/divisor);
-   if(mode==4) {
-    s32 edge=sub(count,1);
-    if(first>=end) {
-     first=edge;
-     if(last>=end) last=edge;
-     else if(last>=edge) last=sub(edge,1);
-    } else {
-     if(first>=edge) first=sub(edge,1);
-     if(last>=end) last=edge;
-     else if(last>=edge) last=sub(edge,1);
+static s32 sub(s32 a, s32 b) { return s32(u32(a) - u32(b)); }
+static void item(WindowPart *self, s32 index) { windowUpdateItem(self, u32(index)); }
+/* 026F48A4 */
+u32 hdMsgPart_updateItems(WindowPart *self, f32 before, f32 now) {
+    s32 count = self->mItemCount;
+    if (count == 0)
+        return 1;
+    f32 one = l_windowPartOne;
+    f32 zero = l_windowPartZero;
+    f32 progress = zero;
+    WindowPartConfig *config = self->mpConfig.get();
+    if (count == 1) {
+        WindowAnimator *animator = nullptr;
+        if (config->mAnimatorCount)
+            animator = config->mpAnimators.get()->get();
+        if (animator->mProgress == zero)
+            call_ptr<void>(animator->mpVTable[43].get(), animator, one);
+        return 1;
     }
-   }
-  } else if(mode==1 || mode==2 || mode==3) {
-   s32 delay=load<s32>(self+0xD04);
-   if(delay!=0) {
-    store<u32>(self+0xD04,u32(delay)-1);
-    first=0;last=0;
-   } else {
-    s32 remaining=load<s32>(self+0xD08);
-    last=sub(count,remaining);first=last;
-    store<u32>(self+0xD08,u32(remaining)-1);
-    s32 next;
-    if(mode==1) {
-     u32 r=u32(remaining)-1;
-     next=divided(s32(r*r),load<s32>(self+0xD0C));
-    } else if(mode==2) {
-     // Count is reloaded here before the countdown store in the original.
-     u32 r=load<u32>(self+0xD00)-(u32(remaining)-1);
-     next=divided(s32(r*r),load<s32>(self+0xD0C));
+    s32 first = 0;
+    s32 last = 0;
+    if (config->mDuration <= 0) {
+        progress = one;
+        first = 0;
+        last = sub(count, 1);
     } else {
-     config=load<u32>(self+0xCF4);
-     s32 maximum=load<s32>(config+0x4C);
-     next=s32(u32(ftoi(call<f32>(0x020198D8,f32(maximum))))+1);
-     if(next>maximum) next=maximum;
+        u32 mode = config->mMode;
+        if (mode == WINDOW_SCHEDULE_TIMELINE || mode == WINDOW_SCHEDULE_EXTENDED_TIMELINE) {
+            s32 duration = config->mDuration;
+            s32 end = sub(count, 1);
+            if (mode == WINDOW_SCHEDULE_EXTENDED_TIMELINE)
+                end = s32(u32(end) + config->mExtraItems);
+            // HD: GHS first divides time by duration, then by 1/(count-1 or extended end).
+            f32 divisor = one / f32(end);
+            progress = before / f32(duration);
+            first = ftoi(progress / divisor);
+            last = ftoi((now / f32(duration)) / divisor);
+            if (mode == WINDOW_SCHEDULE_EXTENDED_TIMELINE) {
+                s32 edge = sub(count, 1);
+                if (first >= end) {
+                    first = edge;
+                    if (last >= end)
+                        last = edge;
+                    else if (last >= edge)
+                        last = sub(edge, 1);
+                } else {
+                    if (first >= edge)
+                        first = sub(edge, 1);
+                    if (last >= end)
+                        last = edge;
+                    else if (last >= edge)
+                        last = sub(edge, 1);
+                }
+            }
+        } else if (mode == WINDOW_SCHEDULE_REMAINING_SQUARED ||
+                   mode == WINDOW_SCHEDULE_ELAPSED_SQUARED ||
+                   mode == WINDOW_SCHEDULE_RANDOM_DELAY) {
+            s32 delay = self->mDelay;
+            if (delay != 0) {
+                self->mDelay = u32(delay) - 1;
+                first = 0;
+                last = 0;
+            } else {
+                s32 remaining = self->mRemaining;
+                last = sub(count, remaining);
+                first = last;
+                self->mRemaining = u32(remaining) - 1;
+                s32 next;
+                if (mode == WINDOW_SCHEDULE_REMAINING_SQUARED) {
+                    u32 r = u32(remaining) - 1;
+                    next = divided(s32(r * r), self->mIntervalDivisor);
+                } else if (mode == WINDOW_SCHEDULE_ELAPSED_SQUARED) {
+                    // HD: Count is reloaded here before the countdown store in the original.
+                    u32 r = self->mItemCount - (u32(remaining) - 1);
+                    next = divided(s32(r * r), self->mIntervalDivisor);
+                } else {
+                    config = self->mpConfig.get();
+                    s32 maximum = config->mDuration;
+                    next = s32(u32(ftoi(windowRandomDelay(f32(maximum)))) + 1);
+                    if (next > maximum)
+                        next = maximum;
+                }
+                self->mDelay = u32(next);
+                s32 remainingNow = self->mRemaining;
+                config = self->mpConfig.get();
+                if (remainingNow <= 0)
+                    progress = one;
+            }
+        }
     }
-    store<u32>(self+0xD04,u32(next));
-    s32 remainingNow=load<s32>(self+0xD08);
-    config=load<u32>(self+0xCF4);
-    if(remainingNow<=0) progress=one;
-   }
-  }
- }
- u32 order=load<u32>(config+0x54);
- if(order==0) {
-  for(s32 i=first;i<=last;++i) {
-   if(i>=load<s32>(self+0xD00)) break;
-   item(self,i);
-  }
- } else if(order==1) {
-  for(s32 i=first;i<=last;++i) {
-   s32 n=load<s32>(self+0xD00);if(i>=n) break;
-   item(self,sub(sub(n,i),1));
-  }
- } else if(order==2) {
-  for(s32 i=first;i<=last;++i) {
-   s32 n=load<s32>(self+0xD00);
-   if(n%2==1) {
-    s32 half=i/2,center=sub(n,1)/2;
-    item(self,sub(center,half));item(self,s32(u32(center)+u32(half)));
-   } else if(i!=0) {
-    s32 half=sub(i,1)/2,center=n/2;
-    item(self,sub(sub(center,half),1));item(self,s32(u32(center)+u32(half)));
-   }
-  }
- } else if(order==3) {
-  for(s32 i=first;i<=last;++i) {
-   s32 half=i/2;item(self,half);
-   s32 n=load<s32>(self+0xD00);item(self,sub(sub(n,half),1));
-  }
- } else if(order==4) {
-  for(s32 i=first;i<=last;++i) {
-   if(i>=load<s32>(self+0xD00)) break;
-   s32 index=load<s32>(load<u32>(self+0xCF8)+u32(i)*4);
-   if(index>=0) item(self,index);
-  }
- }
- return !(progress<one);
+    u32 order = config->mOrder;
+    if (order == WINDOW_ITEMS_FORWARD) {
+        for (s32 i = first; i <= last; ++i) {
+            if (i >= self->mItemCount)
+                break;
+            item(self, i);
+        }
+    } else if (order == WINDOW_ITEMS_REVERSE) {
+        for (s32 i = first; i <= last; ++i) {
+            s32 n = self->mItemCount;
+            if (i >= n)
+                break;
+            item(self, sub(sub(n, i), 1));
+        }
+    } else if (order == WINDOW_ITEMS_CENTER_OUT) {
+        for (s32 i = first; i <= last; ++i) {
+            s32 n = self->mItemCount;
+            if (n % 2 == 1) {
+                s32 half = i / 2;
+                s32 center = sub(n, 1) / 2;
+                item(self, sub(center, half));
+                item(self, s32(u32(center) + u32(half)));
+            } else if (i != 0) {
+                s32 half = sub(i, 1) / 2;
+                s32 center = n / 2;
+                item(self, sub(sub(center, half), 1));
+                item(self, s32(u32(center) + u32(half)));
+            }
+        }
+    } else if (order == WINDOW_ITEMS_EDGES_IN) {
+        for (s32 i = first; i <= last; ++i) {
+            s32 half = i / 2;
+            item(self, half);
+            s32 n = self->mItemCount;
+            item(self, sub(sub(n, half), 1));
+        }
+    } else if (order == WINDOW_ITEMS_CONFIGURED) {
+        for (s32 i = first; i <= last; ++i) {
+            if (i >= self->mItemCount)
+                break;
+            s32 index = *gabi::at<be<s32>>(gabi::ea(self->mpOrder.get()) + u32(i) * 4);
+            if (index >= 0)
+                item(self, index);
+        }
+    }
+    return !(progress < one);
 }
-VERIFY(0x026F48A4,updateItems);
-void update(u32 self) {
- WWHD_FUNC(0x026F4FD8,void,self);
- if(!load<u32>(self+0xCF4)) return;
- if(load<u8>(self+0xD10)) {
-  f32 previous=load<f32>(self+0xCFC);
-  f32 current=fadds_ppc(previous,load<f32>(0x10109A98));
-  store<f32>(self+0xCFC,current);
-  if(call<u32>(0x026F48A4,self,previous,current)) store<u8>(self+0xD10,0);
- } else {
-  u32 animator=load<u32>(self+0xD14);
-  if(!animator) return;
-  if(load<f32>(animator+0x24)!=load<f32>(0x10109AA4) && !(load<u32>(animator+0x2C)&2)) return;
-  u32 config=load<u32>(self+0xCF4);
-  store<u32>(self+0xD14,0);
-  if(load<u8>(config+0x5D)) call<void>(0x026F4EA8,self,config);
- }
+
+/* 026F4FD8 */
+void hdMsgPart_update(WindowPart *self) {
+    if (!self->mpConfig.get())
+        return;
+    if (self->mScheduling) {
+        f32 previous = self->mTime;
+        f32 current = fadds_ppc(previous, l_windowPartOne);
+        self->mTime = current;
+        if (hdMsgPart_updateItems(self, previous, current))
+            self->mScheduling = 0;
+    } else {
+        WindowAnimator *animator = self->mpCurrentAnimator.get();
+        if (!animator)
+            return;
+        if (animator->mProgress != l_windowPartZero && !(animator->mFlags & 2))
+            return;
+        WindowPartConfig *config = self->mpConfig.get();
+        self->mpCurrentAnimator = 0;
+        if (config->mFinishEnabled)
+            windowFinishPart(self, config);
+    }
 }
-VERIFY(0x026F4FD8,update);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_windowPartOne 10109A98
+data l_windowPartZero 10109AA4
+ext 026F47D0 void windowUpdateItem(WindowPart*,u32)
+ext 020198D8 f32 windowRandomDelay(f32)
+ext 026F4EA8 void windowFinishPart(WindowPart*,WindowPartConfig*)
+*/

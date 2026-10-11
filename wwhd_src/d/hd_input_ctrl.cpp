@@ -1,521 +1,591 @@
-/* hd_input_ctrl: HD controller manager (singleton 101F5088: TV/GamePad/Pro controller mode, pointer,
- * GamePad orientation) and its pointer-controller object, WWHD. HD-only code (no GameCube source): written from the WWHD code.
- * Range 02617590..0261921F (sinits 02618840 and 0261918C). Not verified here (sead::Matrix33 library
- * template instances): 02617590 (setBase column), 026175B4 (setBase), 02618944 (copy),
- * 02618990 (setMul), 02618B04 (makeIdentity), 02618B3C (setInverse).
- *
- * ControllerMgr (0x270): base 020011CC, +4 vtable 100E29BC, +0x18 pointer controller (0x1B8, ctor
- * 02618E74: +0x13C/+0x170 vtables, +0x194/+0x198 pointer (int), +0x19C/+0x1A0 pointer (float),
- * +0x1A4..+0x1B0 calibration, +0x1B4 controller type), +0x1D0 mode (0 TV, 1/2 GamePad, 3 both),
- * +0x1D4 cursor object (0261A198), +0x1D8 GamePad orientation (3 Vec3 + matrix +0x1FC/+0x220
- * calibration / +0x224 / +0x248 inverse), +0x26C u8 pointer enabled, +0x26D u8 recalibration timer.
- * Controllers: sead::ControllerMgr 101F8AE8 (by id 0273CB8C, by order 0273CB44).
- */
-#include "gabi.h"
-using namespace gabi;
+/** HD controller routing, GamePad orientation and calibrated touch pointer. No GameCube counterpart. */
+#include "bindings.h"
+#include "d/hd_input_ctrl.h"
+static void* sControllerMgr;
+static hdInputManager* sInputManager;
+static hdInputDisposer* sInputDisposer;
+static hdInputManagerTable sInputManagerTable;
+static hdInputManagerTable sInputDisposerTable;
+static hdControllerRttiTable sPointerSecondTable;
+static hdControllerRttiTable sPointerThirdTable;
+static hdInputMatrix sIdentityMatrix;
+static hdInputVector sOrientationFirst;
+static hdInputVector sOrientationSecond;
+static hdInputVector sOrientationThird;
+static f32 sPointerWidth;
+static f32 sPointerHeight;
+static f32 sPointerOriginX;
+static f32 sPointerOriginY;
+static f32 sPointerZero;
+static hdInputPosition sInvalidPosition;
+static u32 sDrcRttiGuard;
+static u32 sDrcRtti;
+static u32 sDrcTypeBase;
+static u32 sControllerRttiGuard;
+static u32 sControllerRtti;
+static u32 sControllerTypeBase;
+static u32 sPadRttiGuard;
+static u32 sPadRtti;
+static u32 sPadTypeBase;
+static hdInputControllerTypeMap sControllerTypeMap;
+static hdInputGame* sGameInfo;
+static hdInputStaticBlock sManagerStaticBlock;
+static u32 sManagerRegister1;
+static f32 sManagerMin;
+static f32 sManagerMax;
+static hdInputStaticRange sManagerStaticRange;
+static u32 sManagerRegister2;
+static u32 sManagerRegister3;
+static hdInputStaticBlock sPointerStaticBlock;
+static u32 sPointerRegister1;
+static f32 sPointerMin;
+static f32 sPointerMax;
+static hdInputStaticRange sPointerStaticRange;
+static u32 sPointerRegister2;
+static u32 sPointerRegister3;
+static hdPointerController* pointerCtor(hdPointerController* p);
 
-namespace hd_input_ctrl {
-
-static const u32 kCtrlMgr = 0x101F8AE8;
-static const u32 kInstance = 0x101F5088;
-
-/* sead RTTI dynamic cast with the type info initialised on first use (vtable at vtOff) */
-static void typeInit(u32 guard, u32 info, u32 base) {
-    if (!load<u32>(guard)) {
-        store<u32>(guard, 1);
-        store<u32>(info, base);
+// HD: platform RTTI uses guarded type records and two controller base vtables.
+static void typeInit(be<u32>* guard, be<u32>* info, void* base) {
+    if (!(u32)*guard) {
+        *guard = 1;
+        *info = gabi::ea(base);
     }
 }
-static bool isA(u32 obj, u32 vtOff, u32 info) {
-    return call_ptr<u32>(load<u32>(load<u32>(obj + vtOff) + 0xC), obj, info) != 0;
+static bool isA(hdController* controller, bool secondBase, be<u32>* info) {
+    hdControllerRttiTable* table = secondBase ? controller->mControllerVtable : controller->mVtable;
+    return gabi::call_ptr<u32>(table->mIsA.get(), controller, info) != 0;
 }
-/* the DRC (GamePad) type: guard 101FD698, info 101FD978 */
-static u32 castDrc(u32 c) {
-    typeInit(0x101FD698, 0x101FD978, 0x100E29AC);
-    if (!c || !isA(c, 0x10, 0x101FD978) || !c) return 0;
-    return c;
+static hdController* castDrc(hdController* controller) {
+    typeInit(&sDrcRttiGuard, &sDrcRtti, &sDrcTypeBase);
+    if (!controller || !isA(controller, false, &sDrcRtti) || !controller) return NULL;
+    return controller;
 }
-static bool drcConnected(u32 c) {
-    return s32(load<u32>(c + 0x2018)) > 0 && load<u8>(c + 0x1118 + 0x5C) == 0x1F;
+static bool drcConnected(hdController* controller) {
+    hdDrcController* drc = (hdDrcController*)controller;
+    return (s32)drc->mChannels[0].mConnectedCount > 0 && (u8)drc->mChannels[0].mStatus == 0x1F;
 }
-/* the controller object cast (guard 101FD66C, info 101FD774, vtable at +0x158) */
-static u32 castCtrl(u32 c) {
-    typeInit(0x101FD66C, 0x101FDD74, 0x100E299C);
-    return isA(c, 0x158, 0x101FDD74) ? c : 0;
+static hdController* castCtrl(hdController* controller) {
+    typeInit(&sControllerRttiGuard, &sControllerRtti, &sControllerTypeBase);
+    return isA(controller, true, &sControllerRtti) ? controller : NULL;
 }
-static void setupPointer(u32 self, u32 ctrl, u32 a) {
-    call<void>(0x0273D248, self + 0x18, ctrl, a);
-    call<void>(0x0273BDF4, self + 0x18, 0xFF0000u, 0xFu, 5u);
+static void setupPointer(hdInputManager* self, hdController* controller, u32 enabled) {
+    hdInputSetPointerController(self->pointer(), controller, enabled);
+    hdInputSetPointerParameters(self->pointer(), 0xFF0000u, 0xFu, 5u);
 }
-
-/* 02617620: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x02617620, u32, p);
+/* 02617620 */
+hdInputManager* ctor(hdInputManager* p) {
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x270u);
+        p = (hdInputManager*)operator_new(sizeof(hdInputManager));
         if (!p) return 0;
     }
-    call<void>(0x020011CC, p, p);
-    store<u32>(p + 4, 0x100E29BC);
-    call<void>(0x02618E74, p + 0x18);
-    store<u32>(p + 0x1D0, 4);
-    store<u32>(p + 0x1D4, 0);
-    const u32 src[3] = {0x104A0934, 0x104A0940, 0x104A094C};
+    hdInputConstructBase(p, p);
+    p->mVtable = &sInputManagerTable;
+    pointerCtor(p->pointer());
+    p->mMode = INPUT_MODE_NONE;
+    p->mCursor = NULL;
+    hdInputVector* src[3] = {&sOrientationFirst, &sOrientationSecond, &sOrientationThird};
     for (u32 v = 0; v < 3; v++)
-        for (u32 k = 0; k < 3; k++) store<u32>(p + 0x1D8 + 12 * v + 4 * k, load<u32>(src[v] + 4 * k));
-    for (u32 k = 0; k < 9; k++) store<u32>(p + 0x1FC + 4 * k, load<u32>(0x104A03C8 + 4 * k));
-    store<u32>(p + 0x220, 0);
-    for (u32 k = 0; k < 9; k++) store<u32>(p + 0x224 + 4 * k, load<u32>(0x104A03C8 + 4 * k));
-    for (u32 k = 0; k < 9; k++) store<u32>(p + 0x248 + 4 * k, load<u32>(0x104A03C8 + 4 * k));
-    const f32 w = load<f32>(0x100E29D0), h = load<f32>(0x100E29D4);
-    store<u8>(p + 0x26D, 0);
-    store<u8>(p + 0x26C, 1);
-    call<void>(0x02001924, p + 0x18, load<f32>(0x10143588), load<f32>(0x1014358C), w, h);
-    store<u32>(p, p + 0x18);
+        for (u32 k = 0; k < 3; k++) p->mOrientation.mBasis[v].mBits[k] = src[v]->mBits[k];
+    for (u32 k = 0; k < 9; k++) p->mOrientation.mCurrent.mBits[k] = sIdentityMatrix.mBits[k];
+    p->mOrientation.mSource = NULL;
+    for (u32 k = 0; k < 9; k++) p->mOrientation.mCalibration.mBits[k] = sIdentityMatrix.mBits[k];
+    for (u32 k = 0; k < 9; k++) p->mOrientation.mInverse.mBits[k] = sIdentityMatrix.mBits[k];
+    const f32 w = sPointerWidth, h = sPointerHeight;
+    p->mRecalibrationTimer = 0;
+    p->mPointerEnabled = 1;
+    hdInputSetPointerBounds(p->pointer(), sPointerOriginX, sPointerOriginY, w, h);
+    p->mInput = p->pointer();
     return p;
 }
-VERIFY(0x02617620, ctor);
 
-/* 026177B8: creates the singleton with its disposer */
-void createInstance(u32 heap) {
-    WWHD_FUNC(0x026177B8, void, heap);
-    if (load<u32>(kInstance)) return;
-    const u32 p = call<u32>(0x0273B0D4, 0x270u, heap, 4u);
-    const u32 d = p + 8;
+// creates the singleton with its disposer
+/* 026177B8 */
+void createInstance(void* heap) {
+    if (sInputManager) return;
+    hdInputManager* p = hdInputAllocateSingleton(0x270u, heap, 4u);
+    hdInputDisposer* d = p->disposer();
     if (d) {
-        call<void>(0x02752B0C, d, heap, 3u);
-        store<u32>(d + 0xC, 0x100E29E0);
+        hdInputConstructDisposer(d, heap, 3u);
+        d->mVtable = &sInputDisposerTable;
     }
-    store<u32>(0x101F508C, d);
-    store<u32>(kInstance, p ? ctor(p) : 0u);
+    sInputDisposer = d;
+    sInputManager = p ? ctor(p) : NULL;
 }
-VERIFY(0x026177B8, createInstance);
 
-/* 02617858: initial setup: GamePad + Pro controllers, the pointer and the cursor object */
-void init(u32 self, u32 unused, u32 heap) {
-    WWHD_FUNC(0x02617858, void, self, unused, heap);
-    store<u32>(self + 0x1D0, 3);
-    const u32 mgr = load<u32>(kCtrlMgr);
-    u32 main = 0;
+// initial setup: GamePad + Pro controllers, the pointer and the cursor object
+/* 02617858 */
+void hdInputManager::init(u32 unused, void* heap) {
+    this->mMode = INPUT_MODE_BOTH;
+    void* mgr = sControllerMgr;
+    hdController* main = NULL;
     if (mgr) {
-        main = call<u32>(0x0273CB44, mgr, 9u, 0u);
+        main = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_COMBINED, 0u);
         if (main) {
-            const u32 pad = call<u32>(0x0273CB44, mgr, 8u, 0u);
-            if (pad) call<void>(0x0273D394, castCtrl(main), pad);
-            const u32 c = castDrc(call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 7u));
+            hdController* pad = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_PAD, 0u);
+            if (pad) hdInputAttachController(castCtrl(main), pad);
+            hdController* c = castDrc(hdInputControllerById(sControllerMgr, INPUT_CONTROLLER_DRC));
             if (c) {
-                const u32 base = c + 0x1118;
+                hdDrcStatus* base = ((hdDrcController*)c)->mChannels;
                 for (u32 i = 0; i < 4; i++) {
-                    const u32 e = i < 4 ? base + 0xF08 * i : base;
-                    if (s32(load<u32>(e + 0xF00)) <= 0 || load<u8>(e + 0x5C) != 0x1F) continue;
-                    const u32 drc = call<u32>(0x0273CB44, mgr, 7u, i);
+                    hdDrcStatus* e = i < 4 ? &base[i] : base;
+                    if ((s32)e->mConnectedCount <= 0 || (u8)e->mStatus != 0x1F) continue;
+                    hdController* drc = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, i);
                     if (!drc) continue;
-                    call<void>(0x0273D394, castCtrl(main), drc);
-                    setupPointer(self, main, 1);
-                    u32 cur = call<u32>(0x0273B050, 0x5Cu, heap, 4u);
-                    if (cur) cur = call<u32>(0x0261A198, cur);
-                    store<u32>(self + 0x1D4, cur);
-                    store<u32>(self + 0x220, self + 0x1FC);
+                    hdInputAttachController(castCtrl(main), drc);
+                    setupPointer(this, main, 1);
+                    hdInputCursor* cur = hdInputAllocateCursor(0x5Cu, heap, 4u);
+                    if (cur) cur = hdInputConstructCursor(cur);
+                    this->mCursor = cur;
+                    this->mOrientation.mSource = &this->mOrientation.mCurrent;
                     return;
                 }
             }
         }
     }
-    setupPointer(self, main, 1);
-    u32 cur = call<u32>(0x0273B050, 0x5Cu, heap, 4u);
-    if (cur) cur = call<u32>(0x0261A198, cur);
-    store<u32>(self + 0x1D4, cur);
-    store<u32>(self + 0x220, self + 0x1FC);
+    setupPointer(this, main, 1);
+    hdInputCursor* cur = hdInputAllocateCursor(0x5Cu, heap, 4u);
+    if (cur) cur = hdInputConstructCursor(cur);
+    this->mCursor = cur;
+    this->mOrientation.mSource = &this->mOrientation.mCurrent;
 }
-VERIFY(0x02617858, init);
 
-/* 02617AE4: mode 0 (TV)? */
-u32 isMode0(u32 self) {
-    WWHD_FUNC(0x02617AE4, u32, self);
-    return load<u32>(self + 0x1D0) == 0;
+// mode 0 (TV)?
+/* 02617AE4 */
+u32 hdInputManager::isTvMode() {
+    return this->mMode == INPUT_MODE_TV;
 }
-VERIFY(0x02617AE4, isMode0);
 
-/* 02617AF4: per-frame update */
-void calc(u32 self) {
-    WWHD_FUNC(0x02617AF4, void, self);
-    call<void>(0xC00083C0, 1u);
-    call<void>(0xC00083C0, 2u);
-    call<void>(0xC00083C0, 3u);
-    const s32 mode = s32(load<u32>(self + 0x1D0));
-    bool tail = true;
-    if (mode < 4) {
-        if (mode == 0 || u32(mode) < 3) {
-            if (mode != 0) call<u32>(0x0273CB44, load<u32>(kCtrlMgr), 8u, 0u);
-            const u32 mgr = load<u32>(kCtrlMgr);
-            const u32 c = castDrc(call<u32>(0x0273CB8C, mgr, 7u));
-            if (c && s32(load<u32>(c + 0x2018)) > 0) {
-                const u32 b = load<u8>(c + 0x1118 + 0x5C);
+// per-frame update
+/* 02617AF4 */
+void hdInputManager::calc() {
+    hdInputPlatformUpdate(1u);
+    hdInputPlatformUpdate(2u);
+    hdInputPlatformUpdate(3u);
+    const s32 mode = s32(this->mMode);
+    if (mode < INPUT_MODE_NONE) {
+        if (mode == INPUT_MODE_TV || u32(mode) < INPUT_MODE_BOTH) {
+            if (mode != INPUT_MODE_TV) hdInputControllerByOrder(sControllerMgr, INPUT_CONTROLLER_PAD, 0u);
+            void* mgr = sControllerMgr;
+            hdController* c = castDrc(hdInputControllerById(mgr, INPUT_CONTROLLER_DRC));
+            if (c && (s32)((hdDrcController*)c)->mChannels[0].mConnectedCount > 0) {
+                const u32 b = (u8)((hdDrcController*)c)->mChannels[0].mStatus;
                 if (b == 0x1F) {
-                    if (call<u32>(0x0273CB44, mgr, 7u, 0u) && !load<u8>(self + 0x15C)) {
-                        u32 n = load<u8>(self + 0x26D);
+                    if (hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u) && !this->mPointer.mTouchActive) {
+                        u32 n = this->mRecalibrationTimer;
                         if (n > 15) {
-                            store<u8>(self + 0x26D, 0);
-                            call<void>(0x0273D2C0, self + 0x18, 1u);
-                            n = load<u8>(self + 0x26D);
+                            this->mRecalibrationTimer = 0;
+                            hdInputResetPointer(this->pointer(), 1u);
+                            n = this->mRecalibrationTimer;
                         }
-                        store<u8>(self + 0x26D, u8(n + 1));
+                        this->mRecalibrationTimer = u8(n + 1);
                     }
                 } else if (b != 0xFF && b != 0xFC) {
-                    call<void>(0xC00083C0, 0u);
+                    hdInputPlatformUpdate(0u);
                 }
             }
-        } else if (mode == 3) {
-            const u32 mgr = load<u32>(kCtrlMgr);
-            const u32 main = call<u32>(0x0273CB44, mgr, 9u, 0u);
-            typeInit(0x101FD66C, 0x101FDD74, 0x100E299C);
-            if (main && isA(main, 0x158, 0x101FDD74)) call<void>(0x0273D42C, main);
-            else call<void>(0x0273D42C, 0u);
+        } else if (mode == INPUT_MODE_BOTH) {
+            void* mgr = sControllerMgr;
+            hdController* main = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_COMBINED, 0u);
+            typeInit(&sControllerRttiGuard, &sControllerRtti, &sControllerTypeBase);
+            if (main && isA(main, true, &sControllerRtti)) hdInputClearControllers(main);
+            else hdInputClearControllers(NULL);
             if (main) {
-                const u32 pad = call<u32>(0x0273CB44, mgr, 8u, 0u);
-                if (pad) call<void>(0x0273D394, castCtrl(main), pad);
-                const u32 c = castDrc(call<u32>(0x0273CB8C, mgr, 7u));
+                hdController* pad = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_PAD, 0u);
+                if (pad) hdInputAttachController(castCtrl(main), pad);
+                hdController* c = castDrc(hdInputControllerById(mgr, INPUT_CONTROLLER_DRC));
                 if (c && drcConnected(c)) {
-                    const u32 drc = call<u32>(0x0273CB44, mgr, 7u, 0u);
+                    hdController* drc = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u);
                     if (drc) {
-                        call<void>(0x0273D2C0, self + 0x18, 1u);
-                        call<void>(0x0273D394, castCtrl(main), drc);
+                        hdInputResetPointer(this->pointer(), 1u);
+                        hdInputAttachController(castCtrl(main), drc);
                     }
                 }
             }
-        } else {
-            tail = true; /* negative mode (unsigned compare): orientation only */
         }
     }
-    call<void>(0x026173B0, self + 0x1D8);
-    if (isMode0(self)) return;
-    (void)tail;
-    Local<f32[2]> pos;
-    const f32 z = load<f32>(0x100E2984);
-    store<f32>(pos.a, z);
-    store<f32>(pos.a + 4, z);
-    if (load<u32>(self + 0x124) & 0x8000) {
-        const u32 valid = load<u32>(self + 0x24) & 1;
-        store<f32>(pos.a, load<f32>(valid ? self + 0x1B4 : 0x1049FFA0));
-        store<f32>(pos.a + 4, load<f32>((valid ? self + 0x1B4 : 0x1049FFA0) + 4));
+    hdInputUpdateOrientation(&this->mOrientation);
+    if (this->isTvMode()) return;
+    hdInputPosition pos;
+    const f32 z = sPointerZero;
+    pos.mX = z;
+    pos.mY = z;
+    if (this->mPointer.mRepeat & INPUT_BUTTON_TOUCH) {
+        const u32 valid = this->mPointer.mPointerFlags & 1;
+        pos.mX = valid ? (f32)this->mPointer.mCalibratedX : (f32)sInvalidPosition.mX;
+        pos.mY = valid ? (f32)this->mPointer.mCalibratedY : (f32)sInvalidPosition.mY;
     }
-    call<void>(0x0261A9B8, load<u32>(self + 0x1D4), pos.a);
+    hdInputUpdateCursor(this->mCursor, &pos);
 }
-VERIFY(0x02617AF4, calc);
 
-/* 02617F14: is the GamePad (controller 8) connected? */
-u32 hasPad(u32 self) {
-    WWHD_FUNC(0x02617F14, u32, self);
-    const u32 c = call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 8u);
-    typeInit(0x101FD694, 0x101FD968, 0x100E29AC);
-    if (!c || !isA(c, 0x10, 0x101FD968) || !c) return 0;
-    return s32(load<u32>(c + 0xAD4)) > 0;
+// is the GamePad (controller 8) connected?
+/* 02617F14 */
+u32 hdInputManager::hasPad() {
+    hdController* c = hdInputControllerById(sControllerMgr, INPUT_CONTROLLER_PAD);
+    typeInit(&sPadRttiGuard, &sPadRtti, &sDrcTypeBase);
+    if (!c || !isA(c, false, &sPadRtti) || !c) return 0;
+    return s32(c->mConnectedCount) > 0;
 }
-VERIFY(0x02617F14, hasPad);
 
-/* 02617FCC: is the DRC connected? */
-u32 hasDrc(u32 self) {
-    WWHD_FUNC(0x02617FCC, u32, self);
-    const u32 c = castDrc(call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 7u));
+// is the DRC connected?
+/* 02617FCC */
+u32 hdInputManager::hasDrc() {
+    hdController* c = castDrc(hdInputControllerById(sControllerMgr, INPUT_CONTROLLER_DRC));
     return c && drcConnected(c);
 }
-VERIFY(0x02617FCC, hasDrc);
 
-/* 02618094: switches the controller mode */
-u32 setMode(u32 self, u32 mode) {
-    WWHD_FUNC(0x02618094, u32, self, mode);
-    if (s32(mode) >= 4) return 0;
-    if (mode != 0 && mode < 3) {
-        const u32 pad = call<u32>(0x0273CB44, load<u32>(kCtrlMgr), 8u, 0u);
+// switches the controller mode
+/* 02618094 */
+u32 hdInputManager::setMode(u32 mode) {
+    if (s32(mode) >= INPUT_MODE_NONE) return 0;
+    if (mode != INPUT_MODE_TV && mode < INPUT_MODE_BOTH) {
+        hdController* pad = hdInputControllerByOrder(sControllerMgr, INPUT_CONTROLLER_PAD, 0u);
         if (!pad) return 0;
-        setupPointer(self, pad, 1);
-        store<u32>(self + 0x1D0, mode);
-        call<void>(0x02030AD8, 0u);
+        setupPointer(this, pad, 1);
+        this->mMode = mode;
+        hdInputSetDrcOutput(0u);
         return 1;
     }
-    if (mode == 0) {
-        const u32 mgr = load<u32>(kCtrlMgr);
-        const u32 c = castDrc(call<u32>(0x0273CB8C, mgr, 7u));
+    if (mode == INPUT_MODE_TV) {
+        void* mgr = sControllerMgr;
+        hdController* c = castDrc(hdInputControllerById(mgr, INPUT_CONTROLLER_DRC));
         if (!c || !drcConnected(c)) return 0;
-        const u32 drc = call<u32>(0x0273CB44, mgr, 7u, 0u);
+        hdController* drc = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u);
         if (!drc) return 0;
-        setupPointer(self, drc, 1);
-        store<u32>(self + 0x1D0, mode);
-        call<void>(0x02030AD8, 1u);
+        setupPointer(this, drc, 1);
+        this->mMode = mode;
+        hdInputSetDrcOutput(1u);
         return 1;
     }
-    if (mode != 3) return 0;
+    if (mode != INPUT_MODE_BOTH) return 0;
     u32 done = 0;
-    const u32 mgr = load<u32>(kCtrlMgr);
-    const u32 main = call<u32>(0x0273CB44, mgr, 9u, 0u);
-    typeInit(0x101FD66C, 0x101FDD74, 0x100E299C);
-    if (main && isA(main, 0x158, 0x101FDD74)) call<void>(0x0273D42C, main);
-    else call<void>(0x0273D42C, 0u);
+    void* mgr = sControllerMgr;
+    hdController* main = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_COMBINED, 0u);
+    typeInit(&sControllerRttiGuard, &sControllerRtti, &sControllerTypeBase);
+    if (main && isA(main, true, &sControllerRtti)) hdInputClearControllers(main);
+    else hdInputClearControllers(NULL);
     if (!main) return 0;
-    const u32 pad = call<u32>(0x0273CB44, mgr, 8u, 0u);
+    hdController* pad = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_PAD, 0u);
     if (pad) {
-        call<void>(0x0273D394, castCtrl(main), pad);
+        hdInputAttachController(castCtrl(main), pad);
         done = 1;
-        store<u32>(self + 0x1D0, mode);
+        this->mMode = mode;
     }
-    const u32 c = castDrc(call<u32>(0x0273CB8C, mgr, 7u));
+    hdController* c = castDrc(hdInputControllerById(mgr, INPUT_CONTROLLER_DRC));
     if (c && drcConnected(c)) {
-        const u32 drc = call<u32>(0x0273CB44, mgr, 7u, 0u);
+        hdController* drc = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u);
         if (drc) {
-            call<void>(0x0273D394, castCtrl(main), drc);
-            store<u32>(self + 0x1D0, mode);
-            setupPointer(self, main, 1);
+            hdInputAttachController(castCtrl(main), drc);
+            this->mMode = mode;
+            setupPointer(this, main, 1);
             return 1;
         }
     }
-    if (done) setupPointer(self, main, 1);
+    if (done) setupPointer(this, main, 1);
     return done;
 }
-VERIFY(0x02618094, setMode);
 
-u32 isMode1(u32 self) { WWHD_FUNC(0x02618498, u32, self); return load<u32>(self + 0x1D0) == 1; }
-VERIFY(0x02618498, isMode1);
-u32 isMode2(u32 self) { WWHD_FUNC(0x026184AC, u32, self); return load<u32>(self + 0x1D0) == 2; }
-VERIFY(0x026184AC, isMode2);
-u32 isMode3(u32 self) { WWHD_FUNC(0x026184C0, u32, self); return load<u32>(self + 0x1D0) == 3; }
-VERIFY(0x026184C0, isMode3);
+/* 02618498 */
+u32 hdInputManager::isGamePadMode() { return this->mMode == INPUT_MODE_GAMEPAD; }
+/* 026184AC */
+u32 hdInputManager::isAlternateGamePadMode() { return this->mMode == INPUT_MODE_GAMEPAD_ALT; }
+/* 026184C0 */
+u32 hdInputManager::isCombinedMode() { return this->mMode == INPUT_MODE_BOTH; }
 
-/* 026184D4: are none of the buttons in mask held on the active controllers? */
-u32 isFree(u32 self, u32 mask) {
-    WWHD_FUNC(0x026184D4, u32, self, mask);
-    const u32 mgr = load<u32>(kCtrlMgr);
-    if (hasPad(self)) {
-        const u32 c = call<u32>(0x0273CB44, mgr, 8u, 0u);
-        if (c && (mask & load<u32>(c))) return 1;
+// HD: the platform pad and DRC tests intentionally have opposite polarity.
+/* 026184D4 */
+u32 hdInputManager::isFree(u32 mask) {
+    void* mgr = sControllerMgr;
+    if (this->hasPad()) {
+        hdController* c = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_PAD, 0u);
+        if (c && (mask & c->mHold)) return 1;
     }
-    if (!hasDrc(self)) return 1;
-    const u32 c = call<u32>(0x0273CB44, mgr, 7u, 0u);
-    if (!c || !(mask & load<u32>(c))) return 1;
+    if (!this->hasDrc()) return 1;
+    hdController* c = hdInputControllerByOrder(mgr, INPUT_CONTROLLER_DRC, 0u);
+    if (!c || !(mask & c->mHold)) return 1;
     return 0;
 }
-VERIFY(0x026184D4, isFree);
 
-/* 026185A0: cursor state (5 without a cursor) */
-u32 cursorState(u32 self) {
-    WWHD_FUNC(0x026185A0, u32, self);
-    const u32 c = load<u32>(self + 0x1D4);
-    return c ? load<u32>(c + 4) : 5;
+// cursor state (5 without a cursor)
+/* 026185A0 */
+u32 hdInputManager::cursorState() {
+    hdInputCursor* c = this->mCursor;
+    return c ? (u32)c->mState : 5;
 }
-VERIFY(0x026185A0, cursorState);
 
-/* 026185BC: takes the current orientation as the calibration (and its inverse) */
-void calibrate(u32 self) {
-    WWHD_FUNC(0x026185BC, void, self);
-    const u32 src = load<u32>(self + 0x220);
+// takes the current orientation as the calibration (and its inverse)
+/* 026185BC */
+void hdInputManager::calibrate() {
+    hdInputMatrix* src = this->mOrientation.mSource;
     if (!src) return;
-    call<void>(0x02618944, self + 0x224, src);
-    call<void>(0x02618B3C, self + 0x248, self + 0x224);
+    hdInputCopyMatrix(&this->mOrientation.mCalibration, src);
+    hdInputInvertMatrix(&this->mOrientation.mInverse, &this->mOrientation.mCalibration);
 }
-VERIFY(0x026185BC, calibrate);
 
-/* 02618604: the calibrated GamePad orientation (identity on the TV or when gyro aiming is off) */
-void orientation(u32 out, u32 self) {
-    WWHD_FUNC(0x02618604, void, out, self);
-    const u32 opt = call<u32>(0x027200D0, load<u32>(0x101F84DC) + 0x12C0);
-    if (!call<u32>(0x0271FC30, opt) || isMode0(self)) {
-        for (u32 k = 0; k < 9; k++) store<u32>(out + 4 * k, load<u32>(0x104A03C8 + 4 * k));
+// the calibrated GamePad orientation (identity on the TV or when gyro aiming is off)
+/* 02618604 */
+void orientation(hdInputMatrix* out, hdInputManager* self) {
+    void* opt = hdInputGetOptions(&sGameInfo->mOptions);
+    if (!hdInputGyroEnabled(opt) || self->isTvMode()) {
+        for (u32 k = 0; k < 9; k++) out->mBits[k] = sIdentityMatrix.mBits[k];
         return;
     }
-    Local<u32[9]> m;
-    for (u32 k = 0; k < 9; k++) store<u32>(m.a + 4 * k, load<u32>(0x104A03C8 + 4 * k));
-    const u32 cal = load<u32>(self + 0x220);
-    if (cal) call<void>(0x02618990, m.a, self + 0x248, cal);
-    for (u32 k = 0; k < 9; k++) store<u32>(out + 4 * k, load<u32>(m.a + 4 * k));
+    hdInputMatrix m;
+    for (u32 k = 0; k < 9; k++) m.mBits[k] = sIdentityMatrix.mBits[k];
+    hdInputMatrix* cal = self->mOrientation.mSource;
+    if (cal) hdInputMultiplyMatrix(&m, &self->mOrientation.mInverse, cal);
+    for (u32 k = 0; k < 9; k++) out->mBits[k] = m.mBits[k];
 }
-VERIFY(0x02618604, orientation);
 
-/* 02618720: resets the pointer */
-void resetPointer(u32 self, u32 arg) {
-    WWHD_FUNC(0x02618720, void, self, arg);
-    call<void>(0x0273D2C0, self + 0x18, arg);
-    call<void>(0x0273D2C8, self + 0x18);
-    store<u8>(self + 0x26D, 0);
+// resets the pointer
+/* 02618720 */
+void hdInputManager::resetPointer(u32 arg) {
+    hdInputResetPointer(this->pointer(), arg);
+    hdInputClearPointer(this->pointer());
+    this->mRecalibrationTimer = 0;
 }
-VERIFY(0x02618720, resetPointer);
 
-/* 02618760..0261878C: pointer parameters */
-void pointerParams(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02618760, void, self, a, b);
-    call<void>(0x0273BDF4, self + 0x18, 0xFF0000u, a, b);
+// HD: pointer repeat parameters.
+/* 02618760 */
+void hdInputManager::pointerParams(u32 a, u32 b) {
+    hdInputSetPointerParameters(this->pointer(), 0xFF0000u, a, b);
 }
-VERIFY(0x02618760, pointerParams);
-void pointerDefault(u32 self) {
-    WWHD_FUNC(0x02618774, void, self);
-    pointerParams(self, 0xF, 5);
+/* 02618774 */
+void hdInputManager::pointerDefault() {
+    this->pointerParams(0xF, 5);
 }
-VERIFY(0x02618774, pointerDefault);
-void pointerParamsMasked(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x02618780, void, self, a, b, c);
-    call<void>(0x0273BDF4, self + 0x18, a & 0xFF00FFFFu, b, c);
+/* 02618780 */
+void hdInputManager::pointerParamsMasked(u32 a, u32 b, u32 c) {
+    hdInputSetPointerParameters(this->pointer(), a & 0xFF00FFFFu, b, c);
 }
-VERIFY(0x02618780, pointerParamsMasked);
-void pointerSlow(u32 self, u32 a) {
-    WWHD_FUNC(0x0261878C, void, self, a);
-    pointerParamsMasked(self, a, 0x1E, 1);
+/* 0261878C */
+void hdInputManager::pointerSlow(u32 a) {
+    this->pointerParamsMasked(a, 0x1E, 1);
 }
-VERIFY(0x0261878C, pointerSlow);
 
-/* 02618798: SingletonDisposer deleting destructor (deletes the instance) */
-void disposerDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x02618798, void, p, flags);
+// SingletonDisposer deleting destructor (deletes the instance)
+/* 02618798 */
+void disposerDtor(hdInputDisposer* p, u32 flags) {
     if (!p) return;
-    store<u32>(p + 0xC, 0x100E29E0);
-    if (p == load<u32>(0x101F508C)) {
-        const u32 inst = load<u32>(kInstance);
-        store<u32>(0x101F508C, 0);
-        call_ptr<void>(load<u32>(load<u32>(inst + 4) + 0xC), inst, 2u);
-        store<u32>(kInstance, 0);
+    p->mVtable = &sInputDisposerTable;
+    if (p == sInputDisposer) {
+        hdInputManager* inst = sInputManager;
+        sInputDisposer = NULL;
+        gabi::call_ptr(inst->mVtable->mDestroy.get(), inst, 2u);
+        sInputManager = NULL;
     }
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    hdInputDestroyDisposer(p, 0u);
+    if (flags & 1) operator_delete(p);
 }
-VERIFY(0x02618798, disposerDtor);
 
-static void stdInit(u32 b, u32 r1, u32 lo, u32 hi, u32 f, u32 r2, u32 r3) {
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, r1);
-    const f32 a = load<f32>(lo), c = load<f32>(hi);
-    store<f32>(f, a);
-    store<f32>(f + 4, c);
-    call<void>(0x028ED6F8, f + 8);
-    call<void>(0x028F026C, r2);
-    call<void>(0x028EAB2C, f + 9);
-    call<void>(0x028F026C, r3);
+static void stdInit(hdInputStaticBlock* block, void* firstRegister, be<f32>* low, be<f32>* high, hdInputStaticRange* range, void* secondRegister, void* thirdRegister) {
+    block->mWords[2]=0; block->mWords[0]=0; block->mWords[3]=0; block->mWords[1]=0;
+    hdInputConstructRegister(firstRegister);
+    const f32 min=*low, max=*high;
+    range->mMin = min;
+    range->mMax = max;
+    hdInputConstructFirstFlag(&range->mFirst);
+    hdInputConstructRegister(secondRegister);
+    hdInputConstructSecondFlag(&range->mSecond);
+    hdInputConstructRegister(thirdRegister);
 }
+/* 02618840 */
 void staticInit() {
-    WWHD_FUNC(0x02618840, void);
-    stdInit(0x1048DE74, 0x101F5064, 0x100E29D8, 0x100E29DC, 0x1048DE68, 0x101F5070, 0x101F507C);
+    stdInit(&sManagerStaticBlock, &sManagerRegister1, &sManagerMin, &sManagerMax, &sManagerStaticRange, &sManagerRegister2, &sManagerRegister3);
 }
-VERIFY(0x02618840, staticInit);
 
-/* 026188D4: manager deleting destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x026188D4, void, p, flags);
+// HD: compiler-generated and template code of this translation unit.
+// manager deleting destructor
+/* 026188D4 */
+void dtor(hdInputManager* p, u32 flags) {
     if (!p) return;
-    store<u32>(p + 0x154, 0x100E2A78);
-    call<void>(0x02001728, p + 0x18, 0u);
-    call<void>(0x020011B8, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    p->mPointer.mVtableSecond = &sPointerSecondTable;
+    hdInputDestroyPointerBase(p->pointer(), 0u);
+    hdInputDestroyManagerBase(p, 0u);
+    if (flags & 1) operator_delete(p);
 }
-VERIFY(0x026188D4, dtor);
 
-/* 02618940: empty function */
-void nop() { WWHD_FUNC(0x02618940, void); }
-VERIFY(0x02618940, nop);
+/* 02618940 */
+void nop() { }
 
-/* 02618D10: thunk of the second base (this - 0x130) */
-void thunk(u32 p, u32 a) {
-    WWHD_FUNC(0x02618D10, void, p, a);
-    call<void>(0x02619220, p - 0x130, a);
+// thunk of the second base (this - 0x130)
+/* 02618D10 */
+void thunk(void* p, u32 a) {
+    hdInputPointerSecondBaseOperation(hdInputPointerFromSecondBase(p), a);
 }
-VERIFY(0x02618D10, thunk);
 
-/* 02618D18: pointer controller type (4 when both controllers are active) */
-u32 controllerType(u32 self) {
-    WWHD_FUNC(0x02618D18, u32, self);
-    if (isMode0(load<u32>(kInstance))) {
-        if (!hasDrc(load<u32>(kInstance))) return load<u32>(self + 0x1B4);
-        const u32 r = call<u32>(0xC0008420, 0u);
-        store<u32>(self + 0x1B4, r);
+// pointer controller type (4 when both controllers are active)
+/* 02618D18 */
+u32 hdPointerController::controllerType() {
+    if (sInputManager->isTvMode()) {
+        if (!sInputManager->hasDrc()) return this->mControllerType;
+        const u32 r = hdInputPlatformControllerType(0u);
+        this->mControllerType = r;
         return r;
     }
-    if (isMode3(load<u32>(kInstance))) return 4;
-    if (!hasPad(load<u32>(kInstance))) return load<u32>(self + 0x1B4);
-    u32 c = call<u32>(0x0273CB8C, load<u32>(kCtrlMgr), 8u);
-    typeInit(0x101FD694, 0x101FD968, 0x100E2A00);
-    if (!c || !isA(c, 0x10, 0x101FD968)) c = 0;
-    if (s32(load<u32>(c + 0xAD4)) <= 0) return load<u32>(self + 0x1B4);
-    const u32 r = load<u32>(0x100E2A10 + 4 * load<u8>(c + 0x14 + 0xA1));
-    store<u32>(self + 0x1B4, r);
+    if (sInputManager->isCombinedMode()) return 4;
+    if (!sInputManager->hasPad()) return this->mControllerType;
+    hdController* c = hdInputControllerById(sControllerMgr, INPUT_CONTROLLER_PAD);
+    typeInit(&sPadRttiGuard, &sPadRtti, &sPadTypeBase);
+    if (!c || !isA(c, false, &sPadRtti)) c = 0;
+    // HD: the original reads the null guest controller after a failed RTTI check.
+    if (hdInputControllerConnectedCount(c) <= 0) return this->mControllerType;
+    const u32 r = (u32)sControllerTypeMap.mTypes[c->platformType()];
+    this->mControllerType = r;
     return r;
 }
-VERIFY(0x02618D18, controllerType);
 
-/* 02618E74: pointer controller constructor */
-u32 pointerCtor(u32 p) {
-    WWHD_FUNC(0x02618E74, u32, p);
+// pointer controller constructor
+/* 02618E74 */
+hdPointerController* pointerCtor(hdPointerController* p) {
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x1B8u);
+        p = (hdPointerController*)operator_new(sizeof(hdPointerController));
         if (!p) return 0;
     }
-    call<void>(0x02001790, p);
-    store<u32>(p + 0x170, 0x100E2A38);
-    store<u32>(p + 0x13C, 0x100E2A78);
-    store<u32>(p + 0x1B4, 4);
+    hdInputConstructPointerBase(p);
+    p->mVtableThird = &sPointerThirdTable;
+    p->mVtableSecond = &sPointerSecondTable;
+    p->mControllerType = 4;
     return p;
 }
-VERIFY(0x02618E74, pointerCtor);
 
-static void setBit(u32 dst, bool on, u32 bit) {
-    const u32 v = load<u32>(dst);
-    store<u32>(dst, on ? v | bit : v & ~bit);
+static void setBit(be<u32>* dst, bool on, u32 bit) {
+    const u32 v = (u32)*dst;
+    *dst = on ? v | bit : v & ~bit;
 }
 
 /* the pointer position: calibration offset and scale, integer copy */
-static void pointerPos(u32 self, u32 flags) {
-    const f32 c8 = load<f32>(self + 0x1A8), y = load<f32>(self + 0x1A0), c4 = load<f32>(self + 0x1A4);
-    const f32 dy = fsubs_ppc(y, c8);
-    const f32 x = load<f32>(self + 0x19C), s0 = load<f32>(self + 0x1B0);
-    const f32 dx = fsubs_ppc(x, c4);
-    const f32 sx = load<f32>(self + 0x1AC);
-    const f32 py = fmuls_ppc(dy, s0);
-    const f32 px = fmuls_ppc(dx, sx);
-    store<u32>(self + 0xC, flags);
-    store<f32>(self + 0x19C, px);
-    store<u32>(self + 0x194, u32(ftoi(px)));
-    store<u32>(self + 0x198, u32(ftoi(py)));
-    store<f32>(self + 0x1A0, py);
+static void pointerPos(hdPointerController* self, u32 flags) {
+    const f32 c8 = self->mOffsetY, y = self->mCalibratedY, c4 = self->mOffsetX;
+    const f32 dy = gabi::fsubs_ppc(y, c8);
+    const f32 x = self->mCalibratedX, s0 = self->mScaleY;
+    const f32 dx = gabi::fsubs_ppc(x, c4);
+    const f32 sx = self->mScaleX;
+    const f32 py = gabi::fmuls_ppc(dy, s0);
+    const f32 px = gabi::fmuls_ppc(dx, sx);
+    self->mPointerFlags = flags;
+    self->mCalibratedX = px;
+    self->mPointerPixelX = u32(gabi::ftoi(px));
+    self->mPointerPixelY = u32(gabi::ftoi(py));
+    self->mCalibratedY = py;
 }
 
-/* 02618EDC: pointer update: the GamePad touch as pointer when enabled, else cleared */
-void pointerUpdate(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02618EDC, void, self, a, b);
-    call<void>(0x0200188C, self, a, b);
-    const u32 pad = call<u32>(0x0273CB44, load<u32>(kCtrlMgr), 8u, 0u);
-    const u32 m = load<u32>(kInstance);
-    if (load<u8>(m + 0x26C) && hasPad(m) && pad) {
-        store<f32>(self + 0x19C, load<f32>(pad + 0x110));
-        store<f32>(self + 0x1A0, load<f32>(pad + 0x114));
-        setBit(self + 0x10C, load<u32>(pad + 0x10C) & 0x8000, 0x8000);
-        setBit(self, load<u32>(pad) & 0x8000, 0x8000);
-        setBit(self + 4, load<u32>(pad + 4) & 0x8000, 0x8000);
-        setBit(self + 0xC, load<u32>(pad + 0xC) & 1, 1);
-        setBit(self + 0xC, load<u32>(pad + 0xC) & 2, 2);
-        const u32 f = load<u32>(self + 0xC);
-        if (load<u32>(pad + 0xC) & 4) {
-            pointerPos(self, f | 4);
+// pointer update: the GamePad touch as pointer when enabled, else cleared
+/* 02618EDC */
+void hdPointerController::pointerUpdate(u32 a, u32 b) {
+    hdInputUpdatePointerBase(this, a, b);
+    hdController* pad = hdInputControllerByOrder(sControllerMgr, INPUT_CONTROLLER_PAD, 0u);
+    hdInputManager* m = sInputManager;
+    if (m->mPointerEnabled && m->hasPad() && pad) {
+        this->mCalibratedX = pad->mPointerX;
+        this->mCalibratedY = pad->mPointerY;
+        setBit(&this->mRepeat, pad->mRepeat & INPUT_BUTTON_TOUCH, INPUT_BUTTON_TOUCH);
+        setBit(&this->mHold, pad->mHold & INPUT_BUTTON_TOUCH, INPUT_BUTTON_TOUCH);
+        setBit(&this->mTrigger, pad->mTrigger & INPUT_BUTTON_TOUCH, INPUT_BUTTON_TOUCH);
+        setBit(&this->mPointerFlags, pad->mPointerFlags & 1, 1);
+        setBit(&this->mPointerFlags, pad->mPointerFlags & 2, 2);
+        const u32 f = this->mPointerFlags;
+        if (pad->mPointerFlags & 4) {
+            pointerPos(this, f | 4);
             return;
         }
-        pointerPos(self, f & ~4u);
+        pointerPos(this, f & ~4u);
         return;
     }
-    const u32 h = load<u32>(self + 0x10C);
-    const f32 x = load<f32>(0x1049FFA0);
-    const u32 w0 = load<u32>(self);
-    store<f32>(self + 0x19C, x);
-    const f32 y = load<f32>(0x1049FFA4);
-    store<u32>(self + 0x10C, h & ~0x8000u);
-    store<f32>(self + 0x1A0, y);
-    const u32 w4 = load<u32>(self + 4);
-    const u32 fl = load<u32>(self + 0xC);
-    store<u32>(self, w0 & ~0x8000u);
-    store<u32>(self + 4, w4 & ~0x8000u);
-    pointerPos(self, fl & ~7u);
+    const u32 h = this->mRepeat;
+    const f32 x = (f32)sInvalidPosition.mX;
+    const u32 w0 = this->mHold;
+    this->mCalibratedX = x;
+    const f32 y = (f32)sInvalidPosition.mY;
+    this->mRepeat = h & ~u32(INPUT_BUTTON_TOUCH);
+    this->mCalibratedY = y;
+    const u32 w4 = (u32)this->mTrigger;
+    const u32 fl = this->mPointerFlags;
+    this->mHold = w0 & ~u32(INPUT_BUTTON_TOUCH);
+    this->mTrigger = w4 & ~u32(INPUT_BUTTON_TOUCH);
+    pointerPos(this, fl & ~7u);
 }
-VERIFY(0x02618EDC, pointerUpdate);
 
+/* 0261918C */
 void staticInit2() {
-    WWHD_FUNC(0x0261918C, void);
-    stdInit(0x1048DE90, 0x101F5090, 0x100E2A2C, 0x100E2A30, 0x1048DE84, 0x101F509C, 0x101F50A8);
+    stdInit(&sPointerStaticBlock, &sPointerRegister1, &sPointerMin, &sPointerMax, &sPointerStaticRange, &sPointerRegister2, &sPointerRegister3);
 }
-VERIFY(0x0261918C, staticInit2);
 
-} // namespace hd_input_ctrl
+/* WWHD glue
+data sControllerMgr 101F8AE8
+data sInputManager 101F5088
+data sInputDisposer 101F508C
+data sInputManagerTable 100E29BC
+data sInputDisposerTable 100E29E0
+data sPointerSecondTable 100E2A78
+data sPointerThirdTable 100E2A38
+data sIdentityMatrix 104A03C8
+data sOrientationFirst 104A0934
+data sOrientationSecond 104A0940
+data sOrientationThird 104A094C
+data sPointerWidth 100E29D0
+data sPointerHeight 100E29D4
+data sPointerOriginX 10143588
+data sPointerOriginY 1014358C
+data sPointerZero 100E2984
+data sInvalidPosition 1049FFA0
+data sDrcRttiGuard 101FD698
+data sDrcRtti 101FD978
+data sDrcTypeBase 100E29AC
+data sControllerRttiGuard 101FD66C
+data sControllerRtti 101FDD74
+data sControllerTypeBase 100E299C
+data sPadRttiGuard 101FD694
+data sPadRtti 101FD968
+data sPadTypeBase 100E2A00
+data sControllerTypeMap 100E2A10
+data sGameInfo 101F84DC
+data sManagerStaticBlock 1048DE74
+data sManagerRegister1 101F5064
+data sManagerMin 100E29D8
+data sManagerMax 100E29DC
+data sManagerStaticRange 1048DE68
+data sManagerRegister2 101F5070
+data sManagerRegister3 101F507C
+data sPointerStaticBlock 1048DE90
+data sPointerRegister1 101F5090
+data sPointerMin 100E2A2C
+data sPointerMax 100E2A30
+data sPointerStaticRange 1048DE84
+data sPointerRegister2 101F509C
+data sPointerRegister3 101F50A8
+
+ext 0273B0D4 hdInputManager* hdInputAllocateSingleton(u32, void*, u32)
+ext 020011CC void hdInputConstructBase(hdInputManager*, hdInputManager*)
+ext 02001924 void hdInputSetPointerBounds(hdPointerController*, f32, f32, f32, f32)
+ext 02752B0C void hdInputConstructDisposer(hdInputDisposer*, void*, u32)
+ext 0273CB44 hdController* hdInputControllerByOrder(void*, u32, u32)
+ext 0273CB8C hdController* hdInputControllerById(void*, u32)
+ext 0273D394 void hdInputAttachController(hdController*, hdController*)
+ext 0273D248 void hdInputSetPointerController(hdPointerController*, hdController*, u32)
+ext 0273BDF4 void hdInputSetPointerParameters(hdPointerController*, u32, u32, u32)
+ext 0273B050 hdInputCursor* hdInputAllocateCursor(u32, void*, u32)
+ext 0261A198 hdInputCursor* hdInputConstructCursor(hdInputCursor*)
+ext C00083C0 void hdInputPlatformUpdate(u32)
+ext 0273D2C0 void hdInputResetPointer(hdPointerController*, u32)
+ext 0273D42C void hdInputClearControllers(hdController*)
+ext 026173B0 void hdInputUpdateOrientation(hdInputOrientation*)
+ext 0261A9B8 void hdInputUpdateCursor(hdInputCursor*, hdInputPosition*)
+ext 02030AD8 void hdInputSetDrcOutput(u32)
+ext 02618944 void hdInputCopyMatrix(hdInputMatrix*, hdInputMatrix*)
+ext 02618B3C void hdInputInvertMatrix(hdInputMatrix*, hdInputMatrix*)
+ext 027200D0 void* hdInputGetOptions(void*)
+ext 0271FC30 u32 hdInputGyroEnabled(void*)
+ext 02618990 void hdInputMultiplyMatrix(hdInputMatrix*, hdInputMatrix*, hdInputMatrix*)
+ext 0273D2C8 void hdInputClearPointer(hdPointerController*)
+ext 02752BEC void hdInputDestroyDisposer(hdInputDisposer*, u32)
+ext 028F026C void hdInputConstructRegister(void*)
+ext 028ED6F8 void hdInputConstructFirstFlag(be<u8>*)
+ext 028EAB2C void hdInputConstructSecondFlag(be<u8>*)
+ext 02001728 void hdInputDestroyPointerBase(hdPointerController*, u32)
+ext 020011B8 void hdInputDestroyManagerBase(hdInputManager*, u32)
+ext 02619220 void hdInputPointerSecondBaseOperation(hdPointerController*, u32)
+ext C0008420 u32 hdInputPlatformControllerType(u32)
+ext 02001790 void hdInputConstructPointerBase(hdPointerController*)
+ext 0200188C void hdInputUpdatePointerBase(hdPointerController*, u32, u32)
+*/

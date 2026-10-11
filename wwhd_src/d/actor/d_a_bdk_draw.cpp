@@ -7,71 +7,73 @@
  * (zeldaret/tww src/d/actor/d_a_bdk.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "d/actor/d_a_bdk.h"
+#include "d/actor/d_a_bdk_draw.h"
+
+static BdkDrawTailScales tial_scale;
+static BdkDrawMaskStages kamen_pt;
+static BdkDrawBlur l_blur;
 
 using gabi::fadds_ppc;
 
-static inline f32 tial_scale(s32 i) { return gabi::load<f32>(0x101906E8 + 4 * i); }
-static inline u32 kamen_pt(u32 i) { return gabi::load<u32>(0x101906D8 + 4 * i); }
-/* 027F3F94 (the matcher names it __nw): the model data's joint tree; joint count (u16) at +8 */
-static inline u16 draw_getJointNum(u32 modelData) { return gabi::load<u16>(gabi::ea(gabi::call<void*>(0x027F3F94, modelData)) + 8); }
+
 
 /* kamen_draw (inlined). HD: the crack stage is shown by switching the mask's joint meshes on and off
  * directly (no visibility animation) */
 static inline void kamen_draw(bdk_class* i_this) {
     fopAc_ac_c* actor = i_this;
-    f32 fVar1 = (f32)i_this->m2FA * fadds_ppc(REG0_F(14), 150.0f);
-    s16 sVar1 = (s16)gabi::ftoi(cM_ssin((s32)i_this->m2C4 * 0x5100) * fVar1);
+    f32 amplitude = (f32)i_this->m2FA * fadds_ppc(REG0_F(14), 150.0f);
+    s16 yaw = (s16)gabi::ftoi(cM_ssin((s32)i_this->m2C4 * 0x5100) * amplitude);
     J3DModel* kamen_model = i_this->mp8F0;
-    s16 sVar2 = (s16)gabi::ftoi(cM_scos((s32)i_this->m2C4 * 0x4300) * fVar1);
-    f32 fVar3 = 1.0f;
+    s16 roll = (s16)gabi::ftoi(cM_scos((s32)i_this->m2C4 * 0x4300) * amplitude);
+    f32 maskScale = 1.0f;
     if (i_this->m2FA & 2) {
-        fVar3 = fadds_ppc(REG8_F(18), 1.2f);
+        maskScale = fadds_ppc(REG8_F(18), 1.2f);
     }
-    J3DModel_bdk* model = (J3DModel_bdk*)morf_model(i_this->mpMorf);
-    PSMTXCopy(bdk_getAnmMtx(model, 0x18 /* DK_JNT_J_DK_ATAMA1_e */), calc_mtx());
-    cMtx_YrotM(calc_mtx(), (s16)(sVar1 + 0x4000));
-    cMtx_ZrotM(calc_mtx(), (s16)(sVar2 - 0x4000));
+    J3DModel_bdk* model = (J3DModel_bdk*)bdkDraw_getModel(i_this->mpMorf);
+    PSMTXCopy(bdkDraw_getAnmMtx(model, DK_JNT_J_DK_ATAMA1_e), calc_mtx());
+    cMtx_YrotM(calc_mtx(), (s16)(yaw + 0x4000));
+    cMtx_ZrotM(calc_mtx(), (s16)(roll - 0x4000));
     MtxTrans(0.0f, 40.0f, 125.0f, 1);
-    MtxScale(fVar3, fVar3, fVar3, 1);
-    bdk_setBaseTRMtx(kamen_model, calc_mtx());
+    MtxScale(maskScale, maskScale, maskScale, 1);
+    bdkDraw_setBaseTRMtx(kamen_model, calc_mtx());
 
     if (i_this->m8F8 <= 3) {
         setLightTevColorType(dKy_getEnvlight(), kamen_model, &actor->tevStr);
         u32 shown = 0;
-        for (s32 i = 1; i < draw_getJointNum(gabi::load<u32>(gabi::ea(kamen_model) + 0xAC)); i++, shown++) {
-            u32 data = gabi::load<u32>(gabi::ea(kamen_model) + 0xAC);
-            u32 n = gabi::load<u32>(data + 4);
-            u32 p = gabi::load<u32>(data + 8);
-            if ((u16)i < n) p += (u16)i * 0x1C;
-            for (u32 mesh = gabi::load<u32>(p + 0x10); mesh != 0; mesh = gabi::load<u32>(mesh + 4)) {
-                u32 v = kamen_pt(i_this->m8F8);
-                gabi::store<u8>(gabi::load<u32>(mesh + 8) + 4, v == shown);
+        BdkDrawModel* mask = reinterpret_cast<BdkDrawModel*>(kamen_model);
+        for (s32 i = 1; i < BdkDraw_getJointRegistry(mask->mpModelData)->mJointCount; i++, shown++) {
+            BdkDrawModelData* data = mask->mpModelData;
+            u32 count = data->mJointCount;
+            BdkDrawJoint* joint = data->mpJoints;
+            if (static_cast<u16>(i) < count) joint += static_cast<u16>(i);
+            for (BdkDrawMesh* mesh = joint->mpMesh; mesh; mesh = mesh->mpNext) {
+                u32 visibleJoint = kamen_pt.mJoint[i_this->m8F8];
+                mesh->mpShape->mVisible = visibleJoint == shown;
             }
         }
         mDoExt_modelUpdateDL(kamen_model);
     }
 }
 
-/* 02065AB4 (HD: no real shadow and no shadow model; the blur also runs when the boss is beaten) */
+// HD: no real shadow/model; blur also runs when the boss is beaten.
+/* 02065AB4 */
 static BOOL daBdk_Draw(bdk_class* i_this) {
-    WWHD_FUNC(0x02065AB4, BOOL, i_this);
     fopAc_ac_c* actor = i_this;
-    J3DModel* model = morf_model(i_this->mpMorf);
+    J3DModel* model = bdkDraw_getModel(i_this->mpMorf);
 
     if (i_this->m259E >= 1) {
         if (i_this->m259E > 1) {
-            gabi::store<u8>(0x101F4826, (u8)i_this->m259E); /* mDoGph_gInf_c::setBlureRate */
-            gabi::call(0x025F064C);                          /* mDoGph_gInf_c::onBlure */
+            l_blur.mRate = static_cast<u8>(i_this->m259E);
+            BdkDraw_onBlure();
         } else {
             i_this->m259E = 0;
-            gabi::store<u8>(0x101F4825, 0); /* mDoGph_gInf_c::offBlure */
+            l_blur.mEnabled = 0;
         }
     }
 
-    if (!dSv_memBit_isDungeonItem(bdk_memBit(), 3) /* dComIfGs_isStageBossEnemy */) {
+    if (!BdkDraw_isDungeonItem(&l_save.mpSave->mSave.mMemory.mMembit, 3)) {
         fopAc_ac_c* player = dComIfGp_getLinkPlayer();
-        bdk_tevstr_copy(&actor->tevStr, &player->tevStr);
+        bdkDraw_copyTev(&actor->tevStr, &player->tevStr);
         setLightTevColorType(dKy_getEnvlight(), model, &actor->tevStr);
         i_this->mpMorf->entryDL();
 
@@ -85,7 +87,7 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
                 continue;
             }
             for (s32 i = 0; i < 9; i++) {
-                f32 scale = tial_scale(i) * l_HIO.m00C;
+                f32 scale = tial_scale.mScale[i] * l_HIO.m00C;
                 cXyz* pos = &tail->m024[i];
                 MtxTrans(pos->x, pos->y, pos->z, 0);
                 MtxScale(scale, scale, scale, 1);
@@ -93,12 +95,12 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
                 cMtx_YrotM(calc_mtx(), angle->y);
                 cMtx_XrotM(calc_mtx(), angle->x);
                 J3DModel* m = tail->m000[i];
-                bdk_setBaseTRMtx(m, calc_mtx());
+                bdkDraw_setBaseTRMtx(m, calc_mtx());
                 setLightTevColorType(dKy_getEnvlight(), m, &actor->tevStr);
                 mDoExt_modelUpdateDL(m);
             }
         }
-        dSnap_RegistFig(0xCA /* DSNAP_TYPE_BDK */, actor, 1.0f, 1.0f, 1.0f);
+        dSnap_RegistFig(DSNAP_TYPE_BDK, actor, 1.0f, 1.0f, 1.0f);
     }
 
     /* kamen_break_draw */
@@ -126,7 +128,7 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
         }
     }
     /* obj_draw */
-    settingTevStruct(dKy_getEnvlight(), 4 /* TEV_TYPE_BG3 */, &actor->current.pos, &i_this->m6224);
+    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG3, &actor->current.pos, &i_this->m6224);
     J3DModel* m = i_this->mp62D8;
     setLightTevColorType(dKy_getEnvlight(), m, &i_this->m6224);
     mDoExt_modelUpdateDL(m);
@@ -139,4 +141,13 @@ static BOOL daBdk_Draw(bdk_class* i_this) {
     }
     return TRUE;
 }
-VERIFY(0x02065AB4, daBdk_Draw);
+
+
+/* WWHD glue
+ data tial_scale 101906E8
+ data kamen_pt 101906D8
+ data l_blur 101F4825
+ ext 027F3F94 BdkDrawJointRegistry* BdkDraw_getJointRegistry(BdkDrawModelData*)
+ ext 025F064C void BdkDraw_onBlure()
+ ext 025B9100 BOOL BdkDraw_isDungeonItem(dSv_memBit_c*, s32)
+*/

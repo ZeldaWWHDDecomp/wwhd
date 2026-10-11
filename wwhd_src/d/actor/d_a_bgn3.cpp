@@ -5,1681 +5,1799 @@
  * Ported from the GameCube decompilation
  * (zeldaret/tww d_a_bgn3.cpp) and the WWHD code.
  */
-#include "gabi.h"
+#include "d/actor/d_a_bgn3.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/f_op/f_op_actor_mng.h"
 #include <bit>
 #include <cmath>
-namespace bgn3 {
-using gabi::call;
-using gabi::load;
-using gabi::store;
-u32 bossSearch(u32 a, u32 ignored) {
-  WWHD_FUNC(0x0208FC14, u32, a, ignored);
-  if (call<s32>(0x025D4604, a) && a && load<s16>(a + 8) == 0xF3)
-    return a;
-  return 0;
-}
-VERIFY(0x0208FC14, bossSearch);
-u32 baitSearch(u32 a, u32 ignored) {
-  WWHD_FUNC(0x020900A4, u32, a, ignored);
-  if (call<s32>(0x025D4604, a) && a && load<s16>(a + 8) == 0xDD)
-    return a;
-  return 0;
-}
-VERIFY(0x020900A4, baitSearch);
-u32 treeCount(u32 a, u32 ignored) {
-  WWHD_FUNC(0x02090624, u32, a, ignored);
-  if (call<s32>(0x025D4604, a) && a && load<s16>(a + 8) == 0xCD)
-    store<u32>(0x1046225C, load<u32>(0x1046225C) + 1);
-  return 0;
-}
-VERIFY(0x02090624, treeCount);
-bool ground(u32 a) {
-  WWHD_FUNC(0x02090340, bool, a);
-  f32 floor = load<f32>(0x1047B634) + 150.0f;
-  if (!(load<f32>(a + 0x318) > floor)) {
-    store<f32>(a + 0x318, floor);
-    store<f32>(a + 0x340, 0.0f);
-    return true;
-  }
-  return false;
-}
-VERIFY(0x02090340, ground);
-void position(u32 a) {
-  WWHD_FUNC(0x02090384, void, a);
-  gabi::Local<f32[3]> v, out;
-  store<f32>(v.a, 0.0f);
-  store<f32>(v.a + 4, 0.0f);
-  store<f32>(v.a + 8, load<f32>(a + 0x370));
-  call<void>(0x025F1884, load<u32>(0x1018C7B0), load<s16>(a + 0x322));
-  call<void>(0x0200FCD8, v.a, out.a);
-  store<f32>(a + 0x33C, load<f32>(out.a));
-  store<f32>(a + 0x344, load<f32>(out.a + 8));
-  call<void>(0x028E8D88, a + 0x314, a + 0x33C, a + 0x314);
-  f32 delta = load<f32>(0x1047B61C) - 5.0f;
-  store<f32>(a + 0x340, load<f32>(a + 0x340) + delta);
-}
-VERIFY(0x02090384, position);
-bool isDelete(u32 a) {
-  WWHD_FUNC(0x02090908, bool, a);
-  return true;
-}
-VERIFY(0x02090908, isDelete);
-bool remove(u32 a) {
-  WWHD_FUNC(0x02090910, bool, a);
-  call<s32>(0x025204C8, a + 0x3C8, 0x10009058u);
-  if (load<u8>(a + 0x12388)) {
-    s8 n = load<s8>(0x10462288);
-    store<u8>(0x1019119C, 0);
-    call<void>(0x025F0A18, n);
-  }
-  call<void>(0x025E1B34, a + 0x12130);
-  return true;
-}
-VERIFY(0x02090910, remove);
-f32 tableSin(u32 a, u32 angle) {
-  WWHD_FUNC(0x02091704, f32, a, angle);
-  return load<f32>(a + ((angle & 65535) >> 3) * 8);
-}
-VERIFY(0x02091704, tableSin);
-f32 tableCos(u32 a, u32 angle) {
-  WWHD_FUNC(0x02091718, f32, a, angle);
-  return load<f32>(a + ((angle & 65535) >> 3) * 8 + 4);
-}
-VERIFY(0x02091718, tableCos);
-void hioDtor(u32 a, u32 flags) {
-  WWHD_FUNC(0x02094448, void, a, flags);
-  if (a && (flags & 1))
-    call<void>(0x0273AF40, a);
-}
-VERIFY(0x02094448, hioDtor);
-void partDtor(u32 a, u32 flags) {
-  WWHD_FUNC(0x0209445C, void, a, flags);
-  if (a) {
-    call<void>(0x025E99E0, a + 0x1890, 2);
-    call<void>(0x02515AE8, a + 0x2AC, 2);
-    call<void>(0x02082DDC, a + 4, 2);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
-}
-VERIFY(0x0209445C, partDtor);
-void actorDtor(u32 a, u32 flags) {
-  WWHD_FUNC(0x020944C8, void, a, flags);
-  if (a) {
-    call<void>(0x02082DDC, a + 0x122CC, 2);
-    call<void>(0x025EB8B8, a + 0x12140, 2);
-    call<void>(0x02515AE8, a + 0x12004, 2);
-    call<void>(0x02515AE8, a + 0x11ED8, 2);
-    call<void>(0x02515860, a + 0x11E9C, 2);
-    call<void>(0x028F0164, a + 0x1BE8, 10, 0x19D8, 0x0209445Cu, 0, 0);
-    call<void>(0x02082DDC, a + 0x1B20, 2);
-    call<void>(0x025E99E0, a + 0x19D8, 2);
-    call<void>(0x02082DDC, a + 0x488, 2);
-    call<void>(0x02082DDC, a + 0x3D4, 2);
-    call<void>(0x025D50BC, a, 0);
-    if (flags & 1)
-      call<void>(0x0273AF40, a);
-  }
-}
-VERIFY(0x020944C8, actorDtor);
-void genMessage(u32 a, u32 context) { WWHD_FUNC(0x020945C8, void, a, context); }
-VERIFY(0x020945C8, genMessage);
 
+const gc_tu_data gc_tu = {.safeString = 0x10008F7C};
+static Bgn3BossView* bgn;
+static fopAc_ac_c* esa;
+static GXColor ke_color;
+static daBgn3_HIO_c l_HIO;
+static u8 hio_set;
+static u32 ki_all_count;
+static cXyz zero;
+static Bgn3HeaderStatics headerStatics;
+static Bgn3PiConstants piConstants;
+static Bgn3LightInit defaultLightInit;
+
+static f32 size_d[] = {1.0f, 0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, 0.6f};
+static u16 ke_max[] = {40, 35, 30, 25, 20, 15, 15};
+static s16 fl_check_d[] = {21, 19, 17, 15, 13, 11, 9, 7, 5};
+
+void end(u32 a);
+static f32 singleAdd(f32 a, f32 b);
+void move_se_set(u32 a);
+void move(u32 a);
+f32 tableSin(u32 a, u32 angle);
+f32 tableCos(u32 a, u32 angle);
+u32 actorCtor(u32 a);
+
+/* 020914F4 */
 u32 hioCtor(u32 a) {
-  WWHD_FUNC(0x020914F4, u32, a);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x58);
-  if (!a)
-    return 0;
-  store<s16>(a + 0x18, 1200);
-  store<f32>(a + 0xC, 60.0f);
-  store<u8>(a + 1, 0);
-  store<f32>(a + 4, 50.0f);
-  store<u8>(a + 2, 0);
-  store<s8>(a, -1);
-  store<s16>(a + 0x12, 3);
-  store<s16>(a + 0xA, 3);
-  store<s16>(a + 0x10, 1000);
-  store<s16>(a + 0x1A, 3);
-  store<s16>(a + 8, 800);
-  store<u32>(a + 0x54, 0x10008FF4);
-  store<s16>(a + 0x1E, 40);
-  store<s16>(a + 0x22, 10);
-  store<s16>(a + 0x1C, 60);
-  store<s16>(a + 0x26, 45);
-  store<s16>(a + 0x28, 120);
-  store<s16>(a + 0x24, 20);
-  store<s16>(a + 0x20, 30);
-  store<f32>(a + 0x14, 80.0f);
-  store<u8>(a + 0x3A, 1);
-  store<f32>(a + 0x30, 5.0f);
-  store<s16>(a + 0x2C, 250);
-  store<f32>(a + 0x48, -8.0f);
-  store<f32>(a + 0x34, 0.5f);
-  store<f32>(a + 0x40, 45.0f);
-  store<s16>(a + 0x2A, 200);
-  store<s16>(a + 0x4E, 152);
-  store<f32>(a + 0x3C, 150.0f);
-  store<s16>(a + 0x4C, 188);
-  store<s16>(a + 0x38, 3);
-  store<f32>(a + 0x44, 8.0f);
-  store<s16>(a + 0x50, 66);
-  return a;
+    if (!a)
+        a = Bgn3Bindings::operator_new(0x58);
+    if (!a)
+        return 0;
+    auto* hio = gabi::at<daBgn3_HIO_c>(a);
+    hio->m1C = 1200;
+    hio->m10 = 60.0f;
+    hio->m05 = 0;
+    hio->m08 = 50.0f;
+    hio->m06 = 0;
+    hio->mNo = -1;
+    hio->m16 = 3;
+    hio->m0E = 3;
+    hio->m14 = 1000;
+    hio->m1E = 3;
+    hio->m0C = 800;
+    hio->__vtbl = 0x10008FF4;
+    hio->m22 = 40;
+    hio->m26 = 10;
+    hio->m20 = 60;
+    hio->m2A = 45;
+    hio->m2C = 120;
+    hio->m28 = 20;
+    hio->m24 = 30;
+    hio->m18 = 80.0f;
+    hio->m3E = 1;
+    hio->m34 = 5.0f;
+    hio->m30 = 250;
+    hio->m4C = -8.0f;
+    hio->m38 = 0.5f;
+    hio->m44 = 45.0f;
+    hio->m2E = 200;
+    hio->m52 = 152;
+    hio->m40 = 150.0f;
+    hio->m50 = 188;
+    hio->m3C = 3;
+    hio->m48 = 8.0f;
+    hio->m54 = 66;
+    return a;
 }
-VERIFY(0x020914F4, hioCtor);
-void staticInit() {
-  WWHD_FUNC(0x02091648, void);
-  store<u32>(0x10462274, 0);
-  store<u32>(0x1046226C, 0);
-  store<u32>(0x10462278, 0);
-  store<u32>(0x10462270, 0);
-  call<void>(0x028F026C, 0x10191288u);
-  f32 low = load<f32>(0x10009098), high = load<f32>(0x1000909C);
-  store<f32>(0x10462260, low);
-  store<f32>(0x10462264, high);
-  call<void>(0x028ED6F8, 0x10462268u);
-  call<void>(0x028F026C, 0x10191294u);
-  call<void>(0x028EAB2C, 0x10462269u);
-  call<void>(0x028F026C, 0x101912A0u);
-  store<f32>(0x10462284, 0.0f);
-  store<f32>(0x1046227C, 0.0f);
-  store<f32>(0x10462280, 0.0f);
-  hioCtor(0x10462288);
-}
-VERIFY(0x02091648, staticInit);
-u32 actorCtor(u32 a) {
-  WWHD_FUNC(0x02090F08, u32, a);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x1238C);
-  if (!a)
-    return 0;
-  call<void>(0x025D4ED0, a);
-  store<u32>(a + 0xB4, 0x10009004);
-  call<void>(0x02080404, a + 0x3D4);
-  call<void>(0x02080404, a + 0x488);
-  call<void>(0x025E9960, a + 0x19D8);
-  call<void>(0x02080404, a + 0x1B20);
-  call<void>(0x028EFFD0, a + 0x1BE8, 10, 0x19D8, 0x02090D4Cu);
-  call<void>(0x0200BD2C, a + 0x11E9C);
-  call<void>(0x02515DA0, a + 0x11EB8);
-  store<u32>(a + 0x11EB4, 0x1004AE88);
-  store<u32>(a + 0x11EB8, 0x1004AEC0);
-  call<void>(0x025166F0, a + 0x11ED8);
-  call<void>(0x025166F0, a + 0x12004);
-  call<void>(0x025EB82C, a + 0x12140);
-  call<void>(0x02080404, a + 0x122CC);
-  return a;
-}
-VERIFY(0x02090F08, actorCtor);
 
-bool draw(u32 a) {
-  WWHD_FUNC(0x0208FC64, bool, a);
-  u32 boss = call<u32>(0x025DE508, 0x0208FC14u, a);
-  store<u32>(0x10462250, boss);
-  if (boss && load<s8>(boss + 0x3D5) == 2 && load<u8>(0x104622C2)) {
-    store<u8>(0x10462258, 188);
-    store<u8>(0x10462259, 152);
-    store<u8>(0x1046225A, 66);
-    store<u8>(0x1046225B, 255);
-    call<void>(0x025EA548, a + 0x19D8, 5, 0x10462258u, 3, a + 0x110,
-               load<f32>(0x104622CC));
-    u32 play = call<u32>(0x025200D4);
-    u32 vt = load<u32>(a + 0x1B08);
-    u32 index = gabi::call_ptr<u32>(load<u32>(vt + 0x14), a + 0x19D8);
-    call<void>(0x025EDD04, play + 0x5FB4 + index * 0x9C, a + 0x19D8);
-    for (int i = 0; i < 6; ++i) {
-      u32 part = a + 0x1BE8 + 0x19D8 * i;
-      call<void>(0x025EA548, part + 0x1890, 5, 0x10462258u, 3, a + 0x110,
-                 load<f32>(0x104622CC));
-      play = call<u32>(0x025200D4);
-      vt = load<u32>(part + 0x19C0);
-      index = gabi::call_ptr<u32>(load<u32>(vt + 0x14), part + 0x1890);
-      call<void>(0x025EDD04, play + 0x5FB4 + index * 0x9C, part + 0x1890);
-    }
-  }
-  return true;
+/* 0208FC14 */
+u32 bgn_s_sub(u32 a, u32 ignored) {
+    auto* actor = gabi::at<fopAc_ac_c>(a);
+    if (fopAc_IsActor(actor) && a && fpcM_GetName(actor) == fpcNm_BGN_e)
+        return a;
+    return 0;
 }
-VERIFY(0x0208FC64, draw);
-bool execute(u32 a) {
-  WWHD_FUNC(0x02090680, bool, a);
-  call<u32>(0x025200D4);
-  u32 boss = call<u32>(0x025DE508, 0x0208FC14u, a);
-  store<u32>(0x10462250, boss);
-  if (!boss)
-    return true;
-  u8 dbg = load<u8>(0x1046228A);
-  if (dbg)
-    store<u8>(a + 0x3A1, dbg);
-  u32 bait = call<u32>(0x025DE508, 0x020900A4u, a);
-  boss = load<u32>(0x10462250);
-  store<u32>(0x10462254, bait);
-  if (load<s8>(boss + 0x3D5) != 2) {
-    store<s16>(a + 0x11E66, 10);
-    store<f32>(a + 0x31C, 0.0f);
-    store<u32>(a + 0x39C, 0);
-    store<f32>(a + 0x314, 0.0f);
-    store<f32>(a + 0x318, 30000.0f);
-    return true;
-  }
-  u32 state = a + 0x11E64;
-  if (load<s16>(state + 2) == 10) {
-    u32 z = load<u32>(a + 0x2F4), x = load<u32>(a + 0x2EC);
-    store<u32>(a + 0x31C, z);
-    u32 y = load<u32>(a + 0x2F0);
-    store<u32>(a + 0x314, x);
-    store<u32>(a + 0x318, y);
-    store<s16>(state + 2, 0);
-    store<s16>(state + 0x28, 180);
-    store<s16>(state + 8, 180);
-  }
-  store<u32>(a + 0x39C, 4);
-  call<void>(0x0200ED84, state + 0x2D8, 0.0f, 1.0f, 0.01f);
-  s16 counter = load<s16>(state);
-  store<s16>(state, counter + 1);
-  store<u8>(a + 0x38A, 0x22);
-  for (int i = 0; i < 5; ++i) {
-    s16 n = load<s16>(state + 0x22 + 2 * i);
-    if (n)
-      store<s16>(state + 0x22 + 2 * i, n - 1);
-  }
-  s16 t = load<s16>(state + 0x2C);
-  if (t)
-    store<s16>(state + 0x2C, t - 1);
-  t = load<s16>(state + 0x2E);
-  s16 first = load<s16>(state + 0xC);
-  if (t)
-    store<s16>(state + 0x2E, t - 1);
-  s16 second = load<s16>(state + 0x14);
-  if (first)
-    store<s16>(state + 0xC, first - 1);
-  if (second)
-    store<s16>(state + 0x14, second - 1);
-  call<void>(0x02091730, a);
-  u32 count = load<u32>(state + 0x520);
-  if (count) {
-    store<u32>(state + 0x520, count - 1);
-    store<u32>(0x1046225C, 0);
-    call<u32>(0x025DE508, 0x02090624u, a);
-    if (load<s32>(0x1046225C) < 20) {
-      gabi::Local<f32[3]> pos;
-      store<f32>(pos.a, call<f32>(0x02019918, 2500.0f));
-      store<f32>(pos.a + 4, call<f32>(0x020198D8, 500.0f) + 3500.0f);
-      store<f32>(pos.a + 8, call<f32>(0x02019918, 2500.0f));
-      call<u32>(0x025D5834, 0xCD, 3, pos.a, load<s8>(a + 0x326), 0, 0, -1, 0);
-    }
-  }
-  return true;
-}
-VERIFY(0x02090680, execute);
 
-bool grCheck(u32 a, u32 pos) {
-  WWHD_FUNC(0x0208FD9C, bool, a, pos);
-  gabi::Local<u8[108]> line;
-  gabi::Local<f32[3]> start, end;
-  call<void>(0x02008FEC, line.a);
-  f32 x = load<f32>(pos), y = load<f32>(pos + 4), z = load<f32>(pos + 8);
-  store<u32>(line.a + 0x68, 1);
-  store<u8>(line.a + 0x5D, 0);
-  store<u8>(line.a + 0x62, 0);
-  store<u8>(line.a + 0x60, 0);
-  store<u32>(line.a + 0x64, 0x10008FD4);
-  store<u32>(line.a + 0x20, 0x10008FC4);
-  store<u8>(line.a + 0x61, 0);
-  store<f32>(start.a + 8, z);
-  store<f32>(end.a + 4, y - 1000.0f);
-  store<f32>(start.a, x);
-  store<u32>(line.a, line.a + 0x58);
-  store<f32>(end.a + 8, z);
-  store<u32>(line.a + 0x10, 0x10008FB4);
-  store<u8>(line.a + 0x5F, 0);
-  store<u32>(line.a + 4, line.a + 0x64);
-  store<f32>(end.a, x);
-  store<u8>(line.a + 0x5C, 0);
-  store<u8>(line.a + 0x5E, 0);
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<f32>(start.a + 4, y + 200.0f);
-  call<void>(0x024F1AFC, line.a, start.a, end.a, a);
-  s32 hit = call<s32>(0x02008860, call<u32>(0x025200D4) + 0x12A0, line.a);
-  bool water = false;
-  if (hit) {
-    u32 zc = load<u32>(line.a + 0x38), xc = load<u32>(line.a + 0x30),
-        yc = load<u32>(line.a + 0x34);
-    store<u32>(pos, xc);
-    store<u32>(pos + 4, yc);
-    store<u32>(pos + 8, zc);
-    store<f32>(pos + 4, load<f32>(0x1047B630) - 2.0f);
-    water = call<s32>(0x024EF0F4, call<u32>(0x025200D4) + 0x12A0,
-                      line.a + 0x14) == 0x13;
-  }
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<u32>(line.a + 0x64, 0x10008FA4);
-  store<u32>(line.a + 0x20, 0x10008F94);
-  call<void>(0x02008B4C, line.a, 0);
-  return !water;
+/* 0208FC64 */
+bool daBgn3_Draw(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 boss = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&bgn_s_sub), a);
+    bgn = gabi::at<Bgn3BossView>(boss);
+    if (boss && static_cast<s8>(gabi::at<Bgn3BossView>(boss)->m02B5) == 2 &&
+        static_cast<u8>(l_HIO.m3E)) {
+        ke_color.r = 188;
+        ke_color.g = 152;
+        ke_color.b = 66;
+        ke_color.a = 255;
+        Bgn3Bindings::mDoExt_3DlineMat0_update(a + 0x19D8, 5, gabi::ea(&ke_color), 3, a + 0x110,
+                                               static_cast<f32>(l_HIO.m48));
+        u32 play = dComIfGp_ea();
+        u32 index = bgn3LineMaterialID(&i_this->mLineMat);
+        Bgn3Bindings::mDoExt_3DlineMatSortPacket_setMat(play + 0x5FB4 + index * 0x9C, a + 0x19D8);
+        for (int i = 0; i < 6; ++i) {
+            u32 part = a + 0x1BE8 + 0x19D8 * i;
+            Bgn3Bindings::mDoExt_3DlineMat0_update(part + 0x1890, 5, gabi::ea(&ke_color), 3,
+                                                   a + 0x110, static_cast<f32>(l_HIO.m48));
+            play = dComIfGp_ea();
+            index = bgn3LineMaterialID(&bgn3Part(part)->mPart3LineMat);
+            Bgn3Bindings::mDoExt_3DlineMatSortPacket_setMat(play + 0x5FB4 + index * 0x9C,
+                                                            part + 0x1890);
+        }
+    }
+    return true;
 }
-VERIFY(0x0208FD9C, grCheck);
-void dropEffect(u32 a) {
-  WWHD_FUNC(0x0208FF44, void, a);
-  gabi::Local<f32[3]> pos;
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318);
-  store<f32>(pos.a, x);
-  f32 z = load<f32>(a + 0x31C);
-  store<f32>(pos.a + 4, y);
-  store<f32>(pos.a + 8, z);
-  if (grCheck(a, pos.a))
-    return;
-  for (int i = 0; i < 3; ++i)
-    call<u32>(0x025A847C, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0,
-              0x8414 + i, pos.a, 0, 0, 255, 0, -1, 0, 0, 0);
-  call<void>(0x025A8D40, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0x840E,
-             pos.a, 255, 0x101D5E98u, 0x101D5E98u, 0);
-  call<void>(0x025A8D40, load<u32>(call<u32>(0x025200D4) + 0x5AB0), 0x8408,
-             pos.a, 255, 0x101D5E98u, 0x101D5E98u, 0);
+
+/* 0208FD9C */
+bool gr_check(u32 a, u32 pos) {
+    auto* position = gabi::at<cXyz>(pos);
+    Bgn3LinChk line;
+    cXyz start;
+    cXyz end;
+    Bgn3Bindings::cBgS_LinChk_ct(gabi::ea(&line));
+    f32 x = static_cast<f32>(position->x), y = static_cast<f32>(position->y),
+        z = static_cast<f32>(position->z);
+    line.mGrp = 1;
+    line.mPass[1] = 0;
+    line.mPass[6] = 0;
+    line.mPass[4] = 0;
+    line.__vtbl_64 = 0x10008FD4;
+    line.__vtbl_20 = 0x10008FC4;
+    line.mPass[5] = 0;
+    start.z = z;
+    end.y = y - 1000.0f;
+    start.x = x;
+    line.mpPolyPassChk = gabi::ea(&line) + 0x58;
+    end.z = z;
+    line.__vtbl_10 = 0x10008FB4;
+    line.mPass[3] = 0;
+    line.mpGrpPassChk = gabi::ea(&line) + 0x64;
+    end.x = x;
+    line.mPass[0] = 0;
+    line.mPass[2] = 0;
+    line.__vtbl_58 = 0x10008FE4;
+    start.y = y + 200.0f;
+    Bgn3Bindings::dBgS_LinChk_Set(gabi::ea(&line), gabi::ea(&start), gabi::ea(&end), a);
+    s32 hit = Bgn3Bindings::cBgS_LineCross(dComIfGp_ea() + 0x12A0, gabi::ea(&line));
+    bool water = false;
+    if (hit) {
+        u32 zc = static_cast<u32>(bgn3Word(line.mCross.z)),
+            xc = static_cast<u32>(bgn3Word(line.mCross.x)),
+            yc = static_cast<u32>(bgn3Word(line.mCross.y));
+        bgn3Word(position->x) = xc;
+        bgn3Word(position->y) = yc;
+        bgn3Word(position->z) = zc;
+        position->y = REG_F(0, 8) - 2.0f;
+        water = Bgn3Bindings::dBgS_GetAttributeCode(dComIfGp_ea() + 0x12A0,
+                                                    gabi::ea(&line) + 0x14) == 0x13;
+    }
+    line.__vtbl_58 = 0x10008FE4;
+    line.__vtbl_64 = 0x10008FA4;
+    line.__vtbl_20 = 0x10008F94;
+    Bgn3Bindings::cBgS_LinChk_dt(gabi::ea(&line), 0);
+    return !water;
 }
-VERIFY(0x0208FF44, dropEffect);
-bool wall(u32 a) {
-  WWHD_FUNC(0x020900F4, bool, a);
-  gabi::Local<f32[3]> delta, v, out;
-  call<void>(0x0201ADE0, a + 0x314, delta.a, a + 0x300);
-  u32 z = load<u32>(delta.a + 8), x = load<u32>(delta.a);
-  store<u32>(v.a + 8, z);
-  store<u32>(v.a, x);
-  u32 y = load<u32>(delta.a + 4);
-  store<u32>(v.a + 4, y);
-  store<f32>(v.a + 4, 0.0f);
-  f32 sq = call<f32>(0x028E8DD0, v.a);
-  f32 len = call<f32>(0x028F4384, sq);
-  if (!(len > 0.0f))
+
+/* 0208FF44 */
+void drop_eff_set(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    cXyz pos;
+    f32 x = static_cast<f32>(i_this->current.pos.x), y = static_cast<f32>(i_this->current.pos.y);
+    pos.x = x;
+    f32 z = static_cast<f32>(i_this->current.pos.z);
+    pos.y = y;
+    pos.z = z;
+    if (gr_check(a, gabi::ea(&pos)))
+        return;
+    for (int i = 0; i < 3; ++i)
+        Bgn3Bindings::dPa_control_c_set(gabi::ea(dComIfGp_getParticle()), 0, 0x8414 + i,
+                                        gabi::ea(&pos), 0, 0, 255, 0, -1, 0, 0, 0);
+    Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(dComIfGp_getParticle()), 0x840E, gabi::ea(&pos),
+                                          255, 0x101D5E98u, 0x101D5E98u, 0);
+    Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(dComIfGp_getParticle()), 0x8408, gabi::ea(&pos),
+                                          255, 0x101D5E98u, 0x101D5E98u, 0);
+}
+
+/* 020900A4 */
+u32 esa_s_sub(u32 a, u32 ignored) {
+    auto* actor = gabi::at<fopAc_ac_c>(a);
+    if (fopAc_IsActor(actor) && a && fpcM_GetName(actor) == fpcNm_ESA_e)
+        return a;
+    return 0;
+}
+
+void copyModelMatrix(u32 model, bool alternateOrder = false) {
+    Mtx34* matrix = calc_mtx();
+    auto* object = gabi::at<J3DModel>(model);
+    f32 cells[12];
+    for (int i = 0; i < 12; ++i)
+        cells[i] = matrix->m[i / 4][i % 4];
+    // HD: GHS emitted two store orders at the inline assignment sites.
+    if (alternateOrder) {
+        for (int i : {5, 6, 7, 9, 10, 11, 0, 1, 2, 3, 4, 8})
+            object->mBaseTransformMtx.m[i / 4][i % 4] = cells[i];
+    } else {
+        for (int i : {0, 1, 2, 3, 4, 8, 5, 6, 7, 9, 10, 11})
+            object->mBaseTransformMtx.m[i / 4][i % 4] = cells[i];
+    }
+}
+
+/* inlined into caller */
+void part_control(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    cLib_addCalcAngleS2(&i_this->shape_angle.y, static_cast<s16>(i_this->current.angle.y), 4,
+                        0x1000);
+    cLib_addCalcAngleS2(&i_this->shape_angle.x, static_cast<s16>(i_this->current.angle.x), 8,
+                        0x400);
+    cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->shape_angle.y));
+    cMtx_XrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.x));
+    cXyz direction;
+    cXyz delta;
+    cXyz output;
+    direction.x = 0.0f;
+    direction.y = 0.0f;
+    direction.z = singleAdd(REG_F(0, 3), -300.0f);
+    MtxPosition(&direction, &delta);
+    Bgn3Bindings::cXyz_add(a + 0x314, gabi::ea(&output), gabi::ea(&delta));
+    bgn3Word(i_this->m0FD7C.x) = static_cast<u32>(bgn3Word(output.x));
+    bgn3Word(i_this->m0FD7C.y) = static_cast<u32>(bgn3Word(output.y));
+    bgn3Word(i_this->m0FD7C.z) = static_cast<u32>(bgn3Word(output.z));
+    for (int i = 0; i < 9; ++i) {
+        f32 size = singleAdd(REG_F(0, 11), 1.7f);
+        f32 factor = size_d[i];
+        i_this->mParts[i].m00F4 = factor * size;
+    }
+    f32 separation = singleAdd(REG_F(0, 8), 150.0f);
+    f32 stiffness = static_cast<f32>(i_this->m0FDB8);
+    Bgn3LinChk line;
+    Bgn3Bindings::cBgS_LinChk_ct(gabi::ea(&line));
+    f32 gravity = singleAdd(REG_F(0, 6), -5.0f);
+    for (u32 i = 0; i < 8; ++i)
+        line.mPass[i] = 0;
+    line.mpPolyPassChk = gabi::ea(&line) + 0x58;
+    line.mpGrpPassChk = gabi::ea(&line) + 0x64;
+    line.__vtbl_10 = 0x10008FB4;
+    line.mGrp = 1;
+    line.__vtbl_64 = 0x10008FD4;
+    line.__vtbl_58 = 0x10008FE4;
+    line.__vtbl_20 = 0x10008FC4;
+    u32 firstPart = a + 0x1BE8;
+    bgn3Word(bgn3Part(firstPart)->m00D4.x) = static_cast<u32>(bgn3Word(i_this->m0FD7C.x));
+    bgn3Word(bgn3Part(firstPart)->m00D4.y) = static_cast<u32>(bgn3Word(i_this->m0FD7C.y));
+    bgn3Word(bgn3Part(firstPart)->m00D4.z) = static_cast<u32>(bgn3Word(i_this->m0FD7C.z));
+    cMtx_YrotS(calc_mtx(), static_cast<s16>(i_this->shape_angle.y));
+    cMtx_XrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.x));
+    direction.x = 0.0f;
+    direction.y = 0.0f;
+    direction.z = -static_cast<f32>(i_this->m0FDBC);
+    MtxPosition(&direction, &delta);
+    for (int i = 1; i < 10; ++i) {
+        u32 part = firstPart + i * 0x19D8;
+        u32 prev = part - 0x19D8;
+        f32 floor = singleAdd(REG_F(0, 19), 70.0f) * static_cast<f32>(bgn3Part(prev)->m00F4);
+        f32 y = singleAdd(singleAdd(static_cast<f32>(bgn3Part(part)->m00D4.y), gravity),
+                          static_cast<f32>(bgn3Part(part)->m00E8.y));
+        f32 x = static_cast<f32>(bgn3Part(part)->m00D4.x);
+        f32 prevZ = static_cast<f32>(bgn3Part(prev)->m00D4.z);
+        f32 prevX = static_cast<f32>(bgn3Part(prev)->m00D4.x);
+        if (!(y > floor))
+            y = floor;
+        f32 z = static_cast<f32>(bgn3Part(part)->m00D4.z);
+        f32 dx = singleAdd(x - prevX, static_cast<f32>(bgn3Part(part)->m00E8.x));
+        f32 dz = singleAdd(z - prevZ, static_cast<f32>(bgn3Part(part)->m00E8.z));
+        dx = singleAdd(dx, static_cast<f32>(delta.x));
+        dz = singleAdd(dz, static_cast<f32>(delta.z));
+        f32 dy = y - static_cast<f32>(bgn3Part(prev)->m00D4.y);
+        s16 heading = cM_atan2s(dx, dz);
+        bgn3Part(prev)->m00E2 = heading;
+        f32 horizontal = Bgn3Bindings::sqrtf(gabi::fmadds(dx, dx, dz * dz));
+        u32 pitch = cM_atan2s(dy, horizontal);
+        bgn3Part(prev)->m00E0 = (s16)(0u - pitch);
+        cMtx_YrotS(calc_mtx(), static_cast<s16>(bgn3Part(prev)->m00E2));
+        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(prev)->m00E0));
+        direction.y = 0.0f;
+        direction.x = 0.0f;
+        direction.z = separation * static_cast<f32>(bgn3Part(prev)->m00F4);
+        cXyz segment;
+        MtxPosition(&direction, &segment);
+        u32 oldX = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.x));
+        u32 oldY = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.y));
+        bgn3Word(bgn3Part(part)->m00E8.x) = oldX;
+        u32 oldZ = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.z));
+        bgn3Word(bgn3Part(part)->m00E8.y) = oldY;
+        bgn3Word(bgn3Part(part)->m00E8.z) = oldZ;
+        Bgn3Bindings::cXyz_add(prev + 0x288, gabi::ea(&output), gabi::ea(&segment));
+        bgn3Word(bgn3Part(part)->m00D4.x) = static_cast<u32>(bgn3Word(output.x));
+        f32 vx =
+            static_cast<f32>(bgn3Part(part)->m00D4.x) - static_cast<f32>(bgn3Part(part)->m00E8.x);
+        bgn3Word(bgn3Part(part)->m00D4.y) = static_cast<u32>(bgn3Word(output.y));
+        bgn3Word(bgn3Part(part)->m00D4.z) = static_cast<u32>(bgn3Word(output.z));
+        f32 vy =
+            static_cast<f32>(bgn3Part(part)->m00D4.y) - static_cast<f32>(bgn3Part(part)->m00E8.y);
+        f32 vz =
+            static_cast<f32>(bgn3Part(part)->m00D4.z) - static_cast<f32>(bgn3Part(part)->m00E8.z);
+        bgn3Part(part)->m00E8.x = vx * stiffness;
+        bgn3Part(part)->m00E8.y = vy * stiffness;
+        bgn3Part(part)->m00E8.z = vz * stiffness;
+    }
+    cLib_addCalc2(&i_this->m0FDB8, static_cast<f32>(l_HIO.m38), 1.0f, 0.002f);
+    cLib_addCalc2(&i_this->m0FDBC, static_cast<f32>(l_HIO.m34), 1.0f, 0.5f);
+    line.__vtbl_58 = 0x10008FE4;
+    line.__vtbl_64 = 0x10008FA4;
+    line.__vtbl_20 = 0x10008F94;
+    Bgn3Bindings::cBgS_LinChk_dt(gabi::ea(&line), 0);
+}
+
+/* 020900F4 */
+bool checkWall(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    cXyz delta;
+    cXyz v;
+    cXyz out;
+    Bgn3Bindings::cXyz_subtract(a + 0x314, gabi::ea(&delta), a + 0x300);
+    u32 z = static_cast<u32>(bgn3Word(delta.z)), x = static_cast<u32>(bgn3Word(delta.x));
+    bgn3Word(v.z) = z;
+    bgn3Word(v.x) = x;
+    u32 y = static_cast<u32>(bgn3Word(delta.y));
+    bgn3Word(v.y) = y;
+    v.y = 0.0f;
+    f32 sq = PSVECSquareMag(&v);
+    f32 len = Bgn3Bindings::sqrtf(sq);
+    if (!(len > 0.0f))
+        return false;
+    Bgn3LinChk line;
+    Bgn3Bindings::cBgS_LinChk_ct(gabi::ea(&line));
+    line.mPass[5] = 0;
+    line.mPass[2] = 0;
+    line.mpGrpPassChk = gabi::ea(&line) + 0x64;
+    line.mPass[1] = 0;
+    line.mpPolyPassChk = gabi::ea(&line) + 0x58;
+    line.__vtbl_58 = 0x10008FE4;
+    line.mPass[0] = 0;
+    line.__vtbl_20 = 0x10008FC4;
+    line.__vtbl_10 = 0x10008FB4;
+    u32 mat = gabi::ea(calc_mtx());
+    line.mPass[4] = 0;
+    line.mPass[6] = 0;
+    line.__vtbl_64 = 0x10008FD4;
+    line.mPass[3] = 0;
+    line.mGrp = 1;
+    s16 angle = cM_atan2s(static_cast<f32>(v.x), static_cast<f32>(v.z));
+    cMtx_YrotS(gabi::at<Mtx34>(mat), angle);
+    f32 forward = REG_F(10, 2) + 300.0f, up = REG_F(0, 4) + 150.0f;
+    v.x = 0.0f;
+    v.y = forward;
+    v.z = up;
+    MtxPosition(&v, &out);
+    PSVECAdd(&out, &i_this->current.pos, &out);
+    f32 px = static_cast<f32>(i_this->current.pos.x), height = REG_F(10, 2) + 300.0f;
+    v.x = px;
+    f32 py = static_cast<f32>(i_this->current.pos.y);
+    v.y = py;
+    f32 pz = static_cast<f32>(i_this->current.pos.z);
+    v.z = pz;
+    v.y = py + height;
+    Bgn3Bindings::dBgS_LinChk_Set(gabi::ea(&line), gabi::ea(&v), gabi::ea(&out), a);
+    bool hit = Bgn3Bindings::cBgS_LineCross(dComIfGp_ea() + 0x12A0, gabi::ea(&line)) != 0;
+    if (hit) {
+        f32 oldx = static_cast<f32>(i_this->old.pos.x), oldz = static_cast<f32>(i_this->old.pos.z);
+        i_this->current.pos.x = oldx;
+        i_this->current.pos.z = oldz;
+    }
+    line.__vtbl_58 = 0x10008FE4;
+    line.__vtbl_64 = 0x10008FA4;
+    line.__vtbl_20 = 0x10008F94;
+    Bgn3Bindings::cBgS_LinChk_dt(gabi::ea(&line), 0);
+    return hit;
+}
+
+/* 02090340 */
+bool checkGround(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    f32 floor = REG0_F(9) + 150.0f;
+    if (!(i_this->current.pos.y > floor)) {
+        i_this->current.pos.y = floor;
+        i_this->speed.y = 0.0f;
+        return true;
+    }
     return false;
-  gabi::Local<u8[108]> line;
-  call<void>(0x02008FEC, line.a);
-  store<u8>(line.a + 0x61, 0);
-  store<u8>(line.a + 0x5E, 0);
-  store<u32>(line.a + 4, line.a + 0x64);
-  store<u8>(line.a + 0x5D, 0);
-  store<u32>(line.a, line.a + 0x58);
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<u8>(line.a + 0x5C, 0);
-  store<u32>(line.a + 0x20, 0x10008FC4);
-  store<u32>(line.a + 0x10, 0x10008FB4);
-  u32 mat = load<u32>(0x1018C7B0);
-  store<u8>(line.a + 0x60, 0);
-  store<u8>(line.a + 0x62, 0);
-  store<u32>(line.a + 0x64, 0x10008FD4);
-  store<u8>(line.a + 0x5F, 0);
-  store<u32>(line.a + 0x68, 1);
-  s16 angle = call<s16>(0x020195B0, load<f32>(v.a), load<f32>(v.a + 8));
-  call<void>(0x025F1884, mat, angle);
-  f32 forward = load<f32>(0x1047BBB8) + 300.0f,
-      up = load<f32>(0x1047B620) + 150.0f;
-  store<f32>(v.a, 0.0f);
-  store<f32>(v.a + 4, forward);
-  store<f32>(v.a + 8, up);
-  call<void>(0x0200FCD8, v.a, out.a);
-  call<void>(0x028E8D88, out.a, a + 0x314, out.a);
-  f32 px = load<f32>(a + 0x314), height = load<f32>(0x1047BBB8) + 300.0f;
-  store<f32>(v.a, px);
-  f32 py = load<f32>(a + 0x318);
-  store<f32>(v.a + 4, py);
-  f32 pz = load<f32>(a + 0x31C);
-  store<f32>(v.a + 8, pz);
-  store<f32>(v.a + 4, py + height);
-  call<void>(0x024F1AFC, line.a, v.a, out.a, a);
-  bool hit = call<s32>(0x02008860, call<u32>(0x025200D4) + 0x12A0, line.a) != 0;
-  if (hit) {
-    f32 oldx = load<f32>(a + 0x300), oldz = load<f32>(a + 0x308);
-    store<f32>(a + 0x314, oldx);
-    store<f32>(a + 0x31C, oldz);
-  }
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<u32>(line.a + 0x64, 0x10008FA4);
-  store<u32>(line.a + 0x20, 0x10008F94);
-  call<void>(0x02008B4C, line.a, 0);
-  return hit;
 }
-VERIFY(0x020900F4, wall);
+
+/* 02090384 */
+void pos_move(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    cXyz v;
+    cXyz out;
+    v.x = 0.0f;
+    v.y = 0.0f;
+    v.z = i_this->speedF;
+    cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
+    MtxPosition(&v, &out);
+    i_this->speed.x = out.x;
+    i_this->speed.z = out.z;
+    PSVECAdd(&i_this->current.pos, &i_this->speed, &i_this->current.pos);
+    f32 delta = REG0_F(3) - 5.0f;
+    i_this->speed.y = static_cast<f32>(i_this->speed.y) + delta;
+}
+
+// Inlined move states in the HD move routine.
+/* inlined into caller */
+void moveShock(u32 a, s32 strength) {
+    u32 play = dComIfGp_ea();
+    strength += REG0_S(2);
+    cXyz direction;
+    direction.x = 0.0f;
+    direction.y = 1.0f;
+    direction.z = 0.0f;
+    Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, strength, -33, gabi::ea(&direction));
+}
+
+s16 centerAngle(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    f32 x = -static_cast<f32>(i_this->current.pos.x);
+    f32 z = -static_cast<f32>(i_this->current.pos.z);
+    return cM_atan2s(x, z);
+}
+
+void moveSound(u32 a, u32 id, u32 value) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    if (a + 0x37C) {
+        s32 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+        Bgn3Bindings::mDoAud_seStart(id, a + 0x37C, value, reverb);
+    }
+}
+
+void monsterSound(u32 a, u32 id) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    if (a + 0x37C) {
+        u32 identity = a ? static_cast<u32>(i_this->mBsPcId) : 0xFFFFFFFFu;
+        s32 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+        Bgn3Bindings::mDoAud_monsSeStartAtActor(id, a + 0x37C, identity, 0, reverb);
+    }
+}
+
+u32 soundVolume(f32 value) {
+    u32 integer;
+    if (!(value < 2147483648.0f))
+        integer = (u32)gabi::ftoi(value - 2147483648.0f) + 0x80000000u;
+    else
+        integer = (u32)gabi::ftoi(value);
+    return integer > 100 ? 100 : integer;
+}
+
+/* inlined into caller */
+void splash(u32 a, u32 headEffect, u32 partEffect, bool ripples) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 s = a + 0x11E58;
+    cXyz p;
+    if (((static_cast<s16>(i_this->m0FD88) + 2) & 3) == 0) {
+        bgn3Word(p.x) = static_cast<u32>(bgn3Word(i_this->current.pos.x));
+        bgn3Word(p.y) = static_cast<u32>(bgn3Word(i_this->current.pos.y));
+        bgn3Word(p.z) = static_cast<u32>(bgn3Word(i_this->current.pos.z));
+        if (!gr_check(a, gabi::ea(&p))) {
+            u32 play = dComIfGp_ea();
+            Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(bgn3GameInfo(play)->play.mParticle),
+                                                  headEffect, gabi::ea(&p), 255, 0x101D5E98u,
+                                                  0x101D5E98u, 0);
+            if (ripples && static_cast<s16>(i_this->m0FD94) == 0) {
+                f32 random = cM_rndF(20.0f);
+                i_this->m0FD94 = (s16)gabi::ftoi(singleAdd(random, 20.0f));
+                moveSound(a, 0x6A44, 0);
+            }
+        }
+    }
+    for (int i = 0; i < 9; ++i) {
+        if (((static_cast<s16>(i_this->m0FD88) + i) & (ripples ? 3 : 7)) == 0) {
+            u32 part = a + 0x1BE8 + i * 0x19D8;
+            bgn3Word(p.x) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.x));
+            bgn3Word(p.y) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.y));
+            bgn3Word(p.z) = static_cast<u32>(bgn3Word(bgn3Part(part)->m00D4.z));
+            if (!gr_check(a, gabi::ea(&p))) {
+                u32 play = dComIfGp_ea();
+                Bgn3Bindings::dPa_control_c_setSimple(gabi::ea(bgn3GameInfo(play)->play.mParticle),
+                                                      partEffect, gabi::ea(&p), 255, 0x101D5E98u,
+                                                      0x101D5E98u, 0);
+                if (ripples && i == 8 && static_cast<s16>(i_this->m0FD94) == 0) {
+                    f32 random = cM_rndF(20.0f);
+                    i_this->m0FD94 = (s16)gabi::ftoi(singleAdd(random, 20.0f));
+                    s32 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+                    Bgn3Bindings::mDoAud_seStart(0x6A45u, s + 0x2D8, 0, reverb);
+                }
+            }
+        }
+    }
+}
+
+/* inlined into caller */
+bool move0(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfGp_ea();
+    u32 bait = gabi::ea(esa);
+    s16 turn = 0;
+    s16 center = 0;
+    bool chase = false;
+    if (bait) {
+        turn = static_cast<s16>(i_this->m0FD8E);
+        i_this->m0FD90 = 1;
+        center = static_cast<s16>(i_this->m0FDB0);
+        chase = true;
+    } else {
+        s16 timer = static_cast<s16>(i_this->m0FD90);
+        if (timer) {
+            turn = static_cast<s16>(i_this->m0FD8E);
+            i_this->m0FD90 = (s16)(timer - 1);
+            center = static_cast<s16>(i_this->m0FDB0);
+            chase = true;
+        } else {
+            i_this->current.angle.y =
+                (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->m0FD8E));
+        }
+    }
+    if (chase) {
+        s16 amount = turn < 0 ? (s16)(0u - (u32)turn) : turn;
+        if (center) {
+            s16 heading = centerAngle(a);
+            cLib_addCalcAngleS2(&i_this->current.angle.y, heading, 4, amount);
+        } else if ((bait = gabi::ea(esa))) {
+            cXyz delta;
+            Bgn3Bindings::cXyz_subtract(bait + 0x314, gabi::ea(&delta), a + 0x314);
+            f32 x = static_cast<f32>(delta.x);
+            f32 z = static_cast<f32>(delta.z);
+            s16 heading = cM_atan2s(x, z);
+            i_this->m0FDBC = singleAdd(REG_F(10, 7), 30.0f);
+            cLib_addCalcAngleS2(&i_this->current.angle.y, heading, 4, (s16)(amount * 2));
+        } else {
+            u32 play = dComIfGp_ea();
+            s16 heading = Bgn3Bindings::fopAcM_searchActorAngleY(
+                a, gabi::ea(bgn3GameInfo(play)->play.mPlayerInfo[0].mpPlayer));
+            s32 step = REG0_S(9) + 0x900;
+            s16 counter = static_cast<s16>(i_this->m0FD88);
+            f32 amplitude = singleAdd(REG_F(0, 18), 4000.0f);
+            f32 sine = cM_ssin(counter * step);
+            s16 wobble = (s16)gabi::ftoi(sine * amplitude);
+            cLib_addCalcAngleS2(&i_this->current.angle.y, (s16)(heading + wobble), 4, amount);
+        }
+    }
+    s8 health = static_cast<s8>(i_this->health);
+    f32 speed = (health == 3   ? static_cast<f32>(l_HIO.m08)
+                 : health == 2 ? static_cast<f32>(l_HIO.m10)
+                               : static_cast<f32>(l_HIO.m18));
+    cLib_addCalc2(&i_this->speedF, speed, 1.0f, 3.0f);
+    pos_move(a);
+    checkGround(a);
+    bool struckWall = false;
+    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
+        i_this->m0FD90 = 0;
+        s16 heading = centerAngle(a);
+        i_this->current.angle.y = heading;
+        f32 stiffness = singleAdd(REG_F(0, 5), 0.9f);
+        i_this->m0FDAA[1] = 20;
+        i_this->m0FDB8 = stiffness;
+        struckWall = true;
+        u32 play = dComIfGp_ea();
+        s32 strength = REG0_S(2) + 5;
+        cXyz direction;
+        direction.z = 0.0f;
+        direction.y = 1.0f;
+        direction.x = 0.0f;
+        Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, strength, -33, gabi::ea(&direction));
+        moveSound(a, 0x5981, 0);
+        i_this->m100AC = static_cast<s16>(l_HIO.m3C);
+        health = static_cast<s8>(i_this->health);
+        s16 threshold = (health == 3   ? static_cast<s16>(l_HIO.m0E)
+                         : health == 2 ? static_cast<s16>(l_HIO.m16)
+                                       : static_cast<s16>(l_HIO.m1E));
+        s16 count = (s16)(static_cast<s16>(i_this->m0FD92) + 1);
+        if (count >= threshold) {
+            i_this->m0FD92 = 0;
+            health = static_cast<s8>(i_this->health);
+            i_this->m0FD90 = (health == 3   ? static_cast<s16>(l_HIO.m20)
+                              : health == 2 ? static_cast<s16>(l_HIO.m22)
+                                            : static_cast<s16>(l_HIO.m24));
+        } else {
+            i_this->m0FD92 = count;
+        }
+    }
+    bool newTurn = struckWall;
+    if (static_cast<s16>(i_this->m0FDAE) == 0) {
+        f32 random = cM_rndF(50.0f);
+        i_this->m0FDAE = (s16)gabi::ftoi(singleAdd(random, 30.0f));
+        health = static_cast<s8>(i_this->health);
+        newTurn = true;
+    }
+    if (newTurn) {
+        i_this->m0FD8E = (health == 3   ? static_cast<s16>(l_HIO.m0C)
+                          : health == 2 ? static_cast<s16>(l_HIO.m14)
+                                        : static_cast<s16>(l_HIO.m1C));
+        f32 random = cM_rndF(1.0f);
+        if (random < 0.5f)
+            i_this->m0FD8E = (s16)(0u - (u32) static_cast<s16>(i_this->m0FD8E));
+    }
+    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
+    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
+    i_this->m0FF28.mObjAt.mSPrm = second | 1;
+    i_this->m0FDFC.mObjAt.mSPrm = first | 1;
+    i_this->current.angle.x = 0;
+    if (static_cast<f32>(i_this->speedF) > 10.0f) {
+        splash(a, 0x840E, 0x840D, false);
+        moveSound(a, 0x705D, 0);
+        move_se_set(a);
+        return true;
+    }
+    return false;
+}
+
+void mahi(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfGp_ea();
+    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    if (phase == 0) {
+        i_this->m0FD8C = 1;
+        phase = 1;
+    }
+    if (phase == 1) {
+        Bgn3Bindings::mDoExt_McaMorf_play(static_cast<u32>(bgn3Word(i_this->mpMorf)), a + 0x314, 0,
+                                          0);
+        if (static_cast<s16>(i_this->m0FDAA[0]) == 0) {
+            i_this->m0FD8A = 0;
+            i_this->m0FD8C = 0;
+        }
+    }
+    cLib_addCalc0(&i_this->speedF, 1.0f, 3.0f);
+    pos_move(a);
+    i_this->current.angle.x = 0;
+    checkGround(a);
+    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
+        i_this->m0FD90 = 0;
+        s16 heading = centerAngle(a);
+        i_this->current.angle.y = heading;
+        i_this->m0FDB8 = singleAdd(REG_F(0, 5), 0.9f);
+    }
+}
+
+/* inlined into caller */
+void movementPitch(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    cXyz difference;
+    Bgn3Bindings::cXyz_subtract(a + 0x314, gabi::ea(&difference), a + 0x300);
+    f32 z = static_cast<f32>(difference.z);
+    f32 x = static_cast<f32>(difference.x);
+    f32 y = static_cast<f32>(difference.y);
+    f32 square = gabi::fmadds(x, x, z * z);
+    f32 horizontal = Bgn3Bindings::sqrtf(square);
+    s16 angle = (s16)(0u - cM_atan2s(y, horizontal));
+    if (angle > 0x3000)
+        angle = 0x3000;
+    else if (angle < -0x3000)
+        angle = -0x3000;
+    i_this->current.angle.x = angle;
+}
+
+void damage(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfGp_ea();
+    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    if (phase == 0) {
+        i_this->speed.y = 150.0f;
+        i_this->speedF = 30.0f;
+        i_this->m0FDB8 = 1.0f;
+        i_this->m0FD8C = 1;
+    } else if (phase == 1) {
+        f32 target = singleAdd(REG_F(0, 9), 350.0f);
+        f32 step = singleAdd(REG_F(0, 10), 50.0f);
+        cLib_addCalc2(&i_this->m100A0, target, 1.0f, step);
+        if (checkGround(a)) {
+            i_this->speed.y = 50.0f;
+            i_this->m0FD8C = 2;
+            f32 random = cM_rndF(65536.0f);
+            i_this->current.angle.y = (s16)gabi::ftoi(random);
+            i_this->m0FDB8 = 1.0f;
+            moveShock(a, 5);
+            drop_eff_set(a);
+        }
+    } else if (phase == 2 && checkGround(a)) {
+        i_this->m0FD8A = 0;
+        i_this->m0FD8C = 0;
+    }
+    pos_move(a);
+    movementPitch(a);
+    checkGround(a);
+    if (checkWall(a) && static_cast<s16>(i_this->m0FDAA[1]) == 0) {
+        i_this->current.angle.y = centerAngle(a);
+        i_this->m0FDAA[1] = 20;
+    }
+    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
+    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
+    i_this->m0FDFC.mObjAt.mSPrm = first & ~1u;
+    i_this->m0FF28.mObjAt.mSPrm = second & ~1u;
+}
+
+void end(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 play = dComIfGp_ea();
+    u32 player = gabi::ea(bgn3GameInfo(play)->play.mPlayerInfo[0].mpPlayer);
+    u16 phase = static_cast<u16>(i_this->m0FD8C);
+    if (phase == 0) {
+        i_this->speed.y = 150.0f;
+        i_this->speedF = 0.0f;
+        i_this->m0FD8C = 1;
+        bgn->mCSMode = 20;
+        i_this->m0FDB8 = 1.0f;
+        if (player && player + 0x37C)
+            monsterSound(player, 0x4830);
+    } else if (phase >= 1 && phase <= 4) {
+        f32 height = static_cast<f32>(i_this->current.pos.y) - 150.0f;
+        if (height > 350.0f)
+            height = 350.0f;
+        i_this->m100A0 = height;
+        if (checkGround(a)) {
+            i_this->m0FD8C = (s16)(static_cast<s16>(i_this->m0FD8C) + 1);
+            f32 random = cM_rndF(65536.0f);
+            i_this->current.angle.y = (s16)gabi::ftoi(random);
+            i_this->m0FDB8 = 1.0f;
+            moveShock(a, 5);
+            drop_eff_set(a);
+            i_this->speed.y = singleAdd(REG_F(0, 11), 130.0f);
+            i_this->speedF = 0.0f;
+            random = cM_rndF(65536.0f);
+            i_this->current.angle.y = (s16)gabi::ftoi(random);
+            monsterSound(a, 0x496E);
+        }
+        if (static_cast<s16>(i_this->m0FD8C) == 4 &&
+            !(static_cast<f32>(i_this->speed.y) > -30.0f)) {
+            i_this->m0FD8C = 5;
+            i_this->m0FD8E = 0;
+        }
+    } else if (phase == 5) {
+        f32 rise = singleAdd(REG_F(0, 12), 5.5f);
+        f32 speed = singleAdd(static_cast<f32>(i_this->speed.y), rise);
+        i_this->speed.y = speed;
+        if (speed > 0.0f)
+            cLib_addCalc2(&i_this->m10060, 1.0f, 1.0f, 0.015f);
+        i_this->current.angle.y =
+            (s16)(static_cast<s16>(i_this->current.angle.y) + static_cast<s16>(i_this->m0FD8E));
+        i_this->shape_angle.y =
+            (s16)(static_cast<s16>(i_this->shape_angle.y) + static_cast<s16>(i_this->m0FD8E));
+        cLib_addCalcAngleS2(&i_this->m0FD8E, 5000, 4, 100);
+        f32 target = singleAdd(REG_F(0, 6), 50.0f);
+        cLib_addCalc2(&i_this->m0FDBC, target, 1.0f, 1.0f);
+        f32 step = singleAdd(REG_F(0, 10), 50.0f);
+        cLib_addCalc0(&i_this->m100A0, 1.0f, step);
+    }
+    pos_move(a);
+    movementPitch(a);
+    checkGround(a);
+    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
+    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
+    i_this->m0FDFC.mObjAt.mSPrm = first & ~1u;
+    i_this->m0FF28.mObjAt.mSPrm = second & ~1u;
+    cLib_addCalc2(&i_this->current.pos.x, -15.0f, 0.05f, 30.0f);
+    cLib_addCalc2(&i_this->current.pos.z, 375.17f, 0.05f, 30.0f);
+}
+
+u32 movementParticle(u32 position, u32 effect, u32 rotation = 0, u32 scale = 0) {
+    u32 play = dComIfGp_ea();
+    return Bgn3Bindings::dPa_control_c_set(gabi::ea(bgn3GameInfo(play)->play.mParticle), 0, effect,
+                                           position, rotation, scale, 255, 0, -1, 0, 0, 0);
+}
+
+void emitterScale(u32 emitter, f32 size) {
+    auto* particle = gabi::at<Bgn3EmitterView>(emitter);
+    particle->mGlobalScale.x = size;
+    particle->mGlobalScale.y = size;
+    particle->mGlobalScale.z = size;
+    particle->mGlobalParticleScale.x = size;
+    particle->mGlobalParticleScale.y = size;
+    particle->mGlobalParticleScale.z = size;
+}
+
+void emitterMove(u32 ownerSlot, u32 position, f32 scale) {
+    auto* slot = gabi::at<be<u32>>(ownerSlot);
+    u32 emitter = *slot;
+    auto* particle = gabi::at<Bgn3EmitterView>(emitter);
+    u8 type = particle->mType;
+    auto* pos = gabi::at<cXyz>(position);
+    f32 y = pos->y;
+    f32 x = pos->x;
+    f32 z = pos->z;
+    // HD: the emitter coordinate convention depends on its type.
+    if (type >= 7)
+        y = -y;
+    particle->mGlobalTranslation.x = x;
+    particle->mGlobalTranslation.y = y;
+    particle->mGlobalTranslation.z = z;
+    // Reload the owner after writing the translation: its slot may alias emitter storage.
+    emitterScale(*slot, scale);
+}
+
+void retireEmitter(u32 ownerSlot) {
+    auto* slot = gabi::at<be<u32>>(ownerSlot);
+    u32 emitter = *slot;
+    if (emitter) {
+        auto* particle = gabi::at<Bgn3EmitterView>(emitter);
+        u32 flags = particle->mFlags;
+        particle->mMaxFrame = -1;
+        particle->mFlags = flags | 1;
+        *slot = 0;
+    }
+}
+
+/* inlined into caller */
+void damage_check(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 s = a + 0x11E58;
+    if (static_cast<s16>(i_this->m0FDB4))
+        return;
+    Bgn3AtInfo hit;
+    if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(s + 0x80)) {
+        u32 object = Bgn3Bindings::dCcD_GObjInf_GetTgHitObj(s + 0x80);
+        hit.mpObj = object;
+        u32 source = Bgn3Bindings::at_power_check(gabi::ea(&hit));
+        hit.mpActor = source;
+        if (a && a + 0x37C) {
+            monsterSound(a, 0x4973);
+            moveSound(a, 0x5982, 0);
+        }
+        u8 kind = static_cast<u8>(hit.mResultingAttackType);
+        s32 severity;
+        s16 duration;
+        if (kind == 9) {
+            severity = 6;
+            u32 play = dComIfGp_ea();
+            cXyz direction;
+            direction.x = 0.0f;
+            direction.y = 1.0f;
+            direction.z = 0.0f;
+            Bgn3Bindings::dVibration_c_StartShock(play + 0x599C, REG0_S(2) + 3, -33,
+                                                  gabi::ea(&direction));
+            bgn3PauseTimer() = 5;
+            i_this->m100A8 = 30;
+            duration = static_cast<s16>(l_HIO.m30);
+        } else if (kind == 2) {
+            i_this->m100A8 = 25;
+            severity = 5;
+            duration = static_cast<s16>(l_HIO.m2E);
+        } else if (kind == 1) {
+            u32 objectInfo = Bgn3Bindings::dCcD_GetGObjInf(static_cast<u32>(hit.mpObj));
+            if (static_cast<u8>(gabi::at<dCcD_GObjInf>(objectInfo)->mGObjAt.mSpl) == 1) {
+                bgn3PauseTimer() = 3;
+                i_this->m100A8 = 20;
+                severity = 4;
+                duration = static_cast<s16>(l_HIO.m2C);
+            } else {
+                bgn3PauseTimer() = 2;
+                i_this->m100A8 = 15;
+                severity = 3;
+                duration = static_cast<s16>(l_HIO.m2A);
+            }
+        } else if (static_cast<u32>(hit.mpActor) &&
+                   fpcM_GetName(gabi::at<fopAc_ac_c>(hit.mpActor)) == fpcNm_ARROW_e) {
+            i_this->m100A8 = 10;
+            severity = 2;
+            duration = static_cast<s16>(l_HIO.m28);
+        } else {
+            i_this->m100A8 = 7;
+            severity = 1;
+            duration = static_cast<s16>(l_HIO.m26);
+        }
+        if (static_cast<s16>(i_this->m0FD8A) != 1) {
+            i_this->m0FDAA[0] = duration;
+            i_this->m0FD8A = 1;
+        }
+        i_this->m0FD8C = 0;
+        i_this->m0FDB4 = 20;
+        if (severity >= 4) {
+            movementParticle(s + 0x14C, 0x10);
+            cXyz size;
+            csXyz angle;
+            size.x = 2.0f;
+            size.z = 2.0f;
+            size.y = 2.0f;
+            angle.z = 0;
+            angle.x = 0;
+            u32 play = dComIfGp_ea();
+            s16 heading = Bgn3Bindings::fopAcM_searchActorAngleY(
+                a, gabi::ea(bgn3GameInfo(play)->play.mPlayerInfo[0].mpPlayer));
+            angle.y = heading;
+            movementParticle(s + 0x14C, 0xD, gabi::ea(&angle), gabi::ea(&size));
+            cXyz p;
+            p.x = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.x);
+            p.y = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.y);
+            p.z = static_cast<f32>(i_this->m0FDFC.mGObjTg.mHitPos.z);
+            Bgn3Bindings::dKy_SordFlush_set(gabi::ea(&p), 1);
+        }
+        Bgn3Bindings::def_se_set(a, static_cast<u32>(hit.mpObj), 0x40);
+        return;
+    }
+    if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(a + 0xED54)) {
+        i_this->m0FDB4 = 20;
+        i_this->m0FD9E = 1;
+        i_this->m0FD8A = 2;
+        i_this->m0FD8C = 0;
+        s8 health = static_cast<s8>(i_this->health);
+        if (health) {
+            i_this->health = (s8)(health - 1);
+            s32 reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+            Bgn3Bindings::mDoAud_seStart(0x2879u, 0, 0x35, reverb);
+            f32 size = singleAdd(REG_F(0, 5), 2.0f);
+            health = static_cast<s8>(i_this->health);
+            u32 play = dComIfGp_ea();
+            if (health == 0) {
+                bgn3GameInfo(play)->play.mItemLifeCount = 0.0f;
+                Bgn3Bindings::mDoAud_bgmStop(30);
+                u32 emitter = movementParticle(s + 0x2D8, 0x8457);
+                if (emitter)
+                    emitterScale(emitter, size);
+                emitter = movementParticle(s + 0x2D8, 0x8458);
+                if (emitter)
+                    emitterScale(emitter, size);
+                i_this->m0FD8A = 3;
+                i_this->m0FD8C = 0;
+                i_this->m0FDB4 = 10000;
+                reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+                Bgn3Bindings::mDoAud_monsSeStart(0x4970u, 0, 0, reverb);
+                reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+                Bgn3Bindings::mDoAud_seStart(0x5983u, 0, 0, reverb);
+            } else {
+                u32 emitter =
+                    Bgn3Bindings::dPa_control_c_set(gabi::ea(bgn3GameInfo(play)->play.mParticle), 0,
+                                                    0x8459, s + 0x2D8, 0, 0, 255, 0, -1, 0, 0, 0);
+                if (emitter)
+                    emitterScale(emitter, size);
+                reverb = dComIfGp_getReverb(static_cast<s8>(i_this->current.roomNo));
+                Bgn3Bindings::mDoAud_monsSeStart(0x496Eu, 0, 0, reverb);
+            }
+        }
+    }
+    bool hitAny = false;
+    if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(s + 0x1AC)) {
+        hit.mpObj = Bgn3Bindings::dCcD_GObjInf_GetTgHitObj(s + 0x1AC);
+        hitAny = true;
+    }
+    for (int i = 0; i < 8; ++i) {
+        u32 sphere = a + 0x1BE8 + i * 0x19D8 + 0x2AC;
+        if (Bgn3Bindings::dCcD_GObjInf_ChkTgHit(sphere)) {
+            hit.mpObj = Bgn3Bindings::dCcD_GObjInf_GetTgHitObj(sphere);
+            hitAny = true;
+        }
+    }
+    if (hitAny && static_cast<s16>(i_this->m0FDB6) == 0) {
+        i_this->m0FDB6 = 10;
+        Bgn3Bindings::def_se_set(a, static_cast<u32>(hit.mpObj), 0x44);
+    }
+}
 
 // Preserve the original add's first-NaN payload when mocked vector output
 // and the previous point both contain NaNs; ordinary C++ may commute operands.
 static f32 singleAdd(f32 a, f32 b) {
-  if (std::isnan(a))
-    return std::bit_cast<f32>(std::bit_cast<u32>(a) | 0x00400000u);
-  if (std::isnan(b))
-    return std::bit_cast<f32>(std::bit_cast<u32>(b) | 0x00400000u);
-  return (f32)((f64)a + (f64)b);
-}
-void hairControl(u32 mat, u32 hair, s32 index, f32 length) {
-  WWHD_FUNC(0x02090420, void, mat, hair, index, length);
-  if (!load<u8>(0x104622C2))
-    return;
-  gabi::Local<f32[3]> direction, out;
-  store<f32>(direction.a, 0.0f);
-  store<f32>(direction.a + 4, 0.0f);
-  store<f32>(direction.a + 8, length);
-  u32 point = hair;
-  for (int j = 4; j > 0; --j) {
-    f32 step = load<f32>(0x1047BBB4) + 0.1f;
-    f32 curx = load<f32>(point + 12), vy = load<f32>(hair + 0x7C),
-        curz = load<f32>(point + 20), cury = load<f32>(point + 16);
-    f32 gain = (f32)j * step;
-    f32 prevz = load<f32>(point + 8);
-    f32 yz = gabi::fmadds(vy, gain, cury);
-    f32 bias = load<f32>(0x104622D0);
-    f32 vz = load<f32>(hair + 0x80);
-    f32 yy = yz + bias;
-    f32 prevx = load<f32>(point), prevy = load<f32>(point + 4);
-    f32 dz = gabi::fmadds(vz, gain, curz - prevz);
-    f32 dy = yy - prevy;
-    f32 vx = load<f32>(hair + 0x78);
-    f32 dx = gabi::fmadds(vx, gain, curx - prevx);
-    s16 rx = (s16)(0u - call<u32>(0x020195B0, dy, dz));
-    f32 horizontal = call<f32>(0x028F4384, gabi::fmadds(dy, dy, dz * dz));
-    s16 ry = call<s16>(0x020195B0, dx, horizontal);
-    call<void>(0x025F18EC, load<u32>(0x1018C7B0), rx);
-    call<void>(0x025F1C28, load<u32>(0x1018C7B0), ry);
-    call<void>(0x0200FCD8, direction.a, out.a);
-    point += 12;
-    f32 ox = load<f32>(out.a), px = load<f32>(point - 12),
-        py = load<f32>(point - 8);
-    store<f32>(point, singleAdd(px, ox));
-    f32 oy = load<f32>(out.a + 4);
-    f32 pz = load<f32>(point - 4);
-    store<f32>(point + 4, singleAdd(py, oy));
-    f32 oz = load<f32>(out.a + 8);
-    store<f32>(point + 8, singleAdd(pz, oz));
-  }
-  u32 lines = load<u32>(mat + 0x144);
-  u32 dest = load<u32>(lines + (u32)index * 16);
-  for (int i = 0; i < 5; ++i) {
-    u32 x = load<u32>(hair + 12 * i);
-    store<u32>(dest + 12 * i, x);
-    u32 y = load<u32>(hair + 12 * i + 4);
-    store<u32>(dest + 12 * i + 4, y);
-    u32 z = load<u32>(hair + 12 * i + 8);
-    store<u32>(dest + 12 * i + 8, z);
-  }
-}
-VERIFY(0x02090420, hairControl);
-
-static u32 resource(s32 index) {
-  gabi::Local<u32[2]> name;
-  store<u32>(name.a, 0x1000905C);
-  store<u32>(name.a + 4, 0x10008F7C);
-  return call<u32>(0x026066C4, load<u32>(0x101F4F28), name.a, index);
-}
-bool heapInit(u32 a) {
-  WWHD_FUNC(0x02090984, bool, a);
-  u32 head = resource(21), anim = resource(6);
-  u32 morf = call<u32>(0x025E4F64, 0, head, 0, 0, anim, 2, 0, -1, 1, 0, 0,
-                       0x11020203u, 1.0f);
-  store<u32>(a + 0x3D0, morf);
-  if (!morf || !load<u32>(morf + 0x90))
-    return false;
-  call<void>(0x0207FD38, a + 0x3D4, 0);
-  u32 partData = resource(20);
-  u32 model = call<u32>(0x025E38E0, partData, 0, 0x11020203u);
-  store<u32>(a + 0x484, model);
-  if (!model)
-    return false;
-  call<void>(0x0207FD38, a + 0x488, 0);
-  if (!call<s32>(0x025E9B80, a + 0x19D8, 40, 5, 0))
-    return false;
-  for (int i = 0; i < 9; ++i) {
-    u32 part = a + 0x1BE8 + 0x19D8 * i;
-    model = call<u32>(0x025E38E0, partData, 0, 0x11020203u);
-    store<u32>(part, model);
-    if (!model)
-      return false;
-    call<void>(0x0207FD38, part + 4, 0);
-    if (i < 7 && !call<s32>(0x025E9B80, part + 0x1890,
-                            load<u16>(0x101911E4 + 2 * i), 5, 0))
-      return false;
-  }
-  model = call<u32>(0x025E38E0, resource(24), 0, 0x11020203u);
-  store<u32>(a + 0x1BD8, model);
-  if (!model)
-    return false;
-  u32 weakB = resource(27);
-  model = call<u32>(0x025E38E0, weakB, 0, 0x11020203u);
-  store<u32>(a + 0x1BD4, model);
-  if (!model)
-    return false;
-  u32 brk = call<u32>(0x0273AD10, 0x78);
-  if (brk)
-    brk = call<u32>(0x025E80D0, brk);
-  store<u32>(a + 0x1BE0, brk);
-  if (!brk)
-    return false;
-  anim = resource(39);
-  if (!call<s32>(0x025E8154, load<u32>(a + 0x1BE0), weakB, anim, 1, 2, 0, -1, 0,
-                 0, 1.0f))
-    return false;
-  u32 weakA = resource(30);
-  model = call<u32>(0x025E38E0, weakA, 0, 0x11020203u);
-  store<u32>(a + 0x1BD0, model);
-  if (!model)
-    return false;
-  brk = call<u32>(0x0273AD10, 0x78);
-  if (brk)
-    brk = call<u32>(0x025E80D0, brk);
-  store<u32>(a + 0x1BDC, brk);
-  if (!brk)
-    return false;
-  anim = resource(42);
-  if (!call<s32>(0x025E8154, load<u32>(a + 0x1BDC), weakA, anim, 1, 2, 0, -1, 0,
-                 0, 1.0f))
-    return false;
-  call<void>(0x0207FD38, a + 0x1B20, 0);
-  u32 rope = resource(46);
-  if (!call<s32>(0x025EBA58, a + 0x12140, 1, 60, rope, 1))
-    return false;
-  call<void>(0x0207FD38, a + 0x122CC, 0);
-  return true;
-}
-VERIFY(0x02090984, heapInit);
-u32 partCtor(u32 a) {
-  WWHD_FUNC(0x02090D4C, u32, a);
-  if (!a)
-    a = call<u32>(0x0273AD10, 0x19D8);
-  if (!a)
-    return 0;
-  call<void>(0x02080404, a + 4);
-  // The constructor retains a shared default tev snapshot for three blocks.
-  f32 tev00 = load<f32>(0x1016E414 + 0x0);
-  store<f32>(a + 0xB4, tev00);
-  f32 tev04 = load<f32>(0x1016E414 + 0x4);
-  store<f32>(a + 0xB8, tev04);
-  f32 tev08 = load<f32>(0x1016E414 + 0x8);
-  store<f32>(a + 0xBC, tev08);
-  f32 tev0C = load<f32>(0x1016E414 + 0xC);
-  store<f32>(a + 0xC0, tev0C);
-  f32 tev10 = load<f32>(0x1016E414 + 0x10);
-  store<f32>(a + 0xC4, tev10);
-  f32 tev14 = load<f32>(0x1016E414 + 0x14);
-  store<f32>(a + 0xC8, tev14);
-  u8 tev18 = load<u8>(0x1016E414 + 0x18);
-  store<u8>(a + 0xCC, tev18);
-  u8 tev19 = load<u8>(0x1016E414 + 0x19);
-  store<u8>(a + 0xCD, tev19);
-  u8 tev1A = load<u8>(0x1016E414 + 0x1A);
-  store<u8>(a + 0xCE, tev1A);
-  u8 tev1B = load<u8>(0x1016E414 + 0x1B);
-  store<u8>(a + 0xCF, tev1B);
-  s16 tev1C = load<s16>(0x1016E414 + 0x1C);
-  store<s16>(a + 0xD0, tev1C);
-  s16 tev1E = load<s16>(0x1016E414 + 0x1E);
-  store<s16>(a + 0xD2, tev1E);
-  s16 tev20 = load<s16>(0x1016E414 + 0x20);
-  store<s16>(a + 0xD4, tev20);
-  s16 tev22 = load<s16>(0x1016E414 + 0x22);
-  store<s16>(a + 0xD6, tev22);
-  f32 tev24 = load<f32>(0x1016E414 + 0x24);
-  store<f32>(a + 0xD8, tev24);
-  f32 tev28 = load<f32>(0x1016E414 + 0x28);
-  store<f32>(a + 0xDC, tev28);
-  f32 tev2C = load<f32>(0x1016E414 + 0x2C);
-  store<f32>(a + 0xE0, tev2C);
-  f32 tev30 = load<f32>(0x1016E414 + 0x30);
-  store<f32>(a + 0xE4, tev30);
-  f32 tev34 = load<f32>(0x1016E414 + 0x34);
-  store<f32>(a + 0xE8, tev34);
-  f32 tev38 = load<f32>(0x1016E414 + 0x38);
-  store<f32>(a + 0xEC, tev38);
-  f32 tev3C = load<f32>(0x1016E414 + 0x3C);
-  store<f32>(a + 0xF0, tev3C);
-  f32 tev40 = load<f32>(0x1016E454);
-  store<u8>(a + 0x18C, tev18);
-  store<f32>(a + 0x1B4, tev40);
-  store<u8>(a + 0x18E, tev1A);
-  store<u8>(a + 0x212, tev1A);
-  store<f32>(a + 0x17C, tev08);
-  store<f32>(a + 0x184, tev10);
-  store<u8>(a + 0x18F, tev1B);
-  store<f32>(a + 0x1A4, tev30);
-  store<f32>(a + 0x198, tev24);
-  store<f32>(a + 0x180, tev0C);
-  store<f32>(a + 0x208, tev10);
-  store<u8>(a + 0x18D, tev19);
-  store<f32>(a + 0x1A8, tev34);
-  store<f32>(a + 0x1FC, tev04);
-  store<f32>(a + 0x204, tev0C);
-  store<f32>(a + 0x19C, tev28);
-  store<u8>(a + 0x211, tev19);
-  store<f32>(a + 0x20C, tev14);
-  store<f32>(a + 0x178, tev04);
-  store<u8>(a + 0x213, tev1B);
-  store<s16>(a + 0x190, tev1C);
-  store<f32>(a + 0x200, tev08);
-  store<f32>(a + 0x1F8, tev00);
-  store<f32>(a + 0x1A0, tev2C);
-  store<f32>(a + 0x188, tev14);
-  store<f32>(a + 0x1B0, tev3C);
-  store<f32>(a + 0x174, tev00);
-  store<f32>(a + 0xF4, tev40);
-  store<f32>(a + 0x1AC, tev38);
-  store<s16>(a + 0x194, tev20);
-  store<s16>(a + 0x192, tev1E);
-  store<s16>(a + 0x214, tev1C);
-  store<u8>(a + 0x210, tev18);
-  store<s16>(a + 0x196, tev22);
-  store<s16>(a + 0x216, tev1E);
-  store<s16>(a + 0x218, tev20);
-  store<s16>(a + 0x21A, tev22);
-  store<f32>(a + 0x21C, tev24);
-  store<f32>(a + 0x220, tev28);
-  store<f32>(a + 0x224, tev2C);
-  store<f32>(a + 0x228, tev30);
-  store<f32>(a + 0x22C, tev34);
-  store<f32>(a + 0x230, tev38);
-  store<f32>(a + 0x234, tev3C);
-  store<f32>(a + 0x238, tev40);
-  call<void>(0x025166F0, a + 0x2AC);
-  call<void>(0x025E9960, a + 0x1890);
-  return a;
-}
-VERIFY(0x02090D4C, partCtor);
-
-static void copyActorTev(u32 a, u32 dest) {
-  u32 src = a + 0x110;
-  for (int o = 0; o < 24; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0x18; o < 0x1C; ++o)
-    store<u8>(dest + o, load<u8>(src + o));
-  for (int o = 0x1C; o < 0x24; o += 2)
-    store<s16>(dest + o, load<s16>(src + o));
-  for (int o = 0x24; o < 0x44; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0x84; o < 0x90; o += 4)
-    store<u32>(dest + o, load<u32>(src + o));
-  for (int o = 0x90; o < 0x98; o += 2)
-    store<u16>(dest + o, load<u16>(src + o));
-  store<u32>(dest + 0x98, load<u32>(src + 0x98));
-  store<u32>(dest + 0x9C, load<u32>(src + 0x9C));
-  for (int o = 0xA0; o < 0xA8; o += 2)
-    store<u16>(dest + o, load<u16>(src + o));
-  for (int o = 0xA8; o < 0xB4; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0xB4; o < 0xBD; ++o)
-    store<u8>(dest + o, load<u8>(src + o));
-  for (int o = 0xC0; o < 0xD8; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0xD8; o < 0xDC; ++o)
-    store<u8>(dest + o, load<u8>(src + o));
-  for (int o = 0xDC; o < 0xE4; o += 2)
-    store<s16>(dest + o, load<s16>(src + o));
-  for (int o = 0xE4; o < 0x104; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0x144; o < 0x15C; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-  for (int o = 0x15C; o < 0x160; ++o)
-    store<u8>(dest + o, load<u8>(src + o));
-  for (int o = 0x160; o < 0x168; o += 2)
-    store<s16>(dest + o, load<s16>(src + o));
-  for (int o = 0x168; o < 0x188; o += 4)
-    store<f32>(dest + o, load<f32>(src + o));
-}
-s32 create(u32 a) {
-  WWHD_FUNC(0x02091008, s32, a);
-  u32 flags = load<u32>(a + 0x2E4);
-  if (!(flags & 8)) {
-    if (a) {
-      actorCtor(a);
-      flags = load<u32>(a + 0x2E4);
-    }
-    store<u32>(a + 0x2E4, flags | 8);
-  }
-  s32 phase = call<s32>(0x02520460, a + 0x3C8, 0x10009060u);
-  if (phase != 4)
-    return phase;
-  if (!call<s32>(0x025D63E8, a, 0x02090984u, 0x96000))
-    return 5;
-  if (!load<u8>(0x1019119C)) {
-    store<u8>(a + 0x12388, 1);
-    store<u8>(0x1019119C, 1);
-    store<u8>(0x10462288, call<u32>(0x025F0A10, 0x10009064u, 0x10462288u));
-  }
-  u32 st = a + 0x11E9C;
-  call<void>(0x02515F14, st, 255, 255, a);
-  call<void>(0x0251677C, a + 0x12004, 0x10191208u);
-  u32 bits = load<u32>(a + 0x12004);
-  store<u32>(a + 0x12048, st);
-  store<u32>(a + 0x12004, bits & ~1u);
-  call<void>(0x0251677C, a + 0x11ED8, 0x10191208u);
-  bits = load<u32>(a + 0x11ED8);
-  store<u32>(a + 0x11F1C, st);
-  store<u32>(a + 0x11ED8, bits & ~1u);
-  for (int i = 0; i < 9; ++i) {
-    u32 part = a + 0x1BE8 + i * 0x19D8;
-    call<void>(0x0251677C, part + 0x2AC, i == 8 ? 0x10191248u : 0x10191208u);
-    bits = load<u32>(part + 0x2AC);
-    store<u32>(part + 0x2F0, st);
-    store<u32>(part + 0x2AC, bits & ~1u);
-  }
-  store<u8>(a + 0x3A0, 3);
-  store<u8>(a + 0x3A1, 3);
-  for (int i = 0; i < 9; ++i)
-    copyActorTev(a, a + 0x1BE8 + 0x19D8 * i + 0xB4);
-  execute(a);
-  return phase;
-}
-VERIFY(0x02091008, create);
-// Inlined movement states in the HD movement routine.
-void moveShock(u32 a, s32 strength) {
-  u32 play = call<u32>(0x025200D4);
-  strength += load<s16>(0x1047B68C);
-  gabi::Local<f32[3]> direction;
-  store<f32>(direction.a, 0.0f);
-  store<f32>(direction.a + 4, 1.0f);
-  store<f32>(direction.a + 8, 0.0f);
-  call<void>(0x025CB374, play + 0x599C, strength, -33, direction.a);
-}
-s16 centerAngle(u32 a) {
-  f32 x = -load<f32>(a + 0x314);
-  f32 z = -load<f32>(a + 0x31C);
-  return call<s16>(0x020195B0, x, z);
-}
-void moveSound(u32 a, u32 id, u32 value) {
-  if (a + 0x37C) {
-    s32 reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-    call<void>(0x025E1A40, id, a + 0x37C, value, reverb);
-  }
-}
-void monsterSound(u32 a, u32 id) {
-  if (a + 0x37C) {
-    u32 identity = a ? load<u32>(a + 4) : 0xFFFFFFFFu;
-    s32 reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-    call<void>(0x025E1AA4, id, a + 0x37C, identity, 0, reverb);
-  }
-}
-u32 soundVolume(f32 value) {
-  u32 integer;
-  if (!(value < 2147483648.0f))
-    integer = (u32)gabi::ftoi(value - 2147483648.0f) + 0x80000000u;
-  else
-    integer = (u32)gabi::ftoi(value);
-  return integer > 100 ? 100 : integer;
-}
-void splash(u32 a, u32 headEffect, u32 partEffect, bool ripples) {
-  u32 s = a + 0x11E58;
-  gabi::Local<u32[3]> p;
-  if (((load<s16>(s + 0xC) + 2) & 3) == 0) {
-    store<u32>(p.a, load<u32>(a + 0x314));
-    store<u32>(p.a + 4, load<u32>(a + 0x318));
-    store<u32>(p.a + 8, load<u32>(a + 0x31C));
-    if (!grCheck(a, p.a)) {
-      u32 play = call<u32>(0x025200D4);
-      call<void>(0x025A8D40, load<u32>(play + 0x5AB0), headEffect, p.a, 255,
-                 0x101D5E98u, 0x101D5E98u, 0);
-      if (ripples && load<s16>(s + 0x18) == 0) {
-        f32 random = call<f32>(0x020198D8, 20.0f);
-        store<s16>(s + 0x18, (s16)gabi::ftoi(singleAdd(random, 20.0f)));
-        moveSound(a, 0x6A44, 0);
-      }
-    }
-  }
-  for (int i = 0; i < 9; ++i) {
-    if (((load<s16>(s + 0xC) + i) & (ripples ? 3 : 7)) == 0) {
-      u32 part = a + 0x1BE8 + i * 0x19D8;
-      store<u32>(p.a, load<u32>(part + 0x288));
-      store<u32>(p.a + 4, load<u32>(part + 0x28C));
-      store<u32>(p.a + 8, load<u32>(part + 0x290));
-      if (!grCheck(a, p.a)) {
-        u32 play = call<u32>(0x025200D4);
-        call<void>(0x025A8D40, load<u32>(play + 0x5AB0), partEffect, p.a, 255,
-                   0x101D5E98u, 0x101D5E98u, 0);
-        if (ripples && i == 8 && load<s16>(s + 0x18) == 0) {
-          f32 random = call<f32>(0x020198D8, 20.0f);
-          store<s16>(s + 0x18, (s16)gabi::ftoi(singleAdd(random, 20.0f)));
-          s32 reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-          call<void>(0x025E1A40, 0x6A45u, s + 0x2D8, 0, reverb);
-        }
-      }
-    }
-  }
-}
-void motionSound(u32 a) {
-  gabi::Local<f32[3]> delta, output;
-  call<void>(0x0201ADE0, a + 0x314, delta.a, a + 0x300);
-  store<f32>(delta.a + 4, 0.0f);
-  f32 square = call<f32>(0x028E8DD0, delta.a);
-  f32 length = call<f32>(0x028F4384, square);
-  u32 volume = soundVolume(length * 3.5f);
-  if (a && a + 0x37C)
-    moveSound(a, 0x705A, volume);
-  call<void>(0x0201ADE0, a + 0x314, output.a, a + 0x300);
-  store<u32>(delta.a + 4, load<u32>(output.a + 4));
-  store<f32>(delta.a, 0.0f);
-  store<f32>(delta.a + 8, 0.0f);
-  square = call<f32>(0x028E8DD0, delta.a);
-  length = call<f32>(0x028F4384, square);
-  volume = soundVolume(singleAdd(length, length));
-  if (a && a + 0x37C)
-    moveSound(a, 0x705B, volume);
-}
-bool movingState(u32 a) {
-  u32 s = a + 0x11E58;
-  call<u32>(0x025200D4);
-  u32 bait = load<u32>(0x10462254);
-  s16 turn = 0;
-  s16 center = 0;
-  bool chase = false;
-  if (bait) {
-    turn = load<s16>(s + 0x12);
-    store<s16>(s + 0x14, 1);
-    center = load<s16>(s + 0x34);
-    chase = true;
-  } else {
-    s16 timer = load<s16>(s + 0x14);
-    if (timer) {
-      turn = load<s16>(s + 0x12);
-      store<s16>(s + 0x14, (s16)(timer - 1));
-      center = load<s16>(s + 0x34);
-      chase = true;
-    } else {
-      store<s16>(a + 0x322, (s16)(load<s16>(a + 0x322) + load<s16>(s + 0x12)));
-    }
-  }
-  if (chase) {
-    s16 amount = turn < 0 ? (s16)(0u - (u32)turn) : turn;
-    if (center) {
-      s16 heading = centerAngle(a);
-      call<void>(0x0200F428, a + 0x322, heading, 4, amount);
-    } else if ((bait = load<u32>(0x10462254))) {
-      gabi::Local<f32[3]> delta;
-      call<void>(0x0201ADE0, bait + 0x314, delta.a, a + 0x314);
-      f32 x = load<f32>(delta.a);
-      f32 z = load<f32>(delta.a + 8);
-      s16 heading = call<s16>(0x020195B0, x, z);
-      store<f32>(s + 0x40, singleAdd(load<f32>(0x1047BBCC), 30.0f));
-      call<void>(0x0200F428, a + 0x322, heading, 4, (s16)(amount * 2));
-    } else {
-      u32 play = call<u32>(0x025200D4);
-      s16 heading = call<s16>(0x025D6894, a, load<u32>(play + 0x5B2C));
-      s32 step = load<s16>(0x1047B69A) + 0x900;
-      s16 counter = load<s16>(s + 0xC);
-      f32 amplitude = singleAdd(load<f32>(0x1047B658), 4000.0f);
-      f32 sine =
-          load<f32>(0x104A44F8 + (((u32)(counter * step) & 65535) >> 3) * 8);
-      s16 wobble = (s16)gabi::ftoi(sine * amplitude);
-      call<void>(0x0200F428, a + 0x322, (s16)(heading + wobble), 4, amount);
-    }
-  }
-  s8 health = load<s8>(a + 0x3A1);
-  f32 speed = load<f32>(0x10462288 + (health == 3 ? 4 : health == 2 ? 12 : 20));
-  call<void>(0x0200ED84, a + 0x370, speed, 1.0f, 3.0f);
-  position(a);
-  ground(a);
-  bool struckWall = false;
-  if (wall(a) && load<s16>(s + 0x30) == 0) {
-    store<s16>(s + 0x14, 0);
-    s16 heading = centerAngle(a);
-    store<s16>(a + 0x322, heading);
-    f32 stiffness = singleAdd(load<f32>(0x1047B624), 0.9f);
-    store<s16>(s + 0x30, 20);
-    store<f32>(s + 0x3C, stiffness);
-    struckWall = true;
-    u32 play = call<u32>(0x025200D4);
-    s32 strength = load<s16>(0x1047B68C) + 5;
-    gabi::Local<f32[3]> direction;
-    store<f32>(direction.a + 8, 0.0f);
-    store<f32>(direction.a + 4, 1.0f);
-    store<f32>(direction.a, 0.0f);
-    call<void>(0x025CB374, play + 0x599C, strength, -33, direction.a);
-    moveSound(a, 0x5981, 0);
-    store<s32>(s + 0x52C, load<s16>(0x104622C0));
-    health = load<s8>(a + 0x3A1);
-    s16 threshold = load<s16>(0x10462288 + (health == 3   ? 10
-                                            : health == 2 ? 18
-                                                          : 26));
-    s16 count = (s16)(load<s16>(s + 0x16) + 1);
-    if (count >= threshold) {
-      store<s16>(s + 0x16, 0);
-      health = load<s8>(a + 0x3A1);
-      store<s16>(s + 0x14, load<s16>(0x10462288 + (health == 3   ? 28
-                                                   : health == 2 ? 30
-                                                                 : 32)));
-    } else {
-      store<s16>(s + 0x16, count);
-    }
-  }
-  bool newTurn = struckWall;
-  if (load<s16>(s + 0x32) == 0) {
-    f32 random = call<f32>(0x020198D8, 50.0f);
-    store<s16>(s + 0x32, (s16)gabi::ftoi(singleAdd(random, 30.0f)));
-    health = load<s8>(a + 0x3A1);
-    newTurn = true;
-  }
-  if (newTurn) {
-    store<s16>(s + 0x12, load<s16>(0x10462288 + (health == 3   ? 8
-                                                 : health == 2 ? 16
-                                                               : 24)));
-    f32 random = call<f32>(0x020198D8, 1.0f);
-    if (random < 0.5f)
-      store<s16>(s + 0x12, (s16)(0u - (u32)load<s16>(s + 0x12)));
-  }
-  u32 second = load<u32>(s + 0x1AC);
-  u32 first = load<u32>(s + 0x80);
-  store<u32>(s + 0x1AC, second | 1);
-  store<u32>(s + 0x80, first | 1);
-  store<s16>(a + 0x320, 0);
-  if (load<f32>(a + 0x370) > 10.0f) {
-    splash(a, 0x840E, 0x840D, false);
-    moveSound(a, 0x705D, 0);
-    motionSound(a);
-    return true;
-  }
-  return false;
-}
-void stunnedState(u32 a) {
-  u32 s = a + 0x11E58;
-  call<u32>(0x025200D4);
-  u16 phase = load<u16>(s + 0x10);
-  if (phase == 0) {
-    store<s16>(s + 0x10, 1);
-    phase = 1;
-  }
-  if (phase == 1) {
-    call<void>(0x025E535C, load<u32>(a + 0x3D0), a + 0x314, 0, 0);
-    if (load<s16>(s + 0x2E) == 0) {
-      store<s16>(s + 0xE, 0);
-      store<s16>(s + 0x10, 0);
-    }
-  }
-  call<void>(0x0200EDC8, a + 0x370, 1.0f, 3.0f);
-  position(a);
-  store<s16>(a + 0x320, 0);
-  ground(a);
-  if (wall(a) && load<s16>(s + 0x30) == 0) {
-    store<s16>(s + 0x14, 0);
-    s16 heading = centerAngle(a);
-    store<s16>(a + 0x322, heading);
-    store<f32>(s + 0x3C, singleAdd(load<f32>(0x1047B624), 0.9f));
-  }
-}
-void movementPitch(u32 a) {
-  gabi::Local<f32[3]> difference;
-  call<void>(0x0201ADE0, a + 0x314, difference.a, a + 0x300);
-  f32 z = load<f32>(difference.a + 8);
-  f32 x = load<f32>(difference.a);
-  f32 y = load<f32>(difference.a + 4);
-  f32 square = gabi::fmadds(x, x, z * z);
-  f32 horizontal = call<f32>(0x028F4384, square);
-  s16 angle = (s16)(0u - call<u32>(0x020195B0, y, horizontal));
-  if (angle > 0x3000)
-    angle = 0x3000;
-  else if (angle < -0x3000)
-    angle = -0x3000;
-  store<s16>(a + 0x320, angle);
-}
-void damagedState(u32 a) {
-  u32 s = a + 0x11E58;
-  call<u32>(0x025200D4);
-  u16 phase = load<u16>(s + 0x10);
-  if (phase == 0) {
-    store<f32>(a + 0x340, 150.0f);
-    store<f32>(a + 0x370, 30.0f);
-    store<f32>(s + 0x3C, 1.0f);
-    store<s16>(s + 0x10, 1);
-  } else if (phase == 1) {
-    f32 target = singleAdd(load<f32>(0x1047B634), 350.0f);
-    f32 step = singleAdd(load<f32>(0x1047B638), 50.0f);
-    call<void>(0x0200ED84, s + 0x470, target, 1.0f, step);
-    if (ground(a)) {
-      store<f32>(a + 0x340, 50.0f);
-      store<s16>(s + 0x10, 2);
-      f32 random = call<f32>(0x020198D8, 65536.0f);
-      store<s16>(a + 0x322, (s16)gabi::ftoi(random));
-      store<f32>(s + 0x3C, 1.0f);
-      moveShock(a, 5);
-      dropEffect(a);
-    }
-  } else if (phase == 2 && ground(a)) {
-    store<s16>(s + 0xE, 0);
-    store<s16>(s + 0x10, 0);
-  }
-  position(a);
-  movementPitch(a);
-  ground(a);
-  if (wall(a) && load<s16>(s + 0x30) == 0) {
-    store<s16>(a + 0x322, centerAngle(a));
-    store<s16>(s + 0x30, 20);
-  }
-  u32 first = load<u32>(s + 0x80);
-  u32 second = load<u32>(s + 0x1AC);
-  store<u32>(s + 0x80, first & ~1u);
-  store<u32>(s + 0x1AC, second & ~1u);
-}
-void dyingState(u32 a) {
-  u32 s = a + 0x11E58;
-  u32 play = call<u32>(0x025200D4);
-  u32 player = load<u32>(play + 0x5B2C);
-  u16 phase = load<u16>(s + 0x10);
-  if (phase == 0) {
-    store<f32>(a + 0x340, 150.0f);
-    store<f32>(a + 0x370, 0.0f);
-    store<s16>(s + 0x10, 1);
-    store<u8>(load<u32>(0x10462250) + 0x151CE, 20);
-    store<f32>(s + 0x3C, 1.0f);
-    if (player && player + 0x37C)
-      monsterSound(player, 0x4830);
-  } else if (phase >= 1 && phase <= 4) {
-    f32 height = load<f32>(a + 0x318) - 150.0f;
-    if (height > 350.0f)
-      height = 350.0f;
-    store<f32>(s + 0x470, height);
-    if (ground(a)) {
-      store<s16>(s + 0x10, (s16)(load<s16>(s + 0x10) + 1));
-      f32 random = call<f32>(0x020198D8, 65536.0f);
-      store<s16>(a + 0x322, (s16)gabi::ftoi(random));
-      store<f32>(s + 0x3C, 1.0f);
-      moveShock(a, 5);
-      dropEffect(a);
-      store<f32>(a + 0x340, singleAdd(load<f32>(0x1047B63C), 130.0f));
-      store<f32>(a + 0x370, 0.0f);
-      random = call<f32>(0x020198D8, 65536.0f);
-      store<s16>(a + 0x322, (s16)gabi::ftoi(random));
-      monsterSound(a, 0x496E);
-    }
-    if (load<s16>(s + 0x10) == 4 && !(load<f32>(a + 0x340) > -30.0f)) {
-      store<s16>(s + 0x10, 5);
-      store<s16>(s + 0x12, 0);
-    }
-  } else if (phase == 5) {
-    f32 rise = singleAdd(load<f32>(0x1047B640), 5.5f);
-    f32 speed = singleAdd(load<f32>(a + 0x340), rise);
-    store<f32>(a + 0x340, speed);
-    if (speed > 0.0f)
-      call<void>(0x0200ED84, s + 0x2E4, 1.0f, 1.0f, 0.015f);
-    store<s16>(a + 0x322, (s16)(load<s16>(a + 0x322) + load<s16>(s + 0x12)));
-    store<s16>(a + 0x32A, (s16)(load<s16>(a + 0x32A) + load<s16>(s + 0x12)));
-    call<void>(0x0200F428, s + 0x12, 5000, 4, 100);
-    f32 target = singleAdd(load<f32>(0x1047B628), 50.0f);
-    call<void>(0x0200ED84, s + 0x40, target, 1.0f, 1.0f);
-    f32 step = singleAdd(load<f32>(0x1047B638), 50.0f);
-    call<void>(0x0200EDC8, s + 0x470, 1.0f, step);
-  }
-  position(a);
-  movementPitch(a);
-  ground(a);
-  u32 second = load<u32>(s + 0x1AC);
-  u32 first = load<u32>(s + 0x80);
-  store<u32>(s + 0x80, first & ~1u);
-  store<u32>(s + 0x1AC, second & ~1u);
-  call<void>(0x0200ED84, a + 0x314, -15.0f, 0.05f, 30.0f);
-  call<void>(0x0200ED84, a + 0x31C, 375.17f, 0.05f, 30.0f);
+    if (std::isnan(a))
+        return std::bit_cast<f32>(std::bit_cast<u32>(a) | 0x00400000u);
+    if (std::isnan(b))
+        return std::bit_cast<f32>(std::bit_cast<u32>(b) | 0x00400000u);
+    return (f32)((f64)a + (f64)b);
 }
 
-u32 movementParticle(u32 position, u32 effect, u32 rotation = 0, u32 scale = 0,
-                     u32 managerOffset = 0x5AB0) {
-  u32 play = call<u32>(0x025200D4);
-  return call<u32>(0x025A847C, load<u32>(play + managerOffset), 0, effect,
-                   position, rotation, scale, 255, 0, -1, 0, 0, 0);
-}
-void emitterScale(u32 emitter, f32 size) {
-  store<f32>(emitter + 0x220, size);
-  store<f32>(emitter + 0x224, size);
-  store<f32>(emitter + 0x228, size);
-  store<f32>(emitter + 0x238, size);
-  store<f32>(emitter + 0x23C, size);
-  store<f32>(emitter + 0x240, size);
-}
-void emitterMove(u32 ownerSlot, u32 position, f32 scale) {
-  u32 emitter = load<u32>(ownerSlot);
-  u8 type = load<u8>(emitter + 0x262);
-  f32 y = load<f32>(position + 4);
-  f32 x = load<f32>(position);
-  f32 z = load<f32>(position + 8);
-  if (type >= 7)
-    y = -y;
-  store<f32>(emitter + 0x22C, x);
-  store<f32>(emitter + 0x230, y);
-  store<f32>(emitter + 0x234, z);
-  emitterScale(load<u32>(ownerSlot), scale);
-}
-void retireEmitter(u32 ownerSlot) {
-  u32 emitter = load<u32>(ownerSlot);
-  if (emitter) {
-    u32 flags = load<u32>(emitter + 0x254);
-    store<s32>(emitter + 0x5C, -1);
-    store<u32>(emitter + 0x254, flags | 1);
-    store<u32>(ownerSlot, 0);
-  }
-}
-void hitControl(u32 a) {
-  u32 s = a + 0x11E58;
-  if (load<s16>(s + 0x38))
-    return;
-  gabi::Local<u8[20]> hit;
-  if (call<s32>(0x025162A4, s + 0x80)) {
-    u32 object = call<u32>(0x02516300, s + 0x80);
-    store<u32>(hit.a, object);
-    u32 source = call<u32>(0x02518DB0, hit.a);
-    store<u32>(hit.a + 4, source);
-    if (a && a + 0x37C) {
-      monsterSound(a, 0x4973);
-      moveSound(a, 0x5982, 0);
+/* 02090420 */
+void ke_move(u32 mat, u32 hair, s32 index, f32 length) {
+    if (!static_cast<u8>(l_HIO.m3E))
+        return;
+    cXyz direction;
+    cXyz out;
+    direction.x = 0.0f;
+    direction.y = 0.0f;
+    direction.z = length;
+    auto* hairs = gabi::at<bgn3_ke_s>(hair);
+    cXyz* point = hairs->m00;
+    for (int j = 4; j > 0; --j) {
+        f32 step = REG_F(10, 1) + 0.1f;
+        f32 curx = static_cast<f32>(point[1].x), vy = static_cast<f32>(hairs->m78.y),
+            curz = static_cast<f32>(point[1].z), cury = static_cast<f32>(point[1].y);
+        f32 gain = (f32)j * step;
+        f32 prevz = static_cast<f32>(point->z);
+        f32 yz = gabi::fmadds(vy, gain, cury);
+        f32 bias = static_cast<f32>(l_HIO.m4C);
+        f32 vz = static_cast<f32>(hairs->m78.z);
+        f32 yy = yz + bias;
+        f32 prevx = static_cast<f32>(point->x), prevy = static_cast<f32>(point->y);
+        f32 dz = gabi::fmadds(vz, gain, curz - prevz);
+        f32 dy = yy - prevy;
+        f32 vx = static_cast<f32>(hairs->m78.x);
+        f32 dx = gabi::fmadds(vx, gain, curx - prevx);
+        s16 rx = (s16)(0u - cM_atan2s(dy, dz));
+        f32 horizontal = Bgn3Bindings::sqrtf(gabi::fmadds(dy, dy, dz * dz));
+        s16 ry = cM_atan2s(dx, horizontal);
+        cMtx_XrotS(calc_mtx(), rx);
+        cMtx_YrotM(calc_mtx(), ry);
+        MtxPosition(&direction, &out);
+        ++point;
+        f32 ox = static_cast<f32>(out.x), px = static_cast<f32>(point[-1].x),
+            py = static_cast<f32>(point[-1].y);
+        point->x = singleAdd(px, ox);
+        f32 oy = static_cast<f32>(out.y);
+        f32 pz = static_cast<f32>(point[-1].z);
+        point->y = singleAdd(py, oy);
+        f32 oz = static_cast<f32>(out.z);
+        point->z = singleAdd(pz, oz);
     }
-    u8 kind = load<u8>(hit.a + 10);
-    s32 severity;
-    s16 duration;
-    if (kind == 9) {
-      severity = 6;
-      u32 play = call<u32>(0x025200D4);
-      gabi::Local<f32[3]> direction;
-      store<f32>(direction.a, 0.0f);
-      store<f32>(direction.a + 4, 1.0f);
-      store<f32>(direction.a + 8, 0.0f);
-      call<void>(0x025CB374, play + 0x599C, load<s16>(0x1047B68C) + 3, -33,
-                 direction.a);
-      store<u8>(0x101EACB7, 5);
-      store<s16>(s + 0x528, 30);
-      duration = load<s16>(0x104622B4);
-    } else if (kind == 2) {
-      store<s16>(s + 0x528, 25);
-      severity = 5;
-      duration = load<s16>(0x104622B2);
-    } else if (kind == 1) {
-      u32 objectInfo = call<u32>(0x025157AC, load<u32>(hit.a));
-      if (load<u8>(objectInfo + 0x6F) == 1) {
-        store<u8>(0x101EACB7, 3);
-        store<s16>(s + 0x528, 20);
-        severity = 4;
-        duration = load<s16>(0x104622B0);
-      } else {
-        store<u8>(0x101EACB7, 2);
-        store<s16>(s + 0x528, 15);
-        severity = 3;
-        duration = load<s16>(0x104622AE);
-      }
-    } else if (load<u32>(hit.a + 4) &&
-               load<s16>(load<u32>(hit.a + 4) + 8) == 0x1D8) {
-      store<s16>(s + 0x528, 10);
-      severity = 2;
-      duration = load<s16>(0x104622AC);
-    } else {
-      store<s16>(s + 0x528, 7);
-      severity = 1;
-      duration = load<s16>(0x104622AA);
+    cXyz* dest = bgn3LinePositions(gabi::at<Bgn3LineMat0>(mat), index);
+    for (int i = 0; i < 5; ++i) {
+        u32 x = bgn3Word(hairs->m00[i].x);
+        bgn3Word(dest[i].x) = x;
+        u32 y = bgn3Word(hairs->m00[i].y);
+        bgn3Word(dest[i].y) = y;
+        u32 z = bgn3Word(hairs->m00[i].z);
+        bgn3Word(dest[i].z) = z;
     }
-    if (load<s16>(s + 0xE) != 1) {
-      store<s16>(s + 0x2E, duration);
-      store<s16>(s + 0xE, 1);
-    }
-    store<s16>(s + 0x10, 0);
-    store<s16>(s + 0x38, 20);
-    if (severity >= 4) {
-      movementParticle(s + 0x14C, 0x10);
-      gabi::Local<f32[3]> size;
-      gabi::Local<s16[3]> angle;
-      store<f32>(size.a, 2.0f);
-      store<f32>(size.a + 8, 2.0f);
-      store<f32>(size.a + 4, 2.0f);
-      store<s16>(angle.a + 4, 0);
-      store<s16>(angle.a, 0);
-      u32 play = call<u32>(0x025200D4);
-      s16 heading = call<s16>(0x025D6894, a, load<u32>(play + 0x5B2C));
-      store<s16>(angle.a + 2, heading);
-      movementParticle(s + 0x14C, 0xD, angle.a, size.a);
-      gabi::Local<f32[3]> p;
-      store<f32>(p.a, load<f32>(s + 0x14C));
-      store<f32>(p.a + 4, load<f32>(s + 0x150));
-      store<f32>(p.a + 8, load<f32>(s + 0x154));
-      call<void>(0x0255F554, p.a, 1);
-    }
-    call<void>(0x02518CC8, a, load<u32>(hit.a), 0x40);
-    return;
-  }
-  if (call<s32>(0x025162A4, a + 0xED54)) {
-    store<s16>(s + 0x38, 20);
-    store<s16>(s + 0x22, 1);
-    store<s16>(s + 0xE, 2);
-    store<s16>(s + 0x10, 0);
-    s8 health = load<s8>(a + 0x3A1);
-    if (health) {
-      store<s8>(a + 0x3A1, (s8)(health - 1));
-      s32 reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-      call<void>(0x025E1A40, 0x2879u, 0, 0x35, reverb);
-      f32 size = singleAdd(load<f32>(0x1047B624), 2.0f);
-      health = load<s8>(a + 0x3A1);
-      u32 play = call<u32>(0x025200D4);
-      if (health == 0) {
-        store<f32>(play + 0x5B44, 0.0f);
-        call<void>(0x025E1904, 30);
-        u32 emitter = movementParticle(s + 0x2D8, 0x8457);
-        if (emitter)
-          emitterScale(emitter, size);
-        emitter = movementParticle(s + 0x2D8, 0x8458);
-        if (emitter)
-          emitterScale(emitter, size);
-        store<s16>(s + 0xE, 3);
-        store<s16>(s + 0x10, 0);
-        store<s16>(s + 0x38, 10000);
-        reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-        call<void>(0x025E1A7C, 0x4970u, 0, 0, reverb);
-        reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-        call<void>(0x025E1A40, 0x5983u, 0, 0, reverb);
-      } else {
-        u32 emitter = call<u32>(0x025A847C, load<u32>(play + 0x5AB0), 0, 0x8459,
-                                s + 0x2D8, 0, 0, 255, 0, -1, 0, 0, 0);
-        if (emitter)
-          emitterScale(emitter, size);
-        reverb = call<s32>(0x02520540, load<s8>(a + 0x326));
-        call<void>(0x025E1A7C, 0x496Eu, 0, 0, reverb);
-      }
-    }
-  }
-  bool hitAny = false;
-  if (call<s32>(0x025162A4, s + 0x1AC)) {
-    store<u32>(hit.a, call<u32>(0x02516300, s + 0x1AC));
-    hitAny = true;
-  }
-  for (int i = 0; i < 8; ++i) {
-    u32 sphere = a + 0x1BE8 + i * 0x19D8 + 0x2AC;
-    if (call<s32>(0x025162A4, sphere)) {
-      store<u32>(hit.a, call<u32>(0x02516300, sphere));
-      hitAny = true;
-    }
-  }
-  if (hitAny && load<s16>(s + 0x3A) == 0) {
-    store<s16>(s + 0x3A, 10);
-    call<void>(0x02518CC8, a, load<u32>(hit.a), 0x44);
-  }
 }
 
-void copyModelMatrix(u32 model, bool alternateOrder = false) {
-  u32 matrix = load<u32>(0x1018C7B0);
-  f32 cells[12];
-  for (int i = 0; i < 12; ++i)
-    cells[i] = load<f32>(matrix + i * 4);
-  if (alternateOrder) {
-    for (int i : {5, 6, 7, 9, 10, 11, 0, 1, 2, 3, 4, 8})
-      store<f32>(model + 0xC8 + i * 4, cells[i]);
-  } else {
-    for (int i : {0, 1, 2, 3, 4, 8, 5, 6, 7, 9, 10, 11})
-      store<f32>(model + 0xC8 + i * 4, cells[i]);
-  }
+/* inlined into caller */
+void move_se_set(u32 a) {
+    cXyz delta;
+    cXyz output;
+    Bgn3Bindings::cXyz_subtract(a + 0x314, gabi::ea(&delta), a + 0x300);
+    delta.y = 0.0f;
+    f32 square = PSVECSquareMag(&delta);
+    f32 length = Bgn3Bindings::sqrtf(square);
+    u32 volume = soundVolume(length * 3.5f);
+    if (a && a + 0x37C)
+        moveSound(a, 0x705A, volume);
+    Bgn3Bindings::cXyz_subtract(a + 0x314, gabi::ea(&output), a + 0x300);
+    bgn3Word(delta.y) = static_cast<u32>(bgn3Word(output.y));
+    delta.x = 0.0f;
+    delta.z = 0.0f;
+    square = PSVECSquareMag(&delta);
+    length = Bgn3Bindings::sqrtf(square);
+    volume = soundVolume(singleAdd(length, length));
+    if (a && a + 0x37C)
+        moveSound(a, 0x705B, volume);
 }
-void bodyControl(u32 a) {
-  u32 s = a + 0x11E58;
-  call<void>(0x0200F428, a + 0x32A, load<s16>(a + 0x322), 4, 0x1000);
-  call<void>(0x0200F428, a + 0x328, load<s16>(a + 0x320), 8, 0x400);
-  call<void>(0x025F1884, load<u32>(0x1018C7B0), load<s16>(a + 0x32A));
-  call<void>(0x025F1BF4, load<u32>(0x1018C7B0), load<s16>(a + 0x328));
-  gabi::Local<f32[3]> direction, delta, output;
-  store<f32>(direction.a, 0.0f);
-  store<f32>(direction.a + 4, 0.0f);
-  store<f32>(direction.a + 8, singleAdd(load<f32>(0x1047B61C), -300.0f));
-  call<void>(0x0200FCD8, direction.a, delta.a);
-  call<void>(0x0201AD78, a + 0x314, output.a, delta.a);
-  store<u32>(s, load<u32>(output.a));
-  store<u32>(s + 4, load<u32>(output.a + 4));
-  store<u32>(s + 8, load<u32>(output.a + 8));
-  for (int i = 0; i < 9; ++i) {
-    f32 size = singleAdd(load<f32>(0x1047B63C), 1.7f);
-    f32 factor = load<f32>(0x101911C0 + i * 4);
-    store<f32>(a + 0x1BE8 + i * 0x19D8 + 0x2A8, factor * size);
-  }
-  f32 separation = singleAdd(load<f32>(0x1047B630), 150.0f);
-  f32 stiffness = load<f32>(s + 0x3C);
-  gabi::Local<u8[108]> line;
-  call<void>(0x02008FEC, line.a);
-  f32 gravity = singleAdd(load<f32>(0x1047B628), -5.0f);
-  for (u32 i = 0; i < 8; ++i)
-    store<u8>(line.a + 0x5C + i, 0);
-  store<u32>(line.a, line.a + 0x58);
-  store<u32>(line.a + 4, line.a + 0x64);
-  store<u32>(line.a + 0x10, 0x10008FB4);
-  store<u32>(line.a + 0x68, 1);
-  store<u32>(line.a + 0x64, 0x10008FD4);
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<u32>(line.a + 0x20, 0x10008FC4);
-  u32 firstPart = a + 0x1BE8;
-  store<u32>(firstPart + 0x288, load<u32>(s));
-  store<u32>(firstPart + 0x28C, load<u32>(s + 4));
-  store<u32>(firstPart + 0x290, load<u32>(s + 8));
-  call<void>(0x025F1884, load<u32>(0x1018C7B0), load<s16>(a + 0x32A));
-  call<void>(0x025F1BF4, load<u32>(0x1018C7B0), load<s16>(a + 0x328));
-  store<f32>(direction.a, 0.0f);
-  store<f32>(direction.a + 4, 0.0f);
-  store<f32>(direction.a + 8, -load<f32>(s + 0x40));
-  call<void>(0x0200FCD8, direction.a, delta.a);
-  for (int i = 1; i < 10; ++i) {
-    u32 part = firstPart + i * 0x19D8;
-    u32 prev = part - 0x19D8;
-    f32 floor =
-        singleAdd(load<f32>(0x1047B65C), 70.0f) * load<f32>(prev + 0x2A8);
-    f32 y = singleAdd(singleAdd(load<f32>(part + 0x28C), gravity),
-                      load<f32>(part + 0x2A0));
-    f32 x = load<f32>(part + 0x288);
-    f32 prevZ = load<f32>(prev + 0x290);
-    f32 prevX = load<f32>(prev + 0x288);
-    if (!(y > floor))
-      y = floor;
-    f32 z = load<f32>(part + 0x290);
-    f32 dx = singleAdd(x - prevX, load<f32>(part + 0x29C));
-    f32 dz = singleAdd(z - prevZ, load<f32>(part + 0x2A4));
-    dx = singleAdd(dx, load<f32>(delta.a));
-    dz = singleAdd(dz, load<f32>(delta.a + 8));
-    f32 dy = y - load<f32>(prev + 0x28C);
-    s16 heading = call<s16>(0x020195B0, dx, dz);
-    store<s16>(prev + 0x296, heading);
-    f32 horizontal = call<f32>(0x028F4384, gabi::fmadds(dx, dx, dz * dz));
-    u32 pitch = call<u32>(0x020195B0, dy, horizontal);
-    store<s16>(prev + 0x294, (s16)(0u - pitch));
-    call<void>(0x025F1884, load<u32>(0x1018C7B0), load<s16>(prev + 0x296));
-    call<void>(0x025F1BF4, load<u32>(0x1018C7B0), load<s16>(prev + 0x294));
-    store<f32>(direction.a + 4, 0.0f);
-    store<f32>(direction.a, 0.0f);
-    store<f32>(direction.a + 8, separation * load<f32>(prev + 0x2A8));
-    gabi::Local<f32[3]> segment;
-    call<void>(0x0200FCD8, direction.a, segment.a);
-    u32 oldX = load<u32>(part + 0x288);
-    u32 oldY = load<u32>(part + 0x28C);
-    store<u32>(part + 0x29C, oldX);
-    u32 oldZ = load<u32>(part + 0x290);
-    store<u32>(part + 0x2A0, oldY);
-    store<u32>(part + 0x2A4, oldZ);
-    call<void>(0x0201AD78, prev + 0x288, output.a, segment.a);
-    store<u32>(part + 0x288, load<u32>(output.a));
-    f32 vx = load<f32>(part + 0x288) - load<f32>(part + 0x29C);
-    store<u32>(part + 0x28C, load<u32>(output.a + 4));
-    store<u32>(part + 0x290, load<u32>(output.a + 8));
-    f32 vy = load<f32>(part + 0x28C) - load<f32>(part + 0x2A0);
-    f32 vz = load<f32>(part + 0x290) - load<f32>(part + 0x2A4);
-    store<f32>(part + 0x29C, vx * stiffness);
-    store<f32>(part + 0x2A0, vy * stiffness);
-    store<f32>(part + 0x2A4, vz * stiffness);
-  }
-  call<void>(0x0200ED84, s + 0x3C, load<f32>(0x104622BC), 1.0f, 0.002f);
-  call<void>(0x0200ED84, s + 0x40, load<f32>(0x104622B8), 1.0f, 0.5f);
-  store<u32>(line.a + 0x58, 0x10008FE4);
-  store<u32>(line.a + 0x64, 0x10008FA4);
-  store<u32>(line.a + 0x20, 0x10008F94);
-  call<void>(0x02008B4C, line.a, 0);
-}
+
 void hairRotations(int i, bool reverse) {
-  s32 x = i * (load<s16>(0x1047B690) + 1000);
-  x &= load<s16>(0x1047B692) + 0x3FFF;
-  x -= load<s16>(0x1047B694) + 0x2000;
-  if (reverse)
-    x = -x;
-  call<void>(0x025F1BF4, load<u32>(0x1018C7B0), (s16)x);
-  s32 z = i * (load<s16>(0x1047B696) + 5000);
-  z &= load<s16>(0x1047B698) + 0xFFF;
-  z -= load<s16>(0x1047B69A) + 0x800;
-  if (reverse)
-    z = -z;
-  call<void>(0x025F1C5C, load<u32>(0x1018C7B0), (s16)z);
+    s32 x = i * (REG0_S(4) + 1000);
+    x &= REG0_S(5) + 0x3FFF;
+    x -= REG0_S(6) + 0x2000;
+    if (reverse)
+        x = -x;
+    cMtx_XrotM(calc_mtx(), (s16)x);
+    s32 z = i * (REG0_S(7) + 5000);
+    z &= REG0_S(8) + 0xFFF;
+    z -= REG0_S(9) + 0x800;
+    if (reverse)
+        z = -z;
+    cMtx_ZrotM(calc_mtx(), (s16)z);
 }
 
-void animatedBody(u32 a, bool moving) {
-  u32 s = a + 0x11E58;
-  gabi::Local<f32[3]> vector, world;
-  call<void>(0x025E535C, load<u32>(a + 0x3D0), a + 0x314, 0, 0);
-  call<void>(0x025E742C, load<u32>(a + 0x1BDC));
-  call<void>(0x025E742C, load<u32>(a + 0x1BE0));
-  f32 y = load<f32>(a + 0x318);
-  f32 x = load<f32>(a + 0x314);
-  f32 z = load<f32>(a + 0x31C);
-  call<void>(0x0200FAD8, 0, x, y, z);
-  call<void>(0x025F1C28, load<u32>(0x1018C7B0), load<s16>(a + 0x32A));
-  call<void>(0x025F1BF4, load<u32>(0x1018C7B0), load<s16>(a + 0x328));
-  call<void>(0x025F1C5C, load<u32>(0x1018C7B0), load<s16>(a + 0x32C));
-  call<void>(0x0200FCF0);
-  f32 size = singleAdd(load<f32>(0x1047B638), 2.0f);
-  u32 model = load<u32>(a + 0x484);
-  call<void>(0x0200FC74, 1, size, size, size);
-  copyModelMatrix(model);
-  store<f32>(vector.a, 0.0f);
-  store<f32>(vector.a + 4, 0.0f);
-  store<f32>(vector.a + 8, 0.0f);
-  call<void>(0x0200FCD8, vector.a, world.a);
-  call<void>(0x02018D40, s + 0x2C4, world.a);
-  call<void>(0x02018C8C, s + 0x2C4, singleAdd(load<f32>(0x1047B614), 200.0f));
-  call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, s + 0x1AC);
-  bool effect;
-  s16 timer;
-  if (load<s16>(s + 0x22) == 23) {
-    store<s16>(s + 0x20, 50);
-    store<s16>(s + 0x2C, 99);
-    timer = 99;
-    effect = true;
-  } else {
-    timer = load<s16>(s + 0x2C);
-    effect = timer != 0;
+/* inlined into caller */
+void setModels(u32 a, bool moving) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 s = a + 0x11E58;
+    cXyz vector;
+    cXyz world;
+    Bgn3Bindings::mDoExt_McaMorf_play(static_cast<u32>(bgn3Word(i_this->mpMorf)), a + 0x314, 0, 0);
+    Bgn3Bindings::mDoExt_baseAnm_play(static_cast<u32>(bgn3Word(i_this->mJyakutenCBrkAnm)));
+    Bgn3Bindings::mDoExt_baseAnm_play(static_cast<u32>(bgn3Word(i_this->mJyakutenBBrkAnm)));
+    f32 y = static_cast<f32>(i_this->current.pos.y);
+    f32 x = static_cast<f32>(i_this->current.pos.x);
+    f32 z = static_cast<f32>(i_this->current.pos.z);
+    MtxTrans(x, y, z, 0);
+    cMtx_YrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.y));
+    cMtx_XrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.x));
+    cMtx_ZrotM(calc_mtx(), static_cast<s16>(i_this->shape_angle.z));
+    MtxPush();
+    f32 size = singleAdd(REG_F(0, 10), 2.0f);
+    u32 model = static_cast<u32>(bgn3Word(i_this->m002CC));
+    MtxScale(size, size, size, 1);
+    copyModelMatrix(model);
+    vector.x = 0.0f;
+    vector.y = 0.0f;
+    vector.z = 0.0f;
+    MtxPosition(&vector, &world);
+    i_this->m0FF28.SetC(&world);
+    i_this->m0FF28.SetR(singleAdd(REG_F(0, 1), 200.0f));
+    Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, s + 0x1AC);
+    bool effect;
+    s16 timer;
+    if (static_cast<s16>(i_this->m0FD9E) == 23) {
+        i_this->mArrowHitFlashTimer = 50;
+        i_this->mArrowHitEffectTimer = 99;
+        timer = 99;
+        effect = true;
+    } else {
+        timer = static_cast<s16>(i_this->mArrowHitEffectTimer);
+        effect = timer != 0;
+        if (effect) {
+            timer = (s16)(timer - 1);
+            i_this->mArrowHitEffectTimer = timer;
+        }
+    }
     if (effect) {
-      timer = (s16)(timer - 1);
-      store<s16>(s + 0x2C, timer);
-    }
-  }
-  if (effect) {
-    f32 factor = singleAdd(load<f32>(0x1047BAB0), 0.001f);
-    f32 scale = (100.0f * (f32)timer) * factor;
-    if (load<u32>(s + 0x24) == 0)
-      store<u32>(s + 0x24, movementParticle(world.a, 0x3ED));
-    else
-      emitterMove(s + 0x24, world.a, scale);
-    if (load<u32>(s + 0x28) == 0) {
-      store<f32>(vector.a + 4, scale);
-      store<f32>(vector.a + 8, scale);
-      store<f32>(vector.a, scale);
-      store<u32>(s + 0x28, movementParticle(world.a, 0x3EE));
+        f32 factor = singleAdd(REG_F(8, 8), 0.001f);
+        f32 scale = (100.0f * (f32)timer) * factor;
+        if (static_cast<u32>(bgn3Word(i_this->mpArrowHitEmitter1)) == 0)
+            bgn3Word(i_this->mpArrowHitEmitter1) = movementParticle(gabi::ea(&world), 0x3ED);
+        else
+            emitterMove(s + 0x24, gabi::ea(&world), scale);
+        if (static_cast<u32>(bgn3Word(i_this->mpArrowHitEmitter2)) == 0) {
+            vector.y = scale;
+            vector.z = scale;
+            vector.x = scale;
+            bgn3Word(i_this->mpArrowHitEmitter2) = movementParticle(gabi::ea(&world), 0x3EE);
+        } else {
+            emitterMove(s + 0x28, gabi::ea(&world), scale);
+        }
     } else {
-      emitterMove(s + 0x28, world.a, scale);
+        retireEmitter(s + 0x24);
+        retireEmitter(s + 0x28);
     }
-  } else {
-    retireEmitter(s + 0x24);
-    retireEmitter(s + 0x28);
-  }
-  call<void>(0x0200FD38);
-  for (int i = 0; i < 40; ++i) {
-    call<void>(0x0200FCF0);
-    hairRotations(i, true);
-    store<f32>(vector.a + 4, singleAdd(load<f32>(0x1047BD94), 100.0f));
-    u32 hair = a + 0x538 + i * 0x84;
-    call<void>(0x0200FCD8, vector.a, hair);
-    store<f32>(vector.a + 4, load<f32>(0x104622C4));
-    call<void>(0x0200FCD8, vector.a, hair + 0x78);
-    call<void>(0x028E8DAC, hair + 0x78, world.a, hair + 0x78);
-    f32 length = load<f32>(0x104622C8);
-    hairControl(a + 0x19D8, hair, i, singleAdd(length, length));
-    call<void>(0x0200FD38);
-  }
-  call<void>(0x0200FAD8, 1, 0.0f, 0.0f,
-             singleAdd(load<f32>(0x1047B618), 250.0f));
-  s16 shake = load<s16>(s + 0x528);
-  if (shake) {
-    shake = (s16)(shake - 1);
-    store<s16>(s + 0x528, shake);
-  }
-  f32 magnitude = (f32)shake * singleAdd(load<f32>(0x1047B648), 500.0f);
-  s16 count = load<s16>(s + 0xC);
-  f32 sine = tableSin(0x104A44F8, (s16)(count * 0x2100));
-  s16 yaw = (s16)gabi::ftoi(sine * magnitude);
-  f32 cosine = tableCos(0x104A44F8, (s16)(count * 0x2300));
-  s16 pitch = (s16)gabi::ftoi(cosine * magnitude);
-  call<void>(0x025F1C28, load<u32>(0x1018C7B0), yaw);
-  call<void>(0x025F1BF4, load<u32>(0x1018C7B0), pitch);
-  copyModelMatrix(load<u32>(load<u32>(a + 0x3D0) + 0x90));
-  store<f32>(vector.a, 0.0f);
-  store<f32>(vector.a + 8, 0.0f);
-  store<f32>(vector.a + 4, 0.0f);
-  call<void>(0x0200FCD8, vector.a, world.a);
-  call<void>(0x02018D40, s + 0x198, world.a);
-  call<void>(0x02018C8C, s + 0x198, singleAdd(load<f32>(0x1047B610), 150.0f));
-  call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, s + 0x80);
-  u32 ex = load<u32>(world.a);
-  store<u32>(a + 0x37C, ex);
-  u32 ey = load<u32>(world.a + 4);
-  store<u32>(a + 0x380, ey);
-  u32 ez = load<u32>(world.a + 8);
-  store<u32>(a + 0x384, ez);
-  store<u32>(a + 0x390, ex);
-  store<u32>(a + 0x394, ey);
-  store<u32>(a + 0x398, ez);
-  f32 eyeHeight = singleAdd(load<f32>(0x1047B62C), 100.0f);
-  store<f32>(a + 0x394, singleAdd(load<f32>(a + 0x394), eyeHeight));
-  call<void>(0x025E55A0, load<u32>(a + 0x3D0));
-  s16 hit = load<s16>(s + 0x22);
-  if (hit) {
-    hit = (s16)(hit + 1);
-    store<s16>(s + 0x22, hit > 100 ? 0 : hit);
-  }
-  for (int i = 0; i < 9; ++i) {
-    u32 part = a + 0x1BE8 + i * 0x19D8;
-    x = load<f32>(part + 0x288);
-    z = load<f32>(part + 0x290);
-    y = load<f32>(part + 0x28C);
-    call<void>(0x0200FAD8, 0, x, y, z);
-    call<void>(0x025F1C28, load<u32>(0x1018C7B0), load<s16>(part + 0x296));
-    call<void>(0x025F1BF4, load<u32>(0x1018C7B0), load<s16>(part + 0x294));
-    call<void>(0x0200FCF0);
-    size = load<f32>(part + 0x2A8);
-    call<void>(0x0200FC74, 1, size, size, size);
-    store<f32>(vector.a, 0.0f);
-    store<f32>(vector.a + 4, 0.0f);
-    store<f32>(vector.a + 8, 0.0f);
-    call<void>(0x0200FCD8, vector.a, world.a);
-    if (i == 8) {
-      s8 health = load<s8>(a + 0x3A1);
-      model = health == 3   ? load<u32>(a + 0x1BD8)
-              : health == 2 ? load<u32>(a + 0x1BD4)
-              : health == 1 ? load<u32>(a + 0x1BD0)
-                            : 0;
-      store<u32>(part, model);
-      store<u32>(s + 0x2D8, load<u32>(world.a));
-      store<u32>(s + 0x2DC, load<u32>(world.a + 4));
-      store<u32>(s + 0x2E0, load<u32>(world.a + 8));
+    MtxPull();
+    for (int i = 0; i < 40; ++i) {
+        MtxPush();
+        hairRotations(i, true);
+        vector.y = singleAdd(REG_F(13, 13), 100.0f);
+        u32 hair = a + 0x538 + i * 0x84;
+        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m00[0]);
+        vector.y = static_cast<f32>(l_HIO.m40);
+        MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m78);
+        Bgn3Bindings::PSVECSubtract(hair + 0x78, gabi::ea(&world), hair + 0x78);
+        f32 length = static_cast<f32>(l_HIO.m44);
+        ke_move(a + 0x19D8, hair, i, singleAdd(length, length));
+        MtxPull();
     }
-    model = load<u32>(part);
-    if (model)
-      copyModelMatrix(model, true);
-    call<void>(0x02018D40, part + 0x3C4, world.a);
-    f32 radius = singleAdd(load<f32>(0x1047B640), 100.0f);
-    radius = load<f32>(part + 0x2A8) * radius;
-    call<void>(0x02018C8C, part + 0x3C4, radius);
-    u32 flags = load<u32>(part + 0x2AC);
-    store<u32>(part + 0x2AC, moving ? flags | 1 : flags & ~1u);
-    call<void>(0x0200E240, call<u32>(0x025200D4) + 0x26A4, part + 0x2AC);
-    call<void>(0x0200FD38);
-    if (i < 7 && load<u8>(0x104622C2)) {
-      for (int j = 0; j < load<u16>(0x101911E4 + i * 2); ++j) {
-        call<void>(0x0200FCF0);
-        hairRotations(j, false);
-        f32 unusedHeight = singleAdd(load<f32>(0x1047BD94), 100.0f);
-        store<f32>(vector.a + 4, unusedHeight);
-        f32 hairLength = singleAdd(load<f32>(0x1047BD90), 60.0f);
-        store<f32>(vector.a + 4, load<f32>(part + 0x2A8) * hairLength);
-        u32 hair = part + 0x3F0 + j * 0x84;
-        call<void>(0x0200FCD8, vector.a, hair);
-        store<f32>(vector.a + 4, load<f32>(0x104622C4));
-        call<void>(0x0200FCD8, vector.a, hair + 0x78);
-        call<void>(0x028E8DAC, hair + 0x78, world.a, hair + 0x78);
-        hairControl(part + 0x1890, hair, j,
-                    load<f32>(part + 0x2A8) * load<f32>(0x104622C8));
-        call<void>(0x0200FD38);
-      }
+    MtxTrans(0.0f, 0.0f, singleAdd(REG_F(0, 2), 250.0f), 1);
+    s16 shake = static_cast<s16>(i_this->m100A8);
+    if (shake) {
+        shake = (s16)(shake - 1);
+        i_this->m100A8 = shake;
     }
-    if (load<s16>(s + 0x22) == load<s16>(0x101911F4 + i * 2)) {
-      store<s16>(part + 0x284, 50);
-      store<s16>(part + 0x3EC, 100);
+    f32 magnitude = (f32)shake * singleAdd(REG_F(0, 14), 500.0f);
+    s16 count = static_cast<s16>(i_this->m0FD88);
+    f32 sine = tableSin(0x104A44F8, (s16)(count * 0x2100));
+    s16 yaw = (s16)gabi::ftoi(sine * magnitude);
+    f32 cosine = tableCos(0x104A44F8, (s16)(count * 0x2300));
+    s16 pitch = (s16)gabi::ftoi(cosine * magnitude);
+    cMtx_YrotM(calc_mtx(), yaw);
+    cMtx_XrotM(calc_mtx(), pitch);
+    copyModelMatrix(gabi::ea(i_this->mpMorf->getModel()));
+    vector.x = 0.0f;
+    vector.z = 0.0f;
+    vector.y = 0.0f;
+    MtxPosition(&vector, &world);
+    i_this->m0FDFC.SetC(&world);
+    i_this->m0FDFC.SetR(singleAdd(REG_F(0, 0), 150.0f));
+    Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, s + 0x80);
+    u32 ex = static_cast<u32>(bgn3Word(world.x));
+    bgn3Word(i_this->eyePos.x) = ex;
+    u32 ey = static_cast<u32>(bgn3Word(world.y));
+    bgn3Word(i_this->eyePos.y) = ey;
+    u32 ez = static_cast<u32>(bgn3Word(world.z));
+    bgn3Word(i_this->eyePos.z) = ez;
+    bgn3Word(i_this->attention_info.position.x) = ex;
+    bgn3Word(i_this->attention_info.position.y) = ey;
+    bgn3Word(i_this->attention_info.position.z) = ez;
+    f32 eyeHeight = singleAdd(REG_F(0, 7), 100.0f);
+    i_this->attention_info.position.y =
+        singleAdd(static_cast<f32>(i_this->attention_info.position.y), eyeHeight);
+    Bgn3Bindings::mDoExt_McaMorf_calc(static_cast<u32>(bgn3Word(i_this->mpMorf)));
+    s16 hit = static_cast<s16>(i_this->m0FD9E);
+    if (hit) {
+        hit = (s16)(hit + 1);
+        i_this->m0FD9E = hit > 100 ? 0 : hit;
     }
-    s16 flash = load<s16>(part + 0x284);
-    s16 timer = load<s16>(part + 0x3EC);
-    if (flash)
-      store<s16>(part + 0x284, (s16)(flash - 1));
-    if (timer) {
-      timer = (s16)(timer - 1);
-      store<s16>(part + 0x3EC, timer);
-      f32 factor = singleAdd(load<f32>(0x1047BA90), 0.04f);
-      // Both products keep the original operand order (first-NaN payload).
-      f32 scale = gabi::fmuls_ppc(gabi::fmuls_ppc(load<f32>(part + 0x2A8), (f32)timer), factor);
-      if (load<u32>(part + 0x3E4) == 0)
-        store<u32>(part + 0x3E4, movementParticle(part + 0x288, 0x3ED));
-      else
-        emitterMove(part + 0x3E4, part + 0x288, scale);
-      if (load<u32>(part + 0x3E8) == 0) {
-        store<f32>(vector.a + 4, scale);
-        store<f32>(vector.a + 8, scale);
-        store<f32>(vector.a, scale);
-        store<u32>(part + 0x3E8, movementParticle(part + 0x288, 0x3EE));
-      } else {
-        emitterMove(part + 0x3E8, part + 0x288, scale);
-      }
-    } else {
-      retireEmitter(part + 0x3E4);
-      retireEmitter(part + 0x3E8);
+    for (int i = 0; i < 9; ++i) {
+        u32 part = a + 0x1BE8 + i * 0x19D8;
+        x = static_cast<f32>(bgn3Part(part)->m00D4.x);
+        z = static_cast<f32>(bgn3Part(part)->m00D4.z);
+        y = static_cast<f32>(bgn3Part(part)->m00D4.y);
+        MtxTrans(x, y, z, 0);
+        cMtx_YrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->m00E2));
+        cMtx_XrotM(calc_mtx(), static_cast<s16>(bgn3Part(part)->m00E0));
+        MtxPush();
+        size = static_cast<f32>(bgn3Part(part)->m00F4);
+        MtxScale(size, size, size, 1);
+        vector.x = 0.0f;
+        vector.y = 0.0f;
+        vector.z = 0.0f;
+        MtxPosition(&vector, &world);
+        if (i == 8) {
+            s8 health = static_cast<s8>(i_this->health);
+            model = health == 3   ? static_cast<u32>(bgn3Word(i_this->mpJyakutenAModel))
+                    : health == 2 ? static_cast<u32>(bgn3Word(i_this->mpJyakutenBModel))
+                    : health == 1 ? static_cast<u32>(bgn3Word(i_this->mpJyakutenCModel))
+                                  : 0;
+            bgn3Word(bgn3Part(part)->mpPart3Model) = model;
+            bgn3Word(i_this->m10054.x) = static_cast<u32>(bgn3Word(world.x));
+            bgn3Word(i_this->m10054.y) = static_cast<u32>(bgn3Word(world.y));
+            bgn3Word(i_this->m10054.z) = static_cast<u32>(bgn3Word(world.z));
+        }
+        model = static_cast<u32>(bgn3Word(bgn3Part(part)->mpPart3Model));
+        if (model)
+            copyModelMatrix(model, true);
+        bgn3Part(part)->mPart3Sph.SetC(&world);
+        f32 radius = singleAdd(REG_F(0, 12), 100.0f);
+        radius = static_cast<f32>(bgn3Part(part)->m00F4) * radius;
+        bgn3Part(part)->mPart3Sph.SetR(radius);
+        u32 flags = static_cast<u32>(bgn3Part(part)->mPart3Sph.mObjAt.mSPrm);
+        bgn3Part(part)->mPart3Sph.mObjAt.mSPrm = moving ? flags | 1 : flags & ~1u;
+        Bgn3Bindings::cCcS_Set(dComIfGp_ea() + 0x26A4, part + 0x2AC);
+        MtxPull();
+        if (i < 7 && static_cast<u8>(l_HIO.m3E)) {
+            for (int j = 0; j < ke_max[i]; ++j) {
+                MtxPush();
+                hairRotations(j, false);
+                f32 unusedHeight = singleAdd(REG_F(13, 13), 100.0f);
+                vector.y = unusedHeight;
+                f32 hairLength = singleAdd(REG_F(13, 12), 60.0f);
+                vector.y = static_cast<f32>(bgn3Part(part)->m00F4) * hairLength;
+                u32 hair = part + 0x3F0 + j * 0x84;
+                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m00[0]);
+                vector.y = static_cast<f32>(l_HIO.m40);
+                MtxPosition(&vector, &gabi::at<bgn3_ke_s>(hair)->m78);
+                Bgn3Bindings::PSVECSubtract(hair + 0x78, gabi::ea(&world), hair + 0x78);
+                ke_move(part + 0x1890, hair, j,
+                        static_cast<f32>(bgn3Part(part)->m00F4) * static_cast<f32>(l_HIO.m44));
+                MtxPull();
+            }
+        }
+        if (static_cast<s16>(i_this->m0FD9E) == fl_check_d[i]) {
+            bgn3Part(part)->mPart3ArrowHitFlashTimer = 50;
+            bgn3Part(part)->mPart3ArrowHitEffectTimer = 100;
+        }
+        s16 flash = static_cast<s16>(bgn3Part(part)->mPart3ArrowHitFlashTimer);
+        s16 timer = static_cast<s16>(bgn3Part(part)->mPart3ArrowHitEffectTimer);
+        if (flash)
+            bgn3Part(part)->mPart3ArrowHitFlashTimer = (s16)(flash - 1);
+        if (timer) {
+            timer = (s16)(timer - 1);
+            bgn3Part(part)->mPart3ArrowHitEffectTimer = timer;
+            f32 factor = singleAdd(REG_F(8, 0), 0.04f);
+            // Both products keep the original operand order (first-NaN payload).
+            f32 scale = gabi::fmuls_ppc(
+                gabi::fmuls_ppc(static_cast<f32>(bgn3Part(part)->m00F4), (f32)timer), factor);
+            if (static_cast<u32>(bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter1)) == 0)
+                bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter1) =
+                    movementParticle(part + 0x288, 0x3ED);
+            else
+                emitterMove(part + 0x3E4, part + 0x288, scale);
+            if (static_cast<u32>(bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter2)) == 0) {
+                vector.y = scale;
+                vector.z = scale;
+                vector.x = scale;
+                bgn3Word(bgn3Part(part)->mpPart3ArrowHitEmitter2) =
+                    movementParticle(part + 0x288, 0x3EE);
+            } else {
+                emitterMove(part + 0x3E8, part + 0x288, scale);
+            }
+        } else {
+            retireEmitter(part + 0x3E4);
+            retireEmitter(part + 0x3E8);
+        }
     }
-  }
-  u32 first = load<u32>(s + 0x80);
-  u32 second = load<u32>(s + 0x1AC);
-  store<u32>(s + 0x80, moving ? first | 1 : first & ~1u);
-  store<u32>(s + 0x1AC, moving ? second | 1 : second & ~1u);
-  model = load<u32>(a + 0x484);
-  call<void>(0x028E90D4, model ? model + 0xC8 : 0, load<u32>(0x1018C7B0));
-  store<f32>(vector.a, 0.0f);
-  store<f32>(vector.a + 4, 0.0f);
-  store<f32>(vector.a + 8, 0.0f);
-  call<void>(0x0200FCD8, vector.a, world.a);
-  call<void>(0x0200EDC8, s + 0x470, 1.0f, 25.0f);
-  u32 packet = load<u32>(s + 0x46C);
-  u32 points = load<u32>(packet);
-  u32 sizes = load<u32>(packet + 4);
-  for (int i = 0; i < 60; ++i) {
-    u32 angle = call<u32>(0x02019510, (f32)i * 0.05324733629822731f) & 65535;
-    f32 amplitude =
-        load<f32>(0x104A44F8 + (angle >> 3) * 8) * load<f32>(s + 0x470);
-    s16 frequency = load<s16>(0x1047B68E);
-    s16 counter = load<s16>(s + 0xC);
-    s16 stagger = load<s16>(0x1047B690);
-    u32 xAngle = (u32)(counter * (frequency + 300) + i * (stagger + 2000));
-    s16 zStagger = load<s16>(0x1047B694);
-    s16 zFrequency = load<s16>(0x1047B692);
-    u32 zAngle = (u32)(counter * (zFrequency + 250) + i * (zStagger + 2000));
-    f32 attenuation = (f32)(59 - i) * 0.01666666939854622f;
-    amplitude = amplitude * attenuation;
-    f32 vx = load<f32>(0x104A44F8 + ((xAngle & 65535) >> 3) * 8) * amplitude;
-    f32 vz = load<f32>(0x104A44F8 + ((zAngle & 65535) >> 3) * 8) * amplitude;
-    store<f32>(vector.a + 4, 0.0f);
-    store<f32>(vector.a, vx);
-    store<f32>(vector.a + 8, vz);
-    gabi::Local<u32[3]> result;
-    call<void>(0x0201AD78, world.a, result.a, vector.a);
-    store<u32>(points + i * 12, load<u32>(result.a));
-    store<u32>(points + i * 12 + 4, load<u32>(result.a + 4));
-    store<u32>(points + i * 12 + 8, load<u32>(result.a + 8));
-    store<u8>(sizes + i, load<s16>(0x1047B68E) + 10);
-    store<f32>(world.a + 4, singleAdd(load<f32>(world.a + 4), 80.0f));
-  }
+    u32 first = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
+    u32 second = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
+    i_this->m0FDFC.mObjAt.mSPrm = moving ? first | 1 : first & ~1u;
+    i_this->m0FF28.mObjAt.mSPrm = moving ? second | 1 : second & ~1u;
+    model = static_cast<u32>(bgn3Word(i_this->m002CC));
+    PSMTXCopy(J3DModel_getBaseTRMtx(gabi::at<J3DModel>(model)), calc_mtx());
+    vector.x = 0.0f;
+    vector.y = 0.0f;
+    vector.z = 0.0f;
+    MtxPosition(&vector, &world);
+    cLib_addCalc0(&i_this->m100A0, 1.0f, 25.0f);
+    u32 packet = i_this->mRedRopeMat.mpLines;
+    auto* line = gabi::at<Bgn3RopeLineRecord>(packet);
+    cXyz* points = line->mpPositions;
+    be<u8>* sizes = line->mpSizes;
+    for (int i = 0; i < 60; ++i) {
+        u32 angle = Bgn3Bindings::cM_rad2s((f32)i * 0.05324733629822731f) & 65535;
+        f32 amplitude = cM_ssin(angle) * static_cast<f32>(i_this->m100A0);
+        s16 frequency = REG0_S(3);
+        s16 counter = static_cast<s16>(i_this->m0FD88);
+        s16 stagger = REG0_S(4);
+        u32 xAngle = (u32)(counter * (frequency + 300) + i * (stagger + 2000));
+        s16 zStagger = REG0_S(6);
+        s16 zFrequency = REG0_S(5);
+        u32 zAngle = (u32)(counter * (zFrequency + 250) + i * (zStagger + 2000));
+        f32 attenuation = (f32)(59 - i) * 0.01666666939854622f;
+        amplitude = amplitude * attenuation;
+        f32 vx = cM_ssin(xAngle) * amplitude;
+        f32 vz = cM_ssin(zAngle) * amplitude;
+        vector.y = 0.0f;
+        vector.x = vx;
+        vector.z = vz;
+        cXyz result;
+        Bgn3Bindings::cXyz_add(gabi::ea(&world), gabi::ea(&result), gabi::ea(&vector));
+        bgn3Word(points[i].x) = static_cast<u32>(bgn3Word(result.x));
+        bgn3Word(points[i].y) = static_cast<u32>(bgn3Word(result.y));
+        bgn3Word(points[i].z) = static_cast<u32>(bgn3Word(result.z));
+        sizes[i] = REG0_S(3) + 10;
+        world.y = singleAdd(static_cast<f32>(world.y), 80.0f);
+    }
 }
-void movement(u32 a) {
-  WWHD_FUNC(0x02091730, void, a);
-  call<u32>(0x025200D4);
-  bool moving = false;
-  if (load<u8>(0x10462289) == 0) {
-    switch (load<u16>(a + 0x11E66)) {
-    case 0:
-      moving = movingState(a);
-      break;
-    case 1:
-      stunnedState(a);
-      break;
-    case 2:
-      damagedState(a);
-      break;
-    case 3:
-      dyingState(a);
-      break;
-    default:
-      break;
-    }
-  }
-  splash(a, 0x8443, 0x8407, true);
-  call<u32>(0x025200D4);
-  hitControl(a);
-  bodyControl(a);
-  animatedBody(a, moving);
-}
-VERIFY(0x02091730, movement);
 
-} // namespace bgn3
+/* 02091730 */
+void move(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfGp_ea();
+    bool moving = false;
+    if (static_cast<u8>(l_HIO.m05) == 0) {
+        switch (static_cast<u16>(i_this->m0FD8A)) {
+        case 0:
+            moving = move0(a);
+            break;
+        case 1:
+            mahi(a);
+            break;
+        case 2:
+            damage(a);
+            break;
+        case 3:
+            end(a);
+            break;
+        default:
+            break;
+        }
+    }
+    splash(a, 0x8443, 0x8407, true);
+    dComIfGp_ea();
+    damage_check(a);
+    part_control(a);
+    setModels(a, moving);
+}
+
+/* 02090624 */
+u32 ki_c_sub(u32 a, u32 ignored) {
+    auto* actor = gabi::at<fopAc_ac_c>(a);
+    if (fopAc_IsActor(actor) && a && fpcM_GetName(actor) == fpcNm_KS_e)
+        ki_all_count = static_cast<u32>(ki_all_count) + 1;
+    return 0;
+}
+
+/* 02090680 */
+bool daBgn3_Execute(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfGp_ea();
+    u32 boss = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&bgn_s_sub), a);
+    bgn = gabi::at<Bgn3BossView>(boss);
+    if (!boss)
+        return true;
+    u8 dbg = static_cast<u8>(l_HIO.m06);
+    if (dbg)
+        i_this->health = dbg;
+    u32 bait = Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&esa_s_sub), a);
+    boss = gabi::ea(bgn);
+    esa = gabi::at<fopAc_ac_c>(bait);
+    if (static_cast<s8>(gabi::at<Bgn3BossView>(boss)->m02B5) != 2) {
+        i_this->m0FD8A = 10;
+        i_this->current.pos.z = 0.0f;
+        i_this->attention_info.flags = 0;
+        i_this->current.pos.x = 0.0f;
+        i_this->current.pos.y = 30000.0f;
+        return true;
+    }
+    if (static_cast<s16>(i_this->m0FD8A) == 10) {
+        u32 z = static_cast<u32>(bgn3Word(i_this->home.pos.z)),
+            x = static_cast<u32>(bgn3Word(i_this->home.pos.x));
+        bgn3Word(i_this->current.pos.z) = z;
+        u32 y = static_cast<u32>(bgn3Word(i_this->home.pos.y));
+        bgn3Word(i_this->current.pos.x) = x;
+        bgn3Word(i_this->current.pos.y) = y;
+        i_this->m0FD8A = 0;
+        i_this->m0FDB0 = 180;
+        i_this->m0FD90 = 180;
+    }
+    i_this->attention_info.flags = 4;
+    cLib_addCalc2(&i_this->m10060, 0.0f, 1.0f, 0.01f);
+    s16 counter = static_cast<s16>(i_this->m0FD88);
+    i_this->m0FD88 = counter + 1;
+    i_this->attention_info.distances[2] = 0x22;
+    // HD retains the five-halfword timer sweep across the following timer fields.
+    auto* timers = gabi::at<Bgn3TimerView>(gabi::ea(i_this->m0FDAA));
+    for (int i = 0; i < 5; ++i) {
+        s16 n = timers->mTimers[i];
+        if (n)
+            timers->mTimers[i] = n - 1;
+    }
+    s16 t = static_cast<s16>(i_this->m0FDB4);
+    if (t)
+        i_this->m0FDB4 = t - 1;
+    t = static_cast<s16>(i_this->m0FDB6);
+    s16 first = static_cast<s16>(i_this->m0FD94);
+    if (t)
+        i_this->m0FDB6 = t - 1;
+    s16 second = static_cast<s16>(i_this->mArrowHitFlashTimer);
+    if (first)
+        i_this->m0FD94 = first - 1;
+    if (second)
+        i_this->mArrowHitFlashTimer = second - 1;
+    move(a);
+    u32 count = static_cast<u32>(i_this->m100AC);
+    if (count) {
+        i_this->m100AC = count - 1;
+        ki_all_count = 0;
+        Bgn3Bindings::fpcM_Search(gabi::guest_fn((const void*)&ki_c_sub), a);
+        if (static_cast<s32>(ki_all_count) < 20) {
+            cXyz pos;
+            pos.x = cM_rndFX(2500.0f);
+            pos.y = cM_rndF(500.0f) + 3500.0f;
+            pos.z = cM_rndFX(2500.0f);
+            Bgn3Bindings::fopAcM_create(0xCD, 3, gabi::ea(&pos),
+                                        static_cast<s8>(i_this->current.roomNo), 0, 0, -1, 0);
+        }
+    }
+    return true;
+}
+
+/* 02090908 */
+bool daBgn3_IsDelete(u32 a) { return true; }
+
+/* 02090910 */
+bool daBgn3_Delete(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    dComIfG_resDelete(&i_this->mPhase, "Bgn");
+    if (i_this->m100B0) {
+        s8 n = l_HIO.mNo;
+        hio_set = 0;
+        mDoHIO_deleteChild(n);
+    }
+    mDoAud_seDeleteObject(&i_this->m10054);
+    return true;
+}
+
+static u32 resource(s32 index) { return gabi::ea(dComIfG_getObjectRes("Bgn", index)); }
+
+/* 02090984 */
+bool useHeapInit(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 head = resource(dRes_INDEX_BGN_BDL_BGN_HEAD1_e),
+        anim = resource(dRes_INDEX_BGN_BCK_BGN_HEAD1_e);
+    u32 morf =
+        Bgn3Bindings::mDoExt_McaMorf_ct(0, head, 0, 0, anim, 2, 0, -1, 1, 0, 0, 0x11020203u, 1.0f);
+    bgn3Word(i_this->mpMorf) = morf;
+    if (!morf || !gabi::at<mDoExt_McaMorf>(morf)->getModel())
+        return false;
+    Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x3D4, 0);
+    u32 partData = resource(dRes_INDEX_BGN_BDL_BGN_DEKU1_e);
+    u32 model = Bgn3Bindings::mDoExt_J3DModel_create(partData, 0, 0x11020203u);
+    bgn3Word(i_this->m002CC) = model;
+    if (!model)
+        return false;
+    Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x488, 0);
+    if (!Bgn3Bindings::mDoExt_3DlineMat0_init(a + 0x19D8, 40, 5, 0))
+        return false;
+    for (int i = 0; i < 9; ++i) {
+        u32 part = a + 0x1BE8 + 0x19D8 * i;
+        model = Bgn3Bindings::mDoExt_J3DModel_create(partData, 0, 0x11020203u);
+        bgn3Word(bgn3Part(part)->mpPart3Model) = model;
+        if (!model)
+            return false;
+        Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(part + 4, 0);
+        if (i < 7 &&
+            !Bgn3Bindings::mDoExt_3DlineMat0_init(part + 0x1890, static_cast<u16>(ke_max[i]), 5, 0))
+            return false;
+    }
+    model = Bgn3Bindings::mDoExt_J3DModel_create(resource(dRes_INDEX_BGN_BDL_BGN_JYAKUTENA3_e), 0,
+                                                 0x11020203u);
+    bgn3Word(i_this->mpJyakutenAModel) = model;
+    if (!model)
+        return false;
+    u32 weakB = resource(dRes_INDEX_BGN_BDL_BGN_JYAKUTENB3_e);
+    model = Bgn3Bindings::mDoExt_J3DModel_create(weakB, 0, 0x11020203u);
+    bgn3Word(i_this->mpJyakutenBModel) = model;
+    if (!model)
+        return false;
+    u32 brk = Bgn3Bindings::operator_new(0x78);
+    if (brk)
+        brk = Bgn3Bindings::mDoExt_brkAnm_ct(brk);
+    bgn3Word(i_this->mJyakutenBBrkAnm) = brk;
+    if (!brk)
+        return false;
+    anim = resource(dRes_INDEX_BGN_BRK_BGN_JYAKUTENB3_e);
+    if (!Bgn3Bindings::mDoExt_brkAnm_init(static_cast<u32>(bgn3Word(i_this->mJyakutenBBrkAnm)),
+                                          weakB, anim, 1, 2, 0, -1, 0, 0, 1.0f))
+        return false;
+    u32 weakA = resource(dRes_INDEX_BGN_BDL_BGN_JYAKUTENC3_e);
+    model = Bgn3Bindings::mDoExt_J3DModel_create(weakA, 0, 0x11020203u);
+    bgn3Word(i_this->mpJyakutenCModel) = model;
+    if (!model)
+        return false;
+    brk = Bgn3Bindings::operator_new(0x78);
+    if (brk)
+        brk = Bgn3Bindings::mDoExt_brkAnm_ct(brk);
+    bgn3Word(i_this->mJyakutenCBrkAnm) = brk;
+    if (!brk)
+        return false;
+    anim = resource(dRes_INDEX_BGN_BRK_BGN_JYAKUTENC3_e);
+    if (!Bgn3Bindings::mDoExt_brkAnm_init(static_cast<u32>(bgn3Word(i_this->mJyakutenCBrkAnm)),
+                                          weakA, anim, 1, 2, 0, -1, 0, 0, 1.0f))
+        return false;
+    Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x1B20, 0);
+    u32 rope = resource(dRes_INDEX_BGN_BTI_NOT_CUT1_e);
+    if (!Bgn3Bindings::mDoExt_3DlineMat1_init(a + 0x12140, 1, 60, rope, 1))
+        return false;
+    Bgn3Bindings::mDoExt_J3DModelPacketS_setMaterial(a + 0x122CC, 0);
+    return true;
+}
+
+static void copyLightInit(Bgn3LightInit* dest, const Bgn3LightInit* src) {
+    for (int i = 0; i < 6; ++i)
+        dest->mPositionDirection[i] = static_cast<f32>(src->mPositionDirection[i]);
+    for (int i = 0; i < 4; ++i)
+        dest->mColorBytes[i] = static_cast<u8>(src->mColorBytes[i]);
+    for (int i = 0; i < 4; ++i)
+        dest->mColorWords[i] = static_cast<s16>(src->mColorWords[i]);
+    for (int i = 0; i < 8; ++i)
+        dest->mParameters[i] = static_cast<f32>(src->mParameters[i]);
+}
+
+static void copyActorTev(u32 a, u32 destination) {
+    auto* actor = gabi::at<bgn3_class>(a);
+    auto* src = gabi::at<Bgn3TevCopyView>(gabi::ea(&actor->tevStr));
+    auto* dest = gabi::at<Bgn3TevCopyView>(destination);
+    copyLightInit(&dest->mLight, &src->mLight);
+    // GHS copies these positions and packed colours as words, preserving NaN payloads.
+    bgn3Word(dest->mLightPosWorld.x) = static_cast<u32>(bgn3Word(src->mLightPosWorld.x));
+    bgn3Word(dest->mLightPosWorld.y) = static_cast<u32>(bgn3Word(src->mLightPosWorld.y));
+    bgn3Word(dest->mLightPosWorld.z) = static_cast<u32>(bgn3Word(src->mLightPosWorld.z));
+    for (int i = 0; i < 4; ++i)
+        dest->mColorC0[i] = static_cast<u16>(src->mColorC0[i]);
+    dest->mColorK0 = static_cast<u32>(src->mColorK0);
+    dest->mColorK1 = static_cast<u32>(src->mColorK1);
+    for (int i = 0; i < 4; ++i)
+        dest->mFogColor[i] = static_cast<u16>(src->mFogColor[i]);
+    for (int i = 0; i < 3; ++i)
+        dest->mFogValues[i] = static_cast<f32>(src->mFogValues[i]);
+    for (int i = 0; i < 9; ++i)
+        dest->mEnvironment[i] = static_cast<u8>(src->mEnvironment[i]);
+    copyLightInit(&dest->mLightCopy1, &src->mLightCopy1);
+    copyLightInit(&dest->mLightCopy2, &src->mLightCopy2);
+}
+
+/* 02091008 */
+s32 daBgn3_Create(u32 a) {
+    auto* i_this = gabi::at<bgn3_class>(a);
+    u32 flags = static_cast<u32>(i_this->actor_condition);
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (a) {
+            actorCtor(a);
+            flags = static_cast<u32>(i_this->actor_condition);
+        }
+        i_this->actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    s32 phase = dComIfG_resLoad(&i_this->mPhase, "Bgn");
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!Bgn3Bindings::fopAcM_entrySolidHeap(a, gabi::guest_fn((const void*)&useHeapInit), 0x96000))
+        return cPhs_ERROR_e;
+    if (!static_cast<u8>(hio_set)) {
+        i_this->m100B0 = 1;
+        hio_set = 1;
+        l_HIO.mNo =
+            Bgn3Bindings::mDoHIO_createChild(gabi::guest_addr("Ｇ（ハヤムシ）"), gabi::ea(&l_HIO));
+    }
+    u32 st = a + 0x11E9C;
+    Bgn3Bindings::dCcD_Stts_Init(st, 255, 255, a);
+    Bgn3Bindings::dCcD_Sph_Set(a + 0x12004, 0x10191208u);
+    u32 bits = static_cast<u32>(i_this->m0FF28.mObjAt.mSPrm);
+    bgn3Word(i_this->m0FF28.mStts) = st;
+    i_this->m0FF28.mObjAt.mSPrm = bits & ~1u;
+    Bgn3Bindings::dCcD_Sph_Set(a + 0x11ED8, 0x10191208u);
+    bits = static_cast<u32>(i_this->m0FDFC.mObjAt.mSPrm);
+    bgn3Word(i_this->m0FDFC.mStts) = st;
+    i_this->m0FDFC.mObjAt.mSPrm = bits & ~1u;
+    for (int i = 0; i < 9; ++i) {
+        u32 part = a + 0x1BE8 + i * 0x19D8;
+        Bgn3Bindings::dCcD_Sph_Set(part + 0x2AC, i == 8 ? 0x10191248u : 0x10191208u);
+        bits = static_cast<u32>(bgn3Part(part)->mPart3Sph.mObjAt.mSPrm);
+        bgn3Word(bgn3Part(part)->mPart3Sph.mStts) = st;
+        bgn3Part(part)->mPart3Sph.mObjAt.mSPrm = bits & ~1u;
+    }
+    i_this->max_health = 3;
+    i_this->health = 3;
+    for (int i = 0; i < 9; ++i)
+        copyActorTev(a, a + 0x1BE8 + 0x19D8 * i + 0xB4);
+    daBgn3_Execute(a);
+    return phase;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02091704 */
+f32 tableSin(u32 a, u32 angle) { return gabi::at<Bgn3SinCos>(a)[(angle & 65535) >> 3].mSin; }
+
+/* 02091718 */
+f32 tableCos(u32 a, u32 angle) { return gabi::at<Bgn3SinCos>(a)[(angle & 65535) >> 3].mCos; }
+
+/* 02094448 */
+void hioDtor(u32 a, u32 flags) {
+    if (a && (flags & 1))
+        Bgn3Bindings::operator_delete(a);
+}
+
+/* 0209445C */
+void partDtor(u32 a, u32 flags) {
+    if (a) {
+        Bgn3Bindings::mDoExt_3DlineMat0_dt(a + 0x1890, 2);
+        Bgn3Bindings::dCcD_Sph_dt(a + 0x2AC, 2);
+        Bgn3Bindings::mDoExt_J3DModelPacketS_dt(a + 4, 2);
+        if (flags & 1)
+            Bgn3Bindings::operator_delete(a);
+    }
+}
+
+/* 020944C8 */
+void actorDtor(u32 a, u32 flags) {
+    if (a) {
+        Bgn3Bindings::mDoExt_J3DModelPacketS_dt(a + 0x122CC, 2);
+        Bgn3Bindings::mDoExt_3DlineMat1_dt(a + 0x12140, 2);
+        Bgn3Bindings::dCcD_Sph_dt(a + 0x12004, 2);
+        Bgn3Bindings::dCcD_Sph_dt(a + 0x11ED8, 2);
+        Bgn3Bindings::dCcD_Stts_dt(a + 0x11E9C, 2);
+        Bgn3Bindings::destroy_array(a + 0x1BE8, 10, 0x19D8, gabi::guest_fn((const void*)&partDtor),
+                                    0, 0);
+        Bgn3Bindings::mDoExt_J3DModelPacketS_dt(a + 0x1B20, 2);
+        Bgn3Bindings::mDoExt_3DlineMat0_dt(a + 0x19D8, 2);
+        Bgn3Bindings::mDoExt_J3DModelPacketS_dt(a + 0x488, 2);
+        Bgn3Bindings::mDoExt_J3DModelPacketS_dt(a + 0x3D4, 2);
+        Bgn3Bindings::fopAc_ac_c_dt(a, 0);
+        if (flags & 1)
+            Bgn3Bindings::operator_delete(a);
+    }
+}
+
+/* 020945C8 */
+void genMessage(u32 a, u32 context) {}
+
+/* 02091648 */
+void staticInit() {
+    headerStatics.mZeroWords[2] = 0;
+    headerStatics.mZeroWords[0] = 0;
+    headerStatics.mZeroWords[3] = 0;
+    headerStatics.mZeroWords[1] = 0;
+    Bgn3Bindings::register_global_object(0x10191288u);
+    f32 low = static_cast<f32>(piConstants.mNegativePi), high = static_cast<f32>(piConstants.mPi);
+    headerStatics.mNegativePi = low;
+    headerStatics.mPi = high;
+    Bgn3Bindings::std_char_traits_ct(gabi::ea(&headerStatics.mFlag));
+    Bgn3Bindings::register_global_object(0x10191294u);
+    Bgn3Bindings::std_allocator_ct(gabi::ea(&headerStatics.mByte));
+    Bgn3Bindings::register_global_object(0x101912A0u);
+    zero.z = 0.0f;
+    zero.x = 0.0f;
+    zero.y = 0.0f;
+    hioCtor(gabi::ea(&l_HIO));
+}
+
+/* 02090D4C */
+u32 partCtor(u32 a) {
+    if (!a)
+        a = Bgn3Bindings::operator_new(0x19D8);
+    if (!a)
+        return 0;
+    auto* part = gabi::at<part_s3>(a);
+    auto* tev = gabi::at<Bgn3TevCopyView>(gabi::ea(&part->mPart3TevStr));
+    Bgn3Bindings::mDoExt_J3DModelPacketS_ct(a + 4);
+    // The constructor retains a shared default tev snapshot for three blocks.
+    f32 tev00 = static_cast<f32>(defaultLightInit.mPositionDirection[0]);
+    tev->mLight.mPositionDirection[0] = tev00;
+    f32 tev04 = static_cast<f32>(defaultLightInit.mPositionDirection[1]);
+    tev->mLight.mPositionDirection[1] = tev04;
+    f32 tev08 = static_cast<f32>(defaultLightInit.mPositionDirection[2]);
+    tev->mLight.mPositionDirection[2] = tev08;
+    f32 tev0C = static_cast<f32>(defaultLightInit.mPositionDirection[3]);
+    tev->mLight.mPositionDirection[3] = tev0C;
+    f32 tev10 = static_cast<f32>(defaultLightInit.mPositionDirection[4]);
+    tev->mLight.mPositionDirection[4] = tev10;
+    f32 tev14 = static_cast<f32>(defaultLightInit.mPositionDirection[5]);
+    tev->mLight.mPositionDirection[5] = tev14;
+    u8 tev18 = static_cast<u8>(defaultLightInit.mColorBytes[0]);
+    tev->mLight.mColorBytes[0] = tev18;
+    u8 tev19 = static_cast<u8>(defaultLightInit.mColorBytes[1]);
+    tev->mLight.mColorBytes[1] = tev19;
+    u8 tev1A = static_cast<u8>(defaultLightInit.mColorBytes[2]);
+    tev->mLight.mColorBytes[2] = tev1A;
+    u8 tev1B = static_cast<u8>(defaultLightInit.mColorBytes[3]);
+    tev->mLight.mColorBytes[3] = tev1B;
+    s16 tev1C = static_cast<s16>(defaultLightInit.mColorWords[0]);
+    tev->mLight.mColorWords[0] = tev1C;
+    s16 tev1E = static_cast<s16>(defaultLightInit.mColorWords[1]);
+    tev->mLight.mColorWords[1] = tev1E;
+    s16 tev20 = static_cast<s16>(defaultLightInit.mColorWords[2]);
+    tev->mLight.mColorWords[2] = tev20;
+    s16 tev22 = static_cast<s16>(defaultLightInit.mColorWords[3]);
+    tev->mLight.mColorWords[3] = tev22;
+    f32 tev24 = static_cast<f32>(defaultLightInit.mParameters[0]);
+    tev->mLight.mParameters[0] = tev24;
+    f32 tev28 = static_cast<f32>(defaultLightInit.mParameters[1]);
+    tev->mLight.mParameters[1] = tev28;
+    f32 tev2C = static_cast<f32>(defaultLightInit.mParameters[2]);
+    tev->mLight.mParameters[2] = tev2C;
+    f32 tev30 = static_cast<f32>(defaultLightInit.mParameters[3]);
+    tev->mLight.mParameters[3] = tev30;
+    f32 tev34 = static_cast<f32>(defaultLightInit.mParameters[4]);
+    tev->mLight.mParameters[4] = tev34;
+    f32 tev38 = static_cast<f32>(defaultLightInit.mParameters[5]);
+    tev->mLight.mParameters[5] = tev38;
+    f32 tev3C = static_cast<f32>(defaultLightInit.mParameters[6]);
+    tev->mLight.mParameters[6] = tev3C;
+    f32 tev40 = static_cast<f32>(defaultLightInit.mParameters[7]);
+    tev->mLightCopy1.mColorBytes[0] = tev18;
+    tev->mLightCopy1.mParameters[7] = tev40;
+    tev->mLightCopy1.mColorBytes[2] = tev1A;
+    tev->mLightCopy2.mColorBytes[2] = tev1A;
+    tev->mLightCopy1.mPositionDirection[2] = tev08;
+    tev->mLightCopy1.mPositionDirection[4] = tev10;
+    tev->mLightCopy1.mColorBytes[3] = tev1B;
+    tev->mLightCopy1.mParameters[3] = tev30;
+    tev->mLightCopy1.mParameters[0] = tev24;
+    tev->mLightCopy1.mPositionDirection[3] = tev0C;
+    tev->mLightCopy2.mPositionDirection[4] = tev10;
+    tev->mLightCopy1.mColorBytes[1] = tev19;
+    tev->mLightCopy1.mParameters[4] = tev34;
+    tev->mLightCopy2.mPositionDirection[1] = tev04;
+    tev->mLightCopy2.mPositionDirection[3] = tev0C;
+    tev->mLightCopy1.mParameters[1] = tev28;
+    tev->mLightCopy2.mColorBytes[1] = tev19;
+    tev->mLightCopy2.mPositionDirection[5] = tev14;
+    tev->mLightCopy1.mPositionDirection[1] = tev04;
+    tev->mLightCopy2.mColorBytes[3] = tev1B;
+    tev->mLightCopy1.mColorWords[0] = tev1C;
+    tev->mLightCopy2.mPositionDirection[2] = tev08;
+    tev->mLightCopy2.mPositionDirection[0] = tev00;
+    tev->mLightCopy1.mParameters[2] = tev2C;
+    tev->mLightCopy1.mPositionDirection[5] = tev14;
+    tev->mLightCopy1.mParameters[6] = tev3C;
+    tev->mLightCopy1.mPositionDirection[0] = tev00;
+    tev->mLight.mParameters[7] = tev40;
+    tev->mLightCopy1.mParameters[5] = tev38;
+    tev->mLightCopy1.mColorWords[2] = tev20;
+    tev->mLightCopy1.mColorWords[1] = tev1E;
+    tev->mLightCopy2.mColorWords[0] = tev1C;
+    tev->mLightCopy2.mColorBytes[0] = tev18;
+    tev->mLightCopy1.mColorWords[3] = tev22;
+    tev->mLightCopy2.mColorWords[1] = tev1E;
+    tev->mLightCopy2.mColorWords[2] = tev20;
+    tev->mLightCopy2.mColorWords[3] = tev22;
+    tev->mLightCopy2.mParameters[0] = tev24;
+    tev->mLightCopy2.mParameters[1] = tev28;
+    tev->mLightCopy2.mParameters[2] = tev2C;
+    tev->mLightCopy2.mParameters[3] = tev30;
+    tev->mLightCopy2.mParameters[4] = tev34;
+    tev->mLightCopy2.mParameters[5] = tev38;
+    tev->mLightCopy2.mParameters[6] = tev3C;
+    tev->mLightCopy2.mParameters[7] = tev40;
+    Bgn3Bindings::dCcD_Sph_ct(a + 0x2AC);
+    Bgn3Bindings::mDoExt_3DlineMat0_ct(a + 0x1890);
+    return a;
+}
+
+/* 02090F08 */
+u32 actorCtor(u32 a) {
+    if (!a)
+        a = Bgn3Bindings::operator_new(0x1238C);
+    if (!a)
+        return 0;
+    auto* i_this = gabi::at<bgn3_class>(a);
+    Bgn3Bindings::fopAc_ac_c_ct(a);
+    i_this->__vtbl = 0x10009004;
+    Bgn3Bindings::mDoExt_J3DModelPacketS_ct(a + 0x3D4);
+    Bgn3Bindings::mDoExt_J3DModelPacketS_ct(a + 0x488);
+    Bgn3Bindings::mDoExt_3DlineMat0_ct(a + 0x19D8);
+    Bgn3Bindings::mDoExt_J3DModelPacketS_ct(a + 0x1B20);
+    Bgn3Bindings::construct_array(a + 0x1BE8, 10, 0x19D8, gabi::guest_fn((const void*)&partCtor));
+    Bgn3Bindings::cCcD_Stts_ct(a + 0x11E9C);
+    Bgn3Bindings::dCcD_GStts_ct(a + 0x11EB8);
+    i_this->mStts.__vtbl = 0x1004AE88;
+    i_this->mStts.__vtbl_gstts = 0x1004AEC0;
+    Bgn3Bindings::dCcD_Sph_ct(a + 0x11ED8);
+    Bgn3Bindings::dCcD_Sph_ct(a + 0x12004);
+    Bgn3Bindings::mDoExt_3DlineMat1_ct(a + 0x12140);
+    Bgn3Bindings::mDoExt_J3DModelPacketS_ct(a + 0x122CC);
+    return a;
+}
+
+/* WWHD glue
+str 10009058 "Bgn" in 02090910
+str 1000905C "Bgn" in 02090984
+str 10009060 "Bgn" in 02091008
+str 10009064 "\uff27\uff08\u30cf\u30e4\u30e0\u30b7\uff09" renamed in 02091008
+data bgn 10462250
+data esa 10462254
+data ke_color 10462258
+data ki_all_count 1046225C
+data headerStatics 10462260
+data zero 1046227C
+data l_HIO 10462288
+data hio_set 1019119C
+data piConstants 10009098
+data defaultLightInit 1016E414
+data size_d 101911C0
+data ke_max 101911E4
+data fl_check_d 101911F4
+*/

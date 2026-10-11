@@ -1,330 +1,297 @@
-/* hd_ui_02003C58: two HD UI TUs: the layout resource accessor / pane builder and a lyt wrapper (no GameCube source).
- *
- * 02003C58..0200487F: the layout object of the HD UI (0x248 = NW4F lyt::Layout 0287F418 + owner +0x34,
- *                     resource accessor +0x38, vtable 10000810 at +0x30, child array {count +0x3C,
- *                     capacity +0x40, data +0x44} allocated by 0273B560 with 0x80 entries): sead RTTI static,
- *                     constructors, destructor, the BuildPaneObj override that creates the HD pane classes by
- *                     signature ('pic1' 0xC0, 'txt1' 0x104, 'wnd1' 0xD8, 'bnd1' 0xA4, 'prt1' 0xB0), a parts-layout
- *                     builder, a pane-tree builder and the "%s%02d" part-name binder; __sinit 02004794 + companions
- * 02004880..02004A3B: RTTI static (inlined elsewhere as 020024C4's check) and a 0xA4 lyt-derived pane
- *                     (028757F0 / 02875864, vtable 100008B8); __sinit 020049A8
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/* HD: NW4F layout accessor and pane builder, with Bounding wrapper. No GameCube counterpart. */
+#include "hd/hd_ui_02003C58.h"
+static const u32 layoutVtable = 0x10000810;
+static const u32 paneVtable = 0x101800B8;
+static const u32 stringVtable = 0x100007AC;
+static const u32 bufferVtable = 0x100007DC;
+static const u32 boundingVtable = 0x100008B8;
+static u32 sLayoutTypeReady;
+static u32 sAccessorTypeReady;
+static u32 sRootTypeReady;
+static u32 sOwnerTypeReady;
+static u32 sOwnerRootTypeReady;
+static hdLayout_typeInfo_c sLayoutType;
+static hdLayout_typeInfo_c sAccessorType;
+static hdLayout_typeInfo_c sRootType;
+static hdLayout_typeInfo_c sOwnerType;
+static hdLayout_typeInfo_c sOwnerRootType;
 
-namespace hd_ui_02003C58 {
-
-static u32 Layout_rtti() {
-    WWHD_FUNC(0x02003C58, u32);
-    return rtti_static3(0x101FD92C, 0x101FD930, 0x101FD8C0, 0x101FD934, 0x101FD888, 0x101FD8FC);
+/* 02003C58 */
+static hdLayout_typeInfo_c* hdLayout_getTypeInfo() {
+    if (sLayoutTypeReady) return &sLayoutType;
+    u32 parentReady = sAccessorTypeReady;
+    sLayoutTypeReady = 1;
+    if (parentReady) { sLayoutType.mpParent = &sAccessorType; return &sLayoutType; }
+    u32 rootReady = sRootTypeReady;
+    sAccessorTypeReady = 1;
+    if (!rootReady) { sRootTypeReady = 1; sRootType.mpParent = nullptr; }
+    sLayoutType.mpParent = &sAccessorType;
+    sAccessorType.mpParent = &sRootType;
+    return &sLayoutType;
 }
-VERIFY(0x02003C58, Layout_rtti);
-
-/* inline construction of the child array (its null check is dead unless this == -0x3C) */
-static inline void child_array_ct(u32 t) {
-    u32 a = t + 0x3C;
-    if (a == 0) {
-        a = op_new(0x20C);
-        if (a == 0) return;
+static void hdLayout_constructChildren(hdLayout_c* layout) {
+    // HD: preserve the embedded-array address wrapping to null at this == -0x3C.
+    hdLayout_children_c* children = gabi::at<hdLayout_children_c>(gabi::ea(layout) + 0x3C);
+    if (!children) {
+        children = static_cast<hdLayout_children_c*>(operator_new(sizeof(hdLayout_children_c)));
+        if (!children) return;
     }
-    st(a + 8, 0);
-    st(a + 0, 0);
-    st(a + 4, 0);
-    gabi::call(0x0273B560, a, 0x80, a + 0xC);
+    children->mpData = nullptr;
+    children->mCount = 0;
+    children->mCapacity = 0;
+    hdLayout_setupChildren(children, 128, children->mStorage);
 }
-
-/* 02003CDC: constructor (owner, resource accessor) */
-static u32 Layout_ct(u32 self, u32 owner, u32 acc) {
-    WWHD_FUNC(0x02003CDC, u32, self, owner, acc);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x248);
-        if (t == 0) return 0;
+/* 02003CDC */
+static hdLayout_c* hdLayout_construct(hdLayout_c* layout, hdLayout_c* owner, void* accessor) {
+    if (!layout) {
+        layout = static_cast<hdLayout_c*>(operator_new(sizeof(hdLayout_c)));
+        if (!layout) return nullptr;
     }
-    gabi::call(0x0287F418, t);
-    st(t + 0x38, acc);
-    st(t + 0x34, owner);
-    st(t + 0x30, 0x10000810);
-    child_array_ct(t);
-    return t;
+    hdLayout_constructBase(layout);
+    layout->mpResourceAccessor = accessor;
+    layout->mpOwner = owner;
+    layout->mVtable.v = layoutVtable;
+    hdLayout_constructChildren(layout);
+    return layout;
 }
-VERIFY(0x02003CDC, Layout_ct);
-
-/* 02003D84: default constructor (its own accessor) */
-static u32 Layout_ct0(u32 self) {
-    WWHD_FUNC(0x02003D84, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x248);
-        if (t == 0) return 0;
+/* 02003D84 */
+static hdLayout_c* hdLayout_constructDefault(hdLayout_c* layout) {
+    if (!layout) {
+        layout = static_cast<hdLayout_c*>(operator_new(sizeof(hdLayout_c)));
+        if (!layout) return nullptr;
     }
-    gabi::call(0x0287F418, t);
-    st(t + 0x38, t);
-    st(t + 0x34, 0);
-    st(t + 0x30, 0x10000810);
-    child_array_ct(t);
-    return t;
+    hdLayout_constructBase(layout);
+    layout->mpResourceAccessor = layout;
+    layout->mpOwner = nullptr;
+    layout->mVtable.v = layoutVtable;
+    hdLayout_constructChildren(layout);
+    return layout;
 }
-VERIFY(0x02003D84, Layout_ct0);
-
-/* 02003E1C: destructor: deletes the children, then the lyt base */
-static void Layout_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02003E1C, void, self, flags);
-    if (self == 0) return;
-    s32 n = (s32)ld(self + 0x3C);
-    st(self + 0x30, 0x10000810);
-    for (s32 i = 0; i < n; ++i) {
-        if ((u32)i >= (u32)n) continue;
-        u32 e = ld(ld(self + 0x44) + i * 4);
-        if (e == 0) continue;
-        gabi::call(0x02005A7C, e, 3);
-        n = (s32)ld(self + 0x3C);
+/* 02003E1C */
+void hdLayout_c::destroy(s32 flags) {
+    if (!this) return;
+    s32 count = mChildren.mCount;
+    mVtable.v = layoutVtable;
+    for (s32 i = 0; i < count; ++i) {
+        if (u32(i) >= u32(count)) continue;
+        hdLayout_c* child = *gabi::at<gptr<hdLayout_c>>(gabi::ea(mChildren.mpData) + u32(i) * 4);
+        if (!child) continue;
+        hdLayout_destroyChild(child, 3);
+        count = mChildren.mCount;
     }
-    st(self + 0x3C, 0);
-    gabi::call(0x0287F4E0, self, 0);
-    if (flags & 1) op_delete(self);
+    mChildren.mCount = 0;
+    hdLayout_destroyBase(this, 0);
+    if (flags & 1) operator_delete(this);
 }
-VERIFY(0x02003E1C, Layout_dt);
-
-struct build_l { u8 b[0x34]; };
-
-/* one pane kind: copy the 0x34-byte build argument block, allocate from the lyt allocator, construct */
-static inline u32 build_kind(u32 size, u32 ctor, u32 res, u32 a6, u32 args) {
-    gabi::Local<build_l> copy;
-    for (u32 i = 0; i < 13; ++i) st(copy.a + i * 4, ld(args + i * 4));
-    u32 p = gabi::call<u32>(0x0287F3DC, size, 4);
-    if (p == 0) return 0;
-    return gabi::call<u32>(ctor, p, res, a6, copy.a);
+static void* hdLayout_constructPane(u32 size, hdLayout_paneCtor_t ctor, void* resource, void* context, hdLayout_buildArgs_c* args) {
+    gabi::Local<hdLayout_buildArgs_c> copy;
+    for (u32 i = 0; i < 13; ++i) copy->mWords[i] = u32(args->mWords[i]);
+    void* pane = hdLayout_allocate(size, 4);
+    if (!pane) return nullptr;
+    return ctor(pane, resource, context, copy);
 }
-
-/* 02003EE8: BuildPaneObj override: HD pane classes by signature, the base for anything else */
-static u32 Layout_buildPaneObj(u32 self, u32 kind, u32 res, u32 a6, u32 args) {
-    WWHD_FUNC(0x02003EE8, u32, self, kind, res, a6, args);
-    if (kind < 0x70727431u) {
-        if (kind == 0x626E6431u) return build_kind(0xA4, 0x020048D0, res, a6, args);  /* bnd1 */
-        if (kind == 0x70696331u) return build_kind(0xC0, 0x02002698, res, a6, args);  /* pic1 */
-        return gabi::call<u32>(0x028807D0, self, kind, res, a6, args);
+enum hdLayout_signature_e { PANE_BOUNDING = 0x626E6431, PANE_PICTURE = 0x70696331, PANE_PARTS = 0x70727431, PANE_TEXT = 0x74787431, PANE_WINDOW = 0x776E6431 };
+/* 02003EE8 */
+void* hdLayout_c::buildPaneObj(u32 signature, void* resource, void* context, hdLayout_buildArgs_c* args) {
+    switch (signature) {
+    case PANE_BOUNDING: return hdLayout_constructPane(sizeof(hdLayout_bounding_c), hdLayout_constructBoundingPane, resource, context, args);
+    case PANE_PICTURE: return hdLayout_constructPane(0xC0, hdLayout_constructPicture, resource, context, args);
+    case PANE_PARTS: return hdLayout_constructPane(0xB0, hdLayout_constructPartsPane, resource, context, args);
+    case PANE_TEXT: return hdLayout_constructPane(0x104, hdLayout_constructTextBox, resource, context, args);
+    case PANE_WINDOW: return hdLayout_constructPane(0xD8, hdLayout_constructWindow, resource, context, args);
+    default: return hdLayout_buildPaneBase(this, signature, resource, context, args);
     }
-    if (kind == 0x70727431u) return build_kind(0xB0, 0x020037D0, res, a6, args);      /* prt1 */
-    if (kind == 0x74787431u) return build_kind(0x104, 0x020021FC, res, a6, args);     /* txt1 */
-    if (kind == 0x776E6431u) return build_kind(0xD8, 0x02003AEC, res, a6, args);      /* wnd1 */
-    return gabi::call<u32>(0x028807D0, self, kind, res, a6, args);
 }
-VERIFY(0x02003EE8, Layout_buildPaneObj);
-
-/* 020041EC: build a parts layout: a child layout object sharing this accessor */
-static u32 Layout_buildParts(u32 self, u32 a4, u32 a5, u32 a6) {
-    WWHD_FUNC(0x020041EC, u32, self, a4, a5, a6);
-    u32 r = gabi::call<u32>(0x02880AE0, self, a4, a5, a6);
-    u32 acc = ld(self + 0x38);
-    u32 p = gabi::call<u32>(0x0287F3DC, 0x248, 4);
-    if (p != 0) p = gabi::call<u32>(0x02003CDC, p, self, acc);
-    u32 fn = vfn(p, 0x30, 0x7C); /* p may be null: the original reads 0x30 then */
-    gabi::call_ptr(fn, p, r, ld(self + 0x20), a6, a5);
-    return p;
+/* 020041EC */
+hdLayout_c* hdLayout_c::buildParts(void* resource, void* name, void* options) {
+    void* data = hdLayout_getPartsResource(this, resource, name, options);
+    void* accessor = mpResourceAccessor;
+    hdLayout_c* child = static_cast<hdLayout_c*>(hdLayout_allocate(sizeof(hdLayout_c), 4));
+    if (child) child = hdLayout_constructChild(child, this, accessor);
+    // HD: the original also performs this vtable read when allocation returns null.
+    hdLayout_vtable_c* vtable = *gabi::at<gptr<hdLayout_vtable_c>>(gabi::ea(child) + 0x30);
+    u32 build = vtable->mBuildParts;
+    gabi::call_ptr<void>(build, child, data, (void*)mpBuildContext, options, name);
+    return child;
 }
-VERIFY(0x020041EC, Layout_buildParts);
-
-/* 020042A4: append a child (ignored when full) */
-static void Layout_addChild(u32 self, u32 c) {
-    WWHD_FUNC(0x020042A4, void, self, c);
-    s32 n = (s32)ld(self + 0x3C);
-    if (n >= (s32)ld(self + 0x40)) return;
-    st(ld(self + 0x44) + n * 4, c);
-    st(self + 0x3C, ld(self + 0x3C) + 1);
+/* 020042A4 */
+void hdLayout_c::addChild(hdLayout_c* child) {
+    s32 count = mChildren.mCount;
+    if (count >= s32(mChildren.mCapacity)) return;
+    // HD: a negative count retains the original guest-address wrap.
+    *gabi::at<gptr<hdLayout_c>>(gabi::ea(mChildren.mpData) + u32(count) * 4) = child;
+    mChildren.mCount = u32(mChildren.mCount) + 1;
 }
-VERIFY(0x020042A4, Layout_addChild);
-
-struct res_l { u8 b[0x14]; };
-
-/* 020042D0: build a pane from a resource (or none) and its group members */
-static u32 Layout_buildPane(u32 self, u32 name, u32 group, u32 a6, u32 a7) {
-    WWHD_FUNC(0x020042D0, u32, self, name, group, a6, a7);
-    gabi::call_ptr(vfn(name, 4, 0x14), name);
-    u32 r = gabi::call<u32>(0x0287F6D0, self, ld(name + 0));
-    gabi::Local<res_l> res;
-    gabi::call(0x028727E8, res.a, r);
-    u32 data = ld(res.a + 4);
-    u32 pane = 0;
-    u32 g;
-    if (data == 0) {
-        gabi::call_ptr(vfn(group, 4, 0x14), group);
-        g = gabi::call<u32>(0x02874820, ld(self + 0x10), ld(group + 0));
-    } else {
-        u32 p = gabi::call<u32>(0x0287F3DC, 0x34, 4);
-        if (p == 0) {
-            gabi::call_ptr(vfn(group, 4, 0x14), group);
-            g = gabi::call<u32>(0x02874820, ld(self + 0x10), ld(group + 0));
-        } else {
-            pane = p;
-            gabi::call(0x02872998, p);
-            st(p + 0x30, 0);
-            st(p + 0x14, 0x101800B8);
-            gabi::Local<be<u32>> w;
-            st(w.a, self + 4);
-            gabi::call(0x0286DA70, self, w.a, p);
-            gabi::call_ptr(vfn(p, 0x14, 0x44), p, data, ld(self + 0x20));
-            gabi::call_ptr(vfn(group, 4, 0x14), group);
-            g = gabi::call<u32>(0x02874820, ld(self + 0x10), ld(group + 0));
+/* 020042D0 */
+hdLayout_pane_c* hdLayout_c::buildPane(hdLayout_string_c* name, hdLayout_string_c* group, u32 flags, u32 finishFlags) {
+    name->assureTermination();
+    void* resource = hdLayout_findResource(this, (be<u8>*)name->mpText);
+    gabi::Local<hdLayout_resource_c> description;
+    hdLayout_describeResource(description, resource);
+    void* data = description->mpData;
+    hdLayout_pane_c* pane = nullptr;
+    if (data) {
+        pane = static_cast<hdLayout_pane_c*>(hdLayout_allocate(sizeof(hdLayout_pane_c), 4));
+        if (pane) {
+            hdLayout_constructPaneBase(pane);
+            pane->mFlags = 0;
+            pane->mVtable.v = paneVtable;
+            gabi::Local<be<u32>> owner;
+            *owner = gabi::ea(this) + 4;
+            hdLayout_linkPane(this, owner, pane);
+            gabi::call_ptr<void>(pane->mVtable->mBuild, pane, data, (void*)mpBuildContext);
         }
     }
-    u32 head = g + 0xC;
-    for (u32 n = ld(g + 0xC); n != head; n = ld(n)) {
-        gabi::call_ptr(vfn(self, 0x30, 0x9C), self, pane, ld(n + 8), a6);
+    group->assureTermination();
+    hdLayout_group_c* found = hdLayout_findGroup(mpGroups, group->mpText);
+    hdLayout_groupNode_c* head = gabi::at<hdLayout_groupNode_c>(gabi::ea(found) + 0xC);
+    for (hdLayout_groupNode_c* node = found->mHead.mpNext; node != head; node = node->mpNext) {
+        gabi::call_ptr<void>(mVtable->mBindGroupPane, this, pane, (void*)node->mpPane, flags);
     }
-    gabi::call_ptr(vfn(pane, 0x14, 0x24), pane, a7);
+    hdLayout_paneVtable_c* vtable = *gabi::at<gptr<hdLayout_paneVtable_c>>(gabi::ea(pane) + 0x14);
+    gabi::call_ptr<void>(vtable->mFinish, pane, finishFlags);
     return pane;
 }
-VERIFY(0x020042D0, Layout_buildPane);
-
-struct str2_l { u8 b[8]; };
-struct sbuf29_l { u8 b[0x29]; };  /* FixedSafeString<29>: {char*, vtable, capacity, char[29]} */
-
-/* 02004490: bind the numbered parts: for every part entry of PANE's resource whose name equals NAMES+0x80,
- * build "<name minus 2 chars><NN>" (NN = INDEX) and look it up in the layout's pane / material table */
-static void Layout_bindParts(u32 self, u32 pane, u32 names, u32 index) {
-    WWHD_FUNC(0x02004490, void, self, pane, names, index);
-    u32 res = ld(pane + 8);
-    u32 tab = res + ld(res + 0x10);
-    gabi::Local<str2_l> a;
-    gabi::Local<str2_l> b;
-    gabi::Local<sbuf29_l> buf;
-    for (u32 i = 0; i < lhz(res + 0xE); i = (i + 1) & 0xFFFF) {
-        u32 entry = res + ld(tab + i * 4);
-        st(b.a + 4, 0x100007AC);
-        st(a.a + 4, 0x100007AC);
-        st(a.a + 0, names + 0x80);
-        st(b.a + 0, entry);
-        gabi::call(0x0200483C, a.a);
-        gabi::call_ptr(ld(ld(a.a + 4) + 0x14), a.a);
-        u32 fb = ld(ld(b.a + 4) + 0x14);
-        u32 pa = ld(a.a + 0);
-        gabi::call_ptr(fb, b.a);
-        if (pa != ld(b.a + 0)) {
-            u32 p = ld(a.a + 0), q = ld(b.a + 0) - 1;
-            bool eq = false;
-            for (u32 k = 0; k < 0x40001; ++k) {
-                u8 c1 = lbz(p);
-                ++q;
-                u8 c2 = lbz(q);
-                if (c1 != c2) break;
-                if (c1 == 0) { eq = true; break; }
-                ++p;
-            }
-            if (!eq) continue;
-        }
-        u32 d = buf.a + 0xC;
-        st(buf.a + 0, d);
-        st(buf.a + 8, 0x1D);
-        stb(d, 0);
-        stb(d + 0x1C, 0);
-        st(buf.a + 4, 0x100007DC);
-        gabi::call(0x02759C28, buf.a, 0x100007FC, entry, 0x100007DC);
-        gabi::call_ptr(ld(ld(buf.a + 4) + 0x14), buf.a);
-        u32 data = ld(buf.a + 0);
-        u32 len = 0, cut;
-        u32 c = data;
-        if (lbz(c) != 0) {
+static bool hdLayout_namesEqual(hdLayout_string_c* a, hdLayout_string_c* b) {
+    hdLayout_prepareString(a);
+    a->assureTermination();
+    u32 assure = b->mVtable->mAssureTermination;
+    be<u8>* first = a->mpText;
+    gabi::call_ptr<void>(assure, b);
+    if (first == (be<u8>*)b->mpText) return true;
+    u32 p = gabi::ea(a->mpText), q = gabi::ea(b->mpText) - 1;
+    for (u32 k = 0; k < 0x40001; ++k) {
+        u8 left = *gabi::at<be<u8>>(p);
+        ++q;
+        u8 right = *gabi::at<be<u8>>(q);
+        if (left != right) return false;
+        if (!left) return true;
+        ++p;
+    }
+    return false;
+}
+/* 02004490 */
+void hdLayout_c::bindParts(hdLayout_partsPane_c* pane, hdLayout_names_c* names, u32 index) {
+    hdLayout_partsResource_c* resource = pane->mpResource;
+    be<u32>* table = gabi::at<be<u32>>(gabi::ea(resource) + u32(resource->mTableOffset));
+    gabi::Local<hdLayout_string_c> requested;
+    gabi::Local<hdLayout_string_c> candidate;
+    gabi::Local<hdLayout_fixedString_c> numbered;
+    for (u32 i = 0; i < u16(resource->mCount); i = (i + 1) & 0xFFFF) {
+        hdLayout_partEntry_c* entry = gabi::at<hdLayout_partEntry_c>(gabi::ea(resource) + u32(table[i]));
+        candidate->mVtable.v = stringVtable;
+        requested->mVtable.v = stringVtable;
+        requested->mpText.v = gabi::ea(names) + 0x80;
+        candidate->mpText = entry->mName;
+        if (!hdLayout_namesEqual(requested, candidate)) continue;
+        numbered->mpText = numbered->mBuffer;
+        numbered->mCapacity = 0x1D;
+        numbered->mBuffer[0] = 0;
+        numbered->mBuffer[0x1C] = 0;
+        numbered->mVtable.v = bufferVtable;
+        hdLayout_format(numbered, "%s", entry, bufferVtable);
+        numbered->assureTermination();
+        u32 data = gabi::ea(numbered->mpText), length = 0, cursor = data;
+        if (*gabi::at<be<u8>>(cursor)) {
             for (;;) {
-                ++len;
-                ++c;
-                if ((s32)len > 0x40000) { len = 0xFFFFFFFF; break; }
-                if (lbz(c) == 0) break;
+                ++length;
+                ++cursor;
+                if (s32(length) > 0x40000) { length = 0xFFFFFFFF; break; }
+                if (!*gabi::at<be<u8>>(cursor)) break;
             }
         }
-        if (len == 0xFFFFFFFF) cut = 0;
-        else cut = len - (len < 2 ? len : 2);
-        stb(data + cut, 0);
-        gabi::call_ptr(ld(ld(buf.a + 4) + 0x14), buf.a);
-        gabi::call(0x02759C28, buf.a, 0x10000800, ld(buf.a + 0), index);
-        u32 flag = lbz(entry + 0x1D);
-        u32 tbl = ld(ld(self + 0xC) + 8);
-        u32 base = flag == 0 ? tbl + 0x58 : tbl + 0x60;
-        gabi::call_ptr(ld(ld(buf.a + 4) + 0x14), buf.a);
-        u32 fn = ld(base + 4);
-        u32 obj = gabi::call_ptr<u32>(fn, ld(self + 0xC), ld(buf.a + 0), 1);
-        if (obj == 0) continue;
-        u32 ok = gabi::call<u32>(flag == 0 ? 0x02871710 : 0x0287174C, pane, obj, entry);
-        if (ok == 0) return;
+        u32 cut = length == 0xFFFFFFFF ? 0 : length - (length < 2 ? length : 2);
+        *gabi::at<be<u8>>(data + cut) = 0;
+        numbered->assureTermination();
+        hdLayout_format(numbered, "%s%02d", (be<u8>*)numbered->mpText, index);
+        u32 material = entry->mMaterial;
+        hdLayout_lookupVtable_c* lookup = mpPaneLookup->mVtable;
+        numbered->assureTermination();
+        u32 find = material ? u32(lookup->mFindMaterial) : u32(lookup->mFindPane);
+        void* object = gabi::call_ptr<void*>(find, (hdLayout_lookup_c*)mpPaneLookup, (be<u8>*)numbered->mpText, 1);
+        if (!object) continue;
+        u32 bound = material ? hdLayout_bindMaterial(pane, object, entry) : hdLayout_bindPane(pane, object, entry);
+        if (!bound) return;
     }
 }
-VERIFY(0x02004490, Layout_bindParts);
-
-static void sinit_02004794() {
-    WWHD_FUNC(0x02004794, void);
-    header_sinit(0x101FF264, 0x1018C350, 0x10000808);
+/* 02004794 */
+static void hdLayout_initStatics() { sinit_header_statics_rodata(0x101FF258, 0x1018C350, 0x101FF264, 0x10000808); }
+/* 02004828 */
+static void hdLayout_destroyComponent(void* component, s32 flags) { if (component && (flags & 1)) operator_delete(component); }
+/* 0200483C */
+static void hdLayout_prepareStringImpl() {}
+/* 02004840 */
+static void hdLayout_assureTermination(hdLayout_bufferedString_c* string) {
+    *gabi::at<be<u8>>(gabi::ea(string->mpText) + u32(string->mCapacity) - 1) = 0;
 }
-VERIFY(0x02004794, sinit_02004794);
-
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x02004828, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x02004828, Comp_dt1);
-
-static void Comp_empty() {
-    WWHD_FUNC(0x0200483C, void);
-}
-VERIFY(0x0200483C, Comp_empty);
-
-/* sead BufferedSafeString::assureTerminationImpl_ instance */
-static void SafeString_assureTermination(u32 self) {
-    WWHD_FUNC(0x02004840, void, self);
-    stb(ld(self + 0) + ld(self + 8) - 1, 0);
-}
-VERIFY(0x02004840, SafeString_assureTermination);
-
-static void Comp_dt2(u32 self, s32 flags) {
-    WWHD_FUNC(0x02004858, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x02004858, Comp_dt2);
-
-static void Comp_dt3(u32 self, s32 flags) {
-    WWHD_FUNC(0x0200486C, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x0200486C, Comp_dt3);
-
-/* 02004880: pane-owner RTTI static (the check inlined into 020024C4) */
-static u32 PaneOwner_rtti() {
-    WWHD_FUNC(0x02004880, u32);
-    rtti_static2(0x101FD8C4, 0x101FD900, 0x101FD894, 0x101FD904);
-    return 0x101FD900;
-}
-VERIFY(0x02004880, PaneOwner_rtti);
-
-static u32 LytE_ct(u32 self, u32 a0, u32 a1, u32 a2) {
-    WWHD_FUNC(0x020048D0, u32, self, a0, a1, a2);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xA4);
-        if (t == 0) return 0;
+/* 02004858 */
+static void hdLayout_destroyString(void* string, s32 flags) { if (string && (flags & 1)) operator_delete(string); }
+/* 0200486C */
+static void hdLayout_destroyBuffer(void* buffer, s32 flags) { if (buffer && (flags & 1)) operator_delete(buffer); }
+/* 02004880 */
+static hdLayout_typeInfo_c* hdLayout_getOwnerTypeInfo() {
+    if (!sOwnerTypeReady) {
+        u32 rootReady = sOwnerRootTypeReady;
+        sOwnerTypeReady = 1;
+        if (!rootReady) { sOwnerRootTypeReady = 1; sOwnerRootType.mpParent = nullptr; }
+        sOwnerType.mpParent = &sOwnerRootType;
     }
-    gabi::call(0x028757F0, t, a0, a1, a2);
-    st(t + 8, 0x100008B8);
-    return t;
+    return &sOwnerType;
 }
-VERIFY(0x020048D0, LytE_ct);
-
-static void LytE_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02004954, void, self, flags);
-    if (self == 0) return;
-    gabi::call(0x02875864, self, 0);
-    if (flags & 1) op_delete(self);
+/* 020048D0 */
+static hdLayout_bounding_c* hdLayout_constructBounding(hdLayout_bounding_c* pane, void* resource, void* context, hdLayout_buildArgs_c* args) {
+    if (!pane) {
+        pane = static_cast<hdLayout_bounding_c*>(operator_new(sizeof(hdLayout_bounding_c)));
+        if (!pane) return nullptr;
+    }
+    hdLayout_constructBoundingBase(pane, resource, context, args);
+    pane->mVtable = boundingVtable;
+    return pane;
 }
-VERIFY(0x02004954, LytE_dt);
-
-static void sinit_020049A8() {
-    WWHD_FUNC(0x020049A8, void);
-    header_sinit(0x101FF280, 0x1018C374, 0x100008B0);
+/* 02004954 */
+static void hdLayout_destroyBounding(hdLayout_bounding_c* pane, s32 flags) {
+    if (!pane) return;
+    hdLayout_destroyBoundingBase(pane, 0);
+    if (flags & 1) operator_delete(pane);
 }
-VERIFY(0x020049A8, sinit_020049A8);
+/* 020049A8 */
+static void hdLayout_initBoundingStatics() { sinit_header_statics_rodata(0x101FF274, 0x1018C374, 0x101FF280, 0x100008B0); }
 
-}  // namespace hd_ui_02003C58
+/* WWHD glue
+data sLayoutTypeReady 101FD92C nocheck
+data sAccessorTypeReady 101FD8C0 nocheck
+data sRootTypeReady 101FD888 nocheck
+data sOwnerTypeReady 101FD8C4 nocheck
+data sOwnerRootTypeReady 101FD894 nocheck
+data sLayoutType 101FD930 nocheck
+data sAccessorType 101FD934 nocheck
+data sRootType 101FD8FC nocheck
+data sOwnerType 101FD900 nocheck
+data sOwnerRootType 101FD904 nocheck
+str 100007FC "%s" in 02004490
+str 10000800 "%s%02d" in 02004490
+ext 0273B560 void hdLayout_setupChildren(hdLayout_children_c* children, u32 capacity, gptr<hdLayout_c>* storage)
+ext 0287F418 void hdLayout_constructBase(hdLayout_c* layout)
+ext 0287F4E0 void hdLayout_destroyBase(hdLayout_c* layout, u32 flags)
+ext 02005A7C void hdLayout_destroyChild(hdLayout_c* layout, u32 flags)
+ext 0287F3DC void* hdLayout_allocate(u32 size, u32 alignment)
+ext 020048D0 void* hdLayout_constructBoundingPane(void* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 02002698 void* hdLayout_constructPicture(void* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 020037D0 void* hdLayout_constructPartsPane(void* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 020021FC void* hdLayout_constructTextBox(void* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 02003AEC void* hdLayout_constructWindow(void* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 028807D0 void* hdLayout_buildPaneBase(hdLayout_c* layout, u32 signature, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 02880AE0 void* hdLayout_getPartsResource(hdLayout_c* layout, void* resource, void* name, void* options)
+ext 02003CDC hdLayout_c* hdLayout_constructChild(hdLayout_c* layout, hdLayout_c* owner, void* accessor)
+ext 0287F6D0 void* hdLayout_findResource(hdLayout_c* layout, be<u8>* name)
+ext 028727E8 void hdLayout_describeResource(hdLayout_resource_c* description, void* resource)
+ext 02872998 void hdLayout_constructPaneBase(hdLayout_pane_c* pane)
+ext 0286DA70 void hdLayout_linkPane(hdLayout_c* layout, be<u32>* owner, hdLayout_pane_c* pane)
+ext 02874820 hdLayout_group_c* hdLayout_findGroup(void* groups, be<u8>* name)
+ext 0200483C void hdLayout_prepareString(hdLayout_string_c* string)
+ext 02759C28 void hdLayout_format(hdLayout_fixedString_c* string, const char* format, void* text, u32 value)
+ext 02871710 u32 hdLayout_bindPane(hdLayout_partsPane_c* pane, void* object, hdLayout_partEntry_c* entry)
+ext 0287174C u32 hdLayout_bindMaterial(hdLayout_partsPane_c* pane, void* object, hdLayout_partEntry_c* entry)
+ext 028757F0 void hdLayout_constructBoundingBase(hdLayout_bounding_c* pane, void* resource, void* context, hdLayout_buildArgs_c* args)
+ext 02875864 void hdLayout_destroyBoundingBase(hdLayout_bounding_c* pane, u32 flags)
+*/

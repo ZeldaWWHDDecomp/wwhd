@@ -65,3 +65,53 @@ WWHD_OFFSET(kanban_class, mPhase, 0x658);
 WWHD_OFFSET(kanban_class, m574, 0x68C);
 WWHD_OFFSET(kanban_class, m5B0, 0x6C8);
 WWHD_SIZE(kanban_class, 0x7F8);
+
+#include "gc_api/f_op/f_op_actor.h"
+#include "gc_api/d/d_com_inf_game.h"
+// HD: Link fields used by the sign, including the byte-sized cut type.
+struct KanbanPlayer : fopAc_ac_c {
+    be<u8> mCutType;
+    u8 padding3AD[0x3C0 - 0x3AD];
+    be<u32> mQuakeFlags;
+    u8 padding3C4[0x3E4 - 0x3C4];
+    cXyz mSwordTopPos;
+};
+struct KanbanPlayerVtable { u8 padding[0x2C]; be<u32> getTactMusic; };
+WWHD_OFFSET(KanbanPlayer, mCutType, 0x3AC);
+WWHD_OFFSET(KanbanPlayer, mQuakeFlags, 0x3C0);
+WWHD_OFFSET(KanbanPlayer, mSwordTopPos, 0x3E4);
+WWHD_OFFSET(KanbanPlayerVtable, getTactMusic, 0x2C);
+static inline KanbanPlayer* kanban_player(fopAc_ac_c* player) { return reinterpret_cast<KanbanPlayer*>(player); }
+static inline s32 kanban_getTactMusic(fopAc_ac_c* player) {
+    KanbanPlayerVtable* table = gabi::at<KanbanPlayerVtable>(player->__vtbl);
+    return gabi::call_ptr<s32>(table->getTactMusic, player);
+}
+static inline void kanban_setPauseTimer(s8 timer) { *gabi::at<be<s8>>(0x101EACB7) = timer; }
+static inline u32 kanban_msgManager() { return *gabi::at<be<u32>>(0x101F4B5C); }
+#ifndef KANBAN_STORAGE_OWNER
+// HD: autoglue exports the owner source's statics as guest references.
+extern be<u32>& l_msgId;
+extern const be<s16> (&pl_cut_real_no_dt)[32];
+extern const be<s16> (&pl_cut_no_dt)[32];
+#endif
+BOOL kanban_bombState(void*, s32);
+BOOL kanban_bombExploding(void*);
+fpc_ProcID kanban_createChild(s16, u32, u32, cXyz*, s32, csXyz*, cXyz*, s8, u32);
+void kanban_rippleCtor(void*);
+void kanban_acchDtor(void*, s32);
+void kanban_circleDtor(void*, s32);
+void kanban_actorDtor(void*, s32);
+BOOL kanban_seaWaterCheck(kanban_class*);
+BOOL kanban_shockDamageCheck(kanban_class*);
+void kanban_cutPointCheck(kanban_class*);
+BOOL kanban_returnPosition(kanban_class*);
+u32 kanban_messageSet(u32, u32, cXyz*);
+u8 kanban_getMessageStatus(u32);
+void kanban_setMessageStatus(u32, u8);
+BOOL kanban_rollPlayerCrash(fopAc_ac_c*, f32, u32);
+
+// Main actor modes (the sub-actions remain in m2C0, as in the GameCube source).
+enum KanbanMode {
+    KANBAN_MOTHER = 0, KANBAN_MOTHER_RETURN = 1, KANBAN_MOTHER_SWIM = 2,
+    KANBAN_PARTS = 100, KANBAN_PARTS_RETURN = 101, KANBAN_PARTS_SWIM = 102,
+};

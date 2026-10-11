@@ -1,497 +1,1153 @@
 /* WWHD flame pillar, reconstructed from HD disassembly. */
 #include "d/actor/d_a_obj_flame.h"
-namespace daObjFlame {
-void Act_c::set_switch() {
-    WWHD_FUNC(0x02344974,void,this);
-    if(mType!=1) return;
-    s32 mode=mModeProc; bool active=mode==3||mode==4;
-    s32 sw=prm(8,16); s32 room=home.roomNo;
-    if(active) dComIfGs_onSwitch(sw,room); else dComIfGs_offSwitch(sw,room);
+using daObjFlame::Act_c;
+enum { JA_SE_FIREBLAST_OMEN = 0x704E, JA_SE_FIREBLAST_BLOW = 0x380D, JA_SE_FIREBLAST_NOISE = 0x7009 };
+enum { MODE_WAIT, MODE_WAIT2, MODE_L_BEFORE, MODE_L_U, MODE_U, MODE_U_L, MODE_L_AFTER };
+// HD: attribute records are 0x58 bytes. Names describe verified uses where tww has no table layout.
+struct FlameAttr {
+    be<f32> mRadiusScale, mVerticalScale, mModelScaleXZ, mModelScaleY;
+    be<s32> mBdlIndex, mBtkIndex, mBrkIndex;
+    be<u32> mHeapSize;
+    be<f32> mAnimSpeed, mTimerStep;
+    u8 _28[2];
+    be<u16> mFootEffect;
+    be<u8> mSimpleEmitter, mBlockEmitter;
+    u8 _2E[2];
+    be<f32> mEmitter0ScaleXZ, mEmitter0ScaleY, mEmitter1ScaleXZ, mEmitter1ScaleY, mEmitter2ScaleXZ, mEmitter2ScaleY;
+    be<s16> mCullMinX, mCullMinY, mCullMinZ, mCullMaxX, mCullMaxY, mCullMaxZ;
+    be<f32> mCollisionHeight;
+};
+WWHD_SIZE(FlameAttr, 0x58);
+struct FlameAttributes {
+    FlameAttr mType[4];
+};
+static FlameAttributes l_attr;
+struct FlameEmitter {
+    u8 _00[0x5C];
+    be<s32> mMaxFrame;
+    u8 _60[0x1F0 - 0x60];
+    Mtx34 mGlobalRotation;
+    u8 _220[0xC];
+    cXyz mGlobalTranslation;
+    u8 _238[0x1C];
+    be<u32> mStatus;
+};
+struct FlameModeTable {
+    gabi::ptmf<void (Act_c::*)()> mProc[7];
+};
+static FlameModeTable l_modeProc;
+struct FlameVtable {
+    be<u32> mEntry;
+};
+static FlameVtable l_actorVtable;
+static FlameVtable l_aabVtable;
+static FlameVtable l_shapeVtable;
+static FlameVtable l_capsuleVtable;
+static FlameVtable l_hitVtable;
+static FlameVtable l_cpsShapeVtable;
+struct FlameVecWords {
+    be<u32> mX, mY, mZ;
+};
+static dCcD_SrcCps M_cps_src;
+static cXyz l_origin;
+struct FlameRaiseFlag {
+    be<f32> mValue;
+};
+static FlameRaiseFlag l_raiseFlag;
+struct FlameGameDrawView {
+    u8 _00[0x5D80];
+    be<u32> mEffectList;
+};
+struct FlameDrawBuffers {
+    be<u32> mOpa, mXlu;
+};
+static FlameDrawBuffers l_drawBuffers;
+struct FlameStageInfo {
+    u8 _00[15];
+    be<u8> mTimeStep;
+};
+struct FlameCapsule {
+    cXyz mStart, mEnd;
+    be<u32> __vtbl;
+    be<f32> mRadius;
+};
+struct FlameCpsView : dCcD_GObjInf {
+    u8 _F8[0x18];
+    be<u32> mAabVtable, mShapeVtable;
+    FlameCapsule mCapsule;
+};
+WWHD_SIZE(FlameCpsView, 0x138);
+struct FlameLiftVtable {
+    u8 _00[0x14];
+    be<u32> mLift;
+    u8 _18[4];
+    be<u32> mWait;
+};
+struct FlamePlatformView : fopAc_ac_c {
+    u8 _3AC[10];
+    be<s16> mType;
+};
+const gc_tu_data gc_tu = {.safeString = 0x10028BCC, .headerStatics = {0x10469BA0, 0x101C9474, 0x10469BAC}};
+u32 Flame_schedule();
+s32 Flame_scheduleTimer();
+s32 Flame_prm(const Act_c*, s32, s32);
+u32 Flame_audio(u32, cXyz*, u32, s32);
+void Flame_gObjCtor(dCcD_GObjInf*);
+void Flame_capsuleCtor(FlameCapsule*);
+void Flame_capsuleSet(FlameCapsule*, cXyz*);
+void Flame_cpsSet(dCcD_Cps*, const dCcD_SrcCps*);
+void Flame_gObjDtor(dCcD_GObjInf*, s32);
+mDoExt_btkAnm* Flame_btkCtor(mDoExt_btkAnm*);
+mDoExt_brkAnm* Flame_brkCtor(mDoExt_brkAnm*);
+f32 Flame_sqrt(f32);
+f32 Flame_addCalc(be<f32>*, f32, f32, f32, f32);
+BOOL Flame_isActor(fopAc_ac_c*);
+BOOL Flame_isCarried(u32);
+using FlameJudge = s32 (*)(fopAc_ac_c*, Act_c*);
+void Flame_search(FlameJudge, Act_c*);
+static void removeEmitter(gptr<FlameEmitter>& slot) {
+    FlameEmitter* emitter = slot;
+    if (emitter) {
+        u32 flags = emitter->mStatus;
+        emitter->mMaxFrame = -1;
+        emitter->mStatus = flags | 1;
+        slot = nullptr;
+    }
 }
-VERIFY(0x02344974,&Act_c::set_switch);
-void Act_c::ki_init() {
-    WWHD_FUNC(0x02344A30,void,this);
-    s32 count=(s32)((u32)prm(5,8)+1);
-    if(count!=32 && count>0) { mKiCount=0; mKiActive=1; mKiTimer=0; }
+
+// HD: actor process numbers differ from the GC enum.
+enum { fpcNm_KI_e = 0xD7, fpcNm_Obj_Magmarock_e = 0x2A, fpcNm_MFLFT_e = 0x5B };
+namespace dPa_name {
+enum { ID_AK_SP_O_FIREHOLEKAGEROU = 0xC06B, ID_AK_SN_O_FIRESHAFTHEAD = 0x805A, ID_AK_SN_O_FIRESHAFTBODY = 0x805B };
 }
-VERIFY(0x02344A30,&Act_c::ki_init);
-void Act_c::mode_wait() {
-    WWHD_FUNC(0x02344A8C,void,this);
-    u8 schedule=prm(8,0);
-    if(schedule) {
-        if(!(gabi::call<u32>(0x025602A8)&schedule)) return;
-        if(gabi::call<s32>(0x025602CC)) return;
-    } else if(mTimer>0.0f) return;
-    if(mType==1) {
-        gabi::store<f32>((u32)mpBtk+4,0.0f); u32 brk=mpBrk; if(brk) gabi::store<f32>(brk+4,0.0f);
-        mModeProc=2; mTimer=23.0f; ki_init();
-        mEm0State=1; m457=1; mEm1State=1; mEm2State=1;
-    } else { mModeProc=1; mTimer=127.0f; m457=1; mEm0State=1; mEm2State=1; mEm1State=1; }
+s32 liftup_magmarock(fopAc_ac_c*, Act_c*);
+s32 liftup_mflft(fopAc_ac_c*, Act_c*);
+void Flame_modeProc(Act_c*);
+void Flame_setMtx(Act_c*);
+
+bool Flame_solidHeapCB(Act_c*);
+using FlameHeapCallback = bool (*)(Act_c*);
+s32 Flame_entryHeap(Act_c*, FlameHeapCallback, u32);
+f32 Flame_squareDistance(const cXyz*, const cXyz*);
+static FlameLiftVtable* Flame_liftVtable(fopAc_ac_c* actor) {
+    // HD: the guest vtable uses raw function entries at 0x14 and 0x1C.
+    gptr<FlameLiftVtable>& table = reinterpret_cast<gptr<FlameLiftVtable>&>(actor->__vtbl);
+    return table;
 }
-VERIFY(0x02344A8C,&Act_c::mode_wait);
-u32 Act_c::se_fireblast_omen() {
-    WWHD_FUNC(0x02344B94,u32,this);
-    s32 rev=dComIfGp_getReverb(current.roomNo); return gabi::call<u32>(0x025E1A40,0x704Eu,&current.pos,0u,(s32)(s8)rev); /* mDoAud_seStart: its result stays in r3 (mode_l_before tail-calls this) */
+
+s32 daObjFlame::Act_c::prm(s32 width, s32 shift) const {
+    return Flame_prm(this, width, shift);
 }
-VERIFY(0x02344B94,&Act_c::se_fireblast_omen);
-void Act_c::mode_wait2() {
-    WWHD_FUNC(0x02344BDC,void,this);
-    se_fireblast_omen(); if(mTimer>0.0f) return;
-    gabi::store<f32>((u32)mpBtk+4,0.0f); u32 brk=mpBrk; if(brk) gabi::store<f32>(brk+4,0.0f);
-    mModeProc=2; mTimer=23.0f; ki_init();
+
+/* 02344974 */
+void daObjFlame::Act_c::set_switch() {
+    if (mType != 1)
+        return;
+    s32 mode = mModeProc;
+    bool active = mode == MODE_L_U || mode == MODE_U;
+    s32 sw = prm(8, 16);
+    s32 room = home.roomNo;
+    if (active)
+        dComIfGs_onSwitch(sw, room);
+    else
+        dComIfGs_offSwitch(sw, room);
 }
-VERIFY(0x02344BDC,&Act_c::mode_wait2);
-u32 Act_c::mode_l_before() {
-    WWHD_FUNC(0x02344C50,u32,this);
-    f32 timer=mTimer; m457=0;
-    if(timer>0.0f) return se_fireblast_omen();
-    s32 rev=mReverb; mModeProc=3; mTimer=22.0f; return gabi::call<u32>(0x025E1A40,0x380Du,&eyePos,0u,rev); /* mDoAud_seStart */
+/* 023432B0 */
+// HD: free binding for the tww static heap callback.
+bool Flame_solidHeapCB(Act_c* actor) {
+    return actor->create_heap();
 }
-VERIFY(0x02344C50,&Act_c::mode_l_before);
-void Act_c::mode_l_u() {
-    WWHD_FUNC(0x02344CA4,void,this);
-    f32 timer=mTimer; m457=1; mHeight=0.04545454680919647f*(22.0f-timer);
-    if(timer>0.0f) return; mModeProc=4; mTimer=90.0f;
-}
-VERIFY(0x02344CA4,&Act_c::mode_l_u);
-void Act_c::mode_u() {
-    WWHD_FUNC(0x02344CF4,void,this);
-    if(mTimer>0.0f) return; mModeProc=5; mEm0State=3; mTimer=25.0f;
-}
-VERIFY(0x02344CF4,&Act_c::mode_u);
-void Act_c::mode_u_l() {
-    WWHD_FUNC(0x02344D28,void,this);
-    f32 timer=mTimer; m457=1; mHeight=0.03999999910593033f*timer;
-    if(timer>0.0f) return; mModeProc=6; mTimer=20.0f; mEm2State=3; mEm1State=3;
-}
-VERIFY(0x02344D28,&Act_c::mode_u_l);
-void Act_c::mode_l_after() {
-    WWHD_FUNC(0x02344D78,void,this);
-    if(mTimer>0.0f) return; mModeProc=0; mTimer=(u8)prm(8,0) ? 0.0f :120.0f;
-}
-VERIFY(0x02344D78,&Act_c::mode_l_after);
-u32 PrmAbstract(const Act_c* actor,u32 width,u32 shift) {
-    WWHD_FUNC(0x02345AC0,u32,actor,width,shift);
-    u32 value=gabi::load<u32>(gabi::ea(actor)+0xB0);
-    u32 mask=(width&32)?0u:1u<<(width&31);
-    return ((shift&32)?0u:value>>(shift&31)) & (mask-1);
-}
-VERIFY(0x02345AC0,PrmAbstract);
-}
-namespace daObjFlame {
-s32 Delete(Act_c* actor) {
-    WWHD_FUNC(0x023455B0,s32,actor);
-    gabi::call(0x025204C8,&actor->mPhs,gabi::at<u8>(0x101C94E8)); return 1;
-}
-VERIFY(0x023455B0,Delete);
-void emptyVirtual(void* self) { WWHD_FUNC(0x02345A50,void,self); }
-VERIFY(0x02345A50,emptyVirtual);
-void deleteHelper(void* self,u32 flags) {
-    WWHD_FUNC(0x02345A3C,void,self,flags);
-    if(self && (flags&1)) gabi::call(0x0273AF40,self);
-}
-VERIFY(0x02345A3C,deleteHelper);
-void destroyActor(Act_c* self,u32 flags) {
-    WWHD_FUNC(0x02345A54,void,self,flags);
-    if(!self) return;
-    gabi::call(0x02515980,&self->mCps,2); gabi::call(0x02515860,&self->mStts,2);
-    gabi::call(0x025D50BC,self,0); if(flags&1) gabi::call(0x0273AF40,self);
-}
-VERIFY(0x02345A54,destroyActor);
-s32 cleanupEmitters(Act_c* actor) {
-    WWHD_FUNC(0x02345890,s32,actor);
-    u32 type=actor->mType;
-    if(type>=4) { JUT_ASSERT_fail(STR(0x10028F90),0x1C0,STR(0x10028FA4)); type=actor->mType; }
-    if(!gabi::load<u8>(0x101C9520+0x58*type)) {
-        be<u32>* slots[]={&actor->mpEmitter0,&actor->mpEmitter1,&actor->mpEmitter2};
-        for(auto slot:slots) {
-            u32 em=*slot;
-            if(em) { u32 flag=gabi::load<u32>(em+0x254); gabi::store<u32>(em+0x5C,0xFFFFFFFF); gabi::store<u32>(em+0x254,flag|1); *slot=0; }
+
+/* 02342FC4 */
+bool daObjFlame::Act_c::create_heap() {
+    auto attr = [&]() {
+        u32 type = mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
         }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    auto* data = static_cast<J3DModelData*>(dComIfG_getObjectRes("Yfire_00", a->mBdlIndex));
+    if (!data)
+        JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1F5, "mdl_data != 0");
+    mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    a = attr();
+    auto* animation = static_cast<J3DAnmTextureSRTKey*>(dComIfG_getObjectRes("Yfire_00", a->mBtkIndex));
+    auto* btk = static_cast<mDoExt_btkAnm*>(operator_new(0x74));
+    if (btk)
+        btk = Flame_btkCtor(btk);
+    mpBtkAnm = btk;
+    if (!animation) {
+        JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1FE, "btk != 0");
+        btk = mpBtkAnm;
+    }
+    s32 btkOK = 0;
+    if (btk) {
+        u32 type = mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            btk = mpBtkAnm;
+            type = mType;
+        }
+        f32 speed = l_attr.mType[type].mAnimSpeed;
+        btkOK = btk->init(data, animation, true, J3DFrameCtrl::EMode_LOOP, speed, 0, -1, false, 0);
+    }
+    a = attr();
+    s32 brkOK = 0;
+    if (a->mBrkIndex < 0)
+        brkOK = 1;
+    else {
+        u32 type = mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+            a = &l_attr.mType[type];
+        }
+        auto* brkData = static_cast<J3DAnmTevRegKey*>(dComIfG_getObjectRes("Yfire_00", a->mBrkIndex));
+        auto* brk = static_cast<mDoExt_brkAnm*>(operator_new(0x78));
+        if (brk)
+            brk = Flame_brkCtor(brk);
+        mpBrkAnm = brk;
+        if (!brkData) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x214, "brk != 0");
+            brk = mpBrkAnm;
+        }
+        if (brk) {
+            type = mType;
+            if (type >= 4) {
+                JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+                brk = mpBrkAnm;
+                type = mType;
+            }
+            f32 speed = l_attr.mType[type].mAnimSpeed;
+            brkOK = brk->init(data, brkData, true, J3DFrameCtrl::EMode_LOOP, speed, 0, -1, false, 0);
+        }
+    }
+    return mpModel != nullptr && btkOK != 0 && brkOK != 0;
+}
+/* 0234365C */
+void daObjFlame::Act_c::create_mode_init() {
+    u32 schedule = (u8)prm(8, 0);
+    u32 current = static_cast<u8>(Flame_schedule());
+    if (!schedule || !current) {
+        mModeProc = MODE_WAIT;
+        mTimer = schedule ? 0.0f : 120.0f;
+        mHeight = 0.0f;
+        return;
+    }
+    s32 timer = Flame_scheduleTimer();
+    auto* config = static_cast<FlameStageInfo*>(dComIfGp_getStageStagInfo());
+    u32 step = u32(config->mTimeStep) * 30;
+    if (schedule < current)
+        schedule <<= 8;
+    u32 shifts = 0;
+    while (!(schedule & current)) {
+        current <<= 1;
+        ++shifts;
+    }
+    timer = (s32)(step * shifts + (u32)timer);
+    u32 type = mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    f32 phase = (f32)timer * a->mTimerStep;
+    if (type != 1)
+        phase -= 127.0f;
+    s32 mode;
+    f32 remain, height;
+    if (phase < 0.0f) {
+        mode = MODE_WAIT2;
+        remain = phase + 127.0f;
+        height = 0.0f;
+    } else if (phase < 23.0f) {
+        mode = MODE_L_BEFORE;
+        remain = 23.0f - phase;
+        height = 0.0f;
+    } else if (phase < 45.0f) {
+        mode = MODE_L_U;
+        remain = 45.0f - phase;
+        height = 0.04545454680919647f * (22.0f - remain);
+    } else if (phase < 135.0f) {
+        mode = MODE_U;
+        remain = 135.0f - phase;
+        height = 1.0f;
+    } else if (phase < 160.0f) {
+        mode = MODE_U_L;
+        remain = 160.0f - phase;
+        height = 0.03999999910593033f * remain;
+    } else if (phase < 180.0f) {
+        mode = MODE_L_AFTER;
+        remain = 180.0f - phase;
+        height = 0.0f;
+    } else {
+        mTimer = 0.0f;
+        mModeProc = MODE_WAIT;
+        mHeight = 0.0f;
+        return;
+    }
+    mModeProc = mode;
+    mTimer = remain;
+    mHeight = height;
+    if (mode != MODE_WAIT2) {
+        f32 fraction = phase * 0.0055555556900799274f;
+        mDoExt_btkAnm* btk = mpBtkAnm;
+        if (btk)
+            btk->setFrame(gabi::fmadds(fraction, btk->getEndFrame(), 1.f));
+        mDoExt_brkAnm* brk = mpBrkAnm;
+        if (brk)
+            brk->setFrame(gabi::fmadds(fraction, brk->getEndFrame(), 1.f));
+        mode = mModeProc;
+    }
+    if (mode == MODE_WAIT)
+        return;
+    u32 index = (u32)(mode - 1);
+    if (index <= 3) {
+        mode = mModeProc;
+        index = (u32)(mode - 1);
+        mEm0State = 1;
+    }
+    type = mType;
+    if (index <= 4) {
+        mEm1State = 1;
+        mEm2State = 1;
+    }
+    a = attr();
+    if (!a->mSimpleEmitter)
+        em_manual_set();
+    m457 = 1;
+}
+
+/* 02343AE4 */
+void daObjFlame::Act_c::set_mtx() {
+    f32 x = scale.x, z = scale.z, y = scale.y;
+    J3DModel* model = mpModel;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = current.pos.x;
+    y = current.pos.y;
+    z = current.pos.z;
+    Mtx34* mtx = mDoMtx_stack_c::get();
+    PSMTXTrans(mtx, x, y, z);
+    s16 rz = shape_angle.z, rx = shape_angle.x, ry = shape_angle.y;
+    mDoMtx_ZXYrotM(mtx, rx, ry, rz);
+    ry = mRotY;
+    mDoMtx_YrotM(mtx, ry);
+    f32 matrix[12];
+    for (u32 i = 0; i < 12; ++i)
+        matrix[i] = mtx->m[i / 4][i % 4];
+    model = mpModel; // HD: this assignment does not preserve a null model pointer.
+    Mtx34* destination = &model->mBaseTransformMtx;
+    for (u32 i = 0; i < 12; ++i)
+        destination->m[i / 4][i % 4] = matrix[i];
+    u32 type = mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* attrs[6];
+    for (u32 i = 0; i < 6; i++)
+        attrs[i] = attr();
+    f32 minx = attrs[0]->mCullMinX, miny = attrs[1]->mCullMinY, minz = attrs[2]->mCullMinZ;
+    f32 maxx = attrs[3]->mCullMaxX, maxy = attrs[4]->mCullMaxY, maxz = attrs[5]->mCullMaxZ;
+    f32 height = mHeight;
+    fopAcM_setCullSizeBox(this, minx, miny, minz, maxx, maxy * height, maxz);
+}
+/* 02343D78 */
+void daObjFlame::Act_c::init_mtx() {
+    set_mtx();
+}
+
+/* 02343D7C */
+void daObjFlame::Act_c::em_position() {
+    if (!(s8)m457)
+        return;
+    Mtx34* mtx = mDoMtx_stack_c::get();
+    f32 z = current.pos.z, y = current.pos.y, x = current.pos.x;
+    PSMTXTrans(mtx, x, y, z);
+    s16 rz = shape_angle.z, rx = shape_angle.x, ry = shape_angle.y;
+    mDoMtx_ZXYrotM(mtx, rx, ry, rz);
+    u32 type = mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    if (!a->mSimpleEmitter) {
+        if (mpEmitter0) {
+            mDoMtx_stack_c::push();
+            type = mType;
+            FlameAttr* a0 = attr();
+            FlameAttr* a1 = attr();
+            f32 height = mHeight, sy1 = a1->mModelScaleY, sy0 = a0->mModelScaleY, extra = mExtraScaleY;
+            f32 offset = gabi::fmadds((height * 1500.0f) * sy0, extra, (-300.0f * sy1) * extra);
+            mDoMtx_stack_c::transM(0.0f, offset, 0.0f);
+            FlameEmitter* em = mpEmitter0;
+            JPASetRMtxTVecfromMtx(mtx, &em->mGlobalRotation, &em->mGlobalTranslation);
+            mDoMtx_stack_c::pop();
+        }
+        FlameEmitter* em = mpEmitter1;
+        if (em)
+            JPASetRMtxTVecfromMtx(mtx, &em->mGlobalRotation, &em->mGlobalTranslation);
+        type = mType;
+    }
+    a = attr();
+    f32 height = mHeight, sy = a->mVerticalScale, ratio = m46C;
+    mDoMtx_stack_c::transM(0.0f, ((height * 1500.0f) * sy) * ratio, 0.0f);
+    PSMTXMultVec(mtx, &l_origin, &eyePos);
+    height = mHeight;
+    m434 = gabi::fmsubs(1500.0f, height, 300.0f) > 0.0f;
+    if (!m434)
+        return;
+    type = mType;
+    a = attr();
+    sy = a->mVerticalScale;
+    ratio = m46C;
+    mDoMtx_stack_c::transM(0.0f, (-300.0f * sy) * ratio, 0.0f);
+    PSMTXMultVec(mtx, &l_origin, &mCpsP1);
+}
+
+/* 02344014 */
+void daObjFlame::Act_c::em_simple_set() {
+    u32 type = mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    s8 state = mEm0State;
+    bool blocked = a->mBlockEmitter != 0 && m459 != 0;
+    auto particle = [](u32 id, cXyz* pos) { dComIfGp_particle_setSimple(id, pos); };
+    if (state == 1 && !blocked) {
+        f32 x = eyePos.x;
+        a = attr();
+        f32 sy = a->mVerticalScale, extra = mExtraScaleY, y = eyePos.y, z = eyePos.z;
+        gabi::Local<cXyz> pos;
+        pos->x = x;
+        pos->y = gabi::fmadds(-300.0f * sy, extra, y);
+        pos->z = z;
+        particle(dPa_name::ID_AK_SN_O_FIRESHAFTHEAD, pos.get());
+    }
+    if ((s8)mEm1State == 1)
+        particle(dPa_name::ID_AK_SN_O_FIRESHAFTBODY, &eyePos);
+    if ((s8)mEm2State == 1 && !blocked) {
+        type = mType;
+        a = attr();
+        u32 id = a->mFootEffect;
+        particle(id, &home.pos);
+    }
+}
+
+/* 023441EC */
+void daObjFlame::Act_c::em_simple_inv() {
+    s8 a = mEm0State, b = mEm1State;
+    if (a == 3)
+        mpEmitter0 = 0;
+    s8 c = mEm2State;
+    if (b == 3)
+        mpEmitter1 = 0;
+    if (c == 3)
+        mpEmitter2 = 0;
+}
+/* 023432B4 */
+void daObjFlame::Act_c::em_manual_set() {
+    u32 type = mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    bool blocked = a->mBlockEmitter != 0 && m459 != 0;
+    auto particle = [&](u32 id, cXyz* scale) {
+        return reinterpret_cast<FlameEmitter*>(dPa_control_set(dComIfGp_getParticle(), 0, id, &home.pos, &home.angle,
+                                                               scale, 255, nullptr, -1, nullptr, nullptr, nullptr));
+    };
+    if ((s8)mEm0State == 1 && !blocked && type != 1) {
+        a = attr();
+        f32 x = a->mEmitter0ScaleXZ;
+        a = attr();
+        f32 extra = mExtraScaleY, y = a->mEmitter0ScaleY * extra;
+        a = attr();
+        f32 z = a->mEmitter0ScaleXZ;
+        gabi::Local<cXyz> scale;
+        scale->x = x;
+        scale->y = y;
+        scale->z = z;
+        mpEmitter0 = particle(dPa_name::ID_AK_SN_O_FIRESHAFTHEAD, scale.get());
+        mEm0State = 2;
+    }
+    if ((s8)mEm1State == 1) {
+        type = mType;
+        a = attr();
+        f32 x = a->mEmitter1ScaleXZ;
+        a = attr();
+        f32 extra = mExtraScaleY, y = a->mEmitter1ScaleY * extra;
+        a = attr();
+        f32 z = a->mEmitter1ScaleXZ;
+        gabi::Local<cXyz> scale;
+        scale->x = x;
+        scale->y = y;
+        scale->z = z;
+        mpEmitter1 = particle(dPa_name::ID_AK_SN_O_FIRESHAFTBODY, scale.get());
+        mEm1State = 2;
+    }
+    if ((s8)mEm2State == 1 && !blocked) {
+        type = mType;
+        a = attr();
+        f32 x = a->mEmitter2ScaleXZ;
+        a = attr();
+        f32 y = a->mEmitter2ScaleXZ;
+        a = attr();
+        f32 z = a->mEmitter2ScaleXZ;
+        gabi::Local<cXyz> scale;
+        scale->x = x;
+        scale->y = y;
+        scale->z = z;
+        a = attr();
+        u32 id = a->mFootEffect;
+        mpEmitter2 = particle(id, scale.get());
+        mEm2State = 2;
+    }
+}
+
+/* 02344230 */
+void daObjFlame::Act_c::em_manual_inv() {
+    u32 type = mType;
+    if (type >= 4) {
+        JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+        type = mType;
+    }
+    bool enabled = l_attr.mType[type].mBlockEmitter != 0;
+    s8 first = mEm0State;
+    bool stop = enabled && m459 != 0;
+    s8 last = mEm2State;
+    if (first == 2 && stop) {
+        first = 3;
+        mEm0State = 3;
+    }
+    if (last == 2 && stop) {
+        first = mEm0State;
+        mEm2State = 3;
+    }
+    if (first == 3)
+        removeEmitter(mpEmitter0);
+    if ((s8)mEm1State == 3)
+        removeEmitter(mpEmitter1);
+    if ((s8)mEm2State == 3)
+        removeEmitter(mpEmitter2);
+}
+
+/* 02344A30 */
+void daObjFlame::Act_c::ki_init() {
+    s32 count = (s32)((u32)prm(5, 8) + 1);
+    if (count != 32 && count > 0) {
+        m464 = 0;
+        m45A = 1;
+        m460 = 0;
+    }
+}
+/* 02345068 */
+void daObjFlame::Act_c::ki_make() {
+    if (!m45A)
+        return;
+    if (m45C > 0) {
+        m45A = 0;
+        m45C = (s32)((u32)(s32)m45C - 1);
+        return;
+    }
+    s32 count = (s32)((u32)prm(5, 8) + 1);
+    if (count == 32)
+        count = 0;
+    if (m464 >= count) {
+        m45A = 0;
+        m45C = prm(2, 13);
+        return;
+    }
+    s32 timer = (s32)((u32)(s32)m460 - 1);
+    if (timer > 0) {
+        m460 = timer;
+        return;
+    }
+    m460 = 5;
+    m464 = (s32)((u32)(s32)m464 + 1);
+    f32 angle = cM_rndFX(32768.0f);
+    gabi::Local<csXyz> rotation;
+    csXyz_ct(rotation.get(), 0, (s16)gabi::ftoi(angle), 0);
+    s32 room = current.roomNo;
+    fopAcM_create(fpcNm_KI_e, -32766, &current.pos, room, rotation.get(), nullptr, -1, 0);
+}
+/* 023451C8 */
+void daObjFlame::Act_c::eff_hase() {
+    dComIfGp_particle_setSimple(dPa_name::ID_AK_SP_O_FIREHOLEKAGEROU, &home.pos);
+}
+/* 02344B94 */
+u32 daObjFlame::Act_c::se_fireblast_omen() {
+    s32 rev = dComIfGp_getReverb(current.roomNo);
+    return Flame_audio(JA_SE_FIREBLAST_OMEN, &current.pos, 0u,
+                       (s32)(s8)rev); /* mDoAud_seStart: its result stays in r3 (mode_l_before tail-calls this) */
+}
+/* 023443A0 */
+// HD: typed free callback keeps the actor-search calling convention.
+s32 liftup_magmarock(fopAc_ac_c* rock, Act_c* actor) {
+    if (!Flame_isActor(rock) || !rock || s16(rock->mProcName) != fpcNm_Obj_Magmarock_e)
+        return 0;
+    u32 id = rock ? u32(rock->mBsPcId) : 0xFFFFFFFF;
+    if (Flame_isCarried(id))
+        return 0;
+    u32 type = actor->mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = actor->mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    f32 ey = actor->eyePos.y, base = actor->current.pos.y, radius = gabi::fmadds(a->mRadiusScale, 145.0f, 200.0f);
+    bool upper = ey < base;
+    f32 low = (upper ? ey : base) - 100.0f, high = (upper ? base : ey) + 1000.0f;
+    gabi::Local<cXyz> pos, target;
+    pos->x = rock->current.pos.x;
+    pos->y = 0.0f;
+    pos->z = rock->current.pos.z;
+    target->x = actor->eyePos.x;
+    target->y = 0.0f;
+    target->z = actor->eyePos.z;
+    f32 dist = Flame_squareDistance(pos.get(), target.get());
+    dist = Flame_sqrt(dist);
+    if (!(dist < radius))
+        return 0;
+    f32 ry = rock->current.pos.y;
+    if (!(ry > low) || !(ry < high))
+        return 0;
+    type = actor->mType;
+    if (type == 1)
+        return 0;
+    f32 height = actor->mHeight, boost, offset = 100.0f;
+    if (height < 0.10000000149011612f)
+        boost = height * 2700.0f;
+    else if (height > 0.8999999761581421f) {
+        f32 fall = 1.0f - height;
+        boost = fall * 2700.0f;
+        offset = fall * 1000.0f;
+    } else
+        boost = 270.0f;
+    a = attr();
+    f32 ratio = actor->m46C, scale = a->mVerticalScale;
+    offset *= scale * ratio;
+    a = attr();
+    scale = a->mVerticalScale;
+    ratio = actor->m46C;
+    f32 x = actor->eyePos.x, y = actor->eyePos.y, z = actor->eyePos.z;
+    s32 mode = actor->mModeProc;
+    gabi::Local<cXyz> destination;
+    destination->x = x;
+    destination->y = gabi::fmadds(boost, scale * ratio, y + offset);
+    destination->z = z;
+    auto* vt = Flame_liftVtable(rock);
+    u32 call = (mode == MODE_WAIT2 || mode == MODE_L_BEFORE) ? vt->mWait : vt->mLift;
+    gabi::call_ptr(call, rock, destination.get());
+    actor->m459 = 1;
+    return 0;
+}
+/* 023446B0 */
+s32 liftup_mflft(fopAc_ac_c* platform, Act_c* actor) {
+    if (!Flame_isActor(platform) || !platform || s16(platform->mProcName) != fpcNm_MFLFT_e)
+        return 0;
+    f32 desired = s16(reinterpret_cast<FlamePlatformView*>(platform)->mType) == 0 ? 1.0004417896270752f : 1.0f;
+    f32 height = actor->mHeight, boost, offset;
+    if (height < 0.10000000149011612f) {
+        boost = height * 2700.0f;
+        offset = 100.0f;
+    } else if (height > 0.8999999761581421f) {
+        f32 fall = 1.0f - height;
+        offset = fall * 1000.0f;
+        boost = fall * 2700.0f;
+    } else {
+        offset = 100.0f;
+        boost = 270.0f;
+    }
+    u32 type = actor->mType;
+    auto attr = [&]() {
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = actor->mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    f32 ratio = actor->m46C, scale = a->mVerticalScale;
+    offset *= scale * ratio;
+    a = attr();
+    ratio = actor->m46C;
+    scale = a->mVerticalScale;
+    f32 y = actor->eyePos.y, base = actor->current.pos.y, x = actor->eyePos.x, z = actor->eyePos.z;
+    y = gabi::fmadds(boost, scale * ratio, y + offset);
+    if (y > base + 5000.0f)
+        y = base + 5000.0f;
+    s32 mode = actor->mModeProc;
+    if (mode != MODE_WAIT2 && mode != MODE_L_BEFORE) {
+        gabi::Local<cXyz> destination;
+        destination->x = x;
+        destination->y = y;
+        destination->z = z;
+        auto* vt = Flame_liftVtable(platform);
+        u32 call = vt->mLift;
+        gabi::call_ptr(call, platform, destination.get());
+    }
+    actor->m459 = 1;
+    Flame_addCalc(&actor->m46C, 1.0f, 0.30000001192092896f, 0.10000000149011612f, 0.009999999776482582f);
+    Flame_addCalc(&actor->mExtraScaleY, desired, 0.30000001192092896f, 0.10000000149011612f, 0.009999999776482582f);
+    return 0;
+}
+
+/* 02344A8C */
+void daObjFlame::Act_c::mode_wait() {
+    u8 schedule = prm(8, 0);
+    if (schedule) {
+        if (!(Flame_schedule() & schedule))
+            return;
+        if (Flame_scheduleTimer())
+            return;
+    } else if (mTimer > 0.0f)
+        return;
+    if (mType == 1) {
+        mpBtkAnm->setFrame(0.f);
+        mDoExt_brkAnm* brk = mpBrkAnm;
+        if (brk)
+            brk->setFrame(0.f);
+        mModeProc = MODE_L_BEFORE;
+        mTimer = 23.0f;
+        ki_init();
+        mEm0State = 1;
+        m457 = 1;
+        mEm1State = 1;
+        mEm2State = 1;
+    } else {
+        mModeProc = MODE_WAIT2;
+        mTimer = 127.0f;
+        m457 = 1;
+        mEm0State = 1;
+        mEm2State = 1;
+        mEm1State = 1;
+    }
+}
+/* 02344BDC */
+void daObjFlame::Act_c::mode_wait2() {
+    se_fireblast_omen();
+    if (mTimer > 0.0f)
+        return;
+    mpBtkAnm->setFrame(0.f);
+    mDoExt_brkAnm* brk = mpBrkAnm;
+    if (brk)
+        brk->setFrame(0.f);
+    mModeProc = MODE_L_BEFORE;
+    mTimer = 23.0f;
+    ki_init();
+}
+/* 02344C50 */
+u32 daObjFlame::Act_c::mode_l_before() {
+    f32 timer = mTimer;
+    m457 = 0;
+    if (timer > 0.0f)
+        return se_fireblast_omen();
+    s32 rev = m458;
+    mModeProc = MODE_L_U;
+    mTimer = 22.0f;
+    return Flame_audio(JA_SE_FIREBLAST_BLOW, &eyePos, 0u, rev); /* mDoAud_seStart */
+}
+/* 02344CA4 */
+void daObjFlame::Act_c::mode_l_u() {
+    f32 timer = mTimer;
+    m457 = 1;
+    mHeight = 0.04545454680919647f * (22.0f - timer);
+    if (timer > 0.0f)
+        return;
+    mModeProc = MODE_U;
+    mTimer = 90.0f;
+}
+/* 02344CF4 */
+void daObjFlame::Act_c::mode_u() {
+    if (mTimer > 0.0f)
+        return;
+    mModeProc = MODE_U_L;
+    mEm0State = 3;
+    mTimer = 25.0f;
+}
+/* 02344D28 */
+void daObjFlame::Act_c::mode_u_l() {
+    f32 timer = mTimer;
+    m457 = 1;
+    mHeight = 0.03999999910593033f * timer;
+    if (timer > 0.0f)
+        return;
+    mModeProc = MODE_L_AFTER;
+    mTimer = 20.0f;
+    mEm2State = 3;
+    mEm1State = 3;
+}
+/* 02344D78 */
+void daObjFlame::Act_c::mode_l_after() {
+    if (mTimer > 0.0f)
+        return;
+    mModeProc = MODE_WAIT;
+    mTimer = (u8)prm(8, 0) ? 0.0f : 120.0f;
+}
+/* 02344DF4 */
+void daObjFlame::Act_c::mode_proc_call() {
+    f32 timer = mTimer;
+    if (!(timer < -0.10000000149011612f)) {
+        s32 mode = mModeProc;
+        if (mode == MODE_WAIT || mode == MODE_WAIT2)
+            mTimer = timer - 1.0f;
+        else {
+            u32 type = mType;
+            if (type >= 4) {
+                JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+                timer = mTimer;
+                type = mType;
+            }
+            mTimer = timer - l_attr.mType[type].mTimerStep;
+        }
+    }
+    (this->*l_modeProc.mProc[s32(mModeProc)])();
+    auto attr = [&]() {
+        u32 type = mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    if (a->mSimpleEmitter) {
+        em_position();
+        em_simple_set();
+        em_simple_inv();
+    } else {
+        em_manual_set();
+        em_manual_inv();
+        em_position();
+    }
+    s32 mode = mModeProc;
+    if (mode != MODE_WAIT && mode != MODE_WAIT2) {
+        mpBtkAnm->play();
+        mDoExt_brkAnm* brk = mpBrkAnm;
+        if (brk)
+            brk->play();
+        s32 rev = m458;
+        mDoAud_seStart(JA_SE_FIREBLAST_NOISE, &eyePos, 0, rev);
+    }
+    if (!m434)
+        return;
+    if (mModeProc == MODE_U_L) {
+        a = attr();
+        f32 height = mHeight, limit = a->mCollisionHeight;
+        if (!(height > limit))
+            return;
+    }
+    Flame_capsuleSet(&reinterpret_cast<FlameCpsView*>(&mCps)->mCapsule, &mCpsP0);
+    cCcS_Set(dComIfG_Ccsp(), &mCps);
+}
+
+/* 0234521C */
+cPhs_State daObjFlame::Act_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (this) {
+            fopAc_ac_c_ct(this);
+            __vtbl = gabi::ea(&l_actorVtable);
+            dCcD_Stts_ct(&mStts);
+            auto* cps = reinterpret_cast<FlameCpsView*>(&mCps);
+            Flame_gObjCtor(&mCps);
+            cps->mShapeVtable = gabi::ea(&l_shapeVtable);
+            cps->mAabVtable = gabi::ea(&l_aabVtable);
+            Flame_capsuleCtor(&cps->mCapsule);
+            flags = actor_condition;
+            cps->__vtbl_hitinf = gabi::ea(&l_hitVtable);
+            cps->mCapsule.__vtbl = gabi::ea(&l_capsuleVtable);
+            cps->mShapeVtable = gabi::ea(&l_cpsShapeVtable);
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    cPhs_State result = dComIfG_resLoad(&mPhs, "Yfire_00");
+    if (result != cPhs_COMPLEATE_e)
+        return result;
+    mType = prm(2, 28);
+    auto attr = [&]() {
+        u32 type = mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    u32 heap = a->mHeapSize;
+    if (!Flame_entryHeap(this, Flame_solidHeapCB, heap))
+        return cPhs_ERROR_e;
+    // HD: these scale/position copies are integer loads and stores, preserving NaN payloads.
+    auto* scaleWords = reinterpret_cast<FlameVecWords*>(&scale);
+    auto* origWords = reinterpret_cast<FlameVecWords*>(&mOrigScale);
+    u32 x = scaleWords->mX, y = scaleWords->mY, z;
+    m46C = 1.f;
+    origWords->mX = x;
+    s32 type = mType;
+    z = scaleWords->mZ;
+    origWords->mY = y;
+    origWords->mZ = z;
+    mExtraScaleY = type == 1 ? 1.0004417896270752f : 1.f;
+    a = attr();
+    scale.x = f32(scale.x) * a->mModelScaleXZ;
+    a = attr();
+    f32 extra = mExtraScaleY, sy = a->mModelScaleY, oldy = scale.y;
+    scale.y = oldy * (sy * extra);
+    a = attr();
+    f32 oldz = scale.z, sz = a->mModelScaleXZ;
+    mEm2State = 0;
+    mEm1State = 0;
+    mEm0State = 0;
+    scale.z = oldz * sz;
+    create_mode_init();
+    set_switch();
+    J3DModel* model = mpModel;
+    cullMtx = model ? gabi::ea(model->getBaseTRMtx()) : 0;
+    init_mtx();
+    mStts.Init(100, 255, this);
+    Flame_cpsSet(&mCps, &M_cps_src);
+    auto* pos = reinterpret_cast<FlameVecWords*>(&current.pos);
+    auto* p0 = reinterpret_cast<FlameVecWords*>(&mCpsP0);
+    auto* p1 = reinterpret_cast<FlameVecWords*>(&mCpsP1);
+    z = pos->mZ;
+    type = mType;
+    x = pos->mX;
+    y = pos->mY;
+    p0->mX = x;
+    p0->mY = y;
+    p0->mZ = z;
+    p1->mX = x;
+    p1->mY = y;
+    mCps.SetStts(&mStts);
+    p1->mZ = z;
+    a = attr();
+    f32 radius = a->mRadiusScale * 145.f;
+    m434 = 0;
+    mCpsRad = radius;
+    em_position();
+    s32 rev = dComIfGp_getReverb(home.roomNo);
+    m458 = rev;
+    m459 = 0;
+    s32 bound = static_cast<s32>(u32(prm(2, 13)) + 1);
+    f32 random = cM_rndF(f32(bound));
+    s32 delay = gabi::ftoi(random), mode = mModeProc;
+    m45C = delay;
+    if (mode != MODE_WAIT && delay == 0)
+        m45C = 1;
+    return result;
+}
+
+/* 023455B0 */
+s32 Flame_Method_Delete(Act_c* actor) {
+    dComIfG_resDelete(&actor->mPhs, "Yfire_00");
+    return 1;
+}
+/* 023455E0 */
+s32 Flame_Method_Execute(Act_c* actor) {
+    auto attr = [&]() {
+        u32 type = actor->mType;
+        if (type >= 4) {
+            JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+            type = actor->mType;
+        }
+        return &l_attr.mType[type];
+    };
+    FlameAttr* a = attr();
+    actor->scale.x = (f32)actor->mOrigScale.x * a->mModelScaleXZ;
+    a = attr();
+    actor->scale.y = ((f32)actor->mOrigScale.y * a->mModelScaleY) * (f32)actor->mExtraScaleY;
+    a = attr();
+    actor->scale.z = (f32)actor->mOrigScale.z * a->mModelScaleXZ;
+    Flame_modeProc(actor);
+    actor->ki_make();
+    if (!actor->prm(1, 31))
+        actor->eff_hase();
+    s32 type = actor->mType;
+    s16 rot = actor->mRotY;
+    if (type == 1) {
+        f32 height = actor->mHeight;
+        actor->mRotY = (s16)(rot + 400);
+        if (height > 0.009999999776482582f)
+            l_raiseFlag.mValue = 1.f;
+    } else
+        actor->mRotY = (s16)(rot + 400);
+    s32 mode = actor->mModeProc;
+    actor->m459 = 0;
+    if ((u32)(mode - 1) <= 3) {
+        Flame_search(liftup_magmarock, actor);
+        if (actor->mType == 1)
+            Flame_search(liftup_mflft, actor);
+    }
+    actor->set_switch();
+    Flame_setMtx(actor);
+    return 1;
+}
+
+/* 023457C8 */
+s32 Flame_Method_Draw(Act_c* actor) {
+    auto* env = dKy_getEnvlight();
+    settingTevStruct(env, 0, &actor->current.pos, &actor->tevStr);
+    env = dKy_getEnvlight();
+    J3DModel* model = actor->mpModel;
+    setLightTevColorType(env, model, &actor->tevStr);
+    model = actor->mpModel;
+    mDoExt_btkAnm* btk = actor->mpBtkAnm;
+    J3DModelData* data = model->getModelData();
+    f32 frame = btk->getFrame();
+    btk->entry(data, frame);
+    mDoExt_brkAnm* brk = actor->mpBrkAnm;
+    if (brk) {
+        model = actor->mpModel;
+        frame = brk->getFrame();
+        data = model->getModelData();
+        brk->entry(data, frame);
+    }
+    // HD: the two draw-list fetches and restores are individually observable.
+    l_drawBuffers.mOpa = reinterpret_cast<FlameGameDrawView*>(dComIfGp_get())->mEffectList;
+    l_drawBuffers.mXlu = reinterpret_cast<FlameGameDrawView*>(dComIfGp_get())->mEffectList;
+    model = actor->mpModel;
+    mDoExt_modelUpdateDL(model);
+    dComIfGd_setList();
+    return 1;
+}
+
+/* 02345890 */
+s32 Flame_Method_IsDelete(Act_c* actor) {
+    u32 type = actor->mType;
+    if (type >= 4) {
+        JUT_ASSERT_fail("d_a_obj_flame.cpp", 0x1C0, "(M_scl >= 0) && (M_scl < Scl_Max)");
+        type = actor->mType;
+    }
+    if (!l_attr.mType[type].mSimpleEmitter) {
+        removeEmitter(actor->mpEmitter0);
+        removeEmitter(actor->mpEmitter1);
+        removeEmitter(actor->mpEmitter2);
     }
     return 1;
 }
-VERIFY(0x02345890,cleanupEmitters);
+/* 0234596C */
 void staticInit() {
-    WWHD_FUNC(0x0234596C,void,(u32)0);
-    for(s32 off=12;off>=0;off-=4) gabi::store<u32>(0x10469BAC+off,0);
-    gabi::call(0x028F026C,gabi::at<u8>(0x101C9474));
-    gabi::store<f32>(0x10469BA0,-3.1415927410125732f); gabi::store<f32>(0x10469BA4,3.1415927410125732f);
-    gabi::call(0x028ED6F8,gabi::at<u8>(0x10469BA8)); gabi::call(0x028F026C,gabi::at<u8>(0x101C9480));
-    gabi::call(0x028EAB2C,gabi::at<u8>(0x10469BA9)); gabi::call(0x028F026C,gabi::at<u8>(0x101C948C));
-    gabi::store<f32>(0x101C9550,3.3333334922790527f); gabi::store<f32>(0x101C9558,0.8149999976158142f);
-    gabi::store<f32>(0x101C9580,2.7166666984558105f); gabi::store<f32>(0x101C9588,2.7166666984558105f); gabi::store<f32>(0x101C9590,0.5433333516120911f);
+    __sinit_header_statics();
+    l_attr.mType[1].mVerticalScale = 3.3333334922790527f;
+    l_attr.mType[1].mModelScaleY = 0.8149999976158142f;
+    l_attr.mType[1].mEmitter0ScaleY = 2.7166666984558105f;
+    l_attr.mType[1].mEmitter1ScaleY = 2.7166666984558105f;
+    l_attr.mType[1].mEmitter2ScaleY = 0.5433333516120911f;
 }
-VERIFY(0x0234596C,staticInit);
+
+/* 02345A3C */
+void deleteHelper(void* self, u32 flags) {
+    if (self && (flags & 1))
+        operator_delete(self);
 }
-namespace daObjFlame {
-void ki_make(Act_c* actor) {
-    WWHD_FUNC(0x02345068,void,actor);
-    if(!actor->mKiActive) return;
-    if(actor->mKiDelay>0) { actor->mKiActive=0; actor->mKiDelay=(s32)((u32)(s32)actor->mKiDelay-1); return; }
-    s32 count=(s32)((u32)actor->prm(5,8)+1); if(count==32) count=0;
-    if(actor->mKiCount>=count) { actor->mKiActive=0; actor->mKiDelay=actor->prm(2,13); return; }
-    s32 timer=(s32)((u32)(s32)actor->mKiTimer-1);
-    if(timer>0) { actor->mKiTimer=timer; return; }
-    actor->mKiTimer=5; actor->mKiCount=(s32)((u32)(s32)actor->mKiCount+1);
-    f32 angle=cM_rndFX(32768.0f); gabi::Local<csXyz> rotation;
-    gabi::call(0x0201A478,rotation.get(),0,(s16)gabi::ftoi(angle),0);
-    s32 room=actor->current.roomNo;
-    gabi::call(0x025D5834,0xD7,-32766,&actor->current.pos,room,rotation.get(),(u32)0,-1,(u32)0);
+/* 02345A50 */
+void emptyVirtual(void* self) {}
+/* 02345A54 */
+void destroyActor(Act_c* self, u32 flags) {
+    if (!self)
+        return;
+    Flame_gObjDtor(&self->mCps, 2);
+    __dt(&self->mStts);
+    __dt(static_cast<fopAc_ac_c*>(self));
+    if (flags & 1)
+        operator_delete(self);
 }
-VERIFY(0x02345068,ki_make);
-void eff_hase(Act_c* actor) {
-    WWHD_FUNC(0x023451C8,void,actor);
-    u32 play=gabi::ea(dComIfGp_get()); u32 pa=gabi::load<u32>(play+0x5AB0);
-    gabi::call(0x025A8D40,pa,0xC06B,gabi::at<u8>(gabi::ea(actor)+0x2EC),255,gabi::at<u8>(0x101D5E98),gabi::at<u8>(0x101D5E98),0);
+/* 02345AC0 */
+u32 PrmAbstract(const Act_c* actor, u32 width, u32 shift) {
+    u32 value = u32(actor->mParameters);
+    u32 mask = (width & 32) ? 0u : 1u << (width & 31);
+    return ((shift & 32) ? 0u : value >> (shift & 31)) & (mask - 1);
 }
-VERIFY(0x023451C8,eff_hase);
-s32 Draw(Act_c* actor) {
-    WWHD_FUNC(0x023457C8,s32,actor);
-    auto env=dKy_getEnvlight(); gabi::call(0x025626A4,env,0,&actor->current.pos,&actor->tevStr);
-    env=dKy_getEnvlight(); J3DModel* model=actor->mpModel; gabi::call(0x02562F5C,env,model,&actor->tevStr);
-    model=actor->mpModel; u32 btk=actor->mpBtk; u32 data=gabi::load<u32>(gabi::ea(model)+0xAC); f32 frame=gabi::load<f32>(btk+4);
-    gabi::call(0x025E7FC4,btk,data,frame);
-    u32 brk=actor->mpBrk;
-    if(brk) { model=actor->mpModel; frame=gabi::load<f32>(brk+4); data=gabi::load<u32>(gabi::ea(model)+0xAC); gabi::call(0x025E83FC,brk,data,frame); }
-    u32 play=gabi::ea(dComIfGp_get()); gabi::store<u32>(0x104B4634,gabi::load<u32>(play+0x5D80));
-    play=gabi::ea(dComIfGp_get()); gabi::store<u32>(0x104B4638,gabi::load<u32>(play+0x5D80));
-    model=actor->mpModel; gabi::call(0x025E2DE0,model,0);
-    play=gabi::ea(dComIfGp_get()); gabi::store<u32>(0x104B4634,gabi::load<u32>(play+0x5D78));
-    play=gabi::ea(dComIfGp_get()); gabi::store<u32>(0x104B4638,gabi::load<u32>(play+0x5D7C)); return 1;
-}
-VERIFY(0x023457C8,Draw);
-}
-namespace daObjFlame {
-void em_simple_inv(Act_c* actor) {
-    WWHD_FUNC(0x023441EC,void,actor);
-    s8 a=actor->mEm0State,b=actor->mEm1State; if(a==3) actor->mpEmitter0=0;
-    s8 c=actor->mEm2State; if(b==3) actor->mpEmitter1=0; if(c==3) actor->mpEmitter2=0;
-}
-VERIFY(0x023441EC,em_simple_inv);
-void em_manual_inv(Act_c* actor) {
-    WWHD_FUNC(0x02344230,void,actor);
-    u32 type=actor->mType;
-    if(type>=4) { JUT_ASSERT_fail(STR(0x10028DC0),0x1C0,STR(0x10028DD4)); type=actor->mType; }
-    bool enabled=gabi::load<u8>(0x101C9521+type*0x58)!=0; s8 first=actor->mEm0State;
-    bool stop=enabled && actor->m459!=0; s8 last=actor->mEm2State;
-    if(first==2 && stop) { first=3; actor->mEm0State=3; }
-    if(last==2 && stop) { first=actor->mEm0State; actor->mEm2State=3; }
-    auto remove=[](be<u32>& slot) { u32 em=slot; if(em) { u32 flag=gabi::load<u32>(em+0x254); gabi::store<u32>(em+0x5C,0xFFFFFFFF); gabi::store<u32>(em+0x254,flag|1); slot=0; } };
-    if(first==3) remove(actor->mpEmitter0);
-    if((s8)actor->mEm1State==3) remove(actor->mpEmitter1);
-    if((s8)actor->mEm2State==3) remove(actor->mpEmitter2);
-}
-VERIFY(0x02344230,em_manual_inv);
-}
-namespace daObjFlame {
-s32 Execute(Act_c* actor) {
-    WWHD_FUNC(0x023455E0,s32,actor);
-    auto attr=[&]() { u32 type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028F58),0x1C0,STR(0x10028F6C)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); actor->scale.x=(f32)actor->mOrigScale.x*gabi::load<f32>(a+8);
-    a=attr(); actor->scale.y=((f32)actor->mOrigScale.y*gabi::load<f32>(a+12))*(f32)actor->mExtraScaleY;
-    a=attr(); actor->scale.z=(f32)actor->mOrigScale.z*gabi::load<f32>(a+8);
-    gabi::call(0x02344DF4,actor); ki_make(actor);
-    if(!actor->prm(1,31)) eff_hase(actor);
-    s32 type=actor->mType; s16 rot=actor->mRotY;
-    if(type==1) { f32 height=actor->mHeight; actor->mRotY=(s16)(rot+400); if(height>0.009999999776482582f) gabi::store<f32>(0x1047562C,1.0f); }
-    else actor->mRotY=(s16)(rot+400);
-    s32 mode=actor->mModeProc; actor->m459=0;
-    if((u32)(mode-1)<=3) {
-        gabi::call(0x025D5218,(u32)0x023443A0,actor);
-        if(actor->mType==1) gabi::call(0x025D5218,(u32)0x023446B0,actor);
-    }
-    actor->set_switch(); gabi::call(0x02343AE4,actor); return 1;
-}
-VERIFY(0x023455E0,Execute);
-}
-namespace daObjFlame {
-void set_mtx(Act_c* actor) {
-    WWHD_FUNC(0x02343AE4,void,actor);
-    f32 x=actor->scale.x,z=actor->scale.z,y=actor->scale.y; u32 model=gabi::ea((J3DModel*)actor->mpModel);
-    gabi::store<f32>(model+0xBC,x); gabi::store<f32>(model+0xC0,y); gabi::store<f32>(model+0xC4,z);
-    x=actor->current.pos.x; y=actor->current.pos.y; z=actor->current.pos.z;
-    u32 mtx=0x1048D0CC; gabi::call(0x028E93CC,mtx,x,y,z);
-    s16 rz=actor->shape_angle.z,rx=actor->shape_angle.x,ry=actor->shape_angle.y;
-    gabi::call(0x025F1B48,mtx,rx,ry,rz); ry=actor->mRotY; gabi::call(0x025F1C28,mtx,ry);
-    f32 matrix[12]; for(u32 i=0;i<12;i++) matrix[i]=gabi::load<f32>(mtx+4*i);
-    model=gabi::ea((J3DModel*)actor->mpModel); for(u32 i=0;i<12;i++) gabi::store<f32>(model+0xC8+4*i,matrix[i]);
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028D0C),0x1C0,STR(0x10028D20)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 attrs[6]; for(u32 i=0;i<6;i++) attrs[i]=attr();
-    f32 minx=gabi::load<s16>(attrs[0]+0x48),miny=gabi::load<s16>(attrs[1]+0x4A),minz=gabi::load<s16>(attrs[2]+0x4C);
-    f32 maxx=gabi::load<s16>(attrs[3]+0x4E),maxy=gabi::load<s16>(attrs[4]+0x50),maxz=gabi::load<s16>(attrs[5]+0x52);
-    f32 height=actor->mHeight; gabi::call(0x025D674C,actor,minx,miny,minz,maxx,maxy*height,maxz);
-}
-VERIFY(0x02343AE4,set_mtx);
-void set_mtx_thunk(Act_c* actor) { WWHD_FUNC(0x02343D78,void,actor); set_mtx(actor); }
-VERIFY(0x02343D78,set_mtx_thunk);
-}
-namespace daObjFlame {
-void em_position(Act_c* actor) {
-    WWHD_FUNC(0x02343D7C,void,actor);
-    if(!(s8)actor->m457) return;
-    u32 mtx=0x1048D0CC; f32 z=actor->current.pos.z,y=actor->current.pos.y,x=actor->current.pos.x;
-    gabi::call(0x028E93CC,mtx,x,y,z);
-    s16 rz=actor->shape_angle.z,rx=actor->shape_angle.x,ry=actor->shape_angle.y; gabi::call(0x025F1B48,mtx,rx,ry,rz);
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028D50),0x1C0,STR(0x10028D64)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr();
-    if(!gabi::load<u8>(a+0x2C)) {
-        if(actor->mpEmitter0) {
-            gabi::call(0x025F23EC); type=actor->mType; u32 a0=attr(),a1=attr();
-            f32 height=actor->mHeight,sy1=gabi::load<f32>(a1+12),sy0=gabi::load<f32>(a0+12),extra=actor->mExtraScaleY;
-            f32 offset=gabi::fmadds((height*1500.0f)*sy0,extra,(-300.0f*sy1)*extra);
-            gabi::call(0x025F24E0,0.0f,offset,0.0f);
-            u32 em=actor->mpEmitter0; gabi::call(0x028249B0,mtx,em+0x1F0,em+0x22C); gabi::call(0x025F2468);
-        }
-        u32 em=actor->mpEmitter1; if(em) gabi::call(0x028249B0,mtx,em+0x1F0,em+0x22C);
-        type=actor->mType;
-    }
-    a=attr(); f32 height=actor->mHeight,sy=gabi::load<f32>(a+4),ratio=actor->m46C;
-    gabi::call(0x025F24E0,0.0f,((height*1500.0f)*sy)*ratio,0.0f);
-    gabi::call(0x028E8F64,mtx,(u32)0x101FFBA8,&actor->eyePos);
-    height=actor->mHeight; actor->mCollision=gabi::fmsubs(1500.0f,height,300.0f)>0.0f;
-    if(!actor->mCollision) return;
-    type=actor->mType; a=attr(); sy=gabi::load<f32>(a+4); ratio=actor->m46C;
-    gabi::call(0x025F24E0,0.0f,(-300.0f*sy)*ratio,0.0f);
-    gabi::call(0x028E8F64,mtx,(u32)0x101FFBA8,&actor->mCpsP1);
-}
-VERIFY(0x02343D7C,em_position);
-}
-namespace daObjFlame {
-void em_simple_set(Act_c* actor) {
-    WWHD_FUNC(0x02344014,void,actor);
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028D88),0x1C0,STR(0x10028D9C)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); s8 state=actor->mEm0State; bool blocked=gabi::load<u8>(a+0x2D)!=0 && actor->m459!=0;
-    auto particle=[](u32 id,cXyz* pos) { u32 play=gabi::ea(dComIfGp_get()); u32 pa=gabi::load<u32>(play+0x5AB0); gabi::call(0x025A8D40,pa,id,pos,255,(u32)0x101D5E98,(u32)0x101D5E98,0); };
-    if(state==1 && !blocked) {
-        f32 x=actor->eyePos.x; a=attr(); f32 sy=gabi::load<f32>(a+4),extra=actor->mExtraScaleY,y=actor->eyePos.y,z=actor->eyePos.z;
-        gabi::Local<cXyz> pos; pos->x=x; pos->y=gabi::fmadds(-300.0f*sy,extra,y); pos->z=z;
-        particle(0x805A,pos.get());
-    }
-    if((s8)actor->mEm1State==1) particle(0x805B,&actor->eyePos);
-    if((s8)actor->mEm2State==1 && !blocked) { type=actor->mType; a=attr(); u32 id=gabi::load<u16>(a+0x2A); particle(id,gabi::at<cXyz>(gabi::ea(actor)+0x2EC)); }
-}
-VERIFY(0x02344014,em_simple_set);
-}
-namespace daObjFlame {
-void em_manual_set(Act_c* actor) {
-    WWHD_FUNC(0x023432B4,void,actor);
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028C64),0x1C0,STR(0x10028C78)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); bool blocked=gabi::load<u8>(a+0x2D)!=0 && actor->m459!=0;
-    auto particle=[&](u32 id,cXyz* scale) { u32 play=gabi::ea(dComIfGp_get()); u32 pa=gabi::load<u32>(play+0x5AB0); return gabi::call<u32>(0x025A847C,pa,0,id,gabi::at<cXyz>(gabi::ea(actor)+0x2EC),gabi::at<csXyz>(gabi::ea(actor)+0x2F8),scale,255,0,-1,0,0,0); };
-    if((s8)actor->mEm0State==1 && !blocked && type!=1) {
-        a=attr(); f32 x=gabi::load<f32>(a+0x30); a=attr(); f32 extra=actor->mExtraScaleY,y=gabi::load<f32>(a+0x34)*extra; a=attr(); f32 z=gabi::load<f32>(a+0x30);
-        gabi::Local<cXyz> scale; scale->x=x; scale->y=y; scale->z=z; actor->mpEmitter0=particle(0x805A,scale.get()); actor->mEm0State=2;
-    }
-    if((s8)actor->mEm1State==1) {
-        type=actor->mType; a=attr(); f32 x=gabi::load<f32>(a+0x38); a=attr(); f32 extra=actor->mExtraScaleY,y=gabi::load<f32>(a+0x3C)*extra; a=attr(); f32 z=gabi::load<f32>(a+0x38);
-        gabi::Local<cXyz> scale; scale->x=x; scale->y=y; scale->z=z; actor->mpEmitter1=particle(0x805B,scale.get()); actor->mEm1State=2;
-    }
-    if((s8)actor->mEm2State==1 && !blocked) {
-        type=actor->mType; a=attr(); f32 x=gabi::load<f32>(a+0x40); a=attr(); f32 y=gabi::load<f32>(a+0x40); a=attr(); f32 z=gabi::load<f32>(a+0x40);
-        gabi::Local<cXyz> scale; scale->x=x; scale->y=y; scale->z=z; a=attr(); u32 id=gabi::load<u16>(a+0x2A); actor->mpEmitter2=particle(id,scale.get()); actor->mEm2State=2;
-    }
-}
-VERIFY(0x023432B4,em_manual_set);
-}
-namespace daObjFlame {
-void create_mode_init(Act_c* actor) {
-    WWHD_FUNC(0x0234365C,void,actor);
-    u32 schedule=(u8)actor->prm(8,0); u32 current=gabi::call<u8>(0x025602A8);
-    if(!schedule || !current) { actor->mModeProc=0; actor->mTimer=schedule?0.0f:120.0f; actor->mHeight=0.0f; return; }
-    s32 timer=gabi::call<s32>(0x025602CC); u32 play=gabi::ea(dComIfGp_get());
-    u32 clock=gabi::load<u32>(play+0x5150); u32 getter=gabi::load<u32>(clock+0x15C);
-    u32 config=gabi::call<u32>(getter,play+0x5150); u32 step=gabi::load<u8>(config+15)*30;
-    if(schedule<current) schedule<<=8;
-    u32 shifts=0; while(!(schedule&current)) { current<<=1; ++shifts; }
-    timer=(s32)(step*shifts+(u32)timer);
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028CD4),0x1C0,STR(0x10028CE8)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); f32 phase=(f32)timer*gabi::load<f32>(a+0x24); if(type!=1) phase-=127.0f;
-    s32 mode; f32 remain,height;
-    if(phase<0.0f) { mode=1; remain=phase+127.0f; height=0.0f; }
-    else if(phase<23.0f) { mode=2; remain=23.0f-phase; height=0.0f; }
-    else if(phase<45.0f) { mode=3; remain=45.0f-phase; height=0.04545454680919647f*(22.0f-remain); }
-    else if(phase<135.0f) { mode=4; remain=135.0f-phase; height=1.0f; }
-    else if(phase<160.0f) { mode=5; remain=160.0f-phase; height=0.03999999910593033f*remain; }
-    else if(phase<180.0f) { mode=6; remain=180.0f-phase; height=0.0f; }
-    else { actor->mTimer=0.0f; actor->mModeProc=0; actor->mHeight=0.0f; return; }
-    actor->mModeProc=mode; actor->mTimer=remain; actor->mHeight=height;
-    if(mode!=1) {
-        f32 fraction=phase*0.0055555556900799274f; u32 btk=actor->mpBtk;
-        if(btk) gabi::store<f32>(btk+4,gabi::fmadds(fraction,(f32)gabi::load<s16>(btk+10),1.0f));
-        u32 brk=actor->mpBrk; if(brk) gabi::store<f32>(brk+4,gabi::fmadds(fraction,(f32)gabi::load<s16>(brk+10),1.0f));
-        mode=actor->mModeProc;
-    }
-    if(mode==0) return;
-    u32 index=(u32)(mode-1);
-    if(index<=3) { mode=actor->mModeProc; index=(u32)(mode-1); actor->mEm0State=1; }
-    type=actor->mType; if(index<=4) { actor->mEm1State=1; actor->mEm2State=1; }
-    a=attr(); if(!gabi::load<u8>(a+0x2C)) em_manual_set(actor); actor->m457=1;
-}
-VERIFY(0x0234365C,create_mode_init);
-}
-namespace daObjFlame {
-void mode_proc_call(Act_c* actor) {
-    WWHD_FUNC(0x02344DF4,void,actor);
-    f32 timer=actor->mTimer;
-    if(!(timer< -0.10000000149011612f)) {
-        s32 mode=actor->mModeProc;
-        if(mode==0 || mode==1) actor->mTimer=timer-1.0f;
-        else {
-            u32 type=actor->mType;
-            if(type>=4) { JUT_ASSERT_fail(STR(0x10028EE4),0x1C0,STR(0x10028EF8)); timer=actor->mTimer; type=actor->mType; }
-            actor->mTimer=timer-gabi::load<f32>(0x101C9518+type*0x58);
-        }
-    }
-    u32 entry=0x10028EAC+8*(u32)(s32)actor->mModeProc;
-    s16 index=gabi::load<s16>(entry+2),adjust=gabi::load<s16>(entry); u32 self=gabi::ea(actor)+(s32)adjust,target;
-    if(index<0) target=gabi::load<u32>(entry+4);
-    else { s16 vtOff=gabi::load<s16>(entry+6); u32 vt=gabi::load<u32>(self+(s32)vtOff); target=gabi::load<u32>(vt+8*(s32)index+4); }
-    gabi::call(target,self);
-    auto attr=[&]() { u32 type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028EE4),0x1C0,STR(0x10028EF8)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr();
-    if(gabi::load<u8>(a+0x2C)) { em_position(actor); em_simple_set(actor); em_simple_inv(actor); }
-    else { em_manual_set(actor); em_manual_inv(actor); em_position(actor); }
-    s32 mode=actor->mModeProc;
-    if(mode!=0 && mode!=1) {
-        gabi::call(0x025E742C,(u32)actor->mpBtk); u32 brk=actor->mpBrk; if(brk) gabi::call(0x025E742C,brk);
-        s32 rev=actor->mReverb; mDoAud_seStart(0x7009,&actor->eyePos,0,rev);
-    }
-    if(!actor->mCollision) return;
-    if(actor->mModeProc==5) { a=attr(); f32 height=actor->mHeight,limit=gabi::load<f32>(a+0x54); if(!(height>limit)) return; }
-    gabi::call(0x020181FC,gabi::ea(actor)+0x514,&actor->mCpsP0);
-    u32 play=gabi::ea(dComIfGp_get()); gabi::call(0x0200E240,play+0x26A4,&actor->mCps);
-}
-VERIFY(0x02344DF4,mode_proc_call);
-}
-namespace daObjFlame {
-bool create_heap(Act_c* actor) {
-    WWHD_FUNC(0x02342FC4,bool,actor);
-    auto attr=[&]() { u32 type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028C04),0x1C0,STR(0x10028C18)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    struct Name { be<u32> text,vt; };
-    auto resource=[&](u32 a,u32 off) { gabi::Local<Name> name; name->text=0x101C94E8; name->vt=0x10028BCC; u32 res=gabi::load<u32>(0x101F4F28),id=gabi::load<u32>(a+off); return gabi::call<u32>(0x026066C4,res,name.get(),id); };
-    u32 a=attr(),data=resource(a,0x10);
-    if(!data) JUT_ASSERT_fail(STR(0x10028C04),0x1F5,STR(0x10028C3C));
-    u32 model=gabi::call<u32>(0x025E38E0,data,0,0x11020203); actor->mpModel=gabi::at<J3DModel>(model);
-    a=attr(); u32 animation=resource(a,0x14); u32 btk=gabi::call<u32>(0x0273AD10,0x74);
-    if(btk) btk=gabi::call<u32>(0x025E7C6C,btk); actor->mpBtk=btk;
-    if(!animation) { JUT_ASSERT_fail(STR(0x10028C04),0x1FE,STR(0x10028C4C)); btk=actor->mpBtk; }
-    s32 btkOK=0;
-    if(btk) {
-        u32 type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028C04),0x1C0,STR(0x10028C18)); btk=actor->mpBtk; type=actor->mType; }
-        f32 speed=gabi::load<f32>(0x101C9514+type*0x58);
-        btkOK=gabi::call<s32>(0x025E7CE0,btk,data,animation,1,2,0,-1,0,0,speed);
-    }
-    a=attr(); s32 brkOK=0;
-    if(gabi::load<s32>(a+0x18)<0) brkOK=1;
-    else {
-        // The original repeats its type assertion before the resource lookup.
-        u32 type=actor->mType;
-        if(type>=4) { JUT_ASSERT_fail(STR(0x10028C04),0x1C0,STR(0x10028C18)); type=actor->mType; a=0x101C94F4+type*0x58; }
-        animation=resource(a,0x18); u32 brk=gabi::call<u32>(0x0273AD10,0x78);
-        if(brk) brk=gabi::call<u32>(0x025E80D0,brk); actor->mpBrk=brk;
-        if(!animation) { JUT_ASSERT_fail(STR(0x10028C04),0x214,STR(0x10028C58)); brk=actor->mpBrk; }
-        if(brk) {
-            type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028C04),0x1C0,STR(0x10028C18)); brk=actor->mpBrk; type=actor->mType; }
-            f32 speed=gabi::load<f32>(0x101C9514+type*0x58);
-            brkOK=gabi::call<s32>(0x025E8154,brk,data,animation,1,2,0,-1,0,0,speed);
-        }
-    }
-    return actor->mpModel!=nullptr && btkOK!=0 && brkOK!=0;
-}
-VERIFY(0x02342FC4,create_heap);
-bool heap_thunk(Act_c* actor) { WWHD_FUNC(0x023432B0,bool,actor); return create_heap(actor); }
-VERIFY(0x023432B0,heap_thunk);
-}
-namespace daObjFlame {
-s32 create(Act_c* actor) {
-    WWHD_FUNC(0x0234521C,s32,actor);
-    u32 ea=gabi::ea(actor),flags=gabi::load<u32>(ea+0x2E4);
-    if(!(flags&8)) {
-        if(actor) {
-            gabi::call(0x025D4ED0,actor); gabi::store<u32>(ea+0xB4,0x10028BF4);
-            gabi::call(0x0200BD2C,&actor->mStts); gabi::call(0x02515DA0,ea+0x3DC);
-            gabi::store<u32>(ea+0x3D8,0x1004AE88); gabi::store<u32>(ea+0x3DC,0x1004AEC0);
-            gabi::call(0x02515FB8,&actor->mCps); gabi::store<u32>(ea+0x510,0x100015A8); gabi::store<u32>(ea+0x50C,0x10028BE4);
-            gabi::call(0x02018150,ea+0x514); flags=gabi::load<u32>(ea+0x2E4);
-            gabi::store<u32>(ea+0x438,0x1004AF18); gabi::store<u32>(ea+0x52C,0x1004AF60); gabi::store<u32>(ea+0x510,0x1004AF70);
-        }
-        gabi::store<u32>(ea+0x2E4,flags|8);
-    }
-    s32 result=gabi::call<s32>(0x02520460,&actor->mPhs,(u32)0x101C94E8);
-    if(result!=4) return result;
-    actor->mType=actor->prm(2,28);
-    auto attr=[&]() { u32 type=actor->mType; if(type>=4) { JUT_ASSERT_fail(STR(0x10028F20),0x1C0,STR(0x10028F34)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); u32 heap=gabi::load<u32>(a+0x1C);
-    if(!gabi::call<s32>(0x025D63E8,actor,(u32)0x023432B0,heap)) return 5;
-    u32 x=gabi::load<u32>(ea+0x330),y=gabi::load<u32>(ea+0x334),z;
-    actor->m46C=1.0f; gabi::store<u32>(ea+0x590,x); s32 type=actor->mType; z=gabi::load<u32>(ea+0x338);
-    gabi::store<u32>(ea+0x594,y); gabi::store<u32>(ea+0x598,z); actor->mExtraScaleY=type==1?1.0004417896270752f:1.0f;
-    a=attr(); actor->scale.x=(f32)actor->scale.x*gabi::load<f32>(a+8);
-    a=attr(); f32 extra=actor->mExtraScaleY,sy=gabi::load<f32>(a+12),oldy=actor->scale.y; actor->scale.y=oldy*(sy*extra);
-    a=attr(); f32 oldz=actor->scale.z,sz=gabi::load<f32>(a+8); actor->mEm2State=0; actor->mEm1State=0; actor->mEm0State=0; actor->scale.z=oldz*sz;
-    create_mode_init(actor); actor->set_switch(); u32 model=gabi::ea((J3DModel*)actor->mpModel); gabi::store<u32>(ea+0x348,model?model+0xC8:0);
-    set_mtx_thunk(actor); actor->mStts.Init(100,255,actor); gabi::call(0x025164C0,&actor->mCps,(u32)0x10028FE4);
-    z=gabi::load<u32>(ea+0x31C); type=actor->mType; x=gabi::load<u32>(ea+0x314); y=gabi::load<u32>(ea+0x318);
-    gabi::store<u32>(ea+0x534,x); gabi::store<u32>(ea+0x538,y); gabi::store<u32>(ea+0x53C,z);
-    gabi::store<u32>(ea+0x540,x); gabi::store<u32>(ea+0x544,y); gabi::store<u32>(ea+0x440,ea+0x3C0); gabi::store<u32>(ea+0x548,z);
-    a=attr(); f32 radius=gabi::load<f32>(a)*145.0f; actor->mCollision=0; actor->mCpsRad=radius; em_position(actor);
-    s32 rev=dComIfGp_getReverb(actor->home.roomNo); actor->mReverb=rev; actor->m459=0;
-    s32 bound=(s32)((u32)actor->prm(2,13)+1); f32 random=cM_rndF((f32)bound); s32 delay=gabi::ftoi(random),mode=actor->mModeProc;
-    actor->mKiDelay=delay; if(mode!=0 && delay==0) actor->mKiDelay=1; return result;
-}
-VERIFY(0x0234521C,create);
-}
-namespace daObjFlame {
-s32 liftup_magmarock(fopAc_ac_c* rock,Act_c* actor) {
-    WWHD_FUNC(0x023443A0,s32,rock,actor);
-    if(!gabi::call<s32>(0x025D4604,rock) || !rock || gabi::load<s16>(gabi::ea(rock)+8)!=0x2A) return 0;
-    u32 id=rock?gabi::load<u32>(gabi::ea(rock)+4):0xFFFFFFFF;
-    if(gabi::call<s32>(0x025DD868,id)) return 0;
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028E1C),0x1C0,STR(0x10028E30)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); f32 ey=actor->eyePos.y,base=actor->current.pos.y,radius=gabi::fmadds(gabi::load<f32>(a),145.0f,200.0f);
-    bool upper=ey<base; f32 low=(upper?ey:base)-100.0f,high=(upper?base:ey)+1000.0f;
-    gabi::Local<cXyz> pos,target; pos->x=rock->current.pos.x; pos->y=0.0f; pos->z=rock->current.pos.z;
-    target->x=actor->eyePos.x; target->y=0.0f; target->z=actor->eyePos.z;
-    f32 dist=gabi::call<f32>(0x028E8DE8,pos.get(),target.get()); dist=gabi::call<f32>(0x028F4384,dist);
-    if(!(dist<radius)) return 0;
-    f32 ry=rock->current.pos.y; if(!(ry>low) || !(ry<high)) return 0;
-    type=actor->mType; if(type==1) return 0;
-    f32 height=actor->mHeight,boost,offset=100.0f;
-    if(height<0.10000000149011612f) boost=height*2700.0f;
-    else if(height>0.8999999761581421f) { f32 fall=1.0f-height; boost=fall*2700.0f; offset=fall*1000.0f; }
-    else boost=270.0f;
-    a=attr(); f32 ratio=actor->m46C,scale=gabi::load<f32>(a+4); offset*=scale*ratio;
-    a=attr(); scale=gabi::load<f32>(a+4); ratio=actor->m46C;
-    f32 x=actor->eyePos.x,y=actor->eyePos.y,z=actor->eyePos.z; s32 mode=actor->mModeProc;
-    gabi::Local<cXyz> destination; destination->x=x; destination->y=gabi::fmadds(boost,scale*ratio,y+offset); destination->z=z;
-    u32 vt=gabi::load<u32>(gabi::ea(rock)+0xB4); u32 call=gabi::load<u32>(vt+((mode==1||mode==2)?0x1C:0x14));
-    gabi::call(call,rock,destination.get()); actor->m459=1; return 0;
-}
-VERIFY(0x023443A0,liftup_magmarock);
-s32 liftup_mflft(fopAc_ac_c* platform,Act_c* actor) {
-    WWHD_FUNC(0x023446B0,s32,platform,actor);
-    if(!gabi::call<s32>(0x025D4604,platform) || !platform || gabi::load<s16>(gabi::ea(platform)+8)!=0x5B) return 0;
-    f32 desired=gabi::load<s16>(gabi::ea(platform)+0x3B6)==0?1.0004417896270752f:1.0f;
-    f32 height=actor->mHeight,boost,offset;
-    if(height<0.10000000149011612f) { boost=height*2700.0f; offset=100.0f; }
-    else if(height>0.8999999761581421f) { f32 fall=1.0f-height; offset=fall*1000.0f; boost=fall*2700.0f; }
-    else { offset=100.0f; boost=270.0f; }
-    u32 type=actor->mType;
-    auto attr=[&]() { if(type>=4) { JUT_ASSERT_fail(STR(0x10028E64),0x1C0,STR(0x10028E78)); type=actor->mType; } return 0x101C94F4+type*0x58; };
-    u32 a=attr(); f32 ratio=actor->m46C,scale=gabi::load<f32>(a+4); offset*=scale*ratio;
-    a=attr(); ratio=actor->m46C; scale=gabi::load<f32>(a+4); f32 y=actor->eyePos.y,base=actor->current.pos.y,x=actor->eyePos.x,z=actor->eyePos.z;
-    y=gabi::fmadds(boost,scale*ratio,y+offset); if(y>base+5000.0f) y=base+5000.0f;
-    s32 mode=actor->mModeProc;
-    if(mode!=1 && mode!=2) { gabi::Local<cXyz> destination; destination->x=x; destination->y=y; destination->z=z; u32 vt=gabi::load<u32>(gabi::ea(platform)+0xB4); u32 call=gabi::load<u32>(vt+0x14); gabi::call(call,platform,destination.get()); }
-    actor->m459=1; gabi::call(0x0200ECD4,&actor->m46C,1.0f,0.30000001192092896f,0.10000000149011612f,0.009999999776482582f);
-    gabi::call(0x0200ECD4,&actor->mExtraScaleY,desired,0.30000001192092896f,0.10000000149011612f,0.009999999776482582f); return 0;
-}
-VERIFY(0x023446B0,liftup_mflft);
-}
+
+/* WWHD glue
+data l_attr 101C94F4
+data l_modeProc 10028EAC
+data l_actorVtable 10028BF4
+data l_aabVtable 10028BE4
+data l_shapeVtable 100015A8
+data l_capsuleVtable 1004AF60
+data l_hitVtable 1004AF18
+data l_cpsShapeVtable 1004AF70
+data M_cps_src 10028FE4
+data l_origin 101FFBA8
+data l_raiseFlag 1047562C
+data l_drawBuffers 104B4634
+str 101C94E8
+str 10028F90 in 02345890
+str 10028FA4 in 02345890
+str 10028DC0 in 02344230
+str 10028DD4 in 02344230
+str 10028F58 in 023455E0
+str 10028F6C in 023455E0
+str 10028D0C in 02343AE4
+str 10028D20 in 02343AE4
+str 10028D50 in 02343D7C
+str 10028D64 in 02343D7C
+str 10028D88 in 02344014
+str 10028D9C in 02344014
+str 10028C64 in 023432B4
+str 10028C78 in 023432B4
+str 10028CD4 in 0234365C
+str 10028CE8 in 0234365C
+str 10028EE4 in 02344DF4
+str 10028EF8 in 02344DF4
+str 10028C04 in 02342FC4
+str 10028C18 in 02342FC4
+str 10028C3C in 02342FC4
+str 10028C4C in 02342FC4
+str 10028C58 in 02342FC4
+str 10028F20 in 0234521C
+str 10028F34 in 0234521C
+str 10028E1C in 023443A0
+str 10028E30 in 023443A0
+str 10028E64 in 023446B0
+str 10028E78 in 023446B0
+ext 025602A8 u32 Flame_schedule()
+ext 025602CC s32 Flame_scheduleTimer()
+ext 02345AC0 s32 Flame_prm(const Act_c*,s32,s32)
+ext 025E1A40 u32 Flame_audio(u32,cXyz*,u32,s32)
+ext 02515FB8 void Flame_gObjCtor(dCcD_GObjInf*)
+ext 02018150 void Flame_capsuleCtor(FlameCapsule*)
+ext 020181FC void Flame_capsuleSet(FlameCapsule*,cXyz*)
+ext 025164C0 void Flame_cpsSet(dCcD_Cps*,const dCcD_SrcCps*)
+ext 02515980 void Flame_gObjDtor(dCcD_GObjInf*,s32)
+ext 025E7C6C mDoExt_btkAnm* Flame_btkCtor(mDoExt_btkAnm*)
+ext 025E80D0 mDoExt_brkAnm* Flame_brkCtor(mDoExt_brkAnm*)
+ext 0200ECD4 f32 Flame_addCalc(be<f32>*,f32,f32,f32,f32)
+ext 028F4384 f32 Flame_sqrt(f32)
+ext 025D4604 BOOL Flame_isActor(fopAc_ac_c*)
+ext 025DD868 BOOL Flame_isCarried(u32)
+ext 025D5218 void Flame_search(FlameJudge,Act_c*)
+ext 02344DF4 void Flame_modeProc(Act_c*)
+ext 02343AE4 void Flame_setMtx(Act_c*)
+ext 025D63E8 s32 Flame_entryHeap(Act_c*,FlameHeapCallback,u32)
+ext 028E8DE8 f32 Flame_squareDistance(const cXyz*,const cXyz*)
+*/

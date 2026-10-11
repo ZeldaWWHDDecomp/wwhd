@@ -7,9 +7,38 @@
  * Ported from the GameCube decompilation
  * (zeldaret/tww src/d/actor/d_a_player_main.cpp and its .inc files) to the WWHD layout and code,
  * verified against cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
- * Functions of other ranges are called by address (gabi::call), not as C++ members.
+ * Private HD views preserve the layout used by this address range.
  */
-#include "d/actor/d_a_player_main.h"
+#include "d/actor/d_a_player_main_07.h"
+#include "gc_api/tu.h"
+#include "gc_api/d/d_com_inf_game.h"
+
+// HD: GHS emits a SafeString vtable for this translation unit.
+const gc_tu_data gc_tu = {.safeString = 0x10034B24};
+
+// HD: shared callback flags and the global timing counter are mapped guest data.
+static u8 l_smokeWindOff;
+static u8 m_maba_flg;
+static u8 m_maba_timer;
+static u32 l_frameCounter;
+
+static Link07::SystemPointer l_hdSystem;
+static Link07::MessagePointer l_messageManager;
+
+static Link07::HammerGuards l_hammer_guards;
+static cXyz l_hammer_smoke_kusa_particle_scale;
+static cXyz l_hammer_emitter_scale;
+static cXyz l_hammer_emitter_trans;
+
+static Link07::RopeScales l_rope_scales;
+static Link07::RopeGuards l_rope_guards;
+static Link07::RopeOffsets l_rope_offsets;
+
+static Link07::SalvageRegistry l_salvage_registry;
+static Link07::PadPointer l_pad;
+static Link07::ShipButtons l_ship_buttons = {{0x41, 0x42}, {0, 0}, {0x110000, 0x220000, 0x880000, 0x440000}};
+static cXyz l_ship_ledge = {57.0f, 35.0f, -35.0f};
+static cXyz l_ship_redge = {-57.0f, 35.0f, -35.0f};
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
 /* 0200ECD4 cLib_addCalc(f32* value, f32 target, f32 scale, f32 maxStep, f32 minStep) */
@@ -18,151 +47,136 @@ static inline f32 cLib_addCalc_l(be<f32>* v, f32 target, f32 scale, f32 maxStep,
 }
 /* cBgS::GetTriPla(bg, poly) of a cBgS_PolyInfo; the cM3dGPla normal at +0 */
 static inline u32 dBgS_GetTriPla_l(u32 poly) {
-    u32 bgs = gabi::ea(dComIfG_Bgsp());
-    u32 bg = gabi::load<u16>(poly + 2);
-    u32 pl = gabi::load<u16>(poly + 0);
-    return gabi::call<u32>(0x020084C8, bgs, bg, pl);
+    dBgS* bgs = dComIfG_Bgsp();
+    cBgS_PolyInfo* info = gabi::at<cBgS_PolyInfo>(poly);
+    u32 bg = info->mBgIndex;
+    u32 index = info->mPolyIndex;
+    return gabi::ea(bgs->GetTriPla(bg, index));
 }
 /* camera attention: dAttention_c::LockonTruth() || (flags (+0x20) & 0x20000000) (Lockon()) */
 static inline BOOL dAttention_LockonTruth_l(u32 attn) { return gabi::call<BOOL>(0x024EDFCC, attn); }
 /* the camera of the camera info index (play + 0x5AF8 + idx * 0x34); dCamera_c at +0x248 */
-static inline u32 dComIfGp_getCamera_l(s32 idx) { return gabi::load<u32>(dComIfGp_ea() + idx * 0x34 + 0x5AF8); }
+static inline u32 dComIfGp_getCamera_l(s32 idx) { return Link07::gameInfo()->play.mCameraInfo[idx].mpCamera; }
 /* play + 0x5CDC: dComIfGp_setPlayerStatus1(0, flag) */
 static inline void dComIfGp_onPlayerStatus1_l(u32 flag) {
-    u32 a = dComIfGp_ea() + 0x5CDC;
-    gabi::store<u32>(a, gabi::load<u32>(a) | flag);
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+    status = status | flag;
 }
 /* play + 0x5CD8: dComIfGp_checkPlayerStatus0(0, flag) */
-static inline u32 dComIfGp_checkPlayerStatus0_l(u32 flag) { return gabi::load<u32>(dComIfGp_ea() + 0x5CD8) & flag; }
+static inline u32 dComIfGp_checkPlayerStatus0_l(u32 flag) {
+    return Link07::gameInfo()->play.mPlayerStatus[0][0] & flag;
+}
 
 /* daPy_lk_c members in the opaque blocks of the shared header (offsets measured in this range) */
-#define LK_FIELD(T, off) (*gabi::at<be<T>>(gabi::ea(this) + (off)))
-#define mGrabWearY LK_FIELD(f32, 0x3CC)       /* daPy_py_c field_0x2b0 (checkGrabWear: < 0) */
-#define mDemoMode LK_FIELD(u32, 0x430)        /* daPy_py_c mDemo.mDemoMode (GameCube 0x314) */
-#define mMaxNormalSpeed LK_FIELD(f32, 0x3C4)  /* daPy_py_c (GameCube 0x2A8) */
-#define mLinkLinChkPoly (gabi::ea(this) + 0x9E4) /* mLinkLinChk's cBgS_PolyInfo */
-#define mLinkLinChkCross (*gabi::at<cXyz>(gabi::ea(this) + 0xA00)) /* mLinkLinChk.GetCross() (+0x30) */
+
+#define mLinkLinChkPoly gabi::ea(&Link07::lineHit(this).mPolyInfo)
+#define mLinkLinChkCross Link07::lineHit(this).mCross
 
 /* ---- daPy_lk_c functions of other ranges (by address) ---- */
 enum : u32 {
-    LK_commonProcInit = 0x023DFDD8,
-    LK_setSingleMoveAnime = 0x023E0A04,
-    LK_setBlendMoveAnime = 0x023E14A0,
-    LK_setActAnimeUpper = 0x023DE7E8,
-    LK_resetActAnimeUpper = 0x023DC6A4,
-    LK_freeGrabItem = 0x023DCF8C,
-    LK_actorKeep_clearData = 0x023DC63C,
-    LK_actorKeep_setData = 0x023DE638,
-    LK_initGrabNextMode = 0x0241F470,
-    LK_setAnimeEquipSword = 0x023E9F60,
-    LK_setSpeedAndAngleAtn = 0x02417538,
-    LK_setSpeedAndAngleNormal = 0x0241650C,
-    LK_checkGrabSpecialHeavyState = 0x023DBBE8,
-    LK_checkNextActionGrab = 0x023EA1AC,
     LK_checkNextMode = 0x023F14E0,
-    LK_setWeaponBlur = 0x0242D888,
-    LK_procGrabUp_init = 0x0242D8DC,
-    LK_procGrabMiss_init = 0x0242DA4C,
 };
 #define LK_checkNextMode(n) gabi::call<BOOL>(LK_checkNextMode, this, (s32)(n))
 /* virtual daPy_lk_c::voiceStart(u32) (vtable slot 0xE4) */
 #define LK_voiceStart(n) gabi::call_ptr(gabi::load<u32>(__vtbl + 0xE4), this, (u32)(n))
 #define LK_cutEnd() dComIfGp_evmng_cutEnd(mStaffIdx)
 /* checkGrabAnime(): m_anm_heap_upper[UPPER_MOVE2_e].mIdx is GRABWAIT (0x95) or GRABWAITB (0x96) */
-#define LK_checkGrabAnime() (gabi::load<u16>(gabi::ea(this) + 0x5888) == 0x95 || gabi::load<u16>(gabi::ea(this) + 0x5888) == 0x96)
+#define LK_checkGrabAnime() (Link07::upperHeap(this, 2).mIdx == 0x95 || Link07::upperHeap(this, 2).mIdx == 0x96)
 /* checkAttentionLock(): mpAttention->Lockon() (the attention pointer is read once) */
-static inline BOOL lk_attentionLock(u32 attn) { return dAttention_LockonTruth_l(attn) || (gabi::load<u32>(attn + 0x20) & 0x20000000); }
+static inline BOOL lk_attentionLock(u32 attn) {
+    return dAttention_LockonTruth_l(attn) || (gabi::at<Link07::Attention>(attn)->mFlags & 0x20000000);
+}
 #define LK_checkAttentionLock() lk_attentionLock(mpAttention)
 
 /* HD: m_pbCalc[PART_UPPER_e]->setRatio(2, v) became a per-joint weight table: every joint of the
  * model (joint count from the model data's joint tree) gets the weight */
-static inline void lk_setUpperRatio(u32 calc, f32 v) {
-    u32 tree = gabi::call<u32>(0x027F3F94 /* J3DModelData joint tree (matcher: __nw) */, gabi::load<u32>(gabi::load<u32>(calc + 0x80) + 0xAC));
-    s32 n = gabi::call<s32>(0x027E0174, tree, 0);
-    for (s32 i = 0; i < n; i++) {
-        gabi::store<f32>(gabi::load<u32>(gabi::load<u32>(calc + 0x7C) + 0x2C) + i * 4, v);
+static inline void lk_setUpperRatio(u32 calculator, f32 weight) {
+    Link07::BlendCalc* calc = gabi::at<Link07::BlendCalc>(calculator);
+    u32 tree = Link07_getJointTree(calc->mpModel->mpModelData.get());
+    s32 count = Link07_getJointCount(tree, 0);
+    for (s32 joint = 0; joint < count; ++joint) {
+        calc->mpJointWeights->mpWeights.get()[joint] = weight;
     }
 }
 
 /* 0242DAC8 */
 BOOL daPy_lk_c::procGrabReady() {
-    WWHD_FUNC(0x0242DAC8, BOOL, this);
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
     if (grab == nullptr && mActorKeepRope.mActor == nullptr) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mProcVar6 == 2) {
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-            gabi::call(LK_procGrabUp_init, this);
+            procGrabUp_init();
         }
     } else if (mProcVar6 == 1) {
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
             if (grab != nullptr) {
-                if (fpcM_GetName(grab) == 0x1CF /* fpcNm_BOKO_e */) {
+                if (fpcM_GetName(grab) == Link07::fpcNm_BOKO_e) {
                     u32 id = mActorKeepGrab.mID;
                     u32 actor = gabi::ea(mActorKeepGrab.mActor.get());
                     mActorKeepEquip.mID = id;
-                    mEquipItem = 0x101; /* daPyItem_BOKO_e */
-                    gabi::store<u32>(gabi::ea(&mActorKeepEquip) + 4, actor);
-                    gabi::call(LK_actorKeep_clearData, &mActorKeepGrab);
-                    gabi::call(LK_setWeaponBlur, this);
-                    LK_checkNextMode(0);
-                } else if (grab->actor_status & 0x08010000) {
-                    f32 rate = (grab->actor_status & 0x08000000) ? 0.8f : 0.4f; /* HD: HIO folded */
-                    gabi::call(LK_setSingleMoveAnime, this, 0x67 /* ANM_GRABNG */, rate, 0.0f, 5, 1.0f);
+                    mEquipItem = Link07::daPyItem_BOKO_e;
+                    mActorKeepEquip.mActor = gabi::at<fopAc_ac_c>(actor);
+                    Link07_clearActorKeep(&mActorKeepGrab);
+                    setWeaponBlur();
+                    checkNextMode(0);
+                } else if (grab->actor_status & (fopAcStts_UNK8000000_e | fopAcStts_UNK10000_e)) {
+                    f32 rate = (grab->actor_status & fopAcStts_UNK8000000_e) ? 0.8f : 0.4f;
+                    // HD: HIO folded
+
+                    setSingleMoveAnime(Link07::ANM_GRABNG, rate, 0.0f, 5, 1.0f);
                     mProcVar6 = 2;
                 } else {
-                    gabi::call(LK_procGrabUp_init, this);
+                    procGrabUp_init();
                 }
             } else if (mActorKeepRope.mActor != nullptr) {
-                gabi::call(LK_procGrabMiss_init, this);
+                procGrabMiss_init();
             } else {
-                LK_checkNextMode(0);
+                checkNextMode(0);
             }
         }
-    } else if (mProcVar6 == 0 && gabi::load<u16>(gabi::ea(this) + 0x5888) == 0xFFFF /* checkNoUpperAnime() */) {
-        gabi::call(LK_setSingleMoveAnime, this, 0x65 /* ANM_GRABP */, 0.8f, 0.0f, 4, 1.0f);
+    } else if (mProcVar6 == 0 && Link07::upperHeap(this, 2).mIdx == 0xFFFF /* checkNoUpperAnime() */) {
+        setSingleMoveAnime(Link07::ANM_GRABP, 0.8f, 0.0f, 4, 1.0f);
         mProcVar6 = 1;
     }
     return TRUE;
 }
-VERIFY(0x0242DAC8, &daPy_lk_c::procGrabReady);
 
 /* 0242DC84 */
 BOOL daPy_lk_c::procGrabRebound_init() {
-    WWHD_FUNC(0x0242DC84, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x75 /* daPyProc_GRAB_REBOUND_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x6B /* ANM_GRABRE */, 1.1f, 3.0f, 0x13, 2.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_GRAB_REBOUND_e);
+    setSingleMoveAnime(Link07::ANM_GRABRE, 1.1f, 3.0f, 0x13, 2.0f);
+    // HD: HIO folded
+
     return TRUE;
 }
-VERIFY(0x0242DC84, &daPy_lk_c::procGrabRebound_init);
 
 /* 0242DCE0 */
 BOOL daPy_lk_c::procGrabUp() {
-    WWHD_FUNC(0x0242DCE0, BOOL, this);
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
     if (grab == nullptr) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        setResetFlg0(resetFlg0() | 0x20 /* daPyRFlg0_GRAB_UP_END */);
-        if (grab->actor_status & 0x08010000) {
+        setResetFlg0(resetFlg0() | daPy_py_c::daPyRFlg0_GRAB_UP_END);
+        if (grab->actor_status & (fopAcStts_UNK8000000_e | fopAcStts_UNK10000_e)) {
             procGrabRebound_init();
         } else {
-            gabi::call(LK_initGrabNextMode, this);
+            initGrabNextMode();
         }
     } else if (mFrameCtrlUnder[0].getFrame() > 9.0f) {
-        if (grab->actor_status & 0x08010000) {
+        if (grab->actor_status & (fopAcStts_UNK8000000_e | fopAcStts_UNK10000_e)) {
             if (mStickDistance > 0.05f) {
                 setResetFlg0(resetFlg0() | 0x20);
                 procGrabRebound_init();
             }
         } else {
             if (!LK_checkGrabAnime()) {
-                gabi::call(LK_setActAnimeUpper, this, 0x95 /* GRABWAIT */, 2 /* UPPER_MOVE2_e */, 0.0f, 0.0f, -1, -1.0f);
+                setActAnimeUpper(0x95 /* GRABWAIT */, Link07::UPPER_MOVE2_e, 0.0f, 0.0f, -1, -1.0f);
                 lk_setUpperRatio(m_pbCalc[1], 0.0f);
             }
-            if (LK_checkNextMode(1)) {
+            if (checkNextMode(1)) {
                 setResetFlg0(resetFlg0() | 0x20);
                 if (LK_checkGrabAnime()) {
                     lk_setUpperRatio(m_pbCalc[1], 1.0f);
@@ -172,42 +186,42 @@ BOOL daPy_lk_c::procGrabUp() {
     }
     return TRUE;
 }
-VERIFY(0x0242DCE0, &daPy_lk_c::procGrabUp);
 
 /* 0242DF08 */
 BOOL daPy_lk_c::procGrabMiss() {
-    WWHD_FUNC(0x0242DF08, BOOL, this);
     if (mActorKeepRope.mActor == nullptr) {
-        LK_checkNextMode(0);
+        checkNextMode(0);
     }
     if (mProcVar6 == 0) {
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
             if (mProcVar0 > 0) {
                 mProcVar0 = mProcVar0 - 1;
             } else {
-                gabi::call(LK_setSingleMoveAnime, this, 0x65 /* ANM_GRABP */, -0.8f, 0.0f, 4, 4.0f); /* HD: HIO folded */
+                setSingleMoveAnime(Link07::ANM_GRABP, -0.8f, 0.0f, 4, 4.0f);
+                // HD: HIO folded
+
                 mProcVar6 = 1;
-                gabi::call(LK_freeGrabItem, this);
+                freeGrabItem();
             }
         }
     } else if (mFrameCtrlUnder[0].getRate() > -0.01f) {
-        LK_checkNextMode(0);
+        checkNextMode(0);
     } else if (mFrameCtrlUnder[0].getFrame() < 0.0f) {
-        LK_checkNextMode(1);
+        checkNextMode(1);
     }
     return TRUE;
 }
-VERIFY(0x0242DF08, &daPy_lk_c::procGrabMiss);
 
 /* 0242E010 */
 BOOL daPy_lk_c::procGrabThrow() {
-    WWHD_FUNC(0x0242E010, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
-    cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f); /* HD: HIO folded */
+    cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f);
+    // HD: HIO folded
+
     if (mProcVar7 == 0) {
         if (frameCtrl.getRate() < 0.01f) {
-            gabi::call(LK_setSingleMoveAnime, this, 0x6A /* ANM_GRABTHROW */, 0.8f, 1.0f, 0xE, 0.0f);
+            setSingleMoveAnime(Link07::ANM_GRABTHROW, 0.8f, 1.0f, 0xE, 0.0f);
             mProcVar7 = 1;
         }
         return TRUE;
@@ -218,50 +232,50 @@ BOOL daPy_lk_c::procGrabThrow() {
         grab->speedF = 19.0f;
         s32 idx = mCameraInfoIdx;
         u32 cam = dComIfGp_getCamera_l(idx);
-        gabi::call(0x02515470 /* dCamera_c::ForceLockOn */, cam + 0x248, (u32)mActorKeepGrab.mID);
-        if (grab->actor_status & 0x10000) {
+        Link07_forceCameraLock(cam + 0x248, (u32)mActorKeepGrab.mID);
+        if (grab->actor_status & fopAcStts_UNK10000_e) {
             LK_voiceStart(18);
-        } else if (fpcM_GetName(grab) == 0x126 /* fpcNm_BOMB_e */ || fpcM_GetName(grab) == 0x127 /* fpcNm_Bomb2_e */) {
+        } else if (fpcM_GetName(grab) == Link07::fpcNm_BOMB_e ||
+                   fpcM_GetName(grab) == Link07::fpcNm_Bomb2_e) {
             LK_voiceStart(0);
         } else {
             LK_voiceStart(17);
         }
-        gabi::call(LK_freeGrabItem, this);
+        freeGrabItem();
     }
     if (frameCtrl.getRate() < 0.01f) {
         if (mProcVar6 != 0) {
             mProcVar6 = 0;
-            gabi::call(LK_setAnimeEquipSword, this, 0);
+            setAnimeEquipSword(0);
         }
-        LK_checkNextMode(0);
+        checkNextMode(0);
     } else if (frameCtrl.getFrame() > 7.0f) {
         if (mProcVar6 != 0) {
             mProcVar6 = 0;
-            gabi::call(LK_setAnimeEquipSword, this, 0);
+            setAnimeEquipSword(0);
         }
-        LK_checkNextMode(1);
+        checkNextMode(1);
     }
     return TRUE;
 }
-VERIFY(0x0242E010, &daPy_lk_c::procGrabThrow);
 
 /* 0242E264 */
 BOOL daPy_lk_c::procGrabPut() {
-    WWHD_FUNC(0x0242E264, BOOL, this);
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
     if (grab == nullptr) {
-        if (mDemoMode == 0x38 /* DEMO_GRAB_PUT_e */) {
+        if (mDemo.mDemoMode == daPy_demo_c::DEMO_GRAB_PUT_e) {
             LK_cutEnd();
             return TRUE;
         }
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mProcVar6 == 1) {
-        if (mGrabWearY < 0.0f) { /* checkGrabWear() */
+        if (field_0x2b0 < 0.0f) { /* checkGrabWear() */
             return TRUE;
         }
         mProcVar6 = 0;
-        gabi::call(LK_setSingleMoveAnime, this, 0x66 /* ANM_GRABUP */, -1.1f, 0.0f, 7, 0.0f); /* HD: HIO folded */
+        setSingleMoveAnime(Link07::ANM_GRABUP, -1.1f, 0.0f, 7, 0.0f);
+        // HD: HIO folded
     }
     gabi::Local<cXyz> pos; /* sp+0x14 */
     {
@@ -277,9 +291,9 @@ BOOL daPy_lk_c::procGrabPut() {
     if (cBgS_LineCross(dComIfG_Bgsp(), mLinkLinChk)) {
         u32 pla = dBgS_GetTriPla_l(mLinkLinChkPoly);
         if (pla != 0) {
-            f32 ny = gabi::load<f32>(pla + 4);
+            f32 ny = gabi::at<cM3dGPla>(pla)->mNormal.y;
             if (ny < 0.5f && !(ny < -0.8f)) { /* cBgW_CheckBWall */
-                gabi::Local<cXyz> d; /* sp+0x08 */
+                gabi::Local<cXyz> d;          /* sp+0x08 */
                 cXyz_mi(pos, d, &mLinkLinChkCross);
                 f32 len = std_sqrtf(PSVECSquareMag(d));
                 gabi::Local<cXyz> xz; /* sp+0x20 */
@@ -304,59 +318,62 @@ BOOL daPy_lk_c::procGrabPut() {
     m370C.y = grab->current.pos.y;
     if (mFrameCtrlUnder[0].getRate() > -0.01f) {
         grab->speedF = 0.0f;
-        gabi::call(LK_freeGrabItem, this);
-        if (mDemoMode == 0x38) {
+        freeGrabItem();
+        if (mDemo.mDemoMode == daPy_demo_c::DEMO_GRAB_PUT_e) {
             LK_cutEnd();
         } else {
-            LK_checkNextMode(0);
+            checkNextMode(0);
         }
-    } else if (mFrameCtrlUnder[0].getFrame() < 0.0f && LK_checkNextMode(1)) {
+    } else if (mFrameCtrlUnder[0].getFrame() < 0.0f && checkNextMode(1)) {
         grab->speedF = 0.0f;
-        gabi::call(LK_freeGrabItem, this);
+        freeGrabItem();
     }
     return TRUE;
 }
-VERIFY(0x0242E264, &daPy_lk_c::procGrabPut);
 
 /* 0242E604 */
 BOOL daPy_lk_c::procGrabWait() {
-    WWHD_FUNC(0x0242E604, BOOL, this);
     if (mActorKeepGrab.mActor == nullptr) {
-        gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-        return LK_checkNextMode(0);
+        resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+        return checkNextMode(0);
     }
     if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+        setSpeedAndAngleAtn();
     } else {
-        gabi::call(LK_setSpeedAndAngleNormal, this, 0xBB8); /* HD: HIO folded */
+        setSpeedAndAngleNormal(0xBB8);
+        // HD: HIO folded
     }
     if (m35D8 > -29.0f) {
-        mFrameCtrlUnder[0].setRate(1.0f); /* HD: HIO folded */
+        mFrameCtrlUnder[0].setRate(1.0f);
+        // HD: HIO folded
+
     } else {
         if (mFrameCtrlUnder[0].getRate() > 0.0f && mProcVar6 == 0) {
             mProcVar6 = 1;
-            if (gabi::load<u16>(gabi::ea(this) + 0x5848) == 0x95 /* m_anm_heap_under[0].mIdx == GRABWAIT */) {
-                seStartMapInfo(0x2829 /* JA_SE_LK_BARREL_PUT_ON */);
+            if (Link07::underHeap(this, 0).mIdx == 0x95 /* m_anm_heap_under[0].mIdx == GRABWAIT */) {
+                seStartMapInfo(Link07::JA_SE_LK_BARREL_PUT_ON);
             }
         }
         mFrameCtrlUnder[0].setRate(0.0f);
     }
-    if (LK_checkNextMode(0)) {
+    if (checkNextMode(0)) {
         if (LK_checkGrabAnime()) {
             lk_setUpperRatio(m_pbCalc[1], 1.0f);
         }
     } else if (shape_angle.y != m34DE && !LK_checkAttentionLock()) {
-        f32 morf = (noResetFlg1() & 0x800000) ? -1.0f : 2.4f; /* HD: HIO folded */
-        gabi::call(LK_setBlendMoveAnime, this, morf);
+        f32 morf = (noResetFlg1() & 0x800000) ? -1.0f : 2.4f;
+        // HD: HIO folded
+
+        setBlendMoveAnime(morf);
         lk_setUpperRatio(m_pbCalc[1], 1.0f);
         s16 d = (s16)(shape_angle.y - m34DE);
         setNoResetFlg1(noResetFlg1() | 0x800000);
         m35A0 = (f32)d * 0.005f;
     } else if (noResetFlg1() & 0x800000) {
-        if (gabi::call<BOOL>(LK_checkGrabSpecialHeavyState, this)) {
-            gabi::call(LK_setSingleMoveAnime, this, 0x69 /* ANM_GRABWAITB */, 1.2f, 0.0f, -1, 3.0f);
+        if (checkGrabSpecialHeavyState()) {
+            setSingleMoveAnime(Link07::ANM_GRABWAITB, 1.2f, 0.0f, -1, 3.0f);
         } else {
-            gabi::call(LK_setSingleMoveAnime, this, 0x68 /* ANM_GRABWAIT */, 1.0f, 0.0f, -1, 3.0f);
+            setSingleMoveAnime(Link07::ANM_GRABWAIT, 1.0f, 0.0f, -1, 3.0f);
         }
         lk_setUpperRatio(m_pbCalc[1], 0.0f);
         m35A0 = 0.0f;
@@ -364,127 +381,102 @@ BOOL daPy_lk_c::procGrabWait() {
     }
     return TRUE;
 }
-VERIFY(0x0242E604, &daPy_lk_c::procGrabWait);
 
 /* 0242E9D4 */
 BOOL daPy_lk_c::procGrabHeavyWait() {
-    WWHD_FUNC(0x0242E9D4, BOOL, this);
     if (mActorKeepGrab.mActor == nullptr) {
-        gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-        return LK_checkNextMode(0);
+        resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+        return checkNextMode(0);
     }
     if (!LK_checkAttentionLock() && mStickDistance > 0.05f) {
-        cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x28, 0x12C, 0x28); /* HD: HIO folded */
+        cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x28, 0x12C, 0x28);
+        // HD: HIO folded
+
         s16 sy = shape_angle.y;
         s16 d = (s16)(sy - current.angle.y);
         f32 r = (f32)d / 300.0f;
         current.angle.y = sy;
         m35A0 = r;
         f32 morf = (noResetFlg1() & 0x800000) ? -1.0f : 2.4f;
-        gabi::call(LK_setBlendMoveAnime, this, morf);
+        setBlendMoveAnime(morf);
         lk_setUpperRatio(m_pbCalc[1], 1.0f);
         setNoResetFlg1(noResetFlg1() | 0x800000);
     } else {
         m35A0 = 0.0f;
         if (noResetFlg1() & 0x800000) {
-            gabi::call(LK_setSingleMoveAnime, this, 0x69 /* ANM_GRABWAITB */, 1.2f, 0.0f, -1, 3.0f);
+            setSingleMoveAnime(Link07::ANM_GRABWAITB, 1.2f, 0.0f, -1, 3.0f);
             lk_setUpperRatio(m_pbCalc[1], 0.0f);
             setNoResetFlg1(noResetFlg1() & ~0x800000u);
         }
     }
     if (mActorKeepGrab.mActor == nullptr) {
-        LK_checkNextMode(0);
+        checkNextMode(0);
     } else {
-        gabi::call(LK_checkNextActionGrab, this);
+        checkNextActionGrab();
     }
     return TRUE;
 }
-VERIFY(0x0242E9D4, &daPy_lk_c::procGrabHeavyWait);
 
 /* 0242EC50 */
 BOOL daPy_lk_c::procGrabRebound() {
-    WWHD_FUNC(0x0242EC50, BOOL, this);
     fopAc_ac_c* grab = mActorKeepGrab.mActor;
     if (grab == nullptr) {
-        gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-        return LK_checkNextMode(0);
+        resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+        return checkNextMode(0);
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(LK_initGrabNextMode, this);
-    } else if (mFrameCtrlUnder[0].getFrame() > 6.0f && (grab->actor_status & 0x10000)) {
-        gabi::call(LK_initGrabNextMode, this);
+        initGrabNextMode();
+    } else if (mFrameCtrlUnder[0].getFrame() > 6.0f && (grab->actor_status & fopAcStts_UNK10000_e)) {
+        initGrabNextMode();
     }
     return TRUE;
 }
-VERIFY(0x0242EC50, &daPy_lk_c::procGrabRebound);
 
 /* ---- swim ---- */
-enum : u32 {
-    LK_setNormalSpeedF = 0x02416230,
-    LK_setShapeAngleToAtnActor = 0x02419C70,
-    LK_procShipReady_init = 0x023ECA94,
-    LK_setTalkStatus = 0x023EC260,
-    LK_checkSwimFallCheck = 0x023FE918,
-    LK_swimOutAfter = 0x023DFAAC,
-    LK_procFall_init = 0x023F6564,
-    LK_startRestartRoom = 0x023FD4E4,
-    LK_procSwimWait_init = 0x023F8B00,
-    LK_setSwimTimerStartStop = 0x023F8924,
-    LK_procSwimMove_init = 0x02412E58,
-    LK_changeSwimUpProc = 0x02421FBC,
-    LK_getSwimTimerRate = 0x023F8858,
-    LK_setSwimMoveAnime = 0x02412C30,
-    LK_setTextureAnime = 0x023DD768,
-    LK_setSwimTail = 0x02412D54,
-    LK_changeFrontWallTypeProc = 0x02418E00,
-};
-#define mAcchGroundH LK_FIELD(f32, 0x8A0)          /* mAcch.GetGroundH() (dBgS_Acch + 0x94) */
-#define mAcchGndPoly (gabi::ea(this) + 0x8F4)      /* mAcch.m_gnd (cBgS_PolyInfo, dBgS_Acch + 0xE8) */
-#define mPlayerTail LK_FIELD(u32, 0x8260)          /* HD-only (tail): nonzero blocks the swim talk */
-/* daPy_swimTailEcallBack_c::onEnd(): mEnd (+4) = 1, emitter (+0x20) = NULL [?] */
-static inline void lk_swimTail_onEnd(u32 cb) {
-    gabi::store<u8>(cb + 4, 1);
-    gabi::store<u32>(cb + 0x20, 0);
-}
-static inline BOOL dBgS_ChkPolySafe_l(u32 poly) { return gabi::call<BOOL>(0x02008254, dComIfG_Bgsp(), poly); } /* cBgS::ChkPolySafe */
+#define mAcchGndPoly gabi::ea(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd))
+static inline BOOL dBgS_ChkPolySafe_l(u32 poly) {
+    return gabi::call<BOOL>(0x02008254, dComIfG_Bgsp(), poly);
+} /* cBgS::ChkPolySafe */
 /* play + 0x5BB7: dComIfGp_setDoStatus */
-static inline void dComIfGp_setDoStatus_l(u8 s) { gabi::store<u8>(dComIfGp_ea() + 0x5BB7, s); }
+static inline void dComIfGp_setDoStatus_l(u8 s) { Link07::gameInfo()->play.mDoStatus = s; }
 
 /* 0242ECFC */
 void daPy_lk_c::setSpeedAndAngleSwim() {
-    WWHD_FUNC(0x0242ECFC, void, this);
     f32 speedTarget;
     BOOL backward = FALSE;
-    if (mCurProc != 0x35 /* daPyProc_SWIM_UP_e */) {
+    if (mCurProc != Link07::daPyProc_SWIM_UP_e) {
         if (!LK_checkAttentionLock()) {
             s16 old = shape_angle.y;
             if (mStickDistance > 0.05f) {
-                if (getDirectionFromShapeAngle() == 1 /* DIR_BACKWARD */) {
-                    lk_swimTail_onEnd(gabi::ea(this) + 0x66A8);
-                    lk_swimTail_onEnd(gabi::ea(this) + 0x66A8 + 0x28);
+                if (getDirectionFromShapeAngle() == Link07::DIR_BACKWARD) {
+                    Link07::swimTail(this, 0).onEnd();
+                    Link07::swimTail(this, 1).onEnd();
                     shape_angle.y = m34E8;
                     current.angle.y = shape_angle.y;
                 } else {
-                    cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x11, 0x1388, 0x4B0); /* HD: HIO folded */
+                    cLib_addCalcAngleS(&shape_angle.y, m34E8, 0x11, 0x1388, 0x4B0);
+                    // HD: HIO folded
                 }
-                speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance), cM_scos((s16)(shape_angle.y - old)));
+                speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
+                                              cM_scos((s16)(shape_angle.y - old)));
             } else {
                 speedTarget = 0.0f;
             }
             cLib_addCalcAngleS(&current.angle.y, shape_angle.y, 2, 0x2000, 0x1000);
             mMaxNormalSpeed = 18.0f;
         } else {
-            gabi::call(LK_setShapeAngleToAtnActor, this);
+            setShapeAngleToAtnActor();
             if (mStickDistance > 0.05f) {
                 s16 old = current.angle.y;
-                if (getDirectionFromCurrentAngle() == 1 /* DIR_BACKWARD */) {
-                    lk_swimTail_onEnd(gabi::ea(this) + 0x66A8);
-                    lk_swimTail_onEnd(gabi::ea(this) + 0x66A8 + 0x28);
+                if (getDirectionFromCurrentAngle() == Link07::DIR_BACKWARD) {
+                    Link07::swimTail(this, 0).onEnd();
+                    Link07::swimTail(this, 1).onEnd();
                     speedTarget = 0.0f;
                     backward = TRUE;
                 } else {
                     cLib_addCalcAngleS(&current.angle.y, m34E8, 0x11, 0x1388, 0x4B0);
-                    speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance), cM_scos((s16)(current.angle.y - old)));
+                    speedTarget = gabi::fmuls_ppc(gabi::fmuls_ppc(3.0f, mStickDistance),
+                                                  cM_scos((s16)(current.angle.y - old)));
                 }
             } else {
                 speedTarget = 0.0f;
@@ -496,99 +488,94 @@ void daPy_lk_c::setSpeedAndAngleSwim() {
         speedTarget = 0.0f;
         mMaxNormalSpeed = 18.0f;
     }
-    gabi::call(LK_setNormalSpeedF, this, speedTarget, 0.02f, 2.0f, 0.5f);
+    setNormalSpeedF(speedTarget, 0.02f, 2.0f, 0.5f);
     if (backward && mNormalSpeed < 5.0f) {
         current.angle.y = m34E8;
         mNormalSpeed = 0.0f;
     }
-    if (dComIfGp_checkPlayerStatus0_l(0x10 /* daPyStts0_UNK10_e */)) {
+    if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_UNK10_e)) {
         mNormalSpeed = 0.0f;
     }
 }
-VERIFY(0x0242ECFC, &daPy_lk_c::setSpeedAndAngleSwim);
 
 /* 0242F180 */
 BOOL daPy_lk_c::checkNextModeSwim() {
-    WWHD_FUNC(0x0242F180, BOOL, this);
     u32 entry = mpAttnEntryA;
-    if (entry != 0 && gabi::load<s32>(entry + 8) == 7 /* fopAc_Attn_TYPE_SHIP_e */) {
-        dComIfGp_setDoStatus_l(0x1C /* dActStts_GET_IN_SHIP_e */);
+    if (entry != 0 && gabi::at<Link07::AttentionEntry>(entry)->mType == 7 /* fopAc_Attn_TYPE_SHIP_e */) {
+        dComIfGp_setDoStatus_l(Link07::dActStts_GET_IN_SHIP_e);
         if (mItemTrigger & 1 /* doTrigger() */) {
-            return gabi::call<BOOL>(LK_procShipReady_init, this);
+            return procShipReady_init();
         }
     }
-    if (gabi::call<BOOL>(LK_setTalkStatus, this) && mPlayerTail == 0 /* HD */ && (mItemTrigger & 1)) {
-        return gabi::call<BOOL>(0x025D744C /* fopAcM_orderTalkEvent */, this, mpAttnActorA.get());
+    if (setTalkStatus() && Link07::tail(this).mSwimTalkBlocked == 0 /* HD */ && (mItemTrigger & 1)) {
+        return Link07_orderTalkEvent(this, mpAttnActorA.get());
     }
     return FALSE;
 }
-VERIFY(0x0242F180, &daPy_lk_c::checkNextModeSwim);
 
 /* 0242F254 */
 BOOL daPy_lk_c::changeSwimOutProc() {
-    WWHD_FUNC(0x0242F254, BOOL, this);
     u32 pla;
-    if (mAcchGroundH != -1000000000.0f && dBgS_ChkPolySafe_l(mAcchGndPoly)) {
+    if (mAcch.GetGroundH() != -1000000000.0f && dBgS_ChkPolySafe_l(mAcchGndPoly)) {
         pla = dBgS_GetTriPla_l(mAcchGndPoly);
     } else {
         pla = 0;
     }
-    if (gabi::call<BOOL>(LK_checkSwimFallCheck, this)) {
-        if (mCurProc == 0x37 /* daPyProc_SWIM_MOVE_e */ && mDirection != 0) {
+    if (checkSwimFallCheck()) {
+        if (mCurProc == Link07::daPyProc_SWIM_MOVE_e && mDirection != 0) {
             current.pos.y = current.pos.y + m35C4;
         }
-        gabi::call(LK_swimOutAfter, this, 1);
-        return gabi::call<BOOL>(LK_procFall_init, this, 1, 6.0f); /* HD: HIO folded */
+        swimOutAfter(1);
+        return procFall_init(1, 6.0f);
+        // HD: HIO folded
     }
     if (!(mNoResetFlg0 & 0x80) ||
-        (pla != 0 && !(gabi::load<f32>(pla + 4) < 0.5f) /* cBgW_CheckBGround */ && mWaterY - mAcchGroundH < 85.0f)) {
+        (pla != 0 && !(gabi::at<cM3dGPla>(pla)->mNormal.y < 0.5f) /* cBgW_CheckBGround */ &&
+         mWaterY - mAcch.GetGroundH() < 85.0f)) {
         f32 y = mWaterY;
         current.pos.y = y;
-        if (mCurProc == 0x37 && mDirection != 0) {
+        if (mCurProc == Link07::daPyProc_SWIM_MOVE_e && mDirection != 0) {
             current.pos.y = y + m35C4;
         }
-        gabi::call(LK_swimOutAfter, this, 1);
-        return LK_checkNextMode(0);
+        swimOutAfter(1);
+        return checkNextMode(0);
     }
-    if (gabi::load<s32>(dComIfGp_ea() + 0x5B4C) <= 0 /* dComIfGp_getItemTimeCount() */ &&
-        gabi::call<BOOL>(LK_startRestartRoom, this, 5, 0xC9, -1.0f, 0)) {
+    if (Link07::gameInfo()->play.mAirMeter <= 0 /* dComIfGp_getItemTimeCount() */ &&
+        startRestartRoom(5, 0xC9, -1.0f, 0)) {
         LK_voiceStart(0x21);
         setNoResetFlg1(noResetFlg1() | 0x40000000);
         mFrameCtrlUnder[0].setRate(0.0f);
     }
     return FALSE;
 }
-VERIFY(0x0242F254, &daPy_lk_c::changeSwimOutProc);
 
 /* 0242F45C */
 BOOL daPy_lk_c::procSwimUp() {
-    WWHD_FUNC(0x0242F45C, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     setSpeedAndAngleSwim();
     if (!changeSwimOutProc()) {
         if (frameCtrl.getRate() < 0.01f) {
-            gabi::call(LK_procSwimWait_init, this, 0);
+            procSwimWait_init(0);
         } else if (frameCtrl.getFrame() > 19.0f) {
             if (mStickDistance > 0.05f) {
-                gabi::call(LK_procSwimMove_init, this, 0);
+                procSwimMove_init(0);
             }
         } else if (frameCtrl.checkPass(4.0f)) {
             LK_voiceStart(0x1A);
-            seStartOnlyReverb(0x2840 /* JA_SE_LK_WALK_IN_WATER */);
-            seStartOnlyReverb(0x3807 /* JA_SE_LK_SWIM */);
+            seStartOnlyReverb(Link07::JA_SE_LK_WALK_IN_WATER);
+            seStartOnlyReverb(Link07::JA_SE_LK_SWIM);
         } else {
             current.pos.y = mWaterY;
-            m35C4 = 0.0f; /* HD: HIO folded */
+            m35C4 = 0.0f;
+            // HD: HIO folded
         }
     }
-    gabi::call(LK_setSwimTimerStartStop, this);
+    setSwimTimerStartStop();
     return TRUE;
 }
-VERIFY(0x0242F45C, &daPy_lk_c::procSwimUp);
 
 /* 0242F590 */
 BOOL daPy_lk_c::procSwimWait() {
-    WWHD_FUNC(0x0242F590, BOOL, this);
     setSpeedAndAngleSwim();
     f32 r = cM_rndF(0.3f);
     s16 step = (s16)gabi::ftoi(gabi::fmuls_ppc(2330.0f, gabi::fadds_ppc(r, 0.85f)));
@@ -598,7 +585,7 @@ BOOL daPy_lk_c::procSwimWait() {
         return TRUE;
     }
     if (!(mNoResetFlg0 & 0x100)) {
-        if (gabi::call<BOOL>(LK_changeSwimUpProc, this)) {
+        if (changeSwimUpProc()) {
             return TRUE;
         }
     } else {
@@ -608,26 +595,24 @@ BOOL daPy_lk_c::procSwimWait() {
         return TRUE;
     }
     if (dComIfGp_checkPlayerStatus0_l(0x10)) {
-        fopAc_ac_c* partner = gabi::call<fopAc_ac_c*>(0x025D7C6C /* fopAcM_getTalkEventPartner */, this);
+        fopAc_ac_c* partner = Link07_getTalkPartner(this);
         if (partner != nullptr) {
             s16 target = cLib_targetAngleY(&current.pos, &partner->eyePos);
             cLib_addCalcAngleS(&shape_angle.y, target, 4, 0x1000, 0x200);
             current.angle.y = shape_angle.y;
         }
     }
-    f32 rate = gabi::call<f32>(LK_getSwimTimerRate, this);
+    f32 rate = getSwimTimerRate();
     mFrameCtrlUnder[0].setRate(gabi::fmadds(rate, 2.5f, 0.5f));
     if (mStickDistance > 0.05f) {
-        gabi::call(LK_procSwimMove_init, this, 1);
+        procSwimMove_init(1);
     }
-    gabi::call(LK_setSwimTimerStartStop, this);
+    setSwimTimerStartStop();
     return TRUE;
 }
-VERIFY(0x0242F590, &daPy_lk_c::procSwimWait);
 
 /* 0242F70C */
 BOOL daPy_lk_c::procSwimMove() {
-    WWHD_FUNC(0x0242F70C, BOOL, this);
     setSpeedAndAngleSwim();
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     s32 direction;
@@ -643,85 +628,84 @@ BOOL daPy_lk_c::procSwimMove() {
         f32 off;
         if ((u8)direction == 0) {
             anm = 0x83; /* ANM_SWIMING */
-            off = 0.0f; /* HD: HIO folded */
+            off = 0.0f;
+            // HD: HIO folded
+
         } else {
             off = -80.0f;
-            if (mDirection == 2 /* DIR_LEFT */) {
+            if (mDirection == Link07::DIR_LEFT) {
                 anm = 0xB; /* ANM_ATNDLS */
-            } else if (mDirection == 3 /* DIR_RIGHT */) {
+            } else if (mDirection == Link07::DIR_RIGHT) {
                 anm = 0xC; /* ANM_ATNDRS */
             } else {
                 anm = 0xE; /* ANM_ATNWB */
             }
         }
         m35C4 = off;
-        u32 info = gabi::load<u32>(m_old_fdata + 0x1C); /* m_old_fdata->getOldFrameTransInfo(0) */
-        gabi::store<f32>(info + 0x18, gabi::load<f32>(info + 0x18) - (off - old));
-        gabi::call(LK_setSwimMoveAnime, this, anm);
+        Link07::TransformInfo* info = gabi::at<Link07::OldFrameData>(m_old_fdata)->mpOldFrameTransInfo.get();
+        info->mTranslate.y = info->mTranslate.y - (off - old);
+        setSwimMoveAnime(anm);
         if (mDirection != 0) {
-            gabi::call(LK_setTextureAnime, this, 3, 0);
+            setTextureAnime(3, 0);
             mModeFlg = (mModeFlg | 0x100) & ~0x400u;
             mpSeAnmFrameCtrl = 0;
         } else {
             mModeFlg = (mModeFlg & ~0x100u) | 0x400;
         }
     } else {
-        f32 base = 0.6f + (0.5f * std::fabs((f32)mNormalSpeed)) / mMaxNormalSpeed; /* HD: HIO folded */
-        f32 rate = gabi::call<f32>(LK_getSwimTimerRate, this);
+        f32 base = 0.6f + (0.5f * std::fabs((f32)mNormalSpeed)) / mMaxNormalSpeed;
+        // HD: HIO folded
+
+        f32 rate = getSwimTimerRate();
         frameCtrl.setRate(gabi::fmadds(rate, 1.0f, base));
     }
-    if (mDirection == 1 /* DIR_BACKWARD */) {
+    if (mDirection == Link07::DIR_BACKWARD) {
         frameCtrl.setRate(frameCtrl.getRate() * 0.5f);
     }
     if (changeSwimOutProc()) {
         return TRUE;
     }
     if (!(mNoResetFlg0 & 0x100)) {
-        if (gabi::call<BOOL>(LK_changeSwimUpProc, this)) {
+        if (changeSwimUpProc()) {
             return TRUE;
         }
     } else {
         current.pos.y = mWaterY;
-        gabi::call(LK_setSwimTail, this);
+        setSwimTail();
     }
     if (checkNextModeSwim()) {
         return TRUE;
     }
-    if (gabi::call<BOOL>(LK_changeFrontWallTypeProc, this)) {
-        gabi::call(LK_swimOutAfter, this, 1);
+    if (changeFrontWallTypeProc()) {
+        swimOutAfter(1);
         return TRUE;
     }
     if (!(mStickDistance > 0.05f)) {
-        gabi::call(LK_procSwimWait_init, this, 1);
-    } else if ((mDirection == 0 && frameCtrl.checkPass(20.0f)) || (mDirection != 0 && frameCtrl.checkPass(0.0f))) {
-        seStartOnlyReverb(0x3807 /* JA_SE_LK_SWIM */);
+        procSwimWait_init(1);
+    } else if ((mDirection == 0 && frameCtrl.checkPass(20.0f)) ||
+               (mDirection != 0 && frameCtrl.checkPass(0.0f))) {
+        seStartOnlyReverb(Link07::JA_SE_LK_SWIM);
     }
-    gabi::call(LK_setSwimTimerStartStop, this);
+    setSwimTimerStartStop();
     return TRUE;
 }
-VERIFY(0x0242F70C, &daPy_lk_c::procSwimMove);
 
 /* ---- battle ---- */
 enum : u32 {
     LK_getItemAnimeResource = 0x023DDEEC, /* unnamed by the matcher */
-    LK_setBlurPosResource = 0x023E55A4,
-    LK_setExtraFinishCutAtParam = 0x023E6A58,
-    LK_changeLandProc = 0x0241C898,
-    LK_setFallVoice = 0x0241D6CC,
-    LK_resetFootEffect = 0x023DF9C0,
-    LK_endFlameDamageEmitter = 0x023E4E2C,
-    LK_setDamagePoint = 0x023F51D0,
-    LK_procBackJump_init = 0x023EE710,
 };
-#define LK_mAcchChkGroundHit() (gabi::load<u32>(gabi::ea(this) + 0x834) & 0x20) /* mAcch.ChkGroundHit() (m_flags, dBgS_Acch + 0x28) */
-/* checkNormalSwordEquip(): the selected sword (save + 0x2E) is the normal sword or the mini game type (play + 0x5CEA) is 2 */
+#define LK_mAcchChkGroundHit()                                                                                         \
+    (mAcch.m_flags & dBgS_Acch::GROUND_HIT) /* mAcch.ChkGroundHit() (m_flags, dBgS_Acch + 0x28) */
+/* checkNormalSwordEquip(): the selected sword (save + 0x2E) is the normal sword or the mini game type (play + 0x5CEA)
+ * is 2 */
 static inline BOOL lk_checkNormalSwordEquip() {
-    return gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x2E) == 0x38 || gabi::load<u8>(dComIfGp_ea() + 0x5CEA) == 2;
+    return dComIfGs_info()->mSavedata.mPlayer.mPlayerStatusA.mSelectEquip[0] == 0x38 ||
+           Link07::gameInfo()->play.mMiniGameType == 2;
 }
 /* mSwordAnim (mDoExt_bckAnm, +0x4444).changeBckOnly(getItemAnimeResource(idx)) */
 static inline void lk_swordAnim_changeBckOnly(daPy_lk_c* t, u32 idx) {
-    u32 res = gabi::call<u32>(LK_getItemAnimeResource, t, idx);
-    gabi::call(0x025E871C, gabi::ea(t) + 0x4444, res);
+    u32 res = t->getItemAnimeResource(idx);
+    Link07_changeSwordBck(gabi::ea(t) + 0x4444, res);
 }
 /* dComIfGp_getVibration().StartShock(6, -0x21, cXyz(0.0f, 1.0f, 0.0f)) */
 static inline void lk_startShockUp() {
@@ -730,20 +714,15 @@ static inline void lk_startShockUp() {
     up->x = 0.0f;
     up->y = 1.0f;
     up->z = 0.0f;
-    gabi::call(0x025CB374, v, 6, -0x21, up.get());
+    Link07_startShock(v, 6, -0x21, up.get());
 }
 /* play + 0x5CD8: dComIfGp_setPlayerStatus0(0, flag) */
 static inline void dComIfGp_onPlayerStatus0_l(u32 flag) {
-    u32 a = dComIfGp_ea() + 0x5CD8;
-    gabi::store<u32>(a, gabi::load<u32>(a) | flag);
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][0];
+    status = status | flag;
 }
 /* cXyz assignment through integer registers (GHS struct copy) */
-static inline void lk_xyz_copy(cXyz* dst, const cXyz* src) {
-    u32 d = gabi::ea(dst), s = gabi::ea(src);
-    gabi::store<u32>(d + 0, gabi::load<u32>(s + 0));
-    gabi::store<u32>(d + 4, gabi::load<u32>(s + 4));
-    gabi::store<u32>(d + 8, gabi::load<u32>(s + 8));
-}
+static inline void lk_xyz_copy(cXyz* dst, const cXyz* src) { *dst = *src; }
 /* HD inline anm setFrame (mpCutfBpk / mpCutfBtk): frame (+4), the animation's frame (through the pointer
  * at +ptrOff) and a functor at +fnOff ({f32 result, f32 a, f32 b, ?, fn, arg}) re-evaluated, then
  * 027DF40C(&functor) (as d_a_dr2) */
@@ -758,22 +737,39 @@ static inline void anm_setFrame_hd(u32 a, f32 frame, u32 ptrOff, u32 fnOff) {
     u32 arg = gabi::load<u32>(fn + 0x14);
     f32 res = gabi::call_ptr<f32>(target, arg, frame, p2, p3);
     gabi::store<f32>(fn, res);
-    gabi::call(0x027DF40C, a + fnOff);
+    Link07_updateFrameFunctor(a + fnOff);
 }
 #define LK_cutfBpk (gabi::ea(this) + 0x4980) /* HD brkAnm (GameCube mpCutfBpk) [?] */
 #define LK_cutfBtk (gabi::ea(this) + 0x49F4) /* HD btkAnm (GameCube mpCutfBtk) [?] */
-static inline void lk_cutf_setFrame(u32 self, f32 f) {
-    anm_setFrame_hd(self + 0x4980, f, 0x10, 0x18);
-    anm_setFrame_hd(self + 0x49F4, f, 0x68, 0x10);
+template <class Animation> static void setCutFrame(Animation* animation, f32 frame) {
+    Link07::FrameAnimation* data = animation->mpAnimation.get();
+    animation->mFrame = frame;
+    data->mFrame = frame;
+    Link07::FrameFunctor* functor = animation->mpFunctor.get();
+    u32 target = functor->mFunction;
+    f32 end = functor->mEnd;
+    f32 start = functor->mStart;
+    u32 argument = functor->mArgument;
+    f32 result = gabi::call_ptr<f32>(target, argument, frame, start, end);
+    functor->mResult = result;
+    Link07_updateFrameFunctor(gabi::ea(&animation->mpFunctor));
+}
+static inline void lk_cutf_setFrame(u32 self, f32 frame) {
+    Link07::PlayerCutWork* player = gabi::at<Link07::PlayerCutWork>(self);
+    setCutFrame(&player->mCutfBpk, frame);
+    setCutFrame(&player->mCutfBtk, frame);
 }
 /* J3DAnmBase::getFrameMax (HD: virtual, vtable at +4, slot 0x14) */
-static inline s32 anm_getFrameMax(u32 anm) { return gabi::call_ptr<s32>(gabi::load<u32>(gabi::load<u32>(anm + 4) + 0x14), anm); }
+static inline s32 anm_getFrameMax(u32 anm) {
+    return gabi::call_ptr<s32>(gabi::load<u32>(gabi::load<u32>(anm + 4) + 0x14), anm);
+}
 
 /* 0242FA80 */
 BOOL daPy_lk_c::procBtJumpCut_init(cXyz* pos) {
-    WWHD_FUNC(0x0242FA80, BOOL, this, pos);
-    gabi::call(LK_commonProcInit, this, 0x5E /* daPyProc_BT_JUMP_CUT_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x6D /* ANM_MJMPC */, 0.6f, 1.0f, 8, 0.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_BT_JUMP_CUT_e);
+    setSingleMoveAnime(Link07::ANM_MJMPC, 0.6f, 1.0f, 8, 0.0f);
+    // HD: HIO folded
+
     if (lk_checkNormalSwordEquip()) {
         lk_swordAnim_changeBckOnly(this, 0xC4 /* MJMPCA */);
     } else {
@@ -785,27 +781,27 @@ BOOL daPy_lk_c::procBtJumpCut_init(cXyz* pos) {
     speed.y = 0.0f;
     lk_xyz_copy(&m370C, pos);
     mProcVar6 = 0;
-    dComIfGp_onPlayerStatus0_l(0x402 /* daPyStts0_UNK2_e | daPyStts0_UNK400_e */);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK2_e | Link07::daPyStts0_UNK400_e);
     LK_voiceStart(1);
-    gabi::call(LK_setBlurPosResource, this, 0x27A /* _BTJUMPCUT_POS */);
-    gabi::call(LK_setExtraFinishCutAtParam, this, 5 /* CUT_TYPE_BT_JUMPCUT */);
+    setBlurPosResource(0x27A /* _BTJUMPCUT_POS */);
+    setExtraFinishCutAtParam(5 /* CUT_TYPE_BT_JUMPCUT */);
     lk_startShockUp();
     return TRUE;
 }
-VERIFY(0x0242FA80, &daPy_lk_c::procBtJumpCut_init);
 
 /* 0242FCA0 */
 BOOL daPy_lk_c::procBtJump() {
-    WWHD_FUNC(0x0242FCA0, BOOL, this);
     if (mProcVar6 == 0) {
-        if (!(mFrameCtrlUnder[0].getFrame() < 0.0f)) { /* HD: HIO folded */
+        if (!(mFrameCtrlUnder[0].getFrame() < 0.0f)) {
+            // HD: HIO folded
+
             mNormalSpeed = m35A4;
             speed.y = m35A0;
             mProcVar6 = 1;
         }
     } else {
         if (LK_mAcchChkGroundHit()) {
-            return gabi::call<BOOL>(LK_changeLandProc, this, 2.0f);
+            return changeLandProc(2.0f);
         }
         if (mProcVar6 == 1) {
             mProcVar0 = mProcVar0 + 1;
@@ -815,16 +811,14 @@ BOOL daPy_lk_c::procBtJump() {
         } else {
             s16 a = cM_atan2s(mNormalSpeed, -speed.y);
             m34F2 = (s16)gabi::ftoi(-3500.0f * cM_ssin(a * 2));
-            gabi::call(LK_setFallVoice, this);
+            setFallVoice();
         }
     }
     return TRUE;
 }
-VERIFY(0x0242FCA0, &daPy_lk_c::procBtJump);
 
 /* 0242FDD0 */
 BOOL daPy_lk_c::procBtJumpCut() {
-    WWHD_FUNC(0x0242FDD0, BOOL, this);
     m35EC = mFrameCtrlUnder[0].getFrame();
     if (speed.y < 0.0f) {
         s16 a = cM_atan2s(mNormalSpeed, -speed.y);
@@ -833,13 +827,13 @@ BOOL daPy_lk_c::procBtJumpCut() {
     f32 frame = mFrameCtrlUnder[0].getFrame();
     if (!(frame < 2.5f) && frame < 6.5f) {
         setResetFlg0(resetFlg0() | 2);
-        if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+        if (!(mNoResetFlg0 & daPy_py_c::daPyFlg0_CUT_AT_FLG)) {
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
+            seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
         }
     }
     if (LK_mAcchChkGroundHit()) {
-        return gabi::call<BOOL>(LK_changeLandProc, this, 2.0f);
+        return changeLandProc(2.0f);
     }
     if (mProcVar6 == 0) {
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
@@ -850,45 +844,43 @@ BOOL daPy_lk_c::procBtJumpCut() {
         }
     } else if (mProcVar6 == 1 && speed.y < -gravity) {
         mProcVar6 = 2;
-        gabi::call(LK_setSingleMoveAnime, this, 0xD /* ANM_JMPEDS */, 0.0f, 0.0f, -1, 10.0f);
+        setSingleMoveAnime(Link07::ANM_JMPEDS, 0.0f, 0.0f, -1, 10.0f);
         mModeFlg = mModeFlg & ~0x400u;
-        gabi::call(LK_setTextureAnime, this, 0x37, 0);
+        setTextureAnime(0x37, 0);
         resetSeAnime();
     }
-    gabi::call(LK_setFallVoice, this);
+    setFallVoice();
     return TRUE;
 }
-VERIFY(0x0242FDD0, &daPy_lk_c::procBtJumpCut);
 
 /* 0242FFD8 */
 BOOL daPy_lk_c::procBtSlide() {
-    WWHD_FUNC(0x0242FFD8, BOOL, this);
-    f32 r = cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 6.25f, 2.5f); /* HD: HIO folded */
+    f32 r = cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 6.25f, 2.5f);
+    // HD: HIO folded
+
     if (!(r > 0.001f)) {
-        LK_checkNextMode(0);
+        checkNextMode(0);
     }
     if (mNormalSpeed < 2.5f) {
-        gabi::call(LK_resetFootEffect, this);
+        resetFootEffect();
     }
     return TRUE;
 }
-VERIFY(0x0242FFD8, &daPy_lk_c::procBtSlide);
 
 /* 02430078 */
 BOOL daPy_lk_c::procBtRollCut_init(cXyz* pos) {
-    WWHD_FUNC(0x02430078, BOOL, this, pos);
-    gabi::call(LK_commonProcInit, this, 0x61 /* daPyProc_BT_ROLL_CUT_e */);
+    commonProcInit(Link07::daPyProc_BT_ROLL_CUT_e);
     s16 d = (s16)(current.angle.y - shape_angle.y);
     if (d > 0) {
         m34EC = 1;
         mProcVar6 = 1;
-        gabi::call(LK_setBlurPosResource, this, 0x27B /* _BTROTATECUTL_POS */);
-        gabi::call(LK_setSingleMoveAnime, this, 0x70 /* ANM_MROLLLC */, 0.5f, 3.0f, 6, 0.0f);
+        setBlurPosResource(0x27B /* _BTROTATECUTL_POS */);
+        setSingleMoveAnime(Link07::ANM_MROLLLC, 0.5f, 3.0f, 6, 0.0f);
     } else {
         m34EC = -1;
         mProcVar6 = -1;
-        gabi::call(LK_setBlurPosResource, this, 0x27C /* _BTROTATECUTR_POS */);
-        gabi::call(LK_setSingleMoveAnime, this, 0x71 /* ANM_MROLLRC */, 0.5f, 3.0f, 6, 0.0f);
+        setBlurPosResource(0x27C /* _BTROTATECUTR_POS */);
+        setSingleMoveAnime(Link07::ANM_MROLLRC, 0.5f, 3.0f, 6, 0.0f);
     }
     if (lk_checkNormalSwordEquip()) {
         lk_swordAnim_changeBckOnly(this, 0xC7 /* MROLLCA */);
@@ -902,21 +894,21 @@ BOOL daPy_lk_c::procBtRollCut_init(cXyz* pos) {
     mProcVar2 = 0;
     speed.y = 40.0f;
     LK_voiceStart(1);
-    gabi::call(LK_setExtraFinishCutAtParam, this, 0xF /* CUT_TYPE_BT_ROLLCUT */);
+    setExtraFinishCutAtParam(0xF /* CUT_TYPE_BT_ROLLCUT */);
     mNoResetFlg0 = mNoResetFlg0 & ~0x40000u; /* daPyFlg0_NO_FALL_VOICE */
     setResetFlg0(resetFlg0() | 3);
-    seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
-    dComIfGp_onPlayerStatus0_l(0x402);
+    seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK2_e | Link07::daPyStts0_UNK400_e);
     lk_startShockUp();
     return TRUE;
 }
-VERIFY(0x02430078, &daPy_lk_c::procBtRollCut_init);
 
 /* 024302C0 */
 BOOL daPy_lk_c::procBtRoll() {
-    WWHD_FUNC(0x024302C0, BOOL, this);
     s16 old = mProcVar2;
-    cLib_addCalcAngleS(&mProcVar2, 0, 5, 0x6A4, 0x1E); /* HD: HIO folded */
+    cLib_addCalcAngleS(&mProcVar2, 0, 5, 0x6A4, 0x1E);
+    // HD: HIO folded
+
     s16 d = (s16)(old - mProcVar2);
     if (old > 0) {
         current.angle.y = (s16)(mProcVar3 + 0x4000);
@@ -933,21 +925,19 @@ BOOL daPy_lk_c::procBtRoll() {
     current.pos.z = gabi::fmadds(r, cM_scos(mProcVar3), center->z);
     shape_angle.y = (s16)(mProcVar3 + 0x8000);
     if (std::abs((s32)d) < 0x1E) {
-        gabi::call(LK_resetFootEffect, this);
+        resetFootEffect();
     }
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if (frameCtrl.getRate() < 0.01f) {
         procBtRollCut_init(center);
     } else if (frameCtrl.checkPass(10.0f)) {
-        gabi::call(LK_endFlameDamageEmitter, this);
+        endFlameDamageEmitter();
     }
     return TRUE;
 }
-VERIFY(0x024302C0, &daPy_lk_c::procBtRoll);
 
 /* 024304C8 */
 BOOL daPy_lk_c::procBtRollCut() {
-    WWHD_FUNC(0x024304C8, BOOL, this);
     m35EC = mFrameCtrlUnder[0].getFrame();
     s16 target = cLib_targetAngleY(&current.pos, &m370C);
     cLib_addCalcAngleS(&shape_angle.y, target, 5, 0x5E8, 0x13C);
@@ -957,9 +947,9 @@ BOOL daPy_lk_c::procBtRollCut() {
             mProcVar2 = 1;
             setResetFlg0(resetFlg0() | 2);
         } else if (mProcVar2 == 1) {
-            gabi::call(LK_setSingleMoveAnime, this, 0xD /* ANM_JMPEDS */, 0.0f, 0.0f, -1, 15.0f);
+            setSingleMoveAnime(Link07::ANM_JMPEDS, 0.0f, 0.0f, -1, 15.0f);
             mModeFlg = mModeFlg & ~0x400u;
-            gabi::call(LK_setTextureAnime, this, 0x37, 0);
+            setTextureAnime(0x37, 0);
             resetSeAnime();
             mProcVar2 = 2;
         }
@@ -975,7 +965,7 @@ BOOL daPy_lk_c::procBtRollCut() {
             s16 a = (s16)(shape_angle.y + m34EC);
             current.angle.y = a;
             shape_angle.y = a;
-            return gabi::call<BOOL>(LK_changeLandProc, this, 1.3f);
+            return changeLandProc(1.3f);
         }
     } else {
         setResetFlg0(resetFlg0() | 2);
@@ -983,146 +973,115 @@ BOOL daPy_lk_c::procBtRollCut() {
     if (speed.y < -gravity) {
         gravity = -3.5f;
     }
-    gabi::call(LK_setFallVoice, this);
+    setFallVoice();
     return TRUE;
 }
-VERIFY(0x024304C8, &daPy_lk_c::procBtRollCut);
 
 /* 024306C8 */
 BOOL daPy_lk_c::procBtVerticalJumpCut_init() {
-    WWHD_FUNC(0x024306C8, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x63 /* daPyProc_BT_VERTICAL_JUMP_CUT_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x73 /* ANM_MSTEPOVERA */, 1.5f, 4.0f, 0x13, 8.0f);
+    commonProcInit(Link07::daPyProc_BT_VERTICAL_JUMP_CUT_e);
+    setSingleMoveAnime(Link07::ANM_MSTEPOVERA, 1.5f, 4.0f, 0x13, 8.0f);
     lk_cutf_setFrame(gabi::ea(this), 0.0f);
     gravity = -7.0f;
-    gabi::call(LK_setExtraFinishCutAtParam, this, 0x10 /* CUT_TYPE_BT_VERTICALJUMPCUT */);
-    dComIfGp_onPlayerStatus0_l(0x402);
+    setExtraFinishCutAtParam(0x10 /* CUT_TYPE_BT_VERTICALJUMPCUT */);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK2_e | Link07::daPyStts0_UNK400_e);
     return TRUE;
 }
-VERIFY(0x024306C8, &daPy_lk_c::procBtVerticalJumpCut_init);
 
 /* 024307E4 */
 BOOL daPy_lk_c::procBtVerticalJump() {
-    WWHD_FUNC(0x024307E4, BOOL, this);
-    gabi::call(LK_setFallVoice, this);
+    setFallVoice();
     if (LK_mAcchChkGroundHit()) {
-        gabi::call(LK_changeLandProc, this, 1.3f);
+        changeLandProc(1.3f);
     } else if (speed.y < -(gravity + gravity)) {
         procBtVerticalJumpCut_init();
     }
     return TRUE;
 }
-VERIFY(0x024307E4, &daPy_lk_c::procBtVerticalJump);
 
 /* 02430858 */
 BOOL daPy_lk_c::procBtVerticalJumpLand_init() {
-    WWHD_FUNC(0x02430858, BOOL, this);
     f32 h = m35F0 - current.pos.y;
-    if (gabi::load<u8>(dComIfGp_ea() + 0x5292) == 0 /* !dComIfGp_event_runCheck() */) {
-        if (!(h < 6000.0f)) { /* HD: HIO folded */
-            gabi::call(LK_setDamagePoint, this, -2.0f);
+    if (Link07::gameInfo()->play.mEvtCtrl.mMode == 0 /* !dComIfGp_event_runCheck() */) {
+        if (!(h < 6000.0f)) {
+            // HD: HIO folded
+
+            setDamagePoint(-2.0f);
         } else if (!(h < 2000.0f)) {
-            gabi::call(LK_setDamagePoint, this, -1.0f);
+            setDamagePoint(-1.0f);
         }
     }
-    gabi::call(LK_commonProcInit, this, 0x64 /* daPyProc_BT_VERTICAL_JUMP_LAND_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x74 /* ANM_MSTEPOVERLAND */, 1.0f, 2.0f, 0x11, 0.0f);
+    commonProcInit(Link07::daPyProc_BT_VERTICAL_JUMP_LAND_e);
+    setSingleMoveAnime(Link07::ANM_MSTEPOVERLAND, 1.0f, 2.0f, 0x11, 0.0f);
     lk_startShockUp();
     if (!(mNoResetFlg0 & 0x10000000)) {
-        seStartOnlyReverb(0x283C /* JA_SE_LK_JUMP_ATTACK */);
+        seStartOnlyReverb(Link07::JA_SE_LK_JUMP_ATTACK);
     }
     return TRUE;
 }
-VERIFY(0x02430858, &daPy_lk_c::procBtVerticalJumpLand_init);
 
 /* 02430988 */
 BOOL daPy_lk_c::procBtVerticalJumpCut() {
-    WWHD_FUNC(0x02430988, BOOL, this);
-    gabi::call(LK_setFallVoice, this);
+    setFallVoice();
     f32 frame = mFrameCtrlUnder[0].getFrame() - 9.0f;
     if (frame < 0.0f) {
         frame = 0.0f;
-    } else if (!((f32)anm_getFrameMax(gabi::load<u32>(gabi::ea(this) + 0x4990)) < frame)) {
-        frame = (f32)anm_getFrameMax(gabi::load<u32>(gabi::ea(this) + 0x4990)) - 0.001f;
+    } else if (!((f32)gabi::at<Link07::PlayerCutWork>(gabi::ea(this))->mCutfBpk.mpAnimation->getFrameMax() <
+                 frame)) {
+        frame = (f32)gabi::at<Link07::PlayerCutWork>(gabi::ea(this))->mCutfBpk.mpAnimation->getFrameMax() -
+                0.001f;
     }
     lk_cutf_setFrame(gabi::ea(this), frame);
     if (LK_mAcchChkGroundHit()) {
         procBtVerticalJumpLand_init();
     } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+        if (!(mNoResetFlg0 & daPy_py_c::daPyFlg0_CUT_AT_FLG)) {
             LK_voiceStart(1);
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
+            seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
             gravity = -10.0f;
         }
         setResetFlg0(resetFlg0() | 2);
     }
     return TRUE;
 }
-VERIFY(0x02430988, &daPy_lk_c::procBtVerticalJumpCut);
 
 /* 02430C00 */
 BOOL daPy_lk_c::procBtVerticalJumpLand() {
-    WWHD_FUNC(0x02430C00, BOOL, this);
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(LK_procBackJump_init, this);
+        procBackJump_init();
         mNormalSpeed = 5.5f;
         speed.y = 25.0f;
     }
     return TRUE;
 }
-VERIFY(0x02430C00, &daPy_lk_c::procBtVerticalJumpLand);
 
 /* ---- ship ---- */
-enum : u32 {
-    LK_setBodyAngleXReadyAnime = 0x02427230,
-    LK_deleteEquipItem = 0x023DC7AC,
-    LK_setShipRidePos = 0x023E287C,
-    LK_setScopeModel = 0x023DED8C,
-    LK_setPhotoBoxModel = 0x023DEDE4,
-    LK_setBowModel = 0x023DEA24,
-    LK_setBowReadyAnime = 0x023E7BEC,
-    LK_makeItemType = 0x023DF600,
-    LK_orderTalk = 0x023EC724,
-    LK_checkShipNotNormalMode = 0x023D69CC,
-    LK_checkSetItemTrigger = 0x023E9AF4,
-    LK_procShipSteer_init = 0x023F1D84,
-    LK_procShipPaddle_init = 0x023F1E60,
-    LK_procShipCannon_init = 0x023F1AC8,
-    LK_procShipCrane_init = 0x023F1C68,
-    LK_procTactWait_init = 0x023E92A0,
-    LK_changeDragonShield = 0x023E9D50,
-    LK_procBottleDrink_init = 0x023EF280,
-    LK_procBottleOpen_init = 0x023EF3E0,
-    LK_procBottleSwing_init = 0x023EDD9C,
-    LK_procFoodSet_init = 0x023EEB70,
-    LK_procFoodThrow_init = 0x023EED74,
-};
-#define mBodyAngleY LK_FIELD(s16, 0x3D2) /* daPy_py_c mBodyAngle.y (GameCube 0x2B6) */
-#define mHDBoomerangFlag LK_FIELD(u8, 0x827C) /* HD-only (tail): cleared by procShipBoomerang_init [?] */
-#define mHDTingleTalk LK_FIELD(u8, 0x8264)    /* HD-only (tail): set when the ship's Tingle Tuner talk event is ordered */
 /* dComIfGp_getShipActor(): play + 0x5B3C */
-static inline u32 dComIfGp_getShipActor_l() { return gabi::load<u32>(dComIfGp_ea() + 0x5B3C); }
+static inline u32 dComIfGp_getShipActor_l() { return gabi::ea(Link07::gameInfo()->play.mpPlayerPtr[2].get()); }
 /* dComIfGp_getSelectItem(btn): play + 0x5BBB + btn */
-static inline u8 dComIfGp_getSelectItem_l(u32 btn) { return gabi::load<u8>(dComIfGp_ea() + 0x5BBB + btn); }
+static inline u8 dComIfGp_getSelectItem_l(u32 btn) { return Link07::gameInfo()->play.mSelectItem[btn]; }
 /* daBoomerang_c::onCancelFlg() (HD: the flag at +0x26274) */
 static inline void lk_boomerang_onCancelFlg(u32 b) {
     if (b != 0) {
-        gabi::store<u8>(b + 0x26274, 1);
+        gabi::at<Link07::Boomerang>(b)->mCancelFlg = 1;
     }
 }
 /* play + 0x5CDC: dComIfGp_checkPlayerStatus1(0, flag) */
-static inline u32 dComIfGp_checkPlayerStatus1_l(u32 flag) { return gabi::load<u32>(dComIfGp_ea() + 0x5CDC) & flag; }
+static inline u32 dComIfGp_checkPlayerStatus1_l(u32 flag) {
+    return Link07::gameInfo()->play.mPlayerStatus[0][1] & flag;
+}
 /* play + 0x5BB7 / 0x5BB6: the do status and the HD second (B) button status */
-static inline u8 dComIfGp_getDoStatus_l() { return gabi::load<u8>(dComIfGp_ea() + 0x5BB7); }
-static inline u8 dComIfGp_getBStatus_l() { return gabi::load<u8>(dComIfGp_ea() + 0x5BB6); }
-static inline void dComIfGp_setBStatus_l(u8 s) { gabi::store<u8>(dComIfGp_ea() + 0x5BB6, s); }
+static inline u8 dComIfGp_getDoStatus_l() { return Link07::gameInfo()->play.mDoStatus; }
+static inline u8 dComIfGp_getBStatus_l() { return Link07::gameInfo()->play.mAStatus; }
+static inline void dComIfGp_setBStatus_l(u8 s) { Link07::gameInfo()->play.mAStatus = s; }
 
 /* 02430C60 */
 void daPy_lk_c::setShipAttentionAnmSpeed(f32 rate) {
-    WWHD_FUNC(0x02430C60, void, this, rate);
     if (LK_checkAttentionLock()) {
-        mFrameCtrlUnder[0].setRate(1.25f); /* HD: HIO folded */
+        mFrameCtrlUnder[0].setRate(1.25f);
+        // HD: HIO folded
+
         mFrameCtrlUpper[2].setRate(rate);
     } else {
         mFrameCtrlUnder[0].setRate(0.0f);
@@ -1131,20 +1090,18 @@ void daPy_lk_c::setShipAttentionAnmSpeed(f32 rate) {
         mFrameCtrlUpper[2].setFrame(0.0f);
     }
 }
-VERIFY(0x02430C60, &daPy_lk_c::setShipAttentionAnmSpeed);
 
 /* 02430D28 */
 void daPy_lk_c::setShipAttnetionBodyAngle() {
-    WWHD_FUNC(0x02430D28, void, this);
-    gabi::call(LK_setBodyAngleXReadyAnime, this);
+    setBodyAngleXReadyAnime();
     s16 target = 0;
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
     } else {
         f32 stick = mStickDistance; /* kept across the call (GHS) */
         if (stick > 0.05f) {
             s32 dir = getDirectionFromAngle(m34DC);
-            if (dir == 2 /* DIR_LEFT */) {
+            if (dir == Link07::DIR_LEFT) {
                 s16 lim = (s16)gabi::ftoi(512.0f * stick);
                 if (lim > mProcVar5) {
                     s16 v = (s16)(mProcVar5 + gabi::ftoi(64.0f * stick));
@@ -1156,7 +1113,7 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
                 } else {
                     target = lim;
                 }
-            } else if (dir == 3 /* DIR_RIGHT */) {
+            } else if (dir == Link07::DIR_RIGHT) {
                 s16 lim = (s16)gabi::ftoi(-512.0f * stick);
                 if (lim < mProcVar5) {
                     s16 v = (s16)(mProcVar5 - gabi::ftoi(64.0f * stick));
@@ -1175,198 +1132,193 @@ void daPy_lk_c::setShipAttnetionBodyAngle() {
     }
     current.angle.y = shape_angle.y;
 }
-VERIFY(0x02430D28, &daPy_lk_c::setShipAttnetionBodyAngle);
 
 /* 02430EC0 */
 BOOL daPy_lk_c::procShipGetOff_init() {
-    WWHD_FUNC(0x02430EC0, BOOL, this);
-    if (mCurProc == 0x90 /* daPyProc_SHIP_GET_OFF_e */) {
+    if (mCurProc == Link07::daPyProc_SHIP_GET_OFF_e) {
         return FALSE;
     }
     u32 ship = dComIfGp_getShipActor_l();
-    gabi::call(LK_commonProcInit, this, 0x90);
-    gabi::call(LK_deleteEquipItem, this, 1);
-    gabi::call(LK_setSingleMoveAnime, this, 2 /* ANM_DASH */, 0.8f, 0.0f, -1, 5.0f); /* HD: HIO folded */
+    commonProcInit(0x90);
+    deleteEquipItem(1);
+    setSingleMoveAnime(Link07::ANM_DASH, 0.8f, 0.0f, -1, 5.0f);
+    // HD: HIO folded
+
     gravity = 0.0f;
     mNormalSpeed = 8.0f;
-    s16 a = (s16)(gabi::load<s16>(ship + 0x32A) - 0x4000);
+    s16 a = (s16)(Link07::ship(ship)->shape_angle.y - 0x4000);
     mProcVar6 = 0;
     current.angle.y = a;
     shape_angle.y = a;
     m370C.x = gabi::fmadds(57.0f, cM_ssin(a), current.pos.x); /* l_ship_ledge */
-    m370C.y = gabi::load<f32>(ship + 0x318) + 35.0f;
+    m370C.y = Link07::ship(ship)->current.pos.y + 35.0f;
     m370C.z = gabi::fmadds(57.0f, cM_scos(a), current.pos.z);
-    gabi::store<u8>(ship + 0x636, 5); /* ship->setGetOffFirst() */
-    mBodyAngleY = 0;
-    m35A0 = gabi::load<f32>(ship + 0x318);
+    Link07::ship(ship)->setGetOffFirst(); /* ship->setGetOffFirst() */
+    mBodyAngle.y = 0;
+    m35A0 = Link07::ship(ship)->current.pos.y;
     return TRUE;
 }
-VERIFY(0x02430EC0, &daPy_lk_c::procShipGetOff_init);
 
-/* 02431028 HD-only (unnamed): the ship's put-away trigger: the B trigger, or the HD pad buttons
+/* 02431028 */
+/* HD-only (unnamed): the ship's put-away trigger: the B trigger, or the HD pad buttons
  * (*(0x101F5088) + 0x18) while player status 1 bit 4 (0x40000) or bit 2 (0x80000) is set */
 BOOL daPy_lk_c::checkShipPutAwayTrigger() {
-    WWHD_FUNC(0x02431028, BOOL, this);
     if (mItemTrigger & 2) {
         return TRUE;
     }
-    if (dComIfGp_checkPlayerStatus1_l(4) && (gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18) & 0x40000)) {
+    if (dComIfGp_checkPlayerStatus1_l(4) && (l_pad.mpPad->mTrigger & 0x40000)) {
         return TRUE;
     }
-    if (dComIfGp_checkPlayerStatus1_l(2) && (gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18) & 0x80000)) {
+    if (dComIfGp_checkPlayerStatus1_l(2) && (l_pad.mpPad->mTrigger & 0x80000)) {
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x02431028, &daPy_lk_c::checkShipPutAwayTrigger);
 
 /* 024310B8 */
 BOOL daPy_lk_c::procShipScope_init(int scope) {
-    WWHD_FUNC(0x024310B8, BOOL, this, scope);
     u32 ship = dComIfGp_getShipActor_l();
-    gabi::call(LK_commonProcInit, this, 0x8A /* daPyProc_SHIP_SCOPE_e */);
-    gabi::call(LK_deleteEquipItem, this, 1);
+    commonProcInit(Link07::daPyProc_SHIP_SCOPE_e);
+    deleteEquipItem(1);
     gravity = 0.0f;
-    gabi::store<u8>(ship + 0x636, 2); /* ship->setPaddleMove() */
-    gabi::call(LK_setShipRidePos, this, 0);
-    gabi::call(LK_setSingleMoveAnime, this, 0 /* ANM_WAITS */, 1.1f, 0.0f, -1, 5.0f); /* HD: HIO folded */
-    dComIfGp_onPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */);
-    gabi::call(0x025E1988 /* seStartSystem */, 0x822 /* JA_SE_ITM_SUBMENU_IN_1 */);
+    Link07::ship(ship)->setPaddleMove(); /* ship->setPaddleMove() */
+    setShipRidePos(0);
+    setSingleMoveAnime(Link07::ANM_WAITS, 1.1f, 0.0f, -1, 5.0f);
+    // HD: HIO folded
+
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e);
+    Link07_seStartSystem(Link07::JA_SE_ITM_SUBMENU_IN_1);
     mNoResetFlg0 = mNoResetFlg0 & ~0x80000u; /* daPyFlg0_SCOPE_CANCEL */
     u8 btn = mReadyItemBtn;
     mEquipItem = dComIfGp_getSelectItem_l(btn);
-    u32 play = dComIfGp_ea();
+    dComIfG_inf_c* play = Link07::gameInfo();
     if (scope != 0) {
-        gabi::store<u32>(play + 0x5CD8, gabi::load<u32>(play + 0x5CD8) | 0x200000 /* daPyStts0_TELESCOPE_LOOK_e */);
-        gabi::call(LK_setScopeModel, this);
+        play->play.mPlayerStatus[0][0] = play->play.mPlayerStatus[0][0] | Link07::daPyStts0_TELESCOPE_LOOK_e;
+        setScopeModel();
     } else {
-        gabi::store<u32>(play + 0x5CDC, gabi::load<u32>(play + 0x5CDC) | 8 /* daPyStts1_PICTO_BOX_AIM_e */);
-        u32 a = dComIfGp_ea() + 0x5CDC;
-        gabi::store<u32>(a, gabi::load<u32>(a) & ~0x100000u); /* HD */
-        gabi::call(LK_setPhotoBoxModel, this);
+        play->play.mPlayerStatus[0][1] = play->play.mPlayerStatus[0][1] | Link07::daPyStts1_PICTO_BOX_AIM_e;
+        be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+        status = status & ~0x100000u; /* HD */
+        setPhotoBoxModel();
     }
     return TRUE;
 }
-VERIFY(0x024310B8, &daPy_lk_c::procShipScope_init);
 
 /* 024311FC */
 BOOL daPy_lk_c::procShipBow_init() {
-    WWHD_FUNC(0x024311FC, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
-    if (mCurProc == 0x8D /* daPyProc_SHIP_BOW_e */) {
+    if (mCurProc == Link07::daPyProc_SHIP_BOW_e) {
         return FALSE;
     }
-    gabi::call(LK_commonProcInit, this, 0x8D);
-    gabi::call(LK_deleteEquipItem, this, 1);
+    commonProcInit(Link07::daPyProc_SHIP_BOW_e);
+    deleteEquipItem(1);
     gravity = 0.0f;
-    gabi::store<u8>(ship + 0x636, 2); /* ship->setPaddleMove() */
-    if (mDemoMode == 0x44 /* checkBowMiniGame() */) {
-        mEquipItem = 0x27; /* dItemNo_BOW_e */
+    Link07::ship(ship)->setPaddleMove(); /* ship->setPaddleMove() */
+    if (mDemo.mDemoMode == 0x44 /* checkBowMiniGame() */) {
+        mEquipItem = Link07::dItemNo_BOW_e;
     } else {
         u8 btn = mReadyItemBtn;
         mEquipItem = dComIfGp_getSelectItem_l(btn);
     }
-    gabi::call(LK_setSingleMoveAnime, this, 8 /* ANM_ATNRS */, 0.0f, 0.0f, -1, 5.0f);
-    gabi::call(LK_setBowModel, this);
-    gabi::call(LK_setBowReadyAnime, this);
-    dComIfGp_onPlayerStatus0_l(0x11000 /* daPyStts0_BOW_AIM_e | daPyStts0_SHIP_RIDE_e */);
-    gabi::call(LK_setShipRidePos, this, 0);
-    mProcVar2 = gabi::load<s16>(ship + 0x32A);
+    setSingleMoveAnime(Link07::ANM_ATNRS, 0.0f, 0.0f, -1, 5.0f);
+    setBowModel();
+    setBowReadyAnime();
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_BOW_AIM_e | Link07::daPyStts0_SHIP_RIDE_e);
+    setShipRidePos(0);
+    mProcVar2 = Link07::ship(ship)->shape_angle.y;
     mProcVar5 = 0;
-    if (LK_checkAttentionLock() && mDemoMode != 0x44) {
+    if (LK_checkAttentionLock() && mDemo.mDemoMode != 0x44) {
         mProcVar6 = 1;
     } else {
         mProcVar6 = 0;
     }
     return TRUE;
 }
-VERIFY(0x024311FC, &daPy_lk_c::procShipBow_init);
 
 /* 02431404 */
 BOOL daPy_lk_c::procShipBoomerang_init() {
-    WWHD_FUNC(0x02431404, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
-    if (mCurProc == 0x8B /* daPyProc_SHIP_BOOMERANG_e */) {
+    if (mCurProc == Link07::daPyProc_SHIP_BOOMERANG_e) {
         return FALSE;
     }
-    mHDBoomerangFlag = 0; /* HD */
+    Link07::tail(this).mBoomerangFlag = 0; /* HD */
     m355C = 0;
     m355E = itemButton() == 0;
-    gabi::call(LK_commonProcInit, this, 0x8B);
-    gabi::call(LK_deleteEquipItem, this, 1);
+    commonProcInit(Link07::daPyProc_SHIP_BOOMERANG_e);
+    deleteEquipItem(1);
     gravity = 0.0f;
-    gabi::store<u8>(ship + 0x636, 2); /* ship->setPaddleMove() */
-    mEquipItem = 0x2D; /* dItemNo_BOOMERANG_e */
-    gabi::call(LK_setSingleMoveAnime, this, 8 /* ANM_ATNRS */, 0.0f, 0.0f, -1, 5.0f);
-    gabi::call(LK_setActAnimeUpper, this, 0x35 /* BOOMWAIT */, 2 /* UPPER_MOVE2_e */, 0.0f, 0.0f, -1, -1.0f);
-    gabi::call(LK_setTextureAnime, this, 0, 0);
-    gabi::call(LK_makeItemType, this);
-    dComIfGp_onPlayerStatus0_l(0x90000 /* daPyStts0_SHIP_RIDE_e | daPyStts0_BOOMERANG_AIM_e */);
-    gabi::call(LK_setShipRidePos, this, 0);
-    s16 a = gabi::load<s16>(ship + 0x32A);
+    Link07::ship(ship)->setPaddleMove(); /* ship->setPaddleMove() */
+    mEquipItem = Link07::dItemNo_BOOMERANG_e;
+    setSingleMoveAnime(Link07::ANM_ATNRS, 0.0f, 0.0f, -1, 5.0f);
+    setActAnimeUpper(0x35 /* BOOMWAIT */, Link07::UPPER_MOVE2_e, 0.0f, 0.0f, -1, -1.0f);
+    setTextureAnime(0, 0);
+    makeItemType();
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e | Link07::daPyStts0_BOOMERANG_AIM_e);
+    setShipRidePos(0);
+    s16 a = Link07::ship(ship)->shape_angle.y;
     mProcVar5 = 0;
     mProcVar2 = a;
     return TRUE;
 }
-VERIFY(0x02431404, &daPy_lk_c::procShipBoomerang_init);
 
 /* 0243155C */
 BOOL daPy_lk_c::procShipHookshot_init() {
-    WWHD_FUNC(0x0243155C, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
-    if (mCurProc == 0x8C /* daPyProc_SHIP_HOOKSHOT_e */) {
+    if (mCurProc == Link07::daPyProc_SHIP_HOOKSHOT_e) {
         return FALSE;
     }
-    gabi::call(LK_commonProcInit, this, 0x8C);
-    gabi::call(LK_deleteEquipItem, this, 1);
+    commonProcInit(Link07::daPyProc_SHIP_HOOKSHOT_e);
+    deleteEquipItem(1);
     gravity = 0.0f;
-    gabi::store<u8>(ship + 0x636, 2); /* ship->setPaddleMove() */
+    Link07::ship(ship)->setPaddleMove(); /* ship->setPaddleMove() */
     m355C = 10;
-    mEquipItem = 0x2F; /* dItemNo_HOOKSHOT_e */
-    gabi::call(LK_setSingleMoveAnime, this, 7 /* ANM_ATNLS */, 0.0f, 0.0f, -1, 5.0f);
-    gabi::call(LK_setActAnimeUpper, this, 0xA7 /* HOOKSHOTWAIT */, 2 /* UPPER_MOVE2_e */, 0.0f, 0.0f, -1, -1.0f);
-    gabi::call(LK_setTextureAnime, this, 0, 0);
-    gabi::call(LK_makeItemType, this);
-    dComIfGp_onPlayerStatus0_l(0x14000 /* daPyStts0_HOOKSHOT_AIM_e | daPyStts0_SHIP_RIDE_e */);
-    gabi::call(LK_setShipRidePos, this, 0);
-    mProcVar2 = gabi::load<s16>(ship + 0x32A);
+    mEquipItem = Link07::dItemNo_HOOKSHOT_e;
+    setSingleMoveAnime(Link07::ANM_ATNLS, 0.0f, 0.0f, -1, 5.0f);
+    setActAnimeUpper(0xA7 /* HOOKSHOTWAIT */, Link07::UPPER_MOVE2_e, 0.0f, 0.0f, -1, -1.0f);
+    setTextureAnime(0, 0);
+    makeItemType();
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_HOOKSHOT_AIM_e | Link07::daPyStts0_SHIP_RIDE_e);
+    setShipRidePos(0);
+    mProcVar2 = Link07::ship(ship)->shape_angle.y;
     mProcVar6 = LK_checkAttentionLock() ? 1 : 0;
     return TRUE;
 }
-VERIFY(0x0243155C, &daPy_lk_c::procShipHookshot_init);
 
 /* 024316EC */
 BOOL daPy_lk_c::changeShipEndProc() {
-    WWHD_FUNC(0x024316EC, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
     if (ship == 0) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     mNoResetFlg0 = mNoResetFlg0 & ~0x200u; /* daPyFlg0_SHIP_DROP */
     if (mItemTrigger & 1 /* doTrigger() */) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
     }
     s32 proc = mCurProc;
-    if (proc != 0x8A && proc != 0x8D && proc != 0x8C && (proc != 0x8B || mEquipItem != 0x2D) &&
-        !(gabi::load<u32>(ship + 0x644) & 1) /* ship->getFlyFlg() */) {
-        gabi::call(LK_setTalkStatus, this);
-        if (gabi::call<BOOL>(LK_orderTalk, this)) {
+    if (proc != Link07::daPyProc_SHIP_SCOPE_e && proc != Link07::daPyProc_SHIP_BOW_e &&
+        proc != Link07::daPyProc_SHIP_HOOKSHOT_e &&
+        (proc != Link07::daPyProc_SHIP_BOOMERANG_e || mEquipItem != Link07::dItemNo_BOOMERANG_e) &&
+        !(Link07::ship(ship)->mStateFlag & Link07::Ship::daSFLG_FLY_e) /* ship->getFlyFlg() */) {
+        setTalkStatus();
+        if (orderTalk()) {
             return TRUE;
         }
     }
-    if (gabi::load<u8>(dComIfGp_ea() + 0x5CEA) != 1 && gabi::load<f32>(ship + 0x370) < 3.0f) {
+    if (Link07::gameInfo()->play.mMiniGameType != 1 && Link07::ship(ship)->speedF < 3.0f) {
         gabi::Local<cXyz> belt; /* ship->getBeltSpeed() (HD: the XZ length of the vector at +0x132C) */
-        f32 bx = gabi::load<f32>(ship + 0x132C);
+        f32 bx = Link07::ship(ship)->m1044.x;
         belt->y = 0.0f;
-        belt->z = gabi::load<f32>(ship + 0x1334);
+        belt->z = Link07::ship(ship)->m1044.z;
         belt->x = bx;
         if (std_sqrtf(PSVECSquareMag(belt)) < 3.0f) {
-            if (!gabi::call<BOOL>(LK_checkShipNotNormalMode, this) ||
-                (u32)(gabi::load<u16>(gabi::ea(this) + 0x5848) - 0x8A) <= 2 /* FREEA, FREEB, FREED */) {
-                if (!dComIfGp_checkPlayerStatus0_l(0x2000 /* daPyStts0_SUBJECT_e */) && !(mItemButton & 0x40) &&
-                    mCurProc == 0x89 /* daPyProc_SHIP_PADDLE_e */ && gabi::load<u32>(ship + 0x704) == 0 &&
-                    gabi::load<u32>(ship + 0x70C) == 0 /* !ship->checkForceMove() */) {
-                    /* HD: the get-off action moved to the B button */
+            if (!checkShipNotNormalMode() ||
+                (u32)(Link07::underHeap(this, 0).mIdx - 0x8A) <= 2 /* FREEA, FREEB, FREED */) {
+                if (!dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SUBJECT_e) && !(mItemButton & 0x40) &&
+                    mCurProc == Link07::daPyProc_SHIP_PADDLE_e && Link07::ship(ship)->mTornadoActor == 0 &&
+                    Link07::ship(ship)->mWhirlActor == 0 /* !ship->checkForceMove() */) {
+
+                    // HD: the get-off action moved to the B button
+
                     if (dComIfGp_getDoStatus_l() == 0) {
                         dComIfGp_setDoStatus_l(0x14);
                     }
@@ -1380,216 +1332,218 @@ BOOL daPy_lk_c::changeShipEndProc() {
             }
         }
     }
-    if (mCurProc == 0x8A || (gabi::load<u32>(ship + 0x644) & 1)) {
+    if (mCurProc == Link07::daPyProc_SHIP_SCOPE_e ||
+        (Link07::ship(ship)->mStateFlag & Link07::Ship::daSFLG_FLY_e)) {
         return FALSE;
     }
-    u8 part = gabi::load<u8>(ship + 0x637);
-    if (part == 1 /* PART_STEER_e */ || gabi::load<u32>(ship + 0x704) != 0 || gabi::load<u32>(ship + 0x70C) != 0 ||
-        (gabi::load<f32>(ship + 0x370) < 3.0f && part != 0 /* PART_WAIT_e */)) {
+    u8 part = Link07::ship(ship)->mPart;
+    if (part == Link07::Ship::PART_STEER_e || Link07::ship(ship)->mTornadoActor != 0 ||
+        Link07::ship(ship)->mWhirlActor != 0 ||
+        (Link07::ship(ship)->speedF < 3.0f && part != Link07::Ship::PART_WAIT_e)) {
         if (dComIfGp_getBStatus_l() == 0) {
             dComIfGp_setBStatus_l(8 /* PUT_AWAY */);
         }
-        /* HD: while steering with the sail (0x77) selected, the do status shows the sail state */
-        if (gabi::load<u8>(ship + 0x637) == 1 && gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x5D) == 0x77 &&
-            gabi::load<u8>(dComIfGp_ea() + 0x5CEA) != 1) {
-            u8 st = gabi::load<u8>(0x100360D4 + (gabi::load<u8>(dComIfGp_ea() + 0x5D2C) & 1));
+
+        // HD: while steering with the sail (0x77) selected, the do status shows the sail state
+
+        if (Link07::ship(ship)->mPart == Link07::Ship::PART_STEER_e &&
+            dComIfGs_info()->mSavedata.mPlayer.mPlayerItem.mItems[1] == 0x77 &&
+            Link07::gameInfo()->play.mMiniGameType != 1) {
+            u8 st = l_ship_buttons.mSailStatus[Link07::sailState() & 1];
             if (dComIfGp_getDoStatus_l() == 0) {
                 dComIfGp_setDoStatus_l(st);
             }
         }
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x78 /* dItemNo_SAIL_e */, 1) ||
-        gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x77, 1) /* HD */) {
+    if (checkSetItemTrigger(Link07::dItemNo_SAIL_e, 1) || checkSetItemTrigger(0x77, 1) /* HD */) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
-        gabi::store<u8>(dComIfGp_ea() + 0x5D2C, 0); /* HD */
-        return gabi::call<BOOL>(LK_procShipSteer_init, this);
+        Link07::sailState() = 0; /* HD */
+        return procShipSteer_init();
     }
     if (dComIfGp_getBStatus_l() == 8 && checkShipPutAwayTrigger()) { /* HD */
-        return gabi::call<BOOL>(LK_procShipPaddle_init, this);
+        return procShipPaddle_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x31 /* dItemNo_BOMB_BAG_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_BOMB_BAG_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
-        return gabi::call<BOOL>(LK_procShipCannon_init, this);
+        return procShipCannon_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x25 /* dItemNo_GRAPPLING_HOOK_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_GRAPPLING_HOOK_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
-        return gabi::call<BOOL>(LK_procShipCrane_init, this);
+        return procShipCrane_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x20 /* dItemNo_TELESCOPE_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_TELESCOPE_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
         return procShipScope_init(1);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x109 /* daPyItem_PHOTOBOX_e */, 1)) {
+    if (checkSetItemTrigger(Link07::daPyItem_PHOTOBOX_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
         return procShipScope_init(0);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x108 /* daPyItem_BOW_e */, 1)) {
+    if (checkSetItemTrigger(Link07::daPyItem_BOW_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
         return procShipBow_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x2D /* dItemNo_BOOMERANG_e */, 1) && mActorKeepThrow.mActor == nullptr) {
+    if (checkSetItemTrigger(Link07::dItemNo_BOOMERANG_e, 1) && mActorKeepThrow.mActor == nullptr) {
         return procShipBoomerang_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x2F /* dItemNo_HOOKSHOT_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_HOOKSHOT_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
         return procShipHookshot_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x22 /* dItemNo_WIND_WAKER_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_WIND_WAKER_e, 1)) {
         lk_boomerang_onCancelFlg(gabi::ea(mActorKeepThrow.mActor.get()));
-        return gabi::call<BOOL>(LK_procTactWait_init, this, -1);
+        return procTactWait_init(-1);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x21 /* dItemNo_TINGLE_TUNER_e */, 1)) {
-        /* HD: fopAcM_orderTalkEvent(this, dComIfGp_getAgb()) inlined, with an HD flag */
-        mHDTingleTalk = 1;
-        u32 agb = gabi::load<u32>(dComIfGp_ea() + 0x5B2C);
-        gabi::call(0x0253EC0C /* dEvt_control_c::order */, dComIfGp_ea() + 0x51D0, 3, 1, 0, 0xFFFF, this, agb, -1, 0xFF);
+    if (checkSetItemTrigger(Link07::dItemNo_TINGLE_TUNER_e, 1)) {
+
+        // HD: fopAcM_orderTalkEvent(this, dComIfGp_getAgb()) inlined, with an HD flag
+
+        Link07::tail(this).mTingleTalk = 1;
+        u32 agb = gabi::ea(Link07::gameInfo()->play.mPlayerInfo[0].mpPlayer.get());
+        Link07_orderEvent(gabi::ea(&Link07::gameInfo()->play.mEvtCtrl), 3, 1, 0, 0xFFFF, this, agb, -1, 0xFF);
         s32 snap = 1;
-        if (gabi::call<BOOL>(LK_checkShipNotNormalMode, this)) {
+        if (checkShipNotNormalMode()) {
             snap = 0;
         }
-        gabi::call(LK_setShipRidePos, this, snap);
+        setShipRidePos(snap);
         return TRUE;
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x2A /* dItemNo_MAGIC_ARMOR_e */, 1)) {
+    if (checkSetItemTrigger(Link07::dItemNo_MAGIC_ARMOR_e, 1)) {
         s32 snap = 1;
-        if (gabi::call<BOOL>(LK_checkShipNotNormalMode, this)) {
+        if (checkShipNotNormalMode()) {
             snap = 0;
         }
-        gabi::call(LK_setShipRidePos, this, snap);
-        return gabi::call<BOOL>(LK_changeDragonShield, this, 1);
+        setShipRidePos(snap);
+        return changeDragonShield(1);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x105 /* daPyItem_DRINK_BOTTLE_e */, 0)) {
+    if (checkSetItemTrigger(Link07::daPyItem_DRINK_BOTTLE_e, 0)) {
         u8 btn = mReadyItemBtn;
-        return gabi::call<BOOL>(LK_procBottleDrink_init, this, (u32)dComIfGp_getSelectItem_l(btn));
+        return procBottleDrink_init((u32)dComIfGp_getSelectItem_l(btn));
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x57 /* dItemNo_FAIRY_BOTTLE_e */, 0)) {
-        return gabi::call<BOOL>(LK_procBottleOpen_init, this, 0x57);
+    if (checkSetItemTrigger(Link07::dItemNo_FAIRY_BOTTLE_e, 0)) {
+        return procBottleOpen_init(0x57);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x106 /* daPyItem_OPEN_BOTTLE_e */, 1)) {
+    if (checkSetItemTrigger(Link07::daPyItem_OPEN_BOTTLE_e, 1)) {
         u8 btn = mReadyItemBtn;
-        return gabi::call<BOOL>(LK_procBottleOpen_init, this, (u32)dComIfGp_getSelectItem_l(btn));
+        return procBottleOpen_init((u32)dComIfGp_getSelectItem_l(btn));
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x50 /* dItemNo_EMPTY_BOTTLE_e */, 1)) {
-        return gabi::call<BOOL>(LK_procBottleSwing_init, this, 1);
+    if (checkSetItemTrigger(Link07::dItemNo_EMPTY_BOTTLE_e, 1)) {
+        return procBottleSwing_init(1);
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x83 /* dItemNo_HYOI_PEAR_e */, 1)) {
-        return gabi::call<BOOL>(LK_procFoodSet_init, this);
+    if (checkSetItemTrigger(Link07::dItemNo_HYOI_PEAR_e, 1)) {
+        return procFoodSet_init();
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x107 /* daPyItem_ESA_e */, 1)) {
-        return gabi::call<BOOL>(LK_procFoodThrow_init, this);
+    if (checkSetItemTrigger(Link07::daPyItem_ESA_e, 1)) {
+        return procFoodThrow_init();
     }
-    /* HD: the do button toggles the sail state (play + 0x5D2C) */
+
+    // HD: the do button toggles the sail state (play + 0x5D2C)
+
     if ((mItemTrigger & 1) && (dComIfGp_getDoStatus_l() == 0x42 || dComIfGp_getDoStatus_l() == 0x41)) {
-        u8 v = (u8)((gabi::load<u8>(dComIfGp_ea() + 0x5D2C) + 1) & 1);
-        gabi::store<u8>(dComIfGp_ea() + 0x5D2C, v);
+        u8 v = (u8)((Link07::sailState() + 1) & 1);
+        Link07::sailState() = v;
     }
     return FALSE;
 }
-VERIFY(0x024316EC, &daPy_lk_c::changeShipEndProc);
 
 enum : u32 {
     LK_seenActorAngleY = 0x025D68A0, /* fopAcM_seenActorAngleY */
-    LK_checkSubjectEnd = 0x02415EF0,
-    LK_initShipBaseAnime = 0x023F19D0,
-    LK_checkScopeEnd = 0x02415AF8, /* unnamed by the matcher: checkScopeEnd (body as GameCube) */
+    LK_checkScopeEnd = 0x02415AF8,   /* unnamed by the matcher: checkScopeEnd (body as GameCube) */
 };
 /* ship->getBodyMtx(): the body morf (+0x3B4) model's (+0x90) base matrix (NULL-preserving) */
 static inline Mtx34* lk_shipBodyMtx(u32 ship) {
-    u32 m = gabi::load<u32>(gabi::load<u32>(ship + 0x3B4) + 0x90);
-    return gabi::at<Mtx34>(m ? m + 0xC8 : 0);
+    Link07::BodyModel* model = gabi::at<Link07::BodyAnimation>(gabi::ea(Link07::ship(ship)->mpBodyAnm.get()))->mpModel;
+    return model ? &model->mBaseTransform : nullptr;
 }
 /* 020076E0: button bit 2 held on pad n (*(0x101F5088) + 0x124) (d_a_ship: A, d_camera_util: B) */
-static inline BOOL CPad_holdBit2_l(s32 pad) { return gabi::call<BOOL>(0x020076E0, pad); }
+static inline BOOL CPad_holdBit2_l(s32 pad) { return Link07_holdSpecialPadButton(pad); }
 /* play + 0x5BB5: dComIfGp_setRStatus */
-static inline void dComIfGp_setRStatus_l(u8 s) { gabi::store<u8>(dComIfGp_ea() + 0x5BB5, s); }
+static inline void dComIfGp_setRStatus_l(u8 s) { Link07::gameInfo()->play.mRStatus = s; }
 /* camera attention status of a camera info index: play + 0x5B00 + idx * 0x34 */
-static inline u32 dComIfGp_getCameraAttentionStatus_l(s32 idx) { return gabi::load<u32>(dComIfGp_ea() + idx * 0x34 + 0x5B00); }
+static inline u32 dComIfGp_getCameraAttentionStatus_l(s32 idx) {
+    return Link07::gameInfo()->play.mCameraInfo[idx].mCameraAttentionStatus;
+}
 /* dComIfGp_event_runCheck(): play + 0x5292 */
-static inline u8 dComIfGp_event_runCheck_l() { return gabi::load<u8>(dComIfGp_ea() + 0x5292); }
+static inline u8 dComIfGp_event_runCheck_l() { return Link07::gameInfo()->play.mEvtCtrl.mMode; }
 
 /* 0243213C */
 BOOL daPy_lk_c::procShipReady() {
-    WWHD_FUNC(0x0243213C, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
     if (ship == 0) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mProcVar6 == 0) {
         s16 side = mProcVar0;
         Mtx34* mtx = lk_shipBodyMtx(ship);
         if (side == 0) {
-            PSMTXMultVec(mtx, gabi::at<cXyz>(0x10034FB4) /* l_ship_ledge */, &current.pos);
+            PSMTXMultVec(mtx, &l_ship_ledge, &current.pos);
         } else {
-            PSMTXMultVec(mtx, gabi::at<cXyz>(0x10034FA8) /* l_ship_redge */, &current.pos);
+            PSMTXMultVec(mtx, &l_ship_redge, &current.pos);
         }
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
             mProcVar6 = 1;
             mNormalSpeed = 6.0f;
-            gabi::call(LK_setSingleMoveAnime, this, 1 /* ANM_WALK */, 0.8f, 0.0f, -1, 5.0f); /* HD: HIO folded */
+            setSingleMoveAnime(Link07::ANM_WALK, 0.8f, 0.0f, -1, 5.0f);
+            // HD: HIO folded
+
             m34C2 = 10;
-            mModeFlg = mModeFlg & ~0x420u; /* ModeFlg_HANG | ModeFlg_00000400 */
-            gabi::store<u8>(ship + 0x636, 4); /* ship->setReadySecond() */
-            m35A0 = gabi::load<f32>(ship + 0x318);
+            mModeFlg = mModeFlg & ~0x420u;        /* ModeFlg_HANG | ModeFlg_00000400 */
+            Link07::ship(ship)->setReadySecond(); /* ship->setReadySecond() */
+            m35A0 = Link07::ship(ship)->current.pos.y;
         }
     } else {
-        current.pos.y = current.pos.y + (gabi::load<f32>(ship + 0x318) - m35A0);
-        cLib_chaseF(&current.pos.y, gabi::load<f32>(ship + 0x318) + 15.0f /* l_ship_offset.y */, 2.0f);
-        m35A0 = gabi::load<f32>(ship + 0x318);
-        if (gabi::call<s32>(LK_seenActorAngleY, this, ship) >= 0x4000) {
-            gabi::call(LK_procShipPaddle_init, this);
+        current.pos.y = current.pos.y + (Link07::ship(ship)->current.pos.y - m35A0);
+        cLib_chaseF(&current.pos.y, Link07::ship(ship)->current.pos.y + 15.0f /* l_ship_offset.y */, 2.0f);
+        m35A0 = Link07::ship(ship)->current.pos.y;
+        if (Link07_seenActorAngleY(this, ship) >= 0x4000) {
+            procShipPaddle_init();
         }
     }
     return TRUE;
 }
-VERIFY(0x0243213C, &daPy_lk_c::procShipReady);
 
 /* 024322EC */
 BOOL daPy_lk_c::procShipJumpRide() {
-    WWHD_FUNC(0x024322EC, BOOL, this);
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(LK_procShipPaddle_init, this);
+        procShipPaddle_init();
     } else {
-        gabi::call(LK_setShipRidePos, this, 0);
+        setShipRidePos(0);
     }
     return TRUE;
 }
-VERIFY(0x024322EC, &daPy_lk_c::procShipJumpRide);
 
 /* 02432334 */
 BOOL daPy_lk_c::procShipSteer() {
-    WWHD_FUNC(0x02432334, BOOL, this);
     if (changeShipEndProc()) {
         return TRUE;
     }
-    gabi::call(LK_setShipRidePos, this, 1);
+    setShipRidePos(1);
     return TRUE;
 }
-VERIFY(0x02432334, &daPy_lk_c::procShipSteer);
 
 /* 02432378 */
 BOOL daPy_lk_c::procShipPaddle() {
-    WWHD_FUNC(0x02432378, BOOL, this);
     if (changeShipEndProc()) {
         return TRUE;
     }
-    gabi::call(LK_setShipRidePos, this, 1);
+    setShipRidePos(1);
     if (!CPad_holdBit2_l(0)) { /* HD */
-        dComIfGp_setRStatus_l(0x2C /* dActStts_CRUISE_e */);
+        dComIfGp_setRStatus_l(Link07::dActStts_CRUISE_e);
     }
     if (dComIfGp_getDoStatus_l() == 0) {
         dComIfGp_setDoStatus_l(0x14); /* HD */
     }
-    if (dComIfGp_getBStatus_l() == 0 && !(gabi::load<f32>(dComIfGp_getShipActor_l() + 0x370) < 3.0f)) {
-        dComIfGp_setBStatus_l(0x13 /* dActStts_STOP_e */);
+    if (dComIfGp_getBStatus_l() == 0 && !(Link07::ship(dComIfGp_getShipActor_l())->speedF < 3.0f)) {
+        dComIfGp_setBStatus_l(Link07::dActStts_STOP_e);
     }
-    if (dComIfGp_checkPlayerStatus0_l(0x2000 /* daPyStts0_SUBJECT_e */)) {
-        dComIfGp_setBStatus_l(7 /* dActStts_RETURN_e */);
-        if (gabi::call<BOOL>(LK_checkSubjectEnd, this, 1)) {
-            u32 a = dComIfGp_ea() + 0x5CD8;
-            gabi::store<u32>(a, gabi::load<u32>(a) & ~0x2000u);
+    if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SUBJECT_e)) {
+        dComIfGp_setBStatus_l(Link07::dActStts_RETURN_e);
+        if (checkSubjectEnd(1)) {
+            be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][0];
+            status = status & ~0x2000u;
         }
     } else {
-        setResetFlg0(resetFlg0() | 0x4000000 /* daPyRFlg0_SUBJECT_ACCEPT */);
+        setResetFlg0(resetFlg0() | daPy_py_c::daPyRFlg0_SUBJECT_ACCEPT);
         s32 idx = mCameraInfoIdx;
         if ((dComIfGp_getCameraAttentionStatus_l(idx) & 0x1000) && !dComIfGp_event_runCheck_l()) {
             setSubjectMode();
@@ -1605,26 +1559,27 @@ BOOL daPy_lk_c::procShipPaddle() {
                 LK_voiceStart(47);
             }
         }
-        if (mStickDistance > 0.05f || dComIfGp_event_runCheck_l() || dComIfGp_getDoStatus_l() != 0x1D /* GET_OUT_SHIP */ ||
-            gabi::load<u32>(ship + 0x704) != 0 || gabi::load<u32>(ship + 0x70C) != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
-            gabi::call(LK_initShipBaseAnime, this);
+        if (mStickDistance > 0.05f || dComIfGp_event_runCheck_l() ||
+            dComIfGp_getDoStatus_l() != 0x1D /* GET_OUT_SHIP */ || Link07::ship(ship)->mTornadoActor != 0 ||
+            Link07::ship(ship)->mWhirlActor != 0 || mFrameCtrlUnder[0].getRate() < 0.01f) {
+            initShipBaseAnime();
             mProcVar0 = (s16)gabi::ftoi(cM_rndF(150.0f) + 300.0f);
         }
-    } else if (!dComIfGp_event_runCheck_l() && dComIfGp_getDoStatus_l() == 0x1D && !(mStickDistance > 0.05f) &&
-               gabi::load<u32>(ship + 0x704) == 0 && gabi::load<u32>(ship + 0x70C) == 0 &&
-               !gabi::call<BOOL>(LK_checkShipNotNormalMode, this)) {
+    } else if (!dComIfGp_event_runCheck_l() && dComIfGp_getDoStatus_l() == 0x1D &&
+               !(mStickDistance > 0.05f) && Link07::ship(ship)->mTornadoActor == 0 &&
+               Link07::ship(ship)->mWhirlActor == 0 && !checkShipNotNormalMode()) {
         mProcVar0 = (s16)(mProcVar0 - 1);
         if (mProcVar0 == 0) {
             f32 r = cM_rnd();
             if (r < 0.3333f) {
                 mProcVar0 = -1;
-                gabi::call(LK_setSingleMoveAnime, this, 0xE1 /* ANM_FREEA */, 1.0f, 0.0f, -1, 5.0f);
+                setSingleMoveAnime(Link07::ANM_FREEA, 1.0f, 0.0f, -1, 5.0f);
             } else if (r < 0.6666f) {
                 mProcVar0 = -2;
-                gabi::call(LK_setSingleMoveAnime, this, 0xE2 /* ANM_FREEB */, 1.0f, 0.0f, -1, 5.0f);
+                setSingleMoveAnime(Link07::ANM_FREEB, 1.0f, 0.0f, -1, 5.0f);
             } else {
                 mProcVar0 = -1;
-                gabi::call(LK_setSingleMoveAnime, this, 0xE3 /* ANM_FREED */, 1.0f, 0.0f, -1, 5.0f);
+                setSingleMoveAnime(Link07::ANM_FREED, 1.0f, 0.0f, -1, 5.0f);
             }
         }
     } else {
@@ -1632,52 +1587,52 @@ BOOL daPy_lk_c::procShipPaddle() {
     }
     return TRUE;
 }
-VERIFY(0x02432378, &daPy_lk_c::procShipPaddle);
 
 /* HD inline: an anm frame functor ({f32 result, f32 a, f32 b, ?, fn, arg}) re-evaluated for a frame */
-static inline void lk_functor_eval(u32 fn, f32 frame) {
-    u32 target = gabi::load<u32>(fn + 0x10);
-    u32 arg = gabi::load<u32>(fn + 0x14);
-    f32 p2 = gabi::load<f32>(fn + 4);
-    f32 p3 = gabi::load<f32>(fn + 8);
-    gabi::store<f32>(fn, gabi::call_ptr<f32>(target, arg, frame, p2, p3));
+static inline void lk_functor_eval(Link07::FrameFunctor* functor, f32 frame) {
+    u32 target = functor->mFunction;
+    u32 argument = functor->mArgument;
+    f32 start = functor->mStart;
+    f32 end = functor->mEnd;
+    functor->mResult = gabi::call_ptr<f32>(target, argument, frame, start, end);
 }
 
 /* 024327A4 */
 BOOL daPy_lk_c::procShipScope() {
-    WWHD_FUNC(0x024327A4, BOOL, this);
     s32 snap = 1;
     if (changeShipEndProc()) {
         return TRUE;
     }
-    if (gabi::call<BOOL>(LK_checkScopeEnd, this)) {
-        u32 a = dComIfGp_ea() + 0x5CDC;
-        gabi::store<u32>(a, gabi::load<u32>(a) & ~0x100000u); /* HD */
-        gabi::call(LK_procShipPaddle_init, this);
+    if (Link07_checkScopeEnd(this)) {
+        be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+        status = status & ~0x100000u; /* HD */
+        procShipPaddle_init();
         mNoResetFlg0 = mNoResetFlg0 & ~0x80000u; /* daPyFlg0_SCOPE_CANCEL */
-        gabi::call(LK_setShipRidePos, this, snap);
+        setShipRidePos(snap);
         return TRUE;
     }
     s32 idx = mCameraInfoIdx;
     if ((dComIfGp_getCameraAttentionStatus_l(idx) & 0x10) && !dComIfGp_event_runCheck_l() &&
-        gabi::load<u16>(gabi::ea(this) + 0x420) == 0 /* !checkPlayerDemoMode() */) {
-        u32 st1 = gabi::load<u32>(dComIfGp_ea() + 0x5CDC);
+        mDemo.mDemoType == 0 /* !checkPlayerDemoMode() */) {
+        u32 st1 = Link07::gameInfo()->play.mPlayerStatus[0][1];
         s32 camIdx = mCameraInfoIdx;
         if (st1 & 0x100000) {
-            /* HD: aiming the picto box at Link himself (selfie): the camera angle turned around and the
-             * face chosen with the pad (*(0x101F5088) + 0x124) from the table at 0x10035064 */
+
+            // HD: aiming the picto box at Link himself (selfie): the camera angle turned around and the * face chosen with the pad (*(0x101F5088) + 0x124) from the table at 0x10035064
+
             (void)dComIfGp_ea();
             s32 ci = mCameraInfoIdx;
-            u32 cam = gabi::load<u32>(dComIfGp_ea() + ci * 0x34 + 0x5AF8);
+            u32 cam = dComIfGp_getCamera_l(ci);
             gabi::Local<be<s16>> ang;
-            u32 p = gabi::call<u32>(0x0200658C /* cSAngle::cSAngle(s16) */, ang.get(), (s16)(gabi::load<s16>(cam + 0x236) + 0x1500));
-            s16 inv = gabi::call<s16>(0x02006804 /* cSAngle::Inv */, p);
+            u32 p =
+                Link07_constructAngle(ang.get(), (s16)(gabi::at<Link07::CameraAngle>(cam)->mAngleY + 0x1500));
+            s16 inv = Link07_invertAngle(p);
             shape_angle.y = inv;
             current.angle.y = inv;
-            u32 pad = gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x124);
+            u32 pad = l_pad.mpPad->mButton;
             s32 sel = (pad & 4) ? 5 : 0;
             for (s32 i = 1; i <= 4; i++) {
-                if (gabi::load<u32>(0x100360D4 + i * 4) & pad) {
+                if (l_ship_buttons.mFaceButton[i - 1] & pad) {
                     sel += i;
                     break;
                 }
@@ -1685,17 +1640,17 @@ BOOL daPy_lk_c::procShipScope() {
             if (pad & 0x80) {
                 sel = 10;
             }
-            u32 entry = 0x10035064 + sel * 0xC;
-            u32 face = gabi::load<u32>(entry);
+            const Link07::SelfiePose* entry = Link07::selfiePose(sel);
+            u32 face = entry->mFace;
             mFace = face;
-            f32 frame = gabi::load<f32>(entry + 4);
-            gabi::call(LK_setTextureAnime, this, face & 0xFFFF, gabi::ftoi(frame));
-            gabi::store<f32>(gabi::load<u32>(gabi::ea(this) + 0x5F4), (f32)(u16)m3530);
-            gabi::store<f32>(gabi::load<u32>(gabi::ea(this) + 0x5FC), (f32)(u16)m3532);
-            lk_functor_eval(gabi::load<u32>(gabi::ea(this) + 0x644), (f32)(u16)m3530);
-            lk_functor_eval(gabi::load<u32>(gabi::ea(this) + 0x69C), (f32)(u16)m3530);
-            lk_functor_eval(gabi::load<u32>(gabi::ea(this) + 0x6F4), (f32)(u16)m3532);
-            if (gabi::load<u8>(entry + 8) != 0) {
+            f32 frame = entry->mFrame;
+            setTextureAnime(face & 0xFFFF, gabi::ftoi(frame));
+            *gabi::at<be<f32>>(mpAnmTexPatternData) = (f32)(u16)m3530;
+            *gabi::at<be<f32>>(mpTexScrollResData) = (f32)(u16)m3532;
+            lk_functor_eval(Link07::frameBlend(this, 0).mpFunctor.get(), (f32)(u16)m3530);
+            lk_functor_eval(Link07::frameBlend(this, 1).mpFunctor.get(), (f32)(u16)m3530);
+            lk_functor_eval(Link07::frameBlend(this, 2).mpFunctor.get(), (f32)(u16)m3532);
+            if (entry->mHoldFrame != 0) {
                 mModeFlg = mModeFlg | 0x08000180;
             } else {
                 u32 f = mModeFlg & ~0x100u;
@@ -1709,105 +1664,101 @@ BOOL daPy_lk_c::procShipScope() {
             }
             snap = 0;
         } else {
-            u32 cam = gabi::load<u32>(dComIfGp_ea() + camIdx * 0x34 + 0x5AF8);
+            u32 cam = dComIfGp_getCamera_l(camIdx);
             mModeFlg = mModeFlg & 0xF7FFFE7F;
-            s16 a = gabi::load<s16>(cam + 0x236); /* fopCamM_GetAngleY */
+            s16 a = gabi::at<Link07::CameraAngle>(cam)->mAngleY; /* fopCamM_GetAngleY */
             shape_angle.y = a;
             snap = 0;
             current.angle.y = a;
         }
     }
     mNoResetFlg0 = mNoResetFlg0 & ~0x80000u;
-    gabi::call(LK_setShipRidePos, this, snap);
+    setShipRidePos(snap);
     return TRUE;
 }
-VERIFY(0x024327A4, &daPy_lk_c::procShipScope);
 
 enum : u32 {
-    LK_checkNextActionBoomerangReady = 0x023EB510,
-    LK_setBodyAngleToCamera = 0x02416E90,
-    LK_checkSightLine = 0x023EBCB0,
-    LK_itemTrigger = 0x023EAB40,
-    LK_getReadyItem = 0x023EAA80,
-    LK_checkNextActionHookshotReady = 0x023EAD5C,
-    LK_checkNextActionBowReady = 0x023EB208,
-    LK_HD_setShipBStatus = 0x023D6188, /* unnamed by the matcher: HD, sets the B status (STOP 0x13 / PUT_AWAY 8) from the ship's state */
+    LK_HD_setShipBStatus =
+        0x023D6188, /* unnamed by the matcher: HD, sets the B status (STOP 0x13 / PUT_AWAY 8) from the ship's state */
 };
 /* mSightPacket (0x58E8): draw flag +4, lock flag +5, frame +6, position +8 */
 #define LK_sightPacket (gabi::ea(this) + 0x58E8)
-static inline void lk_sight_setPos(u32 sp, u32 pos) { lk_xyz_copy(gabi::at<cXyz>(sp + 8), gabi::at<cXyz>(pos)); }
+static inline void lk_sight_setPos(u32 sp, u32 pos) { gabi::at<Link07::SightPacket>(sp)->mPos = *gabi::at<cXyz>(pos); }
 
 /* 02432B28 */
 BOOL daPy_lk_c::procShipBoomerang() {
-    WWHD_FUNC(0x02432B28, BOOL, this);
     if (changeShipEndProc()) {
-        u32 a = dComIfGp_ea() + 0x5CD8;
-        gabi::store<u32>(a, gabi::load<u32>(a) & ~0x400000u); /* daPyStts0_BOOMERANG_WAIT_e */
+        be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][0];
+        status = status & ~0x400000u; /* daPyStts0_BOOMERANG_WAIT_e */
         return TRUE;
     }
-    gabi::call(LK_setShipRidePos, this, 0);
-    if (mActorKeepThrow.mActor == nullptr && gabi::load<u16>(gabi::ea(this) + 0x5888) != 0x33 /* BOOMCATCH */) {
-        dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
-        if (mItemTrigger & 3) { /* HD: do or B trigger */
-            gabi::call(LK_procShipPaddle_init, this);
-            gabi::call(LK_deleteEquipItem, this, 1);
+    setShipRidePos(0);
+    if (mActorKeepThrow.mActor == nullptr && Link07::upperHeap(this, 2).mIdx != 0x33 /* BOOMCATCH */) {
+        dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
+        if (mItemTrigger & 3) {
+            // HD: do or B trigger
+
+            procShipPaddle_init();
+            deleteEquipItem(1);
             return TRUE;
         }
     }
-    gabi::store<u8>(LK_sightPacket + 4, 0); /* mSightPacket.offDrawFlg() */
+    gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0; /* mSightPacket.offDrawFlg() */
     u32 ship = dComIfGp_getShipActor_l();
-    u16 upper = gabi::load<u16>(gabi::ea(this) + 0x5888);
+    u16 upper = Link07::upperHeap(this, 2).mIdx;
     if (upper != 0x33) {
-        if (mEquipItem == 0x2D /* dItemNo_BOOMERANG_e */) {
+        if (mEquipItem == Link07::dItemNo_BOOMERANG_e) {
             if (upper == 0x35 /* BOOMWAIT */) {
-                setShipAttentionAnmSpeed(0.8f); /* HD: HIO folded */
-                if (gabi::load<u16>(gabi::ea(this) + 0x5888) != 0x34) { /* HD */
-                    gabi::call(LK_checkNextActionBoomerangReady, this);
+                setShipAttentionAnmSpeed(0.8f);
+                // HD: HIO folded
+
+                if (Link07::upperHeap(this, 2).mIdx != 0x34) { /* HD */
+                    checkNextActionBoomerangReady();
                 }
                 if (LK_checkAttentionLock()) {
                     setShipAttnetionBodyAngle();
                 } else {
                     mProcVar5 = 0;
-                    if (gabi::call<BOOL>(LK_setBodyAngleToCamera, this)) {
+                    if (setBodyAngleToCamera()) {
                         u32 boomerang = gabi::ea(mActorKeepEquip.mActor.get());
                         if (boomerang != 0) {
                             gabi::Local<cXyz> sight; /* sp+0x08 */
-                            f64 flyMax = gabi::call<f64>(0x020CECF0 /* daBoomerang_c::getFlyMax */, boomerang);
-                            gabi::call(LK_checkSightLine, this, flyMax, sight.get());
+                            f64 flyMax = Link07_getBoomerangFlyMax(boomerang);
+                            checkSightLine(flyMax, sight.get());
                             lk_sight_setPos(LK_sightPacket, gabi::ea(sight.get()));
-                            gabi::store<u8>(LK_sightPacket + 4, 1); /* onDrawFlg() */
+                            gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 1; /* onDrawFlg() */
                         }
                     }
                 }
                 if (mpAttnActorLockOn == nullptr) {
-                    shape_angle.y = (s16)(shape_angle.y + (s16)(gabi::load<s16>(ship + 0x32A) - mProcVar2));
+                    shape_angle.y =
+                        (s16)(shape_angle.y + (s16)(Link07::ship(ship)->shape_angle.y - mProcVar2));
                 }
             }
         } else {
             if (mActorKeepThrow.mActor == nullptr) {
-                return gabi::call<BOOL>(LK_procShipPaddle_init, this);
+                return procShipPaddle_init();
             }
-            gabi::call(LK_setShapeAngleToAtnActor, this);
+            setShapeAngleToAtnActor();
             mFrameCtrlUnder[0].setRate(1.25f);
-            if (gabi::call<BOOL>(LK_itemTrigger, this) && gabi::call<s32>(LK_getReadyItem, this) == 0x2D) { /* HD */
-                gabi::store<u8>(gabi::ea(mActorKeepThrow.mActor.get()) + 0x26274, 1); /* boomerang->onCancelFlg() */
+            if (itemTrigger() && getReadyItem() == 0x2D) { /* HD */
+                gabi::at<Link07::Boomerang>(gabi::ea(mActorKeepThrow.mActor.get()))->mCancelFlg =
+                    1; /* boomerang->onCancelFlg() */
             }
         }
     }
-    mProcVar2 = gabi::load<s16>(ship + 0x32A);
+    mProcVar2 = Link07::ship(ship)->shape_angle.y;
     return TRUE;
 }
-VERIFY(0x02432B28, &daPy_lk_c::procShipBoomerang);
 
 /* 02432D80 */
 void daPy_lk_c::setHookshotSight() {
-    WWHD_FUNC(0x02432D80, void, this);
     gabi::Local<cXyz> dir;    /* sp+0x08 */
     gabi::Local<cXyz> t1;     /* sp+0x14 */
     gabi::Local<cXyz> t2;     /* sp+0x20 */
     gabi::Local<cXyz> endP;   /* sp+0x2C (GameCube sp38) */
     gabi::Local<cXyz> startP; /* sp+0x38 (GameCube sp44) */
-    s16 bx = gabi::load<s16>(gabi::ea(this) + 0x3D0); /* mBodyAngle.x */
+    s16 bx = mBodyAngle.x;    /* mBodyAngle.x */
     f32 cb = cM_scos(bx);
     dir->x = cM_ssin(shape_angle.y) * cb;
     dir->y = -cM_ssin(bx);
@@ -1822,29 +1773,33 @@ void daPy_lk_c::setHookshotSight() {
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
     BOOL cross = cBgS_LineCross(dComIfG_Bgsp(), mRopeLinChk);
     u32 sp = LK_sightPacket;
-    gabi::store<u8>(sp + 4, 1); /* onDrawFlg() */
-    u32 hs = hookshot + 0xD50C; /* daHookshot_c sight data (HD offset) */
-    u32 ropeCross = gabi::ea(this) + 0xA6C; /* mRopeLinChk.GetCross() */
+    gabi::at<Link07::SightPacket>(sp)->mDrawFlag = 1; /* onDrawFlg() */
+    u32 hs =
+        gabi::ea(&gabi::at<Link07::Hookshot>(hookshot)->mSight); /* daHookshot_c sight data (HD offset) */
+    u32 ropeCross =
+        gabi::ea(&gabi::at<Link07::LinkLineHit>(gabi::ea(mRopeLinChk))->mCross); /* mRopeLinChk.GetCross() */
     BOOL objSight;
     if (!cross) {
-        if (!gabi::call<BOOL>(0x025160DC /* dCcD_GObjInf::ChkAtHit */, hs + 0x124)) { /* !hookshot->getSightHit() */
+        if (!Link07_checkAttackHit(
+                gabi::ea(gabi::at<Link07::HookshotSight>(hs)->mSightHit))) { /* !hookshot->getSightHit() */
             lk_sight_setPos(sp, gabi::ea(endP.get()));
-            gabi::store<u8>(sp + 5, 0); /* offLockFlg() */
+            gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
             return;
         }
         objSight = TRUE;
     } else {
-        f32 d1 = gabi::call<f32>(0x028E8DE8 /* PSVECSquareDistance */, &mHookshotRootPos, &current.pos);
-        f32 d2 = gabi::call<f32>(0x028E8DE8, ropeCross, &current.pos);
+        f32 d1 = Link07_squareDistance(&mHookshotRootPos, &current.pos);
+        f32 d2 = Link07_squareDistance(gabi::at<cXyz>(ropeCross), &current.pos);
         if (d1 > d2) {
             lk_sight_setPos(sp, gabi::ea(&mHookshotRootPos));
             objSight = FALSE;
-        } else if (!gabi::call<BOOL>(0x025160DC, hs + 0x124)) {
+        } else if (!Link07_checkAttackHit(gabi::ea(gabi::at<Link07::HookshotSight>(hs)->mSightHit))) {
             objSight = FALSE;
             lk_sight_setPos(sp, ropeCross);
         } else {
-            f32 d3 = gabi::call<f32>(0x028E8DE8, ropeCross, &mHookshotRootPos);
-            f32 d4 = gabi::call<f32>(0x028E8DE8, hs + 0x1C, &mHookshotRootPos);
+            f32 d3 = Link07_squareDistance(gabi::at<cXyz>(ropeCross), &mHookshotRootPos);
+            f32 d4 = Link07_squareDistance(&gabi::at<Link07::HookshotSight>(hs)->mObjSightCrossPos,
+                                           &mHookshotRootPos);
             if (d3 > d4) {
                 objSight = TRUE;
             } else {
@@ -1855,56 +1810,59 @@ void daPy_lk_c::setHookshotSight() {
     }
     BOOL hook;
     if (objSight) {
-        lk_sight_setPos(sp, hs + 0x1C); /* hookshot->getObjSightCrossPos() */
-        hook = gabi::load<u32>(hs) != 0; /* getObjHookFlg() */
+        lk_sight_setPos(sp, gabi::ea(&gabi::at<Link07::HookshotSight>(hs)
+                                          ->mObjSightCrossPos));      /* hookshot->getObjSightCrossPos() */
+        hook = gabi::at<Link07::HookshotSight>(hs)->mObjHookFlg != 0; /* getObjHookFlg() */
     } else {
-        hook = gabi::call<u32>(0x024EF398 /* dBgS::GetPolyId2 (ChkPolyHSStick) */, dComIfG_Bgsp(), gabi::ea(this) + 0xA50) != 0;
+        hook = Link07_getPolyId2(
+                   dComIfG_Bgsp(),
+                   gabi::ea(&gabi::at<Link07::LinkLineHit>(gabi::ea(mRopeLinChk))->mPolyInfo)) != 0;
     }
     if (hook) {
-        if (gabi::load<u8>(sp + 5) != 0) { /* getLockFlg() */
-            u8 f = (u8)(gabi::load<u8>(sp + 6) + 1); /* incFrame() */
+        if (gabi::at<Link07::SightPacket>(sp)->mLockFlag != 0) {        /* getLockFlg() */
+            u8 f = (u8)(gabi::at<Link07::SightPacket>(sp)->mFrame + 1); /* incFrame() */
             if (f == 0x1A) {
-                gabi::store<u8>(sp + 6, 0);
-                gabi::call(0x025E1988 /* seStartSystem */, 0x820 /* JA_SE_INDICATOR_1 */);
+                gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
+                Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
             } else {
-                gabi::store<u8>(sp + 6, f);
+                gabi::at<Link07::SightPacket>(sp)->mFrame = f;
                 if (f == 0) {
-                    gabi::call(0x025E1988, 0x820);
+                    Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
                 }
             }
         } else {
-            gabi::store<u8>(sp + 6, 0);
-            gabi::store<u8>(sp + 5, 1); /* onLockFlg() */
-            gabi::call(0x025E1988, 0x820);
+            gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
+            gabi::at<Link07::SightPacket>(sp)->mLockFlag = 1; /* onLockFlg() */
+            Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
         }
     } else {
-        gabi::store<u8>(sp + 5, 0); /* offLockFlg() */
+        gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
     }
 }
-VERIFY(0x02432D80, &daPy_lk_c::setHookshotSight);
 
 /* 02433104 */
 BOOL daPy_lk_c::procShipHookshot() {
-    WWHD_FUNC(0x02433104, BOOL, this);
     if (changeShipEndProc()) {
         return TRUE;
     }
-    gabi::call(LK_setShipRidePos, this, 0);
-    dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
+    setShipRidePos(0);
+    dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
-    if ((mItemTrigger & 3) /* HD: do or B */ || hookshot == 0 || (mProcVar6 != 0 && m355E == 0 && !LK_checkAttentionLock())) {
-        gabi::call(LK_procShipPaddle_init, this);
-        gabi::call(LK_deleteEquipItem, this, 1);
+    if ((mItemTrigger & 3)
+        // HD: do or B
+        || hookshot == 0 || (mProcVar6 != 0 && m355E == 0 && !LK_checkAttentionLock())) {
+        procShipPaddle_init();
+        deleteEquipItem(1);
         return TRUE;
     }
-    gabi::store<u8>(LK_sightPacket + 4, 0); /* mSightPacket.offDrawFlg() */
-    gabi::call(LK_checkNextActionHookshotReady, this);
+    gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0; /* mSightPacket.offDrawFlg() */
+    checkNextActionHookshotReady();
     u32 ship = dComIfGp_getShipActor_l();
-    if (gabi::load<u32>(hookshot + 0xB0) == 0 /* hookshot->checkWait() */) {
+    if (gabi::at<fopAc_ac_c>(hookshot)->mParameters == 0 /* hookshot->checkWait() */) {
         setShipAttentionAnmSpeed(1.0f);
     }
     if (LK_checkAttentionLock()) {
-        if (gabi::load<u32>(hookshot + 0xB0) == 0) {
+        if (gabi::at<fopAc_ac_c>(hookshot)->mParameters == 0) {
             setShipAttnetionBodyAngle();
         } else {
             mProcVar5 = 0;
@@ -1912,139 +1870,130 @@ BOOL daPy_lk_c::procShipHookshot() {
         mProcVar6 = 1;
     } else {
         mProcVar5 = 0;
-        gabi::call(LK_setBodyAngleToCamera, this);
+        setBodyAngleToCamera();
         mProcVar6 = 0;
     }
     if (mpAttnActorLockOn == nullptr) {
-        shape_angle.y = (s16)(shape_angle.y + (s16)(gabi::load<s16>(ship + 0x32A) - mProcVar2));
+        shape_angle.y = (s16)(shape_angle.y + (s16)(Link07::ship(ship)->shape_angle.y - mProcVar2));
     }
-    u32 st;
-    if (gabi::load<u32>(hookshot + 0xB0) == 0) {
+    be<u32>* status;
+    if (gabi::at<fopAc_ac_c>(hookshot)->mParameters == 0) {
         if (!LK_checkAttentionLock()) {
             setHookshotSight();
         } else {
-            gabi::store<u8>(LK_sightPacket + 4, 0);
+            gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0;
         }
-        st = dComIfGp_ea() + 0x5CD8;
-        gabi::store<u32>(st, gabi::load<u32>(st) & ~0x40000u);
+        status = &Link07::gameInfo()->play.mPlayerStatus[0][0];
+        *status = *status & ~0x40000u;
     } else {
-        st = dComIfGp_ea() + 0x5CD8;
-        gabi::store<u32>(st, gabi::load<u32>(st) | 0x40000);
+        status = &Link07::gameInfo()->play.mPlayerStatus[0][0];
+        *status = *status | 0x40000;
     }
-    mProcVar2 = gabi::load<s16>(ship + 0x32A);
+    mProcVar2 = Link07::ship(ship)->shape_angle.y;
     return TRUE;
 }
-VERIFY(0x02433104, &daPy_lk_c::procShipHookshot);
 
 /* 0243333C */
 BOOL daPy_lk_c::procShipBow() {
-    WWHD_FUNC(0x0243333C, BOOL, this);
-    if (mDemoMode != 0x44 /* !checkBowMiniGame() */ && changeShipEndProc()) {
+    if (mDemo.mDemoMode != 0x44 /* !checkBowMiniGame() */ && changeShipEndProc()) {
         return TRUE;
     }
-    gabi::call(LK_setShipRidePos, this, 0);
-    if (mDemoMode != 0x44) {
-        dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
-        if ((mItemTrigger & 3) /* HD: do or B */ ||
-            (!LK_checkAttentionLock() && mActorKeepEquip.mActor == nullptr && mProcVar6 != 0)) {
-            gabi::call(LK_procShipPaddle_init, this);
-            gabi::call(LK_deleteEquipItem, this, 1);
+    setShipRidePos(0);
+    if (mDemo.mDemoMode != 0x44) {
+        dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
+        if ((mItemTrigger & 3)
+            // HD: do or B
+            || (!LK_checkAttentionLock() && mActorKeepEquip.mActor == nullptr && mProcVar6 != 0)) {
+            procShipPaddle_init();
+            deleteEquipItem(1);
             return TRUE;
         }
     } else {
         LK_cutEnd();
     }
     u32 ship = dComIfGp_getShipActor_l();
-    if (gabi::load<u16>(gabi::ea(this) + 0x5888) == 0x36 /* checkBowWaitAnime() */) {
+    if (Link07::upperHeap(this, 2).mIdx == 0x36 /* checkBowWaitAnime() */) {
         setShipAttentionAnmSpeed(1.0f);
     }
-    if (LK_checkAttentionLock() && mDemoMode != 0x44) {
+    if (LK_checkAttentionLock() && mDemo.mDemoMode != 0x44) {
         setShipAttnetionBodyAngle();
         mProcVar6 = 1;
     } else {
         mProcVar5 = 0;
-        gabi::call(LK_setBodyAngleToCamera, this);
+        setBodyAngleToCamera();
         mProcVar6 = 0;
     }
     if (mpAttnActorLockOn == nullptr) {
-        shape_angle.y = (s16)(shape_angle.y + (s16)(gabi::load<s16>(ship + 0x32A) - mProcVar2));
+        shape_angle.y = (s16)(shape_angle.y + (s16)(Link07::ship(ship)->shape_angle.y - mProcVar2));
     }
-    mProcVar2 = gabi::load<s16>(ship + 0x32A);
-    gabi::call(LK_checkNextActionBowReady, this);
+    mProcVar2 = Link07::ship(ship)->shape_angle.y;
+    checkNextActionBowReady();
     m35EC = mFrameCtrlUpper[2].getFrame();
     return TRUE;
 }
-VERIFY(0x0243333C, &daPy_lk_c::procShipBow);
 
 /* 024334EC */
 BOOL daPy_lk_c::procShipCannon() {
-    WWHD_FUNC(0x024334EC, BOOL, this);
     if (!CPad_holdBit2_l(0)) { /* HD */
-        dComIfGp_setRStatus_l(0x2C /* dActStts_CRUISE_e */);
+        dComIfGp_setRStatus_l(Link07::dActStts_CRUISE_e);
     }
     if (dComIfGp_getDoStatus_l() == 0) {
         dComIfGp_setDoStatus_l(0x3F); /* HD */
     }
-    gabi::call(LK_HD_setShipBStatus);
+    Link07_setShipBStatus();
     if (!changeShipEndProc()) {
-        gabi::call(LK_setShipRidePos, this, 1);
+        setShipRidePos(1);
     }
     return TRUE;
 }
-VERIFY(0x024334EC, &daPy_lk_c::procShipCannon);
 
-enum : u32 {
-    LK_initShipCraneAnime = 0x023F1B90,
-    LK_checkFanGlideProc = 0x0241A578,
-};
 /* daSalvage_c::getSalvageKind() == 1 (HD inline: the salvage id (0x10475638) and the registry's type (025B4CB8)) */
 static inline BOOL lk_salvageKindIs1() {
-    s32 id = gabi::load<s32>(0x10475638);
+    s32 id = l_salvage_registry.mId;
     if (id == -1) {
         return FALSE;
     }
-    return gabi::call<u8>(0x025B4CB8, gabi::load<u32>(0x10475634), id) == 1;
+    return Link07_getSalvageKind(l_salvage_registry.mRegistry, id) == 1;
 }
 
 /* 02433570 */
 BOOL daPy_lk_c::procShipCrane() {
-    WWHD_FUNC(0x02433570, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
     if (ship == 0) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (!CPad_holdBit2_l(0)) { /* HD */
-        dComIfGp_setRStatus_l(0x2C /* dActStts_CRUISE_e */);
+        dComIfGp_setRStatus_l(Link07::dActStts_CRUISE_e);
     }
-    if (gabi::load<u16>(gabi::ea(this) + 0x5888) != 0xFFFF /* !checkNoUpperAnime() */) {
+    if (Link07::upperHeap(this, 2).mIdx != 0xFFFF /* !checkNoUpperAnime() */) {
         if (dComIfGp_getDoStatus_l() == 0) {
             dComIfGp_setDoStatus_l(0x40); /* HD */
         }
-        gabi::call(LK_HD_setShipBStatus);
+        Link07_setShipBStatus();
         if (changeShipEndProc()) {
             return TRUE;
         }
-        if (gabi::load<s16>(ship + 0x686) != 0 /* ship->getRopeCnt() */) {
-            gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-            gabi::call(LK_initShipCraneAnime, this);
+        if (Link07::ship(ship)->mRopeCnt != 0 /* ship->getRopeCnt() */) {
+            resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+            initShipCraneAnime();
         }
-    } else if (gabi::load<u8>(ship + 0x63A) == 2 /* ship->checkSalvageDemo() */) {
-        if (mProcVar2 == 0 && (gabi::load<u32>(ship + 0x644) & 0x40000) /* ship->checkCraneUpEnd() */) {
+    } else if (Link07::ship(ship)->m0351 == 2 /* ship->checkSalvageDemo() */) {
+        if (mProcVar2 == 0 && (Link07::ship(ship)->mStateFlag & 0x40000) /* ship->checkCraneUpEnd() */) {
             mProcVar2 = 1;
             s32 anm;
-            if (gabi::load<s16>(ship + 0x682) > 0 /* ship->getCraneBaseAngle() */) {
-                anm = lk_salvageKindIs1() ? 0xD1 /* ANM_SALVRGOOD */ : 0xCF /* ANM_SALVRBAD */;
+            if (Link07::ship(ship)->mCraneBaseAngle > 0 /* ship->getCraneBaseAngle() */) {
+                anm = lk_salvageKindIs1() ? Link07::ANM_SALVRGOOD : Link07::ANM_SALVRBAD;
             } else {
-                anm = lk_salvageKindIs1() ? 0xD2 /* ANM_SALVLGOOD */ : 0xD0 /* ANM_SALVLBAD */;
+                anm = lk_salvageKindIs1() ? Link07::ANM_SALVLGOOD : Link07::ANM_SALVLBAD;
             }
             mModeFlg = (mModeFlg & ~0x100u) | 0x400;
-            gabi::call(LK_setSingleMoveAnime, this, anm, 1.0f, 0.0f, -1, 5.0f);
+            setSingleMoveAnime(anm, 1.0f, 0.0f, -1, 5.0f);
         } else if (mProcVar6 == 0) {
-            if (gabi::load<s16>(ship + 0x682) > 0) {
-                gabi::call(LK_setSingleMoveAnime, this, 0xCD /* ANM_SALVRWAIT */, 1.0f, 0.0f, -1, 5.0f);
+            if (Link07::ship(ship)->mCraneBaseAngle > 0) {
+                setSingleMoveAnime(Link07::ANM_SALVRWAIT, 1.0f, 0.0f, -1, 5.0f);
                 mProcVar6 = 3;
             } else {
-                gabi::call(LK_setSingleMoveAnime, this, 0xCE /* ANM_SALVLWAIT */, 1.0f, 0.0f, -1, 5.0f);
+                setSingleMoveAnime(Link07::ANM_SALVLWAIT, 1.0f, 0.0f, -1, 5.0f);
                 mProcVar6 = 2;
             }
         }
@@ -2052,18 +2001,18 @@ BOOL daPy_lk_c::procShipCrane() {
         if (dComIfGp_getDoStatus_l() == 0) {
             dComIfGp_setDoStatus_l(0x40); /* HD */
         }
-        gabi::call(LK_HD_setShipBStatus);
+        Link07_setShipBStatus();
         if (changeShipEndProc()) {
             return TRUE;
         }
-        if (mProcVar6 == 3 && gabi::load<s16>(ship + 0x682) < 0) {
+        if (mProcVar6 == 3 && Link07::ship(ship)->mCraneBaseAngle < 0) {
             mProcVar6 = 0;
-            gabi::call(LK_setSingleMoveAnime, this, 0xCC /* ANM_SALVLR */, 1.0f, 0.0f, -1, 5.0f);
+            setSingleMoveAnime(Link07::ANM_SALVLR, 1.0f, 0.0f, -1, 5.0f);
             mModeFlg = (mModeFlg & ~0x100u) | 0x400;
             mProcVar7 = 2;
-        } else if (mProcVar6 == 2 && gabi::load<s16>(ship + 0x682) > 0) {
+        } else if (mProcVar6 == 2 && Link07::ship(ship)->mCraneBaseAngle > 0) {
             mProcVar6 = 0;
-            gabi::call(LK_setSingleMoveAnime, this, 0xCC /* ANM_SALVLR */, -1.0f, 0.0f, -1, 5.0f);
+            setSingleMoveAnime(Link07::ANM_SALVLR, -1.0f, 0.0f, -1, 5.0f);
             mModeFlg = (mModeFlg & ~0x100u) | 0x400;
             mProcVar7 = 3;
         } else if (mProcVar6 == 0) {
@@ -2071,14 +2020,15 @@ BOOL daPy_lk_c::procShipCrane() {
             s32 side = mProcVar7;
             if (std::fabs(rate) < 0.01f) {
                 if (side == 3) {
-                    gabi::call(LK_setSingleMoveAnime, this, 0xCD /* ANM_SALVRWAIT */, 1.0f, 0.0f, -1, 5.0f);
+                    setSingleMoveAnime(Link07::ANM_SALVRWAIT, 1.0f, 0.0f, -1, 5.0f);
                     mProcVar6 = 3;
                 } else {
-                    gabi::call(LK_setSingleMoveAnime, this, 0xCE /* ANM_SALVLWAIT */, 1.0f, 0.0f, -1, 5.0f);
+                    setSingleMoveAnime(Link07::ANM_SALVLWAIT, 1.0f, 0.0f, -1, 5.0f);
                     mProcVar6 = 2;
                 }
                 mModeFlg = (mModeFlg | 0x100) & ~0x400u;
-            } else if ((side == 3 && gabi::load<s16>(ship + 0x682) < 0) || (side == 2 && gabi::load<s16>(ship + 0x682) > 0)) {
+            } else if ((side == 3 && Link07::ship(ship)->mCraneBaseAngle < 0) ||
+                       (side == 2 && Link07::ship(ship)->mCraneBaseAngle > 0)) {
                 mFrameCtrlUnder[0].setRate(-rate);
                 if (mProcVar7 == 3) {
                     mProcVar7 = 2;
@@ -2087,13 +2037,13 @@ BOOL daPy_lk_c::procShipCrane() {
                 }
             }
         } else {
-            s16 cnt = gabi::load<s16>(ship + 0x686);
+            s16 cnt = Link07::ship(ship)->mRopeCnt;
             if (cnt == 0xFA /* ship->checkRopeCntMax() */) {
-                gabi::call(LK_setTextureAnime, this, 9, 0);
+                setTextureAnime(9, 0);
             } else if (cnt > 0x14 /* ship->checkRopeDownStart() */) {
-                gabi::call(LK_setTextureAnime, this, 6, 0);
+                setTextureAnime(6, 0);
             } else {
-                gabi::call(LK_setTextureAnime, this, 0, 0);
+                setTextureAnime(0, 0);
             }
         }
     }
@@ -2103,96 +2053,87 @@ BOOL daPy_lk_c::procShipCrane() {
     } else {
         mModeFlg = flg & ~0x08000080u;
     }
-    gabi::call(LK_setShipRidePos, this, 1);
+    setShipRidePos(1);
     return TRUE;
 }
-VERIFY(0x02433570, &daPy_lk_c::procShipCrane);
 
 /* 02433BB8 */
 BOOL daPy_lk_c::procShipGetOff() {
-    WWHD_FUNC(0x02433BB8, BOOL, this);
     u32 ship = dComIfGp_getShipActor_l();
     if (ship == 0) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mProcVar6 == 0) {
-        current.pos.y = current.pos.y + (gabi::load<f32>(ship + 0x318) - m35A0);
-        cLib_chaseF(&current.pos.y, gabi::load<f32>(ship + 0x318) + 35.0f /* l_ship_ledge.y */, 4.0f);
-        m35A0 = gabi::load<f32>(ship + 0x318);
+        current.pos.y = current.pos.y + (Link07::ship(ship)->current.pos.y - m35A0);
+        cLib_chaseF(&current.pos.y, Link07::ship(ship)->current.pos.y + 35.0f /* l_ship_ledge.y */, 4.0f);
+        m35A0 = Link07::ship(ship)->current.pos.y;
         s16 target = cLib_targetAngleY(&current.pos, &m370C);
         if (cLib_distanceAngleS(target, shape_angle.y) >= 0x4000) {
-            gabi::call(LK_setSingleMoveAnime, this, 0x3C /* ANM_JMPST */, 0.8f, 1.0f, 5, 1.0f); /* HD: HIO folded */
+            setSingleMoveAnime(Link07::ANM_JMPST, 0.8f, 1.0f, 5, 1.0f);
+            // HD: HIO folded
+
             speed.y = 8.0f;
             gravity = -2.5f;
             mProcVar6 = 1;
             mNormalSpeed = 8.0f;
             m34C2 = 1;
-            gabi::store<u8>(ship + 0x636, 6); /* ship->setGetOffSecond() */
-            mModeFlg = mModeFlg | 2; /* ModeFlg_MIDAIR */
+            Link07::ship(ship)->setGetOffSecond(); /* ship->setGetOffSecond() */
+            mModeFlg = mModeFlg | 2;               /* ModeFlg_MIDAIR */
         }
     } else {
         s32 staff = mStaffIdx;
         m34C2 = 1;
         dComIfGp_evmng_cutEnd(staff);
         if (LK_mAcchChkGroundHit()) {
-            gabi::call(LK_changeLandProc, this, 1.3f);
-        } else if (gabi::call<BOOL>(LK_checkFanGlideProc, this, 0)) {
+            changeLandProc(1.3f);
+        } else if (checkFanGlideProc(0)) {
             return TRUE;
         } else if (speed.y < -gravity) {
-            gabi::call(LK_procFall_init, this, 0, 7.0f);
-            gabi::call(LK_setTextureAnime, this, 0x37, 0);
+            procFall_init(0, 7.0f);
+            setTextureAnime(0x37, 0);
         }
     }
     return TRUE;
 }
-VERIFY(0x02433BB8, &daPy_lk_c::procShipGetOff);
 
 /* 02433D88 */
 BOOL daPy_lk_c::procShipRestart() {
-    WWHD_FUNC(0x02433D88, BOOL, this);
     if (dComIfGp_getShipActor_l() == 0) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(LK_procShipPaddle_init, this);
+        procShipPaddle_init();
     }
-    gabi::call(LK_setShipRidePos, this, 1);
+    setShipRidePos(1);
     return TRUE;
 }
-VERIFY(0x02433D88, &daPy_lk_c::procShipRestart);
 
 /* ---- rope ---- */
-enum : u32 {
-    LK_freeRopeItem = 0x023DCA80,
-    LK_checkBossGomaStage = 0x023EB6C8,
-};
-#define mRopePos (*gabi::at<cXyz>(gabi::ea(this) + 0x408)) /* daPy_py_c (GameCube 0x2EC) */
-#define mRoofChkPos (*gabi::at<cXyz>(gabi::ea(this) + 0xBA0)) /* mRoofChk's position (+0x38) */
+#define mRoofChkPos (gabi::at<dBgS_RoofChk>(gabi::ea(mRoofChk))->m_pos) /* mRoofChk's position (+0x38) */
 
 /* 02433E0C */
 f32 daPy_lk_c::checkRopeRoofHit(s16 angle) {
-    WWHD_FUNC(0x02433E0C, f32, this, angle);
     f32 x = gabi::fnmsubs(15.0f, cM_ssin(angle), current.pos.x);
     f32 z = gabi::fnmsubs(15.0f, cM_scos(angle), current.pos.z);
     mRoofChkPos.y = current.pos.y;
     mRoofChkPos.x = x;
     mRoofChkPos.z = z;
-    return (f32)gabi::call<f64>(0x024EF6E8 /* dBgS::RoofChk */, dComIfG_Bgsp(), mRoofChk);
+    return (f32)Link07_roofHeight(dComIfG_Bgsp(), mRoofChk);
 }
-VERIFY(0x02433E0C, &daPy_lk_c::checkRopeRoofHit);
 
 /* 02433E8C */
 int daPy_lk_c::changeRopeEndProc(int fall) {
-    WWHD_FUNC(0x02433E8C, int, this, fall);
-    /* HD: no letting go on the stage "ADMumi" (sead::SafeString comparison with the start stage name) */
+
+    // HD: no letting go on the stage "ADMumi" (sead::SafeString comparison with the start stage name)
+
     {
-        gabi::Local<SafeString> name;  /* sp+0x08 */
-        gabi::Local<SafeString> stage; /* sp+0x10 */
-        name->mStringTop = 0x100360E8; /* "ADMumi" */
-        name->__vtbl = 0x10034B24;
-        u32 play = dComIfGp_ea();
-        stage->__vtbl = 0x10034B24;
-        stage->mStringTop = play + 0x5134; /* dComIfGp_getStartStageName() */
+        gabi::Local<SafeString> name;                  /* sp+0x08 */
+        gabi::Local<SafeString> stage;                 /* sp+0x10 */
+        name->mStringTop = gabi::guest_addr("ADMumi"); /* "ADMumi" */
+        name->__vtbl = gc_tu.safeString;
+        dComIfG_inf_c* play = Link07::gameInfo();
+        stage->__vtbl = gc_tu.safeString;
+        stage->mStringTop = gabi::ea(play) + 0x5134; /* dComIfGp_getStartStageName() */
         gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
         gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
         u32 a = name->mStringTop;
@@ -2215,17 +2156,18 @@ int daPy_lk_c::changeRopeEndProc(int fall) {
             q++;
         }
     }
-    dComIfGp_setDoStatus_l(0x16 /* dActStts_LET_GO_ROPE_e */);
+    dComIfGp_setDoStatus_l(Link07::dActStts_LET_GO_ROPE_e);
     if ((mItemTrigger & 3) /* doTrigger() || cancelTrigger() */ ||
         (!gabi::call_ptr<BOOL>(gabi::load<u32>(__vtbl + 0xD4), this) /* checkRopeTag() (HD: virtual) */ &&
-         gabi::call<BOOL>(LK_itemTrigger, this))) {
-        gabi::call(LK_freeRopeItem, this);
+         itemTrigger())) {
+        freeRopeItem();
         LK_voiceStart(6);
-        if ((mItemTrigger & 2) && !gabi::call<BOOL>(LK_checkBossGomaStage, this)) {
-            gabi::call(LK_setAnimeEquipSword, this, 0);
+        if ((mItemTrigger & 2) && !checkBossGomaStage()) {
+            setAnimeEquipSword(0);
         }
         if (fall != 0) {
-            gabi::call(LK_procFall_init, this, 1, 6.0f); /* HD: HIO folded */
+            procFall_init(1, 6.0f);
+            // HD: HIO folded
         }
         mNoResetFlg0 = mNoResetFlg0 | 0x400000;
         setNoResetFlg1(noResetFlg1() | 0x8000000);
@@ -2233,14 +2175,12 @@ int daPy_lk_c::changeRopeEndProc(int fall) {
     }
     return FALSE;
 }
-VERIFY(0x02433E8C, &daPy_lk_c::changeRopeEndProc);
 
 /* 02434078 */
 BOOL daPy_lk_c::procRopeUpHang_init() {
-    WWHD_FUNC(0x02434078, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x7F /* daPyProc_ROPE_UP_HANG_e */);
-    dComIfGp_onPlayerStatus0_l(0x800000 /* daPyStts0_UNK800000_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x4C /* ANM_VJMP */, 1.0f, 10.0f, -1, 3.0f);
+    commonProcInit(Link07::daPyProc_ROPE_UP_HANG_e);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK800000_e);
+    setSingleMoveAnime(Link07::ANM_VJMP, 1.0f, 10.0f, -1, 3.0f);
     s16 a = (s16)(m352C + 0x8000);
     mNormalSpeed = 0.0f;
     shape_angle.y = a;
@@ -2250,11 +2190,9 @@ BOOL daPy_lk_c::procRopeUpHang_init() {
     speed.y = 0.0f;
     return TRUE;
 }
-VERIFY(0x02434078, &daPy_lk_c::procRopeUpHang_init);
 
 /* 02434120 */
 int daPy_lk_c::changeRopeToHangProc() {
-    WWHD_FUNC(0x02434120, int, this);
     if (mProcVar6 == 0) {
         return FALSE;
     }
@@ -2276,10 +2214,12 @@ int daPy_lk_c::changeRopeToHangProc() {
         return FALSE;
     }
     u32 pla = dBgS_GetTriPla_l(mLinkLinChkPoly);
-    if (pla == 0) { /* HD: NULL check */
+    if (pla == 0) {
+        // HD: NULL check
+
         return FALSE;
     }
-    s16 a = cM_atan2s(gabi::load<f32>(pla + 0), gabi::load<f32>(pla + 8));
+    s16 a = cM_atan2s(gabi::at<cM3dGPla>(pla)->mNormal.x, gabi::at<cM3dGPla>(pla)->mNormal.z);
     if (cLib_distanceAngleS(a, (s16)(shape_angle.y + 0x8000)) > 0x2000) {
         return FALSE;
     }
@@ -2287,23 +2227,21 @@ int daPy_lk_c::changeRopeToHangProc() {
     procRopeUpHang_init();
     return TRUE;
 }
-VERIFY(0x02434120, &daPy_lk_c::changeRopeToHangProc);
 
 /* 02434260 */
 BOOL daPy_lk_c::checkRopeSwingWall(cXyz* start, cXyz* end, s16* swing, f32* angle) {
-    WWHD_FUNC(0x02434260, BOOL, this, start, end, swing, angle);
     /* function-local statics: dynamic_scale (0.25) and particle_scale (0.75), guard words first */
-    if (gabi::load<u32>(0x1046D20C) == 0) {
-        gabi::store<u32>(0x1046D20C, 1);
-        gabi::store<f32>(0x1046D218, 0.25f);
-        gabi::store<f32>(0x1046D21C, 0.25f);
-        gabi::store<f32>(0x1046D214, 0.25f);
+    if (l_rope_scales.mDynamicsGuard == 0) {
+        l_rope_scales.mDynamicsGuard = 1;
+        l_rope_scales.mDynamics.y = 0.25f;
+        l_rope_scales.mDynamics.z = 0.25f;
+        l_rope_scales.mDynamics.x = 0.25f;
     }
-    if (gabi::load<u32>(0x1046D210) == 0) {
-        gabi::store<u32>(0x1046D210, 1);
-        gabi::store<f32>(0x1046D224, 0.75f);
-        gabi::store<f32>(0x1046D228, 0.75f);
-        gabi::store<f32>(0x1046D220, 0.75f);
+    if (l_rope_scales.mParticleGuard == 0) {
+        l_rope_scales.mParticleGuard = 1;
+        l_rope_scales.mParticle.y = 0.75f;
+        l_rope_scales.mParticle.z = 0.75f;
+        l_rope_scales.mParticle.x = 0.75f;
     }
     dBgS_LinChk_Set(mLinkLinChk, start, end, this);
     if (!cBgS_LineCross(dComIfG_Bgsp(), mLinkLinChk)) {
@@ -2318,105 +2256,97 @@ BOOL daPy_lk_c::checkRopeSwingWall(cXyz* start, cXyz* end, s16* swing, f32* angl
     be<f32>* ang = gabi::at<be<f32>>(gabi::ea(angle));
     f64 a;
     if (*ang > 0.0f) {
-        f64 r = gabi::call<f64>(0x028F4384 /* std::sqrtf */, gabi::fnmsubs(s, s, 1.0f));
-        a = gabi::call<f64>(0x0201971C /* cM_atan2f */, s, -r);
+        f64 r = Link07_sqrtUnrounded(gabi::fnmsubs(s, s, 1.0f));
+        a = Link07_atan2Unrounded(s, -r);
     } else {
-        f64 r = gabi::call<f64>(0x028F4384, gabi::fnmsubs(s, s, 1.0f));
-        a = gabi::call<f64>(0x0201971C, s, r);
+        f64 r = Link07_sqrtUnrounded(gabi::fnmsubs(s, s, 1.0f));
+        a = Link07_atan2Unrounded(s, r);
     }
     *ang = (f32)a;
     m35A8 = (f32)(a / (f64)(f32)m35A4);
-    u32 fe = gabi::ea(this) + 0x6648; /* mFootEffect[1] (daPy_footEffect_c, 0x4C) */
-    if (gabi::load<s32>(fe + 0x48) != -1) { /* getID() */
-        gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(fe) + 0x44), fe);               /* smoke callback remove() */
-        gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(fe + 0x20) + 0x44), fe + 0x20); /* other callback remove() */
+    Link07::FootEffect* fe = gabi::at<Link07::FootEffect>(
+        gabi::ea(mFootEffect) + sizeof(Link07::FootEffect)); /* mFootEffect[1] (daPy_footEffect_c, 0x4C) */
+    if (fe->mID != -1) {                                     /* getID() */
+        fe->mSmokeCallback.remove();                         /* smoke callback remove() */
+        fe->mOtherCallback.remove();                         /* other callback remove() */
     }
     u32 pla = dBgS_GetTriPla_l(mLinkLinChkPoly);
-    if (pla == 0) { /* HD: NULL check */
+    if (pla == 0) {
+        // HD: NULL check
+
         return FALSE;
     }
     gabi::Local<cXyz> scaled; /* sp+0x38 */
     gabi::Local<cXyz> pos;    /* sp+0x2C */
     cXyz_ml(gabi::at<cXyz>(pla), scaled, 10.0f);
     cXyz_pl(&mLinkLinChkCross, pos, scaled);
-    lk_xyz_copy(gabi::at<cXyz>(fe + 0x34), pos); /* setPos() */
-    gabi::Local<cXyz> xz; /* sp+0x20 */
-    xz->x = gabi::load<f32>(pla + 0);
-    xz->z = gabi::load<f32>(pla + 8);
+    lk_xyz_copy(&fe->mPos, pos); /* setPos() */
+    gabi::Local<cXyz> xz;        /* sp+0x20 */
+    xz->x = gabi::at<cM3dGPla>(pla)->mNormal.x;
+    xz->z = gabi::at<cM3dGPla>(pla)->mNormal.z;
     xz->y = 0.0f;
-    f64 lxz = gabi::call<f64>(0x028F4384, PSVECSquareMag(xz));
-    s16 ax = gabi::call<s16>(0x020195B0 /* cM_atan2s */, lxz, gabi::load<f32>(pla + 4));
-    s16 ay = cM_atan2s(gabi::load<f32>(pla + 0), gabi::load<f32>(pla + 8));
-    gabi::store<s16>(fe + 0x40, ax); /* setAngle() */
-    gabi::store<s16>(fe + 0x42, ay);
-    gabi::store<s16>(fe + 0x44, 0);
+    f64 lxz = Link07_sqrtUnrounded(PSVECSquareMag(xz));
+    s16 ax = Link07_atan2sUnrounded(lxz, gabi::at<cM3dGPla>(pla)->mNormal.y);
+    s16 ay = cM_atan2s(gabi::at<cM3dGPla>(pla)->mNormal.x, gabi::at<cM3dGPla>(pla)->mNormal.z);
+    fe->mAngle.x = ax; /* setAngle() */
+    fe->mAngle.y = ay;
+    fe->mAngle.z = 0;
     s8 room = current.roomNo;
     dPa_control_c* pa = dComIfGp_getParticle();
-    u32 em = gabi::ea(dPa_control_set(pa, 3, 0x2022 /* ID_AK_JT_ELEMENTSMOKE00 */, gabi::at<cXyz>(fe + 0x34),
-                                      gabi::at<csXyz>(fe + 0x40), nullptr, 0xA0, gabi::at<dPa_levelEcallBack>(fe), room,
-                                      nullptr, nullptr, nullptr));
+    u32 em = gabi::ea(dPa_control_set(pa, 3, Link07::ID_AK_JT_ELEMENTSMOKE00, &fe->mPos, &fe->mAngle, nullptr,
+                                      0xA0, gabi::at<dPa_levelEcallBack>(gabi::ea(fe)), room, nullptr,
+                                      nullptr, nullptr));
     if (em != 0) {
-        gabi::store<f32>(em + 0x58, 1.0f); /* setSpread() */
-        gabi::store<f32>(em + 0x34, 8.0f); /* setRate() */
-        gabi::store<u32>(em + 0x220, gabi::load<u32>(0x1046D214)); /* setGlobalDynamicsScale() */
-        gabi::store<u32>(em + 0x224, gabi::load<u32>(0x1046D218));
-        gabi::store<u32>(em + 0x228, gabi::load<u32>(0x1046D21C));
-        gabi::store<u32>(em + 0x238, gabi::load<u32>(0x1046D220)); /* setGlobalParticleScale() */
-        gabi::store<u32>(em + 0x23C, gabi::load<u32>(0x1046D224));
-        gabi::store<u32>(em + 0x240, gabi::load<u32>(0x1046D228));
+        gabi::at<Link07::Emitter>(em)->mSpread = 1.0f; /* setSpread() */
+        gabi::at<Link07::Emitter>(em)->mRate = 8.0f;   /* setRate() */
+        gabi::at<Link07::Emitter>(em)->mGlobalDynamicsScale = l_rope_scales.mDynamics;
+        gabi::at<Link07::Emitter>(em)->mGlobalParticleScale = l_rope_scales.mParticle;
     }
     return TRUE;
 }
-VERIFY(0x02434260, &daPy_lk_c::checkRopeSwingWall);
 
 enum : u32 {
-    LK_procHangStart_init = 0x02417D30,
-    LK_checkSpecialRope = 0x0241CB30,
-    LK_checkItemModeActorPointer = 0x02427370,
-    LK_setSpeedAndAngleAtnActor = 0x02416B70,
     LK_HD_02416FA8 = 0x02416FA8, /* unnamed by the matcher: HD, called after the rope aim speed boost */
-    LK_procRopeSwing_init = 0x0241D040,
 };
 /* mSightPacket lock update when the target is hookable (getLockFlg/incFrame/checkSEFrame/onLockFlg) */
 static inline void lk_sight_lock(u32 sp) {
-    if (gabi::load<u8>(sp + 5) != 0) {
-        u8 f = (u8)(gabi::load<u8>(sp + 6) + 1);
+    if (gabi::at<Link07::SightPacket>(sp)->mLockFlag != 0) {
+        u8 f = (u8)(gabi::at<Link07::SightPacket>(sp)->mFrame + 1);
         if (f == 0x1A) {
-            gabi::store<u8>(sp + 6, 0);
-            gabi::call(0x025E1988 /* seStartSystem */, 0x820 /* JA_SE_INDICATOR_1 */);
+            gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
+            Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
         } else {
-            gabi::store<u8>(sp + 6, f);
+            gabi::at<Link07::SightPacket>(sp)->mFrame = f;
             if (f == 0) {
-                gabi::call(0x025E1988, 0x820);
+                Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
             }
         }
     } else {
-        gabi::store<u8>(sp + 6, 0);
-        gabi::store<u8>(sp + 5, 1);
-        gabi::call(0x025E1988, 0x820);
+        gabi::at<Link07::SightPacket>(sp)->mFrame = 0;
+        gabi::at<Link07::SightPacket>(sp)->mLockFlag = 1;
+        Link07_seStartSystem(Link07::JA_SE_INDICATOR_1);
     }
 }
 
 /* 02434E64 */
 BOOL daPy_lk_c::checkHangRopeActorNull() {
-    WWHD_FUNC(0x02434E64, BOOL, this);
     if (mActorKeepRope.mActor == nullptr) {
         if (gabi::call_ptr<BOOL>(gabi::load<u32>(__vtbl + 0xD4), this) /* checkRopeTag() (HD: virtual) */) {
-            mEquipItem = 0x100; /* daPyItem_NONE_e */
+            mEquipItem = Link07::daPyItem_NONE_e;
         }
-        gabi::call(LK_procFall_init, this, 1, 6.0f); /* HD: HIO folded */
+        procFall_init(1, 6.0f);
+        // HD: HIO folded
+
         mNoResetFlg0 = mNoResetFlg0 | 0x400000;
         setNoResetFlg1(noResetFlg1() | 0x8000000);
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x02434E64, &daPy_lk_c::checkHangRopeActorNull);
 
 /* 02434F04 */
 int daPy_lk_c::specialRopeHangUp() {
-    WWHD_FUNC(0x02434F04, int, this);
-    if (!gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+    if (!checkSpecialRope()) {
         return FALSE;
     }
     if (shape_angle.y < 0x4000) {
@@ -2435,70 +2365,66 @@ int daPy_lk_c::specialRopeHangUp() {
     old.pos.z = current.pos.z;
     current.angle.y = shape_angle.y;
     lk_xyz_copy(&m3724, &current.pos);
-    gabi::call(LK_setSingleMoveAnime, this, 0x4C /* ANM_VJMP */, 1.0f, 10.0f, -1, 3.0f);
-    return gabi::call<BOOL>(LK_procHangStart_init, this);
+    setSingleMoveAnime(Link07::ANM_VJMP, 1.0f, 10.0f, -1, 3.0f);
+    return procHangStart_init();
 }
-VERIFY(0x02434F04, &daPy_lk_c::specialRopeHangUp);
 
 /* 024350A0 */
 BOOL daPy_lk_c::procRopeSubject() {
-    WWHD_FUNC(0x024350A0, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
     u32 rope = gabi::ea(mActorKeepEquip.mActor.get());
-    u32 param = gabi::load<u32>(rope + 0xB0); /* fopAcM_GetParam(rope) */
-    u32 st = dComIfGp_ea() + 0x5CD8;
+    u32 param = gabi::at<fopAc_ac_c>(rope)->mParameters; /* fopAcM_GetParam(rope) */
+    be<u32>* status = &Link07::gameInfo()->play.mPlayerStatus[0][0];
     if (param == 0) {
-        gabi::store<u32>(st, gabi::load<u32>(st) & ~0x40000u);
+        *status = *status & ~0x40000u;
     } else {
-        gabi::store<u32>(st, gabi::load<u32>(st) | 0x40000);
+        *status = *status | 0x40000;
     }
     if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
-    } else if (gabi::load<u16>(gabi::ea(this) + 0x5888) != 0xE2) { /* HD */
-        gabi::call(LK_setSpeedAndAngleAtnActor, this);
+        setSpeedAndAngleAtn();
+    } else if (Link07::upperHeap(this, 2).mIdx != 0xE2) { /* HD */
+        setSpeedAndAngleAtnActor();
     }
-    if (LK_checkNextMode(0)) {
+    if (checkNextMode(0)) {
         return TRUE;
     }
-    if (gabi::call<BOOL>(LK_setBodyAngleToCamera, this)) {
-        if (LK_FIELD(s16, 0x3D0) > 0) { /* mBodyAngle.x */
-            LK_FIELD(s16, 0x3D0) = 0;
+    if (setBodyAngleToCamera()) {
+        if (mBodyAngle.x > 0) { /* mBodyAngle.x */
+            mBodyAngle.x = 0;
         }
         gabi::Local<cXyz> sight; /* sp+0x08 */
-        gabi::call(LK_checkSightLine, this, 2200.0f, sight.get());
+        checkSightLine(2200.0f, sight.get());
         u32 sp = LK_sightPacket;
-        gabi::store<u8>(sp + 4, 1); /* onDrawFlg() */
+        gabi::at<Link07::SightPacket>(sp)->mDrawFlag = 1; /* onDrawFlg() */
         lk_sight_setPos(sp, gabi::ea(sight.get()));
-        if (gabi::call<BOOL>(0x0216EEB8 /* himo2: search_target (setTargetPos) */, rope, sight.get(), &m3600, &m3604)) {
-            gabi::store<u8>(sp + 4, 1);
+        if (Link07_setRopeTargetPos(rope, sight.get(), &m3600, &m3604)) {
+            gabi::at<Link07::SightPacket>(sp)->mDrawFlag = 1;
             lk_sight_lock(sp);
         } else {
-            gabi::store<u8>(sp + 5, 0); /* offLockFlg() */
+            gabi::at<Link07::SightPacket>(sp)->mLockFlag = 0; /* offLockFlg() */
         }
     }
     mNormalSpeed = (f32)((f64)(f32)mNormalSpeed * 1.2); /* HD */
-    gabi::call(LK_HD_02416FA8, this);
+    setBlendSubjectMoveAnimeHD();
     return TRUE;
 }
-VERIFY(0x024350A0, &daPy_lk_c::procRopeSubject);
 
 /* 024352F4 */
 BOOL daPy_lk_c::procRopeReady() {
-    WWHD_FUNC(0x024352F4, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
     u32 rope = gabi::ea(mActorKeepEquip.mActor.get());
-    lk_xyz_copy(&mRopePos, gabi::at<cXyz>(rope + 0x314));
+    lk_xyz_copy(&mRopePos, &gabi::at<fopAc_ac_c>(rope)->current.pos);
     m370C.x = mRopePos.x;
     m370C.z = mRopePos.z;
     gabi::Local<cXyz> d0; /* sp+0x1C */
     gabi::Local<cXyz> d;  /* sp+0x10 */
     cXyz_mi(&m370C, d0, &current.pos);
     lk_xyz_copy(d, d0);
-    f64 len = gabi::call<f64>(0x028F4384 /* std::sqrtf */, PSVECSquareMag(d));
+    f64 len = Link07_sqrtUnrounded(PSVECSquareMag(d));
     cLib_chaseF(&m35A0, 50.0f, 5.0f);
     shape_angle.x = (s16)gabi::ftoi((f32)mProcVar2 * m35A0 * 0.025f);
     if (len > (f64)(f32)m35A0) {
@@ -2508,58 +2434,56 @@ BOOL daPy_lk_c::procRopeReady() {
     }
     f32 m = m35A0;
     if (!(len > (f64)(m + m))) {
-        gabi::call(LK_procRopeSwing_init, this, gabi::ea(mActorKeepEquip.mActor.get()), (s32)shape_angle.x);
+        procRopeSwing_init(mActorKeepEquip.mActor.get(), (s16)shape_angle.x);
     }
     return TRUE;
 }
-VERIFY(0x024352F4, &daPy_lk_c::procRopeReady);
 
-#define mGndChkPos (*gabi::at<cXyz>(gabi::ea(this) + 0xB38)) /* mGndChk's position (dBgS_GndChk + 0x24) */
+#define mGndChkPos (gabi::at<dBgS_GndChk>(gabi::ea(mGndChk))->m_pos) /* mGndChk's position (dBgS_GndChk + 0x24) */
 
 /* 02435458 */
 BOOL daPy_lk_c::procRopeHangWait_init(int mode) {
-    WWHD_FUNC(0x02435458, BOOL, this, mode);
-    gabi::call(LK_commonProcInit, this, 0x79 /* daPyProc_ROPE_HANG_WAIT_e */);
+    commonProcInit(Link07::daPyProc_ROPE_HANG_WAIT_e);
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     current.pos.x = mRopePos.x;
     current.pos.z = mRopePos.z;
-    dComIfGp_onPlayerStatus0_l(0x800000 /* daPyStts0_UNK800000_e */);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK800000_e);
     gravity = 0.0f;
     if (mode == 0) {
-        mProcVar0 = 0x5A; /* HD: HIO folded */
-        gabi::call(LK_setSingleMoveAnime, this, 0x75 /* ANM_ROPECATCH */, 1.0f, (f32)mFrameCtrlUnder[0].getEnd() - 0.001f, -1, 4.0f);
-        gabi::call(LK_setTextureAnime, this, 2, 0);
+        mProcVar0 = 0x5A;
+        // HD: HIO folded
+
+        setSingleMoveAnime(Link07::ANM_ROPECATCH, 1.0f, (f32)mFrameCtrlUnder[0].getEnd() - 0.001f, -1, 4.0f);
+        setTextureAnime(2, 0);
     } else {
         mProcVar0 = -1;
-        gabi::call(LK_setSingleMoveAnime, this, 0x78 /* ANM_ROPEWAIT */, 0.5f, 0.0f, -1, 4.0f);
+        setSingleMoveAnime(Link07::ANM_ROPEWAIT, 0.5f, 0.0f, -1, 4.0f);
     }
     mProcVar2 = 0;
     return TRUE;
 }
-VERIFY(0x02435458, &daPy_lk_c::procRopeHangWait_init);
 
 /* 0243656C */
 BOOL daPy_lk_c::procRopeUp_init() {
-    WWHD_FUNC(0x0243656C, BOOL, this);
     fopAc_ac_c* rope = mActorKeepRope.mActor;
     lk_xyz_copy(&mRopePos, &rope->current.pos);
     mProcVar6 = 0;
     f32 top;
-    if (gabi::call<BOOL>(LK_checkBossGomaStage, this)) {
+    if (checkBossGomaStage()) {
         top = mRopePos.y - 200.0f;
     } else {
         top = mRopePos.y - 100.0f;
-        f32 roof = (f32)(gabi::call<f64>(0x02433E0C /* checkRopeRoofHit */, this, (s32)shape_angle.y) - 60.0);
+        f32 roof = (f32)(Link07_ropeRoofUnrounded(this, (s32)shape_angle.y) - 60.0);
         if (roof < top) {
             top = roof;
-        } else if ((rope != nullptr && fpcM_GetName(rope) == 0x1BE /* fpcNm_HIMO2_e */) || gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+        } else if ((rope != nullptr && fpcM_GetName(rope) == Link07::fpcNm_HIMO2_e) || checkSpecialRope()) {
             mProcVar6 = 1;
         }
     }
     if (top > current.pos.y) {
-        gabi::call(LK_commonProcInit, this, 0x7A /* daPyProc_ROPE_UP_e */);
+        commonProcInit(Link07::daPyProc_ROPE_UP_e);
         dComIfGp_onPlayerStatus0_l(0x800000);
-        gabi::call(LK_setSingleMoveAnime, this, 0x79 /* ANM_ROPECLIMB */, 0.8f, 0.0f, -1, 1.5f); /* HD: HIO folded */
+        setSingleMoveAnime(Link07::ANM_ROPECLIMB, 0.8f, 0.0f, -1, 1.5f); /* HD: HIO folded */
         m35A0 = top;
         mFrameCtrlUnder[0].setAttribute(0 /* EMode_NONE */);
         gravity = 0.0f;
@@ -2573,57 +2497,55 @@ BOOL daPy_lk_c::procRopeUp_init() {
     }
     return procRopeHangWait_init(0);
 }
-VERIFY(0x0243656C, &daPy_lk_c::procRopeUp_init);
 
 /* 02436780 */
 BOOL daPy_lk_c::procRopeDown_init() {
-    WWHD_FUNC(0x02436780, BOOL, this);
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     if (mActorKeepEquip.mActor != nullptr) {
         if (!(m3604 < 0.0f)) {
             m35A4 = m3600 - m3604;
-        } else if (gabi::call<BOOL>(LK_checkBossGomaStage, this)) {
+        } else if (checkBossGomaStage()) {
             m35A4 = m3600 - 100.0f;
         } else {
             f32 y = m3600 - 300.0f;
             lk_xyz_copy(&mGndChkPos, &mRopePos);
             m35A4 = y;
-            f64 g = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
+            f64 g = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
             if (g > (f64)(f32)(m35A4 + -175.0f)) {
                 m35A4 = (f32)(g + 175.0);
             }
         }
     } else {
-        m35A4 = mRopePos.y - gabi::load<f32>(gabi::ea(mActorKeepRope.mActor.get()) + 0x1914); /* himo3: getPlayerMoveLength() */
+        m35A4 =
+            mRopePos.y -
+            gabi::at<Link07::Rope3>(gabi::ea(mActorKeepRope.mActor.get()))->m15FC; /* himo3: getPlayerMoveLength() */
     }
     if (current.pos.y > m35A4) {
-        gabi::call(LK_commonProcInit, this, 0x7B /* daPyProc_ROPE_DOWN_e */);
+        commonProcInit(Link07::daPyProc_ROPE_DOWN_e);
         dComIfGp_onPlayerStatus0_l(0x800000);
-        gabi::call(LK_setSingleMoveAnime, this, 0x7A /* ANM_ROPEDOWN */, 1.5f, 0.0f, -1, 4.0f); /* HD: HIO folded */
+        setSingleMoveAnime(Link07::ANM_ROPEDOWN, 1.5f, 0.0f, -1, 4.0f); /* HD: HIO folded */
         gravity = 0.0f;
         m35A0 = 0.0f;
         return TRUE;
     }
     return procRopeHangWait_init(1);
 }
-VERIFY(0x02436780, &daPy_lk_c::procRopeDown_init);
 
 /* 0243692C */
 BOOL daPy_lk_c::procRopeSwingStart_init() {
-    WWHD_FUNC(0x0243692C, BOOL, this);
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
-    gabi::call(LK_commonProcInit, this, 0x7C /* daPyProc_ROPE_SWING_START_e */);
-    f64 sq = gabi::call<f64>(0x028E8DE8 /* PSVECSquareDistance */, &mRopePos, &current.pos);
-    f64 d = gabi::call<f64>(0x028F4384 /* std::sqrtf */, sq);
+    commonProcInit(Link07::daPyProc_ROPE_SWING_START_e);
+    f64 sq = Link07_squareDistanceUnrounded(&mRopePos, &current.pos);
+    f64 d = Link07_sqrtDoubleArgument(sq);
     f32 r = (f32)(500.0 / d);
     m35A0 = (f32)d;
     if (r > 1.0f) {
         r = 1.0f;
     }
     m35A4 = r;
-    gabi::call(LK_setSingleMoveAnime, this, 0x77 /* ANM_ROPESWINGB */, 1.0f, 0.0f, -1, 20.0f);
+    setSingleMoveAnime(Link07::ANM_ROPESWINGB, 1.0f, 0.0f, -1, 20.0f);
     mProcVar2 = (s16)gabi::ftoi(2048.0f * m35A4);
-    if (gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+    if (checkSpecialRope()) {
         mProcVar2 = (s16)gabi::ftoi((f32)mProcVar2 * 0.125f);
     }
     gravity = 0.0f;
@@ -2632,12 +2554,10 @@ BOOL daPy_lk_c::procRopeSwingStart_init() {
     dComIfGp_onPlayerStatus0_l(0x800000);
     return TRUE;
 }
-VERIFY(0x0243692C, &daPy_lk_c::procRopeSwingStart_init);
 
 /* 02436AB4 */
 BOOL daPy_lk_c::procRopeHangWait() {
-    WWHD_FUNC(0x02436AB4, BOOL, this);
-    dComIfGp_setRStatus_l(0x13 /* dActStts_STOP_e */);
+    dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
     if (mProcVar0 > 0) {
         mProcVar0 = mProcVar0 - 1;
     }
@@ -2654,11 +2574,11 @@ BOOL daPy_lk_c::procRopeHangWait() {
     s16 target = 0;
     if (stick > 0.05f) {
         s32 dir = getDirectionFromAngle(m34DC);
-        if ((mItemButton & 0x40) /* spActionButton() */ && dir == 0 /* DIR_FORWARD */) {
+        if ((mItemButton & 0x40) /* spActionButton() */ && dir == Link07::DIR_FORWARD) {
             if (std::abs((s32)mProcVar2) <= 0x80) {
                 procRopeUp_init();
             }
-        } else if ((mItemButton & 0x40) && dir == 1 /* DIR_BACKWARD */) {
+        } else if ((mItemButton & 0x40) && dir == Link07::DIR_BACKWARD) {
             if (std::abs((s32)mProcVar2) <= 0x80) {
                 procRopeDown_init();
             }
@@ -2666,7 +2586,7 @@ BOOL daPy_lk_c::procRopeHangWait() {
             return procRopeSwingStart_init();
         } else if (dir == 2 || dir == 3) {
             /* HD: left/right swing the hang angle with or without the action button */
-            if (dir == 2 /* DIR_LEFT */) {
+            if (dir == Link07::DIR_LEFT) {
                 s16 lim = (s16)gabi::ftoi(512.0f * stick);
                 if (lim > mProcVar2) {
                     s16 v = (s16)(mProcVar2 + gabi::ftoi(64.0f * stick));
@@ -2693,19 +2613,19 @@ BOOL daPy_lk_c::procRopeHangWait() {
             }
             if (mProcVar0 != -1) {
                 mProcVar0 = -1;
-                gabi::call(LK_setSingleMoveAnime, this, 0x78 /* ANM_ROPEWAIT */, 0.5f, 0.0f, -1, 6.0f); /* HD: HIO folded */
+                setSingleMoveAnime(Link07::ANM_ROPEWAIT, 0.5f, 0.0f, -1, 6.0f); /* HD: HIO folded */
             }
         }
     } else if (mProcVar0 == 0) {
         mProcVar0 = -1;
-        gabi::call(LK_setSingleMoveAnime, this, 0x78 /* ANM_ROPEWAIT */, 0.5f, 0.0f, -1, 6.0f);
+        setSingleMoveAnime(Link07::ANM_ROPEWAIT, 0.5f, 0.0f, -1, 6.0f);
     }
     cLib_addCalcAngleS(&mProcVar2, target, 3, 0x40, 0x10);
     f64 roof;
     if (mProcVar2 > 0) {
-        roof = gabi::call<f64>(0x02433E0C /* checkRopeRoofHit */, this, (s32)(s16)(shape_angle.y + 0x2000));
+        roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(shape_angle.y + 0x2000));
     } else {
-        roof = gabi::call<f64>(0x02433E0C, this, (s32)(s16)(shape_angle.y - 0x2000));
+        roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(shape_angle.y - 0x2000));
     }
     if ((f32)(roof + -55.0f) > current.pos.y) {
         s16 a = (s16)(shape_angle.y + mProcVar2);
@@ -2714,19 +2634,14 @@ BOOL daPy_lk_c::procRopeHangWait() {
     }
     return TRUE;
 }
-VERIFY(0x02436AB4, &daPy_lk_c::procRopeHangWait);
 
 enum : u32 {
     LK_HD_setSpeedAndAngleAtnActor2 = 0x02419CC8, /* unnamed by the matcher: an HD copy of setSpeedAndAngleAtnActor */
-    LK_setBlendAtnMoveAnime = 0x023E81E4,
-    LK_checkNextRopeMode = 0x023E91E4,
 };
-#define LK_mAcchChkWallHit() (gabi::load<u32>(gabi::ea(this) + 0x834) & 0x10) /* mAcch.ChkWallHit() */
 
 /* 02436E6C */
 BOOL daPy_lk_c::procRopeUp() {
-    WWHD_FUNC(0x02436E6C, BOOL, this);
-    dComIfGp_setRStatus_l(0x13 /* dActStts_STOP_e */);
+    dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
     if (checkHangRopeActorNull()) {
         return TRUE;
     }
@@ -2742,11 +2657,11 @@ BOOL daPy_lk_c::procRopeUp() {
             procRopeHangWait_init(0);
         } else if (!(mItemButton & 0x40) /* !spActionButton() */) {
             procRopeSwingStart_init();
-        } else if (dir == 1 /* DIR_BACKWARD */) {
+        } else if (dir == Link07::DIR_BACKWARD) {
             procRopeDown_init();
-        } else if (dir == 0 /* DIR_FORWARD */) {
+        } else if (dir == Link07::DIR_FORWARD) {
             if (m35A0 > current.pos.y) {
-                gabi::call(LK_setSingleMoveAnime, this, 0x79 /* ANM_ROPECLIMB */, 0.8f, 0.0f, -1, -1.0f); /* HD: HIO folded */
+                setSingleMoveAnime(Link07::ANM_ROPECLIMB, 0.8f, 0.0f, -1, -1.0f); /* HD: HIO folded */
                 mFrameCtrlUnder[0].setAttribute(0 /* EMode_NONE */);
             } else if (!specialRopeHangUp()) {
                 procRopeHangWait_init(0);
@@ -2762,12 +2677,10 @@ BOOL daPy_lk_c::procRopeUp() {
     }
     return TRUE;
 }
-VERIFY(0x02436E6C, &daPy_lk_c::procRopeUp);
 
 /* 02437000 */
 BOOL daPy_lk_c::procRopeDown() {
-    WWHD_FUNC(0x02437000, BOOL, this);
-    dComIfGp_setRStatus_l(0x13 /* dActStts_STOP_e */);
+    dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
     if (checkHangRopeActorNull()) {
         return TRUE;
     }
@@ -2782,9 +2695,9 @@ BOOL daPy_lk_c::procRopeDown() {
         procRopeHangWait_init(1);
     } else if (!(mItemButton & 0x40) /* !spActionButton() */) {
         procRopeSwingStart_init();
-    } else if (dir == 0 /* DIR_FORWARD */) {
+    } else if (dir == Link07::DIR_FORWARD) {
         procRopeUp_init();
-    } else if (dir == 1 /* DIR_BACKWARD */) {
+    } else if (dir == Link07::DIR_BACKWARD) {
         f32 v = m35A0 + 1.5f;
         if (v > 27.0f) { /* HD: HIO folded */
             v = 27.0f;
@@ -2798,12 +2711,10 @@ BOOL daPy_lk_c::procRopeDown() {
     }
     return TRUE;
 }
-VERIFY(0x02437000, &daPy_lk_c::procRopeDown);
 
 /* 02437134 */
 BOOL daPy_lk_c::procRopeSwingStart() {
-    WWHD_FUNC(0x02437134, BOOL, this);
-    dComIfGp_setRStatus_l(0x13 /* dActStts_STOP_e */);
+    dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
     gabi::Local<cXyz> offset; /* sp+0x10 */
     offset->x = 0.0f;
     offset->z = 0.0f;
@@ -2815,23 +2726,23 @@ BOOL daPy_lk_c::procRopeSwingStart() {
         lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
         if (mProcVar0 == 1) {
             if (!cLib_addCalcAngleS(&shape_angle.x, mProcVar2, 5, 0x180, 0x40)) {
-                gabi::call(LK_procRopeSwing_init, this, 0, (s32)shape_angle.x);
+                Link07_initRopeSwingWord(this, 0, (s32)shape_angle.x);
             }
         } else if (!cLib_addCalcAngleS(&shape_angle.x, mProcVar2, 5, 0xA0, 0x40)) {
             if (mProcVar2 > 0) {
-                gabi::call(LK_setSingleMoveAnime, this, 0x76 /* ANM_ROPESWINGF */, 1.0f, 0.0f, -1, 10.0f);
+                setSingleMoveAnime(Link07::ANM_ROPESWINGF, 1.0f, 0.0f, -1, 10.0f);
                 mProcVar2 = (s16)gabi::ftoi(-4096.0f * m35A4);
             } else {
-                gabi::call(LK_setSingleMoveAnime, this, 0x77 /* ANM_ROPESWINGB */, 1.0f, 0.0f, -1, 10.0f);
+                setSingleMoveAnime(Link07::ANM_ROPESWINGB, 1.0f, 0.0f, -1, 10.0f);
                 mProcVar2 = (s16)gabi::ftoi(4096.0f * m35A4);
             }
             mProcVar0 = 1;
-            if (gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+            if (checkSpecialRope()) {
                 mProcVar2 = (s16)gabi::ftoi((f32)mProcVar2 * 0.125f);
             }
         }
-        if (LK_mAcchChkWallHit()) {
-            gabi::call(LK_procRopeSwing_init, this, 0, (s32)shape_angle.x);
+        if (mAcch.ChkWallHit()) {
+            Link07_initRopeSwingWord(this, 0, (s32)shape_angle.x);
         }
     }
     mDoMtx_stack_c::transS(mRopePos.x, mRopePos.y, mRopePos.z);
@@ -2839,70 +2750,65 @@ BOOL daPy_lk_c::procRopeSwingStart() {
     PSMTXMultVec(mDoMtx_stack_c::get(), offset, &current.pos);
     return TRUE;
 }
-VERIFY(0x02437134, &daPy_lk_c::procRopeSwingStart);
 
 /* 02437398 */
 BOOL daPy_lk_c::procRopeMove() {
-    WWHD_FUNC(0x02437398, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
-    if (gabi::load<u32>(gabi::ea(mActorKeepEquip.mActor.get()) + 0xB0) == 0 /* fopAcM_GetParam() */ &&
-        gabi::call_ptr<BOOL>(gabi::load<u32>(__vtbl + 0xDC), this) /* checkRopeReadyAnime() (HD: virtual) */) {
+    if (fopAcM_GetParam(mActorKeepEquip.mActor.get()) == 0 /* fopAcM_GetParam() */ &&
+        gabi::call_ptr<BOOL>(gabi::at<Link07::PlayerVtable>(__vtbl)->mCheckRopeReadyAnime,
+                             this) /* checkRopeReadyAnime() (HD: virtual) */) {
         if (mpAttnActorLockOn != nullptr) {
-            gabi::call(LK_HD_setSpeedAndAngleAtnActor2, this);
-        } else if (m355E == 0 && !LK_checkAttentionLock()) {
-            gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+            Link07_setSpeedAndAngleAtnActorHD(this);
+        } else if (m355E == 0 && !lk_attentionLock(mpAttention)) {
+            resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
         } else {
-            gabi::call(LK_setSpeedAndAngleAtn, this);
+            setSpeedAndAngleAtn();
         }
     }
-    if (LK_checkNextMode(0)) {
+    if (checkNextMode(0)) {
         return TRUE;
     }
     f32 morf = -1.0f;
     if (std::fabs((f32)mNormalSpeed) < 0.001f) {
         mModeFlg = mModeFlg | 1;
-        if (mDirection != 3 /* DIR_RIGHT */) {
+        if (mDirection != Link07::DIR_RIGHT) {
             mDirection = 3;
             morf = 2.4f; /* HD: HIO folded */
         }
     } else {
         mModeFlg = mModeFlg & ~1u;
     }
-    gabi::call(LK_setBlendAtnMoveAnime, this, morf);
-    gabi::call(LK_setBodyAngleXReadyAnime, this);
+    setBlendAtnMoveAnime(morf);
+    setBodyAngleXReadyAnime();
     return TRUE;
 }
-VERIFY(0x02437398, &daPy_lk_c::procRopeMove);
 
 /* 02437530 */
 BOOL daPy_lk_c::procRopeThrowCatch() {
-    WWHD_FUNC(0x02437530, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
-    BOOL lock = LK_checkAttentionLock();
-    u32 st = dComIfGp_ea() + 0x5CD8;
+    BOOL lock = lk_attentionLock(mpAttention);
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][0];
     if (lock) {
-        gabi::store<u32>(st, gabi::load<u32>(st) & ~0x40000u);
+        status = status & ~0x40000u;
     } else {
-        gabi::store<u32>(st, gabi::load<u32>(st) | 0x40000);
+        status = status | 0x40000;
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         mProcVar0 = (s16)(mProcVar0 - 1);
         u32 rope = gabi::ea(mActorKeepEquip.mActor.get());
-        if (gabi::load<u32>(rope + 0x3F8) == 0 /* rope->m02DC */ || mProcVar0 == 0) {
-            gabi::call(LK_checkNextRopeMode, this);
+        if (gabi::at<Link07::Rope2>(rope)->m02DC == 0 /* rope->m02DC */ || mProcVar0 == 0) {
+            checkNextRopeMode();
         }
     }
     return TRUE;
 }
-VERIFY(0x02437530, &daPy_lk_c::procRopeThrowCatch);
 
 /* 02437630 */
 BOOL daPy_lk_c::procRopeUpHang() {
-    WWHD_FUNC(0x02437630, BOOL, this);
     if (checkHangRopeActorNull()) {
         return TRUE;
     }
@@ -2912,132 +2818,122 @@ BOOL daPy_lk_c::procRopeUpHang() {
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         lk_xyz_copy(&m3724, &mRopePos);
         m352C = (s16)(shape_angle.y + 0x8000);
-        gabi::call(LK_procHangStart_init, this);
+        procHangStart_init();
     }
     return TRUE;
 }
-VERIFY(0x02437630, &daPy_lk_c::procRopeUpHang);
 
 /* ---- boomerang, bow, hookshot subjects ---- */
 /* HD: the aim procs speed Link up while aiming (mNormalSpeed *= 1.2, then the unnamed 02416FA8) */
 static inline void lk_aimSpeedBoost(daPy_lk_c* t) {
     t->mNormalSpeed = (f32)((f64)(f32)t->mNormalSpeed * 1.2);
-    gabi::call(LK_HD_02416FA8, t);
+    t->setBlendSubjectMoveAnimeHD();
 }
 
 /* 024376D8 */
 BOOL daPy_lk_c::procBoomerangSubject() {
-    WWHD_FUNC(0x024376D8, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
-    if (gabi::load<u16>(gabi::ea(this) + 0x5888) == 0x35 /* checkBoomerangReadyAnime() */) {
-        dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
+    if (Link07::upperHeap(this, 2).mIdx == 0x35 /* checkBoomerangReadyAnime() */) {
+        dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
     }
-    gabi::call(LK_setShapeAngleToAtnActor, this);
-    if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+    setShapeAngleToAtnActor();
+    if (lk_attentionLock(mpAttention)) {
+        setSpeedAndAngleAtn();
     } else {
-        gabi::call(LK_setSpeedAndAngleAtnActor, this); /* HD */
+        setSpeedAndAngleAtnActor(); /* HD */
     }
-    if (LK_checkNextMode(0)) {
-        gabi::store<u8>(LK_sightPacket + 4, 0); /* mSightPacket.offDrawFlg() */
+    if (checkNextMode(0)) {
+        gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0; /* mSightPacket.offDrawFlg() */
         return TRUE;
     }
-    if (gabi::call<BOOL>(LK_setBodyAngleToCamera, this)) {
+    if (setBodyAngleToCamera()) {
         u32 boomerang = gabi::ea(mActorKeepEquip.mActor.get());
         if (boomerang != 0) {
             gabi::Local<cXyz> sight; /* sp+0x08 */
-            f64 flyMax = gabi::call<f64>(0x020CECF0 /* daBoomerang_c::getFlyMax */, boomerang);
-            gabi::call(LK_checkSightLine, this, flyMax, sight.get());
+            f64 flyMax = Link07_getBoomerangFlyMax(boomerang);
+            Link07_checkSightLineUnrounded(this, flyMax, sight.get());
             lk_sight_setPos(LK_sightPacket, gabi::ea(sight.get()));
-            gabi::store<u8>(LK_sightPacket + 4, 1); /* onDrawFlg() */
+            gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 1; /* onDrawFlg() */
         }
     }
     lk_aimSpeedBoost(this);
     return TRUE;
 }
-VERIFY(0x024376D8, &daPy_lk_c::procBoomerangSubject);
 
 /* 02437810 */
 BOOL daPy_lk_c::procBoomerangMove() {
-    WWHD_FUNC(0x02437810, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_HD_setSpeedAndAngleAtnActor2, this);
+        Link07_setSpeedAndAngleAtnActorHD(this);
     } else {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+        setSpeedAndAngleAtn();
     }
-    if (LK_checkNextMode(0)) {
+    if (checkNextMode(0)) {
         return TRUE;
     }
     f32 morf = -1.0f;
     if (std::fabs((f32)mNormalSpeed) < 0.001f) {
         mModeFlg = mModeFlg | 1;
-        if (mDirection != 3 /* DIR_RIGHT */) {
+        if (mDirection != Link07::DIR_RIGHT) {
             mDirection = 3;
             morf = 2.4f; /* HD: HIO folded */
         }
     } else {
         mModeFlg = mModeFlg & ~1u;
     }
-    gabi::call(LK_setBlendAtnMoveAnime, this, morf);
-    gabi::call(LK_setBodyAngleXReadyAnime, this);
+    setBlendAtnMoveAnime(morf);
+    setBodyAngleXReadyAnime();
     return TRUE;
 }
-VERIFY(0x02437810, &daPy_lk_c::procBoomerangMove);
 
 /* 02437900 */
 BOOL daPy_lk_c::procBoomerangCatch() {
-    WWHD_FUNC(0x02437900, BOOL, this);
-    if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+    if (lk_attentionLock(mpAttention)) {
+        setSpeedAndAngleAtn();
     } else {
-        gabi::call(LK_setSpeedAndAngleNormal, this, 0xBB8); /* HD: HIO folded */
+        setSpeedAndAngleNormal(0xBB8); /* HD: HIO folded */
     }
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+        resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
     }
-    LK_checkNextMode(0);
+    checkNextMode(0);
     return TRUE;
 }
-VERIFY(0x02437900, &daPy_lk_c::procBoomerangCatch);
 
 /* 024379C0 */
 BOOL daPy_lk_c::procBowSubject() {
-    WWHD_FUNC(0x024379C0, BOOL, this);
-    dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
-    if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+    dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
+    if (lk_attentionLock(mpAttention)) {
+        setSpeedAndAngleAtn();
     } else {
-        gabi::call(LK_setSpeedAndAngleAtnActor, this); /* HD */
+        setSpeedAndAngleAtnActor(); /* HD */
     }
-    if (!LK_checkNextMode(0)) {
-        gabi::call(LK_setBodyAngleToCamera, this);
+    if (!checkNextMode(0)) {
+        setBodyAngleToCamera();
         lk_aimSpeedBoost(this);
         m35EC = mFrameCtrlUpper[2].getFrame();
     }
     return TRUE;
 }
-VERIFY(0x024379C0, &daPy_lk_c::procBowSubject);
 
 /* 02437A8C */
 BOOL daPy_lk_c::procBowMove() {
-    WWHD_FUNC(0x02437A8C, BOOL, this);
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_HD_setSpeedAndAngleAtnActor2, this);
-    } else if (!LK_checkAttentionLock() && mActorKeepEquip.mActor == nullptr) {
-        gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+        Link07_setSpeedAndAngleAtnActorHD(this);
+    } else if (!lk_attentionLock(mpAttention) && mActorKeepEquip.mActor == nullptr) {
+        resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
     } else {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
+        setSpeedAndAngleAtn();
     }
-    if (!LK_checkNextMode(0)) {
+    if (!checkNextMode(0)) {
         f32 morf = -1.0f;
         if (std::fabs((f32)mNormalSpeed) < 0.001f) {
             mModeFlg = mModeFlg | 1;
-            if (mDirection != 3 /* DIR_RIGHT */) {
+            if (mDirection != Link07::DIR_RIGHT) {
                 mDirection = 3;
                 morf = 2.4f; /* HD: HIO folded */
             }
@@ -3045,76 +2941,69 @@ BOOL daPy_lk_c::procBowMove() {
         } else {
             mModeFlg = mModeFlg & ~1u;
         }
-        gabi::call(LK_setBlendAtnMoveAnime, this, morf);
-        gabi::call(LK_setBodyAngleXReadyAnime, this);
+        setBlendAtnMoveAnime(morf);
+        setBodyAngleXReadyAnime();
         m35EC = mFrameCtrlUpper[2].getFrame();
     }
     return TRUE;
 }
-VERIFY(0x02437A8C, &daPy_lk_c::procBowMove);
 
 /* 02437C0C */
 BOOL daPy_lk_c::procHookshotSubject() {
-    WWHD_FUNC(0x02437C0C, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
-    if (gabi::load<u32>(hookshot + 0xB0) == 0 /* hookshot->checkWait() */) {
-        dComIfGp_setDoStatus_l(7 /* dActStts_RETURN_e */);
+    if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0 /* hookshot->checkWait() */) {
+        dComIfGp_setDoStatus_l(Link07::dActStts_RETURN_e);
     }
-    if (LK_checkAttentionLock()) {
-        gabi::call(LK_setSpeedAndAngleAtn, this);
-    } else if (gabi::load<u32>(hookshot + 0xB0) == 0) {
-        gabi::call(LK_setSpeedAndAngleAtnActor, this); /* HD */
+    if (lk_attentionLock(mpAttention)) {
+        setSpeedAndAngleAtn();
+    } else if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0) {
+        setSpeedAndAngleAtnActor(); /* HD */
     }
-    gabi::store<u8>(LK_sightPacket + 4, 0); /* mSightPacket.offDrawFlg() */
-    if (!LK_checkNextMode(0)) {
-        if (gabi::load<u32>(hookshot + 0xB0) == 0 && gabi::call<BOOL>(LK_setBodyAngleToCamera, this) &&
-            gabi::load<u32>(hookshot + 0xB0) == 0) {
+    gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0; /* mSightPacket.offDrawFlg() */
+    if (!checkNextMode(0)) {
+        if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0 && setBodyAngleToCamera() &&
+            fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0) {
             setHookshotSight();
         }
         lk_aimSpeedBoost(this);
     }
-    u32 wait = gabi::load<u32>(hookshot + 0xB0);
-    u32 st = dComIfGp_ea() + 0x5CD8;
+    u32 wait = fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot));
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][0];
     if (wait == 0) {
-        gabi::store<u32>(st, gabi::load<u32>(st) & ~0x40000u);
+        status = status & ~0x40000u;
     } else {
-        gabi::store<u32>(st, gabi::load<u32>(st) | 0x40000);
+        status = status | 0x40000;
     }
     return TRUE;
 }
-VERIFY(0x02437C0C, &daPy_lk_c::procHookshotSubject);
 
-enum : u32 {
-    LK_procShipJumpRide_init = 0x0241C244,
-};
 /* a float copy through an FPR that the recompiled original keeps bit-exact (no SNaN quieting) */
 static inline void fcpy_l(u32 dst, u32 src) { gmem_stf32(dst, gmem_ld32(src)); }
 
 /* 02437D60 */
 BOOL daPy_lk_c::procHookshotMove() {
-    WWHD_FUNC(0x02437D60, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
+    if (!checkItemModeActorPointer()) {
         return TRUE;
     }
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
-    gabi::store<u8>(LK_sightPacket + 4, 0); /* mSightPacket.offDrawFlg() */
-    if (gabi::load<u32>(hookshot + 0xB0) == 0 /* hookshot->checkWait() */) {
+    gabi::at<Link07::SightPacket>(LK_sightPacket)->mDrawFlag = 0; /* mSightPacket.offDrawFlg() */
+    if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0 /* hookshot->checkWait() */) {
         if (mpAttnActorLockOn != nullptr) {
-            gabi::call(LK_HD_setSpeedAndAngleAtnActor2, this);
-        } else if (m355E == 0 && !LK_checkAttentionLock()) {
-            gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+            Link07_setSpeedAndAngleAtnActorHD(this);
+        } else if (m355E == 0 && !lk_attentionLock(mpAttention)) {
+            resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
         } else {
-            gabi::call(LK_setSpeedAndAngleAtn, this);
+            setSpeedAndAngleAtn();
         }
     }
-    if (!LK_checkNextMode(0)) {
+    if (!checkNextMode(0)) {
         f32 morf = -1.0f;
         if (std::fabs((f32)mNormalSpeed) < 0.001f) {
             mModeFlg = mModeFlg | 1;
-            if (mDirection != 2 /* DIR_LEFT */) {
+            if (mDirection != Link07::DIR_LEFT) {
                 mDirection = 2;
                 morf = 2.4f; /* HD: HIO folded */
             }
@@ -3122,29 +3011,28 @@ BOOL daPy_lk_c::procHookshotMove() {
         } else {
             mModeFlg = mModeFlg & ~1u;
         }
-        if (gabi::load<u32>(hookshot + 0xB0) == 0) {
-            gabi::call(LK_setBlendAtnMoveAnime, this, morf);
-            gabi::call(LK_setBodyAngleXReadyAnime, this);
+        if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) == 0) {
+            setBlendAtnMoveAnime(morf);
+            setBodyAngleXReadyAnime();
         }
     }
     return TRUE;
 }
-VERIFY(0x02437D60, &daPy_lk_c::procHookshotMove);
 
 /* 02437F00 */
 BOOL daPy_lk_c::procHookshotFly() {
-    WWHD_FUNC(0x02437F00, BOOL, this);
-    if (!gabi::call<BOOL>(LK_checkItemModeActorPointer, this)) {
-        LK_voiceStart(10);
+    if (!checkItemModeActorPointer()) {
+        Link07::voiceStart(this, 10);
         return TRUE;
     }
     u32 hookshot = gabi::ea(mActorKeepEquip.mActor.get());
-    if (gabi::load<u32>(hookshot + 0xB0) != 3 /* !hookshot->checkPull() */) {
-        if (gabi::load<u8>(hookshot + 0xD4FE) != 0 /* checkShipRideFlg() */ && gabi::call<BOOL>(LK_procShipJumpRide_init, this)) {
+    if (fopAcM_GetParam(gabi::at<fopAc_ac_c>(hookshot)) != 3 /* !hookshot->checkPull() */) {
+        if (gabi::at<Link07::Hookshot>(hookshot)->mShipRideFlg != 0 /* checkShipRideFlg() */ &&
+            procShipJumpRide_init()) {
             return TRUE;
         }
-        if (!LK_mAcchChkGroundHit() && gabi::call<BOOL>(LK_changeFrontWallTypeProc, this)) {
-            LK_voiceStart(10);
+        if (!mAcch.ChkGroundHit() && changeFrontWallTypeProc()) {
+            Link07::voiceStart(this, 10);
             return TRUE;
         }
         dBgS_LinChk_Set(mLinkLinChk, &m370C, &current.pos, this);
@@ -3152,25 +3040,25 @@ BOOL daPy_lk_c::procHookshotFly() {
             lk_xyz_copy(&current.pos, &mLinkLinChkCross);
         }
         s16 a = shape_angle.y;
-        f32 x = gabi::fnmsubs(35.0f, cM_ssin(a), gabi::load<f32>(hookshot + 0x314));
+        f32 x = gabi::fnmsubs(35.0f, cM_ssin(a), gabi::at<Link07::Hookshot>(hookshot)->current.pos.x);
         current.pos.x = x;
         f32 y = current.pos.y;
-        f32 z = gabi::fnmsubs(35.0f, cM_scos(a), gabi::load<f32>(hookshot + 0x31C));
+        f32 z = gabi::fnmsubs(35.0f, cM_scos(a), gabi::at<Link07::Hookshot>(hookshot)->current.pos.z);
         m35F0 = y;
         m35F4 = y;
         m3688.x = x;
         m3688.z = z;
         m3688.y = y;
         current.pos.z = z;
-        if (LK_mAcchChkGroundHit()) {
-            LK_checkNextMode(0);
+        if (mAcch.ChkGroundHit()) {
+            checkNextMode(0);
         } else {
-            gabi::call(LK_procFall_init, this, 1, 0.0f);
+            procFall_init(1, 0.0f);
         }
-        LK_voiceStart(10);
+        Link07::voiceStart(this, 10);
     } else {
-        shape_angle.x = gabi::load<s16>(hookshot + 0x328);
-        s16 ay = gabi::load<s16>(hookshot + 0x32A);
+        shape_angle.x = gabi::at<Link07::Hookshot>(hookshot)->shape_angle.x;
+        s16 ay = gabi::at<Link07::Hookshot>(hookshot)->shape_angle.y;
         shape_angle.y = ay;
         current.angle.y = ay;
         gabi::Local<cXyz> move; /* sp+0x08: hookshot->getMoveVec() (HD +0xD51C) */
@@ -3182,13 +3070,8 @@ BOOL daPy_lk_c::procHookshotFly() {
     }
     return TRUE;
 }
-VERIFY(0x02437F00, &daPy_lk_c::procHookshotFly);
 
 /* ---- cut reverse ---- */
-enum : u32 {
-    LK_checkHeavyStateOn = 0x023DBC24,
-};
-#define mSwordTopPos (*gabi::at<cXyz>(gabi::ea(this) + 0x3E4)) /* daPy_py_c (GameCube 0x2C8) */
 /* dComIfGp_getVibration().StartShock(strength, flags, cXyz(0.0f, 1.0f, 0.0f)) */
 static inline void lk_startShock(s32 strength, s32 flags) {
     gabi::Local<cXyz> up;
@@ -3196,35 +3079,33 @@ static inline void lk_startShock(s32 strength, s32 flags) {
     up->x = 0.0f;
     up->y = 1.0f;
     up->z = 0.0f;
-    gabi::call(0x025CB374, v, strength, flags, up.get());
+    Link07_startShock(v, strength, flags, up.get());
 }
 
 /* 02438128 */
 BOOL daPy_lk_c::procCutReverse_init(int anm) {
-    WWHD_FUNC(0x02438128, BOOL, this, anm);
     lk_startShock(4, -0x31);
-    if (anm == 0x2B /* ANM_JATTACK */) {
+    if (anm == Link07::ANM_JATTACK) {
         return TRUE;
     }
     BOOL keep = (mNoResetFlg0 >> 2) & 1; /* daPyFlg0_UNK4 */
-    gabi::call(LK_commonProcInit, this, 0x5A /* daPyProc_CUT_REVERSE_e */);
+    commonProcInit(Link07::daPyProc_CUT_REVERSE_e);
     if (keep) {
         mNoResetFlg0 = mNoResetFlg0 | 4;
     }
-    gabi::call(LK_setSingleMoveAnime, this, anm, 0.5f, 2.0f, 0x12, 0.0f); /* HD: HIO folded */
+    setSingleMoveAnime(anm, 0.5f, 2.0f, 0x12, 0.0f); /* HD: HIO folded */
     s16 a = (s16)(shape_angle.y + 0x8000);
     m3522 = 0;
     mNormalSpeed = 12.0f;
     current.angle.y = a;
-    LK_voiceStart(37);
-    if (mCurrAttributeCode == 0xF /* dBgS_Attr_ICE_e */ && !gabi::call<BOOL>(LK_checkHeavyStateOn, this)) {
+    Link07::voiceStart(this, 37);
+    if (mCurrAttributeCode == 0xF /* dBgS_Attr_ICE_e */ && !checkHeavyStateOn()) {
         s16 c = current.angle.y;
         m36A0.x = gabi::fmadds(10.0f, cM_ssin(c), m36A0.x);
         m36A0.z = gabi::fmadds(10.0f, cM_scos(c), m36A0.z);
     }
     return TRUE;
 }
-VERIFY(0x02438128, &daPy_lk_c::procCutReverse_init);
 
 /* dKy_Sound_set(cXyz pos (by value), int, u32 actorId, int) */
 static inline void lk_dKy_Sound_set_pos(fopAc_ac_c* a, s32 p1, s32 p3) {
@@ -3233,20 +3114,18 @@ static inline void lk_dKy_Sound_set_pos(fopAc_ac_c* a, s32 p1, s32 p3) {
     u32 id = gabi::load<u32>(gabi::ea(a) + 4); /* fopAcM_GetID(this) */
     pos->z = a->current.pos.z;
     pos->x = a->current.pos.x;
-    gabi::call(0x0255F458 /* dKy_Sound_set */, pos.get(), p1, id, p3);
+    Link07_setSoundPosition(pos.get(), p1, id, p3);
 }
 
 /* 0243829C */
 int daPy_lk_c::changeCutReverseProc(int anm) {
-    WWHD_FUNC(0x0243829C, int, this, anm);
-    if (mEquipItem != 0x33 /* dItemNo_SKULL_HAMMER_e */) {
+    if (mEquipItem != Link07::dItemNo_SKULL_HAMMER_e) {
         /* mAtCps[i].ChkAtShieldHit() */
-        if ((gabi::load<u32>(gabi::ea(this) + 0x7B70) & 1) || (gabi::load<u32>(gabi::ea(this) + 0x7CA8) & 1) ||
-            (gabi::load<u32>(gabi::ea(this) + 0x7DE0) & 1)) {
+        if ((mAtCps[0].mGObjAt.mRPrm & 1) || (mAtCps[1].mGObjAt.mRPrm & 1) || (mAtCps[2].mGObjAt.mRPrm & 1)) {
             return procCutReverse_init(anm);
         }
     }
-    if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+    if (!(mNoResetFlg0 & daPyFlg0_CUT_AT_FLG)) {
         return FALSE;
     }
     gabi::Local<cXyz> start; /* sp+0x20 */
@@ -3261,63 +3140,64 @@ int daPy_lk_c::changeCutReverseProc(int anm) {
     if (pla == 0) { /* HD: NULL check */
         return FALSE;
     }
-    f32 ny = gabi::load<f32>(pla + 4);
-    if (!(ny < 0.5f) /* cBgW_CheckBGround */ && !(mCurProc == 0x53 /* daPyProc_HAMMER_FRONT_SWING_e */ && ny < 0.6427876f)) {
+    f32 ny = gabi::at<cM3dGPla>(pla)->mNormal.y;
+    if (!(ny < 0.5f) /* cBgW_CheckBGround */ &&
+        !(mCurProc == Link07::daPyProc_HAMMER_FRONT_SWING_e && ny < 0.6427876f)) {
         if (mCurProc == 0x53) {
             return TRUE;
         }
         return FALSE;
     }
-    if (mEquipItem != 0x34 /* dItemNo_DEKU_LEAF_e */) {
-        u32 mtrl = gabi::call<u32>(0x024EECAC /* dBgS::GetMtrlSndId */, dComIfG_Bgsp(), mLinkLinChkPoly);
-        u32 at = gabi::load<u32>(gabi::ea(this) + 0x7B2C); /* mAtCps[0].GetAtType() */
-        if (at == 0x80 /* AT_TYPE_BOKO_STICK */) {
-            gabi::call(0x025E1A40 /* mDoAud_seStart */, 0x2833 /* JA_SE_LK_W_WEP_HIT */, &mSwordTopPos, mtrl, (s32)mReverb);
-        } else if (at == 0x1000000 /* AT_TYPE_STALFOS_MACE */ || at == 0x10000 /* AT_TYPE_SKULL_HAMMER */) {
+    if (mEquipItem != Link07::dItemNo_DEKU_LEAF_e) {
+        u32 mtrl = Link07_materialSoundWord(dComIfG_Bgsp(), mLinkLinChkPoly);
+        u32 at = mAtCps[0].mAtType; /* mAtCps[0].GetAtType() */
+        if (at == Link07::AT_TYPE_BOKO_STICK) {
+            Link07_seStartMaterial(Link07::JA_SE_LK_W_WEP_HIT, &mSwordTopPos, mtrl, (s32)mReverb);
+        } else if (at == Link07::AT_TYPE_STALFOS_MACE || at == Link07::AT_TYPE_SKULL_HAMMER) {
             if (at != 0x10000 || !(mNoResetFlg0 & 0x10000000)) {
-                gabi::call(0x025E1A40, 0x2855 /* JA_SE_LK_HAMMER_HIT */, &mSwordTopPos, mtrl, (s32)mReverb);
+                Link07_seStartMaterial(Link07::JA_SE_LK_HAMMER_HIT, &mSwordTopPos, mtrl, (s32)mReverb);
             }
         } else {
-            gabi::call(0x025E1A40, 0x2803 /* JA_SE_LK_SW_HIT_S */, &mSwordTopPos, mtrl, (s32)mReverb);
+            Link07_seStartMaterial(Link07::JA_SE_LK_SW_HIT_S, &mSwordTopPos, mtrl, (s32)mReverb);
         }
-        if (gabi::load<u32>(gabi::ea(this) + 0x7B2C) == 0x10000 && mCurProc != 0x5B /* daPyProc_JUMP_CUT_e */) {
+        if (mAtCps[0].mAtType == 0x10000 && mCurProc != Link07::daPyProc_JUMP_CUT_e) {
             mNoResetFlg0 = mNoResetFlg0 | 0x10000000;
         }
-        s32 attr = gabi::call<s32>(0x024EF0F4 /* dBgS::GetAttributeCode */, dComIfG_Bgsp(), mLinkLinChkPoly);
+        s32 attr = Link07_getAttributeCodeWord(dComIfG_Bgsp(), mLinkLinChkPoly);
         if (attr == 2 /* WOOD */ || attr == 3 /* STONE */ || attr == 0x14 /* METAL */) {
             u32 pla2 = dBgS_GetTriPla_l(mLinkLinChkPoly);
             if (pla2 != 0) {
                 gabi::Local<cXyz> xz; /* sp+0x38 */
-                f32 px = gabi::load<f32>(pla2 + 0);
+                f32 px = gabi::at<cM3dGPla>(pla2)->mNormal.x;
                 xz->y = 0.0f;
-                xz->z = gabi::load<f32>(pla2 + 8);
+                xz->z = gabi::at<cM3dGPla>(pla2)->mNormal.z;
                 xz->x = px;
-                f64 lxz = gabi::call<f64>(0x028F4384 /* std::sqrtf */, PSVECSquareMag(xz));
+                f64 lxz = Link07_sqrtUnrounded(PSVECSquareMag(xz));
                 gabi::Local<csXyz> ang; /* sp+0x18 */
-                ang->x = gabi::call<s16>(0x020195B0 /* cM_atan2s */, -gabi::load<f32>(pla2 + 4), lxz);
-                ang->y = cM_atan2s(gabi::load<f32>(pla2 + 0), gabi::load<f32>(pla2 + 8));
+                ang->x = Link07_atan2sSecondUnrounded(-gabi::at<cM3dGPla>(pla2)->mNormal.y, lxz);
+                ang->y = cM_atan2s(gabi::at<cM3dGPla>(pla2)->mNormal.x, gabi::at<cM3dGPla>(pla2)->mNormal.z);
                 ang->z = 0;
                 if (attr == 2) {
                     dPa_control_c* pa = dComIfGp_getParticle();
-                    u32 em = gabi::ea(dPa_control_set(pa, 1, 0x2B /* ID_AK_JN_ELEMENTKIKUZU00 */, &mLinkLinChkCross, ang,
-                                                      nullptr, 0xFF, nullptr, -1, gabi::at<GXColor>(gabi::ea(this) + 0x1A8),
-                                                      gabi::at<GXColor>(gabi::ea(this) + 0x1A8), nullptr));
+                    u32 em = gabi::ea(dPa_control_set(
+                        pa, 1, Link07::ID_AK_JN_ELEMENTKIKUZU00, &mLinkLinChkCross, ang, nullptr, 0xFF, nullptr, -1,
+                        gabi::at<GXColor>(gabi::ea(this) + 0x1A8), gabi::at<GXColor>(gabi::ea(this) + 0x1A8), nullptr));
                     if (em != 0) {
-                        gabi::store<f32>(em + 0x58, 0.2f);  /* setSpread() */
-                        gabi::store<f32>(em + 0x34, 8.0f);  /* setRate() */
-                        gabi::store<u32>(em + 0x5C, 1);     /* setMaxFrame() */
-                        gabi::store<f32>(em + 0x7C, 0.15f); /* setVolumeSweep() */
+                        gabi::at<Link07::Emitter>(em)->mSpread = 0.2f;       /* setSpread() */
+                        gabi::at<Link07::Emitter>(em)->mRate = 8.0f;         /* setRate() */
+                        gabi::at<Link07::Emitter>(em)->mMaxFrame = 1;        /* setMaxFrame() */
+                        gabi::at<Link07::Emitter>(em)->mVolumeSweep = 0.15f; /* setVolumeSweep() */
                     }
                 } else {
                     ang->x = (s16)(ang->x + 0x4000);
                     dPa_control_c* pa = dComIfGp_getParticle();
-                    u32 em = gabi::ea(dPa_control_set(pa, 1, 0x2C /* ID_AK_JN_ELEMENTHIBANA00 */, &mLinkLinChkCross, ang,
+                    u32 em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_AK_JN_ELEMENTHIBANA00, &mLinkLinChkCross, ang,
                                                       nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
                     if (em != 0) {
-                        gabi::store<u32>(em + 0x5C, 1);     /* setMaxFrame() */
-                        gabi::store<f32>(em + 0x34, 20.0f); /* setRate() */
-                        gabi::store<f32>(em + 0x6C, 20.0f); /* setAwayFromAxisSpeed() */
-                        gabi::store<f32>(em + 0x70, 20.0f); /* setDirectionalSpeed() */
+                        gabi::at<Link07::Emitter>(em)->mMaxFrame = 1;              /* setMaxFrame() */
+                        gabi::at<Link07::Emitter>(em)->mRate = 20.0f;              /* setRate() */
+                        gabi::at<Link07::Emitter>(em)->mAwayFromAxisSpeed = 20.0f; /* setAwayFromAxisSpeed() */
+                        gabi::at<Link07::Emitter>(em)->mDirectionalSpeed = 20.0f;  /* setDirectionalSpeed() */
                     }
                 }
             }
@@ -3326,20 +3206,14 @@ int daPy_lk_c::changeCutReverseProc(int anm) {
     lk_dKy_Sound_set_pos(this, 100, 5);
     return procCutReverse_init(anm);
 }
-VERIFY(0x0243829C, &daPy_lk_c::changeCutReverseProc);
 
 /* ---- fan ---- */
-enum : u32 {
-    LK_mtxFollow_end = 0x023D4538,
-    LK_mtxFollow_makeEmitter = 0x023D457C,
-    LK_getGroundAngle = 0x023E7D6C,
-};
 /* J3DModel::getAnmMtx (HD: marks the joint matrices dirty; block at +0x2C, flags +4, matrices +0x10) */
 static inline u32 lk_getAnmMtx(u32 model, s32 jnt) {
-    u32 blk = gabi::load<u32>(model + 0x2C);
-    u16 f = gabi::load<u16>(blk + 4);
-    u32 mtx = gabi::load<u32>(blk + 0x10);
-    gabi::store<u16>(blk + 4, (u16)(f | 0x10));
+    Link07::MatrixBuffer* buffer = gabi::at<Link07::MatrixModel>(model)->mpMtxBuffer;
+    u16 flags = buffer->mFlags;
+    u32 mtx = gabi::ea(buffer->mpAnmMtx.get());
+    buffer->mFlags = (u16)(flags | 0x10);
     return mtx + jnt * 0x30;
 }
 /* strcmp(dComIfGp_getStartStageName(), name) == 0 (GHS inline loop) */
@@ -3361,40 +3235,39 @@ static inline BOOL lk_stageNameIs(u32 name) {
 
 /* 024386C4 */
 BOOL daPy_lk_c::procFanSwing() {
-    WWHD_FUNC(0x024386C4, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if (mpAttnActorLockOn != nullptr) {
         mModeFlg = mModeFlg | 0x80;
     } else {
         mModeFlg = mModeFlg & ~0x80u;
     }
-    if (changeCutReverseProc(0x15 /* ANM_CUTREL */)) {
+    if (changeCutReverseProc(Link07::ANM_CUTREL)) {
         return TRUE;
     }
     if (frameCtrl.checkPass(4.0f) && mProcVar0 != 0) {
         u32 cb = gabi::ea(this) + 0x6808; /* mFanSwingCb */
-        u32 em = gabi::load<u32>(cb + 8);
+        u32 em = gabi::ea(gabi::at<Link07::FanSwingCallback>(cb)->mpEmitter.get());
         if (em != 0) { /* mFanSwingCb.deleteCallBack() */
-            gabi::store<u32>(em + 0x254, gabi::load<u32>(em + 0x254) & ~0x40u);
-            gabi::store<u32>(gabi::load<u32>(cb + 8) + 0x1E4, 0);
-            gabi::store<u32>(cb + 8, 0);
+            gabi::at<Link07::Emitter>(em)->mStatus = gabi::at<Link07::Emitter>(em)->mStatus & ~0x40u;
+            gabi::at<Link07::FanSwingCallback>(cb)->mpEmitter->mpCallBack = nullptr;
+            gabi::at<Link07::FanSwingCallback>(cb)->mpEmitter = nullptr;
         }
-        u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0 /* CL_JNT_LINK_ROOT_e */);
+        u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_LINK_ROOT_e);
         gabi::Local<cXyz> root; /* sp+0x30: mDoMtx_multVecZero */
-        root->x = gabi::load<f32>(mtx + 0xC);
-        root->y = gabi::load<f32>(mtx + 0x1C);
-        root->z = gabi::load<f32>(mtx + 0x2C);
+        root->x = gabi::at<Mtx34>(mtx)->m[0][3];
+        root->y = gabi::at<Mtx34>(mtx)->m[1][3];
+        root->z = gabi::at<Mtx34>(mtx)->m[2][3];
         dPa_control_c* pa = dComIfGp_getParticle();
-        dPa_control_set(pa, 1, 0x4A /* ID_AK_JN_LEAFFAN00 */, root, &shape_angle, nullptr, 0xFF,
+        dPa_control_set(pa, 1, Link07::ID_AK_JN_LEAFFAN00, root, &shape_angle, nullptr, 0xFF,
                         gabi::at<dPa_levelEcallBack>(cb), -1, nullptr, nullptr, nullptr);
     }
     if (frameCtrl.getFrame() < 22.0f) {
         cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.6f, 2.5f, 1.8f); /* HD: HIO folded */
     } else if (mProcVar6 == 0) {
         if (mProcVar0 != 0) {
-            if (!gabi::call<BOOL>(LK_checkHeavyStateOn, this) &&
-                (!LK_mAcchChkGroundHit() || (mNoResetFlg0 & 0xA0000000) || !dBgS_ChkPolySafe_l(mAcchGndPoly) ||
-                 !gabi::call<BOOL>(0x024EEABC /* dBgS::ChkMoveBG */, dComIfG_Bgsp(), mAcchGndPoly))) {
+            if (!checkHeavyStateOn() &&
+                (!mAcch.ChkGroundHit() || (mNoResetFlg0 & 0xA0000000) || !dBgS_ChkPolySafe_l(mAcchGndPoly) ||
+                 !Link07_checkMoveBG(dComIfG_Bgsp(), mAcchGndPoly))) {
                 mNormalSpeed = 10.0f;
                 s16 a = (s16)(shape_angle.y + 0x8000);
                 current.angle.y = a;
@@ -3419,22 +3292,23 @@ BOOL daPy_lk_c::procFanSwing() {
                 xz->x = d->x;
                 xz->y = 0.0f;
                 xz->z = d->z;
-                f64 lxz = gabi::call<f64>(0x028F4384 /* std::sqrtf */, PSVECSquareMag(xz));
-                ax = gabi::call<s16>(0x020195B0 /* cM_atan2s */, -d->y, lxz);
+                f64 lxz = Link07_sqrtUnrounded(PSVECSquareMag(xz));
+                ax = Link07_atan2sSecondUnrounded(-d->y, lxz);
             }
             m3538 = ax;
             anm_setFrame_hd(gabi::ea(this) + 0x54F4, 0.0f, 0x10, 0x20); /* mpYuchw00Brk->setFrame(0.0f) */
-            gabi::call(LK_mtxFollow_end, &m33E8);
-            u32 mtx = lk_getAnmMtx(gabi::load<u32>(gabi::ea(this) + 0x53F0) /* mpYuchw00Model */, 2 /* YUCHW00_JNT_LWIND_e */);
-            gabi::call(LK_mtxFollow_makeEmitter, &m33E8, 0x32 /* ID_AK_JN_UCHIWAWIND00 */, mtx, windEnd.get(), nullptr);
+            Link07_endMtxFollow(&m33E8);
+            u32 mtx = lk_getAnmMtx(gabi::ea(Link07::models(this).mpYuchw00Model.get()) /* mpYuchw00Model */,
+                                   2 /* YUCHW00_JNT_LWIND_e */);
+            Link07_makeMtxFollowEmitter(&m33E8, Link07::ID_AK_JN_UCHIWAWIND00, mtx, windEnd.get(), nullptr);
             u32 em = gabi::ea(m33E8.mpEmitter.get());
             if (em != 0) { /* setGlobalPrmColor(tevStr.mColorC0) */
-                gabi::store<u8>(em + 0x244, gabi::load<u8>(gabi::ea(this) + 0x1A1));
-                gabi::store<u8>(em + 0x246, gabi::load<u8>(gabi::ea(this) + 0x1A5));
-                gabi::store<u8>(em + 0x245, gabi::load<u8>(gabi::ea(this) + 0x1A3));
+                gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.r = (u8)tevStr.mColorC0.r;
+                gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.b = (u8)tevStr.mColorC0.b;
+                gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.g = (u8)tevStr.mColorC0.g;
             }
-            gabi::call(0x02018808 /* mFanWindCps.SetStartEnd (cM3dGCps) */, gabi::ea(this) + 0x7FDC, &current.pos, windEnd.get());
-            seStartOnlyReverb(0x2844 /* JA_SE_LK_FAN_SWING */);
+            cM3dGLin_SetStartEnd(gabi::at<cM3dGCps>(gabi::ea(mFanWindCps.mCps)), &current.pos, windEnd.get());
+            seStartOnlyReverb(Link07::JA_SE_LK_FAN_SWING);
             gabi::Local<cXyz> land; /* sp+0x18 (GameCube local_48) */
             {
                 s16 a = shape_angle.y;
@@ -3448,199 +3322,183 @@ BOOL daPy_lk_c::procFanSwing() {
                 mGndChkPos.y = y;
                 mGndChkPos.z = z;
             }
-            f64 g = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
+            f64 g = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
             land->y = (f32)g;
             if (!(g < (f64)(f32)(current.pos.y - 50.0f))) {
-                s32 attr = gabi::call<s32>(0x024EF0F4 /* dBgS::GetAttributeCode */, dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
-                if (lk_stageNameIs(0x1003615C /* "Adanmae" */)) {
+                s32 attr = Link07_getAttributeCodeWord(dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
+                if (lk_stageNameIs(gabi::guest_str("Adanmae"))) {
                     dPa_control_c* pa = dComIfGp_getParticle();
-                    dPa_control_set(pa, 1, 0x8236 /* ID_AK_SN_VOLCANICASHESFAN00 */, land, &shape_angle, nullptr, 0xFF, nullptr,
-                                    -1, nullptr, nullptr, nullptr);
+                    dPa_control_set(pa, 1, Link07::ID_AK_SN_VOLCANICASHESFAN00, land, &shape_angle, nullptr, 0xFF,
+                                    nullptr, -1, nullptr, nullptr, nullptr);
                 }
-                gabi::store<u8>(0x1047B299, 1); /* dPa_control_c::getSmokeEcallback()->onWindOff() */
+                l_smokeWindOff = 1;       /* dPa_control_c::getSmokeEcallback()->onWindOff() */
                 gabi::Local<be<s32>> out; /* sp+0x60 */
                 dPa_control_c* pa = dComIfGp_getParticle();
-                u32 em2 = gabi::call<u32>(0x025A87C0 /* dPa_control_c::setSimpleLand */, pa, attr, land.get(), 0, 1.0f, 1.0f, 1.0f,
-                                          gabi::ea(this) + 0x110 /* &tevStr */, out.get(), 0x17);
-                gabi::store<u8>(0x1047B299, 0); /* offWindOff() */
+                u32 em2 = Link07_setSimpleLandHD(pa, attr, land.get(), 0, 1.0f, 1.0f, 1.0f,
+                                                 gabi::ea(this) + 0x110 /* &tevStr */, out.get(), 0x17);
+                l_smokeWindOff = 0; /* offWindOff() */
                 if (em2 != 0) {
                     s16 ay = (s16)(shape_angle.y + 0x8000);
-                    s16 gx = gabi::call<s16>(LK_getGroundAngle, this, gabi::ea(this) + 0xB28, (s32)ay);
-                    s16 gz = gabi::call<s16>(LK_getGroundAngle, this, gabi::ea(this) + 0xB28, (s32)(s16)(ay - 0x4000));
+                    s16 gx = Link07_getGroundAngleWord(this, gabi::ea(this) + 0xB28, (s32)ay);
+                    s16 gz = Link07_getGroundAngleWord(this, gabi::ea(this) + 0xB28, (s32)(s16)(ay - 0x4000));
                     mDoMtx_stack_c::transS(land->x, land->y, land->z);
                     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), gx, ay, gz);
-                    gabi::call(0x028249B0 /* JPASetRMtxTVecfromMtx */, mDoMtx_stack_c::get(), em2 + 0x1F0, em2 + 0x22C);
-                    gabi::store<f32>(em2 + 0x58, 0.45f); /* setSpread() */
-                    gabi::store<f32>(em2 + 0x34, attr == 4 /* dBgS_Attr_GRASS_e */ ? 100.0f : 50.0f); /* setRate() */
+                    Link07_setParticleMatrix(mDoMtx_stack_c::get(), em2 + 0x1F0, em2 + 0x22C);
+                    gabi::at<Link07::Emitter>(em2)->mSpread = 0.45f; /* setSpread() */
+                    gabi::at<Link07::Emitter>(em2)->mRate =
+                        attr == 4 /* dBgS_Attr_GRASS_e */ ? 100.0f : 50.0f; /* setRate() */
                 }
             }
             gabi::Local<cXyz> squal; /* sp+0x3C */
             squal->z = current.pos.z;
             squal->x = current.pos.x;
             squal->y = current.pos.y + 50.0f;
-            gabi::call(0x0257DC9C /* dKyw_squal_set */, squal.get(), 1000, (s32)shape_angle.y, 280.0f, 1000.0f, 1.0f, 140.0f, 0.08f);
+            Link07_setSquall(squal.get(), 1000, (s32)shape_angle.y, 280.0f, 1000.0f, 1.0f, 140.0f, 0.08f);
         } else {
-            seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
+            seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
         }
-        LK_voiceStart(1);
+        Link07::voiceStart(this, 1);
         mProcVar6 = 1;
     } else if (cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.5f, 1.5f, 0.3f) < 0.5f) {
-        gabi::call(LK_resetFootEffect, this);
+        resetFootEffect();
     }
     m35EC = frameCtrl.getFrame();
     if (frameCtrl.getRate() < 0.01f) {
         mNormalSpeed = 0.0f;
-        LK_checkNextMode(0);
+        checkNextMode(0);
     }
     return TRUE;
 }
-VERIFY(0x024386C4, &daPy_lk_c::procFanSwing);
 
 /* ---- tact (Wind Waker) ---- */
-enum : u32 {
-    LK_checkShipRideUseItem = 0x023E26EC,
-    LK_initShipRideUseItem = 0x023E2E18,
-};
 
 /* 02439C14 */
 u16 daPy_lk_c::getTactPlayRightArmAnm(s32 dir) {
-    WWHD_FUNC(0x02439C14, u16, this, dir);
     if (dir == 1) {
-        return 0xB; /* ACTIONTAKTRUP */
+        return Link07::dRes_INDEX_LKANM_BCK_ACTIONTAKTRUP_e;
     } else if (dir == 3) {
-        return 8; /* ACTIONTAKTRDW */
+        return Link07::dRes_INDEX_LKANM_BCK_ACTIONTAKTRDW_e;
     } else if (dir == 2) {
-        return 0x12C; /* WAITTAKTRHANDL */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTRHANDL_e;
     } else if (dir == 4) {
-        return 0x12D; /* WAITTAKTRHANDR */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTRHANDR_e;
     }
-    return 0x127; /* WAITTAKT */
+    return Link07::dRes_INDEX_LKANM_BCK_WAITTAKT_e;
 }
-VERIFY(0x02439C14, &daPy_lk_c::getTactPlayRightArmAnm);
 
 /* 02439C58 */
 u16 daPy_lk_c::getTactPlayLeftArmAnm(s32 dir) {
-    WWHD_FUNC(0x02439C58, u16, this, dir);
     if (dir == 1) {
-        return 0x12B; /* WAITTAKTLHANDU */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTLHANDU_e;
     } else if (dir == 3) {
-        return 0x128; /* WAITTAKTLHANDD */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTLHANDD_e;
     } else if (dir == 2) {
-        return 0x129; /* WAITTAKTLHANDL */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTLHANDL_e;
     } else if (dir == 4) {
-        return 0x12A; /* WAITTAKTLHANDR */
+        return Link07::dRes_INDEX_LKANM_BCK_WAITTAKTLHANDR_e;
     }
-    return 0x127; /* WAITTAKT */
+    return Link07::dRes_INDEX_LKANM_BCK_WAITTAKT_e;
 }
-VERIFY(0x02439C58, &daPy_lk_c::getTactPlayLeftArmAnm);
 
-/* 02439C9C (unnamed by the matcher: checkNpcStatus, GameCube 8014D8AC) */
+/* 02439C9C */
+/* (unnamed by the matcher: checkNpcStatus, GameCube 8014D8AC) */
 BOOL daPy_lk_c::checkNpcStatus() {
-    WWHD_FUNC(0x02439C9C, BOOL, this);
-    if (gabi::load<u32>(dComIfGp_ea() + 0x5B38) /* dComIfGp_getCb1Player() */ != 0) {
-        if (!(gabi::load<u32>(gabi::load<u32>(dComIfGp_ea() + 0x5B38) + 0x3BC) & 0x40) /* !checkNpcNotChange() */) {
-            u32 cb1 = gabi::load<u32>(dComIfGp_ea() + 0x5B38);
-            if ((u32)(s32)gabi::load<s8>(cb1 + 0x326) == (u32)(s32)current.roomNo) {
+    if (dComIfGp_getCb1Player() != nullptr) {
+        if (!(gabi::at<daPy_py_c>(gabi::ea(dComIfGp_getCb1Player()))->mNoResetFlg1 & 0x40) /* !checkNpcNotChange() */) {
+            fopAc_ac_c* cb1 = dComIfGp_getCb1Player();
+            if ((u32)(s32)(s8)cb1->current.roomNo == (u32)(s32)current.roomNo) {
                 return TRUE;
             }
         }
     }
     return FALSE;
 }
-VERIFY(0x02439C9C, &daPy_lk_c::checkNpcStatus);
 
-/* 02439D24 HD-only (unnamed): the tact cancel trigger: the B trigger or the HD pad button 0x10000 */
+/* 02439D24 */
+/* HD-only (unnamed): the tact cancel trigger: the B trigger or the HD pad button 0x10000 */
 BOOL daPy_lk_c::checkTactCancelTrigger() {
-    WWHD_FUNC(0x02439D24, BOOL, this);
-    if ((mItemTrigger & 2) || (gabi::load<u32>(gabi::load<u32>(0x101F5088) + 0x18) & 0x10000)) {
+    if ((mItemTrigger & 2) || (l_pad.mpPad->mTrigger & 0x10000)) {
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x02439D24, &daPy_lk_c::checkTactCancelTrigger);
 
 /* 02439D54 */
 BOOL daPy_lk_c::procTactPlay_init(s32 song, int warp, int noMsg) {
-    WWHD_FUNC(0x02439D54, BOOL, this, song, warp, noMsg);
-    int use = gabi::call<int>(LK_checkShipRideUseItem, this, 0);
-    gabi::call(LK_commonProcInit, this, 0x9B /* daPyProc_TACT_PLAY_e */);
-    u32 a = dComIfGp_ea() + 0x5CDC;
-    gabi::store<u32>(a, gabi::load<u32>(a) | 1 /* daPyStts1_WIND_WAKER_CONDUCT_e */);
+    int use = checkShipRideUseItem(0);
+    commonProcInit(Link07::daPyProc_TACT_PLAY_e);
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+    status = status | Link07::daPyStts1_WIND_WAKER_CONDUCT_e;
     mProcVar6 = song;
-    u32 msgMgr = gabi::load<u32>(0x101F4B5C);
+    u32 msgMgr = gabi::ea(l_messageManager.mpManager.get());
     u32 sh = (u32)song & 0x3F;
     u8 bit = (u8)((sh & 0x20) ? 0 : (1u << sh));
-    if (noMsg == 0 && !(gabi::load<u8>(gabi::load<u32>(0x101F8344) + 0x241) & bit) /* HD: song not yet learned */) {
-        if (gabi::call<s32>(0x025F7DB0 /* fopMsgM_messageSet */, msgMgr, 0x5AD + song, 0) != -1) {
+    if (noMsg == 0 && !(l_hdSystem.mpSystem->mLearnedSongs & bit) /* HD: song not yet learned */) {
+        if (Link07_messageSet(msgMgr, 0x5AD + song, 0) != -1) {
             mGameOverId = 0;
         }
     } else {
         mGameOverId = 0xFFFFFFFF;
     }
-    gabi::call(0x025E1EF0 /* mDoAud_tact_setVolume */, 0.0f);
-    gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-    gabi::call(LK_resetActAnimeUpper, this, 1 /* UPPER_MOVE1_e */, -1.0f);
+    Link07_tactSetVolume(0.0f);
+    resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+    resetActAnimeUpper(Link07::UPPER_MOVE1_e, -1.0f);
     mProcVar5 = 10;
     s32 anm;
     if (song == 0) {
-        anm = 0xE4; /* ANM_TAKTKAZE */
+        anm = Link07::ANM_TAKTKAZE;
     } else if (song == 1) {
-        anm = 0xE5; /* ANM_TAKTSIPPU */
+        anm = Link07::ANM_TAKTSIPPU;
     } else if (song == 5) {
-        anm = 0xE6; /* ANM_TAKTCHUYA */
+        anm = Link07::ANM_TAKTCHUYA;
     } else if (song == 4) {
-        anm = 0xE7; /* ANM_TAKTFUJIN */
+        anm = Link07::ANM_TAKTFUJIN;
     } else if (song == 2) {
-        anm = 0xE8; /* ANM_TAKTAYATSURI */
+        anm = Link07::ANM_TAKTAYATSURI;
     } else {
-        anm = 0xE9; /* ANM_TAKTCHISIN */
+        anm = Link07::ANM_TAKTCHISIN;
     }
-    gabi::call(LK_setSingleMoveAnime, this, anm, 1.0f, 0.0f, -1, 3.0f);
-    gabi::call(LK_initShipRideUseItem, this, use, 2);
+    setSingleMoveAnime(anm, 1.0f, 0.0f, -1, 3.0f);
+    initShipRideUseItem(use, 2);
     if (use != 0 && mProcVar6 == 1) {
         u32 stage = dComIfGp_ea() + 0x5150; /* dComIfGp_getStageStagInfo(): virtual getStagInfo (slot 0x15C) */
-        u32 info = gabi::call_ptr<u32>(gabi::load<u32>(gabi::load<u32>(stage) + 0x15C), stage);
-        if (((gabi::load<u32>(info + 0xC) >> 16) & 7) == 7 /* dStageType_SEA_e */ && m34CC != 1 && warp != 0) {
+        u32 info = gabi::call_ptr<u32>(gabi::at<Link07::StageInterface>(stage)->mpVtable->mGetStageInfo, stage);
+        if (((gabi::at<Link07::StageInfo>(info)->mStageType >> 16) & 7) == 7 /* dStageType_SEA_e */ && m34CC != 1 &&
+            warp != 0) {
             u32 ship = dComIfGp_getShipActor_l();
-            u32 id = fopAcM_create(0x1BB /* fpcNm_TORNADO_e */, 1, &current.pos, current.roomNo, nullptr, nullptr, -1, 0);
-            gabi::store<u32>(ship + 0x714, id); /* ship->setTactWarpID() */
+            u32 id = fopAcM_create(Link07::fpcNm_TORNADO_e, 1, &current.pos, current.roomNo, nullptr, nullptr, -1, 0);
+            Link07::ship(ship)->mTactWarpID = id; /* ship->setTactWarpID() */
         }
     }
-    u32 model = gabi::load<u32>(gabi::ea(this) + 0x4440); /* mpEquipItemModel */
-    gabi::call(LK_mtxFollow_makeEmitter, &m32E4, 0x51 /* ID_AK_JN_TAKT01 */, model ? model + 0xC8 : 0, &current.pos, nullptr);
+    u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
+    Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
     mProcVar4 = (s16)noMsg;
     m3624 = 0;
     mProcVar7 = warp;
     mProcVar0 = 0;
     return TRUE;
 }
-VERIFY(0x02439D54, &daPy_lk_c::procTactPlay_init);
 
-enum : u32 {
-    LK_checkEndMessage = 0x0241FBCC,
-    LK_endDemoMode = 0x023F2048,
-    LK_procTactPlayEnd_init = 0x02412948,
-    LK_setTactModel = 0x023DEF04,
-};
 /* dCam_getBody()->EndEventCamera(fopAcM_GetID(this)) */
 static inline void lk_endEventCamera(fopAc_ac_c* a) {
-    u32 cam = gabi::call<u32>(0x024F8044 /* dCam_getBody */);
-    gabi::call(0x0253E860 /* dCamera_c::EndEventCamera */, cam, gabi::load<u32>(gabi::ea(a) + 4));
+    u32 cam = Link07_cameraBody();
+    Link07_endEventCamera(cam, gabi::load<u32>(gabi::ea(a) + 4));
 }
 /* HD: mAnmRatioUpper[i].setRatio(v) became a per-joint weight table (count +8, data +0xC) */
 static inline void lk_anmRatio_set(u32 pack, f32 v) {
-    for (s32 i = 0; i < gabi::load<s32>(pack + 8); i++) {
-        gabi::store<f32>(gabi::load<u32>(pack + 0xC) + i * 4, v);
+    Link07::AnmRatioPack* ratio = gabi::at<Link07::AnmRatioPack>(pack);
+    for (s32 i = 0; i < ratio->mJointNum; i++) {
+        ratio->mpJointRatios.get()[i] = v;
     }
 }
 
-/* 0243AAD4 HD-only (unnamed): whether the played song takes effect here; otherwise the "nothing
+/* 0243AAD4 */
+/* HD-only (unnamed): whether the played song takes effect here; otherwise the "nothing
  * happened" message (m3624) is set (GameCube: inside procTactPlay) */
 BOOL daPy_lk_c::checkTactSongUsable() {
-    WWHD_FUNC(0x0243AAD4, BOOL, this);
     s32 song = mProcVar6;
     if (song == 0) {
-        if (gabi::call<BOOL>(0x0257E6EC /* dKyw_gbwind_use_check */)) {
+        if (Link07_checkGustWind()) {
             return TRUE;
         }
         m3624 = 0x14A5;
@@ -3648,32 +3506,33 @@ BOOL daPy_lk_c::checkTactSongUsable() {
     }
     if (song == 1) {
         u32 ship = dComIfGp_getShipActor_l();
-        if (ship != 0 && gabi::load<s32>(ship + 0x714) != -1 /* getTactWarpID() */) {
+        if (ship != 0 && (s32)(u32)Link07::ship(ship)->mTactWarpID != -1 /* getTactWarpID() */) {
             return TRUE;
         }
         m3624 = 0x14A6;
         return FALSE;
     }
     if (song == 2) {
-        if (checkNpcStatus() && !dComIfGp_checkPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */)) {
+        if (checkNpcStatus() && !dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e)) {
             return TRUE;
         }
         m3624 = 0x14A8;
         return FALSE;
     }
     if (song == 5) {
-        if (gabi::call<BOOL>(0x02560C84 /* dKy_daynighttact_stop_chk */)) {
+        if (Link07_checkDayNightTactStop()) {
             m3624 = 0x14A7;
             return FALSE;
         }
         s32 room = current.roomNo;
-        u32 rd = gabi::call<u32>(0x025C11DC /* dStage_roomControl_c::getStatusRoomDt */, dComIfGp_ea() + 0x51CC, room);
-        u32 fili = gabi::call_ptr<u32>(gabi::load<u32>(gabi::load<u32>(rd) + 0x1DC), rd); /* getFileListInfo() */
+        u32 rd = Link07_roomStatus(dComIfGp_ea() + 0x51CC, room);
+        u32 fili = gabi::call_ptr<u32>(gabi::at<Link07::StageInterface>(rd)->mpVtable->mGetFileListInfo,
+                                       rd); /* getFileListInfo() */
         if (fili == 0) {
             JUT_ASSERT_fail(gabi::at<char>(0x10035020), 0x4DD, gabi::at<char>(0x1003502C));
             return TRUE;
         }
-        if (gabi::load<u32>(fili) & 0x40000000 /* dStage_FileList_dt_GetSongOk() */) {
+        if (gabi::at<Link07::FileListInfo>(fili)->mFlags & 0x40000000 /* dStage_FileList_dt_GetSongOk() */) {
             m3624 = 0x14AA;
             return FALSE;
         }
@@ -3682,13 +3541,11 @@ BOOL daPy_lk_c::checkTactSongUsable() {
     m3624 = 0x14A9;
     return FALSE;
 }
-VERIFY(0x0243AAD4, &daPy_lk_c::checkTactSongUsable);
 
 /* 0243AC64 */
 BOOL daPy_lk_c::procTactPlay() {
-    WWHD_FUNC(0x0243AC64, BOOL, this);
-    if (dComIfGp_checkPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */)) {
-        gabi::call(LK_setShipRidePos, this, 1);
+    if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e)) {
+        setShipRidePos(1);
         shape_angle.y = (s16)(shape_angle.y - 0x4000);
     }
     /* HD: a song Link already knows (save bit) skips the play and takes effect right away */
@@ -3697,27 +3554,27 @@ BOOL daPy_lk_c::procTactPlay() {
         if (mTactZevPartnerId == 0xFFFFFFFF || (u32)m34CC != (u32)song) {
             u32 sh = (u32)song & 0x3F;
             u8 bit = (u8)((sh & 0x20) ? 0 : (1u << sh));
-            if (gabi::load<u8>(gabi::load<u32>(0x101F8344) + 0x241) & bit) {
-                gabi::call(0x025E1E94 /* mDoAud_tact_reset */);
-                gabi::store<u8>(dComIfGp_ea() + 0x5BD1, 0); /* dComIfGp_setMetronomeOff() */
-                gabi::call(LK_setSingleMoveAnime, this, 0xA8 /* ANM_WAITTAKT */, 0.8f, 0.0f, -1, 10.0f);
-                gabi::call(LK_setTextureAnime, this, 6, 0);
+            if (l_hdSystem.mpSystem->mLearnedSongs & bit) {
+                Link07_tactReset();
+                Link07::gameInfo()->play.mMetronome = 0; /* dComIfGp_setMetronomeOff() */
+                setSingleMoveAnime(Link07::ANM_WAITTAKT, 0.8f, 0.0f, -1, 10.0f);
+                setTextureAnime(6, 0);
                 mModeFlg = (mModeFlg | 0x100) & ~0x400u;
                 if (checkTactSongUsable()) {
-                    gabi::call(0x025E1988 /* seStartSystem */, 0x871 /* JA_SE_TAKT_MATCHED */);
-                    return gabi::call<BOOL>(LK_procTactPlayEnd_init, this, (s32)mProcVar6);
+                    Link07_seStartSystem(Link07::JA_SE_TAKT_MATCHED);
+                    return procTactPlayEnd_init((s32)mProcVar6);
                 }
             }
         }
     }
-    gabi::call(0x025E1F14 /* mDoAud_tact_ambientPlay */);
+    Link07_tactAmbientPlay();
     if (m3624 != 0) {
-        if (gabi::call<BOOL>(LK_checkEndMessage, this, (u32)m3624)) {
-            gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+        if (checkEndMessage((u32)m3624)) {
+            resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
             dComIfGp_event_reset();
             lk_endEventCamera(this);
-            gabi::call(LK_endDemoMode, this);
-            gabi::call(0x027170AC /* HD: song result to the save */, gabi::load<u32>(0x101F8344), (u32)gabi::load<u8>(gabi::ea(this) + 0x69C3));
+            endDemoMode();
+            Link07_saveTactSongResult(gabi::ea(l_hdSystem.mpSystem.get()), (u32)(u8)mProcVar6);
             return TRUE;
         }
         return TRUE;
@@ -3725,22 +3582,22 @@ BOOL daPy_lk_c::procTactPlay() {
     if (mProcVar5 > 0) {
         mProcVar5 = (s16)(mProcVar5 - 1);
         if (mProcVar5 == 0) {
-            gabi::call(0x025E1F58 /* mDoAud_tact_melodyPlay */, (s32)mProcVar6);
+            Link07_tactMelodyPlay((s32)mProcVar6);
         }
     }
     if (mProcVar0 != 0) {
         if (mProcVar4 != 0) {
-            gabi::store<u8>(dComIfGp_ea() + 0x5BD1, 0); /* dComIfGp_setMetronomeOff() */
-            LK_cutEnd();
+            Link07::gameInfo()->play.mMetronome = 0; /* dComIfGp_setMetronomeOff() */
+            dComIfGp_evmng_cutEnd(mStaffIdx);
             return TRUE;
         }
-        u32 msgMgr = gabi::load<u32>(0x101F4B5C);
-        u32 st = gabi::call<u32>(0x025F795C /* fopMsgM_SearchByID (HD: the message status) */, msgMgr);
+        u32 msgMgr = gabi::ea(l_messageManager.mpManager.get());
+        u32 st = Link07_messageStatus(msgMgr);
         if (st == 0 || st == 0x12 /* fopMsgStts_BOX_CLOSED_e */) {
             fopAc_ac_c* partner = nullptr;
-            gabi::store<u8>(dComIfGp_ea() + 0x5BD1, 0);
+            Link07::gameInfo()->play.mMetronome = 0;
             if (st == 0x12) {
-                gabi::call(0x025F74D0 /* HD: set the message status */, msgMgr, 0x13 /* fopMsgStts_MSG_DESTROYED_e */);
+                Link07_setMessageStatus(msgMgr, 0x13 /* fopMsgStts_MSG_DESTROYED_e */);
             }
             mGameOverId = 0xFFFFFFFF;
             u32 id = mTactZevPartnerId;
@@ -3750,58 +3607,54 @@ BOOL daPy_lk_c::procTactPlay() {
                 partner = fopAcIt_Judge(0x025E1234 /* fpcSch_JudgeByID */, key.get());
             }
             if (mProcVar7 == 0) {
-                LK_cutEnd();
+                dComIfGp_evmng_cutEnd(mStaffIdx);
                 return TRUE;
             }
             if (partner != nullptr) {
                 if (m3494 == 0) {
-                    gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
+                    resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
                     dComIfGp_event_reset();
                     lk_endEventCamera(this);
-                    gabi::call(LK_endDemoMode, this);
+                    endDemoMode();
                     return TRUE;
                 }
-                return gabi::call<BOOL>(LK_procTactPlayEnd_init, this, -1);
+                return procTactPlayEnd_init(-1);
             }
             if (checkTactSongUsable()) {
-                gabi::call(0x027170AC, gabi::load<u32>(0x101F8344), (u32)gabi::load<u8>(gabi::ea(this) + 0x69C3));
-                return gabi::call<BOOL>(LK_procTactPlayEnd_init, this, (s32)mProcVar6);
+                Link07_saveTactSongResult(gabi::ea(l_hdSystem.mpSystem.get()), (u32)(u8)mProcVar6);
+                return procTactPlayEnd_init((s32)mProcVar6);
             }
         }
     } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        gabi::call(0x025E1988 /* seStartSystem */, 0x871 /* JA_SE_TAKT_MATCHED */);
-        gabi::store<u8>(gabi::load<u32>(0x101F4B5C) + 0x921, 1); /* fopMsgM_messageSendOn() */
+        Link07_seStartSystem(Link07::JA_SE_TAKT_MATCHED);
+        l_messageManager.mpManager->mMessageSend = 1; /* fopMsgM_messageSendOn() */
         mProcVar0 = 1;
-        gabi::call(0x025E1E94 /* mDoAud_tact_reset */);
-        gabi::call(LK_setSingleMoveAnime, this, 0xA8 /* ANM_WAITTAKT */, 0.8f, 0.0f, -1, 10.0f); /* HD: HIO folded */
-        gabi::call(LK_setTextureAnime, this, 6, 0);
+        Link07_tactReset();
+        setSingleMoveAnime(Link07::ANM_WAITTAKT, 0.8f, 0.0f, -1, 10.0f); /* HD: HIO folded */
+        setTextureAnime(6, 0);
         mModeFlg = (mModeFlg | 0x100) & ~0x400u;
     }
     return TRUE;
 }
-VERIFY(0x0243AC64, &daPy_lk_c::procTactPlay);
 
 /* 0243B188 */
 u32 daPy_lk_c::getDayNightParamData() {
-    WWHD_FUNC(0x0243B188, u32, this);
-    s32 type = dComIfGp_checkPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */) ? 2 : 0;
+    s32 type = dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e) ? 2 : 0;
     u32 ship = dComIfGp_getShipActor_l();
     s32 room = current.roomNo;
     return setParamData(room, type, 0xCC, ship != 0 ? 0x140 : 0x40);
 }
-VERIFY(0x0243B188, &daPy_lk_c::getDayNightParamData);
 
 /* 0243B200 */
 BOOL daPy_lk_c::procTactPlayEnd() {
-    WWHD_FUNC(0x0243B200, BOOL, this);
     u32 evmng = 0;
-    if (dComIfGp_checkPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */)) {
-        gabi::call(LK_setShipRidePos, this, 0);
+    if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e)) {
+        setShipRidePos(0);
         if (mProcVar6 == 0 &&
-            !gabi::call<BOOL>(0x025445B8 /* dEvent_manager_c::startCheckOld */, dComIfGp_ea() + 0x52C4, 0x101CECCC /* l_tact_wind_change_event_label */) &&
-            !gabi::call<BOOL>(0x025445B8, dComIfGp_ea() + 0x52C4, 0x101CECAC /* l_tact_wind_change_event_label2 */)) {
+            !Link07_eventStartCheckOld(dComIfGp_ea() + 0x52C4, 0x101CECCC /* l_tact_wind_change_event_label */) &&
+            !Link07_eventStartCheckOld(dComIfGp_ea() + 0x52C4, 0x101CECAC /* l_tact_wind_change_event_label2 */)) {
             /* HD: turn towards the new wind direction (save data) */
-            s16 target = (s16)(gabi::load<u16>(gabi::load<u32>(gabi::load<u32>(0x101F8344) + 0x1C4) + 0x92) - 0x8000);
+            s16 target = (s16)(l_hdSystem.mpSystem->mpWindState->mAngle - 0x8000);
             cLib_addCalcAngleS(&shape_angle.y, target, 4, 0x2000, 0x100);
             current.angle.y = shape_angle.y;
         }
@@ -3812,134 +3665,130 @@ BOOL daPy_lk_c::procTactPlayEnd() {
         return TRUE; /* HD: GameCube sets the A status here */
     }
     if (song == 5) {
-        if (gabi::call<BOOL>(0x0254457C /* dEvent_manager_c::endCheckOld */, dComIfGp_ea() + 0x52C4, 0x101CECC0 /* l_tact_night_event_label */) &&
+        if (Link07_eventEndCheckOld(dComIfGp_ea() + 0x52C4, 0x101CECC0 /* l_tact_night_event_label */) &&
             !(mNoResetFlg0 & 0x4000)) {
             mNoResetFlg0 = mNoResetFlg0 | 0x4000;
-            u32 save = gabi::load<u32>(0x101F84DC) + 0x1278; /* dSv_turnRestart_c */
+            u32 save = dComIfGs_ea() + SAVE_OFF(mTurnRestart); /* dSv_turnRestart_c */
             if (dComIfGp_getShipActor_l() != 0) {
                 u32 ship = dComIfGp_getShipActor_l();
                 s32 room = current.roomNo;
                 s16 ay = shape_angle.y;
                 u32 param = getDayNightParamData();
-                save = gabi::load<u32>(0x101F84DC) + 0x1278;
-                gabi::call(0x025B998C /* dSv_turnRestart_c::set */, save, &current.pos, (s32)ay, room, param, ship + 0x314,
-                           (s32)gabi::load<s16>(ship + 0x32A), 1);
+                save = dComIfGs_ea() + SAVE_OFF(mTurnRestart);
+                Link07_setTurnRestart(save, &current.pos, (s32)ay, room, param, &Link07::ship(ship)->current.pos,
+                                      (s32)Link07::ship(ship)->shape_angle.y, 1);
             } else {
                 s32 room = current.roomNo;
                 s16 ay = shape_angle.y;
                 u32 param = getDayNightParamData();
-                save = gabi::load<u32>(0x101F84DC) + 0x1278;
-                gabi::call(0x025B998C, save, &current.pos, (s32)ay, room, param, &current.pos, (s32)shape_angle.y, 0);
+                save = dComIfGs_ea() + SAVE_OFF(mTurnRestart);
+                Link07_setTurnRestart(save, &current.pos, (s32)ay, room, param, &current.pos, (s32)shape_angle.y, 0);
             }
-            if (gabi::load<s32>(dComIfGp_ea() + 0x5CFC) == 3 /* dComIfG_getTimerMode() */) {
-                u32 timer = gabi::load<u32>(dComIfGp_ea() + 0x5CF0);
+            if (Link07::gameInfo()->play.mTimerInfo.mTimerMode == 3 /* dComIfG_getTimerMode() */) {
+                u32 timer = gabi::ea(dComIfG_getTimerPtr());
                 if (timer != 0) {
-                    gabi::call(0x025C58D8 /* dTimer_c::deleteRequest */, timer);
+                    Link07_deleteTimerRequest(timer);
                 }
             }
-            gabi::call(0x025C3DE4 /* dStage_turnRestart */);
-            gabi::call(0x025E1E88 /* mDoAud_taktModeMuteOff */);
+            Link07_turnRestart();
+            Link07_taktModeMuteOff();
         }
         return TRUE;
     }
     if (song == 2) {
-        if (gabi::call<BOOL>(0x0254457C, dComIfGp_ea() + 0x52C4, 0x101CEC98 /* l_tact_event_label */)) {
+        if (Link07_eventEndCheckOld(dComIfGp_ea() + 0x52C4, 0x101CEC98 /* l_tact_event_label */)) {
             dComIfGp_event_reset();
-            gabi::call(0x023D4688 /* daPy_py_c::changePlayer */, this, gabi::load<u32>(dComIfGp_ea() + 0x5B38));
-            gabi::call(LK_endDemoMode, this);
+            Link07_changePlayer(this, gabi::ea(dComIfGp_getCb1Player()));
+            endDemoMode();
         }
         return TRUE;
     }
     if (song == 1) {
         if (mProcVar7 == 0) {
-            if (gabi::load<u8>(dComIfGp_ea() + 0x5BB2) == 0 /* dComIfGp_getMesgStatus() */) {
-                gabi::store<u8>(dComIfGp_ea() + 0x5BDB, 1); /* dComIfGp_fmapOpenOn() */
+            if (Link07::gameInfo()->play.mMesgStatus == 0 /* dComIfGp_getMesgStatus() */) {
+                Link07::gameInfo()->play.mFmapOpen = 1; /* dComIfGp_fmapOpenOn() */
                 mProcVar7 = 1;
             }
             return TRUE;
         }
         lk_endEventCamera(this);
         u32 ship = dComIfGp_getShipActor_l();
-        if (ship == 0 || gabi::load<s32>(ship + 0x6AC) < 0 /* getTactWarpPosNum() */) {
+        if (ship == 0 || Link07::ship(ship)->mTactWarpPosNum < 0 /* getTactWarpPosNum() */) {
             dComIfGp_event_reset();
-            gabi::call(LK_endDemoMode, this);
+            endDemoMode();
             if (ship != 0) {
-                gabi::call(0x025D57E4 /* fopAcM_delete(fpc_ProcID) */, gabi::load<u32>(ship + 0x714));
-                gabi::store<s32>(ship + 0x714, -1);
+                Link07_deleteActorByID((u32)Link07::ship(ship)->mTactWarpID);
+                Link07::ship(ship)->mTactWarpID = 0xFFFFFFFF;
             }
         } else {
-            if (gabi::load<s32>(dComIfGp_ea() + 0x5CFC) == 3) {
-                u32 timer = gabi::load<u32>(dComIfGp_ea() + 0x5CF0);
+            if (Link07::gameInfo()->play.mTimerInfo.mTimerMode == 3) {
+                u32 timer = gabi::ea(dComIfG_getTimerPtr());
                 if (timer != 0) {
-                    gabi::call(0x025C58D8 /* dTimer_c::deleteRequest */, timer);
+                    Link07_deleteTimerRequest(timer);
                 }
             }
-            gabi::call(LK_procShipPaddle_init, this);
-            gabi::store<u8>(ship + 0x636, 0xE); /* ship->setTactWarp() */
+            procShipPaddle_init();
+            Link07::ship(ship)->mNextMode = 0xE; /* ship->setTactWarp() */
         }
     }
     return TRUE;
 }
-VERIFY(0x0243B200, &daPy_lk_c::procTactPlayEnd);
 
 /* 0243B50C */
 BOOL daPy_lk_c::procTactPlayOriginal_init() {
-    WWHD_FUNC(0x0243B50C, BOOL, this);
-    if (mCurProc == 0x9D /* daPyProc_TACT_PLAY_ORIGINAL_e */) {
+    if (mCurProc == Link07::daPyProc_TACT_PLAY_ORIGINAL_e) {
         return TRUE;
     }
-    gabi::call(LK_commonProcInit, this, 0x9D);
-    u32 a = dComIfGp_ea() + 0x5CDC;
-    gabi::store<u32>(a, gabi::load<u32>(a) | 1 /* daPyStts1_WIND_WAKER_CONDUCT_e */);
+    commonProcInit(0x9D);
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+    status = status | Link07::daPyStts1_WIND_WAKER_CONDUCT_e;
     mProcVar0 = 0;
-    gabi::store<u8>(0x101CEF18, 0); /* daPy_matAnm_c::offMabaFlg() */
-    gabi::store<u8>(0x101CEF19, 1);
-    gabi::call(LK_setSingleMoveAnime, this, 0xA8 /* ANM_WAITTAKT */, 0.8f, 0.0f, -1, 6.0f); /* HD: HIO folded */
+    m_maba_flg = 0; /* daPy_matAnm_c::offMabaFlg() */
+    m_maba_timer = 1;
+    setSingleMoveAnime(Link07::ANM_WAITTAKT, 0.8f, 0.0f, -1, 6.0f); /* HD: HIO folded */
     s16 idx = mProcVar0;
-    s32 m = gabi::call<s32>(0x0254045C /* dEvt_control_c::getTactFreeMStick */, dComIfGp_ea() + 0x51D0, (s32)idx);
+    s32 m = Link07_tactFreeMStickWord(dComIfGp_ea() + 0x51D0, (s32)idx);
     mProcVar6 = m;
-    gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayRightArmAnm(m), 1 /* UPPER_MOVE1_e */, 0.0f, 0.0f, -1, -1.0f);
+    setActAnimeUpper((u32)getTactPlayRightArmAnm(m), Link07::UPPER_MOVE1_e, 0.0f, 0.0f, -1, -1.0f);
     lk_anmRatio_set(gabi::ea(this) + 0x5828, 0.0f); /* mAnmRatioUpper[UPPER_MOVE1_e].setRatio(0.0f) */
     idx = mProcVar0;
-    s32 c = gabi::call<s32>(0x02540468 /* dEvt_control_c::getTactFreeCStick */, dComIfGp_ea() + 0x51D0, (s32)idx);
+    s32 c = Link07_tactFreeCStickWord(dComIfGp_ea() + 0x51D0, (s32)idx);
     mProcVar7 = c;
-    gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayLeftArmAnm(c), 2 /* UPPER_MOVE2_e */, 0.0f, 0.0f, -1, -1.0f);
+    setActAnimeUpper((u32)getTactPlayLeftArmAnm(c), Link07::UPPER_MOVE2_e, 0.0f, 0.0f, -1, -1.0f);
     lk_anmRatio_set(gabi::ea(this) + 0x5838, 0.0f); /* mAnmRatioUpper[UPPER_MOVE2_e].setRatio(0.0f) */
-    gabi::call(LK_setTextureAnime, this, 0, 0);
+    setTextureAnime(0, 0);
     s32 m6 = mProcVar6;
     s32 m7 = mProcVar7;
     m3530 = 3;
-    gabi::call(0x025E1EA0 /* mDoAud_tact_setStickPos */, m6, m7);
-    gabi::call(0x025E1EC0 /* mDoAud_tact_playArmSwing */, (s32)mProcVar6, (s32)mProcVar7);
-    gabi::call(LK_setTactModel, this);
-    u32 model = gabi::load<u32>(gabi::ea(this) + 0x4440); /* mpEquipItemModel */
-    gabi::call(LK_mtxFollow_makeEmitter, &m32E4, 0x51 /* ID_AK_JN_TAKT01 */, model ? model + 0xC8 : 0, &current.pos, nullptr);
+    Link07_tactSetStickPos(m6, m7);
+    Link07_tactPlayArmSwing((s32)mProcVar6, (s32)mProcVar7);
+    setTactModel();
+    u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
+    Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_TAKT01, model ? model + 0xC8 : 0, &current.pos, nullptr);
     mProcVar5 = 0;
     mProcVar3 = 0xF;
-    gabi::call(0x025E1E7C /* mDoAud_taktModeMute */);
+    Link07_taktModeMute();
     return TRUE;
 }
-VERIFY(0x0243B50C, &daPy_lk_c::procTactPlayOriginal_init);
 
 /* 0243B74C */
 BOOL daPy_lk_c::procTactPlayOriginal() {
-    WWHD_FUNC(0x0243B74C, BOOL, this);
-    gabi::call(0x025E1988 /* seStartSystem */, 0x205E /* JA_SE_LK_WTAKT_USING */);
-    if (gabi::load<f32>(m_old_fdata + 0xC) < 0.01f) { /* m_old_fdata->getOldFrameRate() */
+    Link07_seStartSystem(Link07::JA_SE_LK_WTAKT_USING);
+    if (gabi::at<Link07::OldFrameData>(m_old_fdata)->mOldFrameRate < 0.01f) { /* m_old_fdata->getOldFrameRate() */
         if (mProcVar3 > 0) {
             mProcVar3 = (s16)(mProcVar3 - 1);
             if (mProcVar3 == 0) {
                 mProcVar0 = (s16)(mProcVar0 + 1);
             }
         } else if (mProcVar0 == 5) {
-            LK_cutEnd();
-            gabi::call(0x025E1ED4 /* mDoAud_tact_stopArmSwing */);
+            dComIfGp_evmng_cutEnd(mStaffIdx);
+            Link07_tactStopArmSwing();
         } else {
             s16 idx = mProcVar0;
             mProcVar3 = 0xF;
-            s32 m = gabi::call<s32>(0x0254045C /* dEvt_control_c::getTactFreeMStick */, dComIfGp_ea() + 0x51D0, (s32)idx);
+            s32 m = Link07_tactFreeMStickWord(dComIfGp_ea() + 0x51D0, (s32)idx);
             mProcVar6 = m;
-            gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayRightArmAnm(m), 1 /* UPPER_MOVE1_e */, 0.08f, 0.0f, -1, 5.0f);
+            setActAnimeUpper((u32)getTactPlayRightArmAnm(m), Link07::UPPER_MOVE1_e, 0.08f, 0.0f, -1, 5.0f);
             lk_anmRatio_set(gabi::ea(this) + 0x5828, 0.0f);
             s32 m6 = mProcVar6;
             if (m6 == 0 || m6 == 2 || m6 == 4) {
@@ -3948,29 +3797,24 @@ BOOL daPy_lk_c::procTactPlayOriginal() {
                 mFrameCtrlUpper[1].setFrame(fr);
             }
             idx = mProcVar0;
-            s32 c = gabi::call<s32>(0x02540468 /* dEvt_control_c::getTactFreeCStick */, dComIfGp_ea() + 0x51D0, (s32)idx);
+            s32 c = Link07_tactFreeCStickWord(dComIfGp_ea() + 0x51D0, (s32)idx);
             mProcVar7 = c;
-            gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayLeftArmAnm(c), 2 /* UPPER_MOVE2_e */, 0.8f, 0.0f, -1, 5.0f);
+            setActAnimeUpper((u32)getTactPlayLeftArmAnm(c), Link07::UPPER_MOVE2_e, 0.8f, 0.0f, -1, 5.0f);
             lk_anmRatio_set(gabi::ea(this) + 0x5838, 0.0f);
             s32 a6 = mProcVar6;
             mFrameCtrlUpper[2].setFrame(mFrameCtrlUnder[0].getFrame());
-            gabi::call(0x025E1EA0 /* mDoAud_tact_setStickPos */, a6, (s32)mProcVar7);
-            gabi::call(0x025E1EC0 /* mDoAud_tact_playArmSwing */, (s32)mProcVar6, (s32)mProcVar7);
+            Link07_tactSetStickPos(a6, (s32)mProcVar7);
+            Link07_tactPlayArmSwing((s32)mProcVar6, (s32)mProcVar7);
         }
     }
     if (mProcVar3 != 0 && mProcVar5 != 0) {
-        gabi::call(0x025E1EB4 /* mDoAud_tact_play */);
+        Link07_tactPlay();
     }
     mProcVar5 = 1;
     return TRUE;
 }
-VERIFY(0x0243B74C, &daPy_lk_c::procTactPlayOriginal);
 
 /* ---- vomit (jump flowers) ---- */
-enum : u32 {
-    LK_checkJumpFlower = 0x023F13A0,
-    LK_procVomitJump_init = 0x023E47D4,
-};
 /* mStts.ClrCcMove() (the cc move vector at mStts + 0) */
 static inline void lk_stts_clrCcMove(u32 self) {
     gabi::store<f32>(self + 0x7624, 0.0f);
@@ -3980,30 +3824,27 @@ static inline void lk_stts_clrCcMove(u32 self) {
 
 /* 0243B9C4 */
 BOOL daPy_lk_c::procVomitReady() {
-    WWHD_FUNC(0x0243B9C4, BOOL, this);
-    gabi::call(LK_setFallVoice, this);
-    if (!gabi::call<BOOL>(LK_checkJumpFlower, this)) {
-        if (LK_mAcchChkGroundHit()) {
-            gabi::call(LK_changeLandProc, this, 1.3f);
-        } else if (gabi::call<BOOL>(LK_checkFanGlideProc, this, 0)) {
+    setFallVoice();
+    if (!checkJumpFlower()) {
+        if (mAcch.ChkGroundHit()) {
+            changeLandProc(1.3f);
+        } else if (checkFanGlideProc(0)) {
             return TRUE;
         } else if (speed.y < -gravity) {
-            gabi::call(LK_setSingleMoveAnime, this, 0xD /* ANM_JMPEDS */, 0.0f, 0.0f, -1, 6.0f); /* HD: HIO folded */
+            setSingleMoveAnime(Link07::ANM_JMPEDS, 0.0f, 0.0f, -1, 6.0f); /* HD: HIO folded */
             mModeFlg = mModeFlg & ~0x400u;
-            gabi::call(LK_setTextureAnime, this, 0x37, 0);
+            setTextureAnime(0x37, 0);
             resetSeAnime();
         }
     }
     return TRUE;
 }
-VERIFY(0x0243B9C4, &daPy_lk_c::procVomitReady);
 
 /* 0243BA94 */
 BOOL daPy_lk_c::procVomitWait() {
-    WWHD_FUNC(0x0243BA94, BOOL, this);
     if ((noResetFlg1() & 0x10 /* daPyFlg1_FORCE_VOMIT_JUMP */) || mProcVar0 != 0) {
         if (!dComIfGp_event_runCheck_l()) {
-            gabi::call(LK_procVomitJump_init, this, 0);
+            procVomitJump_init(0);
         } else {
             mProcVar0 = 1;
         }
@@ -4013,7 +3854,7 @@ BOOL daPy_lk_c::procVomitWait() {
     f32 stick = mStickDistance; /* kept across the call (GHS) */
     if (stick > 0.05f) {
         s32 dir = getDirectionFromAngle(m34DC);
-        if (dir == 2 /* DIR_LEFT */) {
+        if (dir == Link07::DIR_LEFT) {
             s16 lim = (s16)gabi::ftoi(512.0f * stick);
             if (lim > mProcVar2) {
                 s16 v = (s16)(mProcVar2 + gabi::ftoi(64.0f * stick));
@@ -4025,7 +3866,7 @@ BOOL daPy_lk_c::procVomitWait() {
             } else {
                 target = lim;
             }
-        } else if (dir == 3 /* DIR_RIGHT */) {
+        } else if (dir == Link07::DIR_RIGHT) {
             s16 lim = (s16)gabi::ftoi(-512.0f * stick);
             if (lim < mProcVar2) {
                 s16 v = (s16)(mProcVar2 - gabi::ftoi(64.0f * stick));
@@ -4045,15 +3886,13 @@ BOOL daPy_lk_c::procVomitWait() {
     current.angle.y = a;
     return TRUE;
 }
-VERIFY(0x0243BA94, &daPy_lk_c::procVomitWait);
 
 /* 0243BC78 */
 BOOL daPy_lk_c::procVomitJump() {
-    WWHD_FUNC(0x0243BC78, BOOL, this);
     if (mProcVar1 != 0) {
         mProcVar1 = (s16)(mProcVar1 - 1);
         if (mProcVar1 == 0) {
-            LK_voiceStart(0);
+            Link07::voiceStart(this, 0);
             speed.y = 46.0f;
             gravity = -2.5f; /* HD: HIO folded */
         }
@@ -4064,28 +3903,28 @@ BOOL daPy_lk_c::procVomitJump() {
         lk_stts_clrCcMove(gabi::ea(this));
         mProcVar0 = (s16)(mProcVar0 - 1);
     }
-    if (!gabi::call<BOOL>(LK_checkJumpFlower, this)) {
-        if (LK_mAcchChkGroundHit()) {
-            gabi::call(LK_changeLandProc, this, 1.3f);
+    if (!checkJumpFlower()) {
+        if (mAcch.ChkGroundHit()) {
+            changeLandProc(1.3f);
             return TRUE;
         }
         s16 sx = shape_angle.x;
         shape_angle.x = (s16)(sx + 0x55F0);
         if (sx < 0 && shape_angle.x > 0) {
-            seStartOnlyReverb(0x2849 /* JA_SE_LK_JUMP_FLOWER_OUT */);
+            seStartOnlyReverb(Link07::JA_SE_LK_JUMP_FLOWER_OUT);
         }
         if (mProcVar6 == 1) {
             cLib_addCalc_l(&mNormalSpeed, 12.725f, 0.5f, 2.0f, 0.1f); /* HD: HIO folded */
             return TRUE;
         }
-        if (!gabi::call<BOOL>(LK_checkFanGlideProc, this, 1)) {
+        if (!checkFanGlideProc(1)) {
             f32 stick = mStickDistance; /* kept across the call (GHS) */
             f32 dirScale = 0.0f;
             if (stick > 0.05f) {
                 s32 dir = getDirectionFromShapeAngle();
-                if (dir == 0 /* DIR_FORWARD */) {
+                if (dir == Link07::DIR_FORWARD) {
                     dirScale = 1.0f;
-                } else if (dir == 1 /* DIR_BACKWARD */) {
+                } else if (dir == Link07::DIR_BACKWARD) {
                     dirScale = -1.0f;
                 }
             }
@@ -4094,35 +3933,32 @@ BOOL daPy_lk_c::procVomitJump() {
     }
     return TRUE;
 }
-VERIFY(0x0243BC78, &daPy_lk_c::procVomitJump);
 
 /* 0243BEE4 */
 BOOL daPy_lk_c::procVomitLand() {
-    WWHD_FUNC(0x0243BEE4, BOOL, this);
-    gabi::call(LK_resetFootEffect, this);
+    resetFootEffect();
     if (mProcVar6 != 0) {
         if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-            LK_checkNextMode(0);
+            checkNextMode(0);
         } else if (mFrameCtrlUnder[0].getFrame() > 8.0f) { /* HD: HIO folded */
-            LK_checkNextMode(1);
+            checkNextMode(1);
         }
     } else if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         if (mProcVar0 > 0) {
             mProcVar0 = (s16)(mProcVar0 - 1);
         } else {
-            gabi::call(LK_setSingleMoveAnime, this, 0x31 /* ANM_LANDDAMAST */, 0.5f, 1.0f, 9, 8.0f);
+            setSingleMoveAnime(Link07::ANM_LANDDAMAST, 0.5f, 1.0f, 9, 8.0f);
             mProcVar6 = 1;
         }
     }
     return TRUE;
 }
-VERIFY(0x0243BEE4, &daPy_lk_c::procVomitLand);
 
 /* ---- hammer ---- */
 /* fsel: a >= 0 ? b : c (NaN -> c) */
 static inline f32 fsel_l(f32 a, f32 b, f32 c) { return a >= 0.0f ? b : c; }
 static inline void lk_JPASetRMtxTVecfromMtx(u32 em) {
-    gabi::call(0x028249B0 /* JPASetRMtxTVecfromMtx */, mDoMtx_stack_c::get(), em + 0x1F0, em + 0x22C); /* setGlobalRTMatrix() */
+    Link07_setParticleMatrix(mDoMtx_stack_c::get(), em + 0x1F0, em + 0x22C); /* setGlobalRTMatrix() */
 }
 /* lfs/stfs copy: bit-exact on PowerPC (signalling NaNs are not quieted), so copy the words */
 static inline void lk_copy3f(u32 dst, u32 src) {
@@ -4133,26 +3969,27 @@ static inline void lk_copy3f(u32 dst, u32 src) {
 
 /* 0243BFC8 */
 void daPy_lk_c::setHammerQuake(cBgS_PolyInfo* poly, const cXyz* pos, int mtrl) {
-    WWHD_FUNC(0x0243BFC8, void, this, poly, pos, mtrl);
     /* function-local statics (guard words first) */
-    const u32 smokeKusaScale = 0x1046D24C, emitterScale = 0x1046D258, emitterTrans = 0x1046D264;
-    if (gabi::load<u32>(0x1046D240) == 0) {
-        gabi::store<u32>(0x1046D240, 1);
-        gabi::store<f32>(smokeKusaScale + 0, 2.0f);
-        gabi::store<f32>(smokeKusaScale + 8, 2.0f);
-        gabi::store<f32>(smokeKusaScale + 4, 2.0f);
+    const u32 smokeKusaScale = gabi::ea(&l_hammer_smoke_kusa_particle_scale);
+    const u32 emitterScale = gabi::ea(&l_hammer_emitter_scale);
+    const u32 emitterTrans = gabi::ea(&l_hammer_emitter_trans);
+    if (l_hammer_guards.mSmokeInitialized == 0) {
+        l_hammer_guards.mSmokeInitialized = 1;
+        l_hammer_smoke_kusa_particle_scale.x = 2.0f;
+        l_hammer_smoke_kusa_particle_scale.z = 2.0f;
+        l_hammer_smoke_kusa_particle_scale.y = 2.0f;
     }
-    if (gabi::load<u32>(0x1046D244) == 0) {
-        gabi::store<f32>(emitterScale + 8, 1.0f);
-        gabi::store<f32>(emitterScale + 0, 1.0f);
-        gabi::store<f32>(emitterScale + 4, 0.1f);
-        gabi::store<u32>(0x1046D244, 1);
+    if (l_hammer_guards.mScaleInitialized == 0) {
+        l_hammer_emitter_scale.z = 1.0f;
+        l_hammer_emitter_scale.x = 1.0f;
+        l_hammer_emitter_scale.y = 0.1f;
+        l_hammer_guards.mScaleInitialized = 1;
     }
-    if (gabi::load<u32>(0x1046D248) == 0) {
-        gabi::store<f32>(emitterTrans + 0, 0.0f);
-        gabi::store<f32>(emitterTrans + 8, 0.0f);
-        gabi::store<u32>(0x1046D248, 1);
-        gabi::store<f32>(emitterTrans + 4, 10.0f);
+    if (l_hammer_guards.mTransInitialized == 0) {
+        l_hammer_emitter_trans.x = 0.0f;
+        l_hammer_emitter_trans.z = 0.0f;
+        l_hammer_guards.mTransInitialized = 1;
+        l_hammer_emitter_trans.y = 10.0f;
     }
     lk_startShock(6, -0x31);
     setResetFlg0(resetFlg0() | 0x20000 /* daPyRFlg0_HAMMER_QUAKE */);
@@ -4162,54 +3999,57 @@ void daPy_lk_c::setHammerQuake(cBgS_PolyInfo* poly, const cXyz* pos, int mtrl) {
             mGndChkPos.z = mSwordTopPos.z;
             mGndChkPos.x = mSwordTopPos.x;
             mGndChkPos.y = mSwordTopPos.y + 100.0f;
-            f64 g = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
+            f64 g = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
             if (g != -1000000000.0) {
-                snd = gabi::call<u32>(0x024EECAC /* dBgS::GetMtrlSndId */, dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
+                snd = Link07_materialSoundWord(dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
             } else {
                 snd = mMtrlSndId;
             }
         } else {
             snd = mtrl;
         }
-        gabi::call(0x025E1A40 /* mDoAud_seStart */, 0x2855 /* JA_SE_LK_HAMMER_HIT */, &mSwordTopPos, snd, (s32)mReverb);
+        Link07_seStartMaterial(Link07::JA_SE_LK_HAMMER_HIT, &mSwordTopPos, snd, (s32)mReverb);
     }
     if (poly != nullptr && m355C == 0) {
         Mtx34* stk = mDoMtx_stack_c::get();
         PSMTXTrans(stk, pos->x, pos->y, pos->z);
-        s16 gx = gabi::call<s16>(LK_getGroundAngle, this, poly, (s32)shape_angle.y);
+        s16 gx = Link07_getGroundAngleWord(this, gabi::ea(poly), (s32)shape_angle.y);
         s16 ay = shape_angle.y;
-        s16 gz = gabi::call<s16>(LK_getGroundAngle, this, poly, (s32)(s16)(ay - 0x4000));
+        s16 gz = Link07_getGroundAngleWord(this, gabi::ea(poly), (s32)(s16)(ay - 0x4000));
         mDoMtx_ZXYrotM(stk, gx, ay, gz);
         mDoMtx_stack_c::transM(0.0f, 0.0f, -30.0f);
-        gabi::Local<cXyz> hit;           /* sp+0x18 (GameCube local_38) */
-        gabi::Local<be<f32>> waterY;     /* sp+0x30 */
-        gabi::Local<be<s32>> landOut;    /* sp+0x34 */
+        gabi::Local<cXyz> hit;        /* sp+0x18 (GameCube local_38) */
+        gabi::Local<be<f32>> waterY;  /* sp+0x30 */
+        gabi::Local<be<s32>> landOut; /* sp+0x34 */
         u32 s = gabi::ea(stk);
-        hit->z = gabi::load<f32>(s + 0x2C); /* multVecZero */
-        hit->y = gabi::load<f32>(s + 0x1C);
-        hit->x = gabi::load<f32>(s + 0xC);
+        hit->z = gabi::at<Mtx34>(s)->m[2][3]; /* multVecZero */
+        hit->y = gabi::at<Mtx34>(s)->m[1][3];
+        hit->x = gabi::at<Mtx34>(s)->m[0][3];
         s32 attr;
         u32 em;
-        if (!gabi::call<BOOL>(0x025D9F70 /* fopAcM_getWaterY */, hit.get(), waterY.get()) || (f32)*waterY < hit->y + 5.0f) {
+        if (!Link07_getWaterY(hit.get(), waterY.get()) || (f32)*waterY < hit->y + 5.0f) {
             dPa_control_c* pa = dComIfGp_getParticle();
-            em = gabi::ea(dPa_control_set(pa, 1, 0x214 /* ID_IT_JN_HM_SENKO00 */, hit, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
+            em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_IT_JN_HM_SENKO00, hit, nullptr, nullptr, 0xFF, nullptr, -1,
+                                          nullptr, nullptr, nullptr));
             if (em != 0) {
                 lk_JPASetRMtxTVecfromMtx(em);
             }
             pa = dComIfGp_getParticle();
-            em = gabi::ea(dPa_control_set(pa, 1, 0x215 /* ID_IT_JN_HM_SENPU00 */, hit, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
+            em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_IT_JN_HM_SENPU00, hit, nullptr, nullptr, 0xFF, nullptr, -1,
+                                          nullptr, nullptr, nullptr));
             if (em != 0) {
                 lk_JPASetRMtxTVecfromMtx(em);
             }
             pa = dComIfGp_getParticle();
-            em = gabi::ea(dPa_control_set(pa, 1, 0x216 /* ID_IT_JN_HM_SYOGEKI00 */, hit, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr));
+            em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_IT_JN_HM_SYOGEKI00, hit, nullptr, nullptr, 0xFF, nullptr,
+                                          -1, nullptr, nullptr, nullptr));
             if (em != 0) {
                 lk_JPASetRMtxTVecfromMtx(em);
             }
-            attr = gabi::call<s32>(0x024EF0F4 /* dBgS::GetAttributeCode */, dComIfG_Bgsp(), poly);
+            attr = Link07_getAttributeCodeWord(dComIfG_Bgsp(), gabi::ea(poly));
             pa = dComIfGp_getParticle();
-            em = gabi::call<u32>(0x025A87C0 /* dPa_control_c::setSimpleLand */, pa, attr, hit.get(), 0, 1.0f, 1.0f, 1.0f,
-                                 gabi::ea(this) + 0x110 /* &tevStr */, landOut.get(), 0x1E);
+            em = Link07_setSimpleLandHD(pa, attr, hit.get(), 0, 1.0f, 1.0f, 1.0f, gabi::ea(this) + 0x110 /* &tevStr */,
+                                        landOut.get(), 0x1E);
         } else {
             f32 wy = *waterY;
             hit->y = wy;
@@ -4217,32 +4057,35 @@ void daPy_lk_c::setHammerQuake(cBgS_PolyInfo* poly, const cXyz* pos, int mtrl) {
             mDoMtx_YrotM(stk, shape_angle.y);
             attr = 0x13; /* dBgS_Attr_WATER_e */
             dPa_control_c* pa = dComIfGp_getParticle();
-            dPa_control_set(pa, 1, 0x27C /* ID_IT_JN_HM_WP00 */, hit, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr, nullptr);
+            dPa_control_set(pa, 1, Link07::ID_IT_JN_HM_WP00, hit, nullptr, nullptr, 0xFF, nullptr, -1, nullptr, nullptr,
+                            nullptr);
             pa = dComIfGp_getParticle();
-            dPa_control_set(pa, 5, 0x3D /* ID_IT_JN_WP_HAMON01 */, hit, nullptr, nullptr, 0xFF,
-                            gabi::at<dPa_levelEcallBack>(0x1047B2E4 /* dPa_control_c::mSingleRippleEcallBack */), -1, nullptr, nullptr, nullptr);
+            dPa_control_set(pa, 5, Link07::ID_IT_JN_WP_HAMON01, hit, nullptr, nullptr, 0xFF,
+                            gabi::at<dPa_levelEcallBack>(0x1047B2E4 /* dPa_control_c::mSingleRippleEcallBack */), -1,
+                            nullptr, nullptr, nullptr);
             pa = dComIfGp_getParticle();
-            em = gabi::call<u32>(0x025A87C0, pa, attr, hit.get(), 0, 1.0f, 1.0f, 1.0f, gabi::ea(this) + 0x110, landOut.get(), 0x1E);
+            em = Link07_setSimpleLandHD(pa, attr, hit.get(), 0, 1.0f, 1.0f, 1.0f, gabi::ea(this) + 0x110, landOut.get(),
+                                        0x1E);
         }
         if (em != 0) {
             lk_JPASetRMtxTVecfromMtx(em);
             if (attr == 0x13 || attr == 4 /* dBgS_Attr_GRASS_e */) {
-                gabi::store<f32>(em + 0x58, 1.0f);  /* setSpread() */
-                gabi::store<f32>(em + 0x34, 60.0f); /* setRate() */
+                gabi::at<Link07::Emitter>(em)->mSpread = 1.0f; /* setSpread() */
+                gabi::at<Link07::Emitter>(em)->mRate = 60.0f;  /* setRate() */
                 if (attr == 0x13) {
-                    gabi::store<f32>(em + 0x70, 10.0f);
+                    gabi::at<Link07::Emitter>(em)->mDirectionalSpeed = 10.0f;
                     lk_copy3f(em + 0x238, 0x1046CD3C); /* setGlobalParticleScale() */
                 } else {
-                    gabi::store<f32>(em + 0x70, 40.0f);
+                    gabi::at<Link07::Emitter>(em)->mDirectionalSpeed = 40.0f;
                     lk_copy3f(em + 0x238, smokeKusaScale);
                 }
             } else {
-                gabi::store<f32>(em + 0x58, 0.0f);
-                gabi::store<s16>(em + 0x60, 0x28);
-                gabi::store<f32>(em + 0x34, 45.0f);
+                gabi::at<Link07::Emitter>(em)->mSpread = 0.0f;
+                gabi::at<Link07::Emitter>(em)->mLifeTime = 0x28;
+                gabi::at<Link07::Emitter>(em)->mRate = 45.0f;
                 lk_copy3f(em + 0x8, emitterScale);  /* setEmitterScale() */
                 lk_copy3f(em + 0x14, emitterTrans); /* setEmitterTranslation() */
-                gabi::store<f32>(em + 0x68, 50.0f);
+                gabi::at<Link07::Emitter>(em)->mAwayFromCenterSpeed = 50.0f;
                 lk_copy3f(em + 0x238, smokeKusaScale);
             }
         }
@@ -4251,22 +4094,20 @@ void daPy_lk_c::setHammerQuake(cBgS_PolyInfo* poly, const cXyz* pos, int mtrl) {
     snd->y = current.pos.y;
     f32 z = current.pos.z;
     snd->x = current.pos.x;
-    u32 id = gabi::load<u32>(gabi::ea(this) + 4); /* fopAcM_GetID(this) */
+    u32 id = fopAcM_GetID(this); /* fopAcM_GetID(this) */
     m355C = 1;
     snd->z = z;
-    gabi::call(0x0255F458 /* dKy_Sound_set */, snd.get(), 500, id, 10);
+    Link07_setSoundPosition(snd.get(), 500, id, 10);
 }
-VERIFY(0x0243BFC8, &daPy_lk_c::setHammerQuake);
 
 /* 0243C61C */
 BOOL daPy_lk_c::procHammerSideSwing() {
-    WWHD_FUNC(0x0243C61C, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     m35EC = frameCtrl.getFrame();
     if (frameCtrl.getRate() < 0.01f) {
         mNormalSpeed = 0.0f;
-        mDirection = 3; /* DIR_RIGHT */
-        LK_checkNextMode(0);
+        mDirection = Link07::DIR_RIGHT;
+        checkNextMode(0);
         return TRUE;
     }
     if (frameCtrl.getFrame() > 55.0f) { /* HD: HIO folded */
@@ -4274,18 +4115,18 @@ BOOL daPy_lk_c::procHammerSideSwing() {
         mNormalSpeed = 0.0f;
         u8 dir = mDirection;
         mDirection = 3;
-        if (LK_checkNextMode(1)) {
+        if (checkNextMode(1)) {
             return TRUE;
         }
         mDirection = dir;
         mNormalSpeed = sp;
     }
-    if (changeCutReverseProc(0x15 /* ANM_CUTREL */)) {
+    if (changeCutReverseProc(Link07::ANM_CUTREL)) {
         setHammerQuake(nullptr, nullptr, -1);
         return TRUE;
     }
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
         mProcVar2 = a;
         current.angle.y = a;
@@ -4295,47 +4136,44 @@ BOOL daPy_lk_c::procHammerSideSwing() {
     }
     f32 f = frameCtrl.getFrame();
     if (!(f < 25.0f) && f < 36.0f) {
-        if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+        if (!(mNoResetFlg0 & daPyFlg0_CUT_AT_FLG)) {
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2857 /* JA_SE_LK_HAMMER_SWING */);
+            seStartSwordCut(Link07::JA_SE_LK_HAMMER_SWING);
         }
         setResetFlg0(resetFlg0() | 2);
     }
     return TRUE;
 }
-VERIFY(0x0243C61C, &daPy_lk_c::procHammerSideSwing);
 
 /* 0243C7D8 */
 BOOL daPy_lk_c::procHammerFrontSwing_init() {
-    WWHD_FUNC(0x0243C7D8, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x53 /* daPyProc_HAMMER_FRONT_SWING_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0xAC /* ANM_HAMSWINGBHIT */, 4.0f, 0.0f, 0x23, 0.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_HAMMER_FRONT_SWING_e);
+    setSingleMoveAnime(Link07::ANM_HAMSWINGBHIT, 4.0f, 0.0f, 0x23, 0.0f); /* HD: HIO folded */
     mNormalSpeed = 0.0f;
     current.angle.y = shape_angle.y;
-    LK_voiceStart(1);
-    if (!LK_checkAttentionLock()) { /* GameCube: both branches end with mProcVar2 = shape_angle.y */
+    Link07::voiceStart(this, 1);
+    if (!lk_attentionLock(mpAttention)) { /* GameCube: both branches end with mProcVar2 = shape_angle.y */
         (void)(f32)mStickDistance;
     }
     mProcVar2 = shape_angle.y;
-    gabi::call(LK_setBlurPosResource, this, 0x288 /* _HAMMERFRONT_POS */);
+    setBlurPosResource(0x288 /* _HAMMERFRONT_POS */);
     mProcVar0 = 0;
-    LK_FIELD(u8, 0x3AC) = 0x12; /* mCutType = CUT_TYPE_HAMMER_FRONTSWING (a raw u8 in d_a_player.h: not accessible) */
+    Link07::models(this).mCutType =
+        0x12; /* mCutType = CUT_TYPE_HAMMER_FRONTSWING (a raw u8 in d_a_player.h: not accessible) */
     setResetFlg0((resetFlg0() & ~0x8000000u) | 3);
-    lk_swordAnim_changeBckOnly(this, 0x9C /* HAMSWINGBHITA */);
+    lk_swordAnim_changeBckOnly(this, Link07::dRes_INDEX_LKANM_BCK_HAMSWINGBHITA_e);
     m35EC = 0.0f;
     return TRUE;
 }
-VERIFY(0x0243C7D8, &daPy_lk_c::procHammerFrontSwing_init);
 
 /* 0243C954 */
 BOOL daPy_lk_c::procHammerFrontSwingReady() {
-    WWHD_FUNC(0x0243C954, BOOL, this);
     m35EC = mFrameCtrlUnder[0].getFrame();
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
         return procHammerFrontSwing_init();
     }
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
         current.angle.y = a;
         mProcVar2 = a;
@@ -4345,24 +4183,21 @@ BOOL daPy_lk_c::procHammerFrontSwingReady() {
     }
     return TRUE;
 }
-VERIFY(0x0243C954, &daPy_lk_c::procHammerFrontSwingReady);
 
 /* 0243CA00 */
 BOOL daPy_lk_c::procHammerFrontSwingEnd_init() {
-    WWHD_FUNC(0x0243CA00, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x54 /* daPyProc_HAMMER_FRONT_SWING_END_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0xAD /* ANM_HAMSWINGBEND */, 0.9f, 5.0f, 0xC, 0.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_HAMMER_FRONT_SWING_END_e);
+    setSingleMoveAnime(Link07::ANM_HAMSWINGBEND, 0.9f, 5.0f, 0xC, 0.0f); /* HD: HIO folded */
     current.angle.y = shape_angle.y;
-    LK_FIELD(u8, 0x3AC) = 0x12; /* mCutType = CUT_TYPE_HAMMER_FRONTSWING (a raw u8 in d_a_player.h: not accessible) */
+    Link07::models(this).mCutType =
+        0x12; /* mCutType = CUT_TYPE_HAMMER_FRONTSWING (a raw u8 in d_a_player.h: not accessible) */
     mNormalSpeed = 0.0f;
     setResetFlg0(resetFlg0() & ~0x8000000u);
     return TRUE;
 }
-VERIFY(0x0243CA00, &daPy_lk_c::procHammerFrontSwingEnd_init);
 
 /* 0243CA98 */
 BOOL daPy_lk_c::procHammerFrontSwing() {
-    WWHD_FUNC(0x0243CA98, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     f32 rate = frameCtrl.getRate();
     f32 frame = frameCtrl.getFrame();
@@ -4374,8 +4209,8 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
         mProcVar0 = (s16)(mProcVar0 - 1);
         return TRUE;
     }
-    if (frame > rate && changeCutReverseProc(0x15 /* ANM_CUTREL */)) {
-        if (mCurProc != 0x53 /* daPyProc_HAMMER_FRONT_SWING_e */) {
+    if (frame > rate && changeCutReverseProc(Link07::ANM_CUTREL)) {
+        if (mCurProc != Link07::daPyProc_HAMMER_FRONT_SWING_e) {
             setHammerQuake(nullptr, nullptr, -1);
             return TRUE;
         }
@@ -4391,35 +4226,35 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
             gp->y = y;
             mGndChkPos.z = z;
         }
-        f64 g = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
+        f64 g = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
         gp->y = (f32)g;
         if (g > (f64)(f32)mSwordTopPos.y) {
             s32 i = 0;
             s32 mtrl = -1;
-            for (; i < gabi::load<s32>(mpSwBlur + 0x9C); i++) { /* mSwBlur.field_0x014 */
-                u32 pt = mpSwBlur + 0xBC + i * 0xC;      /* mSwBlur.field_0x034[i] */
-                f32 px = gabi::load<f32>(pt + 0);
-                f32 py = gabi::load<f32>(pt + 4) + 300.0f;
-                f32 pz = gabi::load<f32>(pt + 8);
+            for (; i < gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x014; i++) {        /* mSwBlur.field_0x014 */
+                const cXyz* pt = &gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x034[i]; /* mSwBlur.field_0x034[i] */
+                f32 px = (f32)pt->x;
+                f32 py = (f32)pt->y + 300.0f;
+                f32 pz = (f32)pt->z;
                 mGndChkPos.x = px;
                 gp->z = pz;
                 gp->y = py;
                 mGndChkPos.y = py;
                 mGndChkPos.z = pz;
                 gp->x = px;
-                f64 h = gabi::call<f64>(0x02008974, dComIfG_Bgsp(), mGndChk);
+                f64 h = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
                 gp->y = (f32)h;
-                if (h != -1000000000.0 && (f64)gabi::load<f32>(mpSwBlur + 0xC0 + i * 0xC) > h) {
-                    mtrl = gabi::call<s32>(0x024EECAC /* dBgS::GetMtrlSndId */, dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
+                if (h != -1000000000.0 && (f64)gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x034[i].y > h) {
+                    mtrl = Link07_materialSoundSignedWord(dComIfG_Bgsp(), gabi::ea(this) + 0xB28);
                     break;
                 }
             }
             f32 r = frameCtrl.getRate();
             f32 f5 = gabi::fnmsubs((f32)i * r, 0.1f, frameCtrl.getFrame() - r);
-            if (i != 0 && i < gabi::load<s32>(mpSwBlur + 0x9C)) {
+            if (i != 0 && i < gabi::at<Link07::SwordBlur>(mpSwBlur)->field_0x014) {
                 u32 b = mpSwBlur;
-                f32 a = gabi::load<f32>(b + 0xB4 + i * 0xC);
-                f32 d = gabi::load<f32>(b + 0xC0 + i * 0xC) - a;
+                f32 a = gabi::at<Link07::SwordBlur>(b)->field_0x034[i - 1].y;
+                f32 d = gabi::at<Link07::SwordBlur>(b)->field_0x034[i].y - a;
                 if (std::fabs(d) > 1.0f) {
                     f32 t = (gp->y - a) / d;
                     f5 = gabi::fmadds((1.0f - t) * r, 0.1f, f5);
@@ -4435,7 +4270,7 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
         }
     }
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
         current.angle.y = a;
         mProcVar2 = a;
@@ -4446,32 +4281,24 @@ BOOL daPy_lk_c::procHammerFrontSwing() {
     setResetFlg0(resetFlg0() | 2);
     return TRUE;
 }
-VERIFY(0x0243CA98, &daPy_lk_c::procHammerFrontSwing);
 
 /* 0243CE98 */
 BOOL daPy_lk_c::procHammerFrontSwingEnd() {
-    WWHD_FUNC(0x0243CE98, BOOL, this);
     if (mFrameCtrlUnder[0].getRate() < 0.01f) {
-        return LK_checkNextMode(0);
+        return checkNextMode(0);
     }
     if (mFrameCtrlUnder[0].getFrame() > 10.0f) { /* HD: HIO folded */
-        return LK_checkNextMode(1);
+        return checkNextMode(1);
     }
     return TRUE;
 }
-VERIFY(0x0243CE98, &daPy_lk_c::procHammerFrontSwingEnd);
 
 /* ---- push / pull ---- */
-enum : u32 {
-    LK_setFrontWallType = 0x023E3850,
-    LK_procPushPullWait_init = 0x023ECF74,
-};
 
 /* 0243CEE0 */
 BOOL daPy_lk_c::setPushPullKeepData(int label) {
-    WWHD_FUNC(0x0243CEE0, BOOL, this, label);
     if (label != 0 /* dBgW::PPLABEL_NONE */) {
-        if (gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x30) == 0x28 /* checkPowerGloveEquip() */) {
+        if (dComIfGs_getSelectEquip(2) == 0x28 /* checkPowerGloveEquip() */) {
             label |= 8; /* PPLABEL_HEAVY */
         }
         if (mProcVar6 != 0) {
@@ -4479,82 +4306,76 @@ BOOL daPy_lk_c::setPushPullKeepData(int label) {
         }
     }
     u32 bgs = gabi::ea(dComIfG_Bgsp());
-    u32 pp = gabi::call<u32>(0x024EFC54 /* dBgS::PushPullCallBack */, bgs, gabi::ea(this) + 0xCE0 /* mPolyInfo */, this,
-                             (s32)shape_angle.y, label);
+    u32 pp = Link07_pushPullCallback(bgs, gabi::ea(mPolyInfo) /* mPolyInfo */, this, (s32)shape_angle.y, label);
     if (pp == 0) {
         return FALSE;
     }
     if (label != 0) {
-        if (gabi::load<s16>(pp + 0x32A) != mProcVar2) {
+        if (gabi::at<fopAc_ac_c>(pp)->shape_angle.y != mProcVar2) {
             gabi::Local<cXyz> d; /* sp+0x08 */
             cXyz_mi(&current.pos, d, &m370C);
             mDoMtx_stack_c::transS(m370C.x, m370C.y, m370C.z);
-            mDoMtx_stack_c::YrotM((s16)(gabi::load<s16>(pp + 0x32A) - mProcVar2));
+            mDoMtx_stack_c::YrotM((s16)(gabi::at<fopAc_ac_c>(pp)->shape_angle.y - mProcVar2));
             PSMTXMultVec(mDoMtx_stack_c::get(), d, &current.pos);
-            s16 dd = (s16)(gabi::load<s16>(pp + 0x32A) - mProcVar2);
+            s16 dd = (s16)(gabi::at<fopAc_ac_c>(pp)->shape_angle.y - mProcVar2);
             shape_angle.y = (s16)(shape_angle.y + dd);
             current.angle.y = (s16)(current.angle.y + dd);
         }
-        current.pos.x = current.pos.x + (gabi::load<f32>(pp + 0x314) - m370C.x);
-        current.pos.z = current.pos.z + (gabi::load<f32>(pp + 0x31C) - m370C.z);
+        current.pos.x = current.pos.x + (gabi::at<fopAc_ac_c>(pp)->current.pos.x - m370C.x);
+        current.pos.z = current.pos.z + (gabi::at<fopAc_ac_c>(pp)->current.pos.z - m370C.z);
     }
     lk_xyz_copy(&m370C, gabi::at<cXyz>(pp + 0x314));
-    mProcVar2 = gabi::load<s16>(pp + 0x32A);
+    mProcVar2 = gabi::at<fopAc_ac_c>(pp)->shape_angle.y;
     return TRUE;
 }
-VERIFY(0x0243CEE0, &daPy_lk_c::setPushPullKeepData);
 
 /* 0243D06C */
 BOOL daPy_lk_c::procPushMove_init() {
-    WWHD_FUNC(0x0243D06C, BOOL, this);
     if (!setPushPullKeepData(0)) {
         return FALSE;
     }
-    gabi::call(LK_commonProcInit, this, 0x33 /* daPyProc_PUSH_MOVE_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x7F /* ANM_WALKPUSH */, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_PUSH_MOVE_e);
+    setSingleMoveAnime(Link07::ANM_WALKPUSH, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
     mProcVar6 = 1;
-    dComIfGp_onPlayerStatus0_l(0x4000000 /* daPyStts0_UNK4000000_e */);
+    dComIfGp_onPlayerStatus0_l(Link07::daPyStts0_UNK4000000_e);
     return TRUE;
 }
-VERIFY(0x0243D06C, &daPy_lk_c::procPushMove_init);
 
 /* 0243D118 */
 BOOL daPy_lk_c::procPullMove_init() {
-    WWHD_FUNC(0x0243D118, BOOL, this);
     if (!setPushPullKeepData(0)) {
         return FALSE;
     }
-    gabi::call(LK_commonProcInit, this, 0x34 /* daPyProc_PULL_MOVE_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0x80 /* ANM_WALKPULL */, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_PULL_MOVE_e);
+    setSingleMoveAnime(Link07::ANM_WALKPULL, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
     mProcVar6 = 1;
     dComIfGp_onPlayerStatus0_l(0x4000000);
     return TRUE;
 }
-VERIFY(0x0243D118, &daPy_lk_c::procPullMove_init);
 
 /* 0243D1C4 */
 BOOL daPy_lk_c::procPushPullWait() {
-    WWHD_FUNC(0x0243D1C4, BOOL, this);
-    dComIfGp_setDoStatus_l(0x11 /* dActStts_GRAB_e */); /* HD: the do status (GameCube: the R status) */
-    gabi::call(LK_setFrontWallType, this);
+    dComIfGp_setDoStatus_l(Link07::dActStts_GRAB_e); /* HD: the do status (GameCube: the R status) */
+    setFrontWallType();
     if (mProcVar3 != 0) {
-        if (gabi::load<u16>(gabi::ea(this) + 0x5888) == 0xFFFF /* checkNoUpperAnime() */) {
-            gabi::call(LK_setSingleMoveAnime, this, 0x7E /* ANM_WAITPUSHPULL */, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
+        if (Link07::upperHeap(this, 2).mIdx == 0xFFFF /* checkNoUpperAnime() */) {
+            setSingleMoveAnime(Link07::ANM_WAITPUSHPULL, 1.0f, 0.0f, -1, 5.0f); /* HD: HIO folded */
             mProcVar3 = 0;
         }
         return TRUE;
     }
-    if (!(mItemButton & 1) /* HD: the do button (GameCube spActionButton) */ || !(resetFlg0() & 8 /* daPyRFlg0_UNK8 */)) {
-        LK_checkNextMode(0);
+    if (!(mItemButton & 1) /* HD: the do button (GameCube spActionButton) */ ||
+        !(resetFlg0() & 8 /* daPyRFlg0_UNK8 */)) {
+        checkNextMode(0);
         return TRUE;
     }
     if (mProcVar6 != 0) {
         s16 left = cLib_addCalcAngleS(&shape_angle.y, mProcVar2, 3, 0x800, 0x100);
         current.angle.y = shape_angle.y;
-        f64 dx = gabi::call<f64>(0x0200ECD4 /* cLib_addCalc */, &current.pos.x, (f32)m370C.x, 0.5f, 10.0f, 1.0f);
-        f64 dz = gabi::call<f64>(0x0200ECD4, &current.pos.z, (f32)m370C.z, 0.5f, 10.0f, 1.0f);
+        f64 dx = Link07_addCalcUnrounded(&current.pos.x, (f32)m370C.x, 0.5f, 10.0f, 1.0f);
+        f64 dz = Link07_addCalcUnrounded(&current.pos.z, (f32)m370C.z, 0.5f, 10.0f, 1.0f);
         f32 sum = (f32)(dx + dz);
-        if (left == 0 && sum < 5.0f && gabi::load<u16>(gabi::ea(this) + 0x5888) == 0xFFFF) {
+        if (left == 0 && sum < 5.0f && Link07::upperHeap(this, 2).mIdx == 0xFFFF) {
             current.pos.x = m370C.x;
             current.pos.z = m370C.z;
             mProcVar6 = 0;
@@ -4564,62 +4385,58 @@ BOOL daPy_lk_c::procPushPullWait() {
     }
     if (mStickDistance > 0.05f) {
         s32 dir = getDirectionFromShapeAngle();
-        if (dir == 0 /* DIR_FORWARD */) {
+        if (dir == Link07::DIR_FORWARD) {
             procPushMove_init();
-        } else if (dir == 1 /* DIR_BACKWARD */) {
+        } else if (dir == Link07::DIR_BACKWARD) {
             procPullMove_init();
         }
     } else {
-        gabi::call(LK_setTextureAnime, this, 2 /* mAnmDataTable[ANM_WAITPUSHPULL].mTexAnmIdx */, 0);
+        setTextureAnime(2 /* mAnmDataTable[ANM_WAITPUSHPULL].mTexAnmIdx */, 0);
     }
     return TRUE;
 }
-VERIFY(0x0243D1C4, &daPy_lk_c::procPushPullWait);
 
 /* 0243D424 */
 BOOL daPy_lk_c::procPushMove() {
-    WWHD_FUNC(0x0243D424, BOOL, this);
-    dComIfGp_setDoStatus_l(0x11 /* dActStts_GRAB_e */);
+    dComIfGp_setDoStatus_l(Link07::dActStts_GRAB_e);
     s32 dir = getDirectionFromShapeAngle();
-    gabi::call(LK_setFrontWallType, this);
-    if (!(resetFlg0() & 8) || (!(mNoResetFlg0 & 0x800 /* daPyFlg0_PUSH_PULL_KEEP */) && !(mItemButton & 1) /* HD: do button */)) {
-        LK_checkNextMode(0);
+    setFrontWallType();
+    if (!(resetFlg0() & 8) || (!(mNoResetFlg0 & daPyFlg0_PUSH_PULL_KEEP) && !(mItemButton & 1) /* HD: do button */)) {
+        checkNextMode(0);
         return TRUE;
     }
-    if (!(mNoResetFlg0 & 0x800)) {
+    if (!(mNoResetFlg0 & daPyFlg0_PUSH_PULL_KEEP)) {
         if (mStickDistance > 0.05f) {
-            if (dir == 0 /* DIR_FORWARD */) {
+            if (dir == Link07::DIR_FORWARD) {
                 setPushPullKeepData(1 /* PPLABEL_PUSH */);
                 return TRUE;
             }
-            if (dir == 1 /* DIR_BACKWARD */) {
+            if (dir == Link07::DIR_BACKWARD) {
                 return procPullMove_init();
             }
         }
-        return gabi::call<BOOL>(LK_procPushPullWait_init, this, 0);
+        return procPushPullWait_init(0);
     }
     if (mProcVar6 != 0) {
-        LK_voiceStart(19);
+        Link07::voiceStart(this, 19);
     }
     mProcVar6 = 0;
     setPushPullKeepData(1 /* PPLABEL_PUSH */);
     return TRUE;
 }
-VERIFY(0x0243D424, &daPy_lk_c::procPushMove);
 
 /* 0243D578 */
 BOOL daPy_lk_c::procPullMove() {
-    WWHD_FUNC(0x0243D578, BOOL, this);
-    dComIfGp_setDoStatus_l(0x11 /* dActStts_GRAB_e */);
+    dComIfGp_setDoStatus_l(Link07::dActStts_GRAB_e);
     s32 dir = getDirectionFromShapeAngle();
-    gabi::call(LK_setFrontWallType, this);
-    if (!(resetFlg0() & 8) || (!(mNoResetFlg0 & 0x800 /* daPyFlg0_PUSH_PULL_KEEP */) && !(mItemButton & 1) /* HD: do button */)) {
-        LK_checkNextMode(0);
+    setFrontWallType();
+    if (!(resetFlg0() & 8) || (!(mNoResetFlg0 & daPyFlg0_PUSH_PULL_KEEP) && !(mItemButton & 1) /* HD: do button */)) {
+        checkNextMode(0);
         return TRUE;
     }
-    if (!(mNoResetFlg0 & 0x800)) {
+    if (!(mNoResetFlg0 & daPyFlg0_PUSH_PULL_KEEP)) {
         if (mStickDistance > 0.05f) {
-            if (dir == 1 /* DIR_BACKWARD */) {
+            if (dir == Link07::DIR_BACKWARD) {
                 s16 a = shape_angle.y;
                 f32 s = cM_ssin(a);
                 f32 c = cM_scos(a);
@@ -4651,92 +4468,90 @@ BOOL daPy_lk_c::procPullMove() {
                 mGndChkPos.x = ex;
                 mGndChkPos.z = ez;
                 end->z = ez;
-                f64 g = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
+                f64 g = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
                 if (!((f32)(g - (f64)(f32)current.pos.y) < -30.1f)) {
                     setPushPullKeepData(2 /* PPLABEL_PULL */);
                 }
                 return TRUE;
             }
-            if (dir == 0 /* DIR_FORWARD */) {
+            if (dir == Link07::DIR_FORWARD) {
                 return procPushMove_init();
             }
         }
-        return gabi::call<BOOL>(LK_procPushPullWait_init, this, 0);
+        return procPushPullWait_init(0);
     }
     if (mProcVar6 == 1) {
-        LK_voiceStart(19);
+        Link07::voiceStart(this, 19);
     }
     mProcVar6 = 0;
     setPushPullKeepData(2 /* PPLABEL_PULL */);
     return TRUE;
 }
-VERIFY(0x0243D578, &daPy_lk_c::procPullMove);
 
 /* ---- bottle ---- */
 enum : u32 {
-    LK_setShipRidePosUseItem = 0x023E2DC4,
-    LK_changeBottleDrinkFace = 0x023EF260,
-    LK_setBottleModel = 0x023DF0FC,
-    LK_mtxPosFollow_makeEmitterColor = 0x023E47C4, /* unnamed by the matcher: daPy_mtxPosFollowEcallBack_c::makeEmitterColor */
+    LK_mtxPosFollow_makeEmitterColor =
+        0x023E47C4, /* unnamed by the matcher: daPy_mtxPosFollowEcallBack_c::makeEmitterColor */
 };
-#define mpBottleContentsModel LK_FIELD(u32, 0x4970) /* GameCube J3DModel* in 0x974..0x2FAC */
 /* dComIfGp_att_getCatghTarget(): dAttLook_c::convPId(play + 0x5934, the catch target id (play + 0x5944)) */
 static inline u32 lk_att_getCatchTarget() {
     u32 play = dComIfGp_ea();
-    return gabi::call<u32>(0x024EBD10 /* dAttLook_c::convPId */, play + 0x5934, gabi::load<u32>(play + 0x5804 + 0x140));
+    return Link07_catchTargetFromID(play + 0x5934, gabi::load<u32>(play + 0x5804 + 0x140));
 }
 
 /* 0243D838 */
 BOOL daPy_lk_c::procBottleDrink() {
-    WWHD_FUNC(0x0243D838, BOOL, this);
-    gabi::call(LK_setShipRidePosUseItem, this);
+    setShipRidePosUseItem();
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    u16 idx = gabi::load<u16>(gabi::ea(this) + 0x5848); /* m_anm_heap_under[UNDER_MOVE0_e].mIdx */
+    u16 idx = Link07::underHeap(this, 0).mIdx; /* m_anm_heap_under[UNDER_MOVE0_e].mIdx */
     u32 save = 0;
-    if (idx == 0x2C /* BINDRINKPRE */) {
+    if (idx == Link07::dRes_INDEX_LKANM_BCK_BINDRINKPRE_e) {
         if (frameCtrl.getRate() < 0.01f) {
-            gabi::call(LK_setSingleMoveAnime, this, 0xB7 /* ANM_BINDRINKING */, 0.9f, 0.0f, -1, 0.0f); /* HD: HIO folded */
+            setSingleMoveAnime(Link07::ANM_BINDRINKING, 0.9f, 0.0f, -1, 0.0f); /* HD: HIO folded */
             u16 item = mEquipItem; /* kept across the call when no face is set (GHS) */
-            if (gabi::call<BOOL>(LK_changeBottleDrinkFace, this, (u32)item)) {
-                gabi::call(LK_setTextureAnime, this, 0x86, 0);
+            if (changeBottleDrinkFace((u32)item)) {
+                setTextureAnime(0x86, 0);
                 item = mEquipItem;
             }
-            if (item != 0x52 /* dItemNo_GREEN_POTION_e */) {
+            if (item != Link07::dItemNo_GREEN_POTION_e) {
                 /* HD: dComIfGp_setItemLifeCount(dComIfGs_getMaxLife()) accumulates a float */
-                f32 maxLife = (f32)gabi::load<u16>(gabi::load<u32>(0x101F84DC) + 0x20);
-                u32 a = dComIfGp_ea() + 0x5B44;
-                gabi::store<f32>(a, gabi::load<f32>(a) + maxLife);
+                f32 maxLife = (f32)dComIfGs_getMaxLife();
+                be<f32>& lifeCount = Link07::gameInfo()->play.mItemLifeCount;
+                lifeCount = (f32)lifeCount + maxLife;
             }
-            if (mEquipItem != 0x51 /* dItemNo_RED_POTION_e */) {
-                u8 maxMagic = gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x33);
-                u32 a = dComIfGp_ea() + 0x5B60;
-                gabi::store<s16>(a, (s16)(gabi::load<s16>(a) + maxMagic)); /* dComIfGp_setItemMagicCount(dComIfGs_getMaxMagic()) */
-                if (mEquipItem == 0x55 /* dItemNo_SOUP_BOTTLE_e */ || mEquipItem == 0x54 /* dItemNo_HALF_SOUP_BOTTLE_e */) {
-                    setNoResetFlg1(noResetFlg1() | 0x8000 /* daPyFlg1_SOUP_POWER_UP */);
+            if (mEquipItem != Link07::dItemNo_RED_POTION_e) {
+                u8 maxMagic = dComIfGs_getMaxMagic();
+                be<s16>& magicCount = Link07::gameInfo()->play.mItemMagicCount;
+                magicCount = (s16)((s16)magicCount + maxMagic); /* dComIfGp_setItemMagicCount(dComIfGs_getMaxMagic()) */
+                if (mEquipItem == Link07::dItemNo_SOUP_BOTTLE_e || mEquipItem == Link07::dItemNo_HALF_SOUP_BOTTLE_e) {
+                    setNoResetFlg1(noResetFlg1() | daPyFlg1_SOUP_POWER_UP);
                 }
             }
             resetCurse();
         } else if (frameCtrl.checkPass(65.0f)) {
-            LK_voiceStart(39);
+            Link07::voiceStart(this, 39);
         }
-    } else if (idx == 0x2B /* BINDRINKING */) {
-        save = gabi::load<u32>(0x101F84DC);
-        if (gabi::load<u16>(dComIfGp_ea() + 0x5BAC) == gabi::load<u16>(gabi::load<u32>(0x101F84DC) + 0x22) /* now life == life */ &&
-            (u32)(s32)gabi::load<s16>(dComIfGp_ea() + 0x5B62) == (u32)gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x34) /* now magic == magic */) {
-            gabi::call(LK_setSingleMoveAnime, this, 0xB8 /* ANM_BINDRINKAFTER */, 1.0f, 0.0f, 0x24, 2.0f); /* HD: HIO folded */
-            if (gabi::call<BOOL>(LK_changeBottleDrinkFace, this, (u32)mEquipItem)) {
-                gabi::call(LK_setTextureAnime, this, 0x87, 0);
+    } else if (idx == Link07::dRes_INDEX_LKANM_BCK_BINDRINKING_e) {
+        save = dComIfGs_ea();
+        if (Link07::gameInfo()->play.mItemNowLife == dComIfGs_getLife() /* now life == life */ &&
+            (u32)(s32)Link07::gameInfo()->play.mItemNowMagicCount ==
+                (u32)dComIfGs_getMagic() /* now magic == magic */) {
+            setSingleMoveAnime(Link07::ANM_BINDRINKAFTER, 1.0f, 0.0f, 0x24, 2.0f); /* HD: HIO folded */
+            if (changeBottleDrinkFace((u32)mEquipItem)) {
+                setTextureAnime(0x87, 0);
             }
-            if (mEquipItem == 0x55 /* dItemNo_SOUP_BOTTLE_e */) {
-                gabi::call(LK_setBottleModel, this, 0x54);
-                gabi::call(0x025B5578 /* dSv_player_item_c::setEquipBottleItemIn */, gabi::load<u32>(0x101F84DC) + 0x5C, (u32)mReadyItemBtn, 0x54);
+            if (mEquipItem == Link07::dItemNo_SOUP_BOTTLE_e) {
+                setBottleModel(0x54);
+                Link07_setEquipBottleItemIn(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem), (u32)mReadyItemBtn,
+                                            0x54);
             } else {
-                mpBottleContentsModel = 0;
-                gabi::call(0x025B58B8 /* dSv_player_item_c::setEquipBottleItemEmpty */, gabi::load<u32>(0x101F84DC) + 0x5C, (u32)mReadyItemBtn);
+                Link07::models(this).mpBottleContentsModel = nullptr;
+                Link07_setEquipBottleItemEmpty(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem),
+                                               (u32)mReadyItemBtn);
             }
             u16 item = mEquipItem;
             if (item != 0x55 && item != 0x54) {
-                u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x12 /* CL_JNT_CHIN_JNT_e */);
+                u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_CHIN_JNT_e);
                 u32 color;
                 if (item == 0x51) {
                     color = 0x1003617C; /* red */
@@ -4745,81 +4560,78 @@ BOOL daPy_lk_c::procBottleDrink() {
                 } else {
                     color = 0x10036184; /* blue */
                 }
-                gabi::call(LK_mtxPosFollow_makeEmitterColor, &m33A8, 0x57 /* ID_IT_JN_LK_GEPPU00 */, mtx, &current.pos, &shape_angle,
-                           color, 0);
+                Link07_makeMtxPosFollowEmitterColor(&m33A8, Link07::ID_IT_JN_LK_GEPPU00, mtx, &current.pos,
+                                                    &shape_angle, color, 0);
             }
         } else if (frameCtrl.checkPass(10.0f)) {
-            LK_voiceStart(39);
+            Link07::voiceStart(this, 39);
         }
     } else if (frameCtrl.getRate() < 0.01f) {
         dComIfGp_event_reset();
         lk_endEventCamera(this);
-        gabi::call(LK_endDemoMode, this);
+        endDemoMode();
     } else if (frameCtrl.checkPass(8.0f)) {
-        LK_voiceStart(40);
+        Link07::voiceStart(this, 40);
     }
     (void)save;
     return TRUE;
 }
-VERIFY(0x0243D838, &daPy_lk_c::procBottleDrink);
 
 /* 0243E534 */
 BOOL daPy_lk_c::procBottleGet_init() {
-    WWHD_FUNC(0x0243E534, BOOL, this);
-    int use = gabi::call<int>(LK_checkShipRideUseItem, this, 0);
-    gabi::call(LK_commonProcInit, this, 0xA6 /* daPyProc_BOTTLE_GET_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0xBE /* ANM_BINGET */, 1.0f, 0.0f, 0x32, 4.0f); /* HD: HIO folded */
-    u32 a = dComIfGp_ea() + 0x5CDC;
-    gabi::store<u32>(a, gabi::load<u32>(a) | 0x1000 /* daPyStts1_UNK1000_e */);
+    int use = checkShipRideUseItem(0);
+    commonProcInit(Link07::daPyProc_BOTTLE_GET_e);
+    setSingleMoveAnime(Link07::ANM_BINGET, 1.0f, 0.0f, 0x32, 4.0f); /* HD: HIO folded */
+    be<u32>& status = Link07::gameInfo()->play.mPlayerStatus[0][1];
+    status = status | Link07::daPyStts1_UNK1000_e;
     mGameOverId = 0xFFFFFFFF;
     mProcVar6 = 0;
-    u32 cam = gabi::call<u32>(0x024F8044 /* dCam_getBody */);
-    gabi::call(0x0253E70C /* dCamera_c::StartEventCamera (varargs) */, cam, 0x12, gabi::load<u32>(gabi::ea(this) + 4),
-               0x100361A0 /* "Type" */, &mProcVar6, 0);
-    if (mEquipItem == 0x59 /* dItemNo_FOREST_WATER_e */) {
-        u32 model = gabi::load<u32>(gabi::ea(this) + 0x4440); /* mpEquipItemModel */
-        gabi::call(LK_mtxFollow_makeEmitter, &m32F0, 0x20D /* ID_AK_JN_FORESTWATER00 */, model ? model + 0xC8 : 0, &current.pos, nullptr);
+    u32 cam = Link07_cameraBody();
+    Link07_startBottleEventCamera(cam, 0x12, fopAcM_GetID(this), gabi::guest_str("Type"), &mProcVar6, 0);
+    if (mEquipItem == Link07::dItemNo_FOREST_WATER_e) {
+        u32 model = gabi::ea(Link07::models(this).mpEquipItemModel.get()); /* mpEquipItemModel */
+        Link07_makeMtxFollowEmitter(&m32F0, Link07::ID_AK_JN_FORESTWATER00, model ? model + 0xC8 : 0, &current.pos,
+                                    nullptr);
     }
-    gabi::call(LK_initShipRideUseItem, this, use, 2);
+    initShipRideUseItem(use, 2);
     return TRUE;
 }
-VERIFY(0x0243E534, &daPy_lk_c::procBottleGet_init);
 
 /* 0243E634 */
 BOOL daPy_lk_c::procBottleSwing() {
-    WWHD_FUNC(0x0243E634, BOOL, this);
-    gabi::call(LK_setShipRidePosUseItem, this);
+    setShipRidePosUseItem();
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if (mProcVar6 == 0) {
-        if (gabi::load<u16>(gabi::ea(this) + 0xF8) == 6 /* eventInfo.checkCommandCatch() */) {
+        if (eventInfo.mCommand == 6 /* eventInfo.checkCommandCatch() */) {
             mProcVar6 = 1;
-            u8 item = gabi::load<u8>(dComIfGp_ea() + 0x52B1); /* dComIfGp_event_getPreItemNo() */
+            u8 item = dComIfGp_event_getPreItemNo(); /* dComIfGp_event_getPreItemNo() */
             BOOL skip = FALSE;
-            if (item == 0x56 /* dItemNo_WATER_BOTTLE_e */) {
-                seStartOnlyReverb(0x287E /* JA_SE_LK_SCOOP_WATER */);
-                if (lk_stageNameIs(0x100361A8 /* "Omori" */)) {
+            if (item == Link07::dItemNo_WATER_BOTTLE_e) {
+                seStartOnlyReverb(Link07::JA_SE_LK_SCOOP_WATER);
+                if (lk_stageNameIs(gabi::guest_str("Omori"))) {
                     item = 0x59; /* dItemNo_FOREST_WATER_e */
-                    if (gabi::call<BOOL>(0x025B5C80 /* dSv_player_item_c::checkBottle */, gabi::load<u32>(0x101F84DC) + 0x5C, 0x59)) {
+                    if (dComIfGs_checkBottle(0x59)) {
                         mProcVar7 = 1;
                         mGameOverId = 0xFFFFFFFF;
                         skip = TRUE;
                     } else {
-                        gabi::call(0x025B6120 /* dSv_player_item_record_c::resetTimer */, gabi::load<u32>(0x101F84DC) + 0x86, 0xD2F0); /* HD: 54000 */
+                        Link07_resetItemRecordTimer(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mItemRecord.mTimer),
+                                                    0xD2F0); /* HD: 54000 */
                     }
                 }
             }
             if (!skip && mProcVar7 == 0) {
-                gabi::call(LK_setBottleModel, this, (u32)item);
-                gabi::call(0x025B5578 /* dSv_player_item_c::setEquipBottleItemIn */, gabi::load<u32>(0x101F84DC) + 0x5C,
-                           (u32)mReadyItemBtn, (u32)gabi::load<u8>(gabi::ea(this) + 0x69B1) /* (u8)mEquipItem */);
+                setBottleModel((u32)item);
+                Link07_setEquipBottleItemIn(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem), (u32)mReadyItemBtn,
+                                            (u32)(u8)mEquipItem /* (u8)mEquipItem */);
                 m355E = 0;
             }
-            gabi::store<u16>(gabi::ea(this) + 0x420, 5); /* mDemo.setSpecialDemoType() */
+            mDemo.mDemoType = daPy_demo_c::TYPE_SPECIAL_e; /* mDemo.setSpecialDemoType() */
         } else {
             f32 f = frameCtrl.getFrame();
-            if (!(f < 1.0f) && !(f > 4.0f) && gabi::call<s32>(LK_getReadyItem, this) == 0x50 /* dItemNo_EMPTY_BOTTLE_e */ &&
+            if (!(f < 1.0f) && !(f > 4.0f) && getReadyItem() == Link07::dItemNo_EMPTY_BOTTLE_e &&
                 (lk_att_getCatchTarget() != 0 || mWaterY > current.pos.y + 10.0f)) {
-                gabi::call(0x025D7774 /* fopAcM_orderCatchEvent */, this, lk_att_getCatchTarget());
+                Link07_orderCatchEvent(this, lk_att_getCatchTarget());
             }
         }
     }
@@ -4827,58 +4639,51 @@ BOOL daPy_lk_c::procBottleSwing() {
         if (mProcVar7 != 0) {
             if (mProcVar2 == 0) {
                 mModeFlg = (mModeFlg & ~0x400u) | 0x100;
-                gabi::call(LK_setBlendMoveAnime, this, 2.4f); /* HD: HIO folded */
+                setBlendMoveAnime(2.4f); /* HD: HIO folded */
                 mProcVar2 = 1;
             }
-            if (gabi::call<BOOL>(LK_checkEndMessage, this, 0x14A2)) {
+            if (checkEndMessage(0x14A2)) {
                 dComIfGp_event_reset();
-                gabi::call(LK_endDemoMode, this);
+                endDemoMode();
             }
         } else if (mProcVar6 != 0) {
             procBottleGet_init();
-        } else if (dComIfGp_checkPlayerStatus0_l(0x10000 /* daPyStts0_SHIP_RIDE_e */)) {
-            gabi::call(LK_procShipPaddle_init, this);
+        } else if (dComIfGp_checkPlayerStatus0_l(Link07::daPyStts0_SHIP_RIDE_e)) {
+            procShipPaddle_init();
         } else {
-            LK_checkNextMode(0);
+            checkNextMode(0);
         }
     } else if (frameCtrl.getFrame() > m35A0) {
         if (mProcVar6 == 0 && !dComIfGp_checkPlayerStatus0_l(0x10000)) {
-            LK_checkNextMode(1);
+            checkNextMode(1);
         }
     }
     return TRUE;
 }
-VERIFY(0x0243E634, &daPy_lk_c::procBottleSwing);
 
 /* 0243E948 */
 BOOL daPy_lk_c::procBottleGet() {
-    WWHD_FUNC(0x0243E948, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    gabi::call(LK_setShipRidePosUseItem, this);
-    if (frameCtrl.getRate() < 0.01f && gabi::call<BOOL>(LK_checkEndMessage, this, (u32)mEquipItem + 0x65 /* MSG_NO_FOR_ITEM */)) {
+    setShipRidePosUseItem();
+    if (frameCtrl.getRate() < 0.01f && checkEndMessage((u32)mEquipItem + 0x65 /* MSG_NO_FOR_ITEM */)) {
         dComIfGp_event_reset();
         lk_endEventCamera(this);
-        gabi::call(LK_deleteEquipItem, this, 0);
-        gabi::call(LK_endDemoMode, this);
+        deleteEquipItem(0);
+        endDemoMode();
     } else if (!(frameCtrl.getFrame() < 9.0f)) {
         m355E = 1;
     }
     if (frameCtrl.checkPass(39.0f)) {
-        gabi::call(0x025E1988 /* seStartSystem */, 0x8F5 /* JA_SE_ME_ITEM_GET_S */);
-        gabi::store<u8>(dComIfGp_ea() + 0x5C20, 2); /* dComIfGp_setMesgBgmOn2() */
+        Link07_seStartSystem(Link07::JA_SE_ME_ITEM_GET_S);
+        gabi::at<Link07::MessagePlayState>(dComIfGp_ea())->mMesgBgm = 2; /* dComIfGp_setMesgBgmOn2() */
     }
     return TRUE;
 }
-VERIFY(0x0243E948, &daPy_lk_c::procBottleGet);
 
 /* ---- enemy weapons (boko sticks) ---- */
-enum : u32 {
-    LK_setEnemyWeaponAtParam = 0x023ED2CC,
-};
 
 /* 0243EA44 */
 BOOL daPy_lk_c::procWeaponNormalSwing() {
-    WWHD_FUNC(0x0243EA44, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if ((mItemButton & 2) /* swordButton() */ && mActorKeepEquip.mActor != nullptr) {
         mNoResetFlg0 = mNoResetFlg0 | 4;
@@ -4894,8 +4699,8 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
             mProcVar0 = (s16)(mProcVar0 - 1);
         } else {
             mNormalSpeed = 0.0f;
-            mDirection = 3; /* DIR_RIGHT */
-            LK_checkNextMode(0);
+            mDirection = Link07::DIR_RIGHT;
+            checkNextMode(0);
             return TRUE;
         }
     } else if (frameCtrl.getFrame() > 27.0f) { /* HD: HIO folded */
@@ -4903,18 +4708,18 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
         mNormalSpeed = 0.0f;
         u8 dir = mDirection;
         mDirection = 3;
-        if (LK_checkNextMode(1)) {
+        if (checkNextMode(1)) {
             return TRUE;
         }
         mDirection = dir;
         mNormalSpeed = sp;
     }
-    if (changeCutReverseProc(0x27 /* ANM_CUTRER */)) {
+    if (changeCutReverseProc(Link07::ANM_CUTRER)) {
         return TRUE;
     }
     m34C2 = 1;
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
         mProcVar2 = a;
         current.angle.y = a;
@@ -4930,20 +4735,18 @@ BOOL daPy_lk_c::procWeaponNormalSwing() {
     }
     f32 f = frameCtrl.getFrame();
     if (!(f < 7.0f) && f < 13.0f) {
-        if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+        if (!(mNoResetFlg0 & daPyFlg0_CUT_AT_FLG)) {
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
+            seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
         }
         setResetFlg0(resetFlg0() | 2);
     }
     cLib_addCalc_l(&mNormalSpeed, 0.0f, 0.8f, 2.6f, 0.5f);
     return TRUE;
 }
-VERIFY(0x0243EA44, &daPy_lk_c::procWeaponNormalSwing);
 
 /* 0243ED14 */
 BOOL daPy_lk_c::procWeaponSideSwing() {
-    WWHD_FUNC(0x0243ED14, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if ((mItemButton & 2) /* swordButton() */ && mActorKeepEquip.mActor != nullptr) {
         mNoResetFlg0 = mNoResetFlg0 | 4;
@@ -4952,8 +4755,8 @@ BOOL daPy_lk_c::procWeaponSideSwing() {
     }
     if (frameCtrl.getRate() < 0.01f || mActorKeepEquip.mActor == nullptr) {
         mNormalSpeed = 0.0f;
-        mDirection = 3; /* DIR_RIGHT */
-        LK_checkNextMode(0);
+        mDirection = Link07::DIR_RIGHT;
+        checkNextMode(0);
         return TRUE;
     }
     if (frameCtrl.getFrame() > 69.0f) { /* HD: HIO folded */
@@ -4961,17 +4764,17 @@ BOOL daPy_lk_c::procWeaponSideSwing() {
         mNormalSpeed = 0.0f;
         u8 dir = mDirection;
         mDirection = 3;
-        if (LK_checkNextMode(1)) {
+        if (checkNextMode(1)) {
             return TRUE;
         }
         mDirection = dir;
         mNormalSpeed = sp;
     }
-    if (changeCutReverseProc(0x15 /* ANM_CUTREL */)) {
+    if (changeCutReverseProc(Link07::ANM_CUTREL)) {
         return TRUE;
     }
     if (mpAttnActorLockOn != nullptr) {
-        gabi::call(LK_setShapeAngleToAtnActor, this);
+        setShapeAngleToAtnActor();
         s16 a = shape_angle.y;
         mProcVar2 = a;
         current.angle.y = a;
@@ -4981,68 +4784,62 @@ BOOL daPy_lk_c::procWeaponSideSwing() {
     }
     f32 f = frameCtrl.getFrame();
     if (!(f < 25.0f) && f < 32.0f) {
-        if (!(mNoResetFlg0 & 0x40 /* daPyFlg0_CUT_AT_FLG */)) {
+        if (!(mNoResetFlg0 & daPyFlg0_CUT_AT_FLG)) {
             setResetFlg0(resetFlg0() | 1);
-            seStartSwordCut(0x2800 /* JA_SE_LK_SW_KAZEKIRI_S */);
+            seStartSwordCut(Link07::JA_SE_LK_SW_KAZEKIRI_S);
         }
         setResetFlg0(resetFlg0() | 2);
     }
     return TRUE;
 }
-VERIFY(0x0243ED14, &daPy_lk_c::procWeaponSideSwing);
 
 /* 0243EF08 */
 BOOL daPy_lk_c::procWeaponFrontSwing_init() {
-    WWHD_FUNC(0x0243EF08, BOOL, this);
-    gabi::call(LK_commonProcInit, this, 0x4E /* daPyProc_WEAPON_FRONT_SWING_e */);
-    gabi::call(LK_setSingleMoveAnime, this, 0xAC /* ANM_HAMSWINGBHIT */, 3.2f, 0.0f, 0xB, 0.0f); /* HD: HIO folded */
+    commonProcInit(Link07::daPyProc_WEAPON_FRONT_SWING_e);
+    setSingleMoveAnime(Link07::ANM_HAMSWINGBHIT, 3.2f, 0.0f, 0xB, 0.0f); /* HD: HIO folded */
     mNormalSpeed = 0.0f;
     current.angle.y = shape_angle.y;
-    LK_voiceStart(1);
-    seStartSwordCut(0x2857 /* JA_SE_LK_HAMMER_SWING */); /* HD */
-    if (!LK_checkAttentionLock()) { /* GameCube: both branches end with mProcVar2 = shape_angle.y */
+    Link07::voiceStart(this, 1);
+    seStartSwordCut(Link07::JA_SE_LK_HAMMER_SWING); /* HD */
+    if (!lk_attentionLock(mpAttention)) {           /* GameCube: both branches end with mProcVar2 = shape_angle.y */
         (void)(f32)mStickDistance;
     }
     mProcVar2 = shape_angle.y;
-    gabi::call(LK_setBlurPosResource, this, 0x288 /* _HAMMERFRONT_POS */);
-    gabi::call(LK_setEnemyWeaponAtParam, this, 0);
+    setBlurPosResource(0x288 /* _HAMMERFRONT_POS */);
+    setEnemyWeaponAtParam(0);
     mProcVar0 = 0;
     setResetFlg0(resetFlg0() | 3);
     return TRUE;
 }
-VERIFY(0x0243EF08, &daPy_lk_c::procWeaponFrontSwing_init);
 
 enum : u32 {
-    LK_mtxFollow_makeEmitterColor = 0x023D460C,
-    LK_setAtParam = 0x023E5600,
-    LK_makeFairy = 0x023F73B8,
-    LK_HD_0255BE0C = 0x0255BE0C, /* unnamed by the matcher: an HD stage check (d_kankyo) that tints the water particles */
+    LK_HD_0255BE0C =
+        0x0255BE0C, /* unnamed by the matcher: an HD stage check (d_kankyo) that tints the water particles */
 };
 /* HD: the water particles take the particle manager's colour (pa + 0xF0..0xF2) as prm and env colour */
 static inline void lk_tintWaterEmitter(u32 em) {
     u32 pa = gabi::ea(dComIfGp_getParticle());
     u8 g = gabi::load<u8>(pa + 0xF1), r = gabi::load<u8>(pa + 0xF0), b = gabi::load<u8>(pa + 0xF2);
-    gabi::store<u8>(em + 0x244, r);
-    gabi::store<u8>(em + 0x245, g);
-    gabi::store<u8>(em + 0x246, b);
+    gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.r = r;
+    gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.g = g;
+    gabi::at<Link07::Emitter>(em)->mGlobalPrmColor.b = b;
     u8 g2 = gabi::load<u8>(pa + 0xF1), r2 = gabi::load<u8>(pa + 0xF0), b2 = gabi::load<u8>(pa + 0xF2);
-    gabi::store<u8>(em + 0x249, g2);
-    gabi::store<u8>(em + 0x248, r2);
-    gabi::store<u8>(em + 0x24A, b2);
+    gabi::at<Link07::Emitter>(em)->mGlobalEnvColor.g = g2;
+    gabi::at<Link07::Emitter>(em)->mGlobalEnvColor.r = r2;
+    gabi::at<Link07::Emitter>(em)->mGlobalEnvColor.b = b2;
 }
 
 /* 0243DBFC */
 BOOL daPy_lk_c::procBottleOpen() {
-    WWHD_FUNC(0x0243DBFC, BOOL, this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
-    gabi::call(LK_setShipRidePosUseItem, this);
+    setShipRidePosUseItem();
     u32 self = gabi::ea(this);
-    if (gabi::load<u16>(self + 0x5848) == 0x30 /* BINOPENPRE */) {
+    if (Link07::underHeap(this, 0).mIdx == Link07::dRes_INDEX_LKANM_BCK_BINOPENPRE_e) {
         if (frameCtrl.getRate() < 0.01f) {
-            if (mEquipItem == 0x57 /* dItemNo_FAIRY_BOTTLE_e */) {
-                gabi::call(LK_setSingleMoveAnime, this, 0xBB /* ANM_BINOPENB */, 1.0f, 0.0f, 0x7C, 5.0f); /* HD: HIO folded */
+            if (mEquipItem == Link07::dItemNo_FAIRY_BOTTLE_e) {
+                setSingleMoveAnime(Link07::ANM_BINOPENB, 1.0f, 0.0f, 0x7C, 5.0f); /* HD: HIO folded */
             } else {
-                gabi::call(LK_setSingleMoveAnime, this, 0xBA /* ANM_BINOPENA */, 1.0f, 0.0f, 0x45, 5.0f);
+                setSingleMoveAnime(Link07::ANM_BINOPENA, 1.0f, 0.0f, 0x45, 5.0f);
             }
         } else if (frameCtrl.checkPass(32.0f)) {
             m355E = 0;
@@ -5050,13 +4847,15 @@ BOOL daPy_lk_c::procBottleOpen() {
         }
     } else {
         u32 em = gabi::ea(m32E4.mpEmitter.get());
-        if (em != 0 && mProcVar2 == 0 && em + 0x1AC != 0 /* getParticleList() */ && gabi::load<u32>(em + 0x1B0) != 0 /* getLast() */) {
-            u32 ptcl = gabi::load<u32>(gabi::load<u32>(em + 0x1B0)); /* getLast()->getObject() */
-            f32 py = gabi::load<f32>(ptcl + 0x2C);                    /* getGlobalPosition() */
-            f32 pz = gabi::load<f32>(ptcl + 0x30);
-            f32 px = gabi::load<f32>(ptcl + 0x28);
-            gabi::Local<cXyz> pos;   /* sp+0x18 (GameCube sp64) */
-            gabi::Local<cXyz> start; /* sp+0x24 (GameCube sp58) */
+        if (em != 0 && mProcVar2 == 0 && em + 0x1AC != 0 /* getParticleList() */ &&
+            gabi::ea(gabi::at<Link07::Emitter>(em)->mpLastParticle.get()) != 0 /* getLast() */) {
+            u32 ptcl =
+                gabi::ea(gabi::at<Link07::Emitter>(em)->mpLastParticle->mpObject.get()); /* getLast()->getObject() */
+            f32 py = gabi::at<Link07::Particle>(ptcl)->mGlobalPosition.y;                /* getGlobalPosition() */
+            f32 pz = gabi::at<Link07::Particle>(ptcl)->mGlobalPosition.z;
+            f32 px = gabi::at<Link07::Particle>(ptcl)->mGlobalPosition.x;
+            gabi::Local<cXyz> pos;       /* sp+0x18 (GameCube sp64) */
+            gabi::Local<cXyz> start;     /* sp+0x24 (GameCube sp58) */
             gabi::Local<be<f32>> waterY; /* sp+0x3C */
             mGndChkPos.z = pz;
             f32 y100 = py + 100.0f;
@@ -5066,12 +4865,12 @@ BOOL daPy_lk_c::procBottleOpen() {
             pos->y = y100;
             BOOL inWater = FALSE;
             pos->z = pz;
-            f64 g1 = gabi::call<f64>(0x02008974 /* cBgS::GroundCross */, dComIfG_Bgsp(), mGndChk);
-            lk_xyz_copy(gabi::at<cXyz>(self + 0xCB0), pos); /* mLavaGndChk.SetPos() */
-            f64 g2 = gabi::call<f64>(0x02008974, dComIfG_Bgsp(), mGndChk); /* (GameCube bug kept: mGndChk again) */
+            f64 g1 = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk);
+            lk_xyz_copy(gabi::at<cXyz>(self + 0xCB0), pos);                /* mLavaGndChk.SetPos() */
+            f64 g2 = Link07_groundCrossUnrounded(dComIfG_Bgsp(), mGndChk); /* (GameCube bug kept: mGndChk again) */
             f64 top;
             BOOL splash;
-            if (gabi::call<BOOL>(0x025D9F70 /* fopAcM_getWaterY */, pos.get(), waterY.get()) && (f64)(f32)*waterY > g1) {
+            if (Link07_getWaterY(pos.get(), waterY.get()) && (f64)(f32)*waterY > g1) {
                 f32 w = *waterY;
                 if ((f64)w > g2) {
                     top = w;
@@ -5087,19 +4886,22 @@ BOOL daPy_lk_c::procBottleOpen() {
                 pos->y = (f32)top;
                 mProcVar2 = 1;
                 dPa_control_c* pa = dComIfGp_getParticle();
-                u32 em2 = gabi::ea(dPa_control_set(pa, 1, 0x40 /* ID_IT_JN_WP_SHIBUKI */, pos, nullptr, gabi::at<cXyz>(0x10036188) /* splash_scale */,
-                                                   0xFF, nullptr, -1, gabi::at<GXColor>(self + 0x1A8), gabi::at<GXColor>(self + 0x1A8), nullptr));
+                u32 em2 = gabi::ea(dPa_control_set(
+                    pa, 1, Link07::ID_IT_JN_WP_SHIBUKI, pos, nullptr, gabi::at<cXyz>(0x10036188) /* splash_scale */,
+                    0xFF, nullptr, -1, gabi::at<GXColor>(self + 0x1A8), gabi::at<GXColor>(self + 0x1A8), nullptr));
                 if (em2 != 0) {
-                    gabi::store<u32>(em2 + 0x5C, 0x14); /* setMaxFrame() */
-                    gabi::store<f32>(em2 + 0x34, 8.0f); /* setRate() */
-                    if (gabi::call<BOOL>(LK_HD_0255BE0C)) {
+                    gabi::at<Link07::Emitter>(em2)->mMaxFrame = 0x14; /* setMaxFrame() */
+                    gabi::at<Link07::Emitter>(em2)->mRate = 8.0f;     /* setRate() */
+                    if (Link07_checkDaylightPresetHD()) {
                         lk_tintWaterEmitter(em2);
                     }
                 }
                 if (inWater) {
                     dPa_control_c* pa2 = dComIfGp_getParticle();
-                    dPa_control_set(pa2, 5, 0x3F /* ID_IT_JN_WP_HAMON03 */, pos, nullptr, gabi::at<cXyz>(0x10036194) /* ripple_scale */, 0xFF,
-                                    gabi::at<dPa_levelEcallBack>(0x1047B2E4 /* mSingleRippleEcallBack */), -1, nullptr, nullptr, nullptr);
+                    dPa_control_set(pa2, 5, Link07::ID_IT_JN_WP_HAMON03, pos, nullptr,
+                                    gabi::at<cXyz>(0x10036194) /* ripple_scale */, 0xFF,
+                                    gabi::at<dPa_levelEcallBack>(0x1047B2E4 /* mSingleRippleEcallBack */), -1, nullptr,
+                                    nullptr, nullptr);
                     start->x = pos->x;
                     start->y = pos->y;
                     start->z = pos->z;
@@ -5113,63 +4915,68 @@ BOOL daPy_lk_c::procBottleOpen() {
                     start->y = yy;
                     start->z = z;
                 }
-                gabi::call(0x02018808 /* cM3dGCps::SetStartEnd */, self + 0x7D6C /* mAtCps[1] */, start.get(), pos.get());
-                gabi::store<f32>(self + 0x7CD0, 0.0f); /* mAtCps[1].SetAtVec(0) */
-                gabi::store<f32>(self + 0x7D88, 50.0f); /* mAtCps[1].SetR(50.0f) */
-                gabi::store<f32>(self + 0x7CD4, 0.0f);
-                gabi::store<f32>(self + 0x7CD8, 0.0f);
+                cM3dGLin_SetStartEnd(gabi::at<cM3dGCps>(gabi::ea(mAtCps[1].mCps)), start.get(), pos.get());
+                mAtCps[1].mGObjAt.mVec.x = 0.0f; /* mAtCps[1].SetAtVec(0) */
+                gabi::at<Link07::CapsuleGeometry>(gabi::ea(mAtCps[1].mCps))->mRadius =
+                    50.0f; /* mAtCps[1].SetR(50.0f) */
+                mAtCps[1].mGObjAt.mVec.y = 0.0f;
+                mAtCps[1].mGObjAt.mVec.z = 0.0f;
             } else {
                 pos->y = py;
             }
-            u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 8 /* CL_JNT_CL_LHANDA_e */);
-            gabi::Local<cXyz> d;    /* sp+0x40 */
-            gabi::Local<cXyz> vec;  /* sp+0x4C (GameCube sp40) */
-            start->x = gabi::load<f32>(mtx + 0xC); /* mDoMtx_multVecZero */
-            start->y = gabi::load<f32>(mtx + 0x1C);
-            start->z = gabi::load<f32>(mtx + 0x2C);
+            u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_CL_LHANDA_e);
+            gabi::Local<cXyz> d;                      /* sp+0x40 */
+            gabi::Local<cXyz> vec;                    /* sp+0x4C (GameCube sp40) */
+            start->x = gabi::at<Mtx34>(mtx)->m[0][3]; /* mDoMtx_multVecZero */
+            start->y = gabi::at<Mtx34>(mtx)->m[1][3];
+            start->z = gabi::at<Mtx34>(mtx)->m[2][3];
             cXyz_mi(pos, d, start);
             lk_xyz_copy(vec, d);
-            gabi::call(0x02018808, self + 0x7C34 /* mAtCps[0] */, start.get(), pos.get());
+            cM3dGLin_SetStartEnd(gabi::at<cM3dGCps>(gabi::ea(mAtCps[0].mCps)), start.get(), pos.get());
             lk_xyz_copy(gabi::at<cXyz>(self + 0x7B98), vec); /* mAtCps[0].SetAtVec() */
             mProcVar3 = 1;
         }
         if (frameCtrl.getRate() < 0.01f) {
-            gabi::call(LK_actorKeep_clearData, &mActorKeepRope);
-            if (gabi::load<u16>(self + 0x420) == 5 /* checkSpecialDemoMode() */) {
+            Link07_clearActorKeep(&mActorKeepRope);
+            if (mDemo.mDemoType == 5 /* checkSpecialDemoMode() */) {
                 lk_endEventCamera(this);
                 dComIfGp_event_reset();
-                gabi::call(LK_endDemoMode, this);
+                endDemoMode();
             } else {
-                LK_cutEnd();
+                dComIfGp_evmng_cutEnd(mStaffIdx);
             }
         } else if (mProcVar4 == 0) {
             u16 item = mEquipItem;
-            BOOL water = (item == 0x56 /* dItemNo_WATER_BOTTLE_e */ || item == 0x59 /* dItemNo_FOREST_WATER_e */);
+            BOOL water = (item == Link07::dItemNo_WATER_BOTTLE_e || item == Link07::dItemNo_FOREST_WATER_e);
             if (water && frameCtrl.checkPass(9.0f)) {
-                seStartOnlyReverb(0x287F /* JA_SE_LK_SPRINKLE_WATER */);
-                u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 8 /* CL_JNT_CL_LHANDA_e */);
-                gabi::call(LK_mtxFollow_makeEmitterColor, &m32E4, 0x279 /* ID_AK_JN_SPILLWATER00 */, mtx, &current.pos, self + 0x1A8, self + 0x1A8);
-                if (gabi::call<BOOL>(LK_HD_0255BE0C) && gabi::load<u32>(self + 0x66FC) != 0) {
+                seStartOnlyReverb(Link07::JA_SE_LK_SPRINKLE_WATER);
+                u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_CL_LHANDA_e);
+                Link07_makeMtxFollowEmitterColor(&m32E4, Link07::ID_AK_JN_SPILLWATER00, mtx, &current.pos, self + 0x1A8,
+                                                 self + 0x1A8);
+                if (Link07_checkDaylightPresetHD() && gabi::ea(m32E4.mpEmitter.get()) != 0) {
                     u32 pa = gabi::ea(dComIfGp_getParticle());
-                    u32 e = gabi::load<u32>(self + 0x66FC);
-                    u8 g = gabi::load<u8>(pa + 0xF1), r = gabi::load<u8>(pa + 0xF0), b = gabi::load<u8>(pa + 0xF2);
-                    gabi::store<u8>(e + 0x244, r);
-                    gabi::store<u8>(e + 0x245, g);
-                    gabi::store<u8>(e + 0x246, b);
-                    u8 g2 = gabi::load<u8>(pa + 0xF1), r2 = gabi::load<u8>(pa + 0xF0);
-                    u32 e2 = gabi::load<u32>(self + 0x66FC);
-                    u8 b2 = gabi::load<u8>(pa + 0xF2);
-                    gabi::store<u8>(e2 + 0x249, g2);
-                    gabi::store<u8>(e2 + 0x248, r2);
-                    gabi::store<u8>(e2 + 0x24A, b2);
+                    u32 e = gabi::ea(m32E4.mpEmitter.get());
+                    u8 g = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.g,
+                       r = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.r,
+                       b = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.b;
+                    gabi::at<Link07::Emitter>(e)->mGlobalPrmColor.r = r;
+                    gabi::at<Link07::Emitter>(e)->mGlobalPrmColor.g = g;
+                    gabi::at<Link07::Emitter>(e)->mGlobalPrmColor.b = b;
+                    u8 g2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.g,
+                       r2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.r;
+                    u32 e2 = gabi::ea(m32E4.mpEmitter.get());
+                    u8 b2 = gabi::at<Link07::ParticleManager>(pa)->mGlobalColor.b;
+                    gabi::at<Link07::Emitter>(e2)->mGlobalEnvColor.g = g2;
+                    gabi::at<Link07::Emitter>(e2)->mGlobalEnvColor.r = r2;
+                    gabi::at<Link07::Emitter>(e2)->mGlobalEnvColor.b = b2;
                 }
                 s32 spl = 0; /* dCcG_At_Spl_UNK0 */
                 if (mEquipItem != 0x56) {
                     m3554 = 3;
-                    setNoResetFlg1(noResetFlg1() | 0x20000 /* daPyFlg1_FOREST_WATER_USE */);
+                    setNoResetFlg1(noResetFlg1() | daPyFlg1_FOREST_WATER_USE);
                     spl = 4; /* dCcG_At_Spl_UNK4 */
                 }
-                gabi::call(LK_setAtParam, this, 0x100 /* AT_TYPE_WATER */, 0, spl, 0, 0, 0, 5.0f);
+                Link07_setAttackParamWord(this, Link07::AT_TYPE_WATER, 0, spl, 0, 0, 0, 5.0f);
             } else {
                 item = mEquipItem;
                 BOOL empty;
@@ -5181,29 +4988,31 @@ BOOL daPy_lk_c::procBottleOpen() {
                     empty = !(frameCtrl.getFrame() < 15.0f);
                 }
                 if (empty) {
-                    u16 demo = gabi::load<u16>(self + 0x420);
-                    mpBottleContentsModel = 0;
+                    u16 demo = mDemo.mDemoType;
+                    Link07::models(this).mpBottleContentsModel = nullptr;
                     mProcVar4 = 1;
-                    u32 itemSave = gabi::load<u32>(0x101F84DC) + 0x5C;
+                    u32 itemSave = dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem);
                     if (demo == 5) {
-                        gabi::call(0x025B58B8 /* dSv_player_item_c::setEquipBottleItemEmpty */, itemSave, (u32)mReadyItemBtn);
-                    } else if (gabi::load<u8>(dComIfGp_ea() + 0x52B0) == 1 /* dTalkBtn_X_e */) {
-                        gabi::call(0x025B58B8, gabi::load<u32>(0x101F84DC) + 0x5C, 0 /* dItemBtn_X_e */);
+                        Link07_setEquipBottleItemEmpty(itemSave, (u32)mReadyItemBtn);
+                    } else if (Link07::gameInfo()->play.mEvtCtrl.mTalkButton == 1 /* dTalkBtn_X_e */) {
+                        Link07_setEquipBottleItemEmpty(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem),
+                                                       0 /* dItemBtn_X_e */);
                     } else {
-                        u32 slot = gabi::load<u8>(dComIfGp_ea() + 0x52B0) == 2 /* dTalkBtn_Y_e */ ? 1 : 2;
-                        gabi::call(0x025B58B8, gabi::load<u32>(0x101F84DC) + 0x5C, slot);
+                        u32 slot = Link07::gameInfo()->play.mEvtCtrl.mTalkButton == 2 /* dTalkBtn_Y_e */ ? 1 : 2;
+                        Link07_setEquipBottleItemEmpty(dComIfGs_ea() + SAVE_OFF(mSavedata.mPlayer.mPlayerItem), slot);
                     }
                     if (mEquipItem == 0x57) {
                         mModeFlg = mModeFlg | 0x8000000;
-                        u32 fairy = gabi::call<u32>(LK_makeFairy, this, self + 0x3F0 /* &mLeftHandPos */, 2);
-                        gabi::call(LK_actorKeep_setData, &mActorKeepRope, fairy);
-                    } else if (mEquipItem == 0x58 /* dItemNo_FIREFLY_BOTTLE_e */) {
-                        fopAcM_create(0x139 /* fpcNm_NH_e */, 1, gabi::at<cXyz>(self + 0x3F0), current.roomNo, &shape_angle, nullptr, -1, 0);
+                        u32 fairy = Link07_makeFairyWord(this, gabi::ea(&mLeftHandPos), 2);
+                        Link07_setActorKeepWord(&mActorKeepRope, fairy);
+                    } else if (mEquipItem == Link07::dItemNo_FIREFLY_BOTTLE_e) {
+                        fopAcM_create(Link07::fpcNm_NH_e, 1, gabi::at<cXyz>(self + 0x3F0), current.roomNo, &shape_angle,
+                                      nullptr, -1, 0);
                     }
                 }
             }
         } else if (frameCtrl.getFrame() > 40.0f) {
-            gabi::call(LK_mtxFollow_end, &m32E4);
+            Link07_endMtxFollow(&m32E4);
         }
     }
     if (mProcVar0 > 0) {
@@ -5218,33 +5027,32 @@ BOOL daPy_lk_c::procBottleOpen() {
             mark->x = x;
             mark->y = y;
             mark->z = z;
-            gabi::call(0x025DADA4 /* fopKyM_create */, 0x1D4 /* fpcNm_WATER_MARK_e */, 1, mark.get(), 0, 0);
+            Link07_createKyActor(Link07::fpcNm_WATER_MARK_e, 1, mark.get(), 0, 0);
             mProcVar0 = 3;
         }
     }
     return TRUE;
 }
-VERIFY(0x0243DBFC, &daPy_lk_c::procBottleOpen);
 
 enum : u32 {
-    LK_HD_023D83D8 = 0x023D83D8, /* unnamed by the matcher: HD, stops Link's water-drop emitters (actor_condition bit 4) */
+    LK_HD_023D83D8 =
+        0x023D83D8, /* unnamed by the matcher: HD, stops Link's water-drop emitters (actor_condition bit 4) */
 };
 /* the tact audio helpers (m_Do_audio): f1 results kept unrounded where the code computes with them */
-static inline f64 mDoAud_tact_getBeatFrames_l() { return gabi::call<f64>(0x025E1F08); }
+
 static inline u32 ppc_divwu_l(u32 a, u32 b) { return b ? a / b : 0; }
 
 /* 0243A094 */
 BOOL daPy_lk_c::procTactWait() {
-    WWHD_FUNC(0x0243A094, BOOL, this);
     u32 self = gabi::ea(this);
     if (actor_condition & 4) { /* HD */
-        gabi::call(LK_HD_023D83D8, this);
+        offBodyEffect();
     }
-    gabi::call(LK_setShipRidePosUseItem, this);
-    gabi::call(0x025E1F14 /* mDoAud_tact_ambientPlay */);
+    setShipRidePosUseItem();
+    Link07_tactAmbientPlay();
     s32 p6 = mProcVar6;
     if (p6 == -4) {
-        LK_cutEnd();
+        dComIfGp_evmng_cutEnd(mStaffIdx);
         return TRUE;
     }
     s16 p1 = mProcVar1;
@@ -5261,8 +5069,8 @@ BOOL daPy_lk_c::procTactWait() {
         }
         p6 = mProcVar6;
         if (p6 == -5 || p6 == 6 || p6 == 7) {
-            LK_cutEnd();
-            gabi::store<u8>(dComIfGp_ea() + 0x5BD1, 0); /* dComIfGp_setMetronomeOff() */
+            dComIfGp_evmng_cutEnd(mStaffIdx);
+            Link07::gameInfo()->play.mMetronome = 0; /* dComIfGp_setMetronomeOff() */
             return TRUE;
         }
         if (p6 == -1 || p6 == -3 || p6 >= 0) {
@@ -5282,7 +5090,7 @@ BOOL daPy_lk_c::procTactWait() {
             p6 = mProcVar6;
         }
         if (p6 == 5) {
-            dComIfGp_setBStatus_l(7 /* dActStts_RETURN_e */); /* HD: the B status (GameCube: A) */
+            dComIfGp_setBStatus_l(Link07::dActStts_RETURN_e); /* HD: the B status (GameCube: A) */
         }
         p1 = mProcVar1;
     } else if (p6 != -5) {
@@ -5291,41 +5099,41 @@ BOOL daPy_lk_c::procTactWait() {
     }
     BOOL cancel = TRUE;
     if (!checkTactCancelTrigger()) {
-        if (!(p1 < -1) || LK_mAcchChkGroundHit()) {
+        if (!(p1 < -1) || mAcch.ChkGroundHit()) {
             cancel = FALSE;
         }
     }
     if (p1 == 0 || (cancel && dComIfGp_getBStatus_l() == 7) || !(m35AC > 0.0f)) {
         if (p1 != 0 && mProcVar1 != 0) {
-            gabi::call(LK_resetActAnimeUpper, this, 2 /* UPPER_MOVE2_e */, -1.0f);
-            gabi::call(LK_resetActAnimeUpper, this, 1 /* UPPER_MOVE1_e */, -1.0f);
-            gabi::call(0x025E1988 /* seStartSystem */, 0x870 /* JA_SE_TAKT_USE_CANCEL */);
+            resetActAnimeUpper(Link07::UPPER_MOVE2_e, -1.0f);
+            resetActAnimeUpper(Link07::UPPER_MOVE1_e, -1.0f);
+            Link07_seStartSystem(Link07::JA_SE_TAKT_USE_CANCEL);
         }
-        gabi::store<u8>(dComIfGp_ea() + 0x5BD1, 0); /* dComIfGp_setMetronomeOff() */
+        Link07::gameInfo()->play.mMetronome = 0; /* dComIfGp_setMetronomeOff() */
         if (cancel && mProcVar6 == 5) {
             m35AC = -1000.0f;
         }
         if (mProcVar6 == -1) {
             dComIfGp_event_reset();
             lk_endEventCamera(this);
-            gabi::call(LK_endDemoMode, this);
+            endDemoMode();
         } else {
-            LK_cutEnd();
+            dComIfGp_evmng_cutEnd(mStaffIdx);
         }
-        gabi::call(0x025E1E94 /* mDoAud_tact_reset */);
+        Link07_tactReset();
         return TRUE;
     }
     s32 right, left;
     BOOL count;
-    u8 tactOn = gabi::load<u8>(gabi::load<u32>(gabi::load<u32>(0x101F8344) + 0x1DC) + 0x16B); /* HD */
+    u8 tactOn = l_hdSystem.mpSystem->mpTactInput->mTactOn; /* HD */
     if (tactOn != 0 && mProcVar6 != -5) {
-        right = gabi::call<s32>(0x025E162C /* mDoAud_getTactDirection */, 1, (s32)mProcVar2);
-        left = gabi::call<s32>(0x025E162C, 0, (s32)mProcVar3);
+        right = Link07_tactDirection(1, (s32)mProcVar2);
+        left = Link07_tactDirection(0, (s32)mProcVar3);
         if (left == 0) { /* HD: the GamePad input */
-            left = gabi::call<s32>(0x026185A0, gabi::load<u32>(0x101F5088));
+            left = Link07_cursorStateWord(gabi::ea(l_pad.mpPad.get()));
         }
         count = m3624 != 0;
-        gabi::call(0x025E1EF0 /* mDoAud_tact_setVolume */, mStickDistance * cM_scos(m34DC));
+        Link07_tactSetVolume(mStickDistance * cM_scos(m34DC));
     } else {
         right = mProcVar2;
         left = mProcVar3;
@@ -5337,18 +5145,18 @@ BOOL daPy_lk_c::procTactWait() {
     if ((u32)right != (u32)(s32)mProcVar2) {
         f32 w = m35A4;
         if (!(w > 0.0f) || right != 0) {
-            gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayRightArmAnm(right), 1 /* UPPER_MOVE1_e */, 0.08f, 0.0f, -1, 4.0f);
+            setActAnimeUpper((u32)getTactPlayRightArmAnm(right), Link07::UPPER_MOVE1_e, 0.08f, 0.0f, -1, 4.0f);
             if (right == 0 || right == 2 || right == 4) {
                 mFrameCtrlUpper[1].setRate(0.8f);
                 mFrameCtrlUpper[1].setFrame(mFrameCtrlUnder[0].getFrame());
             }
             s16 r = mProcVar2;
             if (r == 4 || r == 2 || right == 4 || right == 2) {
-                gabi::call(0x025E1E94 /* mDoAud_tact_reset */);
-                gabi::call(0x025E1EE0 /* mDoAud_tact_setBeat */, right);
+                Link07_tactReset();
+                Link07_tactSetBeat(right);
                 mProcVar5 = 0;
                 m35A0 = 0.0f;
-                gabi::call(0x025E3F3C /* mDoExt_MtxCalcOldFrame::initOldFrameMorf */, (u32)m_old_fdata, 5.0f, 0, 0x2A);
+                Link07_initOldFrameMorf((u32)m_old_fdata, 5.0f, 0, 0x2A);
                 m3624 = 0;
                 mProcVar0 = -1;
             }
@@ -5369,25 +5177,26 @@ BOOL daPy_lk_c::procTactWait() {
     if ((u32)left != (u32)(s32)mProcVar3) {
         f32 w = m35A8;
         if (!(w > 0.0f) || left != 0) {
-            gabi::call(LK_setActAnimeUpper, this, (u32)getTactPlayLeftArmAnm(left), 2 /* UPPER_MOVE2_e */, 1.0f, 0.0f, -1, 4.0f); /* HD: HIO folded */
+            setActAnimeUpper((u32)getTactPlayLeftArmAnm(left), Link07::UPPER_MOVE2_e, 1.0f, 0.0f, -1,
+                             4.0f); /* HD: HIO folded */
             mProcVar3 = (s16)left;
             lk_anmRatio_set(self + 0x5838, 0.0f); /* mAnmRatioUpper[UPPER_MOVE2_e].setRatio(0.0f) */
-            gabi::call(0x025E1F48 /* mDoAud_tact_armSoundPlay */, left);
+            Link07_tactArmSoundPlay(left);
             if (mProcVar3 != 0) {
                 m35A8 = 2.0f;
                 if (mProcVar5 == 0) { /* HD: the first input starts the beat */
-                    m3624 = gabi::call<u32>(0x025E1EFC /* mDoAud_tact_getBeat */);
-                    f64 bf = mDoAud_tact_getBeatFrames_l();
+                    m3624 = Link07_tactGetBeatWord();
+                    f64 bf = Link07_tactGetBeatFramesUnrounded();
                     cnt = (f32)bf;
                     m35A0 = cnt;
-                    beat = mDoAud_tact_getBeatFrames_l();
+                    beat = Link07_tactGetBeatFramesUnrounded();
                     beatSet = TRUE;
                 }
             }
         } else {
             cnt = m35A0;
             m35A8 = w - 1.0f;
-            beat = mDoAud_tact_getBeatFrames_l();
+            beat = Link07_tactGetBeatFramesUnrounded();
             beatSet = TRUE;
         }
     } else if (mProcVar3 != 0) {
@@ -5395,57 +5204,59 @@ BOOL daPy_lk_c::procTactWait() {
     }
     if (!beatSet) {
         cnt = m35A0;
-        beat = mDoAud_tact_getBeatFrames_l();
+        beat = Link07_tactGetBeatFramesUnrounded();
     }
     s16 p0;
+    bool beatCounted = false;
     if (!((f64)cnt < beat)) {
-        gabi::call(0x025E1F20 /* mDoAud_tact_metronomePlay */, (s32)mProcVar5, (s32)mProcVar3);
+        Link07_tactMetronomePlay((s32)mProcVar5, (s32)mProcVar3);
         /* mpEquipItemBrk->setFrame(getFrameMax() - 0.001f) (HD brkAnm at +0x48F8, its end frame at +0xA) */
-        anm_setFrame_hd(self + 0x48F8, (f32)gabi::load<s16>(self + 0x4902) - 0.001f, 0x10, 0x20);
+        anm_setFrame_hd(gabi::ea(&Link07::models(this).mEquipItemBrk),
+                        (f32)Link07::models(this).mEquipItemBrk.mEndFrame - 0.001f, 0x10, 0x20);
         mProcVar0 = 3;
-        f64 bf = mDoAud_tact_getBeatFrames_l();
+        f64 bf = Link07_tactGetBeatFramesUnrounded();
         f32 nc = (f32)((f64)(f32)m35A0 - bf);
         u32 m24 = m3624;
         m35A0 = nc;
         if (m24 != 0) { /* HD: a countdown of beats (GameCube toggles 0/1) */
             p0 = mProcVar0;
             m3624 = m24 - 1;
-            goto check_p0;
+            beatCounted = true;
         }
     } else {
         anm_setFrame_hd(self + 0x48F8, 0.0f, 0x10, 0x20); /* mpEquipItemBrk->setFrame(0.0f) */
     }
-    p0 = mProcVar0;
-check_p0:
+    if (!beatCounted) {
+        p0 = mProcVar0;
+    }
     if (p0 >= 0) {
         if (p0 > 0) {
             p0 = (s16)(p0 - 1);
             mProcVar0 = p0;
         }
         if (p0 == 0) {
-            s32 judge = gabi::call<s32>(0x025E1F34 /* mDoAud_tact_judge */, (s32)mProcVar5, (s32)mProcVar3);
+            s32 judge = Link07_tactJudge((s32)mProcVar5, (s32)mProcVar3);
             mProcVar7 = judge;
             s16 p5 = (s16)(mProcVar5 + 1);
             mProcVar5 = p5;
-            s32 nbeat = gabi::call<s32>(0x025E1EFC /* mDoAud_tact_getBeat */);
+            s32 nbeat = Link07_tactGetBeatSignedWord();
             u32 rf = resetFlg0();
             s32 song = mProcVar6;
             if (!(p5 < nbeat)) {
                 mProcVar5 = 0;
             }
-            setResetFlg0(rf | 0x1000000 /* daPyRFlg0_TACT_INPUT */);
+            setResetFlg0(rf | daPyRFlg0_TACT_INPUT);
             mProcVar0 = -1;
             BOOL match = FALSE;
             if (song >= 0) {
                 match = (u32)song == (u32)mProcVar7;
             } else if (song == -1 || song == -3) {
                 s32 j = mProcVar7;
-                match = j >= 0 && j != 6 && j != 7 &&
-                        gabi::call<BOOL>(0x025B7B10 /* dSv_player_collect_c::isTact */, gabi::load<u32>(0x101F84DC) + 0xD4, (u32)(u8)j);
+                match = j >= 0 && j != 6 && j != 7 && dComIfGs_isTact((u8)j);
             }
             if (match) {
                 mProcVar1 = 0x1E;
-                gabi::call(0x025E1988 /* seStartSystem */, 0x896 /* JA_SE_WTAKT_MATCH_SIGNAL */);
+                Link07_seStartSystem(Link07::JA_SE_WTAKT_MATCH_SIGNAL);
                 m35A0 = 0.0f;
             } else {
                 mProcVar7 = -1;
@@ -5471,37 +5282,31 @@ check_p0:
         return TRUE;
     }
     /* the arm swing frame follows the global frame counter in beats */
-    f32 two = (f32)(mDoAud_tact_getBeatFrames_l() * 2.0);
+    f32 two = (f32)(Link07_tactGetBeatFramesUnrounded() * 2.0);
     u32 period;
     if (two < 2147483648.0f) {
         period = (u32)gabi::ftoi(two);
     } else {
         period = (u32)gabi::ftoi(two - 2147483648.0f) + 0x80000000u;
     }
-    u32 frm = gabi::load<u32>(0x101FF560);
+    u32 frm = l_frameCounter;
     f32 phase = (f32)(frm - ppc_divwu_l(frm, period) * period);
-    f32 r = (f32)((f64)phase / (f64)(f32)(mDoAud_tact_getBeatFrames_l() * 2.0));
+    f32 r = (f32)((f64)phase / (f64)(f32)(Link07_tactGetBeatFramesUnrounded() * 2.0));
     mFrameCtrlUnder[0].setFrame(r * (f32)mFrameCtrlUnder[0].getEnd());
     mFrameCtrlUpper[1].setFrame(r * (f32)mFrameCtrlUpper[1].getEnd());
-    gabi::store<f32>(gabi::load<u32>(self + 0x57FC) /* getNowAnmPackUnder(0) */, mFrameCtrlUnder[0].getFrame());
-    u32 up = gabi::load<u32>(self + 0x582C); /* getNowAnmPackUpper(UPPER_MOVE1_e) */
+    gabi::at<Link07::AnmRatioPack>(gabi::ea(mAnmRatioUnder))->mAnmTransform->mFrame = mFrameCtrlUnder[0].getFrame();
+    Link07::FrameAnimation* up = gabi::at<Link07::AnmRatioPack>(gabi::ea(mAnmRatioUpper))[1].mAnmTransform;
     if (up != 0) {
-        gabi::store<f32>(up, mFrameCtrlUpper[1].getFrame());
+        up->mFrame = mFrameCtrlUpper[1].getFrame();
     }
     return TRUE;
 }
-VERIFY(0x0243A094, &daPy_lk_c::procTactWait);
 
-enum : u32 {
-    LK_procLand_init = 0x0241C714,
-    LK_checkJumpRideShip = 0x0241C344,
-};
 /* clamp a GHS s16 accumulator to +-lim */
 static inline s16 lk_clampS(s32 v, s32 lim) { return (s16)(v > lim ? lim : (v < -lim ? -lim : v)); }
 
 /* 02438E78 */
 BOOL daPy_lk_c::procFanGlide() {
-    WWHD_FUNC(0x02438E78, BOOL, this);
     u32 self = gabi::ea(this);
     J3DFrameCtrl& frameCtrl = mFrameCtrlUnder[0];
     if (mProcVar1 != 0) {
@@ -5509,39 +5314,40 @@ BOOL daPy_lk_c::procFanGlide() {
     }
     if (frameCtrl.checkPass(4.0f)) {
         dPa_control_c* pa = dComIfGp_getParticle();
-        u32 em = gabi::ea(dPa_control_set(pa, 1, 0x4B /* ID_AK_JN_LEAFPARACHUTE00 */, &current.pos, nullptr, nullptr, 0xFF, nullptr, -1,
-                                          nullptr, nullptr, nullptr));
+        u32 em = gabi::ea(dPa_control_set(pa, 1, Link07::ID_AK_JN_LEAFPARACHUTE00, &current.pos, nullptr, nullptr, 0xFF,
+                                          nullptr, -1, nullptr, nullptr, nullptr));
         if (em != 0) {
-            u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0xF /* CL_JNT_HEAD_JNT_e */);
-            gabi::call(0x028249B0 /* JPASetRMtxTVecfromMtx */, mtx, em + 0x1F0, em + 0x22C); /* setGlobalRTMatrix() */
+            u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_HEAD_JNT_e);
+            Link07_setParticleMatrix(gabi::at<Mtx34>(mtx), em + 0x1F0, em + 0x22C); /* setGlobalRTMatrix() */
         }
     }
-    if (frameCtrl.getRate() < 0.01f && mProcVar6 == 0 && gabi::load<u32>(self + 0x66FC) == 0 /* m32E4.getEmitter() */) {
+    if (frameCtrl.getRate() < 0.01f && mProcVar6 == 0 &&
+        gabi::ea(m32E4.mpEmitter.get()) == 0 /* m32E4.getEmitter() */) {
         u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0xF);
-        gabi::call(LK_mtxFollow_makeEmitter, &m32E4, 0x4C /* ID_AK_JN_LEAFPARACHUTE01 */, mtx, &current.pos, nullptr);
+        Link07_makeMtxFollowEmitter(&m32E4, Link07::ID_AK_JN_LEAFPARACHUTE01, mtx, &current.pos, nullptr);
     }
     if (!(frameCtrl.getFrame() > 2.0f) && mProcVar6 == 0) {
         return TRUE;
     }
-    if (LK_mAcchChkGroundHit()) {
-        if (gabi::call<BOOL>(LK_checkHeavyStateOn, this)) {
-            return gabi::call<BOOL>(LK_changeLandProc, this, 0.6f); /* HD: HIO folded */
+    if (mAcch.ChkGroundHit()) {
+        if (checkHeavyStateOn()) {
+            return changeLandProc(0.6f); /* HD: HIO folded */
         }
-        return gabi::call<BOOL>(LK_procLand_init, this, 0.6f, 1);
+        return procLand_init(0.6f, 1);
     }
-    if (gabi::call<BOOL>(LK_checkJumpFlower, this) || gabi::call<BOOL>(LK_checkJumpRideShip, this)) {
+    if (checkJumpFlower() || checkJumpRideShip()) {
         return TRUE;
     }
-    if (gabi::load<u32>(self + 0x6698) != 0 /* m3280.getEmitter() */) {
+    if (gabi::ea(gabi::at<daPy_mtxFollowEcallBack_c>(gabi::ea(m3280))->mpEmitter.get()) != 0 /* m3280.getEmitter() */) {
         if (mProcVar5 == 0) {
-            seStartOnlyReverb(0x2848 /* JA_SE_LK_FAN_CHUTE_WATER */);
+            seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_WATER);
             mProcVar5 = 6;
         } else {
             mProcVar5 = (s16)(mProcVar5 - 1);
         }
     }
     if (mProcVar0 <= 0) {
-        if (!gabi::call<BOOL>(LK_checkHeavyStateOn, this)) {
+        if (!checkHeavyStateOn()) {
             maxFallSpeed = -2.0f; /* HD: HIO folded */
             if (mProcVar0 == 0) {
                 mProcVar0 = 1;
@@ -5557,20 +5363,20 @@ BOOL daPy_lk_c::procFanGlide() {
     if (!dComIfGp_event_runCheck_l()) {
         s32 m7 = mProcVar7 - 1;
         mProcVar7 = m7;
-        if (m7 == 0 && gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x34) != 0 /* dComIfGs_getMagic() >= 1 */) {
-            u32 a = dComIfGp_ea() + 0x5B60;
-            gabi::store<s16>(a, (s16)(gabi::load<s16>(a) - 1)); /* dComIfGp_setItemMagicCount(-1) */
+        if (m7 == 0 && dComIfGs_getMagic() != 0 /* dComIfGs_getMagic() >= 1 */) {
+            be<s16>& magicCount = Link07::gameInfo()->play.mItemMagicCount;
+            magicCount = (s16)(magicCount - 1); /* dComIfGp_setItemMagicCount(-1) */
             mProcVar7 = 0x28;
         }
     }
     BOOL close = FALSE;
     if (mProcVar1 == 0) {
-        dComIfGp_setDoStatus_l(0x27 /* dActStts_CANCEL_e */);
+        dComIfGp_setDoStatus_l(Link07::dActStts_CANCEL_e);
         if (mProcVar1 == 0 && (mItemTrigger & 3) /* doTrigger() || cancelTrigger() */) {
             close = TRUE;
         }
     }
-    if (!close && gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x34) == 0 && mProcVar7 == 0) {
+    if (!close && dComIfGs_getMagic() == 0 && mProcVar7 == 0) {
         close = TRUE;
     }
     if (close) {
@@ -5580,53 +5386,53 @@ BOOL daPy_lk_c::procFanGlide() {
         m3688.y = y;
         m3688.z = z;
         m35F0 = y;
-        seStartOnlyReverb(0x2847 /* JA_SE_LK_FAN_CHUTE_CLOSE */);
+        seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_CLOSE);
         if (mItemTrigger & 2 /* swordTrigger() */) {
-            gabi::call(LK_setAnimeEquipSword, this, 0);
+            setAnimeEquipSword(0);
         }
-        return gabi::call<BOOL>(LK_procFall_init, this, 2, 6.0f); /* HD: HIO folded */
+        return procFall_init(2, 6.0f); /* HD: HIO folded */
     }
-    if (speed.y < -gravity && !gabi::call<BOOL>(LK_checkHeavyStateOn, this)) {
+    if (speed.y < -gravity && !checkHeavyStateOn()) {
         gravity = -0.5f;
         maxFallSpeed = -2.0f;
     }
-    if (gabi::call<BOOL>(LK_checkSetItemTrigger, this, 0x34 /* dItemNo_DEKU_LEAF_e */, 1) && frameCtrl.getRate() < 0.01f && mProcVar6 == 0) {
-        gabi::call(LK_setSingleMoveAnime, this, 0xA2 /* ANM_USEFANB */, 0.5f, 1.0f, 0xD, 0.0f);
-        u32 res = gabi::call<u32>(LK_getItemAnimeResource, this, 0x84 /* FANBA */);
-        gabi::call(0x025E4A98 /* mDoExt_McaMorf::setAnm */, gabi::load<u32>(self + 0x44D0) /* mpParachuteFanMorf */, res, 0, 0.0f, 0.5f,
-                   1.0f, 13.0f, 0);
+    if (checkSetItemTrigger(Link07::dItemNo_DEKU_LEAF_e, 1) && frameCtrl.getRate() < 0.01f && mProcVar6 == 0) {
+        setSingleMoveAnime(Link07::ANM_USEFANB, 0.5f, 1.0f, 0xD, 0.0f);
+        u32 res = getItemAnimeResource(Link07::dRes_INDEX_LKANM_BCK_FANBA_e);
+        Link07_setParachuteAnimation(gabi::ea(Link07::models(this).mpParachuteFanMorf.get()), res, 0, 0.0f, 0.5f, 1.0f,
+                                     13.0f, 0);
         gravity = -2.5f;
-        LK_voiceStart(5);
-        seStartOnlyReverb(0x2846 /* JA_SE_LK_FAN_CHUTE_RISE */);
+        Link07::voiceStart(this, 5);
+        seStartOnlyReverb(Link07::JA_SE_LK_FAN_CHUTE_RISE);
         m353A = 5;
     }
-    if (LK_mAcchChkWallHit()) {
+    if (mAcch.ChkWallHit()) {
         for (s32 i = 0; i < 3; i++) {
-            u32 cir = self + 0x74C + i * 0x40; /* mAcchCir[i] */
-            if ((gabi::load<u32>(cir + 0x10) & 2) /* ChkWallHit() */ &&
-                cLib_distanceAngleS(current.angle.y, gabi::load<s16>(cir + 0x3C) /* GetWallAngleY() */) > 0x6000) {
+            dBgS_AcchCir& circle = mAcchCir[i];
+            if (circle.ChkWallHit() && cLib_distanceAngleS(current.angle.y, circle.GetWallAngleY()) > 0x6000) {
                 mNormalSpeed = -mNormalSpeed;
                 break;
             }
         }
     }
-    if (gabi::call<BOOL>(LK_checkHeavyStateOn, this)) {
+    if (checkHeavyStateOn()) {
         cLib_chaseF(&mNormalSpeed, 0.0f, 0.08000000566f); /* HD: HIO folded (0.1f * 0.8f) */
     }
     gabi::Local<be<f32>> windPow; /* sp+0x18 */
     gabi::Local<cXyz> v;          /* sp+0x28 (GameCube local_54) */
     gabi::Local<cXyz> windDir;    /* sp+0x34 (GameCube local_60) */
-    gabi::call(0x0257E1B8 /* dKyw_get_AllWind_vec */, self + 0x3D8 /* &mHeadTopPos */, windDir.get(), windPow.get());
+    Link07_getAllWindVector(gabi::ea(&mHeadTopPos), windDir.get(), windPow.get());
     s32 diff = (s16)(m34E8 - shape_angle.y);
     {
         f32 stick = mStickDistance;
-        cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f), 0.01f); /* HD: HIO folded */
+        cLib_addCalc_l(&mNormalSpeed, (12.0f * stick) * cM_scos(diff), 0.5f, gabi::fmadds(0.4f, stick, 0.1f),
+                       0.01f); /* HD: HIO folded */
         cLib_addCalcAngleS(&mProcVar2, (s16)gabi::ftoi((512.0f * mStickDistance) * cM_ssin(diff)), 5, 0x40, 8);
     }
     f32 step;
-    if (gabi::call<BOOL>(0x025162A4 /* dCcD_GObjInf::ChkTgHit */, self + 0x778C /* mWindCyl */)) {
-        lk_xyz_copy(v, gabi::at<cXyz>(self + 0x784C)); /* *mWindCyl.GetTgRVecP() */
-        f64 len = gabi::call<f64>(0x028F4384 /* std::sqrtf */, PSVECSquareMag(v));
+    if (mWindCyl.ChkTgHit()) {
+        lk_xyz_copy(v, &mWindCyl.mGObjTg.mRVec); /* *mWindCyl.GetTgRVecP() */
+        f64 len = Link07_sqrtUnrounded(PSVECSquareMag(v));
         if (len > 50.0) {
             PSVECScale(v, v, (f32)(50.0 / len));
         }
@@ -5634,9 +5440,10 @@ BOOL daPy_lk_c::procFanGlide() {
         *windPow = 1.0f;
         if (mProcVar6 == 0) {
             mProcVar6 = 1;
-            gabi::call(LK_setSingleMoveAnime, this, 0xA3 /* ANM_USEFANB2 */, 1.0f, 0.0f, -1, 3.0f);
-            u32 res = gabi::call<u32>(LK_getItemAnimeResource, this, 0x83 /* FANB2A */);
-            gabi::call(0x025E4A98, gabi::load<u32>(self + 0x44D0), res, 0, 3.0f, 1.0f, 0.0f, -1.0f, 0);
+            setSingleMoveAnime(Link07::ANM_USEFANB2, 1.0f, 0.0f, -1, 3.0f);
+            u32 res = getItemAnimeResource(Link07::dRes_INDEX_LKANM_BCK_FANB2A_e);
+            Link07_setParachuteAnimation(gabi::ea(Link07::models(this).mpParachuteFanMorf.get()), res, 0, 3.0f, 1.0f,
+                                         0.0f, -1.0f, 0);
         }
     } else {
         f32 p = *windPow * 1.5f;
@@ -5653,9 +5460,10 @@ BOOL daPy_lk_c::procFanGlide() {
         step = 3.0f;
         if (mProcVar6 != 0) {
             mProcVar6 = 0;
-            gabi::call(LK_setSingleMoveAnime, this, 0xA2 /* ANM_USEFANB */, 0.5f, 12.999f, 0xD, 5.0f);
-            u32 res = gabi::call<u32>(LK_getItemAnimeResource, this, 0x84 /* FANBA */);
-            gabi::call(0x025E4A98, gabi::load<u32>(self + 0x44D0), res, 0, 5.0f, 0.5f, 12.999f, 13.0f, 0);
+            setSingleMoveAnime(Link07::ANM_USEFANB, 0.5f, 12.999f, 0xD, 5.0f);
+            u32 res = getItemAnimeResource(Link07::dRes_INDEX_LKANM_BCK_FANBA_e);
+            Link07_setParachuteAnimation(gabi::ea(Link07::models(this).mpParachuteFanMorf.get()), res, 0, 5.0f, 0.5f,
+                                         12.999f, 13.0f, 0);
         }
     }
     cLib_addCalc_l(&m3730.x, v->x, 0.5f, step, 1.0f);
@@ -5713,37 +5521,36 @@ BOOL daPy_lk_c::procFanGlide() {
     f32 base = pow + 1.5f;
     *windPow = pow;
     f32 s1 = cM_ssin(m355C);
-    f64 r1 = gabi::call<f64>(0x02019918 /* cM_rndFX */, 0.3f);
+    f64 r1 = Link07_rndFXUnrounded(0.3f);
     m3600 = (f32)((f64)(f32)(base + r1) * (f64)s1);
     f32 s2 = cM_ssin(m355C);
-    f64 r2 = gabi::call<f64>(0x02019918, 100.0f);
+    f64 r2 = Link07_rndFXUnrounded(100.0f);
     m355E = (s16)gabi::ftoi((f32)((f64)(f32)(r2 + 600.0) * (f64)s2));
     f32 pw = *windPow;
-    f64 r3 = gabi::call<f64>(0x02019788 /* cM_rnd */);
+    f64 r3 = Link07_rndUnrounded();
     f32 hi = gabi::fmadds(3000.0f, pw, 12000.0f);
     f32 lo = gabi::fmadds(2000.0f, pw, 6000.0f);
     f32 add = (f32)((f64)hi * r3 + (f64)lo);
     m355C = (s16)gabi::ftoi((f32)((f64)(f32)m355C + (f64)add));
     return TRUE;
 }
-VERIFY(0x02438E78, &daPy_lk_c::procFanGlide);
 
 /* ---- rope swing (procRopeSwing and its HD turn check) ---- */
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline s16 cM_rad2s_l(f32 x) { return gabi::call<s16>(0x02019510, x); }
+static inline s16 cM_rad2s_l(f32 x) { return Link07_rad2s(x); }
 static inline f32 cM_fsin_l(f32 x) { return cM_ssin((u16)cM_rad2s_l(x)); }
 static inline f32 cM_fcos_l(f32 x) { return cM_scos((u16)cM_rad2s_l(x)); }
-static inline BOOL cLib_chaseS_l(be<s16>* v, s16 target, s16 step) { return gabi::call<BOOL>(0x0200F564, v, target, step); }
-static inline void mDoMtx_ZrotS_l(Mtx34* m, s16 z) { gabi::call(0x025F181C, m, z); }
-static inline void mDoMtx_ZXYrotS_l(Mtx34* m, s16 x, s16 y, s16 z) { gabi::call(0x025F1AA4, m, x, y, z); }
+static inline BOOL cLib_chaseS_l(be<s16>* v, s16 target, s16 step) { return Link07_chaseAngle(v, target, step); }
+static inline void mDoMtx_ZrotS_l(Mtx34* m, s16 z) { Link07_rotateZ(m, z); }
+static inline void mDoMtx_ZXYrotS_l(Mtx34* m, s16 x, s16 y, s16 z) { Link07_rotateZXY(m, x, y, z); }
 /* strcmp(dComIfGp_getStartStageName(), str) == 0 through two sead::SafeString objects (HD) */
 static inline BOOL lk_safeStageIs(u32 str) {
     gabi::Local<SafeString> name;
     gabi::Local<SafeString> stage;
-    name->__vtbl = 0x10034B24;
+    name->__vtbl = gc_tu.safeString;
     name->mStringTop = str;
     u32 play = dComIfGp_ea();
-    stage->__vtbl = 0x10034B24;
+    stage->__vtbl = gc_tu.safeString;
     stage->mStringTop = play + 0x5134;
     gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
     gabi::call_ptr(gabi::load<u32>(name->__vtbl + 0x14), name.get());
@@ -5770,28 +5577,26 @@ static inline BOOL lk_safeStageIs(u32 str) {
 }
 /* m_pbCalc[PART_UNDER_e]->getRatio(1) (HD: per-joint table) */
 static inline f32 lk_underRatio(u32 calc) {
-    return gabi::load<f32>(gabi::load<u32>(gabi::load<u32>(calc + 0x7C) + 0x1C));
+    return *gabi::at<Link07::BlendCalc>(calc)->mpJointWeights->mpUnderRatio.get();
 }
 /* GHS function-static cXyz with its guard word */
-static inline void lk_staticXyz(u32 guard, u32 v, f32 x, f32 y, f32 z) {
-    if (gabi::load<u32>(guard) == 0) {
-        gabi::store<u32>(guard, 1);
-        gabi::store<f32>(v, x);
-        gabi::store<f32>(v + 4, y);
-        gabi::store<f32>(v + 8, z);
+static inline void lk_staticXyz(int slot, f32 x, f32 y, f32 z) {
+    if (l_rope_guards.mInitialized[slot] == 0) {
+        l_rope_guards.mInitialized[slot] = 1;
+        l_rope_offsets.mPosition[slot].x = x;
+        l_rope_offsets.mPosition[slot].y = y;
+        l_rope_offsets.mPosition[slot].z = z;
     }
 }
-struct lk_xyz5 { cXyz v[5]; };
-
-enum {
-    LK_setBlendRopeMoveAnime = 0x0241CBB0,
+struct lk_xyz5 {
+    cXyz v[5];
 };
 
-/* 0243460C  HD-only: would turning the swing (yaw by m6922) hit a wall? Simulates the swing
+/* 0243460C */
+/* HD-only: would turning the swing (yaw by m6922) hit a wall? Simulates the swing
  * position with the current swing values, sweeps two body-side rays from the rope along the
  * rope to the foot, restores everything and returns FALSE when the ray on the turn side hits. */
 BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
-    WWHD_FUNC(0x0243460C, BOOL, this, foot, swingX, swingZ);
     s16 saveCurAngX = current.angle.x;
     s16 saveVar2 = mProcVar2;
     s16 saveShpX = shape_angle.x;
@@ -5803,7 +5608,7 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
     f32 savePosY = current.pos.y;
     f32 savePosZ = current.pos.z;
     s16 maxSwing = 12000;
-    if (gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+    if (checkSpecialRope()) {
         maxSwing = 1500;
     }
     if (mProcVar2 > maxSwing) {
@@ -5843,17 +5648,18 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
         PSMTXMultVec(mDoMtx_stack_c::get(), down, p);
         mDoMtx_stack_c::transS(p->x, p->y, p->z);
         f32 s = cM_fsin_l(swingX + m35A4);
-        mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), (s16)gabi::ftoi((f32)(-(s32)mProcVar2) * s * t), shape_angle.y, rz);
+        mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), (s16)gabi::ftoi((f32)(-(s32)mProcVar2) * s * t), shape_angle.y,
+                       rz);
         PSMTXMultVec(mDoMtx_stack_c::get(), foot, &line->v[i]);
     }
-    lk_staticXyz(0x1046D22C, 0x1046CDD8, 0.0f, -105.0f, 0.0f);
-    lk_staticXyz(0x1046D230, 0x1046CDE4, 15.0f, 0.0f, 0.0f);
-    lk_staticXyz(0x1046D234, 0x1046CDF0, 30.0f, 0.0f, 0.0f);
-    lk_staticXyz(0x1046D238, 0x1046CDFC, -30.0f, 0.0f, 0.0f);
-    cXyz* body = gabi::at<cXyz>(0x1046CDD8);
-    cXyz* foot2 = gabi::at<cXyz>(0x1046CDE4);
-    cXyz* left = gabi::at<cXyz>(0x1046CDF0);
-    cXyz* right = gabi::at<cXyz>(0x1046CDFC);
+    lk_staticXyz(0, 0.0f, -105.0f, 0.0f);
+    lk_staticXyz(1, 15.0f, 0.0f, 0.0f);
+    lk_staticXyz(2, 30.0f, 0.0f, 0.0f);
+    lk_staticXyz(3, -30.0f, 0.0f, 0.0f);
+    cXyz* body = &l_rope_offsets.mPosition[0];
+    cXyz* foot2 = &l_rope_offsets.mPosition[1];
+    cXyz* left = &l_rope_offsets.mPosition[2];
+    cXyz* right = &l_rope_offsets.mPosition[3];
     gabi::Local<cXyz> l0, r0, l1, r1; /* sp+0x50, 0x5C, 0x28, 0x34 */
     cXyz_pl(body, l0, left);
     cXyz_pl(body, r0, right);
@@ -5881,8 +5687,12 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
         hitR |= cBgS_LineCross(dComIfG_Bgsp(), mLinkLinChk);
     }
     BOOL ret;
-    if ((hitL && gabi::fmuls_ppc((f32)(s32)LK_FIELD(s16, 0x6922), m35A8) > 0.0f) ||
-        (hitR && gabi::fmuls_ppc((f32)(s32)LK_FIELD(s16, 0x6922), m35A8) < 0.0f)) {
+    if ((hitL &&
+         gabi::fmuls_ppc((f32)(s32)gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed,
+                         m35A8) > 0.0f) ||
+        (hitR &&
+         gabi::fmuls_ppc((f32)(s32)gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed,
+                         m35A8) < 0.0f)) {
         ret = FALSE;
     } else {
         ret = TRUE;
@@ -5899,20 +5709,18 @@ BOOL daPy_lk_c::checkRopeSwingTurn(cXyz* foot, f32 swingX, f32 swingZ) {
     current.angle.z = saveCurAngZ;
     return ret;
 }
-VERIFY(0x0243460C, &daPy_lk_c::checkRopeSwingTurn);
 
 /* 02435580 */
 BOOL daPy_lk_c::procRopeSwing() {
-    WWHD_FUNC(0x02435580, BOOL, this);
     if (checkHangRopeActorNull()) {
         return TRUE;
     }
     gabi::Local<cXyz> toe; /* sp+0x38 */
     {
-        u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), 0x28 /* CL_JNT_RTOE_JNT_e */);
-        toe->x = gabi::load<f32>(mtx + 0x0C);
-        toe->y = gabi::load<f32>(mtx + 0x1C);
-        toe->z = gabi::load<f32>(mtx + 0x2C);
+        u32 mtx = lk_getAnmMtx(gabi::ea(mpCLModel.get()), Link07::CL_JNT_RTOE_JNT_e);
+        toe->x = gabi::at<Mtx34>(mtx)->m[0][3];
+        toe->y = gabi::at<Mtx34>(mtx)->m[1][3];
+        toe->z = gabi::at<Mtx34>(mtx)->m[2][3];
     }
     lk_xyz_copy(&mRopePos, &mActorKeepRope.mActor->current.pos);
     f32 swingX = gabi::fmuls_ppc(m35A8, m35A4);
@@ -5926,7 +5734,7 @@ BOOL daPy_lk_c::procRopeSwing() {
 
     f32 addX;
     f32 addZ;
-    if (gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+    if (checkSpecialRope()) {
         addX = gabi::fadds_ppc(0.0f, 1.0f);
         addZ = addX;
     } else {
@@ -5967,14 +5775,14 @@ BOOL daPy_lk_c::procRopeSwing() {
     u32 mode = mModeFlg;
     if ((mode & 0x400) && mFrameCtrlUnder[0].getRate() < 0.01f) {
         mModeFlg = (mode & ~0x400u) | 0x100;
-        gabi::call(LK_setTextureAnime, this, 8, 0);
+        setTextureAnime(8, 0);
     }
-    gabi::call(LK_setBlendRopeMoveAnime, this, 0);
+    setBlendRopeMoveAnime(0);
 
     s16 maxSwing;
     s16 chaseStep;
     s16 addStep;
-    if (gabi::call<BOOL>(LK_checkSpecialRope, this)) {
+    if (checkSpecialRope()) {
         maxSwing = 1500; /* HD: HIO folded (12000 / 8) */
         chaseStep = 4;
         addStep = 8;
@@ -5984,13 +5792,13 @@ BOOL daPy_lk_c::procRopeSwing() {
         addStep = 0x40;
     }
     /* HD: no swing input on the stage "ADMumi" */
-    if (!lk_safeStageIs(0x1003613C /* "ADMumi" */)) {
-        dComIfGp_setRStatus_l(0x13 /* dActStts_STOP_e */);
+    if (!lk_safeStageIs(gabi::guest_str("ADMumi"))) {
+        dComIfGp_setRStatus_l(Link07::dActStts_STOP_e);
         /* HD: m6922 = sideways turn speed of the swing */
-        if (std::abs((s32)LK_FIELD(s16, 0x6922)) > 0x10) {
-            cLib_addCalcAngleS(&LK_FIELD(s16, 0x6922), 0, 5, 0x40, 5);
+        if (std::abs((s32)gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed) > 0x10) {
+            cLib_addCalcAngleS(&gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed, 0, 5, 0x40, 5);
         } else {
-            LK_FIELD(s16, 0x6922) = 0;
+            gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed = 0;
         }
         if (mItemButton & 0x40 /* spActionButton() */) {
             s16 step = (s16)(chaseStep * 10);
@@ -6007,31 +5815,31 @@ BOOL daPy_lk_c::procRopeSwing() {
                 }
                 BOOL turning = FALSE;
                 s16 target = 0;
-                if (dir == 2 /* DIR_LEFT */) {
+                if (dir == Link07::DIR_LEFT) {
                     f32 stick = mStickDistance;
                     s16 lim = (s16)gabi::ftoi(170.0f * stick);
-                    s16 cur = LK_FIELD(s16, 0x6922);
+                    s16 cur = gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed;
                     if (lim > cur) {
                         s16 v = (s16)(cur + gabi::ftoi(32.0f * stick));
                         if (v > lim) {
                             v = lim;
                         }
-                        LK_FIELD(s16, 0x6922) = v;
+                        gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed = v;
                         target = v;
                     } else {
                         target = lim;
                     }
                     turning = TRUE;
-                } else if (dir == 3 /* DIR_RIGHT */) {
+                } else if (dir == Link07::DIR_RIGHT) {
                     f32 stick = mStickDistance;
                     s16 lim = (s16)gabi::ftoi(-170.0f * stick);
-                    s16 cur = LK_FIELD(s16, 0x6922);
+                    s16 cur = gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed;
                     if (lim < cur) {
                         s16 v = (s16)(cur - gabi::ftoi(32.0f * stick));
                         if (v < lim) {
                             v = lim;
                         }
-                        LK_FIELD(s16, 0x6922) = v;
+                        gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed = v;
                         target = v;
                     } else {
                         target = lim;
@@ -6039,18 +5847,20 @@ BOOL daPy_lk_c::procRopeSwing() {
                     turning = TRUE;
                 }
                 if (!checkRopeSwingTurn(localToe, *sp10, swingZ)) {
-                    LK_FIELD(s16, 0x6922) = 0;
+                    gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed = 0;
                 } else if (turning) {
-                    cLib_addCalcAngleS(&LK_FIELD(s16, 0x6922), target, 3, 0x30, 0x10);
+                    cLib_addCalcAngleS(&gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed, target, 3,
+                                       0x30, 0x10);
                     s16 sy = shape_angle.y;
                     f64 roof;
-                    if (LK_FIELD(s16, 0x6922) > 0) {
-                        roof = gabi::call<f64>(0x02433E0C /* checkRopeRoofHit */, this, (s32)(s16)(sy + 0x2000));
+                    if (gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed > 0) {
+                        roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(sy + 0x2000));
                     } else {
-                        roof = gabi::call<f64>(0x02433E0C /* checkRopeRoofHit */, this, (s32)(s16)(sy - 0x2000));
+                        roof = Link07_ropeRoofUnrounded(this, (s32)(s16)(sy - 0x2000));
                     }
                     if ((f32)(roof + -55.0) > current.pos.y) {
-                        s16 y = (s16)(shape_angle.y + LK_FIELD(s16, 0x6922));
+                        s16 y =
+                            (s16)(shape_angle.y + gabi::at<Link07::PlayerRopeTurnWork>(gabi::ea(this))->mRopeTurnSpeed);
                         shape_angle.y = y;
                         current.angle.y = y;
                     }
@@ -6098,12 +5908,12 @@ BOOL daPy_lk_c::procRopeSwing() {
     gabi::Local<cXyz> sp50; /* sp+0x50 */
     PSMTXMultVec(mDoMtx_stack_c::get(), localToe, sp50);
     if (!checkRopeSwingWall(toe, sp50, (s16*)sp14.get(), (f32*)sp10.get())) {
-        lk_staticXyz(0x1046D23C, 0x1046CE08, 0.0f, -105.0f, 0.0f); /* local_height_offset */
+        lk_staticXyz(4, 0.0f, -105.0f, 0.0f); /* local_height_offset */
         mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
         mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
-        PSMTXMultVec(mDoMtx_stack_c::get(), gabi::at<cXyz>(0x1046CE08), sp50);
+        PSMTXMultVec(mDoMtx_stack_c::get(), &l_rope_offsets.mPosition[4], sp50);
         if (!checkRopeSwingWall(&current.pos, sp50, (s16*)sp14.get(), (f32*)sp10.get())) {
-            gabi::call(LK_resetFootEffect, this);
+            resetFootEffect();
         }
     }
 
@@ -6116,8 +5926,7 @@ BOOL daPy_lk_c::procRopeSwing() {
         ratio = gabi::fmuls_ppc(ratio, r);
         BOOL slow = FALSE;
         /* HD: slower release on "Asoko" until event bit 0x520 */
-        if (lk_safeStageIs(0x10036134 /* "Asoko" */) &&
-            !dSv_event_isEventBit(gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644), 0x520)) {
+        if (lk_safeStageIs(gabi::guest_str("Asoko")) && !dSv_event_isEventBit(dComIfGs_getEvent(), 0x520)) {
             slow = TRUE;
         }
         f32 a = *sp10;
@@ -6130,15 +5939,255 @@ BOOL daPy_lk_c::procRopeSwing() {
             current.angle.y = (s16)(shape_angle.y + 0x8000);
         }
         speed.y = gabi::fmuls_ppc(30.0f, ratio);
-        gabi::call(LK_procFall_init, this, 0, 6.0f); /* HD: HIO folded */
+        procFall_init(0, 6.0f); /* HD: HIO folded */
         setNoResetFlg1(noResetFlg1() | 0x8000000);
     } else if (mProcVar2 == 0 && mProcVar3 == 0) {
         procRopeHangWait_init(0);
     } else if (ratio > 0.6f) {
         if (cM_fcos_l(*sp10) > 0.77f) {
-            mDoAud_seStart(0x201E /* JA_SE_LK_ROPE_SWING_F */, &mRopePos, 0, mReverb);
+            mDoAud_seStart(Link07::JA_SE_LK_ROPE_SWING_F, &mRopePos, 0, mReverb);
         }
     }
     return TRUE;
 }
-VERIFY(0x02435580, &daPy_lk_c::procRopeSwing);
+/* WWHD glue (tools/verify/autoglue.py)
+ext 023DFDD8 BOOL daPy_lk_c::commonProcInit(int)
+ext 023E0A04 BOOL daPy_lk_c::setSingleMoveAnime(int, f32, f32, int, f32)
+ext 023E14A0 void daPy_lk_c::setBlendMoveAnime(f32)
+ext 023DE7E8 BOOL daPy_lk_c::setActAnimeUpper(u32, int, f32, f32, int, f32)
+ext 023DC6A4 BOOL daPy_lk_c::resetActAnimeUpper(int, f32)
+ext 023DCF8C void daPy_lk_c::freeGrabItem()
+ext 0241F470 void daPy_lk_c::initGrabNextMode()
+ext 023E9F60 void daPy_lk_c::setAnimeEquipSword(BOOL)
+ext 02417538 void daPy_lk_c::setSpeedAndAngleAtn()
+ext 0241650C void daPy_lk_c::setSpeedAndAngleNormal(s16)
+ext 023DBBE8 BOOL daPy_lk_c::checkGrabSpecialHeavyState()
+ext 023EA1AC BOOL daPy_lk_c::checkNextActionGrab()
+ext 023F14E0 BOOL daPy_lk_c::checkNextMode(int)
+ext 0242D888 void daPy_lk_c::setWeaponBlur()
+ext 0242D8DC BOOL daPy_lk_c::procGrabUp_init()
+ext 0242DA4C BOOL daPy_lk_c::procGrabMiss_init()
+ext 027F3F94 u32 Link07_getJointTree(void*)
+ext 027E0174 s32 Link07_getJointCount(u32, s32)
+ext 023DDEEC u32 daPy_lk_c::getItemAnimeResource(u32)
+ext 023DC63C void Link07_clearActorKeep(daPy_actorKeep_l*)
+ext 023E9D50 BOOL daPy_lk_c::changeDragonShield(int)
+ext 02418E00 BOOL daPy_lk_c::changeFrontWallTypeProc()
+ext 0241C898 BOOL daPy_lk_c::changeLandProc(f32)
+ext 02421FBC BOOL daPy_lk_c::changeSwimUpProc()
+ext 023EB6C8 BOOL daPy_lk_c::checkBossGomaStage()
+ext 0241A578 BOOL daPy_lk_c::checkFanGlideProc(int)
+ext 02427370 BOOL daPy_lk_c::checkItemModeActorPointer()
+ext 023EB510 BOOL daPy_lk_c::checkNextActionBoomerangReady()
+ext 023EB208 BOOL daPy_lk_c::checkNextActionBowReady()
+ext 023EAD5C BOOL daPy_lk_c::checkNextActionHookshotReady()
+ext 023E9AF4 BOOL daPy_lk_c::checkSetItemTrigger(int, int)
+ext 023D69CC BOOL daPy_lk_c::checkShipNotNormalMode()
+ext 023EBCB0 BOOL daPy_lk_c::checkSightLine(f32, cXyz*)
+ext 0241CB30 BOOL daPy_lk_c::checkSpecialRope()
+ext 02415EF0 BOOL daPy_lk_c::checkSubjectEnd(BOOL)
+ext 023FE918 BOOL daPy_lk_c::checkSwimFallCheck()
+ext 023DC7AC void daPy_lk_c::deleteEquipItem(BOOL)
+ext 023E4E2C void daPy_lk_c::endFlameDamageEmitter()
+ext 023DCA80 void daPy_lk_c::freeRopeItem()
+ext 023F8858 f32 daPy_lk_c::getSwimTimerRate()
+ext 023F19D0 void daPy_lk_c::initShipBaseAnime()
+ext 023F1B90 void daPy_lk_c::initShipCraneAnime()
+ext 023EAB40 BOOL daPy_lk_c::itemTrigger()
+ext 023DF600 void daPy_lk_c::makeItemType()
+ext 023EE710 BOOL daPy_lk_c::procBackJump_init()
+ext 023EF280 BOOL daPy_lk_c::procBottleDrink_init(u16)
+ext 023EF3E0 BOOL daPy_lk_c::procBottleOpen_init(u16)
+ext 023EDD9C BOOL daPy_lk_c::procBottleSwing_init(int)
+ext 023F6564 BOOL daPy_lk_c::procFall_init(int, f32)
+ext 023EEB70 BOOL daPy_lk_c::procFoodSet_init()
+ext 023EED74 BOOL daPy_lk_c::procFoodThrow_init()
+ext 02417D30 BOOL daPy_lk_c::procHangStart_init()
+ext 0241D040 BOOL daPy_lk_c::procRopeSwing_init(fopAc_ac_c*, s16)
+ext 023F1AC8 BOOL daPy_lk_c::procShipCannon_init()
+ext 023F1C68 BOOL daPy_lk_c::procShipCrane_init()
+ext 023F1E60 BOOL daPy_lk_c::procShipPaddle_init()
+ext 023ECA94 BOOL daPy_lk_c::procShipReady_init()
+ext 023F1D84 BOOL daPy_lk_c::procShipSteer_init()
+ext 02412E58 BOOL daPy_lk_c::procSwimMove_init(int)
+ext 023F8B00 BOOL daPy_lk_c::procSwimWait_init(int)
+ext 023E92A0 BOOL daPy_lk_c::procTactWait_init(int)
+ext 023DF9C0 void daPy_lk_c::resetFootEffect()
+ext 023E55A4 void daPy_lk_c::setBlurPosResource(u16)
+ext 02416E90 BOOL daPy_lk_c::setBodyAngleToCamera()
+ext 02427230 void daPy_lk_c::setBodyAngleXReadyAnime()
+ext 023DEA24 void daPy_lk_c::setBowModel()
+ext 023E7BEC void daPy_lk_c::setBowReadyAnime()
+ext 023F51D0 BOOL daPy_lk_c::setDamagePoint(f32)
+ext 023E6A58 void daPy_lk_c::setExtraFinishCutAtParam(u8)
+ext 0241D6CC void daPy_lk_c::setFallVoice()
+ext 02416230 void daPy_lk_c::setNormalSpeedF(f32, f32, f32, f32)
+ext 023DEDE4 void daPy_lk_c::setPhotoBoxModel()
+ext 023DED8C void daPy_lk_c::setScopeModel()
+ext 02419C70 void daPy_lk_c::setShapeAngleToAtnActor()
+ext 023E287C void daPy_lk_c::setShipRidePos(int)
+ext 02416B70 void daPy_lk_c::setSpeedAndAngleAtnActor()
+ext 02412C30 void daPy_lk_c::setSwimMoveAnime(int)
+ext 02412D54 void daPy_lk_c::setSwimTail()
+ext 023F8924 void daPy_lk_c::setSwimTimerStartStop()
+ext 023EC260 BOOL daPy_lk_c::setTalkStatus()
+ext 023DD768 void daPy_lk_c::setTextureAnime(u32, int)
+ext 023FD4E4 BOOL daPy_lk_c::startRestartRoom(u32, int, f32, int)
+ext 023DFAAC void daPy_lk_c::swimOutAfter(BOOL)
+ext 0200658C u32 Link07_constructAngle(be<s16>*, s16)
+ext 02006804 s16 Link07_invertAngle(u32)
+ext 020076E0 BOOL Link07_holdSpecialPadButton(s32)
+ext 020195B0 s16 Link07_atan2sUnrounded(f64, f32)
+ext 0201971C f64 Link07_atan2Unrounded(f32, f64)
+ext 020CECF0 f64 Link07_getBoomerangFlyMax(u32)
+ext 0216EEB8 BOOL Link07_setRopeTargetPos(u32, cXyz*, be<f32>*, be<f32>*)
+ext 024EF398 u32 Link07_getPolyId2(dBgS*, u32)
+ext 024EF6E8 f64 Link07_roofHeight(dBgS*, void*)
+ext 02515470 void Link07_forceCameraLock(u32, u32)
+ext 025160DC BOOL Link07_checkAttackHit(u32)
+ext 025B4CB8 u8 Link07_getSalvageKind(u32, u32)
+ext 025CB374 void Link07_startShock(u32, s32, s32, cXyz*)
+ext 025D744C BOOL Link07_orderTalkEvent(daPy_lk_c*, fopAc_ac_c*)
+ext 025D7C6C fopAc_ac_c* Link07_getTalkPartner(daPy_lk_c*)
+ext 025E1988 void Link07_seStartSystem(u32)
+ext 025E871C void Link07_changeSwordBck(u32, u32)
+ext 027DF40C void Link07_updateFrameFunctor(u32)
+ext 028F4384 f64 Link07_sqrtUnrounded(f32)
+ext 023EC724 int daPy_lk_c::orderTalk()
+ext 023EAA80 int daPy_lk_c::getReadyItem()
+ext 02416FA8 void daPy_lk_c::setBlendSubjectMoveAnimeHD()
+ext 025D68A0 s32 Link07_seenActorAngleY(daPy_lk_c*, u32)
+ext 02415AF8 BOOL Link07_checkScopeEnd(daPy_lk_c*)
+ext 023D6188 void Link07_setShipBStatus()
+ext 028E8DE8 f32 Link07_squareDistance(const cXyz*, const cXyz*)
+ext 0253EC0C void Link07_orderEvent(u32, s32, s32, s32, s32, daPy_lk_c*, u32, s32, s32)
+ext 025E1EF0 void Link07_tactSetVolume(f32)
+ext 025E1E94 void Link07_tactReset()
+ext 025E1F14 void Link07_tactAmbientPlay()
+ext 025E1F58 void Link07_tactMelodyPlay(s32)
+ext 025E1E88 void Link07_taktModeMuteOff()
+ext 025E1EA0 void Link07_tactSetStickPos(s32, s32)
+ext 025E1EC0 void Link07_tactPlayArmSwing(s32, s32)
+ext 025E1E7C void Link07_taktModeMute()
+ext 025E1ED4 void Link07_tactStopArmSwing()
+ext 025E1EB4 void Link07_tactPlay()
+ext 025E1EE0 void Link07_tactSetBeat(s32)
+ext 025E1F48 void Link07_tactArmSoundPlay(s32)
+ext 025E1F20 void Link07_tactMetronomePlay(s32, s32)
+ext 025E1F34 s32 Link07_tactJudge(s32, s32)
+ext 0254045C s32 Link07_tactFreeMStickWord(u32, s32)
+ext 02540468 s32 Link07_tactFreeCStickWord(u32, s32)
+ext 026185A0 s32 Link07_cursorStateWord(u32)
+ext 025E1EFC u32 Link07_tactGetBeatWord()
+ext 025E1EFC s32 Link07_tactGetBeatSignedWord()
+ext 025E1F08 f64 Link07_tactGetBeatFramesUnrounded()
+ext 02433E0C f64 Link07_ropeRoofUnrounded(daPy_lk_c*, s32)
+ext 02008974 f64 Link07_groundCrossUnrounded(dBgS*, void*)
+ext 028E8DE8 f64 Link07_squareDistanceUnrounded(const cXyz*, const cXyz*)
+ext 02019918 f64 Link07_rndFXUnrounded(f32)
+ext 02019788 f64 Link07_rndUnrounded()
+ext 020195B0 s16 Link07_atan2sSecondUnrounded(f32, f64)
+ext 028F4384 f64 Link07_sqrtDoubleArgument(f64)
+ext 02018808 void cM3dGLin_SetStartEnd(cM3dGCps*, const cXyz*, const cXyz*)
+ext 024EF0F4 s32 Link07_getAttributeCodeWord(dBgS*, u32)
+ext 024EEABC BOOL Link07_checkMoveBG(dBgS*, u32)
+ext 025D9F70 BOOL Link07_getWaterY(const cXyz*, be<f32>*)
+ext 0257E6EC BOOL Link07_checkGustWind()
+ext 02560C84 BOOL Link07_checkDayNightTactStop()
+ext 0255F458 void Link07_setSoundPosition(const cXyz*, s32, u32, s32)
+ext 025E1A40 void Link07_seStartMaterial(u32, const cXyz*, u32, s32)
+ext 025F7DB0 s32 Link07_messageSet(u32, s32, s32)
+ext 024F8044 u32 Link07_cameraBody()
+ext 0253E860 void Link07_endEventCamera(u32, u32)
+ext 025C11DC u32 Link07_roomStatus(u32, s32)
+ext 027170AC void Link07_saveTactSongResult(u32, u32)
+ext 025F795C u32 Link07_messageStatus(u32)
+ext 025F74D0 void Link07_setMessageStatus(u32, s32)
+ext 025445B8 BOOL Link07_eventStartCheckOld(u32, u32)
+ext 0254457C BOOL Link07_eventEndCheckOld(u32, u32)
+ext 025C58D8 void Link07_deleteTimerRequest(u32)
+ext 025C3DE4 void Link07_turnRestart()
+ext 023D4688 void Link07_changePlayer(daPy_lk_c*, u32)
+ext 025D57E4 void Link07_deleteActorByID(u32)
+ext 024EBD10 u32 Link07_catchTargetFromID(u32, u32)
+ext 025E162C s32 Link07_tactDirection(s32, s32)
+ext 025E3F3C void Link07_initOldFrameMorf(u32, f32, s32, s32)
+ext 0200ECD4 f64 Link07_addCalcUnrounded(be<f32>*, f32, f32, f32, f32)
+ext 025A87C0 u32 Link07_setSimpleLandHD(dPa_control_c*, s32, const cXyz*, s32, f32, f32, f32, u32, be<s32>*, u32)
+ext 028249B0 void Link07_setParticleMatrix(const Mtx34*, u32, u32)
+ext 0257DC9C void Link07_setSquall(const cXyz*, s32, s32, f32, f32, f32, f32, f32)
+ext 025B5578 void Link07_setEquipBottleItemIn(u32, u32, u32)
+ext 025B58B8 void Link07_setEquipBottleItemEmpty(u32, u32)
+ext 025B6120 void Link07_resetItemRecordTimer(u32, u32)
+ext 025D7774 void Link07_orderCatchEvent(daPy_lk_c*, u32)
+ext 025DADA4 void Link07_createKyActor(s32, s32, const cXyz*, s32, s32)
+ext 0257E1B8 void Link07_getAllWindVector(u32, cXyz*, be<f32>*)
+ext 025E4A98 void Link07_setParachuteAnimation(u32, u32, s32, f32, f32, f32, f32, s32)
+ext 025B998C void Link07_setTurnRestart(u32, const cXyz*, s32, s32, u32, const cXyz*, s32, s32)
+ext 024EFC54 u32 Link07_pushPullCallback(u32, u32, daPy_lk_c*, s32, s32)
+ext 0253E70C void Link07_startBottleEventCamera(u32, s32, u32, u32, be<s32>*, s32)
+ext 02019510 s16 Link07_rad2s(f32)
+ext 0200F564 BOOL Link07_chaseAngle(be<s16>*, s16, s16)
+ext 025F181C void Link07_rotateZ(Mtx34*, s16)
+ext 025F1AA4 void Link07_rotateZXY(Mtx34*, s16, s16, s16)
+ext 024EECAC u32 Link07_materialSoundWord(dBgS*, u32)
+ext 024EECAC s32 Link07_materialSoundSignedWord(dBgS*, u32)
+ext 023EF260 int daPy_lk_c::changeBottleDrinkFace(int)
+ext 0241FBCC BOOL daPy_lk_c::checkEndMessage(u32)
+ext 023DBC24 BOOL daPy_lk_c::checkHeavyStateOn()
+ext 023F13A0 BOOL daPy_lk_c::checkJumpFlower()
+ext 0241C344 BOOL daPy_lk_c::checkJumpRideShip()
+ext 023E91E4 BOOL daPy_lk_c::checkNextRopeMode()
+ext 023E26EC int daPy_lk_c::checkShipRideUseItem(int)
+ext 023F2048 void daPy_lk_c::endDemoMode()
+ext 023E2E18 void daPy_lk_c::initShipRideUseItem(int, int)
+ext 0241C714 BOOL daPy_lk_c::procLand_init(f32, int)
+ext 023ECF74 BOOL daPy_lk_c::procPushPullWait_init(int)
+ext 0241C244 BOOL daPy_lk_c::procShipJumpRide_init()
+ext 02412948 BOOL daPy_lk_c::procTactPlayEnd_init(int)
+ext 023E47D4 BOOL daPy_lk_c::procVomitJump_init(int)
+ext 023E81E4 void daPy_lk_c::setBlendAtnMoveAnime(f32)
+ext 0241CBB0 void daPy_lk_c::setBlendRopeMoveAnime(int)
+ext 023DF0FC void daPy_lk_c::setBottleModel(u32)
+ext 023ED2CC void daPy_lk_c::setEnemyWeaponAtParam(BOOL)
+ext 023E3850 void daPy_lk_c::setFrontWallType()
+ext 023E2DC4 void daPy_lk_c::setShipRidePosUseItem()
+ext 023DEF04 void daPy_lk_c::setTactModel()
+ext 02419CC8 void Link07_setSpeedAndAngleAtnActorHD(daPy_lk_c*)
+ext 023EBCB0 BOOL Link07_checkSightLineUnrounded(daPy_lk_c*, f64, cXyz*)
+ext 023E7D6C s16 Link07_getGroundAngleWord(daPy_lk_c*, u32, s32)
+ext 0241D040 BOOL Link07_initRopeSwingWord(daPy_lk_c*, u32, s32)
+ext 023D4538 void Link07_endMtxFollow(daPy_mtxFollowEcallBack_c*)
+ext 023D457C void Link07_makeMtxFollowEmitter(daPy_mtxFollowEcallBack_c*, u32, u32, const cXyz*, const csXyz*)
+ext 023D460C void Link07_makeMtxFollowEmitterColor(daPy_mtxFollowEcallBack_c*, u32, u32, const cXyz*, u32, u32)
+ext 023E47C4 void Link07_makeMtxPosFollowEmitterColor(void*, u32, u32, const cXyz*, const csXyz*, u32, s32)
+ext 023E5600 void Link07_setAttackParamWord(daPy_lk_c*, u32, s32, s32, u32, u32, u32, f32)
+ext 023F73B8 u32 Link07_makeFairyWord(daPy_lk_c*, u32, s32)
+ext 023DE638 void Link07_setActorKeepWord(daPy_actorKeep_l*, u32)
+ext 0255BE0C BOOL Link07_checkDaylightPresetHD()
+ext 023D83D8 void daPy_lk_c::offBodyEffect()
+data l_hammer_guards 1046D240
+data l_hammer_smoke_kusa_particle_scale 1046D24C
+data l_hammer_emitter_scale 1046D258
+data l_hammer_emitter_trans 1046D264
+data l_smokeWindOff 1047B299
+data m_maba_flg 101CEF18
+data m_maba_timer 101CEF19
+data l_frameCounter 101FF560
+data l_hdSystem 101F8344
+data l_messageManager 101F4B5C
+str 100361A0 "Type"
+str 100361A8 "Omori"
+str 1003613C "ADMumi" in 02435580
+str 10036134 "Asoko"
+str 1003615C "Adanmae"
+str 100360E8
+data l_salvage_registry 10475634
+data l_rope_scales 1046D20C
+data l_rope_guards 1046D22C
+data l_rope_offsets 1046CDD8
+data l_pad 101F5088
+data l_ship_buttons 100360D4
+data l_ship_ledge 10034FB4
+data l_ship_redge 10034FA8
+*/

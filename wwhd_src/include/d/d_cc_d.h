@@ -7,6 +7,7 @@
 #pragma once
 #include "SSystem/SComponent/c_xyz.h"
 #include "f_op/f_op_actor.h"
+#include "d/d_bg_s.h"
 #include "wwhd.h"
 
 WWHD_OPAQUE(dCcD_SrcSph);
@@ -131,6 +132,8 @@ struct dCcD_GObjInf {
     void OffTgSPrmBit(u32 b) { mObjTg.mSPrm &= ~b; }
     void OnCoSPrmBit(u32 b) { mObjCo.mSPrm |= b; }
     void OffCoSPrmBit(u32 b) { mObjCo.mSPrm &= ~b; }
+    /* cCcD_Obj::ChkAtType: cCcD_ObjAt::mType */
+    bool ChkAtType(u32 mask) { return (mAtType & mask) != 0; }
 };
 WWHD_OFFSET(dCcD_GObjInf, mStts, 0x44);
 WWHD_OFFSET(dCcD_GObjInf, mGObjTg, 0x94);
@@ -177,7 +180,7 @@ WWHD_SIZE(dCcD_Cyl, 0x130);
 
 struct dCcD_Cps : dCcD_GObjInf {
     /* 0x0F8 */ u8 mShapeAttr[0x20];
-    /* 0x118 */ u8 mCps[0x20];          /* cM3dGCps: cM3dGLin (start 0x0, end 0xC, vtable 0x18) + radius 0x1C */
+    /* 0x118 */ u8 mCps[0x20];          /* cM3dGCps (raw bytes: raw units do pointer arithmetic on it) */
 };
 WWHD_SIZE(dCcD_Cps, 0x138);
 

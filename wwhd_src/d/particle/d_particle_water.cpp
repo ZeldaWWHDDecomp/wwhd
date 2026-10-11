@@ -1,58 +1,642 @@
-#include "d_particle_local.h"
+/* Particle control and callbacks; verified HD behavior, GameCube naming. */
+#include "d/particle/d_particle_local.h"
 using namespace pa;
-struct ShaderConfig {u8 bytes[28];};
-struct ShaderState {u8 bytes[0x11C];};
-static void fillConfig(ShaderConfig* config,u32 name,bool mode=false){u32 a=gabi::ea(config);W(a,name);W(a+4,0x10051A34);f32 one=f(0x10051C24);F(a+16,one);F(a+12,one);F(a+20,one);F(a+8,one);B(a+24,1);B(a+25,mode);B(a+26,0);B(a+27,0);}
-static void removeEmitter(void* callback,u32 off){u32 a=gabi::ea(callback),e=w(a+off);if(!e)return;W(e+0x1E4,0);e=w(a+off);u32 flags=w(e+0x254);W(e+0x5C,~u32(0));W(e+0x254,flags|1);W(a+off,0);}
-static void disableFog(){if(!(b(0x101EA4E4)&1))return;gabi::Local<ShaderState> state;u32 a=gabi::ea(state.get());gabi::call<void>(0x02750250,state.get());u32 flags=w(a+12);W(a+4,0);B(a+1,0);W(a+12,flags|2);B(a,0);gabi::call<void>(0x02750534,state.get());}
-void dPa_singleRippleDraw(void* callback,void* emitter){WWHD_FUNC(0x025A7220,void,callback,emitter);disableFog();}
-VERIFY(0x025A7220,dPa_singleRippleDraw);
-void dPa_singleRippleSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025A7278,void,callback,emitter,pos,angle,info);gabi::Local<ShaderConfig> config;W(gabi::ea(emitter)+0x1E8,0x1047B2E8);fillConfig(config.get(),0x10051CB8);gabi::call<void>(0x0281E5A8,emitter,config.get());}
-VERIFY(0x025A7278,dPa_singleRippleSetup);
-void* dPa_rippleCtor(void* obj){WWHD_FUNC(0x025A9084,void*,obj);obj=allocate(obj,20);if(obj){u32 a=gabi::ea(obj);f32 zero=f(0x10051C28);W(a,0x10052168);W(a+8,0);W(a+12,0);F(a+16,zero);W(a+4,0);}return obj;}
-VERIFY(0x025A9084,dPa_rippleCtor);
-void dPa_rippleExecute(void* callback,void* emitter){WWHD_FUNC(0x025A90E0,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter),pos=w(a+8);u8 group=b(e+0x262);f32 y=f(pos+4),z=f(pos+8),x=f(pos);if(group>=7)y=-y;F(e+0x230,y);F(e+0x234,z);F(e+0x22C,x);f32 scale=f(a+16),slope=f(0x10051F18),bias=f(0x10051F1C);F(e+0x34,gabi::fmadds(slope,scale,bias));if(w(a+12)&1){gabi::Local<Color> sea,foam;gabi::call<void>(0x025602F0,sea.get(),foam.get());u32 s=gabi::ea(sea.get());u8 blue=b(s+2),green=b(s+1);B(e+0x246,blue);u8 red=b(s);B(e+0x245,green);B(e+0x244,red);}}
-VERIFY(0x025A90E0,dPa_rippleExecute);
-void dPa_rippleDraw(void* callback,void* emitter){WWHD_FUNC(0x025A9180,void,callback,emitter);disableFog();}
-VERIFY(0x025A9180,dPa_rippleDraw);
-void dPa_rippleSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025A91D8,void,callback,emitter,pos,angle,info);u32 a=gabi::ea(callback),e=gabi::ea(emitter);W(e+0x1E8,0x1047B2E8);u32 flags=w(a+12);W(a+4,e);F(a+16,f(0x10051C24));W(a+8,gabi::ea(pos));W(a+12,flags|1);gabi::Local<ShaderConfig> config;fillConfig(config.get(),0x10051F20);gabi::call<void>(0x0281E5A8,emitter,config.get());}
-VERIFY(0x025A91D8,dPa_rippleSetup);
-void dPa_rippleEnd(void* callback){WWHD_FUNC(0x025A9270,void,callback);u32 a=gabi::ea(callback),e=w(a+4);if(!e)return;u32 flags=w(e+0x254);W(e+0x5C,~u32(0));W(e+0x254,flags|1);e=w(a+4);W(e+0x254,w(e+0x254)&~u32(0x40));e=w(a+4);W(e+0x1E4,0);u32 cbflags=w(a+12);W(a+4,0);W(a+12,cbflags|2);}
-VERIFY(0x025A9270,dPa_rippleEnd);
-void dPa_waveRemove(void* callback){WWHD_FUNC(0x025A92C0,void,callback);removeEmitter(callback,0x60);}
-VERIFY(0x025A92C0,dPa_waveRemove);
-void dPa_waveSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025A9904,void,callback,emitter,pos,angle,info);u32 a=gabi::ea(callback);W(a+0x60,gabi::ea(emitter));H(a+6,0);F(a+12,f(0x10051C28));W(a+0x34,gabi::ea(pos));H(a+4,0);f32 one=f(0x10051C24);F(a+20,one);F(a+24,f(0x10051F34));W(a+0x38,gabi::ea(angle));gabi::Local<ShaderConfig> config;fillConfig(config.get(),0x10051F38);gabi::call<void>(0x0281E5A8,emitter,config.get());gabi::call<void>(0x0281E7B0,p(w(a+0x60)));}
-VERIFY(0x025A9904,dPa_waveSetup);
-void dPa_splashRemove(void* callback){WWHD_FUNC(0x025A99B8,void,callback);removeEmitter(callback,24);}
-VERIFY(0x025A99B8,dPa_splashRemove);
-void dPa_splashSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025A9BA0,void,callback,emitter,pos,angle,info);u32 a=gabi::ea(callback);W(a+16,gabi::ea(pos));W(a+24,gabi::ea(emitter));W(a+20,gabi::ea(angle));H(a+4,0);gabi::Local<ShaderConfig> config;fillConfig(config.get(),0x10051F50);gabi::call<void>(0x0281E5A8,emitter,config.get());}
-VERIFY(0x025A9BA0,dPa_splashSetup);
-void dPa_cutTurnSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025A9C20,void,callback,emitter,pos,angle,info);u32 a=gabi::ea(callback);W(a+12,gabi::ea(emitter));H(a+6,0);B(a+4,255);B(a+5,0);}
-VERIFY(0x025A9C20,dPa_cutTurnSetup);
-void dPa_cutTurnEnd(void* callback){WWHD_FUNC(0x025A9D64,void,callback);u32 a=gabi::ea(callback);if(!w(a+12))return;removeEmitter(callback,12);B(a+5,1);}
-VERIFY(0x025A9D64,dPa_cutTurnEnd);
-void dPa_trackMaxWaterY(void* callback,void* pos){WWHD_FUNC(0x025A9DA0,void,callback,pos);u32 a=gabi::ea(callback),v=gabi::ea(pos);f32 x=f(v),z=f(v+8),height;if(gabi::call<s32>(0x0246B6A4,x,z)){x=f(v);z=f(v+8);height=gabi::call<f32>(0x0246BA0C,x,z);F(v+4,height);f32 bound=f(a+12);if(bound>height)height=bound;}else{f32 bound=f(a+12);height=bound==f(0x10051EC8)?f(a+8):bound;}F(v+4,gabi::fadds_ppc(height,f(0x10051CAC)));}
-VERIFY(0x025A9DA0,dPa_trackMaxWaterY);
-void dPa_trackRemove(void* callback){WWHD_FUNC(0x025A9E38,void,callback);removeEmitter(callback,0x4C);}
-VERIFY(0x025A9E38,dPa_trackRemove);
-void dPa_copyMatrix(void* out,void* matrix){WWHD_FUNC(0x025AA08C,void,out,matrix);u32 o=gabi::ea(out),m=gabi::ea(matrix);f32 values[12];for(u32 i=0;i<12;i++)values[i]=f(m+i*4);for(u32 i=0;i<12;i++)F(o+i*4,values[i]);}
-VERIFY(0x025AA08C,dPa_copyMatrix);
-void dPa_trackSetup(void* callback,void* emitter,void* pos,void* angle,u32 info){WWHD_FUNC(0x025AA770,void,callback,emitter,pos,angle,info);u32 a=gabi::ea(callback);W(a+0x38,gabi::ea(angle));W(a+0x34,gabi::ea(pos));H(a+4,0);W(a+0x4C,gabi::ea(emitter));gabi::call<void>(0x0281E76C,emitter);}
-VERIFY(0x025AA770,dPa_trackSetup);
-void dPa_waveDrawBefore(void* callback,void* emitter){WWHD_FUNC(0x025A97A8,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter),count=w(e+0x1B4);if(count<2)return;u32 model=w(w(e+0x1AC));gabi::Local<Color> sea,foam;gabi::Local<ColorF> first,second;gabi::call<void>(0x025602F0,sea.get(),foam.get());B(gabi::ea(sea.get())+3,255);B(gabi::ea(foam.get())+3,255);gabi::call<void>(0x025A37A4,second.get(),sea.get());u32 light=gabi::ea(gabi::call<void*>(0x02555D0C));gabi::call<void>(0x0274D458,first.get(),second.get(),f(light+0x10B8));gabi::call<void>(0x027FC500,p(w(model+0xEC)),first.get(),u32(0));gabi::call<void>(0x025A37A4,first.get(),foam.get());light=gabi::ea(gabi::call<void*>(0x02555D0C));gabi::call<void>(0x0274D458,second.get(),first.get(),f(light+0x10BC));gabi::call<void>(0x027FC500,p(w(model+0xEC)),second.get(),u32(1));gabi::call<void>(0x027FB678,p(w(model+0xEC)));u32 material=w(model+0xEC),target=w(w(material+12)+0x2C),resource=w(w(a+0x60)+0x26C);gabi::call_ptr<void>(target,p(material),p(resource));gabi::call<void>(0x027FE5B8,p(w(model+0xF0)),p(w(w(a+0x60)+0x26C)));for(u32 i=0;i<2;i++){u32 block=w(w(a+0x60)+0x308),bank=i*2+(w(block+0x950)==0?1:0);gabi::call<void>(0x027BFE5C,p(block+bank*0x254+0x158));u32 buffers=w(model+0x100),vertex=w(buffers),index=w(buffers+4),indices=w(buffers+8);gabi::call<void>(0xC0006178,p(index),count,p(vertex),indices,u32(0),u32(1));}B(model+0x120,1);}
-VERIFY(0x025A97A8,dPa_waveDrawBefore);
-void dPa_splashExecute(void* callback,void* emitter){WWHD_FUNC(0x025A99EC,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);gabi::Local<Color> sea,foam;gabi::call<void>(0x025602F0,sea.get(),foam.get());u32 c=gabi::ea(sea.get());u8 blue=b(c+2),red=b(c),green=b(c+1);B(e+0x246,blue);B(e+0x244,red);B(e+0x245,green);f32 factor=f(0x10051F4C),scale;if(sh(a+4)){gabi::Local<Vec> v;u32 t=gabi::ea(v.get());f32 y=f(e+0x23C),z=f(e+0x240),x=f(e+0x238);F(t+8,z);F(t,x);F(t+4,y);if(gabi::call<s32>(0x0200F5C8,v.get(),f(0x10051C28),f(0x10051D34))){gabi::call<void>(0x025A99B8,callback);return;}scale=f(t);F(e+0x240,scale);F(e+0x224,scale);F(e+0x23C,scale);F(e+0x238,scale);F(e+0x228,scale);F(e+0x220,scale);F(e+0x70,factor*scale);return;}u32 pos=w(a+16);f32 x=f(pos),y=f(pos+4),z=f(pos+8);if(b(e+0x262)>=7)y=-y;F(e+0x22C,x);F(e+0x230,y);F(e+0x234,z);scale=f(a+8)/f(a+12);f32 one=f(0x10051C24);s32 angle=sh(w(a+20)+2);if(scale>one)scale=one;F(e+0x224,scale);F(e+0x238,scale);F(e+0x23C,scale);F(e+0x70,factor*scale);F(e+0x240,scale);F(e+0x228,scale);F(e+0x220,scale);gabi::call<void>(0x028245AC,u32(0),angle,u32(0),p(e+0x1F0));}
-VERIFY(0x025A99EC,dPa_splashExecute);
-void dPa_trackExecute(void* callback,void* emitter){WWHD_FUNC(0x025A9E6C,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);gabi::Local<Color> sea,foam;gabi::call<void>(0x025602F0,sea.get(),foam.get());u32 s=gabi::ea(sea.get()),t=gabi::ea(foam.get());u8 red=b(s),blue=b(t+2);B(e+0x244,red);u8 green=b(s+1),white=b(t);B(e+0x24A,blue);u8 sb=b(s+2),fg=b(t+1);B(e+0x248,white);B(e+0x249,fg);B(e+0x246,sb);B(e+0x245,green);if(sh(a+4)){gabi::Local<Vec> pos;u32 v=gabi::ea(pos.get());F(v,f(e+0x22C));F(v+4,f(e+0x230));F(v+8,f(e+0x234));gabi::call<void>(0x025A9DA0,callback,pos.get());gabi::Local<s16> alpha;u32 c=gabi::ea(alpha.get());H(c,b(e+0x247));gabi::call<void>(0x0200F564,alpha.get(),s32(0),s32(10));s16 value=sh(c);B(e+0x247,value);if(!value){gabi::call<void>(0x025A9E38,callback);return;}}else{u32 pos=w(a+0x34);f32 x=f(pos),y=f(pos+4),z=f(pos+8);if(b(e+0x262)>=7)y=-y;F(e+0x234,z);F(e+0x22C,x);F(e+0x230,y);s32 angle=sh(w(a+0x38)+2);if(f(a+0x44)<f(0x10051C28))angle=s16(angle+0x8000);gabi::call<void>(0x028245AC,u32(0),angle,u32(0),p(e+0x1F0));f32 speed=std::fabs(f(a+0x44)),limit=f(a+0x48);gabi::Local<s16> alpha;u32 c=gabi::ea(alpha.get());H(c,b(e+0x247));gabi::call<void>(0x0200F564,alpha.get(),s32(speed>limit?255:0),s32(5));B(e+0x247,b(c+1));}u32 node=w(e+0x1AC);while(node){u32 particle=w(node);node=w(node+12);gabi::Local<Vec> pos;u32 v=gabi::ea(pos.get());F(v,f(particle+16));F(v+4,f(particle+20));F(v+8,f(particle+24));gabi::call<void>(0x025A9DA0,callback,pos.get());F(particle+16,f(v));F(particle+20,f(v+4));F(particle+24,f(v+8));}}
-VERIFY(0x025A9E6C,dPa_trackExecute);
-void dPa_waveExecuteAfter(void* callback,void* emitter){WWHD_FUNC(0x025A92F4,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);f32 zero=f(0x10051C28);s16 stop=sh(a+4);f32 m0=f(0x104B5778),m1=f(0x104B5768),m2=f(0x104B5788);F(a+0x3C,m1);F(a+0x40,m0);F(a+0x44,m2);f32 n2=f(0x104B578C),n0=f(0x104B576C),n1=f(0x104B577C);F(a+0x48,n0);F(a+0x50,n2);F(a+0x4C,n1);f32 z0=f(0x104B5770),z1=f(0x104B5780),z2=f(0x104B5790);F(a+0x58,z1);F(a+0x54,z0);F(a+0x5C,z2);if(stop){F(e+0x70,zero);s16 delay=sh(a+6);if(delay>0)H(a+6,delay-1);else gabi::call<void>(0x025A92C0,callback);return;}u32 pos=w(a+0x34);f32 oldx=f(e+0x22C),x=f(pos),oldy=f(e+0x230),y=f(pos+4),oldz=f(e+0x234),z=f(pos+8);F(e+0x22C,x);F(e+0x234,z);F(e+0x230,y);if(b(e+0x262)>=7)F(e+0x230,-f(e+0x230));f32 dy=y-oldy,dx=x-oldx,dz=z-oldz;f32 distance=f32(gabi::call<f64>(0x028F37F0,gabi::fmadds(dz,dz,gabi::fmadds(dx,dx,dy*dy))));f32 cap=f(a+24),scale=f(a+8);if(!(distance<cap))distance=cap;f32 speed=(scale*distance)*f(a+20);gabi::call<void>(0x028245AC,u32(0),s32(sh(w(a+0x38)+2)),u32(0),p(e+0x1F0));f32 last=f(a+12),delta=speed-last,step=f(a+16);if(std::fabs(delta)>step)speed=delta>zero?last+step:last-step;F(e+0x70,speed);F(a+12,speed);}
-VERIFY(0x025A92F4,dPa_waveExecuteAfter);
-void dPa_trackDrawBefore(void* callback,void* emitter){WWHD_FUNC(0x025AA574,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);if(w(e+0x1B4)<6)return;u32 node=w(e+0x1AC),count=0;if(!node)return;for(u32 n=node;n;n=w(n+12))if(!b(w(n)+0x10C))++count;if(count<6)return;disableFog();node=w(e+0x1AC);f32 groups=f32(count)*f(0x10051F64),split=f(0x10051F68);u32 n;if(groups>=split)n=u32(gabi::ftoi(groups-split))+0x80000000;else n=u32(gabi::ftoi(groups));u32 model=w(node),mat=w(model+0xEC),target=w(w(mat+12)+0x2C);gabi::call_ptr<void>(target,p(mat),p(w(w(a+0x4C)+0x26C)));gabi::call<void>(0x027FE5B8,p(w(model+0xF0)),p(w(w(a+0x4C)+0x26C)));u32 block=w(w(a+0x4C)+0x310),bank=w(block+0x2BA70)==0?1:0,remaining=n-1;if(remaining){u32 current=block+bank*0x254;do{if(w(block+0x2BA80))gabi::call<void>(0x027BFE5C,p(current+0x158));gabi::call<void>(0xC0006178,p(w(0x104B4A88)),u32(6),p(w(0x104B4A84)),w(0x104B4A8C),u32(0),u32(1));current+=0x4A8;}while(--remaining);}B(model+0x120,1);}
-VERIFY(0x025AA574,dPa_trackDrawBefore);
-static void zeroBlocks(u32 dest,u32 length){u32 end=dest+length;while(dest<end){u32 aligned=dest&~31u;for(u32 i=0;i<32;i++)B(aligned+i,0);dest+=32;}}
-static f32 waveFusedAdd(f32 a,f32 c,f32 b){if(a!=a)return gabi::ppc_qnan(a);if(b!=b)return gabi::ppc_qnan(b);if(c!=c)return gabi::ppc_qnan(c);return gabi::fmadds(a,c,b);}
-static f32 waveInnerAdd(f32 a,f32 c,f32 b){if(b!=b)return gabi::ppc_qnan(b);if(a!=a)return gabi::ppc_qnan(a);if(c!=c)return gabi::ppc_qnan(c);return gabi::fmadds(a,c,b);}
-void dPa_waveDraw(void* callback,void* emitter){WWHD_FUNC(0x025A9508,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);f32 ex=f(e+0x22C),ez=f(e+0x234),ey=f(e+0x230),one=f(0x10051C24);u32 count=w(e+0x1B4);f32 stride=one/f32(count-1);if(count<2)return;u32 node=w(e+0x1AC);gabi::call<void>(0x028255F8,p(w(node)));f32 zero=f(0x10051C28),half=f(0x10051CA8);for(u32 side=0;side<2;side++){u32 v=a+0x1C+side*12;f32 x=f(v),y=f(v+4),z=f(v+8);f32 dx=waveFusedAdd(f(a+0x54),z,waveInnerAdd(f(a+0x3C),x,f(a+0x48)*y));f32 dy=waveFusedAdd(f(a+0x58),z,waveInnerAdd(f(a+0x4C),y,f(a+0x40)*x));f32 dz=waveFusedAdd(f(a+0x5C),z,waveInnerAdd(f(a+0x44),x,f(a+0x50)*y));u32 block=w(w(a+0x60)+0x308),bank=side*2+w(block+0x950),dest=w(block+bank*0x254);zeroBlocks(dest,0x3A80);bank=side*2+w(block+0x950);dest=w(block+bank*0x254);F(dest+16,zero);F(dest+4,gabi::fadds_ppc(ey,dy));F(dest+8,gabi::fadds_ppc(ez,dz));F(dest,gabi::fadds_ppc(ex,dx));F(dest+12,half);f32 t=zero;node=w(e+0x1AC);while(node){u32 particle=w(node);f32 px=f(particle+0x28),py=f(particle+0x2C),pz=f(particle+0x30);dest+=20;F(dest,px);F(dest+12,t);F(dest+4,py);F(dest+8,pz);F(dest+16,one);node=w(node+12);t+=stride;}}u32 block=w(w(a+0x60)+0x308),cur=block+w(block+0x950)*0x254+4;for(u32 i=0;i<2;i++){gabi::call<void>(0x027B5E94,p(cur),u32(0),w(cur+0x14C));cur+=0x4A8;}W(block+0x950,w(block+0x950)==0?1:0);}
-VERIFY(0x025A9508,dPa_waveDraw);
-void dPa_trackDraw(void* callback,void* emitter){WWHD_FUNC(0x025AA12C,void,callback,emitter);u32 a=gabi::ea(callback),e=gabi::ea(emitter);if(w(e+0x1B4)<6)return;u32 node=w(e+0x1AC),count=0;if(!node)return;for(u32 n=node;n;n=w(n+12))if(!b(w(n)+0x10C))++count;if(count<6)return;f32 groups=f32(count)*f(0x10051F64),split=f(0x10051F68);u32 n=groups>=split?u32(gabi::ftoi(groups-split))+0x80000000:u32(gabi::ftoi(groups));f32 stride=f(0x10051C24)/f32(n-1),half=f(0x10051CA8);struct Matrix{u8 bytes[48];};gabi::Local<Matrix> input,output;u32 in=gabi::ea(input.get());gabi::call<void>(0x028E9098,input.get());F(in+0x1C,f(e+0x194)*f(a+0x3C));F(in+0x14,f(a+0x40));u32 model=w(w(e+0x1AC));gabi::call<void>(0x025AA08C,output.get(),input.get());gabi::call<void>(0x027FC80C,p(w(model+0xEC)),output.get(),u32(1));gabi::call<void>(0x028255F8,p(model),p(w(a+0x4C)));node=w(e+0x1AC);f32 zero=f(0x10051C28),t=zero;for(u32 group=0;group<n;group++){if(group==0){for(u32 i=0;i<3;i++){u32 q=w(node),v=a+16+i*12;F(v,f(q+0x28));F(v+4,f(q+0x2C));F(v+8,f(q+0x30));node=w(node+12);}}else{u32 block=w(w(a+0x4C)+0x310),bank=(group*2-2)+w(block+0x2BA70),current=block+bank*0x254;zeroBlocks(w(current),0x60);bank=(group*2-2)+w(block+0x2BA70);current=block+bank*0x254;f32 previous=t-stride,u=zero;u32 i=0;while(i<3){u32 q=w(node);if(!b(q+0x10C)){gabi::Local<Vec> pos;u32 v=gabi::ea(pos.get());F(v,f(q+0x28));F(v+4,f(q+0x2C));F(v+8,f(q+0x30));gabi::call<void>(0x025A9DA0,callback,pos.get());u32 dest=w(current)+i*40;F(dest,f(v));F(dest+4,f(v+4));F(dest+8,f(v+8));dest=w(current)+i*40;F(dest+12,u);F(dest+16,t);u32 old=a+16+i*12;f32 x=f(old),z=f(old+8),y=f(old+4);dest=w(current)+i*40;F(dest+20,x);F(dest+24,y);F(dest+28,z);dest=w(current)+i*40;F(dest+36,previous);F(dest+32,u);F(old,f(v));F(old+4,f(v+4));F(old+8,f(v+8));u+=half;++i;}node=w(node+12);}}t+=stride;}u32 block=w(w(a+0x4C)+0x310),bank=w(block+0x2BA70),remain=n-1;if(remain){u32 current=block+bank*0x254+4;do{gabi::call<void>(0x027B5E94,p(current),u32(0),w(current+0x14C));current+=0x4A8;}while(--remain);bank=w(block+0x2BA70);}W(block+0x2BA70,bank==0?1:0);gabi::call<void>(0x027FB678,p(w(model+0xEC)));}
-VERIFY(0x025AA12C,dPa_trackDraw);
+struct ShaderState {
+    u8 bytes[0x11C];
+};
+static void fillConfig(ParticleShaderConfig* config, u32 name, bool mode = false) {
+    config->mName.mString = name;
+    config->mName.__vtbl = 0x10051A34;
+    f32 one = (f32)l_particleOne;
+    config->mScaleZ = one;
+    config->mScaleY = one;
+    config->mScaleW = one;
+    config->mScaleX = one;
+    config->mEnableX = 1;
+    config->mEnableY = mode;
+    config->mEnableZ = 0;
+    config->mEnableW = 0;
+}
+
+static void removeEmitter(void* callback, u32 off) {
+    u32 a = gabi::ea(callback), e = w(a + off);
+    if (!e)
+        return;
+    gabi::at<pa::JPABaseEmitter>(e)->mpEmitterCallBack = 0;
+    e = w(a + off);
+    u32 flags = (u32)gabi::at<pa::JPABaseEmitter>(e)->mFlags;
+    gabi::at<pa::JPABaseEmitter>(e)->mMaxFrame = ~u32(0);
+    gabi::at<pa::JPABaseEmitter>(e)->mFlags = flags | JPAEmtrStts_StopEmit;
+    W(a + off, 0);
+}
+static void disableFog() {
+    if (!((u8)l_particleStatus & 1))
+        return;
+    gabi::Local<ShaderState> state;
+    u32 a = gabi::ea(state.get());
+    pa_captureParticleShaderState(state.get());
+    u32 flags = w(a + 12);
+    W(a + 4, 0);
+    B(a + 1, 0);
+    W(a + 12, flags | 2);
+    B(a, 0);
+    pa_applyParticleShaderState(state.get());
+}
+/* 025A7220 */
+void dPa_singleRippleDraw(void* callback, void* emitter) { disableFog(); }
+/* 025A7278 */
+void dPa_singleRippleSetup(void* callback, void* emitter, void* pos, void* angle, u32 info) {
+    gabi::Local<ParticleShaderConfig> config;
+    W(gabi::ea(emitter) + 0x1E8, 0x1047B2E8);
+    fillConfig(config.get(), 0x10051CB8);
+    pa_setParticleShaderConfig(emitter, config.get());
+}
+/* 025A9084 */
+void* dPa_rippleCtor(void* obj) {
+    obj = allocate(obj, 20);
+    if (obj) {
+        pa::dPa_rippleEcallBack* self = gabi::at<pa::dPa_rippleEcallBack>(gabi::ea(obj));
+        f32 zero = (f32)l_particleZero;
+        self->__vtbl = gabi::ea(l_particleRippleVtable);
+        self->mPos = 0;
+        self->mFlags = 0;
+        self->mRate = zero;
+        self->mpBaseEmitter = 0;
+    }
+    return obj;
+}
+/* 025A90E0 */
+void pa::dPa_rippleEcallBack::execute(void* emitter) {
+    u32 e = gabi::ea(emitter), pos = (u32)this->mPos;
+    u8 group = (u8)gabi::at<pa::JPABaseEmitter>(e)->mGroupID;
+    f32 y = (f32)gabi::at<pa::Vec>(pos)->y, z = (f32)gabi::at<pa::Vec>(pos)->z,
+        x = (f32)gabi::at<pa::Vec>(pos)->x;
+    if (group >= dPa_control_c::dPtclGroup_2Dfore_e)
+        y = -y;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y = y;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z = z;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x = x;
+    f32 scale = (f32)this->mRate, slope = f(0x10051F18), bias = f(0x10051F1C);
+    gabi::at<pa::JPABaseEmitter>(e)->mRate = gabi::fmadds(slope, scale, bias);
+    if ((u32)this->mFlags & JPAEmtrStts_StopEmit) {
+        gabi::Local<Color> sea, foam;
+        pa_dKy_get_seacolor(sea.get(), foam.get());
+        u32 s = gabi::ea(sea.get());
+        u8 blue = b(s + 2), green = b(s + 1);
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.b = blue;
+        u8 red = b(s);
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.g = green;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.r = red;
+    }
+}
+/* 025A9180 */
+void pa::dPa_rippleEcallBack::draw(void* emitter) { disableFog(); }
+/* 025A91D8 */
+void pa::dPa_rippleEcallBack::setup(void* emitter, void* pos, void* angle, u32 info) {
+    u32 e = gabi::ea(emitter);
+    gabi::at<pa::JPABaseEmitter>(e)->mpParticleCallBack = 0x1047B2E8;
+    u32 flags = (u32)this->mFlags;
+    this->mpBaseEmitter = e;
+    this->mRate = (f32)l_particleOne;
+    this->mPos = gabi::ea(pos);
+    this->mFlags = flags | JPAEmtrStts_StopEmit;
+    gabi::Local<ParticleShaderConfig> config;
+    fillConfig(config.get(), 0x10051F20);
+    pa_setParticleShaderConfig(emitter, config.get());
+}
+/* 025A9270 */
+void pa::dPa_rippleEcallBack::end() {
+    u32 e = (u32)this->mpBaseEmitter;
+    if (!e)
+        return;
+    u32 flags = (u32)gabi::at<pa::JPABaseEmitter>(e)->mFlags;
+    gabi::at<pa::JPABaseEmitter>(e)->mMaxFrame = ~u32(0);
+    gabi::at<pa::JPABaseEmitter>(e)->mFlags = flags | JPAEmtrStts_StopEmit;
+    e = (u32)this->mpBaseEmitter;
+    gabi::at<pa::JPABaseEmitter>(e)->mFlags =
+        (u32)gabi::at<pa::JPABaseEmitter>(e)->mFlags & ~u32(0x40);
+    e = (u32)this->mpBaseEmitter;
+    gabi::at<pa::JPABaseEmitter>(e)->mpEmitterCallBack = 0;
+    u32 cbflags = (u32)this->mFlags;
+    this->mpBaseEmitter = 0;
+    this->mFlags = cbflags | JPAEmtrStts_StopCalc;
+}
+/* 025A92C0 */
+void pa::dPa_waveEcallBack::remove() { removeEmitter(this, 0x60); }
+/* 025A9904 */
+void pa::dPa_waveEcallBack::setup(void* emitter, void* pos, void* angle, u32 info) {
+    this->mpBaseEmitter = gabi::ea(emitter);
+    this->mFadeTimer = 0;
+    this->mVel = (f32)l_particleZero;
+    this->mpPos = gabi::ea(pos);
+    this->mState = 0;
+    f32 one = (f32)l_particleOne;
+    this->mVelFade2 = one;
+    this->mMaxParticleVelocity = f(0x10051F34);
+    this->mpRot = gabi::ea(angle);
+    gabi::Local<ParticleShaderConfig> config;
+    fillConfig(config.get(), 0x10051F38);
+    pa_setParticleShaderConfig(emitter, config.get());
+    pa_releaseTrackEmitterRendering(p((u32)this->mpBaseEmitter));
+}
+/* 025A99B8 */
+void pa::dPa_splashEcallBack::remove() { removeEmitter(this, 24); }
+/* 025A9BA0 */
+void pa::dPa_splashEcallBack::setup(void* emitter, void* pos, void* angle, u32 info) {
+    this->mpPos = gabi::ea(pos);
+    this->mpBaseEmitter = gabi::ea(emitter);
+    this->mpRot = gabi::ea(angle);
+    this->mState = 0;
+    gabi::Local<ParticleShaderConfig> config;
+    fillConfig(config.get(), 0x10051F50);
+    pa_setParticleShaderConfig(emitter, config.get());
+}
+/* 025A9C20 */
+void pa::dPa_cutTurnEcallBack_c::setup(void* emitter, void* pos, void* angle, u32 info) {
+    this->mpBaseEmitter = gabi::ea(emitter);
+    this->field_0x6 = 0;
+    this->mAlpha = 255;
+    this->field_0x5 = 0;
+}
+/* 025A9D64 */
+void pa::dPa_cutTurnEcallBack_c::end() {
+    if (!(u32)this->mpBaseEmitter)
+        return;
+    removeEmitter(this, 12);
+    this->field_0x5 = 1;
+}
+/* 025A9DA0 */
+void pa::dPa_trackEcallBack::getMaxWaterY(void* pos) {
+    u32 v = gabi::ea(pos);
+    f32 x = (f32)gabi::at<pa::Vec>(v)->x, z = (f32)gabi::at<pa::Vec>(v)->z, height;
+    if (pa_daSea_ChkArea(x, z)) {
+        x = (f32)gabi::at<pa::Vec>(v)->x;
+        z = (f32)gabi::at<pa::Vec>(v)->z;
+        height = pa_daSea_calcWave(x, z);
+        gabi::at<pa::Vec>(v)->y = height;
+        f32 bound = (f32)this->mMinY;
+        if (bound > height)
+            height = bound;
+    } else {
+        f32 bound = (f32)this->mMinY;
+        height = bound == f(0x10051EC8) ? (f32)this->mBaseY : bound;
+    }
+    gabi::at<pa::Vec>(v)->y = gabi::fadds_ppc(height, f(0x10051CAC));
+}
+/* 025A9E38 */
+void pa::dPa_trackEcallBack::remove() { removeEmitter(this, 0x4C); }
+/* 025AA08C */
+void dPa_copyMatrix(void* out, void* matrix) {
+    u32 o = gabi::ea(out), m = gabi::ea(matrix);
+    f32 values[12];
+    for (u32 i = 0; i < 12; i++)
+        values[i] = (f32)gabi::at<ParticleMatrix>(m)->m[i / 4][i % 4];
+    for (u32 i = 0; i < 12; i++)
+        gabi::at<ParticleMatrix>(o)->m[i / 4][i % 4] = values[i];
+}
+/* 025AA770 */
+void pa::dPa_trackEcallBack::setup(void* emitter, void* pos, void* angle, u32 info) {
+    this->mpRot = gabi::ea(angle);
+    this->mpPos = gabi::ea(pos);
+    this->mState = 0;
+    this->mpBaseEmitter = gabi::ea(emitter);
+    pa_prepareWaveEmitterRendering(emitter);
+}
+/* 025A97A8 */
+void pa::dPa_waveEcallBack::drawBefore(void* emitter) {
+    u32 e = gabi::ea(emitter),
+        count = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mLength;
+    if (count < 2)
+        return;
+    u32 model = w((u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead);
+    gabi::Local<Color> sea, foam;
+    gabi::Local<ColorF> first, second;
+    pa_dKy_get_seacolor(sea.get(), foam.get());
+    B(gabi::ea(sea.get()) + 3, 255);
+    B(gabi::ea(foam.get()) + 3, 255);
+    pa_colorToFloat(second.get(), sea.get());
+    u32 light = gabi::ea(pa_getEnvlight());
+    pa_blendParticleColors(first.get(), second.get(), f(light + 0x10B8));
+    pa_setMaterialColor(p(w(model + 0xEC)), first.get(), u32(0));
+    pa_colorToFloat(first.get(), foam.get());
+    light = gabi::ea(pa_getEnvlight());
+    pa_blendParticleColors(second.get(), first.get(), f(light + 0x10BC));
+    pa_setMaterialColor(p(w(model + 0xEC)), second.get(), u32(1));
+    pa_loadMaterial(p(w(model + 0xEC)));
+    u32 material = w(model + 0xEC), target = w(w(material + 12) + 0x2C),
+        resource = w((u32)this->mpBaseEmitter + 0x26C);
+    gabi::call_ptr<void>(target, p(material), p(resource));
+    pa_loadShape(p(w(model + 0xF0)), p(w((u32)this->mpBaseEmitter + 0x26C)));
+    for (u32 i = 0; i < 2; i++) {
+        u32 block = w((u32)this->mpBaseEmitter + 0x308),
+            bank = i * 2 + ((u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank == 0 ? 1 : 0);
+        pa_bindVertexBuffer(p(block + bank * 0x254 + 0x158));
+        u32 buffers = w(model + 0x100), vertex = w(buffers), index = w(buffers + 4),
+            indices = w(buffers + 8);
+        pa_drawIndexed(p(index), count, p(vertex), indices, u32(0), u32(1));
+    }
+    B(model + 0x120, 1);
+}
+/* 025A99EC */
+void pa::dPa_splashEcallBack::execute(void* emitter) {
+    u32 e = gabi::ea(emitter);
+    gabi::Local<Color> sea, foam;
+    pa_dKy_get_seacolor(sea.get(), foam.get());
+    u32 c = gabi::ea(sea.get());
+    u8 blue = b(c + 2), red = b(c), green = b(c + 1);
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.b = blue;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.r = red;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.g = green;
+    f32 factor = f(0x10051F4C), scale;
+    if ((s16)this->mState) {
+        gabi::Local<Vec> v;
+        u32 t = gabi::ea(v.get());
+        f32 y = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.y,
+            z = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.z,
+            x = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.x;
+        F(t + 8, z);
+        F(t, x);
+        F(t + 4, y);
+        if (pa_cLib_chaseF(v.get(), (f32)l_particleZero, f(0x10051D34))) {
+            pa_splashRemove(this);
+            return;
+        }
+        scale = f(t);
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.z = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.y = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.y = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.x = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.z = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.x = scale;
+        gabi::at<pa::JPABaseEmitter>(e)->mInitialVelDir = factor * scale;
+        return;
+    }
+    u32 pos = (u32)this->mpPos;
+    f32 x = (f32)gabi::at<pa::Vec>(pos)->x, y = (f32)gabi::at<pa::Vec>(pos)->y,
+        z = (f32)gabi::at<pa::Vec>(pos)->z;
+    if ((u8)gabi::at<pa::JPABaseEmitter>(e)->mGroupID >= 7)
+        y = -y;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x = x;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y = y;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z = z;
+    scale = (f32)this->mScaleTimer / (f32)this->mMaxScaleTimer;
+    f32 one = (f32)l_particleOne;
+    s32 angle = sh((u32)this->mpRot + 2);
+    if (scale > one)
+        scale = one;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.y = scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.x = scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.y = scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mInitialVelDir = factor * scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalParticleScale.z = scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.z = scale;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalDynamicsScale.x = scale;
+    pa_JPAGetXYZRotateMtx(u32(0), angle, u32(0), p(e + 0x1F0));
+}
+/* 025A9E6C */
+void pa::dPa_trackEcallBack::execute(void* emitter) {
+    u32 e = gabi::ea(emitter);
+    gabi::Local<Color> sea, foam;
+    pa_dKy_get_seacolor(sea.get(), foam.get());
+    u32 s = gabi::ea(sea.get()), t = gabi::ea(foam.get());
+    u8 red = b(s), blue = b(t + 2);
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.r = red;
+    u8 green = b(s + 1), white = b(t);
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalEnvColor.b = blue;
+    u8 sb = b(s + 2), fg = b(t + 1);
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalEnvColor.r = white;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalEnvColor.g = fg;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.b = sb;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.g = green;
+    if ((s16)this->mState) {
+        gabi::Local<Vec> pos;
+        u32 v = gabi::ea(pos.get());
+        gabi::at<pa::Vec>(v)->x = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x;
+        gabi::at<pa::Vec>(v)->y = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y;
+        gabi::at<pa::Vec>(v)->z = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z;
+        pa_trackGetMaxWaterY(this, pos.get());
+        gabi::Local<s16> alpha;
+        u32 c = gabi::ea(alpha.get());
+        H(c, (u8)gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.a);
+        pa_cLib_chaseS(alpha.get(), s32(0), s32(10));
+        s16 value = sh(c);
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.a = value;
+        if (!value) {
+            pa_trackRemove(this);
+            return;
+        }
+    } else {
+        u32 pos = (u32)this->mpPos;
+        f32 x = (f32)gabi::at<pa::Vec>(pos)->x, y = (f32)gabi::at<pa::Vec>(pos)->y,
+            z = (f32)gabi::at<pa::Vec>(pos)->z;
+        if ((u8)gabi::at<pa::JPABaseEmitter>(e)->mGroupID >= 7)
+            y = -y;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z = z;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x = x;
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y = y;
+        s32 angle = sh((u32)this->mpRot + 2);
+        if ((f32)this->mVel < (f32)l_particleZero)
+            angle = s16(angle + 0x8000);
+        pa_JPAGetXYZRotateMtx(u32(0), angle, u32(0), p(e + 0x1F0));
+        f32 speed = std::fabs((f32)this->mVel), limit = (f32)this->mMinVel;
+        gabi::Local<s16> alpha;
+        u32 c = gabi::ea(alpha.get());
+        H(c, (u8)gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.a);
+        pa_cLib_chaseS(alpha.get(), s32(speed > limit ? 255 : 0), s32(5));
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalPrmColor.a = b(c + 1);
+    }
+    u32 node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
+    while (node) {
+        u32 particle = w(node);
+        node = w(node + 12);
+        gabi::Local<Vec> pos;
+        u32 v = gabi::ea(pos.get());
+        gabi::at<pa::Vec>(v)->x = f(particle + 16);
+        gabi::at<pa::Vec>(v)->y = f(particle + 20);
+        gabi::at<pa::Vec>(v)->z = f(particle + 24);
+        pa_trackGetMaxWaterY(this, pos.get());
+        F(particle + 16, (f32)gabi::at<pa::Vec>(v)->x);
+        F(particle + 20, (f32)gabi::at<pa::Vec>(v)->y);
+        F(particle + 24, (f32)gabi::at<pa::Vec>(v)->z);
+    }
+}
+/* 025A92F4 */
+void pa::dPa_waveEcallBack::executeAfter(void* emitter) {
+    u32 e = gabi::ea(emitter);
+    f32 zero = (f32)l_particleZero;
+    s16 stop = (s16)this->mState;
+    f32 m0 = f(0x104B5778), m1 = f(0x104B5768), m2 = f(0x104B5788);
+    this->mRotMtx[0].x = m1;
+    this->mRotMtx[0].y = m0;
+    this->mRotMtx[0].z = m2;
+    f32 n2 = f(0x104B578C), n0 = f(0x104B576C), n1 = f(0x104B577C);
+    this->mRotMtx[1].x = n0;
+    this->mRotMtx[1].z = n2;
+    this->mRotMtx[1].y = n1;
+    f32 z0 = f(0x104B5770), z1 = f(0x104B5780), z2 = f(0x104B5790);
+    this->mRotMtx[2].y = z1;
+    this->mRotMtx[2].x = z0;
+    this->mRotMtx[2].z = z2;
+    if (stop) {
+        gabi::at<pa::JPABaseEmitter>(e)->mInitialVelDir = zero;
+        s16 delay = (s16)this->mFadeTimer;
+        if (delay > 0)
+            this->mFadeTimer = delay - 1;
+        else
+            pa_waveRemove(this);
+        return;
+    }
+    u32 pos = (u32)this->mpPos;
+    f32 oldx = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x,
+        x = (f32)gabi::at<pa::Vec>(pos)->x,
+        oldy = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y,
+        y = (f32)gabi::at<pa::Vec>(pos)->y,
+        oldz = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z,
+        z = (f32)gabi::at<pa::Vec>(pos)->z;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x = x;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z = z;
+    gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y = y;
+    if ((u8)gabi::at<pa::JPABaseEmitter>(e)->mGroupID >= 7)
+        gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y =
+            -(f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y;
+    f32 dy = y - oldy, dx = x - oldx, dz = z - oldz;
+    f32 distance = f32(pa_sqrtHD(gabi::fmadds(dz, dz, gabi::fmadds(dx, dx, dy * dy))));
+    f32 cap = (f32)this->mMaxParticleVelocity, scale = (f32)this->mVelFade1;
+    if (!(distance < cap))
+        distance = cap;
+    f32 speed = (scale * distance) * (f32)this->mVelFade2;
+    pa_JPAGetXYZRotateMtx(u32(0), s32(sh((u32)this->mpRot + 2)), u32(0), p(e + 0x1F0));
+    f32 last = (f32)this->mVel, delta = speed - last, step = (f32)this->mVelSpeed;
+    if (std::fabs(delta) > step)
+        speed = delta > zero ? last + step : last - step;
+    gabi::at<pa::JPABaseEmitter>(e)->mInitialVelDir = speed;
+    this->mVel = speed;
+}
+/* 025AA574 */
+void pa::dPa_trackEcallBack::drawBefore(void* emitter) {
+    u32 e = gabi::ea(emitter);
+    if ((u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mLength < 6)
+        return;
+    u32 node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead, count = 0;
+    if (!node)
+        return;
+    for (u32 n = node; n; n = w(n + 12))
+        if (!b(w(n) + 0x10C))
+            ++count;
+    if (count < 6)
+        return;
+    disableFog();
+    node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
+    f32 groups = f32(count) * f(0x10051F64), split = f(0x10051F68);
+    u32 n;
+    if (groups >= split)
+        n = u32(gabi::ftoi(groups - split)) + 0x80000000;
+    else
+        n = u32(gabi::ftoi(groups));
+    u32 model = w(node), mat = w(model + 0xEC), target = w(w(mat + 12) + 0x2C);
+    gabi::call_ptr<void>(target, p(mat), p(w((u32)this->mpBaseEmitter + 0x26C)));
+    pa_loadShape(p(w(model + 0xF0)), p(w((u32)this->mpBaseEmitter + 0x26C)));
+    u32 block = w((u32)this->mpBaseEmitter + 0x310), bank = w(block + 0x2BA70) == 0 ? 1 : 0,
+        remaining = n - 1;
+    if (remaining) {
+        u32 current = block + bank * 0x254;
+        do {
+            if (w(block + 0x2BA80))
+                pa_bindVertexBuffer(p(current + 0x158));
+            pa_drawIndexed(p(w(0x104B4A88)), u32(6), p(w(0x104B4A84)), w(0x104B4A8C), u32(0),
+                           u32(1));
+            current += 0x4A8;
+        } while (--remaining);
+    }
+    B(model + 0x120, 1);
+}
+static void zeroBlocks(u32 dest, u32 length) {
+    u32 end = dest + length;
+    while (dest < end) {
+        u32 aligned = dest & ~31u;
+        for (u32 i = 0; i < 32; i++)
+            B(aligned + i, 0);
+        dest += 32;
+    }
+}
+static f32 waveFusedAdd(f32 a, f32 c, f32 b) {
+    if (a != a)
+        return gabi::ppc_qnan(a);
+    if (b != b)
+        return gabi::ppc_qnan(b);
+    if (c != c)
+        return gabi::ppc_qnan(c);
+    return gabi::fmadds(a, c, b);
+}
+static f32 waveInnerAdd(f32 a, f32 c, f32 b) {
+    if (b != b)
+        return gabi::ppc_qnan(b);
+    if (a != a)
+        return gabi::ppc_qnan(a);
+    if (c != c)
+        return gabi::ppc_qnan(c);
+    return gabi::fmadds(a, c, b);
+}
+/* 025A9508 */
+void pa::dPa_waveEcallBack::draw(void* emitter) {
+    u32 a = gabi::ea(this), e = gabi::ea(emitter);
+    f32 ex = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.x,
+        ez = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.z,
+        ey = (f32)gabi::at<pa::JPABaseEmitter>(e)->mGlobalTranslation.y, one = (f32)l_particleOne;
+    u32 count = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mLength;
+    f32 stride = one / f32(count - 1);
+    if (count < 2)
+        return;
+    u32 node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
+    pa_drawParticleModel(p(w(node)));
+    f32 zero = (f32)l_particleZero, half = (f32)l_particleHalf;
+    for (u32 side = 0; side < 2; side++) {
+        u32 v = a + 0x1C + side * 12;
+        f32 x = (f32)gabi::at<pa::Vec>(v)->x, y = (f32)gabi::at<pa::Vec>(v)->y,
+            z = (f32)gabi::at<pa::Vec>(v)->z;
+        f32 dx =
+            waveFusedAdd((f32)this->mRotMtx[2].x, z,
+                         waveInnerAdd((f32)this->mRotMtx[0].x, x, (f32)this->mRotMtx[1].x * y));
+        f32 dy =
+            waveFusedAdd((f32)this->mRotMtx[2].y, z,
+                         waveInnerAdd((f32)this->mRotMtx[1].y, y, (f32)this->mRotMtx[0].y * x));
+        f32 dz =
+            waveFusedAdd((f32)this->mRotMtx[2].z, z,
+                         waveInnerAdd((f32)this->mRotMtx[0].z, x, (f32)this->mRotMtx[1].z * y));
+        u32 block = w((u32)this->mpBaseEmitter + 0x308),
+            bank = side * 2 + (u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank,
+            dest = (u32)gabi::at<pa::ParticleRenderBuffer>(block + bank * 0x254)->mData;
+        zeroBlocks(dest, 0x3A80);
+        bank = side * 2 + (u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank;
+        dest = (u32)gabi::at<pa::ParticleRenderBuffer>(block + bank * 0x254)->mData;
+        F(dest + 16, zero);
+        F(dest + 4, gabi::fadds_ppc(ey, dy));
+        F(dest + 8, gabi::fadds_ppc(ez, dz));
+        F(dest, gabi::fadds_ppc(ex, dx));
+        F(dest + 12, half);
+        f32 t = zero;
+        node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
+        while (node) {
+            u32 particle = w(node);
+            f32 px = f(particle + 0x28), py = f(particle + 0x2C), pz = f(particle + 0x30);
+            dest += 20;
+            F(dest, px);
+            F(dest + 12, t);
+            F(dest + 4, py);
+            F(dest + 8, pz);
+            F(dest + 16, one);
+            node = w(node + 12);
+            t += stride;
+        }
+    }
+    u32 block = w((u32)this->mpBaseEmitter + 0x308),
+        cur = block + (u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank * 0x254 + 4;
+    for (u32 i = 0; i < 2; i++) {
+        pa_flushVertexBuffer(p(cur), u32(0), w(cur + 0x14C));
+        cur += 0x4A8;
+    }
+    gabi::at<pa::ParticleRippleBuffers>(block)->mBank =
+        (u32)gabi::at<pa::ParticleRippleBuffers>(block)->mBank == 0 ? 1 : 0;
+}
+/* 025AA12C */
+void pa::dPa_trackEcallBack::draw(void* emitter) {
+    u32 a = gabi::ea(this), e = gabi::ea(emitter);
+    if ((u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mLength < 6)
+        return;
+    u32 node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead, count = 0;
+    if (!node)
+        return;
+    for (u32 n = node; n; n = w(n + 12))
+        if (!b(w(n) + 0x10C))
+            ++count;
+    if (count < 6)
+        return;
+    f32 groups = f32(count) * f(0x10051F64), split = f(0x10051F68);
+    u32 n =
+        groups >= split ? u32(gabi::ftoi(groups - split)) + 0x80000000 : u32(gabi::ftoi(groups));
+    f32 stride = (f32)l_particleOne / f32(n - 1), half = (f32)l_particleHalf;
+    struct Matrix {
+        u8 bytes[48];
+    };
+    gabi::Local<Matrix> input, output;
+    u32 in = gabi::ea(input.get());
+    pa_PSMTXIdentity(input.get());
+    F(in + 0x1C, f(e + 0x194) * (f32)this->mExTransY);
+    F(in + 0x14, (f32)this->mExScaleY);
+    u32 model = w((u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead);
+    pa_copyMatrix(output.get(), input.get());
+    pa_setParticleMaterialMatrix(p(w(model + 0xEC)), output.get(), u32(1));
+    pa_drawParticleModel(p(model), p((u32)this->mpBaseEmitter));
+    node = (u32)gabi::at<pa::JPABaseEmitter>(e)->mActiveParticles.mHead;
+    f32 zero = (f32)l_particleZero, t = zero;
+    for (u32 group = 0; group < n; group++) {
+        if (group == 0) {
+            for (u32 i = 0; i < 3; i++) {
+                u32 q = w(node), v = a + 16 + i * 12;
+                gabi::at<pa::Vec>(v)->x = (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.x;
+                gabi::at<pa::Vec>(v)->y = (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.y;
+                gabi::at<pa::Vec>(v)->z = (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.z;
+                node = w(node + 12);
+            }
+        } else {
+            u32 block = w((u32)this->mpBaseEmitter + 0x310),
+                bank = (group * 2 - 2) + w(block + 0x2BA70), current = block + bank * 0x254;
+            zeroBlocks((u32)gabi::at<pa::ParticleRenderBuffer>(current)->mData, 0x60);
+            bank = (group * 2 - 2) + w(block + 0x2BA70);
+            current = block + bank * 0x254;
+            f32 previous = t - stride, u = zero;
+            u32 i = 0;
+            while (i < 3) {
+                u32 q = w(node);
+                if (!(u8)gabi::at<pa::JPABaseParticle>(q)->hdHidden) {
+                    gabi::Local<Vec> pos;
+                    u32 v = gabi::ea(pos.get());
+                    gabi::at<pa::Vec>(v)->x =
+                        (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.x;
+                    gabi::at<pa::Vec>(v)->y =
+                        (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.y;
+                    gabi::at<pa::Vec>(v)->z =
+                        (f32)gabi::at<pa::JPABaseParticle>(q)->mGlobalPosition.z;
+                    pa_trackGetMaxWaterY(this, pos.get());
+                    u32 dest = (u32)gabi::at<pa::ParticleRenderBuffer>(current)->mData + i * 40;
+                    F(dest, (f32)gabi::at<pa::Vec>(v)->x);
+                    F(dest + 4, (f32)gabi::at<pa::Vec>(v)->y);
+                    F(dest + 8, (f32)gabi::at<pa::Vec>(v)->z);
+                    dest = (u32)gabi::at<pa::ParticleRenderBuffer>(current)->mData + i * 40;
+                    F(dest + 12, u);
+                    F(dest + 16, t);
+                    u32 old = a + 16 + i * 12;
+                    f32 x = f(old), z = f(old + 8), y = f(old + 4);
+                    dest = (u32)gabi::at<pa::ParticleRenderBuffer>(current)->mData + i * 40;
+                    F(dest + 20, x);
+                    F(dest + 24, y);
+                    F(dest + 28, z);
+                    dest = (u32)gabi::at<pa::ParticleRenderBuffer>(current)->mData + i * 40;
+                    F(dest + 36, previous);
+                    F(dest + 32, u);
+                    F(old, (f32)gabi::at<pa::Vec>(v)->x);
+                    F(old + 4, (f32)gabi::at<pa::Vec>(v)->y);
+                    F(old + 8, (f32)gabi::at<pa::Vec>(v)->z);
+                    u += half;
+                    ++i;
+                }
+                node = w(node + 12);
+            }
+        }
+        t += stride;
+    }
+    u32 block = w((u32)this->mpBaseEmitter + 0x310), bank = w(block + 0x2BA70), remain = n - 1;
+    if (remain) {
+        u32 current = block + bank * 0x254 + 4;
+        do {
+            pa_flushVertexBuffer(p(current), u32(0),
+                                 (u32)gabi::at<pa::ParticleNativeVertexBuffer>(current)->mSize);
+            current += 0x4A8;
+        } while (--remain);
+        bank = w(block + 0x2BA70);
+    }
+    W(block + 0x2BA70, bank == 0 ? 1 : 0);
+    pa_loadMaterial(p(w(model + 0xEC)));
+}
+/* WWHD glue
+*/

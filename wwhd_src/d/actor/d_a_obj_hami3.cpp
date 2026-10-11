@@ -1,368 +1,378 @@
-// WWHD Hami3 rotating grate. Derived game code:
-// TU boundary: 0234EC78..0234F910; all 27 entry points are verified.
-// HD changes the GC joint-name scan to the model-data name lookup and uses
-// relative name-table pointers. The callback marks animation matrices dirty.
-// The grate rotates about Y in the joint callback; its actor X angle remains
-// home.angle.x + rotation. Keep the call/reload order for clobbering callees.
-#include "bindings.h"
+/* Hami3 rotating grate. All 27 original entry points retain verified HD behavior.
+ * HD: name lookup uses relative name tables; callbacks mark matrix buffers dirty.
+ * HD: the joint rotates around Y while the actor X angle follows its home angle. */
+#include "d/actor/d_a_obj_hami3.h"
 namespace daObjHami3 {
-struct Act_c : fopAc_ac_c {
-  u8 pad[0x3e0 - sizeof(fopAc_ac_c)];
-  be<s16> rotation;
-  be<s16> unused;
-  u8 phase[8];
-  gptr<void> model;
-  be<s32> state;
-  be<s16> event;
-  be<s16> unused2;
-};
-WWHD_OFFSET(Act_c, rotation, 0x3e0);
-WWHD_OFFSET(Act_c, model, 0x3ec);
-WWHD_OFFSET(Act_c, state, 0x3f0);
-// Local bindings use addresses (kept local to this unit).
-static u32 rd(u32 a) { return gabi::load<u32>(a); }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
+static GuestText M_arcname;
+static GuestText M_evname;
+static GuestText jointName;
+static GuestText assertFile1;
+static GuestText assertText1;
+static GuestText assertFile2;
+static GuestText assertText2;
+static ActorVtable actorVtable;
+static u32 safeStringVtable;
+static u32 currentModel;
+static u32 calcMatrix;
+static u32 saveInfo;
+static u32 resourceControl;
+static u32 currentOpaList;
+static u32 currentXluList;
+static Mtx34 matrixStack;
+static Mtx34 M_tmp_mtx;
+static Mtx34 currentMatrix;
+static f32 lowerBound;
+static f32 upperBound;
+static f32 cullMin;
+static f32 cullMax;
+// HD: aliases preserve the original static bytes; sinit initializes them at runtime.
+static u32 objectIds[4] = {};
+static u8 vectorInit;
+static u8 angleInit;
+static u32 vectorDtor;
+static u32 angleDtor;
+static u32 matrixDtor;
+
+// HD: each access calls the getter again, preserving callee clobbers.
+static u32 play() { return hami3_call::getPlay(); }
 // Snapshot all FPR-loaded values before any store, preserving overlap and SNaNs.
 static void matrix_copy(u32 src, u32 dst) {
-  f32 v[12];
-  for (int i = 0; i < 12; ++i)
-    v[i] = gabi::load<f32>(src + 4 * i);
-  for (int i = 0; i < 12; ++i)
-    gabi::store<f32>(dst + 4 * i, v[i]);
+    J3DModel::mtx_assign(gabi::at<Mtx34>(dst), gabi::at<Mtx34>(src));
 }
 static void order(Act_c *a) {
-  gabi::call(0x025D7A58, a, (s16)a->event, 0xff, 0xffff, 0, 1);
+    hami3_call::orderOtherEvent(a, (s16)a->field_0x2DC, 0xff, 0xffff, 0, 1);
 }
+/* 0234F8F8 */
 static s32 parameter(Act_c *a, u32 width, u32 shift) {
-  WWHD_FUNC(0x0234F8F8, s32, a, width, shift);
-  // PPC variable shifts use the low six bits and yield zero for 32..63.
-  u32 w = width & 63, s = shift & 63;
-  return ((s < 32 ? rd(gabi::ea(a) + 0xb0) >> s : 0) &
-          ((w < 32 ? 1u << w : 0) - 1));
+    // PPC variable shifts use the low six bits and yield zero for 32..63.
+    u32 w = width & 63, s = shift & 63;
+    return ((s < 32 ? (u32)a->mParameters >> s : 0) & ((w < 32 ? 1u << w : 0) - 1));
 }
-VERIFY(0x0234F8F8, parameter);
+/* 0234EC78 */
 static BOOL nodeCallBack(void *node, s32 timing) {
-  WWHD_FUNC(0x0234EC78, BOOL, node, timing);
-  if (timing == 0) {
-    u32 joint = gabi::call<u32>(0x027F7878, node);
-    u32 model = rd(0x104B462C), actor = rd(model + 0xb8);
-    u32 index = gabi::load<u16>(joint + 4) * 0x30;
-    if (actor) {
-      u32 matrices = rd(model + 0x2c);
-      auto flags = gabi::load<u16>(matrices + 4);
-      u32 base = rd(matrices + 0x10);
-      gabi::store<u16>(matrices + 4, flags | 0x10);
-      gabi::call(0x028E90D4, base + index, rd(0x1018C7B0));
-      u32 calc = rd(0x1018C7B0);
-      s16 angle = gabi::load<s16>(actor + 0x3e0);
-      gabi::call(0x025F1C28, calc, angle);
-      matrices = rd(model + 0x2c);
-      flags = gabi::load<u16>(matrices + 4);
-      calc = rd(0x1018C7B0);
-      base = rd(matrices + 0x10);
-      gabi::store<u16>(matrices + 4, flags | 0x10);
-      matrix_copy(calc, base + index);
-      gabi::call(0x028E90D4, rd(0x1018C7B0), 0x104B4868u);
+    if (timing == 0) {
+        JointIndex *joint = gabi::at<JointIndex>(hami3_call::getJointData(node));
+        J3DModel *model = gabi::at<J3DModel>(currentModel);
+        Act_c *actor = gabi::at<Act_c>(model->mUserArea);
+        u32 index = joint->mJointNo * sizeof(Mtx34);
+        if (actor) {
+            J3DMtxBuffer_hd *matrices = model->mpMtxBuffer;
+            u16 flags = matrices->mFlags;
+            u32 base = matrices->mpAnmMtx;
+            matrices->mFlags = flags | MATRIX_DIRTY;
+            hami3_call::matrixCopy(base + index, (u32)calcMatrix);
+            u32 calc = calcMatrix;
+            s16 angle = actor->field_0x2C8;
+            hami3_call::matrixRotateY(calc, angle);
+            matrices = model->mpMtxBuffer;
+            flags = matrices->mFlags;
+            calc = calcMatrix;
+            base = matrices->mpAnmMtx;
+            matrices->mFlags = flags | MATRIX_DIRTY;
+            matrix_copy(calc, base + index);
+            hami3_call::matrixCopy((u32)calcMatrix, gabi::ea(&currentMatrix));
+        }
     }
-  }
-  return 1;
+    return 1;
 }
-VERIFY(0x0234EC78, nodeCallBack);
-s32 Mthd_Create(Act_c *a) {
-  WWHD_FUNC(0x0234ED9C, s32, a);
-  u32 self = gabi::ea(a), flags = rd(self + 0x2e4);
-  if (!(flags & 8)) {
-    if (self) {
-      gabi::call(0x024F1D40, a);
-      flags = rd(self + 0x2e4);
-      gabi::store<u32>(self + 0xb4, 0x10029DA0);
+/* 0234ED9C */
+s32 daObjHami3::Act_c::Mthd_Create() {
+    u32 self = gabi::ea(this), flags = (u32)actor_condition;
+    if (!(flags & ACTOR_INITIALIZED)) {
+        if (self) {
+            hami3_call::constructMoveBgActor(this);
+            flags = (u32)actor_condition;
+            __vtbl = gabi::ea(&actorVtable);
+        }
+        actor_condition = flags | ACTOR_INITIALIZED;
     }
-    gabi::store<u32>(self + 0x2e4, flags | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, self + 0x3e4, 0x10029D98u);
-  if (phase == 4) {
-    phase = gabi::call<s32>(0x024F1D9C, a, 0x10029D98u, 7, 0x024EE658u, 0x1fc0);
-    if (phase != 4 && phase != 5)
-      gabi::call(0x0273AA24, 0x10029CF4u, 0xbf, 0x10029D08u);
-  }
-  return phase;
+    s32 phase = hami3_call::resLoad(gabi::ea(&field_0x2CC), gabi::ea(M_arcname.bytes));
+    if (phase == cPhs_COMPLEATE_e) {
+        phase = hami3_call::moveBGCreate(this, gabi::ea(M_arcname.bytes),
+                                         dRes_INDEX_HAMI3_DZB_HAMI3, 0x024EE658u, 0x1fc0);
+        if (phase != cPhs_COMPLEATE_e && phase != cPhs_ERROR_e)
+            hami3_call::assertFail(gabi::ea(assertFile1.bytes), 0xbf, gabi::ea(assertText1.bytes));
+    }
+    return phase;
 }
-VERIFY(0x0234ED9C, Mthd_Create);
-BOOL Mthd_Delete(Act_c *a) {
-  WWHD_FUNC(0x0234EE70, BOOL, a);
-  BOOL result = gabi::call<BOOL>(0x024F1F64, a);
-  gabi::call(0x025204C8, gabi::ea(a) + 0x3e4, 0x10029D98u);
-  return result;
+/* 0234EE70 */
+BOOL daObjHami3::Act_c::Mthd_Delete() {
+    BOOL result = hami3_call::moveBGDelete(this);
+    hami3_call::resDelete(gabi::ea(&field_0x2CC), gabi::ea(M_arcname.bytes));
+    return result;
 }
-VERIFY(0x0234EE70, Mthd_Delete);
-BOOL CreateHeap(Act_c *a) {
-  WWHD_FUNC(0x0234EEBC, BOOL, a);
-  gabi::Local<SafeString> name;
-  name->mStringTop = 0x10029D98;
-  name->__vtbl = 0x10029CD4;
-  u32 data = gabi::call<u32>(0x026066C4, rd(0x101F4F28), name.get(), 4);
-  if (!data)
-    gabi::call(0x0273AA24, 0x10029D54u, 0x71, 0x10029D68u);
-  u32 model = gabi::call<u32>(0x025E38E0, data, 0, 0x11020203u);
-  a->model = gabi::at<void>(model);
-  if (!model)
-    return 0;
-  u32 table = gabi::call<u32>(0x027F68FC, rd(model + 0xac));
-  u32 offset = rd(table + 0x10);
-  u32 names = offset ? table + 0x10 + offset : 0;
-  s32 index = gabi::call<s32>(0x027DF9B0, names, 0x10029D4Cu);
-  if (index >= 0) {
-    model = gabi::ea(a->model.get());
-    data = rd(model + 0xac);
-    u32 count = rd(data + 4), joints = rd(data + 8), i = (u16)index;
-    if (i < count)
-      joints += i * 0x1c;
-    gabi::store<u32>(joints + 8, 0x0234EC78);
-  }
-  model = gabi::ea(a->model.get());
-  gabi::store<u32>(model + 0xb8, gabi::ea(a));
-  return 1;
+/* 0234EEBC */
+BOOL daObjHami3::Act_c::CreateHeap() {
+    gabi::Local<SafeString> name;
+    name->mStringTop = gabi::ea(M_arcname.bytes);
+    name->__vtbl = gabi::ea(&safeStringVtable);
+    J3DModelData *data = gabi::at<J3DModelData>(hami3_call::getObjectResource(
+        (u32)resourceControl, name.get(), dRes_INDEX_HAMI3_BDL_HAMI3));
+    if (!data)
+        hami3_call::assertFail(gabi::ea(assertFile2.bytes), 0x71, gabi::ea(assertText2.bytes));
+    J3DModel *model = gabi::at<J3DModel>(hami3_call::createModel(data, 0, 0x11020203u));
+    field_0x2D4 = model;
+    if (!model)
+        return 0;
+    // HD: resource names use a relative table, replacing the retail joint-name scan.
+    NameTableView *table =
+        gabi::at<NameTableView>(hami3_call::getJointNameTable(model->mModelData.get()));
+    u32 offset = table->mNamesOffset;
+    u32 names = offset ? gabi::ea(&table->mNamesOffset) + offset : 0;
+    s32 index = hami3_call::getNameIndex(names, gabi::ea(jointName.bytes));
+    if (index >= 0) {
+        model = field_0x2D4;
+        data = model->mModelData;
+        u32 count = data->mJointNum;
+        u32 joints = data->mJointNodes;
+        u32 i = (u16)index;
+        if (i < count)
+            joints += i * sizeof(JointRecord);
+        gabi::at<JointRecord>(joints)->mCallback = gabi::guest_fn((const void *)nodeCallBack);
+    }
+    model = field_0x2D4;
+    model->mUserArea = gabi::ea(this);
+    return 1;
 }
-VERIFY(0x0234EEBC, CreateHeap);
-void set_mtx(Act_c *a) {
-  WWHD_FUNC(0x0234EFD4, void, a);
-  u32 self = gabi::ea(a);
-  f32 x = gabi::load<f32>(self + 0x314), z = gabi::load<f32>(self + 0x31c),
-      y = gabi::load<f32>(self + 0x318);
-  gabi::call(0x028E93CC, 0x1048D0CCu, x, y, z);
-  s16 ax = gabi::load<s16>(self + 0x328), az = gabi::load<s16>(self + 0x32c),
-      ay = gabi::load<s16>(self + 0x32a);
-  gabi::call(0x025F1B48, 0x1048D0CCu, ax, ay, az);
-  matrix_copy(0x1048D0CC, gabi::ea(a->model.get()) + 0xc8);
-  gabi::call(0x028E90D4, 0x1048D0CCu, 0x10469D68u);
+/* 0234EFD4 */
+void daObjHami3::Act_c::set_mtx() {
+    f32 x = (f32)current.pos.x, z = (f32)current.pos.z, y = (f32)current.pos.y;
+    hami3_call::matrixTranslate(gabi::ea(&matrixStack), x, y, z);
+    s16 ax = (s16)shape_angle.x, az = (s16)shape_angle.z, ay = (s16)shape_angle.y;
+    hami3_call::matrixRotateZXY(gabi::ea(&matrixStack), ax, ay, az);
+    matrix_copy(gabi::ea(&matrixStack), gabi::ea(&field_0x2D4->mBaseTransformMtx));
+    hami3_call::matrixCopy(gabi::ea(&matrixStack), gabi::ea(&M_tmp_mtx));
 }
-VERIFY(0x0234EFD4, set_mtx);
-void init_mtx(Act_c *a) {
-  WWHD_FUNC(0x0234F0A8, void, a);
-  u32 model = gabi::ea(a->model.get()), self = gabi::ea(a);
-  f32 y = gabi::load<f32>(self + 0x334), x = gabi::load<f32>(self + 0x330),
-      z = gabi::load<f32>(self + 0x338);
-  gabi::store<f32>(model + 0xbc, x);
-  gabi::store<f32>(model + 0xc0, y);
-  gabi::store<f32>(model + 0xc4, z);
-  set_mtx(a);
+/* 0234F0A8 */
+void daObjHami3::Act_c::init_mtx() {
+    J3DModel *model = field_0x2D4;
+    f32 y = (f32)scale.y, x = (f32)scale.x, z = (f32)scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    set_mtx();
 }
-VERIFY(0x0234F0A8, init_mtx);
-BOOL Create(Act_c *a) {
-  WWHD_FUNC(0x0234F0C8, BOOL, a);
-  u32 self = gabi::ea(a), model = gabi::ea(a->model.get());
-  gabi::store<u32>(self + 0x348, model ? model + 0xc8 : 0);
-  s32 sw = parameter(a, 8, 0);
-  u32 save = rd(0x101F84DC);
-  s8 room = gabi::load<s8>(self + 0x2fe);
-  BOOL on = gabi::call<BOOL>(0x025BA0C0, save + 0x20, sw, room);
-  a->state = on ? 3 : 0;
-  s16 home = gabi::load<s16>(self + 0x2f8);
-  a->rotation = on ? 0x4000 : 0;
-  gabi::store<s16>(self + 0x328, home + (on ? 0x4000 : 0));
-  init_mtx(a);
-  gabi::call(0x025D674C, a, -1200.f, -1200.f, -1200.f, 1200.f, 1200.f, 1200.f);
-  u32 p = play();
-  a->event = gabi::call<s32>(0x02543F10, p + 0x52c4, 0x10029D84u, 0xff);
-  return 1;
+/* 0234F0C8 */
+BOOL daObjHami3::Act_c::Create() {
+    J3DModel *model = field_0x2D4;
+    cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    s32 sw = parameter(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    SaveView *save = gabi::at<SaveView>(saveInfo);
+    s8 room = (s8)home.roomNo;
+    BOOL on = hami3_call::isSwitch(gabi::ea(save->mMemory), sw, room);
+    field_0x2D8 = on ? Act_c::OPEN_STOP : Act_c::CLOSE_STOP;
+    s16 homeAngle = (s16)home.angle.x;
+    field_0x2C8 = on ? OPEN_ANGLE : 0;
+    shape_angle.x = homeAngle + (on ? OPEN_ANGLE : 0);
+    init_mtx();
+    hami3_call::setCullBox(this, -1200.f, -1200.f, -1200.f, 1200.f, 1200.f, 1200.f);
+    PlayView *p = gabi::at<PlayView>(play());
+    field_0x2DC =
+        hami3_call::getEventIndex(gabi::ea(p->mEventManager), gabi::ea(M_evname.bytes), 0xff);
+    return 1;
 }
-VERIFY(0x0234F0C8, Create);
-void close_stop(Act_c *a) {
-  WWHD_FUNC(0x0234F210, void, a);
-  s32 sw = parameter(a, 8, 0);
-  s8 room = gabi::load<s8>(gabi::ea(a) + 0x2fe);
-  u32 save = rd(0x101F84DC);
-  if (gabi::call<BOOL>(0x025BA0C0, save + 0x20, sw, room)) {
-    order(a);
-    a->state = 1;
-  }
+/* 0234F210 */
+void daObjHami3::Act_c::daObjHami3_close_stop() {
+    s32 sw = parameter(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    s8 room = (s8)home.roomNo;
+    SaveView *save = gabi::at<SaveView>(saveInfo);
+    if (hami3_call::isSwitch(gabi::ea(save->mMemory), sw, room)) {
+        order(this);
+        field_0x2D8 = Act_c::OPEN_DEMO_WAIT;
+    }
 }
-VERIFY(0x0234F210, close_stop);
-void open_demo_wait(Act_c *a) {
-  WWHD_FUNC(0x0234F290, void, a);
-  if (gabi::load<u16>(gabi::ea(a) + 0xf8) == 2) {
-    if (parameter(a, 1, 16) == 0)
-      gabi::call(0x025E1988, 0x806);
-    a->state = 2;
-  } else
-    order(a);
+/* 0234F290 */
+void daObjHami3::Act_c::daObjHami3_open_demo_wait() {
+    if ((u16)eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        if (parameter(this, Act_c::PRM_SOUND_W, Act_c::PRM_SOUND_S) == 0)
+            hami3_call::startSystemSound(JA_SE_READ_RIDDLE_1);
+        field_0x2D8 = Act_c::OPEN_DEMO;
+    } else
+        order(this);
 }
-VERIFY(0x0234F290, open_demo_wait);
 static void shock_reset() {
-  u32 p = play();
-  gabi::Local<cXyz> direction;
-  direction->set(0.f, 1.f, 0.f);
-  gabi::call(0x025CB374, p + 0x599c, 4, -0x21, direction.get());
-  p = play();
-  gabi::store<u16>(p + 0x52b8, gabi::load<u16>(p + 0x52b8) | 8);
+    PlayView *p = gabi::at<PlayView>(play());
+    gabi::Local<cXyz> direction;
+    direction->set(0.f, 1.f, 0.f);
+    hami3_call::startShock(gabi::ea(p->mVibration), 4, -0x21, direction.get());
+    p = gabi::at<PlayView>(play());
+    p->mEventFlags |= EVENT_RESET;
 }
 static void sound(Act_c *a, s8 room) {
-  s32 reverb = gabi::call<s32>(0x02520540, room);
-  gabi::call(0x025E1A40, 0x61cb, gabi::ea(a) + 0x314, 0, reverb);
+    s32 reverb = hami3_call::getReverb(room);
+    hami3_call::startPositionSound(JA_SE_OBJ_AMI_MOVE, gabi::ea(&a->current.pos), 0, reverb);
 }
-void open_demo(Act_c *a) {
-  WWHD_FUNC(0x0234F318, void, a);
-  s16 angle = a->rotation;
-  s8 room = gabi::load<s8>(gabi::ea(a) + 0x326);
-  a->rotation = angle + 0x100;
-  sound(a, room);
-  if ((s16)a->rotation >= 0x4000) {
-    a->rotation = 0x4000;
-    shock_reset();
-    s32 sw = parameter(a, 8, 8);
-    room = gabi::load<s8>(gabi::ea(a) + 0x2fe);
-    u32 save = rd(0x101F84DC);
-    gabi::call(0x025B9E38, save + 0x20, sw, room);
-    a->state = 3;
-  }
+/* 0234F318 */
+void daObjHami3::Act_c::daObjHami3_open_demo() {
+    s16 angle = field_0x2C8;
+    s8 room = (s8)current.roomNo;
+    field_0x2C8 = angle + ROTATION_STEP;
+    sound(this, room);
+    if ((s16)field_0x2C8 >= OPEN_ANGLE) {
+        field_0x2C8 = OPEN_ANGLE;
+        shock_reset();
+        s32 sw = parameter(this, Act_c::PRM_SWSAVE2_W, Act_c::PRM_SWSAVE2_S);
+        room = (s8)home.roomNo;
+        SaveView *save = gabi::at<SaveView>(saveInfo);
+        hami3_call::onSwitch(gabi::ea(save->mMemory), sw, room);
+        field_0x2D8 = Act_c::OPEN_STOP;
+    }
 }
-VERIFY(0x0234F318, open_demo);
-void open_stop(Act_c *a) {
-  WWHD_FUNC(0x0234F3F8, void, a);
-  s32 sw = parameter(a, 8, 0);
-  u32 save = rd(0x101F84DC);
-  s8 room = gabi::load<s8>(gabi::ea(a) + 0x2fe);
-  if (!gabi::call<BOOL>(0x025BA0C0, save + 0x20, sw, room)) {
-    order(a);
-    a->state = 4;
-  }
+/* 0234F3F8 */
+void daObjHami3::Act_c::daObjHami3_open_stop() {
+    s32 sw = parameter(this, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    SaveView *save = gabi::at<SaveView>(saveInfo);
+    s8 room = (s8)home.roomNo;
+    if (!hami3_call::isSwitch(gabi::ea(save->mMemory), sw, room)) {
+        order(this);
+        field_0x2D8 = Act_c::CLOSE_DEMO_WAIT;
+    }
 }
-VERIFY(0x0234F3F8, open_stop);
-void close_demo_wait(Act_c *a) {
-  WWHD_FUNC(0x0234F478, void, a);
-  if (gabi::load<u16>(gabi::ea(a) + 0xf8) == 2)
-    a->state = 5;
-  else
-    order(a);
+/* 0234F478 */
+void daObjHami3::Act_c::daObjHami3_close_demo_wait() {
+    if ((u16)eventInfo.mCommand == dEvtCmd_INDEMO_e)
+        field_0x2D8 = Act_c::CLOSE_DEMO;
+    else
+        order(this);
 }
-VERIFY(0x0234F478, close_demo_wait);
-void close_demo(Act_c *a) {
-  WWHD_FUNC(0x0234F4AC, void, a);
-  s8 room = gabi::load<s8>(gabi::ea(a) + 0x326);
-  s16 angle = a->rotation;
-  a->rotation = angle - 0x100;
-  sound(a, room);
-  if ((s16)a->rotation <= 0) {
-    a->rotation = 0;
-    shock_reset();
-    a->state = 0;
-  }
+/* 0234F4AC */
+void daObjHami3::Act_c::daObjHami3_close_demo() {
+    s8 room = (s8)current.roomNo;
+    s16 angle = field_0x2C8;
+    field_0x2C8 = angle - ROTATION_STEP;
+    sound(this, room);
+    if ((s16)field_0x2C8 <= 0) {
+        field_0x2C8 = 0;
+        shock_reset();
+        field_0x2D8 = Act_c::CLOSE_STOP;
+    }
 }
-VERIFY(0x0234F4AC, close_demo);
-BOOL Execute(Act_c *a, u32 *output) {
-  WWHD_FUNC(0x0234F564, BOOL, a, output);
-  switch ((s32)a->state) {
-  case 0:
-    close_stop(a);
-    break;
-  case 1:
-    open_demo_wait(a);
-    break;
-  case 2:
-    open_demo(a);
-    break;
-  case 3:
-    open_stop(a);
-    break;
-  case 4:
-    close_demo_wait(a);
-    break;
-  case 5:
-    close_demo(a);
-    break;
-  }
-  s16 angle = a->rotation, home = gabi::load<s16>(gabi::ea(a) + 0x2f8);
-  gabi::store<s16>(gabi::ea(a) + 0x328, home + angle);
-  set_mtx(a);
-  gabi::store<u32>(gabi::ea(output), 0x10469D68);
-  return 1;
+/* 0234F564 */
+BOOL daObjHami3::Act_c::Execute(be<u32> *output) {
+    switch ((s32)field_0x2D8) {
+    case Act_c::CLOSE_STOP:
+        daObjHami3_close_stop();
+        break;
+    case Act_c::OPEN_DEMO_WAIT:
+        daObjHami3_open_demo_wait();
+        break;
+    case Act_c::OPEN_DEMO:
+        daObjHami3_open_demo();
+        break;
+    case Act_c::OPEN_STOP:
+        daObjHami3_open_stop();
+        break;
+    case Act_c::CLOSE_DEMO_WAIT:
+        daObjHami3_close_demo_wait();
+        break;
+    case Act_c::CLOSE_DEMO:
+        daObjHami3_close_demo();
+        break;
+    }
+    s16 angle = field_0x2C8, homeAngle = (s16)home.angle.x;
+    shape_angle.x = homeAngle + angle;
+    set_mtx();
+    *output = gabi::ea(&M_tmp_mtx);
+    return 1;
 }
-VERIFY(0x0234F564, Execute);
-BOOL Draw(Act_c *a) {
-  WWHD_FUNC(0x0234F724, BOOL, a);
-  u32 self = gabi::ea(a);
-  u32 env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, env, 1, self + 0x314, self + 0x110);
-  env = gabi::call<u32>(0x02555D0C);
-  u32 model = gabi::ea(a->model.get());
-  gabi::call(0x02562F5C, env, model, self + 0x110);
-  u32 p = play();
-  gabi::store<u32>(0x104B4634, rd(p + 0x5d70));
-  p = play();
-  gabi::store<u32>(0x104B4638, rd(p + 0x5d74));
-  model = gabi::ea(a->model.get());
-  gabi::call(0x025E2DE0, model, 0);
-  p = play();
-  gabi::store<u32>(0x104B4634, rd(p + 0x5d78));
-  p = play();
-  gabi::store<u32>(0x104B4638, rd(p + 0x5d7c));
-  return 1;
+/* 0234F724 */
+BOOL daObjHami3::Act_c::Draw() {
+    u32 env = hami3_call::getEnvironmentLight();
+    hami3_call::settingTevStruct(env, 1, gabi::ea(&current.pos), gabi::ea(&tevStr));
+    env = hami3_call::getEnvironmentLight();
+    J3DModel *model = field_0x2D4;
+    hami3_call::setLightTevColor(env, model, gabi::ea(&tevStr));
+    DrawLists *p = gabi::at<DrawLists>(play());
+    currentOpaList = (u32)p->mOpaList;
+    p = gabi::at<DrawLists>(play());
+    currentXluList = (u32)p->mXluList;
+    model = field_0x2D4;
+    hami3_call::modelUpdate(model, 0);
+    p = gabi::at<DrawLists>(play());
+    currentOpaList = (u32)p->mDefaultOpaList;
+    p = gabi::at<DrawLists>(play());
+    currentXluList = (u32)p->mDefaultXluList;
+    return 1;
 }
-VERIFY(0x0234F724, Draw);
-BOOL Delete(Act_c *a) {
-  WWHD_FUNC(0x0234F89C, BOOL, a);
-  return 1;
-}
-VERIFY(0x0234F89C, Delete);
-BOOL create_adapter(Act_c *a) {
-  WWHD_FUNC(0x0234F7BC, BOOL, a);
-  return Mthd_Create(a);
-}
-VERIFY(0x0234F7BC, create_adapter);
-BOOL delete_adapter(Act_c *a) {
-  WWHD_FUNC(0x0234F7C0, BOOL, a);
-  return Mthd_Delete(a);
-}
-VERIFY(0x0234F7C0, delete_adapter);
-BOOL execute_adapter(Act_c *a) {
-  WWHD_FUNC(0x0234F7C4, BOOL, a);
-  return gabi::call<BOOL>(0x024F1E9C, a);
-}
-VERIFY(0x0234F7C4, execute_adapter);
+/* 0234F89C */
+BOOL daObjHami3::Act_c::Delete() { return 1; }
+/* 0234F7BC */
+BOOL create_adapter(Act_c *a) { return a->Mthd_Create(); }
+/* 0234F7C0 */
+BOOL delete_adapter(Act_c *a) { return a->Mthd_Delete(); }
+/* 0234F7C4 */
+BOOL execute_adapter(Act_c *a) { return hami3_call::moveBGExecute(a); }
+/* 0234F7C8 */
 BOOL draw_adapter(Act_c *a) {
-  WWHD_FUNC(0x0234F7C8, BOOL, a);
-  return gabi::call<BOOL>(rd(rd(gabi::ea(a) + 0xb4) + 0x2c), a);
+    ActorVtable *vtable = gabi::at<ActorVtable>(a->__vtbl);
+    return gabi::call_ptr<BOOL>(vtable->mDraw.get(), a);
 }
-VERIFY(0x0234F7C8, draw_adapter);
+/* 0234F7D8 */
 BOOL isdelete_adapter(Act_c *a) {
-  WWHD_FUNC(0x0234F7D8, BOOL, a);
-  return gabi::call<BOOL>(rd(rd(gabi::ea(a) + 0xb4) + 0x3c), a);
+    ActorVtable *vtable = gabi::at<ActorVtable>(a->__vtbl);
+    return gabi::call_ptr<BOOL>(vtable->mIsDelete.get(), a);
 }
-VERIFY(0x0234F7D8, isdelete_adapter);
+/* 0234F7E8 */
+// HD: compiler-generated and template code of this translation unit.
 void sinit() {
-  WWHD_FUNC(0x0234F7E8, void);
-  for (int i = 0; i < 4; ++i)
-    gabi::store<u32>(0x10469D58 + 4 * i, 0);
-  gabi::call(0x028F026C, 0x101C9BC8u);
-  f32 lo = gabi::load<f32>(0x10029D90), hi = gabi::load<f32>(0x10029D94);
-  gabi::store<f32>(0x10469D4C, lo);
-  gabi::store<f32>(0x10469D50, hi);
-  gabi::call(0x028ED6F8, 0x10469D54u);
-  gabi::call(0x028F026C, 0x101C9BD4u);
-  gabi::call(0x028EAB2C, 0x10469D55u);
-  gabi::call(0x028F026C, 0x101C9BE0u);
+    for (int i = 0; i < 4; ++i)
+        objectIds[i] = 0;
+    hami3_call::registerDestructor(gabi::ea(&vectorDtor));
+    f32 lo = lowerBound, hi = upperBound;
+    cullMin = lo;
+    cullMax = hi;
+    hami3_call::constructVector(gabi::ea(&vectorInit));
+    hami3_call::registerDestructor(gabi::ea(&angleDtor));
+    hami3_call::constructAngles(gabi::ea(&angleInit));
+    hami3_call::registerDestructor(gabi::ea(&matrixDtor));
 }
-VERIFY(0x0234F7E8, sinit);
+/* 0234F87C */
 void static_destructor(void *a, u32 flags) {
-  WWHD_FUNC(0x0234F87C, void, a, flags);
-  if (a && (flags & 1))
-    gabi::call(0x0273AF40, a);
+    if (a && (flags & 1))
+        hami3_call::deleteObject(a);
 }
-VERIFY(0x0234F87C, static_destructor);
-BOOL IsDelete(Act_c *a) {
-  WWHD_FUNC(0x0234F890, BOOL, a);
-  return 1;
-}
-VERIFY(0x0234F890, IsDelete);
-void noop(void *a) { WWHD_FUNC(0x0234F898, void, a); }
-VERIFY(0x0234F898, noop);
+/* 0234F890 */
+BOOL IsDelete(Act_c *a) { return 1; }
+/* 0234F898 */
+void noop(void *a) {}
+/* 0234F8A4 */
 void destructor(Act_c *a, u32 flags) {
-  WWHD_FUNC(0x0234F8A4, void, a, flags);
-  if (a) {
-    gabi::call(0x025D50BC, a, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, a);
-  }
+    if (a) {
+        hami3_call::destroyActor(a, 0);
+        if (flags & 1)
+            hami3_call::deleteObject(a);
+    }
 }
-VERIFY(0x0234F8A4, destructor);
 } // namespace daObjHami3
+
+using namespace daObjHami3;
+/* WWHD glue (tools/verify/autoglue.py)
+data M_arcname 10029D98 nocheck
+data M_evname 10029D84 nocheck
+data jointName 10029D4C nocheck
+data assertFile1 10029CF4 nocheck
+data assertText1 10029D08 nocheck
+data assertFile2 10029D54 nocheck
+data assertText2 10029D68 nocheck
+data actorVtable 10029DA0 nocheck
+data safeStringVtable 10029CD4
+data currentModel 104B462C
+data calcMatrix 1018C7B0
+data saveInfo 101F84DC
+data resourceControl 101F4F28
+data currentOpaList 104B4634
+data currentXluList 104B4638
+data matrixStack 1048D0CC
+data M_tmp_mtx 10469D68
+data currentMatrix 104B4868
+data lowerBound 10029D90
+data upperBound 10029D94
+data cullMin 10469D4C
+data cullMax 10469D50
+data objectIds 10469D58 nocheck
+data vectorInit 10469D54
+data angleInit 10469D55
+data vectorDtor 101C9BC8
+data angleDtor 101C9BD4
+data matrixDtor 101C9BE0
+*/

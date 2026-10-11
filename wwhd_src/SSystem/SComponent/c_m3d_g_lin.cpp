@@ -1,64 +1,71 @@
-/* WWHD c_m3d_g_lin: the HD translation unit of cM3dGLin (line segment), linked between
- * c_m3d_g_cyl and c_m3d_g_pla. In HD the header-inline methods are emitted out of line here.
- * (decompiled from the game; see wwhd_src/README.md). */
-#include "wwhd.h"
-#include "gabi.h"
-struct M3dGLinVec_l { be<f32> x,y,z; };
-WWHD_SIZE(M3dGLinVec_l,12);
-namespace c_m3d_g_lin {
-/* cM3dGLin::cM3dGLin(const cXyz& start, const cXyz& end) (GHS form: allocates when this==0) */
-u32 ctor(u32 self,u32 start,u32 end) {
- WWHD_FUNC(0x02018780,u32,self,start,end);
- if(!self){self=gabi::call<u32>(0x0273AD10,0x1Cu);if(!self)return 0;}
- gabi::store<u32>(self+0x18,0x10003374);
- gabi::store<u32>(self+0,gabi::load<u32>(start+0));gabi::store<u32>(self+4,gabi::load<u32>(start+4));gabi::store<u32>(self+8,gabi::load<u32>(start+8));
- gabi::store<u32>(self+0xC,gabi::load<u32>(end+0));gabi::store<u32>(self+0x10,gabi::load<u32>(end+4));gabi::store<u32>(self+0x14,gabi::load<u32>(end+8));
- return self;
+/**
+ * c_m3d_g_lin.cpp
+ * Component - line segments
+ * HD emits the GameCube header-inline methods out of line in this translation unit.
+ */
+#include "SSystem/SComponent/c_m3d_g_lin.h"
+#include "bindings.h" /* the header stays light: d/d_bg_s.h includes it */
+void PSVECSubtract(const cXyz* a, const cXyz* b, cXyz* out); /* moved from the header (actors define their own) */
+#include <bit>
+
+enum : u32 { lineVtable = 0x10003374 }; // HD: cM3dGLin vtable.
+
+/* 02018780 */
+// HD: GHS constructor allocates when called with NULL.
+static cM3dGLin* cM3dGLin__ct(cM3dGLin* i_this, const cXyz* start, const cXyz* end) {
+    if (i_this == NULL) {
+        i_this = (cM3dGLin*)operator_new(sizeof(cM3dGLin));
+        if (i_this == NULL) {
+            return NULL;
+        }
+    }
+    i_this->__vtbl = lineVtable;
+    i_this->mStart = *start;
+    i_this->mEnd = *end;
+    return i_this;
 }
-VERIFY(0x02018780,ctor);
-/* cM3dGLin::SetStartEnd(const cXyz&, const cXyz&): cXyz copy assignment (word copies) */
-void SetStartEnd_cXyz(u32 self,u32 start,u32 end) {
- WWHD_FUNC(0x02018808,void,self,start,end);
- gabi::store<u32>(self+0,gabi::load<u32>(start+0));gabi::store<u32>(self+4,gabi::load<u32>(start+4));gabi::store<u32>(self+8,gabi::load<u32>(start+8));
- gabi::store<u32>(self+0xC,gabi::load<u32>(end+0));gabi::store<u32>(self+0x10,gabi::load<u32>(end+4));gabi::store<u32>(self+0x14,gabi::load<u32>(end+8));
+
+/* 02018808 */
+void cM3dGLin::SetStartEnd(const cXyz* start, const cXyz* end) {
+    mStart = *start;
+    mEnd = *end;
 }
-VERIFY(0x02018808,SetStartEnd_cXyz);
-/* cM3dGLin::SetStartEnd(const Vec&, const Vec&): cXyz::set(Vec), lfs/stfs pairs. In the recompiled
- * original a direct lfs->stfs pair keeps the bits (the host folds the single->double->single round
- * trip, so a signalling NaN is not quieted); fcopy models that: bit copy, marked as a float store. */
-static void fcopy(u32 dst,u32 src) { u32 v=gabi::load<u32>(src); f32 f; memcpy(&f,&v,4); gabi::store<f32>(dst,f); }
-void SetStartEnd_Vec(u32 self,u32 start,u32 end) {
- WWHD_FUNC(0x0201883C,void,self,start,end);
- fcopy(self+0,start+0);fcopy(self+4,start+4);fcopy(self+8,start+8);
- fcopy(self+0xC,end+0);fcopy(self+0x10,end+4);fcopy(self+0x14,end+8);
+
+// HD: direct lfs/stfs pairs keep the original bits, even for signalling NaNs.
+// Preserve the float-store event while avoiding a conversion through double.
+static void copyFloatWord(be<f32>* dst, const be<f32>* src) {
+    u32 word = *reinterpret_cast<const be<u32>*>(src);
+    *dst = std::bit_cast<f32>(word);
 }
-VERIFY(0x0201883C,SetStartEnd_Vec);
-/* cM3dGLin::SetEnd(const cXyz&) */
-void SetEnd(u32 self,u32 pos) {
- WWHD_FUNC(0x02018870,void,self,pos);
- gabi::store<u32>(self+0xC,gabi::load<u32>(pos+0));gabi::store<u32>(self+0x10,gabi::load<u32>(pos+4));gabi::store<u32>(self+0x14,gabi::load<u32>(pos+8));
+
+/* 0201883C */
+void cM3dGLin::SetStartEndVec(const cXyz* start, const cXyz* end) {
+    copyFloatWord(&mStart.x, &start->x);
+    copyFloatWord(&mStart.y, &start->y);
+    copyFloatWord(&mStart.z, &start->z);
+    copyFloatWord(&mEnd.x, &end->x);
+    copyFloatWord(&mEnd.y, &end->y);
+    copyFloatWord(&mEnd.z, &end->z);
 }
-VERIFY(0x02018870,SetEnd);
-/* cM3dGLin::CalcPos(Vec* out, f32 scale) const: out = start + (end - start) * scale */
-void CalcPos(u32 self,u32 out,f32 scale) {
- WWHD_FUNC(0x0201888C,void,self,out,scale);
- gabi::Local<M3dGLinVec_l> tmp;
- gabi::call<void>(0x028E8DAC,gabi::at<void>(self+0xC),gabi::at<void>(self),tmp.get());
- gabi::call<void>(0x028E8E64,tmp.get(),tmp.get(),scale);
- gabi::call<void>(0x028E8D88,tmp.get(),gabi::at<void>(self),gabi::at<void>(out));
+
+/* 02018870 */
+void cM3dGLin::SetEnd(const cXyz* pos) {
+    mEnd = *pos;
 }
-VERIFY(0x0201888C,CalcPos);
-/* TU static initializer (header statics only) */
-void hd_static_init_0201890C() {
- WWHD_FUNC(0x0201890C,void);
- gabi::store<u32>(0x101FF940,0);gabi::store<u32>(0x101FF938,0);gabi::store<u32>(0x101FF944,0);gabi::store<u32>(0x101FF93C,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C964));
- f32 negativePi=gabi::load<f32>(0x1000338C),positivePi=gabi::load<f32>(0x10003390);
- gabi::store<f32>(0x101FF92C,negativePi);gabi::store<f32>(0x101FF930,positivePi);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF934));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C970));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF935));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C97C));
+
+/* 0201888C */
+void cM3dGLin::CalcPos(cXyz* out, f32 scale) {
+    gabi::Local<cXyz> tmp;
+    PSVECSubtract(&mEnd, &mStart, tmp.get());
+    PSVECScale(tmp.get(), tmp.get(), scale);
+    PSVECAdd(tmp.get(), &mStart, out);
 }
-VERIFY(0x0201890C,hd_static_init_0201890C);
+
+/* 0201890C */
+static void __sinit_c_m3d_g_lin_cpp() {
+    sinit_header_statics_rodata(0x101FF92C, 0x1018C964, 0x101FF938, 0x1000338C);
 }
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 028E8DAC void PSVECSubtract(const cXyz*, const cXyz*, cXyz*)
+*/

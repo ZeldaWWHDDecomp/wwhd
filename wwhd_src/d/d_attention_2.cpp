@@ -1,34 +1,10 @@
 /* d_attention part 2: the lock-on lists and the lock-on state machine (initList .. runSoundProc).
  * WWHD. See d_attention.cpp for the unit's range and
  * layouts. Calls to functions of the other parts go by address. */
-#include "bindings.h"
+#include "d/d_attention.h"
 
-namespace d_attention_2_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void cSAngle_ct_l(u32 a) { gabi::call(0x020065FC, a); }
-static inline void cSAngle_mi_l(u32 a, u32 res, s16 v) { gabi::call(0x02006908, a, res, v); }
-static inline void cSGlobe_ct_l(u32 g, u32 v) { gabi::call(0x02007324, g, v); }
-static inline void cXyz_mi_l(u32 a, u32 res, u32 b) { gabi::call(0x0201ADE0, a, res, b); }
-static inline void memcpy_l(u32 d, u32 s, u32 n) { gabi::call(0xC000A848, d, s, n); }
-static inline void fopAcIt_Executor_l(u32 fn, u32 data) { gabi::call(0x025D51DC, fn, data); }
-static inline BOOL mDoCPd_L_LOCK_BUTTON_l(u32 pad) { return gabi::call<BOOL>(0x02007CA4, pad); }
-static inline f32 CPad_GET_STICK_POS_Y_l(u32 pad) { return gabi::call<f32>(0x02007990, pad); }
-static inline void mDoAud_bgmNowBattle_l(f32 v) { gabi::call(0x025E1DD8, v); }
-
-/* functions of part 1 */
-static inline f32 calcWeight_l(u32 t, s32 type, u32 ac, f32 d, s32 a1, s32 a2, u32 out) {
-    return gabi::call<f32>(0x024EB2D4, t, type, ac, d, a1, a2, out);
-}
-static inline void setActor_l(u32 e, u32 ac) { gabi::call(0x024EB524, e, ac); }
-static inline u32 getActor_l(u32 e) { return gabi::call<u32>(0x024EBA14, e); }
-static inline s32 check_event_condition_l(u32 type, u32 cond) { return gabi::call<s32>(0x024EAFE4, type, cond); }
-static inline s32 check_flontofplayer_l(u32 mask, s32 a1, s32 a2) { return gabi::call<s32>(0x024EB030, mask, a1, a2); }
-static inline s32 check_distace_l(u32 pp, s32 a, u32 ap, f32 b, f32 m, f32 mx, f32 mn) {
-    return gabi::call<s32>(0x024EB198, pp, a, ap, b, m, mx, mn);
-}
-static inline f32 distace_weight_l(f32 d, s32 a, f32 r) { return gabi::call<f32>(0x024EB0D8, d, a, r); }
-
+// HD: endian-aware image accesses retained for word copies and dynamic virtual slots.
+namespace AttentionMemory2 {
 static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
 static inline u16 ld16(u32 a) { return gabi::load<u16>(a); }
 static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
@@ -37,58 +13,98 @@ static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
 static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
 static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
 static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
+} // namespace AttentionMemory2
+
+u32 att2_searchActor(u32, u32);
+
+/* ---- local bindings (SHARED-CANDIDATE) ---- */
+void att2_cSAngle_ct(u32 a);
+void att2_cSAngle_mi(u32 a, u32 res, s16 v);
+void att2_cSGlobe_ct(u32 g, u32 v);
+void att2_cXyz_mi(u32 a, u32 res, u32 b);
+void att2_memcpy(u32 d, u32 s, u32 n);
+void att2_fopAcIt_Executor(u32 fn, u32 data);
+BOOL att2_mDoCPd_L_LOCK_BUTTON(u32 pad);
+f32 att2_CPad_GET_STICK_POS_Y(u32 pad);
+void att2_mDoAud_bgmNowBattle(f32 v);
+
+/* functions of part 1 */
+f32 att2_calcWeight(u32 t, s32 type, u32 ac, f32 d, s32 a1, s32 a2, u32 out);
+void att2_setActor(u32 e, u32 ac);
+u32 att2_getActor(u32 e);
+s32 att2_check_event_condition(u32 type, u32 cond);
+s32 att2_check_flontofplayer(u32 mask, s32 a1, s32 a2);
+s32 att2_check_distace(u32 pp, s32 a, u32 ap, f32 b, f32 m, f32 mx, f32 mn);
+f32 att2_distace_weight(f32 d, s32 a, f32 r);
+
 static inline u32 searchByID(u32 id) {
     gabi::Local<be<u32>> key;
     *key = id;
-    if (id == 0xFFFFFFFFu) return 0;
-    return gabi::call<u32>(0x025D5218, 0x025E1234u, key.get());
+    if (id == 0xFFFFFFFFu)
+        return 0;
+    return att2_searchActor(0x025E1234u, gabi::ea(key.get()));
 }
 
-struct cXyz_l { be<f32> x, y, z; };
-struct cSGlobe_l { be<f32> r; be<s16> v, u; };
-struct dAttList_l { be<f32> w, d; be<u32> type, id; };
-
 enum : u32 { DIST_TABLE = 0x101D3CC0, LOC_TYPE_NUM = 0x101D5180, LOC_TYPE_TBL = 0x101D5188 };
-enum : u32 { AC_ATTN_DIST = 0x388, AC_ATTN_POS = 0x390, AC_ATTN_FLAGS = 0x39C, AC_EVT_COND = 0xFA, AC_SHAPE_Y = 0x32A };
+enum : u32 {
+    AC_ATTN_DIST = 0x388,
+    AC_ATTN_POS = 0x390,
+    AC_ATTN_FLAGS = 0x39C,
+    AC_EVT_COND = 0xFA,
+    AC_SHAPE_Y = 0x32A
+};
 /* dAttention_c */
-enum : u32 { A_PLAYER = 0, A_TARGETID = 4, A_PADNO = 0xC, A_FLAGMASK = 0x10, A_LOCKSTATE = 0x18, A_BUTTON = 0x1A,
-             A_FLAGS = 0x20, A_LLIST = 0x54, A_LCOUNT = 0xD4, A_LOFFSET = 0xD8, A_ALIST = 0xDC, A_ACOUNT = 0x11C,
-             A_AOFFSET = 0x120, A_ENEMYID = 0x168, A_ENEMYDIST = 0x16C };
+enum : u32 {
+    A_PLAYER = 0,
+    A_TARGETID = 4,
+    A_PADNO = 0xC,
+    A_FLAGMASK = 0x10,
+    A_LOCKSTATE = 0x18,
+    A_BUTTON = 0x1A,
+    A_FLAGS = 0x20,
+    A_LLIST = 0x54,
+    A_LCOUNT = 0xD4,
+    A_LOFFSET = 0xD8,
+    A_ALIST = 0xDC,
+    A_ACOUNT = 0x11C,
+    A_AOFFSET = 0x120,
+    A_ENEMYID = 0x168,
+    A_ENEMYDIST = 0x16C
+};
 
 /* 024EC6A8 */
 static void dAttention_c_initList(u32 i_this, u32 flagMask) {
-    WWHD_FUNC(0x024EC6A8, void, i_this, flagMask);
-    st(i_this + A_FLAGMASK, flagMask);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    self->mFlagMask = flagMask;
     for (s32 i = 0; i < 8; i++) {
-        setActor_l(i_this + A_LLIST + i * 0x10, 0);
-        stf(i_this + A_LLIST + i * 0x10, 3.4028235e+38f);
+        att2_setActor(i_this + A_LLIST + i * 0x10, 0);
+        AttentionMemory2::stf(i_this + A_LLIST + i * 0x10, 3.4028235e+38f);
     }
-    st(i_this + A_LOFFSET, 0);
-    st(i_this + A_LCOUNT, 0);
+    self->mLockOnOffset = 0;
+    self->mLockonCount = 0;
     for (s32 i = 0; i < 4; i++) {
-        setActor_l(i_this + A_ALIST + i * 0x10, 0);
-        stf(i_this + A_ALIST + i * 0x10, 3.4028235e+38f);
+        att2_setActor(i_this + A_ALIST + i * 0x10, 0);
+        AttentionMemory2::stf(i_this + A_ALIST + i * 0x10, 3.4028235e+38f);
     }
-    st(i_this + A_AOFFSET, 0);
-    st(i_this + A_ACOUNT, 0);
+    self->mActionOffset = 0;
+    self->mActionCount = 0;
 }
-VERIFY(0x024EC6A8, dAttention_c_initList);
 
 /* 024EC72C */
 static s32 dAttention_c_makeList(u32 i_this) {
-    WWHD_FUNC(0x024EC72C, s32, i_this);
-    fopAcIt_Executor_l(0x024EB7E0 /* select_attention */, i_this);
-    return (s32)(ld(i_this + A_LCOUNT) + ld(i_this + A_ACOUNT));
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    att2_fopAcIt_Executor(0x024EB7E0 /* select_attention */, i_this);
+    return (s32)((u32)self->mLockonCount + (u32)self->mActionCount);
 }
-VERIFY(0x024EC72C, dAttention_c_makeList);
 
 static inline void sort(u32 i_this, u32 cntOff, u32 list, u32 swap) {
-    for (s32 i = 0; i < (s32)ld(i_this + cntOff) - 1; i++) {
-        for (s32 j = i + 1; j < (s32)ld(i_this + cntOff); j++) {
-            if (ldf(list + i * 0x10) > ldf(list + j * 0x10)) {
-                memcpy_l(swap, list + j * 0x10, 0x10);
-                memcpy_l(list + j * 0x10, list + i * 0x10, 0x10);
-                memcpy_l(list + i * 0x10, swap, 0x10);
+    for (s32 i = 0; i < (s32)AttentionMemory2::ld(i_this + cntOff) - 1; i++) {
+        for (s32 j = i + 1; j < (s32)AttentionMemory2::ld(i_this + cntOff); j++) {
+            if ((f32)AttentionHD::view<AttentionHD::List>(list)[i].mWeight >
+                (f32)AttentionHD::view<AttentionHD::List>(list)[j].mWeight) {
+                att2_memcpy(swap, list + j * 0x10, 0x10);
+                att2_memcpy(list + j * 0x10, list + i * 0x10, 0x10);
+                att2_memcpy(list + i * 0x10, swap, 0x10);
             }
         }
     }
@@ -96,210 +112,229 @@ static inline void sort(u32 i_this, u32 cntOff, u32 list, u32 swap) {
 
 /* 024EC770 */
 static void dAttention_c_sortList(u32 i_this) {
-    WWHD_FUNC(0x024EC770, void, i_this);
-    gabi::Local<dAttList_l> swap;
+    gabi::Local<AttentionHD::List> swap;
     sort(i_this, A_LCOUNT, i_this + A_LLIST, gabi::ea(swap.get()));
     sort(i_this, A_ACOUNT, i_this + A_ALIST, gabi::ea(swap.get()));
 }
-VERIFY(0x024EC770, dAttention_c_sortList);
 
-/* 024EC8D0: LockonTarget (matcher: ActionTarget; the matcher's LockonTarget 024EE464 is ActionTarget) */
+// HD: LockonTarget (matcher: ActionTarget; the matcher's LockonTarget 024EE464 is ActionTarget)
+/* 024EC8D0 */
 static u32 dAttention_c_LockonTarget(u32 i_this, s32 idx) {
-    WWHD_FUNC(0x024EC8D0, u32, i_this, idx);
-    s32 cnt = (s32)ld(i_this + A_LCOUNT);
-    if (idx >= cnt) return 0;
-    s32 listIdx = (s32)ld(i_this + A_LOFFSET) + idx;
-    if (listIdx >= cnt) listIdx -= cnt;
-    return getActor_l(i_this + A_LLIST + listIdx * 0x10);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    s32 cnt = (s32)(u32)self->mLockonCount;
+    if (idx >= cnt)
+        return 0;
+    s32 listIdx = (s32)(u32)self->mLockOnOffset + idx;
+    if (listIdx >= cnt)
+        listIdx -= cnt;
+    return att2_getActor(i_this + A_LLIST + listIdx * 0x10);
 }
-VERIFY(0x024EC8D0, dAttention_c_LockonTarget);
 
 /* 024EC908 */
 static u32 dAttention_c_stockAttention(u32 i_this, u32 interactMask) {
-    WWHD_FUNC(0x024EC908, u32, i_this, interactMask);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
     u32 pTarget = dAttention_c_LockonTarget(i_this, 0);
     dAttention_c_initList(i_this, interactMask);
-    if (dAttention_c_makeList(i_this) != 0) dAttention_c_sortList(i_this);
-    if (pTarget != getActor_l(i_this + A_LLIST)) {
+    if (dAttention_c_makeList(i_this) != 0)
+        dAttention_c_sortList(i_this);
+    if (pTarget != att2_getActor(i_this + A_LLIST)) {
         if (pTarget != 0) {
-            if (getActor_l(i_this + A_LLIST) != 0) st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 2 | 4);
-            else st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 4);
+            if (att2_getActor(i_this + A_LLIST) != 0)
+                self->mFlags = (u32)self->mFlags | 2 | 4;
+            else
+                self->mFlags = (u32)self->mFlags | 4;
         } else {
-            st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 1 | 4);
+            self->mFlags = (u32)self->mFlags | 1 | 4;
         }
     }
     return dAttention_c_LockonTarget(i_this, 0);
 }
-VERIFY(0x024EC908, dAttention_c_stockAttention);
 
 /* 024EC9D4 */
 static u32 dAttention_c_nextAttention(u32 i_this, u32 interactMask) {
-    WWHD_FUNC(0x024EC9D4, u32, i_this, interactMask);
-    u32 pTarget = searchByID(ld(i_this + A_TARGETID));
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    u32 pTarget = searchByID((u32)self->mLockonTargetID);
     dAttention_c_initList(i_this, interactMask);
-    if (dAttention_c_makeList(i_this) != 0) dAttention_c_sortList(i_this);
-    if (pTarget == getActor_l(i_this + A_LLIST) && (s32)ld(i_this + A_LCOUNT) > 1) st(i_this + A_LOFFSET, 1);
+    if (dAttention_c_makeList(i_this) != 0)
+        dAttention_c_sortList(i_this);
+    if (pTarget == att2_getActor(i_this + A_LLIST) && (s32)(u32)self->mLockonCount > 1)
+        self->mLockOnOffset = 1;
     return dAttention_c_LockonTarget(i_this, 0);
 }
-VERIFY(0x024EC9D4, dAttention_c_nextAttention);
 
 /* 024ECA8C */
 static s32 dAttention_c_freeAttention(u32 i_this) {
-    WWHD_FUNC(0x024ECA8C, s32, i_this);
-    st(i_this + A_AOFFSET, 0);
-    st(i_this + A_LOFFSET, 0);
-    st(i_this + A_ACOUNT, 0);
-    st(i_this + A_LCOUNT, 0);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    self->mActionOffset = 0;
+    self->mLockOnOffset = 0;
+    self->mActionCount = 0;
+    self->mLockonCount = 0;
     dAttention_c_initList(i_this, 0xFFFFFFFF);
     return 0;
 }
-VERIFY(0x024ECA8C, dAttention_c_freeAttention);
 
-/* 024ECAC8: chkAttMask (not named by the matcher) */
+// HD: chkAttMask (not named by the matcher)
+/* 024ECAC8 */
 static u32 dAttention_c_chkAttMask(u32 i_this, u32 type, u32 mask) {
-    WWHD_FUNC(0x024ECAC8, u32, i_this, type, mask);
-    s32 num = (s32)ld(LOC_TYPE_NUM);
+    s32 num = (s32)(u32)*AttentionHD::view<be<u32>>(LOC_TYPE_NUM);
     for (s32 i = 0; i < num; i++) {
-        if (type == (u32)(s32)lds16(LOC_TYPE_TBL + i * 4)) return mask & ld16(LOC_TYPE_TBL + i * 4 + 2);
+        if (type == (u32)(s32)AttentionMemory2::lds16(LOC_TYPE_TBL + i * 4))
+            return mask & AttentionMemory2::ld16(LOC_TYPE_TBL + i * 4 + 2);
     }
     return 1;
 }
-VERIFY(0x024ECAC8, dAttention_c_chkAttMask);
 
 /* 024ECB08 */
 static bool dAttention_c_chaseAttention(u32 i_this) {
-    WWHD_FUNC(0x024ECB08, bool, i_this);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
     gabi::Local<be<s16>> angle1;
     gabi::Local<be<s16>> res;
     gabi::Local<be<s16>> angle2;
     gabi::Local<be<u32>> type;
-    gabi::Local<cSGlobe_l> globe1;
-    gabi::Local<cXyz_l> d;
-    gabi::Local<cSGlobe_l> globe2;
-    cSAngle_ct_l(gabi::ea(angle1.get()));
-    cSAngle_ct_l(gabi::ea(angle2.get()));
-    u32 e = i_this + A_LLIST + ld(i_this + A_LOFFSET) * 0x10;
-    u32 actor = getActor_l(e);
-    if (actor == 0) return false;
-    cXyz_mi_l(actor + AC_ATTN_POS, gabi::ea(d.get()), ld(i_this + A_PLAYER) + AC_ATTN_POS);
-    cSGlobe_ct_l(gabi::ea(globe1.get()), gabi::ea(d.get()));
-    cSAngle_mi_l(gabi::ea(globe1.get()) + 6, gabi::ea(res.get()), lds16(ld(i_this + A_PLAYER) + AC_SHAPE_Y));
+    gabi::Local<AttentionHD::Globe> globe1;
+    gabi::Local<cXyz> d;
+    gabi::Local<AttentionHD::Globe> globe2;
+    att2_cSAngle_ct(gabi::ea(angle1.get()));
+    att2_cSAngle_ct(gabi::ea(angle2.get()));
+    u32 e = i_this + A_LLIST + (u32)self->mLockOnOffset * 0x10;
+    u32 actor = att2_getActor(e);
+    if (actor == 0)
+        return false;
+    att2_cXyz_mi(actor + AC_ATTN_POS, gabi::ea(d.get()), (u32)self->mpPlayer + AC_ATTN_POS);
+    att2_cSGlobe_ct(gabi::ea(globe1.get()), gabi::ea(d.get()));
+    att2_cSAngle_mi(gabi::ea(globe1.get()) + 6, gabi::ea(res.get()),
+                    AttentionMemory2::lds16((u32)self->mpPlayer + AC_SHAPE_Y));
     *angle1 = (s16)*res;
-    cXyz_mi_l(ld(i_this + A_PLAYER) + AC_ATTN_POS, gabi::ea(d.get()), actor + AC_ATTN_POS);
-    cSGlobe_ct_l(gabi::ea(globe2.get()), gabi::ea(d.get()));
-    cSAngle_mi_l(gabi::ea(globe2.get()) + 6, gabi::ea(res.get()), lds16(actor + AC_SHAPE_Y));
+    att2_cXyz_mi((u32)self->mpPlayer + AC_ATTN_POS, gabi::ea(d.get()), actor + AC_ATTN_POS);
+    att2_cSGlobe_ct(gabi::ea(globe2.get()), gabi::ea(d.get()));
+    att2_cSAngle_mi(gabi::ea(globe2.get()) + 6, gabi::ea(res.get()),
+                    (s16)AttentionHD::view<fopAc_ac_c>(actor)->shape_angle.y);
     *angle2 = (s16)*res;
-    f32 weight = calcWeight_l(i_this, 'L', actor, globe1->r, *angle1, *angle2, gabi::ea(type.get()));
+    f32 weight = att2_calcWeight(i_this, 'L', actor, globe1->mRadius, *angle1, *angle2,
+                                 gabi::ea(type.get()));
     if (weight > 0.0f) {
-        setActor_l(e, actor);
-        stf(e + 4, globe1->r);
-        stf(e + 0, weight);
-        st(e + 8, *type);
+        att2_setActor(e, actor);
+        AttentionMemory2::stf(e + 4, globe1->mRadius);
+        AttentionMemory2::stf(e + 0, weight);
+        AttentionMemory2::st(e + 8, *type);
         return true;
     }
-    u32 t = ld(e + 8);
+    u32 t = (u32)AttentionHD::view<AttentionHD::List>(e)->mType;
     *type = t;
-    u32 flags = ld(actor + AC_ATTN_FLAGS);
-    u8 idx = ld8(actor + AC_ATTN_DIST + t);
-    if (dAttention_c_chkAttMask(i_this, t, flags) == 0) return false;
-    if (check_event_condition_l(t, ld16(actor + AC_EVT_COND)) != 0) return false;
+    u32 flags = (u32)AttentionHD::view<fopAc_ac_c>(actor)->attention_info.flags;
+    u8 idx = (u8)AttentionHD::view<fopAc_ac_c>(actor)->attention_info.distances[t];
+    if (dAttention_c_chkAttMask(i_this, t, flags) == 0)
+        return false;
+    if (att2_check_event_condition(
+            t, (u16)AttentionHD::view<fopAc_ac_c>(actor)->eventInfo.mCondition) != 0)
+        return false;
     u32 dt = DIST_TABLE + idx * 0x1C;
     s16 a1 = *angle1;
-    if (check_flontofplayer_l(ld(dt + 0x18), a1, *angle2) != 0) return false;
-    if (check_distace_l(ld(i_this + A_PLAYER) + AC_ATTN_POS, a1, actor + AC_ATTN_POS, ldf(dt + 4), ldf(dt + 8),
-                        ldf(dt + 0xC), ldf(dt + 0x10)) == 0)
+    if (att2_check_flontofplayer(
+            (u32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mFrontAngleCheckBits, a1, *angle2) !=
+        0)
         return false;
-    stf(e + 0, distace_weight_l(globe1->r, *angle1, 0.5f));
+    if (att2_check_distace((u32)self->mpPlayer + AC_ATTN_POS, a1, actor + AC_ATTN_POS,
+                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZMaxRelease,
+                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDistXZAngleAdjust,
+                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMax,
+                           (f32)AttentionHD::view<AttentionHD::DistTbl>(dt)->mDeltaYMin) == 0)
+        return false;
+    AttentionMemory2::stf(e + 0, att2_distace_weight(globe1->mRadius, *angle1, 0.5f));
     return true;
 }
-VERIFY(0x024ECB08, dAttention_c_chaseAttention);
 
 static inline bool player_busy() {
-    if (ld(gabi::ea(dComIfGp_get()) + 0x5CD8) & 0x37A02371) return true;
-    return (ld(gabi::ea(dComIfGp_get()) + 0x5CDC) & 0x11) != 0;
+    if (AttentionMemory2::ld(gabi::ea(dComIfGp_get()) + 0x5CD8) & 0x37A02371)
+        return true;
+    return (AttentionMemory2::ld(gabi::ea(dComIfGp_get()) + 0x5CDC) & 0x11) != 0;
 }
 
 /* 024ECCFC */
 static void dAttention_c_judgementButton(u32 i_this) {
-    WWHD_FUNC(0x024ECCFC, void, i_this);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
     if (player_busy()) {
-        u8 b = ld8(i_this + A_BUTTON);
-        if (b < 1) return;
-        if (b <= 2) st8(i_this + A_BUTTON, 0);
+        u8 b = (u8)self->field_0x01a;
+        if (b < 1)
+            return;
+        if (b <= 2)
+            self->field_0x01a = 0;
         return;
     }
-    switch (ld8(i_this + A_BUTTON)) {
+    switch ((u8)self->field_0x01a) {
     case 0:
-        if (!mDoCPd_L_LOCK_BUTTON_l(ld(i_this + A_PADNO))) break;
-        st8(i_this + A_BUTTON, 1);
+        if (!att2_mDoCPd_L_LOCK_BUTTON((u32)self->mPadNo))
+            break;
+        self->field_0x01a = 1;
         break;
     case 1:
-        st8(i_this + A_BUTTON, 2);
+        self->field_0x01a = 2;
         /* fallthrough */
     case 2:
-        if (!mDoCPd_L_LOCK_BUTTON_l(ld(i_this + A_PADNO))) st8(i_this + A_BUTTON, 0);
+        if (!att2_mDoCPd_L_LOCK_BUTTON((u32)self->mPadNo))
+            self->field_0x01a = 0;
         break;
     }
 }
-VERIFY(0x024ECCFC, dAttention_c_judgementButton);
 
 /* 024ECDDC */
 static void dAttention_c_judgementTriggerProc(u32 i_this) {
-    WWHD_FUNC(0x024ECDDC, void, i_this);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
     if (dAttention_c_chaseAttention(i_this)) {
-        u32 f = ld(i_this + A_FLAGS);
-        st8(i_this + A_LOCKSTATE, 1);
-        st(i_this + A_FLAGS, f | 8);
+        u32 f = (u32)self->mFlags;
+        self->mLockOnState = 1;
+        self->mFlags = f | 8;
     }
 }
-VERIFY(0x024ECDDC, dAttention_c_judgementTriggerProc);
 
 /* 024ECE24 */
 static BOOL dAttention_c_judgementLostCheck(u32 i_this) {
-    WWHD_FUNC(0x024ECE24, BOOL, i_this);
-    if (dAttention_c_chaseAttention(i_this)) return FALSE;
-    u32 f = ld(i_this + A_FLAGS);
-    st8(i_this + A_LOCKSTATE, 0);
-    st(i_this + A_FLAGS, f | 0x10);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    if (dAttention_c_chaseAttention(i_this))
+        return FALSE;
+    u32 f = (u32)self->mFlags;
+    self->mLockOnState = 0;
+    self->mFlags = f | 0x10;
     dAttention_c_freeAttention(i_this);
-    st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 0x40);
+    self->mFlags = (u32)self->mFlags | 0x40;
     return TRUE;
 }
-VERIFY(0x024ECE24, dAttention_c_judgementLostCheck);
 
 /* 024ECE9C */
 static u32 dAttention_c_LockonTargetPId(u32 i_this, s32 idx) {
-    WWHD_FUNC(0x024ECE9C, u32, i_this, idx);
-    s32 cnt = (s32)ld(i_this + A_LCOUNT);
-    if (idx >= cnt) return 0;
-    s32 listIdx = (s32)ld(i_this + A_LOFFSET) + idx;
-    if (listIdx >= cnt) listIdx -= cnt;
-    return ld(i_this + A_LLIST + listIdx * 0x10 + 0xC);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    s32 cnt = (s32)(u32)self->mLockonCount;
+    if (idx >= cnt)
+        return 0;
+    s32 listIdx = (s32)(u32)self->mLockOnOffset + idx;
+    if (listIdx >= cnt)
+        listIdx -= cnt;
+    return AttentionMemory2::ld(i_this + A_LLIST + listIdx * 0x10 + 0xC);
 }
-VERIFY(0x024ECE9C, dAttention_c_LockonTargetPId);
 
 /* 024ECED4 */
 static void dAttention_c_judgementStatusSw(u32 i_this, u32 interactMask) {
-    WWHD_FUNC(0x024ECED4, void, i_this, interactMask);
-    switch (ld8(i_this + A_LOCKSTATE)) {
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    switch ((u8)self->mLockOnState) {
     case 0:
-        st(i_this + A_TARGETID, 0xFFFFFFFF);
+        self->mLockonTargetID = 0xFFFFFFFF;
         dAttention_c_stockAttention(i_this, interactMask);
-        if (ld8(i_this + A_BUTTON) == 1) dAttention_c_judgementTriggerProc(i_this);
+        if ((u8)self->field_0x01a == 1)
+            dAttention_c_judgementTriggerProc(i_this);
         break;
     case 1: {
         u32 id = dAttention_c_LockonTargetPId(i_this, 0);
-        u8 b = ld8(i_this + A_BUTTON);
-        st(i_this + A_TARGETID, id);
+        u8 b = (u8)self->field_0x01a;
+        self->mLockonTargetID = id;
         if (b == 1) {
-            f32 stickY = CPad_GET_STICK_POS_Y_l(ld(i_this + A_PADNO));
+            f32 stickY = att2_CPad_GET_STICK_POS_Y((u32)self->mPadNo);
             if (-0.9f < stickY && dAttention_c_nextAttention(i_this, interactMask) != 0 &&
-                (s32)ld(i_this + A_LCOUNT) > 1) {
-                st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 8);
+                (s32)(u32)self->mLockonCount > 1) {
+                self->mFlags = (u32)self->mFlags | 8;
             } else {
-                u32 f = ld(i_this + A_FLAGS);
-                st8(i_this + A_LOCKSTATE, 2);
-                st(i_this + A_FLAGS, f | 0x10);
+                u32 f = (u32)self->mFlags;
+                self->mLockOnState = 2;
+                self->mFlags = f | 0x10;
             }
         } else {
             dAttention_c_judgementLostCheck(i_this);
@@ -307,74 +342,91 @@ static void dAttention_c_judgementStatusSw(u32 i_this, u32 interactMask) {
         break;
     }
     case 2: {
-        u32 f = ld(i_this + A_FLAGS);
-        u8 b = ld8(i_this + A_BUTTON);
-        st(i_this + A_FLAGS, f | 0x40);
+        u32 f = (u32)self->mFlags;
+        u8 b = (u8)self->field_0x01a;
+        self->mFlags = f | 0x40;
         if (b == 1) {
-            st8(i_this + A_LOCKSTATE, 0);
+            self->mLockOnState = 0;
             dAttention_c_judgementTriggerProc(i_this);
-        } else if (dAttention_c_LockonTarget(i_this, 0) == 0 || !(ld(i_this + A_FLAGS) & 0x40000000)) {
-            st8(i_this + A_LOCKSTATE, 0);
+        } else if (dAttention_c_LockonTarget(i_this, 0) == 0 || !((u32)self->mFlags & 0x40000000)) {
+            self->mLockOnState = 0;
             dAttention_c_freeAttention(i_this);
         }
         break;
     }
     }
 }
-VERIFY(0x024ECED4, dAttention_c_judgementStatusSw);
 
 /* 024ED0A4 */
 static void dAttention_c_judgementStatusHd(u32 i_this, u32 interactMask) {
-    WWHD_FUNC(0x024ED0A4, void, i_this, interactMask);
-    switch (ld8(i_this + A_LOCKSTATE)) {
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    switch ((u8)self->mLockOnState) {
     case 0:
-        st(i_this + A_TARGETID, 0xFFFFFFFF);
+        self->mLockonTargetID = 0xFFFFFFFF;
         dAttention_c_stockAttention(i_this, interactMask);
-        if (ld8(i_this + A_BUTTON) == 1) dAttention_c_judgementTriggerProc(i_this);
+        if ((u8)self->field_0x01a == 1)
+            dAttention_c_judgementTriggerProc(i_this);
         break;
     case 1:
-        st(i_this + A_TARGETID, dAttention_c_LockonTargetPId(i_this, 0));
-        if (dAttention_c_judgementLostCheck(i_this) == 0 && ld8(i_this + A_BUTTON) == 0) {
-            u32 f = ld(i_this + A_FLAGS);
-            st8(i_this + A_LOCKSTATE, 2);
-            st(i_this + A_FLAGS, f | 0x10);
+        self->mLockonTargetID = dAttention_c_LockonTargetPId(i_this, 0);
+        if (dAttention_c_judgementLostCheck(i_this) == 0 && (u8)self->field_0x01a == 0) {
+            u32 f = (u32)self->mFlags;
+            self->mLockOnState = 2;
+            self->mFlags = f | 0x10;
         }
         break;
     case 2: {
-        u32 f = ld(i_this + A_FLAGS);
-        u8 b = ld8(i_this + A_BUTTON);
-        st(i_this + A_FLAGS, f | 0x40);
+        u32 f = (u32)self->mFlags;
+        u8 b = (u8)self->field_0x01a;
+        self->mFlags = f | 0x40;
         if (b == 1) {
             if (dAttention_c_nextAttention(i_this, interactMask) != 0) {
-                u32 f2 = ld(i_this + A_FLAGS);
-                st8(i_this + A_LOCKSTATE, 1);
-                st(i_this + A_FLAGS, f2 | 8);
+                u32 f2 = (u32)self->mFlags;
+                self->mLockOnState = 1;
+                self->mFlags = f2 | 8;
                 break;
             }
-        } else if (dAttention_c_LockonTarget(i_this, 0) != 0 && (ld(i_this + A_FLAGS) & 0x40000000)) {
+        } else if (dAttention_c_LockonTarget(i_this, 0) != 0 && ((u32)self->mFlags & 0x40000000)) {
             break;
         }
-        st8(i_this + A_LOCKSTATE, 0);
+        self->mLockOnState = 0;
         dAttention_c_freeAttention(i_this);
         break;
     }
     }
 }
-VERIFY(0x024ED0A4, dAttention_c_judgementStatusHd);
 
 /* 024ED200 */
 static void dAttention_c_runSoundProc(u32 i_this) {
-    WWHD_FUNC(0x024ED200, void, i_this);
-    u32 f = ld(i_this + A_FLAGS);
-    st(i_this + A_ENEMYID, 0xFFFFFFFF);
-    stf(i_this + A_ENEMYDIST, 10000.0f);
-    if (f & 0x80000000) return;
-    fopAcIt_Executor_l(0x024EB88C /* sound_attention */, i_this);
-    if (searchByID(ld(i_this + A_ENEMYID)) != 0) {
-        mDoAud_bgmNowBattle_l(ldf(i_this + A_ENEMYDIST) * 0.1f);
-        st(i_this + A_FLAGS, ld(i_this + A_FLAGS) | 0x100);
+    auto* self = AttentionHD::view<AttentionHD::Attention>(i_this);
+    u32 f = (u32)self->mFlags;
+    self->mEnemyID = 0xFFFFFFFF;
+    self->mEnemyDistance = 10000.0f;
+    if (f & 0x80000000)
+        return;
+    att2_fopAcIt_Executor(0x024EB88C /* sound_attention */, i_this);
+    if (searchByID((u32)self->mEnemyID) != 0) {
+        att2_mDoAud_bgmNowBattle((f32)self->mEnemyDistance * 0.1f);
+        self->mFlags = (u32)self->mFlags | 0x100;
     }
 }
-VERIFY(0x024ED200, dAttention_c_runSoundProc);
 
-} // namespace d_attention_2_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+ext 020065FC void att2_cSAngle_ct(u32)
+ext 02006908 void att2_cSAngle_mi(u32,u32,s16)
+ext 02007324 void att2_cSGlobe_ct(u32,u32)
+ext 0201ADE0 void att2_cXyz_mi(u32,u32,u32)
+ext C000A848 void att2_memcpy(u32,u32,u32)
+ext 025D51DC void att2_fopAcIt_Executor(u32,u32)
+ext 02007CA4 BOOL att2_mDoCPd_L_LOCK_BUTTON(u32)
+ext 02007990 f32 att2_CPad_GET_STICK_POS_Y(u32)
+ext 025E1DD8 void att2_mDoAud_bgmNowBattle(f32)
+ext 024EB2D4 f32 att2_calcWeight(u32,s32,u32,f32,s32,s32,u32)
+ext 024EB524 void att2_setActor(u32,u32)
+ext 024EBA14 u32 att2_getActor(u32)
+ext 024EAFE4 s32 att2_check_event_condition(u32,u32)
+ext 024EB030 s32 att2_check_flontofplayer(u32,s32,s32)
+ext 024EB198 s32 att2_check_distace(u32,s32,u32,f32,f32,f32,f32)
+ext 024EB0D8 f32 att2_distace_weight(f32,s32,f32)
+ext 025D5218 u32 att2_searchActor(u32,u32)
+*/

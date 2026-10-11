@@ -1,28 +1,51 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_command_a {
-u32 ready(u32 self) {
- WWHD_FUNC(0x02647CC0,u32,self);
- if(!load<u8>(self+0x74)) return 0;
- if(load<u8>(call<u32>(0x025200D4)+0x5292)) return 0;
- if(load<u32>(call<u32>(0x025200D4)+0x5CD8)&0x11) { store<u32>(self+0x70,1); return 0; }
- return 1;
+/** HD A-button command visibility and waiting states; private decomp source. */
+#include "bindings.h"
+#include "d/hd_screen_command_a.h"
+static hdHudStateDescriptor sCommandActiveState;
+static hdHudStateDescriptor sCommandWaitState;
+
+/* 02647CC0 */
+static u32 isCommandAReady(hdHudCommandA* i_this) {
+    if (i_this->mEnabled == 0) {
+        return 0;
+    }
+    if (dComIfGp_getEvent()->runCheck()) {
+        return 0;
+    }
+    dComIfG_inf_c* game = (dComIfG_inf_c*)dComIfGp_get();
+    if (game->play.mPlayerStatus[0][0] & 0x11) {
+        i_this->mWaitTimer = 1;
+        return 0;
+    }
+    return 1;
 }
-VERIFY(0x02647CC0,ready);
-void wait(u32 self) {
- WWHD_FUNC(0x02647D50,void,self);
- if(!call<u32>(0x02647CC0,self)) return;
- u32 n=load<u32>(self+0x70);
- if(n) store<u32>(self+0x70,n-1);
- else call<void>(0x020063C0,self+0x18,0x1049118Cu);
+
+/* 02647D50 */
+static void waitCommandA(hdHudCommandA* i_this) {
+    if (!isCommandAReady(i_this)) {
+        return;
+    }
+    u32 timer = i_this->mWaitTimer;
+    if (timer != 0) {
+        i_this->mWaitTimer = timer - 1;
+    } else {
+        hdHudChangeState(&i_this->mStateMachine, &sCommandActiveState);
+    }
 }
-VERIFY(0x02647D50,wait);
-void waitUpdate(u32 self) {
- WWHD_FUNC(0x02647E48,void,self);
- u32 n=load<u32>(self+0x70);
- if(n) store<u32>(self+0x70,n-1);
- else if(!call<u32>(0x02647CC0,self)) call<void>(0x020063C0,self+0x18,0x104911ECu);
- call_ptr<void>(load<u32>(load<u32>(self+4)+0x8C),self);
+
+/* 02647E48 */
+static void updateCommandAWait(hdHudCommandA* i_this) {
+    u32 timer = i_this->mWaitTimer;
+    if (timer != 0) {
+        i_this->mWaitTimer = timer - 1;
+    } else if (!isCommandAReady(i_this)) {
+        hdHudChangeState(&i_this->mStateMachine, &sCommandWaitState);
+    }
+    i_this->update();
 }
-VERIFY(0x02647E48,waitUpdate);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): HD command states
+ data sCommandActiveState 1049118C
+ data sCommandWaitState 104911EC
+ ext 020063C0 void hdHudChangeState(hdHudStateMachine*, hdHudStateDescriptor*)
+*/

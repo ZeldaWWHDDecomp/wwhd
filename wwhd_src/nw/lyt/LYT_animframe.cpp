@@ -1,89 +1,94 @@
-#include "wwhd.h"
-using namespace gabi;
-// Reconstructed solely from the WWHD instructions. No SDK implementation template.
-namespace {
-struct Animator_l {
-    u8 links[8];
-    gptr<void> resource;
-    be<f32> frame;
-    u8 pad10[0x14];
-    be<f32> speed;
-    be<u32> playType;
-    be<u32> flags;
-};
-WWHD_OFFSET(Animator_l,resource,0x8);
-WWHD_OFFSET(Animator_l,frame,0xC);
-WWHD_OFFSET(Animator_l,speed,0x24);
-WWHD_OFFSET(Animator_l,playType,0x28);
-WWHD_OFFSET(Animator_l,flags,0x2C);
-static f32 frameCount(u32 animator) { return (f32)call<u32>(0x028713B8,animator); }
-}
-void Animator_UpdateFrame(u32 self) {
-    WWHD_FUNC(0x02872DFC,void,self);
-    f32 zero=load<f32>(0x1017FFC8);
-    u32 flags=load<u32>(self+0x2C);
-    f32 speed=load<f32>(self+0x24);
-    store<u32>(self+0x2C,flags&~7u);
-    if(speed==zero) return;
-    f32 frame=load<f32>(self+0xC)+speed;
-    if(speed>zero) {
-        f32 end=frameCount(self);
-        if(!(frame<end)) {
-            u32 type=load<u32>(self+0x28);
-            if(type==0) {
-                frame=frameCount(self);
-                flags=load<u32>(self+0x2C);
-                store<f32>(self+0x24,zero);
-                store<u32>(self+0x2C,flags|1u);
-            } else if(type==1) {
-                f32 length=frameCount(self);
-                flags=load<u32>(self+0x2C);
-                store<u32>(self+0x2C,flags|2u);
-                frame=frame-length;
-            } else if(type==2) {
-                f32 end1=frameCount(self),end2=frameCount(self);
-                f32 currentSpeed=load<f32>(self+0x24);
-                flags=load<u32>(self+0x2C);
-                store<f32>(self+0x24,-currentSpeed);
-                store<u32>(self+0x2C,flags|2u);
-                frame=end1-(frame-end2);
+/** HD layout animation: update frame bounds and dispatch layout animation lists.
+ * Verified against LYT_animframe; no GameCube or SDK implementation template. */
+#include "nw/lyt/LYT_animframe.h"
+
+using FrameConstant = be<f32>;
+static FrameConstant l_zeroFrame;
+
+/* 02872DFC */
+void nw::lyt::Animator::UpdateFrame() {
+    f32 zero = l_zeroFrame;
+    u32 flags = mFlags;
+    f32 speed = mSpeed;
+    mFlags = flags & ~(FrameFlag_Ended | FrameFlag_ForwardWrap | FrameFlag_BackwardWrap);
+    if (speed == zero) return;
+    f32 frame = f32(mFrame) + speed;
+    if (speed > zero) {
+        f32 end = f32(LYTAnimator_getFrameCount(this));
+        if (!(frame < end)) {
+            switch (u32(mPlayType)) {
+            case PlayType_Once:
+                frame = f32(LYTAnimator_getFrameCount(this));
+                flags = mFlags;
+                mSpeed = zero;
+                mFlags = flags | FrameFlag_Ended;
+                break;
+            case PlayType_Loop: {
+                f32 length = f32(LYTAnimator_getFrameCount(this));
+                flags = mFlags;
+                mFlags = flags | FrameFlag_ForwardWrap;
+                frame = frame - length;
+                break;
+            }
+            case PlayType_Mirror: {
+                // HD: retain both count calls and reload speed/flags after they may clobber the animator.
+                f32 end1 = f32(LYTAnimator_getFrameCount(this));
+                f32 end2 = f32(LYTAnimator_getFrameCount(this));
+                f32 currentSpeed = mSpeed;
+                flags = mFlags;
+                mSpeed = -currentSpeed;
+                mFlags = flags | FrameFlag_ForwardWrap;
+                frame = end1 - (frame - end2);
+                break;
+            }
             }
         }
-    } else if(!(frame>zero)) {
-        u32 type=load<u32>(self+0x28);
-        if(type==0) {
-            flags=load<u32>(self+0x2C);
-            store<f32>(self+0x24,zero);
-            frame=zero;
-            store<u32>(self+0x2C,flags|1u);
-        } else if(type==1) {
-            f32 length=frameCount(self);
-            flags=load<u32>(self+0x2C);
-            store<u32>(self+0x2C,flags|4u);
-            frame=frame+length;
-        } else if(type==2) {
-            flags=load<u32>(self+0x2C);
-            store<f32>(self+0x24,-speed);
-            frame=-frame;
-            store<u32>(self+0x2C,flags|4u);
+    } else if (!(frame > zero)) {
+        switch (u32(mPlayType)) {
+        case PlayType_Once:
+            flags = mFlags;
+            mSpeed = zero;
+            frame = zero;
+            mFlags = flags | FrameFlag_Ended;
+            break;
+        case PlayType_Loop: {
+            f32 length = f32(LYTAnimator_getFrameCount(this));
+            flags = mFlags;
+            mFlags = flags | FrameFlag_BackwardWrap;
+            frame = frame + length;
+            break;
+        }
+        case PlayType_Mirror:
+            flags = mFlags;
+            mSpeed = -speed;
+            frame = -frame;
+            mFlags = flags | FrameFlag_BackwardWrap;
+            break;
         }
     }
-    store<f32>(self+0xC,frame);
+    mFrame = frame;
 }
-VERIFY(0x02872DFC,Animator_UpdateFrame);
-void Layout_UpdateAnimFrame(u32 self) {
-    WWHD_FUNC(0x0287FB68,void,self);
-    u32 sentinel=self+4,node=load<u32>(sentinel);
-    while(node!=sentinel) {
-        u32 vt=load<u32>(node+0x14),target=load<u32>(vt+0x1C);
-        call_ptr<void>(target,node);
-        node=load<u32>(node);
+
+/* 0287FB68 */
+void nw::lyt::Layout::UpdateAnimFrame() {
+    Animator* sentinel = reinterpret_cast<Animator*>(&mAnimators);
+    Animator* animator = mAnimators.mpNext;
+    while (animator != sentinel) {
+        AnimatorVtable* table = animator->__vtbl;
+        gabi::call_ptr<void>(table->mUpdateFrame, animator);
+        animator = animator->mLink.mpNext;
     }
-    sentinel=self+0x28;node=load<u32>(sentinel);
-    while(node!=sentinel) {
-        u32 part=load<u32>(node+8),vt=load<u32>(part+0x30),target=load<u32>(vt+0x54);
-        call_ptr<void>(target,part);
-        node=load<u32>(node);
+    PartLink* partSentinel = &mParts;
+    PartLink* link = mParts.mpNext;
+    while (link != partSentinel) {
+        Part* part = link->mpPart;
+        PartVtable* table = part->__vtbl;
+        gabi::call_ptr<void>(table->mUpdateAnimFrame, part);
+        link = link->mpNext;
     }
 }
-VERIFY(0x0287FB68,Layout_UpdateAnimFrame);
+
+/* WWHD glue (tools/verify/autoglue.py):
+data l_zeroFrame 1017FFC8
+ext 028713B8 u32 LYTAnimator_getFrameCount(nw::lyt::Animator*)
+*/

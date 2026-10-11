@@ -9,44 +9,55 @@
  */
 #include "d/actor/d_a_obj_buoyflag.h"
 
-#define M_arcname STR(0x10026530) /* "Cloth" */
+#define M_arcname "Cloth" /* "Cloth" */
 #define ACT_VTBL 0x10026570
 #define PACKET_VTBL 0x10026860
 
 namespace daObjBuoyflag {
+static void* elem10_ct(void*);
+static void* vtx_ct(void*);
+static void* vtx_ct2(void*);
+using ModeProc = gabi::ptmf<BOOL (Act_c::*)()>;
+struct ModeTable {
+    ModeProc entries[2];
+};
+static ModeProc modeInitial[2] = {&Act_c::mode_afl, &Act_c::mode_jumpToSea};
+static ModeTable modeTable;
+static u32 modeInitialized;
 
-/* 0232EDC4: daObj::PrmAbstract<Act_c::Prm_e>(actor, width, shift) (per TU) */
+// HD: daObj::PrmAbstract<Act_c::Prm_e>(actor, width, shift) (per TU)
+/* 0232EDC4 */
 u32 PrmAbstract(fopAc_ac_c* a, s32 width, s32 shift) {
-    WWHD_FUNC(0x0232EDC4, u32, a, width, shift);
+
     u32 sh = (u32)shift & 63, wd = (u32)width & 63;
     u32 v = sh < 32 ? fopAcM_GetParam(a) >> sh : 0;
     u32 m = (wd < 32 ? 1u << wd : 0u) - 1;
     return v & m;
 }
-VERIFY(0x0232EDC4, PrmAbstract);
 
 /* 0232CD40 */
 void Act_c::mtx_init() {
-    WWHD_FUNC(0x0232CD40, void, this);
+
     PSMTXTrans(mDoMtx_stack_c::get(), current.pos.x, current.pos.y, current.pos.z);
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
-    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
+    PSMTXCopy(mDoMtx_stack_c::get(), &m1090);
     PSMTXCopy(mDoMtx_stack_c::get(), &mOldMtx);
 }
-VERIFY(0x0232CD40, &Act_c::mtx_init);
 
-/* 0232CDB4: afloat (follows the setup matrix given by the parent) */
+// HD: afloat (follows the setup matrix given by the parent)
+// HD: the mode returns a continuation flag in WWHD.
+/* 0232CDB4 */
 BOOL Act_c::mode_afl() {
-    WWHD_FUNC(0x0232CDB4, BOOL, this);
-    f32 z = mMtx.m[2][3];
-    f32 y = mMtx.m[1][3];
-    f32 x = mMtx.m[0][3];
+
+    f32 z = m1090.m[2][3];
+    f32 y = m1090.m[1][3];
+    f32 x = m1090.m[0][3];
     current.pos.y = y;
     current.pos.x = x;
     current.pos.z = z;
     mPacket.calc(this);
     fopAcM_setCullSizeSphere(this, 0.0f, 50.0f * scale.y, 0.0f, 90.0f * scale.x);
-    if (attr_type(this, 0x10026730, 0x10026748)->mCc) {
+    if (attr_type(this, "d_a_obj_buoyflag.cpp", "(M_type >= 0) && (M_type < Type_Max)")->mCc) {
         f32 sx = scale.x;
         f32 r = sx * 5.0f;
         f32 sy = scale.y;
@@ -61,12 +72,12 @@ BOOL Act_c::mode_afl() {
     }
     return TRUE;
 }
-VERIFY(0x0232CDB4, &Act_c::mode_afl);
 
-/* 0232CF30: thrown into the sea (spins about a random axis, sinks) */
+// HD: thrown into the sea (spins about a random axis, sinks)
+/* 0232CF30 */
 BOOL Act_c::mode_jumpToSea() {
-    WWHD_FUNC(0x0232CF30, BOOL, this);
-    if (mbInit) {
+
+    if (m1128) {
         mRotSpeed = 1000.0f;
         gravity = -8.0f;
         mRotAngle = 0;
@@ -98,32 +109,36 @@ BOOL Act_c::mode_jumpToSea() {
     mDoMtx_stack_transM(0.0f, 60.0f, 0.0f);
     C_QUATRotAxisRad(mDoMtx_quatStack_get(), &mRotAxis, (f32)(s16)mRotAngle * 9.58738e-05f);
     mDoMtx_stack_quatM(mDoMtx_quatStack_get());
-    PSMTXConcat_l(mDoMtx_stack_c::get(), &mJumpMtx, mDoMtx_stack_c::get());
+    buoyflag_concatMatrix(mDoMtx_stack_c::get(), &m10F0, mDoMtx_stack_c::get());
     mDoMtx_stack_transM(0.0f, -60.0f, 0.0f);
-    PSMTXCopy(mDoMtx_stack_c::get(), &mMtx);
+    PSMTXCopy(mDoMtx_stack_c::get(), &m1090);
     mPacket.calc(this);
     return TRUE;
 }
-VERIFY(0x0232CF30, &Act_c::mode_jumpToSea);
 
-void hasi_nrm_init_call() { gabi::call(0x0232BCE0); }
+void hasi_nrm_init_call() { buoyflag_call_hasi_nrm_init(); }
 
 /* GHS inline constructor of a sub-object at `p`: allocates when the address is NULL */
 static inline u32 inl_ct(u32 p, u32 size) {
-    if (p == 0) p = gabi::ea(operator_new(size));
+    if (p == 0)
+        p = gabi::ea(operator_new(size));
     return p;
 }
-static inline void bzero_l(u32 p, u32 n) { gabi::call(0x028F521C, p, n); }
-static inline void construct_array(u32 p, u32 n, u32 size, u32 ct) { gabi::call(0x028EFFD0, p, n, size, ct); }
+static inline void buoyflag_clearMemory(u32 p, u32 n) { buoyflag_clearStorage(p, n); }
+static inline void construct_array(u32 p, u32 n, u32 size, u32 ct) {
+    buoyflag_construct_array(p, n, size, ct);
+}
 
 /* the HD GPU state's initial values (after the bzero): a zero cXyz, then 1.0 at every 0x10 bytes */
 static inline void gpu_state_init(u32 M) {
-    for (u32 o = 0; o < 0xB0; o += 4) gabi::store<f32>(M + o, (o >= 0xC && ((o - 0xC) & 0xF) == 0) ? 1.0f : 0.0f);
+    for (u32 i = 0; i < 44; i++)
+        buoyflag_view<BuoyUniformState>(M)->initialColors[i] = (i >= 3 && ((i - 3) & 3) == 0) ? 1.0f : 0.0f;
 }
 
-/* 0232D1F8 Mthd_Create (Act_c::_create inlined) */
+// HD: Mthd_Create (Act_c::_create inlined)
+/* 0232D1F8 */
 static cPhs_State Mthd_Create(void* i_this) {
-    WWHD_FUNC(0x0232D1F8, cPhs_State, i_this);
+
     Act_c* a = (Act_c*)i_this;
     u32 cond = a->actor_condition;
     if (!(cond & fopAcCnd_INIT_e)) {
@@ -133,101 +148,124 @@ static cPhs_State Mthd_Create(void* i_this) {
             a->__vtbl = ACT_VTBL;
             dCcD_Stts_ct(&a->mStts);
             dCcD_Cyl_ct(&a->mCyl, 0x10026560);
-            gabi::call(0x027F1278, &a->mPacket); /* J3DPacket */
-            u32 P = A + 0x520;
+            buoyflag_constructPacket(&a->mPacket); /* J3DPacket */
+            u32 P = gabi::ea(&a->mPacket);
             /* the flag's vertex buffers: {s32, sead::Buffer {count, ptr}, elements[4], ...} */
-            gabi::store<u32>(P + 0xD18, 0);
-            gabi::store<u32>(P + 0xC, PACKET_VTBL);
+            buoyflag_view<Packet_c>(P)->flagGpu.programCount = 0;
+            buoyflag_view<Packet_c>(P)->__vtbl = PACKET_VTBL;
             {
-                u32 b = P + 0xD1C;
-                if (b == 0) b = gabi::ea(operator_new(8));
+                u32 b = gabi::ea(&buoyflag_view<Packet_c>(P)->flagGpu.programs);
+                if (b == 0)
+                    b = gabi::ea(operator_new(8));
                 if (b != 0) {
-                    gabi::store<u32>(b + 4, 0);
-                    gabi::store<u32>(b, 0);
+                    buoyflag_view<BuoyList>(b)->array = 0;
+                    buoyflag_view<BuoyList>(b)->count = 0;
                 }
             }
             {
-                u32 v = P + 0xD24;
-                if (v == 0) v = gabi::ea(operator_new(0x968));
+                u32 v = gabi::ea(&buoyflag_view<Packet_c>(P)->flagGpu.materialPool);
+                if (v == 0)
+                    v = gabi::ea(operator_new(0x968));
                 if (v != 0) {
-                    construct_array(v, 4, 0x254, 0x0232E550);
-                    gabi::store<u32>(v + 0x950, 0);
-                    gabi::store<u32>(v + 0x960, 0);
-                    gabi::store<u32>(v + 0x958, 0x20);
-                    gabi::store<u8>(v + 0x964, 0);
-                    gabi::store<u32>(v + 0x954, 0);
+                    construct_array(v, 4, 0x254, gabi::guest_fn((const void*)vtx_ct));
+                    buoyflag_view<BuoyMaterialPool>(v)->current = 0;
+                    buoyflag_view<BuoyMaterialPool>(v)->unused = 0;
+                    buoyflag_view<BuoyMaterialPool>(v)->stride = 0x20;
+                    buoyflag_view<BuoyMaterialPool>(v)->initialized = 0;
+                    buoyflag_view<BuoyMaterialPool>(v)->attributeCount = 0;
                     for (int k = 0; k < 2; k++)
-                        for (int m = 0; m < 2; m++) gabi::store<u32>(v + k * 0x254 + m * 0x4A8, 0);
+                        for (int m = 0; m < 2; m++)
+                            buoyflag_view<BuoyGpuMaterial>(v + (k + 2 * m) * sizeof(BuoyGpuMaterial))
+                                ->vertices = nullptr;
                 }
             }
             /* the flag's GPU state */
-            u32 B = A + 0x1BAC;
-            gabi::call(0x027B5430, B);
-            gabi::call(0x027FD6F4, A + 0x1BC4);
-            gabi::call(0x027FB40C, A + 0x1BD0);
-            gabi::store<u32>(A + 0x1BDC, 0x1016EF84);
-            bzero_l(A + 0x1C44, 0x34);
-            inl_ct(A + 0x1BD0 + 0x74, 0x30);
-            gabi::call(0x027FB40C, A + 0x1C78);
-            gabi::store<u32>(A + 0x1C84, 0x1016EFB4);
-            u32 M = A + 0x1CEC;
-            bzero_l(M, 0x2F0);
+            u32 B = gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.indexBuffer);
+            buoyflag_constructIndexBuffer(B);
+            buoyflag_constructMaterialList(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.uniforms));
+            buoyflag_constructUniformObject(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.drawUniform));
+            buoyflag_view<Act_c>(A)->mPacket.flagGpu.drawUniform.vtable = 0x1016EF84;
+            buoyflag_clearMemory(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.modelMatrix), 0x34);
+            inl_ct(gabi::ea(&a->mPacket.flagGpu.modelMatrix), 0x30);
+            buoyflag_constructUniformObject(
+                gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.materialUniform));
+            buoyflag_view<Act_c>(A)->mPacket.flagGpu.materialUniform.vtable = 0x1016EFB4;
+            u32 M = gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.uniformState);
+            buoyflag_clearMemory(M, 0x2F0);
             gpu_state_init(M);
-            construct_array(A + 0x1D9C, 2, 0x10, 0x0232DCC4);
-            construct_array(A + 0x1DBC, 2, 0x10, 0x0232DCC4);
-            construct_array(A + 0x1DDC, 2, 0x10, 0x0232DCC4);
-            for (u32 o = 0x110; o <= 0x260; o += 0x30) inl_ct(M + o, 0x30);
-            for (u32 o = 0x290; o <= 0x2E0; o += 0x10) inl_ct(M + o, 0x10);
-            gabi::store<u8>(A + 0x1FDC, 0);
-            gabi::call(0x027BE6B8, A + 0x1FE0);
-            gabi::call(0x027BE6B8, A + 0x2070);
-            gabi::call(0x027BDF7C, A + 0x2100);
-            gabi::call(0x027BDF7C, A + 0x2298);
+            construct_array(gabi::ea(&a->mPacket.flagGpu.uniformState.descriptors[0]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            construct_array(gabi::ea(&a->mPacket.flagGpu.uniformState.descriptors[1]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            construct_array(gabi::ea(&a->mPacket.flagGpu.uniformState.descriptors[2]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            for (u32 i = 0; i < 8; i++)
+                inl_ct(gabi::ea(&a->mPacket.flagGpu.uniformState.matrices[i]), sizeof(Mtx34));
+            for (u32 i = 0; i < 6; i++)
+                inl_ct(gabi::ea(&a->mPacket.flagGpu.uniformState.finalDescriptors[i]),
+                       sizeof(BuoyDescriptor));
+            buoyflag_view<Act_c>(A)->mPacket.flagGpu.uniformFlag = 0;
+            buoyflag_constructTextureResource(
+                gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.primaryResource));
+            buoyflag_constructTextureResource(
+                gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.alternateResource));
+            buoyflag_constructTexture(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.primaryTexture));
+            buoyflag_constructTexture(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.flagGpu.alternateTexture));
             /* the pole's vertex buffers */
-            gabi::store<u32>(A + 0x2430, 0);
+            buoyflag_view<Act_c>(A)->mPacket.poleGpu.programCount = 0;
             {
-                u32 b = A + 0x2434;
-                if (b == 0) b = gabi::ea(operator_new(8));
+                u32 b = gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.programs);
+                if (b == 0)
+                    b = gabi::ea(operator_new(8));
                 if (b != 0) {
-                    gabi::store<u32>(b + 4, 0);
-                    gabi::store<u32>(b, 0);
+                    buoyflag_view<BuoyList>(b)->array = 0;
+                    buoyflag_view<BuoyList>(b)->count = 0;
                 }
             }
             {
-                u32 v = A + 0x520 + 0x1F1C;
-                if (v == 0) v = gabi::ea(operator_new(0x4C0));
+                u32 v = gabi::ea(&a->mPacket.poleGpu.materialPool);
+                if (v == 0)
+                    v = gabi::ea(operator_new(0x4C0));
                 if (v != 0) {
-                    construct_array(v, 2, 0x254, 0x0232E5AC);
-                    gabi::store<u32>(v + 0x4A8, 0);
-                    gabi::store<u32>(v + 0x4AC, 0);
-                    gabi::store<u32>(v + 0x4B8, 0);
-                    gabi::store<u32>(v + 0x4B0, 0x20);
-                    gabi::store<u8>(v + 0x4BC, 0);
-                    gabi::store<u32>(v, 0);
-                    gabi::store<u32>(v + 0x254, 0);
+                    construct_array(v, 2, 0x254, gabi::guest_fn((const void*)vtx_ct2));
+                    buoyflag_view<BuoyPoleMaterialPool>(v)->current = 0;
+                    buoyflag_view<BuoyPoleMaterialPool>(v)->attributeCount = 0;
+                    buoyflag_view<BuoyPoleMaterialPool>(v)->unused = 0;
+                    buoyflag_view<BuoyPoleMaterialPool>(v)->stride = 0x20;
+                    buoyflag_view<BuoyPoleMaterialPool>(v)->initialized = 0;
+                    buoyflag_view<BuoyGpuMaterial>(v)->vertices = nullptr;
+                    buoyflag_view<BuoyGpuMaterial>(v + sizeof(BuoyGpuMaterial))->vertices = nullptr;
                 }
             }
-            gabi::call(0x027B5430, A + 0x28FC);
-            gabi::call(0x027FD6F4, A + 0x2914);
-            gabi::call(0x027FB40C, A + 0x2920);
-            gabi::store<u32>(A + 0x292C, 0x1016EF84);
-            bzero_l(A + 0x2994, 0x34);
-            inl_ct(A + 0x2920 + 0x74, 0x30);
-            gabi::call(0x027FB40C, A + 0x29C8);
-            u32 M2 = A + 0x2A3C;
-            gabi::store<u32>(A + 0x29D4, 0x1016EFB4);
-            bzero_l(M2, 0x2F0);
+            buoyflag_constructIndexBuffer(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.indexBuffer));
+            buoyflag_constructMaterialList(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.uniforms));
+            buoyflag_constructUniformObject(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.drawUniform));
+            buoyflag_view<Act_c>(A)->mPacket.poleGpu.drawUniform.vtable = 0x1016EF84;
+            buoyflag_clearMemory(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.modelMatrix), 0x34);
+            inl_ct(gabi::ea(&a->mPacket.poleGpu.modelMatrix), 0x30);
+            buoyflag_constructUniformObject(
+                gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.materialUniform));
+            u32 M2 = gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.uniformState);
+            buoyflag_view<Act_c>(A)->mPacket.poleGpu.materialUniform.vtable = 0x1016EFB4;
+            buoyflag_clearMemory(M2, 0x2F0);
             gpu_state_init(M2);
-            construct_array(A + 0x2AEC, 2, 0x10, 0x0232DCC4);
-            construct_array(A + 0x2B0C, 2, 0x10, 0x0232DCC4);
-            construct_array(A + 0x2B2C, 2, 0x10, 0x0232DCC4);
-            for (u32 o = 0x110; o <= 0x260; o += 0x30) inl_ct(M2 + o, 0x30);
-            for (u32 o = 0x290; o <= 0x2E0; o += 0x10) inl_ct(M2 + o, 0x10);
-            gabi::store<u8>(A + 0x2D2C, 0);
-            gabi::call(0x027BE6B8, A + 0x2D30);
-            gabi::call(0x027BDF7C, A + 0x2DC0);
-            gabi::call(0x027BE6B8, A + 0x2F58);
-            gabi::call(0x027BDF7C, A + 0x2FE8);
+            construct_array(gabi::ea(&a->mPacket.poleGpu.uniformState.descriptors[0]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            construct_array(gabi::ea(&a->mPacket.poleGpu.uniformState.descriptors[1]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            construct_array(gabi::ea(&a->mPacket.poleGpu.uniformState.descriptors[2]), 2, 0x10,
+                            gabi::guest_fn((const void*)elem10_ct));
+            for (u32 i = 0; i < 8; i++)
+                inl_ct(gabi::ea(&a->mPacket.poleGpu.uniformState.matrices[i]), sizeof(Mtx34));
+            for (u32 i = 0; i < 6; i++)
+                inl_ct(gabi::ea(&a->mPacket.poleGpu.uniformState.finalDescriptors[i]),
+                       sizeof(BuoyDescriptor));
+            buoyflag_view<Act_c>(A)->mPacket.poleGpu.uniformFlag = 0;
+            buoyflag_constructTextureResource(
+                gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.textureResource));
+            buoyflag_constructTexture(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.poleGpu.texture));
+            buoyflag_constructTextureResource(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.toonResource));
+            buoyflag_constructTexture(gabi::ea(&buoyflag_view<Act_c>(A)->mPacket.toonTexture));
             hasi_nrm_init_call();
             a->mPacket.gpu_init_hata();
             a->mPacket.gpu_init_hasi();
@@ -238,164 +276,156 @@ static cPhs_State Mthd_Create(void* i_this) {
     a->mType = PrmAbstract(a, 2, 0);
     cPhs_State phase = dComIfG_resLoad(&a->mPhs, M_arcname);
     if (phase == cPhs_COMPLEATE_e) {
-        f32 s = attr_type(a, 0x100267A8, 0x100267C0)->mScale;
+        f32 s = attr_type(a, "d_a_obj_buoyflag.cpp", "(M_type >= 0) && (M_type < Type_Max)")->mScale;
         a->scale.x = s;
-        a->cullMtx = gabi::ea(&a->mMtx); /* fopAcM_SetMtx */
+        a->cullMtx = gabi::ea(&a->m1090); /* fopAcM_SetMtx */
         a->scale.y = s;
         a->scale.z = s;
         fopAcM_setCullSizeSphere(a, 0.0f, 50.0f, 0.0f, 2000.0f);
         a->mtx_init();
         if (PrmAbstract(a, 1, 0x1F)) /* prm_get_noCull */
             a->actor_status &= ~0x180u;
-        if (attr_type(a, 0x100267A8, 0x100267C0)->mCc) {
+        if (attr_type(a, "d_a_obj_buoyflag.cpp", "(M_type >= 0) && (M_type < Type_Max)")->mCc) {
             a->mStts.Init(0xFF, 0xFF, a);
             a->mCyl.Set(gabi::at<dCcD_SrcCyl>(0x1002681C)); /* M_cyl_src */
             a->mCyl.mStts = &a->mStts;
         }
         a->mPacket.mpActor = a;
         a->mPacket.init(a);
-        a->mMode = 0;
-        a->mbInit = 1;
+        a->m1124 = 0;
+        a->m1128 = 1;
     }
     return phase;
 }
-VERIFY(0x0232D1F8, Mthd_Create);
 
 /* 0232DABC */
 static BOOL Mthd_Delete(void* i_this) {
-    WWHD_FUNC(0x0232DABC, BOOL, i_this);
+
     dComIfG_resDelete(&((Act_c*)i_this)->mPhs, M_arcname);
     return TRUE;
-}
-VERIFY(0x0232DABC, Mthd_Delete);
-
-/* GHS pointer to member function call returning BOOL */
-static inline BOOL ptmf_call_ret(u32 entry, void* self) {
-    s16 idx = gabi::load<s16>(entry + 2);
-    s16 delta = gabi::load<s16>(entry);
-    void* p = gabi::at<void>(gabi::ea(self) + delta);
-    if (idx < 0)
-        return gabi::call_ptr<BOOL>(gabi::load<u32>(entry + 4), p);
-    u32 vt = gabi::load<u32>(gabi::ea(p) + gabi::load<s16>(entry + 6));
-    return gabi::call_ptr<BOOL>(gabi::load<u32>(vt + idx * 8 + 4), p);
 }
 
 /* 0232DAEC */
 static BOOL Mthd_Execute(void* i_this) {
-    WWHD_FUNC(0x0232DAEC, BOOL, i_this);
+
     Act_c* a = (Act_c*)i_this;
-    /* static const ModeFunc mode_proc[] = {mode_afl, mode_jumpToSea}: guard 0x101FDB98, table 0x101FDB88 */
-    if (gabi::load<u32>(0x101FDB98) == 0) {
-        gabi::store<u32>(0x101FDB98, 1);
-        memcpy_g(gabi::at<u8>(0x101FDB88), gabi::at<u8>(0x10026538), 0x10);
+    // HD: preserve the original lazy initialization and store order.
+    if (static_cast<u32>(modeInitialized) == 0) {
+        modeInitialized = 1;
+        memcpy_g(&modeTable, &modeInitial, sizeof(modeInitial));
     }
-    if (ptmf_call_ret(0x101FDB88 + 8 * (u32)a->mMode, a)) {
-        a->mbInit = 0;
-        PSMTXCopy(&a->mMtx, &a->mOldMtx);
+    if ((a->*(*buoyflag_view<ModeProc>(gabi::ea(&modeTable) + sizeof(ModeProc) * (u32)a->m1124)))()) {
+        a->m1128 = 0;
+        PSMTXCopy(&a->m1090, &a->mOldMtx);
         return TRUE;
     }
     fopAcM_delete(a);
     return TRUE;
 }
-VERIFY(0x0232DAEC, Mthd_Execute);
 
 /* 0232DBD0 */
 static BOOL Mthd_Draw(void* i_this) {
-    WWHD_FUNC(0x0232DBD0, BOOL, i_this);
+
     Act_c* a = (Act_c*)i_this;
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &a->current.pos, &a->tevStr);
     a->mPacket.update(a);
     return TRUE;
 }
-VERIFY(0x0232DBD0, Mthd_Draw);
 
 /* 0232EDBC */
-static BOOL Mthd_IsDelete(void* i_this) {
-    WWHD_FUNC(0x0232EDBC, BOOL, i_this);
-    return TRUE;
-}
-VERIFY(0x0232EDBC, Mthd_IsDelete);
+static BOOL Mthd_IsDelete(void* i_this) { return TRUE; }
 
+// HD: compiler-generated and template code of this translation unit.
 /* 0232DC1C */
-static void __sinit_d_a_obj_buoyflag_cpp() {
-    WWHD_FUNC(0x0232DC1C, void, (u32)0);
-    sinit_header_statics(0x1046934C, 0x101C81B4);
-}
-VERIFY(0x0232DC1C, __sinit_d_a_obj_buoyflag_cpp);
+static void __sinit_d_a_obj_buoyflag_cpp() { sinit_header_statics(0x1046934C, 0x101C81B4); }
 
-/* 0232DCB0: deleting destructor of a class with a trivial destructor */
+// HD: deleting destructor of a class with a trivial destructor
+/* 0232DCB0 */
 static void trivial_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x0232DCB0, void, p, flags);
+
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x0232DCB0, trivial_dt);
 
-/* 0232DCC4: constructor of a trivial 0x10-byte element (allocates when NULL) */
+// HD: constructor of a trivial 0x10-byte element (allocates when NULL)
+/* 0232DCC4 */
 static void* elem10_ct(void* p) {
-    WWHD_FUNC(0x0232DCC4, void*, p);
+
     if (p == nullptr)
         p = operator_new(0x10);
     return p;
 }
-VERIFY(0x0232DCC4, elem10_ct);
 
-/* 0232DCF0, 0232E54C: empty virtuals */
-static void empty_virtual(void* p) { WWHD_FUNC(0x0232DCF0, void, p); }
-VERIFY(0x0232DCF0, empty_virtual);
-static void empty_virtual2(void* p) { WWHD_FUNC(0x0232E54C, void, p); }
-VERIFY(0x0232E54C, empty_virtual2);
+// HD: , 0232E54C: empty virtuals
+/* 0232DCF0 */
+static void empty_virtual(void* p) {}
+/* 0232E54C */
+static void empty_virtual2(void* p) {}
 
-/* 0232DCF4, 0232DD54: deleting destructors of the 0x254-byte vertex buffer element (two copies) */
+// HD: , 0232DD54: deleting destructors of the 0x254-byte vertex buffer element (two copies)
+/* 0232DCF4 */
 static void vtx_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x0232DCF4, void, p, flags);
+
     if (p != nullptr) {
-        gabi::call(0x027BF880, gabi::ea(p) + 0x158, 2);
-        gabi::call(0x027B5CBC, gabi::ea(p) + 4, 2);
+        buoyflag_destroyShader(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->shaderObject), 2);
+        buoyflag_destroyVertexBuffer(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->vertexBuffer), 2);
         if (flags & 1)
             operator_delete(p);
     }
 }
-VERIFY(0x0232DCF4, vtx_dt);
+/* 0232DD54 */
 static void vtx_dt2(void* p, s32 flags) {
-    WWHD_FUNC(0x0232DD54, void, p, flags);
+
     if (p != nullptr) {
-        gabi::call(0x027BF880, gabi::ea(p) + 0x158, 2);
-        gabi::call(0x027B5CBC, gabi::ea(p) + 4, 2);
+        buoyflag_destroyShader(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->shaderObject), 2);
+        buoyflag_destroyVertexBuffer(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->vertexBuffer), 2);
         if (flags & 1)
             operator_delete(p);
     }
 }
-VERIFY(0x0232DD54, vtx_dt2);
 
-/* 0232E550, 0232E5AC: constructors of the 0x254-byte vertex buffer element (two copies) */
+// HD: , 0232E5AC: constructors of the 0x254-byte vertex buffer element (two copies)
+/* 0232E550 */
 static void* vtx_ct(void* p) {
-    WWHD_FUNC(0x0232E550, void*, p);
-    if (p == nullptr) {
-        p = operator_new(0x254);
-        if (p == nullptr)
-            return p;
-    }
-    gabi::call(0x027B5BD8, gabi::ea(p) + 4);
-    gabi::call(0x027BF734, gabi::ea(p) + 0x158);
-    gabi::store<u32>(gabi::ea(p) + 0x250, 0);
-    gabi::store<u32>(gabi::ea(p) + 0x24C, 0);
-    return p;
-}
-VERIFY(0x0232E550, vtx_ct);
-static void* vtx_ct2(void* p) {
-    WWHD_FUNC(0x0232E5AC, void*, p);
-    if (p == nullptr) {
-        p = operator_new(0x254);
-        if (p == nullptr)
-            return p;
-    }
-    gabi::call(0x027B5BD8, gabi::ea(p) + 4);
-    gabi::call(0x027BF734, gabi::ea(p) + 0x158);
-    gabi::store<u32>(gabi::ea(p) + 0x250, 0);
-    gabi::store<u32>(gabi::ea(p) + 0x24C, 0);
-    return p;
-}
-VERIFY(0x0232E5AC, vtx_ct2);
 
-}  // namespace daObjBuoyflag
+    if (p == nullptr) {
+        p = operator_new(0x254);
+        if (p == nullptr)
+            return p;
+    }
+    buoyflag_constructVertexBuffer(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->vertexBuffer));
+    buoyflag_constructShader(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->shaderObject));
+    buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->allocation = nullptr;
+    buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->allocationCount = 0;
+    return p;
+}
+/* 0232E5AC */
+static void* vtx_ct2(void* p) {
+
+    if (p == nullptr) {
+        p = operator_new(0x254);
+        if (p == nullptr)
+            return p;
+    }
+    buoyflag_constructVertexBuffer(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->vertexBuffer));
+    buoyflag_constructShader(gabi::ea(&buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->shaderObject));
+    buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->allocation = nullptr;
+    buoyflag_view<BuoyGpuMaterial>(gabi::ea(p))->allocationCount = 0;
+    return p;
+}
+
+} // namespace daObjBuoyflag
+
+using namespace daObjBuoyflag;
+// clang-format off
+/* WWHD glue
+str 10026530 "Cloth"
+str 10026730 "d_a_obj_buoyflag.cpp" in 0232CDB4
+str 10026748 "(M_type >= 0) && (M_type < Type_Max)" in 0232CDB4
+str 100267A8 "d_a_obj_buoyflag.cpp" in 0232D1F8
+str 100267C0 "(M_type >= 0) && (M_type < Type_Max)" in 0232D1F8
+data modeInitial 10026538
+data modeTable 101FDB88
+data modeInitialized 101FDB98
+*/
+// clang-format on

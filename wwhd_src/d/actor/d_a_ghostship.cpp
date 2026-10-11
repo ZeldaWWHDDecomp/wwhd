@@ -1,306 +1,406 @@
+/* Ghost Ship: moon-phase visibility, circular effects, path movement and translucent cloth.
+ * GameCube names follow zeldaret/tww. HD rendering and ABI differences are marked below.
+ */
 #include "d/actor/d_a_ghostship.h"
 #include <cmath>
+static f32 l_pathChaseScale;
+static f32 l_circleWobble;
+static f32 l_pathThreshold;
+static f32 l_circleOffset;
+static s16 l_circleSpeed;
+static f32 l_negativePi;
+static f32 l_positivePi;
+static u8 l_angleTag;
+static u8 l_byteTag;
+static ghostshipHD::HeaderZeros l_headerZeros;
+static ghostshipHD::DestructorRecord l_headerRecord0;
+static ghostshipHD::DestructorRecord l_headerRecord1;
+static ghostshipHD::DestructorRecord l_headerRecord2;
+#include "gc_api/f_op/f_op_actor.h"
+#include "gc_api/tu.h"
 
-static u8 *ghostPtr(u32 address) { return gabi::at<u8>(address); }
-static void ghostCopyWord(be<f32> *destination, const be<f32> *source) {
-    gabi::store<u32>(gabi::ea(destination), gabi::load<u32>(gabi::ea(source)));
+// HD: GHS emits these inline class vtables separately for each translation unit.
+const gc_tu_data gc_tu = {
+    .safeString = 0x1000FAE0,
+    .objAcch = {0x1000FAF8, 0x1000FB18, 0x1000FB08},
+    .objAcchDt = {0x1000FB08, 0x1000FB18},
+};
+static ghostshipHD::SaveBlock* l_save;
+static GXColor l_particleColor;
+extern u8 ghostshipGetEventRegByte(dSv_event_c*, u32);
+extern void ghostshipAssert(const char*, u32, const char*);
+extern BOOL ghostshipInitBtk(mDoExt_btkAnm*, J3DModelData*, J3DAnmTextureSRTKey*, bool, s32, f32,
+                             s32, s16, bool, s32);
+extern ghostshipHD::Cloth* ghostshipCreateCloth(ResTIMG*, ResTIMG*, s32, s32, f32, f32,
+                                                dKy_tevstr_c*, u32);
+extern u8* ghostshipGetRoomPath(s32, s8);
+extern void ghostshipSetWall(dBgS_AcchCir*, f32, f32);
+extern void ghostshipSetAcch(dBgS_ObjAcch*, cXyz*, cXyz*, daGhostship_c*, s32, dBgS_AcchCir*, cXyz*,
+                             u32, u32);
+extern void ghostshipConstructActor(daGhostship_c*);
+extern void ghostshipConstructBtk(mDoExt_btkAnm*);
+extern void ghostshipConstructAcch(dBgS_ObjAcch*);
+extern void ghostshipConstructCir(dBgS_AcchCir*);
+extern s32 ghostshipLoadResource(request_of_phase_process_class*, const char*);
+extern void ghostshipDeleteResource(request_of_phase_process_class*, const char*);
+extern u32 ghostshipGetEventReg(dSv_event_c*, u32);
+extern dComIfG_inf_c* ghostshipGetPlayAddress();
+extern f32 ghostshipActorDistanceXZ(daGhostship_c*, fopAc_ac_c*);
+extern u32 ghostshipGetMoonPhase();
+extern void ghostshipGhostShipCutoff();
+extern void ghostshipGhostShipExist();
+extern BOOL ghostshipIsOpenCollectMap(dSv_player_map_c*, u32);
+extern BOOL ghostshipIsGetCollectMap(dSv_player_map_c*, u32);
+extern s32 ghostshipGetReverb(s8);
+extern void ghostshipStartSound(u32, cXyz*, u32, s32);
+extern void ghostshipSetSimpleParticle(dPa_control_c*, u32, cXyz*, u32, GXColor*, GXColor*, u32);
+extern ghostshipHD::SceneList* ghostshipGetSceneList(cXyz*);
+extern void ghostshipSetEventReg(dSv_event_c*, u32, u32);
+extern void ghostshipSetNextStage(const char*, s32, s32, s32, s32, s32, s32, f32);
+extern void ghostshipPlayBtk(mDoExt_btkAnm*);
+extern cXyz* ghostshipGetWindAddress();
+extern dScnKy_env_light_c* ghostshipGetEnvironmentAddress();
+extern void ghostshipSetLighting(dScnKy_env_light_c*, s32, cXyz*, dKy_tevstr_c*);
+extern void ghostshipModelLighting(dScnKy_env_light_c*, J3DModel*, dKy_tevstr_c*);
+extern void ghostshipEnterBtk(mDoExt_btkAnm*, J3DModelData*, f32);
+extern void ghostshipUpdateModel(J3DModel*, s32);
+extern void ghostshipPathMove(cXyz*, be<s8>*, u8*, f32, u32, daGhostship_c*);
+extern u8* ghostshipAllocate(u32);
+extern void ghostshipRegisterDestructor(void*);
+extern void ghostshipConstructAngle(void*);
+extern void ghostshipConstructByte(void*);
+extern void ghostshipDelete(void*);
+extern void ghostshipDestroyCircleBase(cM3dGCir_l*, s32);
+extern void ghostshipDestroyAcch(dBgS_ObjAcch*, s32);
+extern void ghostshipDestroyActor(daGhostship_c*, s32);
+extern BOOL ghostshipEntryHeap(daGhostship_c*, u32, u32);
+extern ghostshipHD::MaterialTable* ghostshipGetMaterialTable(J3DModelData*);
+extern ghostshipHD::FloatColor* ghostshipGetUniform(ghostshipHD::UniformBlock*, u32);
+extern void ghostshipConvertColor(ghostshipHD::FloatColor*, ghostshipHD::FloatColor*, f32);
+static ghostshipHD::Hio l_HIO;
+static Mtx34 l_matrix;
+static ghostshipHD::DebugWord l_axisGuard;
+static ghostshipHD::DebugWord l_fanGuard;
+static ghostshipHD::DebugWord l_vectorGuard;
+static ghostshipHD::DebugWord l_axisColor;
+static ghostshipHD::DebugWord l_fanColor;
+static ghostshipHD::DebugWord l_vectorColor;
+static ghostshipHD::DebugWord l_axisColorSource;
+static ghostshipHD::DebugWord l_fanColorSource;
+static ghostshipHD::DebugWord l_vectorColorSource;
+extern void ghostshipCopyDebugWord(void*, const void*, u32);
+
+extern void ghostshipWaveRot(cXyz*, f32, dLib_wave_c*);
+extern void ghostshipSetCirclePath(dLib_circle_path_c*);
+extern f32 ghostshipGetWaterY(cXyz*, dBgS_ObjAcch*);
+extern BOOL ghostshipNormalizeVector(cXyz*);
+extern void ghostshipChasePos(cXyz*, cXyz*, f32);
+extern void ghostshipAddCalcPosXZ(cXyz*, cXyz*, f32, f32);
+extern void ghostshipSetGlobalWind(ghostshipHD::Cloth*, cXyz*);
+extern void ghostshipSetClothMtx(ghostshipHD::Cloth*, Mtx34*);
+extern void ghostshipMtxTrans(Mtx34*, f32, f32, f32);
+extern void ghostshipMtxXYZrotM(Mtx34*, s16, s16, s16);
+extern void ghostshipMtxYrotM(Mtx34*, s16);
+extern void ghostshipMtxCopy(Mtx34*, Mtx34*);
+extern void ghostshipMtxPush();
+extern void ghostshipMtxPop();
+extern void ghostshipMtxTransM(f32, f32, f32);
+
+static ghostshipHD::ModeProc mode_proc[] = {
+    {&daGhostship_c::modeWait},
+    {&daGhostship_c::modeRealize},
+    {&daGhostship_c::modePathMove},
+};
+
+static void ghostCopyWord(be<f32>* destination, const be<f32>* source) {
+    reinterpret_cast<ghostshipHD::FloatWord*>(destination)->bits =
+        reinterpret_cast<const ghostshipHD::FloatWord*>(source)->bits;
 }
-static BOOL ghostSailFactor(u8 *cloth, s32 row, s32 column) {
-    WWHD_FUNC(0x02149ED4, BOOL, cloth, row, column);
+/* 02149ED4 */
+static BOOL daGhostship_SailVtxFactorCB(u8* cloth, s32 row, s32 column) {
     return column == 0;
 }
-static BOOL ghostHeap(daGhostship_c *self) {
-    WWHD_FUNC(0x02149EE0, BOOL, self);
-    u32 data = gabi::ea(dComIfG_getObjectRes(STR(0x1000FC84), 5, 0x1000FAE0));
+/* 02149EE0 */
+BOOL daGhostship_c::_createHeap() {
+    J3DModelData* data = static_cast<J3DModelData*>(
+        dComIfG_getObjectRes("Ayush", dRes_INDEX_AYUSH_BDL_AYUSH_e, gc_tu.safeString));
     if (!data)
-        gabi::call(0x0273AA24, STR(0x1000FB84), 0x58, STR(0x1000FB98));
-    self->model = mDoExt_J3DModel__create((J3DModelData *)ghostPtr(data), 0, 0x11020203);
-    if (!self->model)
+        ghostshipAssert("d_a_ghostship.cpp", 0x58, "modelData != (0)");
+    this->mpModel = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    if (!this->mpModel)
         return 0;
-    u32 animation = gabi::ea(dComIfG_getObjectRes(STR(0x1000FC84), 8, 0x1000FAE0));
+    J3DAnmTextureSRTKey* animation = static_cast<J3DAnmTextureSRTKey*>(
+        dComIfG_getObjectRes("Ayush", dRes_INDEX_AYUSH_BTK_AYUSH_e, gc_tu.safeString));
     if (!animation)
-        gabi::call(0x0273AA24, STR(0x1000FB84), 0x5F, STR(0x1000FBAC));
-    if (!gabi::call<BOOL>(0x025E7CE0, &self->btk, ghostPtr(data), ghostPtr(animation), true, 2,
-                          1.0f, 0, (s16)-1, false, 0))
+        ghostshipAssert("d_a_ghostship.cpp", 0x5F, "btk != 0");
+    if (!ghostshipInitBtk(&this->mBtk, data, animation, true, 2, 1.0f, 0, (s16)-1, false, 0))
         return 0;
-    u32 texture1 = gabi::ea(dComIfG_getObjectRes(STR(0x1000FC84), 0xB, 0x1000FAE0));
-    u32 texture2 = gabi::ea(dComIfG_getObjectRes(STR(0x1000FC84), 0xC, 0x1000FAE0));
-    u32 toon = gabi::ea(dComIfG_getObjectRes(STR(0x1000FC8C), 3, 0x1000FAE0));
-    self->cloth = gabi::call<u8 *>(0x0251BE14, ghostPtr(texture1), ghostPtr(toon), 5, 5, 700.0f,
-                                   350.0f, ghostPtr(gabi::ea(self) + 0x110), 0);
-    u8 *second = gabi::call<u8 *>(0x0251BE14, ghostPtr(texture2), ghostPtr(toon), 6, 6, 1800.0f,
-                                  1000.0f, ghostPtr(gabi::ea(self) + 0x110), 0);
-    bool firstPresent = self->cloth != nullptr;
-    self->cloth2 = second;
+    ResTIMG* texture1 = static_cast<ResTIMG*>(
+        dComIfG_getObjectRes("Ayush", dRes_INDEX_AYUSH_BTI_B_GSHIP_HATA_e, gc_tu.safeString));
+    ResTIMG* texture2 = static_cast<ResTIMG*>(
+        dComIfG_getObjectRes("Ayush", dRes_INDEX_AYUSH_BTI_B_GSHIP_HO_e, gc_tu.safeString));
+    ResTIMG* toon = static_cast<ResTIMG*>(
+        dComIfG_getObjectRes("Cloth", dRes_INDEX_CLOTH_BTI_CLOTHTOON_e, gc_tu.safeString));
+    this->mpCloth = ghostshipCreateCloth(texture1, toon, 5, 5, 700.0f, 350.0f, &this->tevStr, 0);
+    ghostshipHD::Cloth* second =
+        ghostshipCreateCloth(texture2, toon, 6, 6, 1800.0f, 1000.0f, &this->tevStr, 0);
+    bool firstPresent = this->mpCloth != nullptr;
+    this->mpCloth2 = second;
     if (!firstPresent || !second)
         return 0;
-    gabi::store<u32>(gabi::ea(second) + 0xAC, 0x02149ED4);
+    second->mpFactorCheckCB =
+        gabi::guest_fn(reinterpret_cast<const void*>(daGhostship_SailVtxFactorCB));
     return 1;
 }
-static BOOL ghostHeapCB(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A0D8, BOOL, self);
-    return ghostHeap(self);
+/* 0214A0D8 */
+static BOOL createHeap_CB(daGhostship_c* self) {
+    return self->_createHeap();
 }
-static BOOL ghostPathStep(daGhostship_c *self, cXyz *position, cXyz *current, cXyz *next) {
-    WWHD_FUNC(0x0214A0DC, BOOL, self, position, current, next);
-    ghostCopyWord(&self->currentPoint.x, &current->x);
-    ghostCopyWord(&self->currentPoint.y, &current->y);
-    f32 water = self->current.pos.y;
-    // HD reads source Z before replacing Y, preserving overlapping point inputs.
-    u32 currentZ = gabi::load<u32>(gabi::ea(&current->z));
-    self->currentPoint.y = water;
-    gabi::store<u32>(gabi::ea(&self->currentPoint.z), currentZ);
-    ghostCopyWord(&self->nextPoint.x, &next->x);
-    ghostCopyWord(&self->nextPoint.y, &next->y);
-    u32 nextZ = gabi::load<u32>(gabi::ea(&next->z));
-    self->nextPoint.y = water;
-    gabi::store<u32>(gabi::ea(&self->nextPoint.z), nextZ);
+/* 0214A0DC */
+BOOL daGhostship_c::_pathMove(cXyz* position, cXyz* current, cXyz* next) {
+    ghostCopyWord(&this->mCurPntPos.x, &current->x);
+    ghostCopyWord(&this->mCurPntPos.y, &current->y);
+    f32 water = this->current.pos.y;
+    // HD: reads source Z before replacing Y, preserving overlapping point inputs.
+    u32 currentZ = reinterpret_cast<ghostshipHD::FloatWord*>(&current->z)->bits;
+    this->mCurPntPos.y = water;
+    reinterpret_cast<ghostshipHD::FloatWord*>(&this->mCurPntPos.z)->bits = currentZ;
+    ghostCopyWord(&this->mNextPntPos.x, &next->x);
+    ghostCopyWord(&this->mNextPntPos.y, &next->y);
+    u32 nextZ = reinterpret_cast<ghostshipHD::FloatWord*>(&next->z)->bits;
+    this->mNextPntPos.y = water;
+    reinterpret_cast<ghostshipHD::FloatWord*>(&this->mNextPntPos.z)->bits = nextZ;
     gabi::Local<cXyz> delta, difference, secondDifference, xz, secondXZ;
     // Reserve the caller linkage area below live guest-stack temporaries.
     gabi::Local<u8[16]> linkage;
-    cXyz_mi(&self->nextPoint, delta.get(), &self->currentPoint);
-    if (!gabi::call<BOOL>(0x0201B47C, delta.get()))
+    cXyz_mi(&this->mNextPntPos, delta.get(), &this->mCurPntPos);
+    if (!ghostshipNormalizeVector(delta.get()))
         return 1;
     f32 x = delta->x, z = delta->z;
-    s16 target = gabi::call<s16>(0x020195B0, x, z);
-    s16 remaining = gabi::call<s16>(0x0200F378, &self->current.angle.y, target, 8, 0x200, 8);
+    s16 target = cM_atan2s(x, z);
+    s16 remaining = cLib_addCalcAngleS(&this->current.angle.y, target, 8, 0x200, 8);
     f32 cosine = cM_scos(remaining);
-    f32 step = (f32)self->speedF * std::fabs(cosine);
-    gabi::call(0x0200F764, position, &self->nextPoint, step);
-    cXyz_mi(position, difference.get(), &self->nextPoint);
+    f32 step = (f32)this->speedF * std::fabs(cosine);
+    ghostshipChasePos(position, &this->mNextPntPos, step);
+    cXyz_mi(position, difference.get(), &this->mNextPntPos);
     xz->x = difference->x;
     xz->y = 0;
     xz->z = difference->z;
     f32 distance = std_sqrtf(PSVECSquareMag(xz.get()));
-    f32 factor = gabi::load<f32>(0x1047BCE4) + 1.0f;
+    f32 factor = static_cast<f32>(l_pathThreshold) + 1.0f;
     if (distance < step * factor)
         return 1;
-    cXyz_mi(position, secondDifference.get(), &self->nextPoint);
+    cXyz_mi(position, secondDifference.get(), &this->mNextPntPos);
     secondXZ->x = secondDifference->x;
     secondXZ->y = 0;
     secondXZ->z = secondDifference->z;
     return std_sqrtf(PSVECSquareMag(secondXZ.get())) == 0.0f;
 }
-static BOOL ghostPathCB(cXyz *p, cXyz *current, cXyz *next, daGhostship_c *self) {
-    WWHD_FUNC(0x0214A2B4, BOOL, p, current, next, self);
-    return ghostPathStep(self, p, current, next);
+/* 0214A2B4 */
+static BOOL pathMove_CB(cXyz* p, cXyz* current, cXyz* next, daGhostship_c* self) {
+    return self->_pathMove(p, current, next);
 }
-static void ghostGetArg(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A2CC, void, self);
-    u32 parameter = self->mParameters;
-    self->moonPhase = (u8)parameter;
-    self->pathNo = (parameter >> 16) & 255;
+/* 0214A2CC */
+void daGhostship_c::getArg() {
+    u32 parameter = mParameters;
+    moonPhase = (u8)parameter;
+    mPathNo = (parameter >> 16) & 255;
 }
-static void ghostPathInit(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A2E0, void, self);
-    self->mode = 2;
+/* 0214A2E0 */
+void daGhostship_c::modePathMoveInit() {
+    mMode = daGhostship_c::MODE_PATH_MOVE;
 }
-static void ghostWaitInit(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A2EC, void, self);
-    self->mode = 0;
+/* 0214A2EC */
+void daGhostship_c::modeWaitInit() {
+    mMode = daGhostship_c::MODE_WAIT;
 }
 
 // Shared by two inlined HD paths; this is not a guest function call.
-static void ghostMatrices(daGhostship_c *self) {
-    gabi::call(0x025872F4, &self->current.pos, 0.0f, &self->wave);
-    self->shape_angle.x = self->wave.rotX;
-    self->shape_angle.z = self->wave.rotZ;
+static void ghostMatrices(daGhostship_c* self) {
+    ghostshipWaveRot(&self->current.pos, 0.0f, &self->mWave);
+    self->shape_angle.x = self->mWave.mRotX;
+    self->shape_angle.z = self->mWave.mRotZ;
     f32 sx = self->scale.x, sy = self->scale.y, sz = self->scale.z;
-    u32 model = gabi::ea(self->model);
-    gabi::store<f32>(model + 0xBC, sx);
-    gabi::store<f32>(model + 0xC0, sy);
-    gabi::store<f32>(model + 0xC4, sz);
-    u8 *matrix = ghostPtr(0x1048D0CC);
+    J3DModel* model = self->mpModel;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.y = sy;
+    model->mBaseScale.z = sz;
+    Mtx34* matrix = &l_matrix;
     f32 px = self->current.pos.x, py = self->current.pos.y, pz = self->current.pos.z;
-    gabi::call(0x028E93CC, matrix, px, py, pz);
+    ghostshipMtxTrans(matrix, px, py, pz);
     s16 ax = self->shape_angle.x, az = self->shape_angle.z;
-    gabi::call(0x025F19F8, matrix, ax, 0, az);
-    gabi::call(0x025F1C28, matrix, (s16)self->shape_angle.y);
-    f32 values[12];
-    for (u32 i = 0; i < 12; i++)
-        values[i] = gabi::load<f32>(0x1048D0CC + i * 4);
-    model = gabi::ea(self->model);
-    for (u32 i = 0; i < 12; i++)
-        gabi::store<f32>(model + 0xC8 + i * 4, values[i]);
-    model = gabi::ea(self->model);
-    gabi::call(0x028E90D4, ghostPtr(model ? model + 0xC8 : 0), matrix);
-    gabi::call(0x025F23EC);
-    gabi::call(0x025F24E0, 0.0f, 3200.0f, 75.0f);
-    gabi::call(0x0251B638, (u8 *)self->cloth, matrix);
-    gabi::call(0x025F2468);
-    gabi::call(0x025F24E0, -900.0f, 2080.0f, 85.0f);
-    gabi::call(0x025F1C28, matrix, 0x4000);
-    gabi::call(0x0251B638, (u8 *)self->cloth2, matrix);
+    ghostshipMtxXYZrotM(matrix, ax, 0, az);
+    ghostshipMtxYrotM(matrix, (s16)self->shape_angle.y);
+    self->mpModel->setBaseTRMtx(matrix);
+    ghostshipMtxCopy(self->mpModel->getBaseTRMtx(), matrix);
+    ghostshipMtxPush();
+    ghostshipMtxTransM(0.0f, 3200.0f, 75.0f);
+    ghostshipSetClothMtx((ghostshipHD::Cloth*)self->mpCloth, matrix);
+    ghostshipMtxPop();
+    ghostshipMtxTransM(-900.0f, 2080.0f, 85.0f);
+    ghostshipMtxYrotM(matrix, 0x4000);
+    ghostshipSetClothMtx((ghostshipHD::Cloth*)self->mpCloth2, matrix);
 }
-static void ghostCreateInit(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A2F8, void, self);
-    ghostCopyWord(&self->pathPos.x, &self->current.pos.x);
-    ghostCopyWord(&self->pathPos.y, &self->current.pos.y);
-    ghostCopyWord(&self->pathPos.z, &self->current.pos.z);
+/* 0214A2F8 */
+void daGhostship_c::createInit() {
+    ghostCopyWord(&this->mPathPos.x, &this->current.pos.x);
+    ghostCopyWord(&this->mPathPos.y, &this->current.pos.y);
+    ghostCopyWord(&this->mPathPos.z, &this->current.pos.z);
     for (s32 i = 0; i < 12; i++) {
-        auto &circle = self->circles[i];
-        s16 angle = (s16)(i * 0x2000), oldSpeed = circle.angleSpeed;
-        circle.angle = angle;
+        auto& circle = this->mPaths[i];
+        s16 angle = (s16)(i * 0x2000), oldSpeed = circle.mAngleSpeed;
+        circle.mAngle = angle;
         f32 vertical = 600.0f * cM_scos((s16)(angle + oldSpeed));
         s32 direction = 1;
         if (i & 1) {
             vertical = 600.0f * cM_ssin((s16)(angle + oldSpeed));
             direction = -1;
         }
-        circle.radius = (f32)i * 100.0f;
-        circle.wobbleAmplitude = gabi::load<f32>(0x1047BCD4) + 300.0f;
-        s32 base = 0x100 + gabi::load<s16>(0x1047BD48) + 16 * i;
-        f32 distance = gabi::load<f32>(0x1047BCF8) + 500.0f;
+        circle.mRadius = (f32)i * 100.0f;
+        circle.mWobbleAmplitude = static_cast<f32>(l_circleWobble) + 300.0f;
+        s32 base = 0x100 + static_cast<s16>(l_circleSpeed) + 16 * i;
+        f32 distance = static_cast<f32>(l_circleOffset) + 500.0f;
         f32 random = cM_rndF(100.0f);
-        circle.angleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
-        circle.translation.x =
-            gabi::fmadds(distance, cM_ssin(self->shape_angle.y), (f32)self->current.pos.x);
-        f32 y = ((f32)self->current.pos.y + 600.0f) + vertical;
+        circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
+        circle.mTranslation.x =
+            gabi::fmadds(distance, cM_ssin(this->shape_angle.y), (f32)this->current.pos.x);
+        f32 y = ((f32)this->current.pos.y + 600.0f) + vertical;
         random = cM_rndF(100.0f);
-        circle.translation.y = y + random;
-        circle.translation.z =
-            gabi::fmadds(distance, cM_scos(self->shape_angle.y), (f32)self->current.pos.z);
-        gabi::call(0x02587128, &circle);
+        circle.mTranslation.y = y + random;
+        circle.mTranslation.z =
+            gabi::fmadds(distance, cM_scos(this->shape_angle.y), (f32)this->current.pos.z);
+        ghostshipSetCirclePath(&circle);
     }
-    if (self->pathNo != 255) {
-        self->path = gabi::call<u8 *>(0x025AAF88, (s32)self->pathNo, (s8)self->current.roomNo);
-        ghostPathInit(self);
+    if (this->mPathNo != 255) {
+        this->mPath = ghostshipGetRoomPath((s32)this->mPathNo, (s8)this->current.roomNo);
+        this->modePathMoveInit();
     } else
-        ghostWaitInit(self);
-    gabi::call(0x024EFF44, &self->cir, 30.0f, 30.0f);
-    gabi::call(0x024F06B4, &self->acch, &self->current.pos, &self->old.pos, self, 1, &self->cir,
-               &self->speed, 0, 0);
-    gabi::store<u32>(gabi::ea(self) + 0x4A4, gabi::load<u32>(gabi::ea(self) + 0x4A4) | 0xC);
-    ghostMatrices(self);
+        this->modeWaitInit();
+    ghostshipSetWall(&this->mCir, 30.0f, 30.0f);
+    ghostshipSetAcch(&this->mAcch, &this->current.pos, &this->old.pos, this, 1, &this->mCir,
+                     &this->speed, 0, 0);
+    this->mAcch.m_flags = (u32)this->mAcch.m_flags | dBgS_Acch::WALL_NONE | dBgS_Acch::ROOF_NONE;
+    ghostMatrices(this);
 }
-static BOOL ghostCreate(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A758, BOOL, self);
-    if (!((u32)self->actor_condition & 8)) {
+/* 0214A758 */
+static BOOL daGhostship_Create(daGhostship_c* self) {
+    if (!((u32)self->actor_condition & fopAcCnd_INIT_e)) {
         if (self) {
-            gabi::call(0x025D4ED0, self);
-            gabi::store<u32>(gabi::ea(self) + 0xB4, 0x1000FB28);
-            gabi::call(0x025E7C6C, &self->btk);
-            gabi::call(0x024F0474, &self->acch);
-            gabi::store<u32>(gabi::ea(self) + 0x48C, 0x1000FAF8);
-            gabi::store<u32>(gabi::ea(self) + 0x49C, 0x1000FB08);
-            gabi::store<u32>(gabi::ea(self) + 0x490, 0x1000FB18);
-            gabi::store<u8>(gabi::ea(self) + 0x494, 1);
-            gabi::call(0x024EFE94, &self->cir);
+            ghostshipConstructActor(self);
+            self->__vtbl = 0x1000FB28; // HD: this actor vtable is local to the unit.
+            ghostshipConstructBtk(&self->mBtk);
+            ghostshipConstructAcch(&self->mAcch);
+            static_cast<cBgS_Chk*>(&self->mAcch)->__vtbl = gc_tu.objAcch.v10;
+            static_cast<dBgS_GrpPassChk*>(&self->mAcch)->__vtbl = gc_tu.objAcch.v20;
+            static_cast<dBgS_PolyPassChk*>(&self->mAcch)->__vtbl = gc_tu.objAcch.v14;
+            self->mAcch.mbObjThrough = 1;
+            ghostshipConstructCir(&self->mCir);
         }
-        self->actor_condition = (u32)self->actor_condition | 8;
+        self->actor_condition = (u32)self->actor_condition | fopAcCnd_INIT_e;
     }
-    s32 phase = gabi::call<s32>(0x02520460, &self->phase, STR(0x1000FC84));
-    if (phase != 4)
+    s32 phase = ghostshipLoadResource(&self->mPhs, "Ayush");
+    if (phase != cPhs_COMPLEATE_e)
         return phase;
-    phase = gabi::call<s32>(0x02520460, &self->clothPhase, STR(0x1000FC8C));
-    if (phase != 4)
+    phase = ghostshipLoadResource(&self->mClothPhs, "Cloth");
+    if (phase != cPhs_COMPLEATE_e)
         return phase;
-    ghostGetArg(self);
-    u32 save = gabi::load<u32>(0x101F84DC);
-    if (gabi::call<u8>(0x025B8BB0, ghostPtr(save + 0x644), 0x8803) == 3)
-        return 5;
-    if (!gabi::call<BOOL>(0x025D63E8, self, 0x0214A0D8, 0x1EA0))
-        return 5;
-    ghostCreateInit(self);
-    return 4;
+    self->getArg();
+    ghostshipHD::SaveBlock* save = l_save;
+    if (ghostshipGetEventRegByte(&save->save.mSavedata.mEvent, 0x8803) == 3)
+        return cPhs_ERROR_e;
+    if (!ghostshipEntryHeap(self, gabi::guest_fn(reinterpret_cast<const void*>(createHeap_CB)),
+                            0x1EA0))
+        return cPhs_ERROR_e;
+    self->createInit();
+    return cPhs_COMPLEATE_e;
 }
-static BOOL ghostDelete(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A8B8, BOOL, self);
-    gabi::call(0x025204C8, &self->phase, STR(0x1000FC84));
-    gabi::call(0x025204C8, &self->clothPhase, STR(0x1000FC8C));
-    u32 cloth = gabi::ea(self->cloth);
+/* 0214A8B8 */
+static BOOL daGhostship_Delete(daGhostship_c* self) {
+    ghostshipDeleteResource(&self->mPhs, "Ayush");
+    ghostshipDeleteResource(&self->mClothPhs, "Cloth");
+    ghostshipHD::Cloth* cloth = self->mpCloth;
     if (cloth) {
-        u32 target = gabi::load<u32>(gabi::load<u32>(cloth + 0xC) + 0xC);
-        gabi::call_ptr<void>(target, ghostPtr(cloth), 3);
+        cloth->destroy(3);
     }
-    cloth = gabi::ea(self->cloth2);
-    self->cloth = nullptr;
+    cloth = self->mpCloth2;
+    self->mpCloth = nullptr;
     if (cloth) {
-        u32 target = gabi::load<u32>(gabi::load<u32>(cloth + 0xC) + 0xC);
-        gabi::call_ptr<void>(target, ghostPtr(cloth), 3);
+        cloth->destroy(3);
     }
-    self->cloth2 = nullptr;
+    self->mpCloth2 = nullptr;
     return 1;
 }
-static void ghostModeProc(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A958, void, self);
-    u32 entry = 0x1000FBF0 + (u32)self->mode * 8;
-    s16 virtualSlot = gabi::load<s16>(entry + 2), adjust = gabi::load<s16>(entry);
-    u32 adjusted = gabi::ea(self) + (s32)adjust, target;
-    if (virtualSlot < 0)
-        target = gabi::load<u32>(entry + 4);
-    else {
-        s16 vtableOffset = gabi::load<s16>(entry + 6);
-        u32 vtable = gabi::load<u32>(adjusted + (s32)vtableOffset);
-        target = gabi::load<u32>(vtable + (u32)virtualSlot * 8 + 4);
-    }
-    gabi::call_ptr<void>(target, ghostPtr(adjusted));
+/* 0214A958 */
+void daGhostship_c::modeProcCall() {
+    (this->*mode_proc[mMode].fn)();
 }
-static void ghostClothParameters(u32 cloth, f32 vertical) {
-    gabi::store<u16>(cloth + 0x1B6, 0x100);
-    gabi::store<u16>(cloth + 0x1BA, 0);
-    gabi::store<u16>(cloth + 0x1BC, 900);
-    gabi::store<f32>(cloth + 0x1A0, 0.45f);
-    gabi::store<f32>(cloth + 0x1A4, vertical);
-    gabi::store<f32>(cloth + 0x1A8, 0.875f);
-    gabi::store<f32>(cloth + 0x1AC, 1.0f);
-    gabi::store<u16>(cloth + 0x1BE, (u16)-800);
-    gabi::store<f32>(cloth + 0xE4, 7.0f);
-    gabi::store<f32>(cloth + 0xE8, 6.0f);
-    gabi::store<f32>(cloth + 0x1B0, 1.0f);
+
+static void ghostClothParameters(ghostshipHD::Cloth* cloth, f32 vertical) {
+    cloth->mWaveSpeed = 0x100;
+    cloth->field_0xF2 = 0;
+    cloth->mRipple = 900;
+    cloth->mSpring = 0.45f;
+    cloth->mGravity = vertical;
+    cloth->mDrag = 0.875f;
+    cloth->mFlyFlex = 1.0f;
+    cloth->mRotateY = static_cast<u16>(-800);
+    cloth->mWindSpeed = 7.0f;
+    cloth->mWindSpeedWave = 6.0f;
+    cloth->mHoistFlex = 1.0f;
 }
-static void ghostClothMove(u32 cloth) {
-    u32 target = gabi::load<u32>(gabi::load<u32>(cloth + 0xC) + 0x3C);
-    gabi::call_ptr<void>(target, ghostPtr(cloth));
+
+static void ghostClothMove(ghostshipHD::Cloth* cloth) {
+    cloth->cloth_move();
 }
-static BOOL ghostExecute(daGhostship_c *self) {
-    WWHD_FUNC(0x0214A9A4, BOOL, self);
-    u32 save = gabi::load<u32>(0x101F84DC);
-    f32 time = gabi::load<f32>(save + 0x44);
-    u32 play = gabi::call<u32>(0x025200D4);
-    u32 player = gabi::load<u32>(play + 0x5B2C);
-    f32 distance = gabi::call<f32>(0x025D6958, self, ghostPtr(player));
-    self->canEnterShip = 0;
-    u32 moon = gabi::call<u32>(0x02560828);
-    // Unordered time takes the HD ble branch and remains in the active path.
-    if ((u32)self->moonPhase != moon || (time > 90.0f && time < 285.0f)) {
-        gabi::call(0x02560C5C);
-        self->alpha = 0;
-        self->actor_status = (u32)self->actor_status & ~0x23u;
+/* 0214A9A4 */
+BOOL daGhostship_c::_execute() {
+    ghostshipHD::SaveBlock* save = l_save;
+    f32 time = static_cast<f32>(save->save.mSavedata.mPlayer.mPlayerStatusB.mTime);
+    dComIfG_inf_c* play = ghostshipGetPlayAddress();
+    fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
+    f32 distance = ghostshipActorDistanceXZ(this, player);
+    this->mbCanEnterShip = 0;
+    u32 moon = ghostshipGetMoonPhase();
+    // HD: unordered time takes the HD ble branch and remains in the active path.
+    if ((u32)this->moonPhase != moon || (time > 90.0f && time < 285.0f)) {
+        ghostshipGhostShipCutoff();
+        this->mAlpha = 0;
+        this->actor_status = (u32)this->actor_status & ~(3u | fopAcStts_SHOWMAP_e);
     } else {
-        gabi::call(0x02560C34);
-        f32 hideDistance = gabi::load<f32>(0x10463F88);
-        save = gabi::load<u32>(0x101F84DC);
-        f32 target = distance < hideDistance ? 0.0f : gabi::load<f32>(0x10463F80);
-        if (gabi::call<BOOL>(0x025B80C8, ghostPtr(save + 0xE4), 0x23)) {
-            save = gabi::load<u32>(0x101F84DC);
-            if (gabi::call<BOOL>(0x025B7F68, ghostPtr(save + 0xE4), 0x23)) {
-                self->canEnterShip = 1;
-                target = gabi::load<f32>(0x10463F80);
+        ghostshipGhostShipExist();
+        f32 hideDistance = static_cast<f32>(l_HIO.shipHideDist);
+        save = l_save;
+        f32 target = distance < hideDistance ? 0.0f : static_cast<f32>(l_HIO.shipAlpha);
+        // HD: the collectible map index is 0x23 here (GameCube 0x24).
+        if (ghostshipIsOpenCollectMap(&save->save.mSavedata.mPlayer.mMap, 0x23)) {
+            save = l_save;
+            if (ghostshipIsGetCollectMap(&save->save.mSavedata.mPlayer.mMap, 0x23)) {
+                this->mbCanEnterShip = 1;
+                target = static_cast<f32>(l_HIO.shipAlpha);
             }
         }
-        gabi::call(0x0200F5C8, &self->alpha, target, 0.02f);
-        if (self->alpha == 0.0f)
-            self->actor_status = (u32)self->actor_status & ~0x23u;
+        cLib_chaseF(&this->mAlpha, target, 0.02f);
+        if (this->mAlpha == 0.0f)
+            this->actor_status = (u32)this->actor_status & ~(3u | fopAcStts_SHOWMAP_e);
         else {
-            s32 reverb = gabi::call<s32>(0x02520540, (s8)self->current.roomNo);
-            gabi::call(0x025E1A40, 0x107A, &self->current.pos, 0, reverb);
-            self->actor_status = (u32)self->actor_status | 0x23;
+            s32 reverb = ghostshipGetReverb((s8)this->current.roomNo);
+            ghostshipStartSound(0x107A, &this->current.pos, 0, reverb);
+            this->actor_status = (u32)this->actor_status | (3u | fopAcStts_SHOWMAP_e);
         }
     }
     for (s32 i = 0; i < 12; i++) {
-        auto &circle = self->circles[i];
-        f32 radius = circle.radius, target;
-        // HD bge takes unordered inputs; only an ordered radius below 900 selects this target.
+        auto& circle = this->mPaths[i];
+        f32 radius = circle.mRadius, target;
+        // HD: bge takes unordered inputs; only an ordered radius below 900 selects this target.
         if (radius < 900.0f) {
             target = gabi::fmadds((f32)i, 100.0f, 1500.0f);
-            self->radiusTargets[i] = target;
+            this->field_0x6C4[i] = target;
         } else if (radius > gabi::fmadds((f32)i, 100.0f, 1400.0f)) {
             target = 800.0f;
-            self->radiusTargets[i] = target;
+            this->field_0x6C4[i] = target;
         } else
-            target = self->radiusTargets[i];
-        s32 phase = (s32)(s16)circle.angle + (s32)(s16)circle.angleSpeed;
+            target = this->field_0x6C4[i];
+        s32 phase = (s32)(s16)circle.mAngle + (s32)(s16)circle.mAngleSpeed;
         s16 doubled = (s16)((phase * 2) & 0xFFFE);
         f32 vertical = 600.0f * cM_scos(doubled);
         s32 direction = 1;
@@ -308,246 +408,312 @@ static BOOL ghostExecute(daGhostship_c *self) {
             vertical = 600.0f * cM_ssin(doubled);
             direction = -1;
         }
-        gabi::call(0x0200ED84, &circle.radius, target, 0.1f, 10.0f);
-        circle.wobbleAmplitude = gabi::load<f32>(0x1047BCD4) + 300.0f;
-        s32 base = gabi::load<s16>(0x1047BD48) + 2 * i + 5;
-        f32 offset = gabi::load<f32>(0x1047BCF8) + 500.0f;
+        cLib_addCalc2(&circle.mRadius, target, 0.1f, 10.0f);
+        circle.mWobbleAmplitude = static_cast<f32>(l_circleWobble) + 300.0f;
+        s32 base = static_cast<s16>(l_circleSpeed) + 2 * i + 5;
+        f32 offset = static_cast<f32>(l_circleOffset) + 500.0f;
         f32 random = cM_rndF(20.0f);
-        circle.angleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
-        circle.translation.x =
-            gabi::fmadds(offset, cM_ssin(self->shape_angle.y), (f32)self->current.pos.x);
-        circle.translation.y = ((f32)self->current.pos.y + 600.0f) + vertical;
-        circle.translation.z =
-            gabi::fmadds(offset, cM_scos(self->shape_angle.y), (f32)self->current.pos.z);
-        gabi::call(0x02587128, &circle);
-        if (self->alpha != 0.0f) {
-            play = gabi::call<u32>(0x025200D4);
-            u32 particles = gabi::load<u32>(play + 0x5AB0);
-            gabi::call(0x025A8D40, ghostPtr(particles), 0x8306, &circle.position, 255,
-                       ghostPtr(0x101D5E98), ghostPtr(0x101D5E98), 0);
+        circle.mAngleSpeed = (s16)gabi::ftoi(((f32)base + random) * (f32)direction);
+        circle.mTranslation.x =
+            gabi::fmadds(offset, cM_ssin(this->shape_angle.y), (f32)this->current.pos.x);
+        circle.mTranslation.y = ((f32)this->current.pos.y + 600.0f) + vertical;
+        circle.mTranslation.z =
+            gabi::fmadds(offset, cM_scos(this->shape_angle.y), (f32)this->current.pos.z);
+        ghostshipSetCirclePath(&circle);
+        if (this->mAlpha != 0.0f) {
+            play = ghostshipGetPlayAddress();
+            dPa_control_c* particles = play->play.mParticle;
+            ghostshipSetSimpleParticle(particles, 0x8306, &circle.mPos, 255, &l_particleColor,
+                                       &l_particleColor, 0);
         }
     }
-    if (self->alpha == gabi::load<f32>(0x10463F80) && distance < gabi::load<f32>(0x10463F8C)) {
-        save = gabi::load<u32>(0x101F84DC);
-        u32 event = gabi::call<u32>(0x025B8BB0, ghostPtr(save + 0x644), 0x8803);
-        if (event < 3 && !self->enteredShip) {
-            gabi::call(0x025E1A40, 0x2889, 0, 0, 0);
-            u32 scene = gabi::call<u32>(0x02521678, &self->current.pos);
+    if (this->mAlpha == static_cast<f32>(l_HIO.shipAlpha) &&
+        distance < static_cast<f32>(l_HIO.shipEnterDist)) {
+        save = l_save;
+        u32 event = ghostshipGetEventReg(&save->save.mSavedata.mEvent, 0x8803);
+        if (event < 3 && !this->mbEnteredShip) {
+            ghostshipStartSound(0x2889, 0, 0, 0);
+            ghostshipHD::SceneList* scene = ghostshipGetSceneList(&this->current.pos);
             if (!scene)
-                gabi::call(0x0273AA24, STR(0x1000FB48), 0x1D3, STR(0x1000FB5C));
-            save = gabi::load<u32>(0x101F84DC);
-            u8 room = gabi::load<u8>(scene + 9), start = gabi::load<u8>(scene + 8);
-            gabi::call(0x025B8AF4, ghostPtr(save + 0x644), 0xC3FF, room);
-            save = gabi::load<u32>(0x101F84DC);
-            gabi::call(0x025B8AF4, ghostPtr(save + 0x644), 0x85FF, start);
-            gabi::call(0x0252012C, STR(0x1000FAD8), 0, 2, -1, 0, 1, 0, 0.0f);
-            self->enteredShip = 1;
+                ghostshipAssert("d_a_ghostship.cpp", 0x1D3, "scls_data != (0)");
+            save = l_save;
+            u8 room = scene->room, start = scene->start;
+            ghostshipSetEventReg(&save->save.mSavedata.mEvent, 0xC3FF, room);
+            save = l_save;
+            ghostshipSetEventReg(&save->save.mSavedata.mEvent, 0x85FF, start);
+            ghostshipSetNextStage("PShip", 0, 2, -1, 0, 1, 0, 0.0f);
+            this->mbEnteredShip = 1;
         }
     }
-    ghostModeProc(self);
-    gabi::call(0x025E742C, &self->btk);
-    ghostMatrices(self);
-    u32 cloth = gabi::ea(self->cloth);
+    this->modeProcCall();
+    ghostshipPlayBtk(&this->mBtk);
+    ghostMatrices(this);
+    ghostshipHD::Cloth* cloth = this->mpCloth;
     ghostClothParameters(cloth, -1.5f);
-    u32 wind = gabi::call<u32>(0x0257DAA8);
-    gabi::call(0x0251E7A8, (u8 *)self->cloth, ghostPtr(wind));
-    ghostClothMove(gabi::ea(self->cloth));
-    cloth = gabi::ea(self->cloth2);
+    cXyz* wind = ghostshipGetWindAddress();
+    ghostshipSetGlobalWind((ghostshipHD::Cloth*)this->mpCloth, wind);
+    ghostClothMove(this->mpCloth);
+    cloth = this->mpCloth2;
     ghostClothParameters(cloth, -0.25f);
-    wind = gabi::call<u32>(0x0257DAA8);
+    wind = ghostshipGetWindAddress();
     gabi::Local<cXyz> secondWind;
     gabi::Local<u8[16]> linkage;
-    secondWind->x = gabi::load<f32>(wind);
-    secondWind->y = gabi::load<f32>(wind + 4);
-    secondWind->z = gabi::load<f32>(wind + 8);
+    secondWind->x = static_cast<f32>(wind->x);
+    secondWind->y = static_cast<f32>(wind->y);
+    secondWind->z = static_cast<f32>(wind->z);
     PSVECScale(secondWind.get(), secondWind.get(), 0.548f);
     secondWind->y = -0.83f;
-    gabi::call(0x0251E7A8, (u8 *)self->cloth2, secondWind.get());
-    ghostClothMove(gabi::ea(self->cloth2));
+    ghostshipSetGlobalWind((ghostshipHD::Cloth*)this->mpCloth2, secondWind.get());
+    ghostClothMove(this->mpCloth2);
     return 0;
 }
-struct GhostshipColor_l {
-    be<f32> r, g, b, a;
-};
-static void ghostNormalize(GhostshipColor_l *out, u8 *color) {
-    WWHD_FUNC(0x0214B3F4, void, out, color);
-    u32 a = gabi::ea(color);
-    f32 r = (f32)gabi::load<u8>(a) / 255.0f, g = (f32)gabi::load<u8>(a + 1) / 255.0f,
-        b = (f32)gabi::load<u8>(a + 2) / 255.0f, alpha = (f32)gabi::load<u8>(a + 3) / 255.0f;
+/* 0214B3F4 */
+static void ghostNormalize(ghostshipHD::FloatColor* out, GXColor* color) {
+    f32 r = (f32)color->r / 255.0f, g = (f32)color->g / 255.0f, b = (f32)color->b / 255.0f,
+        alpha = (f32)color->a / 255.0f;
     out->r = r;
     out->g = g;
     out->b = b;
     out->a = alpha;
 }
-static void ghostCopyGuard(u32 guard, u32 destination, u32 source) {
-    if (!gabi::load<u32>(guard)) {
-        gabi::store<u32>(guard, 1);
-        gabi::call(0xC000A848, ghostPtr(destination), ghostPtr(source), 4);
+// HD: these compiler guard words cover the debug draw colors.
+static void ghostCopyGuard(ghostshipHD::DebugWord* guard, ghostshipHD::DebugWord* destination,
+                           const ghostshipHD::DebugWord* source) {
+    if (!guard->value) {
+        guard->value = 1;
+        ghostshipCopyDebugWord(destination, source, 4);
     }
 }
-static u32 ghostKColor(u32 material) {
-    u32 block = gabi::load<u32>(material + 0x18),
-        target = gabi::load<u32>(gabi::load<u32>(block + 4) + 0x4C);
-    return gabi::call_ptr<u32>(target, ghostPtr(block), 3);
-}
-static BOOL ghostDraw(daGhostship_c *self) {
-    WWHD_FUNC(0x0214B4A8, BOOL, self);
-    if (gabi::load<u8>(0x10463F7C)) {
-        ghostCopyGuard(0x101FDAC0, 0x101FEBF8, 0x1000FAC8);
-        ghostCopyGuard(0x101FDA50, 0x101FEBF4, 0x1000FACC);
-        ghostCopyGuard(0x101FDA50, 0x101FEBF4, 0x1000FACC);
-        ghostCopyGuard(0x101FDA50, 0x101FEBF4, 0x1000FACC);
-        ghostCopyGuard(0x101FDA48, 0x101FEBEC, 0x1000FAD0);
-        ghostCopyGuard(0x101FDAC0, 0x101FEBF8, 0x1000FAC8);
-        ghostCopyGuard(0x101FDAC0, 0x101FEBF8, 0x1000FAC8);
-        ghostCopyGuard(0x101FDAC0, 0x101FEBF8, 0x1000FAC8);
+/* 0214B4A8 */
+BOOL daGhostship_c::_draw() {
+    if (l_HIO.field_0x04) {
+        ghostCopyGuard(&l_axisGuard, &l_axisColor, &l_axisColorSource);
+        ghostCopyGuard(&l_fanGuard, &l_fanColor, &l_fanColorSource);
+        ghostCopyGuard(&l_fanGuard, &l_fanColor, &l_fanColorSource);
+        ghostCopyGuard(&l_fanGuard, &l_fanColor, &l_fanColorSource);
+        ghostCopyGuard(&l_vectorGuard, &l_vectorColor, &l_vectorColorSource);
+        ghostCopyGuard(&l_axisGuard, &l_axisColor, &l_axisColorSource);
+        ghostCopyGuard(&l_axisGuard, &l_axisColor, &l_axisColorSource);
+        ghostCopyGuard(&l_axisGuard, &l_axisColor, &l_axisColorSource);
     }
-    if (self->alpha == 0.0f || gabi::load<u8>(0x10463F7D))
+    if (this->mAlpha == 0.0f || l_HIO.hideShip)
         return 1;
-    u32 env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, ghostPtr(env), 0, &self->current.pos, ghostPtr(gabi::ea(self) + 0x110));
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, ghostPtr(env), (J3DModel *)self->model,
-               ghostPtr(gabi::ea(self) + 0x110));
-    u8 alpha = (u8)gabi::ftoi(255.5f * (f32)self->alpha);
-    u32 data = gabi::load<u32>(gabi::ea(self->model) + 0xAC);
-    u32 table = gabi::call<u32>(0x027F3F8C, ghostPtr(data));
-    for (u8 i = 0; i < gabi::load<u16>(table + 0x24); i = (u8)(i + 1)) {
-        u32 count = gabi::load<u32>(data + 0xC), material = gabi::load<u32>(data + 0x10);
-        if ((u32)i < count)
-            material += (u32)i * 0x39C;
-        u32 color = ghostKColor(material);
-        gabi::store<u8>(color + 3, alpha);
-        color = ghostKColor(material);
-        u32 block = gabi::load<u32>(material + 0x18),
-            target = gabi::load<u32>(gabi::load<u32>(block + 4) + 0x3C);
-        gabi::call_ptr<void>(target, ghostPtr(block), 3, ghostPtr(color));
-        gabi::Local<GhostshipColor_l> input, converted;
+    dScnKy_env_light_c* env = ghostshipGetEnvironmentAddress();
+    ghostshipSetLighting(env, 0, &this->current.pos, &this->tevStr);
+    env = ghostshipGetEnvironmentAddress();
+    ghostshipModelLighting(env, (J3DModel*)this->mpModel, &this->tevStr);
+    u8 alpha = (u8)gabi::ftoi(255.5f * (f32)this->mAlpha);
+    // HD: convert each material color and update its renderer uniform before drawing.
+    J3DModelData* data = this->mpModel->getModelData();
+    ghostshipHD::MaterialTable* table = ghostshipGetMaterialTable(data);
+    for (u8 i = 0; i < table->mMaterialNum; i = (u8)(i + 1)) {
+        auto* material = reinterpret_cast<ghostshipHD::Material*>(data->getMaterialNodePointer(i));
+        GXColor* color = material->mTevBlock->getTevKColor(3);
+        color->a = alpha;
+        color = material->mTevBlock->getTevKColor(3);
+        ghostshipHD::TevBlock* block = material->mTevBlock;
+        block->setTevKColor(3, color);
+        gabi::Local<ghostshipHD::FloatColor> input, converted;
         gabi::Local<u8[16]> linkage;
-        ghostNormalize(input.get(), ghostPtr(color));
-        gabi::call(0x0274D458, converted.get(), input.get(), 1.0f);
-        gabi::store<u32>(material + 0xA0, gabi::load<u32>(material + 0xA0) | 0x400);
-        u32 output = gabi::call<u32>(0x027F9F0C, ghostPtr(material + 0xA0), 10);
-        f32 savedAlpha = (f32)gabi::load<u8>(color + 3) / 255.0f;
+        ghostNormalize(input.get(), color);
+        ghostshipConvertColor(converted.get(), input.get(), 1.0f);
+        material->uniforms.flags = static_cast<u32>(material->uniforms.flags) | 0x400;
+        ghostshipHD::FloatColor* output = ghostshipGetUniform(&material->uniforms, 10);
+        f32 savedAlpha = (f32)color->a / 255.0f;
         f32 r = converted->r, g = converted->g, b = converted->b;
-        gabi::store<f32>(output + 4, g);
-        gabi::store<f32>(output + 8, b);
-        gabi::store<f32>(output, r);
-        gabi::store<f32>(output + 12, savedAlpha);
-        table = gabi::call<u32>(0x027F3F8C, ghostPtr(data));
+        output->g = g;
+        output->b = b;
+        output->r = r;
+        output->a = savedAlpha;
+        table = ghostshipGetMaterialTable(data);
     }
-    gabi::call(0x025E7FC4, &self->btk, ghostPtr(data), (f32)self->btk.mFrameCtrl.mFrame);
-    gabi::call(0x025E2DE0, (J3DModel *)self->model, 0);
-    gabi::store<u32>(data + 0x44, 0);
-    u32 cloth = gabi::ea(self->cloth);
-    gabi::store<u16>(gabi::ea(self) + 0x1A6, alpha);
-    u32 target = gabi::load<u32>(gabi::load<u32>(cloth + 0xC) + 0x44);
-    gabi::call_ptr<void>(target, ghostPtr(cloth));
-    cloth = gabi::ea(self->cloth2);
-    gabi::store<u16>(gabi::ea(self) + 0x1A6, alpha);
-    target = gabi::load<u32>(gabi::load<u32>(cloth + 0xC) + 0x44);
-    gabi::call_ptr<void>(target, ghostPtr(cloth));
+    ghostshipEnterBtk(&this->mBtk, data, (f32)this->mBtk.mFrameCtrl.mFrame);
+    ghostshipUpdateModel((J3DModel*)this->mpModel, 0);
+    reinterpret_cast<ghostshipHD::ModelDataTail*>(data)->mTextureAnimation = 0;
+    ghostshipHD::Cloth* cloth = this->mpCloth;
+    this->tevStr.mColorC0.a = alpha;
+    cloth->cloth_draw();
+    cloth = this->mpCloth2;
+    this->tevStr.mColorC0.a = alpha;
+    cloth->cloth_draw();
     return 1;
 }
-static void ghostPathMove(daGhostship_c *self) {
-    WWHD_FUNC(0x0214B834, void, self);
-    gabi::call(0x0200ED84, &self->speedF, (f32)self->pathSpeed, 0.1f, 2.0f);
-    gabi::call(0x02587D24, &self->pathPos, &self->pointNo, (u8 *)self->path, (f32)self->speedF,
-               0x0214A2B4, self);
-    f32 factor = gabi::load<f32>(0x1047BCD0) + 0.01f;
-    gabi::call(0x0200F268, &self->current.pos, &self->pathPos, factor, (f32)self->speedF);
-    if (self->speedF != 0.0f && self->pathSpeed != 0.0f) {
-        s16 angle = gabi::call<s16>(0x0200F93C, &self->current.pos, &self->pathPos);
-        gabi::call(0x0200F428, &self->shape_angle.y, angle, 8, 0x100);
+/* 0214B834 */
+void daGhostship_c::pathMove() {
+    cLib_addCalc2(&this->speedF, (f32)this->mPathSpeed, 0.1f, 2.0f);
+    ghostshipPathMove(&this->mPathPos, &this->mPathPntNo, (u8*)this->mPath, (f32)this->speedF,
+                      gabi::guest_fn(reinterpret_cast<const void*>(pathMove_CB)), this);
+    f32 factor = static_cast<f32>(l_pathChaseScale) + 0.01f;
+    ghostshipAddCalcPosXZ(&this->current.pos, &this->mPathPos, factor, (f32)this->speedF);
+    if (this->speedF != 0.0f && this->mPathSpeed != 0.0f) {
+        s16 angle = cLib_targetAngleY(&this->current.pos, &this->mPathPos);
+        cLib_addCalcAngleS2(&this->shape_angle.y, angle, 8, 0x100);
     }
 }
-static void ghostPathMode(daGhostship_c *self) {
-    WWHD_FUNC(0x0214B8FC, void, self);
-    if (self->pathNo != 255) {
-        self->pathSpeed = 10.0f;
-        ghostPathMove(self);
+/* 0214B8FC */
+void daGhostship_c::modePathMove() {
+    if (this->mPathNo != 255) {
+        this->mPathSpeed = 10.0f;
+        this->pathMove();
     }
-    self->current.pos.y = gabi::call<f32>(0x025871F8, &self->current.pos, &self->acch);
+    this->current.pos.y = ghostshipGetWaterY(&this->current.pos, &this->mAcch);
 }
-static u8 *ghostHioCtor(u8 *self) {
-    WWHD_FUNC(0x0214B954, u8 *, self);
+/* 0214B954 */
+static u8* ghostHioCtor(u8* self) {
     if (!self) {
-        self = gabi::call<u8 *>(0x0273AD10, 0x18);
+        self = ghostshipAllocate(0x18);
         if (!self)
             return nullptr;
     }
-    u32 a = gabi::ea(self);
-    gabi::store<f32>(a + 8, 0.51f);
-    gabi::store<f32>(a + 0x10, 3000.0f);
-    gabi::store<u8>(a + 4, 0);
-    gabi::store<u32>(a, 0x1000FB38);
-    gabi::store<f32>(a + 0xC, 5.0f);
-    gabi::store<u8>(a + 5, 0);
-    gabi::store<f32>(a + 0x14, 1500.0f);
+    auto* hio = reinterpret_cast<ghostshipHD::Hio*>(self);
+    hio->shipAlpha = 0.51f;
+    hio->shipHideDist = 3000.0f;
+    hio->field_0x04 = 0;
+    hio->vtable = 0x1000FB38;
+    hio->field_0x0C = 5.0f;
+    hio->hideShip = 0;
+    hio->shipEnterDist = 1500.0f;
     return self;
 }
+/* 0214B9D0 */
 static void ghostStaticInit() {
-    WWHD_FUNC(0x0214B9D0, void);
-    gabi::store<u32>(0x10463F98, 0);
-    gabi::store<u32>(0x10463F90, 0);
-    gabi::store<u32>(0x10463F9C, 0);
-    gabi::store<u32>(0x10463F94, 0);
-    gabi::call(0x028F026C, ghostPtr(0x101B529C));
-    gabi::store<f32>(0x10463F6C, -3.1415927410125732f);
-    gabi::store<f32>(0x10463F70, 3.1415927410125732f);
-    gabi::call(0x028ED6F8, ghostPtr(0x10463F74));
-    gabi::call(0x028F026C, ghostPtr(0x101B52A8));
-    gabi::call(0x028EAB2C, ghostPtr(0x10463F75));
-    gabi::call(0x028F026C, ghostPtr(0x101B52B4));
-    ghostHioCtor(ghostPtr(0x10463F78));
+    l_headerZeros.zero2 = 0;
+    l_headerZeros.zero0 = 0;
+    l_headerZeros.zero3 = 0;
+    l_headerZeros.zero1 = 0;
+    ghostshipRegisterDestructor(&l_headerRecord0);
+    l_negativePi = -3.1415927410125732f;
+    l_positivePi = 3.1415927410125732f;
+    ghostshipConstructAngle(&l_angleTag);
+    ghostshipRegisterDestructor(&l_headerRecord1);
+    ghostshipConstructByte(&l_byteTag);
+    ghostshipRegisterDestructor(&l_headerRecord2);
+    ghostHioCtor(reinterpret_cast<u8*>(&l_HIO));
 }
-static void ghostStringDtor(u8 *self, s32 flags) {
-    WWHD_FUNC(0x0214BA70, void, self, flags);
+/* 0214BA70 */
+static void ghostStringDtor(u8* self, s32 flags) {
     if (self && (flags & 1))
-        gabi::call(0x0273AF40, self);
+        ghostshipDelete(self);
 }
-static BOOL ghostIsDelete(daGhostship_c *self) {
-    WWHD_FUNC(0x0214BA84, BOOL, self);
+/* 0214BA84 */
+static BOOL daGhostship_IsDelete(daGhostship_c* self) {
     return 1;
 }
-static void ghostWait(daGhostship_c *self) { WWHD_FUNC(0x0214BA8C, void, self); }
-static void ghostRealize(daGhostship_c *self) { WWHD_FUNC(0x0214BA90, void, self); }
-static void ghostActorDtor(daGhostship_c *self, s32 flags) {
-    WWHD_FUNC(0x0214BA94, void, self, flags);
+/* 0214BA8C */
+void daGhostship_c::modeWait() {}
+/* 0214BA90 */
+void daGhostship_c::modeRealize() {}
+/* 0214BA94 */
+static void ghostActorDtor(daGhostship_c* self, s32 flags) {
     if (self) {
-        gabi::call(0x02018034, ghostPtr(gabi::ea(self) + 0x654), 2);
-        gabi::store<u32>(gabi::ea(self) + 0x49C, 0x1000FB08);
-        gabi::store<u32>(gabi::ea(self) + 0x490, 0x1000FB18);
-        gabi::call(0x024EFD9C, &self->acch, 0);
-        gabi::call(0x025D50BC, self, 0);
+        ghostshipDestroyCircleBase(&self->mCir.m_cir, 2);
+        static_cast<dBgS_GrpPassChk*>(&self->mAcch)->__vtbl = gc_tu.objAcch.v20;
+        static_cast<dBgS_PolyPassChk*>(&self->mAcch)->__vtbl = gc_tu.objAcch.v14;
+        ghostshipDestroyAcch(&self->mAcch, 0);
+        ghostshipDestroyActor(self, 0);
         if (flags & 1)
-            gabi::call(0x0273AF40, self);
+            ghostshipDelete(self);
     }
 }
-static void ghostStringVirtual() { WWHD_FUNC(0x0214BB18, void); }
-
-VERIFY(0x02149ED4, ghostSailFactor);
-VERIFY(0x02149EE0, ghostHeap);
-VERIFY(0x0214A0D8, ghostHeapCB);
-VERIFY(0x0214A0DC, ghostPathStep);
-VERIFY(0x0214A2B4, ghostPathCB);
-VERIFY(0x0214A2CC, ghostGetArg);
-VERIFY(0x0214A2E0, ghostPathInit);
-VERIFY(0x0214A2EC, ghostWaitInit);
-VERIFY(0x0214A2F8, ghostCreateInit);
-VERIFY(0x0214A758, ghostCreate);
-VERIFY(0x0214A8B8, ghostDelete);
-VERIFY(0x0214A958, ghostModeProc);
-VERIFY(0x0214A9A4, ghostExecute);
-VERIFY(0x0214B3F4, ghostNormalize);
-VERIFY(0x0214B4A8, ghostDraw);
-VERIFY(0x0214B834, ghostPathMove);
-VERIFY(0x0214B8FC, ghostPathMode);
-VERIFY(0x0214B954, ghostHioCtor);
-VERIFY(0x0214B9D0, ghostStaticInit);
-VERIFY(0x0214BA70, ghostStringDtor);
-VERIFY(0x0214BA84, ghostIsDelete);
-VERIFY(0x0214BA8C, ghostWait);
-VERIFY(0x0214BA90, ghostRealize);
-VERIFY(0x0214BA94, ghostActorDtor);
-VERIFY(0x0214BB18, ghostStringVirtual);
+/* 0214BB18 */
+static void ghostStringVirtual() {}
+/* WWHD glue
+str 1000FC84
+str 1000FC8C
+str 1000FB84 in 02149EE0
+str 1000FB98
+str 1000FBAC
+str 1000FB48 in 0214A9A4
+str 1000FB5C
+str 1000FAD8
+data l_pathChaseScale 1047BCD0
+data l_circleWobble 1047BCD4
+data l_pathThreshold 1047BCE4
+data l_circleOffset 1047BCF8
+data l_circleSpeed 1047BD48
+data l_negativePi 10463F6C
+data l_positivePi 10463F70
+data l_angleTag 10463F74
+data l_byteTag 10463F75
+data l_headerZeros 10463F90
+data l_headerRecord0 101B529C
+data l_headerRecord1 101B52A8
+data l_headerRecord2 101B52B4
+data l_save 101F84DC
+data l_particleColor 101D5E98
+ext 025B8BB0 u8 ghostshipGetEventRegByte(dSv_event_c*, u32)
+ext 0273AA24 void ghostshipAssert(const char*, u32, const char*)
+ext 025E7CE0 BOOL ghostshipInitBtk(mDoExt_btkAnm*, J3DModelData*, J3DAnmTextureSRTKey*, bool, s32, f32, s32, s16, bool, s32)
+ext 0251BE14 ghostshipHD::Cloth* ghostshipCreateCloth(ResTIMG*, ResTIMG*, s32, s32, f32, f32, dKy_tevstr_c*, u32)
+ext 025AAF88 u8* ghostshipGetRoomPath(s32, s8)
+ext 024EFF44 void ghostshipSetWall(dBgS_AcchCir*, f32, f32)
+ext 024F06B4 void ghostshipSetAcch(dBgS_ObjAcch*, cXyz*, cXyz*, daGhostship_c*, s32, dBgS_AcchCir*, cXyz*, u32, u32)
+ext 025D4ED0 void ghostshipConstructActor(daGhostship_c*)
+ext 025E7C6C void ghostshipConstructBtk(mDoExt_btkAnm*)
+ext 024F0474 void ghostshipConstructAcch(dBgS_ObjAcch*)
+ext 024EFE94 void ghostshipConstructCir(dBgS_AcchCir*)
+ext 02520460 s32 ghostshipLoadResource(request_of_phase_process_class*, const char*)
+ext 025204C8 void ghostshipDeleteResource(request_of_phase_process_class*, const char*)
+ext 025B8BB0 u32 ghostshipGetEventReg(dSv_event_c*, u32)
+ext 025200D4 dComIfG_inf_c* ghostshipGetPlayAddress()
+ext 025D6958 f32 ghostshipActorDistanceXZ(daGhostship_c*, fopAc_ac_c*)
+ext 02560828 u32 ghostshipGetMoonPhase()
+ext 02560C5C void ghostshipGhostShipCutoff()
+ext 02560C34 void ghostshipGhostShipExist()
+ext 025B80C8 BOOL ghostshipIsOpenCollectMap(dSv_player_map_c*, u32)
+ext 025B7F68 BOOL ghostshipIsGetCollectMap(dSv_player_map_c*, u32)
+ext 02520540 s32 ghostshipGetReverb(s8)
+ext 025E1A40 void ghostshipStartSound(u32, cXyz*, u32, s32)
+ext 025A8D40 void ghostshipSetSimpleParticle(dPa_control_c*, u32, cXyz*, u32, GXColor*, GXColor*, u32)
+ext 02521678 ghostshipHD::SceneList* ghostshipGetSceneList(cXyz*)
+ext 025B8AF4 void ghostshipSetEventReg(dSv_event_c*, u32, u32)
+ext 0252012C void ghostshipSetNextStage(const char*, s32, s32, s32, s32, s32, s32, f32)
+ext 025E742C void ghostshipPlayBtk(mDoExt_btkAnm*)
+ext 0257DAA8 cXyz* ghostshipGetWindAddress()
+ext 02555D0C dScnKy_env_light_c* ghostshipGetEnvironmentAddress()
+ext 025626A4 void ghostshipSetLighting(dScnKy_env_light_c*, s32, cXyz*, dKy_tevstr_c*)
+ext 02562F5C void ghostshipModelLighting(dScnKy_env_light_c*, J3DModel*, dKy_tevstr_c*)
+ext 025E7FC4 void ghostshipEnterBtk(mDoExt_btkAnm*, J3DModelData*, f32)
+ext 025E2DE0 void ghostshipUpdateModel(J3DModel*, s32)
+ext 02587D24 void ghostshipPathMove(cXyz*, be<s8>*, u8*, f32, u32, daGhostship_c*)
+ext 0273AD10 u8* ghostshipAllocate(u32)
+ext 028F026C void ghostshipRegisterDestructor(void*)
+ext 028ED6F8 void ghostshipConstructAngle(void*)
+ext 028EAB2C void ghostshipConstructByte(void*)
+ext 0273AF40 void ghostshipDelete(void*)
+ext 02018034 void ghostshipDestroyCircleBase(cM3dGCir_l*, s32)
+ext 024EFD9C void ghostshipDestroyAcch(dBgS_ObjAcch*, s32)
+ext 025D50BC void ghostshipDestroyActor(daGhostship_c*, s32)
+ext 025D63E8 BOOL ghostshipEntryHeap(daGhostship_c*, u32, u32)
+ext 027F3F8C ghostshipHD::MaterialTable* ghostshipGetMaterialTable(J3DModelData*)
+ext 027F9F0C ghostshipHD::FloatColor* ghostshipGetUniform(ghostshipHD::UniformBlock*, u32)
+ext 0274D458 void ghostshipConvertColor(ghostshipHD::FloatColor*, ghostshipHD::FloatColor*, f32)
+data l_HIO 10463F78
+data l_matrix 1048D0CC
+ext C000A848 void ghostshipCopyDebugWord(void*, const void*, u32)
+data l_axisGuard 101FDAC0
+data l_fanGuard 101FDA50
+data l_vectorGuard 101FDA48
+data l_axisColor 101FEBF8
+data l_fanColor 101FEBF4
+data l_vectorColor 101FEBEC
+data l_axisColorSource 1000FAC8
+data l_fanColorSource 1000FACC
+data l_vectorColorSource 1000FAD0
+ext 025872F4 void ghostshipWaveRot(cXyz*, f32, dLib_wave_c*)
+ext 02587128 void ghostshipSetCirclePath(dLib_circle_path_c*)
+ext 025871F8 f32 ghostshipGetWaterY(cXyz*, dBgS_ObjAcch*)
+ext 0201B47C BOOL ghostshipNormalizeVector(cXyz*)
+ext 0200F764 void ghostshipChasePos(cXyz*, cXyz*, f32)
+ext 0200F268 void ghostshipAddCalcPosXZ(cXyz*, cXyz*, f32, f32)
+ext 0251E7A8 void ghostshipSetGlobalWind(ghostshipHD::Cloth*, cXyz*)
+ext 0251B638 void ghostshipSetClothMtx(ghostshipHD::Cloth*, Mtx34*)
+ext 028E93CC void ghostshipMtxTrans(Mtx34*, f32, f32, f32)
+ext 025F19F8 void ghostshipMtxXYZrotM(Mtx34*, s16, s16, s16)
+ext 025F1C28 void ghostshipMtxYrotM(Mtx34*, s16)
+ext 028E90D4 void ghostshipMtxCopy(Mtx34*, Mtx34*)
+ext 025F23EC void ghostshipMtxPush()
+ext 025F2468 void ghostshipMtxPop()
+ext 025F24E0 void ghostshipMtxTransM(f32, f32, f32)
+data mode_proc 1000FBF0
+*/

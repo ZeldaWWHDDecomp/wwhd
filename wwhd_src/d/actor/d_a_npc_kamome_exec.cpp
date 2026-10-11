@@ -1,6 +1,6 @@
 /**
  * d_a_npc_kamome_exec.cpp (WWHD)
- * Player - Hyoi Seagull: execute (0225E598)
+ * Player - Hyoi Seagull: execute
  *
  * Ported from the GameCube decompilation
  * (zeldaret/tww src/d/actor/d_a_npc_kamome.cpp) to the WWHD layout and code, verified against
@@ -8,26 +8,25 @@
  */
 #include "d/actor/d_a_npc_kamome.h"
 
-/* this TU's dBgS_GndChk vtables (execute) */
-static const dBgS_GndChk_vt KAM_GNDCHK_VT = {0x1001B4AC, 0x1001B4BC, 0x1001B4DC, 0x1001B4CC};
-struct kam_chk54 { u8 _[0x54]; };
-/* 02445950 daPy_npc_c::checkNowPosMove(const char* staffName) */
-static inline BOOL daPy_npc_checkNowPosMove(fopAc_ac_c* a, const char* name) { return gabi::call<BOOL>(0x02445950, a, name); }
+using KamomeGroundCheck = dBgS_GndChk;
+// HD: daPy_npc_c::checkNowPosMove binding.
+static inline BOOL daPy_npc_checkNowPosMove(fopAc_ac_c* a, const char* name) { return kam_checkPositionMove(a, name); }
 
-/* HD: below its minimum height, or close to the ground (debug-register margins), the seagull is
- * pitched up and lifted; never sinks while touching water. */
+// HD: below its minimum height, or close to the ground (debug-register margins), the seagull is
+// pitched up and lifted; never sinks while touching water.
+
+/* inlined into daNpc_kam_c::execute */
 static inline void kam_groundCheck(daNpc_kam_c* i_this) {
-    gabi::Local<kam_chk54> gnd_chk;
-    dBgS_GndChk_ct(gnd_chk, KAM_GNDCHK_VT, false);
-    u32 g = gabi::ea(gnd_chk.get());
+    gabi::Local<KamomeGroundCheck> gnd_chk;
+    dBgS_GndChk_ct(gnd_chk, gc_tu.gndChk, false);
     f32 x = i_this->current.pos.x;
     f32 y = i_this->current.pos.y;
     f32 y150 = y + 150.0f;
     f32 z = i_this->current.pos.z;
     f32 gy_set = y150 + REG_F(18, 10);
-    gabi::store<f32>(g + 0x24, x); /* SetPos */
-    gabi::store<f32>(g + 0x28, gy_set);
-    gabi::store<f32>(g + 0x2C, z);
+    gnd_chk->m_pos.x = x; /* SetPos */
+    gnd_chk->m_pos.y = gy_set;
+    gnd_chk->m_pos.z = z;
     f32 groundY = cBgS_GroundCross(dComIfG_Bgsp(), gnd_chk);
     f32 limit = (groundY - 10.0f) + REG_F(18, 11);
     f32 py = i_this->current.pos.y;
@@ -54,14 +53,16 @@ static inline void kam_groundCheck(daNpc_kam_c* i_this) {
         }
     }
     /* ~dBgS_GndChk */
-    gabi::store<u32>(g + 0x20, 0x1001B4BC);
-    gabi::store<u32>(g + 0x40, 0x1001B4DC);
-    gabi::store<u32>(g + 0x4C, 0x1001B49C);
-    gabi::call(0x02008DAC, gnd_chk.get(), 0); /* cBgS_Chk::~cBgS_Chk */
+    gnd_chk->cBgS_PolyInfo::__vtbl = gc_tu.gndChkDt[0];
+    gnd_chk->dBgS_PolyPassChk::__vtbl = gc_tu.gndChkDt[1];
+    gnd_chk->dBgS_GrpPassChk::__vtbl = gc_tu.gndChkDt[2];
+    kam_destroyCheck(gnd_chk.get(), 0); /* cBgS_Chk::~cBgS_Chk */
 }
 
-/* HD: on the sea in room 44, the seagull is kept out of a circle around one spot (debug-register
- * radius); it is pushed back to the circle's edge */
+// HD: on the sea in room 44, the seagull is kept out of a circle around one spot (debug-register
+// radius); it is pushed back to the circle's edge
+
+/* inlined into daNpc_kam_c::execute */
 static inline void kam_keepOut(daNpc_kam_c* i_this) {
     f32 dy = 3737.0f - i_this->current.pos.y;
     f32 dx = -200460.0f - i_this->current.pos.x;
@@ -92,29 +93,30 @@ static inline void kam_keepOut(daNpc_kam_c* i_this) {
     }
 }
 
-/* 0225E598 HD: nothing moves while the seagull waits hidden; ground and keep-out checks (above);
- * the water splash uses dPa_control_c::set directly; with REG0_S(0) == 0 current.angle follows
- * shape_angle (GameCube: the reverse); no checkOrder; the mass collision replaces the tg sphere */
+/* 0225E598 */
+// HD: nothing moves while the seagull waits hidden; ground and keep-out checks (above);
+// the water splash uses dPa_control_c::set directly; with REG0_S(0) == 0 current.angle follows
+// shape_angle (GameCube: the reverse); no checkOrder; the mass collision replaces the tg sphere
 BOOL daNpc_kam_c::execute() {
-    WWHD_FUNC(0x0225E598, BOOL, this);
-    gabi::store<s16>(KAM_L_DEMO_CHK_CNT, 0);
+
+    l_demo_start_chk_cnt = 0;
 
     /* static JGeometry::TVec3<f32> splash_scale(0.6f, 0.6f, 0.6f), ripple_scale(1.0f, 1.0f, 1.0f) */
-    if (gabi::load<u32>(KAM_GUARD_SPLASH_SCALE) == 0) {
-        gabi::store<u32>(KAM_GUARD_SPLASH_SCALE, 1);
-        kam_setVec(KAM_L_SPLASH_SCALE, 0.6f, 0.6f, 0.6f);
+    if (splash_guard == 0) {
+        splash_guard = 1;
+        kam_setVec(&splash_scale, 0.6f, 0.6f, 0.6f);
     }
-    if (gabi::load<u32>(KAM_GUARD_RIPPLE_SCALE) == 0) {
-        gabi::store<u32>(KAM_GUARD_RIPPLE_SCALE, 1);
-        kam_setVec(KAM_L_RIPPLE_SCALE, 1.0f, 1.0f, 1.0f);
+    if (ripple_guard == 0) {
+        ripple_guard = 1;
+        kam_setVec(&ripple_scale, 1.0f, 1.0f, 1.0f);
     }
 
     actor_status = actor_status & ~0x20u; /* fopAcM_OffStatus(this, fopAcStts_SHOWMAP_e) */
-    kam_calcTimerU8(&mDamageFogTimer);    /* executeDamageFog() */
+    kam_calcTimerU8(&mDamageFogTimer);
 
     if (!isReturnLink() && mHidden == 0) {
-        if (daPy_npc_checkNowPosMove(this, gabi::at<const char>(gabi::load<u32>(KAM_L_STAFF_NAME)))) {
-            daNpc_kam_HIO1_l& hio = kam_l_HIO().mHio1;
+        if (daPy_npc_checkNowPosMove(this, l_staff_name.get())) {
+            daNpc_kam_HIO1_c& hio = l_HIO.mHio1;
             f32 target = mTargetSpeedF;
             f32 spd = speedF;
             f32 accel = hio.mAccelF;
@@ -156,68 +158,68 @@ BOOL daNpc_kam_c::execute() {
                     kam_groundCheck(this);
                 }
                 BOOL special = FALSE;
-                if (kam_isStartStage(0x1001B670 /* "sea" */) && current.roomNo == 44) {
+                if (kam_isStartStage("sea") && current.roomNo == 44) {
                     special = TRUE;
                 }
                 if (special) {
                     kam_keepOut(this);
                 }
             }
-            fopAcM_posMove(this, &mStts.m_cc_move); /* mStts.GetCCMoveP() */
+            fopAcM_posMove(this, &mStts.m_cc_move);
         }
 
         if (!isNoBgCheck()) {
             mAcch.CrrPos(dComIfG_Bgsp());
             if (!(mAcch.GetGroundH() == -1000000000.0f /* -G_CM3D_F_INF */)) {
-                u32 gnd = gabi::ea(this) + 0x6FC; /* mAcch.m_gnd */
-                s8 roomNo = (s8)gabi::call<s32>(0x024EF130, dComIfG_Bgsp(), gnd); /* dBgS::GetRoomId */
+                u32 gnd = gabi::ea(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd)); /* mAcch.m_gnd */
+                s8 roomNo = (s8)kam_getGroundRoom(dComIfG_Bgsp(), gnd); /* dBgS::GetRoomId */
                 current.roomNo = roomNo;           /* fopAcM_SetRoomNo */
-                gabi::store<s8>(gabi::ea(this) + 0x1C9, roomNo); /* tevStr.mRoomNo */
-                u8 color = (u8)gabi::call<u32>(0x024EEEB8, dComIfG_Bgsp(), gnd); /* dBgS::GetPolyColor */
-                mPolyInfo.mPolyIndex = gabi::load<u16>(gnd);  /* mPolyInfo.SetPolyInfo(mAcch.m_gnd) */
-                mPolyInfo.mBgIndex = gabi::load<u16>(gnd + 2);
-                mPolyInfo.mpBgW = gabi::load<u32>(gnd + 4);
-                mPolyInfo.mProcId = gabi::load<s32>(gnd + 8);
+                tevStr.mRoomNo = roomNo; /* tevStr.mRoomNo */
+                u8 color = (u8)kam_getGroundColor(dComIfG_Bgsp(), gnd); /* dBgS::GetPolyColor */
+                mPolyInfo.mPolyIndex = static_cast<cBgS_PolyInfo&>(mAcch.m_gnd).mPolyIndex;  /* mPolyInfo.SetPolyInfo(mAcch.m_gnd) */
+                mPolyInfo.mBgIndex = static_cast<cBgS_PolyInfo&>(mAcch.m_gnd).mBgIndex;
+                mPolyInfo.mpBgW = static_cast<cBgS_PolyInfo&>(mAcch.m_gnd).mpBgW;
+                mPolyInfo.mProcId = static_cast<cBgS_PolyInfo&>(mAcch.m_gnd).mActorId;
                 mStts.mRoomId = (u8)roomNo;        /* mStts.SetRoomId(roomNo) */
-                gabi::store<u8>(gabi::ea(this) + 0x1CA, color); /* tevStr.mEnvrIdxOverride */
+                tevStr.mEnvrIdxOverride = color; /* tevStr.mEnvrIdxOverride */
             }
             u32 flags = mHitFlags;
-            if (mAcch.m_flags & 0x80000 /* ChkSeaIn() */) {
+            if (mAcch.m_flags & 0x80000 ) {
                 if (!(flags & 8)) {
-                    mHitFlags = flags | 8; /* onWaterHit() */
+                    mHitFlags = flags | 8;
                     JPABaseEmitter* splash = dPa_control_set(dComIfGp_getParticle(), 0, 0x40 /* ID_IT_JN_WP_SHIBUKI */,
                                                              &current.pos, nullptr, nullptr, 0xFF, nullptr, -1,
                                                              nullptr, nullptr, nullptr);
                     if (splash != nullptr) {
-                        u32 e = gabi::ea(splash);
-                        gabi::store<f32>(e + 0x34, 15.0f); /* setRate */
-                        f32 sx = gabi::load<f32>(KAM_L_SPLASH_SCALE);
-                        f32 sy = gabi::load<f32>(KAM_L_SPLASH_SCALE + 4);
-                        f32 sz = gabi::load<f32>(KAM_L_SPLASH_SCALE + 8);
-                        kam_setVec(e + 0x220, sx, sy, sz); /* setGlobalScale */
-                        kam_setVec(e + 0x238, sx, sy, sz);
+                        KamomeEmitter* e = reinterpret_cast<KamomeEmitter*>(splash);
+                        splash->setRate(15.0f); /* setRate */
+                        f32 sx = splash_scale.x;
+                        f32 sy = splash_scale.y;
+                        f32 sz = splash_scale.z;
+                        kam_setVec(&e->mGlobalScale, sx, sy, sz); /* setGlobalScale */
+                        kam_setVec(&e->mGlobalScaleOut, sx, sy, sz);
                     }
                     /* dComIfGp_particle_setSingleRipple */
                     JPABaseEmitter* ripple = dPa_control_set(dComIfGp_getParticle(), 5, 0x3D /* ID_IT_JN_WP_HAMON01 */,
                                                              &current.pos, nullptr, nullptr, 0xFF,
-                                                             gabi::at<dPa_levelEcallBack>(0x1047B2E4), -1, nullptr,
+                                                             &l_rippleCallback, -1, nullptr,
                                                              nullptr, nullptr);
                     if (ripple != nullptr) {
-                        u32 e = gabi::ea(ripple);
-                        f32 sx = gabi::load<f32>(KAM_L_RIPPLE_SCALE);
-                        f32 sy = gabi::load<f32>(KAM_L_RIPPLE_SCALE + 4);
-                        f32 sz = gabi::load<f32>(KAM_L_RIPPLE_SCALE + 8);
-                        kam_setVec(e + 0x220, sx, sy, sz);
-                        kam_setVec(e + 0x238, sx, sy, sz);
+                        KamomeEmitter* e = reinterpret_cast<KamomeEmitter*>(ripple);
+                        f32 sx = ripple_scale.x;
+                        f32 sy = ripple_scale.y;
+                        f32 sz = ripple_scale.z;
+                        kam_setVec(&e->mGlobalScale, sx, sy, sz);
+                        kam_setVec(&e->mGlobalScaleOut, sx, sy, sz);
                     }
                 }
             } else {
-                mHitFlags = flags & ~8u; /* offWaterHit() */
+                mHitFlags = flags & ~8u;
             }
         }
 
         setLineBgCheck();
-        if (daPy_npc_checkNowPosMove(this, gabi::at<const char>(gabi::load<u32>(KAM_L_STAFF_NAME)))) {
+        if (daPy_npc_checkNowPosMove(this, l_staff_name.get())) {
             animationPlay();
         }
     }
@@ -253,12 +255,15 @@ BOOL daNpc_kam_c::execute() {
         setCollision();
     }
 
-    gabi::call(0x0251641C, &mAtSph); /* ClrCoHit */
+    kam_clearSphereCollision(&mAtSph); /* ClrCoHit */
     mAtSph.ClrTgHit();
     mCps.ClrAtHit();
-    mStts.m_cc_move.z = 0.0f; /* mStts.ClrCcMove() */
+    mStts.m_cc_move.z = 0.0f;
     mStts.m_cc_move.x = 0.0f;
     mStts.m_cc_move.y = 0.0f;
     return TRUE;
 }
-VERIFY(0x0225E598, &daNpc_kam_c::execute);
+
+/* WWHD glue (tools/verify/autoglue.py)
+str 1001B670 in 0225E598
+*/

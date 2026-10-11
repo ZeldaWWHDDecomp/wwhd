@@ -6,232 +6,100 @@
  * (zeldaret/tww src/d/actor/d_a_dr2.cpp) to the WWHD layout and code, verified against
  * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
  */
-#include "bindings.h"
+#include "d/actor/d_a_dr2.h"
 
 #define SAFESTRING_VTBL 0x1000E0D0
 #define DR2_VTBL 0x1000E0F8     /* HD: dr2_class vtable */
 #define DR2_HIO_VTBL 0x1000E0E8 /* daDr2_HIO_c vtable */
-#define FILE_NAME STR(0x1000E1E0) /* "d_a_dr2.cpp" */
-#define ASSERT_FILE STR(0x1000E118)
 
-enum {
-    dRes_INDEX_DR2_BCK_DR_BOSS_DEMO1_e = 9,
-    dRes_INDEX_DR2_BDL_IWA00_e = 0xE,
-    dRes_INDEX_DR2_BMD_DR_e = 0x17,
-    dRes_INDEX_DR2_BMD_DR_SIPPO_e = 0x18,
-    dRes_INDEX_DR2_BMD_GAN_MAGMA_e = 0x1B,
-    dRes_INDEX_DR2_BMD_MBYO1_e = 0x1C,
-    dRes_INDEX_DR2_BMD_MBYO2_e = 0x1D,
-    dRes_INDEX_DR2_BRK_MBYO2_e = 0x20,
-    dRes_INDEX_DR2_BTK_GAN_MAGMA_e = 0x23,
-    dRes_INDEX_DR2_BTK_MBYO1_e = 0x24,
-    dRes_INDEX_DR2_BTK_MBYO2_e = 0x25,
-    dRes_INDEX_DR2_DZB_MBYO1_e = 0x28,
-    dRes_INDEX_DR2_DZB_MBYO2_e = 0x29,
-};
-enum { DR_JNT_J_DR_HANE_L2_e = 11 };
-enum {
-    JA_SE_CM_BTD_STN_FALL = 0x5828,
-    JA_SE_CM_BTD_ROCK_FALL = 0x582A,
-    JA_SE_CM_BTD_ROCK_HIT = 0x582B,
-    JA_SE_CM_BTD_ROCK_ATTACH = 0x582F,
-};
-enum {
-    dPa_name_ID_AK_SN_BTDDRIPMAGMA00 = 0x80B7,
-    dPa_name_ID_AK_SN_BTDBROKENROCK00 = 0x80B9,
-    dPa_name_ID_AK_SN_O_BTDBROKENROCKTAIL00 = 0x8062,
-    dPa_name_ID_AK_ST_BTDSMOKE02 = 0xA0B8,
-};
-enum { fpcNm_BTD_e = 0xEA, fpcNm_KUI_e = 0xFA };
+const gc_tu_data gc_tu = {.safeString = SAFESTRING_VTBL, .headerStatics = {0x10463C34, 0x101B47E0, 0}};
+static daDr2_HIO_c l_HIO;
+static const f32 hsx[6] = {-10.0f, -10.0f, 0.0f, 10.0f, 10.0f, 0.0f};
+static const f32 hsz[6] = {-7.0f, 7.0f, 12.0f, 7.0f, -7.0f, -12.0f};
+static const s32 hahen_model[6] = {15, 16, 17, 18, 19, 20};
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* HD J3D: j3dSys.mModel at 0x104B462C, J3DSys::mCurrentMtx at 0x104B4868; a model's joint
- * matrices live in a block at +0x2C (+0x4 flags, +0x10 matrices), user area at +0xB8 */
-static inline Mtx34* J3DModel_getAnmMtx(J3DModel* m, s32 jntNo) {
-    u32 blk = gabi::load<u32>(gabi::ea(m) + 0x2C);
-    gabi::store<u16>(blk + 4, (u16)(gabi::load<u16>(blk + 4) | 0x10)); /* HD: marks the joint matrices dirty */
-    return gabi::at<Mtx34>(gabi::load<u32>(blk + 0x10) + jntNo * 0x30);
+// HD: setAnmMtx uses word copies here; the common float assignment would quiet signaling NaNs.
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void J3DModel_setAnmMtx(J3DModel* model, s32 joint, Mtx34* source) {
+    mtx_copy(model->getAnmMtx(joint), source);
 }
-static inline void J3DModel_setAnmMtx(J3DModel* m, s32 jntNo, Mtx34* src) { mtx_copy(J3DModel_getAnmMtx(m, jntNo), src); }
-static inline Mtx34* J3DSys_mCurrentMtx() { return gabi::at<Mtx34>(0x104B4868); }
-/* 027F3F94 (the matcher names it __nw): returns the model data's joint tree; joint count (u16) at +8 */
-static inline u16 J3DModelData_getJointNum(J3DModelData* d) { return gabi::load<u16>(gabi::ea(gabi::call<void*>(0x027F3F94, d)) + 8); }
-/* J3DModelData::getJointNodePointer(i)->setCallBack(cb) (HD: nodes of 0x1C bytes from +8; index checked against +4) */
-static inline void setJointCallBack(J3DModelData* d, u16 i, u32 cb) {
-    u32 data = gabi::ea(d);
-    u32 n = gabi::load<u32>(data + 4);
-    u32 p = gabi::load<u32>(data + 8);
-    if (i < n) p += i * 0x1C;
-    gabi::store<u32>(p + 8, cb);
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline f32 cM_fsin(f32 radians) { return cM_ssin(dr2_radiansToAngle(radians)); }
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline f32 anm_getFrame(void* animation) {
+    return reinterpret_cast<J3DFrameCtrl*>(animation)->mFrame;
 }
-static inline void MtxRotY(f32 rad, u8 concat) { gabi::call(0x0200FBA4, rad, concat); }
-static inline void mDoExt_modelUpdate(J3DModel* m) { gabi::call(0x025E2DA8, m); }
-static inline s16 cM_rad2s(f32 x) { return gabi::call<s16>(0x02019510, x); }
-static inline f32 cM_fsin(f32 x) { return cM_ssin(cM_rad2s(x)); }
-static inline void PSMTXInverse(const Mtx34* a, Mtx34* b) { gabi::call(0x028E91EC, a, b); }
-static inline void PSMTXScale(Mtx34* m, f32 x, f32 y, f32 z) { gabi::call(0x028E945C, m, x, y, z); }
-static inline void PSMTXConcat(const Mtx34* a, const Mtx34* b, Mtx34* ab) { gabi::call(0x028E9108, a, b, ab); }
-static inline s32 JUTNameTab_getIndex(u32 tab, const char* name) { return gabi::call<s32>(0x027DF9B0, tab, name); }
-static inline void mDoExt_brkAnm_entry_l(void* a, J3DModelData* d, f32 frame) { gabi::call(0x025E83FC, a, d, frame); }
-static inline void mDoExt_btkAnm_entry_l(void* a, J3DModelData* d, f32 frame) { gabi::call(0x025E7FC4, a, d, frame); }
-static inline f32 anm_getFrame(void* a) { return gabi::load<f32>(gabi::ea(a) + 4); }
-/* JPABaseEmitter (HD inlines) */
-static inline void JPABaseEmitter_becomeInvalidEmitter(JPABaseEmitter* em) {
-    u32 e = gabi::ea(em);
-    u32 f = gabi::load<u32>(e + 0x254);
-    gabi::store<s32>(e + 0x5C, -1);
-    gabi::store<u32>(e + 0x254, f | 1);
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void JPABaseEmitter_becomeInvalidEmitter(JPABaseEmitter* emitter) {
+    Dr2Emitter* view = reinterpret_cast<Dr2Emitter*>(emitter);
+    u32 flags = view->mFlags;
+    view->mMaxFrame = -1;
+    view->mFlags = flags | 1;
 }
-static inline bool JPABaseEmitter_isEnableDeleteEmitter(JPABaseEmitter* em) {
-    u32 e = gabi::ea(em);
-    return (gabi::load<u32>(e + 0x254) & 8) && gabi::load<u32>(e + 0x1B4) + gabi::load<u32>(e + 0x1C0) == 0;
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline bool JPABaseEmitter_isEnableDeleteEmitter(JPABaseEmitter* emitter) {
+    Dr2Emitter* view = reinterpret_cast<Dr2Emitter*>(emitter);
+    return (view->mFlags & 8) && view->mParticleCount + view->mChildCount == 0;
 }
-static inline void JPABaseEmitter_setRate(JPABaseEmitter* em, f32 r) { gabi::store<f32>(gabi::ea(em) + 0x34, r); }
-/* dComIfGp_particle_setToon: dPa_control_c::set with group 2 (setup = room number) */
-static inline JPABaseEmitter* particle_setToon(u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
-                                               dPa_levelEcallBack* cb, s8 setup) {
-    dPa_control_c* pa = dComIfGp_getParticle();
-    return dPa_control_set(pa, 2, id, pos, angle, scale, alpha, cb, setup, nullptr, nullptr, nullptr);
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void JPABaseEmitter_setRate(JPABaseEmitter* emitter, f32 rate) {
+    reinterpret_cast<Dr2Emitter*>(emitter)->mRate = rate;
 }
-/* HD inline fopAcM_seStartCurrent: tests the actor (optionally) and &current.pos */
-static inline void seStartCurrent(fopAc_ac_c* a, u32 id, bool check_actor) {
-    if (check_actor && a == nullptr) return;
-    if (gabi::ea(&a->current.pos) != 0)
-        mDoAud_seStart(id, &a->current.pos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(a)));
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline JPABaseEmitter* particle_setToon(u16 id, const cXyz* pos, const csXyz* angle,
+                                            const cXyz* scale, u8 alpha, dPa_levelEcallBack* cb, s8 setup) {
+    dPa_control_c* control = dComIfGp_getParticle();
+    return dPa_control_set(control, 2, id, pos, angle, scale, alpha, cb, setup, nullptr, nullptr, nullptr);
 }
-/* dVibration_c::StartShock(int, int, cXyz) (the cXyz by pointer to a copy); REG read after the accessor */
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void seStartCurrent(fopAc_ac_c* actor, u32 sound, bool checkActor) {
+    if (checkActor && actor == nullptr) return;
+    if (gabi::ea(&actor->current.pos) != 0)
+        mDoAud_seStart(sound, &actor->current.pos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
+}
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void StartShock_reg(s32 add, s32 flags, cXyz* pos) {
-    dVibration_c* v = dComIfGp_getVibration();
+    dVibration_c* vibration = dComIfGp_getVibration();
     s32 strength = REG0_S(2) + add;
-    gabi::call(0x025CB374, v, strength, flags, pos);
+    dr2_shock(vibration, strength, flags, pos);
 }
-static inline void mDoExt_baseAnm_play_l(void* a) { gabi::call(0x025E742C, a); }
-/* HD inline anm setFrame: frame (+4), the animation's frame (through the pointer at +ptrOff) and a
- * functor at +fnOff ({f32 result, f32 a, f32 b, ?, fn, arg}) re-evaluated, then 027DF40C(&functor) */
-static inline void anm_setFrame_hd(void* anm, f32 frame, u32 ptrOff, u32 fnOff) {
-    u32 a = gabi::ea(anm);
-    u32 fp = gabi::load<u32>(a + ptrOff);
-    gabi::store<f32>(a + 4, frame);
-    gabi::store<f32>(fp, frame);
-    u32 fn = gabi::load<u32>(a + fnOff);
-    u32 target = gabi::load<u32>(fn + 0x10);
-    f32 p3 = gabi::load<f32>(fn + 8);
-    f32 p2 = gabi::load<f32>(fn + 4);
-    u32 arg = gabi::load<u32>(fn + 0x14);
-    f32 res = gabi::call_ptr<f32>(target, arg, frame, p2, p3);
-    gabi::store<f32>(fn, res);
-    gabi::call(0x027DF40C, a + fnOff);
+// HD: animation frame, pointed-to resource frame, then functor arguments in GHS load order.
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void anm_setFrame_hd(void* animation, f32 frame, bool brk) {
+    be<f32>* resourceFrame;
+    gptr<Dr2FrameFunctor>* functorSlot;
+    if (brk) {
+        Dr2BrkAnimation* view = reinterpret_cast<Dr2BrkAnimation*>(animation);
+        resourceFrame = view->mpAnimationFrame;
+        view->mFrameCtrl.mFrame = frame;
+        *resourceFrame = frame;
+        functorSlot = &view->mpFunctor;
+    } else {
+        Dr2BtkAnimation* view = reinterpret_cast<Dr2BtkAnimation*>(animation);
+        resourceFrame = view->mpAnimationFrame;
+        view->mFrameCtrl.mFrame = frame;
+        *resourceFrame = frame;
+        functorSlot = &view->mpFunctor;
+    }
+    Dr2FrameFunctor* functor = *functorSlot;
+    u32 target = functor->mFunction;
+    f32 b = functor->mB;
+    f32 a = functor->mA;
+    u32 argument = functor->mArgument;
+    f32 result = gabi::call_ptr<f32>(target, argument, frame, a, b);
+    functor->mResult = result;
+    dr2_finishFrame(functorSlot);
 }
-/* btkAnm setFrame from an s16 (HD: clamped to the end frame) */
-static inline void btk_setFrame_clamped(void* btk, f32 frame) {
-    if (frame > (f32)gabi::load<s16>(gabi::ea(btk) + 0xA))
-        frame = (f32)gabi::load<s16>(gabi::ea(btk) + 0xA);
-    anm_setFrame_hd(btk, frame, 0x68, 0x10);
+/* inlined into daDr2_Execute / daDr2_Draw */
+static inline void btk_setFrame_clamped(void* animation, f32 frame) {
+    J3DFrameCtrl* control = reinterpret_cast<J3DFrameCtrl*>(animation);
+    if (frame > (f32)control->mEnd) frame = (f32)control->mEnd;
+    anm_setFrame_hd(animation, frame, false);
 }
-/* JPABaseParticle global position (HD: read directly) */
-static inline u32 JPABaseEmitter_getParticleListFirst(JPABaseEmitter* e) { return gabi::load<u32>(gabi::ea(e) + 0x1AC); }
 
-/* daDr2_HIO_c (HD: vtable after the members) */
-struct daDr2_HIO_c {
-    /* 0x00 */ be<s8> mNo;
-    /* 0x01 */ u8 _01[3];
-    /* 0x04 */ be<f32> m08;
-    /* 0x08 */ be<u32> __vtbl;
-};
-WWHD_SIZE(daDr2_HIO_c, 0xC);
-static daDr2_HIO_c& l_HIO() { return *gabi::at<daDr2_HIO_c>(0x10463C50); }
-
-static f32 hsx(int i) { return gabi::load<f32>(0x101B4778 + 4 * i); }
-static f32 hsz(int i) { return gabi::load<f32>(0x101B4790 + 4 * i); }
-
-struct iwa_hahen_s {
-    /* 0x00 */ gptr<J3DModel> mpModel;
-    /* 0x04 */ be<u8> unk_04;
-    /* 0x05 */ u8 _05[3];
-    /* 0x08 */ cXyz unk_08;
-    /* 0x14 */ cXyz unk_14;
-    /* 0x20 */ csXyz unk_20;
-    /* 0x26 */ u8 _26[2];
-};
-WWHD_SIZE(iwa_hahen_s, 0x28);
-
-/* GameCube +0x11C throughout */
-struct dr2_class : fopEn_enemy_c {
-    /* 0x3C8 */ request_of_phase_process_class mPhase;
-    /* 0x3D0 */ gptr<mDoExt_McaMorf> mpMorf1;
-    /* 0x3D4 */ gptr<mDoExt_McaMorf> mpMorf2;
-    /* 0x3D8 */ be<s16> unk_2BC;
-    /* 0x3DA */ u8 _3DA[2];
-    /* 0x3DC */ iwa_hahen_s mRockFragments[6];
-    /* 0x4CC */ cXyz unk_3B0;
-    /* 0x4D8 */ be<s16> unk_3BC[12];
-    /* 0x4F0 */ be<s16> unk_3D4[12];
-    /* 0x508 */ be<f32> unk_3EC;
-    /* 0x50C */ be<f32> unk_3F0;
-    /* 0x510 */ be<f32> unk_3F4;
-    /* 0x514 */ be<f32> unk_3F8;
-    /* 0x518 */ be<u32> unk_3FC;
-    /* 0x51C */ be<s16> unk_400[5];
-    /* 0x526 */ be<u8> unk_40A;
-    /* 0x527 */ u8 _527;
-    /* 0x528 */ be<f32> unk_40C;
-    /* 0x52C */ be<f32> unk_410;
-    /* 0x530 */ be<f32> unk_414;
-    /* 0x534 */ gptr<J3DModel> unk_418;
-    /* 0x538 */ gptr<J3DModel> unk_41C;
-    /* 0x53C */ gptr<void> unk_420; /* mDoExt_btkAnm* */
-    /* 0x540 */ be<s16> unk_424;
-    /* 0x542 */ u8 _542[2];
-    /* 0x544 */ gptr<J3DModel> unk_428;
-    /* 0x548 */ gptr<J3DModel> unk_42C;
-    /* 0x54C */ gptr<void> unk_430; /* mDoExt_btkAnm* */
-    /* 0x550 */ gptr<void> unk_434; /* mDoExt_btkAnm* */
-    /* 0x554 */ gptr<void> unk_438; /* mDoExt_brkAnm* */
-    /* 0x558 */ be<u8> unk_43C;
-    /* 0x559 */ u8 _559[3];
-    /* 0x55C */ Mtx34 unk_440;
-    /* 0x58C */ Mtx34 unk_470;
-    /* 0x5BC */ gptr<dBgW> mpBgW1;
-    /* 0x5C0 */ gptr<dBgW> mpBgW2;
-    /* 0x5C4 */ cXyz unk_4A8;
-    /* 0x5D0 */ csXyz unk_4B4;
-    /* 0x5D6 */ be<s16> unk_4BA;
-    /* 0x5D8 */ u8 _5D8[4];
-    /* 0x5DC */ be<f32> unk_4C0;
-    /* 0x5E0 */ be<u8> unk_4C4;
-    /* 0x5E1 */ u8 _5E1;
-    /* 0x5E2 */ be<s16> unk_4C6;
-    /* 0x5E4 */ be<s16> unk_4C8;
-    /* 0x5E6 */ be<s16> unk_4CA;
-    /* 0x5E8 */ be<s16> unk_4CC;
-    /* 0x5EA */ be<s16> unk_4CE;
-    /* 0x5EC */ be<f32> unk_4D0;
-    /* 0x5F0 */ gptr<JPABaseEmitter> unk_4D4;
-    /* 0x5F4 */ dPa_followEcallBack unk_4D8;
-    /* 0x608 */ u8 unk_4EC[0x20]; /* dPa_smokeEcallBack (HD 0x20, vtable at +0) */
-    /* 0x628 */ be<u8> unk_50C;
-    /* 0x629 */ be<u8> unk_50D;
-    /* 0x62A */ be<u8> unk_50E;
-    /* 0x62B */ u8 _62B;
-    /* 0x62C */ be<s16> unk_510;
-    /* 0x62E */ u8 _62E[2];
-    /* 0x630 */ gptr<fopAc_ac_c> unk_514; /* btd_class* */
-};
-WWHD_OFFSET(dr2_class, mRockFragments, 0x3DC);
-WWHD_OFFSET(dr2_class, unk_40A, 0x526);
-WWHD_OFFSET(dr2_class, mpBgW1, 0x5BC);
-WWHD_OFFSET(dr2_class, unk_4D8, 0x5F4);
-WWHD_OFFSET(dr2_class, unk_50C, 0x628);
-WWHD_SIZE(dr2_class, 0x634);
-
-/* btd_class fields read here (HD: GameCube +0x128) */
-static inline u32 btd_m02FC(fopAc_ac_c* btd, int i) { return gabi::ea(btd) + 0x424 + 12 * i; }
-static inline f32 btd_m02FC_y(fopAc_ac_c* btd, int i) { return gabi::load<f32>(btd_m02FC(btd, i) + 4); }
-static inline u32 btd_m02F6(fopAc_ac_c* btd) { return gabi::ea(btd) + 0x41E; }
-
-/* 0212D548 daDr2_HIO_c::daDr2_HIO_c (HD: allocates when this == NULL) */
+// HD: daDr2_HIO_c::daDr2_HIO_c (HD: allocates when this == NULL)
+/* 0212D548 */
 static daDr2_HIO_c* daDr2_HIO_c_ct(daDr2_HIO_c* i_this) {
-    WWHD_FUNC(0x0212D548, daDr2_HIO_c*, i_this);
     if (i_this == nullptr) {
         i_this = (daDr2_HIO_c*)operator_new(0xC);
         if (i_this == nullptr)
@@ -242,48 +110,46 @@ static daDr2_HIO_c* daDr2_HIO_c_ct(daDr2_HIO_c* i_this) {
     i_this->m08 = 1.0f;
     return i_this;
 }
-VERIFY(0x0212D548, daDr2_HIO_c_ct);
 
 /* 0212AACC */
 static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
-    WWHD_FUNC(0x0212AACC, BOOL, node, calcTiming);
-    if (calcTiming == 0 /* J3DNodeCBCalcTiming_In */) {
+    if (calcTiming == J3DNodeCBCalcTiming_In) {
         J3DJoint* joint = J3DNode_toJoint(node);
-        J3DModel* model = gabi::at<J3DModel>(gabi::load<u32>(0x104B462C)); /* j3dSys.getModel() */
-        dr2_class* i_this = gabi::at<dr2_class>(gabi::load<u32>(gabi::ea(model) + 0xB8));
-        s32 jntNo = gabi::load<u16>(gabi::ea(joint) + 4);
+        J3DModel* model = j3dSys.getModel(); /* j3dSys.getModel() */
+        dr2_class* i_this = reinterpret_cast<dr2_class*>(model->getUserArea());
+        s32 jntNo = reinterpret_cast<Dr2JointData*>(joint)->mJointNo;
 
         if (i_this != nullptr) {
-            PSMTXCopy(J3DModel_getAnmMtx(model, jntNo), calc_mtx());
+            PSMTXCopy(model->getAnmMtx(jntNo), calc_mtx());
 
-            if (i_this->unk_40A == 3) {
+            if (i_this->unk_40A == DR2_TAIL_ROCK_SHAKE) {
                 /* HD: joints 2..11 (ASHI_L1..KOSHI) */
                 if ((u32)(jntNo - 2) <= 9) {
                     cMtx_YrotM(calc_mtx(), i_this->unk_3BC[jntNo]);
                     cMtx_ZrotM(calc_mtx(), i_this->unk_3D4[jntNo]);
                     J3DModel_setAnmMtx(model, jntNo, calc_mtx());
-                    PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
+                    PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
                 }
-            } else if (i_this->unk_40A == 1) {
+            } else if (i_this->unk_40A == DR2_TAIL_PULLED) {
                 MtxScale(i_this->unk_40C, 1.0f, 1.0f, true);
                 J3DModel_setAnmMtx(model, jntNo, calc_mtx());
 
                 if ((u32)jntNo <= 4) {
-                    MtxRotY(i_this->unk_3EC, 1);
+                    dr2_rotateY(i_this->unk_3EC, 1);
                     MtxRotZ(i_this->unk_3F0, 1);
                     J3DModel_setAnmMtx(model, jntNo, calc_mtx());
-                    PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
+                    PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
                 }
             } else if ((u32)(jntNo - 4) <= 7) {
-                if (i_this->unk_40A == 2) {
+                if (i_this->unk_40A == DR2_TAIL_GRABBED) {
                     cMtx_YrotM(calc_mtx(), i_this->unk_3BC[0]);
                     cMtx_ZrotM(calc_mtx(), i_this->unk_3D4[0]);
                 } else {
-                    MtxRotY(i_this->unk_3EC, 1);
+                    dr2_rotateY(i_this->unk_3EC, 1);
                     MtxRotZ(i_this->unk_3F0, 1);
                 }
                 J3DModel_setAnmMtx(model, jntNo, calc_mtx());
-                PSMTXCopy(calc_mtx(), J3DSys_mCurrentMtx());
+                PSMTXCopy(calc_mtx(), J3DSys::mCurrentMtx);
             }
 
             if (jntNo == DR_JNT_J_DR_HANE_L2_e) {
@@ -297,21 +163,22 @@ static BOOL nodeCallBack(J3DNode* node, int calcTiming) {
     }
     return TRUE;
 }
-VERIFY(0x0212AACC, nodeCallBack);
 
 /* hahen_draw (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void hahen_draw(dr2_class* i_this) {
     iwa_hahen_s* fragment = i_this->mRockFragments;
     for (s32 i = 0; i < 6; i++, fragment++) {
         if (fragment->unk_04) {
             dScnKy_env_light_c* env = dKy_getEnvlight();
             setLightTevColorType(env, fragment->mpModel, &i_this->tevStr);
-            mDoExt_modelUpdate(fragment->mpModel);
+            dr2_updateModel(fragment->mpModel);
         }
     }
 }
 
 /* iwa_draw (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void iwa_draw(dr2_class* i_this) {
     if (i_this->unk_4BA < 10) {
         dScnKy_env_light_c* env = dKy_getEnvlight();
@@ -320,7 +187,7 @@ static inline void iwa_draw(dr2_class* i_this) {
         if (i_this->unk_424 != 0) {
             J3DModelData* modelData = J3DModel_getModelData(i_this->unk_41C);
             void* btk = i_this->unk_420;
-            mDoExt_btkAnm_entry_l(btk, modelData, anm_getFrame(btk));
+            dr2_btkEntry(btk, modelData, anm_getFrame(btk));
             env = dKy_getEnvlight();
             setLightTevColorType(env, i_this->unk_41C, &i_this->tevStr);
             mDoExt_modelUpdateDL(i_this->unk_41C);
@@ -329,44 +196,46 @@ static inline void iwa_draw(dr2_class* i_this) {
     hahen_draw(i_this);
 }
 
-/* HD only: the lava floor's texture matrix follows the camera (material "...", 0x1000E108) */
+// HD: the lava floor texture projection follows the view matrix.
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void yuka_texmtx_hd(dr2_class* i_this) {
-    u32 tabp = gabi::load<u32>(gabi::ea(i_this->unk_42C.get()) + 0x14);
-    s32 off = gabi::load<s32>(tabp + 0x18);
-    u32 tab = 0;
-    if (off != 0) tab = tabp + 0x18 + off;
-    s32 idx = JUTNameTab_getIndex(tab, STR(0x1000E108));
-    u32 m = gabi::ea(i_this->unk_42C.get());
-    u32 md = gabi::load<u32>(m + 0xAC);
-    u32 shapePkt = gabi::load<u32>(m + 0x34) + idx * 0x3C;
-    u32 n = gabi::load<u32>(md + 0xC);
-    u32 mat = gabi::load<u32>(md + 0x10);
-    if ((u32)(u16)idx < n) mat += (u16)idx * 0x39C;
-    u32 obj = gabi::load<u32>(mat + 0x14);
-    u32 texMtx = gabi::call_ptr<u32>(gabi::load<u32>(gabi::load<u32>(obj) + 0x14), obj, 2);
+    Dr2Model* modelView = reinterpret_cast<Dr2Model*>(i_this->unk_42C.get());
+    Dr2MaterialNameBlock* names = modelView->mpMaterialNames;
+    JUTNameTab* table = names->getNames();
+    s32 idx = table->getIndex("test_SC_Yedge_v");
+    J3DModel* model = i_this->unk_42C;
+    J3DModelData* data = model->mModelData;
+    Dr2ShapePacket* shapePacket = reinterpret_cast<Dr2Model*>(model)->mpShapePackets.get() + idx;
+    u32 count = data->mMaterialNum;
+    Dr2Material* material = dr2_materialBase(data);
+    if ((u32)(u16)idx < count) material += (u16)idx;
+    Dr2TexGenBlock* textureGeneration = material->mpTexGen;
+    Dr2TextureMatrix* textureMatrix = textureGeneration->getTextureMatrix(2);
 
     gabi::Local<Mtx34> inv;
-    PSMTXInverse(gabi::at<Mtx34>(0x104B45F8), inv.get());
-    PSMTXScale(mDoMtx_stack_c::get(), 0.2f, 0.2f, 1.0f);
+    dr2_inverse(dr2_viewMatrix(), inv.get());
+    dr2_scale(mDoMtx_stack_c::get(), 0.2f, 0.2f, 1.0f);
     mDoMtx_XrotM(mDoMtx_stack_c::get(), 0x4000);
-    PSMTXConcat(mDoMtx_stack_c::get(), inv.get(), mDoMtx_stack_c::get());
-    u32 s = gabi::ea(mDoMtx_stack_c::get());
-    /* adjacent lfs/stfs pairs: the recompiled code copies the bits (no NaN quieting) */
-    for (int k = 0; k < 11; k++) gabi::store<u32>(texMtx + 0x24 + 4 * k, gabi::load<u32>(s + 4 * k));
-    f32 m23 = gabi::load<f32>(s + 0x2C);
-    gabi::store<f32>(texMtx + 0x5C, 0.0f);
-    gabi::store<f32>(texMtx + 0x60, 1.0f);
-    gabi::store<f32>(texMtx + 0x58, 0.0f);
-    gabi::store<f32>(texMtx + 0x54, 0.0f);
-    gabi::store<f32>(texMtx + 0x50, m23);
+    dr2_concat(mDoMtx_stack_c::get(), inv.get(), mDoMtx_stack_c::get());
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    // HD: adjacent integer load/store pairs preserve signaling NaN payloads.
+    for (int k = 0; k < 11; k++)
+        textureMatrix->mProjection[k] = reinterpret_cast<be<u32>*>(matrix)[k];
+    f32 m23 = matrix->m[2][3];
+    textureMatrix->mRow3 = 0.0f;
+    textureMatrix->mRow2 = 1.0f;
+    textureMatrix->mRow1 = 0.0f;
+    textureMatrix->mRow0 = 0.0f;
+    textureMatrix->mTranslation = m23;
     gabi::Local<Mtx34> tmp;
     mtx_copy(tmp.get(), mDoMtx_stack_c::get());
-    PSMTXCopy(tmp.get(), gabi::at<Mtx34>(texMtx + 0x64));
-    u32 p = gabi::call<u32>(0x027FA678, shapePkt, 2);
-    if (p != 0) gabi::store<u32>(p, texMtx + 0x64);
+    PSMTXCopy(tmp.get(), &textureMatrix->mEffectMatrix);
+    gptr<Mtx34>* slot = dr2_shapeMatrixSlot(shapePacket, 2);
+    if (slot != nullptr) *slot = &textureMatrix->mEffectMatrix;
 }
 
 /* yuka_draw (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void yuka_draw(dr2_class* i_this) {
     J3DModelData* modelData;
 
@@ -375,7 +244,7 @@ static inline void yuka_draw(dr2_class* i_this) {
         setLightTevColorType(env, i_this->unk_428, &i_this->tevStr);
         modelData = J3DModel_getModelData(i_this->unk_428);
         void* btk = i_this->unk_430;
-        mDoExt_btkAnm_entry_l(btk, modelData, anm_getFrame(btk));
+        dr2_btkEntry(btk, modelData, anm_getFrame(btk));
         mDoExt_modelUpdateDL(i_this->unk_428);
     } else {
         dScnKy_env_light_c* env = dKy_getEnvlight();
@@ -383,15 +252,16 @@ static inline void yuka_draw(dr2_class* i_this) {
         yuka_texmtx_hd(i_this);
         modelData = J3DModel_getModelData(i_this->unk_42C);
         void* btk = i_this->unk_434;
-        mDoExt_btkAnm_entry_l(btk, modelData, anm_getFrame(btk));
+        dr2_btkEntry(btk, modelData, anm_getFrame(btk));
         modelData = J3DModel_getModelData(i_this->unk_42C);
         void* brk = i_this->unk_438;
-        mDoExt_brkAnm_entry_l(brk, modelData, anm_getFrame(brk));
+        dr2_brkEntry(brk, modelData, anm_getFrame(brk));
         mDoExt_modelUpdateDL(i_this->unk_42C);
     }
 }
 
 /* dr_draw (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void dr_draw(dr2_class* i_this) {
     if (i_this->unk_50C) {
         J3DModel* model = i_this->mpMorf2->getModel();
@@ -414,7 +284,6 @@ static inline void dr_draw(dr2_class* i_this) {
 
 /* 0212AEEC */
 static BOOL daDr2_Draw(dr2_class* i_this) {
-    WWHD_FUNC(0x0212AEEC, BOOL, i_this);
     J3DModel* model = i_this->mpMorf1->getModel();
     settingTevStruct(dKy_getEnvlight(), TEV_TYPE_ACTOR, &i_this->current.pos, &i_this->tevStr);
     setLightTevColorType(dKy_getEnvlight(), model, &i_this->tevStr);
@@ -424,20 +293,18 @@ static BOOL daDr2_Draw(dr2_class* i_this) {
     dr_draw(i_this);
     return TRUE;
 }
-VERIFY(0x0212AEEC, daDr2_Draw);
 
 /* 0212B380 */
 static void* s_a_d_sub(void* ac1, void* ac2) {
-    WWHD_FUNC(0x0212B380, void*, ac1, ac2);
     /* HD: fopAcM_GetName checks the pointer */
     if (fopAc_IsActor(ac1) && ac1 != nullptr && fpcM_GetName(ac1) == fpcNm_BTD_e) {
         return ac1;
     }
     return nullptr;
 }
-VERIFY(0x0212B380, s_a_d_sub);
 
 /* hahen_move (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void hahen_move(dr2_class* i_this) {
     iwa_hahen_s* fragment = &i_this->mRockFragments[0];
 
@@ -467,12 +334,13 @@ static inline void hahen_move(dr2_class* i_this) {
 }
 
 /* iwa_move (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void iwa_move(dr2_class* i_this) {
     fopAc_ac_c* a_this = i_this;
 
     fopAc_ac_c* btd = i_this->unk_514;
     if (btd == nullptr) {
-        btd = (fopAc_ac_c*)fpcM_Search(0x0212B380 /* s_a_d_sub */, i_this);
+        btd = (fopAc_ac_c*)fpcM_Search(gabi::guest_fn(reinterpret_cast<const void*>(s_a_d_sub)), i_this);
         i_this->unk_514 = btd;
     }
 
@@ -481,7 +349,7 @@ static inline void iwa_move(dr2_class* i_this) {
     }
 
     switch (i_this->unk_4BA) {
-    case -1:
+    case DR2_ROCK_RETURN:
         if (std::fabs((f32)(a_this->current.pos.y - a_this->home.pos.y)) > 200.0f) {
             i_this->unk_410 = 0.0f;
         }
@@ -490,17 +358,17 @@ static inline void iwa_move(dr2_class* i_this) {
             cLib_addCalc2(&a_this->current.pos.y, a_this->home.pos.y, 0.5f, 30.0f);
 
             if (std::fabs((f32)(a_this->current.pos.y - a_this->home.pos.y)) < 1.0f) {
-                i_this->unk_4BA = 0;
+                i_this->unk_4BA = DR2_ROCK_ATTACHED;
             }
         } else {
             i_this->unk_4C8 = (s16)(i_this->unk_4C8 - 1);
         }
         // Fall-through
-    case 0:
+    case DR2_ROCK_ATTACHED:
         cLib_addCalcAngleS2(&i_this->unk_4B4.x, 0, 1, 0x100);
         cLib_addCalcAngleS2(&i_this->unk_4B4.y, 0, 1, 0x100);
 
-        if (i_this->unk_40A == 1 || i_this->unk_4CA != 0) {
+        if (i_this->unk_40A == DR2_TAIL_PULLED || i_this->unk_4CA != 0) {
             if (i_this->unk_4CC == 0) {
                 i_this->unk_4CC = (s16)(REG0_S(5) + 3);
                 i_this->unk_4CE = (s16)gabi::ftoi(cM_rndFX(REG0_F(7) + 300.0f));
@@ -529,24 +397,25 @@ static inline void iwa_move(dr2_class* i_this) {
             i_this->unk_50D = (u8)(REG0_S(2) + 30);
             i_this->unk_50E = true;
             particle_setToon(dPa_name_ID_AK_ST_BTDSMOKE02, &i_this->unk_4A8, &i_this->unk_4B4, nullptr, 0xB9,
-                             (dPa_levelEcallBack*)i_this->unk_4EC, roomNo);
+                             (dPa_levelEcallBack*)&i_this->unk_4EC, roomNo);
             seStartCurrent(a_this, JA_SE_CM_BTD_ROCK_FALL, false);
         }
         break;
 
-    case 1: {
+    case DR2_ROCK_FALL: {
+        // HD: assert text names the GameCube variable btd; original guest text is b != (0).
         if (btd == nullptr) /* JUT_ASSERT(0x280, btd != NULL) */
-            JUT_ASSERT_fail(ASSERT_FILE, 0x280, STR(0x1000E124));
+            JUT_ASSERT_fail("d_a_dr2.cpp", 0x280, "btd != NULL");
         f32 spy = a_this->speed.y;
         i_this->unk_4A8.y = i_this->unk_4A8.y + spy;
         a_this->speed.y = spy - (REG0_F(2) + 10.0f);
 
-        f32 fVar11 = btd_m02FC_y(btd, 3) + REG0_F(3);
+        f32 fVar11 = reinterpret_cast<Dr2Btd*>(btd)->m02FC[3].y + REG0_F(3);
         if (i_this->unk_4A8.y < fVar11) {
             i_this->unk_4A8.y = fVar11;
-            i_this->unk_4BA = 2;
+            i_this->unk_4BA = DR2_ROCK_RIDE_GOHMA;
             i_this->unk_400[0] = 0x32;
-            gabi::store<u8>(btd_m02F6(btd), 1);
+            reinterpret_cast<Dr2Btd*>(btd)->m02F6 = 1;
             seStartCurrent(a_this, JA_SE_CM_BTD_ROCK_HIT, false);
             gabi::Local<cXyz> up;
             up->x = 0.0f;
@@ -556,58 +425,60 @@ static inline void iwa_move(dr2_class* i_this) {
         }
         break;
     }
-    case 2: {
+    case DR2_ROCK_RIDE_GOHMA: {
+        // HD: assert text names the GameCube variable btd; original guest text is b != (0).
         if (btd == nullptr) /* JUT_ASSERT(0x2A5, btd != NULL) */
-            JUT_ASSERT_fail(ASSERT_FILE, 0x2A5, STR(0x1000E124));
-        i_this->unk_40A = 3;
+            JUT_ASSERT_fail("d_a_dr2.cpp", 0x2A5, "btd != NULL");
+        i_this->unk_40A = DR2_TAIL_ROCK_SHAKE;
         cLib_addCalc2(&i_this->unk_414, 2000.0f, 0.5f, 100.0f);
 
-        i_this->unk_4A8.y = btd_m02FC_y(btd, 3) + REG0_F(3);
+        i_this->unk_4A8.y = reinterpret_cast<Dr2Btd*>(btd)->m02FC[3].y + REG0_F(3);
         i_this->unk_4B4.y = i_this->unk_514->current.angle.y;
 
         f32 lim = REG0_F(6) + 100.0f;
-        if (btd_m02FC_y(btd, 3) < lim) {
-            i_this->unk_4C0 = lim - btd_m02FC_y(btd, 3);
+        if (reinterpret_cast<Dr2Btd*>(btd)->m02FC[3].y < lim) {
+            i_this->unk_4C0 = lim - reinterpret_cast<Dr2Btd*>(btd)->m02FC[3].y;
             i_this->unk_4C0 = i_this->unk_4C0 * (REG0_F(7) + 0.3f);
         }
 
         gabi::Local<cXyz> sp4C;
-        cXyz_mi(gabi::at<cXyz>(btd_m02FC(btd, 3)), sp4C.get(), gabi::at<cXyz>(btd_m02FC(btd, 4)));
+        cXyz_mi(&reinterpret_cast<Dr2Btd*>(btd)->m02FC[3], sp4C.get(), &reinterpret_cast<Dr2Btd*>(btd)->m02FC[4]);
         f32 y = sp4C->y + ((REG0_F(5) + -330.0f) + i_this->unk_4C0);
         f32 x = sp4C->x, z = sp4C->z;
         f32 xz = std_sqrtf(gabi::fmadds(x, x, z * z));
         cLib_addCalcAngleS2(&i_this->unk_4B4.x, (s16)-cM_atan2s(y, xz), 1, 0x200);
 
-        if (!gabi::load<u8>(btd_m02F6(btd))) {
-            i_this->unk_4BA = 3;
+        if (!reinterpret_cast<Dr2Btd*>(btd)->m02F6) {
+            i_this->unk_4BA = DR2_ROCK_RISE;
             dComIfGp_particle_set(dPa_name_ID_AK_SN_BTDDRIPMAGMA00, &i_this->unk_4A8, &i_this->unk_4B4, nullptr, 0xFF,
                                   (dPa_levelEcallBack*)&i_this->unk_4D8);
             i_this->unk_424 = 1;
         }
         break;
     }
-    case 3:
+    case DR2_ROCK_RISE:
+        // HD: assert text names the GameCube variable btd; original guest text is b != (0).
         if (btd == nullptr) /* JUT_ASSERT(0x2E8, btd != NULL) */
-            JUT_ASSERT_fail(ASSERT_FILE, 0x2E8, STR(0x1000E124));
-        i_this->unk_4A8.y = btd_m02FC_y(btd, 8) + 100.0f + REG0_F(9);
+            JUT_ASSERT_fail("d_a_dr2.cpp", 0x2E8, "btd != NULL");
+        i_this->unk_4A8.y = reinterpret_cast<Dr2Btd*>(btd)->m02FC[8].y + 100.0f + REG0_F(9);
         cLib_addCalcAngleS2(&i_this->unk_4B4.x, 0, 1, 0x100);
         cLib_addCalcAngleS2(&i_this->unk_4B4.y, 0, 1, 0x100);
 
         if (i_this->unk_4A8.y > a_this->home.pos.y - 1200.0f) {
             a_this->current.pos.y = a_this->current.pos.y + (REG0_F(9) + 100.0f);
-            i_this->unk_40A = 0;
+            i_this->unk_40A = DR2_TAIL_IDLE;
         }
 
         if (i_this->unk_4A8.y > a_this->home.pos.y - 50.0f) {
             i_this->unk_4A8.y = a_this->home.pos.y - 50.0f;
             a_this->speed.y = 0.0f;
-            i_this->unk_4BA = -1;
+            i_this->unk_4BA = DR2_ROCK_RETURN;
             i_this->unk_4C0 = 0.0f;
             i_this->unk_4C8 = 0x82;
             dPa_followEcallBack_end(&i_this->unk_4D8); /* HD: unk_4D8.remove() is end() */
             s8 roomNo = fopAcM_GetRoomNo(a_this);
             particle_setToon(dPa_name_ID_AK_ST_BTDSMOKE02, &i_this->unk_4A8, &i_this->unk_4B4, nullptr, 0xB9,
-                             (dPa_levelEcallBack*)i_this->unk_4EC, roomNo);
+                             (dPa_levelEcallBack*)&i_this->unk_4EC, roomNo);
 
             i_this->unk_510 = 2;
             i_this->unk_50D = (u8)(REG0_S(2) + 10);
@@ -622,7 +493,7 @@ static inline void iwa_move(dr2_class* i_this) {
         }
         break;
 
-    case 10: {
+    case DR2_ROCK_BREAK: {
         i_this->unk_4BA = (s16)(i_this->unk_4BA + 1);
 
         iwa_hahen_s* fragment = &i_this->mRockFragments[0];
@@ -637,16 +508,16 @@ static inline void iwa_move(dr2_class* i_this) {
                 cMtx_XrotM(calc_mtx(), fragment->unk_20.x);
                 gabi::Local<cXyz> sp58;
                 f32 k = REG0_F(2) + 3.0f;
-                sp58->x = hsx(i) * k;
+                sp58->x = hsx[i] * k;
                 sp58->y = 0.0f;
-                sp58->z = hsz(i) * k;
+                sp58->z = hsz[i] * k;
                 MtxPosition(sp58.get(), &fragment->unk_14);
             }
         }
     }
         // Fall-through
-    case 11:
-        i_this->unk_40A = 0;
+    case DR2_ROCK_GONE:
+        i_this->unk_40A = DR2_TAIL_IDLE;
         break;
     }
 
@@ -680,18 +551,18 @@ static inline void iwa_move(dr2_class* i_this) {
             }
         }
 
-        u32 link = JPABaseEmitter_getParticleListFirst(em);
-        while (link != 0) {
-            u32 ptcl = gabi::load<u32>(link);
+        Dr2ParticleLink* link = reinterpret_cast<Dr2Emitter*>(em)->mpFirst;
+        while (link != nullptr) {
+            Dr2Particle* ptcl = link->mpObject;
             gabi::Local<cXyz> sp40;
-            f32 py = gabi::load<f32>(ptcl + 0x2C);
-            f32 pz = gabi::load<f32>(ptcl + 0x30);
-            f32 px = gabi::load<f32>(ptcl + 0x28);
+            f32 py = ptcl->mGlobalPosition.y;
+            f32 pz = ptcl->mGlobalPosition.z;
+            f32 px = ptcl->mGlobalPosition.x;
             sp40->z = pz;
             sp40->y = py;
             sp40->x = px;
             dComIfGp_particle_setSimple(dPa_name_ID_AK_SN_O_BTDBROKENROCKTAIL00, sp40.get(), 0xB9);
-            link = gabi::load<u32>(link + 0xC);
+            link = link->mpNext;
         }
         break;
     }
@@ -711,22 +582,23 @@ static inline void iwa_move(dr2_class* i_this) {
 }
 
 /* move (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void move(dr2_class* i_this) {
     fopAc_ac_c* a_this = i_this;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     fopAc_ac_c* foundActor = fopAcM_SearchByID(i_this->unk_3FC);
 
-    if (i_this->unk_40A == 3) {
+    if (i_this->unk_40A == DR2_TAIL_ROCK_SHAKE) {
         for (s32 i = 2; i < 12; i++) {
             i_this->unk_3BC[i] = (s16)gabi::ftoi(cM_ssin(i_this->unk_2BC * 2800 + i * 3000) * i_this->unk_414);
             i_this->unk_3D4[i] = (s16)gabi::ftoi(cM_scos(i_this->unk_2BC * 2300 + i * 2000) * i_this->unk_414);
         }
     } else {
-        i_this->unk_40A = 0;
+        i_this->unk_40A = DR2_TAIL_IDLE;
         if (foundActor != nullptr && foundActor->health == 3) {
-            /* daPy_py_c::getLeftHandPos() (HD: +0x3F0) - foundActor->current.pos */
+            // HD: copy the left hand position before the subtraction call.
             gabi::Local<cXyz> hand;
-            cXyz* lh = gabi::at<cXyz>(gabi::ea(player) + 0x3F0);
+            cXyz* lh = &reinterpret_cast<Dr2Player*>(player)->mLeftHandPosition;
             hand->x = lh->x;
             hand->y = lh->y;
             hand->z = lh->z;
@@ -745,9 +617,9 @@ static inline void move(dr2_class* i_this) {
 
             cLib_addCalcAngleS2(&i_this->unk_3BC[0], atan2, 0x10, 0x40);
             cLib_addCalcAngleS2(&i_this->unk_3D4[0], 0, 0x10, 0x40);
-            i_this->unk_40A = 2;
+            i_this->unk_40A = DR2_TAIL_GRABBED;
         } else if (foundActor != nullptr && foundActor->health == 2) {
-            i_this->unk_40A = 1;
+            i_this->unk_40A = DR2_TAIL_PULLED;
             s16 ang = fopAcM_searchPlayerAngleY(a_this);
             i_this->current.angle.y = ang;
             player->shape_angle.y = (s16)(ang - -0x8000);
@@ -791,6 +663,7 @@ static inline void move(dr2_class* i_this) {
 }
 
 /* dr_move (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void dr_move(dr2_class* i_this) {
     if (i_this->unk_4C6 != 0) {
         i_this->unk_4C6 = (s16)(i_this->unk_4C6 - 1);
@@ -801,7 +674,7 @@ static inline void dr_move(dr2_class* i_this) {
         if (i_this->unk_50C) {
             i_this->unk_4C6 = 0;
             J3DAnmTransform* pAnimRes =
-                (J3DAnmTransform*)dComIfG_getObjectRes(STR(0x1000E0CC) /* "Dr2" */, dRes_INDEX_DR2_BCK_DR_BOSS_DEMO1_e, SAFESTRING_VTBL);
+                (J3DAnmTransform*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BCK_DR_BOSS_DEMO1_e, SAFESTRING_VTBL);
             i_this->mpMorf2->setAnm(pAnimRes, 0, 1.0f, 1.0f, 0.0f, -1.0f, nullptr);
             i_this->unk_4C4 = 1;
         }
@@ -816,46 +689,46 @@ static inline void dr_move(dr2_class* i_this) {
 }
 
 /* yuka_move (inlined) */
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void yuka_move(dr2_class* i_this) {
-    /* dComIfGs_isStageBossEnemy(): HD dSv_memBit_c::isDungeonItem(3) on the save info (+0x798) */
-    if (gabi::call<BOOL>(0x025B9100, gabi::load<u32>(0x101F84DC) + 0x798, 3) &&
-        gabi::load<u8>(dComIfGp_ea() + 0x5134) != 'X' /* dComIfGp_getStartStageName()[0] */) {
+    // HD: the stage boss flag is read through the save object before the stage name.
+    if (dComIfGs_isStageBossEnemy() &&
+        *reinterpret_cast<const be<u8>*>(dComIfGp_getStartStageName()) != 'X' /* dComIfGp_getStartStageName()[0] */) {
         i_this->unk_43C = true;
-        anm_setFrame_hd(i_this->unk_434, 299.0f, 0x68, 0x10);
-        anm_setFrame_hd(i_this->unk_438, 299.0f, 0x10, 0x20);
+        anm_setFrame_hd(i_this->unk_434, 299.0f, false);
+        anm_setFrame_hd(i_this->unk_438, 299.0f, true);
     }
 
     gabi::Local<Mtx34> sp08;
     f32 s = REG0_F(9) + 1.0f;
-    PSMTXScale(sp08.get(), s, s, s);
+    dr2_scale(sp08.get(), s, s, s);
 
     if (i_this->unk_43C) {
         MtxTrans(0.0f, -10000.0f, 0.0f, false);
     } else {
         MtxTrans(0.0f, 0.0f, 0.0f, false);
-        mDoExt_baseAnm_play_l(i_this->unk_430);
+        dr2_playAnimation(i_this->unk_430);
     }
 
     J3DModel_setBaseTRMtx(i_this->unk_428, calc_mtx());
-    PSMTXConcat(calc_mtx(), sp08.get(), &i_this->unk_440);
+    dr2_concat(calc_mtx(), sp08.get(), &i_this->unk_440);
 
     dBgW_Move(i_this->mpBgW1);
     if (!i_this->unk_43C) {
         MtxTrans(0.0f, -10000.0f, 0.0f, false);
     } else {
         MtxTrans(0.0f, 0.0f, 0.0f, false);
-        mDoExt_baseAnm_play_l(i_this->unk_434);
-        mDoExt_baseAnm_play_l(i_this->unk_438);
+        dr2_playAnimation(i_this->unk_434);
+        dr2_playAnimation(i_this->unk_438);
     }
 
     J3DModel_setBaseTRMtx(i_this->unk_42C, calc_mtx());
-    PSMTXConcat(calc_mtx(), sp08.get(), &i_this->unk_470);
+    dr2_concat(calc_mtx(), sp08.get(), &i_this->unk_470);
     dBgW_Move(i_this->mpBgW2);
 }
 
 /* 0212B3D0 */
 static BOOL daDr2_Execute(dr2_class* i_this) {
-    WWHD_FUNC(0x0212B3D0, BOOL, i_this);
     i_this->unk_2BC = (s16)(i_this->unk_2BC + 1);
 
     for (s32 i = 0; i < 5; i++) {
@@ -867,7 +740,7 @@ static BOOL daDr2_Execute(dr2_class* i_this) {
     move(i_this);
 
     fopAcM_SearchByID(i_this->unk_3FC);
-    f32 s = l_HIO().m08;
+    f32 s = l_HIO.m08;
     i_this->scale.z = s;
     i_this->scale.y = s;
     i_this->scale.x = s;
@@ -897,22 +770,18 @@ static BOOL daDr2_Execute(dr2_class* i_this) {
     yuka_move(i_this);
     return TRUE;
 }
-VERIFY(0x0212B3D0, daDr2_Execute);
 
 /* 0212CD08 */
 static BOOL daDr2_IsDelete(dr2_class*) {
-    WWHD_FUNC(0x0212CD08, BOOL, (u32)0);
     return TRUE;
 }
-VERIFY(0x0212CD08, daDr2_IsDelete);
 
 /* 0212CD10 */
 static BOOL daDr2_Delete(dr2_class* i_this) {
-    WWHD_FUNC(0x0212CD10, BOOL, i_this);
-    dComIfG_resDelete(&i_this->mPhase, STR(0x1000E1D8) /* "Dr2" */);
-    mDoHIO_deleteChild(l_HIO().mNo);
+    dComIfG_resDelete(&i_this->mPhase, "Dr2");
+    mDoHIO_deleteChild(l_HIO.mNo);
     i_this->unk_4D8.remove();
-    gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(i_this->unk_4EC)) + 0x44), i_this->unk_4EC); /* unk_4EC.remove() */
+    dr2_removeSmoke(&i_this->unk_4EC); /* unk_4EC.remove() */
     mDoAud_seDeleteObject(&i_this->unk_4A8);
     dBgS* bgs = dComIfG_Bgsp();
     cBgS_Release(bgs, i_this->mpBgW1);
@@ -920,24 +789,23 @@ static BOOL daDr2_Delete(dr2_class* i_this) {
     cBgS_Release(bgs, i_this->mpBgW2);
     return TRUE;
 }
-VERIFY(0x0212CD10, daDr2_Delete);
 
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline void* new_btkAnm() {
     void* p = operator_new(0x74);
-    if (p != nullptr) p = gabi::call<void*>(0x025E7C6C, p); /* mDoExt_btkAnm::mDoExt_btkAnm */
+    if (p != nullptr) p = dr2_btkCtor(p); /* mDoExt_btkAnm::mDoExt_btkAnm */
     return p;
 }
+/* inlined into daDr2_Execute / daDr2_Draw */
 static inline BOOL btkAnm_init(void* a, J3DModelData* d, void* key, s32 mode) {
-    return gabi::call<BOOL>(0x025E7CE0, a, d, key, (u32)1, mode, 1.0f, (s16)0, (s16)-1, (u32)0, (s32)0);
+    return dr2_btkInit(a, d, key, (u32)1, mode, 1.0f, (s16)0, (s16)-1, (u32)0, (s32)0);
 }
 
 /* 0212CDAC */
 static BOOL useHeapInit(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x0212CDAC, BOOL, a_this);
     dr2_class* i_this = (dr2_class*)a_this;
-#define ARC STR(0x1000E1DC) /* "Dr2" */
 
-    J3DModelData* md = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BMD_DR_SIPPO_e, SAFESTRING_VTBL);
+    J3DModelData* md = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BMD_DR_SIPPO_e, SAFESTRING_VTBL);
     i_this->mpMorf1 = mDoExt_McaMorf::create(nullptr, md, nullptr, nullptr, nullptr, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 0,
                                              nullptr, 0, 0x11020203);
 
@@ -946,22 +814,22 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         return FALSE;
     }
 
-    for (u16 i = 0; i < J3DModelData_getJointNum(J3DModel_getModelData(i_this->mpMorf1->getModel())); i++) {
-        setJointCallBack(J3DModel_getModelData(i_this->mpMorf1->getModel()), i, 0x0212AACC /* nodeCallBack */);
+    for (u16 i = 0; i < J3DModel_getModelData(i_this->mpMorf1->getModel())->getJointNum(); i++) {
+        J3DModel_getModelData(i_this->mpMorf1->getModel())->getJointNodePointer(i)->setCallBack(nodeCallBack);
     }
-    gabi::store<u32>(gabi::ea(i_this->mpMorf1->getModel()) + 0xB8, gabi::ea(i_this)); /* setUserArea */
+    i_this->mpMorf1->getModel()->mUserArea = gabi::ea(i_this); /* setUserArea */
 
-    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BDL_IWA00_e, SAFESTRING_VTBL);
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BDL_IWA00_e, SAFESTRING_VTBL);
     if (modelData == nullptr) /* JUT_ASSERT(1404, modelData != NULL) */
-        JUT_ASSERT_fail(FILE_NAME, 0x57C, STR(0x1000E1EC));
+        JUT_ASSERT_fail("d_a_dr2.cpp", 0x57C, "modelData != NULL");
     i_this->unk_418 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (i_this->unk_418 == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BMD_GAN_MAGMA_e, SAFESTRING_VTBL);
+    modelData = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BMD_GAN_MAGMA_e, SAFESTRING_VTBL);
     if (modelData == nullptr)
-        JUT_ASSERT_fail(FILE_NAME, 0x585, STR(0x1000E1EC));
+        JUT_ASSERT_fail("d_a_dr2.cpp", 0x585, "modelData != NULL");
     i_this->unk_41C = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (i_this->unk_41C == nullptr) {
         return FALSE;
@@ -973,16 +841,15 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
     {
         J3DModel* m = i_this->unk_41C;
-        void* srtKey = dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BTK_GAN_MAGMA_e, SAFESTRING_VTBL);
+        void* srtKey = dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BTK_GAN_MAGMA_e, SAFESTRING_VTBL);
         if (!btkAnm_init(i_this->unk_420, J3DModel_getModelData(m), srtKey, J3DFrameCtrl::EMode_NONE)) {
             return FALSE;
         }
     }
 
     for (s32 i = 0; i < 6; i++) {
-        /* static s32 hahen_model[] = { 15, 16, 17, 18, 19, 20 }; (0x101B47C8) */
-        s32 idx = gabi::load<s32>(0x101B47C8 + 4 * i);
-        modelData = (J3DModelData*)dComIfG_getObjectRes(ARC, idx, SAFESTRING_VTBL);
+        s32 idx = hahen_model[i];
+        modelData = (J3DModelData*)dComIfG_getObjectRes("Dr2", idx, SAFESTRING_VTBL);
         i_this->mRockFragments[i].mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
         if (i_this->mRockFragments[i].mpModel == nullptr) {
             return FALSE;
@@ -990,8 +857,8 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
 
     {
-        J3DModelData* d2 = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BMD_DR_e, SAFESTRING_VTBL);
-        J3DAnmTransform* a2 = (J3DAnmTransform*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BCK_DR_BOSS_DEMO1_e, SAFESTRING_VTBL);
+        J3DModelData* d2 = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BMD_DR_e, SAFESTRING_VTBL);
+        J3DAnmTransform* a2 = (J3DAnmTransform*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BCK_DR_BOSS_DEMO1_e, SAFESTRING_VTBL);
         i_this->mpMorf2 = mDoExt_McaMorf::create(nullptr, d2, nullptr, nullptr, a2, J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, 0,
                                                  nullptr, 0, 0x11020203);
     }
@@ -1000,17 +867,17 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BMD_MBYO1_e, SAFESTRING_VTBL);
+    modelData = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BMD_MBYO1_e, SAFESTRING_VTBL);
     if (modelData == nullptr)
-        JUT_ASSERT_fail(FILE_NAME, 0x5C0, STR(0x1000E1EC));
+        JUT_ASSERT_fail("d_a_dr2.cpp", 0x5C0, "modelData != NULL");
     i_this->unk_428 = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (i_this->unk_428 == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BMD_MBYO2_e, SAFESTRING_VTBL);
+    modelData = (J3DModelData*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BMD_MBYO2_e, SAFESTRING_VTBL);
     if (modelData == nullptr)
-        JUT_ASSERT_fail(FILE_NAME, 0x5C7, STR(0x1000E1EC));
+        JUT_ASSERT_fail("d_a_dr2.cpp", 0x5C7, "modelData != NULL");
     i_this->unk_42C = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
     if (i_this->unk_42C == nullptr) {
         return FALSE;
@@ -1022,7 +889,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
     {
         J3DModel* m = i_this->unk_428;
-        void* srtKey = dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BTK_MBYO1_e, SAFESTRING_VTBL);
+        void* srtKey = dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BTK_MBYO1_e, SAFESTRING_VTBL);
         if (!btkAnm_init(i_this->unk_430, J3DModel_getModelData(m), srtKey, J3DFrameCtrl::EMode_LOOP)) {
             return FALSE;
         }
@@ -1034,7 +901,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
     {
         J3DModel* m = i_this->unk_42C;
-        void* srtKey = dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BTK_MBYO2_e, SAFESTRING_VTBL);
+        void* srtKey = dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BTK_MBYO2_e, SAFESTRING_VTBL);
         if (!btkAnm_init(i_this->unk_434, J3DModel_getModelData(m), srtKey, J3DFrameCtrl::EMode_NONE)) {
             return FALSE;
         }
@@ -1042,7 +909,7 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
 
     {
         void* p = operator_new(0x78);
-        if (p != nullptr) p = gabi::call<void*>(0x025E80D0, p); /* mDoExt_brkAnm::mDoExt_brkAnm */
+        if (p != nullptr) p = dr2_brkCtor(p); /* mDoExt_brkAnm::mDoExt_brkAnm */
         i_this->unk_438 = p;
     }
     if (i_this->unk_438 == nullptr) {
@@ -1050,8 +917,8 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
     }
     {
         J3DModel* m = i_this->unk_42C;
-        void* tevRegKey = dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_BRK_MBYO2_e, SAFESTRING_VTBL);
-        if (!gabi::call<BOOL>(0x025E8154, i_this->unk_438.get(), J3DModel_getModelData(m), tevRegKey, (u32)1, (s32)0, 1.0f, (s16)0,
+        void* tevRegKey = dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_BRK_MBYO2_e, SAFESTRING_VTBL);
+        if (!dr2_brkInit(i_this->unk_438.get(), J3DModel_getModelData(m), tevRegKey, (u32)1, (s32)0, 1.0f, (s16)0,
                               (s16)-1, (u32)0, (s32)0)) {
             return FALSE;
         }
@@ -1067,22 +934,20 @@ static BOOL useHeapInit(fopAc_ac_c* a_this) {
         return FALSE;
     }
 
-    cBgD_t* cBgD = (cBgD_t*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_DZB_MBYO1_e, SAFESTRING_VTBL);
+    cBgD_t* cBgD = (cBgD_t*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_DZB_MBYO1_e, SAFESTRING_VTBL);
     cBgW_Set(i_this->mpBgW1, cBgD, cBgW_MOVE_BG_e, &i_this->unk_440);
-    gabi::store<u32>(gabi::ea(i_this->mpBgW1.get()) + 0xA8, 0x024EE658); /* SetCrrFunc(dBgS_MoveBGProc_Typical) */
+    dr2_setMoveBgCorrection(i_this->mpBgW1); /* SetCrrFunc(dBgS_MoveBGProc_Typical) */
 
-    cBgD = (cBgD_t*)dComIfG_getObjectRes(ARC, dRes_INDEX_DR2_DZB_MBYO2_e, SAFESTRING_VTBL);
+    cBgD = (cBgD_t*)dComIfG_getObjectRes("Dr2", dRes_INDEX_DR2_DZB_MBYO2_e, SAFESTRING_VTBL);
     cBgW_Set(i_this->mpBgW2, cBgD, cBgW_MOVE_BG_e, &i_this->unk_470);
-    gabi::store<u32>(gabi::ea(i_this->mpBgW2.get()) + 0xA8, 0x024EE658);
+    dr2_setMoveBgCorrection(i_this->mpBgW2);
 
     return TRUE;
-#undef ARC
+
 }
-VERIFY(0x0212CDAC, useHeapInit);
 
 /* 0212D394 */
 static cPhs_State daDr2_Create(fopAc_ac_c* a_this) {
-    WWHD_FUNC(0x0212D394, cPhs_State, a_this);
     dr2_class* i_this = (dr2_class*)a_this;
 
     /* fopAcM_ct(&i_this->actor, dr2_class) */
@@ -1091,15 +956,15 @@ static cPhs_State daDr2_Create(fopAc_ac_c* a_this) {
             fopAc_ac_c_ct(i_this);
             i_this->__vtbl = DR2_VTBL;
             dPa_followEcallBack_ct(&i_this->unk_4D8, 0, 0);
-            gabi::call(0x025A5B18, i_this->unk_4EC, (u8)1); /* dPa_smokeEcallBack::dPa_smokeEcallBack(1) */
+            dr2_smokeCtor(&i_this->unk_4EC, (u8)1); /* dPa_smokeEcallBack::dPa_smokeEcallBack(1) */
         }
         fopAcM_OnCondition(i_this, fopAcCnd_INIT_e);
     }
 
-    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, STR(0x1000E200) /* "Dr2" */);
+    cPhs_State ret = dComIfG_resLoad(&i_this->mPhase, "Dr2");
     if (ret == cPhs_COMPLEATE_e) {
-        gabi::store<u8>(gabi::ea(i_this->unk_4EC) + 0x12, 1); /* unk_4EC.setFollowOff() */
-        if (!fopAcM_entrySolidHeap(a_this, 0x0212CDAC /* useHeapInit */, 0xDFE0)) {
+        i_this->unk_4EC.mFollowOff = 1; /* unk_4EC.setFollowOff() */
+        if (!fopAcM_entrySolidHeap(a_this, gabi::guest_fn(reinterpret_cast<const void*>(useHeapInit)), 0xDFE0)) {
             return cPhs_ERROR_e;
         }
 
@@ -1113,50 +978,84 @@ static cPhs_State daDr2_Create(fopAc_ac_c* a_this) {
             return cPhs_ERROR_e;
         }
 
-        l_HIO().mNo = mDoHIO_createChild(STR(0x1000E204) /* "ドラゴンシッポ" */, &l_HIO());
+        // HD: glue retains the original Shift-JIS HIO label bytes.
+        l_HIO.mNo = mDoHIO_createChild("Dragon Tail", &l_HIO);
         /* fopAcM_Create(fpcNm_KUI_e, NULL, params) (HD inline) */
-        u32 params = gabi::call<u32>(0x025D5600); /* fopAcM_CreateAppend */
-        gabi::store<u32>(params, 0x511);
-        gabi::store<s8>(params + 0x21, a_this->current.roomNo);
-        u32 layer = gabi::call<u32>(0x025DED64); /* fpcLy_CurrentLayer */
-        i_this->unk_3FC = gabi::call<u32>(0x025E14A8, layer, (s16)fpcNm_KUI_e, (u32)0, (u32)0, params); /* fpcSCtRq_Request */
+        Dr2CreateAppend* params = dr2_createAppend(); /* fopAcM_CreateAppend */
+        params->mParameter = 0x511;
+        params->mRoomNo = a_this->current.roomNo;
+        u32 layer = dr2_currentLayer(); /* fpcLy_CurrentLayer */
+        i_this->unk_3FC = dr2_createRequest(layer, (s16)fpcNm_KUI_e, (u32)0, (u32)0, params); /* fpcSCtRq_Request */
         i_this->unk_4A8.x = a_this->home.pos.x;
         i_this->unk_4A8.y = a_this->home.pos.y + REG0_F(7) - 50.0f;
         i_this->unk_4A8.z = a_this->home.pos.z;
     }
     return ret;
 }
-VERIFY(0x0212D394, daDr2_Create);
 
+// HD: compiler-generated and template code of this translation unit.
 /* 0212D59C */
 static void __sinit_d_a_dr2_cpp() {
-    WWHD_FUNC(0x0212D59C, void, (u32)0);
-    sinit_header_statics(0x10463C34, 0x101B47E0);
-    daDr2_HIO_c_ct(&l_HIO()); /* static daDr2_HIO_c l_HIO */
+    sinit_header_statics(gc_tu.headerStatics[0], gc_tu.headerStatics[1]);
+    daDr2_HIO_c_ct(&l_HIO); /* static daDr2_HIO_c l_HIO */
 }
-VERIFY(0x0212D59C, __sinit_d_a_dr2_cpp);
 
-/* 0212D63C: deleting destructor of a class with a trivial destructor (daDr2_HIO_c) */
+// HD: deleting destructor of a class with a trivial destructor (daDr2_HIO_c)
+/* 0212D63C */
 static void trivial_dt(void* p, s32 flags) {
-    WWHD_FUNC(0x0212D63C, void, p, flags);
     if (p != nullptr && (flags & 1))
         operator_delete(p);
 }
-VERIFY(0x0212D63C, trivial_dt);
 
-/* 0212D650: dr2_class deleting destructor (HD) */
+// HD: dr2_class deleting destructor (HD)
+/* 0212D650 */
 static void dr2_class_dt(dr2_class* p, s32 flags) {
-    WWHD_FUNC(0x0212D650, void, p, flags);
     if (p != nullptr) {
-        gabi::call(0x025D50BC, p, 0); /* fopAc_ac_c::~fopAc_ac_c */
+        dr2_actorDtor(p, 0); /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(p);
     }
 }
-VERIFY(0x0212D650, dr2_class_dt);
 
-/* 0212D6A4: empty virtual */
+// HD: empty virtual
+/* 0212D6A4 */
 static void empty_virtual(void* p) {
-    WWHD_FUNC(0x0212D6A4, void, p);
 }
-VERIFY(0x0212D6A4, empty_virtual);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 0200FBA4 void dr2_rotateY(f32 radians, u8 concatenate)
+ext 025E2DA8 void dr2_updateModel(J3DModel* model)
+ext 02019510 s16 dr2_radiansToAngle(f32 radians)
+ext 028E91EC void dr2_inverse(const Mtx34* source, Mtx34* result)
+ext 028E945C void dr2_scale(Mtx34* matrix, f32 x, f32 y, f32 z)
+ext 028E9108 void dr2_concat(const Mtx34* left, const Mtx34* right, Mtx34* result)
+ext 025E83FC void dr2_brkEntry(void* animation, J3DModelData* data, f32 frame)
+ext 025E7FC4 void dr2_btkEntry(void* animation, J3DModelData* data, f32 frame)
+ext 025CB374 void dr2_shock(dVibration_c* vibration, s32 strength, s32 flags, cXyz* position)
+ext 025E742C void dr2_playAnimation(void* animation)
+ext 027DF40C void dr2_finishFrame(gptr<Dr2FrameFunctor>* functor)
+ext 027FA678 gptr<Mtx34>* dr2_shapeMatrixSlot(Dr2ShapePacket* packet, s32 index)
+ext 025E7C6C void* dr2_btkCtor(void* animation)
+ext 025E7CE0 BOOL dr2_btkInit(void* animation, J3DModelData* data, void* key, u32 play, s32 mode, f32 rate, s16 start, s16 end, u32 modify, s32 entry)
+ext 025E80D0 void* dr2_brkCtor(void* animation)
+ext 025E8154 BOOL dr2_brkInit(void* animation, J3DModelData* data, void* key, u32 play, s32 mode, f32 rate, s16 start, s16 end, u32 modify, s32 entry)
+ext 025A5B18 void dr2_smokeCtor(Dr2SmokeCallback* callback, u8 mode)
+ext 025D5600 Dr2CreateAppend* dr2_createAppend()
+ext 025DED64 u32 dr2_currentLayer()
+ext 025E14A8 u32 dr2_createRequest(u32 layer, s16 process, u32 callback, u32 data, Dr2CreateAppend* append)
+ext 025D50BC void dr2_actorDtor(fopAc_ac_c* actor, s32 flags)
+str 1000E108 "test_SC_Yedge_v" in 0212AEEC
+str 1000E0CC "Dr2" in 0212B3D0
+str 1000E1D8 "Dr2" in 0212CD10
+str 1000E1DC "Dr2" in 0212CDAC
+str 1000E200 "Dr2" in 0212D394
+str 1000E1E0 "d_a_dr2.cpp" in 0212CDAC
+str 1000E118 "d_a_dr2.cpp" in 0212B3D0
+str 1000E124 "btd != NULL" renamed in 0212B3D0
+str 1000E1EC "modelData != NULL" in 0212CDAC
+str 1000E204 "Dragon Tail" renamed in 0212D394
+data l_HIO 10463C50 nocheck
+data hsx 101B4778
+data hsz 101B4790
+data hahen_model 101B47C8
+*/

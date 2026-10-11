@@ -1,76 +1,208 @@
-// Qualified HD SaveMgr card range;
-#include "d_menu_save_local.h"
-void saveMgrInitialCard(u32 p,u32 slot){
- WWHD_FUNC(0x027219AC,void,p,slot);u32 state=U(0x101F84DCu);call<void>(0x025BAC50,state+0x20,U(p,0x64),slot);call<void>(0x0271FF4C,U(0x101F84DCu)+0x12C0,slot);
+// HD SaveMgr card range.
+#include "d/d_menu_save.h"
+using namespace hdSave;
+/* 027219AC */
+void SaveMgr::initialCard(u32 slot) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    u32 state = dComIfGs_ea();
+    saveCardApi_initializeSaveSlot(gabi::ea(&gabi::at<SaveGameState>(state)->mSave),
+                                   (u32)gabi::at<SaveMgr>(p)->mpSaveData, slot);
+    saveCardApi_initializeCardSlot(gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mCardInfo), slot);
 }
-VERIFY(0x027219AC,saveMgrInitialCard);
-void saveMgrInitialCardWrapper(u32 p,u32 slot){
- WWHD_FUNC(0x02721A04,void,p,slot);call<void>(0x027219AC,p,slot);
+/* 02721A04 */
+void SaveMgr::initialCardWrapper(u32 slot) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    saveCardApi_saveMgrInitialCardCall(p, slot);
 }
-VERIFY(0x02721A04,saveMgrInitialCardWrapper);
-void saveMgrMode(u32 p,u32 mode){
- WWHD_FUNC(0x02721A08,void,p,mode);store<u8>(U(0x101F84DCu)+0x12B0,mode);
+/* 02721A08 */
+void SaveMgr::mode(u32 mode) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    gabi::at<SaveGameState>(dComIfGs_ea())->mSave.mDataNum = (u8)(mode);
 }
-VERIFY(0x02721A08,saveMgrMode);
-void saveMgrBegin(u32 p,u32 mode){
- WWHD_FUNC(0x02721A18,void,p,mode);call<void>(0x02721A08,p,mode);if(!U(p,0x1C)){u32 thread=U(p,0x18);store<u32>(p+0x1C,1);call_ptr<void>(U(U(thread,12),0x1C),thread,1u,1u);}
+/* 02721A18 */
+void SaveMgr::begin(u32 mode) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    saveCardApi_saveMgrModeCall(p, mode);
+    if (!(u32)gabi::at<SaveMgr>(p)->mCommand) {
+        u32 thread = (u32)gabi::at<SaveMgr>(p)->mpThread;
+        gabi::at<SaveMgr>(p)->mCommand = (u32)(1);
+        gabi::call_ptr<void>((u32)gabi::at<WorkerVtable>(gabi::at<Worker>(thread)->mVtable)->postMessage,
+                             thread, 1u, 1u);
+    }
 }
-VERIFY(0x02721A18,saveMgrBegin);
-void saveMgrSessionCounter(){
- WWHD_FUNC(0x02721A68,void);u32 state=U(0x101F84DCu);u16 n=load<u16>(state+0x178);if(n<9999)store<u16>(state+0x178,n+1);
+/* 02721A68 */
+void saveMgrSessionCounter() {
+    u32 state = dComIfGs_ea();
+    u16 n = (u16)gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.field_0x10;
+    if (n < MaxSaveCount)
+        gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mInfo.field_0x10 = (u16)(n + 1);
 }
-VERIFY(0x02721A68,saveMgrSessionCounter);
-void saveMgrStampTime(){
- WWHD_FUNC(0x02721A8C,void);u32 state=U(0x101F84DCu);call<void>(0xC0009CD8u);u32 high=cpu->r[3],low=cpu->r[4];store<u32>(state+0x3C,low);store<u32>(state+0x38,high);
+/* 02721A8C */
+void saveMgrStampTime() {
+    u32 state = dComIfGs_ea();
+    saveCardApi_getSaveSystemTime();
+    u32 high = cpu->r[3], low = cpu->r[4];
+    gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mPlayerStatusB.mDateIPL[1] = (u32)(low);
+    gabi::at<SaveGameState>(state)->mSave.mSavedata.mPlayer.mPlayerStatusB.mDateIPL[0] = (u32)(high);
 }
-VERIFY(0x02721A8C,saveMgrStampTime);
-void saveMgrChecksumSlot(u32 p,u32 data,u32 slot){
- WWHD_FUNC(0x02721AFC,void,p,data,slot);u32 block=data+slot*0xA94u;u32 sum=call<u32>(0x02721AC4,p,block,0xA8Cu);u32 complement=cpu->r[4];store<u32>(block+0xA8C,sum);store<u32>(block+0xA90,complement);
+/* 02721AFC */
+void SaveMgr::checksumSlot(u32 data, u32 slot) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    u32 block = data + slot * sizeof(SlotData);
+    u32 sum = saveCardApi_saveMgrChecksumCall(p, block, 0xA8Cu);
+    u32 complement = cpu->r[4];
+    gabi::at<SlotData>(block)->mChecksum = (u32)(sum);
+    gabi::at<SlotData>(block)->mChecksumComplement = (u32)(complement);
 }
-VERIFY(0x02721AFC,saveMgrChecksumSlot);
-void saveMgrSyncSlot(u32 p,u32 slot){
- WWHD_FUNC(0x02721B34,void,p,slot);u32 state=U(0x101F84DCu)+0x12C0;u32 a=call<u32>(0x027200D0,state);u32 b=call<u32>(0x027200A0,state,slot);call<void>(0x0271FCB4,b,a);
- a=call<u32>(0x027200F4,state);b=call<u32>(0x027200D8,state,slot);call<void>(0x0271FAC0,b,a);
- a=call<u32>(0x02720118,state);b=call<u32>(0x027200FC,state,slot);call<void>(0x0271F914,b,a);
- a=call<u32>(0x0272019C,state);b=call<u32>(0x02720180,state,slot);call<void>(0x027208F4,b,a);
- a=call<u32>(0x02720144,state);b=call<u32>(0x02720120,state,slot);call<void>(0x027262BC,b,a);
- a=call<u32>(0x02720144,state);call<void>(0x02726044,a);
- a=call<u32>(0x027201DC,state);b=call<u32>(0x027201A4,state,slot);call<void>(0x02726BC8,b,a);
+/* 02721B34 */
+void SaveMgr::syncSlot(u32 slot) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    u32 state = gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mCardInfo);
+    u32 a = saveCardApi_getCurrentCardPlayer(state);
+    u32 b = saveCardApi_getCardPlayer(state, slot);
+    saveCardApi_copyCardPlayer(b, a);
+    a = saveCardApi_getCurrentCardStatus(state);
+    b = saveCardApi_getCardStatus(state, slot);
+    saveCardApi_copyCardStatus(b, a);
+    a = saveCardApi_getCurrentCardEvents(state);
+    b = saveCardApi_getCardEvents(state, slot);
+    saveCardApi_copyCardEvents(b, a);
+    a = saveCardApi_getCurrentCardMap(state);
+    b = saveCardApi_getCardMap(state, slot);
+    saveCardApi_copyCardMap(b, a);
+    a = saveCardApi_getCurrentCardPictures(state);
+    b = saveCardApi_getCardPictures(state, slot);
+    saveCardApi_copyPictureStore(b, a);
+    a = saveCardApi_getCurrentCardPictures(state);
+    saveCardApi_disablePictureSlots(a);
+    a = saveCardApi_getCurrentCardPlayLog(state);
+    b = saveCardApi_getCardPlayLog(state, slot);
+    saveCardApi_copySavePlayLog(b, a);
 }
-VERIFY(0x02721B34,saveMgrSyncSlot);
-void saveMgrSaveCard(u32 p,u32 slot,u32 update){
- WWHD_FUNC(0x02721C44,void,p,slot,update);if(update){u32 g=call<u32>(0x025200D4)+0x5150;u32 q=call_ptr<u32>(U(U(g),0x15C),g);u32 index=(load<u8>(q+9)>>1)&0x7F;if(index<16)call<void>(0x025B9D24,U(0x101F84DCu)+0x20,index);call<void>(0x02721A68,p);call<void>(0x02721A8C);call<void>(0x025217F8);}
- s32 result=call<s32>(0x025BA9FC,U(0x101F84DCu)+0x20,U(p,0x64),slot);if(result!=-1){for(u32 i=0;i<3;i++)call<void>(0x02721AFC,p,U(p,0x64),i);call<void>(0x02721B34,p,slot);}
+/* 02721C44 */
+void SaveMgr::saveCard(u32 slot, u32 update) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    if (update) {
+        u32 g = saveCardApi_getGameInfoAddress() + 0x5150;
+        u32 q = gabi::call_ptr<u32>(readWord(readWord(g), 0x15C), g);
+        u32 index = (gabi::load<u8>(q + 9) >> 1) & 0x7F;
+        if (index < 16)
+            saveCardApi_markVisitedStage(gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mSave), index);
+        saveCardApi_saveMgrSessionCounterCall(p);
+        saveCardApi_saveMgrStampTimeCall();
+        saveCardApi_updateSaveGameState();
+    }
+    s32 result = saveCardApi_storeSaveInfo(gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mSave),
+                                           (u32)gabi::at<SaveMgr>(p)->mpSaveData, slot);
+    if (result != -1) {
+        for (u32 i = 0; i < 3; i++)
+            saveCardApi_saveMgrChecksumSlotCall(p, (u32)gabi::at<SaveMgr>(p)->mpSaveData, i);
+        saveCardApi_saveMgrSyncSlotCall(p, slot);
+    }
 }
-VERIFY(0x02721C44,saveMgrSaveCard);
-void saveMgrEnd(u32 p){
- WWHD_FUNC(0x02721D18,void,p);if(!U(p,0x1C)){u32 thread=U(p,0x18);store<u32>(p+0x1C,2);call_ptr<void>(U(U(thread,12),0x1C),thread,2u,1u);}
+/* 02721D18 */
+void SaveMgr::end() {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    if (!(u32)gabi::at<SaveMgr>(p)->mCommand) {
+        u32 thread = (u32)gabi::at<SaveMgr>(p)->mpThread;
+        gabi::at<SaveMgr>(p)->mCommand = (u32)(2);
+        gabi::call_ptr<void>((u32)gabi::at<WorkerVtable>(gabi::at<Worker>(thread)->mVtable)->postMessage,
+                             thread, 2u, 1u);
+    }
 }
-VERIFY(0x02721D18,saveMgrEnd);
-Pair32 saveMgrChecksum(u32 p,u32 data,u32 count){
- WWHD_FUNC(0x02721AC4,Pair32,p,data,count);u32 sum=0,complement=0;
- for(u32 i=0;i<count;i++){u32 b=load<u8>(data+i);sum+=b;complement+=~b;}
- return {sum,complement};
+/* 02721AC4 */
+Pair32 SaveMgr::checksum(u32 data, u32 count) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    u32 sum = 0, complement = 0;
+    for (u32 i = 0; i < count; i++) {
+        u32 b = gabi::load<u8>(data + i);
+        sum += b;
+        complement += ~b;
+    }
+    return {sum, complement};
 }
-VERIFY(0x02721AC4,saveMgrChecksum);
-void saveMgrRefreshEquipment(){
- WWHD_FUNC(0x02721730,void);if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,0u,3u))call<void>(0x02522398,0u,0x3Eu);
- else if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,0u,2u))call<void>(0x02522398,0u,0x3Au);
- else if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,0u,1u))call<void>(0x02522398,0u,0x39u);
- else if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,0u,0u))call<void>(0x02522398,0u,0x38u);
- if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,1u,1u))call<void>(0x02522398,1u,0x3Cu);
- else if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,1u,0u))call<void>(0x02522398,1u,0x3Bu);
- if(call<u32>(0x025B7A2C,U(0x101F84DCu)+0xD4,2u,0u))call<void>(0x02522398,2u,0x28u);
+/* 02721730 */
+void saveMgrRefreshEquipment() {
+    if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 0u, 3u))
+        saveCardApi_setSelectedEquipment(0u, 0x3Eu);
+    else if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 0u, 2u))
+        saveCardApi_setSelectedEquipment(0u, 0x3Au);
+    else if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 0u, 1u))
+        saveCardApi_setSelectedEquipment(0u, 0x39u);
+    else if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 0u, 0u))
+        saveCardApi_setSelectedEquipment(0u, 0x38u);
+    if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 1u, 1u))
+        saveCardApi_setSelectedEquipment(1u, 0x3Cu);
+    else if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 1u, 0u))
+        saveCardApi_setSelectedEquipment(1u, 0x3Bu);
+    if (saveCardApi_checkCollectFlag(dComIfGs_ea() + 0xD4, 2u, 0u))
+        saveCardApi_setSelectedEquipment(2u, 0x28u);
 }
-VERIFY(0x02721730,saveMgrRefreshEquipment);
-void saveMgrRefreshGame(u32 p){
- WWHD_FUNC(0x02721880,void,p);call<void>(0x02720E34,p);call<void>(0x02721730,p);
- for(u32 n:{1u,3u,5u,6u,7u})call<void>(0x025B82A0,U(0x101F84DCu)+0xE4,n);
+/* 02721880 */
+void SaveMgr::refreshGame() {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    saveCardApi_saveMgrStartupCall(p);
+    saveCardApi_saveMgrRefreshEquipmentCall(p);
+    for (u32 n : {1u, 3u, 5u, 6u, 7u})
+        saveCardApi_markOwnedChart(dComIfGs_ea() + 0xE4, n);
 }
-VERIFY(0x02721880,saveMgrRefreshGame);
-void saveMgrLoadCard(u32 p,u32 slot,u32 resetItems){
- WWHD_FUNC(0x02721908,void,p,slot,resetItems);if(slot>=3)return;call<void>(0x025B9A18,U(0x101F84DCu)+0x20);
- if(resetItems)call<void>(0x025248BC,call<u32>(0x025200D4)+0x12A0);
- store<u8>(U(0x101F84DCu)+0x12B0,slot);call<void>(0x025BA7B0,U(0x101F84DCu)+0x20,U(p,0x64),slot);call<void>(0x02720D34,p,slot);call<void>(0x02721880,p);
+/* 02721908 */
+void SaveMgr::loadCard(u32 slot, u32 resetItems) {
+    [[maybe_unused]] u32 p = gabi::ea(this);
+    if (slot >= 3)
+        return;
+    saveCardApi_initializeSaveInfo(gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mSave));
+    if (resetItems)
+        saveCardApi_initializePlayState(saveCardApi_getGameInfoAddress() + 0x12A0);
+    gabi::at<SaveGameState>(dComIfGs_ea())->mSave.mDataNum = (u8)(slot);
+    saveCardApi_loadSaveInfo(gabi::ea(&gabi::at<SaveGameState>(dComIfGs_ea())->mSave),
+                             (u32)gabi::at<SaveMgr>(p)->mpSaveData, slot);
+    saveCardApi_saveMgrSyncCall(p, slot);
+    saveCardApi_saveMgrRefreshGameCall(p);
 }
-VERIFY(0x02721908,saveMgrLoadCard);
+/* WWHD glue
+
+ext 025200D4 u32 saveCardApi_getGameInfoAddress()
+ext 025217F8 void saveCardApi_updateSaveGameState()
+ext 02522398 void saveCardApi_setSelectedEquipment(u32, u32)
+ext 025248BC void saveCardApi_initializePlayState(u32)
+ext 025B7A2C u32 saveCardApi_checkCollectFlag(u32, u32, u32)
+ext 025B82A0 void saveCardApi_markOwnedChart(u32, u32)
+ext 025B9A18 void saveCardApi_initializeSaveInfo(u32)
+ext 025B9D24 void saveCardApi_markVisitedStage(u32, u32)
+ext 025BA7B0 void saveCardApi_loadSaveInfo(u32, u32, u32)
+ext 025BA9FC s32 saveCardApi_storeSaveInfo(u32, u32, u32)
+ext 025BAC50 void saveCardApi_initializeSaveSlot(u32, u32, u32)
+ext 0271F914 void saveCardApi_copyCardEvents(u32, u32)
+ext 0271FAC0 void saveCardApi_copyCardStatus(u32, u32)
+ext 0271FCB4 void saveCardApi_copyCardPlayer(u32, u32)
+ext 0271FF4C void saveCardApi_initializeCardSlot(u32, u32)
+ext 027200A0 u32 saveCardApi_getCardPlayer(u32, u32)
+ext 027200D0 u32 saveCardApi_getCurrentCardPlayer(u32)
+ext 027200D8 u32 saveCardApi_getCardStatus(u32, u32)
+ext 027200F4 u32 saveCardApi_getCurrentCardStatus(u32)
+ext 027200FC u32 saveCardApi_getCardEvents(u32, u32)
+ext 02720118 u32 saveCardApi_getCurrentCardEvents(u32)
+ext 02720120 u32 saveCardApi_getCardPictures(u32, u32)
+ext 02720144 u32 saveCardApi_getCurrentCardPictures(u32)
+ext 02720180 u32 saveCardApi_getCardMap(u32, u32)
+ext 0272019C u32 saveCardApi_getCurrentCardMap(u32)
+ext 027201A4 u32 saveCardApi_getCardPlayLog(u32, u32)
+ext 027201DC u32 saveCardApi_getCurrentCardPlayLog(u32)
+ext 027208F4 void saveCardApi_copyCardMap(u32, u32)
+ext 02720D34 void saveCardApi_saveMgrSyncCall(u32, u32)
+ext 02720E34 void saveCardApi_saveMgrStartupCall(u32)
+ext 02721730 void saveCardApi_saveMgrRefreshEquipmentCall(u32)
+ext 02721880 void saveCardApi_saveMgrRefreshGameCall(u32)
+ext 027219AC void saveCardApi_saveMgrInitialCardCall(u32, u32)
+ext 02721A08 void saveCardApi_saveMgrModeCall(u32, u32)
+ext 02721A68 void saveCardApi_saveMgrSessionCounterCall(u32)
+ext 02721A8C void saveCardApi_saveMgrStampTimeCall()
+ext 02721AC4 u32 saveCardApi_saveMgrChecksumCall(u32, u32, u32)
+ext 02721AFC void saveCardApi_saveMgrChecksumSlotCall(u32, u32, u32)
+ext 02721B34 void saveCardApi_saveMgrSyncSlotCall(u32, u32)
+ext 02726044 void saveCardApi_disablePictureSlots(u32)
+ext 027262BC void saveCardApi_copyPictureStore(u32, u32)
+ext 02726BC8 void saveCardApi_copySavePlayLog(u32, u32)
+ext C0009CD8 void saveCardApi_getSaveSystemTime()
+*/

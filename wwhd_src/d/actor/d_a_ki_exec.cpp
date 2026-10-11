@@ -9,24 +9,23 @@
 #include "d/actor/d_a_ki.h"
 
 /* functions of d_a_ki.cpp (guest calls by address) */
-static inline void ki_check(ki_class* i_this) { gabi::call(0x02199364, i_this); }
+static inline void ki_check(ki_class* i_this) { kiAttack_check(i_this); }
 static inline void anm_init(ki_class* i_this, int anmResIdx, float morf, unsigned char loopMode, float playSpeed, int soundResIdx) {
-    gabi::call(0x02199388, i_this, anmResIdx, morf, loopMode, playSpeed, soundResIdx);
+    kiAttack_animation(i_this, anmResIdx, morf, loopMode, playSpeed, soundResIdx);
 }
-static inline void tex_anm_set(ki_class* i_this, unsigned short idx) { gabi::call(0x021994B0, i_this, idx); }
-static inline BOOL ki_player_bg_check(ki_class* i_this) { return gabi::call<BOOL>(0x021995BC, i_this); }
-static inline void ki_pos_move(ki_class* i_this, s8 arg1) { gabi::call(0x02199A64, i_this, arg1); }
+static inline void tex_anm_set(ki_class* i_this, unsigned short idx) { kiAttack_texture(i_this, idx); }
+static inline BOOL ki_player_bg_check(ki_class* i_this) { return kiAttack_playerBackground(i_this); }
+static inline void ki_pos_move(ki_class* i_this, s8 arg1) { kiAttack_position(i_this, arg1); }
 
 /* sp = a + b */
 static inline void cXyz_add_to(cXyz* a, const cXyz* b) { PSVECAdd(a, b, a); }
 
 /* 02199C48 */
 static void ki_atack_move(ki_class* i_this) {
-    WWHD_FUNC(0x02199C48, void, i_this);
     fopAc_ac_c* a_this = &i_this->actor;
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    gabi::Local<cXyz> sp24;
-    kiHIO_c& hio = l_kiHIO();
+    cXyz sp24;
+    kiHIO_c& hio = l_kiHIO;
 
     i_this->m540 = 1;
     s8 cVar6 = 0;
@@ -54,11 +53,11 @@ static void ki_atack_move(ki_class* i_this) {
         i_this->mPosMove.z = player->current.pos.z;
         i_this->mPosMove.y += 80.0f;
 
-        gabi::Local<cXyz> tmp;
-        cXyz_mi(&i_this->mPosMove, tmp, &a_this->current.pos);
-        sp24->copy(*tmp);
+        cXyz tmp;
+        cXyz_mi(&i_this->mPosMove, &tmp, &a_this->current.pos);
+        sp24.copy(*&tmp);
         cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 2, 0x1000);
-        if (std_sqrtf(PSVECSquareMag(sp24)) < 300.0f) {
+        if (std_sqrtf(PSVECSquareMag(&sp24)) < 300.0f) {
             i_this->mBehaviorType = 10;
             anm_init(i_this, dRes_INDEX_KI_BCK_FLY2_e, 5.0f, 2, hio.m14, dRes_INDEX_KI_BAS_FLY2_e);
             i_this->mPosMoveDist = 0.0f;
@@ -70,13 +69,13 @@ static void ki_atack_move(ki_class* i_this) {
         if (i_this->mTimers[2] == 0) {
             ki_check(i_this);
             i_this->mTimers[2] = hio.m4C;
-            f32 tmp = hio.m48;
-            if (ki_fight_count() >= hio.m54) {
-                tmp *= 0.5f;
+            f32 attackChance = hio.m48;
+            if (ki_fight_count >= hio.m54) {
+                attackChance *= 0.5f;
                 i_this->mTimers[2] <<= 1;
             }
 
-            if (cM_rndF(1.0f) < tmp) {
+            if (cM_rndF(1.0f) < attackChance) {
                 i_this->mBehaviorType = 3;
                 anm_init(i_this, dRes_INDEX_KI_BCK_ATTACK1_e, 5.0f, 2, hio.m18, dRes_INDEX_KI_BAS_ATTACK1_e);
                 i_this->mPosMove.x = player->current.pos.x;
@@ -97,11 +96,11 @@ static void ki_atack_move(ki_class* i_this) {
             i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(50.0f) + 20.0f);
             s32 rndFX = gabi::ftoi(cM_rndFX(hio.m24 * 182.0444f));
             cMtx_YrotS(calc_mtx(), (s16)(player->current.angle.y + rndFX));
-            sp24->x = 0.0f;
+            sp24.x = 0.0f;
             f32 y = cM_rndF(50.0f) + hio.m1C;
-            sp24->y = y;
-            sp24->z = hio.m20;
-            MtxPosition(sp24, &i_this->mPosMove);
+            sp24.y = y;
+            sp24.z = hio.m20;
+            MtxPosition(&sp24, &i_this->mPosMove);
             cXyz_add_to(&i_this->mPosMove, &player->current.pos);
             i_this->mPosMoveDist = 0.0f;
         }
@@ -164,7 +163,7 @@ static void ki_atack_move(ki_class* i_this) {
         i_this->mPosMoveTarget = hio.m30;
         ki_check(i_this);
 
-        if (ki_fight_count() < hio.m52) {
+        if (ki_fight_count < hio.m52) {
             i_this->mBehaviorType = 2;
             i_this->mTimers[2] = 50;
         }
@@ -174,11 +173,11 @@ static void ki_atack_move(ki_class* i_this) {
             i_this->mTimers[1] = (s16)gabi::ftoi(cM_rndF(50.0f) + 50.0f);
             s32 rndFX = gabi::ftoi(cM_rndFX(32768.0f));
             cMtx_YrotS(calc_mtx(), (s16)(player->current.angle.y + rndFX));
-            sp24->x = 0.0f;
+            sp24.x = 0.0f;
             f32 y = (cM_rndFX(50.0f) + 200.0f) + REG0_F(12);
-            sp24->y = y;
-            sp24->z = hio.m20 + REG0_F(13);
-            MtxPosition(sp24, &i_this->mPosMove);
+            sp24.y = y;
+            sp24.z = hio.m20 + REG0_F(13);
+            MtxPosition(&sp24, &i_this->mPosMove);
             cXyz_add_to(&i_this->mPosMove, &player->current.pos);
             i_this->mPosMoveDist = 0.0f;
         }
@@ -219,19 +218,19 @@ static void ki_atack_move(ki_class* i_this) {
             } else if (i_this->mAction == ki_class::ACT_FIRE_SET_MOVE_e) {
                 i_this->mBehaviorType = 10;
             } else if (i_this->mAction == ki_class::ACT_WAIT_MOVE_e) {
-                gabi::Local<dBgS_LinChk_l> linChk;
-                ki_LinChk_ct(linChk);
-                gabi::Local<cXyz> sp18;
-                sp18->x = a_this->current.pos.x;
-                sp18->y = a_this->current.pos.y;
-                sp18->z = a_this->current.pos.z;
-                sp18->y += 5000.0f;
-                dBgS_LinChk_Set(linChk, &a_this->current.pos, sp18, a_this);
-                if (cBgS_LineCross(dComIfG_Bgsp(), linChk)) {
-                    u32 cross = gabi::ea(linChk.get()) + 0x30; /* linChk.GetCross() */
-                    a_this->home.pos.x = gabi::load<f32>(cross + 0);
-                    a_this->home.pos.y = gabi::load<f32>(cross + 4);
-                    a_this->home.pos.z = gabi::load<f32>(cross + 8);
+                KiLineCheck linChk;
+                ki_LinChk_ct(&linChk);
+                cXyz sp18;
+                sp18.x = a_this->current.pos.x;
+                sp18.y = a_this->current.pos.y;
+                sp18.z = a_this->current.pos.z;
+                sp18.y += 5000.0f;
+                dBgS_LinChk_Set(&linChk, &a_this->current.pos, &sp18, a_this);
+                if (cBgS_LineCross(dComIfG_Bgsp(), &linChk)) {
+                    cXyz* cross = kiLineCross(&linChk); /* linChk.GetCross() */
+                    a_this->home.pos.x = cross->x;
+                    a_this->home.pos.y = cross->y;
+                    a_this->home.pos.z = cross->z;
                     a_this->home.pos.y -= 30.0f;
                     i_this->mBehaviorType = 10;
                     anm_init(i_this, dRes_INDEX_KI_BCK_FLY1_e, 5.0f, 2, hio.m08, dRes_INDEX_KI_BAS_FLY1_e);
@@ -240,7 +239,7 @@ static void ki_atack_move(ki_class* i_this) {
                     i_this->mBehaviorType = 1;
                     i_this->mAction = ki_class::ACT_ATTACK_MOVE_INDEX_e;
                 }
-                ki_LinChk_dt(linChk);
+                ki_LinChk_dt(&linChk);
             } else {
                 i_this->mBehaviorType = 0;
                 i_this->mTimers[0] = (s16)gabi::ftoi(cM_rndF(50.0f) + 100.0f);
@@ -248,4 +247,11 @@ static void ki_atack_move(ki_class* i_this) {
         }
     }
 }
-VERIFY(0x02199C48, ki_atack_move);
+
+/* WWHD glue
+ext 02199364 void kiAttack_check(ki_class* actor)
+ext 02199388 void kiAttack_animation(ki_class* actor, int resource, f32 blend, u8 loop, f32 speed, int sound)
+ext 021994B0 void kiAttack_texture(ki_class* actor, u16 index)
+ext 021995BC BOOL kiAttack_playerBackground(ki_class* actor)
+ext 02199A64 void kiAttack_position(ki_class* actor, s8 mode)
+*/

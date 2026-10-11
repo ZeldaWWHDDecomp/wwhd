@@ -1,77 +1,119 @@
-/* WWHD standard create request.
- * Nine request/phase bodies025E12E0..025E14A8 plus trailing SDK initializer025E1538.
- * The GC load phase is absent in HD; process creation failure no longer frees the module.
- * HD request is0x60: layer44,phase48,name50,append54,callback58,callbackData5C.
+/** Standard process creation requests, GameCube structure verified against WWHD. Local only.
+ * HD: no module-load phase and no module-free call on process creation failure.
  */
-#include "bindings.h"
-namespace stdcreate {
-using gabi::load;using gabi::store;
-static s32 create(u32 q) {
- WWHD_FUNC(0x025E12E0,s32,q);
- gabi::call(0x025DEAB4,load<u32>(q+0x44));
- s16 name=load<s16>(q+0x50);u32 data=load<u32>(q+0x54),id=load<u32>(q+0x3C);
- u32 process=gabi::call<u32>(0x025DD414,name,id,data);
- store<u32>(q+0x40,process);
- if(process==0)return 5;
- store<u32>(process+0x14,q);return 2;
+#include "f_pc/f_pc_stdcreate_req.h"
+
+static create_request_method_class submethod;
+// HD: the phase table starts at CreateProcess, without the GameCube Load phase.
+static StandardCreatePhaseTable method;
+static s32 g_fpcNd_type;
+
+/* 025E12E0 */
+cPhs_State fpcSCtRq_phase_CreateProcess(standard_create_request_class* i_SCtReq) {
+    fpcLy_SetCurrentLayer(i_SCtReq->base.mpLayer);
+    s16 name = i_SCtReq->mProcName;
+    void* data = i_SCtReq->mpUserData;
+    u32 id = i_SCtReq->base.mBsPcId;
+    base_process_class* process = fpcBs_Create(name, id, data);
+    i_SCtReq->base.mpRes = process;
+    if (process == nullptr) {
+        return cPhs_ERROR_e;
+    } else {
+        process->mpCtRq = gabi::ea(i_SCtReq);
+        return cPhs_NEXT_e;
+    }
 }
-VERIFY(0x025E12E0,create);
-static s32 subcreate(u32 q){
- WWHD_FUNC(0x025E134C,s32,q);
- gabi::call(0x025DEAB4,load<u32>(q+0x44));
- return gabi::call<s32>(0x025DD538,load<u32>(q+0x40));
+
+/* 025E134C */
+cPhs_State fpcSCtRq_phase_SubCreateProcess(standard_create_request_class* i_SCtReq) {
+    fpcLy_SetCurrentLayer(i_SCtReq->base.mpLayer);
+    return fpcBs_SubCreate(i_SCtReq->base.mpRes);
 }
-VERIFY(0x025E134C,subcreate);
-static s32 complete(u32 q){
- WWHD_FUNC(0x025E1384,s32,q);
- u32 process=load<u32>(q+0x40);
- if(gabi::call<s32>(0x025DD258,load<u32>(0x101F3D60),load<u32>(process+0xB8))==1)
-  if(gabi::call<s32>(0x025DEA6C,process+0xC0)==1)return 0;
- return 2;
+
+/* 025E1384 */
+cPhs_State fpcSCtRq_phase_IsComplete(standard_create_request_class* i_SCtReq) {
+    StandardCreateNodePrefix* procNode = reinterpret_cast<StandardCreateNodePrefix*>(i_SCtReq->base.mpRes.get());
+    if (fpcBs_Is_JustOfType(g_fpcNd_type, procNode->mSubType) == TRUE) {
+        if (fpcLy_IsCreatingMesg(procNode->mLayer) == TRUE) {
+            return cPhs_INIT_e;
+        }
+    }
+    return cPhs_NEXT_e;
 }
-VERIFY(0x025E1384,complete);
-static s32 post(u32 q){
- WWHD_FUNC(0x025E13F0,s32,q);
- u32 cb=load<u32>(q+0x58);
- if(cb && gabi::call_ptr<s32>(cb,load<u32>(q+0x40),load<u32>(q+0x5C))==0)return 0;
- return 2;
+
+/* 025E13F0 */
+cPhs_State fpcSCtRq_phase_PostMethod(standard_create_request_class* i_SCtReq) {
+    // HD: the callback is stored as a guest code address.
+    u32 callback = i_SCtReq->mpCallBack.get();
+    if (callback && gabi::call_ptr<s32>(callback, i_SCtReq->base.mpRes.get(),
+                                      i_SCtReq->mpCallBackUserData.get()) == 0) {
+        return cPhs_INIT_e;
+    } else {
+        return cPhs_NEXT_e;
+    }
 }
-VERIFY(0x025E13F0,post);
-static s32 done(u32 q){WWHD_FUNC(0x025E144C,s32,q);return 2;}
-VERIFY(0x025E144C,done);
-static s32 handler(u32 q){
- WWHD_FUNC(0x025E1454,s32,q);
- s32 state;
- do {state=gabi::call<s32>(0x02019F74,q+0x48,q);}while(state==2);
- return state;
+
+/* 025E144C */
+cPhs_State fpcSCtRq_phase_Done(standard_create_request_class* i_SCtReq) {
+    return cPhs_NEXT_e;
 }
-VERIFY(0x025E1454,handler);
-static s32 remove(u32 q){WWHD_FUNC(0x025E1498,s32,q);return 1;}
-VERIFY(0x025E1498,remove);
-static s32 cancel(u32 q){WWHD_FUNC(0x025E14A0,s32,q);return 1;}
-VERIFY(0x025E14A0,cancel);
-static u32 request(u32 layer,s32 name,u32 cb,u32 cbData,u32 append){
- WWHD_FUNC(0x025E14A8,u32,layer,name,cb,cbData,append);
- if(name>=32767)return 0xFFFFFFFF;
- u32 q=gabi::call<u32>(0x025DDAD4,layer,0x60,0x101F46B0);
- if(q==0)return 0xFFFFFFFF;
- gabi::call(0x02019F0C,q+0x48,0x101F4698);
- store<s16>(q+0x50,(s16)name);store<u32>(q+0x54,append);
- u32 id=load<u32>(q+0x3C);
- store<u32>(q+0x5C,cbData);store<u32>(q+0x58,cb);return id;
+
+/* 025E1454 */
+cPhs_State fpcSCtRq_Handler(standard_create_request_class* i_SCtReq) {
+    // HD: GHS replaces the GameCube recursive NEXT step with a loop.
+    cPhs_State phase_state;
+    do {
+        phase_state = cPhs_Do(&i_SCtReq->mPhase, i_SCtReq);
+    } while (phase_state == cPhs_NEXT_e);
+    return phase_state;
 }
-VERIFY(0x025E14A8,request);
-static void init(){
- WWHD_FUNC(0x025E1538,void);
- store<u32>(0x1048ABB4,0);store<u32>(0x1048ABAC,0);
- store<u32>(0x1048ABB8,0);store<u32>(0x1048ABB0,0);
- gabi::call(0x028F026C,0x101F46BC);
- f32 a=load<f32>(0x100584A4),b=load<f32>(0x100584A8);
- store<f32>(0x1048ABA0,a);store<f32>(0x1048ABA4,b);
- gabi::call(0x028ED6F8,0x1048ABA8);
- gabi::call(0x028F026C,0x101F46C8);
- gabi::call(0x028EAB2C,0x1048ABA9);
- gabi::call(0x028F026C,0x101F46D4);
+
+/* 025E1498 */
+BOOL fpcSCtRq_Delete(standard_create_request_class* i_SCtReq) {
+    return TRUE;
 }
-VERIFY(0x025E1538,init);
+
+/* 025E14A0 */
+BOOL fpcSCtRq_Cancel(standard_create_request_class* i_SCtReq) {
+    return TRUE;
 }
+
+/* 025E14A8 */
+fpc_ProcID fpcSCtRq_Request(layer_class* i_layer, s32 i_procName, u32 i_createFunc,
+                          void* param_4, void* i_append) {
+    // HD: compare the full-width process name before narrowing it into the request.
+    if (i_procName >= 0x7FFF) {
+        return fpcM_ERROR_PROCESS_ID_e;
+    }
+    standard_create_request_class* request = reinterpret_cast<standard_create_request_class*>(
+        fpcCtRq_Create(i_layer, sizeof(standard_create_request_class), &submethod));
+    if (request == nullptr) {
+        return fpcM_ERROR_PROCESS_ID_e;
+    }
+    cPhs_Set(&request->mPhase, method.mHandlers);
+    request->mProcName = static_cast<s16>(i_procName);
+    request->mpUserData = i_append;
+    u32 id = request->base.mBsPcId;
+    request->mpCallBackUserData = param_4;
+    request->mpCallBack.v = i_createFunc;
+    return id;
+}
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025E1538 */
+static void __sinit_f_pc_stdcreate_req_cpp() {
+    sinit_header_statics_rodata(0x1048ABA0, 0x101F46BC, 0x1048ABAC, 0x100584A4);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data and external operations
+data submethod 101F46B0
+data method 101F4698
+data g_fpcNd_type 101F3D60
+ext 025DD414 base_process_class* fpcBs_Create(s32, u32, void*)
+ext 025DD538 cPhs_State fpcBs_SubCreate(base_process_class*)
+ext 025DD258 BOOL fpcBs_Is_JustOfType(int, int)
+ext 025DEA6C BOOL fpcLy_IsCreatingMesg(void*)
+ext 025DDAD4 create_request* fpcCtRq_Create(layer_class*, u32, create_request_method_class*)
+ext 02019F0C void cPhs_Set(request_of_phase_process_class*, cPhs__Handler*)
+ext 02019F74 cPhs_State cPhs_Do(request_of_phase_process_class*, void*)
+*/

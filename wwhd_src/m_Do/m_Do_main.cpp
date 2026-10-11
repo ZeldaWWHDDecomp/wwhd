@@ -1,64 +1,116 @@
-/* Full retained HD main TU: LOAD_COPYDATE, init, single frame, initializer.
- * Periodic heap checker025F1654 belongs m_Do_machine. */
+/** Main initialization and retained HD frame entry. Private decomp source. */
 #include "bindings.h"
-namespace m_Do_main_cpp {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void sb(u32 a,u8 v){gabi::store<u8>(a,v);}
-static s32 LOAD_COPYDATE(){
-    WWHD_FUNC(0x025F1658,s32,(u32)0);
+#include "m_Do/m_Do_main.h"
+
+static mDoMain_StartupRecord sStartupRecord;
+static mDoMain_StartupRecord* sCurrentStartupRecord;
+static s8 sDevelopmentMode;
+static void* sHeapManager;
+static u8 mDisplayHeapSize;
+static u32 frameCount;
+static u8 fillcheck_check_frame;
+static mDoMain_HeaderZeroRecord sHeaderZeroRecord;
+static f32 sHeaderPiLower;
+static f32 sHeaderPiUpper;
+static f32 sHeaderPiLowerSource;
+static f32 sHeaderPiUpperSource;
+static u8 sHeaderFirstByte;
+static u8 sHeaderSecondByte;
+
+/* 025F1658 */
+static s32 LOAD_COPYDATE(void*) {
+    // HD: COPYDATE loading is disabled and always reports success.
     return 1;
 }
-VERIFY(0x025F1658,LOAD_COPYDATE);
-static void main01(){
-    WWHD_FUNC(0x025F1660,void,(u32)0);
-    st(0x1048D090,0);
-    st(0x1048D09C,0xFFFFFFFF);
-    st(0x1048D098,0);
-    st(0x101F4974,0x1048D090);
-    st(0x1048D094,0);
-    u32 game=gabi::call<u32>(0x025200D4);
-    gabi::call(0x02520020,game);
-    sb(0x101F48C0,1);
-    gabi::call(0x025F12F8);
-    u32 heap=gabi::call<u32>(0x025E2FBC);
-    u32 previous=1;
-    if(heap) previous=gabi::call<u32>(0x02756170,ld(0x101F8B4C),heap);
-    gabi::call(0x025F0A08);
-    gabi::call(0x025F0550);
-    gabi::call(0x025F2D70);
-    gabi::call(0x025E2384,0x025F1658,0);
-    gabi::call(0x025D4320);
-    sb(0x1048D07C,0);
-    if(previous!=1) gabi::call(0x02756170,ld(0x101F8B4C),previous);
+
+/* 025F1660 */
+void main01() {
+    // HD: initialize the startup record before constructing the game information.
+    sStartupRecord.field_0x0 = 0;
+    sStartupRecord.field_0xc = 0xFFFFFFFF;
+    sStartupRecord.field_0x8 = 0;
+    sCurrentStartupRecord = &sStartupRecord;
+    sStartupRecord.field_0x4 = 0;
+    dComIfG_inf_c_ct(dComIfGp_get());
+    sDevelopmentMode = 1;
+    mDoMch_Create();
+    void* gameHeap = mDoExt_getGameHeap();
+    u32 previousHeap = 1;
+    if (gameHeap != NULL) {
+        previousHeap = mDoMch_setThreadHeap(sHeapManager, gabi::ea(gameHeap));
+    }
+    mDoHIO_disabledEntry();
+    mDoGph_Create();
+    // HD: the retained m_Re controller companion is empty.
+    mReCPd_disabledCreate();
+    mDoDvdThd_callback_c::create(LOAD_COPYDATE, NULL);
+    fapGm_Create();
+    mDisplayHeapSize = FALSE;
+    if (previousHeap != 1) {
+        mDoMch_setThreadHeap(sHeapManager, previousHeap);
+    }
 }
-VERIFY(0x025F1660,main01);
-static void frame(){
-    WWHD_FUNC(0x025F172C,void,(u32)0);
-    u32 count=ld(0x1048D0A8)+1;
-    u8 period=gabi::load<u8>(0x1048D0AC);
-    st(0x1048D0A8,count);
-    if(period!=0 && count%period==0) gabi::call(0x025F1654);
-    gabi::call(0x025F2D74);
-    gabi::call(0x025E15E0);
-    gabi::call(0x025D42EC);
+
+/* 025F172C */
+// HD: the GameCube main loop is a single-frame entry called by GameTask.
+static void frame() {
+    u32 count = frameCount + 1;
+    u8 period = fillcheck_check_frame;
+    frameCount = count;
+    if (period != 0 && count % period == 0) {
+        mDoMch_HeapCheckAll();
+    }
+    mReCPd_disabledRead();
+    mDoAud_Execute();
+    fapGm_Execute();
 }
-VERIFY(0x025F172C,frame);
-static void initializer(){
-    WWHD_FUNC(0x025F1788,void,(u32)0);
-    st(0x1048D088,0);
-    st(0x1048D080,0);
-    st(0x1048D08C,0);
-    st(0x1048D084,0);
-    gabi::call(0x028F026C,0x101F489C);
-    f32 a=gabi::load<f32>(0x10059038);
-    f32 b=gabi::load<f32>(0x1005903C);
-    gabi::store<f32>(0x1048D074,a);
-    gabi::store<f32>(0x1048D078,b);
-    gabi::call(0x028ED6F8,0x1048D07D);
-    gabi::call(0x028F026C,0x101F48A8);
-    gabi::call(0x028EAB2C,0x1048D07E);
-    gabi::call(0x028F026C,0x101F48B4);
+
+/* 025F1788 */
+static void __sinit_m_Do_main_cpp() {
+    // HD: byte objects follow mDisplayHeapSize, so the common header helper does not apply.
+    sHeaderZeroRecord.mWords[2] = 0;
+    sHeaderZeroRecord.mWords[0] = 0;
+    sHeaderZeroRecord.mWords[3] = 0;
+    sHeaderZeroRecord.mWords[1] = 0;
+    __register_global_object(0x101F489C);
+    f32 lower = sHeaderPiLowerSource;
+    f32 upper = sHeaderPiUpperSource;
+    sHeaderPiLower = lower;
+    sHeaderPiUpper = upper;
+    mDoMain_headerFirstByteConstruct(&sHeaderFirstByte);
+    __register_global_object(0x101F48A8);
+    mDoMain_headerSecondByteConstruct(&sHeaderSecondByte);
+    __register_global_object(0x101F48B4);
 }
-VERIFY(0x025F1788,initializer);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): private main state and calls
+ data sStartupRecord 1048D090
+ data sCurrentStartupRecord 101F4974
+ data sDevelopmentMode 101F48C0
+ data sHeapManager 101F8B4C
+ data mDisplayHeapSize 1048D07C
+ data frameCount 1048D0A8
+ data fillcheck_check_frame 1048D0AC
+ data sHeaderZeroRecord 1048D080
+ data sHeaderPiLower 1048D074
+ data sHeaderPiUpper 1048D078
+ data sHeaderPiLowerSource 10059038
+ data sHeaderPiUpperSource 1005903C
+ data sHeaderFirstByte 1048D07D
+ data sHeaderSecondByte 1048D07E
+ ext 02520020 void dComIfG_inf_c_ct(u8*)
+ ext 025F12F8 bool mDoMch_Create()
+ ext 025E2FBC void* mDoExt_getGameHeap()
+ ext 02756170 u32 mDoMch_setThreadHeap(void*, u32)
+ ext 025F0A08 void mDoHIO_disabledEntry()
+ ext 025F0550 void mDoGph_Create()
+ ext 025F2D70 void mReCPd_disabledCreate()
+ ext 025F2D74 void mReCPd_disabledRead()
+ ext 025E2384 void mDoDvdThd_createCallback(mDoDvdThd_callback_func, void*)
+ ext 025D4320 void fapGm_Create()
+ ext 025D42EC void fapGm_Execute()
+ ext 025E15E0 void mDoAud_Execute()
+ ext 025F1654 void mDoMch_HeapCheckAll()
+ ext 028ED6F8 void mDoMain_headerFirstByteConstruct(be<u8>*)
+ ext 028EAB2C void mDoMain_headerSecondByteConstruct(be<u8>*)
+*/

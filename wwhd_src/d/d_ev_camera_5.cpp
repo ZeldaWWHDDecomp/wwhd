@@ -1,482 +1,520 @@
-/* d_ev_camera, part 5: getItemEvCamera. See
- * d_ev_camera.cpp for the unit's layout notes; written from the WWHD code (the GameCube
- * d_ev_camera.cpp is all "Nonmatching" stubs). */
-#include "bindings.h"
+/** Item acquisition, actor turn and saved-view restoration event cameras.
+ * GameCube supplies names/layouts; its function bodies are nonmatching stubs.
+ * HD: explicit-result bindings and work overlays preserve the verified implementation. */
+#include "d/d_ev_camera_5.h"
+using namespace event_camera_transition;
 
-namespace d_ev_camera_5_cpp {
+namespace event_camera_transition {
+static void copyPoint(cXyz* destination, const cXyz* source) {
+    // HD: word copies preserve the original memory order and NaN payloads.
+    auto* out = reinterpret_cast<CameraPointWordsHD*>(destination);
+    auto* in = reinterpret_cast<const CameraPointWordsHD*>(source);
+    out->x = in->x;
+    out->y = in->y;
+    out->z = in->z;
+}
+static void copyFloatPoint(cXyz* destination, const cXyz* source) {
+    // HD: collision arguments use floating loads/stores rather than word copies.
+    destination->x = (f32)source->x;
+    destination->y = (f32)source->y;
+    destination->z = (f32)source->z;
+}
+static void copySavedPositions(CameraSavedViewHD* destination, const CameraSavedViewHD* source) {
+    auto* out = reinterpret_cast<CameraWordsHD*>(destination);
+    auto* in = reinterpret_cast<const CameraWordsHD*>(source);
+    for (int i = 0; i < 6; i++)
+        out->mWords[i] = in->mWords[i];
+}
+static void setPoint(cXyz* point, f32 x, f32 y, f32 z) {
+    point->x = x;
+    point->y = y;
+    point->z = z;
+}
+static void SkipSmoother(dCamera_c* camera) {
+    camera->m102 = 1;
+    camera->m101 = 1;
+    camera->m100 = 1;
+}
+/* inlined into getItemEvCamera */
+static void eyeFromGlobe(dCamera_c* camera) {
+    gabi::Local<cXyz> direction;
+    gabi::Local<cXyz> eye;
+    cameraTransitionGlobeXyz(&camera->mViewCache.mDirection, direction.get());
+    cameraTransitionAdd(&camera->mViewCache.mCenter, eye.get(), direction.get());
+    copyPoint(&camera->mViewCache.mEye, eye.get());
+}
+static void assignAngleSum(be<s16>* destination, const be<s16>* a, const be<s16>* b,
+                           be<s16>* sum, be<s16>* constructed) {
+    // HD: GHS assigns through a signed-angle constructor result.
+    cameraTransitionAngleAdd(a, sum, b);
+    be<s16>* result = cameraTransitionAngleShort(constructed, (s16)*sum);
+    *destination = (s16)*result;
+}
+/* inlined into restorePosEvCamera */
+static void restoreGlobe(CameraGlobeHD* globe, const cXyz* eye, const cXyz* center) {
+    gabi::Local<cXyz> difference;
+    gabi::Local<cXyz> eyeDifference;
+    gabi::Local<cXyz> normal;
+    gabi::Local<cXyz> scaled;
+    cameraTransitionSubtract(eye, difference.get(), center);
+    cameraTransitionGlobeVector(globe, difference.get());
+    cameraTransitionSubtract(eye, eyeDifference.get(), center);
+    if (cameraTransitionVectorLength(eyeDifference.get()) < 45.0f) {
+        cameraTransitionNormalize(eyeDifference.get(), normal.get());
+        cameraTransitionScale(normal.get(), scaled.get(), 60.0f);
+        copyPoint(eyeDifference.get(), scaled.get());
+        cameraTransitionGlobeVector(globe, eyeDifference.get());
+    }
+}
+} // namespace event_camera_transition
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
-}
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline void positionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8D5C, c, out, actor); }
-static inline bool lineBGCheck(u32 c, u32 a, u32 b, u32 flags) { return gabi::call<bool>(0x024FCBE8, c, a, b, flags); }
-static inline void cXyz_mi(u32 a, u32 out, u32 b) { gabi::call(0x0201ADE0, a, out, b); }
-static inline void cXyz_pl(u32 a, u32 out, u32 b) { gabi::call(0x0201AD78, a, out, b); }
-static inline void cXyz_ml(u32 a, u32 out, f32 s) { gabi::call(0x0201AE48, a, out, s); }
-static inline void cSGlobe_Val(u32 g, u32 v) { gabi::call(0x020072E0, g, v); }
-static inline void cSGlobe_Xyz(u32 g, u32 out) { gabi::call(0x020073AC, g, out); }
-static inline void cSAngle_mi(u32 a, u32 out, u32 b) { gabi::call(0x020068B0, a, out, b); }
-static inline void cSAngle_ml(u32 a, u32 out, f32 f) { gabi::call(0x0200693C, a, out, f); }
-static inline void cSAngle_addeq(u32 a, u32 b) { gabi::call(0x020068CC, a, b); }
-static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
-}
-static inline void f3(u32 v, f32 x, f32 y, f32 z) {
-    stf(v + 0, x);
-    stf(v + 4, y);
-    stf(v + 8, z);
-}
-/* eye = centre + direction (mViewCache) */
-static inline void eyeFromGlobe(u32 c) {
-    gabi::Local<cXyz> x;
-    gabi::Local<cXyz> e;
-    u32 xx = gabi::ea(x.get()), ee = gabi::ea(e.get());
-    cSGlobe_Xyz(c + 0x3C, xx);
-    cXyz_pl(c + 0x44, ee, xx);
-    copy3(c + 0x50, ee);
+/* 02534964 */
+bool event_camera_transition::dCamera_c::restorePosEvCamera() {
+    auto* gaps = gabi::at<CameraDefaultGapsHD>(0x10475884);
+    auto* timers = gabi::at<CameraTimersHD>(0x101D6230);
+    auto* zero = gabi::at<cXyz>(0x101FFBA8);
+    if ((u32)gaps->mRestoreGuard == 0) {
+        f32 x = (f32)zero->x, y = (f32)zero->y;
+        gaps->mRestoreGap.x = x;
+        f32 z = (f32)zero->z;
+        gaps->mRestoreGap.y = y;
+        gaps->mRestoreGap.z = z;
+        gaps->mRestoreGuard = 1;
+    }
+    auto& work = mWork.restore;
+    if ((u32)m11C == 0) {
+        gabi::Local<cXyz> def;
+        auto* d = def.get();
+        f32 z = (f32)gaps->mRestoreGap.z, y = (f32)gaps->mRestoreGap.y, x = (f32)gaps->mRestoreGap.x;
+        d->z = z;
+        d->x = x;
+        d->y = y;
+        cameraTransitionGetXyz(this, &work.mCenterGap, "CtrGap", d);
+        cameraTransitionGetFloat(this, &work.mCushion, "Cushion", 1.0f);
+        cameraTransitionGetFloat(this, &work.mNearDist, "NearDist", 750.0f);
+        cameraTransitionGetFloat(this, &work.mFarDist, "FarDist", 1500.0f);
+        cameraTransitionGetInt(this, &work.mNearTimer, "NearTimer", (s32)timers->mNearTimer);
+        cameraTransitionGetInt(this, &work.mFarTimer, "FarTimer", (s32)timers->mFarTimer);
+        cameraTransitionGetInt(this, &work.mDest, "Dest", 2);
+        cameraTransitionGetInt(this, &work.mTargetType, "TargetType", 0);
+        u32 dest = (u32)work.mDest;
+        if (dest == RESTORE_PLAY_SLOT) {
+            auto* play = reinterpret_cast<PlaySavedCameraHD*>(dComIfGp_get());
+            copySavedPositions(&work.mSavedView, &play->mSavedView);
+            work.mSavedView.mFovY = (f32)play->mSavedView.mFovY;
+            work.mSavedView.mBank = (s16)play->mSavedView.mBank;
+        } else {
+            const CameraSavedViewHD* source =
+                dest == 0 ? &m0A4[0] : dest == 1 ? &m0A4[1]
+                                                 : reinterpret_cast<CameraSavedViewHD*>(&m084);
+            copySavedPositions(&work.mSavedView, source);
+            work.mSavedView.mFovY = (f32)source->mFovY;
+        }
+        fopAc_ac_c* a = cameraTransitionGetActor(this, "Target", "@PLAYER");
+        work.mpTargetActor = a;
+        if (a == 0) return true;
+        gabi::Local<cXyz> r;
+        gabi::Local<CameraGlobeHD> globe;
+        auto* rr = r.get();
+        auto* gg = globe.get();
+        cameraTransitionRelational(this, rr, a, &work.mCenterGap);
+        copyPoint(&work.mTargetCenter, rr);
+        cameraTransitionSubtract(&work.mSavedView.mEye, rr, &mViewCache.mCenter);
+        cameraTransitionGlobeFromVector(gg, rr); /* cSGlobe(const cXyz&) */
+        f32 dist = gg->mRadius;
+        u32 mode;
+        if (dist < (f32)work.mNearDist) {
+            mode = cameraTransitionPointInSight(this, &work.mTargetCenter) ^ 1; /* HD: preserve the original xor, including nonboolean callback results. */
+        } else if (dist < (f32)work.mFarDist && !cameraTransitionLineCheck(this, &mEye, &work.mTargetCenter, CAMERA_LINE_DEFAULT)) {
+            mode = RESTORE_BLEND;
+        } else {
+            mode = RESTORE_JUMP;
+        }
+        work.mMode = mode;
+        SkipSmoother(this);
+    }
+    u32 mode = (u32)work.mMode;
+    if (mode < RESTORE_NEAR || mode > RESTORE_JUMP) {
+        SkipSmoother(this);
+        return true;
+    }
+    if (mode == RESTORE_JUMP) {
+        if ((u32)m11C == 0) {
+            if ((u32)work.mTargetType == 1) copyPoint(&mViewCache.mCenter, &work.mSavedView.mCenter);
+            else copyPoint(&mViewCache.mCenter, &work.mTargetCenter);
+            restoreGlobe(&mViewCache.mDirection, &work.mSavedView.mEye, &work.mSavedView.mCenter);
+            gabi::Local<cXyz> x;
+            gabi::Local<cXyz> e;
+            auto* xx = x.get();
+            auto* ee = e.get();
+            cameraTransitionGlobeXyz(&mViewCache.mDirection, xx);
+            cameraTransitionAdd(&mViewCache.mCenter, ee, xx);
+            copyPoint(&mViewCache.mEye, ee);
+            mViewCache.mFovy = (f32)work.mSavedView.mFovY;
+        }
+        SkipSmoother(this);
+        return true;
+    }
+    if ((u32)m11C == 0) restoreGlobe(&work.mDirection, &work.mSavedView.mEye, &work.mSavedView.mCenter);
+    u32 elapsed = (u32)m11C;
+    if (elapsed >= (u32)work.mFarTimer) {
+        SkipSmoother(this);
+        return true;
+    }
+    f32 ratio = (f32)(f64)elapsed / (f32)(f64)(s32)(u32)work.mFarTimer;
+    gabi::Local<cXyz> a;
+    gabi::Local<cXyz> b;
+    gabi::Local<be<s16>[4]> an;
+    gabi::Local<be<s16>[2]> ct;
+    auto* aa = a.get();
+    auto* bb = b.get();
+    auto* ang = &(*an.get())[0];
+    auto* cto = &(*ct.get())[0];
+    cameraTransitionSubtract((u32)work.mTargetType == 1 ? &work.mSavedView.mCenter : &work.mTargetCenter, aa, &mViewCache.mCenter);
+    cameraTransitionScale(aa, bb, ratio);
+    PSVECAdd(&mViewCache.mCenter, bb, &mViewCache.mCenter); /* PSVECAdd */
+    f32 radius = (f32)mViewCache.mDirection.mRadius;
+    mViewCache.mDirection.mRadius = gabi::fmadds((f32)work.mDirection.mRadius - radius, ratio, radius);
+    cameraTransitionAngleSubtract(&work.mDirection.mU, ang + 2, &mViewCache.mDirection.mU);
+    cameraTransitionAngleMultiply(ang + 2, ang + 1, ratio);
+    cameraTransitionAngleAdd(&mViewCache.mDirection.mU, ang, ang + 1);
+    be<s16>* r = cameraTransitionAngleShort(cto, (s16)*ang);
+    mViewCache.mDirection.mU = (u16)(s16)*r;
+    cameraTransitionAngleSubtract(&work.mDirection.mV, ang, &mViewCache.mDirection.mV);
+    cameraTransitionAngleMultiply(ang, ang + 1, ratio);
+    cameraTransitionAngleAdd(&mViewCache.mDirection.mV, ang + 2, ang + 1);
+    r = cameraTransitionAngleShort(cto + 1, (s16)*(ang + 2));
+    mViewCache.mDirection.mV = (u16)(s16)*r;
+    cameraTransitionGlobeXyz(&mViewCache.mDirection, bb);
+    cameraTransitionAdd(&mViewCache.mCenter, aa, bb);
+    copyPoint(&mViewCache.mEye, aa);
+    f32 fovy = (f32)mViewCache.mFovy;
+    mViewCache.mFovy = gabi::fmadds((f32)work.mSavedView.mFovY - fovy, ratio, fovy);
+    return false;
 }
 
-/* 025351A0: getItemEvCamera: a state machine in work+0 (0/1: wait "Timer1" frames, 0xA: pick the
- * first of four eye offsets around the player with a clear view, 0xB: blend to it over "Timer2"
- * frames, 0xC/0x63: hold). work: +4 frames of this state, +0xC centre, +0x18 target fovy (79),
- * +0x1C/+0x20 frame counter, +0x24 target direction (cSGlobe), +0x44 Timer1 (27), +0x48 Timer2 (5) */
-static u32 dCamera_c_getItemEvCamera(u32 i_this) {
-    WWHD_FUNC(0x025351A0, u32, i_this);
-    u32 w = i_this + 0x37C;
+/* 02536404 */
+bool event_camera_transition::dCamera_c::turnToActorEvCamera() {
+    auto* gaps = gabi::at<CameraDefaultGapsHD>(0x10475884);
+    auto* timers = gabi::at<CameraTimersHD>(0x101D6230);
+    if ((u32)gaps->mTurnGuard == 0) {
+        f32 z0 = 0.0f, y40 = 40.0f;
+        gaps->mTurnGap.x = z0;
+        gaps->mTurnGap.y = y40;
+        gaps->mTurnGuard = 1;
+        gaps->mTurnGap.z = z0;
+    }
+    auto& work = mWork.turn;
+    if ((u32)m11C == 0) {
+        gabi::Local<cXyz> def;
+        auto* d = def.get();
+        f32 x = (f32)gaps->mTurnGap.x, y = (f32)gaps->mTurnGap.y;
+        d->x = x;
+        f32 z = (f32)gaps->mTurnGap.z;
+        d->y = y;
+        d->z = z;
+        cameraTransitionGetXyz(this, &work.mCenterGap, "CtrGap", d);
+        cameraTransitionGetFloat(this, &work.mCushion, "Cushion", 1.0f);
+        cameraTransitionGetInt(this, &work.mTimer, "Timer", (s32)timers->mTurnTimer);
+        cameraTransitionGetFloat(this, &work.mFrontAngle, "FrontAngle", 179.0f);
+        fopAc_ac_c* targetActor = cameraTransitionGetActor(this, "Target", "@STARTER");
+        work.mpTargetActor = targetActor;
+        if (targetActor == 0) {
+            SkipSmoother(this);
+            return true;
+        }
+        cameraTransitionAttention(this, d, targetActor);
+        copyPoint(&work.mTargetPosition, d);
+        u32 elapsed = (u32)m11C;
+        SkipSmoother(this);
+        if (elapsed == 0) {
+            gabi::Local<cXyz> c;
+            gabi::Local<cXyz> v;
+            gabi::Local<CameraGlobeHD> g1;
+            gabi::Local<cXyz> p;
+            gabi::Local<cXyz> v2;
+            gabi::Local<CameraGlobeHD> g2;
+            gabi::Local<be<s16>[2]> dir;
+            gabi::Local<be<s16>[2]> diff;
+            gabi::Local<be<s16>[24]> tmp;
+            auto* cc = c.get();
+            auto* vv = v.get();
+            auto* targetGlobe = g1.get();
+            auto* pp = p.get();
+            auto* vv2 = v2.get();
+            auto* eyeGlobe = g2.get();
+            auto* dr = &(*dir.get())[0];
+            auto* df = &(*diff.get())[0];
+            auto* tp = &(*tmp.get())[0];
+            cameraTransitionRelational(this, cc, mpPlayerActor.get(), &work.mCenterGap);
+            cameraTransitionSubtract(cc, vv, &work.mTargetPosition);
+            cameraTransitionGlobeFromVector(targetGlobe, vv); /* cSGlobe(const cXyz&) */
+            cameraTransitionPosition(this, pp, work.mpTargetActor.get());
+            cameraTransitionSubtract(&mViewCache.mEye, vv2, pp);
+            cameraTransitionGlobeFromVector(eyeGlobe, vv2);
+            cameraTransitionDirection(this, dr, work.mpTargetActor.get());
+            cameraTransitionAngleSubtract(&eyeGlobe->mU, df, dr);
+            bool belowMinimum;
+            if ((s16)*df < (s16)*gabi::at<be<s16>>(0x101FF354)) { /* the actor faces away: turn +5 degrees */
+                be<s16>* five = cameraTransitionAngleDegrees(tp, 5.0f);
+                assignAngleSum(&targetGlobe->mU, &targetGlobe->mU, five, tp + 1, tp + 2);
+            } else {
+                be<s16>* five = cameraTransitionAngleDegrees(tp + 3, -5.0f);
+                assignAngleSum(&targetGlobe->mU, &targetGlobe->mU, five, tp + 4, tp + 5);
+            }
+            cameraTransitionDirection(this, dr, work.mpTargetActor.get());
+            cameraTransitionAngleSubtract(&targetGlobe->mU, df + 1, dr);
+            cameraTransitionAngleDefault(tp + 6); /* cSAngle() */
+            be<s16>* minimumAngle = cameraTransitionAngleDegrees(tp + 7, -(f32)work.mFrontAngle);
+            belowMinimum = (s16)*(df + 1) < (s16)*minimumAngle;
+            if (belowMinimum) {
+                cameraTransitionDirection(this, dr + 1, work.mpTargetActor.get());
+                be<s16>* b = cameraTransitionAngleDegrees(tp + 8, -(f32)work.mFrontAngle);
+                assignAngleSum(&targetGlobe->mU, dr + 1, b, tp + 9, tp + 10);
+            } else {
+                be<s16>* maximumAngle = cameraTransitionAngleDegrees(tp + 11, (f32)work.mFrontAngle);
+                if ((s16)*(df + 1) > (s16)*maximumAngle) {
+                    cameraTransitionDirection(this, dr + 1, work.mpTargetActor.get());
+                    be<s16>* b = cameraTransitionAngleDegrees(tp + 12, (f32)work.mFrontAngle);
+                    assignAngleSum(&targetGlobe->mU, dr + 1, b, tp + 13, tp + 14);
+                }
+            }
+            cameraTransitionGlobeSet(&work.mDirection, 120.0f, &targetGlobe->mV, &targetGlobe->mU); /* cSGlobe::Val(r, V, U) */
+            cameraTransitionRelational(this, pp, mpPlayerActor.get(), &work.mCenterGap);
+            copyPoint(&work.mCenter, pp);
+        }
+    }
+    u32 elapsed = (u32)m11C;
+    if (elapsed >= (u32)work.mTimer) {
+        SkipSmoother(this);
+        return true;
+    }
+    f32 ratio = (f32)(f64)elapsed / (f32)(f64)(s32)(u32)work.mTimer;
+    gabi::Local<cXyz> targetActor;
+    gabi::Local<cXyz> b;
+    gabi::Local<be<s16>[4]> ang;
+    gabi::Local<be<s16>[2]> ct;
+    auto* aa = targetActor.get();
+    auto* bb = b.get();
+    auto* an = &(*ang.get())[0];
+    auto* cto = &(*ct.get())[0];
+    cameraTransitionSubtract(&work.mCenter, aa, &mViewCache.mCenter);
+    cameraTransitionScale(aa, bb, ratio);
+    PSVECAdd(&mViewCache.mCenter, bb, &mViewCache.mCenter); /* PSVECAdd */
+    f32 radius = (f32)mViewCache.mDirection.mRadius;
+    mViewCache.mDirection.mRadius = gabi::fmadds((f32)work.mDirection.mRadius - radius, ratio, radius);
+    /* U then V towards the target globe */
+    cameraTransitionAngleSubtract(&work.mDirection.mU, an + 2, &mViewCache.mDirection.mU);
+    cameraTransitionAngleMultiply(an + 2, an + 1, ratio);
+    cameraTransitionAngleAdd(&mViewCache.mDirection.mU, an, an + 1);
+    be<s16>* r = cameraTransitionAngleShort(cto, (s16)*an);
+    mViewCache.mDirection.mU = (u16)(s16)*r;
+    cameraTransitionAngleSubtract(&work.mDirection.mV, an, &mViewCache.mDirection.mV);
+    cameraTransitionAngleMultiply(an, an + 1, ratio);
+    cameraTransitionAngleAdd(&mViewCache.mDirection.mV, an + 2, an + 1);
+    r = cameraTransitionAngleShort(cto + 1, (s16)*(an + 2));
+    mViewCache.mDirection.mV = (u16)(s16)*r;
+    cameraTransitionGlobeXyz(&mViewCache.mDirection, bb);
+    cameraTransitionAdd(&mViewCache.mCenter, aa, bb);
+    copyPoint(&mViewCache.mEye, aa);
+    cameraTransitionSubtract(&mViewCache.mEye, aa, &mViewCache.mCenter);
+    cameraTransitionGlobeVector(&mViewCache.mDirection, aa);
+    return false;
+}
+
+/* 025351A0 */
+bool event_camera_transition::dCamera_c::getItemEvCamera() {
+    auto& work = mWork.item;
     gabi::Local<cXyz> ctrOfs;
     gabi::Local<cXyz[4]> eyeOfs;
-    u32 co = gabi::ea(ctrOfs.get()), eo = gabi::ea(eyeOfs.get());
-    f3(co, ldf(0x1004D06C), ldf(0x1004D070), ldf(0x1004D074));
-    f3(eo + 0x00, ldf(0x1004D078), ldf(0x1004D07C), ldf(0x1004D080));
-    f3(eo + 0x0C, ldf(0x1004D084), ldf(0x1004D088), ldf(0x1004D08C));
-    f3(eo + 0x18, ldf(0x1004D090), ldf(0x1004D094), ldf(0x1004D098));
-    f3(eo + 0x24, ldf(0x1004D078), ldf(0x1004D07C), ldf(0x1004D080));
-    gabi::Local<s16[2]> nameU; /* the original's sp+0x20: the process name searched for, then cSAngle U */
-    gabi::Local<s16> angV;
-    u32 nm = gabi::ea(nameU.get()), au = nm + 2, av = gabi::ea(angV.get());
-    gabi::call(0x020065FC, au); /* cSAngle() */
-    gabi::call(0x020065FC, av);
-    u32 ret = 0;
+    auto* co = ctrOfs.get();
+    auto* eo = &(*eyeOfs.get())[0];
+    setPoint(co, -0.095f, 0.428f, -7.177f);
+    setPoint(eo + 0, 0.17f, 97.0f, -57.78f);
+    setPoint(eo + 1, 35.098f, 100.791f, -31.185f);
+    setPoint(eo + 2, -28.844f, 99.996f, -41.073f);
+    setPoint(eo + 3, 0.17f, 97.0f, -57.78f);
+    gabi::Local<ItemAngleSlotsHD> nameU; /* the original's sp+0x20: the process name searched for, then cSAngle U */
+    gabi::Local<be<s16>> angV;
+    auto* nm = &nameU->mProcessName;
+    auto* au = &nameU->mU;
+    auto* av = angV.get();
+    cameraTransitionAngleDefault(au); /* cSAngle() */
+    cameraTransitionAngleDefault(av);
     u32 state;
-    if (ld(i_this + 0x11C) == 0) {
+    if ((u32)m11C == 0) {
         state = 0;
-        st(w + 0, 0);
+        work.mState = 0;
     } else {
-        state = ld(w + 0);
+        state = (u32)work.mState;
     }
-    if (state != 1 && state != 0xA && state != 0xB && state != 0xC && state != 0x63) {
-        getEvIntData(i_this, w + 0x44, 0x1004D0A0 /* "Timer1" */, 0x1B);
-        getEvIntData(i_this, w + 0x48, 0x1004D0A8 /* "Timer2" */, 5);
-        st(w + 0x1C, 0);
-        u32 t1 = ld(w + 0x44);
-        st(w + 0, 1);
-        st(w + 0x20, 0);
-        st(w + 4, t1);
-        state = 1;
+    if (state != ITEM_WAIT && state != ITEM_CHOOSE_EYE && state != ITEM_BLEND && state != ITEM_SETTLE && state != ITEM_HOLD) {
+        cameraTransitionGetInt(this, &work.mTimer1, "Timer1", 27);
+        cameraTransitionGetInt(this, &work.mTimer2, "Timer2", 5);
+        work.mInitialCounter = 0;
+        u32 t1 = (u32)work.mTimer1;
+        work.mState = ITEM_WAIT;
+        work.mElapsed = 0;
+        work.mTimer = t1;
+        state = ITEM_WAIT;
     }
-    if (state == 1) {
-        st(i_this + 0x510, ld(i_this + 0x510) | 1);
-        if ((s32)ld(w + 0x20) < (s32)ld(w + 4)) {
-            st(w + 0x20, ld(w + 0x20) + 1);
-            return 0;
+    if (state == ITEM_WAIT) {
+        mEventFlags = (u32)mEventFlags | CAMERA_HOLD_VIEW;
+        if ((s32)(u32)work.mElapsed < (s32)(u32)work.mTimer) {
+            work.mElapsed = (u32)work.mElapsed + 1;
+            return false;
         }
-        st(w + 0, 0xA);
-        st(w + 0x20, ld(w + 0x20) + 1);
-        return 0;
+        work.mState = ITEM_CHOOSE_EYE;
+        work.mElapsed = (u32)work.mElapsed + 1;
+        return false;
     }
     gabi::Local<cXyz> r;
     gabi::Local<cXyz> d;
-    u32 rr = gabi::ea(r.get()), dd = gabi::ea(d.get());
-    if (state == 0xA) {
-        st(w + 0x20, 0);
-        relationalPos(i_this, rr, ld(i_this + 0x128), co);
-        copy3(w + 0xC, rr);
+    auto* rr = r.get();
+    auto* dd = d.get();
+    if (state == ITEM_CHOOSE_EYE) {
+        work.mElapsed = 0;
+        cameraTransitionRelational(this, rr, mpPlayerActor.get(), co);
+        copyPoint(&work.mCenter, rr);
         gabi::Local<cXyz> e;
         gabi::Local<cXyz> eye;
         gabi::Local<cXyz> pos;
         gabi::Local<cXyz> a1;
         gabi::Local<cXyz> a2;
-        u32 ee = gabi::ea(e.get()), ey = gabi::ea(eye.get()), pp = gabi::ea(pos.get());
-        u32 p1 = gabi::ea(a1.get()), p2 = gabi::ea(a2.get());
+        auto* ee = e.get();
+        auto* ey = eye.get();
+        auto* pp = pos.get();
+        auto* p1 = a1.get();
+        auto* p2 = a2.get();
         for (u32 k = 0; k < 4; k++) {
-            relationalPos(i_this, ee, ld(i_this + 0x128), eo + k * 12);
-            copy3(ey, ee);
-            positionOf(i_this, ee, ld(i_this + 0x128));
-            f32 floor = ldf(ee + 4) + ldf(i_this + 0x36C);
-            if (ldf(ey + 4) < floor) { /* bge: taken on NaN */
-                positionOf(i_this, pp, ld(i_this + 0x128));
-                stf(ey + 4, ldf(pp + 4) + ldf(i_this + 0x36C));
+            cameraTransitionRelational(this, ee, mpPlayerActor.get(), eo + k);
+            copyPoint(ey, ee);
+            cameraTransitionPosition(this, ee, mpPlayerActor.get());
+            f32 floor = (f32)ee->y + (f32)m368;
+            if ((f32)ey->y < floor) { /* bge: taken on NaN */
+                cameraTransitionPosition(this, pp, mpPlayerActor.get());
+                ey->y = (f32)pp->y + (f32)m368;
             }
-            u32 item = 0;
-            s32 pad = (s32)ld(i_this + 0x124);
-            u32 g = gi();
-            if (ld(g + 0x5CD8 + (u32)(pad << 4)) & 0x10000) { /* the player holds an item up */
-                st16(nm, 0xA5);
-                item = gabi::call<u32>(0x025D5218, 0x025E121C /* fpcSch_JudgeForPName */, nm); /* fopAcIt_Judge */
+            fopAc_ac_c* ship = nullptr;
+            s32 pad = (s32)(u32)mPadId;
+            if (dComIfGp_checkPlayerStatus0(pad, PLAYER_HOLD_ITEM)) { /* the player holds an item up */
+                *nm = fpcNm_SHIP_e;
+                // HD: retain the mapped guest callback target; autoglue cannot register an ext-only host wrapper.
+                ship = fopAcIt_Judge(JUDGE_FOR_PROCESS_NAME, nm);
             }
-            if (lineBGCheck(i_this, w + 0xC, ey, 0x8F)) continue;
-            for (u32 i = 0; i < 3; i++) stf(p1 + 4 * i, ldf(w + 0xC + 4 * i));
-            for (u32 i = 0; i < 3; i++) stf(p2 + 4 * i, ldf(ey + 4 * i));
-            u32 pl = ld(i_this + 0x128);
-            g = gi();
-            if (!gabi::call<bool>(0x025187D8, g + 0x26A4, p1, p2, ldf(0x1004CF80), pl, item)) break; /* dCcS::ChkCamera */
+            if (cameraTransitionLineCheck(this, &work.mCenter, ey, CAMERA_LINE_DEFAULT)) continue;
+            copyFloatPoint(p1, &work.mCenter);
+            copyFloatPoint(p2, ey);
+            fopAc_ac_c* pl = mpPlayerActor;
+            auto* collision = dComIfG_Ccsp();
+            if (!cameraTransitionCheckCamera(collision, p1, p2, 15.0f, pl, ship)) break; /* dCcS::ChkCamera */
         }
-        cXyz_mi(ey, rr, w + 0xC);
-        cSGlobe_Val(w + 0x24, rr);
-        u32 t2 = ld(w + 0x48);
-        st(w + 0, 0xB);
-        st(w + 4, t2);
-        stf(w + 0x18, ldf(0x1004D09C)); /* 79 */
-        state = 0xB;
+        cameraTransitionSubtract(ey, rr, &work.mCenter);
+        cameraTransitionGlobeVector(&work.mDirection, rr);
+        u32 t2 = (u32)work.mTimer2;
+        work.mState = ITEM_BLEND;
+        work.mTimer = t2;
+        work.mFovy = 79.0f; /* 79 */
+        state = ITEM_BLEND;
     }
-    if (state == 0xB) {
-        f32 t = (f32)(f64)(s32)ld(w + 0x20) / (f32)(f64)(s32)ld(w + 4);
-        f32 fovy = ldf(i_this + 0x60);
-        stf(i_this + 0x60, gabi::fmadds(ldf(w + 0x18) - fovy, t, fovy));
-        relationalPos(i_this, rr, ld(i_this + 0x128), co);
-        copy3(w + 0xC, rr);
+    if (state == ITEM_BLEND) {
+        f32 t = (f32)(f64)(s32)(u32)work.mElapsed / (f32)(f64)(s32)(u32)work.mTimer;
+        f32 fovy = (f32)mViewCache.mFovy;
+        mViewCache.mFovy = gabi::fmadds((f32)work.mFovy - fovy, t, fovy);
+        cameraTransitionRelational(this, rr, mpPlayerActor.get(), co);
+        copyPoint(&work.mCenter, rr);
         gabi::Local<cXyz> s;
-        u32 ss = gabi::ea(s.get());
-        cXyz_mi(w + 0xC, ss, i_this + 0x44);
-        cXyz_ml(ss, rr, t);
-        gabi::call(0x028E8D88, i_this + 0x44, rr, i_this + 0x44); /* PSVECAdd */
-        st16(av, (u16)lds16(i_this + 0x40));
-        st16(au, (u16)lds16(i_this + 0x42));
-        f32 rad = ldf(i_this + 0x3C);
-        rad = gabi::fmadds(ldf(w + 0x24) - rad, t, rad);
-        gabi::Local<s16> t1;
-        gabi::Local<s16> t2;
-        u32 a1 = gabi::ea(t1.get()), a2 = gabi::ea(t2.get());
-        cSAngle_mi(w + 0x28, a1, av);
-        cSAngle_ml(a1, a2, t);
-        cSAngle_addeq(av, a2);
-        cSAngle_mi(w + 0x2A, a2, au);
-        cSAngle_ml(a2, a1, t);
-        cSAngle_addeq(au, a1);
-        gabi::call(0x020071E0, i_this + 0x3C, rad, av, au); /* cSGlobe::Val(r, V, U) */
+        auto* ss = s.get();
+        cameraTransitionSubtract(&work.mCenter, ss, &mViewCache.mCenter);
+        cameraTransitionScale(ss, rr, t);
+        PSVECAdd(&mViewCache.mCenter, rr, &mViewCache.mCenter); /* PSVECAdd */
+        *av = (u16)(s16)mViewCache.mDirection.mV;
+        *au = (u16)(s16)mViewCache.mDirection.mU;
+        f32 rad = (f32)mViewCache.mDirection.mRadius;
+        rad = gabi::fmadds((f32)work.mDirection.mRadius - rad, t, rad);
+        gabi::Local<be<s16>> t1;
+        gabi::Local<be<s16>> t2;
+        auto* a1 = t1.get();
+        auto* a2 = t2.get();
+        cameraTransitionAngleSubtract(&work.mDirection.mV, a1, av);
+        cameraTransitionAngleMultiply(a1, a2, t);
+        cameraTransitionAngleAddAssign(av, a2);
+        cameraTransitionAngleSubtract(&work.mDirection.mU, a2, au);
+        cameraTransitionAngleMultiply(a2, a1, t);
+        cameraTransitionAngleAddAssign(au, a1);
+        cameraTransitionGlobeSet(&mViewCache.mDirection, rad, av, au); /* cSGlobe::Val(r, V, U) */
         gabi::Local<cXyz> x;
-        u32 xx = gabi::ea(x.get());
-        cSGlobe_Xyz(i_this + 0x3C, rr);
-        cXyz_pl(i_this + 0x44, xx, rr);
-        copy3(i_this + 0x50, xx);
-        if ((s32)ld(w + 0x20) < (s32)ld(w + 4)) {
-            st(w + 0x20, ld(w + 0x20) + 1);
-            return 0;
+        auto* xx = x.get();
+        cameraTransitionGlobeXyz(&mViewCache.mDirection, rr);
+        cameraTransitionAdd(&mViewCache.mCenter, xx, rr);
+        copyPoint(&mViewCache.mEye, xx);
+        if ((s32)(u32)work.mElapsed < (s32)(u32)work.mTimer) {
+            work.mElapsed = (u32)work.mElapsed + 1;
+            return false;
         }
-        st(w + 0, 0xC);
-        state = 0xC;
+        work.mState = ITEM_SETTLE;
+        state = ITEM_SETTLE;
     }
-    if (state == 0xC) {
-        relationalPos(i_this, dd, ld(i_this + 0x128), co);
-        copy3(i_this + 0x44, dd);
-        eyeFromGlobe(i_this);
-        st(w + 0, 0x63);
+    if (state == ITEM_SETTLE) {
+        cameraTransitionRelational(this, dd, mpPlayerActor.get(), co);
+        copyPoint(&mViewCache.mCenter, dd);
+        eyeFromGlobe(this);
+        work.mState = ITEM_HOLD;
     }
-    ret = 1;
-    setDone(i_this);
-    relationalPos(i_this, dd, ld(i_this + 0x128), co);
-    copy3(i_this + 0x44, dd);
-    eyeFromGlobe(i_this);
-    st(w + 0x20, ld(w + 0x20) + 1);
-    return ret;
-}
-VERIFY(0x025351A0, dCamera_c_getItemEvCamera);
-
-static inline u32 getEvFloatData(u32 c, u32 out, u32 name, f32 def) { return gabi::call<u32>(0x0253072C, c, out, name, def); }
-static inline u32 getEvXyzData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x0253086C, c, out, name, def); }
-static inline u32 getEvActor2(u32 c, u32 name, u32 def) { return gabi::call<u32>(0x02530CB4, c, name, def); }
-static inline void attentionPos(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F3C, c, out, actor); }
-static inline void directionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F30, c, out, actor); }
-static inline u32 cSAngleF(u32 tmp, f32 deg) { return gabi::call<u32>(0x020066C0, tmp, deg); } /* cSAngle(f32 degrees) */
-static inline u32 cSAngleS(u32 tmp, s16 v) { return gabi::call<u32>(0x0200658C, tmp, (s32)v); }
-static inline void cSAngle_pl(u32 a, u32 out, u32 b) { gabi::call(0x02006894, a, out, b); }
-/* *dst = cSAngle(a + b) through a temporary (the GHS pattern of `x = a + b` with out-of-line ops) */
-static inline void angAssignSum(u32 dst, u32 a, u32 b, u32 sumTmp, u32 ctTmp) {
-    cSAngle_pl(a, sumTmp, b);
-    u32 r = cSAngleS(ctTmp, lds16(sumTmp));
-    st16(dst, (u16)lds16(r));
+    SkipSmoother(this);
+    cameraTransitionRelational(this, dd, mpPlayerActor.get(), co);
+    copyPoint(&mViewCache.mCenter, dd);
+    eyeFromGlobe(this);
+    work.mElapsed = (u32)work.mElapsed + 1;
+    return true;
 }
 
-/* 02536404: turnToActorEvCamera: turn the camera towards an actor ("Target") over "Timer" frames,
- * keeping the angle to the actor's facing within FrontAngle. work: +0 CtrGap, +0xC target attention
- * position, +0x18 centre, +0x24 Cushion, +0x2C Timer, +0x30 target, +0x44 globe (r, V, U),
- * +0x50 FrontAngle */
-static u32 dCamera_c_turnToActorEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02536404, u32, i_this);
-    u32 dg = 0x10475890; /* function-local default CtrGap (0, 40, 0) */
-    if (ld(0x104758B4) == 0) {
-        f32 z0 = ldf(0x1004CE58), y40 = ldf(0x1004D0D0);
-        stf(dg + 0, z0);
-        stf(dg + 4, y40);
-        st(0x104758B4, 1);
-        stf(dg + 8, z0);
-    }
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        gabi::Local<cXyz> def;
-        u32 d = gabi::ea(def.get());
-        f32 x = ldf(dg + 0), y = ldf(dg + 4);
-        stf(d + 0, x);
-        f32 z = ldf(dg + 8);
-        stf(d + 4, y);
-        stf(d + 8, z);
-        getEvXyzData(i_this, w, 0x1004D108 /* "CtrGap" */, d);
-        getEvFloatData(i_this, w + 0x24, 0x1004D0F8 /* "Cushion" */, 1.0f);
-        getEvIntData(i_this, w + 0x2C, 0x1004D100 /* "Timer" */, (s32)ld(0x101D623C));
-        getEvFloatData(i_this, w + 0x50, 0x1004D118 /* "FrontAngle" */, 179.0f);
-        u32 a = getEvActor2(i_this, 0x1004D110 /* "Target" */, 0x1004D124 /* "@STARTER" */);
-        st(w + 0x30, a);
-        if (a == 0) {
-            setDone(i_this);
-            return 1;
-        }
-        attentionPos(i_this, d, a);
-        copy3(w + 0xC, d);
-        u32 t = ld(i_this + 0x11C);
-        setDone(i_this);
-        if (t == 0) {
-            gabi::Local<cXyz> c;
-            gabi::Local<cXyz> v;
-            gabi::Local<u8[8]> g1;
-            gabi::Local<cXyz> p;
-            gabi::Local<cXyz> v2;
-            gabi::Local<u8[8]> g2;
-            gabi::Local<s16[2]> dir;
-            gabi::Local<s16[2]> diff;
-            gabi::Local<s16[24]> tmp;
-            u32 cc = gabi::ea(c.get()), vv = gabi::ea(v.get()), G1 = gabi::ea(g1.get()), pp = gabi::ea(p.get());
-            u32 vv2 = gabi::ea(v2.get()), G2 = gabi::ea(g2.get()), dr = gabi::ea(dir.get()), df = gabi::ea(diff.get());
-            u32 tp = gabi::ea(tmp.get());
-            relationalPos(i_this, cc, ld(i_this + 0x128), w);
-            cXyz_mi(cc, vv, w + 0xC);
-            gabi::call(0x02007324, G1, vv); /* cSGlobe(const cXyz&) */
-            positionOf(i_this, pp, ld(w + 0x30));
-            cXyz_mi(i_this + 0x50, vv2, pp);
-            gabi::call(0x02007324, G2, vv2);
-            directionOf(i_this, dr, ld(w + 0x30));
-            cSAngle_mi(G2 + 6, df, dr);
-            bool adjustNeg;
-            if (lds16(df) < lds16(0x101FF354)) { /* the actor faces away: turn +5 degrees */
-                u32 five = cSAngleF(tp + 0, ldf(0x1004CEB8));
-                angAssignSum(G1 + 6, G1 + 6, five, tp + 2, tp + 4);
-            } else {
-                u32 five = cSAngleF(tp + 6, ldf(0x1004CF68));
-                angAssignSum(G1 + 6, G1 + 6, five, tp + 8, tp + 10);
-            }
-            directionOf(i_this, dr, ld(w + 0x30));
-            cSAngle_mi(G1 + 6, df + 2, dr);
-            gabi::call(0x020065FC, tp + 12); /* cSAngle() */
-            u32 lim = cSAngleF(tp + 14, -ldf(w + 0x50));
-            adjustNeg = lds16(df + 2) < lds16(lim);
-            if (adjustNeg) {
-                directionOf(i_this, dr + 2, ld(w + 0x30));
-                u32 b = cSAngleF(tp + 16, -ldf(w + 0x50));
-                angAssignSum(G1 + 6, dr + 2, b, tp + 18, tp + 20);
-            } else {
-                u32 lim2 = cSAngleF(tp + 22, ldf(w + 0x50));
-                if (lds16(df + 2) > lds16(lim2)) {
-                    directionOf(i_this, dr + 2, ld(w + 0x30));
-                    u32 b = cSAngleF(tp + 24, ldf(w + 0x50));
-                    angAssignSum(G1 + 6, dr + 2, b, tp + 26, tp + 28);
-                }
-            }
-            gabi::call(0x020071E0, w + 0x44, 120.0f, G1 + 4, G1 + 6); /* cSGlobe::Val(r, V, U) */
-            relationalPos(i_this, pp, ld(i_this + 0x128), w);
-            copy3(w + 0x18, pp);
-        }
-    }
-    u32 t = ld(i_this + 0x11C);
-    if (t >= ld(w + 0x2C)) {
-        setDone(i_this);
-        return 1;
-    }
-    f32 ratio = (f32)(f64)t / (f32)(f64)(s32)ld(w + 0x2C);
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> b;
-    gabi::Local<s16[4]> ang;
-    gabi::Local<s16[2]> ct;
-    u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get()), an = gabi::ea(ang.get()), cto = gabi::ea(ct.get());
-    cXyz_mi(w + 0x18, aa, i_this + 0x44);
-    cXyz_ml(aa, bb, ratio);
-    gabi::call(0x028E8D88, i_this + 0x44, bb, i_this + 0x44); /* PSVECAdd */
-    f32 r0 = ldf(i_this + 0x3C);
-    stf(i_this + 0x3C, gabi::fmadds(ldf(w + 0x44) - r0, ratio, r0));
-    /* U then V towards the target globe */
-    cSAngle_mi(w + 0x4A, an + 4, i_this + 0x42);
-    cSAngle_ml(an + 4, an + 2, ratio);
-    cSAngle_pl(i_this + 0x42, an + 0, an + 2);
-    u32 r = cSAngleS(cto + 0, lds16(an + 0));
-    st16(i_this + 0x42, (u16)lds16(r));
-    cSAngle_mi(w + 0x48, an + 0, i_this + 0x40);
-    cSAngle_ml(an + 0, an + 2, ratio);
-    cSAngle_pl(i_this + 0x40, an + 4, an + 2);
-    r = cSAngleS(cto + 2, lds16(an + 4));
-    st16(i_this + 0x40, (u16)lds16(r));
-    cSGlobe_Xyz(i_this + 0x3C, bb);
-    cXyz_pl(i_this + 0x44, aa, bb);
-    copy3(i_this + 0x50, aa);
-    cXyz_mi(i_this + 0x50, aa, i_this + 0x44);
-    cSGlobe_Val(i_this + 0x3C, aa);
-    return 0;
-}
-VERIFY(0x02536404, dCamera_c_turnToActorEvCamera);
-
-static inline f32 vecLen(u32 v) { return gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, v)); } /* sqrtf(PSVECSquareMag) */
-/* g.Val(eye - centre), pushed out to 60 when closer than 45 */
-static inline void restoreGlobe(u32 g, u32 eye, u32 ctr) {
-    gabi::Local<cXyz> d;
-    gabi::Local<cXyz> e;
-    gabi::Local<cXyz> n;
-    gabi::Local<cXyz> m;
-    u32 dd = gabi::ea(d.get()), ee = gabi::ea(e.get()), nn = gabi::ea(n.get()), mm = gabi::ea(m.get());
-    cXyz_mi(eye, dd, ctr);
-    cSGlobe_Val(g, dd);
-    cXyz_mi(eye, ee, ctr);
-    if (vecLen(ee) < ldf(0x1004D008)) { /* 45; bge: taken on NaN */
-        gabi::call(0x0201B31C, ee, nn); /* cXyz::normalize */
-        cXyz_ml(nn, mm, ldf(0x1004D004)); /* 60 */
-        copy3(ee, mm);
-        cSGlobe_Val(g, ee);
-    }
-}
-
-/* 02534964: restorePosEvCamera: back to a saved view ("Dest": 0/1 m0A4[], 9 the play's slot, else
- * the last view) depending on how far it is from the "Target" (mode 1: near, inside the view;
- * 2: middle distance with a clear line; 3: jump). work: +0 CtrGap, +0xC target centre, +0x18
- * Cushion, +0x1C NearTimer, +0x20 NearDist, +0x24 FarTimer (frames), +0x28 FarDist, +0x34 Target,
- * +0x38 globe, +0x40 mode, +0x44 Dest, +0x48 saved view (centre, eye, fovy, bank), +0x68 TargetType */
-static u32 dCamera_c_restorePosEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02534964, u32, i_this);
-    u32 dz = 0x10475884;
-    if (ld(0x104758B0) == 0) {
-        f32 x = ldf(0x101FFBA8), y = ldf(0x101FFBAC);
-        stf(dz + 0, x);
-        f32 z = ldf(0x101FFBB0);
-        stf(dz + 4, y);
-        stf(dz + 8, z);
-        st(0x104758B0, 1);
-    }
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        gabi::Local<cXyz> def;
-        u32 d = gabi::ea(def.get());
-        f32 z = ldf(dz + 8), y = ldf(dz + 4), x = ldf(dz + 0);
-        stf(d + 8, z);
-        stf(d + 0, x);
-        stf(d + 4, y);
-        getEvXyzData(i_this, w, 0x1004D024 /* "CtrGap" */, d);
-        getEvFloatData(i_this, w + 0x18, 0x1004D00C /* "Cushion" */, 1.0f);
-        getEvFloatData(i_this, w + 0x20, 0x1004D048 /* "NearDist" */, 750.0f);
-        getEvFloatData(i_this, w + 0x28, 0x1004D014 /* "FarDist" */, 1500.0f);
-        getEvIntData(i_this, w + 0x1C, 0x1004D03C /* "NearTimer" */, (s32)ld(0x101D6230));
-        getEvIntData(i_this, w + 0x24, 0x1004D054 /* "FarTimer" */, (s32)ld(0x101D6234));
-        getEvIntData(i_this, w + 0x44, 0x1004D02C /* "Dest" */, 2);
-        getEvIntData(i_this, w + 0x68, 0x1004D060 /* "TargetType" */, 0);
-        u32 dest = ld(w + 0x44);
-        u32 src;
-        if (dest == 9) {
-            u32 g = gi();
-            for (u32 i = 0; i < 0x18; i += 4) st(w + 0x48 + i, ld(g + 0x5B0C + i));
-            stf(w + 0x60, ldf(g + 0x5B24));
-            st16(w + 0x64, (u16)lds16(g + 0x5B28));
-        } else {
-            src = dest == 0 ? i_this + 0xA4 : dest == 1 ? i_this + 0xC4 : i_this + 0x84;
-            for (u32 i = 0; i < 0x18; i += 4) st(w + 0x48 + i, ld(src + i));
-            stf(w + 0x60, ldf(src + 0x18));
-        }
-        u32 a = getEvActor2(i_this, 0x1004D034 /* "Target" */, 0x1004D01C /* "@PLAYER" */);
-        st(w + 0x34, a);
-        if (a == 0) return 1;
-        gabi::Local<cXyz> r;
-        gabi::Local<u8[8]> globe;
-        u32 rr = gabi::ea(r.get()), gg = gabi::ea(globe.get());
-        relationalPos(i_this, rr, a, w);
-        copy3(w + 0xC, rr);
-        cXyz_mi(w + 0x54, rr, i_this + 0x44);
-        gabi::call(0x02007324, gg, rr); /* cSGlobe(const cXyz&) */
-        f32 dist = ldf(gg);
-        u32 mode;
-        if (dist < ldf(w + 0x20)) {
-            mode = gabi::call<u32>(0x025050E4, i_this, w + 0xC) ^ 1; /* !pointInSight */
-        } else if (dist < ldf(w + 0x28) && !lineBGCheck(i_this, i_this + 0x1C, w + 0xC, 0x8F)) {
-            mode = 2;
-        } else {
-            mode = 3;
-        }
-        st(w + 0x40, mode);
-        setDone(i_this);
-    }
-    u32 mode = ld(w + 0x40);
-    if (mode < 1 || mode > 3) {
-        setDone(i_this);
-        return 1;
-    }
-    if (mode == 3) {
-        if (ld(i_this + 0x11C) == 0) {
-            if (ld(w + 0x68) == 1) copy3(i_this + 0x44, w + 0x48);
-            else copy3(i_this + 0x44, w + 0xC);
-            restoreGlobe(i_this + 0x3C, w + 0x54, w + 0x48);
-            gabi::Local<cXyz> x;
-            gabi::Local<cXyz> e;
-            u32 xx = gabi::ea(x.get()), ee = gabi::ea(e.get());
-            cSGlobe_Xyz(i_this + 0x3C, xx);
-            cXyz_pl(i_this + 0x44, ee, xx);
-            copy3(i_this + 0x50, ee);
-            stf(i_this + 0x60, ldf(w + 0x60));
-        }
-        setDone(i_this);
-        return 1;
-    }
-    if (ld(i_this + 0x11C) == 0) restoreGlobe(w + 0x38, w + 0x54, w + 0x48);
-    u32 t = ld(i_this + 0x11C);
-    if (t >= ld(w + 0x24)) {
-        setDone(i_this);
-        return 1;
-    }
-    f32 ratio = (f32)(f64)t / (f32)(f64)(s32)ld(w + 0x24);
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> b;
-    gabi::Local<s16[4]> an;
-    gabi::Local<s16[2]> ct;
-    u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get()), ang = gabi::ea(an.get()), cto = gabi::ea(ct.get());
-    cXyz_mi(ld(w + 0x68) == 1 ? w + 0x48 : w + 0xC, aa, i_this + 0x44);
-    cXyz_ml(aa, bb, ratio);
-    gabi::call(0x028E8D88, i_this + 0x44, bb, i_this + 0x44); /* PSVECAdd */
-    f32 r0 = ldf(i_this + 0x3C);
-    stf(i_this + 0x3C, gabi::fmadds(ldf(w + 0x38) - r0, ratio, r0));
-    cSAngle_mi(w + 0x3E, ang + 4, i_this + 0x42);
-    cSAngle_ml(ang + 4, ang + 2, ratio);
-    cSAngle_pl(i_this + 0x42, ang + 0, ang + 2);
-    u32 r = cSAngleS(cto + 0, lds16(ang + 0));
-    st16(i_this + 0x42, (u16)lds16(r));
-    cSAngle_mi(w + 0x3C, ang + 0, i_this + 0x40);
-    cSAngle_ml(ang + 0, ang + 2, ratio);
-    cSAngle_pl(i_this + 0x40, ang + 4, ang + 2);
-    r = cSAngleS(cto + 2, lds16(ang + 4));
-    st16(i_this + 0x40, (u16)lds16(r));
-    cSGlobe_Xyz(i_this + 0x3C, bb);
-    cXyz_pl(i_this + 0x44, aa, bb);
-    copy3(i_this + 0x50, aa);
-    f32 fv = ldf(i_this + 0x60);
-    stf(i_this + 0x60, gabi::fmadds(ldf(w + 0x60) - fv, ratio, fv));
-    return 0;
-}
-VERIFY(0x02534964, dCamera_c_restorePosEvCamera);
-
-} // namespace d_ev_camera_5_cpp
+// clang-format off
+/* WWHD glue
+str 1004D0A0 "Timer1" in 025351A0
+str 1004D0A8 "Timer2" in 025351A0
+str 1004D108 "CtrGap" in 02536404
+str 1004D0F8 "Cushion" in 02536404
+str 1004D100 "Timer" in 02536404
+str 1004D118 "FrontAngle" in 02536404
+str 1004D110 "Target" in 02536404
+str 1004D124 "@STARTER" in 02536404
+str 1004D024 "CtrGap" in 02534964
+str 1004D00C "Cushion" in 02534964
+str 1004D048 "NearDist" in 02534964
+str 1004D014 "FarDist" in 02534964
+str 1004D03C "NearTimer" in 02534964
+str 1004D054 "FarTimer" in 02534964
+str 1004D02C "Dest" in 02534964
+str 1004D060 "TargetType" in 02534964
+str 1004D034 "Target" in 02534964
+str 1004D01C "@PLAYER" in 02534964
+ext 020065FC void cameraTransitionAngleDefault(be<s16>*)
+ext 020066C0 be<s16>* cameraTransitionAngleDegrees(be<s16>*,f32)
+ext 0200658C be<s16>* cameraTransitionAngleShort(be<s16>*,s32)
+ext 020068B0 void cameraTransitionAngleSubtract(const be<s16>*,be<s16>*,const be<s16>*)
+ext 0200693C void cameraTransitionAngleMultiply(const be<s16>*,be<s16>*,f32)
+ext 020068CC void cameraTransitionAngleAddAssign(be<s16>*,const be<s16>*)
+ext 02006894 void cameraTransitionAngleAdd(const be<s16>*,be<s16>*,const be<s16>*)
+ext 0201ADE0 void cameraTransitionSubtract(const cXyz*,cXyz*,const cXyz*)
+ext 0201AD78 void cameraTransitionAdd(const cXyz*,cXyz*,const cXyz*)
+ext 0201AE48 void cameraTransitionScale(const cXyz*,cXyz*,f32)
+ext 0201B31C void cameraTransitionNormalize(const cXyz*,cXyz*)
+ext 028E8DD0 f32 cameraTransitionSquareMagnitude(const cXyz*)
+ext 028F4384 f32 cameraTransitionSquareRoot(f32)
+ext 020072E0 void cameraTransitionGlobeVector(CameraGlobeHD*,const cXyz*)
+ext 02007324 void cameraTransitionGlobeFromVector(CameraGlobeHD*,const cXyz*)
+ext 020073AC void cameraTransitionGlobeXyz(const CameraGlobeHD*,cXyz*)
+ext 020071E0 void cameraTransitionGlobeSet(CameraGlobeHD*,f32,const be<s16>*,const be<s16>*)
+ext 0250242C void cameraTransitionRelational(event_camera_transition::dCamera_c*,cXyz*,fopAc_ac_c*,const cXyz*)
+ext 024F8D5C void cameraTransitionPosition(event_camera_transition::dCamera_c*,cXyz*,fopAc_ac_c*)
+ext 024F8F3C void cameraTransitionAttention(event_camera_transition::dCamera_c*,cXyz*,fopAc_ac_c*)
+ext 024F8F30 void cameraTransitionDirection(event_camera_transition::dCamera_c*,be<s16>*,fopAc_ac_c*)
+ext 024FCBE8 bool cameraTransitionLineCheck(event_camera_transition::dCamera_c*,const cXyz*,const cXyz*,u32)
+ext 025187D8 bool cameraTransitionCheckCamera(cCcS*,cXyz*,cXyz*,f32,fopAc_ac_c*,fopAc_ac_c*)
+ext 02530634 u32 cameraTransitionGetInt(event_camera_transition::dCamera_c*,be<u32>*,const char*,s32)
+ext 0253072C u32 cameraTransitionGetFloat(event_camera_transition::dCamera_c*,be<f32>*,const char*,f32)
+ext 0253086C u32 cameraTransitionGetXyz(event_camera_transition::dCamera_c*,cXyz*,const char*,const cXyz*)
+ext 02530CB4 fopAc_ac_c* cameraTransitionGetActor(event_camera_transition::dCamera_c*,const char*,const char*)
+ext 025050E4 u32 cameraTransitionPointInSight(event_camera_transition::dCamera_c*,const cXyz*)
+*/

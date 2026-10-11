@@ -1,342 +1,280 @@
-/* hd_net_02038498: the HD SpotPass manager translation unit (cking::net NetBossMgr, 02038498..02038E23).
- * No GameCube source: HD-only code.
- *
- * A sead singleton (0x24: IDisposer +0, work buffer +0x10, heap +0x14, state +0x18, thread +0x1C, last
- * result +0x20) that registers the game's nn::boss SpotPass task ("NetBossMgr" heap, "NetBossThread"
- * sead::DelegateThread): nn::boss initialisation, the NBDL task setting filled from 21 save values,
- * task (re)registration and scheduling; plus the TU's companions (deleting destructors, SafeString
- * terminator, a 0xF4 helper object) and the __sinit (the task id SafeString).
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD SpotPass manager and task registration. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_net_02038498.h"
+static hdNetBossVirtualTable sDisposerTable;
+static hdNetBossManager* sNetBossManager;
+static hdNetBossManager* sNetBossDisposer;
+static u8 sNetBossInitialized;
+static u32 sThreadPriority;
+static void* sSaveManager;
+static hdNetBossString sTaskId;
+static hdNetBossStringTable sStringTable;
+static char sTaskIdText;
 
-namespace hd_net_02038498 {
-
-static constexpr u32 boss_Initialize = 0xC0005338;            /* nn::boss::Initialize() */
-static constexpr u32 boss_TaskSetting_Initialize = 0xC0005380; /* NbdlTaskSetting::Initialize(buf, size) */
-static constexpr u32 boss_Task_Initialize = 0xC0005398;        /* Task::Initialize(id, slot) */
-static constexpr u32 boss_Task_IsRegistered = 0xC00053C8;
-static constexpr u32 boss_Task_Register = 0xC0005450;
-static constexpr u32 boss_TaskSetting_Set = 0xC0005608;
-static constexpr u32 boss_Task_StartScheduling = 0xC0005610;
-static constexpr u32 boss_Task_Unregister = 0xC0005638;
-static constexpr u32 boss_TaskSetting_ct = 0xC0005728;
-static constexpr u32 boss_Task_ct = 0xC0005750;
-static constexpr u32 boss_TaskSetting_dt = 0xC0005830;
-static constexpr u32 boss_Task_dt = 0xC0005850;
-static constexpr u32 SS_VT = 0x100054F0; /* this TU's SafeString vtable */
-static constexpr u32 INST = 0x1018F47C, DISP = 0x1018F480;
-
-/* 02038498: deleting destructor of a class with three vtables (+0x20/+0x24/+0x30), base 02008B4C */
-static void Dt_02038498(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038498, void, p, flags);
-    if (p == 0) return;
-    st(p + 0x20, 0x10005378);
-    st(p + 0x24, 0x10005398);
-    st(p + 0x30, 0x10005328);
-    gabi::call(0x02008B4C, p + 0x10, 0u);
-    if (flags & 1) op_delete(p);
+/* 02038498 */
+static void destroyNetCompanion(hdNetBossCompanion* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    i_this->mFirstVtable = 0x10005378;
+    i_this->mSecondVtable = 0x10005398;
+    i_this->mThirdVtable = 0x10005328;
+    hdNetBossDestroyCompanionBase(i_this->mBase, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038498, Dt_02038498);
-
-static void Dt_02038510(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038510, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 02038510 */
+static void destroyFirstNetCompanion(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038510, Dt_02038510);
-
-static void Empty_02038524() {
-    WWHD_FUNC(0x02038524, void);
+/* 02038524 */
+static void emptyFirstNetCompanion() {}
+/* 02038528 */
+static void assureNetStringTermination(hdNetBossFixedString* i_this) { i_this->terminate(); }
+/* 02038540 */
+static void destroySecondNetCompanion(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038524, Empty_02038524);
-
-static void SafeBuf_assureTerminate(u32 self) {
-    WWHD_FUNC(0x02038528, void, self);
-    stb(ld(self) + ld(self + 8) - 1, 0);
+/* 02038554 */
+static void destroyThirdNetCompanion(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038528, SafeBuf_assureTerminate);
-
-static void Dt_02038540(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038540, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 02038568 */
+static void destroyFourthNetCompanion(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038540, Dt_02038540);
-
-static void Dt_02038554(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038554, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
-}
-VERIFY(0x02038554, Dt_02038554);
-
-static void Dt_02038568(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038568, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
-}
-VERIFY(0x02038568, Dt_02038568);
-
-/* 0203857C: constructor of a 0xF4 object (flag +0xF0) */
-static u32 Obj_ct_0203857C(u32 self) {
-    WWHD_FUNC(0x0203857C, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0xF4);
-        if (t == 0) return 0;
+/* 0203857C */
+static hdNetBossFlagObject* constructNetFlagObject(hdNetBossFlagObject* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdNetBossFlagObject*)operator_new(sizeof(hdNetBossFlagObject));
+        if (i_this == NULL) return NULL;
     }
-    stb(t + 0xF0, 0);
-    return t;
+    i_this->mFlag = 0;
+    return i_this;
 }
-VERIFY(0x0203857C, Obj_ct_0203857C);
-
-static void Dt_020385B8(u32 p, u32 flags) {
-    WWHD_FUNC(0x020385B8, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 020385B8 */
+static void destroyNetFlagObject(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020385B8, Dt_020385B8);
-
-static void Empty_020385CC() {
-    WWHD_FUNC(0x020385CC, void);
-}
-VERIFY(0x020385CC, Empty_020385CC);
-
-static void Empty_020385D0() {
-    WWHD_FUNC(0x020385D0, void);
-}
-VERIFY(0x020385D0, Empty_020385D0);
-
-/* 020385D4: NetBossMgr constructor (0x24) */
-static u32 BossMgr_ct(u32 self) {
-    WWHD_FUNC(0x020385D4, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x24);
-        if (t == 0) return 0;
+/* 020385CC */
+static void emptySecondNetCompanion() {}
+/* 020385D0 */
+static void emptyThirdNetCompanion() {}
+/* 020385D4 */
+static hdNetBossManager* constructNetBossManager(hdNetBossManager* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdNetBossManager*)operator_new(sizeof(hdNetBossManager));
+        if (i_this == NULL) return NULL;
     }
-    st(t + 0x1C, 0);
-    st(t + 0x20, 0xFFFFFFFF);
-    st(t + 0x10, 0);
-    st(t + 0x18, 0);
-    st(t + 0x14, 0);
-    return t;
+    i_this->mThread = NULL;
+    i_this->mLastResult = 0xFFFFFFFF;
+    i_this->mWorkBuffer = NULL;
+    i_this->mState = NET_BOSS_IDLE;
+    i_this->mHeap = NULL;
+    return i_this;
 }
-VERIFY(0x020385D4, BossMgr_ct);
-
-/* 02038624: sead singleton createInstance(heap) */
-static u32 BossMgr_createInstance(u32 heap) {
-    WWHD_FUNC(0x02038624, u32, heap);
-    u32 cur = ld(INST);
-    if (cur != 0) return cur;
-    u32 d = gabi::call<u32>(0x0273B0D4, 0x24u, heap, 4u);
-    if (d != 0) {
-        gabi::call(0x02752B0C, d, heap, 3u);
-        st(d + 0xC, 0x100055D0);
+/* 02038624 */
+static hdNetBossManager* createNetBossInstance(void* heap) {
+    hdNetBossManager* current = sNetBossManager;
+    if (current != NULL) return current;
+    hdNetBossManager* disposer = (hdNetBossManager*)hdNetBossAllocateAligned(sizeof(hdNetBossManager), heap, 4);
+    if (disposer != NULL) {
+        hdNetBossConstructDisposer(disposer, heap, 3);
+        disposer->mDisposerVtable = &sDisposerTable;
     }
-    st(DISP, d);
-    u32 r = d;
-    if (d != 0) r = gabi::call<u32>(0x020385D4, d);
-    st(INST, r);
-    return r;
+    sNetBossDisposer = disposer;
+    hdNetBossManager* manager = disposer;
+    if (disposer != NULL) manager = constructNetBossManager(disposer);
+    sNetBossManager = manager;
+    return manager;
 }
-VERIFY(0x02038624, BossMgr_createInstance);
-
-static void BossMgr_dt(u32 p, u32 flags) {
-    WWHD_FUNC(0x020386B8, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 020386B8 */
+static void destroyNetBossManager(hdNetBossManager* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020386B8, BossMgr_dt);
-
-/* 020386CC: sead singleton deleteInstance */
-static void BossMgr_deleteInstance() {
-    WWHD_FUNC(0x020386CC, void);
-    u32 d = ld(DISP);
-    if (d == 0) return;
-    st(DISP, 0);
-    gabi::call_ptr<u32>(vfn(d, 0xC, 0xC), d, 2u);
-    gabi::call(0x020386B8, ld(INST), 3u);
-    st(INST, 0);
+/* 020386CC */
+static void deleteNetBossInstance() {
+    hdNetBossManager* disposer = sNetBossDisposer;
+    if (disposer == NULL) return;
+    sNetBossDisposer = NULL;
+    disposer->destroyDisposer(2);
+    destroyNetBossManager(sNetBossManager, 3);
+    sNetBossManager = NULL;
 }
-VERIFY(0x020386CC, BossMgr_deleteInstance);
-
-/* 02038738: keep the last nn::Result (the third argument, a message, is unused) */
-static void BossMgr_setResult(u32 self, u32 res) {
-    WWHD_FUNC(0x02038738, void, self, res);
-    st(self + 0x20, ld(res));
+/* 02038738 */
+static void setNetBossResult(hdNetBossManager* i_this, hdNetBossResult* result, u32 message) {
+    (void)message; // HD: diagnostic message is passed but unused by this function.
+    i_this->mLastResult = result->mValue;
 }
-VERIFY(0x02038738, BossMgr_setResult);
-
-/* 02038744: initialise: own heap (0x96000), worker thread (method 02038C7C), the 0x276-byte work
- * buffer, nn::boss::Initialize */
-static void BossMgr_init(u32 self, u32 parent) {
-    WWHD_FUNC(0x02038744, void, self, parent);
-    gabi::Local<be<u32>[2]> nm;
-    st(nm.a + 4, SS_VT);
-    st(nm.a + 0, 0x10005528);
-    u32 h = gabi::call<u32>(0x02753004, 0x96000u, nm.a, parent, 1u, 0u);
-    st(self + 0x14, h);
-    u32 th = gabi::call<u32>(0x0273B050, 0x98u, h, 4u);
-    if (th != 0) {
-        st(nm.a + 4, SS_VT);
-        st(nm.a + 0, 0x10005518);
-        u32 dg = gabi::call<u32>(0x0273B050, 0x10u, ld(self + 0x14), 4u);
-        if (dg != 0) {
-            st(dg + 4, self);
-            sth(dg + 8, 0);
-            st(dg + 0xC, 0x02038C7C);
-            sth(dg + 0xA, 0xFFFF);
-            st(dg + 0, 0x10005508);
+/* 02038744 */
+static void initializeNetBoss(hdNetBossManager* i_this, void* parent) {
+    hdNetBossThreadName name;
+    name.mVtable = 0x100054F0;
+    name.mTextAddress = 0x10005528;
+    hdNetBossObject* heap = hdNetBossCreateHeap(0x96000, &name, parent, 1, 0);
+    i_this->mHeap = heap;
+    hdNetBossObject* thread = (hdNetBossObject*)hdNetBossAllocateFromHeap(0x98, heap, 4);
+    if (thread != NULL) {
+        name.mVtable = 0x100054F0;
+        name.mTextAddress = 0x10005518;
+        hdNetBossDelegate* delegate = (hdNetBossDelegate*)hdNetBossAllocateFromHeap(sizeof(hdNetBossDelegate), i_this->mHeap, 4);
+        if (delegate != NULL) {
+            delegate->mObject = i_this;
+            delegate->mThisAdjustment = 0;
+            delegate->mFunction = 0x02038C7C;
+            delegate->mVirtualIndex = -1;
+            delegate->mVtable = 0x10005508;
         }
-        th = gabi::call<u32>(0x0275FBD8, th, nm.a, dg, ld(self + 0x14), ld(0x101F8B9C), 0u, 0x7FFFFFFFu, 0x4C000u, 0x20u);
+        thread = hdNetBossConstructThread(thread, &name, delegate, i_this->mHeap, sThreadPriority, 0, 0x7FFFFFFF, 0x4C000, 0x20);
     }
-    st(self + 0x1C, th);
-    gabi::call_ptr<u32>(vfn(th, 0xC, 0x2C), th);
-    st(self + 0x10, gabi::call<u32>(0x0273B0D4, 0x276u, ld(self + 0x14), 0x40u));
-    gabi::Local<be<u32>[1]> res;
-    st(res.a, gabi::call<u32>(boss_Initialize));
-    gabi::call(0x02038738, self, res.a, 0x10005534);
-    stb(0x1018F484, 1);
+    i_this->mThread = thread;
+    thread->start();
+    i_this->mWorkBuffer = hdNetBossAllocateAligned(0x276, i_this->mHeap, 0x40);
+    hdNetBossResult result;
+    result.mValue = hdNetBossInitializeLibrary();
+    setNetBossResult(i_this, &result, 0x10005534);
+    sNetBossInitialized = 1;
 }
-VERIFY(0x02038744, BossMgr_init);
-
-/* 0203899C: start the thread (state 0 -> 2) */
-static void BossMgr_start(u32 self) {
-    WWHD_FUNC(0x0203899C, void, self);
-    if (ld(self + 0x18) != 0) return;
-    u32 t = ld(self + 0x1C);
-    gabi::call_ptr<u32>(vfn(t, 0xC, 0x4C), t, 0u);
-    st(self + 0x18, 2);
+/* 0203899C */
+static void startNetBossThread(hdNetBossManager* i_this) {
+    if (i_this->mState != NET_BOSS_IDLE) return;
+    hdNetBossObject* thread = i_this->mThread;
+    thread->startThread();
+    i_this->mState = NET_BOSS_THREAD_STARTED;
 }
-VERIFY(0x0203899C, BossMgr_start);
-
-/* 020389F0: destroy the heap */
-static void BossMgr_fini(u32 self) {
-    WWHD_FUNC(0x020389F0, void, self);
-    u32 h = ld(self + 0x14);
-    gabi::call_ptr<u32>(vfn(h, 0xC, 0x24), h);
-    st(self + 0x14, 0);
-    st(self + 0x1C, 0);
-    st(self + 0x10, 0);
+/* 020389F0 */
+static void finalizeNetBoss(hdNetBossManager* i_this) {
+    hdNetBossObject* heap = i_this->mHeap;
+    heap->destroyHeap();
+    i_this->mHeap = NULL;
+    i_this->mThread = NULL;
+    i_this->mWorkBuffer = NULL;
 }
-VERIFY(0x020389F0, BossMgr_fini);
-
-/* 02038A3C: request the registration job (state 0 -> 1) */
-static u32 BossMgr_request(u32 self) {
-    WWHD_FUNC(0x02038A3C, u32, self);
-    if (ld(self + 0x18) != 0) return self;
-    u32 t = ld(self + 0x1C);
-    st(self + 0x18, 1);
-    return gabi::call_ptr<u32>(vfn(t, 0xC, 0x1C), t, 1u, 1u);
+/* 02038A3C */
+static u32 requestNetBossRegistration(hdNetBossManager* i_this) {
+    if (i_this->mState != NET_BOSS_IDLE) return gabi::ea(i_this);
+    hdNetBossObject* thread = i_this->mThread;
+    i_this->mState = NET_BOSS_REGISTERING;
+    return thread->sendMessage(1, 1);
 }
-VERIFY(0x02038A3C, BossMgr_request);
-
-/* 02038A6C: setting value I of the save-derived parameter object */
-static u32 BossMgr_param(u32 self, u32 i, u32 obj) {
-    WWHD_FUNC(0x02038A6C, u32, self, i, obj);
-    return gabi::call<u32>(0x02726CE0, obj, i);
+/* 02038A6C */
+static u32 getNetBossParameter(hdNetBossManager* i_this, u32 index, hdNetBossSaveParameters* parameters) {
+    (void)i_this;
+    return hdNetBossGetSaveParameter(parameters, index);
 }
-VERIFY(0x02038A6C, BossMgr_param);
-
-/* 02038A74: fill the task setting with the 21 parameters (keys 1..21) */
-static void BossMgr_fillSetting(u32 self, u32 setting) {
-    WWHD_FUNC(0x02038A74, void, self, setting);
-    u32 obj = gabi::call<u32>(0x0273B050, 0x7Cu, ld(self + 0x14), 4u);
-    if (obj != 0) obj = gabi::call<u32>(0x02726A34, obj);
-    gabi::call(0x02722E88, ld(0x101F852C), obj);
-    for (u32 i = 0; i < 0x15; i++) {
-        u32 v = gabi::call<u32>(0x02038A6C, self, i, obj);
-        gabi::call(boss_TaskSetting_Set, setting, i + 1, v);
+/* 02038A74 */
+static void fillNetBossTaskSetting(hdNetBossManager* i_this, hdNetBossTaskSetting* setting) {
+    hdNetBossSaveParameters* parameters = (hdNetBossSaveParameters*)hdNetBossAllocateFromHeap(sizeof(hdNetBossSaveParameters), i_this->mHeap, 4);
+    if (parameters != NULL) parameters = hdNetBossConstructSaveParameters(parameters);
+    hdNetBossReadSaveParameters(sSaveManager, parameters);
+    // HD: save parameter indices 0..20 map to nn::boss setting keys 1..21.
+    for (u32 index = 0; index < 21; ++index) {
+        u32 value = getNetBossParameter(i_this, index, parameters);
+        hdNetBossSetTaskParameter(setting, index + 1, value);
     }
 }
-VERIFY(0x02038A74, BossMgr_fillSetting);
-
-/* 02038B10: (re)register the SpotPass task and start its scheduling */
-static void BossMgr_registerTask(u32 self) {
-    WWHD_FUNC(0x02038B10, void, self);
-    gabi::Local<be<u32>[0x488]> ts; /* nn::boss::NbdlTaskSetting (0x1220) */
-    gabi::Local<be<u32>[8]> task;   /* nn::boss::Task (0x20) */
-    gabi::Local<be<u32>[1]> res;
-    gabi::call(boss_TaskSetting_ct, ts.a);
-    gabi::call(boss_TaskSetting_Initialize, ts.a, ld(self + 0x10), 0x276u);
-    gabi::call(0x02038A74, self, ts.a);
-    st(res.a, 0xFFFFFFFF);
-    gabi::call(boss_Task_ct, task.a);
-    const u32 id = 0x10200A6C;
-    gabi::call_ptr<u32>(ld(ld(id + 4) + 0x14), id);
-    u32 r = gabi::call<u32>(boss_Task_Initialize, task.a, ld(id), 0u);
-    st(res.a, r);
-    gabi::call(0x02038738, self, res.a, 0x10005568);
-    if ((ld(res.a) & 0x80000000u) == 0) {
-        bool ok = true;
-        if (gabi::call<u32>(boss_Task_IsRegistered, task.a) != 0) {
-            r = gabi::call<u32>(boss_Task_Unregister, task.a);
-            st(res.a, r);
-            gabi::call(0x02038738, self, res.a, 0x10005584);
-            ok = (ld(res.a) & 0x80000000u) == 0;
+/* 02038B10 */
+static void registerNetBossTask(hdNetBossManager* i_this) {
+    hdNetBossTaskSetting setting;
+    hdNetBossTask task;
+    hdNetBossResult result;
+    hdNetBossConstructTaskSetting(&setting);
+    hdNetBossInitializeTaskSetting(&setting, i_this->mWorkBuffer, 0x276);
+    fillNetBossTaskSetting(i_this, &setting);
+    result.mValue = 0xFFFFFFFF;
+    hdNetBossConstructTask(&task);
+    sTaskId.assureTermination();
+    u32 value = hdNetBossInitializeTask(&task, sTaskId.mText, 0);
+    result.mValue = value;
+    setNetBossResult(i_this, &result, 0x10005568);
+    if ((result.mValue & 0x80000000u) == 0) {
+        bool success = true;
+        if (hdNetBossIsTaskRegistered(&task) != 0) {
+            value = hdNetBossUnregisterTask(&task);
+            result.mValue = value;
+            setNetBossResult(i_this, &result, 0x10005584);
+            success = (result.mValue & 0x80000000u) == 0;
         }
-        if (ok) {
-            r = gabi::call<u32>(boss_Task_Register, task.a, ts.a);
-            st(res.a, r);
-            gabi::call(0x02038738, self, res.a, 0x100055A0);
-            if ((ld(res.a) & 0x80000000u) == 0) {
-                r = gabi::call<u32>(boss_Task_StartScheduling, task.a, 1u);
-                st(res.a, r);
-                gabi::call(0x02038738, self, res.a, 0x10005554);
+        if (success) {
+            value = hdNetBossRegisterTask(&task, &setting);
+            result.mValue = value;
+            setNetBossResult(i_this, &result, 0x100055A0);
+            if ((result.mValue & 0x80000000u) == 0) {
+                value = hdNetBossStartScheduling(&task, 1);
+                result.mValue = value;
+                setNetBossResult(i_this, &result, 0x10005554);
             }
         }
     }
-    gabi::call(boss_Task_dt, task.a, 2u);
-    gabi::call(boss_TaskSetting_dt, ts.a, 2u);
+    hdNetBossDestroyTask(&task, 2);
+    hdNetBossDestroyTaskSetting(&setting, 2);
 }
-VERIFY(0x02038B10, BossMgr_registerTask);
-
-/* 02038C7C: thread message handler */
-static void BossMgr_threadProc(u32 self, u32 thread, u32 msg) {
-    WWHD_FUNC(0x02038C7C, void, self, thread, msg);
-    if (msg != 1) return;
-    gabi::call(0x02038B10, self);
-    st(self + 0x18, 0);
+/* 02038C7C */
+static void processNetBossMessage(hdNetBossManager* i_this, void* thread, u32 message) {
+    (void)thread;
+    if (message != 1) return;
+    registerNetBossTask(i_this);
+    i_this->mState = NET_BOSS_IDLE;
 }
-VERIFY(0x02038C7C, BossMgr_threadProc);
-
-/* 02038CBC: the singleton disposer's destructor */
-static void BossMgr_disposer_dt(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038CBC, void, p, flags);
-    if (p == 0) return;
-    st(p + 0xC, 0x100055D0);
-    if (p == ld(DISP)) {
-        u32 inst = ld(INST);
-        st(DISP, 0);
-        gabi::call(0x020386B8, inst, 2u);
-        st(INST, 0);
+/* 02038CBC */
+static void destroyNetBossDisposer(hdNetBossManager* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    i_this->mDisposerVtable = &sDisposerTable;
+    if (i_this == sNetBossDisposer) {
+        hdNetBossManager* manager = sNetBossManager;
+        sNetBossDisposer = NULL;
+        destroyNetBossManager(manager, 2);
+        sNetBossManager = NULL;
     }
-    gabi::call(0x02752BEC, p, 0u);
-    if (flags & 1) op_delete(p);
+    hdNetBossDestroyDisposerBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038CBC, BossMgr_disposer_dt);
-
-/* 02038D58: __sinit: header statics and the task id */
-static void sinit_02038D58() {
-    WWHD_FUNC(0x02038D58, void);
-    header_sinit(0x10200A5C, 0x1018F458, 0x100055BC);
-    st(0x10200A6C + 4, SS_VT);
-    st(0x10200A6C, 0x100055C4);
+/* 02038D58 */
+static void __sinit_hd_net_boss_cpp() {
+    sinit_header_statics_rodata(0x10200A50, 0x1018F458, 0x10200A5C, 0x100055BC);
+    sTaskId.mVtable = &sStringTable;
+    sTaskId.mText = (be<u8>*)&sTaskIdText;
 }
-VERIFY(0x02038D58, sinit_02038D58);
-
-static void Dt_02038E0C(u32 p, u32 flags) {
-    WWHD_FUNC(0x02038E0C, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 02038E0C */
+static void destroyFinalNetCompanion(void* i_this, u32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x02038E0C, Dt_02038E0C);
-
-static void Empty_02038E20() {
-    WWHD_FUNC(0x02038E20, void);
-}
-VERIFY(0x02038E20, Empty_02038E20);
-
-}  // namespace hd_net_02038498
+/* 02038E20 */
+static void emptyFinalNetCompanion() {}
+/* WWHD glue (tools/verify/autoglue.py): private NetBossMgr globals and library calls
+ data sDisposerTable 100055D0
+ data sNetBossManager 1018F47C
+ data sNetBossDisposer 1018F480
+ data sNetBossInitialized 1018F484
+ data sThreadPriority 101F8B9C
+ data sSaveManager 101F852C
+ data sTaskId 10200A6C
+ data sStringTable 100054F0
+ data sTaskIdText 100055C4
+ ext 02008B4C void hdNetBossDestroyCompanionBase(void*, u32)
+ ext 0273B050 void* hdNetBossAllocateFromHeap(u32, void*, u32)
+ ext 0273B0D4 void* hdNetBossAllocateAligned(u32, void*, u32)
+ ext 02752B0C void hdNetBossConstructDisposer(hdNetBossManager*, void*, u32)
+ ext 02752BEC void hdNetBossDestroyDisposerBase(hdNetBossManager*, u32)
+ ext 02753004 hdNetBossObject* hdNetBossCreateHeap(u32, hdNetBossThreadName*, void*, u32, u32)
+ ext 0275FBD8 hdNetBossObject* hdNetBossConstructThread(hdNetBossObject*, hdNetBossThreadName*, hdNetBossDelegate*, void*, u32, u32, u32, u32, u32)
+ ext C0005338 u32 hdNetBossInitializeLibrary()
+ ext 02726CE0 u32 hdNetBossGetSaveParameter(hdNetBossSaveParameters*, u32)
+ ext 02726A34 hdNetBossSaveParameters* hdNetBossConstructSaveParameters(hdNetBossSaveParameters*)
+ ext 02722E88 void hdNetBossReadSaveParameters(void*, hdNetBossSaveParameters*)
+ ext C0005608 void hdNetBossSetTaskParameter(hdNetBossTaskSetting*, u32, u32)
+ ext C0005728 void hdNetBossConstructTaskSetting(hdNetBossTaskSetting*)
+ ext C0005380 void hdNetBossInitializeTaskSetting(hdNetBossTaskSetting*, void*, u32)
+ ext C0005750 void hdNetBossConstructTask(hdNetBossTask*)
+ ext C0005398 u32 hdNetBossInitializeTask(hdNetBossTask*, const void*, u32)
+ ext C00053C8 u32 hdNetBossIsTaskRegistered(hdNetBossTask*)
+ ext C0005638 u32 hdNetBossUnregisterTask(hdNetBossTask*)
+ ext C0005450 u32 hdNetBossRegisterTask(hdNetBossTask*, hdNetBossTaskSetting*)
+ ext C0005610 u32 hdNetBossStartScheduling(hdNetBossTask*, u32)
+ ext C0005850 void hdNetBossDestroyTask(hdNetBossTask*, u32)
+ ext C0005830 void hdNetBossDestroyTaskSetting(hdNetBossTaskSetting*, u32)
+*/

@@ -1,84 +1,146 @@
-#include "bindings.h"
-namespace {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static s16 sh(u32 a){return gabi::load<s16>(a);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static f32 lf(u32 a){return gabi::load<f32>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void sf(u32 a,f32 v){gabi::store<f32>(a,v);}
-struct SafeString {be<u32> ptr,vtable;};
-static bool same(u32 a,u32 b){if(a==b)return true;for(u32 i=0;i<0x40001;i++){u8 x=lb(a+i),y=lb(b+i);if(x!=y)return false;if(!x)return true;}return false;}
-static bool demoName(u32 name){
-    gabi::Local<SafeString> left,right;u32 a=gabi::ea(left.get()),b=gabi::ea(right.get());st(b+4,0x10051884);st(a+4,0x10051884);st(a,name);st(b,0x1047E6B8);
-    gabi::call_ptr(0x025A1BCC,a);gabi::call_ptr(ld(ld(a+4)+20),a);u32 saved=ld(a);
-    gabi::call_ptr(ld(ld(b+4)+20),b);return same(saved,ld(b));
+/** Overlap fade controller, with HD stage-name modes and display calls.
+ * Verified WWHD unit d_ovlp_fade. */
+#include "d/d_ovlp_fade.h"
+
+static gfn dOvlpFd_execute_f;
+#define l_display (*gabi::at<gptr<void>>(0x101F86B4))
+#define l_stageName (gabi::at<const char>(0x1047E6B8))
+
+static BOOL dOvlpFd_FadeOut(overlap1_class*);
+static BOOL dOvlpFd_Wait(overlap1_class*);
+static BOOL dOvlpFd_FadeIn(overlap1_class*);
+static void seadSafeString_assureTerminationImpl();
+
+// HD: SafeString equality is inlined, including its bounded unsigned-byte comparison.
+/* inlined into dOvlpFd_FadeOut */
+static bool sameStageName(const be<u8>* a, const be<u8>* b) {
+    if (a == b) return true;
+    for (u32 i = 0; i < 0x40001; ++i) {
+        u8 x = a[i];
+        u8 y = b[i];
+        if (x != y) return false;
+        if (x == 0) return true;
+    }
+    return false;
 }
-static BOOL fadeOut(u32 self){
-    WWHD_FUNC(0x025A17A0,BOOL,self);
-    if(!ld(self+0xD0)){
-        if(self&&sh(self+14)==2){if(!gabi::call<u32>(0x02728CB8,ld(0x101F86B4),1,0))return TRUE;st(self+0xD0,1);}
-        else {u32 mode=demoName(0x1005189C)?1:(demoName(0x100518A4)?2:0);
-            if(gabi::call<u32>(0x02728CB8,ld(0x101F86B4),26,mode))return TRUE;
-            st(self+0xD0,26);
+
+/* inlined into dOvlpFd_FadeOut */
+static bool stageNameEquals(const char* name) {
+    gabi::Local<SafeString> left, right;
+    right->__vtbl = 0x10051884;
+    left->__vtbl = 0x10051884;
+    left->mStringTop = gabi::guest_addr(name);
+    right->mStringTop = gabi::ea(l_stageName);
+    // HD: keep the direct assure call and both virtual calls in their original order.
+    gabi::call_ptr<void>(gabi::guest_fn((const void*)seadSafeString_assureTerminationImpl), left.get());
+    auto* leftVtable = gabi::at<dOvlpFd_SafeStringVtable>(left->__vtbl);
+    gabi::call_ptr<void>(leftVtable->assureTerminationImpl.get(), left.get());
+    u32 saved = left->mStringTop;
+    auto* rightVtable = gabi::at<dOvlpFd_SafeStringVtable>(right->__vtbl);
+    gabi::call_ptr<void>(rightVtable->assureTerminationImpl.get(), right.get());
+    return sameStageName(gabi::at<const be<u8>>(saved), gabi::at<const be<u8>>(right->mStringTop));
+}
+
+/* 025A1798 */
+static BOOL dOvlpFd_Draw() {
+    return TRUE;
+}
+
+/* 025A17A0 */
+static BOOL dOvlpFd_FadeOut(overlap1_class* i_this) {
+    if (i_this->mFadeOutTime == 0) {
+        if (i_this && i_this->base.mProfName == fpcNm_OVERLAP6_e) {
+            if (!dOvlpFd_startFadeInHD(l_display, 1, 0)) return TRUE;
+            i_this->mFadeOutTime = 1;
+        } else {
+            // HD: stage-specific modes and the normal path's return test differ from GameCube.
+            u32 mode = stageNameEquals("Demo01") ? 1 : (stageNameEquals("Demo37") ? 2 : 0);
+            if (dOvlpFd_startFadeInHD(l_display, 26, mode)) return TRUE;
+            i_this->mFadeOutTime = 26;
         }
     }
-    gabi::call(0x025DBD74);u32 count=ld(self+0xD0)-1;st(self+0xD0,count);
-    if(!count){gabi::call(0x025DBDDC,self);st(self+0xD0,ld(self+0xD0)+1);}return TRUE;
-}
-VERIFY(0x025A17A0,fadeOut);
-static BOOL wait(u32 self){
-    WWHD_FUNC(0x025A19E0,BOOL,self);
-    if(gabi::call<u32>(0x025DBDC4,self)){st(0x101EA1D4,0x025A17A0);gabi::call(0x025DBD74);}return TRUE;
-}
-VERIFY(0x025A19E0,wait);
-static BOOL fadeIn(u32 self){
-    WWHD_FUNC(0x025A1A20,BOOL,self);
-    u32 count=ld(self+0xD4);
-    if(!count){count=26;st(self+0xD4,count);
-        if(self&&(sh(self+14)==0||sh(self+14)==3)){gabi::call(0x025F05E8,26);count=ld(self+0xD4);}}
-    st(self+0xD4,count-1);
-    if(count==1){st(0x101EA1D4,0x025A19E0);gabi::call(0x025F05E8,1);gabi::call(0x02728D5C,ld(0x101F86B4));gabi::call(0x025DBDDC,self);}return TRUE;
-}
-VERIFY(0x025A1A20,fadeIn);
-static BOOL Execute(u32 self){
-    WWHD_FUNC(0x025A1ACC,BOOL,self);
-    gabi::call_ptr(ld(0x101EA1D4),self);return TRUE;
-}
-VERIFY(0x025A1ACC,Execute);
-static BOOL Draw(){
-    WWHD_FUNC(0x025A1798,BOOL,(u32)0);
+    fopOvlpM_SceneIsStart();
+    u32 count = (u32)i_this->mFadeOutTime - 1;
+    i_this->mFadeOutTime = count;
+    if (count == 0) {
+        fopOvlpM_Done(i_this);
+        i_this->mFadeOutTime = (u32)i_this->mFadeOutTime + 1;
+    }
     return TRUE;
 }
-VERIFY(0x025A1798,Draw);
-static BOOL IsDelete(){
-    WWHD_FUNC(0x025A1AFC,BOOL,(u32)0);
+
+/* 025A19E0 */
+static BOOL dOvlpFd_Wait(overlap1_class* i_this) {
+    if (fopOvlpM_IsOutReq(i_this)) {
+        dOvlpFd_execute_f.v = gabi::guest_fn((const void*)dOvlpFd_FadeOut);
+        // HD: present in the retail HD wait path.
+        fopOvlpM_SceneIsStart();
+    }
     return TRUE;
 }
-VERIFY(0x025A1AFC,IsDelete);
-static BOOL Delete(){
-    WWHD_FUNC(0x025A1B04,BOOL,(u32)0);
+
+/* 025A1A20 */
+static BOOL dOvlpFd_FadeIn(overlap1_class* i_this) {
+    u32 count = i_this->mFadeInTime;
+    if (count == 0) {
+        count = 26;
+        i_this->mFadeInTime = count;
+        if (i_this && (i_this->base.mProfName == fpcNm_OVERLAP0_e || i_this->base.mProfName == fpcNm_OVERLAP7_e)) {
+            mDoGph_startFadeOutHD(26);
+            count = i_this->mFadeInTime;
+        }
+    }
+    i_this->mFadeInTime = count - 1;
+    if (count == 1) {
+        dOvlpFd_execute_f.v = gabi::guest_fn((const void*)dOvlpFd_Wait);
+        // HD: fade completion uses 1 and finishes the display fade before reporting Done.
+        mDoGph_startFadeOutHD(1);
+        dOvlpFd_finishFadeHD(l_display);
+        fopOvlpM_Done(i_this);
+    }
     return TRUE;
 }
-VERIFY(0x025A1B04,Delete);
-static u32 Create(){
-    WWHD_FUNC(0x025A1B0C,u32,(u32)0);
-    st(0x101EA1D4,0x025A1A20);return 4;
+
+/* 025A1ACC */
+static BOOL dOvlpFd_Execute(overlap1_class* i_this) {
+    gabi::call_ptr<void>(dOvlpFd_execute_f.get(), i_this);
+    return TRUE;
 }
-VERIFY(0x025A1B0C,Create);
-static void sinit(){
-    WWHD_FUNC(0x025A1B24,void,(u32)0);
-    st(0x1047B0F8,0);st(0x1047B0F0,0);st(0x1047B0FC,0);st(0x1047B0F4,0);
-    gabi::call(0x028F026C,0x101EA1EC);f32 a=lf(0x100518B4),b=lf(0x100518B8);sf(0x1047B0E4,a);sf(0x1047B0E8,b);
-    gabi::call(0x028ED6F8,0x1047B0EC);gabi::call(0x028F026C,0x101EA1F8);gabi::call(0x028EAB2C,0x1047B0ED);gabi::call(0x028F026C,0x101EA204);
+
+/* 025A1AFC */
+static BOOL dOvlpFd_IsDelete() { return TRUE; }
+
+/* 025A1B04 */
+static BOOL dOvlpFd_Delete() { return TRUE; }
+
+/* 025A1B0C */
+static u32 dOvlpFd_Create() {
+    dOvlpFd_execute_f.v = gabi::guest_fn((const void*)dOvlpFd_FadeIn);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x025A1B24,sinit);
-static void stringDtor(u32 self,u32 flags){
-    WWHD_FUNC(0x025A1BB8,void,self,flags);
-    if(self&&(flags&1))gabi::call(0x0273AF40,self);
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025A1B24 */
+static void __sinit_d_ovlp_fade_cpp() {
+    sinit_header_statics_rodata(0x1047B0E4, 0x101EA1EC, 0x1047B0F0, 0x100518B4);
 }
-VERIFY(0x025A1BB8,stringDtor);
-static void stringStub(){
-    WWHD_FUNC(0x025A1BCC,void,(u32)0);
+
+/* 025A1BB8 */
+static void seadSafeString__dt(SafeString* self, u32 flags) {
+    if (self && (flags & 1)) operator_delete(self);
 }
-VERIFY(0x025A1BCC,stringStub);
-}
+
+/* 025A1BCC */
+static void seadSafeString_assureTerminationImpl() {}
+
+/* WWHD glue (tools/verify/autoglue.py): dispatch pointer, HD stage names and free call adapters
+data dOvlpFd_execute_f 101EA1D4
+str 1005189C "Demo01"
+str 100518A4 "Demo37"
+ext 02728CB8 u32 dOvlpFd_startFadeInHD(void*, u32, u32)
+ext 02728D5C void dOvlpFd_finishFadeHD(void*)
+ext 025F05E8 void mDoGph_startFadeOutHD(u32)
+ext 025DBD74 void fopOvlpM_SceneIsStart()
+ext 025DBDC4 u32 fopOvlpM_IsOutReq(overlap1_class*)
+ext 025DBDDC void fopOvlpM_Done(overlap1_class*)
+*/

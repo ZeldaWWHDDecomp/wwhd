@@ -1,1096 +1,570 @@
-/* Local WWHD menu scene reconstruction. */
-#include "wwhd.h"
-// Explicit native blocks retain all debug menu string comparisons and callback boundaries.
-// The 176-byte frame contains the native eight-byte SafeString temporaries and conversion slots.
-s32 menu_execute(void* self) {
- WWHD_FUNC(0x025AC798,s32,self);
- gabi::Local<u8[176]> frame;
- u32 v0=0,v1=gabi::ea(frame.get()),v3=gabi::ea(self),v4=0,v5=0,v6=0,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v21=0,v22=0,v23=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
- f64 q0=0,q1=0,q6=0,q7=0,q8=0,q9=0,q10=0,q11=0,q12=0,q13=0,q30=0,q31=0;
- bool less=false,greater=false,equal=false; u32 count=0; u8 carry=0;
- v29 = v3;
- v3 = 0u + 0x00000000u;
- v26 = gabi::load<u32>(v29 + 0x000001D8u);
- v3=gabi::call<u32>(0x020075E0 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v27 = 0u + 0x101F0000u;
- if (!equal) { goto L_025AC7EC; }
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x0200760C ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (equal) { goto L_025AC87C; }
- L_025AC7EC: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x02007764 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AC80C; }
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x02007790 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (equal) { goto L_025AC818; }
- L_025AC80C: ;
- v9 = 0u + 0x00000014u;
- gabi::store<u8>(v29 + 0x000001E5u, v9);
- goto L_025AC830;
- L_025AC818: ;
- v3 = v29 + 0x000001E5u;
- v3=gabi::call<u32>(0x0207A9A0 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AC87C; }
- v9 = 0u + 0x00000004u;
- gabi::store<u8>(v29 + 0x000001E5u, v9);
- L_025AC830: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020075E0 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v8 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- if (equal) { goto L_025AC860; }
- { uint64_t t = (uint64_t)v8 + 0xFFFFFFFFu; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); } less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- gabi::store<u32>(v27 + 0xFFFFA6C4u, v0);
- if (!less) { goto L_025AC87C; }
- v7 = gabi::load<u8>(v26 + 0x00000000u);
- v12 = v7 + 0xFFFFFFFFu;
- gabi::store<u32>(v27 + 0xFFFFA6C4u, v12);
- goto L_025AC87C;
- L_025AC860: ;
- v8 = v8 + 0x00000001u;
- gabi::store<u32>(v27 + 0xFFFFA6C4u, v8);
- v0 = gabi::load<u8>(v26 + 0x00000000u);
- less=((int32_t)v8)<((int32_t)v0); greater=((int32_t)v8)>((int32_t)v0); equal=((int32_t)v8)==((int32_t)v0);
- if (less) { goto L_025AC87C; }
- v12 = 0u + 0x00000000u;
- gabi::store<u32>(v27 + 0xFFFFA6C4u, v12);
- L_025AC87C: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020076E0 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AC89C; }
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020076BC ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (equal) { goto L_025AC974; }
- L_025AC89C: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020078BC ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AC8BC; }
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x02007898 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (equal) { goto L_025AC8C8; }
- L_025AC8BC: ;
- v10 = 0u + 0x00000014u;
- gabi::store<u8>(v29 + 0x000001E6u, v10);
- goto L_025AC8E0;
- L_025AC8C8: ;
- v3 = v29 + 0x000001E6u;
- v3=gabi::call<u32>(0x0207A9A0 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AC974; }
- v10 = 0u + 0x00000004u;
- gabi::store<u8>(v29 + 0x000001E6u, v10);
- L_025AC8E0: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020076E0 ,v3);
- v10 = 0u + 0x101F0000u;
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v10 = gabi::load<u32>(v10 + 0xFFFFA6CCu);
- if (equal) { goto L_025AC938; }
- v6 = gabi::load<u8>(v10 + v5);
- v6 = v6 + 0xFFFFFFFFu;
- v6 = (uint32_t)(int32_t)(int8_t)v6; less=(s32)v6<0; greater=(s32)v6>0; equal=v6==0;
- gabi::store<u8>(v10 + v5, v6);
- if (!less) { goto L_025AC974; }
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- v4 = ((u32)v5 * 40u);
- v8 = gabi::load<u32>(v26 + 0x00000004u);
- v6 = v8 + v4;
- v9 = gabi::load<u8>(v6 + 0x00000021u);
- v4 = v9 + 0xFFFFFFFFu;
- v9 = 0u + 0x101F0000u;
- v9 = gabi::load<u32>(v9 + 0xFFFFA6CCu);
- gabi::store<u8>(v9 + v5, v4);
- goto L_025AC974;
- L_025AC938: ;
- v7 = gabi::load<u8>(v10 + v5);
- v7 = v7 + 0x00000001u;
- v7 = (uint32_t)(int32_t)(int8_t)v7;
- gabi::store<u8>(v10 + v5, v7);
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- v0 = ((u32)v5 * 40u);
- v12 = gabi::load<u32>(v26 + 0x00000004u);
- v11 = v12 + v0;
- v4 = gabi::load<u8>(v11 + 0x00000021u);
- less=((int32_t)v7)<((int32_t)v4); greater=((int32_t)v7)>((int32_t)v4); equal=((int32_t)v7)==((int32_t)v4);
- if (less) { goto L_025AC974; }
- v9 = 0u + 0x101F0000u;
- v9 = gabi::load<u32>(v9 + 0xFFFFA6CCu);
- v4 = 0u + 0x00000000u;
- gabi::store<u8>(v9 + v5, v4);
- L_025AC974: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x02007940 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v28 = 0u + 0x10200000u;
- if (equal) { goto L_025AD254; }
- v25 = 0u + 0x10050000u;
- v31 = 0u + 0x025B0000u;
- v6 = 0u + 0x10050000u;
- v25 = v25 + 0x000028C4u;
- v31 = v31 + 0xFFFFD9B4u;
- v6 = v6 + 0x0000291Cu;
- v0 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- count = v31;
- gabi::store<u32>(v1 + 0x0000004Cu, v25);
- v7 = ((u32)v0 * 40u);
- gabi::store<u32>(v1 + 0x00000048u, v6);
- v9 = gabi::load<u32>(v26 + 0x00000004u);
- gabi::store<u32>(v1 + 0x00000054u, v25);
- v0 = v9 + v7;
- v3 = v1 + 0x00000048u;
- gabi::store<u32>(v1 + 0x00000050u, v0);
- v3=gabi::call_ptr<u32>(count,v3);
- v10 = gabi::load<u32>(v1 + 0x0000004Cu);
- v11 = gabi::load<u32>(v10 + 0x00000014u);
- count = v11;
- v3 = v1 + 0x00000048u;
- v3=gabi::call_ptr<u32>(count,v3);
- v12 = gabi::load<u32>(v1 + 0x00000054u);
- v0 = gabi::load<u32>(v12 + 0x00000014u);
- count = v0;
- v30 = gabi::load<u32>(v1 + 0x00000048u);
- v3 = v1 + 0x00000050u;
- v3=gabi::call_ptr<u32>(count,v3);
- v4 = gabi::load<u32>(v1 + 0x00000050u);
- less=(v30)<(v4); greater=(v30)>(v4); equal=(v30)==(v4);
- if (equal) { goto L_025ACB0C; }
- v11 = 0u + 0x00040000u;
- v10 = gabi::load<u32>(v1 + 0x00000048u);
- v11 = v11 + 0x00000001u;
- v12 = gabi::load<u32>(v1 + 0x00000050u);
- count = v11;
- v12 = v12 + 0xFFFFFFFFu;
- L_025ACA1C: ;
- v0 = gabi::load<u8>(v10 + 0x00000000u);
- { uint32_t ea = v12 + 0x00000001u; v5 = gabi::load<u8>(ea); v12 = ea; }
- less=(v0)<(v5); greater=(v0)>(v5); equal=(v0)==(v5);
- if (!equal) { goto L_025AD188; }
- less=((int32_t)v0)<(0); greater=((int32_t)v0)>(0); equal=((int32_t)v0)==(0);
- if (equal) { goto L_025ACB0C; }
- v10 = v10 + 0x00000001u;
- count--; if (count != 0) { goto L_025ACA1C; }
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- v8 = 0u + 0x101F0000u;
- v8 = gabi::load<u32>(v8 + 0xFFFFA6CCu);
- v12 = ((u32)v5 * 40u);
- v8 = gabi::load<u8>(v8 + v5);
- v5 = gabi::load<u32>(v26 + 0x00000004u);
- v8 = (uint32_t)(int32_t)(int8_t)v8;
- v4 = v5 + v12;
- v7 = ((u32)v8 * 44u);
- v10 = gabi::load<u32>(v4 + 0x00000024u);
- v31 = v10 + v7;
- v3=gabi::call<u32>(0x025200D4);
- v5 = 0u + 0x00000000u;
- gabi::store<u8>(v3 + 0x0000514Cu, v5);
- v11 = gabi::load<u8>(v29 + 0x000001E4u);
- less=((int32_t)v11)<(0); greater=((int32_t)v11)>(0); equal=((int32_t)v11)==(0);
- if (!equal) { goto L_025AD1CC; }
- L_025ACA80: ;
- v5 = gabi::load<u8>(v31 + 0x00000029u);
- v7 = 0u + 0x10050000u;
- v0 = gabi::load<u8>(v31 + 0x0000002Au);
- v5 = (uint32_t)(int32_t)(int8_t)v5;
- q1=gabi::load<f32>(v7 + 0x000028DCu);
- v7 = 0u + 0x00000000u;
- v3 = v31 + 0x00000021u;
- v6 = gabi::load<u8>(v31 + 0x0000002Bu);
- v8 = 0u + 0x00000001u;
- v9 = v7;
- v4 = v0;
- v6 = (uint32_t)(int32_t)(int8_t)v6;
- v3=gabi::call<u32>(0x0252012C ,v3,v4,v5,v6,v7,v8,v9,q1);
- v5 = 0u + 0x00000000u;
- v4 = 0u + 0x00000007u;
- v3 = v29;
- v7 = v5;
- v6 = 0u + 0x00000005u;
- v3=gabi::call<u32>(0x025DC86C ,v3,v4,v5,v6,v7);
- v12 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v4 = 0u + 0x00000000u;
- gabi::store<u32>(v12 + 0x0000116Cu, v4);
- v3=gabi::call<u32>(0x025200D4);
- v30 = v3 + 0x00005140u;
- v3=gabi::call<u32>(0x025200D4);
- v31 = gabi::load<u8>(v3 + 0x0000514Au);
- v31 = (uint32_t)(int32_t)(int8_t)v31;
- v3=gabi::call<u32>(0x025200D4);
- v7 = v3 + 0x000012A0u;
- v5 = gabi::load<u8>(v7 + 0x00003EABu);
- v4 = v31;
- v3 = v30;
- v5 = (uint32_t)(int32_t)(int8_t)v5;
- v3=gabi::call<u32>(0x025E17CC ,v3,v4,v5);
- goto L_025AD254;
- L_025ACB0C: ;
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- v10 = 0u + 0x101F0000u;
- v10 = gabi::load<u32>(v10 + 0xFFFFA6CCu);
- v6 = ((u32)v5 * 40u);
- v0 = gabi::load<u8>(v10 + v5);
- v8 = gabi::load<u32>(v26 + 0x00000004u);
- v0 = (uint32_t)(int32_t)(int8_t)v0;
- v7 = v8 + v6;
- v9 = ((u32)v0 * 44u);
- v12 = gabi::load<u32>(v7 + 0x00000024u);
- gabi::store<u32>(v1 + 0x00000034u, v25);
- v12 = v12 + v9;
- gabi::store<u32>(v1 + 0x00000030u, v12);
- v4 = gabi::load<u8>(v10 + v5);
- v4 = (uint32_t)(int32_t)(int8_t)v4;
- v24 = 0u + 0x00000001u;
- less=((int32_t)v4)<(23); greater=((int32_t)v4)>(23); equal=((int32_t)v4)==(23);
- v0 = 0u + 0x00000000u;
- if (!greater) { goto L_025ACFBC; }
- count = v31;
- v5 = 0u + 0x10050000u;
- gabi::store<u32>(v1 + 0x0000003Cu, v25);
- v5 = v5 + 0x00002924u;
- v3 = v1 + 0x00000030u;
- gabi::store<u32>(v1 + 0x00000038u, v5);
- v0 = 0u + 0x00000001u;
- v3=gabi::call_ptr<u32>(count,v3);
- v7 = gabi::load<u32>(v1 + 0x00000030u);
- v6 = gabi::load<u8>(v7 + 0x00000000u);
- v31 = 0u + 0x00000000u;
- less=((int32_t)v6)<(0); greater=((int32_t)v6)>(0); equal=((int32_t)v6)==(0);
- v0 = 0u + 0x00040000u;
- if (equal) { goto L_025ACBB4; }
- L_025ACB90: ;
- v31 = v31 + 0x00000001u;
- less=((int32_t)v31)<((int32_t)v0); greater=((int32_t)v31)>((int32_t)v0); equal=((int32_t)v31)==((int32_t)v0);
- v7 = v7 + 0x00000001u;
- if (greater) { goto L_025ACBB0; }
- v8 = gabi::load<u8>(v7 + 0x00000000u);
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- if (!equal) { goto L_025ACB90; }
- goto L_025ACBB4;
- L_025ACBB0: ;
- v31 = 0u + 0x00000000u;
- L_025ACBB4: ;
- v9 = gabi::load<u32>(v1 + 0x0000003Cu);
- v10 = gabi::load<u32>(v9 + 0x00000014u);
- count = v10;
- v3 = v1 + 0x00000038u;
- v3=gabi::call_ptr<u32>(count,v3);
- v5 = gabi::load<u32>(v1 + 0x00000038u);
- v11 = gabi::load<u8>(v5 + 0x00000000u);
- v30 = 0u + 0x00000000u;
- less=((int32_t)v11)<(0); greater=((int32_t)v11)>(0); equal=((int32_t)v11)==(0);
- v6 = 0u + 0x00040000u;
- if (equal) { goto L_025ACC04; }
- L_025ACBE0: ;
- v30 = v30 + 0x00000001u;
- less=((int32_t)v30)<((int32_t)v6); greater=((int32_t)v30)>((int32_t)v6); equal=((int32_t)v30)==((int32_t)v6);
- v5 = v5 + 0x00000001u;
- if (greater) { goto L_025ACC00; }
- v12 = gabi::load<u8>(v5 + 0x00000000u);
- less=((int32_t)v12)<(0); greater=((int32_t)v12)>(0); equal=((int32_t)v12)==(0);
- if (!equal) { goto L_025ACBE0; }
- goto L_025ACC04;
- L_025ACC00: ;
- v30 = 0u + 0x00000000u;
- L_025ACC04: ;
- v31 = v31 - v30; less=(s32)v31<0; greater=(s32)v31>0; equal=v31==0;
- v23 = 0u + 0x00000000u;
- if (less) { goto L_025ACCC8; }
- L_025ACC10: ;
- v4 = gabi::load<u32>(v1 + 0x00000030u);
- v22 = v30;
- gabi::store<u32>(v1 + 0x00000014u, v25);
- v0 = v4 + v23;
- v3 = v1 + 0x00000010u;
- gabi::store<u32>(v1 + 0x00000010u, v0);
- v3=gabi::call<u32>(0x025AD9B4);
- v5 = gabi::load<u32>(v1 + 0x00000014u);
- v6 = gabi::load<u32>(v5 + 0x00000014u);
- count = v6;
- v3 = v1 + 0x00000010u;
- v3=gabi::call_ptr<u32>(count,v3);
- v7 = gabi::load<u32>(v1 + 0x0000003Cu);
- v8 = gabi::load<u32>(v7 + 0x00000014u);
- count = v8;
- v21 = gabi::load<u32>(v1 + 0x00000010u);
- v3 = v1 + 0x00000038u;
- v3=gabi::call_ptr<u32>(count,v3);
- v6 = gabi::load<u32>(v1 + 0x00000038u);
- less=(v21)<(v6); greater=(v21)>(v6); equal=(v21)==(v6);
- if (equal) { goto L_025ACCB0; }
- less=((int32_t)v22)<(0); greater=((int32_t)v22)>(0); equal=((int32_t)v22)==(0);
- if (!greater) { goto L_025ACCB0; }
- count = v22;
- v11 = gabi::load<u32>(v1 + 0x00000010u);
- L_025ACC74: ;
- v9 = gabi::load<u8>(v11 + 0x00000000u);
- less=((int32_t)v9)<(0); greater=((int32_t)v9)>(0); equal=((int32_t)v9)==(0);
- if (!equal) { goto L_025ACC90; }
- v9 = gabi::load<u8>(v6 + 0x00000000u);
- less=((int32_t)v9)<(0); greater=((int32_t)v9)>(0); equal=((int32_t)v9)==(0);
- if (equal) { goto L_025ACCB0; }
- goto L_025ACCBC;
- L_025ACC90: ;
- v8 = gabi::load<u8>(v6 + 0x00000000u);
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- if (equal) { goto L_025ACCBC; }
- less=(v8)<(v9); greater=(v8)>(v9); equal=(v8)==(v9);
- if (!equal) { goto L_025ACCBC; }
- v6 = v6 + 0x00000001u;
- v11 = v11 + 0x00000001u;
- count--; if (count != 0) { goto L_025ACC74; }
- L_025ACCB0: ;
- less=((int32_t)v23)<(-1); greater=((int32_t)v23)>(-1); equal=((int32_t)v23)==(-1);
- if (equal) { goto L_025ACCC8; }
- goto L_025ACFBC;
- L_025ACCBC: ;
- v23 = v23 + 0x00000001u;
- less=((int32_t)v23)<((int32_t)v31); greater=((int32_t)v23)>((int32_t)v31); equal=((int32_t)v23)==((int32_t)v31);
- if (!greater) { goto L_025ACC10; }
- L_025ACCC8: ;
- v0 = 0u + 0x10050000u;
- gabi::store<u32>(v1 + 0x00000044u, v25);
- { uint64_t t = (uint64_t)v0 + 0x00002930u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- v11 = gabi::load<u32>(v1 + 0x00000034u);
- gabi::store<u32>(v1 + 0x00000040u, v0);
- v12 = gabi::load<u32>(v11 + 0x00000014u);
- count = v12;
- v0 = 0u + 0x00000001u;
- v3 = v1 + 0x00000030u;
- v3=gabi::call_ptr<u32>(count,v3);
- v9 = gabi::load<u32>(v1 + 0x00000030u);
- v4 = gabi::load<u8>(v9 + 0x00000000u);
- v30 = 0u + 0x00000000u;
- less=((int32_t)v4)<(0); greater=((int32_t)v4)>(0); equal=((int32_t)v4)==(0);
- v0 = 0u + 0x00040000u;
- if (equal) { goto L_025ACD2C; }
- L_025ACD08: ;
- v30 = v30 + 0x00000001u;
- less=((int32_t)v30)<((int32_t)v0); greater=((int32_t)v30)>((int32_t)v0); equal=((int32_t)v30)==((int32_t)v0);
- v9 = v9 + 0x00000001u;
- if (greater) { goto L_025ACD28; }
- v5 = gabi::load<u8>(v9 + 0x00000000u);
- less=((int32_t)v5)<(0); greater=((int32_t)v5)>(0); equal=((int32_t)v5)==(0);
- if (!equal) { goto L_025ACD08; }
- goto L_025ACD2C;
- L_025ACD28: ;
- v30 = 0u + 0x00000000u;
- L_025ACD2C: ;
- v6 = gabi::load<u32>(v1 + 0x00000044u);
- v7 = gabi::load<u32>(v6 + 0x00000014u);
- count = v7;
- v3 = v1 + 0x00000040u;
- v3=gabi::call_ptr<u32>(count,v3);
- v7 = gabi::load<u32>(v1 + 0x00000040u);
- v8 = gabi::load<u8>(v7 + 0x00000000u);
- v31 = 0u + 0x00000000u;
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- v8 = 0u + 0x00040000u;
- if (equal) { goto L_025ACD7C; }
- L_025ACD58: ;
- v31 = v31 + 0x00000001u;
- less=((int32_t)v31)<((int32_t)v8); greater=((int32_t)v31)>((int32_t)v8); equal=((int32_t)v31)==((int32_t)v8);
- v7 = v7 + 0x00000001u;
- if (greater) { goto L_025ACD78; }
- v9 = gabi::load<u8>(v7 + 0x00000000u);
- less=((int32_t)v9)<(0); greater=((int32_t)v9)>(0); equal=((int32_t)v9)==(0);
- if (!equal) { goto L_025ACD58; }
- goto L_025ACD7C;
- L_025ACD78: ;
- v31 = 0u + 0x00000000u;
- L_025ACD7C: ;
- v30 = v30 - v31; less=(s32)v30<0; greater=(s32)v30>0; equal=v30==0;
- v23 = 0u + 0x00000000u;
- if (less) { goto L_025ACE40; }
- L_025ACD88: ;
- v11 = gabi::load<u32>(v1 + 0x00000030u);
- v22 = v31;
- gabi::store<u32>(v1 + 0x0000001Cu, v25);
- v0 = v11 + v23;
- v3 = v1 + 0x00000018u;
- gabi::store<u32>(v1 + 0x00000018u, v0);
- v3=gabi::call<u32>(0x025AD9B4);
- v12 = gabi::load<u32>(v1 + 0x0000001Cu);
- v4 = gabi::load<u32>(v12 + 0x00000014u);
- count = v4;
- v3 = v1 + 0x00000018u;
- v3=gabi::call_ptr<u32>(count,v3);
- v5 = gabi::load<u32>(v1 + 0x00000044u);
- v6 = gabi::load<u32>(v5 + 0x00000014u);
- count = v6;
- v21 = gabi::load<u32>(v1 + 0x00000018u);
- v3 = v1 + 0x00000040u;
- v3=gabi::call_ptr<u32>(count,v3);
- v5 = gabi::load<u32>(v1 + 0x00000040u);
- less=(v21)<(v5); greater=(v21)>(v5); equal=(v21)==(v5);
- if (equal) { goto L_025ACE28; }
- less=((int32_t)v22)<(0); greater=((int32_t)v22)>(0); equal=((int32_t)v22)==(0);
- if (!greater) { goto L_025ACE28; }
- count = v22;
- v6 = gabi::load<u32>(v1 + 0x00000018u);
- L_025ACDEC: ;
- v11 = gabi::load<u8>(v6 + 0x00000000u);
- less=((int32_t)v11)<(0); greater=((int32_t)v11)>(0); equal=((int32_t)v11)==(0);
- if (!equal) { goto L_025ACE08; }
- v7 = gabi::load<u8>(v5 + 0x00000000u);
- less=((int32_t)v7)<(0); greater=((int32_t)v7)>(0); equal=((int32_t)v7)==(0);
- if (equal) { goto L_025ACE28; }
- goto L_025ACE34;
- L_025ACE08: ;
- v10 = gabi::load<u8>(v5 + 0x00000000u);
- less=((int32_t)v10)<(0); greater=((int32_t)v10)>(0); equal=((int32_t)v10)==(0);
- if (equal) { goto L_025ACE34; }
- less=(v10)<(v11); greater=(v10)>(v11); equal=(v10)==(v11);
- if (!equal) { goto L_025ACE34; }
- v5 = v5 + 0x00000001u;
- v6 = v6 + 0x00000001u;
- count--; if (count != 0) { goto L_025ACDEC; }
- L_025ACE28: ;
- less=((int32_t)v23)<(-1); greater=((int32_t)v23)>(-1); equal=((int32_t)v23)==(-1);
- if (equal) { goto L_025ACE40; }
- goto L_025ACFBC;
- L_025ACE34: ;
- v23 = v23 + 0x00000001u;
- less=((int32_t)v23)<((int32_t)v30); greater=((int32_t)v23)>((int32_t)v30); equal=((int32_t)v23)==((int32_t)v30);
- if (!greater) { goto L_025ACD88; }
- L_025ACE40: ;
- v0 = 0u + 0x10050000u;
- gabi::store<u32>(v1 + 0x0000000Cu, v25);
- { uint64_t t = (uint64_t)v0 + 0x0000293Cu; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- v9 = gabi::load<u32>(v1 + 0x00000034u);
- gabi::store<u32>(v1 + 0x00000008u, v0);
- v10 = gabi::load<u32>(v9 + 0x00000014u);
- count = v10;
- v0 = 0u + 0x00000001u;
- v3 = v1 + 0x00000030u;
- v3=gabi::call_ptr<u32>(count,v3);
- v12 = gabi::load<u32>(v1 + 0x00000030u);
- v11 = gabi::load<u8>(v12 + 0x00000000u);
- v30 = 0u + 0x00000000u;
- less=((int32_t)v11)<(0); greater=((int32_t)v11)>(0); equal=((int32_t)v11)==(0);
- v4 = 0u + 0x00040000u;
- if (equal) { goto L_025ACEA4; }
- L_025ACE80: ;
- v30 = v30 + 0x00000001u;
- less=((int32_t)v30)<((int32_t)v4); greater=((int32_t)v30)>((int32_t)v4); equal=((int32_t)v30)==((int32_t)v4);
- v12 = v12 + 0x00000001u;
- if (greater) { goto L_025ACEA0; }
- v0 = gabi::load<u8>(v12 + 0x00000000u);
- less=((int32_t)v0)<(0); greater=((int32_t)v0)>(0); equal=((int32_t)v0)==(0);
- if (!equal) { goto L_025ACE80; }
- goto L_025ACEA4;
- L_025ACEA0: ;
- v30 = 0u + 0x00000000u;
- L_025ACEA4: ;
- v5 = gabi::load<u32>(v1 + 0x0000000Cu);
- v6 = gabi::load<u32>(v5 + 0x00000014u);
- count = v6;
- v3 = v1 + 0x00000008u;
- v3=gabi::call_ptr<u32>(count,v3);
- v9 = gabi::load<u32>(v1 + 0x00000008u);
- v7 = gabi::load<u8>(v9 + 0x00000000u);
- v31 = 0u + 0x00000000u;
- less=((int32_t)v7)<(0); greater=((int32_t)v7)>(0); equal=((int32_t)v7)==(0);
- v0 = 0u + 0x00040000u;
- if (equal) { goto L_025ACEF4; }
- L_025ACED0: ;
- v31 = v31 + 0x00000001u;
- less=((int32_t)v31)<((int32_t)v0); greater=((int32_t)v31)>((int32_t)v0); equal=((int32_t)v31)==((int32_t)v0);
- v9 = v9 + 0x00000001u;
- if (greater) { goto L_025ACEF0; }
- v8 = gabi::load<u8>(v9 + 0x00000000u);
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- if (!equal) { goto L_025ACED0; }
- goto L_025ACEF4;
- L_025ACEF0: ;
- v31 = 0u + 0x00000000u;
- L_025ACEF4: ;
- v30 = v30 - v31; less=(s32)v30<0; greater=(s32)v30>0; equal=v30==0;
- v23 = 0u + 0x00000000u;
- if (less) { goto L_025ACFB8; }
- L_025ACF00: ;
- v11 = gabi::load<u32>(v1 + 0x00000030u);
- v22 = v31;
- gabi::store<u32>(v1 + 0x00000024u, v25);
- v0 = v11 + v23;
- v3 = v1 + 0x00000020u;
- gabi::store<u32>(v1 + 0x00000020u, v0);
- v3=gabi::call<u32>(0x025AD9B4);
- v12 = gabi::load<u32>(v1 + 0x00000024u);
- v4 = gabi::load<u32>(v12 + 0x00000014u);
- count = v4;
- v3 = v1 + 0x00000020u;
- v3=gabi::call_ptr<u32>(count,v3);
- v5 = gabi::load<u32>(v1 + 0x0000000Cu);
- v6 = gabi::load<u32>(v5 + 0x00000014u);
- count = v6;
- v21 = gabi::load<u32>(v1 + 0x00000020u);
- v3 = v1 + 0x00000008u;
- v3=gabi::call_ptr<u32>(count,v3);
- v4 = gabi::load<u32>(v1 + 0x00000008u);
- less=(v21)<(v4); greater=(v21)>(v4); equal=(v21)==(v4);
- if (equal) { goto L_025ACFA0; }
- less=((int32_t)v22)<(0); greater=((int32_t)v22)>(0); equal=((int32_t)v22)==(0);
- if (!greater) { goto L_025ACFA0; }
- count = v22;
- v6 = gabi::load<u32>(v1 + 0x00000020u);
- L_025ACF64: ;
- v5 = gabi::load<u8>(v6 + 0x00000000u);
- less=((int32_t)v5)<(0); greater=((int32_t)v5)>(0); equal=((int32_t)v5)==(0);
- if (!equal) { goto L_025ACF80; }
- v7 = gabi::load<u8>(v4 + 0x00000000u);
- less=((int32_t)v7)<(0); greater=((int32_t)v7)>(0); equal=((int32_t)v7)==(0);
- if (equal) { goto L_025ACFA0; }
- goto L_025ACFAC;
- L_025ACF80: ;
- v0 = gabi::load<u8>(v4 + 0x00000000u);
- less=((int32_t)v0)<(0); greater=((int32_t)v0)>(0); equal=((int32_t)v0)==(0);
- if (equal) { goto L_025ACFAC; }
- less=(v0)<(v5); greater=(v0)>(v5); equal=(v0)==(v5);
- if (!equal) { goto L_025ACFAC; }
- v4 = v4 + 0x00000001u;
- v6 = v6 + 0x00000001u;
- count--; if (count != 0) { goto L_025ACF64; }
- L_025ACFA0: ;
- less=((int32_t)v23)<(-1); greater=((int32_t)v23)>(-1); equal=((int32_t)v23)==(-1);
- if (equal) { goto L_025ACFB8; }
- goto L_025ACFBC;
- L_025ACFAC: ;
- v23 = v23 + 0x00000001u;
- less=((int32_t)v23)<((int32_t)v30); greater=((int32_t)v23)>((int32_t)v30); equal=((int32_t)v23)==((int32_t)v30);
- if (!greater) { goto L_025ACF00; }
- L_025ACFB8: ;
- v24 = 0u + 0x00000000u;
- L_025ACFBC: ;
- v11 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v4 = 0u + 0x00002D01u;
- less=((int32_t)v24)<(0); greater=((int32_t)v24)>(0); equal=((int32_t)v24)==(0);
- v3 = v11 + 0x00000644u;
- if (equal) { goto L_025ACFE8; }
- v3=gabi::call<u32>(0x025B8B7C ,v3,v4);
- v0 = 0u + 0x10050000u;
- gabi::store<u32>(v1 + 0x0000000Cu, v25);
- { uint64_t t = (uint64_t)v0 + 0x00002948u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- gabi::store<u32>(v1 + 0x00000008u, v0);
- goto L_025ACFFC;
- L_025ACFE8: ;
- v3=gabi::call<u32>(0x025B8B68 ,v3,v4);
- v0 = 0u + 0x10050000u;
- gabi::store<u32>(v1 + 0x0000000Cu, v25);
- { uint64_t t = (uint64_t)v0 + 0x00002948u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- gabi::store<u32>(v1 + 0x00000008u, v0);
- L_025ACFFC: ;
- v6 = gabi::load<u32>(v1 + 0x00000034u);
- v7 = gabi::load<u32>(v6 + 0x00000014u);
- count = v7;
- v3 = v1 + 0x00000030u;
- v3=gabi::call_ptr<u32>(count,v3);
- v11 = gabi::load<u32>(v1 + 0x00000030u);
- v8 = gabi::load<u8>(v11 + 0x00000000u);
- v31 = 0u + 0x00000000u;
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- v0 = 0u + 0x00040000u;
- if (equal) { goto L_025AD04C; }
- L_025AD028: ;
- v31 = v31 + 0x00000001u;
- less=((int32_t)v31)<((int32_t)v0); greater=((int32_t)v31)>((int32_t)v0); equal=((int32_t)v31)==((int32_t)v0);
- v11 = v11 + 0x00000001u;
- if (greater) { goto L_025AD048; }
- v9 = gabi::load<u8>(v11 + 0x00000000u);
- less=((int32_t)v9)<(0); greater=((int32_t)v9)>(0); equal=((int32_t)v9)==(0);
- if (!equal) { goto L_025AD028; }
- goto L_025AD04C;
- L_025AD048: ;
- v31 = 0u + 0x00000000u;
- L_025AD04C: ;
- v10 = gabi::load<u32>(v1 + 0x0000000Cu);
- v0 = gabi::load<u32>(v10 + 0x00000014u);
- count = v0;
- v3 = v1 + 0x00000008u;
- v3=gabi::call_ptr<u32>(count,v3);
- v8 = gabi::load<u32>(v1 + 0x00000008u);
- v4 = gabi::load<u8>(v8 + 0x00000000u);
- v30 = 0u + 0x00000000u;
- less=((int32_t)v4)<(0); greater=((int32_t)v4)>(0); equal=((int32_t)v4)==(0);
- v9 = 0u + 0x00040000u;
- if (equal) { goto L_025AD09C; }
- L_025AD078: ;
- v30 = v30 + 0x00000001u;
- less=((int32_t)v30)<((int32_t)v9); greater=((int32_t)v30)>((int32_t)v9); equal=((int32_t)v30)==((int32_t)v9);
- v8 = v8 + 0x00000001u;
- if (greater) { goto L_025AD098; }
- v5 = gabi::load<u8>(v8 + 0x00000000u);
- less=((int32_t)v5)<(0); greater=((int32_t)v5)>(0); equal=((int32_t)v5)==(0);
- if (!equal) { goto L_025AD078; }
- goto L_025AD09C;
- L_025AD098: ;
- v30 = 0u + 0x00000000u;
- L_025AD09C: ;
- v31 = v31 - v30; less=(s32)v31<0; greater=(s32)v31>0; equal=v31==0;
- v24 = 0u + 0x00000000u;
- if (less) { goto L_025AD168; }
- L_025AD0A8: ;
- v7 = gabi::load<u32>(v1 + 0x00000030u);
- gabi::store<u32>(v1 + 0x0000002Cu, v25);
- v6 = v7 + v24;
- v3 = v1 + 0x00000028u;
- gabi::store<u32>(v1 + 0x00000028u, v6);
- v3=gabi::call<u32>(0x025AD9B4);
- v8 = gabi::load<u32>(v1 + 0x0000002Cu);
- v9 = gabi::load<u32>(v8 + 0x00000014u);
- count = v9;
- v3 = v1 + 0x00000028u;
- v3=gabi::call_ptr<u32>(count,v3);
- v10 = gabi::load<u32>(v1 + 0x0000000Cu);
- v11 = gabi::load<u32>(v10 + 0x00000014u);
- count = v11;
- v23 = gabi::load<u32>(v1 + 0x00000028u);
- v3 = v1 + 0x00000008u;
- v3=gabi::call_ptr<u32>(count,v3);
- v0 = gabi::load<u32>(v1 + 0x00000008u);
- less=(v23)<(v0); greater=(v23)>(v0); equal=(v23)==(v0);
- if (equal) { goto L_025AD148; }
- v0 = v30; less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- if (!greater) { goto L_025AD148; }
- v12 = gabi::load<u32>(v1 + 0x00000008u);
- count = v0;
- v4 = gabi::load<u32>(v1 + 0x00000028u);
- L_025AD10C: ;
- v8 = gabi::load<u8>(v4 + 0x00000000u);
- less=((int32_t)v8)<(0); greater=((int32_t)v8)>(0); equal=((int32_t)v8)==(0);
- if (!equal) { goto L_025AD128; }
- v5 = gabi::load<u8>(v12 + 0x00000000u);
- less=((int32_t)v5)<(0); greater=((int32_t)v5)>(0); equal=((int32_t)v5)==(0);
- if (equal) { goto L_025AD148; }
- goto L_025AD15C;
- L_025AD128: ;
- v6 = gabi::load<u8>(v12 + 0x00000000u);
- less=((int32_t)v6)<(0); greater=((int32_t)v6)>(0); equal=((int32_t)v6)==(0);
- if (equal) { goto L_025AD15C; }
- less=(v6)<(v8); greater=(v6)>(v8); equal=(v6)==(v8);
- if (!equal) { goto L_025AD15C; }
- v12 = v12 + 0x00000001u;
- v4 = v4 + 0x00000001u;
- count--; if (count != 0) { goto L_025AD10C; }
- L_025AD148: ;
- v6 = ~(v24 | v24);
- { uint64_t t = (uint64_t)v6 + 0xFFFFFFFFu; v7 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- { uint64_t t = (uint64_t)(uint32_t)~v7 + v6 + carry; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); } less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- if (equal) { goto L_025AD188; }
- goto L_025AD178;
- L_025AD15C: ;
- v24 = v24 + 0x00000001u;
- less=((int32_t)v24)<((int32_t)v31); greater=((int32_t)v24)>((int32_t)v31); equal=((int32_t)v24)==((int32_t)v31);
- if (!greater) { goto L_025AD0A8; }
- L_025AD168: ;
- v6 = 0u + 0x00000000u;
- { uint64_t t = (uint64_t)v6 + 0xFFFFFFFFu; v7 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
- { uint64_t t = (uint64_t)(uint32_t)~v7 + carry; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); } less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- if (equal) { goto L_025AD188; }
- L_025AD178: ;
- v10 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v4 = 0u + 0x00001E40u;
- v3 = v10 + 0x00000644u;
- v3=gabi::call<u32>(0x025B8B68 ,v3,v4);
- L_025AD188: ;
- v5 = gabi::load<u32>(v27 + 0xFFFFA6C4u);
- v8 = 0u + 0x101F0000u;
- v8 = gabi::load<u32>(v8 + 0xFFFFA6CCu);
- v12 = ((u32)v5 * 40u);
- v8 = gabi::load<u8>(v8 + v5);
- v5 = gabi::load<u32>(v26 + 0x00000004u);
- v8 = (uint32_t)(int32_t)(int8_t)v8;
- v4 = v5 + v12;
- v7 = ((u32)v8 * 44u);
- v10 = gabi::load<u32>(v4 + 0x00000024u);
- v31 = v10 + v7;
- v3=gabi::call<u32>(0x025200D4);
- v5 = 0u + 0x00000000u;
- gabi::store<u8>(v3 + 0x0000514Cu, v5);
- v11 = gabi::load<u8>(v29 + 0x000001E4u);
- less=((int32_t)v11)<(0); greater=((int32_t)v11)>(0); equal=((int32_t)v11)==(0);
- if (equal) { goto L_025ACA80; }
- L_025AD1CC: ;
- v5 = gabi::load<u8>(v31 + 0x00000029u);
- v7 = 0u + 0x10050000u;
- v3 = v31 + 0x00000021u;
- v0 = v11 + 0xFFFFFFFFu;
- q1=gabi::load<f32>(v7 + 0x000028DCu);
- v7 = 0u + 0x00000000u;
- v5 = (uint32_t)(int32_t)(int8_t)v5;
- v6 = gabi::load<u8>(v31 + 0x0000002Bu);
- v8 = 0u + 0x00000001u;
- v9 = v7;
- v4 = (uint32_t)(int32_t)(int16_t)v0;
- v6 = (uint32_t)(int32_t)(int8_t)v6;
- v3=gabi::call<u32>(0x0252012C ,v3,v4,v5,v6,v7,v8,v9,q1);
- v5 = 0u + 0x00000000u;
- v4 = 0u + 0x00000007u;
- v3 = v29;
- v7 = v5;
- v6 = 0u + 0x00000005u;
- v3=gabi::call<u32>(0x025DC86C ,v3,v4,v5,v6,v7);
- v12 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v4 = 0u + 0x00000000u;
- gabi::store<u32>(v12 + 0x0000116Cu, v4);
- v3=gabi::call<u32>(0x025200D4);
- v30 = v3 + 0x00005140u;
- v3=gabi::call<u32>(0x025200D4);
- v31 = gabi::load<u8>(v3 + 0x0000514Au);
- v31 = (uint32_t)(int32_t)(int8_t)v31;
- v3=gabi::call<u32>(0x025200D4);
- v7 = v3 + 0x000012A0u;
- v5 = gabi::load<u8>(v7 + 0x00003EABu);
- v4 = v31;
- v3 = v30;
- v5 = (uint32_t)(int32_t)(int8_t)v5;
- v3=gabi::call<u32>(0x025E17CC ,v3,v4,v5);
- L_025AD254: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x02007914 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v30 = 0u + 0x101F0000u;
- if (equal) { goto L_025AD280; }
- v8 = gabi::load<u32>(v30 + 0xFFFFA6C8u);
- { uint64_t t = (uint64_t)v8 + 0xFFFFFFFFu; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); } less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- if (!less) { goto L_025AD2A0; }
- v8 = 0u + 0x0000001Du;
- gabi::store<u32>(v30 + 0xFFFFA6C8u, v8);
- goto L_025AD2C8;
- L_025AD280: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020078E8 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (equal) { goto L_025AD2C8; }
- v11 = gabi::load<u32>(v30 + 0xFFFFA6C8u);
- v0 = v11 + 0x00000001u;
- less=((int32_t)v0)<(29); greater=((int32_t)v0)>(29); equal=((int32_t)v0)==(29);
- if (greater) { goto L_025AD2C0; }
- L_025AD2A0: ;
- v3 = 0u + 0x00000000u;
- gabi::store<u32>(v30 + 0xFFFFA6C8u, v0);
- v3=gabi::call<u32>(0x020077BC ,v3);
- v31 = 0u + 0x101F0000u;
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v31 = v31 + 0xFFFFA6D0u;
- if (equal) { goto L_025AD2FC; }
- goto L_025AD2E0;
- L_025AD2C0: ;
- v8 = 0u + 0x00000000u;
- gabi::store<u32>(v30 + 0xFFFFA6C8u, v8);
- L_025AD2C8: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020077BC ,v3);
- v31 = 0u + 0x101F0000u;
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- v31 = v31 + 0xFFFFA6D0u;
- if (equal) { goto L_025AD2FC; }
- L_025AD2E0: ;
- v4 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v31 + 0x00000000u);
- v0 = v4 + 0xFFFFFFFFu;
- v0 = (uint32_t)(int32_t)(int16_t)v0; less=(s32)v0<0; greater=(s32)v0>0; equal=v0==0;
- if (!less) { goto L_025AD354; }
- v0 = 0u + 0x00000006u;
- gabi::store<u16>(v31 + 0x00000000u, v0);
- goto L_025AD390;
- L_025AD2FC: ;
- v3 = 0u + 0x00000000u;
- v3=gabi::call<u32>(0x020077E8 ,v3);
- less=((int32_t)v3)<(0); greater=((int32_t)v3)>(0); equal=((int32_t)v3)==(0);
- if (!equal) { goto L_025AD340; }
- v0 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v31 + 0x00000000u);
- v7 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- gabi::store<u16>(v7 + 0x00000048u, v0);
- v3=gabi::call<u32>(0x02555D0C);
- v12 = 0u + 0x10050000u;
- v11 = 0u + 0x10050000u;
- q0=gabi::load<f32>(v12 + 0x000028DCu);
- q31=gabi::load<f32>(v11 + 0x000028E0u);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q0); }
- v11 = gabi::load<u32>(v30 + 0xFFFFA6C8u);
- less=((int32_t)v11)<(6); greater=((int32_t)v11)>(6); equal=((int32_t)v11)==(6);
- if (less) { goto L_025AD404; }
- goto L_025AD3BC;
- L_025AD340: ;
- v6 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v31 + 0x00000000u);
- v0 = v6 + 0x00000001u;
- v0 = (uint32_t)(int32_t)(int16_t)v0;
- less=((int32_t)v0)<(7); greater=((int32_t)v0)>(7); equal=((int32_t)v0)==(7);
- if (!less) { goto L_025AD388; }
- L_025AD354: ;
- v7 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- gabi::store<u16>(v31 + 0x00000000u, v0);
- gabi::store<u16>(v7 + 0x00000048u, v0);
- v3=gabi::call<u32>(0x02555D0C);
- v12 = 0u + 0x10050000u;
- v11 = 0u + 0x10050000u;
- q0=gabi::load<f32>(v12 + 0x000028DCu);
- q31=gabi::load<f32>(v11 + 0x000028E0u);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q0); }
- v11 = gabi::load<u32>(v30 + 0xFFFFA6C8u);
- less=((int32_t)v11)<(6); greater=((int32_t)v11)>(6); equal=((int32_t)v11)==(6);
- if (less) { goto L_025AD404; }
- goto L_025AD3BC;
- L_025AD388: ;
- v0 = 0u + 0x00000000u;
- gabi::store<u16>(v31 + 0x00000000u, v0);
- L_025AD390: ;
- v7 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- gabi::store<u16>(v7 + 0x00000048u, v0);
- v3=gabi::call<u32>(0x02555D0C);
- v12 = 0u + 0x10050000u;
- v11 = 0u + 0x10050000u;
- q0=gabi::load<f32>(v12 + 0x000028DCu);
- q31=gabi::load<f32>(v11 + 0x000028E0u);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q0); }
- v11 = gabi::load<u32>(v30 + 0xFFFFA6C8u);
- less=((int32_t)v11)<(6); greater=((int32_t)v11)>(6); equal=((int32_t)v11)==(6);
- if (less) { goto L_025AD404; }
- L_025AD3BC: ;
- v9 = 0u + 0x10050000u;
- v12 = v11 + 0xFFFFFFFAu;
- v7 = 0u + 0x43300000u;
- { uint32_t ea = v9 + 0x000028E8u; q11 = gabi::load<f64>(ea); }
- v9 = v12 ^ 0x80000000u;
- gabi::store<u32>(v1 + 0x00000058u, v7);
- gabi::store<u32>(v1 + 0x0000005Cu, v9);
- { uint32_t ea = v1 + 0x00000058u; q7 = gabi::load<f64>(ea); }
- q13 = q7 - q11;
- v6 = 0u + 0x10050000u;
- q6=to_single(q13);
- q9=gabi::load<f32>(v6 + 0x000028F0u);
- q0=to_single(q6 * round25(q9));
- v12 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- { uint32_t ea = v12 + 0x00000044u; gabi::store<f32>(ea, q0); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD404: ;
- less=(v11)<(0x0003u); greater=(v11)>(0x0003u); equal=(v11)==(0x0003u);
- if (!less) { goto L_025AD440; }
- less=(v11)<(0x0001u); greater=(v11)>(0x0001u); equal=(v11)==(0x0001u);
- if (less) { goto L_025AD45C; }
- if (equal) { goto L_025AD480; }
- v31 = 0u + 0x10050000u;
- v8 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- q10=gabi::load<f32>(v31 + 0x00002900u);
- { uint32_t ea = v8 + 0x00000044u; gabi::store<f32>(ea, q10); }
- v3=gabi::call<u32>(0x02555D0C);
- q8=gabi::load<f32>(v31 + 0x00002900u);
- { uint32_t ea = v3 + 0x00001020u; gabi::store<f32>(ea, q8); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD440: ;
- less=(v11)<(0x0004u); greater=(v11)>(0x0004u); equal=(v11)==(0x0004u);
- if (less) { goto L_025AD4A4; }
- if (equal) { goto L_025AD4D0; }
- less=(v11)<(0x0005u); greater=(v11)>(0x0005u); equal=(v11)==(0x0005u);
- if (equal) { goto L_025AD4FC; }
- v3 = 0u + 0x00000001u;
- goto L_025AD528;
- L_025AD45C: ;
- v4 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v9 = 0u + 0x10050000u;
- q12=gabi::load<f32>(v9 + 0x000028F4u);
- v8 = 0u + 0x10050000u;
- q31=gabi::load<f32>(v8 + 0x000028F8u);
- { uint32_t ea = v4 + 0x00000044u; gabi::store<f32>(ea, q12); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD480: ;
- v5 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- v11 = 0u + 0x10050000u;
- q13=gabi::load<f32>(v11 + 0x000028F4u);
- v10 = 0u + 0x10050000u;
- q31=gabi::load<f32>(v10 + 0x000028FCu);
- { uint32_t ea = v5 + 0x00000044u; gabi::store<f32>(ea, q13); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD4A4: ;
- v11 = 0u + 0x10050000u;
- v10 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- q30=gabi::load<f32>(v11 + 0x00002904u);
- { uint32_t ea = v10 + 0x00000044u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- v10 = 0u + 0x10050000u;
- q31=gabi::load<f32>(v10 + 0x00002908u);
- { uint32_t ea = v3 + 0x00001020u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD4D0: ;
- v5 = 0u + 0x10050000u;
- v11 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- q30=gabi::load<f32>(v5 + 0x0000290Cu);
- { uint32_t ea = v11 + 0x00000044u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- v4 = 0u + 0x10050000u;
- q31=gabi::load<f32>(v4 + 0x00002910u);
- { uint32_t ea = v3 + 0x00001020u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- goto L_025AD524;
- L_025AD4FC: ;
- v7 = 0u + 0x10050000u;
- v12 = gabi::load<u32>(v28 + 0xFFFF84DCu);
- q30=gabi::load<f32>(v7 + 0x00002914u);
- { uint32_t ea = v12 + 0x00000044u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- v6 = 0u + 0x10050000u;
- q31=gabi::load<f32>(v6 + 0x00002918u);
- { uint32_t ea = v3 + 0x00001020u; gabi::store<f32>(ea, q30); }
- v3=gabi::call<u32>(0x02555D0C);
- { uint32_t ea = v3 + 0x00001028u; gabi::store<f32>(ea, q31); }
- L_025AD524: ;
- v3 = 0u + 0x00000001u;
- L_025AD528: ;
- return (s32)v3;
-}
-VERIFY(0x025AC798,menu_execute);
-s32 menu_draw(void* self) { WWHD_FUNC(0x025AC790,s32,self); return 1; }
-VERIFY(0x025AC790,menu_draw);
-s32 menu_isDelete(void* self) { WWHD_FUNC(0x025AD550,s32,self); return 1; }
-VERIFY(0x025AD550,menu_isDelete);
-s32 menu_delete(void* self) {
- WWHD_FUNC(0x025AD558,s32,self);
- u32 addr=gabi::ea(self),font=gabi::load<u32>(addr+0x1E0);
- if(font) {
-  u32 table=gabi::load<u32>(font+0x18),target=gabi::load<u32>(table+0xC);
-  gabi::call_ptr(target,gabi::at<void>(font),3);
- }
- gabi::call(0x027EC0B0,gabi::at<void>(gabi::load<u32>(addr+0x1D8)));
- gabi::call(0x027EC0B0,gabi::at<void>(gabi::load<u32>(addr+0x1DC)));
- u8 flag=gabi::load<u8>(0x104873CF)&0xFD;
- u32 save=gabi::load<u32>(0x101F84DC);
- gabi::store<u8>(0x104873CF,flag);
- gabi::call(0x025B9864,gabi::at<void>(save+0x1148),0);
- gabi::call(0x0259170C,0);
- return 1;
-}
-VERIFY(0x025AD558,menu_delete);
-s32 menu_phase1(void* self) {
- WWHD_FUNC(0x025AD5E0,s32,self);
- u32 addr=gabi::ea(self);
- u32 command=gabi::call<u32>(0x025E255C,gabi::at<void>(0x10052954),0,0);
- gabi::store<u32>(addr+0x1D0,command);
- if(!command) gabi::call(0x0273AA24,gabi::at<void>(0x100529A4),0x308,gabi::at<void>(0x100529B4));
- u32 font=gabi::call<u32>(0x025E255C,gabi::at<void>(0x10052978),0,0);
- gabi::store<u32>(addr+0x1D4,font);
- if(!font) gabi::call(0x0273AA24,gabi::at<void>(0x100529A4),0x30B,gabi::at<void>(0x100529CC));
- return 2;
-}
-VERIFY(0x025AD5E0,menu_phase1);
-s32 menu_phase2(void* self) {
- WWHD_FUNC(0x025AD680,s32,self);
- u32 addr=gabi::ea(self),command=gabi::load<u32>(addr+0x1D0);
- if(!gabi::load<u8>(command+0xC)) return 0;
- u32 fontCommand=gabi::load<u32>(addr+0x1D4);
- if(!gabi::load<u8>(fontCommand+0xC)) return 0;
- u32 info=gabi::load<u32>(command+0x118);
- gabi::store<u32>(addr+0x1D8,info);
- if(!info) gabi::call(0x0273AA24,gabi::at<void>(0x10052A10),0x338,gabi::at<void>(0x100529E8));
- command=gabi::load<u32>(addr+0x1D0);
- if(command) {
-  u32 table=gabi::load<u32>(command+0x10);
-  gabi::call_ptr(gabi::load<u32>(table+0xC),gabi::at<void>(command),3);
- }
- u32 endian=gabi::load<u32>(0x104A0CD4),slot=0x10147620+endian*4;
- info=gabi::load<u32>(addr+0x1D8);
- u32 offset=gabi::load<u32>(info+4);
- u32 decoded=gabi::call_ptr<u32>(gabi::load<u32>(slot),offset);
- u32 num=gabi::load<u8>(info);
- u32 stages=decoded+info;
- gabi::store<u32>(info+4,stages);
- if(num>0) {
-  u32 target=gabi::load<u32>(slot),i=0;
-  do {
-   u32 room=gabi::load<u32>(stages+i*40+0x24);
-   room=gabi::call_ptr<u32>(target,room);
-   stages=gabi::load<u32>(info+4);
-   gabi::store<u32>(stages+i*40+0x24,room+info);
-   num=gabi::load<u8>(info);
-   i++;
-   if(i>=num) break;
-   stages=gabi::load<u32>(info+4);
-  } while(true);
- }
- if(!gabi::load<u32>(0x101EA6CC)) {
-  u32 points=gabi::call<u32>(0x0273ADAC,num);
-  gabi::store<u32>(0x101EA6CC,points);
-  if(!points) gabi::call(0x0273AA24,gabi::at<void>(0x10052A10),0x353,gabi::at<void>(0x100529FC));
-  for(u32 i=0;i<gabi::load<u8>(info);i++) {
-   u32 p=gabi::load<u32>(0x101EA6CC);
-   gabi::store<u8>(p+i,0);
-  }
- }
- fontCommand=gabi::load<u32>(addr+0x1D4);
- u32 font=gabi::load<u32>(fontCommand+0x118);
- gabi::store<u32>(addr+0x1DC,font);
- if(fontCommand) {
-  u32 table=gabi::load<u32>(fontCommand+0x10);
-  gabi::call_ptr(gabi::load<u32>(table+0xC),gabi::at<void>(fontCommand),3);
-  font=gabi::load<u32>(addr+0x1DC);
- }
- if(font) {
-  u32 instance=gabi::load<u32>(addr+0x1E0);
-  if(instance) gabi::call(0x027ECCC8,gabi::at<void>(gabi::load<u32>(0x101F97D4)),gabi::at<void>(instance));
- }
- u32 system=gabi::call<u32>(0xC0009C80u);
- u32 clock=gabi::load<u32>(system);
- u32 high=((u64)0x88888889u*(clock>>2))>>32;
- gabi::call(0x025F096C,high>>5);
- gabi::store<u32>(0x101F4818,gabi::load<u32>(0x101D5E90));
- u8 flags=gabi::load<u8>(0x104873CF);
- gabi::store<u8>(0x104873CF,flags|2);
- return 4;
-}
-VERIFY(0x025AD680,menu_phase2);
-s32 menu_create(void* self) {
- WWHD_FUNC(0x025AD8AC,s32,self);
- u32 save=gabi::load<u32>(0x101F84DC);
- u32 option=gabi::call<u32>(0x027200D0,gabi::at<void>(save+0x12C0));
- gabi::store<u8>(0x101EA6D2,gabi::load<u8>(option+4));
- gabi::call(0x0259170C,1);
- return gabi::call<s32>(0x02525FE4,gabi::at<void>(gabi::ea(self)+0x1C8),gabi::at<void>(0x101EA6E8),self);
-}
-VERIFY(0x025AD8AC,menu_create);
-void menu_initializer() {
- WWHD_FUNC(0x025AD90C,void);
- gabi::store<u32>(0x1047B3AC,0); gabi::store<u32>(0x1047B3A4,0);
- gabi::store<u32>(0x1047B3B0,0); gabi::store<u32>(0x1047B3A8,0);
- gabi::call(0x028F026C,gabi::at<void>(0x101EA6F0));
- f32 zero=gabi::load<f32>(0x10052A24),one=gabi::load<f32>(0x10052A28);
- gabi::store<f32>(0x1047B398,zero); gabi::store<f32>(0x1047B39C,one);
- gabi::call(0x028ED6F8,gabi::at<void>(0x1047B3A0));
- gabi::call(0x028F026C,gabi::at<void>(0x101EA6FC));
- gabi::call(0x028EAB2C,gabi::at<void>(0x1047B3A1));
- gabi::call(0x028F026C,gabi::at<void>(0x101EA708));
-}
-VERIFY(0x025AD90C,menu_initializer);
+/** Debug map selection scene. Local verification */
+#include "d/d_s_menu.h"
 
-/* 025AD9A0 this TU's sead::SafeString copy (vtable 100528C4): deleting destructor of a trivially
- * destructible class: operator delete when this != NULL and bit 0 of the flags is set */
+using namespace MenuScene;
+using SavePointer = gptr<Save>;
+using SignedBytePointer = gptr<be<s8>>;
+using FontManagerPointer = gptr<void>;
+using SignedWord = be<s32>;
+using SignedHalf = be<s16>;
+using Byte = be<u8>;
+using Word = be<u32>;
+using FloatConstant = be<f32>;
+using DoubleConstant = be<f64>;
+static SignedWord l_cursolID;
+static SignedWord l_timepat;
+static SignedHalf l_weekpat;
+static SignedBytePointer l_groupPoint;
+static Byte l_languageType;
+static Byte l_displayFlags;
+static SavePointer l_save;
+static Vtable l_safeStringVtable;
+static FloatConstant l_zero;
+static FloatConstant l_fastTimeAdv;
+static FloatConstant l_hourStep;
+static FloatConstant l_normalTime;
+static FloatConstant l_normalTimeAdv;
+static FloatConstant l_fastAdv;
+static FloatConstant l_morning;
+static FloatConstant l_noon;
+static FloatConstant l_noonAdv;
+static FloatConstant l_evening;
+static FloatConstant l_eveningAdv;
+static FloatConstant l_night;
+static FloatConstant l_nightAdv;
+static DoubleConstant l_integerBias;
+static Word l_endianMode;
+static Word l_clearColor;
+static Word l_backColor;
+static OffsetReaders l_decodeOffset;
+static FontManagerPointer l_fontManager;
+static u8 l_phaseMethod;
+static Word l_headerZeroA;
+static Word l_headerZeroB;
+static Word l_headerZeroC;
+static Word l_headerZeroD;
+static FloatConstant l_headerFloatA;
+static FloatConstant l_headerFloatB;
+static FloatConstant l_headerZero;
+static FloatConstant l_headerOne;
+static u8 l_headerTypeA;
+static u8 l_headerTypeB;
+static u8 l_headerColorA;
+static u8 l_headerColorB;
+static u8 l_headerColorC;
+
+using stage_inf = menu_of_scene_class::stage_inf;
+using room_inf = menu_of_scene_class::room_inf;
+using menu_inf = menu_of_scene_class::menu_inf;
+
+static stage_inf* selectedStage(menu_inf* info) {
+    u32 index = l_cursolID;
+    return gabi::at<stage_inf>(gabi::ea(info->stage.get()) +
+                               index * static_cast<u32>(sizeof(stage_inf)));
+}
+static be<s8>* groupPoint(u32 index) {
+    return gabi::at<be<s8>>(gabi::ea(l_groupPoint.get()) + index);
+}
+static room_inf* selectedRoom(menu_inf* info) {
+    u32 index = l_cursolID;
+    s32 room = *groupPoint(index);
+    stage_inf* stage = gabi::at<stage_inf>(gabi::ea(info->stage.get()) +
+                                           index * static_cast<u32>(sizeof(stage_inf)));
+    return gabi::at<room_inf>(gabi::ea(stage->roomPtr.get()) +
+                              static_cast<u32>(room) * static_cast<u32>(sizeof(room_inf)));
+}
+static void setString(MenuScene::SafeString* string, void* text) {
+    string->mString = static_cast<be<u8>*>(text);
+    string->__vtbl = &l_safeStringVtable;
+}
+static void setString(MenuScene::SafeString* string, const char* text) {
+    string->mString = gabi::at<be<u8>>(gabi::guest_addr(text));
+    string->__vtbl = &l_safeStringVtable;
+}
+static void terminate(MenuScene::SafeString* string) {
+    gabi::call_ptr<u32>(string->__vtbl->assureTermination.get(), string);
+}
+static u32 stringLength(be<u8>* string) {
+    u32 length = 0;
+    while (static_cast<u8>(*string) != 0) {
+        ++length;
+        string = gabi::at<be<u8>>(gabi::ea(string) + 1);
+        if (length > STRING_MAX_LENGTH)
+            return 0;
+    }
+    return length;
+}
+static bool equalBytes(be<u8>* left, be<u8>* right, u32 count) {
+    for (u32 i = 0; i < count; ++i) {
+        u8 a = *left, b = *right;
+        if (a != b)
+            return false;
+        if (!a)
+            return true;
+        left = gabi::at<be<u8>>(gabi::ea(left) + 1);
+        right = gabi::at<be<u8>>(gabi::ea(right) + 1);
+    }
+    return true;
+}
+// HD: SafeString::find keeps the native temporary slots and virtual termination calls.
+static bool contains(MenuScene::SafeString* haystack, MenuScene::SafeString* needle,
+                     MenuScene::SafeString* candidate) {
+    terminate(haystack);
+    u32 haystackLength = stringLength(haystack->mString);
+    terminate(needle);
+    u32 needleLength = stringLength(needle->mString);
+    s32 last = static_cast<s32>(haystackLength - needleLength);
+    if (last < 0)
+        return false;
+    for (u32 offset = 0; static_cast<s32>(offset) <= last; ++offset) {
+        setString(candidate, gabi::at<void>(gabi::ea(haystack->mString.get()) + offset));
+        // GHS's direct empty template call has no explicit argument register.
+        MenuString_terminateDirect();
+        terminate(candidate);
+        be<u8>* left = candidate->mString;
+        terminate(needle);
+        be<u8>* right = needle->mString;
+        if (gabi::ea(left) == gabi::ea(right) || static_cast<s32>(needleLength) <= 0 ||
+            equalBytes(left, right, needleLength))
+            return offset != 0xFFFFFFFFu;
+    }
+    return false;
+}
+
+/* 025AC790 */
+static s32 dScnMenu_Draw(menu_of_scene_class* i_this) {
+    // HD: the debug text draw is disabled.
+    return 1;
+}
+
+/* 025AC798 */
+static s32 dScnMenu_Execute(menu_of_scene_class* i_this) {
+    gabi::Local<u8[176]> storage;
+    ExecuteFrame* frame = reinterpret_cast<ExecuteFrame*>(storage.get());
+    menu_inf* info = i_this->info;
+    if (MenuPad_holdUp(0) || MenuPad_holdDown(0)) {
+        bool trig = true;
+        if (MenuPad_trigUp(0) || MenuPad_trigDown(0))
+            i_this->field_0x1e1 = REPEAT_DELAY;
+        else if (Menu_calcTimer(&i_this->field_0x1e1) == 0)
+            i_this->field_0x1e1 = REPEAT_INTERVAL;
+        else
+            trig = false;
+        if (trig) {
+            bool up = MenuPad_holdUp(0);
+            u32 id = l_cursolID;
+            if (up) {
+                id -= 1;
+                l_cursolID = id;
+                if (static_cast<s32>(id) < 0)
+                    l_cursolID = static_cast<u32>(info->num) - 1;
+            } else {
+                id += 1;
+                l_cursolID = id;
+                if (static_cast<s32>(id) >= static_cast<s32>(info->num))
+                    l_cursolID = 0;
+            }
+        }
+    }
+    if (MenuPad_holdB(0) || MenuPad_holdA(0)) {
+        bool trig = true;
+        if (MenuPad_trigB(0) || MenuPad_trigA(0))
+            i_this->field_0x1e2 = REPEAT_DELAY;
+        else if (Menu_calcTimer(&i_this->field_0x1e2) == 0)
+            i_this->field_0x1e2 = REPEAT_INTERVAL;
+        else
+            trig = false;
+        if (trig) {
+            // GHS reloads selection and resource pointers after the byte store.
+            bool back = MenuPad_holdB(0);
+            u32 id = l_cursolID;
+            be<s8>* point = groupPoint(id);
+            s32 room;
+            if (back) {
+                room = static_cast<s8>(static_cast<u8>(*point) - 1);
+                *point = room;
+                if (room < 0) {
+                    id = l_cursolID;
+                    stage_inf* stage = gabi::at<stage_inf>(
+                        gabi::ea(info->stage.get()) + id * static_cast<u32>(sizeof(stage_inf)));
+                    u32 last = static_cast<u32>(stage->roomNum) - 1;
+                    *groupPoint(id) = last;
+                }
+            } else {
+                room = static_cast<s8>(static_cast<u8>(*point) + 1);
+                *point = room;
+                id = l_cursolID;
+                stage_inf* stage = gabi::at<stage_inf>(gabi::ea(info->stage.get()) +
+                                                       id * static_cast<u32>(sizeof(stage_inf)));
+                if (room >= static_cast<s32>(stage->roomNum))
+                    *groupPoint(id) = 0;
+            }
+        }
+    }
+    // HD: start-code shoulder-button adjustment is absent; startCode remains externally supplied.
+    // HD: readable spellings below map to the original Shift-JIS menu strings.
+    if (MenuPad_trigStart(0)) {
+        setString(&frame->demoName, "demo");
+        setString(&frame->stageName, selectedStage(info));
+        MenuString_assureTermination(&frame->demoName);
+        terminate(&frame->demoName);
+        be<u8>* demo = frame->demoName.mString;
+        terminate(&frame->stageName);
+        be<u8>* stage = frame->stageName.mString;
+        bool isDemo =
+            gabi::ea(demo) == gabi::ea(stage) || equalBytes(demo, stage, STRING_COMPARE_LIMIT);
+        if (isDemo) {
+            setString(&frame->roomName, selectedRoom(info));
+            u32 id = l_cursolID;
+            s32 room = *groupPoint(id);
+            bool demo23 = true;
+            if (room > 23) {
+                setString(&frame->needleFirst, "(44)");
+                demo23 = contains(&frame->roomName, &frame->needleFirst, &frame->candidateFirst);
+                if (!demo23) {
+                    setString(&frame->needleSecond, "(49)");
+                    demo23 =
+                        contains(&frame->roomName, &frame->needleSecond, &frame->candidateSecond);
+                }
+                if (!demo23) {
+                    setString(&frame->needleLast, "(50)");
+                    demo23 = contains(&frame->roomName, &frame->needleLast, &frame->candidateThird);
+                }
+            }
+            if (demo23)
+                MenuEvent_off(l_save->mEvent, EVENT_DEMO23);
+            else
+                MenuEvent_on(l_save->mEvent, EVENT_DEMO23);
+            setString(&frame->needleLast, "(19)");
+            if (contains(&frame->roomName, &frame->needleLast, &frame->candidateLast))
+                MenuEvent_on(l_save->mEvent, EVENT_DEMO40);
+        }
+        room_inf* room = selectedRoom(info);
+        Menu_getPlay()->mEnableNextStage = 0;
+        u32 start = i_this->startCode;
+        s32 roomNo = room->roomNo;
+        u32 startCode = start ? static_cast<u32>(static_cast<s16>(start - 1))
+                              : static_cast<u32>(room->startCode);
+        f64 time = l_zero;
+        s32 layer = room->layerNo;
+        Menu_setNextStage(room->stageName, startCode, roomNo, layer, 0, 1, 0, time);
+        Menu_changeScene(i_this, PLAY_SCENE, OVERLAP0, 5, 0);
+        l_save->mRestartRoomParam = 0;
+        Play* next = Menu_getPlay();
+        StartStage* name = &next->mNextStage;
+        s32 nextRoom = Menu_getPlay()->mNextStage.mRoomNo;
+        s32 nextLayer = Menu_getPlay()->mNextStage.mLayer;
+        Menu_setAudioScene(name, nextRoom, nextLayer);
+    }
+    if (MenuPad_trigY(0)) {
+        u32 time = static_cast<u32>(l_timepat) - 1;
+        l_timepat = static_cast<s32>(time) < 0 ? 29 : time;
+    } else if (MenuPad_trigX(0)) {
+        u32 time = static_cast<u32>(l_timepat) + 1;
+        l_timepat = static_cast<s32>(time) > 29 ? 0 : time;
+    }
+    if (MenuPad_trigLeft(0)) {
+        s32 week = static_cast<s16>(static_cast<s32>(l_weekpat) - 1);
+        l_weekpat = week < 0 ? 6 : week;
+    } else if (MenuPad_trigRight(0)) {
+        s32 week = static_cast<s16>(static_cast<s32>(l_weekpat) + 1);
+        l_weekpat = week >= 7 ? 0 : week;
+    }
+    l_save->mDate = static_cast<s16>(l_weekpat);
+    Environment* environment = Menu_getEnvironment();
+    f64 zero = l_zero;
+    f64 advance = l_fastTimeAdv;
+    environment->mTimeAdv = zero;
+    s32 timepat = l_timepat;
+    if (timepat >= 6) {
+        // HD: retain the native signed integer-to-double conversion and single rounding.
+        frame->conversionHigh = 0x43300000u;
+        frame->conversionLow = (static_cast<u32>(timepat) - 6) ^ 0x80000000u;
+        f64 encoded = gabi::load<f64>(gabi::ea(&frame->conversionHigh));
+        f64 hours = to_single(encoded - static_cast<f64>(l_integerBias));
+        f64 step = l_hourStep;
+        f64 time = to_single(hours * round25(step));
+        l_save->mTime = time;
+        Menu_getEnvironment()->mTimeAdv = advance;
+    } else {
+        switch (static_cast<u32>(timepat)) {
+        case 0: {
+            f64 time = l_normalTime;
+            f64 adv = l_normalTimeAdv;
+            l_save->mTime = time;
+            Menu_getEnvironment()->mTimeAdv = adv;
+        } break;
+        case 1: {
+            f64 time = l_normalTime;
+            f64 adv = l_fastAdv;
+            l_save->mTime = time;
+            Menu_getEnvironment()->mTimeAdv = adv;
+        } break;
+        case 2: {
+            f64 time = l_morning;
+            l_save->mTime = time;
+        }
+            environment = Menu_getEnvironment();
+            {
+                f64 time = l_morning;
+                environment->mCurTime = time;
+            }
+            Menu_getEnvironment()->mTimeAdv = advance;
+            break;
+        case 3: {
+            f64 time = l_noon;
+            l_save->mTime = time;
+            environment = Menu_getEnvironment();
+            f64 adv = l_noonAdv;
+            environment->mCurTime = time;
+            Menu_getEnvironment()->mTimeAdv = adv;
+        } break;
+        case 4: {
+            f64 time = l_evening;
+            l_save->mTime = time;
+            environment = Menu_getEnvironment();
+            f64 adv = l_eveningAdv;
+            environment->mCurTime = time;
+            Menu_getEnvironment()->mTimeAdv = adv;
+        } break;
+        case 5: {
+            f64 time = l_night;
+            l_save->mTime = time;
+            environment = Menu_getEnvironment();
+            f64 adv = l_nightAdv;
+            environment->mCurTime = time;
+            Menu_getEnvironment()->mTimeAdv = adv;
+        } break;
+        }
+    }
+    return 1;
+}
+
+/* 025AD550 */
+static s32 dScnMenu_IsDelete(menu_of_scene_class* i_this) { return 1; }
+
+/* 025AD558 */
+static s32 dScnMenu_Delete(menu_of_scene_class* i_this) {
+    Font* font = i_this->font;
+    if (font)
+        gabi::call_ptr(font->__vtbl->deletingDestructor.get(), font, 3);
+    Menu_free(i_this->info);
+    Menu_free(i_this->fontRes);
+    u8 flags = static_cast<u8>(l_displayFlags) & ~2;
+    Save* save = l_save;
+    l_displayFlags = flags;
+    Menu_setRestartOption(save->mRestart, 0);
+    // HD: menu lifecycle also toggles the frontend mode.
+    Menu_setFrontendMode(0);
+    return 1;
+}
+
+/* 025AD5E0 */
+static s32 phase_1(menu_of_scene_class* i_this) {
+    DvdCommand* command = Menu_createDvd("/Common/Debug/DebugMenu/Menu1.dat", 0, 0);
+    i_this->command = command;
+    if (!command)
+        Menu_assert("d_s_menu.cpp", 0x308, "i_this->command != NULL");
+    command = Menu_createDvd("/Common/Debug/DebugMenu/kanfont_fix16.bfn", 0, 0);
+    i_this->fontCommand = command;
+    if (!command)
+        Menu_assert("d_s_menu.cpp", 0x30B, "i_this->fontCommand != NULL");
+    return cPhs_NEXT_e;
+}
+
+/* 025AD680 */
+static s32 phase_2(menu_of_scene_class* i_this) {
+    DvdCommand* command = i_this->command;
+    if (!command->mSync)
+        return cPhs_INIT_e;
+    DvdCommand* fontCommand = i_this->fontCommand;
+    if (!fontCommand->mSync)
+        return cPhs_INIT_e;
+    menu_inf* info = static_cast<menu_inf*>(command->mMemAddress.get());
+    i_this->info = info;
+    if (!info)
+        Menu_assert("d_s_menu.cpp", 0x338, "i_this->info != NULL");
+    command = i_this->command;
+    if (command)
+        gabi::call_ptr(command->__vtbl->deletingDestructor.get(), command, 3);
+    // HD: resource-relative pointers are decoded through the selected endian reader.
+    u32 endian = l_endianMode;
+    gabi::gfn* decoder = gabi::at<gabi::gfn>(gabi::ea(&l_decodeOffset) + endian * 4);
+    info = i_this->info;
+    u32 offset = gabi::ea(info->stage.get());
+    u32 decoded = gabi::call_ptr<u32>(decoder->get(), offset);
+    u32 num = info->num;
+    stage_inf* stages = gabi::at<stage_inf>(decoded + gabi::ea(info));
+    info->stage = stages;
+    if (num > 0) {
+        u32 target = decoder->get();
+        for (u32 i = 0;; ++i) {
+            stage_inf* stage =
+                gabi::at<stage_inf>(gabi::ea(stages) + i * static_cast<u32>(sizeof(stage_inf)));
+            u32 room = gabi::ea(stage->roomPtr.get());
+            room = gabi::call_ptr<u32>(target, room);
+            stages = info->stage;
+            stage = gabi::at<stage_inf>(gabi::ea(stages) + i * static_cast<u32>(sizeof(stage_inf)));
+            stage->roomPtr = gabi::at<room_inf>(room + gabi::ea(info));
+            num = info->num;
+            if (i + 1 >= num)
+                break;
+            stages = info->stage;
+        }
+    }
+    if (!l_groupPoint) {
+        be<s8>* points = Menu_newArray(num);
+        l_groupPoint = points;
+        if (!points)
+            Menu_assert("d_s_menu.cpp", 0x353, "l_groupPoint != NULL");
+        for (u32 i = 0; i < static_cast<u32>(info->num); ++i)
+            *groupPoint(i) = 0;
+    }
+    fontCommand = i_this->fontCommand;
+    void* font = fontCommand->mMemAddress;
+    i_this->fontRes = font;
+    if (fontCommand) {
+        gabi::call_ptr(fontCommand->__vtbl->deletingDestructor.get(), fontCommand, 3);
+        font = i_this->fontRes;
+    }
+    // HD: this build uses an existing font instance rather than allocating myFontClass.
+    if (font) {
+        Font* instance = i_this->font;
+        if (instance)
+            Menu_changeFont(l_fontManager, instance);
+    }
+    be<u32>* system = Menu_getSystemClock();
+    u32 clock = *system;
+    u32 high = (static_cast<u64>(0x88888889u) * (clock >> 2)) >> 32;
+    Menu_setTickRate(high >> 5);
+    l_backColor = static_cast<u32>(l_clearColor);
+    l_displayFlags = static_cast<u8>(l_displayFlags) | 2;
+    return cPhs_COMPLEATE_e;
+}
+
+/* 025AD8AC */
+static s32 dScnMenu_Create(menu_of_scene_class* i_this) {
+    Save* save = l_save;
+    Option* option = Menu_getOption(save->mOption);
+    l_languageType = option->mLanguage;
+    Menu_setFrontendMode(1);
+    return Menu_phaseHandler(i_this->mPhs, &l_phaseMethod, i_this);
+}
+
+// HD: compiler-generated and template code of this translation unit.
+/* 025AD90C */
+static void __sinit_d_s_menu_cpp() {
+    l_headerZeroA = 0;
+    l_headerZeroB = 0;
+    l_headerZeroC = 0;
+    l_headerZeroD = 0;
+    Menu_initColor(&l_headerColorA);
+    f32 zero = l_headerZero, one = l_headerOne;
+    l_headerFloatA = zero;
+    l_headerFloatB = one;
+    Menu_initTypeA(&l_headerTypeA);
+    Menu_initColor(&l_headerColorB);
+    Menu_initTypeB(&l_headerTypeB);
+    Menu_initColor(&l_headerColorC);
+}
+/* 025AD9A0 */
 static void SafeString_deletingDtor_d_s_menu(u32 p, u32 flags) {
-    WWHD_FUNC(0x025AD9A0, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) gabi::call(0x0273AF40, p);
+    if (p && (flags & 1))
+        Menu_delete(p);
 }
-VERIFY(0x025AD9A0, SafeString_deletingDtor_d_s_menu);
-
-/* 025AD9B4 this TU's sead::SafeString copy assureTerminationImpl_ (vtable 100528C4; also called directly by dScnMenu_Execute): empty function */
-static void SafeString_assureTerminationImpl_d_s_menu(u32 p) {
-    WWHD_FUNC(0x025AD9B4, void, p);
-}
-VERIFY(0x025AD9B4, SafeString_assureTerminationImpl_d_s_menu);
+/* 025AD9B4 */
+static void SafeString_assureTerminationImpl_d_s_menu(u32 p) {}
+/* WWHD glue
+data l_cursolID 101EA6C4
+data l_timepat 101EA6C8
+data l_groupPoint 101EA6CC
+data l_weekpat 101EA6D0
+data l_languageType 101EA6D2
+data l_save 101F84DC
+data l_displayFlags 104873CF
+data l_safeStringVtable 100528C4
+str 1005291C "demo" renamed
+str 10052924 "(44)" renamed
+str 10052930 "(49)" renamed
+str 1005293C "(50)" renamed
+str 10052948 "(19)" renamed
+data l_zero 100528DC
+data l_fastTimeAdv 100528E0
+data l_integerBias 100528E8
+data l_hourStep 100528F0
+data l_normalTime 100528F4
+data l_normalTimeAdv 100528F8
+data l_fastAdv 100528FC
+data l_morning 10052900
+data l_noon 10052904
+data l_noonAdv 10052908
+data l_evening 1005290C
+data l_eveningAdv 10052910
+data l_night 10052914
+data l_nightAdv 10052918
+data l_endianMode 104A0CD4
+data l_decodeOffset 10147620
+data l_fontManager 101F97D4
+data l_backColor 101F4818
+data l_clearColor 101D5E90
+data l_phaseMethod 101EA6E8
+data l_headerZeroA 1047B3AC
+data l_headerZeroB 1047B3A4
+data l_headerZeroC 1047B3B0
+data l_headerZeroD 1047B3A8
+data l_headerColorA 101EA6F0
+data l_headerFloatA 1047B398
+data l_headerFloatB 1047B39C
+data l_headerZero 10052A24
+data l_headerOne 10052A28
+data l_headerTypeA 1047B3A0
+data l_headerColorB 101EA6FC
+data l_headerTypeB 1047B3A1
+data l_headerColorC 101EA708
+str 10052954 "/Common/Debug/DebugMenu/Menu1.dat"
+str 10052978 "/Common/Debug/DebugMenu/kanfont_fix16.bfn"
+str 100529A4 "d_s_menu.cpp" in 025AD5E0
+str 10052A10 "d_s_menu.cpp" in 025AD680
+str 100529B4 "i_this->command != NULL"
+str 100529CC "i_this->fontCommand != NULL"
+str 100529E8 "i_this->info != NULL"
+str 100529FC "l_groupPoint != NULL"
+ext 020075E0 u32 MenuPad_holdUp(u32)
+ext 0200760C u32 MenuPad_holdDown(u32)
+ext 02007764 u32 MenuPad_trigUp(u32)
+ext 02007790 u32 MenuPad_trigDown(u32)
+ext 020076E0 u32 MenuPad_holdB(u32)
+ext 020076BC u32 MenuPad_holdA(u32)
+ext 020078BC u32 MenuPad_trigB(u32)
+ext 02007898 u32 MenuPad_trigA(u32)
+ext 02007940 u32 MenuPad_trigStart(u32)
+ext 02007914 u32 MenuPad_trigY(u32)
+ext 020078E8 u32 MenuPad_trigX(u32)
+ext 020077BC u32 MenuPad_trigLeft(u32)
+ext 020077E8 u32 MenuPad_trigRight(u32)
+ext 0207A9A0 u32 Menu_calcTimer(be<u8>*)
+ext 025AD9B4 u32 MenuString_assureTermination(MenuScene::SafeString*)
+ext 025AD9B4 u32 MenuString_terminateDirect()
+ext 025B8B7C u32 MenuEvent_off(void*, u32)
+ext 025B8B68 u32 MenuEvent_on(void*, u32)
+ext 025200D4 MenuScene::Play* Menu_getPlay()
+ext 0252012C u32 Menu_setNextStage(void*, u32, s32, s32, u32, u32, u32, f64)
+ext 025DC86C u32 Menu_changeScene(menu_of_scene_class*, u32, u32, u32, u32)
+ext 025E17CC u32 Menu_setAudioScene(MenuScene::StartStage*, s32, s32)
+ext 02555D0C MenuScene::Environment* Menu_getEnvironment()
+ext 027EC0B0 void Menu_free(void*)
+ext 025B9864 void Menu_setRestartOption(void*, u32)
+ext 0259170C void Menu_setFrontendMode(u32)
+ext 025E255C MenuScene::DvdCommand* Menu_createDvd(const char*, u32, u32)
+ext 0273AA24 void Menu_assert(const char*, u32, const char*)
+ext 0273ADAC be<s8>* Menu_newArray(u32)
+ext 027ECCC8 void Menu_changeFont(void*, MenuScene::Font*)
+ext C0009C80 be<u32>* Menu_getSystemClock()
+ext 025F096C void Menu_setTickRate(u32)
+ext 027200D0 MenuScene::Option* Menu_getOption(void*)
+ext 02525FE4 s32 Menu_phaseHandler(void*, void*, menu_of_scene_class*)
+ext 028F026C void Menu_initColor(void*)
+ext 028ED6F8 void Menu_initTypeA(void*)
+ext 028EAB2C void Menu_initTypeB(void*)
+ext 0273AF40 void Menu_delete(u32)
+*/

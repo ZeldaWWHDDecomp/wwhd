@@ -1,120 +1,160 @@
-#include "gabi.h"
+/**
+ * c_m3d_g_sph.cpp
+ * Component - sphere geometry
+ */
+#include "SSystem/SComponent/c_m3d_g_sph.h"
 #include <cmath>
-using namespace gabi;
-struct SphVectorLocal { be<f32> v[3]; };
 
-void* sph_ctor(void* self) {
-    WWHD_FUNC(0x02018C40, void*, self);
-    if (!self) self = call<void*>(0x0273AD10, 20);
-    if (self) {
-        f32 radius = load<f32>(0x100033D4);
-        store<u32>(ea(self)+16, 0x100033C4);
-        store<f32>(ea(self)+12, radius);
+static const f32 initialRadius = 0.0f;
+static const f32 rangeMin = -1.0e32;
+static const f32 rangeMax = 1.0e32;
+static const f32 headerPiMin = -3.1415927;
+static const f32 headerPiMax = 3.1415927;
+enum : u32 { sphereVtable = 0x100033C4 }; // HD: sphere vtable.
+
+// HD: translation-unit header statics. Use the cylinder header's existing initialization API
+// without importing bindings.h, which defines a caller-only cM3dGSph class.
+struct HeaderStatics {
+    be<f32> piMin, piMax;
+    u8 byteObject, flagObject;
+    u8 padding[2];
+};
+struct HeaderZeroObject { be<u32> words[4]; };
+#define headerStatics (*gabi::at<HeaderStatics>(0x101FF964))
+#define headerZeroObject (*gabi::at<HeaderZeroObject>(0x101FF970))
+
+/* 02018C40 */
+// HD: allocating constructor initializes radius; GameCube constructor is empty.
+static cM3dGSph* cM3dGSph__ct(cM3dGSph* self) {
+    if (self == NULL) {
+        self = (cM3dGSph*)operator_new(sizeof(cM3dGSph));
+    }
+    if (self != NULL) {
+        f32 radius = initialRadius;
+        self->__vtbl = sphereVtable;
+        self->mRadius = radius;
     }
     return self;
 }
-VERIFY(0x02018C40, sph_ctor);
 
-void sph_set_r(void* self, f32 radius) {
-    WWHD_FUNC(0x02018C8C, void, self, radius);
-    if (std::isnan(radius)) call<void>(0x0273AA24, at<void>(0x100033E0), 66, at<void>(0x1000340C));
-    if (!(load<f32>(0x100033D8) < radius && radius < load<f32>(0x100033DC)))
-        call<void>(0x0273AA24, at<void>(0x100033E0), 67, at<void>(0x100033F0));
-    store<f32>(ea(self)+12, radius);
+/* 02018C8C */
+// HD: assertion strings and line numbers differ from GameCube.
+void cM3dGSph::SetR(f32 radius) {
+    if (std::isnan(radius)) {
+        JUT_ASSERT_fail(STR(0x100033E0), 66, STR(0x1000340C));
+    }
+    if (!(rangeMin < radius && radius < rangeMax)) {
+        JUT_ASSERT_fail(STR(0x100033E0), 67, STR(0x100033F0));
+    }
+    mRadius = radius;
 }
-VERIFY(0x02018C8C, sph_set_r);
 
-void sph_set_c(void* self, void* center) {
-    WWHD_FUNC(0x02018D40, void, self, center);
-    u32 p = ea(center);
-    if (std::isnan(load<f32>(p))) call<void>(0x0273AA24, at<void>(0x10003440), 31, at<void>(0x10003450));
-    if (std::isnan(load<f32>(p+4))) call<void>(0x0273AA24, at<void>(0x10003440), 32, at<void>(0x10003488));
-    if (std::isnan(load<f32>(p+8))) call<void>(0x0273AA24, at<void>(0x10003440), 33, at<void>(0x100034C0));
-    f32 x = load<f32>(p);
-    f32 lower = load<f32>(0x100033D8);
+/* 02018D40 */
+void cM3dGSph::SetC(const cXyz* center) {
+    if (std::isnan((f32)center->x)) {
+        JUT_ASSERT_fail(STR(0x10003440), 31, STR(0x10003450));
+    }
+    if (std::isnan((f32)center->y)) {
+        JUT_ASSERT_fail(STR(0x10003440), 32, STR(0x10003488));
+    }
+    if (std::isnan((f32)center->z)) {
+        JUT_ASSERT_fail(STR(0x10003440), 33, STR(0x100034C0));
+    }
+    f32 x = (f32)center->x;
+    f32 lower = rangeMin;
     f32 y, z;
     bool valid = false;
     if (lower < x) {
-        f32 upper = load<f32>(0x100033DC);
+        f32 upper = rangeMax;
         if (x < upper) {
-            y = load<f32>(p+4);
+            y = (f32)center->y;
             if (lower < y && y < upper) {
-                z = load<f32>(p+8);
+                z = (f32)center->z;
                 valid = lower < z && z < upper;
             }
         }
     }
     if (!valid) {
-        call<void>(0x0273AA24, at<void>(0x10003440), 34, at<void>(0x100034F8));
-        y = load<f32>(p+4);
-        z = load<f32>(p+8);
-        x = load<f32>(p);
+        JUT_ASSERT_fail(STR(0x10003440), 34, STR(0x100034F8));
+        y = (f32)center->y;
+        z = (f32)center->z;
+        x = (f32)center->x;
     }
-    store<f32>(ea(self)+4, y);
-    store<f32>(ea(self)+8, z);
-    store<f32>(ea(self), x);
+    mCenter.y = y;
+    mCenter.z = z;
+    mCenter.x = x;
 }
-VERIFY(0x02018D40, sph_set_c);
 
-void sph_set(void* self, void* center, f32 radius) {
-    WWHD_FUNC(0x02018E88, void, self, center, radius);
-    sph_set_c(self, center);
-    sph_set_r(self, radius);
+/* 02018E88 */
+void cM3dGSph::Set(const cXyz* center, f32 radius) {
+    SetC(center);
+    SetR(radius);
 }
-VERIFY(0x02018E88, sph_set);
 
-void sph_set_src(void* self, void* source) {
-    WWHD_FUNC(0x02018EDC, void, self, source);
-    Local<SphVectorLocal> center;
-    f32 x = load<f32>(ea(source));
-    f32 y = load<f32>(ea(source)+4);
-    f32 z = load<f32>(ea(source)+8);
-    center.get()->v[0] = x;
-    center.get()->v[1] = y;
-    center.get()->v[2] = z;
-    sph_set_c(self, center.get());
-    f32 radius = load<f32>(ea(source)+12);
-    sph_set_r(self, radius);
+/* 02018EDC */
+void cM3dGSph::SetShape(const cM3dGSphS* source) {
+    gabi::Local<cXyz> center;
+    f32 x = source->mCenter.x;
+    f32 y = source->mCenter.y;
+    f32 z = source->mCenter.z;
+    center->x = x;
+    center->y = y;
+    center->z = z;
+    SetC(center.get());
+    f32 radius = source->mRadius;
+    SetR(radius);
 }
-VERIFY(0x02018EDC, sph_set_src);
 
-void sph_set_xyz(void* self, f32 x, f32 y, f32 z) {
-    WWHD_FUNC(0x02018F3C, void, self, x, y, z);
-    Local<SphVectorLocal> center;
-    center.get()->v[2] = z;
-    center.get()->v[1] = y;
-    center.get()->v[0] = x;
-    sph_set_c(self, center.get());
+/* 02018F3C */
+// HD: routes scalar coordinates through the checked center setter.
+void cM3dGSph::SetCxyz(f32 x, f32 y, f32 z) {
+    gabi::Local<cXyz> center;
+    center->z = z;
+    center->y = y;
+    center->x = x;
+    SetC(center.get());
 }
-VERIFY(0x02018F3C, sph_set_xyz);
 
-u32 sph_cross_cyl(void* self, void* other, void* out) {
-    WWHD_FUNC(0x02018F6C, u32, self, other, out);
-    Local<be<f32>> distance;
-    return call<u32>(0x02013854, other, self, out, distance.get());
+/* 02018F6C */
+// HD: cross methods preserve the full integer result instead of narrowing to GameCube bool.
+u32 cM3dGSph::crossCylinder(const cM3dGCyl* other, cXyz* out) {
+    gabi::Local<be<f32>> distance;
+    return cM3d_Cross_CylSph(other, this, out, distance.get());
 }
-VERIFY(0x02018F6C, sph_cross_cyl);
 
-u32 sph_cross_sph(void* self, void* other, void* out) {
-    WWHD_FUNC(0x02018F9C, u32, self, other, out);
-    return call<u32>(0x02014010, other, self, out);
+/* 02018F9C */
+u32 cM3dGSph::crossSphere(const cM3dGSph* other, cXyz* out) {
+    return cM3d_Cross_SphSph(other, this, out);
 }
-VERIFY(0x02018F9C, sph_cross_sph);
 
-void sph_sinit() {
-    WWHD_FUNC(0x02018FAC, void);
-    store<u32>(0x101FF978, 0);
-    store<u32>(0x101FF970, 0);
-    store<u32>(0x101FF97C, 0);
-    store<u32>(0x101FF974, 0);
-    call<void>(0x028F026C, at<void>(0x1018C9AC));
-    f32 a = load<f32>(0x10003564);
-    f32 b = load<f32>(0x10003568);
-    store<f32>(0x101FF964, a);
-    store<f32>(0x101FF968, b);
-    call<void>(0x028ED6F8, at<void>(0x101FF96C));
-    call<void>(0x028F026C, at<void>(0x1018C9B8));
-    call<void>(0x028EAB2C, at<void>(0x101FF96D));
-    call<void>(0x028F026C, at<void>(0x1018C9C4));
+/* 02018FAC */
+static void __sinit_c_m3d_g_sph_cpp() {
+    headerZeroObject.words[2] = 0;
+    headerZeroObject.words[0] = 0;
+    headerZeroObject.words[3] = 0;
+    headerZeroObject.words[1] = 0;
+    registerGlobalObject(gabi::at<void>(0x1018C9AC));
+    f32 lo = headerPiMin;
+    f32 hi = headerPiMax;
+    headerStatics.piMin = lo;
+    headerStatics.piMax = hi;
+    initializeHeaderByte(&headerStatics.byteObject);
+    registerGlobalObject(gabi::at<void>(0x1018C9B8));
+    initializeHeaderFlag(&headerStatics.flagObject);
+    registerGlobalObject(gabi::at<void>(0x1018C9C4));
 }
-VERIFY(0x02018FAC, sph_sinit);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data initialRadius 100033D4
+data rangeMin 100033D8
+data rangeMax 100033DC
+data headerPiMin 10003564
+data headerPiMax 10003568
+ext 0273AD10 void* operator_new(u32)
+ext 0273AA24 void JUT_ASSERT_fail(const char*, s32, const char*)
+ext 028F026C void registerGlobalObject(void*)
+ext 028ED6F8 void initializeHeaderByte(void*)
+ext 028EAB2C void initializeHeaderFlag(void*)
+ext 02013854 s32 cM3d_Cross_CylSph(const cM3dGCyl*, const cM3dGSph*, cXyz*, be<f32>*)
+ext 02014010 u32 cM3d_Cross_SphSph(const cM3dGSph*, const cM3dGSph*, cXyz*)
+*/

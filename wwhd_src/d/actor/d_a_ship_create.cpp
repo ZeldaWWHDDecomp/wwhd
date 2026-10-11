@@ -5,48 +5,59 @@
  * Ported from the GameCube decompilation
  * (zeldaret/tww src/d/actor/d_a_ship.cpp) to the WWHD layout and verified against cking.rpx.
  */
-#include "d/actor/d_a_ship.h"
+#include "d/actor/d_a_ship_create.h"
 
-/* 02606900 dRes_control_c::getRes(const SafeString& arc, const SafeString& name) */
-static inline void* ship_getResName(u32 arc, u32 name) {
+static u32 resourceControl;
+static u32 arrayHeaderSize;
+static ShipCreateResourceArc resourceArc;
+static dCcD_SrcCyl cyl_src;
+static dCcD_SrcSph sph_src;
+static dCcD_SrcSph rope_sph_src;
+static cXyz tiller_top_offset;
+
+// HD: resource names use this ship translation unit's SafeString vtable.
+static inline void* ship_getResName(const char* arc, const char* name) {
     gabi::Local<daShip_SafeString> a;
     gabi::Local<daShip_SafeString> n;
-    a->mStr = arc;
+    a->mStr = gabi::guest_addr(arc);
     a->__vtbl = SAFESTRING_VTBL;
-    n->mStr = name;
+    n->mStr = gabi::guest_addr(name);
     n->__vtbl = SAFESTRING_VTBL;
-    return gabi::call<void*>(0x02606900, gabi::load<u32>(0x101F4F28), a.get(), n.get());
+    return ShipCreate_getResource(resourceControl, a.get(), n.get());
 }
-static inline void* ship_getResIdx(u32 arc, s32 idx) {
-    return dComIfG_getObjectRes(STR(arc), idx, SAFESTRING_VTBL);
+static inline void* ship_getResIdx(const char* arc, s32 idx) {
+    return dComIfG_getObjectRes(arc, idx, SAFESTRING_VTBL);
 }
 
 /* PowerPC slw/srw: shift amounts 32..63 give 0 */
-static inline u32 ppc_slw(u32 x, u32 n) { n &= 63; return n >= 32 ? 0 : x << n; }
-static inline u32 ppc_srw(u32 x, u32 n) { n &= 63; return n >= 32 ? 0 : x >> n; }
+static inline u32 ppc_slw(u32 x, u32 n) {
+    n &= 63;
+    return n >= 32 ? 0 : x << n;
+}
+static inline u32 ppc_srw(u32 x, u32 n) {
+    n &= 63;
+    return n >= 32 ? 0 : x >> n;
+}
 
-/* 0247AF98: HD-only. In the stage "sea_E", the textures fn_head1, fn_main1 and new_fn_eye of a model
- * data are replaced with their "<name>_D46.ftxb" versions from the resources (the texture header is
- * copied over the entry and its offsets rebased), and the entry's bit is set in the data's
- * replaced-texture mask. Probably the boat's look in the ending sea. */
+// HD: replace the ending ship textures with their Demo46 versions and mark the entries.
+/* 0247AF98 */
 static void daShip_replaceSeaETextures(J3DModelData* data) {
-    WWHD_FUNC(0x0247AF98, void, data);
-    if (!ship_isStartStage(0x1003A5D4 /* "sea_E" */)) {
+    if (!ship_isStartStage(gabi::guest_addr("sea_E"))) {
         return;
     }
-    u32 tex = gabi::load<u32>(gabi::ea(data) + 0x30);
-    u32 names = gabi::load<u32>(gabi::ea(data) + 0x34);
-    for (u16 i = 0; i < gabi::load<u16>(tex); i++) {
+    ShipCreateTextureTable* tex = reinterpret_cast<ShipCreateModelTextures*>(data)->mTexture;
+    u32 names = reinterpret_cast<ShipCreateModelTextures*>(data)->mTextureName;
+    for (u16 i = 0; i < tex->mNum; i++) {
         gabi::Local<daShip_SafeString> name;
-        name->mStr = gabi::call<u32>(0x027ED1F0 /* JUTNameTab::getName */, names, (u32)i);
+        name->mStr = gabi::guest_addr(ShipCreate_getTextureName(names, (u32)i));
         name->__vtbl = SAFESTRING_VTBL;
         gabi::Local<daShip_SafeString> b1;
-        b1->mStr = 0x1003A5E8; /* "fn_head1" */
+        b1->mStr = gabi::guest_addr("fn_head1");
         b1->__vtbl = SAFESTRING_VTBL;
         /* the first comparison: name's first assureTermination is a direct call (this TU's copy) */
         bool hit;
         {
-            gabi::call(0x024832A0, name.get());
+            ShipCreate_assureTermination(name.get());
             ship_ss_assure(name.get());
             u32 pa = name->mStr;
             ship_ss_assure(b1.get());
@@ -56,8 +67,8 @@ static void daShip_replaceSeaETextures(J3DModelData* data) {
             } else {
                 hit = false;
                 for (u32 n = 0; n < 0x40001; n++) {
-                    u8 ca = gabi::load<u8>(pa + n);
-                    u8 cb = gabi::load<u8>(pb + n);
+                    u8 ca = gabi::at<be<u8>>(pa)[n];
+                    u8 cb = gabi::at<be<u8>>(pb)[n];
                     if (ca != cb)
                         break;
                     if (ca == 0) {
@@ -69,12 +80,12 @@ static void daShip_replaceSeaETextures(J3DModelData* data) {
         }
         if (!hit) {
             gabi::Local<daShip_SafeString> b2;
-            b2->mStr = 0x1003A5F4; /* "fn_main1" */
+            b2->mStr = gabi::guest_addr("fn_main1");
             b2->__vtbl = SAFESTRING_VTBL;
             hit = ship_ss_cmp(name.get(), b2.get());
             if (!hit) {
                 gabi::Local<daShip_SafeString> b3;
-                b3->mStr = 0x1003A600; /* "new_fn_eye" */
+                b3->mStr = gabi::guest_addr("new_fn_eye");
                 b3->__vtbl = SAFESTRING_VTBL;
                 hit = ship_ss_cmp(name.get(), b3.get());
             }
@@ -83,346 +94,348 @@ static void daShip_replaceSeaETextures(J3DModelData* data) {
             continue;
         }
         ship_ss_assure(name.get());
-        gabi::Local<u8[0x2C]> buf;
+        gabi::Local<ShipCreateFormattedString> buf;
         u32 bf = gabi::ea(buf.get());
-        gabi::call(0x02482CFC /* FormatFixedSafeString<32>(fmt, ...) */, bf, 0x1003A5DC /* "%s_D46.ftxb" */, (u32)name->mStr);
-        gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(bf + 4) + 0x14), bf);
+        ShipCreate_formatTextureName(buf.get(), "%s_D46.ftxb", name->mStr);
+        gabi::call_ptr(gabi::at<ShipCreateVirtualTable>(buf->__vtbl)->mMethod, bf);
         gabi::Local<daShip_SafeString> k1;
         gabi::Local<daShip_SafeString> k2;
-        k1->mStr = 0x1047E6B8;
+        k1->mStr = gabi::ea(&resourceArc);
         k1->__vtbl = SAFESTRING_VTBL;
-        k2->mStr = gabi::load<u32>(bf);
+        k2->mStr = buf->mStr;
         k2->__vtbl = SAFESTRING_VTBL;
-        u32 res = gabi::call<u32>(0x02606900, gabi::load<u32>(0x101F4F28), k1.get(), k2.get());
-        u32 e = gabi::load<u32>(tex + 4) + i * 0x24;
-        for (int k = 0; k < 0x24; k += 4) {
-            gabi::store<u32>(e + k, gabi::load<u32>(res + k));
+        u32 res = gabi::ea(ShipCreate_getResource(resourceControl, k1.get(), k2.get()));
+        ShipCreateTextureEntry* entry = &tex->mEntries[i];
+        be<u32>* src = gabi::at<be<u32>>(res);
+        be<u32>* dst = reinterpret_cast<be<u32>*>(entry);
+        for (int k = 0; k < 9; k++) {
+            dst[k] = src[k];
         }
-        e = gabi::load<u32>(tex + 4) + i * 0x24;
-        gabi::store<u32>(e + 0x1C, gabi::load<u32>(e + 0x1C) + res - e);
-        e = gabi::load<u32>(tex + 4) + i * 0x24;
-        gabi::store<u32>(e + 0xC, gabi::load<u32>(e + 0xC) + res - e);
-        e = gabi::load<u32>(tex + 4) + i * 0x24;
-        gabi::store<u32>(e + 0x20, gabi::load<u32>(res + 0x20));
+        entry = &tex->mEntries[i];
+        entry->mImageOffset = entry->mImageOffset + res - gabi::ea(entry);
+        entry = &tex->mEntries[i];
+        entry->mPaletteOffset = entry->mPaletteOffset + res - gabi::ea(entry);
+        entry = &tex->mEntries[i];
+        entry->mHDImage = gabi::at<ShipCreateTextureEntry>(res)->mHDImage;
         /* mask |= (u64 at +0x18) << i, a 128-bit mask at +0x8 */
-        u32 hi = gabi::load<u32>(tex + 0x18);
-        u32 lo = gabi::load<u32>(tex + 0x1C);
+        u32 hi = tex->mMaskHigh;
+        u32 lo = tex->mMaskLow;
         u32 n = i;
-        u32 at = 8;
+        u32 at = 0;
         if (n >= 0x40) {
             n -= 0x40;
-            at = 0x10;
+            at = 2;
         }
         u32 shi = ppc_slw(lo, n + 0x20) | (ppc_slw(hi, n) | ppc_srw(lo, 0x20 - n));
         u32 slo = ppc_slw(lo, n);
-        gabi::store<u32>(tex + at, gabi::load<u32>(tex + at) | shi);
-        gabi::store<u32>(tex + at + 4, gabi::load<u32>(tex + at + 4) | slo);
+        tex->mReplacedMask[at] |= shi;
+        tex->mReplacedMask[at + 1] |= slo;
     }
 }
-VERIFY(0x0247AF98, daShip_replaceSeaETextures);
 
-/* 0247B400: HD-only. Creates the cannon-sight packet's model (+0x9C) and its 25 segments (+0xA0) */
-static void daShip_sightPacket_create(u8* pkt, u32 heap) {
-    WWHD_FUNC(0x0247B400, void, pkt, heap);
-    u32 p = gabi::ea(pkt);
-    if (gabi::load<u32>(p + 0x9C) == 0) {
-        u32 m = gabi::call<u32>(0x0273B050 /* operator new(size, heap, align) */, 0xC, heap, 4);
+// HD: create the cannon-sight model and its 25 segments.
+/* 0247B400 */
+static void daShip_sightPacket_create(ShipCreateSightPacket* pkt, u32 heap) {
+    if (pkt->mModel == 0) {
+        u32 m = ShipCreate_new(0xC, heap, 4);
         if (m != 0) {
-            m = gabi::call<u32>(0x027FD6F4, m);
+            m = ShipCreate_modelConstruct(m);
         }
-        gabi::store<u32>(p + 0x9C, m);
-        gabi::call(0x027FD838, m, 1, heap);
+        pkt->mModel = m;
+        ShipCreate_modelCreate(m, 1, heap);
     }
-    if (gabi::load<u32>(p + 0xA0) == 0) {
-        u32 a = gabi::call<u32>(0x0273B0D4 /* operator new[](size, heap, align) */, gabi::load<u32>(0x101FCD08) + 0x1068, heap, 4);
+    if (pkt->mSegments == 0) {
+        u32 a = ShipCreate_newArray(arrayHeaderSize + 0x1068, heap, 4);
         if (a != 0) {
-            a = gabi::call<u32>(0x028EFF8C /* __construct_new_array */, a + gabi::load<u32>(0x101FCD08), 0x19, 0xA8, 0x02482E30, 0);
+            a = ShipCreate_constructNewArray(a + arrayHeaderSize, 0x19, 0xA8,
+                                             ShipCreateTU::segmentConstructor, 0);
         } else {
             a = 0;
         }
-        gabi::store<u32>(p + 0xA0, a);
+        pkt->mSegments = a;
         for (int i = 0; i < 0x19; i++) {
-            gabi::call(0x027FB5D4, gabi::load<u32>(p + 0xA0) + i * 0xA8, heap);
+            ShipCreate_segmentCreate(pkt->mSegments + i * 0xA8, heap);
         }
     }
 }
-VERIFY(0x0247B400, daShip_sightPacket_create);
 
 /* 0247B508 */
 BOOL daShip_c::createHeap() {
-    WWHD_FUNC(0x0247B508, BOOL, this);
-    if (checkStateFlg((daSHIP_SFLG)0x200)) {
-        m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e + 1;
+    ShipCreateEffectModels* hd = reinterpret_cast<ShipCreateEffectModels*>(this);
+    if (checkStateFlg(daSFLG_SAIL_ON_e)) {
+        m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_ON2_e;
     } else {
         m0392 = dRes_INDEX_SHIP_BCK_FN_MAST_OFF2_e;
     }
-    J3DModelData* modelData = (J3DModelData*)ship_getResIdx(0x101D034C, 0x11 /* fn_body.bdl */);
+    J3DModelData* modelData = (J3DModelData*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BDL_FN_BODY_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1003A664), 0x216A, STR(0x1003A674));
+        JUT_ASSERT_fail("d_a_ship.cpp", 0x216A, "modelData != (0)");
     }
     daShip_replaceSeaETextures(modelData);
-    J3DAnmTransform* anm = (J3DAnmTransform*)ship_getResIdx(0x101D034C, (u16)m0392);
-    mpBodyAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 1.0f, 0, -1, 0, nullptr, 0x80000, 0x11200202);
+    J3DAnmTransform* anm = (J3DAnmTransform*)ship_getResIdx("Ship", (u16)m0392);
+    mpBodyAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 1.0f, 0, -1, 0,
+                                       nullptr, 0x80000, 0x11200202);
     if (mpBodyAnm == nullptr || mpBodyAnm->getModel() == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)ship_getResIdx(0x101D034C, 0x13 /* vfncn.bdl */);
+    modelData = (J3DModelData*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BDL_VFNCN_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1003A664), 0x2195, STR(0x1003A674));
+        JUT_ASSERT_fail("d_a_ship.cpp", 0x2195, "modelData != (0)");
     }
     mpCannonModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
     if (mpCannonModel == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)ship_getResIdx(0x101D034C, 0x14 /* vfncr.bdl */);
+    modelData = (J3DModelData*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BDL_VFNCR_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1003A664), 0x21A2, STR(0x1003A674));
+        JUT_ASSERT_fail("d_a_ship.cpp", 0x21A2, "modelData != (0)");
     }
     mpSalvageArmModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
     if (mpSalvageArmModel == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)ship_getResIdx(0x1003A60C /* "Link" */, 0x2E);
+    modelData =
+        (J3DModelData*)ship_getResIdx("Link", ShipCreateResource::dRes_INDEX_LINK_BDL_ROPEEND_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1003A664), 0x21AF, STR(0x1003A674));
+        JUT_ASSERT_fail("d_a_ship.cpp", 0x21AF, "modelData != (0)");
     }
     mpLinkModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000002);
     if (mpLinkModel == nullptr) {
         return FALSE;
     }
 
-    modelData = (J3DModelData*)ship_getResIdx(0x101D034C, 0x12 /* fn_head_h.bdl */);
+    modelData = (J3DModelData*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BDL_FN_HEAD_H_e);
     if (modelData == nullptr) {
-        JUT_ASSERT_fail(STR(0x1003A664), 0x21BC, STR(0x1003A674));
+        JUT_ASSERT_fail("d_a_ship.cpp", 0x21BC, "modelData != (0)");
     }
     daShip_replaceSeaETextures(modelData);
-    m03B4 = 7;
-    anm = (J3DAnmTransform*)ship_getResIdx(0x101D034C, 7);
-    mpHeadAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 0.0f, 0, -1, 0, nullptr, 0x80000, 0x11000002);
+    m03B4 = dRes_INDEX_SHIP_BCK_FN_LOOK_L_e;
+    anm = (J3DAnmTransform*)ship_getResIdx("Ship", dRes_INDEX_SHIP_BCK_FN_LOOK_L_e);
+    mpHeadAnm = mDoExt_McaMorf::create(nullptr, modelData, nullptr, nullptr, anm, 0, 0.0f, 0, -1, 0,
+                                       nullptr, 0x80000, 0x11000002);
     if (mpHeadAnm == nullptr || mpHeadAnm->getModel() == nullptr) {
         return FALSE;
     }
     mpHeadAnm->setMorf(3.0f);
 
-    /* HD: 125 rope segments (GameCube 250) */
-    u32 ropeTex = gabi::ea(ship_getResIdx(0x1003A614 /* "Always" */, 0x7E));
-    if (!gabi::call<BOOL>(0x025EBA58 /* mDoExt_3DlineMat1_c::init */, &mRopeLine, 1, 0x7D, ropeTex, 0)) {
+    // HD: 125 rope segments (GameCube 250).
+    u32 ropeTex =
+        gabi::ea(ship_getResIdx("Always", ShipCreateResource::dRes_INDEX_ALWAYS_BTI_ROPE_e));
+    if (!ShipCreate_ropeInit(&mRopeLine, 1, 0x7D, ropeTex, 0)) {
         return FALSE;
     }
 
-    /* HD: the beacon model */
-    J3DModelData* beacon = (J3DModelData*)ship_getResName(0x101D034C, 0x1003A688 /* "beacon.bdl" */);
-    mpHD5AC = mDoExt_J3DModel__create(beacon, 0, 0x11020203);
-    if (mpHD5AC == nullptr) {
+    // HD: the beacon model.
+    J3DModelData* beacon = (J3DModelData*)ship_getResName("Ship", "beacon.bdl");
+    hd->mpBeaconModel = mDoExt_J3DModel__create(beacon, 0, 0x11020203);
+    if (hd->mpBeaconModel == nullptr) {
         return FALSE;
     }
     {
-        u32 m = gabi::ea(mpHD5AC.get());
-        u32 fl = gabi::load<u32>(m + 0x74) & ~1u;
-        gabi::store<u32>(m + 0x74, fl);
-        gabi::call(0x027F596C, m, fl); /* (r4: the flags, left over) */
+        u32 m = gabi::ea(hd->mpBeaconModel.get());
+        u32 fl = gabi::at<ShipCreateModelFlags>(m)->mFlags & ~1u;
+        gabi::at<ShipCreateModelFlags>(m)->mFlags = fl;
+        ShipCreate_modelUnlock(m, fl); /* (r4: the flags, left over) */
     }
 
-    /* HD: the cannon-sight impact marker */
-    J3DModelData* fallData = (J3DModelData*)ship_getResName(0x101D034C, 0x1003A61C /* "fallpoint.bdl" */);
-    J3DAnmTransform* fallAnm = (J3DAnmTransform*)ship_getResName(0x101D034C, 0x1003A62C /* "fallpoint.bck" */);
-    mpHD5B4 = mDoExt_McaMorf::create(nullptr, fallData, nullptr, nullptr, fallAnm, 2, 1.0f, 0, -1, 0, nullptr, 0, 0x11020203);
-    mpHD5B0 = mpHD5B4->getModel();
-    mpHD5B4->setMorf(0.0f);
-    if (mpHD5B0 != nullptr) {
-        u32 m = gabi::ea(mpHD5B0.get());
-        u32 fl = gabi::load<u32>(m + 0x74) & ~1u;
-        gabi::store<u32>(m + 0x74, fl);
-        gabi::call(0x027F596C, m, fl); /* (r4: the flags, left over) */
+    // HD: the cannon-sight impact marker.
+    J3DModelData* fallData = (J3DModelData*)ship_getResName("Ship", "fallpoint.bdl");
+    J3DAnmTransform* fallAnm = (J3DAnmTransform*)ship_getResName("Ship", "fallpoint.bck");
+    hd->mpFallPointAnm = mDoExt_McaMorf::create(nullptr, fallData, nullptr, nullptr, fallAnm, 2,
+                                                1.0f, 0, -1, 0, nullptr, 0, 0x11020203);
+    hd->mpFallPointModel = hd->mpFallPointAnm->getModel();
+    hd->mpFallPointAnm->setMorf(0.0f);
+    if (hd->mpFallPointModel != nullptr) {
+        u32 m = gabi::ea(hd->mpFallPointModel.get());
+        u32 fl = gabi::at<ShipCreateModelFlags>(m)->mFlags & ~1u;
+        gabi::at<ShipCreateModelFlags>(m)->mFlags = fl;
+        ShipCreate_modelUnlock(m, fl); /* (r4: the flags, left over) */
     }
 
-    /* HD: the cannon-sight packet, drawn with the beacon model */
-    daShip_sightPacket_create(mHDPacket, 0);
-    gabi::store<u32>(gabi::ea(this) + 0x1BEC, gabi::ea(mpHD5AC.get()));
+    // HD: the cannon-sight packet, drawn with the beacon model.
+    daShip_sightPacket_create(reinterpret_cast<ShipCreateSightPacket*>(mHDPacket), 0);
+    reinterpret_cast<ShipCreateSightPacket*>(mHDPacket)->mBeacon = hd->mpBeaconModel;
 
-    /* HD: the shadow on the water and its texture animation */
-    J3DModelData* shadowData = (J3DModelData*)ship_getResName(0x1003A614, 0x1003A63C /* "ship_minamo00.bdl" */);
+    // HD: the shadow on the water and its texture animation.
+    J3DModelData* shadowData = (J3DModelData*)ship_getResName("Always", "ship_minamo00.bdl");
     mpShadowModel = mDoExt_J3DModel__create(shadowData, 0, 0x11020203);
     if (mpShadowModel == nullptr) {
         return FALSE;
     }
-    u32 btk = gabi::ea(ship_getResName(0x1003A614, 0x1003A650 /* "ship_minamo00.btk" */));
-    if (gabi::call<BOOL>(0x025E7CE0 /* mDoExt_btkAnm::init */, &mShadowBtk, shadowData, btk, 1, 2, 1.0f, 0, -1, 0, 0) == 0) {
+    u32 btk = gabi::ea(ship_getResName("Always", "ship_minamo00.btk"));
+    if (ShipCreate_shadowInit(&mShadowBtk, shadowData, btk, 1, 2, 1.0f, 0, -1, 0, 0) == 0) {
         return FALSE;
     }
     return TRUE;
 }
-VERIFY(0x0247B508, &daShip_c::createHeap);
 
 /* the placement constructor (fopAcM_SetupActor(this, daShip_c)) */
 static void daShip_construct(daShip_c* p) {
-    u32 s = gabi::ea(p);
     fopAc_ac_c_ct(p);
-    gabi::store<u32>(s + 0xB4, 0x1003A2EC);
-    gabi::call(0x027F2BC0 /* J3DFrameCtrl::init */, s + 0x408, 0);
-    gabi::call(0x025EB82C /* mDoExt_3DlineMat1_c ctor */, s + 0x424);
-    gabi::call(0x025E7C6C /* mDoExt_btkAnm ctor */, s + 0x5BC);
-    gabi::call(0x028EFFD0 /* __construct_array */, s + 0x1368, 4, 0x40, 0x024EFE94 /* dBgS_AcchCir ctor */);
+    p->__vtbl = ShipCreateTU::shipVtable;
+    ShipCreate_frameInit(&p->mFrameCtrl, 0);
+    ShipCreate_lineConstruct(&p->mRopeLine);
+    ShipCreate_btkConstruct(&p->mShadowBtk);
+    ShipCreate_constructArray(p->mAcchCir, 4, 0x40, ShipCreateTU::acchCirConstructor);
     {
         /* mAcch: dBgS_ObjAcch */
-        u32 b = s + 0x1468;
-        gabi::call(0x024F0474, b);
-        gabi::store<u8>(b + 0x18, 1);
-        gabi::store<u32>(b + 0x10, 0x1003A27C);
-        gabi::store<u32>(b + 0x20, 0x1003A28C);
-        gabi::store<u32>(b + 0x14, 0x1003A29C);
+        ShipCreateAcchBase* b = reinterpret_cast<ShipCreateAcchBase*>(&p->mAcch);
+        ShipCreate_acchConstruct(b);
+        b->mObject = 1;
+        b->mPolyVtable = ShipCreateTU::polyVtable;
+        b->mObjectVtable = ShipCreateTU::objectVtable;
+        b->mCheckVtable = ShipCreateTU::checkVtable;
     }
     dCcD_Stts_ct(&p->mStts);
-    gabi::call(0x028EFFD0, s + 0x1668, 3, 0x130, 0x02482EA0 /* dCcD_Cyl ctor */);
-    gabi::call(0x025166F0 /* dCcD_Sph ctor */, s + 0x19F8);
-    /* HD: the sight packet */
-    gabi::call(0x027F1278 /* J3DPacket ctor */, s + 0x1B54);
-    gabi::store<u32>(s + 0x1BEC, 0);
-    gabi::store<u32>(s + 0x1BF0, 0);
-    gabi::store<u32>(s + 0x1BF4, 0);
-    gabi::store<u32>(s + 0x1B60, 0x1003A7F8);
-    /* HD: the 128 sight colliders */
-    gabi::call(0x028EFFD0, s + 0x1BF8, 0x80, 0x3C, 0x02482F2C /* dCcD_Stts ctor */);
-    gabi::call(0x028EFFD0, s + 0x39F8, 0x80, 0x12C, 0x025166F0 /* dCcD_Sph ctor */);
+    ShipCreate_constructArray(p->mCyl, 3, 0x130, ShipCreateTU::cylinderConstructor);
+    ShipCreate_sphereConstruct(&p->mSph);
+    // HD: the sight packet.
+    ShipCreate_packetConstruct(p->mHDPacket);
+    reinterpret_cast<ShipCreateSightPacket*>(p->mHDPacket)->mBeacon = nullptr;
+    reinterpret_cast<ShipCreateSightPacket*>(p->mHDPacket)->mModel = 0;
+    reinterpret_cast<ShipCreateSightPacket*>(p->mHDPacket)->mSegments = 0;
+    reinterpret_cast<ShipCreateSightPacket*>(p->mHDPacket)->__vtbl = ShipCreateTU::sightVtable;
+    // HD: the 128 sight colliders.
+    ShipCreate_constructArray(p->mRopeStts, 0x80, 0x3C, ShipCreateTU::statusConstructor);
+    ShipCreate_constructArray(p->mRopeSph, 0x80, 0x12C, ShipCreateTU::sphereConstructor);
     /* the wave callbacks (their cXyz members' constructors allocate only for a null this) */
-    for (u32 w = 0xCFF8; w <= 0xD05C; w += 0x64) {
-        gabi::store<u32>(s + w, 0x100521A8);
-        if (s + w + 0x3C == 0) operator_new(0xC);
-        if (s + w + 0x48 == 0) operator_new(0xC);
-        if (s + w + 0x54 == 0) operator_new(0xC);
+    for (int i = 0; i < 2; i++) {
+        ShipCreateWave* wave = reinterpret_cast<ShipCreateWave*>(i == 0 ? p->mWaveR : p->mWaveL);
+        wave->__vtbl = ShipCreateTU::waveVtable;
+        // HD: retain the GHS null-subobject allocation checks, including 32-bit wraparound.
+        for (int j = 0; j < 3; j++) {
+            if (gabi::ea(&wave->mPosition[j]) == 0) {
+                operator_new(sizeof(cXyz));
+            }
+        }
     }
-    gabi::store<u32>(s + 0xD0C0, 0x100521E8); /* mSplash */
-    gabi::store<u32>(s + 0xD0DC, 0x10052268); /* mTrack */
-    gabi::call(0x028EFFD0, s + 0xD0EC, 3, 0xC, 0x02482F94);
-    gabi::call(0x025A9084 /* dPa_rippleEcallBack ctor */, s + 0xD12C);
-    gabi::call(0x025A5894 /* dPa_followEcallBack ctor */, s + 0xD140, 0, 0);
-    gabi::call(0x025A5894, s + 0xD154, 0, 0);
-    gabi::call(0x025A5894, s + 0xD168, 0, 0);
-    gabi::call(0x025A9084, s + 0xD17C);
+    reinterpret_cast<ShipCreateVtable*>(p->mSplash)->__vtbl = ShipCreateTU::splashVtable;
+    reinterpret_cast<ShipCreateTrack*>(p->mTrack)->__vtbl = ShipCreateTU::trackVtable;
+    ShipCreate_constructArray(reinterpret_cast<ShipCreateTrack*>(p->mTrack)->mPosition, 3, 0xC,
+                              ShipCreateTU::positionConstructor);
+    ShipCreate_rippleConstruct(p->mRipple);
+    ShipCreate_followConstruct(&p->m1984, 0, 0);
+    ShipCreate_followConstruct(&p->m1998, 0, 0);
+    ShipCreate_followConstruct(&p->m19AC, 0, 0);
+    ShipCreate_rippleConstruct(p->m19C0);
 }
 
 /* a model's joint callback (joint i: i < count ? &joints[i] : joints) */
-static inline void ship_setJointCallBack(u32 data, u32 i, u32 cb) {
-    u32 j = gabi::load<u32>(data + 8);
-    if (i < gabi::load<u32>(data + 4)) {
-        j += i * 0x1C;
+static inline void ship_setJointCallBack(J3DModelData* modelData, u32 i, u32 cb) {
+    u32 joint = modelData->mJointNodes;
+    if (i < modelData->mJointNum) {
+        joint += i * 0x1C;
     }
-    gabi::store<u32>(j + 8, cb);
+    gabi::at<J3DJoint>(joint)->mCallBack = cb;
 }
 
 /* 0247C358 */
 cPhs_State daShip_c::create() {
-    WWHD_FUNC(0x0247C358, cPhs_State, this);
     u32 s = gabi::ea(this);
-    if (!(gabi::load<u32>(s + 0x2E4) & 8)) {
+    if (!(actor_condition & ShipCreateActorInitialized)) {
         daShip_construct(this);
-        gabi::store<u32>(s + 0x2E4, gabi::load<u32>(s + 0x2E4) | 8);
+        actor_condition |= ShipCreateActorInitialized;
     }
     if (!dComIfGs_isEventBit(0x0F80)) {
         return cPhs_ERROR_e;
     }
-    cPhs_State phase = dComIfG_resLoad(&mPhs, STR(l_arcName));
-    if (((gabi::load<u32>(s + 0xB0) >> 8) & 0xFF) == 1) {
-        onStateFlg((daSHIP_SFLG)0x200);
+    cPhs_State phase = dComIfG_resLoad(&mPhs, "Ship");
+    if (((mParameters >> 8) & 0xFF) == 1) {
+        onStateFlg(daSFLG_SAIL_ON_e);
         m03E8 = 1.0f;
     } else {
         m03E8 = 0.001f;
-        offStateFlg((daSHIP_SFLG)0x200);
+        offStateFlg(daSFLG_SAIL_ON_e);
     }
     if (phase != cPhs_COMPLEATE_e) {
         return phase;
     }
 
-    /* HD: the ending sea waits for the "Demo46" resources */
-    if (ship_isStartStage(0x1003A6C4 /* "sea_E" */)) {
+    // HD: the ending sea waits for the "Demo46" resources.
+    if (ship_isStartStage(gabi::guest_addr("sea_E"))) {
         gabi::Local<daShip_SafeString> arc;
-        arc->mStr = 0x1003A6D4; /* "Demo46" */
+        arc->mStr = gabi::guest_addr("Demo46");
         arc->__vtbl = SAFESTRING_VTBL;
-        if (gabi::call<u32>(0x026065A8, gabi::load<u32>(0x101F4F28), arc.get(), 0, 1) == 0) {
+        if (ShipCreate_resourceReady(resourceControl, arc.get(), 0, 1) == 0) {
             return (cPhs_State)0;
         }
     }
 
-    if (!fopAcM_entrySolidHeap(this, (heapCallbackFunc)0x0247BA34, 0x20000)) {
+    if (!fopAcM_entrySolidHeap(this, daShip_createHeap, 0x20000)) {
         return cPhs_ERROR_e;
     }
 
-    /* mpBodyAnm->setFrame(mpBodyAnm->getEndFrame()) */
-    {
-        u32 b = gabi::ea(mpBodyAnm.get());
-        f32 end = (f32)gabi::load<s16>(b + 0xA2);
-        s16 f = (s16)gabi::ftoi(end);
-        gabi::store<f32>(b + 0x9C, (f32)f);
-    }
-    u32 model = gabi::load<u32>(gabi::ea(mpBodyAnm.get()) + 0x90);
-    u32 data = gabi::load<u32>(model + 0xAC);
-    gabi::store<u32>(model + 0xB8, s);
-    gabi::store<u32>(s + 0x348, model != 0 ? model + 0xC8 : 0);
-    for (u16 i = 0; i < gabi::load<u16>(gabi::call<u32>(0x027F3F94, data) + 8); i++) {
+    mpBodyAnm->setFrame(mpBodyAnm->getEndFrame());
+    // HD: preserve guest-zero views for unchecked model/data accesses.
+    J3DModel* pModel = gabi::at<J3DModel>(gabi::ea(mpBodyAnm->getModel()));
+    J3DModelData* pModelData = gabi::at<J3DModelData>(gabi::ea(pModel->getModelData()));
+    pModel->mUserArea = s;
+    cullMtx = gabi::ea(pModel->getBaseTRMtx());
+    for (u16 i = 0; i < pModelData->getJointNum(); i++) {
         if ((i >= 5 && i <= 7) || i == 10) {
-            ship_setJointCallBack(data, i, 0x0247187C);
+            ship_setJointCallBack(pModelData, i, ShipCreateTU::bodyJointCallback);
         }
     }
-    /* HD: the texture matrix of the material "m_fn_main_hashi" */
+    // HD: the texture matrix of the material "m_fn_main_hashi".
     {
         gabi::Local<daShip_SafeString> mat;
-        mat->mStr = 0x1003A6E4;
+        mat->mStr = gabi::guest_addr("m_fn_main_hashi");
         mat->__vtbl = SAFESTRING_VTBL;
-        u32 d0 = gabi::load<u32>(data);
-        gabi::call(0x024832A0, mat.get());
-        u32 off = gabi::load<u32>(d0 + 0x18);
+        u32 d0 = pModelData->mpResHeader;
+        ShipCreate_assureTermination(mat.get());
+        u32 off = gabi::at<ShipCreateResourceHeader>(d0)->mMaterialNameOffset;
         u32 tab = off != 0 ? d0 + 0x18 + off : 0;
         s32 idx = JUTNameTab_getIndex_s(tab, mat->mStr);
         if (idx >= 0) {
-            u32 m = gabi::load<u32>(data + 0x10);
-            if ((u32)idx < gabi::load<u32>(data + 0xC)) {
+            u32 m = pModelData->mMaterials;
+            if ((u32)idx < pModelData->mMaterialNum) {
                 m += idx * 0x39C;
             }
             if (m != 0) {
-                u32 o = gabi::load<u32>(m + 0x14);
-                u32 r = gabi::call_ptr<u32>(gabi::load<u32>(gabi::load<u32>(o) + 0x14), o, 1);
+                ShipCreateTexGenBlock* texGen = gabi::at<ShipCreateMaterial>(m)->mTexGenBlock;
+                u32 r = texGen->getTexMtx(1);
                 m02A0 = r;
                 m02A4 = r;
             }
         }
     }
-    gabi::call(0x028E9A70 /* C_MTXOrtho */, &m02A8, 50.0f, -50.0f, -50.0f, 50.0f, 0.1f, 100000.0f);
+    ShipCreate_ortho(&m02A8, 50.0f, -50.0f, -50.0f, 50.0f, 0.1f, 100000.0f);
 
-    model = gabi::load<u32>(gabi::ea(mpHeadAnm.get()) + 0x90);
-    data = gabi::load<u32>(model + 0xAC);
-    gabi::store<u32>(model + 0xB8, s);
-    for (u16 i = 0; i < gabi::load<u16>(gabi::call<u32>(0x027F3F94, data) + 8); i++) {
+    pModel = gabi::at<J3DModel>(gabi::ea(mpHeadAnm->getModel()));
+    pModelData = gabi::at<J3DModelData>(gabi::ea(pModel->getModelData()));
+    pModel->mUserArea = s;
+    for (u16 i = 0; i < pModelData->getJointNum(); i++) {
         if (i == 8 || i == 10) {
-            ship_setJointCallBack(data, i, 0x02471C50);
+            ship_setJointCallBack(pModelData, i, ShipCreateTU::headJointCallback0);
         } else if ((u32)(i - 2) <= 5) {
-            ship_setJointCallBack(data, i, 0x02471E54);
+            ship_setJointCallBack(pModelData, i, ShipCreateTU::headJointCallback1);
         }
     }
 
-    gabi::store<u32>(gabi::ea(mpCannonModel.get()) + 0xB8, s);
-    data = gabi::load<u32>(gabi::ea(mpCannonModel.get()) + 0xAC);
-    ship_setJointCallBack(data, 1, 0x02471AAC);
-    ship_setJointCallBack(data, 2, 0x02471AAC);
-    gabi::store<u32>(gabi::ea(mpSalvageArmModel.get()) + 0xB8, s);
-    data = gabi::load<u32>(gabi::ea(mpSalvageArmModel.get()) + 0xAC);
-    ship_setJointCallBack(data, 1, 0x02471BF4);
+    mpCannonModel->mUserArea = s;
+    pModelData = gabi::at<J3DModelData>(gabi::ea(mpCannonModel->getModelData()));
+    ship_setJointCallBack(pModelData, 1, ShipCreateTU::cannonJointCallback);
+    ship_setJointCallBack(pModelData, 2, ShipCreateTU::cannonJointCallback);
+    mpSalvageArmModel->mUserArea = s;
+    pModelData = gabi::at<J3DModelData>(gabi::ea(mpSalvageArmModel->getModelData()));
+    ship_setJointCallBack(pModelData, 1, ShipCreateTU::craneJointCallback);
 
     mTornadoID = fpcM_ERROR_PROCESS_ID_e;
     mTornadoActor = nullptr;
     mWhirlID = fpcM_ERROR_PROCESS_ID_e;
-    m034B = (u8)gabi::load<u32>(s + 0xB0);
+    m034B = (u8)mParameters;
     mWhirlActor = nullptr;
     mPart = PART_WAIT_e;
     if (mNextMode != MODE_START_MODE_WARP_e) {
         mTactWarpID = fpcM_ERROR_PROCESS_ID_e;
     }
-    if (checkStateFlg((daSHIP_SFLG)0x200)) {
+    if (checkStateFlg(daSFLG_SAIL_ON_e)) {
         mPart = PART_STEER_e;
         procSteerMove_init();
-    } else if (mNextMode == 2 /* MODE_PADDLE_MOVE_e */) {
+    } else if (mNextMode == MODE_PADDLE_MOVE_e) {
         procPaddleMove_init();
     } else if (mNextMode == MODE_START_MODE_WARP_e) {
         procStartModeWarp_init();
@@ -432,11 +445,11 @@ cPhs_State daShip_c::create() {
         procWait_init();
     }
     BOOL wide;
-    if (ship_getStageType() == 7 /* SEA */) {
+    if (ship_getStageType() == ShipCreateStageSea) {
         wide = TRUE;
-    } else if (ship_isStartStage(0x1003A6DC /* "Hyrule" */)) {
+    } else if (ship_isStartStage(gabi::guest_addr("Hyrule"))) {
         wide = TRUE;
-    } else if (ship_isStartStage(0x1003A6CC /* "Ocean" */)) {
+    } else if (ship_isStartStage(gabi::guest_addr("Ocean"))) {
         wide = TRUE;
     } else {
         wide = FALSE;
@@ -447,15 +460,16 @@ cPhs_State daShip_c::create() {
     mAcchCir[1].SetWall(75.0f, 250.0f);
     mAcchCir[2].SetWall(150.0f, 250.0f);
     mAcchCir[3].SetWall(-600.0f - current.pos.y, 250.0f);
-    gabi::store<f32>(s + 0x390, current.pos.x);
-    gabi::store<f32>(s + 0x394, current.pos.y);
-    gabi::store<f32>(s + 0x1530, 10000.0f);
-    gabi::store<f32>(s + 0x398, current.pos.z);
-    gabi::store<u32>(s + 0x39C, 0);
-    gabi::store<u32>(s + 0x1490, gabi::load<u32>(s + 0x1490) & ~0x400u);
+    attention_info.position.x = current.pos.x;
+    attention_info.position.y = current.pos.y;
+    mAcch.SetWaterCheckOffset(10000.0f);
+    attention_info.position.z = current.pos.z;
+    attention_info.flags = 0;
+    mAcch.m_flags &= ~0x400u;
     gravity = -2.5f;
     maxFallSpeed = -150.0f;
-    mGridID = fopAcM_create(0xAB /* PROC_SAIL */, 1, &current.pos, -1, &current.angle, nullptr, -1, 0);
+    mGridID = fopAcM_create(ShipCreateProcess::fpcNm_GRID_e, 1, &current.pos, -1, &current.angle,
+                            nullptr, -1, 0);
     if (mGridID == fpcM_ERROR_PROCESS_ID_e) {
         return cPhs_ERROR_e;
     }
@@ -463,16 +477,16 @@ cPhs_State daShip_c::create() {
     m03E0 = 10000.0f;
     mStts.Init(0xF0, 0, this);
     for (int i = 0; i < 3; i++) {
-        mCyl[i].Set(gabi::at<dCcD_SrcCyl>(0x101D0440));
-        gabi::store<u32>(gabi::ea(&mCyl[i]) + 0x44, gabi::ea(&mStts));
+        mCyl[i].Set(&cyl_src);
+        mCyl[i].SetStts(&mStts);
     }
     mCyl[1].SetR(95.0f);
-    mSph.Set(gabi::at<dCcD_SrcSph>(0x101D0400));
-    gabi::store<u32>(gabi::ea(&mSph) + 0x44, gabi::ea(&mStts));
-    gabi::call(0x025D672C /* fopAcM_SetMin */, this, -325.0f, -50.0f, -325.0f);
-    gabi::call(0x025D673C /* fopAcM_SetMax */, this, 325.0f, 570.0f, 240.0f);
-    gabi::call(0x025DADA4 /* fopKyM_create */, 0x16, this, 0, 0, 0);
-    offStateFlg((daSHIP_SFLG)0x2);
+    mSph.Set(&sph_src);
+    mSph.SetStts(&mStts);
+    ShipCreate_setMin(this, -325.0f, -50.0f, -325.0f);
+    ShipCreate_setMax(this, 325.0f, 570.0f, 240.0f);
+    ShipCreate_createWindArrow(ShipCreateProcess::fpcNm_WIND_ARROW_e, this, 0, 0, 0);
+    offStateFlg(daSFLG_UNK2_e);
     mAcch.CrrPos(dComIfG_Bgsp());
     setRoomInfo();
     m03F4 = getWaterY();
@@ -491,35 +505,95 @@ cPhs_State daShip_c::create() {
     J3DModel_setBaseTRMtx(mpBodyAnm->getModel(), mDoMtx_now());
     mpBodyAnm->play(nullptr, 0, 0);
     mpBodyAnm->calc();
-    PSMTXMultVec(model_getAnmMtx(mpBodyAnm->getModel(), FN_BODY_JNT_J_FN_STEER1_e), gabi::at<cXyz>(0x101D03C0 /* l_tiller_top_offset */),
-                 &mTillerTopPos);
+    PSMTXMultVec(model_getAnmMtx(mpBodyAnm->getModel(), FN_BODY_JNT_J_FN_STEER1_e),
+                 &tiller_top_offset, &mTillerTopPos);
     mpHeadAnm->play(nullptr, 0, 0);
-    J3DModel_setBaseTRMtx(mpHeadAnm->getModel(), model_getAnmMtx(mpBodyAnm->getModel(), FN_BODY_JNT_J_FN_GATTAI_e));
+    J3DModel_setBaseTRMtx(mpHeadAnm->getModel(),
+                          model_getAnmMtx(mpBodyAnm->getModel(), FN_BODY_JNT_J_FN_GATTAI_e));
     mpHeadAnm->calc();
-    gabi::store<u32>(dComIfGp_ea() + 0x5B3C, s); /* dComIfGp_setShip */
-    gabi::store<f32>(s + 0xD124, 3.0f);
-    gabi::store<f32>(s + 0xD074, 40.0f); /* mWaveL max speed */
-    gabi::store<f32>(s + 0xD18C, 0.0f);
-    gabi::store<f32>(s + 0xD010, 40.0f); /* mWaveR max speed */
-    if (ship_getStageType() == 7 /* SEA */) {
-        gabi::call(0x025D5A20 /* fopAcM_createChild */, 0x10E, gabi::load<u32>(s + 4), 0, &current.pos, -1, 0, 0, -1, 0);
+    gabi::at<ShipCreatePlay>(dComIfGp_ea())->mShipActor = this;
+    reinterpret_cast<ShipCreateTrack*>(mTrack)->mLimitSpeed = 3.0f;
+    reinterpret_cast<ShipCreateWave*>(mWaveL)->mMaxSpeed = 40.0f; /* mWaveL max speed */
+    reinterpret_cast<ShipCreateFollow*>(m19C0)->mRate = 0.0f;
+    reinterpret_cast<ShipCreateWave*>(mWaveR)->mMaxSpeed = 40.0f; /* mWaveR max speed */
+    if (ship_getStageType() == ShipCreateStageSea) {
+        ShipCreate_createChild(ShipCreateProcess::fpcNm_Coming2_e, mBsPcId, 0, &current.pos, -1, 0,
+                               0, -1, 0);
     }
-    /* HD: the cannon sight */
-    u32 b = s + 0x1B24;
-    gabi::store<f32>(b + 0x8, 0.0f);
-    gabi::store<u16>(b + 0, 0);
-    gabi::store<u16>(b + 2, 0);
-    gabi::store<u16>(b + 4, 0);
-    for (u32 k = 0xC; k <= 0x24; k += 4) {
-        gabi::store<f32>(b + k, 0.0f);
+    // HD: the cannon sight.
+    ShipCreateSight* sight = &reinterpret_cast<ShipCreateSightActor*>(this)->mSight;
+    sight->mTime = 0.0f;
+    sight->mAngle[0] = 0;
+    sight->mAngle[1] = 0;
+    sight->mAngle[2] = 0;
+    for (int i = 0; i < 7; i++) {
+        sight->mTrajectory[i] = 0.0f;
     }
-    gabi::store<u16>(b + 0x28, 0);
-    gabi::store<f32>(b + 0x2C, -100.0f);
+    sight->mSegment = 0;
+    sight->mHeight = -100.0f;
     for (int i = 0; i < 0x80; i++) {
         mRopeStts[i].Init(0, 0xFF, this);
-        mRopeSph[i].Set(gabi::at<dCcD_SrcSph>(0x101D0354));
-        gabi::store<u32>(gabi::ea(&mRopeSph[i]) + 0x44, gabi::ea(&mRopeStts[i]));
+        mRopeSph[i].Set(&rope_sph_src);
+        mRopeSph[i].SetStts(&mRopeStts[i]);
     }
     return phase;
 }
-VERIFY(0x0247C358, &daShip_c::create);
+
+// clang-format off
+/* WWHD glue
+ data resourceControl 101F4F28
+ data arrayHeaderSize 101FCD08
+ data resourceArc 1047E6B8
+ data cyl_src 101D0440
+ data sph_src 101D0400
+ data rope_sph_src 101D0354
+ data tiller_top_offset 101D03C0
+ str 1003A5D4 "sea_E" in 0247AF98
+ str 1003A5E8 "fn_head1"
+ str 1003A5F4 "fn_main1"
+ str 1003A600 "new_fn_eye"
+ str 101D034C "Ship"
+ str 1003A60C "Link"
+ str 1003A614 "Always"
+ str 1003A688 "beacon.bdl"
+ str 1003A61C "fallpoint.bdl"
+ str 1003A62C "fallpoint.bck"
+ str 1003A63C "ship_minamo00.bdl"
+ str 1003A650 "ship_minamo00.btk"
+ str 1003A6C4 "sea_E" in 0247C358
+ str 1003A6D4 "Demo46"
+ str 1003A6E4 "m_fn_main_hashi"
+ str 1003A6DC "Hyrule"
+ str 1003A6CC "Ocean"
+ str 1003A664 "d_a_ship.cpp"
+ str 1003A674 "modelData != (0)"
+ ext 027ED1F0 const char* ShipCreate_getTextureName(u32, u32)
+ ext 024832A0 void ShipCreate_assureTermination(daShip_SafeString*)
+ ext 02482CFC void ShipCreate_formatTextureName(ShipCreateFormattedString*, const char*, u32)
+ ext 02606900 void* ShipCreate_getResource(u32, daShip_SafeString*, daShip_SafeString*)
+ ext 026065A8 u32 ShipCreate_resourceReady(u32, daShip_SafeString*, u32, u32)
+ ext 0273B050 u32 ShipCreate_new(u32, u32, u32)
+ ext 0273B0D4 u32 ShipCreate_newArray(u32, u32, u32)
+ ext 027FD6F4 u32 ShipCreate_modelConstruct(u32)
+ ext 027FD838 void ShipCreate_modelCreate(u32, u32, u32)
+ ext 028EFF8C u32 ShipCreate_constructNewArray(u32, u32, u32, u32, u32)
+ ext 027FB5D4 void ShipCreate_segmentCreate(u32, u32)
+ ext 025EBA58 BOOL ShipCreate_ropeInit(void*, u32, u32, u32, u32)
+ ext 027F596C void ShipCreate_modelUnlock(u32, u32)
+ ext 025E7CE0 BOOL ShipCreate_shadowInit(void*, J3DModelData*, u32, u32, u32, f32, u32, s32, u32, u32)
+ ext 028E9A70 void ShipCreate_ortho(Mtx34*, f32, f32, f32, f32, f32, f32)
+ ext 025D672C void ShipCreate_setMin(daShip_c*, f32, f32, f32)
+ ext 025D673C void ShipCreate_setMax(daShip_c*, f32, f32, f32)
+ ext 025DADA4 void ShipCreate_createWindArrow(u32, daShip_c*, u32, u32, u32)
+ ext 025D5A20 void ShipCreate_createChild(u32, u32, u32, cXyz*, s32, u32, u32, s32, u32)
+ ext 027F2BC0 void ShipCreate_frameInit(void*, u32)
+ ext 025EB82C void ShipCreate_lineConstruct(void*)
+ ext 025E7C6C void ShipCreate_btkConstruct(void*)
+ ext 028EFFD0 void ShipCreate_constructArray(void*, u32, u32, u32)
+ ext 024F0474 void ShipCreate_acchConstruct(void*)
+ ext 025166F0 void ShipCreate_sphereConstruct(void*)
+ ext 027F1278 void ShipCreate_packetConstruct(void*)
+ ext 025A9084 void ShipCreate_rippleConstruct(void*)
+ ext 025A5894 void ShipCreate_followConstruct(void*, u32, u32)
+ str 1003A5DC "%s_D46.ftxb"
+*/

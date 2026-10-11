@@ -1,36 +1,46 @@
-/* Native HD frame controller;16-byte layout without a vptr. */
-#include "wwhd.h"
-enum { EMode_NONE, EMode_RESET, EMode_LOOP, EMode_REVERSE, EMode_LOOP_REVERSE };
-void frame_init(void* self,s16 end) {
- WWHD_FUNC(0x027F2BC0,void,self,end);
- u32 p=gabi::ea(self);
- gabi::store<s16>(p+10,end);
- gabi::store<u8>(p+15,0);gabi::store<u8>(p+14,2);
- f32 initialFrame=gabi::load<f32>(0x1016E48C);
- gabi::store<s16>(p+8,0);gabi::store<f32>(p+4,initialFrame);
- f32 initialRate=gabi::load<f32>(0x1016E488);
- gabi::store<s16>(p+12,0);gabi::store<f32>(p,initialRate);
+/** J3D frame-controller initialization, frame crossings and playback.
+ * GameCube names with the verified HD layout, load/store order and remainder arithmetic. */
+#include "J3DAnimation.h"
+
+using FrameConstant = be<f32>;
+static FrameConstant l_initialFrame;
+static FrameConstant l_initialRate;
+static FrameConstant l_frameEpsilon;
+
+/* 027F2BC0 */
+void J3DFrameCtrl::init(s16 end) {
+    mEnd = end;
+    mState = 0;
+    mAttribute = EMode_LOOP;
+    f32 initialFrame = l_initialFrame;
+    mStart = 0;
+    mFrame = initialFrame;
+    f32 initialRate = l_initialRate;
+    mLoop = 0;
+    mRate = initialRate;
 }
-VERIFY(0x027F2BC0,frame_init);
-s32 frame_checkPass(void* self,f32 pass_frame) {
- WWHD_FUNC(0x027F2BF8,s32,self,pass_frame);
- u32 p=gabi::ea(self);
- f32 mFrame=gabi::load<f32>(p+4),mRate=gabi::load<f32>(p);
- s16 mStart=gabi::load<s16>(p+8),mEnd=gabi::load<s16>(p+10),mLoop=gabi::load<s16>(p+12);
- u8 mAttribute=gabi::load<u8>(p+14);
 
-    f32 cur_frame = mFrame;
-    f32 next_frame = cur_frame + mRate;
+/* 027F2BF8 */
+s32 J3DFrameCtrl::checkPass(f32 pass_frame) {
+    // HD: preserve the original field snapshot order.
+    f32 frame = mFrame;
+    f32 rate = mRate;
+    s16 start = mStart;
+    s16 end = mEnd;
+    s16 loop = mLoop;
+    u8 attribute = mAttribute;
+    f32 cur_frame = frame;
+    f32 next_frame = cur_frame + rate;
 
-    switch (mAttribute) {
+    switch (attribute) {
     case EMode_NONE:
     case EMode_RESET:
-        if (next_frame < mStart) {
-            next_frame = mStart;
+        if (next_frame < start) {
+            next_frame = start;
         }
 
-        if (next_frame >= mEnd) {
-            next_frame = mEnd - gabi::load<f32>(0x1016E490);
+        if (next_frame >= end) {
+            next_frame = end - f32(l_frameEpsilon);
         }
 
         if (cur_frame <= next_frame) {
@@ -46,55 +56,55 @@ s32 frame_checkPass(void* self,f32 pass_frame) {
         }
         return false;
     case EMode_LOOP:
-        if (cur_frame < mStart) {
-            while (next_frame < mStart) {
-                if (mLoop - mStart <= 0.0f) {
+        if (cur_frame < start) {
+            while (next_frame < start) {
+                if (loop - start <= 0.0f) {
                     break;
                 }
-                next_frame += mLoop - mStart;
+                next_frame += loop - start;
             }
 
-            if (next_frame <= pass_frame && pass_frame < mLoop) {
+            if (next_frame <= pass_frame && pass_frame < loop) {
                 return true;
             } else {
                 return false;
             }
-        } else if (mEnd <= cur_frame) {
-            while (next_frame >= mEnd) {
-                if (mEnd - mLoop <= 0.0f) {
+        } else if (end <= cur_frame) {
+            while (next_frame >= end) {
+                if (end - loop <= 0.0f) {
                     break;
                 }
-                next_frame -= mEnd - mLoop;
+                next_frame -= end - loop;
             }
 
-            if (mLoop <= pass_frame && pass_frame < next_frame) {
+            if (loop <= pass_frame && pass_frame < next_frame) {
                 return true;
             } else {
                 return false;
             }
-        } else if (next_frame < mStart) {
-            while (next_frame < mStart) {
-                if (mLoop - mStart <= 0.0f) {
+        } else if (next_frame < start) {
+            while (next_frame < start) {
+                if (loop - start <= 0.0f) {
                     break;
                 }
-                next_frame += mLoop - mStart;
+                next_frame += loop - start;
             }
 
-            if ((mStart <= pass_frame && pass_frame < cur_frame) || (next_frame <= pass_frame && pass_frame < mLoop)) {
+            if ((start <= pass_frame && pass_frame < cur_frame) || (next_frame <= pass_frame && pass_frame < loop)) {
                 return true;
             } else {
                 return false;
             }
-        } else if (mEnd <= next_frame) {
-            while (next_frame >= mEnd) {
-                if (mEnd - mLoop <= 0.0f) {
+        } else if (end <= next_frame) {
+            while (next_frame >= end) {
+                if (end - loop <= 0.0f) {
                     break;
                 }
 
-                next_frame -= mEnd - mLoop;
+                next_frame -= end - loop;
             }
 
-            if ((cur_frame <= pass_frame && pass_frame < mEnd) || (mLoop <= pass_frame && pass_frame < next_frame)) {
+            if ((cur_frame <= pass_frame && pass_frame < end) || (loop <= pass_frame && pass_frame < next_frame)) {
                 return true;
             } else {
                 return false;
@@ -111,12 +121,12 @@ s32 frame_checkPass(void* self,f32 pass_frame) {
         return false;
     case EMode_REVERSE:
     case EMode_LOOP_REVERSE:
-        if (next_frame >= mEnd) {
-            next_frame = mEnd - gabi::load<f32>(0x1016E490);
+        if (next_frame >= end) {
+            next_frame = end - f32(l_frameEpsilon);
         }
 
-        if (next_frame < mStart) {
-            next_frame = mStart;
+        if (next_frame < start) {
+            next_frame = start;
         }
 
         if (cur_frame <= next_frame) {
@@ -134,88 +144,117 @@ s32 frame_checkPass(void* self,f32 pass_frame) {
     default:
         return false;
     }
-
 }
-VERIFY(0x027F2BF8,frame_checkPass);
 
-void frame_update(void* self) {
- WWHD_FUNC(0x027F2FC4,void,self);
- u32 p=gabi::ea(self);
- f32 mFrame=gabi::load<f32>(p+4),mRate=gabi::load<f32>(p);
- s16 mStart=gabi::load<s16>(p+8),mEnd=gabi::load<s16>(p+10),mLoop=gabi::load<s16>(p+12);
- u8 mAttribute=gabi::load<u8>(p+14),mState=0;
-
-    { mState = 0; gabi::store<u8>(p+15,mState); }
-    { mFrame += mRate; gabi::store<f32>(p+4,mFrame); }
-    switch (mAttribute) {
+/* 027F2FC4 */
+void J3DFrameCtrl::update() {
+    // HD: cached values survive the remainder call; only end and loop are reloaded below.
+    f32 frame = mFrame;
+    f32 rate = mRate;
+    s16 start = mStart;
+    s16 end = mEnd;
+    s16 loop = mLoop;
+    u8 attribute = mAttribute;
+    u8 state = 0;
+    mState = state;
+    frame += rate;
+    mFrame = frame;
+    switch (attribute) {
     case EMode_NONE:
-        if (mFrame < mStart) {
-            { mFrame = mStart; gabi::store<f32>(p+4,mFrame); }
-            { mRate = 0.0f; gabi::store<f32>(p+0,mRate); }
-            { mState |= 1; gabi::store<u8>(p+15,mState); }
+        if (frame < start) {
+            frame = start;
+            mFrame = frame;
+            rate = 0.0f;
+            mRate = rate;
+            state |= STATE_STOP_E;
+            mState = state;
         }
-        if (mFrame >= mEnd) {
-            { mFrame = mEnd - gabi::load<f32>(0x1016E490); gabi::store<f32>(p+4,mFrame); }
-            { mRate = 0.0f; gabi::store<f32>(p+0,mRate); }
-            { mState |= 1; gabi::store<u8>(p+15,mState); }
+        if (frame >= end) {
+            frame = end - f32(l_frameEpsilon);
+            mFrame = frame;
+            rate = 0.0f;
+            mRate = rate;
+            state |= STATE_STOP_E;
+            mState = state;
         }
         break;
     case EMode_RESET:
-        if (mFrame < mStart) {
-            { mFrame = mStart; gabi::store<f32>(p+4,mFrame); }
-            { mRate = 0.0f; gabi::store<f32>(p+0,mRate); }
-            { mState |= 1; gabi::store<u8>(p+15,mState); }
+        if (frame < start) {
+            frame = start;
+            mFrame = frame;
+            rate = 0.0f;
+            mRate = rate;
+            state |= STATE_STOP_E;
+            mState = state;
         }
-        if (mFrame >= mEnd) {
-            { mFrame = mStart; gabi::store<f32>(p+4,mFrame); }
-            { mRate = 0.0f; gabi::store<f32>(p+0,mRate); }
-            { mState |= 1; gabi::store<u8>(p+15,mState); }
+        if (frame >= end) {
+            frame = start;
+            mFrame = frame;
+            rate = 0.0f;
+            mRate = rate;
+            state |= STATE_STOP_E;
+            mState = state;
         }
         break;
     case EMode_LOOP: {
-        // HD uses one remainder operation per crossed boundary and leaves state clear.
-        if (mFrame < mStart) {
-            f32 span=(f32)(mLoop-mStart);
+        // HD: one double-precision remainder per crossed boundary; loop state stays clear.
+        if (frame < start) {
+            f32 span = f32(loop - start);
             if (span > 0.0f) {
-                f64 rem=gabi::call<f64>(0x028F4034,(f64)(f32)(mFrame-mStart),(f64)span);
-                mFrame=(f32)(rem+(f64)span);
-                gabi::store<f32>(p+4,mFrame);
+                f64 rem = J3DFrameCtrl_fmod(f64(f32(frame - start)), f64(span));
+                frame = f32(rem + f64(span));
+                mFrame = frame;
             }
         }
-        mEnd=gabi::load<s16>(p+10);
-        if (!(mFrame < mEnd)) {
-            mLoop=gabi::load<s16>(p+12);
-            f32 span=(f32)(mEnd-mLoop);
+        end = mEnd;
+        if (!(frame < end)) {
+            loop = mLoop;
+            f32 span = f32(end - loop);
             if (span > 0.0f) {
-                f64 rem=gabi::call<f64>(0x028F4034,(f64)(f32)(mFrame-mEnd),(f64)span);
-                gabi::store<f32>(p+4,(f32)rem);
+                f64 rem = J3DFrameCtrl_fmod(f64(f32(frame - end)), f64(span));
+                mFrame = f32(rem);
             }
         }
         break;
     }
     case EMode_REVERSE:
-        if (mFrame >= mEnd) {
-            { mFrame = mEnd - gabi::load<f32>(0x1016E490); gabi::store<f32>(p+4,mFrame); }
-            { mRate = -mRate; gabi::store<f32>(p+0,mRate); }
+        if (frame >= end) {
+            frame = end - f32(l_frameEpsilon);
+            mFrame = frame;
+            rate = -rate;
+            mRate = rate;
         }
-        if (mFrame < mStart) {
-            { mFrame = mStart; gabi::store<f32>(p+4,mFrame); }
-            { mRate = 0.0f; gabi::store<f32>(p+0,mRate); }
-            { mState |= 1; gabi::store<u8>(p+15,mState); }
+        if (frame < start) {
+            frame = start;
+            mFrame = frame;
+            rate = 0.0f;
+            mRate = rate;
+            state |= STATE_STOP_E;
+            mState = state;
         }
         break;
     case EMode_LOOP_REVERSE:
-        if (mFrame >= mEnd) {
-            { mFrame = mEnd - gabi::load<f32>(0x1016E490); gabi::store<f32>(p+4,mFrame); }
-            { mRate = -mRate; gabi::store<f32>(p+0,mRate); }
+        if (frame >= end) {
+            frame = end - f32(l_frameEpsilon);
+            mFrame = frame;
+            rate = -rate;
+            mRate = rate;
         }
-        if (mFrame < mStart) {
-            { mFrame = mStart; gabi::store<f32>(p+4,mFrame); }
-            { mRate = -mRate; gabi::store<f32>(p+0,mRate); }
-            { mState |= 2; gabi::store<u8>(p+15,mState); }
+        if (frame < start) {
+            frame = start;
+            mFrame = frame;
+            rate = -rate;
+            mRate = rate;
+            state |= STATE_LOOP_E;
+            mState = state;
         }
         break;
     }
-
 }
-VERIFY(0x027F2FC4,frame_update);
+
+/* WWHD glue (tools/verify/autoglue.py):
+data l_initialFrame 1016E48C
+data l_initialRate 1016E488
+data l_frameEpsilon 1016E490
+ext 028F4034 f64 J3DFrameCtrl_fmod(f64, f64)
+*/

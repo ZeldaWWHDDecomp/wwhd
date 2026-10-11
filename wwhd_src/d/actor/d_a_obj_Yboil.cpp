@@ -1,255 +1,276 @@
 /* Volcano boiling lava: private port of the actual HD translation unit. */
 #include "d/actor/d_a_obj_Yboil.h"
-static u8* ptr(u32 a) { return gabi::at<u8>(a); }
+using namespace yboil_layout;
+const gc_tu_data gc_tu = {.safeString=0x10033924,.headerStatics={0x1046CA50,0x101CDF7C,0x1046CA5C}};
+static const char M_arcname[]="Yboil";
+enum { YBOIL_VTBL=0x10033964, BCK_BASE_VTBL=0x1016E54C, BCK_VTBL=0x1003393C,
+       CALC_ANM_VTBL=0x1016D820, LavaDisabledEvent=0x1902,
+       BtkConstructor=0x025E7C6C, BrkConstructor=0x025E80D0,
+       dRes_INDEX_YBOIL_BDL_YBOIL00_e=6, dRes_INDEX_YBOIL_BCK_YBOIL00_e=9,
+       dRes_INDEX_YBOIL_BTK_YBOIL00_e=15, dRes_INDEX_YBOIL_BRK_YBOIL00_e=12 };
+
+static u8* bckConstructorGuest(u8*);
+static void bckDestructorGuest(u8*,u32);
+void constructArray(void*,u32,u32,u32);
+void destroyArray(void*,u32,u32,u32,u32,u32);
+void initializeFrameCtrl(J3DFrameCtrl*,s32);
+void constructMatrixCalc(void*);
+void destructMatrixCalc(void*,s32);
+void dKy_get_seacolor(GXColor*,GXColor*);
+void convertColor(FloatColor*,const FloatColor*,f32);
+FloatColor* getShaderParameter(ShaderParams*,u32);
+// HD: array construction receives guest entry addresses for the shared constructors.
+
+/* 023BC3D8 */
 BOOL daObjYboil_c::CreateHeap() {
- WWHD_FUNC(0x023BC3D8,BOOL,this);
- const u32 indices[]={6,9,15,12},lines[]={0x5C,0x60,0x64,0x68};
- const u32 expressions[]={0x10033994,0x100339A8,0x100339B4,0x100339C0};
- u32 resources[4];
- for(u32 j=0;j<4;j++) {
-  resources[j]=gabi::ea(dComIfG_getObjectRes(STR(0x10033978),indices[j],0x10033924));
-  if(!resources[j]) JUT_ASSERT_fail(STR(0x10033980),lines[j],STR(expressions[j]));
+ auto* modelData=static_cast<J3DModelData*>(dComIfG_getObjectRes(M_arcname,dRes_INDEX_YBOIL_BDL_YBOIL00_e));
+ if (!modelData) JUT_ASSERT_fail("d_a_obj_Yboil.cpp",0x5C,"modelData != (0)");
+ auto* bck=static_cast<J3DAnmTransform*>(dComIfG_getObjectRes(M_arcname,dRes_INDEX_YBOIL_BCK_YBOIL00_e));
+ if (!bck) JUT_ASSERT_fail("d_a_obj_Yboil.cpp",0x60,"bck != 0");
+ auto* btk=static_cast<J3DAnmTextureSRTKey*>(dComIfG_getObjectRes(M_arcname,dRes_INDEX_YBOIL_BTK_YBOIL00_e));
+ if (!btk) JUT_ASSERT_fail("d_a_obj_Yboil.cpp",0x64,"btk != 0");
+ auto* brk=static_cast<J3DAnmTevRegKey*>(dComIfG_getObjectRes(M_arcname,dRes_INDEX_YBOIL_BRK_YBOIL00_e));
+ if (!brk) JUT_ASSERT_fail("d_a_obj_Yboil.cpp",0x68,"brk != 0");
+ for (u32 i=0;i<50;++i) {
+  mModel[i]=mDoExt_J3DModel__create(modelData,0x80000,0x11000222);
+  if (!mModel[i]) return FALSE;
+  if (!mBckAnm[i].init(modelData,bck,true,J3DFrameCtrl::EMode_NONE,1.f,0,-1,false)) return FALSE;
+  if (!mBtkAnm[i].init(modelData,btk,true,J3DFrameCtrl::EMode_NONE,1.f,0,-1,false,0)) return FALSE;
+  if (!mBrkAnm[i].init(modelData,brk,true,J3DFrameCtrl::EMode_NONE,1.f,0,-1,false,0)) return FALSE;
  }
- for(u32 i=0;i<50;i++) {
-  mModels[i]=mDoExt_J3DModel__create((J3DModelData*)ptr(resources[0]),0x80000,0x11000222);
-  if(!mModels[i]) return 0;
-  if(!mBck[i].init((J3DModelData*)ptr(resources[0]),(J3DAnmTransform*)ptr(resources[1]),true,0,1.0f,0,-1,false)) return 0;
-  if(!mBtk[i].init((J3DModelData*)ptr(resources[0]),(J3DAnmTextureSRTKey*)ptr(resources[2]),true,0,1.0f,0,-1,false,0)) return 0;
-  if(!gabi::call<BOOL>(0x025E8154,&mBrk[i],ptr(resources[0]),ptr(resources[3]),true,0,1.0f,(s16)0,(s16)-1,false,0)) return 0;
- }
- return 1;
+ return TRUE;
 }
-VERIFY(0x023BC3D8,&daObjYboil_c::CreateHeap);
-static BOOL yboilHeapCB(daObjYboil_c* self) {
- WWHD_FUNC(0x023BC624,BOOL,self); return gabi::call<BOOL>(0x023BC3D8,self);
+/* 023BC624 */
+static BOOL CheckCreateHeap(daObjYboil_c* self) {
+  return self->CreateHeap();
 }
-VERIFY(0x023BC624,yboilHeapCB);
+/* 023BC628 */
 void daObjYboil_c::pos_reset(s32 i) {
- WWHD_FUNC(0x023BC628,void,this,i);
+
  f32 spread=(f32)mScaleMax-(f32)mScaleMin;
  f32 size=cM_rndF(spread)+(f32)mScaleMin;
- mScales[i].x=size; mScales[i].y=size; mScales[i].z=size;
+ mMdlScale[i].x=size; mMdlScale[i].y=size; mMdlScale[i].z=size;
  f32 distance=cM_rndF(1400.0f)+1300.0f;
  u16 angle=(u16)gabi::ftoi(cM_rndF(65536.0f));
- mPositions[i].x=gabi::fmadds(distance,cM_ssin(angle),current.pos.x);
- mPositions[i].y=current.pos.y;
- mPositions[i].z=gabi::fmadds(distance,cM_scos(angle),current.pos.z);
+ mMdlPos[i].x=gabi::fmadds(distance,cM_ssin(angle),current.pos.x);
+ mMdlPos[i].y=current.pos.y;
+ mMdlPos[i].z=gabi::fmadds(distance,cM_scos(angle),current.pos.z);
 }
-VERIFY(0x023BC628,&daObjYboil_c::pos_reset);
+/* 023BC718 */
 void daObjYboil_c::set_mtx() {
- WWHD_FUNC(0x023BC718,void,this);
+
  for(u32 i=0;i<50;i++) {
-  J3DModel_setBaseScale(mModels[i],&mScales[i]);
-  mDoMtx_stack_c::transS(mPositions[i].x,mPositions[i].y,mPositions[i].z);
-  J3DModel_setBaseTRMtx(mModels[i],mDoMtx_stack_c::get());
+  J3DModel_setBaseScale(mModel[i],&mMdlScale[i]);
+  mDoMtx_stack_c::transS(mMdlPos[i].x,mMdlPos[i].y,mMdlPos[i].z);
+  J3DModel_setBaseTRMtx(mModel[i],mDoMtx_stack_c::get());
  }
 }
-VERIFY(0x023BC718,&daObjYboil_c::set_mtx);
+/* 023BC800 */
 void daObjYboil_c::CreateInit() {
- WWHD_FUNC(0x023BC800,void,this);
+
  mScaleMin=0.5f; mScaleMax=1.0f;
  for(u32 i=0;i<50;i++) {
   pos_reset(i);
-  cullMtx=gabi::ea(J3DModel_getBaseTRMtx(mModels[i]));
+  cullMtx=gabi::ea(J3DModel_getBaseTRMtx(mModel[i]));
   fopAcM_setCullSizeBox(this,-3000.0f,-0.0f,-3000.0f,3000.0f,200.0f,3000.0f);
   cullSizeFar=1.0f;
   f32 frame=(f32)gabi::ftoi(cM_rndF(29.999900817871094f));
-  mBck[i].mFrameCtrl.mFrame=frame; mBtk[i].mFrameCtrl.mFrame=frame; mBrk[i].mFrameCtrl.mFrame=frame;
-  mTimers[i]=0;
+  mBckAnm[i].mFrameCtrl.mFrame=frame; mBtkAnm[i].mFrameCtrl.mFrame=frame; mBrkAnm[i].mFrameCtrl.mFrame=frame;
+  mMdlTimer[i]=0;
  }
  set_mtx();
 }
-VERIFY(0x023BC800,&daObjYboil_c::CreateInit);
-static s32 yboilCreate(daObjYboil_c* self) {
- WWHD_FUNC(0x023BC9BC,s32,self);
- if(!(self->actor_condition&8)) {
-  if(self) {
-   gabi::call(0x025D4ED0,self); gabi::store<u32>(gabi::ea(self)+0xB4,0x10033964);
-   gabi::call(0x028EFFD0,&self->mBck[0],50,0x8C,0x023BD294);
-   gabi::call(0x028EFFD0,&self->mBtk[0],50,0x74,0x025E7C6C);
-   gabi::call(0x028EFFD0,&self->mBrk[0],50,0x78,0x025E80D0);
+/* 023BC9BC */
+s32 daObjYboil_c::_create() {
+
+ if(!(this->actor_condition & fopAcCnd_INIT_e)) {
+  if(this) {
+   fopAc_ac_c_ct(this); this->__vtbl=YBOIL_VTBL;
+   constructArray(&this->mBckAnm[0],50,sizeof(mDoExt_bckAnm),gabi::guest_fn((const void*)bckConstructorGuest));
+   constructArray(&this->mBtkAnm[0],50,sizeof(mDoExt_btkAnm),BtkConstructor);
+   constructArray(&this->mBrkAnm[0],50,sizeof(YboilBrk),BrkConstructor);
   }
-  self->actor_condition=(u32)self->actor_condition|8;
+  this->actor_condition=(u32)this->actor_condition | fopAcCnd_INIT_e;
  }
- if(gabi::call<BOOL>(0x025B8B94,ptr(gabi::load<u32>(0x101F84DC)+0x644),0x1902)) return 3;
- s32 result=gabi::call<s32>(0x02520460,&self->mPhase,STR(0x1003391C));
+ if(dComIfGs_isEventBit(LavaDisabledEvent)) return 3;
+ s32 result=dComIfG_resLoad(&this->mPhs,M_arcname);
  if(result==4) {
-  if(!gabi::call<BOOL>(0x025D63E8,self,0x023BC624,0x14500)) return 5;
-  self->CreateInit();
+  if(!fopAcM_entrySolidHeap(this,(BOOL(*)(fopAc_ac_c*))CheckCreateHeap,0x14500)) return 5;
+  this->CreateInit();
  }
  return result;
 }
-VERIFY(0x023BC9BC,yboilCreate);
-static BOOL yboilDelete(daObjYboil_c* self) {
- WWHD_FUNC(0x023BCB04,BOOL,self);
- if(gabi::load<u8>(gabi::ea(self)+0xD)!=3) gabi::call(0x025204C8,&self->mPhase,STR(0x100339F8));
+/* 023BCB04 */
+BOOL daObjYboil_c::_delete() {
+
+ if (this->mCreateResult != cPhs_STOP_e) dComIfG_resDelete(&this->mPhs,M_arcname);
  return 1;
 }
-VERIFY(0x023BCB04,yboilDelete);
-struct YboilByteColor { be<u8> rgba[4]; };
-struct YboilFloatColor { be<f32> r,g,b,a; };
-static void yboilNormalize(YboilFloatColor* out,u8* color) {
- WWHD_FUNC(0x023BCB40,void,out,color);
- u32 source=gabi::ea(color),dest=gabi::ea(out);
- f32 r=gabi::load<u8>(source),g=gabi::load<u8>(source+1),b=gabi::load<u8>(source+2),a=gabi::load<u8>(source+3);
- gabi::store<f32>(dest,r/255.0f);gabi::store<f32>(dest+4,g/255.0f);
- gabi::store<f32>(dest+8,b/255.0f);gabi::store<f32>(dest+12,a/255.0f);
+/* 023BCB40 */
+static void normalizeColor(FloatColor* out,GXColor* color) {
+ f32 r=color->r,g=color->g,b=color->b,a=color->a;
+ out->r=r/255.f;
+ out->g=g/255.f;
+ out->b=b/255.f;
+ out->a=a/255.f;
 }
-VERIFY(0x023BCB40,yboilNormalize);
-static u32 colorGet(u32 material,u32 slot) {
- u32 tev=gabi::load<u32>(material+0x18);
- u32 target=gabi::load<u32>(gabi::load<u32>(tev+4)+slot);
- return gabi::call_ptr<u32>(target,ptr(tev),0);
-}
-static void colorSet(u32 material,u32 slot,u32 color) {
- u32 tev=gabi::load<u32>(material+0x18);
- u32 target=gabi::load<u32>(gabi::load<u32>(tev+4)+slot);
- gabi::call_ptr(target,ptr(tev),0,ptr(color));
-}
-static void renderList(u32 first,u32 second) {
- u32 play=gabi::call<u32>(0x025200D4);
- gabi::store<u32>(0x104B4634,gabi::load<u32>(play+first));
- play=gabi::call<u32>(0x025200D4);
- gabi::store<u32>(0x104B4638,gabi::load<u32>(play+second));
-}
-static BOOL yboilDraw(daObjYboil_c* self) {
- WWHD_FUNC(0x023BCBF4,BOOL,self);
- renderList(0x5D70,0x5D74);
- u32 env=gabi::call<u32>(0x02555D0C);
- gabi::call(0x025626A4,ptr(env),1,&self->current.pos,ptr(gabi::ea(self)+0x110));
- for(u32 i=0;i<50;i++) {
-  env=gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C,ptr(env),(J3DModel*)self->mModels[i],ptr(gabi::ea(self)+0x110));
-  u32 model=gabi::ea(self->mModels[i]);
-  u32 data=gabi::load<u32>(model+0xAC);
-  u32 material=gabi::load<u32>(gabi::load<u32>(data+8)+0x10);
-  while(material) {
-   gabi::Local<YboilByteColor> ambient,diffuse;
-   gabi::Local<YboilFloatColor> input,converted;
-   gabi::call(0x025602F0,ambient.get(),diffuse.get());
-   for(u32 component=0;component<3;component++) {
-    u32 destination=colorGet(material,0x34);
-    u16 value=ambient->rgba[component];
-    gabi::store<u16>(destination+component*2,value);
+/* 023BCBF4 */
+BOOL daObjYboil_c::_draw() {
+ dComIfGd_setListBG();
+ g_env_light.settingTevStruct(1,&this->current.pos,&this->tevStr);
+ for (u32 i=0;i<50;++i) {
+  g_env_light.setLightTevColorType(this->mModel[i],&this->tevStr);
+  auto* data=reinterpret_cast<ModelData*>(this->mModel[i]->getModelData());
+  Material* material=data->mJointNodes->mMesh;
+  while (material) {
+   // HD: retain the four color temporaries in their verified stack order.
+   gabi::Local<GXColor> ambient,diffuse;
+   gabi::Local<FloatColor> input,converted;
+   dKy_get_seacolor(ambient.get(),diffuse.get());
+   for (u32 component=0;component<3;++component) {
+    auto* dest=reinterpret_cast<be<s16>*>(material->mTevBlock->getTevColor());
+    auto* src=reinterpret_cast<be<u8>*>(ambient.get());
+    u16 value=src[component];
+    dest[component]=value;
    }
-   u32 color=colorGet(material,0x34);
-   colorSet(material,0x24,color);
-   input->r=(f32)gabi::load<s16>(color)/255.0f;
-   input->g=(f32)gabi::load<s16>(color+2)/255.0f;
-   input->b=(f32)gabi::load<s16>(color+4)/255.0f;
-   input->a=(f32)gabi::load<s16>(color+6)/255.0f;
-   gabi::call(0x0274D458,converted.get(),input.get(),1.0f);
-   gabi::store<u32>(material+0xA0,gabi::load<u32>(material+0xA0)|0x10);
-   u32 output=gabi::call<u32>(0x027F9F0C,ptr(material+0xA0),4);
-   f32 alpha=(f32)gabi::load<s16>(color+6)/255.0f;
-   // The generated HD green load/store preserves its signaling payload;
-   // red and blue round through double FPRs. Aliased color buffers expose this.
-   u32 rgb=gabi::ea(converted.get());
+   GXColorS10* color=material->mTevBlock->getTevColor();
+   material->mTevBlock->setTevColor(color);
+   input->r=(f32)color->r/255.f;
+   input->g=(f32)color->g/255.f;
+   input->b=(f32)color->b/255.f;
+   input->a=(f32)color->a/255.f;
+   convertColor(converted.get(),input.get(),1.f);
+   material->mShaderParams.flags |= 0x10;
+   FloatColor* output=getShaderParameter(&material->mShaderParams,4);
+   f32 alpha=(f32)color->a/255.f;
+   // HD: green is copied as bits to preserve signaling NaNs; red/blue round via FPRs.
    f32 red=converted->r,blue=converted->b;
-   u32 green=gabi::load<u32>(rgb+4);
-   gabi::store<u32>(output+4,green);gabi::store<f32>(output+8,blue);
-   gabi::store<f32>(output,red);gabi::store<f32>(output+12,alpha);
-   for(u32 component=0;component<3;component++) {
-    u32 destination=colorGet(material,0x4C);
-    u8 value=diffuse->rgba[component];
-    gabi::store<u8>(destination+component,value);
+   u32 green=reinterpret_cast<FloatColorBits*>(converted.get())->g;
+   reinterpret_cast<FloatColorBits*>(output)->g=green;
+   output->b=blue;
+   output->r=red;
+   output->a=alpha;
+   for (u32 component=0;component<3;++component) {
+    auto* dest=reinterpret_cast<be<u8>*>(material->mTevBlock->getTevKColor());
+    auto* src=reinterpret_cast<be<u8>*>(diffuse.get());
+    u8 value=src[component];
+    dest[component]=value;
    }
-   color=colorGet(material,0x4C);
-   colorSet(material,0x3C,color);
-   yboilNormalize(input.get(),ptr(color));
-   gabi::call(0x0274D458,converted.get(),input.get(),1.0f);
-   gabi::store<u32>(material+0xA0,gabi::load<u32>(material+0xA0)|0x80);
-   output=gabi::call<u32>(0x027F9F0C,ptr(material+0xA0),7);
-   alpha=(f32)gabi::load<u8>(color+3)/255.0f;
-   // This second HD conversion rounds RGB through double FPRs.
+   GXColor* kColor=material->mTevBlock->getTevKColor();
+   material->mTevBlock->setTevKColor(kColor);
+   normalizeColor(input.get(),kColor);
+   convertColor(converted.get(),input.get(),1.f);
+   material->mShaderParams.flags |= 0x80;
+   output=getShaderParameter(&material->mShaderParams,7);
+   alpha=(f32)kColor->a/255.f;
+   // HD: the second conversion rounds all RGB channels through FPRs.
    f32 redFloat=converted->r,greenFloat=converted->g,blueFloat=converted->b;
-   gabi::store<f32>(output+4,greenFloat);gabi::store<f32>(output+8,blueFloat);
-   gabi::store<f32>(output,redFloat);gabi::store<f32>(output+12,alpha);
-   material=gabi::load<u32>(material+4);
+   output->g=greenFloat;
+   output->b=blueFloat;
+   output->r=redFloat;
+   output->a=alpha;
+   material=material->mNext;
   }
-  data=gabi::load<u32>(gabi::ea(self->mModels[i])+0xAC);
-  self->mBck[i].entry((J3DModelData*)ptr(data),self->mBck[i].mFrameCtrl.mFrame);
-  data=gabi::load<u32>(gabi::ea(self->mModels[i])+0xAC);
-  self->mBtk[i].entry((J3DModelData*)ptr(data),self->mBtk[i].mFrameCtrl.mFrame);
-  data=gabi::load<u32>(gabi::ea(self->mModels[i])+0xAC);
-  gabi::call(0x025E83FC,&self->mBrk[i],ptr(data),(f32)self->mBrk[i].mFrameCtrl.mFrame);
-  gabi::call(0x025E2DE0,(J3DModel*)self->mModels[i],0);
+  J3DModelData* modelData=this->mModel[i]->getModelData();
+  this->mBckAnm[i].entry(modelData,this->mBckAnm[i].getFrame());
+  modelData=this->mModel[i]->getModelData();
+  this->mBtkAnm[i].entry(modelData,this->mBtkAnm[i].getFrame());
+  modelData=this->mModel[i]->getModelData();
+  this->mBrkAnm[i].entry(modelData,this->mBrkAnm[i].getFrame());
+  mDoExt_modelUpdateDL(this->mModel[i]);
  }
- renderList(0x5D78,0x5D7C);
- return 1;
+ dComIfGd_setList();
+ return TRUE;
 }
-VERIFY(0x023BCBF4,yboilDraw);
-static u32 yboilParameter(daObjYboil_c* self,u32 width,u32 shift) {
- WWHD_FUNC(0x023BD3F8,u32,self,width,shift);
+/* 023BD3F8 */
+static u32 PrmAbstract(daObjYboil_c* self,u32 width,u32 shift) {
+
  u32 mask=width&32?0:1u<<(width&31);
  u32 value=shift&32?0:(u32)self->mParameters>>(shift&31);
  return value&(mask-1);
 }
-VERIFY(0x023BD3F8,yboilParameter);
-static BOOL yboilExecute(daObjYboil_c* self) {
- WWHD_FUNC(0x023BD02C,BOOL,self);
+/* 023BD02C */
+BOOL daObjYboil_c::_execute() {
+
  for(u32 i=0;i<50;i++) {
-  if(self->mTimers[i]==0) {
-   self->mBck[i].play();self->mBtk[i].play();self->mBrk[i].play();
-   if(self->mBck[i].mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) || self->mBck[i].mFrameCtrl.mRate==0.0f) {
-    self->mBck[i].mFrameCtrl.mFrame=0;self->mBtk[i].mFrameCtrl.mFrame=0;self->mBrk[i].mFrameCtrl.mFrame=0;
-    self->mBck[i].mFrameCtrl.mRate=1;self->mBtk[i].mFrameCtrl.mRate=1;self->mBrk[i].mFrameCtrl.mRate=1;
-    self->mTimers[i]=(u32)gabi::ftoi(cM_rndF(3.9999001026153564f))+1;
+  if(this->mMdlTimer[i]==0) {
+   this->mBckAnm[i].play();this->mBtkAnm[i].play();this->mBrkAnm[i].play();
+   if(this->mBckAnm[i].mFrameCtrl.checkState(J3DFrameCtrl::STATE_STOP_E) || this->mBckAnm[i].mFrameCtrl.mRate==0.0f) {
+    this->mBckAnm[i].mFrameCtrl.mFrame=0;this->mBtkAnm[i].mFrameCtrl.mFrame=0;this->mBrkAnm[i].mFrameCtrl.mFrame=0;
+    this->mBckAnm[i].mFrameCtrl.mRate=1;this->mBtkAnm[i].mFrameCtrl.mRate=1;this->mBrkAnm[i].mFrameCtrl.mRate=1;
+    this->mMdlTimer[i]=(u32)gabi::ftoi(cM_rndF(3.9999001026153564f))+1;
    }
   } else {
-   u32 sw=yboilParameter(self,8,8);
-   u32 save=gabi::load<u32>(0x101F84DC);
-   if(!gabi::call<BOOL>(0x025BA0C0,ptr(save+0x20),sw,(s32)(s8)self->home.roomNo)) {
-    u32 timer=(u32)self->mTimers[i]-1;
-    self->mTimers[i]=timer;
-    if(timer==0) self->pos_reset(i);
+   u32 sw=PrmAbstract(this,PRM_SWSAVE_W,PRM_SWSAVE_S);
+   if (!dComIfGs_isSwitch(sw,this->home.roomNo)) {
+    u32 timer=(u32)this->mMdlTimer[i]-1;
+    this->mMdlTimer[i]=timer;
+    if(timer==0) this->pos_reset(i);
    }
   }
  }
- self->set_mtx();return 1;
+ this->set_mtx();return 1;
 }
-VERIFY(0x023BD02C,yboilExecute);
-static void yboilStaticInit() {
- WWHD_FUNC(0x023BD1EC,void);
- for(u32 i=0;i<4;i++) gabi::store<u32>(0x1046CA5C+i*4,0);
- gabi::call(0x028F026C,ptr(0x101CDF7C));
- gabi::store<f32>(0x1046CA50,-3.1415927410125732f);gabi::store<f32>(0x1046CA54,3.1415927410125732f);
- gabi::call(0x028ED6F8,ptr(0x1046CA58));gabi::call(0x028F026C,ptr(0x101CDF88));
- gabi::call(0x028EAB2C,ptr(0x1046CA59));gabi::call(0x028F026C,ptr(0x101CDF94));
+/* 023BD1EC */
+static void staticInitialize() { __sinit_header_statics(); }
+/* 023BD280 */
+static void deleteStatic(u8* self,u32 flags) {
+  if(self && (flags&1)) operator_delete(self);
 }
-VERIFY(0x023BD1EC,yboilStaticInit);
-static void yboilTrivialDtor(u8* self,u32 flags) {
- WWHD_FUNC(0x023BD280,void,self,flags); if(self && (flags&1)) gabi::call(0x0273AF40,self);
-}
-VERIFY(0x023BD280,yboilTrivialDtor);
-static u8* yboilBckCtor(u8* self) {
- WWHD_FUNC(0x023BD294,u8*,self);
- if(!self) { self=gabi::call<u8*>(0x0273AD10,0x8C); if(!self) return nullptr; }
- gabi::call(0x027F2BC0,self,0);
- u32 a=gabi::ea(self);gabi::store<u32>(a+0x10,0x1016E54C);
- gabi::call(0x027DA984,ptr(a+0x14));
- gabi::store<u32>(a+0x88,0);gabi::store<u32>(a+0x48,0x1016D820);
- gabi::store<u32>(a+0x58,0);gabi::store<u32>(a+0x84,0);
- gabi::store<u32>(a+0x10,0x1003393C);gabi::store<u32>(a+0x80,0);gabi::store<u32>(a+0x7C,0);
+/* 023BD294 */
+static u8* bckConstructorGuest(u8* self) {
+ // HD: this GHS constructor allocates on a null pointer.
+ if (!self) { self=static_cast<u8*>(operator_new(0x8C)); if (!self) return nullptr; }
+ auto* view=reinterpret_cast<BckConstructorView*>(self);
+ initializeFrameCtrl(&view->mFrameCtrl,0);
+ view->__vtbl=BCK_BASE_VTBL;
+ constructMatrixCalc(view->mCalc);
+ view->mpAnm=0;
+ view->__vtblAnm=CALC_ANM_VTBL;
+ view->mTransform=0;
+ view->mCalcState[2]=0;
+ view->__vtbl=BCK_VTBL;
+ view->mCalcState[1]=0;
+ view->mCalcState[0]=0;
  return self;
 }
-VERIFY(0x023BD294,yboilBckCtor);
-static BOOL yboilIsDelete(daObjYboil_c* self) {
- WWHD_FUNC(0x023BD324,BOOL,self);return 1;
+/* 023BD324 */
+static BOOL IsDelete(daObjYboil_c* self) {
+ return 1;
 }
-VERIFY(0x023BD324,yboilIsDelete);
-static void yboilBckDtor(u8* self,u32 flags) {
- WWHD_FUNC(0x023BD32C,void,self,flags);
- if(self) { gabi::call(0x027F3628,ptr(gabi::ea(self)+0x10),0);if(flags&1) gabi::call(0x0273AF40,self); }
+/* 023BD32C */
+static void bckDestructorGuest(u8* self,u32 flags) {
+
+ if(self) { destructMatrixCalc(&reinterpret_cast<BckConstructorView*>(self)->__vtbl,0);if(flags&1) operator_delete(self); }
 }
-VERIFY(0x023BD32C,yboilBckDtor);
-static void yboilActorDtor(daObjYboil_c* self,u32 flags) {
- WWHD_FUNC(0x023BD380,void,self,flags);
+/* 023BD380 */
+static void actorDestructor(daObjYboil_c* self,u32 flags) {
+
  if(self) {
-  gabi::call(0x028F0164,&self->mBck[0],50,0x8C,0x023BD32C,0,0);
-  gabi::call(0x025D50BC,self,0);if(flags&1) gabi::call(0x0273AF40,self);
+  destroyArray(&self->mBckAnm[0],50,sizeof(mDoExt_bckAnm),gabi::guest_fn((const void*)bckDestructorGuest),0,0);
+  __dt(static_cast<fopAc_ac_c*>(self));if(flags&1) operator_delete(self);
  }
 }
-VERIFY(0x023BD380,yboilActorDtor);
-static void yboilEmpty(u8* self) { WWHD_FUNC(0x023BD3F4,void,self); }
-VERIFY(0x023BD3F4,yboilEmpty);
+/* 023BD3F4 */
+static void emptyVirtual(u8* self) {  }
+
+/* WWHD glue
+str 1003391C
+str 10033978 in 023BC3D8
+str 100339F8 in 023BCB04
+str 10033980
+str 10033994
+str 100339A8
+str 100339B4
+str 100339C0
+ext 025E8154 BOOL YboilBrk::init(J3DModelData*,J3DAnmTevRegKey*,bool,s32,f32,s16,s16,bool,s32)
+ext 025E83FC void YboilBrk::entry(J3DModelData*,f32)
+ext 028EFFD0 void constructArray(void*,u32,u32,u32)
+ext 028F0164 void destroyArray(void*,u32,u32,u32,u32,u32)
+ext 027F2BC0 void initializeFrameCtrl(J3DFrameCtrl*,s32)
+ext 027DA984 void constructMatrixCalc(void*)
+ext 027F3628 void destructMatrixCalc(void*,s32)
+ext 025602F0 void dKy_get_seacolor(GXColor*,GXColor*)
+ext 0274D458 void convertColor(FloatColor*,const FloatColor*,f32)
+ext 027F9F0C FloatColor* getShaderParameter(ShaderParams*,u32)
+*/

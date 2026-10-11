@@ -1,17 +1,31 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_control_wind_ok {
-struct Event { u8 data[40]; };
-void wait(u32 self) {
- WWHD_FUNC(0x0264F09C,void,self);
- FrameLocal<Event> event(8);
- call<void>(0x020013C0,event.a,load<u32>(0x101F4FF0)+0x30);
- u32 n=load<u8>(self+0x50), flag=load<u8>(self+0x55);
- if(n) { n=u8(n-1); store<u8>(self+0x50,n); }
- if(flag || !n || call<u32>(0x026F620C,load<u32>(event.a))) {
-  store<u8>(self+0x54,1);
-  call<void>(0x020063C0,self+0x18,0x10491C00u);
- }
+/** HD wind-control waiting state; private decomp source. */
+#include "bindings.h"
+#include "d/hd_screen_command_a.h"
+static hdHudEventManager* sEventManager;
+static hdHudStateDescriptor sWindReadyState;
+
+/* 0264F09C */
+static void waitWindControl(hdHudWindControl* i_this) {
+    // HD: the verified final stack range includes the original saved-register area.
+    auto frame = gabi::AutoFrame(0x0264F09C);
+    // HD: the copied event must occupy the original frame slot for its complete 40-byte result.
+    gabi::FrameLocal<hdHudInputEvent> event(8);
+    hdHudCopyInputEvent(event.get(), &sEventManager->mCurrentEvent);
+    u32 timer = i_this->mWaitTimer;
+    u32 forced = i_this->mForced;
+    if (timer != 0) {
+        timer = u8(timer - 1);
+        i_this->mWaitTimer = timer;
+    }
+    if (forced || timer == 0 || hdHudIsWindEvent(event->mType)) {
+        i_this->mReady = 1;
+        hdHudChangeState(&i_this->mStateMachine, &sWindReadyState);
+    }
 }
-VERIFY(0x0264F09C,wait);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): HD wind event and state
+ data sEventManager 101F4FF0
+ data sWindReadyState 10491C00
+ ext 020013C0 void hdHudCopyInputEvent(hdHudInputEvent*, hdHudInputEvent*)
+ ext 026F620C u32 hdHudIsWindEvent(u32)
+*/

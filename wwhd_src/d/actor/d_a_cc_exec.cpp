@@ -1,135 +1,53 @@
-/**
- * d_a_cc_exec.cpp (WWHD)
- * Enemy - ChuChu: daCC_Execute with its inlined action functions (action_nomal_move,
- * action_oyogu, action_attack_move, action_damage_move, action_dead_move)
- *
- * Ported from the GameCube decompilation
- * (zeldaret/tww src/d/actor/d_a_cc.cpp) to the WWHD layout and code, verified against
- * cking.rpx. "HD:" marks where WWHD's code differs from the GameCube source.
- */
-#include "d/actor/d_a_cc.h"
+/** ChuChu execution and inlined actions, following tww with verified HD behaviour. */
+#include "d/actor/d_a_cc_exec.h"
+#include "gc_api/tu.h"
+const gc_tu_data gc_tu = {.safeString = 0x1000C548};
+static const char splitArchive[3] = {0x43, 0x63, 0};
+static const char deadArchive[3] = {0x43, 0x63, 0};
 
-#define SAFESTRING_VTBL 0x1000C548 /* this TU's sead::SafeString vtable */
-
-enum {
-    dRes_INDEX_CC_BCK_ATACK01_e = 0x14,
-    dRes_INDEX_CC_BCK_ATACK02_e = 0x15,
-    dRes_INDEX_CC_BCK_ATACK03_e = 0x16,
-    dRes_INDEX_CC_BCK_CC_BETA_e = 0x17,
-    dRes_INDEX_CC_BCK_CC_PTCL_e = 0x18,
-    dRes_INDEX_CC_BCK_HUKKATSU_e = 0x1A,
-    dRes_INDEX_CC_BCK_HUSE2TACHI_e = 0x1B,
-    dRes_INDEX_CC_BCK_HUSE_WALK_e = 0x1C,
-    dRes_INDEX_CC_BCK_MAHI_e = 0x1D,
-    dRes_INDEX_CC_BCK_START_e = 0x1E,
-    dRes_INDEX_CC_BCK_TACHI2HUSE_e = 0x1F,
-    dRes_INDEX_CC_BCK_TACHI_WALK_e = 0x20,
-    dRes_INDEX_CC_BCK_TSTART01_e = 0x21,
-    dRes_INDEX_CC_BCK_TSTART02_e = 0x22,
-};
-enum {
-    JA_SE_CV_CC_STAND_UP = 0x4860,
-    JA_SE_CV_CC_ATTACK = 0x4861,
-    JA_SE_CV_CC_DAMAGE = 0x4862,
-    JA_SE_CV_CC_DIE = 0x4863,
-    JA_SE_CM_MD_PIYO = 0x50BC,
-    JA_SE_CM_CC_ENTER_GND = 0x585D,
-    JA_SE_CM_CC_LANDING = 0x585E,
-    JA_SE_CM_CC_STAND_TO_LIE = 0x585F,
-    JA_SE_CM_CC_LIE_TO_STAND = 0x5860,
-    JA_SE_CM_CC_MOVE_LIE = 0x5861,
-    JA_SE_CM_CC_MOVE_STAND = 0x5862,
-    JA_SE_CM_CC_ATTACK = 0x5863,
-    JA_SE_CM_CC_DMG_SWING = 0x5864,
-    JA_SE_CM_CC_DIE_SWING = 0x5865,
-    JA_SE_CM_CC_BLUE_SPARK = 0x5866,
-    JA_SE_CM_B_CC_RECOVER = 0x591E,
-};
-enum {
-    daDisItem_IBALL_e = 0,
-    daDisItem_HEART_e = 0xA,
-    daDisItem_MAGIC_e = 0xB,
-    daDisItem_ARROW_e = 0xC,
-    daDisItem_NONE13_e = 0xD,
-};
-/* ~(AT_TYPE_UNK400000 | AT_TYPE_UNK20000 | AT_TYPE_WATER) */
-#define CC_TG_TYPE_ALL 0xFFBDFEFFu
-
-static be<u8>& DEMO_RET_START_FLAG() { return *gabi::at<be<u8>>(0x101B3AFD); }
-
-/* functions of this TU (guest calls by address) */
-static inline void naraku_check(cc_class* i) { gabi::call(0x0210C828, i); }
-static inline void draw_SUB(cc_class* i) { gabi::call(0x0210BB58, i); }
-static inline void cc_eff_set(cc_class* i, u8 a) { gabi::call(0x0210C364, i, a); }
-static inline void anm_init(cc_class* i, int idx, float morf, unsigned char loop, float speed, int snd) {
-    gabi::call(0x0210C5C8, i, idx, morf, loop, speed, snd);
-}
-static inline void denki_start(cc_class* i) { gabi::call(0x0210CBC0, i); }
-static inline void denki_end(cc_class* i) { gabi::call(0x0210CC00, i); }
-static inline BOOL shock_damage_check(cc_class* i) { return gabi::call<BOOL>(0x0210CC58, i); }
-static inline void black_light_check(cc_class* i) { gabi::call(0x0210CE2C, i); }
-static inline BOOL body_atari_check(cc_class* i) { return gabi::call<BOOL>(0x0210CE9C, i); }
-static inline BOOL search_angle_set(cc_class* i) { return gabi::call<BOOL>(0x0210DA18, i); }
-static inline void BG_check(cc_class* i) { gabi::call(0x0210DC8C, i); }
-static inline void action_noboru(cc_class* i) { gabi::call(0x021116B8, i); }
-static inline void action_up_check(cc_class* i) { gabi::call(0x02112414, i); }
-static inline void action_tomaru(cc_class* i) { gabi::call(0x02112DA0, i); }
-static inline void action_tubo_search(cc_class* i) { gabi::call(0x02112E74, i); }
-/* 02111638: this TU's out-of-line copy of fopAcM_seStart */
-static inline void fopAcM_seStart_ool(fopAc_ac_c* a, u32 se, u32 param) { gabi::call(0x02111638, a, se, param); }
-/* 0211310C: an empty function of this TU returning its argument (an unexpanded inline accessor) */
-static inline u32 cc_ident_0211310C(u32 p) { return gabi::call<u32>(0x0211310C, p); }
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-/* 020402C8 enemy_ice(enemyice*) */
-static inline BOOL enemy_ice(enemyice_l* e) { return gabi::call<BOOL>(0x020402C8, e); }
-/* 02041CAC enemy_piyo_set(fopAc_ac_c*) */
-static inline void enemy_piyo_set(fopAc_ac_c* a) { gabi::call(0x02041CAC, a); }
-/* 025DA088 fopAcM_setGbaName(fopAc_ac_c*, u8 itemNo, u8 n, u8 gbaName) */
-static inline void fopAcM_setGbaName(fopAc_ac_c* a, u8 item, u8 n, u8 gba) { gabi::call(0x025DA088, a, item, n, gba); }
-/* 024EECAC dBgS::GetMtrlSndId(const cBgS_PolyInfo&) */
-static inline u32 dBgS_GetMtrlSndId(dBgS* bgs, void* poly) { return gabi::call<u32>(0x024EECAC, bgs, poly); }
-/* 028249B0 JPASetRMtxTVecfromMtx(const Mtx, Mtx (rotation), TVec3 (translation)) */
-static inline void JPASetRMtxTVecfromMtx(u32 mtx, u32 r, u32 t) { gabi::call(0x028249B0, mtx, r, t); }
 /* HD fopAcM_monsSeStart inline (the process id is read before the reverb call) */
 static inline void fopAcM_monsSeStart(fopAc_ac_c* a, u32 se, u32 param) {
     if (a != nullptr && gabi::ea(&a->eyePos) != 0) {
         s32 room = fopAcM_GetRoomNo(a);
         u32 id = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, se, &a->eyePos, id, param, reverb); /* mDoAud_monsSeStart */
+        CcExec_monsSeStart(se, &a->eyePos, id, param, reverb); /* mDoAud_monsSeStart */
     }
 }
-static inline bool fopAcM_checkCarryNow(fopAc_ac_c* a) { return (a->actor_status & 0x2000) != 0; }
-/* dComIfGs_getLife / getMagic / getArrowNum (HD save info through 0x101F84DC) */
-static inline u16 dComIfGs_getLife() { return gabi::load<u16>(gabi::load<u32>(0x101F84DC) + 0x22); }
-static inline u8 dComIfGs_getMagic() { return gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x34); }
-static inline u8 dComIfGs_getArrowNum() { return gabi::load<u8>(gabi::load<u32>(0x101F84DC) + 0x89); }
-/* REG8_F / REG8_S */
-#define REG8_F(i) REG_F(8, i)
-#define REG8_S(i) REG_S(8, i)
-
 /* mCyl (dCcD_Cyl) bits */
-static inline void cyl_OnAtSet(cc_class* i) { i->mCyl.OnAtSPrmBit(1); }
-static inline void cyl_OffAtSet(cc_class* i) { i->mCyl.OffAtSPrmBit(1); }
-static inline void cyl_OnTgSet(cc_class* i) { i->mCyl.OnTgSPrmBit(1); }
-static inline void cyl_OffTgSet(cc_class* i) { i->mCyl.OffTgSPrmBit(1); }
-static inline void cyl_OnCoSet(cc_class* i) { i->mCyl.OnCoSPrmBit(1); }
-static inline void cyl_OffCoSet(cc_class* i) { i->mCyl.OffCoSPrmBit(1); }
-
-/* HD J3D: a model's joint matrix (marks the matrix block dirty) */
-static u32 cc_getAnmMtx(J3DModel* model, s32 jntNo) {
-    u32 blk = gabi::load<u32>(gabi::ea(model) + 0x2C);
-    gabi::store<u16>(blk + 4, gabi::load<u16>(blk + 4) | 0x10);
-    return gabi::load<u32>(blk + 0x10) + jntNo * 0x30;
+static inline void cyl_OnAtSet(cc_class* i) {
+    i->mCyl.OnAtSPrmBit(1);
 }
-enum { CC_JNT_BODY03_e = 3 };
+static inline void cyl_OffAtSet(cc_class* i) {
+    i->mCyl.OffAtSPrmBit(1);
+}
+static inline void cyl_OnTgSet(cc_class* i) {
+    i->mCyl.OnTgSPrmBit(1);
+}
+static inline void cyl_OffTgSet(cc_class* i) {
+    i->mCyl.OffTgSPrmBit(1);
+}
+static inline void cyl_OnCoSet(cc_class* i) {
+    i->mCyl.OnCoSPrmBit(1);
+}
+static inline void cyl_OffCoSet(cc_class* i) {
+    i->mCyl.OffCoSPrmBit(1);
+}
+
+// HD: reading a joint matrix marks its matrix block dirty.
+static Mtx34* cc_getAnmMtx(J3DModel* model, s32 jntNo) {
+    u32 block = reinterpret_cast<CcModel*>(model)->mMatrixBlock;
+    auto* matrices = Cc_view<CcMatrixBlock>(block);
+    matrices->mFlags = matrices->mFlags | 0x10;
+    return Cc_view<Mtx34>(matrices->mMatrices + jntNo * sizeof(Mtx34));
+}
 
 static inline void zero_m35C(cc_class* i_this) {
-    for (s32 i = 0; i < 5; i++) i_this->m35C[i] = 0;
+    for (s32 i = 0; i < 5; i++)
+        i_this->m35C[i] = 0;
 }
 
-/* ---- action_nomal_move (inlined) ---- */
+/* inlined into daCC_Execute */
 static inline void action_nomal_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     switch (i_this->m2F5) {
@@ -145,7 +63,7 @@ static inline void action_nomal_move(cc_class* i_this) {
         [[fallthrough]];
     case 1:
         if (fopAcM_searchPlayerDistance(a_this) < i_this->mNoticeRange) {
-            a_this->actor_status |= 0x20; /* fopAcStts_SHOWMAP_e */
+            a_this->actor_status |= fopAcStts_SHOWMAP_e;
             if (i_this->mBehaviorType == 1) {
                 anm_init(i_this, dRes_INDEX_CC_BCK_TSTART01_e, 0.0f, 0, 1.0f, -1);
                 i_this->m2F5 = 2;
@@ -156,7 +74,7 @@ static inline void action_nomal_move(cc_class* i_this) {
                 a_this->gravity = -3.0f;
                 i_this->m2F5 = 3;
                 cyl_OnTgSet(i_this);
-                gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4); /* attention_info.flags */
+                a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
             }
         }
         break;
@@ -170,7 +88,8 @@ static inline void action_nomal_move(cc_class* i_this) {
             cLib_addCalcAngleS2(&a_this->shape_angle.x, 0, 1, 0x1000);
         }
         if (i_this->mAcch.ChkGroundHit()) {
-            u32 snd = dBgS_GetMtrlSndId(dComIfG_Bgsp(), gabi::at<u8>(gabi::ea(&i_this->mAcch) + 0xE8));
+            u32 snd =
+                dComIfG_Bgsp()->GetMtrlSndId(static_cast<cBgS_PolyInfo*>(&i_this->mAcch.m_gnd));
             fopAcM_seStart(a_this, JA_SE_CM_CC_LANDING, snd);
             cc_eff_set(i_this, 1);
             a_this->shape_angle.x = 0;
@@ -178,7 +97,7 @@ static inline void action_nomal_move(cc_class* i_this) {
             anm_init(i_this, dRes_INDEX_CC_BCK_TSTART02_e, 0.0f, 0, 1.0f, -1);
             i_this->m2F5 = 3;
             cyl_OnTgSet(i_this);
-            gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4);
+            a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
             denki_start(i_this);
         }
         break;
@@ -190,7 +109,7 @@ static inline void action_nomal_move(cc_class* i_this) {
         i_this->m2F5 += 1;
         [[fallthrough]];
     case 4: {
-        gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4);
+        a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         zero_m35C(i_this);
         i_this->mCyl.SetTgType(CC_TG_TYPE_ALL);
         cyl_OnCoSet(i_this);
@@ -234,7 +153,7 @@ static inline void action_nomal_move(cc_class* i_this) {
     case 6:
         denki_start(i_this);
         fopAcM_seStart(a_this, JA_SE_CM_CC_STAND_TO_LIE, 0);
-        i_this->mCyl.SetTgType(0x089DC060);
+        i_this->mCyl.SetTgType(CC_TG_TYPE_CROUCH);
         cyl_OffCoSet(i_this);
         anm_init(i_this, dRes_INDEX_CC_BCK_TACHI2HUSE_e, 2.0f, 0, 1.0f, -1);
         i_this->m2F5 += 1;
@@ -282,7 +201,8 @@ static inline void action_nomal_move(cc_class* i_this) {
     case 0xb:
         if (i_this->m2B4->isStop()) {
             fopAcM_monsSeStart(a_this, JA_SE_CV_CC_STAND_UP, 0);
-            if (i_this->mBehaviorType != 3 && fopAcM_searchPlayerDistance(a_this) < 380.0f && i_this->mAcch.ChkGroundHit()) {
+            if (i_this->mBehaviorType != 3 && fopAcM_searchPlayerDistance(a_this) < 380.0f &&
+                i_this->mAcch.ChkGroundHit()) {
                 i_this->mCurrAction = 2;
                 i_this->m2F5 = 0x1e;
                 return;
@@ -294,13 +214,14 @@ static inline void action_nomal_move(cc_class* i_this) {
 
     cLib_addCalcAngleS2(&a_this->shape_angle.y, a_this->current.angle.y, 1, 0x400);
 
-    if ((i_this->m2F5 < 4 || i_this->m2F5 > 0xb || !shock_damage_check(i_this)) && i_this->m2F5 >= 3) {
+    if ((i_this->m2F5 < 4 || i_this->m2F5 > 0xb || !shock_damage_check(i_this)) &&
+        i_this->m2F5 >= 3) {
         body_atari_check(i_this);
         black_light_check(i_this);
     }
 }
 
-/* ---- action_oyogu (inlined) ---- */
+/* inlined into daCC_Execute */
 static inline void action_oyogu(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
 
@@ -313,7 +234,7 @@ static inline void action_oyogu(cc_class* i_this) {
         i_this->m310.x = 0;
         i_this->m310.y = 0;
         i_this->m310.z = 0;
-        i_this->mCyl.SetTgType(0x083CC040);
+        i_this->mCyl.SetTgType(CC_TG_TYPE_SWIM);
         cyl_OffCoSet(i_this);
         if (i_this->mColorType != 2 && i_this->mColorType != 4) {
             cyl_OffAtSet(i_this);
@@ -345,13 +266,14 @@ static inline void action_oyogu(cc_class* i_this) {
 
         if (i_this->mAcch.m_flags & dBgS_Acch::WATER_IN) {
             /* m_wtr.GetHeight(): mAcch + 0x1BC */
-            cLib_addCalc2(&a_this->current.pos.y, gabi::load<f32>(gabi::ea(&i_this->mAcch) + 0x1BC) - 20.0f, 1.0f, i_this->m324);
+            cLib_addCalc2(&a_this->current.pos.y, i_this->mAcch.m_wtr.m_height - 20.0f, 1.0f,
+                          i_this->m324);
             cLib_addCalc2(&i_this->m324, 6.0f, 1.0f, 1.0f);
-            f32 h = gabi::load<f32>(gabi::ea(&i_this->mAcch) + 0x1BC) - 20.0f;
+            f32 h = i_this->mAcch.m_wtr.m_height - 20.0f;
             if (std::fabs((f32)(a_this->current.pos.y - h)) < 2.0f) {
                 i_this->m2F8 = 1;
-                cLib_addCalc2(&a_this->speedF, REG8_F(17) + 1.0f, 0.3f, 1.0f);
-                if (REG8_F(17) != 0.0f || a_this->speedF < 2.0f) {
+                cLib_addCalc2(&a_this->speedF, REG_F(8, 17) + 1.0f, 0.3f, 1.0f);
+                if (REG_F(8, 17) != 0.0f || a_this->speedF < 2.0f) {
                     search_angle_set(i_this);
                 }
             }
@@ -382,7 +304,7 @@ static inline void action_oyogu(cc_class* i_this) {
     }
 }
 
-/* ---- action_attack_move (inlined) ---- */
+/* inlined into daCC_Execute */
 static inline void action_attack_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     fopEn_enemy_c* e_this = &i_this->actor;
@@ -392,7 +314,7 @@ static inline void action_attack_move(cc_class* i_this) {
         zero_m35C(i_this);
         a_this->speedF = 0.0f;
         denki_start(i_this);
-        gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4);
+        a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
         cyl_OnCoSet(i_this);
         fopAcM_monsSeStart(a_this, JA_SE_CV_CC_ATTACK, 0);
         i_this->m306 = 0;
@@ -430,7 +352,8 @@ static inline void action_attack_move(cc_class* i_this) {
             if (i_this->mColorType != 2 && i_this->mColorType != 4) {
                 cyl_OffAtSet(i_this);
             }
-            u32 snd = dBgS_GetMtrlSndId(dComIfG_Bgsp(), gabi::at<u8>(gabi::ea(&i_this->mAcch) + 0xE8));
+            u32 snd =
+                dComIfG_Bgsp()->GetMtrlSndId(static_cast<cBgS_PolyInfo*>(&i_this->mAcch.m_gnd));
             fopAcM_seStart(a_this, JA_SE_CM_CC_LANDING, snd);
             cc_eff_set(i_this, 1);
             a_this->speedF = 0.0f;
@@ -455,7 +378,8 @@ static inline void action_attack_move(cc_class* i_this) {
 
     if (i_this->m2F5 >= 0x1F && i_this->m2F5 <= 0x22) {
         i_this->m306 += 1;
-        if (i_this->m306 > (s16)gabi::ftoi(REG8_F(7)) && i_this->m306 < (s16)gabi::ftoi(REG8_F(8) + 25.0f)) {
+        if (i_this->m306 > (s16)gabi::ftoi(REG_F(8, 7)) &&
+            i_this->m306 < (s16)gabi::ftoi(REG_F(8, 8) + 25.0f)) {
             e_this->mBtNowFrame = 5.0f;
         }
     }
@@ -467,7 +391,7 @@ static inline void action_attack_move(cc_class* i_this) {
     }
 }
 
-/* damage swing (shared by 0x28 -> 0x29 and 0x29) */
+/* inlined into daCC_Execute */
 static inline void damage_swing(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     cMtx_YrotS(calc_mtx(), i_this->m34A);
@@ -475,6 +399,7 @@ static inline void damage_swing(cc_class* i_this) {
     gabi::Local<cXyz> sp1C;
     sp28->x = 0.0f;
     sp28->y = 0.0f;
+    // HD: retain the sine-first operand order and unextended angle passed by GHS.
     sp28->z = cM_ssin((u16)i_this->m348) * i_this->m32C;
     MtxPosition(sp28, sp1C);
     i_this->m310.z = (s16)gabi::ftoi(-sp1C->x);
@@ -486,7 +411,7 @@ static inline void damage_swing(cc_class* i_this) {
     cLib_addCalc0(&i_this->m32C, 1.0f, i_this->m330);
 }
 
-/* ---- action_damage_move (inlined) ---- */
+/* inlined into daCC_Execute */
 static inline void action_damage_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
 
@@ -496,7 +421,7 @@ static inline void action_damage_move(cc_class* i_this) {
         cyl_OffAtSet(i_this);
         cyl_OnTgSet(i_this);
         cyl_OnCoSet(i_this);
-        gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4);
+        a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
 
         if (i_this->mColorType == 3 && i_this->m2F6 == 0) {
             cyl_OffTgSet(i_this);
@@ -547,15 +472,15 @@ static inline void action_damage_move(cc_class* i_this) {
         case 4:
         case 9:
             anm_init(i_this, dRes_INDEX_CC_BCK_MAHI_e, 0.0f, 0, 1.0f, -1);
-            dComIfGp_particle_set(0x27B /* ID_IT_JN_PIYOHIT00 */, gabi::at<cXyz>(gabi::ea(a_this) + 0x390));
+            dComIfGp_particle_set(ID_IT_JN_PIYOHIT00, &a_this->attention_info.position);
             i_this->m32C = 0.0f;
             i_this->m330 = 0.0f;
             i_this->m348 = 0;
             break;
         case 3:
-            if (fopAcM_checkCarryNow(a_this)) {
+            if (((a_this->actor_status & fopAcStts_CARRY_e) != 0)) {
                 fopAcM_cancelCarryNow(a_this);
-                gabi::store<u32>(gabi::ea(a_this) + 0x39C, 4);
+                a_this->attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
                 cyl_OnCoSet(i_this);
                 a_this->gravity = -3.0f;
                 a_this->speedF = 0.0f;
@@ -590,12 +515,12 @@ static inline void action_damage_move(cc_class* i_this) {
 
             if (i_this->m2F6 == 4 || i_this->m2F6 == 2) {
                 i_this->m34E[4] = 0x5A; /* 0x2d + 0x2d */
-                i_this->m34E[4] = (s16)(REG8_S(5) + 0x5A);
+                i_this->m34E[4] = (s16)(REG_S(8, 5) + 0x5A);
                 enemy_piyo_set(a_this);
                 fopAcM_seStart(a_this, JA_SE_CM_MD_PIYO, 0);
                 i_this->m2F5 = 0x2b;
             } else if (i_this->m2F6 == 9) {
-                i_this->m34E[4] = (s16)(REG8_S(4) + 0x14);
+                i_this->m34E[4] = (s16)(REG_S(8, 4) + 0x14);
                 i_this->m2F5 = 0x2c;
             } else {
                 i_this->m2F5 += 1;
@@ -622,7 +547,7 @@ static inline void action_damage_move(cc_class* i_this) {
         if (i_this->m34E[4] <= 1) {
             anm_init(i_this, dRes_INDEX_CC_BCK_HUKKATSU_e, 0.0f, 2, 1.0f, -1);
             i_this->m34E[4] = 0x3c;
-            i_this->m34E[4] = (s16)(REG8_S(6) + 0x3c);
+            i_this->m34E[4] = (s16)(REG_S(8, 6) + 0x3c);
             i_this->m2F5 += 1;
         }
         break;
@@ -639,33 +564,33 @@ static inline void action_damage_move(cc_class* i_this) {
 
     case 0x2d: {
         i_this->m301 = 1;
-        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(STR(0x1000C530) /* "Cc" */, dRes_INDEX_CC_BCK_CC_PTCL_e, SAFESTRING_VTBL);
+        J3DAnmTransform* anm =
+            (J3DAnmTransform*)dComIfG_getObjectRes(reinterpret_cast<const char*>(splitArchive),
+                                                   dRes_INDEX_CC_BCK_CC_PTCL_e, gc_tu.safeString);
         i_this->m2D8->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
 
-        JPABaseEmitter* emitter = dComIfGp_particle_set(0x82A8 /* ID_AK_SN_CCSPLIT00 */, gabi::at<cXyz>(gabi::ea(a_this) + 0x390),
-                                                        &a_this->current.angle);
+        JPABaseEmitter* emitter = dComIfGp_particle_set(
+            ID_AK_SN_CCSPLIT00, &a_this->attention_info.position, &a_this->current.angle);
         if (emitter != nullptr) {
             /* HD: emitter->setGlobalPrmColor / setGlobalEnvColor inlines; the prm colour scales a
              * colour of the particle manager (dPa_control_c + 0xF4) by the tev colour K0 */
-            u32 e = gabi::ea(emitter);
-            u32 pa = gabi::load<u32>(dComIfGp_ea() + PLAY_PARTICLE);
+            auto* e = reinterpret_cast<CcExecEmitter*>(emitter);
+            auto* pa = reinterpret_cast<CcParticle*>(dComIfGp_getParticle());
             u8 r = 0, g = 0, b = 0;
-            if (pa != 0) {
-                u32 a = gabi::ea(a_this);
-                f32 k = (f32)gabi::load<u8>(a + 0x1A8) / 255.0f;
-                r = (u8)gabi::ftoi((f32)gabi::load<u8>(pa + 0xF4) * k);
-                k = (f32)gabi::load<u8>(a + 0x1A9) / 255.0f;
-                g = (u8)gabi::ftoi((f32)gabi::load<u8>(pa + 0xF5) * k);
-                k = (f32)gabi::load<u8>(a + 0x1AA) / 255.0f;
-                b = (u8)gabi::ftoi((f32)gabi::load<u8>(pa + 0xF6) * k);
+            if (pa != nullptr) {
+                f32 k = (f32)a_this->tevStr.mColorK0.r / 255.0f;
+                r = (u8)gabi::ftoi((f32)pa->mToonColor.r * k);
+                k = (f32)a_this->tevStr.mColorK0.g / 255.0f;
+                g = (u8)gabi::ftoi((f32)pa->mToonColor.g * k);
+                k = (f32)a_this->tevStr.mColorK0.b / 255.0f;
+                b = (u8)gabi::ftoi((f32)pa->mToonColor.b * k);
             }
-            gabi::store<u8>(e + 0x244, r);
-            gabi::store<u8>(e + 0x245, g);
-            gabi::store<u8>(e + 0x246, b);
-            u32 a = gabi::ea(a_this);
-            gabi::store<u8>(e + 0x248, gabi::load<u8>(a + 0x1A8));
-            gabi::store<u8>(e + 0x249, gabi::load<u8>(a + 0x1A9));
-            gabi::store<u8>(e + 0x24A, gabi::load<u8>(a + 0x1AA));
+            e->mPrmColor.r = r;
+            e->mPrmColor.g = g;
+            e->mPrmColor.b = b;
+            e->mEnvColor.r = a_this->tevStr.mColorK0.r;
+            e->mEnvColor.g = a_this->tevStr.mColorK0.g;
+            e->mEnvColor.b = a_this->tevStr.mColorK0.b;
         }
         i_this->mStts.SetWeight(0xFE);
         i_this->m2F5 += 1;
@@ -700,7 +625,7 @@ static inline void action_damage_move(cc_class* i_this) {
     }
 }
 
-/* drop on death (shared by 51 and 53) */
+/* inlined into daCC_Execute */
 static inline void dead_drop(cc_class* i_this, cXyz* pos) {
     fopAc_ac_c* a_this = &i_this->actor;
     if (i_this->mBehaviorType == 3) {
@@ -732,15 +657,15 @@ static inline void dead_drop(cc_class* i_this, cXyz* pos) {
     dComIfGs_onActor(a_this->setID, a_this->home.roomNo); /* fopAcM_onActor */
 }
 
-/* ---- action_dead_move (inlined) ---- */
+/* inlined into daCC_Execute */
 static inline void action_dead_move(cc_class* i_this) {
     fopAc_ac_c* a_this = &i_this->actor;
     gabi::Local<cXyz> sp08;
-    /* recompiled lfs/stfs pairs keep a signalling NaN's bits (the host elides the double round trip);
+    /* HD: recompiled lfs/stfs pairs keep a signalling NaN's bits (the host elides the double round trip);
      * the stack copy is compared exactly, so copy the untouched words bit for bit */
-    gabi::store<u32>(gabi::ea(&sp08->x), gabi::load<u32>(gabi::ea(&a_this->current.pos.x)));
+    reinterpret_cast<be<u32>&>(sp08->x) = reinterpret_cast<be<u32>&>(a_this->current.pos.x);
     sp08->y = a_this->current.pos.y;
-    gabi::store<u32>(gabi::ea(&sp08->z), gabi::load<u32>(gabi::ea(&a_this->current.pos.z)));
+    reinterpret_cast<be<u32>&>(sp08->z) = reinterpret_cast<be<u32>&>(a_this->current.pos.z);
     sp08->y += 60.0f;
 
     switch (i_this->m2F5) {
@@ -761,7 +686,9 @@ static inline void action_dead_move(cc_class* i_this) {
         cc_eff_set(i_this, 1);
         fopAcM_seStart(a_this, JA_SE_CM_CC_DIE_SWING, 0);
         fopAcM_monsSeStart(a_this, JA_SE_CV_CC_DIE, 0);
-        J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(STR(0x1000C533) /* "Cc" */, dRes_INDEX_CC_BCK_CC_BETA_e, SAFESTRING_VTBL);
+        J3DAnmTransform* anm =
+            (J3DAnmTransform*)dComIfG_getObjectRes(reinterpret_cast<const char*>(deadArchive),
+                                                   dRes_INDEX_CC_BCK_CC_BETA_e, gc_tu.safeString);
         i_this->m2BC->setAnm(anm, 0, 0.0f, 1.0f, 0.0f, -1.0f, nullptr);
         a_this->speedF = 0.0f;
         a_this->speed.x = 0.0f;
@@ -785,19 +712,18 @@ static inline void action_dead_move(cc_class* i_this) {
 
 /* 0210DD3C */
 static BOOL daCC_Execute(cc_class* i_this) {
-    WWHD_FUNC(0x0210DD3C, BOOL, i_this);
     fopAc_ac_c* a_this = &i_this->actor;
 
     a_this->model = 0;
     switch (i_this->mColorType) {
     case 2:
-        fopAcM_setGbaName(a_this, 0x27 /* dItemNo_BOW_e */, 30, 0x2b);
+        fopAcM_setGbaName(a_this, dItemNo_BOW_e, 30, 0x2b);
         break;
     case 3:
-        fopAcM_setGbaName(a_this, 0x3C /* dItemNo_MIRROR_SHIELD_e */, 16, 0x2e);
+        fopAcM_setGbaName(a_this, dItemNo_MIRROR_SHIELD_e, 16, 0x2e);
         break;
     case 4:
-        fopAcM_setGbaName(a_this, 0x27 /* dItemNo_BOW_e */, 10, 0x28);
+        fopAcM_setGbaName(a_this, dItemNo_BOW_e, 10, 0x28);
         break;
     }
 
@@ -813,7 +739,7 @@ static BOOL daCC_Execute(cc_class* i_this) {
         a_this->eyePos.y += 70.0f;
     }
 
-    cXyz* attn = gabi::at<cXyz>(gabi::ea(a_this) + 0x390); /* attention_info.position */
+    cXyz* attn = &a_this->attention_info.position; /* attention_info.position */
     if (i_this->mCurrAction != 5) {
         attn->x = a_this->eyePos.x;
         attn->y = a_this->eyePos.y;
@@ -840,8 +766,8 @@ static BOOL daCC_Execute(cc_class* i_this) {
         }
     }
 
-    if (i_this->mCurrAction != 5 && i_this->mCurrAction != 4 && a_this->health > 0 && i_this->mBehaviorType == 2 &&
-        DEMO_RET_START_FLAG() != 0) {
+    if (i_this->mCurrAction != 5 && i_this->mCurrAction != 4 && a_this->health > 0 &&
+        i_this->mBehaviorType == 2 && DEMO_RET_START_FLAG() != 0) {
         i_this->m34E[5] = 0;
         i_this->mCurrAction = 5;
         i_this->m2F5 = 0x44;
@@ -882,10 +808,10 @@ static BOOL daCC_Execute(cc_class* i_this) {
     }
 
     if (i_this->mColorType == 2 || i_this->mColorType == 4) {
-        u32 mtx = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-        i_this->m3A4.x = gabi::load<f32>(mtx + 0x0C);
-        i_this->m3A4.y = gabi::load<f32>(mtx + 0x1C);
-        i_this->m3A4.z = gabi::load<f32>(mtx + 0x2C);
+        Mtx34* mtx = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
+        i_this->m3A4.x = mtx->m[0][3];
+        i_this->m3A4.y = mtx->m[1][3];
+        i_this->m3A4.z = mtx->m[2][3];
 
         switch (i_this->m2F7) {
         case 0:
@@ -896,11 +822,11 @@ static BOOL daCC_Execute(cc_class* i_this) {
 
         case 1:
             if (i_this->m368.getEmitter() == nullptr) {
-                dComIfGp_particle_set(0x3ED /* ID_AK_JN_CCTHUNDER00 */, &i_this->m3A4, nullptr, nullptr, 0xff,
+                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER00, &i_this->m3A4, nullptr, nullptr, 0xff,
                                       (dPa_levelEcallBack*)&i_this->m368);
             }
             if (i_this->m37C.getEmitter() == nullptr) {
-                dComIfGp_particle_set(0x3EE /* ID_AK_JN_CCTHUNDER01 */, &i_this->m3A4, nullptr, nullptr, 0xff,
+                dComIfGp_particle_set(ID_AK_JN_CCTHUNDER01, &i_this->m3A4, nullptr, nullptr, 0xff,
                                       (dPa_levelEcallBack*)&i_this->m37C);
             }
             if (i_this->m368.getEmitter() != nullptr && i_this->m37C.getEmitter() != nullptr) {
@@ -911,14 +837,18 @@ static BOOL daCC_Execute(cc_class* i_this) {
         case 2:
             /* emitter->setGlobalRTMatrix(getAnmMtx(BODY03)) */
             if (JPABaseEmitter* e = i_this->m368.getEmitter()) {
-                u32 mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-                u32 r = cc_ident_0211310C(gabi::ea(e) + 0x1F0);
-                JPASetRMtxTVecfromMtx(mtx2, r, gabi::ea(e) + 0x22C);
+                Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
+                CcExecRotation* r =
+                    CcExec_globalRotation(&reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation);
+                JPASetRMtxTVecfromMtx(mtx2, r,
+                                      &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
             if (JPABaseEmitter* e = i_this->m37C.getEmitter()) {
-                u32 mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
-                u32 r = cc_ident_0211310C(gabi::ea(e) + 0x1F0);
-                JPASetRMtxTVecfromMtx(mtx2, r, gabi::ea(e) + 0x22C);
+                Mtx34* mtx2 = cc_getAnmMtx(i_this->m2B4->getModel(), CC_JNT_BODY03_e);
+                CcExecRotation* r =
+                    CcExec_globalRotation(&reinterpret_cast<CcExecEmitter*>(e)->mGlobalRotation);
+                JPASetRMtxTVecfromMtx(mtx2, r,
+                                      &reinterpret_cast<CcExecEmitter*>(e)->mGlobalTranslation);
             }
             if (i_this->m34E[3] == 0) {
                 fopAcM_seStart_ool(a_this, JA_SE_CM_CC_BLUE_SPARK, 0);
@@ -933,7 +863,8 @@ static BOOL daCC_Execute(cc_class* i_this) {
     gabi::Local<cXyz> sp30;
     sp30->x = 0.0f;
     sp30->y = 0.0f;
-    gabi::store<u32>(gabi::ea(&sp30->z), gabi::load<u32>(gabi::ea(&a_this->speedF))); /* bit copy, see dead_move */
+    reinterpret_cast<be<u32>&>(sp30->z) =
+        reinterpret_cast<be<u32>&>(a_this->speedF); /* HD: word copy, as in dead_move */
     gabi::Local<cXyz> sp24;
     MtxPosition(sp30, sp24);
 
@@ -1000,7 +931,7 @@ static BOOL daCC_Execute(cc_class* i_this) {
     i_this->mCyl.SetH(h);
     i_this->mCyl.SetR(35.0f);
     dComIfG_Ccsp_Set(&i_this->mCyl);
-    if (!fopAcM_checkCarryNow(a_this)) {
+    if (!((a_this->actor_status & fopAcStts_CARRY_e) != 0)) {
         if (i_this->mCyl.mObjCo.mSPrm & 1) { /* ChkCoSet */
             fopAcM_posMove(a_this, &i_this->mStts.m_cc_move);
         } else {
@@ -1011,4 +942,30 @@ static BOOL daCC_Execute(cc_class* i_this) {
     draw_SUB(i_this);
     return TRUE;
 }
-VERIFY(0x0210DD3C, daCC_Execute);
+
+/* WWHD glue
+data splitArchive 1000C530
+data deadArchive 1000C533
+ext 0210C828 void naraku_check(cc_class*)
+ext 0210BB58 void draw_SUB(cc_class*)
+ext 0210C364 void cc_eff_set(cc_class*, u8)
+ext 0210C5C8 void anm_init(cc_class*, int, f32, u8, f32, int)
+ext 0210CBC0 void denki_start(cc_class*)
+ext 0210CC00 void denki_end(cc_class*)
+ext 0210CC58 BOOL shock_damage_check(cc_class*)
+ext 0210CE2C void black_light_check(cc_class*)
+ext 0210CE9C BOOL body_atari_check(cc_class*)
+ext 0210DA18 BOOL search_angle_set(cc_class*)
+ext 0210DC8C void BG_check(cc_class*)
+ext 021116B8 void action_noboru(cc_class*)
+ext 02112414 void action_up_check(cc_class*)
+ext 02112DA0 void action_tomaru(cc_class*)
+ext 02112E74 void action_tubo_search(cc_class*)
+ext 02111638 void fopAcM_seStart_ool(fopAc_ac_c*, u32, u32)
+ext 0211310C CcExecRotation* CcExec_globalRotation(CcExecRotation*)
+ext 020402C8 BOOL enemy_ice(enemyice_l*)
+ext 02041CAC void enemy_piyo_set(fopAc_ac_c*)
+ext 025DA088 void fopAcM_setGbaName(fopAc_ac_c*, u8, u8, u8)
+ext 028249B0 void JPASetRMtxTVecfromMtx(Mtx34*, CcExecRotation*, cXyz*)
+ext 025E1AA4 void CcExec_monsSeStart(u32, cXyz*, u32, u32, s32)
+*/

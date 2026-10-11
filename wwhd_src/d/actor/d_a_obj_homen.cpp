@@ -1,854 +1,1004 @@
-/** Wind Temple stone Hookshot target, derived from HD disassembly. */
+/** d_a_obj_homen.cpp - Wind Temple stone Hookshot target.
+ * GameCube naming/layout, with audited HD call, float-payload and guest-temporary ordering. */
 #include "d/actor/d_a_obj_homen.h"
-namespace Homen {
+using namespace daObjHomen;
+
+static const HomenTUData homen_tu = {
+    .mSafeStringVtable = 0x1002A9E8,
+    .mArchiveName = 0x1002AC30,
+    .mHeapAssertFile = 0x1002AABC,
+    .mModelAssertText = 0x1002AAD0,
+    .mCollisionAssertText = 0x1002AAE0,
+    .mEnemyAssertFile = 0x1002AB48,
+    .mEnemyAssertText = 0x1002AB5C,
+    .mActorVtable = 0x1002AAA0,
+    .mStatusBaseVtable = 0x1004AE88,
+    .mStatusGameVtable = 0x1004AEC0,
+    .mGroundBaseVtable = 0x1002AA60,
+    .mGroundPolyVtable = 0x1002AA90,
+    .mGroundVtable = 0x1002AA70,
+    .mGroundGroupVtable = 0x1002AA80,
+    .mEventName = 0x1002AB18,
+    .mGroundDeletingVtable = 0x1002AA30,
+    .mGroundDeletingPolyVtable = 0x1002AA50,
+    .mGroundDeletingGroupVtable = 0x1002AA10,
+    .mGeometryBaseVtable = 0x100015A8,
+    .mCapsuleVtable = 0x1002AA00,
+    .mCollisionObjectVtable = 0x1004AF18,
+    .mCapsuleShapeVtable = 0x1004AF60,
+    .mCapsuleGeometryVtable = 0x1004AF70,
+    .mHeaderDtorLink0 = 0x101CA0B4,
+    .mHeaderDtorLink1 = 0x101CA0C0,
+    .mHeaderDtorLink2 = 0x101CA0CC,
+    .mFindByIDCallback = 0x025E1234,
+    .mCapsuleDestructor = 0x02515980,
+    .mStatusDestructor = 0x02515860,
+};
+
 // Guest callees save LR at caller SP+4; temporaries must remain above linkage.
 template <class T> struct Local : gabi::Local<T> {
   gabi::Local<be<u8>[16]> linkage;
 };
-template <class T> T *at(u32 p, u32 off = 0) { return gabi::at<T>(p + off); }
-template <class T> T *sub(daObjHomen_c *a, u32 off) {
-  return at<T>(gabi::ea(a), off);
+static const u32 bdl_idx[2] = {4, 5};
+static const u32 dzb_idx[2] = {8, 9};
+static const f32 at_col_radius[2] = {135.0f, 45.0f};
+static const f32 culling_dat[12] = {-300.0f, -30.0f, -100.0f, 300.0f, 600.0f, 300.0f, -100.0f, -30.0f, -100.0f, 100.0f, 250.0f, 120.0f};
+static const u32 vibe_level_1st[2] = {2, 1};
+static const u32 vibe_level_2nd[2] = {6, 4};
+static const f32 speed_table[2] = {20.0f, 12.0f};
+static const f32 co_radius[2] = {105.0f, 57.0f};
+static const u32 offset_table[2] = {273063676, 273063700};
+static const u32 M_sph_srcS[16] = {0, 0, 0, 0, 32768, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1108082688};
+static const u32 M_sph_srcL[16] = {0, 0, 0, 0, 32768, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1112014848};
+static const u32 M_cps_srcL[19] = {0, 2048, 16777216, 5, 0, 0, 0, 256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1124532224};
+static const u32 M_cps_srcS[19] = {0, 2048, 16777216, 5, 0, 0, 0, 256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1110704128};
+static const u32 make_enemy_dat[22] = {12386304, 4294901760, 12386304, 4294901792, 12386304, 4294901824, 12386304, 4294901856, 12386304, 4294901888, 12386304, 4294901920, 13500416, 4278190080, 13500416, 4278190336, 13500416, 4278190592, 13500416, 4278190848, 13500416, 4278191104};
+static u32 l_resourceManager;
+static u32 l_save;
+static u32 l_offset0Guard;
+static u32 l_offset1Guard;
+static u32 l_atOffsetGuard;
+static f32 l_minAngle;
+static f32 l_maxAngle;
+static u8 l_headerGuard;
+static u8 l_headerByte;
+static f32 offset_data0[6] = {};
+static f32 offset_data1[6] = {};
+static f32 at_offset[24] = {};
+static u32 l_zero[3] = {};
+static u32 l_headerDefaults[4] = {};
+static f32 l_calcMtx[12] = {};
+static HomenInitEntry init_table[] = {{&Act_c::process_free_init}, {&Act_c::process_wait_falldown_init}, {&Act_c::process_falldown_init}, {&Act_c::process_wait_init}, {&Act_c::process_none_init}};
+static HomenMainEntry main_table[] = {{&Act_c::process_free_main}, {&Act_c::process_wait_falldown_main}, {&Act_c::process_falldown_main}, {&Act_c::process_wait_main}, {&Act_c::process_none_main}};
+
+/* 02358280 */
+BOOL solidHeapCB(daObjHomen_c *a) {
+  return a->create_heap();
 }
-u32 word(u32 p) { return *at<be<u32>>(p); }
-void put(u32 p, u32 v) { *at<be<u32>>(p) = v; }
-constexpr u32 matrix = 0x1048D0CC;
-struct SafeString {
-  be<u32> text, vtable;
-};
-void setMatrix(daObjHomen_c *a) {
-  WWHD_FUNC(0x02357EC4, void, a);
-  if ((s32)a->type == 0 && (s16)a->pivoted == 1) {
-    gabi::call<void>(0x028E93CC, at<void>(matrix), (f32)a->current.pos.x,
-                     (f32)a->current.pos.y, (f32)a->current.pos.z);
-    gabi::call<void>(0x025F24E0, 0.0f, 0.0f, 200.0f);
-    gabi::call<void>(0x025F1C5C, at<void>(matrix), (s16)a->shape_angle.z);
-    gabi::call<void>(0x025F1C28, at<void>(matrix), (s16)a->shape_angle.y);
-    gabi::call<void>(0x025F1BF4, at<void>(matrix), (s16)a->shape_angle.x);
-    gabi::call<void>(0x025F24E0, 0.0f, 0.0f, -200.0f);
-  } else {
-    gabi::call<void>(0x028E93CC, at<void>(matrix), (f32)a->current.pos.x,
-                     (f32)a->current.pos.y, (f32)a->current.pos.z);
-    gabi::call<void>(0x025F1C5C, at<void>(matrix), (s16)a->shape_angle.z);
-    gabi::call<void>(0x025F1C28, at<void>(matrix), (s16)a->shape_angle.y);
-    gabi::call<void>(0x025F1BF4, at<void>(matrix), (s16)a->shape_angle.x);
-  }
-  f32 values[12];
-  for (int i = 0; i < 12; i++)
-    values[i] = *at<be<f32>>(matrix + i * 4);
-  u32 model = gabi::ea((void *)a->model);
-  for (int i = 0; i < 12; i++)
-    *at<be<f32>>(model + 0xc8 + i * 4) = values[i];
-  gabi::call<void>(0x028E90D4, at<void>(matrix), a->matrix);
-}
-VERIFY(0x02357EC4, setMatrix);
-void initMatrix(daObjHomen_c *a) {
-  WWHD_FUNC(0x023580B0, void, a);
-  // These three plain scale copies preserve the stored float payload bits.
-  u32 y = word(gabi::ea(a) + 0x334), x = word(gabi::ea(a) + 0x330);
-  u32 model = gabi::ea((void *)a->model);
-  u32 z = word(gabi::ea(a) + 0x338);
-  put(model + 0xc0, y);
-  put(model + 0xbc, x);
-  put(model + 0xc4, z);
-  gabi::call<void>(0x02357EC4, a);
-  gabi::call<void>(0x027F4D5C, (void *)a->model);
-}
-VERIFY(0x023580B0, initMatrix);
-BOOL createHeap(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358100, BOOL, a);
-  Local<SafeString> modelName, collisionName;
-  modelName->vtable = 0x1002A9E8;
-  modelName->text = 0x1002AC30;
-  u32 type = (s32)a->type;
-  u32 data = gabi::call<u32>(0x026066C4, at<void>(word(0x101F4F28)),
-                             modelName.get(), word(0x101CA054 + type * 4));
+
+/* 02358100 */
+BOOL Act_c::create_heap() {
+  Local<HomenSafeString> modelName, collisionName;
+  modelName->mVtable = homen_tu.mSafeStringVtable;
+  modelName->mText = homen_tu.mArchiveName;
+  u32 type = (s32)this->mType;
+  u32 data = Homen_getObjectRes(Homen_guest<void>(l_resourceManager),
+                             modelName.get(), bdl_idx[(type*4) / 4]);
   if (!data)
-    gabi::call<void>(0x0273AA24, at<void>(0x1002AABC), 0x267,
-                     at<void>(0x1002AAD0));
+    Homen_assert(Homen_guest<void>(homen_tu.mHeapAssertFile), 0x267,
+                     Homen_guest<void>(homen_tu.mModelAssertText));
   else
-    a->model =
-        at<void>(gabi::call<u32>(0x025E38E0, at<void>(data), 0, 0x11000002));
-  gabi::call<void>(0x023580B0, a);
-  u32 index = word(0x101CA05C + (u32)(s32)a->type * 4);
-  collisionName->text = 0x1002AC30;
-  collisionName->vtable = 0x1002A9E8;
-  u32 collision = gabi::call<u32>(0x026066C4, at<void>(word(0x101F4F28)),
+    this->mpModel =
+        Homen_guest<void>(Homen_modelCreate(Homen_guest<void>(data), 0, 0x11000002));
+  this->init_mtx();
+  u32 index = dzb_idx[((u32)(s32)this->mType*4) / 4];
+  collisionName->mText = homen_tu.mArchiveName;
+  collisionName->mVtable = homen_tu.mSafeStringVtable;
+  u32 collision = Homen_getObjectRes(Homen_guest<void>(l_resourceManager),
                                   collisionName.get(), index);
   if (!collision)
-    gabi::call<void>(0x0273AA24, at<void>(0x1002AABC), 0x274,
-                     at<void>(0x1002AAE0));
+    Homen_assert(Homen_guest<void>(homen_tu.mHeapAssertFile), 0x274,
+                     Homen_guest<void>(homen_tu.mCollisionAssertText));
   else {
-    u32 bg = gabi::call<u32>(0x024F23F4, (void *)nullptr);
-    a->background = at<void>(bg);
-    if (bg && gabi::call<s32>(0x0200A030, at<void>(bg), at<void>(collision), 1,
-                              a->matrix))
+    u32 bg = Homen_bgNew((void *)nullptr);
+    this->mpBgW = Homen_guest<void>(bg);
+    if (bg && Homen_bgSet(Homen_guest<void>(bg), Homen_guest<void>(collision), 1,
+                              this->mMtx))
       return 0;
   }
-  return data && (void *)a->model && (void *)a->background;
+  return data && (void *)this->mpModel && (void *)this->mpBgW;
 }
-VERIFY(0x02358100, createHeap);
-BOOL heapCallback(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358280, BOOL, a);
-  return createHeap(a);
-}
-VERIFY(0x02358280, heapCallback);
-BOOL processInit(daObjHomen_c *a, s16 state) {
-  WWHD_FUNC(0x02358284, BOOL, a, state);
-  if ((u32)(s32)state >= 5)
-    return 0;
-  u32 entry = 0x1002AAF0 + (u32)(s32)state * 8;
-  s16 vslot = *at<be<s16>>(entry + 2), adjust = *at<be<s16>>(entry);
-  u32 self = gabi::ea(a) + (s32)adjust, target;
-  if (vslot < 0)
-    target = word(entry + 4);
-  else {
-    s16 vptr = *at<be<s16>>(entry + 6);
-    target = word(word(self + (s32)vptr) + (s32)vslot * 8 + 4);
+
+/* 0235833C */
+BOOL Act_c::_create() {
+  u32 status = this->actor_condition;
+  if (!(status & 8)) {
+    if (gabi::ea(this)) {
+      Homen_actorCtor(this);
+      this->__vtbl = homen_tu.mActorVtable;
+      Homen_statusBaseCtor(&this->mSphStts);
+      Homen_statusCtor(&this->mSphStts.mGameVtable);
+      this->mSphStts.mBaseVtable = homen_tu.mStatusBaseVtable;
+      this->mSphStts.mGameVtable = homen_tu.mStatusGameVtable;
+      Homen_sphereCtor(&this->mSph);
+      Homen_constructArray(this->mCpsStts, 2, 0x3c,
+                       statusConstruct);
+      Homen_constructArray(this->mCps, 2, 0x138,
+                       capsuleConstruct);
+      Homen_groundCtor(&this->mGndChk);
+      this->mGndChk.mCamera = 0;
+      this->mGndChk.mRope = 0;
+      this->mGndChk.mPolyPass = gabi::ea(&this->mGndChk.mPolyVtable);
+      this->mGndChk.mObject = 1;
+      this->mGndChk.mBomb = 0;
+      this->mGndChk.mGroupPass = gabi::ea(&this->mGndChk.mGroupVtable);
+      this->mGndChk.mGroupMask = 1;
+      this->mGndChk.mBaseVtable = homen_tu.mGroundBaseVtable;
+      this->mGndChk.mPolyVtable = homen_tu.mGroundPolyVtable;
+      this->mGndChk.mBoomerang = 0;
+      this->mGndChk.mVtable = homen_tu.mGroundVtable;
+      this->mGndChk.mLink = 0;
+      this->mGndChk.mGroupVtable = homen_tu.mGroundGroupVtable;
+      status = this->actor_condition;
+      this->mGndChk.mArrow = 0;
+    }
+    this->actor_condition = status | 8;
   }
-  if (!gabi::call<s32>(target, at<void>(self)))
-    return 0;
-  a->state = state;
-  return 1;
+  s32 sw = PrmAbstract(this, PRM_SWITCH_W, PRM_SWITCH_S);
+  if (sw != 255 &&
+      Homen_isSwitch(Homen_guest<HomenSave>(l_save)->mZone, sw,
+                      (s8)this->home.roomNo))
+    return HOMEN_PHASE_ERROR;
+  s32 phase =
+      Homen_resLoad(&this->mPhase, Homen_guest<void>(homen_tu.mArchiveName));
+  this->mType = PrmAbstract(this, PRM_ARG0_W, PRM_ARG0_S) & 1;
+  if (phase != HOMEN_PHASE_COMPLETE)
+    return phase;
+  if (!Homen_entrySolidHeap(this, solidHeapCB, 0))
+    return HOMEN_PHASE_ERROR;
+  u32 model = gabi::ea((void *)this->mpModel);
+  this->cullMtx = model ? model + 0xc8 : 0;
+  u32 p = Homen_getPlay();
+  Homen_bgRegist(Homen_guest<HomenPlay>(p)->mBgS, (void *)this->mpBgW, this);
+  Homen_guest<HomenBgW>(gabi::ea((void*)this->mpBgW))->mCorrection = 0;
+  const HomenCullBox* cull = reinterpret_cast<const HomenCullBox*>(&culling_dat[(u32)(s32)this->mType * 6]);
+  Homen_setCullBox(this, (f32)cull->mMinX,
+                   (f32)cull->mMinY, (f32)cull->mMinZ,
+                   (f32)cull->mMaxX, (f32)cull->mMaxY,
+                   (f32)cull->mMaxZ);
+  Homen_statusInit(&this->mSphStts, 0, 255, this);
+  u32 sph = (s32)this->mType == 0 ? gabi::ea(M_sph_srcL) : gabi::ea(M_sph_srcS);
+  Homen_setSphere(&this->mSph, Homen_guest<void>(sph));
+  this->mSph.mStatus = gabi::ea(&this->mSphStts);
+  u32 zeroX = l_zero[0], flags = this->mSph.mTargetFlags;
+  this->mSph.mTargetVector[0] = zeroX;
+  this->mSph.mTargetVector[1] = l_zero[1];
+  u32 zeroZ = l_zero[2];
+  this->mSph.mTargetFlags = flags | 4;
+  this->mSph.mTargetVector[2] = zeroZ;
+  for (u32 i = 0; i < 2; i++) {
+    u32 st = gabi::ea(&this->mCpsStts[i]),
+        cap = gabi::ea(&this->mCps[i]),
+        ends = gabi::ea(&this->mCpsS[i]);
+    Homen_statusInit(Homen_guest<void>(st), 100, 255, this);
+    u32 src = (s32)this->mType == 0 ? gabi::ea(M_cps_srcL) : gabi::ea(M_cps_srcS);
+    Homen_setCapsule(Homen_guest<void>(cap), Homen_guest<void>(src));
+    Homen_guest<HomenCapsule>(cap)->mStatus = st;
+    for (u32 j = 0; j < 3; j++)
+      Homen_guest<HomenCapsuleShape>(ends)->mStart[j] = Homen_component(this->current.pos, j);
+    for (u32 j = 0; j < 3; j++)
+      Homen_guest<HomenCapsuleShape>(ends)->mEnd[j] = Homen_component(this->current.pos, j);
+    Homen_guest<HomenCapsuleShape>(ends)->mRadius =
+        at_col_radius[(((u32)(s32)this->mType&1)*4) / 4];
+  }
+  this->process_init(HOMEN_FREE);
+  if (PrmAbstract(this, PRM_ENEMY_W, PRM_ENEMY_S) != 15)
+    this->group = 2;
+  p = Homen_getPlay();
+  this->mEventIdx = (s16)Homen_getEventIdx(Homen_guest<HomenPlay>(p)->mEventManager,
+                                       Homen_guest<void>(homen_tu.mEventName), 255);
+  this->mHookshotID = 0xffffffff;
+  return phase;
 }
-VERIFY(0x02358284, processInit);
-BOOL remove(daObjHomen_c *a) {
-  WWHD_FUNC(0x023586DC, BOOL, a);
-  gabi::call<void>(0x025204C8, sub<void>(a, 0x850), at<void>(0x1002AC30));
-  if (word(gabi::ea(a) + 0xf4)) {
-    u32 bg = gabi::ea((void *)a->background);
-    if (bg && word(bg) < 256) {
-      u32 p = gabi::call<u32>(0x025200D4);
-      gabi::call<void>(0x020087EC, at<void>(p + 0x12a0), (void *)a->background);
+
+/* 023586DC */
+BOOL Act_c::_delete() {
+  Homen_resDelete(&this->mPhase, Homen_guest<void>(homen_tu.mArchiveName));
+  if (this->heap.v) {
+    u32 bg = gabi::ea((void *)this->mpBgW);
+    if (bg && Homen_guest<HomenBgW>(bg)->mUseFlags < 256) {
+      u32 p = Homen_getPlay();
+      Homen_bgRelease(Homen_guest<HomenPlay>(p)->mBgS, (void *)this->mpBgW);
     }
   }
   return 1;
 }
-VERIFY(0x023586DC, remove);
-void getNorseOffset(daObjHomen_c *a, cXyz *out, s32 which) {
-  WWHD_FUNC(0x0235874C, void, a, out, which);
-  if (!word(0x10469F9C)) {
-    put(0x10469F9C, 1);
-    *at<be<f32>>(0x10469EFC) = 0;
-    *at<be<f32>>(0x10469F00) = 453;
-    *at<be<f32>>(0x10469F04) = 140;
-    *at<be<f32>>(0x10469F08) = 0;
-    *at<be<f32>>(0x10469F0C) = 181.5f;
-    *at<be<f32>>(0x10469F10) = 48;
+
+/* 02357EC4 */
+void Act_c::set_mtx() {
+  if ((s32)this->mType == 0 && (s16)this->pivoted == 1) {
+    Homen_transS(l_calcMtx, (f32)this->current.pos.x,
+                     (f32)this->current.pos.y, (f32)this->current.pos.z);
+    Homen_transM(0.0f, 0.0f, 200.0f);
+    Homen_ZrotM(l_calcMtx, (s16)this->shape_angle.z);
+    Homen_YrotM(l_calcMtx, (s16)this->shape_angle.y);
+    Homen_XrotM(l_calcMtx, (s16)this->shape_angle.x);
+    Homen_transM(0.0f, 0.0f, -200.0f);
+  } else {
+    Homen_transS(l_calcMtx, (f32)this->current.pos.x,
+                     (f32)this->current.pos.y, (f32)this->current.pos.z);
+    Homen_ZrotM(l_calcMtx, (s16)this->shape_angle.z);
+    Homen_YrotM(l_calcMtx, (s16)this->shape_angle.y);
+    Homen_XrotM(l_calcMtx, (s16)this->shape_angle.x);
   }
-  if (!word(0x10469FA0)) {
-    put(0x10469FA0, 1);
-    *at<be<f32>>(0x10469F14) = 0;
-    *at<be<f32>>(0x10469F18) = 453;
-    *at<be<f32>>(0x10469F1C) = 190;
-    *at<be<f32>>(0x10469F20) = 0;
-    *at<be<f32>>(0x10469F24) = 181.5f;
-    *at<be<f32>>(0x10469F28) = 68;
+  // HD: load the whole model matrix before publishing any component.
+  f32 values[12];
+  for (int i = 0; i < 12; i++)
+    values[i] = l_calcMtx[(i * 4) / 4];
+  u32 model = gabi::ea((void *)this->mpModel);
+  for (int i = 0; i < 12; i++)
+    Homen_guest<HomenModel>(model)->mBaseMtx[i] = values[i];
+  Homen_mtxCopy(l_calcMtx, this->mMtx);
+}
+
+/* 023580B0 */
+void Act_c::init_mtx() {
+  // HD: these three plain scale copies preserve the stored float payload bits.
+  u32 y = Homen_bits(this->scale.y), x = Homen_bits(this->scale.x);
+  u32 model = gabi::ea((void *)this->mpModel);
+  u32 z = Homen_bits(this->scale.z);
+  Homen_guest<HomenModel>(model)->mScaleBits[1] = y;
+  Homen_guest<HomenModel>(model)->mScaleBits[0] = x;
+  Homen_guest<HomenModel>(model)->mScaleBits[2] = z;
+  this->set_mtx();
+  Homen_modelCalc((void *)this->mpModel);
+}
+
+/* 023588F4 */
+void Act_c::exe_event() {
+  s16 state = this->eventState;
+  if (state == 1) {
+    if ((u16)this->eventInfo.mCommand == 2) {
+      this->eventState = 2;
+      return;
+    }
+    Homen_orderEvent(this, (s16)this->eventOrder, 255, 65535, 0, 1);
+    this->eventInfo.mCondition = (u16)this->eventInfo.mCondition | 2;
+  } else if (state == 2) {
+    s16 event = this->eventOrder;
+    u32 p = Homen_getPlay();
+    if (Homen_eventEndCheck(Homen_guest<HomenPlay>(p)->mEventManager, event)) {
+      p = Homen_getPlay();
+      Homen_guest<HomenPlay>(p)->mEventFlags = (u16)Homen_guest<HomenPlay>(p)->mEventFlags | 8;
+      this->eventOrder = -1;
+      this->eventState = 0;
+    }
   }
-  u32 data = word(0x101CA04C + ((u32)which & 1) * 4) + (u32)(s32)a->type * 12;
-  put(gabi::ea(out), word(data));
-  put(gabi::ea(out) + 4, word(data + 4));
-  put(gabi::ea(out) + 8, word(data + 8));
 }
-VERIFY(0x0235874C, getNorseOffset);
-void makeItem(daObjHomen_c *a) {
-  WWHD_FUNC(0x023589FC, void, a);
-  Local<csXyz> angles;
-  Local<cXyz> scale;
-  gabi::call<void>(0x0201A478, angles.get(), 0, 0, 0);
-  scale->z = 1;
-  scale->x = 1;
-  scale->y = 1;
-  s32 item = gabi::call<s32>(0x02359AB0, a, 6, 12);
-  if (item != 63) {
-    s32 bit = gabi::call<s32>(0x02359AB0, a, 7, 0);
-    gabi::call<void>(0x025D8120, &a->current.pos, item, bit,
-                     (s8)*sub<be<u8>>(a, 0x326), 0, angles.get(), 1,
-                     scale.get());
-  }
-}
-VERIFY(0x023589FC, makeItem);
-void manageItemTimer(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358AA8, void, a);
-  s16 timer = a->itemTimer;
-  if (timer <= 0)
-    return;
-  timer = (s16)(timer - 1);
-  a->itemTimer = timer;
-  if (!timer)
-    gabi::call<void>(0x023589FC, a);
-}
-VERIFY(0x02358AA8, manageItemTimer);
-void makeEnemy(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358AC8, void, a);
-  s32 enemy = gabi::call<s32>(0x02359AB0, a, 4, 18);
+
+/* 02358AC8 */
+void Act_c::make_enemy() {
+  s32 enemy = PrmAbstract(this, PRM_ENEMY_W, PRM_ENEMY_S);
   if (enemy == 15 || (u32)enemy >= 11)
     return;
   if (enemy < 0)
-    gabi::call<void>(0x0273AA24, at<void>(0x1002AB48), 0x3a9,
-                     at<void>(0x1002AB5C));
+    Homen_assert(Homen_guest<void>(homen_tu.mEnemyAssertFile), 0x3a9,
+                     Homen_guest<void>(homen_tu.mEnemyAssertText));
   Local<be<f32>[6]> offsets;
   Local<cXyz> position;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 8) = 350;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 4) = 300;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 12) = 0;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 0) = 0;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 20) = 25;
-  *at<be<f32>>(gabi::ea(offsets.get()) + 16) = 0;
-  u32 index = (u32)(s32)a->type & 1;
-  gabi::call<void>(0x028E8F64, a->matrix,
-                   at<void>(gabi::ea(offsets.get()) + index * 12),
+  (*offsets)[(8) / 4] = 350;
+  (*offsets)[(4) / 4] = 300;
+  (*offsets)[(12) / 4] = 0;
+  (*offsets)[(0) / 4] = 0;
+  (*offsets)[(20) / 4] = 25;
+  (*offsets)[(16) / 4] = 0;
+  u32 index = (u32)(s32)this->mType & 1;
+  Homen_multVec(this->mMtx,
+                   &(*offsets)[index * 3],
                    position.get());
-  u32 dat = 0x1002AB6C + (u32)enemy * 8;
-  s16 proc = *at<be<s16>>(dat);
-  u32 params = word(dat + 4);
-  u32 id = gabi::call<u32>(0x025D5834, proc, params, position.get(),
-                           (s8)*sub<be<u8>>(a, 0x326), 0, 0, -1, 0);
-  a->enemyID = id;
+  u32 dat = gabi::ea(&make_enemy_dat[(u32)enemy * 2]);
+  s16 proc = Homen_guest<HomenEnemyData>(dat)->mProcName;
+  u32 params = Homen_guest<HomenEnemyData>(dat)->mParameters;
+  u32 id = Homen_createActor(proc, params, position.get(),
+                           (s8)this->current.roomNo, 0, 0, -1, 0);
+  this->mEnemyID = id;
   if (id == 0xffffffff)
-    *sub<be<u8>>(a, 0x2da) = 0;
+    this->group = 0;
 }
-VERIFY(0x02358AC8, makeEnemy);
-void manageEnemyTimer(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358BDC, void, a);
-  s16 timer = a->enemyTimer;
+
+/* 023589FC */
+void Act_c::make_item() {
+  Local<csXyz> angles;
+  Local<cXyz> scale;
+  Homen_anglesCtor(angles.get(), 0, 0, 0);
+  scale->z = 1;
+  scale->x = 1;
+  scale->y = 1;
+  s32 item = PrmAbstract(this, PRM_ITEM_W, PRM_ITEM_S);
+  if (item != 63) {
+    s32 bit = PrmAbstract(this, PRM_ITEMBIT_W, PRM_ITEMBIT_S);
+    Homen_createItem(&this->current.pos, item, bit,
+                     (s8)this->current.roomNo, 0, angles.get(), 1,
+                     scale.get());
+  }
+}
+
+/* 02358AA8 */
+void Act_c::manage_item_timer() {
+  s16 timer = this->mItemTimer;
   if (timer <= 0)
     return;
   timer = (s16)(timer - 1);
-  a->enemyTimer = timer;
+  this->mItemTimer = timer;
   if (!timer)
-    gabi::call<void>(0x02358AC8, a);
+    this->make_item();
 }
-VERIFY(0x02358BDC, manageEnemyTimer);
-void getNorsePoint(daObjHomen_c *a, cXyz *out, s32 which) {
-  WWHD_FUNC(0x02358DB8, void, a, out, which);
+
+/* 02358BDC */
+void Act_c::manage_enemy_timer() {
+  s16 timer = this->mEnemyTimer;
+  if (timer <= 0)
+    return;
+  timer = (s16)(timer - 1);
+  this->mEnemyTimer = timer;
+  if (!timer)
+    this->make_enemy();
+}
+
+/* 0235874C */
+void Act_c::get_norse_offset(cXyz *out, s32 which) {
+  if (!l_offset0Guard) {
+    l_offset0Guard = 1;
+    offset_data0[0] = 0;
+    offset_data0[1] = 453;
+    offset_data0[2] = 140;
+    offset_data0[3] = 0;
+    offset_data0[4] = 181.5f;
+    offset_data0[5] = 48;
+  }
+  if (!l_offset1Guard) {
+    l_offset1Guard = 1;
+    offset_data1[0] = 0;
+    offset_data1[1] = 453;
+    offset_data1[2] = 190;
+    offset_data1[3] = 0;
+    offset_data1[4] = 181.5f;
+    offset_data1[5] = 68;
+  }
+  u32 data = offset_table[(((u32)which&1)*4) / 4] + (u32)(s32)this->mType * 12;
+  Homen_component(*out, (0) / 4) = Homen_guest<HomenWordVector>(data)->x;
+  Homen_component(*out, (4) / 4) = Homen_guest<HomenWordVector>(data)->y;
+  Homen_component(*out, (8) / 4) = Homen_guest<HomenWordVector>(data)->z;
+}
+
+/* 02358DB8 */
+void Act_c::get_norse_point(cXyz *out, s32 which) {
   Local<cXyz> offset, result;
-  gabi::call<void>(0x0235874C, a, offset.get(), which);
-  gabi::call<void>(0x028E8F64, a->matrix, offset.get(), result.get());
-  put(gabi::ea(out), word(gabi::ea(result.get())));
-  put(gabi::ea(out) + 4, word(gabi::ea(result.get()) + 4));
-  put(gabi::ea(out) + 8, word(gabi::ea(result.get()) + 8));
+  this->get_norse_offset(offset.get(), which);
+  Homen_multVec(this->mMtx, offset.get(), result.get());
+  Homen_component(*out, (0) / 4) = Homen_component(*result, (0) / 4);
+  Homen_component(*out, (4) / 4) = Homen_component(*result, (4) / 4);
+  Homen_component(*out, (8) / 4) = Homen_component(*result, (8) / 4);
 }
-VERIFY(0x02358DB8, getNorsePoint);
-BOOL freeInit(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359114, BOOL, a);
-  a->enemyID = 0xffffffff;
+
+/* 02359114 */
+BOOL Act_c::process_free_init() {
+  this->mEnemyID = 0xffffffff;
   return 1;
 }
-VERIFY(0x02359114, freeInit);
-BOOL methodCreate(daObjHomen_c *a) {
-  WWHD_FUNC(0x0235981C, BOOL, a);
-  return gabi::call<s32>(0x0235833C, a);
-}
-VERIFY(0x0235981C, methodCreate);
-BOOL methodDelete(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359820, BOOL, a);
-  return remove(a);
-}
-VERIFY(0x02359820, methodDelete);
-BOOL methodExecute(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359824, BOOL, a);
-  return gabi::call<s32>(0x02358C54, a);
-}
-VERIFY(0x02359824, methodExecute);
-BOOL methodDraw(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359828, BOOL, a);
-  return gabi::call<s32>(0x02358D48, a);
-}
-VERIFY(0x02359828, methodDraw);
-BOOL isDelete(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359AA8, BOOL, a);
-  return 1;
-}
-VERIFY(0x02359AA8, isDelete);
-u32 parameter(const daObjHomen_c *a, u32 width, u32 shift) {
-  WWHD_FUNC(0x02359AB0, u32, a, width, shift);
-  u32 value = word(gabi::ea(a) + 0xb0), n = width & 63, s = shift & 63;
-  u32 mask = (n < 32 ? (1u << n) : 0u) - 1u;
-  u32 shifted = s < 32 ? value >> s : 0u;
-  return shifted & mask;
-}
-VERIFY(0x02359AB0, parameter);
-void processMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358BFC, void, a);
-  s16 state = a->state;
-  if ((u32)(s32)state >= 5)
-    return;
-  u32 entry = 0x1002ABC4 + (u32)(s32)state * 8;
-  s16 slot = *at<be<s16>>(entry + 2), adjust = *at<be<s16>>(entry);
-  u32 self = gabi::ea(a) + (s32)adjust, target;
-  if (slot < 0)
-    target = word(entry + 4);
-  else {
-    s16 off = *at<be<s16>>(entry + 6);
-    target = word(word(self + (s32)off) + (s32)slot * 8 + 4);
-  }
-  gabi::call<void>(target, at<void>(self));
-}
-VERIFY(0x02358BFC, processMain);
-BOOL execute(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358C54, BOOL, a);
-  gabi::call<void>(0x02358820, a);
-  gabi::call<void>(0x023588F4, a);
-  gabi::call<void>(0x02358AA8, a);
-  gabi::call<void>(0x02358BDC, a);
-  gabi::call<void>(0x02358BFC, a);
-  u32 bg = gabi::ea((void *)a->background);
-  if (bg)
-    gabi::call<void>(0x024F43DC, at<void>(bg));
-  s16 increment = a->spinZ, spin = a->spinX;
-  spin = (s16)(spin + increment);
-  if (spin > 2000)
-    spin = 2000;
-  s16 angle = (s16)((s16)a->shape_angle.x + spin);
-  a->spinX = spin;
-  if (angle >= 0x5000) {
-    a->shape_angle.x = 0x5000;
-    a->spinX = 0;
-    a->spinZ = 0;
-  } else
-    a->shape_angle.x = angle;
-  gabi::call<void>(0x025D67A8, a);
-  gabi::call<void>(0x025D6800, a, 0);
-  gabi::call<void>(0x02357EC4, a);
-  return 1;
-}
-VERIFY(0x02358C54, execute);
-BOOL draw(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358D48, BOOL, a);
-  s16 state = a->state;
-  if (state != 4 && state != 3) {
-    u32 env = gabi::call<u32>(0x02555D0C);
-    gabi::call<void>(0x025626A4, at<void>(env), 1, &a->current.pos,
-                     sub<void>(a, 0x110));
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call<void>(0x02562F5C, at<void>(env), (void *)a->model,
-                     sub<void>(a, 0x110));
-    gabi::call<void>(0x025E2DE0, (void *)a->model, 0);
-  }
-  return 1;
-}
-VERIFY(0x02358D48, draw);
-BOOL create(daObjHomen_c *a) {
-  WWHD_FUNC(0x0235833C, BOOL, a);
-  u32 status = word(gabi::ea(a) + 0x2e4);
-  if (!(status & 8)) {
-    if (a) {
-      gabi::call<void>(0x025D4ED0, a);
-      put(gabi::ea(a) + 0xb4, 0x1002AAA0);
-      gabi::call<void>(0x0200BD2C, sub<void>(a, 0x3c8));
-      gabi::call<void>(0x02515DA0, sub<void>(a, 0x3e4));
-      put(gabi::ea(a) + 0x3e0, 0x1004AE88);
-      put(gabi::ea(a) + 0x3e4, 0x1004AEC0);
-      gabi::call<void>(0x025166F0, sub<void>(a, 0x404));
-      gabi::call<void>(0x028EFFD0, sub<void>(a, 0x530), 2, 0x3c,
-                       at<void>(0x023598D4));
-      gabi::call<void>(0x028EFFD0, sub<void>(a, 0x5a8), 2, 0x138,
-                       at<void>(0x0235993C));
-      gabi::call<void>(0x02008E0C, sub<void>(a, 0x890));
-      *sub<be<u8>>(a, 0x8d5) = 0;
-      *sub<be<u8>>(a, 0x8da) = 0;
-      put(gabi::ea(a) + 0x890, gabi::ea(a) + 0x8d0);
-      *sub<be<u8>>(a, 0x8d4) = 1;
-      *sub<be<u8>>(a, 0x8d8) = 0;
-      put(gabi::ea(a) + 0x894, gabi::ea(a) + 0x8dc);
-      put(gabi::ea(a) + 0x8e0, 1);
-      put(gabi::ea(a) + 0x8a0, 0x1002AA60);
-      put(gabi::ea(a) + 0x8d0, 0x1002AA90);
-      *sub<be<u8>>(a, 0x8d9) = 0;
-      put(gabi::ea(a) + 0x8b0, 0x1002AA70);
-      *sub<be<u8>>(a, 0x8d6) = 0;
-      put(gabi::ea(a) + 0x8dc, 0x1002AA80);
-      status = word(gabi::ea(a) + 0x2e4);
-      *sub<be<u8>>(a, 0x8d7) = 0;
-    }
-    put(gabi::ea(a) + 0x2e4, status | 8);
-  }
-  s32 sw = gabi::call<s32>(0x02359AB0, a, 8, 24);
-  if (sw != 255 &&
-      gabi::call<s32>(0x025BA0C0, at<void>(word(0x101F84DC) + 0x20), sw,
-                      (s8)*sub<be<u8>>(a, 0x2fe)))
-    return 5;
-  s32 phase =
-      gabi::call<s32>(0x02520460, sub<void>(a, 0x850), at<void>(0x1002AC30));
-  a->type = gabi::call<u32>(0x02359AB0, a, 4, 8) & 1;
-  if (phase != 4)
-    return phase;
-  if (!gabi::call<s32>(0x025D63E8, a, at<void>(0x02358280), 0))
-    return 5;
-  u32 model = gabi::ea((void *)a->model);
-  put(gabi::ea(a) + 0x348, model ? model + 0xc8 : 0);
-  u32 p = gabi::call<u32>(0x025200D4);
-  gabi::call<void>(0x024EEA6C, at<void>(p + 0x12a0), (void *)a->background, a);
-  put(gabi::ea((void *)a->background) + 0xa8, 0);
-  u32 cull = 0x101CA06C + (u32)(s32)a->type * 24;
-  gabi::call<void>(0x025D674C, a, (f32)*at<be<f32>>(cull),
-                   (f32)*at<be<f32>>(cull + 4), (f32)*at<be<f32>>(cull + 8),
-                   (f32)*at<be<f32>>(cull + 12), (f32)*at<be<f32>>(cull + 16),
-                   (f32)*at<be<f32>>(cull + 20));
-  gabi::call<void>(0x02515F14, sub<void>(a, 0x3c8), 0, 255, a);
-  u32 sph = (s32)a->type == 0 ? 0x1002AC78 : 0x1002AC38;
-  gabi::call<void>(0x0251677C, sub<void>(a, 0x404), at<void>(sph));
-  put(gabi::ea(a) + 0x448, gabi::ea(a) + 0x3c8);
-  u32 zeroX = word(0x101FFBA8), flags = word(gabi::ea(a) + 0x498);
-  put(gabi::ea(a) + 0x4b8, zeroX);
-  put(gabi::ea(a) + 0x4bc, word(0x101FFBAC));
-  u32 zeroZ = word(0x101FFBB0);
-  put(gabi::ea(a) + 0x498, flags | 4);
-  put(gabi::ea(a) + 0x4c0, zeroZ);
-  for (u32 i = 0; i < 2; i++) {
-    u32 st = gabi::ea(a) + 0x530 + i * 0x3c,
-        cap = gabi::ea(a) + 0x5a8 + i * 0x138,
-        ends = gabi::ea(a) + 0x818 + i * 28;
-    gabi::call<void>(0x02515F14, at<void>(st), 100, 255, a);
-    u32 src = (s32)a->type == 0 ? 0x1002ACB8 : 0x1002AD04;
-    gabi::call<void>(0x025164C0, at<void>(cap), at<void>(src));
-    put(cap + 0x44, st);
-    for (u32 j = 0; j < 3; j++)
-      put(ends + j * 4, word(gabi::ea(a) + 0x314 + j * 4));
-    for (u32 j = 0; j < 3; j++)
-      put(ends + 12 + j * 4, word(gabi::ea(a) + 0x314 + j * 4));
-    *at<be<f32>>(ends + 24) =
-        *at<be<f32>>(0x101CA064 + ((u32)(s32)a->type & 1) * 4);
-  }
-  gabi::call<s32>(0x02358284, a, 0);
-  if (gabi::call<s32>(0x02359AB0, a, 4, 18) != 15)
-    *sub<be<u8>>(a, 0x2da) = 2;
-  p = gabi::call<u32>(0x025200D4);
-  a->eventIndex = (s16)gabi::call<s32>(0x02543F10, at<void>(p + 0x52c4),
-                                       at<void>(0x1002AB18), 255);
-  a->hookshotID = 0xffffffff;
-  return phase;
-}
-VERIFY(0x0235833C, create);
-void adjustHookshot(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358820, void, a);
-  u32 p = gabi::call<u32>(0x025200D4), player = word(p + 0x5b2c);
-  if (word(player + 0x3b8) & 0x02000000)
-    return;
-  u32 id = a->hookshotID;
-  if (id == 0xffffffff)
-    return;
-  Local<be<u32>> lookup;
-  *lookup = id;
-  if (!gabi::call<u32>(0x025D5218, at<void>(0x025E1234), lookup.get()))
-    return;
-  Local<cXyz> offset, result;
-  Local<be<f32>[12]> transform;
-  gabi::call<void>(0x0235874C, a, offset.get(), 1);
-  gabi::call<void>(0x025F1884, at<void>(matrix), (s16)a->shape_angle.y);
-  gabi::call<void>(0x028E90D4, at<void>(matrix), transform.get());
-  gabi::call<void>(0x028E8F64, transform.get(), offset.get(), result.get());
-  u32 target = word(word(player + 0xb4) + 0x10c);
-  gabi::call<void>(target, at<void>(player), word(gabi::ea(a) + 4),
-                   result.get());
-  a->hookshotID = 0xffffffff;
-}
-VERIFY(0x02358820, adjustHookshot);
-void executeEvent(daObjHomen_c *a) {
-  WWHD_FUNC(0x023588F4, void, a);
-  s16 state = a->eventState;
-  if (state == 1) {
-    if ((u16)*sub<be<u16>>(a, 0xf8) == 2) {
-      a->eventState = 2;
-      return;
-    }
-    gabi::call<void>(0x025D7A58, a, (s16)a->eventOrder, 255, 65535, 0, 1);
-    *sub<be<u16>>(a, 0xfa) = (u16)*sub<be<u16>>(a, 0xfa) | 2;
-  } else if (state == 2) {
-    s16 event = a->eventOrder;
-    u32 p = gabi::call<u32>(0x025200D4);
-    if (gabi::call<s32>(0x025440C8, at<void>(p + 0x52c4), event)) {
-      p = gabi::call<u32>(0x025200D4);
-      *at<be<u16>>(p + 0x52b8) = (u16)*at<be<u16>>(p + 0x52b8) | 8;
-      a->eventOrder = -1;
-      a->eventState = 0;
-    }
-  }
-}
-VERIFY(0x023588F4, executeEvent);
-void setAtCollision(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358E0C, void, a);
-  constexpr u32 table = 0x10469F3C;
-  if (!word(0x10469FA4)) {
-    *at<be<f32>>(table + 0x18) = 120;
-    *at<be<f32>>(table + 0x20) = 140;
-    *at<be<f32>>(table + 8) = 140;
-    *at<be<f32>>(table + 0x14) = 140;
-    *at<be<f32>>(table + 0x2c) = 140;
-    *at<be<f32>>(table + 0x10) = 550;
-    *at<be<f32>>(table + 0x1c) = 30;
-    *at<be<f32>>(table + 0x24) = 120;
-    *at<be<f32>>(table + 0x4c) = 20;
-    *at<be<f32>>(table + 0x34) = 20;
-    *at<be<f32>>(table + 0x28) = 550;
-    *at<be<f32>>(table + 0x30) = -45;
-    *at<be<f32>>(table + 0x3c) = -45;
-    *at<be<f32>>(table + 0x38) = 80;
-    *at<be<f32>>(table + 0x44) = 80;
-    put(0x10469FA4, 1);
-    *at<be<f32>>(table + 0x40) = 190;
-    *at<be<f32>>(table) = -120;
-    *at<be<f32>>(table + 4) = 30;
-    *at<be<f32>>(table + 0x48) = 45;
-    *at<be<f32>>(table + 0xc) = -120;
-    *at<be<f32>>(table + 0x50) = 80;
-    *at<be<f32>>(table + 0x54) = 45;
-    *at<be<f32>>(table + 0x58) = 190;
-    *at<be<f32>>(table + 0x5c) = 80;
-  }
-  Local<cXyz> input, result;
-  for (u32 i = 0; i < 2; i++) {
-    u32 index = ((u32)(s32)a->type & 1) * 2 + i,
-        ends = gabi::ea(a) + 0x818 + i * 28,
-        cap = gabi::ea(a) + 0x5a8 + i * 0x138;
-    u32 data = table + index * 24;
-    put(gabi::ea(input.get()) + 4, word(data + 4));
-    put(gabi::ea(input.get()), word(data));
-    put(gabi::ea(input.get()) + 8, word(data + 8));
-    gabi::call<void>(0x028E8F64, a->matrix, input.get(), result.get());
-    u32 x = word(gabi::ea(result.get())), y = word(gabi::ea(result.get()) + 4);
-    put(ends, x);
-    u32 z = word(gabi::ea(result.get()) + 8);
-    put(ends + 4, y);
-    put(ends + 8, z);
-    index = ((u32)(s32)a->type & 1) * 2 + i;
-    data = table + 12 + index * 24;
-    put(gabi::ea(input.get()) + 4, word(data + 4));
-    put(gabi::ea(input.get()), word(data));
-    put(gabi::ea(input.get()) + 8, word(data + 8));
-    gabi::call<void>(0x028E8F64, a->matrix, input.get(), result.get());
-    y = word(gabi::ea(result.get()) + 4);
-    x = word(gabi::ea(result.get()));
-    z = word(gabi::ea(result.get()) + 8);
-    put(ends + 12, x);
-    put(ends + 20, z);
-    put(ends + 16, y);
-    gabi::call<void>(0x020181FC, at<void>(cap + 0x118), at<void>(ends));
-    u32 p = gabi::call<u32>(0x025200D4);
-    gabi::call<void>(0x0200E240, at<void>(p + 0x26a4), at<void>(cap));
-  }
-}
-VERIFY(0x02358E0C, setAtCollision);
-void setCoCollision(daObjHomen_c *a) {
-  WWHD_FUNC(0x02358FEC, void, a);
-  u32 sph = gabi::ea(a) + 0x404;
-  if (gabi::call<s32>(0x025162A4, at<void>(sph))) {
-    u32 hit = gabi::call<u32>(0x02516300, at<void>(sph)),
-        p = gabi::call<u32>(0x025200D4), player = word(p + 0x5b2c);
-    if (hit && (word(hit + 0x10) & 0x8000)) {
-      a->yaw = *at<be<s16>>(player + 0x32a);
-      u32 actor = gabi::call<u32>(0x02515BBC, sub<void>(a, 0x498));
-      u32 id = 0xffffffff;
-      s32 type = a->type;
-      if (actor)
-        id = word(actor + 4);
-      a->hookshotID = id;
-      if (type == 0)
-        gabi::call<void>(0x025B8B68, at<void>(word(0x101F84DC) + 0x644),
-                         0x3880);
-    }
-    gabi::call<void>(0x0251621C, sub<void>(a, 0x404));
-    return;
-  }
-  Local<be<f32>[2]> radii;
-  Local<cXyz> center;
-  *at<be<f32>>(gabi::ea(radii.get()) + 0) = *at<be<f32>>(0x1002AC0C);
-  *at<be<f32>>(gabi::ea(radii.get()) + 4) = *at<be<f32>>(0x1002AC10);
-  gabi::call<void>(0x02358DB8, a, center.get(), 0);
-  gabi::call<void>(0x02018D40, sub<void>(a, 0x51c), center.get());
-  u32 index = (u32)(s32)a->type & 1;
-  gabi::call<void>(0x02018C8C, sub<void>(a, 0x51c),
-                   (f32)*at<be<f32>>(gabi::ea(radii.get()) + index * 4));
-  u32 p = gabi::call<u32>(0x025200D4);
-  gabi::call<void>(0x0200E240, at<void>(p + 0x26a4), at<void>(sph));
-}
-VERIFY(0x02358FEC, setCoCollision);
-void freeMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359124, void, a);
-  u32 p = gabi::call<u32>(0x025200D4), player = word(p + 0x5b2c);
-  u32 boots = word(player + 0x3b8), flags = word(gabi::ea(a) + 0x2e0);
+
+/* 02359124 */
+void Act_c::process_free_main() {
+  u32 p = Homen_getPlay(), player = Homen_guest<HomenPlay>(p)->mpPlayer;
+  u32 boots = Homen_guest<HomenPlayer>(player)->mEquipmentFlags, flags = this->actor_status;
   if (boots & 0x02000000)
     flags = (flags | 0x80000) & ~0x200000u;
   else
     flags = (flags | 0x200000) & ~0x80000u;
-  put(gabi::ea(a) + 0x2e0, flags);
+  this->actor_status = flags;
   if (flags & 0x100000)
-    gabi::call<s32>(0x02358284, a, 1);
-  gabi::call<void>(0x02358FEC, a);
+    this->process_init(HOMEN_WAIT_FALLDOWN);
+  this->set_co_collision();
 }
-VERIFY(0x02359124, freeMain);
-BOOL waitFallInit(daObjHomen_c *a) {
-  WWHD_FUNC(0x023591A4, BOOL, a);
-  u32 flags = word(gabi::ea(a) + 0x2e0);
-  a->enemyTimer = 6;
-  a->followCount = 0;
-  put(gabi::ea(a) + 0x2e0, flags & ~0x100000u);
-  a->itemTimer = 20;
-  u32 p = gabi::call<u32>(0x025200D4);
-  gabi::call<void>(0x020087EC, at<void>(p + 0x12a0), (void *)a->background);
-  a->background = nullptr;
-  p = gabi::call<u32>(0x025200D4);
-  u32 type = (s32)a->type;
+
+/* 023591A4 */
+BOOL Act_c::process_wait_falldown_init() {
+  u32 flags = this->actor_status;
+  this->mEnemyTimer = 6;
+  this->followCount = 0;
+  this->actor_status = flags & ~0x100000u;
+  this->mItemTimer = 20;
+  u32 p = Homen_getPlay();
+  Homen_bgRelease(Homen_guest<HomenPlay>(p)->mBgS, (void *)this->mpBgW);
+  this->mpBgW = nullptr;
+  p = Homen_getPlay();
+  u32 type = (s32)this->mType;
   Local<cXyz> up;
   up->z = 0;
   up->x = 0;
   up->y = 1;
-  gabi::call<void>(0x025CB374, at<void>(p + 0x599c),
-                   word(0x101CA09C + (type & 1) * 4), -17, up.get());
-  if ((s32)a->type != 0) {
-    u32 z = word(gabi::ea(a) + 0x31c), y = word(gabi::ea(a) + 0x318),
-        x = word(gabi::ea(a) + 0x314), id = a->hookshotID;
-    put(gabi::ea(a) + 0x914, x);
-    put(gabi::ea(a) + 0x918, y);
-    put(gabi::ea(a) + 0x91c, z);
+  Homen_startShock(Homen_guest<HomenPlay>(p)->mVibration,
+                   vibe_level_1st[((type&1)*4) / 4], -17, up.get());
+  if ((s32)this->mType != 0) {
+    u32 z = Homen_bits(this->current.pos.z), y = Homen_bits(this->current.pos.y),
+        x = Homen_bits(this->current.pos.x), id = this->mHookshotID;
+    Homen_bits(this->target.x) = x;
+    Homen_bits(this->target.y) = y;
+    Homen_bits(this->target.z) = z;
     if (id != 0xffffffff) {
       Local<be<u32>> lookup;
       *lookup = id;
       u32 hook =
-          gabi::call<u32>(0x025D5218, at<void>(0x025E1234), lookup.get());
+          Homen_searchActor(Homen_guest<void>(homen_tu.mFindByIDCallback), lookup.get());
       if (hook) {
         Local<cXyz> offset, result, difference;
         Local<be<f32>[12]> transform;
-        gabi::call<void>(0x0235874C, a, offset.get(), 1);
-        gabi::call<void>(0x025F1884, at<void>(matrix), (s16)a->shape_angle.y);
-        gabi::call<void>(0x028E90D4, at<void>(matrix), transform.get());
-        gabi::call<void>(0x028E8F64, transform.get(), offset.get(),
+        this->get_norse_offset(offset.get(), 1);
+        Homen_YrotS(l_calcMtx, (s16)this->shape_angle.y);
+        Homen_mtxCopy(l_calcMtx, transform.get());
+        Homen_multVec(transform.get(), offset.get(),
                          result.get());
-        gabi::call<void>(0x0201ADE0, at<cXyz>(hook + 0x314), difference.get(),
+        Homen_vectorSubtract(&Homen_guest<fopAc_ac_c>(hook)->current.pos, difference.get(),
                          result.get());
-        x = word(gabi::ea(difference.get()));
-        z = word(gabi::ea(difference.get()) + 8);
-        put(gabi::ea(a) + 0x914, x);
-        y = word(gabi::ea(difference.get()) + 4);
-        put(gabi::ea(a) + 0x91c, z);
-        put(gabi::ea(a) + 0x918, y);
+        x = Homen_component(*difference, (0) / 4);
+        z = Homen_component(*difference, (8) / 4);
+        Homen_bits(this->target.x) = x;
+        y = Homen_component(*difference, (4) / 4);
+        Homen_bits(this->target.z) = z;
+        Homen_bits(this->target.y) = y;
       }
     }
-    if ((s32)a->type != 0)
+    if ((s32)this->mType != 0)
       return 1;
   }
-  gabi::call<void>(0x025B8B68, at<void>(word(0x101F84DC) + 0x644), 0x3410);
+  Homen_onEventBit(Homen_guest<HomenSave>(l_save)->mEvent, 0x3410);
   return 1;
 }
-VERIFY(0x023591A4, waitFallInit);
-void waitFallMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359328, void, a);
-  if ((s16)a->followCount < 3) {
-    gabi::call<void>(0x0200ED84, &a->current.pos.x, (f32)a->target.x, 0.5f,
+
+/* 02359328 */
+void Act_c::process_wait_falldown_main() {
+  if ((s16)this->followCount < 3) {
+    Homen_addCalc2(&this->current.pos.x, (f32)this->target.x, 0.5f,
                      20.0f);
-    gabi::call<void>(0x0200ED84, &a->current.pos.y, (f32)a->target.y, 0.5f,
+    Homen_addCalc2(&this->current.pos.y, (f32)this->target.y, 0.5f,
                      20.0f);
-    gabi::call<void>(0x0200ED84, &a->current.pos.z, (f32)a->target.z, 0.5f,
+    Homen_addCalc2(&this->current.pos.z, (f32)this->target.z, 0.5f,
                      20.0f);
-    a->followCount = (s16)((s16)a->followCount + 1);
+    this->followCount = (s16)((s16)this->followCount + 1);
   } else
-    gabi::call<s32>(0x02358284, a, 2);
-  gabi::call<void>(0x02358FEC, a);
+    this->process_init(HOMEN_FALLDOWN);
+  this->set_co_collision();
 }
-VERIFY(0x02359328, waitFallMain);
-BOOL fallInit(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359400, BOOL, a);
-  u32 id = word(gabi::ea(a) + 4);
-  *sub<be<f32>>(a, 0x374) = -2;
-  *sub<be<f32>>(a, 0x378) = -36;
-  f32 y = (f32)a->current.pos.y + 100.0f, x = a->current.pos.x,
-      z = a->current.pos.z;
-  *sub<be<f32>>(a, 0x8b4) = x;
-  *sub<be<f32>>(a, 0x8b8) = y;
-  put(gabi::ea(a) + 0x898, id);
-  *sub<be<f32>>(a, 0x8bc) = z;
-  u32 p = gabi::call<u32>(0x025200D4);
+
+/* 02359400 */
+BOOL Act_c::process_falldown_init() {
+  // HD: copy the ground position component stores around SetActorPid exactly as verified.
+  u32 id = this->mBsPcId;
+  this->gravity = -2;
+  this->maxFallSpeed = -36;
+  f32 y = (f32)this->current.pos.y + 100.0f, x = this->current.pos.x,
+      z = this->current.pos.z;
+  this->mGndChk.mPosX = x;
+  this->mGndChk.mPosY = y;
+  this->mGndChk.mActorID = id;
+  this->mGndChk.mPosZ = z;
+  u32 p = Homen_getPlay();
   f32 ground =
-      gabi::call<f32>(0x02008974, at<void>(p + 0x12a0), sub<void>(a, 0x890));
-  s32 type = a->type;
-  a->groundY = ground;
-  a->spinZ = type == 0 ? 90 : 120;
-  f32 random = gabi::call<f32>(0x02019918, 3072.0f);
-  a->spinTarget = (s16)gabi::ftoi(random);
+      Homen_groundCross(Homen_guest<HomenPlay>(p)->mBgS, &this->mGndChk);
+  s32 type = this->mType;
+  this->mGroundY = ground;
+  this->spinZ = type == 0 ? 90 : 120;
+  f32 random = Homen_rndFX(3072.0f);
+  this->spinTarget = (s16)gabi::ftoi(random);
   return 1;
 }
-VERIFY(0x02359400, fallInit);
-void fallMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x023594C8, void, a);
-  gabi::call<void>(0x02358E0C, a);
+
+/* 023594C8 */
+void Act_c::process_falldown_main() {
+  this->set_at_collision();
   Local<cXyz> point;
-  gabi::call<void>(0x02358DB8, a, point.get(), 0);
+  this->get_norse_point(point.get(), 0);
   f32 ground;
-  if ((s32)a->type == 0 && (s16)a->pivoted == 0) {
+  if ((s32)this->mType == 0 && (s16)this->pivoted == 0) {
     Local<cXyz> zero, result;
     zero->x = 0;
     zero->y = 0;
     zero->z = 0;
-    gabi::call<void>(0x028E8F64, a->matrix, zero.get(), result.get());
-    ground = a->groundY;
+    Homen_multVec(this->mMtx, zero.get(), result.get());
+    ground = this->mGroundY;
     if (!((f32)result->y - 1.0f > ground)) {
-      *sub<be<f32>>(a, 0x370) = 0;
-      a->pivoted = 1;
-      ground = a->groundY;
-      *sub<be<f32>>(a, 0x374) = 0;
-      *sub<be<f32>>(a, 0x33c) = 0;
-      *sub<be<f32>>(a, 0x344) = 0;
-      *sub<be<f32>>(a, 0x340) = 0;
+      this->speedF = 0;
+      this->pivoted = 1;
+      ground = this->mGroundY;
+      this->gravity = 0;
+      this->speed.x = 0;
+      this->speed.z = 0;
+      this->speed.y = 0;
     }
   } else {
-    ground = a->groundY;
-    if ((f32)a->current.pos.y < ground) {
-      *sub<be<f32>>(a, 0x340) = 0;
-      *sub<be<f32>>(a, 0x370) = 0;
-      *sub<be<f32>>(a, 0x374) = 0;
-      *sub<be<f32>>(a, 0x344) = 0;
-      ground = a->groundY;
-      *sub<be<f32>>(a, 0x33c) = 0;
+    ground = this->mGroundY;
+    if ((f32)this->current.pos.y < ground) {
+      this->speed.y = 0;
+      this->speedF = 0;
+      this->gravity = 0;
+      this->speed.z = 0;
+      ground = this->mGroundY;
+      this->speed.x = 0;
     }
   }
-  s16 pivot = a->pivoted;
+  s16 pivot = this->pivoted;
   if ((f32)point->y < ground) {
-    u32 params = ((u32)(s32)pivot << 1) | (u32)(s32)a->type;
-    u32 smoke = gabi::call<u32>(0x025D5A20, 0x82, word(gabi::ea(a) + 4), params,
-                                &a->current.pos, (s8)*sub<be<u8>>(a, 0x326),
-                                &a->shape_angle, 0, -1, 0);
-    a->smokeID = smoke;
+    u32 params = ((u32)(s32)pivot << 1) | (u32)(s32)this->mType;
+    u32 smoke = Homen_createChild(HOMEN_SMOKE_PROCESS, this->mBsPcId, params,
+                                &this->current.pos, (s8)this->current.roomNo,
+                                &this->shape_angle, 0, -1, 0);
+    this->mSmokeID = smoke;
     if (smoke != 0xffffffff) {
-      u32 p = gabi::call<u32>(0x025200D4);
+      u32 p = Homen_getPlay();
       Local<cXyz> up;
       up->x = 0;
       up->y = 1;
       up->z = 0;
-      gabi::call<void>(0x025CB374, at<void>(p + 0x599c),
-                       word(0x101CA0A4 + ((u32)(s32)a->type & 1) * 4), -17,
+      Homen_startShock(Homen_guest<HomenPlay>(p)->mVibration,
+                       vibe_level_2nd[(((u32)(s32)this->mType&1)*4) / 4], -17,
                        up.get());
-      *sub<be<f32>>(a, 0x33c) = 0;
-      *sub<be<f32>>(a, 0x344) = 0;
-      a->spinX = 0;
-      *sub<be<f32>>(a, 0x370) = 0;
-      a->spinZ = 0;
-      *sub<be<f32>>(a, 0x340) = 0;
-      *sub<be<f32>>(a, 0x374) = 0;
-      gabi::call<s32>(0x02358284, a, 3);
+      this->speed.x = 0;
+      this->speed.z = 0;
+      this->spinX = 0;
+      this->speedF = 0;
+      this->spinZ = 0;
+      this->speed.y = 0;
+      this->gravity = 0;
+      this->process_init(HOMEN_WAIT);
     }
   } else if (!pivot) {
-    gabi::call<void>(0x0200F428, &a->shape_angle.z, (s16)a->spinTarget, 20,
+    Homen_addCalcAngleS2(&this->shape_angle.z, (s16)this->spinTarget, 20,
                      4096);
-    gabi::call<void>(0x0200F428, &a->shape_angle.y, (s16)((s16)a->yaw + 0x8000),
+    Homen_addCalcAngleS2(&this->shape_angle.y, (s16)((s16)this->yaw + 0x8000),
                      10, 4096);
   }
-  if ((f32)*sub<be<f32>>(a, 0x374) != 0.0f)
-    *sub<be<f32>>(a, 0x370) =
-        *at<be<f32>>(0x101CA0AC + ((u32)(s32)a->type & 1) * 4);
+  if ((f32)this->gravity != 0.0f)
+    this->speedF =
+        speed_table[(((u32)(s32)this->mType&1)*4) / 4];
 }
-VERIFY(0x023594C8, fallMain);
-BOOL waitInit(daObjHomen_c *a) {
-  WWHD_FUNC(0x023596F8, BOOL, a);
-  s32 sw = gabi::call<s32>(0x02359AB0, a, 8, 24);
-  gabi::call<void>(0x025B9E38, at<void>(word(0x101F84DC) + 0x20), sw,
-                   (s8)*sub<be<u8>>(a, 0x2fe));
-  s32 type = a->type;
-  a->extra = 1;
-  gabi::call<void>(0x025E19CC, type == 0 ? 0x69ff : 0x6a00, &a->current.pos);
+
+/* 023596F8 */
+BOOL Act_c::process_wait_init() {
+  s32 sw = PrmAbstract(this, PRM_SWITCH_W, PRM_SWITCH_S);
+  Homen_onSwitch(Homen_guest<HomenSave>(l_save)->mZone, sw,
+                   (s8)this->home.roomNo);
+  s32 type = this->mType;
+  this->extra = 1;
+  Homen_seStartAt(type == 0 ? 0x69ff : 0x6a00, &this->current.pos);
   return 1;
 }
-VERIFY(0x023596F8, waitInit);
-void waitMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359770, void, a);
-  s16 timer = a->extra;
+
+/* 02359770 */
+void Act_c::process_wait_main() {
+  s16 timer = this->extra;
   if (timer <= 0)
     return;
   timer = (s16)(timer - 1);
-  a->extra = timer;
+  this->extra = timer;
   if (!timer)
-    gabi::call<s32>(0x02358284, a, 4);
+    this->process_init(HOMEN_NONE);
 }
-VERIFY(0x02359770, waitMain);
-BOOL noneInit(daObjHomen_c *a) {
-  WWHD_FUNC(0x02359794, BOOL, a);
-  if ((s32)a->type == 0)
-    gabi::call<void>(0x025E1988, 0x806);
+
+/* 02359794 */
+BOOL Act_c::process_none_init() {
+  if ((s32)this->mType == 0)
+    Homen_seStartGlobal(0x806);
   return 1;
 }
-VERIFY(0x02359794, noneInit);
-void noneMain(daObjHomen_c *a) {
-  WWHD_FUNC(0x023597C8, void, a);
-  u32 id = a->enemyID;
+
+/* 023597C8 */
+void Act_c::process_none_main() {
+  u32 id = this->mEnemyID;
   if (id == 0xffffffff)
     return;
   Local<be<u32>> found;
-  if (!gabi::call<s32>(0x025D54C4, id, found.get())) {
-    a->enemyID = 0xffffffff;
-    gabi::call<void>(0x025D57E0, a);
+  if (!Homen_searchByID(id, found.get())) {
+    this->mEnemyID = 0xffffffff;
+    Homen_deleteActor(this);
   }
 }
-VERIFY(0x023597C8, noneMain);
-void staticInit() {
-  WWHD_FUNC(0x0235982C, void);
-  put(0x10469F34, 0);
-  put(0x10469F2C, 0);
-  put(0x10469F38, 0);
-  put(0x10469F30, 0);
-  gabi::call<void>(0x028F026C, at<void>(0x101CA0B4));
-  *at<be<f32>>(0x10469EF0) = -3.1415927410125732f;
-  *at<be<f32>>(0x10469EF4) = 3.1415927410125732f;
-  gabi::call<void>(0x028ED6F8, at<void>(0x10469EF8));
-  gabi::call<void>(0x028F026C, at<void>(0x101CA0C0));
-  gabi::call<void>(0x028EAB2C, at<void>(0x10469EF9));
-  gabi::call<void>(0x028F026C, at<void>(0x101CA0CC));
+
+/* 02358284 */
+BOOL Act_c::process_init(s16 state) {
+  if ((u32)(s32)state >= 5) return 0;
+  if (!Homen_dispatch<BOOL>(this, init_table[state].proc)) return 0;
+  this->mState = state;
+  return 1;
 }
-VERIFY(0x0235982C, staticInit);
-void staticDestructor(void *self, s32 flags) {
-  WWHD_FUNC(0x023598C0, void, self, flags);
+
+/* 02358BFC */
+void Act_c::process_main() {
+  s16 state = this->mState;
+  if ((u32)(s32)state >= 5) return;
+  Homen_dispatch<void>(this, main_table[state].proc);
+}
+
+/* 02358FEC */
+void Act_c::set_co_collision() {
+  u32 sph = gabi::ea(&this->mSph);
+  if (Homen_checkTargetHit(Homen_guest<void>(sph))) {
+    u32 hit = Homen_getTargetHit(Homen_guest<void>(sph)),
+        p = Homen_getPlay(), player = Homen_guest<HomenPlay>(p)->mpPlayer;
+    if (hit && (Homen_guest<HomenAttack>(hit)->mType & 0x8000)) {
+      this->yaw = Homen_guest<HomenPlayer>(player)->mShapeYaw;
+      u32 actor = Homen_getTargetHitActor(&this->mSph.mTargetFlags);
+      u32 id = 0xffffffff;
+      s32 type = this->mType;
+      if (actor)
+        id = Homen_guest<fopAc_ac_c>(actor)->mBsPcId;
+      this->mHookshotID = id;
+      if (type == 0)
+        Homen_onEventBit(Homen_guest<HomenSave>(l_save)->mEvent,
+                         0x3880);
+    }
+    Homen_clearTargetHit(&this->mSph);
+    return;
+  }
+  Local<be<f32>[2]> radii;
+  Local<cXyz> center;
+  (*radii)[(0) / 4] = co_radius[0];
+  (*radii)[(4) / 4] = co_radius[1];
+  this->get_norse_point(center.get(), 0);
+  Homen_sphereSetC(this->mSph.mGeometry, center.get());
+  u32 index = (u32)(s32)this->mType & 1;
+  Homen_sphereSetR(this->mSph.mGeometry,
+                   (f32)(*radii)[(index*4) / 4]);
+  u32 p = Homen_getPlay();
+  Homen_collisionSet(Homen_guest<HomenPlay>(p)->mCcS, Homen_guest<void>(sph));
+}
+
+/* 02358E0C */
+void Act_c::set_at_collision() {
+  // HD: preserve the interleaved GHS guarded-table store order, including its early guard write.
+  if (!l_atOffsetGuard) {
+    at_offset[6] = 120;
+    at_offset[8] = 140;
+    at_offset[2] = 140;
+    at_offset[5] = 140;
+    at_offset[11] = 140;
+    at_offset[4] = 550;
+    at_offset[7] = 30;
+    at_offset[9] = 120;
+    at_offset[19] = 20;
+    at_offset[13] = 20;
+    at_offset[10] = 550;
+    at_offset[12] = -45;
+    at_offset[15] = -45;
+    at_offset[14] = 80;
+    at_offset[17] = 80;
+    l_atOffsetGuard = 1;
+    at_offset[16] = 190;
+    at_offset[0] = -120;
+    at_offset[1] = 30;
+    at_offset[18] = 45;
+    at_offset[3] = -120;
+    at_offset[20] = 80;
+    at_offset[21] = 45;
+    at_offset[22] = 190;
+    at_offset[23] = 80;
+  }
+  Local<cXyz> input, result;
+  for (u32 i = 0; i < 2; i++) {
+    u32 index = ((u32)(s32)this->mType & 1) * 2 + i,
+        ends = gabi::ea(&this->mCpsS[i]),
+        cap = gabi::ea(&this->mCps[i]);
+    u32 data = gabi::ea(&at_offset[index * 6]);
+    Homen_component(*input, (4) / 4) = Homen_guest<HomenWordVector>(data)->y;
+    Homen_component(*input, (0) / 4) = Homen_guest<HomenWordVector>(data)->x;
+    Homen_component(*input, (8) / 4) = Homen_guest<HomenWordVector>(data)->z;
+    Homen_multVec(this->mMtx, input.get(), result.get());
+    u32 x = Homen_component(*result, (0) / 4), y = Homen_component(*result, (4) / 4);
+    Homen_guest<HomenCapsuleShape>(ends)->mStart[0] = x;
+    u32 z = Homen_component(*result, (8) / 4);
+    Homen_guest<HomenCapsuleShape>(ends)->mStart[1] = y;
+    Homen_guest<HomenCapsuleShape>(ends)->mStart[2] = z;
+    index = ((u32)(s32)this->mType & 1) * 2 + i;
+    data = gabi::ea(&at_offset[3 + index * 6]);
+    Homen_component(*input, (4) / 4) = Homen_guest<HomenWordVector>(data)->y;
+    Homen_component(*input, (0) / 4) = Homen_guest<HomenWordVector>(data)->x;
+    Homen_component(*input, (8) / 4) = Homen_guest<HomenWordVector>(data)->z;
+    Homen_multVec(this->mMtx, input.get(), result.get());
+    y = Homen_component(*result, (4) / 4);
+    x = Homen_component(*result, (0) / 4);
+    z = Homen_component(*result, (8) / 4);
+    Homen_guest<HomenCapsuleShape>(ends)->mEnd[0] = x;
+    Homen_guest<HomenCapsuleShape>(ends)->mEnd[2] = z;
+    Homen_guest<HomenCapsuleShape>(ends)->mEnd[1] = y;
+    Homen_capsuleSet(Homen_guest<HomenCapsule>(cap)->mGeometry, Homen_guest<void>(ends));
+    u32 p = Homen_getPlay();
+    Homen_collisionSet(Homen_guest<HomenPlay>(p)->mCcS, Homen_guest<void>(cap));
+  }
+}
+
+/* 02358820 */
+void Act_c::adjust_hookshot() {
+  u32 p = Homen_getPlay(), player = Homen_guest<HomenPlay>(p)->mpPlayer;
+  if (Homen_guest<HomenPlayer>(player)->mEquipmentFlags & 0x02000000)
+    return;
+  u32 id = this->mHookshotID;
+  if (id == 0xffffffff)
+    return;
+  Local<be<u32>> lookup;
+  *lookup = id;
+  if (!Homen_searchActor(Homen_guest<void>(homen_tu.mFindByIDCallback), lookup.get()))
+    return;
+  Local<cXyz> offset, result;
+  Local<be<f32>[12]> transform;
+  this->get_norse_offset(offset.get(), 1);
+  Homen_YrotS(l_calcMtx, (s16)this->shape_angle.y);
+  Homen_mtxCopy(l_calcMtx, transform.get());
+  Homen_multVec(transform.get(), offset.get(), result.get());
+  u32 target = Homen_guest<HomenPlayerVtable>(Homen_guest<HomenPlayer>(player)->mVtable)->mSetHookshotCarryOffset;
+  gabi::call<void>(target, Homen_guest<void>(player), u32(this->mBsPcId),
+                   result.get());
+  this->mHookshotID = 0xffffffff;
+}
+
+/* 02358C54 */
+BOOL Act_c::_execute() {
+  this->adjust_hookshot();
+  this->exe_event();
+  this->manage_item_timer();
+  this->manage_enemy_timer();
+  this->process_main();
+  u32 bg = gabi::ea((void *)this->mpBgW);
+  if (bg)
+    Homen_bgMove(Homen_guest<void>(bg));
+  s16 increment = this->spinZ, spin = this->spinX;
+  spin = (s16)(spin + increment);
+  if (spin > 2000)
+    spin = 2000;
+  s16 angle = (s16)((s16)this->shape_angle.x + spin);
+  this->spinX = spin;
+  if (angle >= 0x5000) {
+    this->shape_angle.x = 0x5000;
+    this->spinX = 0;
+    this->spinZ = 0;
+  } else
+    this->shape_angle.x = angle;
+  Homen_calcSpeed(this);
+  Homen_posMove(this, 0);
+  this->set_mtx();
+  return 1;
+}
+
+/* 02358D48 */
+BOOL Act_c::_draw() {
+  s16 state = this->mState;
+  if (state != 4 && state != 3) {
+    u32 env = Homen_getEnvLight();
+    Homen_settingTevStruct(Homen_guest<void>(env), 1, &this->current.pos,
+                     &this->tevStr);
+    env = Homen_getEnvLight();
+    Homen_setLightTevColorType(Homen_guest<void>(env), (void *)this->mpModel,
+                     &this->tevStr);
+    Homen_modelUpdateDL((void *)this->mpModel, 0);
+  }
+  return 1;
+}
+
+/* 0235981C */
+BOOL Mthd_Create(daObjHomen_c *a) {
+  return a->_create();
+}
+
+/* 02359820 */
+BOOL Mthd_Delete(daObjHomen_c *a) {
+  return a->_delete();
+}
+
+/* 02359824 */
+BOOL Mthd_Execute(daObjHomen_c *a) {
+  return a->_execute();
+}
+
+/* 02359828 */
+BOOL Mthd_Draw(daObjHomen_c *a) {
+  return a->_draw();
+}
+
+/* 02359AA8 */
+BOOL Mthd_IsDelete(daObjHomen_c *a) {
+  return 1;
+}
+
+/* 02359AB0 */
+u32 PrmAbstract(const daObjHomen_c *a, u32 width, u32 shift) {
+  u32 value = a->mParameters, n = width & 63, s = shift & 63;
+  u32 mask = (n < 32 ? (1u << n) : 0u) - 1u;
+  u32 shifted = s < 32 ? value >> s : 0u;
+  return shifted & mask;
+}
+
+/* ---------------- HD: compiler-generated and template code of this translation unit ---------------- */
+
+/* 0235982C */
+void __sinit_d_a_obj_homen_cpp() {
+  l_headerDefaults[2] = 0;
+  l_headerDefaults[0] = 0;
+  l_headerDefaults[3] = 0;
+  l_headerDefaults[1] = 0;
+  Homen_registerDestructor(Homen_guest<void>(homen_tu.mHeaderDtorLink0));
+  l_minAngle = -3.1415927410125732f;
+  l_maxAngle = 3.1415927410125732f;
+  Homen_headerGuardCtor(Homen_guest<void>(0x10469EF8));
+  Homen_registerDestructor(Homen_guest<void>(homen_tu.mHeaderDtorLink1));
+  Homen_headerByteCtor(Homen_guest<void>(0x10469EF9));
+  Homen_registerDestructor(Homen_guest<void>(homen_tu.mHeaderDtorLink2));
+}
+
+/* 023598C0 */
+void SafeString_dtor(void *self, s32 flags) {
   if (self && (flags & 1))
-    gabi::call<void>(0x0273AF40, self);
+    Homen_delete(self);
 }
-VERIFY(0x023598C0, staticDestructor);
-void *statusConstruct(void *self) {
-  WWHD_FUNC(0x023598D4, void *, self);
+
+/* 023598D4 */
+void* statusConstruct(void *self) {
   u32 p = gabi::ea(self);
   if (!p)
-    p = gabi::call<u32>(0x0273AD10, 0x3c);
+    p = Homen_new(0x3c);
   if (p) {
-    gabi::call<void>(0x0200BD2C, at<void>(p));
-    gabi::call<void>(0x02515DA0, at<void>(p + 0x1c));
-    put(p + 0x18, 0x1004AE88);
-    put(p + 0x1c, 0x1004AEC0);
+    Homen_statusBaseCtor(Homen_guest<void>(p));
+    Homen_statusCtor(&Homen_guest<HomenStatus>(p)->mGameVtable);
+    Homen_guest<HomenStatus>(p)->mBaseVtable = homen_tu.mStatusBaseVtable;
+    Homen_guest<HomenStatus>(p)->mGameVtable = homen_tu.mStatusGameVtable;
   }
-  return at<void>(p);
+  return Homen_guest<void>(p);
 }
-VERIFY(0x023598D4, statusConstruct);
-void *capsuleConstruct(void *self) {
-  WWHD_FUNC(0x0235993C, void *, self);
+
+/* 0235993C */
+void* capsuleConstruct(void *self) {
   u32 p = gabi::ea(self);
   if (!p)
-    p = gabi::call<u32>(0x0273AD10, 0x138);
+    p = Homen_new(0x138);
   if (p) {
-    gabi::call<void>(0x02515FB8, at<void>(p));
-    put(p + 0x114, 0x100015A8);
-    put(p + 0x110, 0x1002AA00);
-    gabi::call<void>(0x02018150, at<void>(p + 0x118));
-    put(p + 0x3c, 0x1004AF18);
-    put(p + 0x130, 0x1004AF60);
-    put(p + 0x114, 0x1004AF70);
+    Homen_collisionObjectCtor(Homen_guest<void>(p));
+    Homen_guest<HomenCapsule>(p)->mGeometryVtable = homen_tu.mGeometryBaseVtable;
+    Homen_guest<HomenCapsule>(p)->mCapsuleVtable = homen_tu.mCapsuleVtable;
+    Homen_capsuleGeometryCtor(Homen_guest<HomenCapsule>(p)->mGeometry);
+    Homen_guest<HomenCapsule>(p)->mObjectVtable = homen_tu.mCollisionObjectVtable;
+    Homen_guest<HomenCapsule>(p)->mShapeVtable = homen_tu.mCapsuleShapeVtable;
+    Homen_guest<HomenCapsule>(p)->mGeometryVtable = homen_tu.mCapsuleGeometryVtable;
   }
-  return at<void>(p);
+  return Homen_guest<void>(p);
 }
-VERIFY(0x0235993C, capsuleConstruct);
-void emptyVirtual(void *self) { WWHD_FUNC(0x023599C8, void, self); }
-VERIFY(0x023599C8, emptyVirtual);
+
+/* 023599C8 */
+void SafeString_assureTerminationImpl(void *self) { }
+
+/* 023599CC */
 void actorDestructor(daObjHomen_c *a, s32 flags) {
-  WWHD_FUNC(0x023599CC, void, a, flags);
   if (!a)
     return;
-  put(gabi::ea(a) + 0x8b0, 0x1002AA30);
-  put(gabi::ea(a) + 0x8d0, 0x1002AA50);
-  put(gabi::ea(a) + 0x8dc, 0x1002AA10);
-  gabi::call<void>(0x02008DAC, sub<void>(a, 0x890), 0);
-  gabi::call<void>(0x028F0164, sub<void>(a, 0x5a8), 2, 0x138,
-                   at<void>(0x02515980), 0, 0);
-  gabi::call<void>(0x028F0164, sub<void>(a, 0x530), 2, 0x3c,
-                   at<void>(0x02515860), 0, 0);
-  gabi::call<void>(0x02515AE8, sub<void>(a, 0x404), 2);
-  gabi::call<void>(0x02515860, sub<void>(a, 0x3c8), 2);
-  gabi::call<void>(0x025D50BC, a, 0);
+  a->mGndChk.mVtable = homen_tu.mGroundDeletingVtable;
+  a->mGndChk.mPolyVtable = homen_tu.mGroundDeletingPolyVtable;
+  a->mGndChk.mGroupVtable = homen_tu.mGroundDeletingGroupVtable;
+  Homen_groundDtor(&a->mGndChk, 0);
+  Homen_destroyArray(a->mCps, 2, 0x138,
+                   Homen_guest<void>(homen_tu.mCapsuleDestructor), 0, 0);
+  Homen_destroyArray(a->mCpsStts, 2, 0x3c,
+                   Homen_guest<void>(homen_tu.mStatusDestructor), 0, 0);
+  Homen_sphereDtor(&a->mSph, 2);
+  Homen_statusDtor(&a->mSphStts, 2);
+  Homen_actorDtor(a, 0);
   if (flags & 1)
-    gabi::call<void>(0x0273AF40, a);
+    Homen_delete(a);
 }
-VERIFY(0x023599CC, actorDestructor);
-} // namespace Homen
+
+/* WWHD glue (tools/verify/autoglue.py): private HD ABI bindings
+data bdl_idx 101CA054
+data dzb_idx 101CA05C
+data at_col_radius 101CA064
+data culling_dat 101CA06C
+data vibe_level_1st 101CA09C
+data vibe_level_2nd 101CA0A4
+data speed_table 101CA0AC
+data co_radius 1002AC0C
+data offset_table 101CA04C
+data M_sph_srcS 1002AC38
+data M_sph_srcL 1002AC78
+data M_cps_srcL 1002ACB8
+data M_cps_srcS 1002AD04
+data make_enemy_dat 1002AB6C
+data l_resourceManager 101F4F28
+data l_save 101F84DC
+data l_offset0Guard 10469F9C
+data l_offset1Guard 10469FA0
+data l_atOffsetGuard 10469FA4
+data l_minAngle 10469EF0
+data l_maxAngle 10469EF4
+data l_headerGuard 10469EF8
+data l_headerByte 10469EF9
+data offset_data0 10469EFC nocheck
+data offset_data1 10469F14 nocheck
+data at_offset 10469F3C nocheck
+data l_zero 101FFBA8 nocheck
+data l_headerDefaults 10469F2C nocheck
+data l_calcMtx 1048D0CC nocheck
+data init_table 1002AAF0
+data main_table 1002ABC4
+ext 020087EC void Homen_bgRelease(void*, void*)
+ext 02008974 f32 Homen_groundCross(void*, void*)
+ext 02008DAC void Homen_groundDtor(void*, s32)
+ext 02008E0C void Homen_groundCtor(void*)
+ext 0200A030 s32 Homen_bgSet(void*, void*, s32, void*)
+ext 0200BD2C void Homen_statusBaseCtor(void*)
+ext 0200E240 void Homen_collisionSet(void*, void*)
+ext 0200ED84 void Homen_addCalc2(be<f32>*, f32, f32, f32)
+ext 0200F428 void Homen_addCalcAngleS2(be<s16>*, s16, s32, s32)
+ext 02018150 void Homen_capsuleGeometryCtor(void*)
+ext 020181FC void Homen_capsuleSet(void*, void*)
+ext 02018C8C void Homen_sphereSetR(void*, f32)
+ext 02018D40 void Homen_sphereSetC(void*, const cXyz*)
+ext 02019918 f32 Homen_rndFX(f32)
+ext 0201A478 void Homen_anglesCtor(csXyz*, s32, s32, s32)
+ext 0201ADE0 void Homen_vectorSubtract(cXyz*, cXyz*, cXyz*)
+ext 024EEA6C void Homen_bgRegist(void*, void*, daObjHomen_c*)
+ext 024F23F4 u32 Homen_bgNew(void*)
+ext 024F43DC void Homen_bgMove(void*)
+ext 02515860 void Homen_statusDtor(void*, s32)
+ext 02515AE8 void Homen_sphereDtor(void*, s32)
+ext 02515BBC u32 Homen_getTargetHitActor(void*)
+ext 02515DA0 void Homen_statusCtor(void*)
+ext 02515F14 void Homen_statusInit(void*, s32, s32, daObjHomen_c*)
+ext 02515FB8 void Homen_collisionObjectCtor(void*)
+ext 0251621C void Homen_clearTargetHit(void*)
+ext 025162A4 s32 Homen_checkTargetHit(void*)
+ext 02516300 u32 Homen_getTargetHit(void*)
+ext 025164C0 void Homen_setCapsule(void*, void*)
+ext 025166F0 void Homen_sphereCtor(void*)
+ext 0251677C void Homen_setSphere(void*, void*)
+ext 025200D4 u32 Homen_getPlay()
+ext 02520460 s32 Homen_resLoad(void*, void*)
+ext 025204C8 void Homen_resDelete(void*, void*)
+ext 02543F10 s32 Homen_getEventIdx(void*, void*, s32)
+ext 025440C8 s32 Homen_eventEndCheck(void*, s16)
+ext 02555D0C u32 Homen_getEnvLight()
+ext 025626A4 void Homen_settingTevStruct(void*, s32, const cXyz*, void*)
+ext 02562F5C void Homen_setLightTevColorType(void*, void*, void*)
+ext 025B8B68 void Homen_onEventBit(void*, s32)
+ext 025B9E38 void Homen_onSwitch(void*, s32, s32)
+ext 025BA0C0 s32 Homen_isSwitch(void*, s32, s32)
+ext 025CB374 void Homen_startShock(void*, u32, s32, const cXyz*)
+ext 025D4ED0 void Homen_actorCtor(daObjHomen_c*)
+ext 025D50BC void Homen_actorDtor(daObjHomen_c*, s32)
+ext 025D5218 u32 Homen_searchActor(void*, void*)
+ext 025D54C4 s32 Homen_searchByID(u32, void*)
+ext 025D57E0 void Homen_deleteActor(daObjHomen_c*)
+ext 025D5834 u32 Homen_createActor(s16, u32, const cXyz*, s32, void*, void*, s32, void*)
+ext 025D5A20 u32 Homen_createChild(s32, u32, u32, const cXyz*, s32, const csXyz*, void*, s32, void*)
+ext 025D63E8 s32 Homen_entrySolidHeap(daObjHomen_c*, HomenHeapCallback, s32)
+ext 025D674C void Homen_setCullBox(daObjHomen_c*, f32, f32, f32, f32, f32, f32)
+ext 025D67A8 void Homen_calcSpeed(daObjHomen_c*)
+ext 025D6800 void Homen_posMove(daObjHomen_c*, void*)
+ext 025D7A58 void Homen_orderEvent(daObjHomen_c*, s16, s32, s32, s32, s32)
+ext 025D8120 void Homen_createItem(const cXyz*, s32, s32, s32, s32, const csXyz*, s32, const cXyz*)
+ext 025E1988 void Homen_seStartGlobal(s32)
+ext 025E19CC void Homen_seStartAt(s32, const cXyz*)
+ext 025E2DE0 void Homen_modelUpdateDL(void*, s32)
+ext 025E38E0 u32 Homen_modelCreate(void*, s32, u32)
+ext 025F1884 void Homen_YrotS(void*, s16)
+ext 025F1BF4 void Homen_XrotM(void*, s16)
+ext 025F1C28 void Homen_YrotM(void*, s16)
+ext 025F1C5C void Homen_ZrotM(void*, s16)
+ext 025F24E0 void Homen_transM(f32, f32, f32)
+ext 026066C4 u32 Homen_getObjectRes(void*, void*, u32)
+ext 0273AA24 void Homen_assert(void*, s32, void*)
+ext 0273AD10 u32 Homen_new(s32)
+ext 0273AF40 void Homen_delete(void*)
+ext 027F4D5C void Homen_modelCalc(void*)
+ext 028E8F64 void Homen_multVec(void*, void*, void*)
+ext 028E90D4 void Homen_mtxCopy(void*, void*)
+ext 028E93CC void Homen_transS(void*, f32, f32, f32)
+ext 028EAB2C void Homen_headerByteCtor(void*)
+ext 028ED6F8 void Homen_headerGuardCtor(void*)
+ext 028EFFD0 void Homen_constructArray(void*, s32, s32, HomenArrayConstructor)
+ext 028F0164 void Homen_destroyArray(void*, s32, s32, void*, s32, s32)
+ext 028F026C void Homen_registerDestructor(void*)
+*/

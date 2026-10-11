@@ -1,90 +1,125 @@
-/* Retained HD environment data APIs. Tables live in the reference image;
- * this unit verifies actual accessor/copy code, not fabricated data functions.
- * Neighboring02563940 has a separate registration cluster and remains
- * unattributed/excluded; the admitted executable scope has9 entries.
- */
-#include "gabi.h"
-using namespace gabi;
+/** Environment data accessors. */
+#include "d/d_kankyo_data.h"
 
-void dKyd_xfog_table_set_hd(u32 index) {
-  WWHD_FUNC(0x025638D8, void, index);
-  u32 table = 0x101E8F50 + index * 20u;
-  for (u32 offset = 0; offset < 20; offset += 2) {
-    // Native lazy environment accessor, called once for every copied entry.
-    u32 environment = call<u32>(0x02555D0C);
-    u16 value = load<u16>(table + offset);
-    store<u16>(environment + offset + 0xB50, value);
-  }
-}
-VERIFY(0x025638D8, dKyd_xfog_table_set_hd);
+static stage_palet_info_class l_field_data;
+static stage_pselect_info_class l_pselect_default[] = {
+    {{0, 0, 1, 2, 2, 3, 0, 0}, 0.0f},
+    {{4, 4, 5, 6, 6, 7, 0, 0}, 0.0f},
+};
+static stage_envr_info_class l_envr_default[] = {
+    {{0, 1, 2, 3, 0, 0, 0, 0}},
+    {{4, 5, 6, 7, 0, 0, 0, 0}},
+};
+static stage_vrbox_info_class l_vr_box_data;
+// HD: Field/menu timing differs from the GameCube schedules.
+static dKyd_Schedule l_time_attribute[] = {
+    {0.0f, 90.0f, 5, 5, {0, 0}},
+    {90.0f, 105.0f, 5, 0, {0, 0}},
+    {105.0f, 120.0f, 0, 1, {0, 0}},
+    {120.0f, 150.0f, 1, 2, {0, 0}},
+    {150.0f, 255.0f, 2, 2, {0, 0}},
+    {255.0f, 270.0f, 2, 3, {0, 0}},
+    {270.0f, 300.0f, 3, 4, {0, 0}},
+    {300.0f, 315.0f, 4, 5, {0, 0}},
+    {315.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+};
+static dKyd_Schedule l_time_attribute_boss[] = {
+    {0.0f, 45.0f, 0, 1, {0, 0}},
+    {45.0f, 90.0f, 1, 2, {0, 0}},
+    {90.0f, 180.0f, 2, 3, {0, 0}},
+    {180.0f, 225.0f, 3, 4, {0, 0}},
+    {225.0f, 270.0f, 4, 5, {0, 0}},
+    {270.0f, 360.0f, 5, 0, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+};
+static dKyd_Schedule l_time_attribute_menu[] = {
+    {0.0f, 90.0f, 5, 5, {0, 0}},
+    {90.0f, 105.0f, 5, 0, {0, 0}},
+    {105.0f, 120.0f, 0, 1, {0, 0}},
+    {120.0f, 150.0f, 1, 2, {0, 0}},
+    {150.0f, 255.0f, 2, 2, {0, 0}},
+    {255.0f, 270.0f, 2, 3, {0, 0}},
+    {270.0f, 300.0f, 3, 4, {0, 0}},
+    {300.0f, 315.0f, 4, 5, {0, 0}},
+    {315.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+    {360.0f, 360.0f, 5, 5, {0, 0}},
+};
+static GXFogAdjTable S_xfog_table_data[] = {
+    {{260, 260, 270, 280, 290, 300, 310, 320, 330, 340}},
+    {{250, 260, 280, 320, 350, 400, 480, 550, 600, 800}},
+};
 
-void *dKyd_dmpalet_getp_hd() {
-  WWHD_FUNC(0x025639D4, void *);
-  return at<void>(0x101E9104);
+/* 025638D8 */
+void dKyd_xfog_table_set(u32 index) {
+    // HD: The index remains 32-bit, and the lazy accessor is called for every entry.
+    GXFogAdjTable* table = &S_xfog_table_data[index];
+    for (u32 i = 0; i < 10; i++) {
+        dKyd_environment_c* environment = (dKyd_environment_c*)dKy_getEnvlight();
+        u16 value = table->fogVals[i];
+        environment->mFogAdjTable.fogVals[i] = value;
+    }
 }
-VERIFY(0x025639D4, dKyd_dmpalet_getp_hd);
-void *dKyd_dmpselect_getp_hd() {
-  WWHD_FUNC(0x025639E0, void *);
-  return at<void>(0x101E8F28);
-}
-VERIFY(0x025639E0, dKyd_dmpselect_getp_hd);
-void *dKyd_dmenvr_getp_hd() {
-  WWHD_FUNC(0x025639EC, void *);
-  return at<void>(0x101E8F40);
-}
-VERIFY(0x025639EC, dKyd_dmenvr_getp_hd);
-void *dKyd_dmvrbox_getp_hd() {
-  WWHD_FUNC(0x025639F8, void *);
-  return at<void>(0x101E97C4);
-}
-VERIFY(0x025639F8, dKyd_dmvrbox_getp_hd);
-void *dKyd_schejule_getp_hd() {
-  WWHD_FUNC(0x02563A04, void *);
-  return at<void>(0x101E8F78);
-}
-VERIFY(0x02563A04, dKyd_schejule_getp_hd);
-void *dKyd_schejule_boss_getp_hd() {
-  WWHD_FUNC(0x02563A10, void *);
-  return at<void>(0x101E8FFC);
-}
-VERIFY(0x02563A10, dKyd_schejule_boss_getp_hd);
-void *dKyd_schejule_menu_getp_hd() {
-  WWHD_FUNC(0x02563A1C, void *);
-  return at<void>(0x101E9080);
-}
-VERIFY(0x02563A1C, dKyd_schejule_menu_getp_hd);
 
-void d_kankyo_data_sinit_hd() {
-  WWHD_FUNC(0x02563A28, void);
-  store<u32>(0x104773EC, 0);
-  store<u32>(0x104773E4, 0);
-  store<u32>(0x104773F0, 0);
-  store<u32>(0x104773E8, 0);
-  call<void>(0x028F026C, at<void>(0x101E99A8));
-  f32 a = load<f32>(0x1004F368), b = load<f32>(0x1004F36C);
-  store<f32>(0x104773D8, a);
-  store<f32>(0x104773DC, b);
-  call<void>(0x028ED6F8, at<void>(0x104773E0));
-  call<void>(0x028F026C, at<void>(0x101E99B4));
-  call<void>(0x028EAB2C, at<void>(0x104773E1));
-  call<void>(0x028F026C, at<void>(0x101E99C0));
+/* 025639D4 */
+void* dKyd_dmpalet_getp() {
+    return &l_field_data;
 }
-VERIFY(0x02563A28, d_kankyo_data_sinit_hd);
 
-/* 02563940 __sinit: header-statics initializer of the TU that ends with dKyd_xfog_table_set 025638D8 (the data accessors 025639D4.. and their own __sinit 02563A28 follow). The header statics block at
- * 104773BC (zeroed 16-byte object at +0xC, {-pi, pi} from 1004F35C, two one-byte objects at +8/+9),
- * each registered for destruction (records 101E9984, +0xC, +0x18). */
+/* 025639E0 */
+void* dKyd_dmpselect_getp() {
+    return l_pselect_default;
+}
+
+/* 025639EC */
+void* dKyd_dmenvr_getp() {
+    return l_envr_default;
+}
+
+/* 025639F8 */
+void* dKyd_dmvrbox_getp() {
+    return &l_vr_box_data;
+}
+
+/* 02563A04 */
+void* dKyd_schejule_getp() {
+    return l_time_attribute;
+}
+
+/* 02563A10 */
+void* dKyd_schejule_boss_getp() {
+    return l_time_attribute_boss;
+}
+
+/* 02563A1C */
+void* dKyd_schejule_menu_getp() {
+    return l_time_attribute_menu;
+}
+
+/* 02563A28 */
+void __sinit_d_kankyo_data_cpp() {
+    sinit_header_statics_rodata(0x104773D8, 0x101E99A8, 0x104773E4, 0x1004F368);
+}
+
+/* 02563940 */
 static void __sinit_d_kankyo_data_xfog_tu() {
-    WWHD_FUNC(0x02563940, void);
-    const u32 bss = 0x104773BC, rec = 0x101E9984, ro = 0x1004F35C;
-    gabi::store<u32>(bss + 0x14, 0); gabi::store<u32>(bss + 0xC, 0); gabi::store<u32>(bss + 0x18, 0); gabi::store<u32>(bss + 0x10, 0);
-    gabi::call(0x028F026C, rec);
-    f32 lo = gabi::load<f32>(ro), hi = gabi::load<f32>(ro + 4);
-    gabi::store<f32>(bss, lo);
-    gabi::store<f32>(bss + 4, hi);
-    gabi::call(0x028ED6F8, bss + 8);
-    gabi::call(0x028F026C, rec + 0xC);
-    gabi::call(0x028EAB2C, bss + 9);
-    gabi::call(0x028F026C, rec + 0x18);
+    // HD: The fog setter belongs to a separate TU with its own header statics.
+    sinit_header_statics_rodata(0x104773BC, 0x101E9984, 0x104773C8, 0x1004F35C);
 }
-VERIFY(0x02563940, __sinit_d_kankyo_data_xfog_tu);
+
+/* WWHD glue
+data S_xfog_table_data 101E8F50
+data l_field_data 101E9104
+data l_pselect_default 101E8F28
+data l_envr_default 101E8F40
+data l_vr_box_data 101E97C4
+data l_time_attribute 101E8F78
+data l_time_attribute_boss 101E8FFC
+data l_time_attribute_menu 101E9080
+*/

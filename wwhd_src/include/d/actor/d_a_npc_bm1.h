@@ -12,7 +12,8 @@
  * Size 0xA7C (to be confirmed by the profile). The HD vtable at 0xB4 is 0x10017A18 (_create).
  * Layout entries marked [g] are derived, not yet read by a verified function. */
 #pragma once
-#include "d/actor/d_a_npc_ba1.h" /* ProcFunc_l (GHS pointer to member, 8 bytes) */
+#include "d/actor/d_a_npc_ba1.h"
+using Bm1ActionFunc = ProcFunc_l; /* Bm1ActionFunc (GHS pointer to member, 8 bytes) */
 #include "d/d_npc.h"
 
 /* dNpc_PathRun_c (8 bytes, unchanged) */
@@ -134,7 +135,7 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     u32 getMsg_BMD_0();
     u32 getMsg_BMD_1();
     u32 getMsg();
-    u8 chkAttention(); /* bool (stored as is) */
+    u8 chkAttention();      /* bool (stored as is) */
     void setAttention(u32); /* bool */
     fopAc_ac_c* searchByID(fpc_ProcID);
     bool partner_srch_sub(u32 /* fpcLyIt_JudgeFunc */);
@@ -159,7 +160,8 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     void eInit_setLocFlag(be<s32>*);
     void eInit_setShapeAngleY(be<s32>*, s16);
     void eInit_setEvTimer(be<s32>*);
-    cXyz* eInit_calcRelativPos(cXyz* /* hidden result (HD: allocated when NULL) */, cXyz*, be<s32>*);
+    cXyz* eInit_calcRelativPos(cXyz* /* hidden result (HD: allocated when NULL) */, cXyz*,
+                               be<s32>*);
     void eInit_ATTENTION_(be<s32>*, be<s32>*, be<s32>*, cXyz*, be<s32>*, be<s32>*, be<s32>*);
     void eInit_SET_PLYER_GOL_(be<s32>*, cXyz*, be<s32>*);
     f32 eInit_prmFloat(be<f32>*, f32);
@@ -172,7 +174,7 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     void eInit_MOV_PTH_POINT_(be<s32>*, be<s32>*, be<s32>*, be<s32>*);
     void event_actionInit(int);
     u32 eMove_ATTENTION_(); /* bool; returns m_jnt.mbTrn ^ 1 as is */
-    u8 eMove_KMA_FLY_(); /* bool; returns m88A as is */
+    u8 eMove_KMA_FLY_();    /* bool; returns m88A as is */
     bool eMove_FLY_();
     bool eMove_WLK_();
     u32 event_action(); /* bool; returns the eMove_* result register as is */
@@ -182,7 +184,7 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     void endEvent();
     BOOL isEventEntry();
     void event_proc(int);
-    BOOL set_action(ProcFunc_l*, void*);
+    BOOL set_action(Bm1ActionFunc*, void*);
     void setStt(s8);
     BOOL d_wait();
     BOOL lookup();
@@ -237,9 +239,9 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0x7F4 */ gptr<J3DModel> mpBagModel;
     /* 0x7F8 */ gptr<J3DModel> mpKnifeModel;
     /* 0x7FC */ gptr<J3DModel> mpStickModel;
-    /* 0x800 */ gptr<mDoExt_McaMorf> mpHeadMorf;          /* HD: no mShadowID before it */
+    /* 0x800 */ gptr<mDoExt_McaMorf> mpHeadMorf; /* HD: no mShadowID before it */
     /* 0x804 */ gptr<J3DAnmTexPattern> m_hed_tex_pttrn;
-    /* 0x808 */ u8 mHeadBtpAnm[0x74];                     /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x808 */ u8 mHeadBtpAnm[0x74]; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x87C */ be<u8> mBlinkFrame;
     /* 0x87D */ u8 _87D;
     /* 0x87E */ be<s16> mBlinkTimer;
@@ -258,11 +260,11 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0x897 */ be<s8> m_armR2_jnt_num;
     /* 0x898 */ be<s8> m_hnd_R_jnt_num;
     /* 0x899 */ u8 _899[3];
-    /* 0x89C */ ProcFunc_l mCurrActionFunc;               /* HD: 8 bytes (GameCube 12) */
+    /* 0x89C */ Bm1ActionFunc mCurrActionFunc; /* HD: 8 bytes (GameCube 12) */
     /* 0x8A4 */ Mtx34 mLeftArmMtx;
     /* 0x8D4 */ Mtx34 mRightArmMtx;
     /* 0x904 */ dNpc_PathRun_bm1 mPathRun;
-    /* 0x90C */ dNpc_EventCut_c mEventCut;               /* hides fopNpc_npc_c::mEventCut (as on GameCube) */
+    /* 0x90C */ dNpc_EventCut_c mEventCut; /* hides fopNpc_npc_c::mEventCut (as on GameCube) */
     /* 0x978 */ be<u32> mPartnerProcID;
     /* 0x97C */ cXyz mInitialPos;
     /* 0x988 */ csXyz m818;
@@ -315,7 +317,10 @@ struct daNpc_Bm1_c : fopNpc_npc_c {
     /* 0xA05 */ be<u8> m895;
     /* 0xA06 */ be<u8> m896;
     /* 0xA07 */ be<u8> mbInDemo;
-    /* 0xA08 */ be<u8> mHD_A08;                            /* HD-only byte */
+    /* 0xA08 */ union {
+        be<u8> mbKeepOldPosition;
+        be<u8> mHD_A08;
+    }; // HD: compatibility name for the separately claimed movement part. /* HD-only byte */
     /* 0xA09 */ u8 _A09[3];
     /* 0xA0C */ cXyz mWingLPos;
     /* 0xA18 */ cXyz mWingRPos;
@@ -363,3 +368,239 @@ WWHD_OFFSET(daNpc_Bm1_c, mpFeather1EmitterR, 0xA64);
 WWHD_OFFSET(daNpc_Bm1_c, mType, 0xA75);
 WWHD_OFFSET(daNpc_Bm1_c, mSpecificType, 0xA76);
 WWHD_SIZE(daNpc_Bm1_c, 0xA7C);
+
+// HD: event integers are narrowed through their low guest-endian byte or halfword.
+union Bm1EventParam {
+    be<s32> mValue;
+    struct {
+        u8 mPadding[2];
+        be<s16> mHalf;
+    };
+    struct {
+        u8 mBytePadding[3];
+        be<u8> mByte;
+    };
+};
+static inline Bm1EventParam* Bm1_eventParam(be<s32>* value) {
+    return reinterpret_cast<Bm1EventParam*>(value);
+}
+
+s8 JUTNameTab_getIndex(u32 tab, const char* name);
+
+s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, J3DAnmTexPattern* p, s32 play, s32 attr,
+                       f32 rate, s32 start, s32 end, u32 modify, s32 entry);
+
+char* strcpy_g(char* d, const char* s);
+
+s16 cLib_calcTimer_g(be<s16>* t);
+
+s8 dBgS_GetRoomId(dBgS* bgs, void* poly);
+
+u8 dBgS_GetPolyColor(dBgS* bgs, void* poly);
+
+void mDoMtx_XYZrotM(Mtx34* m, s16 x, s16 y, s16 z);
+
+void dNpc_PathRun_setInf(dNpc_PathRun_bm1* p, u32 idx, s8 room, u8 fwd);
+
+dPath* dNpc_PathRun_nextPath(dNpc_PathRun_bm1* p, s8 room);
+
+void dNpc_PathRun_setInfDrct(dNpc_PathRun_bm1* p, dPath* path);
+
+BOOL dDemo_setDemoData(fopAc_ac_c* a, u8 flags, mDoExt_McaMorf* morf, const char* arc, s32 n,
+                       void* ids, u32 p6, s8 p7);
+
+BOOL dNpc_setAnmFNDirect(mDoExt_McaMorf* m, s32 loop, f32 morf, f32 speed, u32 name, s32 snd,
+                         const char* arc);
+
+u32 Bm1_pathMaxPoint(dNpc_PathRun_bm1* p);
+
+void Bm1_pathGetPoint(dNpc_PathRun_bm1* p, cXyz* out, u8 idx);
+
+void Bm1_pathNextIdxAuto(dNpc_PathRun_bm1* p);
+
+u32 Bm1_setBtpResult(daNpc_Bm1_c* npc, u32 modify, s32 btp);
+
+u32 Bm1_initSkettResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_initBashtResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_initPashliResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_moveFlyResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_moveKmaFlyResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_moveAttentionResult(daNpc_Bm1_c* npc);
+
+u32 Bm1_moveWalkResult(daNpc_Bm1_c* npc);
+
+struct Bm1JointNumberView {
+    u8 mPadding[4];
+    be<u16> mJointNo;
+};
+static inline u16 Bm1_jointNumber(J3DJoint* joint) {
+    return reinterpret_cast<Bm1JointNumberView*>(joint)->mJointNo;
+}
+
+// HD: private views retain the exact guest memory widths and virtual slots.
+template <class T> static inline T* Bm1_view(u32 address) { return gabi::at<T>(address); }
+struct Bm1NameHeader {
+    u8 mPadding[4];
+    be<u32> mNameOffset;
+};
+struct Bm1EmitterView {
+    u8 mPadding[0x5C];
+    be<s32> mMaxFrame;
+    u8 mBody[0x254 - 0x60];
+    be<u32> mStatus;
+};
+struct Bm1JointCallback {
+    u8 mPadding[8];
+    be<u32> mCallback;
+    u8 mBody[0x1C - 12];
+};
+struct Bm1JointTable {
+    u8 mPadding[4];
+    be<u32> mCount;
+    gptr<Bm1JointCallback> mJoints;
+};
+
+static inline void McaMorf_delete(mDoExt_McaMorf* morf) {
+    if (morf != nullptr) {
+        u32 vt = gabi::load<u32>(gabi::ea(morf));
+        gabi::call_ptr(gabi::load<u32>(vt + 0xC), morf, 3);
+    }
+}
+
+static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* p) {
+    u32 vt = gabi::load<u32>(gabi::ea(p) + 4);
+    return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x14), p);
+}
+
+static inline void pmf_load(Bm1ActionFunc* dst, u32 src) {
+    gabi::store<u32>(gabi::ea(dst), gabi::load<u32>(src));
+    gabi::store<u32>(gabi::ea(dst) + 4, gabi::load<u32>(src + 4));
+}
+
+static inline void Bm1_callAction(void* self, Bm1ActionFunc* pmf, void* arg) {
+    s16 i = pmf->i;
+    u32 thisp = gabi::ea(self) + (s32)(s16)pmf->d;
+    if (i < 0) {
+        gabi::call_ptr<BOOL>(pmf->f, thisp, arg);
+    } else {
+        s16 voff = gabi::load<s16>(gabi::ea(pmf) + 6);
+        u32 vt = gabi::load<u32>(thisp + voff);
+        gabi::call_ptr<BOOL>(gabi::load<u32>(vt + i * 8 + 4), thisp, arg);
+    }
+}
+
+u32 Bm1_modelNameHeader(J3DModelData* data);
+
+s8 JUTNameTab_getIndex(u32 tab, const char* name);
+
+void Bm1_setEmitterMatrix(Mtx34* matrix, u32 rotation, u32 translation);
+
+void Bm1_constructNpc(daNpc_Bm1_c* npc);
+
+void Bm1_constructBtp(void* animation);
+
+void Bm1_constructEventCut(dNpc_EventCut_c* cut);
+
+void Bm1_searchById(fpc_ProcID id, gptr<fopAc_ac_c>* result);
+
+void* Bm1_demoGetActor(u32 object, u32 id);
+
+J3DAnmTexPattern* Bm1_demoGetBtp(void* actor, const char* archive);
+
+s8 Bm1_getMyActIndex(void* manager, s32 staff, u32 table, s32 count, s32 force, s32 extra);
+
+void Bm1_cutEnd(void* manager, s32 staff);
+
+BOOL Bm1_isAdvance(void* manager, s32 staff);
+
+static inline void* Bm1_resource(const char* arc, const char* name) {
+    gabi::Local<SafeString> a;
+    gabi::Local<SafeString> n;
+    a->mStringTop = gabi::guest_addr(arc);
+    a->__vtbl = 0x10016F80;
+    n->mStringTop = gabi::guest_addr(name);
+    n->__vtbl = 0x10016F80;
+    return gabi::call<void*>(0x02606900, dComIfG_resControl(), a.get(), n.get());
+}
+
+struct Bm1ActorResult {
+    gptr<fopAc_ac_c> actor;
+};
+WWHD_SIZE(Bm1ActorResult, 4);
+
+struct Bm1SetupHioParam {
+    /* 0x00 */ be<s16> mMaxHeadX;
+    /* 0x02 */ be<s16> mMaxHeadY;
+    /* 0x04 */ be<s16> mMinHeadX;
+    /* 0x06 */ be<s16> mMinHeadY;
+    /* 0x08 */ be<s16> mMaxBackboneX;
+    /* 0x0A */ be<s16> mMaxBackboneY;
+    /* 0x0C */ be<s16> mMinBackboneX;
+    /* 0x0E */ be<s16> mMinBackboneY;
+    /* 0x10 */ be<s16> mMaxTurnStep;
+    /* 0x12 */ be<s16> mCalcAngleTarget;
+    /* 0x14 */ be<f32> mAttPosOffsetY;
+    /* 0x18 */ be<u8> m18;
+    /* 0x19 */ u8 _19;
+    /* 0x1A */ be<s16> mFlyScale;
+    /* 0x1C */ be<s16> mFlyMaxStep;
+    /* 0x1E */ u8 _1E[2];
+    /* 0x20 */ be<f32> m20;
+    /* 0x24 */ be<f32> m24;
+    /* 0x28 */ be<f32> m28;
+    /* 0x2C */ be<f32> m2C;
+    /* 0x30 */ be<f32> m30;
+    /* 0x34 */ be<s16> m34;
+    /* 0x36 */ be<s16> m36;
+    /* 0x38 */ be<f32> m38;
+    /* 0x3C */ be<f32> m3C;
+    /* 0x40 */ be<f32> m40;
+    /* 0x44 */ be<f32> m44;
+    /* 0x48 */ be<f32> m48;
+};
+WWHD_SIZE(Bm1SetupHioParam, 0x4C);
+struct Bm1SetupChildHio {
+    /* 0x00 */ be<u32> __vtbl;
+    /* 0x04 */ Bm1SetupHioParam hio_prm;
+    /* 0x50 */ be<u32> m50;
+};
+WWHD_SIZE(Bm1SetupChildHio, 0x54);
+struct Bm1SetupHio {
+    /* 0x000 */ be<u32> __vtbl;
+    /* 0x004 */ be<s8> m4;
+    /* 0x005 */ u8 _5[3];
+    /* 0x008 */ be<s32> m8;
+    /* 0x00C */ Bm1SetupChildHio children[10];
+};
+WWHD_SIZE(Bm1SetupHio, 0x354);
+
+struct Bm1EmitterMatrix {
+    u8 mPadding[0x1F0];
+    Mtx34 mGlobalRotation;
+    u8 mReserved[0x22C - 0x220];
+    cXyz mGlobalTranslation;
+};
+WWHD_OFFSET(Bm1EmitterMatrix, mGlobalTranslation, 0x22C);
+
+WWHD_SIZE(Bm1EventParam, 4);
+WWHD_OFFSET(Bm1EventParam, mByte, 3);
+WWHD_OFFSET(Bm1EventParam, mHalf, 2);
+WWHD_SIZE(Bm1NameHeader, 8);
+WWHD_OFFSET(Bm1NameHeader, mNameOffset, 4);
+WWHD_SIZE(Bm1EmitterView, 0x258);
+WWHD_OFFSET(Bm1EmitterView, mMaxFrame, 0x5C);
+WWHD_OFFSET(Bm1EmitterView, mStatus, 0x254);
+WWHD_SIZE(Bm1JointCallback, 0x1C);
+WWHD_OFFSET(Bm1JointCallback, mCallback, 8);
+WWHD_SIZE(Bm1JointTable, 0xC);
+WWHD_OFFSET(Bm1JointTable, mCount, 4);
+WWHD_OFFSET(Bm1JointTable, mJoints, 8);
+WWHD_SIZE(Bm1JointNumberView, 6);
+WWHD_OFFSET(Bm1JointNumberView, mJointNo, 4);
+WWHD_SIZE(Bm1EmitterMatrix, 0x238);
+WWHD_OFFSET(Bm1EmitterMatrix, mGlobalRotation, 0x1F0);

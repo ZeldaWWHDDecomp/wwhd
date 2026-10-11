@@ -1,200 +1,267 @@
-/* WWHD node requests, HD TU025E0330..025E0B1F (16 entries).
- * GC queue admission/removal and three request constructors are inlined in HD.
- * Constant delete-timing phase emitted after the TU initializer. */
-#include "bindings.h"
-namespace f_pc_node_req_cpp {
-static s32 phase_IsCreated(u32 req) {
-    WWHD_FUNC(0x025E0330, s32, req);
-    if (gabi::call<s32>(0x025DD868, gabi::load<u32>(req + 0x54)) == 1) return 0;
-    return gabi::call<s32>(0x025DE564, gabi::load<u32>(req + 0x54)) == 1 ? 2 : 3;
-}
-VERIFY(0x025E0330, phase_IsCreated);
-static s32 phase_Create(u32 req) {
-    WWHD_FUNC(0x025E039C, s32, req);
-    u32 methods = gabi::load<u32>(req + 0x3C);
-    s32 id = gabi::call<s32>(0x025E14A8, gabi::load<u32>(req + 0x50), gabi::load<s16>(req + 0x58), gabi::load<u32>(methods + 0xC), req, gabi::load<u32>(req + 0x5C));
-    gabi::store<u32>(req + 0x54, id);
-    return id == -1 ? 3 : 2;
-}
-VERIFY(0x025E039C, phase_Create);
-static s32 phase_IsDeleted(u32 req) {
-    WWHD_FUNC(0x025E03F8, s32, req);
-    return gabi::call<s32>(0x025DDFA4) == 0 ? 0 : 2;
-}
-VERIFY(0x025E03F8, phase_IsDeleted);
-static s32 phase_Delete(u32 req) {
-    WWHD_FUNC(0x025E0424, s32, req);
-    u32 node = gabi::load<u32>(req + 0x48);
-    if (node != 0) {
-        if (gabi::call<s32>(0x025DE1B8, node) == 0) return 0;
-        gabi::store<u32>(req + 0x48, 0);
+/* Process-node requests. */
+#include "f_pc/f_pc_node_req.h"
+
+static node_list_class l_fpcNdRq_Queue;
+static u32 request_id;
+static NodeRequestTemplate clear;
+static NodeRequestPhaseTable createMethods;
+static NodeRequestPhaseTable deleteMethods;
+static NodeRequestPhaseTable changeMethods;
+static NodeRequestExecuteMap executeResults;
+
+/* 025E0330 */
+cPhs_State fpcNdRq_phase_IsCreated(node_create_request* i_NdCtReq) {
+    if (fpcM_IsCreating(i_NdCtReq->mCreatingID) == TRUE) {
+        return cPhs_INIT_e;
     }
-    return 2;
+    if (fpcEx_IsExist(i_NdCtReq->mCreatingID) == TRUE) return cPhs_NEXT_e;
+    return cPhs_STOP_e;
 }
-VERIFY(0x025E0424, phase_Delete);
-static s32 DoPhase(u32 req) {
-    WWHD_FUNC(0x025E0488, s32, req);
-    s32 result;
+
+/* 025E039C */
+cPhs_State fpcNdRq_phase_Create(node_create_request* i_NdCtReq) {
+    node_create_request_method_class* methods = i_NdCtReq->mpNodeCrReqMthCls;
+    u32 id = fpcSCtRq_Request(i_NdCtReq->mpLayerClass, i_NdCtReq->mProcName,
+                             methods->mpPostMethodFunc.get(), i_NdCtReq, i_NdCtReq->mpUserData);
+    i_NdCtReq->mCreatingID = id;
+    if (id == fpcM_ERROR_PROCESS_ID_e) return cPhs_STOP_e;
+    return cPhs_NEXT_e;
+}
+
+/* 025E03F8 */
+cPhs_State fpcNdRq_phase_IsDeleted(node_create_request* i_NdCtReq) {
+    return fpcDt_IsComplete() == FALSE ? cPhs_INIT_e : cPhs_NEXT_e;
+}
+
+/* 025E0424 */
+cPhs_State fpcNdRq_phase_Delete(node_create_request* i_NdCtReq) {
+    process_node_class* node = i_NdCtReq->mNodeProc.mpNodeProc;
+    if (node != NULL) {
+        if (fpcDt_Delete(&node->base) == FALSE) {
+            return cPhs_INIT_e;
+        }
+        i_NdCtReq->mNodeProc.mpNodeProc = NULL;
+    }
+    return cPhs_NEXT_e;
+}
+
+/* 025E0488 */
+cPhs_State fpcNdRq_DoPhase(node_create_request* i_NdCtReq) {
+    cPhs_State result;
+    // HD: iterate consecutive next phases rather than recursively calling DoPhase.
     do {
-        result = gabi::call<s32>(0x0201A0AC, req + 0x30, gabi::load<u32>(req + 0x38), req);
-    } while (result == 2);
+        result = cPhs_Handler(&i_NdCtReq->mReqPhsProc, i_NdCtReq->mpPhsHandler, i_NdCtReq);
+    } while (result == cPhs_NEXT_e);
     return result;
 }
-VERIFY(0x025E0488, DoPhase);
-static u32 Execute(u32 req) {
-    WWHD_FUNC(0x025E04D0, u32, req);
-    u32 result = gabi::call<u32>(0x025E0488, req);
-    if (result <= 1) return 0;
-    if (result >= 3 && result <= 5) return gabi::load<u8>(0x10058401 + result);
-    return result;
-}
-VERIFY(0x025E04D0, Execute);
-static s32 Delete(u32 req) {
-    WWHD_FUNC(0x025E0538, s32, req);
-    gabi::call<void>(0x025DEA90, gabi::load<u32>(req + 0x50));
-    gabi::call<void>(0x025DE9E0, req + 0x14);
-    gabi::call<void>(0x0201A868, req);
-    u32 methods = gabi::load<u32>(req + 0x3C);
-    if (methods != 0) {
-        u32 method = gabi::load<u32>(methods + 8);
-        if (method != 0 && gabi::call<s32>(0x025DFCAC, method, req) == 0) return 0;
+
+/* 025E04D0 */
+u32 fpcNdRq_Execute(node_create_request* i_NdCtReq) {
+    u32 result = fpcNdRq_DoPhase(i_NdCtReq);
+    if (result <= cPhs_LOADING_e) {
+        return cPhs_INIT_e;
     }
-    gabi::call<void>(0x0201945C, req);
-    return 1;
+    if (result >= cPhs_STOP_e && result <= cPhs_ERROR_e) {
+        // HD: the compiler's three-byte phase-result table is retained.
+        return executeResults.result[result - cPhs_STOP_e];
+    }
+    return result;
 }
-VERIFY(0x025E0538, Delete);
-static s32 Cancel(u32 req) {
-    WWHD_FUNC(0x025E05C4, s32, req);
-    u32 methods = gabi::load<u32>(req + 0x3C);
-    if (methods != 0 && gabi::call<s32>(0x025DFCAC, gabi::load<u32>(methods + 4), req) == 0) return 0;
-    return gabi::call<s32>(0x025E0538, req);
-}
-VERIFY(0x025E05C4, Cancel);
-static s32 Handler() {
-    WWHD_FUNC(0x025E062C, s32, (u32)0);
-    u32 node = gabi::load<u32>(0x101F3DA4);
-    while (node != 0) {
-        u32 req = gabi::load<u32>(node + 0xC);
-        u32 methods = gabi::load<u32>(req + 0x3C);
-        u32 result = gabi::call_ptr<u32>(gabi::load<u32>(methods), req);
-        node = gabi::load<u32>(node + 8);
-        if (result == 3 || result == 5) {
-            if (gabi::call<s32>(0x025E05C4, req) == 0) return 0;
-        } else if (result == 4) {
-            if (gabi::call<s32>(0x025E0538, req) == 0) return 0;
+
+/* 025E0538 */
+BOOL fpcNdRq_Delete(node_create_request* i_NdCtReq) {
+    // HD: RequestQTo is inlined, preserving its three external operations.
+    fpcLy_CreatedMesg(i_NdCtReq->mpLayerClass);
+    fpcLy_CancelQTo(&i_NdCtReq->mProcMthCls);
+    cTg_SingleCut(&i_NdCtReq->mCreateTag);
+    node_create_request_method_class* methods = i_NdCtReq->mpNodeCrReqMthCls;
+    if (methods != NULL) {
+        u32 method = methods->mpUnkFunc.get();
+        if (method != 0 && fpcMtd_Method(method, i_NdCtReq) == FALSE) {
+            return FALSE;
         }
     }
-    return 1;
+    nodeRequestFree(i_NdCtReq);
+    return TRUE;
 }
-VERIFY(0x025E062C, Handler);
-static s32 IsPossibleTarget(u32 proc) {
-    WWHD_FUNC(0x025E06EC, s32, proc);
-    u32 id = gabi::load<u32>(proc + 4);
-    u32 node = gabi::load<u32>(0x101F3DA4);
-    while (node != 0) {
-        u32 req = gabi::load<u32>(node + 0xC);
-        s32 type = gabi::load<s32>(req + 0x40);
-        if ((type == 2 || type == 4 || type == 1) && gabi::load<u32>(req + 0x4C) == id) return 0;
-        node = gabi::load<u32>(node + 8);
+
+/* 025E05C4 */
+BOOL fpcNdRq_Cancel(node_create_request* i_NdCtReq) {
+    node_create_request_method_class* methods = i_NdCtReq->mpNodeCrReqMthCls;
+    if (methods != NULL && fpcMtd_Method(methods->mpCancelFunc.get(), i_NdCtReq) == FALSE) {
+        return FALSE;
     }
-    return 1;
+    return fpcNdRq_Delete(i_NdCtReq);
 }
-VERIFY(0x025E06EC, IsPossibleTarget);
-static s32 IsIng(u32 proc) {
-    WWHD_FUNC(0x025E0750, s32, proc);
-    u32 id = gabi::load<u32>(proc + 4);
-    u32 node = gabi::load<u32>(0x101F3DA4);
-    while (node != 0) {
-        u32 req = gabi::load<u32>(node + 0xC);
-        if (gabi::load<u32>(req + 0x54) == id) return 1;
-        node = gabi::load<u32>(node + 8);
+
+/* 025E062C */
+s32 fpcNdRq_Handler() {
+    node_class* currentNode = l_fpcNdRq_Queue.mpHead;
+    while (currentNode != NULL) {
+        node_create_request* req = reinterpret_cast<request_node_class*>(currentNode)->mNodeCrReq;
+        node_create_request_method_class* methods = req->mpNodeCrReqMthCls;
+        u32 result = gabi::call_ptr<u32>(methods->mpExecuteFunc.get(), req);
+        // HD: fetch the next node after execute, before cancel/delete callbacks.
+        currentNode = currentNode->mpNextNode;
+        switch (result) {
+        case cPhs_STOP_e:
+        case cPhs_ERROR_e:
+            if (fpcNdRq_Cancel(req) == FALSE) return FALSE;
+            break;
+        case cPhs_COMPLEATE_e:
+            if (fpcNdRq_Delete(req) == FALSE) return FALSE;
+            break;
+        }
     }
-    return 0;
+    return TRUE;
 }
-VERIFY(0x025E0750, IsIng);
-static u32 Create(u32 size) {
-    WWHD_FUNC(0x025E0798, u32, size);
-    u32 req = gabi::call<u32>(0x02019430, -4, size);
-    if (req != 0) {
-        gabi::call<void>(0x0201B680, req, size);
-        for (u32 i = 0; i < 25; i++) gabi::store<u32>(req + i * 4, gabi::load<u32>(0x101F3DC0 + i * 4));
-        gabi::call<void>(0x0201A918, req, req);
-        gabi::call<void>(0x025DFE2C, req + 0x14, 0x025E05C4u, req);
-        u32 id = gabi::load<u32>(0x101F3DBC);
-        gabi::store<u32>(0x101F3DBC, id + 1);
-        gabi::store<u32>(req + 0x44, id);
+
+/* 025E06EC */
+s32 fpcNdRq_IsPossibleTarget(process_node_class* i_procNode) {
+    u32 bsPcId = i_procNode->base.mBsPcId;
+    node_class* currentNode = l_fpcNdRq_Queue.mpHead;
+    while (currentNode != NULL) {
+        node_create_request* currentNdCr = reinterpret_cast<request_node_class*>(currentNode)->mNodeCrReq;
+        s32 type = currentNdCr->mParameter;
+        if ((type == NodeRequest_Change || type == NodeRequest_Blocked || type == NodeRequest_Delete)
+            && currentNdCr->mNodeProc.mProcId == bsPcId) {
+            return FALSE;
+        }
+        currentNode = currentNode->mpNextNode;
+    }
+    return TRUE;
+}
+
+/* 025E0750 */
+s32 fpcNdRq_IsIng(process_node_class* i_procNode) {
+    u32 bsPcId = i_procNode->base.mBsPcId;
+    node_class* currentNode = l_fpcNdRq_Queue.mpHead;
+    while (currentNode != NULL) {
+        node_create_request* currentNodeReq = reinterpret_cast<request_node_class*>(currentNode)->mNodeCrReq;
+        if (currentNodeReq->mCreatingID == bsPcId) return TRUE;
+        currentNode = currentNode->mpNextNode;
+    }
+    return FALSE;
+}
+
+/* 025E0798 */
+node_create_request* fpcNdRq_Create(u32 i_requestSize) {
+    node_create_request* req = static_cast<node_create_request*>(nodeRequestMemalign(-4, i_requestSize));
+    if (req != NULL) {
+        sBs_ClearArea(req, i_requestSize);
+        // HD: the template is copied as 25 consecutive guest words, including padding.
+        be<u32>* words = reinterpret_cast<be<u32>*>(req);
+        for (u32 i = 0; i < 25; ++i) words[i] = clear.words[i];
+        cTg_Create(&req->mCreateTag, req);
+        fpcMtdTg_Init(&req->mProcMthCls, gabi::guest_fn((const void*)fpcNdRq_Cancel), req);
+        u32 id = request_id;
+        request_id = id + 1;
+        req->mRequestId = id;
     }
     return req;
 }
-VERIFY(0x025E0798, Create);
-static u32 Request(u32 size, u32 type, u32 proc, s16 name, u32 data, u32 methods) {
-    WWHD_FUNC(0x025E0840, u32, size, type, proc, name, data, methods);
-    u32 req = 0;
-    if (type == 0) {
-        u32 layer = gabi::call<u32>(0x025DED64);
-        if (gabi::load<u32>(layer + 0xC) != 0 && gabi::call<s32>(0x025E06EC, gabi::load<u32>(layer + 0x18)) == 0) return 0;
-        req = gabi::call<u32>(0x025E0798, size);
-        if (req != 0) {
-            gabi::store<u32>(req + 0x38, 0x101F3DB0);
-            if (gabi::load<u32>(layer + 0xC) != 0) {
-                gabi::store<u32>(req + 0x48, gabi::load<u32>(layer + 0x18));
-                gabi::store<u32>(req + 0x4C, gabi::load<u32>(gabi::load<u32>(layer + 0x18) + 4));
+
+/* 025E0840 */
+node_create_request* fpcNdRq_Request(u32 i_requestSize, u32 i_reqType,
+    process_node_class* i_procNode, s16 i_procName, void* i_data,
+    node_create_request_method_class* i_nodeCtRqMtd) {
+    node_create_request* req = NULL;
+    // HD: the three request constructors are inlined, with their original store order.
+    if (i_reqType == NodeRequest_Create) {
+        layer_class* layer = fpcLy_CurrentLayer();
+        if (layer->mLayerID != 0 && fpcNdRq_IsPossibleTarget(layer->mpPcNode) == FALSE) return NULL;
+        req = fpcNdRq_Create(i_requestSize);
+        if (req != NULL) {
+            req->mpPhsHandler = createMethods.methods;
+            if (layer->mLayerID != 0) {
+                req->mNodeProc.mpNodeProc = layer->mpPcNode;
+                req->mNodeProc.mProcId = layer->mpPcNode->base.mBsPcId;
             }
-            gabi::store<s16>(req + 0x58, name);
-            gabi::store<u32>(req + 0x50, layer);
-            gabi::store<u32>(req + 0x5C, data);
+            req->mProcName = i_procName;
+            req->mpLayerClass = layer;
+            req->mpUserData = i_data;
         }
-    } else if (type == 1 || type == 2) {
-        if (gabi::call<s32>(0x025E06EC, proc) != 1) return 0;
-        if (gabi::call<s32>(0x025E0750, proc) != 0) return 0;
-        req = gabi::call<u32>(0x025E0798, size);
-        if (req != 0) {
-            gabi::store<u32>(req + 0x48, proc);
-            gabi::store<u32>(req + 0x38, type == 1 ? 0x101F3D94u : 0x101F3D7Cu);
-            gabi::store<u32>(req + 0x4C, gabi::load<u32>(proc + 4));
-            u32 layer = gabi::load<u32>(proc + 0x2C);
-            if (type == 2) gabi::store<s16>(req + 0x58, name);
-            gabi::store<u32>(req + 0x50, layer);
-            if (type == 2) gabi::store<u32>(req + 0x5C, data);
+    } else if (i_reqType == NodeRequest_Delete || i_reqType == NodeRequest_Change) {
+        if (fpcNdRq_IsPossibleTarget(i_procNode) != TRUE) return NULL;
+        if (fpcNdRq_IsIng(i_procNode) != FALSE) return NULL;
+        req = fpcNdRq_Create(i_requestSize);
+        if (req != NULL) {
+            req->mNodeProc.mpNodeProc = i_procNode;
+            req->mpPhsHandler = i_reqType == NodeRequest_Delete ? deleteMethods.methods : changeMethods.methods;
+            req->mNodeProc.mProcId = i_procNode->base.mBsPcId;
+            layer_class* layer = i_procNode->base.mLyTg.mpLayer;
+            if (i_reqType == NodeRequest_Change) req->mProcName = i_procName;
+            req->mpLayerClass = layer;
+            if (i_reqType == NodeRequest_Change) req->mpUserData = i_data;
         }
     } else {
-        gabi::call<void>(0x0273AA24, 0x1005840Cu, 825, 0x10058407u);
-        return 0;
+        // HD: invalid types assert, unlike the unfinished GameCube switch case.
+        nodeRequestAssert("f_pc_node_req.cpp", 825, "invalid node request");
+        return NULL;
     }
-    if (req != 0) {
-        gabi::store<u32>(req + 0x40, type);
-        gabi::store<u32>(req + 0x3C, methods);
-        gabi::call<void>(0x0201A8B4, 0x101F3DA4u, req);
-        gabi::call<void>(0x025DE9E4, gabi::load<u32>(req + 0x50), req + 0x14);
-        gabi::call<void>(0x025DEA80, gabi::load<u32>(req + 0x50));
+    if (req != NULL) {
+        req->mParameter = i_reqType;
+        req->mpNodeCrReqMthCls = i_nodeCtRqMtd;
+        cTg_Addition(&l_fpcNdRq_Queue, &req->mCreateTag);
+        fpcLy_ToCancelQ(req->mpLayerClass, &req->mProcMthCls);
+        fpcLy_CreatingMesg(req->mpLayerClass);
     }
     return req;
 }
-VERIFY(0x025E0840, Request);
-static s32 ReChangeNode(u32 id, s16 name, u32 data) {
-    WWHD_FUNC(0x025E0A20, s32, id, name, data);
-    u32 node = gabi::load<u32>(0x101F3DA4);
-    while (node != 0) {
-        u32 req = gabi::load<u32>(node + 0xC);
-        if (gabi::load<s32>(req + 0x40) == 2 && gabi::load<u32>(req + 0x44) == id) {
-            if (gabi::load<s32>(req + 0x54) != -2) return 0;
-            gabi::store<s16>(req + 0x58, name);
-            gabi::store<u32>(req + 0x5C, data);
-            return 1;
+
+/* 025E0A20 */
+s32 fpcNdRq_ReChangeNode(u32 i_requestID, s16 i_procName, void* i_data) {
+    node_class* currentNode = l_fpcNdRq_Queue.mpHead;
+    while (currentNode != NULL) {
+        node_create_request* found = reinterpret_cast<request_node_class*>(currentNode)->mNodeCrReq;
+        if (found->mParameter == NodeRequest_Change && found->mRequestId == i_requestID) {
+            if (found->mCreatingID != u32(-2)) return FALSE;
+            found->mProcName = i_procName;
+            found->mpUserData = i_data;
+            return TRUE;
         }
-        node = gabi::load<u32>(node + 8);
+        currentNode = currentNode->mpNextNode;
     }
-    return 0;
+    return FALSE;
 }
-VERIFY(0x025E0A20, ReChangeNode);
-static void __sinit_node_req() {
-    WWHD_FUNC(0x025E0A84, void, (u32)0);
+
+/* 025E0A84 */
+static void __sinit_f_pc_node_req_cpp() {
+    // HD: initialize header statics emitted into this translation unit.
     sinit_header_statics(0x1048AAEC, 0x101F3E24);
 }
-VERIFY(0x025E0A84, __sinit_node_req);
-static s32 phase_IsDeleteTiming(u32 req) {
-    WWHD_FUNC(0x025E0B18, s32, req);
-    return 2;
+
+/* 025E0B18 */
+cPhs_State fpcNdRq_phase_IsDeleteTiming(node_create_request* i_NdCtReq) {
+    return cPhs_NEXT_e;
 }
-VERIFY(0x025E0B18, phase_IsDeleteTiming);
-}
+
+/* WWHD glue
+data l_fpcNdRq_Queue 101F3DA4
+data request_id 101F3DBC
+data clear 101F3DC0
+data createMethods 101F3DB0
+data deleteMethods 101F3D94
+data changeMethods 101F3D7C
+data executeResults 10058404
+str 1005840C "f_pc_node_req.cpp" renamed
+str 10058407 "invalid node request" renamed
+ext 025DD868 BOOL fpcM_IsCreating(u32)
+ext 025DE564 BOOL fpcEx_IsExist(u32)
+ext 025E14A8 u32 fpcSCtRq_Request(layer_class*, s16, u32, node_create_request*, void*)
+ext 025DDFA4 BOOL fpcDt_IsComplete()
+ext 025DE1B8 BOOL fpcDt_Delete(base_process_class*)
+ext 0201A0AC cPhs_State cPhs_Handler(request_of_phase_process_class*, cPhs__Handler*, void*)
+ext 025DEA90 void fpcLy_CreatedMesg(layer_class*)
+ext 025DE9E0 void fpcLy_CancelQTo(process_method_tag_class*)
+ext 0201A868 s32 cTg_SingleCut(create_tag_class*)
+ext 025DFCAC BOOL fpcMtd_Method(u32, void*)
+ext 0201945C void nodeRequestFree(void*)
+ext 02019430 void* nodeRequestMemalign(s32, u32)
+ext 0201A918 void cTg_Create(create_tag_class*, void*)
+ext 025DFE2C void fpcMtdTg_Init(process_method_tag_class*, u32, void*)
+ext 0273AA24 void nodeRequestAssert(const char*, u32, const char*)
+ext 0201A8B4 s32 cTg_Addition(node_list_class*, create_tag_class*)
+ext 025DE9E4 void fpcLy_ToCancelQ(layer_class*, process_method_tag_class*)
+ext 025DEA80 void fpcLy_CreatingMesg(layer_class*)
+*/

@@ -1,160 +1,221 @@
-/* Opening scene HD TU025AEBCC..025AF20F:14entries incl inline stubs.
- * HD native UI uses singleton101F8318. */
-#include "bindings.h"
-namespace d_s_open_cpp {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static s16 lh(u32 a){return gabi::load<s16>(a);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void sb(u32 a,u8 v){gabi::store<u8>(a,v);}
-static BOOL IsDelete(){
-    WWHD_FUNC(0x025AF208,BOOL,(u32)0);
+/** Opening scene: native HD UI and transition to the game.
+ * Verified against cking.rpx. */
+#include "d/d_s_open.h"
+
+const gc_tu_data gc_tu = {.headerStatics = {0x1047B3E0, 0x101EA810, 0x1047B3EC}};
+using OpeningUIPtr = gptr<dScnOpen_UI>;
+using OpeningSavePtr = gptr<dScnOpen_SaveInfoHD>;
+using OpeningPadPtr = gptr<dScnOpen_PadHD>;
+using OpeningLoaderPtr = gptr<void>;
+static OpeningUIPtr l_ui;
+static OpeningSavePtr l_save;
+static OpeningPadPtr l_pad;
+static OpeningLoaderPtr l_loader;
+static u8 l_phase;
+// HD: profile numbers and the native controller masks used by this scene.
+enum { fpcNm_OPEN_SCENE_e = 12, fpcNm_OPEN2_SCENE_e = 13, fpcNm_OPENING2_SCENE_e = 8, fpcNm_PLAY_SCENE_e = 7 };
+enum { PAD_TRIGGER_START = 0x1000, PAD_HOLD_A = 0x8000 };
+
+/* 025AEBE4 */
+BOOL dScnOpen_c::draw() {
+    dScnOpen_GameInfoHD* play = dScnOpen_getGameInfo();
+    void* window = play->mWindow;
+    play = dScnOpen_getGameInfo();
+    play->mpWindow = window;
+    play = dScnOpen_getGameInfo();
+    play->mpViewport = window;
+    for (dScnOpen_DrawTag* pTag = fopDwIt_Begin(); pTag != nullptr; pTag = fopDwIt_Next(pTag))
+        fpcM_Draw(pTag->mpTagData);
+    dScnOpen_proc_c* packet = mpProc;
+    play = dScnOpen_getGameInfo();
+    dScnOpen_DrawList* list = &play->mDrawList;
+    dScnOpen_set2DOpa(list, &list->mp2DOpaHead, &list->mp2DOpaTail, packet);
     return TRUE;
 }
-VERIFY(0x025AF208,IsDelete);
-static void packetDelete(u32 self,u32 flags){
-    WWHD_FUNC(0x025AEBCC,void,self,flags);
-    if(self && (flags&1))gabi::call(0x0273AF40,self);
-}
-VERIFY(0x025AEBCC,packetDelete);
-static void packetStub(){
-    WWHD_FUNC(0x025AEBE0,void,(u32)0);
-}
-VERIFY(0x025AEBE0,packetStub);
-static BOOL draw(u32 self){
-    WWHD_FUNC(0x025AEBE4,BOOL,self);
-    u32 play=gabi::call<u32>(0x025200D4);
-    u32 window=play+0x5ACC;
-    play=gabi::call<u32>(0x025200D4);st(play+0x5F9C,window);
-    play=gabi::call<u32>(0x025200D4);st(play+0x5FA0,window);
-    u32 tag=gabi::call<u32>(0x025DA7AC);
-    while(tag){gabi::call(0x025DF904,ld(tag+12));tag=gabi::call<u32>(0x025DA7D0,tag);}
-    u32 packet=ld(self+0x1D4);
-    play=gabi::call<u32>(0x025200D4);
-    u32 list=play+0x5D30;
-    gabi::call(0x0252CDC0,list,list+0x1DC,list+0x1E0,packet);
-    return TRUE;
-}
-VERIFY(0x025AEBE4,draw);
-static BOOL Draw(u32 self){
-    WWHD_FUNC(0x025AEC70,BOOL,self);
-    return gabi::call<BOOL>(0x025AEBE4,self);
-}
-VERIFY(0x025AEC70,Draw);
-static void changeGameScene(u32 self){
-    WWHD_FUNC(0x025AEC74,void,self);
-    if(gabi::call<BOOL>(0x025DBE00))return;
-    if(lh(self+8)==13){gabi::call(0x02520230,self,8);return;}
-    if(gabi::call<BOOL>(0x025DC86C,self,7,0,5,1)){
-        st(ld(0x101F84DC)+0x116C,0);
-        u32 play=gabi::call<u32>(0x025200D4),stage=play+0x5140;
-        play=gabi::call<u32>(0x025200D4);s32 room=(s8)lb(play+0x514A);
-        play=gabi::call<u32>(0x025200D4);s32 layer=(s8)lb(play+0x514B);
-        gabi::call(0x025E17CC,stage,room,layer);
+
+/* 025AEC70 */
+static BOOL dScnOpen_Draw(dScnOpen_c* i_this) { return i_this->draw(); }
+
+/* 025AEC74 */
+void dScnOpen_c::changeGameScene() {
+    if (fopOvlpM_IsPeek()) return;
+    if (mProcName == fpcNm_OPEN2_SCENE_e) {
+        dComIfG_changeOpeningScene(this, fpcNm_OPENING2_SCENE_e);
+        return;
+    }
+    // HD: transition binding carries the extra final flag.
+    if (fopScnM_ChangeReq(this, fpcNm_PLAY_SCENE_e, 0, 5, 1)) {
+        l_save->mRestartRoomParam = 0;
+        dScnOpen_GameInfoHD* play = dScnOpen_getGameInfo();
+        const char* stage = play->mNextStageName;
+        play = dScnOpen_getGameInfo();
+        s32 room = play->mNextStageRoomNo;
+        play = dScnOpen_getGameInfo();
+        s32 layer = play->mNextStageLayer;
+        mDoAud_setSceneName(stage, room, layer);
     }
 }
-VERIFY(0x025AEC74,changeGameScene);
-static BOOL execute(u32 self){
-    WWHD_FUNC(0x025AED3C,BOOL,self);
-    gabi::call(0x0270CA94,ld(0x101F8318));
-    u32 count=ld(self+0x1DC);
-    if((s32)count<90){
-        ++count;st(self+0x1DC,count);
-        if(count==40)gabi::call(0x025E1934,0xC0000024);
-        else if((s32)count>=90)gabi::call(0x025E1944);
+
+/* 025AED3C */
+BOOL dScnOpen_c::execute() {
+    // HD: native UI executes before the stream timer and input checks.
+    dScnOpen_UI_execute(l_ui);
+    u32 count = mStreamTimer;
+    if ((s32)count < 90) {
+        ++count;
+        mStreamTimer = count;
+        if (count == 40) mDoAud_bgmStreamPrepare(0xC0000024);
+        else if ((s32)count >= 90) mDoAud_bgmStreamPlay();
     }
-    s16 name=lh(self+8);u32 skip=0;
-    if(name==12 && (s32)ld(ld(0x101F8318))>0){
-        BOOL pressed=gabi::call<BOOL>(0x02007940,0);
-        name=lh(self+8);if(pressed)skip=1;
+    s16 name = mProcName;
+    u32 skip = 0;
+    if (name == fpcNm_OPEN_SCENE_e && l_ui->mTimer > 0) {
+        BOOL pressed = mDoCPd_checkStart(0);
+        name = mProcName;
+        if (pressed) skip = 1;
     }
-    if(name==12 && gabi::call<BOOL>(0x02007940,0)){
-        u32 ui=ld(0x101F8318),proc=ld(ui+0x94);
-        st(ui,300);gabi::call(0x026BF3E8,proc);
+    if (name == fpcNm_OPEN_SCENE_e && mDoCPd_checkStart(0)) {
+        dScnOpen_UI* ui = l_ui;
+        dScnOpen_proc_c* proc = ui->mpProc;
+        ui->mTimer = 300;
+        dScnOpen_proc_skip(proc);
     }
-    if(!gabi::call<BOOL>(0x025DBE00) && !gabi::call<BOOL>(0x025202F8,self)){
-        u32 buttons=0;
-        if(lh(self+8)==13){
-            if(gabi::call<BOOL>(0x02007898,0) || gabi::call<BOOL>(0x020078BC,0) || gabi::call<BOOL>(0x02007940,0) || gabi::call<BOOL>(0x020078E8,0) || gabi::call<BOOL>(0x02007914,0)) buttons=1;
-            else {
-                u32 pad=ld(0x101F5088);
-                if((ld(pad+0x18)&0x1000) || (ld(ld(pad))&0x8000))buttons=1;
+    if (!fopOvlpM_IsPeek() && !dComIfG_resetToOpening(this)) {
+        u32 buttons = 0;
+        if (mProcName == fpcNm_OPEN2_SCENE_e) {
+            if (mDoCPd_checkA(0) || mDoCPd_checkB(0) || mDoCPd_checkStart(0) || mDoCPd_checkX(0) || mDoCPd_checkY(0)) {
+                buttons = 1;
+            } else {
+                dScnOpen_PadHD* pad = l_pad;
+                if ((pad->mTrigger & PAD_TRIGGER_START) || (pad->mpButtons->mButtons & PAD_HOLD_A)) buttons = 1;
             }
         }
-        if(skip|buttons){sb(self+0x1D8,1);gabi::call(0x025E1904,20);}
-        if(lb(self+0x1D8) && !gabi::call<BOOL>(0x025E20F0))gabi::call(0x025AEC74,self);
+        if (skip | buttons) {
+            field_0x1d4 = 1;
+            mDoAud_bgmStop(20);
+        }
+        if (field_0x1d4 && !mDoAud_isUsedHeapForStreamBuffer()) changeGameScene();
     }
-    u32 ui=ld(0x101F8318);
-    if(lb(ld(ui+0x94)+0x88))gabi::call(0x025AEC74,self);
+    if (l_ui->mpProc->mIsEnd) changeGameScene();
     return TRUE;
 }
-VERIFY(0x025AED3C,execute);
-static BOOL Execute(u32 self){
-    WWHD_FUNC(0x025AEF38,BOOL,self);
-    return gabi::call<BOOL>(0x025AED3C,self);
+
+/* 025AEF38 */
+static BOOL dScnOpen_Execute(dScnOpen_c* i_this) { return i_this->execute(); }
+
+/* 025AEF3C */
+static void dScnOpen__dt(dScnOpen_c* i_this, u32 flags) {
+    if (!i_this) return;
+    dScnOpen_proc_c* proc = i_this->mpProc;
+    if (proc) gabi::call_ptr(proc->mVtable->destroy, proc, 3);
+    void* heap = i_this->solid_heap;
+    if (heap) mDoExt_destroySolidHeap(heap);
+    dScnOpen_resDelete(&i_this->mPhs, "Opening");
+    dScnOpen_getGameInfo()->mWindowNum = 0;
+    // HD: native UI is owned by its singleton rather than the scene's heap.
+    dScnOpen_UI_cleanup(l_ui);
+    dScnOpen_UI_destroy();
+    l_phase = 0;
+    base_process_class__dt(i_this, 2);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x025AEF38,Execute);
-static void destructor(u32 self,u32 flags){
-    WWHD_FUNC(0x025AEF3C,void,self,flags);
-    if(!self)return;
-    u32 proc=ld(self+0x1D4);
-    if(proc)gabi::call_ptr(ld(ld(proc)+12),proc,3);
-    u32 heap=ld(self+0x1D0);
-    if(heap)gabi::call(0x025E3868,heap);
-    gabi::call(0x025204C8,self+0x1C8,0x10052B1C);
-    u32 play=gabi::call<u32>(0x025200D4);sb(play+0x5AC9,0);
-    gabi::call(0x0270CB3C,ld(0x101F8318));
-    gabi::call(0x0270CE94);
-    sb(0x101EA834,0);
-    gabi::call(0x025DD630,self,2);
-    if(flags&1)gabi::call(0x0273AF40,self);
+
+/* 025AEFFC */
+static BOOL dScnOpen_Delete(dScnOpen_c* i_this) {
+    dScnOpen__dt(i_this, 2);
+    return TRUE;
 }
-VERIFY(0x025AEF3C,destructor);
-static BOOL Delete(u32 self){
-    WWHD_FUNC(0x025AEFFC,BOOL,self);
-    gabi::call(0x025AEF3C,self,2);return TRUE;
-}
-VERIFY(0x025AEFFC,Delete);
-static u32 constructor(u32 self){
-    WWHD_FUNC(0x025AF024,u32,self);
-    if(!self)self=gabi::call<u32>(0x0273AD10,0x1E0);
-    if(self){
-        gabi::call(0x025DD5F0,self);
-        gabi::call(0x028F521C,self+0x1C8,8);
-        st(self+0x1DC,0);st(self+0x1D0,0);sb(self+0x1D8,0);st(self+0x1D4,0);
+
+/* 025AF024 */
+static dScnOpen_c* dScnOpen__ct(dScnOpen_c* i_this) {
+    if (!i_this) i_this = static_cast<dScnOpen_c*>(operator_new(sizeof(dScnOpen_c)));
+    if (i_this) {
+        base_process_class__ct(i_this);
+        dScnOpen_initPhase(&i_this->mPhs, 8);
+        i_this->mStreamTimer = 0;
+        i_this->solid_heap = nullptr;
+        i_this->field_0x1d4 = 0;
+        i_this->mpProc = nullptr;
     }
-    return self;
+    return i_this;
 }
-VERIFY(0x025AF024,constructor);
-static s32 create(u32 self){
-    WWHD_FUNC(0x025AF08C,s32,self);
-    u8 phase=lb(0x101EA834);
-    if(phase>1){
-        st(self+0x1DC,0);
-        u32 play=gabi::call<u32>(0x025200D4);sb(play+0x514C,0);
-        gabi::call(0x0270CD94,0);
-        gabi::call(0x0270C940,ld(0x101F8318));
-        sb(0x101EA834,0);return 4;
+
+/* 025AF08C */
+s32 dScnOpen_c::create() {
+    // HD: asynchronous native UI load replaces the GC Opening archive/heap setup.
+    u8 phase = l_phase;
+    if (phase > 1) {
+        mStreamTimer = 0;
+        dScnOpen_getGameInfo()->mEnableNextStage = 0;
+        dScnOpen_UI_select(0);
+        dScnOpen_UI_initialize(l_ui);
+        l_phase = 0;
+        return cPhs_COMPLEATE_e;
     }
-    u32 result=phase==0?gabi::call<u32>(0x026FBB8C,ld(0x101F7274),2):gabi::call<u32>(0x026FBB7C,ld(0x101F7274));
-    if(result)sb(0x101EA834,lb(0x101EA834)+1);
-    return 0;
+    u32 result = phase == 0 ? dScnOpen_requestLoad(l_loader, 2) : dScnOpen_checkLoad(l_loader);
+    if (result) l_phase = (u8)(l_phase + 1);
+    return cPhs_INIT_e;
 }
-VERIFY(0x025AF08C,create);
-static s32 Create(u32 self){
-    WWHD_FUNC(0x025AF138,s32,self);
-    if(self)gabi::call(0x025AF024,self);
-    return gabi::call<s32>(0x025AF08C,self);
+
+/* 025AF138 */
+static s32 dScnOpen_Create(dScnOpen_c* i_this) {
+    if (i_this) dScnOpen__ct(i_this);
+    return i_this->create();
 }
-VERIFY(0x025AF138,Create);
-static void sinit(){
-    WWHD_FUNC(0x025AF174,void,(u32)0);
-    st(0x1047B3F4,0);st(0x1047B3EC,0);st(0x1047B3F8,0);st(0x1047B3F0,0);
-    gabi::call(0x028F026C,0x101EA810);
-    f32 a=gabi::load<f32>(0x10052B2C),b=gabi::load<f32>(0x10052B30);
-    gabi::store<f32>(0x1047B3E0,a);gabi::store<f32>(0x1047B3E4,b);
-    gabi::call(0x028ED6F8,0x1047B3E8);gabi::call(0x028F026C,0x101EA81C);
-    gabi::call(0x028EAB2C,0x1047B3E9);gabi::call(0x028F026C,0x101EA828);
+
+/* 025AF208 */
+static BOOL dScnOpen_IsDelete() { return TRUE; }
+
+// HD: compiler-generated packet destructors and header statics.
+/* 025AEBCC */
+static void dScnOpen_packet__dt(void* packet, u32 flags) {
+    if (packet && (flags & 1)) operator_delete(packet);
 }
-VERIFY(0x025AF174,sinit);
+/* 025AEBE0 */
+static void dScnOpen_packet_draw() {}
+
+/* 025AF174 */
+static void __sinit_d_s_open_cpp() {
+    sinit_header_statics_rodata(gc_tu.headerStatics[0], gc_tu.headerStatics[1], gc_tu.headerStatics[2], 0x10052B2C);
 }
+
+/* WWHD glue
+str 10052B1C # "Opening"
+data l_ui 101F8318
+data l_save 101F84DC
+data l_pad 101F5088
+data l_loader 101F7274
+data l_phase 101EA834
+ext 025200D4 dScnOpen_GameInfoHD* dScnOpen_getGameInfo()
+ext 025DA7AC dScnOpen_DrawTag* fopDwIt_Begin()
+ext 025DA7D0 dScnOpen_DrawTag* fopDwIt_Next(dScnOpen_DrawTag*)
+ext 025DF904 void fpcM_Draw(void*)
+ext 0252CDC0 void dScnOpen_set2DOpa(dScnOpen_DrawList*, gptr<void>*, gptr<void>*, dScnOpen_proc_c*)
+ext 025DBE00 BOOL fopOvlpM_IsPeek()
+ext 02520230 void dComIfG_changeOpeningScene(dScnOpen_c*, u32)
+ext 025DC86C BOOL fopScnM_ChangeReq(dScnOpen_c*, u32, u32, u32, u32)
+ext 025E17CC void mDoAud_setSceneName(const char*, s32, s32)
+ext 0270CA94 void dScnOpen_UI_execute(dScnOpen_UI*)
+ext 0270CB3C void dScnOpen_UI_cleanup(dScnOpen_UI*)
+ext 0270CE94 void dScnOpen_UI_destroy()
+ext 0270CD94 void dScnOpen_UI_select(u32)
+ext 0270C940 void dScnOpen_UI_initialize(dScnOpen_UI*)
+ext 026BF3E8 void dScnOpen_proc_skip(dScnOpen_proc_c*)
+ext 026FBB8C u32 dScnOpen_requestLoad(void*, u32)
+ext 026FBB7C u32 dScnOpen_checkLoad(void*)
+ext 025E1934 void mDoAud_bgmStreamPrepare(u32)
+ext 025E1944 void mDoAud_bgmStreamPlay()
+ext 025E1904 void mDoAud_bgmStop(u32)
+ext 025E20F0 BOOL mDoAud_isUsedHeapForStreamBuffer()
+ext 02007898 BOOL mDoCPd_checkA(u32)
+ext 020078BC BOOL mDoCPd_checkB(u32)
+ext 02007940 BOOL mDoCPd_checkStart(u32)
+ext 020078E8 BOOL mDoCPd_checkX(u32)
+ext 02007914 BOOL mDoCPd_checkY(u32)
+ext 025202F8 BOOL dComIfG_resetToOpening(dScnOpen_c*)
+ext 025E3868 void mDoExt_destroySolidHeap(void*)
+ext 025204C8 void dScnOpen_resDelete(request_of_phase_process_class*, const char*)
+ext 025DD5F0 void base_process_class__ct(base_process_class*)
+ext 025DD630 void base_process_class__dt(base_process_class*, u32)
+ext 028F521C void dScnOpen_initPhase(request_of_phase_process_class*, u32)
+*/

@@ -1,404 +1,406 @@
-/* d_save part 5: dSv_info_c and the unit's __sinit (025B99DC..025BAF8F). WWHD. See d_save.cpp for the unit's range and the save layout.
- *
- * dSv_info_c (HD): save data (dSv_save_c, 0x778) 0, memory 0x778, dan 0x79C, zones [32] (0x4C
- * each) 0x7A8, tmp event 0x1158, 0x1290..0x1292, 0x1298, 0x129C (HD, zeroed by init); the
- * HD-only save area at info + 0x12A0 (save base + 0x12C0) is reached through 027200D0 /
- * 02720144. Room zone numbers: the room status table at 1047E8EB + room * 0x22C (s8), read after
- * a dComIfGp_get call (dComIfGp_roomControl_getZoneNo inlined).
- * Card data (0xA94 per slot, 0xA8C used): status a 0x18, status b 0x18, return place 0xC, item
- * 0x15, get item 0x15, item record 8, item max 8, bag item 0x18, get bag item 0xC, bag item
- * record 0x18, collect 0xD, map 0x84, info 0x5C, config 5, priest 0x10, status c [4] 0x70,
- * memory [16] 0x24, ocean 0x64, event 0x100, reserve 0x50. */
+/* d_save — Active save information, new-game state and packed memory-card serialization.
+ * GameCube names with verified WWHD layouts and behavior. Unit: d_save. */
 #include "bindings.h"
+#include "d/d_save_readable.h"
 
-namespace d_save_5_cpp {
-#include "d_save_local.h"
+namespace d_save_cpp {
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline void memcpy_l(u32 dst, u32 src, u32 n) { gabi::call(0xC000A848, dst, src, n); } /* memcpy (import) */
-static inline void memset_l(u32 dst, u32 v, u32 n) { gabi::call(0xC000A858, dst, v, n); } /* memset (import) */
-static inline void __register_global_object_l(u32 d) { gabi::call(0x028F026C, d); }
+#include "d/d_save_local.h"
+
 /* 025E1C74 probably mDoAud_setOutputMode */
-static inline void mDoAud_setOutputMode_l(u32 mode) { gabi::call(0x025E1C74, mode); }
-/* HD save area accessors (argument: save base + 0x12C0) */
-static inline u32 hdSave_027200D0_l(u32 p) { return gabi::call<u32>(0x027200D0, p); }
-static inline u32 dComIfGs_getPictureInfo_l(u32 p) { return gabi::call<u32>(0x02720144, p); }
-static inline void hdPicture_setNum_027262B0_l(u32 p, u32 num) { gabi::call(0x027262B0, p, num); }
-/* calls into the other parts (by address) */
-static inline u8 dSv_event_getEventReg_l(u32 ev, u32 reg) { return gabi::call<u8>(0x025B8BB0, ev, reg); }
-static inline void dSv_event_setEventReg_l(u32 ev, u32 reg, u32 no) { gabi::call(0x025B8AF4, ev, reg, no); }
-static inline void dSv_event_onEventBit_l(u32 ev, u32 no) { gabi::call(0x025B8B68, ev, no); }
-static inline void dSv_zone_init_l(u32 z, s32 roomNo) { gabi::call(0x025B97DC, z, roomNo); }
-
-template <u32 N> struct blk_l { u8 b[N]; };
+static inline u8 saveGetEventReg(u32 ev, u32 reg) { return view<dSv_event_c>(ev)->getEventReg(reg); }
+static inline void saveSetEventReg(u32 ev, u32 reg, u32 no) { view<dSv_event_c>(ev)->setEventReg(reg, no); }
+static inline void saveOnEventBit(u32 ev, u32 no) { view<dSv_event_c>(ev)->onEventBit(no); }
+static inline void initializeZoneRecord(u32 z, s32 roomNo) { view<dSv_zone_c>(z)->init(roomNo); }
 
 /* dComIfGp_roomControl_getZoneNo(roomNo) (inline): HD calls dComIfGp_get, then reads the static
  * room status table */
-static inline s32 getZoneNo_inl(u32 roomNo) {
+static inline s32 roomZoneNo(u32 roomNo) {
     play();
-    return (s8)ld8(0x1047E8EB + roomNo * 0x22C);
+    return (s8)indexed(view<RoomZone>(0x1047E8EB), roomNo).mZoneNo;
 }
-static inline u32 zone(u32 t, s32 zoneNo) { return t + 0x7A8 + (u32)zoneNo * 0x4C; }
 
 /* 025B99DC */
-static void dSv_info_c_initZone(u32 t) {
-    WWHD_FUNC(0x025B99DC, void, t);
-    for (u32 i = 0; i < 32; i++) dSv_zone_init_l(t + 0x7A8 + 0x4C * i, -1);
+void d_save_cpp::dSv_info_c::initZone() {
+    for (u32 i = 0; i < ZONE_MAX; i++) view<dSv_zone_c>(gabi::ea(&indexed(mZone, i)))->init((u32)-1);
 }
-VERIFY(0x025B99DC, dSv_info_c_initZone);
 
-/* 025B9A18: HD also clears five HD fields */
-static void dSv_info_c_init(u32 t) {
-    WWHD_FUNC(0x025B9A18, void, t);
-    gabi::call(0x025B9938, t);          /* mSavedata.init() */
-    gabi::call(0x025B9170, t + 0x778);  /* mMemory.init() */
-    gabi::call(0x025B9174, t + 0x79C, -1); /* mDan.init(-1) */
-    dSv_info_c_initZone(t);
-    gabi::call(0x025B8B10, t + 0x1158); /* mTmp.init() */
-    st(t + 0x129C, 0);
-    st8(t + 0x1291, 0);
-    st(t + 0x1298, 0);
-    st8(t + 0x1292, 0);
-    st8(t + 0x1290, 0);
-    st(0x101D5F1C, 0); /* daNpc_Sarace_c::ship_race_rupee */
-    st(0x101D5F18, 0); /* daNpc_Sarace_c::ship_race_result */
+/* 025B9A18 */
+void d_save_cpp::dSv_info_c::init() {
+    view<dSv_save_c>(gabi::ea(&mSavedata))->init();
+    view<dSv_memory_c>(gabi::ea(&mMemory))->init();
+    view<dSv_danBit_c>(gabi::ea(&mDan))->init(-1);
+    initZone();
+    view<dSv_event_c>(gabi::ea(&mTmp))->init();
+    mMemCardCheckID[1] = 0;
+    mNewFile = 0;
+    mMemCardCheckID[0] = 0;
+    mNoFile = 0;
+    mDataNum = 0;
+    l_shipRaceRupee = 0;
+    l_shipRaceResult = 0;
 }
-VERIFY(0x025B9A18, dSv_info_c_init);
 
-/* 025B9A90: HD keeps the sound mode, vibration and two values of the HD save area (when < 2),
- * the clear count, the picture count and register 0x89FF; the player name, attention type and
- * ruby are not kept */
-static void dSv_info_c_reinit(u32 t) {
-    WWHD_FUNC(0x025B9A90, void, t);
-    const u32 l_holdEventReg = 0x101EADA8, l_onEventBit = 0x101EADCC;
+// HD: preserves sound, vibration, picture count and the two validated HD progress bytes across a new game.
+/* 025B9A90 */
+void d_save_cpp::dSv_info_c::reinit() {
+
     u8 hold[17];
     u32 b = svbase(); /* kept in a register across the getEventReg calls */
-    for (u32 i = 0; i < 17; i++) hold[i] = dSv_event_getEventReg_l(b + 0x644, ld16(l_holdEventReg + 2 * i));
+    for (u32 i = 0; i < 17; i++) hold[i] = saveGetEventReg(gabi::ea(&view<SaveGlobal>(b)->mInfo.mSavedata.mEvent), (u16)l_holdEventReg[i]);
     b = svbase();
-    u8 clearCount = ld8(b + 0x1C0);
-    u8 hd0 = ld8(hdSave_027200D0_l(b + 0x12C0) + 0);
+    u8 clearCount = (u8)savePlayer(b).mInfo.mClearCount;
+    u8 hd0 = (u8)view<HdProgress>(saveHdProgress(gabi::ea(view<SaveGlobal>(b)->mHdSave)))->mFirst;
     b = svbase();
-    u8 hd3 = ld8(hdSave_027200D0_l(b + 0x12C0) + 3);
+    u8 hd3 = (u8)view<HdProgress>(saveHdProgress(gabi::ea(view<SaveGlobal>(b)->mHdSave)))->mSecond;
     b = svbase();
-    u8 vib = ld8(b + 0x1C7);
-    u8 sound = ld8(b + 0x1C5);
-    u32 pic = dComIfGs_getPictureInfo_l(b + 0x12C0);
-    u8 pictureNum = ld8(pic + 0x3C030C);
-    u8 reg89 = dSv_event_getEventReg_l(svbase() + 0x644, 0x89FF);
+    u8 vib = (u8)savePlayer(b).mConfig.mVibration;
+    u8 sound = (u8)savePlayer(b).mConfig.mSoundMode;
+    u32 pic = savePictureInfo(gabi::ea(view<SaveGlobal>(b)->mHdSave));
+    u8 pictureNum = (u8)view<HdPictureInfo>(pic)->mCount;
+    u8 reg89 = saveGetEventReg(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), 0x89FF);
 
-    dSv_info_c_init(t);
+    init();
 
-    for (u32 i = 0; i < 17; i++) dSv_event_setEventReg_l(svbase() + 0x644, ld16(l_holdEventReg + 2 * i), hold[i]);
-    for (u32 i = 0; i < 5; i++) dSv_event_onEventBit_l(svbase() + 0x644, ld16(l_onEventBit + 2 * i));
-    dSv_event_setEventReg_l(svbase() + 0x644, 0xC407, 7);
-    st8(svbase() + 0x1C0, clearCount);
-    gabi::call(0x025B8C0C, svbase() + 0x52C, 0);    /* onSaveTbox(STAGE_MISC, 0) */
-    gabi::call(0x025B8CE0, svbase() + 0x3A0, 0x47); /* onSaveSwitch(STAGE_SEA, 0x47) */
-    gabi::call(0x025B8CE0, svbase() + 0x3A0, 0x5E); /* onSaveSwitch(STAGE_SEA, 0x5E) */
-    u32 p = hdSave_027200D0_l(svbase() + 0x12C0);
-    if (hd0 < 2) st8(p + 0, hd0);
-    p = hdSave_027200D0_l(svbase() + 0x12C0);
-    if (hd3 < 2) st8(p + 3, hd3);
-    st8(svbase() + 0x1C5, sound);
-    st8(svbase() + 0x1C7, vib);
-    st8(svbase() + 0x1C1, 3); /* setRandomSalvagePoint(3) */
-    st8(svbase() + 0x64, 0x26); /* setItem(CAMERA, DELUXE_PICTO_BOX) */
+    for (u32 i = 0; i < 17; i++) saveSetEventReg(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), (u16)l_holdEventReg[i], hold[i]);
+    for (u32 i = 0; i < 5; i++) saveOnEventBit(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), (u16)l_onEventBit[i]);
+    saveSetEventReg(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), 0xC407, 7);
+    savePlayer().mInfo.mClearCount = clearCount;
+    view<dSv_memBit_c>(gabi::ea(&saveBase()->mInfo.mSavedata.mMemory[dSv_save_c::STAGE_MISC].mMembit))->onTbox(0);
+    view<dSv_memBit_c>(gabi::ea(&saveBase()->mInfo.mSavedata.mMemory[dSv_save_c::STAGE_SEA].mMembit))->onSwitch(0x47);
+    view<dSv_memBit_c>(gabi::ea(&saveBase()->mInfo.mSavedata.mMemory[dSv_save_c::STAGE_SEA].mMembit))->onSwitch(0x5E);
+    u32 p = saveHdProgress(gabi::ea(saveBase()->mHdSave));
+    if (hd0 < 2) view<HdProgress>(p)->mFirst = hd0;
+    p = saveHdProgress(gabi::ea(saveBase()->mHdSave));
+    if (hd3 < 2) view<HdProgress>(p)->mSecond = hd3;
+    savePlayer().mConfig.mSoundMode = sound;
+    savePlayer().mConfig.mVibration = vib;
+    savePlayer().mInfo.mRandomSalvagePoint = 3;
+    savePlayer().mPlayerItem.mItems[dInvSlot_CAMERA_e] = item_data::dItemNo_DELUXE_PICTO_BOX_e;
     u32 pl = play();
-    st8(pl + PL_ITEMNO, 0x26);
-    st8(pl + PL_ITEMSLOT, 8);
-    gabi::call(0x025B5CCC, svbase() + 0x71, 8, 0); /* onGetItem(CAMERA, 0) */
-    gabi::call(0x025B5CCC, svbase() + 0x71, 8, 1); /* onGetItem(CAMERA, 1) */
-    pic = dComIfGs_getPictureInfo_l(svbase() + 0x12C0);
-    hdPicture_setNum_027262B0_l(pic, pictureNum);
-    dSv_event_setEventReg_l(svbase() + 0x644, 0x89FF, reg89);
+    playInfo(pl)->play.mItemNo = item_data::dItemNo_DELUXE_PICTO_BOX_e;
+    playInfo(pl)->play.mItemSlot = dInvSlot_CAMERA_e;
+    view<dSv_player_get_item_c>(gabi::ea(&savePlayer().mGetItem))->onItem(dInvSlot_CAMERA_e, 0);
+    view<dSv_player_get_item_c>(gabi::ea(&savePlayer().mGetItem))->onItem(dInvSlot_CAMERA_e, 1);
+    pic = savePictureInfo(gabi::ea(saveBase()->mHdSave));
+    savePictureCount(pic, pictureNum);
+    saveSetEventReg(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), 0x89FF, reg89);
 }
-VERIFY(0x025B9A90, dSv_info_c_reinit);
 
 /* 025B9C9C */
-static void dSv_info_c_getSave(u32 t, u32 stageNo) {
-    WWHD_FUNC(0x025B9C9C, void, t, stageNo);
-    if (stageNo >= 0x10) JUT_ASSERT_l(0x10054034, 0xD77, 0x10054000);
-    u32 src = t + stageNo * 0x24 + 0x380;
-    for (u32 i = 0; i < 9; i++) st(t + 0x778 + 4 * i, ld(src + 4 * i));
+void d_save_cpp::dSv_info_c::getSave(u32 stageNo) {
+    if (stageNo >= dSv_save_c::STAGE_MAX) saveAssert("d_save.cpp", 0xD77, "0 <= i_stageNo && i_stageNo < dSv_save_c::STAGE_MAX");
+    MemoryWords& src = memoryWords(&indexed(mSavedata.mMemory, stageNo));
+    MemoryWords& dst = memoryWords(&mMemory);
+    for (u32 i = 0; i < 9; i++) dst.mWords[i] = src.mWords[i];
 }
-VERIFY(0x025B9C9C, dSv_info_c_getSave);
 
-/* 025B9D24: the memory goes through a stack copy */
-static void dSv_info_c_putSave(u32 t, u32 stageNo) {
-    WWHD_FUNC(0x025B9D24, void, t, stageNo);
-    if (stageNo >= 0x10) JUT_ASSERT_l(0x10054074, 0xD87, 0x10054040);
+/* 025B9D24 */
+void d_save_cpp::dSv_info_c::putSave(u32 stageNo) {
+    if (stageNo >= dSv_save_c::STAGE_MAX) saveAssert("d_save.cpp", 0xD87, "0 <= i_stageNo && i_stageNo < dSv_save_c::STAGE_MAX");
     u32 tmp[9];
-    for (u32 i = 0; i < 9; i++) tmp[i] = ld(t + 0x778 + 4 * i);
-    u32 dst = t + stageNo * 0x24 + 0x380;
-    for (u32 i = 0; i < 9; i++) st(dst + 4 * i, tmp[i]);
+    for (u32 i = 0; i < 9; i++) tmp[i] = memoryWords(&mMemory).mWords[i];
+    MemoryWords& dst = memoryWords(&indexed(mSavedata.mMemory, stageNo));
+    for (u32 i = 0; i < 9; i++) dst.mWords[i] = tmp[i];
 }
-VERIFY(0x025B9D24, dSv_info_c_putSave);
 
 /* 025B9DD8 */
-static s32 dSv_info_c_createZone(u32 t, u32 roomNo) {
-    WWHD_FUNC(0x025B9DD8, s32, t, roomNo);
-    u32 z = t + 0x7A8;
+s32 d_save_cpp::dSv_info_c::createZone(u32 roomNo) {
+    ::dSv_zone_c* zone_p = mZone;
     for (s32 i = 0; i < 32; i++) {
-        if ((s8)ld8(z) < 0) {
-            dSv_zone_init_l(z, (s32)roomNo);
+        if ((s8)zone_p->mRoomNo < 0) {
+            view<dSv_zone_c>(gabi::ea(zone_p))->init(roomNo);
             return i;
         }
-        z += 0x4C;
+        zone_p++;
     }
     return -1;
 }
-VERIFY(0x025B9DD8, dSv_info_c_createZone);
 
 /* switch numbers: memory 0..0x7F, dungeon 0x80..0xBF, zone 0xC0..0xEF */
 /* 025B9E38 */
-static void dSv_info_c_onSwitch(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025B9E38, void, t, no, roomNo);
+void d_save_cpp::dSv_info_c::onSwitch(s32 no, s32 roomNo) {
     if (no == -1 || no == 0xFF) return;
-    if ((u32)no >= 0xF0) JUT_ASSERT_l(0x10054080, 0xDBF, 0x100540D0);
-    if (no < 0x80) {
-        gabi::call(0x025B8CE0, t + 0x778, no);
-    } else if (no < 0xC0) {
-        gabi::call(0x025B91AC, t + 0x79C, no - 0x80);
+    if ((u32)no >= MEMORY_SWITCH + DAN_SWITCH + ZONE_SWITCH) saveAssert("d_save.cpp", 0xDBF, "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255");
+    if (no < MEMORY_SWITCH) {
+        view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->onSwitch(no);
+    } else if (no < MEMORY_SWITCH + DAN_SWITCH) {
+        view<dSv_danBit_c>(gabi::ea(&mDan))->onSwitch(no - MEMORY_SWITCH);
     } else {
-        if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x10054080, 0xDD0, 0x1005408C);
-        s32 zoneNo = getZoneNo_inl((u32)roomNo);
-        if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x10054080, 0xDD2, 0x100540AC);
-        gabi::call(0x025B93BC, zone(t, zoneNo) + 2, no - 0xC0);
+        if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xDD0, "0 <= i_roomNo && i_roomNo < 64");
+        s32 zoneNo = roomZoneNo((u32)roomNo);
+        if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xDD2, "0 <= zoneId && zoneId < ZONE_MAX");
+        view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->onSwitch(no - (MEMORY_SWITCH + DAN_SWITCH));
     }
 }
-VERIFY(0x025B9E38, dSv_info_c_onSwitch);
 
 /* 025B9F7C */
-static void dSv_info_c_offSwitch(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025B9F7C, void, t, no, roomNo);
+void d_save_cpp::dSv_info_c::offSwitch(s32 no, s32 roomNo) {
     if (no == -1 || no == 0xFF) return;
-    if ((u32)no >= 0xF0) JUT_ASSERT_l(0x1005412C, 0xDE4, 0x1005417C);
-    if (no < 0x80) {
-        gabi::call(0x025B8D54, t + 0x778, no);
-    } else if (no < 0xC0) {
-        gabi::call(0x025B9220, t + 0x79C, no - 0x80);
+    if ((u32)no >= MEMORY_SWITCH + DAN_SWITCH + ZONE_SWITCH) saveAssert("d_save.cpp", 0xDE4, "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255");
+    if (no < MEMORY_SWITCH) {
+        view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->offSwitch(no);
+    } else if (no < MEMORY_SWITCH + DAN_SWITCH) {
+        view<dSv_danBit_c>(gabi::ea(&mDan))->offSwitch(no - MEMORY_SWITCH);
     } else {
-        if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x1005412C, 0xDF5, 0x10054138);
-        s32 zoneNo = getZoneNo_inl((u32)roomNo);
-        if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x1005412C, 0xDF7, 0x10054158);
-        gabi::call(0x025B9430, zone(t, zoneNo) + 2, no - 0xC0);
+        if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xDF5, "0 <= i_roomNo && i_roomNo < 64");
+        s32 zoneNo = roomZoneNo((u32)roomNo);
+        if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xDF7, "0 <= zoneNo && zoneNo < ZONE_MAX");
+        view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->offSwitch(no - (MEMORY_SWITCH + DAN_SWITCH));
     }
 }
-VERIFY(0x025B9F7C, dSv_info_c_offSwitch);
 
 /* 025BA0C0 */
-static BOOL dSv_info_c_isSwitch(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025BA0C0, BOOL, t, no, roomNo);
+BOOL d_save_cpp::dSv_info_c::isSwitch(s32 no, s32 roomNo) {
     if (no == -1 || no == 0xFF) return FALSE;
-    if (no < 0x80) return gabi::call<BOOL>(0x025B8DC8, t + 0x778, no);
-    if (no < 0xC0) return gabi::call<BOOL>(0x025B9294, t + 0x79C, no - 0x80);
-    if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x100541D8, 0xE25, 0x100541E4);
-    s32 zoneNo = getZoneNo_inl((u32)roomNo);
-    if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x100541D8, 0xE27, 0x10054204);
-    return gabi::call<BOOL>(0x025B94A4, zone(t, zoneNo) + 2, no - 0xC0);
+    if (no < MEMORY_SWITCH) return view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->isSwitch(no);
+    if (no < MEMORY_SWITCH + DAN_SWITCH) return view<dSv_danBit_c>(gabi::ea(&mDan))->isSwitch(no - MEMORY_SWITCH);
+    if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xE25, "0 <= i_roomNo && i_roomNo < 64");
+    s32 zoneNo = roomZoneNo((u32)roomNo);
+    if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xE27, "0 <= zoneNo && zoneNo < ZONE_MAX");
+    return view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->isSwitch(no - (MEMORY_SWITCH + DAN_SWITCH));
 }
-VERIFY(0x025BA0C0, dSv_info_c_isSwitch);
 
 /* 025BA20C */
-static BOOL dSv_info_c_revSwitch(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025BA20C, BOOL, t, no, roomNo);
+BOOL d_save_cpp::dSv_info_c::revSwitch(s32 no, s32 roomNo) {
     if (no == -1 || no == 0xFF) return FALSE;
-    if ((u32)no >= 0xF0) JUT_ASSERT_l(0x10054228, 0xE38, 0x10054278);
-    if (no < 0x80) return gabi::call<BOOL>(0x025B8E40, t + 0x778, no);
-    if (no < 0xC0) return gabi::call<BOOL>(0x025B930C, t + 0x79C, no - 0x80);
-    if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x10054228, 0xE48, 0x10054234);
-    s32 zoneNo = getZoneNo_inl((u32)roomNo);
-    if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x10054228, 0xE4A, 0x10054254);
-    return gabi::call<BOOL>(0x025B951C, zone(t, zoneNo) + 2, no - 0xC0);
+    if ((u32)no >= MEMORY_SWITCH + DAN_SWITCH + ZONE_SWITCH) saveAssert("d_save.cpp", 0xE38, "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255");
+    if (no < MEMORY_SWITCH) return view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->revSwitch(no);
+    if (no < MEMORY_SWITCH + DAN_SWITCH) return view<dSv_danBit_c>(gabi::ea(&mDan))->revSwitch(no - MEMORY_SWITCH);
+    if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xE48, "0 <= i_roomNo && i_roomNo < 64");
+    s32 zoneNo = roomZoneNo((u32)roomNo);
+    if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xE4A, "0 <= zoneNo && zoneNo < ZONE_MAX");
+    return view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->revSwitch(no - (MEMORY_SWITCH + DAN_SWITCH));
 }
-VERIFY(0x025BA20C, dSv_info_c_revSwitch);
 
 /* item numbers: memory 0..0x3F, zone 0x40..0x4F */
 /* 025BA384 */
-static void dSv_info_c_onItem(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025BA384, void, t, no, roomNo);
+void d_save_cpp::dSv_info_c::onItem(s32 no, s32 roomNo) {
     if (no == -1 || no == 0x7F) return;
-    if ((u32)no >= 0x50) JUT_ASSERT_l(0x100542D4, 0xE5B, 0x10054324);
-    if (no < 0x40) {
-        gabi::call(0x025B8EC0, t + 0x778, no);
+    if ((u32)no >= MEMORY_ITEM + ZONE_ITEM) saveAssert("d_save.cpp", 0xE5B, "(0 <= i_no && i_no < (MEMORY_ITEM+ZONE_ITEM)) || i_no == -1 || i_no == 127");
+    if (no < MEMORY_ITEM) {
+        view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->onItem(no);
     } else {
-        if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x100542D4, 0xE67, 0x100542E0);
-        s32 zoneNo = getZoneNo_inl((u32)roomNo);
-        if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x100542D4, 0xE69, 0x10054300);
-        gabi::call(0x025B95A0, zone(t, zoneNo) + 2, no - 0x40);
+        if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xE67, "0 <= i_roomNo && i_roomNo < 64");
+        s32 zoneNo = roomZoneNo((u32)roomNo);
+        if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xE69, "0 <= zoneNo && zoneNo < ZONE_MAX");
+        view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->onItem(no - MEMORY_ITEM);
     }
 }
-VERIFY(0x025BA384, dSv_info_c_onItem);
 
 /* 025BA494 */
-static BOOL dSv_info_c_isItem(u32 t, s32 no, s32 roomNo) {
-    WWHD_FUNC(0x025BA494, BOOL, t, no, roomNo);
+BOOL d_save_cpp::dSv_info_c::isItem(s32 no, s32 roomNo) {
     if (no == -1 || no == 0x7F) return FALSE;
-    if ((u32)no >= 0x50) JUT_ASSERT_l(0x1005437C, 0xE9B, 0x100543CC);
-    if (no < 0x40) return gabi::call<BOOL>(0x025B8F34, t + 0x778, no);
-    if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x1005437C, 0xEA6, 0x10054388);
-    s32 zoneNo = getZoneNo_inl((u32)roomNo);
-    if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x1005437C, 0xEA8, 0x100543A8);
-    return gabi::call<BOOL>(0x025B9608, zone(t, zoneNo) + 2, no - 0x40);
+    if ((u32)no >= MEMORY_ITEM + ZONE_ITEM) saveAssert("d_save.cpp", 0xE9B, "(0 <= i_no && i_no < (MEMORY_ITEM+ZONE_ITEM)) || i_no == -1 || i_no == 127");
+    if (no < MEMORY_ITEM) return view<dSv_memBit_c>(gabi::ea(&mMemory.mMembit))->isItem(no);
+    if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xEA6, "0 <= i_roomNo && i_roomNo < 64");
+    s32 zoneNo = roomZoneNo((u32)roomNo);
+    if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xEA8, "0 <= zoneNo && zoneNo < ZONE_MAX");
+    return view<dSv_zoneBit_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneBit))->isItem(no - MEMORY_ITEM);
 }
-VERIFY(0x025BA494, dSv_info_c_isItem);
 
 /* 025BA5D4 */
-static void dSv_info_c_onActor(u32 t, s32 id, s32 roomNo) {
-    WWHD_FUNC(0x025BA5D4, void, t, id, roomNo);
+void d_save_cpp::dSv_info_c::onActor(s32 id, s32 roomNo) {
     if (id == -1 || (u32)id == 0xFFFF || roomNo == -1) return;
-    if ((u32)id >= 0x200 || (u32)roomNo >= 0x40) JUT_ASSERT_l(0x10054424, 0xEDC, 0x10054454);
-    s32 zoneNo = getZoneNo_inl((u32)roomNo);
-    if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x10054424, 0xEDF, 0x10054430);
-    gabi::call(0x025B9690, zone(t, zoneNo) + 0xC, id);
+    if ((u32)id >= 0x200 || (u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xEDC, "(0 <= i_id && i_id < dSv_zoneActor_c::ACTOR_MAX) && (0 <= i_roomNo && i_roomNo < 64)");
+    s32 zoneNo = roomZoneNo((u32)roomNo);
+    if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xEDF, "0 <= zoneNo && zoneNo < ZONE_MAX");
+    view<dSv_zoneActor_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneActor))->on(id);
 }
-VERIFY(0x025BA5D4, dSv_info_c_onActor);
 
 /* 025BA6A4 */
-static BOOL dSv_info_c_isActor(u32 t, s32 id, s32 roomNo) {
-    WWHD_FUNC(0x025BA6A4, BOOL, t, id, roomNo);
+BOOL d_save_cpp::dSv_info_c::isActor(s32 id, s32 roomNo) {
     if (id == -1 || (u32)id == 0xFFFF || roomNo == -1) return FALSE;
-    if ((u32)id >= 0x200) JUT_ASSERT_l(0x100544B4, 0xF10, 0x100544C0);
-    if ((u32)roomNo >= 0x40) JUT_ASSERT_l(0x100544B4, 0xF12, 0x100544F0);
-    s32 zoneNo = getZoneNo_inl((u32)roomNo);
-    if ((u32)zoneNo >= 0x20) JUT_ASSERT_l(0x100544B4, 0xF14, 0x10054510);
-    return gabi::call<BOOL>(0x025B9700, zone(t, zoneNo) + 0xC, id);
+    if ((u32)id >= 0x200) saveAssert("d_save.cpp", 0xF10, "0 <= i_id && i_id < dSv_zoneActor_c::ACTOR_MAX");
+    if ((u32)roomNo >= ROOM_MAX) saveAssert("d_save.cpp", 0xF12, "0 <= i_roomNo && i_roomNo < 64");
+    s32 zoneNo = roomZoneNo((u32)roomNo);
+    if ((u32)zoneNo >= ZONE_MAX) saveAssert("d_save.cpp", 0xF14, "0 <= zoneNo && zoneNo < ZONE_MAX");
+    return view<dSv_zoneActor_c>(gabi::ea(&indexed(mZone, (u32)zoneNo).mZoneActor))->is(id);
 }
-VERIFY(0x025BA6A4, dSv_info_c_isActor);
 
 /* the card layout: (save base offset, size) per block, status c and memory handled apart */
-struct cardBlk_l { u32 ofs, size; };
-static constexpr cardBlk_l kCardHead[] = {
-    {0x20, 0x18}, {0x38, 0x18}, {0x50, 0xC}, {0x5C, 0x15}, {0x71, 0x15}, {0x86, 8}, {0x8E, 8},
-    {0x96, 0x18}, {0xB0, 0xC}, {0xBC, 0x18}, {0xD4, 0xD}, {0xE4, 0x84}, {0x168, 0x5C}, {0x1C4, 5}};
+struct CardBlock { u32 mOffset, mSize; };
+static constexpr CardBlock kCardHead[] = {
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mPlayerStatusA), sizeof(::dSv_player_status_a_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mPlayerStatusB), sizeof(::dSv_player_status_b_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mReturnPlace), sizeof(::dSv_player_return_place_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mPlayerItem), sizeof(::dSv_player_item_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mGetItem), sizeof(::dSv_player_get_item_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mItemRecord), sizeof(::dSv_player_item_record_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mItemMax), sizeof(::dSv_player_item_max_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mBagItem), sizeof(::dSv_player_bag_item_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mGetBagItem), sizeof(::dSv_player_get_bag_item_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mBagItemRecord), sizeof(::dSv_player_bag_item_record_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mCollect), sizeof(::dSv_player_collect_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mMap), sizeof(::dSv_player_map_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mInfo), sizeof(::dSv_player_info_c)},
+    {(u32)offsetof(SaveGlobal, mInfo.mSavedata.mPlayer.mConfig), sizeof(::dSv_player_config_c)},
+};
 
-/* 025BA7B0: HD always sets the sound mode to 2 */
-static s32 dSv_info_c_card_to_memory(u32 t, u32 card, s32 dataNum) {
-    WWHD_FUNC(0x025BA7B0, s32, t, card, dataNum);
-    u32 start = card + (u32)dataNum * 0xA94;
+// HD: always selects sound mode 2 after loading the packed player blocks.
+/* 025BA7B0 */
+s32 d_save_cpp::dSv_info_c::card_to_memory(u8* card, s32 dataNum) {
+    u32 start = gabi::ea(card) + (u32)dataNum * CARD_SLOT_SIZE;
     u32 buf = start;
-    for (const cardBlk_l& c : kCardHead) {
-        memcpy_l(svbase() + c.ofs, buf, c.size);
-        buf += c.size;
+    for (const CardBlock& c : kCardHead) {
+        saveCopy(svbase() + c.mOffset, buf, c.mSize);
+        buf += c.mSize;
     }
-    st8(svbase() + 0x1C5, 2);
-    mDoAud_setOutputMode_l(2);
-    memcpy_l(svbase() + 0x1CC, buf, 0x10); /* priest */
+    savePlayer().mConfig.mSoundMode = 2;
+    saveAudioOutput(2);
+    saveCopy(gabi::ea(&saveBase()->mInfo.mSavedata.mPlayer.mPriest), buf, 0x10); /* priest */
     buf += 0x10;
     for (u32 i = 0; i < 4; i++) {
-        memcpy_l(svbase() + 0x1DC + 0x70 * i, buf, 0x70); /* status c */
+        saveCopy(gabi::ea(&indexed(savePlayer().mStatusC, i)), buf, 0x70); /* status c */
         buf += 0x70;
     }
-    memcpy_l(svbase() + 0x3A0, buf, 0x240); /* memory [16] */
+    saveCopy(gabi::ea(&saveBase()->mInfo.mSavedata.mMemory), buf, 0x240); /* memory [16] */
     buf += 0x240;
-    memcpy_l(svbase() + 0x5E0, buf, 0x64); /* ocean */
+    saveCopy(gabi::ea(&saveBase()->mInfo.mSavedata.mOcean), buf, 0x64); /* ocean */
     buf += 0x64;
-    memcpy_l(svbase() + 0x644, buf, 0x100); /* event */
+    saveCopy(gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), buf, 0x100); /* event */
     buf += 0x100;
-    memcpy_l(svbase() + 0x744, buf, 0x50); /* reserve */
+    saveCopy(gabi::ea(&saveBase()->mInfo.mSavedata.mReserve), buf, 0x50); /* reserve */
     buf += 0x50;
-    return (buf - start) > 0xA8C ? -1 : 0;
+    return (buf - start) > CARD_PAYLOAD_SIZE ? -1 : 0;
 }
-VERIFY(0x025BA7B0, dSv_info_c_card_to_memory);
 
-/* 025BA9FC: HD stores no IPL date */
-static s32 dSv_info_c_memory_to_card(u32 t, u32 card, s32 dataNum) {
-    WWHD_FUNC(0x025BA9FC, s32, t, card, dataNum);
-    u32 start = card + (u32)dataNum * 0xA94;
+// HD: leaves the copied IPL timestamp unchanged.
+/* 025BA9FC */
+s32 d_save_cpp::dSv_info_c::memory_to_card(u8* card, s32 dataNum) {
+    u32 start = gabi::ea(card) + (u32)dataNum * CARD_SLOT_SIZE;
     u32 buf = start;
     bool first = true;
-    for (const cardBlk_l& c : kCardHead) {
-        memcpy_l(buf, svbase() + c.ofs, c.size);
+    for (const CardBlock& c : kCardHead) {
+        saveCopy(buf, svbase() + c.mOffset, c.mSize);
         if (first) {
-            if (ld16(buf + 2) < 0xC) st16(buf + 2, 0xC); /* life */
+            dSv_player_status_a_c* status_a = view<dSv_player_status_a_c>(buf);
+            if ((u16)status_a->mLife < 12) status_a->mLife = 12;
             first = false;
         }
-        buf += c.size;
+        buf += c.mSize;
     }
-    memcpy_l(buf, svbase() + 0x1CC, 0x10);
+    saveCopy(buf, gabi::ea(&saveBase()->mInfo.mSavedata.mPlayer.mPriest), 0x10);
     buf += 0x10;
     for (u32 i = 0; i < 4; i++) {
-        memcpy_l(buf, svbase() + 0x1DC + 0x70 * i, 0x70);
+        saveCopy(buf, gabi::ea(&indexed(savePlayer().mStatusC, i)), 0x70);
         buf += 0x70;
     }
-    memcpy_l(buf, svbase() + 0x3A0, 0x240);
+    saveCopy(buf, gabi::ea(&saveBase()->mInfo.mSavedata.mMemory), 0x240);
     buf += 0x240;
-    memcpy_l(buf, svbase() + 0x5E0, 0x64);
+    saveCopy(buf, gabi::ea(&saveBase()->mInfo.mSavedata.mOcean), 0x64);
     buf += 0x64;
-    memcpy_l(buf, svbase() + 0x644, 0x100);
+    saveCopy(buf, gabi::ea(&saveBase()->mInfo.mSavedata.mEvent), 0x100);
     buf += 0x100;
-    memcpy_l(buf, svbase() + 0x744, 0x50);
+    saveCopy(buf, gabi::ea(&saveBase()->mInfo.mSavedata.mReserve), 0x50);
     buf += 0x50;
-    return (buf - start) > 0xA8C ? -1 : 0;
+    return (buf - start) > CARD_PAYLOAD_SIZE ? -1 : 0;
 }
-VERIFY(0x025BA9FC, dSv_info_c_memory_to_card);
 
-/* 025BAC50: HD copies the one initialised memory 16 times (GameCube copied 15 uninitialised
- * stack memories after it).
- * The init functions leave padding and some fields of their objects unset, and those bytes go to
- * the card as they are (status B padding, return place +0xA, get bag item +6, priest, status C
- * padding, ...): what the stack held before. So the objects sit where the original's frame
- * (stwu r1,-0x420) has them and are not initialised (gabi::NativeFrame; game test 2026-10-05: the
- * empty slots of cking.sav must keep these stale bytes), and the frame's own stores (back chain,
- * saved r28..r31, LR) are written like the original's. */
-static s32 dSv_info_c_initdata_to_card(u32 t, u32 card, s32 dataNum) {
-    WWHD_FUNC(0x025BAC50, s32, t, card, dataNum);
-    gabi::NativeFrame<0x420> f;
-    const u32 sp = f.sp();
-    st(f.entry() + 4, gabi::cpu->lr);           /* stw r0,0x424(r1) */
-    st(sp, f.entry());                          /* stwu back chain */
-    st(sp + 0x418, gabi::cpu->r[30]);
-    st(sp + 0x410, gabi::cpu->r[28]);
-    st(sp + 0x414, gabi::cpu->r[29]);
-    st(sp + 0x41C, gabi::cpu->r[31]);
-    u32 start = card + (u32)dataNum * 0xA94;
+// HD: serializes this exact stack frame, including stale padding; the player-info block is written as zeros.
+/* 025BAC50 */
+s32 d_save_cpp::dSv_info_c::initdata_to_card(u8* card, s32 dataNum) {
+    gabi::NativeFrame<sizeof(SaveCardFrame)> f;
+    SaveCardFrame& frame = *view<SaveCardFrame>(f.sp());
+    *view<be<u32>>(f.entry() + 4) = gabi::cpu->lr;
+    frame.mBackChain = f.entry();
+    frame.mSavedR30 = gabi::cpu->r[30];
+    frame.mSavedR28 = gabi::cpu->r[28];
+    frame.mSavedR29 = gabi::cpu->r[29];
+    frame.mSavedR31 = gabi::cpu->r[31];
+    u32 start = gabi::ea(card) + (u32)dataNum * CARD_SLOT_SIZE;
     u32 buf = start;
-    auto copy = [&](u32 off, u32 n, u32 initFn) {
-        if (initFn) gabi::call(initFn, sp + off);
-        memcpy_l(buf, sp + off, n);
-        buf += n;
+    auto copy = [&](const auto& object) {
+        saveCopy(buf, gabi::ea(&object), (u32)sizeof(object));
+        buf += (u32)sizeof(object);
     };
-    copy(0x88, 0x18, 0x025B4DC0);  /* status a */
-    copy(0xD0, 0x18, 0x025B5028);  /* status b */
-    copy(0x20, 0xC, 0x025B5060);   /* return place */
-    copy(0x58, 0x15, 0x025B51BC);  /* item */
-    copy(0x70, 0x15, 0x025B5CAC);  /* get item */
-    copy(0x10, 8, 0x025B60EC);     /* item record */
-    copy(0x18, 8, 0x025B61E4);     /* item max */
-    copy(0xA0, 0x18, 0x025B6214);  /* bag item */
-    copy(0x2C, 0xC, 0x025B7614);   /* get bag item */
-    copy(0xB8, 0x18, 0x025B78AC);  /* bag item record */
-    copy(0x38, 0xD, 0x025B790C);   /* collect */
-    copy(0x230, 0x84, 0x025B7E74); /* map */
-    gabi::call(0x025B8630, sp + 0x2B4); /* player info: initialised, then the card gets zeros (as on GameCube) */
-    memset_l(buf, 0, 0x5C);
-    buf += 0x5C;
-    copy(8, 5, 0x025B8800);        /* config */
-    copy(0x48, 0x10, 0x025B8874);  /* priest */
-    gabi::call(0x025B88A8, sp + 0x1C0); /* dSv_player_status_c_c::init, copied four times */
-    for (u32 i = 0; i < 4; i++) copy(0x1C0, 0x70, 0);
-    gabi::call(0x025B9170, sp + 0xE8);  /* dSv_memory_c::init, twice, copied 16 times */
-    gabi::call(0x025B9170, sp + 0xE8);
-    for (u32 i = 0; i < 0x10; i++) copy(0xE8, 0x24, 0);
-    copy(0x15C, 0x64, 0x025B8998); /* ocean */
-    copy(0x310, 0x100, 0x025B8B10); /* event */
-    copy(0x10C, 0x50, 0x025B9918); /* reserve */
-    return (buf - start) > 0xA8C ? -1 : 0;
+    view<dSv_player_status_a_c>(gabi::ea(&frame.mStatusA))->init();
+    copy(frame.mStatusA);
+    view<dSv_player_status_b_c>(gabi::ea(&frame.mStatusB))->init();
+    copy(frame.mStatusB);
+    view<dSv_player_return_place_c>(gabi::ea(&frame.mReturnPlace))->init();
+    copy(frame.mReturnPlace);
+    view<dSv_player_item_c>(gabi::ea(&frame.mItem))->init();
+    copy(frame.mItem);
+    view<dSv_player_get_item_c>(gabi::ea(&frame.mGetItem))->init();
+    copy(frame.mGetItem);
+    view<dSv_player_item_record_c>(gabi::ea(&frame.mItemRecord))->init();
+    copy(frame.mItemRecord);
+    view<dSv_player_item_max_c>(gabi::ea(&frame.mItemMax))->init();
+    copy(frame.mItemMax);
+    view<dSv_player_bag_item_c>(gabi::ea(&frame.mBagItem))->init();
+    copy(frame.mBagItem);
+    view<dSv_player_get_bag_item_c>(gabi::ea(&frame.mGetBagItem))->init();
+    copy(frame.mGetBagItem);
+    view<dSv_player_bag_item_record_c>(gabi::ea(&frame.mBagItemRecord))->init();
+    copy(frame.mBagItemRecord);
+    view<dSv_player_collect_c>(gabi::ea(&frame.mCollect))->init();
+    copy(frame.mCollect);
+    view<dSv_player_map_c>(gabi::ea(&frame.mMap))->init();
+    copy(frame.mMap);
+    view<dSv_player_info_c>(gabi::ea(&frame.mInfo))->init();
+    saveFill(buf, 0, sizeof(frame.mInfo));
+    buf += sizeof(frame.mInfo);
+    view<dSv_player_config_c>(gabi::ea(&frame.mConfig))->init();
+    copy(frame.mConfig);
+    view<dSv_player_priest_c>(gabi::ea(&frame.mPriest))->init();
+    copy(frame.mPriest);
+    view<dSv_player_status_c_c>(gabi::ea(&frame.mStatusC))->init();
+    for (u32 i = 0; i < dSv_player_c::PLAYER_STATUS_C_COUNT; i++) copy(frame.mStatusC);
+    // HD: one initialized memory record is copied to all sixteen stages.
+    view<dSv_memory_c>(gabi::ea(&frame.mMemory))->init();
+    view<dSv_memory_c>(gabi::ea(&frame.mMemory))->init();
+    for (u32 i = 0; i < dSv_save_c::STAGE_MAX; i++) copy(frame.mMemory);
+    view<dSv_ocean_c>(gabi::ea(&frame.mOcean))->init();
+    copy(frame.mOcean);
+    view<dSv_event_c>(gabi::ea(&frame.mEvent))->init();
+    copy(frame.mEvent);
+    view<dSv_reserve_c>(gabi::ea(&frame.mReserve))->init();
+    copy(frame.mReserve);
+    return (buf - start) > CARD_PAYLOAD_SIZE ? -1 : 0;
 }
-VERIFY(0x025BAC50, dSv_info_c_initdata_to_card);
 
-/* 025BAEFC __sinit_d_save_cpp: the per-TU header statics (as in every unit) */
+/* 025BAEFC */
 static void __sinit_d_save_cpp() {
-    WWHD_FUNC(0x025BAEFC, void, (u32)0);
-    for (int i = 0; i < 4; i++) st(0x1047C90C + 4 * i, 0);
-    __register_global_object_l(0x101EADD8);
-    stf(0x1047C900, -3.1415927f);
-    stf(0x1047C904, 3.1415927f);
-    gabi::call(0x028ED6F8, 0x1047C908);
-    __register_global_object_l(0x101EADE4);
-    gabi::call(0x028EAB2C, 0x1047C909);
-    __register_global_object_l(0x101EADF0);
+    sinit_header_statics_z(gc_tu.headerStatics[0], gc_tu.headerStatics[1], gc_tu.headerStatics[2]);
 }
-VERIFY(0x025BAEFC, __sinit_d_save_cpp);
 
-}  // namespace d_save_5_cpp
+}  // namespace d_save_cpp
+using d_save_cpp::__sinit_d_save_cpp;
+
+/* WWHD glue
+str 10054034 "d_save.cpp" in 025B9C9C
+str 10054000 "0 <= i_stageNo && i_stageNo < dSv_save_c::STAGE_MAX" in 025B9C9C
+str 10054074 "d_save.cpp" in 025B9D24
+str 10054040 "0 <= i_stageNo && i_stageNo < dSv_save_c::STAGE_MAX" in 025B9D24
+str 10054080 "d_save.cpp" in 025B9E38
+str 100540D0 "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255" in 025B9E38
+str 1005408C "0 <= i_roomNo && i_roomNo < 64" in 025B9E38
+str 100540AC "0 <= zoneId && zoneId < ZONE_MAX" in 025B9E38
+str 1005412C "d_save.cpp" in 025B9F7C
+str 1005417C "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255" in 025B9F7C
+str 10054138 "0 <= i_roomNo && i_roomNo < 64" in 025B9F7C
+str 10054158 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025B9F7C
+str 100541D8 "d_save.cpp" in 025BA0C0
+str 100541E4 "0 <= i_roomNo && i_roomNo < 64" in 025BA0C0
+str 10054204 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA0C0
+str 10054228 "d_save.cpp" in 025BA20C
+str 10054278 "(0 <= i_no && i_no < (MEMORY_SWITCH+ DAN_SWITCH+ ZONE_SWITCH)) || i_no == -1 || i_no == 255" in 025BA20C
+str 10054234 "0 <= i_roomNo && i_roomNo < 64" in 025BA20C
+str 10054254 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA20C
+str 100542D4 "d_save.cpp" in 025BA384
+str 10054324 "(0 <= i_no && i_no < (MEMORY_ITEM+ZONE_ITEM)) || i_no == -1 || i_no == 127" in 025BA384
+str 100542E0 "0 <= i_roomNo && i_roomNo < 64" in 025BA384
+str 10054300 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA384
+str 1005437C "d_save.cpp" in 025BA494
+str 100543CC "(0 <= i_no && i_no < (MEMORY_ITEM+ZONE_ITEM)) || i_no == -1 || i_no == 127" in 025BA494
+str 10054388 "0 <= i_roomNo && i_roomNo < 64" in 025BA494
+str 100543A8 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA494
+str 10054424 "d_save.cpp" in 025BA5D4
+str 10054454 "(0 <= i_id && i_id < dSv_zoneActor_c::ACTOR_MAX) && (0 <= i_roomNo && i_roomNo < 64)" in 025BA5D4
+str 10054430 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA5D4
+str 100544B4 "d_save.cpp" in 025BA6A4
+str 100544C0 "0 <= i_id && i_id < dSv_zoneActor_c::ACTOR_MAX" in 025BA6A4
+str 100544F0 "0 <= i_roomNo && i_roomNo < 64" in 025BA6A4
+str 10054510 "0 <= zoneNo && zoneNo < ZONE_MAX" in 025BA6A4
+*/

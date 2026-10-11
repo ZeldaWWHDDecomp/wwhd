@@ -1,292 +1,370 @@
-/* hd_olv_02036084: the HD JPEG encode manager translation unit (02036084..02036A63). No GameCube
- * source: HD-only code.
- *
- * A sead singleton (0x7C: IDisposer +0, thread +0x10, state +0x14, done/ok flags +0x18/+0x19, the save
- * job +0x1C..+0x2C, the decode job +0x30..+0x3C, critical section +0x40) running on a
- * "JpegEncodeMgrThread" sead::DelegateThread: job 1 writes a picture into the save's album (picture
- * slots of the Tingle bottle / Picto Box), job 2 decodes a downloaded Miiverse JPEG screenshot into a
- * GX2 texture (decode, GX2CopySurface into the destination, texture registers, lyt texture map).
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/* HD JPEG encode/decode worker singleton. Private reconstruction. */
+#include "hd/hd_jpeg_mgr.h"
+using namespace gabi;
+static HdJpegSingleton l_singleton;
+static HdJpegDisposerHolder l_disposerHolder;
+static u32 l_disposerVTable;
+static u32 l_stringVTable;
+static u32 l_delegateVTable;
+static u32 l_threadHandler;
+static u32 l_threadPriority;
+static HdJpegConfiguration l_defaultConfig;
+static HdJpegStatics l_statics;
+static HdJpegRange l_range;
+static f32 l_lower;
+static f32 l_upper;
+static HdJpegRegistration l_registration1;
+static HdJpegRegistration l_registration2;
+static HdJpegRegistration l_registration3;
+extern void* hdJpegAllocate(u32);
+extern void* hdJpegHeapAllocate(u32,HdJpegHeap*,u32);
+extern void hdJpegDelete(void*);
+extern void hdJpegDeleteArray(void*);
+extern void hdJpegClear(void*,u32);
+extern void hdJpegCriticalConstruct(HdJpegCriticalSection*);
+extern void hdJpegCriticalDestroy(HdJpegCriticalSection*,u32);
+extern void hdJpegCriticalEnter(HdJpegCriticalSection*);
+extern void hdJpegCriticalLeave(HdJpegCriticalSection*);
+extern void hdJpegDisposerConstruct(HdJpegDisposer*,HdJpegHeap*,u32);
+extern void hdJpegDisposerDestroy(HdJpegDisposer*,u32);
+extern HdJpegHeap* hdJpegGetParentHeap();
+extern HdJpegHeap* hdJpegGetWorkHeap();
+extern HdJpegHeap* hdJpegCreateHeap(u32,HdJpegSafeString*,HdJpegHeap*,u32,u32);
+extern void* hdJpegHeapNew(u32,HdJpegHeap*,u32);
+extern HdJpegThread* hdJpegThreadConstruct(HdJpegThread*,HdJpegSafeString*,HdJpegDelegate*,HdJpegHeap*,u32,u32,u32,u32,u32);
+extern void hdJpegSaveConstruct(HdJpegSaveObject*,HdJpegHeap*,u32);
+extern void hdJpegSavePicture(HdJpegSaveObject*,void*,HdJpegSaveParameters*,u32,u32);
+extern u32 hdJpegGetDescriptor1();
+extern u32 hdJpegGetDescriptor2();
+extern void hdJpegSaveDescriptor1(HdJpegSaveObject*,u32,u32);
+extern void hdJpegSaveDescriptor2(HdJpegSaveObject*,u32,u32);
+extern void hdJpegSaveDestroy(HdJpegSaveObject*,u32);
+extern u32 hdJpegReadHeader(void*,u32,u32,be<u32>*,be<u32>*);
+extern u32 hdJpegDecode(void*,u32,void*,u32,u32,void*,u32);
+extern void hdJpegSurfaceSize(HdJpegSurface*);
+extern void hdJpegTextureRegisters(HdJpegTexture*);
+extern void hdJpegCopySurface(HdJpegSurface*,u32,u32,HdJpegSurface*,u32,u32);
+extern void hdJpegBlockMove(void*,void*,u32,u32);
+extern void hdJpegTextureFormat(be<u32>*,u32,u32);
+extern void hdJpegRegister(void*);
+extern void hdJpegInitSigned(be<u8>*);
+extern void hdJpegInitUnsigned(be<u8>*);
 
-namespace hd_olv_02036084 {
-
-static constexpr u32 GX2CalcSurfaceSizeAndAlignment = 0xC00060D0;
-static constexpr u32 GX2CopySurface = 0xC0006120;
-static constexpr u32 GX2InitTextureRegs = 0xC0006498;
-static constexpr u32 OSBlockMove_ = 0xC0009988;
-static constexpr u32 INST = 0x1018F3F4, DISP = 0x1018F3F8;
-
-/* 02036084: constructor (0x7C; the IDisposer at +0 is built by createInstance) */
-static u32 JpegMgr_ct(u32 self) {
-    WWHD_FUNC(0x02036084, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x7C);
-        if (t == 0) return 0;
+/* 02036084 */
+HdJpegMgr* hdJpegMgrConstruct(HdJpegMgr* self) {
+    if (!self) {
+        self = static_cast<HdJpegMgr*>(hdJpegAllocate(sizeof(HdJpegMgr)));
+        if (!self) return NULL;
     }
-    st(t + 0x10, 0);
-    st(t + 0x14, 3);
-    stb(t + 0x19, 0);
-    stb(t + 0x18, 0);
-    gabi::call(0x028F521C, t + 0x1C, 0x14u);
-    gabi::call(0x028F521C, t + 0x30, 0x10u);
-    gabi::call(0x02760084, t + 0x40);
-    return t;
+    self->mThread = NULL;
+    self->mState = HD_JPEG_NOT_STARTED;
+    self->mOk = 0;
+    self->mDone = 0;
+    hdJpegClear(&self->mSave,sizeof(HdJpegSaveJob));
+    hdJpegClear(&self->mDecode,sizeof(HdJpegDecodeJob));
+    hdJpegCriticalConstruct(&self->mCriticalSection);
+    return self;
 }
-VERIFY(0x02036084, JpegMgr_ct);
 
-/* 020360FC: sead singleton createInstance(heap) */
-static u32 JpegMgr_createInstance(u32 heap) {
-    WWHD_FUNC(0x020360FC, u32, heap);
-    u32 cur = ld(INST);
-    if (cur != 0) return cur;
-    u32 d = gabi::call<u32>(0x0273B0D4, 0x7Cu, heap, 4u);
-    if (d != 0) {
-        gabi::call(0x02752B0C, d, heap, 3u);
-        st(d + 0xC, 0x10005250);
+/* 020360FC */
+HdJpegMgr* hdJpegMgrCreateInstance(HdJpegHeap* heap) {
+    HdJpegMgr* current = l_singleton.mInstance;
+    if (current) return current;
+    HdJpegMgr* instance = static_cast<HdJpegMgr*>(hdJpegHeapAllocate(sizeof(HdJpegMgr),heap,4));
+    if (instance) {
+        hdJpegDisposerConstruct(&instance->mDisposer,heap,3);
+        instance->mDisposer.mVTable = reinterpret_cast<gfn*>(&l_disposerVTable);
     }
-    st(DISP, d);
-    u32 r = d;
-    if (d != 0) r = gabi::call<u32>(0x02036084, d);
-    st(INST, r);
-    return r;
+    l_disposerHolder.mDisposer = reinterpret_cast<HdJpegDisposer*>(instance);
+    HdJpegMgr* result = instance;
+    if (instance) result = hdJpegMgrConstruct(instance);
+    l_singleton.mInstance = result;
+    return result;
 }
-VERIFY(0x020360FC, JpegMgr_createInstance);
 
-static void JpegMgr_dt(u32 p, u32 flags) {
-    WWHD_FUNC(0x02036190, void, p, flags);
-    if (p == 0) return;
-    gabi::call(0x02760168, p + 0x40, 2u);
-    if (flags & 1) op_delete(p);
+/* 02036190 */
+void hdJpegMgrDestroy(HdJpegMgr* self,u32 flags) {
+    if (!self) return;
+    hdJpegCriticalDestroy(&self->mCriticalSection,2);
+    if (flags&1) hdJpegDelete(self);
 }
-VERIFY(0x02036190, JpegMgr_dt);
 
-/* 020361E4: the worker thread (method 02036860) on its own heap */
-static void JpegMgr_createThread(u32 self) {
-    WWHD_FUNC(0x020361E4, void, self);
-    gabi::Local<be<u32>[2]> nm;
-    st(nm.a + 4, 0x10005120);
-    st(nm.a + 0, 0x10005234);
-    u32 parent = gabi::call<u32>(0x0203E900);
-    u32 heap = gabi::call<u32>(0x02753004, 0u, nm.a, parent, 1u, 0u);
-    u32 th = gabi::call<u32>(0x0273B050, 0x98u, heap, 4u);
-    if (th != 0) {
-        st(nm.a + 4, 0x10005120);
-        st(nm.a + 0, 0x10005220);
-        u32 dg = gabi::call<u32>(0x0273B050, 0x10u, heap, 4u);
-        if (dg != 0) {
-            st(dg + 4, self);
-            sth(dg + 8, 0);
-            st(dg + 0xC, 0x02036860);
-            sth(dg + 0xA, 0xFFFF);
-            st(dg + 0, 0x10005138);
+/* 020361E4 */
+void hdJpegMgrCreateThread(HdJpegMgr* self) {
+    // HD: preserve the original frame and reused SafeString parameter storage.
+    gabi::AutoFrame automatic{gabi::Activation::current};
+    gabi::Local<HdJpegSafeString> storage;
+    HdJpegSafeString* name = storage.get();
+    name->mVTable = &l_stringVTable;
+    name->mText = gabi::at<const char>(gabi::guest_addr("JpegWorkerHeap"));
+    HdJpegHeap* parent = hdJpegGetParentHeap();
+    HdJpegHeap* heap = hdJpegCreateHeap(0,name,parent,1,0);
+    HdJpegThread* thread = static_cast<HdJpegThread*>(hdJpegHeapNew(0x98,heap,4));
+    if (thread) {
+        name->mVTable = &l_stringVTable;
+        name->mText = gabi::at<const char>(gabi::guest_addr("JpegEncodeMgrThread"));
+        HdJpegDelegate* delegate = static_cast<HdJpegDelegate*>(hdJpegHeapNew(sizeof(HdJpegDelegate),heap,4));
+        if (delegate) {
+            delegate->mObject = self;
+            delegate->mThisAdjustment = 0;
+            delegate->mFunction = &l_threadHandler;
+            delegate->mVirtualOffset = 0xFFFF;
+            delegate->mVTable = reinterpret_cast<gfn*>(&l_delegateVTable);
         }
-        th = gabi::call<u32>(0x0275FBD8, th, nm.a, dg, heap, ld(0x101F8B9C) + 2, 0u, 0x7FFFFFFFu, 0x5000u, 0x20u);
+        thread = hdJpegThreadConstruct(thread,name,delegate,heap,l_threadPriority+2,0,0x7FFFFFFF,0x5000,0x20);
     }
-    st(self + 0x10, th);
-    gabi::call_ptr<u32>(vfn(heap, 0xC, 0x2C), heap);
-    u32 t = ld(self + 0x10);
-    gabi::call_ptr<u32>(vfn(t, 0xC, 0x2C), t);
-    st(self + 0x14, 0);
+    self->mThread = thread;
+    gabi::call_ptr<u32>(heap->mVTable[11].get(),heap);
+    thread = self->mThread;
+    gabi::call_ptr<u32>(thread->mVTable[11].get(),thread);
+    self->mState = HD_JPEG_IDLE;
 }
-VERIFY(0x020361E4, JpegMgr_createThread);
 
-/* 020363E4: queue job 1 (save the picture BUF: three parameters and the album slot) */
-static u32 JpegMgr_requestSave(u32 self, u32 buf, u32 a, u32 b, u32 c, u32 slot) {
-    WWHD_FUNC(0x020363E4, u32, self, buf, a, b, c, slot);
-    if (ld(self + 0x14) != 0) return 0;
-    st(self + 0x1C, buf);
-    st(self + 0x2C, slot);
-    st(self + 0x20, a);
-    st(self + 0x14, 1);
-    st(self + 0x24, b);
-    u32 t = ld(self + 0x10);
-    stb(self + 0x18, 0);
-    st(self + 0x28, c);
-    gabi::call_ptr<u32>(vfn(t, 0xC, 0x1C), t, 1u, 0u);
+/* 020363E4 */
+u32 hdJpegMgrRequestSave(HdJpegMgr* self,void* buffer,u32 width,u32 height,u32 parameter,u32 slot) {
+    if (self->mState != HD_JPEG_IDLE) return 0;
+    self->mSave.mBuffer = buffer;
+    self->mSave.mSlot = slot;
+    self->mSave.mWidth = width;
+    self->mState = HD_JPEG_SAVE;
+    self->mSave.mHeight = height;
+    HdJpegThread* thread = self->mThread;
+    self->mDone = 0;
+    self->mSave.mParameter = parameter;
+    gabi::call_ptr<u32>(thread->mVTable[7].get(),thread,1u,0u);
     return 1;
 }
-VERIFY(0x020363E4, JpegMgr_requestSave);
 
-/* 02036474: queue job 2 (decode JPEG of SIZE into texture TEX at image DST) */
-static u32 JpegMgr_requestDecode(u32 self, u32 jpeg, u32 tex, u32 dst, u32 size) {
-    WWHD_FUNC(0x02036474, u32, self, jpeg, tex, dst, size);
-    if (ld(self + 0x14) != 0) return 0;
-    st(self + 0x3C, size);
-    u32 t = ld(self + 0x10);
-    st(self + 0x38, dst);
-    stb(self + 0x18, 0);
-    st(self + 0x14, 2);
-    st(self + 0x30, jpeg);
-    st(self + 0x34, tex);
-    gabi::call_ptr<u32>(vfn(t, 0xC, 0x1C), t, 2u, 0u);
+/* 02036474 */
+u32 hdJpegMgrRequestDecode(HdJpegMgr* self,void* jpeg,HdJpegTextureMap* texture,void* image,u32 size) {
+    if (self->mState != HD_JPEG_IDLE) return 0;
+    self->mDecode.mSize = size;
+    HdJpegThread* thread = self->mThread;
+    self->mDecode.mImage = image;
+    self->mDone = 0;
+    self->mState = HD_JPEG_DECODE;
+    self->mDecode.mJpeg = jpeg;
+    self->mDecode.mTexture = texture;
+    gabi::call_ptr<u32>(thread->mVTable[7].get(),thread,2u,0u);
     return 1;
 }
-VERIFY(0x02036474, JpegMgr_requestDecode);
 
-/* 020364F4: job 1: write the picture into the save's album (and its two descriptor values) */
-static void JpegMgr_doSave(u32 self) {
-    WWHD_FUNC(0x020364F4, void, self);
-    if (ld(self + 0x1C) == 0) return;
-    struct frame_l { be<u32> obj[2]; be<u32> prm[3]; }; /* sp+8..0x1B */
-    gabi::Local<frame_l> f;
-    const u32 obj = f.a, prm = f.a + 8;
-    u32 h = gabi::call<u32>(0x0203E90C);
-    gabi::call(0x0272720C, obj, h, 0u);
-    u32 buf = ld(self + 0x1C);
-    st(prm + 4, ld(self + 0x24));
-    st(prm + 0, ld(self + 0x20));
-    u32 c = ld(self + 0x28), slot = ld(self + 0x2C);
-    st(prm + 8, 3);
-    gabi::call(0x027272FC, obj, buf, prm, c, slot);
-    u32 ok = lbz(obj + 4);
-    stb(self + 0x19, ok);
-    if (ok != 0) {
-        u32 v = gabi::call<u32>(0x025BE8E8);
-        gabi::call(0x02727420, obj, ld(self + 0x2C), v);
-        v = gabi::call<u32>(0x025BE8F8);
-        gabi::call(0x02727470, obj, ld(self + 0x2C), v);
-        gabi::call(0x0273AFC8, ld(self + 0x1C));
-        st(self + 0x1C, 0);
-        stb(self + 0x19, 1);
+/* 020364F4 */
+void hdJpegMgrSave(HdJpegMgr* self) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
+    if (!self->mSave.mBuffer) return;
+    // HD: the constructor intentionally writes beyond the short object view into its caller frame.
+    gabi::Local<HdJpegSaveFrame> storage;
+    HdJpegSaveFrame* frame = storage.get();
+    HdJpegHeap* heap = hdJpegGetWorkHeap();
+    hdJpegSaveConstruct(&frame->mObject,heap,0);
+    void* buffer = self->mSave.mBuffer;
+    frame->mParameters.mHeight = self->mSave.mHeight;
+    frame->mParameters.mWidth = self->mSave.mWidth;
+    u32 parameter = self->mSave.mParameter;
+    u32 slot = self->mSave.mSlot;
+    frame->mParameters.mFormat = 3;
+    hdJpegSavePicture(&frame->mObject,buffer,&frame->mParameters,parameter,slot);
+    u32 ok = frame->mObject.mOk;
+    self->mOk = ok;
+    if (ok) {
+        u32 descriptor = hdJpegGetDescriptor1();
+        hdJpegSaveDescriptor1(&frame->mObject,self->mSave.mSlot,descriptor);
+        descriptor = hdJpegGetDescriptor2();
+        hdJpegSaveDescriptor2(&frame->mObject,self->mSave.mSlot,descriptor);
+        hdJpegDeleteArray(self->mSave.mBuffer);
+        self->mSave.mBuffer = NULL;
+        self->mOk = 1;
     }
-    gabi::call(0x027272A0, obj, 2u);
+    hdJpegSaveDestroy(&frame->mObject,2);
 }
-VERIFY(0x020364F4, JpegMgr_doSave);
 
-/* 020365C8: job 2: decode the JPEG into a linear RGBA surface and copy it into the texture */
-static void JpegMgr_doDecode(u32 self) {
-    WWHD_FUNC(0x020365C8, void, self);
-    if (ld(self + 0x30) == 0) {
-        stb(self + 0x19, 0);
+/* 020365C8 */
+void hdJpegMgrDecode(HdJpegMgr* self) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
+    if (!self->mDecode.mJpeg) {
+        self->mOk = 0;
         return;
     }
-    gabi::Local<be<u32>[0x82]> fr; /* the original frame sp+0..0x207 (offsets below as in it) */
-    const u32 F = fr.a;
-    const u32 S1 = F + 0x20, S2 = F + 0x94;
-    u32 h = gabi::call<u32>(0x0203E90C);
-    st(F + 8, 0);
-    if (gabi::call<u32>(0x0284DDB0, ld(self + 0x30), 0x50000u, ld(self + 0x3C), F + 0x14, F + 8) != 0) {
-        stb(self + 0x19, 0);
+    // HD: named views retain all original surface/texture/config offsets and untouched bytes.
+    gabi::Local<HdJpegDecodeFrame> storage;
+    HdJpegDecodeFrame* frame = storage.get();
+    HdJpegSurface* source = &frame->mSource;
+    HdJpegTexture* destination = &frame->mDestination;
+    HdJpegHeap* heap = hdJpegGetWorkHeap();
+    frame->mWorkSize = 0;
+    if (hdJpegReadHeader(self->mDecode.mJpeg,0x50000,self->mDecode.mSize,&frame->mWidth,&frame->mWorkSize)) {
+        self->mOk = 0;
         return;
     }
-    u32 freeSz = gabi::call_ptr<u32>(vfn(h, 0xC, 0x74), h);
-    u32 work_sz = ld(F + 8);
-    if (freeSz <= work_sz) {
-        stb(self + 0x19, 0);
+    u32 freeSize = gabi::call_ptr<u32>(heap->mVTable[29].get(),heap);
+    u32 workSize = frame->mWorkSize;
+    if (freeSize <= workSize) {
+        self->mOk = 0;
         return;
     }
-    u32 work = gabi::call<u32>(0x0273B0D4, work_sz, h, 4u);
-    /* source surface: 2D, RGBA8 (0x1A), linear (tile mode 0x10) */
-    st(S1 + 0xC, 0);
-    st(S1 + 4, ld(F + 0x14));
-    st(S1 + 0x14, 0x1A);
-    st(S1 + 0, 1);
-    st(S1 + 0x18, 0);
-    st(S1 + 0x10, 0);
-    st(S1 + 0x1C, 1);
-    st(S1 + 0x2C, 0);
-    st(S1 + 0x24, 0);
-    st(S1 + 8, ld(F + 0x18));
-    st(S1 + 0x34, 0);
-    st(S1 + 0x30, 0x10);
-    gabi::call(GX2CalcSurfaceSizeAndAlignment, S1);
-    u32 buf = gabi::call<u32>(0x0273B0D4, (ld(S1 + 0x20) + 3) & ~3u, h, ld(S1 + 0x38));
-    u32 rc = gabi::call<u32>(0x0284BE8C, work, ld(F + 8), ld(self + 0x30), 0x50000u, ld(self + 0x3C), buf, ld(S1 + 0x20));
-    gabi::call(0x0273AFC8, work);
-    st(S1 + 0x24, buf);
-    for (u32 i = 0; i < 0x36; i++) st(F + 0x130 + i * 4, ld(0x10005148 + i * 4));
-    /* destination texture surface: 2D, RGBA8, default tiling */
-    st(S2 + 8, ld(F + 0x18));
-    st(S2 + 0x10, 0);
-    st(F + 0x10C, 0);
-    st(F + 0x118, ld(F + 0x198));
-    st(F + 0x114, 0);
-    st(S2 + 0xC, 0);
-    st(F + 0x108, 0);
-    st(S2 + 0, 1);
-    st(S2 + 0x18, 0);
-    st(S2 + 0x30, 0);
-    st(F + 0x110, 0);
-    st(S2 + 4, ld(F + 0x14));
-    st(S2 + 0x14, 0x1A);
-    st(S2 + 0x34, 0);
-    st(S2 + 0x1C, 1);
-    gabi::call(GX2CalcSurfaceSizeAndAlignment, S2);
-    gabi::call(GX2InitTextureRegs, S2);
-    st(S2 + 0x24, ld(self + 0x38));
-    gabi::call(GX2CopySurface, S1, 0u, 0u, S2, 0u, 0u);
-    u32 tex = ld(self + 0x34);
-    gabi::call(OSBlockMove_, tex + 0xC, S2, 0x74u, 0u);
-    st(tex + 0x80, 0);
-    u32 a1c = ld(tex + 0x1C);
-    st(tex + 0x90, 0x10203);
-    st(tex + 0x84, a1c);
-    st(tex + 0x20, 0x41A);
-    u32 a18 = ld(tex + 0x18);
-    st(tex + 0x88, 0);
-    st(tex + 0x8C, a18);
-    gabi::call(GX2InitTextureRegs, tex + 0xC);
-    gabi::call(0x0287F1EC, F + 0xC, 0x41Au, 1u);
-    u32 wh = ((u32)lhz(S2 + 6) << 16) | lhz(S2 + 0xA);
-    u32 fmt = ld(F + 0xC);
-    st(tex + 0, 1);
-    st(F + 0x10, wh);
-    sth(tex + 4, lhz(F + 0x10));
-    stb(tex + 8, fmt);
-    sth(tex + 6, lhz(F + 0x12));
-    gabi::call(0x0273AFC8, buf);
-    stb(self + 0x19, rc == 0 ? 1 : 0);
+    void* work = hdJpegHeapAllocate(workSize,heap,4);
+    source->mDepth = 0;
+    source->mWidth = frame->mWidth;
+    source->mFormat = HD_JPEG_FORMAT_RGBA8;
+    source->mDimension = HD_JPEG_SURFACE_2D;
+    source->mAa = 0;
+    source->mMipLevels = 0;
+    source->mUse = 1;
+    source->mMip = NULL;
+    source->mImage = NULL;
+    source->mHeight = frame->mHeight;
+    source->mSwizzle = 0;
+    source->mTileMode = HD_JPEG_TILE_LINEAR;
+    hdJpegSurfaceSize(source);
+    void* buffer = hdJpegHeapAllocate((source->mImageSize+3)&~3u,heap,source->mAlignment);
+    u32 result = hdJpegDecode(work,frame->mWorkSize,self->mDecode.mJpeg,0x50000,self->mDecode.mSize,buffer,source->mImageSize);
+    hdJpegDeleteArray(work);
+    source->mImage = buffer;
+    for (u32 i=0;i<0x36;++i) frame->mConfig[i] = l_defaultConfig.mWords[i];
+    destination->mSurface.mHeight = frame->mHeight;
+    destination->mSurface.mMipLevels = 0;
+    destination->mMipCount = 0;
+    destination->mComponentSelect = frame->mConfig[26];
+    destination->mSliceCount = 0;
+    destination->mSurface.mDepth = 0;
+    destination->mFirstMip = 0;
+    destination->mSurface.mDimension = HD_JPEG_SURFACE_2D;
+    destination->mSurface.mAa = 0;
+    destination->mSurface.mTileMode = 0;
+    destination->mFirstSlice = 0;
+    destination->mSurface.mWidth = frame->mWidth;
+    destination->mSurface.mFormat = HD_JPEG_FORMAT_RGBA8;
+    destination->mSurface.mSwizzle = 0;
+    destination->mSurface.mUse = 1;
+    hdJpegSurfaceSize(&destination->mSurface);
+    hdJpegTextureRegisters(destination);
+    destination->mSurface.mImage = self->mDecode.mImage;
+    hdJpegCopySurface(source,0,0,&destination->mSurface,0,0);
+    HdJpegTextureMap* texture = self->mDecode.mTexture;
+    hdJpegBlockMove(&texture->mTexture,destination,sizeof(HdJpegSurface),0);
+    texture->mTexture.mFirstMip = 0;
+    u32 mipLevels = texture->mTexture.mSurface.mMipLevels;
+    texture->mTexture.mComponentSelect = 0x10203;
+    texture->mTexture.mMipCount = mipLevels;
+    texture->mTexture.mSurface.mFormat = 0x41A;
+    u32 depth = texture->mTexture.mSurface.mDepth;
+    texture->mTexture.mFirstSlice = 0;
+    texture->mTexture.mSliceCount = depth;
+    hdJpegTextureRegisters(&texture->mTexture);
+    hdJpegTextureFormat(&frame->mFormat,0x41A,1);
+    u32 dimensions = ((u32)(u16)destination->mSurface.mWidth<<16)|(u16)destination->mSurface.mHeight;
+    u32 format = frame->mFormat;
+    texture->mType = 1;
+    frame->mPackedSize = dimensions;
+    texture->mWidth = frame->mSizeHalves[0];
+    texture->mFormat = format;
+    texture->mHeight = frame->mSizeHalves[1];
+    hdJpegDeleteArray(buffer);
+    self->mOk = result==0?1:0;
 }
-VERIFY(0x020365C8, JpegMgr_doDecode);
 
-/* 02036860: thread message handler */
-static void JpegMgr_threadProc(u32 self, u32 thread, u32 msg) {
-    WWHD_FUNC(0x02036860, void, self, thread, msg);
-    if (msg != 1 && msg != 2) return;
-    u32 cs = self + 0x40;
-    gabi::call(0x027601BC, cs);
-    gabi::call(msg == 1 ? 0x020364F4 : 0x020365C8, self);
-    st(self + 0x14, 0);
-    stb(self + 0x18, 1);
-    gabi::call(0x027601F0, cs);
+/* 02036860 */
+void hdJpegMgrThreadProc(HdJpegMgr* self,HdJpegThread* thread,u32 message) {
+    if (message != HD_JPEG_SAVE && message != HD_JPEG_DECODE) return;
+    HdJpegCriticalSection* critical = &self->mCriticalSection;
+    hdJpegCriticalEnter(critical);
+    if (message == HD_JPEG_SAVE) hdJpegMgrSave(self);
+    else hdJpegMgrDecode(self);
+    self->mState = HD_JPEG_IDLE;
+    self->mDone = 1;
+    hdJpegCriticalLeave(critical);
 }
-VERIFY(0x02036860, JpegMgr_threadProc);
 
-/* 0203691C: the singleton disposer's destructor */
-static void JpegMgr_disposer_dt(u32 p, u32 flags) {
-    WWHD_FUNC(0x0203691C, void, p, flags);
-    if (p == 0) return;
-    st(p + 0xC, 0x10005250);
-    if (p == ld(DISP)) {
-        u32 inst = ld(INST);
-        st(DISP, 0);
-        gabi::call(0x02036190, inst, 2u);
-        st(INST, 0);
+/* 0203691C */
+void hdJpegMgrDisposerDestroy(HdJpegDisposer* disposer,u32 flags) {
+    if (!disposer) return;
+    disposer->mVTable = reinterpret_cast<gfn*>(&l_disposerVTable);
+    if (disposer == l_disposerHolder.mDisposer) {
+        HdJpegMgr* instance = l_singleton.mInstance;
+        l_disposerHolder.mDisposer = NULL;
+        hdJpegMgrDestroy(instance,2);
+        l_singleton.mInstance = NULL;
     }
-    gabi::call(0x02752BEC, p, 0u);
-    if (flags & 1) op_delete(p);
+    hdJpegDisposerDestroy(disposer,0);
+    if (flags&1) hdJpegDelete(disposer);
 }
-VERIFY(0x0203691C, JpegMgr_disposer_dt);
 
-static void sinit_020369B8() {
-    WWHD_FUNC(0x020369B8, void);
-    header_sinit(0x102009B4, 0x1018F3D0, 0x10005244);
+/* 020369B8 */
+void hdJpegMgrStaticInit() {
+    l_statics.mWords[2] = 0;
+    l_statics.mWords[0] = 0;
+    l_statics.mWords[3] = 0;
+    l_statics.mWords[1] = 0;
+    hdJpegRegister(&l_registration1);
+    const f32 lower = l_lower;
+    const f32 upper = l_upper;
+    l_range.mLower = lower;
+    l_range.mUpper = upper;
+    hdJpegInitSigned(&l_range.mSigned);
+    hdJpegRegister(&l_registration2);
+    hdJpegInitUnsigned(&l_range.mUnsigned);
+    hdJpegRegister(&l_registration3);
 }
-VERIFY(0x020369B8, sinit_020369B8);
 
-static void Dt_02036A4C(u32 p, u32 flags) {
-    WWHD_FUNC(0x02036A4C, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) op_delete(p);
+/* 02036A4C */
+void hdJpegDeleteCompanion(void* object,u32 flags) {
+    if (!object) return;
+    if (flags&1) hdJpegDelete(object);
 }
-VERIFY(0x02036A4C, Dt_02036A4C);
 
-static void Empty_02036A60() {
-    WWHD_FUNC(0x02036A60, void);
-}
-VERIFY(0x02036A60, Empty_02036A60);
+/* 02036A60 */
+void hdJpegEmptyCompanion() {}
 
-}  // namespace hd_olv_02036084
+/* WWHD glue (tools/verify/autoglue.py)
+data l_singleton 1018F3F4
+data l_disposerHolder 1018F3F8
+data l_disposerVTable 10005250
+data l_stringVTable 10005120
+data l_delegateVTable 10005138
+data l_threadHandler 02036860
+data l_threadPriority 101F8B9C
+data l_defaultConfig 10005148
+data l_statics 102009B4
+data l_range 102009A8
+data l_lower 10005244
+data l_upper 10005248
+data l_registration1 1018F3D0
+data l_registration2 1018F3DC
+data l_registration3 1018F3E8
+str 10005234 "JpegWorkerHeap" renamed
+str 10005220 "JpegEncodeMgrThread" renamed
+ext 0273AD10 void* hdJpegAllocate(u32)
+ext 0273B0D4 void* hdJpegHeapAllocate(u32,HdJpegHeap*,u32)
+ext 0273AF40 void hdJpegDelete(void*)
+ext 0273AFC8 void hdJpegDeleteArray(void*)
+ext 028F521C void hdJpegClear(void*,u32)
+ext 02760084 void hdJpegCriticalConstruct(HdJpegCriticalSection*)
+ext 02760168 void hdJpegCriticalDestroy(HdJpegCriticalSection*,u32)
+ext 027601BC void hdJpegCriticalEnter(HdJpegCriticalSection*)
+ext 027601F0 void hdJpegCriticalLeave(HdJpegCriticalSection*)
+ext 02752B0C void hdJpegDisposerConstruct(HdJpegDisposer*,HdJpegHeap*,u32)
+ext 02752BEC void hdJpegDisposerDestroy(HdJpegDisposer*,u32)
+ext 0203E900 HdJpegHeap* hdJpegGetParentHeap()
+ext 0203E90C HdJpegHeap* hdJpegGetWorkHeap()
+ext 02753004 HdJpegHeap* hdJpegCreateHeap(u32,HdJpegSafeString*,HdJpegHeap*,u32,u32)
+ext 0273B050 void* hdJpegHeapNew(u32,HdJpegHeap*,u32)
+ext 0275FBD8 HdJpegThread* hdJpegThreadConstruct(HdJpegThread*,HdJpegSafeString*,HdJpegDelegate*,HdJpegHeap*,u32,u32,u32,u32,u32)
+ext 0272720C void hdJpegSaveConstruct(HdJpegSaveObject*,HdJpegHeap*,u32)
+ext 027272FC void hdJpegSavePicture(HdJpegSaveObject*,void*,HdJpegSaveParameters*,u32,u32)
+ext 025BE8E8 u32 hdJpegGetDescriptor1()
+ext 025BE8F8 u32 hdJpegGetDescriptor2()
+ext 02727420 void hdJpegSaveDescriptor1(HdJpegSaveObject*,u32,u32)
+ext 02727470 void hdJpegSaveDescriptor2(HdJpegSaveObject*,u32,u32)
+ext 027272A0 void hdJpegSaveDestroy(HdJpegSaveObject*,u32)
+ext 0284DDB0 u32 hdJpegReadHeader(void*,u32,u32,be<u32>*,be<u32>*)
+ext 0284BE8C u32 hdJpegDecode(void*,u32,void*,u32,u32,void*,u32)
+ext C00060D0 void hdJpegSurfaceSize(HdJpegSurface*)
+ext C0006498 void hdJpegTextureRegisters(HdJpegTexture*)
+ext C0006120 void hdJpegCopySurface(HdJpegSurface*,u32,u32,HdJpegSurface*,u32,u32)
+ext C0009988 void hdJpegBlockMove(void*,void*,u32,u32)
+ext 0287F1EC void hdJpegTextureFormat(be<u32>*,u32,u32)
+ext 028F026C void hdJpegRegister(void*)
+ext 028ED6F8 void hdJpegInitSigned(be<u8>*)
+ext 028EAB2C void hdJpegInitUnsigned(be<u8>*)
+*/

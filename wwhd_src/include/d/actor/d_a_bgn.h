@@ -302,14 +302,12 @@ inline be<s32>& BGN_HAND_MAX() { return *gabi::at<be<s32>>(0x10461A40); }
 inline be<s32>& BGN_TAIL_MAX() { return *gabi::at<be<s32>>(0x10461A44); }
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
-WWHD_OPAQUE(J3DDrawBuffer);
-WWHD_OPAQUE(J3DPacket);
+/* J3DDrawBuffer, J3DPacket: JSystem/J3DGraph.h */
 /* j3dSys (HD 0x104B45C0): view matrix at +0x38 */
 inline Mtx34* j3dSys_viewMtx() { return gabi::at<Mtx34>(0x104B45F8); }
 /* 028E9108 PSMTXConcat(a, b, ab) */
 inline void PSMTXConcat(const Mtx34* a, const Mtx34* b, Mtx34* ab) { gabi::call(0x028E9108, a, b, ab); }
-/* dComIfGd_getOpaListSky(): play+0x5D4C (HD) */
-inline J3DDrawBuffer* dComIfGd_getOpaListSky() { return gabi::at<J3DDrawBuffer>(gabi::load<u32>(dComIfGp_ea() + 0x5D4C)); }
+/* dComIfGd_getOpaListSky, dComIfGd_setListSky: bindings.h */
 /* 027F0E04 J3DDrawBuffer::entryImm(J3DPacket*, u16) */
 inline s32 J3DDrawBuffer_entryImm(J3DDrawBuffer* b, void* pkt, u16 idx) { return gabi::call<s32>(0x027F0E04, b, pkt, idx); }
 /* dPa_smokeEcallBack::remove(): virtual (vtable at +0, slot +0x44) */
@@ -359,11 +357,6 @@ WWHD_SIZE(dBgS_LinChk_bgn, 0x6C);
 /* dCcD_GObjInf::OnAtSetBit / OffAtSetBit (inline): bit 0 of the At SPrm word */
 inline void OnAtSetBit(dCcD_GObjInf* o) { o->mObjAt.mSPrm |= 1u; }
 inline void OffAtSetBit(dCcD_GObjInf* o) { o->mObjAt.mSPrm &= ~1u; }
-/* dComIfGd_setListSky (HD): the sky opa/xlu lists (play+0x5D4C/0x5D50) */
-inline void dComIfGd_setListSky() {
-    gabi::store<u32>(0x104B4634, gabi::load<u32>(dComIfGp_ea() + 0x5D4C));
-    gabi::store<u32>(0x104B4638, gabi::load<u32>(dComIfGp_ea() + 0x5D50));
-}
 /* HD J3DMaterial: material i of a model's data (+0xAC) is *(*(data+0x10) + 4i); its pixel-engine block
  * is self-relative at material+0x20 (0: none) */
 inline u32 bgn_material0(J3DModel* model) {

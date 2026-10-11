@@ -1,45 +1,54 @@
-#include "gabi.h"
-using namespace gabi;
-namespace c_node_iter {
-s32 method(void *node, u32 callback, void *user) {
-  WWHD_FUNC(0x02019D50, s32, node, callback, user);
-  s32 result = 1;
-  u32 next = node ? load<u32>(ea(node) + 8) : 0;
-  while (node) {
-    if (!call_ptr<s32>(callback, node, user)) result = 0;
-    node = at<void>(next);
-    next = node ? load<u32>(ea(node) + 8) : 0;
-  }
-  return result;
+/**
+ * c_node_iter.cpp
+ * System component - node iteration and search
+ *
+ * WWHD, written in the style of zeldaret/tww and verified function by function against the
+ * recompiled original (tools/verify, unit c_node_iter).
+ */
+
+#include "SSystem/SComponent/c_node_iter.h"
+
+/* 02019D50 */
+BOOL cNdIt_Method(node_class* pNode, cNdIt_MethodFunc pMethod, void* pUserData) {
+    BOOL ret = TRUE;
+    node_class* pNext = pNode ? (node_class*)pNode->mpNextNode : NULL;
+
+    while (pNode) {
+        // HD: dispatch the guest callback through the verification ABI.
+        int methodRet = gabi::call_ptr<int>(gabi::ea((void*)pMethod), pNode, pUserData);
+        if (!methodRet) {
+            ret = FALSE;
+        }
+        pNode = pNext;
+        pNext = pNext ? (node_class*)pNext->mpNextNode : NULL;
+    }
+
+    return ret;
 }
-VERIFY(0x02019D50, method);
-void *judge(void *node, u32 callback, void *user) {
-  WWHD_FUNC(0x02019DE8, void *, node, callback, user);
-  u32 next = node ? load<u32>(ea(node) + 8) : 0;
-  while (node) {
-    void *result = call_ptr<void *>(callback, node, user);
-    if (result) return result;
-    node = at<void>(next);
-    next = node ? load<u32>(ea(node) + 8) : 0;
-  }
-  return nullptr;
+
+/* 02019DE8 */
+void* cNdIt_Judge(node_class* pNode, cNdIt_JudgeFunc pJudge, void* pUserData) {
+    node_class* pNext = pNode ? (node_class*)pNode->mpNextNode : NULL;
+
+    while (pNode) {
+        // HD: dispatch the guest callback through the verification ABI.
+        void* pJudgeRet = gabi::call_ptr<void*>(gabi::ea((void*)pJudge), pNode, pUserData);
+        if (pJudgeRet != NULL) {
+            return pJudgeRet;
+        }
+        pNode = pNext;
+        pNext = pNext ? (node_class*)pNext->mpNextNode : NULL;
+    }
+
+    return NULL;
 }
-VERIFY(0x02019DE8, judge);
-void static_init() {
-  WWHD_FUNC(0x02019E6C, void);
-  store<u32>(0x101FFA48, 0);
-  store<u32>(0x101FFA40, 0);
-  store<u32>(0x101FFA4C, 0);
-  store<u32>(0x101FFA44, 0);
-  call<void>(0x028F026C, at<void>(0x1018D2B0));
-  f32 first = load<f32>(0x10003648);
-  f32 second = load<f32>(0x1000364C);
-  store<f32>(0x101FFA34, first);
-  store<f32>(0x101FFA38, second);
-  call<void>(0x028ED6F8, at<void>(0x101FFA3C));
-  call<void>(0x028F026C, at<void>(0x1018D2BC));
-  call<void>(0x028EAB2C, at<void>(0x101FFA3D));
-  call<void>(0x028F026C, at<void>(0x1018D2C8));
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 02019E6C */
+static void __sinit_c_node_iter_cpp() {
+    sinit_header_statics_rodata(0x101FFA34, 0x1018D2B0, 0x101FFA40, 0x10003648);
 }
-VERIFY(0x02019E6C, static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

@@ -1,25 +1,58 @@
-// HD message controller, proven control vtable subset. Full unit inventory pending.
-#include "gabi.h"
-using namespace gabi;
-u32 messageControlCtor(u32 p){
- WWHD_FUNC(0x025F7424,u32,p);
- if(!p){p=call<u32>(0x0273AD10,0x74u);if(!p)return 0;}
- call<void>(0x028427B8,p);
- store<u32>(p+0x3C,0);store<u32>(p+0x40,0);store<u32>(p+0x38,0x100E0CB8u);
- store<u32>(p+0x54,0);store<u32>(p+0x58,0);
- s32 n=load<s16>(0x1047AFA0u);float z=load<float>(0x100E0C4Cu);store<u32>(p+0x5C,n);
- n=load<s16>(0x1047AFA0u);
- store<float>(p+0x44,z);store<u32>(p+0x60,n);store<u32>(p+0x6C,0x1E6u);
- store<float>(p+0x48,z);store<u8>(p+0x71,0);store<float>(p+0x4C,z);
- store<u32>(p+0x68,0);store<u32>(p+0x64,0);store<u8>(p+0x70,0);store<float>(p+0x50,z);
- return p;
+/** d_mesg_controller.cpp — message text controller.
+ * See tww d/d_mesg.cpp.
+ */
+#include "d/d_mesg_controller.h"
+
+static s16 initialFontSize;
+static f32 initialLineLength;
+
+/* 025F7424 */
+dMesg_tControl* dMesg_tControl_ct(dMesg_tControl* self) {
+    // HD: GHS constructor allocation path and explicit base construction.
+    if (!self) {
+        self = static_cast<dMesg_tControl*>(operator_new(sizeof(dMesg_tControl)));
+        if (!self)
+            return nullptr;
+    }
+    JMessage_TControl_ct(self);
+    self->mMainFont = nullptr;
+    self->mRubyFont = nullptr; // HD: initializes the ruby font as well.
+    self->__vtbl = dMesg_tControl::__vt;
+    self->mLineCount = 0;
+    self->mLineStart = 0;
+    self->mInitFontSize = initialFontSize;
+    f32 length = initialLineLength;
+    self->mNowFontSize = initialFontSize;
+    self->mLineLength[0] = length;
+    self->mTextBoxWidth = 486;
+    self->mLineLength[1] = length;
+    self->mCode16Fg = 0;
+    self->mLineLength[2] = length;
+    self->mCharCode = 0;
+    self->mCharSpace = 0;
+    self->mbHeader = 0;
+    self->mLineLength[3] = length;
+    return self;
 }
-VERIFY(0x025F7424,messageControlCtor);
-void messageControlMode(u32 p,u32 mode){
- WWHD_FUNC(0x025F74D0,void,p,mode);store<u8>(call<u32>(0x025200D4)+0x5BB2,mode);
+
+/* 025F74D0 */
+void dMesg_tControl::setMesgStatus(u32 status) {
+    // HD: status belongs to the play object; this method ignores its controller.
+    reinterpret_cast<dMesg_play_view*>(dComIfGp_get())->mMesgStatus = status;
 }
-VERIFY(0x025F74D0,messageControlMode);
-void messageControlDtor(u32 p,u32 flags){
- WWHD_FUNC(0x025F9070,void,p,flags);if(p){call<void>(0x02842828,p,0u);if(flags&1)call<void>(0x0273AF40,p);}
+
+/* 025F9070 */
+void dMesg_tControl_dt(dMesg_tControl* self, u32 flags) {
+    if (self) {
+        JMessage_TControl_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
 }
-VERIFY(0x025F9070,messageControlDtor);
+
+/* WWHD glue (tools/verify/autoglue.py)
+data initialFontSize 1047AFA0
+data initialLineLength 100E0C4C
+ext 028427B8 void JMessage_TControl_ct(JMessage::TControl* self)
+ext 02842828 void JMessage_TControl_dt(JMessage::TControl* self, u32 flags)
+*/

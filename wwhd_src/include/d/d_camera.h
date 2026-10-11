@@ -86,8 +86,13 @@ struct dCamera_c {
     struct BGChk {
         /* 0x00 */ be<u8> m00;
         /* 0x01 */ u8 _01[3];
-        /* 0x04 */ u8 m04[0x54];   /* dBgS_CamGndChk */
+        /* 0x04 */ dBgS_CamGndChk m04;
         /* 0x58 */ be<f32> m58;
+    };
+    /* GameCube struct BG (0xB8) */
+    struct BG {
+        /* 0x00 */ BGChk m00;
+        /* 0x5C */ BGChk m5C;
     };
     struct EventParam {
         /* 0x00 */ char mName[16];
@@ -211,8 +216,7 @@ struct dCamera_c {
     /* 0x24C */ be<s32> m248[3];
     /* 0x258 */ be<s32> m254;
     /* 0x25C */ be<s32> m258;
-    /* 0x260 */ BGChk mBG_m00;
-    /* 0x2BC */ BGChk mBG_m5C;
+    /* 0x260 */ BG mBG;                     /* GameCube 0x25C */
     /* 0x318 */ be<u8> m314;
     /* 0x319 */ u8 _319[3];
     /* 0x31C */ be<f32> m318;
@@ -429,7 +433,7 @@ WWHD_OFFSET(dCamera_c, mCameraID, 0x120);
 WWHD_OFFSET(dCamera_c, mStickMainPosXLast, 0x158);
 WWHD_OFFSET(dCamera_c, mForcusLine, 0x1B4);
 WWHD_OFFSET(dCamera_c, mMonitor, 0x22C);
-WWHD_OFFSET(dCamera_c, mBG_m00, 0x260);
+WWHD_OFFSET(dCamera_c, mBG, 0x260);
 WWHD_OFFSET(dCamera_c, m318, 0x31C);
 WWHD_OFFSET(dCamera_c, mWork, 0x37C);
 WWHD_OFFSET(dCamera_c, mEventData, 0x3FC);

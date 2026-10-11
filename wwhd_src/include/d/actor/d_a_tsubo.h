@@ -5,6 +5,7 @@
  * their GameCube layouts (Data_c 0xCC, M_data at 0x10040FAC). */
 #pragma once
 #include "bindings.h"
+#include "gc_api/f_op/f_op_actor.h"
 
 namespace daTsubo {
 
@@ -16,6 +17,7 @@ struct dBgS_GndChk_l {
 /* dPa_followEcallBack (0x14), see bindings.h; remove() is the virtual at vtable +0x44 */
 
 struct Act_c : fopAc_ac_c {
+    bool pos_init(); /* GameCube inline (below) [v nz, ji1] */
     enum Prm_e {
         PRM_ITEMNO_W = 6, PRM_ITEMNO_S = 0,
         PRM_SPEC_W = 6, PRM_SPEC_S = 8,
@@ -273,7 +275,7 @@ inline cBgS_PolyInfo* Acch_gnd(dBgS_Acch* a) { return gabi::at<cBgS_PolyInfo>(ga
 /* attention_info.flags (+0x39C), distances (+0x388..), position (+0x390) */
 inline void attn_onBit(fopAc_ac_c* a, u32 b) { u32 p = gabi::ea(a) + 0x39C; gabi::store<u32>(p, gabi::load<u32>(p) | b); }
 inline void attn_offBit(fopAc_ac_c* a, u32 b) { u32 p = gabi::ea(a) + 0x39C; gabi::store<u32>(p, gabi::load<u32>(p) & ~b); }
-enum { fopAc_Attn_ACTION_CARRY_e = 0x10 };
+/* fopAc_Attn_ACTION_CARRY_e: gc_api/f_op/f_op_actor.h */
 
 /* HD fopAcM_seStart inline where the actor is known non-null (only &eyePos is checked) */
 inline void fopAcM_seStart_nn(fopAc_ac_c* a, u32 id, u32 param) {
@@ -311,4 +313,21 @@ template <class F> inline bool sead_streq(u32 lit, F str_fn) {
     return false;
 }
 
+/* GameCube inline Act_c::pos_init (cSAngle::Val out of line, mDoMtx_identity = PSMTXIdentity) [v nz] */
+inline bool Act_c::pos_init() {
+    if (m678 == 2) {
+        current.pos.set(home.pos);
+        current.angle = home.angle;
+        shape_angle = home.angle;
+        cSAngle_Val(&m688, cSAngle__0);
+        cSAngle_Val(&m68A, cSAngle__0);
+        cSAngle_Val(&m68C, cSAngle__0);
+        cSAngle_Val(&m68E, cSAngle__0);
+        cSAngle_Val(&m690, cSAngle__0);
+        cSAngle_Val(&m692, (s16)current.angle.y);
+        gabi::call(0x028E9098, &mPoseMtx);
+        return true;
+    }
+    return false;
+}
 } // namespace daTsubo

@@ -1,72 +1,75 @@
-#include "gabi.h"
-using gabi::load; using gabi::store;
-s32 fpcLyTg_ToQueue(void* tag,u32 layerID,u32 listID,u32 priority) {
- WWHD_FUNC(0x025DEF68,s32,tag,layerID,listID,priority);
- u32 a=gabi::ea(tag),layer=load<u32>(a+0x14);
- if(layerID==0xFFFFFFFFu && !layer) return 0;
- if(layerID==0xFFFFFFFFu || layerID==0xFFFFFFFDu) {
-  s32 index=gabi::call<s32>(0x025DEA20,gabi::at<void>(layer),listID,tag);
-  if(!index) return 0;
-  store<u16>(a+0x18,listID);
-  store<u16>(a+0x1A,u16(u32(index)-1u));
-  return 1;
- }
- if(!layer || load<u32>(layer+0xC)!=layerID) {
-  layer=gabi::ea(gabi::call<void*>(0x025DEAC0,layerID));
-  store<u32>(a+0x14,layer);
- }
- s32 result=gabi::call<s32>(0x025DEA18,gabi::at<void>(layer),listID,tag,priority);
- if(!result) return 0;
- store<u16>(a+0x1A,priority);
- store<u16>(a+0x18,listID);
- return 1;
+/** Layer management tags and queue transitions, in tww style.
+ * Verified WWHD unit f_pc_layer_tag. */
+#include "f_pc/f_pc_layer_tag.h"
+
+static const u32 crear[7] = {0, 0, 0, 0, 0, 0, 0xFFFFFFFF};
+
+/* 025DEF68 */
+s32 fpcLyTg_ToQueue(layer_management_tag_class* i_lyTag, u32 i_layerID, u32 i_listID, u32 i_listPriority) {
+    layer_class* layer = i_lyTag->mpLayer;
+    if (i_layerID == fpcLy_NONE_e && layer == NULL) return 0;
+    if (i_layerID == fpcLy_NONE_e || i_layerID == fpcLy_CURRENT_e) {
+        s32 idx = fpcLy_ToQueue(layer, i_listID, i_lyTag);
+        if (idx == 0) return 0;
+        i_lyTag->mNodeListID = (u16)i_listID;
+        i_lyTag->mNodeListIdx = (u16)((u32)idx - 1);
+        return 1;
+    }
+    // HD: a missing stored layer is resolved before reading its ID.
+    if (layer == NULL || layer->mLayerID != i_layerID) {
+        layer = fpcLy_Layer(i_layerID);
+        i_lyTag->mpLayer = layer;
+    }
+    s32 result = fpcLy_IntoQueue(layer, i_listID, i_lyTag, i_listPriority);
+    if (result == 0) return 0;
+    i_lyTag->mNodeListIdx = (u16)i_listPriority;
+    i_lyTag->mNodeListID = (u16)i_listID;
+    return 1;
 }
-VERIFY(0x025DEF68,fpcLyTg_ToQueue);
-s32 fpcLyTg_QueueTo(void* tag) {
- WWHD_FUNC(0x025DF084,s32,tag);
- u32 a=gabi::ea(tag),layer=load<u32>(a+0x14);
- if(gabi::call<s32>(0x025DEA28,gabi::at<void>(layer),tag)!=1) return 0;
- store<u32>(a+0x14,0);
- store<u16>(a+0x1A,0xFFFF);
- store<u16>(a+0x18,0xFFFF);
- return 1;
+
+/* 025DF084 */
+s32 fpcLyTg_QueueTo(layer_management_tag_class* i_lyTag) {
+    layer_class* layer = i_lyTag->mpLayer;
+    if (fpcLy_QueueTo(layer, i_lyTag) != 1) return 0;
+    i_lyTag->mpLayer = NULL;
+    i_lyTag->mNodeListIdx = 0xFFFF;
+    i_lyTag->mNodeListID = 0xFFFF;
+    return 1;
 }
-VERIFY(0x025DF084,fpcLyTg_QueueTo);
-s32 fpcLyTg_Move(void* tag,u32 layerID,u32 listID,u32 priority) {
- WWHD_FUNC(0x025DF0F4,s32,tag,layerID,listID,priority);
- void* layer=gabi::call<void*>(0x025DEAC0,layerID);
- if(!gabi::ea(layer)) return 0;
- if(fpcLyTg_QueueTo(tag)!=1) return 0;
- store<u32>(gabi::ea(tag)+0x14,gabi::ea(layer));
- return fpcLyTg_ToQueue(tag,layerID,listID,priority);
+
+/* 025DF0F4 */
+s32 fpcLyTg_Move(layer_management_tag_class* i_lyTag, u32 i_layerID, u32 i_listID, u32 i_listPriority) {
+    layer_class* layer = fpcLy_Layer(i_layerID);
+    if (layer == NULL) return 0;
+    if (fpcLyTg_QueueTo(i_lyTag) != 1) return 0;
+    i_lyTag->mpLayer = layer;
+    return fpcLyTg_ToQueue(i_lyTag, i_layerID, i_listID, i_listPriority);
 }
-VERIFY(0x025DF0F4,fpcLyTg_Move);
-s32 fpcLyTg_Init(void* tag,u32 layerID,void* data) {
- WWHD_FUNC(0x025DF178,s32,tag,layerID,data);
- u32 a=gabi::ea(tag);
- for(u32 offset=0;offset<0x1C;offset+=4) store<u32>(a+offset,load<u32>(0x101F3B74+offset));
- gabi::call<void>(0x0201A918,tag,data);
- void* layer=gabi::call<void*>(0x025DEAC0,layerID);
- if(!gabi::ea(layer)) return 0;
- store<u32>(a+0x14,gabi::ea(layer));
- return 1;
+
+/* 025DF178 */
+s32 fpcLyTg_Init(layer_management_tag_class* i_lyTag, u32 i_layerID, void* i_data) {
+    // HD: seven ordered word copies preserve the template's byte layout and overlap behavior.
+    for (u32 i = 0; i < 7; ++i) {
+        *gabi::at<be<u32>>(gabi::ea(i_lyTag) + i * 4) = crear[i];
+    }
+    cTg_Create(&i_lyTag->mCreateTag, i_data);
+    layer_class* layer = fpcLy_Layer(i_layerID);
+    if (layer == NULL) return 0;
+    i_lyTag->mpLayer = layer;
+    return 1;
 }
-VERIFY(0x025DF178,fpcLyTg_Init);
-// HD math/header globals and their registration records.
-void fpcLyTg_StaticInit() {
- WWHD_FUNC(0x025DF224,void);
- store<u32>(0x1048A83C,0);
- store<u32>(0x1048A834,0);
- store<u32>(0x1048A840,0);
- store<u32>(0x1048A838,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3B90));
- f32 first=load<f32>(0x10058310);
- f32 second=load<f32>(0x10058314);
- store<f32>(0x1048A828,first);
- store<f32>(0x1048A82C,second);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1048A830));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3B9C));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1048A831));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3BA8));
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025DF224 */
+static void __sinit_f_pc_layer_tag_cpp() {
+    sinit_header_statics_rodata(0x1048A828, 0x101F3B90, 0x1048A834, 0x10058310);
 }
-VERIFY(0x025DF224,fpcLyTg_StaticInit);
+
+/* WWHD glue (tools/verify/autoglue.py): initial tag and layer operations
+data crear 101F3B74
+ext 025DEA20 s32 fpcLy_ToQueue(layer_class*, u32, layer_management_tag_class*)
+ext 025DEA18 s32 fpcLy_IntoQueue(layer_class*, u32, layer_management_tag_class*, u32)
+ext 025DEA28 s32 fpcLy_QueueTo(layer_class*, layer_management_tag_class*)
+ext 025DEAC0 layer_class* fpcLy_Layer(u32)
+ext 0201A918 void cTg_Create(create_tag_class*, void*)
+*/

@@ -1,26 +1,18 @@
-#include "gabi.h"
-using namespace gabi;
-namespace f_pc_method_iter {
-s32 method(void *list, u32 callback) {
-  WWHD_FUNC(0x025DFD78, s32, list, callback);
-  return call<s32>(0x020100A0, list, at<void>(callback), nullptr);
+/** Process method iteration, GameCube structure verified against WWHD. Local only. */
+#include "f_pc/f_pc_method_iter.h"
+
+/* 025DFD78 */
+// HD: callbacks are represented by guest code addresses.
+BOOL fpcMtdIt_Method(node_list_class* i_nodeList, u32 i_methods) {
+    return cLsIt_Method(i_nodeList, i_methods, nullptr);
 }
-VERIFY(0x025DFD78, method);
-void static_init() {
-  WWHD_FUNC(0x025DFD80, void);
-  store<u32>(0x1048AA90, 0);
-  store<u32>(0x1048AA88, 0);
-  store<u32>(0x1048AA94, 0);
-  store<u32>(0x1048AA8C, 0);
-  call<void>(0x028F026C, at<void>(0x101F3CD0));
-  f32 first = load<f32>(0x100583D0);
-  f32 second = load<f32>(0x100583D4);
-  store<f32>(0x1048AA7C, first);
-  store<f32>(0x1048AA80, second);
-  call<void>(0x028ED6F8, at<void>(0x1048AA84));
-  call<void>(0x028F026C, at<void>(0x101F3CDC));
-  call<void>(0x028EAB2C, at<void>(0x1048AA85));
-  call<void>(0x028F026C, at<void>(0x101F3CE8));
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025DFD80 */
+static void __sinit_f_pc_method_iter_cpp() {
+    sinit_header_statics_rodata(0x1048AA7C, 0x101F3CD0, 0x1048AA88, 0x100583D0);
 }
-VERIFY(0x025DFD80, static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 020100A0 s32 cLsIt_Method(node_list_class*, u32, void*)
+*/

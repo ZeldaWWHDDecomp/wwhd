@@ -1,253 +1,531 @@
 /* WWHD hammer switch; */
 #include "d/actor/d_a_obj_swhammer.h"
-using daObjSwhammer::Act_c;
-#define ARC STR(0x1002FAC8)
-#define TMP_MTX gabi::at<Mtx34>(0x1046BFD8)
-#define DAMAGE 0x101CCE48
-#define DAMAGE_DIR 0x101CCE4C
-static u32 PrmAbstract(fopAc_ac_c* a,s32 width,s32 shift) {
- WWHD_FUNC(0x02393CB4,u32,a,width,shift);
- u32 w=(u32)width&63,s=(u32)shift&63;
- return (s<32?(u32)a->mParameters>>s:0)&((w<32?1u<<w:0)-1);
+using namespace daObjSwhammer;
+enum SwhammerProfileHD { fpcNm_PLAYER_e = 168 };
+enum SwhammerCutHD {
+    CUT_TYPE_HAMMER_SIDESWING = 17,
+    CUT_TYPE_HAMMER_FRONTSWING = 18,
+    CUT_TYPE_JUMPCUT_HAMMER = 19
+};
+enum SwhammerParticleHD {
+    ID_IT_SN_HAMSW_STAR00 = 0x81B7,
+    ID_IT_SN_HAMSW_SYOUGEKI00 = 0x81B8,
+    ID_AK_JT_ELEMENTSMOKE01 = 0x2027
+};
+enum SwhammerModeHD { Mode_Upper, Mode_UpperToLower, Mode_Lower, Mode_LowerToUpper };
+enum SwhammerCrushHD { Crush_Idle, Crush_Start, Crush_Wait };
+enum SwhammerDamageHD { Damage_None, Damage_Crush, Damage_Swing };
+enum SwhammerSoundHD {
+    JA_SE_OBJ_HAMMER_SW_ON = 0x69B2,
+    JA_SE_OBJ_HAMMER_SW_OFF = 0x69B7,
+    JA_SE_OBJ_HAMMER_SW_SWING = 0x69B8
+};
+
+const gc_tu_data gc_tu = {.safeString = 0x1002F9A4};
+static const char *M_arcname = "MhmrSW";
+using SwhammerS32HD = be<s32>;
+using SwhammerS16HD = be<s16>;
+using SwhammerU32HD = be<u32>;
+static SwhammerS32HD M_damage;
+static SwhammerS16HD M_damage_dir;
+static Mtx34 M_tmp_mtx;
+static SwhammerCylinderSourceHD M_cyl_src_co;
+static SwhammerCylinderSourceHD M_cyl_src_tg;
+static SwhammerHeaderHD l_header;
+static cXyz particle_scale;
+static cXyz vec;
+static SwhammerU32HD l_scaleGuard;
+static SwhammerU32HD l_translationGuard;
+struct SwhammerModeProcHD {
+    be<s16> mThisDelta;
+    be<s16> mVirtualIndex;
+    be<u32> mFunction;
+};
+static SwhammerModeProcHD mode_proc[] = {
+    {0, -1, 0x023938B4}, {0, -1, 0x023939AC}, {0, -1, 0x02393A70}, {0, -1, 0x02393AF0}};
+static BOOL jnodeCB(J3DNode *, s32);
+
+// HD: the deletion wrapper forwards the entire native return register.
+s32 Swhammer_deleteResult(Act_c *);
+void Swhammer_setCullSphere(fopAc_ac_c *, f32, f32, f32, f32);
+void Swhammer_initHeaderByte(be<u8> *);
+void Swhammer_initHeaderFlag(be<u8> *);
+void Swhammer_hitSound(cXyz *, s32, dCcD_Cyl *, s32);
+void Swhammer_hitEffect(fopAc_ac_c *, dCcD_Cyl *);
+s16 Swhammer_atan2s(f32, f32);
+void Swhammer_transM(f32, f32, f32);
+void Swhammer_quatM(Quaternion *);
+void Swhammer_quatRotBaseY2(Quaternion *, cXyz *);
+SwhammerEmitterHD *Swhammer_spawnParticle(dPa_control_c *, s32, s32, cXyz *, u32, u32, s32,
+                                          dPa_smokeEcallBack *, s32, u32, u32, cXyz *);
+void Swhammer_destroyStatus(dCcD_Stts *, s32);
+void Swhammer_destroyCylinder(dCcD_Cyl *, s32);
+void Swhammer_destroyActor(fopAc_ac_c *, s32);
+
+/* 02393CB4 */
+static u32 PrmAbstract(fopAc_ac_c *a, s32 width, s32 shift) {
+    u32 w = (u32)width & 63, s = (u32)shift & 63;
+    return (s < 32 ? (u32)a->mParameters >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
 }
-VERIFY(0x02393CB4,PrmAbstract);
-static bool is_switch(Act_c* a) { s32 sw=PrmAbstract(a,8,8); return fopAcM_isSwitch(a,sw)!=0; }
-static void change_switch(Act_c* a,u32 target,s32 shift) {
- s32 sw=PrmAbstract(a,8,shift); u32 save=gabi::load<u32>(0x101F84DC); s32 room=a->home.roomNo;
- gabi::call(target,gabi::at<void>(save+0x20),sw,room);
+static bool is_switch(Act_c *a) {
+    s32 sw = PrmAbstract(a, 8, 8);
+    return fopAcM_isSwitch(a, sw) != 0;
 }
+static void on_switch(Act_c *actor) {
+    s32 no = PrmAbstract(actor, 8, 8);
+    dSv_info_c *save = dComIfGs_info();
+    s32 room = actor->home.roomNo;
+    save->onSwitch(no, room);
+}
+static void off_switch2(Act_c *actor) {
+    s32 no = PrmAbstract(actor, 8, 0);
+    dSv_info_c *save = dComIfGs_info();
+    s32 room = actor->home.roomNo;
+    save->offSwitch(no, room);
+}
+/* 02392F08 */
 void Act_c::mode_upper_init() {
- WWHD_FUNC(0x02392F08,void,this);
- gabi::call(0x02018428,&mCylTg.mCyl,112.5f); gabi::call(0x02018428,&mCylCo.mCyl,112.5f);
- u32 flags=gabi::load<u32>(gabi::ea(this)+0x39C); mMode=0; gabi::store<u32>(gabi::ea(this)+0x39C,flags|1); mTargetHFrac=1; mChanging=0;
+    mCylTg.SetH(112.5f);
+    mCylCo.SetH(112.5f);
+    u32 flags = (u32)attention_info.flags;
+    mMode = Mode_Upper;
+    attention_info.flags = flags | fopAc_Attn_LOCKON_MISC_e;
+    mTargetHFrac = 1;
+    m5FC = 0;
 }
-VERIFY(0x02392F08,&Act_c::mode_upper_init);
+/* 02392E94 */
 void Act_c::mode_lower_init() {
- WWHD_FUNC(0x02392E94,void,this);
- gabi::call(0x02018428,&mCylTg.mCyl,gabi::load<f32>(0x1046BFA0)); gabi::call(0x02018428,&mCylCo.mCyl,gabi::load<f32>(0x1046BFA0));
- u32 flags=gabi::load<u32>(gabi::ea(this)+0x39C); mMode=2; mTargetHFrac=0; gabi::store<u32>(gabi::ea(this)+0x39C,flags&~1u); mChanging=0;
+    mCylTg.SetH(l_header.mLowerHeight);
+    mCylCo.SetH(l_header.mLowerHeight);
+    u32 flags = (u32)attention_info.flags;
+    mMode = Mode_Lower;
+    mTargetHFrac = 0;
+    attention_info.flags = flags & ~u32(fopAc_Attn_LOCKON_MISC_e);
+    m5FC = 0;
 }
-VERIFY(0x02392E94,&Act_c::mode_lower_init);
+/* 02393858 */
 void Act_c::mode_u_l_init() {
- WWHD_FUNC(0x02393858,void,this); fopAcM_seStart(this,0x69B2,0); mMode=1; mTargetHFrac=0;
+    fopAcM_seStart(this, JA_SE_OBJ_HAMMER_SW_ON, 0);
+    mMode = Mode_UpperToLower;
+    mTargetHFrac = 0;
 }
-VERIFY(0x02393858,&Act_c::mode_u_l_init);
-void Act_c::mode_l_u_init() { WWHD_FUNC(0x02393A58,void,this); mMode=3; mTargetHFrac=1; }
-VERIFY(0x02393A58,&Act_c::mode_l_u_init);
+/* 02393A58 */
+void Act_c::mode_l_u_init() {
+    mMode = Mode_LowerToUpper;
+    mTargetHFrac = 1;
+}
+/* 023938B4 */
 void Act_c::mode_upper() {
- WWHD_FUNC(0x023938B4,void,this);
- if(gabi::load<s32>(DAMAGE)==1) { mChanging=1; mode_u_l_init(); }
- else if(is_switch(this))mode_u_l_init();
- else if(gabi::load<s32>(DAMAGE)==2) { vib_start(gabi::load<s16>(DAMAGE_DIR),1); fopAcM_seStart(this,0x69B8,0); }
+    if ((s32)M_damage == Damage_Crush) {
+        m5FC = 1;
+        mode_u_l_init();
+    } else if (is_switch(this))
+        mode_u_l_init();
+    else if ((s32)M_damage == Damage_Swing) {
+        vib_start((s16)M_damage_dir, 1);
+        fopAcM_seStart(this, JA_SE_OBJ_HAMMER_SW_SWING, 0);
+    }
 }
-VERIFY(0x023938B4,&Act_c::mode_upper);
+/* 02393A70 */
 void Act_c::mode_lower() {
- WWHD_FUNC(0x02393A70,void,this);
- if(!is_switch(this)) { fopAcM_seStart(this,0x69B7,0); mode_l_u_init(); }
+    if (!is_switch(this)) {
+        fopAcM_seStart(this, JA_SE_OBJ_HAMMER_SW_OFF, 0);
+        mode_l_u_init();
+    }
 }
-VERIFY(0x02393A70,&Act_c::mode_lower);
+/* 023939AC */
 void Act_c::mode_u_l() {
- WWHD_FUNC(0x023939AC,void,this);
- if(!(mCurHFrac>0)) { change_switch(this,0x025B9E38,8); if(mChanging)change_switch(this,0x025B9F7C,0); mode_lower_init(); }
+    if (!(mCurHFrac > 0)) {
+        on_switch(this);
+        if (m5FC)
+            off_switch2(this);
+        mode_lower_init();
+    }
 }
-VERIFY(0x023939AC,&Act_c::mode_u_l);
-void Act_c::mode_l_u() { WWHD_FUNC(0x02393AF0,void,this); if(!(mCurHFrac<1))mode_upper_init(); }
-VERIFY(0x02393AF0,&Act_c::mode_l_u);
-void Act_c::vib_start(s16 dir,f32 mag) {
- WWHD_FUNC(0x02393824,void,this,dir,mag); mAngleSpeedZ=cM_scos(dir)*mag; mAngleSpeedX=cM_ssin(dir)*mag;
+/* 02393AF0 */
+void Act_c::mode_l_u() {
+    if (!(mCurHFrac < 1))
+        mode_upper_init();
 }
-VERIFY(0x02393824,&Act_c::vib_start);
+/* 02393824 */
+void Act_c::vib_start(s16 dir, f32 mag) {
+    mAngleSpeedZ = cM_scos(dir) * mag;
+    mAngleSpeedX = cM_ssin(dir) * mag;
+}
+/* 023934E4 */
 void Act_c::vib_proc() {
- WWHD_FUNC(0x023934E4,void,this);
- f32 z=mAngleZ,x=mAngleX,vz=mAngleSpeedZ,vx=mAngleSpeedX;
- f32 az=gabi::fnmsubs(vz,0.18f,-(z*0.99f)),ax=gabi::fnmsubs(vx,0.18f,-(x*0.99f));
- vz+=az; vx+=ax; mAngleSpeedZ=vz; mAngleSpeedX=vx; mAngleZ=z+vz; mAngleX=x+vx;
+    f32 z = mAngleZ, x = mAngleX, vz = mAngleSpeedZ, vx = mAngleSpeedX;
+    // HD: retain native fused arithmetic and evaluation order.
+    f32 az = gabi::fnmsubs(vz, 0.18f, -(z * 0.99f)), ax = gabi::fnmsubs(vx, 0.18f, -(x * 0.99f));
+    vz += az;
+    vx += ax;
+    mAngleSpeedZ = vz;
+    mAngleSpeedX = vx;
+    mAngleZ = z + vz;
+    mAngleX = x + vx;
 }
-VERIFY(0x023934E4,&Act_c::vib_proc);
-void Act_c::crush_start() { WWHD_FUNC(0x023932A0,void,this); mCrushState=1; }
-VERIFY(0x023932A0,&Act_c::crush_start);
+/* 023932A0 */
+void Act_c::crush_start() {
+    mCrushState = Crush_Start;
+}
+/* 02393540 */
 void Act_c::crush_proc() {
- WWHD_FUNC(0x02393540,void,this);
- if(mCrushState==1) { mCrushState=2; mScaleY=0.2f; mCrushTimer=18; return; }
- if(mCrushState==2) { s16 timer=(s16)((s16)mCrushTimer-1); mCrushTimer=timer; if(timer<=0) {mCrushState=0;mScaleYSpeed=0;} return; }
- f32 scale=mScaleY, velocity=mScaleYSpeed; f32 accel=gabi::fnmsubs(velocity,0.45f,-((scale-1.0f)*0.8f));
- velocity+=accel; mScaleYSpeed=velocity; mScaleY=scale+velocity;
+    if (mCrushState == Crush_Start) {
+        mCrushState = Crush_Wait;
+        mScaleY = 0.2f;
+        mCrushTimer = 18;
+        return;
+    }
+    if (mCrushState == Crush_Wait) {
+        s16 timer = (s16)((s16)mCrushTimer - 1);
+        mCrushTimer = timer;
+        if (timer <= 0) {
+            mCrushState = Crush_Idle;
+            mScaleYSpeed = 0;
+        }
+        return;
+    }
+    f32 scale = mScaleY, velocity = mScaleYSpeed;
+    f32 accel = gabi::fnmsubs(velocity, 0.45f, -((scale - 1.0f) * 0.8f));
+    velocity += accel;
+    mScaleYSpeed = velocity;
+    mScaleY = scale + velocity;
 }
-VERIFY(0x02393540,&Act_c::crush_proc);
+/* 02393488 */
 void Act_c::calc_top_pos() {
- WWHD_FUNC(0x02393488,void,this);
- f32 frac=mCurHFrac,diff=frac-(f32)mTargetHFrac;
- f32 velocity=gabi::fnmsubs(diff,0.8f,mVSpeed); velocity=gabi::fnmsubs(velocity,0.55f,velocity);
- frac+=velocity; frac=(frac-1.0f)>=0?1.0f:frac; mVSpeed=velocity; mCurHFrac=frac; mTopPos=(1-frac)*-60.0f;
+    f32 frac = mCurHFrac, diff = frac - (f32)mTargetHFrac;
+    f32 velocity = gabi::fnmsubs(diff, 0.8f, mVSpeed);
+    velocity = gabi::fnmsubs(velocity, 0.55f, velocity);
+    frac += velocity;
+    frac = (frac - 1.0f) >= 0 ? 1.0f : frac;
+    mVSpeed = velocity;
+    mCurHFrac = frac;
+    mTopPos = (1 - frac) * -60.0f;
 }
-VERIFY(0x02393488,&Act_c::calc_top_pos);
+/* 02393798 */
 s32 Act_c::Draw() {
- WWHD_FUNC(0x02393798,s32,this);
- settingTevStruct(dKy_getEnvlight(),0,&current.pos,&tevStr); setLightTevColorType(dKy_getEnvlight(),mpModel,&tevStr); mDoExt_modelUpdateDL(mpModel); return TRUE;
+    settingTevStruct(dKy_getEnvlight(), 0, &current.pos, &tevStr);
+    setLightTevColorType(dKy_getEnvlight(), mpModel, &tevStr);
+    mDoExt_modelUpdateDL(mpModel);
+    return TRUE;
 }
-VERIFY(0x02393798,&Act_c::Draw);
+/* 023937F4 */
 s32 Act_c::Delete() {
- WWHD_FUNC(0x023937F4,s32,this);
- u32 callback=gabi::ea(&mSmokeCb),vt=gabi::load<u32>(callback); gabi::call(gabi::load<u32>(vt+0x44),gabi::at<void>(callback)); return TRUE;
+    mSmokeCb.remove();
+    return TRUE;
 }
-VERIFY(0x023937F4,&Act_c::Delete);
-static s32 method_Create(Act_c* a) { WWHD_FUNC(0x02393B08,s32,a); return a->_create(); }
-VERIFY(0x02393B08,method_Create);
-static s32 method_Delete(Act_c* a) { WWHD_FUNC(0x02393B0C,s32,a); return gabi::call<s32>(0x02392A70,a); }
-VERIFY(0x02393B0C,method_Delete);
-static s32 method_Execute(Act_c* a) { WWHD_FUNC(0x02393B10,s32,a); return a->MoveBGExecute(); }
-VERIFY(0x02393B10,method_Execute);
-static s32 method_Draw(Act_c* a) { WWHD_FUNC(0x02393B14,s32,a); return a->Draw_v(); }
-VERIFY(0x02393B14,method_Draw);
-static s32 method_IsDelete(Act_c* a) { WWHD_FUNC(0x02393B24,s32,a); return a->IsDelete_v(); }
-VERIFY(0x02393B24,method_IsDelete);
-Act_c* Act_c::ct(Act_c* a) {
- WWHD_FUNC(0x02392880,Act_c*,a);
- if(!a) { a=(Act_c*)operator_new(0x718); if(!a)return a; }
- dBgS_MoveBgActor::ct(a); a->__vtbl=0x1002FAD0;
- dCcD_Cyl_ct(&a->mCylCo,0x1002F9BC); dCcD_Stts_ct(&a->mSttsCo);
- dCcD_Cyl_ct(&a->mCylTg,0x1002F9BC); dCcD_Stts_ct(&a->mSttsTg);
- gabi::call(0x025A5B18,&a->mSmokeCb,1);
- u32 b=gabi::ea(a); gabi::store<u8>(b+0x70B,160); gabi::store<u8>(b+0x70A,160); gabi::store<u8>(b+0x70D,255); gabi::store<u8>(b+0x70C,128);
- return a;
+/* 02393B08 */
+static s32 Mthd_Create(Act_c *a) {
+    return a->_create();
 }
-VERIFY(0x02392880,Act_c::ct);
+/* 02393B0C */
+static s32 Mthd_Delete(Act_c *a) {
+    return Swhammer_deleteResult(a);
+}
+/* 02393B10 */
+static s32 Mthd_Execute(Act_c *a) {
+    return a->MoveBGExecute();
+}
+/* 02393B14 */
+static s32 Mthd_Draw(Act_c *a) {
+    return a->Draw_v();
+}
+/* 02393B24 */
+static s32 Mthd_IsDelete(Act_c *a) {
+    return a->IsDelete_v();
+}
+/* 02392880 */
+static Act_c *Swhammer_construct(Act_c *a) {
+    if (!a) {
+        a = (Act_c *)operator_new(0x718);
+        if (!a)
+            return a;
+    }
+    dBgS_MoveBgActor::ct(a);
+    a->__vtbl = 0x1002FAD0;
+    dCcD_Cyl_ct(&a->mCylCo, 0x1002F9BC);
+    dCcD_Stts_ct(&a->mSttsCo);
+    dCcD_Cyl_ct(&a->mCylTg, 0x1002F9BC);
+    dCcD_Stts_ct(&a->mSttsTg);
+    __ct(&a->mSmokeCb, 1);
+    a->mSmokeCb.mColor.g = 160;
+    a->mSmokeCb.mColor.r = 160;
+    a->mSmokeCb.mColor.a = 255;
+    a->mSmokeCb.mColor.b = 128;
+    return a;
+}
+/* 023929AC */
 s32 Act_c::_create() {
- WWHD_FUNC(0x023929AC,s32,this);
- if(!((u32)actor_condition&8)) { if(gabi::ea(this)!=0)ct(this); actor_condition=(u32)actor_condition|8; }
- s32 phase=dComIfG_resLoad(&mPhs,ARC);
- if(phase==4) { phase=MoveBGCreate(ARC,7,0,0xA80); if(phase!=4&&phase!=5)JUT_ASSERT_fail(STR(0x1002F9CC),0x1E8,STR(0x1002F9E4)); }
- return phase;
+    if (!((u32)actor_condition & 8)) {
+        if (this != nullptr)
+            Swhammer_construct(this);
+        actor_condition = (u32)actor_condition | 8;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, M_arcname);
+    if (phase == 4) {
+        phase = MoveBGCreate(M_arcname, 7, 0, 0xA80);
+        if (phase != 4 && phase != 5)
+            JUT_ASSERT_fail("d_a_obj_swhammer.cpp", 0x1E8,
+                            "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
+    }
+    return phase;
 }
-VERIFY(0x023929AC,&Act_c::_create);
-bool Act_c::_delete() { WWHD_FUNC(0x02392A70,bool,this); s32 result=MoveBGDelete(); dComIfG_resDelete(&mPhs,ARC); return result!=0; }
-VERIFY(0x02392A70,&Act_c::_delete);
+/* 02392A70 */
+bool Act_c::_delete() {
+    s32 result = MoveBGDelete();
+    dComIfG_resDelete(&mPhs, M_arcname);
+    return result != 0;
+}
+/* 02392CB0 */
 s32 Act_c::CreateHeap() {
- WWHD_FUNC(0x02392CB0,s32,this);
- auto* data=(J3DModelData*)dComIfG_getObjectRes(ARC,4,0x1002F9A4);
- if(!data)JUT_ASSERT_fail(STR(0x1002FA34),0x18B,STR(0x1002FA4C));
- J3DModel* model=mDoExt_J3DModel__create(data,0x80000,0x11000022); mpModel=model;
- if(model) { u32 b=gabi::ea(data),n=gabi::load<u32>(b+4),joint=gabi::load<u32>(b+8); if(n>1)joint+=0x1C; gabi::store<u32>(joint+8,0x02392AC0); gabi::store<u32>(gabi::ea((J3DModel*)mpModel)+0xB8,gabi::ea(this)); model=mpModel; }
- return model!=nullptr;
+    auto *data = (J3DModelData *)dComIfG_getObjectRes(M_arcname, 4);
+    if (!data)
+        JUT_ASSERT_fail("d_a_obj_swhammer.cpp", 0x18B, "modelData != 0");
+    J3DModel *model = mDoExt_J3DModel__create(data, 0x80000, 0x11000022);
+    mpModel = model;
+    if (model) {
+        data->getJointNodePointer(1)->setCallBack(jnodeCB);
+        mpModel->setUserArea((uintptr_t)this);
+        model = mpModel;
+    }
+    return model != nullptr;
 }
-VERIFY(0x02392CB0,&Act_c::CreateHeap);
+/* 02392D80 */
 void Act_c::set_mtx() {
- WWHD_FUNC(0x02392D80,void,this);
- mDoMtx_stack_c::transS(current.pos.x,current.pos.y,current.pos.z); mDoMtx_ZXYrotM(mDoMtx_stack_c::get(),shape_angle.x,shape_angle.y,shape_angle.z); J3DModel_setBaseTRMtx(mpModel,mDoMtx_stack_c::get());
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), shape_angle.x, shape_angle.y, shape_angle.z);
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
-VERIFY(0x02392D80,&Act_c::set_mtx);
+/* 02392E44 */
 void Act_c::init_mtx() {
- WWHD_FUNC(0x02392E44,void,this);
- f32 x=scale.x,y=scale.y; J3DModel* model=mpModel; f32 z=scale.z;
- gabi::store<f32>(gabi::ea(model)+0xBC,x); gabi::store<f32>(gabi::ea(model)+0xC0,y); gabi::store<f32>(gabi::ea(model)+0xC4,z);
- set_mtx(); PSMTXCopy(mDoMtx_stack_c::get(),gabi::at<Mtx34>(0x1046BFD8));
+    f32 x = scale.x, y = scale.y;
+    J3DModel *model = mpModel;
+    f32 z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    set_mtx();
+    PSMTXCopy(mDoMtx_stack_c::get(), (&M_tmp_mtx));
 }
-VERIFY(0x02392E44,&Act_c::init_mtx);
+/* 02392F8C */
 s32 Act_c::Create() {
- WWHD_FUNC(0x02392F8C,s32,this);
- cullMtx=gabi::ea(J3DModel_getBaseTRMtx(mpModel)); init_mtx();
- gabi::call(0x025D6768,this,0.0f,30.0f,0.0f,120.0f);
- mSttsCo.Init(255,255,this); mCylCo.Set(gabi::at<dCcD_SrcCyl>(0x101CCEA0)); mCylCo.SetStts(&mSttsCo);
- mSttsTg.Init(255,255,this); mCylTg.Set(gabi::at<dCcD_SrcCyl>(0x101CCEE4));
- mScaleYSpeed=0; mVSpeed=0; mCrushTimer=0; u32 flags=gabi::load<u32>(gabi::ea(this)+0x5EC);
- mAngleSpeedZ=0; mCylTg.SetStts(&mSttsTg); mTargetHFrac=0; mScaleY=1; mAngleX=0; mAngleZ=0;
- gabi::store<u32>(gabi::ea(this)+0x5EC,flags|4); mAngleSpeedX=0; mCrushState=0;
- if(is_switch(this)) { mCurHFrac=0; mTopPos=-60; mode_lower_init(); }
- else { mCurHFrac=1; mTopPos=0; mode_upper_init(); }
- f32 y=(f32)current.pos.y+(f32)mTopPos+120;
- gabi::store<u8>(gabi::ea(this)+0x388,45); gabi::store<f32>(gabi::ea(this)+0x394,y); eyePos.y=y; return TRUE;
+    cullMtx = gabi::ea(J3DModel_getBaseTRMtx(mpModel));
+    init_mtx();
+    Swhammer_setCullSphere(this, 0.0f, 30.0f, 0.0f, 120.0f);
+    mSttsCo.Init(255, 255, this);
+    mCylCo.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_co));
+    mCylCo.SetStts(&mSttsCo);
+    mSttsTg.Init(255, 255, this);
+    mCylTg.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_tg));
+    mScaleYSpeed = 0;
+    mVSpeed = 0;
+    mCrushTimer = 0;
+    u32 flags = (u32)mCylTg.mGObjTg.mSPrm;
+    mAngleSpeedZ = 0;
+    mCylTg.SetStts(&mSttsTg);
+    mTargetHFrac = 0;
+    mScaleY = 1;
+    mAngleX = 0;
+    mAngleZ = 0;
+    mCylTg.mGObjTg.mSPrm = flags | 4;
+    mAngleSpeedX = 0;
+    mCrushState = Crush_Idle;
+    if (is_switch(this)) {
+        mCurHFrac = 0;
+        mTopPos = -60;
+        mode_lower_init();
+    } else {
+        mCurHFrac = 1;
+        mTopPos = 0;
+        mode_upper_init();
+    }
+    f32 y = (f32)current.pos.y + (f32)mTopPos + 120;
+    attention_info.distances[fopAc_Attn_TYPE_MISC_e] = 45;
+    attention_info.position.y = y;
+    eyePos.y = y;
+    return TRUE;
 }
-VERIFY(0x02392F8C,&Act_c::Create);
-static void sinit() {
- WWHD_FUNC(0x02393B34,void,(u32)0);
- for(u32 i=0;i<4;i++)gabi::store<u32>(0x1046BFA8+i*4,0);
- __register_global_object(0x101CCE24); gabi::store<f32>(0x1046BF98,-3.1415927f); gabi::store<f32>(0x1046BF9C,3.1415927f);
- gabi::call(0x028ED6F8,(u32)0x1046BFA4); __register_global_object(0x101CCE30); gabi::call(0x028EAB2C,(u32)0x1046BFA5); __register_global_object(0x101CCE3C);
- gabi::store<f32>(0x101CCEA0+0x3C,100); gabi::store<f32>(0x1046BFA0,52.5f);
- gabi::store<f32>(0x101CCEE4+0x3C,50); gabi::store<f32>(0x101CCEE4+0x40,112.5f); gabi::store<f32>(0x101CCEA0+0x40,112.5f);
+// HD: native initialization mutates the cylinder radius/height fields.
+/* 02393B34 */
+static void __sinit_d_a_obj_swhammer_cpp() {
+    for (u32 i = 0; i < 4; i++)
+        l_header.mZero[i] = 0;
+    __register_global_object(0x101CCE24);
+    l_header.mPiMin = -3.1415927f;
+    l_header.mPiMax = 3.1415927f;
+    Swhammer_initHeaderByte(&l_header.mAngleByte);
+    __register_global_object(0x101CCE30);
+    Swhammer_initHeaderFlag(&l_header.mAngleFlag);
+    __register_global_object(0x101CCE3C);
+    M_cyl_src_co.mRadius = 100;
+    l_header.mLowerHeight = 52.5f;
+    M_cyl_src_tg.mRadius = 50;
+    M_cyl_src_tg.mHeight = 112.5f;
+    M_cyl_src_co.mHeight = 112.5f;
 }
-VERIFY(0x02393B34,sinit);
-static void trivial_dt(void* a,s32 flags) { WWHD_FUNC(0x02393C10,void,a,flags); if(a&&(flags&1))operator_delete(a); }
-VERIFY(0x02393C10,trivial_dt);
+/* 02393C10 */
+static void Swhammer_trivialDestructor(void *a, s32 flags) {
+    if (a && (flags & 1))
+        operator_delete(a);
+}
+/* 02393178 */
 void Act_c::set_damage() {
- WWHD_FUNC(0x02393178,void,this);
- u32 play=dComIfGp_ea(),player=gabi::load<u32>(play+0x5B2C); u8 cut=gabi::load<u8>(player+0x3AC);
- gabi::store<u32>(DAMAGE,0); gabi::store<u16>(DAMAGE_DIR,0);
- if(gabi::call<s32>(0x025162A4,&mCylTg)) {
- void* hit=gabi::call<void*>(0x02516300,&mCylTg);
- void* actor=gabi::call<void*>(0x02515BBC,gabi::at<void>(gabi::ea(this)+0x5EC));
- if((gabi::load<u32>(gabi::ea(hit)+0x10)&0x10000) && actor && gabi::load<s16>(gabi::ea(actor)+0xE)==168) {
- if(cut==18||cut==19)gabi::store<u32>(DAMAGE,1);
- else if(cut==17) { f32 x=gabi::load<f32>(gabi::ea(this)+0x618),z=gabi::load<f32>(gabi::ea(this)+0x620); s16 dir=gabi::call<s16>(0x020195B0,x,z); gabi::store<s16>(DAMAGE_DIR,dir); gabi::store<u32>(DAMAGE,2); }
- }
- gabi::call(0x023129C4,&eyePos,(s32)current.roomNo,&mCylTg,17);
- gabi::call(0x02312E54,this,&mCylTg); gabi::call(0x0251621C,&mCylTg);
- }
- gabi::call(0x02515E50,gabi::at<void>(gabi::ea(this)+0x6A4));
+    // HD: the cut type comes from player slot zero, independent of the Link pointer.
+    SwhammerPlayerHD *player = reinterpret_cast<SwhammerPlayerHD *>(dComIfGp_getPlayer(0));
+    u8 cut = player->mCutType;
+    M_damage = Damage_None;
+    M_damage_dir = 0;
+    if (mCylTg.ChkTgHit()) {
+        void *hit = mCylTg.GetTgHitObj();
+        fopAc_ac_c *actor = mCylTg.GetTgHitAc();
+        if ((static_cast<dCcD_GObjInf *>(hit)->mAtType & 0x10000) && actor &&
+            actor->mProfName == fpcNm_PLAYER_e) {
+            if (cut == CUT_TYPE_HAMMER_FRONTSWING || cut == CUT_TYPE_JUMPCUT_HAMMER)
+                M_damage = Damage_Crush;
+            else if (cut == CUT_TYPE_HAMMER_SIDESWING) {
+                f32 x = (f32)mCylTg.mGObjTg.mRVec.x, z = (f32)mCylTg.mGObjTg.mRVec.z;
+                s16 dir = Swhammer_atan2s(x, z);
+                M_damage_dir = dir;
+                M_damage = Damage_Swing;
+            }
+        }
+        Swhammer_hitSound(&eyePos, (s32)current.roomNo, &mCylTg, 17);
+        Swhammer_hitEffect(this, &mCylTg);
+        mCylTg.ClrTgHit();
+    }
+    mSttsTg.Move();
 }
-VERIFY(0x02393178,&Act_c::set_damage);
-static void member_dispatch(Act_c* a,u32 entry) {
- u32 base=gabi::ea(a)+(s16)gabi::load<s16>(entry); s16 index=gabi::load<s16>(entry+2); u32 target;
- if(index<0)target=gabi::load<u32>(entry+4);
- else {s16 offset=gabi::load<s16>(entry+6); u32 vt=gabi::load<u32>(base+offset);target=gabi::load<u32>(vt+(u32)index*8+4);}
- gabi::call(target,gabi::at<void>(base));
+/* 023935E4 */
+s32 Act_c::Execute(Mtx34 **matrix) {
+    set_damage();
+    if ((s32)M_damage == Damage_Crush) {
+        crush_start();
+        eff_crush();
+    }
+    (this->*reinterpret_cast<const gabi::ptmf<void (Act_c::*)()> &>(mode_proc[(u32)mMode]))();
+    calc_top_pos();
+    vib_proc();
+    crush_proc();
+    set_mtx();
+    *reinterpret_cast<gptr<Mtx34> *>(matrix) = (&M_tmp_mtx);
+    mCylTg.SetC(&current.pos);
+    mCylCo.SetC(&current.pos);
+    dComIfG_Ccsp_Set(&mCylTg);
+    dComIfG_Ccsp_Set(&mCylCo);
+    f32 y = (f32)current.pos.y + (f32)mTopPos + 120;
+    eyePos.y = y;
+    attention_info.position.y = y;
+    return TRUE;
 }
-s32 Act_c::Execute(Mtx34** matrix) {
- WWHD_FUNC(0x023935E4,s32,this,matrix);
- set_damage(); if(gabi::load<s32>(DAMAGE)==1) {crush_start();eff_crush();}
- member_dispatch(this,0x1002FA90+(u32)mMode*8);
- calc_top_pos();vib_proc();crush_proc();set_mtx();
- gabi::store<u32>(gabi::ea(matrix),0x1046BFD8);
- gabi::call(0x020182E0,&mCylTg.mCyl,&current.pos); gabi::call(0x020182E0,&mCylCo.mCyl,&current.pos);
- u32 play=dComIfGp_ea();gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),&mCylTg);
- play=dComIfGp_ea();gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),&mCylCo);
- f32 y=(f32)current.pos.y+(f32)mTopPos+120; eyePos.y=y;gabi::store<f32>(gabi::ea(this)+0x394,y);return TRUE;
+/* 02392AC0 */
+static BOOL jnodeCB(J3DNode *node, s32 timing) {
+    if (timing == 0) {
+        J3DModel *model = j3dSys.getModel();
+        Act_c *actor = static_cast<Act_c *>(model->getUserArea());
+        u16 index = reinterpret_cast<J3DJoint *>(node)->getJntNo();
+        PSMTXCopy(model->getAnmMtx(index), mDoMtx_stack_c::get());
+        f32 scale = (f32)actor->mScaleY;
+        Swhammer_transM(0.0f, 20.0f * (1.0f - scale), 0.0f);
+        scale = (f32)actor->mScaleY;
+        mDoMtx_stack_c::scaleM(1, scale, 1);
+        Swhammer_transM(0.0f, (f32)actor->mTopPos, 0.0f);
+        gabi::Local<cXyz> axis;
+        f32 x = (f32)actor->mAngleX, z = (f32)actor->mAngleZ;
+        axis->y = 1;
+        axis->x = x;
+        axis->z = z;
+        gabi::Local<Quaternion> quat;
+        Swhammer_quatRotBaseY2((Quaternion *)quat, (cXyz *)axis);
+        Swhammer_transM(0.0f, -20.0f, 0.0f);
+        Swhammer_quatM((Quaternion *)quat);
+        Swhammer_transM(0.0f, 20.0f, 0.0f);
+        mtx_copy(model->getAnmMtx(index), mDoMtx_stack_c::get());
+        PSMTXCopy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
+    }
+    return TRUE;
 }
-VERIFY(0x023935E4,&Act_c::Execute);
-struct Quaternion_l {be<f32> x,y,z,w;};
-static BOOL jnodeCB(void* node,s32 timing) {
- WWHD_FUNC(0x02392AC0,BOOL,node,timing);
- if(timing==0) {
- u32 model=gabi::load<u32>(0x104B462C),actor=gabi::load<u32>(model+0xB8);
- void* joint=gabi::call<void*>(0x027F7878,node); u16 index=gabi::load<u16>(gabi::ea(joint)+4);
- u32 block=gabi::load<u32>(model+0x2C),matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,gabi::load<u16>(block+4)|16);
- PSMTXCopy(gabi::at<Mtx34>(matrices+index*0x30),mDoMtx_stack_c::get());
- f32 scale=gabi::load<f32>(actor+0x6D0);
- gabi::call(0x025F24E0,0.0f,20.0f*(1.0f-scale),0.0f);
- scale=gabi::load<f32>(actor+0x6D0);mDoMtx_stack_c::scaleM(1,scale,1);
- gabi::call(0x025F24E0,0.0f,gabi::load<f32>(actor+0x6F0),0.0f);
- gabi::Local<cXyz> axis; f32 x=gabi::load<f32>(actor+0x6D8),z=gabi::load<f32>(actor+0x6D4);axis->y=1;axis->x=x;axis->z=z;
- gabi::Local<Quaternion_l> quat;gabi::call(0x02312548,(Quaternion_l*)quat,(cXyz*)axis);
- gabi::call(0x025F24E0,0.0f,-20.0f,0.0f);gabi::call(0x025F25CC,(Quaternion_l*)quat);gabi::call(0x025F24E0,0.0f,20.0f,0.0f);
- block=gabi::load<u32>(model+0x2C);matrices=gabi::load<u32>(block+0x10);gabi::store<u16>(block+4,gabi::load<u16>(block+4)|16);
- mtx_copy(gabi::at<Mtx34>(matrices+index*0x30),mDoMtx_stack_c::get());PSMTXCopy(mDoMtx_stack_c::get(),gabi::at<Mtx34>(0x104B4868));
- }
- return TRUE;
-}
-VERIFY(0x02392AC0,jnodeCB);
+/* 023932AC */
 void Act_c::eff_crush() {
- WWHD_FUNC(0x023932AC,void,this);
- if(mMode==0) { dComIfGp_particle_set(0x81B7,&current.pos);dComIfGp_particle_set(0x81B8,&current.pos); }
- if(!gabi::load<u32>(0x1046BFD0)) {
- gabi::store<f32>(0x1046BFB8,1.5f);gabi::store<f32>(0x1046BFC0,1);gabi::store<f32>(0x1046BFBC,1.5f);gabi::store<u32>(0x1046BFD0,1);
- }
- u32 play=dComIfGp_ea(),particles=gabi::load<u32>(play+0x5AB0);
- void* emitter=gabi::call<void*>(0x025A847C,gabi::at<void>(particles),2,0x2027,&current.pos,(u32)0,(u32)0,200,&mSmokeCb,-1,(u32)0,(u32)0,gabi::at<cXyz>(0x1046BFB8));
- if(emitter) {
- u32 b=gabi::ea(emitter);gabi::store<u32>(b+0x5C,1);gabi::store<u16>(b+0x60,45);gabi::store<f32>(b+0x34,30);gabi::store<f32>(b+0x68,0);gabi::store<f32>(b+0x6C,38);
- if(!gabi::load<u32>(0x1046BFD4)) {
- gabi::store<u32>(0x1046BFD4,1);gabi::store<f32>(0x1046BFCC,0);gabi::store<f32>(0x1046BFC8,15);gabi::store<f32>(0x1046BFC4,0);
- }
- gabi::store<f32>(b+0x14,gabi::load<f32>(0x1046BFC4));gabi::store<f32>(b+0x18,gabi::load<f32>(0x1046BFC8));gabi::store<f32>(b+0x1C,gabi::load<f32>(0x1046BFCC));
- }
+    if (mMode == Mode_Upper) {
+        dComIfGp_particle_set(ID_IT_SN_HAMSW_STAR00, &current.pos);
+        dComIfGp_particle_set(ID_IT_SN_HAMSW_SYOUGEKI00, &current.pos);
+    }
+    // HD: retain guard placement and component-store order.
+    if (!(u32)l_scaleGuard) {
+        particle_scale.x = 1.5f;
+        particle_scale.z = 1;
+        particle_scale.y = 1.5f;
+        l_scaleGuard = 1;
+    }
+    dPa_control_c *particles = dComIfGp_getParticle();
+    SwhammerEmitterHD *emitter =
+        Swhammer_spawnParticle(particles, 2, ID_AK_JT_ELEMENTSMOKE01, &current.pos, (u32)0, (u32)0, 200,
+                               &mSmokeCb, -1, (u32)0, (u32)0, &particle_scale);
+    if (emitter) {
+        emitter->mMaxFrame = 1;
+        emitter->mLifeTime = 45;
+        emitter->mRate = 30;
+        emitter->mInitialVelOmni = 0;
+        emitter->mInitialVelAxis = 38;
+        if (!(u32)l_translationGuard) {
+            l_translationGuard = 1;
+            vec.z = 0;
+            vec.y = 15;
+            vec.x = 0;
+        }
+        emitter->mEmitterTranslation.x = vec.x;
+        emitter->mEmitterTranslation.y = vec.y;
+        emitter->mEmitterTranslation.z = vec.z;
+    }
 }
-VERIFY(0x023932AC,&Act_c::eff_crush);
-static void actor_dt(Act_c* a,s32 flags) {
- WWHD_FUNC(0x02393C30,void,a,flags);
- if(a) {gabi::call(0x02515860,&a->mSttsTg,2);gabi::call(0x02515A70,&a->mCylTg,2);gabi::call(0x02515860,&a->mSttsCo,2);gabi::call(0x02515A70,&a->mCylCo,2);gabi::call(0x025D50BC,a,0);if(flags&1)operator_delete(a);}
+/* 02393C30 */
+static void Swhammer_actorDestructor(Act_c *a, s32 flags) {
+    if (a) {
+        Swhammer_destroyStatus(&a->mSttsTg, 2);
+        Swhammer_destroyCylinder(&a->mCylTg, 2);
+        Swhammer_destroyStatus(&a->mSttsCo, 2);
+        Swhammer_destroyCylinder(&a->mCylCo, 2);
+        Swhammer_destroyActor(a, 0);
+        if (flags & 1)
+            operator_delete(a);
+    }
 }
-VERIFY(0x02393C30,actor_dt);
-static BOOL base_IsDelete(void* a) {WWHD_FUNC(0x02393C24,BOOL,a);return TRUE;}
-VERIFY(0x02393C24,base_IsDelete);
-static void base_empty(void* a) {WWHD_FUNC(0x02393C2C,void,a);}
-VERIFY(0x02393C2C,base_empty);
+/* 02393C24 */
+static BOOL Swhammer_baseIsDelete(void *a) {
+    return TRUE;
+}
+/* 02393C2C */
+static void Swhammer_baseDestructor(void *a) {}
+
+/* WWHD glue
+ext 02392A70 s32 Swhammer_deleteResult(Act_c*)
+str 1002FAC8 "MhmrSW"
+data M_damage 101CCE48
+data M_damage_dir 101CCE4C
+data M_tmp_mtx 1046BFD8
+data M_cyl_src_co 101CCEA0
+data M_cyl_src_tg 101CCEE4
+data l_header 1046BF98
+data particle_scale 1046BFB8
+data vec 1046BFC4
+data l_scaleGuard 1046BFD0
+data l_translationGuard 1046BFD4
+data mode_proc 1002FA90
+str 1002F9CC in 023929AC # "d_a_obj_swhammer.cpp"
+str 1002F9E4 # "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)"
+str 1002FA34 in 02392CB0 # "d_a_obj_swhammer.cpp"
+str 1002FA4C # "modelData != 0"
+ext 025D6768 void Swhammer_setCullSphere(fopAc_ac_c*, f32, f32, f32, f32)
+ext 028ED6F8 void Swhammer_initHeaderByte(be<u8>*)
+ext 028EAB2C void Swhammer_initHeaderFlag(be<u8>*)
+ext 023129C4 void Swhammer_hitSound(cXyz*, s32, dCcD_Cyl*, s32)
+ext 02312E54 void Swhammer_hitEffect(fopAc_ac_c*, dCcD_Cyl*)
+ext 020195B0 s16 Swhammer_atan2s(f32, f32)
+ext 025F24E0 void Swhammer_transM(f32, f32, f32)
+ext 025F25CC void Swhammer_quatM(Quaternion*)
+ext 02312548 void Swhammer_quatRotBaseY2(Quaternion*, cXyz*)
+ext 025A847C SwhammerEmitterHD* Swhammer_spawnParticle(dPa_control_c*, s32, s32, cXyz*, u32, u32, s32, dPa_smokeEcallBack*, s32, u32, u32, cXyz*)
+ext 02515860 void Swhammer_destroyStatus(dCcD_Stts*, s32)
+ext 02515A70 void Swhammer_destroyCylinder(dCcD_Cyl*, s32)
+ext 025D50BC void Swhammer_destroyActor(fopAc_ac_c*, s32)
+*/

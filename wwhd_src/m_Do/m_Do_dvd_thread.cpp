@@ -1,177 +1,375 @@
-#include "wwhd.h"
-#include "gabi.h"
-namespace dvd { template<class T>T ld(u32 a,u32 o=0){return gabi::load<T>(a+o);} template<class T>void st(u32 a,u32 o,T v){gabi::store<T>(a+o,v);} void* p(u32 a){return gabi::at<void>(a);} struct Path {u8 bytes[0x101];}; }
-using namespace dvd;
-void dvd_path(void* dest,void* input){
- WWHD_FUNC(0x025E21A8,void,dest,input);
- gabi::Local<Path> local;gabi::call<void>(0x0284B7BC,local.get(),input);gabi::call<void>(0xC000A848,dest,local.get(),0x101);
+/** HD resource command queue and path loading. */
+#include "m_Do/m_Do_dvd_thread.h"
+
+using DvdThreadPtr = gptr<mDoDvdThd_thread_c>;
+using DvdHeapPtr = gptr<void>;
+static DvdThreadPtr l_dvdThread;
+static DvdHeapPtr l_dvdHeap;
+static mDoDvdThd_param_c l_param;
+static u8 sDefaultDirection;
+static mDoDvdThd_data_c l_commandVtable;
+static mDoDvdThd_data_c l_callbackVtable;
+static mDoDvdThd_data_c l_ramVtable;
+static mDoDvdThd_data_c l_pathViewVtable;
+static mDoDvdThd_data_c l_pathBaseVtable;
+static mDoDvdThd_data_c l_pathBufferVtable;
+static mDoDvdThd_data_c l_pathFixedVtable;
+static mDoDvdThd_data_c l_threadVtable;
+static mDoDvdThd_data_c l_threadBaseVtable;
+static mDoDvdThd_data_c l_commandFailureText;
+static mDoDvdThd_data_c l_threadName;
+static mDoDvdThd_headerStatics_c l_dvdHeaderStatics;
+static mDoDvdThd_staticRecords_c l_dvdRecords;
+static f32 l_dvdInitialFirst;
+static f32 l_dvdInitialSecond;
+
+/* 025E21A8 */
+void mDoDvdThd_convertPath(void* dest, void* input) {
+    gabi::Local<mDoDvdThd_path_c> path;
+    mDoDvd_normalizePath(path.get(), input);
+    mDoDvd_copy(dest, path.get(), sizeof(mDoDvdThd_path_c));
 }
-VERIFY(0x025E21A8,dvd_path);
-s32 dvd_command_cb(void* address){
- WWHD_FUNC(0x025E21E8,s32,address);
- u32 a=ld<u32>(gabi::ea(address)),vt=ld<u32>(a,0x10),target=ld<u32>(vt,0x14);
- s32 result=gabi::call_ptr<s32>(target,p(a),gabi::cpu->r[4],gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],gabi::cpu->r[10]);
- if(result!=1)gabi::call<void>(0x025F2710,p(0x10058518));return 0;
+
+/* 025E21E8 */
+s32 mDoDvdThd_commandCallback(void* address) {
+    auto* slot = static_cast<gptr<mDoDvdThd_command_c>*>(address);
+    auto* command = slot->get();
+    s32 result = mDoDvdThd_executeCommand(command);
+    if (result != TRUE) mDoDvd_reportError(gabi::at<const char>(gabi::ea(&l_commandFailureText)));
+    return FALSE;
 }
-VERIFY(0x025E21E8,dvd_command_cb);
-void* dvd_command_ctor(void* self){
- WWHD_FUNC(0x025E2234,void*,self);
- u32 a=gabi::ea(self);if(!a)a=gabi::call<u32>(0x0273AD10,0x14);
- if(a){st<u8>(a,0xC,0);st<u32>(a,0x10,0x10058688);gabi::call<void>(0x02019C94,p(a));}return p(a);
+
+/* 025E2234 */
+void* mDoDvdThd_command_construct(void* self) {
+    if (!self) self = mDoDvd_alloc(sizeof(mDoDvdThd_command_c));
+    if (self) {
+        auto* command = static_cast<mDoDvdThd_command_c*>(self);
+        command->mIsDone = false;
+        command->mpVtable = gabi::at<mDoDvdThd_commandVtable_c>(gabi::ea(&l_commandVtable));
+        cNd_ForcedClear(command);
+    }
+    return self;
 }
-VERIFY(0x025E2234,dvd_command_ctor);
-void* dvd_callback_ctor(void* self,void* callback,void* user){
- WWHD_FUNC(0x025E2290,void*,self,callback,user);
- u32 a=gabi::ea(self);if(!a)a=gabi::call<u32>(0x0273AD10,0x20);
- if(a){gabi::call<void>(0x025E2234,p(a));st<u32>(a,0x14,gabi::ea(callback));st<u32>(a,0x18,gabi::ea(user));st<u32>(a,0x10,0x100586A0);st<u32>(a,0x1C,0);}return p(a);
+
+/* 025E2290 */
+void* mDoDvdThd_callback_construct(void* self, void* callback, void* user) {
+    if (!self) self = mDoDvd_alloc(sizeof(mDoDvdThd_callback_c));
+    if (self) {
+        mDoDvdThd_command_construct(self);
+        auto* command = static_cast<mDoDvdThd_callback_c*>(self);
+        command->mFunc = gabi::ea(callback);
+        command->mUserData = user;
+        command->mpVtable = gabi::at<mDoDvdThd_commandVtable_c>(gabi::ea(&l_callbackVtable));
+        command->mResult = nullptr;
+    }
+    return self;
 }
-VERIFY(0x025E2290,dvd_callback_ctor);
-void dvd_kick(void* self){
- WWHD_FUNC(0x025E230C,void,self);
- u32 a=ld<u32>(0x1048CE3C),vt=ld<u32>(a,0xC),target=ld<u32>(vt,0x1C);
- gabi::call_ptr<void>(target,p(a),1,1,gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],gabi::cpu->r[10]);
+
+/* 025E230C */
+void mDoDvdThd_param_c::kick() {
+    auto* thread = l_dvdThread.get();
+    u32 target = thread->mpVtable->mWake;
+    // HD: The thread wake call replaces GameCube's OS message submission.
+    gabi::call_ptr<void>(target, thread, 1, 1, gabi::cpu->r[6], gabi::cpu->r[7],
+        gabi::cpu->r[8], gabi::cpu->r[9], gabi::cpu->r[10]);
 }
-VERIFY(0x025E230C,dvd_kick);
-void dvd_add(void* self,void* command){
- WWHD_FUNC(0x025E232C,void,self,command);
- u32 a=gabi::ea(self);gabi::call<void>(0xC0009E40,p(a+0x58));gabi::call<void>(0x0200FE78,p(a+0x4C),command);gabi::call<void>(0xC000A1C8,p(a+0x58));gabi::call<void>(0x025E230C,self);
+
+/* 025E232C */
+void mDoDvdThd_param_c::addition(void* command) {
+    mDoDvd_lockMutex(&mMutex);
+    cLs_Addition(&mCommandList, static_cast<node_class*>(command));
+    mDoDvd_unlockMutex(&mMutex);
+    kick();
 }
-VERIFY(0x025E232C,dvd_add);
-void* dvd_callback_create(void* callback,void* user){
- WWHD_FUNC(0x025E2384,void*,callback,user);
- u32 heap=gabi::call<u32>(0x025EE060),a=gabi::call<u32>(0x0273B050,0x20,p(heap),-4);
- if(!a)return nullptr;
- a=gabi::call<u32>(0x025E2290,p(a),callback,user);if(a)gabi::call<void>(0x025E232C,p(0x1048CE40),p(a));return p(a);
+
+/* 025E2384 */
+void* mDoDvdThd_callback_create(void* callback, void* user) {
+    void* heap = mDoDvd_getCommandHeap();
+    void* command = mDoDvd_heapAlloc(sizeof(mDoDvdThd_callback_c), heap, -4);
+    if (!command) return nullptr;
+    command = mDoDvdThd_callback_construct(command, callback, user);
+    if (command) l_param.addition(command);
+    return command;
 }
-VERIFY(0x025E2384,dvd_callback_create);
-BOOL dvd_callback_execute(void* self){
- WWHD_FUNC(0x025E2404,BOOL,self);
- u32 a=gabi::ea(self),target=ld<u32>(a,0x14),user=ld<u32>(a,0x18);
- u32 result=gabi::call_ptr<u32>(target,p(user),gabi::cpu->r[4],gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],gabi::cpu->r[10]);st<u32>(a,0x1C,result);st<u8>(a,0xC,1);return result!=0;
+
+/* 025E2404 */
+BOOL mDoDvdThd_callback_execute(void* self) {
+    auto* command = static_cast<mDoDvdThd_callback_c*>(self);
+    u32 target = command->mFunc;
+    void* user = command->mUserData;
+    u32 result = gabi::call_ptr<u32>(target, user, gabi::cpu->r[4], gabi::cpu->r[5], gabi::cpu->r[6],
+        gabi::cpu->r[7], gabi::cpu->r[8], gabi::cpu->r[9], gabi::cpu->r[10]);
+    command->mResult = gabi::at<void>(result);
+    command->mIsDone = true;
+    return result != 0;
 }
-VERIFY(0x025E2404,dvd_callback_execute);
-void* dvd_ram_ctor(void* self,s32 direction){
- WWHD_FUNC(0x025E2450,void*,self,direction);
- u32 a=gabi::ea(self);if(!a)a=gabi::call<u32>(0x0273AD10,0x230);
- if(a){gabi::call<void>(0x025E2234,p(a));st<u8>(a,0x14,u8(direction));st<u32>(a,0x10,0x100586B8);st<u8>(a,0x15,0);st<u32>(a,0x120,0);st<u32>(a,0x118,0);st<u32>(a,0x11C,0);
- u32 b=a+0x124;if(!b)b=gabi::call<u32>(0x0273AD10,0x10C);
- if(b){u32 c=b;if(!c)c=gabi::call<u32>(0x0273AD10,0xC);if(c){st<u32>(c,0,b+0xC);st<u32>(c,4,0x10058574);st<u32>(c,8,0x100);st<u8>(b,0x10B,0);}u32 data=ld<u32>(b);st<u32>(b,4,0x1005859C);st<u8>(data,0,0);st<u32>(b,4,0x100585B4);}
- if(direction==0)st<u8>(a,0x14,ld<u8>(0x1048CEC4));}
- return p(a);
+
+/* 025E2450 */
+void* mDoDvdThd_toMainRam_construct(void* self, s32 direction) {
+    if (!self) self = mDoDvd_alloc(sizeof(mDoDvdThd_toMainRam_c));
+    if (self) {
+        mDoDvdThd_command_construct(self);
+        auto* command = static_cast<mDoDvdThd_toMainRam_c*>(self);
+        command->mAllocDirection = (u8)direction;
+        command->mpVtable = gabi::at<mDoDvdThd_commandVtable_c>(gabi::ea(&l_ramVtable));
+        command->mPath[0] = 0;
+        command->mHeap = nullptr;
+        command->mData = nullptr;
+        command->mDataSize = 0;
+        // HD: Retain the null-constructor path even if the embedded guest address wraps to zero.
+        u32 bufferAddress = gabi::ea(command) + offsetof(mDoDvdThd_toMainRam_c, mPathString);
+        if (!bufferAddress) bufferAddress = gabi::ea(mDoDvd_alloc(sizeof(mDoDvdThd_pathBuffer_c)));
+        if (bufferAddress) {
+            auto* buffer = gabi::at<mDoDvdThd_pathBuffer_c>(bufferAddress);
+            buffer->mData = buffer->mBuffer;
+            buffer->mpVtable = gabi::at<mDoDvdThd_stringVtable_c>(gabi::ea(&l_pathBaseVtable));
+            buffer->mCapacity = 256;
+            buffer->mBuffer[255] = 0;
+            auto* data = buffer->mData.get();
+            buffer->mpVtable = gabi::at<mDoDvdThd_stringVtable_c>(gabi::ea(&l_pathBufferVtable));
+            *data = 0;
+            buffer->mpVtable = gabi::at<mDoDvdThd_stringVtable_c>(gabi::ea(&l_pathFixedVtable));
+        }
+        if (direction == 0) command->mAllocDirection = sDefaultDirection;
+    }
+    return self;
 }
-VERIFY(0x025E2450,dvd_ram_ctor);
-BOOL dvd_ram_execute(void* self){
- WWHD_FUNC(0x025E26A8,BOOL,self);
- u32 a=gabi::ea(self),heap=ld<u32>(a,0x120);if(!heap)heap=gabi::call<u32>(0x025E3268);
- u32 direction=ld<u8>(a,0x14)==0?1:2;gabi::Local<Path> local;gabi::call<void>(0xC000A848,local.get(),p(a+0x15),0x101);
- u32 data=gabi::call<u32>(0x027EBB2C,local.get(),0,1,0,p(heap),direction,0,0,0);st<u32>(a,0x118,data);
- if(data){u32 size=gabi::call<u32>(0x027EC134,p(heap),p(data));st<u32>(a,0x11C,size);}u32 result=ld<u32>(a,0x118);st<u8>(a,0xC,1);return result!=0;
+
+/* 025E26A8 */
+BOOL mDoDvdThd_toMainRam_execute(void* self) {
+    auto* command = static_cast<mDoDvdThd_toMainRam_c*>(self);
+    void* heap = command->mHeap;
+    if (!heap) heap = mDoDvd_getArchiveHeap();
+    u32 direction = command->mAllocDirection == 0 ? 1 : 2;
+    gabi::Local<mDoDvdThd_path_c> path;
+    mDoDvd_copy(path.get(), command->mPath, sizeof(mDoDvdThd_path_c));
+    void* data = mDoDvd_loadToMainRAM(path.get(), 0, 1, 0, heap, direction, 0, 0, 0);
+    command->mData = data;
+    if (data) {
+        u32 size = mDoDvd_getSize(heap, data);
+        command->mDataSize = size;
+    }
+    void* result = command->mData;
+    command->mIsDone = true;
+    return result != nullptr;
 }
-VERIFY(0x025E26A8,dvd_ram_execute);
-void* dvd_param_ctor(void* self){
- WWHD_FUNC(0x025E276C,void*,self);
- u32 a=gabi::ea(self);if(!a)a=gabi::call<u32>(0x0273AD10,0x84);
- if(a){gabi::call<void>(0x028F521C,p(a),0x3C);gabi::call<void>(0x028F521C,p(a+0x3C),0x10);gabi::call<void>(0x028F521C,p(a+0x4C),0xC);gabi::call<void>(0x028F521C,p(a+0x58),0x2C);gabi::call<void>(0xC0009D68,p(a+0x58));gabi::call<void>(0x02010008,p(a+0x4C));}return p(a);
+
+/* 025E276C */
+void* mDoDvdThd_param_construct(void* self) {
+    if (!self) self = mDoDvd_alloc(sizeof(mDoDvdThd_param_c));
+    if (self) {
+        auto* param = static_cast<mDoDvdThd_param_c*>(self);
+        mDoDvd_clear(param->mMessageQueue, sizeof(param->mMessageQueue));
+        mDoDvd_clear(param->mMessageBuf, sizeof(param->mMessageBuf));
+        mDoDvd_clear(&param->mCommandList, sizeof(param->mCommandList));
+        mDoDvd_clear(&param->mMutex, sizeof(param->mMutex));
+        mDoDvd_initMutex(&param->mMutex);
+        cLs_Create(&param->mCommandList);
+    }
+    return self;
 }
-VERIFY(0x025E276C,dvd_param_ctor);
-void dvd_cut(void* self,void* command){
- WWHD_FUNC(0x025E27EC,void,self,command);
- u32 a=gabi::ea(self);gabi::call<void>(0xC0009E40,p(a+0x58));gabi::call<void>(0x0200FDF4,command);gabi::call<void>(0xC000A1C8,p(a+0x58));gabi::call<void>(0x025E230C,self);
+
+/* 025E27EC */
+void mDoDvdThd_param_c::cut(void* command) {
+    mDoDvd_lockMutex(&mMutex);
+    cLs_SingleCut(static_cast<node_class*>(command));
+    mDoDvd_unlockMutex(&mMutex);
+    kick();
 }
-VERIFY(0x025E27EC,dvd_cut);
-void* dvd_first(void* self){
- WWHD_FUNC(0x025E2840,void*,self);
- return p(ld<u32>(gabi::ea(self),0x4C));
+
+/* 025E2840 */
+void* mDoDvdThd_param_c::getFirstCommand() { return mCommandList.mpHead.get(); }
+
+/* 025E2848 */
+void mDoDvdThd_param_c::mainLoop() {
+    // HD: One drain replaces the GameCube loop that waited for OS messages.
+    using CommandSlot = gptr<mDoDvdThd_command_c>;
+    gabi::Local<CommandSlot> command;
+    void* next = getFirstCommand();
+    *command.get() = static_cast<mDoDvdThd_command_c*>(next);
+    while (next) {
+        cut(next);
+        mDoDvdThd_commandCallback(command.get());
+        next = getFirstCommand();
+        *command.get() = static_cast<mDoDvdThd_command_c*>(next);
+    }
 }
-VERIFY(0x025E2840,dvd_first);
-void dvd_drain(void* self){
- WWHD_FUNC(0x025E2848,void,self);
- gabi::Local<u32> command;u32 next=gabi::call<u32>(0x025E2840,self);st<u32>(command.a,0,next);
- while(next){gabi::call<void>(0x025E27EC,self,p(next));gabi::call<void>(0x025E21E8,command.get());next=gabi::call<u32>(0x025E2840,self);st<u32>(command.a,0,next);}
+
+/* 025E29FC */
+void mDoDvdThd_pathView_delete(void* self, s32 flags) {
+    if (self && ((u32)flags & 1)) mDoDvd_free(self);
 }
-VERIFY(0x025E2848,dvd_drain);
-void dvd_dtor_25E29FC(void* self,s32 flag){
- WWHD_FUNC(0x025E29FC,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+/* 025E2A28 */
+void mDoDvdThd_pathBuffer_delete(void* self, s32 flags) {
+    if (self && ((u32)flags & 1)) mDoDvd_free(self);
 }
-VERIFY(0x025E29FC,dvd_dtor_25E29FC);
-void dvd_dtor_25E2A28(void* self,s32 flag){
- WWHD_FUNC(0x025E2A28,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+/* 025E2A3C */
+void mDoDvdThd_toMainRam_delete(void* self, s32 flags) {
+    if (self && ((u32)flags & 1)) mDoDvd_free(self);
 }
-VERIFY(0x025E2A28,dvd_dtor_25E2A28);
-void dvd_dtor_25E2A3C(void* self,s32 flag){
- WWHD_FUNC(0x025E2A3C,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+/* 025E2A54 */
+void mDoDvdThd_pathBufferBase_delete(void* self, s32 flags) {
+    if (self && ((u32)flags & 1)) mDoDvd_free(self);
 }
-VERIFY(0x025E2A3C,dvd_dtor_25E2A3C);
-void dvd_dtor_25E2A54(void* self,s32 flag){
- WWHD_FUNC(0x025E2A54,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+/* 025E2A78 */
+void mDoDvdThd_pathFixed_delete(void* self, s32 flags) {
+    if (self && ((u32)flags & 1)) mDoDvd_free(self);
 }
-VERIFY(0x025E2A54,dvd_dtor_25E2A54);
-void dvd_dtor_25E2A78(void* self,s32 flag){
- WWHD_FUNC(0x025E2A78,void,self,flag);
- if(self&&(u32(flag)&1))gabi::call<void>(0x0273AF40,self);
+
+/* 025E2A10 */
+void mDoDvdThd_path_assureTermination(void* self) {
+    auto* buffer = static_cast<mDoDvdThd_pathBuffer_c*>(self);
+    u32 data = gabi::ea(buffer->mData.get());
+    u32 size = buffer->mCapacity;
+    // HD: Keep the PPC wrap for zero or negative capacities.
+    *gabi::at<be<u8>>(data + size - 1) = 0;
 }
-VERIFY(0x025E2A78,dvd_dtor_25E2A78);
-void dvd_terminate(void* self){
- WWHD_FUNC(0x025E2A10,void,self);
- u32 a=gabi::ea(self),data=ld<u32>(a),size=ld<u32>(a,8);st<u8>(data+size-1,0,0);
+
+/* 025E2A50 */
+void mDoDvdThd_pathView_assureTermination(void* self) {}
+
+/* 025E2A68 */
+s32 mDoDvdThd_thread_run(void* self) {
+    auto* thread = static_cast<mDoDvdThd_thread_c*>(self);
+    u32 target = thread->mpVtable->mRun;
+    return gabi::call_ptr<s32>(target, self, gabi::cpu->r[4], gabi::cpu->r[5], gabi::cpu->r[6],
+        gabi::cpu->r[7], gabi::cpu->r[8], gabi::cpu->r[9], gabi::cpu->r[10]);
 }
-VERIFY(0x025E2A10,dvd_terminate);
-void dvd_view(void* self){
- WWHD_FUNC(0x025E2A50,void,self);
+
+/* 025E2A8C */
+void mDoDvdThd_mainLoop() { l_param.mainLoop(); }
+
+/* 025E2A98 */
+void mDoDvdThd_thread_delete(void* self, s32 flags) {
+    if (self) {
+        auto* thread = static_cast<mDoDvdThd_thread_c*>(self);
+        thread->mDestructorVtable = gabi::ea(&l_threadBaseVtable);
+        mDoDvd_threadDestruct(self, 0);
+        if ((u32)flags & 1) mDoDvd_free(self);
+    }
 }
-VERIFY(0x025E2A50,dvd_view);
-s32 dvd_thread_entry(void* self){
- WWHD_FUNC(0x025E2A68,s32,self);
- u32 a=gabi::ea(self),vt=ld<u32>(a,0xC),target=ld<u32>(vt,0x4C);
- return gabi::call_ptr<s32>(target,self,gabi::cpu->r[4],gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],gabi::cpu->r[10]);
+
+/* 025E255C */
+void* mDoDvdThd_toMainRam_create(void* input, s32 direction, void* heap) {
+    void* commandHeap = mDoDvd_getCommandHeap();
+    void* allocation = mDoDvd_heapAlloc(sizeof(mDoDvdThd_toMainRam_c), commandHeap, -4);
+    if (!allocation) return nullptr;
+    auto* command = static_cast<mDoDvdThd_toMainRam_c*>(mDoDvdThd_toMainRam_construct(allocation, direction));
+    if (!command) return nullptr;
+    gabi::Local<mDoDvdThd_pathView_c> view;
+    view->mData = static_cast<be<u8>*>(input);
+    view->mpVtable = gabi::at<mDoDvdThd_stringVtable_c>(gabi::ea(&l_pathViewVtable));
+    u32 buffer = gabi::ea(command->mPathString.mData.get());
+    mDoDvdThd_pathView_assureTermination(view.get());
+    u32 cursor = gabi::ea(view->mData.get());
+    s32 length = 0;
+    if (*gabi::at<be<u8>>(cursor)) {
+        do {
+            length++;
+            cursor++;
+            if (length > 0x40000) { length = 0; break; }
+        } while (*gabi::at<be<u8>>(cursor));
+    }
+    s32 capacity = command->mPathString.mCapacity;
+    auto* table = view->mpVtable.get();
+    if (length >= capacity) length = (s32)((u32)capacity - 1);
+    mDoDvdThd_assureTermination(view.get(), table);
+    void* data = view->mData.get();
+    mDoDvd_move(gabi::at<void>(buffer), data, length, 0);
+    *gabi::at<be<u8>>(buffer + (u32)length) = 0;
+    mDoDvdThd_convertPath(command->mPath, input);
+    if (!command->mPath[0]) {
+        auto* vtable = command->mpVtable.get();
+        command->mIsDone = true;
+        u32 target = vtable->mDestroy;
+        // HD: The failed-path destructor explicitly leaves r8/r9/r10 as zero, one and its table.
+        gabi::call_ptr<void>(target, command, 3, gabi::cpu->r[5], gabi::cpu->r[6], gabi::cpu->r[7],
+                            0, 1, gabi::ea(vtable));
+        return nullptr;
+    }
+    command->mHeap = heap;
+    l_param.addition(command);
+    return command;
 }
-VERIFY(0x025E2A68,dvd_thread_entry);
-void dvd_global_drain(){
- WWHD_FUNC(0x025E2A8C,void);
- gabi::call<void>(0x025E2848,p(0x1048CE40));
+
+/* 025E28B0 */
+void mDoDvdThd_create() {
+    void* heap = l_dvdHeap;
+    auto* thread = static_cast<mDoDvdThd_thread_c*>(mDoDvd_alloc(sizeof(mDoDvdThd_thread_c)));
+    if (thread) {
+        gabi::Local<mDoDvdThd_pathView_c> view;
+        view->mData = gabi::at<be<u8>>(gabi::ea(&l_threadName));
+        view->mpVtable = gabi::at<mDoDvdThd_stringVtable_c>(gabi::ea(&l_pathViewVtable));
+        mDoDvd_threadConstruct(thread, view.get(), 0, heap, 0, 0x7FFFFFFF, 0x5000, 0x20);
+        thread->mpVtable = gabi::at<mDoDvdThd_threadVtable_c>(gabi::ea(&l_threadVtable));
+    }
+    l_dvdThread = thread;
+    auto* table = thread->mpVtable.get();
+    u32 target = table->mStart;
+    gabi::call_ptr<void>(target, thread, gabi::cpu->r[4], gabi::cpu->r[5], gabi::cpu->r[6],
+        gabi::cpu->r[7], gabi::cpu->r[8], gabi::cpu->r[9], gabi::ea(table));
 }
-VERIFY(0x025E2A8C,dvd_global_drain);
-void dvd_thread_dtor(void* self,s32 flag){
- WWHD_FUNC(0x025E2A98,void,self,flag);
- u32 a=gabi::ea(self);if(a){st<u32>(a,0x18,0x1005858C);gabi::call<void>(0x027609AC,self,0);if(u32(flag)&1)gabi::call<void>(0x0273AF40,self);}
+
+// HD: Adjacent compiler startup initializer; attribution follows its parameter constructor call.
+/* 025E295C */
+void mDoDvdThd_staticInit() {
+    l_dvdHeaderStatics.mZeroWords[2] = 0;
+    l_dvdHeaderStatics.mZeroWords[0] = 0;
+    l_dvdHeaderStatics.mZeroWords[3] = 0;
+    l_dvdHeaderStatics.mZeroWords[1] = 0;
+    mDoDvd_registerStatic(&l_dvdRecords.mFirst);
+    f32 first = l_dvdInitialFirst, second = l_dvdInitialSecond;
+    l_dvdHeaderStatics.mFloatPair[0] = first;
+    l_dvdHeaderStatics.mFloatPair[1] = second;
+    mDoDvd_initFlag(&l_dvdHeaderStatics.mFlag);
+    mDoDvd_registerStatic(&l_dvdRecords.mSecond);
+    mDoDvd_initByte(&l_dvdHeaderStatics.mByte);
+    mDoDvd_registerStatic(&l_dvdRecords.mThird);
+    mDoDvdThd_param_construct(&l_param);
 }
-VERIFY(0x025E2A98,dvd_thread_dtor);
-struct DvdView {u32 data,vt;};
-void* dvd_ram_create(void* input,s32 direction,void* heap){
- WWHD_FUNC(0x025E255C,void*,input,direction,heap);
- u32 h=gabi::call<u32>(0x025EE060),a=gabi::call<u32>(0x0273B050,0x230,p(h),-4);
- if(!a)return nullptr;
- a=gabi::call<u32>(0x025E2450,p(a),direction);if(!a)return nullptr;
- gabi::Local<DvdView> view;st<u32>(view.a,0,gabi::ea(input));st<u32>(view.a,4,0x1005855C);
- u32 buffer=ld<u32>(a,0x124);gabi::call<void>(0x025E2A50,view.get());
- u32 cursor=ld<u32>(view.a);s32 length=0;
- if(ld<u8>(cursor)){do{length++;cursor++;if(length>0x40000){length=0;break;}}while(ld<u8>(cursor));}
- s32 capacity=ld<s32>(a,0x12C);u32 vt=ld<u32>(view.a,4);if(length>=capacity)length=s32(u32(capacity)-1);
- u32 target=ld<u32>(vt,0x14);
- gabi::call_ptr<void>(target,view.get(),gabi::cpu->r[4],gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],gabi::cpu->r[10]);
- u32 data=ld<u32>(view.a);gabi::call<void>(0xC0009988,p(buffer),p(data),length,0);st<u8>(buffer+u32(length),0,0);
- gabi::call<void>(0x025E21A8,p(a+0x15),input);
- if(!ld<u8>(a,0x15)){u32 table=ld<u32>(a,0x10);st<u8>(a,0xC,1);target=ld<u32>(table,0xC);gabi::call_ptr<void>(target,p(a),3,gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],0,1,table);return nullptr;}
- st<u32>(a,0x120,gabi::ea(heap));gabi::call<void>(0x025E232C,p(0x1048CE40),p(a));return p(a);
-}
-VERIFY(0x025E255C,dvd_ram_create);
-void dvd_thread_create(){
- WWHD_FUNC(0x025E28B0,void);
- u32 heap=ld<u32>(0x101F8B9C),a=gabi::call<u32>(0x0273AD10,0x94);
- if(a){gabi::Local<DvdView> view;st<u32>(view.a,0,0x10058674);st<u32>(view.a,4,0x1005855C);gabi::call<void>(0x027607C0,p(a),view.get(),0,p(heap),0,0x7FFFFFFF,0x5000,0x20);st<u32>(a,0xC,0x100585CC);}
- st<u32>(0x1048CE3C,0,a);u32 vt=ld<u32>(a,0xC),target=ld<u32>(vt,0x2C);
- gabi::call_ptr<void>(target,p(a),gabi::cpu->r[4],gabi::cpu->r[5],gabi::cpu->r[6],gabi::cpu->r[7],gabi::cpu->r[8],gabi::cpu->r[9],vt);
-}
-VERIFY(0x025E28B0,dvd_thread_create);
-// Adjacent startup initializer; attribution by ordering and param-constructor call.
-void dvd_startup(){
- WWHD_FUNC(0x025E295C,void);
- st<u32>(0x1048CE2C,8,0);st<u32>(0x1048CE2C,0,0);st<u32>(0x1048CE2C,12,0);st<u32>(0x1048CE2C,4,0);gabi::call<void>(0x028F026C,p(0x101F472C));
- f32 lo=ld<f32>(0x10058680),hi=ld<f32>(0x10058684);st<f32>(0x1048CE20,0,lo);st<f32>(0x1048CE24,0,hi);
- gabi::call<void>(0x028ED6F8,p(0x1048CE28));gabi::call<void>(0x028F026C,p(0x101F4738));gabi::call<void>(0x028EAB2C,p(0x1048CE29));gabi::call<void>(0x028F026C,p(0x101F4744));gabi::call<void>(0x025E276C,p(0x1048CE40));
-}
-VERIFY(0x025E295C,dvd_startup);
+
+/* WWHD glue
+ext 0273AD10 void* mDoDvd_alloc(u32)
+ext 0273B050 void* mDoDvd_heapAlloc(u32, void*, s32)
+ext 0273AF40 void mDoDvd_free(void*)
+ext 0284B7BC void mDoDvd_normalizePath(void*, void*)
+ext C000A848 void mDoDvd_copy(void*, void*, u32)
+ext C0009988 void mDoDvd_move(void*, void*, s32, s32)
+ext 028F521C void mDoDvd_clear(void*, u32)
+ext C0009D68 void mDoDvd_initMutex(mDoDvdThd_mutex_c*)
+ext C0009E40 void mDoDvd_lockMutex(mDoDvdThd_mutex_c*)
+ext C000A1C8 void mDoDvd_unlockMutex(mDoDvdThd_mutex_c*)
+ext 025F2710 void mDoDvd_reportError(const char*)
+ext 025EE060 void* mDoDvd_getCommandHeap()
+ext 025E3268 void* mDoDvd_getArchiveHeap()
+ext 027EBB2C void* mDoDvd_loadToMainRAM(void*, u32, u32, u32, void*, u32, u32, u32, u32)
+ext 027EC134 u32 mDoDvd_getSize(void*, void*)
+ext 027607C0 void mDoDvd_threadConstruct(mDoDvdThd_thread_c*, mDoDvdThd_pathView_c*, s32, void*, s32, s32, u32, u32)
+ext 027609AC void mDoDvd_threadDestruct(void*, s32)
+ext 02019C94 void cNd_ForcedClear(node_class*)
+ext 0200FE78 s32 cLs_Addition(node_list_class*, node_class*)
+ext 0200FDF4 s32 cLs_SingleCut(node_class*)
+ext 02010008 void cLs_Create(node_list_class*)
+ext 028F026C void mDoDvd_registerStatic(void*)
+ext 028ED6F8 void mDoDvd_initFlag(void*)
+ext 028EAB2C void mDoDvd_initByte(void*)
+data l_dvdThread 1048CE3C
+data l_dvdHeap 101F8B9C
+data l_param 1048CE40
+data sDefaultDirection 1048CEC4
+data l_commandVtable 10058688
+data l_callbackVtable 100586A0
+data l_ramVtable 100586B8
+data l_pathViewVtable 1005855C
+data l_pathBaseVtable 10058574
+data l_pathBufferVtable 1005859C
+data l_pathFixedVtable 100585B4
+data l_threadVtable 100585CC
+data l_threadBaseVtable 1005858C
+data l_commandFailureText 10058518
+data l_threadName 10058674
+data l_dvdHeaderStatics 1048CE20
+data l_dvdRecords 101F472C
+data l_dvdInitialFirst 10058680
+data l_dvdInitialSecond 10058684
+*/

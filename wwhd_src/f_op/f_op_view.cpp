@@ -1,49 +1,60 @@
-#include "gabi.h"
-using gabi::load; using gabi::store;
-s32 fopVw_Draw(void* view) {
- WWHD_FUNC(0x025DD050,s32,view);
- void* method=gabi::at<void>(load<u32>(gabi::ea(view)+0xC4));
- return gabi::call<s32>(0x025DF2C0,method,view);
+/** View Process Framework. WWHD. */
+#include "f_op/f_op_view.h"
+static ViewHeaderStatics l_headerStatics;
+static const ViewPiPair l_piPair;
+
+/* 025DD050 */
+BOOL fopVw_Draw(view_class* i_this) {
+    return fpcLf_DrawMethod(i_this->sub_method, i_this);
 }
-VERIFY(0x025DD050,fopVw_Draw);
-s32 fopVw_Execute(void* view) {
- WWHD_FUNC(0x025DD05C,s32,view);
- void* method=gabi::at<void>(load<u32>(gabi::ea(view)+0xC4));
- return gabi::call<s32>(0x025DFCC4,method,view);
+
+/* 025DD05C */
+BOOL fopVw_Execute(view_class* i_this) {
+    return fpcMtd_Execute(&i_this->sub_method->base, i_this);
 }
-VERIFY(0x025DD05C,fopVw_Execute);
-s32 fopVw_IsDelete(void* view) {
- WWHD_FUNC(0x025DD068,s32,view);
- void* method=gabi::at<void>(load<u32>(gabi::ea(view)+0xC4));
- return gabi::call<s32>(0x025DFCCC,method,view);
+
+/* 025DD068 */
+BOOL fopVw_IsDelete(view_class* i_this) {
+    return fpcMtd_IsDelete(&i_this->sub_method->base, i_this);
 }
-VERIFY(0x025DD068,fopVw_IsDelete);
-s32 fopVw_Delete(void* view) {
- WWHD_FUNC(0x025DD074,s32,view);
- void* method=gabi::at<void>(load<u32>(gabi::ea(view)+0xC4));
- return gabi::call<s32>(0x025DFCD4,method,view);
+
+/* 025DD074 */
+BOOL fopVw_Delete(view_class* i_this) {
+    return fpcMtd_Delete(&i_this->sub_method->base, i_this);
 }
-VERIFY(0x025DD074,fopVw_Delete);
-s32 fopVw_Create(void* view) {
- WWHD_FUNC(0x025DD080,s32,view);
- u32 a=gabi::ea(view),profile=load<u32>(a+0x10);
- u32 method=load<u32>(profile+0x24);
- store<u32>(a+0xC4,method);
- u8 parameter=load<u8>(profile+0x28);
- store<u8>(a+0xC8,parameter);
- return gabi::call<s32>(0x025DFCDC,gabi::at<void>(method),view);
+
+/* 025DD080 */
+cPhs_State fopVw_Create(view_class* i_this) {
+    view_process_profile_definition* profile = reinterpret_cast<view_process_profile_definition*>(i_this->mpProf.get());
+    leafdraw_method_class* methods = profile->sub_method;
+    i_this->sub_method = methods;
+    i_this->mViewMode = profile->mViewMode;
+    // HD: preserve the original method pointer across the byte store.
+    return fpcMtd_Create(&methods->base, i_this);
 }
-VERIFY(0x025DD080,fopVw_Create);
-void fopVw_StaticInit() {
- WWHD_FUNC(0x025DD09C,void);
- store<u32>(0x1048A660,0);store<u32>(0x1048A658,0);
- store<u32>(0x1048A664,0);store<u32>(0x1048A65C,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3888));
- f32 first=load<f32>(0x10057DC8),second=load<f32>(0x10057DCC);
- store<f32>(0x1048A64C,first);store<f32>(0x1048A650,second);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1048A654));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3894));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1048A655));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F38A0));
+
+/* 025DD09C */
+static void __sinit_f_op_view_cpp() {
+    // HD: common-header initialization retains the verified store/read/call order.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F3888);
+    f32 first = l_piPair.negativePi;
+    f32 second = l_piPair.positivePi;
+    l_headerStatics.negativePi = first;
+    l_headerStatics.positivePi = second;
+    ViewFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F3894);
+    ViewSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F38A0);
 }
-VERIFY(0x025DD09C,fopVw_StaticInit);
+
+/* WWHD glue: data and other-unit calls
+ data l_headerStatics 1048A64C
+ data l_piPair 10057DC8
+ ext 025DF2C0 s32 fpcLf_DrawMethod(leafdraw_method_class*, view_class*)
+ ext 028ED6F8 void ViewFirstHeaderObject_ct(u8*)
+ ext 028EAB2C void ViewSecondHeaderObject_ct(u8*)
+*/

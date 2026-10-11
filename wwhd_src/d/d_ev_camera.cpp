@@ -1,358 +1,419 @@
-/* d_ev_camera: event camera (dCamera_c::*EvCamera and the event parameter helpers), WWHD.
- *
- * Translation unit 025303B4..0253E948, from the image: d_envse ends with its __sinit 02530320;
- * this unit starts with searchEventArgData (025303B4; its assert file string "d_ev_camera.cpp"
- * is 1004CCB8), follows the GameCube order of d_ev_camera.cpp only loosely (the GameCube file is
- * all "Nonmatching" stubs: everything here is written from the WWHD code), and ends with its
- * __sinit 0253E89C and the per-TU inline copies 0253E930 (deleting destructor) and 0253E944
- * (empty virtual); d_event starts at 0253E948. Part 1 (this file): the parameter helpers,
- * getEvActor, pause/talkto, Start/EndEventCamera, the __sinit and the inline copies; the camera
- * engines are in d_ev_camera_*.cpp.
- *
- * dCamera_c (d/d_camera.h, HD 0x8E0): event data at 0x3FC (staff index 0x400, the "no data"
- * flag 0x40C, Start's ids 0x410/0x414, debug parameters 0x428: 8 x {name[16], value pointer}),
- * event flags 0x510 (bit 0x20000000: the event camera was started with explicit parameters,
- * which then come from the debug table instead of the event manager), the engine timer 0x11C,
- * the "done" flags 0x100..0x102, the work area 0x37C and the HD flag 0x610. */
-#include "bindings.h"
+// Event-camera parameter and control helpers; GameCube names, verified HD behavior.
+#include "d/d_ev_camera.h"
+namespace event_camera {
+static EventString intFile;
+static EventString intAssert;
+static EventString stringPointerFile;
+static EventString stringPointerAssert;
+static EventString defaultIntFile;
+static EventString defaultIntAssert;
+static EventString floatFile;
+static EventString floatAssert;
+static EventString xyzFile;
+static EventString xyzAssert;
+static EventString stringFile;
+static EventString stringAssert;
+static EventString defaultStringPointerFile;
+static EventString defaultStringPointerAssert;
+static EventString timerName;
+static EventString stayName;
+static HeaderStatics headerStatics;
+static DestructorRecords destructorRecords;
 
-namespace d_ev_camera_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 JUT_ASSERT_l(u32 file, s32 line, u32 msg) { return gabi::call<u32>(0x0273AA24, file, line, msg); }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline s32 evmng_getMySubstanceNum_l(s32 staff, u32 name) { return gabi::call<s32>(0x025448CC, gi() + 0x52C4, staff, name); }
-static inline u32 evmng_getMySubstanceP_l(s32 staff, u32 name, s32 type) {
-    u32 m = gi() + 0x52C4;
-    return gabi::call<u32>(0x0254487C, m, staff, name, type);
+static bool debugParams(dCamera_c* camera) {
+    return (camera->mEventFlags & DEBUG_EVENT_PARAMS) != 0;
 }
-static inline void strcpy_l(u32 d, u32 s) { gabi::call(0x028F040C, d, s); }
+static EventParameter* parameters(dCamera_c* camera) {
+    return reinterpret_cast<EventParameter*>(camera->mEventData.mEventParams);
+}
+static GuestWord* paramValue(dCamera_c* camera, s32 index) {
+    return parameters(camera)[index].mValue.get();
+}
+static void SkipSmoother(dCamera_c* camera) {
+    camera->m102 = 1;
+    camera->m101 = 1;
+    camera->m100 = 1;
+}
+static void copyPoint(cXyz* destination, const cXyz* source) {
+    // HD: preserve integer payloads and the interleaved word-copy order.
+    auto* out = reinterpret_cast<VectorWords*>(destination);
+    auto* in = reinterpret_cast<const VectorWords*>(source);
+    out->x = in->x;
+    out->y = in->y;
+    out->z = in->z;
+}
+static void copyString(GuestByte* destination, const char* source) {
+    eventCameraStrcpy(reinterpret_cast<char*>(destination), source);
+}
 
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-
-enum : u32 { EV_STAFF = 0x400, EV_NODATA = 0x40C, EV_ID1 = 0x410, EV_ID2 = 0x414, EV_PARAMS = 0x428, EV_FLAGS = 0x510,
-             EV_TIMER = 0x11C, EV_WORK = 0x37C };
-static inline bool debugParams(u32 c) { return (ld(c + EV_FLAGS) >> 29) & 1; }
-static inline u32 paramValue(u32 c, s32 i) { return ld(c + EV_PARAMS + i * 0x14 + 0x10); }
-
-/* 025303B4: the index of a debug parameter by name, -1 when absent (an empty name ends the list) */
-static s32 dCamera_c_searchEventArgData(u32 i_this, u32 i_name) {
-    WWHD_FUNC(0x025303B4, s32, i_this, i_name);
-    for (s32 i = 0; i < 8; i++) {
-        u32 n = i_this + EV_PARAMS + i * 0x14;
-        if (ld8(n) == 0) return -1;
-        for (u32 k = 0;; k++) {
-            u8 a = ld8(n + k);
-            u8 b = ld8(i_name + k);
-            if (a != b) break;
-            if (a == 0) return i;
+/* 025303B4 */
+s32 searchEventArgData(dCamera_c* camera, const GuestByte* name) {
+    for (s32 i = 0; i < 8; ++i) {
+        auto* parameterName = parameters(camera)[i].mName;
+        if (parameterName[0] == 0)
+            return -1;
+        for (u32 k = 0;; ++k) {
+            u8 a = parameterName[k];
+            u8 b = name[k];
+            if (a != b)
+                break;
+            if (a == 0)
+                return i;
         }
     }
     return -1;
 }
-VERIFY(0x025303B4, dCamera_c_searchEventArgData);
 
 /* 02530418 */
-static u32 dCamera_c_getEvIntData(u32 i_this, u32 o_data, u32 i_name) {
-    WWHD_FUNC(0x02530418, u32, i_this, o_data, i_name);
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        if (i == -1) return 0;
-        st(o_data, ld(paramValue(i_this, i)));
+u32 getEvIntData(dCamera_c* camera, GuestWord* out, const GuestByte* name) {
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        if (index == -1)
+            return 0;
+        *out = *paramValue(camera, index);
         return 1;
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        st8(i_this + EV_NODATA, 1);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        camera->mEventData.field_0x10 = 1;
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 3);
-    if (p == 0) JUT_ASSERT_l(0x1004CCB8, 0x9A, 0x1004CCC8 /* "p_ret != (0)" */);
-    st(o_data, ld(p));
+    auto* value = static_cast<GuestWord*>(dComIfGp_evmng_getMySubstanceP(
+        camera->mEventData.mStaffIdx, reinterpret_cast<const char*>(name), 3));
+    if (!value)
+        eventCameraAssert(intFile.text, 0x9A, intAssert.text);
+    *out = *value;
     return 1;
 }
-VERIFY(0x02530418, dCamera_c_getEvIntData);
 
+// HD: pointer-valued entry points retain their verified u32 return width.
 /* 02530538 */
-static u32 dCamera_c_getEvStringPntData(u32 i_this, u32 i_name) {
-    WWHD_FUNC(0x02530538, u32, i_this, i_name);
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        if (i == -1) return 0;
-        return paramValue(i_this, i);
+u32 getEvStringPntData(dCamera_c* camera, const GuestByte* name) {
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        if (index == -1)
+            return 0;
+        return gabi::ea(paramValue(camera, index));
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        st8(i_this + EV_NODATA, 1);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        camera->mEventData.field_0x10 = 1;
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 4);
-    if (p == 0) JUT_ASSERT_l(0x1004CCD8, 0x11C, 0x1004CCE8);
-    return p;
+    auto* value = dComIfGp_evmng_getMySubstanceP(camera->mEventData.mStaffIdx,
+                                                 reinterpret_cast<const char*>(name), 4);
+    if (!value)
+        eventCameraAssert(stringPointerFile.text, 0x11C, stringPointerAssert.text);
+    return gabi::ea(value);
 }
-VERIFY(0x02530538, dCamera_c_getEvStringPntData);
 
+// GameCube overload: getEvIntData(out, name, default).
 /* 02530634 */
-static u32 dCamera_c_getEvIntData3(u32 i_this, u32 o_data, u32 i_name, s32 i_default) {
-    WWHD_FUNC(0x02530634, u32, i_this, o_data, i_name, i_default);
-    s32 v = i_default;
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        if (i != -1) v = (s32)ld(paramValue(i_this, i));
-        st(o_data, (u32)v);
+u32 getEvIntDataDefault(dCamera_c* camera, GuestWord* out, const GuestByte* name, s32 fallback) {
+    s32 value = fallback;
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        if (index != -1)
+            value = static_cast<s32>(*paramValue(camera, index));
+        *out = static_cast<u32>(value);
         return 1;
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        st(o_data, (u32)v);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        *out = static_cast<u32>(value);
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 3);
-    if (p == 0) JUT_ASSERT_l(0x1004CCF8, 0x137, 0x1004CD08);
-    st(o_data, ld(p));
+    auto* data = static_cast<GuestWord*>(dComIfGp_evmng_getMySubstanceP(
+        camera->mEventData.mStaffIdx, reinterpret_cast<const char*>(name), 3));
+    if (!data)
+        eventCameraAssert(defaultIntFile.text, 0x137, defaultIntAssert.text);
+    *out = *data;
     return 1;
 }
-VERIFY(0x02530634, dCamera_c_getEvIntData3);
 
 /* 0253072C */
-static u32 dCamera_c_getEvFloatData(u32 i_this, u32 o_data, u32 i_name, f32 i_default) {
-    WWHD_FUNC(0x0253072C, u32, i_this, o_data, i_name, i_default);
-    f32 v = i_default;
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        if (i != -1) v = ldf(paramValue(i_this, i));
-        stf(o_data, v);
+u32 getEvFloatData(dCamera_c* camera, be<f32>* out, const GuestByte* name, f32 fallback) {
+    f32 value = fallback;
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        if (index != -1)
+            value = *reinterpret_cast<be<f32>*>(paramValue(camera, index));
+        *out = value;
         return 1;
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        stf(o_data, v);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        *out = value;
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 0);
-    if (p == 0) JUT_ASSERT_l(0x1004CD18, 0x150, 0x1004CD28);
-    stf(o_data, ldf(p));
+    auto* data = static_cast<be<f32>*>(dComIfGp_evmng_getMySubstanceP(
+        camera->mEventData.mStaffIdx, reinterpret_cast<const char*>(name), 0));
+    if (!data)
+        eventCameraAssert(floatFile.text, 0x150, floatAssert.text);
+    *out = *data;
     return 1;
 }
-VERIFY(0x0253072C, dCamera_c_getEvFloatData);
 
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
-}
-
-/* 0253086C: getEvXyzData(out, name, default) */
-static u32 dCamera_c_getEvXyzData(u32 i_this, u32 o_data, u32 i_name, u32 i_default) {
-    WWHD_FUNC(0x0253086C, u32, i_this, o_data, i_name, i_default);
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        copy3(o_data, i == -1 ? i_default : paramValue(i_this, i));
+/* 0253086C */
+u32 getEvXyzData(dCamera_c* camera, cXyz* out, const GuestByte* name, const cXyz* fallback) {
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        copyPoint(out, index == -1 ? fallback : reinterpret_cast<cXyz*>(paramValue(camera, index)));
         return 1;
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        copy3(o_data, i_default);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        copyPoint(out, fallback);
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 1);
-    if (p == 0) JUT_ASSERT_l(0x1004CD38, 0x169, 0x1004CD48);
-    copy3(o_data, p);
+    auto* data = static_cast<cXyz*>(dComIfGp_evmng_getMySubstanceP(
+        camera->mEventData.mStaffIdx, reinterpret_cast<const char*>(name), 1));
+    if (!data)
+        eventCameraAssert(xyzFile.text, 0x169, xyzAssert.text);
+    copyPoint(out, data);
     return 1;
 }
-VERIFY(0x0253086C, dCamera_c_getEvXyzData);
 
-/* 02530998: getEvStringData(out, name, default) */
-static u32 dCamera_c_getEvStringData(u32 i_this, u32 o_data, u32 i_name, u32 i_default) {
-    WWHD_FUNC(0x02530998, u32, i_this, o_data, i_name, i_default);
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        strcpy_l(o_data, i == -1 ? i_default : paramValue(i_this, i));
+/* 02530998 */
+u32 getEvStringData(dCamera_c* camera, GuestByte* out, const GuestByte* name,
+                    const char* fallback) {
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        copyString(out, index == -1 ? fallback
+                                    : reinterpret_cast<const char*>(paramValue(camera, index)));
         return 1;
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) {
-        strcpy_l(o_data, i_default);
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0) {
+        copyString(out, fallback);
         return 0;
     }
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 4);
-    if (p == 0) JUT_ASSERT_l(0x1004CD58, 0x19C, 0x1004CD68);
-    strcpy_l(o_data, p);
+    auto* data = static_cast<const char*>(dComIfGp_evmng_getMySubstanceP(
+        camera->mEventData.mStaffIdx, reinterpret_cast<const char*>(name), 4));
+    if (!data)
+        eventCameraAssert(stringFile.text, 0x19C, stringAssert.text);
+    copyString(out, data);
     return 1;
 }
-VERIFY(0x02530998, dCamera_c_getEvStringData);
 
-/* 02530AAC: getEvStringPntData(name, default) */
-static u32 dCamera_c_getEvStringPntData2(u32 i_this, u32 i_name, u32 i_default) {
-    WWHD_FUNC(0x02530AAC, u32, i_this, i_name, i_default);
-    if (debugParams(i_this)) {
-        s32 i = dCamera_c_searchEventArgData(i_this, i_name);
-        return i == -1 ? i_default : paramValue(i_this, i);
+// GameCube overload: getEvStringPntData(name, default).
+/* 02530AAC */
+u32 getEvStringPntDataDefault(dCamera_c* camera, const GuestByte* name, const char* fallback) {
+    if (debugParams(camera)) {
+        s32 index = searchEventArgData(camera, name);
+        return index == -1 ? gabi::ea(fallback) : gabi::ea(paramValue(camera, index));
     }
-    if (evmng_getMySubstanceNum_l((s32)ld(i_this + EV_STAFF), i_name) == 0) return i_default;
-    u32 p = evmng_getMySubstanceP_l((s32)ld(i_this + EV_STAFF), i_name, 4);
-    if (p == 0) JUT_ASSERT_l(0x1004CD78, 0x1B6, 0x1004CD88);
-    return p;
-}
-VERIFY(0x02530AAC, dCamera_c_getEvStringPntData2);
-
-/* dEvt_control_c::convPId(id) with the play pointer loaded after the call to gi() */
-static inline u32 convPIdAt(u32 off) {
-    u32 g = gi();
-    return gabi::call<u32>(0x0253EE04, g + 0x51D0, ld(g + off));
+    if (dComIfGp_evmng_getMySubstanceNum(camera->mEventData.mStaffIdx,
+                                         reinterpret_cast<const char*>(name)) == 0)
+        return gabi::ea(fallback);
+    auto* data = dComIfGp_evmng_getMySubstanceP(camera->mEventData.mStaffIdx,
+                                                reinterpret_cast<const char*>(name), 4);
+    if (!data)
+        eventCameraAssert(defaultStringPointerFile.text, 0x1B6, defaultStringPointerAssert.text);
+    return gabi::ea(data);
 }
 
-/* 02530B84: getEvActor(name) */
-static u32 dCamera_c_getEvActor(u32 i_this, u32 i_name) {
-    WWHD_FUNC(0x02530B84, u32, i_this, i_name);
-    u32 s = dCamera_c_getEvStringPntData(i_this, i_name);
-    if (s == 0) return 0;
-    u32 w = ld(s);
-    if (w == 0x40504C41) return ld(i_this + 0x128);
-    if (w == 0x40535441) return convPIdAt(0x5294);
-    if (w == 0x40504152) return convPIdAt(0x5298);
-    if (w == 0x4054414C) return convPIdAt(0x529C);
-    if (w == 0x40544152 || w == 0x40495445) return convPIdAt(0x52A0);
-    if (w == 0x4C696E6B) return ld(gi() + 0x5B34);
-    return gabi::call<u32>(0x025D9F38, s, 0, 0);
+static u32 actorByName(dCamera_c* camera, u32 prefix, const char* name) {
+    switch (prefix) {
+    case ACTOR_PLAYER:
+        return gabi::ea(camera->mpPlayerActor.get());
+    case ACTOR_STARTER:
+        return gabi::ea(dComIfGp_event_getPt1());
+    case ACTOR_PARTNER:
+        return gabi::ea(dComIfGp_event_getPt2());
+    case ACTOR_TALK_PARTNER:
+        return gabi::ea(dComIfGp_event_getTalkPartner());
+    case ACTOR_TARGET:
+    case ACTOR_ITEM: {
+        auto* play = &reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play;
+        return gabi::ea(eventCameraConvPId(&play->mEvtCtrl, play->mEvtCtrl.mPtItem));
+    }
+    case ACTOR_LINK:
+        return gabi::ea(dComIfGp_getLinkPlayer());
+    default:
+        return eventCameraActorByName(name, 0, 0);
+    }
 }
-VERIFY(0x02530B84, dCamera_c_getEvActor);
 
-/* 02530CB4: getEvActor(name, default) through a 16-byte string buffer */
-static u32 dCamera_c_getEvActor2(u32 i_this, u32 i_name, u32 i_default) {
-    WWHD_FUNC(0x02530CB4, u32, i_this, i_name, i_default);
-    gabi::Local<u8[0x20]> frame; /* the original's frame: the buffer at +8 (long strings overrun it alike) */
-    u32 b = gabi::ea(frame.get()) + 8;
-    st8(b, 0);
-    dCamera_c_getEvStringData(i_this, b, i_name, i_default);
-    u32 w = ld(b);
-    if (w == 0x40504C41) return ld(i_this + 0x128);
-    if (w == 0x40535441) return convPIdAt(0x5294);
-    if (w == 0x40504152) return convPIdAt(0x5298);
-    if (w == 0x4054414C) return convPIdAt(0x529C);
-    if (w == 0x40544152 || w == 0x40495445) return convPIdAt(0x52A0);
-    if (w == 0x4C696E6B) return ld(gi() + 0x5B34);
-    return gabi::call<u32>(0x025D9F38, b, 0, 0);
+/* 02530B84 */
+u32 getEvActor(dCamera_c* camera, const GuestByte* name) {
+    u32 stringAddress = getEvStringPntData(camera, name);
+    if (!stringAddress)
+        return 0;
+    auto* string = gabi::at<GuestWord>(stringAddress);
+    u32 prefix = *string;
+    return actorByName(camera, prefix, reinterpret_cast<const char*>(string));
 }
-VERIFY(0x02530CB4, dCamera_c_getEvActor2);
 
-/* 02530DDC: pauseEvCamera; work: +0 timer set, +4 Stay, +8 Timer */
-static u32 dCamera_c_pauseEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02530DDC, u32, i_this);
-    u32 w = i_this + EV_WORK;
-    if (ld(i_this + EV_TIMER) == 0) {
-        st8(i_this + 0x102, 1);
-        st8(i_this + 0x101, 1);
-        st8(i_this + 0x100, 1);
-        st8(w + 0, (u8)dCamera_c_getEvIntData3(i_this, w + 8, 0x1004CD9C /* "Timer" */, -1));
-        dCamera_c_getEvIntData3(i_this, w + 4, 0x1004CDA4 /* "Stay" */, 0);
-        if (ld8(i_this + 0x610) != 0) {
-            /* HD: keep the eye 120 units from the centre along the current direction */
-            gabi::Local<cXyz> d;
-            gabi::Local<cXyz> n;
-            gabi::Local<cXyz> s;
-            u32 dd = gabi::ea(d.get()), nn = gabi::ea(n.get()), ss = gabi::ea(s.get());
-            gabi::call(0x0201ADE0, i_this + 0x1C, dd, i_this + 0x10); /* eye - center */
-            gabi::call(0x0201B31C, dd, nn);                          /* normalize */
-            gabi::call(0x0201AE48, nn, ss, 120.0f);                  /* * 120 */
-            copy3(dd, ss);
-            gabi::call(0x0201AD78, i_this + 0x10, nn, dd);           /* center + */
-            u32 x = ld(nn + 0), y = ld(nn + 4), z = ld(nn + 8);
-            st(i_this + 0x58, z);
-            st(i_this + 0x50, x);
-            st(i_this + 0x54, y);
-            gabi::call(0x0201ADE0, i_this + 0x50, nn, i_this + 0x44); /* eye - center */
-            gabi::call(0x020072E0, i_this + 0x3C, nn);               /* mViewCache.mDirection.Val */
+// GameCube overload: getEvActor(name, default).
+/* 02530CB4 */
+u32 getEvActorDefault(dCamera_c* camera, const GuestByte* name, const char* fallback) {
+    // HD: the original frame has a buffer at +8; long strings retain its overrun behavior.
+    ActorStringFrame frame;
+    frame.mBuffer[0] = 0;
+    getEvStringData(camera, frame.mBuffer, name, fallback);
+    u32 prefix = *reinterpret_cast<GuestWord*>(frame.mBuffer);
+    return actorByName(camera, prefix, reinterpret_cast<const char*>(frame.mBuffer));
+}
+
+/* 02530DDC */
+u32 pauseEvCamera(dCamera_c* camera) {
+    auto* work = reinterpret_cast<PauseWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        SkipSmoother(camera);
+        work->mTimerSet = static_cast<u8>(getEvIntDataDefault(
+            camera, &work->mTimer, reinterpret_cast<const GuestByte*>(timerName.text), -1));
+        getEvIntDataDefault(camera, &work->mStay, reinterpret_cast<const GuestByte*>(stayName.text),
+                            0);
+        if (camera->mHD610 != 0) {
+            // HD: keep the eye 120 units from the center along the current direction.
+            cXyz direction;
+            cXyz normalized;
+            cXyz scaled;
+            eventCameraSubtract(&camera->mEye, &direction, &camera->mCenter);
+            eventCameraNormalize(&direction, &normalized);
+            eventCameraScale(&normalized, &scaled, 120.0f);
+            copyPoint(&direction, &scaled);
+            eventCameraAdd(&camera->mCenter, &normalized, &direction);
+            auto* words = reinterpret_cast<VectorWords*>(&normalized);
+            u32 x = words->x;
+            u32 y = words->y;
+            u32 z = words->z;
+            auto* eye = reinterpret_cast<VectorWords*>(&camera->mViewCache.mEye);
+            eye->z = z;
+            eye->x = x;
+            eye->y = y;
+            eventCameraSubtract(&camera->mViewCache.mEye, &normalized, &camera->mViewCache.mCenter);
+            cSGlobe_Val(&camera->mViewCache.mDirection, &normalized);
         }
     }
-    if (ld(w + 4) != 0) st(i_this + EV_FLAGS, ld(i_this + EV_FLAGS) | 1);
-    if (ld8(w + 0) != 0 && ld(i_this + EV_TIMER) < ld(w + 8)) return 0;
+    if (work->mStay != 0)
+        camera->mEventFlags |= 1;
+    if (work->mTimerSet != 0 && camera->m11C < work->mTimer)
+        return 0;
     return 1;
 }
-VERIFY(0x02530DDC, dCamera_c_pauseEvCamera);
 
-/* 02530F5C: talktoEvCamera: talktoCamera with the event type's style (or "TT01") */
-static u8 dCamera_c_talktoEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02530F5C, u8, i_this);
-    convPIdAt(0x5294);
-    s32 type = (s32)ld(i_this + 0x408);
-    u32 t108 = ld(i_this + 0x108);
-    s32 style = lds16(0x1004936E + (u32)(type << 6)); /* types[type].mStyles[0] */
-    if (t108 == 0) st(i_this + EV_FLAGS, ld(i_this + EV_FLAGS) & ~0x200000u);
-    if (style < 0) style = gabi::call<s32>(0x024F732C, i_this + 0x8A4, 0x54543031 /* 'TT01' */);
-    gabi::call(0x02508A60, i_this, style); /* talktoCamera */
-    u8 r = 0;
-    if (ld8(i_this + 0x100) != 0 && ld8(i_this + 0x101) != 0 && ld8(i_this + 0x102) != 0) r = 1;
-    return r;
+/* 02530F5C */
+u8 talktoEvCamera(dCamera_c* camera) {
+    dComIfGp_event_getPt1();
+    s32 type = camera->mEventData.field_0x0c;
+    u32 frame = camera->m108;
+    s32 style = camTypeStyle(type, 3);
+    if (frame == 0)
+        camera->mEventFlags &= ~CLEAR_EVENT_FLAG;
+    if (style < 0)
+        style = eventCameraSearchStyle(camera->mCamParam, 0x54543031); // TT01
+    eventCameraTalktoCamera(camera, style);
+    u8 done = 0;
+    if (camera->m100 != 0 && camera->m101 != 0 && camera->m102 != 0)
+        done = 1;
+    return done;
 }
-VERIFY(0x02530F5C, dCamera_c_talktoEvCamera);
 
-/* 0253E70C: StartEventCamera(id2, id1, name, value, ..., NULL): varargs name/value pairs into the
- * debug parameter table (at most 8) */
-static u32 dCamera_c_StartEventCamera(u32 i_this, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5, u32 a6, u32 a7) {
-    WWHD_FUNC(0x0253E70C, u32, i_this, a1, a2, a3, a4, a5, a6, a7);
-    u32 entry = gabi::cpu->r[1];
-    gabi::Local<u8[0x90]> frame; /* the original's frame: va_list at +8, register save area at +0x18 */
-    u32 f = gabi::ea(frame.get());
-    const u32 regs[8] = {i_this, a1, a2, a3, a4, a5, a6, a7};
-    for (u32 i = 0; i < 8; i++) st(f + 0x18 + 4 * i, regs[i]);
-    if (debugParams(i_this)) return 0;
-    st(i_this + EV_ID1, a2);
-    st(i_this + EV_ID2, a1);
-    u32 va = f + 8;
-    st(va + 4, entry + 8);
-    st(va + 8, f + 0x18);
-    st8(va + 0, 3);
-    st8(va + 1, 0);
-    for (u32 i = 0; i < 8; i++) {
-        u32 name = ld(gabi::call<u32>(0x028F5C88, va, 1));
-        u32 slot = i_this + EV_PARAMS + i * 0x14;
-        if (name == 0) {
-            st8(slot, 0);
+/* 0253E70C */
+u32 StartEventCamera(dCamera_c* camera, u32 id2, u32 id1, u32 a3, u32 a4, u32 a5, u32 a6, u32 a7) {
+    auto* overflow = entryStackArguments();
+    EventVarArgsFrame frame;
+    const u32 registers[8] = {gabi::ea(camera), id2, id1, a3, a4, a5, a6, a7};
+    for (u32 i = 0; i < 8; ++i)
+        frame.mRegisters[i] = registers[i];
+    if (debugParams(camera))
+        return 0;
+    camera->mEventData.field_0x14 = id1;
+    camera->mEventData.field_0x18 = id2;
+    frame.mArgs.mpOverflow = overflow;
+    frame.mArgs.mpRegisterSave = frame.mRegisters;
+    frame.mArgs.mGpr = 3;
+    frame.mArgs.mFpr = 0;
+    for (u32 i = 0; i < 8; ++i) {
+        u32 nameAddress = *eventCameraVaArg(&frame.mArgs, 1);
+        auto* parameter = &parameters(camera)[i];
+        if (!nameAddress) {
+            parameter->mName[0] = 0;
             break;
         }
-        strcpy_l(slot, name);
-        u32 v = ld(gabi::call<u32>(0x028F5C88, va, 1));
-        st(slot + 0x10, v);
+        copyString(parameter->mName, gabi::at<const char>(nameAddress));
+        u32 value = *eventCameraVaArg(&frame.mArgs, 1);
+        parameter->mValue = gabi::at<GuestWord>(value);
     }
-    u32 fl = ld(i_this + EV_FLAGS);
-    st(i_this + EV_TIMER, 0);
-    st(i_this + EV_FLAGS, fl | 0x20000000);
+    u32 flags = camera->mEventFlags;
+    camera->m11C = 0;
+    camera->mEventFlags = flags | DEBUG_EVENT_PARAMS;
     return 1;
 }
-VERIFY(0x0253E70C, dCamera_c_StartEventCamera);
 
-/* 0253E860: EndEventCamera(id) */
-static u32 dCamera_c_EndEventCamera(u32 i_this, u32 i_id) {
-    WWHD_FUNC(0x0253E860, u32, i_this, i_id);
-    u32 fl = ld(i_this + EV_FLAGS);
-    if (!((fl >> 29) & 1)) return 0;
-    if ((s32)ld(i_this + 0xE8) != -1 && i_id != ld(i_this + EV_ID1)) return 0;
-    st(i_this + EV_FLAGS, fl & ~0x20000000u);
+/* 0253E860 */
+u32 EndEventCamera(dCamera_c* camera, u32 id) {
+    u32 flags = camera->mEventFlags;
+    if (!(flags & DEBUG_EVENT_PARAMS))
+        return 0;
+    if (camera->m0E8 != -1 && id != static_cast<u32>(camera->mEventData.field_0x14))
+        return 0;
+    camera->mEventFlags = flags & ~DEBUG_EVENT_PARAMS;
     return 1;
 }
-VERIFY(0x0253E860, dCamera_c_EndEventCamera);
 
-/* 0253E89C: static initialisers (header statics) */
-static void __sinit_d_ev_camera_cpp() {
-    WWHD_FUNC(0x0253E89C, void, (u32)0);
-    sinit_header_statics(0x10475850, 0x101D627C);
+/* 0253E89C */
+void __sinit_d_ev_camera_cpp() {
+    for (u32 i = 0; i < 4; ++i)
+        headerStatics.mZeroObject[i] = 0;
+    eventCameraRegisterGlobal(&destructorRecords.mRecords[0]);
+    headerStatics.mPi[0] = -3.1415927f;
+    headerStatics.mPi[1] = 3.1415927f;
+    eventCameraConstructFirst(&headerStatics.mFirstObject);
+    eventCameraRegisterGlobal(&destructorRecords.mRecords[1]);
+    eventCameraConstructSecond(&headerStatics.mSecondObject);
+    eventCameraRegisterGlobal(&destructorRecords.mRecords[2]);
 }
-VERIFY(0x0253E89C, __sinit_d_ev_camera_cpp);
 
-/* 0253E930: deleting destructor without members (per-TU copy) */
-static void dtor_0253E930(u32 i_this, s32 i_flag) {
-    WWHD_FUNC(0x0253E930, void, i_this, i_flag);
-    if (i_this == 0) return;
-    if ((i_flag & 1) == 0) return;
-    gabi::call(0x0273AF40, i_this);
+/* 0253E930 */
+void destroyEventCameraHeaderObject(void* object, s32 flags) {
+    if (!object)
+        return;
+    if (!(flags & 1))
+        return;
+    eventCameraFree(object);
 }
-VERIFY(0x0253E930, dtor_0253E930);
 
-/* 0253E944: empty virtual (per-TU copy) */
-static void empty_0253E944(u32 i_this) {
-    WWHD_FUNC(0x0253E944, void, i_this);
+/* 0253E944 */
+void eventCameraEmptyVirtual(void* object) {
 }
-VERIFY(0x0253E944, empty_0253E944);
+} // namespace event_camera
+using namespace event_camera;
 
-} // namespace d_ev_camera_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+data intFile 1004CCB8
+data intAssert 1004CCC8
+data stringPointerFile 1004CCD8
+data stringPointerAssert 1004CCE8
+data defaultIntFile 1004CCF8
+data defaultIntAssert 1004CD08
+data floatFile 1004CD18
+data floatAssert 1004CD28
+data xyzFile 1004CD38
+data xyzAssert 1004CD48
+data stringFile 1004CD58
+data stringAssert 1004CD68
+data defaultStringPointerFile 1004CD78
+data defaultStringPointerAssert 1004CD88
+data timerName 1004CD9C
+data stayName 1004CDA4
+data headerStatics 10475850
+data destructorRecords 101D627C
+ext 0273AA24 u32 eventCameraAssert(const char*, s32, const char*)
+ext 028F040C void eventCameraStrcpy(char*, const char*)
+ext 0253EE04 fopAc_ac_c* eventCameraConvPId(dEvt_control_c*, u32)
+ext 025D9F38 u32 eventCameraActorByName(const char*, u32, u32)
+ext 024F732C s32 eventCameraSearchStyle(void*, u32)
+ext 02508A60 void eventCameraTalktoCamera(dCamera_c*, s32)
+ext 0201ADE0 void eventCameraSubtract(cXyz*, cXyz*, cXyz*)
+ext 0201B31C void eventCameraNormalize(cXyz*, cXyz*)
+ext 0201AE48 void eventCameraScale(cXyz*, cXyz*, f32)
+ext 0201AD78 void eventCameraAdd(cXyz*, cXyz*, cXyz*)
+ext 028F5C88 GuestWord* eventCameraVaArg(EventVaList*, u32)
+ext 028F026C void eventCameraRegisterGlobal(DestructorRecord*)
+ext 028ED6F8 void eventCameraConstructFirst(GuestByte*)
+ext 028EAB2C void eventCameraConstructSecond(GuestByte*)
+ext 0273AF40 void eventCameraFree(void*)
+*/

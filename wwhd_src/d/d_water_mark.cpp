@@ -1,85 +1,359 @@
-// HD water-mark effect.
-#include "gabi.h"
-using namespace gabi;
-static u32 U(u32 p,u32 n=0){return load<u32>(p+n);}
-static f32 F(u32 p,u32 n=0){return load<f32>(p+n);}
-static void S(u32 p,u32 n,f32 x){store<f32>(p+n,x);}
-struct WaterVec { be<u32> xyz[3]; };
-struct WaterRes { be<u32> a,b; };
-u32 waterDraw(u32 p){
- WWHD_FUNC(0x025CC200,u32,p);Local<WaterVec> v;
- u32 x=U(p,0xE0),y=U(p,0xE4),z=U(p,0xE8);v->xyz[0]=x;v->xyz[1]=y;v->xyz[2]=z;
- u32 clipped=call<u32>(0x02838148,0x1048CFF0u,0x104B45F8u,v.get(),fmuls_ppc(F(0x10056540),F(p,0xEC)));
- if(!clipped){call<void>(0x025E83FC,p+0x104,U(U(p,0x100),0xAC),F(p,0x108));call<void>(0x025E7B3C,p+0x17C,U(U(p,0x100),0xAC),load<s16>(p+0xFA));call<void>(0x025E2DE0,U(p,0x100),0u);}return 1;
+/** Water-mark effect. WWHD, verified unit d_water_mark. */
+#include "d/d_water_mark.h"
+
+static s16 m_circle_cnt;
+static s16 m_player_foot_now_id;
+static dBgS_ObjGndChk m_ground_check;
+static WaterHeapPointer effectHeap;
+static f32 clipScale;
+static f32 groundOffset;
+static f32 invalidGround;
+static f32 zero;
+static f32 surfaceOffset;
+static f32 playRate;
+static u32 waterVtable;
+static u8 heapDebugName;
+static u32 safeStringVtable;
+static u8 clipper;
+static Mtx34 viewMatrix;
+static WaterSinCosTable sincosTable;
+static u32 groundCtorChkVtable;
+static u32 groundCtorPolyVtable;
+static u32 groundCtorGroupVtable;
+static u32 groundCtorPassVtable;
+static u32 groundDtorPolyVtable;
+static u32 groundDtorPassVtable;
+static u32 groundDtorGroupVtable;
+
+/* 025CC200 */
+u32 dWaterMark_c::draw() {
+    gabi::Local<cXyz> position;
+    position->copy(mPos);
+    u32 clipped = Water_clip(&clipper, &viewMatrix, position.get(),
+                             gabi::fmuls_ppc(clipScale, mScale.x));
+    if (clipped == 0) {
+        Water_brkEntry(&mBrk, mpModel->getModelData(), mBrk.mFrameCtrl.mFrame);
+        // HD: the texture frame comes from the lower half of mParam.
+        Water_btpEntry(&mBtp, mpModel->getModelData(), s16(u32(mParam) & 0xFFFF));
+        Water_modelUpdateDL(mpModel, 0);
+    }
+    return TRUE;
 }
-VERIFY(0x025CC200,waterDraw);
-u32 waterSetMatrix(u32 p){
- WWHD_FUNC(0x025CC2B4,u32,p);u32 chk=0x104872E8u;
- f32 y=fadds_ppc(F(p,0xE4),F(0x10056638)),x=F(p,0xE0),z=F(p,0xE8);S(chk,0x24,x);S(chk,0x2C,z);S(chk,0x28,y);
- u32 g=call<u32>(0x025200D4);f32 ground=call<f32>(0x02008974,g+0x12A0,chk);f32 bad=F(0x1005663C);S(p,0xE4,ground);if(ground==bad)return 0;
- g=call<u32>(0x025200D4);u32 plane=call<u32>(0x020084C8,g+0x12A0,load<u16>(chk+0x16),load<u16>(chk+0x14));if(!plane)return 0;
- s16 direction=call<s16>(0x020195B0,F(plane),F(plane,8));u32 relative=(u16)((s32)direction-(s32)load<s16>(p+0x1F2));
- Local<WaterVec> v;v->xyz[0]=U(plane);v->xyz[2]=U(plane,8);store<f32>(ea(v.get())+4,F(0x10056640));
- f32 mag=call<f32>(0x028E8DD0,v.get());f32 len=call<f32>(0x028F4384,mag);
- u32 mtx=0x1048D0CCu;call<void>(0x028E93CC,mtx,F(p,0xE0),fadds_ppc(F(p,0xE4),F(0x10056644)),F(p,0xE8));
- u32 table=0x104A44F8u+(relative>>3)*8;
- s16 rotX=call<s16>(0x020195B0,fmuls_ppc(len,F(table,4)),F(plane,4));
- s16 heading=load<s16>(p+0x1F2);s16 rotZ=call<s16>(0x020195B0,-fmuls_ppc(len,F(table)),F(plane,4));
- call<void>(0x025F1B48,mtx,rotX,heading,rotZ);
- f32 a[12];for(u32 n=0;n<12;++n)a[n]=F(mtx,n*4);u32 model=U(p,0x100);
- S(model,0xF4,a[11]);S(model,0xE4,a[7]);S(model,0xD0,a[2]);S(model,0xE8,a[8]);S(model,0xDC,a[5]);S(model,0xEC,a[9]);S(model,0xD8,a[4]);S(model,0xF0,a[10]);S(model,0xE0,a[6]);S(model,0xC8,a[0]);S(model,0xD4,a[3]);S(model,0xCC,a[1]);
- g=call<u32>(0x025200D4);s16 moving=call<s16>(0x024EEABC,g+0x12A0,chk+0x14);store<s16>(p+0x1F0,moving);return 1;
+
+/* 025CC2B4 */
+u32 dWaterMark_c::setMatrix() {
+    f32 y = gabi::fadds_ppc(mPos.y, groundOffset);
+    f32 x = mPos.x;
+    f32 z = mPos.z;
+    m_ground_check.m_pos.x = x;
+    m_ground_check.m_pos.z = z;
+    m_ground_check.m_pos.y = y;
+    f32 ground = Water_GroundCross(dComIfG_Bgsp(), &m_ground_check);
+    f32 bad = invalidGround;
+    mPos.y = ground;
+    if (ground == bad) {
+        return FALSE;
+    }
+    dBgS* bgs = dComIfG_Bgsp();
+    cM3dGPla* tri = Water_GetTriPla(bgs, m_ground_check.mBgIndex, m_ground_check.mPolyIndex);
+    // HD: a missing triangle is a second failure path.
+    if (tri == NULL) {
+        return FALSE;
+    }
+    s16 direction = cM_atan2s(tri->mNormal.x, tri->mNormal.z);
+    u32 relative = u16(s32(direction) - s32(field_0x12e));
+    gabi::Local<cXyz> normalXZ;
+    normalXZ->x = tri->mNormal.x;
+    normalXZ->z = tri->mNormal.z;
+    normalXZ->y = zero;
+    f32 mag = PSVECSquareMag(normalXZ.get());
+    f32 norm_xz_mag = Water_sqrt(mag);
+    mDoMtx_stack_c::transS(mPos.x, gabi::fadds_ppc(mPos.y, surfaceOffset), mPos.z);
+    WaterSinCosPair* angles = &sincosTable.entries[relative >> 3];
+    s16 rotX = cM_atan2s(gabi::fmuls_ppc(norm_xz_mag, angles->cosine), tri->mNormal.y);
+    s16 heading = field_0x12e;
+    s16 rotZ = cM_atan2s(-gabi::fmuls_ppc(norm_xz_mag, angles->sine), tri->mNormal.y);
+    Water_ZXYrotM(mDoMtx_stack_c::get(), rotX, heading, rotZ);
+    // HD: load all twelve words before the original nonsequential matrix stores.
+    f32 matrix[12];
+    Mtx34* stack = mDoMtx_stack_c::get();
+    for (u32 i = 0; i < 12; ++i) {
+        matrix[i] = stack->m[i / 4][i % 4];
+    }
+    J3DModel* model = mpModel;
+    Mtx34& dst = model->mBaseTransformMtx;
+    dst.m[2][3] = matrix[11];
+    dst.m[1][3] = matrix[7];
+    dst.m[0][2] = matrix[2];
+    dst.m[2][0] = matrix[8];
+    dst.m[1][1] = matrix[5];
+    dst.m[2][1] = matrix[9];
+    dst.m[1][0] = matrix[4];
+    dst.m[2][2] = matrix[10];
+    dst.m[1][2] = matrix[6];
+    dst.m[0][0] = matrix[0];
+    dst.m[0][3] = matrix[3];
+    dst.m[0][1] = matrix[1];
+    field_0x12c = Water_ChkMoveBG(dComIfG_Bgsp(), static_cast<cBgS_PolyInfo*>(&m_ground_check));
+    return TRUE;
 }
-VERIFY(0x025CC2B4,waterSetMatrix);
-u32 waterExecute(u32 p){
- WWHD_FUNC(0x025CC4A4,u32,p);bool play=load<s16>(p+0x1F8)==-1;
- if(!play){s16 start=load<s16>(p+0x1F4),end=load<s16>(p+0x1F6),now=load<s16>(0x101F133Eu);
-  if((start<end && !(start>now) && !(end<=now)) || (start>=end && ((start<=now) || !(end<=now)))){store<s16>(p+0x1F8,-1);play=true;}}
- if(play)call<void>(0x025E742C,p+0x104);
- bool remove=(load<u8>(p+0x113)&1)!=0;
- if(!remove){if(F(p,0x104)==F(0x10056640))remove=true;else if(load<s16>(p+0x1F0)==1)remove=call<u32>(0x025CC2B4,p)==0;}
- if(remove)call<void>(0x025DAD48,p);return 1;
+
+/* 025CC4A4 */
+u32 dWaterMark_c::execute() {
+    bool play = field_0x134 == -1;
+    if (!play) {
+        s16 start = field_0x130;
+        s16 end = field_0x132;
+        s16 now = m_player_foot_now_id;
+        if ((start < end && start <= now && end > now) ||
+            (start >= end && (start <= now || end > now))) {
+            field_0x134 = -1;
+            play = true;
+        }
+    }
+    if (play) {
+        Water_brkPlay(&mBrk);
+    }
+    bool remove = (mBrk.mFrameCtrl.mState & J3DFrameCtrl::STATE_STOP_E) != 0;
+    if (!remove) {
+        if (mBrk.mFrameCtrl.mRate == zero) {
+            remove = true;
+        } else if (field_0x12c == 1) {
+            remove = setMatrix() == FALSE;
+        }
+    }
+    if (remove) {
+        Water_kankyoDelete(this);
+    }
+    return TRUE;
 }
-VERIFY(0x025CC4A4,waterExecute);
-u32 waterIsDelete(u32 p){WWHD_FUNC(0x025CC564,u32,p);return 1;}
-VERIFY(0x025CC564,waterIsDelete);
-u32 waterDelete(u32 p){WWHD_FUNC(0x025CC56C,u32,p);u32 heap=U(p,0xFC);if(heap)call<void>(0x025E3868,heap);if(U(p,0xF8)==1)store<s16>(0x101F133Cu,(s16)((u16)load<s16>(0x101F133Cu)-1));call<void>(0x025DD630,p,0u);return 1;}
-VERIFY(0x025CC56C,waterDelete);
-u32 waterCreate(u32 p){
- WWHD_FUNC(0x025CC5D0,u32,p);if(p){call<void>(0x025DD5F0,p);store<u32>(p+0xB4,0x10056570u);call<void>(0x025E80D0,p+0x104);call<void>(0x025E7820,p+0x17C);}
- u32 params=U(p,0xF8),kind=params&0xFFFFu;store<u16>(p+0x1F2,(u16)(params>>16));store<u32>(p+0xF8,kind);
- if(kind>2)return 5;if(kind==1){s16 count=(s16)((u16)load<s16>(0x101F133Cu)+1);store<s16>(0x101F133Cu,count);if(count>10)return 5;}
- u32 parent=U(0x1047C8B4u),heap;
- if(parent){heap=call<u32>(0x025E35BC,0x3534u,parent,0x100u);store<u32>(p+0xFC,heap);}else heap=U(p,0xFC);
- if(!heap){parent=call<u32>(0x025E2F64,0u);heap=call<u32>(0x025E35BC,0x3534u,parent,0x100u);store<u32>(p+0xFC,heap);
-  if(!heap){parent=call<u32>(0x025E2F64,1u);heap=call<u32>(0x025E35BC,0x3534u,parent,0x100u);store<u32>(p+0xFC,heap);if(!heap)return 5;}}
- store<u32>(heap+16,0x10056548u);Local<WaterRes> modelName;modelName->a=0x10056550u;modelName->b=0x10056558u;
- u32 data=call<u32>(0x026066C4,U(0x101F4F28u),modelName.get(),0x2Fu);if(!data)call<void>(0x0273AA24,0x10056610u,0x14Eu,0x10056624u);
- u32 model=call<u32>(0x025E38E0,data,0x80000u,0x11020022u);store<u32>(p+0x100,model);
- Local<WaterRes> brkName;brkName->b=0x10056558u;brkName->a=0x10056550u;
- u32 resource=call<u32>(0x026066C4,U(0x101F4F28u),brkName.get(),0x4Du);f32 rate=F(0x10056648);
- u32 brk=call<u32>(0x025E8154,p+0x104,data,resource,1u,0u,0u,0xFFFFFFFFu,0u,0u,rate);
- Local<WaterRes> btpName;btpName->b=0x10056558u;btpName->a=0x10056550u;
- resource=call<u32>(0x026066C4,U(0x101F4F28u),btpName.get(),0x63u);
- u32 ok=brk&call<u32>(0x025E789C,p+0x17C,data,resource,0u,0u,0u,0xFFFFFFFFu,0u,0u,rate);
- call<void>(0x025E37D8);call<void>(0x025E3678,U(p,0xFC));model=U(p,0x100);if(!model||!ok)return 5;
- f32 sx=F(p,0xEC),sz=F(p,0xF4),sy=F(p,0xF0);S(model,0xC4,sz);S(model,0xBC,sx);S(model,0xC0,sy);
- if(!call<u32>(0x025CC2B4,p))return 5;
- if(U(p,0xF8)==2){s16 old=load<s16>(0x101F133Eu);store<s16>(p+0x1F8,old);s16 next=(s16)((u16)load<s16>(0x101F133Eu)+1);store<s16>(0x101F133Eu,next==40?0:next);
-  s16 start=(s16)((u16)load<s16>(p+0x1F8)+20);if(start>=40)start=(s16)((u16)start-40);s16 end=(s16)((u16)start+20);store<s16>(p+0x1F4,start);
-  if(end<40){store<s16>(p+0x1F6,end);store<u32>(p+0xF8,0);}else{store<u32>(p+0xF8,0);store<s16>(p+0x1F6,(s16)((u16)end-40));}
- }else store<s16>(p+0x1F8,-1);return 4;
+
+/* 025CC564 */
+static u32 dWaterMark_IsDelete(dWaterMark_c* i_this) {
+    return TRUE;
 }
-VERIFY(0x025CC5D0,waterCreate);
-void waterStaticInit(){
- WWHD_FUNC(0x025CC934,void);store<u32>(0x104872E0u,0);store<u32>(0x104872D8u,0);store<u32>(0x104872E4u,0);store<u32>(0x104872DCu,0);call<void>(0x028F026C,0x101F130Cu);
- f32 a=F(0x10056650),b=F(0x10056654);S(0x104872CC,0,a);S(0x104872D0,0,b);call<void>(0x028ED6F8,0x104872D4u);call<void>(0x028F026C,0x101F1318u);call<void>(0x028EAB2C,0x104872D5u);call<void>(0x028F026C,0x101F1324u);
- u32 p=0x104872E8u;call<void>(0x02008E0C,p);store<u8>(p+0x45,0);store<u8>(p+0x46,0);store<u32>(p,p+0x40);store<u8>(p+0x47,0);store<u8>(p+0x48,0);store<u32>(p+4,p+0x4C);store<u32>(p+0x50,1);store<u8>(p+0x49,0);store<u32>(p+0x10,0x100565D0u);store<u32>(p+0x20,0x100565E0u);store<u32>(p+0x4C,0x100565F0u);store<u8>(p+0x4A,0);store<u32>(p+0x40,0x10056600u);store<u8>(p+0x44,1);call<void>(0x028F026C,0x101F1330u);
+
+/* 025CC56C */
+u32 dWaterMark_c::wm_delete() {
+    WaterSolidHeap* heap = mpHeap;
+    if (heap != NULL) {
+        Water_destroySolidHeap(heap);
+    }
+    if (mParam == 1) {
+        m_circle_cnt = s16(u16(m_circle_cnt) - 1);
+    }
+    // HD: the environment base destructor is explicitly called.
+    Water_baseDelete(this, 0);
+    return TRUE;
 }
-VERIFY(0x025CC934,waterStaticInit);
-void waterEmptyDtor(u32 p,u32 flags){WWHD_FUNC(0x025CCA58,void,p,flags);if(p&&(flags&1))call<void>(0x0273AF40,p);}
-VERIFY(0x025CCA58,waterEmptyDtor);
-void waterGroundDtor(u32 p,u32 flags){WWHD_FUNC(0x025CCA6C,void,p,flags);if(p){store<u32>(p+0x20,0x100565A0u);store<u32>(p+0x40,0x100565C0u);store<u32>(p+0x4C,0x10056580u);call<void>(0x02008DAC,p,0u);if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x025CCA6C,waterGroundDtor);
-void waterEmpty(u32 p){WWHD_FUNC(0x025CCAE4,void,p);}
-VERIFY(0x025CCAE4,waterEmpty);
+
+/* 025CC5D0 */
+u32 dWaterMark_c::create() {
+    if (gabi::ea(this) != 0) {
+        Water_baseConstruct(this);
+        base.__vtbl = gabi::ea(&waterVtable);
+        Water_brkConstruct(&mBrk);
+        Water_btpConstruct(&mBtp);
+    }
+    u32 params = mParam;
+    u32 kind = params & 0xFFFF;
+    field_0x12e = u16(params >> 16);
+    mParam = kind;
+    if (kind > 2) {
+        return cPhs_ERROR_e;
+    }
+    if (kind == 1) {
+        s16 count = s16(u16(m_circle_cnt) + 1);
+        m_circle_cnt = count;
+        if (count > 10) {
+            return cPhs_ERROR_e;
+        }
+    }
+    JKRHeap* parent = effectHeap.mpHeap;
+    WaterSolidHeap* heap;
+    if (parent != NULL) {
+        // HD: effect heap grows to 0x3534 with 0x100 alignment and explicit fallback heaps.
+        heap = Water_createSolidHeap(0x3534, parent, 0x100);
+        mpHeap = heap;
+    } else {
+        heap = mpHeap;
+    }
+    if (heap == NULL) {
+        parent = Water_getGameHeap(0);
+        heap = Water_createSolidHeap(0x3534, parent, 0x100);
+        mpHeap = heap;
+        if (heap == NULL) {
+            parent = Water_getGameHeap(1);
+            heap = Water_createSolidHeap(0x3534, parent, 0x100);
+            mpHeap = heap;
+            if (heap == NULL) {
+                return cPhs_ERROR_e;
+            }
+        }
+    }
+    heap->mDebugName = gabi::ea(&heapDebugName);
+    gabi::Local<WaterResourceName> modelName;
+    modelName->__vtbl = gabi::ea(&safeStringVtable);
+    modelName->mString = gabi::guest_addr("Always");
+    J3DModelData* modelData = static_cast<J3DModelData*>(
+        Water_getResource(dComIfG_resControl(), modelName.get(), dRes_INDEX_ALWAYS_BDL_MPA_SIMI_e));
+    if (modelData == NULL) {
+        Water_assert("d_water_mark.cpp", 0x14E, "modelData != NULL");
+    }
+    mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11020022);
+    gabi::Local<WaterResourceName> brkName;
+    brkName->mString = gabi::guest_addr("Always");
+    brkName->__vtbl = gabi::ea(&safeStringVtable);
+    void* brk = Water_getResource(dComIfG_resControl(), brkName.get(), dRes_INDEX_ALWAYS_BRK_MPA_SIMI_e);
+    f32 rate = playRate;
+    u32 brk_rt = Water_brkInit(&mBrk, modelData, brk, TRUE, J3DFrameCtrl::EMode_NONE,
+                              0, 0xFFFFFFFF, 0, 0, rate);
+    gabi::Local<WaterResourceName> btpName;
+    btpName->mString = gabi::guest_addr("Always");
+    btpName->__vtbl = gabi::ea(&safeStringVtable);
+    void* btp = Water_getResource(dComIfG_resControl(), btpName.get(), dRes_INDEX_ALWAYS_BTP_MPA_SIMI_e);
+    u32 is_anm_init = brk_rt & Water_btpInit(&mBtp, modelData, btp, FALSE,
+                                           J3DFrameCtrl::EMode_NONE, 0, 0xFFFFFFFF, 0, 0, rate);
+    Water_restoreCurrentHeap();
+    Water_adjustSolidHeap(mpHeap);
+    J3DModel* model = mpModel;
+    if (model == NULL || is_anm_init == 0) {
+        return cPhs_ERROR_e;
+    }
+    // HD: preserve the original z/x/y scale-store order.
+    f32 sx = mScale.x;
+    f32 sz = mScale.z;
+    f32 sy = mScale.y;
+    model->mBaseScale.z = sz;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.y = sy;
+    if (setMatrix() == FALSE) {
+        return cPhs_ERROR_e;
+    }
+    if (mParam == 2) {
+        s16 old = m_player_foot_now_id;
+        field_0x134 = old;
+        s16 next = s16(u16(m_player_foot_now_id) + 1);
+        m_player_foot_now_id = next == 40 ? 0 : next;
+        s16 start = s16(u16(field_0x134) + 20);
+        if (start >= 40) {
+            start = s16(u16(start) - 40);
+        }
+        s16 end = s16(u16(start) + 20);
+        field_0x130 = start;
+        if (end < 40) {
+            field_0x132 = end;
+            mParam = 0;
+        } else {
+            mParam = 0;
+            field_0x132 = s16(u16(end) - 40);
+        }
+    } else {
+        field_0x134 = -1;
+    }
+    return cPhs_COMPLEATE_e;
+}
+
+/* 025CC934 */
+// HD: initialize per-TU header statics and the specialized object-ground check.
+static void __sinit_d_water_mark_cpp() {
+    sinit_header_statics_rodata(0x104872CC, 0x101F130C, 0x104872D8, 0x10056650);
+    Water_groundConstruct(&m_ground_check);
+    m_ground_check.mbCamThrough = 0;
+    m_ground_check.mbLinkThrough = 0;
+    m_ground_check.mPolyPassChk = gabi::ea(static_cast<dBgS_PolyPassChk*>(&m_ground_check));
+    m_ground_check.mbArrowThrough = 0;
+    m_ground_check.mbBombThrough = 0;
+    m_ground_check.mGrpPassChk = gabi::ea(static_cast<dBgS_GrpPassChk*>(&m_ground_check));
+    m_ground_check.mGrp = 1;
+    m_ground_check.mbBoomerangThrough = 0;
+    static_cast<cBgS_Chk*>(&m_ground_check)->__vtbl = gabi::ea(&groundCtorChkVtable);
+    static_cast<cBgS_PolyInfo*>(&m_ground_check)->__vtbl = gabi::ea(&groundCtorPolyVtable);
+    static_cast<dBgS_GrpPassChk*>(&m_ground_check)->__vtbl = gabi::ea(&groundCtorGroupVtable);
+    m_ground_check.mbRopeThrough = 0;
+    static_cast<dBgS_PolyPassChk*>(&m_ground_check)->__vtbl = gabi::ea(&groundCtorPassVtable);
+    m_ground_check.mbObjThrough = 1;
+    __register_global_object(0x101F1330);
+}
+
+/* 025CCA58 */
+// HD: adjacent empty destructor with GHS deleting flags; original generating class unknown.
+static void waterEmptyDeletingDtor(void* i_this, u32 flags) {
+    if (i_this != NULL && (flags & 1)) {
+        Water_delete(i_this);
+    }
+}
+
+/* 025CCA6C */
+// HD: per-TU ground-check destructor tables.
+static void waterGroundDtor(dBgS_ObjGndChk* i_this, u32 flags) {
+    if (i_this != NULL) {
+        static_cast<cBgS_PolyInfo*>(i_this)->__vtbl = gabi::ea(&groundDtorPolyVtable);
+        static_cast<dBgS_PolyPassChk*>(i_this)->__vtbl = gabi::ea(&groundDtorPassVtable);
+        static_cast<dBgS_GrpPassChk*>(i_this)->__vtbl = gabi::ea(&groundDtorGroupVtable);
+        Water_groundDestruct(i_this, 0);
+        if (flags & 1) {
+            Water_delete(i_this);
+        }
+    }
+}
+
+/* 025CCAE4 */
+// HD: empty adjacent method; original generating class unknown.
+static void waterEmpty(void* i_this) {}
+
+/* WWHD glue (tools/verify/autoglue.py): per-TU state, constants and external operations
+data m_circle_cnt 101F133C
+data m_player_foot_now_id 101F133E
+data m_ground_check 104872E8
+data effectHeap 1047C8B4
+data clipScale 10056540
+data groundOffset 10056638
+data invalidGround 1005663C
+data zero 10056640
+data surfaceOffset 10056644
+data playRate 10056648
+data waterVtable 10056570
+data heapDebugName 10056548
+data safeStringVtable 10056550
+data clipper 1048CFF0
+data viewMatrix 104B45F8
+data sincosTable 104A44F8
+data groundCtorChkVtable 100565D0
+data groundCtorPolyVtable 100565E0
+data groundCtorGroupVtable 100565F0
+data groundCtorPassVtable 10056600
+data groundDtorPolyVtable 100565A0
+data groundDtorPassVtable 100565C0
+data groundDtorGroupVtable 10056580
+str 10056558 "Always" renamed
+str 10056610 "d_water_mark.cpp" renamed
+str 10056624 "modelData != NULL" renamed
+ext 02838148 u32 Water_clip(void*, Mtx34*, const cXyz*, f32)
+ext 025E83FC void Water_brkEntry(WaterBrkAnm*, J3DModelData*, f32)
+ext 025E7B3C void Water_btpEntry(WaterBtpAnm*, J3DModelData*, s16)
+ext 025E2DE0 void Water_modelUpdateDL(J3DModel*, u32)
+ext 02008974 f32 Water_GroundCross(dBgS*, dBgS_ObjGndChk*)
+ext 020084C8 cM3dGPla* Water_GetTriPla(dBgS*, u16, u16)
+ext 024EEABC s16 Water_ChkMoveBG(dBgS*, cBgS_PolyInfo*)
+ext 028F4384 f32 Water_sqrt(f32)
+ext 025F1B48 void Water_ZXYrotM(Mtx34*, s16, s16, s16)
+ext 025E742C void Water_brkPlay(WaterBrkAnm*)
+ext 025DAD48 void Water_kankyoDelete(dWaterMark_c*)
+ext 025E3868 void Water_destroySolidHeap(WaterSolidHeap*)
+ext 025DD630 void Water_baseDelete(dWaterMark_c*, u32)
+ext 025DD5F0 void Water_baseConstruct(dWaterMark_c*)
+ext 025E80D0 void Water_brkConstruct(WaterBrkAnm*)
+ext 025E7820 void Water_btpConstruct(WaterBtpAnm*)
+ext 025E35BC WaterSolidHeap* Water_createSolidHeap(u32, JKRHeap*, u32)
+ext 025E2F64 JKRHeap* Water_getGameHeap(u32)
+ext 026066C4 void* Water_getResource(dRes_control_c*, WaterResourceName*, u32)
+ext 0273AA24 void Water_assert(const char*, u32, const char*)
+ext 025E8154 u32 Water_brkInit(WaterBrkAnm*, J3DModelData*, void*, u32, u32, u32, u32, u32, u32, f32)
+ext 025E789C u32 Water_btpInit(WaterBtpAnm*, J3DModelData*, void*, u32, u32, u32, u32, u32, u32, f32)
+ext 025E37D8 void Water_restoreCurrentHeap()
+ext 025E3678 void Water_adjustSolidHeap(WaterSolidHeap*)
+ext 02008E0C void Water_groundConstruct(dBgS_ObjGndChk*)
+ext 02008DAC void Water_groundDestruct(dBgS_ObjGndChk*, u32)
+ext 0273AF40 void Water_delete(void*)
+*/

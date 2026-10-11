@@ -1,56 +1,81 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_heart {
-static u32 heart(u32 self,u32 index) {
- u32 slots=load<u32>(self+0x4C);
- if(index<load<u32>(self+0x48)) slots+=index*4;
- return load<u32>(slots);
+/** HD HUD heart refresh, selection and refill; private decomp source. */
+#include "bindings.h"
+#include "d/hd_screen_command_a.h"
+static hdHudSaveInfo* sSaveInfo;
+static u8 sHeartVisible;
+static hdHudStateDescriptor sHeartHiddenState;
+
+/* 0266D334 */
+static void refreshHudHearts(hdHudHeart* i_this) {
+    for (u32 i = 0; i < 20; i++) {
+        hdHudHeartChild* child = i_this->heart(i);
+        u32 value = hdHudGetHeartValue(i_this, i);
+        hdHudSetHeartValue(child, value);
+    }
 }
-void refresh(u32 self) {
- WWHD_FUNC(0x0266D334,void,self);
- for(u32 i=0;i<20;++i) {
-  u32 child=heart(self,i);
-  u32 value=call<u32>(0x0266D308,self,i);
-  call<void>(0x026F7090,child,value);
- }
+
+/* 0266D588 */
+static void selectHudHeart(hdHudHeart* i_this) {
+    u32 shown = u32(i_this->mShownContainers) * 4;
+    u32 maximum = i_this->mShownLife;
+    u32 amount = maximum > shown ? shown : maximum;
+    u32 index = amount != 0 ? (amount - 1) >> 2 : 0xFFFFFFFFu;
+    u32 old = i_this->mSelectedHeart;
+    if (old == index) {
+        return;
+    }
+    if (s32(index) >= 0) {
+        i_this->heart(index)->mNextState = 1;
+        old = i_this->mSelectedHeart;
+    }
+    if (s32(old) >= 0) {
+        i_this->heart(old)->mNextState = 2;
+    }
+    i_this->mSelectedHeart = index;
 }
-VERIFY(0x0266D334,refresh);
-void select(u32 self) {
- WWHD_FUNC(0x0266D588,void,self);
- u32 shown=load<u32>(self+0xF8)*4, max=load<u32>(self+0xF4);
- u32 amount=max>shown?shown:max;
- u32 index=amount?(amount-1)>>2:0xFFFFFFFFu;
- u32 old=load<u32>(self+0xFC);
- if(old==index) return;
- if(s32(index)>=0) { store<u32>(heart(self,index)+0x58,1); old=load<u32>(self+0xFC); }
- if(s32(old)>=0) store<u32>(heart(self,old)+0x58,2);
- store<u32>(self+0xFC,index);
+
+/* 0266D624 */
+static void refillHudHearts(hdHudHeart* i_this) {
+    u32 timer = i_this->mRefillTimer;
+    hdHudSaveInfo* save;
+    if (timer != 0) {
+        i_this->mRefillTimer = timer - 1;
+        save = sSaveInfo;
+    } else {
+        save = sSaveInfo;
+        u32 target = u32(save->mStatusA.mMaxLife) >> 2;
+        u32 shown = i_this->mShownContainers;
+        if (shown != target) {
+            i_this->mRefillTimer = 8;
+            if (target > shown) {
+                hdHudSetHeartVisible(i_this->heart(shown), 1);
+                i_this->mShownContainers = u32(i_this->mShownContainers) + 1;
+            } else {
+                shown--;
+                i_this->mShownContainers = shown;
+                hdHudSetHeartVisible(i_this->heart(shown), 0);
+            }
+            selectHudHeart(i_this);
+            save = sSaveInfo;
+        }
+    }
+    u32 target = save->mStatusA.mLife;
+    u32 shown = i_this->mShownLife;
+    if (shown != target) {
+        i_this->mShownLife = shown < target ? shown + 1 : shown - 1;
+        refreshHudHearts(i_this);
+        selectHudHeart(i_this);
+    }
+    if (sHeartVisible == 0) {
+        hdHudChangeState(&i_this->mStateMachine, &sHeartHiddenState);
+    }
 }
-VERIFY(0x0266D588,select);
-void refill(u32 self) {
- WWHD_FUNC(0x0266D624,void,self);
- u32 timer=load<u32>(self+0xF0), save;
- if(timer) { store<u32>(self+0xF0,timer-1); save=load<u32>(0x101F84DC); }
- else {
-  save=load<u32>(0x101F84DC); u32 target=load<u16>(save+0x20)>>2, shown=load<u32>(self+0xF8);
-  if(shown!=target) {
-   store<u32>(self+0xF0,8);
-   if(target>shown) {
-    call<void>(0x026F711C,heart(self,shown),1u);
-    store<u32>(self+0xF8,load<u32>(self+0xF8)+1);
-   } else {
-    shown-=1; store<u32>(self+0xF8,shown);
-    call<void>(0x026F711C,heart(self,shown),0u);
-   }
-   call<void>(0x0266D588,self); save=load<u32>(0x101F84DC);
-  }
- }
- u32 target=load<u16>(save+0x22), shown=load<u32>(self+0xF4);
- if(shown!=target) {
-  store<u32>(self+0xF4,shown<target?shown+1:shown-1);
-  call<void>(0x0266D334,self); call<void>(0x0266D588,self);
- }
- if(!load<u8>(0x1047B08F)) call<void>(0x020063C0,self+0x18,0x104947F4u);
-}
-VERIFY(0x0266D624,refill);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): HD heart/save state
+ data sSaveInfo 101F84DC
+ data sHeartVisible 1047B08F
+ data sHeartHiddenState 104947F4
+ ext 0266D308 u32 hdHudGetHeartValue(hdHudHeart*, u32)
+ ext 026F7090 void hdHudSetHeartValue(hdHudHeartChild*, u32)
+ ext 026F711C void hdHudSetHeartVisible(hdHudHeartChild*, u32)
+*/

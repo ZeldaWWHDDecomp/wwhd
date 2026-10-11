@@ -1,586 +1,709 @@
-/* d_ev_camera, part 10: uniformTrans/uniformBrake/uniformAcceleEvCamera. See
- * d_ev_camera.cpp for the unit's layout notes; written from the WWHD code (the GameCube
- * d_ev_camera.cpp is all "Nonmatching" stubs). */
-#include "bindings.h"
+#include "d/d_ev_camera_10.h"
+namespace event_camera_uniform {
+static EventString asokoName;
+static EventString transTimerName;
+static EventString transCurveName;
+static EventString transEyeName;
+static EventString transCenterName;
+static EventString transFovyName;
+static EventString transStartEyeName;
+static EventString transStartCenterName;
+static EventString transStartFovyName;
+static EventString transBankName;
+static EventString transStartBankName;
+static EventString transTypeName;
+static EventString transMaskName;
+static EventString transMaskDefault;
+static EventString transActorName;
+static EventString transCushionName;
+static EventString tactWindowName;
+static EventString brakeTimerName;
+static EventString brakingPointName;
+static EventString brakeTypeName;
+static EventString acceleTimerName;
+static EventString acceleRampName;
+static EventString acceleTypeName;
+static EventString brakeName0;
+static EventString brakeName1;
+static EventString brakeName2;
+static EventString brakeName3;
+static EventString brakeName4;
+static EventString brakeName5;
+static EventString brakeName6;
+static EventString brakeName7;
+static EventString brakeName8;
+static EventString brakeName9;
+static EventString brakeName10;
+static EventString brakeName11;
+static EventString brakeName12;
+static EventString acceleName0;
+static EventString acceleName1;
+static EventString acceleName2;
+static EventString acceleName3;
+static EventString acceleName4;
+static EventString acceleName5;
+static EventString acceleName6;
+static EventString acceleName7;
+static EventString acceleName8;
+static EventString acceleName9;
+static EventString acceleName10;
+static EventString acceleName11;
+static EventString acceleName12;
+static const char* const brakeNames[] = {
+    brakeName0.text,  brakeName1.text,  brakeName2.text, brakeName3.text, brakeName4.text,
+    brakeName5.text,  brakeName6.text,  brakeName7.text, brakeName8.text, brakeName9.text,
+    brakeName10.text, brakeName11.text, brakeName12.text};
+static const char* const acceleNames[] = {
+    acceleName0.text,  acceleName1.text,  acceleName2.text, acceleName3.text, acceleName4.text,
+    acceleName5.text,  acceleName6.text,  acceleName7.text, acceleName8.text, acceleName9.text,
+    acceleName10.text, acceleName11.text, acceleName12.text};
+static SinCosTable sinCosTable;
+static SplineCurve splineCurve;
+enum : u32 {
+    STAGE_STRING_VTABLE = 0x1004CDBC,
+    JUDGE_BY_NAME = 0x025E121C,
+    JUDGE_BY_ID = 0x025E1234
+};
 
-namespace d_ev_camera_10_cpp {
-
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-static inline u32 ld(u32 a) { return gabi::load<u32>(a); }
-static inline u8 ld8(u32 a) { return gabi::load<u8>(a); }
-static inline s16 lds16(u32 a) { return gabi::load<s16>(a); }
-static inline f32 ldf(u32 a) { return gabi::load<f32>(a); }
-static inline void st(u32 a, u32 v) { gabi::store<u32>(a, v); }
-static inline void st8(u32 a, u8 v) { gabi::store<u8>(a, v); }
-static inline void st16(u32 a, u16 v) { gabi::store<u16>(a, v); }
-static inline void stf(u32 a, f32 v) { gabi::store<f32>(a, v); }
-static inline void copy3(u32 d, u32 s) {
-    st(d + 0, ld(s + 0));
-    st(d + 4, ld(s + 4));
-    st(d + 8, ld(s + 8));
+// HD: named bindings retain the individual calls used by this event-camera unit.
+static inline GuestWord& transType(MoveWork* w, MoveKind k) {
+    return k == UNIFORM ? w->mTrans.mTransType : w->mBrake.mTransType;
 }
-static inline void copy3f(u32 d, u32 s) {
-    stf(d + 0, ldf(s + 0));
-    stf(d + 4, ldf(s + 4));
-    stf(d + 8, ldf(s + 8));
+static inline GuestFloat& cushionParam(MoveWork* w, MoveKind k) {
+    return k == UNIFORM ? w->mTrans.mCushion : w->mBrake.mCushion;
 }
-static inline u32 gi() { return gabi::call<u32>(0x025200D4); }
-static inline u32 getEvIntData2(u32 c, u32 out, u32 name) { return gabi::call<u32>(0x02530418, c, out, name); }
-static inline u32 getEvIntData(u32 c, u32 out, u32 name, s32 def) { return gabi::call<u32>(0x02530634, c, out, name, def); }
-static inline u32 getEvFloatData(u32 c, u32 out, u32 name, f32 def) { return gabi::call<u32>(0x0253072C, c, out, name, def); }
-static inline u32 getEvXyzData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x0253086C, c, out, name, def); }
-static inline u32 getEvStringData(u32 c, u32 out, u32 name, u32 def) { return gabi::call<u32>(0x02530998, c, out, name, def); }
-static inline u32 getEvActor(u32 c, u32 name) { return gabi::call<u32>(0x02530B84, c, name); }
-static inline void relationalPos(u32 c, u32 out, u32 actor, u32 ofs) { gabi::call(0x0250242C, c, out, actor, ofs); }
-static inline void cXyz_mi(u32 a, u32 out, u32 b) { gabi::call(0x0201ADE0, a, out, b); }
-static inline void cXyz_pl(u32 a, u32 out, u32 b) { gabi::call(0x0201AD78, a, out, b); }
-static inline void cXyz_ml(u32 a, u32 out, f32 s) { gabi::call(0x0201AE48, a, out, s); }
-static inline void PSVECAdd(u32 a, u32 b, u32 out) { gabi::call(0x028E8D88, a, b, out); }
-static inline void cSGlobe_Val(u32 g, u32 v) { gabi::call(0x020072E0, g, v); }
-static inline void cSGlobe_Xyz(u32 g, u32 out) { gabi::call(0x020073AC, g, out); }
-static inline void cSGlobe_ct(u32 g, u32 v) { gabi::call(0x02007324, g, v); }
-static inline void cSAngle_mi(u32 a, u32 out, u32 b) { gabi::call(0x020068B0, a, out, b); }
-static inline void cSAngle_pl(u32 a, u32 out, u32 b) { gabi::call(0x02006894, a, out, b); }
-static inline void cSAngle_ml(u32 a, u32 out, f32 f) { gabi::call(0x0200693C, a, out, f); }
-static inline u32 cSAngleS(u32 tmp, s16 v) { return gabi::call<u32>(0x0200658C, tmp, (s32)v); }
-static inline void positionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8D5C, c, out, actor); }
-static inline void directionOf(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F30, c, out, actor); }
-static inline void attentionPos(u32 c, u32 out, u32 actor) { gabi::call(0x024F8F3C, c, out, actor); }
-static inline f32 vecLen(u32 v) { return gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, v)); } /* sqrtf(PSVECSquareMag) */
-static inline bool lineBGCheck(u32 c, u32 a, u32 b, u32 flags) { return gabi::call<bool>(0x024FCBE8, c, a, b, flags); }
-static inline bool lineBGCheckCross(u32 c, u32 a, u32 b, u32 cross, u32 flags) { return gabi::call<bool>(0x024FB608, c, a, b, cross, flags); }
-static inline void negX(u32 v) { stf(v, -ldf(v)); }
-static inline void setDone(u32 c) {
-    st8(c + 0x102, 1);
-    st8(c + 0x101, 1);
-    st8(c + 0x100, 1);
+static inline be<u8>& bankSet(MoveWork* w, MoveKind k) {
+    return k == UNIFORM ? w->mTrans.mBankSet : w->mBrake.mBankSet;
 }
-static inline void cxyzDef(u32 d, u32 src) {
-    f32 x = ldf(src + 0), y = ldf(src + 4), z = ldf(src + 8);
-    stf(d + 0, x);
-    stf(d + 4, y);
-    stf(d + 8, z);
+static inline cSAngle_l& startLongitude(MoveWork* w, MoveKind k) {
+    return k == UNIFORM ? w->mTrans.mStartGlobe.mU : w->mBrake.mStartGlobe.mU;
 }
-
-/* the stage name check "Asoko": two inline string holders {const char*, vtable 1004CDBC} whose
- * empty virtual (slot 0x14) is called before the compare */
-static inline bool stageIsAsoko() {
-    gabi::Local<u32[2]> a;
-    gabi::Local<u32[2]> b;
-    u32 sa = gabi::ea(a.get()), sb = gabi::ea(b.get());
-    st(sa + 4, 0x1004CDBC);
-    st(sa + 0, 0x1004CED4); /* "Asoko" */
-    u32 g = gi();
-    st(sb + 4, 0x1004CDBC);
-    st(sb + 0, g + 0x5134); /* the stage name */
-    gabi::call_ptr(ld(ld(sa + 4) + 0x14), sa);
-    gabi::call_ptr(ld(ld(sa + 4) + 0x14), sa);
-    gabi::call_ptr(ld(ld(sb + 4) + 0x14), sb);
-    u32 p = ld(sa), q = ld(sb);
-    if (p == q) return true;
+static void copyWords(cXyz* dst, cXyz* src) {
+    auto* d = reinterpret_cast<VectorWords*>(dst);
+    auto* s = reinterpret_cast<VectorWords*>(src);
+    d->x = (u32)s->x;
+    d->y = (u32)s->y;
+    d->z = (u32)s->z;
+}
+static void copyFloats(cXyz* dst, cXyz* src) {
+    f32 x = src->x, y = src->y, z = src->z;
+    dst->x = x;
+    dst->y = y;
+    dst->z = z;
+}
+static void negateX(cXyz* v) {
+    v->x = -(f32)v->x;
+}
+static void setDone(dCamera_c* c) {
+    c->m102 = 1;
+    c->m101 = 1;
+    c->m100 = 1;
+}
+static f32 vectorLength(cXyz* v) {
+    return cameraUniformSqrt(cameraUniformSquareMag(v));
+}
+/* inlined into uniformTransEvCamera */
+static bool stageIsAsoko() {
+    StageString a;
+    StageString b;
+    a.mVtable = STAGE_STRING_VTABLE;
+    a.mpText = asokoName.text;
+    const char* name = dComIfGp_getStartStageName();
+    b.mVtable = STAGE_STRING_VTABLE;
+    b.mpText = const_cast<char*>(name);
+    gabi::call_ptr(gabi::at<StageStringVtable>((u32)a.mVtable)->mEmpty, &a);
+    gabi::call_ptr(gabi::at<StageStringVtable>((u32)a.mVtable)->mEmpty, &a);
+    gabi::call_ptr(gabi::at<StageStringVtable>((u32)b.mVtable)->mEmpty, &b);
+    const be<u8>* p = reinterpret_cast<const be<u8>*>(a.mpText.get());
+    const be<u8>* q = reinterpret_cast<const be<u8>*>(b.mpText.get());
+    if (p == q)
+        return true;
     for (u32 i = 0; i < 0x40001; i++) {
-        u8 x = ld8(p + i), y = ld8(q + i);
-        if (x != y) return false;
-        if (x == 0) return true;
+        u8 x = p[i], y = q[i];
+        if (x != y)
+            return false;
+        if (x == 0)
+            return true;
     }
     return false;
 }
-/* the event start: the inverted globe of this + 8 kept at work + 0x5C */
-static inline void finishInit(u32 c, u32 w) {
-    u32 g = gabi::call<u32>(0x02007400, c + 8); /* cSGlobe::Invert */
-    st(w + 0x5C, ld(g + 0));
-    st(w + 0x60, ld(g + 4));
+static void finishInit(dCamera_c* c, MoveWork* w) {
+    auto* g = reinterpret_cast<GlobeWords*>(cameraUniformGlobeInvert(&c->mDirection));
+    auto* d = reinterpret_cast<GlobeWords*>(&w->mTrans.mStartGlobe);
+    d->mRadius = (u32)g->mRadius;
+    d->mAngles = (u32)g->mAngles;
     setDone(c);
 }
-/* 'r': the eye offset mirrored by the camera's side flag, again when the view is blocked */
-static inline void rBlock(u32 c, u32 w, u32 ctr, u32 eye) {
-    gabi::Local<cXyz> r;
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> b;
-    u32 rr = gabi::ea(r.get()), aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
-    relationalPos(c, rr, ld(w + 0x40), ctr);
-    copy3(aa, rr);
-    if (ld(c + 0x80) & 1) negX(eye);
-    relationalPos(c, rr, ld(w + 0x40), eye);
-    copy3(bb, rr);
-    if (lineBGCheck(c, aa, bb, 0x8F)) negX(eye);
+/* inlined into uniformTransEvCamera, uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void relativeSide(dCamera_c* c, MoveWork* w, cXyz* center, cXyz* eye) {
+    cXyz r;
+    cXyz a;
+    cXyz b;
+    cameraUniformRelationalPos(c, &r, w->mpRelActor, center);
+    copyWords(&a, &r);
+    if (c->m080 & 1)
+        negateX(eye);
+    cameraUniformRelationalPos(c, &r, w->mpRelActor, eye);
+    copyWords(&b, &r);
+    if (cameraUniformLineBGCheck(c, &a, &b, 0x8F))
+        negateX(eye);
 }
-/* 'n': both offsets mirrored when the actor faces away from `from`; the eye again when blocked */
-static inline void nBlock(u32 c, u32 w, u32 from, u32 mc, u32 ctr, u32 me, u32 eye) {
-    gabi::Local<cXyz> pos;
-    gabi::Local<cXyz> d;
-    gabi::Local<u8[8]> globe;
-    gabi::Local<s16[2]> ang;
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> b;
-    u32 pp = gabi::ea(pos.get()), dd = gabi::ea(d.get()), gg = gabi::ea(globe.get()), an = gabi::ea(ang.get());
-    u32 aa = gabi::ea(a.get()), bb = gabi::ea(b.get());
-    positionOf(c, pp, ld(w + 0x40));
-    cXyz_mi(from, dd, pp);
-    cSGlobe_ct(gg, dd);
-    directionOf(c, an, ld(w + 0x40));
-    cSAngle_mi(gg + 6, an + 2, an);
-    if (lds16(an + 2) < lds16(0x101FF354)) { /* cSAngle::_0 */
-        u8 e = ld8(me);
-        if (ld8(mc) == 'n') negX(ctr);
-        if (e == 'n') negX(eye);
+/* inlined into uniformTransEvCamera, uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void relativeFacing(dCamera_c* c, MoveWork* w, cXyz* from, be<char>* mc, cXyz* center,
+                           be<char>* me, cXyz* eye) {
+    cXyz pos;
+    cXyz difference;
+    cSGlobe_l globe;
+    AnglePair angles;
+    cXyz a;
+    cXyz b;
+    cameraUniformPositionOf(c, &pos, w->mpRelActor);
+    cameraUniformSubtract(from, &difference, &pos);
+    cameraUniformGlobeCtor(&globe, &difference);
+    cameraUniformDirectionOf(c, &angles.m0, w->mpRelActor);
+    cameraUniformAngleSubtract(&globe.mU, &angles.m1, &angles.m0);
+    if ((s16)angles.m1 < (s16)zeroAngle()) {
+        u8 e = *me;
+        if (*mc == 'n')
+            negateX(center);
+        if (e == 'n')
+            negateX(eye);
     }
-    relationalPos(c, pp, ld(w + 0x40), ctr);
-    copy3(aa, pp);
-    relationalPos(c, pp, ld(w + 0x40), eye);
-    copy3(bb, pp);
-    if (lineBGCheck(c, aa, bb, 0x8F)) negX(eye);
+    cameraUniformRelationalPos(c, &pos, w->mpRelActor, center);
+    copyWords(&a, &pos);
+    cameraUniformRelationalPos(c, &pos, w->mpRelActor, eye);
+    copyWords(&b, &pos);
+    if (cameraUniformLineBGCheck(c, &a, &b, 0x8F))
+        negateX(eye);
 }
-/* 'p': the offset mirrored when that puts the point farther from the player */
-static inline void pBlock(u32 c, u32 w, u32 ofs) {
-    gabi::Local<cXyz> o;
-    gabi::Local<cXyz> t;
-    gabi::Local<cXyz> p;
-    gabi::Local<cXyz> d;
-    u32 oo = gabi::ea(o.get()), tt = gabi::ea(t.get()), pp = gabi::ea(p.get()), dd = gabi::ea(d.get());
-    copy3f(oo, ofs);
-    relationalPos(c, tt, ld(w + 0x40), oo);
-    positionOf(c, pp, ld(c + 0x128));
-    cXyz_mi(tt, dd, pp);
-    f32 d1 = vecLen(dd);
-    negX(oo);
-    relationalPos(c, pp, ld(w + 0x40), oo);
-    copy3(tt, pp);
-    positionOf(c, dd, ld(c + 0x128));
-    cXyz_mi(tt, pp, dd);
-    f32 d2 = vecLen(pp);
-    if (d1 < d2) negX(ofs); /* bge: taken on NaN */
+/* inlined into uniformTransEvCamera, uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void relativePlayer(dCamera_c* c, MoveWork* w, cXyz* offset) {
+    cXyz original;
+    cXyz target;
+    cXyz player;
+    cXyz difference;
+    copyFloats(&original, offset);
+    cameraUniformRelationalPos(c, &target, w->mpRelActor, &original);
+    cameraUniformPositionOf(c, &player, c->mpPlayerActor);
+    cameraUniformSubtract(&target, &difference, &player);
+    f32 d1 = vectorLength(&difference);
+    negateX(&original);
+    cameraUniformRelationalPos(c, &player, w->mpRelActor, &original);
+    copyWords(&target, &player);
+    cameraUniformPositionOf(c, &difference, c->mpPlayerActor);
+    cameraUniformSubtract(&target, &player, &difference);
+    f32 d2 = vectorLength(&player);
+    if (d1 < d2)
+        negateX(offset);
 }
-/* a point of the move by its RelUseMask character: 't' attention position + offset, 'c' globe
- * around the attention position turned by the start direction, '-' the plain offset (TransType 2:
- * turned by the actor's direction when `rot`), else relationalPos */
-struct MoveLayout { u32 trans, cushion, bankSet, globeU; bool bankS16; };
-static inline void relPoint(u32 c, u32 w, u8 m, u32 ofs, u32 dst, bool rot, const MoveLayout& L) {
-    gabi::Local<cXyz> a;
-    gabi::Local<cXyz> x;
-    gabi::Local<cXyz> r;
-    u32 aa = gabi::ea(a.get()), xx = gabi::ea(x.get()), rr = gabi::ea(r.get());
-    if (m == 't') {
-        attentionPos(c, aa, ld(w + 0x40));
-        cXyz_pl(aa, rr, ofs);
-        copy3(dst, rr);
-    } else if (m == 'c') {
-        gabi::Local<u8[8]> globe;
-        gabi::Local<s16[2]> an;
-        u32 gg = gabi::ea(globe.get()), ap = gabi::ea(an.get());
-        cSGlobe_ct(gg, ofs);
-        cSAngle_pl(w + L.globeU, ap, gg + 6);
-        u32 res = cSAngleS(ap + 2, lds16(ap));
-        st16(gg + 6, (u16)lds16(res));
-        attentionPos(c, aa, ld(w + 0x40));
-        cSGlobe_Xyz(gg, xx);
-        cXyz_pl(aa, rr, xx);
-        copy3(dst, rr);
-    } else if (m == '-') {
-        if (rot && ld(w + L.trans) == 2) {
-            gabi::Local<s16> dir;
-            u32 dp = gabi::ea(dir.get());
-            directionOf(c, dp, ld(w + 0x40));
-            gabi::call(0x024F7A40, rr, ofs, dp); /* dCamMath::xyzRotateY */
-            copy3(dst, rr);
-        } else {
-            copy3(dst, ofs);
-        }
+/* inlined into uniformTransEvCamera, uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void relativePoint(dCamera_c* c, MoveWork* w, u8 mask, cXyz* offset, cXyz* dst, bool rotate,
+                          MoveKind kind) {
+    cXyz attention;
+    cXyz xyz;
+    cXyz result;
+    if (mask == 't') {
+        cameraUniformAttentionPos(c, &attention, w->mpRelActor);
+        cameraUniformAdd(&attention, &result, offset);
+        copyWords(dst, &result);
+    } else if (mask == 'c') {
+        cSGlobe_l globe;
+        AnglePair angles;
+        cameraUniformGlobeCtor(&globe, offset);
+        cameraUniformAngleAdd(&startLongitude(w, kind), &angles.m0, &globe.mU);
+        auto* angle = cameraUniformAngleShortCtor(&angles.m1, (s32)(s16)angles.m0);
+        globe.mU = (s16)*angle;
+        cameraUniformAttentionPos(c, &attention, w->mpRelActor);
+        cameraUniformGlobeXyz(&globe, &xyz);
+        cameraUniformAdd(&attention, &result, &xyz);
+        copyWords(dst, &result);
+    } else if (mask == '-') {
+        if (rotate && (u32)transType(w, kind) == 2) {
+            cSAngle_l direction;
+            cameraUniformDirectionOf(c, &direction, w->mpRelActor);
+            cameraUniformRotateY(&result, offset, &direction);
+            copyWords(dst, &result);
+        } else
+            copyWords(dst, offset);
     } else {
-        relationalPos(c, rr, ld(w + 0x40), ofs);
-        copy3(dst, rr);
+        cameraUniformRelationalPos(c, &result, w->mpRelActor, offset);
+        copyWords(dst, &result);
     }
 }
-/* fovy towards Start/Fovy, cushioned */
-static inline void blendFovy(u32 c, u32 w, f32 ratio, u32 cu) {
-    f32 s = ldf(w + 0x18);
-    f32 f = gabi::fmadds(ldf(w + 0x38) - s, ratio, s);
-    f32 cur = ldf(c + 0x60);
-    stf(c + 0x60, gabi::fmadds(f - cur, ldf(cu), cur));
+static void blendFovy(dCamera_c* c, MoveWork* w, f32 ratio, GuestFloat* cushion) {
+    f32 start = w->mStartFovy;
+    f32 target = gabi::fmadds((f32)w->mFovy - start, ratio, start);
+    f32 current = c->mViewCache.mFovy;
+    c->mViewCache.mFovy = gabi::fmadds(target - current, *cushion, current);
 }
-/* pos += (target - pos) * Cushion */
-static inline void cushion(u32 cu, u32 pos, u32 target, u32 t1, u32 t2) {
-    cXyz_mi(target, t1, pos);
-    cXyz_ml(t1, t2, ldf(cu));
-    PSVECAdd(pos, t2, pos);
+static void cushionPosition(GuestFloat* cushion, cXyz* pos, cXyz* target, cXyz* tmp1, cXyz* tmp2) {
+    cameraUniformSubtract(target, tmp1, pos);
+    cameraUniformScale(tmp1, tmp2, *cushion);
+    cameraUniformPSVECAdd(pos, tmp2, pos);
 }
-
-/* the move: start/end points by RelUseMask, the centre and eye towards them (TransType 1: eye on a
- * globe, 2: end points as deltas, else linear), cushioned; fovy and bank */
-static inline void moveTail(u32 c, u32 w, f32 ratio, const MoveLayout& L) {
-    gabi::Local<cXyz> sc;
-    gabi::Local<cXyz> se;
-    gabi::Local<cXyz> ec;
-    gabi::Local<cXyz> ee;
-    u32 SC = gabi::ea(sc.get()), SE = gabi::ea(se.get()), EC = gabi::ea(ec.get()), EE = gabi::ea(ee.get());
-    if (ld(w + 0x40) == 0) {
-        copy3(SC, w + 0xC);
-        copy3(SE, w + 0);
-        copy3(EC, w + 0x2C);
-        copy3(EE, w + 0x20);
+/* inlined into uniformTransEvCamera, uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void moveTail(dCamera_c* c, MoveWork* w, f32 ratio, MoveKind kind) {
+    cXyz startCenter;
+    cXyz startEye;
+    cXyz endCenter;
+    cXyz endEye;
+    if (!w->mpRelActor) {
+        copyWords(&startCenter, &w->mStartCenter);
+        copyWords(&startEye, &w->mStartEye);
+        copyWords(&endCenter, &w->mCenter);
+        copyWords(&endEye, &w->mEye);
     } else {
-        relPoint(c, w, ld8(w + 0x48), w + 0xC, SC, false, L);
-        relPoint(c, w, ld8(w + 0x49), w + 0, SE, false, L);
-        relPoint(c, w, ld8(w + 0x4A), w + 0x2C, EC, true, L);
-        relPoint(c, w, ld8(w + 0x4B), w + 0x20, EE, true, L);
+        relativePoint(c, w, w->mRelUseMask[0], &w->mStartCenter, &startCenter, false, kind);
+        relativePoint(c, w, w->mRelUseMask[1], &w->mStartEye, &startEye, false, kind);
+        relativePoint(c, w, w->mRelUseMask[2], &w->mCenter, &endCenter, true, kind);
+        relativePoint(c, w, w->mRelUseMask[3], &w->mEye, &endEye, true, kind);
     }
-    gabi::Local<cXyz> t1;
-    gabi::Local<cXyz> t2;
-    gabi::Local<cXyz> t3;
-    gabi::Local<cXyz> tgt;
-    u32 a1 = gabi::ea(t1.get()), a2 = gabi::ea(t2.get()), a3 = gabi::ea(t3.get()), tg = gabi::ea(tgt.get());
-    u32 tt = ld(w + L.trans);
-    if (tt == 1) {
-        cXyz_mi(EC, a1, SC);
-        cXyz_ml(a1, a2, ratio);
-        cXyz_pl(SC, a3, a2);
-        copy3(tg, a3);
-        cushion(w + L.cushion, c + 0x44, tg, a2, a1);
-        gabi::Local<u8[8]> g1;
-        gabi::Local<u8[8]> g2;
-        gabi::Local<u8[8]> g3;
-        gabi::Local<s16[6]> an;
-        u32 G1 = gabi::ea(g1.get()), G2 = gabi::ea(g2.get()), G3 = gabi::ea(g3.get()), ap = gabi::ea(an.get());
-        cXyz_mi(SE, a1, SC);
-        cSGlobe_ct(G1, a1);
-        cXyz_mi(EE, a2, EC);
-        cSGlobe_ct(G2, a2);
-        cSAngle_mi(G2 + 4, ap + 0, G1 + 4);
-        cSAngle_ml(ap + 0, ap + 2, ratio);
-        cSAngle_pl(G1 + 4, ap + 4, ap + 2);
-        cSAngle_mi(G2 + 6, ap + 6, G1 + 6);
-        cSAngle_ml(ap + 6, ap + 8, ratio);
-        cSAngle_pl(G1 + 6, ap + 10, ap + 8);
-        f32 r1 = ldf(G1);
-        gabi::call(0x02007248, G3, gabi::fmadds(ldf(G2) - r1, ratio, r1), ap + 4, ap + 10); /* cSGlobe(r, V, U) */
-        cSGlobe_Xyz(G3, a3);
-        cXyz_pl(c + 0x44, a2, a3);
-        copy3(tg, a2);
-        cushion(w + L.cushion, c + 0x50, tg, a1, a3);
-    } else if (tt == 2) {
-        cXyz_ml(EC, a1, ratio);
-        cXyz_pl(SC, a2, a1);
-        copy3(tg, a2);
-        cushion(w + L.cushion, c + 0x44, tg, a2, a1);
-        cXyz_ml(EE, a2, ratio);
-        cXyz_pl(SE, a1, a2);
-        copy3(tg, a1);
-        cushion(w + L.cushion, c + 0x50, tg, a2, a1);
+    cXyz tmp1;
+    cXyz tmp2;
+    cXyz tmp3;
+    cXyz target;
+    u32 type = transType(w, kind);
+    if (type == 1) {
+        cameraUniformSubtract(&endCenter, &tmp1, &startCenter);
+        cameraUniformScale(&tmp1, &tmp2, ratio);
+        cameraUniformAdd(&startCenter, &tmp3, &tmp2);
+        copyWords(&target, &tmp3);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mCenter, &target, &tmp2, &tmp1);
+        cSGlobe_l start;
+        cSGlobe_l end;
+        cSGlobe_l interpolated;
+        AngleSix angles;
+        cameraUniformSubtract(&startEye, &tmp1, &startCenter);
+        cameraUniformGlobeCtor(&start, &tmp1);
+        cameraUniformSubtract(&endEye, &tmp2, &endCenter);
+        cameraUniformGlobeCtor(&end, &tmp2);
+        cameraUniformAngleSubtract(&end.mV, &angles.m0, &start.mV);
+        cameraUniformAngleScale(&angles.m0, &angles.m1, ratio);
+        cameraUniformAngleAdd(&start.mV, &angles.m2, &angles.m1);
+        cameraUniformAngleSubtract(&end.mU, &angles.m3, &start.mU);
+        cameraUniformAngleScale(&angles.m3, &angles.m4, ratio);
+        cameraUniformAngleAdd(&start.mU, &angles.m5, &angles.m4);
+        f32 radius = start.mRadius;
+        cameraUniformGlobeAnglesCtor(&interpolated,
+                                     gabi::fmadds((f32)end.mRadius - radius, ratio, radius),
+                                     &angles.m2, &angles.m5);
+        cameraUniformGlobeXyz(&interpolated, &tmp3);
+        cameraUniformAdd(&c->mViewCache.mCenter, &tmp2, &tmp3);
+        copyWords(&target, &tmp2);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mEye, &target, &tmp1, &tmp3);
+    } else if (type == 2) {
+        cameraUniformScale(&endCenter, &tmp1, ratio);
+        cameraUniformAdd(&startCenter, &tmp2, &tmp1);
+        copyWords(&target, &tmp2);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mCenter, &target, &tmp2, &tmp1);
+        cameraUniformScale(&endEye, &tmp2, ratio);
+        cameraUniformAdd(&startEye, &tmp1, &tmp2);
+        copyWords(&target, &tmp1);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mEye, &target, &tmp2, &tmp1);
     } else {
-        cXyz_mi(EC, a1, SC);
-        cXyz_ml(a1, a2, ratio);
-        cXyz_pl(SC, a3, a2);
-        copy3(tg, a3);
-        cushion(w + L.cushion, c + 0x44, tg, a2, a1);
-        cXyz_mi(EE, a3, SE);
-        cXyz_ml(a3, a2, ratio);
-        cXyz_pl(SE, a1, a2);
-        copy3(tg, a1);
-        cushion(w + L.cushion, c + 0x50, tg, a2, a1);
+        cameraUniformSubtract(&endCenter, &tmp1, &startCenter);
+        cameraUniformScale(&tmp1, &tmp2, ratio);
+        cameraUniformAdd(&startCenter, &tmp3, &tmp2);
+        copyWords(&target, &tmp3);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mCenter, &target, &tmp2, &tmp1);
+        cameraUniformSubtract(&endEye, &tmp3, &startEye);
+        cameraUniformScale(&tmp3, &tmp2, ratio);
+        cameraUniformAdd(&startEye, &tmp1, &tmp2);
+        copyWords(&target, &tmp1);
+        cushionPosition(&cushionParam(w, kind), &c->mViewCache.mEye, &target, &tmp2, &tmp1);
     }
-    blendFovy(c, w, ratio, w + L.cushion);
-    if (ld8(w + L.bankSet) != 0) {
-        gabi::Local<s16[4]> b;
-        u32 bp = gabi::ea(b.get());
-        f32 s = ldf(w + 0x1C);
-        f32 bank = gabi::fmadds(ldf(w + 0x3C) - s, ratio, s);
-        if (L.bankS16) {
-            gabi::call(0x020065EC, bp + 2, (s32)(s16)gabi::ftoi(bank * 182.04444885253906f), c + 0x5C); /* s16 - cSAngle */
-        } else {
-            u32 ang = gabi::call<u32>(0x020066C0, bp + 0, bank); /* cSAngle(f32) */
-            cSAngle_mi(ang, bp + 2, c + 0x5C);
+    blendFovy(c, w, ratio, &cushionParam(w, kind));
+    if (bankSet(w, kind)) {
+        AngleFour angles;
+        f32 start = w->mStartBank;
+        f32 bank = gabi::fmadds((f32)w->mBank - start, ratio, start);
+        // HD: braking uses a wrapped signed degree conversion; uniform translation calls
+        // cSAngle(f32).
+        if (kind == BRAKING)
+            cameraUniformShortMinusAngle(
+                &angles.m1, (s32)(s16)gabi::ftoi(bank * 182.04444885253906f), &c->mViewCache.mBank);
+        else {
+            auto* angle = cameraUniformAngleFloatCtor(&angles.m0, bank);
+            cameraUniformAngleSubtract(angle, &angles.m1, &c->mViewCache.mBank);
         }
-        cSAngle_ml(bp + 2, bp + 4, ldf(w + L.cushion));
-        gabi::call(0x020068CC, c + 0x5C, bp + 4); /* cSAngle::operator+= */
-        st(c + 0x510, ld(c + 0x510) | 0x400);
+        cameraUniformAngleScale(&angles.m1, &angles.m2, cushionParam(w, kind));
+        cameraUniformAngleAddAssign(&c->mViewCache.mBank, &angles.m2);
+        c->mEventFlags = (u32)c->mEventFlags | 0x400;
     }
-    gabi::Local<cXyz> v;
-    u32 vv = gabi::ea(v.get());
-    cXyz_mi(c + 0x50, vv, c + 0x44);
-    cSGlobe_Val(c + 0x3C, vv);
+    cXyz difference;
+    cameraUniformSubtract(&c->mViewCache.mEye, &difference, &c->mViewCache.mCenter);
+    cameraUniformGlobeVal(&c->mViewCache.mDirection, &difference);
 }
-static const MoveLayout kTransLayout = {0x54, 0x58, 0x64, 0x62, false};
-static const MoveLayout kBrakeLayout = {0x64, 0x6C, 0x78, 0x76, true};
-
-/* 02531D20: uniformTransEvCamera: a move from StartCenter/StartEye/StartFovy/StartBank to
- * Center/Eye/Fovy/Bank over Timer frames (linear, or along the "BSpCurve" ratio curve), the points
- * relative to RelActor by RelUseMask (start centre, start eye, centre, eye); TransType 1 moves the
- * eye on a globe, 2 adds the end points as deltas. HD: under the TACT_WINDOW event (staff
- * "Asoko" check aside) the eye is placed behind the player's facing. work: +0 StartEye, +0xC
- * StartCenter, +0x18 StartFovy, +0x1C StartBank, +0x20 Eye, +0x2C Center, +0x38 Fovy, +0x3C Bank,
- * +0x40 RelActor, +0x44 its process id, +0x48 RelUseMask, +0x50 Timer, +0x54 TransType, +0x58
- * Cushion, +0x5C start globe, +0x64 bank set, +0x68 BSpCurve */
-static u32 dCamera_c_uniformTransEvCamera(u32 i_this) {
-    WWHD_FUNC(0x02531D20, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        if (getEvIntData2(i_this, w + 0x50, 0x1004CECC /* "Timer" */) == 0) return 1;
-        getEvIntData(i_this, w + 0x68, 0x1004CF38 /* "BSpCurve" */, 1);
-        if (ld(w + 0x68) != 0) gabi::call(0x025C0B18, i_this + 0x4CC, 4, ld(w + 0x50)); /* d2DBSplinePath::Init */
-        gabi::Local<cXyz> def;
-        u32 d = gabi::ea(def.get());
-        cxyzDef(d, i_this + 0x1C);
-        getEvXyzData(i_this, w + 0x20, 0x1004CEC8 /* "Eye" */, d);
-        cxyzDef(d, i_this + 0x10);
-        getEvXyzData(i_this, w + 0x2C, 0x1004CEDC /* "Center" */, d);
-        if (ld(i_this + 0x400) == 0x104 && stageIsAsoko() && ldf(w + 0x28) < -1000.0f) { /* bge: taken on NaN */
-            f32 ex = ldf(w + 0x20), cx = ldf(w + 0x2C);
-            stf(w + 0x20, ex + -80.0f);
-            stf(w + 0x2C, cx + -80.0f);
+/* 02531D20 */
+u32 uniformTransEvCamera(dCamera_c* camera) {
+    auto* work = reinterpret_cast<MoveWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        if (!cameraUniformGetRequiredInt(camera, &work->mTimer, transTimerName.text))
+            return 1;
+        cameraUniformGetInt(camera, &work->mTrans.mBSpCurve, transCurveName.text, 1);
+        if (work->mTrans.mBSpCurve)
+            cameraUniformSplineInit(camera->mEventData.mSpline2DPath, 4, work->mTimer);
+        cXyz fallback;
+        copyFloats(&fallback, &camera->mEye);
+        cameraUniformGetXyz(camera, &work->mEye, transEyeName.text, &fallback);
+        copyFloats(&fallback, &camera->mCenter);
+        cameraUniformGetXyz(camera, &work->mCenter, transCenterName.text, &fallback);
+        if (camera->mEventData.mStaffIdx == 0x104 && stageIsAsoko() &&
+            (f32)work->mEye.z < -1000.0f) {
+            f32 eye = work->mEye.x, center = work->mCenter.x;
+            work->mEye.x = eye + -80.0f;
+            work->mCenter.x = center + -80.0f;
         }
-        getEvFloatData(i_this, w + 0x38, 0x1004CEE4 /* "Fovy" */, ldf(i_this + 0x38));
-        cxyzDef(d, i_this + 0x1C);
-        getEvXyzData(i_this, w + 0, 0x1004CF44 /* "StartEye" */, d);
-        cxyzDef(d, i_this + 0x10);
-        getEvXyzData(i_this, w + 0xC, 0x1004CEFC /* "StartCenter" */, d);
-        getEvFloatData(i_this, w + 0x18, 0x1004CF14 /* "StartFovy" */, ldf(i_this + 0x38));
-        f32 deg = gabi::call<f32>(0x02006720, i_this + 0x34); /* cSAngle::Degree */
-        st8(w + 0x64, (u8)getEvFloatData(i_this, w + 0x3C, 0x1004CEEC /* "Bank" */, deg));
-        deg = gabi::call<f32>(0x02006720, i_this + 0x34);
-        u32 r = getEvFloatData(i_this, w + 0x1C, 0x1004CF20 /* "StartBank" */, deg);
-        st8(w + 0x64, (u8)(ld8(w + 0x64) | r));
-        getEvIntData(i_this, w + 0x54, 0x1004CF2C /* "TransType" */, 0);
-        getEvStringData(i_this, w + 0x48, 0x1004CF50 /* "RelUseMask" */, 0x1004CEF4 /* "--oo" */);
-        st(w + 0x40, getEvActor(i_this, 0x1004CF5C /* "RelActor" */));
-        getEvFloatData(i_this, w + 0x58, 0x1004CEC0 /* "Cushion" */, 1.0f);
-        u32 a = ld(w + 0x40);
-        if (a != 0) {
-            st(w + 0x44, a != 0 ? ld(a + 4) : 0xFFFFFFFF);
-            if (ld8(w + 0x49) == 'r') rBlock(i_this, w, w + 0xC, w + 0);
-            if (ld8(w + 0x48) == 'n' || ld8(w + 0x49) == 'n') nBlock(i_this, w, i_this + 0x1C, w + 0x48, w + 0xC, w + 0x49, w + 0);
-            if (ld8(w + 0x4A) == 'n' || ld8(w + 0x4B) == 'n') nBlock(i_this, w, w + 0x20, w + 0x4A, w + 0x2C, w + 0x4B, w + 0x20);
-            if (ld8(w + 0x4A) == 'p') pBlock(i_this, w, w + 0x2C);
-            u8 m = ld8(w + 0x4B);
-            if (m == 'p') pBlock(i_this, w, w + 0x20);
-            else if (m == 'r') rBlock(i_this, w, w + 0x2C, w + 0x20);
+        cameraUniformGetFloat(camera, &work->mFovy, transFovyName.text, camera->mFovy);
+        copyFloats(&fallback, &camera->mEye);
+        cameraUniformGetXyz(camera, &work->mStartEye, transStartEyeName.text, &fallback);
+        copyFloats(&fallback, &camera->mCenter);
+        cameraUniformGetXyz(camera, &work->mStartCenter, transStartCenterName.text, &fallback);
+        cameraUniformGetFloat(camera, &work->mStartFovy, transStartFovyName.text, camera->mFovy);
+        f32 degrees = cameraUniformAngleDegree(&camera->mBank);
+        work->mTrans.mBankSet =
+            (u8)cameraUniformGetFloat(camera, &work->mBank, transBankName.text, degrees);
+        degrees = cameraUniformAngleDegree(&camera->mBank);
+        u32 bank =
+            cameraUniformGetFloat(camera, &work->mStartBank, transStartBankName.text, degrees);
+        work->mTrans.mBankSet = (u8)((u8)work->mTrans.mBankSet | bank);
+        cameraUniformGetInt(camera, &work->mTrans.mTransType, transTypeName.text, 0);
+        cameraUniformGetString(camera, work->mRelUseMask, transMaskName.text,
+                               transMaskDefault.text);
+        work->mpRelActor = cameraUniformGetActor(camera, transActorName.text);
+        cameraUniformGetFloat(camera, &work->mTrans.mCushion, transCushionName.text, 1.0f);
+        fopAc_ac_c* actor = work->mpRelActor;
+        if (actor) {
+            work->mRelActorId = actor ? (u32)actor->mBsPcId : 0xFFFFFFFF;
+            if (work->mRelUseMask[1] == 'r')
+                relativeSide(camera, work, &work->mStartCenter, &work->mStartEye);
+            if (work->mRelUseMask[0] == 'n' || work->mRelUseMask[1] == 'n')
+                relativeFacing(camera, work, &camera->mEye, &work->mRelUseMask[0],
+                               &work->mStartCenter, &work->mRelUseMask[1], &work->mStartEye);
+            if (work->mRelUseMask[2] == 'n' || work->mRelUseMask[3] == 'n')
+                relativeFacing(camera, work, &work->mEye, &work->mRelUseMask[2], &work->mCenter,
+                               &work->mRelUseMask[3], &work->mEye);
+            if (work->mRelUseMask[2] == 'p')
+                relativePlayer(camera, work, &work->mCenter);
+            u8 mask = work->mRelUseMask[3];
+            if (mask == 'p')
+                relativePlayer(camera, work, &work->mEye);
+            else if (mask == 'r')
+                relativeSide(camera, work, &work->mCenter, &work->mEye);
         }
-        finishInit(i_this, w);
+        finishInit(camera, work);
     }
-    /* HD: the tact window event: the eye goes behind the player at 800 / 100 */
-    s32 idx = gabi::call<s32>(0x02543F10, gi() + 0x52C4, 0x1004CF08 /* "TACT_WINDOW" */, 0xFF); /* getEventIdx */
-    u32 ev = gabi::call<u32>(0x02544044, gi() + 0x52C4, (s32)(s16)idx); /* getEventData */
-    if (ev != 0 && ld(ev + 0xA4) == 2 && (ld(gi() + 0x5CD8) & 0x10000)) {
-        u32 pl = ld(gi() + 0x5B34);
-        if (pl != 0) {
-            u32 o = ((u32)(u16)(lds16(pl + 0x32A) + -0x8000) >> 3) << 3;
-            f32 s = ldf(0x104A44F8 + o), co = ldf(0x104A44F8 + o + 4);
-            stf(w + 0x24, 100.0f);
-            stf(w + 0x20, 800.0f * s);
-            stf(w + 0x28, 800.0f * co);
-            gabi::Local<s16> nm;
-            u32 np = gabi::ea(nm.get());
-            st16(np, 0xA5);
-            u32 act = gabi::call<u32>(0x025D5218, 0x025E121C /* fpcSch_JudgeForPName */, np); /* fopAcIt_Judge */
-            gabi::Local<cXyz> base;
-            gabi::Local<cXyz> p1;
-            gabi::Local<cXyz> p2;
-            gabi::Local<cXyz> cr;
-            gabi::Local<cXyz> tg;
-            gabi::Local<cXyz> tmp;
-            u32 bp = gabi::ea(base.get()), a1 = gabi::ea(p1.get()), a2 = gabi::ea(p2.get()), cp = gabi::ea(cr.get());
-            u32 tp = gabi::ea(tg.get()), mp = gabi::ea(tmp.get());
-            f32 bx = ldf(pl + 0x314);
-            f32 by = ldf(act + 0x6D8) + 120.0f;
-            f32 bz = ldf(pl + 0x31C);
-            stf(bp + 0, bx);
-            stf(bp + 8, bz);
-            stf(bp + 4, by);
-            cXyz_pl(bp, a1, w + 0x2C);
-            cXyz_pl(bp, a2, w + 0x20);
-            if (lineBGCheckCross(i_this, a1, a2, cp, 0x8F)) {
-                cXyz_mi(cp, mp, bp);
-                copy3(tp, mp);
-            } else {
-                copy3(tp, w + 0x20);
+    // HD: TACT_WINDOW places the eye behind Link and clips the resulting path.
+    s32 index = cameraUniformEventIndex(dComIfGp_getPEvtManager(), tactWindowName.text, 0xFF);
+    auto* event = cameraUniformEventData(dComIfGp_getPEvtManager(), (s32)(s16)index);
+    if (event && event->mState == 2 && (dComIfGp_getPlayerStatus0(0) & 0x10000)) {
+        fopAc_ac_c* player = dComIfGp_getLinkPlayer();
+        if (player) {
+            u32 index = (u32)(u16)((s16)player->shape_angle.y + -0x8000) >> 3;
+            f32 sine = sinCosTable.mEntries[index].mSin, cosine = sinCosTable.mEntries[index].mCos;
+            work->mEye.y = 100.0f;
+            work->mEye.x = 800.0f * sine;
+            work->mEye.z = 800.0f * cosine;
+            cSAngle_l actorName;
+            actorName = 0xA5;
+            auto* actor =
+                reinterpret_cast<TactActorView*>(fopAcIt_Judge(JUDGE_BY_NAME, &actorName));
+            cXyz base;
+            cXyz point1;
+            cXyz point2;
+            cXyz cross;
+            cXyz target;
+            cXyz temporary;
+            f32 x = player->current.pos.x;
+            f32 y = (f32)actor->mHeight + 120.0f;
+            f32 z = player->current.pos.z;
+            base.x = x;
+            base.z = z;
+            base.y = y;
+            cameraUniformAdd(&base, &point1, &work->mCenter);
+            cameraUniformAdd(&base, &point2, &work->mEye);
+            if (cameraUniformLineBGCheckCross(camera, &point1, &point2, &cross, 0x8F)) {
+                cameraUniformSubtract(&cross, &temporary, &base);
+                copyWords(&target, &temporary);
+            } else
+                copyWords(&target, &work->mEye);
+            cameraUniformAddCalcPos(&work->mEye, &target, 5.0f, 20.0f, 1.0f);
+            cameraUniformAdd(&base, &point2, &work->mEye);
+            if (cameraUniformLineBGCheckCross(camera, &work->mStartEye, &point2, &cross, 0x8F)) {
+                cameraUniformSubtract(&cross, &temporary, &base);
+                copyWords(&work->mEye, &temporary);
             }
-            gabi::call(0x0200EE00, w + 0x20, tp, 5.0f, 20.0f, 1.0f); /* cLib_addCalcPos */
-            cXyz_pl(bp, a2, w + 0x20);
-            if (lineBGCheckCross(i_this, w + 0, a2, cp, 0x8F)) {
-                cXyz_mi(cp, mp, bp);
-                copy3(w + 0x20, mp);
-            }
-            finishInit(i_this, w);
+            finishInit(camera, work);
         }
     }
-    if (ld(w + 0x40) != 0) {
-        gabi::Local<u32> id;
-        u32 ip = gabi::ea(id.get());
-        u32 pid = ld(w + 0x44);
-        st(ip, pid);
-        if (pid == 0xFFFFFFFF) return 1;
-        if (gabi::call<u32>(0x025D5218, 0x025E1234 /* fpcSch_JudgeByID */, ip) == 0) return 1;
+    if (work->mpRelActor) {
+        GuestWord id;
+        u32 actorId = work->mRelActorId;
+        id = actorId;
+        if (actorId == 0xFFFFFFFF)
+            return 1;
+        if (!fopAcIt_Judge(JUDGE_BY_ID, &id))
+            return 1;
     }
-    u32 ret = 0;
+    u32 result = 0;
     f32 ratio = 1.0f;
-    u32 t = ld(i_this + 0x11C);
-    u32 n = ld(w + 0x50);
-    if (t >= n) {
-        ret = 1;
-    } else if (ld(w + 0x68) != 0) {
-        gabi::call(0x025C0C80, i_this + 0x4CC); /* d2DBSplinePath::Step */
-        ratio = gabi::call<f32>(0x025C0F30, i_this + 0x4CC, 0x101D626C); /* Calc(f32*) */
+    u32 frame = camera->m11C;
+    u32 timer = work->mTimer;
+    if (frame >= timer)
+        result = 1;
+    else if (work->mTrans.mBSpCurve) {
+        cameraUniformSplineStep(camera->mEventData.mSpline2DPath);
+        ratio = cameraUniformSplineCalc(camera->mEventData.mSpline2DPath, splineCurve.mValues);
+    } else
+        ratio = (f32)(f64)(frame + 1) / (f32)(f64)(s32)timer;
+    moveTail(camera, work, ratio, UNIFORM);
+    return result;
+}
+// HD: PPC slw masks its count to six bits and returns zero for counts 32..63.
+static u32 shiftLeft(u32 value, u32 shift) {
+    shift &= 63;
+    return shift >= 32 ? 0 : value << shift;
+}
+static void brakeTotal(MoveWork* w) {
+    s32 ramp = (s32)(u32)w->mBrake.mRampFrames;
+    if (w->mBrake.mBrakeType != 1) {
+        f32 full = (f32)(f64)(s32)((u32)w->mBrake.mFullFrames * (u32)ramp);
+        f32 tail = (f32)(f64)(s32)((s32)((u32)ramp * (u32)(ramp + 1)) >> 1);
+        w->mBrake.mTotal = full;
+        w->mBrake.mTotal = full + tail;
     } else {
-        ratio = (f32)(f64)(t + 1) / (f32)(f64)(s32)n;
-    }
-    moveTail(i_this, w, ratio, kTransLayout);
-    return ret;
-}
-VERIFY(0x02531D20, dCamera_c_uniformTransEvCamera);
-
-/* PPC slw: shift counts 32..63 give 0 */
-static inline u32 slw(u32 v, u32 sh) {
-    sh &= 63;
-    return sh >= 32 ? 0 : v << sh;
-}
-/* the sum of the per-frame steps of a braking/accelerating move: k frames at full step n1 plus the
- * ramp n1..1 (linear) or 2^(n1-1)..1 (type 1) */
-static inline void brakeTotal(u32 w) {
-    s32 n1 = (s32)ld(w + 0x5C);
-    if (ld(w + 0x60) != 1) {
-        f32 a = (f32)(f64)(s32)((u32)ld(w + 0x58) * (u32)n1);
-        f32 b = (f32)(f64)(s32)((s32)((u32)n1 * (u32)(n1 + 1)) >> 1);
-        stf(w + 0x54, a);
-        stf(w + 0x54, a + b);
-    } else {
-        u32 v = slw(1, (u32)n1 - 1);
-        f32 p = (f32)(f64)(s32)v;
-        f32 k = (f32)(f64)(s32)ld(w + 0x58);
-        f32 r = (p + p) - 1.0f;
-        f32 m = k * p;
-        stf(w + 0x54, m + r);
+        u32 value = shiftLeft(1, (u32)ramp - 1);
+        f32 step = (f32)(f64)(s32)value;
+        f32 frames = (f32)(f64)(s32)(u32)w->mBrake.mFullFrames;
+        f32 tail = (step + step) - 1.0f;
+        f32 full = frames * step;
+        w->mBrake.mTotal = full + tail;
     }
 }
-/* the start/end parameters of the braking/accelerating moves (names at `nm`: Eye, Center, Fovy,
- * StartEye, StartCenter, StartFovy, Bank, StartBank, TransType, RelUseMask, its default, RelActor,
- * Cushion) and the RelUseMask adjustments */
-static inline void brakeParams(u32 c, u32 w, const u32* nm) {
-    gabi::Local<cXyz> def;
-    u32 d = gabi::ea(def.get());
-    cxyzDef(d, c + 0x1C);
-    getEvXyzData(c, w + 0x20, nm[0], d);
-    cxyzDef(d, c + 0x10);
-    getEvXyzData(c, w + 0x2C, nm[1], d);
-    getEvFloatData(c, w + 0x38, nm[2], ldf(c + 0x38));
-    cxyzDef(d, c + 0x1C);
-    getEvXyzData(c, w + 0, nm[3], d);
-    cxyzDef(d, c + 0x10);
-    getEvXyzData(c, w + 0xC, nm[4], d);
-    getEvFloatData(c, w + 0x18, nm[5], ldf(c + 0x38));
-    f32 deg = gabi::call<f32>(0x02006720, c + 0x34); /* cSAngle::Degree */
-    st8(w + 0x78, (u8)getEvFloatData(c, w + 0x3C, nm[6], deg));
-    deg = gabi::call<f32>(0x02006720, c + 0x34);
-    u32 r = getEvFloatData(c, w + 0x1C, nm[7], deg);
-    st8(w + 0x78, (u8)(ld8(w + 0x78) | r));
-    getEvIntData(c, w + 0x64, nm[8], 0);
-    getEvStringData(c, w + 0x48, nm[9], nm[10]);
-    st(w + 0x40, getEvActor(c, nm[11]));
-    getEvFloatData(c, w + 0x6C, nm[12], 1.0f);
-    u32 a = ld(w + 0x40);
-    if (a != 0) {
-        st(w + 0x44, a != 0 ? ld(a + 4) : 0xFFFFFFFF);
-        if (ld8(w + 0x49) == 'r') rBlock(c, w, w + 0xC, w + 0);
-        if (ld8(w + 0x48) == 'n' || ld8(w + 0x49) == 'n') nBlock(c, w, c + 0x1C, w + 0x48, w + 0xC, w + 0x49, w + 0);
-        if (ld8(w + 0x4A) == 'n' || ld8(w + 0x4B) == 'n') nBlock(c, w, w + 0x20, w + 0x4A, w + 0x2C, w + 0x4B, w + 0x20);
-        if (ld8(w + 0x4A) == 'p') pBlock(c, w, w + 0x2C);
-        u8 m = ld8(w + 0x4B);
-        if (m == 'p') pBlock(c, w, w + 0x20);
-        else if (m == 'r') rBlock(c, w, w + 0x2C, w + 0x20);
+/* inlined into uniformBrakeEvCamera, uniformAcceleEvCamera */
+static void brakeParams(dCamera_c* c, MoveWork* w, const char* const* names) {
+    cXyz fallback;
+    copyFloats(&fallback, &c->mEye);
+    cameraUniformGetXyz(c, &w->mEye, names[0], &fallback);
+    copyFloats(&fallback, &c->mCenter);
+    cameraUniformGetXyz(c, &w->mCenter, names[1], &fallback);
+    cameraUniformGetFloat(c, &w->mFovy, names[2], c->mFovy);
+    copyFloats(&fallback, &c->mEye);
+    cameraUniformGetXyz(c, &w->mStartEye, names[3], &fallback);
+    copyFloats(&fallback, &c->mCenter);
+    cameraUniformGetXyz(c, &w->mStartCenter, names[4], &fallback);
+    cameraUniformGetFloat(c, &w->mStartFovy, names[5], c->mFovy);
+    f32 degrees = cameraUniformAngleDegree(&c->mBank);
+    w->mBrake.mBankSet = (u8)cameraUniformGetFloat(c, &w->mBank, names[6], degrees);
+    degrees = cameraUniformAngleDegree(&c->mBank);
+    u32 bank = cameraUniformGetFloat(c, &w->mStartBank, names[7], degrees);
+    w->mBrake.mBankSet = (u8)((u8)w->mBrake.mBankSet | bank);
+    cameraUniformGetInt(c, &w->mBrake.mTransType, names[8], 0);
+    cameraUniformGetString(c, w->mRelUseMask, names[9], names[10]);
+    w->mpRelActor = cameraUniformGetActor(c, names[11]);
+    cameraUniformGetFloat(c, &w->mBrake.mCushion, names[12], 1.0f);
+    fopAc_ac_c* actor = w->mpRelActor;
+    if (actor) {
+        w->mRelActorId = actor ? (u32)actor->mBsPcId : 0xFFFFFFFF;
+        if (w->mRelUseMask[1] == 'r')
+            relativeSide(c, w, &w->mStartCenter, &w->mStartEye);
+        if (w->mRelUseMask[0] == 'n' || w->mRelUseMask[1] == 'n')
+            relativeFacing(c, w, &c->mEye, &w->mRelUseMask[0], &w->mStartCenter, &w->mRelUseMask[1],
+                           &w->mStartEye);
+        if (w->mRelUseMask[2] == 'n' || w->mRelUseMask[3] == 'n')
+            relativeFacing(c, w, &w->mEye, &w->mRelUseMask[2], &w->mCenter, &w->mRelUseMask[3],
+                           &w->mEye);
+        if (w->mRelUseMask[2] == 'p')
+            relativePlayer(c, w, &w->mCenter);
+        u8 mask = w->mRelUseMask[3];
+        if (mask == 'p')
+            relativePlayer(c, w, &w->mEye);
+        else if (mask == 'r')
+            relativeSide(c, w, &w->mCenter, &w->mEye);
     }
-    u32 g = gabi::call<u32>(0x02007400, c + 8); /* cSGlobe::Invert */
-    st(w + 0x70, ld(g + 0));
-    stf(w + 0x68, 0.0f);
-    st(w + 0x74, ld(g + 4));
+    auto* globe = reinterpret_cast<GlobeWords*>(cameraUniformGlobeInvert(&c->mDirection));
+    auto* dst = reinterpret_cast<GlobeWords*>(&w->mBrake.mStartGlobe);
+    dst->mRadius = (u32)globe->mRadius;
+    w->mBrake.mSteps = 0.0f;
+    dst->mAngles = (u32)globe->mAngles;
     setDone(c);
 }
-/* the RelActor must still exist */
-static inline bool relActorGone(u32 w) {
-    if (ld(w + 0x40) == 0) return false;
-    gabi::Local<u32> id;
-    u32 ip = gabi::ea(id.get());
-    u32 pid = ld(w + 0x44);
-    st(ip, pid);
-    if (pid == 0xFFFFFFFF) return true;
-    return gabi::call<u32>(0x025D5218, 0x025E1234 /* fpcSch_JudgeByID */, ip) == 0;
+/* inlined into uniformBrakeEvCamera, uniformAcceleEvCamera */
+static bool relActorGone(MoveWork* w) {
+    if (!w->mpRelActor)
+        return false;
+    GuestWord id;
+    u32 actorId = w->mRelActorId;
+    id = actorId;
+    if (actorId == 0xFFFFFFFF)
+        return true;
+    return !fopAcIt_Judge(JUDGE_BY_ID, &id);
 }
-static inline f32 brakeStep(u32 w, f32 f) {
-    f32 acc = ldf(w + 0x68) + f;
-    stf(w + 0x68, acc);
-    return acc / ldf(w + 0x54);
+static f32 brakeStep(MoveWork* w, f32 step) {
+    f32 total = (f32)w->mBrake.mSteps + step;
+    w->mBrake.mSteps = total;
+    return total / (f32)w->mBrake.mTotal;
 }
-
-static const u32 kBrakeNames[13] = {0x1004D618, 0x1004D624, 0x1004D62C, 0x1004D690, 0x1004D644, 0x1004D65C, 0x1004D634,
-                                    0x1004D668, 0x1004D674, 0x1004D69C, 0x1004D63C, 0x1004D6A8, 0x1004D610};
-static const u32 kAcceleNames[13] = {0x1004D6BC, 0x1004D6C8, 0x1004D6D0, 0x1004D730, 0x1004D6F4, 0x1004D700, 0x1004D6D8,
-                                     0x1004D70C, 0x1004D718, 0x1004D73C, 0x1004D6E0, 0x1004D748, 0x1004D6B4};
-
-/* 0253BC1C: uniformBrakeEvCamera: as uniformTrans, at full speed until "BrakingPoint", then braking
- * (BrakeType 0: linearly, 1: halving the step each frame). work: as uniformTrans up to +0x4C, +0x50
- * Timer, +0x54 total of the steps, +0x58 BrakingPoint, +0x5C Timer - BrakingPoint, +0x60 BrakeType,
- * +0x64 TransType, +0x68 steps so far, +0x6C Cushion, +0x70 start globe, +0x78 bank set */
-static u32 dCamera_c_uniformBrakeEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253BC1C, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        if (getEvIntData2(i_this, w + 0x50, 0x1004D61C /* "Timer" */) == 0) return 1;
-        getEvIntData(i_this, w + 0x58, 0x1004D680 /* "BrakingPoint" */, 0);
-        u32 bp = ld(w + 0x58);
-        st(w + 0x5C, ld(w + 0x50) - bp);
-        getEvIntData(i_this, w + 0x60, 0x1004D650 /* "BrakeType" */, 0);
+/* 0253BC1C */
+u32 uniformBrakeEvCamera(dCamera_c* camera) {
+    auto* w = reinterpret_cast<MoveWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        if (!cameraUniformGetRequiredInt(camera, &w->mTimer, brakeTimerName.text))
+            return 1;
+        cameraUniformGetInt(camera, &w->mBrake.mFullFrames, brakingPointName.text, 0);
+        u32 point = w->mBrake.mFullFrames;
+        w->mBrake.mRampFrames = (u32)w->mTimer - point;
+        cameraUniformGetInt(camera, &w->mBrake.mBrakeType, brakeTypeName.text, 0);
         brakeTotal(w);
-        brakeParams(i_this, w, kBrakeNames);
+        brakeParams(camera, w, brakeNames);
     }
-    if (relActorGone(w)) return 1;
-    u32 ret = 0;
+    if (relActorGone(w))
+        return 1;
+    u32 result = 0;
     f32 ratio = 1.0f;
-    u32 t = ld(i_this + 0x11C);
-    u32 n = ld(w + 0x50);
-    if (t >= n) {
-        ret = 1;
-    } else if (ld(w + 0x60) != 1) {
-        if (t < ld(w + 0x58)) ratio = brakeStep(w, (f32)(f64)(s32)ld(w + 0x5C));
-        else ratio = brakeStep(w, (f32)(f64)(n - t));
+    u32 frame = camera->m11C;
+    u32 timer = w->mTimer;
+    if (frame >= timer)
+        result = 1;
+    else if (w->mBrake.mBrakeType != 1) {
+        if (frame < (u32)w->mBrake.mFullFrames)
+            ratio = brakeStep(w, (f32)(f64)(s32)(u32)w->mBrake.mRampFrames);
+        else
+            ratio = brakeStep(w, (f32)(f64)(timer - frame));
     } else {
-        u32 sh = t < ld(w + 0x58) ? ld(w + 0x5C) - 1 : n - t - 1;
-        ratio = brakeStep(w, (f32)(f64)(s32)slw(1, sh));
+        u32 shift =
+            frame < (u32)w->mBrake.mFullFrames ? (u32)w->mBrake.mRampFrames - 1 : timer - frame - 1;
+        ratio = brakeStep(w, (f32)(f64)(s32)shiftLeft(1, shift));
     }
-    moveTail(i_this, w, ratio, kBrakeLayout);
-    return ret;
+    moveTail(camera, w, ratio, BRAKING);
+    return result;
 }
-VERIFY(0x0253BC1C, dCamera_c_uniformBrakeEvCamera);
-
-/* 0253D1A4: uniformAcceleEvCamera: as uniformBrake, accelerating over the first "AcceleTimer" frames
- * (AcceleType 0: linearly, 1: doubling the step each frame), then at full speed. work: as
- * uniformBrake with +0x58 Timer - AcceleTimer, +0x5C AcceleTimer, +0x60 AcceleType */
-static u32 dCamera_c_uniformAcceleEvCamera(u32 i_this) {
-    WWHD_FUNC(0x0253D1A4, u32, i_this);
-    u32 w = i_this + 0x37C;
-    if (ld(i_this + 0x11C) == 0) {
-        if (getEvIntData2(i_this, w + 0x50, 0x1004D6C0 /* "Timer" */) == 0) return 1;
-        getEvIntData(i_this, w + 0x5C, 0x1004D6E8 /* "AcceleTimer" */, (s32)ld(w + 0x50));
-        getEvIntData(i_this, w + 0x60, 0x1004D724 /* "AcceleType" */, 0);
-        st(w + 0x58, ld(w + 0x50) - ld(w + 0x5C));
+/* 0253D1A4 */
+u32 uniformAcceleEvCamera(dCamera_c* camera) {
+    auto* w = reinterpret_cast<MoveWork*>(camera->mWork);
+    if (camera->m11C == 0) {
+        if (!cameraUniformGetRequiredInt(camera, &w->mTimer, acceleTimerName.text))
+            return 1;
+        cameraUniformGetInt(camera, &w->mBrake.mRampFrames, acceleRampName.text,
+                            (s32)(u32)w->mTimer);
+        cameraUniformGetInt(camera, &w->mBrake.mBrakeType, acceleTypeName.text, 0);
+        w->mBrake.mFullFrames = (u32)w->mTimer - (u32)w->mBrake.mRampFrames;
         brakeTotal(w);
-        brakeParams(i_this, w, kAcceleNames);
+        brakeParams(camera, w, acceleNames);
     }
-    if (relActorGone(w)) return 1;
-    u32 ret = 0;
+    if (relActorGone(w))
+        return 1;
+    u32 result = 0;
     f32 ratio = 1.0f;
-    u32 t = ld(i_this + 0x11C);
-    u32 n = ld(w + 0x50);
-    if (t >= n) {
-        ret = 1;
-    } else if (ld(w + 0x60) != 1) {
-        u32 at = ld(w + 0x5C);
-        if (t < at) ratio = brakeStep(w, (f32)(f64)t);
-        else ratio = brakeStep(w, (f32)(f64)(s32)at);
+    u32 frame = camera->m11C;
+    u32 timer = w->mTimer;
+    if (frame >= timer)
+        result = 1;
+    else if (w->mBrake.mBrakeType != 1) {
+        u32 ramp = w->mBrake.mRampFrames;
+        if (frame < ramp)
+            ratio = brakeStep(w, (f32)(f64)frame);
+        else
+            ratio = brakeStep(w, (f32)(f64)(s32)ramp);
     } else {
-        u32 at = ld(w + 0x5C);
-        u32 sh = t < at ? t - 1 : at - 1;
-        ratio = brakeStep(w, (f32)(f64)(s32)slw(1, sh));
+        u32 ramp = w->mBrake.mRampFrames;
+        u32 shift = frame < ramp ? frame - 1 : ramp - 1;
+        ratio = brakeStep(w, (f32)(f64)(s32)shiftLeft(1, shift));
     }
-    moveTail(i_this, w, ratio, kBrakeLayout);
-    return ret;
+    moveTail(camera, w, ratio, BRAKING);
+    return result;
 }
-VERIFY(0x0253D1A4, dCamera_c_uniformAcceleEvCamera);
+} // namespace event_camera_uniform
+using namespace event_camera_uniform;
 
-} // namespace d_ev_camera_10_cpp
+/* WWHD glue (tools/verify/autoglue.py)
+ext 02530418 u32 cameraUniformGetRequiredInt(dCamera_c*,GuestWord*,const char*)
+ext 02530634 u32 cameraUniformGetInt(dCamera_c*,GuestWord*,const char*,s32)
+ext 0253072C u32 cameraUniformGetFloat(dCamera_c*,GuestFloat*,const char*,f32)
+ext 0253086C u32 cameraUniformGetXyz(dCamera_c*,cXyz*,const char*,cXyz*)
+ext 02530998 u32 cameraUniformGetString(dCamera_c*,be<char>*,const char*,const char*)
+ext 02530B84 fopAc_ac_c* cameraUniformGetActor(dCamera_c*,const char*)
+ext 0250242C void cameraUniformRelationalPos(dCamera_c*,cXyz*,fopAc_ac_c*,cXyz*)
+ext 0201ADE0 void cameraUniformSubtract(cXyz*,cXyz*,cXyz*)
+ext 0201AD78 void cameraUniformAdd(cXyz*,cXyz*,cXyz*)
+ext 0201AE48 void cameraUniformScale(cXyz*,cXyz*,f32)
+ext 028E8D88 void cameraUniformPSVECAdd(cXyz*,cXyz*,cXyz*)
+ext 020072E0 void cameraUniformGlobeVal(cSGlobe_l*,cXyz*)
+ext 020073AC void cameraUniformGlobeXyz(cSGlobe_l*,cXyz*)
+ext 02007324 void cameraUniformGlobeCtor(cSGlobe_l*,cXyz*)
+ext 020068B0 void cameraUniformAngleSubtract(cSAngle_l*,cSAngle_l*,cSAngle_l*)
+ext 02006894 void cameraUniformAngleAdd(cSAngle_l*,cSAngle_l*,cSAngle_l*)
+ext 0200693C void cameraUniformAngleScale(cSAngle_l*,cSAngle_l*,f32)
+ext 0200658C cSAngle_l* cameraUniformAngleShortCtor(cSAngle_l*,s32)
+ext 024F8D5C void cameraUniformPositionOf(dCamera_c*,cXyz*,fopAc_ac_c*)
+ext 024F8F30 void cameraUniformDirectionOf(dCamera_c*,cSAngle_l*,fopAc_ac_c*)
+ext 024F8F3C void cameraUniformAttentionPos(dCamera_c*,cXyz*,fopAc_ac_c*)
+ext 028F4384 f32 cameraUniformSqrt(f32)
+ext 028E8DD0 f32 cameraUniformSquareMag(cXyz*)
+ext 024FCBE8 bool cameraUniformLineBGCheck(dCamera_c*,cXyz*,cXyz*,u32)
+ext 024FB608 bool cameraUniformLineBGCheckCross(dCamera_c*,cXyz*,cXyz*,cXyz*,u32)
+ext 02007400 cSGlobe_l* cameraUniformGlobeInvert(cSGlobe_l*)
+ext 024F7A40 void cameraUniformRotateY(cXyz*,cXyz*,cSAngle_l*)
+ext 02007248 void cameraUniformGlobeAnglesCtor(cSGlobe_l*,f32,cSAngle_l*,cSAngle_l*)
+ext 020065EC void cameraUniformShortMinusAngle(cSAngle_l*,s32,cSAngle_l*)
+ext 020066C0 cSAngle_l* cameraUniformAngleFloatCtor(cSAngle_l*,f32)
+ext 020068CC void cameraUniformAngleAddAssign(cSAngle_l*,cSAngle_l*)
+ext 025C0B18 void cameraUniformSplineInit(u8*,u32,u32)
+ext 02006720 f32 cameraUniformAngleDegree(cSAngle_l*)
+ext 02543F10 s32 cameraUniformEventIndex(void*,const char*,s32)
+ext 02544044 StageEventView* cameraUniformEventData(void*,s32)
+ext 0200EE00 void cameraUniformAddCalcPos(cXyz*,cXyz*,f32,f32,f32)
+ext 025C0C80 void cameraUniformSplineStep(u8*)
+ext 025C0F30 f32 cameraUniformSplineCalc(u8*,GuestFloat*)
+data asokoName 1004CED4
+data transTimerName 1004CECC
+data transCurveName 1004CF38
+data transEyeName 1004CEC8
+data transCenterName 1004CEDC
+data transFovyName 1004CEE4
+data transStartEyeName 1004CF44
+data transStartCenterName 1004CEFC
+data transStartFovyName 1004CF14
+data transBankName 1004CEEC
+data transStartBankName 1004CF20
+data transTypeName 1004CF2C
+data transMaskName 1004CF50
+data transMaskDefault 1004CEF4
+data transActorName 1004CF5C
+data transCushionName 1004CEC0
+data tactWindowName 1004CF08
+data brakeTimerName 1004D61C
+data brakingPointName 1004D680
+data brakeTypeName 1004D650
+data acceleTimerName 1004D6C0
+data acceleRampName 1004D6E8
+data acceleTypeName 1004D724
+data brakeName0 1004D618
+data brakeName1 1004D624
+data brakeName2 1004D62C
+data brakeName3 1004D690
+data brakeName4 1004D644
+data brakeName5 1004D65C
+data brakeName6 1004D634
+data brakeName7 1004D668
+data brakeName8 1004D674
+data brakeName9 1004D69C
+data brakeName10 1004D63C
+data brakeName11 1004D6A8
+data brakeName12 1004D610
+data acceleName0 1004D6BC
+data acceleName1 1004D6C8
+data acceleName2 1004D6D0
+data acceleName3 1004D730
+data acceleName4 1004D6F4
+data acceleName5 1004D700
+data acceleName6 1004D6D8
+data acceleName7 1004D70C
+data acceleName8 1004D718
+data acceleName9 1004D73C
+data acceleName10 1004D6E0
+data acceleName11 1004D748
+data acceleName12 1004D6B4
+data sinCosTable 104A44F8
+data splineCurve 101D626C
+*/

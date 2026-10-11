@@ -12,21 +12,26 @@
 static inline bool am_isStop(am_class* i_this) { return i_this->mpMorf->isStop(); }
 
 /* dComIfGp_getVibration().StartShock(strength, -0x21, cXyz(0.0f, 1.0f, 0.0f)) */
+/* inlined into daAM_Execute */
 static inline void am_shock(s32 strength) {
     dVibration_c* vib = dComIfGp_getVibration();
-    gabi::Local<cXyz> dir;
-    dir->set(0.0f, 1.0f, 0.0f);
-    gabi::call(0x025CB374, vib, strength, -0x21, dir.get());
+    cXyz dir;
+    dir.set(0.0f, 1.0f, 0.0f);
+    vib->StartShock(strength, -0x21, &dir);
 }
 
+/* inlined into daAM_Execute */
 static inline void am_smoke(am_class* i_this, u16 id, cXyz* pos, s32 idx) {
-    am_particle_setToon(id, pos, &i_this->shape_angle, 0xB9, &i_this->mSmokeCbs[idx], fopAcM_GetRoomNo(i_this));
+    am_particle_setToon(id, pos, &i_this->shape_angle, 0xB9, &i_this->mSmokeCbs[idx],
+                        fopAcM_GetRoomNo(i_this));
 }
 
 /* medama_move (inline) */
+/* inlined into daAM_Execute */
 static inline void medama_move(am_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    if (i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_e || i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
+    if (i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_e ||
+        i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
         i_this->mEyeRot.x = 0;
         i_this->mEyeRot.y = 0;
         i_this->mEyeRot.z = 0;
@@ -58,14 +63,14 @@ static inline void medama_move(am_class* i_this) {
 }
 
 /* medama_atari_check (inline) */
+/* inlined into daAM_Execute */
 static inline BOOL medama_atari_check(am_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     void* hitObj = i_this->mEyeSph.GetTgHitObj();
     bool ret = false;
 
     if (i_this->mStartsInactive == 1 && i_this->mSwitch != 0xFF &&
-        !dComIfGs_isSwitch(i_this->mSwitch, dComIfGp_roomControl_getStayNo()))
-    {
+        !dComIfGs_isSwitch(i_this->mSwitch, dComIfGp_roomControl_getStayNo())) {
         return ret;
     }
 
@@ -77,25 +82,26 @@ static inline BOOL medama_atari_check(am_class* i_this) {
         return ret;
     }
 
-    gabi::Local<CcAtInfo_am> atInfo;
-    gabi::Local<cXyz> hitPos;
-    hitPos->copy(*i_this->mEyeSph.GetTgHitPosP());
-    atInfo->pParticlePos = 0;
+    CcAtInfo atInfo;
+    cXyz hitPos;
+    hitPos.copy(*i_this->mEyeSph.GetTgHitPosP());
+    atInfo.pParticlePos = nullptr;
 
-    switch (gabi::load<u32>(gabi::ea(hitObj) + 0x10) /* GetAtType() */) {
+    switch (static_cast<dCcD_GObjInf*>(hitObj)->mAtType) {
     case AT_TYPE_GRAPPLING_HOOK:
-        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_SLEEP_e && i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
+        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_SLEEP_e &&
+            i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
             if (i_this->stealItemLeft > 0) {
                 i_this->max_health = 10;
                 i_this->health = 10;
-                atInfo->mpObj = gabi::ea(i_this->mEyeSph.GetTgHitObj());
-                atInfo->pParticlePos = 0;
-                cc_at_check(i_this, atInfo);
+                atInfo.mpObj = static_cast<dCcD_GObjInf*>(i_this->mEyeSph.GetTgHitObj());
+                atInfo.pParticlePos = nullptr;
+                cc_at_check(i_this, &atInfo);
                 i_this->max_health = 10;
                 i_this->health = 10;
                 dComIfGp_particle_set(ID_IT_JN_PIYOHIT00, attention_pos(i_this));
             } else {
-                dComIfGp_particle_set(ID_AK_JN_NG, hitPos);
+                dComIfGp_particle_set(ID_AK_JN_NG, &hitPos);
             }
             fopAcM_seStart(i_this, JA_SE_LK_MS_WEP_HIT, 0x42);
         }
@@ -125,14 +131,16 @@ static inline BOOL medama_atari_check(am_class* i_this) {
     case AT_TYPE_ICE_ARROW:
         fopAcM_seStart(i_this, JA_SE_LK_MS_WEP_HIT, 0x42);
         ret = true;
-        if (i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_e || i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
+        if (i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_e ||
+            i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_SLEEP_LOOP_e) {
             anm_init(i_this, dRes_INDEX_AM_BCK_OKIRU_e, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
             attention_flags(i_this) = fopAc_Attn_LOCKON_BATTLE_e;
             needle_onAt(&i_this->mNeedleCyl);
             i_this->mAction = ACTION_DOUSA;
             i_this->mMode = MODE_DOUSA_OKIRU;
         } else {
-            dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, &i_this->mEyeballPos, &player->shape_angle);
+            dComIfGp_particle_set(ID_AK_JN_CRITICALHITFLASH, &i_this->mEyeballPos,
+                                  &player->shape_angle);
             fopAcM_seStart(i_this, JA_SE_CM_AM_EYE_DAMAGE, 0);
             am_monsSeStart(i_this, JA_SE_CV_AM_EYE_DAMAGE, 0); /* HD: param 0 (GameCube 0x42) */
             i_this->mAction = ACTION_ITAI_MOVE;
@@ -140,7 +148,7 @@ static inline BOOL medama_atari_check(am_class* i_this) {
         }
         break;
     default:
-        dComIfGp_particle_set(ID_AK_JN_NG, hitPos);
+        dComIfGp_particle_set(ID_AK_JN_NG, &hitPos);
         fopAcM_seStart(i_this, JA_SE_LK_MS_WEP_HIT, 0x42);
         break;
     }
@@ -153,6 +161,7 @@ static inline BOOL medama_atari_check(am_class* i_this) {
 }
 
 /* action_dousa (inline) */
+/* inlined into daAM_Execute */
 static inline void action_dousa(am_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     switch (i_this->mMode) {
@@ -165,8 +174,7 @@ static inline void action_dousa(am_class* i_this) {
         /* fall-through */
     case 1: {
         if (i_this->mStartsInactive == 1 && i_this->mSwitch != 0xFF &&
-            !dComIfGs_isSwitch(i_this->mSwitch, dComIfGp_roomControl_getStayNo()))
-        {
+            !dComIfGs_isSwitch(i_this->mSwitch, dComIfGp_roomControl_getStayNo())) {
             break;
         }
         i_this->actor_status |= fopAcStts_SHOWMAP_e;
@@ -176,10 +184,11 @@ static inline void action_dousa(am_class* i_this) {
             if (yDist > 300.0f) {
                 break;
             }
-            gabi::Local<cXyz> dest;
-            dest->copy(player->current.pos);
-            if (Line_check(i_this, dest)) {
-                anm_init(i_this, dRes_INDEX_AM_BCK_OKIRU_e, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
+            cXyz dest;
+            dest.copy(player->current.pos);
+            if (Line_check(i_this, &dest)) {
+                anm_init(i_this, dRes_INDEX_AM_BCK_OKIRU_e, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f,
+                         -1);
                 am_monsSeStart(i_this, JA_SE_CV_AM_AWAKE, 0);
                 attention_flags(i_this) = fopAc_Attn_LOCKON_BATTLE_e;
                 needle_onAt(&i_this->mNeedleCyl);
@@ -195,7 +204,8 @@ static inline void action_dousa(am_class* i_this) {
         i_this->mMode = i_this->mMode + 1;
         /* fall-through */
     case 3:
-        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_e && i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_LOOP_e) {
+        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_e &&
+            i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_LOOP_e) {
             if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_DAMAGE_END_e) {
                 fopAcM_seStart(i_this, JA_SE_CM_AM_NEEDLE_OUT, 0);
                 fopAcM_seStart(i_this, JA_SE_CM_AM_MOUTH_CLOSE, 0);
@@ -245,9 +255,9 @@ static inline void action_dousa(am_class* i_this) {
         i_this->gravity = -11.0f;
         i_this->speed.y = 40.0f;
         am_monsSeStart(i_this, JA_SE_CV_AM_JUMP, 0);
-        gabi::Local<cXyz> dest;
-        dest->copy(player->current.pos);
-        if (!Line_check(i_this, dest) || daPy_getDamageWaitTimer(player) != 0) {
+        cXyz dest;
+        dest.copy(player->current.pos);
+        if (!Line_check(i_this, &dest) || daPy_getDamageWaitTimer(player) != 0) {
             i_this->speedF = 0.0f;
         }
         i_this->mMode = i_this->mMode + 1;
@@ -256,14 +266,15 @@ static inline void action_dousa(am_class* i_this) {
     case 6:
         if (i_this->mCurrBckIdx == dRes_INDEX_AM_BCK_CLOSE_e) {
             if (am_isStop(i_this)) {
-                anm_init(i_this, dRes_INDEX_AM_BCK_CLOSE_LOOP_e, 1.0f, J3DFrameCtrl::EMode_LOOP, 1.0f, -1);
+                anm_init(i_this, dRes_INDEX_AM_BCK_CLOSE_LOOP_e, 1.0f, J3DFrameCtrl::EMode_LOOP,
+                         1.0f, -1);
             }
         }
         if (!i_this->mAcch.ChkGroundHit()) {
             break;
         }
         fopAcM_seStart(i_this, JA_SE_CM_AM_JUMP, 0);
-        i_this->mSmokeCbs[0].remove();
+        i_this->mSmokeCbs[0].end();
         am_smoke(i_this, ID_AK_ST_AMOTHSMOKE00, &i_this->mWaistPos, 0);
         am_shock(3);
         i_this->speedF = 0.0f;
@@ -303,7 +314,7 @@ static inline void action_dousa(am_class* i_this) {
             i_this->mTargetAngleY = fopAcM_searchPlayerAngleY(i_this);
         }
         if (i_this->mCountDownTimers[0] == 0) {
-            i_this->mSmokeCbs[2].remove();
+            i_this->mSmokeCbs[2].end();
             i_this->mMode = 3;
         }
         break;
@@ -325,13 +336,14 @@ static inline void action_dousa(am_class* i_this) {
     medama_move(i_this);
 
     if (i_this->mMode != 2 && medama_atari_check(i_this)) {
-        i_this->mSmokeCbs[2].remove();
+        i_this->mSmokeCbs[2].end();
     } else if (bomb_nomi_check(i_this)) {
-        i_this->mSmokeCbs[2].remove();
+        i_this->mSmokeCbs[2].end();
     }
 }
 
 /* action_modoru_move (inline) */
+/* inlined into daAM_Execute */
 static inline void action_modoru_move(am_class* i_this) {
     switch (i_this->mMode) {
     case MODE_MODORU_MOVE_INIT: {
@@ -352,7 +364,7 @@ static inline void action_modoru_move(am_class* i_this) {
         f32 xDistToSpawn = i_this->mSpawnPos.x - i_this->current.pos.x;
         f32 zDistToSpawn = i_this->mSpawnPos.z - i_this->current.pos.z;
         if (i_this->mAcch.ChkGroundHit()) {
-            i_this->mSmokeCbs[0].remove();
+            i_this->mSmokeCbs[0].end();
             am_smoke(i_this, ID_AK_ST_AMOTHSMOKE00, &i_this->mWaistPos, 0);
             am_shock(1);
             fopAcM_seStart(i_this, JA_SE_CM_AM_JUMP, 0);
@@ -363,7 +375,8 @@ static inline void action_modoru_move(am_class* i_this) {
             i_this->mTargetAngleY = cM_atan2s(xDistToSpawn, zDistToSpawn);
         }
 
-        f32 xzDist = std_sqrtf(gabi::fmadds(xDistToSpawn, xDistToSpawn, zDistToSpawn * zDistToSpawn));
+        f32 xzDist =
+            std_sqrtf(gabi::fmadds(xDistToSpawn, xDistToSpawn, zDistToSpawn * zDistToSpawn));
         if (xzDist < 20.0f) {
             i_this->mTargetAngleY = i_this->mSpawnRotY;
             i_this->speedF = 0.0f;
@@ -386,6 +399,7 @@ static inline void action_modoru_move(am_class* i_this) {
 }
 
 /* action_handou_move (inline) */
+/* inlined into daAM_Execute */
 static inline void action_handou_move(am_class* i_this) {
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
     switch (i_this->mMode) {
@@ -398,7 +412,8 @@ static inline void action_handou_move(am_class* i_this) {
             i_this->speedF = 40.0f;
         }
         i_this->mTargetAngleY = i_this->current.angle.y;
-        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_e && i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_LOOP_e) {
+        if (i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_e &&
+            i_this->mCurrBckIdx != dRes_INDEX_AM_BCK_CLOSE_LOOP_e) {
             fopAcM_seStart(i_this, JA_SE_CM_AM_NEEDLE_OUT, 0);
             fopAcM_seStart(i_this, JA_SE_CM_AM_MOUTH_CLOSE, 0);
             anm_init(i_this, dRes_INDEX_AM_BCK_CLOSE_e, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
@@ -420,16 +435,18 @@ static inline void action_handou_move(am_class* i_this) {
     }
 }
 
+/* inlined into daAM_Execute */
 static inline void am_bomb_detonate_now(fopAc_ac_c* swallowedActor) {
     swallowedActor->scale.set(1.0f, 1.0f, 1.0f);
-    if (swallowedActor != nullptr && am_GetName(swallowedActor) == PROC_BOMB) {
+    if (swallowedActor != nullptr && am_GetName(swallowedActor) == fpcNm_BOMB_e) {
         daBomb_setBombRestTime(swallowedActor, 1);
-    } else if (swallowedActor != nullptr && am_GetName(swallowedActor) == PROC_BOMB2) {
+    } else if (swallowedActor != nullptr && am_GetName(swallowedActor) == fpcNm_Bomb2_e) {
         daBomb2_set_time(swallowedActor, 1);
     }
 }
 
 /* action_itai_move (inline) */
+/* inlined into daAM_Execute */
 static inline void action_itai_move(am_class* i_this) {
     switch (i_this->mMode) {
     case MODE_ITAI_MOVE_INIT:
@@ -474,7 +491,7 @@ static inline void action_itai_move(am_class* i_this) {
         i_this->mMode = 3;
         break;
     case 44:
-        i_this->mSmokeCbs[3].remove();
+        i_this->mSmokeCbs[3].end();
         i_this->mStts.SetWeight(0xFF);
         am_smoke(i_this, ID_AK_ST_AMOTHSMOKE03, &i_this->mJawPos, 3);
         fopAcM_seStart(i_this, JA_SE_CM_AM_MOUTH_CLOSE, 0);
@@ -495,7 +512,7 @@ static inline void action_itai_move(am_class* i_this) {
             am_monsSeStart(i_this, JA_SE_CV_AM_EAT_BOMB, 0);
         }
         if (i_this->mpMorf->checkFrame(6.0f)) {
-            i_this->mSmokeCbs[1].remove();
+            i_this->mSmokeCbs[1].end();
             needle_onAt(&i_this->mNeedleCyl);
             am_smoke(i_this, ID_AK_ST_AMOTHSMOKE01, &i_this->mJawPos, 1);
             i_this->m033C = dComIfGp_particle_set(ID_AK_SN_AMOTHBOMBEYE, &i_this->mJawPos);
@@ -513,7 +530,7 @@ static inline void action_itai_move(am_class* i_this) {
         bomb_move_set(i_this, 1);
         i_this->shape_angle.y = i_this->shape_angle.y + 0x1000;
         if (i_this->mAcch.ChkGroundHit()) {
-            i_this->mSmokeCbs[0].remove();
+            i_this->mSmokeCbs[0].end();
             fopAcM_seStart(i_this, JA_SE_CM_AM_JUMP, 0);
             am_smoke(i_this, ID_AK_ST_AMOTHSMOKE00, &i_this->mWaistPos, 0);
             am_shock(1);
@@ -550,9 +567,9 @@ static inline void action_itai_move(am_class* i_this) {
         if (!am_isStop(i_this)) {
             break;
         }
-        gabi::Local<cXyz> centerPos;
-        centerPos->copy(i_this->current.pos);
-        centerPos->y = i_this->current.pos.y + 150.0f;
+        cXyz centerPos;
+        centerPos.copy(i_this->current.pos);
+        centerPos.y = i_this->current.pos.y + 150.0f;
         u32 pid = i_this->mSwallowedActorPID;
         if (pid != fpcM_ERROR_PROCESS_ID_e) {
             fopAc_ac_c* swallowedActor = fopAcM_SearchByID(pid);
@@ -564,7 +581,7 @@ static inline void action_itai_move(am_class* i_this) {
         fopAcM_seStart(i_this, JA_SE_CM_AM_EXPLODE, 0);
         fopAcM_seStart(i_this, JA_SE_LK_LAST_HIT, 0);
 
-        fopAcM_createDisappear(i_this, centerPos, 5, 0, 0xFF);
+        fopAcM_createDisappear(i_this, &centerPos, 5, 0, 0xFF);
         fopAcM_onActor(i_this);
         fopAcM_delete(i_this);
         break;
@@ -572,10 +589,10 @@ static inline void action_itai_move(am_class* i_this) {
     }
 
     if (i_this->m033C) {
-        JPA_setGlobalRTMatrix(i_this->m033C, getAnmMtx(i_this->mpMorf->getModel(), AM_JNT_AGO_e));
+        JPA_setGlobalRTMatrix(i_this->m033C, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
     }
     if (i_this->m0340) {
-        JPA_setGlobalRTMatrix(i_this->m0340, getAnmMtx(i_this->mpMorf->getModel(), AM_JNT_AGO_e));
+        JPA_setGlobalRTMatrix(i_this->m0340, i_this->mpMorf->getModel()->getAnmMtx(AM_JNT_AGO_e));
     }
 
     if (i_this->mMode == 41 || i_this->mMode == 42) {
@@ -585,9 +602,8 @@ static inline void action_itai_move(am_class* i_this) {
 
 /* 0204938C */
 static BOOL daAM_Execute(am_class* i_this) {
-    WWHD_FUNC(0x0204938C, BOOL, i_this);
 
-    fopAcM_setGbaName(i_this, 0x27 /* dItemNo_BOW_e */, 0xC, 0x2A);
+    fopAcM_setGbaName(i_this, dItemNo_BOW_e, 0xC, 0x2A);
 
     if (enemy_ice(&i_this->mEnemyIce)) {
         J3DModel* model = i_this->mpMorf->getModel();
@@ -617,7 +633,8 @@ static BOOL daAM_Execute(am_class* i_this) {
         break;
     }
 
-    if (i_this->mAction != ACTION_ITAI_MOVE && i_this->mSpawnPosY - 1500.0f > i_this->current.pos.y) {
+    if (i_this->mAction != ACTION_ITAI_MOVE &&
+        i_this->mSpawnPosY - 1500.0f > i_this->current.pos.y) {
         anm_init(i_this, dRes_INDEX_AM_BCK_DEAD_e, 1.0f, J3DFrameCtrl::EMode_NONE, 1.0f, -1);
 
         dComIfGp_particle_set(ID_AK_SN_AMOTHFLASH00, &i_this->mWaistPos);
@@ -629,12 +646,12 @@ static BOOL daAM_Execute(am_class* i_this) {
 
         /* becomeInvalidEmitter: here through the out-of-line status setter */
         if (i_this->m033C) {
-            gabi::store<s32>(gabi::ea(i_this->m033C.get()) + 0x5C, -1);
+            i_this->m033C->setMaxFrame(-1);
             JPABaseEmitter_onStatus(i_this->m033C, 1);
             i_this->m033C = nullptr;
         }
         if (i_this->m0340) {
-            gabi::store<s32>(gabi::ea(i_this->m0340.get()) + 0x5C, -1);
+            i_this->m0340->setMaxFrame(-1);
             JPABaseEmitter_onStatus(i_this->m0340, 1);
             i_this->m0340 = nullptr;
         }
@@ -655,14 +672,14 @@ static BOOL daAM_Execute(am_class* i_this) {
 
     cMtx_YrotS(calc_mtx(), i_this->current.angle.y);
     cMtx_XrotM(calc_mtx(), i_this->current.angle.x);
-    gabi::Local<cXyz> offset;
-    offset->x = 0.0f;
-    offset->y = 0.0f;
-    gabi::store<u32>(gabi::ea(&offset->z), gabi::load<u32>(gabi::ea(&i_this->speedF))); /* offset.z = speedF (bit copy) */
-    gabi::Local<cXyz> rotOffset;
-    MtxPosition(offset, rotOffset);
-    gabi::store<u32>(gabi::ea(&i_this->speed.x), gabi::load<u32>(gabi::ea(&rotOffset->x)));
-    gabi::store<u32>(gabi::ea(&i_this->speed.z), gabi::load<u32>(gabi::ea(&rotOffset->z)));
+    cXyz offset;
+    offset.x = 0.0f;
+    offset.y = 0.0f;
+    am_copyFloat(offset.z, i_this->speedF); /* offset.z = speedF (bit copy) */
+    cXyz rotOffset;
+    MtxPosition(&offset, &rotOffset);
+    am_copyFloat(i_this->speed.x, rotOffset.x);
+    am_copyFloat(i_this->speed.z, rotOffset.z);
     f32 sy = i_this->speed.y + i_this->gravity;
     if (sy < -100.0f) {
         sy = -100.0f;
@@ -672,15 +689,15 @@ static BOOL daAM_Execute(am_class* i_this) {
     body_atari_check(i_this);
 
     cXyz* attn = attention_pos(i_this);
-    gabi::store<u32>(gabi::ea(&attn->x), gabi::load<u32>(gabi::ea(&i_this->current.pos.x)));
+    am_copyFloat(attn->x, i_this->current.pos.x);
     attn->y = i_this->current.pos.y + 330.0f;
-    gabi::store<u32>(gabi::ea(&attn->z), gabi::load<u32>(gabi::ea(&i_this->current.pos.z)));
-    gabi::store<u32>(gabi::ea(&i_this->eyePos.x), gabi::load<u32>(gabi::ea(&i_this->current.pos.x)));
+    am_copyFloat(attn->z, i_this->current.pos.z);
+    am_copyFloat(i_this->eyePos.x, i_this->current.pos.x);
     i_this->eyePos.y = i_this->current.pos.y + 250.0f;
-    gabi::store<u32>(gabi::ea(&i_this->eyePos.z), gabi::load<u32>(gabi::ea(&i_this->current.pos.z)));
+    am_copyFloat(i_this->eyePos.z, i_this->current.pos.z);
 
-    gabi::Local<cXyz> needlePos;
-    needlePos->copy(i_this->current.pos);
+    cXyz needlePos;
+    needlePos.copy(i_this->current.pos);
 
     i_this->mEyeSph.SetC(&i_this->mEyeballPos);
     i_this->mEyeSph.SetR(60.0f);
@@ -695,8 +712,8 @@ static BOOL daAM_Execute(am_class* i_this) {
     i_this->mBodyCyl.SetR(80.0f);
     dComIfG_Ccsp_Set(&i_this->mBodyCyl);
 
-    needlePos->y = needlePos->y + 40.0f;
-    i_this->mNeedleCyl.SetC(needlePos);
+    needlePos.y = needlePos.y + 40.0f;
+    i_this->mNeedleCyl.SetC(&needlePos);
     i_this->mNeedleCyl.SetH(30.0f);
     i_this->mNeedleCyl.SetR(130.0f);
     dComIfG_Ccsp_Set(&i_this->mNeedleCyl);
@@ -707,4 +724,6 @@ static BOOL daAM_Execute(am_class* i_this) {
 
     return TRUE;
 }
-VERIFY(0x0204938C, daAM_Execute);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ */

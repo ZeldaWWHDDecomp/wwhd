@@ -1,13 +1,12 @@
 /* daNpcRoten_c (Traveling Merchants), WWHD layout. 
  *
- * GameCube -> WWHD, measured from the constructor (022D30F4, allocates 0xB40; the matcher calls
- * it daNpcRoten_c::setAnm) and the functions of d_a_npc_roten:
+ * GameCube -> WWHD, measured from the allocating constructor and the functions of d_a_npc_roten:
  * - fopNpc_npc_c is 0x7DC (d/d_npc.h), so members are +0x118 up to mBtpAnm;
  * - mDoExt_btpAnm grew from 0x14 to 0x74 (+0x60) and mShadowId (GameCube 0x6F4) is gone (HD
  *   shadows, -4): everything from field_0x6F8 on is +0x174.
  * Size 0xB40 (GameCube 0x9CC). */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
 
 struct sRotenAnmDat {
     /* 0x00 */ be<u8> field_0x00;
@@ -29,8 +28,8 @@ struct dNpc_PathRun_r {
 };
 WWHD_SIZE(dNpc_PathRun_r, 8);
 
-/* l_npc_dat entry (.data 0x101C5D54, 3 entries of 0x54) */
-struct RotenNpcDat {
+// Merchant tuning data, three entries.
+struct NpcDatStruct {
     /* 0x00 */ be<f32> field_0x00;
     /* 0x04 */ be<s16> field_0x04;
     /* 0x06 */ be<s16> field_0x06;
@@ -63,9 +62,39 @@ struct RotenNpcDat {
     /* 0x50 */ be<s16> field_0x50;
     /* 0x52 */ be<s16> field_0x52;
 };
-WWHD_SIZE(RotenNpcDat, 0x54);
+WWHD_SIZE(NpcDatStruct, 0x54);
 
 struct daNpcRoten_c : fopNpc_npc_c {
+    enum TradeItem {
+        dItemNo_TOWN_FLOWER_e = 0x8C,
+        dItemNo_SHOP_GURU_STATUE_e = 0x97,
+        dItemNo_XXX_039_e = 0xA2
+    };
+    enum ItemButton { dItemBtn_X_e, dItemBtn_Y_e, dItemBtn_Z_e, dItemBtn_NONE_e };
+    enum TalkButton { dTalkBtn_X_e = 1, dTalkBtn_Y_e, dTalkBtn_Z_e };
+    enum Mode { MODE_WAIT, MODE_TALK, MODE_WALK, MODE_TURN, MODE_WIND };
+    enum Animation {
+        ANM_WAIT,
+        ANM_TALK,
+        ANM_WALK,
+        ANM_TALK2,
+        ANM_TALK3,
+        ANM_TALK4,
+        ANM_TALK5,
+        ANM_WATASU,
+        ANM_ITEMWAIT,
+        ANM_WIND
+    };
+    enum Cut {
+        CUT_INIT,
+        CUT_MES_SET,
+        CUT_SET_ITEM,
+        CUT_CLR_ITEM,
+        CUT_GET_ITEM,
+        CUT_SET_ANGLE,
+        CUT_ON_PLR,
+        CUT_OFF_PLR
+    };
     enum Prm_e {
         PRM_RAIL_ID_W = 0x08,
         PRM_RAIL_ID_S = 0x10,
@@ -130,7 +159,7 @@ struct daNpcRoten_c : fopNpc_npc_c {
     /* 0x7EC */ gptr<J3DModel> field_0x6D4;
     /* 0x7F0 */ gptr<mDoExt_McaMorf> field_0x6D8;
     /* 0x7F4 */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0x7F8 */ u8 mBtpAnm[0x74];                 /* mDoExt_btpAnm (HD 0x74); HD: no mShadowId after it */
+    /* 0x7F8 */ mDoExt_btpAnm mBtpAnm; // HD: the texture animator grows; mShadowId is absent.
     /* 0x86C */ be<u32> field_0x6F8;
     /* 0x870 */ be<u32> field_0x6FC;
     /* 0x874 */ dNpc_PathRun_r mPathRun;
@@ -191,124 +220,256 @@ WWHD_OFFSET(daNpcRoten_c, field_0x9B2, 0xB26);
 WWHD_OFFSET(daNpcRoten_c, mNpcNo, 0xB31);
 WWHD_SIZE(daNpcRoten_c, 0xB40);
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
-#define ROTEN_SAFESTRING_VTBL 0x10021278 /* this TU's sead::SafeString vtable */
-#define ROTEN_VTBL 0x10021614            /* daNpcRoten_c vtable */
+void roten_constructNpc(daNpcRoten_c* actor);
+void roten_constructSphere(dCcD_Sph* sphere);
+s32 roten_initBtp(mDoExt_btpAnm* animator, J3DModelData* model, J3DAnmTexPattern* animation,
+                  s32 play, s32 mode, s32 start, s32 end, u32 modify, s32 entry, f32 speed);
+s8 roten_getJointIndex(u32 table, const char* name);
+cPhs_State roten_phaseHandler(request_of_phase_process_class* phase, void* handlers,
+                              daNpcRoten_c* actor);
+void roten_destroySphere(dCcD_Sph* sphere, s32 flags);
+void roten_destroyCircle(void* circle, s32 flags);
+void roten_destroyAcch(dBgS_ObjAcch* acch, s32 flags);
+void roten_destroyActor(fopAc_ac_c* actor, s32 flags);
+u32 roten_createPresentItem(cXyz* position, u32 itemNo, u32 flags, s32 bitNo, s32 room, u32 angle,
+                            u32 scale);
+s8 roten_getActionIndex(void* manager, s32 staff, u32 names, s32 count, BOOL force, s32 nameType);
 
-/* .data / .rodata tables */
-enum : u32 {
-    l_arcname_tbl = 0x101C5A38,      /* const char*[3] ("Ro") */
-    l_npc_staff_id = 0x101C5D3C,     /* const char*[3] ("Roten") */
-    l_npc_dat = 0x101C5D54,          /* RotenNpcDat[3] */
-    l_bmd_ix_tbl = 0x100212D8,
-    l_head_bmd_ix_tbl = 0x100212E4,
-    l_head_bck_ix_tbl = 0x100212F0,
-    l_btp_ix_tbl = 0x100212FC,
-    l_bck_ix_tbl = 0x1002132C,       /* s32[3][10] */
-    l_save_dat = 0x100212C0,         /* SaveDatStruct[3] (u16 x4) */
-    l_item_dat = 0x10021308,         /* u8[3][12] */
-    l_npc_anm_wait = 0x101C5478,
-    l_npc_anm_walk = 0x101C547E,
-    l_npc_anm_wind = 0x101C5D48,
-    l_sph_src = 0x101C5988,
-    dNpc_cyl_src = 0x101EA190,
+struct RotenInitTable {
+    gabi::ptmf<s32 (daNpcRoten_c::*)()> entries[5];
 };
-static inline RotenNpcDat& npc_dat(u32 no) { return *gabi::at<RotenNpcDat>(l_npc_dat + no * 0x54); }
-static inline const char* arcname(u32 no) { return gabi::at<const char>(gabi::load<u32>(l_arcname_tbl + no * 4)); }
-static inline u16 save_dat(u32 no, u32 field) { return gabi::load<u16>(l_save_dat + no * 8 + field); }
-static inline u8 item_dat(u32 no, u32 idx) { return gabi::load<u8>(l_item_dat + no * 12 + idx); }
+struct RotenMoveTable {
+    gabi::ptmf<void (daNpcRoten_c::*)()> entries[5];
+};
+WWHD_SIZE(RotenInitTable, 40);
+WWHD_SIZE(RotenMoveTable, 40);
+extern RotenInitTable& l_execute_init;
+extern RotenMoveTable& moveProc;
+struct RotenCutNames {
+    gptr<char> entries[8];
+};
+WWHD_SIZE(RotenCutNames, 32);
+extern RotenCutNames& cut_name_tbl;
+struct RotenPhaseHandlers {
+    be<u32> phase1, phase2, end;
+};
+WWHD_SIZE(RotenPhaseHandlers, 12);
+struct RotenAcchVtables {
+    u8 _00[0x14];
+    be<u32> dBgS_Chk_vtable;
+    u8 _18[8];
+    be<u32> cBgS_Chk_vtable;
+};
+WWHD_OFFSET(RotenAcchVtables, dBgS_Chk_vtable, 0x14);
+WWHD_OFFSET(RotenAcchVtables, cBgS_Chk_vtable, 0x20);
+WWHD_SIZE(RotenAcchVtables, 0x24);
+struct RotenActorVtable {
+    u8 _00[0x1C];
+    be<u32> getMsg;
+};
+WWHD_OFFSET(RotenActorVtable, getMsg, 0x1C);
+WWHD_SIZE(RotenActorVtable, 0x20);
+struct RotenAnimationVtable {
+    u8 _00[0x14];
+    be<u32> getFrameMax;
+};
+WWHD_OFFSET(RotenAnimationVtable, getFrameMax, 0x14);
+WWHD_SIZE(RotenAnimationVtable, 0x18);
+struct RotenAnimationView {
+    u8 _00[4];
+    gptr<RotenAnimationVtable> vtable;
+};
+WWHD_OFFSET(RotenAnimationView, vtable, 4);
+WWHD_SIZE(RotenAnimationView, 8);
 
-/* save events (dSv_event_c at save + 0x644) */
-static inline dSv_event_c* roten_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
-static inline BOOL dComIfGs_isEventBit(u16 f) { return dSv_event_isEventBit(roten_event(), f); }
-static inline void dComIfGs_onEventBit(u16 f) { dSv_event_onEventBit(roten_event(), f); }
-static inline u8 dComIfGs_getEventReg(u16 r) { return dSv_event_getEventReg(roten_event(), r); }
-static inline void dComIfGs_setEventReg(u16 r, u8 v) { dSv_event_setEventReg(roten_event(), r, v); }
-/* dSv_player_get_bag_item_c at save + 0xB0, dSv_player_bag_item_c at save + 0x96 */
-static inline void dComIfGs_onGetItemReserve(u8 i) { gabi::call(0x025B77D8, gabi::load<u32>(0x101F84DC) + 0xB0, i); }
-static inline BOOL dComIfGs_isGetItemReserve(u8 i) { return gabi::call<BOOL>(0x025B7840, gabi::load<u32>(0x101F84DC) + 0xB0, i); }
-static inline void dComIfGs_setReserveItemEmpty() { gabi::call(0x025B7270, gabi::load<u32>(0x101F84DC) + 0x96); }
-static inline void dComIfGs_setReserveItemChange(u8 btn, u8 item) { gabi::call(0x025B7278, gabi::load<u32>(0x101F84DC) + 0x96, btn, item); }
-static inline u16 dComIfGs_getRupee() { return gabi::load<u16>(gabi::load<u32>(0x101F84DC) + 0x24); }
+// Private exact-width HD bindings.
+
+static constexpr u32 l_actorVtable = 0x10021614;
+
+// HD: both source parts refer to these single mapped table definitions in the main source.
+struct SaveDatStruct {
+    be<u16> field_0x00, field_0x02, field_0x04, field_0x06;
+};
+WWHD_SIZE(SaveDatStruct, 8);
+struct RotenStringTable {
+    gptr<const char> entries[3];
+};
+struct RotenNpcTable {
+    NpcDatStruct entries[3];
+};
+struct RotenIndexTable {
+    be<s32> entries[3];
+};
+struct RotenAnimationTable {
+    be<s32> entries[3][10];
+};
+struct RotenSaveTable {
+    SaveDatStruct entries[3];
+};
+struct RotenItemTable {
+    be<u8> entries[3][12];
+};
+struct RotenWindAnmTable {
+    sRotenAnmDat entries[3];
+};
+WWHD_SIZE(RotenStringTable, 12);
+WWHD_SIZE(RotenNpcTable, 0xFC);
+WWHD_SIZE(RotenIndexTable, 12);
+WWHD_SIZE(RotenAnimationTable, 120);
+WWHD_SIZE(RotenSaveTable, 24);
+WWHD_SIZE(RotenItemTable, 36);
+WWHD_SIZE(RotenWindAnmTable, 9);
+extern RotenStringTable& l_arcname_tbl;
+extern RotenStringTable& l_npc_staff_id;
+extern RotenNpcTable& l_npc_dat;
+extern RotenIndexTable& l_bmd_ix_tbl;
+extern RotenIndexTable& l_head_bmd_ix_tbl;
+extern RotenIndexTable& l_head_bck_ix_tbl;
+extern RotenIndexTable& l_btp_ix_tbl;
+extern RotenAnimationTable& l_bck_ix_tbl;
+extern RotenSaveTable& l_save_dat;
+extern RotenItemTable& l_item_dat;
+extern sRotenAnmDat& l_npc_anm_wait;
+extern sRotenAnmDat& l_npc_anm_walk;
+extern RotenWindAnmTable& l_npc_anm_wind;
+extern dCcD_SrcSph& l_sph_src;
+extern dCcD_SrcCyl& dNpc_cyl_src;
+static inline NpcDatStruct& npc_dat(u32 no) { return l_npc_dat.entries[no]; }
+static inline const char* arcname(u32 no) { return l_arcname_tbl.entries[no].get(); }
+static inline u16 save_dat(u32 no, u32 field) {
+    const auto& dat = l_save_dat.entries[no];
+    switch (field) {
+    case 0:
+        return dat.field_0x00;
+    case 2:
+        return dat.field_0x02;
+    case 4:
+        return dat.field_0x04;
+    default:
+        return dat.field_0x06;
+    }
+}
+static inline u8 item_dat(u32 no, u32 idx) { return l_item_dat.entries[no][idx]; }
 
 /* play object fields */
-static inline u8 dComIfGp_event_runCheck() { return gabi::load<u8>(dComIfGp_ea() + 0x5292); }
-static inline u8 dComIfGp_event_getTalkXYBtn() { return gabi::load<u8>(dComIfGp_ea() + 0x52B0); }
-static inline BOOL dComIfGp_event_chkTalkXY() { return (u32)(gabi::load<u8>(dComIfGp_ea() + 0x52B0) - 1) <= 3; }
-static inline u8 dComIfGp_event_getPreItemNo() { return gabi::load<u8>(dComIfGp_ea() + 0x52B1); }
-static inline void dComIfGp_event_setItemPartnerId(u32 id) { gabi::store<u32>(dComIfGp_ea() + 0x52A0, id); }
-static inline BOOL dComIfGp_evmng_ChkPresentEnd() { return gabi::call<BOOL>(0x02544950, dComIfGp_getPEvtManager()); }
-static inline u8 dComIfGp_getSelectItem(int btn) { return gabi::load<u8>(dComIfGp_ea() + btn + 0x5BBB); }
-static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfGp_ea() + 0x5BC5); }
-static inline void dComIfGp_clearMesgAnimeAttrInfo() { gabi::store<u8>(dComIfGp_ea() + 0x5BC5, 0xFF); }
-static inline s16 dComIfGp_getMessageRupee() { return gabi::load<s16>(dComIfGp_ea() + 0x5BA4); }
-static inline s16 dComIfGp_evmng_getEventIdx_r(u32 name) { return dComIfGp_evmng_getEventIdx(gabi::at<const char>(name), 0xFF); }
-static inline s8 dComIfGp_evmng_getMyActIdx(s32 staffId, u32 tbl, s32 n, BOOL force, s32 nameType) {
-    return gabi::call<s8>(0x02542EDC, dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
+// HD: keep the event mode byte unnormalized.
+static inline u8 roten_dComIfGp_event_runCheck() {
+    return gabi::at<dComIfG_inf_c>(dComIfGp_ea())->play.mEvtCtrl.mMode;
 }
-static inline void* dComIfGp_evmng_getMyIntegerP(s32 staffId, const char* name) { return dComIfGp_evmng_getMySubstanceP(staffId, name, 3); }
-/* HD message manager (*(0x101F4B5C)): the selected answer at +0x948 (GameCube mpCurrMsg->mSelectNum) */
-static inline u32 msgMgr() { return gabi::load<u32>(0x101F4B5C); }
-
-/* resources (SafeString keys with this TU's vtable) */
-static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
-    gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
-    key->__vtbl = ROTEN_SAFESTRING_VTBL;
-    return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
+static inline s8 roten_dComIfGp_evmng_getMyActIdx(s32 staffId, u32 tbl, s32 n, BOOL force,
+                                                  s32 nameType) {
+    return roten_getActionIndex(dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
 }
 
 /* actors */
-/* 025D54C4 fopAcM_SearchByID(id, fopAc_ac_c** out) (out of line) */
-static inline BOOL fopAcM_SearchByID_o(u32 id, gptr<fopAc_ac_c>* out) { return gabi::call<BOOL>(0x025D54C4, id, out); }
-/* 025D7DEC fopAcM_createItemForPresentDemo(pos, itemNo, argFlag, itemBitNo, roomNo, angle, scale) */
-static inline u32 fopAcM_createItemForPresentDemo(cXyz* pos, u8 itemNo, u8 flag, s32 bitNo, s32 roomNo) {
-    return gabi::call<u32>(0x025D7DEC, pos, itemNo, flag, bitNo, roomNo, (u32)0, (u32)0);
+
+BOOL roten_fopAcM_SearchByID_o(u32 id, gptr<fopAc_ac_c>* out);
+
+static inline u32 roten_fopAcM_createItemForPresentDemo(cXyz* pos, u8 itemNo, u8 flag, s32 bitNo,
+                                                        s32 roomNo) {
+    return roten_createPresentItem(pos, itemNo, flag, bitNo, roomNo, 0, 0);
 }
-/* 025D7970 fopAcM_orderChangeEventId(actor, partner, s16 eventIdx, u16 flag, u16 hind) */
-static inline BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind) {
-    return gabi::call<BOOL>(0x025D7970, a, b, ev, flag, hind);
-}
-/* daItemBase_c::dead (0218432C), ::show (021842C8) */
-static inline void daItemBase_dead(fopAc_ac_c* a) { gabi::call(0x0218432C, a); }
-static inline void daItemBase_show(fopAc_ac_c* a) { gabi::call(0x021842C8, a); }
+
+BOOL roten_fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind);
+
+void daItemBase_dead(fopAc_ac_c* a);
+void daItemBase_show(fopAc_ac_c* a);
 
 /* d_npc */
-/* 0259D624 dNpc_calc_DisXZ_AngY(cXyz, cXyz (pointers to copies), f32* dist, s16* angle) */
-static inline void dNpc_calc_DisXZ_AngY(cXyz* a, cXyz* b, be<f32>* dist, be<s16>* ang) { gabi::call(0x0259D624, a, b, dist, ang); }
-static inline void dNpc_playerEyePos_r(cXyz* out, f32 offs) { gabi::call(0x0259D54C, out, offs); }
-static inline void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot, s16 vel, u8 headOnly) {
-    gabi::call(0x0259DED0, j, outY, target, eye, yrot, vel, headOnly);
-}
-static inline void dNpc_PathRun_setInf(dNpc_PathRun_r* r, u8 id, s8 room, u8 b) { gabi::call(0x0259E6D0, r, id, room, b); }
-static inline void dNpc_PathRun_getPoint(dNpc_PathRun_r* r, cXyz* out, u8 idx) { gabi::call(0x0259E778, r, out, idx); }
-static inline void dNpc_PathRun_incIdxLoop(dNpc_PathRun_r* r) { gabi::call(0x0259EB60, r); }
-static inline BOOL dNpc_PathRun_chkPointPass(dNpc_PathRun_r* r, cXyz* pos, u32 dir) { return gabi::call<BOOL>(0x0259E838, r, pos, dir); }
-static inline BOOL dNpc_PathRun_nextIdxAuto(dNpc_PathRun_r* r) { return gabi::call<BOOL>(0x0259ED58, r); }
+
+void roten_dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye,
+                                     s16 yrot, s16 vel, u8 headOnly);
+void roten_dNpc_PathRun_setInf(dNpc_PathRun_r* r, u8 id, s8 room, u8 b);
+void roten_dNpc_PathRun_getPoint(dNpc_PathRun_r* r, cXyz* out, u8 idx);
+void roten_dNpc_PathRun_incIdxLoop(dNpc_PathRun_r* r);
+BOOL roten_dNpc_PathRun_chkPointPass(dNpc_PathRun_r* r, cXyz* pos, u32 dir);
+BOOL roten_dNpc_PathRun_nextIdxAuto(dNpc_PathRun_r* r);
 
 /* J3D (HD) */
-static inline J3DModelData* J3DModel_getModelData_r(J3DModel* m) { return gabi::at<J3DModelData>(gabi::load<u32>(gabi::ea(m) + 0xAC)); }
 /* J3DModel::getAnmMtx (HD: the matrix block's dirty flag is set on access) */
-static inline Mtx34* getAnmMtx(J3DModel* model, s32 jntNo) {
-    u32 blk = gabi::load<u32>(gabi::ea(model) + 0x2C);
-    gabi::store<u16>(blk + 4, (u16)(gabi::load<u16>(blk + 4) | 0x10));
-    return gabi::at<Mtx34>(gabi::load<u32>(blk + 0x10) + jntNo * 0x30);
+static inline Mtx34* getAnmMtx(J3DModel* model, s32 jntNo) { return model->getAnmMtx(jntNo); }
+void roten_PSMTXConcat(Mtx34* a, Mtx34* b, Mtx34* ab);
+static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* animation) {
+    auto* view = reinterpret_cast<RotenAnimationView*>(animation);
+    return gabi::call_ptr<s32>(view->vtable->getFrameMax, animation);
 }
-static inline void PSMTXConcat(Mtx34* a, Mtx34* b, Mtx34* ab) { gabi::call(0x028E9108, a, b, ab); }
-static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* p) {
-    u32 vt = gabi::load<u32>(gabi::ea(p) + 4);
-    return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x14), p);
-}
-static inline s16 cLib_calcTimer(be<s16>* t) { return gabi::call<s16>(0x02055B64, t); }
 
-/* GHS pointer to member function call through a table entry, returning r3 */
-static inline s32 roten_pmf_call(void* self, u32 entry) {
-    s16 i = gabi::load<s16>(entry + 2);
-    u32 thisp = gabi::ea(self) + gabi::load<s16>(entry);
-    if (i < 0) {
-        return gabi::call_ptr<s32>(gabi::load<u32>(entry + 4), thisp);
-    } else {
-        u32 vt = gabi::load<u32>(thisp + gabi::load<s16>(entry + 6));
-        return gabi::call_ptr<s32>(gabi::load<u32>(vt + i * 8 + 4), thisp);
-    }
-}
+struct RotenMessageNumbers {
+    be<u32> entries[3];
+};
+struct RotenForceMessages {
+    be<u32> entries[7];
+};
+struct RotenMapMessages {
+    be<u32> entries[2];
+};
+struct RotenMessageTable {
+    gptr<be<u32>> entries[3];
+};
+struct RotenExchangeMessages {
+    gptr<be<u32>> entries[3][12];
+};
+struct RotenMessageAnimations {
+    gptr<sRotenAnmDat> entries[9];
+};
+struct RotenItemNumber {
+    be<u32> itemNo;
+};
+WWHD_SIZE(RotenMessageNumbers, 12);
+WWHD_SIZE(RotenForceMessages, 28);
+WWHD_SIZE(RotenMapMessages, 8);
+WWHD_SIZE(RotenMessageTable, 12);
+WWHD_SIZE(RotenExchangeMessages, 144);
+WWHD_SIZE(RotenMessageAnimations, 36);
+WWHD_SIZE(RotenItemNumber, 4);
+// HD: model and message fields used only by this merchant translation unit.
+struct RotenModelData : J3DModelData {
+    u8 _14[0x38 - 0x14];
+    be<u32> mpTexNoAnm;
+};
+WWHD_OFFSET(RotenModelData, mpTexNoAnm, 0x38);
+WWHD_SIZE(RotenModelData, 0x3C);
+struct RotenMessageManager {
+    u8 _00[0x948];
+    be<u32> mSelectNum;
+};
+WWHD_OFFSET(RotenMessageManager, mSelectNum, 0x948);
+WWHD_SIZE(RotenMessageManager, 0x94C);
+struct RotenCurrentModel {
+    gptr<J3DModel> model;
+};
+struct RotenMessageManagerPtr {
+    gptr<RotenMessageManager> manager;
+};
+struct RotenPresentItem : fopAc_ac_c {
+    u8 _3AC[0x760 - 0x3AC];
+    cXyz mOffsetPos;
+};
+WWHD_OFFSET(RotenPresentItem, mOffsetPos, 0x760);
+WWHD_SIZE(RotenPresentItem, 0x76C);
+
+extern RotenMessageNumbers& l_msg_xy_koukan_end;
+extern RotenMessageNumbers& l_msg_xy_koukan_first;
+extern RotenMessageNumbers& l_msg_xy_koukan_no;
+extern RotenMessageNumbers& l_msg_xy_koukan_rupee;
+extern RotenForceMessages& l_msg_try_force;
+extern RotenMapMessages& l_msg_collect_map;
+extern RotenMessageTable& l_msg_xy_exchange3;
+extern RotenMessageTable& l_msg_xy_no_roten_item;
+extern RotenMessageTable& l_msg_xy_invalid_item;
+extern RotenMessageTable& l_msg_1st_talk;
+extern RotenMessageTable& l_msg_exchange3;
+extern RotenMessageTable& l_msg_exchange;
+extern RotenMessageTable& l_msg_etc;
+extern RotenExchangeMessages& l_msg_xy_koukan_item;
+extern RotenExchangeMessages& l_msg_xy_koukan_item2;
+extern RotenExchangeMessages& l_msg_xy_koukan_item3;
+extern RotenMessageTable& l_msg_xy_after_get_demo;
+extern RotenMessageTable& l_msg_xy_after_get_demo2;
+extern RotenMessageAnimations& l_msg_anm;
+extern RotenItemNumber& l_get_item_no;
+extern RotenCurrentModel& l_currentModel;
+extern Mtx34& l_currentMtx;
+extern RotenMessageManagerPtr& l_messageManager;
+
+static inline J3DModelData* roten_modelData(J3DModel* model) { return model->getModelData(); }

@@ -10,36 +10,39 @@
  */
 #include "d/actor/d_a_bmd.h"
 
-#define ARC_BMD STR(0x10009A98) /* "Bmd" */
+#define ARC_BMD "Bmd" /* "Bmd" */
 
 static inline f32 REG10_F(int i) { return REG_F(10, i); }
 
 /* camera_process_class (HD): dCamera_c mCamera at +0x248; view.mLookat eye at +0xDC, center at +0xE8 */
-static inline u32 dComIfGp_getCamera_bl(s32 id) { return gabi::load<u32>(dComIfGp_ea() + 0x5AF8 + id * 0x34); }
-static inline s32 dComIfGp_getPlayerCameraID0() { return gabi::load<s8>(dComIfGp_ea() + 0x5B30); }
-static inline void cam_Stop(u32 cam) { gabi::call(0x02514F2C, cam + 0x248); }
-static inline void cam_Start(u32 cam) { gabi::call(0x02514F38, cam + 0x248); }
-static inline void cam_SetTrimSize(u32 cam, s32 n) { gabi::call(0x02515280, cam + 0x248, n); }
-static inline void cam_Reset(u32 cam, cXyz* center, cXyz* eye) { gabi::call(0x0251510C, cam + 0x248, center, eye); }
-static inline void cam_Set(u32 cam, cXyz* center, cXyz* eye, s16 bank, f32 fovy) { gabi::call(0x02514FE8, cam + 0x248, center, eye, bank, fovy); }
+static inline u32 bmd_cameraAddress(s32 id) { return gabi::ea(dComIfGp_getCamera(id)); }
+
+static inline dCamera_c* bmd_cameraBody(u32 camera) {
+    return &gabi::at<BmdCameraProcessView>(camera)->mCamera;
+}
+static inline void cam_Stop(u32 cam) { bmd_cameraBody(cam)->Stop(); }
+static inline void cam_Start(u32 cam) { bmd_cameraBody(cam)->Start(); }
+static inline void cam_SetTrimSize(u32 cam, s32 n) { bmd_cameraBody(cam)->SetTrimSize(n); }
+static inline void cam_Reset(u32 cam, cXyz* center, cXyz* eye) {
+    dCamera_Reset(bmd_cameraBody(cam), center, eye);
+}
+static inline void cam_Set(u32 cam, cXyz* center, cXyz* eye, s16 bank, f32 fovy) {
+    dCamera_Set(bmd_cameraBody(cam), center, eye, bank, fovy);
+}
 
 /* daPy_py_c (HD) */
 static inline void player_changeOriginalDemo(fopAc_ac_c* p) {
-    gabi::store<s16>(gabi::ea(p) + 0x420, 3);
-    gabi::store<u32>(gabi::ea(p) + 0x428, 0);
+    ((daPy_py_c*)p)->mDemo.mDemoType = daPy_demo_c::TYPE_ORIGINAL_e;
+    ((daPy_py_c*)p)->mDemo.mParam0 = 0;
 }
 static inline void player_cancelOriginalDemo(fopAc_ac_c* p) {
-    gabi::store<s16>(gabi::ea(p) + 0x420, 2);
-    gabi::store<u32>(gabi::ea(p) + 0x430, 1);
+    ((daPy_py_c*)p)->mDemo.mDemoType = daPy_demo_c::TYPE_SYSTEM_e;
+    ((daPy_py_c*)p)->mDemo.mDemoMode = daPy_demo_c::DEMO_N_WAIT_e;
 }
-static inline void player_changeDemoMode(fopAc_ac_c* p, u32 mode) { gabi::store<u32>(gabi::ea(p) + 0x430, mode); }
-static inline void player_voiceStart(fopAc_ac_c* p, u32 id) {
-    u32 fn = gabi::load<u32>(gabi::load<u32>(gabi::ea(p) + 0xB4) + 0xE4);
-    gabi::call_ptr(fn, p, id);
-}
+static inline void player_changeDemoMode(fopAc_ac_c* p, u32 mode) { ((daPy_py_c*)p)->mDemo.mDemoMode = mode; }
+static inline void player_voiceStart(fopAc_ac_c* p, u32 id) { daPy_py_c_voiceStart((daPy_py_c*)p, id); }
 static inline void player_setPlayerPosAndAngle(fopAc_ac_c* p, cXyz* pos, s16 angle) {
-    u32 fn = gabi::load<u32>(gabi::load<u32>(gabi::ea(p) + 0xB4) + 0x114);
-    gabi::call_ptr(fn, p, pos, angle);
+    ((daPy_py_c*)p)->setPlayerPosAndAngle(pos, angle);
 }
 static inline void head_setAnm(bmd_class* i_this, s32 idx, s32 mode, f32 morf) {
     J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(ARC_BMD, idx, SAFESTRING_VTBL);
@@ -51,22 +54,17 @@ static inline void monsSeStart_e(fopAc_ac_c* a, u32 id) {
         s8 room = fopAcM_GetRoomNo(a);
         u32 pid = fopAcM_GetID(a);
         s32 reverb = dComIfGp_getReverb(room);
-        gabi::call(0x025E1AA4, id, &a->eyePos, pid, 0, reverb);
+        mDoAudioApi::monsSeStart(id, &a->eyePos, pid, 0, reverb);
     }
 }
-/* the camera's view (eye, center) copied word by word */
-static inline void copy_from(cXyz* dst, u32 src) {
-    for (u32 i = 0; i < 12; i += 4) gabi::store<u32>(gabi::ea(dst) + i, gabi::load<u32>(src + i));
-}
-
 /* the demo's start: event order, then take the camera */
 static inline bool order_event(bmd_class* i_this) {
     fopAc_ac_c* actor = i_this;
     if (!eventInfo_checkCommandDemoAccrpt(actor)) {
-        gabi::call(0x025D7B24, actor, 2 /* dEvtFlag_STAFF_ALL_e */, 0xFFFF, 0); /* fopAcM_orderPotentialEvent */
+        fopAcMApi::orderPotentialEvent(actor, 2 /* dEvtFlag_STAFF_ALL_e */, 0xFFFF, 0);
         i_this->mB76 = 0;
         i_this->mB78 = 0;
-        eventInfo_onCondition(actor, 2 /* dEvtCnd_UNK2_e */);
+        eventInfo_onCondition(actor, dEvtCnd_UNK2_e);
         return false;
     }
     return true;
@@ -74,14 +72,13 @@ static inline bool order_event(bmd_class* i_this) {
 
 /* 020B3BF8 */
 void demo_camera(bmd_class* i_this) {
-    WWHD_FUNC(0x020B3BF8, void, i_this);
     fopAc_ac_c* actor = i_this;
     gabi::Local<cXyz> local_44;
     gabi::Local<cXyz> local_50;
 
     fopAc_ac_c* player = dComIfGp_getPlayer(0);
-    s32 camId = dComIfGp_getPlayerCameraID0();
-    u32 camera = dComIfGp_getCamera_bl(camId);
+    s32 camId = dComIfGp_getPlayerCameraID(0);
+    u32 camera = bmd_cameraAddress(camId);
 
     switch (i_this->mB74) {
     case 0:
@@ -90,9 +87,9 @@ void demo_camera(bmd_class* i_this) {
         if (!order_event(i_this))
             return;
         i_this->mB74 = i_this->mB74 + 1;
-        u32 camera2 = dComIfGp_getCamera_bl(0);
-        copy_from(&i_this->mB7C, camera2 + 0xDC);
-        copy_from(&i_this->mB88, camera2 + 0xE8);
+        BmdCameraLookAtView* camera2 = gabi::at<BmdCameraLookAtView>(bmd_cameraAddress(0));
+        i_this->mB7C.copy(camera2->mEye);
+        i_this->mB88.copy(camera2->mCenter);
         {
             /* HD: the angle from the camera to the boss (GameCube: to the player) */
             gabi::Local<cXyz> tmp;
@@ -124,7 +121,8 @@ void demo_camera(bmd_class* i_this) {
             cLib_addCalc2(&i_this->mB7C.y, player->current.pos.y + local_50->y, 0.1f, 200.0f);
             cLib_addCalc2(&i_this->mB7C.z, actor->current.pos.z + local_50->z, 0.1f, 200.0f);
         } else if ((s32)i_this->mB78 < REG0_S(1) + 100) {
-            cLib_addCalc2(&i_this->mB88.y, actor->current.pos.y + 1200.0f + REG0_F(5), 0.2f, REG0_F(6) + 100.0f);
+            cLib_addCalc2(&i_this->mB88.y, actor->current.pos.y + 1200.0f + REG0_F(5), 0.2f,
+                          REG0_F(6) + 100.0f);
         } else {
             cLib_addCalc2(&i_this->mB88.x, player->current.pos.x, 0.3f, 300.0f);
             cLib_addCalc2(&i_this->mB88.y, player->current.pos.y + 70.0f + REG0_F(5), 0.3f, 300.0f);
@@ -197,17 +195,18 @@ void demo_camera(bmd_class* i_this) {
     case 9:
         cLib_addCalc2(&i_this->mB88.y, actor->eyePos.y + 30.0f, 0.2f, REG0_F(4) + 5.0f);
         if (i_this->mB78 == 0x1E) {
-            head_setAnm(i_this, 0x22 /* NEW_SDEMO1 */, 0, 1.0f);
+            head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO1_e, J3DFrameCtrl::EMode_NONE, 1.0f);
             if (gabi::ea(&actor->eyePos) != 0) {
-                mDoAud_seStart(0x584A /* JA_SE_CM_BKM_CORE_ENTER */, &actor->eyePos, 0, dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
+                mDoAud_seStart(JA_SE_CM_BKM_CORE_ENTER, &actor->eyePos, 0,
+                               dComIfGp_getReverb(fopAcM_GetRoomNo(actor)));
             }
-            monsSeStart_e(actor, 0x485A /* JA_SE_CV_BKM_ENTER */);
+            monsSeStart_e(actor, JA_SE_CV_BKM_ENTER);
         }
         if (i_this->mB78 > 0x1E) {
             if (i_this->mpHeadMorf->isStop()) {
                 i_this->mB78 = 0;
                 i_this->mB74 = i_this->mB74 + 1;
-                head_setAnm(i_this, 0x23 /* NEW_SDEMO2 */, 2, 1.0f);
+                head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO2_e, J3DFrameCtrl::EMode_LOOP, 1.0f);
             }
         }
         break;
@@ -239,7 +238,8 @@ void demo_camera(bmd_class* i_this) {
         i_this->mB88.z = 104.0f;
         if (i_this->mB78 == 0x1E) {
             /* the morf rate is read after the resource lookup */
-            J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(ARC_BMD, 0x24 /* NEW_SDEMO3 */, SAFESTRING_VTBL);
+            J3DAnmTransform* anm = (J3DAnmTransform*)dComIfG_getObjectRes(
+                ARC_BMD, dRes_INDEX_BMD_BCK_NEW_SDEMO3_e, SAFESTRING_VTBL);
             i_this->mpHeadMorf->setAnm(anm, 0, REG0_F(16) + 4.0f, 1.0f, 0.0f, -1.0f, nullptr);
         }
         if (i_this->mB78 > 0x1B) {
@@ -248,7 +248,7 @@ void demo_camera(bmd_class* i_this) {
                 i_this->m2DC = 0;
                 i_this->mB74 = i_this->mB74 + 1;
                 mk_voice_set(i_this, 0x48C6);
-                head_setAnm(i_this, 0x25 /* NEW_SDEMO4 */, 0, 1.0f);
+                head_setAnm(i_this, dRes_INDEX_BMD_BCK_NEW_SDEMO4_e, J3DFrameCtrl::EMode_NONE, 1.0f);
                 cXyz_fcopy(&i_this->mB88, &actor->eyePos);
                 i_this->mB88.y = i_this->mB88.y + (REG0_F(15) + 60.0f);
             }
@@ -283,9 +283,9 @@ void demo_camera(bmd_class* i_this) {
             if (i_this->mpHeadMorf->isStop()) {
                 i_this->m302 = 3;
                 i_this->mB78 = REG0_S(6);
-                head_setAnm(i_this, 0x13 /* COA_START3 */, 2, 1.0f);
+                head_setAnm(i_this, dRes_INDEX_BMD_BCK_COA_START3_e, J3DFrameCtrl::EMode_LOOP, 1.0f);
                 i_this->m308[0] = 10;
-                monsSeStart_e(actor, 0x485B /* JA_SE_CV_BKM_LAUGH */);
+                monsSeStart_e(actor, JA_SE_CV_BKM_LAUGH);
                 i_this->mB74 = 0xF;
                 i_this->mB9C = REG0_F(8) + 55.0f;
                 i_this->mB76 = REG0_S(7) + 0x6E;
@@ -309,7 +309,8 @@ void demo_camera(bmd_class* i_this) {
         }
         if ((s32)i_this->mB78 >= REG0_S(5) + 0xD2) {
             if ((s32)i_this->mB78 <= REG0_S(6) + 0x159) {
-                cLib_addCalc2(&i_this->mB9C, REG0_F(6) + 40.0f, 0.05f, REG0_F(7) + 0.0249999985f /* 0x3CCCCCCC */);
+                cLib_addCalc2(&i_this->mB9C, REG0_F(6) + 40.0f, 0.05f,
+                              REG0_F(7) + 0.0249999985f /* 0x3CCCCCCC */);
             } else {
                 /* HD: a blur and a voice */
                 if ((s32)i_this->mB78 == REG0_S(6) + 0x15A) {
@@ -338,23 +339,23 @@ void demo_camera(bmd_class* i_this) {
             i_this->m302 = -1;
             i_this->mBE0 = 0;
             i_this->m308[0] = 0x3C;
-            if (dComIfGp_getStartStageName0() == 'X') {
-                mDoAud_bgmStart(0x8000004A /* JA_BGM_PAST_BKM */);
+            if (bmd_startStageName0() == 'X') {
+                mDoAudioApi::bgmStart(JA_BGM_PAST_BKM);
             } else {
-                mDoAud_bgmStart(0x80000005 /* JA_BGM_KINDAN_BOSS */);
+                mDoAudioApi::bgmStart(JA_BGM_KINDAN_BOSS);
             }
             i_this->mB71 = 1;
             i_this->mB72 = 1; /* HD */
-            dComIfGs_onDungeonItem_bl(5); /* dComIfGs_onStageBossDemo */
+            bmd_onDungeonItem(dSv_memBit_c::STAGE_BOSS_DEMO);
         }
         break;
     case 100: {
         if (!order_event(i_this))
             break;
         i_this->mB74 = i_this->mB74 + 1;
-        u32 camera2 = dComIfGp_getCamera_bl(0);
-        copy_from(&i_this->mB7C, camera2 + 0xDC);
-        copy_from(&i_this->mB88, camera2 + 0xE8);
+        BmdCameraLookAtView* camera2 = gabi::at<BmdCameraLookAtView>(bmd_cameraAddress(0));
+        i_this->mB7C.copy(camera2->mEye);
+        i_this->mB88.copy(camera2->mCenter);
         cam_Stop(camera);
         cam_SetTrimSize(camera, 2);
         i_this->mB9C = 55.0f;
@@ -362,7 +363,8 @@ void demo_camera(bmd_class* i_this) {
     }
         /* fallthrough */
     case 101:
-        if ((i_this->mB78 >= 0x140) && (cLib_addCalc2(&i_this->mB9C, REG0_F(8) + 85.0f, 0.2f, 1.0f), i_this->mB78 == 0x140)) {
+        if ((i_this->mB78 >= 0x140) &&
+            (cLib_addCalc2(&i_this->mB9C, REG0_F(8) + 85.0f, 0.2f, 1.0f), i_this->mB78 == 0x140)) {
             i_this->m2DC = 5;
         }
         if (i_this->m924.y < i_this->m328 + 10.0f) {
@@ -415,7 +417,8 @@ void demo_camera(bmd_class* i_this) {
         gabi::Local<csXyz> cStack_b8;
         csXyz_ct(cStack_b8, 0, 0, 0);
         cStack_b8->y = actor->shape_angle.y + 0x8BB8;
-        fopAcM_create(0x14E /* fpcNm_NPC_CB1_e */, 0, &i_this->m2E0, fopAcM_GetRoomNo(actor), cStack_b8, nullptr, -1, 0);
+        fopAcM_create(0x14E /* fpcNm_NPC_CB1_e */, 0, &i_this->m2E0, fopAcM_GetRoomNo(actor), cStack_b8,
+                      nullptr, -1, 0);
         i_this->m2DC = 0;
     }
         /* fallthrough */
@@ -483,11 +486,19 @@ void demo_camera(bmd_class* i_this) {
         cam_Set(camera, local_b0, local_a4, iVar6, i_this->mB9C);
         cLib_addCalc0(&i_this->mBA8, 1.0f, REG0_F(16) + 2.0f);
         /* HD: JUTReport(x, y, fmt, ...) prints the three counters */
-        gabi::call(0x027EC9E8, 0x1E, 0x186, STR(0x10009B2C), (s32)i_this->mB74);
-        gabi::call(0x027EC9E8, 0x1E, 0x19A, STR(0x10009B40), (s32)i_this->mB76);
-        gabi::call(0x027EC9E8, 0x1E, 0x1AE, STR(0x10009B54), (s32)i_this->mB78);
+        JUTReport(0x1E, 0x186, "K DEMO MODE   %d", (s32)i_this->mB74);
+        JUTReport(0x1E, 0x19A, "K MAIN COUNT  %d", (s32)i_this->mB76);
+        JUTReport(0x1E, 0x1AE, "K SUB  COUNT  %d", (s32)i_this->mB78);
         i_this->mB78 = i_this->mB78 + 1;
         i_this->mB76 = i_this->mB76 + 1;
     }
 }
-VERIFY(0x020B3BF8, demo_camera);
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+str 10009A98 in 020B3BF8
+str 10009B2C in 020B3BF8
+str 10009B40 in 020B3BF8
+str 10009B54 in 020B3BF8
+*/
+// clang-format on

@@ -1,63 +1,95 @@
-#include "gabi.h"
-using gabi::load; using gabi::store;
-void cLs_Init(void* list) {
- WWHD_FUNC(0x0200FDE0,void,list); u32 a=gabi::ea(list);
- store<u32>(a,0); store<u32>(a+4,0); store<u32>(a+8,0);
-}
-VERIFY(0x0200FDE0,cLs_Init);
-s32 cLs_SingleCut(void* node) {
- WWHD_FUNC(0x0200FDF4,s32,node); u32 a=gabi::ea(node),list=load<u32>(a+4);
- u32 head=load<u32>(list),tail=load<u32>(list+4);
- if(a==head) store<u32>(list,load<u32>(a+8));
- if(a==tail) store<u32>(list+4,load<u32>(a));
- gabi::call<void>(0x02019B48,node); gabi::call<void>(0x02019C8C,node);
- u32 size=load<u32>(list+8)-1u; store<u32>(list+8,size);
- return s32(size)>0;
-}
-VERIFY(0x0200FDF4,cLs_SingleCut);
-s32 cLs_Addition(void* list,void* node) {
- WWHD_FUNC(0x0200FE78,s32,list,node); u32 a=gabi::ea(list),tail=load<u32>(a+4);
- if(!tail) store<u32>(a,gabi::ea(node));
- else gabi::call<void>(0x02019B94,gabi::at<void>(tail),node);
- void* last=gabi::call<void*>(0x02019AD8,node); store<u32>(a+4,gabi::ea(last));
- gabi::call<void>(0x02019C6C,node,list);
- void* head=gabi::at<void>(load<u32>(a)); s32 size=gabi::call<s32>(0x02019A90,head);
- store<s32>(a+8,size); return size;
-}
-VERIFY(0x0200FE78,cLs_Addition);
-s32 cLs_Insert(void* list,s32 index,void* node) {
- WWHD_FUNC(0x0200FF10,s32,list,index,node); u32 a=gabi::ea(list);
- void* head=gabi::at<void>(load<u32>(a)); void* existing=gabi::call<void*>(0x02019AFC,head,index);
- if(!gabi::ea(existing)) return cLs_Addition(list,node);
- gabi::call<void>(0x02019C6C,node,list); gabi::call<void>(0x02019C0C,existing,node);
- head=gabi::call<void*>(0x02019AB4,node); store<u32>(a,gabi::ea(head));
- s32 size=gabi::call<s32>(0x02019A90,head); store<s32>(a+8,size); return size;
-}
-VERIFY(0x0200FF10,cLs_Insert);
-void* cLs_GetFirst(void* list) {
- WWHD_FUNC(0x0200FFB0,void*,list); u32 a=gabi::ea(list);
- if(!load<u32>(a+8)) return nullptr;
- void* head=gabi::at<void>(load<u32>(a)); cLs_SingleCut(head); return head;
-}
-VERIFY(0x0200FFB0,cLs_GetFirst);
-void cLs_Create(void* list) { WWHD_FUNC(0x02010008,void,list); cLs_Init(list); }
-VERIFY(0x02010008,cLs_Create);
+/**
+ * c_list.cpp - node lists: insertion and removal.
+ * WWHD (cking.rpx), verified against the recompiled original (unit c_list).
+ */
+#include "SSystem/SComponent/c_list.h"
 
-// Per-translation-unit HD math/header globals and their registration records.
-void cLs_StaticInit() {
- WWHD_FUNC(0x0201000C,void);
- store<u32>(0x101FF7E4,0);
- store<u32>(0x101FF7DC,0);
- store<u32>(0x101FF7E8,0);
- store<u32>(0x101FF7E0,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7B4));
- f32 first=load<f32>(0x10001ED8);
- f32 second=load<f32>(0x10001EDC);
- store<f32>(0x101FF7D0,first);
- store<f32>(0x101FF7D4,second);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x101FF7D8));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7C0));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x101FF7D9));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x1018C7CC));
+/* 0200FDE0 */
+void cLs_Init(node_list_class* pList) {
+    pList->mpHead = NULL;
+    pList->mpTail = NULL;
+    pList->mSize = 0;
 }
-VERIFY(0x0201000C,cLs_StaticInit);
+
+/* 0200FDF4 */
+s32 cLs_SingleCut(node_class* pNode) {
+    node_list_class* pList = static_cast<node_list_class*>(pNode->mpData.get());
+    // HD: both endpoints are read before either endpoint can be changed.
+    node_class* head = pList->mpHead;
+    node_class* tail = pList->mpTail;
+    if (pNode == head) {
+        pList->mpHead = pNode->mpNextNode;
+    }
+    if (pNode == tail) {
+        pList->mpTail = pNode->mpPrevNode;
+    }
+    cNd_SingleCut(pNode);
+    cNd_ClearObject(pNode);
+    s32 newSize = (s32)((u32)pList->mSize - 1u);
+    pList->mSize = newSize;
+    return newSize > 0;
+}
+
+/* 0200FE78 */
+s32 cLs_Addition(node_list_class* pList, node_class* pNode) {
+    node_class* tail = pList->mpTail;
+    if (tail == NULL) {
+        pList->mpHead = pNode;
+    } else {
+        cNd_Addition(tail, pNode);
+    }
+    pList->mpTail = cNd_Last(pNode);
+    cNd_SetObject(pNode, pList);
+    s32 size = cNd_LengthOf(pList->mpHead);
+    pList->mSize = size;
+    return size;
+}
+
+/* 0200FF10 */
+s32 cLs_Insert(node_list_class* pList, s32 idx, node_class* pNode) {
+    node_class* pExisting = cNd_Order(pList->mpHead, idx);
+    if (pExisting == NULL) {
+        return cLs_Addition(pList, pNode);
+    }
+    cNd_SetObject(pNode, pList);
+    cNd_Insert(pExisting, pNode);
+    node_class* head = cNd_First(pNode);
+    pList->mpHead = head;
+    s32 size = cNd_LengthOf(head);
+    pList->mSize = size;
+    return size;
+}
+
+/* 0200FFB0 */
+node_class* cLs_GetFirst(node_list_class* pList) {
+    if (pList->mSize != 0) {
+        node_class* pHead = pList->mpHead;
+        cLs_SingleCut(pHead);
+        return pHead;
+    }
+    return NULL;
+}
+
+/* 02010008 */
+void cLs_Create(node_list_class* pList) {
+    cLs_Init(pList);
+}
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+
+/* 0201000C */
+static void __sinit_c_list_cpp() {
+    sinit_header_statics_rodata(0x101FF7D0, 0x1018C7B4, 0x101FF7DC, 0x10001ED8);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): external node operations
+ext 02019B48 void cNd_SingleCut(node_class*)
+ext 02019C8C void cNd_ClearObject(node_class*)
+ext 02019B94 void cNd_Addition(node_class*, node_class*)
+ext 02019AD8 node_class* cNd_Last(node_class*)
+ext 02019C6C void cNd_SetObject(node_class*, void*)
+ext 02019A90 s32 cNd_LengthOf(node_class*)
+ext 02019AFC node_class* cNd_Order(node_class*, s32)
+ext 02019C0C void cNd_Insert(node_class*, node_class*)
+ext 02019AB4 node_class* cNd_First(node_class*)
+*/

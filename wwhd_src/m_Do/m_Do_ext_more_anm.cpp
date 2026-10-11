@@ -1,30 +1,251 @@
-#include "gabi.h"
-using namespace gabi;
-void* ext_btkCtor(void* self){WWHD_FUNC(0x025E7C6C,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x74);if(!o)return nullptr;}call(0x027F2BC0,at<void>(o),0);call(0x027DA984,at<void>(o+0x10));store<u32>(o+0x54,0);store<u32>(o+0x44,0x1016D7E0);store<u32>(o+0x6C,0);store<u16>(o+0x70,0);store<u32>(o+0x68,0);return at<void>(o);}
-VERIFY(0x025E7C6C,ext_btkCtor);
-u32 ext_btkInit(void* self,void* model,void* animation,u32 play,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E7CE0,u32,self,model,animation,play,mode,start,end,existing,rate);const bool pattern=false;u32 o=ea(self),a=ea(animation),off=0x10;if(!a){store<u32>(o+0x68,0);return 1;}if(!ea(model)){call(0x0273AA24,at<void>(0x10058A60),0x40F,at<void>(0x10058A70));return 0;}store<u32>(o+0x68,a);if(!existing){Local<u8[0x40]> descriptor; /* game test 2026-10-05: the size query/init fill descriptor+0x14..+0x3C; the original reserves sp+0x18..0x58 */u32 d=ea(descriptor.get());for(u32 j=0;j<4;j++)store<s32>(d+j*4,-1);store<u8>(d+0x10,1);store<u8>(d+0x11,0);store<u32>(d+0x14,0);store<u32>(d+0x18,0);u32 data=call<u32>(0x027F3F8C,model);s32 count=load<u16>(data+0x24);if(load<s32>(d)>=count){}else store<s32>(d,count);u32 resource=load<u32>(a+0xC);count=load<u16>(resource+(pattern?0x16:0x14));if(load<s32>(d+4)<count)store<s32>(d+4,count);s32 first=load<s32>(resource+0x18);if(load<s32>(d+8)<first)store<s32>(d+8,first);s32 second=load<s32>(resource+0x1C);if(load<s32>(d+0xC)<second)store<s32>(d+0xC,second);u32 flags=pattern?load<u16>(resource+0xC):load<u32>(resource+0xC);store<u8>(d+0x11,(u8)(load<u8>(d+0x11)|((flags&1)^1)));s32 size=load<s32>(resource+0x18);if(size<4)size=4;store<s32>(d+0xC,size);store<u8>(d+0x11,1);u32 bytes=call<u32>(pattern?0x027E0AF0:0x027DEFB8,descriptor.get());u32 buffer=call<u32>(0x025E3A34,bytes,4);if(!buffer)return 0;call(pattern?0x027E09B8:0x027DEE5C,at<void>(o+off),descriptor.get(),at<void>(buffer),bytes);}
- call(pattern?0x027E12B4:0x027DF7F4,at<void>(o+off),at<void>(load<u32>(a+0xC)));u32 data=call<u32>(0x027F3F8C,model);call(pattern?0x027E0C88:0x027DF240,at<void>(o+off),at<void>(data));if(play){a=load<u32>(o+0x68);s32 length=call_ptr<s32>(load<u32>(load<u32>(a+4)+0x14),at<void>(a));a=load<u32>(o+0x68);u32 r=load<u32>(a+0xC),flags=pattern?load<u16>(r+0xC):load<u32>(r+0xC);f32 f=(f32)length;if(flags&4)f=fsubs_ppc(f,load<f32>(0x100586D4));if(!call<u32>(0x025E72D4,self,(s32)(s16)ftoi(f),mode,start,end,existing,rate))return 0;}return 1;}
-VERIFY(0x025E7CE0,ext_btkInit);
-void ext_btkEntry(void* self,void* model,f32 frame){WWHD_FUNC(0x025E7FC4,void,self,model,frame);const bool pattern=false,bind=true;u32 o=ea(self),a=load<u32>(o+0x68),off=0x10;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+0x44,o+off);else call(0x027E1234,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E7FC4,ext_btkEntry);
-void ext_btkCalc(void* self,void* model,f32 frame){WWHD_FUNC(0x025E8048,void,self,model,frame);const bool pattern=false,bind=false;u32 o=ea(self),a=load<u32>(o+0x68),off=0x10;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+0x44,o+off);else call(0x027DF774,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E8048,ext_btkCalc);
-void* ext_brkCtor(void* self){WWHD_FUNC(0x025E80D0,void*,self);u32 o=ea(self);if(!o){o=call<u32>(0x0273AD10,0x78);if(!o)return nullptr;}call(0x027F2BC0,at<void>(o),0);store<u32>(o+0x10,0);store<u16>(o+0x1C,0);store<u32>(o+0x18,0);store<u16>(o+0x1E,0);store<u32>(o+0x14,0);call(0x027DA984,at<void>(o+0x20));store<u32>(o+0x64,0);store<u32>(o+0x54,0x1016D7E0);return at<void>(o);}
-VERIFY(0x025E80D0,ext_brkCtor);
-u32 ext_brkInit(void* self,void* model,void* animation,u32 play,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E8154,u32,self,model,animation,play,mode,start,end,existing,rate);const bool pattern=false;u32 o=ea(self),a=ea(animation),off=0x20;if(!a){store<u32>(o+0x10,0);return 1;}store<u32>(o+0x10,a);if(!ea(model))return 0;if(!existing){Local<u8[0x40]> descriptor; /* game test 2026-10-05: the size query/init fill descriptor+0x14..+0x3C; the original reserves sp+0x18..0x58 */u32 d=ea(descriptor.get());for(u32 j=0;j<4;j++)store<s32>(d+j*4,-1);store<u8>(d+0x10,1);store<u8>(d+0x11,0);store<u32>(d+0x14,0);store<u32>(d+0x18,0);u32 data=call<u32>(0x027F3F8C,model);s32 count=load<u16>(data+0x24);if(load<s32>(d)>=count){}else store<s32>(d,count);u32 resource=load<u32>(a+0xC);count=load<u16>(resource+(pattern?0x16:0x14));if(load<s32>(d+4)<count)store<s32>(d+4,count);s32 first=load<s32>(resource+0x18);if(load<s32>(d+8)<first)store<s32>(d+8,first);s32 second=load<s32>(resource+0x1C);if(load<s32>(d+0xC)<second)store<s32>(d+0xC,second);u32 flags=pattern?load<u16>(resource+0xC):load<u32>(resource+0xC);store<u8>(d+0x11,(u8)(load<u8>(d+0x11)|((flags&1)^1)));s32 size=load<s32>(resource+0x18);if(size<4)size=4;store<s32>(d+0xC,size);store<u8>(d+0x11,1);u32 bytes=call<u32>(pattern?0x027E0AF0:0x027DEFB8,descriptor.get());u32 buffer=call<u32>(0x025E3A34,bytes,4);if(!buffer)return 0;call(pattern?0x027E09B8:0x027DEE5C,at<void>(o+off),descriptor.get(),at<void>(buffer),bytes);}
- call(pattern?0x027E12B4:0x027DF7F4,at<void>(o+off),at<void>(load<u32>(a+0xC)));u32 data=call<u32>(0x027F3F8C,model);call(pattern?0x027E0C88:0x027DF240,at<void>(o+off),at<void>(data));if(play){a=load<u32>(o+0x10);s32 length=call_ptr<s32>(load<u32>(load<u32>(a+4)+0x14),at<void>(a));a=load<u32>(o+0x10);u32 r=load<u32>(a+0xC),flags=pattern?load<u16>(r+0xC):load<u32>(r+0xC);f32 f=(f32)length;if(flags&4)f=fsubs_ppc(f,load<f32>(0x100586D4));if(!call<u32>(0x025E72D4,self,(s32)(s16)ftoi(f),mode,start,end,existing,rate))return 0;}return 1;}
-VERIFY(0x025E8154,ext_brkInit);
-void ext_brkEntry(void* self,void* model,f32 frame){WWHD_FUNC(0x025E83FC,void,self,model,frame);const bool pattern=false,bind=true;u32 o=ea(self),a=load<u32>(o+0x10),off=0x20;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+0x48,o+off);else call(0x027E1234,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E83FC,ext_brkEntry);
-void ext_brkCalc(void* self,void* model,f32 frame){WWHD_FUNC(0x025E8480,void,self,model,frame);const bool pattern=false,bind=false;u32 o=ea(self),a=load<u32>(o+0x10),off=0x20;if(!a)return;store<f32>(o+4,frame);store<f32>(a,frame);u32 c=load<u32>(o+off);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);call(pattern?0x027E1038:0x027DF40C,at<void>(o+off));if(bind)store<u32>(ea(model)+0x48,o+off);else call(0x027DF774,at<void>(o+off),at<void>(ea(model)+0x14));}
-VERIFY(0x025E8480,ext_brkCalc);
-u32 ext_bckInit(void* self,void* model,void* animation,u32 play,s32 mode,s32 start,s32 end,u32 existing,f32 rate){WWHD_FUNC(0x025E8508,u32,self,model,animation,play,mode,start,end,existing,rate);u32 o=ea(self),a=ea(animation),m=ea(model);if(!existing&&!call<u32>(0x025E2AF8))call(0x0273AA24,at<void>(0x10058A84),0x61B,at<void>(0x10058A94));if(!m||!a){call(0x0273AA24,at<void>(0x10058A84),0x61C,at<void>(0x10058AB8));if(!m||!a)return 0;}store<u32>(o+0x88,a);if(!existing)call(0x027F36FC,at<void>(o+0x10),model,animation);else call(0x027F363C,at<void>(o+0x10),animation);if(!play)return 1;a=load<u32>(o+0x88);if(!a)return 0;s32 length=call_ptr<s32>(load<u32>(load<u32>(a+4)+0x14),at<void>(a));a=load<u32>(o+0x88);u32 r=load<u32>(a+8),flags=load<u32>(r+0xC);f32 frame=(f32)length;if(flags&4)frame=fsubs_ppc(frame,load<f32>(0x100586D4));return call<u32>(0x025E72D4,self,(s32)(s16)ftoi(frame),mode,start,end,existing,rate)?1:0;}
-VERIFY(0x025E8508,ext_bckInit);
-void ext_bckEntry(void* self,void* model,f32 frame){WWHD_FUNC(0x025E86B8,void,self,model,frame);u32 o=ea(self),c=load<u32>(o+0x14);f32 result=call_ptr<f32>(load<u32>(c+0x10),at<void>(load<u32>(c+0x14)),frame,load<f32>(c+4),load<f32>(c+8));store<f32>(c,result);store<u32>(load<u32>(ea(model)+8)+0x14,o+0x10);}
-VERIFY(0x025E86B8,ext_bckEntry);
-void ext_bckSet(void* self,void* animation){WWHD_FUNC(0x025E871C,void,self,animation);store<u32>(ea(self)+0x88,ea(animation));call(0x027F363C,at<void>(ea(self)+0x10),animation);}
-VERIFY(0x025E871C,ext_bckSet);
-void ext_stateEight(){WWHD_FUNC(0x025E8728,void);Local<u8[284]> state;u32 o=ea(state.get());call(0x02750250,state.get());u32 flags=load<u32>(o+0xEC);flags=(flags&0xFFFFFFF0)+8;flags=(flags&0xFFFFFF0F)+0x10;store<u32>(o+0xEC,flags);store<u32>(o+0xC,3);call(0x02750370,state.get());}
-VERIFY(0x025E8728,ext_stateEight);
-void ext_stateSeven(){WWHD_FUNC(0x025E8774,void);Local<u8[284]> state;u32 o=ea(state.get());call(0x02750250,state.get());u32 flags=load<u32>(o+0xEC);flags=(flags&0xFFFFFFF0)+7;flags=(flags&0xFFFFFF0F)+0x10;store<u32>(o+0xEC,flags);store<u32>(o+0xC,3);call(0x02750370,state.get());}
-VERIFY(0x025E8774,ext_stateSeven);
+#include "m_Do/m_Do_ext_more_anm.h"
+
+static f32 l_one;
+static u32 l_backendVtable;
+
+// HD: resource descriptors and backend allocation replace the GameCube material arrays.
+static bool prepareBackend(HdAnmBackend* backend, HdAnmModel* model, HdAnmObject* animation) {
+    gabi::Local<HdAnmDescriptor> local;
+    HdAnmDescriptor* descriptor = local.get();
+    descriptor->mModelCount = -1;
+    descriptor->mMaterialCount = -1;
+    descriptor->mFirstCount = -1;
+    descriptor->mSecondCount = -1;
+    descriptor->mEnabled = 1;
+    descriptor->mFlags = 0;
+    descriptor->mBufferSize = 0;
+    descriptor->mBufferCount = 0;
+    HdAnmModelData* data = hdAnmGetModelData(model);
+    s32 count = data->mMaterialCount;
+    if (descriptor->mModelCount < count) descriptor->mModelCount = count;
+    HdAnmResource* resource = animation->mResource;
+    count = resource->mMaterialCount;
+    if (descriptor->mMaterialCount < count) descriptor->mMaterialCount = count;
+    s32 first = resource->mFirstCount;
+    if (descriptor->mFirstCount < first) descriptor->mFirstCount = first;
+    s32 second = resource->mSecondCount;
+    if (descriptor->mSecondCount < second) descriptor->mSecondCount = second;
+    u32 flags = resource->mFlags;
+    descriptor->mFlags = (u8)(descriptor->mFlags | ((flags & HdAnmResource_Enabled) ^ HdAnmResource_Enabled));
+    s32 size = resource->mFirstCount;
+    if (size < 4) size = 4;
+    descriptor->mSecondCount = size;
+    descriptor->mFlags = 1;
+    u32 bytes = hdAnmDescriptorSize(descriptor);
+    void* buffer = hdAnmBufferAllocate(bytes, 4);
+    if (buffer == NULL) return false;
+    hdAnmBackendInit(backend, descriptor, buffer, bytes);
+    return true;
+}
+
+static u32 initPlayback(mDoExt_baseAnm* self, gptr<HdAnmObject>& slot, bool skeletal,
+                        s32 mode, s32 start, s32 end, u32 existing, f32 rate) {
+    HdAnmObject* animation = slot;
+    s32 length = gabi::call_ptr<s32>(animation->mVtable[HdAnm_LengthSlot].get(), animation);
+    // HD: the virtual callback may replace the animation; reload the stored pointer.
+    animation = slot;
+    HdAnmResource* resource = skeletal ? animation->mBckResource.get() : animation->mResource.get();
+    u32 flags = resource->mFlags;
+    f32 frame = (f32)length;
+    if (flags & HdAnmResource_ExcludeLast) frame = gabi::fsubs_ppc(frame, l_one);
+    return hdAnmInitPlay(self, (s32)(s16)gabi::ftoi(frame), mode, start, end, existing, rate) ? 1 : 0;
+}
+
+static void calculateController(HdAnmController* controller, f32 frame) {
+    f32 result = gabi::call_ptr<f32>(controller->mCalc.get(), controller->mCalcData.get(), frame,
+                                   (f32)controller->mStart, (f32)controller->mEnd);
+    controller->mFrame = result;
+}
+
+/* 025E7C6C */
+// HD: the constructor ABI accepts a nullable allocation destination.
+static HdBtkAnm* HdBtkAnm__ct(HdBtkAnm* self) {
+    if (self == NULL) {
+        self = static_cast<HdBtkAnm*>(hdAnmAllocate(sizeof(HdBtkAnm)));
+        if (self == NULL) return NULL;
+    }
+    hdAnmFrameConstruct(self, 0);
+    hdAnmBackendConstruct(&self->mBackend);
+    self->mBackend.mBuffer = 0;
+    self->mBackend.__vtbl = &l_backendVtable;
+    self->mpTexMtxAnm = 0;
+    self->mUpdateMaterialNum = 0;
+    self->mpAnm = NULL;
+    return self;
+}
+
+/* 025E7CE0 */
+u32 HdBtkAnm::init(HdAnmModel* model, HdAnmObject* animation, u32 play, s32 mode,
+                     s32 start, s32 end, u32 existing, f32 rate) {
+    if (animation == NULL) {
+        mpAnm = NULL;
+        return 1;
+    }
+    if (model == NULL) {
+        hdAnmAssert("btk source", 0x40F, "btk model");
+        return 0;
+    }
+    mpAnm = animation;
+    if (!existing && !prepareBackend(&mBackend, model, animation)) return 0;
+    hdAnmSetResource(&mBackend, animation->mResource);
+    HdAnmModelData* data = hdAnmGetModelData(model);
+    hdAnmBindModel(&mBackend, data);
+    if (play && !initPlayback(this, mpAnm, false, mode, start, end, existing, rate)) return 0;
+    return 1;
+}
+
+/* 025E7FC4 */
+void HdBtkAnm::entry(HdAnmModel* model, f32 frame) {
+    HdAnmObject* animation = mpAnm;
+    if (animation == NULL) return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    calculateController(mBackend.mController, frame);
+    hdAnmBackendCalc(&mBackend);
+    model->mBtk = &mBackend;
+}
+
+/* 025E8048 */
+void HdBtkAnm::calc(HdAnmModel* model, f32 frame) {
+    HdAnmObject* animation = mpAnm;
+    if (animation == NULL) return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    calculateController(mBackend.mController, frame);
+    hdAnmBackendCalc(&mBackend);
+    hdAnmBackendApply(&mBackend, &model->mMaterialTarget);
+}
+
+/* 025E80D0 */
+static HdBrkAnm* HdBrkAnm__ct(HdBrkAnm* self) {
+    if (self == NULL) {
+        self = static_cast<HdBrkAnm*>(hdAnmAllocate(sizeof(HdBrkAnm)));
+        if (self == NULL) return NULL;
+    }
+    hdAnmFrameConstruct(self, 0);
+    self->mpAnm = NULL;
+    self->mCRegUpdateMaterialNum = 0;
+    self->mpKRegAnm = 0;
+    self->mKRegUpdateMaterialNum = 0;
+    self->mpCRegAnm = 0;
+    hdAnmBackendConstruct(&self->mBackend);
+    self->mBackend.mBuffer = 0;
+    self->mBackend.__vtbl = &l_backendVtable;
+    return self;
+}
+
+/* 025E8154 */
+u32 HdBrkAnm::init(HdAnmModel* model, HdAnmObject* animation, u32 play, s32 mode,
+                     s32 start, s32 end, u32 existing, f32 rate) {
+    if (animation == NULL) {
+        mpAnm = NULL;
+        return 1;
+    }
+    mpAnm = animation;
+    if (model == NULL) {
+        return 0;
+    }
+    if (!existing && !prepareBackend(&mBackend, model, animation)) return 0;
+    hdAnmSetResource(&mBackend, animation->mResource);
+    HdAnmModelData* data = hdAnmGetModelData(model);
+    hdAnmBindModel(&mBackend, data);
+    if (play && !initPlayback(this, mpAnm, false, mode, start, end, existing, rate)) return 0;
+    return 1;
+}
+
+/* 025E83FC */
+void HdBrkAnm::entry(HdAnmModel* model, f32 frame) {
+    HdAnmObject* animation = mpAnm;
+    if (animation == NULL) return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    calculateController(mBackend.mController, frame);
+    hdAnmBackendCalc(&mBackend);
+    model->mBrk = &mBackend;
+}
+
+/* 025E8480 */
+void HdBrkAnm::calc(HdAnmModel* model, f32 frame) {
+    HdAnmObject* animation = mpAnm;
+    if (animation == NULL) return;
+    mFrameCtrl.mFrame = frame;
+    animation->mFrame = frame;
+    calculateController(mBackend.mController, frame);
+    hdAnmBackendCalc(&mBackend);
+    hdAnmBackendApply(&mBackend, &model->mMaterialTarget);
+}
+
+/* 025E8508 */
+u32 HdBckAnm::init(HdAnmModel* model, HdAnmObject* animation, u32 play, s32 mode,
+                  s32 start, s32 end, u32 existing, f32 rate) {
+    if (!existing && !hdAnmIsCurrentSolidHeap()) hdAnmAssert("bck source", 0x61B, "solid heap");
+    if (model == NULL || animation == NULL) {
+        hdAnmAssert("bck source", 0x61C, "bck model and animation");
+        return 0;
+    }
+    mpAnm = animation;
+    if (!existing) hdBckBackendInit(&mBackend, model, animation);
+    else hdBckBackendSet(&mBackend, animation);
+    if (!play) return 1;
+    if (mpAnm == NULL) return 0;
+    return initPlayback(this, mpAnm, true, mode, start, end, existing, rate);
+}
+
+/* 025E86B8 */
+void HdBckAnm::entry(HdAnmModel* model, f32 frame) {
+    // HD: skeletal binding updates its backend controller without changing the wrapper frame.
+    calculateController(mBackend.mController, frame);
+    model->mJointBinding->mBck = &mBackend;
+}
+
+/* 025E871C */
+void HdBckAnm::changeBckOnly(HdAnmObject* animation) {
+    mpAnm = animation;
+    hdBckBackendSet(&mBackend, animation);
+}
+
+static void setDrawMode(u32 mode) {
+    gabi::Local<HdAnmDrawState> local;
+    HdAnmDrawState* state = local.get();
+    hdAnmDrawStateConstruct(state);
+    u32 flags = state->mMode;
+    flags = (flags & ~HdAnm_ModeLowMask) + mode;
+    flags = (flags & ~HdAnm_ModeHighMask) + HdAnm_ModeHighValue;
+    state->mMode = flags;
+    state->mFlags = HdAnm_DrawFlags;
+    hdAnmDrawStateApply(state);
+}
+
+/* 025E8728 */
+static void mDoExt_setAnmDrawModeEight() { setDrawMode(HdAnm_ModeEight); }
+
+/* 025E8774 */
+static void mDoExt_setAnmDrawModeSeven() { setDrawMode(HdAnm_ModeSeven); }
+
+/* WWHD glue (tools/verify/autoglue.py): HD animation backend ABI.
+data l_one 100586D4
+data l_backendVtable 1016D7E0
+str 10058A60 "btk source" renamed
+str 10058A70 "btk model" renamed
+str 10058A84 "bck source" renamed
+str 10058A94 "solid heap" renamed
+str 10058AB8 "bck model and animation" renamed
+ext 0273AD10 void* hdAnmAllocate(u32)
+ext 027F2BC0 void hdAnmFrameConstruct(mDoExt_baseAnm*, u32)
+ext 027DA984 void hdAnmBackendConstruct(HdAnmBackend*)
+ext 027F3F8C HdAnmModelData* hdAnmGetModelData(HdAnmModel*)
+ext 027DEFB8 u32 hdAnmDescriptorSize(HdAnmDescriptor*)
+ext 025E3A34 void* hdAnmBufferAllocate(u32, u32)
+ext 027DEE5C void hdAnmBackendInit(HdAnmBackend*, HdAnmDescriptor*, void*, u32)
+ext 027DF7F4 void hdAnmSetResource(HdAnmBackend*, HdAnmResource*)
+ext 027DF240 void hdAnmBindModel(HdAnmBackend*, HdAnmModelData*)
+ext 025E72D4 u32 hdAnmInitPlay(mDoExt_baseAnm*, s32, s32, s32, s32, u32, f32)
+ext 027DF40C void hdAnmBackendCalc(HdAnmBackend*)
+ext 027DF774 void hdAnmBackendApply(HdAnmBackend*, void*)
+ext 025E2AF8 u32 hdAnmIsCurrentSolidHeap()
+ext 027F36FC void hdBckBackendInit(HdBckBackend*, HdAnmModel*, HdAnmObject*)
+ext 027F363C void hdBckBackendSet(HdBckBackend*, HdAnmObject*)
+ext 0273AA24 void hdAnmAssert(const char*, u32, const char*)
+ext 02750250 void hdAnmDrawStateConstruct(HdAnmDrawState*)
+ext 02750370 void hdAnmDrawStateApply(HdAnmDrawState*)
+*/

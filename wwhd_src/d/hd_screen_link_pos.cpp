@@ -1,18 +1,27 @@
-#include "gabi.h"
+#include "d/hd_gamepad_map.h"
 using namespace gabi;
-static f32 fdivs(f32 a,f32 b) { return f32(f64(a)/f64(b)); }
-namespace hd_screen_link_pos {
-void grid(u32 self,u32 pane,u32 size,u32 positions) {
- WWHD_FUNC(0x02684698,void,self,pane,size,positions);
- f32 width=fdivs(load<f32>(pane+0x3C),load<f32>(0x100F93D8));
- f32 height=fdivs(load<f32>(pane+0x40),load<f32>(0x100F93D8));
- store<f32>(size,width); store<f32>(size+4,height);
- f32 half=load<f32>(0x100F93DC),left=-fmuls_ppc(load<f32>(pane+0x3C),half),top=fmuls_ppc(load<f32>(pane+0x40),half);
- for(u32 row=0;row<7;++row) for(u32 col=0;col<7;++col) {
-  f32 x=fadds_ppc(left,fmadds(f32(f64(col)),width,fmuls_ppc(width,half)));
-  f32 y=fsubs_ppc(top,fmadds(f32(f64(row)),height,fmuls_ppc(height,half)));
-  u32 out=positions+(row*7+col)*8; store<f32>(out,x); store<f32>(out+4,y);
- }
+static f32 fdivs(f32 a, f32 b) { return f32(f64(a) / f64(b)); }
+static f32 l_hdLinkPosGridSide;
+static f32 l_hdLinkPosHalf;
+
+/* 02684698 */
+void hdLinkPosGrid(void *self, HdPadPane *pane, HdPadPoint *size, HdPadPoint *positions) {
+    f32 width = fdivs(pane->mWidth, l_hdLinkPosGridSide);
+    f32 height = fdivs(pane->mHeight, l_hdLinkPosGridSide);
+    size->x = width;
+    size->y = height;
+    f32 half = l_hdLinkPosHalf, left = -fmuls_ppc(pane->mWidth, half),
+        top = fmuls_ppc(pane->mHeight, half);
+    for (u32 row = 0; row < HD_PAD_GRID_SIDE; ++row)
+        for (u32 col = 0; col < HD_PAD_GRID_SIDE; ++col) {
+            f32 x = fadds_ppc(left, fmadds(f32(f64(col)), width, fmuls_ppc(width, half)));
+            f32 y = fsubs_ppc(top, fmadds(f32(f64(row)), height, fmuls_ppc(height, half)));
+            HdPadPoint *out = &positions[row * HD_PAD_GRID_SIDE + col];
+            out->x = x;
+            out->y = y;
+        }
 }
-VERIFY(0x02684698,grid);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_hdLinkPosGridSide 100F93D8
+data l_hdLinkPosHalf 100F93DC
+*/

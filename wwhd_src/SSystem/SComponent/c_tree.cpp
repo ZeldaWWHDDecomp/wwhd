@@ -1,48 +1,46 @@
-#include "gabi.h"
-using namespace gabi;
-namespace c_tree {
-s32 single_cut(void *node) {
-  WWHD_FUNC(0x0201AAB0, s32, node);
-  return call<s32>(0x0200FDF4, node);
+/** Node-list trees. WWHD, verified unit c_tree. */
+#include "SSystem/SComponent/c_tree.h"
+
+/* 0201AAB0 */
+s32 cTr_SingleCut(node_class* pNode) {
+    return cLs_SingleCut(pNode);
 }
-VERIFY(0x0201AAB0, single_cut);
-s32 addition(void *tree, s32 index, void *node) {
-  WWHD_FUNC(0x0201AAB4, s32, tree, index, node);
-  if (index >= load<s32>(ea(tree) + 4)) return 0;
-  u32 lists = load<u32>(ea(tree));
-  return call<s32>(0x0200FE78, at<void>(lists + u32(index) * 12u), node);
+
+/* 0201AAB4 */
+s32 cTr_Addition(node_lists_tree_class* pTree, s32 listIdx, node_class* pNode) {
+    if (listIdx >= pTree->mNumLists) {
+        return 0;
+    }
+    return cLs_Addition(&pTree->mpLists.get()[listIdx], pNode);
 }
-VERIFY(0x0201AAB4, addition);
-s32 insert(void *tree, s32 listIndex, void *node, s32 index) {
-  WWHD_FUNC(0x0201AADC, s32, tree, listIndex, node, index);
-  if (listIndex >= load<s32>(ea(tree) + 4)) return 0;
-  u32 lists = load<u32>(ea(tree));
-  return call<s32>(0x0200FF10, at<void>(lists + u32(listIndex) * 12u), index, node);
+
+/* 0201AADC */
+s32 cTr_Insert(node_lists_tree_class* pTree, s32 listIdx, node_class* pNode, s32 idx) {
+    if (listIdx >= pTree->mNumLists) {
+        return 0;
+    }
+    return cLs_Insert(&pTree->mpLists.get()[listIdx], idx, pNode);
 }
-VERIFY(0x0201AADC, insert);
-void create(void *tree, void *lists, s32 count) {
-  WWHD_FUNC(0x0201AB04, void, tree, lists, count);
-  store<u32>(ea(tree) + 4, u32(count));
-  store<u32>(ea(tree), ea(lists));
-  for (s32 i = 0; i < count; ++i)
-    call<void>(0x02010008, at<void>(ea(lists) + u32(i) * 12u));
+
+/* 0201AB04 */
+void cTr_Create(node_lists_tree_class* pTree, node_list_class* pLists, s32 numLists) {
+    // HD: count is stored before the list pointer, preserving overlapping arguments.
+    pTree->mNumLists = numLists;
+    pTree->mpLists = pLists;
+    for (s32 i = 0; i < numLists; ++i) {
+        cLs_Create(&pLists[i]);
+    }
 }
-VERIFY(0x0201AB04, create);
-void static_init() {
-  WWHD_FUNC(0x0201AB5C, void);
-  store<u32>(0x101FFB68, 0);
-  store<u32>(0x101FFB60, 0);
-  store<u32>(0x101FFB6C, 0);
-  store<u32>(0x101FFB64, 0);
-  call<void>(0x028F026C, at<void>(0x1018D418));
-  f32 first = load<f32>(0x100036D8);
-  f32 second = load<f32>(0x100036DC);
-  store<f32>(0x101FFB54, first);
-  store<f32>(0x101FFB58, second);
-  call<void>(0x028ED6F8, at<void>(0x101FFB5C));
-  call<void>(0x028F026C, at<void>(0x1018D424));
-  call<void>(0x028EAB2C, at<void>(0x101FFB5D));
-  call<void>(0x028F026C, at<void>(0x1018D430));
+
+/* 0201AB5C */
+// HD: header statics and destructor registrations.
+static void __sinit_c_tree_cpp() {
+    sinit_header_statics_rodata(0x101FFB54, 0x1018D418, 0x101FFB60, 0x100036D8);
 }
-VERIFY(0x0201AB5C, static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): external list operations
+ext 0200FDF4 s32 cLs_SingleCut(node_class*)
+ext 0200FE78 s32 cLs_Addition(node_list_class*, node_class*)
+ext 0200FF10 s32 cLs_Insert(node_list_class*, s32, node_class*)
+ext 02010008 void cLs_Create(node_list_class*)
+*/

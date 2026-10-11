@@ -1,18 +1,247 @@
-#include "gabi.h"
+/**
+ * JAS audio envelope oscillator. GameCube names and WWHD layout, verified against
+ * the original by unit JASOscillator.
+ */
+#include "JSystem/JAudio/JASOscillator.h"
 #include <cmath>
-using namespace gabi;
-static u32 word(u32 a,u32 o=0){return load<u32>(a+o);}static u16 half(u32 a,u32 o=0){return load<u16>(a+o);}static u8 byte(u32 a,u32 o=0){return load<u8>(a+o);}static f32 fl(u32 a,u32 o=0){return load<f32>(a+o);}static void pf(u32 a,u32 o,f32 v){store<f32>(a+o,v);}static void copyf(u32 a,u32 o,u32 b,u32 k){store<u32>(a+o,word(b,k));}
-void oscInit(u32 a){WWHD_FUNC(0x02816448,void,a);u32 zero=word(0x101703F8);store<u16>(a+24,0);store<u32>(a,0);store<u8>(a+28,0);store<u8>(a+29,0);store<u16>(a+26,0);for(u32 o=4;o<=20;o+=4)store<u32>(a+o,zero);}
-VERIFY(0x02816448,oscInit);
-f32 oscCalc(u32 a,u32 table){WWHD_FUNC(0x02816480,f32,a,table);f32 zero=fl(0x101703F8);
- while(!(fl(a,4)>zero)){u32 index=half(a,24);copyf(a,8,a,12);if(byte(a,28)==5){store<u8>(a+28,0);break;}u32 entry=table+index*6;s32 mode=(s16)half(entry),time=(s16)half(entry,2),value=(s16)half(entry,4);if(mode==13){store<u16>(a+24,(u16)value);continue;}if(mode==15){store<u8>(a+28,0);break;}if(mode==14){store<u8>(a+28,2);u32 config=word(a);return fmadds(fl(a,8),fl(config,16),fl(config,20));}store<u8>(a+29,(u8)mode);f32 scale=fl(0x101703FC);if(time==0){pf(a,12,fmuls_ppc((f32)value,scale));store<u16>(a+24,(u16)(half(a,24)+1));continue;}f32 rate=call<f32>(0x02813AD4);f32 duration=fmuls_ppc((f32)((f32)(rate/fl(0x10170408))/fl(0x1017040C)),(f32)time);u8 curve=byte(a,29);u16 next=half(a,24);f32 phase=fl(a,8),target=fmuls_ppc((f32)value,scale);pf(a,4,duration);pf(a,20,duration);f32 change=fsubs_ppc(target,phase);pf(a,12,target);if(!curve)change=(f32)(change/fl(a,4));pf(a,16,change);store<u16>(a+24,(u16)(next+1));}
- u32 config=word(a);if(fl(config,16)==zero)return fl(config,20);f32 target=fl(a,12),result;if((f64)fl(a,20)==load<f64>(0x10170410)){copyf(a,8,a,12);result=target;}else{f32 change=fl(a,16);u8 curve=byte(a,29);if(curve>=1&&curve<=3&&change!=zero){u32 lut=word(0x1017042C+curve*4);f32 one=fl(0x10170418),ratio=(f32)(fl(a,4)/fl(a,20));f32 scaled=fmuls_ppc(change<zero?fsubs_ppc(one,ratio):ratio,fl(0x1017041C));u32 index;f32 fraction;if(scaled<fl(0x10170420)){index=(u32)ftoi(scaled);fraction=fsubs_ppc(scaled,(f32)index);}else{u32 raw=(u32)ftoi(fsubs_ppc(scaled,fl(0x10170420)));index=raw+0x80000000u;fraction=fsubs_ppc(scaled,(f32)index);}if(index>=16){index=15;fraction=one;}f32 first=fl(lut,index*4),second=fl(lut,index*4+4);f32 amount=std::fabs(fmuls_ppc(fmadds(fsubs_ppc(second,first),fraction,first),change));if(change<zero)result=fadds_ppc(target,amount);else result=fsubs_ppc(target,fsubs_ppc(change,amount));}else result=fnmsubs(change,fl(a,4),target);pf(a,8,result);}config=word(a);return fmadds(result,fl(config,16),fl(config,20));}
-VERIFY(0x02816480,oscCalc);
-void oscUpdate(u32 a){WWHD_FUNC(0x028168F8,void,a);u8 state=byte(a,28);if(state==0||state==2)return;f32 one=fl(0x10170418);u32 config=word(a),table;if(state==3){table=word(config,12);if(!table)goto noTable;}else if(state==4){pf(a,4,fsubs_ppc(fl(a,4),one));call<f32>(0x02816480,a,0x10170444);return;}else{table=word(config,8);if(!table)goto noTable;}pf(a,4,fsubs_ppc(fl(a,4),fl(config,4)));call<f32>(0x02816480,a,table);return;noTable:if(state==5){pf(a,4,fsubs_ppc(fl(a,4),fl(config,4)));call<f32>(0x02816480,a,table);}else pf(a,8,one);}
-VERIFY(0x028168F8,oscUpdate);
-void oscStart(u32 a,u32 config){WWHD_FUNC(0x02816980,void,a,config);if(!config){store<u8>(a+28,0);return;}store<u32>(a,config);store<u16>(a+26,0);store<u8>(a+28,1);f32 zero=fl(0x101703F8);if(!word(config,8)){pf(a,8,zero);return;}pf(a,4,zero);pf(a,12,zero);store<u16>(a+24,0);pf(a,4,fsubs_ppc(zero,fl(word(a),4)));call<void>(0x028168F8,a);}
-VERIFY(0x02816980,oscStart);
-f32 oscValue(u32 a){WWHD_FUNC(0x028169E0,f32,a);if(!byte(a,28))return fl(0x10170418);u32 config=word(a);return fmadds(fl(a,8),fl(config,16),fl(config,20));}
-VERIFY(0x028169E0,oscValue);
-u32 oscRelease(u32 a){WWHD_FUNC(0x02816A10,u32,a);if(byte(a,28)==4)return 0;f32 zero=fl(0x101703F8);u32 config=word(a);u32 direct=half(a,26);if(word(config,8)!=word(config,12)){pf(a,4,zero);copyf(a,12,a,8);store<u16>(a+24,0);}if(!direct){if(word(word(a),12)){store<u8>(a+28,3);return 1;}direct=16;store<u16>(a+26,16);}direct=half(a,26);store<u8>(a+28,5);store<u8>(a+29,(u8)((direct>>14)&3));f32 count=(f32)(direct&0x3FFF);f32 rate=call<f32>(0x02813AD4);f32 duration=fmuls_ppc(count,(f32)((f32)(rate/fl(0x10170408))/fl(0x1017040C)));f32 one=fl(0x10170418);if(duration<one)duration=one;u8 curve=byte(a,29);pf(a,4,duration);pf(a,20,duration);pf(a,12,zero);f32 phase=fl(a,8);pf(a,16,curve?-phase:-(f32)(phase/fl(a,4)));return 1;}
-VERIFY(0x02816A10,oscRelease);
+
+using JASystem::TOscillator;
+static f32 l_zero;
+static f32 l_valueScale;
+static f32 l_rateDivisor;
+static f32 l_timeDivisor;
+static f64 l_zeroDouble;
+static f32 l_one;
+static f32 l_tableIntervals;
+static f32 l_unsignedBoundary;
+struct ReleaseTables {
+    gptr<be<f32>> table[4];
+};
+static ReleaseTables l_releaseTables;
+static s16 oscTableForceStop[6] = {0, 15, 0, 15, 0, 0};
+
+extern f32 oscillatorDacRate();
+extern f32 oscillatorCalcNative(TOscillator*, be<s16>*);
+extern void oscillatorUpdateNative(TOscillator*);
+
+/* 02816448 */
+void TOscillator::init() {
+    // Copy the constant's word, preserving the original lfs/stfs payload.
+    const be<f32>& zero = *reinterpret_cast<const be<f32>*>(&l_zero);
+    field_0x6 = 0;
+    mOsc = nullptr;
+    mState = STOP;
+    field_0x5 = 0;
+    mDirectRelease = 0;
+    mReleaseRate = zero;
+    mPhase = zero;
+    mTargetPhase = zero;
+    mPhaseChangeRate = zero;
+    mInitialReleaseRate = zero;
+}
+
+/* 02816480 */
+f32 TOscillator::calc(be<s16>* i_table) {
+    f32 zero = l_zero;
+    // HD: unordered rates enter the loop too.
+    while (!(mReleaseRate > zero)) {
+        u32 idx = field_0x6;
+        mPhase = mTargetPhase;
+        if (mState == DIRECT_RELEASE) {
+            mState = STOP;
+            break;
+        }
+        s32 envMode = i_table[idx * 3];
+        s32 envTime = i_table[idx * 3 + 1];
+        s32 envValue = i_table[idx * 3 + 2];
+        if (envMode == JUMP) {
+            field_0x6 = (u16)envValue;
+            continue;
+        }
+        if (envMode == END) {
+            mState = STOP;
+            break;
+        }
+        if (envMode == SUSTAIN) {
+            mState = HOLD;
+            const Osc_* osc = mOsc;
+            return fmadds(mPhase, osc->field_0x10, osc->field_0x14);
+        }
+        field_0x5 = (u8)envMode;
+        f32 scale = l_valueScale;
+        if (envTime == 0) {
+            mTargetPhase = fmuls_ppc((f32)envValue, scale);
+            field_0x6 = (u16)(field_0x6 + 1);
+            continue;
+        }
+        // HD: the fixed divisors include the update interval.
+        f32 rate = oscillatorDacRate();
+        f32 duration = fmuls_ppc((f32)((f32)(rate / l_rateDivisor) / l_timeDivisor), (f32)envTime);
+        u8 curve = field_0x5;
+        u16 next = field_0x6;
+        f32 phase = mPhase;
+        f32 target = fmuls_ppc((f32)envValue, scale);
+        mReleaseRate = duration;
+        mInitialReleaseRate = duration;
+        f32 change = fsubs_ppc(target, phase);
+        mTargetPhase = target;
+        if (!curve)
+            change = (f32)(change / mReleaseRate);
+        mPhaseChangeRate = change;
+        field_0x6 = (u16)(next + 1);
+    }
+    const Osc_* osc = mOsc;
+    if (osc->field_0x10 == zero)
+        return osc->field_0x14;
+    f32 target = mTargetPhase;
+    f32 newPhase;
+    // GHS keeps the original unsuffixed-zero comparison in double precision.
+    if ((f64)mInitialReleaseRate == l_zeroDouble) {
+        mPhase = mTargetPhase;
+        newPhase = target;
+    } else {
+        f32 change = mPhaseChangeRate;
+        u8 curve = field_0x5;
+        if (curve >= 1 && curve <= 3 && change != zero) {
+            be<f32>* table = l_releaseTables.table[curve];
+            f32 one = l_one;
+            f32 ratio = (f32)(mReleaseRate / mInitialReleaseRate);
+            f32 fIdx = fmuls_ppc(change < zero ? fsubs_ppc(one, ratio) : ratio, l_tableIntervals);
+            u32 idx;
+            f32 prop;
+            // GHS's unsigned conversion retains wrapping for out-of-range inputs.
+            if (fIdx < l_unsignedBoundary) {
+                idx = (u32)ftoi(fIdx);
+                prop = fsubs_ppc(fIdx, (f32)idx);
+            } else {
+                u32 raw = (u32)ftoi(fsubs_ppc(fIdx, l_unsignedBoundary));
+                idx = raw + 0x80000000u;
+                prop = fsubs_ppc(fIdx, (f32)idx);
+            }
+            if (idx >= 16) {
+                idx = 15;
+                prop = one;
+            }
+            f32 first = table[idx];
+            f32 second = table[idx + 1];
+            f32 valAbs =
+                std::fabs(fmuls_ppc(fmadds(fsubs_ppc(second, first), prop, first), change));
+            if (change < zero)
+                newPhase = fadds_ppc(target, valAbs);
+            else
+                newPhase = fsubs_ppc(target, fsubs_ppc(change, valAbs));
+        } else {
+            newPhase = fnmsubs(change, mReleaseRate, target);
+        }
+        mPhase = newPhase;
+    }
+    osc = mOsc;
+    return fmadds(newPhase, osc->field_0x10, osc->field_0x14);
+}
+
+/* 028168F8 */
+void TOscillator::getOffset() {
+    u8 state = mState;
+    if (state == STOP || state == HOLD)
+        return;
+    f32 one = l_one;
+    const Osc_* osc = mOsc;
+    be<s16>* table;
+    if (state == RELEASE) {
+        table = osc->rel_table;
+    } else if (state == FORCE_STOP) {
+        mReleaseRate = fsubs_ppc(mReleaseRate, one);
+        oscillatorCalcNative(this, reinterpret_cast<be<s16>*>(oscTableForceStop));
+        return;
+    } else {
+        table = osc->table;
+    }
+    if (table != nullptr || state == DIRECT_RELEASE) {
+        mReleaseRate = fsubs_ppc(mReleaseRate, osc->field_0x4);
+        oscillatorCalcNative(this, table);
+    } else {
+        mPhase = one;
+    }
+}
+
+/* 02816980 */
+void TOscillator::initStart(const Osc_* osc) {
+    if (osc == nullptr) {
+        mState = STOP;
+        return;
+    }
+    mOsc = osc;
+    mDirectRelease = 0;
+    mState = ATTACK;
+    f32 zero = l_zero;
+    if (!osc->table) {
+        mPhase = zero;
+        return;
+    }
+    mReleaseRate = zero;
+    mTargetPhase = zero;
+    field_0x6 = 0;
+    mReleaseRate = fsubs_ppc(zero, mOsc->field_0x4);
+    oscillatorUpdateNative(this);
+}
+
+/* 028169E0 */
+f32 TOscillator::getValue() {
+    if (!mState)
+        return l_one;
+    const Osc_* osc = mOsc;
+    return fmadds(mPhase, osc->field_0x10, osc->field_0x14);
+}
+
+/* 02816A10 */
+u32 TOscillator::release() {
+    if (mState == FORCE_STOP)
+        return 0;
+    f32 zero = l_zero;
+    const Osc_* osc = mOsc;
+    u32 direct = mDirectRelease;
+    if (osc->table != osc->rel_table) {
+        mReleaseRate = zero;
+        mTargetPhase = mPhase;
+        field_0x6 = 0;
+    }
+    if (!direct) {
+        if (mOsc->rel_table) {
+            mState = RELEASE;
+            return 1;
+        }
+        mDirectRelease = 16;
+    }
+    direct = mDirectRelease;
+    mState = DIRECT_RELEASE;
+    field_0x5 = (u8)((direct >> 14) & 3);
+    f32 count = (f32)(direct & 0x3FFF);
+    f32 rate = oscillatorDacRate();
+    f32 duration = fmuls_ppc(count, (f32)((f32)(rate / l_rateDivisor) / l_timeDivisor));
+    f32 one = l_one;
+    if (duration < one)
+        duration = one;
+    u8 curve = field_0x5;
+    mReleaseRate = duration;
+    mInitialReleaseRate = duration;
+    mTargetPhase = zero;
+    f32 phase = mPhase;
+    mPhaseChangeRate = curve ? -phase : -(f32)(phase / mReleaseRate);
+    return 1;
+}
+
+/* WWHD glue
+data l_zero 101703F8
+data l_valueScale 101703FC
+data l_rateDivisor 10170408
+data l_timeDivisor 1017040C
+data l_zeroDouble 10170410
+data l_one 10170418
+data l_tableIntervals 1017041C
+data l_unsignedBoundary 10170420
+data l_releaseTables 1017042C
+data oscTableForceStop 10170444
+ext 02813AD4 f32 oscillatorDacRate()
+ext 02816480 f32 oscillatorCalcNative(TOscillator*, be<s16>*)
+ext 028168F8 void oscillatorUpdateNative(TOscillator*)
+*/

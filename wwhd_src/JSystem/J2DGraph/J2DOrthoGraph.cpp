@@ -1,56 +1,97 @@
-#include "gabi.h"
-using namespace gabi;
-namespace J2DOrthoGraphHD {
-void setLookat(void *self) {
- WWHD_FUNC(0x027EDE30,void,self);
- call<void>(0x028E9098,at<void>(ea(self)+0x7C));
+/* Orthographic 2D graphics context, following tww J2DOrthoGraph. */
+#include "JSystem/J2DGraph/J2DOrthoGraph.h"
+
+static f32 l_zero = 0.0f;
+static f32 l_half = 0.5f;
+// HD: adjacent initializer attribution is inferred from TU placement.
+static u32 l_staticFirstLow;
+static u32 l_staticFirstHigh;
+static u32 l_staticSecondLow;
+static u32 l_staticSecondHigh;
+struct OrthoStaticRecord {
+    u8 bytes[1];
+};
+static OrthoStaticRecord l_staticRecord;
+
+/* 027EDE30 */
+void J2DOrthoGraph::setLookat() {
+    // HD: matrix setup does not submit GX position state.
+    orthoMatrixIdentity(&mPosMtx);
 }
-VERIFY(0x027EDE30,setLookat);
-void *construct(void *self,f32 x,f32 y,f32 width,f32 height,f32 nearPlane,f32 farPlane) {
- WWHD_FUNC(0x027EDE38,void*,self,x,y,width,height,nearPlane,farPlane);
- if(!self)self=call<void*>(0x0273AD10,u32(0xD4));
- if(!self)return nullptr;
- u32 a=ea(self);
- call<void>(0x027EDB54,self,x,y,width,height);
- store<u32>(a+0xB8,0x1016DEAC);
- if(a+0xBC==0)call<void*>(0x0273AD10,u32(0x10));
- f32 zero=load<f32>(0x1016DEA0);
- store<f32>(a+0xCC,nearPlane);store<f32>(a+0xC4,width);
- store<f32>(a+0xC8,height);store<f32>(a+0xC0,zero);
- store<f32>(a+0xD0,farPlane);store<f32>(a+0xBC,zero);
- call<void>(0x027EDE30,self);
- return self;
+
+/* 027EDE38 */
+J2DOrthoGraph* J2DOrthoGraph__ct(J2DOrthoGraph* i_this, f32 x, f32 y, f32 width, f32 height,
+                                 f32 nearPlane, f32 farPlane) {
+    if (!i_this)
+        i_this = static_cast<J2DOrthoGraph*>(orthoAllocate(sizeof(J2DOrthoGraph)));
+    if (!i_this)
+        return nullptr;
+    orthoBaseConstruct(i_this, x, y, width, height);
+    i_this->__vtbl = 0x1016DEAC;
+    // HD: retain the GHS embedded-box allocation check with guest-address wrapping.
+    if (gabi::ea(&i_this->mOrtho) == 0)
+        orthoAllocate(0x10);
+    f32 zero = l_zero;
+    i_this->mNear = nearPlane;
+    i_this->mOrtho.f.x = width;
+    i_this->mOrtho.f.y = height;
+    i_this->mOrtho.i.y = zero;
+    i_this->mFar = farPlane;
+    i_this->mOrtho.i.x = zero;
+    i_this->setLookat();
+    return i_this;
 }
-VERIFY(0x027EDE38,construct);
-void setPort(void *self) {
- WWHD_FUNC(0x027EDF68,void,self);
- call<void>(0x027EDD50,self);
- u32 a=ea(self);
- f32 bottom=fadds_ppc(load<f32>(a+0xC8),load<f32>(0x1016DEA4));
- call<void>(0x028E9A70,at<void>(a+0x3C),load<f32>(a+0xC0),bottom,load<f32>(a+0xBC),load<f32>(a+0xC4),load<f32>(a+0xCC),load<f32>(a+0xD0));
+
+/* 027EDF68 */
+void J2DOrthoGraph::setPort() {
+    orthoBaseSetPort(this);
+    f32 bottom = gabi::fadds_ppc(mOrtho.f.y, l_half);
+    // HD: projection state submission is omitted.
+    orthoMatrixProjection(&mMtx44, mOrtho.i.y, bottom, mOrtho.i.x, mOrtho.f.x, mNear, mFar);
 }
-VERIFY(0x027EDF68,setPort);
-void scissorBounds(void *self,void *output,const void *input) {
- WWHD_FUNC(0x027EDFC0,void,self,output,input);
- u32 a=ea(self),i=ea(input),o=ea(output);
- f32 orthoX=load<f32>(a+0xBC),left=load<f32>(a),orthoY=load<f32>(a+0xC0),top=load<f32>(a+4);
- f32 xscale=f32(fsubs_ppc(load<f32>(a+8),left)/fsubs_ppc(load<f32>(a+0xC4),orthoX));
- f32 yscale=f32(fsubs_ppc(load<f32>(a+12),top)/fsubs_ppc(load<f32>(a+0xC8),orthoY));
- f32 x0=fmadds(fsubs_ppc(load<f32>(i),orthoX),xscale,left);
- f32 x1=fmadds(fsubs_ppc(load<f32>(i+8),orthoX),xscale,left);
- f32 y0=fmadds(fsubs_ppc(load<f32>(i+4),orthoY),yscale,top);
- f32 y1=fmadds(fsubs_ppc(load<f32>(i+12),orthoY),yscale,top);
- store<f32>(o,x0);store<f32>(o+8,x1);store<f32>(o+4,y0);store<f32>(o+12,y1);
+
+/* 027EDFC0 */
+void J2DOrthoGraph::scissorBounds(Ortho::Box* output, const Ortho::Box* input) {
+    f32 orthoX = mOrtho.i.x, left = mBounds.i.x;
+    f32 orthoY = mOrtho.i.y, top = mBounds.i.y;
+    f32 widthPower = f32(gabi::fsubs_ppc(mBounds.f.x, left) / gabi::fsubs_ppc(mOrtho.f.x, orthoX));
+    f32 heightPower = f32(gabi::fsubs_ppc(mBounds.f.y, top) / gabi::fsubs_ppc(mOrtho.f.y, orthoY));
+    f32 f0 = gabi::fmadds(gabi::fsubs_ppc(input->i.x, orthoX), widthPower, left);
+    f32 f2 = gabi::fmadds(gabi::fsubs_ppc(input->f.x, orthoX), widthPower, left);
+    f32 f1 = gabi::fmadds(gabi::fsubs_ppc(input->i.y, orthoY), heightPower, top);
+    f32 f3 = gabi::fmadds(gabi::fsubs_ppc(input->f.y, orthoY), heightPower, top);
+    output->i.x = f0;
+    output->f.x = f2;
+    output->i.y = f1;
+    output->f.y = f3;
 }
-VERIFY(0x027EDFC0,scissorBounds);
-// Adjacent initializer attribution inferred from TU placement before virtual type getter.
-void staticInit() {
- WWHD_FUNC(0x027EE03C,void);
- store<u32>(0x104B4530,0);store<u32>(0x104B4528,0);
- store<u32>(0x104B4534,0);store<u32>(0x104B452C,0);
- call<void>(0x028F026C,at<void>(0x101F9838));
+
+// HD: compiler-generated translation-unit initialization.
+/* 027EE03C */
+static void __sinit_J2DOrthoGraph_cpp() {
+    l_staticFirstLow = 0;
+    l_staticSecondLow = 0;
+    l_staticFirstHigh = 0;
+    l_staticSecondHigh = 0;
+    orthoRegisterStatic(&l_staticRecord);
 }
-VERIFY(0x027EE03C,staticInit);
-u32 getGrafType(void *self) { WWHD_FUNC(0x027EE064,u32,self);return 1; }
-VERIFY(0x027EE064,getGrafType);
-}
+
+/* 027EE064 */
+u32 J2DOrthoGraph::getGrafType() { return 1; }
+
+// clang-format off
+/* WWHD glue: HD inline constants, static storage and graphics bindings.
+data l_zero 1016DEA0
+data l_half 1016DEA4
+data l_staticFirstLow 104B4530
+data l_staticFirstHigh 104B4534
+data l_staticSecondLow 104B4528
+data l_staticSecondHigh 104B452C
+data l_staticRecord 101F9838
+ext 0273AD10 void* orthoAllocate(u32)
+ext 027EDB54 void orthoBaseConstruct(J2DOrthoGraph*, f32, f32, f32, f32)
+ext 027EDD50 void orthoBaseSetPort(J2DOrthoGraph*)
+ext 028E9098 void orthoMatrixIdentity(Mtx34*)
+ext 028E9A70 void orthoMatrixProjection(Ortho::Matrix44*, f32, f32, f32, f32, f32, f32)
+ext 028F026C void orthoRegisterStatic(void*)
+*/

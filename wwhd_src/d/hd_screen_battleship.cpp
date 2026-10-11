@@ -1,32 +1,45 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_battleship {
-template<unsigned N> struct Bytes { u8 data[N]; };
-void updateDisplay(u32 self) {
- WWHD_FUNC(0x02623B44, void, self);
- FrameLocal<Bytes<12>> text(8); FrameLocal<Bytes<6>> buffer(0x14);
- store<u16>(buffer.a+4,0); store<u16>(buffer.a,0);
- store<u32>(text.a,buffer.a); store<u32>(text.a+4,0x100E49F4); store<u32>(text.a+8,3);
- call<void>(0x02759D3C,text.a,0x100E4AACu,load<u32>(self+0x5C));
- call<void>(0x027046D4,load<u32>(self+0x50),text.a,0u);
+/* HD battleship HUD. */
+#include "d/hd_minigame_hud.h"
+static u32 battleshipTextVtable;
+
+/* 02623B44 */
+void hdScreenBattleship_c::updateDisplay() {
+    // HD: keep the original frame offsets and the untouched middle buffer word.
+    gabi::NativeFrame<0x20> frame;
+    MinigameText* text = gabi::at<MinigameText>(frame + 8);
+    MinigameTextBuffer3* buffer = gabi::at<MinigameTextBuffer3>(frame + 0x14);
+    buffer->characters[2] = 0;
+    buffer->characters[0] = 0;
+    text->mBuffer = buffer->characters;
+    text->__vtbl = gabi::ea(&battleshipTextVtable);
+    text->mCapacity = 3;
+    minigameFormatCount(text, "battleship count format", mRevealedHits);
+    minigameSetText(mTextPane, text, 0);
 }
-VERIFY(0x02623B44, updateDisplay);
-void reveal(u32 self,u32 first,u32 second) {
- WWHD_FUNC(0x02624134, void, self, first, second);
- u32 n=load<u32>(self+0x58);
- if(n<second) {
-  u32 index=n+30, slots=load<u32>(self+0x4C);
-  if(index<load<u32>(self+0x48)) slots+=index*4;
-  store<u8>(load<u32>(slots)+0x50,1);
-  store<u32>(self+0x58,load<u32>(self+0x58)+1);
- }
- n=load<u32>(self+0x5C);
- if(n>=first) return;
- u32 slots=load<u32>(self+0x4C);
- if(n<load<u32>(self+0x48)) slots+=n*4;
- store<u8>(load<u32>(slots)+0x50,1);
- store<u32>(self+0x5C,first);
- call<void>(0x02623B44,self);
+
+/* 02624134 */
+void hdScreenBattleship_c::reveal(u32 first, u32 second) {
+    u32 n = mRevealedMisses;
+    if (n < second) {
+        u32 index = n + Minigame_BattleshipMissPane;
+        gptr<MinigamePane>* slots = mPanes;
+        // HD: an out-of-range pane index falls back to the first slot.
+        if (index < mPaneCount) slots += index;
+        slots->get()->mVisible = 1;
+        mRevealedMisses = u32(mRevealedMisses) + 1;
+    }
+    n = mRevealedHits;
+    if (n >= first) return;
+    gptr<MinigamePane>* slots = mPanes;
+    if (n < mPaneCount) slots += n;
+    slots->get()->mVisible = 1;
+    mRevealedHits = first;
+    updateDisplay();
 }
-VERIFY(0x02624134,reveal);
-}
+
+/* WWHD glue
+data battleshipTextVtable 100E49F4
+str 100E4AAC "battleship count format" renamed
+ext 02759D3C void minigameFormatCount(MinigameText*, const char*, u32)
+ext 027046D4 void minigameSetText(void*, MinigameText*, u32)
+*/

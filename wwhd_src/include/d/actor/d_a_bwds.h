@@ -6,6 +6,7 @@
  * Offsets from the verified functions. */
 #pragma once
 #include "bindings.h"
+#include "gc_api/f_op/f_op_actor.h"
 
 /* dPa_smokeEcallBack (HD 0x20): vtable at +0, colour (GXColor) at +0x16 */
 struct dPa_smokeEcallBack_bw {
@@ -95,9 +96,12 @@ struct daBwds_HIO_c {
     /* 0x1C */ be<u32> __vtbl;
 };
 WWHD_SIZE(daBwds_HIO_c, 0x20);
-#define l_HIO (*gabi::at<daBwds_HIO_c>(0x10462C44))
-#define hio_set (*gabi::at<be<u8>>(0x101B3874))
-#define eff_col 0x10462C34u /* GXColor */
+#ifndef BWDS_STORAGE_OWNER
+// Autoglue exports the owner source's statics as references to guest storage.
+extern daBwds_HIO_c& l_HIO;
+extern be<u8>& hio_set;
+extern GXColor& eff_col;
+#endif
 
 #define BWDS_VTBL 0x1000C2A4      /* bwds_class vtable (HD virtual destructor) */
 #define BWDS_HIO_VTBL 0x1000C294  /* daBwds_HIO_c vtable */
@@ -107,6 +111,7 @@ enum {
     dRes_INDEX_BWDS_BCK_KOBOSS_CLOSE_e = 4,
     dRes_INDEX_BWDS_BCK_KOBOSS_PAKUPAKU_e = 5,
     dRes_INDEX_BWDS_BDL_KOBOSS_HEAD_e = 9,
+
 };
 enum {
     JA_SE_LK_HS_SPIKE = 0x286F,
@@ -127,18 +132,26 @@ enum { ACTION_UG_MOVE = 0, ACTION_HOOK_ON = 1, ACTION_HOOK_CHANCE = 2, ACTION_FA
 #define REG10_F(i) REG_F(10, i)
 #define REG10_S(i) REG_S(10, i)
 #define REG18_F(i) REG_F(18, i)
-/* virtual remove() (vtable +0x44) of a particle callback (as in d_a_kb.h) */
-static inline void bw_vremove(void* cb) { gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(cb)) + 0x44), cb); }
-/* attention_info.flags (+0x39C) */
-static inline be<u32>& attn_flags(fopAc_ac_c* a) { return *gabi::at<be<u32>>(gabi::ea(a) + 0x39C); }
-/* J3DModel::getAnmMtx (HD: marks the joint matrices dirty; block at +0x2C, flags +4, matrices +0x10) */
-static inline Mtx34* bw_getAnmMtx(J3DModel* m, s32 jnt) {
-    u32 blk = gabi::load<u32>(gabi::ea(m) + 0x2C);
-    gabi::store<u16>(blk + 4, gabi::load<u16>(blk + 4) | 0x10);
-    return gabi::at<Mtx34>(gabi::load<u32>(blk + 0x10) + jnt * 0x30);
+// HD: callback removal and the joint-matrix dirty flag use virtual/private views.
+struct BwdsCallbackVtable { u8 padding[0x44]; be<u32> remove; };
+struct BwdsCallback { gptr<BwdsCallbackVtable> vtable; };
+struct BwdsJointMatrices { u8 padding0[4]; be<u16> mFlags; u8 padding6[10]; gptr<Mtx34> mMatrices; };
+struct BwdsModel { u8 padding[0x2C]; gptr<BwdsJointMatrices> mJointMatrices; };
+struct BwdsPlayerVtable { u8 padding[0x10C]; be<u32> setHookshotCarryOffset; };
+WWHD_OFFSET(BwdsCallbackVtable, remove, 0x44);
+WWHD_OFFSET(BwdsModel, mJointMatrices, 0x2C);
+WWHD_OFFSET(BwdsJointMatrices, mMatrices, 0x10);
+WWHD_OFFSET(BwdsPlayerVtable, setHookshotCarryOffset, 0x10C);
+static inline void bw_vremove(void* cb) {
+    gabi::call_ptr(reinterpret_cast<BwdsCallback*>(cb)->vtable->remove, cb);
+}
+static inline Mtx34* bw_getAnmMtx(J3DModel* model, s32 joint) {
+    BwdsJointMatrices* matrices = reinterpret_cast<BwdsModel*>(model)->mJointMatrices;
+    matrices->mFlags = matrices->mFlags | 0x10;
+    return matrices->mMatrices.get() + joint;
 }
 /* 02518CC8 def_se_set(fopAc_ac_c*, cCcD_Obj*, u32) */
-static inline void def_se_set(fopAc_ac_c* a, void* obj, u32 mtrl) { gabi::call(0x02518CC8, a, obj, mtrl); }
+void bw_def_se_set(fopAc_ac_c*, void*, u32);
 /* 025192A8 cc_at_check(fopAc_ac_c*, CcAtInfo*) (as in d_a_kb.h) */
 struct CcAtInfo_bw {
     /* 0x00 */ be<u32> mpObj;
@@ -148,40 +161,44 @@ struct CcAtInfo_bw {
     /* 0x18 */ be<s32> mHitSoundId;
 };
 WWHD_SIZE(CcAtInfo_bw, 0x1C);
-static inline void cc_at_check(fopAc_ac_c* a, CcAtInfo_bw* info) { gabi::call(0x025192A8, a, info); }
-/* dComIfGp_particle_setToon (HD): dPa_control_c::set with group 2, setupInfo = roomNo (as in d_a_mo2.h) */
-static inline JPABaseEmitter* dComIfGp_particle_setToon(u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
+void bw_cc_at_check(fopAc_ac_c*, CcAtInfo_bw*);
+/* bw_particle_setToon (HD): dPa_control_c::set with group 2, setupInfo = roomNo (as in d_a_mo2.h) */
+static inline JPABaseEmitter* bw_particle_setToon(u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
                                                         void* cb, s8 roomNo) {
     dPa_control_c* pa = dComIfGp_getParticle();
     return dPa_control_set(pa, 2, id, pos, angle, scale, alpha, (dPa_levelEcallBack*)cb, roomNo, nullptr, nullptr, nullptr);
 }
 /* dPa_smokeEcallBack::setColor (inline): 4-byte copy */
-static inline void smoke_setColor(dPa_smokeEcallBack_bw* cb, u32 col) {
-    u8 c[4];
-    for (int k = 0; k < 4; k++) c[k] = gabi::load<u8>(col + k);
-    for (int k = 0; k < 4; k++) cb->mColor[k] = c[k];
+static inline void smoke_setColor(dPa_smokeEcallBack_bw* cb, const GXColor* col) {
+    u8 r = col->r, g = col->g, b = col->b, a = col->a;
+    cb->mColor[0] = r; cb->mColor[1] = g; cb->mColor[2] = b; cb->mColor[3] = a;
 }
 static inline dPa_smokeEcallBack* smoke(dPa_smokeEcallBack_bw* cb) { return (dPa_smokeEcallBack*)cb; }
 /* dBgS_GndChk on the stack (this TU's vtables) */
 static const dBgS_GndChk_vt BW_GNDCHK_VT = {0x1000C254, 0x1000C264, 0x1000C284, 0x1000C274};
-static inline void bw_GndChk_dt(void* c) {
-    u32 b = gabi::ea(c);
-    gabi::store<u32>(b + 0x20, 0x1000C264);
-    gabi::store<u32>(b + 0x40, 0x1000C284);
-    gabi::store<u32>(b + 0x4C, 0x1000C244);
-    gabi::call(0x02008DAC, c, 0); /* cBgS_Chk::~cBgS_Chk */
+void bw_checkDtor(void*, s32);
+static inline void bw_GndChk_dt(dBgS_GndChk* check) {
+    static_cast<cBgS_PolyInfo*>(check)->__vtbl = 0x1000C264;
+    static_cast<dBgS_PolyPassChk*>(check)->__vtbl = 0x1000C284;
+    static_cast<dBgS_GrpPassChk*>(check)->__vtbl = 0x1000C244;
+    bw_checkDtor(check, 0);
 }
-/* mDoExt_brkAnm (HD 0x78): constructor 025E80D0 (the matcher calls it init), init 025E8154 (as in d_a_oq.h) */
-static inline void* mDoExt_brkAnm_ct(void* p) { return gabi::call<void*>(0x025E80D0, p); }
-static inline BOOL mDoExt_brkAnm_init(void* a, J3DModelData* d, void* brk, s32 anmPlay, s32 mode, f32 rate, s16 start, s16 end,
-                                      bool modify, s32 entry) {
-    return gabi::call<BOOL>(0x025E8154, a, d, brk, anmPlay, mode, rate, start, end, modify, entry);
+// HD: constructor entries return the original pointer (including NULL).
+void* bw_brkCtor(void*);
+void* bw_btkCtor(void*);
+void bw_constructArray(void*, u32, u32, u32);
+void bw_destroyArray(void*, u32, u32, u32, u32, u32);
+void bw_sphereCtor(void*);
+void bw_sphereDtor(void*, s32);
+void* bw_smokeCtor(void*, u8);
+void bw_actorDtor(fopAc_ac_c*, s32);
+void bw_anm_init(bwds_class*, int, f32, u8, f32, int);
+void bw_seStart(fopAc_ac_c*, u32, u32);
+
+// HD: external array element callbacks.
+static constexpr u32 BWDS_SPHERE_CTOR = 0x025166F0;
+static constexpr u32 BWDS_SPHERE_DTOR = 0x02515AE8;
+
+static inline BwdsPlayerVtable* bw_playerVtable(fopAc_ac_c* player) {
+    return gabi::at<BwdsPlayerVtable>(player->__vtbl);
 }
-/* mDoExt_btkAnm (HD 0x74): constructor 025E7C6C (the matcher calls it init) */
-static inline void* mDoExt_btkAnm_ct(void* p) { return gabi::call<void*>(0x025E7C6C, p); }
-/* GHS array helpers (as in d_a_kb.h; __destroy_arr also takes r8) */
-static inline void __construct_array(void* p, u32 n, u32 size, u32 ctor) { gabi::call(0x028EFFD0, p, n, size, ctor); }
-static inline void __destroy_arr(void* p, u32 n, u32 size, u32 dtor, u32 f7, u32 f8) { gabi::call(0x028F0164, p, n, size, dtor, f7, f8); }
-/* 02515AE8 dCcD_Sph::~dCcD_Sph, 025166F0 dCcD_Sph::dCcD_Sph */
-static inline void dCcD_Sph_dt(void* s, s32 flags) { gabi::call(0x02515AE8, s, flags); }
-static inline void dCcD_Sph_ct(void* s) { gabi::call(0x025166F0, s); }

@@ -1,863 +1,1868 @@
-#include "gabi.h"
+// Flower interactions and pooled animations. HD replaces display lists with GX2 geometry.
+// Register widths, guest layouts, stack objects and call order follow the verified source.
+#include "d/d_flower.h"
 using namespace gabi;
-namespace d_flower {
-// HD packet fields: data+0x9C, animation+0x35BC, room heads+0x457C.
-void data_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x02544AA4,void,self,flags);
- if(self && (flags&1))call<void>(0x0273AF40,self);
-}
-VERIFY(0x02544AA4,data_destroy);
-void empty_draw(void *self) { WWHD_FUNC(0x02544AB8,void,self); }
-VERIFY(0x02544AB8,empty_draw);
-f32 ground_y(void *position) {
- WWHD_FUNC(0x02544ABC,f32,position);
- Local<u8[0x54]> object;
- call<void>(0x02008E0C,object.get());
- u32 a=ea(object.get()),p=ea(position);
- f32 originalY=load<f32>(p+4),x=load<f32>(p);
- f32 raise=load<f32>(0x1004E03C);
- for(u32 k=0x44;k<=0x4A;++k)store<u8>(a+k,0);
- store<u32>(a+0x4C,0x1004E01C);store<u32>(a+0x20,0x1004E00C);
- store<u32>(a+0x50,1);
- f32 raised=fadds_ppc(originalY,raise);
- store<f32>(a+0x28,raised);store<f32>(p+4,raised);
- store<u32>(a+0x10,0x1004DFFC);store<f32>(a+0x24,x);
- store<u32>(a+4,a+0x4C);store<u32>(a+0x40,0x1004E02C);
- store<u32>(a,a+0x40);store<f32>(a+0x2C,load<f32>(p+8));
- void *play=call<void*>(0x025200D4);
- f32 y=call<f32>(0x02008974,at<void>(ea(play)+0x12A0),object.get());
- f32 restored=fsubs_ppc(load<f32>(p+4),raise);
- store<u32>(a+0x40,0x1004E02C);store<u32>(a+0x20,0x1004E00C);
- f32 threshold=load<f32>(0x1004E040);
- store<u32>(a+0x4C,0x1004DFEC);store<f32>(p+4,restored);
- call<void>(0x02008DAC,object.get(),u32(0));
- return y>threshold ? y:restored;
-}
-VERIFY(0x02544ABC,ground_y);
-void *data_construct(void *self) {
- WWHD_FUNC(0x02544C4C,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x44));
- if(!self)return nullptr;
- u32 a=ea(self);store<u8>(a+3,0);store<u8>(a+2,0);store<u8>(a,0);store<u8>(a+1,0);
- call<void>(0x028F521C,at<void>(a+0x10),u32(0x30));
- store<u32>(a+0x40,0);store<u8>(a,0);return self;
-}
-VERIFY(0x02544C4C,data_construct);
-s32 new_animation(void *self) {
- WWHD_FUNC(0x02544CBC,s32,self);
- for(s32 i=8;i<72;++i){u32 a=ea(self)+0x35BC+i*0x38;
- if(!load<u8>(a)){store<u8>(a,1);store<u16>(a+4,0);store<u16>(a+2,0);return i;}}
- return -1;
-}
-VERIFY(0x02544CBC,new_animation);
-void room_add(void *room,void *data) {
- WWHD_FUNC(0x02545998,void,room,data);
- store<u32>(ea(data)+0x40,load<u32>(ea(room)));store<u32>(ea(room),ea(data));
-}
-VERIFY(0x02545998,room_add);
-void room_clear(void *room) {
- WWHD_FUNC(0x025459A8,void,room);
- u32 head=load<u32>(ea(room));
- while(head){store<u8>(head,0);u32 current=load<u32>(ea(room));
- call<void>(0x025E1B34,at<void>(current+4));
- current=load<u32>(ea(room));head=load<u32>(current+0x40);store<u32>(ea(room),head);}
-}
-VERIFY(0x025459A8,room_clear);
-void set_animation(void *self,s32 index,s32 angle) {
- WWHD_FUNC(0x02545A0C,void,self,index,angle);
- u32 a=ea(self)+0x35BC+u32(index)*0x38;
- store<u8>(a,1);store<u16>(a+4,0);store<u16>(a+2,u16(angle));
-}
-VERIFY(0x02545A0C,set_animation);
-void copy_matrix(void *destination,void *source) {
- WWHD_FUNC(0x02548554,void,destination,source);
- f32 values[12];for(int i=0;i<12;++i)values[i]=load<f32>(ea(source)+4*i);
- for(int i=0;i<12;++i)store<f32>(ea(destination)+4*i,values[i]);
-}
-VERIFY(0x02548554,copy_matrix);
-void normalized_color(void *destination,void *source) {
- WWHD_FUNC(0x025485F4,void,destination,source);
- s16 red=load<s16>(ea(source)),blue=load<s16>(ea(source)+4),green=load<s16>(ea(source)+2);
- f32 scale=load<f32>(0x1004E118);
- s16 alpha=load<s16>(ea(source)+6);
- f32 colors[4]={f32(f64(red)/scale),f32(f64(green)/scale),f32(f64(blue)/scale),f32(f64(alpha)/scale)};
- for(int i=0;i<4;++i)store<f32>(ea(destination)+4*i,colors[i]);
-}
-VERIFY(0x025485F4,normalized_color);
-void static_init() {
- WWHD_FUNC(0x02549118,void);
- store<u32>(0x10475950,0);store<u32>(0x10475948,0);store<u32>(0x10475954,0);store<u32>(0x1047594C,0);
- call<void>(0x028F026C,at<void>(0x101E1CBC));
- f32 first=load<f32>(0x1004E168),second=load<f32>(0x1004E16C);
- store<f32>(0x10475934,first);store<f32>(0x10475938,second);
- call<void>(0x028ED6F8,at<void>(0x10475944));call<void>(0x028F026C,at<void>(0x101E1CC8));
- call<void>(0x028EAB2C,at<void>(0x10475945));call<void>(0x028F026C,at<void>(0x101E1CD4));
-}
-VERIFY(0x02549118,static_init);
-void *animation_construct(void *self) {
- WWHD_FUNC(0x025491C0,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x38));
- if(!self)return nullptr;
- store<u8>(ea(self),0);return self;
-}
-VERIFY(0x025491C0,animation_construct);
-void *room_construct(void *self) {
- WWHD_FUNC(0x025491FC,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x4));
- if(!self)return nullptr;
- store<u32>(ea(self),0);return self;
-}
-VERIFY(0x025491FC,room_construct);
-void *string_construct(void *self,void *text) {
- WWHD_FUNC(0x02549290,void*,self,text);
- if(!self)self=call<void*>(0x0273AD10,u32(0x8));
- if(!self)return nullptr;
- store<u32>(ea(self),ea(text));store<u32>(ea(self)+4,0x1004DFD4);return self;
-}
-VERIFY(0x02549290,string_construct);
-void *draw_node_construct(void *self) {
- WWHD_FUNC(0x025492E0,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0xA8));
- if(!self)return nullptr;
- call<void>(0x027FB40C,self);store<u32>(ea(self)+0xC,0x1016EF84);call<void>(0x028F521C,at<void>(ea(self)+0x74),u32(0x34));if(ea(self)+0x74==0)call<void*>(0x0273AD10,u32(0x30));return self;
-}
-VERIFY(0x025492E0,draw_node_construct);
-void *matrix_construct(void *self) {
- WWHD_FUNC(0x02549350,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x10));
- if(!self)return nullptr;
- return self;
-}
-VERIFY(0x02549350,matrix_construct);
-void *buffer1_construct(void *self) {
- WWHD_FUNC(0x02549604,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x254));
- if(!self)return nullptr;
- call<void>(0x027B5BD8,at<void>(ea(self)+4));call<void>(0x027BF734,at<void>(ea(self)+0x158));store<u32>(ea(self)+0x250,0);store<u32>(ea(self)+0x24C,0);return self;
-}
-VERIFY(0x02549604,buffer1_construct);
-void *buffer2_construct(void *self) {
- WWHD_FUNC(0x02549660,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x254));
- if(!self)return nullptr;
- call<void>(0x027B5BD8,at<void>(ea(self)+4));call<void>(0x027BF734,at<void>(ea(self)+0x158));store<u32>(ea(self)+0x250,0);store<u32>(ea(self)+0x24C,0);return self;
-}
-VERIFY(0x02549660,buffer2_construct);
-void animation_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x025491AC,void,self,flags);
- if(self&&(flags&1))call<void>(0x0273AF40,self);
-}
-VERIFY(0x025491AC,animation_destroy);
-void set_vec3(void *self,f32 x,f32 y,f32 z) {
- WWHD_FUNC(0x025496BC,void,self,x,y,z);
- store<f32>(ea(self)+4,y);store<f32>(ea(self)+8,z);store<f32>(ea(self),x);
-}
-VERIFY(0x025496BC,set_vec3);
-void set_vec4(void *self,f32 x,f32 y,f32 z,f32 w) {
- WWHD_FUNC(0x025496CC,void,self,x,y,z,w);
- store<f32>(ea(self)+8,z);store<f32>(ea(self)+4,y);store<f32>(ea(self)+12,w);store<f32>(ea(self),x);
-}
-VERIFY(0x025496CC,set_vec4);
-void set_vec2(void *self,f32 x,f32 y) {
- WWHD_FUNC(0x025496E0,void,self,x,y);
- store<f32>(ea(self),x);store<f32>(ea(self)+4,y);
-}
-VERIFY(0x025496E0,set_vec2);
-void *new_data(void *self,s32 type,void *position,s32 room,s32 variant) {
- WWHD_FUNC(0x02548FEC,void*,self,type,position,room,variant);
- if(u32(room)>=64)call<void>(0x0273AA24,at<void>(0x1004E134),u32(0x1F68),at<void>(0x1004E144));
- u32 start=load<u16>(ea(self)+0x98),base=ea(self)+0x9C;
- for(u32 i=start;i<200;++i){u32 data=base+i*0x44;
- if(!(load<u8>(data)&2)){call<void>(0x02548D28,self,at<void>(data),i,type,position,room,variant);return at<void>(data);}}
- for(u32 i=0;i<start;++i){u32 data=base+i*0x44;
- if(!(load<u8>(data)&2)){call<void>(0x02548D28,self,at<void>(data),i,type,position,room,variant);return at<void>(data);}}
- return nullptr;
-}
-VERIFY(0x02548FEC,new_data);
-void update(void *self) {
- WWHD_FUNC(0x02548B6C,void,self);
- u32 animations=ea(self)+0x35BC;
- for(int i=0;i<72;++i){u32 a=animations+i*0x38;
- call<void>(0x025F1884,at<void>(0x1048D0CC),s32(load<s16>(a+2)));
- call<void>(0x025F1BF4,at<void>(0x1048D0CC),s32(load<s16>(a+4)));
- call<void>(0x025F1C28,at<void>(0x1048D0CC),s32(s16(-s32(load<s16>(a+2)))));
- call<void>(0x028E90D4,at<void>(0x1048D0CC),at<void>(a+8));}
- f32 radius=load<f32>(0x1004E128);int groundUpdates=0;
- Local<u8[12]> clipPosition;
- for(int i=0;i<200;++i){u32 data=ea(self)+0x9C+i*0x44;
- if(!(load<u8>(data)&2))continue;
- call<void>(0x0207A9A0,at<void>(data+3));
- if((load<u8>(data)&0x10)&&groundUpdates<8){f32 y=ground_y(at<void>(data+4));u8 flags=load<u8>(data);
- store<f32>(data+8,y);store<u8>(data,flags&0xEF);++groundUpdates;}
- f32 y=load<f32>(data+8),x=load<f32>(data+4),z=load<f32>(data+12);
- store<f32>(clipPosition.a,x);store<f32>(clipPosition.a+4,y);store<f32>(clipPosition.a+8,z);
- s32 clipped=call<s32>(0x02838148,at<void>(0x1048CFF0),at<void>(0x104B45F8),clipPosition.get(),radius);
- u8 flags=load<u8>(data);
- if(clipped){store<u8>(data,flags|4);continue;}
- s8 index=load<s8>(data+1);store<u8>(data,flags&0xFB);
- u32 matrix=animations+s32(index)*0x38;
- // These scalar matrix translations are direct copies in the optimized reference.
- store<u32>(matrix+0x14,load<u32>(data+4));store<u32>(matrix+0x24,load<u32>(data+8));store<u32>(matrix+0x34,load<u32>(data+12));
- call<void>(0x028E90D4,at<void>(matrix+8),at<void>(data+0x10));}
- call<void>(0x027F0E04,at<void>(load<u32>(0x104B4634)),self,u32(0));
- call<void>(0x025486B8,self);
-}
-VERIFY(0x02548B6C,update);
-void calc(void *self) {
- WWHD_FUNC(0x02548370,void,self);
- f32 scale=load<f32>(0x1004E108);
- for(u32 i=0;i<8;++i){u32 timer=load<u32>(0x101FF560)+i*0xFA;
- u16 angle=u16(ftoi(fmuls_ppc(f32(timer),scale)));
- f32 cosine=load<f32>(0x104A44FC+(u32(angle)>>3)*8);
- store<u16>(ea(self)+0x35C0+i*0x38,u16(ftoi(fmadds(scale,cosine,scale))));}
- s32 room=load<s8>(0x1047E6C8);u32 head=load<u32>(ea(self)+0x457C+u32(room)*4);
- if(!head)return;
- u32 play=ea(call<void*>(0x025200D4));u32 player=load<u32>(play+0x5B2C);
- store<u8>(ea(self)+0x467C,(load<u32>(player+0x3B8)&0x40)!=0);
- Local<u8[12]> delta;Local<u8[12]> sword;
- f32 x=load<f32>(player+0x3E4),y=load<f32>(player+0x3E8),z=load<f32>(player+0x3EC);
- store<f32>(sword.a,x);store<f32>(sword.a+8,z);store<f32>(sword.a+4,y);
- store<f32>(delta.a,x);store<f32>(delta.a+4,y);store<f32>(delta.a+8,z);
- call<void>(0x0201ADE0,sword.get(),delta.get(),at<void>(player+0x314));
- f32 dz=load<f32>(delta.a+8),dx=load<f32>(delta.a);
- s32 angle=call<s32>(0x020195B0,dx,dz);store<u16>(ea(self)+0x467E,u16(angle));
- call<void>(0x0201ADE0,at<void>(ea(self)+0x4684),delta.get(),sword.get());
- dx=load<f32>(delta.a);dz=load<f32>(delta.a+8);
- angle=call<s32>(0x020195B0,dx,dz);
- u32 sx=load<u32>(sword.a),sy=load<u32>(sword.a+4),sz=load<u32>(sword.a+8);
- store<u32>(ea(self)+0x4684,sx);store<u16>(ea(self)+0x4680,u16(angle));
- store<u32>(ea(self)+0x4688,sy);store<u32>(ea(self)+0x468C,sz);store<u8>(0x101D645C,0);
- play=ea(call<void*>(0x025200D4));
- call<void>(0x020184DC,at<void>(play+0x5008),load<f32>(0x1004E05C));
- call<void>(0x02018428,at<void>(play+0x5008),load<f32>(0x1004E03C));
- store<u8>(play+0x5020,0xB);store<u8>(play+0x5021,2);
- do{if(!(load<u8>(head)&4))call<void>(0x025457C4,at<void>(head),at<void>(player),room);
- head=load<u32>(head+0x40);}while(head);
-}
-VERIFY(0x02548370,calc);
-void *buffer_select(void *self,u32 slot,u32 clear) {
- WWHD_FUNC(0x02549238,void*,self,slot,clear);
- u32 index=load<u32>(ea(self)+0x950)+slot*2,buffer=ea(self)+index*0x254;
- if(clear){u32 begin=load<u32>(buffer),end=begin+0x7160;
- for(u32 line=begin;line<end;line+=32){u32 aligned=line&~31u;for(u32 k=0;k<32;++k)store<u8>(aligned+k,0);}
- if(begin<end)buffer=ea(self)+(load<u32>(ea(self)+0x950)+slot*2)*0x254;}
- return at<void>(buffer);
-}
-VERIFY(0x02549238,buffer_select);
-void buffer_rotate(void *self,u32 unused,u32 count) {
- WWHD_FUNC(0x025496EC,void,self,unused,count);
- u32 active=load<u32>(ea(self)+0x950);
- if(count){u32 buffer=ea(self)+active*0x254+4;
- for(u32 i=0;i<count;++i,buffer+=0x4A8)call<void>(0x027B5E94,at<void>(buffer),u32(0),load<u32>(buffer+0x14C));
- active=load<u32>(ea(self)+0x950);}
- store<u32>(ea(self)+0x950,active==0);
-}
-VERIFY(0x025496EC,buffer_rotate);
-void surface_assign(void *self,void *source) {
- WWHD_FUNC(0x02549768,void,self,source);
- for(u32 offset:{4u,8u,12u,16u,20u,24u,56u,52u,28u})
- if(load<u32>(ea(self)+offset)!=load<u32>(ea(source)+offset)){call<void>(0x027BDEB4,self,source);return;}
- u32 image=load<u32>(ea(source)+0x28),mip=load<u32>(ea(source)+0x30);
- store<u32>(ea(self)+0x28,image);store<u32>(ea(self)+0x30,mip);
- store<u32>(ea(self)+0xD4,image);store<u32>(ea(self)+0xDC,mip);
-}
-VERIFY(0x02549768,surface_assign);
-void flags_set(void *self,u32 mask) {
- WWHD_FUNC(0x02549818,void,self,mask);
- store<u8>(ea(self),load<u8>(ea(self))|mask);
-}
-VERIFY(0x02549818,flags_set);
-void hit_check(void *self,void *player,s32 room) {
- WWHD_FUNC(0x025457C4,void,self,player,room);
- Local<u8[20]> hit;Local<u32> actor;
- call<void>(0x0251694C,hit.get());
- u32 play=ea(call<void*>(0x025200D4));
- u32 mask=call<u32>(0x025170D8,at<void>(play+0x4EF8),at<void>(ea(self)+4),actor.get(),hit.get());
- bool attack=false;
- if(mask&1){u32 a=load<u32>(actor.a);if(a && load<s16>(a+8)!=453 && load<s16>(a+8)!=454)attack=true;}
- if(!(mask&2)&&!attack){
- s32 index=load<s8>(ea(self)+1);if(index<8)return;
- play=ea(call<void*>(0x025200D4));index=load<s8>(ea(self)+1);
- u32 animation=load<u32>(play+0x5AC4)+u32(index)*56+0x35BC;
- u32 angle=load<u16>(animation+2);s32 target=s16(angle&0xE000);u32 windIndex=angle>>13;
- play=ea(call<void*>(0x025200D4));u32 packet=load<u32>(play+0x5AC4);
- s32 bend=load<s16>(packet+0x35C0+windIndex*56);
- if(call<s32>(0x0200F378,at<void>(animation+4),bend,s32(0x10),s32(0xFA0),s32(0x64)))return;
- if(!call<s32>(0x0200F8D0,at<void>(animation+2),target,s32(0x320)))return;
- play=ea(call<void*>(0x025200D4));index=load<s8>(ea(self)+1);packet=load<u32>(play+0x5AC4);
- store<u8>(packet+0x35BC+u32(index)*56,0);store<u8>(ea(self)+1,load<u16>(animation+2)>>13);return;
- }
- if(!load<u32>(actor.a))call<void>(0x0273AA24,at<void>(0x1004E064),u32(0x1BA0),at<void>(0x1004E074));
- if(mask&2)call<void>(0x02544D04,self,at<void>(load<u32>(actor.a)),mask,room);
- if(!(load<u8>(ea(self))&8)&&attack)call<void>(0x025453B8,self,at<void>(load<u32>(actor.a)),mask,room,hit.get());
-}
-VERIFY(0x025457C4,hit_check);
-void work_co(void *self,void *actor,u32 mask,s32 room) {
- WWHD_FUNC(0x02544D04,void,self,actor,mask,room);
- f32 x=fsubs_ppc(load<f32>(ea(self)+4),load<f32>(ea(actor)+0x314));
- f32 z=fsubs_ppc(load<f32>(ea(self)+12),load<f32>(ea(actor)+0x31C));
- Local<u8[12]> delta;
- store<f32>(delta.a+4,load<f32>(0x1004E044));store<f32>(delta.a,x);store<f32>(delta.a+8,z);
- f32 squared=call<f32>(0x028E8DD0,delta.get());
- if(squared>load<f32>(0x1004E048))return;
- s32 angle=call<s32>(0x020195B0,x,z);f32 distance=call<f32>(0x028F4384,squared);
- if(load<s8>(ea(self)+1)<8){
- if(!load<u8>(ea(self)+3)){
- u8 flags=load<u8>(ea(self));
- if(!(flags&8)&&load<f32>(ea(actor)+0x370)>load<f32>(0x1004E04C)){
- Local<u8[12]> position;
- f32 y=load<f32>(ea(self)+8),pz=load<f32>(ea(self)+12),rise=load<f32>(0x1004E050),px=load<f32>(ea(self)+4);
- store<f32>(position.a+8,pz);store<f32>(position.a,px);store<f32>(position.a+4,fadds_ppc(y,rise));
- u32 particle=(flags&0x20)?((flags&0x40)?0x82C6:0x3DD):0x3DE;
- call<void*>(0x025200D4);
- u32 color=0x1047E6CC+u32(room)*0x22C+0xEC;
- u32 play=ea(call<void*>(0x025200D4)),control=load<u32>(play+0x5AB0);
- void *emitter=call<void*>(0x025A847C,at<void>(control),u32(0),particle,position.get(),u32(0),u32(0),u32(0xFF),u32(0),s32(s8(room)),at<void>(color),at<void>(color),u32(0));
- if(emitter){f32 one=load<f32>(0x1004E054);
- store<f32>(ea(emitter)+0x34,particle==0x82C6?load<f32>(0x1004E058):one);
- Local<u8[28]> texture;
- store<f32>(texture.a+12,one);store<f32>(texture.a+20,one);store<u8>(texture.a+24,1);
- store<f32>(texture.a+8,one);store<u8>(texture.a+26,0);store<u8>(texture.a+27,0);
- store<u32>(texture.a+4,0x1004DFD4);store<u8>(texture.a+25,0);store<f32>(texture.a+16,one);store<u32>(texture.a,0x10000160);
- play=ea(call<void*>(0x025200D4));control=load<u32>(play+0x5AB0);
- for(u32 k=0;k<4;++k)store<u32>(texture.a+8+k*4,load<u32>(control+0x50+k*4));
- call<void>(0x0281E5A8,emitter,texture.get());store<u8>(ea(self)+3,0x10);
- }}}
- u32 play=ea(call<void*>(0x025200D4));s32 index=new_animation(at<void>(load<u32>(play+0x5AC4)));
- if(index<0)return;store<u8>(ea(self)+1,u8(index));
- }
- u32 play=ea(call<void*>(0x025200D4));s32 index=load<s8>(ea(self)+1);u32 packet=load<u32>(play+0x5AC4);
- f32 bend=fsubs_ppc(load<f32>(0x1004E05C),distance),height=load<f32>(0x1004E060);
- u32 animation=packet+u32(index)*56+0x35BC;store<u16>(animation+2,u16(angle));
- s32 tilt=call<s32>(0x020195B0,bend,height);store<u16>(animation+4,u16(tilt));
-}
-VERIFY(0x02544D04,work_co);
-void work_at_no_cut(void *self,void *actor,u32 mask,s32 room,void *hit,void *collision) {
- WWHD_FUNC(0x02545040,void,self,actor,mask,room,hit,collision);
- u32 object=ea(call<void*>(0x025157AC,collision));
- f32 x=load<f32>(object+0x7C),z=load<f32>(object+0x84),zero=load<f32>(0x1004E044);
- Local<u8[12]> first;Local<u8[12]> fallback;Local<u8[12]> vector;
- store<f32>(first.a+8,z);store<f32>(first.a,x);store<f32>(first.a+4,zero);
- f32 squared=call<f32>(0x028E8DD0,first.get());
- if(__builtin_fabsf(squared)<load<f32>(0x100030B8)&&actor&&load<s16>(ea(actor)+8)==168){
- f32 ax=load<f32>(ea(actor)+0x314),sz=load<f32>(ea(self)+12),sx=load<f32>(ea(self)+4),az=load<f32>(ea(actor)+0x31C);
- x=fsubs_ppc(sx,ax);z=fsubs_ppc(sz,az);
- store<f32>(fallback.a+4,zero);store<f32>(fallback.a,x);store<f32>(fallback.a+8,z);
- call<f32>(0x028E8DD0,fallback.get());
- }
- store<f32>(vector.a+8,z);store<f32>(vector.a,x);store<f32>(vector.a+4,zero);
- squared=call<f32>(0x028E8DD0,vector.get());
- s32 angle=call<s32>(0x020195B0,x,z);f32 distance=call<f32>(0x028F4384,squared);
- if(load<s8>(ea(self)+1)<8){
- if(!load<u8>(ea(self)+3)){
- u8 flags=load<u8>(ea(self));
- if(!(flags&8)&&distance>load<f32>(0x1004E04C)){
- Local<u8[12]> position;
- f32 y=load<f32>(ea(self)+8),pz=load<f32>(ea(self)+12),rise=load<f32>(0x1004E050),px=load<f32>(ea(self)+4);
- store<f32>(position.a+8,pz);store<f32>(position.a,px);store<f32>(position.a+4,fadds_ppc(y,rise));
- u32 particle=(flags&0x20)?((flags&0x40)?0x82C6:0x3DD):0x3DE;
- call<void*>(0x025200D4);
- u32 color=0x1047E6CC+u32(room)*0x22C+0xEC;
- u32 play=ea(call<void*>(0x025200D4)),control=load<u32>(play+0x5AB0);
- void *emitter=call<void*>(0x025A847C,at<void>(control),u32(0),particle,position.get(),u32(0),u32(0),u32(0xFF),u32(0),s32(s8(room)),at<void>(color),at<void>(color),u32(0));
- if(emitter){f32 one=load<f32>(0x1004E054);
- store<f32>(ea(emitter)+0x34,particle==0x82C6?load<f32>(0x1004E058):one);
- Local<u8[28]> texture;
- store<f32>(texture.a+12,one);store<f32>(texture.a+20,one);store<u8>(texture.a+24,1);
- store<f32>(texture.a+8,one);store<u8>(texture.a+26,0);store<u8>(texture.a+27,0);
- store<u32>(texture.a+4,0x1004DFD4);store<u8>(texture.a+25,0);store<f32>(texture.a+16,one);store<u32>(texture.a,0x10000160);
- play=ea(call<void*>(0x025200D4));control=load<u32>(play+0x5AB0);
- for(u32 k=0;k<4;++k)store<u32>(texture.a+8+k*4,load<u32>(control+0x50+k*4));
- call<void>(0x0281E5A8,emitter,texture.get());store<u8>(ea(self)+3,0x10);
- }}}
- u32 play=ea(call<void*>(0x025200D4));s32 index=new_animation(at<void>(load<u32>(play+0x5AC4)));
- if(index<0)return;store<u8>(ea(self)+1,u8(index));
- }
- u32 play=ea(call<void*>(0x025200D4));s32 index=load<s8>(ea(self)+1);u32 packet=load<u32>(play+0x5AC4);
- f32 bend=distance,height=load<f32>(0x1004E060);
- u32 animation=packet+u32(index)*56+0x35BC;store<u16>(animation+2,u16(angle));
- s32 tilt=call<s32>(0x020195B0,bend,height);store<u16>(animation+4,u16(tilt));
-}
-VERIFY(0x02545040,work_at_no_cut);
-static void apply_texture(void *emitter,Local<u8[28]> &texture,f32 one) {
- store<u32>(texture.a+4,0x1004DFD4);store<f32>(texture.a+12,one);store<u8>(texture.a+24,1);
- store<f32>(texture.a+20,one);store<u32>(texture.a,0x10000160);store<u8>(texture.a+26,0);
- store<f32>(texture.a+16,one);store<u8>(texture.a+25,0);store<u8>(texture.a+27,0);store<f32>(texture.a+8,one);
- u32 play=ea(call<void*>(0x025200D4)),control=load<u32>(play+0x5AB0);
- for(u32 k=0;k<4;++k)store<u32>(texture.a+8+k*4,load<u32>(control+0x50+k*4));
- call<void>(0x0281E5A8,emitter,texture.get());
-}
-void work_at(void *self,void *actor,u32 mask,s32 room,void *hit) {
- WWHD_FUNC(0x025453B8,void,self,actor,mask,room,hit);
- u32 collision=load<u32>(ea(hit)+4);
- if(collision&&(load<u32>(collision+0x10)&0x003CC000)){
- work_at_no_cut(self,actor,mask,room,hit,at<void>(collision));return;
- }
- if(load<s8>(ea(self)+1)>=8){u32 play=ea(call<void*>(0x025200D4));s32 index=load<s8>(ea(self)+1);
- u32 packet=load<u32>(play+0x5AC4);store<u8>(packet+0x35BC+u32(index)*56,0);}
- store<u8>(ea(self),load<u8>(ea(self))|8);
- if(!load<u32>(0x10475958)){store<u32>(0x10475958,1);call<void>(0x0201A478,at<void>(0x1047593C),u32(0),u32(0),u32(0));}
- call<void*>(0x025200D4);
- Local<u8[12]> position;
- f32 z=load<f32>(ea(self)+12),y=load<f32>(ea(self)+8);u8 flags=load<u8>(ea(self));f32 x=load<f32>(ea(self)+4);
- u32 color=0x1047E720+u32(room)*0x22C+0x98;
- store<f32>(position.a+4,y);store<f32>(position.a,x);store<f32>(position.a+8,z);
- f32 one=load<f32>(0x1004E054);
- Local<u8[28]> texture1;Local<u8[28]> texture2;
- void *emitter=nullptr;
- u32 particle=(flags&0x20)?((flags&0x40)?0x82C6:0x3DD):0x3DE;
- if(particle==0x82C6){u32 play=ea(call<void*>(0x025200D4));u32 control=load<u32>(play+0x5AB0);
- void *extra=call<void*>(0x025A847C,at<void>(control),u32(0),u32(0x82C7),position.get(),at<void>(0x1047593C),u32(0),u32(0xFF),u32(0),s32(s8(room)),at<void>(color),at<void>(color),u32(0));
- if(extra)apply_texture(extra,texture1,one);
- }
- u32 play=ea(call<void*>(0x025200D4));u32 control=load<u32>(play+0x5AB0);
- emitter=call<void*>(0x025A847C,at<void>(control),u32(0),particle,position.get(),at<void>(0x1047593C),u32(0),u32(0xFF),u32(0),s32(s8(room)),at<void>(color),at<void>(color),u32(0));
- if(emitter)apply_texture(emitter,texture2,one);
- s32 item=load<s8>(ea(self)+2);
- if(item>=0)call<void>(0x025D8120,at<void>(ea(self)+4),item,s32(-1),room,u32(0),u32(0),u32(1),u32(0));
- if(!load<u8>(0x101D645C)){store<u8>(0x101D645C,1);s32 reverb=call<s32>(0x02520540,room);
- call<void>(0x025E1A40,u32(0x282C),at<void>(ea(self)+4),u32(0),reverb);}
-}
-VERIFY(0x025453B8,work_at);
-void set_data(void *self,void *data,s32 index,s32 type,void *position,s32 room,s32 item) {
- WWHD_FUNC(0x02548D28,void,self,data,index,type,position,room,item);
- f32 ground;u8 flags;
- if(call<s32>(0x025DBE00)){ground=ground_y(position);flags=6;}
- else{flags=0x16;ground=load<f32>(ea(position)+4);}
- if(type==2)flags|=0x20;
- f32 range=load<f32>(0x1004E12C);store<u8>(ea(data),flags);
- f32 random=call<f32>(0x020198D8,range);store<u8>(ea(data)+1,u8(ftoi(random)));
- f32 x=load<f32>(ea(position)),z=load<f32>(ea(position)+8);
- store<f32>(ea(data)+4,x);store<f32>(ea(data)+8,ground);store<u8>(ea(data)+2,u8(item));
- store<f32>(ea(data)+12,z);store<u8>(ea(data)+3,0);
- u32 base=ea(self)+0x1AEA8;u32 selected;
- if(load<u32>(ea(self)+0x457C+u32(room)*4))selected=load<u32>(base+0x17A8);
- else{
- Local<u8[8]> literal;Local<u8[8]> stage;
- store<u32>(literal.a,0x1004E130);store<u32>(literal.a+4,0x1004DFD4);
- u32 play=ea(call<void*>(0x025200D4));store<u32>(stage.a+4,0x1004DFD4);store<u32>(stage.a,play+0x5134);
- call_ptr<void>(load<u32>(load<u32>(literal.a+4)+0x14),literal.get());
- call_ptr<void>(load<u32>(load<u32>(literal.a+4)+0x14),literal.get());
- u32 cached=load<u32>(literal.a);
- call_ptr<void>(load<u32>(load<u32>(stage.a+4)+0x14),stage.get());
- bool equal=cached==load<u32>(stage.a);
- if(!equal){u32 a=load<u32>(literal.a),b=load<u32>(stage.a);
- for(u32 i=0;i<0x40001;++i){u8 lhs=load<u8>(a+i),rhs=load<u8>(b+i);if(lhs!=rhs)break;if(lhs==0){equal=true;break;}}}
- bool oasis=equal && room==33;
- u32 positions=oasis?base+0xBCC:base;
- store<u32>(base+0x1798,positions);store<u32>(base+0x179C,positions+12);
- store<u32>(base+0x17A0,base+(oasis?0x1540:0x974));store<u32>(base+0x17A4,base+(oasis?0x1558:0x98C));
- selected=base+(oasis?0x1570:0x9A4);store<u32>(base+0x17A8,selected);
- }
- if(selected==base+0x1570)store<u8>(ea(data),load<u8>(ea(data))|0x40);
- room_add(at<void>(ea(self)+0x457C+u32(room)*4),data);store<u16>(ea(self)+0x98,u16(index));
-}
-VERIFY(0x02548D28,set_data);
-void buffer1_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x02549828,void,self,flags);
- if(!self)return;call<void>(0x027BF880,at<void>(ea(self)+0x158),u32(2));call<void>(0x027B5CBC,at<void>(ea(self)+4),u32(2));if(flags&1)call<void>(0x0273AF40,self);
-}
-VERIFY(0x02549828,buffer1_destroy);
-void buffer2_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x02549888,void,self,flags);
- if(!self)return;call<void>(0x027BF880,at<void>(ea(self)+0x158),u32(2));call<void>(0x027B5CBC,at<void>(ea(self)+4),u32(2));if(flags&1)call<void>(0x0273AF40,self);
-}
-VERIFY(0x02549888,buffer2_destroy);
-void draw_node_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x025498E8,void,self,flags);
- if(!self)return;call<void>(0x027FB528,self,u32(0));if(flags&1)call<void>(0x0273AF40,self);
-}
-VERIFY(0x025498E8,draw_node_destroy);
-void room_node_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x0254993C,void,self,flags);
- if(!self)return;call<void>(0x027FB528,self,u32(0));if(flags&1)call<void>(0x0273AF40,self);
-}
-VERIFY(0x0254993C,room_node_destroy);
-void empty_resource1(void *self) { WWHD_FUNC(0x02549990,void,self);  }
-VERIFY(0x02549990,empty_resource1);
-void empty_resource2(void *self) { WWHD_FUNC(0x02549994,void,self);  }
-VERIFY(0x02549994,empty_resource2);
-u32 resource_enabled(void *self) { WWHD_FUNC(0x02549998,u32,self); return 1; }
-VERIFY(0x02549998,resource_enabled);
-void *room_node_construct(void *self) {
- WWHD_FUNC(0x0254937C,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x364));
- if(!self)return nullptr;
- call<void>(0x027FB40C,self);store<u32>(ea(self)+12,0x1016EFB4);
- call<void>(0x028F521C,at<void>(ea(self)+0x74),u32(0x2F0));
- f32 zero=load<f32>(0x10145180),one=load<f32>(0x1014517C);
- // Eleven initial vectors, each with an alpha/homogeneous component of one.
- for(u32 i=0;i<44;++i)store<f32>(ea(self)+0x74+i*4,(i%4)==3?one:zero);
- for(u32 offset:{0x124u,0x144u,0x164u})call<void>(0x028EFFD0,at<void>(ea(self)+offset),u32(2),u32(0x10),at<void>(0x02549350));
- for(u32 offset=0x184;offset<=0x304;offset+=0x30)if(ea(self)+offset==0)call<void*>(0x0273AD10,u32(0x30));
- for(u32 offset=0x314;offset<=0x354;offset+=0x10)if(ea(self)+offset==0)call<void*>(0x0273AD10,u32(0x10));
- return self;
-}
-VERIFY(0x0254937C,room_node_construct);
-// Graphics allocation ownership: paired vertex buffers and shader arrays use the
-// current resource heap; pointers are reloaded after the heap accessor/free call.
-static void heap_release_field(u32 field) {
- u32 pointer=load<u32>(field);
- void *heap=call<void*>(0x02755FEC,at<void>(load<u32>(0x101F8B4C)),at<void>(pointer));
- u32 target=load<u32>(load<u32>(ea(heap)+12)+0x3C);
- call_ptr<void>(target,heap,at<void>(load<u32>(field)));
-}
-static void cleanup_buffers(u32 group) {
- for(u32 pair=0;pair<2;++pair)for(u32 member=0;member<2;++member){u32 buffer=group+pair*0x4A8+member*0x254;
- call<void>(0x027BF7E8,at<void>(buffer+0x158));u32 pointer=load<u32>(buffer+0x250);
- store<u32>(buffer,0);
- if(pointer){load<u32>(buffer+0x24C);heap_release_field(buffer+0x250);store<u32>(buffer+0x24C,0);store<u32>(buffer+0x250,0);}}
-}
-static void cleanup_shader_array(u32 descriptor) {
- u32 pointer=load<u32>(descriptor+8);
- if(!pointer)return;
- s32 count=load<s32>(descriptor+4);u32 offset=0;
- for(s32 i=0;i<count;++i,offset+=20){u32 row=pointer+offset;
- if(row){u32 children=load<u32>(row+8);store<u32>(row,0);
- for(u32 side=0;side<2;++side){u32 sizeField=row+4+side*8,ptrField=row+8+side*8;
- if(side)children=load<u32>(ptrField);
- if(children){s32 number=load<s32>(sizeField);u32 childOffset=0;
- for(s32 j=0;j<number;++j,childOffset+=0xF4){u32 child=children+childOffset;
- u32 target=load<u32>(load<u32>(child+0xF0)+12);
- call_ptr<void>(target,at<void>(child),u32(2));number=load<s32>(sizeField);children=load<u32>(ptrField);}
- heap_release_field(ptrField);store<u32>(sizeField,0);store<u32>(ptrField,0);}}
- count=load<s32>(descriptor+4);pointer=load<u32>(descriptor+8);
- }}
- heap_release_field(descriptor+8);store<u32>(descriptor+4,0);store<u32>(descriptor+8,0);
-}
-void packet_destroy(void *self,u32 flags) {
- WWHD_FUNC(0x0254725C,void,self,flags);
- if(!self)return;
- u32 root=ea(self)+0x1A2DC;
- store<u32>(ea(self)+12,0x1004E180);
- for(u32 offset:{0xCu,0xBD8u,0x17A4u}){cleanup_buffers(root+offset);store<u32>(root+offset+0x960,0);}
- for(u32 geometry:{0x1798u,0xBCCu,0u}){
- call<void>(0x027BE2B0,at<void>(root+geometry+0x9A4),u32(2));
- call<void>(0x027B54A0,at<void>(root+geometry+0x98C),u32(2));
- call<void>(0x027B54A0,at<void>(root+geometry+0x974),u32(2));
- u32 group=root+geometry+12;
- if(group){cleanup_buffers(group);store<u32>(group+0x960,0);
- call<void>(0x028F0164,at<void>(group),u32(4),u32(0x254),at<void>(geometry?0x02549828:0x02549888),u32(0),u32(0));}
- cleanup_shader_array(root+geometry);
- }
- call<void>(0x028F0164,at<void>(ea(self)+0xC9DC),u32(64),u32(0x364),at<void>(0x025498E8),u32(0),u32(0));
- call<void>(0x028F0164,at<void>(ea(self)+0x469C),u32(200),u32(0xA8),at<void>(0x0254993C),u32(0),u32(0));
- call<void>(0x027FD764,at<void>(ea(self)+0x4690),u32(2));call<void>(0x027F13DC,self,u32(0));
- if(flags&1)call<void>(0x0273AF40,self);
-}
-VERIFY(0x0254725C,packet_destroy);
+static FlowerRegularIndices regularIndices;
+static FlowerRegularCutIndices regularCutIndices;
+static FlowerPinkIndices pinkIndices;
+static FlowerPinkCutIndices pinkCutIndices;
+static FlowerOasisIndices oasisIndices;
+static FlowerOasisCutIndices oasisCutIndices;
+static flower::RoomColors flowerRoomColors;
+static flower::DestructorRecords flowerDestructorRecords;
+static u8 flowerFirstStaticFlag;
+static u8 flowerSecondStaticFlag;
+static u32 flowerTransformVtable;
+static u32 flowerTextureTransformVtable;
+static csXyz flowerParticleAngles;
+static Mtx34 flowerMatrixStack;
+static char flowerFrustum;
+static flower::CosineTable flowerCosineTable;
+static u32 flowerPacketVtable;
+static char flowerVertexDeclaration;
+static flower::MeshCounts flowerMeshCounts;
+static FlowerRegularPositions regularPositions;
+static FlowerRegularNormals regularNormals;
+static FlowerRegularTexCoords regularTexCoords;
+static FlowerRegularColors regularColors;
+static FlowerRegularCutPositions regularCutPositions;
+static FlowerRegularCutNormals regularCutNormals;
+static FlowerRegularCutTexCoords regularCutTexCoords;
+static FlowerRegularCutColors regularCutColors;
+static FlowerPinkPositions pinkPositions;
+static FlowerPinkNormals pinkNormals;
+static FlowerPinkTexCoords pinkTexCoords;
+static FlowerPinkColors pinkColors;
+static FlowerPinkCutPositions pinkCutPositions;
+static FlowerPinkCutNormals pinkCutNormals;
+static FlowerPinkCutTexCoords pinkCutTexCoords;
+static FlowerPinkCutColors pinkCutColors;
+static FlowerOasisPositions oasisPositions;
+static FlowerOasisNormals oasisNormals;
+static FlowerOasisTexCoords oasisTexCoords;
+static FlowerOasisColors oasisColors;
+static FlowerOasisCutPositions oasisCutPositions;
+static FlowerOasisCutNormals oasisCutNormals;
+static FlowerOasisCutTexCoords oasisCutTexCoords;
+static FlowerOasisCutColors oasisCutColors;
+static u32 flowerWallQueryVtable;
+static u32 flowerPolygonQueryVtable;
+static u32 flowerGroundQueryVtable;
+static u32 flowerBackgroundQueryVtable;
+static u32 flowerWallBaseVtable;
 
-// HD lighting state is 0x1C8 bytes (72 words cleared by tevstr_init).
-void graphics_prepare(void *self) {
- WWHD_FUNC(0x025486B8,void,self);
- u32 a=ea(self);
- Local<u8[0x30]> view; copy_matrix(view.get(),at<void>(0x104B45F8));
- call<void>(0x027FDA54,at<void>(a+0x4690),u32(0),view.get(),at<void>(0x104B470C),at<void>(load<u32>(0x104B4708)+0x240));
- Local<u8[0x1C8]> lighting; u32 light=ea(lighting.get());
- // The three leading material records receive the same 0x44-byte defaults.
- for(u32 base: {u32(0),u32(0xC0),u32(0x144)}) {
-  for(u32 off=0;off<0x44;off+=4) {
-   if(off==0x18||off==0x1C||off==0x20) store<u32>(light+base+off,load<u32>(0x1016E414+off));
-   else store<f32>(light+base+off,load<f32>(0x1016E414+off));
-  }
- }
- call<void>(0x0255FFF4,lighting.get(),s32(s8(load<u8>(0x1047E6C8))),u32(0xFF));
- void *environment=call<void*>(0x02555D0C);
- call<void>(0x025626A4,environment,s32(1),u32(0),lighting.get());
- Local<u8[16]> color; Local<u8[16]> scaled;
- u32 material=load<u32>(a+0x4694);
- normalized_color(color.get(),at<void>(light+0x90));
- call<void>(0x0274D458,scaled.get(),color.get(),load<f32>(light+0x28));
- for(u32 i=0;i<16;i+=4)store<u32>(material+0x1C4+i,load<u32>(ea(scaled.get())+i));
- material=load<u32>(a+0x4694);
- normalized_color(color.get(),at<void>(light+0x160));
- call<void>(0x0274D458,scaled.get(),color.get(),load<f32>(light+0x16C));
- for(u32 i=0;i<16;i+=4)store<u32>(material+0x1D4+i,load<u32>(ea(scaled.get())+i));
- call<void>(0x027FE010,at<void>(a+0x4690));
- u32 drawn=0; f32 divisor=load<f32>(0x1004E118);
- Local<u8[48]> matrix;
- for(u32 room=0;room<64;++room) {
-  u32 data=load<u32>(a+0x457C+room*4);
-  if(!data)continue;
-  u32 node=a+0xC9DC+room*0x364;
-  for(u32 i=0;i<4;++i)store<f32>(node+0xB4+i*4,f32(double(load<s16>(light+0x90+i*2))/double(divisor)));
-  for(u32 i=0;i<4;++i)store<f32>(node+0xC4+i*4,f32(double(load<u8>(light+0x98+i))/double(divisor)));
-  call<void>(0x0274D2AC,at<void>(node+0xC4),load<f32>(light+0x24));
-  u32 source=load<u32>(a+0x4694);
-  for(u32 i=0;i<16;i+=4)store<u32>(node+0x94+i,load<u32>(source+0x1C4+i));
-  call<void>(0x027FB678,at<void>(node));
-  call<void>(0x0255F8F4,lighting.get());
-  while(data) {
-   if(!(load<u8>(data)&4)) {
-    for(u32 i=0;i<48;i+=4)store<f32>(ea(matrix.get())+i,load<f32>(data+0x10+i));
-    u32 drawNode=a+0x469C+drawn*0xA8;
-    call<void>(0x028E90D4,matrix.get(),at<void>(drawNode+0x74));
-    call<void>(0x027FB678,at<void>(drawNode));++drawn;
-   }
-   data=load<u32>(data+0x40);
-  }
- }
-}
-VERIFY(0x025486B8,graphics_prepare);
+static u32 flowerSafeStringVtable;
+static flower::GraphicsState flowerDefaultGraphicsState;
+static u8 flowerShaderContext;
+static flower::LightDefaults flowerInitialLight;
+static Mtx34 flowerViewMatrix;
+static Mtx34 flowerProjection;
+static s8 flowerCurrentRoom;
+static f32 textureEpsilon;
+static f32 groundRaise;
+static f32 groundMinimum;
+static f32 flowerZero;
+static f32 collisionDistanceSquared;
+static f32 cutDistance;
+static f32 particleRise;
+static f32 particleOne;
+static f32 pinkParticleScale;
+static f32 collisionRadius;
+static f32 collisionHeight;
+static f32 drawDepth;
+static f32 swayScale;
+static f32 colorDivisor;
+static f32 cullRadius;
+static f32 normalAnimationRange;
+static f32 staticFirstValue;
+static f32 staticSecondValue;
+static f32 textureOne;
+static f32 textureZero;
+static u8 cutSoundFlag;
+static u32 resourceManager;
+static u32 graphicsLock;
+static u32 heapManager;
+static u32 swayCounter;
+static f32 firstStaticValue;
+static f32 secondStaticValue;
+static u32 firstStaticHead;
+static u32 secondStaticHead;
+static u32 firstStaticTail;
+static u32 secondStaticTail;
+static u32 particleAnglesReady;
+static u32 flowerDrawList;
+static u32 flowerCamera;
 
-static u32 shader_row(u32 descriptor,u32 index) {
- u32 pointer=load<u32>(descriptor+8);
- return index<load<u32>(descriptor+4)?pointer+index*20:pointer;
-}
-static void indexed_draw(u32 geometry) {
- u32 count=load<u32>(geometry+12);
- if(count)call<void>(0xC0006178,load<u32>(geometry+4),count,load<u32>(geometry),load<u32>(geometry+8),u32(0),u32(1));
-}
-static void draw_uniforms(u32 shader,u32 object) {
- u32 uniforms=load<u32>(shader+12)?load<u32>(shader+16):0;
- u32 record=object+16+load<u32>(object+0x4C)*28;
- s32 vertex=load<s16>(uniforms+12),pixel=load<s16>(uniforms+14),geometry=load<s16>(uniforms+16);
- u32 size=load<u32>(record+4),buffer=load<u32>(record+12);
- if(pixel!=-1)call<void>(0xC0006900,pixel,buffer,size);
- if(vertex!=-1)call<void>(0xC0006A38,vertex,buffer,size);
- if(geometry!=-1)call<void>(0xC00068A8,geometry,buffer,size);
-}
-void graphics_draw(void *self,void *context) {
- WWHD_FUNC(0x02547C94,void,self,context);
- u32 a=ea(self),ctx=ea(context),root=a+0x1A2DC,shader=0;
- s32 pass=load<s32>(ctx+12);
- if(pass<4)shader=load<u32>(shader_row(root,u32(pass)));
- u32 cache=ea(call<void*>(0x027F29D4,at<void>(0x104B45C0)));
- u32 material=load<u32>(shader);
- if(material!=load<u32>(cache+4)) {
-  u8 flags=load<u8>(material);u32 oldProgram=load<u32>(cache);
-  if(flags&2){store<u8>(material,flags&~2);call<void>(0x027BB9E0,at<void>(material),u32(0));}
-  u32 program=load<u32>(load<u32>(material+0x7C)+0x28);
-  if(oldProgram!=program)call<void>(0x027B9F68,at<void>(program));
-  u32 size=load<u32>(material+12);
-  if(size)call<void>(0xC00060E0,load<u32>(material+4),size);
-  else call<void>(0x027BB7CC,at<void>(material));
-  store<u32>(cache,program);store<u32>(cache+4,material);
- }
- pass=load<s32>(ctx+12);
- if(pass==0) {
-  u32 object=load<u32>(ctx+20);
-  if(object)draw_uniforms(shader,load<u32>(object+4));
- } else if(pass==1||pass==2) {
-  draw_uniforms(shader,load<u32>(a+0x4694));
-  if(pass==2) {
-   u32 object=load<u32>(ctx+0x30);
-   if(object)call_ptr<void>(load<u32>(load<u32>(object+12)+0x2C),at<void>(object),at<void>(shader));
-   call<void>(0x027FFE54,context,at<void>(shader));
-  }
- }
- Local<u8[0x11C]> state;u32 st=ea(state.get());
- call<void>(0x02750250,state.get());
- store<u32>(st+12,2);store<u8>(st+0xE0,1);store<u32>(st+0xE4,4);
- store<f32>(st+0xE8,load<f32>(0x1004E104));
- u32 flags=load<u32>(st+0xEC);
- store<u32>(st+0xEC,(((flags&~15u)+7u)&0xFFFFFF0Fu)+16u);
- call<void>(0x0280037C,load<u32>(ctx+12),state.get());
- call<void>(0x02750370,state.get());
- u32 drawn=0;
- for(u32 room=0;room<64;++room) {
-  u32 data=load<u32>(a+0x457C+room*4);
-  if(data){u32 node=a+0xC9DC+room*0x364;call_ptr<void>(load<u32>(load<u32>(node+12)+0x2C),at<void>(node),at<void>(shader));}
-  s32 texture=-1,shape=-1;
-  while(data) {
-   if(!(load<u8>(data)&4)) {
-    u32 node=a+0x469C+drawn*0xA8;
-    call_ptr<void>(load<u32>(load<u32>(node+12)+0x2C),at<void>(node),at<void>(shader));++drawn;
-    bool special=(load<u8>(data)&0x20)!=0;
-    s32 wantedTexture=special?1:0;
-    if(texture!=wantedTexture) {
-     u32 params=load<u32>(shader+20)?load<u32>(shader+24):0;
-     u32 resource=special?load<u32>(root+0x2374):root+0x9A4;
-     call<void>(0x027BE53C,at<void>(resource),at<void>(params+4),u32(0),u32(0));texture=wantedTexture;
-    }
-    bool cut=(load<u8>(data)&8)!=0;
-    s32 wantedShape=(special?2:0)+(cut?1:0);
-    if(shape!=wantedShape) {
-     u32 descriptor=special?load<u32>(root+0x2364):root;
-     u32 row=shader_row(descriptor,load<u32>(ctx+12));
-     u32 index=load<u32>(a+0x1AC38);
-     u32 column=(index?u32(__builtin_clz(index)):32u)/4u&~7u;
-     u32 selected=row+column;
-     u32 buffer=load<u32>(selected+8);
-     if(cut && load<u32>(selected+4)>1)buffer+=0xF4;
-     call<void>(0x027BFE5C,at<void>(buffer));shape=wantedShape;
-    }
-    u32 geometry=special?load<u32>(root+(cut?0x2370:0x236C)):root+(cut?0x98C:0x974);
-    indexed_draw(geometry);
-   }
-   data=load<u32>(data+0x40);
-  }
- }
- call<void>(0x02750370,at<void>(0x104B474C));
-}
-VERIFY(0x02547C94,graphics_draw);
+// HD: renderer helpers are declared here to retain the GameCube function order.
+static void flowerApplyTexture(void* emitter, Local<flower::EmitterColor>& texture, f32 one);
+static void flowerHeapReleaseField(be<u32>* field);
+static void flowerCleanupBuffers(flower::MaterialBuffers* materials);
+static void flowerCleanupShaderArray(flower::ShapeGroups* descriptor);
+static flower::ShapeGroup* flowerShaderRow(flower::ShapeGroups* descriptor, u32 index);
+static void flowerIndexedDraw(flower::IndexBuffer* geometry);
+static void flowerDrawUniforms(flower::ShaderMaterial* shader, flower::UniformData* object);
+static void* flowerHeapAllocate(u32 size, u32 align);
+static void flowerShaderLoad(u32 descriptor, void* name);
+static void flowerShaderBuffers(u32 descriptorAddress, u32 buffers);
+static u32 flowerInlineClear(u32 group, u32 side, u32 bytes);
+static void flowerVertices(flower::Vertex* output, be<u32>* count, cXyz* position, cXyz* normal,
+                           flower::Vector2* texcoord, flower::Vector4* color, bool setters);
 
-static void *flower_heap_allocate(u32 size,u32 align) {
- void *heap=call<void*>(0x02756140,at<void>(load<u32>(0x101F8B4C)));
- return call_ptr<void*>(load<u32>(load<u32>(ea(heap)+12)+0x34),heap,size,align);
+/* 02544ABC */
+f32 checkGroundY(void* position) {
+    // HD: the wall query adds a trailing word to the GameCube ground-check record.
+    Local<flower::GroundCheck> object;
+    flowerGroundConstruct(object.get());
+    auto* pos = static_cast<cXyz*>(position);
+    f32 originalY = pos->y, x = pos->x;
+    f32 raise = groundRaise;
+    for (u32 k = 0; k < 7; ++k)
+        object->mFlags[k] = 0;
+    object->mWallVtable = ea(&flowerWallQueryVtable);
+    object->mPolygonVtable = ea(&flowerPolygonQueryVtable);
+    object->mWallEnabled = 1;
+    f32 raised = fadds_ppc(originalY, raise);
+    object->mPosition.y = raised;
+    pos->y = raised;
+    object->mCheckVtable = ea(&flowerGroundQueryVtable);
+    object->mPosition.x = x;
+    object->mWallInterface = ea(&object->mWallVtable);
+    object->mBaseVtable = ea(&flowerBackgroundQueryVtable);
+    object->mBackgroundInterface = ea(&object->mBaseVtable);
+    object->mPosition.z = pos->z;
+    auto* background = dComIfG_Bgsp();
+    f32 y = flowerCBgS_GroundCross(background, object.get());
+    f32 restored = fsubs_ppc(pos->y, raise);
+    object->mBaseVtable = ea(&flowerBackgroundQueryVtable);
+    object->mPolygonVtable = ea(&flowerPolygonQueryVtable);
+    f32 threshold = groundMinimum;
+    object->mWallVtable = ea(&flowerWallBaseVtable);
+    pos->y = restored;
+    flowerGroundDestruct(object.get(), u32(0));
+    return y > threshold ? y : restored;
 }
-static void flower_shader_load(u32 descriptor,void *name) {
- u32 manager=ea(call<void*>(0x027FFCBC));
- s32 index=call<s32>(0x027B90AC,at<void>(load<u32>(manager+4)),name);
- u32 entry=0;
- if(index>=0) {
-  u32 array=load<u32>(manager+12),count=load<u32>(manager+8);
-  entry=u32(index)<count?array+u32(index)*36:array;
-  if(!load<u8>(entry+0x20)) {
-   u32 archive=load<u32>(manager+4),record=0;
-   if(u32(index)<load<u32>(archive+0x1C))record=load<u32>(archive+0x20)+u32(index)*132;
-   call<void>(0x02800B0C,at<void>(entry),at<void>(record),u32(0));
-   array=load<u32>(manager+12);count=load<u32>(manager+8);
-   entry=u32(index)<count?array+u32(index)*36:array;
-  }
- }
- call<void>(0x0280068C,at<void>(descriptor),at<void>(entry),u32(0));
-}
-static void flower_shader_buffers(u32 descriptor,u32 buffers) {
- for(u32 i=0;i<load<u32>(descriptor);++i) {
-  u32 row=shader_row(descriptor,i),shader=load<u32>(row);
-  store<u32>(row,0);
-  for(u32 side=0;side<2;++side) {
-   u32 countField=row+4+side*8,pointerField=row+8+side*8,pointer=load<u32>(pointerField);
-   if(pointer) {
-    for(s32 n=0;n<load<s32>(countField);++n) {
-     u32 child=pointer+u32(n)*0xF4;
-     call_ptr<void>(load<u32>(load<u32>(child+0xF0)+12),at<void>(child),u32(2));
-     pointer=load<u32>(pointerField);
+
+/* 02544D04 */
+void dFlower_data_c::WorkCo(fopAc_ac_c* actor, u32 mask, s32 room) {
+    f32 x = fsubs_ppc((f32)mPosition.x, f32(static_cast<fopAc_ac_c*>(actor)->current.pos.x));
+    f32 z = fsubs_ppc((f32)mPosition.z, f32(static_cast<fopAc_ac_c*>(actor)->current.pos.z));
+    Local<cXyz> delta;
+    delta->y = flowerZero;
+    delta->x = x;
+    delta->z = z;
+    f32 squared = flowerVectorSquareMagnitude(delta.get());
+    if (squared > collisionDistanceSquared)
+        return;
+    s32 angle = flowerAtan2(x, z);
+    f32 distance = flowerSquareRoot(squared);
+    if ((s8)mAnmIdx < 8) {
+        if (!(u8)mParticleTimer) {
+            u8 flags = (u8)mFlags;
+            if (!(flags & dFlower_data_c::FLAG_CUT) &&
+                f32(static_cast<fopAc_ac_c*>(actor)->speedF) > cutDistance) {
+                Local<cXyz> position;
+                f32 y = (f32)mPosition.y, pz = (f32)mPosition.z, rise = particleRise,
+                    px = (f32)mPosition.x;
+                position->z = pz;
+                position->x = px;
+                position->y = fadds_ppc(y, rise);
+                u32 particle = (flags & dFlower_data_c::FLAG_PINK)
+                                   ? ((flags & dFlower_data_c::FLAG_OASIS) ? flower::PARTICLE_OASIS
+                                                                           : flower::PARTICLE_PINK)
+                                   : flower::PARTICLE_REGULAR;
+                dComIfGp_get();
+                u32 color = ea(at<flower::RoomColor>(ea(&flowerRoomColors) +
+                                                     u32(room) * sizeof(flower::RoomColor))
+                                   ->mColor);
+                u32 play = ea(dComIfGp_get()),
+                    control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+                void* emitter = flowerDPa_control_c_set(
+                    at<void>(control), u32(0), particle, position.get(), u32(0), u32(0), u32(0xFF),
+                    u32(0), s32(s8(room)), at<void>(color), at<void>(color), u32(0));
+                if (emitter) {
+                    f32 one = particleOne;
+                    static_cast<flower::Emitter*>(emitter)->mScaleX =
+                        particle == flower::PARTICLE_OASIS ? pinkParticleScale : one;
+                    Local<flower::EmitterColor> texture;
+                    texture->mValues[1] = one;
+                    texture->mValues[3] = one;
+                    texture->mEnabled = 1;
+                    texture->mValues[0] = one;
+                    texture->mPadding[1] = 0;
+                    texture->mPadding[2] = 0;
+                    texture->mVtable = ea(&flowerSafeStringVtable);
+                    texture->mPadding[0] = 0;
+                    texture->mValues[2] = one;
+                    texture->mpName.v = guest_str("");
+                    play = ea(dComIfGp_get());
+                    control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+                    for (u32 k = 0; k < 4; ++k)
+                        texture->mWords[k] = u32(at<flower::ParticleControl>(control)->mColor[k]);
+                    flowerEmitterSetColor(emitter, texture.get());
+                    mParticleTimer = 0x10;
+                }
+            }
+        }
+        u32 play = ea(dComIfGp_get());
+        s32 index =
+            at<dFlower_packet_c>(u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket))->newAnm();
+        if (index < 0)
+            return;
+        mAnmIdx = u8(index);
     }
-    heap_release_field(pointerField);store<u32>(countField,0);store<u32>(pointerField,0);
-   }
-  }
-  store<u32>(row,shader);
-  for(u32 side=0;side<2;++side) {
-   u32 pointer=ea(flower_heap_allocate(0x1E8,4));
-   for(u32 n=0;n<2;++n)if(pointer+n*0xF4)call<void>(0x027BF734,at<void>(pointer+n*0xF4));
-   if(pointer){store<u32>(row+8+side*8,pointer);store<u32>(row+4+side*8,2);}
-  }
-  for(u32 side=0;side<2;++side)for(u32 n=0;n<2;++n) {
-   u32 child=load<u32>(row+8+side*8);
-   if(n<load<u32>(row+4+side*8))child+=n*0xF4;
-   call<void>(0x027FF530,at<void>(shader),at<void>(child),at<void>(buffers+4+side*0x254+n*0x4A8),at<void>(buffers+0x954),u32(0));
-  }
- }
+    u32 play = ea(dComIfGp_get());
+    s32 index = (s8)mAnmIdx;
+    u32 packet = u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket);
+    f32 bend = fsubs_ppc(collisionRadius, distance), height = collisionHeight;
+    u32 animation = packet + u32(index) * 56 + 0x35BC;
+    at<dFlower_anm_c>(animation)->mAngleY = u16(angle);
+    s32 tilt = flowerAtan2(bend, height);
+    at<dFlower_anm_c>(animation)->mBend = u16(tilt);
 }
-static u32 flower_inline_clear(u32 group,u32 side,u32 bytes) {
- u32 buffer=group+(load<u32>(group+0x950)+side*2)*0x254;
- u32 begin=load<u32>(buffer),end=begin+bytes;
- for(u32 line=begin;line<end;line+=32)for(u32 k=0;k<32;++k)store<u8>((line&~31u)+k,0);
- if(begin<end)buffer=group+(load<u32>(group+0x950)+side*2)*0x254;
- return buffer;
+
+/* 02545040 */
+void dFlower_data_c::WorkAt_NoCutAnim(fopAc_ac_c* actor, u32 mask, s32 room, flower::HitInf* hit,
+                                      void* collision) {
+    u32 object = ea(flowerDCcD_GetGObjInf(collision));
+    f32 x = f32(at<dCcD_GObjInf>(object)->mGObjAt.mVec.x),
+        z = f32(at<dCcD_GObjInf>(object)->mGObjAt.mVec.z), zero = flowerZero;
+    Local<cXyz> first;
+    Local<cXyz> fallback;
+    Local<cXyz> vector;
+    first->z = z;
+    first->x = x;
+    first->y = zero;
+    f32 squared = flowerVectorSquareMagnitude(first.get());
+    if (__builtin_fabsf(squared) < textureEpsilon && actor &&
+        s16(static_cast<fopAc_ac_c*>(actor)->mProcName) == flower::fpcNm_PLAYER_e) {
+        f32 ax = f32(static_cast<fopAc_ac_c*>(actor)->current.pos.x), sz = (f32)mPosition.z,
+            sx = (f32)mPosition.x, az = f32(static_cast<fopAc_ac_c*>(actor)->current.pos.z);
+        x = fsubs_ppc(sx, ax);
+        z = fsubs_ppc(sz, az);
+        fallback->y = zero;
+        fallback->x = x;
+        fallback->z = z;
+        flowerVectorSquareMagnitude(fallback.get());
+    }
+    vector->z = z;
+    vector->x = x;
+    vector->y = zero;
+    squared = flowerVectorSquareMagnitude(vector.get());
+    s32 angle = flowerAtan2(x, z);
+    f32 distance = flowerSquareRoot(squared);
+    if ((s8)mAnmIdx < 8) {
+        if (!(u8)mParticleTimer) {
+            u8 flags = (u8)mFlags;
+            if (!(flags & dFlower_data_c::FLAG_CUT) && distance > cutDistance) {
+                Local<cXyz> position;
+                f32 y = (f32)mPosition.y, pz = (f32)mPosition.z, rise = particleRise,
+                    px = (f32)mPosition.x;
+                position->z = pz;
+                position->x = px;
+                position->y = fadds_ppc(y, rise);
+                u32 particle = (flags & dFlower_data_c::FLAG_PINK)
+                                   ? ((flags & dFlower_data_c::FLAG_OASIS) ? flower::PARTICLE_OASIS
+                                                                           : flower::PARTICLE_PINK)
+                                   : flower::PARTICLE_REGULAR;
+                dComIfGp_get();
+                u32 color = ea(at<flower::RoomColor>(ea(&flowerRoomColors) +
+                                                     u32(room) * sizeof(flower::RoomColor))
+                                   ->mColor);
+                u32 play = ea(dComIfGp_get()),
+                    control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+                void* emitter = flowerDPa_control_c_set(
+                    at<void>(control), u32(0), particle, position.get(), u32(0), u32(0), u32(0xFF),
+                    u32(0), s32(s8(room)), at<void>(color), at<void>(color), u32(0));
+                if (emitter) {
+                    f32 one = particleOne;
+                    static_cast<flower::Emitter*>(emitter)->mScaleX =
+                        particle == flower::PARTICLE_OASIS ? pinkParticleScale : one;
+                    Local<flower::EmitterColor> texture;
+                    texture->mValues[1] = one;
+                    texture->mValues[3] = one;
+                    texture->mEnabled = 1;
+                    texture->mValues[0] = one;
+                    texture->mPadding[1] = 0;
+                    texture->mPadding[2] = 0;
+                    texture->mVtable = ea(&flowerSafeStringVtable);
+                    texture->mPadding[0] = 0;
+                    texture->mValues[2] = one;
+                    texture->mpName.v = guest_str("");
+                    play = ea(dComIfGp_get());
+                    control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+                    for (u32 k = 0; k < 4; ++k)
+                        texture->mWords[k] = u32(at<flower::ParticleControl>(control)->mColor[k]);
+                    flowerEmitterSetColor(emitter, texture.get());
+                    mParticleTimer = 0x10;
+                }
+            }
+        }
+        u32 play = ea(dComIfGp_get());
+        s32 index =
+            at<dFlower_packet_c>(u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket))->newAnm();
+        if (index < 0)
+            return;
+        mAnmIdx = u8(index);
+    }
+    u32 play = ea(dComIfGp_get());
+    s32 index = (s8)mAnmIdx;
+    u32 packet = u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket);
+    f32 bend = distance, height = collisionHeight;
+    u32 animation = packet + u32(index) * 56 + 0x35BC;
+    at<dFlower_anm_c>(animation)->mAngleY = u16(angle);
+    s32 tilt = flowerAtan2(bend, height);
+    at<dFlower_anm_c>(animation)->mBend = u16(tilt);
 }
-static void flower_vertices(u32 output,u32 countAddress,u32 position,u32 normal,u32 texcoord,u32 color,bool setters) {
- for(u32 i=0;i<load<u32>(countAddress);++i) {
-  u32 vertex=output+i*48;
-  if(setters) {
-   call<void>(0x025496BC,at<void>(vertex),load<f32>(position+i*12),load<f32>(position+i*12+4),load<f32>(position+i*12+8));
-   call<void>(0x025496BC,at<void>(vertex+12),load<f32>(normal+i*12),load<f32>(normal+i*12+4),load<f32>(normal+i*12+8));
-   call<void>(0x025496CC,at<void>(vertex+32),load<f32>(color+i*16),load<f32>(color+i*16+4),load<f32>(color+i*16+8),load<f32>(color+i*16+12));
-   call<void>(0x025496E0,at<void>(vertex+24),load<f32>(texcoord+i*8),load<f32>(texcoord+i*8+4));
-  } else {
-   for(u32 k=0;k<12;k+=4)store<f32>(vertex+k,load<f32>(position+i*12+k));
-   for(u32 k=0;k<12;k+=4)store<f32>(vertex+12+k,load<f32>(normal+i*12+k));
-   for(u32 k=0;k<16;k+=4)store<f32>(vertex+32+k,load<f32>(color+i*16+k));
-   if(countAddress==0x101D643C)call<void>(0x025496E0,at<void>(vertex+24),load<f32>(texcoord+i*8),load<f32>(texcoord+i*8+4));
-   else for(u32 k=0;k<8;k+=4)store<f32>(vertex+24+k,load<f32>(texcoord+i*8+k));
-  }
- }
+
+/* 025453B8 */
+void dFlower_data_c::WorkAt(fopAc_ac_c* actor, u32 mask, s32 room, flower::HitInf* hit) {
+    u32 collision = static_cast<flower::HitInf*>(hit)->mpAtObject.v;
+    if (collision &&
+        (at<dCcD_GObjInf>(collision)->mAtType &
+         (flower::AT_TYPE_WIND | flower::AT_TYPE_NORMAL_ARROW | flower::AT_TYPE_FIRE_ARROW |
+          flower::AT_TYPE_ICE_ARROW | flower::AT_TYPE_LIGHT_ARROW | flower::AT_TYPE_HOOKSHOT))) {
+        WorkAt_NoCutAnim(actor, mask, room, hit, at<void>(collision));
+        return;
+    }
+    if ((s8)mAnmIdx >= 8) {
+        u32 play = ea(dComIfGp_get());
+        s32 index = (s8)mAnmIdx;
+        u32 packet = u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket);
+        at<dFlower_anm_c>(packet + offsetof(dFlower_packet_c, mAnm) +
+                          u32(index) * sizeof(dFlower_anm_c))
+            ->mActive = 0;
+    }
+    mFlags = (u8)mFlags | 8;
+    if (!particleAnglesReady) {
+        particleAnglesReady = 1;
+        flowerCsXyz_csXyz(&flowerParticleAngles, u32(0), u32(0), u32(0));
+    }
+    dComIfGp_get();
+    Local<cXyz> position;
+    f32 z = (f32)mPosition.z, y = (f32)mPosition.y;
+    u8 flags = (u8)mFlags;
+    f32 x = (f32)mPosition.x;
+    u32 color =
+        ea(at<flower::RoomColor>(ea(&flowerRoomColors) + u32(room) * sizeof(flower::RoomColor))
+               ->mColor);
+    position->y = y;
+    position->x = x;
+    position->z = z;
+    f32 one = particleOne;
+    Local<flower::EmitterColor> texture1;
+    Local<flower::EmitterColor> texture2;
+    void* emitter = nullptr;
+    u32 particle = (flags & dFlower_data_c::FLAG_PINK)
+                       ? ((flags & dFlower_data_c::FLAG_OASIS) ? flower::PARTICLE_OASIS
+                                                               : flower::PARTICLE_PINK)
+                       : flower::PARTICLE_REGULAR;
+    if (particle == flower::PARTICLE_OASIS) {
+        u32 play = ea(dComIfGp_get());
+        u32 control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+        void* extra = flowerDPa_control_c_set(
+            at<void>(control), u32(0), u32(flower::PARTICLE_OASIS_EXTRA), position.get(),
+            &flowerParticleAngles, u32(0), u32(0xFF), u32(0), s32(s8(room)), at<void>(color),
+            at<void>(color), u32(0));
+        if (extra)
+            flowerApplyTexture(extra, texture1, one);
+    }
+    u32 play = ea(dComIfGp_get());
+    u32 control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+    emitter = flowerDPa_control_c_set(at<void>(control), u32(0), particle, position.get(),
+                                      &flowerParticleAngles, u32(0), u32(0xFF), u32(0),
+                                      s32(s8(room)), at<void>(color), at<void>(color), u32(0));
+    if (emitter)
+        flowerApplyTexture(emitter, texture2, one);
+    s32 item = (s8)mItemTableIdx;
+    if (item >= 0)
+        flowerFopAcM_createItemFromTable(&mPosition, item, s32(-1), room, u32(0), u32(0), u32(1),
+                                         u32(0));
+    if (!cutSoundFlag) {
+        cutSoundFlag = 1;
+        s32 reverb = flowerDComIfGp_getReverb(room);
+        flowerStartSound(u32(0x282C), &mPosition, u32(0), reverb);
+    }
 }
-void *packet_construct(void *self) {
- WWHD_FUNC(0x02545A2C,void*,self);
- if(!self)self=call<void*>(0x0273AD10,u32(0x1C654));
- if(!self)return nullptr;
- u32 a=ea(self),root=a+0x1A2DC;
- call<void>(0x027F1278,self);store<u32>(a+12,0x1004E180);store<u16>(a+0x98,0);
- call<void>(0x028EFFD0,at<void>(a+0x9C),u32(200),u32(0x44),u32(0x02544C4C));
- call<void>(0x028EFFD0,at<void>(a+0x35BC),u32(72),u32(0x38),u32(0x025491C0));
- call<void>(0x028EFFD0,at<void>(a+0x457C),u32(64),u32(4),u32(0x025491FC));
- store<u16>(a+0x467E,0);store<u16>(a+0x4680,0);store<u8>(a+0x467C,0);
- call<void>(0x027FD6F4,at<void>(a+0x4690));
- call<void>(0x028EFFD0,at<void>(a+0x469C),u32(200),u32(0xA8),u32(0x025492E0));
- call<void>(0x028EFFD0,at<void>(a+0xC9DC),u32(64),u32(0x364),u32(0x0254937C));
- u32 groups[3];
- for(u32 i=0;i<3;++i) {
-  u32 set=root+i*0xBCC;store<u32>(set,0);
-  u32 pair=set+4;if(!pair)pair=ea(call<void*>(0x0273AD10,u32(8)));
-  if(pair){store<u32>(pair+4,0);store<u32>(pair,0);}
-  u32 group=set+12;groups[i]=group;if(!group)group=ea(call<void*>(0x0273AD10,u32(0x968)));
-  if(group) {
-   call<void>(0x028EFFD0,at<void>(group),u32(4),u32(0x254),u32(i?0x02549660:0x02549604));
-   store<u32>(group+0x950,0);store<u32>(group+0x960,0);store<u32>(group+0x958,0x30);
-   store<u8>(group+0x964,0);store<u32>(group+0x954,0);
-   for(u32 n=0;n<4;++n)store<u32>(group+n*0x254,0);
-  }
-  call<void>(0x027B5430,at<void>(set+0x974));call<void>(0x027B5430,at<void>(set+0x98C));
-  call<void>(0x027BDF7C,at<void>(set+0x9A4));call<void>(0x027BE6B8,at<void>(set+0xB3C));
- }
- for(u32 off=0x2364;off<=0x2374;off+=4)store<u32>(root+off,0);
- for(u32 n=0;n<200;++n)store<u8>(a+0x9C+n*0x44,0);
- for(u32 n=0;n<72;++n)store<u8>(a+0x35BC+n*0x38,0);
- for(u32 n=0;n<8;++n)call<void>(0x02545A0C,self,n,s32(s16(n*0x2000)));
- Local<u8[8]> name;
- for(u32 i=0;i<3;++i) {
-  store<u32>(ea(name.get()),0x1004E098);store<u32>(ea(name.get())+4,0x1004DFD4);
-  flower_shader_load(root+i*0xBCC,name.get());
- }
- for(u32 i=0;i<3;++i){store<u32>(groups[i]+0x954,0x1013);store<u32>(groups[i]+0x95C,0x1004E170);}
- for(u32 i=0;i<3;++i) {
-  u32 group=groups[i],count=i?605:90;
-  for(u32 side=0;side<2;++side)for(u32 n=0;n<2;++n) {
-   u32 buffer=group+side*0x254+n*0x4A8,pointer=load<u32>(buffer);
-   if(!pointer) {
-    u32 allocated=ea(flower_heap_allocate(i?0x7170:0x10E0,0x40));
-    if(allocated){store<u32>(buffer+0x250,allocated);store<u32>(buffer+0x24C,count);}
-    pointer=load<u32>(buffer+0x250);store<u32>(buffer,pointer);
-   }
-   call<void>(0x027FF478,at<void>(buffer+4),at<void>(pointer),count,at<void>(group+0x954));
-  }
-  store<u32>(group+0x960,0);store<u8>(group+0x964,1);
- }
- for(u32 i=0;i<3;++i)flower_shader_buffers(root+i*0xBCC,groups[i]);
- call<void>(0x027FD838,at<void>(a+0x4690),u32(1),u32(0));
- for(u32 i=0;i<64;++i)call<void>(0x027FB5D4,at<void>(a+0xC9DC+i*0x364),u32(0));
- for(u32 i=0;i<200;++i)call<void>(0x027FB5D4,at<void>(a+0x469C+i*0xA8),u32(0));
- u32 geometry[6]={root+0x974,root+0x98C,root+0x1540,root+0x1558,root+0x210C,root+0x2124};
- const u32 data[6]={0x101D7540,0x101D81A0,0x101D8FE0,0x101D96E8,0x101E08E8,0x101E1BE4};
- for(u32 i=0;i<6;++i){call<void>(0x027B54E0,at<void>(geometry[i]),at<void>(data[i]),u32(4),load<u32>(0x101D6430+i*8));store<u32>(geometry[i]+4,4);}
- u32 buffer=flower_inline_clear(groups[0],0,0x10E0);
- flower_vertices(load<u32>(buffer),0x101D642C,0x101D6460,0x101D6898,0x101D7270,0x101D6CD0,false);
- buffer=flower_inline_clear(groups[0],1,0x10E0);
- flower_vertices(load<u32>(buffer),0x101D6434,0x101D7660,0x101D7930,0x101D7FC0,0x101D7C00,false);
- buffer=groups[0]+load<u32>(groups[0]+0x950)*0x254+4;
- for(u32 i=0;i<2;++i,buffer+=0x4A8)call<void>(0x027B5E94,at<void>(buffer),u32(0),load<u32>(buffer+0x14C));
- store<u32>(groups[0]+0x950,load<u32>(groups[0]+0x950)==0);
- buffer=flower_inline_clear(groups[1],0,0x7160);
- flower_vertices(load<u32>(buffer),0x101D643C,0x101D8230,0x101D859C,0x101D8D98,0x101D8908,false);
- buffer=ea(call<void*>(0x02549238,at<void>(groups[1]),u32(1),u32(1)));
- flower_vertices(load<u32>(buffer),0x101D6444,0x101D9118,0x101D928C,0x101D95F0,0x101D9400,true);
- call<void>(0x025496EC,at<void>(groups[1]),u32(0),u32(2));
- buffer=ea(call<void*>(0x02549238,at<void>(groups[2]),u32(0),u32(1)));
- flower_vertices(load<u32>(buffer),0x101D644C,0x101D9778,0x101DB3D4,0x101DF600,0x101DD030,true);
- buffer=ea(call<void*>(0x02549238,at<void>(groups[2]),u32(1),u32(1)));
- flower_vertices(load<u32>(buffer),0x101D6454,0x101E1404,0x101E15FC,0x101E1A94,0x101E17F4,true);
- call<void>(0x025496EC,at<void>(groups[2]),u32(0),u32(2));
- call<void>(0x0274FBF8,at<void>(load<u32>(0x101F8B18)));
- Local<u8[8]> folder;Local<u8[8]> archive;
- void *folderName=call<void*>(0x02549290,folder.get(),at<void>(0x1004E0C0));
- void *archiveName=call<void*>(0x02549290,archive.get(),at<void>(0x1004E0D0));
- void *resource=call<void*>(0x026124B0,at<void>(load<u32>(0x101F4F7C)),folderName,archiveName,u32(0));
- call<void>(0x025491AC,archive.get(),u32(2));call<void>(0x025491AC,folder.get(),u32(2));
- const u32 textures[3]={0x1004E0A4,0x1004E0E8,0x1004E088};
- for(u32 i=0;i<3;++i) {
-  u32 texture=root+i*0xBCC+0x9A4,sampler=root+i*0xBCC+0xB3C;
-  call<void>(0x02773870,at<void>(sampler),resource,at<void>(textures[i]));
-  call<void>(0x02549768,at<void>(texture),at<void>(sampler));
-  store<u32>(texture+0x160,1);store<u32>(texture+0x15C,1);store<u32>(texture+0x164,1);
-  call<void>(0x02549818,at<void>(texture+0x190),u32(2));
- }
- call<void>(0x0274FCCC,at<void>(load<u32>(0x101F8B18)));
- store<u32>(root+0x2374,root+0x1570);store<u32>(root+0x2368,groups[1]);
- store<u32>(root+0x236C,root+0x1540);store<u32>(root+0x2370,root+0x1558);store<u32>(root+0x2364,root+0xBCC);
- return self;
+
+/* 025457C4 */
+void dFlower_data_c::hitCheck(fopAc_ac_c* player, s32 room) {
+    Local<flower::HitInf> hit;
+    Local<be<u32>> actor;
+    flowerHitConstruct(hit.get());
+    u32 play = ea(dComIfGp_get());
+    u32 mask =
+        flowerCheckMass(&at<flower::MassGameView>(play)->mMass, &mPosition, actor.get(), hit.get());
+    bool attack = false;
+    if (mask & 1) {
+        u32 a = (*actor);
+        if (a && at<fopAc_ac_c>(a)->mProcName != fpcNm_TSUBO_e &&
+            at<fopAc_ac_c>(a)->mProcName != flower::fpcNm_STONE_e)
+            attack = true;
+    }
+    if (!(mask & 2) && !attack) {
+        s32 index = (s8)mAnmIdx;
+        if (index < 8)
+            return;
+        play = ea(dComIfGp_get());
+        index = (s8)mAnmIdx;
+        u32 animation =
+            u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket) + u32(index) * 56 + 0x35BC;
+        u32 angle = u16(at<dFlower_anm_c>(animation)->mAngleY);
+        s32 target = s16(angle & 0xE000);
+        u32 windIndex = angle >> 13;
+        play = ea(dComIfGp_get());
+        u32 packet = u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket);
+        s32 bend = s16(at<dFlower_anm_c>(packet + offsetof(dFlower_packet_c, mAnm) +
+                                         windIndex * sizeof(dFlower_anm_c))
+                           ->mBend);
+        if (flowerCLib_addCalcAngleS(&at<dFlower_anm_c>(animation)->mBend, bend, s32(0x10),
+                                     s32(0xFA0), s32(0x64)))
+            return;
+        if (!flowerCLib_chaseAngleS(&at<dFlower_anm_c>(animation)->mAngleY, target, s32(0x320)))
+            return;
+        play = ea(dComIfGp_get());
+        index = (s8)mAnmIdx;
+        packet = u32(at<dComIfG_inf_c>(play)->play.mpFlowerPacket);
+        at<dFlower_anm_c>(packet + offsetof(dFlower_packet_c, mAnm) +
+                          u32(index) * sizeof(dFlower_anm_c))
+            ->mActive = 0;
+        mAnmIdx = u16(at<dFlower_anm_c>(animation)->mAngleY) >> 13;
+        return;
+    }
+    if (!(*actor))
+        flower_assert(at<void>(guest_str("d_flower.cpp")), u32(0x1BA0),
+                      at<void>(guest_str("hit_actor != (0)")));
+    if (mask & 2)
+        WorkCo(at<fopAc_ac_c>((*actor)), mask, room);
+    if (!((u8)mFlags & dFlower_data_c::FLAG_CUT) && attack)
+        WorkAt(at<fopAc_ac_c>((*actor)), mask, room, hit.get());
 }
-VERIFY(0x02545A2C,packet_construct);
+
+/* 02545998 */
+void dFlower_room_c::newData(dFlower_data_c* data) {
+    auto* flower = static_cast<dFlower_data_c*>(data);
+    flower->mpNext = mpHead;
+    mpHead = flower;
 }
+
+/* 025459A8 */
+void dFlower_room_c::deleteData() {
+    auto* head = mpHead.get();
+    while (head) {
+        head->mFlags = 0;
+        auto* current = mpHead.get();
+        flowerJAIZelBasic_seDeleteObject(&current->mPosition);
+        current = mpHead.get();
+        head = current->mpNext.get();
+        mpHead = head;
+    }
+}
+
+/* 02545A2C */
+void* dFlower_packet_c__ct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x1C654));
+    if (!self)
+        return nullptr;
+    auto* packet = static_cast<dFlower_packet_c*>(self);
+    u32 root = ea(packet->mGeometry);
+    flowerPacketBaseConstruct(self);
+    packet->mPacketBase.mVtable = ea(&flowerPacketVtable);
+    packet->mNextData = 0;
+    flowerArrayConstruct(&packet->mData, u32(200), u32(0x44),
+                         guest_fn(reinterpret_cast<const void*>(&dFlower_data_c__ct)));
+    flowerArrayConstruct(&packet->mAnm, u32(72), u32(0x38),
+                         guest_fn(reinterpret_cast<const void*>(&dFlower_anm_c__ct)));
+    flowerArrayConstruct(&packet->mRoom, u32(64), u32(4),
+                         guest_fn(reinterpret_cast<const void*>(&dFlower_room_c__ct)));
+    packet->mPlayerSwordAngle = 0;
+    packet->mPlayerSwordMoveAngle = 0;
+    packet->mPlayerCutFlag = 0;
+    flowerTransformSetConstruct(&packet->mTransformSet);
+    flowerArrayConstruct(&packet->mTransforms, u32(200), u32(0xA8),
+                         guest_fn(reinterpret_cast<const void*>(&flowerDrawNodeConstruct)));
+    flowerArrayConstruct(&packet->mTextures, u32(64), u32(0x364),
+                         guest_fn(reinterpret_cast<const void*>(&flowerRoomNodeConstruct)));
+    u32 groups[3];
+    for (u32 i = 0; i < 3; ++i) {
+        auto* geometry = &packet->mGeometry[i];
+        geometry->mShapes.mCount = 0;
+        u32 pair = ea(&geometry->mShapes.mCapacity);
+        if (!pair)
+            pair = ea(flowerAllocate(u32(8)));
+        if (pair) {
+            auto* fields = at<be<u32>>(pair);
+            fields[1] = 0;
+            fields[0] = 0;
+        }
+        u32 group = ea(&geometry->mMaterials);
+        groups[i] = group;
+        if (!group)
+            group = ea(flowerAllocate(u32(sizeof(flower::MaterialBuffers))));
+        if (group) {
+            auto* materials = at<flower::MaterialBuffers>(group);
+            flowerArrayConstruct(
+                materials, u32(4), u32(sizeof(flower::MaterialPart)),
+                u32(i ? guest_fn(reinterpret_cast<const void*>(&flowerBuffer2Construct))
+                      : guest_fn(reinterpret_cast<const void*>(&flowerBuffer1Construct))));
+            materials->mFrameIndex = 0;
+            materials->mState = 0;
+            materials->mVertexSize = sizeof(flower::Vertex);
+            materials->mReady = 0;
+            materials->mVertexFormat = 0;
+            for (u32 n = 0; n < 4; ++n)
+                materials->mPart[n / 2][n % 2].mpVertices = nullptr;
+        }
+        flowerIndexBufferConstruct(&geometry->mUncut);
+        flowerIndexBufferConstruct(&geometry->mCut);
+        flowerSamplerConstruct(&geometry->mSampler);
+        flowerSamplerResourceConstruct(geometry->mSamplerResource);
+    }
+
+    packet->mpShapeGroups = nullptr;
+    packet->mpMaterialBuffers = nullptr;
+    packet->mpUncutIndices = nullptr;
+    packet->mpCutIndices = nullptr;
+    packet->mpSampler = nullptr;
+    for (u32 n = 0; n < 200; ++n)
+        packet->mData[n].mFlags = 0;
+    for (u32 n = 0; n < 72; ++n)
+        packet->mAnm[n].mActive = 0;
+    for (u32 n = 0; n < 8; ++n)
+        static_cast<dFlower_packet_c*>(self)->setAnm(n, s32(s16(n * 0x2000)));
+    Local<flower::String> name;
+    for (u32 i = 0; i < 3; ++i) {
+        name->mText = guest_str("flower_draw");
+        name->mpVtable.v = ea(&flowerSafeStringVtable);
+        flowerShaderLoad(root + i * 0xBCC, name.get());
+    }
+    for (u32 i = 0; i < 3; ++i) {
+        auto* materials = at<flower::MaterialBuffers>(groups[i]);
+        materials->mVertexFormat = 0x1013;
+        materials->mpVertexDeclaration = &flowerVertexDeclaration;
+    }
+    for (u32 i = 0; i < 3; ++i) {
+        u32 group = groups[i], count = i ? 605 : 90;
+        for (u32 side = 0; side < 2; ++side)
+            for (u32 n = 0; n < 2; ++n) {
+                u32 buffer = group + side * sizeof(flower::MaterialPart) +
+                             n * 2 * sizeof(flower::MaterialPart);
+                auto* part = at<flower::MaterialPart>(buffer);
+                u32 pointer = part->mpVertices.v;
+                if (!pointer) {
+                    u32 allocated = ea(flowerHeapAllocate(i ? 0x7170 : 0x10E0, 0x40));
+                    if (allocated) {
+                        part->mpVertexStorage.v = allocated;
+                        part->mVertexCapacity = count;
+                    }
+                    pointer = part->mpVertexStorage.v;
+                    part->mpVertices.v = pointer;
+                }
+                flowerConfigureVertexBuffer(&part->mVertexBuffer, at<void>(pointer), count,
+                                            &at<flower::MaterialBuffers>(group)->mVertexFormat);
+            }
+        at<flower::MaterialBuffers>(group)->mState = 0;
+        at<flower::MaterialBuffers>(group)->mReady = 1;
+    }
+    for (u32 i = 0; i < 3; ++i)
+        flowerShaderBuffers(root + i * 0xBCC, groups[i]);
+    flowerTransformSetConfigure(&packet->mTransformSet, u32(1), u32(0));
+    for (u32 i = 0; i < 64; ++i)
+        flowerUniformSetState(&packet->mTextures[i], u32(0));
+    for (u32 i = 0; i < 200; ++i)
+        flowerUniformSetState(&packet->mTransforms[i], u32(0));
+    u32 geometry[6] = {root + 0x974,  root + 0x98C,  root + 0x1540,
+                       root + 0x1558, root + 0x210C, root + 0x2124};
+    void* const indexData[6] = {regularIndices.mValues, regularCutIndices.mValues,
+                                pinkIndices.mValues,    pinkCutIndices.mValues,
+                                oasisIndices.mValues,   oasisCutIndices.mValues};
+    for (u32 i = 0; i < 6; ++i) {
+        flowerIndexBufferSet(at<void>(geometry[i]), indexData[i], u32(4),
+                             u32(flowerMeshCounts.mMeshes[i].mIndices));
+        at<flower::IndexBuffer>(geometry[i])->mIndexFormat = 4;
+    }
+    u32 buffer = flowerInlineClear(groups[0], 0, 0x10E0);
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[0].mVertices, regularPositions.mValues,
+                   regularNormals.mValues, regularTexCoords.mValues, regularColors.mValues, false);
+    buffer = flowerInlineClear(groups[0], 1, 0x10E0);
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[1].mVertices, regularCutPositions.mValues,
+                   regularCutNormals.mValues, regularCutTexCoords.mValues, regularCutColors.mValues,
+                   false);
+    buffer = groups[0] + u32(at<flower::MaterialBuffers>(groups[0])->mFrameIndex) * 0x254 + 4;
+    for (u32 i = 0; i < 2; ++i, buffer += 0x4A8)
+        flowerVertexBufferFlush(at<void>(buffer), u32(0),
+                                u32(at<flower::VertexBuffer>(buffer)->mFlushSize));
+    at<flower::MaterialBuffers>(groups[0])->mFrameIndex =
+        at<flower::MaterialBuffers>(groups[0])->mFrameIndex == 0;
+    buffer = flowerInlineClear(groups[1], 0, 0x7160);
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[2].mVertices, pinkPositions.mValues,
+                   pinkNormals.mValues, pinkTexCoords.mValues, pinkColors.mValues, false);
+    buffer = ea(flowerBufferSelect(at<void>(groups[1]), u32(1), u32(1)));
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[3].mVertices, pinkCutPositions.mValues,
+                   pinkCutNormals.mValues, pinkCutTexCoords.mValues, pinkCutColors.mValues, true);
+    flowerBufferRotate(at<void>(groups[1]), u32(0), u32(2));
+    buffer = ea(flowerBufferSelect(at<void>(groups[2]), u32(0), u32(1)));
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[4].mVertices, oasisPositions.mValues,
+                   oasisNormals.mValues, oasisTexCoords.mValues, oasisColors.mValues, true);
+    buffer = ea(flowerBufferSelect(at<void>(groups[2]), u32(1), u32(1)));
+    flowerVertices(at<flower::MaterialPart>(buffer)->mpVertices.get(),
+                   &flowerMeshCounts.mMeshes[5].mVertices, oasisCutPositions.mValues,
+                   oasisCutNormals.mValues, oasisCutTexCoords.mValues, oasisCutColors.mValues,
+                   true);
+    flowerBufferRotate(at<void>(groups[2]), u32(0), u32(2));
+    flowerLockGraphics(at<void>(graphicsLock));
+    Local<flower::String> folder;
+    Local<flower::String> archive;
+    void* folderName = flowerStringConstruct(folder.get(), at<void>(guest_str("ProgramTexture")));
+    void* archiveName =
+        flowerStringConstruct(archive.get(), at<void>(guest_str("ProgramTexture.bfres")));
+    void* resource = flowerGetResource(at<void>(resourceManager), folderName, archiveName, u32(0));
+    flowerAnimationDestroy(archive.get(), u32(2));
+    flowerAnimationDestroy(folder.get(), u32(2));
+    void* const textures[3] = {at<void>(guest_str("Txo_ob_flower_white_64x64")),
+                               at<void>(guest_str("Txo_ob_flower_pink_64x64")),
+                               at<void>(guest_str("Txq_bessou_hana"))};
+    for (u32 i = 0; i < 3; ++i) {
+        u32 texture = root + i * 0xBCC + 0x9A4, sampler = root + i * 0xBCC + 0xB3C;
+        flowerLoadSamplerResource(at<void>(sampler), resource, textures[i]);
+        flowerSurfaceAssign(at<void>(texture), at<void>(sampler));
+        auto* samplerState = at<flower::SamplerRecord>(texture);
+        samplerState->mWords[0x160 / 4] = 1;
+        samplerState->mWords[0x15C / 4] = 1;
+        samplerState->mWords[0x164 / 4] = 1;
+        flowerFlagsSet(&at<flower::SamplerRecord>(texture)->mFlags, u32(2));
+    }
+    flowerUnlockGraphics(at<void>(graphicsLock));
+    packet->mpSampler = &packet->mGeometry[1].mSampler;
+    packet->mpMaterialBuffers.v = groups[1];
+    packet->mpUncutIndices = &packet->mGeometry[1].mUncut;
+    packet->mpCutIndices = &packet->mGeometry[1].mCut;
+    packet->mpShapeGroups = &packet->mGeometry[1].mShapes;
+    return self;
+}
+
+/* 025491FC */
+void* dFlower_room_c__ct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x4));
+    if (!self)
+        return nullptr;
+    static_cast<dFlower_room_c*>(self)->mpHead = nullptr;
+    return self;
+}
+
+/* 025491C0 */
+void* dFlower_anm_c__ct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x38));
+    if (!self)
+        return nullptr;
+    static_cast<dFlower_anm_c*>(self)->mActive = 0;
+    return self;
+}
+
+/* 02544C4C */
+void* dFlower_data_c__ct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x44));
+    if (!self)
+        return nullptr;
+    auto* data = static_cast<dFlower_data_c*>(self);
+    data->mParticleTimer = 0;
+    data->mItemTableIdx = 0;
+    data->mFlags = 0;
+    data->mAnmIdx = 0;
+    flowerClearUniformData(&data->mMtx, u32(sizeof(Mtx34)));
+    data->mpNext = nullptr;
+    data->mFlags = 0;
+    return self;
+}
+
+/* 02544AB8 */
+void dFlower_packet_c::draw() {}
+
+/* 02548370 */
+void dFlower_packet_c::calc() {
+    f32 scale = swayScale;
+    for (u32 i = 0; i < 8; ++i) {
+        u32 timer = swayCounter + i * 0xFA;
+        u16 angle = u16(ftoi(fmuls_ppc(f32(timer), scale)));
+        f32 cosine = f32(flowerCosineTable.mValues[u32(angle) >> 3][0]);
+        mAnm[i].mBend = u16(ftoi(fmadds(scale, cosine, scale)));
+    }
+    s32 room = flowerCurrentRoom;
+    auto* head = at<dFlower_room_c>(ea(mRoom) + u32(room) * sizeof(dFlower_room_c))->mpHead.get();
+    if (!head)
+        return;
+    u32 play = ea(dComIfGp_get());
+    u32 player = u32(at<dComIfG_inf_c>(play)->play.mPlayerInfo[0].mpPlayer.v);
+    mPlayerCutFlag = (u32(at<flower::SwordView>(player)->mCutFlags) & 0x40) != 0;
+    Local<cXyz> delta;
+    Local<cXyz> sword;
+    f32 x = f32(at<flower::SwordView>(player)->mSwordTop.x),
+        y = f32(at<flower::SwordView>(player)->mSwordTop.y),
+        z = f32(at<flower::SwordView>(player)->mSwordTop.z);
+    sword->x = x;
+    sword->z = z;
+    sword->y = y;
+    delta->x = x;
+    delta->y = y;
+    delta->z = z;
+    flowerCXyzSubtract(sword.get(), delta.get(), &at<fopAc_ac_c>(player)->current.pos);
+    f32 dz = (f32)delta->z, dx = (f32)delta->x;
+    s32 angle = flowerAtan2(dx, dz);
+    mPlayerSwordAngle = u16(angle);
+    flowerCXyzSubtract(&mPlayerSwordTop, delta.get(), sword.get());
+    dx = (f32)delta->x;
+    dz = (f32)delta->z;
+    angle = flowerAtan2(dx, dz);
+    u32 sx = (u32) reinterpret_cast<be<u32>*>(sword.get())[0],
+        sy = (u32) reinterpret_cast<be<u32>*>(sword.get())[1],
+        sz = (u32) reinterpret_cast<be<u32>*>(sword.get())[2];
+    auto* swordTop = reinterpret_cast<be<u32>*>(&mPlayerSwordTop);
+    swordTop[0] = sx;
+    mPlayerSwordMoveAngle = u16(angle);
+    swordTop[1] = sy;
+    swordTop[2] = sz;
+    cutSoundFlag = 0;
+    play = ea(dComIfGp_get());
+    flowerMassSetRadius(at<flower::MassGameView>(play)->mMass.mShape, collisionRadius);
+    flowerMassSetHeight(at<flower::MassGameView>(play)->mMass.mShape, groundRaise);
+    at<flower::MassGameView>(play)->mMass.mAttribute = 0xB;
+    at<flower::MassGameView>(play)->mMass.mEnabled = 2;
+    do {
+        if (!(head->mFlags & dFlower_data_c::FLAG_CULLED))
+            head->hitCheck(at<fopAc_ac_c>(player), room);
+        head = head->mpNext.get();
+    } while (head);
+}
+
+/* 02548B6C */
+void dFlower_packet_c::update() {
+    for (u32 i = 0; i < 72; ++i) {
+        auto* animation = &mAnm[i];
+        // HD: these matrix helpers receive full-width sign-extended angles.
+        flowerCMtx_YrotS(&flowerMatrixStack, s32(animation->mAngleY));
+        flowerCMtx_XrotM(&flowerMatrixStack, s32(animation->mBend));
+        flowerCMtx_YrotM(&flowerMatrixStack, s32(s16(-s32(animation->mAngleY))));
+        flowerMatrixCopy(&flowerMatrixStack, &animation->mMtx);
+    }
+    f32 radius = cullRadius;
+    int groundUpdates = 0;
+    Local<cXyz> clipPosition;
+    for (u32 i = 0; i < 200; ++i) {
+        auto* data = &mData[i];
+        if (!(data->mFlags & dFlower_data_c::FLAG_ACTIVE))
+            continue;
+        flowerCLib_calcTimer(&data->mParticleTimer);
+        if ((data->mFlags & dFlower_data_c::FLAG_GROUND_PENDING) && groundUpdates < 8) {
+            f32 y = checkGroundY(&data->mPosition);
+            u8 flags = data->mFlags;
+            data->mPosition.y = y;
+            data->mFlags = flags & ~dFlower_data_c::FLAG_GROUND_PENDING;
+            ++groundUpdates;
+        }
+        // HD: culling uses the flower position without GameCube's vertical offset.
+        f32 y = data->mPosition.y, x = data->mPosition.x, z = data->mPosition.z;
+        clipPosition->x = x;
+        clipPosition->y = y;
+        clipPosition->z = z;
+        s32 clipped =
+            flowerFrustumCheck(&flowerFrustum, &flowerViewMatrix, clipPosition.get(), radius);
+        u8 flags = data->mFlags;
+        if (clipped) {
+            data->mFlags = flags | dFlower_data_c::FLAG_CULLED;
+            continue;
+        }
+        s8 index = data->mAnmIdx;
+        data->mFlags = flags & ~dFlower_data_c::FLAG_CULLED;
+        auto* animation = at<dFlower_anm_c>(ea(mAnm) + u32(s32(index)) * sizeof(dFlower_anm_c));
+        // GHS copies translation words exactly, preserving float payloads.
+        auto* position = reinterpret_cast<be<u32>*>(&data->mPosition);
+        *reinterpret_cast<be<u32>*>(&animation->mMtx.m[0][3]) = position[0];
+        *reinterpret_cast<be<u32>*>(&animation->mMtx.m[1][3]) = position[1];
+        *reinterpret_cast<be<u32>*>(&animation->mMtx.m[2][3]) = position[2];
+        flowerMatrixCopy(&animation->mMtx, &data->mMtx);
+    }
+    flowerDrawListEntry(at<void>(flowerDrawList), this, u32(0));
+    prepareGraphics();
+}
+
+/* 02548D28 */
+void dFlower_packet_c::setData(dFlower_data_c* data, s32 index, s32 type, cXyz* position, s32 room,
+                               s32 item) {
+    auto* flower = static_cast<dFlower_data_c*>(data);
+    auto* pos = static_cast<cXyz*>(position);
+    f32 ground;
+    u8 flags;
+    if (flowerFopOvlpM_IsPeek()) {
+        ground = checkGroundY(position);
+        flags = dFlower_data_c::FLAG_ACTIVE | dFlower_data_c::FLAG_CULLED;
+    } else {
+        flags = dFlower_data_c::FLAG_ACTIVE | dFlower_data_c::FLAG_CULLED |
+                dFlower_data_c::FLAG_GROUND_PENDING;
+        ground = pos->y;
+    }
+    if (type == 2)
+        flags |= 0x20;
+    f32 range = normalAnimationRange;
+    flower->mFlags = flags;
+    f32 random = flowerCM_rndF(range);
+    flower->mAnmIdx = u8(ftoi(random));
+    f32 x = pos->x, z = pos->z;
+    flower->mPosition.x = x;
+    flower->mPosition.y = ground;
+    flower->mItemTableIdx = u8(item);
+    flower->mPosition.z = z;
+    flower->mParticleTimer = 0;
+    auto* roomData = at<dFlower_room_c>(ea(mRoom) + u32(room) * sizeof(dFlower_room_c));
+    void* selected;
+    if (roomData->mpHead.get())
+        selected = mpSampler.get();
+    else {
+        Local<flower::String> literal;
+        Local<flower::String> stage;
+        literal->mText = guest_str("sea");
+        literal->mpVtable.v = ea(&flowerSafeStringVtable);
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        stage->mpVtable.v = ea(&flowerSafeStringVtable);
+        stage->mText = ea(play->play.mCurStage.mName);
+        call_ptr<void>(literal->mpVtable->mEnsureText.get(), literal.get());
+        call_ptr<void>(literal->mpVtable->mEnsureText.get(), literal.get());
+        u32 cached = literal->mText;
+        call_ptr<void>(stage->mpVtable->mEnsureText.get(), stage.get());
+        bool equal = cached == stage->mText;
+        if (!equal) {
+            u32 a = literal->mText, b = stage->mText;
+            for (u32 i = 0; i < 0x40001; ++i) {
+                u8 lhs = *at<be<u8>>(a + i), rhs = *at<be<u8>>(b + i);
+                if (lhs != rhs)
+                    break;
+                if (lhs == 0) {
+                    equal = true;
+                    break;
+                }
+            }
+        }
+        bool oasis = equal && room == 33;
+        auto* geometry = &mGeometry[oasis ? 2 : 1];
+        mpShapeGroups = &geometry->mShapes;
+        mpMaterialBuffers = &geometry->mMaterials;
+        mpUncutIndices = &geometry->mUncut;
+        mpCutIndices = &geometry->mCut;
+        selected = &geometry->mSampler;
+        mpSampler = selected;
+    }
+    if (ea(selected) == ea(&mGeometry[2].mSampler))
+        flower->mFlags = u8(flower->mFlags) | 0x40;
+    roomData->newData(data);
+    mNextData = u16(index);
+}
+
+/* 02548FEC */
+void* dFlower_packet_c::newData(s32 type, cXyz* position, s32 room, s32 variant) {
+    if (u32(room) >= 64)
+        flower_assert(at<void>(guest_str("d_flower.cpp")), u32(0x1F68),
+                      at<void>(guest_str("0 <= i_roomNo && i_roomNo < 64")));
+    u32 start = mNextData;
+    u32 base = ea(mData);
+    for (u32 i = start; i < 200; ++i) {
+        auto* data = at<dFlower_data_c>(base + i * sizeof(dFlower_data_c));
+        if (!(data->mFlags & dFlower_data_c::FLAG_ACTIVE)) {
+            setData(data, i, type, position, room, variant);
+            return data;
+        }
+    }
+    for (u32 i = 0; i < start; ++i) {
+        auto* data = at<dFlower_data_c>(base + i * sizeof(dFlower_data_c));
+        if (!(data->mFlags & dFlower_data_c::FLAG_ACTIVE)) {
+            setData(data, i, type, position, room, variant);
+            return data;
+        }
+    }
+    return nullptr;
+}
+
+/* 02544CBC */
+s32 dFlower_packet_c::newAnm() {
+    for (s32 i = 8; i < 72; ++i) {
+        auto& animation = mAnm[i];
+        if (!animation.mActive) {
+            animation.mActive = 1;
+            animation.mBend = 0;
+            animation.mAngleY = 0;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* 02545A0C */
+void dFlower_packet_c::setAnm(s32 index, s32 angle) {
+    // HD: preserve guest address wrapping for the unchecked animation index.
+    auto* animation = at<dFlower_anm_c>(ea(mAnm) + u32(index) * sizeof(dFlower_anm_c));
+    animation->mActive = 1;
+    animation->mBend = 0;
+    animation->mAngleY = s16(angle);
+}
+
+// HD: shader geometry, lighting and uniforms replace the GameCube display lists.
+
+/* 025486B8 */
+void dFlower_packet_c::prepareGraphics() {
+    // HD: GX2 uses per-room textures and per-flower transforms in place of display lists.
+    Local<Mtx34> view;
+    flowerCopyMatrix(view.get(), &flowerViewMatrix);
+    flowerTransformSetView(&mTransformSet, u32(0), view.get(), &flowerProjection,
+                           at<void>(flowerCamera + 0x240));
+    Local<flower::TevStr> lighting;
+    flower::LightObj* lightObjects[3] = {&lighting->mLightObj, &lighting->mHdLightParam[0],
+                                         &lighting->mHdLightParam[1]};
+    for (auto* object : lightObjects) {
+        auto* defaults = reinterpret_cast<flower::LightDefaults*>(object);
+        // Preserve the reference's word copies for colors and float copies for light parameters.
+        for (u32 i = 0; i < 17; ++i) {
+            if (i == 6 || i == 7 || i == 8)
+                defaults->mWords[i] = flowerInitialLight.mWords[i];
+            else
+                defaults->mFloat[i] = flowerInitialLight.mFloat[i];
+        }
+    }
+    flowerInitLight(lighting.get(), s32(flowerCurrentRoom), u32(0xFF));
+    void* environment = flowerGetEnvironment();
+    flowerSetupEnvironment(environment, s32(1), u32(0), lighting.get());
+    Local<flower::Vector4> color;
+    Local<flower::Vector4> scaled;
+    auto* material = static_cast<flower::FogDescriptor*>(mTransformSet.mpDescriptor.get());
+    flowerNormalizedColor(color.get(), lighting->mColorC0);
+    flowerConvertFogColor(scaled.get(), color.get(), lighting->mLightObj.mFactors[1]);
+    auto* words = reinterpret_cast<be<u32>*>(scaled.get());
+    for (u32 i = 0; i < 4; ++i)
+        material->mColors[0][i] = words[i];
+    material = static_cast<flower::FogDescriptor*>(mTransformSet.mpDescriptor.get());
+    flowerNormalizedColor(color.get(), lighting->mHdLightParam[1].mColorS10);
+    flowerConvertFogColor(scaled.get(), color.get(), lighting->mHdLightParam[1].mFactors[1]);
+    for (u32 i = 0; i < 4; ++i)
+        material->mColors[1][i] = words[i];
+    flowerTransformSetUpdate(&mTransformSet);
+    u32 drawn = 0;
+    f32 divisor = colorDivisor;
+    Local<Mtx34> matrix;
+    for (u32 room = 0; room < 64; ++room) {
+        auto* data = mRoom[room].mpHead.get();
+        if (!data)
+            continue;
+        auto* node = &mTextures[room];
+        for (u32 i = 0; i < 4; ++i)
+            node->mColors[4].mValues[i] = f32(double(s16(lighting->mColorC0[i])) / double(divisor));
+        const auto* rgba = reinterpret_cast<const be<u8>*>(&lighting->mColorK0);
+        for (u32 i = 0; i < 4; ++i)
+            node->mColors[5].mValues[i] = f32(double(u8(rgba[i])) / double(divisor));
+        flowerScaleColor(&node->mColors[5], lighting->mLightObj.mFactors[0]);
+        auto* source = static_cast<flower::FogDescriptor*>(mTransformSet.mpDescriptor.get());
+        auto* target = reinterpret_cast<be<u32>*>(&node->mColors[2]);
+        for (u32 i = 0; i < 4; ++i)
+            target[i] = source->mColors[0][i];
+        flowerUniformUpdate(node);
+        flowerApplyLightColor(lighting.get());
+        while (data) {
+            if (!(data->mFlags & dFlower_data_c::FLAG_CULLED)) {
+                for (u32 i = 0; i < 12; ++i)
+                    matrix->m[i / 4][i % 4] = data->mMtx.m[i / 4][i % 4];
+                // The counter remains unchecked and wraps in the guest address space.
+                auto* drawNode =
+                    at<flower::Transform>(ea(mTransforms) + drawn * sizeof(flower::Transform));
+                flowerMatrixCopy(matrix.get(), &drawNode->mMatrix);
+                flowerUniformUpdate(drawNode);
+                ++drawn;
+            }
+            data = data->mpNext.get();
+        }
+    }
+}
+
+/* 02547C94 */
+void dFlower_packet_c::drawGraphics(flower::DrawInfo* context) {
+    auto* draw = static_cast<flower::DrawInfo*>(context);
+    flower::ShaderMaterial* shader = nullptr;
+    s32 pass = draw->mPass;
+    if (pass < 4)
+        shader = static_cast<flower::ShaderMaterial*>(
+            flowerShaderRow(&mGeometry[0].mShapes, u32(pass))->mpMaterial.get());
+    auto* cache = static_cast<flower::ShaderCache*>(flowerGetShaderCache(&flowerShaderContext));
+    auto* material = shader->mpProgram.get();
+    if (material != cache->mpProgram.get()) {
+        u8 flags = material->mFlags;
+        u32 oldProgram = cache->mState;
+        if (flags & 2) {
+            material->mFlags = flags & ~2;
+            flowerUpdateShaderProgram(material, u32(0));
+        }
+        u32 program = material->mpState->mState;
+        if (oldProgram != program)
+            flowerBindShaderState(at<void>(program));
+        u32 size = material->mBinarySize;
+        if (size)
+            flowerGX2BindProgram(material->mpBinary.v, size);
+        else
+            flowerBindShaderProgram(material);
+        cache->mState = program;
+        cache->mpProgram = material;
+    }
+    pass = draw->mPass;
+    if (pass == 0) {
+        auto* object = draw->mpDrawObject.get();
+        if (object)
+            flowerDrawUniforms(shader, object->mpUniformData.get());
+    } else if (pass == 1 || pass == 2) {
+        flowerDrawUniforms(shader,
+                           static_cast<flower::UniformData*>(mTransformSet.mpDescriptor.get()));
+        if (pass == 2) {
+            auto* object = static_cast<flower::UniformObject*>(draw->mpObject.get());
+            if (object)
+                call_ptr<void>(object->mpVtable->mApply.get(), object, shader);
+            flowerApplyDrawObject(context, shader);
+        }
+    }
+    Local<flower::GraphicsState> state;
+    flowerGraphicsStateConstruct(state.get());
+    state->mBlendMode = 2;
+    state->mDepthEnabled = 1;
+    state->mDepthFunction = 4;
+    state->mDepthValue = drawDepth;
+    u32 flags = state->mDepthBits;
+    state->mDepthBits = (((flags & ~15u) + 7u) & 0xFFFFFF0Fu) + 16u;
+    flowerApplyDrawMode(u32(draw->mPass), state.get());
+    flowerGraphicsStateApply(state.get());
+    u32 drawn = 0;
+    for (u32 room = 0; room < 64; ++room) {
+        auto* data = mRoom[room].mpHead.get();
+        if (data) {
+            auto* node = &mTextures[room];
+            call_ptr<void>(node->mpVtable->mApply.get(), node, shader);
+        }
+        s32 texture = -1, shape = -1;
+        while (data) {
+            if (!(data->mFlags & dFlower_data_c::FLAG_CULLED)) {
+                auto* node =
+                    at<flower::Transform>(ea(mTransforms) + drawn * sizeof(flower::Transform));
+                call_ptr<void>(node->mpVtable->mApply.get(), node, shader);
+                ++drawn;
+                bool special = (data->mFlags & dFlower_data_c::FLAG_PINK) != 0;
+                s32 wantedTexture = special ? 1 : 0;
+                if (texture != wantedTexture) {
+                    void* params = shader->mSamplerCount ? shader->mpSamplers.get() : nullptr;
+                    void* resource = special ? mpSampler.get() : &mGeometry[0].mSampler;
+                    // HD: the external sampler API takes the opaque descriptor after its header word.
+                    flowerBindSamplers(resource, at<void>(ea(params) + 4), u32(0), u32(0));
+                    texture = wantedTexture;
+                }
+                bool cut = (data->mFlags & dFlower_data_c::FLAG_CUT) != 0;
+                s32 wantedShape = (special ? 2 : 0) + (cut ? 1 : 0);
+                if (shape != wantedShape) {
+                    auto* descriptor = special
+                                           ? static_cast<flower::ShapeGroups*>(mpShapeGroups.get())
+                                           : &mGeometry[0].mShapes;
+                    auto* row = flowerShaderRow(descriptor, u32(draw->mPass));
+                    u32 index = mGeometry[0].mMaterials.mFrameIndex;
+                    u32 column = (index ? u32(__builtin_clz(index)) : 32u) / 4u & ~7u;
+                    auto* selected = at<flower::ShapeArray>(ea(row) + column + 4);
+                    auto* buffer = selected->mpShapes.get();
+                    if (cut && u32(selected->mCount) > 1)
+                        buffer = at<flower::Shape>(ea(buffer) + sizeof(flower::Shape));
+                    flowerShapeBind(buffer);
+                    shape = wantedShape;
+                }
+                auto* geometry = special ? static_cast<flower::IndexBuffer*>(
+                                               cut ? mpCutIndices.get() : mpUncutIndices.get())
+                                         : (cut ? &mGeometry[0].mCut : &mGeometry[0].mUncut);
+                flowerIndexedDraw(geometry);
+            }
+            data = data->mpNext.get();
+        }
+    }
+    flowerGraphicsStateApply(&flowerDefaultGraphicsState);
+}
+
+/* inlined into dFlower_data_c::WorkAt */
+static void flowerApplyTexture(void* emitter, Local<flower::EmitterColor>& texture, f32 one) {
+    texture->mVtable = ea(&flowerSafeStringVtable);
+    texture->mValues[1] = one;
+    texture->mEnabled = 1;
+    texture->mValues[3] = one;
+    texture->mpName.v = guest_str("");
+    texture->mPadding[1] = 0;
+    texture->mValues[2] = one;
+    texture->mPadding[0] = 0;
+    texture->mPadding[2] = 0;
+    texture->mValues[0] = one;
+    u32 play = ea(dComIfGp_get()), control = u32(at<dComIfG_inf_c>(play)->play.mParticle.v);
+    for (u32 k = 0; k < 4; ++k)
+        texture->mWords[k] = u32(at<flower::ParticleControl>(control)->mColor[k]);
+    flowerEmitterSetColor(emitter, texture.get());
+}
+
+/* inlined into dFlower_packet_c__dt */
+static void flowerHeapReleaseField(be<u32>* field) {
+    u32 pointer = *field;
+    auto* heap =
+        static_cast<flower::Heap*>(flowerFindHeap(at<void>(heapManager), at<void>(pointer)));
+    u32 target = heap->mpVtable->mFree.get();
+    call_ptr<void>(target, heap, at<void>(*field));
+}
+
+/* inlined into dFlower_packet_c__dt */
+static void flowerCleanupBuffers(flower::MaterialBuffers* materials) {
+    for (u32 pair = 0; pair < 2; ++pair)
+        for (u32 member = 0; member < 2; ++member) {
+            auto* part = &materials->mPart[pair][member];
+            flowerShapeClear(&part->mShape);
+            u32 pointer = part->mpVertexStorage.v;
+            part->mpVertices = nullptr;
+            if (pointer) {
+                (void)u32(part->mVertexCapacity);
+                flowerHeapReleaseField(&part->mpVertexStorage.v);
+                part->mVertexCapacity = 0;
+                part->mpVertexStorage = nullptr;
+            }
+        }
+}
+
+/* inlined into dFlower_packet_c__dt */
+static void flowerCleanupShaderArray(flower::ShapeGroups* descriptor) {
+    auto* pointer = descriptor->mpGroups.get();
+    if (!pointer)
+        return;
+    s32 count = s32(descriptor->mCapacity);
+    u32 offset = 0;
+    for (s32 i = 0; i < count; ++i, offset += sizeof(flower::ShapeGroup)) {
+        auto* row = at<flower::ShapeGroup>(ea(pointer) + offset);
+        if (row) {
+            auto* children = row->mShapes[0].mpShapes.get();
+            row->mpMaterial = nullptr;
+            for (u32 side = 0; side < 2; ++side) {
+                auto* shapes = &row->mShapes[side];
+                if (side)
+                    children = shapes->mpShapes.get();
+                if (children) {
+                    s32 number = shapes->mCount;
+                    u32 childOffset = 0;
+                    for (s32 j = 0; j < number; ++j, childOffset += sizeof(flower::Shape)) {
+                        auto* child = at<flower::Shape>(ea(children) + childOffset);
+                        u32 target = child->mpVtable->mDestroy.get();
+                        call_ptr<void>(target, child, u32(2));
+                        number = shapes->mCount;
+                        children = shapes->mpShapes.get();
+                    }
+                    flowerHeapReleaseField(&shapes->mpShapes.v);
+                    shapes->mCount = 0;
+                    shapes->mpShapes = nullptr;
+                }
+            }
+            count = s32(descriptor->mCapacity);
+            pointer = descriptor->mpGroups.get();
+        }
+    }
+    flowerHeapReleaseField(&descriptor->mpGroups.v);
+    descriptor->mCapacity = 0;
+    descriptor->mpGroups = nullptr;
+}
+
+/* inlined into dFlower_packet_c::drawGraphics */
+static flower::ShapeGroup* flowerShaderRow(flower::ShapeGroups* descriptor, u32 index) {
+    auto* pointer = descriptor->mpGroups.get();
+    return index < descriptor->mCapacity
+               ? at<flower::ShapeGroup>(ea(pointer) + index * sizeof(flower::ShapeGroup))
+               : pointer;
+}
+
+/* inlined into dFlower_packet_c::drawGraphics */
+static void flowerIndexedDraw(flower::IndexBuffer* geometry) {
+    u32 count = geometry->mCount;
+    if (count)
+        flowerGX2DrawIndexed(geometry->mIndexFormat, count, geometry->mPrimitive,
+                             geometry->mIndexType, u32(0), u32(1));
+}
+
+/* inlined into dFlower_packet_c::drawGraphics */
+static void flowerDrawUniforms(flower::ShaderMaterial* shader, flower::UniformData* object) {
+    auto* uniforms = shader->mUniformCount ? shader->mpUniforms.get() : nullptr;
+    // HD: unchecked record indices retain 32-bit guest address wrapping.
+    auto* record =
+        at<flower::UniformRecord>(ea(object) + offsetof(flower::UniformData, mRecords) +
+                                  u32(object->mRecordIndex) * sizeof(flower::UniformRecord));
+    s32 vertex = uniforms->mVertex, pixel = uniforms->mPixel, geometry = uniforms->mGeometry;
+    u32 size = record->mSize, buffer = record->mBuffer;
+    if (pixel != -1)
+        flowerGX2PixelUniform(pixel, buffer, size);
+    if (vertex != -1)
+        flowerGX2VertexUniform(vertex, buffer, size);
+    if (geometry != -1)
+        flowerGX2GeometryUniform(geometry, buffer, size);
+}
+
+/* inlined into dFlower_packet_c__ct */
+static void* flowerHeapAllocate(u32 size, u32 align) {
+    auto* heap = static_cast<flower::Heap*>(flowerGetHeap(at<void>(heapManager)));
+    return call_ptr<void*>(heap->mpVtable->mAllocate.get(), heap, size, align);
+}
+
+/* inlined into dFlower_packet_c__ct */
+static void flowerShaderLoad(u32 descriptor, void* name) {
+    auto* manager = static_cast<flower::MaterialManager*>(flowerGetMaterialManager());
+    s32 index = flowerFindMaterialIndex(manager->mpResource.get(), name);
+    flower::MaterialInstance* entry = nullptr;
+    if (index >= 0) {
+        auto* array = manager->mpInstances.get();
+        u32 count = manager->mCount;
+        entry = u32(index) < count ? at<flower::MaterialInstance>(
+                                         ea(array) + u32(index) * sizeof(flower::MaterialInstance))
+                                   : array;
+        if (!entry->mReady) {
+            auto* archive = manager->mpResource.get();
+            flower::MaterialBinding* record = nullptr;
+            if (u32(index) < archive->mCount)
+                record = at<flower::MaterialBinding>(ea(archive->mpBindings.get()) +
+                                                     u32(index) * sizeof(flower::MaterialBinding));
+            flowerCreateMaterialInstance(entry, record, u32(0));
+            array = manager->mpInstances.get();
+            count = manager->mCount;
+            entry = u32(index) < count
+                        ? at<flower::MaterialInstance>(
+                              ea(array) + u32(index) * sizeof(flower::MaterialInstance))
+                        : array;
+        }
+    }
+    flowerBindMaterialGroups(at<void>(descriptor), entry, u32(0));
+}
+
+/* inlined into dFlower_packet_c__ct */
+static void flowerShaderBuffers(u32 descriptorAddress, u32 buffers) {
+    auto* descriptor = at<flower::ShapeGroups>(descriptorAddress);
+    auto* materials = at<flower::MaterialBuffers>(buffers);
+    for (u32 i = 0; i < descriptor->mCount; ++i) {
+        auto* row = flowerShaderRow(descriptor, i);
+        void* shader = row->mpMaterial.get();
+        row->mpMaterial = nullptr;
+        for (u32 side = 0; side < 2; ++side) {
+            auto* shapes = &row->mShapes[side];
+            auto* pointer = shapes->mpShapes.get();
+            if (pointer) {
+                for (s32 n = 0; n < shapes->mCount; ++n) {
+                    auto* child = at<flower::Shape>(ea(pointer) + u32(n) * sizeof(flower::Shape));
+                    call_ptr<void>(child->mpVtable->mDestroy.get(), child, u32(2));
+                    pointer = shapes->mpShapes.get();
+                }
+                flowerHeapReleaseField(&shapes->mpShapes.v);
+                shapes->mCount = 0;
+                shapes->mpShapes = nullptr;
+            }
+        }
+        row->mpMaterial = shader;
+        for (u32 side = 0; side < 2; ++side) {
+            u32 pointer = ea(flowerHeapAllocate(2 * sizeof(flower::Shape), 4));
+            for (u32 n = 0; n < 2; ++n)
+                if (u32(pointer + n * sizeof(flower::Shape)))
+                    flowerShapeConstruct(at<void>(pointer + n * sizeof(flower::Shape)));
+            if (pointer) {
+                row->mShapes[side].mpShapes.v = pointer;
+                row->mShapes[side].mCount = 2;
+            }
+        }
+        for (u32 side = 0; side < 2; ++side)
+            for (u32 n = 0; n < 2; ++n) {
+                u32 child = row->mShapes[side].mpShapes.v;
+                if (n < u32(row->mShapes[side].mCount))
+                    child += n * sizeof(flower::Shape);
+                flowerConfigureShape(shader, at<void>(child),
+                                     &materials->mPart[n][side].mVertexBuffer,
+                                     &materials->mVertexFormat, u32(0));
+            }
+    }
+}
+
+/* inlined into dFlower_packet_c__ct */
+static u32 flowerInlineClear(u32 group, u32 side, u32 bytes) {
+    auto* materials = at<flower::MaterialBuffers>(group);
+    u32 buffer = group + (u32(materials->mFrameIndex) + side * 2) * sizeof(flower::MaterialPart);
+    u32 begin = at<flower::MaterialPart>(buffer)->mpVertices.v, end = begin + bytes;
+    for (u32 line = begin; line < end; line += 32) {
+        auto* cacheLine = at<be<u8>>(line & ~31u);
+        for (u32 k = 0; k < 32; ++k)
+            cacheLine[k] = 0;
+    }
+    if (begin < end)
+        buffer = group + (u32(materials->mFrameIndex) + side * 2) * sizeof(flower::MaterialPart);
+    return buffer;
+}
+
+/* inlined into dFlower_packet_c__ct */
+static void flowerVertices(flower::Vertex* output, be<u32>* count, cXyz* position, cXyz* normal,
+                           flower::Vector2* texcoord, flower::Vector4* color, bool setters) {
+    for (u32 i = 0; i < *count; ++i) {
+        auto* vertex = at<flower::Vertex>(ea(output) + i * sizeof(flower::Vertex));
+        if (setters) {
+            flowerSetVec3(vertex->mPosition, position[i].x, position[i].y, position[i].z);
+            flowerSetVec3(vertex->mNormal, normal[i].x, normal[i].y, normal[i].z);
+            flowerSetVec4(vertex->mColor, color[i].mValues[0], color[i].mValues[1],
+                          color[i].mValues[2], color[i].mValues[3]);
+            flowerSetVec2(vertex->mTexCoord, texcoord[i].mValues[0], texcoord[i].mValues[1]);
+        } else {
+            const auto* pos = reinterpret_cast<const be<f32>*>(&position[i]);
+            const auto* norm = reinterpret_cast<const be<f32>*>(&normal[i]);
+            for (u32 k = 0; k < 3; ++k)
+                vertex->mPosition[k] = pos[k];
+            for (u32 k = 0; k < 3; ++k)
+                vertex->mNormal[k] = norm[k];
+            for (u32 k = 0; k < 4; ++k)
+                vertex->mColor[k] = color[i].mValues[k];
+            if (count == &flowerMeshCounts.mMeshes[2].mVertices)
+                flowerSetVec2(vertex->mTexCoord, texcoord[i].mValues[0], texcoord[i].mValues[1]);
+            else
+                for (u32 k = 0; k < 2; ++k)
+                    vertex->mTexCoord[k] = texcoord[i].mValues[k];
+        }
+    }
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02544AA4 */
+void dFlower_data_c__dt(void* self, u32 flags) {
+    if (self && (flags & 1))
+        flowerFree(self);
+}
+
+/* 02548554 */
+void flowerCopyMatrix(void* destination, void* source) {
+    auto* input = static_cast<be<f32>*>(source);
+    auto* output = static_cast<be<f32>*>(destination);
+    // HD: load the complete matrix before storing, including overlapping inputs.
+    f32 values[12];
+    for (int i = 0; i < 12; ++i)
+        values[i] = input[i];
+    for (int i = 0; i < 12; ++i)
+        output[i] = values[i];
+}
+
+/* 025485F4 */
+void flowerNormalizedColor(void* destination, void* source) {
+    auto* input = static_cast<be<s16>*>(source);
+    auto* output = static_cast<be<f32>*>(destination);
+    s16 red = input[0], blue = input[2], green = input[1];
+    f32 scale = colorDivisor;
+    s16 alpha = input[3];
+    f32 colors[4] = {f32(f64(red) / scale), f32(f64(green) / scale), f32(f64(blue) / scale),
+                     f32(f64(alpha) / scale)};
+    for (int i = 0; i < 4; ++i)
+        output[i] = colors[i];
+}
+
+/* 02549118 */
+void flowerStaticInit() {
+    firstStaticTail = 0;
+    firstStaticHead = 0;
+    secondStaticTail = 0;
+    secondStaticHead = 0;
+    flowerRegisterStatic(&flowerDestructorRecords.mRecords[0]);
+    f32 first = staticFirstValue, second = staticSecondValue;
+    firstStaticValue = first;
+    secondStaticValue = second;
+    flowerFirstStaticFlagConstruct(&flowerFirstStaticFlag);
+    flowerRegisterStatic(&flowerDestructorRecords.mRecords[1]);
+    flowerSecondStaticFlagConstruct(&flowerSecondStaticFlag);
+    flowerRegisterStatic(&flowerDestructorRecords.mRecords[2]);
+}
+
+/* 02549290 */
+void* flowerStringConstruct(void* self, void* text) {
+    if (!self)
+        self = flowerAllocate(u32(0x8));
+    if (!self)
+        return nullptr;
+    auto* string = static_cast<flower::String*>(self);
+    string->mText = ea(text);
+    string->mpVtable.v = ea(&flowerSafeStringVtable);
+    return self;
+}
+
+/* 025492E0 */
+void* flowerDrawNodeConstruct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0xA8));
+    if (!self)
+        return nullptr;
+    auto* transform = static_cast<flower::Transform*>(self);
+    flowerUniformConstruct(self);
+    transform->mpVtable.v = ea(&flowerTransformVtable);
+    flowerClearUniformData(&transform->mMatrix, u32(0x34));
+    if (ea(&transform->mMatrix) == 0)
+        flowerAllocate(u32(sizeof(Mtx34)));
+    return self;
+}
+
+/* 02549350 */
+void* flowerMatrixConstruct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x10));
+    if (!self)
+        return nullptr;
+    return self;
+}
+
+/* 02549604 */
+void* flowerBuffer1Construct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x254));
+    if (!self)
+        return nullptr;
+    auto* part = static_cast<flower::MaterialPart*>(self);
+    flowerVertexBufferConstruct(&part->mVertexBuffer);
+    flowerShapeConstruct(&part->mShape);
+    part->mpVertexStorage = nullptr;
+    part->mVertexCapacity = 0;
+    return self;
+}
+
+/* 02549660 */
+void* flowerBuffer2Construct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x254));
+    if (!self)
+        return nullptr;
+    auto* part = static_cast<flower::MaterialPart*>(self);
+    flowerVertexBufferConstruct(&part->mVertexBuffer);
+    flowerShapeConstruct(&part->mShape);
+    part->mpVertexStorage = nullptr;
+    part->mVertexCapacity = 0;
+    return self;
+}
+
+/* 025491AC */
+void flowerAnimationDestroy(void* self, u32 flags) {
+    if (self && (flags & 1))
+        flowerFree(self);
+}
+
+/* 025496BC */
+void flowerSetVec3(void* self, f32 x, f32 y, f32 z) {
+    auto* vector = static_cast<cXyz*>(self);
+    vector->y = y;
+    vector->z = z;
+    vector->x = x;
+}
+
+/* 025496CC */
+void flowerSetVec4(void* self, f32 x, f32 y, f32 z, f32 w) {
+    auto* vector = static_cast<be<f32>*>(self);
+    vector[2] = z;
+    vector[1] = y;
+    vector[3] = w;
+    vector[0] = x;
+}
+
+/* 025496E0 */
+void flowerSetVec2(void* self, f32 x, f32 y) {
+    auto* vector = static_cast<be<f32>*>(self);
+    vector[0] = x;
+    vector[1] = y;
+}
+
+/* 02549238 */
+void* flowerBufferSelect(void* self, u32 slot, u32 clear) {
+    auto* materials = static_cast<flower::MaterialBuffers*>(self);
+    u32 index = materials->mFrameIndex + slot * 2;
+    auto* part = at<flower::MaterialPart>(ea(self) + index * sizeof(flower::MaterialPart));
+    if (clear) {
+        u32 begin = ea(part->mpVertices.get()), end = begin + 0x7160;
+        // HD: clear complete cache lines, retaining unsigned guest-address wrapping.
+        for (u32 line = begin; line < end; line += 32) {
+            auto* bytes = at<be<u8>>(line & ~31u);
+            for (u32 k = 0; k < 32; ++k)
+                bytes[k] = 0;
+        }
+        if (begin < end)
+            part = at<flower::MaterialPart>(ea(self) + (u32(materials->mFrameIndex) + slot * 2) *
+                                                           sizeof(flower::MaterialPart));
+    }
+    return part;
+}
+
+/* 025496EC */
+void flowerBufferRotate(void* self, u32 unused, u32 count) {
+    auto* materials = static_cast<flower::MaterialBuffers*>(self);
+    u32 active = materials->mFrameIndex;
+    if (count) {
+        u32 buffer = ea(self) + active * sizeof(flower::MaterialPart) +
+                     offsetof(flower::MaterialPart, mVertexBuffer);
+        for (u32 i = 0; i < count; ++i, buffer += 2 * sizeof(flower::MaterialPart)) {
+            auto* vertexBuffer = at<flower::VertexBuffer>(buffer);
+            flowerVertexBufferFlush(vertexBuffer, u32(0), vertexBuffer->mFlushSize);
+        }
+        active = materials->mFrameIndex;
+    }
+    materials->mFrameIndex = active == 0;
+}
+
+/* 02549768 */
+void flowerSurfaceAssign(void* self, void* source) {
+    auto* target = static_cast<flower::SurfaceTransfer*>(self);
+    auto* input = static_cast<flower::SurfaceTransfer*>(source);
+    if (target->mDimension != input->mDimension || target->mWidth != input->mWidth ||
+        target->mHeight != input->mHeight || target->mDepth != input->mDepth ||
+        target->mMipLevels != input->mMipLevels || target->mFormat != input->mFormat ||
+        target->mSwizzle != input->mSwizzle || target->mTileMode != input->mTileMode ||
+        target->mAntialias != input->mAntialias) {
+        flowerCopySamplerState(self, source);
+        return;
+    }
+    u32 image = input->mImage, mip = input->mMipmap;
+    target->mImage = image;
+    target->mMipmap = mip;
+    target->mCachedImage = image;
+    target->mCachedMipmap = mip;
+}
+
+/* 02549818 */
+void flowerFlagsSet(void* self, u32 mask) {
+    auto* flags = static_cast<be<u8>*>(self);
+    *flags = u8(*flags) | mask;
+}
+
+/* 02549828 */
+void flowerBuffer1Destroy(void* self, u32 flags) {
+    if (!self)
+        return;
+    auto* part = static_cast<flower::MaterialPart*>(self);
+    flowerShapeDestroy(&part->mShape, u32(2));
+    flowerVertexBufferDestroy(&part->mVertexBuffer, u32(2));
+    if (flags & 1)
+        flowerFree(self);
+}
+
+/* 02549888 */
+void flowerBuffer2Destroy(void* self, u32 flags) {
+    if (!self)
+        return;
+    auto* part = static_cast<flower::MaterialPart*>(self);
+    flowerShapeDestroy(&part->mShape, u32(2));
+    flowerVertexBufferDestroy(&part->mVertexBuffer, u32(2));
+    if (flags & 1)
+        flowerFree(self);
+}
+
+/* 025498E8 */
+void flowerDrawNodeDestroy(void* self, u32 flags) {
+    if (!self)
+        return;
+    flowerUniformDestroy(self, u32(0));
+    if (flags & 1)
+        flowerFree(self);
+}
+
+/* 0254993C */
+void flowerRoomNodeDestroy(void* self, u32 flags) {
+    if (!self)
+        return;
+    flowerUniformDestroy(self, u32(0));
+    if (flags & 1)
+        flowerFree(self);
+}
+
+/* 02549990 */
+void flowerEmptyResource1(void* self) {}
+
+/* 02549994 */
+void flowerEmptyResource2(void* self) {}
+
+/* 02549998 */
+u32 flowerResourceEnabled(void* self) { return 1; }
+
+/* 0254937C */
+void* flowerRoomNodeConstruct(void* self) {
+    if (!self)
+        self = flowerAllocate(u32(0x364));
+    if (!self)
+        return nullptr;
+    auto* transform = static_cast<flower::TextureTransform*>(self);
+    flowerUniformConstruct(self);
+    transform->mpVtable.v = ea(&flowerTextureTransformVtable);
+    flowerClearUniformData(transform->mColors, u32(0x2F0));
+    f32 zero = textureZero, one = textureOne;
+    // Eleven initial vectors, each with an alpha/homogeneous component of one.
+    for (u32 i = 0; i < 44; ++i)
+        transform->mColors[i / 4].mValues[i % 4] = (i % 4) == 3 ? one : zero;
+    for (u32 i = 0; i < 3; ++i)
+        flowerArrayConstruct(
+            transform->mVectors[i], u32(2), u32(sizeof(flower::Vector4)),
+            at<void>(guest_fn(reinterpret_cast<const void*>(&flowerMatrixConstruct))));
+    // HD: GHS retains the wrapped null checks, including the first tail vector as a matrix-sized object.
+    for (u32 i = 0; i < 9; ++i)
+        if (u32(ea(transform->mMatrices) + i * sizeof(Mtx34)) == 0)
+            flowerAllocate(u32(sizeof(Mtx34)));
+    for (u32 i = 1; i < 6; ++i)
+        if (ea(&transform->mTailVectors[i]) == 0)
+            flowerAllocate(u32(sizeof(flower::Vector4)));
+    return self;
+}
+
+/* 0254725C */
+void dFlower_packet_c__dt(void* self, u32 flags) {
+    if (!self)
+        return;
+    auto* packet = static_cast<dFlower_packet_c*>(self);
+    packet->mPacketBase.mVtable = ea(&flowerPacketVtable);
+    for (u32 i = 0; i < 3; ++i) {
+        auto* materials = &packet->mGeometry[i].mMaterials;
+        flowerCleanupBuffers(materials);
+        materials->mState = 0;
+    }
+    for (u32 i : {2u, 1u, 0u}) {
+        auto* geometry = &packet->mGeometry[i];
+        flowerSamplerDestroy(&geometry->mSampler, u32(2));
+        flowerIndexBufferDestroy(&geometry->mCut, u32(2));
+        flowerIndexBufferDestroy(&geometry->mUncut, u32(2));
+        auto* materials = &geometry->mMaterials;
+        if (ea(materials)) {
+            flowerCleanupBuffers(materials);
+            materials->mState = 0;
+            u32 callback = guest_fn(
+                reinterpret_cast<const void*>(i ? &flowerBuffer1Destroy : &flowerBuffer2Destroy));
+            flowerArrayDestroy(materials, u32(4), u32(sizeof(flower::MaterialPart)),
+                               at<void>(callback), u32(0), u32(0));
+        }
+        flowerCleanupShaderArray(&geometry->mShapes);
+    }
+    flowerArrayDestroy(packet->mTextures, u32(64), u32(sizeof(flower::TextureTransform)),
+                       at<void>(guest_fn(reinterpret_cast<const void*>(&flowerDrawNodeDestroy))),
+                       u32(0), u32(0));
+    flowerArrayDestroy(packet->mTransforms, u32(200), u32(sizeof(flower::Transform)),
+                       at<void>(guest_fn(reinterpret_cast<const void*>(&flowerRoomNodeDestroy))),
+                       u32(0), u32(0));
+    flowerTransformSetDestroy(&packet->mTransformSet, u32(2));
+    flowerPacketBaseDestroy(self, u32(0));
+    if (flags & 1)
+        flowerFree(self);
+}
+
+/* WWHD glue
+str 1004E130 "sea" in 02548D28
+str 10000160 ""
+str 1004E098 "flower_draw" in 02545A2C
+str 1004E0C0 "ProgramTexture" in 02545A2C
+str 1004E0D0 "ProgramTexture.bfres" in 02545A2C
+str 1004E0A4 "Txo_ob_flower_white_64x64" in 02545A2C
+str 1004E0E8 "Txo_ob_flower_pink_64x64" in 02545A2C
+str 1004E088 "Txq_bessou_hana" in 02545A2C
+str 1004E134 "d_flower.cpp" in 02548FEC
+str 1004E144 "0 <= i_roomNo && i_roomNo < 64" in 02548FEC
+str 1004E064 "d_flower.cpp" in 025457C4
+str 1004E074 "hit_actor != (0)" in 025457C4
+data regularIndices 101D7540
+data regularCutIndices 101D81A0
+data pinkIndices 101D8FE0
+data pinkCutIndices 101D96E8
+data oasisIndices 101E08E8
+data oasisCutIndices 101E1BE4
+data flowerRoomColors 1047E6CC
+data flowerDestructorRecords 101E1CBC
+data flowerFirstStaticFlag 10475944
+data flowerSecondStaticFlag 10475945
+data flowerTransformVtable 1016EF84
+data flowerTextureTransformVtable 1016EFB4
+data flowerParticleAngles 1047593C
+data flowerMatrixStack 1048D0CC
+data flowerFrustum 1048CFF0
+data flowerCosineTable 104A44FC
+data flowerPacketVtable 1004E180
+data flowerVertexDeclaration 1004E170
+data flowerMeshCounts 101D642C
+data regularPositions 101D6460
+data regularNormals 101D6898
+data regularTexCoords 101D7270
+data regularColors 101D6CD0
+data regularCutPositions 101D7660
+data regularCutNormals 101D7930
+data regularCutTexCoords 101D7FC0
+data regularCutColors 101D7C00
+data pinkPositions 101D8230
+data pinkNormals 101D859C
+data pinkTexCoords 101D8D98
+data pinkColors 101D8908
+data pinkCutPositions 101D9118
+data pinkCutNormals 101D928C
+data pinkCutTexCoords 101D95F0
+data pinkCutColors 101D9400
+data oasisPositions 101D9778
+data oasisNormals 101DB3D4
+data oasisTexCoords 101DF600
+data oasisColors 101DD030
+data oasisCutPositions 101E1404
+data oasisCutNormals 101E15FC
+data oasisCutTexCoords 101E1A94
+data oasisCutColors 101E17F4
+data flowerWallQueryVtable 1004E01C
+data flowerPolygonQueryVtable 1004E00C
+data flowerGroundQueryVtable 1004DFFC
+data flowerBackgroundQueryVtable 1004E02C
+data flowerWallBaseVtable 1004DFEC
+data flowerSafeStringVtable 1004DFD4
+data flowerDefaultGraphicsState 104B474C
+data flowerShaderContext 104B45C0
+data flowerInitialLight 1016E414
+data flowerViewMatrix 104B45F8
+data flowerProjection 104B470C
+data flowerCurrentRoom 1047E6C8
+data textureEpsilon 100030B8
+data groundRaise 1004E03C
+data groundMinimum 1004E040
+data flowerZero 1004E044
+data collisionDistanceSquared 1004E048
+data cutDistance 1004E04C
+data particleRise 1004E050
+data particleOne 1004E054
+data pinkParticleScale 1004E058
+data collisionRadius 1004E05C
+data collisionHeight 1004E060
+data drawDepth 1004E104
+data swayScale 1004E108
+data colorDivisor 1004E118
+data cullRadius 1004E128
+data normalAnimationRange 1004E12C
+data staticFirstValue 1004E168
+data staticSecondValue 1004E16C
+data textureOne 1014517C
+data textureZero 10145180
+data cutSoundFlag 101D645C
+data resourceManager 101F4F7C
+data graphicsLock 101F8B18
+data heapManager 101F8B4C
+data swayCounter 101FF560
+data firstStaticValue 10475934
+data secondStaticValue 10475938
+data firstStaticHead 10475948
+data secondStaticHead 1047594C
+data firstStaticTail 10475950
+data secondStaticTail 10475954
+data particleAnglesReady 10475958
+data flowerDrawList 104B4634
+data flowerCamera 104B4708
+ext 02008974 f32 flowerCBgS_GroundCross(void* a0, void* a1)
+ext 02008DAC void flowerGroundDestruct(void* a0, u32 a1)
+ext 02008E0C void flowerGroundConstruct(void* a0)
+ext 0200F378 s32 flowerCLib_addCalcAngleS(void* a0, s32 a1, s32 a2, s32 a3, s32 a4)
+ext 0200F378 short flowerCLib_addCalcAngleS(void* a0, s16 a1, s16 a2, s16 a3, s16 a4)
+ext 0200F8D0 s32 flowerCLib_chaseAngleS(void* a0, s16 a1, s16 a2)
+ext 0200F8D0 s32 flowerCLib_chaseAngleS(void* a0, s32 a1, s32 a2)
+ext 02018428 void flowerMassSetHeight(void* a0, f32 a1)
+ext 020184DC void flowerMassSetRadius(void* a0, f32 a1)
+ext 020195B0 s32 flowerAtan2(f32 a0, f32 a1)
+ext 020198D8 f32 flowerCM_rndF(f32 a0)
+ext 0201A478 void flowerCsXyz_csXyz(void* a0, u32 a1, u32 a2, u32 a3)
+ext 0201A478 void* flowerCsXyz_csXyz(void* a0, s16 a1, s16 a2, s16 a3)
+ext 0201ADE0 void flowerCXyzSubtract(void* a0, void* a1, void* a2)
+ext 0207A9A0 void flowerCLib_calcTimer(void* a0)
+ext 025157AC void* flowerDCcD_GetGObjInf(void* a0)
+ext 0251694C void flowerHitConstruct(void* a0)
+ext 025170D8 u32 flowerCheckMass(void* a0, void* a1, void* a2, void* a3)
+ext 02520540 s32 flowerDComIfGp_getReverb(s32 a0)
+ext 02555D0C void* flowerGetEnvironment()
+ext 0255F8F4 void flowerApplyLightColor(void* a0)
+ext 0255FFF4 void flowerInitLight(void* a0, s32 a1, u32 a2)
+ext 025626A4 void flowerSetupEnvironment(void* a0, s32 a1, u32 a2, void* a3)
+ext 025626A4 void flowerSetupEnvironment(void* a0, s32 a1, void* a2, void* a3)
+ext 025A847C void* flowerDPa_control_c_set(void* a0, u32 a1, u32 a2, void* a3, u32 a4, u32 a5, u32 a6, u32 a7, s32 a8, void* a9, void* a10, u32 a11)
+ext 025A847C void* flowerDPa_control_c_set(void* a0, u32 a1, u32 a2, void* a3, void* a4, u32 a5, u32 a6, u32 a7, s32 a8, void* a9, void* a10, u32 a11)
+ext 025A847C void* flowerDPa_control_c_set(void* a0, u8 a1, u16 a2, void* a3, void* a4, void* a5, u8 a6, void* a7, s8 a8, void* a9, void* a10, void* a11)
+ext 025D8120 u32 flowerFopAcM_createItemFromTable(void* a0, s32 a1, s32 a2, s32 a3, s32 a4, void* a5, s32 a6, void* a7)
+ext 025D8120 void flowerFopAcM_createItemFromTable(void* a0, s32 a1, s32 a2, s32 a3, u32 a4, u32 a5, u32 a6, u32 a7)
+ext 025DBE00 s32 flowerFopOvlpM_IsPeek()
+ext 025E1A40 void flowerStartSound(u32 a0, void* a1, u32 a2, s32 a3)
+ext 025E1B34 void flowerJAIZelBasic_seDeleteObject(void* a0)
+ext 025F1884 void flowerCMtx_YrotS(void* a0, s16 a1)
+ext 025F1884 void flowerCMtx_YrotS(void* a0, s32 a1)
+ext 025F1BF4 void flowerCMtx_XrotM(void* a0, s16 a1)
+ext 025F1BF4 void flowerCMtx_XrotM(void* a0, s32 a1)
+ext 025F1C28 void flowerCMtx_YrotM(void* a0, s16 a1)
+ext 025F1C28 void flowerCMtx_YrotM(void* a0, s32 a1)
+ext 026124B0 void* flowerGetResource(void* a0, void* a1, void* a2, u32 a3)
+ext 0273AA24 void flower_assert(void* a0, s32 a1, void* a2)
+ext 0273AA24 void flower_assert(void* a0, u32 a1, void* a2)
+ext 0273AD10 void* flowerAllocate(u32 a0)
+ext 0273AF40 void flowerFree(void* a0)
+ext 0274D2AC void flowerScaleColor(void* a0, f32 a1)
+ext 0274D458 void flowerConvertFogColor(void* a0, void* a1, f32 a2)
+ext 0274FBF8 void flowerLockGraphics(void* a0)
+ext 0274FCCC void flowerUnlockGraphics(void* a0)
+ext 02750250 void flowerGraphicsStateConstruct(void* a0)
+ext 02750370 void flowerGraphicsStateApply(void* a0)
+ext 02755FEC void* flowerFindHeap(void* a0, void* a1)
+ext 02756140 void* flowerGetHeap(void* a0)
+ext 02773870 void flowerLoadSamplerResource(void* a0, void* a1, void* a2)
+ext 027B5430 void flowerIndexBufferConstruct(void* a0)
+ext 027B54A0 void flowerIndexBufferDestroy(void* a0, u32 a1)
+ext 027B54E0 void flowerIndexBufferSet(void* a0, void* a1, u32 a2, u32 a3)
+ext 027B5BD8 void flowerVertexBufferConstruct(void* a0)
+ext 027B5CBC void flowerVertexBufferDestroy(void* a0, u32 a1)
+ext 027B5E94 void flowerVertexBufferFlush(void* a0, u32 a1, u32 a2)
+ext 027B90AC s32 flowerFindMaterialIndex(void* a0, void* a1)
+ext 027B9F68 void flowerBindShaderState(void* a0)
+ext 027BB7CC void flowerBindShaderProgram(void* a0)
+ext 027BB9E0 void flowerUpdateShaderProgram(void* a0, u32 a1)
+ext 027BDEB4 void flowerCopySamplerState(void* a0, void* a1)
+ext 027BDF7C void flowerSamplerConstruct(void* a0)
+ext 027BE2B0 void flowerSamplerDestroy(void* a0, u32 a1)
+ext 027BE53C void flowerBindSamplers(void* a0, void* a1, u32 a2, u32 a3)
+ext 027BE6B8 void flowerSamplerResourceConstruct(void* a0)
+ext 027BF734 void flowerShapeConstruct(void* a0)
+ext 027BF7E8 void flowerShapeClear(void* a0)
+ext 027BF880 void flowerShapeDestroy(void* a0, u32 a1)
+ext 027BFE5C void flowerShapeBind(void* a0)
+ext 027F0E04 s32 flowerDrawListEntry(void* a0, void* a1, u16 a2)
+ext 027F0E04 void flowerDrawListEntry(void* a0, void* a1, u32 a2)
+ext 027F1278 void flowerPacketBaseConstruct(void* a0)
+ext 027F13DC void flowerPacketBaseDestroy(void* a0, u32 a1)
+ext 027F29D4 void* flowerGetShaderCache(void* a0)
+ext 027FB40C void flowerUniformConstruct(void* a0)
+ext 027FB528 void flowerUniformDestroy(void* a0, u32 a1)
+ext 027FB5D4 void flowerUniformSetState(void* a0, u32 a1)
+ext 027FB678 void flowerUniformUpdate(void* a0)
+ext 027FD6F4 void flowerTransformSetConstruct(void* a0)
+ext 027FD764 void flowerTransformSetDestroy(void* a0, u32 a1)
+ext 027FD838 void flowerTransformSetConfigure(void* a0, u32 a1, u32 a2)
+ext 027FDA54 void flowerTransformSetView(void* a0, u32 a1, void* a2, void* a3, void* a4)
+ext 027FE010 void flowerTransformSetUpdate(void* a0)
+ext 027FF478 void flowerConfigureVertexBuffer(void* a0, void* a1, u32 a2, void* a3)
+ext 027FF530 void flowerConfigureShape(void* a0, void* a1, void* a2, void* a3, u32 a4)
+ext 027FFCBC void* flowerGetMaterialManager()
+ext 027FFE54 void flowerApplyDrawObject(void* a0, void* a1)
+ext 0280037C void flowerApplyDrawMode(u32 a0, void* a1)
+ext 0280068C void flowerBindMaterialGroups(void* a0, void* a1, u32 a2)
+ext 02800B0C void flowerCreateMaterialInstance(void* a0, void* a1, u32 a2)
+ext 0281E5A8 void flowerEmitterSetColor(void* a0, void* a1)
+ext 02838148 s32 flowerFrustumCheck(void* a0, void* a1, void* a2, f32 a3)
+ext 028E8DD0 f32 flowerVectorSquareMagnitude(void* a0)
+ext 028E90D4 void flowerMatrixCopy(void* a0, void* a1)
+ext 028EAB2C void flowerSecondStaticFlagConstruct(u32 a0)
+ext 028EAB2C void flowerSecondStaticFlagConstruct(void* a0)
+ext 028ED6F8 void flowerFirstStaticFlagConstruct(u32 a0)
+ext 028ED6F8 void flowerFirstStaticFlagConstruct(void* a0)
+ext 028EFFD0 void flowerArrayConstruct(void* a0, u32 a1, u32 a2, u32 a3)
+ext 028EFFD0 void flowerArrayConstruct(void* a0, u32 a1, u32 a2, void* a3)
+ext 028F0164 void flowerArrayDestroy(void* a0, u32 a1, u32 a2, void* a3, u32 a4, u32 a5)
+ext 028F026C void flowerRegisterStatic(u32 a0)
+ext 028F026C void flowerRegisterStatic(void* a0)
+ext 028F4384 f32 flowerSquareRoot(f32 a0)
+ext 028F4384 f64 flowerSquareRoot(f64 a0)
+ext 028F521C void flowerClearUniformData(void* a0, u32 a1)
+ext C00060E0 void flowerGX2BindProgram(u32 a0, u32 a1)
+ext C0006178 void flowerGX2DrawIndexed(u32 a0, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5)
+ext C00068A8 void flowerGX2GeometryUniform(s32 a0, u32 a1, u32 a2)
+ext C0006900 void flowerGX2PixelUniform(s32 a0, u32 a1, u32 a2)
+ext C0006A38 void flowerGX2VertexUniform(s32 a0, u32 a1, u32 a2)
+*/

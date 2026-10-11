@@ -2,26 +2,26 @@
  * The GameCube header has no members: the layout here is measured from the WWHD code
  * (constructor 0248D390 allocates 0x3E20). */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
 
 /* one segment of a tentacle line */
 struct ss_seg {
     /* 0x0 */ cXyz mPos;
-    /* 0xC */ be<u8> mSize;            /* line width index */
+    /* 0xC */ be<u8> mSize; /* line width index */
     /* 0xD */ u8 _D[3];
 };
 WWHD_SIZE(ss_seg, 0x10);
 
 /* one tentacle ("hand"), 0x58C bytes (constructor 0248D724, destructor 0248D77C) */
 struct ss_s {
-    /* 0x000 */ be<u8> mMode;           /* 0 set, 1 move, 2 cut */
+    /* 0x000 */ be<u8> mMode; /* 0 set, 1 move, 2 cut */
     /* 0x001 */ u8 _001[3];
-    /* 0x004 */ cXyz mPos;              /* root position */
+    /* 0x004 */ cXyz mPos; /* root position */
     /* 0x010 */ u8 _010[2];
     /* 0x012 */ be<s16> mAngleY;
     /* 0x014 */ be<s16> mAngleZ;
     /* 0x016 */ u8 _016[2];
-    /* 0x018 */ cXyz mSpeed;            /* cut: flight speed */
+    /* 0x018 */ cXyz mSpeed; /* cut: flight speed */
     /* 0x024 */ be<f32> mHeight;
     /* 0x028 */ be<f32> mSwing;
     /* 0x02C */ be<f32> mGround;
@@ -30,7 +30,7 @@ struct ss_s {
     /* 0x034 */ be<s16> mRotSpeed;
     /* 0x036 */ be<s16> mHoldTimer;
     /* 0x038 */ be<s16> mLandTimer;
-    /* 0x03A */ be<s8> mLen;            /* visible segments */
+    /* 0x03A */ be<s8> mLen; /* visible segments */
     /* 0x03B */ be<s8> mBurn;
     /* 0x03C */ dCcD_Sph mSph[4];
     /* 0x4EC */ ss_seg mSeg[10];
@@ -40,23 +40,37 @@ WWHD_OFFSET(ss_s, mSeg, 0x4EC);
 WWHD_SIZE(ss_s, 0x58C);
 
 /* mDoExt_3DlineMat0_c (HD 0x148): vtable at +0x130, lines at +0x144 */
+struct SsLine {
+    gptr<cXyz> mpSegments;
+    gptr<be<u8>> mpSize;
+    u8 mMeshState[8];
+};
+WWHD_SIZE(SsLine, 0x10);
+struct SsJoint {
+    be<u32> mpData;
+    be<u16> mJntNo;
+};
+struct SsSinCosEntry {
+    be<f32> mSin;
+    be<f32> mCos;
+};
 struct mDoExt_3DlineMat0_ss {
     /* 0x000 */ u8 _000[0x130];
     /* 0x130 */ be<u32> __vtbl;
     /* 0x134 */ u8 _134[0x144 - 0x134];
-    /* 0x144 */ be<u32> mpLines;
+    /* 0x144 */ gptr<SsLine> mpLines;
 };
 WWHD_SIZE(mDoExt_3DlineMat0_ss, 0x148);
 
 struct ss_class : fopAc_ac_c {
     /* 0x3AC */ u8 _3AC[0x3C8 - 0x3AC];
     /* 0x3C8 */ request_of_phase_process_class mPhs;
-    /* 0x3D0 */ be<s8> m3D0;
+    /* 0x3D0 */ be<s8> mShielded;
     /* 0x3D1 */ u8 _3D1[3];
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpMorf;
-    /* 0x3D8 */ be<u8> mType;         /* param & 0xFF */
-    /* 0x3D9 */ be<u8> mKind;         /* (param >> 8) & 0xFF */
-    /* 0x3DA */ be<u8> mSwNo;         /* param >> 24 (0xFF -> 0) */
+    /* 0x3D8 */ be<u8> mType; /* param & 0xFF */
+    /* 0x3D9 */ be<u8> mKind; /* (param >> 8) & 0xFF */
+    /* 0x3DA */ be<u8> mSwNo; /* param >> 24 (0xFF -> 0) */
     /* 0x3DB */ u8 _3DB;
     /* 0x3DC */ be<s16> mCounter;
     /* 0x3DE */ u8 _3DE[2];
@@ -67,7 +81,7 @@ struct ss_class : fopAc_ac_c {
     /* 0x3EE */ be<s16> mHeadRotX;
     /* 0x3F0 */ be<s16> mHeadRotY;
     /* 0x3F2 */ u8 _3F2[2];
-    /* 0x3F4 */ be<u8> m3F4;
+    /* 0x3F4 */ be<u8> mHeadSwingTimer;
     /* 0x3F5 */ u8 _3F5[3];
     /* 0x3F8 */ ss_s mHand[10];
     /* 0x3B70 */ mDoExt_3DlineMat0_ss mLineMat;
@@ -80,3 +94,123 @@ WWHD_OFFSET(ss_class, mLineMat, 0x3B70);
 WWHD_OFFSET(ss_class, mStts, 0x3CB8);
 WWHD_OFFSET(ss_class, mSph, 0x3CF4);
 WWHD_SIZE(ss_class, 0x3E20);
+
+/* ---- local bindings (SHARED-CANDIDATE) ---- */
+/* mDoExt_3DlineMat0_c */
+static inline void lineMat0_ct(void* p) { gabi::call(0x025E9960, p); }
+static inline void lineMat0_dt(void* p, s32 flags) { gabi::call(0x025E99E0, p, flags); }
+static inline BOOL lineMat0_init(void* p, u16 numLines, u16 numSegs, BOOL hasSize) {
+    return gabi::call<BOOL>(0x025E9B80, p, numLines, numSegs, hasSize);
+}
+static inline void lineMat0_update(void* p, u16 segs, GXColor* color, dKy_tevstr_c* tev) {
+    gabi::call(0x025EAF58, p, segs, color, tev);
+}
+/* dCcD_Sph out-of-line constructor / destructor */
+static inline void dCcD_Sph_ct(void* p) { gabi::call(0x025166F0, p); }
+static inline void dCcD_Sph_dt(void* p, s32 flags) { gabi::call(0x02515AE8, p, flags); }
+/* GHS runtime */
+static inline void construct_array(u32 p, u32 n, u32 size, u32 ct) {
+    gabi::call(0x028EFFD0, p, n, size, ct);
+}
+static inline void destroy_arr(u32 p, u32 n, u32 size, u32 dt) {
+    gabi::call(0x028F0164, p, n, size, dt, 0, 0);
+}
+/* 027F3F94 (matcher: __nw): J3DModelData joint-tree accessor, joint count (u16) at +8 */
+
+/* CcAtInfo (0x1C), as in d_a_kb.h's CcAtInfo_l */
+struct CcAtInfo_ss {
+    /* 0x00 */ be<u32> mpObj;
+    /* 0x04 */ be<u32> mpActor;
+    /* 0x08 */ be<u8> mDamage;
+    /* 0x09 */ be<u8> mbDead;
+    /* 0x0A */ be<u8> mResultingAttackType;
+    /* 0x0B */ u8 _0B;
+    /* 0x0C */ csXyz m0C;
+    /* 0x12 */ be<u16> mPlCutBit;
+    /* 0x14 */ be<u32> pParticlePos;
+    /* 0x18 */ be<s32> mHitSoundId;
+};
+WWHD_SIZE(CcAtInfo_ss, 0x1C);
+/* 02518DB0 at_power_check(CcAtInfo*) -> attacking actor */
+static inline u32 at_power_check(CcAtInfo_ss* i) { return gabi::call<u32>(0x02518DB0, i); }
+/* 025192A8 cc_at_check(fopAc_ac_c*, CcAtInfo*) */
+static inline void cc_at_check(fopAc_ac_c* a, CcAtInfo_ss* i) { gabi::call(0x025192A8, a, i); }
+/* 02518CC8 def_se_set(fopAc_ac_c*, cCcD_Obj*, u32) */
+static inline void def_se_set(fopAc_ac_c* a, u32 obj, u32 mtrl) {
+    gabi::call(0x02518CC8, a, obj, mtrl);
+}
+/* cCcD_Obj::ChkAtType(AT_TYPE 0x08000000) on a hit object */
+static inline bool hitObjIsWind(u32 obj) {
+    return (gabi::at<dCcD_GObjInf>(obj)->mAtType & 0x08000000) != 0;
+}
+static inline bool morf_isStop(mDoExt_McaMorf* m) { return m->isStop(); }
+
+/* dBgS_LinChk / dBgS_GndChk on the stack with this TU's vtables */
+static const dBgS_LinChk_vt ss_linchk_vt = {0x1003D19C, 0x1003D1AC, 0x1003D1CC, 0x1003D1BC};
+static inline void ss_LinChk_dt(dBgS_LinChk* c) {
+    c->dBgS_PolyPassChk::__vtbl = 0x1003D1CC;
+    c->dBgS_GrpPassChk::__vtbl = 0x1003D14C;
+    c->cBgS_PolyInfo::__vtbl = 0x1003D13C;
+    cBgS_LinChk_dt(c, 0);
+}
+static const dBgS_GndChk_vt ss_gndchk_vt = {0x1003D15C, 0x1003D16C, 0x1003D18C, 0x1003D17C};
+static inline void ss_GndChk_dt(dBgS_GndChk* c) {
+    c->dBgS_PolyPassChk::__vtbl = 0x1003D18C;
+    c->dBgS_GrpPassChk::__vtbl = 0x1003D14C;
+    c->cBgS_PolyInfo::__vtbl = 0x1003D16C;
+    gabi::call(0x02008DAC, c, 0);
+}
+static inline cXyz* linChk_cross(dBgS_LinChk* c) { return &c->mLin.mEnd; }
+
+struct SsSphereSource {
+    be<u32> mFlags;
+    be<u32> mAtType;
+    u8 mAtp;
+    u8 mAtPadding0;
+    u8 mAtPadding1;
+    u8 mAtPadding2;
+    be<u32> mAtSPrm;
+    be<u32> mTgType;
+    be<u32> mTgSPrm;
+    be<u32> mCoSPrm;
+    u8 mGAtSe;
+    u8 mGAtHitMark;
+    u8 mGAtSpl;
+    u8 mGAtMtrl;
+    be<u32> mGAtSPrm;
+    u8 mGTgSe;
+    u8 mGTgHitMark;
+    u8 mGTgSpl;
+    u8 mGTgMtrl;
+    be<u32> mGTgSPrm;
+    be<u32> mGCoSPrm;
+    be<f32> mCenterX;
+    be<f32> mCenterY;
+    be<f32> mCenterZ;
+    be<f32> mRadius;
+};
+WWHD_SIZE(SsSphereSource, 0x40);
+
+inline void ssActorDestroy(ss_class* p) { gabi::call(0x025D50BC, p, 0); }
+inline constexpr u32 SS_SPHERE_CONSTRUCTOR = 0x025166F0;
+inline constexpr u32 SS_SPHERE_DESTRUCTOR = 0x02515AE8;
+
+// HD: state values retained by the inlined core and tentacle controllers.
+enum SsCoreMode {
+    SS_OPEN_INIT = 0,
+    SS_OPEN = 1,
+    SS_SHIELDED_INIT = 10,
+    SS_SHIELDED = 11,
+    SS_OPEN_RETURN = 19,
+    SS_OPENING_INIT = 20,
+    SS_OPENING = 21,
+    SS_WAIT_OPEN = 22,
+    SS_SHIELDED_RETURN = 29,
+    SS_CLOSING_INIT = 30,
+    SS_CLOSING = 31,
+    SS_WAIT_SHIELDED = 32,
+    SS_DAMAGE_INIT = 40,
+    SS_DAMAGE = 41,
+    SS_DEAD = 50,
+};
+enum SsHandMode { SS_HAND_SET = 0, SS_HAND_MOVE = 1, SS_HAND_CUT = 2 };

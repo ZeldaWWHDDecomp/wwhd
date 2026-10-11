@@ -1,68 +1,82 @@
-/* Scoped HD SequenceWindow/BtnSequence updates, reconstructed from the WWHD binary.
- * Original 30 Hz behaviour. */
-#include "gabi.h"
+#include "d/hd_msg_window_views.h"
 using namespace gabi;
-namespace hd_screen_sequence_window {
-void waitMove(u32 self) {
-    WWHD_FUNC(0x026DA8AC, void, self);
-    const u32 timer = load<u32>(self + 0xB4);
-    if (timer) store<u32>(self + 0xB4, timer - 1);
-    else call<void>(0x020063C0, self + 0x18, load<u32>(self + 0x94));
+extern void hdMsgStartSave(HdMsgSaveManager*);
+extern void hdMsgStartLoad(HdMsgSaveManager*);
+extern void hdMsgPlaySound(void*);
+extern void hdMsgSelectButton(HdMsgSequence*,u32);
+extern void hdMsgUpdateButtons(HdMsgSequence*);
+static HdMsgManagerPointer l_saveManager;
+static HdMsgState l_sequenceWaitState;
+static HdMsgState l_sequenceDoneState;
+static u32 l_saveSound;
+static u32 l_loadSound;
+/* 026DA8AC */
+void hdMsgWaitMove(HdMsgSequence* self) {
+    const u32 timer = self->mTimer;
+    if (timer) self->mTimer = timer - 1;
+    else hdMsgChangeState(&self->mState, self->mNextState);
 }
-VERIFY(0x026DA8AC, waitMove);
-void waitFlagMove(u32 self) {
-    WWHD_FUNC(0x026DAA34, void, self);
-    const u32 timer = load<u32>(self + 0xB4);
+/* 026DAA34 */
+void hdMsgWaitFlagMove(HdMsgSequence* self) {
+    const u32 timer = self->mTimer;
     if (timer) {
         const u32 next = timer - 1;
-        store<u32>(self + 0xB4, next);
-        if (!next) store<u8>(self + 0xD7, 1);
-    } else if (!load<u8>(self + 0xD7)) {
-        call<void>(0x020063C0, self + 0x18, 0x1049B510u);
+        self->mTimer = next;
+        if (!next) self->mWaitComplete = 1;
+    } else if (!self->mWaitComplete) {
+        hdMsgChangeState(&self->mState, &l_sequenceWaitState);
     }
 }
-VERIFY(0x026DAA34, waitFlagMove);
-void saveMove(u32 self) {
-    WWHD_FUNC(0x026DAB18, void, self);
-    u32 timer = load<u32>(self + 0xB4);
-    const u32 phase = load<u32>(self + 0xB8);
-    if (timer) { --timer; store<u32>(self + 0xB4, timer); }
-    if (phase > 1 || (phase == 1 && timer)) return;
-    const u32 manager = load<u32>(0x101F852C);
-    const u32 status = load<u32>(manager + 0x1C);
-    if (status == 2 || status == 3) return;
-    if (phase == 0) {
-        call<void>(0x02721D48, manager);
-        store<u32>(self + 0xB8, 1);
+/* 026DAB18 */
+void hdMsgSaveMove(HdMsgSequence* self) {
+    u32 timer = self->mTimer;
+    const u32 phase = self->mPhase;
+    if (timer) { --timer; self->mTimer = timer; }
+    if (phase > HD_MSG_IO_WAIT || (phase == HD_MSG_IO_WAIT && timer)) return;
+    HdMsgSaveManager* manager = l_saveManager.mManager;
+    const u32 status = manager->mStatus;
+    if (status == HD_MSG_IO_BUSY || status == HD_MSG_IO_PENDING) return;
+    if (phase == HD_MSG_IO_START) {
+        hdMsgStartSave(manager);
+        self->mPhase = HD_MSG_IO_WAIT;
     } else {
-        call<void>(0x02030B38, 0x10103FC0u);
-        call<void>(0x020063C0, self + 0x18, 0x1049B660u);
+        hdMsgPlaySound(&l_saveSound);
+        hdMsgChangeState(&self->mState, &l_sequenceDoneState);
     }
 }
-VERIFY(0x026DAB18, saveMove);
-void buttonAdvance(u32 self) {
-    WWHD_FUNC(0x026DAC68, void, self);
-    store<u32>(self + 0x8C, load<u32>(self + 0x8C) + 0x28);
-    call<void>(0x026D9974, self, 1u);
-    call<void>(0x026D9C48, self);
+/* 026DAC68 */
+void hdMsgButtonAdvance(HdMsgSequence* self) {
+    self->mTextOffset = self->mTextOffset + 0x28;
+    hdMsgSelectButton(self, 1u);
+    hdMsgUpdateButtons(self);
 }
-VERIFY(0x026DAC68, buttonAdvance);
-void loadMove(u32 self) {
-    WWHD_FUNC(0x026DAD14, void, self);
-    u32 timer = load<u32>(self + 0xB4);
-    const u32 phase = load<u32>(self + 0xB8);
-    if (timer) { --timer; store<u32>(self + 0xB4, timer); }
-    if (phase > 1 || (phase == 1 && timer)) return;
-    const u32 manager = load<u32>(0x101F852C);
-    const u32 status = load<u32>(manager + 0x1C);
-    if (status == 2 || status == 3) return;
-    if (phase == 0) {
-        call<void>(0x0272276C, manager);
-        store<u32>(self + 0xB8, 1);
+/* 026DAD14 */
+void hdMsgLoadMove(HdMsgSequence* self) {
+    u32 timer = self->mTimer;
+    const u32 phase = self->mPhase;
+    if (timer) { --timer; self->mTimer = timer; }
+    if (phase > HD_MSG_IO_WAIT || (phase == HD_MSG_IO_WAIT && timer)) return;
+    HdMsgSaveManager* manager = l_saveManager.mManager;
+    const u32 status = manager->mStatus;
+    if (status == HD_MSG_IO_BUSY || status == HD_MSG_IO_PENDING) return;
+    if (phase == HD_MSG_IO_START) {
+        hdMsgStartLoad(manager);
+        self->mPhase = HD_MSG_IO_WAIT;
     } else {
-        call<void>(0x02030B38, 0x10103FD0u);
-        call<void>(0x020063C0, self + 0x18, 0x1049B660u);
+        hdMsgPlaySound(&l_loadSound);
+        hdMsgChangeState(&self->mState, &l_sequenceDoneState);
     }
 }
-VERIFY(0x026DAD14, loadMove);
-}
+
+/* WWHD glue (tools/verify/autoglue.py)
+data l_saveManager 101F852C
+data l_sequenceWaitState 1049B510
+data l_sequenceDoneState 1049B660
+data l_saveSound 10103FC0
+data l_loadSound 10103FD0
+ext 02721D48 void hdMsgStartSave(HdMsgSaveManager*)
+ext 0272276C void hdMsgStartLoad(HdMsgSaveManager*)
+ext 02030B38 void hdMsgPlaySound(void*)
+ext 026D9974 void hdMsgSelectButton(HdMsgSequence*,u32)
+ext 026D9C48 void hdMsgUpdateButtons(HdMsgSequence*)
+*/

@@ -13,8 +13,7 @@
 #pragma once
 #include "bindings.h"
 
-/* fopNpc_npc_c, measured WWHD layout (the shared d/d_npc.h has 0x7E0 with a vtable at 0x7DC and
- * a msg_class pointer at 0x7CC: both wrong, see the report) */
+/* Legacy NPC base retained for other actor headers. Ba1 uses shared fopNpc_npc_c. */
 struct fopNpc_npc_l : fopAc_ac_c {
     /* 0x3AC */ dNpc_JntCtrl_c m_jnt;
     /* 0x3E0 */ dNpc_EventCut_c mEventCut;
@@ -50,7 +49,48 @@ struct ProcFunc_l {
 };
 WWHD_SIZE(ProcFunc_l, 8);
 
-struct daNpc_Ba1_c : fopNpc_npc_l {
+struct daNpc_Ba1_c;
+using Ba1ProcFunc = gabi::ptmf<BOOL(daNpc_Ba1_c::*)(void*)>;
+WWHD_SIZE(Ba1ProcFunc, 8);
+
+struct daNpc_Ba1_c : fopNpc_npc_c {
+    enum ProcState {
+        PROC_START = 0,
+        PROC_SEARCH = 1,
+        PROC_PARTNER_FOUND = 2,
+        PROC_ACTIVE = 3,
+        PROC_END = 9,
+    };
+    enum LookBackState {
+        LOOK_NONE = 0,
+        LOOK_PLAYER = 1,
+        LOOK_POSITION = 2,
+        LOOK_ANGLE = 3,
+    };
+    enum Status {
+        STATUS_NONE = 0,
+        STATUS_WAIT_HOME = 1,
+        STATUS_TALK = 2,
+        STATUS_WAIT_OUTSIDE = 3,
+        STATUS_SLEEP = 4,
+        STATUS_TALK_SLEEP = 5,
+        STATUS_WAIT_HEALED = 6,
+        STATUS_WAIT_PLAYER = 7,
+    };
+    enum EventAction {
+        ACT_WAKE = 0,
+        ACT_SET_PLAYER_GOAL = 1,
+        ACT_SET_PLAYER_POS = 2,
+        ACT_FAIRY_END = 3,
+        ACT_MOVE_POS = 4,
+        ACT_TURN_PLAYER = 5,
+        ACT_DRAW_CONTROL = 6,
+        ACT_CHECK_FAIRY = 7,
+        ACT_EYE_OFFSET = 8,
+        ACT_EYE_RESET = 9,
+        ACT_FAIRY_MOVEMENT = 10,
+    };
+
     struct anm_prm_c {
         /* 0x00 */ be<s8> mAnmNum;
         /* 0x01 */ be<s8> mBtpNum;
@@ -129,7 +169,7 @@ struct daNpc_Ba1_c : fopNpc_npc_l {
     void endEvent();
     s32 isEventEntry();
     void event_proc(int);
-    BOOL set_action(ProcFunc_l*, void*);
+    BOOL set_action(Ba1ProcFunc*, void*);
     void setStt(s8);
     BOOL wait_0();
     BOOL wait_1();
@@ -159,11 +199,11 @@ struct daNpc_Ba1_c : fopNpc_npc_l {
     /* 0x7E7 */ u8 _7E7;
     /* 0x7E8 */ gptr<J3DModel> mpClothModel;
     /* 0x7EC */ gptr<J3DAnmTexPattern> m_hed_tex_pttrn;   /* HD: no mShadowID before it */
-    /* 0x7F0 */ u8 mHeadBtpAnm[0x74];                     /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x7F0 */ mDoExt_btpAnm mHeadBtpAnm;                     /* mDoExt_btpAnm (HD 0x74) */
     /* 0x864 */ be<u8> mBlinkFrame;
     /* 0x865 */ u8 _865;
     /* 0x866 */ be<s16> mBlinkTimer;
-    /* 0x868 */ ProcFunc_l mCurrProcFunc;
+    /* 0x868 */ Ba1ProcFunc mCurrProcFunc;
     /* 0x870 */ u8 field_0x870[8];
     /* 0x878 */ dNpc_EventCut_c mEventCut;                /* hides fopNpc_npc_c::mEventCut (as on GameCube) */
     /* 0x8E4 */ be<u32> mPartnerProcID;
@@ -237,3 +277,130 @@ WWHD_OFFSET(daNpc_Ba1_c, mPrevMorfFrame, 0x930);
 WWHD_OFFSET(daNpc_Ba1_c, mbRanExecute, 0x970);
 WWHD_OFFSET(daNpc_Ba1_c, m819, 0x989);
 WWHD_SIZE(daNpc_Ba1_c, 0x98C);
+
+struct daNpc_Ba1_HIO_c {
+    struct hio_prm_c {
+        /* 0x00 */ be<s16> mMaxHeadX;
+        /* 0x02 */ be<s16> mMaxHeadY;
+        /* 0x04 */ be<s16> mMinHeadX;
+        /* 0x06 */ be<s16> mMinHeadY;
+        /* 0x08 */ be<s16> mMaxBackboneX;
+        /* 0x0A */ be<s16> mMaxBackboneY;
+        /* 0x0C */ be<s16> mMinBackboneX;
+        /* 0x0E */ be<s16> mMinBackboneY;
+        /* 0x10 */ be<s16> mMaxTurnStep;
+        /* 0x12 */ be<s16> mCalcAngleTarget;
+        /* 0x14 */ be<f32> mAttPosOffsetY;
+        /* 0x18 */ be<u8> m18;
+        /* 0x19 */ u8 pad19[3];
+        /* 0x1C */ be<f32> m1C;
+        /* 0x20 */ be<f32> m20;
+    };
+    /* 0x00 */ be<u32> __vtbl;
+    /* 0x04 */ be<s8> mNo;
+    /* 0x05 */ u8 _05[3];
+    /* 0x08 */ be<s32> field_0x8;
+    /* 0x0C */ hio_prm_c mPrmTbl;
+};
+WWHD_SIZE(daNpc_Ba1_HIO_c, 0x30);
+
+struct Ba1ModelDataView {
+    /* 0x00 */ u8 pad[0x38];
+    /* 0x38 */ be<u32> mpTexNoAnimator;
+};
+WWHD_OFFSET(Ba1ModelDataView, mpTexNoAnimator, 0x38);
+WWHD_SIZE(Ba1ModelDataView, 0x3C);
+struct Ba1TexPatternVtable {
+    u8 pad[0x14];
+    be<u32> mGetFrameMax;
+};
+struct Ba1TexPatternView {
+    u8 pad[4];
+    gptr<Ba1TexPatternVtable> mpVtable;
+};
+WWHD_OFFSET(Ba1TexPatternView, mpVtable, 4);
+WWHD_SIZE(Ba1TexPatternView, 8);
+WWHD_OFFSET(Ba1TexPatternVtable, mGetFrameMax, 0x14);
+WWHD_SIZE(Ba1TexPatternVtable, 0x18);
+struct Ba1PlayerVtable {
+    u8 pad[0x114];
+    be<u32> mSetPlayerPosAndAngle;
+};
+struct Ba1PlayerView {
+    u8 pad[0xB4]; gptr<Ba1PlayerVtable> mpVtable;
+    u8 padB8[0x3B8-0xB8]; be<u32> mNoResetFlg0;
+    u8 pad3BC[0x422-0x3BC]; be<s16> mDemoMoveAngle;
+};
+WWHD_OFFSET(Ba1PlayerView, mpVtable, 0xB4);
+WWHD_OFFSET(Ba1PlayerView, mNoResetFlg0, 0x3B8);
+WWHD_OFFSET(Ba1PlayerView, mDemoMoveAngle, 0x422);
+WWHD_SIZE(Ba1PlayerView, 0x424);
+WWHD_OFFSET(Ba1PlayerVtable, mSetPlayerPosAndAngle, 0x114);
+WWHD_SIZE(Ba1PlayerVtable, 0x118);
+struct Ba1FairyView {
+    u8 pad[0x8AC];
+    be<u8> mMode;
+};
+WWHD_OFFSET(Ba1FairyView, mMode, 0x8AC);
+WWHD_SIZE(Ba1FairyView, 0x8AD);
+
+using Ba1ActionSignature = BOOL(daNpc_Ba1_c::*)(void*);
+struct Ba1ActionDescriptor {
+    gabi::ptmf<Ba1ActionSignature> action;
+};
+WWHD_SIZE(Ba1ActionDescriptor, 8);
+
+struct Ba1SafeStringVtable {
+    u8 pad[0x14];
+    be<u32> mAssureTermination;
+};
+WWHD_OFFSET(Ba1SafeStringVtable, mAssureTermination, 0x14);
+WWHD_SIZE(Ba1SafeStringVtable, 0x18);
+struct Ba1MorfVtable {
+    u8 pad[0xC];
+    be<u32> mDeletingDestructor;
+};
+struct Ba1MorfView {
+    gptr<Ba1MorfVtable> mpVtable;
+};
+WWHD_OFFSET(Ba1MorfVtable, mDeletingDestructor, 0xC);
+WWHD_SIZE(Ba1MorfVtable, 0x10);
+WWHD_OFFSET(Ba1MorfView, mpVtable, 0);
+WWHD_SIZE(Ba1MorfView, 4);
+
+enum dRes_ID_BA {
+    /* BCKS */
+    dRes_ID_BA_BCK_05_BA_CUT8_WAIT_e=0x0,
+    dRes_ID_BA_BCK_HOLD_e=0x1,
+    dRes_ID_BA_BCK_SLEEP_e=0x2,
+    dRes_ID_BA_BCK_TALK01_e=0x3,
+    dRes_ID_BA_BCK_TALK02_e=0x4,
+    dRes_ID_BA_BCK_TALK03_e=0x5,
+    dRes_ID_BA_BCK_TALK04_e=0x6,
+    dRes_ID_BA_BCK_WAIT01_e=0x7,
+    dRes_ID_BA_BCK_WAIT02_e=0x8,
+    dRes_ID_BA_BCK_GETUP_e=0x17,
+    /* BDL  */
+    dRes_ID_BA_BDL_BA_CLOTH_e=0x9,
+    /* BDLM */
+    dRes_ID_BA_BDL_BA_e=0xA,
+    /* BTP  */
+    dRes_ID_BA_BTP_BA_T01_e=0xB,
+    dRes_ID_BA_BTP_BA_T02_e=0xC,
+    dRes_ID_BA_BTP_BA_T03_e=0xD,
+    dRes_ID_BA_BTP_BA_T04_e=0xE,
+    dRes_ID_BA_BTP_BA_T05_e=0xF,
+    dRes_ID_BA_BTP_BA_T06_e=0x10,
+    dRes_ID_BA_BTP_BA_T07_e=0x11,
+    dRes_ID_BA_BTP_BA_T08_e=0x12,
+    dRes_ID_BA_BTP_BA_T09_e=0x13,
+    dRes_ID_BA_BTP_BA_T10_e=0x14,
+    dRes_ID_BA_BTP_BA_WAKE_e=0x15,
+    dRes_ID_BA_BTP_MABA01_e=0x16,
+};
+
+WWHD_OFFSET(daNpc_Ba1_HIO_c, mPrmTbl, 0xC);
+WWHD_OFFSET(daNpc_Ba1_HIO_c::hio_prm_c, m18, 0x18);
+WWHD_SIZE(daNpc_Ba1_HIO_c::hio_prm_c, 0x24);
+
+WWHD_OFFSET(Ba1ActionDescriptor, action, 0);

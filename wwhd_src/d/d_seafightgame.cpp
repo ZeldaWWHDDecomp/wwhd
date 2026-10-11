@@ -1,120 +1,167 @@
-/* Local WWHD sea-fight minigame reconstruction. */
-#include "wwhd.h"
-s32 sea_check(void* self,s32 x,s32 y,s32 size,s32 direction) {
- WWHD_FUNC(0x025BB0E0,s32,self,x,y,size,direction);
- if(size<=0) return 1;
- u32 addr=gabi::ea(self)+(u32)x*8+(u32)y;
- if(direction==0) {
-  if(x>7) return 0;
-  for(s32 i=0;i<size;i++) {
-   if(y>7 || gabi::load<u8>(addr)>100) return 0;
-   addr++; y=(s32)((u32)y+1);
-  }
- } else {
-  if(y>7) return 0;
-  for(s32 i=0;i<size;i++) {
-   if(x>7 || gabi::load<u8>(addr)>100) return 0;
-   addr+=8; x=(s32)((u32)x+1);
-  }
- }
- return 1;
+/** d_seafightgame: HD compiler statics. */
+#include "d/d_seafightgame.h"
+
+static dHeaderStatics_c l_seaHeaderStatics;
+static dHeaderStaticRecords_c l_seaRecords;
+static f32 l_seaInitialFirst;
+static f32 l_seaInitialSecond;
+void sea_registerStatic(void*);
+void sea_initFlag(void*);
+void sea_initByte(void*);
+
+
+static f32 l_seaGridScale;
+static f32 l_seaDirectionScale;
+
+/* 025BB358 */
+s32 dSeaFightGame_info_c::init(s32 i_bulletNum, u32 i_scenario) {
+    for (u32 x = 0; x < 8; x++) {
+        for (u32 y = 0; y < 8; y++) mGrid[x][y] = SEA_EMPTY;
+    }
+    mBulletNum = i_bulletNum;
+    mScore = 0;
+    switch (i_scenario) {
+    case 1:
+        mAliveShipNum = 1;
+        put_ship(0, 2);
+        break;
+    case 2:
+        mAliveShipNum = 2;
+        put_ship(0, 2);
+        put_ship(1, 3);
+        break;
+    case 3:
+        mAliveShipNum = 3;
+        put_ship(0, 2);
+        put_ship(1, 3);
+        put_ship(2, 4);
+        break;
+    }
+    mDeadShipNum = 0;
+    return TRUE;
 }
-VERIFY(0x025BB0E0,sea_check);
-s32 sea_put(void* self,u32 ship,u32 size) {
- WWHD_FUNC(0x025BB198,s32,self,ship,size);
- f32 gridScale=gabi::load<f32>(0x10054568),directionScale=gabi::load<f32>(0x1005456C);
- u32 x,y,direction;
- do {
-  s16 dir=(s16)gabi::ftoi(gabi::call<f32>(0x020198D8,directionScale));
-  direction=(u8)(dir%2);
-  x=(u8)gabi::ftoi(gabi::call<f32>(0x020198D8,gridScale));
-  y=(u8)gabi::ftoi(gabi::call<f32>(0x020198D8,gridScale));
- } while(!sea_check(self,x,y,(s32)size,direction));
- u32 addr=gabi::ea(self),record=addr+0x40+ship*15;
- if(direction==0) {
-  for(u32 i=0;i<size && (s32)size>0;i++) {
-   gabi::store<u8>(record+i*2,x);
-   gabi::store<u8>(record+i*2+1,y+i);
-   gabi::store<u8>(addr+x*8+y+i,ship+102);
-  }
-  gabi::store<u8>(record+0xD,0);
-  gabi::store<u8>(record+0xB,x);
-  gabi::store<u8>(record+0xC,y);
-  gabi::store<u8>(record+0xE,size);
- } else {
-  for(u32 i=0;i<size && (s32)size>0;i++) {
-   gabi::store<u8>(record+i*2,x+i);
-   gabi::store<u8>(record+i*2+1,y);
-   gabi::store<u8>(addr+(x+i)*8+y,ship+102);
-  }
-  gabi::store<u8>(record+0xD,size);
-  gabi::store<u8>(record+0xB,x);
-  gabi::store<u8>(record+0xC,y);
-  gabi::store<u8>(record+0xE,0);
- }
- gabi::store<u8>(record+8,size);
- gabi::store<u8>(record+9,size);
- return 1;
+
+/* 025BB198 */
+s32 dSeaFightGame_info_c::put_ship(u32 i_shipNo, u32 i_shipSize) {
+    f32 gridScale = l_seaGridScale, directionScale = l_seaDirectionScale;
+    u32 x, y, direction;
+    do {
+        s16 dir = (s16)gabi::ftoi(cM_rndF(directionScale));
+        direction = (u8)(dir % 2);
+        x = (u8)gabi::ftoi(cM_rndF(gridScale));
+        y = (u8)gabi::ftoi(cM_rndF(gridScale));
+    } while (!checkPutShip(x, y, (s32)i_shipSize, direction));
+    auto* shipData = ship(i_shipNo);
+    if (direction == 0) {
+        for (u32 i = 0; i < i_shipSize && (s32)i_shipSize > 0; i++) {
+            shipData->position(i)->x = x;
+            shipData->position(i)->y = y + i;
+            gridCell(x * 8 + y + i) = i_shipNo + SEA_SHIP_BASE;
+        }
+        // HD: The direction-size byte is stored before the origin coordinates.
+        shipData->field_0xd = 0;
+        shipData->field_0xb = x;
+        shipData->field_0xc = y;
+        shipData->field_0xe = i_shipSize;
+    } else {
+        for (u32 i = 0; i < i_shipSize && (s32)i_shipSize > 0; i++) {
+            shipData->position(i)->x = x + i;
+            shipData->position(i)->y = y;
+            gridCell((x + i) * 8 + y) = i_shipNo + SEA_SHIP_BASE;
+        }
+        shipData->field_0xd = i_shipSize;
+        shipData->field_0xb = x;
+        shipData->field_0xc = y;
+        shipData->field_0xe = 0;
+    }
+    shipData->field_0x8 = i_shipSize;
+    shipData->field_0x9 = i_shipSize;
+    return TRUE;
 }
-VERIFY(0x025BB198,sea_put);
-s32 sea_init(void* self,s32 bullets,u32 scenario) {
- WWHD_FUNC(0x025BB358,s32,self,bullets,scenario);
- u32 addr=gabi::ea(self);
- for(u32 i=0;i<64;i++) gabi::store<u8>(addr+i,0);
- gabi::store<u8>(addr+0x7D,bullets);
- gabi::store<u8>(addr+0x7E,0);
- if(scenario==1) {
-  gabi::store<u8>(addr+0x7C,1); sea_put(self,0,2);
- } else if(scenario==2) {
-  gabi::store<u8>(addr+0x7C,2); sea_put(self,0,2); sea_put(self,1,3);
- } else if(scenario==3) {
-  gabi::store<u8>(addr+0x7C,3); sea_put(self,0,2); sea_put(self,1,3); sea_put(self,2,4);
- }
- gabi::store<u32>(addr+0x80,0);
- return 1;
+
+/* 025BB0E0 */
+s32 dSeaFightGame_info_c::checkPutShip(s32 i_x, s32 i_y, s32 i_shipSize, s32 i_direction) {
+    if (i_shipSize <= 0) return TRUE;
+    u32 cell = (u32)i_x * 8 + (u32)i_y;
+    if (i_direction == 0) {
+        if (i_x > 7) return FALSE;
+        for (s32 i = 0; i < i_shipSize; i++) {
+            if (i_y > 7 || gridCell(cell) > SEA_OCCUPIED_LIMIT) return FALSE;
+            cell++;
+            i_y = (s32)((u32)i_y + 1);
+        }
+    } else {
+        if (i_y > 7) return FALSE;
+        for (s32 i = 0; i < i_shipSize; i++) {
+            if (i_x > 7 || gridCell(cell) > SEA_OCCUPIED_LIMIT) return FALSE;
+            cell += 8;
+            i_x = (s32)((u32)i_x + 1);
+        }
+    }
+    return TRUE;
 }
-VERIFY(0x025BB358,sea_init);
-s32 sea_attack(void* self,u32 x,u32 y) {
- WWHD_FUNC(0x025BB470,s32,self,x,y);
- u32 addr=gabi::ea(self),cell=addr+x*8+y;
- u32 value=gabi::load<u8>(cell);
- s32 result=-1;
- if(value==0) {
-  gabi::store<u8>(cell,1);
- } else if(value>100) {
-  u32 ship=value-102;
-  if(ship>=4) {
-   gabi::call(0x0273AA24,gabi::at<void>(0x10054570),0xAF,gabi::at<void>(0x10054584));
-   return -1;
-  }
-  result=ship;
-  u32 record=addr+ship*15;
-  u8 remaining=gabi::load<u8>(record+0x49)-1;
-  gabi::store<u8>(record+0x49,remaining);
-  if(remaining==0) {
-   u8 alive=gabi::load<u8>(addr+0x7C);
-   u32 dead=gabi::load<u32>(addr+0x80);
-   gabi::store<u8>(addr+0x7C,alive-1);
-   gabi::store<u32>(addr+0x80,dead+1);
-  }
-  gabi::store<u8>(cell,3);
- } else return -2;
- u8 bullets=gabi::load<u8>(addr+0x7D),score=gabi::load<u8>(addr+0x7E);
- gabi::store<u8>(addr+0x7D,bullets-1);
- gabi::store<u8>(addr+0x7E,score+1);
- return result;
+
+/* 025BB470 */
+s32 dSeaFightGame_info_c::attack(u32 i_x, u32 i_y) {
+    u32 cell = i_x * 8 + i_y;
+    u32 value = gridCell(cell);
+    s32 rt = -1;
+    if (value == SEA_EMPTY) {
+        gridCell(cell) = SEA_MISS;
+    } else if (value > SEA_OCCUPIED_LIMIT) {
+        u32 ship_no = value - SEA_SHIP_BASE;
+        // HD: An invalid occupied cell asserts and returns without consuming a bullet.
+        if (ship_no >= MAX_SHIP) {
+            JUTAssertion::showAssert("d_seafightgame.cpp", 0xAF, "ship_no >= 0 && ship_no < MAX_SHIP");
+            return -1;
+        }
+        rt = ship_no;
+        auto* shipData = ship(ship_no);
+        u8 remaining = shipData->field_0x9 - 1;
+        shipData->field_0x9 = remaining;
+        if (remaining == 0) {
+            u8 alive = mAliveShipNum;
+            u32 dead = mDeadShipNum;
+            mAliveShipNum = alive - 1;
+            mDeadShipNum = (s32)(dead + 1);
+        }
+        gridCell(cell) = SEA_HIT;
+    } else {
+        return -2;
+    }
+    u8 bullets = mBulletNum, score = mScore;
+    mBulletNum = bullets - 1;
+    mScore = score + 1;
+    return rt;
 }
-VERIFY(0x025BB470,sea_attack);
-void sea_initializer() {
- WWHD_FUNC(0x025BB568,void);
- gabi::store<u32>(0x1047C978,0); gabi::store<u32>(0x1047C970,0);
- gabi::store<u32>(0x1047C97C,0); gabi::store<u32>(0x1047C974,0);
- gabi::call(0x028F026C,gabi::at<void>(0x101EAE80));
- f32 zero=gabi::load<f32>(0x100545B4),one=gabi::load<f32>(0x100545B8);
- gabi::store<f32>(0x1047C964,zero); gabi::store<f32>(0x1047C968,one);
- gabi::call(0x028ED6F8,gabi::at<void>(0x1047C96C));
- gabi::call(0x028F026C,gabi::at<void>(0x101EAE8C));
- gabi::call(0x028EAB2C,gabi::at<void>(0x1047C96D));
- gabi::call(0x028F026C,gabi::at<void>(0x101EAE98));
+
+// HD: Compiler-generated initialization and destructor registration order.
+/* 025BB568 */
+void d_seafightgame_staticInit() {
+    l_seaHeaderStatics.mZeroWords[2] = 0;
+    l_seaHeaderStatics.mZeroWords[0] = 0;
+    l_seaHeaderStatics.mZeroWords[3] = 0;
+    l_seaHeaderStatics.mZeroWords[1] = 0;
+    sea_registerStatic(&l_seaRecords.mFirst);
+    f32 first = l_seaInitialFirst, second = l_seaInitialSecond;
+    l_seaHeaderStatics.mFloatPair[0] = first;
+    l_seaHeaderStatics.mFloatPair[1] = second;
+    sea_initFlag(&l_seaHeaderStatics.mFlag);
+    sea_registerStatic(&l_seaRecords.mSecond);
+    sea_initByte(&l_seaHeaderStatics.mByte);
+    sea_registerStatic(&l_seaRecords.mThird);
 }
-VERIFY(0x025BB568,sea_initializer);
+
+/* WWHD glue
+ext 028F026C void sea_registerStatic(void*)
+ext 028ED6F8 void sea_initFlag(void*)
+ext 028EAB2C void sea_initByte(void*)
+str 10054570
+str 10054584
+data l_seaGridScale 10054568
+data l_seaDirectionScale 1005456C
+data l_seaHeaderStatics 1047C964
+data l_seaRecords 101EAE80
+data l_seaInitialFirst 100545B4
+data l_seaInitialSecond 100545B8
+*/

@@ -12,16 +12,17 @@
  */
 #include "d/actor/d_a_npc_cb1.h"
 
-/* 02227124: __sinit_d_a_npc_cb1_static_cpp (HD: the per-TU header statics only) */
+/* 02227124 */
+// HD: this translation unit initializes only the shared header statics.
 static void __sinit_d_a_npc_cb1_static_cpp() {
-    WWHD_FUNC(0x02227124, void);
     sinit_header_statics(0x10466C88, 0x101BDC04);
 }
-VERIFY(0x02227124, __sinit_d_a_npc_cb1_static_cpp);
 
 /* 022271B8 */
+// HD: free wrapper preserves the static accessor ABI until autoglue supports static methods.
 static s16 daNpc_Cb1_c_getMaxFlyingTimer() {
-    WWHD_FUNC(0x022271B8, s16);
     return 15 * 30;
 }
-VERIFY(0x022271B8, daNpc_Cb1_c_getMaxFlyingTimer);
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit has no bound data.
+*/

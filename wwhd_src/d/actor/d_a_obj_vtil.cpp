@@ -1,442 +1,306 @@
-// Tingle statues, complete HD translation unit 023B5E60..023B73EB.
+/**
+ * d_a_obj_vtil.cpp
+ * Object - Tingle statues
+ */
 #include "d/actor/d_a_obj_vtil.h"
 #include <cmath>
 
-namespace {
-template<class T> T read(u32 address) { return *gabi::at<be<T>>(address); }
-template<class T> void write(u32 address, T value) { *gabi::at<be<T>>(address) = value; }
-void* ptr(u32 address) { return gabi::at<void>(address); }
-u32 address(daObjVtil_c* statue, u32 offset) { return gabi::ea(statue) + offset; }
-struct ArchiveName { be<u32> name, vtable; };
-void correctBackground(daObjVtil_c* statue) {
-    u32 play = gabi::call<u32>(0x025200D4);
-    gabi::call(0x024F08A8, &statue->mAcch, ptr(play + 0x12A0));
+daObjVtil_c* daObjVtil_construct(daObjVtil_c*);
+
+static u32 l_stageTbox[5] = {3, 4, 5, 7, 6};
+static u32 l_modelRes[5] = {3, 4, 5, 7, 6};
+static VtilCylSource l_co_cyl_data;
+static VtilZeroWords l_zero;
+static VtilMathStatics l_math;
+static VtilGlobalDescriptors l_descriptors;
+static VtilAction l_modeProc[4] = {{0,-1,0x023B6EE4},{0,-1,0x023B707C},{0,-1,0x023B71A0},{0,-1,0x023B7210}};
+static void correctBackground(daObjVtil_c* statue) {
+    statue->mAcch.CrrPos(dComIfG_Bgsp());
 }
-void stopTracking(daObjVtil_c* statue) {
-    u32 play = gabi::call<u32>(0x025200D4);
-    u32 camera = read<u32>(play + 0x5AF8);
-    u32 processID = read<u32>(address(statue, 4));
-    gabi::call(0x025052BC, ptr(camera + 0x248), processID);
-}
+static void stopTracking(daObjVtil_c* statue) {
+    VtilCamera* camera = reinterpret_cast<VtilCamera*>(dComIfGp_getCamera(0));
+    u32 processID = statue->mBsPcId;
+    vtilForceLockOff(&camera->mCamera, processID);
 }
 
-daObjVtil_c* vtil_construct(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B5E60, daObjVtil_c*, statue);
-    if (!statue) statue = gabi::call<daObjVtil_c*>(0x0273AD10, 0x75C);
-    if (!statue) return nullptr;
-    gabi::call(0x025D4ED0, statue);
-    u32 actor = gabi::ea(statue);
-    write<u32>(actor + 0xB4, 0x100331BC);
-    gabi::call(0x024F0474, &statue->mAcch);
-    write<u32>(actor + 0x3C8, 0x1003318C);
-    write<u32>(actor + 0x3D8, 0x1003319C);
-    write<u32>(actor + 0x3CC, 0x100331AC);
-    write<u8>(actor + 0x3D0, 1);
-    gabi::call(0x024EFE94, &statue->mAcchCircle);
-    gabi::call(0x0200BD2C, &statue->mCollisionStatus);
-    gabi::call(0x02515DA0, ptr(actor + 0x5D8));
-    write<u32>(actor + 0x5D4, 0x1004AE88);
-    write<u32>(actor + 0x5D8, 0x1004AEC0);
-    gabi::call(0x02515FB8, &statue->mCylinder);
-    write<u32>(actor + 0x70C, 0x100015A8);
-    write<u32>(actor + 0x708, 0x1003317C);
-    gabi::call(0x02018590, ptr(actor + 0x710));
-    statue->mLight.mHD20 = 1.0f;
-    write<u32>(actor + 0x724, 0x1004B150);
-    write<u32>(actor + 0x634, 0x1004B108);
-    write<u32>(actor + 0x70C, 0x1004B160);
-    return statue;
+/* 023B6028 */
+static BOOL solidHeapCB(fopAc_ac_c* actor) {
+    return static_cast<daObjVtil_c*>(actor)->create_heap();
 }
-VERIFY(0x023B5E60, vtil_construct);
 
-BOOL vtil_create_heap(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B5F70, BOOL, statue);
-    u32 type = statue->mStatueType;
-    gabi::Local<ArchiveName> archive;
-    archive->vtable = 0x10033164;
-    archive->name = 0x100332D0;
-    u32 resource = read<u32>(0x100332EC + type * 4);
-    u32 modelData = gabi::call<u32>(0x026066C4, ptr(read<u32>(0x101F4F28)), archive.get(), resource);
+/* 023B5F70 */
+BOOL daObjVtil_c::create_heap() {
+    u32 type = mStatueType;
+    // HD: this TU uses the legacy resource lookup and its SafeString vtable.
+    gabi::Local<SafeString> archive;
+    archive->__vtbl = VT_ARCHIVE;
+    archive->mStringTop = gabi::guest_str("Vtil");
+    u32 resource = u32(l_modelRes[type]);
+    J3DModelData* modelData = vtilGetResource(dComIfG_resControl(), archive.get(), resource);
     if (!modelData) {
-        gabi::call(0x0273AA24, ptr(0x100331E0), 0x147, ptr(0x100331D0));
+        JUT_ASSERT_fail("d_a_obj_vtil.cpp", 0x147, "mdl_data != 0");
         return 0;
     }
-    statue->mModel = gabi::call<J3DModel*>(0x025E38E0, ptr(modelData), 0, 0x11020203);
-    return statue->mModel.get() != nullptr;
+    mModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+    return mModel.get() != nullptr;
 }
-VERIFY(0x023B5F70, vtil_create_heap);
 
-BOOL vtil_heap_callback(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6028, BOOL, statue);
-    return vtil_create_heap(statue);
-}
-VERIFY(0x023B6028, vtil_heap_callback);
-
-void vtil_init_mtx(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B602C, void, statue);
-    f32 x = statue->scale.x, y = statue->scale.y, z = statue->scale.z;
-    u32 model = gabi::ea(statue->mModel.get());
-    write<f32>(model + 0xBC, x);
-    write<f32>(model + 0xC0, y);
-    write<f32>(model + 0xC4, z);
-    x = statue->current.pos.x; y = statue->current.pos.y; z = statue->current.pos.z;
-    gabi::call(0x028E93CC, ptr(0x1048D0CC), x, y, z);
-    gabi::call(0x025F1B48, ptr(0x1048D0CC), s16(statue->shape_angle.x), s16(statue->shape_angle.y), s16(statue->shape_angle.z));
-    // Snapshot the matrix before storing: model storage may overlap the stack matrix.
-    f32 matrix[12];
-    for (u32 i = 0; i < 12; ++i) matrix[i] = read<f32>(0x1048D0CC + i * 4);
-    model = gabi::ea(statue->mModel.get());
-    for (u32 i = 0; i < 12; ++i) write<f32>(model + 0xC8 + i * 4, matrix[i]);
-    gabi::call(0x027F4D5C, statue->mModel.get());
-}
-VERIFY(0x023B602C, vtil_init_mtx);
-
-void vtil_init_co(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6114, void, statue);
-    statue->mCollisionStatus.Init(200, 255, statue);
-    gabi::call(0x02516518, &statue->mCylinder, ptr(0x10033300));
-    write<u32>(address(statue, 0x63C), address(statue, 0x5BC));
-    gabi::call(0x020182E0, ptr(address(statue, 0x710)), &statue->current.pos);
-    write<u32>(address(statue, 0x674), read<u32>(0x101FFBA8));
-    write<u32>(address(statue, 0x678), read<u32>(0x101FFBAC));
-    write<u32>(address(statue, 0x67C), read<u32>(0x101FFBB0));
-    u32 x = read<u32>(0x101FFBA8);
-    u32 flags = read<u32>(address(statue, 0x68C));
-    write<u32>(address(statue, 0x6AC), x);
-    write<u32>(address(statue, 0x6B0), read<u32>(0x101FFBAC));
-    u32 z = read<u32>(0x101FFBB0);
-    write<u32>(address(statue, 0x68C), flags | 1);
-    write<u32>(address(statue, 0x6B4), z);
-}
-VERIFY(0x023B6114, vtil_init_co);
-
-void vtil_init_bgc(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B61B4, void, statue);
-    statue->mAcchCircle.SetWall(30.0f, 56.0f);
-    statue->mAcch.Set(&statue->current.pos, &statue->old.pos, statue, 1, &statue->mAcchCircle, &statue->speed, &statue->current.angle, &statue->shape_angle);
-    u32 flags = statue->mAcch.m_flags;
-    write<f32>(address(statue, 0x478), 160.0f);
-    statue->mAcch.m_flags = (flags & ~0x408u) | 0x60000;
-    gabi::call(0x025D6870, statue, 0);
-    correctBackground(statue);
-    statue->mAcch.m_flags = u32(statue->mAcch.m_flags) & ~0x80u;
-}
-VERIFY(0x023B61B4, vtil_init_bgc);
-
-void vtil_renew_attention(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6268, void, statue);
-    f32 z = statue->current.pos.z, y = statue->current.pos.y, x = statue->current.pos.x;
-    write<f32>(address(statue, 0x398), z);
-    write<f32>(address(statue, 0x390), x);
-    write<f32>(address(statue, 0x394), y + 160.0f);
-}
-VERIFY(0x023B6268, vtil_renew_attention);
-
-void vtil_to_wait(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6290, void, statue);
-    u32 attack = read<u32>(address(statue, 0x5F8));
-    u32 collision = read<u32>(address(statue, 0x624));
-    u32 target = read<u32>(address(statue, 0x610));
-    statue->gravity = -6.0f;
-    write<u32>(address(statue, 0x5F8), attack & ~1u);
-    statue->speedF = 0.0f;
-    write<u32>(address(statue, 0x610), target | 1);
-    write<u32>(address(statue, 0x624), collision | 1);
-    statue->mCollisionStatus.Init(200, 255, statue);
-    statue->mMode = 0;
-}
-VERIFY(0x023B6290, vtil_to_wait);
-
-u32 vtil_parameters(daObjVtil_c* statue, u32 width, u32 shift) {
-    WWHD_FUNC(0x023B73D0, u32, statue, width, shift);
+/* 023B73D0 */
+u32 daObjVtil_c::getPrm(u32 width, u32 shift) {
     u32 mask = (width & 32) ? 0 : (1u << (width & 31));
-    u32 parameters = (shift & 32) ? 0 : (u32(statue->mParameters) >> (shift & 31));
+    u32 parameters = (shift & 32) ? 0 : (u32(mParameters) >> (shift & 31));
     return parameters & (mask - 1);
 }
-VERIFY(0x023B73D0, vtil_parameters);
 
-s32 vtil_create(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6310, s32, statue);
-    u32 condition = statue->actor_condition;
-    if (!(condition & 8)) {
-        if (statue) {
-            vtil_construct(statue);
-            condition = statue->actor_condition;
+/* 023B6310 */
+s32 daObjVtil_c::_create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (this) {
+            daObjVtil_construct(this);
+            condition = actor_condition;
         }
-        statue->actor_condition = condition | 8;
+        actor_condition = condition | fopAcCnd_INIT_e;
     }
-    u32 type = vtil_parameters(statue, 4, 0);
+    u32 type = getPrm(4, 0);
     if (type == 15 || type == 0xFFFFFFFF) type = 0;
-    statue->mStatueType = type;
-    if (!gabi::call<s32>(0x02520864, read<u32>(0x100332D8 + type * 4), 15)) return 5;
-    s32 phase = gabi::call<s32>(0x02520460, &statue->mPhase, ptr(0x100332D0));
+    mStatueType = type;
+    if (!vtilIsStageTbox(u32(l_stageTbox[type]), 15)) return 5;
+    s32 phase = dComIfG_resLoad(&mPhase, "Vtil");
     if (phase != 4) return phase;
-    if (!gabi::call<s32>(0x025D63E8, statue, ptr(0x023B6028), 0xCC0)) return 5;
-    u32 model = gabi::ea(statue->mModel.get());
-    statue->cullMtx = model ? model + 0xC8 : 0;
-    vtil_init_mtx(statue);
-    gabi::call(0x025D674C, statue, -50.0f, 0.0f, -50.0f, 50.0f, 160.0f, 50.0f);
-    vtil_init_co(statue);
-    vtil_init_bgc(statue);
-    statue->gravity = -6.0f;
-    vtil_renew_attention(statue);
-    u32 attention = read<u32>(address(statue, 0x39C));
-    f32 y = statue->current.pos.y, z = statue->current.pos.z;
-    write<u32>(address(statue, 0x39C), attention | 0x10);
-    write<u8>(address(statue, 0x38C), 0x17);
-    statue->eyePos.y = y + 110.0f;
-    statue->eyePos.z = z;
-    statue->mFirstGroundHit = 1;
-    statue->eyePos.x = statue->current.pos.x;
-    vtil_to_wait(statue);
-    dKy_plight_set(&statue->mLight);
-    statue->model = gabi::ea(statue->mModel.get());
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)solidHeapCB), 0xCC0)) return 5;
+    J3DModel* model = mModel;
+    cullMtx = gabi::ea(model ? &model->mBaseTransformMtx : nullptr);
+    init_mtx();
+    fopAcM_setCullSizeBox(this, -50.0f, 0.0f, -50.0f, 50.0f, 160.0f, 50.0f);
+    init_co();
+    init_bgc();
+    gravity = -6.0f;
+    renew_attention_pos();
+    u32 attention = attention_info.flags;
+    f32 y = current.pos.y, z = current.pos.z;
+    attention_info.flags = attention | fopAc_Attn_ACTION_CARRY_e;
+    attention_info.distances[fopAc_Attn_TYPE_CARRY_e] = 0x17;
+    eyePos.y = y + 110.0f;
+    eyePos.z = z;
+    mFirstGroundHit = 1;
+    eyePos.x = current.pos.x;
+    to_wait_mode();
+    dKy_plight_set(&mLight);
+    this->model = gabi::ea(mModel.get());
     return 4;
 }
-VERIFY(0x023B6310, vtil_create);
 
-BOOL vtil_delete(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B64BC, BOOL, statue);
-    dKy_plight_cut(&statue->mLight);
-    statue->model = 0;
-    gabi::call(0x025204C8, &statue->mPhase, ptr(0x100332D0));
+/* 023B64BC */
+BOOL daObjVtil_c::_delete() {
+    dKy_plight_cut(&mLight);
+    model = 0;
+    dComIfG_resDelete(&mPhase, "Vtil");
     return 1;
 }
-VERIFY(0x023B64BC, vtil_delete);
 
-void vtil_set_sound(daObjVtil_c* statue, s32 sound, s32 mode) {
-    WWHD_FUNC(0x023B6508, void, statue, sound, mode);
+/* 023B602C */
+void daObjVtil_c::init_mtx() {
+    f32 x = scale.x, y = scale.y, z = scale.z;
+    J3DModel* model = mModel;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = current.pos.x; y = current.pos.y; z = current.pos.z;
+    PSMTXTrans(mDoMtx_stack_c::get(), x, y, z);
+    mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), s16(shape_angle.x), s16(shape_angle.y), s16(shape_angle.z));
+    // Snapshot the matrix before storing: model storage may overlap the stack matrix.
+    f32 matrix[12];
+    for (u32 i = 0; i < 12; ++i) matrix[i] = f32(mDoMtx_stack_c::get()->m[i / 4][i % 4]);
+    model = mModel;
+    for (u32 i = 0; i < 12; ++i) model->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
+    mModel->calc();
+}
+
+/* 023B6114 */
+void daObjVtil_c::init_co() {
+    mCollisionStatus.Init(200, 255, this);
+    mCylinder.Set(reinterpret_cast<dCcD_SrcCyl*>(&l_co_cyl_data));
+    mCylinder.SetStts(&mCollisionStatus);
+    mCylinder.mCyl.SetC(&current.pos);
+    vtilWord(mCylinder.mGObjAt.mVec.x) = u32(l_zero.x);
+    vtilWord(mCylinder.mGObjAt.mVec.y) = u32(l_zero.y);
+    vtilWord(mCylinder.mGObjAt.mVec.z) = u32(l_zero.z);
+    u32 x = u32(l_zero.x);
+    u32 flags = mCylinder.mGObjTg.mSPrm;
+    vtilWord(mCylinder.mGObjTg.mVec.x) = x;
+    vtilWord(mCylinder.mGObjTg.mVec.y) = u32(l_zero.y);
+    u32 z = u32(l_zero.z);
+    mCylinder.mGObjTg.mSPrm = flags | 1;
+    vtilWord(mCylinder.mGObjTg.mVec.z) = z;
+}
+
+/* 023B61B4 */
+void daObjVtil_c::init_bgc() {
+    mAcchCircle.SetWall(30.0f, 56.0f);
+    mAcch.Set(&current.pos, &old.pos, this, 1, &mAcchCircle, &speed, &current.angle, &shape_angle);
+    u32 flags = mAcch.m_flags;
+    mAcch.m_roof_crr_height = 160.0f;
+    mAcch.m_flags = (flags & ~u32(dBgS_Acch::ROOF_NONE | dBgS_Acch::WATER_NONE)) | dBgS_Acch::SEA_CHECK | dBgS_Acch::SEA_WATER_HEIGHT;
+    fopAcM_posMoveF(this, 0);
+    correctBackground(this);
+    mAcch.m_flags = u32(mAcch.m_flags) & ~u32(dBgS_Acch::GROUND_LANDING);
+}
+
+/* 023B6268 */
+void daObjVtil_c::renew_attention_pos() {
+    f32 z = current.pos.z, y = current.pos.y, x = current.pos.x;
+    attention_info.position.z = z;
+    attention_info.position.x = x;
+    attention_info.position.y = y + 160.0f;
+}
+
+/* 023B6868 */
+void daObjVtil_c::make_smoke() {
+    vtilMakeLandEffect(this, &mAcch.m_gnd, 1.0f);
+}
+
+/* 023B6878 */
+void daObjVtil_c::se_smoke() {
+    dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    s32 material = play->play.mBgS.GetMtrlSndId(static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd));
+    s32 reverb = dComIfGp_getReverb(s32(s8(current.roomNo)));
+    mDoAud_seStart(0x6929, &eyePos, material, reverb);
+}
+
+/* 023B663C */
+void daObjVtil_c::make_splash() {
     gabi::Local<cXyz> position;
-    position->x = f32(statue->current.pos.x);
-    position->z = f32(statue->current.pos.z);
-    u32 processID = read<u32>(address(statue, 4));
-    position->y = f32(statue->current.pos.y);
-    gabi::call(0x0255F458, position.get(), sound, processID, mode);
+    position->x = f32(current.pos.x);
+    position->y = f32(mAcch.m_sea_height);
+    position->z = f32(current.pos.z);
+    fopKyM_createWpillar(position.get(), 1.0f, 0.75f, 0);
 }
-VERIFY(0x023B6508, vtil_set_sound);
 
-void vtil_hit_co(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B654C, void, statue);
-    statue->mCollisionStatus.Move();
-    if (gabi::call<s32>(0x025160DC, &statue->mCylinder)) {
-        gabi::call(0x02516094, &statue->mCylinder);
-        statue->speedF = f32(statue->speedF) * 0.8f;
-        return;
-    }
-    if (gabi::call<s32>(0x025162A4, &statue->mCylinder)) {
-        gabi::call(0x023129C4, &statue->eyePos, s32(s8(statue->current.roomNo)), &statue->mCylinder, 13);
-        vtil_set_sound(statue, 150, 5);
-        gabi::call(0x02312E54, statue, &statue->mCylinder);
-        gabi::call(0x0251621C, &statue->mCylinder);
-    }
-}
-VERIFY(0x023B654C, vtil_hit_co);
-
-BOOL vtil_check_sink(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6604, BOOL, statue);
-    if (!(u32(statue->mAcch.m_flags) & 0x80000)) return 0;
-    return f32(statue->mAcch.m_sea_height) > f32(statue->current.pos.y) + 70.0f;
-}
-VERIFY(0x023B6604, vtil_check_sink);
-
-void vtil_make_splash(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B663C, void, statue);
-    gabi::Local<cXyz> position;
-    position->x = f32(statue->current.pos.x);
-    position->y = f32(statue->mAcch.m_sea_height);
-    position->z = f32(statue->current.pos.z);
-    gabi::call(0x025DAE64, position.get(), 0, 1.0f, 0.75f);
-}
-VERIFY(0x023B663C, vtil_make_splash);
-
-void vtil_se_splash(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B668C, void, statue);
+/* 023B668C */
+void daObjVtil_c::se_splash() {
     s32 material = 19;
-    const u32 polygonOffsets[] = {0x52C, 0x4A0};
-    for (u32 offset : polygonOffsets) {
-        u32 polygon = address(statue, offset);
-        if (read<u16>(polygon + 2) < 256) {
-            u32 play = gabi::call<u32>(0x025200D4);
-            material = gabi::call<s32>(0x024EECAC, ptr(play + 0x12A0), ptr(polygon));
+    cBgS_PolyInfo* polygons[] = {
+        reinterpret_cast<cBgS_PolyInfo*>(&mAcch.m_wtr),
+        static_cast<cBgS_PolyInfo*>(&mAcch.m_gnd),
+    };
+    for (cBgS_PolyInfo* polygon : polygons) {
+        if (polygon->mBgIndex < 256) {
+            dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            material = play->play.mBgS.GetMtrlSndId(polygon);
             break;
         }
     }
-    s32 reverb = gabi::call<s32>(0x02520540, s32(s8(statue->current.roomNo)));
-    gabi::call(0x025E1A40, 0x6918, &statue->eyePos, material, reverb);
-    vtil_set_sound(statue, 125, 5);
+    s32 reverb = dComIfGp_getReverb(s32(s8(current.roomNo)));
+    mDoAud_seStart(0x6918, &eyePos, material, reverb);
+    set_sound(125, 5);
 }
-VERIFY(0x023B668C, vtil_se_splash);
 
-void vtil_to_sink(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6770, void, statue);
-    f32 forwardSquared = f32(statue->speedF) * f32(statue->speedF);
-    u32 flags = statue->mAcch.m_flags;
-    u32 collision = read<u32>(address(statue, 0x624));
-    u32 attack = read<u32>(address(statue, 0x5F8));
-    u32 target = read<u32>(address(statue, 0x610));
-    write<u32>(address(statue, 0x624), collision | 1);
-    f32 vertical = statue->speed.y;
-    write<u32>(address(statue, 0x5F8), attack & ~1u);
-    f32 squared = std::fma(vertical, vertical, forwardSquared);
-    write<u32>(address(statue, 0x610), target | 1);
-    statue->gravity = -2.0f;
-    statue->mAcch.m_flags = ((flags | 8) & ~0x406u) | 0x2000;
-    f64 magnitude = gabi::call<f64>(0x028F4384, squared);
-    if (magnitude > 30.0) {
-        f32 factor = f32(30.0 / magnitude);
-        gabi::call(0x028E8E64, &statue->speed, &statue->speed, factor);
-        statue->speedF = f32(statue->speedF) * factor;
+/* 023B6508 */
+void daObjVtil_c::set_sound(s32 sound, s32 mode) {
+    gabi::Local<cXyz> position;
+    position->x = f32(current.pos.x);
+    position->z = f32(current.pos.z);
+    u32 processID = mBsPcId;
+    position->y = f32(current.pos.y);
+    dKy_Sound_set(position.get(), sound, processID, mode);
+}
+
+/* 023B6290 */
+void daObjVtil_c::to_wait_mode() {
+    u32 attack = mCylinder.mObjAt.mSPrm;
+    u32 collision = mCylinder.mObjCo.mSPrm;
+    u32 target = mCylinder.mObjTg.mSPrm;
+    gravity = -6.0f;
+    mCylinder.mObjAt.mSPrm = attack & ~1u;
+    speedF = 0.0f;
+    mCylinder.mObjTg.mSPrm = target | 1;
+    mCylinder.mObjCo.mSPrm = collision | 1;
+    mCollisionStatus.Init(200, 255, this);
+    mMode = MODE_WAIT;
+}
+
+/* 023B6EE4 */
+void daObjVtil_c::mode_wait() {
+    if (u32(actor_status) & fopAcStts_CARRY_e) {
+        to_carry_mode();
+        mPreviousVerticalSpeed = f32(speed.y);
+        correctBackground(this);
+        return;
     }
-    vtil_make_splash(statue);
-    vtil_se_splash(statue);
-    u32 attention = read<u32>(address(statue, 0x39C));
-    statue->mMode = 3;
-    write<u32>(address(statue, 0x39C), attention & ~0x10u);
-}
-VERIFY(0x023B6770, vtil_to_sink);
-
-void vtil_make_smoke(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6868, void, statue);
-    gabi::call(0x02311CD8, statue, ptr(address(statue, 0x48C)), 1.0f);
-}
-VERIFY(0x023B6868, vtil_make_smoke);
-
-void vtil_se_smoke(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6878, void, statue);
-    u32 play = gabi::call<u32>(0x025200D4);
-    s32 material = gabi::call<s32>(0x024EECAC, ptr(play + 0x12A0), ptr(address(statue, 0x4A0)));
-    s32 reverb = gabi::call<s32>(0x02520540, s32(s8(statue->current.roomNo)));
-    gabi::call(0x025E1A40, 0x6929, &statue->eyePos, material, reverb);
-}
-VERIFY(0x023B6878, vtil_se_smoke);
-
-BOOL vtil_check_circle(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B68DC, BOOL, statue);
-    u32 play = gabi::call<u32>(0x025200D4);
-    u32 player = read<u32>(play + 0x5B2C);
-    gabi::Local<cXyz> difference;
-    gabi::call(0x0201ADE0, ptr(player + 0x314), difference.get(), &statue->current.pos);
-    gabi::Local<cXyz> horizontal;
-    horizontal->x = f32(difference->x);
-    horizontal->y = 0.0f;
-    horizontal->z = f32(difference->z);
-    f64 squared = gabi::call<f64>(0x028E8DD0, horizontal.get());
-    f64 magnitude = gabi::call<f64>(0x028F4384, squared);
-    return !(magnitude > 190.0);
-}
-VERIFY(0x023B68DC, vtil_check_circle);
-
-void vtil_make_vib(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B695C, void, statue);
-    u32 near = u32(vtil_check_circle(statue)) & 1;
-    u32 play = gabi::call<u32>(0x025200D4);
-    gabi::Local<cXyz> direction;
-    direction->x = 0.0f; direction->y = 1.0f; direction->z = 0.0f;
-    gabi::call(0x025CB374, ptr(play + 0x599C), near + 1, 1, direction.get());
-}
-VERIFY(0x023B695C, vtil_make_vib);
-
-BOOL vtil_check_sink_end(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B69BC, BOOL, statue);
-    if (!(u32(statue->mAcch.m_flags) & 0x80000)) return 0;
-    return f32(statue->mAcch.m_sea_height) > f32(statue->current.pos.y) + 210.0f;
-}
-VERIFY(0x023B69BC, vtil_check_sink_end);
-
-void vtil_hit_bg(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B69F4, void, statue);
-    u32 flags = statue->mAcch.m_flags;
-    bool groundHit = (flags & 0x20) != 0;
-    BOOL sinking = vtil_check_sink(statue);
-    u32 mode = statue->mMode;
-    if (mode == 0 || (mode == 2 && !(groundHit || (flags & 0x210)))) {
-        if (sinking) vtil_to_sink(statue);
-    } else if (mode == 2) {
-        if (f32(statue->mPreviousVerticalSpeed) < f32(statue->gravity) - 1.0f) {
-            statue->speedF = f32(statue->speedF) * 0.6f;
-            return;
-        }
-        if (groundHit) {
-            vtil_make_smoke(statue);
-            vtil_se_smoke(statue);
-            vtil_make_vib(statue);
-        }
-        statue->speedF = 0.0f;
-        vtil_to_wait(statue);
-        stopTracking(statue);
-    } else if (mode == 3) {
-        if (vtil_check_sink_end(statue)) {
-            statue->mDeleteState = 1;
-            return;
-        }
-        if (!sinking) {
-            vtil_to_wait(statue);
-            stopTracking(statue);
-        }
+    u32 flags = mAcch.m_flags;
+    if (flags & dBgS_Acch::GROUND_LANDING) {
+        if (!u8(mFirstGroundHit)) {
+            make_smoke();
+            se_smoke();
+            make_vib();
+        } else mFirstGroundHit = 0;
+        flags = mAcch.m_flags;
+        mAcch.m_flags = flags & ~u32(dBgS_Acch::GROUND_LANDING);
     }
+    u32 attention = attention_info.flags;
+    attention_info.flags = (flags & dBgS_Acch::GROUND_HIT) ? attention | fopAc_Attn_ACTION_CARRY_e : attention & ~u32(fopAc_Attn_ACTION_CARRY_e);
+    fopAcM_posMoveF(this, &mCollisionStatus.m_cc_move);
+    mPreviousVerticalSpeed = f32(speed.y);
+    correctBackground(this);
 }
-VERIFY(0x023B69F4, vtil_hit_bg);
 
-BOOL vtil_execute(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6B70, BOOL, statue);
-    vtil_hit_co(statue);
-    vtil_hit_bg(statue);
-    if (!u8(statue->mDeleteState)) {
-        u32 mode = statue->mMode;
-        if (mode >= 4) {
-            gabi::call(0x0273AA24, ptr(0x10033264), 0x3EA, ptr(0x10033278));
-            mode = statue->mMode;
-        }
-        u32 entry = 0x10033244 + mode * 8;
-        u32 adjustedActor = gabi::ea(statue) + s32(read<s16>(entry));
-        s32 selector = read<s16>(entry + 2);
-        u32 target;
-        if (selector < 0) target = read<u32>(entry + 4);
-        else {
-            s32 vtableOffset = read<s16>(entry + 6);
-            u32 vtable = read<u32>(adjustedActor + vtableOffset);
-            target = read<u32>(vtable + selector * 8 + 4);
-        }
-        gabi::call_ptr(target, ptr(adjustedActor));
-        vtil_renew_attention(statue);
-        vtil_init_mtx(statue);
-        gabi::call(0x025165A4, &statue->mCylinder, &statue->current.pos);
-        u32 play = gabi::call<u32>(0x025200D4);
-        gabi::call(0x0200E240, ptr(play + 0x26A4), &statue->mCylinder);
-        f32 y = statue->current.pos.y, z = statue->current.pos.z;
-        statue->mLight.mColorB = 0x34;
-        statue->mLight.mPos.z = z;
-        statue->mLight.mPower = 230.0f;
-        statue->mLight.mFluctuation = 250.0f;
-        statue->mLight.mColorR = 0x94;
-        statue->mLight.mColorG = 0x7F;
-        statue->mLight.mPos.y = y + 70.0f;
-        statue->mLight.mPos.x = f32(statue->current.pos.x);
+/* 023B6EA8 */
+void daObjVtil_c::to_carry_mode() {
+    u32 collision = mCylinder.mObjCo.mSPrm;
+    u32 attack = mCylinder.mObjAt.mSPrm;
+    u32 target = mCylinder.mObjTg.mSPrm;
+    u32 attention = attention_info.flags;
+    mCylinder.mObjCo.mSPrm = collision & ~1u;
+    mCylinder.mObjTg.mSPrm = target | 1;
+    attention_info.flags = attention & ~u32(fopAc_Attn_ACTION_CARRY_e);
+    mMode = MODE_CARRY;
+    mCylinder.mObjAt.mSPrm = attack & ~1u;
+}
+
+/* 023B707C */
+void daObjVtil_c::mode_carry() {
+    f32 z = current.pos.z, y = current.pos.y, x = current.pos.x;
+    f32 speedX = speed.x, speedY = speed.y, speedZ = speed.z;
+    f32 vertical = speedY;
+    if (!(u32(actor_status) & fopAcStts_CARRY_e)) {
+        if (f32(speedF) > 0.0f) to_throw_mode();
+        else to_wait_mode();
+        vertical = speed.y;
     }
-    if (u8(statue->mDeleteState) == 1) {
-        gabi::call(0x025D57E0, statue);
-        statue->mDeleteState = 2;
-    }
-    return 1;
+    mPreviousVerticalSpeed = vertical;
+    correctBackground(this);
+    speed.y = speedY;
+    current.pos.x = x;
+    speed.x = speedX;
+    speed.z = speedZ;
+    current.pos.y = y;
+    current.pos.z = z;
 }
-VERIFY(0x023B6B70, vtil_execute);
 
-BOOL vtil_draw(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6D44, BOOL, statue);
-    u32 environment = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, ptr(environment), 0, &statue->current.pos, &statue->tevStr);
-    environment = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, ptr(environment), statue->mModel.get(), &statue->tevStr);
-    gabi::call(0x025E2DE0, statue->mModel.get(), 0);
-    return 1;
+/* 023B6FE0 */
+void daObjVtil_c::to_throw_mode() {
+    dComIfGp_get();
+    u32 collision = mCylinder.mObjCo.mSPrm;
+    u32 flags = mAcch.m_flags;
+    u32 attack = mCylinder.mObjAt.mSPrm;
+    u32 target = mCylinder.mObjTg.mSPrm;
+    speed.y = 27.0f;
+    gravity = -6.0f;
+    mCylinder.mObjAt.mSPrm = attack | 1;
+    mCylinder.mObjCo.mSPrm = collision | 1;
+    attention_info.flags = attention_info.flags & ~0x10u;
+    speedF = 36.0f;
+    mCylinder.mObjTg.mSPrm = target | 1;
+    mAcch.m_flags = (flags & ~u32(dBgS_Acch::GRND_NONE | dBgS_Acch::WALL_NONE | dBgS_Acch::ROOF_NONE | dBgS_Acch::WATER_NONE)) | dBgS_Acch::LINE_CHECK;
+    mMode = MODE_THROW;
 }
-VERIFY(0x023B6D44, vtil_draw);
 
-void vtil_calc_throw(daObjVtil_c* statue, be<f32>* gravityOut, be<f32>* linearOut, be<f32>* angularOut) {
-    WWHD_FUNC(0x023B6DA0, void, statue, gravityOut, linearOut, angularOut);
+/* 023B6DA0 */
+void daObjVtil_c::calc_throw(be<f32>* gravityOut, be<f32>* linearOut, be<f32>* angularOut) {
     f32 linear = 0.002f, angular = 0.0002f, gravity = -6.0f;
-    if (u32(statue->mAcch.m_flags) & 0x80000) {
-        f32 depth = f32(statue->current.pos.y) - f32(statue->mAcch.m_sea_height);
+    if (u32(mAcch.m_flags) & dBgS_Acch::SEA_IN) {
+        f32 depth = f32(current.pos.y) - f32(mAcch.m_sea_height);
         f32 blend = 0.0f;
         if (depth < 0.0f) {
             if (!(depth > -160.0f)) blend = 0.5f;
@@ -447,175 +311,308 @@ void vtil_calc_throw(daObjVtil_c* statue, be<f32>* gravityOut, be<f32>* linearOu
         angular = std::fma(blend, 0.02f, rest * 0.0002f);
         gravity = std::fma(blend, 4.0f, -6.0f);
     }
+    // HD: output pointers can overlap; retain the original store order.
     *linearOut = linear;
     *angularOut = angular;
     *gravityOut = gravity;
 }
-VERIFY(0x023B6DA0, vtil_calc_throw);
 
-void vtil_to_carry(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6EA8, void, statue);
-    u32 collision = read<u32>(address(statue, 0x624));
-    u32 attack = read<u32>(address(statue, 0x5F8));
-    u32 target = read<u32>(address(statue, 0x610));
-    u32 attention = read<u32>(address(statue, 0x39C));
-    write<u32>(address(statue, 0x624), collision & ~1u);
-    write<u32>(address(statue, 0x610), target | 1);
-    write<u32>(address(statue, 0x39C), attention & ~0x10u);
-    statue->mMode = 1;
-    write<u32>(address(statue, 0x5F8), attack & ~1u);
+/* 023B71A0 */
+void daObjVtil_c::mode_throw() {
+    gabi::Local<be<f32>> gravity, linear, angular;
+    calc_throw(gravity.get(), linear.get(), angular.get());
+    f32 gravityValue = *gravity, linearValue = *linear, angularValue = *angular;
+    this->gravity = gravityValue;
+    daObj_posMoveF_stream(this, &mCollisionStatus.m_cc_move, reinterpret_cast<cXyz*>(&l_zero), linearValue, angularValue);
+    mPreviousVerticalSpeed = f32(speed.y);
+    correctBackground(this);
 }
-VERIFY(0x023B6EA8, vtil_to_carry);
 
-void vtil_mode_wait(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6EE4, void, statue);
-    if (u32(statue->actor_status) & 0x2000) {
-        vtil_to_carry(statue);
-        statue->mPreviousVerticalSpeed = f32(statue->speed.y);
-        correctBackground(statue);
+/* 023B6770 */
+void daObjVtil_c::to_sink_mode() {
+    f32 forwardSquared = f32(speedF) * f32(speedF);
+    u32 flags = mAcch.m_flags;
+    u32 collision = mCylinder.mObjCo.mSPrm;
+    u32 attack = mCylinder.mObjAt.mSPrm;
+    u32 target = mCylinder.mObjTg.mSPrm;
+    mCylinder.mObjCo.mSPrm = collision | 1;
+    f32 vertical = speed.y;
+    mCylinder.mObjAt.mSPrm = attack & ~1u;
+    f32 squared = std::fma(vertical, vertical, forwardSquared);
+    mCylinder.mObjTg.mSPrm = target | 1;
+    gravity = -2.0f;
+    mAcch.m_flags = ((flags | dBgS_Acch::ROOF_NONE) & ~u32(dBgS_Acch::GRND_NONE | dBgS_Acch::WALL_NONE | dBgS_Acch::WATER_NONE)) | dBgS_Acch::LINE_CHECK;
+    // HD: keep the full floating-point return register through the square-root call.
+    f64 magnitude = vtilSqrtRegister(squared);
+    if (magnitude > 30.0) {
+        f32 factor = f32(30.0 / magnitude);
+        PSVECScale(&speed, &speed, factor);
+        speedF = f32(speedF) * factor;
+    }
+    make_splash();
+    se_splash();
+    u32 attention = attention_info.flags;
+    mMode = MODE_SINK;
+    attention_info.flags = attention & ~u32(fopAc_Attn_ACTION_CARRY_e);
+}
+
+/* 023B7210 */
+void daObjVtil_c::mode_sink() {
+    daObj_posMoveF_stream(this, &mCollisionStatus.m_cc_move, reinterpret_cast<cXyz*>(&l_zero), 0.2f, 0.02f);
+    mPreviousVerticalSpeed = f32(speed.y);
+    correctBackground(this);
+}
+
+/* 023B654C */
+void daObjVtil_c::hit_co() {
+    mCollisionStatus.Move();
+    if (mCylinder.ChkAtHit()) {
+        mCylinder.ClrAtHit();
+        speedF = f32(speedF) * 0.8f;
         return;
     }
-    u32 flags = statue->mAcch.m_flags;
-    if (flags & 0x80) {
-        if (!u8(statue->mFirstGroundHit)) {
-            vtil_make_smoke(statue);
-            vtil_se_smoke(statue);
-            vtil_make_vib(statue);
-        } else statue->mFirstGroundHit = 0;
-        flags = statue->mAcch.m_flags;
-        statue->mAcch.m_flags = flags & ~0x80u;
+    if (mCylinder.ChkTgHit()) {
+        vtilHitSeStart(&eyePos, s32(s8(current.roomNo)), &mCylinder, 13);
+        set_sound(150, 5);
+        vtilHitEffHibana(this, &mCylinder);
+        mCylinder.ClrTgHit();
     }
-    u32 attention = read<u32>(address(statue, 0x39C));
-    write<u32>(address(statue, 0x39C), (flags & 0x20) ? attention | 0x10 : attention & ~0x10u);
-    gabi::call(0x025D6870, statue, &statue->mCollisionStatus);
-    statue->mPreviousVerticalSpeed = f32(statue->speed.y);
-    correctBackground(statue);
 }
-VERIFY(0x023B6EE4, vtil_mode_wait);
 
-void vtil_to_throw(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B6FE0, void, statue);
-    gabi::call<u32>(0x025200D4);
-    u32 collision = read<u32>(address(statue, 0x624));
-    u32 flags = statue->mAcch.m_flags;
-    u32 attack = read<u32>(address(statue, 0x5F8));
-    u32 target = read<u32>(address(statue, 0x610));
-    statue->speed.y = 27.0f;
-    statue->gravity = -6.0f;
-    write<u32>(address(statue, 0x5F8), attack | 1);
-    write<u32>(address(statue, 0x624), collision | 1);
-    write<u32>(address(statue, 0x39C), read<u32>(address(statue, 0x39C)) & ~0x10u);
-    statue->speedF = 36.0f;
-    write<u32>(address(statue, 0x610), target | 1);
-    statue->mAcch.m_flags = (flags & ~0x40Eu) | 0x2000;
-    statue->mMode = 2;
+/* 023B6604 */
+BOOL daObjVtil_c::check_sink() {
+    if (!(u32(mAcch.m_flags) & dBgS_Acch::SEA_IN)) return 0;
+    return f32(mAcch.m_sea_height) > f32(current.pos.y) + 70.0f;
 }
-VERIFY(0x023B6FE0, vtil_to_throw);
 
-void vtil_mode_carry(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B707C, void, statue);
-    f32 z = statue->current.pos.z, y = statue->current.pos.y, x = statue->current.pos.x;
-    f32 speedX = statue->speed.x, speedY = statue->speed.y, speedZ = statue->speed.z;
-    f32 vertical = speedY;
-    if (!(u32(statue->actor_status) & 0x2000)) {
-        if (f32(statue->speedF) > 0.0f) vtil_to_throw(statue);
-        else vtil_to_wait(statue);
-        vertical = statue->speed.y;
+/* 023B69BC */
+BOOL daObjVtil_c::check_sink_end() {
+    if (!(u32(mAcch.m_flags) & dBgS_Acch::SEA_IN)) return 0;
+    return f32(mAcch.m_sea_height) > f32(current.pos.y) + 210.0f;
+}
+
+/* 023B69F4 */
+void daObjVtil_c::hit_bg() {
+    u32 flags = mAcch.m_flags;
+    bool groundHit = (flags & dBgS_Acch::GROUND_HIT) != 0;
+    BOOL sinking = check_sink();
+    u32 mode = mMode;
+    if (mode == MODE_WAIT || (mode == MODE_THROW && !(groundHit || (flags & (dBgS_Acch::WALL_HIT | dBgS_Acch::ROOF_HIT))))) {
+        if (sinking) to_sink_mode();
+    } else if (mode == MODE_THROW) {
+        if (f32(mPreviousVerticalSpeed) < f32(gravity) - 1.0f) {
+            speedF = f32(speedF) * 0.6f;
+            return;
+        }
+        if (groundHit) {
+            make_smoke();
+            se_smoke();
+            make_vib();
+        }
+        speedF = 0.0f;
+        to_wait_mode();
+        stopTracking(this);
+    } else if (mode == MODE_SINK) {
+        if (check_sink_end()) {
+            mDeleteState = 1;
+            return;
+        }
+        if (!sinking) {
+            to_wait_mode();
+            stopTracking(this);
+        }
     }
-    statue->mPreviousVerticalSpeed = vertical;
-    correctBackground(statue);
-    statue->speed.y = speedY;
-    statue->current.pos.x = x;
-    statue->speed.x = speedX;
-    statue->speed.z = speedZ;
-    statue->current.pos.y = y;
-    statue->current.pos.z = z;
 }
-VERIFY(0x023B707C, vtil_mode_carry);
 
-void vtil_mode_throw(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B71A0, void, statue);
-    gabi::Local<be<f32>> gravity, linear, angular;
-    vtil_calc_throw(statue, gravity.get(), linear.get(), angular.get());
-    f32 gravityValue = *gravity, linearValue = *linear, angularValue = *angular;
-    statue->gravity = gravityValue;
-    gabi::call(0x023123C0, statue, &statue->mCollisionStatus, ptr(0x101FFBA8), linearValue, angularValue);
-    statue->mPreviousVerticalSpeed = f32(statue->speed.y);
-    correctBackground(statue);
+/* 023B695C */
+void daObjVtil_c::make_vib() {
+    u32 near = u32(check_circle()) & 1;
+    dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    gabi::Local<cXyz> direction;
+    direction->x = 0.0f; direction->y = 1.0f; direction->z = 0.0f;
+    play->play.mVibration.StartShock( near + 1, 1, direction.get());
 }
-VERIFY(0x023B71A0, vtil_mode_throw);
 
-void vtil_mode_sink(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B7210, void, statue);
-    gabi::call(0x023123C0, statue, &statue->mCollisionStatus, ptr(0x101FFBA8), 0.2f, 0.02f);
-    statue->mPreviousVerticalSpeed = f32(statue->speed.y);
-    correctBackground(statue);
+/* 023B68DC */
+BOOL daObjVtil_c::check_circle() {
+    dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    fopAc_ac_c* player = play->play.mPlayerInfo[0].mpPlayer;
+    gabi::Local<cXyz> difference;
+    cXyz_mi(&player->current.pos, difference.get(), &current.pos);
+    gabi::Local<cXyz> horizontal;
+    horizontal->x = f32(difference->x);
+    horizontal->y = 0.0f;
+    horizontal->z = f32(difference->z);
+    // HD: this call chain consumes the full FPR result, rather than a narrowed float.
+    f64 squared = vtilSquareMagRegister(horizontal.get());
+    // HD: keep the full floating-point return register through the square-root call.
+    f64 magnitude = vtilSqrtRegister(squared);
+    return !(magnitude > 190.0);
 }
-VERIFY(0x023B7210, vtil_mode_sink);
 
-s32 vtil_method_create(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B7270, s32, statue);
-    return vtil_create(statue);
-}
-VERIFY(0x023B7270, vtil_method_create);
-BOOL vtil_method_delete(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B7274, BOOL, statue);
-    return vtil_delete(statue);
-}
-VERIFY(0x023B7274, vtil_method_delete);
-BOOL vtil_method_execute(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B7278, BOOL, statue);
-    return vtil_execute(statue);
-}
-VERIFY(0x023B7278, vtil_method_execute);
-BOOL vtil_method_draw(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B727C, BOOL, statue);
-    return vtil_draw(statue);
-}
-VERIFY(0x023B727C, vtil_method_draw);
-
-void vtil_static_init() {
-    WWHD_FUNC(0x023B7280, void);
-    write<u32>(0x1046C95C, 0);
-    write<u32>(0x1046C960, 0);
-    write<u32>(0x1046C964, 0);
-    write<u32>(0x1046C968, 0);
-    gabi::call(0x028F026C, ptr(0x101CDCD0));
-    write<f32>(0x1046C950, -3.1415927410125732f);
-    write<f32>(0x1046C954, 3.1415927410125732f);
-    gabi::call(0x028ED6F8, ptr(0x1046C958));
-    gabi::call(0x028F026C, ptr(0x101CDCDC));
-    gabi::call(0x028EAB2C, ptr(0x1046C959));
-    gabi::call(0x028F026C, ptr(0x101CDCE8));
-}
-VERIFY(0x023B7280, vtil_static_init);
-
-void vtil_static_destruct(void* object, u32 flags) {
-    WWHD_FUNC(0x023B7314, void, object, flags);
-    if (object && (flags & 1)) gabi::call(0x0273AF40, object);
-}
-VERIFY(0x023B7314, vtil_static_destruct);
-
-void vtil_destruct(daObjVtil_c* statue, u32 flags) {
-    WWHD_FUNC(0x023B7328, void, statue, flags);
-    if (!statue) return;
-    gabi::call(0x02515A70, &statue->mCylinder, 2);
-    gabi::call(0x02515860, &statue->mCollisionStatus, 2);
-    gabi::call(0x02018034, ptr(address(statue, 0x590)), 2);
-    write<u32>(address(statue, 0x3D8), 0x1003319C);
-    write<u32>(address(statue, 0x3CC), 0x100331AC);
-    gabi::call(0x024EFD9C, &statue->mAcch, 0);
-    gabi::call(0x025D50BC, statue, 0);
-    if (flags & 1) gabi::call(0x0273AF40, statue);
-}
-VERIFY(0x023B7328, vtil_destruct);
-
-void vtil_empty_virtual(void* object) {
-    WWHD_FUNC(0x023B73C4, void, object);
-}
-VERIFY(0x023B73C4, vtil_empty_virtual);
-BOOL vtil_is_delete(daObjVtil_c* statue) {
-    WWHD_FUNC(0x023B73C8, BOOL, statue);
+/* 023B6B70 */
+BOOL daObjVtil_c::_execute() {
+    hit_co();
+    hit_bg();
+    if (!u8(mDeleteState)) {
+        u32 mode = mMode;
+        if (mode >= MODE_MAX) {
+            JUT_ASSERT_fail("d_a_obj_vtil.cpp", 0x3EA, "M_mode >= 0 && M_mode < MODE_MAX");
+            mode = mMode;
+        }
+        l_modeProc[mode].invoke(this);
+        renew_attention_pos();
+        init_mtx();
+        vtilMoveCAtTg(&mCylinder, &current.pos);
+        dComIfG_inf_c* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        cCcS_Set(&play->play.mCcS, &mCylinder);
+        f32 y = current.pos.y, z = current.pos.z;
+        mLight.mColorB = 0x34;
+        mLight.mPos.z = z;
+        mLight.mPower = 230.0f;
+        mLight.mFluctuation = 250.0f;
+        mLight.mColorR = 0x94;
+        mLight.mColorG = 0x7F;
+        mLight.mPos.y = y + 70.0f;
+        mLight.mPos.x = f32(current.pos.x);
+    }
+    if (u8(mDeleteState) == 1) {
+        fopAcM_delete(this);
+        mDeleteState = 2;
+    }
     return 1;
 }
-VERIFY(0x023B73C8, vtil_is_delete);
+
+/* 023B6D44 */
+BOOL daObjVtil_c::_draw() {
+    dScnKy_env_light_c* environment = dKy_getEnvlight();
+    settingTevStruct(environment, 0, &current.pos, &tevStr);
+    environment = dKy_getEnvlight();
+    setLightTevColorType(environment, mModel.get(), &tevStr);
+    mDoExt_modelUpdateDL(mModel.get(), 0);
+    return 1;
+}
+
+/* 023B7270 */
+static s32 Mthd_Create(daObjVtil_c* statue) {
+    return statue->_create();
+}
+
+/* 023B7274 */
+static BOOL Mthd_Delete(daObjVtil_c* statue) {
+    return statue->_delete();
+}
+
+/* 023B7278 */
+static BOOL Mthd_Execute(daObjVtil_c* statue) {
+    return statue->_execute();
+}
+
+/* 023B727C */
+static BOOL Mthd_Draw(daObjVtil_c* statue) {
+    return statue->_draw();
+}
+
+/* 023B73C8 */
+static BOOL Mthd_IsDelete(daObjVtil_c* statue) {
+    return 1;
+}
+
+/* 023B5E60 */
+daObjVtil_c* daObjVtil_construct(daObjVtil_c* statue) {
+    if (!statue) statue = static_cast<daObjVtil_c*>(operator_new(sizeof(daObjVtil_c)));
+    if (!statue) return nullptr;
+    fopAc_ac_c_ct(statue);
+    statue->__vtbl = VT_ACTOR;
+    vtilAcchConstruct(&statue->mAcch);
+    statue->mAcch.cBgS_Chk::__vtbl = VT_ACCH_CHECK;
+    statue->mAcch.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP;
+    statue->mAcch.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLYGON;
+    statue->mAcch.mbObjThrough = 1;
+    dBgS_AcchCir_ct(&statue->mAcchCircle);
+    vtilStatusConstruct(&statue->mCollisionStatus);
+    vtilGlobalStatusConstruct(&statue->mCollisionStatus.__vtbl_gstts);
+    statue->mCollisionStatus.__vtbl = VT_STATUS;
+    statue->mCollisionStatus.__vtbl_gstts = VT_GLOBAL_STATUS;
+    vtilColliderConstruct(&statue->mCylinder);
+    vtilShape(&statue->mCylinder)->mShapeVtable = VT_SHAPE;
+    vtilShape(&statue->mCylinder)->mBoundsVtable = VT_BOUNDS;
+    vtilCylinderConstruct(&statue->mCylinder.mCyl);
+    statue->mLight.mHD20 = 1.0f;
+    statue->mCylinder.mCyl.__vtbl = VT_CYLINDER;
+    statue->mCylinder.__vtbl_hitinf = VT_CYL_HIT;
+    vtilShape(&statue->mCylinder)->mShapeVtable = VT_CYL_SHAPE;
+    return statue;
+}
+
+/* 023B7280 */
+void __sinit_d_a_obj_vtil_cpp() {
+    l_math.mZero[0] = 0;
+    l_math.mZero[1] = 0;
+    l_math.mZero[2] = 0;
+    l_math.mZero[3] = 0;
+    __register_global_object(gabi::ea(&l_descriptors.mEntries[0]));
+    l_math.mMinAngle = -3.1415927410125732f;
+    l_math.mMaxAngle = 3.1415927410125732f;
+    vtilInitSinTable(&l_math.mSinTable);
+    __register_global_object(gabi::ea(&l_descriptors.mEntries[1]));
+    vtilInitAtanTable(&l_math.mAtanTable);
+    __register_global_object(gabi::ea(&l_descriptors.mEntries[2]));
+}
+
+/* 023B7314 */
+void __dt_VtilHeaderStatics(void* object, u32 flags) {
+    if (object && (flags & 1)) operator_delete(object);
+}
+
+/* 023B7328 */
+void daObjVtil_destruct(daObjVtil_c* statue, u32 flags) {
+    if (!statue) return;
+    dCcD_Cyl_dt(&statue->mCylinder, 2);
+    dCcD_Stts_dt(&statue->mCollisionStatus, 2);
+    vtilCircleDestruct(&statue->mAcchCircle.m_cir, 2);
+    statue->mAcch.dBgS_GrpPassChk::__vtbl = VT_ACCH_GROUP;
+    statue->mAcch.dBgS_PolyPassChk::__vtbl = VT_ACCH_POLYGON;
+    vtilAcchDestruct(&statue->mAcch, 0);
+    vtilActorDestruct(statue, 0);
+    if (flags & 1) operator_delete(statue);
+}
+
+/* 023B73C4 */
+void daObjVtil_emptyVirtual(void* object) {
+}
+
+/* WWHD glue
+data l_stageTbox 100332D8
+data l_modelRes 100332EC
+data l_co_cyl_data 10033300
+data l_zero 101FFBA8
+data l_math 1046C950
+data l_descriptors 101CDCD0
+data l_modeProc 10033244
+ext 025165A4 void vtilMoveCAtTg(dCcD_Cyl*, cXyz*)
+ext 025052BC void vtilForceLockOff(VtilCameraController*, u32)
+ext 026066C4 J3DModelData* vtilGetResource(void*, SafeString*, u32)
+ext 02520864 BOOL vtilIsStageTbox(u32, s32)
+ext 0255F458 void dKy_Sound_set(cXyz*, s32, u32, s32)
+ext 023129C4 void vtilHitSeStart(cXyz*, s32, dCcD_GObjInf*, u32)
+ext 02312E54 void vtilHitEffHibana(fopAc_ac_c*, dCcD_Cyl*)
+ext 02311CD8 void vtilMakeLandEffect(fopAc_ac_c*, dBgS_GndChk*, f32)
+ext 028F4384 f64 vtilSqrtRegister(f32)
+ext 028E8DD0 f64 vtilSquareMagRegister(const cXyz*)
+ext 028ED6F8 void vtilInitSinTable(u8*)
+ext 028EAB2C void vtilInitAtanTable(u8*)
+ext 024F0474 void vtilAcchConstruct(dBgS_Acch*)
+ext 0200BD2C void vtilStatusConstruct(dCcD_Stts*)
+ext 02515DA0 void vtilGlobalStatusConstruct(be<u32>*)
+ext 02515FB8 void vtilColliderConstruct(dCcD_GObjInf*)
+ext 02018590 void vtilCylinderConstruct(cM3dGCyl*)
+ext 02018034 void vtilCircleDestruct(cM3dGCir_l*, s32)
+ext 024EFD9C void vtilAcchDestruct(dBgS_Acch*, s32)
+ext 025D50BC void vtilActorDestruct(fopAc_ac_c*, s32)
+str 100332D0 "Vtil"
+str 100331E0 "d_a_obj_vtil.cpp" in 023B5F70
+str 100331D0 "mdl_data != 0"
+str 10033264 "d_a_obj_vtil.cpp" in 023B6B70
+str 10033278 "M_mode >= 0 && M_mode < MODE_MAX"
+*/

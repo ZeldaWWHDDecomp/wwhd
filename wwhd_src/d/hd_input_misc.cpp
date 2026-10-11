@@ -1,153 +1,214 @@
-/* hd_input_misc: HD UI input receiver (pane hit tests and distances), two initialiser-only TUs and
- * the GamePad gyro/orientation reader, WWHD. HD-only code
- * (no GameCube source): written from the WWHD code. Range 02616ED4..0261758F.
- *
- * Receiver (0x60): base 02001A00 (event receiver), +0x14 vtable 100E28F8 (+0x14 hit test (x, y)),
- * +0x18 pane (its global matrix at +0x48), +0x58..+0x5A u8 flags, +0x5C user value.
- */
-#include "gabi.h"
-using namespace gabi;
+/* HD-only pane event receiver, initialization and GamePad orientation. */
+#include "d/hd_input_misc.h"
 
-namespace hd_input_misc {
+static u32 l_receiverVtable;
+static f32 l_zero;
+static f32 l_half;
+static f32 l_three;
+static HdInputPointer l_controllerManager;
+static u32 l_orientationInitialized;
+static HdInputCallback l_orientationCallback;
+static u32 l_orientationVtable;
+static HdInputInitGlobals l_globals1;
+static HdInputInitRange l_range1;
+static f32 l_lower1;
+static f32 l_upper1;
+static HdInputRegistration l_registration1_1;
+static HdInputRegistration l_registration1_2;
+static HdInputRegistration l_registration1_3;
+static HdInputInitGlobals l_globals2;
+static HdInputInitRange l_range2;
+static f32 l_lower2;
+static f32 l_upper2;
+static HdInputRegistration l_registration2_1;
+static HdInputRegistration l_registration2_2;
+static HdInputRegistration l_registration2_3;
+static HdInputInitGlobals l_globals3;
+static HdInputInitRange l_range3;
+static f32 l_lower3;
+static f32 l_upper3;
+static HdInputRegistration l_registration3_1;
+static HdInputRegistration l_registration3_2;
+static HdInputRegistration l_registration3_3;
 
-/* 02616ED4: receiver constructor */
-u32 ctor(u32 p, u32 owner, u32 value) {
-    WWHD_FUNC(0x02616ED4, u32, p, owner, value);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x60u);
-        if (!p) return 0;
+enum HdInputSlot : u32 { HdInput_HitTest = 5, HdInput_ReadOrientation = 3 };
+enum HdInputConstants : u32 { HdInput_Delete = 1, HdInput_GamePad = 8 };
+
+/* 02616ED4 */
+static HdInputReceiver* HdInputReceiver__ct(HdInputReceiver* self, void* owner, u32 value) {
+    if (self == NULL) {
+        self = static_cast<HdInputReceiver*>(hdInputAllocate(sizeof(HdInputReceiver)));
+        if (self == NULL) return NULL;
     }
-    call<void>(0x02001A00, p, owner);
-    store<u32>(p + 0x5C, value);
-    store<u32>(p + 0x14, 0x100E28F8);
-    store<u8>(p + 0x59, 0);
-    store<u8>(p + 0x5A, 0);
-    store<u8>(p + 0x58, 0);
-    return p;
-}
-VERIFY(0x02616ED4, ctor);
-
-/* 02616F58: receiver destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x02616F58, void, p, flags);
-    if (!p) return;
-    call<void>(0x02001ABC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
-}
-VERIFY(0x02616F58, dtor);
-
-/* copies a pane's global matrix (0x30 bytes) to the stack */
-static void copyMtx(u32 dst, u32 pane) {
-    const u32 m = load<u32>(pane + 0x18) + 0x48;
-    for (u32 i = 0; i < 12; i++) store<u32>(dst + 4 * i, load<u32>(m + 4 * i));
+    hdInputReceiverConstruct(self, owner);
+    self->mUserValue = value;
+    self->mVtable = reinterpret_cast<gfn*>(&l_receiverVtable);
+    self->mFlags[1] = 0;
+    self->mFlags[2] = 0;
+    self->mFlags[0] = 0;
+    return self;
 }
 
-/* 02616FAC: does this receiver's hit test contain a corner of the item's pane rectangle? */
-u8 hitsCorner(u32 self, u32 item) {
-    WWHD_FUNC(0x02616FAC, u8, self, item);
-    Local<u8[0x40]> F;
-    const u32 rect = F.a, mtx = F.a + 0x10;
-    copyMtx(mtx, item);
-    call<void>(0x02876368, load<u32>(item + 0x18), rect);
-    const f32 tx = load<f32>(mtx + 0xC), ty = load<f32>(mtx + 0x1C);
-    const f32 l = fadds_ppc(tx, load<f32>(rect));
-    const f32 r = fadds_ppc(tx, load<f32>(rect + 8));
-    const f32 b = fadds_ppc(ty, load<f32>(rect + 0xC));
-    const f32 t = fadds_ppc(ty, load<f32>(rect + 4));
-    const f32 xs[4] = {l, r, l, r}, ys[4] = {t, t, b, b};
-    for (u32 i = 0; i < 4; i++)
-        if (call_ptr<u32>(load<u32>(load<u32>(self + 0x14) + 0x14), self, xs[i], ys[i])) return 1;
+/* 02616F58 */
+static void HdInputReceiver__dt(HdInputReceiver* self, u32 flags) {
+    if (self == NULL) return;
+    hdInputReceiverDestroy(self, 0);
+    if (flags & HdInput_Delete) hdInputDelete(self);
+}
+
+// HD: copy matrix words, preserving signaling NaNs in the UI transform.
+static void copyPaneMatrix(Mtx34* destination, HdInputReceiver* receiver) {
+    be<u32>* source = reinterpret_cast<be<u32>*>(&receiver->mpPane->mGlobalMtx);
+    be<u32>* words = reinterpret_cast<be<u32>*>(destination);
+    for (u32 i = 0; i < 12; i++) words[i] = source[i];
+}
+
+/* 02616FAC */
+u8 HdInputReceiver::hitsCorner(HdInputReceiver* item) {
+    gabi::Local<HdInputCornerWorkspace> workspace;
+    copyPaneMatrix(&workspace->mMtx, item);
+    hdInputGetPaneRect(item->mpPane, &workspace->mRect);
+    f32 tx = workspace->mMtx.m[0][3];
+    f32 ty = workspace->mMtx.m[1][3];
+    f32 left = gabi::fadds_ppc(tx, workspace->mRect.mLeft);
+    f32 right = gabi::fadds_ppc(tx, workspace->mRect.mRight);
+    f32 bottom = gabi::fadds_ppc(ty, workspace->mRect.mBottom);
+    f32 top = gabi::fadds_ppc(ty, workspace->mRect.mTop);
+    const f32 xs[4] = {left, right, left, right};
+    const f32 ys[4] = {top, top, bottom, bottom};
+    for (u32 i = 0; i < 4; i++) {
+        if (gabi::call_ptr<u32>(mVtable[HdInput_HitTest].get(), this, xs[i], ys[i])) return 1;
+    }
     return 0;
 }
-VERIFY(0x02616FAC, hitsCorner);
 
-/* 02617174: distance between the two panes' translations */
-f32 paneDistance(u32 a, u32 b) {
-    WWHD_FUNC(0x02617174, f32, a, b);
-    Local<u8[0x60]> F;
-    copyMtx(F.a, a);
-    copyMtx(F.a + 0x30, b);
-    const f32 dy = fsubs_ppc(load<f32>(F.a + 0x1C), load<f32>(F.a + 0x4C));
-    const f32 dy2 = fmuls_ppc(dy, dy);
-    const f32 dx = fsubs_ppc(load<f32>(F.a + 0xC), load<f32>(F.a + 0x3C));
-    const f32 d2 = fmadds(dx, dx, dy2);
-    f32 inv = load<f32>(0x100E28E0);
-    if (d2 > inv) {
-        const f64 e = frsqrte(d2); /* the estimate stays double in the FPR */
-        const f32 e2 = f32(e * round25(e)); /* fmuls rounds frC to 25 bits */
-        const f32 eh = f32(e * f64(load<f32>(0x100E28E4)));
-        inv = fmuls_ppc(fnmsubs(e2, d2, load<f32>(0x100E28E8)), eh);
+/* 02617174 */
+f32 HdInputReceiver::paneDistance(HdInputReceiver* other) {
+    gabi::Local<HdInputDistanceWorkspace> workspace;
+    copyPaneMatrix(&workspace->mFirst, this);
+    copyPaneMatrix(&workspace->mSecond, other);
+    f32 dy = gabi::fsubs_ppc(workspace->mFirst.m[1][3], workspace->mSecond.m[1][3]);
+    f32 dy2 = gabi::fmuls_ppc(dy, dy);
+    f32 dx = gabi::fsubs_ppc(workspace->mFirst.m[0][3], workspace->mSecond.m[0][3]);
+    f32 distanceSquared = gabi::fmadds(dx, dx, dy2);
+    f32 inverse = l_zero;
+    if (distanceSquared > inverse) {
+        // HD: retain the double reciprocal estimate and PowerPC operand rounding.
+        f64 estimate = gabi::frsqrte(distanceSquared);
+        f32 estimateSquared = f32(estimate * round25(estimate));
+        f32 halfEstimate = f32(estimate * f64(l_half));
+        inverse = gabi::fmuls_ppc(gabi::fnmsubs(estimateSquared, distanceSquared, l_three), halfEstimate);
     }
-    return fmuls_ppc(inv, d2);
+    return gabi::fmuls_ppc(inverse, distanceSquared);
 }
-VERIFY(0x02617174, paneDistance);
 
-u8 flag58(u32 p) { WWHD_FUNC(0x02617270, u8, p); return load<u8>(p + 0x58); }
-VERIFY(0x02617270, flag58);
-u8 flag59(u32 p) { WWHD_FUNC(0x02617278, u8, p); return load<u8>(p + 0x59); }
-VERIFY(0x02617278, flag59);
-u8 flag5A(u32 p) { WWHD_FUNC(0x02617280, u8, p); return load<u8>(p + 0x5A); }
-VERIFY(0x02617280, flag5A);
+/* 02617270 */
+u8 HdInputReceiver::getPrimaryFlag() { return mFlags[0]; }
+/* 02617278 */
+u8 HdInputReceiver::getSecondaryFlag() { return mFlags[1]; }
+/* 02617280 */
+u8 HdInputReceiver::getTertiaryFlag() { return mFlags[2]; }
 
-static void stdInit(u32 b, u32 r1, u32 lo, u32 hi, u32 f, u32 r2, u32 r3) {
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, r1);
-    const f32 a = load<f32>(lo), c = load<f32>(hi);
-    store<f32>(f, a);
-    store<f32>(f + 4, c);
-    call<void>(0x028ED6F8, f + 8);
-    call<void>(0x028F026C, r2);
-    call<void>(0x028EAB2C, f + 9);
-    call<void>(0x028F026C, r3);
+static void initializeGlobals(HdInputInitGlobals* globals, HdInputRegistration* first,
+                              be<f32>* lower, be<f32>* upper, HdInputInitRange* range,
+                              HdInputRegistration* second, HdInputRegistration* third) {
+    globals->mThird = 0;
+    globals->mFirst = 0;
+    globals->mFourth = 0;
+    globals->mSecond = 0;
+    hdInputRegister(first);
+    f32 lowerValue = *lower;
+    f32 upperValue = *upper;
+    range->mLower = lowerValue;
+    range->mUpper = upperValue;
+    hdInputInitSigned(&range->mSignedInitialized);
+    hdInputRegister(second);
+    hdInputInitUnsigned(&range->mUnsignedInitialized);
+    hdInputRegister(third);
 }
-void staticInit() {
-    WWHD_FUNC(0x02617288, void);
-    stdInit(0x1048DE20, 0x101F4FF8, 0x100E28EC, 0x100E28F0, 0x1048DE14, 0x101F5004, 0x101F5010);
-}
-VERIFY(0x02617288, staticInit);
-void staticInit2() {
-    WWHD_FUNC(0x0261731C, void);
-    stdInit(0x1048DE3C, 0x101F501C, 0x100E2950, 0x100E2954, 0x1048DE30, 0x101F5028, 0x101F5034);
-}
-VERIFY(0x0261731C, staticInit2);
 
-/* 026173B0: GamePad orientation: the three axis vectors of controller 8 (DRC) and their matrix */
-void padOrientation(u32 out) {
-    WWHD_FUNC(0x026173B0, void, out);
-    const u32 ctl = call<u32>(0x0273CB8C, load<u32>(0x101F8AE8), 8u);
-    if (!load<u32>(0x101FD694)) {
-        store<u32>(0x101FD694, 1);
-        store<u32>(0x101FD968, 0x100E2968);
+/* 02617288 */
+static void __sinit_hd_input_misc_cpp() {
+    initializeGlobals(&l_globals1, &l_registration1_1, &l_lower1, &l_upper1, &l_range1,
+                      &l_registration1_2, &l_registration1_3);
+}
+/* 0261731C */
+static void __sinit_hd_input_misc_second_cpp() {
+    initializeGlobals(&l_globals2, &l_registration2_1, &l_lower2, &l_upper2, &l_range2,
+                      &l_registration2_2, &l_registration2_3);
+}
+
+/* 026173B0 */
+static void hdInput_readGamePadOrientation(HdInputOrientation* out) {
+    HdInputController* controller = hdInputGetController(l_controllerManager.mpValue, HdInput_GamePad);
+    if (!l_orientationInitialized) {
+        l_orientationInitialized = 1;
+        l_orientationCallback.mVtable = &l_orientationVtable;
     }
-    if (!ctl) return;
-    if (!call_ptr<u32>(load<u32>(load<u32>(ctl + 0x10) + 0xC), ctl, 0x101FD968u)) return;
-    if (!ctl) return;
-    if (s32(load<u32>(ctl + 0xAD4)) <= 0) return;
-    const u32 m = ctl + 0x14;
-    Local<f32[9]> V;
-    const u32 v = V.a;
-    const u32 so[9] = {0x6C, 0x70, 0x74, 0x78, 0x7C, 0x80, 0x84, 0x88, 0x8C};
-    for (u32 i = 0; i < 9; i++) store<f32>(v + 4 * i, load<f32>(m + so[i]));
-    store<f32>(out + 4, load<f32>(v + 4));
-    store<f32>(out + 8, load<f32>(v + 8));
-    store<f32>(out + 0x10, load<f32>(v + 0x10));
-    store<f32>(out, load<f32>(v));
-    store<f32>(out + 0x14, load<f32>(v + 0x14));
-    store<f32>(out + 0xC, load<f32>(v + 0xC));
-    store<f32>(out + 0x18, load<f32>(v + 0x18));
-    store<f32>(out + 0x20, load<f32>(v + 0x20));
-    store<f32>(out + 0x1C, load<f32>(v + 0x1C));
-    call<void>(0x026175B4, out + 0x24, v, v + 0xC, v + 0x18);
+    if (controller == NULL) return;
+    if (!gabi::call_ptr<u32>(controller->mVtable[HdInput_ReadOrientation].get(), controller,
+                             &l_orientationCallback)) return;
+    if (controller->mSampleCount <= 0) return;
+    gabi::Local<HdInputAxes> vectors;
+    be<f32>* source = reinterpret_cast<be<f32>*>(controller->mOrientation);
+    be<f32>* temporary = reinterpret_cast<be<f32>*>(vectors.get());
+    for (u32 i = 0; i < 9; i++) temporary[i] = (f32)source[i];
+    out->mAxes[0].y = vectors->mAxes[0].y;
+    out->mAxes[0].z = vectors->mAxes[0].z;
+    out->mAxes[1].y = vectors->mAxes[1].y;
+    out->mAxes[0].x = vectors->mAxes[0].x;
+    out->mAxes[1].z = vectors->mAxes[1].z;
+    out->mAxes[1].x = vectors->mAxes[1].x;
+    out->mAxes[2].x = vectors->mAxes[2].x;
+    out->mAxes[2].z = vectors->mAxes[2].z;
+    out->mAxes[2].y = vectors->mAxes[2].y;
+    hdInputMakeOrientationMatrix(&out->mMatrix, &vectors->mAxes[0], &vectors->mAxes[1], &vectors->mAxes[2]);
 }
-VERIFY(0x026173B0, padOrientation);
 
-void staticInit3() {
-    WWHD_FUNC(0x026174FC, void);
-    stdInit(0x1048DE58, 0x101F5040, 0x100E2978, 0x100E297C, 0x1048DE4C, 0x101F504C, 0x101F5058);
+/* 026174FC */
+static void __sinit_hd_input_misc_third_cpp() {
+    initializeGlobals(&l_globals3, &l_registration3_1, &l_lower3, &l_upper3, &l_range3,
+                      &l_registration3_2, &l_registration3_3);
 }
-VERIFY(0x026174FC, staticInit3);
 
-} // namespace hd_input_misc
+/* WWHD glue (tools/verify/autoglue.py): HD receiver and controller interfaces.
+data l_receiverVtable 100E28F8
+data l_zero 100E28E0
+data l_half 100E28E4
+data l_three 100E28E8
+data l_controllerManager 101F8AE8
+data l_orientationInitialized 101FD694
+data l_orientationCallback 101FD968
+data l_orientationVtable 100E2968
+data l_globals1 1048DE20
+data l_range1 1048DE14
+data l_lower1 100E28EC
+data l_upper1 100E28F0
+data l_registration1_1 101F4FF8
+data l_registration1_2 101F5004
+data l_registration1_3 101F5010
+data l_globals2 1048DE3C
+data l_range2 1048DE30
+data l_lower2 100E2950
+data l_upper2 100E2954
+data l_registration2_1 101F501C
+data l_registration2_2 101F5028
+data l_registration2_3 101F5034
+data l_globals3 1048DE58
+data l_range3 1048DE4C
+data l_lower3 100E2978
+data l_upper3 100E297C
+data l_registration3_1 101F5040
+data l_registration3_2 101F504C
+data l_registration3_3 101F5058
+ext 0273AD10 void* hdInputAllocate(u32)
+ext 02001A00 void hdInputReceiverConstruct(HdInputReceiver*, void*)
+ext 02001ABC void hdInputReceiverDestroy(HdInputReceiver*, u32)
+ext 0273AF40 void hdInputDelete(void*)
+ext 02876368 void hdInputGetPaneRect(HdInputPane*, HdInputRect*)
+ext 028F026C void hdInputRegister(void*)
+ext 028ED6F8 void hdInputInitSigned(be<u8>*)
+ext 028EAB2C void hdInputInitUnsigned(be<u8>*)
+ext 0273CB8C HdInputController* hdInputGetController(void*, u32)
+ext 026175B4 void hdInputMakeOrientationMatrix(Mtx34*, cXyz*, cXyz*, cXyz*)
+*/

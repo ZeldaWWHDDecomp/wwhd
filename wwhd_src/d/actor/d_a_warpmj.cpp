@@ -1,390 +1,611 @@
-// Forsaken Fortress warp portal. HD-derived; GC bodies are placeholders.
-// See wwhd_src/README.md.
+/** Forsaken Fortress warp portal: sea alignment, materials, and event actions.
+ * HD: preserve verified animation construction, draw-tag callbacks, and guest call ordering.
+ */
 #include "d/actor/d_a_warpmj.h"
-using gabi::load; using gabi::store; using gabi::call;
-static u32 play() { return call<u32>(0x025200D4); }
-static u32 envlight() { return call<u32>(0x02555D0C); }
-static u32 actorEA(daWarpmj_c* a) { return gabi::ea(a); }
-static f32 constant(u32 a) { return load<f32>(a); }
-static u32 resource(s32 index) {
+static void* sResourceManager;
+static WarpmjLightBlock sLightDefault;
+static WarpmjSave* sSave;
+static void* sDemo;
+static WarpmjHeader sHeader;
+static WarpmjWords sHeaderZero;
+static WarpmjDestructorRecords sDestructorRecords;
+static f32 sRate;
+static f32 sZero;
+static f32 sCullMin;
+static f32 sCullMax;
+static f32 sCullTop;
+static f32 sSeaProbeHeight;
+static f32 sNoSeaHeight;
+static f32 sColorScale;
+static f32 sWarpRadius;
+static f32 sMinAngle;
+static f32 sMaxAngle;
+static WarpmjActionTable sInitActions;
+static WarpmjActionTable sExecuteActions;
+static WarpmjActionNames sActionNames;
+
+static void* resource(s32 index) {
     gabi::Local<SafeString> name;
-    name->mStringTop = 0x10042A20; name->__vtbl = 0x100428F4;
-    return call<u32>(0x026066C4, load<u32>(0x101F4F28), name.get(), index);
+    name->mStringTop = gabi::guest_addr("Gmjwp");
+    name->__vtbl = 0x100428F4;
+    return warpmjGetResource(sResourceManager.get(), name.get(), index);
 }
-static void resourceAssert(s32 line, u32 message) {
-    call(0x0273AA24, STR(0x10042998), line, STR(message));
+static void resourceAssert(s32 line, const char* message) {
+    warpmjAssert("d_a_warpmj.cpp", line, message);
 }
-static void copyModelMatrix(u32 model) {
+// HD: snapshot all twelve matrix floats before writing the model.
+static void copyModelMatrix(J3DModel* model) {
     f32 values[12];
-    for (unsigned i=0;i<12;++i) values[i]=load<f32>(0x1048D0CC+4*i);
-    for (unsigned i=0;i<12;++i) store<f32>(model+0xC8+4*i,values[i]);
+    for (unsigned i = 0; i < 12; ++i)
+        values[i] = mDoMtx_stack_c::get()->m[i / 4][i % 4];
+    for (unsigned i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
 }
-static BOOL CreateHeap(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DCE1C, BOOL, a);
-    u32 modelData=resource(9);
-    if(!modelData) resourceAssert(0xAC,0x100429A8);
-    a->model=gabi::at<J3DModel>(call<u32>(0x025E38E0,modelData,0x80000,0x11000222));
-    if(!a->model) return 0;
-    u32 animation=resource(6);
-    if(!animation) resourceAssert(0xBB,0x10042974);
-    u32 bck=call<u32>(0x0273AD10,0x8C);
-    if(bck) {
-        call(0x027F2BC0,bck,0);
-        store<u32>(bck+0x10,0x1016E54C);
-        call(0x027DA984,bck+0x14);
-        store<u32>(bck+0x48,0x1016D820);
-        store<u32>(bck+0x10,0x1004290C);
-        store<u32>(bck+0x58,0);
-        store<u32>(bck+0x7C,0); store<u32>(bck+0x80,0);
-        store<u32>(bck+0x84,0); store<u32>(bck+0x88,0);
+static s32 invokeAction(const WarpmjAction* descriptor, daWarpmj_c* i_this) {
+    s32 staff = i_this->mStaff;
+    return (i_this->*(*descriptor))(staff);
+}
+
+// HD: allocating actor constructor.
+/* 024DD128 */
+static daWarpmj_c* warpmj_actorCtor(daWarpmj_c* i_this) {
+
+    if (!i_this) {
+        i_this = warpmjAllocateActor(0x5AC);
+        if (!i_this)
+            return i_this;
     }
-    a->bck=gabi::at<void>(bck);
-    if(!bck) return 0;
-    f32 rate=constant(0x10042960);
-    if(!call<s32>(0x025E8508,bck,modelData,animation,1,0,rate,0,-1,0)) return 0;
-    bck=gabi::ea(a->bck.get());
-    store<f32>(bck,(f32)load<s16>(bck+0xA));
-    animation=resource(0xF);
-    if(!animation) resourceAssert(0xCE,0x10042980);
-    u32 btk=call<u32>(0x025E7C6C,0);
-    a->btk=gabi::at<void>(btk);
-    if(!btk) return 0;
-    if(!call<s32>(0x025E7CE0,btk,modelData,animation,1,2,rate,0,-1,0,0)) return 0;
-    store<f32>(gabi::ea(a->btk.get()),constant(0x10042970));
-    animation=resource(0xC);
-    if(!animation) resourceAssert(0xDE,0x1004298C);
-    u32 brk=call<u32>(0x025E80D0,0);
-    a->brk=gabi::at<void>(brk);
-    if(!brk) return 0;
-    if(!call<s32>(0x025E8154,brk,modelData,animation,1,0,rate,0,-1,0,0)) return 0;
-    brk=gabi::ea(a->brk.get());
-    store<f32>(brk,(f32)load<s16>(brk+0xA));
+    warpmjConstructActor(i_this);
+
+    i_this->__vtbl = 0x10042934;
+    // HD: the extra tev structure contains three light blocks; keep mixed-width copy order.
+    WarpmjLightBlock* blocks[] = {
+        reinterpret_cast<WarpmjLightBlock*>(i_this->mWarpTev.mLightObj),
+        reinterpret_cast<WarpmjLightBlock*>(i_this->mWarpTev.mHdLightParam),
+        reinterpret_cast<WarpmjLightBlock*>(i_this->mWarpTev.mHdLightParam + 0x84)};
+    for (auto* block : blocks) {
+        for (u32 i = 0; i < 6; ++i)
+            block->mVectors[i] = (f32)sLightDefault.mVectors[i];
+        for (u32 i = 0; i < 4; ++i)
+            block->mColor[i] = sLightDefault.mColor[i];
+        for (u32 i = 0; i < 4; ++i)
+            block->mCoefficients[i] = (s16)sLightDefault.mCoefficients[i];
+        for (u32 i = 0; i < 8; ++i)
+            block->mAttenuation[i] = (f32)sLightDefault.mAttenuation[i];
+    }
+    return i_this;
+}
+/* 024DD738 */
+BOOL daWarpmj_c::_delete() {
+
+    warpmjDeleteResource(&mPhase, "Gmjwp");
     return 1;
 }
-VERIFY(0x024DCE1C, CreateHeap);
-static BOOL CheckCreateHeap(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD124, BOOL, a); return CreateHeap(a);
-}
-VERIFY(0x024DD124, CheckCreateHeap);
-static daWarpmj_c* construct(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD128, daWarpmj_c*, a);
-    if(!a) { a=gabi::at<daWarpmj_c>(call<u32>(0x0273AD10,0x5AC)); if(!a) return a; }
-    call(0x025D4ED0,a);
-    u32 base=actorEA(a);
-    store<u32>(base+0xB4,0x10042934);
-    // Three tev structures use the same static HD defaults.
-    for(u32 off: {0x3E4u,0x4A4u,0x528u}) {
-        for(u32 i=0;i<0x18;i+=4) store<f32>(base+off+i,load<f32>(0x1016E414+i));
-        for(u32 i=0x18;i<0x1C;++i) store<u8>(base+off+i,load<u8>(0x1016E414+i));
-        for(u32 i=0x1C;i<0x24;i+=2) store<s16>(base+off+i,load<s16>(0x1016E414+i));
-        for(u32 i=0x24;i<0x44;i+=4) store<f32>(base+off+i,load<f32>(0x1016E414+i));
+/* 024DD124 */
+static BOOL CheckCreateHeap(daWarpmj_c* i_this) { return i_this->CreateHeap(); }
+/* 024DCE1C */
+BOOL daWarpmj_c::CreateHeap() {
+
+    void* modelData = resource(GMJWP_BDL_PORTAL);
+    if (!modelData)
+        resourceAssert(0xAC, "modelData != (0)");
+    mpModel = warpmjCreateModel(modelData, 0x80000, 0x11000222);
+    if (!mpModel)
+        return 0;
+    void* animation = resource(GMJWP_BCK_PORTAL);
+    if (!animation)
+        resourceAssert(0xBB, "pbck != (0)");
+    WarpmjBckConstruction* bck = warpmjAllocateBck(0x8C);
+    if (bck) {
+        warpmjInitFrame(bck, 0);
+        bck->mAnimationVtable = 0x1016E54C;
+        warpmjConstructTransform(&bck->mTransform);
+        bck->mTransformVtable = 0x1016D820;
+        bck->mAnimationVtable = 0x1004290C;
+        bck->mpTransform = nullptr;
+        bck->mAnimationWords[0] = 0;
+        bck->mAnimationWords[1] = 0;
+        bck->mAnimationWords[2] = 0;
+        bck->mAnimationWords[3] = 0;
     }
-    return a;
+    mpBck = reinterpret_cast<mDoExt_bckAnm*>(bck);
+    if (!bck)
+        return 0;
+    f32 rate = sRate;
+    if (!warpmjInitBck(bck, modelData, animation, 1, 0, rate, 0, -1, 0))
+        return 0;
+    mDoExt_bckAnm* bckAnm = mpBck;
+    bckAnm->mFrameCtrl.mRate = (f32)(s16)bckAnm->mFrameCtrl.mEnd;
+    animation = resource(GMJWP_BTK_PORTAL);
+    if (!animation)
+        resourceAssert(0xCE, "pbtk != (0)");
+    mDoExt_btkAnm* btk = warpmjCreateBtk(nullptr);
+    mpBtk = btk;
+    if (!btk)
+        return 0;
+    if (!warpmjInitBtk(btk, modelData, animation, 1, 2, rate, 0, -1, 0, 0))
+        return 0;
+    mpBtk->mFrameCtrl.mRate = sZero;
+    animation = resource(GMJWP_BRK_PORTAL);
+    if (!animation)
+        resourceAssert(0xDE, "pbrk != (0)");
+    mDoExt_brkAnm* brk = warpmjCreateBrk(nullptr);
+    mpBrk = brk;
+    if (!brk)
+        return 0;
+    if (!warpmjInitBrk(brk, modelData, animation, 1, 0, rate, 0, -1, 0, 0))
+        return 0;
+    brk = mpBrk;
+    brk->mFrameCtrl.mRate = (f32)(s16)brk->mFrameCtrl.mEnd;
+    return 1;
 }
-VERIFY(0x024DD128, construct);
-static f32 getSeaY(daWarpmj_c* a, cXyz* position) {
-    WWHD_FUNC(0x024DD2E0, f32, a, position);
-    f32 z=position->z, x=position->x;
-    if(call<s32>(0x0246B6A4,x,z)) { x=position->x; z=position->z; return call<f32>(0x0246BA0C,x,z); }
-    return call<f32>(0x024F1478,position);
-}
-VERIFY(0x024DD2E0, getSeaY);
-static void setEndAnm(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD334, void, a);
-    u32 bck=gabi::ea(a->bck.get());
-    if(bck) store<f32>(bck+4,(f32)load<s16>(bck+0xA));
-    u32 brk=gabi::ea(a->brk.get());
-    if(brk) store<f32>(brk+4,(f32)load<s16>(brk+0xA));
-}
-VERIFY(0x024DD334, setEndAnm);
-static void CreateInit(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD3B0, void, a);
-    u32 base=actorEA(a), model=gabi::ea(a->model.get());
-    store<u32>(base+0x348,model?model+0xC8:0);
-    f32 zero=constant(0x10042970);
-    f32 low=constant(0x100429BC), high=constant(0x100429C0), top=constant(0x100429C4);
-    call(0x025D674C,a,low,zero,low,high,top,high);
-    f32 x=load<f32>(base+0x314), rate=constant(0x10042960), y=load<f32>(base+0x318);
-    store<f32>(base+0x364,rate);
+/* 024DD3B0 */
+void daWarpmj_c::CreateInit() {
+
+    J3DModel* model = mpModel;
+    cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    f32 zero = sZero;
+    f32 low = sCullMin, high = sCullMax, top = sCullTop;
+    warpmjSetCullBox(this, low, zero, low, high, top, high);
+    f32 x = current.pos.x, rate = sRate, y = current.pos.y;
+    cullSizeFar = rate;
     gabi::Local<cXyz> position;
-    position->x=x; position->y=y+constant(0x100429C8); position->z=load<f32>(base+0x31C);
-    f32 sea=getSeaY(a,position);
-    model=gabi::ea(a->model.get());
-    f32 sz=load<f32>(base+0x338), sy=load<f32>(base+0x334), sx=load<f32>(base+0x330);
-    if(sea==constant(0x100429CC)) sea=zero;
-    store<f32>(base+0x318,sea);
-    store<f32>(model+0xC0,sy); store<f32>(model+0xBC,sx); store<f32>(model+0xC4,sz);
-    y=load<f32>(base+0x318); x=load<f32>(base+0x314); f32 z=load<f32>(base+0x31C);
-    call(0x028E93CC,0x1048D0CC,x,y+rate,z);
-    copyModelMatrix(gabi::ea(a->model.get()));
-    for(unsigned i=0;i<3;++i) {
-        u32 particleSystem=load<u32>(play()+0x5AB0);
-        u32 kind=i==2?4:0, id=i==2?0xC3FC:0x83FD+i;
-        a->particles[i]=gabi::at<void>(call<u32>(0x025A847C,particleSystem,kind,id,base+0x314,0,0,0xFF,0,-1,0,0,0));
+    position->x = x;
+    position->y = y + sSeaProbeHeight;
+    position->z = current.pos.z;
+    f32 sea = getSeaY(position);
+    model = mpModel;
+    f32 sz = scale.z, sy = scale.y, sx = scale.x;
+    if (sea == sNoSeaHeight)
+        sea = zero;
+    current.pos.y = sea;
+    model->mBaseScale.y = sy;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.z = sz;
+    y = current.pos.y;
+    x = current.pos.x;
+    f32 z = current.pos.z;
+    warpmjTranslate(mDoMtx_stack_c::get(), x, y + rate, z);
+    copyModelMatrix(mpModel.get());
+    for (unsigned i = 0; i < 3; ++i) {
+        void* particleSystem = warpmjGetGameInfo()->mpParticles.get();
+        u32 kind = i == 2 ? 4 : 0, id = i == 2 ? 0xC3FC : 0x83FD + i;
+        mpParticles[i] = warpmjSpawnParticle(particleSystem, kind, id, &current.pos, 0,
+                                                   0, 0xFF, 0, -1, 0, 0, 0);
     }
-    a->order=0; setEndAnm(a);
-    u32 events=play()+0x52C4;
-    s32 event=call<s32>(0x02543F10,events,STR(0x100429D0),0xFF);
-    s32 room=load<s8>(base+0x326); u32 destination=load<u8>(base+0xB3);
-    a->eventIndex=(s16)event; a->destination=destination;
-    call(0x0255FFF4,base+0x3E4,room,0xFF);
+    mOrder = ORDER_IDLE;
+    setEndAnm();
+    void* events = &warpmjGetGameInfo()->mEventManager;
+    s32 event = warpmjGetEventIndex(events, "TO_GANON_WARP", 0xFF);
+    s32 room = current.roomNo;
+    u32 destination = (u8)(u32)mParameters;
+    mEventIndex = (s16)event;
+    mDestination = destination;
+    warpmjInitTev(&mWarpTev, room, 0xFF);
 }
-VERIFY(0x024DD3B0, CreateInit);
-static s32 create(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD660, s32, a);
-    u32 base=actorEA(a), flags=load<u32>(base+0x2E4);
-    if(!(flags&8)) { if(a) { construct(a); flags=load<u32>(base+0x2E4); } store<u32>(base+0x2E4,flags|8); }
-    u32 save=load<u32>(0x101F84DC);
-    if(!call<s32>(0x025B8B94,save+0x644,0x3D02)) return 5;
-    s32 phase=call<s32>(0x02520460,&a->phase,STR(0x10042A20));
-    if(phase==4) {
-        if(!call<s32>(0x025D63E8,a,0x024DD124,0x3000)) return 5;
-        CreateInit(a);
+/* 024DD660 */
+s32 daWarpmj_c::_create() {
+
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this)) {
+            warpmj_actorCtor(this);
+            flags = actor_condition;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    WarpmjSave* save = sSave;
+    if (!warpmjCheckEventBit(&save->mEventBits, 0x3D02))
+        return cPhs_ERROR_e;
+    s32 phase = warpmjLoadResource(&mPhase, "Gmjwp");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!warpmjEntryHeap(this, gabi::guest_fn((const void*)CheckCreateHeap), 0x3000))
+            return cPhs_ERROR_e;
+        CreateInit();
     }
     return phase;
 }
-VERIFY(0x024DD660, create);
-static s32 daWarpmj_Create(daWarpmj_c* a) { WWHD_FUNC(0x024DD734,s32,a); return create(a); }
-VERIFY(0x024DD734,daWarpmj_Create);
-static BOOL remove(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD738,BOOL,a);
-    call(0x025204C8,&a->phase,STR(0x10042A20)); return 1;
-}
-VERIFY(0x024DD738,remove);
-static BOOL daWarpmj_Delete(daWarpmj_c* a) { WWHD_FUNC(0x024DD768,BOOL,a); return remove(a); }
-VERIFY(0x024DD768,daWarpmj_Delete);
-static void colorToFloat(be<f32>* output, be<u8>* color) {
-    WWHD_FUNC(0x024DD76C,void,output,color);
-    f32 rgba[4]; for(unsigned i=0;i<4;++i) rgba[i]=(f32)(u8)color[i]/255.0f;
-    for(unsigned i=0;i<4;++i) output[i]=rgba[i];
-}
-VERIFY(0x024DD76C,colorToFloat);
-static u32 virtualMaterial(u32 material,u32 slot,s32 index) {
-    u32 object=load<u32>(material+0x18), vtable=load<u32>(object+4);
-    return gabi::call_ptr<u32>(load<u32>(vtable+slot),object,index);
-}
-static BOOL draw(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DD820,BOOL,a);
-    u32 base=actorEA(a), env=envlight();
-    call(0x025626A4,env,0,base+0x314,base+0x110);
-    env=envlight(); u32 model=gabi::ea(a->model.get());
-    call(0x02562F5C,env,model,base+0x110);
-    env=envlight(); call(0x025626A4,env,2,base+0x314,base+0x3E4);
-    model=gabi::ea(a->model.get()); u32 data=load<u32>(model+0xAC);
-    u32 materialBlock=call<u32>(0x027F3F8C,data);
-    u16 index=0;
-    if(index<load<u16>(materialBlock+0x24)) {
-        f32 rate=constant(0x10042960);
-        do {
-            u32 count=load<u32>(data+0xC), material=load<u32>(data+0x10);
-            if(index<count) material+=index*0x39C;
-            for(unsigned channel=0;channel<3;++channel) {
-                u32 color=virtualMaterial(material,0x4C,1);
-                store<u8>(color+channel,load<u8>(base+0x47C+channel));
-            }
-            u32 color=virtualMaterial(material,0x4C,1);
-            u32 object=load<u32>(material+0x18), vtable=load<u32>(object+4);
-            gabi::call_ptr(load<u32>(vtable+0x3C),object,1,color);
-            gabi::Local<be<f32>[4]> floats;
-            colorToFloat(*floats,gabi::at<be<u8>>(color));
-            gabi::Local<be<f32>[4]> corrected;
-            call(0x0274D458,corrected.get(),floats.get(),rate);
-            u32 flags=load<u32>(material+0xA0);
-            store<u32>(material+0xA0,flags|0x100);
-            u32 uniform=call<u32>(0x027F9F0C,material+0xA0,8);
-            f32 alpha=(f32)load<u8>(color+3)/constant(0x100429E0);
-            f32 red=(*corrected)[0], green=(*corrected)[1], blue=(*corrected)[2];
-            store<f32>(uniform+4,green); store<f32>(uniform+8,blue);
-            store<f32>(uniform,red); store<f32>(uniform+0xC,alpha);
-            ++index;
-            materialBlock=call<u32>(0x027F3F8C,data);
-        } while(index<load<u16>(materialBlock+0x24));
-    }
-    u32 animation=gabi::ea(a->btk.get());
-    if(animation) {
-        model=gabi::ea(a->model.get()); f32 frame=load<f32>(animation+4);
-        call(0x025E7FC4,animation,load<u32>(model+0xAC),frame);
-    }
-    animation=gabi::ea(a->brk.get());
-    if(animation) {
-        model=gabi::ea(a->model.get()); f32 frame=load<f32>(animation+4);
-        call(0x025E83FC,animation,load<u32>(model+0xAC),frame);
-    }
-    animation=gabi::ea(a->bck.get());
-    if(animation) {
-        model=gabi::ea(a->model.get()); f32 frame=load<f32>(animation+4);
-        call(0x025E86B8,animation,load<u32>(model+0xAC),frame);
-    }
-    call(0x025E2DE0,a->model.get(),0); return 1;
-}
-VERIFY(0x024DD820,draw);
-static BOOL daWarpmj_Draw(daWarpmj_c* a) { WWHD_FUNC(0x024DDA74,BOOL,a); return draw(a); }
-VERIFY(0x024DDA74,daWarpmj_Draw);
-static u32 animPlay(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDA78,u32,a);
-    u32 animation=gabi::ea(a->btk.get());
-    if(animation) { store<f32>(animation,constant(0x10042960)); return call<u32>(0x025E742C,a->btk.get()); }
-    return (u32)gabi::ea(a); /* original: r3 still a */
-}
-VERIFY(0x024DDA78,animPlay);
-static BOOL check_warp(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDA98,BOOL,a);
-    play(); u32 player=load<u32>(play()+0x5B3C);
-    if(!(load<u32>(play()+0x5CD8)&0x10000)||!player) return 0;
-    gabi::Local<cXyz> delta, horizontal;
-    call(0x0201ADE0,player+0x314,delta.get(),actorEA(a)+0x314);
-    horizontal->x=delta->x; horizontal->y=constant(0x10042970); horizontal->z=delta->z;
-    f32 magnitude=call<f32>(0x028E8DD0,horizontal.get());
-    f32 distance=call<f32>(0x028F4384,magnitude);
-    return distance<constant(0x100429F0);
-}
-VERIFY(0x024DDA98,check_warp);
-static void normal_execute(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDB54,void,a);
-    animPlay(a); if(check_warp(a)) a->order=1;
-}
-VERIFY(0x024DDB54,normal_execute);
-static void checkOrder(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDB98,void,a);
-    u32 base=actorEA(a);
-    if(load<u16>(base+0xF8)==2) {
-        s32 event=a->eventIndex; u32 events=play()+0x52C4;
-        s32 started=call<s32>(0x0254407C,events,event);
-        event=a->eventIndex;
-        if(started && a->order!=0) a->order=0;
-        events=play()+0x52C4;
-        if(call<s32>(0x025440C8,events,event)) {
-            s32 room=load<s8>(base+0x326); u32 destination=load<u8>(base+0x3D3);
-            call(0x02587EFC,destination,room);
-        }
-    } else if(a->order==0 && !load<u8>(play()+0x5292)) normal_execute(a);
-}
-VERIFY(0x024DDB98,checkOrder);
-// GHS pointer-to-member descriptor: this delta, virtual slot (-1 for direct), target.
-static s32 invokeAction(u32 descriptor,daWarpmj_c* a) {
-    s16 slot=load<s16>(descriptor+2), delta=load<s16>(descriptor);
-    s32 staff=a->staff; u32 object=actorEA(a)+(s32)delta, target;
-    if(slot<0) target=load<u32>(descriptor+4);
-    else {
-        s16 vptrOffset=load<s16>(descriptor+6);
-        u32 vtable=load<u32>(object+(s32)vptrOffset);
-        target=load<u32>(vtable+(u32)(s32)slot*8+4);
-    }
-    return gabi::call_ptr<s32>(target,object,staff);
-}
-static void demo_proc(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDC6C,void,a);
-    u32 events=play()+0x52C4;
-    a->staff=call<s32>(0x02542D88,events,STR(0x100429F4),0,0);
-    if(!load<u8>(play()+0x5292) || load<u16>(actorEA(a)+0xF8)==1) return;
-    s32 staff=a->staff;
-    if(staff==-1) return;
-    events=play()+0x52C4;
-    s32 action=call<s32>(0x02542EDC,events,staff,0x101D32AC,3,0,0);
-    staff=a->staff;
-    if(action==-1) { events=play()+0x52C4; call(0x02543280,events,staff); return; }
-    events=play()+0x52C4;
-    if(call<s32>(0x025447C8,events,staff)) invokeAction(0x101D325C+(u32)action*8,a);
-    if(invokeAction(0x101D3274+(u32)action*8,a)) {
-        staff=a->staff; events=play()+0x52C4; call(0x02543280,events,staff);
-    }
-}
-VERIFY(0x024DDC6C,demo_proc);
-static void eventOrder(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDE30,void,a);
-    if(a->order==1) {
-        call(0x025D7A58,a,(s32)a->eventIndex,0xFF,0xFFFF,0,1);
-        u32 base=actorEA(a); store<u16>(base+0xFA,load<u16>(base+0xFA)|2);
-    }
-}
-VERIFY(0x024DDE30,eventOrder);
-static void demo_execute(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDE90,void,a);
-    u32 base=actorEA(a), id=load<u8>(base+0x2DC);
-    if(id==0||id>32) return;
-    u32 demo=load<u32>(0x101D5FFC);
-    if(!demo) {
-        call(0x0273AA24,STR(0x10042954),0x23A,STR(0x10042944));
-        demo=load<u32>(0x101D5FFC);
-    }
-    u32 actor=call<u32>(0x02526E70,demo,id);
-    if(!actor) return;
-    s32 state=load<s32>(actor+0x28); a->demoState=state;
-    if(state==0) call(0x025DA884,base+0xDC);
-    else if(state==1) {
-        u32 queue=call<u32>(0x025DF2B8,a);
-        call(0x025DA874,base+0xDC,queue); animPlay(a);
-    }
-}
-VERIFY(0x024DDE90,demo_execute);
-static BOOL execute(daWarpmj_c* a) {
-    WWHD_FUNC(0x024DDF70,BOOL,a);
-    u32 base=actorEA(a);
-    if(!load<u8>(base+0x2DC)) { checkOrder(a); demo_proc(a); eventOrder(a); }
-    else demo_execute(a);
-    s32 reverb=call<s32>(0x02520540,(s32)load<s8>(base+0x326));
-    call(0x025E1A40,0x1089,base+0x37C,0,reverb);
+/* 024DDF70 */
+BOOL daWarpmj_c::_execute() {
+
+    if (!demoActorID) {
+        checkOrder();
+        demo_proc();
+        eventOrder();
+    } else
+        demo_execute();
+    s32 reverb = warpmjGetReverb((s32)current.roomNo);
+    warpmjStartLevelSound(0x1089, &eyePos, 0, reverb);
     gabi::Local<cXyz> position;
-    position->x=load<f32>(base+0x314);
-    position->y=load<f32>(base+0x318)+constant(0x100429C8);
-    position->z=load<f32>(base+0x31C);
-    f32 sea=getSeaY(a,position);
-    u32 model=gabi::ea(a->model.get());
-    f32 sz=load<f32>(base+0x338), sx=load<f32>(base+0x330), sy=load<f32>(base+0x334);
-    if(sea==constant(0x100429CC)) sea=constant(0x10042970);
-    store<f32>(base+0x318,sea);
-    store<f32>(model+0xBC,sx); store<f32>(model+0xC4,sz); store<f32>(model+0xC0,sy);
-    f32 y=load<f32>(base+0x318), x=load<f32>(base+0x314), z=load<f32>(base+0x31C);
-    call(0x028E93CC,0x1048D0CC,x,y+constant(0x10042960),z);
-    copyModelMatrix(gabi::ea(a->model.get())); return 1;
+    position->x = current.pos.x;
+    position->y = current.pos.y + sSeaProbeHeight;
+    position->z = current.pos.z;
+    f32 sea = getSeaY(position);
+    J3DModel* model = mpModel;
+    f32 sz = scale.z, sx = scale.x, sy = scale.y;
+    if (sea == sNoSeaHeight)
+        sea = sZero;
+    current.pos.y = sea;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.z = sz;
+    model->mBaseScale.y = sy;
+    f32 y = current.pos.y, x = current.pos.x, z = current.pos.z;
+    warpmjTranslate(mDoMtx_stack_c::get(), x, y + sRate, z);
+    copyModelMatrix(mpModel.get());
+    return 1;
 }
-VERIFY(0x024DDF70,execute);
-static BOOL daWarpmj_Execute(daWarpmj_c* a) { WWHD_FUNC(0x024DE150,BOOL,a); return execute(a); }
-VERIFY(0x024DE150,daWarpmj_Execute);
-static BOOL actWait(daWarpmj_c* a,s32 staff) {
-    WWHD_FUNC(0x024DE154,BOOL,a,staff); animPlay(a); return 1;
+/* 024DDB54 */
+void daWarpmj_c::normal_execute() {
+
+    animPlay();
+    if (check_warp())
+        mOrder = ORDER_REQUESTED;
 }
-VERIFY(0x024DE154,actWait);
-static void initWarp(daWarpmj_c* a,s32 staff) {
-    WWHD_FUNC(0x024DE178,void,a,staff);
-    u32 events=play()+0x52C4; call(0x02543714,events,actorEA(a)+0x314);
-    call(0x025E1988,0x2891);
+/* 024DDE90 */
+void daWarpmj_c::demo_execute() {
+
+    u32 id = demoActorID;
+    if (id == 0 || id > 32)
+        return;
+    void* demo = sDemo;
+    if (!demo) {
+        warpmjAssert("d_demo.h", 0x23A, "m_object != (0)");
+        demo = sDemo;
+    }
+    WarpmjDemoActor* actor = warpmjGetDemoActor(demo, id);
+    if (!actor)
+        return;
+    s32 state = actor->mState;
+    mDemoState = state;
+    if (state == 0)
+        warpmjRemoveDrawTag(&draw_tag);
+    else if (state == 1) {
+        void* queue = warpmjGetDrawQueue(this);
+        warpmjQueueDrawTag(&draw_tag, queue);
+        animPlay();
+    }
 }
-VERIFY(0x024DE178,initWarp);
-static BOOL actWarp(daWarpmj_c* a,s32 staff) {
-    WWHD_FUNC(0x024DE1B8,BOOL,a,staff); animPlay(a); return 1;
+/* 024DDC6C */
+void daWarpmj_c::demo_proc() {
+
+    void* events = &warpmjGetGameInfo()->mEventManager;
+    mStaff = warpmjGetStaff(events, "Warpmj", 0, 0);
+    if (!warpmjGetGameInfo()->mEventRunning || eventInfo.mCommand == dEvtCmd_INTALK_e)
+        return;
+    s32 staff = mStaff;
+    if (staff == -1)
+        return;
+    events = &warpmjGetGameInfo()->mEventManager;
+    s32 action = warpmjGetAction(events, staff, sActionNames.mNames, 3, 0, 0);
+    staff = mStaff;
+    if (action == -1) {
+        events = &warpmjGetGameInfo()->mEventManager;
+        warpmjEndCut(events, staff);
+        return;
+    }
+    events = &warpmjGetGameInfo()->mEventManager;
+    if (warpmjIsAdvance(events, staff))
+        invokeAction(&sInitActions.mActions[(u32)action], this);
+    if (invokeAction(&sExecuteActions.mActions[(u32)action], this)) {
+        staff = mStaff;
+        events = &warpmjGetGameInfo()->mEventManager;
+        warpmjEndCut(events, staff);
+    }
 }
-VERIFY(0x024DE1B8,actWarp);
-static void initWarpArrive(daWarpmj_c* a,s32 staff) {
-    WWHD_FUNC(0x024DE1DC,void,a,staff); setEndAnm(a); call(0x025E1988,0x2894);
+/* 024DE2D8 */
+void daWarpmj_c::initWait(s32 staff) {}
+/* 024DE154 */
+BOOL daWarpmj_c::actWait(s32 staff) {
+    animPlay();
+    return 1;
 }
-VERIFY(0x024DE1DC,initWarpArrive);
-static BOOL actWarpArrive(daWarpmj_c* a,s32 staff) {
-    WWHD_FUNC(0x024DE204,BOOL,a,staff); animPlay(a); return 1;
+/* 024DE178 */
+void daWarpmj_c::initWarp(s32 staff) {
+
+    void* events = &warpmjGetGameInfo()->mEventManager;
+    warpmjSetGoal(events, &current.pos);
+    warpmjStartSound(0x2891);
 }
-VERIFY(0x024DE204,actWarpArrive);
+/* 024DE1B8 */
+BOOL daWarpmj_c::actWarp(s32 staff) {
+    animPlay();
+    return 1;
+}
+/* 024DE1DC */
+void daWarpmj_c::initWarpArrive(s32 staff) {
+    setEndAnm();
+    warpmjStartSound(0x2894);
+}
+/* 024DE204 */
+BOOL daWarpmj_c::actWarpArrive(s32 staff) {
+    animPlay();
+    return 1;
+}
+/* 024DDE30 */
+void daWarpmj_c::eventOrder() {
+
+    if (mOrder == ORDER_REQUESTED) {
+        warpmjOrderEvent(this, (s32)mEventIndex, 0xFF, 0xFFFF, 0, 1);
+        eventInfo.mCondition = eventInfo.mCondition | dEvtCnd_UNK2_e;
+    }
+}
+/* 024DDB98 */
+void daWarpmj_c::checkOrder() {
+
+    if (eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        s32 event = mEventIndex;
+        void* events = &warpmjGetGameInfo()->mEventManager;
+        s32 started = warpmjCheckStart(events, event);
+        event = mEventIndex;
+        if (started && mOrder != ORDER_IDLE)
+            mOrder = ORDER_IDLE;
+        events = &warpmjGetGameInfo()->mEventManager;
+        if (warpmjCheckEnd(events, event)) {
+            s32 room = current.roomNo;
+            u32 destination = (u8)(u32)mDestination;
+            warpmjChangeScene(destination, room);
+        }
+    } else if (mOrder == ORDER_IDLE && !warpmjGetGameInfo()->mEventRunning)
+        normal_execute();
+}
+/* 024DDA78 */
+u32 daWarpmj_c::animPlay() {
+
+    mDoExt_baseAnm* animation = mpBtk.get();
+    if (animation) {
+        animation->mFrameCtrl.mRate = sRate;
+        return warpmjPlayAnimation(mpBtk.get());
+    }
+    return (u32)gabi::ea(this); // HD: the no-controller path retains the incoming actor in r3.
+}
+/* 024DD334 */
+void daWarpmj_c::setEndAnm() {
+
+    mDoExt_bckAnm* bck = mpBck;
+    if (bck)
+        bck->mFrameCtrl.mFrame = (f32)(s16)bck->mFrameCtrl.mEnd;
+    mDoExt_brkAnm* brk = mpBrk;
+    if (brk)
+        brk->mFrameCtrl.mFrame = (f32)(s16)brk->mFrameCtrl.mEnd;
+}
+/* 024DD2E0 */
+f32 daWarpmj_c::getSeaY(cXyz* position) {
+
+    f32 z = position->z, x = position->x;
+    if (warpmjCheckSea(x, z)) {
+        x = position->x;
+        z = position->z;
+        return warpmjGetSeaHeight(x, z);
+    }
+    return warpmjGetWaterHeight(position);
+}
+/* 024DDA98 */
+BOOL daWarpmj_c::check_warp() {
+
+    warpmjGetGameInfo();
+    fopAc_ac_c* player = warpmjGetGameInfo()->mpPlayer.get();
+    if (!(warpmjGetGameInfo()->mPlayerStatus & WARP_PLAYER_READY) || !player)
+        return 0;
+    gabi::Local<cXyz> delta, horizontal;
+    warpmjSubtract(&player->current.pos, delta.get(), &current.pos);
+    horizontal->x = delta->x;
+    horizontal->y = sZero;
+    horizontal->z = delta->z;
+    f32 magnitude = warpmjSquaredMagnitude(horizontal.get());
+    f32 distance = warpmjSqrt(magnitude);
+    return distance < sWarpRadius;
+}
+/* 024DD76C */
+static void colorToFloat(be<f32>* output, be<u8>* color) {
+
+    f32 rgba[4];
+    for (unsigned i = 0; i < 4; ++i)
+        rgba[i] = (f32)(u8)color[i] / 255.0f;
+    for (unsigned i = 0; i < 4; ++i)
+        output[i] = rgba[i];
+}
+/* 024DD820 */
+BOOL daWarpmj_c::_draw() {
+
+    void* env = warpmjGetEnvironment();
+    warpmjSetLight(env, 0, &current.pos, &tevStr);
+    env = warpmjGetEnvironment();
+    J3DModel* model = mpModel;
+    warpmjApplyLight(env, model, &tevStr);
+    env = warpmjGetEnvironment();
+    warpmjSetLight(env, 2, &current.pos, &mWarpTev);
+    model = mpModel;
+    J3DModelData* data = model->mModelData;
+    WarpmjMaterialBlock* materialBlock = warpmjGetMaterialBlock(data);
+    u16 index = 0;
+    if (index < (u16)materialBlock->mCount) {
+        f32 rate = sRate;
+        do {
+            u32 count = data->mMaterialNum;
+            // HD: the shared model-data layout stores this array as a guest address.
+            WarpmjMaterial* material = gabi::at<WarpmjMaterial>(data->mMaterials);
+            if (index < count)
+                material += index;
+            for (unsigned channel = 0; channel < 3; ++channel) {
+                be<u8>* color = material->mpColorBlock->getColor(1);
+                color[channel] = reinterpret_cast<be<u8>*>(&mWarpTev.mColorK0)[channel];
+            }
+            be<u8>* color = material->mpColorBlock->getColor(1);
+            WarpmjColorBlock* object = material->mpColorBlock;
+            object->setColor(1, color);
+            gabi::Local<be<f32>[4]> floats;
+            colorToFloat(*floats, color);
+            gabi::Local<be<f32>[4]> corrected;
+            warpmjCorrectColor(corrected.get(), floats.get(), rate);
+            u32 flags = material->mUniformFlags;
+            material->mUniformFlags = flags | WARP_UNIFORM_DIRTY;
+            be<f32>* uniform = warpmjGetUniform(&material->mUniformFlags, 8);
+            f32 alpha = (f32)(u8)color[3] / sColorScale;
+            f32 red = (*corrected)[0], green = (*corrected)[1], blue = (*corrected)[2];
+            uniform[1] = green;
+            uniform[2] = blue;
+            uniform[0] = red;
+            uniform[3] = alpha;
+            ++index;
+            materialBlock = warpmjGetMaterialBlock(data);
+        } while (index < (u16)materialBlock->mCount);
+    }
+    mDoExt_baseAnm* animation = mpBtk.get();
+    if (animation) {
+        model = mpModel;
+        f32 frame = (f32)animation->mFrameCtrl.mFrame;
+        warpmjEntryBtk(animation, model->mModelData.get(), frame);
+    }
+    animation = mpBrk.get();
+    if (animation) {
+        model = mpModel;
+        f32 frame = (f32)animation->mFrameCtrl.mFrame;
+        warpmjEntryBrk(animation, model->mModelData.get(), frame);
+    }
+    animation = mpBck.get();
+    if (animation) {
+        model = mpModel;
+        f32 frame = (f32)animation->mFrameCtrl.mFrame;
+        warpmjEntryBck(animation, model->mModelData.get(), frame);
+    }
+    warpmjUpdateModel(mpModel.get(), 0);
+    return 1;
+}
+/* 024DD734 */
+static s32 daWarpmj_Create(daWarpmj_c* i_this) { return i_this->_create(); }
+/* 024DD768 */
+static BOOL daWarpmj_Delete(daWarpmj_c* i_this) { return i_this->_delete(); }
+/* 024DDA74 */
+static BOOL daWarpmj_Draw(daWarpmj_c* i_this) { return i_this->_draw(); }
+/* 024DE150 */
+static BOOL daWarpmj_Execute(daWarpmj_c* i_this) { return i_this->_execute(); }
+/* 024DE2D0 */
+static BOOL daWarpmj_IsDelete(daWarpmj_c* i_this) { return 1; }
+// HD: compiler-generated initialization and deleting destructors.
+/* 024DE228 */
 static void staticInit() {
-    WWHD_FUNC(0x024DE228,void);
-    store<u32>(0x1046EBC0,0); store<u32>(0x1046EBB8,0);
-    store<u32>(0x1046EBC4,0); store<u32>(0x1046EBBC,0);
-    call(0x028F026C,0x101D32B8);
-    f32 low=constant(0x10042A18), high=constant(0x10042A1C);
-    store<f32>(0x1046EBAC,low); store<f32>(0x1046EBB0,high);
-    call(0x028ED6F8,0x1046EBB4); call(0x028F026C,0x101D32C4);
-    call(0x028EAB2C,0x1046EBB5); call(0x028F026C,0x101D32D0);
+
+    sHeaderZero.mWords[2] = 0;
+    sHeaderZero.mWords[0] = 0;
+    sHeaderZero.mWords[3] = 0;
+    sHeaderZero.mWords[1] = 0;
+    warpmjRegisterGlobal(&sDestructorRecords.mRecords[0]);
+    f32 low = sMinAngle, high = sMaxAngle;
+    sHeader.mMinAngle = low;
+    sHeader.mMaxAngle = high;
+    warpmjInitHeaderByte(&sHeader.mByte);
+    warpmjRegisterGlobal(&sDestructorRecords.mRecords[1]);
+    warpmjInitHeaderFlag(&sHeader.mFlag);
+    warpmjRegisterGlobal(&sDestructorRecords.mRecords[2]);
 }
-VERIFY(0x024DE228,staticInit);
-static void staticDestructor(void* object,s32 flags) {
-    WWHD_FUNC(0x024DE2BC,void,object,flags);
-    if(object&&(flags&1)) call(0x0273AF40,object);
+/* 024DE2BC */
+static void staticDestructor(void* object, s32 flags) {
+
+    if (object && (flags & 1))
+        warpmjDeleteObject(object);
 }
-VERIFY(0x024DE2BC,staticDestructor);
-static BOOL daWarpmj_IsDelete(daWarpmj_c* a) { WWHD_FUNC(0x024DE2D0,BOOL,a); return 1; }
-VERIFY(0x024DE2D0,daWarpmj_IsDelete);
-static void initWait(daWarpmj_c* a,s32 staff) { WWHD_FUNC(0x024DE2D8,void,a,staff); }
-VERIFY(0x024DE2D8,initWait);
-static void destructor(daWarpmj_c* a,s32 flags) {
-    WWHD_FUNC(0x024DE2DC,void,a,flags);
-    if(a) { call(0x025D50BC,a,0); if(flags&1) call(0x0273AF40,a); }
+/* 024DE2DC */
+static void warpmj_actorDtor(daWarpmj_c* i_this, s32 flags) {
+
+    if (i_this) {
+        warpmjDestroyActor(i_this, 0);
+        if (flags & 1)
+            warpmjDeleteObject(i_this);
+    }
 }
-VERIFY(0x024DE2DC,destructor);
+
+// clang-format off
+/* WWHD glue
+data sResourceManager 101F4F28
+data sLightDefault 1016E414
+data sSave 101F84DC
+data sDemo 101D5FFC
+data sHeader 1046EBAC
+data sHeaderZero 1046EBB8
+data sDestructorRecords 101D32B8
+data sRate 10042960
+data sZero 10042970
+data sCullMin 100429BC
+data sCullMax 100429C0
+data sCullTop 100429C4
+data sSeaProbeHeight 100429C8
+data sNoSeaHeight 100429CC
+data sColorScale 100429E0
+data sWarpRadius 100429F0
+data sMinAngle 10042A18
+data sMaxAngle 10042A1C
+data sInitActions 101D325C
+data sExecuteActions 101D3274
+data sActionNames 101D32AC
+ext 026066C4 void* warpmjGetResource(void*, SafeString*, s32)
+ext 0273AA24 void warpmjAssert(const char*, s32, const char*)
+ext 025E38E0 J3DModel* warpmjCreateModel(void*, u32, u32)
+ext 0273AD10 WarpmjBckConstruction* warpmjAllocateBck(u32)
+ext 027F2BC0 void warpmjInitFrame(void*, s32)
+ext 027DA984 void warpmjConstructTransform(void*)
+ext 025E8508 s32 warpmjInitBck(void*, void*, void*, s32, s32, f32, s32, s32, s32)
+ext 025E7C6C mDoExt_btkAnm* warpmjCreateBtk(void*)
+ext 025E7CE0 s32 warpmjInitBtk(void*, void*, void*, s32, s32, f32, s32, s32, s32, s32)
+ext 025E80D0 mDoExt_brkAnm* warpmjCreateBrk(void*)
+ext 025E8154 s32 warpmjInitBrk(void*, void*, void*, s32, s32, f32, s32, s32, s32, s32)
+ext 025D4ED0 void warpmjConstructActor(daWarpmj_c*)
+ext 0246B6A4 s32 warpmjCheckSea(f32, f32)
+ext 0246BA0C f32 warpmjGetSeaHeight(f32, f32)
+ext 024F1478 f32 warpmjGetWaterHeight(cXyz*)
+ext 025D674C void warpmjSetCullBox(daWarpmj_c*, f32, f32, f32, f32, f32, f32)
+ext 028E93CC void warpmjTranslate(Mtx34*, f32, f32, f32)
+ext 025A847C void* warpmjSpawnParticle(void*, u32, u32, cXyz*, u32, u32, u32, u32, s32, u32, u32, u32)
+ext 02543F10 s32 warpmjGetEventIndex(void*, const char*, s32)
+ext 0255FFF4 void warpmjInitTev(dKy_tevstr_c*, s32, s32)
+ext 025B8B94 s32 warpmjCheckEventBit(void*, u32)
+ext 02520460 s32 warpmjLoadResource(request_of_phase_process_class*, const char*)
+ext 025D63E8 s32 warpmjEntryHeap(daWarpmj_c*, u32, u32)
+ext 025204C8 void warpmjDeleteResource(request_of_phase_process_class*, const char*)
+ext 025626A4 void warpmjSetLight(void*, s32, cXyz*, dKy_tevstr_c*)
+ext 02562F5C void warpmjApplyLight(void*, J3DModel*, dKy_tevstr_c*)
+ext 027F3F8C WarpmjMaterialBlock* warpmjGetMaterialBlock(J3DModelData*)
+ext 0274D458 void warpmjCorrectColor(void*, void*, f32)
+ext 027F9F0C be<f32>* warpmjGetUniform(be<u32>*, s32)
+ext 025E7FC4 void warpmjEntryBtk(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 025E83FC void warpmjEntryBrk(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 025E86B8 void warpmjEntryBck(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 025E2DE0 void warpmjUpdateModel(J3DModel*, u32)
+ext 025E742C u32 warpmjPlayAnimation(mDoExt_btkAnm*)
+ext 0201ADE0 void warpmjSubtract(cXyz*, cXyz*, cXyz*)
+ext 028E8DD0 f32 warpmjSquaredMagnitude(cXyz*)
+ext 028F4384 f32 warpmjSqrt(f32)
+ext 0254407C s32 warpmjCheckStart(void*, s32)
+ext 025440C8 s32 warpmjCheckEnd(void*, s32)
+ext 02587EFC void warpmjChangeScene(u32, s32)
+ext 02542D88 s32 warpmjGetStaff(void*, const char*, u32, u32)
+ext 02542EDC s32 warpmjGetAction(void*, s32, void*, s32, s32, s32)
+ext 02543280 void warpmjEndCut(void*, s32)
+ext 025447C8 s32 warpmjIsAdvance(void*, s32)
+ext 025D7A58 void warpmjOrderEvent(daWarpmj_c*, s32, u32, u32, u32, u32)
+ext 02526E70 WarpmjDemoActor* warpmjGetDemoActor(void*, u32)
+ext 025DA884 void warpmjRemoveDrawTag(void*)
+ext 025DF2B8 void* warpmjGetDrawQueue(daWarpmj_c*)
+ext 025DA874 void warpmjQueueDrawTag(void*, void*)
+ext 02520540 s32 warpmjGetReverb(s32)
+ext 025E1A40 void warpmjStartLevelSound(u32, cXyz*, u32, s32)
+ext 02543714 void warpmjSetGoal(void*, cXyz*)
+ext 025E1988 void warpmjStartSound(u32)
+ext 028F026C void warpmjRegisterGlobal(void*)
+ext 028ED6F8 void warpmjInitHeaderByte(void*)
+ext 028EAB2C void warpmjInitHeaderFlag(void*)
+ext 0273AF40 void warpmjDeleteObject(void*)
+ext 025D50BC void warpmjDestroyActor(daWarpmj_c*, s32)
+ext 025200D4 WarpmjGameInfo* warpmjGetGameInfo()
+ext 02555D0C void* warpmjGetEnvironment()
+ext 0273AD10 daWarpmj_c* warpmjAllocateActor(u32)
+str 10042944
+str 10042954
+str 10042974
+str 10042980
+str 1004298C
+str 10042998
+str 100429A8
+str 100429D0
+str 100429F4
+str 10042A20
+*/

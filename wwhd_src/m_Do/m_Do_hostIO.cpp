@@ -1,15 +1,30 @@
-#include "gabi.h"
-// Adjacent empty HD entry points; exact source-level roles remain unspecified.
-void mDoHIO_Empty025F0A08() { WWHD_FUNC(0x025F0A08,void); }
-VERIFY(0x025F0A08,mDoHIO_Empty025F0A08);
-void mDoHIO_Empty025F0A0C() { WWHD_FUNC(0x025F0A0C,void); }
-VERIFY(0x025F0A0C,mDoHIO_Empty025F0A0C);
-s8 mDoHIO_createChild(void* root,const char* name,void* child) {
- WWHD_FUNC(0x025F0A10,s8,root,name,child);
- return 0;
+/**
+ * m_Do_hostIO.cpp
+ * HostIO - disabled registration entry points.
+ *
+ * WWHD, verified against the recompiled original (unit m_Do_hostIO).
+ */
+#include "m_Do/m_Do_hostIO.h"
+
+// HD: adjacent no-op entry points; their individual roles are unconfirmed.
+/* 025F0A08 */
+static void mDoHIO_disabledEntry() {
 }
-VERIFY(0x025F0A10,mDoHIO_createChild);
-void mDoHIO_deleteChild(void* root,s8 index) {
- WWHD_FUNC(0x025F0A18,void,root,index);
+
+/* 025F0A0C */
+static void mDoHIO_disabledCompanion() {
 }
-VERIFY(0x025F0A18,mDoHIO_deleteChild);
+
+/* 025F0A10 */
+s8 mDoHIO_subRoot_c::createChild(const char* i_name, JORReflexible* i_reflexible) {
+    // HD: registration is disabled and returns zero instead of searching the child table.
+    return 0;
+}
+
+/* 025F0A18 */
+void mDoHIO_subRoot_c::deleteChild(s8 i_childID) {
+    // HD: there is no child table to update.
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+*/

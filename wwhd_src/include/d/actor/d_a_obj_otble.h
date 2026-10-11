@@ -1,19 +1,35 @@
 #pragma once
-#include "f_op/f_op_actor.h"
-
+#include "gc_api/gc_api.h"
 namespace daObj_Otble {
-// HD actor base adds0x11C. The Acch and circle retain their 0x1C4/0x40 sizes.
-struct Act_c : fopAc_ac_c {
-  /* 3AC */ be<u32> tableModel;
-  /* 3B0 */ be<s32> variant;
-  /* 3B4 */ request_of_phase_process_class phase;
-  /* 3BC */ be<u32> background;
-  /* 3C0 */ Mtx34 backgroundMatrix;
-  /* 3F0 */ u8 acch[0x1C4];
-  /* 5B4 */ u8 acchCircle[0x40];
+class Act_c : public fopAc_ac_c {
+public:
+    // HD: the actor and embedded collision helpers use TU-specific vtables.
+    Act_c() {
+        fopAc_ac_c_ct(this);
+        __vtbl = 0x1002E374;
+        __ct(&mObjAcch);
+        __ct(&mObjAcchCir);
+    }
+    BOOL _createHeap();
+    void set_mtx();
+    void CreateInit();
+    cPhs_State _create();
+    bool _delete();
+    BOOL _execute();
+    BOOL _draw();
+    gptr<J3DModel> mModel;
+    be<s32> m294;
+    request_of_phase_process_class mPhase;
+    gptr<dBgW> mBgW;
+    Mtx34 m2A4;
+    dBgS_ObjAcch mObjAcch;
+    dBgS_AcchCir mObjAcchCir;
 };
-WWHD_SIZE(Act_c, 0x5F4);
-WWHD_OFFSET(Act_c, backgroundMatrix, 0x3C0);
-WWHD_OFFSET(Act_c, acch, 0x3F0);
-WWHD_OFFSET(Act_c, acchCircle, 0x5B4);
-} // namespace daObj_Otble
+}
+WWHD_SIZE(daObj_Otble::Act_c, 0x5F4);
+WWHD_OFFSET(daObj_Otble::Act_c, m2A4, 0x3C0);
+WWHD_OFFSET(daObj_Otble::Act_c, mObjAcch, 0x3F0);
+WWHD_OFFSET(daObj_Otble::Act_c, mObjAcchCir, 0x5B4);
+// HD: typed view of the compiler's guarded local heap-size array.
+struct OtbleHeapSizes { be<u32> values[2]; };
+u32 dBgS_GetPolyColor(dBgS*, cBgS_PolyInfo*);

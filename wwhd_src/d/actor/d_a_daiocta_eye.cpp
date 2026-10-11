@@ -1,568 +1,582 @@
-/* Big Octo eye, reconstructed from local WWHD code. */
+/* Big Octo eye: joint control, damage modes and hit particles.
+ * GameCube names follow zeldaret/tww; verified against the private WWHD image.
+ * HD: animation/resource ABI, callback cleanup and compiler-generated initialization differ.
+ */
 #include "d/actor/d_a_daiocta_eye.h"
-namespace OctoEye {
-using Actor = daDaiocta_Eye_c;
-template <class T> T *at(u32 p) { return gabi::at<T>(p); }
-template <class T> T read(u32 p) { return *at<be<T>>(p); }
-template <class T> void write(u32 p, T value) { *at<be<T>>(p) = value; }
-u32 ea(Actor *a) { return gabi::ea(a); }
-constexpr u32 Matrix = 0x1048d0cc, Hio = 0x10463a68;
-struct SafeString {
-  be<u32> text, vtable;
-};
-struct ResourceLocal {
-  be<u32> linkage[2];
-  SafeString name;
-};
-u32 resource(gabi::Local<ResourceLocal> &local, u32 id) {
-  local->name.text = 0x1000d568;
-  local->name.vtable = 0x1000d4b4;
-  return gabi::call<u32>(0x026066c4, at<void>(read<u32>(0x101f4f28)),
-                         &local->name, id);
+#include "gc_api/JSystem/JUTAssert.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/f_op/f_op_actor.h"
+using namespace gabi;
+using namespace octoEyeHD;
+
+static Hio l_HIO;
+static J3DModel* l_currentModel;
+static Mtx34 l_currentMtx;
+static dCcD_SrcSph l_sph_src;
+static JointHitData search_data;
+static f32 scale_table[] = {1.0f, 0.975f, 1.0f, 0.95f, 1.0f, 0.9f, 1.0f, 0.85f};
+static HeaderStatics l_header;
+static HeaderVector l_headerVector0;
+static HeaderVector l_headerVector1;
+static HeaderVector l_headerVector2;
+static f32 l_negativePi;
+static f32 l_positivePi;
+static void* l_resourceControl;
+
+extern void* eyeGetResource(void*, SafeString*, u32);
+extern void eyeMonsterSound(u32, cXyz*, u32, u32, s8);
+extern JntHit_c* eyeCreateJntHit(J3DModel*, const JointHitData*, s32);
+extern BOOL eyeBombCheckState(fopAc_ac_c*, s32);
+extern void eyeInitActor(fopAc_ac_c*);
+extern void eyeConstructBrk(mDoExt_brkAnm*);
+extern void eyeConstructBtk(mDoExt_btkAnm*);
+extern void eyeConstructSph(dCcD_Sph*);
+extern void eyeConstructStts(dCcD_Stts*);
+extern void eyeConstructGlobalStts(void*);
+extern void eyeConstructCallback(dPa_followEcallBack*, u32, u32);
+extern void eyeEnemyDamage();
+extern void eyeScaleAnime(be<f32>*, const be<f32>*, s32, be<s32>*, f32, f32, f32);
+extern void eyeInitJntHio(void*);
+extern void eyeRegisterGlobalObject(HeaderVector*);
+extern void eyeConstructAngle(u8*);
+extern void eyeConstructByte(u8*);
+extern void eyeDestroyStts(dCcD_Stts*, s32);
+extern void eyeDestroySph(dCcD_Sph*, s32);
+extern void eyeDestroyActor(fopAc_ac_c*, s32);
+extern void eyeInitBrk(mDoExt_brkAnm*, J3DModelData*, J3DAnmTevRegKey*, s32, s32, f32, s32, s32,
+                       s32, s32);
+extern void eyeInitBtk(mDoExt_btkAnm*, J3DModelData*, J3DAnmTextureSRTKey*, s32, s32, f32, s32, s32,
+                       s32, s32);
+extern JPABaseEmitter* eyeParticleSet(dPa_control_c*, u32, u32, const cXyz*, const csXyz*,
+                                      const cXyz*, u32, dPa_followEcallBack*, s32, const void*,
+                                      const void*, u32);
+extern void eyeSetCollision(cCcS*, dCcD_Sph*);
+extern f32 eyeGetWaterHeight(cXyz*);
+extern void eyeSetLighting(void*, s32, cXyz*, dKy_tevstr_c*);
+extern void eyeModelLighting(void*, J3DModel*, dKy_tevstr_c*);
+extern void* eyeGetLighting();
+extern void eyeModelUpdate(J3DModel*, s32);
+extern void eyeAddAngle(be<s16>*, s16, s16, s16);
+extern void eyeSetSphereRadius(cM3dGSph*, f32);
+extern void eyeSetSphereCenter(cM3dGSph*, cXyz*);
+
+// HD: resource name is capitalized; SafeString follows eight bytes of linkage scratch.
+static void* getObjectResource(Local<ResourceLocal>& local, u32 id) {
+    local->name.mStringTop = guest_addr("Daiocta");
+    local->name.__vtbl = 0x1000D4B4;
+    return eyeGetResource(l_resourceControl, &local->name, id);
 }
-void copyMatrix(u32 from, u32 to) {
-  float values[12];
-  for (u32 i = 0; i < 12; ++i)
-    values[i] = read<float>(from + 4 * i);
-  for (u32 i = 0; i < 12; ++i)
-    write<float>(to + 4 * i, values[i]);
+static void parentSound(fopAc_ac_c* parent, u32 sound) {
+    // HD: both null tests are retained, including guest address wrap at eyePos.
+    if (!parent || !ea(&parent->eyePos))
+        return;
+    s8 room = parent->current.roomNo;
+    u32 id = parent->mBsPcId;
+    s8 reverb = dComIfGp_getReverb(room);
+    eyeMonsterSound(sound, &parent->eyePos, id, 0, reverb);
 }
-void parentSound(u32 parent, u32 sound) {
-  if (!parent || !(parent + 0x37c))
-    return;
-  s8 room = read<s8>(parent + 0x326);
-  u32 id = read<u32>(parent + 4);
-  s8 reverb = gabi::call<s8>(0x02520540, room);
-  gabi::call(0x025e1aa4, sound, at<void>(parent + 0x37c), id, 0, reverb);
+static void actorSound(daDaiocta_Eye_c* actor, u32 sound, s32 extra) {
+    s8 reverb = dComIfGp_getReverb(actor->current.roomNo);
+    mDoAud_seStart(sound, &actor->eyePos, extra, reverb);
 }
-void actorSound(Actor *a, u32 sound, s32 extra) {
-  s8 reverb = gabi::call<s8>(0x02520540, read<s8>(ea(a) + 0x326));
-  gabi::call(0x025e1a40, sound, at<void>(ea(a) + 0x37c), extra, reverb);
+static void removeParticle(daDaiocta_Eye_c* actor) {
+    auto* table = at<CallbackVtable>(actor->mParticleCallback.__vtbl);
+    call_ptr<void>(table->mRemove, &actor->mParticleCallback);
 }
-void removeParticle(Actor *a) {
-  u32 callback = ea(a) + 0x654;
-  u32 target = read<u32>(read<u32>(callback) + 0x44);
-  gabi::call_ptr<void>(target, at<void>(callback));
-}
-void NodeControl(Actor *a, void *node, void *model) {
-  WWHD_FUNC(0x0211d314, void, a, node, model);
-  u32 joint = gabi::call<u32>(0x027f7878, node);
-  u32 index = read<u16>(joint + 4), modelEA = gabi::ea(model);
-  u32 matrices = read<u32>(modelEA + 0x2c);
-  u32 source = read<u32>(matrices + 0x10) + index * 48;
-  write<u16>(matrices + 4, read<u16>(matrices + 4) | 0x10);
-  gabi::call(0x028e90d4, at<void>(source), at<void>(Matrix));
-  if (index == 2) {
-    s16 x = a->eyeRotation.x, y = a->eyeRotation.y, z = a->eyeRotation.z;
-    gabi::call(0x025f1b48, at<void>(Matrix), x, y, z);
-    float sx = a->eyeScale.x, sy = a->eyeScale.y, sz = a->eyeScale.z;
-    gabi::call(0x025f2518, sx, sy, sz);
-  }
-  gabi::call(0x028e90d4, at<void>(Matrix), at<void>(0x104b4868));
-  matrices = read<u32>(modelEA + 0x2c);
-  u32 destination = read<u32>(matrices + 0x10) + index * 48;
-  write<u16>(matrices + 4, read<u16>(matrices + 4) | 0x10);
-  copyMatrix(Matrix, destination);
-}
-VERIFY(0x0211d314, NodeControl);
-BOOL NodeCallback(void *node, s32 timing) {
-  WWHD_FUNC(0x0211d42c, BOOL, node, timing);
-  if (timing == 0) {
-    u32 model = read<u32>(0x104b462c);
-    u32 actor = read<u32>(model + 0xb8);
-    if (actor)
-      NodeControl(at<Actor>(actor), node, at<void>(model));
-  }
-  return 1;
-}
-VERIFY(0x0211d42c, NodeCallback);
-BOOL CreateHeap(Actor *a) {
-  WWHD_FUNC(0x0211d474, BOOL, a);
-  gabi::Local<ResourceLocal> modelName, brkName, btkName;
-  u32 data = resource(modelName, 0x10);
-  if (!data)
-    gabi::call(0x0273aa24, at<void>(0x1000d4f0), 0xe9, at<void>(0x1000d504));
-  u32 model = gabi::call<u32>(0x025e38e0, at<void>(data), 0x80000, 0x11000222);
-  a->model = at<void>(model);
-  if (!model)
-    return 0;
-  write<u32>(model + 0xb8, ea(a));
-  u32 brk = resource(brkName, 0x18);
-  a->brkResource = at<void>(brk);
-  if (!brk)
-    return 0;
-  if (!gabi::call<s32>(0x025e8154, at<void>(ea(a) + 0x3cc), at<void>(data),
-                       at<void>(brk), 1, 0, 1.0f, 0, -1, 0, 0))
-    return 0;
-  u32 btk = resource(btkName, 0x23);
-  a->btkResource = at<void>(btk);
-  if (!btk)
-    return 0;
-  if (!gabi::call<s32>(0x025e7ce0, at<void>(ea(a) + 0x448), at<void>(data),
-                       at<void>(btk), 1, 0, 1.0f, 0, -1, 0, 0))
-    return 0;
-  u32 count = read<u32>(data + 4), joint = read<u32>(data + 8);
-  if (count > 2)
-    joint += 0x38;
-  write<u32>(joint + 8, 0x0211d42c);
-  u32 hit =
-      gabi::call<u32>(0x02552b60, a->model.get(), at<void>(0x101b417c), 1);
-  a->jointHit = at<void>(hit);
-  if (!hit)
-    return 0;
-  write<u32>(ea(a) + 0x36c, hit);
-  return 1;
-}
-VERIFY(0x0211d474, CreateHeap);
-BOOL HeapCallback(Actor *a) {
-  WWHD_FUNC(0x0211d658, BOOL, a);
-  return CreateHeap(a);
-}
-VERIFY(0x0211d658, HeapCallback);
-void DeathInit(Actor *a) {
-  WWHD_FUNC(0x0211d65c, void, a);
-  a->mode = 2;
-  a->eyeScale.y = 1;
-  a->damaged = 1;
-  a->eyeScale.z = 1;
-  a->eyeScale.x = 1;
-  gabi::Local<ResourceLocal> brkName, btkName;
-  u32 brk = resource(brkName, 0x19);
-  a->brkResource = at<void>(brk);
-  u32 data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  gabi::call(0x025e8154, at<void>(ea(a) + 0x3cc), at<void>(data), at<void>(brk),
-             1, 0, 1.0f, 0, -1, 1, 0);
-  u32 btk = resource(btkName, 0x24);
-  a->btkResource = at<void>(btk);
-  data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  gabi::call(0x025e7ce0, at<void>(ea(a) + 0x448), at<void>(data), at<void>(btk),
-             1, 0, 1.0f, 0, -1, 1, 0);
-  parentSound(gabi::ea(a->parent.get()), 0x48cb);
-}
-VERIFY(0x0211d65c, DeathInit);
-void CoHit(Actor *a, void *other) {
-  WWHD_FUNC(0x0211d7cc, void, a, other);
-  if (!other || read<s16>(gabi::ea(other) + 8) != 0x126)
-    return;
-  if (!gabi::call<BOOL>(0x020cb92c, other, 4))
-    return;
-  if (a->dead) {
-    a->damagedByBomb = 1;
-    return;
-  }
-  s8 room = read<s8>(ea(a) + 0x326);
-  write<u8>(ea(a) + 0x3a1, 0);
-  a->dead = 1;
-  a->bombKilled = 1;
-  u32 play = gabi::call<u32>(0x025200d4);
-  gabi::call(0x025a847c, at<void>(read<u32>(play + 0x5ab0)), 0, 0x8206,
-             at<void>(ea(a) + 0x668), at<void>(ea(a) + 0x328), 0, 0xff,
-             at<void>(ea(a) + 0x654), room, 0, 0, 0);
-  DeathInit(a);
-}
-VERIFY(0x0211d7cc, CoHit);
-void CollisionCallback(Actor *a, void *info, void *other) {
-  WWHD_FUNC(0x0211d8b8, void, a, info, other);
-  if (other)
-    CoHit(a, other);
-}
-VERIFY(0x0211d8b8, CollisionCallback);
-void CreateInit(Actor *a) {
-  WWHD_FUNC(0x0211d8c8, void, a);
-  u32 model = gabi::ea(a->model.get());
-  a->appeared = 0;
-  write<u32>(ea(a) + 0x348, model ? model + 0xc8 : 0);
-  gabi::call(0x02515f14, at<void>(ea(a) + 0x600), 0, 0, a);
-  gabi::call(0x0251677c, at<void>(ea(a) + 0x4d4), at<void>(0x101b411c));
-  u32 parentId = read<u32>(ea(a) + 0x2e8);
-  write<u8>(ea(a) + 0x3a1, 4);
-  a->eyeScale.y = 1;
-  a->eyeScale.x = 1;
-  write<u32>(ea(a) + 0x518, ea(a) + 0x600);
-  write<u32>(ea(a) + 0x5b8, 0x0211d8b8);
-  write<u8>(ea(a) + 0x3a0, 4);
-  a->eyeScale.z = 1;
-  if (parentId != 0xffffffff) {
-    gabi::Local<be<u32>> id;
-    *id = parentId;
-    u32 parent = gabi::call<u32>(0x025d5218, at<void>(0x025e1234), id.get());
-    if (parent && gabi::call<BOOL>(0x025d4604, at<void>(parent)) &&
-        read<s16>(parent + 8) == 0xe1)
-      a->parent = at<void>(parent);
-  }
-}
-VERIFY(0x0211d8c8, CreateInit);
-s32 Create(Actor *a) {
-  WWHD_FUNC(0x0211d9bc, s32, a);
-  u32 flags = read<u32>(ea(a) + 0x2e4);
-  if (!(flags & 8)) {
-    if (a) {
-      gabi::call(0x025d4ed0, a);
-      write<u32>(ea(a) + 0xb4, 0x1000d4cc);
-      gabi::call(0x025e80d0, at<void>(ea(a) + 0x3cc));
-      gabi::call(0x025e7c6c, at<void>(ea(a) + 0x448));
-      gabi::call(0x025166f0, at<void>(ea(a) + 0x4d4));
-      gabi::call(0x0200bd2c, at<void>(ea(a) + 0x600));
-      gabi::call(0x02515da0, at<void>(ea(a) + 0x61c));
-      write<u32>(ea(a) + 0x618, 0x1004ae88);
-      write<u32>(ea(a) + 0x61c, 0x1004aec0);
-      gabi::call(0x025a5894, at<void>(ea(a) + 0x654), 0, 0);
-      flags = read<u32>(ea(a) + 0x2e4);
+
+/* 0211D42C */
+BOOL nodeControl_CB(J3DNode* i_nodeP, s32 i_calcTiming) {
+    if (i_calcTiming == J3DNodeCBCalcTiming_In) {
+        J3DModel* model_p = l_currentModel;
+        auto* this_p = static_cast<daDaiocta_Eye_c*>(model_p->getUserArea());
+        if (this_p)
+            this_p->_nodeControl(i_nodeP, model_p);
     }
-    write<u32>(ea(a) + 0x2e4, flags | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, at<void>(ea(a) + 0x3bc),
-                              at<void>(0x1000d568));
-  if (phase == 4) {
-    if (!gabi::call<BOOL>(0x025d63e8, a, at<void>(0x0211d658), 0xb20))
-      return 5;
-    CreateInit(a);
-  }
-  return phase;
+    return 1;
 }
-VERIFY(0x0211d9bc, Create);
-s32 CreateWrapper(Actor *a) {
-  WWHD_FUNC(0x0211dad0, s32, a);
-  return Create(a);
-}
-VERIFY(0x0211dad0, CreateWrapper);
-BOOL Delete(Actor *a) {
-  WWHD_FUNC(0x0211dad4, BOOL, a);
-  gabi::call(0x025204c8, at<void>(ea(a) + 0x3bc), at<void>(0x1000d568));
-  removeParticle(a);
-  return 1;
-}
-VERIFY(0x0211dad4, Delete);
-BOOL DeleteWrapper(Actor *a) {
-  WWHD_FUNC(0x0211db24, BOOL, a);
-  return Delete(a);
-}
-VERIFY(0x0211db24, DeleteWrapper);
-void ModeCall(Actor *a) {
-  WWHD_FUNC(0x0211db28, void, a);
-  u32 descriptor = 0x1000d518 + u32(a->mode) * 8;
-  s16 adjustment = read<s16>(descriptor), index = read<s16>(descriptor + 2);
-  u32 receiver = ea(a) + adjustment, target;
-  if (index < 0)
-    target = read<u32>(descriptor + 4);
-  else {
-    s16 offset = read<s16>(descriptor + 6);
-    target = read<u32>(read<u32>(receiver + offset) + u32(index) * 8 + 4);
-  }
-  gabi::call_ptr<void>(target, at<void>(receiver));
-}
-VERIFY(0x0211db28, ModeCall);
-void SetMatrix(Actor *a) {
-  WWHD_FUNC(0x0211db74, void, a);
-  float x = read<float>(ea(a) + 0x330), y = read<float>(ea(a) + 0x334),
-        z = read<float>(ea(a) + 0x338);
-  u32 model = gabi::ea(a->model.get());
-  write<float>(model + 0xbc, x);
-  write<float>(model + 0xc0, y);
-  write<float>(model + 0xc4, z);
-  x = read<float>(ea(a) + 0x314);
-  y = read<float>(ea(a) + 0x318);
-  z = read<float>(ea(a) + 0x31c);
-  gabi::call(0x028e93cc, at<void>(Matrix), x, y, z);
-  s16 rx = read<s16>(ea(a) + 0x328), ry = read<s16>(ea(a) + 0x32a),
-      rz = read<s16>(ea(a) + 0x32c);
-  gabi::call(0x025f1b48, at<void>(Matrix), rx, ry, rz);
-  copyMatrix(Matrix, gabi::ea(a->model.get()) + 0xc8);
-  x = read<float>(ea(a) + 0x314);
-  y = read<float>(ea(a) + 0x318);
-  z = read<float>(ea(a) + 0x31c);
-  gabi::call(0x028e93cc, at<void>(Matrix), x, y, z);
-  rx = read<s16>(ea(a) + 0x328);
-  ry = read<s16>(ea(a) + 0x32a);
-  rz = read<s16>(ea(a) + 0x32c);
-  gabi::call(0x025f1b48, at<void>(Matrix), rx, ry, rz);
-  x = read<float>(Hio + 0x10);
-  y = read<float>(Hio + 0x14);
-  z = read<float>(Hio + 0x18);
-  gabi::call(0x025f24e0, x, y, z);
-  a->particlePosition.x = read<float>(Matrix + 0xc);
-  a->particlePosition.y = read<float>(Matrix + 0x1c);
-  a->particlePosition.z = read<float>(Matrix + 0x2c);
-}
-VERIFY(0x0211db74, SetMatrix);
-BOOL Execute(Actor *a) {
-  WWHD_FUNC(0x0211dcac, BOOL, a);
-  if (!a->appeared)
-    return 0;
-  if (a->dead)
-    write<u32>(ea(a) + 0x4ec, read<u32>(ea(a) + 0x4ec) & ~1u);
-  for (u32 i = 0; i < 6; ++i)
-    write<u16>(ea(a) + 0x4c8 + 2 * i, read<u16>(Hio + 0x24 + 2 * i));
-  gabi::call(0x025e742c, at<void>(ea(a) + 0x3cc));
-  gabi::call(0x025e742c, at<void>(ea(a) + 0x448));
-  a->damaged = 0;
-  a->damagedByBomb = 0;
-  ModeCall(a);
-  SetMatrix(a);
-  float y = read<float>(ea(a) + 0x318), z = read<float>(ea(a) + 0x31c);
-  write<float>(ea(a) + 0x398, z);
-  float above = y + 100.0f;
-  float x = read<float>(ea(a) + 0x314);
-  u32 zbits = read<u32>(ea(a) + 0x31c), xbits = read<u32>(ea(a) + 0x314);
-  write<u32>(ea(a) + 0x384, zbits);
-  write<u32>(ea(a) + 0x37c, xbits);
-  u32 ybits = read<u32>(ea(a) + 0x318);
-  write<float>(ea(a) + 0x390, x);
-  write<float>(ea(a) + 0x394, above);
-  write<u32>(ea(a) + 0x380, ybits);
-  for (u32 i = 0; i < 3; ++i) {
-    s16 scale = s16(read<s16>(Hio + 0x22) + 1), step = read<s16>(Hio + 0x20),
-        target = read<s16>(ea(a) + 0x4bc + 2 * i);
-    gabi::call(0x0200f428, at<void>(ea(a) + 0x4c2 + 2 * i), target, scale,
-               step);
-  }
-  gabi::call(0x02018c8c, at<void>(ea(a) + 0x5ec), read<float>(Hio + 0x1c));
-  gabi::call(0x02018d40, at<void>(ea(a) + 0x5ec), at<void>(ea(a) + 0x314));
-  u32 play = gabi::call<u32>(0x025200d4);
-  gabi::call(0x0200e240, at<void>(play + 0x26a4), at<void>(ea(a) + 0x4d4));
-  gabi::Local<cXyz> probe;
-  x = read<float>(ea(a) + 0x314);
-  y = read<float>(ea(a) + 0x318);
-  a->particleRotation.z = 0;
-  s16 rotation = read<s16>(ea(a) + 0x32a);
-  probe->x = x;
-  probe->y = y + 1000.0f;
-  a->particleRotation.y = rotation;
-  z = read<float>(ea(a) + 0x31c);
-  a->particleRotation.x = 0;
-  probe->z = z;
-  float water = gabi::call<float>(0x024f17d4, probe.get());
-  y = read<float>(ea(a) + 0x318);
-  // PPC bge checks !(LT), including unordered values.
-  if (!(y < water)) {
-    if (a->mode == 2) {
-      write<u32>(ea(a) + 0x39c, 0);
-      return 0;
+/* 0211D314 */
+void daDaiocta_Eye_c::_nodeControl(J3DNode* i_nodeP, J3DModel* i_modelP) {
+    auto* jnt_p = reinterpret_cast<J3DJoint*>(i_nodeP);
+    u32 jnt_no = jnt_p->getJntNo();
+    mDoMtx_stack_c::copy(i_modelP->getAnmMtx(jnt_no));
+    if (jnt_no == DO_EYE1_JNT_J_DO_EYE2_e) {
+        mDoMtx_stack_c::ZXYrotM(mCurEyeRot);
+        mDoMtx_stack_c::scaleM(mEyeScale.x, mEyeScale.y, mEyeScale.z);
     }
-    write<u32>(ea(a) + 0x39c, 4);
-    write<u8>(ea(a) + 0x38a, 0x22);
-  } else if (read<u32>(ea(a) + 0x658)) {
-    removeParticle(a);
-    if (a->mode == 2) {
-      write<u32>(ea(a) + 0x39c, 0);
-      return 0;
+    PSMTXCopy(mDoMtx_stack_c::get(), &l_currentMtx);
+    i_modelP->setAnmMtx(jnt_no, mDoMtx_stack_c::get());
+}
+/* 0211D658 */
+BOOL createHeap_CB(daDaiocta_Eye_c* i_this) {
+    return i_this->_createHeap();
+}
+/* 0211D474 */
+BOOL daDaiocta_Eye_c::_createHeap() {
+    Local<ResourceLocal> modelName, brkName, btkName;
+    auto* modelData =
+        static_cast<J3DModelData*>(getObjectResource(modelName, dRes_INDEX_DAIOCTA_BDL_DO_EYE1_e));
+    if (!modelData)
+        JUTAssertion::showAssert("d_a_daiocta_eye.cpp", 0xE9, "modelData != (0)");
+    mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
+    if (!mpModel)
+        return 0;
+    mpModel->setUserArea(reinterpret_cast<uintptr_t>(this));
+    mpBrk = static_cast<J3DAnmTevRegKey*>(
+        getObjectResource(brkName, dRes_INDEX_DAIOCTA_BRK_DAMAGE_EYE_A1_e));
+    if (!mpBrk)
+        return 0;
+    if (!mBrkAnm.init(modelData, mpBrk, true, 0, 1.0f, 0, -1, false, 0))
+        return 0;
+    mpBtk = static_cast<J3DAnmTextureSRTKey*>(
+        getObjectResource(btkName, dRes_INDEX_DAIOCTA_BTK_DAMAGE_EYE_A1_e));
+    if (!mpBtk)
+        return 0;
+    if (!mBtkAnm.init(modelData, mpBtk, true, 0, 1.0f, 0, -1, false, 0))
+        return 0;
+    modelData->getJointNodePointer(DO_EYE1_JNT_J_DO_EYE2_e)->setCallBack(nodeControl_CB);
+    mpJntHit = eyeCreateJntHit(mpModel, &search_data, 1);
+    if (!mpJntHit)
+        return 0;
+    jntHit = ea(mpJntHit.get());
+    return 1;
+}
+/* 0211D8B8 */
+void coHit_CB(daDaiocta_Eye_c* i_this, void* info, fopAc_ac_c* i_actor) {
+    if (i_actor)
+        i_this->_coHit(i_actor);
+}
+/* 0211D7CC */
+void daDaiocta_Eye_c::_coHit(fopAc_ac_c* i_actor) {
+    if (!i_actor || i_actor->mProcName != fpcNm_BOMB_e)
+        return;
+    if (!eyeBombCheckState(i_actor, 4))
+        return;
+    if (mbIsDead) {
+        mbIsDamagedBomb = 1;
+        return;
     }
-  }
-  if (a->mode == 2)
-    write<u32>(ea(a) + 0x39c, 0);
-  else {
-    play = gabi::call<u32>(0x025200d4);
-    if (read<u8>(play + 0x5292))
-      write<u32>(ea(a) + 0x39c, 0);
-  }
-  return 0;
+    s8 room = current.roomNo;
+    health = 0;
+    mbIsDead = 1;
+    m295 = 1;
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    eyeParticleSet(play->play.mParticle, 0, ID_IT_SN_DO_SMOKE00, &mParticlePos, &shape_angle,
+                   nullptr, 0xFF, &mParticleCallback, room, nullptr, nullptr, 0);
+    modeDeathInit();
 }
-VERIFY(0x0211dcac, Execute);
-BOOL ExecuteWrapper(Actor *a) {
-  WWHD_FUNC(0x0211deec, BOOL, a);
-  return Execute(a);
+/* 0211DB74 */
+void daDaiocta_Eye_c::setMtx() {
+    // HD: load all scale components before writing the model, as GHS does.
+    f32 x = scale.x, y = scale.y, z = scale.z;
+    mpModel->mBaseScale.x = x;
+    mpModel->mBaseScale.y = y;
+    mpModel->mBaseScale.z = z;
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    mpModel->setBaseTRMtx(mDoMtx_stack_c::get());
+    mDoMtx_stack_c::transS(current.pos);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    mDoMtx_stack_c::transM(l_HIO.mParticleTranslationX, l_HIO.mParticleTranslationY,
+                           l_HIO.mParticleTranslationZ);
+    mParticlePos.x = mDoMtx_stack_c::get()->m[0][3];
+    mParticlePos.y = mDoMtx_stack_c::get()->m[1][3];
+    mParticlePos.z = mDoMtx_stack_c::get()->m[2][3];
 }
-VERIFY(0x0211deec, ExecuteWrapper);
-BOOL Draw(Actor *a) {
-  WWHD_FUNC(0x0211def0, BOOL, a);
-  if (!a->appeared)
+/* 0211E114 */
+void daDaiocta_Eye_c::checkTgHit() {
+    mStts.Move();
+    auto* tg_hit_obj_p = static_cast<dCcD_GObjInf*>(mSph.GetTgHitObj());
+    if (!tg_hit_obj_p)
+        return;
+    eyeEnemyDamage();
+    u32 type = tg_hit_obj_p->mAtType;
+    s32 damage;
+    u32 sound;
+    if (type & AT_TYPE_ARROW_GROUP) {
+        damage = 2;
+        sound = JA_SE_LK_MS_WEP_HIT;
+    } else if (type & AT_TYPE_LIGHT_ARROW) {
+        damage = 4;
+        sound = JA_SE_LK_MS_WEP_HIT;
+    } else if (type & AT_TYPE_HOOKSHOT) {
+        damage = 2;
+        sound = JA_SE_LK_MS_WEP_HIT;
+    } else if (type & AT_TYPE_BOOMERANG) {
+        damage = 1;
+        sound = JA_SE_LK_W_WEP_HIT;
+    } else
+        return;
+    actorSound(this, sound, 32);
+    health = static_cast<u8>(health - damage);
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    fopAc_ac_c* player_p = play->play.mPlayerInfo[0].mpPlayer;
+    Local<cXyz> tg_hit_pos, hit_particle_scale;
+    tg_hit_pos->x = mSph.mGObjTg.mHitPos.x;
+    tg_hit_pos->y = mSph.mGObjTg.mHitPos.y;
+    tg_hit_pos->z = mSph.mGObjTg.mHitPos.z;
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    eyeParticleSet(play->play.mParticle, 0, ID_AK_JN_CRITICALHITFLASH, tg_hit_pos.get(), nullptr,
+                   nullptr, 0xFF, nullptr, -1, nullptr, nullptr, 0);
+    if (health > 0) {
+        modeDamageInit();
+        return;
+    }
+    hit_particle_scale->x = 2;
+    hit_particle_scale->y = 2;
+    hit_particle_scale->z = 2;
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    eyeParticleSet(play->play.mParticle, 0, ID_AK_JN_CRITICALHIT, tg_hit_pos.get(),
+                   &player_p->shape_angle, hit_particle_scale.get(), 0xFF, nullptr, -1, nullptr,
+                   nullptr, 0);
+    actorSound(this, JA_SE_LK_LAST_HIT, 0);
+    health = 0;
+    modeDeathInit();
+}
+/* 0211DFB8 */
+void daDaiocta_Eye_c::modeWaitInit() {
+    mMode = MODE_WAIT;
+}
+/* 0211E40C */
+void daDaiocta_Eye_c::modeWait() {
+    checkTgHit();
+}
+/* 0211DFC4 */
+void daDaiocta_Eye_c::modeDamageInit() {
+    mMode = MODE_DAMAGE;
+    mbIsDamaged = 1;
+    J3DModel* model_p = mpModel;
+    mScaleAnimeIdx = m_scale_damage_time;
+    J3DModelData* model_data_p = model_p->getModelData();
+    Local<ResourceLocal> brkName, btkName;
+    mpBrk = static_cast<J3DAnmTevRegKey*>(
+        getObjectResource(brkName, dRes_INDEX_DAIOCTA_BRK_DAMAGE_EYE_A1_e));
+    eyeInitBrk(&mBrkAnm, model_data_p, mpBrk, 1, 0, 1.0f, 0, -1, 1, 0);
+    mpBtk = static_cast<J3DAnmTextureSRTKey*>(
+        getObjectResource(btkName, dRes_INDEX_DAIOCTA_BTK_DAMAGE_EYE_A1_e));
+    eyeInitBtk(&mBtkAnm, model_data_p, mpBtk, 1, 0, 1.0f, 0, -1, 1, 0);
+    parentSound(mpParentActor, JA_SE_CV_DO_DAMAGE);
+}
+/* 0211E410 */
+void daDaiocta_Eye_c::modeDamage() {
+    eyeScaleAnime(&mEyeScale.x, scale_table, m_scale_damage_time, &mScaleAnimeIdx, 0.2f, 10.0f,
+                  0.025f);
+    f32 x = mEyeScale.x;
+    mEyeScale.z = x;
+    mEyeScale.y = x;
+    if (mBtkAnm.isStop() && mBrkAnm.isStop()) {
+        if (mScaleAnimeIdx == 0)
+            modeWaitInit();
+    } else if (mScaleAnimeIdx == 0)
+        mScaleAnimeIdx = m_scale_damage_time;
+}
+/* 0211D65C */
+void daDaiocta_Eye_c::modeDeathInit() {
+    mMode = MODE_DEATH;
+    mEyeScale.y = 1;
+    mbIsDamaged = 1;
+    mEyeScale.z = 1;
+    mEyeScale.x = 1;
+    Local<ResourceLocal> brkName, btkName;
+    mpBrk = static_cast<J3DAnmTevRegKey*>(
+        getObjectResource(brkName, dRes_INDEX_DAIOCTA_BRK_DAMAGE_EYE_B1_e));
+    J3DModelData* data = mpModel->getModelData();
+    eyeInitBrk(&mBrkAnm, data, mpBrk, 1, 0, 1.0f, 0, -1, 1, 0);
+    mpBtk = static_cast<J3DAnmTextureSRTKey*>(
+        getObjectResource(btkName, dRes_INDEX_DAIOCTA_BTK_DAMAGE_EYE_B1_e));
+    data = mpModel->getModelData();
+    eyeInitBtk(&mBtkAnm, data, mpBtk, 1, 0, 1.0f, 0, -1, 1, 0);
+    parentSound(mpParentActor, JA_SE_CV_DO_EYE_LOSE);
+}
+/* 0211E4E8 */
+void daDaiocta_Eye_c::modeDeath() {
+    mbIsDead = 1;
+}
+/* 0211DB28 */
+void daDaiocta_Eye_c::modeProcCall() {
+    static ModeProc mode_proc[] = {&daDaiocta_Eye_c::modeWait, &daDaiocta_Eye_c::modeDamage,
+                                   &daDaiocta_Eye_c::modeDeath};
+    (this->*mode_proc[static_cast<u32>(mMode)].fn)();
+}
+/* 0211DCAC */
+BOOL daDaiocta_Eye_c::_execute() {
+    if (!mbAppear)
+        return 0;
+    if (mbIsDead)
+        mSph.mObjTg.mSPrm = mSph.mObjTg.mSPrm & ~1u;
+    m2EC = l_HIO.m24;
+    m2EE = l_HIO.m26;
+    m2F0 = l_HIO.m28;
+    mEyeRndRotMaxX = l_HIO.mEyeRndRotMaxX;
+    mEyeRndRotMaxY = l_HIO.mEyeRndRotMaxY;
+    mEyeRndRotMaxZ = l_HIO.mEyeRndRotMaxZ;
+    mBrkAnm.play();
+    mBtkAnm.play();
+    mbIsDamaged = 0;
+    mbIsDamagedBomb = 0;
+    modeProcCall();
+    setMtx();
+    // HD: attention copies use floats; eyePos uses integer words. Keep their interleaving.
+    f32 y = current.pos.y, z = current.pos.z;
+    attention_info.position.z = z;
+    f32 above = y + 100.0f;
+    f32 x = current.pos.x;
+    auto* source = reinterpret_cast<VectorWords*>(&current.pos);
+    auto* eye = reinterpret_cast<VectorWords*>(&eyePos);
+    u32 zbits = source->z, xbits = source->x;
+    eye->z = zbits;
+    eye->x = xbits;
+    u32 ybits = source->y;
+    attention_info.position.x = x;
+    attention_info.position.y = above;
+    eye->y = ybits;
+    eyeAddAngle(&mCurEyeRot.x, mEyeRotTargetX, static_cast<s16>(l_HIO.mEyeRotScale + 1),
+                l_HIO.mEyeRotStep);
+    eyeAddAngle(&mCurEyeRot.y, mEyeRotTargetY, static_cast<s16>(l_HIO.mEyeRotScale + 1),
+                l_HIO.mEyeRotStep);
+    eyeAddAngle(&mCurEyeRot.z, mEyeRotTargetZ, static_cast<s16>(l_HIO.mEyeRotScale + 1),
+                l_HIO.mEyeRotStep);
+    eyeSetSphereRadius(&mSph.mSph, l_HIO.mSphRadius);
+    eyeSetSphereCenter(&mSph.mSph, &current.pos);
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    eyeSetCollision(&play->play.mCcS, &mSph);
+    Local<cXyz> current_pos;
+    x = current.pos.x;
+    y = current.pos.y;
+    m498.z = 0;
+    s16 rotation = shape_angle.y;
+    current_pos->x = x;
+    current_pos->y = y + 1000.0f;
+    m498.y = rotation;
+    z = current.pos.z;
+    m498.x = 0;
+    current_pos->z = z;
+    f32 water_height = eyeGetWaterHeight(current_pos.get());
+    y = current.pos.y;
+    // HD: PPC bge takes unordered values; death may return before the event query.
+    if (!(y < water_height)) {
+        if (mMode == MODE_DEATH) {
+            attention_info.flags = 0;
+            return 0;
+        }
+        attention_info.flags = fopAc_Attn_LOCKON_BATTLE_e;
+        attention_info.distances[fopAc_Attn_TYPE_BATTLE_e] = 34;
+    } else if (mParticleCallback.mpEmitter) {
+        removeParticle(this);
+        if (mMode == MODE_DEATH) {
+            attention_info.flags = 0;
+            return 0;
+        }
+    }
+    if (mMode == MODE_DEATH)
+        attention_info.flags = 0;
+    else if (dComIfGp_event_runCheck())
+        attention_info.flags = 0;
     return 0;
-  u32 light = gabi::call<u32>(0x02555d0c);
-  gabi::call(0x025626a4, at<void>(light), 0, at<void>(ea(a) + 0x314),
-             at<void>(ea(a) + 0x110));
-  light = gabi::call<u32>(0x02555d0c);
-  gabi::call(0x02562f5c, at<void>(light), a->model.get(),
-             at<void>(ea(a) + 0x110));
-  u32 data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  float frame = read<float>(ea(a) + 0x44c);
-  gabi::call(0x025e7fc4, at<void>(ea(a) + 0x448), at<void>(data), frame);
-  data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  frame = read<float>(ea(a) + 0x3d0);
-  gabi::call(0x025e83fc, at<void>(ea(a) + 0x3cc), at<void>(data), frame);
-  gabi::call(0x025e2de0, a->model.get(), 0);
-  data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  write<u32>(data + 0x44, 0);
-  data = read<u32>(gabi::ea(a->model.get()) + 0xac);
-  write<u32>(data + 0x48, 0);
-  return 1;
 }
-VERIFY(0x0211def0, Draw);
-BOOL DrawWrapper(Actor *a) {
-  WWHD_FUNC(0x0211dfb4, BOOL, a);
-  return Draw(a);
+/* 0211DEF0 */
+BOOL daDaiocta_Eye_c::_draw() {
+    if (!mbAppear)
+        return 0;
+    void* light = eyeGetLighting();
+    eyeSetLighting(light, 0, &current.pos, &tevStr);
+    light = eyeGetLighting();
+    eyeModelLighting(light, mpModel, &tevStr);
+    J3DModelData* data = mpModel->getModelData();
+    f32 frame = mBtkAnm.getFrame();
+    mBtkAnm.entry(data, frame);
+    data = mpModel->getModelData();
+    frame = mBrkAnm.getFrame();
+    mBrkAnm.entry(data, frame);
+    eyeModelUpdate(mpModel, 0);
+    reinterpret_cast<ModelAnimationEntries*>(mpModel->getModelData())->mBtkEntry = 0;
+    reinterpret_cast<ModelAnimationEntries*>(mpModel->getModelData())->mBrkEntry = 0;
+    return 1;
 }
-VERIFY(0x0211dfb4, DrawWrapper);
-void WaitInit(Actor *a) {
-  WWHD_FUNC(0x0211dfb8, void, a);
-  a->mode = 0;
+/* 0211D8C8 */
+void daDaiocta_Eye_c::createInit() {
+    J3DModel* model_p = mpModel;
+    mbAppear = 0;
+    cullMtx = ea(model_p ? &model_p->mBaseTransformMtx : nullptr);
+    mStts.Init(0, 0, this);
+    mSph.Set(&l_sph_src);
+    u32 parentId = parentActorID;
+    health = 4;
+    mEyeScale.y = 1;
+    mEyeScale.x = 1;
+    mSph.SetStts(&mStts);
+    mSph.mGObjCo.mHitCallback = guest_fn(reinterpret_cast<void*>(coHit_CB));
+    max_health = 4;
+    mEyeScale.z = 1;
+    if (parentId != 0xFFFFFFFF) {
+        fopAc_ac_c* parent_p = fopAcM_SearchByID(parentId);
+        if (parent_p && fopAc_IsActor(parent_p) && parent_p->mProcName == fpcNm_DAIOCTA_e)
+            mpParentActor = parent_p;
+    }
 }
-VERIFY(0x0211dfb8, WaitInit);
-void DamageInit(Actor *a) {
-  WWHD_FUNC(0x0211dfc4, void, a);
-  a->mode = 1;
-  a->damaged = 1;
-  u32 model = gabi::ea(a->model.get());
-  a->scaleAnimationIndex = 8;
-  u32 data = read<u32>(model + 0xac);
-  gabi::Local<ResourceLocal> brkName, btkName;
-  u32 brk = resource(brkName, 0x18);
-  a->brkResource = at<void>(brk);
-  gabi::call(0x025e8154, at<void>(ea(a) + 0x3cc), at<void>(data), at<void>(brk),
-             1, 0, 1.0f, 0, -1, 1, 0);
-  u32 btk = resource(btkName, 0x23);
-  a->btkResource = at<void>(btk);
-  gabi::call(0x025e7ce0, at<void>(ea(a) + 0x448), at<void>(data), at<void>(btk),
-             1, 0, 1.0f, 0, -1, 1, 0);
-  parentSound(gabi::ea(a->parent.get()), 0x48c8);
+/* 0211D9BC */
+s32 daDaiocta_Eye_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & 8)) {
+        if (ea(this)) {
+            eyeInitActor(this);
+            __vtbl = 0x1000D4CC;
+            eyeConstructBrk(&mBrkAnm);
+            eyeConstructBtk(&mBtkAnm);
+            eyeConstructSph(&mSph);
+            eyeConstructStts(&mStts);
+            eyeConstructGlobalStts(&mStts.__vtbl_gstts);
+            mStts.__vtbl = 0x1004AE88;
+            mStts.__vtbl_gstts = 0x1004AEC0;
+            eyeConstructCallback(&mParticleCallback, 0, 0);
+            flags = actor_condition;
+        }
+        actor_condition = flags | 8;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, "Daiocta");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!fopAcM_entrySolidHeap(this, guest_fn(reinterpret_cast<void*>(createHeap_CB)),
+                                   m_heapsize))
+            return cPhs_ERROR_e;
+        createInit();
+    }
+    return phase;
 }
-VERIFY(0x0211dfc4, DamageInit);
-void CheckHit(Actor *a) {
-  WWHD_FUNC(0x0211e114, void, a);
-  gabi::call(0x02515e50, at<void>(ea(a) + 0x61c));
-  u32 hit = gabi::call<u32>(0x02516300, at<void>(ea(a) + 0x4d4));
-  if (!hit)
-    return;
-  gabi::call(0x025e1fd8);
-  u32 type = read<u32>(hit + 0x10);
-  s32 damage;
-  u32 sound;
-  if (type & (0x4000 | 0x80000 | 0x40000)) {
-    damage = 2;
-    sound = 0x2834;
-  } else if (type & 0x100000) {
-    damage = 4;
-    sound = 0x2834;
-  } else if (type & 0x8000) {
-    damage = 2;
-    sound = 0x2834;
-  } else if (type & 0x40) {
-    damage = 1;
-    sound = 0x2833;
-  } else
-    return;
-  actorSound(a, sound, 0x20);
-  write<u8>(ea(a) + 0x3a1, u8(read<u8>(ea(a) + 0x3a1) - damage));
-  u32 play = gabi::call<u32>(0x025200d4), player = read<u32>(play + 0x5b2c);
-  gabi::Local<cXyz> position, scale;
-  position->x = read<float>(ea(a) + 0x5a0);
-  position->y = read<float>(ea(a) + 0x5a4);
-  position->z = read<float>(ea(a) + 0x5a8);
-  play = gabi::call<u32>(0x025200d4);
-  gabi::call(0x025a847c, at<void>(read<u32>(play + 0x5ab0)), 0, 0x10,
-             position.get(), 0, 0, 0xff, 0, -1, 0, 0, 0);
-  if (read<s8>(ea(a) + 0x3a1) > 0) {
-    DamageInit(a);
-    return;
-  }
-  scale->x = 2;
-  scale->y = 2;
-  scale->z = 2;
-  play = gabi::call<u32>(0x025200d4);
-  gabi::call(0x025a847c, at<void>(read<u32>(play + 0x5ab0)), 0, 0xf,
-             position.get(), at<void>(player + 0x328), scale.get(), 0xff, 0, -1,
-             0, 0, 0);
-  actorSound(a, 0x2828, 0);
-  write<u8>(ea(a) + 0x3a1, 0);
-  DeathInit(a);
+/* 0211DAD4 */
+BOOL daDaiocta_Eye_c::_delete() {
+    dComIfG_resDelete(&mPhs, "Daiocta");
+    removeParticle(this);
+    return 1;
 }
-VERIFY(0x0211e114, CheckHit);
-void Wait(Actor *a) {
-  WWHD_FUNC(0x0211e40c, void, a);
-  CheckHit(a);
+/* 0211DAD0 */
+s32 daDaiocta_EyeCreate(daDaiocta_Eye_c* i_this) {
+    return i_this->_create();
 }
-VERIFY(0x0211e40c, Wait);
-void Damage(Actor *a) {
-  WWHD_FUNC(0x0211e410, void, a);
-  gabi::call(0x02587be0, at<void>(ea(a) + 0x63c), at<void>(0x101b4194), 8,
-             at<void>(ea(a) + 0x648), 0.2f, 10.0f, 0.025f);
-  float x = a->eyeScale.x;
-  a->eyeScale.z = x;
-  a->eyeScale.y = x;
-  bool btkStopped =
-      (read<u8>(ea(a) + 0x457) & 1) || read<float>(ea(a) + 0x448) == 0.0f;
-  bool stopped = false;
-  if (btkStopped)
-    stopped =
-        (read<u8>(ea(a) + 0x3db) & 1) || read<float>(ea(a) + 0x3cc) == 0.0f;
-  if (stopped) {
-    if (a->scaleAnimationIndex == 0)
-      WaitInit(a);
-  } else if (a->scaleAnimationIndex == 0)
-    a->scaleAnimationIndex = 8;
+/* 0211DB24 */
+BOOL daDaiocta_EyeDelete(daDaiocta_Eye_c* i_this) {
+    return i_this->_delete();
 }
-VERIFY(0x0211e410, Damage);
-void Death(Actor *a) {
-  WWHD_FUNC(0x0211e4e8, void, a);
-  a->dead = 1;
+/* 0211DEEC */
+BOOL daDaiocta_EyeExecute(daDaiocta_Eye_c* i_this) {
+    return i_this->_execute();
 }
-VERIFY(0x0211e4e8, Death);
-void *HioConstruct(void *object) {
-  WWHD_FUNC(0x0211e4f4, void *, object);
-  u32 p = gabi::ea(object);
-  if (!p) {
-    p = gabi::call<u32>(0x0273ad10, 0x5c);
-    if (!p)
-      return nullptr;
-  }
-  write<u32>(p, 0x1000d4dc);
-  gabi::call(0x02552be8, at<void>(p + 0x30));
-  write<s16>(p + 0x20, 0x1000);
-  write<s16>(p + 0x26, 0x1000);
-  write<s16>(p + 4, 0xf);
-  write<float>(p + 0x1c, 195.0f);
-  write<s16>(p + 0x28, 0x1000);
-  write<s16>(p + 0x2c, 0x2000);
-  write<s16>(p + 0x2e, 0x2000);
-  write<float>(p + 0x18, 30);
-  write<float>(p + 0x14, 0);
-  write<float>(p + 8, 5);
-  write<s16>(p + 0x2a, 0x7fff);
-  write<s16>(p + 0x22, 4);
-  write<float>(p + 0xc, 8);
-  write<float>(p + 0x10, 0);
-  write<s16>(p + 0x24, 0x4000);
-  return at<void>(p);
+/* 0211DFB4 */
+BOOL daDaiocta_EyeDraw(daDaiocta_Eye_c* i_this) {
+    return i_this->_draw();
 }
-VERIFY(0x0211e4f4, HioConstruct);
-void StaticInit() {
-  WWHD_FUNC(0x0211e5c4, void);
-  write<u32>(0x10463a60, 0);
-  write<u32>(0x10463a58, 0);
-  write<u32>(0x10463a64, 0);
-  write<u32>(0x10463a5c, 0);
-  gabi::call(0x028f026c, at<void>(0x101b41b4));
-  float minimum = read<float>(0x1000d560), maximum = read<float>(0x1000d564);
-  write<float>(0x10463a4c, minimum);
-  write<float>(0x10463a50, maximum);
-  gabi::call(0x028ed6f8, at<void>(0x10463a54));
-  gabi::call(0x028f026c, at<void>(0x101b41c0));
-  gabi::call(0x028eab2c, at<void>(0x10463a55));
-  gabi::call(0x028f026c, at<void>(0x101b41cc));
-  HioConstruct(at<void>(Hio));
+/* 0211E678 */
+BOOL daDaiocta_EyeIsDelete(daDaiocta_Eye_c* i_this) {
+    return 1;
 }
-VERIFY(0x0211e5c4, StaticInit);
-void HioDestroy(void *object, u32 flags) {
-  WWHD_FUNC(0x0211e664, void, object, flags);
-  if (object && (flags & 1))
-    gabi::call(0x0273af40, object);
+
+// HD: compiler-generated constructors, destructors and static initialization.
+/* 0211E4F4 */
+void* daDaiocta_Eye_HIO_construct(void* object) {
+    auto* hio = static_cast<Hio*>(object);
+    if (!hio) {
+        hio = static_cast<Hio*>(operator_new(sizeof(Hio)));
+        if (!hio)
+            return nullptr;
+    }
+    hio->__vtbl = 0x1000D4DC;
+    eyeInitJntHio(hio->m30);
+    hio->mEyeRotStep = 0x1000;
+    hio->m26 = 0x1000;
+    hio->m04 = 0xF;
+    hio->mSphRadius = 195.0f;
+    hio->m28 = 0x1000;
+    hio->mEyeRndRotMaxY = 0x2000;
+    hio->mEyeRndRotMaxZ = 0x2000;
+    hio->mParticleTranslationZ = 30;
+    hio->mParticleTranslationY = 0;
+    hio->m08 = 5;
+    hio->mEyeRndRotMaxX = 0x7FFF;
+    hio->mEyeRotScale = 4;
+    hio->m0C = 8;
+    hio->mParticleTranslationX = 0;
+    hio->m24 = 0x4000;
+    return hio;
 }
-VERIFY(0x0211e664, HioDestroy);
-BOOL IsDelete(Actor *a) {
-  WWHD_FUNC(0x0211e678, BOOL, a);
-  return 1;
+/* 0211E5C4 */
+void daDaiocta_Eye_staticInitialize() {
+    l_header.mZero[2] = 0;
+    l_header.mZero[0] = 0;
+    l_header.mZero[3] = 0;
+    l_header.mZero[1] = 0;
+    eyeRegisterGlobalObject(&l_headerVector0);
+    f32 minimum = l_negativePi, maximum = l_positivePi;
+    l_header.mNegativePi = minimum;
+    l_header.mPositivePi = maximum;
+    eyeConstructAngle(&l_header.mAngleTag);
+    eyeRegisterGlobalObject(&l_headerVector1);
+    eyeConstructByte(&l_header.mByteTag);
+    eyeRegisterGlobalObject(&l_headerVector2);
+    daDaiocta_Eye_HIO_construct(&l_HIO);
 }
-VERIFY(0x0211e678, IsDelete);
-void Destroy(Actor *a, u32 flags) {
-  WWHD_FUNC(0x0211e680, void, a, flags);
-  if (!a)
-    return;
-  gabi::call(0x02515860, at<void>(ea(a) + 0x600), 2);
-  gabi::call(0x02515ae8, at<void>(ea(a) + 0x4d4), 2);
-  gabi::call(0x025d50bc, a, 0);
-  if (flags & 1)
-    gabi::call(0x0273af40, a);
+/* 0211E664 */
+void daDaiocta_Eye_HIO_destroy(void* object, u32 flags) {
+    if (object && (flags & 1))
+        operator_delete(object);
 }
-VERIFY(0x0211e680, Destroy);
-void HioMessage(void *object) { WWHD_FUNC(0x0211e6ec, void, object); }
-VERIFY(0x0211e6ec, HioMessage);
-} // namespace OctoEye
+/* 0211E680 */
+void daDaiocta_Eye_destroy(daDaiocta_Eye_c* i_this, u32 flags) {
+    if (!i_this)
+        return;
+    eyeDestroyStts(&i_this->mStts, 2);
+    eyeDestroySph(&i_this->mSph, 2);
+    eyeDestroyActor(i_this, 0);
+    if (flags & 1)
+        operator_delete(i_this);
+}
+/* 0211E6EC */
+void daDaiocta_Eye_HIO_genMessage(void* object) {}
+/* WWHD glue
+str 1000D568
+str 1000D4F0
+str 1000D504
+data l_HIO 10463A68
+data l_currentModel 104B462C
+data l_currentMtx 104B4868
+data l_sph_src 101B411C
+data search_data 101B417C
+data scale_table 101B4194
+data l_header 10463A4C
+data l_headerVector0 101B41B4
+data l_headerVector1 101B41C0
+data l_headerVector2 101B41CC
+data l_negativePi 1000D560
+data l_positivePi 1000D564
+data l_resourceControl 101F4F28
+data mode_proc 1000D518
+ext 026066C4 void* eyeGetResource(void*, SafeString*, u32)
+ext 025E1AA4 void eyeMonsterSound(u32, cXyz*, u32, u32, s8)
+ext 02552B60 JntHit_c* eyeCreateJntHit(J3DModel*, const JointHitData*, s32)
+ext 020CB92C BOOL eyeBombCheckState(fopAc_ac_c*, s32)
+ext 025D4ED0 void eyeInitActor(fopAc_ac_c*)
+ext 025E80D0 void eyeConstructBrk(mDoExt_brkAnm*)
+ext 025E7C6C void eyeConstructBtk(mDoExt_btkAnm*)
+ext 025166F0 void eyeConstructSph(dCcD_Sph*)
+ext 0200BD2C void eyeConstructStts(dCcD_Stts*)
+ext 02515DA0 void eyeConstructGlobalStts(void*)
+ext 025A5894 void eyeConstructCallback(dPa_followEcallBack*, u32, u32)
+ext 025E1FD8 void eyeEnemyDamage()
+ext 02587BE0 void eyeScaleAnime(be<f32>*, const be<f32>*, s32, be<s32>*, f32, f32, f32)
+ext 02552BE8 void eyeInitJntHio(void*)
+ext 028F026C void eyeRegisterGlobalObject(HeaderVector*)
+ext 028ED6F8 void eyeConstructAngle(u8*)
+ext 028EAB2C void eyeConstructByte(u8*)
+ext 02515860 void eyeDestroyStts(dCcD_Stts*, s32)
+ext 02515AE8 void eyeDestroySph(dCcD_Sph*, s32)
+ext 025D50BC void eyeDestroyActor(fopAc_ac_c*, s32)
+ext 025E8154 void eyeInitBrk(mDoExt_brkAnm*, J3DModelData*, J3DAnmTevRegKey*, s32, s32, f32, s32, s32, s32, s32)
+ext 025E7CE0 void eyeInitBtk(mDoExt_btkAnm*, J3DModelData*, J3DAnmTextureSRTKey*, s32, s32, f32, s32, s32, s32, s32)
+ext 025A847C JPABaseEmitter* eyeParticleSet(dPa_control_c*, u32, u32, const cXyz*, const csXyz*, const cXyz*, u32, dPa_followEcallBack*, s32, const void*, const void*, u32)
+ext 0200E240 void eyeSetCollision(cCcS*, dCcD_Sph*)
+ext 024F17D4 f32 eyeGetWaterHeight(cXyz*)
+ext 025626A4 void eyeSetLighting(void*, s32, cXyz*, dKy_tevstr_c*)
+ext 02562F5C void eyeModelLighting(void*, J3DModel*, dKy_tevstr_c*)
+ext 02555D0C void* eyeGetLighting()
+ext 025E2DE0 void eyeModelUpdate(J3DModel*, s32)
+ext 0200F428 void eyeAddAngle(be<s16>*, s16, s16, s16)
+ext 02018C8C void eyeSetSphereRadius(cM3dGSph*, f32)
+ext 02018D40 void eyeSetSphereCenter(cM3dGSph*, cXyz*)
+*/

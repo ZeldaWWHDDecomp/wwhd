@@ -1,593 +1,756 @@
 /* Spiked Skull Hammer switch. Derived game source;
  */
 #include "d/actor/d_a_obj_shmrgrd.h"
-static constexpr u32 list_address=0x101CCB54,damage_address=0x101CCB58,dir_address=0x101CCB5C;
-static void* member(daObjShmrgrd_c* a,u32 offset) { return gabi::at<void>(gabi::ea(a)+offset);
-  }
-static void sound(daObjShmrgrd_c* a,u32 id) { s32 reverb=dComIfGp_getReverb(a->current.roomNo);
-  gabi::call(0x025E1A40,id,&a->eyePos,0,reverb);
-  }
-static daObjShmrgrd_c* search_target_next(daObjShmrgrd_c* a,daObjShmrgrd_c* target) {
- WWHD_FUNC(0x0238EEF4,daObjShmrgrd_c*,a,target);
- auto cur=gabi::at<daObjShmrgrd_c>(gabi::load<u32>(list_address));
- while(cur) { auto next=(daObjShmrgrd_c*)cur->mpNext;
-  if(next==target)return cur;
-  cur=next;
-  }
- return nullptr;
+#include "gc_api/m_Do/m_Do_mtx.h"
+#include "d/d_cc_uty.h"
+#include "gc_api/JSystem/JUTAssert.h"
+#include "gc_api/d/actor/d_a_player.h"
+const char daObjShmrgrd_c::M_arcname[8] = "Shmrgrd";
+using ShmrgrdResourceControl = gptr<u8>;
+static ShmrgrdResourceControl resourceControl = {};
+const gc_tu_data gc_tu = {.safeString = 0x1002F430};
+using ShmrgrdPointer = gptr<daObjShmrgrd_c>;
+using ShmrgrdMode = gabi::ptmf<void (daObjShmrgrd_c::*)()>;
+static ShmrgrdMode mode_proc[3] = {};
+static u32 hioStorage[4] = {};
+static ShmrgrdRegistration hioRegistration = {};
+static ShmrgrdRegistration signedCharRegistration = {};
+static ShmrgrdRegistration unsignedCharRegistration = {};
+static f32 minPi = {};
+static f32 maxPi = {};
+static u8 signedCharStorage = {};
+static u8 unsignedCharStorage = {};
+static cXyz particle_scale = {};
+static u32 particleScaleInitialized = {};
+static cXyz particleTranslation = {};
+static u32 particleTranslationInitialized = {};
+static ShmrgrdPointer M_list_p = {};
+static s32 M_damage = {};
+static s16 M_damage_dir = {};
+static cXyz zeroVector = {};
+static cXyz baseZ = {};
+static ShmrgrdSrcCyl M_cyl_src_co = {};
+static ShmrgrdSrcCyl M_cyl_src_tg = {};
+static ShmrgrdSrcCyl M_cyl_src_at = {};
+static ShmrgrdSrcCyl M_cyl_src_gap_co = {};
+s32 prm(daObjShmrgrd_c *, s32, s32);
+void daObjShmrgrd_get_at_v(cXyz *, cXyz *);
+daObjShmrgrd_c *actor_constructor(daObjShmrgrd_c *);
+BOOL solidHeapCB(fopAc_ac_c *);
+s32 jnodeCB(void *, s32);
+
+/* inlined into mode_upper and mode_u_l_init */
+static void sound(daObjShmrgrd_c *a, u32 id) {
+    s32 reverb = dComIfGp_getReverb(a->current.roomNo);
+    shmrgrdSound(id, &a->eyePos, 0, reverb);
 }
-VERIFY(0x0238EEF4,search_target_next);
+/* 0238E8DC */
+daObjShmrgrd_c *actor_constructor(daObjShmrgrd_c *a) {
+
+    if (!a) {
+        a = shmrgrdAllocate(0x9F0);
+        if (!a)
+            return nullptr;
+    }
+    fopAc_ac_c_ct(a);
+    a->__vtbl = ShmrgrdActorVtable;
+    dCcD_Cyl *cylinders[4] = {&a->mCylCo, &a->mCylTg, &a->mCylAt, &a->mCylGapCo};
+    dCcD_Stts *statuses[4] = {&a->mSttsCo, &a->mSttsTg, &a->mSttsAt, &a->mSttsGapCo};
+    for (u32 i = 0; i < 4; i++) {
+        dCcD_Cyl *cyl = cylinders[i];
+        ShmrgrdShapeView *shape = reinterpret_cast<ShmrgrdShapeView *>(cyl->mShapeAttr);
+        shmrgrdConstructGObj(cyl);
+        shape->mShapeVtable = ShmrgrdShapeVtable;
+        shape->mAabVtable = ShmrgrdAabVtable;
+        shmrgrdConstructCyl(&cyl->mCyl);
+        // HD: GHS emitted different vtable store orders for the middle colliders.
+        if (i == 1 || i == 2) {
+            cyl->mCyl.__vtbl = ShmrgrdGeometryVtable;
+            shape->mShapeVtable = ShmrgrdCylinderShapeVtable;
+            cyl->__vtbl_hitinf = ShmrgrdHitVtable;
+        } else {
+            shape->mShapeVtable = ShmrgrdCylinderShapeVtable;
+            cyl->__vtbl_hitinf = ShmrgrdHitVtable;
+            cyl->mCyl.__vtbl = ShmrgrdGeometryVtable;
+        }
+        dCcD_Stts_ct(statuses[i]);
+    }
+    shmrgrdConstructSmoke(&a->mSmokeCb, 1);
+    a->mSmokeCb.mColor.r = 0xA0;
+    a->mSmokeCb.mColor.b = 0x80;
+    a->mSmokeCb.mColor.g = 0xA0;
+    a->mpNext = nullptr;
+    a->mSmokeCb.mColor.a = 0xFF;
+    return a;
+}
+
+/* 0238ED74 */
+BOOL solidHeapCB(fopAc_ac_c *i_this) {
+
+    return static_cast<daObjShmrgrd_c *>(i_this)->create_heap();
+}
+
+/* 0238EC78 */
+s32 daObjShmrgrd_c::create_heap() {
+
+    // HD: both SafeString slots exist before the first resource request.
+    gabi::Local<be<u32>[2]> request1, request2;
+    (*request1)[0] = gabi::guest_addr(M_arcname);
+    (*request1)[1] = gc_tu.safeString;
+    J3DModelData *data = static_cast<J3DModelData *>(
+        shmrgrdGetResource(resourceControl, &(*request1)[0], dRes_INDEX_SHMRGRD_BDL_SHMRGRD_e));
+    if (!data) {
+        JUTAssertion::showAssert("d_a_obj_shmrgrd.cpp", 0x21A, "mdl_data != 0");
+        return 0;
+    }
+    J3DModel *model = mDoExt_J3DModel__create(data, 0, 0x11020203);
+    mpModel = model;
+    if (!model)
+        return 0;
+    data->getJointNodePointer(SHMRGRD_JNT_HIT_e)->mCallBack = gabi::guest_fn((const void *)jnodeCB);
+    model = mpModel;
+    model->setUserArea(gabi::ea(this));
+    (*request2)[0] = gabi::guest_addr(M_arcname);
+    (*request2)[1] = gc_tu.safeString;
+    cBgD_t *bg = static_cast<cBgD_t *>(
+        shmrgrdGetResource(resourceControl, &(*request2)[0], dRes_INDEX_SHMRGRD_DZB_HGBASE_e));
+    dBgW *world = shmrgrdBgNewSet(bg, dBgW::MOVE_BG_e, &mMtx);
+    mpBgW = world;
+    return world != nullptr;
+}
+
+/* 0238EF8C */
+s32 daObjShmrgrd_c::_create() {
+
+    u32 condition = actor_condition;
+    if (!(condition & ShmrgrdInitialized)) {
+        if (gabi::ea(this)) {
+            actor_constructor(this);
+            condition = actor_condition;
+        }
+        actor_condition = condition | ShmrgrdInitialized;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, M_arcname);
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void *)solidHeapCB), 0x12A0))
+        return cPhs_ERROR_e;
+    J3DModel *model = mpModel;
+    cullMtx = model ? gabi::ea(&model->mBaseTransformMtx) : 0;
+    init_mtx();
+    fopAcM_setCullSizeBox(this, -90.0f, 0.0f, -90.0f, 90.0f, 120.0f, 90.0f);
+    mSttsCo.Init(255, 255, this);
+    mCylCo.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_co));
+    mCylCo.mStts = &mSttsCo;
+    mSttsTg.Init(255, 255, this);
+    mCylTg.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_tg));
+    u32 flags = mCylTg.mGObjTg.mSPrm;
+    mCylTg.mStts = &mSttsTg;
+    mCylTg.mGObjTg.mSPrm = flags | 4;
+    mSttsAt.Init(255, 255, this);
+    mCylAt.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_at));
+    mCylAt.mStts = &mSttsAt;
+    mSttsGapCo.Init(255, 255, this);
+    mCylGapCo.Set(reinterpret_cast<dCcD_SrcCyl *>(&M_cyl_src_gap_co));
+    flags = (u32)attention_info.flags;
+    mVSpeed = 0;
+    mAngleZ = 0;
+    mAngleX = 0;
+    mScaleY = 1;
+    m85C = 0;
+    mCrushState = 0;
+    mAngleSpeedX = 0;
+    mAngleSpeedZ = 0;
+    attention_info.distances[fopAc_Attn_TYPE_MISC_e] = 0x2D;
+    mCylGapCo.mStts = &mSttsGapCo;
+    attention_info.flags = flags | fopAc_Attn_LOCKON_MISC_e;
+    mCrushTimer = 0;
+    mTargetHFrac = 0;
+    s32 sw = prm(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+    bool set = false;
+    if (sw != 255) {
+        s8 room = home.roomNo;
+        dSv_info_c *save = gabi::at<dSv_info_c>(dComIfGs_ea() + 0x20);
+        set = shmrgrdIsSwitch(save, sw, room) != 0;
+    }
+    if (set) {
+        mCurHFrac = 0;
+        mTopPos = -85;
+        mode_lower_init();
+    } else {
+        mCurHFrac = 1;
+        mTopPos = 0;
+        mode_upper_init();
+    }
+    register_list();
+    model = mpModel;
+    MTXCopy(model->getBaseTRMtx(), &mMtx);
+    dBgS *bgsp = dComIfG_Bgsp();
+    bgsp->Regist(mpBgW, this);
+    return cPhs_COMPLEATE_e;
+}
+
+/* 0238F2CC */
+bool daObjShmrgrd_c::_delete() {
+
+    if (heap) {
+        auto bg = (dBgW *)mpBgW;
+        if (bg && bg->ChkUsed()) {
+            dBgS *bgsp = dComIfG_Bgsp();
+            bgsp->Release(mpBgW);
+            mpBgW = nullptr;
+        }
+    }
+    leave_list();
+    mSmokeCb.remove();
+    dComIfG_resDelete(&mPhs, M_arcname);
+    return true;
+}
+
+/* 0238EEF4 */
+daObjShmrgrd_c *daObjShmrgrd_c::search_target_next(daObjShmrgrd_c *target) {
+
+    daObjShmrgrd_c *cur = M_list_p;
+    while (cur) {
+        auto next = (daObjShmrgrd_c *)cur->mpNext;
+        if (next == target)
+            return cur;
+        cur = next;
+    }
+    return nullptr;
+}
+
+/* 0238EF28 */
 void daObjShmrgrd_c::register_list() {
- WWHD_FUNC(0x0238EF28,void,this);
-  mpNext=nullptr;
- if(gabi::load<u32>(list_address)==0)gabi::store<u32>(list_address,gabi::ea(this));
- else { auto last=gabi::call<daObjShmrgrd_c*>(0x0238EEF4,this,nullptr);
-  if(last)last->mpNext=this;
-  }
+
+    mpNext = nullptr;
+    if (M_list_p == nullptr)
+        M_list_p = this;
+    else {
+        auto last = search_target_next(nullptr);
+        if (last)
+            last->mpNext = this;
+    }
 }
-VERIFY(0x0238EF28,&daObjShmrgrd_c::register_list);
+
+/* 0238F254 */
 void daObjShmrgrd_c::leave_list() {
- WWHD_FUNC(0x0238F254,void,this);
- auto prev=gabi::call<daObjShmrgrd_c*>(0x0238EEF4,this,this);
-  auto next=(daObjShmrgrd_c*)mpNext;
- if(prev)prev->mpNext=next;
- else if(!next)gabi::store<u32>(list_address,0);
- else if(gabi::ea(this)==gabi::load<u32>(list_address))gabi::store<u32>(list_address,gabi::ea(next));
+
+    auto prev = search_target_next(this);
+    auto next = (daObjShmrgrd_c *)mpNext;
+    if (prev)
+        prev->mpNext = next;
+    else if (!next)
+        M_list_p = nullptr;
+    else if (this == M_list_p)
+        M_list_p = next;
 }
-VERIFY(0x0238F254,&daObjShmrgrd_c::leave_list);
-void daObjShmrgrd_c::mode_lower_init() {
- WWHD_FUNC(0x0238EE5C,void,this);
-  u32 flags=gabi::load<u32>(gabi::ea(this)+0x39C);
-  mMode=2;
-  gabi::store<u32>(gabi::ea(this)+0x39C,flags&~1u);
-  mTargetHFrac=0;
+
+/* 0238F7F0 */
+daObjShmrgrd_c *daObjShmrgrd_c::search_gap() {
+
+    daObjShmrgrd_c *node = M_list_p;
+    gabi::Local<cXyz> delta, flat, vec;
+    while (node) {
+        shmrgrdSubtract(&node->current.pos, delta.get(), &current.pos);
+        s32 mode = node->mMode;
+        f32 x = delta->x, z = delta->z;
+        if (mode == 0) {
+            flat->x = x;
+            flat->y = 0;
+            flat->z = z;
+            f32 square = PSVECSquareMag(flat.get());
+            f32 mag = shmrgrdSqrt(square);
+            // HD: unordered magnitudes take the near-node path.
+            if (!(mag > 165)) {
+                mDoMtx_stack_c::YrotS(shape_angle.y);
+                PSMTXMultVec(mDoMtx_stack_c::get(), &baseZ, vec.get());
+                f32 dot = gabi::fmadds((f32)vec->x, x, (f32)vec->z * z);
+                if (dot > 0)
+                    return node;
+            }
+        }
+        node = (daObjShmrgrd_c *)node->mpNext;
+    }
+    return nullptr;
 }
-VERIFY(0x0238EE5C,&daObjShmrgrd_c::mode_lower_init);
-void daObjShmrgrd_c::mode_upper_init() {
- WWHD_FUNC(0x0238EE80,void,this);
-  gabi::call(0x02018428,member(this,0x640),112.5f);
-  gabi::call(0x02018428,member(this,0x4D4),112.5f);
-  mMode=0;
-  mTargetHFrac=1;
+
+/* 0238E84C */
+void daObjShmrgrd_get_at_v(cXyz *out, cXyz *other) {
+
+    fopAc_ac_c *player = dComIfGp_getPlayer(0);
+    gabi::Local<cXyz> dir;
+    shmrgrdSubtract(&player->current.pos, dir.get(), other);
+    out->x = (f32)zeroVector.x;
+    out->y = (f32)zeroVector.y;
+    out->z = (f32)zeroVector.z;
+    if (shmrgrdNormalizeRS(dir.get()) != 0) {
+        f32 y = dir->y, x = dir->x, z = dir->z;
+        out->x = x;
+        out->z = z;
+        out->y = y;
+    }
 }
-VERIFY(0x0238EE80,&daObjShmrgrd_c::mode_upper_init);
-void daObjShmrgrd_c::mode_u_l_init() {
- WWHD_FUNC(0x0238FC84,void,this);
-  sound(this,0x69B2);
-  mMode=1;
-  mTargetHFrac=0;
+
+/* 0238F928 */
+void daObjShmrgrd_c::set_gap_co() {
+
+    auto gap = search_gap();
+    if (!gap)
+        return;
+    gabi::Local<cXyz> delta, pos, at;
+    shmrgrdSubtract(&gap->current.pos, delta.get(), &current.pos);
+    pos->y = delta->y;
+    pos->x = delta->x;
+    pos->z = delta->z;
+    PSVECScale(pos.get(), pos.get(), 0.5f);
+    PSVECAdd(pos.get(), &current.pos, pos.get());
+    mCylGapCo.mCyl.SetC(pos.get());
+    daObjShmrgrd_get_at_v(at.get(), pos.get());
+    f32 y = at->y, x = at->x;
+    mCylGapCo.mGObjAt.mVec.y = y;
+    f32 z = at->z;
+    mCylGapCo.mGObjAt.mVec.x = x;
+    mCylGapCo.mGObjAt.mVec.z = z;
+    shmrgrdRegisterCollision(dComIfG_Ccsp(), &mCylGapCo);
 }
-VERIFY(0x0238FC84,&daObjShmrgrd_c::mode_u_l_init);
-void daObjShmrgrd_c::crush_start() { WWHD_FUNC(0x0238F4F0,void,this);
-  mCrushState=1;
-  }
-VERIFY(0x0238F4F0,&daObjShmrgrd_c::crush_start);
-void daObjShmrgrd_c::crush_proc() {
- WWHD_FUNC(0x0238F790,void,this);
- if(mCrushState==1) { mCrushTimer=18;
-  mCrushState=2;
-  mScaleY=0.2f;
-  }
- else if(mCrushState==2) { s16 timer=(s16)((s16)mCrushTimer-1);
-  mCrushTimer=timer;
-  if(timer>0)return;
-  mCrushState=0;
-  mScaleY=1;
-  }
-}
-VERIFY(0x0238F790,&daObjShmrgrd_c::crush_proc);
-void daObjShmrgrd_c::vib_proc() {
- WWHD_FUNC(0x0238F734,void,this);
- f32 z=mAngleZ,x=mAngleX,sz=mAngleSpeedZ,sx=mAngleSpeedX;
- f32 nz=sz+gabi::fnmsubs(sz,0.18f,-(z*0.99f)), nx=sx+gabi::fnmsubs(sx,0.18f,-(x*0.99f));
- mAngleSpeedZ=nz;
-  mAngleSpeedX=nx;
-  mAngleZ=z+nz;
-  mAngleX=x+nx;
-}
-VERIFY(0x0238F734,&daObjShmrgrd_c::vib_proc);
-void daObjShmrgrd_c::calc_top_pos() {
- WWHD_FUNC(0x0238F6D8,void,this);
- f32 target=mTargetHFrac,cur=mCurHFrac,speed=mVSpeed;
- f32 next=gabi::fnmsubs(cur-target,0.8f,speed);
-  next=gabi::fnmsubs(next,0.55f,next);
- f32 height=cur+next;
-  if(height-1.0f>=0)height=1;
- mVSpeed=next;
-  mCurHFrac=height;
-  mTopPos=(1.0f-height)*-85.0f;
-}
-VERIFY(0x0238F6D8,&daObjShmrgrd_c::calc_top_pos);
-void daObjShmrgrd_c::vib_start(s16 dir,f32 mag) {
- WWHD_FUNC(0x0238FC50,void,this,dir,mag);
- u32 table=0x104A44F8+((u32)(u16)dir>>3)*8;
- mAngleSpeedZ=gabi::load<f32>(table+4)*mag;
-  mAngleSpeedX=gabi::load<f32>(table)*mag;
-}
-VERIFY(0x0238FC50,&daObjShmrgrd_c::vib_start);
-s32 daObjShmrgrd_c::check_player_angle(fopAc_ac_c* actor) {
- WWHD_FUNC(0x0238F360,s32,this,actor);
- s32 angle=gabi::call<s32>(0x0200F93C,&actor->current.pos,&current.pos);
-  s16 delta=(s16)((s16)actor->shape_angle.y-angle);
- return (u32)((s32)delta+0x1FFF)<0x3FFF;
-}
-VERIFY(0x0238F360,&daObjShmrgrd_c::check_player_angle);
-static s32 prm(daObjShmrgrd_c* a,s32 width,s32 shift) { WWHD_FUNC(0x02390008,s32,a,width,shift);
-  u32 w=(u32)width&63, sh=(u32)shift&63;
-  u32 mask=(w<32?1u<<w:0)-1;
-  return (sh<32?(u32)a->mParameters>>sh:0)&mask;
-  }
-VERIFY(0x02390008,prm);
-void daObjShmrgrd_c::mode_upper() {
- WWHD_FUNC(0x0238FCE0,void,this);
- s32 damage=gabi::load<s32>(damage_address);
- if(damage==1) { gabi::call(0x0238FC84,this);
-  return;
-  }
- s32 index=gabi::call<s32>(0x02390008,this,8,0);
- if(index!=255) { s8 room=home.roomNo;
-  u32 save=gabi::load<u32>(0x101F84DC);
-  if(gabi::call<s32>(0x025BA0C0,gabi::at<void>(save+0x20),index,room)!=0) { gabi::call(0x0238FC84,this);
-  return;
-  } damage=gabi::load<s32>(damage_address);
-  }
- if(damage==2) { s16 dir=gabi::load<s16>(dir_address);
-  gabi::call(0x0238FC50,this,dir,1.0f);
-  sound(this,0x69B8);
-  }
-}
-VERIFY(0x0238FCE0,&daObjShmrgrd_c::mode_upper);
-void daObjShmrgrd_c::mode_u_l() {
- WWHD_FUNC(0x0238FDDC,void,this);
- if((f32)mCurHFrac>0)return;
- s32 index=gabi::call<s32>(0x02390008,this,8,0);
- if(index!=255) { s8 room=home.roomNo;
-  u32 save=gabi::load<u32>(0x101F84DC);
-  gabi::call(0x025B9E38,gabi::at<void>(save+0x20),index,room);
-  }
- gabi::call(0x0238EE5C,this);
-}
-VERIFY(0x0238FDDC,&daObjShmrgrd_c::mode_u_l);
+
+/* 0238EE3C */
 void daObjShmrgrd_c::init_mtx() {
- WWHD_FUNC(0x0238EE3C,void,this);
-  u32 model=gabi::ea((J3DModel*)mpModel);
-  f32 x=scale.x,y=scale.y,z=scale.z;
-  gabi::store<f32>(model+0xBC,x);
-  gabi::store<f32>(model+0xC0,y);
-  gabi::store<f32>(model+0xC4,z);
-  gabi::call(0x0238ED78,this);
+
+    J3DModel *model = mpModel;
+    f32 x = scale.x, y = scale.y, z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    set_mtx();
 }
-VERIFY(0x0238EE3C,&daObjShmrgrd_c::init_mtx);
+
+/* 0238ED78 */
 void daObjShmrgrd_c::set_mtx() {
- WWHD_FUNC(0x0238ED78,void,this);
- auto matrix=gabi::at<Mtx34>(0x1048D0CC);
-  f32 x=current.pos.x,y=current.pos.y,z=current.pos.z;
- gabi::call(0x028E93CC,matrix,x,y,z);
-  gabi::call(0x025F1B48,matrix,(s16)shape_angle.x,(s16)shape_angle.y,(s16)shape_angle.z);
- f32 values[12];
-  for(u32 i=0;i<12;i++)values[i]=gabi::load<f32>(0x1048D0CC+i*4);
-  u32 model=gabi::ea((J3DModel*)mpModel);
-  for(u32 i=0;i<12;i++)gabi::store<f32>(model+0xC8+i*4,values[i]);
+
+    auto matrix = mDoMtx_stack_c::get();
+    f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    shmrgrdZXYrotM(matrix, (s16)shape_angle.x, (s16)shape_angle.y, (s16)shape_angle.z);
+    f32 values[12];
+    for (u32 i = 0; i < 12; i++)
+        values[i] = reinterpret_cast<be<f32> *>(mDoMtx_stack_c::get())[i];
+    J3DModel *model = mpModel;
+    for (u32 i = 0; i < 12; i++)
+        reinterpret_cast<be<f32> *>(&model->mBaseTransformMtx)[i] = values[i];
 }
-VERIFY(0x0238ED78,&daObjShmrgrd_c::set_mtx);
-static void empty_lower(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238FFF8,void,a);
-  }
-VERIFY(0x0238FFF8,empty_lower);
-static void empty_callback(void* a) { WWHD_FUNC(0x0238FFFC,void,a);
-  }
-VERIFY(0x0238FFFC,empty_callback);
-static s32 is_delete(daObjShmrgrd_c* a) { WWHD_FUNC(0x02390000,s32,a);
-  return 1;
-  }
-VERIFY(0x02390000,is_delete);
-static void global_destructor(void* a,s32 flags) { WWHD_FUNC(0x0238FF30,void,a,flags);
-  if(a&&((u32)flags&1))gabi::call(0x0273AF40,a);
-  }
-VERIFY(0x0238FF30,global_destructor);
-static void actor_destructor(daObjShmrgrd_c* a,s32 flags) {
- WWHD_FUNC(0x0238FF44,void,a,flags);
-  if(!a)return;
- gabi::call(0x02515860,member(a,0x930),2);
-  gabi::call(0x02515A70,member(a,0x800),2);
- gabi::call(0x02515860,member(a,0x7C4),2);
-  gabi::call(0x02515A70,member(a,0x694),2);
- gabi::call(0x02515860,member(a,0x658),2);
-  gabi::call(0x02515A70,member(a,0x528),2);
- gabi::call(0x02515860,member(a,0x4EC),2);
-  gabi::call(0x02515A70,member(a,0x3BC),2);
- gabi::call(0x025D50BC,a,0);
-  if((u32)flags&1)gabi::call(0x0273AF40,a);
+
+/* 0238F360 */
+s32 daObjShmrgrd_c::check_player_angle(fopAc_ac_c *actor) {
+
+    s32 angle = shmrgrdTargetAngle(&actor->current.pos, &current.pos);
+    s16 delta = (s16)((s16)actor->shape_angle.y - angle);
+    return (u32)((s32)delta + 0x1FFF) < 0x3FFF;
 }
-VERIFY(0x0238FF44,actor_destructor);
-static void get_at_vector(cXyz* out,cXyz* other) {
- WWHD_FUNC(0x0238E84C,void,out,other);
- u32 play=gabi::call<u32>(0x025200D4), player=gabi::load<u32>(play+0x5B2C);
-  gabi::Local<cXyz> dir;
- gabi::call(0x0201ADE0,gabi::at<cXyz>(player+0x314),dir.get(),other);
- out->x=gabi::load<f32>(0x101FFBA8);
-  out->y=gabi::load<f32>(0x101FFBAC);
-  out->z=gabi::load<f32>(0x101FFBB0);
- if(gabi::call<s32>(0x0201B47C,dir.get())!=0) { f32 y=dir->y,x=dir->x,z=dir->z;
-  out->x=x;
-  out->z=z;
-  out->y=y;
-  }
+
+/* 0238F3B4 */
+void daObjShmrgrd_c::set_damage() {
+
+    daPy_py_c *player = static_cast<daPy_py_c *>(dComIfGp_getPlayer(0));
+    // HD: use endian storage for the raw byte read, including sparse guest pointers.
+    u8 cut = reinterpret_cast<ShmrgrdPlayerView *>(player)->mCutType;
+    M_damage = 0;
+    M_damage_dir = 0;
+    mSttsTg.Move();
+    if (!mCylTg.ChkTgHit())
+        return;
+    void *hit = mCylTg.GetTgHitObj();
+    auto actor = mCylTg.GetTgHitAc();
+    if (cCcD_Obj_ChkAtType(hit, cc_uty::AT_TYPE_SKULL_HAMMER) && actor &&
+        (s16)actor->mProfName == cc_uty::fpcNm_PLAYER_e) {
+        s32 front = check_player_angle(actor);
+        if (front && (cut == ShmrgrdCut::CUT_TYPE_HAMMER_FRONTSWING ||
+                      cut == ShmrgrdCut::CUT_TYPE_JUMPCUT_HAMMER))
+            M_damage = 1;
+        else if (cut == ShmrgrdCut::CUT_TYPE_HAMMER_SIDESWING) {
+            f32 x = (f32)mCylTg.mGObjTg.mRVec.x, z = (f32)mCylTg.mGObjTg.mRVec.z;
+            s16 direction = cM_atan2s(x, z);
+            M_damage_dir = direction;
+            M_damage = 2;
+        }
+    }
+    shmrgrdHitSeStart(&eyePos, (s8)current.roomNo, &mCylTg, 0x11);
+    shmrgrdHitEffHibana(this, &mCylTg);
+    mCylTg.ClrTgHit();
 }
-VERIFY(0x0238E84C,get_at_vector);
-static void set_damage(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F3B4,void,a);
- u32 play=gabi::call<u32>(0x025200D4);
-  u32 player=gabi::load<u32>(play+0x5B2C);
-  u8 cut=gabi::load<u8>(player+0x3AC);
- gabi::store<s32>(damage_address,0);
-  gabi::store<s16>(dir_address,0);
- gabi::call(0x02515E50,member(a,0x674));
- if(!gabi::call<s32>(0x025162A4,member(a,0x528)))return;
- u32 hit=gabi::call<u32>(0x02516300,member(a,0x528));
-  auto actor=gabi::call<fopAc_ac_c*>(0x02515BBC,member(a,0x5BC));
- if((gabi::load<u32>(hit+0x10)&0x10000)&&actor&&gabi::load<s16>(gabi::ea(actor)+0xE)==0xA8) {
-  s32 front=gabi::call<s32>(0x0238F360,a,actor);
-  if(front&&(cut==0x12||cut==0x13))gabi::store<s32>(damage_address,1);
-  else if(cut==0x11) { f32 x=gabi::load<f32>(gabi::ea(a)+0x5E8),z=gabi::load<f32>(gabi::ea(a)+0x5F0);
-  s16 direction=gabi::call<s16>(0x020195B0,x,z);
-  gabi::store<s16>(dir_address,direction);
-  gabi::store<s32>(damage_address,2);
-  }
- }
- gabi::call(0x023129C4,&a->eyePos,(s8)a->current.roomNo,member(a,0x528),0x11);
- gabi::call(0x02312E54,a,member(a,0x528));
-  gabi::call(0x0251621C,member(a,0x528));
+
+/* 0238FC50 */
+void daObjShmrgrd_c::vib_start(s16 dir, f32 mag) {
+
+    // HD: retain separate table reads around the first output store (alias witnesses).
+    mAngleSpeedZ = cM_scos(dir) * mag;
+    mAngleSpeedX = cM_ssin(dir) * mag;
 }
-VERIFY(0x0238F3B4,set_damage);
-static daObjShmrgrd_c* search_gap(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F7F0,daObjShmrgrd_c*,a);
- auto node=gabi::at<daObjShmrgrd_c>(gabi::load<u32>(list_address));
-  gabi::Local<cXyz> delta,flat,vec;
- while(node) {
-  gabi::call(0x0201ADE0,&node->current.pos,delta.get(),&a->current.pos);
-  s32 mode=node->mMode;
-  f32 x=delta->x,z=delta->z;
-  if(mode==0) { flat->x=x;
-  flat->y=0;
-  flat->z=z;
-  f32 square=gabi::call<f32>(0x028E8DD0,flat.get());
-  f32 mag=gabi::call<f32>(0x028F4384,square);
-   if(!(mag>165)) { gabi::call(0x025F1884,gabi::at<Mtx34>(0x1048D0CC),(s16)a->shape_angle.y);
-  gabi::call(0x028E8F64,gabi::at<Mtx34>(0x1048D0CC),gabi::at<cXyz>(0x101FFBCC),vec.get());
-    f32 dot=gabi::fmadds((f32)vec->x,x,(f32)vec->z*z);
-  if(dot>0)return node;
-   }
-  }
-  node=(daObjShmrgrd_c*)node->mpNext;
- }
- return nullptr;
+
+/* 0238F734 */
+void daObjShmrgrd_c::vib_proc() {
+
+    f32 z = mAngleZ, x = mAngleX, sz = mAngleSpeedZ, sx = mAngleSpeedX;
+    f32 nz = sz + gabi::fnmsubs(sz, 0.18f, -(z * 0.99f)),
+        nx = sx + gabi::fnmsubs(sx, 0.18f, -(x * 0.99f));
+    mAngleSpeedZ = nz;
+    mAngleSpeedX = nx;
+    mAngleZ = z + nz;
+    mAngleX = x + nx;
 }
-VERIFY(0x0238F7F0,search_gap);
-static void set_gap_co(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F928,void,a);
- auto gap=gabi::call<daObjShmrgrd_c*>(0x0238F7F0,a);
-  if(!gap)return;
- gabi::Local<cXyz> delta,pos,at;
- gabi::call(0x0201ADE0,&gap->current.pos,delta.get(),&a->current.pos);
-  pos->y=delta->y;
-  pos->x=delta->x;
-  pos->z=delta->z;
- gabi::call(0x028E8E64,pos.get(),pos.get(),0.5f);
-  gabi::call(0x028E8D88,pos.get(),&a->current.pos,pos.get());
- gabi::call(0x020182E0,member(a,0x918),pos.get());
-  gabi::call(0x0238E84C,at.get(),pos.get());
- f32 y=at->y,x=at->x;
-  gabi::store<f32>(gabi::ea(a)+0x880,y);
-  f32 z=at->z;
-  gabi::store<f32>(gabi::ea(a)+0x87C,x);
-  gabi::store<f32>(gabi::ea(a)+0x884,z);
- u32 play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),member(a,0x800));
+
+/* 0238F4F0 */
+void daObjShmrgrd_c::crush_start() { mCrushState = 1; }
+
+/* 0238F790 */
+void daObjShmrgrd_c::crush_proc() {
+
+    if (mCrushState == 1) {
+        mCrushTimer = 18;
+        mCrushState = 2;
+        mScaleY = 0.2f;
+    } else if (mCrushState == 2) {
+        s16 timer = (s16)((s16)mCrushTimer - 1);
+        mCrushTimer = timer;
+        if (timer > 0)
+            return;
+        mCrushState = 0;
+        mScaleY = 1;
+    }
 }
-VERIFY(0x0238F928,set_gap_co);
-static daObjShmrgrd_c* actor_constructor(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238E8DC,daObjShmrgrd_c*,a);
- if(!a) { a=gabi::call<daObjShmrgrd_c*>(0x0273AD10,0x9F0);
-  if(!a)return nullptr;
-  }
- fopAc_ac_c_ct(a);
-  a->__vtbl=0x1002F458;
- for(u32 i=0;i<4;i++) {
-  u32 off=0x3BC+i*0x16C;
-  gabi::call(0x02515FB8,member(a,off));
-  gabi::store<u32>(gabi::ea(a)+off+0x114,0x100015A8);
-  gabi::store<u32>(gabi::ea(a)+off+0x110,0x1002F448);
-  gabi::call(0x02018590,member(a,off+0x118));
-  if(i==1||i==2) { gabi::store<u32>(gabi::ea(a)+off+0x12C,0x1004B150);
-  gabi::store<u32>(gabi::ea(a)+off+0x114,0x1004B160);
-  gabi::store<u32>(gabi::ea(a)+off+0x3C,0x1004B108);
-  }
-  else { gabi::store<u32>(gabi::ea(a)+off+0x114,0x1004B160);
-  gabi::store<u32>(gabi::ea(a)+off+0x3C,0x1004B108);
-  gabi::store<u32>(gabi::ea(a)+off+0x12C,0x1004B150);
-  }
-  gabi::call(0x0200BD2C,member(a,off+0x130));
-  gabi::call(0x02515DA0,member(a,off+0x14C));
-  gabi::store<u32>(gabi::ea(a)+off+0x148,0x1004AE88);
-  gabi::store<u32>(gabi::ea(a)+off+0x14C,0x1004AEC0);
- }
- gabi::call(0x025A5B18,member(a,0x99C),1);
- gabi::store<u8>(gabi::ea(a)+0x9B2,0xA0);
-  gabi::store<u8>(gabi::ea(a)+0x9B4,0x80);
-  gabi::store<u8>(gabi::ea(a)+0x9B3,0xA0);
-  a->mpNext=nullptr;
-  gabi::store<u8>(gabi::ea(a)+0x9B5,0xFF);
- return a;
+
+/* 0238F4FC */
+void daObjShmrgrd_c::eff_crush() {
+
+    if (mMode == MODE_UPPER) {
+        dPa_control_c *manager = dComIfGp_getParticle();
+        manager->set(0, 0x81B7, &current.pos, 0, 0, 255, 0, -1, 0, 0, 0);
+        manager = dComIfGp_getParticle();
+        manager->set(0, 0x81B8, &current.pos, 0, 0, 255, 0, -1, 0, 0, 0);
+    }
+    if (!particleScaleInitialized) {
+        particle_scale.x = 1.5f;
+        particle_scale.z = 1;
+        particle_scale.y = 1.5f;
+        particleScaleInitialized = 1;
+    }
+    dPa_control_c *manager = dComIfGp_getParticle();
+    JPABaseEmitter *emitter =
+        manager->set(2, 0x2027, &current.pos, 0, 0, 200,
+                     reinterpret_cast<dPa_levelEcallBack *>(&mSmokeCb), -1, 0, 0, &particle_scale);
+    if (!emitter)
+        return;
+    ShmrgrdEmitterView *view = reinterpret_cast<ShmrgrdEmitterView *>(emitter);
+    view->mMaxFrame = 1;
+    view->mLifeTime = 45;
+    view->mRate = 30;
+    view->mInitialVelOmni = 0;
+    view->mInitialVelAxis = 38;
+    if (!particleTranslationInitialized) {
+        particleTranslationInitialized = 1;
+        particleTranslation.z = 0;
+        particleTranslation.y = 15;
+        particleTranslation.x = 0;
+    }
+    view->mLocalTranslation.x = (f32)particleTranslation.x;
+    view->mLocalTranslation.y = (f32)particleTranslation.y;
+    view->mLocalTranslation.z = (f32)particleTranslation.z;
 }
-VERIFY(0x0238E8DC,actor_constructor);
-static s32 create_heap(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238EC78,s32,a);
-  gabi::Local<be<u32>[2]> request1,request2;
- (*request1)[0]=0x1002F510;
-  (*request1)[1]=0x1002F430;
- u32 data=gabi::call<u32>(0x026066C4,gabi::at<void>(gabi::load<u32>(0x101F4F28)),request1.get(),4);
- if(!data) { gabi::call(0x0273AA24,gabi::at<void>(0x1002F478),0x21A,gabi::at<void>(0x1002F48C));
-  return 0;
-  }
- auto model=gabi::call<J3DModel*>(0x025E38E0,gabi::at<void>(data),0,0x11020203);
-  a->mpModel=model;
-  if(!model)return 0;
- u32 count=gabi::load<u32>(data+4),joint=gabi::load<u32>(data+8);
-  if(count>2)joint+=0x38;
-  gabi::store<u32>(joint+8,0x0238EA88);
- u32 loaded=gabi::ea((J3DModel*)a->mpModel);
-  gabi::store<u32>(loaded+0xB8,gabi::ea(a));
- (*request2)[0]=0x1002F510;
-  (*request2)[1]=0x1002F430;
- u32 bg=gabi::call<u32>(0x026066C4,gabi::at<void>(gabi::load<u32>(0x101F4F28)),request2.get(),7);
- auto world=gabi::call<dBgW*>(0x024F2478,gabi::at<void>(bg),1,&a->mMtx);
-  a->mpBgW=world;
-  return world!=nullptr;
+
+/* 0238F6D8 */
+void daObjShmrgrd_c::calc_top_pos() {
+
+    f32 target = mTargetHFrac, cur = mCurHFrac, speed = mVSpeed;
+    f32 next = gabi::fnmsubs(cur - target, 0.8f, speed);
+    next = gabi::fnmsubs(next, 0.55f, next);
+    f32 height = cur + next;
+    if (height - 1.0f >= 0)
+        height = 1;
+    mVSpeed = next;
+    mCurHFrac = height;
+    mTopPos = (1.0f - height) * -85.0f;
 }
-VERIFY(0x0238EC78,create_heap);
-static s32 heap_callback(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238ED74,s32,a);
-  return gabi::call<s32>(0x0238EC78,a);
-  }
-VERIFY(0x0238ED74,heap_callback);
-static bool delete_actor(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F2CC,bool,a);
- if(a->heap) { auto bg=(dBgW*)a->mpBgW;
-  if(bg&&gabi::load<u32>(gabi::ea(bg))<0x100) { u32 play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x020087EC,gabi::at<void>(play+0x12A0),(dBgW*)a->mpBgW);
-  a->mpBgW=nullptr;
-  } }
- gabi::call(0x0238F254,a);
-  u32 vtable=gabi::load<u32>(gabi::ea(a)+0x99C);
-  gabi::call(gabi::load<u32>(vtable+0x44),member(a,0x99C));
- gabi::call(0x025204C8,&a->mPhase,gabi::at<void>(0x1002F510));
-  return true;
+
+/* 0238EA88 */
+s32 jnodeCB(void *joint, s32 phase) {
+
+    if (phase != 0)
+        return 1;
+    J3DModel *model = j3dSys.getModel();
+    daObjShmrgrd_c *actor = static_cast<daObjShmrgrd_c *>(model->getUserArea());
+    J3DJoint *node = J3DNode_toJoint(static_cast<J3DNode *>(joint));
+    u16 index = reinterpret_cast<ShmrgrdJointView *>(node)->mJntNo;
+    J3DMtxBuffer_hd *matrices = model->mpMtxBuffer;
+    Mtx34 *base = gabi::at<Mtx34>(matrices->mpAnmMtx);
+    u16 flags = matrices->mFlags;
+    matrices->mFlags = flags | 0x10;
+    MTXCopy(&base[index], mDoMtx_stack_c::get());
+    f32 scale = actor->mScaleY;
+    mDoMtx_stack_c::transM(0, 20.0f * (1.0f - scale), 0);
+    mDoMtx_stack_c::scaleM(1, actor->mScaleY, 1);
+    mDoMtx_stack_c::transM(0, actor->mTopPos, 0);
+    gabi::Local<cXyz> axis;
+    gabi::Local<Quaternion> quat;
+    axis->y = 1;
+    axis->x = actor->mAngleX;
+    axis->z = actor->mAngleZ;
+    shmrgrdQuatRotBaseY2(quat.get(), axis.get());
+    mDoMtx_stack_c::transM(0, -20, 0);
+    mDoMtx_stack_c::quatM(quat.get());
+    mDoMtx_stack_c::transM(0, 20, 0);
+    matrices = model->mpMtxBuffer;
+    flags = matrices->mFlags;
+    base = gabi::at<Mtx34>(matrices->mpAnmMtx);
+    matrices->mFlags = flags | 0x10;
+    f32 values[12];
+    for (u32 i = 0; i < 12; i++)
+        values[i] = reinterpret_cast<be<f32> *>(mDoMtx_stack_c::get())[i];
+    for (u32 i = 0; i < 12; i++)
+        reinterpret_cast<be<f32> *>(&base[index])[i] = values[i];
+    MTXCopy(mDoMtx_stack_c::get(), J3DSys::mCurrentMtx);
+    return 1;
 }
-VERIFY(0x0238F2CC,delete_actor);
-static s32 draw_actor(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238FBB8,s32,a);
- u32 light=gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4,gabi::at<void>(light),0,&a->current.pos,&a->tevStr);
- light=gabi::call<u32>(0x02555D0C);
-  gabi::call(0x02562F5C,gabi::at<void>(light),(J3DModel*)a->mpModel,&a->tevStr);
- u32 play=gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634,gabi::load<u32>(play+0x5D70));
- play=gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638,gabi::load<u32>(play+0x5D74));
-  gabi::call(0x025E2DE0,(J3DModel*)a->mpModel,0);
- play=gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4634,gabi::load<u32>(play+0x5D78));
- play=gabi::call<u32>(0x025200D4);
-  gabi::store<u32>(0x104B4638,gabi::load<u32>(play+0x5D7C));
-  return 1;
+
+/* 0238EE80 */
+void daObjShmrgrd_c::mode_upper_init() {
+
+    mCylTg.mCyl.SetH(112.5f);
+    mCylCo.mCyl.SetH(112.5f);
+    mMode = MODE_UPPER;
+    mTargetHFrac = 1;
 }
-VERIFY(0x0238FBB8,draw_actor);
-static s32 create_actor(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238EF8C,s32,a);
- u32 condition=a->actor_condition;
-  if(!(condition&8)) { if(a) { gabi::call(0x0238E8DC,a);
-  condition=a->actor_condition;
-  } a->actor_condition=condition|8;
-  }
- s32 phase=gabi::call<s32>(0x02520460,&a->mPhase,gabi::at<void>(0x1002F510));
-  if(phase!=4)return phase;
- if(!gabi::call<s32>(0x025D63E8,a,gabi::at<void>(0x0238ED74),0x12A0))return 5;
- u32 model=gabi::ea((J3DModel*)a->mpModel);
-  a->cullMtx=model?model+0xC8:0;
-  gabi::call(0x0238EE3C,a);
- gabi::call(0x025D674C,a,-90.0f,0.0f,-90.0f,90.0f,120.0f,90.0f);
- gabi::call(0x02515F14,member(a,0x4EC),255,255,a);
-  gabi::call(0x02516518,member(a,0x3BC),gabi::at<void>(0x101CCBB0));
-  gabi::store<u32>(gabi::ea(a)+0x400,gabi::ea(a)+0x4EC);
- gabi::call(0x02515F14,member(a,0x658),255,255,a);
-  gabi::call(0x02516518,member(a,0x528),gabi::at<void>(0x101CCBF4));
- u32 flags=gabi::load<u32>(gabi::ea(a)+0x5BC);
-  gabi::store<u32>(gabi::ea(a)+0x56C,gabi::ea(a)+0x658);
-  gabi::store<u32>(gabi::ea(a)+0x5BC,flags|4);
- gabi::call(0x02515F14,member(a,0x7C4),255,255,a);
-  gabi::call(0x02516518,member(a,0x694),gabi::at<void>(0x1002F518));
-  gabi::store<u32>(gabi::ea(a)+0x6D8,gabi::ea(a)+0x7C4);
- gabi::call(0x02515F14,member(a,0x930),255,255,a);
-  gabi::call(0x02516518,member(a,0x800),gabi::at<void>(0x1002F55C));
- flags=gabi::load<u32>(gabi::ea(a)+0x39C);
-  a->mVSpeed=0;
-  a->mAngleZ=0;
-  a->mAngleX=0;
-  a->mScaleY=1;
-  a->mUnused=0;
-  a->mCrushState=0;
-  a->mAngleSpeedX=0;
-  a->mAngleSpeedZ=0;
- gabi::store<u8>(gabi::ea(a)+0x388,0x2D);
-  gabi::store<u32>(gabi::ea(a)+0x844,gabi::ea(a)+0x930);
-  gabi::store<u32>(gabi::ea(a)+0x39C,flags|1);
-  a->mCrushTimer=0;
-  a->mTargetHFrac=0;
- s32 sw=gabi::call<s32>(0x02390008,a,8,0);
-  bool set=false;
- if(sw!=255) { s8 room=a->home.roomNo;
-  u32 save=gabi::load<u32>(0x101F84DC);
-  set=gabi::call<s32>(0x025BA0C0,gabi::at<void>(save+0x20),sw,room)!=0;
-  }
- if(set) { a->mCurHFrac=0;
-  a->mTopPos=-85;
-  gabi::call(0x0238EE5C,a);
-  } else { a->mCurHFrac=1;
-  a->mTopPos=0;
-  gabi::call(0x0238EE80,a);
-  }
- gabi::call(0x0238EF28,a);
-  model=gabi::ea((J3DModel*)a->mpModel);
-  gabi::call(0x028E90D4,gabi::at<Mtx34>(model?model+0xC8:0),&a->mMtx);
- u32 play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x024EEA6C,gabi::at<void>(play+0x12A0),(dBgW*)a->mpBgW,a);
-  return 4;
+
+/* 0238FCE0 */
+void daObjShmrgrd_c::mode_upper() {
+
+    s32 damage = (s32)M_damage;
+    if (damage == 1) {
+        mode_u_l_init();
+        return;
+    }
+    s32 index = prm(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+    if (index != 255) {
+        s8 room = home.roomNo;
+        dSv_info_c *save = gabi::at<dSv_info_c>(dComIfGs_ea() + 0x20);
+        if (shmrgrdIsSwitch(save, index, room) != 0) {
+            mode_u_l_init();
+            return;
+        }
+        damage = (s32)M_damage;
+    }
+    if (damage == 2) {
+        s16 dir = (s16)M_damage_dir;
+        vib_start(dir, 1.0f);
+        sound(this, JA_SE_OBJ_HAMMER_SW_SWING);
+    }
 }
-VERIFY(0x0238EF8C,create_actor);
-static s32 execute_actor(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F9F4,s32,a);
- gabi::call(0x0238F3B4,a);
-  if(gabi::load<s32>(damage_address)==1) { gabi::call(0x0238F4F0,a);
-  gabi::call(0x0238F4FC,a);
-  }
- u32 entry=0x1002F4E4+(u32)a->mMode*8;
-  s16 index=gabi::load<s16>(entry+2),adjust=gabi::load<s16>(entry);
- u32 actor=gabi::ea(a)+(s32)adjust,target;
- if(index<0)target=gabi::load<u32>(entry+4);
- else { s16 offset=gabi::load<s16>(entry+6);
-  u32 table=gabi::load<u32>(actor+(s32)offset);
-  target=gabi::load<u32>(table+(u32)(u16)index*8+4);
-  }
- gabi::call(target,gabi::at<daObjShmrgrd_c>(actor));
-  gabi::call(0x0238F6D8,a);
-  gabi::call(0x0238F734,a);
-  gabi::call(0x0238F790,a);
-  gabi::call(0x0238ED78,a);
- if(a->mMode==0) {
-  gabi::call(0x020182E0,member(a,0x640),&a->current.pos);
-  u32 play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),member(a,0x528));
-  gabi::call(0x020182E0,member(a,0x4D4),&a->current.pos);
-  play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),member(a,0x3BC));
-  gabi::Local<cXyz> at;
-  gabi::call(0x0238E84C,at.get(),&a->current.pos);
-  f32 y=at->y,z=at->z,x=at->x;
-  gabi::store<f32>(gabi::ea(a)+0x714,y);
-  gabi::store<f32>(gabi::ea(a)+0x718,z);
-  gabi::store<f32>(gabi::ea(a)+0x710,x);
-  gabi::call(0x020182E0,member(a,0x7AC),&a->current.pos);
-  play=gabi::call<u32>(0x025200D4);
-  gabi::call(0x0200E240,gabi::at<void>(play+0x26A4),member(a,0x694));
-  gabi::call(0x0238F928,a);
- }
- f32 height=(f32)a->current.pos.y+(f32)a->mTopPos;
-  gabi::store<f32>(gabi::ea(a)+0x394,height+125);
-  a->eyePos.y=height+75;
- if(a->heap) { auto bg=(dBgW*)a->mpBgW;
-  if(bg&&gabi::load<u32>(gabi::ea(bg))<0x100)gabi::call(0x024F43DC,bg);
-  } return 1;
+
+/* 0238FC84 */
+void daObjShmrgrd_c::mode_u_l_init() {
+
+    sound(this, JA_SE_OBJ_HAMMER_SW_ON);
+    mMode = MODE_U_L;
+    mTargetHFrac = 0;
 }
-VERIFY(0x0238F9F4,execute_actor);
-static s32 create_method(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238FE54,s32,a);
-  return gabi::call<s32>(0x0238EF8C,a);
-  }
-VERIFY(0x0238FE54,create_method);
-static bool delete_method(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238FE58,bool,a);
-  return gabi::call<bool>(0x0238F2CC,a);
-  }
-VERIFY(0x0238FE58,delete_method);
-static s32 execute_method(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238FE5C,s32,a);
-  return gabi::call<s32>(0x0238F9F4,a);
-  }
-VERIFY(0x0238FE5C,execute_method);
-static s32 draw_method(daObjShmrgrd_c* a) { WWHD_FUNC(0x0238FE60,s32,a);
-  return gabi::call<s32>(0x0238FBB8,a);
-  }
-VERIFY(0x0238FE60,draw_method);
-static void effects_crush(daObjShmrgrd_c* a) {
- WWHD_FUNC(0x0238F4FC,void,a);
- if(a->mMode==0) {
-  u32 play=gabi::call<u32>(0x025200D4);
-  u32 manager=gabi::load<u32>(play+0x5AB0);
-  gabi::call(0x025A847C,gabi::at<void>(manager),0,0x81B7,&a->current.pos,0,0,255,0,-1,0,0,0);
-  play=gabi::call<u32>(0x025200D4);
-  manager=gabi::load<u32>(play+0x5AB0);
-  gabi::call(0x025A847C,gabi::at<void>(manager),0,0x81B8,&a->current.pos,0,0,255,0,-1,0,0,0);
- }
- if(!gabi::load<u32>(0x1046BEA4)) { gabi::store<f32>(0x1046BE8C,1.5f);
-  gabi::store<f32>(0x1046BE94,1);
-  gabi::store<f32>(0x1046BE90,1.5f);
-  gabi::store<u32>(0x1046BEA4,1);
-  }
- u32 play=gabi::call<u32>(0x025200D4),manager=gabi::load<u32>(play+0x5AB0);
- u32 emitter=gabi::call<u32>(0x025A847C,gabi::at<void>(manager),2,0x2027,&a->current.pos,0,0,200,member(a,0x99C),-1,0,0,gabi::at<cXyz>(0x1046BE8C));
- if(!emitter)return;
- gabi::store<u32>(emitter+0x5C,1);
-  gabi::store<u16>(emitter+0x60,45);
-  gabi::store<f32>(emitter+0x34,30);
-  gabi::store<f32>(emitter+0x68,0);
-  gabi::store<f32>(emitter+0x6C,38);
- if(!gabi::load<u32>(0x1046BEA8)) { gabi::store<u32>(0x1046BEA8,1);
-  gabi::store<f32>(0x1046BEA0,0);
-  gabi::store<f32>(0x1046BE9C,15);
-  gabi::store<f32>(0x1046BE98,0);
-  }
- gabi::store<f32>(emitter+0x14,gabi::load<f32>(0x1046BE98));
-  gabi::store<f32>(emitter+0x18,gabi::load<f32>(0x1046BE9C));
-  gabi::store<f32>(emitter+0x1C,gabi::load<f32>(0x1046BEA0));
+
+/* 0238FDDC */
+void daObjShmrgrd_c::mode_u_l() {
+    // HD: unordered heights also complete the descent.
+
+    if ((f32)mCurHFrac > 0)
+        return;
+    s32 index = prm(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+    if (index != 255) {
+        s8 room = home.roomNo;
+        dSv_info_c *save = gabi::at<dSv_info_c>(dComIfGs_ea() + 0x20);
+        shmrgrdOnSwitch(save, index, room);
+    }
+    mode_lower_init();
 }
-VERIFY(0x0238F4FC,effects_crush);
-static s32 joint_callback(void* joint,s32 phase) {
- WWHD_FUNC(0x0238EA88,s32,joint,phase);
-  if(phase!=0)return 1;
- u32 model=gabi::load<u32>(0x104B462C),actor=gabi::load<u32>(model+0xB8);
- u32 node=gabi::call<u32>(0x027F7878,joint);
-  u16 index=gabi::load<u16>(node+4);
-  u32 matrices=gabi::load<u32>(model+0x2C);
- u32 base=gabi::load<u32>(matrices+0x10);
-  u16 flags=gabi::load<u16>(matrices+4);
-  gabi::store<u16>(matrices+4,flags|0x10);
- gabi::call(0x028E90D4,gabi::at<Mtx34>(base+(u32)index*0x30),gabi::at<Mtx34>(0x1048D0CC));
- f32 scale=gabi::load<f32>(actor+0x978);
-  gabi::call(0x025F24E0,0.0f,20.0f*(1.0f-scale),0.0f);
- gabi::call(0x025F2518,1.0f,gabi::load<f32>(actor+0x978),1.0f);
-  gabi::call(0x025F24E0,0.0f,gabi::load<f32>(actor+0x998),0.0f);
- gabi::Local<cXyz> axis;
-  gabi::Local<be<f32>[4]> quat;
- axis->y=1;
-  axis->x=gabi::load<f32>(actor+0x980);
-  axis->z=gabi::load<f32>(actor+0x97C);
- gabi::call(0x02312548,quat.get(),axis.get());
-  gabi::call(0x025F24E0,0.0f,-20.0f,0.0f);
-  gabi::call(0x025F25CC,quat.get());
-  gabi::call(0x025F24E0,0.0f,20.0f,0.0f);
- matrices=gabi::load<u32>(model+0x2C);
-  flags=gabi::load<u16>(matrices+4);
-  base=gabi::load<u32>(matrices+0x10);
-  gabi::store<u16>(matrices+4,flags|0x10);
- f32 values[12];
-  for(u32 i=0;i<12;i++)values[i]=gabi::load<f32>(0x1048D0CC+i*4);
-  for(u32 i=0;i<12;i++)gabi::store<f32>(base+(u32)index*0x30+i*4,values[i]);
- gabi::call(0x028E90D4,gabi::at<Mtx34>(0x1048D0CC),gabi::at<Mtx34>(0x104B4868));
-  return 1;
+
+/* 0238EE5C */
+void daObjShmrgrd_c::mode_lower_init() {
+
+    u32 flags = (u32)attention_info.flags;
+    mMode = MODE_LOWER;
+    attention_info.flags = flags & ~fopAc_Attn_LOCKON_MISC_e;
+    mTargetHFrac = 0;
 }
-VERIFY(0x0238EA88,joint_callback);
-static void initialize_globals() {
- WWHD_FUNC(0x0238FE64,void);
- gabi::store<u32>(0x1046BE88,0);
-  gabi::store<u32>(0x1046BE84,0);
-  gabi::store<u32>(0x1046BE80,0);
-  gabi::store<u32>(0x1046BE7C,0);
- gabi::call(0x028F026C,gabi::at<void>(0x101CCB30));
-  gabi::store<f32>(0x1046BE70,-3.1415927410125732f);
-  gabi::store<f32>(0x1046BE74,3.1415927410125732f);
- gabi::call(0x028ED6F8,gabi::at<void>(0x1046BE78));
-  gabi::call(0x028F026C,gabi::at<void>(0x101CCB3C));
-  gabi::call(0x028EAB2C,gabi::at<void>(0x1046BE79));
-  gabi::call(0x028F026C,gabi::at<void>(0x101CCB48));
- gabi::store<f32>(0x101CCC30,50);
-  gabi::store<f32>(0x101CCC34,112.5f);
-  gabi::store<f32>(0x101CCBEC,79);
-  gabi::store<f32>(0x101CCBF0,112.5f);
+
+/* 0238FFF8 */
+void daObjShmrgrd_c::mode_lower() {}
+
+/* 0238F9F4 */
+s32 daObjShmrgrd_c::_execute() {
+
+    set_damage();
+    if ((s32)M_damage == 1) {
+        crush_start();
+        eff_crush();
+    }
+    (this->*mode_proc[(u32)mMode])();
+    calc_top_pos();
+    vib_proc();
+    crush_proc();
+    set_mtx();
+    if (mMode == MODE_UPPER) {
+        mCylTg.mCyl.SetC(&current.pos);
+        shmrgrdRegisterCollision(dComIfG_Ccsp(), &mCylTg);
+        mCylCo.mCyl.SetC(&current.pos);
+        shmrgrdRegisterCollision(dComIfG_Ccsp(), &mCylCo);
+        gabi::Local<cXyz> at;
+        daObjShmrgrd_get_at_v(at.get(), &current.pos);
+        f32 y = at->y, z = at->z, x = at->x;
+        mCylAt.mGObjAt.mVec.y = y;
+        mCylAt.mGObjAt.mVec.z = z;
+        mCylAt.mGObjAt.mVec.x = x;
+        mCylAt.mCyl.SetC(&current.pos);
+        shmrgrdRegisterCollision(dComIfG_Ccsp(), &mCylAt);
+        set_gap_co();
+    }
+    f32 height = (f32)current.pos.y + (f32)mTopPos;
+    attention_info.position.y = height + 125;
+    eyePos.y = height + 75;
+    if (heap) {
+        auto bg = (dBgW *)mpBgW;
+        if (bg && bg->ChkUsed())
+            bg->Move();
+    }
+    return 1;
 }
-VERIFY(0x0238FE64,initialize_globals);
+
+/* 0238FBB8 */
+s32 daObjShmrgrd_c::_draw() {
+
+    settingTevStruct(dKy_getEnvlight(), 0, &current.pos, &tevStr);
+    dScnKy_env_light_c *light = dKy_getEnvlight();
+    setLightTevColorType(light, mpModel, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelUpdateDL(mpModel, 0);
+    dComIfGd_setList();
+    return 1;
+}
+
+/* 0238FE54 */
+s32 create_method(daObjShmrgrd_c *a) { return a->_create(); }
+
+/* 0238FE58 */
+bool delete_method(daObjShmrgrd_c *a) { return a->_delete(); }
+
+/* 0238FE5C */
+s32 execute_method(daObjShmrgrd_c *a) { return a->_execute(); }
+
+/* 0238FE60 */
+s32 draw_method(daObjShmrgrd_c *a) { return a->_draw(); }
+
+/* 02390000 */
+s32 is_delete(daObjShmrgrd_c *a) { return 1; }
+
+// HD: compiler-generated and template code of this translation unit.
+/* 0238FE64 */
+void initialize_globals() {
+
+    hioStorage[3] = 0;
+    hioStorage[2] = 0;
+    hioStorage[1] = 0;
+    hioStorage[0] = 0;
+    shmrgrdRegisterDestructor(&hioRegistration);
+    minPi = -3.1415927410125732f;
+    maxPi = 3.1415927410125732f;
+    shmrgrdConstructSignedChar(&signedCharStorage);
+    shmrgrdRegisterDestructor(&signedCharRegistration);
+    shmrgrdConstructUnsignedChar(&unsignedCharStorage);
+    shmrgrdRegisterDestructor(&unsignedCharRegistration);
+    M_cyl_src_tg.mCyl.mRadius = 50;
+    M_cyl_src_tg.mCyl.mHeight = 112.5f;
+    M_cyl_src_co.mCyl.mRadius = 79;
+    M_cyl_src_co.mCyl.mHeight = 112.5f;
+}
+
+/* 0238FF30 */
+void global_destructor(void *a, s32 flags) {
+
+    if (a && ((u32)flags & 1))
+        shmrgrdDelete(a);
+}
+
+/* 0238FF44 */
+void actor_destructor(daObjShmrgrd_c *a, s32 flags) {
+
+    if (!a)
+        return;
+    dCcD_Stts_dt(&a->mSttsGapCo, 2);
+    dCcD_Cyl_dt(&a->mCylGapCo, 2);
+    dCcD_Stts_dt(&a->mSttsAt, 2);
+    dCcD_Cyl_dt(&a->mCylAt, 2);
+    dCcD_Stts_dt(&a->mSttsTg, 2);
+    dCcD_Cyl_dt(&a->mCylTg, 2);
+    dCcD_Stts_dt(&a->mSttsCo, 2);
+    dCcD_Cyl_dt(&a->mCylCo, 2);
+    shmrgrdDestroyActor(a, 0);
+    if ((u32)flags & 1)
+        shmrgrdDelete(a);
+}
+
+/* 0238FFFC */
+void empty_callback(void *a) {}
+
+/* 02390008 */
+s32 prm(daObjShmrgrd_c *a, s32 width, s32 shift) {
+
+    u32 w = (u32)width & 63, sh = (u32)shift & 63;
+    u32 mask = (w < 32 ? 1u << w : 0) - 1;
+    return (sh < 32 ? (u32)a->mParameters >> sh : 0) & mask;
+}
+/* WWHD glue (tools/verify/autoglue.py)
+data M_list_p 101CCB54 nocheck
+data M_damage 101CCB58 nocheck
+data M_damage_dir 101CCB5C nocheck
+data zeroVector 101FFBA8 nocheck
+data baseZ 101FFBCC nocheck
+data M_cyl_src_co 101CCBB0 nocheck
+data M_cyl_src_tg 101CCBF4 nocheck
+data M_cyl_src_at 1002F518 nocheck
+data M_cyl_src_gap_co 1002F55C nocheck
+ext 0200F93C s32 shmrgrdTargetAngle(cXyz*, cXyz*)
+ext 025BA0C0 s32 shmrgrdIsSwitch(dSv_info_c*, s32, s32)
+ext 025B9E38 void shmrgrdOnSwitch(dSv_info_c*, s32, s32)
+ext 0273AF40 void shmrgrdDelete(void*)
+ext 025D50BC void shmrgrdDestroyActor(fopAc_ac_c*, s32)
+ext 0201ADE0 void shmrgrdSubtract(const cXyz*, cXyz*, const cXyz*)
+ext 0201B47C s32 shmrgrdNormalizeRS(cXyz*)
+ext 028F4384 f32 shmrgrdSqrt(f32)
+ext 023129C4 void shmrgrdHitSeStart(cXyz*, s32, dCcD_Cyl*, s32)
+ext 02312E54 void shmrgrdHitEffHibana(fopAc_ac_c*, dCcD_Cyl*)
+ext 0273AD10 daObjShmrgrd_c* shmrgrdAllocate(u32)
+ext 025A5B18 void shmrgrdConstructSmoke(dPa_smokeEcallBack*, s32)
+ext 024F2478 dBgW* shmrgrdBgNewSet(cBgD_t*, u32, Mtx34*)
+ext 025F1B48 void shmrgrdZXYrotM(Mtx34*, s16, s16, s16)
+ext 02312548 void shmrgrdQuatRotBaseY2(Quaternion*, cXyz*)
+ext 0200E240 void shmrgrdRegisterCollision(cCcS*, dCcD_GObjInf*)
+data resourceControl 101F4F28 nocheck
+str 1002F510 "Shmrgrd"
+str 1002F478 "d_a_obj_shmrgrd.cpp"
+str 1002F48C "mdl_data != 0"
+ext 026066C4 void* shmrgrdGetResource(u8*, be<u32>*, s32)
+ext 02515FB8 void shmrgrdConstructGObj(dCcD_GObjInf*)
+ext 02018590 void shmrgrdConstructCyl(cM3dGCyl*)
+data hioStorage 1046BE7C nocheck
+data hioRegistration 101CCB30 nocheck
+data signedCharRegistration 101CCB3C nocheck
+data unsignedCharRegistration 101CCB48 nocheck
+data minPi 1046BE70 nocheck
+data maxPi 1046BE74 nocheck
+data signedCharStorage 1046BE78 nocheck
+data unsignedCharStorage 1046BE79 nocheck
+data particle_scale 1046BE8C nocheck
+data particleScaleInitialized 1046BEA4 nocheck
+data particleTranslation 1046BE98 nocheck
+data particleTranslationInitialized 1046BEA8 nocheck
+data mode_proc 1002F4E4 nocheck
+ext 028F026C void shmrgrdRegisterDestructor(ShmrgrdRegistration*)
+ext 028ED6F8 void shmrgrdConstructSignedChar(be<u8>*)
+ext 028EAB2C void shmrgrdConstructUnsignedChar(be<u8>*)
+ext 025E1A40 void shmrgrdSound(u32, cXyz*, s32, s32)
+*/

@@ -1,98 +1,189 @@
-/* WWHD housi particle motion; native02567F68. */
-#include "bindings.h"
-namespace rain_housi {
-static u32 ld(u32 p){return gabi::load<u32>(p);}
-static f32 lf(u32 p){return gabi::load<f32>(p);}
-static void sf(u32 p,f32 v){gabi::store<f32>(p,v);}
-static u16 lh(u32 p){return gabi::load<u16>(p);}
-static void sh(u32 p,u16 v){gabi::store<u16>(p,v);}
-static void sw(u32 p,u32 v){gabi::store<u32>(p,v);}
-static void sb(u32 p,u8 v){gabi::store<u8>(p,v);}
-static void move(){
- WWHD_FUNC(0x02567F68,void);
- // Original live frame SP08..SPA7: vectors12, derived ground query84.
- gabi::Local<u8[160]> scratch; u32 b=gabi::ea(scratch.get());
- auto sp=[&](u32 off){return b+off-8;};
- u32 env=gabi::call<u32>(0x02555D0C), packet=ld(env+0xA78);
- u32 game=gabi::call<u32>(0x025200D4), camera=ld(game+0x5AF8);
- gabi::call<u32>(0x025200D4);
- gabi::call(0x0257DB28,sp(0x38)); gabi::call(0x02008E0C,sp(0x50));
- f32 zero=lf(0x1004F528);
- sw(sp(0x60),0x1004F3F4);sw(sp(0x70),0x1004F404);
- sw(sp(0x50),sp(0x90));sw(sp(0x54),sp(0x9C));sw(sp(0x9C),0x1004F414);
- for(u32 k=0x94;k<=0x99;k++)sb(sp(k),0);
- sw(sp(0xA0),1);sw(sp(0x90),0x1004F424);sb(sp(0x9A),0);
- if(ld(gabi::call<u32>(0x02555D0C)+0xA74)!=0 ||
-    ld(gabi::call<u32>(0x02555D0C)+0xA74)!=0 || !(lf(packet+0x5E64)>zero))
-  sh(packet+0x5E68,ld(gabi::call<u32>(0x02555D0C)+0xA74));
- u32 wanted=ld(gabi::call<u32>(0x02555D0C)+0xA74);
- f32 rate=lf(0x1004F554), inc=lf(0x1004F580);
- gabi::call(0x0200ECD4,packet+0x5E64,wanted?lf(0x1004F550):zero,rate,lf(0x1004F590),inc);
- s32 count=gabi::load<s16>(packet+0x5E68);
- if(count!=0){
-  f32 d=lf(0x1004F6D0);gabi::call(0x0256401C,camera,sp(0x20),d,d);
-  gabi::call<f32>(0x02578348);
-  count=gabi::load<s16>(packet+0x5E68);
-  f32 drag=lf(0x1004F588),fall=lf(0x1004F740),degrees=lf(0x1004F6D8),wind=lf(0x1004F730);
-  f32 limit=lf(0x1004F728),step=lf(0x1004F734),rot=lf(0x1004F73C),force=lf(0x1004F72C);
-  f32 radius=lf(0x1004F720),half=lf(0x1004F57C),floor=lf(0x1004F738),min=lf(0x1004F724);
-  for(s32 i=count-1;i>=0;--i){
-   u32 p=packet+0x9C+u32(i)*0x50;u8 state=gabi::load<u8>(p);f32 alpha=lf(packet+0x5E64);
-   auto position=[&](){for(u32 k=0;k<12;k+=4)sf(sp(8)+k,lf(p+0x10+k)+lf(p+4+k));};
-   if(state==0){
-    f32 speed=gabi::call<f32>(0x020198D8,lf(0x1004F744));sh(p+0x3C,0);sf(p+0x34,speed+rate);
-    f32 angle=gabi::call<f32>(0x02019918,lf(0x1004F748));sh(p+0x4C,u16(gabi::ftoi(angle)));
-    for(u32 k=0;k<12;k+=4)sf(p+0x10+k,lf(sp(0x20)+k));
-    sf(p+4,gabi::call<f32>(0x02019918,radius));sf(p+8,radius);
-    sf(p+12,gabi::call<f32>(0x02019918,radius));sf(p+0x40,zero);sf(p+0x48,zero);
-    sf(p+0x28,gabi::call<f32>(0x020198D8,degrees));sf(p+0x2C,gabi::call<f32>(0x020198D8,degrees));
-    f32 zrot=gabi::call<f32>(0x020198D8,degrees),baseY=lf(p+0x14),offsetY=lf(p+8);
-    u8 now=gabi::load<u8>(p);sf(p+0x30,zrot);sf(p+0x1C,zero);sf(p+0x20,zero);sf(p+0x24,zero);
-    if(baseY+offsetY<lf(0x1004F74C))sf(p+8,(lf(0x1004F750)-baseY)+lf(0x1004F6B8));
-    sb(p,now+1);
-   }else if(state<=3){
-    if(state==1){
-     u32 a=u16(gabi::call<u32>(0x02019510,lf(p+0x28)));f32 wx=lf(sp(0x38)),x=lf(p+4),speed=lf(p+0x34);
-     f32 sine=lf(0x104A44F8+(a>>3)*8);x=gabi::fmadds(wx*wind,speed,x);sf(p+4,x);
-     f32 y=gabi::fmadds(lf(sp(0x3C))*wind,speed,lf(p+8));sf(p+8,y);
-     x=gabi::fmadds(sine,speed,x);f32 z=gabi::fmadds(lf(sp(0x40))*wind,speed,lf(p+12));
-     f32 ry=lf(p+0x2C);y=gabi::fnmsubs(speed,fall,y);sf(p+12,z);sf(p+8,y);sf(p+4,x);
-     a=u16(gabi::call<u32>(0x02019510,ry));speed=lf(p+0x34);y=lf(p+8);
-     y=gabi::fmadds(lf(0x104A44F8+(a>>3)*8),speed*half,y);f32 rz=lf(p+0x30);sf(p+8,y);
-     a=u16(gabi::call<u32>(0x02019510,rz));speed=lf(p+0x34);z=lf(p+12);
-     z=gabi::fmadds(lf(0x104A44F8+(a>>3)*8),speed,z);
-     f32 rx=lf(p+0x28),ry2=lf(p+0x2C),rz2=lf(p+0x30);sf(p+12,z);
-     sf(p+0x28,rx+rot);sf(p+0x2C,ry2+step);sf(p+0x30,rz2+inc);
+// Housi particle motion, GameCube names and verified HD behavior.
+#include "d/d_kankyo_rain_drawSibuki.h"
+namespace RainDraw {
+/* 02567F68 */
+void dKyr_housi_move() {
+    // HD: retain the complete live GHS workspace and destructor sequence.
+    gabi::Local<HousiWork> work;
+    u32 env = getEnvironment();
+    HousiPacket *packet = at<Environment>(env)->mpHousiPacket;
+    u32 game = getGameInfo(), camera = (u32)(at<GameInfo>(game)->camera);
+    getGameInfo();
+    dKyw_get_wind_vecpow(ea(&work->wind));
+    constructGroundCheck(ea(&work->ground));
+    f32 zero = (f32)(*at<be<f32>>(Zero));
+    work->ground.base.cBgS_Chk::__vtbl = GroundCheckVtable;
+    work->ground.base.cBgS_PolyInfo::__vtbl = PolyInfoVtable;
+    work->ground.base.mPolyPassChk = ea(&work->ground.pass);
+    work->ground.base.mGrpPassChk = ea(&work->ground.group);
+    work->ground.group.__vtbl = GroupPassVtable;
+    for (u32 k = 0; k < 6; k++)
+        work->ground.pass.flags[k] = 0;
+    work->ground.group.mGrp = 1;
+    work->ground.pass.__vtbl = PolyPassVtable;
+    work->ground.pass.flags[6] = 0;
+    if ((u32)(at<Environment>(getEnvironment())->mHousiCount) != 0 ||
+        (u32)(at<Environment>(getEnvironment())->mHousiCount) != 0 || !((f32)(packet->field_0x5ddc) > zero))
+        packet->mCount = (u32)(at<Environment>(getEnvironment())->mHousiCount);
+    u32 wanted = (u32)(at<Environment>(getEnvironment())->mHousiCount);
+    f32 rate = (f32)(*at<be<f32>>(Rate)), inc = (f32)(*at<be<f32>>(Increment));
+    cLib_addCalc(ea(&packet->field_0x5ddc), wanted ? (f32)(*at<be<f32>>(One)) : zero, rate,
+                 (f32)(*at<be<f32>>(AlphaStep)), inc);
+    s32 count = (s16)(packet->mCount);
+    if (count != 0) {
+        f32 d = (f32)(*at<be<f32>>(EyeDistance));
+        dKy_set_eyevect_calc2(camera, ea(&work->eye), d, d);
+        dKyw_get_wind_pow();
+        count = (s16)(packet->mCount);
+        f32 drag = (f32)(*at<be<f32>>(Drag)), fall = (f32)(*at<be<f32>>(Fall)),
+            degrees = (f32)(*at<be<f32>>(Degrees)), wind = (f32)(*at<be<f32>>(WindScale));
+        f32 limit = (f32)(*at<be<f32>>(VelocityLimit)), step = (f32)(*at<be<f32>>(MotionStep)),
+            rot = (f32)(*at<be<f32>>(RotationStep)), force = (f32)(*at<be<f32>>(WindForce));
+        f32 radius = (f32)(*at<be<f32>>(Radius)), half = (f32)(*at<be<f32>>(Half)),
+            floor = (f32)(*at<be<f32>>(Floor)), min = (f32)(*at<be<f32>>(MinimumStep));
+        for (s32 i = count - 1; i >= 0; --i) {
+            HOUSI_EFF *effect = at<HOUSI_EFF>(ea(packet) + u32(offsetof(HousiPacket, mEffect)) +
+                                              u32(i) * u32(sizeof(HOUSI_EFF)));
+            u8 state = (u8)(effect->mStatus);
+            f32 alpha = (f32)(packet->field_0x5ddc);
+            auto position = [&]() {
+                for (u32 k = 0; k < 12; k += 4)
+                    work->position.channels[0 + k / 4] =
+                        (f32)(effect->mBasePos.channels[k / 4]) + (f32)(effect->mPos.channels[k / 4]);
+            };
+            if (state == 0) {
+                f32 speed = cM_rndF((f32)(*at<be<f32>>(InitialSpeed)));
+                effect->field_0x3c = 0;
+                effect->field_0x34 = speed + rate;
+                f32 angle = cM_rndFX((f32)(*at<be<f32>>(FullAngle)));
+                effect->field_0x4c = u16(gabi::ftoi(angle));
+                for (u32 k = 0; k < 12; k += 4)
+                    effect->mBasePos.channels[k / 4] = (f32)(work->eye.channels[0 + k / 4]);
+                effect->mPos.value.x = cM_rndFX(radius);
+                effect->mPos.value.y = radius;
+                effect->mPos.value.z = cM_rndFX(radius);
+                effect->mAlpha = zero;
+                effect->field_0x48 = zero;
+                effect->mScale.value.x = cM_rndF(degrees);
+                effect->mScale.value.y = cM_rndF(degrees);
+                f32 zrot = cM_rndF(degrees), baseY = (f32)(effect->mBasePos.value.y),
+                    offsetY = (f32)(effect->mPos.value.y);
+                u8 now = (u8)(effect->mStatus);
+                effect->mScale.value.z = zrot;
+                effect->mSpeed.value.x = zero;
+                effect->mSpeed.value.y = zero;
+                effect->mSpeed.value.z = zero;
+                if (baseY + offsetY < (f32)(*at<be<f32>>(LowestBase)))
+                    effect->mPos.value.y = ((f32)(*at<be<f32>>(BaseResetHeight)) - baseY) +
+                                           (f32)(*at<be<f32>>(BaseHeightOffset));
+                effect->mStatus = now + 1;
+            } else if (state <= 3) {
+                if (state == 1) {
+                    u32 a = u16(cM_rad2s((f32)(effect->mScale.value.x)));
+                    f32 wx = (f32)(work->wind.channels[0]), x = (f32)(effect->mPos.value.x),
+                        speed = (f32)(effect->field_0x34);
+                    f32 sine = (f32)(at<SinCos>(SinCosTable + (a >> 3) * 8)->sine);
+                    x = gabi::fmadds(wx * wind, speed, x);
+                    effect->mPos.value.x = x;
+                    f32 y = gabi::fmadds((f32)(work->wind.channels[1]) * wind, speed,
+                                         (f32)(effect->mPos.value.y));
+                    effect->mPos.value.y = y;
+                    x = gabi::fmadds(sine, speed, x);
+                    f32 z = gabi::fmadds((f32)(work->wind.channels[2]) * wind, speed,
+                                         (f32)(effect->mPos.value.z));
+                    f32 ry = (f32)(effect->mScale.value.y);
+                    y = gabi::fnmsubs(speed, fall, y);
+                    effect->mPos.value.z = z;
+                    effect->mPos.value.y = y;
+                    effect->mPos.value.x = x;
+                    a = u16(cM_rad2s(ry));
+                    speed = (f32)(effect->field_0x34);
+                    y = (f32)(effect->mPos.value.y);
+                    y = gabi::fmadds((f32)(at<SinCos>(SinCosTable + (a >> 3) * 8)->sine), speed * half, y);
+                    f32 rz = (f32)(effect->mScale.value.z);
+                    effect->mPos.value.y = y;
+                    a = u16(cM_rad2s(rz));
+                    speed = (f32)(effect->field_0x34);
+                    z = (f32)(effect->mPos.value.z);
+                    z = gabi::fmadds((f32)(at<SinCos>(SinCosTable + (a >> 3) * 8)->sine), speed, z);
+                    f32 rx = (f32)(effect->mScale.value.x), ry2 = (f32)(effect->mScale.value.y),
+                        rz2 = (f32)(effect->mScale.value.z);
+                    effect->mPos.value.z = z;
+                    effect->mScale.value.x = rx + rot;
+                    effect->mScale.value.y = ry2 + step;
+                    effect->mScale.value.z = rz2 + inc;
+                }
+                position();
+                dKyw_pntwind_get_vecpow(ea(&work->pointWind), ea(&work->position));
+                f32 vx = (f32)(work->pointWind.channels[0]), vy = (f32)(work->pointWind.channels[1]),
+                    vz = (f32)(work->pointWind.channels[2]);
+                work->velocity.channels[0] = vx;
+                work->velocity.channels[1] = vy;
+                work->velocity.channels[2] = vz;
+                f32 oldx = (f32)(effect->mSpeed.value.x), oldy = (f32)(effect->mSpeed.value.y);
+                if (oldx < limit)
+                    effect->mSpeed.value.x = gabi::fmadds(vx, force, oldx);
+                f32 oldz = (f32)(effect->mSpeed.value.z);
+                if (oldy < limit)
+                    effect->mSpeed.value.y = gabi::fmadds((f32)(work->velocity.channels[1]), force, oldy);
+                if (oldz < limit)
+                    effect->mSpeed.value.z = gabi::fmadds((f32)(work->velocity.channels[2]), force, oldz);
+                for (u32 k = 0; k < 12; k += 4)
+                    cLib_addCalc(ea(&effect->mSpeed.channels[k / 4]), zero, rate, drag, min);
+                vx = (f32)(effect->mSpeed.value.x);
+                vy = (f32)(effect->mSpeed.value.y);
+                vz = (f32)(effect->mSpeed.value.z);
+                f32 x = (f32)(effect->mPos.value.x) + vx, y = (f32)(effect->mPos.value.y) + vy,
+                    z = (f32)(effect->mPos.value.z) + vz, bx = (f32)(effect->mBasePos.value.x);
+                effect->mPos.value.x = x;
+                effect->mPos.value.y = y;
+                effect->mPos.value.z = z;
+                work->position.channels[0] = bx + x;
+                work->position.channels[1] = (f32)(effect->mBasePos.value.y) + (f32)(effect->mPos.value.y);
+                work->position.channels[2] = (f32)(effect->mBasePos.value.z) + (f32)(effect->mPos.value.z);
+                f32 distance = PSVECSquareDistance(ea(&work->position), ea(&work->eye));
+                distance = sqrtFloatHD(distance);
+                u16 delay = (u16)(effect->field_0x3c);
+                if (delay == 0) {
+                    if (distance > radius || (f32)(work->position.channels[1]) < floor) {
+                        effect->field_0x3c = 10;
+                        for (u32 k = 0; k < 12; k += 4)
+                            effect->mBasePos.words[k / 4] = (u32)(work->eye.words[0 + k / 4]);
+                        distance = PSVECSquareDistance(ea(&work->position), ea(&work->eye));
+                        distance = sqrtFloatHD(distance);
+                        if (distance > (f32)(*at<be<f32>>(RespawnRadius))) {
+                            for (u32 k = 0; k < 12; k += 4)
+                                effect->mPos.channels[k / 4] = cM_rndFX(radius);
+                        } else {
+                            f32 jitter = cM_rndFX((f32)(*at<be<f32>>(RespawnJitter)));
+                            get_vectle_calc(ea(&work->position), ea(&work->eye), ea(&work->velocity));
+                            f32 scale = jitter + radius;
+                            for (u32 k = 0; k < 12; k += 4)
+                                effect->mPos.channels[k / 4] =
+                                    (f32)(work->velocity.channels[0 + k / 4]) * scale;
+                        }
+                        effect->mSpeed.value.x = zero;
+                        effect->mSpeed.value.y = zero;
+                        effect->mSpeed.value.z = zero;
+                        effect->mStatus = 1;
+                    }
+                } else
+                    effect->field_0x3c = delay - 1;
+            }
+            position();
+            u16 angle = (u16)(effect->field_0x4c) + 600;
+            effect->field_0x4c = angle;
+            if (angle > 30000)
+                alpha = zero;
+            cLib_addCalc(ea(&effect->mAlpha), alpha, half, step, min);
+        }
     }
-    position();gabi::call(0x0257E128,sp(0x2C),sp(8));
-    f32 vx=lf(sp(0x2C)),vy=lf(sp(0x30)),vz=lf(sp(0x34));sf(sp(0x14),vx);sf(sp(0x18),vy);sf(sp(0x1C),vz);
-    f32 oldx=lf(p+0x1C),oldy=lf(p+0x20);if(oldx<limit)sf(p+0x1C,gabi::fmadds(vx,force,oldx));
-    f32 oldz=lf(p+0x24);if(oldy<limit)sf(p+0x20,gabi::fmadds(lf(sp(0x18)),force,oldy));
-    if(oldz<limit)sf(p+0x24,gabi::fmadds(lf(sp(0x1C)),force,oldz));
-    for(u32 k=0;k<12;k+=4)gabi::call(0x0200ECD4,p+0x1C+k,zero,rate,drag,min);
-    vx=lf(p+0x1C);vy=lf(p+0x20);vz=lf(p+0x24);
-    f32 x=lf(p+4)+vx,y=lf(p+8)+vy,z=lf(p+12)+vz,bx=lf(p+0x10);
-    sf(p+4,x);sf(p+8,y);sf(p+12,z);sf(sp(8),bx+x);
-    sf(sp(12),lf(p+0x14)+lf(p+8));sf(sp(16),lf(p+0x18)+lf(p+12));
-    f32 distance=gabi::call<f32>(0x028E8DE8,sp(8),sp(0x20));distance=gabi::call<f32>(0x028F4384,distance);
-    u16 delay=lh(p+0x3C);
-    if(delay==0){
-     if(distance>radius || lf(sp(12))<floor){
-      sh(p+0x3C,10);for(u32 k=0;k<12;k+=4)sw(p+0x10+k,ld(sp(0x20)+k));
-      distance=gabi::call<f32>(0x028E8DE8,sp(8),sp(0x20));distance=gabi::call<f32>(0x028F4384,distance);
-      if(distance>lf(0x1004F754)){for(u32 k=0;k<12;k+=4)sf(p+4+k,gabi::call<f32>(0x02019918,radius));}
-      else{f32 jitter=gabi::call<f32>(0x02019918,lf(0x1004F564));gabi::call(0x02563F0C,sp(8),sp(0x20),sp(0x14));
-       f32 scale=jitter+radius;for(u32 k=0;k<12;k+=4)sf(p+4+k,lf(sp(0x14)+k)*scale);}
-      sf(p+0x1C,zero);sf(p+0x20,zero);sf(p+0x24,zero);sb(p,1);
-     }
-    }else sh(p+0x3C,delay-1);
-   }
-   position();u16 angle=lh(p+0x4C)+600;sh(p+0x4C,angle);if(angle>30000)alpha=zero;
-   gabi::call(0x0200ECD4,p+0x40,alpha,half,step,min);
-  }
- }
- sw(sp(0x70),0x1004F404);sw(sp(0x90),0x1004F424);sw(sp(0x9C),0x1004F3E4);
- gabi::call(0x02008DAC,sp(0x50),0);
+    work->ground.base.cBgS_PolyInfo::__vtbl = PolyInfoVtable;
+    work->ground.pass.__vtbl = PolyPassVtable;
+    work->ground.group.__vtbl = GroupPassDestructorVtable;
+    destroyGroundCheck(ea(&work->ground), 0);
 }
-VERIFY(0x02567F68,move);
-}
+} // namespace RainDraw
+using namespace RainDraw;
+/* WWHD glue (tools/verify/autoglue.py)
+ */

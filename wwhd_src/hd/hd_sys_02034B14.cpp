@@ -1,289 +1,390 @@
-/* hd_sys_02034B14: the HD ProcUI game framework (no GameCube source).
- *
- * TU 02034B14..02035443 (__sinit 02035398 + companions): a sead::GameFramework-derived framework
- * (0x390, base 0274B1F4, vtable 0x10004E88 at +0x24): ProcUI state +0x380 (ProcUIProcessMessages:
- * 2 = background, 3 = exit), "TV/DRC re-enabled" flag +0x38C, run mode +0x28; its createControllers
- * (offset list of controller objects in the controller manager 101F8AE8), the ProcUI init with the
- * save callback, the frame loop (wait on OSGetTime-based ticks through 02760C3C) and the shutdown
- * (_Exit). Also a sead Delegate invoker and a heap destructor (same shape as in 0203400C).
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD ProcUI game framework: controller creation, frame processing and foreground/background lifecycle.
+ * No GameCube counterpart. Verified call order includes save-state frame restoration and mocked exit fallthrough. */
+#include "hd/hd_sys_02034B14.h"
+using namespace gabi;
 
-namespace hd_sys_02034B14 {
+using FrameworkWord = be<u32>;
+using ControllerManagerPointer = gptr<HDFrameworkControllerManager>;
+using TaskManagerPointer = gptr<HDFrameworkTaskManager>;
+using RendererPointer = gptr<HDFrameworkRenderer>;
+static u8 l_heapVtable;
+static u8 l_frameworkVtable;
+static u8 l_callbackVtable;
+static u8 l_callbackFunction;
+static u8 l_parameterVtable;
+static u8 l_controllerTaskParentType;
+static u8 l_frameTaskParentType;
+static u8 l_shutdownTaskParentType;
+static FrameworkWord l_controllerTaskTypeInitialized;
+static FrameworkWord l_frameTaskTypeInitialized;
+static FrameworkWord l_shutdownTaskTypeInitialized;
+static HDFrameworkTypeInfo l_controllerTaskType;
+static HDFrameworkTypeInfo l_frameTaskType;
+static HDFrameworkTypeInfo l_shutdownTaskType;
+static ControllerManagerPointer l_controllerManager;
+static TaskManagerPointer l_taskManager;
+static RendererPointer l_renderer;
+static FrameworkWord l_frameArena;
+static FrameworkWord l_frameService;
+static FrameworkWord l_backgroundService;
+static FrameworkWord l_hostService;
+static FrameworkWord l_networkService;
+static FrameworkWord l_systemService;
+static FrameworkWord l_services;
+static FrameworkWord l_tickHigh;
+static FrameworkWord l_tickLow;
+static HDFrameworkPiPair l_pi;
+static HDFrameworkHeaderStatics l_headerStatics;
+static constexpr u32 HDFramework_taskArgumentConstructorAddress = 0x020354BC;
+static constexpr u32 HDFramework_taskCallbackAddress = 0x0273C714;
+static constexpr u32 HDFramework_baseInitializeAddress = 0x027476D8;
+static constexpr u32 HDFramework_baseProcFrameAddress = 0x02746790;
 
-static constexpr u32 OSSavesDone_ReadyToRelease = 0xC0009F68;
-static constexpr u32 ProcUIInit = 0xC0007868, ProcUIDrawDoneRelease = 0xC0007850;
-static constexpr u32 ProcUIProcessMessages = 0xC0007880, ProcUIShutdown = 0xC00078B8;
-static constexpr u32 GX2SetTVEnable = 0xC00069D0, GX2SetDRCEnable = 0xC0006808, GX2SetContextState = 0xC00067E0;
-static constexpr u32 bossIsInitialized = 0xC00053C0, bossFinalize = 0xC0005108, actFinalize = 0xC00044E8;
-static constexpr u32 OSBlockThreadsOnExit = 0xC0009998, _Exit = 0xC000A468;
-
-/* 02034B14: sead Delegate invoke (tail call with the adjusted object) */
-static u32 Delegate_invoke(u32 self, u32 a) {
-    WWHD_FUNC(0x02034B14, u32, self, a);
-    u32 obj = ld(self + 4);
-    if (obj == 0) return self;
-    s32 vi = (s16)lhz(self + 0xA);
-    if (vi == 0) return self;
-    u32 adj = obj + (u32)(s32)(s16)lhz(self + 8);
-    if (vi < 0) return gabi::call_ptr<u32>(ld(self + 0xC), adj, a);
-    u32 vt = ld(adj + (u32)(s32)(s16)lhz(self + 0xE));
-    return gabi::call_ptr<u32>(ld(vt + (u32)vi * 8 + 4), adj, a);
+/* 02034B14 */
+static u32 HDFrameworkDelegate_invoke(HDFrameworkDelegate* i_this, u32 argument) {
+    void* object = i_this->mpObject;
+    if (!object) return ea(i_this);
+    s32 index = i_this->mVirtualIndex;
+    if (!index) return ea(i_this);
+    // HD: signed halfword adjustments wrap in the 32-bit guest address space.
+    u32 adjusted = ea(object) + u32(s32(i_this->mObjectAdjustment));
+    if (index < 0) return gabi::call_ptr<u32>(i_this->mFunctionOrVtableAdjustment, adjusted, argument);
+    be<u32>* slot = gabi::at<be<u32>>(adjusted + u32(s32(s16(i_this->mVtableAdjustment))));
+    be<u32>* table = gabi::at<be<u32>>(*slot);
+    return gabi::call_ptr<u32>(table[u32(index) * 2 + 1], adjusted, argument);
 }
-VERIFY(0x02034B14, Delegate_invoke);
 
-/* 02034B68: heap destructor */
-static void Heap_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x02034B68, void, self, flags);
-    if (self == 0) return;
-    u8 b = lbz(self + 0x38);
-    st(self + 0xC, 0x10004CB0);
-    if (b != 0) {
-        u32 p = ld(self + 0x1C);
-        if (p != 0) {
-            st(self + 0x1C, 0);
-            gabi::call(0x0273B310, self + 0x10);
-            st(p + 8, ld(p + 8) - 1);
+/* 02034B68 */
+static void HDFrameworkHeap__dt(HDFrameworkHeap* i_this, s32 flags) {
+    if (!i_this) return;
+    u8 linked = i_this->mLinked;
+    i_this->__vtbl = &l_heapVtable;
+    if (linked) {
+        HDFrameworkHeapParent* parent = i_this->mpParent;
+        if (parent) {
+            i_this->mpParent = nullptr;
+            HDFramework_unlink(i_this->mListNode);
+            parent->mChildCount = u32(parent->mChildCount) - 1;
         }
-        stb(self + 0x38, 0);
+        i_this->mLinked = 0;
     }
-    gabi::call(0x02752BEC, self, 0);
-    if (flags & 1) op_delete(self);
-}
-VERIFY(0x02034B68, Heap_dt);
-
-/* 02034C10: framework constructor */
-static u32 Framework_ct(u32 self, u32 a) {
-    WWHD_FUNC(0x02034C10, u32, self, a);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x390);
-        if (t == 0) return 0;
-    }
-    gabi::call(0x0274B1F4, t, a);
-    st(t + 0x380, 0);
-    st(t + 0x24, 0x10004E88);
-    u32 p = t + 0x384;
-    bool ok = true;
-    if (p == 0) {
-        p = op_new(8);
-        if (p == 0) ok = false;
-    }
-    if (ok) {
-        st(p + 4, 0x10004DFC);
-        st(p + 0, 0x10004DF8);
-    }
-    stb(t + 0x38C, 0);
-    return t;
-}
-VERIFY(0x02034C10, Framework_ct);
-
-/* append V to the controller manager's object array {count +0xDC, capacity +0xE0, data +0xE4} */
-static inline void push_obj(u32 m, u32 v) {
-    s32 n = (s32)ld(m + 0xDC);
-    if (n < (s32)ld(m + 0xE0)) {
-        st(ld(m + 0xE4) + (u32)n * 4, v);
-        st(m + 0xDC, ld(m + 0xDC) + 1);
-    }
-}
-/* link node NODE into the offset list at L (count +8) */
-static inline void link_tail(u32 l, u32 node) {
-    gabi::call(0x0273B2F0, l, node + ld(l + 0xC));
-    st(l + 8, ld(l + 8) + 1);
+    HDFramework_heapBaseDestroy(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
 
-/* 02034CC8: createControllers: the task-creation argument (a stack copy) and the controllers */
-static void Framework_createControllers(u32 self, u32 a) {
-    WWHD_FUNC(0x02034CC8, void, self, a);
-    u32 entry = gabi::cpu->r[1];
-    u32 f = entry - 0x128; /* the original's frame */
-    gabi::cpu->r[1] = f;
-    st(f + 8, 2);
-    st(f + 0xC, 0x020354BC);
-    gabi::call(0x02748CFC, f + 0x10, f + 8);
-    u32 p = op_new(0xC);
-    if (p != 0) {
-        st(p + 8, 0);
-        st(p + 0, 0x10004E54);
+/* 02034C10 */
+static HDGameFramework* HDGameFramework__ct(HDGameFramework* i_this, u32 argument) {
+    if (!i_this) {
+        i_this = static_cast<HDGameFramework*>(operator_new(sizeof(HDGameFramework)));
+        if (!i_this) return nullptr;
     }
-    st(p + 4, 7);
-    st(f + 0x6C, a);
-    st(f + 0x70, p);
-    for (u32 i = 0; i < 0x80; i += 4) st(f + 0x90 + i, ld(f + 0x10 + i));
-    st(f + 0x10C, 0x0273C714);
-    u32 r = gabi::call<u32>(0x02749ECC, ld(self + 0x18), f + 0x90);
-    if (ld(0x101FD598) == 0) {
-        st(0x101FD598, 1);
-        st(0x101FD97C, 0x10004E34);
+    HDFramework_baseConstruct(i_this, argument);
+    i_this->mProcUIState = HDFramework_Foreground;
+    i_this->__vtbl = &l_frameworkVtable;
+    // HD: the embedded callback may wrap to guest NULL for the top-of-memory fixture.
+    HDFrameworkCallback* callback = gabi::at<HDFrameworkCallback>(ea(i_this) + offsetof(HDGameFramework, mCallback));
+    bool initialized = true;
+    if (!callback) {
+        callback = static_cast<HDFrameworkCallback*>(operator_new(sizeof(HDFrameworkCallback)));
+        if (!callback) initialized = false;
     }
-    if (r != 0) gabi::call_ptr(vfn(r, 0x70, 0xC), r, 0x101FD97C);
-    u32 m = ld(0x101F8AE8);
-    push_obj(m, gabi::call<u32>(0x0273D6A4, 0, m, 0));
-    link_tail(m + 0xCC, gabi::call<u32>(0x0273D820, 0, m, 0));
-    for (u32 i = 0; i < 4; i++) {
-        u32 o = gabi::call<u32>(0x0273D9E4, 0, m, i);
-        link_tail(o + 0x138, gabi::call<u32>(0x0273E2A0, 0, o));
-        push_obj(m, o);
+    if (initialized) {
+        callback->__vtbl = &l_callbackVtable;
+        callback->mpFunction = &l_callbackFunction;
     }
-    link_tail(m + 0xCC, gabi::call<u32>(0x0273E380, 0, m));
-    u32 o = gabi::call<u32>(0x0273E4B4, 0, m);
-    link_tail(o + 0x138, gabi::call<u32>(0x0273EAC8, 0, o));
-    push_obj(m, o);
-    push_obj(m, gabi::call<u32>(0x0273D2D0, 0, m, 2, 0));
-    gabi::cpu->r[1] = entry;
+    i_this->mOutputsReenabled = 0;
+    return i_this;
 }
-VERIFY(0x02034CC8, Framework_createControllers);
 
-/* 02034F88: the ProcUI save callback */
+static void push_obj(HDFrameworkControllerManager* manager, void* object) {
+    s32 count = manager->mControllerCount;
+    if (count < s32(manager->mControllerCapacity)) {
+        manager->mpControllers[count] = object;
+        manager->mControllerCount = s32(manager->mControllerCount) + 1;
+    }
+}
+static void link_tail(HDFrameworkOffsetList* list, u32 object) {
+    HDFramework_listPushBack(ea(list), object + u32(list->mNodeOffset));
+    list->mCount = u32(list->mCount) + 1;
+}
+
+/* 02034CC8 */
+void HDGameFramework::createControllers(u32 argument) {
+    // HD: retain the original frame and overlapping task-argument copies exactly.
+    u32 entry = cpu->r[1];
+    u32 frameAddress = entry - sizeof(HDFrameworkControllerFrame);
+    cpu->r[1] = frameAddress;
+    HDFrameworkControllerFrame* frame = gabi::at<HDFrameworkControllerFrame>(frameAddress);
+    frame->mArgumentCount = 2;
+    frame->mArgumentConstructor = HDFramework_taskArgumentConstructorAddress;
+    HDFramework_taskArgumentConstruct(&frame->mArgument, &frame->mArgumentCount);
+    HDFrameworkTaskParameter* parameter = static_cast<HDFrameworkTaskParameter*>(operator_new(sizeof(HDFrameworkTaskParameter)));
+    if (parameter) {
+        parameter->mFlags = 0;
+        parameter->__vtbl = &l_parameterVtable;
+    }
+    parameter->mMode = 7;
+    frame->mArgument.mContext = argument;
+    frame->mArgument.mpParameter = parameter;
+    be<u32>* copy = reinterpret_cast<be<u32>*>(&frame->mCopy);
+    be<u32>* original = reinterpret_cast<be<u32>*>(&frame->mArgument);
+    for (u32 i = 0; i < sizeof(HDFrameworkTaskArgument) / 4; ++i) copy[i] = u32(original[i]);
+    frame->mCopy.mWordsAfter[6] = HDFramework_taskCallbackAddress;
+    HDFrameworkTask* task = HDFramework_createTask(ea(mpRootTask.get()), &frame->mCopy);
+    if (!l_controllerTaskTypeInitialized) {
+        l_controllerTaskTypeInitialized = 1;
+        l_controllerTaskType.mpParent = &l_controllerTaskParentType;
+    }
+    if (task) {
+        gabi::call_ptr(task->mpTaskVtable[3], task, &l_controllerTaskType);
+    }
+    HDFrameworkControllerManager* manager = l_controllerManager;
+    push_obj(manager, HDFramework_createGamepad(0, ea(manager), 0));
+    link_tail(&manager->mDevices, HDFramework_createRemoteDevice(0, ea(manager), 0));
+    for (u32 i = 0; i < 4; ++i) {
+        HDFrameworkController* controller = HDFramework_createRemote(0, ea(manager), i);
+        link_tail(&controller->mDevices, HDFramework_createRemoteAddon(0, ea(controller)));
+        push_obj(manager, controller);
+    }
+    link_tail(&manager->mDevices, HDFramework_createDebugDevice(0, ea(manager)));
+    HDFrameworkController* controller = HDFramework_createDebugController(0, ea(manager));
+    link_tail(&controller->mDevices, HDFramework_createDebugAddon(0, ea(controller)));
+    push_obj(manager, controller);
+    push_obj(manager, HDFramework_createKeyboard(0, ea(manager), 2, 0));
+    cpu->r[1] = entry;
+}
+
+/* 02034F88 */
 static u32 saveCallback() {
-    WWHD_FUNC(0x02034F88, u32);
-    return gabi::call<u32>(OSSavesDone_ReadyToRelease);
+    return HDFramework_OSSaveDoneReady();
 }
-VERIFY(0x02034F88, saveCallback);
 
-/* 02034F8C: initialize: ProcUI, then the base framework's initialize */
-static void Framework_initialize(u32 a, u32 b, u32 c, u32 d) {
-    WWHD_FUNC(0x02034F8C, void, a, b, c, d);
-    gabi::call(ProcUIInit, 0x02034F88);
-    /* on the main loop's stack when a save state is taken (frame-exact chain call): LR 02034FD8,
-     * r28..r31 as the original keeps them (cross-build save states) */
-    gabi::call_site(0x02034FD8, {{28, b}, {29, c}, {30, d}, {31, a}}, {}, 0x027476D8, a, b, c, d);
+
+/* 02034F8C */
+static void HDGameFramework_initialize(u32 a, u32 b, u32 c, u32 d) {
+    // HD: replay the prologue so the saved-state chain call sees the original frame.
+    auto originalFrame = gabi::AutoFrame(0x02034F8C);
+    HDFramework_ProcUIInit(guest_fn((const void*)saveCallback));
+    // HD: preserve the original return site and r28..r31 for cross-build save states.
+    gabi::call_site(0x02034FD8, {{28, b}, {29, c}, {30, d}, {31, a}}, {}, HDFramework_baseInitializeAddress, a, b, c, d);
 }
-VERIFY(0x02034F8C, Framework_initialize);
 
-static u32 thunk_0274AF44(u32 self) {
-    WWHD_FUNC(0x02034FF8, u32, self);
-    return gabi::call<u32>(0x0274AF44, self);
+
+/* 02034FF8 */
+static u32 HDGameFramework_delegate(u32 self) {
+    return HDFramework_baseDelegate( self);
 }
-VERIFY(0x02034FF8, thunk_0274AF44);
 
-/* 02034FFC: per-frame procedure (draw / calc of the root task) */
-static void Framework_procFrame(u32 self) {
-    WWHD_FUNC(0x02034FFC, void, self);
-    gabi::call(0x0274A414, ld(self + 0x18));
-    u32 g = ld(0x101F8DC0);
-    if (g != 0) gabi::call(0x02799C70, g);
-    u32 g0 = ld(0x101FD718);
-    u32 o = ld(self + 0x1C);
-    if (g0 == 0) {
-        st(0x101FD718, 1);
-        st(0x101FD990, 0x10004E6C);
+
+/* 02034FFC */
+void HDGameFramework::procFrame() {
+    HDGameFramework* i_this = this;
+    // HD: replay the prologue and epilogue for the frame-exact save-state call.
+    auto originalFrame = gabi::AutoFrame(0x02034FFC);
+    HDFramework_rootBeginFrame(ea(i_this->mpRootTask.get()));
+    u32 arena = l_frameArena;
+    if (arena) HDFramework_resetFrameArena(arena);
+    u32 initialized = l_frameTaskTypeInitialized;
+    HDFrameworkTask* task = i_this->mpTask;
+    if (!initialized) {
+        l_frameTaskTypeInitialized = 1;
+        l_frameTaskType.mpParent = &l_frameTaskParentType;
     }
-    if (o == 0 || gabi::call_ptr<u32>(vfn(o, 0x3C, 0xC), o, 0x101FD990) == 0) o = 0;
-    /* on the main loop's stack when a save state is taken (frame-exact chain call): LR 02035090,
-     * r30 = self and r31 = o as the original keeps them; self is taken back from r30 (after a save
-     * state load it is the snapshot's) */
-    gabi::call_site(0x02035090, {{30, self}, {31, o}}, {}, 0x02746790, o);
-    self = gabi::cpu->r[30];
-    gabi::call(0x0272A8C4, ld(0x101F86E8));
-    gabi::call(0x0272AD80, ld(0x101F86E8));
-    gabi::call(0x0274A5EC, ld(self + 0x18));
+    if (!task || !gabi::call_ptr<u32>(task->mpVtable[3], task, &l_frameTaskType)) task = nullptr;
+    // HD: preserve the save-state chain call's LR, r30/r31, and frame restoration.
+    gabi::call_site(0x02035090, {{30, ea(i_this)}, {31, ea(task)}}, {}, HDFramework_baseProcFrameAddress, task);
+    i_this = gabi::at<HDGameFramework>(cpu->r[30]);
+    HDFramework_beginFrame(l_frameService);
+    HDFramework_endFrame(l_frameService);
+    HDFramework_rootEndFrame(ea(i_this->mpRootTask.get()));
 }
-VERIFY(0x02034FFC, Framework_procFrame);
 
-/* 020350C4: ProcUI message processing (re-enable the outputs, background, exit) */
-static void Framework_procUI(u32 self) {
-    WWHD_FUNC(0x020350C4, void, self);
-    if (lbz(self + 0x38C) == 0 && ld(self + 0x28) == 2) {
-        stb(self + 0x38C, 1);
-        st(self + 0x28, 1);
-        gabi::call(GX2SetTVEnable, 1);
-        gabi::call(GX2SetDRCEnable, 1);
+/* 020350C4 */
+void HDGameFramework::procUI() {
+    if (!mOutputsReenabled && mRunMode == HDFramework_ReenableOutputs) {
+        mOutputsReenabled = 1;
+        mRunMode = HDFramework_Running;
+        HDFramework_GX2SetTVEnable(1);
+        HDFramework_GX2SetDRCEnable(1);
     }
-    gabi::call(0x0274C8C4, self);
-    u32 old = ld(self + 0x380);
-    if (old == 2) {
-        if (gabi::call<u32>(0x02617AE4, ld(0x101F5088)) != 0) gabi::call(0x02618720, ld(0x101F5088), 0);
-        gabi::call(ProcUIDrawDoneRelease);
-        gabi::call(0x0274FBF8, ld(0x101F8B18));
-        old = ld(self + 0x380);
+    HDFramework_baseProcUI(ea(this));
+    u32 oldState = mProcUIState;
+    if (oldState == HDFramework_Background) {
+        if (HDFramework_isBackgroundActive(l_backgroundService)) HDFramework_setBackgroundActive(l_backgroundService, 0);
+        HDFramework_ProcUIDrawDoneRelease();
+        HDFramework_beginRender(ea(l_renderer.get()));
+        oldState = mProcUIState;
     }
-    u32 s = gabi::call<u32>(ProcUIProcessMessages, 1);
-    st(self + 0x380, s);
-    if (s == 3) {
-        gabi::call(0x02032AD8, gabi::call<u32>(0x02032C6C), 1);
-        gabi::call(0x020330E8, ld(0x1018F2BC));
-        gabi::call(ProcUIShutdown);
-        u32 m = ld(0x101F8BA8);
-        u32 r12 = m; /* the register the code after _Exit tests (see below) */
-        if (m != 0) {
-            u32 o = ld(m + 0x14);
-            r12 = ld(0x101FD648);
-            if (r12 == 0) {
-                st(0x101FD648, 1);
-                st(0x101FD958, 0x10004E44);
+    u32 state = HDFramework_ProcUIProcessMessages(1);
+    mProcUIState = state;
+    if (state == HDFramework_ExitRequested) {
+        HDFramework_setExitRequested(HDFramework_getExitManager(), 1);
+        HDFramework_shutdownHost(l_hostService);
+        HDFramework_ProcUIShutdown();
+        HDFrameworkTaskManager* manager = l_taskManager;
+        u32 exitFallthrough = ea(manager);
+        if (manager) {
+            HDFrameworkRuntimeObject* task = manager->mpTask;
+            exitFallthrough = l_shutdownTaskTypeInitialized;
+            if (!exitFallthrough) {
+                l_shutdownTaskTypeInitialized = 1;
+                l_shutdownTaskType.mpParent = &l_shutdownTaskParentType;
             }
-            if (o != 0 && gabi::call_ptr<u32>(vfn(o, 0, 0xC), o, 0x101FD958) != 0 && o != 0) gabi::call(0x02762F34, o);
+            if (task && gabi::call_ptr<u32>(task->__vtbl[3], task, &l_shutdownTaskType) && task) HDFramework_destroyTask(ea(task));
         }
-        u32 v = ld(0x101F4FF0);
-        if (v != 0) gabi::call(0x02614FBC, v);
-        v = ld(0x101F50D8);
-        if (v != 0) gabi::call(0x02619EEC, v);
-        v = ld(0x1018F504);
-        if (v != 0) gabi::call(0x0203BCF4, v);
-        if (gabi::call<u32>(bossIsInitialized) != 0) gabi::call(bossFinalize);
-        gabi::call(actFinalize);
-        gabi::call(OSBlockThreadsOnExit);
-        gabi::call(_Exit, -1);
-        /* _Exit does not return; the code after it (shared with the s != 3 path) tests r12, which
-         * then still holds the last value loaded into it above. Modelled as the binary falls through. */
-        s = r12;
+        u32 service = l_networkService;
+        if (service) HDFramework_finalizeNetwork(service);
+        service = l_systemService;
+        if (service) HDFramework_finalizeSystem(service);
+        service = l_services;
+        if (service) HDFramework_finalizeServices(service);
+        if (HDFramework_bossIsInitialized()) HDFramework_bossFinalize();
+        HDFramework_actFinalize();
+        HDFramework_OSBlockThreadsOnExit();
+        HDFramework_Exit(-1);
+        // HD: retain the binary's fallthrough if the mocked non-returning exit call returns.
+        state = exitFallthrough;
     }
-    if (old != 2) return;
-    if (s == 0) {
-        gabi::call(GX2SetContextState, ld(ld(0x101F8B18) + 0x138));
-        gabi::call(GX2SetTVEnable, 1);
-        gabi::call(GX2SetDRCEnable, 1);
+    if (oldState != HDFramework_Background) return;
+    if (state == HDFramework_Foreground) {
+        HDFrameworkRenderer* renderer = l_renderer;
+        HDFramework_GX2SetContextState(ea(renderer->mpContextState.get()));
+        HDFramework_GX2SetTVEnable(1);
+        HDFramework_GX2SetDRCEnable(1);
     }
-    gabi::call(0x0274FCCC, ld(0x101F8B18));
+    HDFramework_endRender(ea(l_renderer.get()));
 }
-VERIFY(0x020350C4, Framework_procUI);
 
-/* 020352AC: main loop: run frames, waiting (02760C3C) while the root task is idle */
-static void Framework_mainLoop(u32 self) {
-    WWHD_FUNC(0x020352AC, void, self);
-    u32 lo = ld(0x104A11CC), hi = ld(0x104A11C8);
-    u64 t = (((u64)hi << 32) | lo) * 10;
-    Pair32 q = gabi::call<Pair32>(0x028F5B8C, (u32)(t >> 32), (u32)t, 0, 1000);
-    u32 entry = gabi::cpu->r[1];
-    u32 f = entry - 0x28;
-    gabi::cpu->r[1] = f;
+/* 020352AC */
+void HDGameFramework::mainLoop() {
+    u32 low = l_tickLow;
+    u32 high = l_tickHigh;
+    u64 ticks = ((u64(high) << 32) | low) * 10;
+    auto interval = HDFramework_divideTicks(u32(ticks >> 32), u32(ticks), 0, 1000);
+    // HD: preserve the original wait frame rather than adding a guest Local slot.
+    u32 entry = cpu->r[1];
+    u32 frameAddress = entry - sizeof(HDFrameworkWaitFrame);
+    cpu->r[1] = frameAddress;
+    HDFrameworkWaitFrame* frame = gabi::at<HDFrameworkWaitFrame>(frameAddress);
     for (;;) {
-        gabi::call(0x0274FBF8, ld(0x101F8B18));
-        gabi::call(0x0274A414, ld(self + 0x18));
-        gabi::call(0x0274A5EC, ld(self + 0x18));
-        gabi::call(0x0274FCCC, ld(0x101F8B18));
-        if (ld(ld(self + 0x18) + 0xB4) != 0 || ld(self + 0x28) != 0) break;
-        st(f + 0xC, q.r4);
-        st(f + 0x14, q.r4);
-        st(f + 8, q.r3);
-        st(f + 0x10, q.r3);
-        gabi::call(0x02760C3C, f + 0x10);
+        HDFramework_beginRender(ea(l_renderer.get()));
+        HDFramework_rootBeginFrame(ea(mpRootTask.get()));
+        HDFramework_rootEndFrame(ea(mpRootTask.get()));
+        HDFramework_endRender(ea(l_renderer.get()));
+        if (mpRootTask->mDone || mRunMode != HDFramework_Idle) break;
+        frame->mLow = interval.r4;
+        frame->mWaitLow = interval.r4;
+        frame->mHigh = interval.r3;
+        frame->mWaitHigh = interval.r3;
+        HDFramework_waitTicks(&frame->mWaitHigh);
     }
-    u32 o = ld(self + 0x1C);
-    gabi::call_ptr(vfn(o, 0x3C, 0x34), o, 0);
-    gabi::cpu->r[1] = entry;
+    HDFrameworkTask* task = mpTask;
+    gabi::call_ptr(task->mpVtable[13], task, 0);
+    cpu->r[1] = entry;
 }
-VERIFY(0x020352AC, Framework_mainLoop);
 
-static void sinit_02035398() {
-    WWHD_FUNC(0x02035398, void);
-    header_sinit(0x102008E4, 0x1018F2F0, 0x10004E7C);
+// HD: compiler-generated header objects and deleting-destructor companions.
+/* 02035398 */
+static void __sinit_HDGameFramework_cpp() {
+    l_headerStatics.mZero[2] = 0;
+    l_headerStatics.mZero[0] = 0;
+    l_headerStatics.mZero[3] = 0;
+    l_headerStatics.mZero[1] = 0;
+    __register_global_object(0x1018F2F0);
+    f32 negative = l_pi.mNegative;
+    f32 positive = l_pi.mPositive;
+    l_headerStatics.mNegativePi = negative;
+    l_headerStatics.mPositivePi = positive;
+    HDFramework_firstHeaderObject(&l_headerStatics.mFirstObject);
+    __register_global_object(0x1018F2FC);
+    HDFramework_secondHeaderObject(&l_headerStatics.mSecondObject);
+    __register_global_object(0x1018F308);
 }
-VERIFY(0x02035398, sinit_02035398);
 
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x0203542C, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0203542C */
+static void HDFrameworkCompanion__dt(void* i_this, s32 flags) {
+    if (i_this && (flags & 1)) operator_delete(i_this);
 }
-VERIFY(0x0203542C, Comp_dt1);
 
-static void Comp_empty() {
-    WWHD_FUNC(0x02035440, void);
-}
-VERIFY(0x02035440, Comp_empty);
+/* 02035440 */
+static void HDFrameworkCompanion_empty() {}
 
-}  // namespace hd_sys_02034B14
+/* WWHD glue (tools/verify/autoglue.py):
+data l_heapVtable 10004CB0
+data l_frameworkVtable 10004E88
+data l_callbackVtable 10004DFC
+data l_callbackFunction 10004DF8
+data l_parameterVtable 10004E54
+data l_controllerTaskParentType 10004E34
+data l_frameTaskParentType 10004E6C
+data l_shutdownTaskParentType 10004E44
+data l_controllerTaskTypeInitialized 101FD598
+data l_frameTaskTypeInitialized 101FD718
+data l_shutdownTaskTypeInitialized 101FD648
+data l_controllerTaskType 101FD97C
+data l_frameTaskType 101FD990
+data l_shutdownTaskType 101FD958
+data l_controllerManager 101F8AE8
+data l_taskManager 101F8BA8
+data l_renderer 101F8B18
+data l_frameArena 101F8DC0
+data l_frameService 101F86E8
+data l_backgroundService 101F5088
+data l_hostService 1018F2BC
+data l_networkService 101F4FF0
+data l_systemService 101F50D8
+data l_services 1018F504
+data l_tickHigh 104A11C8
+data l_tickLow 104A11CC
+data l_pi 10004E7C
+data l_headerStatics 102008D8
+ext 028ED6F8 void HDFramework_firstHeaderObject(be<u8>*)
+ext 028EAB2C void HDFramework_secondHeaderObject(be<u8>*)
+ext 0273B310 void HDFramework_unlink(void*)
+ext 02752BEC void HDFramework_heapBaseDestroy(void*, s32)
+ext 0274B1F4 void HDFramework_baseConstruct(void*, u32)
+ext 02748CFC void HDFramework_taskArgumentConstruct(void*, void*)
+ext 02749ECC HDFrameworkTask* HDFramework_createTask(u32, void*)
+ext 0273D6A4 void* HDFramework_createGamepad(u32, u32, u32)
+ext 0273D820 u32 HDFramework_createRemoteDevice(u32, u32, u32)
+ext 0273D9E4 HDFrameworkController* HDFramework_createRemote(u32, u32, u32)
+ext 0273E2A0 u32 HDFramework_createRemoteAddon(u32, u32)
+ext 0273E380 u32 HDFramework_createDebugDevice(u32, u32)
+ext 0273E4B4 HDFrameworkController* HDFramework_createDebugController(u32, u32)
+ext 0273EAC8 u32 HDFramework_createDebugAddon(u32, u32)
+ext 0273D2D0 void* HDFramework_createKeyboard(u32, u32, u32, u32)
+ext 0273B2F0 void HDFramework_listPushBack(u32, u32)
+ext 0274AF44 u32 HDFramework_baseDelegate(u32)
+ext 0274A414 void HDFramework_rootBeginFrame(u32)
+ext 02799C70 void HDFramework_resetFrameArena(u32)
+ext 0272A8C4 void HDFramework_beginFrame(u32)
+ext 0272AD80 void HDFramework_endFrame(u32)
+ext 0274A5EC void HDFramework_rootEndFrame(u32)
+ext 0274C8C4 void HDFramework_baseProcUI(u32)
+ext 02617AE4 u32 HDFramework_isBackgroundActive(u32)
+ext 02618720 void HDFramework_setBackgroundActive(u32, u32)
+ext 0274FBF8 void HDFramework_beginRender(u32)
+ext 02032AD8 void HDFramework_setExitRequested(u32, u32)
+ext 02032C6C u32 HDFramework_getExitManager()
+ext 020330E8 void HDFramework_shutdownHost(u32)
+ext 02762F34 void HDFramework_destroyTask(u32)
+ext 02614FBC void HDFramework_finalizeNetwork(u32)
+ext 02619EEC void HDFramework_finalizeSystem(u32)
+ext 0203BCF4 void HDFramework_finalizeServices(u32)
+ext 0274FCCC void HDFramework_endRender(u32)
+ext 028F5B8C Pair32 HDFramework_divideTicks(u32, u32, u32, u32)
+ext 02760C3C void HDFramework_waitTicks(void*)
+ext C0009F68 u32 HDFramework_OSSaveDoneReady()
+ext C0007868 void HDFramework_ProcUIInit(u32)
+ext C0007850 void HDFramework_ProcUIDrawDoneRelease()
+ext C0007880 u32 HDFramework_ProcUIProcessMessages(u32)
+ext C00078B8 void HDFramework_ProcUIShutdown()
+ext C00069D0 void HDFramework_GX2SetTVEnable(u32)
+ext C0006808 void HDFramework_GX2SetDRCEnable(u32)
+ext C00067E0 void HDFramework_GX2SetContextState(u32)
+ext C00053C0 u32 HDFramework_bossIsInitialized()
+ext C0005108 void HDFramework_bossFinalize()
+ext C00044E8 void HDFramework_actFinalize()
+ext C0009998 void HDFramework_OSBlockThreadsOnExit()
+ext C000A468 void HDFramework_Exit(s32)
+*/

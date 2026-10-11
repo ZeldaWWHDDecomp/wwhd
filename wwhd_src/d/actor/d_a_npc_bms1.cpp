@@ -10,101 +10,61 @@
  */
 #include "d/actor/d_a_npc_bms1.h"
 
+static daNpc_Bms1_HIO_c l_HIOStorage;
+static l_btp_ix_tblData l_btp_ix_tbl;
+static morf_frame_tblData morf_frame_tbl;
+static play_mode_tblData play_mode_tbl;
+static play_speed_tblData play_speed_tbl;
+static l_bck_ix_tblData l_bck_ix_tbl;
+static u32 l_msgIdStorage;
+static cXyz l_hairBase;
+static cXyz l_hairTip;
+static u32 l_hairBaseGuard;
+static u32 l_hairTipGuard;
+static bms1_cpp::QuaternionWords l_identityQuaternion;
+static Bms1CutNames l_cutNames;
+static dCcD_SrcCyl l_cyl_src;
+static void* l_demoObject;
+
 /* 02208334 */
 static BOOL daNpc_Bms1_shopMsgCheck(u32 msgNo) {
-    WWHD_FUNC(0x02208334, BOOL, msgNo);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (msgNo - 0x2788 < 9 || msgNo - 0x277A < 8 || msgNo == 0x2783 || msgNo == 0x2776) {
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x02208334, daNpc_Bms1_shopMsgCheck);
 
 /* 0220836C */
 static BOOL daNpc_Bms1_shopStickMoveMsgCheck(u32 msgNo) {
-    WWHD_FUNC(0x0220836C, BOOL, msgNo);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (msgNo - 0x2788 < 3 || msgNo - 0x277A < 3 || msgNo == 0x2783 || msgNo == 0x2776) {
         return TRUE;
     }
     return FALSE;
 }
-VERIFY(0x0220836C, daNpc_Bms1_shopStickMoveMsgCheck);
 
 /* 02208BA8 */
 BOOL daNpc_Bms1_c::initTexPatternAnm(u32 i_modify) {
-    WWHD_FUNC(0x02208BA8, BOOL, this, i_modify);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s8 idx = mTexIdx;
     J3DModelData* modelData = gabi::at<J3DModelData>(J3DModel_modelData_l(mpHeadModel));
     /* l_btp_ix_tbl (.rodata 0x10017CF0) */
-    m_head_tex_pattern = (J3DAnmTexPattern*)bms1_getRes(gabi::load<s32>(0x10017CF0 + idx * 4));
+    m_head_tex_pattern = (J3DAnmTexPattern*)bms1_getRes((s32)l_btp_ix_tbl.mEntries[idx]);
     if (m_head_tex_pattern.get() == nullptr) /* JUT_ASSERT(593, m_head_tex_pattern != NULL) */
-        JUT_ASSERT_fail(STR(0x10017DF4), 0x251, STR(0x10017DD8));
-    if (!mDoExt_btpAnm_init_l(mBtpAnm, modelData, m_head_tex_pattern, 1, 2 /* EMode_LOOP */, 1.0f, 0, -1, i_modify, 0)) {
+        JUT_ASSERT_fail("d_a_npc_bms1.cpp", 0x251, "m_head_tex_pattern != (0)");
+    if (!mDoExt_btpAnm_init_l(&mBtpAnm, modelData, m_head_tex_pattern, 1, 2 /* EMode_LOOP */, 1.0f, 0, -1,
+                              i_modify, 0)) {
         return FALSE;
     }
     mFrame = 0;
     mBlinkTimer = 0;
     return TRUE;
 }
-VERIFY(0x02208BA8, &daNpc_Bms1_c::initTexPatternAnm);
-
-/* 02208CB4 */
-u32 daNpc_Bms1_c::setTexAnm(s8 i_idx) {
-    WWHD_FUNC(0x02208CB4, u32, this, i_idx);
-    s8 cur = mTexIdx;
-    if (cur != i_idx || cur == -1) {
-        mTexIdx = i_idx;
-        return initTexPatternAnm(1);
-    }
-    return (u32)gabi::ea(this); /* original: r3 still this */
-}
-VERIFY(0x02208CB4, &daNpc_Bms1_c::setTexAnm);
-
-/* 02209434: CheckCreateHeap */
-static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
-    WWHD_FUNC(0x02209434, BOOL, i_this);
-    return ((daNpc_Bms1_c*)i_this)->CreateHeap();
-}
-VERIFY(0x02209434, CheckCreateHeap);
-
-/* 0220A0C8 */
-static cPhs_State daNpc_Bms1_Create(fopAc_ac_c* i_this) {
-    WWHD_FUNC(0x0220A0C8, cPhs_State, i_this);
-    return ((daNpc_Bms1_c*)i_this)->_create();
-}
-VERIFY(0x0220A0C8, daNpc_Bms1_Create);
-
-/* 0220A0CC */
-BOOL daNpc_Bms1_c::_delete() {
-    WWHD_FUNC(0x0220A0CC, BOOL, this);
-    if (mbCreateErr != 1) {
-        dComIfG_resDelete(&mPhs, BMS1_ARC);
-        if (heap.get() != nullptr && mpMorf.get() != nullptr) {
-            mpMorf->stopZelAnime();
-        }
-        daNpc_Bms1_HIO_c& hio = l_HIO();
-        if (hio.m8 >= 0) {
-            s32 n = hio.m8 - 1;
-            hio.m8 = n;
-            if (n < 0) {
-                mDoHIO_deleteChild(hio.mNo);
-            }
-        }
-    }
-    return TRUE;
-}
-VERIFY(0x0220A0CC, &daNpc_Bms1_c::_delete);
-
-/* 0220A15C */
-static BOOL daNpc_Bms1_Delete(daNpc_Bms1_c* i_this) {
-    WWHD_FUNC(0x0220A15C, BOOL, i_this);
-    return i_this->_delete();
-}
-VERIFY(0x0220A15C, daNpc_Bms1_Delete);
 
 /* 0220A160 */
 void daNpc_Bms1_c::playTexPatternAnm() {
-    WWHD_FUNC(0x0220A160, void, this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (cLib_calcTimer(&mBlinkTimer) == 0) {
         s32 frameMax = J3DAnmTexPattern_getFrameMax_l(m_head_tex_pattern);
         if ((s32)mFrame >= frameMax) {
@@ -116,34 +76,91 @@ void daNpc_Bms1_c::playTexPatternAnm() {
         }
     }
 }
-VERIFY(0x0220A160, &daNpc_Bms1_c::playTexPatternAnm);
 
-/* 0220A224 (GameCube demo_end_init) */
-void daNpc_Bms1_c::demo_end_init() {
-    WWHD_FUNC(0x0220A224, void, this);
-    mbDemo = 0;
+/* 0220AB80 */
+void daNpc_Bms1_c::setAnm(s8 i_idx, f32 i_morf) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    s8 cur = mAnmIdx;
+    if (i_morf < 0.0f) {
+        i_morf = (f32)morf_frame_tbl.mEntries[i_idx]; /* morf_frame_tbl */
+    }
+    if (i_idx != cur || cur == -1) {
+        mAnmIdx = i_idx;
+        dNpc_setAnm_2(mpMorf, (s32)play_mode_tbl.mEntries[i_idx] /* play_mode_tbl */, i_morf,
+                      (f32)play_speed_tbl.mEntries[i_idx] /* play_speed_tbl */,
+                      (s32)l_bck_ix_tbl.mEntries[i_idx] /* l_bck_ix_tbl */, 0, BMS1_ARC);
+    }
 }
-VERIFY(0x0220A224, &daNpc_Bms1_c::demo_end_init);
+
+/* 02208CB4 */
+u32 daNpc_Bms1_c::setTexAnm(s8 i_idx) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    s8 cur = mTexIdx;
+    if (cur != i_idx || cur == -1) {
+        mTexIdx = i_idx;
+        return initTexPatternAnm(1);
+    }
+    return (u32)gabi::ea(this); /* original: r3 still this */
+}
+
+/* 0220A680 */
+void daNpc_Bms1_c::eventOrder() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    s8 order = mOrderEvt;
+    if (order == BMS1_ORDER_LANDING) {
+        fopAcM_orderOtherEvent2_l(this, "BMS_LAND_DEMO", 1, 0xFFFF);
+    } else if (order == BMS1_ORDER_GET_ITEM) {
+        fopAcM_orderOtherEvent2_l(this, "BMS_GET_DEMO", 1, 0xFFFF);
+    } else if (order == BMS1_ORDER_TALK || order == BMS1_ORDER_SHOP) {
+        eventInfo_onCondition(this, 1 /* dEvtCnd_CANTALK_e */);
+        if (mOrderEvt == BMS1_ORDER_TALK) {
+            fopAcM_orderSpeakEvent(this);
+        }
+    }
+}
+
+/* 0220A6F0 */
+void daNpc_Bms1_c::setCollision() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    gabi::Local<cXyz> offset;
+    offset->x = 0.0f;
+    offset->y = 0.0f;
+    offset->z = -16.0f;
+    MtxTrans(current.pos.x, current.pos.y, current.pos.z, 0);
+    cMtx_YrotM(calc_mtx(), mInitialAngle.y);
+    gabi::Local<cXyz> out;
+    MtxPosition(offset.get(), out.get());
+    mCyl.SetC(out.get());
+    mCyl.SetR(46.0f);
+    mCyl.SetH(130.0f);
+    dComIfG_Ccsp_Set(&mCyl);
+}
+
+/* 0220A360 */
+void daNpc_Bms1_c::talkInit() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mTalkStep = 0;
+}
 
 /* 0220A230 */
 BOOL daNpc_Bms1_c::demo_move() {
-    WWHD_FUNC(0x0220A230, BOOL, this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     u8 demoId = demoActorID;
     if (demoId != 0 && demoId <= 0x20) {
-        u32 demoObj = gabi::load<u32>(0x101D5FFC); /* dComIfGp_demo_get() */
+        u32 demoObj = l_demoObject.v.get(); /* dComIfGp_demo_get() */
         if (demoObj == 0) {
-            JUT_ASSERT_fail(STR(0x10017DB0), 0x23A, STR(0x10017D84));
-            demoObj = gabi::load<u32>(0x101D5FFC);
+            JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
+            demoObj = l_demoObject.v.get();
         }
         void* demoActor = dDemo_object_getActor_l(demoObj, demoId);
         if (demoActor != nullptr) {
             mbDemo = 1;
-            J3DAnmTexPattern* btp = dDemo_actor_getP_BtpData_l(demoActor, STR(0x10017EF0) /* "Bms" */);
+            J3DAnmTexPattern* btp = dDemo_actor_getP_BtpData_l(demoActor, "Bms" /* "Bms" */);
             if (btp != nullptr) {
                 J3DModelData* modelData = gabi::at<J3DModelData>(J3DModel_modelData_l(mpHeadModel));
-                mDoExt_btpAnm_init_l(mBtpAnm, modelData, btp, 1, 2, 1.0f, 0, -1, 1, 0);
+                mDoExt_btpAnm_init_l(&mBtpAnm, modelData, btp, 1, 2, 1.0f, 0, -1, 1, 0);
             }
-            dDemo_setDemoData_l(this, 0x6A, mpMorf, STR(0x10017EF0), 0, nullptr, 0, 0);
+            dDemo_setDemoData_l(this, 0x6A, mpMorf, "Bms", 0, nullptr, 0, 0);
             return TRUE;
         }
     }
@@ -152,113 +169,98 @@ BOOL daNpc_Bms1_c::demo_move() {
     }
     return FALSE;
 }
-VERIFY(0x0220A230, &daNpc_Bms1_c::demo_move);
 
-/* 0220A360 (GameCube talkInit) */
-void daNpc_Bms1_c::talkInit() {
-    WWHD_FUNC(0x0220A360, void, this);
-    mTalkStep = 0;
+/* 0220A224 */
+void daNpc_Bms1_c::demo_end_init() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    mbDemo = 0;
 }
-VERIFY(0x0220A360, &daNpc_Bms1_c::talkInit);
 
-/* 0220A680 */
-void daNpc_Bms1_c::eventOrder() {
-    WWHD_FUNC(0x0220A680, void, this);
-    s8 order = mOrderEvt;
-    if (order == 4) {
-        fopAcM_orderOtherEvent2_l(this, STR(0x10017EFC), 1, 0xFFFF);
-    } else if (order == 3) {
-        fopAcM_orderOtherEvent2_l(this, STR(0x10017F0C), 1, 0xFFFF);
-    } else if (order == 1 || order == 2) {
-        eventInfo_onCondition(this, 1 /* dEvtCnd_CANTALK_e */);
-        if (mOrderEvt == 1) {
-            fopAcM_orderSpeakEvent(this);
+/* 0220A0CC */
+BOOL daNpc_Bms1_c::_delete() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mbCreateErr != 1) {
+        dComIfG_resDelete(&mPhs, BMS1_ARC);
+        if (heap.get() != nullptr && mpMorf.get() != nullptr) {
+            mpMorf->stopZelAnime();
+        }
+        daNpc_Bms1_HIO_c& hio = bms1HIO();
+        if (hio.m8 >= 0) {
+            s32 n = hio.m8 - 1;
+            hio.m8 = n;
+            if (n < 0) {
+                mDoHIO_deleteChild(hio.mNo);
+            }
         }
     }
+    return TRUE;
 }
-VERIFY(0x0220A680, &daNpc_Bms1_c::eventOrder);
 
-/* 0220A6F0 */
-void daNpc_Bms1_c::setCollision() {
-    WWHD_FUNC(0x0220A6F0, void, this);
-    gabi::Local<cXyz> offset;
-    offset->x = 0.0f;
-    offset->y = 0.0f;
-    offset->z = -16.0f;
-    MtxTrans(current.pos.x, current.pos.y, current.pos.z, 0);
-    cMtx_YrotM(calc_mtx(), m936.y);
-    gabi::Local<cXyz> out;
-    MtxPosition(offset.get(), out.get());
-    mCyl.SetC(out.get());
-    mCyl.SetR(46.0f);
-    mCyl.SetH(130.0f);
-    dComIfG_Ccsp_Set(&mCyl);
+/* 02209434 */
+static BOOL CheckCreateHeap(fopAc_ac_c* i_this) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return ((daNpc_Bms1_c*)i_this)->CreateHeap();
 }
-VERIFY(0x0220A6F0, &daNpc_Bms1_c::setCollision);
+
+/* 0220A0C8 */
+static cPhs_State daNpc_Bms1_Create(fopAc_ac_c* i_this) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return ((daNpc_Bms1_c*)i_this)->_create();
+}
+
+/* 0220A15C */
+static BOOL daNpc_Bms1_Delete(daNpc_Bms1_c* i_this) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return i_this->_delete();
+}
 
 /* 0220A950 */
 static BOOL daNpc_Bms1_Execute(daNpc_Bms1_c* i_this) {
-    WWHD_FUNC(0x0220A950, BOOL, i_this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     return i_this->_execute();
 }
-VERIFY(0x0220A950, daNpc_Bms1_Execute);
 
 /* 0220AB74 */
 static BOOL daNpc_Bms1_Draw(daNpc_Bms1_c* i_this) {
-    WWHD_FUNC(0x0220AB74, BOOL, i_this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     return i_this->_draw();
 }
-VERIFY(0x0220AB74, daNpc_Bms1_Draw);
 
 /* 0220AB78 */
 static BOOL daNpc_Bms1_IsDelete(daNpc_Bms1_c*) {
-    WWHD_FUNC(0x0220AB78, BOOL, (daNpc_Bms1_c*)nullptr);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     return TRUE;
 }
-VERIFY(0x0220AB78, daNpc_Bms1_IsDelete);
 
-/* 0220AB80 */
-void daNpc_Bms1_c::setAnm(s8 i_idx, f32 i_morf) {
-    WWHD_FUNC(0x0220AB80, void, this, i_idx, i_morf);
-    s8 cur = mAnmIdx;
-    if (i_morf < 0.0f) {
-        i_morf = gabi::load<f32>(0x101BD334 + i_idx * 4); /* morf_frame_tbl */
-    }
-    if (i_idx != cur || cur == -1) {
-        mAnmIdx = i_idx;
-        dNpc_setAnm_2(mpMorf, gabi::load<s32>(0x101BD318 + i_idx * 4) /* play_mode_tbl */, i_morf,
-                      gabi::load<f32>(0x101BD350 + i_idx * 4) /* play_speed_tbl */,
-                      gabi::load<s32>(0x10017D94 + i_idx * 4) /* l_bck_ix_tbl */, 0, BMS1_ARC);
-    }
-}
-VERIFY(0x0220AB80, &daNpc_Bms1_c::setAnm);
+// HD: compiler-generated and template code of this translation unit.
 
-/* 0220C994: daNpc_Bms1_childHIO_c::daNpc_Bms1_childHIO_c (HD: allocates when this == NULL) */
+/* 0220C994 */
 static void* daNpc_Bms1_childHIO_c_ct(void* i_this) {
-    WWHD_FUNC(0x0220C994, void*, i_this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (i_this == nullptr) {
         i_this = operator_new(0x54);
         if (i_this == nullptr)
             return i_this;
     }
-    u32 p = gabi::ea(i_this);
-    gabi::store<u32>(p + 0x50, 0x10017D64);
-    gabi::call(0x0259DA18, p + 4); /* dNpc_HIO_c::dNpc_HIO_c */
-    for (u32 o = 0x2C; o <= 0x4C; o += 4) gabi::store<f32>(p + o, 0.0f);
+    bms1_cpp::ChildHIO* child = static_cast<bms1_cpp::ChildHIO*>(i_this);
+    child->__vtbl = 0x10017D64;
+    bms1_HIOConstruct(&child->mNpc); /* dNpc_HIO_c::dNpc_HIO_c */
+    for (u32 i = 0; i < 9; ++i)
+        child->mSettings[i] = 0.0f;
     return i_this;
 }
-VERIFY(0x0220C994, daNpc_Bms1_childHIO_c_ct);
 
-/* 0220CA14: daNpc_Bms1_HIO_c::daNpc_Bms1_HIO_c (HD: allocates when this == NULL) */
+/* 0220CA14 */
 static daNpc_Bms1_HIO_c* daNpc_Bms1_HIO_c_ct(daNpc_Bms1_HIO_c* i_this) {
-    WWHD_FUNC(0x0220CA14, daNpc_Bms1_HIO_c*, i_this);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (i_this == nullptr) {
         i_this = (daNpc_Bms1_HIO_c*)operator_new(0x60);
         if (i_this == nullptr)
             return i_this;
     }
     i_this->__vtbl = 0x10017D74;
-    gabi::call(0x028EFFD0, gabi::ea(i_this) + 8, 1, 0x54, 0x0220C994); /* __construct_array(mChild, 1, size, ct) */
+    bms1_constructChildren(&i_this->child_unk, 1, 0x54,
+                           0x0220C994); /* __construct_array(mChild, 1, size, ct) */
     i_this->mMaxHeadX = 0x1388;
     i_this->mMaxBackboneX = 0;
     i_this->mMaxHeadY = 0x2710;
@@ -286,51 +288,46 @@ static daNpc_Bms1_HIO_c* daNpc_Bms1_HIO_c_ct(daNpc_Bms1_HIO_c* i_this) {
     i_this->mNo = -1;
     return i_this;
 }
-VERIFY(0x0220CA14, daNpc_Bms1_HIO_c_ct);
 
-/* 0220CB54: static initialisation of the translation unit */
+/* 0220CB54 */
 static void __sinit_d_a_npc_bms1_cpp() {
-    WWHD_FUNC(0x0220CB54, void);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     sinit_header_statics(0x1046661C, 0x101BD37C);
-    daNpc_Bms1_HIO_c_ct(&l_HIO()); /* static daNpc_Bms1_HIO_c l_HIO */
+    daNpc_Bms1_HIO_c_ct(&l_HIOStorage); // HD: construct the single TU-wide HIO storage.
 }
-VERIFY(0x0220CB54, __sinit_d_a_npc_bms1_cpp);
 
-/* 0220CBF4: trivial deleting destructor (this TU's copy: sead::SafeString / HIO) */
+/* 0220CBF4 */
 static void trivial_dt(void* i_this, s32 flags) {
-    WWHD_FUNC(0x0220CBF4, void, i_this, flags);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (i_this != nullptr && (flags & 1))
         operator_delete(i_this);
 }
-VERIFY(0x0220CBF4, trivial_dt);
 
-/* 0220CC08: daNpc_Bms1_c deleting destructor (compiler-generated, HD virtual destructor) */
+/* 0220CC08 */
 static void daNpc_Bms1_c_dt(daNpc_Bms1_c* i_this, s32 flags) {
-    WWHD_FUNC(0x0220CC08, void, i_this, flags);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (i_this != nullptr) {
-        gabi::call(0x025886D8, &i_this->mStickControl, 2); /* STControl::~STControl */
+        bms1_STControlDestroy(&i_this->mStickControl, 2); /* STControl::~STControl */
         dCcD_Cyl_dt(&i_this->mCyl, 2);
         dCcD_Stts_dt(&i_this->mStts, 2);
-        gabi::call(0x02018034, gabi::ea(&i_this->mAcchCir) + 0x14, 2); /* cM3dGCir::~cM3dGCir */
-        gabi::store<u32>(gabi::ea(&i_this->mAcch) + 0x20, 0x10017D34);
-        gabi::store<u32>(gabi::ea(&i_this->mAcch) + 0x14, 0x10017D44);
-        gabi::call(0x024EFD9C, &i_this->mAcch, 0); /* dBgS_Acch::~dBgS_Acch */
-        gabi::call(0x025D50BC, i_this, 0);         /* fopAc_ac_c::~fopAc_ac_c */
+        bms1_circleDestroy(&i_this->mAcchCir.m_cir, 2); /* cM3dGCir::~cM3dGCir */
+        reinterpret_cast<bms1_cpp::AcchVtables*>(&i_this->mAcch)->mActorVtable = 0x10017D34;
+        reinterpret_cast<bms1_cpp::AcchVtables*>(&i_this->mAcch)->mCheckVtable = 0x10017D44;
+        bms1_acchDestroy(&i_this->mAcch, 0); /* dBgS_Acch::~dBgS_Acch */
+        bms1_actorDestroy(i_this, 0);        /* fopAc_ac_c::~fopAc_ac_c */
         if (flags & 1)
             operator_delete(i_this);
     }
 }
-VERIFY(0x0220CC08, daNpc_Bms1_c_dt);
 
-/* 0220CCB0: empty virtual */
+/* 0220CCB0 */
 static void empty_virtual(void*) {
-    WWHD_FUNC(0x0220CCB0, void, (void*)nullptr);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
 }
-VERIFY(0x0220CCB0, empty_virtual);
 
-/* 0220CCB4: cLib_calcTimer<s8> (this TU's copy) */
+/* 0220CCB4 */
 static s8 cLib_calcTimer_s8(be<s8>* t) {
-    WWHD_FUNC(0x0220CCB4, s8, t);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     s8 v = *t;
     if (v != 0) {
         v = (s8)(v - 1);
@@ -338,4 +335,31 @@ static s8 cLib_calcTimer_s8(be<s8>* t) {
     }
     return v;
 }
-VERIFY(0x0220CCB4, cLib_calcTimer_s8);
+
+// clang-format off
+/* WWHD glue
+str 101BD3A0 "Bms"
+str 10017F0C "BMS_GET_DEMO" in 0220A680
+str 10017EFC "BMS_LAND_DEMO" in 0220A680
+str 10017EF0 "Bms" in 0220A230
+str 10017D84 "m_object != (0)" in 0220A230
+str 10017DB0 "d_demo.h" in 0220A230
+str 10017DD8 "m_head_tex_pattern != (0)" in 02208BA8
+str 10017DF4 "d_a_npc_bms1.cpp" in 02208BA8
+data l_HIOStorage 10466650
+data l_msgIdStorage 10466618
+data l_hairBase 10466638
+data l_hairTip 10466644
+data l_hairBaseGuard 104666B0
+data l_hairTipGuard 104666B4
+data l_identityQuaternion 101E9C38
+data l_cutNames 101BD36C
+data l_cyl_src 101BD2D4
+data l_demoObject 101D5FFC
+data l_btp_ix_tbl 10017CF0
+data morf_frame_tbl 101BD334
+data play_mode_tbl 101BD318
+data play_speed_tbl 101BD350
+data l_bck_ix_tbl 10017D94
+*/
+// clang-format on

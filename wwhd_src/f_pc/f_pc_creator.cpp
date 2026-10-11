@@ -1,32 +1,44 @@
-#include "gabi.h"
-using namespace gabi;
+/** Process creation entry points. */
+#include "f_pc/f_pc_creator.h"
 
-s32 fpcCt_Abort_hd(void* process) {
-    WWHD_FUNC(0x025DDCE4, s32, process);
-    return call<s32>(0x025DD934, at<void>(load<u32>(ea(process)+0x14)));
-}
-VERIFY(0x025DDCE4, fpcCt_Abort_hd);
+static CreatorHeaderStatics l_headerStatics;
+static const CreatorPiPair l_piPair;
 
-s32 fpcCt_Handler_hd() {
-    WWHD_FUNC(0x025DDCEC, s32);
-    return call<s32>(0x025DDAC4);
+/* 025DDCE4 */
+BOOL fpcCt_Abort(base_process_class* i_proc) {
+    // The shared process layout retains this guest pointer as a u32 field.
+    return fpcCtRq_Cancel(gabi::at<create_request>(i_proc->mpCtRq));
 }
-VERIFY(0x025DDCEC, fpcCt_Handler_hd);
 
-void f_pc_creator_sinit_hd() {
-    WWHD_FUNC(0x025DDCF0, void);
-    store<u32>(0x1048A724, 0);
-    store<u32>(0x1048A71C, 0);
-    store<u32>(0x1048A728, 0);
-    store<u32>(0x1048A720, 0);
-    call<void>(0x028F026C, at<void>(0x101F39B0));
-    f32 a = load<f32>(0x10057EAC);
-    f32 b = load<f32>(0x10057EB0);
-    store<f32>(0x1048A710, a);
-    store<f32>(0x1048A714, b);
-    call<void>(0x028ED6F8, at<void>(0x1048A718));
-    call<void>(0x028F026C, at<void>(0x101F39BC));
-    call<void>(0x028EAB2C, at<void>(0x1048A719));
-    call<void>(0x028F026C, at<void>(0x101F39C8));
+/* 025DDCEC */
+BOOL fpcCt_Handler() {
+    return fpcCtRq_Handler();
 }
-VERIFY(0x025DDCF0, f_pc_creator_sinit_hd);
+
+// HD: compiler-generated and template code of this translation unit.
+/* 025DDCF0 */
+static void __sinit_f_pc_creator_cpp() {
+    // Preserve the constructor's nonsequential zeroing and pi load/store order.
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(0x101F39B0);
+    f32 first = l_piPair.negativePi;
+    f32 second = l_piPair.positivePi;
+    l_headerStatics.negativePi = first;
+    l_headerStatics.positivePi = second;
+    CreatorFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F39BC);
+    CreatorSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F39C8);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): translation-unit data and other-unit calls
+ data l_headerStatics 1048A710
+ data l_piPair 10057EAC
+ ext 025DD934 BOOL fpcCtRq_Cancel(create_request*)
+ ext 025DDAC4 BOOL fpcCtRq_Handler()
+ ext 028ED6F8 void CreatorFirstHeaderObject_ct(u8*)
+ ext 028EAB2C void CreatorSecondHeaderObject_ct(u8*)
+*/

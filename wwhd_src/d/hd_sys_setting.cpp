@@ -1,98 +1,90 @@
-/* hd_sys_setting: HD system setting singleton (a console setting read through 0286D620, mirrored
- * into the save options), WWHD. HD-only code (no GameCube
- * source): written from the WWHD code. Range 025F9370..025F9643 (static initialiser 025F95B0).
- *
- * SysSetting (0x18), singleton 101F4BAC (disposer holder 101F4BB0): +0..+0x10 sead disposer (vtable
- * 100E0D88 at +0xC), +0x10 state (1 not read / unavailable, 2 read), +0x14 value (1, 2 or 5; other
- * values are reset to 1). The value is stored as 0/2/3 in byte +4 of the save options object
- * (027200D0 of the save info + 0x12C0). The message manager reads +0x14 as the language id.
- */
-#include "gabi.h"
-using namespace gabi;
+/** HD system setting and its save-option mirror; private decomp source.
+ * No GameCube counterpart. Numeric console values are retained; their names are unconfirmed. */
+#include "bindings.h"
+#include "d/hd_sys_setting.h"
+static hdSysSetting_c* sSetting;
+static hdSysSetting_c* sSettingDisposer;
+static hdSettingSaveInfo* sSaveInfo;
 
-namespace hd_sys_setting {
-
-static const u32 kInstance = 0x101F4BAC;
-
-/* 025F9370: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x025F9370, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x18u);
-        if (!p) return 0;
+/* 025F9370 */
+static hdSysSetting_c* constructSystemSetting(hdSysSetting_c* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdSysSetting_c*)operator_new(sizeof(hdSysSetting_c));
+        if (i_this == NULL) {
+            return NULL;
+        }
     }
-    store<u32>(p + 0x10, 1);
-    store<u32>(p + 0x14, 0);
-    return p;
+    i_this->mState = hdSysSetting_c::UNAVAILABLE;
+    i_this->mValue = 0;
+    return i_this;
 }
-VERIFY(0x025F9370, ctor);
 
-/* 025F93B4: creates the singleton with its disposer */
-void createInstance(u32 heap) {
-    WWHD_FUNC(0x025F93B4, void, heap);
-    if (load<u32>(kInstance)) return;
-    const u32 p = call<u32>(0x0273B0D4, 0x18u, heap, 4u);
-    if (p) {
-        call<void>(0x02752B0C, p, heap, 3u);
-        store<u32>(p + 0xC, 0x100E0D88);
-    }
-    store<u32>(0x101F4BB0, p);
-    store<u32>(kInstance, p ? ctor(p) : 0u);
-}
-VERIFY(0x025F93B4, createInstance);
-
-/* 025F9448: reads the setting and mirrors it into the save options */
-void update(u32 p) {
-    WWHD_FUNC(0x025F9448, void, p);
-    if (s32(call<u32>(0x0286D620, p + 0x14)) == -3) {
-        store<u32>(p + 0x10, 1);
-        store<u32>(p + 0x14, 0);
+/* 025F93B4 */
+static void createSystemSetting(void* heap) {
+    if (sSetting != NULL) {
         return;
     }
-    u32 v = load<u32>(p + 0x14);
-    store<u32>(p + 0x10, 2);
-    if (v < 1 || (v > 2 && v != 5)) {
-        v = 1;
-        store<u32>(p + 0x14, 1);
+    hdSysSetting_c* setting = (hdSysSetting_c*)hdSettingAllocate(sizeof(hdSysSetting_c), heap, 4);
+    if (setting != NULL) {
+        hdSettingConstructDisposer(setting, heap, 3);
+        setting->mDisposerVtable = 0x100E0D88;
     }
-    u8 m = 0;
-    if (v == 2) m = 2;
-    else if (v == 5) m = 3;
-    const u32 opt = call<u32>(0x027200D0, load<u32>(0x101F84DC) + 0x12C0);
-    store<u8>(opt + 4, m);
+    sSettingDisposer = setting;
+    sSetting = setting != NULL ? constructSystemSetting(setting) : NULL;
 }
-VERIFY(0x025F9448, update);
 
-/* 025F9530: destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x025F9530, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0xC, 0x100E0D88);
-    if (p == load<u32>(0x101F4BB0)) {
-        store<u32>(0x101F4BB0, 0);
-        store<u32>(kInstance, 0);
+/* 025F9448 */
+static void updateSystemSetting(hdSysSetting_c* i_this) {
+    if (hdSettingReadConsoleValue(&i_this->mValue) == -3) {
+        i_this->mState = hdSysSetting_c::UNAVAILABLE;
+        i_this->mValue = 0;
+        return;
     }
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    u32 value = i_this->mValue;
+    i_this->mState = hdSysSetting_c::READ;
+    if (value < hdSysSetting_c::DEFAULT ||
+        (value > hdSysSetting_c::SECOND && value != hdSysSetting_c::FIFTH)) {
+        value = hdSysSetting_c::DEFAULT;
+        i_this->mValue = hdSysSetting_c::DEFAULT;
+    }
+    u8 language = 0;
+    if (value == hdSysSetting_c::SECOND) {
+        language = 2;
+    } else if (value == hdSysSetting_c::FIFTH) {
+        language = 3;
+    }
+    hdSettingOptions* options = hdSettingGetOptions(sSaveInfo->mOptions);
+    options->mLanguage = language;
 }
-VERIFY(0x025F9530, dtor);
 
-void staticInit() {
-    WWHD_FUNC(0x025F95B0, void);
-    const u32 b = 0x1048D7A8;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F4B88u);
-    const f32 lo = load<f32>(0x100E0D80), hi = load<f32>(0x100E0D84);
-    store<f32>(0x1048D79C, lo);
-    store<f32>(0x1048D7A0, hi);
-    call<void>(0x028ED6F8, 0x1048D7A4u);
-    call<void>(0x028F026C, 0x101F4B94u);
-    call<void>(0x028EAB2C, 0x1048D7A5u);
-    call<void>(0x028F026C, 0x101F4BA0u);
+/* 025F9530 */
+static void destroySystemSetting(hdSysSetting_c* i_this, u32 flags) {
+    if (i_this == NULL) {
+        return;
+    }
+    i_this->mDisposerVtable = 0x100E0D88;
+    if (i_this == sSettingDisposer) {
+        sSettingDisposer = NULL;
+        sSetting = NULL;
+    }
+    hdSettingDestroyDisposer(i_this, 0);
+    if (flags & 1) {
+        operator_delete(i_this);
+    }
 }
-VERIFY(0x025F95B0, staticInit);
 
-} // namespace hd_sys_setting
+/* 025F95B0 */
+static void __sinit_hd_sys_setting_cpp() {
+    sinit_header_statics_rodata(0x1048D79C, 0x101F4B88, 0x1048D7A8, 0x100E0D80);
+}
+
+/* WWHD glue (tools/verify/autoglue.py): HD setting globals and console APIs
+ data sSetting 101F4BAC
+ data sSettingDisposer 101F4BB0
+ data sSaveInfo 101F84DC
+ ext 0273B0D4 void* hdSettingAllocate(u32, void*, u32)
+ ext 02752B0C void hdSettingConstructDisposer(hdSysSetting_c*, void*, u32)
+ ext 02752BEC void hdSettingDestroyDisposer(hdSysSetting_c*, u32)
+ ext 0286D620 s32 hdSettingReadConsoleValue(be<u32>*)
+ ext 027200D0 hdSettingOptions* hdSettingGetOptions(void*)
+*/

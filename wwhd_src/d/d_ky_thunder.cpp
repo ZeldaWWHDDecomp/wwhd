@@ -1,77 +1,239 @@
-// HD thunder effect.
-#include "gabi.h"
-using namespace gabi;
-static u32 U(u32 p,u32 n=0){return load<u32>(p+n);}
-static f32 F(u32 p,u32 n=0){return load<f32>(p+n);}
-static void S(u32 p,u32 n,f32 x){store<f32>(p+n,x);}
-struct ThunderVec { u8 bytes[12]; };
-struct ThunderMtx { u8 bytes[48]; };
-struct ThunderRes { be<u32> a,b; };
-u32 thunderDraw(u32 p){
- WWHD_FUNC(0x02585098,u32,p);
- if(!U(0x101FDD00)){f32 z=F(0x10050484),x=F(0x1005047C),y=F(0x10050480);store<u32>(0x101FDD00u,1);S(0x101FDD04,0,x);S(0x101FDD04,4,y);S(0x101FDD04,8,z);}
- u32 g=call<u32>(0x025200D4),camera=U(g,0x5AF8);Local<ThunderVec> v;call<void>(0x0201AD78,camera+0xDC,v.get(),p+0x210);
- u32 m=0x1048D0CCu,vec=ea(v.get());call<void>(0x028E93CC,m,F(vec),F(vec,4),F(vec,8));
- call<void>(0x025F1C5C,m,(s16)ftoi(F(p,0x228)));call<void>(0x025F1BF4,m,(s16)ftoi(F(p,0x228)));
- Local<ThunderMtx> copy;call<void>(0x028E90D4,m,copy.get());u32 model=U(p,0x100);f32 sz=F(p,0x200),sx=F(p,0x1F8),sy=F(p,0x1FC);S(model,0xBC,sx);S(model,0xC0,sy);S(model,0xC4,sz);
- f32 a[12];for(u32 n=0;n<12;++n)a[n]=F(ea(copy.get()),n*4);model=U(p,0x100);
- S(model,0xDC,a[5]);S(model,0xE0,a[6]);S(model,0xE4,a[7]);S(model,0xEC,a[9]);S(model,0xF0,a[10]);S(model,0xF4,a[11]);S(model,0xC8,a[0]);S(model,0xCC,a[1]);S(model,0xD0,a[2]);S(model,0xD4,a[3]);S(model,0xD8,a[4]);S(model,0xE8,a[8]);
- call<void>(0x025E7FC4,p+0x10C,U(U(p,0x100),0xAC),F(p,0x22C));call<void>(0x025E83FC,p+0x180,U(U(p,0x100),0xAC),F(p,0x184));
- g=call<u32>(0x025200D4);store<u32>(0x104B4634u,U(g,0x5D78));g=call<u32>(0x025200D4);store<u32>(0x104B4638u,U(g,0x5D7C));
- call<void>(0x025E2DE0,U(p,0x100),0u);call<void>(0x025E8CD8,p+0x104);store<u32>(U(U(p,0x100),0xAC)+0x44,0);store<u32>(U(U(p,0x100),0xAC)+0x48,0);return 1;
+/**
+ * d_ky_thunder.cpp
+ * Environment - Thunder flash
+ * WWHD cking.rpx, GameCube names and structure, verified by tools/verify/d_ky_thunder.
+ */
+#include "d/d_ky_thunder.h"
+#include "gc_api/JSystem/JKernel/JKRSolidHeap.h"
+#include "gc_api/JSystem/JUTAssert.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/d/d_kankyo_rain.h"
+#include "gc_api/dolphin/os.h"
+#include "gc_api/f_op/f_op_kankyo_mng.h"
+#include "gc_api/f_pc/f_pc_base.h"
+#include "gc_api/m_Do/m_Do_audio.h"
+#include "gc_api/m_Do/m_Do_ext.h"
+#include "gc_api/m_Do/m_Do_mtx.h"
+
+const gc_tu_data gc_tu = {.safeString = 0x10050414};
+enum {
+    JA_SE_OBJ_THUNDER_FAR = 0x69F6,
+    dRes_INDEX_ALWAYS_BDL_YTHDR00_e = 0x3E,
+    dRes_INDEX_ALWAYS_BTK_YTHDR00_e = 0x60,
+    dRes_INDEX_ALWAYS_BRK_YTHDR00_e = 0x52
+};
+
+/* 02585098 */
+u32 dThunder_c::draw() {
+    static cXyz l_offsetPos(0.0f, 40.0f, -250.0f);
+    (void)l_offsetPos;
+    // HD: the offset used at creation remains camera-relative when drawing.
+    dThunder_camera_c *pCamera = (dThunder_camera_c *)dComIfGp_getCamera(0);
+    cXyz pos = pCamera->mEye + mOffsetPos;
+    mDoMtx_stack_c::transS(pos);
+    mDoMtx_stack_c::ZrotM((s16)gabi::ftoi(mRot));
+    mDoMtx_stack_c::XrotM((s16)gabi::ftoi(mRot));
+    Mtx34 m;
+    MTXCopy(mDoMtx_stack_c::get(), &m);
+    J3DModel *model = mModelInfo.mpModel;
+    f32 sz = mScale.z, sx = mScale.x, sy = mScale.y;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.y = sy;
+    model->mBaseScale.z = sz;
+    model = mModelInfo.mpModel;
+    model->setBaseTRMtx(&m);
+    mModelInfo.mBtk.entry(mModelInfo.mpModel->getModelData(), mBtkTime);
+    mModelInfo.mBrk.entry(mModelInfo.mpModel->getModelData(), mModelInfo.mBrk.getFrame());
+    dComIfGd_setList();
+    mDoExt_modelUpdateDL(mModelInfo.mpModel);
+    mDoExt_invisibleModel_entryMaskOff(mModelInfo.mInvisModel);
+    // HD: removal is inlined as clearing the two animation pointers on model data.
+    J3DModelData *data = mModelInfo.mpModel->getModelData();
+    mDoExt_btkAnm_remove(data);
+    data = mModelInfo.mpModel->getModelData();
+    mDoExt_brkAnm_remove(data);
+    return TRUE;
 }
-VERIFY(0x02585098,thunderDraw);
-u32 thunderExecute(u32 p){WWHD_FUNC(0x02585278,u32,p);call<void>(0x025200D4);S(p,0x180,F(0x10050488));if(call<u32>(0x025E742C,p+0x180)){call<void>(0x025E19CC,0x69F6u,p+0x204);call<void>(0x025DAD48,p);}return 1;}
-VERIFY(0x02585278,thunderExecute);
-u32 thunderDelete(u32 p){WWHD_FUNC(0x025852D8,u32,p);call<void>(0x025E1B34,p+0x204);call<void>(0x025E1B34,p+0x21C);call<void>(0x025E3868,U(p,0xFC));call<void>(0x025E89F8,p+0x104,2u);call<void>(0x025DD630,p,0u);return 1;}
-VERIFY(0x025852D8,thunderDelete);
-u32 thunderCreateHeap(u32 p){
- WWHD_FUNC(0x02585334,u32,p);if(U(p,0xFC))return 1;u32 parent=U(0x1047C8B4u),heap=0;
- if(parent){heap=call<u32>(0x025E35BC,0x3804u,parent,0x20u);store<u32>(p+0xFC,heap);}
- if(!heap){parent=call<u32>(0x025E2F64,0u);heap=call<u32>(0x025E35BC,0x3804u,parent,0x20u);store<u32>(p+0xFC,heap);
-  if(!heap){parent=call<u32>(0x025E2F64,1u);heap=call<u32>(0x025E35BC,0x3804u,parent,0x20u);store<u32>(p+0xFC,heap);if(!heap)return 0;}}
- store<u32>(heap+16,0x1005048Cu);return 1;
+
+/* 02585278 */
+u32 dThunder_c::execute() {
+    // HD: the play-object accessor is retained although its result is unused.
+    dComIfGp_ea();
+    mModelInfo.mBrk.setPlaySpeed(1.0f);
+    if (mModelInfo.mBrk.play()) {
+        mDoAud_seStart(JA_SE_OBJ_THUNDER_FAR, &mPos);
+        fopKyM_Delete(this);
+    }
+    return TRUE;
 }
-VERIFY(0x02585334,thunderCreateHeap);
-void thunderAdjustHeap(u32 p){WWHD_FUNC(0x02585400,void,p);call<void>(0x025E37D8);s32 size=call<s32>(0x025E3678,U(p,0xFC));if(size>=0){u32 heap=U(p,0xFC),vt=U(heap,12);u32 a=call_ptr<u32>(U(vt,0x6C),heap),b=call_ptr<u32>(U(vt,0x5C),heap);call<void>(0xC00088B8u,b,a);}}
-VERIFY(0x02585400,thunderAdjustHeap);
-u32 thunderCreate(u32 p){
- WWHD_FUNC(0x02585478,u32,p);if(!call<u32>(0x02585334,p))return 5;
- u32 weather=call<u32>(0x02555D0C)+0xAB0,g=call<u32>(0x025200D4),camera=U(g,0x5AF8);
- if(p){call<void>(0x025DD5F0,p);store<u32>(p+0xB4,0x1005042Cu);call<void>(0x025E895C,p+0x104);call<void>(0x025E7C6C,p+0x10C);call<void>(0x025E80D0,p+0x180);}
- Local<ThunderRes> modelName;modelName->b=0x10050414u;modelName->a=0x1005040Cu;
- u32 data=call<u32>(0x026066C4,U(0x101F4F28u),modelName.get(),0x3Eu);if(!data)call<void>(0x0273AA24,0x10050448u,0x8Bu,0x1005045Cu);
- u32 model=call<u32>(0x025E38E0,data,0x80000u,0x01000200u);store<u32>(p+0x100,model);
- if(!model || !call<u32>(0x025E8A48,p+0x104,model)){call<void>(0x02585400,p);return 5;}
- Local<ThunderRes> btkName;btkName->b=0x10050414u;btkName->a=0x1005040Cu;
- u32 anim=call<u32>(0x026066C4,U(0x101F4F28u),btkName.get(),0x60u);if(!anim)call<void>(0x0273AA24,0x10050448u,0x9Au,0x10050470u);
- f32 one=F(0x10050488);if(!call<u32>(0x025E7CE0,p+0x10C,data,anim,0u,2u,0u,0xFFFFFFFFu,0u,0u,one)){call<void>(0x02585400,p);return 5;}
- Local<ThunderRes> brkName;brkName->b=0x10050414u;brkName->a=0x1005040Cu;
- anim=call<u32>(0x026066C4,U(0x101F4F28u),brkName.get(),0x52u);if(!anim)call<void>(0x0273AA24,0x10050448u,0xA9u,0x1005043Cu);
- if(!call<u32>(0x025E8154,p+0x180,data,anim,1u,0u,0u,0xFFFFFFFFu,0u,0u,one)){call<void>(0x02585400,p);return 5;}
- S(p,0x22C,call<f32>(0x020198D8,one));bool close=load<u8>(weather+1)<10;f32 zero=F(0x1005047C),factor=close?one:F(0x10050494);
- S(p,0x228,zero);f32 r=call<f32>(0x02019918,zero);S(p,0x228,fmuls_ppc(r,factor));
- r=call<f32>(0x020198D8,F(0x10050498));f32 size=fmuls_ppc(fadds_ppc(F(0x1005049C),r),factor);S(p,0x1F8,size);
- r=call<f32>(0x02019918,one);f64 boundary=load<f64>(0x100504A0u);if(close?(r>=boundary):!(r<boundary))S(p,0x1F8,-F(p,0x1F8));
- S(p,0x1FC,size);S(p,0x200,one);Local<ThunderVec> dir;call<void>(0x02563F64,camera+0xDC,camera+0xE8,dir.get());u32 v=ea(dir.get());
- f32 dx=F(v),dz=F(v,8);f32 horizontal=call<f32>(0x028F4384,fmadds(dx,dx,fmuls_ppc(dz,dz)));
- s16 yaw=call<s16>(0x020195B0,F(v),F(v,8)),pitch=call<s16>(0x020195B0,F(v,4),horizontal);
- bool right=!(call<f32>(0x02019918,one)<zero);u32 yawIndex=(u16)((s32)yaw+(right?0x4000:-0x4000)),pitchIndex=(u16)pitch;
- u32 tablePitch=0x104A44F8u+(pitchIndex>>3)*8,tableYaw=0x104A44F8u+(yawIndex>>3)*8;
- f32 cs=F(tablePitch,4),sn=F(tableYaw),cy=F(tableYaw,4),sideX=fmuls_ppc(cs,sn),sideZ=fmuls_ppc(cs,cy);
- f32 spread=call<f32>(0x020198D8,F(0x100504A8)),far=F(0x100504AC);
- f32 offX=fmadds(F(v),far,fmuls_ppc(sideX,spread));S(p,0x210,offX);
- f32 offY=call<f32>(0x02019918,F(0x100504B0));f32 offZ=fmadds(F(v,8),far,fmuls_ppc(sideZ,spread)),currentX=F(p,0x210);
- S(p,0x214,offY);S(p,0x218,offZ);S(p,0x204,fadds_ppc(F(camera,0xDC),currentX));S(p,0x208,fadds_ppc(F(camera,0xE0),offY));S(p,0x20C,fadds_ppc(F(camera,0xE4),offZ));
- r=call<f32>(0x020198D8,one);f32 chance=F(0x100504B4);if(right?(r<chance):!(r>=chance)){f32 x=F(p,0x204),y=F(p,0x208),z=F(p,0x20C);S(p,0x21C,-x);S(p,0x220,-y);S(p,0x224,-z);call<void>(0x025E19CC,0x69F6u,p+0x21C);}
- call<void>(0x02585400,p);return 4;
+
+/* 025852D8 */
+static u32 dThunder_Delete(dThunder_c *i_this) {
+    mDoAud_seDeleteObject(&i_this->mPos);
+    mDoAud_seDeleteObject(&i_this->mPosNeg);
+    mDoExt_destroySolidHeap(i_this->solid_heap);
+    // HD: GHS destroys the invisibility wrapper and process base explicitly.
+    mDoExt_invisibleModel_dt(i_this->mModelInfo.mInvisModel);
+    __dt(&i_this->base);
+    return TRUE;
 }
-VERIFY(0x02585478,thunderCreate);
-void thunderStaticInit(){WWHD_FUNC(0x02585A0C,void);store<u32>(0x104775D0u,0);store<u32>(0x104775C8u,0);store<u32>(0x104775D4u,0);store<u32>(0x104775CCu,0);call<void>(0x028F026C,0x101E9A84u);f32 a=F(0x100504B8),b=F(0x100504BC);S(0x104775BC,0,a);S(0x104775C0,0,b);call<void>(0x028ED6F8,0x104775C4u);call<void>(0x028F026C,0x101E9A90u);call<void>(0x028EAB2C,0x104775C5u);call<void>(0x028F026C,0x101E9A9Cu);}
-VERIFY(0x02585A0C,thunderStaticInit);
-u32 thunderIsDelete(u32 p){WWHD_FUNC(0x02585AA0,u32,p);return 1;}
-VERIFY(0x02585AA0,thunderIsDelete);
-void thunderEmptyDtor(u32 p,u32 flags){WWHD_FUNC(0x02585AA8,void,p,flags);if(p&&(flags&1))call<void>(0x0273AF40,p);}
-VERIFY(0x02585AA8,thunderEmptyDtor);
-void thunderEmpty(u32 p){WWHD_FUNC(0x02585ABC,void,p);}
-VERIFY(0x02585ABC,thunderEmpty);
+
+/* 02585334 */
+u32 dThunder_c::createHeap() {
+    if (solid_heap != NULL)
+        return TRUE;
+    // HD: try the selected game heap, then game heaps zero and one, with a larger allocation.
+    JKRHeap *parent = mDoExt_getCurrentGameHeap();
+    JKRSolidHeap *heap = NULL;
+    if (parent != NULL) {
+        heap = mDoExt_createSolidHeapToCurrent(0x3804, parent, 0x20);
+        solid_heap = heap;
+    }
+    if (heap == NULL) {
+        parent = mDoExt_getGameHeap(0);
+        heap = mDoExt_createSolidHeapToCurrent(0x3804, parent, 0x20);
+        solid_heap = heap;
+        if (heap == NULL) {
+            parent = mDoExt_getGameHeap(1);
+            heap = mDoExt_createSolidHeapToCurrent(0x3804, parent, 0x20);
+            solid_heap = heap;
+            if (heap == NULL)
+                return FALSE;
+        }
+    }
+    // HD: source spelling is ASCII; glue preserves the original Japanese guest bytes.
+    JKRSolidHeap_setDebugName(heap, "Thunder");
+    return TRUE;
+}
+
+/* 02585400 */
+void dThunder_c::adjustHeap() {
+    mDoExt_restoreCurrentHeap();
+    if (mDoExt_adjustSolidHeap(solid_heap) >= 0) {
+        JKRSolidHeap *heap = solid_heap;
+        JKRSolidHeap_vtable *vt = JKRSolidHeap_getVirtualTable(heap);
+        u32 size = JKRSolidHeap_getHeapSize(heap, vt);
+        void *start = JKRSolidHeap_getStartAddr(heap, vt);
+        DCStoreRangeNoSync(start, size);
+    }
+}
+
+/* 02585478 */
+static u32 dThunder_Create(dThunder_c *i_this) {
+    if (!i_this->createHeap())
+        return cPhs_ERROR_e;
+    dThunder_env_c *envLight = (dThunder_env_c *)dKy_getEnvlight();
+    dThunder_camera_c *pCamera = (dThunder_camera_c *)dComIfGp_getCamera(0);
+    // HD: GHS expands placement construction and each animation constructor here.
+    if (i_this != NULL) {
+        __ct(&i_this->base);
+        i_this->base.__vtbl = dThunder_c::__vt;
+        mDoExt_invisibleModel_ct(i_this->mModelInfo.mInvisModel);
+        mDoExt_btkAnm::ct(&i_this->mModelInfo.mBtk);
+        mDoExt_brkAnm::ct(&i_this->mModelInfo.mBrk);
+    }
+    J3DModelData *modelData =
+        (J3DModelData *)dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BDL_YTHDR00_e);
+    JUT_ASSERT(0x8B, modelData != NULL);
+    J3DModel *model = mDoExt_J3DModel__create(modelData, 0x80000, 0x01000200);
+    i_this->mModelInfo.mpModel = model;
+    if (model == NULL || !mDoExt_invisibleModel_create(i_this->mModelInfo.mInvisModel, model)) {
+        i_this->adjustHeap();
+        return cPhs_ERROR_e;
+    }
+    void *anm = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BTK_YTHDR00_e);
+    JUT_ASSERT(0x9A, anm != NULL);
+    if (!i_this->mModelInfo.mBtk.init(modelData, (J3DAnmTextureSRTKey *)anm, false,
+                                      J3DFrameCtrl::EMode_LOOP, 1.0f, 0, -1, false, 0)) {
+        i_this->adjustHeap();
+        return cPhs_ERROR_e;
+    }
+    void *canm = dComIfG_getObjectRes("Always", dRes_INDEX_ALWAYS_BRK_YTHDR00_e);
+    JUT_ASSERT(0xA9, canm != NULL);
+    if (!i_this->mModelInfo.mBrk.init(modelData, (J3DAnmTevRegKey *)canm, true,
+                                      J3DFrameCtrl::EMode_NONE, 1.0f, 0, -1, false, 0)) {
+        i_this->adjustHeap();
+        return cPhs_ERROR_e;
+    }
+    i_this->mBtkTime = cM_rndF(1.0f);
+    bool close = envLight->mThunderEff.mState < 10;
+    f32 factor = close ? 1.0f : 0.5f;
+    // HD: rotation is randomized from zero and both scale components use the same size.
+    i_this->mRot = 0.0f;
+    f32 r = cM_rndFX(0.0f);
+    i_this->mRot = gabi::fmuls_ppc(r, factor);
+    r = cM_rndF(60.0f);
+    f32 size = gabi::fmuls_ppc(gabi::fadds_ppc(20.0f, r), factor);
+    i_this->mScale.x = size;
+    r = cM_rndFX(1.0f);
+    // HD: retain GHS's unordered-NaN behavior for the distant branch.
+    if (close ? (r >= 0.5) : !(r < 0.5))
+        i_this->mScale.x = -i_this->mScale.x;
+    i_this->mScale.y = size;
+    i_this->mScale.z = 1.0f;
+    cXyz fwd;
+    dKyr_get_vectle_calc(&pCamera->mEye, &pCamera->mCenter, &fwd);
+    f32 dx = fwd.x, dz = fwd.z;
+    f32 distXZ = std_sqrtf(gabi::fmadds(dx, dx, gabi::fmuls_ppc(dz, dz)));
+    s16 rotX = cM_atan2s(fwd.x, fwd.z);
+    s16 rotY = cM_atan2s(fwd.y, distXZ);
+    bool right = !(cM_rndFX(1.0f) < 0.0f);
+    u16 yaw = (u16)((s32)rotX + (right ? 0x4000 : -0x4000));
+    f32 cs = cM_scos(rotY), sn = cM_ssin(yaw), cy = cM_scos(yaw);
+    f32 sideX = gabi::fmuls_ppc(cs, sn), sideZ = gabi::fmuls_ppc(cs, cy);
+    f32 baseXZ = cM_rndF(120000.0f);
+    f32 offX = gabi::fmadds(fwd.x, 100000.0f, gabi::fmuls_ppc(sideX, baseXZ));
+    i_this->mOffsetPos.x = offX;
+    f32 offY = cM_rndFX(2000.0f);
+    f32 offZ = gabi::fmadds(fwd.z, 100000.0f, gabi::fmuls_ppc(sideZ, baseXZ));
+    f32 currentX = i_this->mOffsetPos.x;
+    i_this->mOffsetPos.y = offY;
+    i_this->mOffsetPos.z = offZ;
+    i_this->mPos.x = gabi::fadds_ppc(pCamera->mEye.x, currentX);
+    i_this->mPos.y = gabi::fadds_ppc(pCamera->mEye.y, offY);
+    i_this->mPos.z = gabi::fadds_ppc(pCamera->mEye.z, offZ);
+    r = cM_rndF(1.0f);
+    // HD: the left-hand branch also preserves GHS's unordered comparison.
+    if (right ? (r < 0.3f) : !(r >= 0.3f)) {
+        f32 x = i_this->mPos.x, y = i_this->mPos.y, z = i_this->mPos.z;
+        i_this->mPosNeg.x = -x;
+        i_this->mPosNeg.y = -y;
+        i_this->mPosNeg.z = -z;
+        mDoAud_seStart(JA_SE_OBJ_THUNDER_FAR, &i_this->mPosNeg);
+    }
+    i_this->adjustHeap();
+    return cPhs_COMPLEATE_e;
+}
+
+/* 02585AA0 */
+static u32 dThunder_IsDelete(dThunder_c *i_this) {
+    return TRUE;
+}
+
+/* ---------------- HD: compiler-generated and template code ---------------- */
+
+/* 02585A0C */
+static void __sinit_d_ky_thunder_cpp() {
+    sinit_header_statics(0x104775BC, 0x101E9A84);
+}
+
+/* 02585AA8 */
+static void SafeString__dt(void *i_this, u32 flags) {
+    if (i_this != NULL && (flags & 1))
+        operator_delete(i_this);
+}
+
+/* 02585ABC */
+static void SafeString__assureTerminationImpl(void *i_this) {
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+ext 025E37D8 void mDoExt_restoreCurrentHeap()
+str 1005040C
+str 10050448
+str 1005045C "modelData != NULL"
+str 10050470 "anm != NULL"
+str 1005043C "canm != NULL"
+str 1005048C "Thunder" renamed
+data l_offsetPos 101FDD04 guard 101FDD00
+*/

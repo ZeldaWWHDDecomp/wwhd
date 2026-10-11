@@ -1,31 +1,1332 @@
-/* Sea ships/rafts, HD behavior checked against cking.rpx. */
+/* Various Great Sea ships and rafts.
+ * HD behavior is checked against the original verified translation unit.
+ */
 #include "d/actor/d_a_obj_ikada.h"
-namespace ikada {
-void Actor::modeProc(s32 proc, s32 mode) {
-    WWHD_FUNC(0x02360080, void, this, proc, mode);
-    u32 entry = 0x1002B3E0;
-    if (proc == 0) {
-        entry += (u32)mode * 0x14;
-        mCurMode = mode;
-    } else if (proc == 1)
-        entry += (u32)(s32)mCurMode * 0x14 + 8;
-    else
-        return;
-    s16 index = gabi::load<s16>(entry + 2), adjust = gabi::load<s16>(entry);
-    u32 self = gabi::ea(this) + (s32)adjust, target;
-    if (index < 0)
-        target = gabi::load<u32>(entry + 4);
-    else {
-        s16 offset = gabi::load<s16>(entry + 6);
-        u32 vt = gabi::load<u32>(self + (s32)offset);
-        target = gabi::load<u32>(vt + 8 * (s32)index + 4);
+#include "gc_api/gc_api.h"
+
+const gc_tu_data gc_tu = {
+    .safeString = 0x1002B2E4,
+    .objAcch = {0x1002B324, 0x1002B344, 0x1002B334},
+    .objAcchDt = {0x1002B334, 0x1002B344},
+};
+
+static daObj_Ikada_HIO_c l_HIO;
+// HD: the sea surface uses a separate model and texture animation.
+static IkadaNameTable sea_bdl = {{"vikae_minamo00.bdl", "vtsp_minamo00.bdl", "vikah_minamo00.bdl", "vtsp2_minamo00.bdl", "vsvsp_minamo00.bdl"}};
+static IkadaNameTable sea_btk = {{"vikae_minamo00.btk", "vtsp_minamo00.btk", "vikah_minamo00.btk", "vtsp2_minamo00.btk", "vsvsp_minamo00.btk"}};
+
+static IkadaGuard wave_l_guard;
+static IkadaGuard sea_quad_a_guard;
+static IkadaGuard sea_quad_b_guard;
+static IkadaGuard sea_quad_c_guard;
+static IkadaGuard sea_quad_d_guard;
+static IkadaGuard sea_cross_guard;
+static IkadaQuad sea_quad_a;
+static IkadaQuad sea_quad_b;
+static IkadaQuad sea_quad_c;
+static IkadaQuad sea_quad_d;
+static IkadaQuad sea_cross_points;
+static IkadaQuadTable control = {{0x1046A0A8, 0x1046A0D8, 0x1046A108, 0x1046A0D8, 0x1046A138}};
+
+static IkadaGuard flag_offset_guard;
+static IkadaGuard fire_scale_guard;
+static IkadaGuard ripple_scale_guard;
+static IkadaVectorTable flag_offset;
+static cXyz fire_scale;
+static cXyz ripple_scale;
+static IkadaGuard wave_r_guard;
+static cXyz wave_l_direction;
+static cXyz wave_r_direction;
+static cXyz m_rope_base_vec;
+static cXyz m_crane_offset;
+static cXyz ikada_vector_zero;
+static cXyz ikada_vector_up;
+static IkadaGuard debug_yellow_guard;
+static IkadaGuard debug_blue_guard;
+static IkadaGuard debug_red_guard;
+static GXColor debug_yellow;
+static GXColor debug_blue;
+static GXColor debug_red;
+static GXColor debug_yellow_source = {255, 255, 0, 128};
+static GXColor debug_blue_source = {0, 0, 255, 128};
+static GXColor debug_red_source = {255, 0, 0, 128};
+
+
+static IkadaIndexTable m_heapsize = {{7424, 12128, 11808, 13024, 28000}};
+static IkadaIndexTable bdl = {{dRes_INDEX_IKADAH_BDL_VIKAE_e, dRes_INDEX_IKADAH_BDL_VTSP_e, dRes_INDEX_IKADAH_BDL_VIKAH_e, dRes_INDEX_IKADAH_BDL_VTSP2_e, dRes_INDEX_IKADAH_BDL_VSVSP_e}};
+static IkadaIndexTable dzb = {{dRes_INDEX_IKADAH_DZB_VIKAE_e, dRes_INDEX_IKADAH_DZB_VTSP_e, dRes_INDEX_IKADAH_DZB_VIKAH_e, dRes_INDEX_IKADAH_DZB_VTSP_e, dRes_INDEX_IKADAH_DZB_VSVSP_e}};
+static IkadaIndexTable flagparam = {{4, 4, 4, 4, 0x02000000}};
+static IkadaScaleTable flag_scale = {{0.2f, 0.0f, 0.0f, 0.0f, 0.12f}};
+
+/* 02360038 */
+s32 nodeControl_CB(void *node, s32 timing) {
+    if (!timing) {
+        J3DModel* model = j3dSys.getModel();
+        auto* actor = static_cast<daObj_Ikada_c*>(model->getUserArea());
+        if (actor)
+            actor->_nodeControl(node, model);
     }
-    gabi::call(target, self);
+    return 1;
 }
-VERIFY(0x02360080, &Actor::modeProc);
-void Actor::getArg() {
-    WWHD_FUNC(0x02361218, void, this);
-    u32 param = gabi::load<u32>(gabi::ea(this) + 0xB0);
+/* 0235FE84 */
+void daObj_Ikada_c::_nodeControl(void *node, J3DModel *model) {
+    u32 index = static_cast<J3DJoint*>(node)->getJntNo();
+    if (index >= 4)
+        ikadaApi_assertionShow("d_a_obj_ikada.cpp", 0x14C, "(jntNo >= 0) && (jntNo < JNT_END)");
+    J3DMtxBuffer_hd* block = model->mpMtxBuffer;
+    u32 array = block->mpAnmMtx;
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    block->mFlags = (u16)block->mFlags | 0x10;
+    ikadaApi_copyMatrix(gabi::at<Mtx34>(array + index * 0x30), matrix);
+    csXyz* rotation = &mJointRot[index];
+    ikadaApi_rotateZXY(matrix, (s16)rotation->x, (s16)rotation->y, (s16)rotation->z);
+    if (index == 1) {
+        s32 product =
+            (s32)((u32)(s32)(s16)m115E * (u32)(REG_S(12, 5) + 5));
+        u16 phase = m115C;
+        s16 base = m115A;
+        f32 sine = cM_ssin(phase);
+        s16 angle = (s16)gabi::ftoi(gabi::fmadds((f32)product, sine, (f32)base));
+        ikadaApi_rotateX(matrix, angle);
+    }
+    ikadaApi_copyMatrix(matrix, J3DSys::mCurrentMtx);
+    block = model->mpMtxBuffer;
+    array = (u32)block->mpAnmMtx;
+    block->mFlags = (u16)block->mFlags | 0x10;
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = (f32)matrix->m[i / 4][i % 4];
+    for (u32 i = 0; i < 12; ++i)
+        gabi::store<f32>(array + index * 0x30 + i * 4, values[i]);
+}
+/* 02360368 */
+s32 pathMove_CB(cXyz *pos, cXyz *point, cXyz *path, daObj_Ikada_c *actor) {
+    return actor->_pathMove(pos, point, path);
+}
+/* 0236012C */
+s32 daObj_Ikada_c::_pathMove(cXyz *position, cXyz *previous, cXyz *next) {
+    auto* path = mpPath.get();
+    s32 pointIndex = mCurPathPoint;
+    s32 index = pointIndex < (s32)(u16)path->m_num - 1 ? (s8)(pointIndex + 1) : 0;
+    auto* points = path->m_points.get();
+    mbCraneMode = (u8)points[index].mArg3 != 255;
+    f32 y = current.pos.y;
+    mCurPathP0.copy(*previous);
+    mCurPathP0.y = y;
+    mCurPathP1.copy(*next);
+    mCurPathP1.y = y;
+    gabi::Local<cXyz> direction, delta, horizontal, delta2, horizontal2;
+    ikadaApi_subtractVector(&mCurPathP1, direction.get(), &mCurPathP0);
+    if (ikadaApi_cXyz_normalizeRS(direction.get())) {
+        s32 angle = ikadaApi_cM_atan2s((f32)direction->x, (f32)direction->z);
+        u16 difference = ikadaApi_cLib_addCalcAngleS(&current.angle.y, angle, 8, 0x200, 8);
+        f32 rate =
+            (f32)speedF * __builtin_fabsf(cM_scos(difference));
+        ikadaApi_cLib_chasePosXZ(position, &mCurPathP1, rate);
+        ikadaApi_subtractVector(position, delta.get(), &mCurPathP1);
+        horizontal->set(delta->x, 0.0f, delta->z);
+        f32 length = std_sqrtf(PSVECSquareMag(horizontal.get()));
+        f32 threshold = rate * (REG_F(12, 2) + 1.0f);
+        if (!(length < threshold)) {
+            ikadaApi_subtractVector(position, delta2.get(), &mCurPathP1);
+            horizontal2->set(delta2->x, 0.0f, delta2->z);
+            if (std_sqrtf(PSVECSquareMag(horizontal2.get())) != 0.0f)
+                return 0;
+        }
+        if (mbCraneMode)
+            modeProc(PROC_INIT_e, MODE_CRANE_TURN_e);
+    }
+    return 1;
+}
+/* 02360414 */
+void ride_CB(void *bg, daObj_Ikada_c *actor, fopAc_ac_c *rider) {
+    actor->_ride(rider);
+}
+/* 02360380 */
+void daObj_Ikada_c::_ride(fopAc_ac_c *actor) {
+    // HD: the bomb trigger rocks the ship without creating GC bomb-smoke particles.
+    if (mType != 1)
+        return;
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    if (gabi::ea(actor) == (u32)play->play.mpPlayerPtr[0].v)
+        mbIsLinkRiding = 1;
+    if (!actor || (s16)actor->mProcName != fpcNm_BOMB_e)
+        return;
+    if (ikadaApi_daBomb_c_getBombRestTime(actor) > 1)
+        return;
+    mLinkRideRockAmpl = 300;
+    modeProc(PROC_INIT_e, MODE_STOP_BOMB_TERRY_e);
+}
+/* 02361000 */
+s32 createHeap_CB(daObj_Ikada_c *actor) {
+    return actor->_createHeap();
+}
+/* 023628CC */
+f32 searchPlayerDistance(daObj_Ikada_c *actor) {
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    f32 distance = ikadaApi_fopAcM_searchActorDistanceXZ(actor, (u32)play->play.mPlayerInfo[0].mpPlayer.v);
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    u32 ship = (u32)play->play.mpPlayerPtr[2].v;
+    if (ship) {
+        f32 other = ikadaApi_fopAcM_searchActorDistanceXZ(actor, ship);
+        if (other < distance)
+            return other;
+    }
+    return distance;
+}
+/* 023647D0 */
+void daObj_Ikada_c::setCollision() {
+    if (mbIsLinkRiding)
+        return;
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    if ((u32)play->play.mPlayerStatus[0][0] & 0x4000)
+        return;
+    ikadaApi_cM3dGSph_SetR(gabi::ea(this) + 0x15F0, (f32)l_HIO.m9C * (f32)scale.x);
+    ikadaApi_cM3dGSph_SetC(gabi::ea(this) + 0x15F0, &current.pos);
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    ikadaApi_cCcS_Set(gabi::ea(&play->play.mCcS), &mSph);
+}
+/* 02364854 */
+s32 daObj_Ikada_c::checkTgHit() {
+    if (mbIsLinkRiding) {
+        auto* player = reinterpret_cast<daPy_py_c*>(reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get())->play.mPlayerInfo[0].mpPlayer.get());
+        if ((u32)player->mResetFlg0 & 0x20000) {
+            gabi::Local<cXyz> pos, delta, horizontal;
+            pos->set((f32)player->mSwordTopPos.x, (f32)player->mSwordTopPos.y,
+                     (f32)player->mSwordTopPos.z);
+            ikadaApi_subtractVector(pos.get(), delta.get(), &current.pos);
+            horizontal->set(delta->x, 0.0f, delta->z);
+            f32 length = std_sqrtf(PSVECSquareMag(horizontal.get()));
+            if (length < 1000.0f) {
+                mLinkRideRockAmpl = 200;
+                modeProc(PROC_INIT_e, MODE_STOP_TERRY_e);
+                return 1;
+            }
+        }
+    }
+    ikadaApi_dCcD_GStts_Move(gabi::ea(this) + 0x1620);
+    if (!ikadaApi_calcTimer(&m12E4)) {
+        u32 hit = ikadaApi_getTargetHitObject(&mSph);
+        ikadaApi_getTargetHitObject(&mSph);
+        if (hit && gabi::load<u32>(hit + 0x10) == 0x20) {
+            m12E4 = 60;
+            mLinkRideRockAmpl = 300;
+            modeProc(PROC_INIT_e, MODE_STOP_BOMB_TERRY_e);
+            return 1;
+        }
+    }
+    return 0;
+}
+/* 023644B0 */
+void daObj_Ikada_c::pathMove() {
+    cLib_addCalc2(&speedF, (f32)mVelocityFwdTarget, 0.1f, 2.0f);
+    ikadaApi_dLib_pathMove(&mPathPosTarget, &mCurPathPoint, (u32)mpPath.v, gabi::guest_fn(reinterpret_cast<const void*>(pathMove_CB)), this,
+               (f32)speedF);
+    ikadaApi_cLib_addCalcPosXZ2(&current.pos, &mPathPosTarget, REG_F(12, 0) + 0.01f,
+               (f32)speedF);
+    if (speedF != 0.0f && mVelocityFwdTarget != 0.0f) {
+        s32 target = ikadaApi_cLib_targetAngleY(&current.pos, &mPathPosTarget);
+        cLib_addCalcAngleS2(&shape_angle.y, target, 8, 0x100);
+    }
+}
+/* 02363F30 */
+void daObj_Ikada_c::HandleRight() {
+    f32 speed = (f32)l_HIO.m20;
+    s16 end = mBckAnm.mFrameCtrl.mEnd;
+    s32 frame = (s32)((u32)(s32)m1154 + (u32)gabi::ftoi(speed));
+    m1154 = frame;
+    if (!((f32)frame < (f32)end))
+        m1154 = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mStart);
+}
+/* 02364098 */
+void daObj_Ikada_c::HandleLeft() {
+    f32 speed = (f32)l_HIO.m20;
+    s16 start = mBckAnm.mFrameCtrl.mStart;
+    s32 frame = (s32)((u32)(s32)m1154 - (u32)gabi::ftoi(speed));
+    m1154 = frame;
+    if (!((f32)frame > (f32)start))
+        m1154 = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mEnd);
+}
+/* 02361268 */
+void daObj_Ikada_c::createWave() {
+    if (!(u32)wave_l_guard.mInitialized) {
+        wave_l_direction.y = 1.0f;
+        wave_l_guard.mInitialized = 1;
+        wave_l_direction.x = 0.5f;
+        wave_l_direction.z = -0.3f;
+    }
+    if (!(u32)wave_r_guard.mInitialized) {
+        wave_r_direction.y = 1.0f;
+        wave_r_guard.mInitialized = 1;
+        wave_r_direction.x = -0.5f;
+        wave_r_direction.z = -0.3f;
+    }
+    if (!mWaveLCallback.mpEmitter) {
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 0, 0x37, &mWavePos, &mWaveRot, nullptr, 255, &mWaveLCallback, -1, nullptr, nullptr, nullptr);
+        auto* emitter = gabi::at<IkadaEmitter>(mWaveLCallback.mpEmitter);
+        if (emitter) {
+            emitter->mEmitterDir[0] = (f32)wave_l_direction.x;
+            emitter->mEmitterDir[1] = (f32)wave_l_direction.y;
+            emitter->mEmitterDir[2] = (f32)wave_l_direction.z;
+        }
+    }
+    if (!mWaveRCallback.mpEmitter) {
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 0, 0x37, &mWavePos, &mWaveRot, nullptr, 255, &mWaveRCallback, -1, nullptr, nullptr, nullptr);
+        auto* emitter = gabi::at<IkadaEmitter>(mWaveRCallback.mpEmitter);
+        if (emitter) {
+            emitter->mEmitterDir[0] = (f32)wave_r_direction.x;
+            emitter->mEmitterDir[1] = (f32)wave_r_direction.y;
+            emitter->mEmitterDir[2] = (f32)wave_r_direction.z;
+        }
+    }
+    if (!mSplashCallBack.mpEmitter) {
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 0, 0x35, &mWavePos, &mWaveRot, nullptr, 255, &mSplashCallBack, -1, nullptr, nullptr, nullptr);
+    }
+    if (!mTrackCallBack.mpEmitter) {
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 5, 0x36, &mTrackPos, &shape_angle, nullptr, 0, &mTrackCallBack, -1, nullptr, nullptr, nullptr);
+        auto* emitter = gabi::at<IkadaEmitter>(mTrackCallBack.mpEmitter);
+        if (emitter) {
+            emitter->mGlobalDynamicsScale[0] = 1.0f;
+            emitter->mGlobalParticleScale[1] = 1.0f;
+            emitter->mGlobalParticleScale[2] = 1.0f;
+            emitter->mGlobalParticleScale[0] = 1.0f;
+            emitter->mGlobalDynamicsScale[2] = 1.0f;
+            emitter->mGlobalDynamicsScale[1] = 1.0f;
+        }
+    }
+}
+/* 02362968 */
+void daObj_Ikada_c::setWave() {
+    f32 splashTarget = (f32)l_HIO.mSplashScaleMax, waveSpeed = (f32)l_HIO.mWaveVelFade,
+        waveMax = (f32)l_HIO.mWaveMaxVelocity, trackSpeed = (f32)l_HIO.mTrackVel;
+    if (!(speedF > 2.0f)) {
+        waveSpeed = 0.0f;
+        splashTarget = 0.0f;
+        mTrackCallBack.mStop = 1;
+    } else
+        createWave();
+    mWavePos.y = ikadaApi_getWaterY(&mWavePos, &mObjAcch);
+    mWaveRot.y = shape_angle.y;
+    if (mTrackCallBack.mpEmitter) {
+        f32 trans = (f32)l_HIO.mTrackIndTransY, scale = (f32)l_HIO.mTrackIndScaleY;
+        u32 flags = (u32)mObjAcch.m_flags;
+        mTrackCallBack.mSpeed = trackSpeed;
+        mTrackCallBack.mIndTransY = trans;
+        mTrackCallBack.mWaterY = mWavePos.y;
+        mTrackCallBack.mIndScaleY = scale;
+        mTrackCallBack.mWaterFlatY =
+            flags & 0x800 ? (f32)mObjAcch.m_wtr.m_height : -1000000000.0f;
+        mTrackCallBack.mLimitSpeed = 3.0f;
+    }
+    auto* emitter = gabi::at<IkadaEmitter>(mWaveLCallback.mpEmitter);
+    if (emitter) {
+        u32 flags = (u32)emitter->mFlags;
+        emitter->mFlags = waveSpeed > 0.0f ? flags & ~1u : flags | 1u;
+    }
+    emitter = gabi::at<IkadaEmitter>(mWaveRCallback.mpEmitter);
+    if (emitter) {
+        u32 flags = (u32)emitter->mFlags;
+        emitter->mFlags = waveSpeed > 0.0f ? flags & ~1u : flags | 1u;
+    }
+    mWaveRCallback.mVelFade1 = waveSpeed;
+    mWaveLCallback.mVelFade1 = waveSpeed;
+    mWaveLCallback.mMaxParticleVelocity = waveMax;
+    mWaveRCallback.mMaxParticleVelocity = waveMax;
+    mWaveRCallback.mVelFade2 = (f32)l_HIO.mWaveVelOffs + 1.0f;
+    mWaveLCallback.mVelFade2 = 1.0f - (f32)l_HIO.mWaveVelOffs;
+    f32 z1 = (f32)l_HIO.mWaveCollapsePos1.z, z0 = (f32)l_HIO.mWaveCollapsePos0.z,
+        y1 = (f32)l_HIO.mWaveCollapsePos1.y, y0 = (f32)l_HIO.mWaveCollapsePos0.y,
+        x1 = (f32)l_HIO.mWaveCollapsePos1.x, x0 = (f32)l_HIO.mWaveCollapsePos0.x;
+    mWaveRCallback.mCollapsePos[1].y = y1;
+    mWaveLCallback.mCollapsePos[1].x = -x1;
+    mWaveLCallback.mCollapsePos[0].x = -x0;
+    mWaveLCallback.mCollapsePos[1].y = y1;
+    mWaveRCallback.mCollapsePos[1].x = x1;
+    mWaveRCallback.mCollapsePos[1].z = z1;
+    mWaveLCallback.mCollapsePos[0].y = y0;
+    mWaveRCallback.mCollapsePos[0].x = x0;
+    mWaveRCallback.mCollapsePos[0].z = z0;
+    mWaveLCallback.mCollapsePos[0].z = z0;
+    mWaveLCallback.mCollapsePos[1].z = z1;
+    mWaveRCallback.mCollapsePos[0].y = y0;
+    mWaveRCallback.mVelSpeed = (f32)l_HIO.mWaveVelSpeed;
+    mWaveLCallback.mVelSpeed = (f32)l_HIO.mWaveVelSpeed;
+    cLib_addCalc2(&mSplashScaleTimer, splashTarget, 0.1f, 10.0f);
+    emitter = gabi::at<IkadaEmitter>(mSplashCallBack.mpEmitter);
+    if (emitter) {
+        f32 timer = mSplashScaleTimer;
+        u32 flags = (u32)emitter->mFlags;
+        emitter->mFlags = timer > 0.1f ? flags & ~1u : flags | 1u;
+    }
+    mSplashCallBack.mScaleTimer = mSplashScaleTimer;
+    mSplashCallBack.mMaxScaleTimer = (f32)l_HIO.mSplashMaxScaleTimer;
+}
+/* 02363D28 */
+void daObj_Ikada_c::incRopeCnt(s32 increment, s32 minimum) {
+    s32 old = m07D8, newCount = (s32)((u32)old + (u32)increment);
+    cXyz* velocity = m07DC + old;
+    cXyz* positions = mRopeLine.getPos(0);
+    if (newCount >= 200)
+        newCount = 200;
+    else if (newCount < minimum)
+        newCount = minimum;
+    s32 delta = (s32)((u32)newCount - (u32)old);
+    cXyz* offset = &m_rope_base_vec;
+    if (delta > 0) {
+        gabi::Local<cXyz> shift;
+        ikadaApi_multiplyVector(offset, shift.get(), (f32)delta);
+        s32 i = 0;
+        old = m07D8;
+        while (i < old) {
+            PSVECAdd(positions, shift.get(), positions);
+            old = m07D8;
+            ++i;
+            ++positions;
+        }
+    } else
+        positions += old;
+    old = m07D8;
+    if (old < newCount) {
+        gabi::Local<cXyz> result;
+        for (s32 remaining = (s32)((u32)newCount - (u32)old); remaining; --remaining) {
+            velocity->copy(*offset);
+            if (m07D8 != 0) {
+                ikadaApi_subtractVector(positions - 1, result.get(), offset);
+                positions->copy(*result.get());
+            }
+            ++positions;
+            ++velocity;
+        }
+    }
+    m07D8 = (s16)newCount;
+}
+/* 023620F0 */
+void daObj_Ikada_c::setRopePos() {
+    if (!(u32)ripple_scale_guard.mInitialized) {
+        ripple_scale.x = 0.6f;
+        ripple_scale.z = 0.6f;
+        ripple_scale_guard.mInitialized = 1;
+        ripple_scale.y = 0.6f;
+    }
+    s32 count = m07D8;
+    cXyz* base = mRopeLine.getPos(0);
+    s32 endIndex = count ? count - 1 : 0;
+    cXyz* end = base + endIndex;
+    gabi::Local<cXyz> saved, direction, normalized, tmp, delta, scaled, divided, updated,
+        velocityDelta;
+    saved->copy(*end);
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    auto anchorMatrix = [&]() {
+        J3DMtxBuffer_hd* block = mpModel->mpMtxBuffer;
+        u32 array = block->mpAnmMtx;
+        block->mFlags = (u16)block->mFlags | 0x10;
+        ikadaApi_copyMatrix(gabi::at<Mtx34>(array + 0x30), matrix);
+        ikadaApi_mDoMtx_stack_c_transM((f32)m_crane_offset.x, (f32)m_crane_offset.y,
+                   (f32)m_crane_offset.z);
+    };
+    anchorMatrix();
+    end->set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+                             (f32)matrix->m[2][3]);
+    if (mCurMode == 1) {
+        J3DModel* endModel = mpRopeEnd.get();
+        Mtx34* modelMatrix = endModel->getBaseTRMtx();
+        direction->set((f32)modelMatrix->m[0][3] - (f32)end->x,
+                       (f32)modelMatrix->m[1][3] - (f32)end->y,
+                       (f32)modelMatrix->m[2][3] - (f32)end->z);
+        ikadaApi_cXyz_normalizeZP(direction.get(), normalized.get());
+        PSVECScale(direction.get(), direction.get(), 10.0f);
+        count = m07D8;
+        for (s32 i = count - 2; i >= 0; --i) {
+            ikadaApi_addVector(base + i + 1, tmp.get(), direction.get());
+            (base + i)->copy(*tmp.get());
+            m07DC[i].copy(*&ikada_vector_zero);
+        }
+    } else {
+        count = m07D8;
+        for (s32 i = count - 2; i >= 0; --i) {
+            cXyz* point = base + i;
+            auto velocity = &m07DC[i];
+            saved->copy(*point);
+            f32 water = ikadaApi_getWaterY(point, &mObjAcch);
+            f32 drag = (f32)point->y < water ? 0.6f : 0.9f;
+            PSVECScale(velocity, velocity, drag);
+            velocity->y = (f32)velocity->y - 3.0f;
+            PSVECAdd(point, velocity, point);
+            ikadaApi_subtractVector(point, delta.get(), point + 1);
+            direction->copy(*delta.get());
+            f32 length = std_sqrtf(PSVECSquareMag(direction.get()));
+            if (length < 0.01f)
+                ikadaApi_addVector(point + 1, updated.get(), &m_rope_base_vec);
+            else {
+                ikadaApi_multiplyVector(direction.get(), scaled.get(), 10.0f);
+                ikadaApi_cXyz_dv(scaled.get(), divided.get(), length);
+                ikadaApi_addVector(point + 1, updated.get(), divided.get());
+            }
+            point->copy(*updated.get());
+            ikadaApi_subtractVector(point, velocityDelta.get(), saved.get());
+            ikadaApi_multiplyVector(velocityDelta.get(), delta.get(), 0.05f);
+            PSVECAdd(velocity, delta.get(), velocity);
+        }
+    }
+    count = m07D8;
+    base = mRopeLine.getPos(0);
+    f32 x, y, z, dx, dy, dz;
+    if (count > 1) {
+        ikadaApi_subtractVector(base, delta.get(), base + 1);
+        x = (f32)base->x;
+        dx = delta->x;
+        y = (f32)base->y;
+        z = (f32)base->z;
+        dy = delta->y;
+        dz = delta->z;
+    } else {
+        anchorMatrix();
+        x = (f32)base->x;
+        y = (f32)base->y;
+        dx = x - (f32)matrix->m[0][3];
+        dy = y - (f32)matrix->m[1][3];
+        z = (f32)base->z;
+        dz = z - (f32)matrix->m[2][3];
+    }
+    u16 heading = shape_angle.y;
+    f32 sine = cM_ssin(heading),
+        cosine = cM_scos(heading);
+    f32 rx = gabi::fmsubs(cosine, dx, sine * dz), rz = gabi::fmadds(sine, dx, cosine * dz);
+    ikadaApi_setTranslationMatrix(matrix, x, y, z);
+    s16 pitch = ikadaApi_cM_atan2s(rz, dy);
+    s16 yaw = shape_angle.y;
+    f32 horizontal = std_sqrtf(gabi::fmadds(dy, dy, rz * rz));
+    s16 roll = ikadaApi_cM_atan2s(-rx, horizontal);
+    ikadaApi_rotateZXY(matrix, pitch, yaw, roll);
+    ikadaApi_rotateX(matrix, -0x4000);
+    m0474.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+                    (f32)matrix->m[2][3]);
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = (f32)matrix->m[i / 4][i % 4];
+    J3DModel* model = mpRopeEnd.get();
+    for (u32 i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    f32 firstY = (f32)base->y, water = ikadaApi_getWaterY(base, &mObjAcch);
+    base->y = firstY;
+    if (water > firstY) {
+        count = m07D8;
+        cXyz* crossing = base;
+        for (s32 i = 0; i < count; ++i) {
+            f32 pointY = i ? (f32)base[i].y : firstY;
+            if (!(pointY > water))
+                crossing = base + i;
+        }
+        f32 pointX = (f32)crossing->x;
+        m0444.y = water;
+        m0444.x = pointX;
+        m0444.z = (f32)crossing->z;
+        if (!mRippleCallBack.mpEmitter) {
+            auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 5, 0x33, &m0444, nullptr, &ripple_scale, 255, &mRippleCallBack, -1, nullptr, nullptr, nullptr);
+            if (mRippleCallBack.mpEmitter) {
+                u8 timer = m0440;
+                mRippleCallBack.mRate = 0.0f;
+                if (!timer) {
+                    ikadaApi_fopKyM_createWpillar(&m0444, 0, 1.0f, 0.7f);
+                    m0440 = 19;
+                    return;
+                }
+            }
+        }
+    } else
+        ikadaApi_dPa_rippleEcallBack_end(&mRippleCallBack);
+    if (m0440)
+        m0440 = (u8)((u8)m0440 - 1);
+}
+/* 02360420 */
+void daObj_Ikada_c::setMtx() {
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    ikadaApi_dLib_waveRot(&current.pos, &mWave, 0.0f);
+    mLinkRideRockTimer = (s16)((s32)mLinkRideRockTimer + 1);
+    s16 step = (s16)(REG_S(12, 4) + 5);
+    cLib_addCalcAngleS2(&mLinkRideRockAmpl, 0, 10, step);
+    s32 amplitude = mLinkRideRockAmpl;
+    if (amplitude <= REG_S(12, 4) + 5) {
+        amplitude = 0;
+        mLinkRideRockAmpl = 0;
+    }
+    s32 product = (s32)((u32)amplitude * (u32)(REG_S(12, 5) + 3));
+    u16 wavePhase = mWaveAnimTimer;
+    f32 waveSine = cM_ssin(wavePhase);
+    s16 rockPhase = mLinkRideRockTimer;
+    s16 wavePitch = (s16)gabi::ftoi((f32)(REG_S(8, 5) + 200) * waveSine);
+    s16 waveRoll = (s16)gabi::ftoi((f32)(REG_S(8, 6) + 60) * waveSine);
+    s16 rockPitch = (s16)gabi::ftoi(
+        (f32)product * cM_ssin((u16)((s32)rockPhase * 0x900)));
+    s16 rockRoll = (s16)gabi::ftoi(
+        (f32)product * cM_ssin((u16)((s32)rockPhase * 0x700)));
+    if (!(u8)l_HIO.mbNoRotAnim) {
+        shape_angle.x = (s16)((s32)mWave.mRotX + rockPitch + wavePitch);
+        shape_angle.z = (s16)((s32)mWave.mRotZ + rockRoll + waveRoll);
+        if (mbIsLinkRiding) {
+            auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            auto* player = reinterpret_cast<daPy_py_c*>(play->play.mpPlayerPtr[0].get());
+            gabi::Local<cXyz> delta, local;
+            delta->set((f32)current.pos.x - (f32)player->current.pos.x,
+                       (f32)current.pos.y - (f32)player->current.pos.y,
+                       (f32)current.pos.z - (f32)player->current.pos.z);
+            ikadaApi_mDoMtx_YrotS(calc_mtx(), (s16) - (s16)shape_angle.y);
+            ikadaApi_MtxPosition(delta.get(), local.get());
+            s16 pitch = (s16)gabi::ftoi(((f32)local->z - (-200.0f)) *
+                                        (REG_F(18, 11) - 1.0f));
+            s16 roll = (s16)gabi::ftoi((f32)local->x * (REG_F(18, 12) + 2.0f));
+            if ((u32)player->mNoResetFlg0 & 0x02000000) {
+                pitch = (s16)((s32)pitch * 2);
+                roll = (s16)((s32)roll * 2);
+                if (!mHDMotionMode) {
+                    mHDMotionMode = 1;
+                    mLinkRideRockAmpl = 150;
+                }
+            } else
+                mHDMotionMode = 0;
+            s32 p = pitch, r = roll;
+            if (p > 0x400)
+                p = 0x400;
+            else if (p < -0x400)
+                p = -0x400;
+            if (r > 0x480)
+                r = 0x480;
+            else if (r < -0x200)
+                r = -0x200;
+            cLib_addCalcAngleS2(&mHDPitch, p, 4, 0x100);
+            cLib_addCalcAngleS2(&mHDRoll, r, 4, 0x100);
+        } else {
+            mHDMotionMode = 0;
+            cLib_addCalcAngleS2(&mHDPitch, 0, 0x20, 0x80);
+            cLib_addCalcAngleS2(&mHDRoll, 0, 0x20, 0x80);
+        }
+        s16 pitch = mHDPitch, x = shape_angle.x, z = shape_angle.z, roll = mHDRoll;
+        shape_angle.x = (s16)((s32)x + pitch);
+        shape_angle.z = (s16)((s32)z + roll);
+    }
+    J3DModel* model = mpModel.get();
+    f32 sx = scale.x, sy = scale.y, sz = scale.z;
+    model->mBaseScale.x = sx;
+    model->mBaseScale.y = sy;
+    model->mBaseScale.z = sz;
+    auto transform = [&]() {
+        ikadaApi_setTranslationMatrix(matrix, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
+        ikadaApi_mDoMtx_XYZrotM(matrix, (s16)shape_angle.x, 0, (s16)shape_angle.z);
+        ikadaApi_rotateY(matrix, (s16)shape_angle.y);
+    };
+    transform();
+    if (mType == 4)
+        ikadaApi_mDoMtx_stack_c_transM(0.0f, 30.0f, -260.0f);
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = (f32)matrix->m[i / 4][i % 4];
+    model = mpModel.get();
+    for (u32 i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    if (mType == 4) {
+        transform();
+        ikadaApi_rotateY(matrix, 0x4000);
+        for (u32 i = 0; i < 4; ++i) {
+            gabi::Local<cXyz> offset;
+            offset->set((f32)l_HIO.mSvOffsX[i], 0.0f, 0.0f);
+            gabi::Local<be<u32>> actor;
+            if (ikadaApi_fopAcM_SearchByID((u32)mSvId[i], actor.get()))
+                ikadaApi_transformVector(matrix, offset.get(), &gabi::at<fopAc_ac_c>((u32)*actor.get())->current.pos);
+        }
+        gabi::Local<cXyz> offset;
+        offset->set((f32)l_HIO.mSvWaveOffsX, 0.0f, 0.0f);
+        ikadaApi_transformVector(matrix, offset.get(), &mWavePos);
+        offset->x = (f32)l_HIO.mSvTrackOffsX;
+        ikadaApi_transformVector(matrix, offset.get(), &mTrackPos);
+    }
+    ikadaApi_copyMatrix(matrix, &mMtx);
+    s32 type = mType;
+    if (type == 3 || type == 1) {
+        mLightRotY = (s16)((s32)mLightRotY + 0xD0);
+        mLightRotX = (s16)((s32)mLightRotX + 0x100);
+        gabi::Local<cXyz> lightOffset;
+        lightOffset->set(REG_F(12, 2), REG_F(12, 3) + 340.0f,
+                         REG_F(12, 4) + 200.0f);
+        model = mpModel.get();
+        ikadaApi_copyMatrix(gabi::at<Mtx34>(gabi::ea(model->getBaseTRMtx())), matrix);
+        ikadaApi_transformVector(matrix, lightOffset.get(), &mFirePos);
+        ikadaApi_mDoMtx_stack_c_transM((f32)lightOffset->x, (f32)lightOffset->y, (f32)lightOffset->z);
+        ikadaApi_rotateY(matrix, (s16)mLightRotY);
+        ikadaApi_rotateX(matrix, (s16)mLightRotX);
+        f32 power = mLightPower;
+        ikadaApi_mDoMtx_stack_c_scaleM(power, power, power);
+        ikadaApi_copyMatrix(matrix, &mLightMtx);
+        mPLight.mPos.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+                         (f32)matrix->m[2][3]);
+        mPLight.mColorR = 600;
+        mPLight.mColorG = 400;
+        mPLight.mColorB = 120;
+        mPLight.mFluctuation = 250.0f;
+        type = mType;
+        if (type == 1 || type == 3) {
+            gabi::Local<cXyz> soundOffset;
+            soundOffset->set(REG_F(12, 2) - 105.0f,
+                             REG_F(12, 3) + 380.0f,
+                             REG_F(12, 4) + 40.0f);
+            model = mpModel.get();
+            ikadaApi_copyMatrix(gabi::at<Mtx34>(gabi::ea(model->getBaseTRMtx())), matrix);
+            ikadaApi_transformVector(matrix, soundOffset.get(), &mSePos);
+            type = mType;
+        }
+    }
+    if (type == 4 || type == 3 || type == 1) {
+        transform();
+        gabi::Local<cXyz> offset;
+        offset->set(0.0f, (f32)l_HIO.mShipOffsY_Attention, 0.0f);
+        ikadaApi_transformVector(matrix, offset.get(), gabi::at<cXyz>(gabi::ea(this) + 0x390));
+        offset->y = (f32)l_HIO.mShipOffsY_Eye;
+        ikadaApi_transformVector(matrix, offset.get(), &eyePos);
+        if (mType != 4) {
+            f32 waveHeight = REG_F(8, 5) + 5.0f;
+            if (mCurMode == 10)
+                waveHeight = REG_F(8, 5) + 20.0f;
+            offset->y = (f32)l_HIO.mTerryWaveOffsY;
+            offset->z = (f32)l_HIO.mTerryWaveOffsZ + waveHeight;
+            ikadaApi_transformVector(matrix, offset.get(), &mWavePos);
+            offset->y = 0.0f;
+            offset->z = (f32)l_HIO.mTerryTrackOffsZ;
+            ikadaApi_transformVector(matrix, offset.get(), &mTrackPos);
+        }
+    }
+}
+/* 02360080 */
+void daObj_Ikada_c::modeProc(Proc_e proc, s32 mode) {
+    static ModeFuncs mode_tbl[] = {
+        {&daObj_Ikada_c::modeWaitInit, &daObj_Ikada_c::modeWait, "WAIT"},
+        {&daObj_Ikada_c::modeCraneUpInit, &daObj_Ikada_c::modeCraneUp, "CRANE_UP"},
+        {&daObj_Ikada_c::modeCraneUpWaitInit, &daObj_Ikada_c::modeCraneUpWait, "CRANE_UP_WAIT"},
+        {&daObj_Ikada_c::modeCraneDownInit, &daObj_Ikada_c::modeCraneDown, "CRANE_DOWN"},
+        {&daObj_Ikada_c::modeCraneDownWaitInit, &daObj_Ikada_c::modeCraneDownWait, "CRANE_DOWN_WAIT"},
+        {&daObj_Ikada_c::modeCraneTurnInit, &daObj_Ikada_c::modeCraneTurn, "CRANE_TURN"},
+        {&daObj_Ikada_c::modeCraneResetInit, &daObj_Ikada_c::modeCraneReset, "CRANE_RESET"},
+        {&daObj_Ikada_c::modeCraneWaitInit, &daObj_Ikada_c::modeCraneWait, "CRANE_WAIT"},
+        {&daObj_Ikada_c::modePathMoveInit, &daObj_Ikada_c::modePathMove, "PATH_MOVE"},
+        {&daObj_Ikada_c::modeStopInit, &daObj_Ikada_c::modeStop, "STOP"},
+        {&daObj_Ikada_c::modePathMoveTerryInit, &daObj_Ikada_c::modePathMoveTerry, "PATH_MOVE_TERRY"},
+        {&daObj_Ikada_c::modeStopTerryInit, &daObj_Ikada_c::modeStopTerry, "STOP"},
+        {&daObj_Ikada_c::modeStopBombTerryInit, &daObj_Ikada_c::modeStopBombTerry, "STOP_BOMB"},
+    };
+    if (proc == PROC_INIT_e) {
+        mCurMode = mode;
+        (this->*mode_tbl[mode].init)();
+    } else if (proc == PROC_EXEC_e) {
+        (this->*mode_tbl[mCurMode].exec)();
+    }
+}
+/* 02365184 */
+void daObj_Ikada_c::modeWaitInit() {
+}
+/* 02363E98 */
+void daObj_Ikada_c::modeWait() {
+    if (mType != 4)
+        return;
+    s16 target = (s16)l_HIO.m1C;
+    if (target) {
+        if (m07D8 > target)
+            incRopeCnt(-1, 0);
+        else if (m07D8 < target)
+            incRopeCnt(1, 0);
+    }
+    if (REG_S(12, 4))
+        modeProc(PROC_INIT_e, MODE_CRANE_UP_e);
+}
+/* 02365188 */
+void daObj_Ikada_c::modeCraneUpInit() {
+}
+/* 02363FE0 */
+void daObj_Ikada_c::modeCraneUp() {
+    if (m07D8 > 15) {
+        HandleRight();
+        incRopeCnt(-1, 0);
+    } else
+        modeProc(PROC_INIT_e, MODE_CRANE_UP_WAIT_e);
+}
+/* 02364034 */
+void daObj_Ikada_c::modeCraneUpWaitInit() {
+    mTimer = (s16)l_HIO.m24;
+}
+/* 02364044 */
+void daObj_Ikada_c::modeCraneUpWait() {
+    if (!ikadaApi_calcTimer(&mTimer))
+        modeProc(PROC_INIT_e, MODE_CRANE_RESET_e);
+}
+/* 0236408C */
+void daObj_Ikada_c::modeCraneDownInit() {
+    m115E = 150;
+}
+/* 02364148 */
+void daObj_Ikada_c::modeCraneDown() {
+    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
+    if (m115E < 20) {
+        HandleLeft();
+        if (m07D8 < (s16)l_HIO.m1E)
+            incRopeCnt(1, 0);
+        else
+            modeProc(PROC_INIT_e, MODE_CRANE_WAIT_e);
+    } else
+        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+}
+/* 02364204 */
+void daObj_Ikada_c::modeCraneDownWaitInit() {
+    mTimer = (s16)l_HIO.m24;
+}
+/* 02364214 */
+void daObj_Ikada_c::modeCraneDownWait() {
+    if (!ikadaApi_calcTimer(&mTimer))
+        modeProc(PROC_INIT_e, MODE_CRANE_DOWN_e);
+}
+/* 0236425C */
+void daObj_Ikada_c::modeCraneTurnInit() {
+    m115E = 150;
+    speedF = 0.0f;
+}
+/* 02364274 */
+void daObj_Ikada_c::modeCraneTurn() {
+    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
+    if (m115E < 20) {
+        HandleRight();
+        s16 target = m1168 == 1 ? 0x4000 : -0x4000;
+        m1158 = target;
+        cLib_addCalcAngleS2(&m115A, target, 10, 0x100);
+        if (cLib_distanceAngleS((s16)m115A, (s16)m1158) <= 0x100)
+            modeProc(PROC_INIT_e, MODE_CRANE_DOWN_WAIT_e);
+    } else
+        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+}
+/* 0236433C */
+void daObj_Ikada_c::modeCraneResetInit() {
+    m115E = 150;
+    speedF = 0.0f;
+}
+/* 02364354 */
+void daObj_Ikada_c::modeCraneReset() {
+    cLib_addCalcAngleS2(&m115E, 0, 10, 10);
+    if (m115E < 20) {
+        HandleLeft();
+        m1158 = 0;
+        cLib_addCalcAngleS2(&m115A, 0, 10, 0x100);
+        if (cLib_distanceAngleS((s16)m115A, (s16)m1158) <= 0x100)
+            modeProc(PROC_INIT_e, MODE_PATH_MOVE_e);
+    } else
+        m115C = (s16)((s32)m115C + REG_S(12, 2) + 0x1830);
+}
+/* 0236440C */
+void daObj_Ikada_c::modeCraneWaitInit() {
+    mTimer = 600;
+}
+/* 02364418 */
+void daObj_Ikada_c::modeCraneWait() {
+    if (!ikadaApi_calcTimer(&mTimer))
+        modeProc(PROC_INIT_e, MODE_CRANE_UP_e);
+}
+/* 02364460 */
+void daObj_Ikada_c::modePathMoveInit() {
+    m1168 = cM_rndF(1.0f) < 0.5 ? 0 : 1;
+}
+/* 02364578 */
+void daObj_Ikada_c::modePathMove() {
+    if ((u8)l_HIO.m06)
+        HandleRight();
+    if ((u8)l_HIO.m05)
+        HandleLeft();
+    if ((u8)l_HIO.m08 || mPathId == 255)
+        return;
+    if (mbCraneMode) {
+        gabi::Local<cXyz> delta, horizontal;
+        ikadaApi_subtractVector(&mCurPathP1, delta.get(), &current.pos);
+        horizontal->set(delta->x, 0.0f, delta->z);
+        f32 length = std_sqrtf(PSVECSquareMag(horizontal.get()));
+        if (length < 50.0f) {
+            mVelocityFwdTarget = 1.0f;
+            pathMove();
+            return;
+        }
+    }
+    mVelocityFwdTarget = 8.0f;
+    pathMove();
+}
+/* 0236518C */
+void daObj_Ikada_c::modeStopInit() {
+}
+/* 02364668 */
+void daObj_Ikada_c::modeStop() {
+    if ((u8)l_HIO.m06)
+        HandleRight();
+    if ((u8)l_HIO.m05)
+        HandleLeft();
+    if (m02F4 == 8) {
+        mVelocityFwdTarget = 0.0f;
+        if (mPathId != 255)
+            pathMove();
+    }
+    s32 count = m07D8;
+    if (!m1166) {
+        if (count <= 15) {
+            HandleLeft();
+            incRopeCnt(1, 0);
+            return;
+        }
+        s32 previous = m02F4;
+        modeProc(PROC_INIT_e, previous == 9 ? 8 : previous == 7 ? 3 : previous);
+    } else if (count > 2) {
+        HandleRight();
+        incRopeCnt(-2, 0);
+        if (m07D8 < 2)
+            m07D8 = 2;
+    }
+}
+/* 023647C4 */
+void daObj_Ikada_c::modePathMoveTerryInit() {
+    mTimer = 10;
+}
+/* 023649B8 */
+void daObj_Ikada_c::modePathMoveTerry() {
+    setCollision();
+    if (checkTgHit())
+        return;
+    bool stop = false;
+    f32 distance = searchPlayerDistance(this);
+    if (distance < (f32)(s16)l_HIO.mPlayerStopDistance && !ikadaApi_calcTimer(&mStopTimer)) {
+        mStopTimer = gabi::ftoi(cM_rndF(120.0f) + 240.0f);
+        f32 voice = cM_rndF(100.0f);
+        s32 room = (s8)current.roomNo;
+        u32 sound = voice < 50.0f ? 0x6A2A : 0x6A2B;
+        s32 reverb = ikadaApi_dComIfGp_getReverb(room);
+        ikadaApi_startSound(sound, &mSePos, 0, reverb);
+    }
+    s32 type = mType;
+    if (type == 1) {
+        mVelocityFwdTarget = (f32)l_HIO.mVelocityTargetTerry1;
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        u32 flag = (u32)play->play.mPlayerStatus[0][0];
+        s16 range = (flag & 0x10000 ? (s16)l_HIO.m94 : (s16)l_HIO.m9A);
+        if (distance < (f32)range)
+            stop = true;
+    } else if (type == 3) {
+        mVelocityFwdTarget = (f32)l_HIO.mVelocityTargetTerry3;
+        if (distance < (f32)(s16)l_HIO.mPlayerStopDistance)
+            mVelocityFwdTarget = (f32)l_HIO.mA8;
+        if (distance < (f32)(s16)l_HIO.m98)
+            stop = true;
+    }
+    if (mbIsLinkRiding) {
+        mTimer = 30;
+        if (mPathId != 255)
+            pathMove();
+        return;
+    }
+    if (!ikadaApi_calcTimer(&mTimer) && stop) {
+        modeProc(PROC_INIT_e, MODE_STOP_TERRY_e);
+        return;
+    }
+    if (mPathId != 255)
+        pathMove();
+}
+/* 02364C60 */
+void daObj_Ikada_c::modeStopTerryInit() {
+    mTimer = 210;
+}
+/* 02364C6C */
+void daObj_Ikada_c::modeStopTerry() {
+    setCollision();
+    if (checkTgHit())
+        return;
+    f32 distance = searchPlayerDistance(this);
+    s32 type = mType;
+    bool close = true;
+    if (type == 1) {
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        u32 flag = (u32)play->play.mPlayerStatus[0][0];
+        close = distance < (f32)(flag & 0x10000 ? (s16)l_HIO.m94 : (s16)l_HIO.m9A);
+    } else if (type == 3)
+        close = distance < (f32)(s16)l_HIO.m98;
+    if (!close) {
+        modeProc(PROC_INIT_e, MODE_PATH_MOVE_TERRY_e);
+        return;
+    }
+    if (mbIsLinkRiding) {
+        if (!ikadaApi_calcTimer(&mTimer)) {
+            modeProc(PROC_INIT_e, MODE_PATH_MOVE_TERRY_e);
+            return;
+        }
+    } else
+        mTimer = 300;
+    mVelocityFwdTarget = 0.0f;
+    if (mPathId != 255)
+        pathMove();
+}
+/* 02365190 */
+void daObj_Ikada_c::modeStopBombTerryInit() {
+}
+/* 02364E10 */
+void daObj_Ikada_c::modeStopBombTerry() {
+    setCollision();
+    if (!checkTgHit()) {
+        mVelocityFwdTarget = 0.0f;
+        if (mPathId != 255)
+            pathMove();
+    }
+}
+/* 02361E40 */
+void daObj_Ikada_c::epProc() {
+    if (!ikadaApi_dKy_daynight_check()) {
+        ikadaApi_dPa_followEcallBack_end(&mFireParticle);
+        mPLight.mPower = 0.0f;
+        return;
+    }
+    if (!mFireParticle.mpEmitter) {
+        if (!(u32)fire_scale_guard.mInitialized)
+            fire_scale_guard.mInitialized = 1;
+        f32 scale = REG_F(12, 10) + 0.5f;
+        fire_scale.y = scale;
+        fire_scale.x = scale;
+        fire_scale.z = scale;
+        auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+        ikadaApi_setParticle(gabi::at<dPa_control_c>((u32)play->play.mParticle.v), 0, 0x1EA, &mFirePos, nullptr, &fire_scale, 255, &mFireParticle, -1, nullptr, nullptr, nullptr);
+        if (!mFireParticle.mpEmitter)
+            return;
+    }
+    gabi::Local<cXyz> pos;
+    pos->set(mFirePos.x, mFirePos.y + 20.0f, mFirePos.z);
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    ikadaApi_dPa_control_c_setSimple((u32)play->play.mParticle.v, 0x4004, pos.get(), 255, 0x101D5E98,
+               0x101D5E98, 0);
+    if (!ikadaApi_calcTimer(&mEpTimer0)) {
+        f32 value = cM_rndF(REG_F(0, 2) + 5.0f);
+        mEpTimer0 = (s16)gabi::ftoi(value + REG_F(0, 3));
+        value = cM_rndF(REG_F(0, 6) + 4.0f);
+        m050C = (value + 8.0f) + REG_F(0, 7);
+    }
+    if (!ikadaApi_calcTimer(&mEpTimer1)) {
+        mEpTimer1 = (s16)gabi::ftoi(cM_rndF(6.0f) + 3.0f);
+        mLightPowerTarget = cM_rndF(0.075f) + 0.75f;
+    }
+    cLib_addCalc2(&m0508, (f32)m050C, 1.0f,
+               REG_F(0, 4) + 1.0f);
+    cLib_addCalc2(&mLightPower, (f32)mLightPowerTarget, 0.4f, 0.04f);
+    mPLight.mPower = 150.0f * (f32)mLightPower;
+}
+/* 02362C54 */
+s32 daObj_Ikada_c::_execute() {
+    mWaveAnimTimer = (s16)((s32)mWaveAnimTimer + REG_S(8, 4) + 0x200);
+    f32 target = REG_F(8, 5) + 5.0f;
+    if (mCurMode == 10 && speedF > 1.0f)
+        target = REG_F(8, 5) + 20.0f;
+    cLib_addCalc2(&mHDWaterOffset, target, 0.1f, 1.0f);
+    f32 offset = cM_ssin(mWaveAnimTimer) * (f32)mHDWaterOffset;
+    if (mBombSmokeEasterEgg.mpEmitter) {
+        s16 yaw = (s16)((s32)(s16)shape_angle.y + (s16)mBombSmokeAngle);
+        mBombSmokeRot.z = shape_angle.z;
+        mBombSmokeRot.x = shape_angle.x;
+        mBombSmokeRot.y = yaw;
+        auto* emitter = gabi::at<IkadaEmitter>(mBombSmokeEasterEgg.mpEmitter);
+        emitter->mGlobalDynamicsScale[0] = 3.0f;
+        emitter->mGlobalDynamicsScale[1] = 3.0f;
+        emitter->mGlobalDynamicsScale[2] = 3.0f;
+        emitter->mGlobalParticleScale[0] = 3.0f;
+        emitter->mGlobalParticleScale[1] = 3.0f;
+        emitter->mGlobalParticleScale[2] = 3.0f;
+        mBombSmokePos.copy(current.pos);
+        mBombSmokePos.y = (f32)l_HIO.m28;
+        if (!ikadaApi_calcTimer(&m04A8))
+            ikadaApi_dPa_followEcallBack_end(&mBombSmokeEasterEgg);
+    }
+    if (m1166 && mCurMode != 9) {
+        m02F4 = mCurMode;
+        modeProc(PROC_INIT_e, MODE_STOP_e);
+    }
+    if (mType == 3 || mType == 1)
+        epProc();
+    if (mType == 4) {
+        setRopePos();
+        if (mType == 4) {
+            mBckAnm.mFrameCtrl.mFrame = (f32)(s32)m1154;
+            s16 index = REG_S(12, 0);
+            if (index) {
+                mJointRot[index].x = REG_S(12, 1);
+                index = REG_S(12, 0);
+                mJointRot[index].y = REG_S(12, 2);
+                index = REG_S(12, 0);
+                mJointRot[index].z = REG_S(12, 3);
+            }
+        }
+    }
+    modeProc(PROC_EXEC_e, 13);
+    current.pos.y = ikadaApi_getWaterY(&current.pos, &mObjAcch) + offset;
+    setMtx();
+    mpModel->calc();
+    s32 type = mType;
+    if (type == 4 || type == 3 || type == 1) {
+        J3DModel* model = mpModel.get();
+        f32 s = scale.x;
+        s32 culled = ikadaApi_fopAcM_checkCullingBox(gabi::ea(model->getBaseTRMtx()), -1000.0f * s, -50.0f * s,
+                                     -1000.0f * s, 1000.0f * s, 1000.0f * s, 1000.0f * s);
+        bool _delete = !(speedF > 2.0f) || culled;
+        if (!_delete)
+            _delete = searchPlayerDistance(this) > 18000.0f;
+        if (_delete) {
+            ikadaApi_dPa_waveEcallBack_remove(&mWaveRCallback);
+            ikadaApi_dPa_waveEcallBack_remove(&mWaveLCallback);
+            ikadaApi_dPa_splashEcallBack_remove(&mSplashCallBack);
+            mTrackCallBack.mStop = 1;
+        } else
+            setWave();
+    }
+    ikadaApi_dBgW_Move((u32)mpBgW.v);
+    if (mType == 0 || mType == 4) {
+        gabi::Local<be<u32>> id;
+        *id.get() = mFlagPcId;
+        u32 flag = 0;
+        if ((u32)mFlagPcId != 0xFFFFFFFF)
+            flag = ikadaApi_fopAcIt_Judge(0x025E1234, id.get());
+        if (flag) {
+            gabi::store<u32>(flag + 0x1E34, gabi::ea(&mMtx));
+            f32 x = (f32)l_HIO.mFlagOffset.x, y = (f32)l_HIO.mFlagOffset.y,
+                z = (f32)l_HIO.mFlagOffset.z;
+            if (x != 0.0f || y != 0.0f || z != 0.0f)
+                mFlagOffset.set(x, y, z);
+            f32 size = (f32)l_HIO.mFlagScale;
+            if (size != 0.0f)
+                mFlagScale = size;
+            else
+                size = mFlagScale;
+            gabi::store<u32>(flag + 0x1E38, gabi::ea(&mFlagOffset));
+            gabi::store<f32>(flag + 0x1DFC, size);
+        }
+    }
+    type = mType;
+    mbIsLinkRiding = 0;
+    if (type == 1 || type == 3) {
+        gabi::Local<cXyz> delta;
+        ikadaApi_subtractVector(&current.pos, delta.get(), &old.pos);
+        f32 speed = std_sqrtf(PSVECSquareMag(delta.get())) / 30.0f;
+        if (!(speed > 0.0f))
+            speed = 0.0f;
+        else if (!(speed < 1.0f))
+            speed = 1.0f;
+        s8 volume = (s8)gabi::ftoi(speed * 100.0f);
+        s32 room = (s8)current.roomNo,
+            reverb = ikadaApi_dComIfGp_getReverb(room);
+        ikadaApi_startSound(0x303D, &eyePos, volume, reverb);
+    }
+    // HD: execute returns success rather than the GC false result.
+    return 1;
+}
+/* 02363168 */
+void daObj_Ikada_c::debugDraw() {
+    // HD: debug geometry is absent; the GHS color initialization remains observable.
+    auto initialize = [](IkadaGuard* guard, GXColor* storage, GXColor* color) {
+        if ((u32)guard->mInitialized)
+            return false;
+        guard->mInitialized = 1;
+        memcpy_g(reinterpret_cast<u8*>(storage), reinterpret_cast<u8*>(color), 4);
+        return true;
+    };
+    s32 type = mType;
+    bool craneReady = type == 4 && (u32)debug_yellow_guard.mInitialized;
+    if (!craneReady) {
+        if (type == 4) {
+            initialize(&debug_yellow_guard, &debug_yellow, &debug_yellow_source);
+            type = mType;
+        }
+        if (type == 1) {
+            if (initialize(&debug_blue_guard, &debug_blue, &debug_blue_source))
+                initialize(&debug_blue_guard, &debug_blue, &debug_blue_source);
+            initialize(&debug_red_guard, &debug_red, &debug_red_source);
+            type = mType;
+        }
+        if (type == 3) {
+            initialize(&debug_red_guard, &debug_red, &debug_red_source);
+            initialize(&debug_blue_guard, &debug_blue, &debug_blue_source);
+            type = mType;
+        }
+        if (type == 1 || type == 3) {
+            if (initialize(&debug_red_guard, &debug_red, &debug_red_source))
+                type = mType;
+        }
+        if (type != 4 && type != 3 && type != 1)
+            return;
+    }
+
+    if (initialize(&debug_red_guard, &debug_red, &debug_red_source))
+        type = mType;
+    if (type == 3 || type == 1 || type == 4)
+        initialize(&debug_red_guard, &debug_red, &debug_red_source);
+}
+/* 02363374 */
+void daObj_Ikada_c::drawSea() {
+    ikadaApi_mDoExt_baseAnm_play(&mSeaBtk);
+    auto initializeQuad = [](IkadaGuard* guard, IkadaQuad* storage, f32 left, f32 right, f32 front, f32 back,
+                             bool guardFirst) {
+        if (guard->mInitialized)
+            return;
+        if (guardFirst)
+            guard->mInitialized = 1;
+        const f32 values[] = {left, 0, front, right, 0, front, right, 0, back, left, 0, back};
+        for (u32 i = 0; i < 4; ++i) {
+            storage->mPoints[i].x = values[i * 3];
+            storage->mPoints[i].y = values[i * 3 + 1];
+            storage->mPoints[i].z = values[i * 3 + 2];
+        }
+        if (!guardFirst)
+            guard->mInitialized = 1;
+    };
+    initializeQuad(&sea_quad_a_guard, &sea_quad_a, -600, 600, 600, -600, false);
+    initializeQuad(&sea_quad_b_guard, &sea_quad_b, -350, 350, 650, -400, true);
+    initializeQuad(&sea_quad_c_guard, &sea_quad_c, -550, 550, 750, -750, true);
+    initializeQuad(&sea_quad_d_guard, &sea_quad_d, -140, 140, 300, -400, true);
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    ikadaApi_setTranslationMatrix(matrix, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
+    ikadaApi_rotateY(matrix, (s16)shape_angle.y);
+    IkadaQuad* quad = control.mValues[(s32)mType].get();
+    gabi::Local<cXyz[4]> points;
+    for (u32 i = 0; i < 4; ++i) {
+        cXyz *point = &(*points.get())[i];
+        ikadaApi_transformVector(matrix, &quad->mPoints[i], point);
+        point->y = ikadaApi_getWaterY(point, &mObjAcch);
+    }
+    gabi::Local<cXyz> normal, a, b, cross;
+    normal->set((f32)ikada_vector_zero.x, (f32)ikada_vector_zero.y,
+                (f32)ikada_vector_zero.z);
+    for (u32 i = 0; i < 4; i += 2) {
+        ikadaApi_subtractVector(&(*points.get())[i + 1], a.get(), &(*points.get())[i]);
+        ikadaApi_subtractVector(&(*points.get())[(i + 2) % 4], b.get(), &(*points.get())[i + 1]);
+        ikadaApi_cXyz_outprod(a.get(), cross.get(), b.get());
+        if (!ikadaApi_cXyz_normalizeRS(cross.get()))
+            cross->copy(*&ikada_vector_up);
+        PSVECAdd(normal.get(), cross.get(), normal.get());
+        if (!ikadaApi_cXyz_normalizeRS(normal.get()))
+            normal->copy(*&ikada_vector_up);
+    }
+    f32 plane = -3.4028234663852886e38f;
+    for (u32 i = 0; i < 4; ++i) {
+        f32 dot = PSVECDotProduct(normal.get(), &(*points.get())[i]);
+        if (dot > plane)
+            plane = dot;
+    }
+    if (!sea_cross_guard.mInitialized) {
+        sea_cross_points.mPoints[0].x = 0.0f;
+        sea_cross_points.mPoints[0].y = 0.0f;
+        sea_cross_guard.mInitialized = 1;
+        sea_cross_points.mPoints[0].z = 100.0f;
+        sea_cross_points.mPoints[1].set(0.0f, 0.0f, -100.0f);
+        sea_cross_points.mPoints[2].set(-100.0f, 0.0f, 0.0f);
+        sea_cross_points.mPoints[3].set(100.0f, 0.0f, 0.0f);
+    }
+    gabi::Local<cXyz[4]> projected;
+    for (u32 i = 0; i < 4; ++i) {
+        cXyz *point = &(*projected.get())[i];
+        ikadaApi_transformVector(matrix, &sea_cross_points.mPoints[i], point);
+        f32 horizontal =
+            gabi::fmadds((f32)point->x, (f32)normal->x, (f32)point->z * (f32)normal->z);
+        point->y = (plane - horizontal) / (f32)normal->y;
+    }
+    gabi::Local<cXyz> xDifference, zDifference, horizontalX, horizontalZ;
+    ikadaApi_subtractVector(&(*projected.get())[1], xDifference.get(), &(*projected.get())[0]);
+    ikadaApi_subtractVector(&(*projected.get())[3], zDifference.get(), &(*projected.get())[2]);
+    horizontalX->set(xDifference->x, 0.0f, xDifference->z);
+    f32 length = std_sqrtf(PSVECSquareMag(horizontalX.get()));
+    s32 pitch = ikadaApi_cM_atan2s((f32)xDifference->y, length);
+    horizontalZ->set(zDifference->x, 0.0f, zDifference->z);
+    length = std_sqrtf(PSVECSquareMag(horizontalZ.get()));
+    s32 roll = ikadaApi_cM_atan2s((f32)zDifference->y, length);
+    f32 horizontal =
+            gabi::fmadds((f32)current.pos.x, (f32)normal->x, (f32)current.pos.z * (f32)normal->z),
+        height = (plane - horizontal) / (f32)normal->y;
+    f32 water = ikadaApi_getWaterY(&current.pos, &mObjAcch);
+    f32 y = gabi::fmadds(water - height, height < water ? 1.0f : 0.0f, height);
+    ikadaApi_setTranslationMatrix(matrix, (f32)current.pos.x, y, (f32)current.pos.z);
+    ikadaApi_rotateZXY(matrix, pitch, (s16)shape_angle.y, roll);
+    ikadaApi_mDoMtx_stack_c_transM(0.0f, 3.0f, 0.0f);
+    f32 values[12];
+    for (u32 i = 0; i < 12; ++i)
+        values[i] = (f32)matrix->m[i / 4][i % 4];
+    J3DModel* model = mpSeaModel.get();
+    for (u32 i = 0; i < 12; ++i)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    u32 data = gabi::ea(mpSeaModel->getModelData()),
+        material = gabi::load<u32>(data + 0x10);
+    gabi::Local<GXColor> seaColor, foamColor;
+    ikadaApi_dKy_get_seacolor(seaColor.get(), foamColor.get());
+    gabi::Local<be<s16>[4]> color;
+    u32 colorEA = gabi::ea(seaColor.get());
+    (*color.get())[0] = gabi::load<u8>(colorEA);
+    (*color.get())[1] = gabi::load<u8>(colorEA + 1);
+    (*color.get())[2] = gabi::load<u8>(colorEA + 2);
+    (*color.get())[3] = 255;
+    u32 light = ikadaApi_getEnvironment();
+    f32 strength = gabi::load<f32>(light + 0x10B8);
+    u32 tev = gabi::load<u32>(material + 0x18), vt = gabi::load<u32>(tev + 4);
+    gabi::call(gabi::load<u32>(vt + 0x24), tev, 1, color.get());
+    gabi::Local<IkadaColorVector> rgba;
+    for (u32 i = 0; i < 4; ++i)
+        rgba->mValues[i] = (f32)(s16)(*color.get())[i] / 255.0f;
+    gabi::Local<IkadaColorVector> bright;
+    ikadaApi_scaleColorBrightness(bright.get(), rgba.get(), strength);
+    gabi::store<u32>(material + 0xA0, gabi::load<u32>(material + 0xA0) | 0x20);
+    u32 output = ikadaApi_getMaterialColor(material + 0xA0, 5);
+    f32 alpha = (f32)(s16)(*color.get())[3] / 255.0f;
+    f32 r = bright->mValues[0], g = bright->mValues[1], bValue = bright->mValues[2];
+    gabi::store<f32>(output + 4, g);
+    gabi::store<f32>(output + 8, bValue);
+    gabi::store<f32>(output, r);
+    gabi::store<f32>(output + 12, alpha);
+    mSeaBtk.entry(gabi::at<J3DModelData>(data), (f32)mSeaBtk.mFrameCtrl.mFrame);
+    mDoExt_modelUpdateDL(mpSeaModel);
+}
+/* 02363B78 */
+s32 daObj_Ikada_c::_draw() {
+    if ((u8)l_HIO.mbDebugDraw)
+        debugDraw();
+    g_env_light.settingTevStruct(TEV_TYPE_ACTOR, &current.pos, &tevStr);
+    g_env_light.setLightTevColorType(mpModel, &tevStr);
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    gabi::store<u32>(0x104B4634, (u32)reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->mpOpaListBG);
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    gabi::store<u32>(0x104B4638, (u32)reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->mpXluListBG);
+    J3DModel* model = mpModel.get();
+    if (mType == 4) {
+        mBckAnm.entry(model->getModelData(),
+                   (f32)mBckAnm.mFrameCtrl.mFrame);
+        mDoExt_modelUpdateDL(mpModel);
+        u32 data = gabi::ea(mpModel->getModelData());
+        gabi::store<u32>(gabi::load<u32>(data + 8) + 0x14, 0);
+    } else
+        mDoExt_modelUpdateDL(mpModel);
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    gabi::store<u32>(0x104B4634, (u32)reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->mpOpaList);
+    play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    gabi::store<u32>(0x104B4638, (u32)reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->mpXluList);
+    drawSea();
+    if (mType == 4) {
+        if (m07D8 >= 2) {
+            ikadaApi_mDoExt_3DlineMat1_c_update(gabi::ea(this) + 0x934, (u16)(s32)m07D8, 0x101CA4D8, 0,
+                       gabi::ea(this) + 0x110, 5.0f);
+            play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            u32 vt = gabi::load<u32>(gabi::ea(this) + 0xA64);
+            s32 index = gabi::call<s32>(gabi::load<u32>(vt + 0x14), gabi::ea(this) + 0x934);
+            ikadaApi_mDoExt_3DlineMatSortPacket_setMat(gabi::ea(&reinterpret_cast<dDlstHD::dDlst_list_c*>(&play->drawlist)->m3DlineMatSortPacket) + (u32)index * 0x9C, gabi::ea(this) + 0x934);
+        }
+        g_env_light.setLightTevColorType(mpRopeEnd, &tevStr);
+        mDoExt_modelUpdateDL(mpRopeEnd);
+        if (mType == 4)
+            ikadaApi_dSnap_RegistFig(0x83, this, 1.0f, 1.0f, 1.0f);
+    }
+    return 1;
+}
+/* 02361218 */
+void daObj_Ikada_c::getArg() {
+    u32 param = (u32)mParameters;
     u32 type = param & 15;
     s16 homeX = home.angle.x;
     mType = type;
@@ -39,906 +1340,8 @@ void Actor::getArg() {
     mPathId = (u32)(s32)homeX >> 8;
     m02A0 = (param >> 18) & 255;
 }
-VERIFY(0x02361218, &Actor::getArg);
-void Actor::ride(fopAc_ac_c *actor) {
-    WWHD_FUNC(0x02360380, void, this, actor);
-    if (mType != 1)
-        return;
-    u32 play = gabi::ea(dComIfGp_get());
-    if (gabi::ea(actor) == gabi::load<u32>(play + 0x5B34))
-        mbIsLinkRiding = 1;
-    if (!actor || gabi::load<s16>(gabi::ea(actor) + 8) != 0x126)
-        return;
-    if (gabi::call<s32>(0x020CB648, actor) > 1)
-        return;
-    mLinkRockAmplitude = 300;
-    modeProc(0, 12);
-}
-VERIFY(0x02360380, &Actor::ride);
-void rideCallback(void *bg, Actor *actor, fopAc_ac_c *rider) {
-    WWHD_FUNC(0x02360414, void, bg, actor, rider);
-    actor->ride(rider);
-}
-VERIFY(0x02360414, rideCallback);
-void Actor::HandleRight() {
-    WWHD_FUNC(0x02363F30, void, this);
-    f32 speed = gabi::load<f32>(0x1046A21C);
-    s16 end = mBckAnm.mFrameCtrl.mEnd;
-    s32 frame = (s32)((u32)(s32)mHandleFrame + (u32)gabi::ftoi(speed));
-    mHandleFrame = frame;
-    if (!((f32)frame < (f32)end))
-        mHandleFrame = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mStart);
-}
-VERIFY(0x02363F30, &Actor::HandleRight);
-void Actor::HandleLeft() {
-    WWHD_FUNC(0x02364098, void, this);
-    f32 speed = gabi::load<f32>(0x1046A21C);
-    s16 start = mBckAnm.mFrameCtrl.mStart;
-    s32 frame = (s32)((u32)(s32)mHandleFrame - (u32)gabi::ftoi(speed));
-    mHandleFrame = frame;
-    if (!((f32)frame > (f32)start))
-        mHandleFrame = gabi::ftoi((f32)(s16)mBckAnm.mFrameCtrl.mEnd);
-}
-VERIFY(0x02364098, &Actor::HandleLeft);
-void Actor::modeCraneUp() {
-    WWHD_FUNC(0x02363FE0, void, this);
-    if (mRopeCount > 15) {
-        HandleRight();
-        gabi::call(0x02363D28, this, -1, 0);
-    } else
-        modeProc(0, 2);
-}
-VERIFY(0x02363FE0, &Actor::modeCraneUp);
-void Actor::modeCraneUpWaitInit() {
-    WWHD_FUNC(0x02364034, void, this);
-    mTimer = gabi::load<s16>(0x1046A220);
-}
-VERIFY(0x02364034, &Actor::modeCraneUpWaitInit);
-void Actor::modeCraneUpWait() {
-    WWHD_FUNC(0x02364044, void, this);
-    if (!gabi::call<s32>(0x0211D2F8, &mTimer))
-        modeProc(0, 6);
-}
-VERIFY(0x02364044, &Actor::modeCraneUpWait);
-void Actor::modeCraneDownInit() {
-    WWHD_FUNC(0x0236408C, void, this);
-    mCraneAmplitude = 150;
-}
-VERIFY(0x0236408C, &Actor::modeCraneDownInit);
-void Actor::modeCraneDownWaitInit() {
-    WWHD_FUNC(0x02364204, void, this);
-    mTimer = gabi::load<s16>(0x1046A220);
-}
-VERIFY(0x02364204, &Actor::modeCraneDownWaitInit);
-void Actor::modeCraneDownWait() {
-    WWHD_FUNC(0x02364214, void, this);
-    if (!gabi::call<s32>(0x0211D2F8, &mTimer))
-        modeProc(0, 3);
-}
-VERIFY(0x02364214, &Actor::modeCraneDownWait);
-void Actor::modeCraneTurnInit() {
-    WWHD_FUNC(0x0236425C, void, this);
-    mCraneAmplitude = 150;
-    speedF = 0.0f;
-}
-VERIFY(0x0236425C, &Actor::modeCraneTurnInit);
-void Actor::modeCraneResetInit() {
-    WWHD_FUNC(0x0236433C, void, this);
-    mCraneAmplitude = 150;
-    speedF = 0.0f;
-}
-VERIFY(0x0236433C, &Actor::modeCraneResetInit);
-void Actor::modeCraneWaitInit() {
-    WWHD_FUNC(0x0236440C, void, this);
-    mTimer = 600;
-}
-VERIFY(0x0236440C, &Actor::modeCraneWaitInit);
-void Actor::modeCraneWait() {
-    WWHD_FUNC(0x02364418, void, this);
-    if (!gabi::call<s32>(0x0211D2F8, &mTimer))
-        modeProc(0, 1);
-}
-VERIFY(0x02364418, &Actor::modeCraneWait);
-void Actor::modePathMoveInit() {
-    WWHD_FUNC(0x02364460, void, this);
-    mDirection = cM_rndF(1.0f) < 0.5 ? 0 : 1;
-}
-VERIFY(0x02364460, &Actor::modePathMoveInit);
-void Actor::modePathMoveTerryInit() {
-    WWHD_FUNC(0x023647C4, void, this);
-    mTimer = 10;
-}
-VERIFY(0x023647C4, &Actor::modePathMoveTerryInit);
-void Actor::modeStopTerryInit() {
-    WWHD_FUNC(0x02364C60, void, this);
-    mTimer = 210;
-}
-VERIFY(0x02364C60, &Actor::modeStopTerryInit);
-void Actor::modeCraneDown() {
-    WWHD_FUNC(0x02364148, void, this);
-    gabi::call(0x0200F428, &mCraneAmplitude, 0, 10, 10);
-    if (mCraneAmplitude < 20) {
-        HandleLeft();
-        if (mRopeCount < gabi::load<s16>(0x1046A21A))
-            gabi::call(0x02363D28, this, 1, 0);
-        else
-            modeProc(0, 7);
-    } else
-        mCraneAnimPhase = (s16)((s32)mCraneAnimPhase + gabi::load<s16>(0x1047BD4C) + 0x1830);
-}
-VERIFY(0x02364148, &Actor::modeCraneDown);
-void Actor::modeCraneTurn() {
-    WWHD_FUNC(0x02364274, void, this);
-    gabi::call(0x0200F428, &mCraneAmplitude, 0, 10, 10);
-    if (mCraneAmplitude < 20) {
-        HandleRight();
-        s16 target = mDirection == 1 ? 0x4000 : -0x4000;
-        mCraneTarget = target;
-        gabi::call(0x0200F428, &mCraneAngle, target, 10, 0x100);
-        if (gabi::call<s32>(0x0200FAAC, (s16)mCraneAngle, (s16)mCraneTarget) <= 0x100)
-            modeProc(0, 4);
-    } else
-        mCraneAnimPhase = (s16)((s32)mCraneAnimPhase + gabi::load<s16>(0x1047BD4C) + 0x1830);
-}
-VERIFY(0x02364274, &Actor::modeCraneTurn);
-void Actor::modeCraneReset() {
-    WWHD_FUNC(0x02364354, void, this);
-    gabi::call(0x0200F428, &mCraneAmplitude, 0, 10, 10);
-    if (mCraneAmplitude < 20) {
-        HandleLeft();
-        mCraneTarget = 0;
-        gabi::call(0x0200F428, &mCraneAngle, 0, 10, 0x100);
-        if (gabi::call<s32>(0x0200FAAC, (s16)mCraneAngle, (s16)mCraneTarget) <= 0x100)
-            modeProc(0, 8);
-    } else
-        mCraneAnimPhase = (s16)((s32)mCraneAnimPhase + gabi::load<s16>(0x1047BD4C) + 0x1830);
-}
-VERIFY(0x02364354, &Actor::modeCraneReset);
-void Actor::modeWait() {
-    WWHD_FUNC(0x02363E98, void, this);
-    if (mType != 4)
-        return;
-    s16 target = gabi::load<s16>(0x1046A218);
-    if (target) {
-        if (mRopeCount > target)
-            gabi::call(0x02363D28, this, -1, 0);
-        else if (mRopeCount < target)
-            gabi::call(0x02363D28, this, 1, 0);
-    }
-    if (gabi::load<s16>(0x1047BD50))
-        modeProc(0, 1);
-}
-VERIFY(0x02363E98, &Actor::modeWait);
-void Actor::modeStop() {
-    WWHD_FUNC(0x02364668, void, this);
-    if (gabi::load<u8>(0x1046A202))
-        HandleRight();
-    if (gabi::load<u8>(0x1046A201))
-        HandleLeft();
-    if (mPreviousMode == 8) {
-        mVelocityFwdTarget = 0.0f;
-        if (mPathId != 255)
-            gabi::call(0x023644B0, this);
-    }
-    s32 count = mRopeCount;
-    if (!mStopRequest) {
-        if (count <= 15) {
-            HandleLeft();
-            gabi::call(0x02363D28, this, 1, 0);
-            return;
-        }
-        s32 previous = mPreviousMode;
-        modeProc(0, previous == 9 ? 8 : previous == 7 ? 3 : previous);
-    } else if (count > 2) {
-        HandleRight();
-        gabi::call(0x02363D28, this, -2, 0);
-        if (mRopeCount < 2)
-            mRopeCount = 2;
-    }
-}
-VERIFY(0x02364668, &Actor::modeStop);
-void Actor::setCollision() {
-    WWHD_FUNC(0x023647D0, void, this);
-    if (mbIsLinkRiding)
-        return;
-    u32 play = gabi::ea(dComIfGp_get());
-    if (gabi::load<u32>(play + 0x5CD8) & 0x4000)
-        return;
-    gabi::call(0x02018C8C, gabi::ea(this) + 0x15F0, gabi::load<f32>(0x1046A298) * (f32)scale.x);
-    gabi::call(0x02018D40, gabi::ea(this) + 0x15F0, &current.pos);
-    play = gabi::ea(dComIfGp_get());
-    gabi::call(0x0200E240, play + 0x26A4, &mSph);
-}
-VERIFY(0x023647D0, &Actor::setCollision);
-void Actor::pathMove() {
-    WWHD_FUNC(0x023644B0, void, this);
-    gabi::call(0x0200ED84, &speedF, (f32)mVelocityFwdTarget, 0.1f, 2.0f);
-    gabi::call(0x02587D24, &mPathPosTarget, &mCurPathPoint, (u32)mpPath, 0x02360368, this,
-               (f32)speedF);
-    gabi::call(0x0200F268, &current.pos, &mPathPosTarget, gabi::load<f32>(0x1047BCD0) + 0.01f,
-               (f32)speedF);
-    if (speedF != 0.0f && mVelocityFwdTarget != 0.0f) {
-        s32 target = gabi::call<s32>(0x0200F93C, &current.pos, &mPathPosTarget);
-        gabi::call(0x0200F428, &shape_angle.y, target, 8, 0x100);
-    }
-}
-VERIFY(0x023644B0, &Actor::pathMove);
-void Actor::modePathMove() {
-    WWHD_FUNC(0x02364578, void, this);
-    if (gabi::load<u8>(0x1046A202))
-        HandleRight();
-    if (gabi::load<u8>(0x1046A201))
-        HandleLeft();
-    if (gabi::load<u8>(0x1046A204) || mPathId == 255)
-        return;
-    if (mbCraneMode) {
-        gabi::Local<cXyz> delta, horizontal;
-        gabi::call(0x0201ADE0, &mCurPathP1, delta.get(), &current.pos);
-        horizontal->set(delta->x, 0.0f, delta->z);
-        f32 length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontal.get()));
-        if (length < 50.0f) {
-            mVelocityFwdTarget = 1.0f;
-            pathMove();
-            return;
-        }
-    }
-    mVelocityFwdTarget = 8.0f;
-    pathMove();
-}
-VERIFY(0x02364578, &Actor::modePathMove);
-s32 Actor::checkTgHit() {
-    WWHD_FUNC(0x02364854, s32, this);
-    if (mbIsLinkRiding) {
-        u32 player = gabi::load<u32>(gabi::ea(dComIfGp_get()) + 0x5B2C);
-        if (gabi::load<u32>(player + 0x3C0) & 0x20000) {
-            gabi::Local<cXyz> pos, delta, horizontal;
-            pos->set(gabi::load<f32>(player + 0x3E4), gabi::load<f32>(player + 0x3E8),
-                     gabi::load<f32>(player + 0x3EC));
-            gabi::call(0x0201ADE0, pos.get(), delta.get(), &current.pos);
-            horizontal->set(delta->x, 0.0f, delta->z);
-            f32 length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontal.get()));
-            if (length < 1000.0f) {
-                mLinkRockAmplitude = 200;
-                modeProc(0, 11);
-                return 1;
-            }
-        }
-    }
-    gabi::call(0x02515E50, gabi::ea(this) + 0x1620);
-    if (!gabi::call<s32>(0x0211D2F8, &mHitTimer)) {
-        u32 hit = gabi::call<u32>(0x02516300, &mSph);
-        gabi::call(0x02516300, &mSph);
-        if (hit && gabi::load<u32>(hit + 0x10) == 0x20) {
-            mHitTimer = 60;
-            mLinkRockAmplitude = 300;
-            modeProc(0, 12);
-            return 1;
-        }
-    }
-    return 0;
-}
-VERIFY(0x02364854, &Actor::checkTgHit);
-s32 nodeControlCallback(void *node, s32 timing) {
-    WWHD_FUNC(0x02360038, s32, node, timing);
-    if (!timing) {
-        u32 model = gabi::load<u32>(0x104B462C), actor = gabi::load<u32>(model + 0xB8);
-        if (actor)
-            gabi::call(0x0235FE84, actor, node, model);
-    }
-    return 1;
-}
-VERIFY(0x02360038, nodeControlCallback);
-s32 pathMoveCallback(cXyz *pos, cXyz *point, cXyz *path, Actor *actor) {
-    WWHD_FUNC(0x02360368, s32, pos, point, path, actor);
-    return gabi::call<s32>(0x0236012C, actor, pos, point, path);
-}
-VERIFY(0x02360368, pathMoveCallback);
-s32 createHeapCallback(Actor *actor) {
-    WWHD_FUNC(0x02361000, s32, actor);
-    return gabi::call<s32>(0x02360C64, actor);
-}
-VERIFY(0x02361000, createHeapCallback);
-s32 Create(Actor *actor) {
-    WWHD_FUNC(0x02361D54, s32, actor);
-    return gabi::call<s32>(0x02361C8C, actor);
-}
-VERIFY(0x02361D54, Create);
-s32 Delete(Actor *actor) {
-    WWHD_FUNC(0x02361E3C, s32, actor);
-    return gabi::call<s32>(0x02361D58, actor);
-}
-VERIFY(0x02361E3C, Delete);
-s32 Execute(Actor *actor) {
-    WWHD_FUNC(0x02363164, s32, actor);
-    return gabi::call<s32>(0x02362C54, actor);
-}
-VERIFY(0x02363164, Execute);
-s32 Draw(Actor *actor) {
-    WWHD_FUNC(0x02363D24, s32, actor);
-    return gabi::call<s32>(0x02363B78, actor);
-}
-VERIFY(0x02363D24, Draw);
-void hioDestructor(void *self, s32 flags) {
-    WWHD_FUNC(0x0236513C, void, self, flags);
-    if (self && (flags & 1))
-        gabi::call(0x0273AF40, self);
-}
-VERIFY(0x0236513C, hioDestructor);
-cXyz *vectorConstructor(cXyz *self) {
-    WWHD_FUNC(0x02365150, cXyz *, self);
-    return self ? self : gabi::call<cXyz *>(0x0273AD10, 12);
-}
-VERIFY(0x02365150, vectorConstructor);
-s32 IsDelete(Actor *actor) {
-    WWHD_FUNC(0x0236517C, s32, actor);
-    return 1;
-}
-VERIFY(0x0236517C, IsDelete);
-void modeWaitInit(Actor *actor) {
-    WWHD_FUNC(0x02365184, void, actor);
-}
-VERIFY(0x02365184, modeWaitInit);
-void modeCraneUpInit(Actor *actor) {
-    WWHD_FUNC(0x02365188, void, actor);
-}
-VERIFY(0x02365188, modeCraneUpInit);
-void modeStopInit(Actor *actor) {
-    WWHD_FUNC(0x0236518C, void, actor);
-}
-VERIFY(0x0236518C, modeStopInit);
-void modeStopBombTerryInit(Actor *actor) {
-    WWHD_FUNC(0x02365190, void, actor);
-}
-VERIFY(0x02365190, modeStopBombTerryInit);
-void emptyVirtual(Actor *actor) {
-    WWHD_FUNC(0x02365248, void, actor);
-}
-VERIFY(0x02365248, emptyVirtual);
-s32 Actor::pathAdvance(cXyz *position, cXyz *previous, cXyz *next) {
-    WWHD_FUNC(0x0236012C, s32, this, position, previous, next);
-    u32 path = mpPath;
-    s32 pointIndex = mCurPathPoint;
-    s32 index = pointIndex < (s32)gabi::load<u16>(path) - 1 ? (s8)(pointIndex + 1) : 0;
-    u32 points = gabi::load<u32>(path + 8);
-    mbCraneMode = gabi::load<u8>(points + (u32)index * 16 + 3) != 255;
-    f32 y = current.pos.y;
-    mCurPathP0.copy(*previous);
-    mCurPathP0.y = y;
-    mCurPathP1.copy(*next);
-    mCurPathP1.y = y;
-    gabi::Local<cXyz> direction, delta, horizontal, delta2, horizontal2;
-    gabi::call(0x0201ADE0, &mCurPathP1, direction.get(), &mCurPathP0);
-    if (gabi::call<s32>(0x0201B47C, direction.get())) {
-        s32 angle = gabi::call<s32>(0x020195B0, (f32)direction->x, (f32)direction->z);
-        u16 difference = gabi::call<u32>(0x0200F378, &current.angle.y, angle, 8, 0x200, 8);
-        f32 rate =
-            (f32)speedF * __builtin_fabsf(gabi::load<f32>(0x104A44FC + 8 * (difference >> 3)));
-        gabi::call(0x0200F764, position, &mCurPathP1, rate);
-        gabi::call(0x0201ADE0, position, delta.get(), &mCurPathP1);
-        horizontal->set(delta->x, 0.0f, delta->z);
-        f32 length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontal.get()));
-        f32 threshold = rate * (gabi::load<f32>(0x1047BCD8) + 1.0f);
-        if (!(length < threshold)) {
-            gabi::call(0x0201ADE0, position, delta2.get(), &mCurPathP1);
-            horizontal2->set(delta2->x, 0.0f, delta2->z);
-            if (gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontal2.get())) != 0.0f)
-                return 0;
-        }
-        if (mbCraneMode)
-            modeProc(0, 5);
-    }
-    return 1;
-}
-VERIFY(0x0236012C, &Actor::pathAdvance);
-s32 Actor::draw() {
-    WWHD_FUNC(0x02363B78, s32, this);
-    if (gabi::load<u8>(0x1046A200))
-        gabi::call(0x02363168, this);
-    u32 light = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, light, 0, &current.pos, gabi::ea(this) + 0x110);
-    light = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, light, mpModel.get(), gabi::ea(this) + 0x110);
-    u32 play = gabi::ea(dComIfGp_get());
-    gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D70));
-    play = gabi::ea(dComIfGp_get());
-    gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D74));
-    u32 model = gabi::ea(mpModel.get());
-    if (mType == 4) {
-        gabi::call(0x025E86B8, &mBckAnm, gabi::load<u32>(model + 0xAC),
-                   (f32)mBckAnm.mFrameCtrl.mFrame);
-        gabi::call(0x025E2DE0, mpModel.get(), 0);
-        u32 data = gabi::load<u32>(gabi::ea(mpModel.get()) + 0xAC);
-        gabi::store<u32>(gabi::load<u32>(data + 8) + 0x14, 0);
-    } else
-        gabi::call(0x025E2DE0, mpModel.get(), 0);
-    play = gabi::ea(dComIfGp_get());
-    gabi::store<u32>(0x104B4634, gabi::load<u32>(play + 0x5D78));
-    play = gabi::ea(dComIfGp_get());
-    gabi::store<u32>(0x104B4638, gabi::load<u32>(play + 0x5D7C));
-    gabi::call(0x02363374, this);
-    if (mType == 4) {
-        if (mRopeCount >= 2) {
-            gabi::call(0x025EC62C, gabi::ea(this) + 0x934, (u16)(s32)mRopeCount, 0x101CA4D8, 0,
-                       gabi::ea(this) + 0x110, 5.0f);
-            play = gabi::ea(dComIfGp_get());
-            u32 vt = gabi::load<u32>(gabi::ea(this) + 0xA64);
-            s32 index = gabi::call<s32>(gabi::load<u32>(vt + 0x14), gabi::ea(this) + 0x934);
-            gabi::call(0x025EDD04, play + 0x5FB4 + (u32)index * 0x9C, gabi::ea(this) + 0x934);
-        }
-        light = gabi::call<u32>(0x02555D0C);
-        gabi::call(0x02562F5C, light, mpRopeEnd.get(), gabi::ea(this) + 0x110);
-        gabi::call(0x025E2DE0, mpRopeEnd.get(), 0);
-        if (mType == 4)
-            gabi::call(0x025BED80, 0x83, this, 1.0f, 1.0f, 1.0f);
-    }
-    return 1;
-}
-VERIFY(0x02363B78, &Actor::draw);
-void actorDestructor(Actor *actor, s32 flags) {
-    WWHD_FUNC(0x02365194, void, actor, flags);
-    if (!actor)
-        return;
-    u32 self = gabi::ea(actor);
-    gabi::call(0x02515860, self + 0x1604, 2);
-    gabi::call(0x02515AE8, self + 0x14D8, 2);
-    gabi::call(0x025EB8B8, self + 0x934, 2);
-    gabi::call(0x02018034, self + 0x8F0, 2);
-    gabi::store<u32>(self + 0x738, 0x1002B334);
-    gabi::store<u32>(self + 0x72C, 0x1002B344);
-    gabi::call(0x024EFD9C, self + 0x718, 0);
-    gabi::call(0x027F3628, self + 0x664, 0);
-    gabi::call(0x025D50BC, actor, 0);
-    if (flags & 1)
-        gabi::call(0x0273AF40, actor);
-}
-VERIFY(0x02365194, actorDestructor);
-void Actor::incRopeCount(s32 increment, s32 minimum) {
-    WWHD_FUNC(0x02363D28, void, this, increment, minimum);
-    s32 old = mRopeCount, newCount = (s32)((u32)old + (u32)increment);
-    u32 velocity = gabi::ea(this) + 0xAC0 + (u32)old * 12;
-    u32 positions = gabi::load<u32>(gabi::load<u32>(gabi::ea(this) + 0xAB8));
-    if (newCount >= 200)
-        newCount = 200;
-    else if (newCount < minimum)
-        newCount = minimum;
-    s32 delta = (s32)((u32)newCount - (u32)old);
-    u32 offset = 0x1046A2E8;
-    if (delta > 0) {
-        gabi::Local<cXyz> shift;
-        gabi::call(0x0201AE48, offset, shift.get(), (f32)delta);
-        s32 i = 0;
-        old = mRopeCount;
-        while (i < old) {
-            gabi::call(0x028E8D88, positions, shift.get(), positions);
-            old = mRopeCount;
-            ++i;
-            positions += 12;
-        }
-    } else
-        positions += (u32)old * 12;
-    old = mRopeCount;
-    if (old < newCount) {
-        gabi::Local<cXyz> result;
-        for (s32 remaining = (s32)((u32)newCount - (u32)old); remaining; --remaining) {
-            for (u32 i = 0; i < 12; i += 4)
-                gabi::store<u32>(velocity + i, gabi::load<u32>(offset + i));
-            if (mRopeCount != 0) {
-                gabi::call(0x0201ADE0, positions - 12, result.get(), offset);
-                for (u32 i = 0; i < 12; i += 4)
-                    gabi::store<u32>(positions + i, gabi::load<u32>(gabi::ea(result.get()) + i));
-            }
-            positions += 12;
-            velocity += 12;
-        }
-    }
-    mRopeCount = (s16)newCount;
-}
-VERIFY(0x02363D28, &Actor::incRopeCount);
-s32 Actor::remove() {
-    WWHD_FUNC(0x02361D58, s32, this);
-    gabi::call(0x025204C8, &mPhase, 0x1002B808);
-    gabi::call(0x025A92C0, &mWaveRCallback);
-    gabi::call(0x025A92C0, &mWaveLCallback);
-    gabi::call(0x025A99B8, &mSplashCallback);
-    gabi::call(0x025A9E38, &mTrackCallback);
-    gabi::call(0x025A9270, &mRippleCallback);
-    u32 vt = gabi::load<u32>(gabi::ea(this) + 0x5CC);
-    gabi::call(gabi::load<u32>(vt + 0x44), &mFireCallback);
-    vt = gabi::load<u32>(gabi::ea(this) + 0x59C);
-    gabi::call(gabi::load<u32>(vt + 0x44), &mBombSmokeCallback);
-    gabi::call(0x025E1B34, &mSePos);
-    if (mType == 3 || mType == 1)
-        gabi::call(0x0255A374, &mPLight);
-    if (gabi::load<u32>(gabi::ea(this) + 0xF4)) {
-        u32 bg = mpBgW;
-        if (bg && gabi::load<u32>(bg) < 0x100) {
-            u32 play = gabi::ea(dComIfGp_get());
-            gabi::call(0x020087EC, play + 0x12A0, (u32)mpBgW);
-        }
-    }
-    return 1;
-}
-VERIFY(0x02361D58, &Actor::remove);
-void Actor::modeStopBombTerry() {
-    WWHD_FUNC(0x02364E10, void, this);
-    setCollision();
-    if (!checkTgHit()) {
-        mVelocityFwdTarget = 0.0f;
-        if (mPathId != 255)
-            pathMove();
-    }
-}
-VERIFY(0x02364E10, &Actor::modeStopBombTerry);
-void *hioConstructor(void *self) {
-    WWHD_FUNC(0x02364E6C, void *, self);
-    if (!self) {
-        self = gabi::call<void *>(0x0273AD10, 0xAC);
-        if (!self)
-            return nullptr;
-    }
-    u32 p = gabi::ea(self);
-    gabi::store<u32>(p, 0x1002B364);
-    for (u32 off : {4u, 5u, 6u, 7u, 8u})
-        gabi::store<u8>(p + off, 0);
-    gabi::store<s16>(p + 0x1C, 0);
-    gabi::store<s16>(p + 0x1E, 100);
-    gabi::store<s16>(p + 0x24, 60);
-    gabi::store<s16>(p + 0x94, 3000);
-    gabi::store<s16>(p + 0x96, 6000);
-    gabi::store<s16>(p + 0x98, 1000);
-    gabi::store<s16>(p + 0x9A, 1000);
-    const struct {
-        u32 offset;
-        f32 value;
-    } defaults[] = {
-        {0xC, 0},     {0x10, 0},    {0x14, 0},   {0x18, 0},   {0x20, 1.5f}, {0x28, 100},
-        {0x2C, 900},  {0x30, 300},  {0x34, 660}, {0x38, 20},  {0x3C, -180}, {0x40, -320},
-        {0x44, 240},  {0x48, 265},  {0x4C, -18}, {0x50, -97}, {0x54, -175}, {0x58, -0.04f},
-        {0x5C, 4},    {0x60, 200},  {0x64, 300}, {0x68, 2},   {0x6C, 300},  {0x70, 2},
-        {0x74, 0},    {0x78, 15},   {0x7C, -80}, {0x80, -50}, {0x84, -150}, {0x88, -40},
-        {0x8C, -100}, {0x90, -350}, {0x9C, 300}, {0xA0, 12},  {0xA4, 15},   {0xA8, 30}};
-    for (auto entry : defaults)
-        gabi::store<f32>(p + entry.offset, entry.value);
-    return self;
-}
-VERIFY(0x02364E6C, hioConstructor);
-void staticInit() {
-    WWHD_FUNC(0x0236505C, void);
-    gabi::store<u32>(0x1046A19C, 0);
-    gabi::store<u32>(0x1046A1A4, 0);
-    gabi::store<u32>(0x1046A198, 0);
-    gabi::store<u32>(0x1046A1A0, 0);
-    gabi::call(0x028F026C, 0x101CA4DC);
-    gabi::store<f32>(0x1046A09C, -3.1415927410125732f);
-    gabi::store<f32>(0x1046A0A0, 3.1415927410125732f);
-    gabi::call(0x028ED6F8, 0x1046A0A4);
-    gabi::call(0x028F026C, 0x101CA4E8);
-    gabi::call(0x028EAB2C, 0x1046A0A5);
-    gabi::call(0x028F026C, 0x101CA4F4);
-    gabi::store<f32>(0x1046A2F4, 200.0f);
-    gabi::store<f32>(0x1046A2E8, 0.0f);
-    gabi::store<f32>(0x1046A2EC, -10.0f);
-    gabi::store<f32>(0x1046A2F8, -340.0f);
-    gabi::store<f32>(0x1046A2FC, 0.0f);
-    gabi::store<f32>(0x1046A2F0, 0.0f);
-    gabi::call(0x02364E6C, 0x1046A1FC);
-}
-VERIFY(0x0236505C, staticInit);
-f32 searchPlayerDistance(Actor *actor) {
-    WWHD_FUNC(0x023628CC, f32, actor);
-    u32 play = gabi::ea(dComIfGp_get());
-    f32 distance = gabi::call<f32>(0x025D6958, actor, gabi::load<u32>(play + 0x5B2C));
-    play = gabi::ea(dComIfGp_get());
-    u32 ship = gabi::load<u32>(play + 0x5B3C);
-    if (ship) {
-        f32 other = gabi::call<f32>(0x025D6958, actor, ship);
-        if (other < distance)
-            return other;
-    }
-    return distance;
-}
-VERIFY(0x023628CC, searchPlayerDistance);
-Actor *actorConstructor(Actor *actor) {
-    WWHD_FUNC(0x02361004, Actor *, actor);
-    if (!actor) {
-        actor = gabi::call<Actor *>(0x0273AD10, 0x16A0);
-        if (!actor)
-            return nullptr;
-    }
-    u32 p = gabi::ea(actor);
-    gabi::call(0x025D4ED0, actor);
-    gabi::store<u32>(p + 0xB4, 0x1002B354);
-    gabi::store<u32>(p + 0x414, 0x100521A8);
-    for (u32 off : {0x450u, 0x45Cu, 0x468u})
-        if (!(p + off))
-            gabi::call(0x0273AD10, 12);
-    gabi::store<u32>(p + 0x478, 0x100521A8);
-    for (u32 off : {0x4B4u, 0x4C0u, 0x4CCu})
-        if (!(p + off))
-            gabi::call(0x0273AD10, 12);
-    gabi::store<u32>(p + 0x4DC, 0x100521E8);
-    gabi::store<u32>(p + 0x4F8, 0x10052268);
-    gabi::call(0x028EFFD0, p + 0x508, 3, 12, 0x02365150);
-    gabi::call(0x025A9084, p + 0x548);
-    gabi::call(0x025A5894, p + 0x59C, 0, 0);
-    gabi::call(0x025A5894, p + 0x5CC, 0, 0);
-    gabi::call(0x027F2BC0, p + 0x654, 0);
-    gabi::store<u32>(p + 0x664, 0x1016E54C);
-    gabi::call(0x027DA984, p + 0x668);
-    gabi::store<u32>(p + 0x6DC, 0);
-    gabi::store<u32>(p + 0x6D0, 0);
-    gabi::store<u32>(p + 0x664, 0x1002B2FC);
-    gabi::store<u32>(p + 0x6D8, 0);
-    gabi::store<u32>(p + 0x69C, 0x1016D820);
-    gabi::store<u32>(p + 0x6D4, 0);
-    gabi::store<u32>(p + 0x6AC, 0);
-    gabi::call(0x024F0474, p + 0x718);
-    gabi::store<u32>(p + 0x728, 0x1002B324);
-    gabi::store<u32>(p + 0x738, 0x1002B334);
-    gabi::store<u32>(p + 0x72C, 0x1002B344);
-    gabi::store<u8>(p + 0x730, 1);
-    gabi::call(0x024EFE94, p + 0x8DC);
-    gabi::call(0x025EB82C, p + 0x934);
-    gabi::call(0x025E7C6C, p + 0x1440);
-    gabi::call(0x025166F0, p + 0x14D8);
-    gabi::call(0x0200BD2C, p + 0x1604);
-    gabi::call(0x02515DA0, p + 0x1620);
-    gabi::store<u32>(p + 0x1620, 0x1004AEC0);
-    gabi::store<u32>(p + 0x161C, 0x1004AE88);
-    gabi::store<f32>(p + 0x1684, 1.0f);
-    return actor;
-}
-VERIFY(0x02361004, actorConstructor);
-void nodeControl(Actor *actor, void *node, J3DModel *model) {
-    WWHD_FUNC(0x0235FE84, void, actor, node, model);
-    u32 joint = gabi::call<u32>(0x027F7878, node);
-    u32 index = gabi::load<u16>(joint + 4);
-    if (index >= 4)
-        gabi::call(0x0273AA24, 0x1002B3A8, 0x14C, 0x1002B3BC);
-    u32 block = gabi::load<u32>(gabi::ea(model) + 0x2C), array = gabi::load<u32>(block + 0x10);
-    u32 matrix = 0x1048D0CC;
-    gabi::store<u16>(block + 4, gabi::load<u16>(block + 4) | 0x10);
-    gabi::call(0x028E90D4, array + index * 0x30, matrix);
-    u32 rotation = gabi::ea(actor) + 0x1420 + index * 6;
-    gabi::call(0x025F1B48, matrix, gabi::load<s16>(rotation), gabi::load<s16>(rotation + 2),
-               gabi::load<s16>(rotation + 4));
-    if (index == 1) {
-        s32 product =
-            (s32)((u32)(s32)(s16)actor->mCraneAmplitude * (u32)(gabi::load<s16>(0x1047BD52) + 5));
-        u16 phase = actor->mCraneAnimPhase;
-        s16 base = actor->mCraneAngle;
-        f32 sine = gabi::load<f32>(0x104A44F8 + 8 * (phase >> 3));
-        s16 angle = (s16)gabi::ftoi(gabi::fmadds((f32)product, sine, (f32)base));
-        gabi::call(0x025F1BF4, matrix, angle);
-    }
-    gabi::call(0x028E90D4, matrix, 0x104B4868);
-    block = gabi::load<u32>(gabi::ea(model) + 0x2C);
-    array = gabi::load<u32>(block + 0x10);
-    gabi::store<u16>(block + 4, gabi::load<u16>(block + 4) | 0x10);
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i)
-        values[i] = gabi::load<f32>(matrix + i * 4);
-    for (u32 i = 0; i < 12; ++i)
-        gabi::store<f32>(array + index * 0x30 + i * 4, values[i]);
-}
-VERIFY(0x0235FE84, nodeControl);
-void Actor::createWave() {
-    WWHD_FUNC(0x02361268, void, this);
-    if (!gabi::load<u32>(0x1046A2A8)) {
-        gabi::store<f32>(0x1046A2B4, 1.0f);
-        gabi::store<u32>(0x1046A2A8, 1);
-        gabi::store<f32>(0x1046A2B0, 0.5f);
-        gabi::store<f32>(0x1046A2B8, -0.3f);
-    }
-    if (!gabi::load<u32>(0x1046A2AC)) {
-        gabi::store<f32>(0x1046A2C0, 1.0f);
-        gabi::store<u32>(0x1046A2AC, 1);
-        gabi::store<f32>(0x1046A2BC, -0.5f);
-        gabi::store<f32>(0x1046A2C4, -0.3f);
-    }
-    if (!mWaveLCallback.mpEmitter) {
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 0, 0x37, &mWavePos, &mWaveRot, 0,
-                   255, &mWaveLCallback, -1, 0, 0, 0);
-        u32 emitter = mWaveLCallback.mpEmitter;
-        if (emitter)
-            for (u32 i = 0; i < 12; i += 4)
-                gabi::store<f32>(emitter + 0x28 + i, gabi::load<f32>(0x1046A2B0 + i));
-    }
-    if (!mWaveRCallback.mpEmitter) {
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 0, 0x37, &mWavePos, &mWaveRot, 0,
-                   255, &mWaveRCallback, -1, 0, 0, 0);
-        u32 emitter = mWaveRCallback.mpEmitter;
-        if (emitter)
-            for (u32 i = 0; i < 12; i += 4)
-                gabi::store<f32>(emitter + 0x28 + i, gabi::load<f32>(0x1046A2BC + i));
-    }
-    if (!mSplashCallback.mpEmitter) {
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 0, 0x35, &mWavePos, &mWaveRot, 0,
-                   255, &mSplashCallback, -1, 0, 0, 0);
-    }
-    if (!mTrackCallback.mpEmitter) {
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 5, 0x36, &mTrackPos, &shape_angle, 0,
-                   0, &mTrackCallback, -1, 0, 0, 0);
-        u32 emitter = mTrackCallback.mpEmitter;
-        if (emitter)
-            for (u32 off : {0x220u, 0x23Cu, 0x240u, 0x238u, 0x228u, 0x224u})
-                gabi::store<f32>(emitter + off, 1.0f);
-    }
-}
-VERIFY(0x02361268, &Actor::createWave);
-s32 Actor::create() {
-    WWHD_FUNC(0x02361C8C, s32, this);
-    u32 status = gabi::load<u32>(gabi::ea(this) + 0x2E4);
-    if (!(status & 8)) {
-        if (gabi::ea(this)) {
-            actorConstructor(this);
-            status = gabi::load<u32>(gabi::ea(this) + 0x2E4);
-        }
-        gabi::store<u32>(gabi::ea(this) + 0x2E4, status | 8);
-    }
-    s32 phase = gabi::call<s32>(0x02520460, &mPhase, 0x1002B808);
-    if (phase == 4) {
-        getArg();
-        u32 size = gabi::load<u32>(0x1002B850 + (u32)(s32)mType * 4);
-        if (!gabi::call<s32>(0x025D63E8, this, 0x02361000, size))
-            return 5;
-        gabi::call(0x023614C8, this);
-    }
-    return phase;
-}
-VERIFY(0x02361C8C, &Actor::create);
-void Actor::modePathMoveTerry() {
-    WWHD_FUNC(0x023649B8, void, this);
-    setCollision();
-    if (checkTgHit())
-        return;
-    bool stop = false;
-    f32 distance = searchPlayerDistance(this);
-    if (distance < (f32)gabi::load<s16>(0x1046A292) && !gabi::call<s32>(0x0211D2F8, &mStopTimer)) {
-        mStopTimer = gabi::ftoi(cM_rndF(120.0f) + 240.0f);
-        f32 voice = cM_rndF(100.0f);
-        s32 room = gabi::load<s8>(gabi::ea(this) + 0x326);
-        u32 sound = voice < 50.0f ? 0x6A2A : 0x6A2B;
-        s32 reverb = gabi::call<s32>(0x02520540, room);
-        gabi::call(0x025E1A40, sound, &mSePos, 0, reverb);
-    }
-    s32 type = mType;
-    if (type == 1) {
-        mVelocityFwdTarget = gabi::load<f32>(0x1046A29C);
-        u32 play = gabi::ea(dComIfGp_get());
-        u32 flag = gabi::load<u32>(play + 0x5CD8);
-        s16 range = gabi::load<s16>(flag & 0x10000 ? 0x1046A290 : 0x1046A296);
-        if (distance < (f32)range)
-            stop = true;
-    } else if (type == 3) {
-        mVelocityFwdTarget = gabi::load<f32>(0x1046A2A0);
-        if (distance < (f32)gabi::load<s16>(0x1046A292))
-            mVelocityFwdTarget = gabi::load<f32>(0x1046A2A4);
-        if (distance < (f32)gabi::load<s16>(0x1046A294))
-            stop = true;
-    }
-    if (mbIsLinkRiding) {
-        mTimer = 30;
-        if (mPathId != 255)
-            pathMove();
-        return;
-    }
-    if (!gabi::call<s32>(0x0211D2F8, &mTimer) && stop) {
-        modeProc(0, 11);
-        return;
-    }
-    if (mPathId != 255)
-        pathMove();
-}
-VERIFY(0x023649B8, &Actor::modePathMoveTerry);
-void Actor::modeStopTerry() {
-    WWHD_FUNC(0x02364C6C, void, this);
-    setCollision();
-    if (checkTgHit())
-        return;
-    f32 distance = searchPlayerDistance(this);
-    s32 type = mType;
-    bool close = true;
-    if (type == 1) {
-        u32 play = gabi::ea(dComIfGp_get());
-        u32 flag = gabi::load<u32>(play + 0x5CD8);
-        close = distance < (f32)gabi::load<s16>(flag & 0x10000 ? 0x1046A290 : 0x1046A296);
-    } else if (type == 3)
-        close = distance < (f32)gabi::load<s16>(0x1046A294);
-    if (!close) {
-        modeProc(0, 10);
-        return;
-    }
-    if (mbIsLinkRiding) {
-        if (!gabi::call<s32>(0x0211D2F8, &mTimer)) {
-            modeProc(0, 10);
-            return;
-        }
-    } else
-        mTimer = 300;
-    mVelocityFwdTarget = 0.0f;
-    if (mPathId != 255)
-        pathMove();
-}
-VERIFY(0x02364C6C, &Actor::modeStopTerry);
-s32 Actor::createHeap() {
-    WWHD_FUNC(0x02360C64, s32, this);
-    auto getResource = [&](u32 archive, u32 index) {
-        gabi::Local<be<u32>[2]> name;
-        (*name.get())[0] = archive;
-        (*name.get())[1] = 0x1002B2E4;
-        return gabi::call<u32>(0x026066C4, gabi::load<u32>(0x101F4F28), name.get(), index);
-    };
-    auto getNamedResource = [&](u32 nameAddress) {
-        gabi::Local<be<u32>[2]> archive, name;
-        (*archive.get())[0] = 0x1002B808;
-        (*archive.get())[1] = 0x1002B2E4;
-        (*name.get())[0] = nameAddress;
-        (*name.get())[1] = 0x1002B2E4;
-        return gabi::call<u32>(0x02606900, gabi::load<u32>(0x101F4F28), archive.get(), name.get());
-    };
-    u32 data = getResource(0x1002B808, gabi::load<u32>(0x1002B5C4 + (u32)(s32)mType * 4));
-    if (!data)
-        gabi::call(0x0273AA24, 0x1002B5EC, 0x92D, 0x1002B600);
-    mpModel = gabi::call<J3DModel *>(0x025E38E0, data, 0x80000, 0x11000022);
-    if (!mpModel)
-        return 0;
-    if (mType == 4) {
-        u32 animation = getResource(0x1002B808, 5);
-        if (!animation)
-            gabi::call(0x0273AA24, 0x1002B5EC, 0x937, 0x1002B614);
-        if (!gabi::call<s32>(0x025E8508, &mBckAnm, data, animation, 1, 2, 0, -1, 0, 1.0f))
-            return 0;
-    }
-    gabi::store<u32>(gabi::ea(mpModel.get()) + 0xB8, gabi::ea(this));
-    if (mType == 4) {
-        u16 index = 0;
-        u32 tree = gabi::call<u32>(0x027F3F94, data);
-        while (index < gabi::load<u16>(tree + 8)) {
-            if (index >= 1 && index <= 3) {
-                u32 size = gabi::load<u32>(data + 4), joint = gabi::load<u32>(data + 8);
-                if (index < size)
-                    joint += index * 0x1C;
-                gabi::store<u32>(joint + 8, 0x02360038);
-            }
-            ++index;
-            tree = gabi::call<u32>(0x027F3F94, data);
-        }
-    }
-    gabi::call(0x02360420, this);
-    u32 seaData = getNamedResource(gabi::load<u32>(0x101CA4B0 + (u32)(s32)mType * 4));
-    mpSeaModel = gabi::call<J3DModel *>(0x025E38E0, seaData, 0, 0x11020203);
-    if (!mpSeaModel)
-        return 0;
-    u32 seaAnimation = getNamedResource(gabi::load<u32>(0x101CA4C4 + (u32)(s32)mType * 4));
-    if (!gabi::call<s32>(0x025E7CE0, &mSeaBtk, seaData, seaAnimation, 1, 2, 0, -1, 0, 0, 1.0f))
-        return 0;
-    mpBgW = gabi::call<u32>(0x024F23F4, 0);
-    if (!mpBgW)
-        return 0;
-    u32 collision = getResource(0x1002B808, gabi::load<u32>(0x1002B5D8 + (u32)(s32)mType * 4));
-    if (gabi::call<s32>(0x0200A030, (u32)mpBgW, collision, 1, &mMtx))
-        return 0;
-    if (mType == 4) {
-        u32 ropeTexture = getResource(0x1002B5B4, 0x7E);
-        if (!gabi::call<s32>(0x025EBA58, gabi::ea(this) + 0x934, 1, 200, ropeTexture, 0))
-            return 0;
-        data = getResource(0x1002B5BC, 0x2E);
-        if (!data)
-            gabi::call(0x0273AA24, 0x1002B5EC, 0x989, 0x1002B600);
-        mpRopeEnd = gabi::call<J3DModel *>(0x025E38E0, data, 0x80000, 0x11000002);
-        if (!mpRopeEnd)
-            return 0;
-    }
-    return 1;
-}
-VERIFY(0x02360C64, &Actor::createHeap);
-void Actor::createInit() {
-    WWHD_FUNC(0x023614C8, void, this);
+/* 023614C8 */
+void daObj_Ikada_c::createInit() {
     mInitPos.copy(current.pos);
     f32 random = cM_rndF(120.0f);
     u32 type = mType;
@@ -948,790 +1351,582 @@ void Actor::createInit() {
     u8 path = mPathId;
     mStopTimer = gabi::ftoi(random + 240.0f);
     if (type <= 2)
-        gabi::store<u32>(gabi::ea(this) + 0x2E0, gabi::load<u32>(gabi::ea(this) + 0x2E0) | 0x25);
+        actor_status = (u32)actor_status | 0x25;
     for (u32 i = 0; i < 3; ++i)
         gabi::store<u32>(gabi::ea(&mPathPosTarget) + i * 4, position[i]);
     if (path != 255 && (mType == 4 || mType == 1 || mType == 3)) {
-        mpPath = gabi::call<u32>(0x025AAF88, path, gabi::load<s8>(gabi::ea(this) + 0x326));
+        mpPath = ikadaApi_dPath_GetRoomPath(path, (s8)current.roomNo);
         if (mType == 4)
-            modeProc(0, 8);
+            modeProc(PROC_INIT_e, MODE_PATH_MOVE_e);
     } else
-        modeProc(0, 0);
+        modeProc(PROC_INIT_e, MODE_WAIT_e);
     if (mType == 1 || mType == 3)
-        modeProc(0, 11);
+        modeProc(PROC_INIT_e, MODE_STOP_TERRY_e);
     if (mType == 4)
         for (u32 i = 0; i < 4; ++i)
             mSvId[i] =
-                gabi::call<u32>(0x025D5AA4, 0x1002B71C + i * 4, gabi::load<u32>(gabi::ea(this) + 4),
-                                -1, &current.pos, gabi::load<s8>(gabi::ea(this) + 0x1C9), 0, 0, 0);
-    current.pos.y = gabi::call<f32>(0x025871F8, &current.pos, &mObjAcch);
-    gabi::store<u8>((u32)mpBgW + 0xBB, gabi::load<u8>(gabi::ea(this) + 0x326));
+                ikadaApi_fopAcM_createChild(0x1002B71C + i * 4, (u32)mBsPcId,
+                                -1, &current.pos, (s8)tevStr.mRoomNo, 0, 0, 0);
+    current.pos.y = ikadaApi_getWaterY(&current.pos, &mObjAcch);
+    reinterpret_cast<background_world::dBgW*>(mpBgW.get())->mGrpRoomInf = (u8)current.roomNo;
     if (mType != 4) {
-        gabi::call(0x02360420, this);
-        gabi::call(0x024F43DC, (u32)mpBgW);
+        setMtx();
+        ikadaApi_dBgW_Move((u32)mpBgW.v);
     }
-    u32 play = gabi::ea(dComIfGp_get());
-    gabi::call(0x024EEA6C, play + 0x12A0, (u32)mpBgW, this);
+    auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    ikadaApi_dBgS_Regist(gabi::ea(&play->play.mBgS), (u32)mpBgW.v, this);
     if (mType == 1)
-        gabi::store<u32>((u32)mpBgW + 0xB0, 0x02360414);
+        reinterpret_cast<background_world::dBgW*>(mpBgW.get())->mpRideCb = gabi::guest_fn(reinterpret_cast<const void*>(ride_CB));
     u32 callback = mType == 1 ? 0x024EE708 : 0x024EE658;
-    gabi::store<u32>((u32)mpBgW + 0xA8, callback);
-    gabi::call(0x024EFF44, &mAcchCir, 30.0f, 30.0f);
-    gabi::call(0x024F06B4, &mObjAcch, &current.pos, &old.pos, this, 1, &mAcchCir, &speed, 0, 0);
-    gabi::store<u32>(gabi::ea(this) + 0x740, gabi::load<u32>(gabi::ea(this) + 0x740) | 0xC);
+    reinterpret_cast<background_world::dBgW*>(mpBgW.get())->m_crr_func = callback;
+    ikadaApi_dBgS_AcchCir_SetWall(&mAcchCir, 30.0f, 30.0f);
+    ikadaApi_dBgS_Acch_Set(&mObjAcch, &current.pos, &old.pos, this, 1, &mAcchCir, &speed, 0, 0);
+    mObjAcch.m_flags = (u32)mObjAcch.m_flags | dBgS_Acch::WALL_NONE | dBgS_Acch::ROOF_NONE;
     s32 currentType = mType;
     if (currentType == 4 || currentType == 3 || currentType == 1) {
         createWave();
         if (mType == 3 || mType == 1)
-            gabi::call(0x025564B4, &mPLight);
+            ikadaApi_dKy_plight_set(&mPLight);
     }
     gravity = 0.0f;
-    gabi::call(0x025D6870, this, 0);
-    u32 model = gabi::ea(mpModel.get());
-    gabi::store<u32>(gabi::ea(this) + 0x348, model ? model + 0xC8 : 0);
+    ikadaApi_fopAcM_posMoveF(this, 0);
+    J3DModel* model = mpModel.get();
+    cullMtx = gabi::ea(model->getBaseTRMtx());
     f32 actorScale = scale.x;
     f32 low = -1000.0f * actorScale, high = 1000.0f * actorScale;
-    gabi::call(0x025D674C, this, low, -50.0f * actorScale, low, high, high, high);
+    ikadaApi_fopAcM_setCullSizeBox(this, low, -50.0f * actorScale, low, high, high, high);
     cullSizeFar = 10.0f;
     if (mType == 0 || mType == 4) {
-        if (!gabi::load<u32>(0x1046A2C8)) {
-            for (u32 i = 0; i < 15; ++i)
-                gabi::store<f32>(0x1046A1C0 + i * 4, i == 1    ? 700.0f
-                                                     : i == 12 ? 100.0f
-                                                     : i == 13 ? 530.0f
-                                                               : 0.0f);
-            gabi::store<u32>(0x1046A2C8, 1);
+        if (!(u32)flag_offset_guard.mInitialized) {
+            for (u32 i = 0; i < 5; ++i) {
+                flag_offset.mValues[i].x = i == 4 ? 100.0f : 0.0f;
+                flag_offset.mValues[i].y = i == 0 ? 700.0f : i == 4 ? 530.0f : 0.0f;
+                flag_offset.mValues[i].z = 0.0f;
+            }
+            flag_offset_guard.mInitialized = 1;
         }
-        mFlagPcId = gabi::call<u32>(
-            0x025D5834, 0xAE, gabi::load<u32>(0x1002B374 + (u32)(s32)mType * 4), &current.pos,
-            gabi::load<s8>(gabi::ea(this) + 0x1C9), &current.angle, 0, -1, 0);
+        mFlagPcId = ikadaApi_createActor(
+            fpcNm_MAJUU_FLAG_e, (u32)flagparam.mValues[(s32)mType], &current.pos,
+            (s8)tevStr.mRoomNo, &current.angle, 0, -1, 0);
         currentType = mType;
-        mFlagOffset.copy(*gabi::at<cXyz>(0x1046A1C0 + (u32)currentType * 12));
-        mFlagScale = gabi::load<f32>(0x1002B388 + (u32)currentType * 4);
+        mFlagOffset.copy(flag_offset.mValues[currentType]);
+        mFlagScale = flag_scale.mValues[currentType];
     }
     mWave.mAnimX = (s16)gabi::ftoi(cM_rndF(32768.0f));
     mWave.mAnimZ = (s16)gabi::ftoi(cM_rndF(32768.0f));
     if (mType == 4) {
-        gabi::call(0x027F4D5C, mpModel.get());
-        u32 positions = gabi::load<u32>(gabi::load<u32>(gabi::ea(this) + 0xAB8));
-        mRopeCount = 15;
-        u32 modelBlock = gabi::load<u32>(gabi::ea(mpModel.get()) + 0x2C),
-            array = gabi::load<u32>(modelBlock + 0x10);
-        gabi::store<u16>(modelBlock + 4, gabi::load<u16>(modelBlock + 4) | 0x10);
-        u32 matrix = 0x1048D0CC;
-        gabi::call(0x028E90D4, array + 0x30, matrix);
-        gabi::call(0x025F24E0, gabi::load<f32>(0x1046A2F4), gabi::load<f32>(0x1046A2F8),
-                   gabi::load<f32>(0x1046A2FC));
-        gabi::store<f32>(positions + 0xA8, gabi::load<f32>(matrix + 0xC));
-        gabi::store<f32>(positions + 0xAC, gabi::load<f32>(matrix + 0x1C));
-        gabi::store<f32>(positions + 0xB0, gabi::load<f32>(matrix + 0x2C));
+        mpModel->calc();
+        cXyz* positions = mRopeLine.getPos(0);
+        m07D8 = 15;
+        J3DMtxBuffer_hd* modelBlock = mpModel->mpMtxBuffer;
+        u32 array = modelBlock->mpAnmMtx;
+        modelBlock->mFlags = (u16)modelBlock->mFlags | 0x10;
+        Mtx34* matrix = mDoMtx_stack_c::get();
+        ikadaApi_copyMatrix(gabi::at<Mtx34>(array + 0x30), matrix);
+        ikadaApi_mDoMtx_stack_c_transM((f32)m_crane_offset.x, (f32)m_crane_offset.y,
+                   (f32)m_crane_offset.z);
+        positions[14].x = (f32)matrix->m[0][3];
+        positions[14].y = (f32)matrix->m[1][3];
+        positions[14].z = (f32)matrix->m[2][3];
         gabi::Local<cXyz> step, tmp, difference;
         step->set(0.0f, -1.0f, 0.0f);
-        gabi::call(0x028E8E64, step.get(), step.get(), 10.0f);
-        s32 count = mRopeCount;
+        PSVECScale(step.get(), step.get(), 10.0f);
+        s32 count = m07D8;
         if (count >= 2)
             for (s32 i = count - 2; i >= 0; --i) {
-                gabi::call(0x0201AD78, positions + (u32)(i + 1) * 12, tmp.get(), step.get());
-                gabi::at<cXyz>(positions + (u32)i * 12)->copy(*tmp.get());
-                mRopeVelocity[i].copy(*gabi::at<cXyz>(0x101FFBA8));
+                ikadaApi_addVector(positions + i + 1, tmp.get(), step.get());
+                (positions + i)->copy(*tmp.get());
+                m07DC[i].copy(*&ikada_vector_zero);
             }
-        positions = gabi::load<u32>(gabi::load<u32>(gabi::ea(this) + 0xAB8));
-        gabi::call(0x0201ADE0, positions, difference.get(), positions + 12);
+        positions = mRopeLine.getPos(0);
+        ikadaApi_subtractVector(positions, difference.get(), positions + 1);
         u16 heading = shape_angle.y;
-        f32 sine = gabi::load<f32>(0x104A44F8 + 8 * (heading >> 3)),
-            cosine = gabi::load<f32>(0x104A44FC + 8 * (heading >> 3));
+        f32 sine = cM_ssin(heading),
+            cosine = cM_scos(heading);
         f32 dx = difference->x, dz = difference->z, dy = difference->y;
         f32 x = gabi::fmsubs(cosine, dx, sine * dz), z = gabi::fmadds(sine, dx, cosine * dz);
-        gabi::call(0x028E93CC, matrix, gabi::load<f32>(positions), gabi::load<f32>(positions + 4),
-                   gabi::load<f32>(positions + 8));
-        s16 pitch = gabi::call<s32>(0x020195B0, z, dy);
+        ikadaApi_setTranslationMatrix(matrix, (f32)positions->x, (f32)positions->y,
+                   (f32)positions->z);
+        s16 pitch = ikadaApi_cM_atan2s(z, dy);
         s16 yaw = shape_angle.y;
-        f32 horizontal = gabi::call<f32>(0x028F4384, gabi::fmadds(dy, dy, z * z));
-        s16 roll = gabi::call<s32>(0x020195B0, -x, horizontal);
-        gabi::call(0x025F1B48, matrix, pitch, yaw, roll);
-        gabi::call(0x025F1BF4, matrix, -0x4000);
-        mRopeEndPos.set(gabi::load<f32>(matrix + 0xC), gabi::load<f32>(matrix + 0x1C),
-                        gabi::load<f32>(matrix + 0x2C));
+        f32 horizontal = std_sqrtf(gabi::fmadds(dy, dy, z * z));
+        s16 roll = ikadaApi_cM_atan2s(-x, horizontal);
+        ikadaApi_rotateZXY(matrix, pitch, yaw, roll);
+        ikadaApi_rotateX(matrix, -0x4000);
+        m0474.set((f32)matrix->m[0][3], (f32)matrix->m[1][3],
+                        (f32)matrix->m[2][3]);
         f32 values[12];
         for (u32 i = 0; i < 12; ++i)
-            values[i] = gabi::load<f32>(matrix + i * 4);
-        u32 endModel = gabi::ea(mpRopeEnd.get());
+            values[i] = (f32)matrix->m[i / 4][i % 4];
+        J3DModel* endModel = mpRopeEnd.get();
         for (u32 i = 0; i < 12; ++i)
-            gabi::store<f32>(endModel + 0xC8 + i * 4, values[i]);
+            endModel->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
     }
-    gabi::call(0x02515F14, &mStts, 255, 255, this);
-    gabi::call(0x0251677C, &mSph, 0x1002B810);
+    ikadaApi_dCcD_Stts_Init(&mStts, 255, 255, this);
+    ikadaApi_dCcD_Sph_Set(&mSph, 0x1002B810);
     gabi::store<u32>(gabi::ea(this) + 0x151C, gabi::ea(&mStts));
 }
-VERIFY(0x023614C8, &Actor::createInit);
-void initializeSeaControls(Actor *actor) {
-    WWHD_FUNC(0x02363168, void, actor);
-    auto initialize = [](u32 guard, u32 storage, u32 name) {
-        if (gabi::load<u32>(guard))
-            return false;
-        gabi::store<u32>(guard, 1);
-        memcpy_g(gabi::at<u8>(storage), gabi::at<u8>(name), 4);
-        return true;
+/* 02360C64 */
+s32 daObj_Ikada_c::_createHeap() {
+    auto getResource = [&](const char* archive, u32 index) {
+        gabi::Local<IkadaSafeString> name;
+        name->mpText = gabi::guest_addr(archive);
+        name->mpVtable = gc_tu.safeString;
+        return ikadaApi_dRes_control_c_getRes(gabi::load<u32>(0x101F4F28), name.get(), index);
     };
-    s32 type = actor->mType;
-    if (type == 4) {
-        if (gabi::load<u32>(0x101FDA44))
-            goto common;
-        initialize(0x101FDA44, 0x101FEBE8, 0x1002B2C8);
-        type = actor->mType;
-    }
-    if (type == 1) {
-        if (initialize(0x101FDAC0, 0x101FEBF8, 0x1002B2CC))
-            initialize(0x101FDAC0, 0x101FEBF8, 0x1002B2CC);
-        initialize(0x101FDA50, 0x101FEBF4, 0x1002B2D0);
-        type = actor->mType;
-    }
-    if (type == 3) {
-        initialize(0x101FDA50, 0x101FEBF4, 0x1002B2D0);
-        initialize(0x101FDAC0, 0x101FEBF8, 0x1002B2CC);
-        type = actor->mType;
-    }
-    if (type == 1 || type == 3) {
-        if (initialize(0x101FDA50, 0x101FEBF4, 0x1002B2D0))
-            type = actor->mType;
-    }
-    if (type != 4 && type != 3 && type != 1)
-        return;
-common:
-    if (initialize(0x101FDA50, 0x101FEBF4, 0x1002B2D0))
-        type = actor->mType;
-    if (type == 3 || type == 1 || type == 4)
-        initialize(0x101FDA50, 0x101FEBF4, 0x1002B2D0);
-}
-VERIFY(0x02363168, initializeSeaControls);
-void Actor::setWave() {
-    WWHD_FUNC(0x02362968, void, this);
-    f32 splashTarget = gabi::load<f32>(0x1046A25C), waveSpeed = gabi::load<f32>(0x1046A264),
-        waveMax = gabi::load<f32>(0x1046A274), trackSpeed = gabi::load<f32>(0x1046A268);
-    if (!(speedF > 2.0f)) {
-        waveSpeed = 0.0f;
-        splashTarget = 0.0f;
-        mTrackCallback.mStop = 1;
-    } else
-        createWave();
-    mWavePos.y = gabi::call<f32>(0x025871F8, &mWavePos, &mObjAcch);
-    mWaveRot.y = shape_angle.y;
-    if (mTrackCallback.mpEmitter) {
-        f32 trans = gabi::load<f32>(0x1046A254), scale = gabi::load<f32>(0x1046A258);
-        u32 flags = gabi::load<u32>(gabi::ea(this) + 0x740);
-        mTrackCallback.mSpeed = trackSpeed;
-        mTrackCallback.mIndTransY = trans;
-        mTrackCallback.mWaterY = mWavePos.y;
-        mTrackCallback.mIndScaleY = scale;
-        mTrackCallback.mWaterFlatY =
-            flags & 0x800 ? gabi::load<f32>(gabi::ea(this) + 0x8D4) : -1000000000.0f;
-        mTrackCallback.mLimitSpeed = 3.0f;
-    }
-    u32 emitter = mWaveLCallback.mpEmitter;
-    if (emitter) {
-        u32 flags = gabi::load<u32>(emitter + 0x254);
-        gabi::store<u32>(emitter + 0x254, waveSpeed > 0.0f ? flags & ~1u : flags | 1u);
-    }
-    emitter = mWaveRCallback.mpEmitter;
-    if (emitter) {
-        u32 flags = gabi::load<u32>(emitter + 0x254);
-        gabi::store<u32>(emitter + 0x254, waveSpeed > 0.0f ? flags & ~1u : flags | 1u);
-    }
-    mWaveRCallback.mSpeed = waveSpeed;
-    mWaveLCallback.mSpeed = waveSpeed;
-    mWaveLCallback.mMaxSpeed = waveMax;
-    mWaveRCallback.mMaxSpeed = waveMax;
-    mWaveRCallback.mPitch = gabi::load<f32>(0x1046A270) + 1.0f;
-    mWaveLCallback.mPitch = 1.0f - gabi::load<f32>(0x1046A270);
-    f32 z1 = gabi::load<f32>(0x1046A28C), z0 = gabi::load<f32>(0x1046A280),
-        y1 = gabi::load<f32>(0x1046A288), y0 = gabi::load<f32>(0x1046A27C),
-        x1 = gabi::load<f32>(0x1046A284), x0 = gabi::load<f32>(0x1046A278);
-    mWaveRCallback.mAnchor1.y = y1;
-    mWaveLCallback.mAnchor1.x = -x1;
-    mWaveLCallback.mAnchor0.x = -x0;
-    mWaveLCallback.mAnchor1.y = y1;
-    mWaveRCallback.mAnchor1.x = x1;
-    mWaveRCallback.mAnchor1.z = z1;
-    mWaveLCallback.mAnchor0.y = y0;
-    mWaveRCallback.mAnchor0.x = x0;
-    mWaveRCallback.mAnchor0.z = z0;
-    mWaveLCallback.mAnchor0.z = z0;
-    mWaveLCallback.mAnchor1.z = z1;
-    mWaveRCallback.mAnchor0.y = y0;
-    mWaveRCallback.mMaxDisSpeed = gabi::load<f32>(0x1046A26C);
-    mWaveLCallback.mMaxDisSpeed = gabi::load<f32>(0x1046A26C);
-    gabi::call(0x0200ED84, &mSplashScaleTimer, splashTarget, 0.1f, 10.0f);
-    emitter = mSplashCallback.mpEmitter;
-    if (emitter) {
-        f32 timer = mSplashScaleTimer;
-        u32 flags = gabi::load<u32>(emitter + 0x254);
-        gabi::store<u32>(emitter + 0x254, timer > 0.1f ? flags & ~1u : flags | 1u);
-    }
-    mSplashCallback.mSpeed = mSplashScaleTimer;
-    mSplashCallback.mMaxSpeed = gabi::load<f32>(0x1046A260);
-}
-VERIFY(0x02362968, &Actor::setWave);
-void Actor::epProc() {
-    WWHD_FUNC(0x02361E40, void, this);
-    if (!gabi::call<s32>(0x02556D14)) {
-        gabi::call(0x025A5AC8, &mFireCallback);
-        mPLight.mPower = 0.0f;
-        return;
-    }
-    u32 debug = 0x1047B608;
-    if (!mFireCallback.mpEmitter) {
-        if (!gabi::load<u32>(0x1046A2CC))
-            gabi::store<u32>(0x1046A2CC, 1);
-        f32 scale = gabi::load<f32>(debug + 0x6F0) + 0.5f;
-        gabi::store<f32>(0x1046A1B8, scale);
-        gabi::store<f32>(0x1046A1B4, scale);
-        gabi::store<f32>(0x1046A1BC, scale);
-        u32 play = gabi::ea(dComIfGp_get());
-        gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 0, 0x1EA, &mFirePos, 0, 0x1046A1B4,
-                   255, &mFireCallback, -1, 0, 0, 0);
-        if (!mFireCallback.mpEmitter)
-            return;
-    }
-    gabi::Local<cXyz> pos;
-    pos->set(mFirePos.x, mFirePos.y + 20.0f, mFirePos.z);
-    u32 play = gabi::ea(dComIfGp_get());
-    gabi::call(0x025A8D40, gabi::load<u32>(play + 0x5AB0), 0x4004, pos.get(), 255, 0x101D5E98,
-               0x101D5E98, 0);
-    if (!gabi::call<s32>(0x0211D2F8, &mEpTimer0)) {
-        f32 value = cM_rndF(gabi::load<f32>(debug + 0x10) + 5.0f);
-        mEpTimer0 = (s16)gabi::ftoi(value + gabi::load<f32>(debug + 0x14));
-        value = cM_rndF(gabi::load<f32>(debug + 0x20) + 4.0f);
-        mGlowRadiusTarget = (value + 8.0f) + gabi::load<f32>(debug + 0x24);
-    }
-    if (!gabi::call<s32>(0x0211D2F8, &mEpTimer1)) {
-        mEpTimer1 = (s16)gabi::ftoi(cM_rndF(6.0f) + 3.0f);
-        mLightPowerTarget = cM_rndF(0.075f) + 0.75f;
-    }
-    gabi::call(0x0200ED84, &mGlowRadius, (f32)mGlowRadiusTarget, 1.0f,
-               gabi::load<f32>(debug + 0x18) + 1.0f);
-    gabi::call(0x0200ED84, &mLightPower, (f32)mLightPowerTarget, 0.4f, 0.04f);
-    mPLight.mPower = 150.0f * (f32)mLightPower;
-}
-VERIFY(0x02361E40, &Actor::epProc);
-s32 Actor::execute() {
-    WWHD_FUNC(0x02362C54, s32, this);
-    u32 debug = 0x1047B608;
-    mWaveAnimPhase = (s16)((s32)mWaveAnimPhase + gabi::load<s16>(debug + 0x508) + 0x200);
-    f32 target = gabi::load<f32>(debug + 0x49C) + 5.0f;
-    if (mCurMode == 10 && speedF > 1.0f)
-        target = gabi::load<f32>(debug + 0x49C) + 20.0f;
-    gabi::call(0x0200ED84, &mHDWaterOffset, target, 0.1f, 1.0f);
-    f32 offset = gabi::load<f32>(0x104A44F8 + 8 * ((u16)mWaveAnimPhase >> 3)) * (f32)mHDWaterOffset;
-    if (mBombSmokeCallback.mpEmitter) {
-        s16 yaw = (s16)((s32)(s16)shape_angle.y + (s16)mBombSmokeAngle);
-        mBombSmokeRot.z = shape_angle.z;
-        mBombSmokeRot.x = shape_angle.x;
-        mBombSmokeRot.y = yaw;
-        u32 emitter = mBombSmokeCallback.mpEmitter;
-        for (u32 off : {0x220u, 0x224u, 0x228u, 0x238u, 0x23Cu, 0x240u})
-            gabi::store<f32>(emitter + off, 3.0f);
-        mBombSmokePos.copy(current.pos);
-        mBombSmokePos.y = gabi::load<f32>(0x1046A224);
-        if (!gabi::call<s32>(0x0211D2F8, &mBombSmokeTimer))
-            gabi::call(0x025A5AC8, &mBombSmokeCallback);
-    }
-    if (mStopRequest && mCurMode != 9) {
-        mPreviousMode = mCurMode;
-        modeProc(0, 9);
-    }
-    if (mType == 3 || mType == 1)
-        epProc();
+    auto getNamedResource = [&](u32 nameAddress) {
+        gabi::Local<IkadaSafeString> archive, name;
+        archive->mpText = gabi::guest_addr("IkadaH");
+        archive->mpVtable = gc_tu.safeString;
+        name->mpText = nameAddress;
+        name->mpVtable = gc_tu.safeString;
+        return ikadaApi_getNamedResource(gabi::load<u32>(0x101F4F28), archive.get(), name.get());
+    };
+    u32 data = getResource("IkadaH", bdl.mValues[(s32)mType]);
+    if (!data)
+        ikadaApi_assertionShow("d_a_obj_ikada.cpp", 0x92D, "modelData != (0)");
+    mpModel = ikadaApi_mDoExt_J3DModel_create(data, 0x80000, 0x11000022);
+    if (!mpModel)
+        return 0;
     if (mType == 4) {
-        gabi::call(0x023620F0, this);
-        if (mType == 4) {
-            mBckAnm.mFrameCtrl.mFrame = (f32)(s32)mHandleFrame;
-            s16 index = gabi::load<s16>(debug + 0x740);
-            if (index) {
-                gabi::store<s16>(gabi::ea(this) + 0x1420 + (s32)index * 6,
-                                 gabi::load<s16>(debug + 0x742));
-                index = gabi::load<s16>(debug + 0x740);
-                gabi::store<s16>(gabi::ea(this) + 0x1422 + (s32)index * 6,
-                                 gabi::load<s16>(debug + 0x744));
-                index = gabi::load<s16>(debug + 0x740);
-                gabi::store<s16>(gabi::ea(this) + 0x1424 + (s32)index * 6,
-                                 gabi::load<s16>(debug + 0x746));
+        u32 animation = getResource("IkadaH", dRes_INDEX_IKADAH_BCK_SVSHIP_KAITEN_e);
+        if (!animation)
+            ikadaApi_assertionShow("d_a_obj_ikada.cpp", 0x937, "bck != 0");
+        if (!ikadaApi_mDoExt_bckAnm_init(&mBckAnm, data, animation, 1, 2, 0, -1, 0, 1.0f))
+            return 0;
+    }
+    mpModel->mUserArea = gabi::ea(this);
+    if (mType == 4) {
+        u16 index = 0;
+        u32 tree = ikadaApi_getJointTree(data);
+        while (index < gabi::load<u16>(tree + 8)) {
+            if (index >= 1 && index <= 3) {
+                J3DJoint* joint = gabi::at<J3DModelData>(data)->getJointNodePointer(index);
+                joint->mCallBack = gabi::guest_fn(reinterpret_cast<const void*>(nodeControl_CB));
             }
+            ++index;
+            tree = ikadaApi_getJointTree(data);
         }
     }
-    modeProc(1, 13);
-    current.pos.y = gabi::call<f32>(0x025871F8, &current.pos, &mObjAcch) + offset;
-    gabi::call(0x02360420, this);
-    gabi::call(0x027F4D5C, mpModel.get());
-    s32 type = mType;
-    if (type == 4 || type == 3 || type == 1) {
-        u32 model = gabi::ea(mpModel.get());
-        f32 s = scale.x;
-        s32 culled = gabi::call<s32>(0x025D6B70, model ? model + 0xC8 : 0, -1000.0f * s, -50.0f * s,
-                                     -1000.0f * s, 1000.0f * s, 1000.0f * s, 1000.0f * s);
-        bool remove = !(speedF > 2.0f) || culled;
-        if (!remove)
-            remove = searchPlayerDistance(this) > 18000.0f;
-        if (remove) {
-            gabi::call(0x025A92C0, &mWaveRCallback);
-            gabi::call(0x025A92C0, &mWaveLCallback);
-            gabi::call(0x025A99B8, &mSplashCallback);
-            mTrackCallback.mStop = 1;
-        } else
-            setWave();
-    }
-    gabi::call(0x024F43DC, (u32)mpBgW);
-    if (mType == 0 || mType == 4) {
-        gabi::Local<be<u32>> id;
-        *id.get() = mFlagPcId;
-        u32 flag = 0;
-        if ((u32)mFlagPcId != 0xFFFFFFFF)
-            flag = gabi::call<u32>(0x025D5218, 0x025E1234, id.get());
-        if (flag) {
-            gabi::store<u32>(flag + 0x1E34, gabi::ea(&mMtx));
-            f32 x = gabi::load<f32>(0x1046A208), y = gabi::load<f32>(0x1046A20C),
-                z = gabi::load<f32>(0x1046A210);
-            if (x != 0.0f || y != 0.0f || z != 0.0f)
-                mFlagOffset.set(x, y, z);
-            f32 size = gabi::load<f32>(0x1046A214);
-            if (size != 0.0f)
-                mFlagScale = size;
-            else
-                size = mFlagScale;
-            gabi::store<u32>(flag + 0x1E38, gabi::ea(&mFlagOffset));
-            gabi::store<f32>(flag + 0x1DFC, size);
-        }
-    }
-    type = mType;
-    mbIsLinkRiding = 0;
-    if (type == 1 || type == 3) {
-        gabi::Local<cXyz> delta;
-        gabi::call(0x0201ADE0, &current.pos, delta.get(), &old.pos);
-        f32 speed = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, delta.get())) / 30.0f;
-        if (!(speed > 0.0f))
-            speed = 0.0f;
-        else if (!(speed < 1.0f))
-            speed = 1.0f;
-        s8 volume = (s8)gabi::ftoi(speed * 100.0f);
-        s32 room = gabi::load<s8>(gabi::ea(this) + 0x326),
-            reverb = gabi::call<s32>(0x02520540, room);
-        gabi::call(0x025E1A40, 0x303D, &eyePos, volume, reverb);
+    setMtx();
+    u32 seaData = getNamedResource((u32)sea_bdl.mValues[(s32)mType].v);
+    mpSeaModel = ikadaApi_mDoExt_J3DModel_create(seaData, 0, 0x11020203);
+    if (!mpSeaModel)
+        return 0;
+    u32 seaAnimation = getNamedResource((u32)sea_btk.mValues[(s32)mType].v);
+    if (!ikadaApi_initSeaTextureAnimation(&mSeaBtk, seaData, seaAnimation, 1, 2, 0, -1, 0, 0, 1.0f))
+        return 0;
+    mpBgW = ikadaApi_dBgW_dBgW(0);
+    if (!mpBgW)
+        return 0;
+    u32 collision = getResource("IkadaH", dzb.mValues[(s32)mType]);
+    if (ikadaApi_cBgW_Set((u32)mpBgW.v, collision, 1, &mMtx))
+        return 0;
+    if (mType == 4) {
+        u32 ropeTexture = getResource("Always", dRes_INDEX_ALWAYS_BTI_ROPE_e);
+        if (!ikadaApi_mDoExt_3DlineMat1_c_init(gabi::ea(this) + 0x934, 1, 200, ropeTexture, 0))
+            return 0;
+        data = getResource("Link", dRes_INDEX_LINK_BDL_ROPEEND_e);
+        if (!data)
+            ikadaApi_assertionShow("d_a_obj_ikada.cpp", 0x989, "modelData != (0)");
+        mpRopeEnd = ikadaApi_mDoExt_J3DModel_create(data, 0x80000, 0x11000002);
+        if (!mpRopeEnd)
+            return 0;
     }
     return 1;
 }
-VERIFY(0x02362C54, &Actor::execute);
-void Actor::setRopePos() {
-    WWHD_FUNC(0x023620F0, void, this);
-    if (!gabi::load<u32>(0x1046A2D0)) {
-        gabi::store<f32>(0x1046A1A8, 0.6f);
-        gabi::store<f32>(0x1046A1B0, 0.6f);
-        gabi::store<u32>(0x1046A2D0, 1);
-        gabi::store<f32>(0x1046A1AC, 0.6f);
+/* 02361C8C */
+s32 daObj_Ikada_c::_create() {
+    u32 status = (u32)actor_condition;
+    if (!(status & 8)) {
+        if (gabi::ea(this)) {
+            actorConstructor(this);
+            status = (u32)actor_condition;
+        }
+        actor_condition = status | 8;
     }
-    s32 count = mRopeCount;
-    u32 base = gabi::load<u32>(gabi::load<u32>(gabi::ea(this) + 0xAB8));
-    s32 endIndex = count ? count - 1 : 0;
-    u32 end = base + (u32)endIndex * 12;
-    gabi::Local<cXyz> saved, direction, normalized, tmp, delta, scaled, divided, updated,
-        velocityDelta;
-    saved->copy(*gabi::at<cXyz>(end));
-    u32 matrix = 0x1048D0CC;
-    auto anchorMatrix = [&]() {
-        u32 block = gabi::load<u32>(gabi::ea(mpModel.get()) + 0x2C),
-            array = gabi::load<u32>(block + 0x10);
-        gabi::store<u16>(block + 4, gabi::load<u16>(block + 4) | 0x10);
-        gabi::call(0x028E90D4, array + 0x30, matrix);
-        gabi::call(0x025F24E0, gabi::load<f32>(0x1046A2F4), gabi::load<f32>(0x1046A2F8),
-                   gabi::load<f32>(0x1046A2FC));
-    };
-    anchorMatrix();
-    gabi::at<cXyz>(end)->set(gabi::load<f32>(matrix + 0xC), gabi::load<f32>(matrix + 0x1C),
-                             gabi::load<f32>(matrix + 0x2C));
-    if (mCurMode == 1) {
-        u32 endModel = gabi::ea(mpRopeEnd.get());
-        u32 modelMatrix = endModel ? endModel + 0xC8 : 0;
-        direction->set(gabi::load<f32>(modelMatrix + 0xC) - gabi::load<f32>(end),
-                       gabi::load<f32>(modelMatrix + 0x1C) - gabi::load<f32>(end + 4),
-                       gabi::load<f32>(modelMatrix + 0x2C) - gabi::load<f32>(end + 8));
-        gabi::call(0x0201B3C0, direction.get(), normalized.get());
-        gabi::call(0x028E8E64, direction.get(), direction.get(), 10.0f);
-        count = mRopeCount;
-        for (s32 i = count - 2; i >= 0; --i) {
-            gabi::call(0x0201AD78, base + (u32)(i + 1) * 12, tmp.get(), direction.get());
-            gabi::at<cXyz>(base + (u32)i * 12)->copy(*tmp.get());
-            mRopeVelocity[i].copy(*gabi::at<cXyz>(0x101FFBA8));
-        }
-    } else {
-        count = mRopeCount;
-        for (s32 i = count - 2; i >= 0; --i) {
-            u32 point = base + (u32)i * 12;
-            auto velocity = &mRopeVelocity[i];
-            saved->copy(*gabi::at<cXyz>(point));
-            f32 water = gabi::call<f32>(0x025871F8, point, &mObjAcch);
-            f32 drag = gabi::load<f32>(point + 4) < water ? 0.6f : 0.9f;
-            gabi::call(0x028E8E64, velocity, velocity, drag);
-            velocity->y = (f32)velocity->y - 3.0f;
-            gabi::call(0x028E8D88, point, velocity, point);
-            gabi::call(0x0201ADE0, point, delta.get(), point + 12);
-            direction->copy(*delta.get());
-            f32 length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, direction.get()));
-            if (length < 0.01f)
-                gabi::call(0x0201AD78, point + 12, updated.get(), 0x1046A2E8);
-            else {
-                gabi::call(0x0201AE48, direction.get(), scaled.get(), 10.0f);
-                gabi::call(0x0201AEAC, scaled.get(), divided.get(), length);
-                gabi::call(0x0201AD78, point + 12, updated.get(), divided.get());
-            }
-            gabi::at<cXyz>(point)->copy(*updated.get());
-            gabi::call(0x0201ADE0, point, velocityDelta.get(), saved.get());
-            gabi::call(0x0201AE48, velocityDelta.get(), delta.get(), 0.05f);
-            gabi::call(0x028E8D88, velocity, delta.get(), velocity);
-        }
+    s32 phase = ikadaApi_dComIfG_resLoad(&mPhase, "IkadaH");
+    if (phase == 4) {
+        getArg();
+        u32 size = m_heapsize.mValues[(s32)mType];
+        if (!ikadaApi_fopAcM_entrySolidHeap(this, gabi::guest_fn(reinterpret_cast<const void*>(createHeap_CB)), size))
+            return 5;
+        createInit();
     }
-    count = mRopeCount;
-    base = gabi::load<u32>(gabi::load<u32>(gabi::ea(this) + 0xAB8));
-    f32 x, y, z, dx, dy, dz;
-    if (count > 1) {
-        gabi::call(0x0201ADE0, base, delta.get(), base + 12);
-        x = gabi::load<f32>(base);
-        dx = delta->x;
-        y = gabi::load<f32>(base + 4);
-        z = gabi::load<f32>(base + 8);
-        dy = delta->y;
-        dz = delta->z;
-    } else {
-        anchorMatrix();
-        x = gabi::load<f32>(base);
-        y = gabi::load<f32>(base + 4);
-        dx = x - gabi::load<f32>(matrix + 0xC);
-        dy = y - gabi::load<f32>(matrix + 0x1C);
-        z = gabi::load<f32>(base + 8);
-        dz = z - gabi::load<f32>(matrix + 0x2C);
-    }
-    u16 heading = shape_angle.y;
-    f32 sine = gabi::load<f32>(0x104A44F8 + 8 * (heading >> 3)),
-        cosine = gabi::load<f32>(0x104A44FC + 8 * (heading >> 3));
-    f32 rx = gabi::fmsubs(cosine, dx, sine * dz), rz = gabi::fmadds(sine, dx, cosine * dz);
-    gabi::call(0x028E93CC, matrix, x, y, z);
-    s16 pitch = gabi::call<s32>(0x020195B0, rz, dy);
-    s16 yaw = shape_angle.y;
-    f32 horizontal = gabi::call<f32>(0x028F4384, gabi::fmadds(dy, dy, rz * rz));
-    s16 roll = gabi::call<s32>(0x020195B0, -rx, horizontal);
-    gabi::call(0x025F1B48, matrix, pitch, yaw, roll);
-    gabi::call(0x025F1BF4, matrix, -0x4000);
-    mRopeEndPos.set(gabi::load<f32>(matrix + 0xC), gabi::load<f32>(matrix + 0x1C),
-                    gabi::load<f32>(matrix + 0x2C));
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i)
-        values[i] = gabi::load<f32>(matrix + i * 4);
-    u32 model = gabi::ea(mpRopeEnd.get());
-    for (u32 i = 0; i < 12; ++i)
-        gabi::store<f32>(model + 0xC8 + i * 4, values[i]);
-    f32 firstY = gabi::load<f32>(base + 4), water = gabi::call<f32>(0x025871F8, base, &mObjAcch);
-    gabi::store<f32>(base + 4, firstY);
-    if (water > firstY) {
-        count = mRopeCount;
-        u32 crossing = base;
-        for (s32 i = 0; i < count; ++i) {
-            f32 pointY = i ? gabi::load<f32>(base + (u32)i * 12 + 4) : firstY;
-            if (!(pointY > water))
-                crossing = base + (u32)i * 12;
-        }
-        f32 pointX = gabi::load<f32>(crossing);
-        mRipplePos.y = water;
-        mRipplePos.x = pointX;
-        mRipplePos.z = gabi::load<f32>(crossing + 8);
-        if (!mRippleCallback.mpEmitter) {
-            u32 play = gabi::ea(dComIfGp_get());
-            gabi::call(0x025A847C, gabi::load<u32>(play + 0x5AB0), 5, 0x33, &mRipplePos, 0,
-                       0x1046A1A8, 255, &mRippleCallback, -1, 0, 0, 0);
-            if (mRippleCallback.mpEmitter) {
-                u8 timer = mRippleTimer;
-                mRippleCallback.mRate = 0.0f;
-                if (!timer) {
-                    gabi::call(0x025DAE64, &mRipplePos, 0, 1.0f, 0.7f);
-                    mRippleTimer = 19;
-                    return;
-                }
-            }
-        }
-    } else
-        gabi::call(0x025A9270, &mRippleCallback);
-    if (mRippleTimer)
-        mRippleTimer = (u8)((u8)mRippleTimer - 1);
+    return phase;
 }
-VERIFY(0x023620F0, &Actor::setRopePos);
-void Actor::setMtx() {
-    WWHD_FUNC(0x02360420, void, this);
-    u32 debug = 0x1047B608, matrix = 0x1048D0CC;
-    gabi::call(0x025872F4, &current.pos, &mWave, 0.0f);
-    mLinkRockPhase = (s16)((s32)mLinkRockPhase + 1);
-    s16 step = (s16)(gabi::load<s16>(debug + 0x748) + 5);
-    gabi::call(0x0200F428, &mLinkRockAmplitude, 0, 10, step);
-    s32 amplitude = mLinkRockAmplitude;
-    if (amplitude <= gabi::load<s16>(debug + 0x748) + 5) {
-        amplitude = 0;
-        mLinkRockAmplitude = 0;
-    }
-    s32 product = (s32)((u32)amplitude * (u32)(gabi::load<s16>(debug + 0x74A) + 3));
-    u16 wavePhase = mWaveAnimPhase;
-    f32 waveSine = gabi::load<f32>(0x104A44F8 + 8 * (wavePhase >> 3));
-    s16 rockPhase = mLinkRockPhase;
-    s16 wavePitch = (s16)gabi::ftoi((f32)(gabi::load<s16>(debug + 0x50A) + 200) * waveSine);
-    s16 waveRoll = (s16)gabi::ftoi((f32)(gabi::load<s16>(debug + 0x50C) + 60) * waveSine);
-    s16 rockPitch = (s16)gabi::ftoi(
-        (f32)product * gabi::load<f32>(0x104A44F8 + 8 * ((u16)((s32)rockPhase * 0x900) >> 3)));
-    s16 rockRoll = (s16)gabi::ftoi(
-        (f32)product * gabi::load<f32>(0x104A44F8 + 8 * ((u16)((s32)rockPhase * 0x700) >> 3)));
-    if (!gabi::load<u8>(0x1046A203)) {
-        shape_angle.x = (s16)((s32)mWave.mRotX + rockPitch + wavePitch);
-        shape_angle.z = (s16)((s32)mWave.mRotZ + rockRoll + waveRoll);
-        if (mbIsLinkRiding) {
-            u32 play = gabi::ea(dComIfGp_get()), player = gabi::load<u32>(play + 0x5B34);
-            gabi::Local<cXyz> delta, local;
-            delta->set((f32)current.pos.x - gabi::load<f32>(player + 0x314),
-                       (f32)current.pos.y - gabi::load<f32>(player + 0x318),
-                       (f32)current.pos.z - gabi::load<f32>(player + 0x31C));
-            gabi::call(0x025F1884, gabi::load<u32>(0x1018C7B0), (s16) - (s16)shape_angle.y);
-            gabi::call(0x0200FCD8, delta.get(), local.get());
-            s16 pitch = (s16)gabi::ftoi(((f32)local->z - (-200.0f)) *
-                                        (gabi::load<f32>(debug + 0xA54) - 1.0f));
-            s16 roll = (s16)gabi::ftoi((f32)local->x * (gabi::load<f32>(debug + 0xA58) + 2.0f));
-            if (gabi::load<u32>(player + 0x3B8) & 0x02000000) {
-                pitch = (s16)((s32)pitch * 2);
-                roll = (s16)((s32)roll * 2);
-                if (!mHDMotionMode) {
-                    mHDMotionMode = 1;
-                    mLinkRockAmplitude = 150;
-                }
-            } else
-                mHDMotionMode = 0;
-            s32 p = pitch, r = roll;
-            if (p > 0x400)
-                p = 0x400;
-            else if (p < -0x400)
-                p = -0x400;
-            if (r > 0x480)
-                r = 0x480;
-            else if (r < -0x200)
-                r = -0x200;
-            gabi::call(0x0200F428, &mHDPitch, p, 4, 0x100);
-            gabi::call(0x0200F428, &mHDRoll, r, 4, 0x100);
-        } else {
-            mHDMotionMode = 0;
-            gabi::call(0x0200F428, &mHDPitch, 0, 0x20, 0x80);
-            gabi::call(0x0200F428, &mHDRoll, 0, 0x20, 0x80);
-        }
-        s16 pitch = mHDPitch, x = shape_angle.x, z = shape_angle.z, roll = mHDRoll;
-        shape_angle.x = (s16)((s32)x + pitch);
-        shape_angle.z = (s16)((s32)z + roll);
-    }
-    u32 model = gabi::ea(mpModel.get());
-    f32 sx = scale.x, sy = scale.y, sz = scale.z;
-    gabi::store<f32>(model + 0xBC, sx);
-    gabi::store<f32>(model + 0xC0, sy);
-    gabi::store<f32>(model + 0xC4, sz);
-    auto transform = [&]() {
-        gabi::call(0x028E93CC, matrix, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
-        gabi::call(0x025F19F8, matrix, (s16)shape_angle.x, 0, (s16)shape_angle.z);
-        gabi::call(0x025F1C28, matrix, (s16)shape_angle.y);
-    };
-    transform();
-    if (mType == 4)
-        gabi::call(0x025F24E0, 0.0f, 30.0f, -260.0f);
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i)
-        values[i] = gabi::load<f32>(matrix + i * 4);
-    model = gabi::ea(mpModel.get());
-    for (u32 i = 0; i < 12; ++i)
-        gabi::store<f32>(model + 0xC8 + i * 4, values[i]);
-    if (mType == 4) {
-        transform();
-        gabi::call(0x025F1C28, matrix, 0x4000);
-        for (u32 i = 0; i < 4; ++i) {
-            gabi::Local<cXyz> offset;
-            offset->set(gabi::load<f32>(0x1046A244 + i * 4), 0.0f, 0.0f);
-            gabi::Local<be<u32>> actor;
-            if (gabi::call<s32>(0x025D54C4, (u32)mSvId[i], actor.get()))
-                gabi::call(0x028E8F64, matrix, offset.get(), (u32)*actor.get() + 0x314);
-        }
-        gabi::Local<cXyz> offset;
-        offset->set(gabi::load<f32>(0x1046A23C), 0.0f, 0.0f);
-        gabi::call(0x028E8F64, matrix, offset.get(), &mWavePos);
-        offset->x = gabi::load<f32>(0x1046A240);
-        gabi::call(0x028E8F64, matrix, offset.get(), &mTrackPos);
-    }
-    gabi::call(0x028E90D4, matrix, &mMtx);
-    s32 type = mType;
-    if (type == 3 || type == 1) {
-        mLightRotY = (s16)((s32)mLightRotY + 0xD0);
-        mLightRotX = (s16)((s32)mLightRotX + 0x100);
-        gabi::Local<cXyz> lightOffset;
-        lightOffset->set(gabi::load<f32>(debug + 0x6D0), gabi::load<f32>(debug + 0x6D4) + 340.0f,
-                         gabi::load<f32>(debug + 0x6D8) + 200.0f);
-        model = gabi::ea(mpModel.get());
-        gabi::call(0x028E90D4, model ? model + 0xC8 : 0, matrix);
-        gabi::call(0x028E8F64, matrix, lightOffset.get(), &mFirePos);
-        gabi::call(0x025F24E0, (f32)lightOffset->x, (f32)lightOffset->y, (f32)lightOffset->z);
-        gabi::call(0x025F1C28, matrix, (s16)mLightRotY);
-        gabi::call(0x025F1BF4, matrix, (s16)mLightRotX);
-        f32 power = mLightPower;
-        gabi::call(0x025F2518, power, power, power);
-        gabi::call(0x028E90D4, matrix, &mLightMtx);
-        mPLight.mPos.set(gabi::load<f32>(matrix + 0xC), gabi::load<f32>(matrix + 0x1C),
-                         gabi::load<f32>(matrix + 0x2C));
-        mPLight.mColorR = 600;
-        mPLight.mColorG = 400;
-        mPLight.mColorB = 120;
-        mPLight.mFluctuation = 250.0f;
-        type = mType;
-        if (type == 1 || type == 3) {
-            gabi::Local<cXyz> soundOffset;
-            soundOffset->set(gabi::load<f32>(debug + 0x6D0) - 105.0f,
-                             gabi::load<f32>(debug + 0x6D4) + 380.0f,
-                             gabi::load<f32>(debug + 0x6D8) + 40.0f);
-            model = gabi::ea(mpModel.get());
-            gabi::call(0x028E90D4, model ? model + 0xC8 : 0, matrix);
-            gabi::call(0x028E8F64, matrix, soundOffset.get(), &mSePos);
-            type = mType;
+/* 02361D58 */
+s32 daObj_Ikada_c::_delete() {
+    ikadaApi_dComIfG_resDelete(&mPhase, "IkadaH");
+    ikadaApi_dPa_waveEcallBack_remove(&mWaveRCallback);
+    ikadaApi_dPa_waveEcallBack_remove(&mWaveLCallback);
+    ikadaApi_dPa_splashEcallBack_remove(&mSplashCallBack);
+    ikadaApi_dPa_trackEcallBack_remove(&mTrackCallBack);
+    ikadaApi_dPa_rippleEcallBack_end(&mRippleCallBack);
+    u32 vt = gabi::load<u32>(gabi::ea(this) + 0x5CC);
+    gabi::call(gabi::load<u32>(vt + 0x44), &mFireParticle);
+    vt = gabi::load<u32>(gabi::ea(this) + 0x59C);
+    gabi::call(gabi::load<u32>(vt + 0x44), &mBombSmokeEasterEgg);
+    ikadaApi_JAIZelBasic_seDeleteObject(&mSePos);
+    if (mType == 3 || mType == 1)
+        ikadaApi_dKy_plight_cut(&mPLight);
+    if ((u32)heap.v) {
+        u32 bg = (u32)mpBgW.v;
+        if (bg && gabi::load<u32>(bg) < 0x100) {
+            auto* play = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            ikadaApi_cBgS_Release(gabi::ea(&play->play.mBgS), (u32)mpBgW.v);
         }
     }
-    if (type == 4 || type == 3 || type == 1) {
-        transform();
-        gabi::Local<cXyz> offset;
-        offset->set(0.0f, gabi::load<f32>(0x1046A228), 0.0f);
-        gabi::call(0x028E8F64, matrix, offset.get(), gabi::ea(this) + 0x390);
-        offset->y = gabi::load<f32>(0x1046A22C);
-        gabi::call(0x028E8F64, matrix, offset.get(), &eyePos);
-        if (mType != 4) {
-            f32 waveHeight = gabi::load<f32>(debug + 0x49C) + 5.0f;
-            if (mCurMode == 10)
-                waveHeight = gabi::load<f32>(debug + 0x49C) + 20.0f;
-            offset->y = gabi::load<f32>(0x1046A234);
-            offset->z = gabi::load<f32>(0x1046A230) + waveHeight;
-            gabi::call(0x028E8F64, matrix, offset.get(), &mWavePos);
-            offset->y = 0.0f;
-            offset->z = gabi::load<f32>(0x1046A238);
-            gabi::call(0x028E8F64, matrix, offset.get(), &mTrackPos);
-        }
-    }
+    return 1;
 }
-VERIFY(0x02360420, &Actor::setMtx);
-void Actor::drawSea() {
-    WWHD_FUNC(0x02363374, void, this);
-    gabi::call(0x025E742C, &mSeaBtk);
-    auto initializeQuad = [](u32 guard, u32 storage, f32 left, f32 right, f32 front, f32 back,
-                             bool guardFirst) {
-        if (gabi::load<u32>(guard))
-            return;
-        if (guardFirst)
-            gabi::store<u32>(guard, 1);
-        const f32 values[] = {left, 0, front, right, 0, front, right, 0, back, left, 0, back};
-        for (u32 i = 0; i < 12; ++i)
-            gabi::store<f32>(storage + i * 4, values[i]);
-        if (!guardFirst)
-            gabi::store<u32>(guard, 1);
-    };
-    initializeQuad(0x1046A2D4, 0x1046A0A8, -600, 600, 600, -600, false);
-    initializeQuad(0x1046A2D8, 0x1046A0D8, -350, 350, 650, -400, true);
-    initializeQuad(0x1046A2DC, 0x1046A108, -550, 550, 750, -750, true);
-    initializeQuad(0x1046A2E0, 0x1046A138, -140, 140, 300, -400, true);
-    u32 matrix = 0x1048D0CC;
-    gabi::call(0x028E93CC, matrix, (f32)current.pos.x, (f32)current.pos.y, (f32)current.pos.z);
-    gabi::call(0x025F1C28, matrix, (s16)shape_angle.y);
-    u32 control = gabi::load<u32>(0x101CA49C + (u32)(s32)mType * 4);
-    gabi::Local<cXyz[4]> points;
-    for (u32 i = 0; i < 4; ++i) {
-        cXyz *point = &(*points.get())[i];
-        gabi::call(0x028E8F64, matrix, control + i * 12, point);
-        point->y = gabi::call<f32>(0x025871F8, point, &mObjAcch);
-    }
-    gabi::Local<cXyz> normal, a, b, cross;
-    normal->set(gabi::load<f32>(0x101FFBA8), gabi::load<f32>(0x101FFBAC),
-                gabi::load<f32>(0x101FFBB0));
-    for (u32 i = 0; i < 4; i += 2) {
-        gabi::call(0x0201ADE0, &(*points.get())[i + 1], a.get(), &(*points.get())[i]);
-        gabi::call(0x0201ADE0, &(*points.get())[(i + 2) % 4], b.get(), &(*points.get())[i + 1]);
-        gabi::call(0x0201B080, a.get(), cross.get(), b.get());
-        if (!gabi::call<s32>(0x0201B47C, cross.get()))
-            cross->copy(*gabi::at<cXyz>(0x101FFBC0));
-        gabi::call(0x028E8D88, normal.get(), cross.get(), normal.get());
-        if (!gabi::call<s32>(0x0201B47C, normal.get()))
-            normal->copy(*gabi::at<cXyz>(0x101FFBC0));
-    }
-    f32 plane = -3.4028234663852886e38f;
-    for (u32 i = 0; i < 4; ++i) {
-        f32 dot = gabi::call<f32>(0x028E8F44, normal.get(), &(*points.get())[i]);
-        if (dot > plane)
-            plane = dot;
-    }
-    if (!gabi::load<u32>(0x1046A2E4)) {
-        gabi::store<f32>(0x1046A168, 0.0f);
-        gabi::store<f32>(0x1046A16C, 0.0f);
-        gabi::store<u32>(0x1046A2E4, 1);
-        const f32 crossPoints[] = {100, 0, 0, -100, -100, 0, 0, 100, 0, 0};
-        for (u32 i = 0; i < 10; ++i)
-            gabi::store<f32>(0x1046A170 + i * 4, crossPoints[i]);
-    }
-    gabi::Local<cXyz[4]> projected;
-    for (u32 i = 0; i < 4; ++i) {
-        cXyz *point = &(*projected.get())[i];
-        gabi::call(0x028E8F64, matrix, 0x1046A168 + i * 12, point);
-        f32 horizontal =
-            gabi::fmadds((f32)point->x, (f32)normal->x, (f32)point->z * (f32)normal->z);
-        point->y = (plane - horizontal) / (f32)normal->y;
-    }
-    gabi::Local<cXyz> xDifference, zDifference, horizontalX, horizontalZ;
-    gabi::call(0x0201ADE0, &(*projected.get())[1], xDifference.get(), &(*projected.get())[0]);
-    gabi::call(0x0201ADE0, &(*projected.get())[3], zDifference.get(), &(*projected.get())[2]);
-    horizontalX->set(xDifference->x, 0.0f, xDifference->z);
-    f32 length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontalX.get()));
-    s32 pitch = gabi::call<s32>(0x020195B0, (f32)xDifference->y, length);
-    horizontalZ->set(zDifference->x, 0.0f, zDifference->z);
-    length = gabi::call<f32>(0x028F4384, gabi::call<f32>(0x028E8DD0, horizontalZ.get()));
-    s32 roll = gabi::call<s32>(0x020195B0, (f32)zDifference->y, length);
-    f32 horizontal =
-            gabi::fmadds((f32)current.pos.x, (f32)normal->x, (f32)current.pos.z * (f32)normal->z),
-        height = (plane - horizontal) / (f32)normal->y;
-    f32 water = gabi::call<f32>(0x025871F8, &current.pos, &mObjAcch);
-    f32 y = gabi::fmadds(water - height, height < water ? 1.0f : 0.0f, height);
-    gabi::call(0x028E93CC, matrix, (f32)current.pos.x, y, (f32)current.pos.z);
-    gabi::call(0x025F1B48, matrix, pitch, (s16)shape_angle.y, roll);
-    gabi::call(0x025F24E0, 0.0f, 3.0f, 0.0f);
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i)
-        values[i] = gabi::load<f32>(matrix + i * 4);
-    u32 model = gabi::ea(mpSeaModel.get());
-    for (u32 i = 0; i < 12; ++i)
-        gabi::store<f32>(model + 0xC8 + i * 4, values[i]);
-    u32 data = gabi::load<u32>(gabi::ea(mpSeaModel.get()) + 0xAC),
-        material = gabi::load<u32>(data + 0x10);
-    gabi::Local<u8[4]> seaColor, foamColor;
-    gabi::call(0x025602F0, seaColor.get(), foamColor.get());
-    gabi::Local<be<s16>[4]> color;
-    u32 colorEA = gabi::ea(seaColor.get());
-    (*color.get())[0] = gabi::load<u8>(colorEA);
-    (*color.get())[1] = gabi::load<u8>(colorEA + 1);
-    (*color.get())[2] = gabi::load<u8>(colorEA + 2);
-    (*color.get())[3] = 255;
-    u32 light = gabi::call<u32>(0x02555D0C);
-    f32 strength = gabi::load<f32>(light + 0x10B8);
-    u32 tev = gabi::load<u32>(material + 0x18), vt = gabi::load<u32>(tev + 4);
-    gabi::call(gabi::load<u32>(vt + 0x24), tev, 1, color.get());
-    gabi::Local<be<f32>[4]> rgba;
-    for (u32 i = 0; i < 4; ++i)
-        (*rgba.get())[i] = (f32)(s16)(*color.get())[i] / 255.0f;
-    gabi::Local<be<f32>[4]> bright;
-    gabi::call(0x0274D458, bright.get(), rgba.get(), strength);
-    gabi::store<u32>(material + 0xA0, gabi::load<u32>(material + 0xA0) | 0x20);
-    u32 output = gabi::call<u32>(0x027F9F0C, material + 0xA0, 5);
-    f32 alpha = (f32)(s16)(*color.get())[3] / 255.0f;
-    f32 r = (*bright.get())[0], g = (*bright.get())[1], bValue = (*bright.get())[2];
-    gabi::store<f32>(output + 4, g);
-    gabi::store<f32>(output + 8, bValue);
-    gabi::store<f32>(output, r);
-    gabi::store<f32>(output + 12, alpha);
-    gabi::call(0x025E7FC4, &mSeaBtk, data, (f32)mSeaBtk.mFrameCtrl.mFrame);
-    gabi::call(0x025E2DE0, mpSeaModel.get(), 0);
+/* 02361D54 */
+s32 daObj_IkadaCreate(daObj_Ikada_c *actor) {
+    return actor->_create();
 }
-VERIFY(0x02363374, &Actor::drawSea);
-} // namespace ikada
+/* 02361E3C */
+s32 daObj_IkadaDelete(daObj_Ikada_c *actor) {
+    return actor->_delete();
+}
+/* 02363164 */
+s32 daObj_IkadaExecute(daObj_Ikada_c *actor) {
+    return actor->_execute();
+}
+/* 02363D24 */
+s32 daObj_IkadaDraw(daObj_Ikada_c *actor) {
+    return actor->_draw();
+}
+/* 0236517C */
+s32 daObj_IkadaIsDelete(daObj_Ikada_c *actor) {
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+/* 0236513C */
+void hioDestructor(void *self, s32 flags) {
+    if (self && (flags & 1))
+        operator_delete(self);
+}
+/* 02365150 */
+cXyz *vectorConstructor(cXyz *self) {
+    return self ? self : static_cast<cXyz *>(operator_new(12));
+}
+/* 02365248 */
+void emptyVirtual(daObj_Ikada_c *actor) {
+}
+/* 02365194 */
+void actorDestructor(daObj_Ikada_c *actor, s32 flags) {
+    if (!actor)
+        return;
+    ikadaApi_destroyObjectStatus(gabi::ea(&actor->mStts), 2);
+    ikadaApi_destroyCollisionSphere(gabi::ea(&actor->mSph), 2);
+    ikadaApi_destroyRopeMaterial(gabi::ea(&actor->mRopeLine), 2);
+    ikadaApi_destroyAcchCircle(gabi::ea(&actor->mAcchCir.m_cir), 2);
+    actor->mObjAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcchDt[0];
+    actor->mObjAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcchDt[1];
+    ikadaApi_destroyAcch(gabi::ea(&actor->mObjAcch), 0);
+    ikadaApi_destroyShaderUniform(gabi::ea(&actor->mBckAnm.mpAnm), 0);
+    ikadaApi_fopAc_ac_c_fopAc_ac_c(actor, 0);
+    if (flags & 1)
+        operator_delete(actor);
+}
+/* 02364E6C */
+void *hioConstructor(void *self) {
+    if (!self) {
+        self = static_cast<void *>(operator_new(0xAC));
+        if (!self)
+            return nullptr;
+    }
+    auto* hio = static_cast<daObj_Ikada_HIO_c*>(self);
+    hio->__vtbl = 0x1002B364;
+    hio->mbDebugDraw = 0;
+    hio->m05 = 0;
+    hio->m06 = 0;
+    hio->mbNoRotAnim = 0;
+    hio->m08 = 0;
+    hio->m1C = 0;
+    hio->m1E = 100;
+    hio->m24 = 60;
+    hio->m94 = 3000;
+    hio->mPlayerStopDistance = 6000;
+    hio->m98 = 1000;
+    hio->m9A = 1000;
+    hio->mFlagOffset.x = 0;
+    hio->mFlagOffset.y = 0;
+    hio->mFlagOffset.z = 0;
+    hio->mFlagScale = 0;
+    hio->m20 = 1.5f;
+    hio->m28 = 100;
+    hio->mShipOffsY_Attention = 900;
+    hio->mShipOffsY_Eye = 300;
+    hio->mTerryWaveOffsZ = 660;
+    hio->mTerryWaveOffsY = 20;
+    hio->mTerryTrackOffsZ = -180;
+    hio->mSvWaveOffsX = -320;
+    hio->mSvTrackOffsX = 240;
+    hio->mSvOffsX[0] = 265;
+    hio->mSvOffsX[1] = -18;
+    hio->mSvOffsX[2] = -97;
+    hio->mSvOffsX[3] = -175;
+    hio->mTrackIndTransY = -0.04f;
+    hio->mTrackIndScaleY = 4;
+    hio->mSplashScaleMax = 200;
+    hio->mSplashMaxScaleTimer = 300;
+    hio->mWaveVelFade = 2;
+    hio->mTrackVel = 300;
+    hio->mWaveVelSpeed = 2;
+    hio->mWaveVelOffs = 0;
+    hio->mWaveMaxVelocity = 15;
+    hio->mWaveCollapsePos0.x = -80;
+    hio->mWaveCollapsePos0.y = -50;
+    hio->mWaveCollapsePos0.z = -150;
+    hio->mWaveCollapsePos1.x = -40;
+    hio->mWaveCollapsePos1.y = -100;
+    hio->mWaveCollapsePos1.z = -350;
+    hio->m9C = 300;
+    hio->mVelocityTargetTerry1 = 12;
+    hio->mVelocityTargetTerry3 = 15;
+    hio->mA8 = 30;
+    return self;
+}
+/* 0236505C */
+void __sinit_d_a_obj_ikada_cpp() {
+    gabi::store<u32>(0x1046A19C, 0);
+    gabi::store<u32>(0x1046A1A4, 0);
+    gabi::store<u32>(0x1046A198, 0);
+    gabi::store<u32>(0x1046A1A0, 0);
+    ikadaApi_registerGlobalObject(0x101CA4DC);
+    gabi::store<f32>(0x1046A09C, -3.1415927410125732f);
+    gabi::store<f32>(0x1046A0A0, 3.1415927410125732f);
+    ikadaApi_initializeMatrixStatics(0x1046A0A4);
+    ikadaApi_registerGlobalObject(0x101CA4E8);
+    ikadaApi_initializeMathStatics(0x1046A0A5);
+    ikadaApi_registerGlobalObject(0x101CA4F4);
+    m_crane_offset.x = 200.0f;
+    m_rope_base_vec.x = 0.0f;
+    m_rope_base_vec.y = -10.0f;
+    m_crane_offset.y = -340.0f;
+    m_crane_offset.z = 0.0f;
+    m_rope_base_vec.z = 0.0f;
+    hioConstructor(&l_HIO);
+}
+/* 02361004 */
+daObj_Ikada_c *actorConstructor(daObj_Ikada_c *actor) {
+    if (!actor) {
+        actor = static_cast<daObj_Ikada_c *>(operator_new(0x16A0));
+        if (!actor)
+            return nullptr;
+    }
+    u32 p = gabi::ea(actor);
+    ikadaApi_fopAc_ac_c_fopAc_ac_c(actor);
+    actor->__vtbl = 0x1002B354;
+    actor->mWaveLCallback.__vtbl = 0x100521A8;
+    for (u32 off : {0x450u, 0x45Cu, 0x468u})
+        if (!(p + off))
+            operator_new(12);
+    actor->mWaveRCallback.__vtbl = 0x100521A8;
+    for (u32 off : {0x4B4u, 0x4C0u, 0x4CCu})
+        if (!(p + off))
+            operator_new(12);
+    actor->mSplashCallBack.__vtbl = 0x100521E8;
+    actor->mTrackCallBack.__vtbl = 0x10052268;
+    ikadaApi_constructArray(p + 0x508, 3, 12, gabi::guest_fn(reinterpret_cast<const void*>(vectorConstructor)));
+    ikadaApi_constructRippleCallback(gabi::ea(&actor->mRippleCallBack));
+    ikadaApi_dPa_followEcallBack_dPa_followEcallBack(gabi::ea(&actor->mBombSmokeEasterEgg), 0, 0);
+    ikadaApi_dPa_followEcallBack_dPa_followEcallBack(gabi::ea(&actor->mFireParticle), 0, 0);
+    ikadaApi_J3DFrameCtrl_init(gabi::ea(&actor->mBckAnm.mFrameCtrl), 0);
+    gabi::store<u32>(p + 0x664, 0x1016E54C);
+    ikadaApi_constructShaderUniform(p + 0x668);
+    gabi::store<u32>(p + 0x6DC, 0);
+    gabi::store<u32>(p + 0x6D0, 0);
+    gabi::store<u32>(p + 0x664, 0x1002B2FC);
+    gabi::store<u32>(p + 0x6D8, 0);
+    gabi::store<u32>(p + 0x69C, 0x1016D820);
+    gabi::store<u32>(p + 0x6D4, 0);
+    gabi::store<u32>(p + 0x6AC, 0);
+    ikadaApi_dBgS_Acch_dBgS_Acch(gabi::ea(&actor->mObjAcch));
+    actor->mObjAcch.cBgS_Chk::__vtbl = gc_tu.objAcch.v10;
+    actor->mObjAcch.dBgS_GrpPassChk::__vtbl = gc_tu.objAcch.v20;
+    actor->mObjAcch.dBgS_PolyPassChk::__vtbl = gc_tu.objAcch.v14;
+    actor->mObjAcch.mbObjThrough = 1;
+    ikadaApi_dBgS_AcchCir_dBgS_AcchCir(gabi::ea(&actor->mAcchCir));
+    ikadaApi_constructRopeMaterial(gabi::ea(&actor->mRopeLine));
+    ikadaApi_mDoExt_btkAnm_init(gabi::ea(&actor->mSeaBtk));
+    ikadaApi_constructCollisionSphere(gabi::ea(&actor->mSph));
+    ikadaApi_constructCollisionStatus(gabi::ea(&actor->mStts));
+    ikadaApi_dCcD_GStts_dCcD_GStts(p + 0x1620);
+    actor->mStts.__vtbl_gstts = 0x1004AEC0;
+    actor->mStts.__vtbl = 0x1004AE88;
+    actor->mPLight.mHD20 = 1.0f;
+    return actor;
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+ext 025D5834 u32 ikadaApi_createActor(s32, u32, cXyz*, s8, csXyz*, s32, s32, s32)
+ext 028E93CC void ikadaApi_setTranslationMatrix(Mtx34*, f32, f32, f32)
+ext 025E1A40 void ikadaApi_startSound(u32, cXyz*, s32, s32)
+ext 025A847C void ikadaApi_setParticle(dPa_control_c*, s32, s32, cXyz*, csXyz*, cXyz*, s32, void*, s32, void*, void*, void*)
+ext 02516300 u32 ikadaApi_getTargetHitObject(dCcD_Sph*)
+ext 028E8F64 void ikadaApi_transformVector(Mtx34*, cXyz*, cXyz*)
+ext 025F1C28 void ikadaApi_rotateY(Mtx34*, s32)
+ext 025F1BF4 void ikadaApi_rotateX(Mtx34*, s32)
+ext 025F1B48 void ikadaApi_rotateZXY(Mtx34*, s32, s32, s32)
+ext 028E90D4 void ikadaApi_copyMatrix(Mtx34*, Mtx34*)
+ext 025871F8 f32 ikadaApi_getWaterY(cXyz*, dBgS_ObjAcch*)
+ext 0201AE48 void ikadaApi_multiplyVector(cXyz*, cXyz*, f32)
+ext 0201AD78 void ikadaApi_addVector(cXyz*, cXyz*, cXyz*)
+ext 0201ADE0 void ikadaApi_subtractVector(cXyz*, cXyz*, cXyz*)
+ext 020CB648 s32 ikadaApi_daBomb_c_getBombRestTime(fopAc_ac_c *)
+ext 02018C8C void ikadaApi_cM3dGSph_SetR(u32, f32)
+ext 02018D40 void ikadaApi_cM3dGSph_SetC(u32, cXyz *)
+ext 0200E240 void ikadaApi_cCcS_Set(u32, dCcD_Sph *)
+ext 02587D24 void ikadaApi_dLib_pathMove(cXyz *, be<s8> *, u32, s32, daObj_Ikada_c *, f32)
+ext 0200F268 void ikadaApi_cLib_addCalcPosXZ2(cXyz *, cXyz *, f32, f32)
+ext 0200F93C s32 ikadaApi_cLib_targetAngleY(cXyz *, cXyz *)
+ext 02515E50 void ikadaApi_dCcD_GStts_Move(u32)
+ext 0201B47C s32 ikadaApi_cXyz_normalizeRS(cXyz *)
+ext 020195B0 s32 ikadaApi_cM_atan2s(f32, f32)
+ext 0200F378 u32 ikadaApi_cLib_addCalcAngleS(be<s16> *, s32, s32, s32, s32)
+ext 0200F764 void ikadaApi_cLib_chasePosXZ(cXyz *, cXyz *, f32)
+ext 02555D0C u32 ikadaApi_getEnvironment()
+ext 025EC62C void ikadaApi_mDoExt_3DlineMat1_c_update(u32, u16, s32, s32, u32, f32)
+ext 025EDD04 void ikadaApi_mDoExt_3DlineMatSortPacket_setMat(u32, u32)
+ext 025BED80 void ikadaApi_dSnap_RegistFig(s32, daObj_Ikada_c *, f32, f32, f32)
+ext 02515860 void ikadaApi_destroyObjectStatus(u32, s32)
+ext 02515AE8 void ikadaApi_destroyCollisionSphere(u32, s32)
+ext 025EB8B8 void ikadaApi_destroyRopeMaterial(u32, s32)
+ext 02018034 void ikadaApi_destroyAcchCircle(u32, s32)
+ext 024EFD9C void ikadaApi_destroyAcch(u32, s32)
+ext 027F3628 void ikadaApi_destroyShaderUniform(u32, s32)
+ext 025D50BC void ikadaApi_fopAc_ac_c_fopAc_ac_c(daObj_Ikada_c *, s32)
+ext 025204C8 void ikadaApi_dComIfG_resDelete(request_of_phase_process_class *, const char*)
+ext 025A92C0 void ikadaApi_dPa_waveEcallBack_remove(IkadaWaveCallback *)
+ext 025A99B8 void ikadaApi_dPa_splashEcallBack_remove(IkadaSplashCallback *)
+ext 025A9E38 void ikadaApi_dPa_trackEcallBack_remove(IkadaTrackCallback *)
+ext 025A9270 void ikadaApi_dPa_rippleEcallBack_end(IkadaRippleCallback *)
+ext 025E1B34 void ikadaApi_JAIZelBasic_seDeleteObject(cXyz *)
+ext 0255A374 void ikadaApi_dKy_plight_cut(LIGHT_INFLUENCE *)
+ext 020087EC void ikadaApi_cBgS_Release(u32, u32)
+ext 028F026C void ikadaApi_registerGlobalObject(s32)
+ext 028ED6F8 void ikadaApi_initializeMatrixStatics(s32)
+ext 028EAB2C void ikadaApi_initializeMathStatics(s32)
+ext 025D6958 f32 ikadaApi_fopAcM_searchActorDistanceXZ(daObj_Ikada_c *, u32)
+ext 025D4ED0 void ikadaApi_fopAc_ac_c_fopAc_ac_c(daObj_Ikada_c *)
+ext 028EFFD0 void ikadaApi_constructArray(u32, s32, s32, s32)
+ext 025A9084 void ikadaApi_constructRippleCallback(u32)
+ext 025A5894 void ikadaApi_dPa_followEcallBack_dPa_followEcallBack(u32, s32, s32)
+ext 027F2BC0 void ikadaApi_J3DFrameCtrl_init(u32, s32)
+ext 027DA984 void ikadaApi_constructShaderUniform(u32)
+ext 024F0474 void ikadaApi_dBgS_Acch_dBgS_Acch(u32)
+ext 024EFE94 void ikadaApi_dBgS_AcchCir_dBgS_AcchCir(u32)
+ext 025EB82C void ikadaApi_constructRopeMaterial(u32)
+ext 025E7C6C void ikadaApi_mDoExt_btkAnm_init(u32)
+ext 025166F0 void ikadaApi_constructCollisionSphere(u32)
+ext 0200BD2C void ikadaApi_constructCollisionStatus(u32)
+ext 02515DA0 void ikadaApi_dCcD_GStts_dCcD_GStts(u32)
+ext 0273AA24 void ikadaApi_assertionShow(const char*, s32, const char*)
+ext 02520460 s32 ikadaApi_dComIfG_resLoad(request_of_phase_process_class *, const char*)
+ext 025D63E8 s32 ikadaApi_fopAcM_entrySolidHeap(daObj_Ikada_c *, s32, u32)
+ext 02520540 s32 ikadaApi_dComIfGp_getReverb(s32)
+ext 026066C4 u32 ikadaApi_dRes_control_c_getRes(u32, IkadaSafeString*, u32)
+ext 02606900 u32 ikadaApi_getNamedResource(u32, IkadaSafeString*, IkadaSafeString*)
+ext 025E38E0 J3DModel * ikadaApi_mDoExt_J3DModel_create(u32, s32, s32)
+ext 025E8508 s32 ikadaApi_mDoExt_bckAnm_init(mDoExt_bckAnm *, u32, u32, s32, s32, s32, s32, s32, f32)
+ext 027F3F94 u32 ikadaApi_getJointTree(u32)
+ext 025E7CE0 s32 ikadaApi_initSeaTextureAnimation(mDoExt_btkAnm *, u32, u32, s32, s32, s32, s32, s32, s32, f32)
+ext 024F23F4 dBgW * ikadaApi_dBgW_dBgW(s32)
+ext 0200A030 s32 ikadaApi_cBgW_Set(u32, u32, s32, Mtx34 *)
+ext 025EBA58 s32 ikadaApi_mDoExt_3DlineMat1_c_init(u32, s32, s32, u32, s32)
+ext 025AAF88 path_layout::dPath * ikadaApi_dPath_GetRoomPath(u8, s8)
+ext 025D5AA4 u32 ikadaApi_fopAcM_createChild(u32, u32, s32, cXyz *, s8, s32, s32, s32)
+ext 024F43DC void ikadaApi_dBgW_Move(u32)
+ext 024EEA6C void ikadaApi_dBgS_Regist(u32, u32, daObj_Ikada_c *)
+ext 024EFF44 void ikadaApi_dBgS_AcchCir_SetWall(dBgS_AcchCir *, f32, f32)
+ext 024F06B4 void ikadaApi_dBgS_Acch_Set(dBgS_ObjAcch *, cXyz *, cXyz *, daObj_Ikada_c *, s32, dBgS_AcchCir *, cXyz *, s32, s32)
+ext 025564B4 void ikadaApi_dKy_plight_set(LIGHT_INFLUENCE *)
+ext 025D6870 void ikadaApi_fopAcM_posMoveF(daObj_Ikada_c *, s32)
+ext 025D674C void ikadaApi_fopAcM_setCullSizeBox(daObj_Ikada_c *, f32, f32, f32, f32, f32, f32)
+ext 025F24E0 void ikadaApi_mDoMtx_stack_c_transM(f32, f32, f32)
+ext 02515F14 void ikadaApi_dCcD_Stts_Init(dCcD_Stts *, s32, s32, daObj_Ikada_c *)
+ext 0251677C void ikadaApi_dCcD_Sph_Set(dCcD_Sph *, s32)
+ext 02556D14 s32 ikadaApi_dKy_daynight_check()
+ext 025A5AC8 void ikadaApi_dPa_followEcallBack_end(IkadaFollowCallback *)
+ext 025A8D40 void ikadaApi_dPa_control_c_setSimple(u32, s32, cXyz *, s32, s32, s32, s32)
+ext 025D6B70 s32 ikadaApi_fopAcM_checkCullingBox(u32, f32, f32, f32, f32, f32, f32)
+ext 025D5218 u32 ikadaApi_fopAcIt_Judge(s32, gabi::be<unsigned int> *)
+ext 0201B3C0 void ikadaApi_cXyz_normalizeZP(cXyz *, cXyz *)
+ext 0201AEAC void ikadaApi_cXyz_dv(cXyz *, cXyz *, f32)
+ext 025DAE64 void ikadaApi_fopKyM_createWpillar(cXyz *, s32, f32, f32)
+ext 025872F4 void ikadaApi_dLib_waveRot(cXyz *, IkadaWave *, f32)
+ext 025F1884 void ikadaApi_mDoMtx_YrotS(Mtx34*, s16)
+ext 0200FCD8 void ikadaApi_MtxPosition(cXyz *, cXyz *)
+ext 025F19F8 void ikadaApi_mDoMtx_XYZrotM(Mtx34*, s16, s32, s16)
+ext 025D54C4 s32 ikadaApi_fopAcM_SearchByID(u32, gabi::be<unsigned int> *)
+ext 025F2518 void ikadaApi_mDoMtx_stack_c_scaleM(f32, f32, f32)
+ext 025E742C void ikadaApi_mDoExt_baseAnm_play(mDoExt_btkAnm *)
+ext 0201B080 void ikadaApi_cXyz_outprod(cXyz *, cXyz *, cXyz *)
+ext 025602F0 void ikadaApi_dKy_get_seacolor(GXColor*, GXColor*)
+ext 0274D458 void ikadaApi_scaleColorBrightness(IkadaColorVector*, IkadaColorVector*, f32)
+ext 027F9F0C u32 ikadaApi_getMaterialColor(u32, s32)
+data l_HIO 1046A1FC
+data debug_yellow_guard 101FDA44
+data debug_yellow 101FEBE8
+data debug_yellow_source 1002B2C8
+data debug_blue_guard 101FDAC0
+data debug_blue 101FEBF8
+data debug_blue_source 1002B2CC
+data debug_red_guard 101FDA50
+data debug_red 101FEBF4
+data debug_red_source 1002B2D0
+data ikada_vector_zero 101FFBA8
+data ikada_vector_up 101FFBC0
+str 1002B808 "IkadaH"
+str 1002B5B4 "Always"
+str 1002B5BC "Link"
+str 1002B3A8 "d_a_obj_ikada.cpp" in 0235FE84
+str 1002B5EC "d_a_obj_ikada.cpp" in 02360C64
+str 1002B3BC "(jntNo >= 0) && (jntNo < JNT_END)"
+str 1002B600 "modelData != (0)"
+str 1002B614 "bck != 0"
+data sea_quad_a_guard 1046A2D4
+data sea_quad_a 1046A0A8
+data sea_quad_b_guard 1046A2D8
+data sea_quad_b 1046A0D8
+data sea_quad_c_guard 1046A2DC
+data sea_quad_c 1046A108
+data sea_quad_d_guard 1046A2E0
+data sea_quad_d 1046A138
+data sea_cross_guard 1046A2E4
+data sea_cross_points 1046A168
+data control 101CA49C
+data sea_bdl 101CA4B0
+data sea_btk 101CA4C4
+str 1002B620 "vikae_minamo00.bdl"
+str 1002B634 "vtsp_minamo00.bdl"
+str 1002B648 "vikah_minamo00.bdl"
+str 1002B65C "vtsp2_minamo00.bdl"
+str 1002B670 "vsvsp_minamo00.bdl"
+str 1002B684 "vikae_minamo00.btk"
+str 1002B698 "vtsp_minamo00.btk"
+str 1002B6AC "vikah_minamo00.btk"
+str 1002B6C0 "vtsp2_minamo00.btk"
+str 1002B6D4 "vsvsp_minamo00.btk"
+data flag_offset_guard 1046A2C8
+data fire_scale_guard 1046A2CC
+data ripple_scale_guard 1046A2D0
+data fire_scale 1046A1B4
+data ripple_scale 1046A1A8
+data flag_offset 1046A1C0
+data wave_l_guard 1046A2A8
+data wave_r_guard 1046A2AC
+data wave_l_direction 1046A2B0
+data wave_r_direction 1046A2BC
+data m_rope_base_vec 1046A2E8
+data m_crane_offset 1046A2F4
+data m_heapsize 1002B850
+data bdl 1002B5C4
+data dzb 1002B5D8
+data flagparam 1002B374
+data flag_scale 1002B388
+data mode_tbl 1002B3E0
+ext 0211D2F8 s32 ikadaApi_calcTimer(be<s32>*)
+*/

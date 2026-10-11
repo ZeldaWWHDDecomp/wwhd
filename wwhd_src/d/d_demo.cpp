@@ -1,168 +1,1623 @@
-#include "bindings.h"
+/**
+ * Demo actors, camera and lighting adapters, object pool and cutscene manager.
+ *
+ * Written in the GameCube decompilation style and verified against the WWHD original
+ * (tools/verify, d_demo).
+ * HD: the manager uses static allocated SDK interfaces and adds cutscene, wind, palette
+ * and audio overrides. GHS constructor/destructor entries keep their nullable receivers.
+ */
+
+#include "d/d_demo.h"
+#include "d/actor/d_a_player.h"
+#include "gc_api/d/d_com_inf_game.h"
+
+static const f32 l_degreesToShort = 182.04444885253906;
+static const f32 l_shortToDegrees = 0.0054931640625;
+static const f32 l_animationMax = 3.402823466e38;
 using namespace gabi;
-namespace d_demo {
-u32 get_actor_slot(u32 p,u32 index){WWHD_FUNC(0x02526E70,u32,p,index);return load<u32>(p+index*4);}
-VERIFY(0x02526E70,get_actor_slot);
-void set_visible(u32 p,u32 value){WWHD_FUNC(0x02527754,void,p,value);u16 flags=load<u16>(p+4);store<u32>(p+0x28,value);store<u16>(p+4,flags|0x10);}
-VERIFY(0x02527754,set_visible);
-void set_frame(u32 p,f64 value){WWHD_FUNC(0x02527788,void,p,value);u16 flags=load<u16>(p+4);store<f32>(p+0x30,value);store<u16>(p+4,flags|0x40);}
-VERIFY(0x02527788,set_frame);
-void set_transition(u32 p,f64 value){WWHD_FUNC(0x0252779C,void,p,value);u16 flags=load<u16>(p+4);store<f32>(p+0x34,value);store<u16>(p+4,flags|0x80);}
-VERIFY(0x0252779C,set_transition);
-void set_tex_animation(u32 p,u32 value){WWHD_FUNC(0x025277B0,void,p,value);u16 flags=load<u16>(p+4);store<u32>(p+0x3c,value);store<u16>(p+4,flags|0x100);}
-VERIFY(0x025277B0,set_tex_animation);
-void set_tex_frame(u32 p,f64 value){WWHD_FUNC(0x025277C4,void,p,value);u16 flags=load<u16>(p+4);store<f32>(p+0x40,value);store<u16>(p+4,flags|0x200);}
-VERIFY(0x025277C4,set_tex_frame);
-void set_near(u32 p,f64 value){WWHD_FUNC(0x02527BD8,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0x8,value);store<u8>(p+4,flags|0x1);}
-VERIFY(0x02527BD8,set_near);
-void set_far(u32 p,f64 value){WWHD_FUNC(0x02527C30,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0xc,value);store<u8>(p+4,flags|0x2);}
-VERIFY(0x02527C30,set_far);
-void set_fovy(u32 p,f64 value){WWHD_FUNC(0x02527C88,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0x10,value);store<u8>(p+4,flags|0x4);}
-VERIFY(0x02527C88,set_fovy);
-void set_roll(u32 p,f64 value){WWHD_FUNC(0x02527E50,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0x3c,value);store<u8>(p+4,flags|0x80);}
-VERIFY(0x02527E50,set_roll);
-void set_light_type(u32 p,u32 value){WWHD_FUNC(0x02527F74,void,p,value);u8 flags=load<u8>(p+4);store<u32>(p+0x8,value);store<u8>(p+4,flags|0x1);}
-VERIFY(0x02527F74,set_light_type);
-void set_fog_start(u32 p,f64 value){WWHD_FUNC(0x0252807C,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0x8,value);store<u8>(p+4,flags|0x2);}
-VERIFY(0x0252807C,set_fog_start);
-void set_fog_end(u32 p,f64 value){WWHD_FUNC(0x02528090,void,p,value);u8 flags=load<u8>(p+4);store<f32>(p+0xc,value);store<u8>(p+4,flags|0x4);}
-VERIFY(0x02528090,set_fog_end);
-void set_translation(u32 p,u32 value){WWHD_FUNC(0x02527698,void,p,value);u32 x=load<u32>(value);u16 flags=load<u16>(p+4);store<u32>(p+0x8,x);u32 y=load<u32>(value+4);store<u32>(p+0xc,y);u32 z=load<u32>(value+8);store<u16>(p+4,flags|0x2);store<u32>(p+0x10,z);}
-VERIFY(0x02527698,set_translation);
-void set_scale(u32 p,u32 value){WWHD_FUNC(0x025276C0,void,p,value);u32 x=load<u32>(value);u16 flags=load<u16>(p+4);store<u32>(p+0x14,x);u32 y=load<u32>(value+4);store<u32>(p+0x18,y);u32 z=load<u32>(value+8);store<u16>(p+4,flags|0x4);store<u32>(p+0x1c,z);}
-VERIFY(0x025276C0,set_scale);
-void set_eye(u32 p,u32 value){WWHD_FUNC(0x02527D10,void,p,value);u32 x=load<u32>(value);u8 flags=load<u8>(p+4);store<u32>(p+0x18,x);u32 y=load<u32>(value+4);store<u32>(p+0x1c,y);u32 z=load<u32>(value+8);store<u8>(p+4,flags|0x10);store<u32>(p+0x20,z);}
-VERIFY(0x02527D10,set_eye);
-void set_target(u32 p,u32 value){WWHD_FUNC(0x02527DB4,void,p,value);u32 x=load<u32>(value);u8 flags=load<u8>(p+4);store<u32>(p+0x30,x);u32 y=load<u32>(value+4);store<u32>(p+0x34,y);u32 z=load<u32>(value+8);store<u8>(p+4,flags|0x40);store<u32>(p+0x38,z);}
-VERIFY(0x02527DB4,set_target);
-void set_light_position(u32 p,u32 value){WWHD_FUNC(0x02527F88,void,p,value);u32 x=load<u32>(value);u8 flags=load<u8>(p+4);store<u32>(p+0x14,x);u32 y=load<u32>(value+4);store<u32>(p+0x18,y);u32 z=load<u32>(value+8);store<u8>(p+4,flags|0x2);store<u32>(p+0x1c,z);}
-VERIFY(0x02527F88,set_light_position);
-void set_light_direction(u32 p,u32 value){WWHD_FUNC(0x02527FE0,void,p,value);u32 x=load<u32>(value);u8 flags=load<u8>(p+4);store<u32>(p+0x30,x);u32 y=load<u32>(value+4);store<u32>(p+0x34,y);u32 z=load<u32>(value+8);store<u8>(p+4,flags|0x20);store<u32>(p+0x38,z);}
-VERIFY(0x02527FE0,set_light_direction);
-void set_ambient_color(u32 p,u32 color){WWHD_FUNC(0x02527EC4,void,p,color);u32 word=load<u32>(color);store<u32>(p+0x5,word);store<u8>(p+4,load<u8>(p+4)|0x1);}
-VERIFY(0x02527EC4,set_ambient_color);
-void set_light_color(u32 p,u32 color){WWHD_FUNC(0x02527FB0,void,p,color);u32 word=load<u32>(color);store<u32>(p+0x20,word);store<u8>(p+4,load<u8>(p+4)|0x4);}
-VERIFY(0x02527FB0,set_light_color);
-void set_fog_color(u32 p,u32 color){WWHD_FUNC(0x025280A4,void,p,color);u32 word=load<u32>(color);store<u32>(p+0x10,word);store<u8>(p+4,load<u8>(p+4)|0x8);}
-VERIFY(0x025280A4,set_fog_color);
-void set_flags(u32 p,u32 a,u32 b,u32 c){WWHD_FUNC(0x0252767C,void,p,a,b,c);u16 flags=load<u16>(p+4);store<u32>(p+0x4c,a);store<u32>(p+0x50,b);store<u32>(p+0x54,c);store<u16>(p+4,flags|1);}
-VERIFY(0x0252767C,set_flags);
-void set_animation(u32 p,u32 animation){WWHD_FUNC(0x02527768,void,p,animation);u16 flags=load<u16>(p+4);store<u32>(p+0x2c,animation);f32 initial=load<f32>(0x1004be58);store<u16>(p+4,flags|0x20);store<f32>(p+0x38,initial);}
-VERIFY(0x02527768,set_animation);
-u32 get_camera(u32 p){WWHD_FUNC(0x025283F8,u32,p);return load<u32>(p+0x84);}
-VERIFY(0x025283F8,get_camera);
-void object_ctor(u32 p){WWHD_FUNC(0x025286C0,void,p);store<u32>(0x101d6008,0);store<u32>(0x101d6014,0);store<u32>(0x101d600c,0);}
-VERIFY(0x025286C0,object_ctor);
-void compiler_delete(u32 p,u32 flags){WWHD_FUNC(0x0252978C,void,p,flags);if(p&&(flags&1))call<void>(0x0273AF40,p,flags);}
-VERIFY(0x0252978C,compiler_delete);
-f64 get_anm_max(u32 p){WWHD_FUNC(0x025298BC,f64,p);return load<f32>(p+0x38);}
-VERIFY(0x025298BC,get_anm_max);
-f64 get_tex_max(u32 p){WWHD_FUNC(0x025298C4,f64,p);return load<f32>(p+0x44);}
-VERIFY(0x025298C4,get_tex_max);
-void get_translation(u32 p,u32 out){WWHD_FUNC(0x025298CC,void,p,out);store<u32>(out,load<u32>(p+0x8));store<u32>(out+4,load<u32>(p+0xc));store<u32>(out+8,load<u32>(p+0x10));}
-VERIFY(0x025298CC,get_translation);
-void get_scale(u32 p,u32 out){WWHD_FUNC(0x025298E8,void,p,out);store<u32>(out,load<u32>(p+0x14));store<u32>(out+4,load<u32>(p+0x18));store<u32>(out+8,load<u32>(p+0x1c));}
-VERIFY(0x025298E8,get_scale);
-void empty(u32 p){WWHD_FUNC(0x02529B2C,void,p);}
-VERIFY(0x02529B2C,empty);
-void prefix_init1(){WWHD_FUNC(0x02526CB4,void,(u32)0);store<u32>(0x1047566c,0);store<u32>(0x10475664,0);store<u32>(0x10475670,0);store<u32>(0x10475668,0);call<void>(0x028F026C,u32(0x101d5f50));f32 first=load<f32>(0x1004bda0),second=load<f32>(0x1004bda4);store<f32>(0x10475658,first);store<f32>(0x1047565c,second);call<void>(0x028ED6F8,u32(0x10475660));call<void>(0x028F026C,u32(0x101d5f5c));call<void>(0x028EAB2C,u32(0x10475661));call<void>(0x028F026C,u32(0x101d5f68));}
-VERIFY(0x02526CB4,prefix_init1);
-void prefix_init2(){WWHD_FUNC(0x02526D48,void,(u32)0);store<u32>(0x10475688,0);store<u32>(0x10475680,0);store<u32>(0x1047568c,0);store<u32>(0x10475684,0);call<void>(0x028F026C,u32(0x101d5f74));f32 first=load<f32>(0x1004bda8),second=load<f32>(0x1004bdac);store<f32>(0x10475674,first);store<f32>(0x10475678,second);call<void>(0x028ED6F8,u32(0x1047567c));call<void>(0x028F026C,u32(0x101d5f80));call<void>(0x028EAB2C,u32(0x1047567d));call<void>(0x028F026C,u32(0x101d5f8c));}
-VERIFY(0x02526D48,prefix_init2);
-void prefix_init3(){WWHD_FUNC(0x02526DDC,void,(u32)0);store<u32>(0x104756a4,0);store<u32>(0x1047569c,0);store<u32>(0x104756a8,0);store<u32>(0x104756a0,0);call<void>(0x028F026C,u32(0x101d5f98));f32 first=load<f32>(0x1004bdb0),second=load<f32>(0x1004bdb4);store<f32>(0x10475690,first);store<f32>(0x10475694,second);call<void>(0x028ED6F8,u32(0x10475698));call<void>(0x028F026C,u32(0x101d5fa4));call<void>(0x028EAB2C,u32(0x10475699));call<void>(0x028F026C,u32(0x101d5fb0));}
-VERIFY(0x02526DDC,prefix_init3);
-void demo_init(){WWHD_FUNC(0x025296F8,void,(u32)0);store<u32>(0x104756c0,0);store<u32>(0x104756b8,0);store<u32>(0x104756c4,0);store<u32>(0x104756bc,0);call<void>(0x028F026C,u32(0x101d5fc0));f32 first=load<f32>(0x1004c038),second=load<f32>(0x1004c03c);store<f32>(0x104756ac,first);store<f32>(0x104756b0,second);call<void>(0x028ED6F8,u32(0x104756b4));call<void>(0x028F026C,u32(0x101d5fcc));call<void>(0x028EAB2C,u32(0x104756b5));call<void>(0x028F026C,u32(0x101d5fd8));}
-VERIFY(0x025296F8,demo_init);
-void tail_init(){WWHD_FUNC(0x02529B30,void,(u32)0);store<u32>(0x104756e0,0);store<u32>(0x104756d8,0);store<u32>(0x104756e4,0);store<u32>(0x104756dc,0);call<void>(0x028F026C,u32(0x101d6018));f32 first=load<f32>(0x1004c4e0),second=load<f32>(0x1004c4e4);store<f32>(0x104756cc,first);store<f32>(0x104756d0,second);call<void>(0x028ED6F8,u32(0x104756d4));call<void>(0x028F026C,u32(0x101d6024));call<void>(0x028EAB2C,u32(0x104756d5));call<void>(0x028F026C,u32(0x101d6030));}
-VERIFY(0x02529B30,tail_init);
-u32 get_view(){WWHD_FUNC(0x02527400,u32,(u32)0);u32 game=call<u32>(0x025200D4);if(!load<u8>(game+0x5ac9))return 0;game=call<u32>(0x025200D4);s32 index=load<s8>(game+0x5af4);game=call<u32>(0x025200D4);return load<u32>(game+u32(index)*52+0x5af8);}
-VERIFY(0x02527400,get_view);
-u32 parameter_ctor(u32 p){WWHD_FUNC(0x02527468,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(12));if(p){store<u32>(p,0);store<u32>(p+8,0);store<u32>(p+4,0);}return p;}
-VERIFY(0x02527468,parameter_ctor);
-u32 find_actor(u32 p){WWHD_FUNC(0x025275AC,u32,p);u32 id=load<u32>(p+0x58);Local<u32> item;store<u32>(ea(item.get()),id);if(id==u32(-1))return 0;return call<u32>(0x025D5218,u32(0x025e1234),item.get());}
-VERIFY(0x025275AC,find_actor);
-void actor_destroy(u32 p,u32 flags){WWHD_FUNC(0x025275EC,void,p,flags);if(p){store<u32>(p,0x1004c044);u32 actor=call<u32>(0x025275AC,p);if(actor)store<u8>(actor+0x2dc,0);store<u32>(p+0x60,-1);store<u32>(p+0x68,-1);store<u32>(p+0x5c,-1);store<u32>(p+0x58,-1);store<u32>(p+0x64,-1);call<void>(0x02842288,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x025275EC,actor_destroy);
-void set_rotation(u32 p,u32 input){WWHD_FUNC(0x025276E8,void,p,input);f32 x=load<f32>(input),scale=load<f32>(0x1004be5c);store<s16>(p+0x20,s16(ftoi(fmuls_ppc(x,scale))));store<s16>(p+0x22,s16(ftoi(fmuls_ppc(load<f32>(input+4),scale))));s16 z=s16(ftoi(fmuls_ppc(load<f32>(input+8),scale)));u16 flags=load<u16>(p+4);store<s16>(p+0x24,z);store<u16>(p+4,flags|8);}
-VERIFY(0x025276E8,set_rotation);
-void set_actor(u32 p,u32 actor){WWHD_FUNC(0x025277D8,void,p,actor);if(!actor){store<u32>(p+0x68,-1);store<u32>(p+0x58,-1);store<u32>(p+0x5c,-1);store<u32>(p+0x60,-1);store<u32>(p+0x64,-1);}else{store<u32>(p+0x58,load<u32>(actor+4));store<u32>(p+0x68,-1);store<u32>(p+0x5c,-1);store<u32>(p+0x64,-1);store<u32>(p+0x60,-1);}}
-VERIFY(0x025277D8,set_actor);
-u32 camera_ctor(u32 p){WWHD_FUNC(0x02527B30,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(64));if(p){f32 zero=load<f32>(0x1004bdc0);store<u8>(p+4,0);store<f32>(p+0xc,zero);store<u32>(p,0x1004c14c);store<f32>(p+0x3c,zero);store<f32>(p+0x14,zero);store<f32>(p+0x10,zero);store<f32>(p+8,zero);}return p;}
-VERIFY(0x02527B30,camera_ctor);
-f64 get_near(u32 p){WWHD_FUNC(0x02527B94,f64,p);u32 view=call<u32>(0x02527400,p);return view?load<f32>(view+0xcc):load<f32>(0x1004bdc0);}
-VERIFY(0x02527B94,get_near);
-f64 get_far(u32 p){WWHD_FUNC(0x02527BEC,f64,p);u32 view=call<u32>(0x02527400,p);return view?load<f32>(view+0xd0):load<f32>(0x1004be34);}
-VERIFY(0x02527BEC,get_far);
-f64 get_fovy(u32 p){WWHD_FUNC(0x02527C44,f64,p);u32 view=call<u32>(0x02527400,p);return view?load<f32>(view+0xd4):load<f32>(0x1004be60);}
-VERIFY(0x02527C44,get_fovy);
-void get_eye(u32 p,u32 out){WWHD_FUNC(0x02527C9C,void,p,out);u32 view=call<u32>(0x02527400,p);if(!view){f32 zero=load<f32>(0x1004bdc0),z=load<f32>(0x1004bdc0);store<f32>(out,zero);store<f32>(out+8,z);store<f32>(out+4,zero);}else{store<u32>(out,load<u32>(view+0xdc));store<u32>(out+4,load<u32>(view+0xe0));store<u32>(out+8,load<u32>(view+0xe4));}}
-VERIFY(0x02527C9C,get_eye);
-void get_target(u32 p,u32 out){WWHD_FUNC(0x02527D38,void,p,out);u32 view=call<u32>(0x02527400,p);if(!view){f32 zero=load<f32>(0x1004bdc0),z=load<f32>(0x1004be34);store<f32>(out,zero);store<f32>(out+8,z);store<f32>(out+4,zero);}else{store<u32>(out,load<u32>(view+0xe8));store<u32>(out+4,load<u32>(view+0xec));store<u32>(out+8,load<u32>(view+0xf0));}}
-VERIFY(0x02527D38,get_target);
-f64 get_roll(u32 p){WWHD_FUNC(0x02527DDC,f64,p);u32 view=call<u32>(0x02527400,p);return view?fmuls_ppc(f32(load<s16>(view+0x100)),load<f32>(0x1004be68)):load<f32>(0x1004bdc0);}
-VERIFY(0x02527DDC,get_roll);
-u32 ambient_ctor(u32 p){WWHD_FUNC(0x02527E64,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(12));if(p){store<u8>(p+4,0);store<u32>(p,0x1004c264);call<void>(0x028F521C,p+5,u32(4));}return p;}
-VERIFY(0x02527E64,ambient_ctor);
-u32 pool_ctor(u32 p){WWHD_FUNC(0x025280D4,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(176));if(p){store<u32>(p+0xac,0);store<u8>(p,0);store<u32>(p+0x88,0);store<u8>(p+1,0);store<u32>(p+0x84,0);}return p;}
-VERIFY(0x025280D4,pool_ctor);
-void pool_destroy(u32 p,u32 flags){WWHD_FUNC(0x02528258,void,p,flags);if(p){call<void>(0x02528120,p);if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x02528258,pool_destroy);
-u32 append_camera(u32 p){WWHD_FUNC(0x025283B8,u32,p);u32 object=load<u32>(p+0x84);if(!object){object=call<u32>(0x02527B30,u32(0));store<u32>(p+0x84,object);}return object;}
-VERIFY(0x025283B8,append_camera);
-u32 append_ambient(u32 p){WWHD_FUNC(0x02528400,u32,p);u32 object=load<u32>(p+0x88);if(!object){object=call<u32>(0x02527E64,u32(0));store<u32>(p+0x88,object);}return object;}
-VERIFY(0x02528400,append_ambient);
-u32 append_fog(u32 p){WWHD_FUNC(0x025284B8,u32,p);u32 object=load<u32>(p+0xac);if(!object){object=call<u32>(0x02528008,u32(0));store<u32>(p+0xac,object);}return object;}
-VERIFY(0x025284B8,append_fog);
-void manager_remove(){WWHD_FUNC(0x02528AC4,void,(u32)0);if(!load<u32>(0x101d5fe4))call<void>(0x0273AA24,u32(0x1004bfa4),u32(0x7a3),u32(0x1004bf94));u32 control=load<u32>(0x101d5fe8);call<void>(0x0283D3E8,control);call<void>(0x02838E6C,control+0x60);call<void>(0x02528120,load<u32>(0x101d5ffc));store<u32>(0x101d6010,0);store<u32>(0x101d6004,0);}
-VERIFY(0x02528AC4,manager_remove);
-void get_rotation(u32 p,u32 out){WWHD_FUNC(0x02529904,void,p,out);f32 x=f32(load<s16>(p+0x20)),scale=load<f32>(0x1004be68);store<f32>(out,fmuls_ppc(x,scale));store<f32>(out+4,fmuls_ppc(f32(load<s16>(p+0x22)),scale));store<f32>(out+8,fmuls_ppc(f32(load<s16>(p+0x24)),scale));}
-VERIFY(0x02529904,get_rotation);
-void camera_delete(u32 p,u32 flags){WWHD_FUNC(0x02529988,void,p,flags);if(p){call<void>(0x0284241C,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x02529988,camera_delete);
-void ambient_delete(u32 p,u32 flags){WWHD_FUNC(0x025299DC,void,p,flags);if(p){call<void>(0x02842330,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x025299DC,ambient_delete);
-void light_delete(u32 p,u32 flags){WWHD_FUNC(0x02529A30,void,p,flags);if(p){call<void>(0x028425A4,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x02529A30,light_delete);
-void fog_delete(u32 p,u32 flags){WWHD_FUNC(0x02529A84,void,p,flags);if(p){call<void>(0x028424A0,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x02529A84,fog_delete);
-void system_delete(u32 p,u32 flags){WWHD_FUNC(0x02529AD8,void,p,flags);if(p){call<void>(0x02842734,p,u32(0));if(flags&1)call<void>(0x0273AF40,p);}}
-VERIFY(0x02529AD8,system_delete);
-u32 actor_ctor(u32 p){WWHD_FUNC(0x025274AC,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(108));if(p){f32 zero=load<f32>(0x1004bdc0);store<u16>(p+4,0);store<f32>(p+0x38,zero);store<u32>(p,0x1004c044);store<u32>(p+0x48,0);store<f32>(p+0x30,zero);store<u32>(p+0x3c,0);store<f32>(p+0x40,zero);store<u32>(p+0x28,0);store<f32>(p+0x44,zero);store<f32>(p+0x34,zero);store<u32>(p+0x2c,0);call<void>(0x02527468,p+0x4c);store<u16>(p+4,0);f32 one=load<f32>(0x1004be34);store<u32>(p+0x68,0);store<f32>(p+0x1c,one);store<f32>(p+0x18,one);store<f32>(p+0x14,one);store<u32>(p+0x58,0);store<f32>(p+8,zero);f32 max=load<f32>(0x1004be58);store<f32>(p+0x10,zero);store<u32>(p+0x60,0);store<u16>(p+0x24,0);store<f32>(p+0x44,max);store<u32>(p+0x5c,0);store<f32>(p+0x38,max);store<u32>(p+0x48,0);store<u16>(p+0x22,0);store<u32>(p+0x64,0);store<u16>(p+0x20,0);store<f32>(p+0xc,zero);}return p;}
-VERIFY(0x025274AC,actor_ctor);
-u32 light_ctor(u32 p){WWHD_FUNC(0x02527EF4,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(60));if(p){store<u8>(p+4,0);store<u32>(p,0x1004c2dc);store<u32>(p+0xc,0);store<u32>(p+8,0);store<u32>(p+0x10,0);call<void>(0x028F521C,p+0x20,u32(4));f32 zero=load<f32>(0x1004bdc0);store<f32>(p+0x24,zero);store<f32>(p+0x28,zero);store<f32>(p+0x2c,zero);}return p;}
-VERIFY(0x02527EF4,light_ctor);
-u32 fog_ctor(u32 p){WWHD_FUNC(0x02528008,u32,p);if(!p)p=call<u32>(0x0273AD10,u32(20));if(p){f32 zero=load<f32>(0x1004bdc0);store<u8>(p+5,0);store<f32>(p+0xc,zero);store<u32>(p,0x1004c3a4);store<u8>(p+4,0);store<f32>(p+8,zero);call<void>(0x028F521C,p+0x10,u32(4));}return p;}
-VERIFY(0x02528008,fog_ctor);
-u32 set_material(u32 p,u32 value){WWHD_FUNC(0x025297A0,u32,p,value);u32 model=load<u32>(p+0x48);if(!model){call<void>(0x0273AA24,u32(0x1004be1c),u32(0x7c),u32(0x1004bdf0));model=load<u32>(p+0x48);}u32 data=call<u32>(0x027F68FC,load<u32>(model+0xac));u32 offset=load<u32>(data+0x10);return call<u32>(0x027DF9B0,offset?data+0x10+offset:0,value);}
-VERIFY(0x025297A0,set_material);
-u32 set_matrix(u32 p,u32 index,u32 matrix){WWHD_FUNC(0x02529828,u32,p,index,matrix);u32 model=load<u32>(p+0x48);if(!model){call<void>(0x0273AA24,u32(0x1004be28),u32(0x85),u32(0x1004be00));model=load<u32>(p+0x48);}u32 data=load<u32>(model+0x2c),out=load<u32>(data+0x10)+(index&0xffff)*48;u16 flags=load<u16>(data+4);store<u16>(data+4,flags|0x10);call<void>(0x028E90D4,out,matrix);return 1;}
-VERIFY(0x02529828,set_matrix);
-f64 get_morph(u32 p){WWHD_FUNC(0x02526E7C,f64,p);u16 flags=load<u16>(p+4);if(flags&0x80)return load<f32>(p+0x34);if(flags&1){u32 type=load<u32>(p+0x4c),data=load<u32>(p+0x50);u32 offset=type==1?4:type==2?7:type==4?6:type==5?11:type==6?15:0;if(offset&&load<u32>(p+0x54)>=offset)return f32(load<u8>(data+offset));}return load<f32>(0x1004bdc0);}
-VERIFY(0x02526E7C,get_morph);
-u32 get_btp(u32 p,u32 archive){WWHD_FUNC(0x02527828,u32,p,archive);u16 flags=load<u16>(p+4);u32 id=0,name=0;if(flags&0x100){u32 old=load<u32>(p+0x60);id=load<u32>(p+0x3c);if(id==old)return 0;}else{if(!(flags&1))return 0;u32 type=load<u32>(p+0x4c),data=load<u32>(p+0x50);name=archive;if(type==1){u32 old=load<u32>(p+0x60);id=u32(load<s16>(data+1));if(id==old)return 0;}else if(type==2){u32 old=load<u32>(p+0x60);id=u32(load<s16>(data+2));if(id==old)return 0;}else if(type==4){u32 old=load<u32>(p+0x60);id=load<u32>(data+1);if(id==old)return 0;}else if(type==5||type==6){u32 old=load<u32>(p+0x60);id=load<u32>(data+2);if(id==old)return 0;}else return 0;}store<u32>(p+0x60,id);if(id&0x10000)name=0x1047e6b8;else if(!name)return 0;Local<u32[2]> request;store<u32>(ea(request.get()),name);store<u32>(ea(request.get())+4,0x1004bdc8);u32 result=call<u32>(0x026067F4,load<u32>(0x101f4f28),request.get(),id&0xffff);if(result){u32 target=load<u32>(load<u32>(result+4)+0x14);s32 max=call_ptr<s32>(target,result);store<f32>(p+0x44,f32(max));}return result;}
-VERIFY(0x02527828,get_btp);
-u32 get_btk(u32 p,u32 archive){WWHD_FUNC(0x025279C8,u32,p,archive);if(!(load<u16>(p+4)&1))return 0;u32 type=load<u32>(p+0x4c),data=load<u32>(p+0x50),id;if(type==2){u32 old=load<u32>(p+0x64);id=u32(load<s16>(data+4));if(id==old)return 0;}else if(type==5||type==6){u32 old=load<u32>(p+0x64);id=load<u32>(data+6);if(id==old)return 0;}else return 0;store<u32>(p+0x64,id);if(id&0x10000)archive=0x1047e6b8;Local<u32[2]> request;store<u32>(ea(request.get()),archive);store<u32>(ea(request.get())+4,0x1004bdc8);return call<u32>(0x026067F4,load<u32>(0x101f4f28),request.get(),id&0xffff);}
-VERIFY(0x025279C8,get_btk);
-u32 get_audio_resource(u32 p,u32 archive){WWHD_FUNC(0x02527A98,u32,p,archive);if(!(load<u16>(p+4)&1))return 0;u32 type=load<u32>(p+0x4c),data=load<u32>(p+0x50);if(type!=6)return 0;u32 old=load<u32>(p+0x68),id=load<u32>(data+10);if(id==old)return 0;store<u32>(p+0x68,id);if(id&0x10000)archive=0x1047e6b8;Local<u32[2]> request;store<u32>(ea(request.get()),archive);store<u32>(ea(request.get())+4,0x1004bdc8);return call<u32>(0x026067F4,load<u32>(0x101f4f28),request.get(),id&0xffff);}
-VERIFY(0x02527A98,get_audio_resource);
-void pool_clear(u32 p){WWHD_FUNC(0x02528120,void,p);u32 count=load<u8>(p);while(count){count=(count-1)&255;store<u8>(p,count);u32 object=load<u32>(p+4+count*4);if(object){call_ptr<void>(load<u32>(load<u32>(object)+12),object,u32(3));count=load<u8>(p);}}u32 object=load<u32>(p+0x84);if(object){call_ptr<void>(load<u32>(load<u32>(object)+12),object,u32(3));store<u32>(p+0x84,0);}object=load<u32>(p+0x88);if(object){call_ptr<void>(load<u32>(load<u32>(object)+12),object,u32(3));store<u32>(p+0x88,0);}count=load<u8>(p+1);while(count){count=(count-1)&255;store<u8>(p+1,count);object=load<u32>(p+0x8c+count*4);if(object){call_ptr<void>(load<u32>(load<u32>(object)+12),object,u32(3));count=load<u8>(p+1);}}object=load<u32>(p+0xac);if(object){call_ptr<void>(load<u32>(load<u32>(object)+12),object,u32(3));store<u32>(p+0xac,0);}}
-VERIFY(0x02528120,pool_clear);
-u32 append_actor(u32 p,u32 actor){WWHD_FUNC(0x025282A8,u32,p,actor);u32 index=load<u8>(actor+0x2dc);if(index&&index<=32){u32 pool=load<u32>(0x101d5ffc);if(!pool){call<void>(0x0273AA24,u32(0x1004be10),u32(0x23a),u32(0x1004bde0));pool=load<u32>(0x101d5ffc);}u32 existing=call<u32>(0x02526E70,pool,index);if(existing)return existing;}if(load<u8>(p)>=32)return 0;u32 object=call<u32>(0x025274AC,u32(0));if(!object)return 0;u32 count=load<u8>(p);store<u8>(p,count+1);store<u32>(p+count*4+4,object);u32 returned=call<u32>(0x025277D8,object,actor);u32 model=load<u32>(actor+0x368),current=load<u8>(p);store<u8>(actor+0x2dc,current);if(model)store<u32>(returned+0x48,model);return returned;}
-VERIFY(0x025282A8,append_actor);
-u32 append_light(u32 p){WWHD_FUNC(0x02528440,u32,p);if(load<u8>(p+1)>=8)return 0;u32 object=call<u32>(0x02527EF4,u32(0));if(!object)return 0;u32 count=load<u8>(p+1);store<u8>(p+1,count+1);store<u32>(p+0x8c+count*4,object);return object;}
-VERIFY(0x02528440,append_light);
-u32 find_object(u32 p,u32 name,u32 kind){WWHD_FUNC(0x025284F8,u32,p,name,kind);u32 pool=load<u32>(p+4);if(!pool)return 0;if(kind==0||kind==2){u32 actor=call<u32>(0x025D9F38,name,u32(0),u32(0));if(!actor){if(kind!=2)return 0;for(u32 i=0;i<5;i++){u8 a=load<u8>(name+i),b=load<u8>(0x1004be6c+i);if(a!=b)return 0;if(!a)break;}actor=call<u32>(0x025D59A8,name,u32(0),u32(0),u32(-1),u32(0),u32(0),u32(0),u32(0));if(!actor)return 0;call<void>(0x025D537C,actor);}return call<u32>(0x025282A8,load<u32>(p+4),actor);}if(kind==3)return call<u32>(0x025283B8,pool);if(kind==4)return call<u32>(0x02528400,pool);if(kind==5)return call<u32>(0x02528440,pool);if(kind==6)return call<u32>(0x025284B8,pool);return 0;}
-VERIFY(0x025284F8,find_object);
-u32 set_demo_data(u32 actor,u32 mask,u32 morph,u32 archive,s32 count,u32 table,u32 sound,u32 reverb){WWHD_FUNC(0x02527028,u32,actor,mask,morph,archive,count,table,sound,reverb);u32 index=load<u8>(actor+0x2dc);if(!index||index>32)return 0;u32 pool=load<u32>(0x101d5ffc);if(!pool){call<void>(0x0273AA24,u32(0x1004be10),u32(0x23a),u32(0x1004bde0));pool=load<u32>(0x101d5ffc);}u32 demo=call<u32>(0x02526E70,pool,index);if(!demo)return 0;mask&=load<u16>(demo+4);if(mask&2){u32 x=load<u32>(demo+8);store<u32>(actor+0x314,x);u32 y=load<u32>(demo+12);store<u32>(actor+0x318,y);u32 z=load<u32>(demo+16);store<u32>(actor+0x31c,z);store<u32>(actor+0x300,x);store<u32>(actor+0x304,y);store<u32>(actor+0x308,z);}if(mask&8){u16 x=load<u16>(demo+0x20);store<u16>(actor+0x328,x);u16 y=load<u16>(demo+0x22);store<u16>(actor+0x32a,y);u16 z=load<u16>(demo+0x24);store<u16>(actor+0x32c,z);store<u16>(actor+0x320,x);store<u16>(actor+0x322,y);store<u16>(actor+0x324,z);}if(mask&4){store<u32>(actor+0x330,load<u32>(demo+0x14));store<u32>(actor+0x334,load<u32>(demo+0x18));store<u32>(actor+0x338,load<u32>(demo+0x1c));}if(mask&0x80)store<f32>(actor+0x374,call<f64>(0x02526E7C,demo));if(morph){u32 model=load<u32>(morph+0x90);f32 one=load<f32>(0x1004be34);store<u32>(demo+0x48,model);if(mask&0x20){u32 id=load<u32>(demo+0x2c),old=load<u32>(demo+0x5c);if(id!=old){u32 name=(id&0x10000)?0x1047e6b8:archive;id&=0xffff;store<u32>(demo+0x5c,load<u32>(demo+0x2c));Local<u32[2]> request;store<u32>(ea(request.get()),name);store<u32>(ea(request.get())+4,0x1004bdc8);u32 animation=call<u32>(0x026067F4,load<u32>(0x101f4f28),request.get(),id);if(!animation)call<void>(0x0273AA24,u32(0x1004be3c),u32(0x24c),u32(0x1004be48));u32 audio=0;if(count>0&&table){for(s32 i=0;i<count;i++){if(load<u16>(table+u32(i)*4)==id){store<u32>(ea(request.get()),name);store<u32>(ea(request.get())+4,0x1004bdc8);audio=call<u32>(0x026067F4,load<u32>(0x101f4f28),request.get(),u32(load<u16>(table+u32(i)*4+2)));break;}}}f64 transition=call<f64>(0x02526E7C,demo);call<void>(0x025E4A98,morph,animation,u32(-1),audio,transition,f64(one),f64(load<f32>(0x1004bdc0)),f64(load<f32>(0x1004be38)));store<f32>(demo+0x38,f32(load<s16>(morph+0xa2)));}}if(mask&0x40){f32 frame=load<f32>(demo+0x30);if(frame>one){store<f32>(morph+0x9c,f32(s16(ftoi(fsubs_ppc(frame,one)))));call<void>(0x025E535C,morph,actor+0x314,sound,reverb);}else store<f32>(morph+0x9c,f32(s16(ftoi(frame))));}else call<void>(0x025E535C,morph,actor+0x314,sound,reverb);}return 1;}
-VERIFY(0x02527028,set_demo_data);
-void manager_delete(){WWHD_FUNC(0x02528B48,void,(u32)0);call<void>(0x02528AC4);u32 object=load<u32>(0x101d5ffc);if(object){call<void>(0x02528258,object,u32(3));store<u32>(0x101d5ffc,0);}object=load<u32>(0x101d5ff8);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x0)+12),object,u32(3));store<u32>(0x101d5ff8,0);}object=load<u32>(0x101d6000);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x8)+12),object,u32(3));store<u32>(0x101d6000,0);}object=load<u32>(0x101d5ff4);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x8)+12),object,u32(3));store<u32>(0x101d5ff4,0);}object=load<u32>(0x101d5ff0);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x8)+12),object,u32(3));store<u32>(0x101d5ff0,0);}object=load<u32>(0x101d5fec);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x8)+12),object,u32(3));store<u32>(0x101d5fec,0);}object=load<u32>(0x104756c8);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x38)+12),object,u32(3));store<u32>(0x104756c8,0);}object=load<u32>(0x101d5fe8);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x54)+12),object,u32(3));store<u32>(0x101d5fe8,0);}object=load<u32>(0x101d5fe4);if(object){call_ptr<void>(load<u32>(load<u32>(object+0x0)+12),object,u32(3));store<u32>(0x101d5fe4,0);}}
-VERIFY(0x02528B48,manager_delete);
-void manager_init(){WWHD_FUNC(0x025286E0,void,(u32)0);u32 audio=call<u32>(0x0273AD10,u32(116));if(audio)audio=call<u32>(0x025F7424,audio);store<u32>(0x104756c8,audio);if(!audio){call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6cd),u32(0x1004bef0));audio=load<u32>(0x104756c8);}call<void>(0x025F8610,load<u32>(0x101f4b5c),audio);u32 system=call<u32>(0x0273AD10,u32(8));if(system){store<u32>(system+4,0);store<u32>(system,0x1004c44c);}store<u32>(0x101d5fe4,system);if(!system)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6d1),u32(0x1004be80));u32 control=call<u32>(0x028395A8,u32(0));store<u32>(0x101d5fe8,control);if(!control)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6d3),u32(0x1004bf08));u32 owner=load<u32>(0x101d5fe4);u32 creator=call<u32>(0x0273AD10,u32(16));if(creator){store<u32>(creator,0);store<u32>(creator+12,owner);store<u32>(creator+4,0);store<u32>(creator+8,0x101735c4);if(!owner)call<void>(0x0273AA24,u32(0x1004beb0),u32(0x2a),u32(0x1004bf1c));}store<u32>(0x101d5fec,creator);if(!creator)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6d5),u32(0x1004bf30));owner=load<u32>(0x101ffc78);creator=call<u32>(0x0273AD10,u32(16));if(creator){store<u32>(creator,0);store<u32>(creator+12,owner);store<u32>(creator+4,0);store<u32>(creator+8,0x1017329c);if(!owner)call<void>(0x0273AA24,u32(0x1004beb0),u32(0x2d),u32(0x1004be90));}store<u32>(0x101d5ff0,creator);if(!creator)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6d9),u32(0x1004bf40));u32 systemOwner=load<u32>(0x101d5fe4);owner=load<u32>(0x1047b2d4);creator=call<u32>(0x0273AD10,u32(20));if(creator){store<u32>(creator+4,0);store<u32>(creator+12,owner);store<u32>(creator+8,0x10173424);store<u32>(creator,0);store<u32>(creator+16,systemOwner);if(!owner)call<void>(0x0273AA24,u32(0x1004beb0),u32(0x2e),u32(0x1004bf50));}store<u32>(0x101d5ff4,creator);if(!creator)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6de),u32(0x1004bebc));owner=load<u32>(0x104756c8);creator=call<u32>(0x0273AD10,u32(16));if(creator){store<u32>(creator,0);store<u32>(creator+12,owner);store<u32>(creator+4,0);store<u32>(creator+8,0x101733ac);if(!owner)call<void>(0x0273AA24,u32(0x1004beb0),u32(0x4a),u32(0x1004bed0));}store<u32>(0x101d6000,creator);if(!creator)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6e1),u32(0x1004bf6c));u32 factory=call<u32>(0x0273AD10,u32(20));if(factory){store<u32>(factory,0x10172cd4);u32 embedded=factory+4;if(!embedded)embedded=call<u32>(0x0273AD10,u32(12));if(embedded){store<u32>(embedded,0);u32 head=embedded+4;store<u32>(head+4,head);store<u32>(head,head);}store<u32>(factory+16,0x10172c74);}store<u32>(0x101d5ff8,factory);if(!factory)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6e4),u32(0x1004bf80));u32 pool=call<u32>(0x025280D4,u32(0));store<u32>(0x101d5ffc,pool);if(!pool)call<void>(0x0273AA24,u32(0x1004bee4),u32(0x6e7),u32(0x1004bea0));f64 timestep=load<f64>(0x1004be78);control=load<u32>(0x101d5fe8);store<f64>(control+0x58,timestep);factory=load<u32>(0x101d5ff8);control=load<u32>(0x101d5fe8);store<u32>(control+0x60,factory?factory+16:0);store<u32>(control+8,factory);call<void>(0x0283973C,load<u32>(0x101d5ff8),load<u32>(0x101d5fec));call<void>(0x0283973C,load<u32>(0x101d5ff8),load<u32>(0x101d5ff0));call<void>(0x0283973C,load<u32>(0x101d5ff8),load<u32>(0x101d5ff4));system=load<u32>(0x101d5fe4);pool=load<u32>(0x101d5ffc);store<u32>(system+4,pool);call<u32>(0x0283973C,load<u32>(0x101d5ff8),load<u32>(0x101d6000));store<u32>(0x101d6004,0);store<u32>(0x101d6010,0);call<void>(0x025286C0,cpu->r[3]);}
-VERIFY(0x025286E0,manager_init);
-// SDK name holders occupy two words; each virtual accessor receives its holder.
-static int compare_names(u32 expected){Local<u32[2]> left,right;u32 l=ea(left.get()),r=ea(right.get());store<u32>(l,expected);store<u32>(l+4,0x1004bdc8);store<u32>(r,0x1047e6b8);store<u32>(r+4,0x1004bdc8);call<void>(0x02529B2C,left.get());call_ptr<void>(load<u32>(load<u32>(l+4)+0x14),left.get());u32 a=load<u32>(l);call_ptr<void>(load<u32>(load<u32>(r+4)+0x14),right.get());u32 b=load<u32>(r);if(a==b)return 1;for(u32 i=0;i<0x40001;i++){u8 x=load<u8>(a+i),y=load<u8>(b+i);if(x!=y)return 0;if(!x)return 1;}return -1;}
-u32 manager_create(u32 data,u32 position,f64 rotation){WWHD_FUNC(0x02528CEC,u32,data,position,rotation);if(!load<u32>(0x101d5fe4))call<void>(0x0273AA24,u32(0x1004bfe4),u32(0x747),u32(0x1004bfd4));call<void>(0x0283D4C8,load<u32>(0x101d5fe8));Local<u32[4]> parser;Local<u32> input;call<void>(0x0283980C,parser.get(),load<u32>(0x101d5fe8));store<u32>(ea(input.get()),data);u32 ok=call<u32>(0x027ED8C0,parser.get(),input.get(),u32(0));if(!ok){call<void>(0x0283987C,parser.get(),u32(2));return 0;}int first=compare_names(0x1004bfb4);u32 control;if(first==1){call<void>(0x025B8B68,load<u32>(0x101f84dc)+0x644,u32(0xe20));control=load<u32>(0x101d5fe8);}else{int second=compare_names(0x1004bfbc);if(second==1){call<void>(0x0283D514,load<u32>(0x101d5fe8),u32(0x7d0));call<void>(0x0257E6C4);call<void>(0x0257E684,u32(0),u32(0xffffc000));call<void>(0x0257E594,f64(load<f32>(0x1004bfb0)));control=load<u32>(0x101d5fe8);}else{call<void>(0x0283D514,load<u32>(0x101d5fe8),u32(0));control=load<u32>(0x101d5fe8);}}if(position){store<u8>(control+0x74,1);store<u8>(control+0x75,1);control=load<u32>(0x101d5fe8);call<void>(0x02839518,control,position,rotation);call<u32>(0x028394F4,control,position,rotation);}else{store<u8>(control+0x75,0);store<u8>(control+0x74,0);}store<u32>(0x101d6010,1);call<void>(0x025286C0,cpu->r[3]);store<u32>(0x101d6004,data);int third=compare_names(0x1004bfc4);if(third==1)call<void>(0x02030FA8,u32(1));else{int fourth=compare_names(0x1004bfbc);if(fourth==1)call<void>(0x02030FA8,u32(1));else if(compare_names(0x1004bfcc)==1)call<void>(0x02030E90,u32(0));}call<void>(0x0283987C,parser.get(),u32(2));return 1;}
-VERIFY(0x02528CEC,manager_create);
-u32 manager_update(){WWHD_FUNC(0x025291C8,u32,(u32)0);if(!load<u32>(0x101d5fe4))call<void>(0x0273AA24,u32(0x1004c02c),u32(0x7e8),u32(0x1004c01c));if(!load<u32>(0x101d6004))return 0;bool advanced=false;int first=compare_names(0x1004bffc);f32 zero=load<f32>(0x1004bdc0);if(first==1){u32 frame=load<u32>(0x101d6008);if(frame-878<56||frame-959<57){if(frame!=1015){store<u32>(0x101d6008,frame+1);return 1;}call<void>(0x0283D514,load<u32>(0x101d5fe8),u32(55));frame=load<u32>(0x101d6008);}else if(frame==1775){call<void>(0x0283D514,load<u32>(0x101d5fe8),u32(20));frame=load<u32>(0x101d6008);}if(frame>=948){if(frame==948)store<f32>(0x101d5fbc,zero);f64 target=load<f32>(0x1004bff4),step=load<f32>(0x1004bff8);call<void>(0x0200F5C8,u32(0x101d5fbc),target,step);call<void>(0x0257E594,f64(load<f32>(0x101d5fbc)));}}else if(compare_names(0x1004c004)==1){u32 frame=load<u32>(0x101d600c);if(frame>=1357){bool bright=frame<=1386;call<void>(0x0257E594,f64(bright?load<f32>(0x1004bfb0):zero));u32 env=call<u32>(0x02555D0C);store<u8>(env+0x10a2,bright?0:255);}}else if(compare_names(0x1004c00c)==1){u32 frame=load<u32>(0x101d600c);if(frame-597<67){u32 game=call<u32>(0x025200D4);frame=load<u32>(0x101d600c);u32 player=load<u32>(game+0x5b34),flags=load<u32>(player+0x3b8);store<u32>(player+0x3b8,frame==663?(flags&0xf7ffffff):(flags|0x08000000));}}else if(compare_names(0x1004c014)==1){if(load<u32>(0x101d600c)==800)call<void>(0x02030FA8,u32(0));}advanced=call<u32>(0x0283D514,load<u32>(0x101d5fe8),u32(1))!=0;if(!advanced)store<u32>(0x101d6010,2);else{u32 frame=load<u32>(0x101d6008),control=load<u32>(0x101d5fe8);store<u32>(0x101d6008,frame+1);if(load<s32>(control+0x50)<=0)store<u32>(0x101d600c,load<u32>(0x101d600c)+1);}return 1;}
-VERIFY(0x025291C8,manager_update);
+static dDemo_virtualTable l_actorVtable;
+static dDemo_virtualTable l_ambientVtable;
+static dDemo_virtualTable l_lightVtable;
+static dDemo_virtualTable l_fogVtable;
+static dDemo_virtualTable l_cameraVtable;
+static dDemo_destructorRecord l_prefixTransform1RangeDestructor;
+static dDemo_destructorRecord l_prefixTransform1OriginDestructor;
+static dDemo_destructorRecord l_prefixTransform1RotationDestructor;
+static dDemo_destructorRecord l_prefixTransform2RangeDestructor;
+static dDemo_destructorRecord l_prefixTransform2OriginDestructor;
+static dDemo_destructorRecord l_prefixTransform2RotationDestructor;
+static dDemo_destructorRecord l_prefixTransform3RangeDestructor;
+static dDemo_destructorRecord l_prefixTransform3OriginDestructor;
+static dDemo_destructorRecord l_prefixTransform3RotationDestructor;
+static dDemo_destructorRecord l_demoTransformRangeDestructor;
+static dDemo_destructorRecord l_demoTransformOriginDestructor;
+static dDemo_destructorRecord l_demoTransformRotationDestructor;
+static dDemo_destructorRecord l_tailTransformRangeDestructor;
+static dDemo_destructorRecord l_tailTransformOriginDestructor;
+static dDemo_destructorRecord l_tailTransformRotationDestructor;
+static dDemo_archiveName l_demoArchive;
+static dDemo_safeStringVtable l_safeStringVtable;
+static dDemo_virtualTable l_systemVtable;
+static dDemo_virtualTable l_stageCreatorVtable;
+static dDemo_virtualTable l_audioCreatorVtable;
+static dDemo_virtualTable l_particleCreatorVtable;
+static dDemo_virtualTable l_messageCreatorVtable;
+static dDemo_virtualTable l_factoryVtable;
+static dDemo_virtualTable l_factoryCreateVtable;
+static dDemo_manager_c l_demo;
+static dDemo_staticTransform l_prefixTransform1;
+static dDemo_staticTransform l_prefixTransform2;
+static dDemo_staticTransform l_prefixTransform3;
+static dDemo_staticTransform l_demoTransform;
+static dDemo_staticTransform l_tailTransform;
+static u32 l_messageControl;
+static f32 l_demoWindPower;
+static u32 l_audioControl;
+static u32 l_audioInterface;
+static u32 l_emitterManager;
+static u32 l_resourceControl;
+static const f32 l_primaryMinAngle = -3.1415927410125732;
+static const f32 l_primaryMaxAngle = 3.1415927410125732;
+static const f32 l_secondaryMinAngle = -3.1415927410125732;
+static const f32 l_secondaryMaxAngle = 3.1415927410125732;
+static const f32 l_tertiaryMinAngle = -3.1415927410125732;
+static const f32 l_tertiaryMaxAngle = 3.1415927410125732;
+static const f32 l_demoMinAngle = -3.1415927410125732;
+static const f32 l_demoMaxAngle = 3.1415927410125732;
+static const f32 l_finalMinAngle = -3.1415927410125732;
+static const f32 l_finalMaxAngle = 3.1415927410125732;
+static const f32 l_zero = 0.0;
+static const f32 l_one = 1.0;
+static const f32 l_defaultFovy = 60.0;
+static const f32 l_reverse = -1.0;
+static dDemo_doubleConstant l_secondPerFrame;
+static const f32 l_calmWindPower = 0.0010000000474974513;
+static const f32 l_demoWindTarget = 0.8999999761581421;
+static const f32 l_demoWindStep = 0.10000000149011612;
+/* 025274AC */
+dDemo_actor_c* dDemo_actor_ct(dDemo_actor_c* self) {
+    // HD: nullable GHS construction preserves the parameter-constructor call and store order.
+    if (!self)
+        self = static_cast<dDemo_actor_c*>(operator_new(sizeof(dDemo_actor_c)));
+    if (self) {
+        f32 zero = l_zero;
+        self->mFlags = 0;
+        self->mAnmFrameMax = zero;
+        self->mVtable = gabi::ea(&l_actorVtable);
+        self->mModel = nullptr;
+        self->mAnmFrame = zero;
+        self->mTexAnimation = 0;
+        self->mTexAnimationFrame = zero;
+        self->mShapeId = 0;
+        self->mTexAnimationFrameMax = zero;
+        self->mAnmTransition = zero;
+        self->mAnmId = 0;
+        dDemo_prm_ct(&self->mPrm);
+        self->mFlags = 0;
+        f32 one = l_one;
+        self->mBrkId = 0;
+        self->mScale.z = one;
+        self->mScale.y = one;
+        self->mScale.x = one;
+        self->mActorId = 0;
+        self->mTrans.x = zero;
+        f32 maximum = l_animationMax;
+        self->mTrans.z = zero;
+        self->mBtpId = 0;
+        self->mRotate.z = 0;
+        self->mTexAnimationFrameMax = maximum;
+        self->mOldAnmId = 0;
+        self->mAnmFrameMax = maximum;
+        self->mModel = nullptr;
+        self->mRotate.y = 0;
+        self->mBtkId = 0;
+        self->mRotate.x = 0;
+        self->mTrans.y = zero;
+    }
+    return self;
 }
+
+/* 025275EC */
+void dDemo_actor_dt(dDemo_actor_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        self->mVtable = gabi::ea(&l_actorVtable);
+        fopAc_ac_c* actor = self->getActor();
+        if (actor)
+            actor->demoActorID = 0;
+        self->mBtpId = fpcM_ERROR_PROCESS_ID_e;
+        self->mBrkId = fpcM_ERROR_PROCESS_ID_e;
+        self->mOldAnmId = fpcM_ERROR_PROCESS_ID_e;
+        self->mActorId = fpcM_ERROR_PROCESS_ID_e;
+        self->mBtkId = fpcM_ERROR_PROCESS_ID_e;
+        dDemo_stageActor_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 025275AC */
+fopAc_ac_c* dDemo_actor_c::getActor() { return fopAcM_SearchByID(mActorId); }
+
+/* 025277D8 */
+void dDemo_actor_c::setActor(fopAc_ac_c* actor) {
+    if (!actor) {
+        mBrkId = fpcM_ERROR_PROCESS_ID_e;
+        mActorId = fpcM_ERROR_PROCESS_ID_e;
+        mOldAnmId = fpcM_ERROR_PROCESS_ID_e;
+        mBtpId = fpcM_ERROR_PROCESS_ID_e;
+        mBtkId = fpcM_ERROR_PROCESS_ID_e;
+    } else {
+        mActorId = actor->mBsPcId;
+        mBrkId = fpcM_ERROR_PROCESS_ID_e;
+        mOldAnmId = fpcM_ERROR_PROCESS_ID_e;
+        mBtkId = fpcM_ERROR_PROCESS_ID_e;
+        mBtpId = fpcM_ERROR_PROCESS_ID_e;
+    }
+}
+
+/* 02527828 */
+J3DAnmTexPattern* dDemo_actor_c::getP_BtpData(const char* archive) {
+    u16 flags = mFlags;
+    u32 id = 0;
+    const char* name = nullptr;
+    if (flags & ENABLE_TEX_ANM) {
+        u32 old = mBtpId;
+        id = mTexAnimation;
+        if (id == old)
+            return nullptr;
+    } else {
+        if (!(flags & ENABLE_UNK_e))
+            return nullptr;
+        u32 type = mPrm.mId;
+        u8* data = mPrm.mData;
+        name = archive;
+        if (type == ID_UNK_1) {
+            u32 old = mBtpId;
+            id = u32(reinterpret_cast<dDemo_prmShortPrimary*>(data)->mBtpId);
+            if (id == old)
+                return nullptr;
+        } else if (type == ID_UNK_2) {
+            u32 old = mBtpId;
+            id = u32(reinterpret_cast<dDemo_prmShortPair*>(data)->mBtpId);
+            if (id == old)
+                return nullptr;
+        } else if (type == ID_UNK_4) {
+            u32 old = mBtpId;
+            id = reinterpret_cast<dDemo_prmWordPrimary*>(data)->mBtpId;
+            if (id == old)
+                return nullptr;
+        } else if (type == ID_UNK_5 || type == ID_UNK_6) {
+            u32 old = mBtpId;
+            id = reinterpret_cast<dDemo_prmWordTriple*>(data)->mBtpId;
+            if (id == old)
+                return nullptr;
+        } else
+            return nullptr;
+    }
+    mBtpId = id;
+    if (id & 0x10000)
+        name = l_demoArchive.mName;
+    else if (!name)
+        return nullptr;
+    dDemo_safeString request;
+    request.mData = const_cast<char*>(name);
+    request.mVtable = &l_safeStringVtable;
+    J3DAnmTexPattern* result = static_cast<J3DAnmTexPattern*>(
+        dDemo_getObjectIDRes(l_resourceControl, &request, id & 0xFFFF));
+    if (result) {
+        s32 maximum = dDemo_textureFrameMax(result);
+        mTexAnimationFrameMax = f32(maximum);
+    }
+    return result;
+}
+
+/* 02527A98 */
+J3DAnmTevRegKey* dDemo_actor_c::getP_BrkData(const char* archive) {
+    if (!(mFlags & ENABLE_UNK_e))
+        return nullptr;
+    u32 type = mPrm.mId;
+    u8* data = mPrm.mData;
+    if (type != ID_UNK_6)
+        return nullptr;
+    u32 old = mBrkId, id = reinterpret_cast<dDemo_prmWordTriple*>(data)->mBrkId;
+    if (id == old)
+        return nullptr;
+    mBrkId = id;
+    if (id & 0x10000)
+        archive = l_demoArchive.mName;
+    dDemo_safeString request;
+    request.mData = const_cast<char*>(archive);
+    request.mVtable = &l_safeStringVtable;
+    return static_cast<J3DAnmTevRegKey*>(
+        dDemo_getObjectIDRes(l_resourceControl, &request, id & 0xFFFF));
+}
+
+/* 025279C8 */
+J3DAnmTextureSRTKey* dDemo_actor_c::getP_BtkData(const char* archive) {
+    if (!(mFlags & ENABLE_UNK_e))
+        return nullptr;
+    u32 type = mPrm.mId;
+    u8* data = mPrm.mData;
+    u32 id;
+    if (type == ID_UNK_2) {
+        u32 old = mBtkId;
+        id = u32(reinterpret_cast<dDemo_prmShortPair*>(data)->mBtkId);
+        if (id == old)
+            return nullptr;
+    } else if (type == ID_UNK_5 || type == ID_UNK_6) {
+        u32 old = mBtkId;
+        id = reinterpret_cast<dDemo_prmWordTriple*>(data)->mBtkId;
+        if (id == old)
+            return nullptr;
+    } else
+        return nullptr;
+    mBtkId = id;
+    if (id & 0x10000)
+        archive = l_demoArchive.mName;
+    dDemo_safeString request;
+    request.mData = const_cast<char*>(archive);
+    request.mVtable = &l_safeStringVtable;
+    return static_cast<J3DAnmTextureSRTKey*>(
+        dDemo_getObjectIDRes(l_resourceControl, &request, id & 0xFFFF));
+}
+
+/* 02526E7C */
+f64 dDemo_actor_c::getPrm_Morf() {
+    u16 flags = mFlags;
+    if (flags & ENABLE_ANM_TRANSITION_e)
+        return mAnmTransition;
+    if (!(flags & ENABLE_UNK_e))
+        return l_zero;
+    u32 type = mPrm.mId;
+    auto* data = reinterpret_cast<dDemo_prm_data*>(mPrm.mData.get());
+    // HD: these parameter bytes are unsigned; the GameCube fields are signed.
+    switch (type) {
+    case ID_UNK_1:
+        if (mPrm.field_0x54 >= 4)
+            return f32(data->field_0x4);
+        break;
+    case ID_UNK_2:
+        if (mPrm.field_0x54 >= 7)
+            return f32(data->field_0x7);
+        break;
+    case ID_UNK_4:
+        if (mPrm.field_0x54 >= 6)
+            return f32(data->field_0x6);
+        break;
+    case ID_UNK_5:
+        if (mPrm.field_0x54 >= 0xB)
+            return f32(data->field_0xb);
+        break;
+    case ID_UNK_6:
+        if (mPrm.field_0x54 >= 0xF)
+            return f32(data->field_0xf);
+        break;
+    }
+    return l_zero;
+}
+
+/* 02527028 */
+u32 dDemo_setDemoData(fopAc_ac_c* actor, u32 mask, mDoExt_McaMorf* morph, const char* archive,
+                      s32 count, dDemo_animationSound* table, u32 sound, u32 reverb) {
+    // HD: flags and reverb keep their full register widths; animation calls use f64 arguments.
+    u32 index = actor->demoActorID;
+    if (!index || index > 32)
+        return 0;
+    dDemo_object_c* pool = l_demo.mDemoObj;
+    if (!pool) {
+        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
+        pool = l_demo.mDemoObj;
+    }
+    dDemo_actor_c* demo = pool->getActor(index);
+    if (!demo)
+        return 0;
+    mask &= demo->mFlags;
+    if (mask & dDemo_actor_c::ENABLE_TRANS_e) {
+        u32 x = demoWords(&demo->mTrans)->x;
+        demoWords(&actor->current.pos)->x = x;
+        u32 y = demoWords(&demo->mTrans)->y;
+        demoWords(&actor->current.pos)->y = y;
+        u32 z = demoWords(&demo->mTrans)->z;
+        demoWords(&actor->current.pos)->z = z;
+        demoWords(&actor->old.pos)->x = x;
+        demoWords(&actor->old.pos)->y = y;
+        demoWords(&actor->old.pos)->z = z;
+    }
+    if (mask & dDemo_actor_c::ENABLE_ROTATE_e) {
+        u16 x = demo->mRotate.x;
+        actor->shape_angle.x = x;
+        u16 y = demo->mRotate.y;
+        actor->shape_angle.y = y;
+        u16 z = demo->mRotate.z;
+        actor->shape_angle.z = z;
+        actor->current.angle.x = x;
+        actor->current.angle.y = y;
+        actor->current.angle.z = z;
+    }
+    if (mask & dDemo_actor_c::ENABLE_SCALE_e) {
+        demoWords(&actor->scale)->x = demoWords(&demo->mScale)->x;
+        demoWords(&actor->scale)->y = demoWords(&demo->mScale)->y;
+        demoWords(&actor->scale)->z = demoWords(&demo->mScale)->z;
+    }
+    // HD: animation transition is also written to the actor's gravity field.
+    if (mask & dDemo_actor_c::ENABLE_ANM_TRANSITION_e)
+        actor->gravity = demo->getPrm_Morf();
+    if (morph) {
+        J3DModel* model = morph->mpModel;
+        f32 one = l_one;
+        demo->mModel = model;
+        if (mask & dDemo_actor_c::ENABLE_ANM_e) {
+            u32 id = demo->mAnmId, old = demo->mOldAnmId;
+            if (id != old) {
+                const char* name = (id & 0x10000) ? l_demoArchive.mName : archive;
+                id &= 0xFFFF;
+                demo->mOldAnmId = demo->mAnmId;
+                dDemo_safeString request;
+                request.mData = const_cast<char*>(name);
+                request.mVtable = &l_safeStringVtable;
+                auto* animation = static_cast<J3DAnmTransform*>(
+                    dDemo_getObjectIDRes(l_resourceControl, &request, id));
+                if (!animation)
+                    JUT_ASSERT_fail("d_demo.cpp", 0x24C, "i_key != (0)");
+                void* audio = nullptr;
+                if (count > 0 && table) {
+                    for (s32 i = 0; i < count; i++) {
+                        if (table[i].mAnimationId == id) {
+                            request.mData = const_cast<char*>(name);
+                            request.mVtable = &l_safeStringVtable;
+                            audio = dDemo_getObjectIDRes(l_resourceControl, &request,
+                                                         table[i].mSoundId);
+                            break;
+                        }
+                    }
+                }
+                f64 transition = demo->getPrm_Morf();
+                dDemo_setMorphAnimation(morph, animation, -1, audio, transition, f64(one),
+                                        f64(l_zero), f64(l_reverse));
+                demo->mAnmFrameMax = f32(morph->mFrameCtrl.mEnd);
+            }
+        }
+        if (mask & dDemo_actor_c::ENABLE_ANM_FRAME_e) {
+            f32 frame = demo->mAnmFrame;
+            if (frame > one) {
+                morph->mFrameCtrl.mFrame = f32(s16(gabi::ftoi(gabi::fsubs_ppc(frame, one))));
+                dDemo_playMorph(morph, &actor->current.pos, sound, reverb);
+            } else {
+                morph->mFrameCtrl.mFrame = f32(s16(gabi::ftoi(frame)));
+            }
+        } else {
+            dDemo_playMorph(morph, &actor->current.pos, sound, reverb);
+        }
+    }
+    return 1;
+}
+
+/* 0252767C */
+void dDemo_actor_c::JSGSetData(u32 a, const void* b, u32 c) {
+    u16 flags = mFlags;
+    mPrm.mId = a;
+    mPrm.mData = static_cast<u8*>(const_cast<void*>(b));
+    mPrm.field_0x54 = c;
+    mFlags = flags | ENABLE_UNK_e;
+}
+
+/* 02527698 */
+void dDemo_actor_c::JSGSetTranslation(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u16 flags = mFlags;
+    demoWords(&mTrans)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mTrans)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_TRANS_e;
+    demoWords(&mTrans)->z = z;
+}
+
+/* 025276C0 */
+void dDemo_actor_c::JSGSetScaling(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u16 flags = mFlags;
+    demoWords(&mScale)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mScale)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_SCALE_e;
+    demoWords(&mScale)->z = z;
+}
+
+/* 025276E8 */
+void dDemo_actor_c::JSGSetRotation(const cXyz* input) {
+    f32 x = input->x, scale = l_degreesToShort;
+    mRotate.x = s16(gabi::ftoi(gabi::fmuls_ppc(x, scale)));
+    mRotate.y = s16(gabi::ftoi(gabi::fmuls_ppc(input->y, scale)));
+    s16 z = s16(gabi::ftoi(gabi::fmuls_ppc(input->z, scale)));
+    u16 flags = mFlags;
+    mRotate.z = z;
+    mFlags = flags | ENABLE_ROTATE_e;
+}
+
+/* 02527754 */
+void dDemo_actor_c::JSGSetShape(u32 value) {
+    u16 flags = mFlags;
+    mShapeId = value;
+    mFlags = flags | ENABLE_SHAPE_e;
+}
+
+/* 02527768 */
+void dDemo_actor_c::JSGSetAnimation(u32 animation) {
+    u16 flags = mFlags;
+    mAnmId = animation;
+    f32 initial = l_animationMax;
+    mFlags = flags | ENABLE_ANM_e;
+    mAnmFrameMax = initial;
+}
+
+/* 02527788 */
+void dDemo_actor_c::JSGSetAnimationFrame(f64 value) {
+    u16 flags = mFlags;
+    mAnmFrame = value;
+    mFlags = flags | ENABLE_ANM_FRAME_e;
+}
+
+/* 0252779C */
+void dDemo_actor_c::JSGSetAnimationTransition(f64 value) {
+    u16 flags = mFlags;
+    mAnmTransition = value;
+    mFlags = flags | ENABLE_ANM_TRANSITION_e;
+}
+
+/* 025277B0 */
+void dDemo_actor_c::JSGSetTextureAnimation(u32 value) {
+    u16 flags = mFlags;
+    mTexAnimation = value;
+    mFlags = flags | ENABLE_TEX_ANM;
+}
+
+/* 025277C4 */
+void dDemo_actor_c::JSGSetTextureAnimationFrame(f64 value) {
+    u16 flags = mFlags;
+    mTexAnimationFrame = value;
+    mFlags = flags | ENABLE_TEX_ANM_FRAME_e;
+}
+
+/* 02527400 */
+dDemo_cameraView* dDemo_getView() {
+    // HD: retain three separate play-object accesses and the signed window camera index.
+    auto* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    if (!game->play.mDlstWindowNum)
+        return nullptr;
+    game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    auto* window = reinterpret_cast<dDemo_windowView*>(game->play.mDlstWindow);
+    s32 index = window->mCameraID;
+    game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+    auto* camera = gabi::at<dComIfG_camera_info_class>(
+        gabi::ea(&game->play.mCameraInfo[0]) + u32(index) * sizeof(dComIfG_camera_info_class));
+    return gabi::at<dDemo_cameraView>(camera->mpCamera);
+}
+
+/* 02527B94 */
+f64 dDemo_camera_c::JSGGetProjectionNear() {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    return view ? f32(view->mNear) : f32(l_zero);
+}
+
+/* 02527BD8 */
+void dDemo_camera_c::JSGSetProjectionNear(f64 value) {
+    u8 flags = mFlags;
+    mProjNear = value;
+    mFlags = flags | ENABLE_PROJ_NEAR_e;
+}
+
+/* 02527BEC */
+f64 dDemo_camera_c::JSGGetProjectionFar() {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    return view ? f32(view->mFar) : f32(l_one);
+}
+
+/* 02527C30 */
+void dDemo_camera_c::JSGSetProjectionFar(f64 value) {
+    u8 flags = mFlags;
+    mProjFar = value;
+    mFlags = flags | ENABLE_PROJ_FAR_e;
+}
+
+/* 02527C44 */
+f64 dDemo_camera_c::JSGGetProjectionFovy() {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    return view ? f32(view->mFovy) : f32(l_defaultFovy);
+}
+
+/* 02527C88 */
+void dDemo_camera_c::JSGSetProjectionFovy(f64 value) {
+    u8 flags = mFlags;
+    mFovy = value;
+    mFlags = flags | ENABLE_PROJ_FOVY_e;
+}
+
+/* 02527C9C */
+void dDemo_camera_c::JSGGetViewPosition(cXyz* out) {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    if (!view) {
+        f32 zero = l_zero, z = l_zero;
+        out->x = zero;
+        out->z = z;
+        out->y = zero;
+    } else {
+        demoWords(out)->x = demoWords(&view->mEye)->x;
+        demoWords(out)->y = demoWords(&view->mEye)->y;
+        demoWords(out)->z = demoWords(&view->mEye)->z;
+    }
+}
+
+/* 02527D10 */
+void dDemo_camera_c::JSGSetViewPosition(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u8 flags = mFlags;
+    demoWords(&mViewPosition)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mViewPosition)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_VIEW_POS_e;
+    demoWords(&mViewPosition)->z = z;
+}
+
+/* 02527D38 */
+void dDemo_camera_c::JSGGetViewTargetPosition(cXyz* out) {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    if (!view) {
+        f32 zero = l_zero, z = l_one;
+        out->x = zero;
+        out->z = z;
+        out->y = zero;
+    } else {
+        demoWords(out)->x = demoWords(&view->mTarget)->x;
+        demoWords(out)->y = demoWords(&view->mTarget)->y;
+        demoWords(out)->z = demoWords(&view->mTarget)->z;
+    }
+}
+
+/* 02527DB4 */
+void dDemo_camera_c::JSGSetViewTargetPosition(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u8 flags = mFlags;
+    demoWords(&mTargetPosition)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mTargetPosition)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_VIEW_TARG_POS_e;
+    demoWords(&mTargetPosition)->z = z;
+}
+
+/* 02527DDC */
+f64 dDemo_camera_c::JSGGetViewRoll() {
+    dDemo_cameraView* view = dDemo_getCameraView(this);
+    return view ? gabi::fmuls_ppc(f32(view->mBank), l_shortToDegrees) : f32(l_zero);
+}
+
+/* 02527E50 */
+void dDemo_camera_c::JSGSetViewRoll(f64 value) {
+    u8 flags = mFlags;
+    mRoll = value;
+    mFlags = flags | ENABLE_VIEW_ROLL_e;
+}
+
+/* 02527EC4 */
+void dDemo_ambient_c::JSGSetColor(const dDemo_colorWord* color) {
+    u32 word = color->mColor;
+    mColor = word;
+    mFlags = (u8)mFlags | ENABLE_COLOR_e;
+}
+
+/* 02527F74 */
+void dDemo_light_c::JSGSetLightType(u32 value) {
+    u8 flags = mFlags;
+    mLightType = value;
+    mFlags = flags | ENABLE_LIGHT_TYPE_e;
+}
+
+/* 02527F88 */
+void dDemo_light_c::JSGSetPosition(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u8 flags = mFlags;
+    demoWords(&mPosition)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mPosition)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_POSITION_e;
+    demoWords(&mPosition)->z = z;
+}
+
+/* 02527FB0 */
+void dDemo_light_c::JSGSetColor(const dDemo_colorWord* color) {
+    u32 word = color->mColor;
+    mColor = word;
+    mFlags = (u8)mFlags | ENABLE_COLOR_e;
+}
+
+/* 02527FE0 */
+void dDemo_light_c::JSGSetDirection(const cXyz* v) {
+    u32 x = demoWords(v)->x;
+    u8 flags = mFlags;
+    demoWords(&mDirection)->x = x;
+    u32 y = demoWords(v)->y;
+    demoWords(&mDirection)->y = y;
+    u32 z = demoWords(v)->z;
+    mFlags = flags | ENABLE_DIRECTION_e;
+    demoWords(&mDirection)->z = z;
+}
+
+/* 0252807C */
+void dDemo_fog_c::JSGSetStartZ(f64 value) {
+    u8 flags = mFlags;
+    mStartZ = value;
+    mFlags = flags | ENABLE_START_Z_e;
+}
+
+/* 02528090 */
+void dDemo_fog_c::JSGSetEndZ(f64 value) {
+    u8 flags = mFlags;
+    mEndZ = value;
+    mFlags = flags | ENABLE_END_Z_e;
+}
+
+/* 025280A4 */
+void dDemo_fog_c::JSGSetColor(const dDemo_colorWord* color) {
+    u32 word = color->mColor;
+    mColor = word;
+    mFlags = (u8)mFlags | ENABLE_COLOR_e;
+}
+
+/* 025280D4 */
+dDemo_object_c* dDemo_object_ct(dDemo_object_c* self) {
+    // HD: the object pool is allocated separately from the manager.
+    if (!self)
+        self = static_cast<dDemo_object_c*>(operator_new(sizeof(dDemo_object_c)));
+    if (self) {
+        self->mpFog = nullptr;
+        self->mNumActor = 0;
+        self->mpAmbient = nullptr;
+        self->mNumLight = 0;
+        self->mpCamera = nullptr;
+    }
+    return self;
+}
+
+/* 02528258 */
+void dDemo_object_dt(dDemo_object_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        self->remove();
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 025282A8 */
+dDemo_actor_c* dDemo_object_c::appendActor(fopAc_ac_c* actor) {
+    u32 index = actor->demoActorID;
+    if (index && index <= 32) {
+        dDemo_object_c* pool = l_demo.mDemoObj;
+        if (!pool) {
+            JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != (0)");
+            pool = l_demo.mDemoObj;
+        }
+        dDemo_actor_c* existing = pool->getActor(index);
+        if (existing)
+            return existing;
+    }
+    if (mNumActor >= 32)
+        return nullptr;
+    dDemo_actor_c* object = dDemo_actor_ct(nullptr);
+    if (!object)
+        return nullptr;
+    u32 count = mNumActor;
+    mNumActor = count + 1;
+    mpActors[count] = object;
+    // HD: this caller consumes the setter's unchanged r3 receiver register.
+    dDemo_actor_c* returned = dDemo_bindActor(object, actor);
+    J3DModel* model = gabi::at<J3DModel>(actor->model);
+    u32 current = mNumActor;
+    actor->demoActorID = current;
+    if (model)
+        returned->mModel = model;
+    return returned;
+}
+
+/* 02526E70 */
+dDemo_actor_c* dDemo_object_c::getActor(u32 index) {
+    // HD: preserve full-register index multiplication and 32-bit address wrap.
+    return *gabi::at<gptr<dDemo_actor_c>>(gabi::ea(this) + index * 4);
+}
+
+/* 025283B8 */
+dDemo_camera_c* dDemo_object_c::createCamera() {
+    dDemo_camera_c* object = mpCamera;
+    if (!object) {
+        object = dDemo_camera_ct(nullptr);
+        mpCamera = object;
+    }
+    return object;
+}
+
+/* 025283F8 */
+dDemo_camera_c* dDemo_object_c::getActiveCamera() { return mpCamera; }
+
+/* 02528400 */
+dDemo_ambient_c* dDemo_object_c::createAmbient() {
+    dDemo_ambient_c* object = mpAmbient;
+    if (!object) {
+        object = dDemo_ambient_ct(nullptr);
+        mpAmbient = object;
+    }
+    return object;
+}
+
+/* 02528440 */
+dDemo_light_c* dDemo_object_c::appendLight() {
+    if (mNumLight >= 8)
+        return nullptr;
+    dDemo_light_c* object = dDemo_light_ct(nullptr);
+    if (!object)
+        return nullptr;
+    u32 count = mNumLight;
+    mNumLight = count + 1;
+    mpLight[count] = object;
+    return object;
+}
+
+/* 025284B8 */
+dDemo_fog_c* dDemo_object_c::createFog() {
+    dDemo_fog_c* object = mpFog;
+    if (!object) {
+        object = dDemo_fog_ct(nullptr);
+        mpFog = object;
+    }
+    return object;
+}
+
+/* 02528120 */
+void dDemo_object_c::remove() {
+    u32 count = mNumActor;
+    while (count) {
+        count = (count - 1) & 0xFF;
+        mNumActor = count;
+        dDemo_actor_c* object = mpActors[count];
+        if (object) {
+            dDemo_deleteObject(object, 3);
+            // HD: a nonnull object's destructor may change the pool count.
+            count = mNumActor;
+        }
+    }
+    dDemo_camera_c* camera = mpCamera;
+    if (camera) {
+        dDemo_deleteObject(camera, 3);
+        mpCamera = nullptr;
+    }
+    dDemo_ambient_c* ambient = mpAmbient;
+    if (ambient) {
+        dDemo_deleteObject(ambient, 3);
+        mpAmbient = nullptr;
+    }
+    count = mNumLight;
+    while (count) {
+        count = (count - 1) & 0xFF;
+        mNumLight = count;
+        dDemo_light_c* object = mpLight[count];
+        if (object) {
+            dDemo_deleteObject(object, 3);
+            count = mNumLight;
+        }
+    }
+    dDemo_fog_c* fog = mpFog;
+    if (fog) {
+        dDemo_deleteObject(fog, 3);
+        mpFog = nullptr;
+    }
+}
+
+/* 025284F8 */
+void* dDemo_system_c::JSGFindObject(const char* name, u32 kind) {
+    dDemo_object_c* pool = mObject;
+    if (!pool)
+        return nullptr;
+    if (kind == OBJECT_ANY || kind == OBJECT_ACTOR) {
+        fopAc_ac_c* actor = dDemo_searchActorByName(name, 0, 0);
+        if (!actor) {
+            if (kind != OBJECT_ACTOR)
+                return nullptr;
+            // HD: compare exactly five guest bytes, retaining early NUL handling.
+            for (u32 i = 0; i < 5; i++) {
+                u8 a = dDemo_nameByte(name, i), b = dDemo_nameByte("d_act", i);
+                if (a != b)
+                    return nullptr;
+                if (!a)
+                    break;
+            }
+            actor = dDemo_fastCreateActor(name, 0, 0, -1, 0, 0, 0, 0);
+            if (!actor)
+                return nullptr;
+            fopAcM_setStageLayer(actor);
+        }
+        return mObject->appendActor(actor);
+    }
+    switch (kind) {
+    case OBJECT_CAMERA:
+        return pool->createCamera();
+    case OBJECT_AMBIENT:
+        return pool->createAmbient();
+    case OBJECT_LIGHT:
+        return pool->appendLight();
+    case OBJECT_FOG:
+        return pool->createFog();
+    default:
+        return nullptr;
+    }
+}
+
+/* 025286E0 */
+void dDemo_init() {
+    // HD: the manager allocates its SDK interfaces individually instead of embedding them.
+    auto* message = static_cast<dDemo_messageControl*>(operator_new(116));
+    if (message)
+        message = dDemo_messageControl_ct(message);
+    l_messageControl = gabi::ea(message);
+    if (!message) {
+        JUT_ASSERT_fail("d_demo.cpp", 0x6CD, "m_mesgControl != (0)");
+        message = gabi::at<dDemo_messageControl>(l_messageControl);
+    }
+    dDemo_setMessageControl(l_audioControl, message);
+    auto* system = static_cast<dDemo_system_c*>(operator_new(sizeof(dDemo_system_c)));
+    if (system) {
+        system->mObject = nullptr;
+        system->mVtable = gabi::ea(&l_systemVtable);
+    }
+    l_demo.mSystem = system;
+    if (!system)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6D1, "m_system != (0)");
+    dDemo_control* control = dDemo_control_ct(nullptr);
+    l_demo.mControl = control;
+    if (!control)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6D3, "m_control != (0)");
+    void* owner = l_demo.mSystem;
+    auto* creator = static_cast<dDemo_createObject*>(operator_new(16));
+    if (creator) {
+        creator->mPrev = 0;
+        creator->mOwner = owner;
+        creator->mNext = 0;
+        creator->mVtable = gabi::ea(&l_stageCreatorVtable);
+        if (!owner)
+            JUT_ASSERT_fail("control.h", 0x2A, "pJSGSystem_!=(0)");
+    }
+    l_demo.mStage = creator;
+    if (!creator)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6D5, "m_stage != (0)");
+    owner = gabi::at<void>(l_audioInterface);
+    creator = static_cast<dDemo_createObject*>(operator_new(16));
+    if (creator) {
+        creator->mPrev = 0;
+        creator->mOwner = owner;
+        creator->mNext = 0;
+        creator->mVtable = gabi::ea(&l_audioCreatorVtable);
+        if (!owner)
+            JUT_ASSERT_fail("control.h", 0x2D, "pJAIBasic_!=(0)");
+    }
+    l_demo.mAudio = creator;
+    if (!creator)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6D9, "m_audio != (0)");
+    dDemo_system_c* systemOwner = l_demo.mSystem;
+    owner = gabi::at<void>(l_emitterManager);
+    creator = static_cast<dDemo_createObject*>(operator_new(sizeof(dDemo_createObject)));
+    if (creator) {
+        creator->mNext = 0;
+        creator->mOwner = owner;
+        creator->mVtable = gabi::ea(&l_particleCreatorVtable);
+        creator->mPrev = 0;
+        creator->mSystem = systemOwner;
+        if (!owner)
+            JUT_ASSERT_fail("control.h", 0x2E, "pJPAEmitterManager_!=(0)");
+    }
+    l_demo.mParticle = creator;
+    if (!creator)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6DE, "m_particle != (0)");
+    owner = gabi::at<void>(l_messageControl);
+    creator = static_cast<dDemo_createObject*>(operator_new(16));
+    if (creator) {
+        creator->mPrev = 0;
+        creator->mOwner = owner;
+        creator->mNext = 0;
+        creator->mVtable = gabi::ea(&l_messageCreatorVtable);
+        if (!owner)
+            JUT_ASSERT_fail("control.h", 0x4A, "pJMSControl_!=(0)");
+    }
+    l_demo.mMessage = creator;
+    if (!creator)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6E1, "m_message != (0)");
+    auto* factory = static_cast<dDemo_factory*>(operator_new(sizeof(dDemo_factory)));
+    if (factory) {
+        factory->mVtable = gabi::ea(&l_factoryVtable);
+        // HD: retain the nullable embedded-list constructor even at a wrapping guest address.
+        auto* list =
+            gabi::at<dDemo_factoryList>(gabi::ea(factory) + offsetof(dDemo_factory, mCount));
+        if (!list)
+            list = static_cast<dDemo_factoryList*>(operator_new(sizeof(dDemo_factoryList)));
+        if (list) {
+            list->mCount = 0;
+            void* head = &list->mNext;
+            list->mPrev = head;
+            list->mNext = head;
+        }
+        factory->mCreateObjectVtable = gabi::ea(&l_factoryCreateVtable);
+    }
+    l_demo.mFactory = factory;
+    if (!factory)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6E4, "m_factory != (0)");
+    dDemo_object_c* pool = dDemo_object_ct(nullptr);
+    l_demo.mDemoObj = pool;
+    if (!pool)
+        JUT_ASSERT_fail("d_demo.cpp", 0x6E7, "m_object != (0)");
+    f64 timestep = l_secondPerFrame.mValue;
+    control = l_demo.mControl;
+    control->mSecondPerFrame = timestep;
+    factory = l_demo.mFactory;
+    control = l_demo.mControl;
+    control->mCreateObject = factory ? &factory->mCreateObjectVtable : nullptr;
+    control->mFactory = factory;
+    dDemo_appendCreateObject(l_demo.mFactory, l_demo.mStage);
+    dDemo_appendCreateObject(l_demo.mFactory, l_demo.mAudio);
+    dDemo_appendCreateObject(l_demo.mFactory, l_demo.mParticle);
+    system = l_demo.mSystem;
+    pool = l_demo.mDemoObj;
+    system->mObject = pool;
+    dDemo_appendCreateObject(l_demo.mFactory, l_demo.mMessage);
+    l_demo.mCurFile = nullptr;
+    l_demo.mMode = 0;
+    // HD: the reset entry receives the last SDK call's unchanged r3 register.
+    dDemo_resetFrames(gabi::at<void>(cpu->r[3]));
+}
+
+/* 02528B48 */
+void dDemo_delete() {
+    dDemo_remove();
+    dDemo_object_c* pool = l_demo.mDemoObj;
+    if (pool) {
+        dDemo_object_dt(pool, 3);
+        l_demo.mDemoObj = nullptr;
+    }
+    dDemo_factory* factory = l_demo.mFactory;
+    if (factory) {
+        dDemo_deleteObject(factory, 3);
+        l_demo.mFactory = nullptr;
+    }
+    dDemo_createObject* creator = l_demo.mMessage;
+    if (creator) {
+        dDemo_deleteCreator(creator);
+        l_demo.mMessage = nullptr;
+    }
+    creator = l_demo.mParticle;
+    if (creator) {
+        dDemo_deleteCreator(creator);
+        l_demo.mParticle = nullptr;
+    }
+    creator = l_demo.mAudio;
+    if (creator) {
+        dDemo_deleteCreator(creator);
+        l_demo.mAudio = nullptr;
+    }
+    creator = l_demo.mStage;
+    if (creator) {
+        dDemo_deleteCreator(creator);
+        l_demo.mStage = nullptr;
+    }
+    auto* message = gabi::at<dDemo_messageControl>(l_messageControl);
+    if (message) {
+        dDemo_deleteMessageControl(message);
+        l_messageControl = 0;
+    }
+    dDemo_control* control = l_demo.mControl;
+    if (control) {
+        dDemo_deleteControl(control);
+        l_demo.mControl = nullptr;
+    }
+    dDemo_system_c* system = l_demo.mSystem;
+    if (system) {
+        dDemo_deleteObject(system, 3);
+        l_demo.mSystem = nullptr;
+    }
+}
+
+/* inlined into dDemo_create, dDemo_update */
+static int compare_names(const char* expected) {
+    dDemo_safeString left;
+    dDemo_safeString right;
+    left.mData = gabi::at<char>(gabi::guest_addr(expected));
+    left.mVtable = &l_safeStringVtable;
+    right.mData = l_demoArchive.mName;
+    right.mVtable = &l_safeStringVtable;
+    dDemo_assureTermination(&left);
+    dDemo_assureSafeString(&left);
+    const char* a = left.mData;
+    dDemo_assureSafeString(&right);
+    const char* b = right.mData;
+    if (a == b)
+        return 1;
+    // HD: the SafeString comparison has a bounded guest-byte scan.
+    for (u32 i = 0; i < 0x40001; i++) {
+        u8 x = dDemo_nameByte(a, i), y = dDemo_nameByte(b, i);
+        if (x != y)
+            return 0;
+        if (!x)
+            return 1;
+    }
+    return -1;
+}
+
+/* 02528CEC */
+u32 dDemo_create(const u8* data, const cXyz* position, f64 rotation) {
+    if (!l_demo.mSystem.v)
+        JUT_ASSERT_fail("d_demo.cpp", 0x747, "m_system != (0)");
+    dDemo_resetControlObjects(l_demo.mControl);
+    dDemo_parse parser;
+    dDemo_parseInput input;
+    dDemo_parse_ct(&parser, l_demo.mControl);
+    input.mData = const_cast<u8*>(data);
+    u32 ok = dDemo_parseNext(&parser, &input, 0);
+    if (!ok) {
+        dDemo_parse_dt(&parser, 2);
+        return 0;
+    }
+    int first = compare_names("Demo04");
+    dDemo_control* control;
+    if (first == 1) {
+        dComIfGs_onEventBit(dDemo_DEMO_EVENT_e);
+        control = l_demo.mControl;
+    } else {
+        int second = compare_names("Demo46");
+        if (second == 1) {
+            dDemo_forward(l_demo.mControl, 2000);
+            dDemo_startEventWind();
+            dDemo_setEventWind(0, 0xFFFFC000);
+            dDemo_setWindPower(f64(l_calmWindPower));
+            control = l_demo.mControl;
+        } else {
+            dDemo_forward(l_demo.mControl, 0);
+            control = l_demo.mControl;
+        }
+    }
+    if (position) {
+        control->mTransformOriginEnabled = 1;
+        control->mTransformEnabled = 1;
+        control = l_demo.mControl;
+        dDemo_setGetOrigin(control, position, rotation);
+        dDemo_setSetOrigin(control, position, rotation);
+    } else {
+        control->mTransformEnabled = 0;
+        control->mTransformOriginEnabled = 0;
+    }
+    l_demo.mMode = 1;
+    // HD: retain the last SDK call's r3 receiver at the reset entry.
+    dDemo_resetFrames(gabi::at<void>(cpu->r[3]));
+    l_demo.mCurFile = data;
+    int third = compare_names("Demo37");
+    if (third == 1)
+        dDemo_pauseStream(dDemo_EVENT_STREAM_e);
+    else {
+        int fourth = compare_names("Demo46");
+        if (fourth == 1)
+            dDemo_pauseStream(dDemo_EVENT_STREAM_e);
+        else if (compare_names("Demo45") == 1)
+            dDemo_startStream(dDemo_DEFAULT_STREAM_e);
+    }
+    dDemo_parse_dt(&parser, 2);
+    return 1;
+}
+
+/* 02528AC4 */
+void dDemo_remove() {
+    if (!l_demo.mSystem.v)
+        JUT_ASSERT_fail("d_demo.cpp", 0x7A3, "m_system != (0)");
+    dDemo_control* control = l_demo.mControl;
+    dDemo_destroyAll(control);
+    dDemo_destroyCreateObjects(&control->mCreateObject);
+    l_demo.mDemoObj->remove();
+    l_demo.mMode = 0;
+    l_demo.mCurFile = nullptr;
+}
+
+/* 025291C8 */
+u32 dDemo_update() {
+    if (!l_demo.mSystem.v)
+        JUT_ASSERT_fail("d_demo.cpp", 0x7E8, "m_system != (0)");
+    if (!l_demo.mCurFile.v)
+        return 0;
+    bool advanced = false;
+    int first = compare_names("Demo46");
+    f32 zero = l_zero;
+    if (first == 1) {
+        u32 frame = l_demo.mFrame;
+        if (frame - 878 < 56 || frame - 959 < 57) {
+            if (frame != 1015) {
+                l_demo.mFrame = frame + 1;
+                return 1;
+            }
+            dDemo_forward(l_demo.mControl, 55);
+            frame = l_demo.mFrame;
+        } else if (frame == 1775) {
+            dDemo_forward(l_demo.mControl, 20);
+            frame = l_demo.mFrame;
+        }
+        if (frame >= 948) {
+            if (frame == 948)
+                l_demoWindPower = zero;
+            f64 target = l_demoWindTarget, step = l_demoWindStep;
+            dDemo_chaseWindPower(&l_demoWindPower, target, step);
+            dDemo_setWindPower(f64(l_demoWindPower));
+        }
+    } else if (compare_names("Demo08") == 1) {
+        u32 frame = l_demo.mFrameNoMsg;
+        if (frame >= 1357) {
+            bool bright = frame <= 1386;
+            dDemo_setWindPower(f64(bright ? f32(l_calmWindPower) : zero));
+            auto* env = reinterpret_cast<dDemo_environment*>(dKy_getEnvlight());
+            env->mPaletteOverride = bright ? 0 : dDemo_DEFAULT_PALETTE_e;
+        }
+    } else if (compare_names("Demo29") == 1) {
+        u32 frame = l_demo.mFrameNoMsg;
+        if (frame - 597 < 67) {
+            auto* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
+            frame = l_demo.mFrameNoMsg;
+            auto* player = static_cast<daPy_py_c*>(game->play.mpPlayerPtr[0].get());
+            u32 flags = player->mNoResetFlg0;
+            player->mNoResetFlg0 = frame == 663 ? (flags & ~daPy_py_c::daPyFlg0_NO_DRAW)
+                                                : (flags | daPy_py_c::daPyFlg0_NO_DRAW);
+        }
+    } else if (compare_names("Demo45") == 1) {
+        if (l_demo.mFrameNoMsg == 800)
+            dDemo_pauseStream(dDemo_DEFAULT_STREAM_e);
+    }
+    advanced = dDemo_forward(l_demo.mControl, 1) != 0;
+    if (!advanced)
+        l_demo.mMode = 2;
+    else {
+        u32 frame = l_demo.mFrame;
+        dDemo_control* control = l_demo.mControl;
+        l_demo.mFrame = frame + 1;
+        if (control->mSuspend <= 0)
+            l_demo.mFrameNoMsg = l_demo.mFrameNoMsg + 1;
+    }
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 02526CB4 */
+void dDemo_initPrimaryTransformRange() {
+    // HD: these SDK transform-range objects and destructor records are static.
+    l_prefixTransform1.mRotationNode = 0;
+    l_prefixTransform1.mOriginNode = 0;
+    l_prefixTransform1.mRotationLink = 0;
+    l_prefixTransform1.mOriginLink = 0;
+    dDemo_registerGlobalDestructor(&l_prefixTransform1RangeDestructor);
+    f32 minimum = l_primaryMinAngle, maximum = l_primaryMaxAngle;
+    l_prefixTransform1.mOriginX = minimum;
+    l_prefixTransform1.mOriginY = maximum;
+    dDemo_initOriginFlag(&l_prefixTransform1.mOriginEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform1OriginDestructor);
+    dDemo_initRotationFlag(&l_prefixTransform1.mRotationEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform1RotationDestructor);
+}
+
+/* 02526D48 */
+void dDemo_initSecondaryTransformRange() {
+    // HD: these SDK transform-range objects and destructor records are static.
+    l_prefixTransform2.mRotationNode = 0;
+    l_prefixTransform2.mOriginNode = 0;
+    l_prefixTransform2.mRotationLink = 0;
+    l_prefixTransform2.mOriginLink = 0;
+    dDemo_registerGlobalDestructor(&l_prefixTransform2RangeDestructor);
+    f32 minimum = l_secondaryMinAngle, maximum = l_secondaryMaxAngle;
+    l_prefixTransform2.mOriginX = minimum;
+    l_prefixTransform2.mOriginY = maximum;
+    dDemo_initOriginFlag(&l_prefixTransform2.mOriginEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform2OriginDestructor);
+    dDemo_initRotationFlag(&l_prefixTransform2.mRotationEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform2RotationDestructor);
+}
+
+/* 02526DDC */
+void dDemo_initTertiaryTransformRange() {
+    // HD: these SDK transform-range objects and destructor records are static.
+    l_prefixTransform3.mRotationNode = 0;
+    l_prefixTransform3.mOriginNode = 0;
+    l_prefixTransform3.mRotationLink = 0;
+    l_prefixTransform3.mOriginLink = 0;
+    dDemo_registerGlobalDestructor(&l_prefixTransform3RangeDestructor);
+    f32 minimum = l_tertiaryMinAngle, maximum = l_tertiaryMaxAngle;
+    l_prefixTransform3.mOriginX = minimum;
+    l_prefixTransform3.mOriginY = maximum;
+    dDemo_initOriginFlag(&l_prefixTransform3.mOriginEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform3OriginDestructor);
+    dDemo_initRotationFlag(&l_prefixTransform3.mRotationEnabled);
+    dDemo_registerGlobalDestructor(&l_prefixTransform3RotationDestructor);
+}
+
+/* 02527468 */
+dDemo_prm_c* dDemo_prm_ct(dDemo_prm_c* self) {
+    // HD: the GHS constructor allocates when its incoming receiver is null.
+    if (!self)
+        self = static_cast<dDemo_prm_c*>(operator_new(sizeof(dDemo_prm_c)));
+    if (self) {
+        self->mId = 0;
+        self->field_0x54 = 0;
+        self->mData = nullptr;
+    }
+    return self;
+}
+
+/* 02527B30 */
+dDemo_camera_c* dDemo_camera_ct(dDemo_camera_c* self) {
+    // HD: nullable constructor receiver and initialization order are retained.
+    if (!self)
+        self = static_cast<dDemo_camera_c*>(operator_new(sizeof(dDemo_camera_c)));
+    if (self) {
+        f32 zero = l_zero;
+        self->mFlags = 0;
+        self->mProjFar = zero;
+        self->mVtable = gabi::ea(&l_cameraVtable);
+        self->mRoll = zero;
+        self->mAspect = zero;
+        self->mFovy = zero;
+        self->mProjNear = zero;
+    }
+    return self;
+}
+
+/* 02527E64 */
+dDemo_ambient_c* dDemo_ambient_ct(dDemo_ambient_c* self) {
+    // HD: nullable GHS construction; the colour starts at byte 5.
+    if (!self)
+        self = static_cast<dDemo_ambient_c*>(operator_new(sizeof(dDemo_ambient_c)));
+    if (self) {
+        self->mFlags = 0;
+        self->mVtable = gabi::ea(&l_ambientVtable);
+        dDemo_zeroColor(&self->mColor, sizeof(self->mColor));
+    }
+    return self;
+}
+
+/* 02527EF4 */
+dDemo_light_c* dDemo_light_ct(dDemo_light_c* self) {
+    // HD: nullable GHS construction and observed member initialization order.
+    if (!self)
+        self = static_cast<dDemo_light_c*>(operator_new(sizeof(dDemo_light_c)));
+    if (self) {
+        self->mFlags = 0;
+        self->mVtable = gabi::ea(&l_lightVtable);
+        self->mAttnFn = 0;
+        self->mLightType = 0;
+        self->mSpotFn = 0;
+        dDemo_zeroColor(&self->mColor, sizeof(self->mColor));
+        f32 zero = l_zero;
+        self->mDistAttn0 = zero;
+        self->mDistAttn1 = zero;
+        self->mAngleAttn = zero;
+    }
+    return self;
+}
+
+/* 02528008 */
+dDemo_fog_c* dDemo_fog_ct(dDemo_fog_c* self) {
+    // HD: nullable GHS construction and packed fog-function byte.
+    if (!self)
+        self = static_cast<dDemo_fog_c*>(operator_new(sizeof(dDemo_fog_c)));
+    if (self) {
+        f32 zero = l_zero;
+        self->mFogType = 0;
+        self->mEndZ = zero;
+        self->mVtable = gabi::ea(&l_fogVtable);
+        self->mFlags = 0;
+        self->mStartZ = zero;
+        dDemo_zeroColor(&self->mColor, sizeof(self->mColor));
+    }
+    return self;
+}
+
+/* 025286C0 */
+void dDemo_resetFrames(void* unused) {
+    // HD: this entry resets static manager counters; it is not a pool constructor.
+    l_demo.mFrame = 0;
+    l_demo.mFrameAux = 0;
+    l_demo.mFrameNoMsg = 0;
+}
+
+/* 025296F8 */
+void dDemo_initTransformRange() {
+    // HD: these SDK transform-range objects and destructor records are static.
+    l_demoTransform.mRotationNode = 0;
+    l_demoTransform.mOriginNode = 0;
+    l_demoTransform.mRotationLink = 0;
+    l_demoTransform.mOriginLink = 0;
+    dDemo_registerGlobalDestructor(&l_demoTransformRangeDestructor);
+    f32 minimum = l_demoMinAngle, maximum = l_demoMaxAngle;
+    l_demoTransform.mOriginX = minimum;
+    l_demoTransform.mOriginY = maximum;
+    dDemo_initOriginFlag(&l_demoTransform.mOriginEnabled);
+    dDemo_registerGlobalDestructor(&l_demoTransformOriginDestructor);
+    dDemo_initRotationFlag(&l_demoTransform.mRotationEnabled);
+    dDemo_registerGlobalDestructor(&l_demoTransformRotationDestructor);
+}
+
+/* 0252978C */
+void dDemo_deleteFactoryBase(void* self, u32 flags) {
+    // HD: this compiler-generated deleting destructor also passes flags to __dl.
+    if (self && (flags & 1))
+        dDemo_deleteWithFlags(self, flags);
+}
+
+/* 025297A0 */
+u32 dDemo_actor_c::JSGFindNodeID(const char* name) {
+    J3DModel* model = mModel;
+    if (!model) {
+        JUT_ASSERT_fail("d_demo.h", 0x7C, "mModel != (0)");
+        model = mModel;
+    }
+    return u32(model->getModelData()->getJointName()->getIndex(name));
+}
+
+/* 02529828 */
+u32 dDemo_actor_c::JSGGetNodeTransformation(u32 index, Mtx34* out) {
+    J3DModel* model = mModel;
+    if (!model) {
+        JUT_ASSERT_fail("d_demo.h", 0x85, "mModel != (0)");
+        model = mModel;
+    }
+    // HD: the full index register is masked to u16 before selecting the joint matrix.
+    J3DMtxBuffer_hd* buffer = model->mpMtxBuffer;
+    Mtx34* jointMatrix = gabi::at<Mtx34>(buffer->mpAnmMtx + (index & 0xFFFF) * sizeof(Mtx34));
+    u16 flags = buffer->mFlags;
+    buffer->mFlags = flags | 0x10;
+    PSMTXCopy(jointMatrix, out);
+    return 1;
+}
+
+/* 025298BC */
+f64 dDemo_actor_c::JSGGetAnimationFrameMax() { return mAnmFrameMax; }
+
+/* 025298C4 */
+f64 dDemo_actor_c::JSGGetTextureAnimationFrameMax() { return mTexAnimationFrameMax; }
+
+/* 025298CC */
+void dDemo_actor_c::JSGGetTranslation(cXyz* out) {
+    demoWords(out)->x = demoWords(&mTrans)->x;
+    demoWords(out)->y = demoWords(&mTrans)->y;
+    demoWords(out)->z = demoWords(&mTrans)->z;
+}
+
+/* 025298E8 */
+void dDemo_actor_c::JSGGetScaling(cXyz* out) {
+    demoWords(out)->x = demoWords(&mScale)->x;
+    demoWords(out)->y = demoWords(&mScale)->y;
+    demoWords(out)->z = demoWords(&mScale)->z;
+}
+
+/* 02529904 */
+void dDemo_actor_c::JSGGetRotation(cXyz* out) {
+    f32 x = f32(mRotate.x), scale = l_shortToDegrees;
+    out->x = gabi::fmuls_ppc(x, scale);
+    out->y = gabi::fmuls_ppc(f32(mRotate.y), scale);
+    out->z = gabi::fmuls_ppc(f32(mRotate.z), scale);
+}
+
+/* 02529988 */
+void dDemo_camera_dt(dDemo_camera_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        dDemo_stageCamera_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 025299DC */
+void dDemo_ambient_dt(dDemo_ambient_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        dDemo_stageAmbient_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 02529A30 */
+void dDemo_light_dt(dDemo_light_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        dDemo_stageLight_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 02529A84 */
+void dDemo_fog_dt(dDemo_fog_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        dDemo_stageFog_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 02529AD8 */
+void dDemo_system_dt(dDemo_system_c* self, u32 flags) {
+    // HD: explicit nullable GHS deleting-destructor entry.
+    if (self) {
+        dDemo_stageSystem_dt(self, 0);
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 02529B2C */
+void dDemo_assureTermination(void* self) {}
+
+/* 02529B30 */
+void dDemo_initFinalTransformRange() {
+    // HD: these SDK transform-range objects and destructor records are static.
+    l_tailTransform.mRotationNode = 0;
+    l_tailTransform.mOriginNode = 0;
+    l_tailTransform.mRotationLink = 0;
+    l_tailTransform.mOriginLink = 0;
+    dDemo_registerGlobalDestructor(&l_tailTransformRangeDestructor);
+    f32 minimum = l_finalMinAngle, maximum = l_finalMaxAngle;
+    l_tailTransform.mOriginX = minimum;
+    l_tailTransform.mOriginY = maximum;
+    dDemo_initOriginFlag(&l_tailTransform.mOriginEnabled);
+    dDemo_registerGlobalDestructor(&l_tailTransformOriginDestructor);
+    dDemo_initRotationFlag(&l_tailTransform.mRotationEnabled);
+    dDemo_registerGlobalDestructor(&l_tailTransformRotationDestructor);
+}
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+data l_actorVtable 1004C044
+data l_ambientVtable 1004C264
+data l_lightVtable 1004C2DC
+data l_fogVtable 1004C3A4
+data l_cameraVtable 1004C14C
+ext 02842288 void dDemo_stageActor_dt(void* self, u32 flags)
+ext 0273AF40 void dDemo_deleteWithFlags(void* self, u32 flags)
+ext 02842734 void dDemo_stageSystem_dt(void* self, u32 flags)
+ext 028424A0 void dDemo_stageFog_dt(void* self, u32 flags)
+ext 028425A4 void dDemo_stageLight_dt(void* self, u32 flags)
+ext 02842330 void dDemo_stageAmbient_dt(void* self, u32 flags)
+ext 0284241C void dDemo_stageCamera_dt(void* self, u32 flags)
+ext 02527400 dDemo_cameraView* dDemo_getCameraView(dDemo_camera_c* caller)
+ext 028F521C void dDemo_zeroColor(void* color, u32 size)
+data l_prefixTransform1RangeDestructor 101D5F50
+data l_prefixTransform1OriginDestructor 101D5F5C
+data l_prefixTransform1RotationDestructor 101D5F68
+data l_prefixTransform2RangeDestructor 101D5F74
+data l_prefixTransform2OriginDestructor 101D5F80
+data l_prefixTransform2RotationDestructor 101D5F8C
+data l_prefixTransform3RangeDestructor 101D5F98
+data l_prefixTransform3OriginDestructor 101D5FA4
+data l_prefixTransform3RotationDestructor 101D5FB0
+data l_demoTransformRangeDestructor 101D5FC0
+data l_demoTransformOriginDestructor 101D5FCC
+data l_demoTransformRotationDestructor 101D5FD8
+data l_tailTransformRangeDestructor 101D6018
+data l_tailTransformOriginDestructor 101D6024
+data l_tailTransformRotationDestructor 101D6030
+data l_demoArchive 1047E6B8
+data l_safeStringVtable 1004BDC8
+str 1004BFA4 "d_demo.cpp" in 02528AC4
+str 1004BF94 "m_system != (0)" in 02528AC4
+str 1004BE1C "d_demo.h" in 025297A0
+str 1004BDF0 "mModel != (0)" in 025297A0
+str 1004BE28 "d_demo.h" in 02529828
+str 1004BE00 "mModel != (0)" in 02529828
+str 1004BE10 "d_demo.h" in 025282A8
+str 1004BDE0 "m_object != (0)" in 025282A8
+str 1004BE10 "d_demo.h" in 02527028
+str 1004BDE0 "m_object != (0)" in 02527028
+str 1004BE3C "d_demo.cpp" in 02527028
+str 1004BE48 "i_key != (0)" in 02527028
+str 1004BEE4 "d_demo.cpp" in 025286E0
+str 1004BEF0 "m_mesgControl != (0)" in 025286E0
+str 1004BE80 "m_system != (0)" in 025286E0
+str 1004BF08 "m_control != (0)" in 025286E0
+str 1004BEB0 "control.h" in 025286E0
+str 1004BF1C "pJSGSystem_!=(0)" in 025286E0
+str 1004BF30 "m_stage != (0)" in 025286E0
+str 1004BE90 "pJAIBasic_!=(0)" in 025286E0
+str 1004BF40 "m_audio != (0)" in 025286E0
+str 1004BF50 "pJPAEmitterManager_!=(0)" in 025286E0
+str 1004BEBC "m_particle != (0)" in 025286E0
+str 1004BED0 "pJMSControl_!=(0)" in 025286E0
+str 1004BF6C "m_message != (0)" in 025286E0
+str 1004BF80 "m_factory != (0)" in 025286E0
+str 1004BEA0 "m_object != (0)" in 025286E0
+str 1004BFE4 "d_demo.cpp" in 02528CEC
+str 1004BFD4 "m_system != (0)" in 02528CEC
+str 1004C02C "d_demo.cpp" in 025291C8
+str 1004C01C "m_system != (0)" in 025291C8
+str 1004BE6C "d_act"
+data l_systemVtable 1004C44C
+data l_stageCreatorVtable 101735C4
+data l_audioCreatorVtable 1017329C
+data l_particleCreatorVtable 10173424
+data l_messageCreatorVtable 101733AC
+data l_factoryVtable 10172CD4
+data l_factoryCreateVtable 10172C74
+str 1004BFB4 "Demo04" in 02528CEC
+str 1004BFBC "Demo46" in 02528CEC
+str 1004BFC4 "Demo37" in 02528CEC
+str 1004BFCC "Demo45" in 02528CEC
+str 1004BFFC "Demo46" in 025291C8
+str 1004C004 "Demo08" in 025291C8
+str 1004C00C "Demo29" in 025291C8
+str 1004C014 "Demo45" in 025291C8
+data l_demo 101D5FE4
+ext 0283D4C8 void dDemo_resetControlObjects(dDemo_control* control)
+ext 0283980C void dDemo_parse_ct(dDemo_parse* parser, dDemo_control* control)
+ext 027ED8C0 u32 dDemo_parseNext(dDemo_parse* parser, dDemo_parseInput* input, u32 flags)
+ext 0283987C void dDemo_parse_dt(dDemo_parse* parser, u32 flags)
+ext 0283D514 u32 dDemo_forward(dDemo_control* control, u32 frames)
+ext 02839518 void dDemo_setGetOrigin(dDemo_control* control, const cXyz* position, f64 rotation)
+ext 028394F4 u32 dDemo_setSetOrigin(dDemo_control* control, const cXyz* position, f64 rotation)
+ext 0257E6C4 void dDemo_startEventWind()
+ext 0257E684 void dDemo_setEventWind(u32 x, u32 y)
+ext 0257E594 void dDemo_setWindPower(f64 power)
+ext 0200F5C8 void dDemo_chaseWindPower(be<f32>* power, f64 target, f64 step)
+ext 02030FA8 void dDemo_pauseStream(u32 stream)
+ext 02030E90 void dDemo_startStream(u32 stream)
+ext 025E4A98 void dDemo_setMorphAnimation(mDoExt_McaMorf* morph, J3DAnmTransform* animation, s32 mode, void* sound, f64 transition, f64 speed, f64 start, f64 end)
+ext 025E535C void dDemo_playMorph(mDoExt_McaMorf* morph, cXyz* position, u32 sound, u32 reverb)
+ext 025F7424 dDemo_messageControl* dDemo_messageControl_ct(dDemo_messageControl* self)
+ext 025F8610 void dDemo_setMessageControl(u32 audioControl, dDemo_messageControl* message)
+ext 028395A8 dDemo_control* dDemo_control_ct(dDemo_control* self)
+ext 0283973C void dDemo_appendCreateObject(dDemo_factory* factory, dDemo_createObject* creator)
+ext 025277D8 dDemo_actor_c* dDemo_bindActor(dDemo_actor_c* self, fopAc_ac_c* actor)
+ext 025D9F38 fopAc_ac_c* dDemo_searchActorByName(const char* name, u32 first, u32 second)
+ext 025D59A8 fopAc_ac_c* dDemo_fastCreateActor(const char* name, u32 first, u32 second, s32 room, u32 fourth, u32 fifth, u32 sixth, u32 seventh)
+ext 0283D3E8 void dDemo_destroyAll(dDemo_control* control)
+ext 02838E6C void dDemo_destroyCreateObjects(void* objects)
+ext 026067F4 void* dDemo_getObjectIDRes(u32 control, dDemo_safeString* archive, u32 id)
+ext 028F026C void dDemo_registerGlobalDestructor(dDemo_destructorRecord* record)
+ext 028ED6F8 void dDemo_initOriginFlag(be<u8>* flag)
+ext 028EAB2C void dDemo_initRotationFlag(be<u8>* flag)
+data l_prefixTransform1 10475658
+data l_prefixTransform2 10475674
+data l_prefixTransform3 10475690
+data l_demoTransform 104756AC
+data l_tailTransform 104756CC
+data l_messageControl 104756C8
+data l_demoWindPower 101D5FBC
+data l_audioControl 101F4B5C
+data l_audioInterface 101FFC78
+data l_emitterManager 1047B2D4
+data l_resourceControl 101F4F28
+data l_primaryMinAngle 1004BDA0
+data l_primaryMaxAngle 1004BDA4
+data l_secondaryMinAngle 1004BDA8
+data l_secondaryMaxAngle 1004BDAC
+data l_tertiaryMinAngle 1004BDB0
+data l_tertiaryMaxAngle 1004BDB4
+data l_demoMinAngle 1004C038
+data l_demoMaxAngle 1004C03C
+data l_finalMinAngle 1004C4E0
+data l_finalMaxAngle 1004C4E4
+data l_zero 1004BDC0
+data l_one 1004BE34
+data l_defaultFovy 1004BE60
+data l_reverse 1004BE38
+data l_secondPerFrame 1004BE78
+data l_calmWindPower 1004BFB0
+data l_demoWindTarget 1004BFF4
+data l_demoWindStep 1004BFF8
+data l_degreesToShort 1004BE5C
+data l_shortToDegrees 1004BE68
+data l_animationMax 1004BE58
+*/
+// clang-format on

@@ -1,90 +1,136 @@
-#include "bindings.h"
-using namespace gabi;
-namespace {
-template<class T> T rd(u32 a,u32 o=0) { return load<T>(a+o); }
-template<class T> void wr(u32 a,u32 o,T v) { store<T>(a+o,v); }
+/**
+ * Process priority changes and deferred queue handling, in tww style.
+ * Verified against the original f_pc_priority specs.
+ */
+#include "f_pc/f_pc_priority.h"
+
+static node_list_class l_fpcPi_Queue;
+static const u32 crear[2] = {0xFFFFFFFF, 0xFFFFFFFF};
+
+/* 025E0CBC */
+s32 fpcPi_IsInQueue(process_priority_class* i_procPriority) {
+    return cTg_IsUse(&i_procPriority->base);
 }
-s32 fpcPi_IsInQueue_hd(u32 p) {
- WWHD_FUNC(0x025E0CBC,s32,p);
- return call<s32>(0x0201A71C,p);
+
+/* 025E0CC0 */
+s32 fpcPi_Delete(process_priority_class* i_procPriority) {
+    cTg_SingleCut(&i_procPriority->base);
+    fpcLy_CancelQTo(&i_procPriority->mMtdTag);
+    // HD: deletion is folded into this entry; the clear words are loaded separately around stores.
+    u32 layer = crear[0];
+    i_procPriority->mInfoQ.mLayer = layer;
+    u32 list = crear[1];
+    i_procPriority->mInfoQ.mListWord = list;
+    return 1;
 }
-VERIFY(0x025E0CBC,fpcPi_IsInQueue_hd);
-s32 fpcPi_QueueTo_hd(u32 p) {
- WWHD_FUNC(0x025E0CC0,s32,p);
- call<void>(0x0201A868,p);
- call<void>(0x025DE9E0,p+0x14);
- const u32 a=rd<u32>(0x101F3E6C);wr<u32>(p,0x30,a);
- const u32 b=rd<u32>(0x101F3E70);wr<u32>(p,0x34,b);
- return 1;
+
+/* 025E0D0C */
+s32 fpcPi_IsNormal(u32 i_layer, u32 i_listID, u32 i_priority) {
+    return i_layer < fpcLy_SPECIAL_e && i_listID < fpcPi_SPECIAL_e && i_priority < fpcPi_SPECIAL_e;
 }
-VERIFY(0x025E0CC0,fpcPi_QueueTo_hd);
-s32 fpcPi_IsNormal_hd(u32 layer,u32 list,u32 priority) {
- WWHD_FUNC(0x025E0D0C,s32,layer,list,priority);
- return layer<0xFFFFFFFEu && list<0xFFFEu && priority<0xFFFEu;
+
+/* 025E0D38 */
+s32 fpcPi_Change(process_priority_class* i_procPriority, u32 i_layer, u32 i_listID, u32 i_priority) {
+    base_process_class* pProc = gabi::at<base_process_class>(i_procPriority->base.mpTagData);
+    if (pProc->mInitState == 3) return 0;
+    if (!fpcPi_IsNormal(i_layer, i_listID, i_priority)) return 0;
+    u32 layer = i_procPriority->mInfoCurr.mLayer;
+    u32 list = i_procPriority->mInfoCurr.mListWord;
+    i_procPriority->mInfoQ.mLayer = layer;
+    i_procPriority->mInfoQ.mListWord = list;
+    bool changed = false;
+    if (i_layer != fpcLy_CURRENT_e && i_procPriority->mInfoCurr.mLayer != i_layer) {
+        changed = true;
+        i_procPriority->mInfoQ.mLayer = i_layer;
+    }
+    if (i_listID != fpcPi_CURRENT_e && i_procPriority->mInfoCurr.mListID != i_listID) {
+        changed = true;
+        i_procPriority->mInfoQ.mListID = (u16)i_listID;
+    }
+    if (i_priority != fpcPi_CURRENT_e && i_procPriority->mInfoCurr.mListPrio != i_priority) {
+        changed = true;
+        i_procPriority->mInfoQ.mListPrio = (u16)i_priority;
+    }
+    u8 state = pProc->mInitState;
+    if (state == 0 || state == 1) {
+        layer = i_procPriority->mInfoQ.mLayer;
+        list = i_procPriority->mInfoQ.mListWord;
+        i_procPriority->mInfoCurr.mLayer = layer;
+        i_procPriority->mInfoCurr.mListWord = list;
+        return 1;
+    }
+    if (!changed) return 0;
+    // HD: ToQueue is inlined here; preserve its layer load before the queue call.
+    u32 queuedLayer = i_procPriority->mInfoQ.mLayer;
+    if (!cTg_Addition(&l_fpcPi_Queue, &i_procPriority->base)) return 0;
+    if (queuedLayer != fpcLy_CURRENT_e) {
+        layer_class* pLayer = fpcLy_Layer(queuedLayer);
+        if (!fpcLy_ToCancelQ(pLayer, &i_procPriority->mMtdTag)) {
+            cTg_SingleCut(&i_procPriority->base);
+            return 0;
+        }
+    }
+    return 1;
 }
-VERIFY(0x025E0D0C,fpcPi_IsNormal_hd);
-s32 fpcPi_Change_hd(u32 p,u32 layer,u32 list,u32 priority) {
- WWHD_FUNC(0x025E0D38,s32,p,layer,list,priority);
- const u32 proc=rd<u32>(p,0xC);
- if(rd<u8>(proc,0xC)==3)return 0;
- if(!call<s32>(0x025E0D0C,layer,list,priority))return 0;
- const u32 a=rd<u32>(p,0x38),b=rd<u32>(p,0x3C);
- wr<u32>(p,0x30,a);wr<u32>(p,0x34,b);
- bool changed=false;
- if(layer!=0xFFFFFFFDu && rd<u32>(p,0x38)!=layer){changed=true;wr<u32>(p,0x30,layer);}
- if(list!=0xFFFDu && rd<u16>(p,0x3C)!=list){changed=true;wr<u16>(p,0x34,(u16)list);}
- if(priority!=0xFFFDu && rd<u16>(p,0x3E)!=priority){changed=true;wr<u16>(p,0x36,(u16)priority);}
- const u8 state=rd<u8>(proc,0xC);
- if(state==0 || state==1){
-  const u32 x=rd<u32>(p,0x30),y=rd<u32>(p,0x34);
-  wr<u32>(p,0x38,x);wr<u32>(p,0x3C,y);return 1;
- }
- if(!changed)return 0;
- const u32 queuedLayer=rd<u32>(p,0x30);
- if(!call<s32>(0x0201A8B4,0x1048AB40u,p))return 0;
- if(queuedLayer!=0xFFFFFFFDu){
-  const u32 l=call<u32>(0x025DEAC0,queuedLayer);
-  if(!call<s32>(0x025DE9E4,l,p+0x14)){call<void>(0x0201A868,p);return 0;}
- }
- return 1;
+
+/* 025E0EE4 */
+s32 fpcPi_Handler() {
+    for (;;) {
+        create_tag_class* tag = cTg_GetFirst(&l_fpcPi_Queue);
+        if (!tag) return 1;
+        base_process_class* pProc = gabi::at<base_process_class>(tag->mpTagData);
+        // HD: normalize the byte-array view to the wrapping guest address, including NULL.
+        process_priority_class* i_procPriority = gabi::at<process_priority_class>(gabi::ea(pProc) + offsetof(base_process_class, mPi));
+        fpcLy_CancelQTo(&i_procPriority->mMtdTag);
+        if (!i_procPriority) return 1;
+        base_process_class* owner = gabi::at<base_process_class>(i_procPriority->base.mpTagData);
+        u32 layer = i_procPriority->mInfoQ.mLayer;
+        void* pLineTag = owner->mLnTg;
+        u16 priority = i_procPriority->mInfoQ.mListPrio;
+        u16 list = i_procPriority->mInfoQ.mListID;
+        if (fpcLyTg_Move(&owner->mLyTg, layer, list, priority) != 1) return 0;
+        u16 oldList = i_procPriority->mInfoCurr.mListID;
+        fpcLnTg_Move(pLineTag, oldList);
+        u32 newLayer = i_procPriority->mInfoQ.mLayer;
+        u32 newList = i_procPriority->mInfoQ.mListWord;
+        i_procPriority->mInfoCurr.mLayer = newLayer;
+        i_procPriority->mInfoCurr.mListWord = newList;
+    }
 }
-VERIFY(0x025E0D38,fpcPi_Change_hd);
-s32 fpcPi_Handler_hd() {
- WWHD_FUNC(0x025E0EE4,s32);
- for(;;){
-  const u32 tag=call<u32>(0x0201A838,0x1048AB40u);
-  if(!tag)return 1;
-  const u32 proc=rd<u32>(tag,0xC),p=proc+0x68;
-  call<void>(0x025DE9E0,proc+0x7C);
-  if(!p)return 1;
-  const u32 owner=rd<u32>(p,0xC),layer=rd<u32>(p,0x30);
-  const u32 line=owner+0x34;
-  const u16 priority=rd<u16>(p,0x36),list=rd<u16>(p,0x34);
-  if(call<s32>(0x025DF0F4,owner+0x18,layer,list,priority)!=1)return 0;
-  const u16 oldList=rd<u16>(p,0x3C);
-  call<void>(0x025DF738,line,oldList);
-  const u32 a=rd<u32>(p,0x30),b=rd<u32>(p,0x34);
-  wr<u32>(p,0x38,a);wr<u32>(p,0x3C,b);
- }
+
+/* 025E0FB0 */
+s32 fpcPi_Init(process_priority_class* i_procPriority, void* pUserData, u32 i_layer, u32 i_listID, u32 i_priority) {
+    if (!fpcPi_IsNormal(i_layer, i_listID, i_priority)) return 0;
+    // HD: retain the interleaved halfword/word initialization order.
+    i_procPriority->mInfoCurr.mListID = (u16)i_listID;
+    i_procPriority->mInfoQ.mLayer = i_layer;
+    i_procPriority->mInfoCurr.mLayer = i_layer;
+    i_procPriority->mInfoCurr.mListPrio = (u16)i_priority;
+    i_procPriority->mInfoQ.mListID = (u16)i_listID;
+    i_procPriority->mInfoQ.mListPrio = (u16)i_priority;
+    cTg_Create(&i_procPriority->base, pUserData);
+    fpcMtdTg_Init(&i_procPriority->mMtdTag, fpcPi_Delete, i_procPriority);
+    return 1;
 }
-VERIFY(0x025E0EE4,fpcPi_Handler_hd);
-s32 fpcPi_Init_hd(u32 p,u32 data,u32 layer,u32 list,u32 priority) {
- WWHD_FUNC(0x025E0FB0,s32,p,data,layer,list,priority);
- if(!call<s32>(0x025E0D0C,layer,list,priority))return 0;
- wr<u16>(p,0x3C,(u16)list);wr<u32>(p,0x30,layer);wr<u32>(p,0x38,layer);
- wr<u16>(p,0x3E,(u16)priority);wr<u16>(p,0x34,(u16)list);wr<u16>(p,0x36,(u16)priority);
- call<void>(0x0201A918,p,data);
- call<void>(0x025DFE2C,p+0x14,0x025E0CC0u,p);
- return 1;
+
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025E104C */
+static void __sinit_f_pc_priority_cpp() {
+    sinit_header_statics_rodata(0x1048AB24, 0x101F3E74, 0x1048AB30, 0x10058454);
 }
-VERIFY(0x025E0FB0,fpcPi_Init_hd);
-void fpcPi_sinit_hd() {
- WWHD_FUNC(0x025E104C,void);
- wr<u32>(0x1048AB30,8,0);wr<u32>(0x1048AB30,0,0);wr<u32>(0x1048AB30,12,0);wr<u32>(0x1048AB30,4,0);
- call<void>(0x028F026C,0x101F3E74u);
- const f32 a=rd<f32>(0x10058454),b=rd<f32>(0x10058458);
- wr<f32>(0x1048AB24,0,a);wr<f32>(0x1048AB28,0,b);
- call<void>(0x028ED6F8,0x1048AB2Cu);call<void>(0x028F026C,0x101F3E80u);
- call<void>(0x028EAB2C,0x1048AB2Du);call<void>(0x028F026C,0x101F3E8Cu);
-}
-VERIFY(0x025E104C,fpcPi_sinit_hd);
+
+/* WWHD glue (tools/verify/autoglue.py): queue, deletion sentinel and external methods
+data l_fpcPi_Queue 1048AB40
+data crear 101F3E6C
+ext 0201A71C s32 cTg_IsUse(create_tag_class*)
+ext 0201A868 void cTg_SingleCut(create_tag_class*)
+ext 0201A8B4 s32 cTg_Addition(node_list_class*, create_tag_class*)
+ext 0201A838 create_tag_class* cTg_GetFirst(node_list_class*)
+ext 0201A918 void cTg_Create(create_tag_class*, void*)
+ext 025DE9E0 void fpcLy_CancelQTo(process_method_tag_class*)
+ext 025DEAC0 layer_class* fpcLy_Layer(u32)
+ext 025DE9E4 s32 fpcLy_ToCancelQ(layer_class*, process_method_tag_class*)
+ext 025DF0F4 s32 fpcLyTg_Move(layer_management_tag_class*, u32, u16, u16)
+ext 025DF738 void fpcLnTg_Move(void*, u16)
+ext 025DFE2C void fpcMtdTg_Init(process_method_tag_class*, process_method_tag_func, process_priority_class*)
+*/

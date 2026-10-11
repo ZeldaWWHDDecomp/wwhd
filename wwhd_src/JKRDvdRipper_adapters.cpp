@@ -1,160 +1,412 @@
-#include "bindings.h"
-// Qualified two-entry SDK subset, not the complete JKRDvdRipper translation unit.
-namespace dvd_ripper_adapters {
-using namespace gabi;
-static u32 word(u32 a){return load<u32>(a);}
-static void put(u32 a,u32 v){store<u32>(a,v);}
-static s32 readDVD(u32 file,u32 dst,u32 size,u32 offset){return call<s32>(0x0284B6EC,file+0x7C,dst,size,offset,2u);}
-static bool readRetry(u32 file,u32 dst,u32 size,u32 offset){
- s32 result=readDVD(file,dst,size,offset);
- while(result<0){if(result==-3||!load<u8>(0x101F9750))return false;call(0x0284B990);result=readDVD(file,dst,size,offset);}return true;
-}
-static bool streamRead(u32 dst,u32 size){
- s32 result=readDVD(word(0x104A23A0),dst,size,word(0x104A2394));
- while(result<0){if(result==-3||!load<u8>(0x101F9750))return false;call(0x0284B990);result=readDVD(word(0x104A23A0),dst,size,word(0x104A2394));}return true;
-}
-static u32 detect(u32 p){u32 kind=call<u32>(0x028428FC,p);return kind==3?0:kind;}
-static u32 alloc(u32 heap,u32 size,s32 direction){return call<u32>(0x027EC0D8,heap,size,direction);}
-static void freeMem(u32 p){call(0x027EC0B0,p);}
-static void invalidate(u32 p,u32 size){call(0xC00088A8,p,size);}
-u32 loadToMainRAM(u32 file,u32 dst,u32 expand,u32 length,u32 heap,u32 direction,u32 offset,u32 compressionOut){
- WWHD_FUNC(0x027EB5F4,u32,file,dst,expand,length,heap,direction,offset,compressionOut);
- // Ninth incoming integer argument is the decompressed-size output.
- u32 sizeOut=word(cpu->r[1]+8);
- u32 vtable=word(file+0xC);
- u32 aligned=(call_ptr<u32>(word(vtable+0x34),file)+31)&~31u;
- u32 compression=0,expandedSize=0,temporary=0;
- bool allocated=false;
- // The native 32-byte read target is 64-byte aligned within a local 64-byte buffer.
- Local<u8[128]> header;u32 headerAddress=(ea(header.get())+63)&~63u;
- if(expand==1){
-  if(!readRetry(file,headerAddress,32,0))return 0;
-  invalidate(headerAddress,32);compression=detect(headerAddress);
-  expandedSize=(u32(load<u8>(headerAddress+4))<<24)|(u32(load<u8>(headerAddress+5))<<16)|(u32(load<u8>(headerAddress+6))<<8)|load<u8>(headerAddress+7);
- }
- if(compressionOut)put(compressionOut,compression);
- if(expand==1&&compression){
-  if(length&&expandedSize>length)expandedSize=length;
-  if(!dst){dst=alloc(heap,expandedSize,direction==1?64:-64);allocated=true;}
-  if(!dst)return 0;
-  if(compression==1){temporary=alloc(heap,aligned,64);if(!temporary&&allocated){freeMem(dst);return 0;}}
- }else{
-  if(!dst){u32 size=aligned-offset;if(length&&size>length)size=length;dst=alloc(heap,size,direction==1?64:-64);allocated=true;}
-  if(!dst)return 0;
- }
- if(!compression){
-  u32 subCompression=0;
-  if(offset){
-   if(!readRetry(file,headerAddress,32,offset)){if(allocated)freeMem(dst);return 0;}
-   invalidate(headerAddress,32);subCompression=detect(headerAddress);
-  }
-  if(!subCompression||expand==2||!expand){
-   u32 size=aligned-offset;if(length&&length<size)size=length;
-   if(!readRetry(file,dst,size,offset)){if(allocated)freeMem(dst);return 0;}
-   if(sizeOut)put(sizeOut,size);return dst;
-  }
-  if(subCompression==2){call(0x027EAE70,file,dst,aligned,length,0u,offset,sizeOut);return dst;}
-  call(0x0273AA24,0x1016DBDCu,0x15Du,0x1016DBB8u);return dst;
- }
- if(compression==1){
-  if(offset)call(0x0273AA24,0x1016DBDCu,0x167u,0x1016DBF0u);
-  if(!readRetry(file,temporary,aligned,0)){if(allocated)freeMem(dst);freeMem(temporary);return 0;}
-  invalidate(temporary,aligned);call(0x02842B38,temporary,dst,expandedSize,offset);freeMem(temporary);
-  if(sizeOut)put(sizeOut,expandedSize);return dst;
- }
- if(compression==2){if(call<u32>(0x027EAE70,file,dst,aligned,expandedSize,offset,0u,sizeOut)){if(allocated)freeMem(dst);dst=0;}return dst;}
- if(allocated)freeMem(dst);return 0;
-}
-VERIFY(0x027EB5F4,loadToMainRAM);
-static s32 decompress(u32 file,u32 dst,u32 fileSize,u32 maxDestination,u32 fileOffset,u32 sourceOffset,u32 sizeOut){
- WWHD_FUNC(0x027EAE70,s32,file,dst,fileSize,maxDestination,fileOffset,sourceOffset,sizeOut);
- u32 interruptState=call<u32>(0xC0009A60);
- if(!load<u8>(0x101F9730)){call(0xC0009D68,0x104A23C8u);store<u8>(0x101F9730,1);}
- call(0xC0009F30,interruptState);call(0xC0009E40,0x104A23C8u);
- u32 bufferSize=word(0x101F974C);
- u32 buffer=call<u32>(0x027EC0B4,bufferSize,-32);put(0x104A2380,buffer);
- if(!buffer){call(0x0273AA24,0x1016DBA4u,0x3ABu,0x1016DB8Cu);buffer=word(0x104A2380);}
- put(0x104A2384,buffer+bufferSize);
- if(fileOffset){
-  u32 ref=call<u32>(0x027EC0B4,0x1120u,-4);put(0x104A2388,ref);
-  if(!ref){call(0x0273AA24,0x1016DBA4u,0x3B4u,0x1016DB98u);ref=word(0x104A2388);}
-  put(0x104A23A0,file);put(0x104A2390,ref);put(0x104A23AC,maxDestination);put(0x104A238C,ref+0x1120);
-  put(0x104A23A8,0);put(0x104A23A4,fileOffset);put(0x104A2398,fileSize-sourceOffset);put(0x104A2394,sourceOffset);
- }else{
-  put(0x104A2388,0);put(0x104A23A0,file);put(0x104A23AC,maxDestination);put(0x104A23A8,0);put(0x104A23A4,fileOffset);
-  put(0x104A2398,fileSize-sourceOffset);put(0x104A2394,sourceOffset);
- }
- if(!sizeOut)sizeOut=0x104A23B4;put(0x104A23B0,sizeOut);put(sizeOut,0);
- s32 status=-1;
- u32 input=word(0x104A2380),endBuffer=word(0x104A2384);
- put(0x104A239C,endBuffer-25);
- u32 initialSize=endBuffer-input;if(initialSize>word(0x104A2398))initialSize=word(0x104A2398);
- if(!streamRead(input,initialSize))goto cleanup;
- invalidate(input,initialSize);
- {u32 next=word(0x104A2394)+initialSize;u32 left=word(0x104A2398)-initialSize;put(0x104A2394,next);put(0x104A2398,left);}
- if(!input)goto cleanup;
- if(load<u8>(input)!='Y'||load<u8>(input+1)!='a'||load<u8>(input+2)!='z'||load<u8>(input+3)!='0')goto cleanup;
- {
- u32 out=dst,end=dst+(word(input+4)-word(0x104A23A4));u32 limit=dst+word(0x104A23AC);if(end>limit)end=limit;
- u32 written=0,code=0,bits=0;input+=16;
- // Native do-loop consumes at least one symbol, even when the requested output limit is zero.
- for(;;){
-  if(!bits){
-   if(input>word(0x104A239C)&&word(0x104A2398)){
-    u32 remainder=word(0x104A2384)-input;
-    u32 relocated=word(0x104A2380);if(remainder&31)relocated+=32-(remainder&31);
-    call(0xC000A848,relocated,input,remainder);
-    u32 nextRead=relocated+remainder;u32 count=word(0x104A2384)-nextRead;if(count>word(0x104A2398))count=word(0x104A2398);
-    if(!count)call(0x0273AA24,0x1016DB78u,0x4D6u,0x1016DB68u);
-    if(!streamRead(nextRead,count)){
-     // Native refill-failure cleanup explicitly supplies r4=0 to the first free call.
-     call(0x027EC0B0,word(0x104A2380),0u);u32 ref=word(0x104A2388);if(ref)freeMem(ref);
-     call(0xC00088B8,dst,word(word(0x104A23B0)));call(0xC000A1C8,0x104A23C8u);return -1;
+/** DVD loading and streaming Yaz0 decompression, qualified HD SDK subset.
+ * Verified against the native functions. */
+#include "JKRDvdRipper_adapters.h"
+// HD: qualified two-entry SDK subset; private stream state retains native load/store order.
+using DVDByte = be<u8>;
+using DVDWord = be<u32>;
+static JKRDvdStreamState l_streamState;
+static DVDByte l_isInitMutex;
+static DVDWord l_szpBufferSize;
+static DVDByte l_errorRetry;
+static u8 l_decompMutex;
+static u8 l_ripperFile;
+static u8 l_unsupportedSubArchive;
+static u8 l_unsupportedOffset;
+static u8 l_decompFile;
+static u8 l_bufferAssertion;
+static u8 l_referenceAssertion;
+static u8 l_refillFile;
+static u8 l_refillAssertion;
+
+static bool readRetry(JKRDvdFile *file, void *destination, u32 size, u32 offset) {
+    s32 result = DVDRipper_DVDReadPrio(&file->mFileInfo, destination, size, offset, 2);
+    while (result < 0) {
+        if (result == -3 || !u8(l_errorRetry))
+            return false;
+        DVDRipper_VIWaitForRetrace();
+        result = DVDRipper_DVDReadPrio(&file->mFileInfo, destination, size, offset, 2);
     }
-    invalidate(nextRead,count);u32 next=word(0x104A2394)+count;u32 left=word(0x104A2398)-count;
-    put(0x104A2394,next);put(0x104A2398,left);if(!left)put(0x104A239C,nextRead+count);
-    input=relocated;if(!input)goto cleanup;
-   }
-   code=load<u8>(input++);bits=8;
-  }
-  u32 skip=word(0x104A23A4);
-  if(code&0x80){
-   if(skip){
-    u32 consumed=word(0x104A23A8);
-    if(consumed>=skip){store<u8>(out++,load<u8>(input));++written;if(out==end)break;}
-    u32 cursor=word(0x104A2390);store<u8>(cursor,load<u8>(input));cursor=word(0x104A2390)+1;
-    if(cursor==word(0x104A238C))cursor=word(0x104A2388);
-    u32 consumedNext=word(0x104A23A8)+1;++input;put(0x104A2390,cursor);put(0x104A23A8,consumedNext);
-   }else{
-    store<u8>(out++,load<u8>(input++));++written;if(out==end)break;
-    put(0x104A23A8,word(0x104A23A8)+1);
-   }
-  }else{
-   u32 first=load<u8>(input),second=load<u8>(input+1);input+=2;
-   u32 distance=((first&15)<<8)|second;u32 count=first>>4;u32 copy;
-   if(skip){copy=word(0x104A2390)-distance-1;u32 start=word(0x104A2388);if(copy<start)copy+=word(0x104A238C)-start;}
-   else copy=out-distance-1;
-   if(!count)count=load<u8>(input++)+18;else count+=2;
-   for(u32 i=0;i<count;++i){
-    if(skip){
-     if(word(0x104A23A8)>=word(0x104A23A4)){store<u8>(out++,load<u8>(copy));++written;if(out==end)break;}
-     u32 cursor=word(0x104A2390);store<u8>(cursor,load<u8>(copy));cursor=word(0x104A2390)+1;
-     u32 refEnd=word(0x104A238C);if(cursor==refEnd)cursor=word(0x104A2388);
-     ++copy;put(0x104A2390,cursor);if(copy==refEnd)copy=word(0x104A2388);
-     put(0x104A23A8,word(0x104A23A8)+1);
-    }else{
-     store<u8>(out++,load<u8>(copy));++written;if(out==end)break;
-     put(0x104A23A8,word(0x104A23A8)+1);++copy;
+    return true;
+}
+static bool streamRead(u32 destination, u32 size) {
+    s32 result = DVDRipper_DVDReadPrio(&l_streamState.srcFile->mFileInfo, gabi::at<void>(destination), size,
+                                       l_streamState.srcOffset, 2);
+    while (result < 0) {
+        if (result == -3 || !u8(l_errorRetry))
+            return false;
+        DVDRipper_VIWaitForRetrace();
+        result = DVDRipper_DVDReadPrio(&l_streamState.srcFile->mFileInfo, gabi::at<void>(destination), size,
+                                       l_streamState.srcOffset, 2);
     }
-   }
-  }
-  --bits;code<<=1;if(out>=end)break;
- }
- put(word(0x104A23B0),written);status=0;
- }
-cleanup:
- freeMem(word(0x104A2380));{u32 ref=word(0x104A2388);if(ref)freeMem(ref);}
- call(0xC00088B8,dst,word(word(0x104A23B0)));call(0xC000A1C8,0x104A23C8u);return status;
+    return true;
 }
-VERIFY(0x027EAE70,decompress);
+static u32 detect(void *header) {
+    // HD: ASR is treated as an uncompressed resource by this adapter.
+    u32 compression = DVDRipper_checkCompressed(header);
+    return compression == COMPRESSION_ASR ? COMPRESSION_NONE : compression;
 }
+// HD: cursors use unsigned guest words to preserve 32-bit wrap and address comparisons.
+/* 027EAE70 */
+static s32 JKRDecompressFromDVD(JKRDvdFile *file, void *destination, u32 fileSize, u32 maxDestination,
+                                u32 fileOffset, u32 sourceOffset, be<u32> *outputSize) {
+    u32 dst = gabi::ea(destination);
+    u32 sizeOut = gabi::ea(outputSize);
+    u32 interruptState = DVDRipper_disableInterrupts();
+    if (!u8(l_isInitMutex)) {
+        DVDRipper_initMutex(&l_decompMutex);
+        l_isInitMutex = 1;
+    }
+    DVDRipper_restoreInterrupts(interruptState);
+    DVDRipper_lockMutex(&l_decompMutex);
+    u32 bufferSize = u32(l_szpBufferSize);
+    u32 buffer = gabi::ea(DVDRipper_allocFromSysHeap(bufferSize, -32));
+    l_streamState.szpBuf = gabi::at<be<u8>>(buffer);
+    if (!buffer) {
+        DVDRipper_panic(&l_decompFile, 0x3AB, &l_bufferAssertion);
+        buffer = gabi::ea(l_streamState.szpBuf.get());
+    }
+    l_streamState.szpEnd = gabi::at<be<u8>>(buffer + bufferSize);
+    if (fileOffset) {
+        u32 ref = gabi::ea(DVDRipper_allocFromSysHeap(0x1120u, -4));
+        l_streamState.refBuf = gabi::at<be<u8>>(ref);
+        if (!ref) {
+            DVDRipper_panic(&l_decompFile, 0x3B4, &l_referenceAssertion);
+            ref = gabi::ea(l_streamState.refBuf.get());
+        }
+        l_streamState.srcFile = file;
+        l_streamState.refCurrent = gabi::at<be<u8>>(ref);
+        l_streamState.maxDest = maxDestination;
+        l_streamState.refEnd = gabi::at<be<u8>>(ref + 0x1120);
+        l_streamState.readCount = 0;
+        l_streamState.fileOffset = fileOffset;
+        l_streamState.transLeft = fileSize - sourceOffset;
+        l_streamState.srcOffset = sourceOffset;
+    } else {
+        l_streamState.refBuf = gabi::at<be<u8>>(0);
+        l_streamState.srcFile = file;
+        l_streamState.maxDest = maxDestination;
+        l_streamState.readCount = 0;
+        l_streamState.fileOffset = fileOffset;
+        l_streamState.transLeft = fileSize - sourceOffset;
+        l_streamState.srcOffset = sourceOffset;
+    }
+    if (!sizeOut)
+        sizeOut = gabi::ea(&l_streamState.decompressedSize);
+    l_streamState.pDecompressedSize = gabi::at<be<u32>>(sizeOut);
+    *l_streamState.pDecompressedSize.get() = 0;
+    s32 status = -1;
+    do {
+        u32 input = gabi::ea(l_streamState.szpBuf.get()), endBuffer = gabi::ea(l_streamState.szpEnd.get());
+        l_streamState.srcLimit = gabi::at<be<u8>>(endBuffer - 25);
+        u32 initialSize = endBuffer - input;
+        if (initialSize > u32(l_streamState.transLeft))
+            initialSize = u32(l_streamState.transLeft);
+        if (!streamRead(input, initialSize))
+            break;
+        DVDRipper_invalidateRange(gabi::at<void>(input), initialSize);
+        {
+            u32 next = u32(l_streamState.srcOffset) + initialSize;
+            u32 left = u32(l_streamState.transLeft) - initialSize;
+            l_streamState.srcOffset = next;
+            l_streamState.transLeft = left;
+        }
+        if (!input)
+            break;
+        if (u8(*gabi::at<be<u8>>(input)) != 'Y' || u8(*gabi::at<be<u8>>(input + 1)) != 'a' ||
+            u8(*gabi::at<be<u8>>(input + 2)) != 'z' || u8(*gabi::at<be<u8>>(input + 3)) != '0')
+            break;
+        {
+            u32 out = dst,
+                end = dst + (u32(gabi::at<SYaz0Header>(input)->length) - u32(l_streamState.fileOffset));
+            u32 limit = dst + u32(l_streamState.maxDest);
+            if (end > limit)
+                end = limit;
+            u32 written = 0, code = 0, bits = 0;
+            input += 16;
+            bool decodeFailed = false;
+            // Native do-loop consumes at least one symbol, even when the requested output limit is zero.
+            for (;;) {
+                if (!bits) {
+                    if (input > gabi::ea(l_streamState.srcLimit.get()) && u32(l_streamState.transLeft)) {
+                        u32 remainder = gabi::ea(l_streamState.szpEnd.get()) - input;
+                        u32 relocated = gabi::ea(l_streamState.szpBuf.get());
+                        if (remainder & 31)
+                            relocated += 32 - (remainder & 31);
+                        DVDRipper_move(gabi::at<void>(relocated), gabi::at<void>(input), remainder);
+                        u32 nextRead = relocated + remainder;
+                        u32 count = gabi::ea(l_streamState.szpEnd.get()) - nextRead;
+                        if (count > u32(l_streamState.transLeft))
+                            count = u32(l_streamState.transLeft);
+                        if (!count)
+                            DVDRipper_panic(&l_refillFile, 0x4D6, &l_refillAssertion);
+                        if (!streamRead(nextRead, count)) {
+                            // Native refill-failure cleanup explicitly supplies r4=0 to the first free call.
+                            DVDRipper_freeRefillFailure(l_streamState.szpBuf.get(), 0);
+                            u32 ref = gabi::ea(l_streamState.refBuf.get());
+                            if (ref)
+                                DVDRipper_free(gabi::at<void>(ref));
+                            DVDRipper_storeRangeNoSync(gabi::at<void>(dst),
+                                                       *l_streamState.pDecompressedSize.get());
+                            DVDRipper_unlockMutex(&l_decompMutex);
+                            return -1;
+                        }
+                        DVDRipper_invalidateRange(gabi::at<void>(nextRead), count);
+                        u32 next = u32(l_streamState.srcOffset) + count;
+                        u32 left = u32(l_streamState.transLeft) - count;
+                        l_streamState.srcOffset = next;
+                        l_streamState.transLeft = left;
+                        if (!left)
+                            l_streamState.srcLimit = gabi::at<be<u8>>(nextRead + count);
+                        input = relocated;
+                        if (!input) {
+                            decodeFailed = true;
+                            break;
+                        }
+                    }
+                    code = u8(*gabi::at<be<u8>>(input++));
+                    bits = 8;
+                }
+                u32 skip = u32(l_streamState.fileOffset);
+                if (code & 0x80) {
+                    if (skip) {
+                        u32 consumed = u32(l_streamState.readCount);
+                        if (consumed >= skip) {
+                            *gabi::at<be<u8>>(out++) = *gabi::at<be<u8>>(input);
+                            ++written;
+                            if (out == end)
+                                break;
+                        }
+                        u32 cursor = gabi::ea(l_streamState.refCurrent.get());
+                        *gabi::at<be<u8>>(cursor) = *gabi::at<be<u8>>(input);
+                        cursor = gabi::ea(l_streamState.refCurrent.get()) + 1;
+                        if (cursor == gabi::ea(l_streamState.refEnd.get()))
+                            cursor = gabi::ea(l_streamState.refBuf.get());
+                        u32 consumedNext = u32(l_streamState.readCount) + 1;
+                        ++input;
+                        l_streamState.refCurrent = gabi::at<be<u8>>(cursor);
+                        l_streamState.readCount = consumedNext;
+                    } else {
+                        *gabi::at<be<u8>>(out++) = *gabi::at<be<u8>>(input++);
+                        ++written;
+                        if (out == end)
+                            break;
+                        l_streamState.readCount = u32(l_streamState.readCount) + 1;
+                    }
+                } else {
+                    u32 first = u8(*gabi::at<be<u8>>(input)), second = u8(*gabi::at<be<u8>>(input + 1));
+                    input += 2;
+                    u32 distance = ((first & 15) << 8) | second;
+                    u32 count = first >> 4;
+                    u32 copy;
+                    if (skip) {
+                        copy = gabi::ea(l_streamState.refCurrent.get()) - distance - 1;
+                        u32 start = gabi::ea(l_streamState.refBuf.get());
+                        if (copy < start)
+                            copy += gabi::ea(l_streamState.refEnd.get()) - start;
+                    } else
+                        copy = out - distance - 1;
+                    if (!count)
+                        count = u8(*gabi::at<be<u8>>(input++)) + 18;
+                    else
+                        count += 2;
+                    for (u32 i = 0; i < count; ++i) {
+                        if (skip) {
+                            if (u32(l_streamState.readCount) >= u32(l_streamState.fileOffset)) {
+                                *gabi::at<be<u8>>(out++) = *gabi::at<be<u8>>(copy);
+                                ++written;
+                                if (out == end)
+                                    break;
+                            }
+                            u32 cursor = gabi::ea(l_streamState.refCurrent.get());
+                            *gabi::at<be<u8>>(cursor) = *gabi::at<be<u8>>(copy);
+                            cursor = gabi::ea(l_streamState.refCurrent.get()) + 1;
+                            u32 refEnd = gabi::ea(l_streamState.refEnd.get());
+                            if (cursor == refEnd)
+                                cursor = gabi::ea(l_streamState.refBuf.get());
+                            ++copy;
+                            l_streamState.refCurrent = gabi::at<be<u8>>(cursor);
+                            if (copy == refEnd)
+                                copy = gabi::ea(l_streamState.refBuf.get());
+                            l_streamState.readCount = u32(l_streamState.readCount) + 1;
+                        } else {
+                            *gabi::at<be<u8>>(out++) = *gabi::at<be<u8>>(copy);
+                            ++written;
+                            if (out == end)
+                                break;
+                            l_streamState.readCount = u32(l_streamState.readCount) + 1;
+                            ++copy;
+                        }
+                    }
+                }
+                --bits;
+                code <<= 1;
+                if (out >= end)
+                    break;
+            }
+            if (decodeFailed)
+                break;
+            *l_streamState.pDecompressedSize.get() = written;
+            status = 0;
+        }
+    } while (false);
+    DVDRipper_free(l_streamState.szpBuf.get());
+    {
+        u32 ref = gabi::ea(l_streamState.refBuf.get());
+        if (ref)
+            DVDRipper_free(gabi::at<void>(ref));
+    }
+    DVDRipper_storeRangeNoSync(gabi::at<void>(dst), *l_streamState.pDecompressedSize.get());
+    DVDRipper_unlockMutex(&l_decompMutex);
+    return status;
+}
+
+// HD: free ABI adapter for the static SDK entry until autoglue supports static methods.
+/* 027EB5F4 */
+static void *JKRDvdRipper_loadToMainRAM(JKRDvdFile *dvdFile, void *destination, u32 expandSwitch,
+                                        u32 dstLength, void *heap, u32 allocDirection, u32 offset,
+                                        be<u32> *pCompression) {
+    // HD: the ninth integer argument remains in the incoming stack slot.
+    be<u32> *returnSize = gabi::at<be<u32>>(u32(*gabi::at<be<u32>>(gabi::cpu->r[1] + 8)));
+    JKRDvdFileVtable *table = dvdFile->__vtbl;
+    u32 fileSizeAligned = (gabi::call_ptr<u32>(table->mGetFileSize, dvdFile) + 31) & ~31u;
+    u32 compression = COMPRESSION_NONE;
+    u32 expandSize = 0;
+    void *mem = nullptr;
+    bool hasAllocated = false;
+    // HD: retain the 128-byte slot and 64-byte alignment used by the native 32-byte header read.
+    gabi::Local<u8[128]> buffer;
+    void *header = gabi::at<void>((gabi::ea(buffer.get()) + 63) & ~63u);
+    if (expandSwitch == EXPAND_SWITCH_UNKNOWN1) {
+        if (!readRetry(dvdFile, header, 32, 0))
+            return nullptr;
+        DVDRipper_invalidateRange(header, 32);
+        compression = detect(header);
+        // HD: the expanded-size header is read as four bytes, preserving the native access order.
+        be<u8> *bytes = static_cast<be<u8> *>(header);
+        expandSize = (u32(bytes[4]) << 24) | (u32(bytes[5]) << 16) | (u32(bytes[6]) << 8) | u32(bytes[7]);
+    }
+    if (pCompression)
+        *pCompression = compression;
+    if (expandSwitch == EXPAND_SWITCH_UNKNOWN1 && compression) {
+        if (dstLength && expandSize > dstLength)
+            expandSize = dstLength;
+        if (!destination) {
+            destination = DVDRipper_allocFromHeap(heap, expandSize,
+                                                  allocDirection == ALLOC_DIRECTION_FORWARD ? 64 : -64);
+            hasAllocated = true;
+        }
+        if (!destination)
+            return nullptr;
+        if (compression == COMPRESSION_YAY0) {
+            mem = DVDRipper_allocFromHeap(heap, fileSizeAligned, 64);
+            if (!mem && hasAllocated) {
+                DVDRipper_free(destination);
+                return nullptr;
+            }
+        }
+    } else {
+        if (!destination) {
+            u32 size = fileSizeAligned - offset;
+            // HD: cap the uncompressed allocation to the requested destination length.
+            if (dstLength && size > dstLength)
+                size = dstLength;
+            destination =
+                DVDRipper_allocFromHeap(heap, size, allocDirection == ALLOC_DIRECTION_FORWARD ? 64 : -64);
+            hasAllocated = true;
+        }
+        if (!destination)
+            return nullptr;
+    }
+    if (compression == COMPRESSION_NONE) {
+        u32 compression2 = COMPRESSION_NONE;
+        if (offset) {
+            if (!readRetry(dvdFile, header, 32, offset)) {
+                if (hasAllocated)
+                    DVDRipper_free(destination);
+                return nullptr;
+            }
+            DVDRipper_invalidateRange(header, 32);
+            compression2 = detect(header);
+        }
+        if (!compression2 || expandSwitch == EXPAND_SWITCH_UNKNOWN2 ||
+            expandSwitch == EXPAND_SWITCH_UNKNOWN0) {
+            u32 size = fileSizeAligned - offset;
+            if (dstLength && dstLength < size)
+                size = dstLength;
+            if (!readRetry(dvdFile, destination, size, offset)) {
+                if (hasAllocated)
+                    DVDRipper_free(destination);
+                return nullptr;
+            }
+            if (returnSize)
+                *returnSize = size;
+            return destination;
+        }
+        if (compression2 == COMPRESSION_YAZ0) {
+            JKRDecompressFromDVD(dvdFile, destination, fileSizeAligned, dstLength, 0, offset, returnSize);
+            return destination;
+        }
+        DVDRipper_panic(&l_ripperFile, 0x15D, &l_unsupportedSubArchive);
+        return destination;
+    }
+    if (compression == COMPRESSION_YAY0) {
+        if (offset)
+            DVDRipper_panic(&l_ripperFile, 0x167, &l_unsupportedOffset);
+        if (!readRetry(dvdFile, mem, fileSizeAligned, 0)) {
+            if (hasAllocated)
+                DVDRipper_free(destination);
+            DVDRipper_free(mem);
+            return nullptr;
+        }
+        DVDRipper_invalidateRange(mem, fileSizeAligned);
+        DVDRipper_decompress(mem, destination, expandSize, offset);
+        DVDRipper_free(mem);
+        if (returnSize)
+            *returnSize = expandSize;
+        return destination;
+    }
+    if (compression == COMPRESSION_YAZ0) {
+        if (JKRDecompressFromDVD(dvdFile, destination, fileSizeAligned, expandSize, offset, 0, returnSize)) {
+            if (hasAllocated)
+                DVDRipper_free(destination);
+            destination = nullptr;
+        }
+        return destination;
+    }
+    if (hasAllocated)
+        DVDRipper_free(destination);
+    return nullptr;
+}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data l_streamState 104A2380
+data l_isInitMutex 101F9730
+data l_szpBufferSize 101F974C
+data l_errorRetry 101F9750
+data l_decompMutex 104A23C8
+data l_ripperFile 1016DBDC
+data l_unsupportedSubArchive 1016DBB8
+data l_unsupportedOffset 1016DBF0
+data l_decompFile 1016DBA4
+data l_bufferAssertion 1016DB8C
+data l_referenceAssertion 1016DB98
+data l_refillFile 1016DB78
+data l_refillAssertion 1016DB68
+ext 0284B6EC s32 DVDRipper_DVDReadPrio(void*, void*, u32, u32, u32)
+ext 0284B990 void DVDRipper_VIWaitForRetrace()
+ext 028428FC u32 DVDRipper_checkCompressed(void*)
+ext 027EC0D8 void* DVDRipper_allocFromHeap(void*, u32, s32)
+ext 027EC0B4 void* DVDRipper_allocFromSysHeap(u32, s32)
+ext 027EC0B0 void DVDRipper_free(void*)
+ext 027EC0B0 void DVDRipper_freeRefillFailure(void*, u32)
+ext C00088A8 void DVDRipper_invalidateRange(void*, u32)
+ext C00088B8 void DVDRipper_storeRangeNoSync(void*, u32)
+ext 02842B38 void DVDRipper_decompress(void*, void*, u32, u32)
+ext 0273AA24 void DVDRipper_panic(void*, u32, void*)
+ext C0009A60 u32 DVDRipper_disableInterrupts()
+ext C0009F30 void DVDRipper_restoreInterrupts(u32)
+ext C0009D68 void DVDRipper_initMutex(void*)
+ext C0009E40 void DVDRipper_lockMutex(void*)
+ext C000A1C8 void DVDRipper_unlockMutex(void*)
+ext C000A848 void DVDRipper_move(void*, void*, u32)
+*/

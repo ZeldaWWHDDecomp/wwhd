@@ -1,37 +1,250 @@
-#include "gabi.h"
-using namespace gabi;
-namespace rain_draw_sun {
-static f32 lf(u32 p){return load<f32>(p);} static void sf(u32 p,f32 v){store<f32>(p,v);}
-static bool stage(u32 name,u32 a,u32 b){store<u32>(a,name);store<u32>(a+4,0x1004F3AC);u32 game=call<u32>(0x025200D4);store<u32>(b,game+0x5134);store<u32>(b+4,0x1004F3AC);call_ptr(load<u32>(load<u32>(a+4)+0x14),at<void>(a));call_ptr(load<u32>(load<u32>(a+4)+0x14),at<void>(a));u32 first=load<u32>(a);call_ptr(load<u32>(load<u32>(b+4)+0x14),at<void>(b));u32 second=load<u32>(b);if(first==second)return true;for(u32 i=0;i<0x40001;i++){u8 x=load<u8>(first+i),y=load<u8>(second+i);if(x!=y)return false;if(!x)return true;}return false;}
-static void vertex(u32 s,u32 matrix,u32 base,u32 out){call(0x028E8F64,at<void>(matrix),at<void>(s+0x10),at<void>(s+0x20));sf(out,fadds_ppc(lf(base),lf(s+0x20)));sf(out+4,fadds_ppc(lf(base+4),lf(s+0x24)));sf(out+8,fadds_ppc(lf(base+8),lf(s+0x28)));}
-static void quad(u32 manager,u32 s,f32 zero,f32 one){u32 index=load<u32>(manager+0x4A8),buffer=load<u32>(manager+index*0x254),end=buffer+0x260;for(u32 p=buffer;p<end;p+=32)for(u32 j=0;j<32;j++)store<u8>((p&~31u)+j,0);index=load<u32>(manager+0x4A8);buffer=load<u32>(manager+index*0x254);for(u32 i=0;i<4;i++){u32 p=buffer+i*0x98,v=s+0x3C+i*12;store<u32>(p,load<u32>(v));store<u32>(p+4,load<u32>(v+4));store<u32>(p+8,load<u32>(v+8));sf(p+0x38,(i==1||i==2)?one:zero);sf(p+0x3C,(i>=2)?one:zero);}}
-void draw(u32 unusedMatrix,u32 input,u32 unusedColor,u32 unusedImages){WWHD_FUNC(0x0256F1C4,void);
- u32 env=call<u32>(0x02555D0C),packet=load<u32>(env+0xA34);env=call<u32>(0x02555D0C);u32 lens=load<u32>(env+0xA38),game=call<u32>(0x025200D4);Local<u8[308]> work;u32 s=ea(work.get()),sun=s+0x2C,moon=s+0x78,relative=s+0x94,camDirection=s+0xA0,sunDirection=s+0xAC,matrix=s+0xB8,rotation=s+0xE8,color=s+0x1C,color2=s+0x38;f32 zero=lf(0x1004F528);sf(s+4,zero);bool drawSun=lf(packet+0xCC)>zero,drawMoon=lf(packet+0xD0)>zero;u32 camera=load<u32>(game+0x5AF8);if(!(drawSun||drawMoon))return;
- sf(sun+8,lf(input+8));sf(sun,lf(input));sf(sun+4,lf(input+4));drawSun=true;drawMoon=true;u32 type=0;
- if(!stage(0x1004FB9C,s+0x84,s+0x8C)){game=call<u32>(0x025200D4);u32 info=call_ptr<u32>(load<u32>(load<u32>(game+0x5150)+0x15C),at<void>(game+0x5150));type=(load<u32>(info+0xC)>>16)&7;}
- env=call<u32>(0x02555D0C);if(load<s16>(env+0x20)==0&&type!=2){env=call<u32>(0x02555D0C);if(lf(env+0x1020)>lf(0x1004FB74))drawMoon=false;else{env=call<u32>(0x02555D0C);if(lf(env+0x1020)<lf(0x1004FB78))drawMoon=false;}sf(moon+8,lf(input+8));sf(moon+4,lf(input+4));sf(moon,lf(input));}
- else{f32 x=-fsubs_ppc(lf(input),lf(camera+0xDC));sf(relative,x);f32 y=-fsubs_ppc(lf(input+4),lf(camera+0xE0));sf(relative+4,y);f32 z=-fsubs_ppc(lf(input+8),lf(camera+0xE4));sf(relative+8,z);sf(moon,fadds_ppc(x,lf(camera+0xDC)));sf(moon+4,fadds_ppc(y,lf(camera+0xE0)));sf(moon+8,fadds_ppc(z,lf(camera+0xE4)));}
- u32 day=call<u32>(0x02554288),save=load<u32>(0x101F84DC);if(lf(save+0x44)<lf(0x1004F5DC))day=day?day-1:6;f32 one=lf(0x1004F550),flip=lf(0x1004FAEC);u32 texture;if(day<4){texture=day;flip=one;}else if(day==4)texture=3;else if(day==5)texture=2;else texture=1;
- env=call<u32>(0x02555D0C);store<u8>(color,load<u8>(env+0xB8C));env=call<u32>(0x02555D0C);store<u8>(color+1,load<u8>(env+0xB8D));env=call<u32>(0x02555D0C);store<u8>(color+2,load<u8>(env+0xB8E));store<u8>(color+3,255);store<u8>(color2,0);store<u8>(color2+1,0);store<u8>(color2+2,0);store<u8>(color2+3,255);
- game=call<u32>(0x025200D4);if(!load<u32>(game+0x5FA4)){u8 timer=load<u8>(packet+0xC4);if(timer<5)store<u8>(packet+0xC4,timer+2);store<u8>(packet+0xC5,1);return;}
- game=call<u32>(0x025200D4);u32 view=load<u32>(game+0x5FA4);call(0x028E91EC,at<void>(view+0x1E4),at<void>(matrix));sf(s,lf(0x1004FB7C));
- if(drawMoon){for(u32 j=0;j<7;j++)store<u32>(s+0x118+j*4,load<u32>(0x1004FBA4+j*4));call(0x0256F084,at<void>(moon),texture);call(0x02563F64,at<void>(camera+0xDC),at<void>(camera+0xE8),at<void>(camDirection));f32 z=lf(camDirection+8),x=lf(camDirection),radius=call<f32>(0x028F4384,fmadds(x,x,fmuls_ppc(z,z)));f32 camTheta=call<f32>(0x028F4D28,lf(camDirection),lf(camDirection+8));call<f32>(0x028F4D28,lf(camDirection+4),radius);
-  z=lf(relative+8);x=lf(relative);radius=call<f32>(0x028F4384,fmadds(x,x,fmuls_ppc(z,z)));f32 moonTheta=call<f32>(0x028F4D28,x,z),moonPhi=call<f32>(0x028F4D28,lf(relative+4),radius);f32 angle=fmadds(lf(0x1004F6D8),fmuls_ppc(fmuls_ppc(fsubs_ppc(moonTheta,camTheta),lf(0x1004FB80)),moonPhi),lf(0x1004FB84));call(0x028E98C0,at<void>(rotation),0x5A,fmuls_ppc(angle,lf(s)));call(0x028E9108,at<void>(matrix),at<void>(rotation),at<void>(matrix));
-  f32 uv0=lf(s+4);store<u8>(color,243);store<u8>(color+1,255);store<u8>(color+2,148);f32 size=lf(0x1004F6BC),factor=lf(0x1004FB8C),alphaScale=lf(0x1004FB88),degree=lf(s),secondAngle=fmuls_ppc(lf(0x1004F564),flip);store<u8>(color+3,(u8)ftoi(fmuls_ppc(lf(packet+0xD0),lf(0x1004F5AC))));u32 manager=packet+0xF0;
-  for(u32 j=0;j<2;j++){if(j==1){store<u8>(color2+1,105);store<u8>(color,255);store<u8>(color2,197);store<u8>(color2+2,35);size=fmuls_ppc(size,factor);store<u8>(color+3,(u8)ftoi(fmuls_ppc(lf(packet+0xD0),alphaScale)));store<u8>(color+1,255);store<u8>(color+2,207);call(0x028E98C0,at<void>(rotation),0x5A,fmuls_ppc(secondAngle,degree));call(0x028E9108,at<void>(matrix),at<void>(rotation),at<void>(matrix));}
-   call(0x0257E8C0,at<void>(packet),j,at<void>(color),at<void>(color2));f32 positiveX=fmuls_ppc(size,flip),negativeX=-positiveX,negativeY=-size;sf(s+0x10,negativeX);sf(s+0x14,size);sf(s+0x18,uv0);vertex(s,matrix,moon,s+0x3C);
-   sf(s+0x10,positiveX);sf(s+0x14,size);sf(s+0x18,uv0);vertex(s,matrix,moon,s+0x48);
-   if(j==0){sf(s+0x10,positiveX);sf(s+0x14,negativeY);}else{f32 scale=lf(s+0x118+day*4);sf(s+0x10,fmuls_ppc(positiveX,scale));sf(s+0x14,-fmuls_ppc(size,scale));}sf(s+0x18,uv0);vertex(s,matrix,moon,s+0x54);
-   sf(s+0x10,negativeX);sf(s+0x14,negativeY);sf(s+0x18,uv0);vertex(s,matrix,moon,s+0x60);quad(manager,s,uv0,one);manager+=0x4C0;
-  }
- }
- if(drawSun){f32 fade=fsubs_ppc(one,lf(lens+0x124));call(0x0256F084,at<void>(sun),9);f32 z=lf(sun+8),x=lf(sun),radius=call<f32>(0x028F4384,fmadds(x,x,fmuls_ppc(z,z)));f32 sunTheta=call<f32>(0x028F4D28,lf(sun),lf(sun+8));call<f32>(0x028F4D28,lf(sun+4),radius);call(0x02563F64,at<void>(camera+0xDC),at<void>(camera+0xE8),at<void>(sunDirection));z=lf(sunDirection+8);x=lf(sunDirection);radius=call<f32>(0x028F4384,fmadds(x,x,fmuls_ppc(z,z)));f32 camTheta=call<f32>(0x028F4D28,lf(sunDirection),lf(sunDirection+8));call<f32>(0x028F4D28,lf(sunDirection+4),radius);
-  f32 angle=fmadds(lf(0x1004F6D8),fmuls_ppc(fsubs_ppc(sunTheta,camTheta),lf(0x1004FB80)),lf(0x1004FB90));call(0x028E98C0,at<void>(rotation),0x5A,fmuls_ppc(angle,lf(s)));call(0x028E9108,at<void>(matrix),at<void>(rotation),at<void>(matrix));sf(s+0xC,one);store<u8>(color2,255);store<u8>(color2+1,40);store<u8>(color2+2,0);sf(s+8,lf(0x1004F5AC));store<u8>(color,255);store<u8>(color+1,255);store<u8>(color+2,235);f32 scale=fmuls_ppc(lf(0x1004F7CC),fmuls_ppc(fade,fade));sf(s,scale);f32 size=lf(0x1004FB94),growth=lf(0x1004F5B4),alphaScale=lf(0x1004FB98),uv0=lf(s+4),uv1=lf(s+0xC);u32 manager=packet+0xA70;
-  for(u32 j=0;j<2;j++){if(j==0){size=lf(0x1004FB94);uv0=lf(s+4);uv1=lf(s+0xC);scale=lf(s);growth=lf(0x1004F5B4);alphaScale=lf(0x1004FB98);store<u8>(color+3,(u8)ftoi(fmuls_ppc(lf(s+8),lf(packet+0xCC))));}else{f32 alpha=lf(packet+0xCC),intensity=lf(packet+0xC8);store<u8>(color+3,(u8)ftoi(fmuls_ppc(alphaScale,alpha)));size=fmuls_ppc(fmadds(scale,intensity,size),growth);}
-   call(0x0257E8C0,at<void>(packet),j+2,at<void>(color),at<void>(color2));f32 neg=-size;sf(s+0x10,neg);sf(s+0x14,size);sf(s+0x18,uv0);vertex(s,matrix,sun,s+0x3C);sf(s+0x10,size);sf(s+0x14,size);sf(s+0x18,uv0);vertex(s,matrix,sun,s+0x48);sf(s+0x10,size);sf(s+0x14,neg);sf(s+0x18,uv0);vertex(s,matrix,sun,s+0x54);sf(s+0x10,neg);sf(s+0x14,neg);sf(s+0x18,uv0);vertex(s,matrix,sun,s+0x60);quad(manager,s,uv0,uv1);manager+=0x4C0;
-  }
- }
- call(0x0257E9DC,at<void>(packet),texture,(u32)drawMoon,(u32)drawSun);
+// Sun and moon drawing, using GameCube names and verified HD buffers.
+#include "d/d_kankyo_rain_drawSibuki.h"
+namespace RainDraw {
+/* 0256F1C4 */
+void dKyr_drawSun(u32 unusedMatrix, u32 input, u32 unusedColor, u32 unusedImages) {
+    u32 env = sun_sdk::environment<u32>(), packet = (u32)(at<Environment>(env)->mpSunPacket.v);
+    env = sun_sdk::environment<u32>();
+    u32 lens = (u32)(at<Environment>(env)->mpSunlenzPacket.v), game = sun_sdk::gameInfo<u32>();
+    Local<SunWork> work;
+    u32 sun = ea(&work->sun), moon = ea(&work->moon), relative = ea(&work->relative),
+        camDirection = ea(&work->cameraDirection), sunDirection = ea(&work->sunDirection),
+        matrix = ea(&work->matrix), rotation = ea(&work->rotation), color = ea(&work->color),
+        color2 = ea(&work->secondary);
+    f32 zero = (f32)(*at<be<f32>>(Zero));
+    work->zero = zero;
+    bool drawSun = (f32)(at<SunPacket>(packet)->mSunAlpha) > zero,
+         drawMoon = (f32)(at<SunPacket>(packet)->mMoonAlpha) > zero;
+    u32 camera = (u32)(at<GameInfo>(game)->camera);
+    if (!(drawSun || drawMoon))
+        return;
+    at<Vector>(sun)->channels[2] = (f32)(at<Vector>(input)->channels[2]);
+    at<Vector>(sun)->channels[0] = (f32)(at<Vector>(input)->channels[0]);
+    at<Vector>(sun)->channels[1] = (f32)(at<Vector>(input)->channels[1]);
+    drawSun = true;
+    drawMoon = true;
+    u32 type = 0;
+    if (!sun_stage(SunStageName, ea(&work->stage), ea(&work->current))) {
+        game = sun_sdk::gameInfo<u32>();
+        u32 info = sun_stage_info(game);
+        type = ((u32)(at<StageInfo>(info)->flags) >> 16) & 7;
+    }
+    env = sun_sdk::environment<u32>();
+    if ((s16)(at<Environment>(env)->mBaseLightRed) == 0 && type != 2) {
+        env = sun_sdk::environment<u32>();
+        if ((f32)(at<Environment>(env)->mCurTime) > (f32)(*at<be<f32>>(MoonTimeEnd)))
+            drawMoon = false;
+        else {
+            env = sun_sdk::environment<u32>();
+            if ((f32)(at<Environment>(env)->mCurTime) < (f32)(*at<be<f32>>(MoonTimeBegin)))
+                drawMoon = false;
+        }
+        at<Vector>(moon)->channels[2] = (f32)(at<Vector>(input)->channels[2]);
+        at<Vector>(moon)->channels[1] = (f32)(at<Vector>(input)->channels[1]);
+        at<Vector>(moon)->channels[0] = (f32)(at<Vector>(input)->channels[0]);
+    } else {
+        f32 x =
+            -fsubs_ppc((f32)(at<Vector>(input)->channels[0]), (f32)(at<Camera>(camera)->mEye.channels[0]));
+        at<Vector>(relative)->channels[0] = x;
+        f32 y =
+            -fsubs_ppc((f32)(at<Vector>(input)->channels[1]), (f32)(at<Camera>(camera)->mEye.channels[1]));
+        at<Vector>(relative)->channels[1] = y;
+        f32 z =
+            -fsubs_ppc((f32)(at<Vector>(input)->channels[2]), (f32)(at<Camera>(camera)->mEye.channels[2]));
+        at<Vector>(relative)->channels[2] = z;
+        at<Vector>(moon)->channels[0] = fadds_ppc(x, (f32)(at<Camera>(camera)->mEye.channels[0]));
+        at<Vector>(moon)->channels[1] = fadds_ppc(y, (f32)(at<Camera>(camera)->mEye.channels[1]));
+        at<Vector>(moon)->channels[2] = fadds_ppc(z, (f32)(at<Camera>(camera)->mEye.channels[2]));
+    }
+    u32 day = sun_sdk::moonDay<u32>(), save = (u32)(*at<be<u32>>(SaveInfoPointer));
+    if ((f32)(at<SaveTime>(save)->time) < (f32)(*at<be<f32>>(MoonDayThreshold)))
+        day = day ? day - 1 : 6;
+    f32 one = (f32)(*at<be<f32>>(One)), flip = (f32)(*at<be<f32>>(MoonFlip));
+    u32 texture;
+    if (day < 4) {
+        texture = day;
+        flip = one;
+    } else if (day == 4)
+        texture = 3;
+    else if (day == 5)
+        texture = 2;
+    else
+        texture = 1;
+    env = sun_sdk::environment<u32>();
+    at<Color>(color)->channels[0] = (u8)(at<Environment>(env)->mFogColor.channels[0]);
+    env = sun_sdk::environment<u32>();
+    at<Color>(color)->channels[1] = (u8)(at<Environment>(env)->mFogColor.channels[1]);
+    env = sun_sdk::environment<u32>();
+    at<Color>(color)->channels[2] = (u8)(at<Environment>(env)->mFogColor.channels[2]);
+    at<Color>(color)->channels[3] = 255;
+    at<Color>(color2)->channels[0] = 0;
+    at<Color>(color2)->channels[1] = 0;
+    at<Color>(color2)->channels[2] = 0;
+    at<Color>(color2)->channels[3] = 255;
+    game = sun_sdk::gameInfo<u32>();
+    if (!(u32)(at<GameInfo>(game)->view)) {
+        u8 timer = (u8)(at<SunPacket>(packet)->field_0x3c);
+        if (timer < 5)
+            at<SunPacket>(packet)->field_0x3c = timer + 2;
+        at<SunPacket>(packet)->field_0x3d = 1;
+        return;
+    }
+    game = sun_sdk::gameInfo<u32>();
+    u32 view = (u32)(at<GameInfo>(game)->view);
+    sun_sdk::inverse(at<void>(ea(&at<View>(view)->mRotation)), at<void>(matrix));
+    work->degree = (f32)(*at<be<f32>>(DegreeToRadians));
+    if (drawMoon) {
+        for (u32 j = 0; j < 7; j++)
+            work->dayScales[j] = (u32)(at<be<u32>>(MoonDayScaleTable)[j]);
+        sun_sdk::preparePosition(at<void>(moon), texture);
+        sun_sdk::direction(at<void>(ea(&at<Camera>(camera)->mEye)),
+                           at<void>(ea(&at<Camera>(camera)->mCenter)), at<void>(camDirection));
+        f32 z = (f32)(at<Vector>(camDirection)->channels[2]),
+            x = (f32)(at<Vector>(camDirection)->channels[0]),
+            radius = sun_sdk::squareRoot<f32>(fmadds(x, x, fmuls_ppc(z, z)));
+        f32 camTheta = sun_sdk::atan2<f32>((f32)(at<Vector>(camDirection)->channels[0]),
+                                           (f32)(at<Vector>(camDirection)->channels[2]));
+        sun_sdk::atan2<f32>((f32)(at<Vector>(camDirection)->channels[1]), radius);
+        z = (f32)(at<Vector>(relative)->channels[2]);
+        x = (f32)(at<Vector>(relative)->channels[0]);
+        radius = sun_sdk::squareRoot<f32>(fmadds(x, x, fmuls_ppc(z, z)));
+        f32 moonTheta = sun_sdk::atan2<f32>(x, z),
+            moonPhi = sun_sdk::atan2<f32>((f32)(at<Vector>(relative)->channels[1]), radius);
+        f32 angle =
+            fmadds((f32)(*at<be<f32>>(Degrees)),
+                   fmuls_ppc(fmuls_ppc(fsubs_ppc(moonTheta, camTheta), (f32)(*at<be<f32>>(MoonAngleScale))),
+                             moonPhi),
+                   (f32)(*at<be<f32>>(SpiralHeight)));
+        sun_sdk::rotate(at<void>(rotation), 0x5A, fmuls_ppc(angle, (f32)(work->degree)));
+        sun_sdk::concat(at<void>(matrix), at<void>(rotation), at<void>(matrix));
+        f32 uv0 = (f32)(work->zero);
+        at<Color>(color)->channels[0] = 243;
+        at<Color>(color)->channels[1] = 255;
+        at<Color>(color)->channels[2] = 148;
+        f32 size = (f32)(*at<be<f32>>(MoonDistanceGain)), factor = (f32)(*at<be<f32>>(LargeStarGain)),
+            alphaScale = (f32)(*at<be<f32>>(MoonAlphaScale)), degree = (f32)(work->degree),
+            secondAngle = fmuls_ppc((f32)(*at<be<f32>>(RespawnJitter)), flip);
+        at<Color>(color)->channels[3] =
+            (u8)ftoi(fmuls_ppc((f32)(at<SunPacket>(packet)->mMoonAlpha), (f32)(*at<be<f32>>(ByteAlpha))));
+        u32 manager = ea(&at<SunPacket>(packet)->mMoonGeometry);
+        for (u32 j = 0; j < 2; j++) {
+            if (j == 1) {
+                at<Color>(color2)->channels[1] = 105;
+                at<Color>(color)->channels[0] = 255;
+                at<Color>(color2)->channels[0] = 197;
+                at<Color>(color2)->channels[2] = 35;
+                size = fmuls_ppc(size, factor);
+                at<Color>(color)->channels[3] =
+                    (u8)ftoi(fmuls_ppc((f32)(at<SunPacket>(packet)->mMoonAlpha), alphaScale));
+                at<Color>(color)->channels[1] = 255;
+                at<Color>(color)->channels[2] = 207;
+                sun_sdk::rotate(at<void>(rotation), 0x5A, fmuls_ppc(secondAngle, degree));
+                sun_sdk::concat(at<void>(matrix), at<void>(rotation), at<void>(matrix));
+            }
+            sun_sdk::setSunColor(at<void>(packet), j, at<void>(color), at<void>(color2));
+            f32 positiveX = fmuls_ppc(size, flip), negativeX = -positiveX, negativeY = -size;
+            work->input.channels[0] = negativeX;
+            work->input.channels[1] = size;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, moon, ea(&work->quad));
+            work->input.channels[0] = positiveX;
+            work->input.channels[1] = size;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, moon, ea(&work->quad.vertices[1]));
+            if (j == 0) {
+                work->input.channels[0] = positiveX;
+                work->input.channels[1] = negativeY;
+            } else {
+                f32 scale = (f32)(std::bit_cast<f32>((u32)work->dayScales[day]));
+                work->input.channels[0] = fmuls_ppc(positiveX, scale);
+                work->input.channels[1] = -fmuls_ppc(size, scale);
+            }
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, moon, ea(&work->quad.vertices[2]));
+            work->input.channels[0] = negativeX;
+            work->input.channels[1] = negativeY;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, moon, ea(&work->quad.vertices[3]));
+            sun_quad(manager, work.get(), uv0, one);
+            manager += sizeof(Geometry);
+        }
+    }
+    if (drawSun) {
+        f32 fade = fsubs_ppc(one, (f32)(at<LensPacket>(lens)->mDistFalloff));
+        sun_sdk::preparePosition(at<void>(sun), 9);
+        f32 z = (f32)(at<Vector>(sun)->channels[2]), x = (f32)(at<Vector>(sun)->channels[0]),
+            radius = sun_sdk::squareRoot<f32>(fmadds(x, x, fmuls_ppc(z, z)));
+        f32 sunTheta =
+            sun_sdk::atan2<f32>((f32)(at<Vector>(sun)->channels[0]), (f32)(at<Vector>(sun)->channels[2]));
+        sun_sdk::atan2<f32>((f32)(at<Vector>(sun)->channels[1]), radius);
+        sun_sdk::direction(at<void>(ea(&at<Camera>(camera)->mEye)),
+                           at<void>(ea(&at<Camera>(camera)->mCenter)), at<void>(sunDirection));
+        z = (f32)(at<Vector>(sunDirection)->channels[2]);
+        x = (f32)(at<Vector>(sunDirection)->channels[0]);
+        radius = sun_sdk::squareRoot<f32>(fmadds(x, x, fmuls_ppc(z, z)));
+        f32 camTheta = sun_sdk::atan2<f32>((f32)(at<Vector>(sunDirection)->channels[0]),
+                                           (f32)(at<Vector>(sunDirection)->channels[2]));
+        sun_sdk::atan2<f32>((f32)(at<Vector>(sunDirection)->channels[1]), radius);
+        f32 angle = fmadds((f32)(*at<be<f32>>(Degrees)),
+                           fmuls_ppc(fsubs_ppc(sunTheta, camTheta), (f32)(*at<be<f32>>(MoonAngleScale))),
+                           (f32)(*at<be<f32>>(SunAngleOffset)));
+        sun_sdk::rotate(at<void>(rotation), 0x5A, fmuls_ppc(angle, (f32)(work->degree)));
+        sun_sdk::concat(at<void>(matrix), at<void>(rotation), at<void>(matrix));
+        work->uvOne = one;
+        at<Color>(color2)->channels[0] = 255;
+        at<Color>(color2)->channels[1] = 40;
+        at<Color>(color2)->channels[2] = 0;
+        work->alphaScale = (f32)(*at<be<f32>>(ByteAlpha));
+        at<Color>(color)->channels[0] = 255;
+        at<Color>(color)->channels[1] = 255;
+        at<Color>(color)->channels[2] = 235;
+        f32 scale = fmuls_ppc((f32)(*at<be<f32>>(ScreenMaximumY)), fmuls_ppc(fade, fade));
+        work->degree = scale;
+        f32 size = (f32)(*at<be<f32>>(SunSize)), growth = (f32)(*at<be<f32>>(SunGrowth)),
+            alphaScale = (f32)(*at<be<f32>>(SunAlphaScale)), uv0 = (f32)(work->zero),
+            uv1 = (f32)(work->uvOne);
+        u32 manager = ea(&at<SunPacket>(packet)->mSunGeometry);
+        for (u32 j = 0; j < 2; j++) {
+            if (j == 0) {
+                size = (f32)(*at<be<f32>>(SunSize));
+                uv0 = (f32)(work->zero);
+                uv1 = (f32)(work->uvOne);
+                scale = (f32)(work->degree);
+                growth = (f32)(*at<be<f32>>(SunGrowth));
+                alphaScale = (f32)(*at<be<f32>>(SunAlphaScale));
+                at<Color>(color)->channels[3] =
+                    (u8)ftoi(fmuls_ppc((f32)(work->alphaScale), (f32)(at<SunPacket>(packet)->mSunAlpha)));
+            } else {
+                f32 alpha = (f32)(at<SunPacket>(packet)->mSunAlpha),
+                    intensity = (f32)(at<SunPacket>(packet)->mVisibility);
+                at<Color>(color)->channels[3] = (u8)ftoi(fmuls_ppc(alphaScale, alpha));
+                size = fmuls_ppc(fmadds(scale, intensity, size), growth);
+            }
+            sun_sdk::setSunColor(at<void>(packet), j + 2, at<void>(color), at<void>(color2));
+            f32 neg = -size;
+            work->input.channels[0] = neg;
+            work->input.channels[1] = size;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, sun, ea(&work->quad));
+            work->input.channels[0] = size;
+            work->input.channels[1] = size;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, sun, ea(&work->quad.vertices[1]));
+            work->input.channels[0] = size;
+            work->input.channels[1] = neg;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, sun, ea(&work->quad.vertices[2]));
+            work->input.channels[0] = neg;
+            work->input.channels[1] = neg;
+            work->input.channels[2] = uv0;
+            sun_vertex(work.get(), matrix, sun, ea(&work->quad.vertices[3]));
+            sun_quad(manager, work.get(), uv0, uv1);
+            manager += sizeof(Geometry);
+        }
+    }
+    sun_sdk::drawSunPacket(at<void>(packet), texture, (u32)drawMoon, (u32)drawSun);
 }
-}
-VERIFY(0x0256F1C4,rain_draw_sun::draw);
+} // namespace RainDraw
+using namespace RainDraw;
+/* WWHD glue (tools/verify/autoglue.py)
+ */

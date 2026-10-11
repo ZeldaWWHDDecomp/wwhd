@@ -1,13 +1,11 @@
-/* daNpcAh_c (Old Man Ho Ho), WWHD layout. 
- *
- * GameCube -> WWHD, measured from the functions of d_a_npc_ah: daNpcAh_c derives from
- * fopNpc_npc_c (HD 0x7DC, fopNpc_npc_c_l in d_a_npc_ob1.h), so mPhs..mBtpAnm are +0x118;
- * mDoExt_btpAnm grew from 0x14 to 0x74 and mShadowId (GameCube 0x6EC) is gone (HD shadows), so
- * everything from mPathRun on is +0x174. Size 0x8C8 (constructor 021E5398 allocates 0x8C8;
- * GameCube 0x754). The actor's vtable is 10015FE4 (destructor +0x0C, next_msgStatus +0x14,
- * getMsg +0x1C, anmAtr +0x24 = fopNpc_npc_c::anmAtr). */
+// Old Man Ho Ho: GameCube member names with the verified WWHD layout.
+// HD: NPC base grows to 0x7DC, shifting mPhs through mBtpAnm by 0x118.
+// HD: mDoExt_btpAnm grows to 0x74 and mShadowId is removed; later fields shift by 0x174.
+// HD: size 0x8C8; virtual dispatch uses the actor vtable at 0xB4.
 #pragma once
-#include "d/actor/d_a_npc_ob1.h"
+#include "gc_api/d/d_npc.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/f_op/f_op_actor.h"
 
 struct sAhAnmDat {
     /* 0x00 */ be<u8> mBckIdx; /* 0xFF: end */
@@ -54,8 +52,9 @@ struct NpcDatStruct {
 };
 WWHD_SIZE(NpcDatStruct, 0x54);
 
-struct daNpcAh_c : fopNpc_npc_c_l {
-    /* 021E5398 */ static daNpcAh_c* ct(daNpcAh_c* p);
+enum { dRes_ID_AH_BDL_AH_e = 2, dRes_ID_AH_BTP_MABA_e = 4 };
+struct daNpcAh_c : fopNpc_npc_c {
+    enum Prm_e { PRM_SWSAVE_S = 8, PRM_SWSAVE_W = 0, PRM_SWSAVE2_S = 8, PRM_SWSAVE2_W = 8 };
     cPhs_State _create();
     BOOL createHeap();
     cPhs_State createInit();
@@ -95,8 +94,8 @@ struct daNpcAh_c : fopNpc_npc_c_l {
     /* 0x7DC */ request_of_phase_process_class mPhs;
     /* 0x7E4 */ request_of_phase_process_class mPhsMethod;
     /* 0x7EC */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0x7F0 */ u8 mBtpAnm[0x74]; /* mDoExt_btpAnm (HD 0x74); HD: no mShadowId after it */
-    /* 0x864 */ dNpc_PathRun_c_l mPathRun;
+    /* 0x7F0 */ mDoExt_btpAnm mBtpAnm; /* mDoExt_btpAnm (HD 0x74); HD: no mShadowId after it */
+    /* 0x864 */ dNpc_PathRun_c mPathRun;
     /* 0x86C */ cXyz field_0x6F4;
     /* 0x878 */ cXyz mEyePos;
     /* 0x884 */ gptr<sAhAnmDat> mpAnmDat;
@@ -145,3 +144,54 @@ WWHD_OFFSET(daNpcAh_c, mTimer, 0x8AE);
 WWHD_OFFSET(daNpcAh_c, mBckIdx, 0x8BD);
 WWHD_OFFSET(daNpcAh_c, field_0x751, 0x8C5);
 WWHD_SIZE(daNpcAh_c, 0x8C8);
+
+// HD: full-width animation modify argument and message-manager ABI are retained.
+void Ah_npcCtor(void*);
+cPhs_State Ah_phaseHandler(request_of_phase_process_class*, u32, void*);
+s32 Ah_createPresent(cXyz*, s32, u8, s32, s32, csXyz*, cXyz*);
+void Ah_setMessageStatus(u32, u32);
+BOOL Ah_initBtp(void*, u32, J3DAnmTexPattern*, s32, s32, f32, s16, s16, s32, s32);
+u32 Ah_messageStatus(u32);
+u32 Ah_messageSet(u32, u32, cXyz*);
+void Ah_circleDt(void*, s32);
+void Ah_acchDt(void*, s32);
+void Ah_actorDt(void*, s32);
+struct AhActorVtable {
+    u8 _00[0x14];
+    be<u32> mNextMessage;
+    u8 _18[4];
+    be<u32> mGetMessage;
+    u8 _20[4];
+    be<u32> mAnimationAttribute;
+};
+WWHD_OFFSET(AhActorVtable, mNextMessage, 0x14);
+WWHD_OFFSET(AhActorVtable, mGetMessage, 0x1C);
+WWHD_OFFSET(AhActorVtable, mAnimationAttribute, 0x24);
+struct AhModelDataAnimation { u8 _00[0x38]; be<u32> mTexPatternAnimation; };
+WWHD_OFFSET(AhModelDataAnimation, mTexPatternAnimation, 0x38);
+struct AhAcchDestructor { u8 _00[0x14]; be<u32> mCheckVtable; u8 _18[8]; be<u32> mActorCheckVtable; };
+WWHD_OFFSET(AhAcchDestructor, mCheckVtable, 0x14);
+WWHD_OFFSET(AhAcchDestructor, mActorCheckVtable, 0x20);
+template<class T, class U> inline T* Ah_view(U* p) { return gabi::at<T>(gabi::ea(p)); }
+inline be<u32>& Ah_word(void* p) { return *Ah_view<be<u32>>(p); }
+inline be<u32>* Ah_messagePointer(u32 address) { return gabi::at<be<u32>>(address); }
+inline AhActorVtable* Ah_vtable(fopNpc_npc_c* actor) { return gabi::at<AhActorVtable>(actor->__vtbl); }
+inline u32 Ah_getMessage(fopNpc_npc_c* actor) { return gabi::call_ptr<u32>(Ah_vtable(actor)->mGetMessage, actor); }
+inline u32 Ah_nextMessage(fopNpc_npc_c* actor, be<u32>* message) { return gabi::call_ptr<u32>(Ah_vtable(actor)->mNextMessage, actor, message); }
+inline void Ah_animationAttribute(fopNpc_npc_c* actor, u16 status) { gabi::call_ptr(Ah_vtable(actor)->mAnimationAttribute, actor, status); }
+
+s16 Ah_calcTimer(be<s16>* timer);
+
+void Ah_lookAtTarget(dNpc_JntCtrl_c*, be<s16>*, cXyz*, cXyz*, s16, s16, u8);
+
+struct AhAnimationVtable { u8 _00[0x14]; be<u32> mGetFrameMax; };
+struct AhAnimation { u8 _00[4]; gptr<AhAnimationVtable> mVtable; };
+WWHD_OFFSET(AhAnimation, mVtable, 4);
+WWHD_OFFSET(AhAnimationVtable, mGetFrameMax, 0x14);
+inline s32 Ah_frameMax(J3DAnmTexPattern* pattern) { return gabi::call_ptr<s32>(Ah_view<AhAnimation>(pattern)->mVtable->mGetFrameMax, pattern); }
+void Ah_cutEnd(dEvent_manager_c*, s32);
+BOOL Ah_advance(dEvent_manager_c*, s32);
+
+WWHD_SIZE(AhActorVtable, 0x28);
+WWHD_SIZE(AhModelDataAnimation, 0x3C);
+WWHD_SIZE(AhAcchDestructor, 0x24);

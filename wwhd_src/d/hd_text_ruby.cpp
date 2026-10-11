@@ -1,318 +1,299 @@
-/* hd_text_ruby: HD message tag processor (ruby/furigana, font, scale, colour tags), WWHD.
- * HD-only code (no GameCube source): written from the
- * WWHD code. Range 02601B60..026025CB; static initialiser 02602518. The two trailing sead
- * SafeString companions 026025AC/026025B0 are library (not verified here).
- *
- * Layouts (from the code):
- *   TagState (0x10): +0 u8 scaleSaved, +4/+8 f32 saved writer scale x/y, +0xC saved font
- *   tag record: +2 u16 group, +4 u16 tag, +5 u8 (group 3 value), +6 u16 param size, +8.. params
- *   writer (nw4f TextWriter-like, 0x4C copied): +0/+4 colours, +0xC/+0x10 scale, +0x14/+0x18
- *   cursor, +0x28 font, +0x48 copied into the ruby writer
- *   sead WSafeString temporaries {top, vtable}; WFixedSafeString<32> {top, vtable, 0x20, buf[32]}
- */
-#include "gabi.h"
-using namespace gabi;
+/* HD message tags: ruby/furigana, font, scale and colour controls.
+ * GameCube-style source verified as hd_text_ruby; no GameCube counterpart. */
+#include "d/hd_text_ruby.h"
 
-namespace hd_text_ruby {
+static const u32 wideStringVtable = 0x100E17A8;
+static const u32 fixedStringVtable = 0x100E17D8;
+static hdRuby_fontManagerPointer_c sFontManager;
+static hdRuby_configPointer_c sConfig;
+static f32 sOne;
+static f32 sMaxScale;
+static f32 sZero;
+static f32 sHalf;
+static f32 sPercent;
 
-static const u32 kWSafeStringVt = 0x100E17A8;
-static const u32 kWFixedSafeStringVt = 0x100E17D8;
-static const u32 kFontMgr = 0x101F4A50;
-
-/* 02601B60: TagState constructor */
-u32 tagStateCtor(u32 p) {
-    WWHD_FUNC(0x02601B60, u32, p);
-    if (!p) {
-        p = call<u32>(0x0273AD10, 0x10u);
-        if (!p) return 0;
+/* 02601B60 */
+static hdRuby_tagState_c* hdRuby_constructState(hdRuby_tagState_c* state) {
+    if (!state) {
+        state = (hdRuby_tagState_c*)operator_new(sizeof(hdRuby_tagState_c));
+        if (!state) return nullptr;
     }
-    const f32 one = load<f32>(0x100E17A0);
-    store<u8>(p, 0);
-    store<f32>(p + 8, one);
-    store<u32>(p + 0xC, 0);
-    store<f32>(p + 4, one);
-    return p;
+    f32 one = sOne;
+    state->mScaleSaved = 0;
+    state->mSavedScaleY = one;
+    state->mpSavedFont = nullptr;
+    state->mSavedScaleX = one;
+    return state;
 }
-VERIFY(0x02601B60, tagStateCtor);
 
-/* 02601BB0: does the text contain a ruby control character (0x0E/0x0F)? */
-u32 hasControlChar(u32 self, u32 text, s32 len) {
-    WWHD_FUNC(0x02601BB0, u32, self, text, len);
-    if (len <= 0) return 0;
-    for (s32 i = 0; i < len; i++) {
-        const u32 c = load<u16>(text + 2 * i);
-        if (c == 0xE || c == 0xF) return 1;
+/* 02601BB0 */
+u32 hdRuby_tagState_c::hasControlChar(be<u16>* text, s32 length) {
+    if (length <= 0) return 0;
+    for (s32 i = 0; i < length; ++i) {
+        u32 character = text[i];
+        if (character == RUBY_TEXT_CONTROL_BEGIN || character == RUBY_TEXT_CONTROL_END) return 1;
     }
     return 0;
 }
-VERIFY(0x02601BB0, hasControlChar);
 
-/* strlen of a wide SafeString, capped as sead does (0x40000) */
-static s32 wideLength(u32 top) {
-    s32 n = 0;
-    if (!load<u16>(top)) return 0;
+/* inlined into hdRuby_copyInto */
+static s32 hdRuby_wideLength(be<u16>* text) {
+    s32 length = 0;
+    if (!*text) return 0;
     for (;;) {
-        n++;
-        if (n > 0x40000) return 0;
-        top += 2;
-        if (!load<u16>(top)) return n;
+        ++length;
+        // HD: sead's maximum length guard returns zero for an unterminated string.
+        if (length > 0x40000) return 0;
+        ++text;
+        if (!*text) return length;
     }
 }
 
-/* copies len (clamped to the buffer) wide chars of the SafeString at frame+8 into a fixed string */
-static void copyInto(u32 frame, u32 fixedOff, s32 len) {
-    const u32 buf = load<u32>(frame + fixedOff);
-    s32 n = len;
-    if (len < 0) {
-        call<void>(0x026025AC, frame + 8);
-        n = wideLength(load<u32>(frame + 8));
+/* inlined into drawRuby */
+static void hdRuby_copyInto(hdRuby_drawFrame_c* frame, hdRuby_fixedString_c* fixed, s32 length) {
+    be<u16>* buffer = fixed->mString.mStringTop;
+    s32 count = length;
+    if (length < 0) {
+        hdRuby_assureWideString(&frame->mSource);
+        count = hdRuby_wideLength(frame->mSource.mStringTop);
     }
-    const s32 size = s32(load<u32>(frame + fixedOff + 8));
-    if (n >= size) n = size - 1;
-    call_ptr<void>(load<u32>(load<u32>(frame + 0xC) + 0x14), frame + 8);
-    call<void>(0xC0009988, buf, load<u32>(frame + 8), u32(n * 2), 0u);
-    store<u16>(buf + 2 * n, 0);
+    s32 capacity = fixed->mCapacity;
+    if (count >= capacity) count = capacity - 1;
+    frame->mSource.assureTermination();
+    hdRuby_copyText(buffer, frame->mSource.mStringTop, u32(count * 2), 0);
+    buffer[count] = 0;
 }
 
-/* 02601BE8: draws the ruby text above the base text */
-void drawRuby(u32 self, u32 writer, u32 tag, u32 text) {
-    WWHD_FUNC(0x02601BE8, void, self, writer, tag, text);
-    const s32 baseLen = s32(load<u16>(tag + 8) >> 1);
-    const s32 rubyLen = s32(load<u16>(tag + 0xA) >> 1);
-    const u32 cfg = load<u32>(0x101F4B5C);
-    if (u32(baseLen - 1) >= 0x1F || u32(rubyLen - 1) >= 0x1F) return;
-    Local<u8[0x100]> F;
-    const u32 f = F.a;
-    /* ruby string: WFixedSafeString<32> at +0x68, source SafeString at +8 */
-    store<u32>(f + 0x68, f + 0x74);
-    store<u32>(f + 0x70, 0x20);
-    store<u32>(f + 0x6C, kWFixedSafeStringVt);
-    store<u16>(f + 0xB2, 0);
-    store<u16>(f + 0x74, 0);
-    store<u32>(f + 0xC, kWSafeStringVt);
-    store<u32>(f + 8, tag + 0xC);
-    copyInto(f, 0x68, rubyLen);
-    /* base string: WFixedSafeString<32> at +0xB4 */
-    store<u32>(f + 8, text);
-    store<u16>(f + 0xFE, 0);
-    store<u16>(f + 0xC0, 0);
-    store<u32>(f + 0xB8, kWFixedSafeStringVt);
-    store<u32>(f + 0xBC, 0x20);
-    store<u32>(f + 0xC, kWSafeStringVt);
-    store<u32>(f + 0xB4, f + 0xC0);
-    copyInto(f, 0xB4, baseLen);
-
-    call<void>(0x0286E3C4, writer);
-    call<void>(0x0286E42C, writer);
-    const u32 font = load<u32>(writer + 0x28);
-    const s32 lineHeight = call_ptr<s32>(load<u32>(load<u32>(font + 4) + 0x2C), font);
-    /* the ruby writer: a copy of the base writer with the ruby font, smaller scale and spacing */
-    const u32 rw = f + 0x1C;
-    for (u32 i = 0; i < 0x4C; i += 4) store<u32>(rw + i, load<u32>(writer + i));
-    store<u32>(rw + 0x28, call<u32>(0x025F36B8, load<u32>(kFontMgr), 2u));
-    const f32 k = load<f32>(cfg + 0x974);
-    f32 sx = fmuls_ppc(load<f32>(rw + 0xC), k);
-    const f32 maxScale = fmuls_ppc(k, load<f32>(0x100E17F0));
-    f32 sy = fmuls_ppc(load<f32>(rw + 0x10), k);
-    if (sx > maxScale) sx = maxScale; /* ble: branch when not greater */
-    if (sy > maxScale) sy = maxScale;
-    store<f32>(rw + 0x10, sy);
-    store<f32>(rw + 0xC, sx);
-    const f32 spacing = load<f32>(cfg + 0x97C);
-    const f32 zero = load<f32>(0x100E17F4);
-    store<f32>(rw + 0x38, spacing);
-    store<f32>(rw + 0x3C, zero);
-    store<u32>(rw + 0x44, 0x300);
-    store<u32>(rw + 0x48, load<u32>(writer + 0x48));
-    call_ptr<void>(load<u32>(load<u32>(f + 0xB8) + 0x14), f + 0xB4);
-    const f32 baseWidth = call<f32>(0x028706A0, writer, load<u32>(f + 0xB4), baseLen);
-    call_ptr<void>(load<u32>(load<u32>(f + 0x6C) + 0x14), f + 0x68);
-    const f32 rubyWidth = call<f32>(0x028706A0, rw, load<u32>(f + 0x68), rubyLen);
-    const f32 diff = fsubs_ppc(baseWidth, rubyWidth);
-    if (diff > zero) {
-        const f32 d = diff / f32(rubyLen + 1);
-        store<f32>(rw + 0x14, fadds_ppc(load<f32>(rw + 0x14), d));
-        store<f32>(rw + 0x38, fadds_ppc(d, spacing));
+/* 02601BE8 */
+void hdRuby_tagState_c::drawRuby(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<u16>* text) {
+    s32 baseLength = u16(tag->mData.mParams[0]) >> 1;
+    s32 rubyLength = u16(tag->mData.mParams[1]) >> 1;
+    hdRuby_config_c* config = sConfig.mpConfig;
+    if (u32(baseLength - 1) >= 31 || u32(rubyLength - 1) >= 31) return;
+    gabi::Local<hdRuby_drawFrame_c> frame;
+    frame->mRuby.mString.mStringTop = frame->mRuby.mBuffer;
+    frame->mRuby.mCapacity = 32;
+    frame->mRuby.mString.setVtable(fixedStringVtable);
+    frame->mRuby.mBuffer[31] = 0;
+    frame->mRuby.mBuffer[0] = 0;
+    frame->mSource.setVtable(wideStringVtable);
+    frame->mSource.mStringTop = &tag->mData.mParams[2];
+    hdRuby_copyInto(frame.get(), &frame->mRuby, rubyLength);
+    frame->mSource.mStringTop = text;
+    frame->mBase.mBuffer[31] = 0;
+    frame->mBase.mBuffer[0] = 0;
+    frame->mBase.mString.setVtable(fixedStringVtable);
+    frame->mBase.mCapacity = 32;
+    frame->mSource.setVtable(wideStringVtable);
+    frame->mBase.mString.mStringTop = frame->mBase.mBuffer;
+    hdRuby_copyInto(frame.get(), &frame->mBase, baseLength);
+    hdRuby_writerPrepareFirst(writer);
+    hdRuby_writerPrepareSecond(writer);
+    hdRuby_font_c* font = writer->mpFont;
+    s32 lineHeight = gabi::call_ptr<s32>(font->mVtable->mGetLineHeight, font);
+    hdRuby_writer_c* rubyWriter = &frame->mWriter;
+    // HD: copying all writer words preserves unknown fields and NaN payloads.
+    be<u32>* destination = reinterpret_cast<be<u32>*>(rubyWriter);
+    be<u32>* source = reinterpret_cast<be<u32>*>(writer);
+    for (u32 i = 0; i < sizeof(hdRuby_writer_c) / 4; ++i) destination[i] = u32(source[i]);
+    rubyWriter->mpFont = hdRuby_getFont(sFontManager.mpManager, RUBY_FONT_RUBY);
+    f32 scale = config->mScale;
+    f32 scaleX = gabi::fmuls_ppc(rubyWriter->mScaleX, scale);
+    f32 maximum = gabi::fmuls_ppc(scale, sMaxScale);
+    f32 scaleY = gabi::fmuls_ppc(rubyWriter->mScaleY, scale);
+    if (scaleX > maximum) scaleX = maximum;
+    if (scaleY > maximum) scaleY = maximum;
+    rubyWriter->mScaleY = scaleY;
+    rubyWriter->mScaleX = scaleX;
+    f32 spacing = config->mSpacing;
+    f32 zero = sZero;
+    rubyWriter->mCharSpacing = spacing;
+    rubyWriter->mLineSpacing = zero;
+    rubyWriter->mFlags = 0x300;
+    rubyWriter->mUnknown = u32(writer->mUnknown);
+    frame->mBase.mString.assureTermination();
+    f32 baseWidth = hdRuby_textWidth(writer, frame->mBase.mString.mStringTop, baseLength);
+    frame->mRuby.mString.assureTermination();
+    f32 rubyWidth = hdRuby_textWidth(rubyWriter, frame->mRuby.mString.mStringTop, rubyLength);
+    f32 difference = gabi::fsubs_ppc(baseWidth, rubyWidth);
+    if (difference > zero) {
+        f32 interval = difference / f32(rubyLength + 1);
+        rubyWriter->mCursorX = gabi::fadds_ppc(rubyWriter->mCursorX, interval);
+        rubyWriter->mCharSpacing = gabi::fadds_ppc(interval, spacing);
     } else {
-        store<f32>(rw + 0x14, fmadds(diff, load<f32>(0x100E1800), load<f32>(rw + 0x14)));
+        rubyWriter->mCursorX = gabi::fmadds(difference, sHalf, rubyWriter->mCursorX);
     }
-    const f32 h = call<f32>(0x0286E494, writer) / f32(lineHeight);
-    const f32 rise = load<f32>(cfg + 0x978);
-    const f32 h2 = call<f32>(0x0286E494, writer);
-    store<f32>(rw + 0x18, fadds_ppc(load<f32>(rw + 0x18), fmsubs(rise, h, h2)));
-    const u32 col = tag + 2 * rubyLen;
-    const u32 c = (u32(load<u8>(col + 0xD)) << 24) | (u32(load<u8>(col + 0xC)) << 16) |
-                  (u32(load<u8>(col + 0xF)) << 8) | load<u8>(col + 0xE);
-    store<u32>(rw, c);
-    store<u32>(rw + 4, c);
-    call_ptr<void>(load<u32>(load<u32>(f + 0x6C) + 0x14), f + 0x68);
-    call<void>(0x028710D0, rw, load<u32>(f + 0x68), rubyLen);
-    call<void>(0x0286FED0, rw, 2u);
+    f32 heightRatio = hdRuby_fontHeight(writer) / f32(lineHeight);
+    f32 rise = config->mRise;
+    f32 height = hdRuby_fontHeight(writer);
+    rubyWriter->mCursorY = gabi::fadds_ppc(rubyWriter->mCursorY, gabi::fmsubs(rise, heightRatio, height));
+    // HD: colour bytes follow the variable-length ruby text, outside the fixed tag prefix.
+    be<u8>* colour = gabi::at<be<u8>>(gabi::ea(tag) + 2u * u32(rubyLength) + 0xC);
+    u32 color = (u32(colour[1]) << 24) | (u32(colour[0]) << 16) | (u32(colour[3]) << 8) | u32(colour[2]);
+    rubyWriter->mColorTop = color;
+    rubyWriter->mColorBottom = color;
+    frame->mRuby.mString.assureTermination();
+    hdRuby_print(rubyWriter, frame->mRuby.mString.mStringTop, rubyLength);
+    hdRuby_destroyWriter(rubyWriter, 2);
 }
-VERIFY(0x02601BE8, drawRuby);
 
-/* 02602038: ruby tag: draws the ruby unless the base text has control characters */
-u32 tagRuby(u32 self, u32 writer, u32 tag, u32 text) {
-    WWHD_FUNC(0x02602038, u32, self, writer, tag, text);
-    if (!hasControlChar(self, text, s32(load<u16>(tag + 8) >> 1))) drawRuby(self, writer, tag, text);
+/* 02602038 */
+u32 hdRuby_tagState_c::tagRuby(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<u16>* text) {
+    if (!hasControlChar(text, s32(u16(tag->mData.mParams[0]) >> 1))) drawRuby(writer, tag, text);
     return 1;
 }
-VERIFY(0x02602038, tagRuby);
 
-/* 0260208C: font tag (0xFFFF restores the saved font); optional size parameters */
-u32 tagFont(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x0260208C, u32, self, writer, tag);
-    const u32 id = load<u16>(tag + 8);
-    u32 font;
-    if (id == 0xFFFF) {
-        font = load<u32>(self + 0xC);
-        store<u32>(self + 0xC, 0);
+/* 0260208C */
+u32 hdRuby_tagState_c::tagFont(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    u32 index = tag->mData.mParams[0];
+    hdRuby_font_c* font;
+    if (index == RUBY_FONT_RESTORE) {
+        font = mpSavedFont;
+        mpSavedFont = nullptr;
     } else {
-        font = call<u32>(0x025F36B8, load<u32>(kFontMgr), id);
-        if (!load<u32>(self + 0xC)) store<u32>(self + 0xC, load<u32>(writer + 0x28));
+        font = hdRuby_getFont(sFontManager.mpManager, index);
+        if (!mpSavedFont) mpSavedFont = writer->mpFont;
     }
-    store<u32>(writer + 0x28, font);
-    if (load<u16>(tag + 6) >= 6) {
-        const f32 h = f32(load<u16>(tag + 0xA)), w = f32(load<u16>(tag + 0xC));
-        const f32 pc = load<f32>(0x100E1804);
-        const f32 y = w / pc;
-        const f32 x = h / pc;
-        call<void>(0x0286E2E4, writer, x, y);
+    writer->mpFont = font;
+    if (tag->mParamSize >= 6) {
+        f32 height = u16(tag->mData.mParams[1]);
+        f32 width = u16(tag->mData.mParams[2]);
+        f32 percent = sPercent;
+        f32 y = width / percent;
+        f32 x = height / percent;
+        hdRuby_setFontSize(writer, x, y);
     }
     return 0;
 }
-VERIFY(0x0260208C, tagFont);
 
-/* 0260216C: scale tag (percent of the scale saved at the first scale tag) */
-u32 tagScale(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x0260216C, u32, self, writer, tag);
-    if (!load<u8>(self)) {
-        store<f32>(self + 4, load<f32>(writer + 0xC));
-        const f32 y = load<f32>(writer + 0x10);
-        store<u8>(self, 1);
-        store<f32>(self + 8, y);
+/* 0260216C */
+u32 hdRuby_tagState_c::tagScale(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    if (!mScaleSaved) {
+        mSavedScaleX = f32(writer->mScaleX);
+        f32 y = writer->mScaleY;
+        mScaleSaved = 1;
+        mSavedScaleY = y;
     }
-    const f32 s = f32(load<u16>(tag + 8)) / load<f32>(0x100E1804);
-    const f32 y = load<f32>(self + 8), x = load<f32>(self + 4);
-    store<f32>(writer + 0xC, fmuls_ppc(x, s));
-    store<f32>(writer + 0x10, fmuls_ppc(y, s));
+    f32 scale = f32(u16(tag->mData.mParams[0])) / sPercent;
+    f32 y = mSavedScaleY;
+    f32 x = mSavedScaleX;
+    writer->mScaleX = gabi::fmuls_ppc(x, scale);
+    writer->mScaleY = gabi::fmuls_ppc(y, scale);
     return 1;
 }
-VERIFY(0x0260216C, tagScale);
 
-static u32 tagColour(u32 b) {
-    return (u32(load<u8>(b + 1)) << 24) | (u32(load<u8>(b)) << 16) | (u32(load<u8>(b + 3)) << 8) | load<u8>(b + 2);
+/* inlined into tagColor and tagColorScale */
+static u32 hdRuby_tagColour(be<u8>* bytes) {
+    return (u32(bytes[1]) << 24) | (u32(bytes[0]) << 16) | (u32(bytes[3]) << 8) | u32(bytes[2]);
 }
 
-/* 026021E8: colour tag (both writer colours) */
-u32 tagColor(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x026021E8, u32, self, writer, tag);
-    const u32 c = tagColour(tag + 8);
-    store<u32>(writer, c);
-    store<u32>(writer + 4, c);
+/* 026021E8 */
+u32 hdRuby_tagState_c::tagColor(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    u32 color = hdRuby_tagColour(tag->mData.mParamBytes);
+    writer->mColorTop = color;
+    writer->mColorBottom = color;
     return 1;
 }
-VERIFY(0x026021E8, tagColor);
 
-/* 0260223C: system tag group dispatch */
-u32 tagSystem(u32 self, u32 writer, u32 tag, u32 text) {
-    WWHD_FUNC(0x0260223C, u32, self, writer, tag, text);
-    switch (load<u16>(tag + 4)) {
-    case 0: return tagRuby(self, writer, tag, text);
-    case 1: return tagFont(self, writer, tag);
-    case 2: return tagScale(self, writer, tag);
-    case 3: return tagColor(self, writer, tag);
+/* 0260223C */
+u32 hdRuby_tagState_c::tagSystem(hdRuby_writer_c* writer, hdRuby_tag_c* tag, be<u16>* text) {
+    switch (u16(tag->mKind.mTag)) {
+    case RUBY_TAG_RUBY: return tagRuby(writer, tag, text);
+    case RUBY_TAG_FONT: return tagFont(writer, tag);
+    case RUBY_TAG_SCALE: return tagScale(writer, tag);
+    case RUBY_TAG_COLOR: return tagColor(writer, tag);
     }
     return 1;
 }
-VERIFY(0x0260223C, tagSystem);
 
-/* 02602270: two colours and scale */
-u32 tagColorScale(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x02602270, u32, self, writer, tag);
-    store<u32>(writer, tagColour(tag + 8));
-    store<u32>(writer + 4, tagColour(tag + 0xC));
-    const f32 pc = load<f32>(0x100E1804);
-    const f32 x = f32(load<u16>(tag + 0x10)), y = f32(load<u16>(tag + 0x12));
-    store<f32>(writer + 0xC, x / pc);
-    store<f32>(writer + 0x10, y / pc);
+/* 02602270 */
+u32 hdRuby_tagState_c::tagColorScale(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    writer->mColorTop = hdRuby_tagColour(tag->mData.mParamBytes);
+    writer->mColorBottom = hdRuby_tagColour(&tag->mData.mParamBytes[4]);
+    f32 percent = sPercent;
+    f32 x = u16(tag->mData.mParams[4]);
+    f32 y = u16(tag->mData.mParams[5]);
+    writer->mScaleX = x / percent;
+    writer->mScaleY = y / percent;
     return 1;
 }
-VERIFY(0x02602270, tagColorScale);
 
-/* 02602334: group 1 dispatch */
-u32 tagGroup1(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x02602334, u32, self, writer, tag);
-    const u32 t = load<u16>(tag + 4);
-    if (t == 0xC) return tagColorScale(self, writer, tag);
-    if (t == 0xD) return 4;
+/* 02602334 */
+u32 hdRuby_tagState_c::tagGroup1(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    u32 kind = tag->mKind.mTag;
+    if (kind == RUBY_TAG_COLOR_SCALE) return tagColorScale(writer, tag);
+    if (kind == RUBY_TAG_FORMAT_BREAK) return 4;
     return 1;
 }
-VERIFY(0x02602334, tagGroup1);
 
-/* 0260237C: group 3: prints a string from the message manager with font 4, raised by its ascent */
-u32 tagGroup3(u32 self, u32 writer, u32 tag) {
-    WWHD_FUNC(0x0260237C, u32, self, writer, tag);
-    const u32 oldFont = load<u32>(writer + 0x28);
-    const u32 font = call<u32>(0x025F36B8, load<u32>(kFontMgr), 4u);
-    const u32 str = call<u32>(0x025F90C8, load<u32>(kFontMgr) + 0x2C, u32(load<u8>(tag + 5)));
-    const u32 c0 = load<u32>(writer), c1 = load<u32>(writer + 4);
-    store<u32>(writer + 0x28, font);
-    const s32 asc = call_ptr<s32>(load<u32>(load<u32>(font + 4) + 0xAC), font);
-    const f32 dy = fmuls_ppc(f32(-asc), load<f32>(writer + 0x10));
-    store<f32>(writer + 0x18, fadds_ppc(load<f32>(writer + 0x18), dy));
-    store<u32>(writer, 0xFFFFFFFF);
-    store<u32>(writer + 4, 0xFFFFFFFF);
-    call<void>(0x0286E9F0, writer, str);
-    const f32 y = load<f32>(writer + 0x18);
-    store<u32>(writer + 0x28, oldFont);
-    store<f32>(writer + 0x18, fsubs_ppc(y, dy));
-    store<u32>(writer, c0);
-    store<u32>(writer + 4, c1);
+/* 0260237C */
+u32 hdRuby_tagState_c::tagGroup3(hdRuby_writer_c* writer, hdRuby_tag_c* tag) {
+    hdRuby_font_c* oldFont = writer->mpFont;
+    hdRuby_font_c* font = hdRuby_getFont(sFontManager.mpManager, RUBY_FONT_PICTURE);
+    // HD: the picture-string manager occupies an embedded slot in the font manager.
+    void* pictureManager = gabi::at<void>(gabi::ea((void*)sFontManager.mpManager) + 0x2C);
+    be<u16>* text = hdRuby_pictureText(pictureManager, u32(tag->mKind.mPicture.mValue));
+    u32 top = writer->mColorTop;
+    u32 bottom = writer->mColorBottom;
+    writer->mpFont = font;
+    s32 ascent = gabi::call_ptr<s32>(font->mVtable->mGetAscent, font);
+    f32 offsetY = gabi::fmuls_ppc(f32(-ascent), writer->mScaleY);
+    writer->mCursorY = gabi::fadds_ppc(writer->mCursorY, offsetY);
+    writer->mColorTop = 0xFFFFFFFF;
+    writer->mColorBottom = 0xFFFFFFFF;
+    hdRuby_printString(writer, text);
+    f32 y = writer->mCursorY;
+    writer->mpFont = oldFont;
+    writer->mCursorY = gabi::fsubs_ppc(y, offsetY);
+    writer->mColorTop = top;
+    writer->mColorBottom = bottom;
     return 1;
 }
-VERIFY(0x0260237C, tagGroup3);
 
-/* 026024C8: tag dispatch (context, tag, text following the tag) */
-u32 process(u32 self, u32 ctx, u32 tag, u32 text) {
-    WWHD_FUNC(0x026024C8, u32, self, ctx, tag, text);
-    const u32 g = load<u16>(tag + 2);
-    const u32 writer = load<u32>(ctx);
-    if (g == 0) return tagSystem(self, writer, tag, text);
-    if (g == 1) return tagGroup1(self, writer, tag);
-    if (g == 3) return tagGroup3(self, writer, tag);
+/* 026024C8 */
+u32 hdRuby_tagState_c::process(hdRuby_context_c* context, hdRuby_tag_c* tag, be<u16>* text) {
+    u32 group = tag->mGroup;
+    hdRuby_writer_c* writer = context->mpWriter;
+    if (group == RUBY_GROUP_SYSTEM) return tagSystem(writer, tag, text);
+    if (group == RUBY_GROUP_FORMAT) return tagGroup1(writer, tag);
+    if (group == RUBY_GROUP_PICTURE) return tagGroup3(writer, tag);
     return 1;
 }
-VERIFY(0x026024C8, process);
 
-/* 026024F8: TagState reset */
-void tagStateReset(u32 p) {
-    WWHD_FUNC(0x026024F8, void, p);
-    const f32 one = load<f32>(0x100E17A0);
-    store<u8>(p, 0);
-    store<f32>(p + 4, one);
-    store<u32>(p + 0xC, 0);
-    store<f32>(p + 8, one);
+/* 026024F8 */
+void hdRuby_tagState_c::reset() {
+    f32 one = sOne;
+    mScaleSaved = 0;
+    mSavedScaleX = one;
+    mpSavedFont = nullptr;
+    mSavedScaleY = one;
 }
-VERIFY(0x026024F8, tagStateReset);
 
-/* 02602518: static initialiser */
-void staticInit() {
-    WWHD_FUNC(0x02602518, void);
-    const u32 b = 0x1048DCCC;
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, 0x101F4E98u);
-    const f32 lo = load<f32>(0x100E1810), hi = load<f32>(0x100E1814);
-    store<f32>(0x1048DCC0, lo);
-    store<f32>(0x1048DCC4, hi);
-    call<void>(0x028ED6F8, 0x1048DCC8u);
-    call<void>(0x028F026C, 0x101F4EA4u);
-    call<void>(0x028EAB2C, 0x1048DCC9u);
-    call<void>(0x028F026C, 0x101F4EB0u);
+/* ---------------- HD: compiler-generated and template code ---------------- */
+
+/* 02602518 */
+static void __sinit_hd_text_ruby_cpp() {
+    sinit_header_statics_rodata(0x1048DCC0, 0x101F4E98, 0x1048DCCC, 0x100E1810);
 }
-VERIFY(0x02602518, staticInit);
 
-} // namespace hd_text_ruby
+/* WWHD glue
+data sFontManager 101F4A50 nocheck
+data sConfig 101F4B5C nocheck
+data sOne 100E17A0 nocheck
+data sMaxScale 100E17F0 nocheck
+data sZero 100E17F4 nocheck
+data sHalf 100E1800 nocheck
+data sPercent 100E1804 nocheck
+ext 026025AC void hdRuby_assureWideString(hdRuby_wideString_c* string)
+ext C0009988 void hdRuby_copyText(be<u16>* destination, be<u16>* source, u32 bytes, u32 flags)
+ext 0286E3C4 void hdRuby_writerPrepareFirst(hdRuby_writer_c* writer)
+ext 0286E42C void hdRuby_writerPrepareSecond(hdRuby_writer_c* writer)
+ext 025F36B8 hdRuby_font_c* hdRuby_getFont(void* manager, s32 index)
+ext 028706A0 f32 hdRuby_textWidth(hdRuby_writer_c* writer, be<u16>* text, s32 length)
+ext 0286E494 f32 hdRuby_fontHeight(hdRuby_writer_c* writer)
+ext 028710D0 void hdRuby_print(hdRuby_writer_c* writer, be<u16>* text, s32 length)
+ext 0286FED0 void hdRuby_destroyWriter(hdRuby_writer_c* writer, u32 flags)
+ext 0286E2E4 void hdRuby_setFontSize(hdRuby_writer_c* writer, f32 x, f32 y)
+ext 025F90C8 be<u16>* hdRuby_pictureText(void* manager, u32 value)
+ext 0286E9F0 void hdRuby_printString(hdRuby_writer_c* writer, be<u16>* text)
+*/

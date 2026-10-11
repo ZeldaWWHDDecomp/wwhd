@@ -1,584 +1,597 @@
-/* hd_snd_0202EE08: three HD sound TUs (no GameCube source).
- *
- * 0202EE08..0202EF23: initialiser-only TU (two float constants 240 / 450 at 102003A8) + companions
- * 0202EF24..0202EFC3: initialiser-only TU + the fader constructor thunk 0202EFB8 (initial value 1.0)
- * 0202EFC4..020302E3: the HD sound player (0x20C, derived from the NW4F sound archive player 0276359C;
- *                     vtables 10004610 / 10004688 / 100046A8): players by name (PLAYER_SYSTEM_SE,
- *                     PLAYER_SEQ_BGM, PLAYER_STRM_BGM, PLAYER_STRM_SUB_BGM, PLAYER_MENU_UI, PLAYER_DRC_ONLY,
- *                     PLAYER_DRC_GAME, PLAYER_DRC_TV, PLAYER_ITEM_SET, PLAYER_CONTROLLER), TV/DRC output
- *                     volumes per frame (two master faders +0x194 / +0x1AC, two BGM faders +0x1C4 / +0x1DC,
- *                     mode flags +0x1F4..+0x1F8, mode +0x1FC, pause +0x200), a distance-based volume curve
- *                     for the controller speaker, pause/resume of all players, stop by sound id, and the
- *                     four HD stream handles (+0x204 demo45 / ending / epilogue, +0x208 staff roll);
- *                     __sinit 02030228 (curve range 170.0 at 102003F0)
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD sound player, channel faders and stream handles. No GameCube counterpart. */
+#include "bindings.h"
+#include "hd/hd_snd_0202EE08.h"
+static char sBgmPlayerName0;
+static char sBgmPlayerName1;
+static char sDrcTvPlayerName;
+static char sStreamName0;
+static char sStreamName1;
+static char sStreamName2;
+static char sStreamName3;
+static f32 sOne;
+static f32 sZero;
+static f32 sMaximumPadVolume;
+static f32 sPadNearDistance;
+static f32 sPadFarDistance;
+static f32 sTvScale;
+static f32 sPadCurveRange;
+static f32 sPadCurveRangeInitial;
+static f32 sFirstConstant;
+static f32 sSecondConstant;
+static f32 sFirstConstantInitial;
+static f32 sSecondConstantInitial;
+static u32 sOutputVolumeInitialized;
+static hdPlayerOutputVolume sOutputVolume;
+static void* sControllerManager;
+static u32 sControllerTypeInitialized;
+static hdPlayerControllerType sControllerType;
+static hdPlayerStringTable sStringTable;
+static u32 sMatchId;
+static u32 sMatchExcludeFirst;
+static u32 sMatchExcludeSecond;
+static u8 sMatchFound;
+static u8 sMatchStartedOnly;
+static u32 sStopExcludeFirst;
+static u32 sStopExcludeSecond;
+static u32 sStopFade;
+static hdPlayerHeaderStatics sCurveHeader;
+static f32 sCurvePiLow;
+static f32 sCurvePiHigh;
+static f32 sCurvePiLowInitial;
+static f32 sCurvePiHighInitial;
+static u8 sCurveHeaderByte;
+static u8 sCurveHeaderSecondByte;
 
-namespace hd_snd_0202EE08 {
-
-/* 0202EE08: __sinit (header statics + two constants) */
-static void sinit_0202EE08() {
-    WWHD_FUNC(0x0202EE08, void);
-    header_sinit(0x102003BC, 0x1018ED38, 0x1000442C);
-    f32 a = ldf(0x10004434), b = ldf(0x10004438);
-    stf(0x102003A8, a);
-    stf(0x102003AC, b);
+/* 0202EE08 */
+static void __sinit_hd_sound_constants_cpp() {
+    sinit_header_statics_rodata(0x102003B0, 0x1018ED38, 0x102003BC, 0x1000442C);
+    f32 first = sFirstConstantInitial;
+    f32 second = sSecondConstantInitial;
+    sFirstConstant = first;
+    sSecondConstant = second;
 }
-VERIFY(0x0202EE08, sinit_0202EE08);
-
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EEB8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EEB8 */
+static void destroyFirstPlayerCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0202EEB8, Comp_dt1);
-
-static void SafeString_assureNone() {
-    WWHD_FUNC(0x0202EECC, void);
+/* 0202EECC */
+static void emptyPlayerString() {}
+/* 0202EED0 */
+static void assurePlayerStringTermination(hdPlayerFixedString* i_this) { i_this->terminate(); }
+/* 0202EEE8 */
+static void destroySecondPlayerCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0202EECC, SafeString_assureNone);
-
-/* sead BufferedSafeString::assureTerminationImpl_ instance */
-static void SafeString_assureTermination(u32 self) {
-    WWHD_FUNC(0x0202EED0, void, self);
-    stb(ld(self + 0) + ld(self + 8) - 1, 0);
+/* 0202EEFC */
+static void destroyThirdPlayerCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0202EED0, SafeString_assureTermination);
-
-static void Comp_dt2(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EEE8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EF10 */
+static void destroyFourthPlayerCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0202EEE8, Comp_dt2);
-
-static void Comp_dt3(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EEFC, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EF24 */
+static void __sinit_hd_player_fader_cpp() {
+    sinit_header_statics_rodata(0x102003CC, 0x1018ED5C, 0x102003D8, 0x10004450);
 }
-VERIFY(0x0202EEFC, Comp_dt3);
-
-static void Comp_dt4(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EF10, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 0202EFB8 */
+static u32 constructPlayerFader(hdPlayerFader* i_this) { return hdPlayerInitializeFader(i_this, sOne); }
+/* 0202EFC4 */
+static void destroySoundPlayer(hdSoundPlayer* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    i_this->mArchiveInterface.mVtable = 0x10004688;
+    i_this->mSecondaryVtable = 0x100046A8;
+    hdPlayerDestroyHandle(&i_this->mStaffRollHandle);
+    hdPlayerDestroyHandle(&i_this->mStreamHandle);
+    hdPlayerDestroyBase(i_this, 0);
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x0202EF10, Comp_dt4);
-
-static void sinit_0202EF24() {
-    WWHD_FUNC(0x0202EF24, void);
-    header_sinit(0x102003D8, 0x1018ED5C, 0x10004450);
+/* 0202F040 */
+static u32 forwardSoundPlayerSecondary(void* secondary, u32 option) {
+    // HD: secondary-base adjustment wraps in the guest address space.
+    return hdPlayerForwardSecondary(gabi::at<hdSoundPlayer>(gabi::ea(secondary) - 4), option);
 }
-VERIFY(0x0202EF24, sinit_0202EF24);
-
-/* 0202EFB8: fader constructor with the initial value 1.0 */
-static u32 Fader_ct1(u32 self) {
-    WWHD_FUNC(0x0202EFB8, u32, self);
-    return gabi::call<u32>(0x02762170, self, ldf(0x10004458));
-}
-VERIFY(0x0202EFB8, Fader_ct1);
-
-static void Player_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202EFC4, void, self, flags);
-    if (self == 0) return;
-    st(self + 4, 0x10004688);
-    st(self + 0x120, 0x100046A8);
-    gabi::call(0x02896CD8, self + 0x208);
-    gabi::call(0x02896CD8, self + 0x204);
-    gabi::call(0x02763360, self, 0);
-    if (flags & 1) op_delete(self);
-}
-VERIFY(0x0202EFC4, Player_dt);
-
-static u32 Player_thunk(u32 self, u32 a) {
-    WWHD_FUNC(0x0202F040, u32, self, a);
-    return gabi::call<u32>(0x02763498, self - 4, a);
-}
-VERIFY(0x0202F040, Player_thunk);
-
-/* 0202F048: constructor */
-static u32 Player_ct(u32 self) {
-    WWHD_FUNC(0x0202F048, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x20C);
-        if (t == 0) return 0;
+/* 0202F048 */
+static hdSoundPlayer* constructSoundPlayer(hdSoundPlayer* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdSoundPlayer*)operator_new(sizeof(hdSoundPlayer));
+        if (i_this == NULL) return NULL;
     }
-    gabi::call(0x0276359C, t);
-    st(t + 0, 0x10004610);
-    st(t + 4, 0x10004688);
-    st(t + 0x120, 0x100046A8);
-    gabi::call(0x028EFFD0, t + 0x194, 2, 0x18, 0x0202EFB8);
-    f32 one = ldf(0x10004458);
-    gabi::call(0x02762170, t + 0x1C4, one);
-    gabi::call(0x02762170, t + 0x1DC, one);
-    stb(t + 0x1F4, 0);
-    st(t + 0x1FC, 0);
-    stb(t + 0x1F7, 0);
-    stb(t + 0x1F5, 0);
-    stb(t + 0x1F8, 0);
-    stb(t + 0x1F6, 0);
-    u32 p = t + 0x200;
-    if (p == 0) p = op_new(4);
-    if (p != 0) st(p, 0);
-    st(t + 0x208, 0);
-    st(t + 0x204, 0);
-    return t;
+    hdPlayerConstructBase(i_this);
+    i_this->mVtable = 0x10004610;
+    i_this->mArchiveInterface.mVtable = 0x10004688;
+    i_this->mSecondaryVtable = 0x100046A8;
+    hdPlayerConstructFaderArray(i_this->mMasterFaders, 2, sizeof(hdPlayerFader), constructPlayerFader);
+    f32 one = sOne;
+    hdPlayerInitializeFader(&i_this->mBgmFaders[0], one);
+    hdPlayerInitializeFader(&i_this->mBgmFaders[1], one);
+    i_this->mMenuFlag = 0;
+    i_this->mMode = 0;
+    i_this->field_0x1f7 = 0;
+    i_this->field_0x1f5 = 0;
+    i_this->field_0x1f8 = 0;
+    i_this->field_0x1f6 = 0;
+    be<u32>* pause = i_this->pauseForConstruction();
+    if (pause == NULL) pause = (be<u32>*)operator_new(sizeof(be<u32>));
+    if (pause != NULL) *pause = 0;
+    i_this->mStaffRollHandle.mSound = NULL;
+    i_this->mStreamHandle.mSound = NULL;
+    return i_this;
 }
-VERIFY(0x0202F048, Player_ct);
-
-/* 0202F14C: fade both master faders to (TV, DRC) over FRAMES */
-static void Player_fadeMaster(u32 self, u32 frames, f32 tv, f32 drc) {
-    WWHD_FUNC(0x0202F14C, void, self, frames, tv, drc);
-    gabi::call(0x02762258, self + 0x194, frames, tv);
-    gabi::call(0x02762258, self + 0x1AC, frames, drc);
+/* 0202F14C */
+static void fadePlayerMaster(hdSoundPlayer* i_this, u32 frames, f32 tv, f32 drc) {
+    hdPlayerFade(&i_this->mMasterFaders[0], frames, tv);
+    hdPlayerFade(&i_this->mMasterFaders[1], frames, drc);
 }
-VERIFY(0x0202F14C, Player_fadeMaster);
-
-static u32 Player_fadeBgm1(u32 self, u32 frames, f32 v) {
-    WWHD_FUNC(0x0202F1B4, u32, self, frames, v);
-    return gabi::call<u32>(0x02762258, self + 0x1C4, frames, v);
+/* 0202F1B4 */
+static u32 fadeFirstBgmPlayer(hdSoundPlayer* i_this, u32 frames, f32 volume) {
+    return hdPlayerFade(&i_this->mBgmFaders[0], frames, volume);
 }
-VERIFY(0x0202F1B4, Player_fadeBgm1);
-
-static u32 Player_fadeBgm2(u32 self, u32 frames, f32 v) {
-    WWHD_FUNC(0x0202F1BC, u32, self, frames, v);
-    return gabi::call<u32>(0x02762258, self + 0x1DC, frames, v);
+/* 0202F1BC */
+static u32 fadeSecondBgmPlayer(hdSoundPlayer* i_this, u32 frames, f32 volume) {
+    return hdPlayerFade(&i_this->mBgmFaders[1], frames, volume);
 }
-VERIFY(0x0202F1BC, Player_fadeBgm2);
-
-/* 0202F1C4: reset: base reset, the shared output-volume object, all faders to 1/0, unpause */
-static void Player_reset(u32 self) {
-    WWHD_FUNC(0x0202F1C4, void, self);
-    gabi::call(0x02763C80, self);
-    if (ld(0x101FD8C8) == 0) {
-        st(0x101FD8C8, 1);
-        gabi::call(0x02888A50, 0x101FCE00);
+/* 0202F1C4 */
+static void resetSoundPlayer(hdSoundPlayer* i_this) {
+    hdPlayerResetBase(i_this);
+    if (sOutputVolumeInitialized == 0) {
+        sOutputVolumeInitialized = 1;
+        hdPlayerConstructOutputVolume(&sOutputVolume);
     }
-    f32 one = ldf(0x10004458);
-    gabi::call(0x02889F18, 0x101FCE00, 0, one);
-    gabi::call(0x0202F14C, self, 0, one, ldf(0x100044C0));
-    gabi::call(0x0202F1B4, self, 0, one);
-    gabi::call(0x0202F1BC, self, 0, one);
-    st(self + 0x200, 0);
-    u32 h = gabi::call<u32>(0x0202DB6C);
-    if (h != 0 && gabi::call<s32>(0x02762C88, h) == 2) gabi::call(0x02762BC8, h, 0);
+    f32 one = sOne;
+    hdPlayerSetOutputVolume(&sOutputVolume, 0, one);
+    fadePlayerMaster(i_this, 0, one, sZero);
+    fadeFirstBgmPlayer(i_this, 0, one);
+    fadeSecondBgmPlayer(i_this, 0, one);
+    i_this->mPaused = 0;
+    void* heap = hdPlayerGetManagerHeap();
+    if (heap != NULL && hdPlayerGetHeapState(heap) == 2) hdPlayerSetHeapState(heap, 0);
 }
-VERIFY(0x0202F1C4, Player_reset);
-
-static u32 Player_fwd(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0202F2B4, u32, self, a, b);
-    return gabi::call<u32>(0x02763758, self, a, b);
+/* 0202F2B4 */
+static u32 forwardSoundPlayer(hdSoundPlayer* i_this, u32 first, u32 second) {
+    return hdPlayerForwardBase(i_this, first, second);
 }
-VERIFY(0x0202F2B4, Player_fwd);
-
-/* 0202F2B8: distance byte of the controller (pad 8, RTTI-checked), 0 without one */
-static u32 Player_padDistance() {
-    WWHD_FUNC(0x0202F2B8, u32);
-    u32 c = ld(0x101F8AE8);
-    if (c == 0) return 0;
-    u32 p = gabi::call<u32>(0x0273CB8C, c, 8);
-    if (p == 0) return 0;
-    if (ld(0x101FD694) == 0) {
-        st(0x101FD694, 1);
-        st(0x101FD968, 0x100044B0);
+/* 0202F2B8 */
+static u32 getControllerDistance() {
+    void* manager = sControllerManager;
+    if (manager == NULL) return 0;
+    hdPlayerController* controller = hdPlayerGetController(manager, 8);
+    if (controller == NULL) return 0;
+    if (sControllerTypeInitialized == 0) {
+        sControllerTypeInitialized = 1;
+        sControllerType.mNameAddress = 0x100044B0;
     }
-    if (gabi::call_ptr<u32>(vfn(p, 0x10, 0xC), p, 0x101FD968) == 0) return 0;
-    if ((s32)ld(p + 0xAD4) <= 0) return 0;
-    return lbz(p + 0xB4);
+    if (controller->checkType(&sControllerType) == 0) return 0;
+    if (controller->mActive <= 0) return 0;
+    return controller->mDistance;
 }
-VERIFY(0x0202F2B8, Player_padDistance);
-
-/* 0202F378: controller-speaker volume from the distance: 0.25 up to 30, 0 from 200, quadratic in between */
-static f32 Player_padVolume(u32 self) {
-    WWHD_FUNC(0x0202F378, f32, self);
-    u32 d = gabi::call<u32>(0x0202F2B8);
-    f32 c = (f32)(f64)d;
-    f32 lo = ldf(0x100044D4);
-    f32 v = ldf(0x100044D0);
-    if (c <= lo) return v;
-    if (!(c < ldf(0x100044D8))) return ldf(0x100044C0);
-    f32 t = fdivs_ppc(gabi::fsubs_ppc(c, lo), ldf(0x102003F0));
-    f32 u = gabi::fsubs_ppc(ldf(0x10004458), t);
-    return gabi::fmuls_ppc(gabi::fmuls_ppc(v, u), u);
+/* 0202F378 */
+static f32 getControllerVolume(hdSoundPlayer* i_this) {
+    (void)i_this;
+    u32 distance = getControllerDistance();
+    f32 value = (f32)(f64)distance;
+    f32 nearDistance = sPadNearDistance;
+    f32 volume = sMaximumPadVolume;
+    if (value <= nearDistance) return volume;
+    if (!(value < sPadFarDistance)) return sZero;
+    f32 ratio = hdPlayerDivide(gabi::fsubs_ppc(value, nearDistance), sPadCurveRange);
+    f32 remaining = gabi::fsubs_ppc(sOne, ratio);
+    return gabi::fmuls_ppc(gabi::fmuls_ppc(volume, remaining), remaining);
 }
-VERIFY(0x0202F378, Player_padVolume);
+static void setPlayerChannelVolume(void* player, u32 channel, f32 volume) { hdPlayerSetChannelVolume(player, channel, volume); }
 
-static inline void vol(u32 h, u32 ch, f32 v) { gabi::call(0x0289765C, h, ch, v); }
-
-/* 0202F41C: per-frame TV / DRC output volumes of every player */
-static void Player_updateVolumes(u32 self) {
-    WWHD_FUNC(0x0202F41C, void, self);
-    gabi::call(0x027621EC, self + 0x194);
-    gabi::call(0x027621EC, self + 0x1AC);
-    if (ld(self + 0x1C) == 0) return;
-    f32 d = ldf(self + 0x1AC);
-    f32 t = ldf(self + 0x194);
-    f32 drc = gabi::fmuls_ppc(d, d);
-    f32 k = ldf(0x100044DC);
-    f32 tv = gabi::fmuls_ppc(gabi::fmuls_ppc(t, t), k);
-    static const u32 names[10] = {0x10004558, 0x1000456C, 0x100044E0, 0x10004520, 0x1000457C,
-                                  0x100044F0, 0x10004500, 0x10004534, 0x10004510, 0x10004544};
-    u32 h[10];
-    for (u32 i = 0; i < 10; ++i) h[i] = gabi::call<u32>(0x0289419C, self + 4, names[i]);
-    for (u32 i = 0; i < 10; ++i) gabi::call(0x02897654, h[i], 0x21);
-    const u32 se = h[0], seq = h[1], strm = h[2], sub = h[3], menu = h[4], drcOnly = h[5],
-              drcGame = h[6], drcTv = h[7], item = h[8], ctrl = h[9];
-    vol(se, 0, tv); vol(se, 1, drc);
-    vol(seq, 0, tv); vol(seq, 1, drc);
-    vol(strm, 0, tv); vol(strm, 1, drc);
-    vol(sub, 0, tv); vol(sub, 1, drc);
-    bool loud = lbz(self + 0x1F7) != 0 || lbz(self + 0x1F8) != 0; /* read before the DRC_GAME calls */
-    f32 one = ldf(0x10004458);
-    vol(drcGame, 0, tv);
-    vol(drcGame, 1, loud ? drc : one);
-    f32 zero = ldf(0x100044C0);
-    bool drcMode = lbz(self + 0x1F4) != 0 && ld(self + 0x1FC) == 1;
+/* 0202F41C */
+static void updatePlayerVolumes(hdSoundPlayer* i_this) {
+    hdPlayerUpdateFader(&i_this->mMasterFaders[0]);
+    hdPlayerUpdateFader(&i_this->mMasterFaders[1]);
+    if (i_this->mArchiveInterface.mPlayerCount == 0) return;
+    f32 drcMaster = (f32)i_this->mMasterFaders[1].mVolume;
+    f32 tvMaster = (f32)i_this->mMasterFaders[0].mVolume;
+    f32 drc = gabi::fmuls_ppc(drcMaster, drcMaster);
+    f32 tvScale = sTvScale;
+    f32 tv = gabi::fmuls_ppc(gabi::fmuls_ppc(tvMaster, tvMaster), tvScale);
+    void* players[10];
+    players[0] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_SYSTEM_SE");
+    players[1] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_SEQ_BGM");
+    players[2] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_STRM_BGM");
+    players[3] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_STRM_SUB_BGM");
+    players[4] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_MENU_UI");
+    players[5] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_DRC_ONLY");
+    players[6] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_DRC_GAME");
+    players[7] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_DRC_TV");
+    players[8] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_ITEM_SET");
+    players[9] = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, "PLAYER_CONTROLLER");
+    for (u32 i = 0; i < 10; ++i) hdPlayerSetPlayerChannels( players[i], PLAYER_CHANNEL_MASK);
+    void* systemSe = players[0];
+    void* sequenceBgm = players[1];
+    void* streamBgm = players[2];
+    void* subBgm = players[3];
+    void* menu = players[4];
+    void* drcOnly = players[5];
+    void* drcGame = players[6];
+    void* drcTv = players[7];
+    void* item = players[8];
+    void* controllerPlayer = players[9];
+    setPlayerChannelVolume(systemSe, PLAYER_CHANNEL_TV, tv);
+    setPlayerChannelVolume(systemSe, PLAYER_CHANNEL_DRC, drc);
+    setPlayerChannelVolume(sequenceBgm, PLAYER_CHANNEL_TV, tv);
+    setPlayerChannelVolume(sequenceBgm, PLAYER_CHANNEL_DRC, drc);
+    setPlayerChannelVolume(streamBgm, PLAYER_CHANNEL_TV, tv);
+    setPlayerChannelVolume(streamBgm, PLAYER_CHANNEL_DRC, drc);
+    setPlayerChannelVolume(subBgm, PLAYER_CHANNEL_TV, tv);
+    setPlayerChannelVolume(subBgm, PLAYER_CHANNEL_DRC, drc);
+    bool loud = i_this->field_0x1f7 != 0 || i_this->field_0x1f8 != 0; /* read before the DRC_GAME calls */
+    f32 one = sOne;
+    setPlayerChannelVolume(drcGame, PLAYER_CHANNEL_TV, tv);
+    setPlayerChannelVolume(drcGame, PLAYER_CHANNEL_DRC, loud ? drc : one);
+    f32 zero = sZero;
+    bool drcMode = i_this->mMenuFlag != 0 && i_this->mMode == 1;
     if (drcMode) {
-        vol(menu, 0, k); vol(menu, 1, zero);
-    } else if (lbz(self + 0x1F6) != 0 || lbz(self + 0x1F7) != 0 || lbz(self + 0x1F8) != 0) {
-        vol(menu, 0, tv); vol(menu, 1, drc);
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_TV, tvScale);
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_DRC, zero);
+    } else if (i_this->field_0x1f6 != 0 || i_this->field_0x1f7 != 0 || i_this->field_0x1f8 != 0) {
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_TV, tv);
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_DRC, drc);
     } else {
-        f32 pv = gabi::call<f32>(0x0202F378, self);
-        vol(menu, 0, gabi::fmuls_ppc(pv, tv)); vol(menu, 1, one);
+        f32 pv = getControllerVolume(i_this);
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_TV, gabi::fmuls_ppc(pv, tv));
+        setPlayerChannelVolume(menu, PLAYER_CHANNEL_DRC, one);
     }
-    vol(drcOnly, 0, zero); vol(drcOnly, 1, one);
-    vol(drcTv, 0, k); vol(drcTv, 1, one);
-    if (lbz(self + 0x1F4) == 0) {
-        vol(item, 0, tv); vol(item, 1, one);
-    } else if (ld(self + 0x1FC) == 1) {
-        vol(item, 0, k); vol(item, 1, zero);
+    setPlayerChannelVolume(drcOnly, PLAYER_CHANNEL_TV, zero);
+    setPlayerChannelVolume(drcOnly, PLAYER_CHANNEL_DRC, one);
+    setPlayerChannelVolume(drcTv, PLAYER_CHANNEL_TV, tvScale);
+    setPlayerChannelVolume(drcTv, PLAYER_CHANNEL_DRC, one);
+    if (i_this->mMenuFlag == 0) {
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_TV, tv);
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_DRC, one);
+    } else if (i_this->mMode == 1) {
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_TV, tvScale);
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_DRC, zero);
     } else {
-        vol(item, 0, zero); vol(item, 1, one);
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_TV, zero);
+        setPlayerChannelVolume(item, PLAYER_CHANNEL_DRC, one);
     }
-    if (ld(self + 0x1FC) == 1) {
-        vol(ctrl, 0, k); vol(ctrl, 1, zero);
+    if (i_this->mMode == 1) {
+        setPlayerChannelVolume(controllerPlayer, PLAYER_CHANNEL_TV, tvScale);
+        setPlayerChannelVolume(controllerPlayer, PLAYER_CHANNEL_DRC, zero);
     } else {
-        f32 pv = gabi::call<f32>(0x0202F378, self);
-        vol(ctrl, 0, gabi::fmuls_ppc(pv, tv)); vol(ctrl, 1, one);
+        f32 pv = getControllerVolume(i_this);
+        setPlayerChannelVolume(controllerPlayer, PLAYER_CHANNEL_TV, gabi::fmuls_ppc(pv, tv));
+        setPlayerChannelVolume(controllerPlayer, PLAYER_CHANNEL_DRC, one);
     }
 }
-VERIFY(0x0202F41C, Player_updateVolumes);
-
-/* 0202F994: BGM fader (+0x1C4) applied to the player 0x1000458C */
-static void Player_bgmFade_0202F994(u32 self) {
-    WWHD_FUNC(0x0202F994, void, self);
-    gabi::call(0x027621EC, self + 0x1C4);
-    if (ld(self + 0x1C) == 0) return;
-    u32 h = gabi::call<u32>(0x0289419C, self + 4, 0x1000458C);
-    gabi::call(0x02897640, h, ldf(self + 0x1C4));
+/* 0202F994 */
+static void updateBgmVolume0(hdSoundPlayer* i_this) {
+    hdPlayerUpdateFader(&i_this->mBgmFaders[0]);
+    if (i_this->mArchiveInterface.mPlayerCount == 0) return;
+    void* player = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, (const char*)&sBgmPlayerName0);
+    hdPlayerSetPlayerVolume(player, i_this->mBgmFaders[0].mVolume);
 }
-VERIFY(0x0202F994, Player_bgmFade_0202F994);
-
-/* 0202F9E8: BGM fader (+0x1DC) applied to the player 0x1000459C */
-static void Player_bgmFade_0202F9E8(u32 self) {
-    WWHD_FUNC(0x0202F9E8, void, self);
-    gabi::call(0x027621EC, self + 0x1DC);
-    if (ld(self + 0x1C) == 0) return;
-    u32 h = gabi::call<u32>(0x0289419C, self + 4, 0x1000459C);
-    gabi::call(0x02897640, h, ldf(self + 0x1DC));
+/* 0202F9E8 */
+static void updateBgmVolume1(hdSoundPlayer* i_this) {
+    hdPlayerUpdateFader(&i_this->mBgmFaders[1]);
+    if (i_this->mArchiveInterface.mPlayerCount == 0) return;
+    void* player = hdPlayerGetNamedPlayer(&i_this->mArchiveInterface, (const char*)&sBgmPlayerName1);
+    hdPlayerSetPlayerVolume(player, i_this->mBgmFaders[1].mVolume);
 }
-VERIFY(0x0202F9E8, Player_bgmFade_0202F9E8);
-
-static void Player_update(u32 self) {
-    WWHD_FUNC(0x0202FA3C, void, self);
-    gabi::call(0x0202F41C, self);
-    gabi::call(0x0202F994, self);
-    gabi::call(0x0202F9E8, self);
-    gabi::call(0x027637B4, self);
+/* 0202FA3C */
+static void updateSoundPlayer(hdSoundPlayer* i_this) {
+    updatePlayerVolumes(i_this);
+    updateBgmVolume0(i_this);
+    updateBgmVolume1(i_this);
+    hdPlayerUpdateBase(i_this);
 }
-VERIFY(0x0202FA3C, Player_update);
-
-struct str2_l { u8 b[8]; };
-
-/* 0202FA80: pause (1, X) every player except PLAYER_DRC_TV */
-static void Player_pauseAll(u32 self, u32 x) {
-    WWHD_FUNC(0x0202FA80, void, self, x);
-    u32 n = ld(self + 0x1C);
-    if (n == 0) return;
-    gabi::Local<str2_l> s1;
-    gabi::Local<str2_l> s2;
-    for (u32 i = 0; n != 0; --n, ++i) {
-        u32 id = i + 0x04000000;
-        st(s1.a + 4, 0x10004478);
-        st(s1.a + 0, 0x100045AC); /* "PLAYER_DRC_TV" */
-        u32 nm = gabi::call<u32>(0x0202DC64, id);
-        st(s2.a + 4, 0x10004478);
-        st(s2.a + 0, nm);
-        sstr_assure(s1.a);
-        sstr_assure(s1.a);
-        u32 fn2 = ld(ld(s2.a + 4) + 0x14);
-        u32 p = ld(s1.a + 0);
-        gabi::call_ptr(fn2, s2.a);
-        u32 q = ld(s2.a + 0);
-        if (p == q || sstr_eq(p, q)) continue;
-        u32 pl = gabi::call<u32>(0x02893CE8, self + 4, id);
-        gabi::call(0x028975CC, pl, 1, x);
+/* 0202FA80 */
+static void pauseAllPlayers(hdSoundPlayer* i_this, u32 frames) {
+    u32 count = i_this->mArchiveInterface.mPlayerCount;
+    if (count == 0) return;
+    hdPlayerSafeString excluded;
+    hdPlayerSafeString name;
+    for (u32 index = 0; count != 0; --count, ++index) {
+        u32 id = index + PLAYER_ID_BASE;
+        excluded.mVtable = &sStringTable;
+        excluded.mText = (const be<u8>*)&sDrcTvPlayerName;
+        const be<u8>* text = hdPlayerGetPlayerName(id);
+        name.mVtable = &sStringTable;
+        name.mText = text;
+        excluded.assureTermination();
+        excluded.assureTermination();
+        hdPlayerStringTable* nameTable = name.mVtable;
+        const be<u8>* first = excluded.mText;
+        gabi::call_ptr(nameTable->mAssureTermination.get(), &name);
+        const be<u8>* second = name.mText;
+        if (first == second || hdPlayerStringEquals(first, second)) continue;
+        hdPlayerSubPlayer* player = hdPlayerGetPlayerById(&i_this->mArchiveInterface, id);
+        hdPlayerSetPlayerPaused(player, 1, frames);
     }
 }
-VERIFY(0x0202FA80, Player_pauseAll);
-
-static u32 Player_pause(u32 self, u32 x) {
-    WWHD_FUNC(0x0202FB98, u32, self, x);
-    if (ld(self + 0x200) != 0) return self;
-    return gabi::call<u32>(0x0202FA80, self, x);
+/* 0202FB98 */
+static u32 pauseSoundPlayer(hdSoundPlayer* i_this, u32 frames) {
+    if (i_this->mPaused != 0) return gabi::ea(i_this);
+    // HD: this call forwards r3 left by the void pause-all function.
+    return hdPlayerPauseAllResult(i_this, frames);
 }
-VERIFY(0x0202FB98, Player_pause);
-
-/* 0202FBA8: resume (0, X) every player */
-static void Player_resumeAll(u32 self, u32 x) {
-    WWHD_FUNC(0x0202FBA8, void, self, x);
-    u32 n = ld(self + 0x1C);
-    for (u32 i = 0; n != 0; --n, ++i) {
-        u32 pl = gabi::call<u32>(0x02893CE8, self + 4, i + 0x04000000);
-        gabi::call(0x028975CC, pl, 0, x);
+/* 0202FBA8 */
+static void resumeAllPlayers(hdSoundPlayer* i_this, u32 frames) {
+    u32 count = i_this->mArchiveInterface.mPlayerCount;
+    for (u32 index = 0; count != 0; --count, ++index) {
+        hdPlayerSubPlayer* player = hdPlayerGetPlayerById(&i_this->mArchiveInterface, index + PLAYER_ID_BASE);
+        hdPlayerSetPlayerPaused(player, 0, frames);
     }
 }
-VERIFY(0x0202FBA8, Player_resumeAll);
-
-static u32 Player_resume(u32 self, u32 x) {
-    WWHD_FUNC(0x0202FC28, u32, self, x);
-    if (ld(self + 0x200) != 0) return self;
-    return gabi::call<u32>(0x0202FBA8, self, x);
+/* 0202FC28 */
+static u32 resumeSoundPlayer(hdSoundPlayer* i_this, u32 frames) {
+    if (i_this->mPaused != 0) return gabi::ea(i_this);
+    // HD: preserve the void resume-all function's resulting r3.
+    return hdPlayerResumeAllResult(i_this, frames);
 }
-VERIFY(0x0202FC28, Player_resume);
-
-static u32 Player_unpause(u32 self, u32 x) {
-    WWHD_FUNC(0x0202FC38, u32, self, x);
-    st(self + 0x200, 0);
-    return gabi::call<u32>(0x0202FBA8, self, x);
+/* 0202FC38 */
+static u32 unpauseSoundPlayer(hdSoundPlayer* i_this, u32 frames) {
+    i_this->mPaused = 0;
+    return hdPlayerResumeAllResult(i_this, frames);
 }
-VERIFY(0x0202FC38, Player_unpause);
-
-/* 0202FC44: per sound of the stop-by-id scan: mark 1018EDBE when the sound matches the id 1018EDA4
- * (optionally only started sounds, 1018EDBF) and is not one of the two excluded handles */
-static void Player_matchSound(u32 h) {
-    WWHD_FUNC(0x0202FC44, void, h);
-    u32 s = ld(h + 0);
-    u32 info = s == 0 ? 0 : ld(s + 0x268);
-    u32 key = ld(0x1018EDA4);
-    if (ld(info) != key) return;
-    if (lbz(0x1018EDBF) != 0) {
-        if (ld(h + 0) == 0) return;
-        if (gabi::call_ptr<u32>(ld(ld(s + 0x294) + 0x2C), s) == 0) return;
-        u32 s3 = ld(h + 0);
-        if (s3 == 0) return;
-        if (ld(s3 + 0xFC) == 0) return;
+/* 0202FC44 */
+static void matchPlayerSound(hdPlayerSoundHandle* handle) {
+    hdPlayerSound* sound = handle->mSound;
+    hdPlayerSoundInfo* info = sound == NULL ? NULL : sound->mInfo.get();
+    u32 key = sMatchId;
+    if (hdPlayerReadInfoId(info) != key) return;
+    if (sMatchStartedOnly != 0) {
+        if (handle->mSound == NULL) return;
+        if (sound->isPlaying() == 0) return;
+        hdPlayerSound* current = handle->mSound;
+        if (current == NULL) return;
+        if (current->mStarted == 0) return;
     }
-    u32 a = ld(0x1018EDA8);
-    u32 v = ld(info + 4);
-    if (a != 0 && v == a) return;
-    u32 b = ld(0x1018EDAC);
-    if (b != 0 && v == b) return;
-    stb(0x1018EDBE, 1);
+    u32 first = sMatchExcludeFirst;
+    u32 id = hdPlayerReadInfoHandle(info);
+    if (first != 0 && id == first) return;
+    u32 second = sMatchExcludeSecond;
+    if (second != 0 && id == second) return;
+    sMatchFound = 1;
 }
-VERIFY(0x0202FC44, Player_matchSound);
-
-/* scan all sounds of all players with CB on a sound-handle temporary; true when CB set 1018EDBE */
-static inline bool scan_players(u32 self, u32 n, u32 cb, bool stopOnHit) {
-    gabi::Local<be<u32>> l;
-    for (u32 i = 0; n != 0; --n, ++i) {
-        u32 p = gabi::call<u32>(0x02893CE8, self + 4, i + 0x04000000);
-        u32 head = p + 4;
-        for (u32 it = ld(p + 4); it != head; ) {
-            u32 cur = it;
-            it = ld(it);
-            st(l.a, 0);
-            gabi::call(0x02896D70, l.a, cur - 0x27C);
-            gabi::call(cb, l.a);
-            gabi::call(0x02896CD8, l.a);
+/* inlined into isPlayerSoundPlaying, stopPlayerSounds */
+static bool scanPlayers(hdSoundPlayer* i_this, u32 count, u32 callback, bool stopOnHit) {
+    hdPlayerSoundHandle handle;
+    for (u32 index = 0; count != 0; --count, ++index) {
+        hdPlayerSubPlayer* player = hdPlayerGetPlayerById(&i_this->mArchiveInterface, index + PLAYER_ID_BASE);
+        hdPlayerListNode* head = player->soundListHead();
+        for (hdPlayerListNode* node = player->mSoundList.mNext; node != head; ) {
+            hdPlayerListNode* current = node;
+            node = node->mNext;
+            handle.mSound = NULL;
+            hdPlayerAttachHandle(&handle, hdPlayerSoundFromNode(current));
+            gabi::call(callback, &handle);
+            hdPlayerDestroyHandle(&handle);
         }
-        if (stopOnHit && lbz(0x1018EDBE) != 0) return true;
+        if (stopOnHit && sMatchFound != 0) return true;
     }
     return false;
 }
-
-/* 0202FD40: is sound KEY playing (FLAG: only started ones; A/B: handles to ignore) */
-static u32 Player_isPlaying(u32 self, u32 key, u32 flag, u32 a, u32 b) {
-    WWHD_FUNC(0x0202FD40, u32, self, key, flag, a, b);
-    u32 n = ld(self + 0x1C);
-    if (n == 0) return 0;
-    st(0x1018EDA8, a);
-    stb(0x1018EDBE, 0);
-    st(0x1018EDAC, b);
-    stb(0x1018EDBF, (u8)flag);
-    st(0x1018EDA4, key);
-    if (scan_players(self, n, 0x0202FC44, true)) {
-        st(0x1018EDA4, 0xFFFFFFFF);
-        st(0x1018EDA8, 0);
-        st(0x1018EDAC, 0);
-        stb(0x1018EDBE, 0);
-        stb(0x1018EDBF, 0);
+/* 0202FD40 */
+static u32 isPlayerSoundPlaying(hdSoundPlayer* i_this, u32 key, u32 startedOnly, u32 firstExclude, u32 secondExclude) {
+    u32 count = i_this->mArchiveInterface.mPlayerCount;
+    if (count == 0) return 0;
+    sMatchExcludeFirst = firstExclude;
+    sMatchFound = 0;
+    sMatchExcludeSecond = secondExclude;
+    sMatchStartedOnly = (u8)startedOnly;
+    sMatchId = key;
+    if (scanPlayers(i_this, count, PLAYER_SCAN_MATCH, true)) {
+        sMatchId = 0xFFFFFFFF;
+        sMatchExcludeFirst = 0;
+        sMatchExcludeSecond = 0;
+        sMatchFound = 0;
+        sMatchStartedOnly = 0;
         return 1;
     }
-    st(0x1018EDA4, 0xFFFFFFFF);
-    st(0x1018EDAC, 0);
-    stb(0x1018EDBF, 0);
-    stb(0x1018EDBE, 0);
-    st(0x1018EDA8, 0);
+    sMatchId = 0xFFFFFFFF;
+    sMatchExcludeSecond = 0;
+    sMatchStartedOnly = 0;
+    sMatchFound = 0;
+    sMatchExcludeFirst = 0;
     return 0;
 }
-VERIFY(0x0202FD40, Player_isPlaying);
-
-/* 0202FE78: per sound of the stop scan: stop it (fade 1018EDB8) unless it is one of the two kept ids */
-static u32 Player_stopSound(u32 h) {
-    WWHD_FUNC(0x0202FE78, u32, h);
-    u32 s = ld(h + 0);
-    u32 a = ld(0x1018EDB0);
-    u32 info = s == 0 ? 0 : ld(s + 0x268);
-    u32 v = ld(info + 4);
-    if (a != 0 && v == a) return h;
-    u32 b = ld(0x1018EDB4);
-    if (b != 0 && v == b) return h;
-    u32 s2 = ld(h + 0);
-    u32 fade = ld(0x1018EDB8);
-    if (s2 == 0) return h;
-    return gabi::call<u32>(0x02883FA8, s, fade);
+/* 0202FE78 */
+static u32 stopPlayerSound(hdPlayerSoundHandle* handle) {
+    hdPlayerSound* sound = handle->mSound;
+    u32 first = sStopExcludeFirst;
+    hdPlayerSoundInfo* info = sound == NULL ? NULL : sound->mInfo.get();
+    u32 id = hdPlayerReadInfoHandle(info);
+    if (first != 0 && id == first) return gabi::ea(handle);
+    u32 second = sStopExcludeSecond;
+    if (second != 0 && id == second) return gabi::ea(handle);
+    hdPlayerSound* current = handle->mSound;
+    u32 fade = sStopFade;
+    if (current == NULL) return gabi::ea(handle);
+    return hdPlayerStopSound(sound, fade);
 }
-VERIFY(0x0202FE78, Player_stopSound);
-
-/* 0202FEF4: stop every sound (FADE frames) except the ids A and B */
-static void Player_stopAll(u32 self, u32 fade, u32 a, u32 b) {
-    WWHD_FUNC(0x0202FEF4, void, self, fade, a, b);
-    u32 n = ld(self + 0x1C);
-    if (n == 0) return;
-    st(0x1018EDB0, a);
-    st(0x1018EDB8, fade);
-    st(0x1018EDB4, b);
-    scan_players(self, n, 0x0202FE78, false);
-    st(0x1018EDB0, 0);
-    st(0x1018EDB8, 0);
-    st(0x1018EDB4, 0);
+/* 0202FEF4 */
+static void stopPlayerSounds(hdSoundPlayer* i_this, u32 fade, u32 firstExclude, u32 secondExclude) {
+    u32 count = i_this->mArchiveInterface.mPlayerCount;
+    if (count == 0) return;
+    sStopExcludeFirst = firstExclude;
+    sStopFade = fade;
+    sStopExcludeSecond = secondExclude;
+    scanPlayers(i_this, count, PLAYER_SCAN_STOP, false);
+    sStopExcludeFirst = 0;
+    sStopFade = 0;
+    sStopExcludeSecond = 0;
 }
-VERIFY(0x0202FEF4, Player_stopAll);
-
-/* 0202FFB8/0202FFF4/02030044: HD stream 0x100045BC on the handle +0x204 (start, is playing, pause) */
-static u32 Strm_start_0202FFB8(u32 self) {
-    WWHD_FUNC(0x0202FFB8, u32, self);
-    return gabi::call<u32>(0x02897F48, self + 4, self + 0x204, 0x100045BC, 0) == 0 ? 1 : 0;
+/* 0202FFB8 */
+static u32 startHdStream0(hdSoundPlayer* i_this) {
+    return hdPlayerStartStream(&i_this->mArchiveInterface, &i_this->mStreamHandle, (const char*)&sStreamName0, 0) == 0 ? 1 : 0;
 }
-VERIFY(0x0202FFB8, Strm_start_0202FFB8);
-
-static u32 Strm_isPlaying_0202FFF4(u32 self) {
-    WWHD_FUNC(0x0202FFF4, u32, self);
-    if (ld(self + 0x204) == 0) return 0;
-    u32 s = ld(self + 0x204);
-    return gabi::call_ptr<u32>(ld(ld(s + 0x294) + 0x2C), s) != 0 ? 1 : 0;
+/* 0202FFF4 */
+static u32 isHdStreamPlaying0(hdSoundPlayer* i_this) {
+    if (i_this->mStreamHandle.mSound == NULL) return 0;
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    return sound->isPlaying() != 0 ? 1 : 0;
 }
-VERIFY(0x0202FFF4, Strm_isPlaying_0202FFF4);
-
-static u32 Strm_pause_02030044(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02030044, u32, self, a, b);
-    u32 s = ld(self + 0x204);
-    if (s == 0) return 0;
-    return gabi::call<u32>(0x028850D4, s, a, b);
+/* 02030044 */
+static u32 pauseHdStream0(hdSoundPlayer* i_this, u32 first, u32 second) {
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    if (sound == NULL) return 0;
+    return hdPlayerPauseStream(sound, first, second);
 }
-VERIFY(0x02030044, Strm_pause_02030044);
-
-/* 02030054/02030090/020300E0: HD stream 0x100045CC on the handle +0x204 (start, is playing, pause) */
-static u32 Strm_start_02030054(u32 self) {
-    WWHD_FUNC(0x02030054, u32, self);
-    return gabi::call<u32>(0x02897F48, self + 4, self + 0x204, 0x100045CC, 0) == 0 ? 1 : 0;
+/* 02030054 */
+static u32 startHdStream1(hdSoundPlayer* i_this) {
+    return hdPlayerStartStream(&i_this->mArchiveInterface, &i_this->mStreamHandle, (const char*)&sStreamName1, 0) == 0 ? 1 : 0;
 }
-VERIFY(0x02030054, Strm_start_02030054);
-
-static u32 Strm_isPlaying_02030090(u32 self) {
-    WWHD_FUNC(0x02030090, u32, self);
-    if (ld(self + 0x204) == 0) return 0;
-    u32 s = ld(self + 0x204);
-    return gabi::call_ptr<u32>(ld(ld(s + 0x294) + 0x2C), s) != 0 ? 1 : 0;
+/* 02030090 */
+static u32 isHdStreamPlaying1(hdSoundPlayer* i_this) {
+    if (i_this->mStreamHandle.mSound == NULL) return 0;
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    return sound->isPlaying() != 0 ? 1 : 0;
 }
-VERIFY(0x02030090, Strm_isPlaying_02030090);
-
-static u32 Strm_pause_020300E0(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x020300E0, u32, self, a, b);
-    u32 s = ld(self + 0x204);
-    if (s == 0) return 0;
-    return gabi::call<u32>(0x028850D4, s, a, b);
+/* 020300E0 */
+static u32 pauseHdStream1(hdSoundPlayer* i_this, u32 first, u32 second) {
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    if (sound == NULL) return 0;
+    return hdPlayerPauseStream(sound, first, second);
 }
-VERIFY(0x020300E0, Strm_pause_020300E0);
-
-/* 020300F0/0203012C/0203017C: HD stream 0x100045DC on the handle +0x204 (start, is playing, pause) */
-static u32 Strm_start_020300F0(u32 self) {
-    WWHD_FUNC(0x020300F0, u32, self);
-    return gabi::call<u32>(0x02897F48, self + 4, self + 0x204, 0x100045DC, 0) == 0 ? 1 : 0;
+/* 020300F0 */
+static u32 startHdStream2(hdSoundPlayer* i_this) {
+    return hdPlayerStartStream(&i_this->mArchiveInterface, &i_this->mStreamHandle, (const char*)&sStreamName2, 0) == 0 ? 1 : 0;
 }
-VERIFY(0x020300F0, Strm_start_020300F0);
-
-static u32 Strm_isPlaying_0203012C(u32 self) {
-    WWHD_FUNC(0x0203012C, u32, self);
-    if (ld(self + 0x204) == 0) return 0;
-    u32 s = ld(self + 0x204);
-    return gabi::call_ptr<u32>(ld(ld(s + 0x294) + 0x2C), s) != 0 ? 1 : 0;
+/* 0203012C */
+static u32 isHdStreamPlaying2(hdSoundPlayer* i_this) {
+    if (i_this->mStreamHandle.mSound == NULL) return 0;
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    return sound->isPlaying() != 0 ? 1 : 0;
 }
-VERIFY(0x0203012C, Strm_isPlaying_0203012C);
-
-static u32 Strm_pause_0203017C(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x0203017C, u32, self, a, b);
-    u32 s = ld(self + 0x204);
-    if (s == 0) return 0;
-    return gabi::call<u32>(0x028850D4, s, a, b);
+/* 0203017C */
+static u32 pauseHdStream2(hdSoundPlayer* i_this, u32 first, u32 second) {
+    hdPlayerSound* sound = i_this->mStreamHandle.mSound;
+    if (sound == NULL) return 0;
+    return hdPlayerPauseStream(sound, first, second);
 }
-VERIFY(0x0203017C, Strm_pause_0203017C);
-
-/* 0203018C/020301C8/02030218: HD stream 0x100045F0 on the handle +0x208 (start, is playing, pause) */
-static u32 Strm_start_0203018C(u32 self) {
-    WWHD_FUNC(0x0203018C, u32, self);
-    return gabi::call<u32>(0x02897F48, self + 4, self + 0x208, 0x100045F0, 0) == 0 ? 1 : 0;
+/* 0203018C */
+static u32 startHdStream3(hdSoundPlayer* i_this) {
+    return hdPlayerStartStream(&i_this->mArchiveInterface, &i_this->mStaffRollHandle, (const char*)&sStreamName3, 0) == 0 ? 1 : 0;
 }
-VERIFY(0x0203018C, Strm_start_0203018C);
-
-static u32 Strm_isPlaying_020301C8(u32 self) {
-    WWHD_FUNC(0x020301C8, u32, self);
-    if (ld(self + 0x208) == 0) return 0;
-    u32 s = ld(self + 0x208);
-    return gabi::call_ptr<u32>(ld(ld(s + 0x294) + 0x2C), s) != 0 ? 1 : 0;
+/* 020301C8 */
+static u32 isHdStreamPlaying3(hdSoundPlayer* i_this) {
+    if (i_this->mStaffRollHandle.mSound == NULL) return 0;
+    hdPlayerSound* sound = i_this->mStaffRollHandle.mSound;
+    return sound->isPlaying() != 0 ? 1 : 0;
 }
-VERIFY(0x020301C8, Strm_isPlaying_020301C8);
-
-static u32 Strm_pause_02030218(u32 self, u32 a, u32 b) {
-    WWHD_FUNC(0x02030218, u32, self, a, b);
-    u32 s = ld(self + 0x208);
-    if (s == 0) return 0;
-    return gabi::call<u32>(0x028850D4, s, a, b);
+/* 02030218 */
+static u32 pauseHdStream3(hdSoundPlayer* i_this, u32 first, u32 second) {
+    hdPlayerSound* sound = i_this->mStaffRollHandle.mSound;
+    if (sound == NULL) return 0;
+    return hdPlayerPauseStream(sound, first, second);
 }
-VERIFY(0x02030218, Strm_pause_02030218);
-
-/* 02030228: __sinit (header statics + the speaker curve range 170) */
-static void sinit_02030228() {
-    WWHD_FUNC(0x02030228, void);
-    /* the header statics of this TU keep their -pi/pi pair at obj-0x10 (the curve range sits at obj-8) */
-    u32 obj = 0x102003F8;
-    st(obj + 8, 0); st(obj + 0, 0); st(obj + 0xC, 0); st(obj + 4, 0);
-    gabi::call(0x028F026C, 0x1018ED80);
-    f32 a = ldf(0x10004604), b = ldf(0x10004608);
-    stf(obj - 0x10, a);
-    stf(obj - 0xC, b);
-    gabi::call(0x028ED6F8, obj - 4);
-    gabi::call(0x028F026C, 0x1018ED8C);
-    gabi::call(0x028EAB2C, obj - 3);
-    gabi::call(0x028F026C, 0x1018ED98);
-    stf(0x102003F0, ldf(0x1000460C));
+/* 02030228 */
+static void __sinit_hd_sound_player_cpp() {
+    // HD: this TU's pi pair is at header -0x10; the curve range occupies header -8.
+    sCurveHeader.mWords[2] = 0;
+    sCurveHeader.mWords[0] = 0;
+    sCurveHeader.mWords[3] = 0;
+    sCurveHeader.mWords[1] = 0;
+    __register_global_object(0x1018ED80);
+    f32 low = sCurvePiLowInitial;
+    f32 high = sCurvePiHighInitial;
+    sCurvePiLow = low;
+    sCurvePiHigh = high;
+    hdPlayerConstructHeaderByte(&sCurveHeaderByte);
+    __register_global_object(0x1018ED8C);
+    hdPlayerDestroyHeaderByte(&sCurveHeaderSecondByte);
+    __register_global_object(0x1018ED98);
+    sPadCurveRange = sPadCurveRangeInitial;
 }
-VERIFY(0x02030228, sinit_02030228);
-
-static void Comp_dt5(u32 self, s32 flags) {
-    WWHD_FUNC(0x020302CC, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
+/* 020302CC */
+static void destroyFinalPlayerCompanion(void* i_this, s32 flags) {
+    if (i_this == NULL) return;
+    if (flags & 1) operator_delete(i_this);
 }
-VERIFY(0x020302CC, Comp_dt5);
-
-static void Comp_empty() {
-    WWHD_FUNC(0x020302E0, void);
-}
-VERIFY(0x020302E0, Comp_empty);
-
-}  // namespace hd_snd_0202EE08
+/* 020302E0 */
+static void emptyFinalPlayerCompanion() {}
+/* WWHD glue (tools/verify/autoglue.py): private player data and named bindings
+ data sBgmPlayerName0 1000458C
+ data sBgmPlayerName1 1000459C
+ data sDrcTvPlayerName 100045AC
+ data sStreamName0 100045BC
+ data sStreamName1 100045CC
+ data sStreamName2 100045DC
+ data sStreamName3 100045F0
+ data sOne 10004458
+ data sZero 100044C0
+ data sMaximumPadVolume 100044D0
+ data sPadNearDistance 100044D4
+ data sPadFarDistance 100044D8
+ data sTvScale 100044DC
+ data sPadCurveRange 102003F0
+ data sPadCurveRangeInitial 1000460C
+ data sFirstConstant 102003A8
+ data sSecondConstant 102003AC
+ data sFirstConstantInitial 10004434
+ data sSecondConstantInitial 10004438
+ data sOutputVolumeInitialized 101FD8C8
+ data sOutputVolume 101FCE00
+ data sControllerManager 101F8AE8
+ data sControllerTypeInitialized 101FD694
+ data sControllerType 101FD968
+ data sStringTable 10004478
+ data sMatchId 1018EDA4
+ data sMatchExcludeFirst 1018EDA8
+ data sMatchExcludeSecond 1018EDAC
+ data sMatchFound 1018EDBE
+ data sMatchStartedOnly 1018EDBF
+ data sStopExcludeFirst 1018EDB0
+ data sStopExcludeSecond 1018EDB4
+ data sStopFade 1018EDB8
+ data sCurveHeader 102003F8
+ data sCurvePiLow 102003E8
+ data sCurvePiHigh 102003EC
+ data sCurvePiLowInitial 10004604
+ data sCurvePiHighInitial 10004608
+ data sCurveHeaderByte 102003F4
+ data sCurveHeaderSecondByte 102003F5
+ str 10004558
+ str 1000456C
+ str 100044E0
+ str 10004520
+ str 1000457C
+ str 100044F0
+ str 10004500
+ str 10004534
+ str 10004510
+ str 10004544
+ ext 02896CD8 void hdPlayerDestroyHandle(hdPlayerSoundHandle*)
+ ext 02763360 void hdPlayerDestroyBase(hdSoundPlayer*, u32)
+ ext 02763498 u32 hdPlayerForwardSecondary(hdSoundPlayer*, u32)
+ ext 0276359C void hdPlayerConstructBase(hdSoundPlayer*)
+ ext 028EFFD0 void hdPlayerConstructFaderArray(void*, u32, u32, hdPlayerFaderConstructor)
+ ext 02762170 u32 hdPlayerInitializeFader(hdPlayerFader*, f32)
+ ext 02762258 u32 hdPlayerFade(hdPlayerFader*, u32, f32)
+ ext 02763C80 void hdPlayerResetBase(hdSoundPlayer*)
+ ext 02888A50 void hdPlayerConstructOutputVolume(hdPlayerOutputVolume*)
+ ext 02889F18 void hdPlayerSetOutputVolume(hdPlayerOutputVolume*, u32, f32)
+ ext 0202DB6C void* hdPlayerGetManagerHeap()
+ ext 02762C88 s32 hdPlayerGetHeapState(void*)
+ ext 02762BC8 void hdPlayerSetHeapState(void*, u32)
+ ext 02763758 u32 hdPlayerForwardBase(hdSoundPlayer*, u32, u32)
+ ext 0273CB8C hdPlayerController* hdPlayerGetController(void*, u32)
+ ext 027621EC void hdPlayerUpdateFader(hdPlayerFader*)
+ ext 0289419C void* hdPlayerGetNamedPlayer(hdPlayerArchiveInterface*, const char*)
+ ext 02897654 void hdPlayerSetPlayerChannels(void*, u32)
+ ext 0289765C void hdPlayerSetChannelVolume(void*, u32, f32)
+ ext 02897640 void hdPlayerSetPlayerVolume(void*, f32)
+ ext 027637B4 void hdPlayerUpdateBase(hdSoundPlayer*)
+ ext 0202DC64 const be<u8>* hdPlayerGetPlayerName(u32)
+ ext 02893CE8 hdPlayerSubPlayer* hdPlayerGetPlayerById(hdPlayerArchiveInterface*, u32)
+ ext 028975CC void hdPlayerSetPlayerPaused(void*, u32, u32)
+ ext 0202FA80 u32 hdPlayerPauseAllResult(hdSoundPlayer*, u32)
+ ext 0202FBA8 u32 hdPlayerResumeAllResult(hdSoundPlayer*, u32)
+ ext 02896D70 void hdPlayerAttachHandle(hdPlayerSoundHandle*, hdPlayerSound*)
+ ext 02883FA8 u32 hdPlayerStopSound(hdPlayerSound*, u32)
+ ext 02897F48 u32 hdPlayerStartStream(hdPlayerArchiveInterface*, hdPlayerSoundHandle*, const char*, u32)
+ ext 028850D4 u32 hdPlayerPauseStream(hdPlayerSound*, u32, u32)
+ ext 028ED6F8 void hdPlayerConstructHeaderByte(be<u8>*)
+ ext 028EAB2C void hdPlayerDestroyHeaderByte(be<u8>*)
+*/

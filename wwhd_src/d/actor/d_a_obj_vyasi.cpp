@@ -1,739 +1,725 @@
-// Full HD Gale Isle palm TU. Derived game code: private verification only.
+/** Palm tree blowing in the wind (Gale Isle).
+ * Rewritten against the verified HD source.
+ */
 #include "d/actor/d_a_obj_vyasi.h"
-namespace {
-using Actor = daObjVyasi_c;
-struct Matrix {
-  be<f32> values[12];
-};
-struct Quat {
-  be<f32> x, y, z, w;
-};
-struct ResourceKey {
-  be<u32> string, vtable;
-};
-static u32 rd(u32 p) { return gabi::load<u32>(p); }
-static f32 lf(u32 p) { return gabi::load<f32>(p); }
-static s16 sh(u32 p) { return gabi::load<s16>(p); }
-static u16 uh(u32 p) { return gabi::load<u16>(p); }
-static u8 byte(u32 p) { return gabi::load<u8>(p); }
-static void put(u32 p, u32 v) { gabi::store<u32>(p, v); }
-static void sf(u32 p, f32 v) { gabi::store<f32>(p, v); }
-static void ss(u32 p, s32 v) { gabi::store<s16>(p, (s16)v); }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static f32 sin_angle(u16 angle) {
-  return lf(0x104A44F8 + (u32)(angle >> 3) * 8);
+#include "gc_api/d/d_kankyo_wether.h"
+#include "gc_api/m_Do/m_Do_mtx.h"
+namespace daObjVyasi {
+using Actor = Act_c;
+static JointKinds M_joint_type;
+static Quaternion M_identity_quat;
+static WindMatrixPointer M_wind_mtx;
+static BaseAngles M_base_angle;
+static u32 M_base_angle_guard;
+static CylSource M_cyl_src;
+static CpsSource M_cps_src;
+static SphSource M_sph_src;
+static cXyz M_default_hit_vec;
+static ProcessTable M_process_init;
+static ProcessTable M_process_main;
+static MathStatics M_math;
+static AngleLimits M_angle_limits;
+static GlobalDescriptors M_descriptors;
+void* VyasiStatus_construct(void*);
+void* VyasiCapsule_construct(void*);
+static s16 angle_float(f32 value) {
+    return (s16)gabi::ftoi(value);
 }
-static f32 cos_angle(u16 angle) {
-  return lf(0x104A44FC + (u32)(angle >> 3) * 8);
+// HD: the resource lookup uses this TU SafeString vtable.
+static void* resource(s32 index) {
+    return dComIfG_getObjectRes("Vyasi", index, VT_RESOURCE);
 }
-static s16 angle_float(f32 value) { return (s16)gabi::ftoi(value); }
-static void words(u32 from, u32 to, u32 count) {
-  for (u32 i = 0; i < count; ++i)
-    put(to + 4 * i, rd(from + 4 * i));
+static BOOL switch_on(Actor* a) {
+    s32 index = vyasiPrmAbstract(a, 8, 0);
+    return dComIfGs_isSwitch(index, a->home.roomNo);
 }
-static void matrix_copy(u32 from, u32 to) {
-  f32 values[12];
-  for (int i = 0; i < 12; ++i)
-    values[i] = lf(from + 4 * i);
-  for (int i = 0; i < 12; ++i)
-    sf(to + 4 * i, values[i]);
+static void hit_sound(Actor* actor, dCcD_GObjInf* collision) {
+    collision->GetTgHitObj();
+    daObj_HitSeStart(&actor->current.pos, actor->current.roomNo, collision, 7);
 }
-static u32 resource(s32 index) {
-  gabi::Local<ResourceKey> key;
-  key->string = 0x100335B8;
-  key->vtable = 0x10033350;
-  return gabi::call<u32>(0x026066C4, rd(0x101F4F28), gabi::ea(key.get()),
-                         index);
+static void sound_position(Actor* actor) {
+    gabi::Local<cXyz> position;
+    f32 y = actor->current.pos.y, z = actor->current.pos.z, x = actor->current.pos.x;
+    position->set(x, y, z);
+    dKy_Sound_set(position.get(), 4, actor->mBsPcId, 0x64);
 }
-static BOOL switch_on(Actor *a) {
-  s32 index = gabi::call<s32>(0x02349DFC, a, 8, 0);
-  u32 save = rd(0x101F84DC);
-  return gabi::call<BOOL>(0x025BA0C0, save + 0x20, index,
-                          (s8)byte(gabi::ea(a) + 0x2fe));
-}
-static u32 joint_matrix(u32 system, u32 index) {
-  u32 data = rd(system + 0x2c), base = rd(data + 0x10);
-  gabi::store<u16>(data + 4, uh(data + 4) | 0x10);
-  return base + index * 48;
-}
-u8 create_heap(Actor *a) {
-  WWHD_FUNC(0x023B73EC, u8, a);
-  u32 self = gabi::ea(a), data = resource(7);
-  if (!data)
-    gabi::call(0x0273AA24, 0x10033468u, 0x47b, 0x1003347cu);
-  u32 animation = resource(4);
-  put(self + 0x608, animation);
-  if (!animation) {
-    gabi::call(0x0273AA24, 0x10033468u, 0x480, 0x10033458u);
-    animation = rd(self + 0x608);
-  }
-  if (animation && data) {
-    u32 morf = gabi::call<u32>(0x025E4F64, 0, data, 0, 0, animation, 0, 0, -1,
-                               1, 0, 0, 0x11000002u, 1.f);
-    animation = rd(self + 0x608);
-    put(self + 0x604, morf);
-  }
-  if (!animation)
-    return 0;
-  u32 morf = rd(self + 0x604);
-  return morf && rd(morf + 0x90) != 0;
-}
-VERIFY(0x023B73EC, create_heap);
-u8 heap_callback(Actor *a) {
-  WWHD_FUNC(0x023B7524, u8, a);
-  return create_heap(a);
-}
-VERIFY(0x023B7524, heap_callback);
-BOOL process_init(Actor *a, s32 state) {
-  WWHD_FUNC(0x023B7528, BOOL, a, state);
-  if ((u32)state >= 5)
-    return 0;
-  u32 member = 0x1003348c + (u32)state * 8;
-  u32 self = gabi::ea(a) + (s32)sh(member);
-  s32 slot = sh(member + 2);
-  u32 function;
-  if (slot < 0)
-    function = rd(member + 4);
-  else
-    function = rd(rd(self + (s32)sh(member + 6)) + (u32)slot * 8 + 4);
-  if (!gabi::call<BOOL>(function, self))
-    return 0;
-  put(gabi::ea(a) + 0x1ae0, state);
-  return 1;
-}
-VERIFY(0x023B7528, process_init);
-void set_first_process(Actor *a) {
-  WWHD_FUNC(0x023B75E0, void, a);
-  gabi::call(0x023B7528, a, switch_on(a) ? 4 : 1);
-  u32 self = gabi::ea(a);
-  s32 yaw = sh(self + 0x32a) - 0x8000;
-  ss(self + 0x65c, 0);
-  ss(self + 0x32a, yaw);
-  sf(self + 0x1aec, 1.f);
-}
-VERIFY(0x023B75E0, set_first_process);
-void set_mtx(Actor *a) {
-  WWHD_FUNC(0x023B7668, void, a);
-  u32 self = gabi::ea(a), model = rd(rd(self + 0x604) + 0x90);
-  f32 z = lf(self + 0x338), x = lf(self + 0x330), y = lf(self + 0x334);
-  sf(model + 0xbc, x);
-  sf(model + 0xc0, y);
-  sf(model + 0xc4, z);
-  gabi::call(0x028E93CC, 0x1048D0CCu, lf(self + 0x314), lf(self + 0x318),
-             lf(self + 0x31c));
-  gabi::call(0x025F1B48, 0x1048D0CCu, sh(self + 0x328), sh(self + 0x32a),
-             sh(self + 0x32c));
-  model = rd(rd(self + 0x604) + 0x90);
-  matrix_copy(0x1048D0CC, model + 0xc8);
-  gabi::call(0x028E90D4, 0x1048D0CCu, self + 0x5d4);
-}
-VERIFY(0x023B7668, set_mtx);
-BOOL joint_callback(void *node, s32 stage) {
-  WWHD_FUNC(0x023B775C, BOOL, node, stage);
-  u32 system = rd(0x104B462C);
-  u32 joint = gabi::call<u32>(0x027F7878, node);
-  u32 index = uh(joint + 4), actor = rd(system + 0xb8);
-  if (stage != 0)
+/* 023B8FDC */
+BOOL Act_c::SetStopJointAnimation(void* animation, f32 speed, f32 morph) {
+    if (!animation)
+        return 0;
+    mpMorf->setAnm(static_cast<J3DAnmTransform*>(animation), 0, morph, speed, 0.0f, -1.0f, nullptr);
+    m19C4 = 1;
     return 1;
-  if (index >= 14)
-    gabi::call(0x0273AA24, 0x100334B8u, 0x373, 0x100334CCu);
-  constexpr u32 stack = 0x1048D0CC;
-  gabi::call(0x028E90D4, joint_matrix(system, index), stack);
-  gabi::Local<Matrix> matrix;
-  gabi::call(0x028E90D4, joint_matrix(system, index), gabi::ea(matrix.get()));
-  f32 x = lf(gabi::ea(matrix.get()) + 12), y = lf(gabi::ea(matrix.get()) + 28),
-      z = lf(gabi::ea(matrix.get()) + 44);
-  sf(gabi::ea(matrix.get()) + 44, 0.f);
-  sf(gabi::ea(matrix.get()) + 12, 0.f);
-  sf(gabi::ea(matrix.get()) + 28, 0.f);
-  gabi::call(0x028E93CC, stack, x, y, z);
-  gabi::call(0x025F25CC, actor + 0x3e4 + index * 16);
-  gabi::call(0x028E9108, stack, gabi::ea(matrix.get()), stack);
-  u32 data = rd(system + 0x2c);
-  gabi::store<u16>(data + 4, uh(data + 4) | 0x10);
-  matrix_copy(stack, rd(data + 0x10) + index * 48);
-  gabi::call(0x028E90D4, stack, 0x104B4868u);
-  gabi::Local<csXyz[14]> angles;
-  for (u32 i = 0; i < 14; ++i)
-    gabi::call(0x0201A478, gabi::ea(angles.get()) + 6 * i, 0, 0, 0);
-  gabi::Local<csXyz> rotation;
-  ss(gabi::ea(rotation.get()), sh(gabi::ea(angles.get()) + index * 6));
-  ss(gabi::ea(rotation.get()) + 2, sh(gabi::ea(angles.get()) + index * 6 + 2));
-  ss(gabi::ea(rotation.get()) + 4, sh(gabi::ea(angles.get()) + index * 6 + 4));
-  gabi::call(0x0201A554, gabi::ea(rotation.get()), actor + 0x4c4 + index * 6);
-  gabi::call(0x028E90D4, joint_matrix(system, index), stack);
-  gabi::call(0x025F1B48, stack, sh(gabi::ea(rotation.get())),
-             sh(gabi::ea(rotation.get()) + 2),
-             sh(gabi::ea(rotation.get()) + 4));
-  if (byte(0x101CDD44 + index) == 0)
-    gabi::call(0x025F2518, lf(actor + 0x5c0), lf(actor + 0x5c4),
-               lf(actor + 0x5c8));
-  data = rd(system + 0x2c);
-  u16 flags = uh(data + 4);
-  u32 base = rd(data + 0x10);
-  gabi::store<u16>(data + 4, flags | 0x10);
-  matrix_copy(stack, base + index * 48);
-  gabi::call(0x028E90D4, stack, 0x104B4868u);
-  gabi::Local<cXyz> origin;
-  origin->set(0.f, 0.f, 0.f);
-  gabi::call(0x028E8F64, stack, gabi::ea(origin.get()),
-             actor + 0x518 + index * 12);
-  return 1;
 }
-VERIFY(0x023B775C, joint_callback);
-s32 create(Actor *a) {
-  WWHD_FUNC(0x023B7B3C, s32, a);
-  u32 self = gabi::ea(a), flags = rd(self + 0x2e4);
-  if (!(flags & 8)) {
-    if (self) {
-      gabi::call(0x025D4ED0, a);
-      put(self + 0xb4, 0x10033378);
-      gabi::call(0x0200BD2C, self + 0x660);
-      gabi::call(0x02515DA0, self + 0x67c);
-      put(self + 0x678, 0x1004AE88);
-      put(self + 0x67c, 0x1004AEC0);
-      gabi::call(0x02515FB8, self + 0x69c);
-      put(self + 0x7b0, 0x100015A8);
-      put(self + 0x7ac, 0x10033368);
-      gabi::call(0x02018590, self + 0x7b4);
-      put(self + 0x7b0, 0x1004B160);
-      put(self + 0x6d8, 0x1004B108);
-      put(self + 0x7c8, 0x1004B150);
-      gabi::call(0x028EFFD0, self + 0x7cc, 5, 0x3c, 0x023B9660u);
-      gabi::call(0x028EFFD0, self + 0x8f8, 5, 0x138, 0x023B96C8u);
-      gabi::call(0x028EFFD0, self + 0xf9c, 8, 0x3c, 0x023B9660u);
-      gabi::call(0x028EFFD0, self + 0x117c, 8, 0x12c, 0x025166F0u);
-      flags = rd(self + 0x2e4);
-    }
-    put(self + 0x2e4, flags | 8);
-  }
-  s32 phase = gabi::call<s32>(0x02520460, self + 0x5cc, 0x100335B8u);
-  if (phase != 4)
-    return phase;
-  if (!gabi::call<BOOL>(0x025D63E8, a, 0x023B7524u, 0))
-    return 5;
-  gabi::call(0x023B75E0, a);
-  gabi::call(0x023B7668, a);
-  u32 model = rd(rd(self + 0x604) + 0x90);
-  put(self + 0x348, model ? model + 0xc8 : 0);
-  gabi::call(0x025D674C, a, -2000.f, 0.f, -2000.f, 2000.f, 2000.f, 2000.f);
-  sf(self + 0x364, 2.f);
-  gabi::call(0x02515F14, self + 0x660, 0xff, 0xff, a);
-  gabi::call(0x02516518, self + 0x69c, 0x100333C8u);
-  put(self + 0x6e0, self + 0x660);
-  u32 objectFlags = rd(self + 0x730);
-  put(self + 0x750, rd(0x101FFBA8));
-  put(self + 0x754, rd(0x101FFBAC));
-  put(self + 0x730, objectFlags | 4);
-  put(self + 0x758, rd(0x101FFBB0));
-  for (u32 i = 0; i < 5; ++i) {
-    u32 status = self + 0x7cc + i * 0x3c, collision = self + 0x8f8 + i * 0x138;
-    gabi::call(0x02515F14, status, 0x64, 0xff, a);
-    gabi::call(0x025164C0, collision, 0x1003340Cu);
-    put(collision + 0x44, status);
-    u32 shape = self + 0xf10 + i * 0x1c;
-    words(self + 0x314, shape, 3);
-    words(self + 0x314, shape + 12, 3);
-    sf(shape + 24, 100.f);
-  }
-  for (u32 i = 0; i < 8; ++i) {
-    u32 status = self + 0xf9c + i * 0x3c, collision = self + 0x117c + i * 0x12c;
-    gabi::call(0x02515F14, status, 0x64, 0xff, a);
-    gabi::call(0x0251677C, collision, 0x10033388u);
-    put(collision + 0x44, status);
-    objectFlags = rd(self + 0x730);
-    put(self + 0x750, rd(0x101FFBA8));
-    put(self + 0x754, rd(0x101FFBAC));
-    put(self + 0x730, objectFlags | 4);
-    put(self + 0x758, rd(0x101FFBB0));
-  }
-  model = rd(rd(self + 0x604) + 0x90);
-  u32 data = rd(model + 0xac);
-  put(model + 0xb8, self);
-  u32 jointData = gabi::call<u32>(0x027F3F94, data);
-  for (u32 i = 0; i < uh(jointData + 8); i = (u16)(i + 1)) {
-    u32 node = rd(data + 8);
-    if (i < rd(data + 4))
-      node += i * 0x1c;
-    put(node + 8, 0x023B775C);
-    jointData = gabi::call<u32>(0x027F3F94, rd(model + 0xac));
-  }
-  for (u32 i = 0; i < 14; ++i)
-    words(0x101E9C38, self + 0x3e4 + i * 16, 4);
-  sf(self + 0x5c0, 1.f);
-  sf(self + 0x5c4, 1.f);
-  sf(self + 0x5c8, 1.f);
-  return phase;
+
+/* 023B7F4C */
+BOOL Act_c::PlayStopJointAnimation() {
+    return mpMorf->play(nullptr, 0, 0) == 0;
 }
-VERIFY(0x023B7B3C, create);
-u8 remove(Actor *a) {
-  WWHD_FUNC(0x023B7F1C, u8, a);
-  gabi::call(0x025204C8, gabi::ea(a) + 0x5cc, 0x100335B8u);
-  return 1;
+
+/* 023B75E0 */
+void Act_c::set_first_process() {
+    process_init(switch_on(this) ? STATE_NORMAL : STATE_SAG);
+    s32 yaw = s16(shape_angle.y) - 0x8000;
+    mNormalCounter = 0;
+    shape_angle.y = (s16)yaw;
+    m19D4 = 1;
 }
-VERIFY(0x023B7F1C, remove);
-BOOL play_stop_animation(Actor *a) {
-  WWHD_FUNC(0x023B7F4C, BOOL, a);
-  return gabi::call<s32>(0x025E535C, rd(gabi::ea(a) + 0x604), 0, 0, 0) == 0;
-}
-VERIFY(0x023B7F4C, play_stop_animation);
-void process_main(Actor *a) {
-  WWHD_FUNC(0x023B7F84, void, a);
-  u32 state = rd(gabi::ea(a) + 0x1ae0);
-  if (state >= 5)
-    return;
-  u32 member = 0x100334F4 + state * 8, self = gabi::ea(a) + (s32)sh(member);
-  s32 slot = sh(member + 2);
-  u32 function;
-  if (slot < 0)
-    function = rd(member + 4);
-  else
-    function = rd(rd(self + (s32)sh(member + 6)) + (u32)slot * 8 + 4);
-  gabi::call(function, self);
-}
-VERIFY(0x023B7F84, process_main);
-static void hit_sound(u32 self, u32 collision) {
-  gabi::call(0x02516300, collision);
-  gabi::call(0x023129C4, self + 0x314, (s8)byte(self + 0x326), collision, 7);
-}
-static void sound_position(u32 self) {
-  gabi::Local<cXyz> position;
-  f32 y = lf(self + 0x318), z = lf(self + 0x31c), x = lf(self + 0x314);
-  position->set(x, y, z);
-  gabi::call(0x0255F458, gabi::ea(position.get()), 4, rd(self + 4), 0x64);
-}
-void set_collision(Actor *a) {
-  WWHD_FUNC(0x023B7FDC, void, a);
-  u32 self = gabi::ea(a), cylinder = self + 0x69c;
-  if (gabi::call<BOOL>(0x025162A4, cylinder)) {
-    hit_sound(self, cylinder);
-    gabi::call(0x02312C8C, a, cylinder);
-    sound_position(self);
-    gabi::call(0x0251621C, cylinder);
-  } else {
-    gabi::call(0x020184DC, self + 0x7b4, 79.f);
-    gabi::call(0x02018428, self + 0x7b4, 250.f);
-    gabi::call(0x020182E0, self + 0x7b4, self + 0x314);
-    gabi::call(0x0200E240, play() + 0x26a4, cylinder);
-  }
-  f32 radius = 47.400001525878906f;
-  for (u32 i = 0; i < 5; ++i) {
-    u32 collision = self + 0x8f8 + i * 0x138;
-    if (gabi::call<BOOL>(0x025162A4, collision)) {
-      hit_sound(self, collision);
-      sound_position(self);
-      gabi::call(0x0251621C, collision);
+
+/* 023B7FDC */
+void Act_c::set_collision() {
+    if (mCyl.ChkTgHit()) {
+        hit_sound(this, &mCyl);
+        daObj_HitEff_kikuzu(this, &mCyl);
+        sound_position(this);
+        mCyl.ClrTgHit();
     } else {
-      u32 shape = self + 0xf10 + i * 0x1c;
-      words(self + 0x518 + i * 12, shape, 3);
-      words(self + 0x518 + (i + 1) * 12, shape + 12, 3);
-      sf(shape + 24, radius);
-      gabi::call(0x020181FC, collision + 0x118, shape);
-      gabi::call(0x0200E240, play() + 0x26a4, collision);
+        mCyl.SetR(79.0f);
+        mCyl.SetH(250.0f);
+        mCyl.SetC(&current.pos);
+        cCcS_Set(dComIfG_Ccsp(), &mCyl);
     }
-  }
-  for (u32 i = 0; i < 4; ++i) {
-    u32 start = self + 0x518 + (i + 1) * 12, end = start + 12;
-    f32 x = lf(start), y = lf(start + 4), z = lf(start + 8);
-    f32 dx = (lf(end) - x) * 0.3333300054073334f;
-    f32 dy = (lf(end + 4) - y) * 0.3333300054073334f;
-    f32 dz = (lf(end + 8) - z) * 0.3333300054073334f;
-    gabi::Local<cXyz> center;
-    center->set(x + dx, y + dy, z + dz);
-    u32 sphere = self + 0x117c + i * 0x258;
-    gabi::call(0x02018D40, sphere + 0x118, gabi::ea(center.get()));
-    gabi::call(0x02018C8C, sphere + 0x118, radius);
-    gabi::call(0x0200E240, play() + 0x26a4, sphere);
-    center->set(lf(start) + (dx + dx), lf(start + 4) + (dy + dy),
-                lf(start + 8) + (dz + dz));
-    sphere += 0x12c;
-    gabi::call(0x02018D40, sphere + 0x118, gabi::ea(center.get()));
-    gabi::call(0x02018C8C, sphere + 0x118, radius);
-    gabi::call(0x0200E240, play() + 0x26a4, sphere);
-  }
-}
-VERIFY(0x023B7FDC, set_collision);
-void quaternion_main(Actor *a) {
-  WWHD_FUNC(0x023B8388, void, a);
-  u32 self = gabi::ea(a);
-  for (u32 i = 0; i < 14; ++i) {
-    gabi::Local<Quat> target;
-    words(0x101E9C38, gabi::ea(target.get()), 4);
-    s32 state = (s32)rd(self + 0x1ae0);
-    if (state == 4 && byte(0x101CDD44 + i) == 0) {
-      gabi::Local<cXyz> axis;
-      axis->set(0.f, 1.f, 0.f);
-      gabi::call(0x025F1884, rd(0x1018C7B0), (s16)-sh(self + 0x322));
-      u32 wind = gabi::call<u32>(0x0257DAA8);
-      gabi::Local<cXyz> localWind;
-      gabi::call(0x0200FCD8, wind, gabi::ea(localWind.get()));
-      f32 power = gabi::call<f32>(0x02578348);
-      gabi::Local<cXyz> cross;
-      gabi::call(0x0201B080, gabi::ea(axis.get()), gabi::ea(cross.get()),
-                 gabi::ea(localWind.get()));
-      f32 scale = lf(self + 0x1aec);
-      u16 angle = (u16)gabi::ftoi((1400.f * power) * scale);
-      f32 sine = sin_angle(angle);
-      gabi::Local<Quat> rotation;
-      rotation->x = sine * lf(gabi::ea(cross.get()));
-      rotation->y = sine * lf(gabi::ea(cross.get()) + 4);
-      rotation->z = sine * lf(gabi::ea(cross.get()) + 8);
-      rotation->w = cos_angle(angle);
-      s16 desired = angle_float((power * 360.f) * scale);
-      gabi::call(0x0200F428, self + 0x3c8 + i * 2,
-                 desired > 220 ? 220 : desired, 4, 0x20);
-      f32 random = gabi::call<f32>(0x02019918, 256.f);
-      f32 bend = lf(self + 0x1aec);
-      s16 delta = angle_float(gabi::fmadds(power * 2048.f, bend, random));
-      s32 phase = sh(self + 0x3ac + i * 2) + delta;
-      ss(self + 0x3ac + i * 2, phase);
-      u16 windAngle = uh(self + 0x3c8 + i * 2);
-      f32 wave = sin_angle(windAngle) * sin_angle((u16)phase);
-      gabi::Local<Quat> oscillation;
-      oscillation->x = wave;
-      oscillation->y = 0.f;
-      oscillation->z = wave;
-      oscillation->w = cos_angle(windAngle);
-      gabi::call(0x028E8B48, gabi::ea(rotation.get()),
-                 gabi::ea(oscillation.get()), gabi::ea(target.get()));
-    }
-    u32 destination = self + 0x3e4 + i * 16;
-    if (sh(self + 0x65c) == 1)
-      words(gabi::ea(target.get()), destination, 4);
-    else
-      gabi::call(0x028E9BC0, destination, gabi::ea(target.get()), destination,
-                 0.4000000059604645f);
-  }
-}
-VERIFY(0x023B8388, quaternion_main);
-void calc_dif_angle(Actor *a) {
-  WWHD_FUNC(0x023B86B8, void, a);
-  u32 self = gabi::ea(a);
-  gabi::Local<csXyz> desired;
-  for (u32 i = 0; i < 14; ++i) {
-    gabi::call(0x0201A478, gabi::ea(desired.get()), 0, 0, 0);
-    s32 state = (s32)rd(self + 0x1ae0), rate = 2;
-    if (state == 2) {
-      u8 kind = byte(0x101CDD44 + i);
-      if (kind == 2) {
-        f32 wave = lf(self + 0x61c) * sin_angle(uh(self + 0x620 + i * 2));
-        ss(gabi::ea(desired.get()), angle_float(20.f * wave));
-        s16 yz = angle_float(40.f * wave);
-        ss(gabi::ea(desired.get()) + 2, yz);
-        ss(gabi::ea(desired.get()) + 4, yz);
-      } else if (kind == 1) {
-        f32 amplitude = lf(self + 0x61c);
-        f32 wave = amplitude * sin_angle(uh(self + 0x620 + i * 2));
-        ss(gabi::ea(desired.get()), angle_float(120.f * wave));
-        ss(gabi::ea(desired.get()) + 2, angle_float(180.f * wave));
-        s32 z = angle_float(220.f * wave);
-        if (i == 1)
-          z += angle_float(gabi::fmadds(3200.f, amplitude, -3200.f));
-        ss(gabi::ea(desired.get()) + 4, z);
-      } else if (kind == 0) {
-        if (!rd(0x1046C9DC)) {
-          put(0x1046C9DC, 1);
-          const s32 z[14] = {0, 0,    0, 0, 0,     0,     0,
-                             0, 5000, 0, 0, -5000, -7000, -2700};
-          for (u32 j = 0; j < 14; ++j)
-            gabi::call(0x0201A478, 0x1046C988 + j * 6, 0, 0, z[j]);
+    f32 radius = 47.400001525878906f;
+    for (u32 i = 0; i < 5; ++i) {
+        Capsule* collision = &mCapsules[i];
+        if (collision->ChkTgHit()) {
+            hit_sound(this, collision);
+            sound_position(this);
+            collision->ClrTgHit();
+        } else {
+            CapsuleEnds* shape = &mCapsuleEnds[i];
+            shape->mStart.copy(m0400[i]);
+            shape->mEnd.copy(m0400[i + 1]);
+            shape->mRadius = radius;
+            vyasiSetCapsuleGeometry(&collision->mCps, shape);
+            cCcS_Set(dComIfG_Ccsp(), collision);
         }
-        f32 wave = lf(self + 0x61c) * sin_angle(uh(self + 0x620 + i * 2));
-        u32 base = 0x1046C988 + i * 6;
-        s32 x = angle_float(700.f * wave) + sh(base);
-        s16 yz = angle_float(1700.f * wave);
-        ss(gabi::ea(desired.get()), x);
-        ss(gabi::ea(desired.get()) + 2, (s32)yz + sh(base + 2));
-        ss(gabi::ea(desired.get()) + 4, (s32)yz + sh(base + 4));
-        rate = 1;
-      }
-    } else if (state == 3 && rd(self + 0x1adc) == 0 &&
-               (i == 0 || i == 1 || i == 6)) {
-      ss(gabi::ea(desired.get()) + 4,
-         angle_float(lf(self + 0x1ae4) * sin_angle(uh(self + 0x1ae8))));
     }
-    u32 rotation = self + 0x4c4 + i * 6;
-    gabi::call(0x0200F428, rotation, sh(gabi::ea(desired.get())), rate, 0x4000);
-    gabi::call(0x0200F428, rotation + 2, sh(gabi::ea(desired.get()) + 2), rate,
-               0x4000);
-    gabi::call(0x0200F428, rotation + 4, sh(gabi::ea(desired.get()) + 4), rate,
-               0x4000);
-    u8 kind = byte(0x101CDD44 + i);
-    s32 increment = sh(self + 0x63c + i * 2);
-    if (kind == 0)
-      increment = angle_float((f32)increment * 1.5f);
-    ss(self + 0x620 + i * 2, (s32)sh(self + 0x620 + i * 2) + increment);
-  }
-}
-VERIFY(0x023B86B8, calc_dif_angle);
-void leaf_scale_main(Actor *a) {
-  WWHD_FUNC(0x023B8DC8, void, a);
-  u32 self = gabi::ea(a);
-  f32 x = 1.f, y = 1.f, z = 1.f;
-  if (rd(self + 0x1ae0) == 2) {
-    f32 amplitude = lf(self + 0x61c);
-    y = gabi::fmadds(-0.5f, amplitude, 1.f);
-    z = y;
-    x = gabi::fmadds(0.3500000238418579f, amplitude, 1.f);
-  }
-  gabi::call(0x0200ED84, self + 0x5c0, x, 0.5f, 0.5f);
-  gabi::call(0x0200ED84, self + 0x5c4, y, 0.5f, 0.5f);
-  gabi::call(0x0200ED84, self + 0x5c8, z, 0.5f, 0.5f);
-}
-VERIFY(0x023B8DC8, leaf_scale_main);
-BOOL execute(Actor *a) {
-  WWHD_FUNC(0x023B8EB0, BOOL, a);
-  u32 self = gabi::ea(a);
-  if (rd(self + 0x1ae0) != 0) {
-    put(self + 0x1adc, gabi::call<s32>(0x023B7F4C, a));
-    gabi::call(0x023B7F84, a);
-    gabi::call(0x023B7FDC, a);
-    gabi::call(0x023B8388, a);
-    gabi::call(0x023B86B8, a);
-    gabi::call(0x023B8DC8, a);
-    gabi::call(0x023B7668, a);
-    gabi::call(0x025D69FC, a, 7, 79.f);
-  }
-  return 1;
-}
-VERIFY(0x023B8EB0, execute);
-BOOL draw(Actor *a) {
-  WWHD_FUNC(0x023B8F38, BOOL, a);
-  u32 self = gabi::ea(a);
-  if (rd(self + 0x1ae0) != 0) {
-    u32 env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, env, 1, self + 0x314, self + 0x110);
-    u32 morf = rd(self + 0x604);
-    env = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, env, rd(morf + 0x90), self + 0x110);
-    put(0x104B4634, rd(play() + 0x5d70));
-    put(0x104B4638, rd(play() + 0x5d74));
-    gabi::call(0x025E54D8, rd(self + 0x604));
-    put(0x104B4634, rd(play() + 0x5d78));
-    put(0x104B4638, rd(play() + 0x5d7c));
-  }
-  return 1;
-}
-VERIFY(0x023B8F38, draw);
-BOOL set_stop_animation(Actor *a, void *animation, f32 speed, f32 morph) {
-  WWHD_FUNC(0x023B8FDC, BOOL, a, animation, speed, morph);
-  if (!animation)
-    return 0;
-  u32 self = gabi::ea(a);
-  gabi::call(0x025E4A98, rd(self + 0x604), animation, 0, 0, morph, speed, 0.f,
-             -1.f);
-  put(self + 0x1adc, 1);
-  return 1;
-}
-VERIFY(0x023B8FDC, set_stop_animation);
-BOOL sag_init(Actor *a) {
-  WWHD_FUNC(0x023B9058, BOOL, a);
-  u32 self = gabi::ea(a);
-  if (!gabi::call<BOOL>(0x023B8FDC, a, rd(self + 0x608), 1.f, 0.f))
-    return 0;
-  sf(rd(self + 0x604) + 0x98, 0.f);
-  return 1;
-}
-VERIFY(0x023B9058, sag_init);
-void sag_main(Actor *a) {
-  WWHD_FUNC(0x023B90EC, void, a);
-  gabi::Local<be<u16>> profile;
-  *profile = 0xa1;
-  u32 source =
-      gabi::call<u32>(0x025D5218, 0x025E121Cu, gabi::ea(profile.get()));
-  if (source) {
-    u32 self = gabi::ea(a);
-    words(source + 0x314, self + 0x60c, 3);
-    ss(self + 0x618, sh(source + 0x32a));
-    gabi::call(0x023B7528, a, 2);
-  }
-}
-VERIFY(0x023B90EC, sag_main);
-BOOL sag_wind_init(Actor *a) {
-  WWHD_FUNC(0x023B9160, BOOL, a);
-  u32 self = gabi::ea(a);
-  if (!gabi::call<BOOL>(0x023B8FDC, a, rd(self + 0x608), 1.f, 3.f))
-    return 0;
-  f32 distance = gabi::call<f32>(0x028E8DE8, self + 0x60c, self + 0x314);
-  distance = gabi::call<f32>(0x028F4384, distance);
-  // Ordered PPC comparisons also retain NaNs in the unclamped branch.
-  if (distance > 2800.f)
-    distance = 2800.f;
-  else if (distance < 1000.f)
-    distance = 1000.f;
-  f32 amplitude = (distance - 2800.f) / -1800.f;
-  f32 velocity = gabi::fmadds(7000.f, amplitude, 5000.f);
-  sf(self + 0x61c, amplitude);
-  s16 half = angle_float(velocity * 0.5f);
-  for (u32 i = 0; i < 14; ++i) {
-    s16 value = half;
-    if (byte(0x101CDD44 + i) == 0) {
-      f32 random = gabi::call<f32>(0x020198D8, 2000.f);
-      f32 speed = velocity + random;
-      value = angle_float((i & 1) ? -speed : speed);
+    for (u32 i = 0; i < 4; ++i) {
+        cXyz* start = &m0400[i + 1];
+        cXyz* end = &m0400[i + 2];
+        f32 x = start->x, y = start->y, z = start->z;
+        f32 dx = (f32(end->x) - x) * 0.3333300054073334f;
+        f32 dy = (f32(end->y) - y) * 0.3333300054073334f;
+        f32 dz = (f32(end->z) - z) * 0.3333300054073334f;
+        gabi::Local<cXyz> center;
+        center->set(x + dx, y + dy, z + dz);
+        dCcD_Sph* sphere = &mSpheres[i * 2];
+        sphere->mSph.SetC(center.get());
+        sphere->mSph.SetR(radius);
+        cCcS_Set(dComIfG_Ccsp(), sphere);
+        center->set(f32(start->x) + (dx + dx), f32(start->y) + (dy + dy),
+                    f32(start->z) + (dz + dz));
+        ++sphere;
+        sphere->mSph.SetC(center.get());
+        sphere->mSph.SetR(radius);
+        cCcS_Set(dComIfG_Ccsp(), sphere);
     }
-    ss(self + 0x63c + i * 2, value);
-  }
-  sf(rd(self + 0x604) + 0x98, 0.f);
-  return 1;
 }
-VERIFY(0x023B9160, sag_wind_init);
-void sag_wind_main(Actor *a) {
-  WWHD_FUNC(0x023B9390, void, a);
-  if (switch_on(a))
-    gabi::call(0x023B7528, a, 3);
+
+/* 023B775C */
+BOOL JointNodeCallBack(void* node, s32 stage) {
+    J3DModel* model = j3dSys.getModel();
+    u32 index = reinterpret_cast<J3DJoint*>(node)->getJntNo();
+    Actor* actor = static_cast<Actor*>(model->getUserArea());
+    if (stage != 0)
+        return 1;
+    if (index >= 14)
+        JUT_ASSERT_fail("d_a_obj_vyasi.cpp", 0x373, "no >= 0 && no < (14)");
+    Mtx34* stack = mDoMtx_stack_c::get();
+    PSMTXCopy(model->getAnmMtx(index), stack);
+    gabi::Local<Mtx34> matrix;
+    PSMTXCopy(model->getAnmMtx(index), matrix.get());
+    f32 x = matrix->m[0][3], y = matrix->m[1][3], z = matrix->m[2][3];
+    matrix->m[2][3] = 0;
+    matrix->m[0][3] = 0;
+    matrix->m[1][3] = 0;
+    PSMTXTrans(stack, x, y, z);
+    mDoMtx_stack_c::quatM(&actor->mJointQuat[index]);
+    PSMTXConcat(stack, matrix.get(), stack);
+    model->mpMtxBuffer->mFlags |= 0x10;
+    // HD: preserve the existing dirty-flag write while mapping the typed matrix array.
+    J3DModel::mtx_assign(gabi::at<Mtx34>(model->mpMtxBuffer->mpAnmMtx + index * 48), stack);
+    PSMTXCopy(stack, J3DSys::mCurrentMtx);
+    gabi::Local<csXyz[14]> angles;
+    for (u32 i = 0; i < 14; ++i)
+        csXyz_ct(&(*angles)[i], 0, 0, 0);
+    gabi::Local<csXyz> rotation;
+    rotation->x = (*angles)[index].x;
+    rotation->y = (*angles)[index].y;
+    rotation->z = (*angles)[index].z;
+    vyasiAddAngles(rotation.get(), &actor->m03AC[index]);
+    PSMTXCopy(model->getAnmMtx(index), stack);
+    mDoMtx_ZXYrotM(stack, rotation->x, rotation->y, rotation->z);
+    if (M_joint_type.entries[index] == 0)
+        mDoMtx_stack_c::scaleM(actor->m04A8, actor->m04AC, actor->m04B0);
+    J3DMtxBuffer_hd* data = model->mpMtxBuffer;
+    u16 flags = data->mFlags;
+    u32 base = data->mpAnmMtx;
+    data->mFlags = flags | 0x10;
+    J3DModel::mtx_assign(gabi::at<Mtx34>(base + index * 48), stack);
+    PSMTXCopy(stack, J3DSys::mCurrentMtx);
+    gabi::Local<cXyz> origin;
+    origin->set(0, 0, 0);
+    PSMTXMultVec(stack, origin.get(), &actor->m0400[index]);
+    return 1;
 }
-VERIFY(0x023B9390, sag_wind_main);
-BOOL to_normal_init(Actor *a) {
-  WWHD_FUNC(0x023B93F4, BOOL, a);
-  return gabi::call<BOOL>(0x023B8FDC, a, rd(gabi::ea(a) + 0x608), 1.f, 0.f);
+
+/* 023B9848 */
+BOOL Act_c::process_none_init() {
+    return 1;
 }
-VERIFY(0x023B93F4, to_normal_init);
-void to_normal_main(Actor *a) {
-  WWHD_FUNC(0x023B940C, void, a);
-  u32 self = gabi::ea(a);
-  if (rd(self + 0x1adc) == 0) {
-    f32 amplitude = lf(self + 0x1ae4);
-    if (!(std::fabs(amplitude) > 0.10000000149011612f)) {
-      if (gabi::call<BOOL>(0x023B7528, a, 4)) {
-        ss(self + 0x65c, 2);
-        sf(self + 0x1aec, 0.f);
-        sf(self + 0x1ae4, 0.f);
-      }
-      amplitude = lf(self + 0x1ae4);
+
+/* 023B9850 */
+void Act_c::process_none_main() {}
+
+/* 023B9058 */
+BOOL Act_c::process_sag_init() {
+    if (!SetStopJointAnimation(mpBckData.get(), 1.f, 0.f))
+        return 0;
+    mpMorf->mFrameCtrl.mRate = 0.0f;
+    return 1;
+}
+
+/* 023B90EC */
+void Act_c::process_sag_main() {
+    gabi::Local<be<u16>> profile;
+    *profile = PROFILE_EKSZS;
+    fopAc_ac_c* source = fopAcIt_Judge(VYASI_PROFILE_JUDGE, profile.get());
+    if (source) {
+        mEkszsPos.copy(source->current.pos);
+        mEkszsRotY = source->shape_angle.y;
+        process_init(STATE_SAG_WIND);
     }
-    s32 phase = sh(self + 0x1ae8) + 0x3000;
-    ss(self + 0x1ae8, phase);
-    sf(self + 0x1ae4, amplitude * 0.8500000238418579f);
-  } else {
-    f32 amplitude = -1792.f * lf(self + 0x61c);
-    ss(self + 0x1ae8, 0);
-    sf(self + 0x1ae4, amplitude);
-  }
 }
-VERIFY(0x023B940C, to_normal_main);
-BOOL normal_init(Actor *a) {
-  WWHD_FUNC(0x023B94D4, BOOL, a);
-  u32 self = gabi::ea(a);
-  if (!gabi::call<BOOL>(0x023B8FDC, a, rd(self + 0x608), -1.f, 0.f))
-    return 0;
-  sf(rd(self + 0x604) + 0x98, 0.f);
-  return 1;
+
+/* 023B9160 */
+BOOL Act_c::process_sagWind_init() {
+    if (!SetStopJointAnimation(mpBckData.get(), 1.f, 3.f))
+        return 0;
+    // HD: this unit rounds the squared distance to float before sqrt.
+    f32 distance = PSVECSquareDistance(&mEkszsPos, &current.pos);
+    distance = std_sqrtf(distance);
+    // Ordered PPC comparisons also retain NaNs in the unclamped branch.
+    if (distance > 2800.f)
+        distance = 2800.f;
+    else if (distance < 1000.f)
+        distance = 1000.f;
+    f32 amplitude = (distance - 2800.f) / -1800.f;
+    f32 velocity = gabi::fmadds(7000.f, amplitude, 5000.f);
+    m0504 = amplitude;
+    s16 half = angle_float(velocity * 0.5f);
+    for (u32 i = 0; i < 14; ++i) {
+        s16 value = half;
+        if (u8(M_joint_type.entries[i]) == 0) {
+            f32 random = cM_rndF(2000.0f);
+            f32 speed = velocity + random;
+            value = angle_float((i & 1) ? -speed : speed);
+        }
+        m0524[i] = value;
+    }
+    mpMorf->mFrameCtrl.mRate = 0.0f;
+    return 1;
 }
-VERIFY(0x023B94D4, normal_init);
-f32 normal_main(Actor *a) {
-  WWHD_FUNC(0x023B9568, f32, a);
-  u32 self = gabi::ea(a);
-  s16 counter = sh(self + 0x65c);
-  if (counter == 0 || counter == 1)
-    ss(self + 0x65c, counter + 1);
-  return gabi::call<f32>(0x0200ECD4, self + 0x1aec, 1.f, 0.009999999776482582f,
-                         1.f, 0.007000000216066837f);
+
+/* 023B9390 */
+void Act_c::process_sagWind_main() {
+    if (switch_on(this))
+        process_init(STATE_TO_NORMAL);
 }
-VERIFY(0x023B9568, normal_main);
-s32 create_adapter(Actor *a) {
-  WWHD_FUNC(0x023B95A8, s32, a);
-  return create(a);
+
+/* 023B93F4 */
+BOOL Act_c::process_toNormal_init() {
+    return SetStopJointAnimation(mpBckData.get(), 1.f, 0.f);
 }
-VERIFY(0x023B95A8, create_adapter);
-u8 delete_adapter(Actor *a) {
-  WWHD_FUNC(0x023B95AC, u8, a);
-  return remove(a);
+
+/* 023B940C */
+void Act_c::process_toNormal_main() {
+    if ((u32)m19C4 == 0) {
+        f32 amplitude = (f32)m19CC;
+        if (!(std::fabs(amplitude) > 0.10000000149011612f)) {
+            if (process_init(STATE_NORMAL)) {
+                mNormalCounter = 2;
+                m19D4 = 0.f;
+                m19CC = 0.f;
+            }
+            amplitude = (f32)m19CC;
+        }
+        s32 phase = (s16)m19D0 + 0x3000;
+        m19D0 = phase;
+        m19CC = amplitude * 0.8500000238418579f;
+    } else {
+        f32 amplitude = -1792.f * (f32)m0504;
+        m19D0 = 0;
+        m19CC = amplitude;
+    }
 }
-VERIFY(0x023B95AC, delete_adapter);
-BOOL execute_adapter(Actor *a) {
-  WWHD_FUNC(0x023B95B0, BOOL, a);
-  return execute(a);
+
+/* 023B94D4 */
+BOOL Act_c::process_normal_init() {
+    if (!SetStopJointAnimation(mpBckData.get(), -1.f, 0.f))
+        return 0;
+    mpMorf->mFrameCtrl.mRate = 0.0f;
+    return 1;
 }
-VERIFY(0x023B95B0, execute_adapter);
-BOOL draw_adapter(Actor *a) {
-  WWHD_FUNC(0x023B95B4, BOOL, a);
-  return draw(a);
+
+/* 023B9568 */
+f32 Act_c::process_normal_main() {
+    s16 counter = (s16)mNormalCounter;
+    if (counter == 0 || counter == 1)
+        mNormalCounter = counter + 1;
+    return vyasiAddCalc(&m19D4, 1.f, 0.009999999776482582f, 1.f, 0.007000000216066837f);
 }
-VERIFY(0x023B95B4, draw_adapter);
-void sinit() {
-  WWHD_FUNC(0x023B95B8, void);
-  put(0x1046C980, 0);
-  put(0x1046C978, 0);
-  put(0x1046C984, 0);
-  put(0x1046C97C, 0);
-  gabi::call(0x028F026C, 0x101CDD54u);
-  f32 low = lf(0x100335AC), high = lf(0x100335B0);
-  sf(0x1046C96C, low);
-  sf(0x1046C970, high);
-  gabi::call(0x028ED6F8, 0x1046C974u);
-  gabi::call(0x028F026C, 0x101CDD60u);
-  gabi::call(0x028EAB2C, 0x1046C975u);
-  gabi::call(0x028F026C, 0x101CDD6Cu);
+
+/* 023B7528 */
+BOOL Act_c::process_init(s32 state) {
+    if ((u32)state >= STATE_COUNT)
+        return 0;
+    if (!M_process_init.entries[state].invoke<BOOL>(this))
+        return 0;
+    mState = state;
+    return 1;
 }
-VERIFY(0x023B95B8, sinit);
-void static_destructor(void *object, u32 flags) {
-  WWHD_FUNC(0x023B964C, void, object, flags);
-  if (object && (flags & 1))
-    gabi::call(0x0273AF40, object);
+
+/* 023B7F84 */
+void Act_c::process_main() {
+    u32 state = mState;
+    if (state >= STATE_COUNT)
+        return;
+    M_process_main.entries[state].invoke<void>(this);
 }
-VERIFY(0x023B964C, static_destructor);
-void *status_ctor(void *object) {
-  WWHD_FUNC(0x023B9660, void *, object);
-  u32 self = gabi::ea(object);
-  if (!self) {
-    self = gabi::call<u32>(0x0273AD10, 0x3c);
-    if (!self)
-      return nullptr;
-  }
-  gabi::call(0x0200BD2C, self);
-  gabi::call(0x02515DA0, self + 0x1c);
-  put(self + 0x18, 0x1004AE88);
-  put(self + 0x1c, 0x1004AEC0);
-  return gabi::at<void>(self);
+
+/* 023B7524 */
+u8 solidHeapCB(Actor* a) {
+    return a->create_heap();
 }
-VERIFY(0x023B9660, status_ctor);
-void *capsule_ctor(void *object) {
-  WWHD_FUNC(0x023B96C8, void *, object);
-  u32 self = gabi::ea(object);
-  if (!self) {
-    self = gabi::call<u32>(0x0273AD10, 0x138);
-    if (!self)
-      return nullptr;
-  }
-  gabi::call(0x02515FB8, self);
-  put(self + 0x114, 0x100015A8);
-  put(self + 0x110, 0x10033368);
-  gabi::call(0x02018150, self + 0x118);
-  put(self + 0x3c, 0x1004AF18);
-  put(self + 0x130, 0x1004AF60);
-  put(self + 0x114, 0x1004AF70);
-  return gabi::at<void>(self);
+
+/* 023B73EC */
+u8 Act_c::create_heap() {
+    J3DModelData* data = static_cast<J3DModelData*>(resource(RES_MODEL));
+    if (!data)
+        JUT_ASSERT_fail("d_a_obj_vyasi.cpp", 0x47b, "mdl_data != 0");
+    J3DAnmTransformKey* animation = static_cast<J3DAnmTransformKey*>(resource(RES_BCK));
+    mpBckData = animation;
+    if (!animation) {
+        JUT_ASSERT_fail("d_a_obj_vyasi.cpp", 0x480, "M_bck_data != 0");
+        animation = mpBckData;
+    }
+    if (animation && data) {
+        mDoExt_McaMorf* morf = mDoExt_McaMorf::create(nullptr, data, nullptr, nullptr,
+                                                      reinterpret_cast<J3DAnmTransform*>(animation),
+                                                      0, 1.0f, 0, -1, 1, nullptr, 0, 0x11000002);
+        animation = mpBckData;
+        mpMorf = morf;
+    }
+    if (!animation)
+        return 0;
+    mDoExt_McaMorf* morf = mpMorf;
+    return morf && morf->getModel() != nullptr;
 }
-VERIFY(0x023B96C8, capsule_ctor);
-void capsule_noop(void *object) { WWHD_FUNC(0x023B9754, void, object); }
-VERIFY(0x023B9754, capsule_noop);
-void destructor(Actor *a, u32 flags) {
-  WWHD_FUNC(0x023B9758, void, a, flags);
-  if (!a)
-    return;
-  u32 self = gabi::ea(a);
-  gabi::call(0x028F0164, self + 0x117c, 8, 0x12c, 0x02515AE8u, 0, 0);
-  gabi::call(0x028F0164, self + 0xf9c, 8, 0x3c, 0x02515860u, 0, 0);
-  gabi::call(0x028F0164, self + 0x8f8, 5, 0x138, 0x02515980u, 0, 0);
-  gabi::call(0x028F0164, self + 0x7cc, 5, 0x3c, 0x02515860u, 0, 0);
-  gabi::call(0x02515A70, self + 0x69c, 2);
-  gabi::call(0x02515860, self + 0x660, 2);
-  gabi::call(0x025D50BC, a, 0);
-  if (flags & 1)
-    gabi::call(0x0273AF40, a);
+
+/* 023B7B3C */
+s32 Act_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        // HD: inline GHS construction retains each vtable write and array callback token.
+        if (this) {
+            vyasiActorConstruct(this);
+            __vtbl = VT_ACTOR;
+            dCcD_Stts_ct(&mStts);
+            vyasiHitInfoConstruct(&mCyl);
+            CapsuleShapeAttr* shape = reinterpret_cast<CapsuleShapeAttr*>(mCyl.mShapeAttr);
+            shape->__vtbl = VT_SHAPE;
+            shape->boundsVtable = VT_BOUNDS;
+            vyasiCylinderGeometryConstruct(&mCyl.mCyl);
+            shape->__vtbl = VT_CYL_SHAPE;
+            mCyl.__vtbl_hitinf = VT_CYL_HIT;
+            mCyl.mCyl.__vtbl = VT_CYL;
+            vyasiConstructArray(mCapsuleStts, 5, sizeof(dCcD_Stts),
+                                gabi::guest_fn((const void*)VyasiStatus_construct));
+            vyasiConstructArray(mCapsules, 5, sizeof(Capsule),
+                                gabi::guest_fn((const void*)VyasiCapsule_construct));
+            vyasiConstructArray(mSphereStts, 8, sizeof(dCcD_Stts),
+                                gabi::guest_fn((const void*)VyasiStatus_construct));
+            vyasiConstructArray(mSpheres, 8, sizeof(dCcD_Sph), VYASI_SPHERE_CONSTRUCTOR);
+            flags = actor_condition;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, "Vyasi");
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)solidHeapCB), 0))
+        return cPhs_ERROR_e;
+    set_first_process();
+    set_mtx();
+    J3DModel* model = mpMorf->getModel();
+    cullMtx = gabi::ea(model ? &model->mBaseTransformMtx : nullptr);
+    fopAcM_setCullSizeBox(this, -2000.0f, 0.0f, -2000.0f, 2000.0f, 2000.0f, 2000.0f);
+    cullSizeFar = 2;
+    mStts.Init(255, 255, this);
+    mCyl.Set(reinterpret_cast<const dCcD_SrcCyl*>(&M_cyl_src));
+    mCyl.SetStts(&mStts);
+    u32 objectFlags = mCyl.mGObjTg.mSPrm;
+    // HD: these are word copies, with the flag store between the second and third component.
+    reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.x) =
+        reinterpret_cast<const be<u32>&>(M_default_hit_vec.x);
+    reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.y) =
+        reinterpret_cast<const be<u32>&>(M_default_hit_vec.y);
+    mCyl.mGObjTg.mSPrm = objectFlags | 4;
+    reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.z) =
+        reinterpret_cast<const be<u32>&>(M_default_hit_vec.z);
+    for (u32 i = 0; i < 5; ++i) {
+        dCcD_Stts* status = &mCapsuleStts[i];
+        Capsule* collision = &mCapsules[i];
+        status->Init(100, 255, this);
+        vyasiSetCapsule(collision, &M_cps_src);
+        collision->SetStts(status);
+        CapsuleEnds* shape = &mCapsuleEnds[i];
+        shape->mStart.copy(current.pos);
+        shape->mEnd.copy(current.pos);
+        shape->mRadius = 100;
+    }
+    for (u32 i = 0; i < 8; ++i) {
+        dCcD_Stts* status = &mSphereStts[i];
+        dCcD_Sph* collision = &mSpheres[i];
+        status->Init(100, 255, this);
+        collision->Set(reinterpret_cast<const dCcD_SrcSph*>(&M_sph_src));
+        collision->SetStts(status);
+        objectFlags = mCyl.mGObjTg.mSPrm;
+        reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.x) =
+            reinterpret_cast<const be<u32>&>(M_default_hit_vec.x);
+        reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.y) =
+            reinterpret_cast<const be<u32>&>(M_default_hit_vec.y);
+        mCyl.mGObjTg.mSPrm = objectFlags | 4;
+        reinterpret_cast<be<u32>&>(mCyl.mGObjTg.mVec.z) =
+            reinterpret_cast<const be<u32>&>(M_default_hit_vec.z);
+    }
+    model = mpMorf->getModel();
+    J3DModelData* data = model->getModelData();
+    model->mUserArea = gabi::ea(this);
+    u16 jointCount = data->getJointNum();
+    for (u32 i = 0; i < jointCount; i = (u16)(i + 1)) {
+        data->getJointNodePointer(i)->setCallBack((J3DJointCallBack)JointNodeCallBack);
+        jointCount = model->getModelData()->getJointNum();
+    }
+    for (u32 i = 0; i < 14; ++i)
+        mJointQuat[i] = M_identity_quat;
+    m04A8 = 1;
+    m04AC = 1;
+    m04B0 = 1;
+    return phase;
 }
-VERIFY(0x023B9758, destructor);
-BOOL none_init(Actor *a) {
-  WWHD_FUNC(0x023B9848, BOOL, a);
-  return 1;
+
+/* 023B7F1C */
+u8 Act_c::_delete() {
+    dComIfG_resDelete(&mPhs, "Vyasi");
+    return 1;
 }
-VERIFY(0x023B9848, none_init);
-void none_main(Actor *a) { WWHD_FUNC(0x023B9850, void, a); }
-VERIFY(0x023B9850, none_main);
-BOOL IsDelete(Actor *a) {
-  WWHD_FUNC(0x023B9854, BOOL, a);
-  return 1;
+
+/* 023B7668 */
+void Act_c::set_mtx() {
+    J3DModel* model = mpMorf->getModel();
+    f32 z = scale.z, x = scale.x, y = scale.y;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    model = mpMorf->getModel();
+    model->setBaseTRMtx(mDoMtx_stack_c::get());
+    PSMTXCopy(mDoMtx_stack_c::get(), &m04BC);
 }
-VERIFY(0x023B9854, IsDelete);
-} // namespace
+
+/* 023B86B8 */
+void Act_c::calc_dif_angle() {
+    gabi::Local<csXyz> desired;
+    for (u32 i = 0; i < 14; ++i) {
+        csXyz_ct(desired.get(), 0, 0, 0);
+        s32 state = mState, rate = 2;
+        if (state == STATE_SAG_WIND) {
+            u8 kind = M_joint_type.entries[i];
+            if (kind == 2) {
+                f32 wave = f32(m0504) * cM_ssin(u16(mAnglePhase[i]));
+                desired->x = angle_float(20.0f * wave);
+                s16 yz = angle_float(40.0f * wave);
+                desired->y = yz;
+                desired->z = yz;
+            } else if (kind == 1) {
+                f32 amplitude = m0504;
+                f32 wave = amplitude * cM_ssin(u16(mAnglePhase[i]));
+                desired->x = angle_float(120.0f * wave);
+                desired->y = angle_float(180.0f * wave);
+                s32 z = angle_float(220.0f * wave);
+                if (i == 1)
+                    z += angle_float(gabi::fmadds(3200.0f, amplitude, -3200.0f));
+                desired->z = (s16)z;
+            } else if (kind == 0) {
+                // HD: GHS initializes the shared bend angles once, setting its guard first.
+                if (!M_base_angle_guard) {
+                    M_base_angle_guard = 1;
+                    const s32 z[14] = {0, 0, 0, 0, 0, 0, 0, 0, 5000, 0, 0, -5000, -7000, -2700};
+                    for (u32 j = 0; j < 14; ++j)
+                        csXyz_ct(&M_base_angle.entries[j], 0, 0, z[j]);
+                }
+                f32 wave = f32(m0504) * cM_ssin(u16(mAnglePhase[i]));
+                const csXyz& base = M_base_angle.entries[i];
+                s32 x = angle_float(700.0f * wave) + s16(base.x);
+                s16 yz = angle_float(1700.0f * wave);
+                desired->x = (s16)x;
+                desired->y = (s16)(s32(yz) + s16(base.y));
+                desired->z = (s16)(s32(yz) + s16(base.z));
+                rate = 1;
+            }
+        } else if (state == STATE_TO_NORMAL && m19C4 == 0 && (i == 0 || i == 1 || i == 6)) {
+            desired->z = angle_float(f32(m19CC) * cM_ssin(u16(m19D0)));
+        }
+        csXyz* rotation = &m03AC[i];
+        cLib_addCalcAngleS2(&rotation->x, desired->x, rate, 0x4000);
+        cLib_addCalcAngleS2(&rotation->y, desired->y, rate, 0x4000);
+        cLib_addCalcAngleS2(&rotation->z, desired->z, rate, 0x4000);
+        u8 kind = M_joint_type.entries[i];
+        s32 increment = m0524[i];
+        if (kind == 0)
+            increment = angle_float(f32(increment) * 1.5f);
+        mAnglePhase[i] = (s16)(s32(mAnglePhase[i]) + increment);
+    }
+}
+
+/* 023B8388 */
+void Act_c::quaternion_main() {
+    for (u32 i = 0; i < 14; ++i) {
+        gabi::Local<Quaternion> target;
+        *target = M_identity_quat;
+        s32 state = mState;
+        if (state == STATE_NORMAL && M_joint_type.entries[i] == 0) {
+            gabi::Local<cXyz> axis;
+            axis->set(0, 1, 0);
+            mDoMtx_YrotS(M_wind_mtx.mMatrix, (s16)-s16(current.angle.y));
+            cXyz* wind = dKyw_get_wind_vec();
+            gabi::Local<cXyz> localWind;
+            MtxPosition(wind, localWind.get());
+            f32 power = dKyw_get_wind_pow();
+            gabi::Local<cXyz> cross;
+            // HD: keep the hidden result in the original caller-owned slot.
+            cXyz_outprod(axis.get(), cross.get(), localWind.get());
+            f32 scale = m19D4;
+            u16 angle = (u16)gabi::ftoi((1400.0f * power) * scale);
+            f32 sine = cM_ssin(angle);
+            gabi::Local<Quaternion> rotation;
+            rotation->x = sine * f32(cross->x);
+            rotation->y = sine * f32(cross->y);
+            rotation->z = sine * f32(cross->z);
+            rotation->w = cM_scos(angle);
+            s16 desired = angle_float((power * 360.0f) * scale);
+            cLib_addCalcAngleS2(&m02B0[i], desired > 220 ? 220 : desired, 4, 0x20);
+            f32 random = cM_rndFX(256.0f);
+            f32 bend = m19D4;
+            s16 delta = angle_float(gabi::fmadds(power * 2048.0f, bend, random));
+            s32 phase = s16(m0294[i]) + delta;
+            m0294[i] = (s16)phase;
+            u16 windAngle = m02B0[i];
+            f32 wave = cM_ssin(windAngle) * cM_ssin((u16)phase);
+            gabi::Local<Quaternion> oscillation;
+            oscillation->x = wave;
+            oscillation->y = 0;
+            oscillation->z = wave;
+            oscillation->w = cM_scos(windAngle);
+            PSQUATMultiply(rotation.get(), oscillation.get(), target.get());
+        }
+        if (mNormalCounter == 1)
+            mJointQuat[i] = *target;
+        else
+            mDoMtx_quatSlerp(&mJointQuat[i], target.get(), &mJointQuat[i], 0.4000000059604645f);
+    }
+}
+
+/* 023B8DC8 */
+void Act_c::leaf_scale_main() {
+    f32 x = 1, y = 1, z = 1;
+    if (mState == STATE_SAG_WIND) {
+        f32 amplitude = m0504;
+        y = gabi::fmadds(-0.5f, amplitude, 1.0f);
+        z = y;
+        x = gabi::fmadds(0.3500000238418579f, amplitude, 1.0f);
+    }
+    cLib_addCalc2(&m04A8, x, 0.5f, 0.5f);
+    cLib_addCalc2(&m04AC, y, 0.5f, 0.5f);
+    cLib_addCalc2(&m04B0, z, 0.5f, 0.5f);
+}
+
+/* 023B8EB0 */
+BOOL Act_c::_execute() {
+    if (mState != STATE_NONE) {
+        m19C4 = PlayStopJointAnimation();
+        process_main();
+        set_collision();
+        quaternion_main();
+        calc_dif_angle();
+        leaf_scale_main();
+        set_mtx();
+        fopAcM_rollPlayerCrash(this, 7, 79.0f);
+    }
+    return 1;
+}
+
+/* 023B8F38 */
+BOOL Act_c::_draw() {
+    if (mState != STATE_NONE) {
+        dScnKy_env_light_c* env = dKy_getEnvlight();
+        settingTevStruct(env, 1, &current.pos, &tevStr);
+        mDoExt_McaMorf* morf = mpMorf;
+        env = dKy_getEnvlight();
+        setLightTevColorType(env, morf->getModel(), &tevStr);
+        dComIfGd_setListBG();
+        mpMorf->updateDL();
+        dComIfGd_setList();
+    }
+    return 1;
+}
+
+/* 023B95A8 */
+s32 Mthd_Create(Actor* a) {
+    return a->_create();
+}
+
+/* 023B95AC */
+u8 Mthd_Delete(Actor* a) {
+    return a->_delete();
+}
+
+/* 023B95B0 */
+BOOL Mthd_Execute(Actor* a) {
+    return a->_execute();
+}
+
+/* 023B95B4 */
+BOOL Mthd_Draw(Actor* a) {
+    return a->_draw();
+}
+
+/* 023B9854 */
+BOOL Mthd_IsDelete(Actor* a) {
+    return 1;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 023B95B8 */
+void __sinit_d_a_obj_vyasi_cpp() {
+    M_math.mZero[2] = 0;
+    M_math.mZero[0] = 0;
+    M_math.mZero[3] = 0;
+    M_math.mZero[1] = 0;
+    __register_global_object(gabi::ea(M_descriptors.entries[0]));
+    f32 low = M_angle_limits.mMin, high = M_angle_limits.mMax;
+    M_math.mMinAngle = low;
+    M_math.mMaxAngle = high;
+    vyasiConstructSinTable(&M_math.mSinTable);
+    __register_global_object(gabi::ea(M_descriptors.entries[1]));
+    vyasiConstructAtanTable(&M_math.mAtanTable);
+    __register_global_object(gabi::ea(M_descriptors.entries[2]));
+}
+
+/* 023B964C */
+void VyasiDescriptor_destruct(void* object, u32 flags) {
+    if (object && (flags & 1))
+        operator_delete(object);
+}
+
+/* 023B9660 */
+void* VyasiStatus_construct(void* object) {
+    dCcD_Stts* status = static_cast<dCcD_Stts*>(object);
+    if (!status) {
+        status = static_cast<dCcD_Stts*>(operator_new(sizeof(dCcD_Stts)));
+        if (!status)
+            return nullptr;
+    }
+    dCcD_Stts_ct(status);
+    return status;
+}
+
+/* 023B96C8 */
+void* VyasiCapsule_construct(void* object) {
+    Capsule* capsule = static_cast<Capsule*>(object);
+    if (!capsule) {
+        capsule = static_cast<Capsule*>(operator_new(sizeof(Capsule)));
+        if (!capsule)
+            return nullptr;
+    }
+    vyasiHitInfoConstruct(capsule);
+    capsule->mShape.__vtbl = VT_SHAPE;
+    capsule->mShape.boundsVtable = VT_BOUNDS;
+    vyasiCapsuleGeometryConstruct(&capsule->mCps);
+    capsule->__vtbl_hitinf = VT_CAPSULE_HIT;
+    capsule->mCps.__vtbl = VT_CAPSULE;
+    capsule->mShape.__vtbl = VT_CAPSULE_SHAPE;
+    return capsule;
+}
+
+/* 023B9754 */
+void VyasiCapsule_dummy(void* object) {}
+
+/* 023B9758 */
+void Act_destruct(Actor* a, u32 flags) {
+    if (!a)
+        return;
+    vyasiDestructArray(a->mSpheres, 8, sizeof(dCcD_Sph), VYASI_SPHERE_DESTRUCTOR, 0, 0);
+    vyasiDestructArray(a->mSphereStts, 8, sizeof(dCcD_Stts), VYASI_STATUS_DESTRUCTOR, 0, 0);
+    vyasiDestructArray(a->mCapsules, 5, sizeof(Capsule), VYASI_CAPSULE_DESTRUCTOR, 0, 0);
+    vyasiDestructArray(a->mCapsuleStts, 5, sizeof(dCcD_Stts), VYASI_STATUS_DESTRUCTOR, 0, 0);
+    dCcD_Cyl_dt(&a->mCyl, 2);
+    dCcD_Stts_dt(&a->mStts, 2);
+    vyasiActorDestruct(a, 0);
+    if (flags & 1)
+        operator_delete(a);
+}
+
+} // namespace daObjVyasi
+
+using namespace daObjVyasi;
+
+/* WWHD glue
+data M_math 1046C96C
+data M_angle_limits 100335AC
+data M_descriptors 101CDD54
+ext 025D50BC void vyasiActorDestruct(fopAc_ac_c*, s32)
+ext 028F0164 void vyasiDestructArray(void*, s32, s32, u32, s32, s32)
+ext 02018150 void vyasiCapsuleGeometryConstruct(daObjVyasi::CapsuleGeometry*)
+ext 028EAB2C void vyasiConstructAtanTable(u8*)
+ext 028ED6F8 void vyasiConstructSinTable(u8*)
+data M_process_init 1003348C
+data M_process_main 100334F4
+ext 0200ECD4 f32 vyasiAddCalc(be<f32>*, f32, f32, f32, f32)
+ext 028E8DE8 f32 PSVECSquareDistance(const cXyz*, const cXyz*)
+ext 025D69FC void fopAcM_rollPlayerCrash(fopAc_ac_c*, s32, f32)
+ext 02349DFC s32 vyasiPrmAbstract(const fopAc_ac_c*, u32, u32)
+data M_cyl_src 100333C8
+data M_cps_src 1003340C
+data M_sph_src 10033388
+data M_default_hit_vec 101FFBA8
+str 100335B8 "Vyasi"
+ext 025164C0 void vyasiSetCapsule(daObjVyasi::Capsule*, const void*)
+ext 028EFFD0 void vyasiConstructArray(void*, s32, s32, u32)
+ext 02018590 void vyasiCylinderGeometryConstruct(cM3dGCyl*)
+ext 02515FB8 void vyasiHitInfoConstruct(void*)
+ext 025D4ED0 void vyasiActorConstruct(fopAc_ac_c*)
+ext 020181FC void vyasiSetCapsuleGeometry(daObjVyasi::CapsuleGeometry*, const daObjVyasi::CapsuleEnds*)
+ext 0255F458 void dKy_Sound_set(cXyz*, s32, u32, s32)
+ext 02312C8C void daObj_HitEff_kikuzu(fopAc_ac_c*, dCcD_Cyl*)
+ext 023129C4 void daObj_HitSeStart(cXyz*, s8, dCcD_GObjInf*, s32)
+data M_base_angle 1046C988
+data M_base_angle_guard 1046C9DC
+data M_wind_mtx 1018C7B0
+ext 0201B080 void cXyz_outprod(const cXyz*, cXyz*, const cXyz*)
+ext 028E8B48 void PSQUATMultiply(const Quaternion*, const Quaternion*, Quaternion*)
+ext 028E9108 void PSMTXConcat(const Mtx34*, const Mtx34*, Mtx34*)
+data M_joint_type 101CDD44
+data M_identity_quat 101E9C38
+ext 0201A554 void vyasiAddAngles(csXyz*, const csXyz*)
+str 10033468 "d_a_obj_vyasi.cpp" in 023B73EC
+str 1003347C "mdl_data != 0"
+str 10033458 "M_bck_data != 0"
+str 100334B8 "d_a_obj_vyasi.cpp" in 023B775C
+str 100334CC "no >= 0 && no < (14)"
+*/

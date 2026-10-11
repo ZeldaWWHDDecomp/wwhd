@@ -1,71 +1,83 @@
-// Scoped HD Shortcut screen event handlers, reconstructed from WWHD.
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_shortcut {
-void prepareState(u32 self, u32 state) {
-  WWHD_FUNC(0x026DC1E8, void, self, state);
-  store<u32>(self + 0x94, state);
-  call<void>(0x020063C0, self + 0x18, 0x1049B540u);
+#include "d/hd_hud_b.h"
+static HdHudState l_prepareState;
+static HdHudState l_oneState;
+static HdHudState l_returnState;
+static HdHudState l_nextState;
+static HdHudState l_activeState;
+static u8 l_shortcutActive;
+
+/* 026DC1E8 */
+void hdShortcutPrepareState(HdHudShortcut* self, HdHudState* state) {
+
+  self->mNextState = state;
+  hdHudChangeState(&self->mState, &l_prepareState);
 }
-VERIFY(0x026DC1E8, prepareState);
-s32 advanceOne(u32 self) {
-  WWHD_FUNC(0x026DC1FC, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  call<void>(0x026DC1E8, self, 0x1049B630u);
+/* 026DC1FC */
+s32 hdShortcutAdvanceOne(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_oneState);
   return 0;
 }
-VERIFY(0x026DC1FC, advanceOne);
-s32 advanceThree(u32 self) {
-  WWHD_FUNC(0x026DC234, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x78);
-  call<void>(0x026DC1E8, self, 0x1049B510u);
+/* 026DC234 */
+s32 hdShortcutAdvanceThree(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + 3 * HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_returnState);
   return 0;
 }
-VERIFY(0x026DC234, advanceThree);
-s32 advanceToNext(u32 self) {
-  WWHD_FUNC(0x026DC29C, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  call<void>(0x026DC1E8, self, 0x1049B690u);
+/* 026DC29C */
+s32 hdShortcutAdvanceToNext(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_nextState);
   return 0;
 }
-VERIFY(0x026DC29C, advanceToNext);
-s32 activate(u32 self) {
-  WWHD_FUNC(0x026DC2D4, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  store<u8>(0x1047B07C, 1);
-  call<void>(0x020063C0, self + 0x18, 0x1049B600u);
-  store<u8>(self + 0xd3, 1);
+/* 026DC2D4 */
+s32 hdShortcutActivate(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  l_shortcutActive = 1;
+  hdHudChangeState(&self->mState, &l_activeState);
+  self->mActive = 1;
   return 0;
 }
-VERIFY(0x026DC2D4, activate);
-s32 activateAlternate(u32 self) {
-  WWHD_FUNC(0x026DC334, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  store<u8>(0x1047B07C, 1);
-  call<void>(0x020063C0, self + 0x18, 0x1049B600u);
-  store<u8>(self + 0xd3, 1);
+/* 026DC334 */
+s32 hdShortcutActivateAlternate(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  l_shortcutActive = 1;
+  hdHudChangeState(&self->mState, &l_activeState);
+  self->mActive = 1;
   return 0;
 }
-VERIFY(0x026DC334, activateAlternate);
-s32 advanceReturn(u32 self) {
-  WWHD_FUNC(0x026DC414, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  call<void>(0x026DC1E8, self, 0x1049B510u);
+/* 026DC414 */
+s32 hdShortcutAdvanceReturn(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_returnState);
   return 0;
 }
-VERIFY(0x026DC414, advanceReturn);
-s32 advanceReturnAlternate(u32 self) {
-  WWHD_FUNC(0x026DC45C, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) + 0x28);
-  call<void>(0x026DC1E8, self, 0x1049B510u);
+/* 026DC45C */
+s32 hdShortcutAdvanceReturnAlternate(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset + HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_returnState);
   return 0;
 }
-VERIFY(0x026DC45C, advanceReturnAlternate);
-s32 retreatReturn(u32 self) {
-  WWHD_FUNC(0x026DC4A4, s32, self);
-  store<u32>(self + 0x8c, load<u32>(self + 0x8c) - 0x28);
-  call<void>(0x026DC1E8, self, 0x1049B510u);
+/* 026DC4A4 */
+s32 hdShortcutRetreatReturn(HdHudShortcut* self) {
+
+  self->mTextOffset = self->mTextOffset - HD_HUD_COMMAND_SIZE;
+  hdShortcutPrepareState(self, &l_returnState);
   return 0;
 }
-VERIFY(0x026DC4A4, retreatReturn);
-} // namespace hd_screen_shortcut
+/* WWHD glue (tools/verify/autoglue.py)
+data l_prepareState 1049B540
+data l_oneState 1049B630
+data l_returnState 1049B510
+data l_nextState 1049B690
+data l_activeState 1049B600
+data l_shortcutActive 1047B07C
+ext 020063C0 void hdHudChangeState(HdHudStateController*,HdHudState*)
+*/

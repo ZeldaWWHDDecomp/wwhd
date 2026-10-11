@@ -1,192 +1,195 @@
-/* Zunari's outdoor shop models. GameCube source corrected against WWHD
- * disassembly. */
+/* Zunari's outdoor shop posts and curtains. GameCube names with verified WWHD
+ * behavior. */
 #include "d/actor/d_a_obj_roten.h"
-static u8 *ptr(u32 a) { return gabi::at<u8>(a); }
-BOOL daObj_Roten_c::CreateHeap() {
-  WWHD_FUNC(0x02388908, BOOL, this);
-  u32 idx = mType;
-  u32 modelIndex = gabi::load<u32>(0x101CC94C + idx * 4);
-  u32 controller = gabi::load<u32>(0x101F4F28);
-  gabi::Local<be<u32>[2]> name;
-  (*name)[0] = 0x1002EE60;
-  (*name)[1] = 0x1002EDE4;
-  u8 *data =
-      gabi::call<u8 *>(0x026066C4, ptr(controller), name.get(), modelIndex);
-  if (!data)
-    gabi::call(0x0273AA24, ptr(0x1002EE20), 0xB0, ptr(0x1002EE34));
-  mpModel = gabi::call<u8 *>(0x025E38E0, data, 0, 0x11020203);
-  u8 *bg = gabi::call<u8 *>(0x024F23F4, (u8 *)nullptr);
-  mpBgW = bg;
-  if (bg) {
-    idx = mType;
-    controller = gabi::load<u32>(0x101F4F28);
-    u32 collisionIndex = gabi::load<u32>(0x101CC958 + idx * 4);
-    gabi::Local<be<u32>[2]> bgName;
-    (*bgName)[0] = 0x1002EE60;
-    (*bgName)[1] = 0x1002EDE4;
-    u8 *bgData = gabi::call<u8 *>(0x026066C4, ptr(controller), bgName.get(),
-                                  collisionIndex);
-    u32 matrix = gabi::ea((u8 *)mpModel);
-    bg = mpBgW;
-    if (matrix)
-      matrix += 0xC8;
-    gabi::call(0x0200A030, bg, bgData, 1, ptr(matrix));
-  }
-  return mpModel != nullptr && mpBgW != nullptr;
+
+const gc_tu_data gc_tu = {.safeString = 0x1002EDE4};
+static const char* M_arcname = "Roten";
+static daObj_Roten_HIO_c l_HIO;
+// HD: the background callback is stored as a guest entry address.
+static const u32 dBgS_MoveBGProc_Typical = 0x024EE658;
+
+// HD: placement construction stores the actor vtable.
+daObj_Roten_c::daObj_Roten_c() {
+    fopAc_ac_c_ct(this);
+    __vtbl = 0x1002EE0C;
 }
-VERIFY(0x02388908, &daObj_Roten_c::CreateHeap);
-BOOL CheckCreateHeap(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388A18, BOOL, self);
-  return self->CreateHeap();
-}
-VERIFY(0x02388A18, CheckCreateHeap);
+
+/* 02388A1C */
 void daObj_Roten_c::set_mtx() {
-  WWHD_FUNC(0x02388A1C, void, this);
-  f32 x = scale.x, y = scale.y;
-  u32 model = gabi::ea((u8 *)mpModel);
-  f32 z = scale.z;
-  gabi::store<f32>(model + 0xBC, x);
-  gabi::store<f32>(model + 0xC0, y);
-  gabi::store<f32>(model + 0xC4, z);
-  x = current.pos.x;
-  y = current.pos.y;
-  z = current.pos.z;
-  gabi::call(0x028E93CC, ptr(0x1048D0CC), x, y, z);
-  f32 matrix[12];
-  for (u32 i = 0; i < 12; i++)
-    matrix[i] = gabi::load<f32>(0x1048D0CC + i * 4);
-  model = gabi::ea((u8 *)mpModel);
-  for (u32 i = 0; i < 12; i++)
-    gabi::store<f32>(model + 0xC8 + i * 4, matrix[i]);
+    // HD: retain all scale loads before model stores, then copy matrix floats.
+    f32 x = scale.x, y = scale.y;
+    J3DModel* model = mpModel;
+    f32 z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    x = current.pos.x;
+    y = current.pos.y;
+    z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    f32 matrix[12];
+    for (u32 i = 0; i < 12; i++)
+        matrix[i] = mDoMtx_stack_c::get()->m[i / 4][i % 4];
+    model = mpModel;
+    for (u32 i = 0; i < 12; i++)
+        model->mBaseTransformMtx.m[i / 4][i % 4] = matrix[i];
 }
-VERIFY(0x02388A1C, &daObj_Roten_c::set_mtx);
-s32 daObj_Roten_c::CreateInit() {
-  WWHD_FUNC(0x02388AE8, s32, this);
-  set_mtx();
-  u32 model = gabi::ea((u8 *)mpModel), bg = gabi::ea((u8 *)mpBgW);
-  gabi::store<u32>(gabi::ea(this) + 0x348, model ? model + 0xC8 : 0);
-  gabi::store<u32>(bg + 0xA8, 0x024EE658);
-  u32 play = gabi::call<u32>(0x025200D4);
-  u8 *w = mpBgW;
-  gabi::call(0x024EEA6C, ptr(play + 0x12A0), w, this);
-  return 4;
-}
-VERIFY(0x02388AE8, &daObj_Roten_c::CreateInit);
-s32 daObj_RotenCreate(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388B50, s32, self);
-  u32 a = gabi::ea(self), flags = gabi::load<u32>(a + 0x2E4);
-  if (!(flags & 8)) {
-    if (self) {
-      gabi::call(0x025D4ED0, self);
-      flags = gabi::load<u32>(a + 0x2E4);
-      gabi::store<u32>(a + 0xB4, 0x1002EE0C);
+
+/* 02388A18 */
+BOOL CheckCreateHeap(fopAc_ac_c* i_this) { return static_cast<daObj_Roten_c*>(i_this)->CreateHeap(); }
+
+/* 02388908 */
+BOOL daObj_Roten_c::CreateHeap() {
+    // HD: numeric Roten02/03/04 indices keep autoglue image checks explicit.
+    static u32 bdl_arc_idx[] = {
+        4,
+        5,
+        6,
+    };
+    static u32 dzb_arc_idx[] = {
+        9,
+        10,
+        11,
+    };
+    u32 idx = mType;
+    J3DModelData* modelData = (J3DModelData*)dComIfG_getObjectRes(M_arcname, bdl_arc_idx[idx]);
+    JUT_ASSERT(0xB0, modelData != NULL);
+    mpModel = mDoExt_J3DModel__create(modelData, 0, 0x11020203);
+    RotenBgW* bg = static_cast<RotenBgW*>(new_dBgW());
+    mpBgW = bg;
+    // HD: collision setup is skipped if allocation fails.
+    if (bg) {
+        idx = mType;
+        cBgD_t* bgData = (cBgD_t*)dComIfG_getObjectRes(M_arcname, dzb_arc_idx[idx]);
+        J3DModel* model = mpModel;
+        bg = mpBgW;
+        bg->Set(bgData, dBgW::MOVE_BG_e, model->getBaseTRMtx());
     }
-    gabi::store<u32>(a + 0x2E4, flags | 8);
-  }
-  u32 type = gabi::load<u32>(a + 0xB0) >> 24;
-  if (type > 2)
-    type = 2;
-  self->mType = type;
-  s32 count = 0;
-  for (u32 i = 0; i < 12; i++) {
-    u32 save = gabi::load<u32>(0x101F84DC);
-    if (gabi::call<s32>(0x025B7840, ptr(save + 0xB0), i) || i == 0)
-      count++;
-  }
-  s32 needed = type == 0 ? 3 : type == 1 ? 6 : 9;
-  if (count <= needed) {
-    self->mRejected = 1;
-    return 5;
-  }
-  self->mRejected = 0;
-  s32 phase = gabi::call<s32>(0x02520460, self->mPhs, ptr(0x1002EE60));
-  if (phase != 4)
-    return phase;
-  // Reload after resource loading: HD stores these heap limits in its scratch
-  // frame.
-  const u32 sizes[3] = {0x2BA0, 0x2A60, 0x2C60};
-  u32 slot = self->mType;
-  if (!gabi::call<s32>(0x025D63E8, self, 0x02388A18, sizes[slot]))
-    return 5;
-  return self->CreateInit();
+    return mpModel != nullptr && mpBgW != nullptr;
 }
-VERIFY(0x02388B50, daObj_RotenCreate);
-BOOL daObj_RotenDelete(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388CC4, BOOL, self);
-  if (!self->mRejected) {
-    u32 play = gabi::call<u32>(0x025200D4);
-    u8 *w = self->mpBgW;
-    gabi::call(0x020087EC, ptr(play + 0x12A0), w);
-    gabi::call(0x025204C8, self->mPhs, ptr(0x1002EE60));
-  }
-  return TRUE;
+
+/* 02388AE8 */
+s32 daObj_Roten_c::CreateInit() {
+    set_mtx();
+    J3DModel* model = mpModel;
+    RotenBgW* bg = mpBgW;
+    fopAcM_SetMtx(this, model->getBaseTRMtx());
+    bg->SetCrrFunc(dBgS_MoveBGProc_Typical);
+    dBgS* bgs = dComIfG_Bgsp();
+    RotenBgW* w = mpBgW;
+    bgs->Regist(w, this);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x02388CC4, daObj_RotenDelete);
-BOOL daObj_RotenExecute(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388D1C, BOOL, self);
-  self->set_mtx();
-  gabi::call(0x024F43DC, (u8 *)self->mpBgW);
-  return FALSE;
+
+static BOOL dComIfGs_isGetItemReserve(u32 index) {
+    return dSv_player_get_bag_item_isReserve(&dComIfGs_info()->mSavedata.mPlayer.mGetBagItem, index);
 }
-VERIFY(0x02388D1C, daObj_RotenExecute);
-BOOL daObj_RotenDraw(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388D54, BOOL, self);
-  u32 env = gabi::call<u32>(0x02555D0C);
-  gabi::call(0x025626A4, ptr(env), 1, &self->current.pos, &self->tevStr);
-  env = gabi::call<u32>(0x02555D0C);
-  u8 *model = self->mpModel;
-  gabi::call(0x02562F5C, ptr(env), model, &self->tevStr);
-  model = self->mpModel;
-  gabi::call(0x025E2DE0, model, 0);
-  return TRUE;
+
+/* 02388B50 */
+s32 daObj_RotenCreate(daObj_Roten_c* self) {
+    fopAcM_ct(self, daObj_Roten_c);
+    u32 type = fopAcM_GetParam(self) >> 24;
+    if (type > 2)
+        type = 2;
+    self->mType = type;
+    s32 count = 0;
+    for (u32 i = 0; i < 12; i++) {
+        if (dComIfGs_isGetItemReserve(i) || i == 0)
+            count++;
+    }
+    s32 needed = type == 0 ? 3 : type == 1 ? 6 : 9;
+    if (count <= needed) {
+        self->field_0x2D1 = 1;
+        return cPhs_ERROR_e;
+    }
+    self->field_0x2D1 = 0;
+    s32 phase = dComIfG_resLoad(&self->mPhs, M_arcname);
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    // HD: reload the selected type after resource loading.
+    const u32 heap_size[3] = {0x2BA0, 0x2A60, 0x2C60};
+    u32 slot = self->mType;
+    if (!fopAcM_entrySolidHeap(self, CheckCreateHeap, heap_size[slot]))
+        return cPhs_ERROR_e;
+    return self->CreateInit();
 }
-VERIFY(0x02388D54, daObj_RotenDraw);
-daObj_Roten_HIO_HD *hioConstructor(daObj_Roten_HIO_HD *self) {
-  WWHD_FUNC(0x02388DB0, daObj_Roten_HIO_HD *, self);
-  if (!self)
-    self = gabi::call<daObj_Roten_HIO_HD *>(0x0273AD10, 0x10);
-  if (self) {
-    self->mNo = -1;
-    self->mOffset = 0.0f;
-    self->mFlags = 0;
-    self->mVtable = 0x1002EDFC;
-  }
-  return self;
+
+/* 02388CC4 */
+BOOL daObj_RotenDelete(daObj_Roten_c* self) {
+    if (!self->field_0x2D1) {
+        dBgS* bgs = dComIfG_Bgsp();
+        RotenBgW* w = self->mpBgW;
+        bgs->Release(w);
+        dComIfG_resDelete(&self->mPhs, M_arcname);
+    }
+    return TRUE;
 }
-VERIFY(0x02388DB0, hioConstructor);
-void initStatics() {
-  WWHD_FUNC(0x02388E0C, void);
-  for (u32 i = 0; i < 16; i += 4)
-    gabi::store<u32>(0x1046BD94 + i, 0);
-  gabi::call(0x028F026C, ptr(0x101CC964));
-  gabi::store<f32>(0x1046BD78, -3.1415927410125732f);
-  gabi::store<f32>(0x1046BD7C, 3.1415927410125732f);
-  gabi::call(0x028ED6F8, ptr(0x1046BD80));
-  gabi::call(0x028F026C, ptr(0x101CC970));
-  gabi::call(0x028EAB2C, ptr(0x1046BD81));
-  gabi::call(0x028F026C, ptr(0x101CC97C));
-  hioConstructor(gabi::at<daObj_Roten_HIO_HD>(0x1046BD84));
+
+/* 02388D1C */
+BOOL daObj_RotenExecute(daObj_Roten_c* self) {
+    self->set_mtx();
+    self->mpBgW->Move();
+    return FALSE;
 }
-VERIFY(0x02388E0C, initStatics);
-void hioDestructor(daObj_Roten_HIO_HD *self, s32 flags) {
-  WWHD_FUNC(0x02388EAC, void, self, flags);
-  if (self && (flags & 1))
-    gabi::call(0x0273AF40, self);
+
+/* 02388D54 */
+BOOL daObj_RotenDraw(daObj_Roten_c* self) {
+    settingTevStruct(dKy_getEnvlight(), TEV_TYPE_BG0, &self->current.pos, &self->tevStr);
+    dScnKy_env_light_c* env = dKy_getEnvlight();
+    J3DModel* model = self->mpModel;
+    setLightTevColorType(env, model, &self->tevStr);
+    model = self->mpModel;
+    mDoExt_modelUpdateDL(model);
+    return TRUE;
 }
-VERIFY(0x02388EAC, hioDestructor);
-BOOL daObj_RotenIsDelete(daObj_Roten_c *self) {
-  WWHD_FUNC(0x02388EC0, BOOL, self);
-  return TRUE;
+
+// HD: compiler-generated and template code of this translation unit.
+/* 02388DB0 */
+daObj_Roten_HIO_c* hioConstructor(daObj_Roten_HIO_c* self) {
+    if (!self)
+        self = (daObj_Roten_HIO_c*)operator_new(sizeof(daObj_Roten_HIO_c));
+    if (self) {
+        self->mNo = -1;
+        self->field_0x08 = 0.0f;
+        self->field_0x0C = 0;
+        self->mVtable = 0x1002EDFC;
+    }
+    return self;
 }
-VERIFY(0x02388EC0, daObj_RotenIsDelete);
-void actorDestructor(daObj_Roten_c *self, s32 flags) {
-  WWHD_FUNC(0x02388EC8, void, self, flags);
-  if (self) {
-    gabi::call(0x025D50BC, self, 0);
-    if (flags & 1)
-      gabi::call(0x0273AF40, self);
-  }
+
+/* 02388E0C */
+void __sinit_d_a_obj_roten_cpp() {
+    sinit_header_statics_z(0x1046BD78, 0x101CC964, 0x1046BD94);
+    hioConstructor(&l_HIO);
 }
-VERIFY(0x02388EC8, actorDestructor);
-void emptyVirtual(daObj_Roten_c *self) { WWHD_FUNC(0x02388F1C, void, self); }
-VERIFY(0x02388F1C, emptyVirtual);
+
+/* 02388EAC */
+void hioDestructor(daObj_Roten_HIO_c* self, s32 flags) {
+    if (self && (flags & 1))
+        operator_delete(self);
+}
+
+/* 02388EC0 */
+BOOL daObj_RotenIsDelete(daObj_Roten_c* self) { return TRUE; }
+
+/* 02388EC8 */
+void actorDestructor(daObj_Roten_c* self, s32 flags) {
+    if (self) {
+        __dt(static_cast<fopAc_ac_c*>(self));
+        if (flags & 1)
+            operator_delete(self);
+    }
+}
+
+/* 02388F1C */
+void emptyVirtual(daObj_Roten_c* self) {}
+
+/* WWHD glue (tools/verify/autoglue.py)
+str 1002EE60
+str 1002EE20
+str 1002EE34 "modelData != NULL" renamed # HD: assertion spells zero instead of NULL.
+data bdl_arc_idx 101CC94C
+data dzb_arc_idx 101CC958
+data l_HIO 1046BD84
+ext 025B7840 BOOL dSv_player_get_bag_item_isReserve(dSv_player_get_bag_item_c*, u32)
+*/

@@ -1,102 +1,147 @@
-/* f_pc_create_req: WWHD process creation requests.
- * HD entries 025DD84C..025DDB83, initializer025DDB84..025DDC17.
- * Request0x48: creating14,cancelling15,methodtag18,methods34,ID3C,process40,layer44.
- * External queue/process/method operations remain verification boundaries. */
-#include "bindings.h"
-namespace f_pc_create_req_cpp {
-static u32 ld(u32 a) { return gabi::load<u32>(a); }
-static u8 lb(u32 a) { return gabi::load<u8>(a); }
-static void st(u32 a,u32 v) { gabi::store<u32>(a,v); }
-static void sb(u32 a,u8 v) { gabi::store<u8>(a,v); }
-static BOOL isCreatingByID(u32 tag,u32 id) {
-    WWHD_FUNC(0x025DD84C,BOOL,tag,id);
-    return ld(ld(tag+0xC)+0x3C)==ld(id);
+/** Process creation requests. */
+#include "f_pc/f_pc_create_req.h"
+
+static CreateRequestHeaderStatics l_headerStatics;
+
+/* 025DD84C */
+BOOL fpcCtRq_isCreatingByID(create_tag* i_createTag, be<u32>* i_procID) {
+    create_request* pReq = gabi::at<create_request>(i_createTag->base.mpTagData);
+    return pReq->mBsPcId == *i_procID;
 }
-VERIFY(0x025DD84C,isCreatingByID);
-static BOOL IsCreatingByID(u32 id) {
-    WWHD_FUNC(0x025DD868,BOOL,id);
+
+/* 025DD868 */
+BOOL fpcCtRq_IsCreatingByID(u32 i_id) {
+    // HD: preserve the original guest-stack key and frame seen by the iterator callback.
+    gabi::AutoFrame frame{gabi::current_function()};
     gabi::Local<be<u32>> key;
-    *key.get()=id;
-    return gabi::call<u32>(0x025DD714,0x025DD84C,gabi::ea(key.get()))!=0;
+    *key.get() = i_id;
+    return fpcCtIt_Judge(gabi::guest_fn((const void*)fpcCtRq_isCreatingByID), key.get()) != NULL;
 }
-VERIFY(0x025DD868,IsCreatingByID);
-static BOOL Delete(u32 req) {
-    WWHD_FUNC(0x025DD8A0,BOOL,req);
-    gabi::call(0x025DDC28,req);
-    gabi::call(0x025DEA90,ld(req+0x44));
-    gabi::call(0x025DE9E0,req+0x18);
-    u32 methods=ld(req+0x34);
-    if(methods && !gabi::call<BOOL>(0x025DFCAC,ld(methods+8),req)) return FALSE;
-    u32 proc=ld(req+0x40);
-    if(proc) st(proc+0x14,0);
-    gabi::call(0x0201945C,req);
+
+/* 025DD8A0 */
+BOOL fpcCtRq_Delete(create_request* i_request) {
+    fpcCtTg_CreateQTo(&i_request->base);
+    fpcLy_CreatedMesg(i_request->mpLayer);
+    fpcLy_CancelQTo(&i_request->mMtdTg);
+    create_request_method_class* methods = i_request->mpCtRqMtd;
+    if (methods && !fpcMtd_Method(methods->mpDelete.get(), i_request)) {
+        return FALSE;
+    }
+    base_process_class* proc = i_request->mpRes;
+    if (proc) {
+        proc->mpCtRq = 0;
+    }
+    cMl::free(i_request);
     return TRUE;
 }
-VERIFY(0x025DD8A0,Delete);
-static BOOL Cancel(u32 req) {
-    WWHD_FUNC(0x025DD934,BOOL,req);
-    if(!req || lb(req+0x15)) return TRUE;
-    u32 proc=ld(req+0x40);
-    sb(req+0x15,1);
-    if(proc && !gabi::call<BOOL>(0x025DE1B8,proc)) return FALSE;
-    u32 methods=ld(req+0x34);
-    if(methods && !gabi::call<BOOL>(0x025DFCAC,ld(methods+4),req)) return FALSE;
-    return gabi::call<BOOL>(0x025DD8A0,req);
+
+/* 025DD934 */
+BOOL fpcCtRq_Cancel(create_request* i_request) {
+    if (!i_request || i_request->mbIsCancelling) {
+        return TRUE;
+    }
+    // HD: capture the process before setting the cancelling byte, as in the verified entry.
+    base_process_class* proc = i_request->mpRes;
+    i_request->mbIsCancelling = TRUE;
+    if (proc && !fpcDt_Delete(proc)) {
+        return FALSE;
+    }
+    create_request_method_class* methods = i_request->mpCtRqMtd;
+    if (methods && !fpcMtd_Method(methods->mpCancel.get(), i_request)) {
+        return FALSE;
+    }
+    return fpcCtRq_Delete(i_request);
 }
-VERIFY(0x025DD934,Cancel);
-static BOOL IsDoing(u32 req) {
-    WWHD_FUNC(0x025DD9E4,BOOL,req);
-    return req ? lb(req+0x14) : FALSE;
+
+/* 025DD9E4 */
+BOOL fpcCtRq_IsDoing(create_request* i_request) {
+    return i_request ? i_request->mbIsCreating : FALSE;
 }
-VERIFY(0x025DD9E4,IsDoing);
-static BOOL Do(u32 req) {
-    WWHD_FUNC(0x025DD9F8,BOOL,req);
-    u32 phase=4;
-    u32 methods=ld(req+0x34);
-    if(methods) {
-        u32 handler=ld(methods);
-        if(handler) {
-            sb(req+0x14,1);
-            phase=gabi::call_ptr<u32>(handler,req);
-            sb(req+0x14,0);
+
+/* 025DD9F8 */
+BOOL fpcCtRq_Do(create_request* i_request) {
+    u32 phase = cPhs_COMPLEATE_e;
+    create_request_method_class* methods = i_request->mpCtRqMtd;
+    if (methods) {
+        u32 handler = methods->mpHandler.get();
+        if (handler) {
+            i_request->mbIsCreating = TRUE;
+            phase = fpcCtRq_callHandler(handler, i_request);
+            i_request->mbIsCreating = FALSE;
         }
     }
-    if(phase==4) {
-        if(gabi::call<BOOL>(0x025DE720,ld(req+0x40))) return gabi::call<BOOL>(0x025DD8A0,req);
-        return gabi::call<BOOL>(0x025DD934,req);
+    switch (phase) {
+    case cPhs_COMPLEATE_e:
+        if (fpcEx_ToExecuteQ(i_request->mpRes)) {
+            return fpcCtRq_Delete(i_request);
+        }
+        return fpcCtRq_Cancel(i_request);
+    case cPhs_STOP_e:
+    case cPhs_ERROR_e:
+        return fpcCtRq_Cancel(i_request);
+    default:
+        return TRUE;
     }
-    if(phase==3 || phase==5) return gabi::call<BOOL>(0x025DD934,req);
-    return TRUE;
 }
-VERIFY(0x025DD9F8,Do);
-static BOOL Handler() {
-    WWHD_FUNC(0x025DDAC4,BOOL,(u32)0);
-    return gabi::call<BOOL>(0x025DD6D8,0x025DD9F8,0);
+
+/* 025DDAC4 */
+BOOL fpcCtRq_Handler() {
+    return fpcCtIt_Method(gabi::guest_fn((const void*)fpcCtRq_Do), NULL);
 }
-VERIFY(0x025DDAC4,Handler);
-static u32 Create(u32 layer,u32 size,u32 methods) {
-    WWHD_FUNC(0x025DDAD4,u32,layer,size,methods);
-    u32 req=gabi::call<u32>(0x02019430,(s32)-4,size);
-    if(req) {
-        gabi::call(0x025DDC2C,req,req);
-        gabi::call(0x025DFE2C,req+0x18,0x025DD934,req);
-        st(req+0x44,layer);
-        st(req+0x34,methods);
-        sb(req+0x38,0);
-        st(req+0x3C,gabi::call<u32>(0x025DD290));
-        sb(req+0x15,0);
-        st(req+0x40,0);
-        sb(req+0x14,0);
-        gabi::call(0x025DEA80,ld(req+0x44));
-        gabi::call(0x025DE9E4,ld(req+0x44),req+0x18);
-        gabi::call(0x025DDC18,req);
+
+/* 025DDAD4 */
+create_request* fpcCtRq_Create(layer_class* i_layer, u32 i_size,
+                              create_request_method_class* i_CtRqMethods) {
+    create_request* pReq = (create_request*)cMl::memalignB(-4, i_size);
+    if (pReq) {
+        fpcCtTg_Init(&pReq->base, pReq);
+        fpcMtdTg_Init(&pReq->mMtdTg, gabi::guest_fn((const void*)fpcCtRq_Cancel), pReq);
+        pReq->mpLayer = i_layer;
+        pReq->mpCtRqMtd = i_CtRqMethods;
+        // HD: only this byte of the GameCube mpUnk1 slot is initialized here.
+        pReq->hdFastCreateState = 0;
+        pReq->mBsPcId = fpcBs_MakeOfId();
+        pReq->mbIsCancelling = FALSE;
+        pReq->mpRes = NULL;
+        pReq->mbIsCreating = FALSE;
+        fpcLy_CreatingMesg(pReq->mpLayer);
+        fpcLy_ToCancelQ(pReq->mpLayer, &pReq->mMtdTg);
+        fpcCtTg_ToCreateQ(&pReq->base);
     }
-    return req;
+    return pReq;
 }
-VERIFY(0x025DDAD4,Create);
-static void sinit() {
-    WWHD_FUNC(0x025DDB84,void,(u32)0);
-    sinit_header_statics(0x1048A6D8,0x101F395C);
+
+/* 025DDB84 */
+static void __sinit_f_pc_create_req_cpp() {
+    // HD: retain this unit's header-object initialization and registration order.
+    for (int i = 0; i < 4; ++i) {
+        l_headerStatics.zero[i] = 0;
+    }
+    __register_global_object(0x101F395C);
+    l_headerStatics.negativePi = -3.1415927f;
+    l_headerStatics.positivePi = 3.1415927f;
+    CreateRequestFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F3968);
+    CreateRequestSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F3974);
 }
-VERIFY(0x025DDB84,sinit);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+data l_headerStatics 1048A6D8
+ext 025DD714 void* fpcCtIt_Judge(u32, void*)
+ext 025DD6D8 BOOL fpcCtIt_Method(u32, void*)
+ext 025DDC28 void fpcCtTg_CreateQTo(create_tag*)
+ext 025DDC18 void fpcCtTg_ToCreateQ(create_tag*)
+ext 025DDC2C void fpcCtTg_Init(create_tag*, void*)
+ext 025DEA90 void fpcLy_CreatedMesg(layer_class*)
+ext 025DEA80 void fpcLy_CreatingMesg(layer_class*)
+ext 025DE9E0 void fpcLy_CancelQTo(process_method_tag_class*)
+ext 025DE9E4 void fpcLy_ToCancelQ(layer_class*, process_method_tag_class*)
+ext 025DFE2C void fpcMtdTg_Init(process_method_tag_class*, u32, void*)
+ext 025DFCAC BOOL fpcMtd_Method(u32, void*)
+ext 025DE1B8 BOOL fpcDt_Delete(base_process_class*)
+ext 025DE720 BOOL fpcEx_ToExecuteQ(base_process_class*)
+ext 025DD290 u32 fpcBs_MakeOfId()
+ext 028ED6F8 void CreateRequestFirstHeaderObject_ct(u8*)
+ext 028EAB2C void CreateRequestSecondHeaderObject_ct(u8*)
+*/

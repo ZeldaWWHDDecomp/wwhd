@@ -1,125 +1,135 @@
-#include "gabi.h"
-struct ThrowstoneName { u8 data[8]; };
-BOOL Throwstone_CreateHeap(u32 self) {
-    WWHD_FUNC(0x025C527C, BOOL, self);
-    gabi::Local<ThrowstoneName> name;
-    gmem_st32(name.a + 4, 0x10056034); gmem_st32(name.a, 0x10056070);
-    u32 data = gabi::call<u32>(0x026066C4, gmem_ld32(0x101F4F28), name.get(), 3);
-    if (!data) return FALSE;
-    u32 model = gabi::call<u32>(0x025E38E0, data, 0x80000, 0x11000002);
-    gmem_st32(self + 0x3B4, model);
-    return model != 0;
-}
-VERIFY(0x025C527C, Throwstone_CreateHeap);
-BOOL Throwstone_CheckCreateHeap(u32 self) {
-    WWHD_FUNC(0x025C5310, BOOL, self);
-    return gabi::call<BOOL>(0x025C527C, self);
-}
-VERIFY(0x025C5310, Throwstone_CheckCreateHeap);
-static void throwstone_SetScale(u32 self) {
-    f32 x = gabi::load<f32>(self + 0x330), z = gabi::load<f32>(self + 0x338);
-    u32 model = gmem_ld32(self + 0x3B4);
-    f32 y = gabi::load<f32>(self + 0x334);
-    gabi::store<f32>(model + 0xBC, x); gabi::store<f32>(model + 0xC4, z);
-    gabi::store<f32>(model + 0xC0, y);
-}
-static void throwstone_CopyMatrix(u32 self) {
-    f32 values[12];
-    for (u32 i = 0; i < 12; ++i) values[i] = gabi::load<f32>(0x1048D0CC + i * 4);
-    u32 model = gmem_ld32(self + 0x3B4);
-    for (u32 i = 0; i < 12; ++i) gabi::store<f32>(model + 0xC8 + i * 4, values[i]);
-    gabi::call<void>(0x028E90D4, 0x1048D0CC, self + 0x3B8);
-}
-s32 Throwstone_Create(u32 self) {
-    WWHD_FUNC(0x025C5314, s32, self);
-    s32 phase = gabi::call<s32>(0x02520460, self + 0x3AC, 0x10056070);
-    if (phase != 4) return phase;
-    u32 flags = gmem_ld32(self + 0x2E4);
-    if (!(flags & 8)) {
-        if (self) {
-            gabi::call<void>(0x025D4ED0, self);
-            flags = gmem_ld32(self + 0x2E4);
-            gmem_st32(self + 0xB4, 0x1005604C);
-        }
-        gmem_st32(self + 0x2E4, flags | 8);
-    }
-    if (!gabi::call<BOOL>(0x025D63E8, self, 0x025C5310, 0x4C0)) return 5;
-    throwstone_SetScale(self);
-    gabi::call<void>(0x028E93CC, 0x1048D0CC, gabi::load<f32>(self + 0x314),
-        gabi::load<f32>(self + 0x318), gabi::load<f32>(self + 0x31C));
-    gabi::call<void>(0x025F1B48, 0x1048D0CC, (s32)gabi::load<s16>(self + 0x328),
-        (s32)gabi::load<s16>(self + 0x32A), (s32)gabi::load<s16>(self + 0x32C));
-    throwstone_CopyMatrix(self);
-    return phase;
-}
-VERIFY(0x025C5314, Throwstone_Create);
-BOOL Throwstone_Delete(u32 self) {
-    WWHD_FUNC(0x025C5498, BOOL, self);
-    gabi::call<void>(0x025204C8, self + 0x3AC, 0x10056070);
-    return TRUE;
-}
-VERIFY(0x025C5498, Throwstone_Delete);
-BOOL Throwstone_Execute(u32 self) {
-    WWHD_FUNC(0x025C54C8, BOOL, self);
-    BOOL active = gabi::call<u32>(0x02527028, self, 0x6A, 0, 0, 0, 0, 0, 0) != 0;
-    gmem_st8(self + 0x3E8, active);
-    if (active) {
-        throwstone_SetScale(self);
-        gabi::call<void>(0x028E93CC, 0x1048D0CC, gabi::load<f32>(self + 0x314),
-            gabi::load<f32>(self + 0x318), gabi::load<f32>(self + 0x31C));
-        gabi::call<void>(0x025F1B48, 0x1048D0CC, (s32)gabi::load<s16>(self + 0x328),
-            (s32)gabi::load<s16>(self + 0x32A), (s32)gabi::load<s16>(self + 0x32C));
-        throwstone_CopyMatrix(self);
-    }
-    return TRUE;
-}
-VERIFY(0x025C54C8, Throwstone_Execute);
-BOOL Throwstone_Draw(u32 self) {
-    WWHD_FUNC(0x025C55E8, BOOL, self);
-    if (gmem_ld8(self + 0x3E8)) {
-        u32 save = gmem_ld32(0x101F84DC);
-        if (gabi::call<BOOL>(0x025B8B94, save + 0x644, 0x310)) {
-            u32 env = gabi::call<u32>(0x02555D0C);
-            gabi::call<void>(0x025626A4, env, 0, self + 0x314, self + 0x110);
-            env = gabi::call<u32>(0x02555D0C);
-            gabi::call<void>(0x02562F5C, env, gmem_ld32(self + 0x3B4), self + 0x110);
-            gabi::call<void>(0x025E2DE0, gmem_ld32(self + 0x3B4), 0);
-        }
-    }
-    return TRUE;
-}
-VERIFY(0x025C55E8, Throwstone_Draw);
-void Throwstone_StaticInit() {
-    WWHD_FUNC(0x025C566C, void);
-    gmem_st32(0x104871E0, 0); gmem_st32(0x104871D8, 0);
-    gmem_st32(0x104871E4, 0); gmem_st32(0x104871DC, 0);
-    gabi::call<void>(0x028F026C, 0x101EE6E8);
-    f32 lower = gabi::load<f32>(0x10056064), upper = gabi::load<f32>(0x10056068);
-    gabi::store<f32>(0x104871CC, lower); gabi::store<f32>(0x104871D0, upper);
-    gabi::call<void>(0x028ED6F8, 0x104871D4);
-    gabi::call<void>(0x028F026C, 0x101EE6F4);
-    gabi::call<void>(0x028EAB2C, 0x104871D5);
-    gabi::call<void>(0x028F026C, 0x101EE700);
-}
-VERIFY(0x025C566C, Throwstone_StaticInit);
-BOOL Throwstone_IsDelete(u32 self) { WWHD_FUNC(0x025C5714, BOOL, self); return TRUE; }
-VERIFY(0x025C5714, Throwstone_IsDelete);
-void Throwstone_Destructor(u32 self, u32 flags) {
-    WWHD_FUNC(0x025C571C, void, self, flags);
-    if (self) {
-        gabi::call<void>(0x025D50BC, self, 0);
-        if (flags & 1) gabi::call<void>(0x0273AF40, self);
-    }
-}
-VERIFY(0x025C571C, Throwstone_Destructor);
-void Throwstone_EmptyInit() { WWHD_FUNC(0x025C5770, void); }
-VERIFY(0x025C5770, Throwstone_EmptyInit);
+/* Cutscene stone actor, verified WWHD behavior. */
+#include "d/d_throwstone.h"
 
-/* 025C5700 this TU's sead::SafeString copy (vtable 10056034, built in daThrowstone_c::CreateHeap): deleting destructor of a trivially
- * destructible class: operator delete when this != NULL and bit 0 of the flags is set */
-static void Throwstone_SafeString_deletingDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x025C5700, void, p, flags);
-    if (p == 0) return;
-    if (flags & 1) gabi::call(0x0273AF40, p);
+const gc_tu_data gc_tu = { .safeString = 0x10056034 };
+static const char M_arcname[] = "Aisi";
+static u32 actorVtable;
+
+/* 025C527C */
+BOOL daThrowstone_c::CreateHeap() {
+    J3DModelData* pModelData = static_cast<J3DModelData*>(
+        dComIfG_getObjectRes(M_arcname, dRes_INDEX_AISI_BDL_AISI_e));
+    if (pModelData == NULL) return FALSE;
+    mpModel = mDoExt_J3DModel__create(pModelData, 0x80000, 0x11000002);
+    return mpModel.get() != NULL;
 }
-VERIFY(0x025C5700, Throwstone_SafeString_deletingDtor);
+
+/* 025C5310 */
+static BOOL CheckCreateHeap(fopAc_ac_c* i_actor) {
+    return static_cast<daThrowstone_c*>(i_actor)->CreateHeap();
+}
+
+static void throwstone_SetScale(daThrowstone_c* i_this) {
+    f32 x = i_this->scale.x;
+    f32 z = i_this->scale.z;
+    J3DModel* model = i_this->mpModel;
+    f32 y = i_this->scale.y;
+    model->mBaseScale.x = x;
+    model->mBaseScale.z = z;
+    model->mBaseScale.y = y;
+}
+
+static void throwstone_CopyMatrix(daThrowstone_c* i_this) {
+    f32 values[12];
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    for (u32 i = 0; i < 12; ++i) values[i] = matrix->m[i / 4][i % 4];
+    J3DModel* model = i_this->mpModel;
+    for (u32 i = 0; i < 12; ++i) model->mBaseTransformMtx.m[i / 4][i % 4] = values[i];
+    throwstoneMatrixCopy(matrix, &i_this->mMtx);
+}
+
+/* 025C5314 */
+cPhs_State daThrowstone_c::_create() {
+    cPhs_State result = dComIfG_resLoad(&mPhs, M_arcname);
+    if (result != cPhs_COMPLEATE_e) return result;
+    // HD: placement construction tests null, then reloads condition before setting INIT.
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            throwstoneActorConstruct(this);
+            flags = actor_condition;
+            __vtbl = gabi::ea(&actorVtable);
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
+    }
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)CheckCreateHeap), 0x4C0)) return cPhs_ERROR_e;
+    // HD: scale belongs to the model and all three shape angles form the matrix.
+    throwstone_SetScale(this);
+    mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    throwstone_CopyMatrix(this);
+    return result;
+}
+
+/* 025C5498 */
+BOOL daThrowstone_c::_delete() {
+    dComIfG_resDeleteDemo(&mPhs, M_arcname);
+    return TRUE;
+}
+
+/* 025C54C8 */
+BOOL daThrowstone_c::_execute() {
+    // HD: update the model only when demo-data activation succeeds; return TRUE.
+    BOOL active = dDemo_setDemoData(this, ThrowstoneDemo_Transform | ThrowstoneDemo_Rotate |
+        ThrowstoneDemo_Animation | ThrowstoneDemo_AnimationFrame, 0, 0, 0, 0, 0, 0) != 0;
+    mDemoActive = active;
+    if (active) {
+        throwstone_SetScale(this);
+        mDoMtx_stack_c::transS(current.pos.x, current.pos.y, current.pos.z);
+        mDoMtx_stack_c::ZXYrotM(shape_angle);
+        throwstone_CopyMatrix(this);
+    }
+    return TRUE;
+}
+
+/* 025C55E8 */
+BOOL daThrowstone_c::_draw() {
+    // HD: demo activation additionally gates the event-bit visibility test.
+    if (mDemoActive && dComIfGs_isEventBit(ThrowstoneEvent_Visible)) {
+        dScnKy_env_light_c* env = dKy_getEnvlight();
+        settingTevStruct(env, 0, &current.pos, &tevStr);
+        env = dKy_getEnvlight();
+        setLightTevColorType(env, mpModel, &tevStr);
+        mDoExt_modelUpdateDL(mpModel, 0);
+    }
+    return TRUE;
+}
+
+/* 025C566C */
+static void __sinit_d_throwstone_cpp() {
+    // HD: initialize common header statics emitted in this unit.
+    sinit_header_statics_rodata(0x104871CC, 0x101EE6E8, 0x104871D8, 0x10056064);
+}
+
+/* 025C5714 */
+static BOOL daThrowstoneIsDelete(void* i_this) {
+    return TRUE;
+}
+
+/* 025C571C */
+// HD: explicit GHS deleting-destructor entry preserves its flags argument.
+static void daThrowstone_c__dt(daThrowstone_c* i_this, u32 flags) {
+    if (i_this != NULL) {
+        throwstoneActorDestruct(i_this, 0);
+        if (flags & 1) throwstoneDeleteStorage(i_this);
+    }
+}
+
+/* 025C5770 */
+static void throwstoneEmptyInit() {}
+
+/* 025C5700 */
+// HD: this unit's trivial sead::SafeString deleting destructor.
+static void throwstoneSafeStringDeletingDtor(void* object, u32 flags) {
+    if (object != NULL && (flags & 1)) throwstoneDeleteStorage(object);
+}
+
+/* WWHD glue
+data actorVtable 1005604C
+str 10056070 "Aisi" renamed
+ext 025D4ED0 void throwstoneActorConstruct(daThrowstone_c*)
+ext 025D50BC void throwstoneActorDestruct(daThrowstone_c*, u32)
+ext 0273AF40 void throwstoneDeleteStorage(void*)
+ext 02527028 u32 dDemo_setDemoData(fopAc_ac_c*, u32, u32, u32, u32, u32, u32, u32)
+ext 028E90D4 void throwstoneMatrixCopy(Mtx34*, Mtx34*)
+*/

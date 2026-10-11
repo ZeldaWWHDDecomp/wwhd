@@ -1,117 +1,165 @@
-/* f_pc_manager: HD management loop, lifecycle wrappers and layer lookup.
- * Full025DF904..025DFCA8 TU; mistaken legacy DD868 map is
- * owned by create_req (the manager alias was folded into its ID lookup).
- * Graphics/DVD error message code from GC is absent; HD adds its render object tail.
- */
-#include "bindings.h"
-namespace f_pc_manager_cpp {
-static u32 ld(u32 a) {return gabi::load<u32>(a);}
-static u8 lb(u32 a) {return gabi::load<u8>(a);}
-static void st(u32 a,u32 v) {gabi::store<u32>(a,v);}
-static BOOL Draw(u32 proc) {
-    WWHD_FUNC(0x025DF904,BOOL,proc);
-    return gabi::call<BOOL>(0x025DE2CC,proc);
+/** Process management. */
+#include "f_pc/f_pc_manager.h"
+static HDRenderObject* l_renderObject;
+static layer_class rootlayer;
+static ManagerQueue queue;
+static ManagerHeaderStatics l_headerStatics;
+static const ManagerConstants l_constants;
+
+/* 025DF904 */
+BOOL fpcM_Draw(void* i_proc) {
+    return fpcDw_Execute((base_process_class*)i_proc);
 }
-VERIFY(0x025DF904,Draw);
-static BOOL DrawIterater(u32 callback) {
-    WWHD_FUNC(0x025DF908,BOOL,callback);
-    u32 layer=gabi::call<u32>(0x025DEAA8);
-    return gabi::call<BOOL>(0x025DED70,layer,callback,0);
+
+/* 025DF908 */
+BOOL fpcM_DrawIterater(u32 i_drawIterFunc) {
+    return fpcLyIt_OnlyHere(fpcLy_RootLayer(), i_drawIterFunc, NULL);
 }
-VERIFY(0x025DF908,DrawIterater);
-static BOOL Execute(u32 proc) {
-    WWHD_FUNC(0x025DF940,BOOL,proc);
-    return gabi::call<BOOL>(0x025DE58C,proc);
+
+/* 025DF940 */
+BOOL fpcM_Execute(void* i_proc) {
+    return fpcEx_Execute((base_process_class*)i_proc);
 }
-VERIFY(0x025DF940,Execute);
-static BOOL Delete(u32 proc) {
-    WWHD_FUNC(0x025DF944,BOOL,proc);
-    return gabi::call<BOOL>(0x025DE1B8,proc);
+
+/* 025DF944 */
+BOOL fpcM_Delete(void* i_proc) {
+    return fpcDt_Delete((base_process_class*)i_proc);
 }
-VERIFY(0x025DF944,Delete);
-static void Management(u32 before,u32 after) {
-    WWHD_FUNC(0x025DF948,void,before,after);
-    gabi::call(0x0200FAC4);
-    gabi::call(0x025F2B08);
-    u32 play=gabi::call<u32>(0x025200D4);
-    if(lb(play+0x5AC9)) {
-        play=gabi::call<u32>(0x025200D4);
-        s32 slot=(s8)lb(play+0x5AF4);
-        u32 current=play+0x5ACC;
-        play=gabi::call<u32>(0x025200D4);
-        u32 active=ld(play+slot*52+0x5AF8);
-        if(active) {
-            play=gabi::call<u32>(0x025200D4);
-            st(play+0x5D04,current);
-            play=gabi::call<u32>(0x025200D4);
-            st(play+0x5D08,active);
-            play=gabi::call<u32>(0x025200D4);
-            st(play+0x5D0C,current);
+
+/* 025DF948 */
+void fpcM_Management(u32 callBack1, u32 callBack2) {
+    MtxInit();
+    cAPIGph_Painter();
+    // HD: no GameCube DVD-condition path. Restore the active window/camera before queues.
+    // Keep every accessor call: the verified HD inlines fetch game info anew each time.
+    if (fpcM_gameInfo()->mDlstWindowNum) {
+        ManagerGameInfo* info = fpcM_gameInfo();
+        s32 slot = info->mDlstWindow[0].mCameraID;
+        ManagerWindow* current = &info->mDlstWindow[0];
+        void* active = fpcM_cameraInfo(fpcM_gameInfo(), slot)->mpCamera;
+        if (active) {
+            fpcM_gameInfo()->mCurrentWindow = current;
+            fpcM_gameInfo()->mCurrentView = active;
+            fpcM_gameInfo()->mCurrentViewport = current;
         }
     }
-    gabi::call(0x025DE024);
-    if(!gabi::call<BOOL>(0x025E0EE4)) gabi::call(0x0273AA24,0x10058398,0x256,0x10058394);
-    if(!gabi::call<BOOL>(0x025DDCEC)) gabi::call(0x0273AA24,0x10058398,0x25A,0x10058394);
-    if(before) gabi::call_ptr(before);
-    gabi::call(0x025DE788,0x025DF940);
-    gabi::call(0x025DE37C,0x025DF908,0x025DF904);
-    if(after) gabi::call_ptr(after);
-    u32 graphics=ld(0x101F8344);
-    if(graphics) gabi::call(0x02715310,graphics);
+    fpcDt_Handler();
+    if (!fpcPi_Handler()) {
+        JUTAssertion::showAssert("f_pc_manager.cpp", 0x256, "0");
+    }
+    if (!fpcCt_Handler()) {
+        JUTAssertion::showAssert("f_pc_manager.cpp", 0x25A, "0");
+    }
+    if (callBack1) {
+        fpcM_callManagement(callBack1);
+    }
+    fpcEx_Handler(gabi::guest_fn((const void*)fpcM_Execute));
+    fpcDw_Handler(gabi::guest_fn((const void*)fpcM_DrawIterater), gabi::guest_fn((const void*)fpcM_Draw));
+    if (callBack2) {
+        fpcM_callManagement(callBack2);
+    }
+    // HD: draw the additional render object after the second callback.
+    HDRenderObject* graphics = l_renderObject;
+    if (graphics) {
+        HDRenderObject_draw(graphics);
+    }
 }
-VERIFY(0x025DF948,Management);
-static void Init() {
-    WWHD_FUNC(0x025DFA7C,void,(u32)0);
-    gabi::call(0x025DEBF0,0x1048A9BC,0,0x1048A9E8,10);
-    gabi::call(0x025DF468);
+
+/* 025DFA7C */
+void fpcM_Init() {
+    fpcLy_Create(&rootlayer, NULL, queue.lists, 10);
+    fpcLn_Create();
 }
-VERIFY(0x025DFA7C,Init);
-static u32 FastCreate(u32 type,u32 callback,u32 createData,u32 data) {
-    WWHD_FUNC(0x025DFAB8,u32,type,callback,createData,data);
-    u32 layer=gabi::call<u32>(0x025DED64);
-    return gabi::call<u32>(0x025DE884,layer,type,callback,createData,data);
+
+/* 025DFAB8 */
+base_process_class* fpcM_FastCreate(u32 i_procTypeID, u32 i_createReqFunc,
+                                  void* i_createData, void* i_data) {
+    // HD: retain the full-width profile argument (GameCube: s16).
+    return fpcFCtRq_Request(fpcLy_CurrentLayer(), i_procTypeID, i_createReqFunc, i_createData, i_data);
 }
-VERIFY(0x025DFAB8,FastCreate);
-static s32 IsPause(u32 proc,u32 flag) {
-    WWHD_FUNC(0x025DFB1C,s32,proc,flag);
-    return gabi::call<s32>(0x025E0B20,proc,flag);
+
+/* 025DFB1C */
+s32 fpcM_IsPause(void* i_proc, u32 i_flag) {
+    // HD: full-width flags are passed through, with no GameCube u8 mask.
+    return fpcPause_IsEnable((base_process_class*)i_proc, i_flag);
 }
-VERIFY(0x025DFB1C,IsPause);
-static void PauseEnable(u32 proc,u32 flag) {
-    WWHD_FUNC(0x025DFB20,void,proc,flag);
-    gabi::call(0x025E0B38,proc,flag);
+
+/* 025DFB20 */
+void fpcM_PauseEnable(void* i_proc, u32 i_flag) {
+    // HD: full-width flags are passed through.
+    fpcPause_Enable((base_process_class*)i_proc, i_flag);
 }
-VERIFY(0x025DFB20,PauseEnable);
-static void PauseDisable(u32 proc,u32 flag) {
-    WWHD_FUNC(0x025DFB24,void,proc,flag);
-    gabi::call(0x025E0BA8,proc,flag);
+
+/* 025DFB24 */
+void fpcM_PauseDisable(void* i_proc, u32 i_flag) {
+    // HD: full-width flags are passed through.
+    fpcPause_Disable((base_process_class*)i_proc, i_flag);
 }
-VERIFY(0x025DFB24,PauseDisable);
-static u32 JudgeInLayer(u32 id,u32 callback,u32 data) {
-    WWHD_FUNC(0x025DFB28,u32,id,callback,data);
-    u32 layer=gabi::call<u32>(0x025DEAC0,id);
-    if(!layer) return 0;
-    u32 result=gabi::call<u32>(0x025DD780,id,callback,data);
-    if(!result) result=gabi::call<u32>(0x025DEE20,layer,callback,data);
-    return result;
+
+/* 025DFB28 */
+void* fpcM_JudgeInLayer(u32 i_layerID, u32 i_judgeFunc, void* i_data) {
+    layer_class* layer = fpcLy_Layer(i_layerID);
+    if (!layer) {
+        return NULL;
+    }
+    void* ret = fpcCtIt_JudgeInLayer(i_layerID, i_judgeFunc, i_data);
+    if (!ret) {
+        ret = fpcLyIt_Judge(layer, i_judgeFunc, i_data);
+    }
+    return ret;
 }
-VERIFY(0x025DFB28,JudgeInLayer);
-static void sinit() {
-    WWHD_FUNC(0x025DFBE8,void,(u32)0);
-    for(int i=0;i<4;++i) st(0x1048A9AC+4*i,0);
-    gabi::call(0x028F026C,0x101F3C88);
-    gabi::store<f32>(0x1048A990,gabi::load<f32>(0x100583B4));
-    gabi::store<f32>(0x1048A994,gabi::load<f32>(0x100583B8));
-    gabi::call(0x028ED6F8,0x1048A9A8);
-    gabi::call(0x028F026C,0x101F3C94);
-    gabi::call(0x028EAB2C,0x1048A9A9);
-    gabi::call(0x028F026C,0x101F3CA0);
-    f32 first=gabi::load<f32>(0x100583BC);
-    f32 second=gabi::load<f32>(0x100583C0);
-    gabi::store<f32>(0x1048A998,first);
-    gabi::store<f32>(0x1048A9A0,second);
-    gabi::store<f32>(0x1048A99C,first);
-    gabi::store<f32>(0x1048A9A4,second);
+
+/* 025DFBE8 */
+static void __sinit_f_pc_manager_cpp() {
+    // HD: header objects precede initialization of two additional constant pairs.
+    for (int i = 0; i < 4; ++i) {
+        l_headerStatics.zero[i] = 0;
+    }
+    __register_global_object(0x101F3C88);
+    l_headerStatics.negativePi = l_constants.negativePi;
+    l_headerStatics.positivePi = l_constants.positivePi;
+    ManagerFirstHeaderObject_ct(&l_headerStatics.firstObject);
+    __register_global_object(0x101F3C94);
+    ManagerSecondHeaderObject_ct(&l_headerStatics.secondObject);
+    __register_global_object(0x101F3CA0);
+    f32 first = l_constants.first;
+    f32 second = l_constants.second;
+    l_headerStatics.firstPair[0] = first;
+    l_headerStatics.secondPair[0] = second;
+    l_headerStatics.firstPair[1] = first;
+    l_headerStatics.secondPair[1] = second;
 }
-VERIFY(0x025DFBE8,sinit);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): this translation unit's data
+str 10058398 "f_pc_manager.cpp"
+str 10058394 "0"
+data l_renderObject 101F8344
+data rootlayer 1048A9BC
+data queue 1048A9E8
+data l_headerStatics 1048A990
+data l_constants 100583B4
+ext 025DE2CC BOOL fpcDw_Execute(base_process_class*)
+ext 025DEAA8 layer_class* fpcLy_RootLayer()
+ext 025DED70 BOOL fpcLyIt_OnlyHere(layer_class*, u32, void*)
+ext 025DE58C BOOL fpcEx_Execute(base_process_class*)
+ext 025DE1B8 BOOL fpcDt_Delete(base_process_class*)
+ext 0200FAC4 void MtxInit()
+ext 025F2B08 void cAPIGph_Painter()
+ext 025DE024 void fpcDt_Handler()
+ext 025E0EE4 BOOL fpcPi_Handler()
+ext 025DDCEC BOOL fpcCt_Handler()
+ext 025DE788 void fpcEx_Handler(u32)
+ext 025DE37C void fpcDw_Handler(u32, u32)
+ext 02715310 void HDRenderObject_draw(HDRenderObject*)
+ext 025DEBF0 void fpcLy_Create(layer_class*, void*, ManagerNodeList*, u32)
+ext 025DF468 void fpcLn_Create()
+ext 025DE884 base_process_class* fpcFCtRq_Request(layer_class*, u32, u32, void*, void*)
+ext 025E0B20 s32 fpcPause_IsEnable(base_process_class*, u32)
+ext 025E0B38 void fpcPause_Enable(base_process_class*, u32)
+ext 025E0BA8 void fpcPause_Disable(base_process_class*, u32)
+ext 025DEAC0 layer_class* fpcLy_Layer(u32)
+ext 025DD780 void* fpcCtIt_JudgeInLayer(u32, u32, void*)
+ext 025DEE20 void* fpcLyIt_Judge(layer_class*, u32, void*)
+ext 028ED6F8 void ManagerFirstHeaderObject_ct(u8*)
+ext 028EAB2C void ManagerSecondHeaderObject_ct(u8*)
+*/

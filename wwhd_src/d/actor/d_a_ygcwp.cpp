@@ -1,193 +1,262 @@
-// Ganon's Castle warp portal. See wwhd_src/README.md.
+/**
+ * Ganon's Castle warp portal, in the style of zeldaret/tww.
+ * Verified against WWHD by d_a_ygcwp and d_a_ygcwp_oct04. Private game-derived source.
+ */
 #include "d/actor/d_a_ygcwp.h"
-using gabi::load; using gabi::store; using gabi::call;
-static u32 play() { return call<u32>(0x025200D4); }
-static u32 environment() { return call<u32>(0x02555D0C); }
-static f32 constant(u32 address) { return load<f32>(address); }
-static u32 resource(u32 index) {
-    gabi::Local<SafeString> name;
-    name->mStringTop=0x10043010; name->__vtbl=0x10042F54;
-    return call<u32>(0x026066C4,load<u32>(0x101F4F28),name.get(),index);
+
+const gc_tu_data gc_tu = {.safeString = 0x10042F54};
+const char daYgcwp_c::M_arcname[] = "Ygcwp";
+static f32 l_playSpeed;
+static f32 l_stoppedSpeed;
+static f32 l_cullMinXZ;
+static f32 l_cullMaxXZ;
+static f32 l_cullMinY;
+static f32 l_cullMaxY;
+static f32 l_headerMin;
+static f32 l_headerMax;
+static YgcwpBrkTable M_brk_table;
+static YgcwpBrkTable M_brk_mode_table;
+static YgcwpActionTable M_act_table;
+static YgcwpHeaderStatics l_headerStatics;
+static YgcwpDestructorRecords l_destructorRecords;
+static YgcwpActorVtable l_actorVtable;
+
+/* 024E9E68 */
+static BOOL solidHeapCB(daYgcwp_c* i_this) {
+    return i_this->create_heap();
 }
-static void resourceAssert(s32 line,u32 message) {
-    call(0x0273AA24,STR(0x10042FB0),line,STR(message));
-}
-static BOOL create_heap(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024E9D04,BOOL,actor);
-    u32 data=resource(4);
-    if(!data) { resourceAssert(0xBE,0x10042FC0); return 0; }
-    actor->model=gabi::at<J3DModel>(call<u32>(0x025E38E0,data,0x80000,0x11000222));
-    if(!actor->model) return 0;
-    f32 speed=constant(0x10042FAC);
-    for(unsigned i=0;i<2;++i) {
-        u32 animation=resource(load<u32>(0x10043000+4*i));
-        if(!animation) { resourceAssert(0xC9,0x10042FD0); return 0; }
-        u32 mode=load<u32>(0x10043008+4*i);
-        if(!call<s32>(0x025E8154,&actor->brk[i],data,animation,1,mode,speed,0,-1,0,0)) return 0;
+
+/* 024E9D04 */
+BOOL daYgcwp_c::create_heap() {
+    // HD: retain the three SafeString stack slots until this function returns.
+    gabi::AutoFrame frame{gabi::current_function()};
+    J3DModelData* mdl_data = (J3DModelData*)dComIfG_getObjectRes(M_arcname, dRes_INDEX_YGCWP_BDL_YGCWP00_e);
+    if (mdl_data == NULL) {
+        JUT_ASSERT_fail("d_a_ygcwp.cpp", 0xBE, "mdl_data != 0");
+        return FALSE;
     }
-    return 1;
-}
-VERIFY(0x024E9D04,create_heap);
-static BOOL solidHeapCB(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024E9E68,BOOL,actor); return create_heap(actor);
-}
-VERIFY(0x024E9E68,solidHeapCB);
-static void copyModelMatrix(u32 model) {
-    f32 matrix[12];
-    for(unsigned i=0;i<12;++i) matrix[i]=load<f32>(0x1048D0CC+4*i);
-    for(unsigned i=0;i<12;++i) store<f32>(model+0xC8+4*i,matrix[i]);
-}
-static void init_mtx(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024E9E6C,void,actor);
-    u32 base=gabi::ea(actor),model=gabi::ea(actor->model.get());
-    f32 x=load<f32>(base+0x330),y=load<f32>(base+0x334),z=load<f32>(base+0x338);
-    store<f32>(model+0xBC,x); store<f32>(model+0xC0,y); store<f32>(model+0xC4,z);
-    x=load<f32>(base+0x314); y=load<f32>(base+0x318); z=load<f32>(base+0x31C);
-    call(0x028E93CC,0x1048D0CC,x,y,z);
-    s32 rx=load<s16>(base+0x328),ry=load<s16>(base+0x32A),rz=load<s16>(base+0x32C);
-    call(0x025F1B48,0x1048D0CC,rx,ry,rz);
-    copyModelMatrix(gabi::ea(actor->model.get()));
-}
-VERIFY(0x024E9E6C,init_mtx);
-static s32 create(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024E9F4C,s32,actor);
-    u32 base=gabi::ea(actor),flags=load<u32>(base+0x2E4);
-    if(!(flags&8)) {
-        if(actor) {
-            call(0x025D4ED0,actor);
-            store<u32>(base+0xB4,0x10042F6C);
-            call(0x028EFFD0,&actor->brk[0],2,0x78,0x025E80D0);
-            flags=load<u32>(base+0x2E4);
+    mpModel = mDoExt_J3DModel__create(mdl_data, 0x80000, 0x11000222);
+    if (mpModel == NULL)
+        return FALSE;
+
+    f32 speed = l_playSpeed;
+    for (u32 i = 0; i < 2; i++) {
+        J3DAnmTevRegKey* brk_p = (J3DAnmTevRegKey*)dComIfG_getObjectRes(M_arcname, M_brk_table.indices[i]);
+        if (brk_p == NULL) {
+            JUT_ASSERT_fail("d_a_ygcwp.cpp", 0xC9, "brk_p != 0");
+            return FALSE;
         }
-        store<u32>(base+0x2E4,flags|8);
+        u32 mode = M_brk_mode_table.indices[i];
+        // HD: expanded animation init arguments, with the original full-width mode.
+        if (!mBrkAnm[i].init(mdl_data, brk_p, TRUE, mode, speed, 0, -1, 0, 0))
+            return FALSE;
     }
-    s32 phase=call<s32>(0x02520460,&actor->phase,STR(0x10043010));
-    if(phase!=4) return phase;
-    if(!call<s32>(0x025D63E8,actor,0x024E9E68,0)) return 5;
-    u32 model=gabi::ea(actor->model.get());
-    store<u32>(base+0x348,model?model+0xC8:0);
-    init_mtx(actor);
-    u32 parameter=load<u32>(base+0xB0)&15;
-    actor->parameter=parameter<3?(s32)parameter:0;
-    f32 speed=constant(0x10042FDC);
-    actor->brk[1].speed=speed;
-    u32 save=load<u32>(0x101F84DC);
-    if(!call<s32>(0x025B8B94,save+0x1178,0x480)) {
-        speed=constant(0x10042FAC); actor->currentBrk=0;
+    return TRUE;
+}
+
+/* 024E9F4C */
+s32 daYgcwp_c::_create() {
+    u32 flags = actor_condition;
+    if (!(flags & fopAcCnd_INIT_e)) {
+        // HD: preserve the nullable placement constructor and the array constructor ABI.
+        if (gabi::ea(this) != 0) {
+            fopAc_ac_c_ct(this);
+            __vtbl = gabi::ea(&l_actorVtable);
+            YgcwpBrkArray_ct(&mBrkAnm[0], 2, sizeof(YgcwpBrkAnm), 0x025E80D0);
+            flags = actor_condition;
+        }
+        actor_condition = flags | fopAcCnd_INIT_e;
     }
-    actor->brk[0].speed=speed;
-    save=load<u32>(0x101F84DC);
-    call(0x025B8B7C,save+0x1178,0x480);
-    f32 low=constant(0x10042FE0),high=constant(0x10042FE4);
-    f32 bottom=constant(0x10042FE8),top=constant(0x10042FEC);
-    call(0x025D674C,actor,low,bottom,low,high,top,high);
-    return 4;
+    s32 rt = dComIfG_resLoad(&mPhs, M_arcname);
+    if (rt != cPhs_COMPLEATE_e)
+        return rt;
+    if (!fopAcM_entrySolidHeap(this, gabi::guest_fn((const void*)solidHeapCB), 0))
+        return cPhs_ERROR_e;
+
+    J3DModel* model = mpModel;
+    fopAcM_SetMtx(this, model ? &model->mBaseTransformMtx : NULL);
+    init_mtx();
+    u32 parameter = fopAcM_GetParam(this) & 0x0F;
+    m2D8 = parameter < 3 ? (s32)parameter : 0;
+    f32 speed = l_stoppedSpeed;
+    mBrkAnm[1].setPlaySpeed(speed);
+    if (!dComIfGs_isTmpBit(YGCWP_WARP_EVENT)) {
+        speed = l_playSpeed;
+        mCurBrk = 0;
+    }
+    mBrkAnm[0].setPlaySpeed(speed);
+    Ygcwp_offTmpBit(dComIfGs_getTmpEvent(), YGCWP_WARP_EVENT);
+    f32 low = l_cullMinXZ, high = l_cullMaxXZ;
+    f32 bottom = l_cullMinY, top = l_cullMaxY;
+    fopAcM_setCullSizeBox(this, low, bottom, low, high, top, high);
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x024E9F4C,create);
-static BOOL remove(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024EA0DC,BOOL,actor);
-    call(0x025204C8,&actor->phase,STR(0x10043010)); return 1;
+
+/* 024EA0DC */
+BOOL daYgcwp_c::_delete() {
+    dComIfG_resDeleteDemo(&mPhs, M_arcname);
+    return TRUE;
 }
-VERIFY(0x024EA0DC,remove);
-static void make_shine(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024EA10C,void,actor);
-    u32 base=gabi::ea(actor),particles=load<u32>(play()+0x5AB0);
-    call<u32>(0x025A847C,particles,0,0x8316,base+0x314,0,base+0x330,0xFF,0,-1,0,0,0);
+
+/* 024E9E6C */
+void daYgcwp_c::init_mtx() {
+    // HD: all three scale loads precede the stores, as do all twelve matrix loads.
+    J3DModel_setBaseScale(mpModel, &scale);
+    f32 x = current.pos.x, y = current.pos.y, z = current.pos.z;
+    mDoMtx_stack_c::transS(x, y, z);
+    mDoMtx_stack_c::ZXYrotM(shape_angle);
+    J3DModel_setBaseTRMtx(mpModel, mDoMtx_stack_c::get());
 }
-VERIFY(0x024EA10C,make_shine);
-static void set_timer(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024EA174,void,actor);
-    s32 staff=actor->staff;
-    u32 events=play()+0x52C4;
-    u32 value=call<u32>(0x0254487C,events,staff,STR(0x10042FF0),3);
-    actor->timer=0;
-    if(value) actor->timer=load<s32>(value);
+
+/* 024EA10C */
+void daYgcwp_c::make_shine() {
+    dComIfGp_particle_set(ID_AK_SN_GANONCASTLEWARP00, &current.pos, NULL, &scale);
 }
-VERIFY(0x024EA174,set_timer);
-static BOOL execute(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024EA1DC,BOOL,actor);
-    u32 base=gabi::ea(actor),player=load<u32>(play()+0x5B2C);
-    u32 events=play()+0x52C4;
-    s32 staff=call<s32>(0x02542D88,events,STR(0x10043010),0,0);
-    actor->staff=staff;
-    if(staff!=-1) {
-        events=play()+0x52C4;
-        s32 action=call<s32>(0x02542EDC,events,staff,0x101D3B9C,3,0,0);
-        staff=actor->staff; events=play()+0x52C4;
-        if(call<s32>(0x025447C8,events,staff)) {
-            f32 zero=constant(0x10042FDC),one=constant(0x10042FAC);
-            if(action==0) {
-                make_shine(actor);
-                actor->brk[1].frame=zero; actor->brk[1].speed=one; actor->currentBrk=1;
-                store<u32>(player+0x3B8,load<u32>(player+0x3B8)|0x08000000);
-                set_timer(actor);
-                s32 room=load<s8>(base+0x326);
-                s32 reverb=call<s32>(0x02520540,room);
-                call(0x025E1A40,0x288A,base+0x314,0,reverb);
-            } else if(action==1) {
-                set_timer(actor);
-                store<u32>(player+0x3B8,load<u32>(player+0x3B8)&~0x08000000u);
-            } else if(action==2) {
-                actor->brk[0].frame=zero; actor->brk[0].speed=one; actor->currentBrk=0;
+
+/* 024EA174 */
+void daYgcwp_c::set_timer() {
+    s32 staff = mStaffId;
+    be<s32>* a_intP = dComIfGp_evmng_getMyIntegerP(staff, "Timer");
+    mTimer = 0;
+    if (a_intP != NULL)
+        mTimer = (s32)*a_intP;
+}
+
+/* 024EA1DC */
+BOOL daYgcwp_c::_execute() {
+    YgcwpPlayer* player = (YgcwpPlayer*)dComIfGp_getPlayer(0);
+    s32 staff = dComIfGp_evmng_getMyStaffId(M_arcname);
+    mStaffId = staff;
+    if (staff != -1) {
+        s32 actIdx = dComIfGp_evmng_getMyActIdx(staff, M_act_table.names, 3, FALSE, 0);
+        staff = mStaffId;
+        if (dComIfGp_evmng_getIsAddvance(staff)) {
+            // HD: both constants are read before dispatch, including unknown actions.
+            f32 zero = l_stoppedSpeed, one = l_playSpeed;
+            switch (actIdx) {
+            case EVENT_WARP_START: {
+                make_shine();
+                mBrkAnm[1].setFrame(zero);
+                mBrkAnm[1].setPlaySpeed(one);
+                mCurBrk = 1;
+                player->mNoResetFlg0 |= YgcwpPlayer::daPyFlg0_NO_DRAW;
+                set_timer();
+                s32 room = current.roomNo;
+                // HD: retain the signed 32-bit reverb result used by this call site.
+                s32 reverb = Ygcwp_getReverb(room);
+                mDoAud_seStart(JA_SE_LK_FG_ROOM_WARP_OUT, &current.pos, 0, reverb);
+                break;
+            }
+            case EVENT_WARP_APPEAR:
+                set_timer();
+                player->mNoResetFlg0 &= ~YgcwpPlayer::daPyFlg0_NO_DRAW;
+                break;
+            case EVENT_WARP_MAKE:
+                mBrkAnm[0].setFrame(zero);
+                mBrkAnm[0].setPlaySpeed(one);
+                mCurBrk = 0;
+                break;
             }
         }
-        if((u32)action<=1) {
-            s32 timer=(s32)((u32)(s32)actor->timer-1u);
-            actor->timer=timer;
-            if(timer<=0) { staff=actor->staff; events=play()+0x52C4; call(0x02543280,events,staff); }
+        if ((u32)actIdx <= EVENT_WARP_APPEAR) {
+            // HD: the countdown wraps as a 32-bit subtraction before its signed test.
+            s32 timer = (s32)((u32)(s32)mTimer - 1u);
+            mTimer = timer;
+            if (timer <= 0) {
+                staff = mStaffId;
+                dComIfGp_evmng_cutEnd(staff);
+            }
         }
     }
-    for(unsigned i=0;i<2;++i) call<s32>(0x025E742C,&actor->brk[i]);
-    return 1;
+    for (u32 i = 0; i < 2; i++)
+        mBrkAnm[i].play();
+    return TRUE;
 }
-VERIFY(0x024EA1DC,execute);
-static BOOL draw(daYgcwp_c* actor) {
-    WWHD_FUNC(0x024EA3C4,BOOL,actor);
-    u32 base=gabi::ea(actor),env=environment();
-    call(0x025626A4,env,1,base+0x314,base+0x110);
-    env=environment(); u32 model=gabi::ea(actor->model.get());
-    call(0x02562F5C,env,model,base+0x110);
-    for(unsigned i=0;i<2;++i) {
-        if((u32)(s32)actor->currentBrk==i) {
-            model=gabi::ea(actor->model.get());
-            f32 frame=actor->brk[i].frame;
-            u32 data=load<u32>(model+0xAC);
-            call(0x025E83FC,&actor->brk[i],data,frame); break;
+
+/* 024EA3C4 */
+BOOL daYgcwp_c::_draw() {
+    g_env_light.settingTevStruct(TEV_TYPE_BG0, &current.pos, &tevStr);
+    g_env_light.setLightTevColorType(mpModel, &tevStr);
+    for (u32 i = 0; i < 2; i++) {
+        if ((u32)(s32)mCurBrk == i) {
+            J3DModel* model = mpModel;
+            f32 frame = mBrkAnm[i].getFrame();
+            J3DModelData* data = model->getModelData();
+            mBrkAnm[i].entry(data, frame);
+            break;
         }
     }
-    call(0x025E2DE0,actor->model.get(),0); return 1;
+    mDoExt_modelUpdateDL(mpModel);
+    return TRUE;
 }
-VERIFY(0x024EA3C4,draw);
-static s32 Mthd_Create(daYgcwp_c* actor) { WWHD_FUNC(0x024EA474,s32,actor); return create(actor); }
-VERIFY(0x024EA474,Mthd_Create);
-static BOOL Mthd_Delete(daYgcwp_c* actor) { WWHD_FUNC(0x024EA478,BOOL,actor); return remove(actor); }
-VERIFY(0x024EA478,Mthd_Delete);
-static BOOL Mthd_Execute(daYgcwp_c* actor) { WWHD_FUNC(0x024EA47C,BOOL,actor); return execute(actor); }
-VERIFY(0x024EA47C,Mthd_Execute);
-static BOOL Mthd_Draw(daYgcwp_c* actor) { WWHD_FUNC(0x024EA480,BOOL,actor); return draw(actor); }
-VERIFY(0x024EA480,Mthd_Draw);
-static void staticInit() {
-    WWHD_FUNC(0x024EA484,void);
-    store<u32>(0x1046EC4C,0); store<u32>(0x1046EC44,0);
-    store<u32>(0x1046EC50,0); store<u32>(0x1046EC48,0);
-    call(0x028F026C,0x101D3BA8);
-    store<f32>(0x1046EC38,constant(0x10042FF8));
-    store<f32>(0x1046EC3C,constant(0x10042FFC));
-    call(0x028ED6F8,0x1046EC40); call(0x028F026C,0x101D3BB4);
-    call(0x028EAB2C,0x1046EC41); call(0x028F026C,0x101D3BC0);
+
+/* 024EA474 */
+static s32 Mthd_Create(daYgcwp_c* i_this) { return i_this->_create(); }
+/* 024EA478 */
+static BOOL Mthd_Delete(daYgcwp_c* i_this) { return i_this->_delete(); }
+/* 024EA47C */
+static BOOL Mthd_Execute(daYgcwp_c* i_this) { return i_this->_execute(); }
+/* 024EA480 */
+static BOOL Mthd_Draw(daYgcwp_c* i_this) { return i_this->_draw(); }
+/* 024EA584 */
+static BOOL Mthd_IsDelete(daYgcwp_c*) { return TRUE; }
+
+// HD: compiler-generated and template code of this translation unit.
+/* 024EA484 */
+static void __sinit_d_a_ygcwp_cpp() {
+    l_headerStatics.zero[2] = 0;
+    l_headerStatics.zero[0] = 0;
+    l_headerStatics.zero[3] = 0;
+    l_headerStatics.zero[1] = 0;
+    __register_global_object(gabi::ea(l_destructorRecords.entries[0]));
+    l_headerStatics.minimum = l_headerMin;
+    l_headerStatics.maximum = l_headerMax;
+    YgcwpFirstHeaderObject_ct(&l_headerStatics.first);
+    __register_global_object(gabi::ea(l_destructorRecords.entries[1]));
+    YgcwpSecondHeaderObject_ct(&l_headerStatics.second);
+    __register_global_object(gabi::ea(l_destructorRecords.entries[2]));
 }
-VERIFY(0x024EA484,staticInit);
-static void SafeStringDestructor(SafeString* object,s32 flags) {
-    WWHD_FUNC(0x024EA518,void,object,flags);
-    if(object&&(flags&1)) call(0x0273AF40,object);
+/* 024EA518 */
+static void SafeString_dtor(SafeString* i_this, s32 flags) {
+    if (i_this != NULL && (flags & 1))
+        operator_delete(i_this);
 }
-VERIFY(0x024EA518,SafeStringDestructor);
-static void destructor(daYgcwp_c* actor,s32 flags) {
-    WWHD_FUNC(0x024EA52C,void,actor,flags);
-    if(actor) { call(0x025D50BC,actor,0); if(flags&1) call(0x0273AF40,actor); }
+/* 024EA52C */
+static void daYgcwp_c_dtor(daYgcwp_c* i_this, s32 flags) {
+    if (i_this != NULL) {
+        __dt((fopAc_ac_c*)i_this);
+        if (flags & 1)
+            operator_delete(i_this);
+    }
 }
-VERIFY(0x024EA52C,destructor);
-static void SafeStringVirtual(SafeString* object) { WWHD_FUNC(0x024EA580,void,object); }
-VERIFY(0x024EA580,SafeStringVirtual);
-static BOOL Mthd_IsDelete(daYgcwp_c* actor) { WWHD_FUNC(0x024EA584,BOOL,actor); return 1; }
-VERIFY(0x024EA584,Mthd_IsDelete);
+/* 024EA580 */
+static void SafeString_assureTerminationImpl(SafeString*) {}
+
+/* WWHD glue: translation-unit data and other-unit calls.
+str 10043010 "Ygcwp"
+str 10042FB0 "d_a_ygcwp.cpp"
+str 10042FC0 "mdl_data != 0"
+str 10042FD0 "brk_p != 0"
+str 10042FF0 "Timer"
+data l_playSpeed 10042FAC
+data l_stoppedSpeed 10042FDC
+data l_cullMinXZ 10042FE0
+data l_cullMaxXZ 10042FE4
+data l_cullMinY 10042FE8
+data l_cullMaxY 10042FEC
+data l_headerMin 10042FF8
+data l_headerMax 10042FFC
+data M_brk_table 10043000
+data M_brk_mode_table 10043008
+data M_act_table 101D3B9C
+data l_headerStatics 1046EC38
+data l_destructorRecords 101D3BA8
+data l_actorVtable 10042F6C
+ext 025E8154 BOOL YgcwpBrkAnm::init(J3DModelData*, J3DAnmTevRegKey*, u32, u32, f32, s32, s32, u32, u32)
+ext 025E83FC void YgcwpBrkAnm::entry(J3DModelData*, f32)
+ext 028EFFD0 void YgcwpBrkArray_ct(YgcwpBrkAnm*, u32, u32, u32)
+ext 025B8B7C void Ygcwp_offTmpBit(dSv_event_c*, u32)
+ext 02520540 s32 Ygcwp_getReverb(s32)
+ext 028ED6F8 void YgcwpFirstHeaderObject_ct(u8*)
+ext 028EAB2C void YgcwpSecondHeaderObject_ct(u8*)
+*/

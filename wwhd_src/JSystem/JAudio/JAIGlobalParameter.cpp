@@ -1,335 +1,374 @@
-/* Native JAIGlobalParameter setters/getters02804454..02804808, including
- * registration02804690. Prior DummyObject and following InitData excluded. */
-#include "gabi.h"
-using namespace gabi;
-namespace jai_global_cpp {
+/* Audio configuration parameters and accessors. Verified WWHD behavior. */
+#include "JSystem/JAudio/JAIGlobalParameter.h"
+
+namespace JAIGlobalParameter {
+// HD: path addresses retain their full u32 API signatures; float APIs use f64 registers
+// around the same f32 storage. Byte/halfword getter results retain u32 width.
+static u32 dummyObjectMax;
+static u32 interfaceHeapSize;
+static u32 soundSceneMax;
+static u32 seRegistMax;
+static u32 seqTrackMax;
+static u32 seTrackMax;
+static u32 seqControlBufferMax;
+static u32 streamControlBufferMax;
+static u32 autoHeapMax;
+static u32 stayHeapMax;
+static u32 seqPlayTrackMax;
+static u32 autoHeapRoomSize;
+static u32 stayHeapSize;
+static u32 initDataFileName;
+static u32 wavePath;
+static u32 sequenceArchivesPath;
+static u32 streamPath;
+static u32 sequenceArchivesFileName;
+static u32 audioResPath;
+static f32 inputGainDown;
+static f32 outputGainUp;
+static f32 distanceMax;
+static f32 minDistanceVolume;
+static f32 maxVolumeDistance;
+static f32 seDolbyCenterValue;
+static f32 seDolbyFrontDistanceMax;
+static f32 seDolbyBehindDistanceMax;
+static u32 dopplarMoveTime;
+static u32 dummyObjectLifeTime;
+static u32 seqMuteMoveSpeedSePlay;
+static u32 audioCameraMax;
+static u32 systemTrackMax;
+static u16 seDistanceFxParameter;
+static u16 seDistanceWaitMax;
+static u8 seqMuteVolumeSePlay;
+static u8 seqParameterLines;
+static u8 distanceParameterMoveTime;
+static JAIBasicView* msBasic;
+} // namespace JAIGlobalParameter
+using namespace JAIGlobalParameter;
+static AudioHeaderStatics headerStatics;
+static AudioDestructorRecord destructorRecord;
+
+namespace JAIGlobalParameter {
+/* 02804454 */
 void setParamInterfaceHeapSize(u32 value) {
-  WWHD_FUNC(0x02804454, void, value);
-  store<u32>(0x101F9BBC, value);
+    interfaceHeapSize = value;
 }
-VERIFY(0x02804454, setParamInterfaceHeapSize);
+/* 02804460 */
 void setParamSoundSceneMax(u32 value) {
-  WWHD_FUNC(0x02804460, void, value);
-  store<u32>(0x101F9BC0, value);
+    soundSceneMax = value;
 }
-VERIFY(0x02804460, setParamSoundSceneMax);
+/* 0280446C */
 void setParamSeRegistMax(u32 value) {
-  WWHD_FUNC(0x0280446C, void, value);
-  store<u32>(0x101F9BC4, value);
+    seRegistMax = value;
 }
-VERIFY(0x0280446C, setParamSeRegistMax);
+/* 02804478 */
 void setParamSeTrackMax(u32 value) {
-  WWHD_FUNC(0x02804478, void, value);
-  store<u32>(0x101F9BCC, value);
+    seTrackMax = value;
 }
-VERIFY(0x02804478, setParamSeTrackMax);
+/* 02804484 */
 void setParamSeqControlBufferMax(u32 value) {
-  WWHD_FUNC(0x02804484, void, value);
-  store<u32>(0x101F9BD0, value);
+    seqControlBufferMax = value;
 }
-VERIFY(0x02804484, setParamSeqControlBufferMax);
+/* 02804490 */
 void setParamStreamControlBufferMax(u32 value) {
-  WWHD_FUNC(0x02804490, void, value);
-  store<u32>(0x101F9BD4, value);
+    streamControlBufferMax = value;
 }
-VERIFY(0x02804490, setParamStreamControlBufferMax);
+/* 0280449C */
 void setParamAutoHeapMax(u32 value) {
-  WWHD_FUNC(0x0280449C, void, value);
-  store<u32>(0x101F9BD8, value);
+    autoHeapMax = value;
 }
-VERIFY(0x0280449C, setParamAutoHeapMax);
+/* 028044A8 */
 void setParamStayHeapMax(u32 value) {
-  WWHD_FUNC(0x028044A8, void, value);
-  store<u32>(0x101F9BDC, value);
+    stayHeapMax = value;
 }
-VERIFY(0x028044A8, setParamStayHeapMax);
+/* 028044B4 */
 void setParamSeqPlayTrackMax(u32 value) {
-  WWHD_FUNC(0x028044B4, void, value);
-  store<u32>(0x101F9BE0, value);
-  store<u32>(0x101F9BD0, value << 1);
+    seqPlayTrackMax = value;
+    seqControlBufferMax = value << 1;
 }
-VERIFY(0x028044B4, setParamSeqPlayTrackMax);
+/* 028044CC */
 void setParamInputGainDown(f64 value) {
-  WWHD_FUNC(0x028044CC, void, value);
-  store<f32>(0x101F9C04, value);
+    inputGainDown = value;
 }
-VERIFY(0x028044CC, setParamInputGainDown);
+/* 028044D8 */
 void setParamOutputGainUp(f64 value) {
-  WWHD_FUNC(0x028044D8, void, value);
-  store<f32>(0x101F9C08, value);
+    outputGainUp = value;
 }
-VERIFY(0x028044D8, setParamOutputGainUp);
+/* 028044E4 */
 void setParamDistanceMax(f64 value) {
-  WWHD_FUNC(0x028044E4, void, value);
-  store<f32>(0x101F9C0C, value);
+    distanceMax = value;
 }
-VERIFY(0x028044E4, setParamDistanceMax);
+/* 028044F0 */
 void setParamMaxVolumeDistance(f64 value) {
-  WWHD_FUNC(0x028044F0, void, value);
-  store<f32>(0x101F9C14, value);
+    maxVolumeDistance = value;
 }
-VERIFY(0x028044F0, setParamMaxVolumeDistance);
+/* 028044FC */
 void setParamMinDistanceVolume(f64 value) {
-  WWHD_FUNC(0x028044FC, void, value);
-  store<f32>(0x101F9C10, value);
+    minDistanceVolume = value;
 }
-VERIFY(0x028044FC, setParamMinDistanceVolume);
+/* 02804508 */
+// HD: store the original low byte, but clamp only the driver argument; omit the GC stream call.
 void setParamSoundOutputMode(u32 value) {
-  WWHD_FUNC(0x02804508, void, value);
-  u32 mode = value;
-  if (value > 2) {
-    call<void>(0x0273AA24, at<void>(0x1016F654), 347, at<void>(0x1016F650));
-    mode = 1;
-  }
-  store<u8>(load<u32>(0x104B4F14) + 0x11, value);
-  call<void>(0x028157C8, mode);
+    u32 mode = value;
+    if (value > 2) {
+        audioParameterAssert("JAIGlobalParameter.cpp", 347, "(0)");
+        mode = 1;
+    }
+    msBasic->field_0xd = value;
+    audioDriverSetOutputMode(mode);
 }
-VERIFY(0x02804508, setParamSoundOutputMode);
+/* 02804588 */
 void setParamSeDistanceFxParameter(u32 value) {
-  WWHD_FUNC(0x02804588, void, value);
-  store<u16>(0x101F9C50, value);
+    seDistanceFxParameter = value;
 }
-VERIFY(0x02804588, setParamSeDistanceFxParameter);
+/* 02804594 */
+// HD: this setter is a no-op.
 void setParamStreamDecodedBufferBlocks(u32 value) {
-  WWHD_FUNC(0x02804594, void, value);
 }
-VERIFY(0x02804594, setParamStreamDecodedBufferBlocks);
+/* 02804598 */
 void setParamStreamInsideBufferCut(u32 value) {
-  WWHD_FUNC(0x02804598, void, value);
-  u32 p = load<u32>(0x104B4F14);
-  store<u16>(p + 0x12, (load<u16>(p + 0x12) & 0xF7FF) | ((value & 1) << 11));
+    JAIBasicView* basic = msBasic;
+    basic->field_0xe = (basic->field_0xe & 0xF7FF) | ((value & 1) << 11);
 }
-VERIFY(0x02804598, setParamStreamInsideBufferCut);
+/* 028045B0 */
 void setParamAutoHeapRoomSize(u32 value) {
-  WWHD_FUNC(0x028045B0, void, value);
-  store<u32>(0x101F9BE4, value);
+    autoHeapRoomSize = value;
 }
-VERIFY(0x028045B0, setParamAutoHeapRoomSize);
+/* 028045BC */
 void setParamStayHeapSize(u32 value) {
-  WWHD_FUNC(0x028045BC, void, value);
-  store<u32>(0x101F9BE8, value);
+    stayHeapSize = value;
 }
-VERIFY(0x028045BC, setParamStayHeapSize);
+/* 028045C8 */
 void setParamSeDolbyCenterValue(u32 value) {
-  WWHD_FUNC(0x028045C8, void, value);
-  store<f32>(0x101F9C18, (f32)value);
+    seDolbyCenterValue = (f32)value;
 }
-VERIFY(0x028045C8, setParamSeDolbyCenterValue);
+/* 028045FC */
 void setParamSeDolbyFrontDistanceMax(f64 value) {
-  WWHD_FUNC(0x028045FC, void, value);
-  store<f32>(0x101F9C1C, value);
+    seDolbyFrontDistanceMax = value;
 }
-VERIFY(0x028045FC, setParamSeDolbyFrontDistanceMax);
+/* 02804608 */
 void setParamSeDolbyBehindDistanceMax(f64 value) {
-  WWHD_FUNC(0x02804608, void, value);
-  store<f32>(0x101F9C20, value);
+    seDolbyBehindDistanceMax = value;
 }
-VERIFY(0x02804608, setParamSeDolbyBehindDistanceMax);
+/* 02804614 */
 void setParamInitDataFileName(u32 value) {
-  WWHD_FUNC(0x02804614, void, value);
-  store<u32>(0x101F9BEC, value);
+    initDataFileName = value;
 }
-VERIFY(0x02804614, setParamInitDataFileName);
+/* 02804620 */
 void setParamWavePath(u32 value) {
-  WWHD_FUNC(0x02804620, void, value);
-  store<u32>(0x101F9BF0, value);
+    wavePath = value;
 }
-VERIFY(0x02804620, setParamWavePath);
+/* 0280462C */
 void setParamSequenceArchivesPath(u32 value) {
-  WWHD_FUNC(0x0280462C, void, value);
-  store<u32>(0x101F9BF4, value);
+    sequenceArchivesPath = value;
 }
-VERIFY(0x0280462C, setParamSequenceArchivesPath);
+/* 02804638 */
 void setParamStreamPath(u32 value) {
-  WWHD_FUNC(0x02804638, void, value);
-  store<u32>(0x101F9BF8, value);
+    streamPath = value;
 }
-VERIFY(0x02804638, setParamStreamPath);
+/* 02804644 */
 void setParamAudioResPath(u32 value) {
-  WWHD_FUNC(0x02804644, void, value);
-  store<u32>(0x101F9C00, value);
+    audioResPath = value;
 }
-VERIFY(0x02804644, setParamAudioResPath);
+/* 02804650 */
 void setParamSequenceArchivesFileName(u32 value) {
-  WWHD_FUNC(0x02804650, void, value);
-  store<u32>(0x101F9BFC, value);
+    sequenceArchivesFileName = value;
 }
-VERIFY(0x02804650, setParamSequenceArchivesFileName);
+/* 0280465C */
 void setParamDummyObjectLifeTime(u32 value) {
-  WWHD_FUNC(0x0280465C, void, value);
-  store<u32>(0x101F9C40, value);
+    dummyObjectLifeTime = value;
 }
-VERIFY(0x0280465C, setParamDummyObjectLifeTime);
+/* 02804668 */
 void setParamDummyObjectMax(u32 value) {
-  WWHD_FUNC(0x02804668, void, value);
-  store<u32>(0x101F9BB8, value);
+    dummyObjectMax = value;
 }
-VERIFY(0x02804668, setParamDummyObjectMax);
+/* 02804674 */
 void setParamAudioCameraMax(u32 value) {
-  WWHD_FUNC(0x02804674, void, value);
-  store<u32>(0x101F9C48, value);
+    audioCameraMax = value;
 }
-VERIFY(0x02804674, setParamAudioCameraMax);
+/* 02804680 */
 void setParamSystemTrackMax(u32 value) {
-  WWHD_FUNC(0x02804680, void, value);
-  store<u32>(0x101F9C4C, value);
+    systemTrackMax = value;
 }
-VERIFY(0x02804680, setParamSystemTrackMax);
+/* 0280468C */
 u32 getParamSeCategoryMax() {
-  WWHD_FUNC(0x0280468C, u32);
-  return call<u32>(0x0280E03C);
+    return audioSoundTableGetCategoryMax();
 }
-VERIFY(0x0280468C, getParamSeCategoryMax);
-void staticInit() {
-  WWHD_FUNC(0x02804690, void);
-  for (u32 i = 0; i < 4; ++i)
-    store<u32>(0x104B4FCC + i * 4, 0);
-  call<void>(0x028F026C, at<void>(0x101F9BAC));
-}
-VERIFY(0x02804690, staticInit);
+} // namespace JAIGlobalParameter
+using namespace JAIGlobalParameter;
+namespace JAIGlobalParameter {
+/* 028046B8 */
 u32 getParamSoundSceneMax() {
-  WWHD_FUNC(0x028046B8, u32);
-  return load<u32>(0x101F9BC0);
+    return soundSceneMax;
 }
-VERIFY(0x028046B8, getParamSoundSceneMax);
+/* 028046C4 */
 u32 getParamSeRegistMax() {
-  WWHD_FUNC(0x028046C4, u32);
-  return load<u32>(0x101F9BC4);
+    return seRegistMax;
 }
-VERIFY(0x028046C4, getParamSeRegistMax);
+/* 028046D0 */
 u32 getParamSeTrackMax() {
-  WWHD_FUNC(0x028046D0, u32);
-  return load<u32>(0x101F9BCC);
+    return seTrackMax;
 }
-VERIFY(0x028046D0, getParamSeTrackMax);
+/* 028046DC */
 u32 getParamSeqTrackMax() {
-  WWHD_FUNC(0x028046DC, u32);
-  return load<u32>(0x101F9BC8);
+    return seqTrackMax;
 }
-VERIFY(0x028046DC, getParamSeqTrackMax);
+/* 028046E8 */
 u32 getParamSeqControlBufferMax() {
-  WWHD_FUNC(0x028046E8, u32);
-  return load<u32>(0x101F9BD0);
+    return seqControlBufferMax;
 }
-VERIFY(0x028046E8, getParamSeqControlBufferMax);
+/* 028046F4 */
 u32 getParamAutoHeapMax() {
-  WWHD_FUNC(0x028046F4, u32);
-  return load<u32>(0x101F9BD8);
+    return autoHeapMax;
 }
-VERIFY(0x028046F4, getParamAutoHeapMax);
+/* 02804700 */
 u32 getParamStayHeapMax() {
-  WWHD_FUNC(0x02804700, u32);
-  return load<u32>(0x101F9BDC);
+    return stayHeapMax;
 }
-VERIFY(0x02804700, getParamStayHeapMax);
+/* 0280470C */
 u32 getParamSeqPlayTrackMax() {
-  WWHD_FUNC(0x0280470C, u32);
-  return load<u32>(0x101F9BE0);
+    return seqPlayTrackMax;
 }
-VERIFY(0x0280470C, getParamSeqPlayTrackMax);
+/* 02804718 */
 f64 getParamDistanceMax() {
-  WWHD_FUNC(0x02804718, f64);
-  return load<f32>(0x101F9C0C);
+    return distanceMax;
 }
-VERIFY(0x02804718, getParamDistanceMax);
+/* 02804724 */
 f64 getParamMaxVolumeDistance() {
-  WWHD_FUNC(0x02804724, f64);
-  return load<f32>(0x101F9C14);
+    return maxVolumeDistance;
 }
-VERIFY(0x02804724, getParamMaxVolumeDistance);
+/* 02804730 */
 f64 getParamMinDistanceVolume() {
-  WWHD_FUNC(0x02804730, f64);
-  return load<f32>(0x101F9C10);
+    return minDistanceVolume;
 }
-VERIFY(0x02804730, getParamMinDistanceVolume);
+/* 0280473C */
 u32 getParamAutoHeapRoomSize() {
-  WWHD_FUNC(0x0280473C, u32);
-  return load<u32>(0x101F9BE4);
+    return autoHeapRoomSize;
 }
-VERIFY(0x0280473C, getParamAutoHeapRoomSize);
+/* 02804748 */
 u32 getParamStayHeapSize() {
-  WWHD_FUNC(0x02804748, u32);
-  return load<u32>(0x101F9BE8);
+    return stayHeapSize;
 }
-VERIFY(0x02804748, getParamStayHeapSize);
+/* 02804754 */
 f64 getParamSeDolbyCenterValue() {
-  WWHD_FUNC(0x02804754, f64);
-  return load<f32>(0x101F9C18);
+    return seDolbyCenterValue;
 }
-VERIFY(0x02804754, getParamSeDolbyCenterValue);
+/* 02804760 */
 f64 getParamSeDolbyFrontDistanceMax() {
-  WWHD_FUNC(0x02804760, f64);
-  return load<f32>(0x101F9C1C);
+    return seDolbyFrontDistanceMax;
 }
-VERIFY(0x02804760, getParamSeDolbyFrontDistanceMax);
+/* 0280476C */
 f64 getParamSeDolbyBehindDistanceMax() {
-  WWHD_FUNC(0x0280476C, f64);
-  return load<f32>(0x101F9C20);
+    return seDolbyBehindDistanceMax;
 }
-VERIFY(0x0280476C, getParamSeDolbyBehindDistanceMax);
+/* 02804778 */
 u32 getParamInitDataFileName() {
-  WWHD_FUNC(0x02804778, u32);
-  return load<u32>(0x101F9BEC);
+    return initDataFileName;
 }
-VERIFY(0x02804778, getParamInitDataFileName);
+/* 02804784 */
 u32 getParamWavePath() {
-  WWHD_FUNC(0x02804784, u32);
-  return load<u32>(0x101F9BF0);
+    return wavePath;
 }
-VERIFY(0x02804784, getParamWavePath);
+/* 02804790 */
 u32 getParamSequenceArchivesPath() {
-  WWHD_FUNC(0x02804790, u32);
-  return load<u32>(0x101F9BF4);
+    return sequenceArchivesPath;
 }
-VERIFY(0x02804790, getParamSequenceArchivesPath);
+/* 0280479C */
 u32 getParamAudioResPath() {
-  WWHD_FUNC(0x0280479C, u32);
-  return load<u32>(0x101F9C00);
+    return audioResPath;
 }
-VERIFY(0x0280479C, getParamAudioResPath);
+/* 028047A8 */
 u32 getParamSequenceArchivesFileName() {
-  WWHD_FUNC(0x028047A8, u32);
-  return load<u32>(0x101F9BFC);
+    return sequenceArchivesFileName;
 }
-VERIFY(0x028047A8, getParamSequenceArchivesFileName);
+/* 028047B4 */
 u32 getParamDopplarMoveTime() {
-  WWHD_FUNC(0x028047B4, u32);
-  return load<u32>(0x101F9C3C);
+    return dopplarMoveTime;
 }
-VERIFY(0x028047B4, getParamDopplarMoveTime);
+/* 028047C0 */
 u32 getParamDistanceParameterMoveTime() {
-  WWHD_FUNC(0x028047C0, u32);
-  return load<u8>(0x101F9C5B);
+    return distanceParameterMoveTime;
 }
-VERIFY(0x028047C0, getParamDistanceParameterMoveTime);
+/* 028047CC */
 u32 getParamDummyObjectMax() {
-  WWHD_FUNC(0x028047CC, u32);
-  return load<u32>(0x101F9BB8);
+    return dummyObjectMax;
 }
-VERIFY(0x028047CC, getParamDummyObjectMax);
+/* 028047D8 */
 u32 getParamSeqMuteVolumeSePlay() {
-  WWHD_FUNC(0x028047D8, u32);
-  return load<u8>(0x101F9C58);
+    return seqMuteVolumeSePlay;
 }
-VERIFY(0x028047D8, getParamSeqMuteVolumeSePlay);
+/* 028047E4 */
 u32 getParamSeqMuteMoveSpeedSePlay() {
-  WWHD_FUNC(0x028047E4, u32);
-  return load<u32>(0x101F9C44);
+    return seqMuteMoveSpeedSePlay;
 }
-VERIFY(0x028047E4, getParamSeqMuteMoveSpeedSePlay);
+/* 028047F0 */
 u32 getParamAudioCameraMax() {
-  WWHD_FUNC(0x028047F0, u32);
-  return load<u32>(0x101F9C48);
+    return audioCameraMax;
 }
-VERIFY(0x028047F0, getParamAudioCameraMax);
+/* 028047FC */
 u32 getParamSeqParameterLines() {
-  WWHD_FUNC(0x028047FC, u32);
-  return load<u8>(0x101F9C59);
+    return seqParameterLines;
 }
-VERIFY(0x028047FC, getParamSeqParameterLines);
+/* 02804808 */
 u32 getParamSeDistanceWaitMax() {
-  WWHD_FUNC(0x02804808, u32);
-  return load<u16>(0x101F9C54);
+    return seDistanceWaitMax;
 }
-VERIFY(0x02804808, getParamSeDistanceWaitMax);
-} // namespace jai_global_cpp
+
+} // namespace JAIGlobalParameter
+using namespace JAIGlobalParameter;
+
+/* 02804690 */
+// HD: compiler-generated common-header zeroing and destructor registration.
+static void __sinit_JAIGlobalParameter_cpp() {
+    for (u32 i = 0; i < 4; ++i)
+        headerStatics.mWords[i] = 0;
+    registerAudioParameterStatics(&destructorRecord);
+}
+
+/* WWHD glue
+data dummyObjectMax 101F9BB8
+data interfaceHeapSize 101F9BBC
+data soundSceneMax 101F9BC0
+data seRegistMax 101F9BC4
+data seqTrackMax 101F9BC8
+data seTrackMax 101F9BCC
+data seqControlBufferMax 101F9BD0
+data streamControlBufferMax 101F9BD4
+data autoHeapMax 101F9BD8
+data stayHeapMax 101F9BDC
+data seqPlayTrackMax 101F9BE0
+data autoHeapRoomSize 101F9BE4
+data stayHeapSize 101F9BE8
+data initDataFileName 101F9BEC
+data wavePath 101F9BF0
+data sequenceArchivesPath 101F9BF4
+data streamPath 101F9BF8
+data sequenceArchivesFileName 101F9BFC
+data audioResPath 101F9C00
+data inputGainDown 101F9C04
+data outputGainUp 101F9C08
+data distanceMax 101F9C0C
+data minDistanceVolume 101F9C10
+data maxVolumeDistance 101F9C14
+data seDolbyCenterValue 101F9C18
+data seDolbyFrontDistanceMax 101F9C1C
+data seDolbyBehindDistanceMax 101F9C20
+data dopplarMoveTime 101F9C3C
+data dummyObjectLifeTime 101F9C40
+data seqMuteMoveSpeedSePlay 101F9C44
+data audioCameraMax 101F9C48
+data systemTrackMax 101F9C4C
+data seDistanceFxParameter 101F9C50
+data seDistanceWaitMax 101F9C54
+data seqMuteVolumeSePlay 101F9C58
+data seqParameterLines 101F9C59
+data distanceParameterMoveTime 101F9C5B
+data msBasic 104B4F14
+data headerStatics 104B4FCC
+data destructorRecord 101F9BAC
+str 1016F654 "JAIGlobalParameter.cpp"
+str 1016F650 "(0)"
+ext 0273AA24 void audioParameterAssert(const char*, s32, const char*)
+ext 028157C8 void audioDriverSetOutputMode(u32)
+ext 0280E03C u32 audioSoundTableGetCategoryMax()
+ext 028F026C void registerAudioParameterStatics(AudioDestructorRecord*)
+*/

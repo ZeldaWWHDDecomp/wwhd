@@ -1,310 +1,578 @@
-#include "bindings.h"
+/** Wind Temple Iron Boots switch. Verified against the HD image; private decompilation. */
 #include "d/actor/d_a_obj_swheavy.h"
 using daObjSwheavy::Act_c;
-static u32 PrmAbstract(Act_c* a,s32 width,s32 shift) {
- WWHD_FUNC(0x023951C0,u32,a,width,shift);
- u32 value=a->mParameters,w=(u32)width&63,sh=(u32)shift&63;
- return (sh<32?value>>sh:0)&((w<32?1u<<w:0)-1);
+const gc_tu_data gc_tu = {.safeString = 0x1002FB34, .headerStatics = {0x1046C008, 0x101CCF28, 0x1046C014}};
+static SwheavyAttrTable M_attr;
+static SwheavyModeTable mode_proc;
+
+static u32 PrmAbstract(Act_c*, s32, s32);
+static void rideCB(void*, Act_c*, fopAc_ac_c*);
+
+static void JUT_assert(const char* file, u32 line, const char* message) {
+    Swheavy_assert(file, line, message);
 }
-VERIFY(0x023951C0,PrmAbstract);
-static void JUT_assert(u32 file,u32 line,u32 message) { gabi::call(0x0273AA24,STR(file),line,STR(message)); }
-static const char* arc() { return STR(0x1002FD88); }
-static u32 play() { return gabi::call<u32>(0x025200D4); }
-static u32 attr(u32 type) { return 0x1002FD90+type*0x1C; }
-static u32 checkedType(Act_c* a,u32 type,u32 file,u32 msg) {
- if(type>=4) { JUT_assert(file,0xFD,msg);type=a->mType; }
- return type;
+static const char* arc() {
+    return "Hhbot";
+}
+static const daObjSwheavy::Attr_c* attr(u32 type) {
+    return &M_attr.mAttr[type];
+}
+// HD: assertions do not abort; reload mType after an out-of-range assertion.
+static u32 checkedType(Act_c* a, u32 type, const char* file, const char* msg) {
+    if (type >= 4) {
+        JUT_assert(file, 0xFD, msg);
+        type = a->mType;
+    }
+    return type;
 }
 static BOOL isSwitch(Act_c* a) {
- u32 sw=PrmAbstract(a,8,8),save=gabi::load<u32>(0x101F84DC);s8 room=a->home.roomNo;
- return gabi::call<BOOL>(0x025BA0C0,gabi::at<u8>(save+0x20),sw,room);
+    u32 sw = PrmAbstract(a, Act_c::PRM_SWSAVE_W, Act_c::PRM_SWSAVE_S);
+    s8 room = a->home.roomNo;
+    return dComIfGs_isSwitch(sw, room);
 }
-static u8 create_heap(Act_c* a) {
- WWHD_FUNC(0x02393CD0,u8,a);
- auto data=dComIfG_getObjectRes(arc(),4,0x1002FB34);
- if(!data) JUT_assert(0x1002FB9C,0x118,0x1002FB5C);
- a->mpModel1=mDoExt_J3DModel__create((J3DModelData*)data,0x80000,0x11000022);
- data=dComIfG_getObjectRes(arc(),5,0x1002FB34);
- if(!data) JUT_assert(0x1002FB9C,0x121,0x1002FB6C);
- a->mpModel2=mDoExt_J3DModel__create((J3DModelData*)data,0x80000,0x11000022);
- BOOL b1=FALSE,b2=FALSE;u32 bg=gabi::call<u32>(0x024F23F4,0);a->mpBgW1=bg;
- if(bg) {
- data=dComIfG_getObjectRes(arc(),8,0x1002FB34);
- if(!data) JUT_assert(0x1002FB9C,0x139,0x1002FB7C);
- if(!gabi::call<BOOL>(0x0200A030,gabi::at<u8>(a->mpBgW1),data,1,&a->mMtx1)) b1=TRUE;
- }
- bg=gabi::call<u32>(0x024F23F4,0);a->mpBgW2=bg;
- if(bg) {
- data=dComIfG_getObjectRes(arc(),9,0x1002FB34);
- if(!data) JUT_assert(0x1002FB9C,0x148,0x1002FB8C);
- if(!gabi::call<BOOL>(0x0200A030,gabi::at<u8>(a->mpBgW2),data,1,&a->mMtx2)) b2=TRUE;
- }
- u8 success=a->mpModel1!=nullptr&&a->mpModel2!=nullptr&&b1&&b2;
- if(!success) { a->mpBgW2=0;a->mpBgW1=0; }
- return success;
-}
-VERIFY(0x02393CD0,create_heap);
-static u8 solidHeapCB(Act_c* a) { WWHD_FUNC(0x02393EC4,u8,a);return create_heap(a); }
-VERIFY(0x02393EC4,solidHeapCB);
-static void rideCB(void* bg,Act_c* a,fopAc_ac_c* rider) {
- WWHD_FUNC(0x02393EC8,void,bg,a,rider);
- if(rider->actor_status&0x400) {
- a->mRiding=1;
- if(rider&&gabi::load<s16>(gabi::ea(rider)+0xE)==0xA8&&(gabi::load<u32>(gabi::ea(rider)+0x3B8)&0x02000000)) a->mHeavyRiding=1;
- }
-}
-VERIFY(0x02393EC8,rideCB);
-static void copyModelMtx(u32 model) {
- f32 v[12];for(u32 i=0;i<12;i++) v[i]=gabi::load<f32>(0x1048D0CC+4*i);
- for(u32 i=0;i<12;i++) gabi::store<f32>(model+0xC8+4*i,v[i]);
+
+static void copyModelMtx(J3DModel* model) {
+    SwheavyModel* view = reinterpret_cast<SwheavyModel*>(model);
+    f32 v[3][4];
+    Mtx34* matrix = mDoMtx_stack_c::get();
+    for (u32 r = 0; r < 3; r++)
+        for (u32 c = 0; c < 4; c++)
+            v[r][c] = matrix->m[r][c];
+    for (u32 r = 0; r < 3; r++)
+        for (u32 c = 0; c < 4; c++)
+            view->mBaseTRMtx.m[r][c] = v[r][c];
 }
 static void translateRotate(Act_c* a) {
- auto m=gabi::at<Mtx34>(0x1048D0CC);
- f32 x=a->current.pos.x,z=a->current.pos.z,y=a->current.pos.y;
- gabi::call(0x028E93CC,m,x,y,z);
- s16 xrot=a->shape_angle.x,yrot=a->shape_angle.y,zrot=a->shape_angle.z;
- gabi::call(0x025F1B48,m,xrot,yrot,zrot);
+    Mtx34* m = mDoMtx_stack_c::get();
+    f32 x = a->current.pos.x, z = a->current.pos.z, y = a->current.pos.y;
+    PSMTXTrans(m, x, y, z);
+    s16 xrot = a->shape_angle.x, yrot = a->shape_angle.y, zrot = a->shape_angle.z;
+    Swheavy_ZXYrotM(m, xrot, yrot, zrot);
 }
-static void set_mtx(Act_c* a) {
- WWHD_FUNC(0x02393F08,void,a);
- translateRotate(a);copyModelMtx(gabi::ea((J3DModel*)a->mpModel1));
- f32 height=a->mModelHeight,old=gabi::load<f32>(0x1048D0E8);
- gabi::store<f32>(0x1048D0E8,old+height);
- copyModelMtx(gabi::ea((J3DModel*)a->mpModel2));
- translateRotate(a);
- f32 y=a->scale.y,x=a->scale.x,z=a->scale.z;
- gabi::call(0x025F2518,x,y,z);
- auto m=gabi::at<Mtx34>(0x1048D0CC);gabi::call(0x028E90D4,m,&a->mMtx1);
- old=gabi::load<f32>(0x1048D0E8);height=a->mTopPos;
- gabi::store<f32>(0x1048D0E8,old+height);gabi::call(0x028E90D4,m,&a->mMtx2);
+
+/* 02393EC4 */
+static u8 solidHeapCB(Act_c* a) {
+    return a->create_heap();
 }
-VERIFY(0x02393F08,set_mtx);
-static void init_mtx(Act_c* a) {
- WWHD_FUNC(0x0239409C,void,a); // Matcher incorrectly names this PrmAbstract.
- u32 model=gabi::ea((J3DModel*)a->mpModel1);f32 y=a->scale.y,x=a->scale.x,z=a->scale.z;
- gabi::store<f32>(model+0xBC,x);gabi::store<f32>(model+0xC0,y);gabi::store<f32>(model+0xC4,z);
- model=gabi::ea((J3DModel*)a->mpModel2);x=a->scale.x;z=a->scale.z;y=a->scale.y;
- gabi::store<f32>(model+0xC4,z);gabi::store<f32>(model+0xBC,x);gabi::store<f32>(model+0xC0,y);
- set_mtx(a);
+
+/* 02393CD0 */
+u8 daObjSwheavy::Act_c::create_heap() {
+    auto data = dComIfG_getObjectRes(arc(), dRes_INDEX_HHBOT_BDL_HHBOT1_e);
+    if (!data)
+        JUT_assert("d_a_obj_swheavy.cpp", 0x118, "mdl_1_data != 0");
+    mpModel1 = mDoExt_J3DModel__create((J3DModelData*)data, 0x80000, 0x11000022);
+    data = dComIfG_getObjectRes(arc(), dRes_INDEX_HHBOT_BDL_HHBOT2_e);
+    if (!data)
+        JUT_assert("d_a_obj_swheavy.cpp", 0x121, "mdl_2_data != 0");
+    mpModel2 = mDoExt_J3DModel__create((J3DModelData*)data, 0x80000, 0x11000022);
+    BOOL b1 = FALSE, b2 = FALSE;
+    SwheavyBgW* bg = Swheavy_newBgW(0);
+    mpBgW1 = bg;
+    if (bg) {
+        data = dComIfG_getObjectRes(arc(), dRes_INDEX_HHBOT_DZB_HHBOT1_e);
+        if (!data)
+            JUT_assert("d_a_obj_swheavy.cpp", 0x139, "bgw_1_data != 0");
+        if (!Swheavy_setBg(mpBgW1, static_cast<cBgD_t*>(data), dBgW::MOVE_BG_e, &mMtx1))
+            b1 = TRUE;
+    }
+    bg = Swheavy_newBgW(0);
+    mpBgW2 = bg;
+    if (bg) {
+        data = dComIfG_getObjectRes(arc(), dRes_INDEX_HHBOT_DZB_HHBOT2_e);
+        if (!data)
+            JUT_assert("d_a_obj_swheavy.cpp", 0x148, "bgw_2_data != 0");
+        if (!Swheavy_setBg(mpBgW2, static_cast<cBgD_t*>(data), dBgW::MOVE_BG_e, &mMtx2))
+            b2 = TRUE;
+    }
+    u8 success = mpModel1 != nullptr && mpModel2 != nullptr && b1 && b2;
+    if (!success) {
+        mpBgW2 = nullptr;
+        mpBgW1 = nullptr;
+    }
+    return success;
 }
-VERIFY(0x0239409C,init_mtx);
-static void mode_upper_init(Act_c* a) {
- WWHD_FUNC(0x023940D8,void,a);a->mMode=0;a->mTargetHFrac=1.0f;a->mChangingState=0;
+
+/* 02394114 */
+s32 daObjSwheavy::Act_c::_create() {
+    u32 condition = actor_condition;
+    if (!(condition & fopAcCnd_INIT_e)) {
+        if (gabi::ea(this) != 0) {
+            Swheavy_actorCtor(this);
+            __vtbl = Act_c::VTABLE;
+            condition = actor_condition;
+        }
+        actor_condition = condition | fopAcCnd_INIT_e;
+    }
+    s32 phase = dComIfG_resLoad(&mPhs, arc());
+    if (phase != cPhs_COMPLEATE_e)
+        return phase;
+    u32 type = PrmAbstract(this, PRM_TYPE_W, PRM_TYPE_S);
+    mType = type;
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    BOOL up = TRUE;
+    if (!(static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_IS_TOGGLE) && isSwitch(this))
+        up = FALSE;
+    f32 z = scale.z, x = scale.x;
+    scale.z = z * 1.5f;
+    scale.x = x * 1.5f;
+    translateRotate(this);
+    f32 sy = scale.y, sx = scale.x, sz = scale.z;
+    mDoMtx_stack_c::scaleM(sx, sy, sz);
+    auto m = mDoMtx_stack_c::get();
+    PSMTXCopy(m, &mMtx1);
+    if (!up) {
+        f32 y = static_cast<f32>(mDoMtx_stack_c::get()->m[1][3]);
+        mDoMtx_stack_c::get()->m[1][3] = y + -35.5f;
+    }
+    PSMTXCopy(m, &mMtx2);
+    if (!fopAcM_entrySolidHeap(this, heapCallbackFunc(gabi::guest_fn(reinterpret_cast<const void*>(solidHeapCB))),
+                               0x2000))
+        return cPhs_ERROR_e;
+    dComIfG_Bgsp()->Regist(mpBgW1, this);
+    mpBgW1->mCrrFunc = 0;
+    dComIfG_Bgsp()->Regist(mpBgW2, this);
+    mpBgW2->mCrrFunc = 0;
+    mpBgW2->mRideCallback = gabi::guest_fn(reinterpret_cast<const void*>(rideCB));
+    auto model = (J3DModel*)mpModel1;
+    cullMtx = model ? gabi::ea(&reinterpret_cast<SwheavyModel*>(model)->mBaseTRMtx) : 0;
+    init_mtx();
+    fopAcM_setCullSizeBox(this, -97.5f, -2.0f, -97.5f, 97.5f, 55.0f, 97.5f);
+    mPushFlg = 0;
+    type = mType;
+    mPrevHeavyRiding = 0;
+    mPushTimer = 0;
+    mVSpeed = 0.0f;
+    mPrevRiding = 0;
+    mMiniPushTimer = 0;
+    m330 = 0;
+    mHeavyRiding = 0;
+    m334 = 0.0f;
+    mMiniPushFlg = 0;
+    mRiding = 0;
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    if ((static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_IS_TOGGLE) || !isSwitch(this)) {
+        mTopPos = 0.0f;
+        m328 = 0.0f;
+        mCurHFrac = 1.0f;
+        m32C = 1.0f;
+        m338 = 1.0f;
+        mTargetHFrac = 1.0f;
+        mode_upper_init();
+    } else {
+        mTopPos = -35.5f;
+        m328 = -35.5f;
+        m32C = 0.0f;
+        mTargetHFrac = 0.0f;
+        m338 = 0.0f;
+        mCurHFrac = 0.0f;
+        mode_lower_init();
+    }
+    return phase;
 }
-VERIFY(0x023940D8,mode_upper_init);
-static void mode_lower_init(Act_c* a) {
- WWHD_FUNC(0x023940F4,void,a);a->mChangingState=0;a->mMode=2;a->mTargetHFrac=0.0f;
+
+/* 02394484 */
+BOOL daObjSwheavy::Act_c::_delete() {
+    SwheavyBgW* bg = mpBgW1;
+    if (bg && bg->ChkUsed()) {
+        dComIfG_Bgsp()->Release(mpBgW1);
+    }
+    bg = mpBgW2;
+    if (bg && bg->ChkUsed()) {
+        dComIfG_Bgsp()->Release(mpBgW2);
+    }
+    dComIfG_resDelete(&mPhs, arc());
+    return TRUE;
 }
-VERIFY(0x023940F4,mode_lower_init);
-static void top_bg_aim_req(Act_c* a,f32 target,s16 timer) {
- WWHD_FUNC(0x02394ADC,void,a,target,timer);a->mBgAimTarget=target;a->mBgAimTimer=timer;
+
+/* 02393F08 */
+void daObjSwheavy::Act_c::set_mtx() {
+    translateRotate(this);
+    copyModelMtx(mpModel1);
+    f32 height = m328, old = static_cast<f32>(mDoMtx_stack_c::get()->m[1][3]);
+    mDoMtx_stack_c::get()->m[1][3] = old + height;
+    copyModelMtx(mpModel2);
+    translateRotate(this);
+    f32 y = scale.y, x = scale.x, z = scale.z;
+    mDoMtx_stack_c::scaleM(x, y, z);
+    auto m = mDoMtx_stack_c::get();
+    PSMTXCopy(m, &mMtx1);
+    old = static_cast<f32>(mDoMtx_stack_c::get()->m[1][3]);
+    height = mTopPos;
+    mDoMtx_stack_c::get()->m[1][3] = old + height;
+    PSMTXCopy(m, &mMtx2);
 }
-VERIFY(0x02394ADC,top_bg_aim_req);
-static void mode_l_u_init(Act_c* a) {
- WWHD_FUNC(0x02394E68,void,a);a->mMode=3;a->mTargetHFrac=1.0f;top_bg_aim_req(a,1.0f,1);
+
+/* 0239409C */
+void daObjSwheavy::Act_c::init_mtx() { // Matcher incorrectly names this PrmAbstract.
+    SwheavyModel* model = reinterpret_cast<SwheavyModel*>(static_cast<J3DModel*>(mpModel1));
+    f32 y = scale.y, x = scale.x, z = scale.z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    model->mBaseScale.z = z;
+    model = reinterpret_cast<SwheavyModel*>(static_cast<J3DModel*>(mpModel2));
+    x = scale.x;
+    z = scale.z;
+    y = scale.y;
+    model->mBaseScale.z = z;
+    model->mBaseScale.x = x;
+    model->mBaseScale.y = y;
+    set_mtx();
 }
-VERIFY(0x02394E68,mode_l_u_init);
-static BOOL Delete(Act_c* a) {
- WWHD_FUNC(0x02394484,BOOL,a);
- u32 bg=a->mpBgW1;
- if(bg&&gabi::load<u32>(bg)<0x100) { u32 p=play();gabi::call(0x020087EC,gabi::at<u8>(p+0x12A0),gabi::at<u8>(a->mpBgW1)); }
- bg=a->mpBgW2;
- if(bg&&gabi::load<u32>(bg)<0x100) { u32 p=play();gabi::call(0x020087EC,gabi::at<u8>(p+0x12A0),gabi::at<u8>(a->mpBgW2)); }
- dComIfG_resDelete(&a->mPhase,arc());return TRUE;
+
+/* 02393EC8 */
+static void rideCB(void* bg, Act_c* a, fopAc_ac_c* rider) {
+    if (rider->actor_status & fopAcStts_FREEZE_e) {
+        a->mRiding = 1;
+        if (rider && rider->mProfName == SWHEAVY_PLAYER_PROC &&
+            (reinterpret_cast<SwheavyPlayer*>(rider)->mEquipFlags & 0x02000000))
+            a->mHeavyRiding = 1;
+    }
 }
-VERIFY(0x02394484,Delete);
-static BOOL Draw(Act_c* a) {
- WWHD_FUNC(0x02394A28,BOOL,a);
- auto env=dKy_getEnvlight();settingTevStruct(env,1,&a->current.pos,&a->tevStr);
- env=dKy_getEnvlight();auto model=(J3DModel*)a->mpModel1;setLightTevColorType(env,model,&a->tevStr);
- env=dKy_getEnvlight();model=(J3DModel*)a->mpModel2;setLightTevColorType(env,model,&a->tevStr);
- u32 p=play();gabi::store<u32>(0x104B4634,gabi::load<u32>(p+0x5D70));
- p=play();gabi::store<u32>(0x104B4638,gabi::load<u32>(p+0x5D74));
- gabi::call(0x025E2DE0,(J3DModel*)a->mpModel1,0);gabi::call(0x025E2DE0,(J3DModel*)a->mpModel2,0);
- p=play();gabi::store<u32>(0x104B4634,gabi::load<u32>(p+0x5D78));
- p=play();gabi::store<u32>(0x104B4638,gabi::load<u32>(p+0x5D7C));return TRUE;
+
+/* 02394730 */
+void daObjSwheavy::Act_c::calc_top_pos() {
+    u32 type = mType;
+    f32 target = mTargetHFrac, current = mCurHFrac, difference = current - target;
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    const daObjSwheavy::Attr_c* params = attr(type);
+    f32 decay = static_cast<f32>(params->mVSpeedDecay);
+    if (type >= 4) {
+        JUT_assert("d_a_obj_swheavy.cpp", 0xFD, "(M_type >=0) && (M_type <Type_Max)");
+        type = mType;
+        params = attr(type);
+    }
+    f32 speed = mVSpeed, spring = static_cast<f32>(params->mVSpring);
+    speed = gabi::fnmsubs(difference, spring, speed);
+    current = mCurHFrac;
+    speed = gabi::fnmsubs(speed, decay, speed);
+    current = current + speed;
+    mCurHFrac = current;
+    f32 height = (1.0f - current) * -35.5f;
+    s16 timer = m330;
+    mVSpeed = speed;
+    if (height < -36.5f)
+        height = -36.5f;
+    else {
+        f32 delta = height - 1.0f;
+        height = delta >= 0.0f ? 1.0f : height;
+    }
+    m328 = height;
+    if (timer > 0) {
+        timer = (s16)(timer - 1);
+        m330 = timer;
+        if (timer == 0)
+            m32C = m334;
+    }
+    f32 fraction = mMode == 0 ? (f32)mCurHFrac : (f32)m32C;
+    f32 top = (1.0f - fraction) * -35.5f;
+    f32 bottom = m328;
+    mTopPos = top;
+    m338 = fraction;
+    if (top < bottom)
+        mTopPos = bottom;
 }
-VERIFY(0x02394A28,Draw);
-static void sinit() { WWHD_FUNC(0x023950B8,void,(u32)0);sinit_header_statics(0x1046C008,0x101CCF28); }
-VERIFY(0x023950B8,sinit);
-static void trivialDestructor(void* a,s32 flags) { WWHD_FUNC(0x0239514C,void,a,flags);if(a&&(flags&1)) operator_delete(a); }
-VERIFY(0x0239514C,trivialDestructor);
-static void emptyVirtual(void* a) { WWHD_FUNC(0x02395160,void,a); }
-VERIFY(0x02395160,emptyVirtual);
-static void destructor(Act_c* a,s32 flags) {
- WWHD_FUNC(0x02395164,void,a,flags);if(a) { gabi::call(0x025D50BC,a,0);if(flags&1) operator_delete(a); }
+
+/* 02394ADC */
+void daObjSwheavy::Act_c::top_bg_aim_req(f32 target, s16 timer) {
+    m334 = target;
+    m330 = timer;
 }
-VERIFY(0x02395164,destructor);
-static BOOL IsDelete(void* a) { WWHD_FUNC(0x023951B8,BOOL,a);return TRUE; }
-VERIFY(0x023951B8,IsDelete);
-static void colorToFloat(void* dest,void* src) {
- WWHD_FUNC(0x023951DC,void,dest,src);
- u32 s=gabi::ea(src),d=gabi::ea(dest);f32 r=(f32)gabi::load<u8>(s)/255.0f,g=(f32)gabi::load<u8>(s+1)/255.0f;
- f32 b=(f32)gabi::load<u8>(s+2)/255.0f,alpha=(f32)gabi::load<u8>(s+3)/255.0f;
- gabi::store<f32>(d,r);gabi::store<f32>(d+4,g);gabi::store<f32>(d+8,b);gabi::store<f32>(d+12,alpha);
+
+/* 02394510 */
+void daObjSwheavy::Act_c::set_push_flag() {
+    if (mMiniPushFlg) {
+        if (mRiding) {
+            u32 type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+            mMiniPushTimer = static_cast<s16>(attr(type)->mMiniPushDelay);
+        } else {
+            s16 timer = (s16)((s16)mMiniPushTimer - 1);
+            mMiniPushTimer = timer;
+            if (timer <= 0)
+                mMiniPushFlg = 0;
+        }
+    } else if (mRiding) {
+        u32 type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        s16 timer = (s16)((s16)mMiniPushTimer + 1);
+        mMiniPushTimer = timer;
+        if (timer >= static_cast<s16>(attr(type)->mMiniPushDelay))
+            mMiniPushFlg = 1;
+    } else
+        mMiniPushTimer = 0;
+    if (mPushFlg) {
+        if (mHeavyRiding) {
+            u32 type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+            mPushTimer = static_cast<s16>(attr(type)->mPushDelay);
+        } else {
+            s16 timer = (s16)((s16)mPushTimer - 1);
+            mPushTimer = timer;
+            if (timer <= 0)
+                mPushFlg = 0;
+        }
+    } else if (mHeavyRiding) {
+        u32 type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        s16 timer = (s16)((s16)mPushTimer + 1);
+        mPushTimer = timer;
+        if (timer >= static_cast<s16>(attr(type)->mPushDelay))
+            mPushFlg = 1;
+    } else
+        mPushTimer = 0;
 }
-VERIFY(0x023951DC,colorToFloat);
-static void set_push_flag(Act_c* a) {
- WWHD_FUNC(0x02394510,void,a);
- if(a->mMiniPushFlg) {
- if(a->mRiding) {
- u32 type=checkedType(a,a->mType,0x1002FC04,0x1002FC18);
- a->mMiniPushTimer=gabi::load<s16>(attr(type)+0x16);
- } else { s16 timer=(s16)((s16)a->mMiniPushTimer-1);a->mMiniPushTimer=timer;if(timer<=0) a->mMiniPushFlg=0; }
- } else if(a->mRiding) {
- u32 type=checkedType(a,a->mType,0x1002FC04,0x1002FC18);
- s16 timer=(s16)((s16)a->mMiniPushTimer+1);a->mMiniPushTimer=timer;
- if(timer>=gabi::load<s16>(attr(type)+0x16)) a->mMiniPushFlg=1;
- } else a->mMiniPushTimer=0;
- if(a->mPushFlg) {
- if(a->mHeavyRiding) {
- u32 type=checkedType(a,a->mType,0x1002FC04,0x1002FC18);
- a->mPushTimer=gabi::load<s16>(attr(type)+0x18);
- } else { s16 timer=(s16)((s16)a->mPushTimer-1);a->mPushTimer=timer;if(timer<=0) a->mPushFlg=0; }
- } else if(a->mHeavyRiding) {
- u32 type=checkedType(a,a->mType,0x1002FC04,0x1002FC18);
- s16 timer=(s16)((s16)a->mPushTimer+1);a->mPushTimer=timer;
- if(timer>=gabi::load<s16>(attr(type)+0x18)) a->mPushFlg=1;
- } else a->mPushTimer=0;
+
+/* 023940D8 */
+void daObjSwheavy::Act_c::mode_upper_init() {
+    mMode = 0;
+    mTargetHFrac = 1.0f;
+    mChangingState = 0;
 }
-VERIFY(0x02394510,set_push_flag);
-static void calc_top_pos(Act_c* a) {
- WWHD_FUNC(0x02394730,void,a);
- u32 type=a->mType;f32 target=a->mTargetHFrac,current=a->mCurHFrac,difference=current-target;
- type=checkedType(a,type,0x1002FC40,0x1002FC54);
- u32 params=attr(type);f32 decay=gabi::load<f32>(params+0xC);
- if(type>=4) { JUT_assert(0x1002FC40,0xFD,0x1002FC54);type=a->mType;params=attr(type); }
- f32 speed=a->mVSpeed,spring=gabi::load<f32>(params+8);
- speed=gabi::fnmsubs(difference,spring,speed);current=a->mCurHFrac;
- speed=gabi::fnmsubs(speed,decay,speed);current=current+speed;a->mCurHFrac=current;
- f32 height=(1.0f-current)*-35.5f;s16 timer=a->mBgAimTimer;
- a->mVSpeed=speed;
- if(height < -36.5f) height=-36.5f;
- else { f32 delta=height-1.0f;height=delta>=0.0f?1.0f:height; }
- a->mModelHeight=height;
- if(timer>0) { timer=(s16)(timer-1);a->mBgAimTimer=timer;if(timer==0) a->mBgAim=a->mBgAimTarget; }
- f32 fraction=a->mMode==0?(f32)a->mCurHFrac:(f32)a->mBgAim;
- f32 top=(1.0f-fraction)*-35.5f;f32 bottom=a->mModelHeight;
- a->mTopPos=top;a->mBgHFrac=fraction;if(top<bottom) a->mTopPos=bottom;
+
+/* 02394BCC */
+void daObjSwheavy::Act_c::mode_upper() {
+    f32 height = 1.0f;
+    u8 mini = mMiniPushFlg;
+    u32 type = mType;
+    if (mini) {
+        type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        if (!(static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_REQ_HEAVY) || mPushFlg) {
+            mChangingState = 1;
+            mode_u_l_init();
+            return;
+        }
+        height = 0.9f;
+    }
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    if ((static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_OBEY_SAVE) && isSwitch(this)) {
+        mode_u_l_init();
+        return;
+    }
+    mTargetHFrac = height;
+    top_bg_aim_req(height, 1);
 }
-VERIFY(0x02394730,calc_top_pos);
-static void mode_u_l_init(Act_c* a) {
- WWHD_FUNC(0x02394AE8,void,a);
- u32 type=a->mType;a->mMode=1;a->mTargetHFrac=0.0f;
- type=checkedType(a,type,0x1002FC98,0x1002FCAC);u32 params=attr(type);
- type=a->mType;a->mVSpeed=gabi::load<f32>(params+0x10);
- type=checkedType(a,type,0x1002FC98,0x1002FCAC);
- top_bg_aim_req(a,0.0f,gabi::load<s16>(attr(type)+0x14));
+
+/* 02394AE8 */
+void daObjSwheavy::Act_c::mode_u_l_init() {
+    u32 type = mType;
+    mMode = 1;
+    mTargetHFrac = 0.0f;
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    const daObjSwheavy::Attr_c* params = attr(type);
+    type = mType;
+    mVSpeed = static_cast<f32>(params->mPushVSpeed0);
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    top_bg_aim_req(0.0f, static_cast<s16>(attr(type)->m14));
 }
-VERIFY(0x02394AE8,mode_u_l_init);
-static void mode_upper(Act_c* a) {
- WWHD_FUNC(0x02394BCC,void,a);
- f32 height=1.0f;u8 mini=a->mMiniPushFlg;u32 type=a->mType;
- if(mini) {
- type=checkedType(a,type,0x1002FCD4,0x1002FCE8);
- if(!(gabi::load<u32>(attr(type)+4)&8)||a->mPushFlg) {
- a->mChangingState=1;mode_u_l_init(a);return;
- }
- height=0.9f;
- }
- type=checkedType(a,type,0x1002FCD4,0x1002FCE8);
- if((gabi::load<u32>(attr(type)+4)&1)&&isSwitch(a)) { mode_u_l_init(a);return; }
- a->mTargetHFrac=height;top_bg_aim_req(a,height,1);
+
+/* 02394D50 */
+void daObjSwheavy::Act_c::mode_u_l() {
+    if (mCurHFrac > 0.0f)
+        return;
+    if (mChangingState) {
+        u32 type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        u32 toggle = static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_IS_TOGGLE,
+            sw = PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+        s8 room = home.roomNo;
+        if (toggle)
+            dComIfGs_revSwitch(sw, room);
+        else
+            dComIfGs_onSwitch(sw, room);
+    }
+    s8 room = current.roomNo;
+    s32 reverb = dComIfGp_getReverb(room);
+    mDoAud_seStart(JA_SE_OBJ_FOOT_SW_ON, &eyePos, 0, reverb);
+    mode_lower_init();
 }
-VERIFY(0x02394BCC,mode_upper);
-static void mode_u_l(Act_c* a) {
- WWHD_FUNC(0x02394D50,void,a);
- if(a->mCurHFrac>0.0f) return;
- if(a->mChangingState) {
- u32 type=checkedType(a,a->mType,0x1002FD0C,0x1002FD20);
- u32 toggle=gabi::load<u32>(attr(type)+4)&4,sw=PrmAbstract(a,8,8);
- s8 room=a->home.roomNo;u32 save=gabi::load<u32>(0x101F84DC);
- gabi::call(toggle?0x025BA20C:0x025B9E38,gabi::at<u8>(save+0x20),sw,room);
- }
- s8 room=a->current.roomNo;s32 reverb=gabi::call<s32>(0x02520540,room);
- gabi::call(0x025E1A40,0x6930,&a->eyePos,0,reverb);mode_lower_init(a);
+
+/* 023940F4 */
+void daObjSwheavy::Act_c::mode_lower_init() {
+    mChangingState = 0;
+    mMode = 2;
+    mTargetHFrac = 0.0f;
 }
-VERIFY(0x02394D50,mode_u_l);
-static void mode_lower(Act_c* a) {
- WWHD_FUNC(0x02394E84,void,a);
- BOOL pressing=FALSE;u8 mini=a->mMiniPushFlg;u32 type=a->mType;
- if(mini) {
- type=checkedType(a,type,0x1002FD44,0x1002FD58);
- if(!(gabi::load<u32>(attr(type)+4)&8)||a->mPushFlg) pressing=TRUE;
- }
- type=checkedType(a,type,0x1002FD44,0x1002FD58);
- BOOL pop=!(gabi::load<u32>(attr(type)+4)&2)&&!pressing;
- u32 params=attr(type);type=checkedType(a,type,0x1002FD44,0x1002FD58);params=attr(type);
- BOOL match=FALSE;
- if(gabi::load<u32>(params+4)&1) { BOOL active=isSwitch(a);if(!(active|pressing)) match=TRUE; }
- if(pop||match) {
- type=checkedType(a,a->mType,0x1002FD44,0x1002FD58);
- u32 toggle=(gabi::load<u32>(attr(type)+4)>>2)&1;
- if(pop&&!(toggle|pressing)) a->mChangingState=1;
- mode_l_u_init(a);
- }
+
+/* 02394E84 */
+void daObjSwheavy::Act_c::mode_lower() {
+    BOOL pressing = FALSE;
+    u8 mini = mMiniPushFlg;
+    u32 type = mType;
+    if (mini) {
+        type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        if (!(static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_REQ_HEAVY) || mPushFlg)
+            pressing = TRUE;
+    }
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    BOOL pop = !(static_cast<u32>(attr(type)->mFlags) & Act_c::FLAG_STAY_PRESSED) && !pressing;
+    const daObjSwheavy::Attr_c* params = attr(type);
+    type = checkedType(this, type, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+    params = attr(type);
+    BOOL match = FALSE;
+    if (static_cast<u32>(params->mFlags) & Act_c::FLAG_OBEY_SAVE) {
+        BOOL active = isSwitch(this);
+        if (!(active | pressing))
+            match = TRUE;
+    }
+    if (pop || match) {
+        type = checkedType(this, mType, "d_a_obj_swheavy.cpp", "(M_type >=0) && (M_type <Type_Max)");
+        u32 toggle = (static_cast<u32>(attr(type)->mFlags) >> 2) & 1;
+        if (pop && !(toggle | pressing))
+            mChangingState = 1;
+        mode_l_u_init();
+    }
 }
-VERIFY(0x02394E84,mode_lower);
-static void mode_l_u(Act_c* a) {
- WWHD_FUNC(0x0239502C,void,a);
- if(a->mCurHFrac<1.0f) return;
- if(a->mChangingState) {
- u32 sw=PrmAbstract(a,8,8),save=gabi::load<u32>(0x101F84DC);s8 room=a->home.roomNo;
- gabi::call(0x025B9F7C,gabi::at<u8>(save+0x20),sw,room);
- }
- mode_upper_init(a);
+
+/* 02394E68 */
+void daObjSwheavy::Act_c::mode_l_u_init() {
+    mMode = 3;
+    mTargetHFrac = 1.0f;
+    top_bg_aim_req(1.0f, 1);
 }
-VERIFY(0x0239502C,mode_l_u);
-static s32 Create(Act_c* a) {
- WWHD_FUNC(0x02394114,s32,a);
- u32 condition=a->actor_condition;
- if(!(condition&8)) {
- if(a) { gabi::call(0x025D4ED0,a);a->__vtbl=0x1002FB4C;condition=a->actor_condition; }
- a->actor_condition=condition|8;
- }
- s32 phase=dComIfG_resLoad(&a->mPhase,arc());if(phase!=4) return phase;
- u32 type=PrmAbstract(a,3,24);a->mType=type;
- type=checkedType(a,type,0x1002FBCC,0x1002FBE0);
- BOOL up=TRUE;if(!(gabi::load<u32>(attr(type)+4)&4)&&isSwitch(a)) up=FALSE;
- f32 z=a->scale.z,x=a->scale.x;a->scale.z=z*1.5f;a->scale.x=x*1.5f;
- translateRotate(a);f32 sy=a->scale.y,sx=a->scale.x,sz=a->scale.z;gabi::call(0x025F2518,sx,sy,sz);
- auto m=gabi::at<Mtx34>(0x1048D0CC);gabi::call(0x028E90D4,m,&a->mMtx1);
- if(!up) { f32 y=gabi::load<f32>(0x1048D0E8);gabi::store<f32>(0x1048D0E8,y+-35.5f); }
- gabi::call(0x028E90D4,m,&a->mMtx2);
- if(!gabi::call<BOOL>(0x025D63E8,a,gabi::at<void>(0x02393EC4),0x2000)) return 5;
- u32 p=play();gabi::call(0x024EEA6C,gabi::at<u8>(p+0x12A0),gabi::at<u8>(a->mpBgW1),a);
- gabi::store<u32>((u32)a->mpBgW1+0xA8,0);
- p=play();gabi::call(0x024EEA6C,gabi::at<u8>(p+0x12A0),gabi::at<u8>(a->mpBgW2),a);
- gabi::store<u32>((u32)a->mpBgW2+0xA8,0);gabi::store<u32>((u32)a->mpBgW2+0xB0,0x02393EC8);
- auto model=(J3DModel*)a->mpModel1;a->cullMtx=model?gabi::ea(model)+0xC8:0;init_mtx(a);
- gabi::call(0x025D674C,a,-97.5f,-2.0f,-97.5f,97.5f,55.0f,97.5f);
- a->mPushFlg=0;type=a->mType;a->mPrevHeavyRiding=0;a->mPushTimer=0;a->mVSpeed=0.0f;
- a->mPrevRiding=0;a->mMiniPushTimer=0;a->mBgAimTimer=0;a->mHeavyRiding=0;a->mBgAimTarget=0.0f;
- a->mMiniPushFlg=0;a->mRiding=0;
- type=checkedType(a,type,0x1002FBCC,0x1002FBE0);
- if((gabi::load<u32>(attr(type)+4)&4)||!isSwitch(a)) {
- a->mTopPos=0.0f;a->mModelHeight=0.0f;a->mCurHFrac=1.0f;a->mBgAim=1.0f;a->mBgHFrac=1.0f;a->mTargetHFrac=1.0f;mode_upper_init(a);
- } else {
- a->mTopPos=-35.5f;a->mModelHeight=-35.5f;a->mBgAim=0.0f;a->mTargetHFrac=0.0f;a->mBgHFrac=0.0f;a->mCurHFrac=0.0f;mode_lower_init(a);
- }
- return phase;
+
+/* 0239502C */
+void daObjSwheavy::Act_c::mode_l_u() {
+    if (mCurHFrac < 1.0f)
+        return;
+    if (mChangingState) {
+        u32 sw = PrmAbstract(this, PRM_SWSAVE_W, PRM_SWSAVE_S);
+        s8 room = home.roomNo;
+        dComIfGs_offSwitch(sw, room);
+    }
+    mode_upper_init();
 }
-VERIFY(0x02394114,Create);
-static BOOL Execute(Act_c* a) {
- WWHD_FUNC(0x023948D4,BOOL,a);
- set_push_flag(a);ptmf_call(0x1002FC78+(u32)a->mMode*8,a);calc_top_pos(a);
- u8 riding=a->mRiding,heavy=a->mHeavyRiding;a->mPrevRiding=riding;a->mPrevHeavyRiding=heavy;
- a->mHeavyRiding=0;a->mRiding=0;set_mtx(a);
- gabi::call(0x024F43DC,gabi::at<u8>(a->mpBgW1));gabi::call(0x024F43DC,gabi::at<u8>(a->mpBgW2));
- f32 height=a->mModelHeight,y=a->current.pos.y;y=(y+height)- -35.5f;
- f32 x=a->current.pos.x,z=a->current.pos.z;a->eyePos.x=x;a->eyePos.z=z;a->eyePos.y=y;return TRUE;
+
+/* 023948D4 */
+BOOL daObjSwheavy::Act_c::_execute() {
+    set_push_flag();
+    (this->*mode_proc.mProc[static_cast<u32>(mMode)])();
+    calc_top_pos();
+    u8 riding = mRiding, heavy = mHeavyRiding;
+    mPrevRiding = riding;
+    mPrevHeavyRiding = heavy;
+    mHeavyRiding = 0;
+    mRiding = 0;
+    set_mtx();
+    mpBgW1->Move();
+    mpBgW2->Move();
+    f32 height = m328, y = current.pos.y;
+    y = (y + height) - -35.5f;
+    f32 x = current.pos.x, z = current.pos.z;
+    eyePos.x = x;
+    eyePos.z = z;
+    eyePos.y = y;
+    return TRUE;
 }
-VERIFY(0x023948D4,Execute);
-static s32 CreateWrapper(Act_c* a) { WWHD_FUNC(0x023950A8,s32,a);return Create(a); }
-VERIFY(0x023950A8,CreateWrapper);
-static BOOL DeleteWrapper(Act_c* a) { WWHD_FUNC(0x023950AC,BOOL,a);return Delete(a); }
-VERIFY(0x023950AC,DeleteWrapper);
-static BOOL ExecuteWrapper(Act_c* a) { WWHD_FUNC(0x023950B0,BOOL,a);return Execute(a); }
-VERIFY(0x023950B0,ExecuteWrapper);
-static BOOL DrawWrapper(Act_c* a) { WWHD_FUNC(0x023950B4,BOOL,a);return Draw(a); }
-VERIFY(0x023950B4,DrawWrapper);
+
+/* 02394A28 */
+BOOL daObjSwheavy::Act_c::_draw() {
+    auto env = dKy_getEnvlight();
+    settingTevStruct(env, 1, &current.pos, &tevStr);
+    env = dKy_getEnvlight();
+    auto model = (J3DModel*)mpModel1;
+    setLightTevColorType(env, model, &tevStr);
+    env = dKy_getEnvlight();
+    model = (J3DModel*)mpModel2;
+    setLightTevColorType(env, model, &tevStr);
+    dComIfGd_setListBG();
+    mDoExt_modelUpdateDL(mpModel1, 0);
+    mDoExt_modelUpdateDL(mpModel2, 0);
+    dComIfGd_setList();
+    return TRUE;
+}
+
+/* 023950A8 */
+static s32 Mthd_Create(Act_c* a) {
+    return a->_create();
+}
+
+/* 023950AC */
+static BOOL Mthd_Delete(Act_c* a) {
+    return a->_delete();
+}
+
+/* 023950B0 */
+static BOOL Mthd_Execute(Act_c* a) {
+    return a->_execute();
+}
+
+/* 023950B4 */
+static BOOL Mthd_Draw(Act_c* a) {
+    return a->_draw();
+}
+
+/* 023951B8 */
+static BOOL Mthd_IsDelete(void* a) {
+    return TRUE;
+}
+
+// HD: compiler-generated and template code of this translation unit.
+
+/* 023951C0 */
+static u32 PrmAbstract(Act_c* a, s32 width, s32 shift) {
+    u32 value = a->mParameters, w = (u32)width & 63, sh = (u32)shift & 63;
+    return (sh < 32 ? value >> sh : 0) & ((w < 32 ? 1u << w : 0) - 1);
+}
+
+/* 023950B8 */
+static void sinit() {
+    __sinit_header_statics();
+}
+
+/* 0239514C */
+static void trivialDestructor(void* a, s32 flags) {
+    if (a && (flags & 1))
+        operator_delete(a);
+}
+
+/* 02395160 */
+static void emptyVirtual(void* a) {}
+
+/* 02395164 */
+static void destructor(Act_c* a, s32 flags) {
+    if (a) {
+        Swheavy_actorDtor(a, 0);
+        if (flags & 1)
+            operator_delete(a);
+    }
+}
+
+/* 023951DC */
+static void colorToFloat(void* dest, void* src) {
+    GXColor* color = static_cast<GXColor*>(src);
+    SwheavyColorFloat* out = static_cast<SwheavyColorFloat*>(dest);
+    f32 r = static_cast<f32>(static_cast<u8>(color->r)) / 255.0f,
+        g = static_cast<f32>(static_cast<u8>(color->g)) / 255.0f;
+    f32 b = static_cast<f32>(static_cast<u8>(color->b)) / 255.0f,
+        alpha = static_cast<f32>(static_cast<u8>(color->a)) / 255.0f;
+    out->r = r;
+    out->g = g;
+    out->b = b;
+    out->a = alpha;
+}
+
+/* WWHD glue
+ data M_attr 1002FD90
+ data mode_proc 1002FC78
+ ext 0273AA24 void Swheavy_assert(const char*,u32,const char*)
+ ext 024F23F4 SwheavyBgW* Swheavy_newBgW(s32)
+ ext 0200A030 BOOL Swheavy_setBg(SwheavyBgW*,cBgD_t*,u32,Mtx34*)
+ ext 025F1B48 void Swheavy_ZXYrotM(Mtx34*,s16,s16,s16)
+ ext 025D4ED0 void Swheavy_actorCtor(Act_c*)
+ ext 025D50BC void Swheavy_actorDtor(Act_c*,s32)
+ str 1002FD88 "Hhbot"
+ str 1002FB9C "d_a_obj_swheavy.cpp" in 02393CD0
+ str 1002FB5C "mdl_1_data != 0"
+ str 1002FB6C "mdl_2_data != 0"
+ str 1002FB7C "bgw_1_data != 0"
+ str 1002FB8C "bgw_2_data != 0"
+ str 1002FC04 "d_a_obj_swheavy.cpp" in 02394510
+ str 1002FC18 "(M_type >=0) && (M_type <Type_Max)" in 02394510
+ str 1002FC40 "d_a_obj_swheavy.cpp" in 02394730
+ str 1002FC54 "(M_type >=0) && (M_type <Type_Max)" in 02394730
+ str 1002FC98 "d_a_obj_swheavy.cpp" in 02394AE8
+ str 1002FCAC "(M_type >=0) && (M_type <Type_Max)" in 02394AE8
+ str 1002FCD4 "d_a_obj_swheavy.cpp" in 02394BCC
+ str 1002FCE8 "(M_type >=0) && (M_type <Type_Max)" in 02394BCC
+ str 1002FD0C "d_a_obj_swheavy.cpp" in 02394D50
+ str 1002FD20 "(M_type >=0) && (M_type <Type_Max)" in 02394D50
+ str 1002FD44 "d_a_obj_swheavy.cpp" in 02394E84
+ str 1002FD58 "(M_type >=0) && (M_type <Type_Max)" in 02394E84
+ str 1002FBCC "d_a_obj_swheavy.cpp" in 02394114
+ str 1002FBE0 "(M_type >=0) && (M_type <Type_Max)" in 02394114
+*/

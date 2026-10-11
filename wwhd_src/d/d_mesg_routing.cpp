@@ -1,828 +1,333 @@
-/* Retained HD message routing and renderer selection, 025F7980..025F85A8 exclusive. */
-#include "wwhd.h"
-u32 mesgroute_025F7980(u32 a3,u32 a4,u32 a5) {
-WWHD_FUNC(0x025F7980,u32,a3,a4,a5);
-gabi::Local<u8[96]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=a4,v5=a5,v6=0,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v23=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
+/** HD message lookup and renderer routing. Local verification */
+#include "d/d_mesg_routing.h"
+using namespace MesgRouting;
+using Word = be<u32>;
+using FloatConstant = be<f32>;
+using ResourcePointer = gptr<void>;
+static StringVtable l_sourceVtable;
+static StringVtable l_formatVtable;
+static StringVtable l_keyInitialVtable;
+static StringVtable l_keyVtable;
+static StringVtable l_pairBufferVtable;
+static StringVtable l_pairVtable;
+static ResourceKey l_messageKey;
+static ResourceKey l_scopeKey;
+static ResourceKey l_demoKey;
+static Word l_messageKeyInitialized;
+static Word l_scopeKeyInitialized;
+static Word l_demoKeyInitialized;
+static ResourcePointer l_resources;
+static u8 l_messageColor;
+static u8 l_scopeColor;
+static u8 l_demoColor;
+static FloatConstant l_tactPosition;
 
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v25 = v3;
-v24 = v5;
-v29 = v4;
-v30 = 0u + 0xFFFFFFFFu;
-v27 = 0u + 0x00000000u;
-v9 = v1 + 0x0000001Cu;
-v11 = 0u + 0x00000020u;
-gabi::store<u8>(v1 + 0x0000003Bu, v27);
-v0 = 0u + 0x100E0000u;
-v31 = 0u + 0x100E0000u;
-gabi::store<u32>(v1 + 0x00000018u, v11);
-{ uint64_t t = (uint64_t)v0 + 0x00000BA4u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-v4 = 0u + 0x100E0000u;
-gabi::store<u8>(v1 + 0x0000001Cu, v27);
-v5 = v29 & 0x0000FFFFu;
-v3 = v1 + 0x00000010u;
-gabi::store<u32>(v1 + 0x00000014u, v0);
-v4 = v4 + 0x00000C70u;
-v31 = v31 + 0x00000AE4u;
-gabi::store<u32>(v1 + 0x00000010u, v9);
-v3=gabi::call<u32>(0x02759C28,v3,v4,v5);
-v8 = 0u + 0x10490000u;
-{ uint32_t ea = v8 + 0xFFFFD774u; v5 = gabi::load<u32>(ea); v8 = ea; }
-v28 = 0u + 0x10490000u;
-less=((int32_t)v5)<(0);greater=((int32_t)v5)>(0);equal=((int32_t)v5)==(0);
-v28 = v28 + 0xFFFFD760u;
-if (equal) { goto L_025F7A28; }
-v3 = 0u + 0x101F0000u;
-v4 = v25 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v28;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v26 = gabi::load<u32>(v25 + 0x00000240u);
-less=((int32_t)v26)<(0);greater=((int32_t)v26)>(0);equal=((int32_t)v26)==(0);
-if (equal) { goto L_025F7B1C; }
-goto L_025F7B34;
-L_025F7A28: ;
-v12 = 0u + 0x100E0000u;
-gabi::store<u32>(v1 + 0x0000000Cu, v31);
-v12 = v12 + 0x00000BECu;
-gabi::store<u8>(v28 + 0x00000011u, v27);
-v6 = 0u + 0x00000001u;
-gabi::store<u32>(v28 + 0x00000004u, v12);
-v26 = v28 + 0x0000000Cu;
-v9 = 0u + 0x00000006u;
-gabi::store<u32>(v8 + 0x00000000u, v6);
-v8 = 0u + 0x100E0000u;
-gabi::store<u32>(v28 + 0x00000008u, v9);
-v8 = v8 + 0x00000C68u;
-gabi::store<u32>(v28 + 0x00000000u, v26);
-v3 = v1 + 0x00000008u;
-gabi::store<u32>(v1 + 0x00000008u, v8);
-v3=gabi::call<u32>(0x025F8F80,v3);
-v8 = gabi::load<u32>(v1 + 0x00000008u);
-v7 = gabi::load<u8>(v8 + 0x00000000u);
-v31 = 0u + 0x00000000u;
-less=((int32_t)v7)<(0);greater=((int32_t)v7)>(0);equal=((int32_t)v7)==(0);
-v10 = 0u + 0x00040000u;
-if (equal) { goto L_025F7AA4; }
-L_025F7A80: ;
-v31 = v31 + 0x00000001u;
-less=((int32_t)v31)<((int32_t)v10);greater=((int32_t)v31)>((int32_t)v10);equal=((int32_t)v31)==((int32_t)v10);
-v8 = v8 + 0x00000001u;
-if (greater) { goto L_025F7AA0; }
-v9 = gabi::load<u8>(v8 + 0x00000000u);
-less=((int32_t)v9)<(0);greater=((int32_t)v9)>(0);equal=((int32_t)v9)==(0);
-if (!equal) { goto L_025F7A80; }
-goto L_025F7AA4;
-L_025F7AA0: ;
-v31 = 0u + 0x00000000u;
-L_025F7AA4: ;
-v12 = gabi::load<u32>(v28 + 0x00000008u);
-less=((int32_t)v31)<((int32_t)v12);greater=((int32_t)v31)>((int32_t)v12);equal=((int32_t)v31)==((int32_t)v12);
-if (less) { goto L_025F7AB4; }
-v31 = v12 + 0xFFFFFFFFu;
-L_025F7AB4: ;
-v12 = gabi::load<u32>(v1 + 0x0000000Cu);
-v0 = gabi::load<u32>(v12 + 0x00000014u);
-count = v0;
-v3 = v1 + 0x00000008u;
-v3=gabi::call_ptr<u32>(count,v3);
-v4 = gabi::load<u32>(v1 + 0x00000008u);
-v3 = v26;
-v5 = v31;
-v6 = 0u + 0x00000000u;
-v3=gabi::call<u32>(0xC0009988,v3,v4,v5,v6);
-v0 = 0u + 0x100E0000u;
-v3 = 0u + 0x101F0000u;
-gabi::store<u8>(v26 + v31, v27);
-{ uint64_t t = (uint64_t)v0 + 0x00000C04u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-v3 = v3 + 0x00004B14u;
-gabi::store<u32>(v28 + 0x00000004u, v0);
-v3=gabi::call<u32>(0x028F026C,v3);
-v3 = 0u + 0x101F0000u;
-v4 = v25 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v28;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v26 = gabi::load<u32>(v25 + 0x00000240u);
-less=((int32_t)v26)<(0);greater=((int32_t)v26)>(0);equal=((int32_t)v26)==(0);
-if (!equal) { goto L_025F7B34; }
-L_025F7B1C: ;
-v0 = gabi::load<u32>(v1 + 0x00000064u);
-v3 = 0u + 0xFFFFFFFFu;
-return v3;
-L_025F7B34: ;
-v31 = gabi::load<u32>(v25 + 0x00000938u);
-gabi::store<u32>(v25 + 0x00000938u, v29);
-v3 = v25;
-v28 = gabi::load<u32>(v25 + 0x0000012Cu);
-v3=gabi::call<u32>(0x025F795C);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (!equal) { goto L_025F7B74; }
-v23 = gabi::load<u8>(v26 + 0x0000000Eu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(v3 + 0x00005BC5u, v23);
-v23 = gabi::load<u8>(v26 + 0x0000000Bu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(v3 + 0x00005C34u, v23);
-v23 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v26 + 0x00000004u);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u16>(v3 + 0x00005BA4u, v23);
-L_025F7B74: ;
-v10 = gabi::load<u8>(v26 + 0x00000001u);
-less=(v10)<(0x0007u);greater=(v10)>(0x0007u);equal=(v10)==(0x0007u);
-if (!less) { goto L_025F7BD0; }
-less=(v10)<(0x0001u);greater=(v10)>(0x0001u);equal=(v10)==(0x0001u);
-if (equal) { goto L_025F7BF4; }
-less=(v10)<(0x0002u);greater=(v10)>(0x0002u);equal=(v10)==(0x0002u);
-if (equal) { goto L_025F7C18; }
-less=(v10)<(0x0006u);greater=(v10)>(0x0006u);equal=(v10)==(0x0006u);
-if (equal) { goto L_025F7C40; }
-less=(v29)<(0x0266u);greater=(v29)>(0x0266u);equal=(v29)==(0x0266u);
-if (!equal) { goto L_025F7CD8; }
-L_025F7BA0: ;
-v0 = 0u + 0x00000005u;
-v3 = gabi::load<u32>(v25 + 0x00000960u);
-v4 = v28;
-v5 = 0u + 0x00000266u;
-v7 = 0u + 0x00000000u;
-v6 = 0u + 0x00000002u;
-gabi::store<u32>(v25 + 0x0000094Cu, v0);
-v3=gabi::call<u32>(0x026AE194,v3,v4,v5,v6,v7);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (!equal) { goto L_025F7D94; }
-L_025F7BC8: ;
-gabi::store<u32>(v25 + 0x00000938u, v31);
-goto L_025F7D98;
-L_025F7BD0: ;
-less=(v10)<(0x0007u);greater=(v10)>(0x0007u);equal=(v10)==(0x0007u);
-if (equal) { goto L_025F7C68; }
-less=(v10)<(0x0009u);greater=(v10)>(0x0009u);equal=(v10)==(0x0009u);
-if (equal) { goto L_025F7C90; }
-less=(v10)<(0x000Eu);greater=(v10)>(0x000Eu);equal=(v10)==(0x000Eu);
-if (equal) { goto L_025F7CB4; }
-less=(v29)<(0x0266u);greater=(v29)>(0x0266u);equal=(v29)==(0x0266u);
-if (equal) { goto L_025F7BA0; }
-goto L_025F7CD8;
-L_025F7BF4: ;
-v5 = v28;
-v3 = gabi::load<u32>(v25 + 0x0000095Cu);
-v4 = 0u + 0x00000003u;
-v6 = v29;
-gabi::store<u32>(v25 + 0x0000094Cu, v27);
-v3=gabi::call<u32>(0x026B3F18,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7C18: ;
-v0 = 0u + 0x00000002u;
-v3 = gabi::load<u32>(v25 + 0x00000950u);
-v5 = v28;
-v6 = v29;
-v4 = 0u + 0x00000000u;
-gabi::store<u32>(v25 + 0x0000094Cu, v0);
-v3=gabi::call<u32>(0x026BCBF0,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7C40: ;
-v7 = 0u + 0x00000004u;
-v3 = gabi::load<u32>(v25 + 0x00000950u);
-v5 = v28;
-v6 = v29;
-v4 = 0u + 0x00000002u;
-gabi::store<u32>(v25 + 0x0000094Cu, v7);
-v3=gabi::call<u32>(0x026BCBF0,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7C68: ;
-v10 = 0u + 0x00000003u;
-v3 = gabi::load<u32>(v25 + 0x00000950u);
-v5 = v28;
-v6 = v29;
-v4 = 0u + 0x00000001u;
-gabi::store<u32>(v25 + 0x0000094Cu, v10);
-v3=gabi::call<u32>(0x026BCBF0,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7C90: ;
-v5 = v28;
-v3 = gabi::load<u32>(v25 + 0x0000095Cu);
-v4 = 0u + 0x00000001u;
-v6 = v29;
-gabi::store<u32>(v25 + 0x0000094Cu, v27);
-v3=gabi::call<u32>(0x026B3F18,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7CB4: ;
-v5 = v28;
-v3 = gabi::load<u32>(v25 + 0x0000095Cu);
-v4 = 0u + 0x00000000u;
-v6 = v29;
-gabi::store<u32>(v25 + 0x0000094Cu, v27);
-v3=gabi::call<u32>(0x026B3F18,v3,v4,v5,v6);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7CD8: ;
-less=(v29)<(0x0EDCu);greater=(v29)>(0x0EDCu);equal=(v29)==(0x0EDCu);
-if (equal) { goto L_025F7D18; }
-less=(v29)<(0x0EDDu);greater=(v29)>(0x0EDDu);equal=(v29)==(0x0EDDu);
-if (equal) { goto L_025F7D44; }
-less=(v29)<(0x0EE2u);greater=(v29)>(0x0EE2u);equal=(v29)==(0x0EE2u);
-if (less) { goto L_025F7D70; }
-less=(v29)<(0x0EE3u);greater=(v29)>(0x0EE3u);equal=(v29)==(0x0EE3u);
-if (!greater) { goto L_025F7D44; }
-v9 = 0u + 0x00000001u;
-v3 = gabi::load<u32>(v25 + 0x00000954u);
-v4 = v28;
-v5 = v29;
-v6 = v24;
-gabi::store<u32>(v25 + 0x0000094Cu, v9);
-v3=gabi::call<u32>(0x026B699C,v3,v4,v5,v6);
-goto L_025F7D8C;
-L_025F7D18: ;
-v0 = 0u + 0x00000005u;
-v3 = gabi::load<u32>(v25 + 0x00000960u);
-v4 = v28;
-v5 = 0u + 0x00000EDCu;
-v7 = 0u + 0x00000000u;
-v6 = 0u + 0x00000003u;
-gabi::store<u32>(v25 + 0x0000094Cu, v0);
-v3=gabi::call<u32>(0x026AE194,v3,v4,v5,v6,v7);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7D44: ;
-v3 = gabi::load<u32>(v25 + 0x00000960u);
-v5 = 0u + 0x00000005u;
-v6 = 0u + 0x00000001u;
-gabi::store<u32>(v25 + 0x0000094Cu, v5);
-v7 = v6;
-v5 = v29;
-v4 = v28;
-v3=gabi::call<u32>(0x026AE194,v3,v4,v5,v6,v7);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-goto L_025F7D94;
-L_025F7D70: ;
-v9 = 0u + 0x00000001u;
-v3 = gabi::load<u32>(v25 + 0x00000954u);
-v4 = v28;
-v5 = v29;
-v6 = v24;
-gabi::store<u32>(v25 + 0x0000094Cu, v9);
-v3=gabi::call<u32>(0x026B699C,v3,v4,v5,v6);
-L_025F7D8C: ;
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F7BC8; }
-L_025F7D94: ;
-v30 = 0u + 0x00000000u;
-L_025F7D98: ;
-v3 = v30;
-return v3;
-return v3;
-}
-VERIFY(0x025F7980,mesgroute_025F7980);
-u32 mesgroute_025F7DB0(u32 a3,u32 a4,u32 a5) {
-WWHD_FUNC(0x025F7DB0,u32,a3,a4,a5);
-gabi::Local<u8[24]> frame;
-u32 v0=0,v3=a3,v4=a4,v5=a5,v28=0,v29=0,v30=0,v31=0;
+// HD: all entry points retain their original full-width register signatures.
+u32 dMesg_routeMessage(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos);
+u32 fopMsgM_messageSet(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos);
+u32 fopMsgM_scopeMessageSet(u32 i_manager, u32 i_msgNo);
+u32 fopMsgM_tactMessageSet(u32 i_manager);
+u32 fopMsgM_messageSetDemo(u32 i_manager, u32 i_msgNo);
+u32 dMesg_routeNamedMessage(u32 i_manager, u32 i_group, u32 i_name, u32 i_context, u32 i_option);
 
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v28 = v4;
-v29 = v5;
-v30 = v3;
-v31 = 0u + 0xFFFFFFFFu;
-v3=gabi::call<u32>(0x025F795C);
-less=(v3)<(0x0000u);greater=(v3)>(0x0000u);equal=(v3)==(0x0000u);
-if (equal) { goto L_025F7DF4; }
-less=(v3)<(0x000Fu);greater=(v3)>(0x000Fu);equal=(v3)==(0x000Fu);
-if (equal) { goto L_025F7E30; }
-goto L_025F7E44;
-L_025F7DF4: ;
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x000000FFu;
-gabi::store<u8>(v3 + 0x00005BC6u, v0);
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0xFFFFFFFFu;
-v5 = v29;
-gabi::store<u32>(v3 + 0x00005C30u, v0);
-v3 = v30;
-v4 = v28;
-v3=gabi::call<u32>(0x025F7980,v3,v4,v5);
-v31 = v3;
-v4 = 0u + 0x00000001u;
-v3 = v30;
-v3=gabi::call<u32>(0x025F74D0,v3,v4);
-goto L_025F7E44;
-L_025F7E30: ;
-v5 = v29;
-v4 = v28;
-v3 = v30;
-v3=gabi::call<u32>(0x025F7980,v3,v4,v5);
-v31 = v3;
-L_025F7E44: ;
-v3 = v31;
-return v3;
-return v3;
+static void terminate(StringBase* string) { gabi::call_ptr<u32>(string->mVtable->assure, string); }
+static u32 stringLength(be<u8>* string) {
+    u32 length = 0;
+    while (static_cast<u8>(*string)) {
+        ++length;
+        string = gabi::at<be<u8>>(gabi::ea(string) + 1);
+        if (length > STRING_MAX_LENGTH)
+            return 0;
+    }
+    return length;
 }
-VERIFY(0x025F7DB0,mesgroute_025F7DB0);
-u32 mesgroute_025F7E68(u32 a3,u32 a4) {
-WWHD_FUNC(0x025F7E68,u32,a3,a4);
-gabi::Local<u8[88]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=a4,v5=0,v6=0,v7=0,v8=0,v9=0,v10=0,v12=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
+static void terminateAt(void* buffer, u32 length) {
+    *gabi::at<be<u8>>(gabi::ea(buffer) + length) = 0;
+}
+static void formatName(String32* name, u32 i_msgNo, const char* format) {
+    name->mData = name->mBuffer;
+    name->mVtable = &l_formatVtable;
+    name->mCapacity = 32;
+    name->mBuffer[0] = 0;
+    name->mBuffer[31] = 0;
+    MesgRoute_format(name, format, i_msgNo & 0xFFFF);
+}
+// HD: lazily initialized resource keys keep the native descriptors and virtual copy boundaries.
+static void initializeKey(ResourceKey* key, Word* initialized, StringBase* source, const char* text,
+                          void* color) {
+    source->mVtable = &l_sourceVtable;
+    key->mBuffer[5] = 0;
+    key->mVtable = &l_keyInitialVtable;
+    *initialized = 1;
+    key->mCapacity = 6;
+    key->mData = key->mBuffer;
+    source->mData = gabi::at<be<u8>>(gabi::guest_addr(text));
+    MesgRoute_sourceNoop(source);
+    u32 length = stringLength(source->mData);
+    u32 capacity = key->mCapacity;
+    if (static_cast<s32>(length) >= static_cast<s32>(capacity))
+        length = capacity - 1;
+    terminate(source);
+    be<u8>* data = source->mData;
+    MesgRoute_copy(key->mBuffer, data, length, 0);
+    terminateAt(key->mBuffer, length);
+    key->mVtable = &l_keyVtable;
+    MesgRoute_initColor(color);
+}
+static MessageEntry* lookup(Manager* manager, KeyFrame* frame, ResourceKey* key, Word* initialized,
+                            const char* prefix, void* color) {
+    if (!static_cast<u32>(*initialized))
+        initializeKey(key, initialized, &frame->source, prefix, color);
+    MesgRoute_lookup(l_resources, manager->mProcessorWork, key, &frame->name);
+    return manager->mWordWork;
+}
+static void setMessageMetadata(MessageEntry* entry) {
+    // GHS reloads play on each setter; resource fields are loaded before those calls.
+    u32 position = entry->mTextboxPosition;
+    MesgRoute_getPlay()->mTextboxPosition = position;
+    u32 camera = entry->mInitialCamera;
+    MesgRoute_getPlay()->mInitialCamera = camera;
+    s32 message = entry->mMsgNo;
+    MesgRoute_getPlay()->mMsgNo = message;
+}
 
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v26 = v3;
-v27 = v4;
-v31 = 0u + 0xFFFFFFFFu;
-v0 = 0u + 0x00000020u;
-v12 = v1 + 0x0000001Cu;
-v25 = 0u + 0x00000000u;
-gabi::store<u32>(v1 + 0x00000018u, v0);
-v4 = 0u + 0x100E0000u;
-v6 = 0u + 0x100E0000u;
-gabi::store<u8>(v1 + 0x0000003Bu, v25);
-v4 = v4 + 0x00000C80u;
-v30 = 0u + 0x100E0000u;
-gabi::store<u32>(v1 + 0x00000010u, v12);
-v6 = v6 + 0x00000BA4u;
-v5 = v27 & 0x0000FFFFu;
-gabi::store<u8>(v1 + 0x0000001Cu, v25);
-v3 = v1 + 0x00000010u;
-v30 = v30 + 0x00000AE4u;
-gabi::store<u32>(v1 + 0x00000014u, v6);
-v3=gabi::call<u32>(0x02759C28,v3,v4,v5);
-v7 = 0u + 0x10490000u;
-{ uint32_t ea = v7 + 0xFFFFD778u; v8 = gabi::load<u32>(ea); v7 = ea; }
-v29 = 0u + 0x10490000u;
-less=((int32_t)v8)<(0);greater=((int32_t)v8)>(0);equal=((int32_t)v8)==(0);
-v29 = v29 + 0xFFFFD738u;
-if (equal) { goto L_025F7F0C; }
-v3 = 0u + 0x101F0000u;
-v4 = v26 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v29;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v29 = gabi::load<u32>(v26 + 0x00000240u);
-less=((int32_t)v29)<(0);greater=((int32_t)v29)>(0);equal=((int32_t)v29)==(0);
-if (equal) { goto L_025F8070; }
-goto L_025F8000;
-L_025F7F0C: ;
-gabi::store<u32>(v1 + 0x0000000Cu, v30);
-v9 = 0u + 0x00000001u;
-v12 = 0u + 0x100E0000u;
-gabi::store<u8>(v29 + 0x00000011u, v25);
-v12 = v12 + 0x00000BECu;
-gabi::store<u32>(v7 + 0x00000000u, v9);
-v0 = 0u + 0x00000006u;
-gabi::store<u32>(v29 + 0x00000004u, v12);
-v10 = 0u + 0x100E0000u;
-v28 = v29 + 0x0000000Cu;
-gabi::store<u32>(v29 + 0x00000008u, v0);
-v10 = v10 + 0x00000C78u;
-gabi::store<u32>(v29 + 0x00000000u, v28);
-v3 = v1 + 0x00000008u;
-gabi::store<u32>(v1 + 0x00000008u, v10);
-v3=gabi::call<u32>(0x025F8F80,v3);
-v9 = gabi::load<u32>(v1 + 0x00000008u);
-v0 = gabi::load<u8>(v9 + 0x00000000u);
-v30 = 0u + 0x00000000u;
-less=((int32_t)v0)<(0);greater=((int32_t)v0)>(0);equal=((int32_t)v0)==(0);
-v10 = 0u + 0x00040000u;
-if (equal) { goto L_025F7F88; }
-L_025F7F64: ;
-v30 = v30 + 0x00000001u;
-less=((int32_t)v30)<((int32_t)v10);greater=((int32_t)v30)>((int32_t)v10);equal=((int32_t)v30)==((int32_t)v10);
-v9 = v9 + 0x00000001u;
-if (greater) { goto L_025F7F84; }
-v6 = gabi::load<u8>(v9 + 0x00000000u);
-less=((int32_t)v6)<(0);greater=((int32_t)v6)>(0);equal=((int32_t)v6)==(0);
-if (!equal) { goto L_025F7F64; }
-goto L_025F7F88;
-L_025F7F84: ;
-v30 = 0u + 0x00000000u;
-L_025F7F88: ;
-v12 = gabi::load<u32>(v29 + 0x00000008u);
-v7 = gabi::load<u32>(v1 + 0x0000000Cu);
-less=((int32_t)v30)<((int32_t)v12);greater=((int32_t)v30)>((int32_t)v12);equal=((int32_t)v30)==((int32_t)v12);
-v8 = gabi::load<u32>(v7 + 0x00000014u);
-if (less) { goto L_025F7FA0; }
-v30 = v12 + 0xFFFFFFFFu;
-L_025F7FA0: ;
-count = v8;
-v3 = v1 + 0x00000008u;
-v3=gabi::call_ptr<u32>(count,v3);
-v4 = gabi::load<u32>(v1 + 0x00000008u);
-v3 = v28;
-v5 = v30;
-v6 = 0u + 0x00000000u;
-v3=gabi::call<u32>(0xC0009988,v3,v4,v5,v6);
-v0 = 0u + 0x100E0000u;
-v3 = 0u + 0x101F0000u;
-gabi::store<u8>(v28 + v30, v25);
-{ uint64_t t = (uint64_t)v0 + 0x00000C04u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-v3 = v3 + 0x00004B20u;
-gabi::store<u32>(v29 + 0x00000004u, v0);
-v3=gabi::call<u32>(0x028F026C,v3);
-v3 = 0u + 0x101F0000u;
-v4 = v26 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v29;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v29 = gabi::load<u32>(v26 + 0x00000240u);
-less=((int32_t)v29)<(0);greater=((int32_t)v29)>(0);equal=((int32_t)v29)==(0);
-if (equal) { goto L_025F8070; }
-L_025F8000: ;
-v3=gabi::call<u32>(0x025200D4);
-v0 = gabi::load<u32>(v3 + 0x00005CD8u);
-v9 = v0 & 0x00200000u; less=(s32)v9<0;greater=(s32)v9>0;equal=v9==0;
-if (equal) { goto L_025F8050; }
-v3=gabi::call<u32>(0x025200D4);
-v0 = gabi::load<u8>(v3 + 0x00005BB3u);
-less=((int32_t)v0)<(11);greater=((int32_t)v0)>(11);equal=((int32_t)v0)==(11);
-if (!equal) { goto L_025F8050; }
-v30 = gabi::load<u8>(v29 + 0x0000000Eu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(v3 + 0x00005BC5u, v30);
-v30 = gabi::load<u8>(v29 + 0x0000000Bu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(v3 + 0x00005C34u, v30);
-v30 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v29 + 0x00000004u);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u16>(v3 + 0x00005BA4u, v30);
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x00000002u;
-gabi::store<u8>(v3 + 0x00005BB3u, v0);
-L_025F8050: ;
-v4 = gabi::load<u32>(v26 + 0x0000012Cu);
-v5 = v27;
-v3 = gabi::load<u32>(v26 + 0x00000958u);
-v3=gabi::call<u32>(0x026B8FD0,v3,v4,v5);
-less=((int32_t)v3)<(0);greater=((int32_t)v3)>(0);equal=((int32_t)v3)==(0);
-if (equal) { goto L_025F8070; }
-v31 = 0u + 0x00000000u;
-gabi::store<u32>(v26 + 0x00000938u, v27);
-L_025F8070: ;
-v3 = v31;
-return v3;
-return v3;
+/* 025F7980 */
+u32 dMesg_routeMessage(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos) {
+    gabi::Local<u8[96]> storage;
+    KeyFrame* frame = reinterpret_cast<KeyFrame*>(storage.get());
+    Manager* manager = gabi::at<Manager>(i_manager);
+    formatName(&frame->name, i_msgNo, "%05d");
+    MessageEntry* entry =
+        lookup(manager, frame, &l_messageKey, &l_messageKeyInitialized, "dummy", &l_messageColor);
+    if (!entry)
+        return MESG_ERROR;
+    u32 oldMsgNo = manager->mMsgNo;
+    manager->mMsgNo = i_msgNo;
+    u32 context = manager->mMessageContext;
+    if (MesgRoute_getStatus() == MESG_IDLE)
+        setMessageMetadata(entry);
+    u32 result;
+    switch (static_cast<u32>(entry->mTextboxType)) {
+    case TEXTBOX_AUX:
+        manager->mMode = MODE_AUX;
+        result = MesgRoute_aux(manager->mAuxScreenWork, 3, context, i_msgNo);
+        break;
+    case TEXTBOX_RESET:
+        manager->mMode = MODE_RESET;
+        result = MesgRoute_reset(manager->mResetWork, 0, context, i_msgNo);
+        break;
+    case TEXTBOX_OVERLAY:
+        manager->mMode = MODE_OVERLAY;
+        result = MesgRoute_reset(manager->mResetWork, 2, context, i_msgNo);
+        break;
+    case TEXTBOX_BOX:
+        manager->mMode = MODE_BOX;
+        result = MesgRoute_reset(manager->mResetWork, 1, context, i_msgNo);
+        break;
+    case TEXTBOX_AUX_SMALL:
+        manager->mMode = MODE_AUX;
+        result = MesgRoute_aux(manager->mAuxScreenWork, 1, context, i_msgNo);
+        break;
+    case TEXTBOX_AUX_EVENT:
+        manager->mMode = MODE_AUX;
+        result = MesgRoute_aux(manager->mAuxScreenWork, 0, context, i_msgNo);
+        break;
+    default:
+        // HD: special message numbers select the sequence renderer independently of box type.
+        switch (i_msgNo) {
+        case MSG_SPECIAL:
+            manager->mMode = MODE_SEQUENCE;
+            result = MesgRoute_sequence(manager->mSequenceWork, context, MSG_SPECIAL, 2, 0);
+            break;
+        case MSG_SEQUENCE:
+            manager->mMode = MODE_SEQUENCE;
+            result = MesgRoute_sequence(manager->mSequenceWork, context, MSG_SEQUENCE, 3, 0);
+            break;
+        case MSG_SEQUENCE_NEXT:
+        case MSG_SEQUENCE_ALT:
+        case MSG_SEQUENCE_ALT_NEXT:
+            manager->mMode = MODE_SEQUENCE;
+            result = MesgRoute_sequence(manager->mSequenceWork, context, i_msgNo, 1, 1);
+            break;
+        default:
+            manager->mMode = MODE_TALK;
+            result = MesgRoute_talk(manager->mScreenWork, context, i_msgNo, i_lookAtPos);
+            break;
+        }
+        break;
+    }
+    if (!result) {
+        manager->mMsgNo = oldMsgNo;
+        return MESG_ERROR;
+    }
+    return 0;
 }
-VERIFY(0x025F7E68,mesgroute_025F7E68);
-u32 mesgroute_025F8088(u32 a3) {
-WWHD_FUNC(0x025F8088,u32,a3);
-gabi::Local<u8[32]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=0,v5=0,v10=0,v11=0,v30=0,v31=0;
-f64 q0=0;
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v11 = 0u + 0x100E0000u;
-q0=gabi::load<f32>(v11 + 0x00000C4Cu);
-{ uint32_t ea = v1 + 0x0000000Cu; gabi::store<f32>(ea, q0); }
-v31 = 0u + 0xFFFFFFFFu;
-{ uint32_t ea = v1 + 0x00000008u; gabi::store<f32>(ea, q0); }
-v30 = v3;
-{ uint32_t ea = v1 + 0x00000010u; gabi::store<f32>(ea, q0); }
-v3=gabi::call<u32>(0x025F795C);
-less=(v3)<(0x0000u);greater=(v3)>(0x0000u);equal=(v3)==(0x0000u);
-if (equal) { goto L_025F80E0; }
-less=(v3)<(0x000Fu);greater=(v3)>(0x000Fu);equal=(v3)==(0x000Fu);
-if (equal) { goto L_025F810C; }
-v3=gabi::call<u32>(0x025200D4);
-v10 = gabi::load<u8>(v3 + 0x00005BB3u);
-less=((int32_t)v10)<(0);greater=((int32_t)v10)>(0);equal=((int32_t)v10)==(0);
-if (equal) { goto L_025F8138; }
-goto L_025F812C;
-L_025F80E0: ;
-v0 = 0u + 0x00000001u;
-v3 = v30;
-v4 = 0u + 0x000005ACu;
-v5 = v1 + 0x00000008u;
-gabi::store<u8>(v30 + 0x00000920u, v0);
-v3=gabi::call<u32>(0x025F7980,v3,v4,v5);
-v31 = v3;
-v4 = 0u + 0x00000002u;
-v3 = v30;
-v3=gabi::call<u32>(0x025F74D0,v3,v4);
-goto L_025F8138;
-L_025F810C: ;
-v0 = 0u + 0x00000001u;
-v3 = v30;
-v4 = 0u + 0x000005ACu;
-v5 = v1 + 0x00000008u;
-gabi::store<u8>(v30 + 0x00000920u, v0);
-v3=gabi::call<u32>(0x025F7980,v3,v4,v5);
-v31 = v3;
-goto L_025F8138;
-L_025F812C: ;
-v3 = v30;
-v4 = 0u + 0x00000000u;
-v3=gabi::call<u32>(0x025F74D0,v3,v4);
-L_025F8138: ;
-v3 = v31;
-return v3;
-return v3;
-}
-VERIFY(0x025F8088,mesgroute_025F8088);
-u32 mesgroute_025F8154(u32 a3,u32 a4) {
-WWHD_FUNC(0x025F8154,u32,a3,a4);
-gabi::Local<u8[88]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=a4,v5=0,v6=0,v7=0,v8=0,v9=0,v10=0,v11=0,v12=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
 
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v28 = v3;
-v25 = v4;
-v3=gabi::call<u32>(0x025200D4);
-v0 = 0u + 0x000000FFu;
-gabi::store<u8>(v3 + 0x00005BC6u, v0);
-v3=gabi::call<u32>(0x025200D4);
-v30 = 0u + 0xFFFFFFFFu;
-gabi::store<u32>(v3 + 0x00005C30u, v30);
-v3 = v28;
-v3=gabi::call<u32>(0x025F795C);
-less=(v3)<(0x0000u);greater=(v3)>(0x0000u);equal=(v3)==(0x0000u);
-if (equal) { goto L_025F819C; }
-less=(v3)<(0x000Fu);greater=(v3)>(0x000Fu);equal=(v3)==(0x000Fu);
-if (!equal) { goto L_025F8370; }
-L_025F819C: ;
-v5 = v1 + 0x0000001Cu;
-v7 = 0u + 0x100E0000u;
-gabi::store<u32>(v1 + 0x00000010u, v5);
-v29 = 0u + 0x100E0000u;
-v27 = 0u + 0x00000000u;
-v29 = v29 + 0x00000AE4u;
-v7 = v7 + 0x00000BA4u;
-gabi::store<u8>(v1 + 0x0000003Bu, v27);
-v0 = 0u + 0x00000020u;
-v4 = 0u + 0x100E0000u;
-gabi::store<u8>(v1 + 0x0000001Cu, v27);
-v3 = v1 + 0x00000010u;
-v4 = v4 + 0x00000C90u;
-gabi::store<u32>(v1 + 0x00000014u, v7);
-v5 = v25 & 0x0000FFFFu;
-gabi::store<u32>(v1 + 0x00000018u, v0);
-v3=gabi::call<u32>(0x02759C28,v3,v4,v5);
-v12 = 0u + 0x10490000u;
-{ uint32_t ea = v12 + 0xFFFFD77Cu; v8 = gabi::load<u32>(ea); v12 = ea; }
-v31 = 0u + 0x10490000u;
-less=((int32_t)v8)<(0);greater=((int32_t)v8)>(0);equal=((int32_t)v8)==(0);
-v31 = v31 + 0xFFFFD74Cu;
-if (equal) { goto L_025F8228; }
-v3 = 0u + 0x101F0000u;
-v4 = v28 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v31;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v31 = gabi::load<u32>(v28 + 0x00000240u);
-less=((int32_t)v31)<(0);greater=((int32_t)v31)>(0);equal=((int32_t)v31)==(0);
-v29 = gabi::load<u32>(v28 + 0x0000012Cu);
-if (equal) { goto L_025F8370; }
-goto L_025F8320;
-L_025F8228: ;
-gabi::store<u32>(v1 + 0x0000000Cu, v29);
-v9 = 0u + 0x00000001u;
-gabi::store<u8>(v31 + 0x00000011u, v27);
-v0 = 0u + 0x100E0000u;
-gabi::store<u32>(v12 + 0x00000000u, v9);
-{ uint64_t t = (uint64_t)v0 + 0x00000BECu; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-v12 = 0u + 0x00000006u;
-gabi::store<u32>(v31 + 0x00000004u, v0);
-v0 = 0u + 0x100E0000u;
-v26 = v31 + 0x0000000Cu;
-gabi::store<u32>(v31 + 0x00000008u, v12);
-{ uint64_t t = (uint64_t)v0 + 0x00000C88u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-gabi::store<u32>(v31 + 0x00000000u, v26);
-v3 = v1 + 0x00000008u;
-gabi::store<u32>(v1 + 0x00000008u, v0);
-v3=gabi::call<u32>(0x025F8F80,v3);
-v11 = gabi::load<u32>(v1 + 0x00000008u);
-v0 = gabi::load<u8>(v11 + 0x00000000u);
-v5 = 0u + 0x00040000u;
-less=((int32_t)v0)<(0);greater=((int32_t)v0)>(0);equal=((int32_t)v0)==(0);
-v29 = 0u + 0x00000000u;
-if (equal) { goto L_025F82A4; }
-L_025F8280: ;
-v29 = v29 + 0x00000001u;
-less=((int32_t)v29)<((int32_t)v5);greater=((int32_t)v29)>((int32_t)v5);equal=((int32_t)v29)==((int32_t)v5);
-v11 = v11 + 0x00000001u;
-if (greater) { goto L_025F82A0; }
-v0 = gabi::load<u8>(v11 + 0x00000000u);
-less=((int32_t)v0)<(0);greater=((int32_t)v0)>(0);equal=((int32_t)v0)==(0);
-if (!equal) { goto L_025F8280; }
-goto L_025F82A4;
-L_025F82A0: ;
-v29 = 0u + 0x00000000u;
-L_025F82A4: ;
-v7 = gabi::load<u32>(v31 + 0x00000008u);
-less=((int32_t)v29)<((int32_t)v7);greater=((int32_t)v29)>((int32_t)v7);equal=((int32_t)v29)==((int32_t)v7);
-if (less) { goto L_025F82B4; }
-v29 = v7 + 0xFFFFFFFFu;
-L_025F82B4: ;
-v10 = gabi::load<u32>(v1 + 0x0000000Cu);
-v0 = gabi::load<u32>(v10 + 0x00000014u);
-count = v0;
-v3 = v1 + 0x00000008u;
-v3=gabi::call_ptr<u32>(count,v3);
-v4 = gabi::load<u32>(v1 + 0x00000008u);
-v3 = v26;
-v5 = v29;
-v6 = 0u + 0x00000000u;
-v3=gabi::call<u32>(0xC0009988,v3,v4,v5,v6);
-v0 = 0u + 0x100E0000u;
-v3 = 0u + 0x101F0000u;
-gabi::store<u8>(v26 + v29, v27);
-{ uint64_t t = (uint64_t)v0 + 0x00000C04u; v0 = (uint32_t)t; carry = (uint8_t)(t >> 32); }
-v3 = v3 + 0x00004B2Cu;
-gabi::store<u32>(v31 + 0x00000004u, v0);
-v3=gabi::call<u32>(0x028F026C,v3);
-v3 = 0u + 0x101F0000u;
-v4 = v28 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v31;
-v6 = v1 + 0x00000010u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v31 = gabi::load<u32>(v28 + 0x00000240u);
-less=((int32_t)v31)<(0);greater=((int32_t)v31)>(0);equal=((int32_t)v31)==(0);
-v29 = gabi::load<u32>(v28 + 0x0000012Cu);
-if (equal) { goto L_025F8370; }
-L_025F8320: ;
-v30 = gabi::load<u8>(v31 + 0x0000000Eu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(v3 + 0x00005BC5u, v30);
-v30 = gabi::load<u8>(v31 + 0x0000000Bu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(v3 + 0x00005C34u, v30);
-v31 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v31 + 0x00000004u);
-v3=gabi::call<u32>(0x025200D4);
-v6 = v25;
-v5 = v29;
-gabi::store<u16>(v3 + 0x00005BA4u, v31);
-v3 = gabi::load<u32>(v28 + 0x0000095Cu);
-v4 = 0u + 0x00000002u;
-gabi::store<u32>(v28 + 0x0000094Cu, v27);
-v3=gabi::call<u32>(0x026B3F18,v3,v4,v5,v6);
-v3 = v28;
-v4 = 0u + 0x00000002u;
-gabi::store<u32>(v28 + 0x00000938u, v25);
-v3=gabi::call<u32>(0x025F74D0,v3,v4);
-v30 = 0u + 0x00000000u;
-L_025F8370: ;
-v3 = v30;
-return v3;
-return v3;
+/* 025F7DB0 */
+u32 fopMsgM_messageSet(u32 i_manager, u32 i_msgNo, u32 i_lookAtPos) {
+    gabi::Local<u8[24]> frame;
+    u32 status = MesgRoute_getStatus();
+    if (status == MESG_IDLE) {
+        MesgRoute_getPlay()->mMesgAnimeTag = 0xFF;
+        MesgRoute_getPlay()->mMesgCameraTag = MESG_ERROR;
+        u32 result = MesgRoute_select(i_manager, i_msgNo, i_lookAtPos);
+        MesgRoute_setStatus(gabi::at<Manager>(i_manager), 1);
+        return result;
+    }
+    if (status == MESG_CONTINUES)
+        return MesgRoute_select(i_manager, i_msgNo, i_lookAtPos);
+    return MESG_ERROR;
 }
-VERIFY(0x025F8154,mesgroute_025F8154);
-u32 mesgroute_025F8388(u32 a3,u32 a4,u32 a5,u32 a6,u32 a7) {
-WWHD_FUNC(0x025F8388,u32,a3,a4,a5,a6,a7);
-gabi::Local<u8[208]> frame;
-u32 v0=0,v1=gabi::ea(frame.get()),v3=a3,v4=a4,v5=a5,v6=a6,v7=a7,v8=0,v9=0,v10=0,v11=0,v12=0,v21=0,v22=0,v23=0,v24=0,v25=0,v26=0,v27=0,v28=0,v29=0,v30=0,v31=0;
 
-bool less=false,greater=false,equal=false;u32 count=0;u8 carry=0;
-v23 = v3;
-v24 = v4;
-v25 = v5;
-v26 = v6;
-v27 = v7;
-v28 = v1 + 0x00000014u;
-gabi::store<u32>(v1 + 0x00000008u, v28);
-v11 = 0u + 0x00000040u;
-gabi::store<u32>(v1 + 0x00000010u, v11);
-v12 = gabi::load<u32>(v24 + 0x00000004u);
-v29 = 0u + 0x100E0000u;
-v22 = 0u + 0x00000000u;
-v29 = v29 + 0x00000B2Cu;
-gabi::store<u8>(v1 + 0x00000053u, v22);
-gabi::store<u32>(v1 + 0x0000000Cu, v29);
-v0 = gabi::load<u32>(v12 + 0x00000014u);
-count = v0;
-v3 = v24;
-v30 = 0u + 0xFFFFFFFFu;
-v3=gabi::call_ptr<u32>(count,v3);
-v10 = gabi::load<u32>(v24 + 0x00000000u);
-v8 = gabi::load<u8>(v10 + 0x00000000u);
-v31 = v22;
-less=((int32_t)v8)<(0);greater=((int32_t)v8)>(0);equal=((int32_t)v8)==(0);
-v12 = 0u + 0x00040000u;
-if (equal) { goto L_025F8424; }
-L_025F8400: ;
-v31 = v31 + 0x00000001u;
-less=((int32_t)v31)<((int32_t)v12);greater=((int32_t)v31)>((int32_t)v12);equal=((int32_t)v31)==((int32_t)v12);
-v10 = v10 + 0x00000001u;
-if (greater) { goto L_025F8420; }
-v9 = gabi::load<u8>(v10 + 0x00000000u);
-less=((int32_t)v9)<(0);greater=((int32_t)v9)>(0);equal=((int32_t)v9)==(0);
-if (!equal) { goto L_025F8400; }
-goto L_025F8424;
-L_025F8420: ;
-v31 = 0u + 0x00000000u;
-L_025F8424: ;
-v8 = gabi::load<u32>(v1 + 0x00000010u);
-v10 = gabi::load<u32>(v24 + 0x00000004u);
-less=((int32_t)v31)<((int32_t)v8);greater=((int32_t)v31)>((int32_t)v8);equal=((int32_t)v31)==((int32_t)v8);
-v0 = gabi::load<u32>(v10 + 0x00000014u);
-if (less) { goto L_025F843C; }
-v31 = v8 + 0xFFFFFFFFu;
-L_025F843C: ;
-count = v0;
-v3 = v24;
-v3=gabi::call_ptr<u32>(count,v3);
-v4 = gabi::load<u32>(v24 + 0x00000000u);
-v6 = 0u + 0x00000000u;
-v5 = v31;
-v3 = v28;
-v3=gabi::call<u32>(0xC0009988,v3,v4,v5,v6);
-gabi::store<u8>(v28 + v31, v22);
-v28 = v1 + 0x00000060u;
-gabi::store<u32>(v1 + 0x00000058u, v29);
-v9 = 0u + 0x00000040u;
-gabi::store<u32>(v1 + 0x00000054u, v28);
-v21 = 0u + 0x100E0000u;
-v11 = gabi::load<u32>(v25 + 0x00000004u);
-v21 = v21 + 0x00000B44u;
-gabi::store<u32>(v1 + 0x0000005Cu, v9);
-gabi::store<u32>(v1 + 0x0000000Cu, v21);
-gabi::store<u8>(v1 + 0x0000009Fu, v22);
-v0 = gabi::load<u32>(v11 + 0x00000014u);
-count = v0;
-v3 = v25;
-v3=gabi::call_ptr<u32>(count,v3);
-v12 = gabi::load<u32>(v25 + 0x00000000u);
-v0 = gabi::load<u8>(v12 + 0x00000000u);
-v31 = 0u + 0x00000000u;
-less=((int32_t)v0)<(0);greater=((int32_t)v0)>(0);equal=((int32_t)v0)==(0);
-v8 = 0u + 0x00040000u;
-if (equal) { goto L_025F84D4; }
-L_025F84B0: ;
-v31 = v31 + 0x00000001u;
-less=((int32_t)v31)<((int32_t)v8);greater=((int32_t)v31)>((int32_t)v8);equal=((int32_t)v31)==((int32_t)v8);
-v12 = v12 + 0x00000001u;
-if (greater) { goto L_025F84D0; }
-v0 = gabi::load<u8>(v12 + 0x00000000u);
-less=((int32_t)v0)<(0);greater=((int32_t)v0)>(0);equal=((int32_t)v0)==(0);
-if (!equal) { goto L_025F84B0; }
-goto L_025F84D4;
-L_025F84D0: ;
-v31 = 0u + 0x00000000u;
-L_025F84D4: ;
-v10 = gabi::load<u32>(v1 + 0x0000005Cu);
-v12 = gabi::load<u32>(v25 + 0x00000004u);
-less=((int32_t)v31)<((int32_t)v10);greater=((int32_t)v31)>((int32_t)v10);equal=((int32_t)v31)==((int32_t)v10);
-v0 = gabi::load<u32>(v12 + 0x00000014u);
-if (less) { goto L_025F84EC; }
-v31 = v10 + 0xFFFFFFFFu;
-L_025F84EC: ;
-count = v0;
-v3 = v25;
-v3=gabi::call_ptr<u32>(count,v3);
-v4 = gabi::load<u32>(v25 + 0x00000000u);
-v3 = v28;
-v5 = v31;
-v6 = 0u + 0x00000000u;
-v3=gabi::call<u32>(0xC0009988,v3,v4,v5,v6);
-gabi::store<u8>(v28 + v31, v22);
-v3 = v23 + 0x00000014u;
-v4 = v24;
-v5 = v25;
-gabi::store<u32>(v1 + 0x00000058u, v21);
-v3=gabi::call<u32>(0x025F6D70,v3,v4,v5);
-v3 = 0u + 0x101F0000u;
-v4 = v23 + 0x00000014u;
-v3 = gabi::load<u32>(v3 + 0x00004AE8u);
-v5 = v1 + 0x00000008u;
-v6 = v1 + 0x00000054u;
-v3=gabi::call<u32>(0x025F50E8,v3,v4,v5,v6);
-v31 = gabi::load<u32>(v23 + 0x00000240u);
-v0 = 0u + 0xFFFFFFF0u;
-less=((int32_t)v31)<(0);greater=((int32_t)v31)>(0);equal=((int32_t)v31)==(0);
-gabi::store<u32>(v23 + 0x00000130u, v0);
-if (equal) { goto L_025F8590; }
-v30 = gabi::load<u8>(v31 + 0x0000000Eu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u8>(v3 + 0x00005BC5u, v30);
-v30 = gabi::load<u8>(v31 + 0x0000000Bu);
-v3=gabi::call<u32>(0x025200D4);
-gabi::store<u32>(v3 + 0x00005C34u, v30);
-v31 = (uint32_t)(int32_t)(int16_t)gabi::load<u16>(v31 + 0x00000004u);
-v3=gabi::call<u32>(0x025200D4);
-v4 = v26;
-v10 = 0u + 0x00000005u;
-gabi::store<u16>(v3 + 0x00005BA4u, v31);
-v3 = gabi::load<u32>(v23 + 0x00000960u);
-v5 = v27;
-gabi::store<u32>(v23 + 0x0000094Cu, v10);
-v3=gabi::call<u32>(0x026AE330,v3,v4,v5);
-v30 = 0u + 0x00000000u;
-L_025F8590: ;
-v3 = v30;
-return v3;
-return v3;
+/* 025F7E68 */
+u32 fopMsgM_scopeMessageSet(u32 i_manager, u32 i_msgNo) {
+    gabi::Local<u8[88]> storage;
+    KeyFrame* frame = reinterpret_cast<KeyFrame*>(storage.get());
+    Manager* manager = gabi::at<Manager>(i_manager);
+    formatName(&frame->name, i_msgNo, "%05d");
+    MessageEntry* entry =
+        lookup(manager, frame, &l_scopeKey, &l_scopeKeyInitialized, "dummy", &l_scopeColor);
+    if (!entry)
+        return MESG_ERROR;
+    if ((static_cast<u32>(MesgRoute_getPlay()->mPlayerStatus) & PLAYER_TELESCOPE_LOOK) &&
+        MesgRoute_getPlay()->mScopeMesgStatus == MESG_SCOPE_ACTIVE) {
+        setMessageMetadata(entry);
+        MesgRoute_getPlay()->mScopeMesgStatus = MESG_BOX_OPENING;
+    }
+    u32 context = manager->mMessageContext;
+    if (!MesgRoute_render(manager->mRenderWork, context, i_msgNo))
+        return MESG_ERROR;
+    manager->mMsgNo = i_msgNo;
+    return 0;
 }
-VERIFY(0x025F8388,mesgroute_025F8388);
+
+/* 025F8088 */
+u32 fopMsgM_tactMessageSet(u32 i_manager) {
+    gabi::Local<u8[32]> storage;
+    PositionFrame* frame = reinterpret_cast<PositionFrame*>(storage.get());
+    // HD: tact routing seeds all three position components from the TU's 1.0f constant.
+    f64 coordinate = l_tactPosition;
+    frame->y = coordinate;
+    frame->x = coordinate;
+    frame->z = coordinate;
+    u32 status = MesgRoute_getStatus();
+    Manager* manager = gabi::at<Manager>(i_manager);
+    if (status == MESG_IDLE || status == MESG_CONTINUES) {
+        manager->mTactMsgFlag = 1;
+        u32 result = MesgRoute_select(i_manager, MSG_TACT, gabi::ea(&frame->x));
+        if (status == MESG_IDLE)
+            MesgRoute_setStatus(manager, 2);
+        return result;
+    }
+    if (MesgRoute_getPlay()->mScopeMesgStatus != 0)
+        MesgRoute_setStatus(manager, 0);
+    return MESG_ERROR;
+}
+
+/* 025F8154 */
+u32 fopMsgM_messageSetDemo(u32 i_manager, u32 i_msgNo) {
+    gabi::Local<u8[88]> storage;
+    KeyFrame* frame = reinterpret_cast<KeyFrame*>(storage.get());
+    Manager* manager = gabi::at<Manager>(i_manager);
+    MesgRoute_getPlay()->mMesgAnimeTag = 0xFF;
+    MesgRoute_getPlay()->mMesgCameraTag = MESG_ERROR;
+    u32 status = MesgRoute_getStatus();
+    if (status != MESG_IDLE && status != MESG_CONTINUES)
+        return MESG_ERROR;
+    formatName(&frame->name, i_msgNo, "%05d");
+    MessageEntry* entry =
+        lookup(manager, frame, &l_demoKey, &l_demoKeyInitialized, "dummy", &l_demoColor);
+    u32 context = manager->mMessageContext;
+    if (!entry)
+        return MESG_ERROR;
+    setMessageMetadata(entry);
+    manager->mMode = MODE_AUX;
+    MesgRoute_aux(manager->mAuxScreenWork, 2, context, i_msgNo);
+    manager->mMsgNo = i_msgNo;
+    MesgRoute_setStatus(manager, 2);
+    return 0;
+}
+
+static void copyName(String64* destination, StringBase* source) {
+    terminate(source);
+    u32 length = stringLength(source->mData);
+    u32 capacity = destination->mCapacity;
+    if (static_cast<s32>(length) >= static_cast<s32>(capacity))
+        length = capacity - 1;
+    terminate(source);
+    be<u8>* data = source->mData;
+    MesgRoute_copy(destination->mBuffer, data, length, 0);
+    terminateAt(destination->mBuffer, length);
+}
+
+/* 025F8388 */
+u32 dMesg_routeNamedMessage(u32 i_manager, u32 i_group, u32 i_name, u32 i_context, u32 i_option) {
+    gabi::Local<u8[208]> storage;
+    PairFrame* frame = reinterpret_cast<PairFrame*>(storage.get());
+    Manager* manager = gabi::at<Manager>(i_manager);
+    StringBase* group = gabi::at<StringBase>(i_group);
+    StringBase* name = gabi::at<StringBase>(i_name);
+    frame->group.mData = frame->group.mBuffer;
+    frame->group.mCapacity = 64;
+    frame->group.mVtable = &l_pairBufferVtable;
+    frame->group.mBuffer[63] = 0;
+    copyName(&frame->group, group);
+    frame->name.mVtable = &l_pairBufferVtable;
+    frame->name.mData = frame->name.mBuffer;
+    frame->name.mCapacity = 64;
+    frame->group.mVtable = &l_pairVtable;
+    frame->name.mBuffer[63] = 0;
+    copyName(&frame->name, name);
+    MesgRoute_setNames(manager->mProcessorWork, group, name);
+    frame->name.mVtable = &l_pairVtable;
+    MesgRoute_lookup(l_resources, manager->mProcessorWork, &frame->group, &frame->name);
+    MessageEntry* entry = manager->mWordWork;
+    manager->mRouteCode = 0xFFFFFFF0u;
+    if (!entry)
+        return MESG_ERROR;
+    setMessageMetadata(entry);
+    manager->mMode = MODE_SEQUENCE;
+    MesgRoute_sequenceNamed(manager->mSequenceWork, i_context, i_option);
+    return 0;
+}
+/* WWHD glue
+data l_sourceVtable 100E0AE4
+data l_formatVtable 100E0BA4
+data l_keyInitialVtable 100E0BEC
+data l_keyVtable 100E0C04
+data l_pairBufferVtable 100E0B2C
+data l_pairVtable 100E0B44
+data l_messageKey 1048D760
+data l_scopeKey 1048D738
+data l_demoKey 1048D74C
+data l_messageKeyInitialized 1048D774
+data l_scopeKeyInitialized 1048D778
+data l_demoKeyInitialized 1048D77C
+data l_resources 101F4AE8
+data l_messageColor 101F4B14
+data l_scopeColor 101F4B20
+data l_demoColor 101F4B2C
+data l_tactPosition 100E0C4C
+str 100E0C70 "%05d" in 025F7980
+str 100E0C80 "%05d" in 025F7E68
+str 100E0C90 "%05d" in 025F8154
+str 100E0C68 "dummy" in 025F7980
+str 100E0C78 "dummy" in 025F7E68
+str 100E0C88 "dummy" in 025F8154
+ext 02759C28 u32 MesgRoute_format(MesgRouting::String*, const char*, u32)
+ext 025F8F80 u32 MesgRoute_sourceNoop(MesgRouting::StringBase*)
+ext C0009988 u32 MesgRoute_copy(void*, void*, u32, u32)
+ext 028F026C u32 MesgRoute_initColor(void*)
+ext 025F50E8 u32 MesgRoute_lookup(void*, void*, MesgRouting::StringBase*, MesgRouting::StringBase*)
+ext 025200D4 MesgRouting::Play* MesgRoute_getPlay()
+ext 025F795C u32 MesgRoute_getStatus()
+ext 026AE194 u32 MesgRoute_sequence(void*, u32, u32, u32, u32)
+ext 026B3F18 u32 MesgRoute_aux(void*, u32, u32, u32)
+ext 026BCBF0 u32 MesgRoute_reset(void*, u32, u32, u32)
+ext 026B699C u32 MesgRoute_talk(void*, u32, u32, u32)
+ext 026B8FD0 u32 MesgRoute_render(void*, u32, u32)
+ext 025F7980 u32 MesgRoute_select(u32, u32, u32)
+ext 025F74D0 u32 MesgRoute_setStatus(MesgRouting::Manager*, u32)
+ext 025F6D70 u32 MesgRoute_setNames(void*, MesgRouting::StringBase*, MesgRouting::StringBase*)
+ext 026AE330 u32 MesgRoute_sequenceNamed(void*, u32, u32)
+*/

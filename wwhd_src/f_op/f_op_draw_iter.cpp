@@ -1,43 +1,58 @@
-#include "gabi.h"
-using namespace gabi;
-namespace f_op_draw_iter {
-void *get_tag() {
- WWHD_FUNC(0x025DA758,void *);
- u32 index=load<u32>(0x101F3390)+1;
- s32 count=load<s32>(0x101F33E0);
- if(s32(index)>=count)return nullptr;
- u32 lists=load<u32>(0x101F33DC);
- do {
-  store<u32>(0x101F3390,index);
-  u32 tag=load<u32>(lists+index*12);
-  if(tag)return at<void>(tag);
-  ++index;
- }while(s32(index)<count);
- return nullptr;
+/** Draw queue iteration. WWHD, verified unit f_op_draw_iter. */
+#include "f_op/f_op_draw_iter.h"
+
+// HD: keep unsigned increment/wrap before interpreting the index as signed.
+static u32 l_fopDwTg_id;
+static node_lists_tree_class g_fopDwTg_Queue;
+
+/* 025DA758 */
+static create_tag_class* fopDwIt_GetTag() {
+    u32 index = l_fopDwTg_id + 1;
+    s32 count = g_fopDwTg_Queue.mNumLists;
+    if (s32(index) >= count) {
+        return NULL;
+    }
+    node_list_class* lists = g_fopDwTg_Queue.mpLists;
+    do {
+        l_fopDwTg_id = index;
+        create_tag_class* tag = reinterpret_cast<create_tag_class*>(lists[index].mpHead.get());
+        if (tag != NULL) {
+            return tag;
+        }
+        ++index;
+    } while (s32(index) < count);
+    return NULL;
 }
-VERIFY(0x025DA758,get_tag);
-void *begin() {
- WWHD_FUNC(0x025DA7AC,void *);
- u32 lists=load<u32>(0x101F33DC);
- u32 head=load<u32>(lists);
- store<u32>(0x101F3390,0);
- return head?at<void>(head):call<void *>(0x025DA758);
+
+/* 025DA7AC */
+create_tag_class* fopDwIt_Begin() {
+    node_list_class* lists = g_fopDwTg_Queue.mpLists;
+    create_tag_class* createTagClass = reinterpret_cast<create_tag_class*>(lists->mpHead.get());
+    l_fopDwTg_id = 0;
+    if (createTagClass != NULL) {
+        return createTagClass;
+    }
+    return fopDwIt_GetTag();
 }
-VERIFY(0x025DA7AC,begin);
-void *next(void *tag) {
- WWHD_FUNC(0x025DA7D0,void *,tag);
- u32 next_tag=load<u32>(ea(tag)+8);
- return next_tag?at<void>(next_tag):call<void *>(0x025DA758);
+
+/* 025DA7D0 */
+create_tag_class* fopDwIt_Next(create_tag_class* i_createTag) {
+    // The canonical shared tag stores its node member as bytes.
+    node_class* node = reinterpret_cast<node_class*>(i_createTag->mNode);
+    create_tag_class* createTagClass = reinterpret_cast<create_tag_class*>(node->mpNextNode.get());
+    if (createTagClass != NULL) {
+        return createTagClass;
+    }
+    return fopDwIt_GetTag();
 }
-VERIFY(0x025DA7D0,next);
-void static_init() {
-  WWHD_FUNC(0x025DA7E0,void);
-  store<u32>(0x10487588,0);store<u32>(0x10487580,0);store<u32>(0x1048758C,0);store<u32>(0x10487584,0);
-  call<void>(0x028F026C,at<void>(0x101F3394));
-  f32 first=load<f32>(0x1005797C),second=load<f32>(0x10057980);
-  store<f32>(0x10487574,first);store<f32>(0x10487578,second);
-  call<void>(0x028ED6F8,at<void>(0x1048757C));call<void>(0x028F026C,at<void>(0x101F33A0));
-  call<void>(0x028EAB2C,at<void>(0x1048757D));call<void>(0x028F026C,at<void>(0x101F33AC));
+
+/* 025DA7E0 */
+// HD: this translation unit's header statics and destructor registrations.
+static void __sinit_f_op_draw_iter_cpp() {
+    sinit_header_statics_rodata(0x10487574, 0x101F3394, 0x10487580, 0x1005797C);
 }
-VERIFY(0x025DA7E0,static_init);
-}
+
+/* WWHD glue (tools/verify/autoglue.py): shared draw queue and iterator cursor
+data l_fopDwTg_id 101F3390
+data g_fopDwTg_Queue 101F33DC
+*/

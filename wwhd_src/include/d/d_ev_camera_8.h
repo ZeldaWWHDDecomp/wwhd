@@ -1,0 +1,151 @@
+// Item-use event cameras.
+#pragma once
+#include "d/d_camera.h"
+struct ItemCameraWork {
+    be<u32> mState, mBlendFrames, mType;
+    cXyz mCenter;
+    be<f32> mFovy;
+    be<u32> mHoldFrames, mFrame;
+    cSGlobe_l mTargetDirection;
+};
+WWHD_OFFSET(ItemCameraWork, mTargetDirection, 0x24);
+WWHD_SIZE(ItemCameraWork, 0x2C);
+struct ItemCameraFprSaveHD {
+    be<u64> mDouble;
+    be<f32> mPairedSingle;
+    u8 _0C[4];
+};
+WWHD_SIZE(ItemCameraFprSaveHD, 0x10);
+// HD: original useItem0 frame, including the unbounded-Type save area.
+struct ItemCameraFrame0HD {
+    be<u32> mBackChain;
+    u8 _04[4];
+    cXyz mPosition;
+    cXyz mEye;
+    be<u16> mItemProfile;
+    cSAngle_l mYaw;
+    cXyz mCollisionEye;
+    cSAngle_l mPitch;
+    cSAngle_l mAngleA;
+    cSAngle_l mAngleB;
+    u8 _36[2];
+    cXyz mDelta;
+    cXyz mPoint;
+    cXyz mPlayerPosition;
+    be<f32> mOffsetValues[77];
+    be<u32> mEyeCounts[7];
+    be<u32> mFovyBits[7];
+    be<u32> mBlendFrames[7];
+    be<u32> mWaitFrames[7];
+    be<u32> mCenterOffsets[7];
+    be<u32> mEyeOffsets[7];
+    be<u32> mSavedGpr[12];
+    ItemCameraFprSaveHD mSavedFpr[2];
+};
+WWHD_SIZE(ItemCameraFrame0HD, 0x288);
+WWHD_OFFSET(ItemCameraFrame0HD, mBackChain, 0x0);
+WWHD_OFFSET(ItemCameraFrame0HD, _04, 0x4);
+WWHD_OFFSET(ItemCameraFrame0HD, mPosition, 0x8);
+WWHD_OFFSET(ItemCameraFrame0HD, mEye, 0x14);
+WWHD_OFFSET(ItemCameraFrame0HD, mItemProfile, 0x20);
+WWHD_OFFSET(ItemCameraFrame0HD, mYaw, 0x22);
+WWHD_OFFSET(ItemCameraFrame0HD, mCollisionEye, 0x24);
+WWHD_OFFSET(ItemCameraFrame0HD, mPitch, 0x30);
+WWHD_OFFSET(ItemCameraFrame0HD, mAngleA, 0x32);
+WWHD_OFFSET(ItemCameraFrame0HD, mAngleB, 0x34);
+WWHD_OFFSET(ItemCameraFrame0HD, _36, 0x36);
+WWHD_OFFSET(ItemCameraFrame0HD, mDelta, 0x38);
+WWHD_OFFSET(ItemCameraFrame0HD, mPoint, 0x44);
+WWHD_OFFSET(ItemCameraFrame0HD, mPlayerPosition, 0x50);
+WWHD_OFFSET(ItemCameraFrame0HD, mOffsetValues, 0x5C);
+WWHD_OFFSET(ItemCameraFrame0HD, mEyeCounts, 0x190);
+WWHD_OFFSET(ItemCameraFrame0HD, mFovyBits, 0x1AC);
+WWHD_OFFSET(ItemCameraFrame0HD, mBlendFrames, 0x1C8);
+WWHD_OFFSET(ItemCameraFrame0HD, mWaitFrames, 0x1E4);
+WWHD_OFFSET(ItemCameraFrame0HD, mCenterOffsets, 0x200);
+WWHD_OFFSET(ItemCameraFrame0HD, mEyeOffsets, 0x21C);
+WWHD_OFFSET(ItemCameraFrame0HD, mSavedGpr, 0x238);
+WWHD_OFFSET(ItemCameraFrame0HD, mSavedFpr, 0x268);
+// HD: original useItem1 frame, including the unbounded-Type save area.
+struct ItemCameraFrame1HD {
+    be<u32> mBackChain;
+    u8 _04[4];
+    cXyz mPosition;
+    cXyz mEye;
+    cXyz mCollisionEye;
+    cSAngle_l mYaw;
+    cSAngle_l mPitch;
+    cSAngle_l mAngleA;
+    cSAngle_l mAngleB;
+    cXyz mDelta;
+    cXyz mPoint;
+    cXyz mPlayerPosition;
+    be<f32> mOffsetValues[78];
+    be<u32> mEyeCounts[7];
+    be<u32> mFovyBits[7];
+    be<u32> mBlendFrames[7];
+    be<u32> mCenterOffsets[7];
+    be<u32> mEyeOffsets[7];
+    u8 _21C[4];
+    be<u32> mSavedGpr[8];
+    ItemCameraFprSaveHD mSavedFpr[2];
+};
+WWHD_SIZE(ItemCameraFrame1HD, 0x260);
+WWHD_OFFSET(ItemCameraFrame1HD, mBackChain, 0x0);
+WWHD_OFFSET(ItemCameraFrame1HD, _04, 0x4);
+WWHD_OFFSET(ItemCameraFrame1HD, mPosition, 0x8);
+WWHD_OFFSET(ItemCameraFrame1HD, mEye, 0x14);
+WWHD_OFFSET(ItemCameraFrame1HD, mCollisionEye, 0x20);
+WWHD_OFFSET(ItemCameraFrame1HD, mYaw, 0x2C);
+WWHD_OFFSET(ItemCameraFrame1HD, mPitch, 0x2E);
+WWHD_OFFSET(ItemCameraFrame1HD, mAngleA, 0x30);
+WWHD_OFFSET(ItemCameraFrame1HD, mAngleB, 0x32);
+WWHD_OFFSET(ItemCameraFrame1HD, mDelta, 0x34);
+WWHD_OFFSET(ItemCameraFrame1HD, mPoint, 0x40);
+WWHD_OFFSET(ItemCameraFrame1HD, mPlayerPosition, 0x4C);
+WWHD_OFFSET(ItemCameraFrame1HD, mOffsetValues, 0x58);
+WWHD_OFFSET(ItemCameraFrame1HD, mEyeCounts, 0x190);
+WWHD_OFFSET(ItemCameraFrame1HD, mFovyBits, 0x1AC);
+WWHD_OFFSET(ItemCameraFrame1HD, mBlendFrames, 0x1C8);
+WWHD_OFFSET(ItemCameraFrame1HD, mCenterOffsets, 0x1E4);
+WWHD_OFFSET(ItemCameraFrame1HD, mEyeOffsets, 0x200);
+WWHD_OFFSET(ItemCameraFrame1HD, _21C, 0x21C);
+WWHD_OFFSET(ItemCameraFrame1HD, mSavedGpr, 0x220);
+WWHD_OFFSET(ItemCameraFrame1HD, mSavedFpr, 0x240);
+struct ItemEventCamera_c : dCamera_c {
+    u32 useItem0EvCamera();
+    u32 useItem1EvCamera();
+};
+WWHD_SIZE(ItemEventCamera_c, 0x8E0);
+// HD: original rodata groups used to build the per-item stack tables.
+struct ItemCameraRodataHD {
+    be<f32> mItem0Values[47];
+    char mType0[8];
+    be<u32> mFovy0[7];
+    be<f32> mItem1Values[10];
+    char mType1[8];
+    be<u32> mFovy1[7];
+};
+WWHD_OFFSET(ItemCameraRodataHD, mFovy0, 0xC4);
+WWHD_OFFSET(ItemCameraRodataHD, mItem1Values, 0xE0);
+WWHD_OFFSET(ItemCameraRodataHD, mFovy1, 0x110);
+WWHD_SIZE(ItemCameraRodataHD, 0x12C);
+
+// HD: explicit out-of-line operations with original hidden-result pointers.
+u32 ev8_getEvIntData(u32 c, u32 out, u32 name, s32 def);
+void ev8_relationalPos(u32 c, u32 out, u32 actor, u32 ofs);
+void ev8_positionOf(u32 c, u32 out, u32 actor);
+bool ev8_lineBGCheck(u32 c, u32 a, u32 b, u32 flags);
+void ev8_cXyz_mi(u32 a, u32 out, u32 b);
+void ev8_cXyz_pl(u32 a, u32 out, u32 b);
+void ev8_cXyz_ml(u32 a, u32 out, f32 s);
+void ev8_cSGlobe_Val(u32 g, u32 v);
+void ev8_cSGlobe_Xyz(u32 g, u32 out);
+void ev8_cSAngle_mi(u32 a, u32 out, u32 b);
+void ev8_cSAngle_ml(u32 a, u32 out, f32 f);
+void ev8_cSAngle_addeq(u32 a, u32 b);
+void ev8_cSAngle_default(u32);
+void ev8_PSVECAdd(u32, u32, u32);
+void ev8_cSGlobe_ValRVU(u32, f32, u32, u32);
+u32 ev8_JudgeActor(u32, u32);
+bool ev8_ChkCamera(u32, u32, u32, f32, u32, u32);

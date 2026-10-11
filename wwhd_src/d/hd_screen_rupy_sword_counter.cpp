@@ -1,27 +1,46 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_rupy_sword_counter {
-template<unsigned N> struct Bytes { u8 data[N]; };
-void updateDisplay(u32 self) {
- WWHD_FUNC(0x026CB2F4,void,self);
- FrameLocal<Bytes<12>> text(8); FrameLocal<Bytes<10>> buffer(0x14);
- store<u16>(buffer.a+8,0); store<u16>(buffer.a,0);
- store<u32>(text.a,buffer.a); store<u32>(text.a+4,0x10101D6C); store<u32>(text.a+8,5);
- call<void>(0x02759D3C,text.a,0x10101E28u,0xD7u,u32(load<u16>(self+0x54)));
- call<void>(0x027046D4,load<u32>(self+0x50),text.a,0u);
+/* HD sword rupee counter. */
+#include "d/hd_minigame_hud.h"
+static u32 swordTextVtable;
+static u8 swordCounterActive;
+static MinigameState swordIdleState;
+
+/* 026CB2F4 */
+void hdScreenRupySwordCounter_c::updateDisplay() {
+    // HD: preserve the original frame offsets and partial buffer initialization.
+    gabi::NativeFrame<0x28> frame;
+    MinigameText* text = gabi::at<MinigameText>(frame + 8);
+    MinigameTextBuffer5* buffer = gabi::at<MinigameTextBuffer5>(frame + 0x14);
+    buffer->characters[4] = 0;
+    buffer->characters[0] = 0;
+    text->mBuffer = buffer->characters;
+    text->__vtbl = gabi::ea(&swordTextVtable);
+    text->mCapacity = 5;
+    minigameFormatCurrency(text, "sword currency format", Minigame_SwordCurrencyGlyph, u32(mShownCount));
+    minigameSetText(mTextPane, text, 0);
 }
-VERIFY(0x026CB2F4,updateDisplay);
-void roll(u32 self) {
- WWHD_FUNC(0x026CB4A0,void,self);
- u32 game=call<u32>(0x025200D4);
- u32 shown=load<u16>(self+0x54), target=load<u16>(game+0x5CEC);
- if(shown<target) {
-  u32 next=u16(shown+1); if(next>999) next=999;
-  store<u16>(self+0x54,next); call<void>(0x026CB2F4,self);
- } else if(shown>target) {
-  store<u16>(self+0x54,u16(shown-1)); call<void>(0x026CB2F4,self);
- }
- if(!load<u8>(0x1047B09A)) call<void>(0x020063C0,self+0x18,0x1049A3A8u);
+
+/* 026CB4A0 */
+void hdScreenRupySwordCounter_c::roll() {
+    MinigameGameCounter* game = reinterpret_cast<MinigameGameCounter*>(dComIfGp_get());
+    u32 shown = mShownCount;
+    u32 target = game->mTargetCount;
+    if (shown < target) {
+        // HD: narrow before clamping, preserving the original 16-bit wrap.
+        u32 next = u16(shown + 1);
+        if (next > Minigame_SwordCountLimit) next = Minigame_SwordCountLimit;
+        mShownCount = next;
+        updateDisplay();
+    } else if (shown > target) {
+        mShownCount = u16(shown - 1);
+        updateDisplay();
+    }
+    if (!swordCounterActive) minigameChangeState(&mStateMachine, &swordIdleState);
 }
-VERIFY(0x026CB4A0,roll);
-}
+
+/* WWHD glue
+data swordTextVtable 10101D6C
+data swordCounterActive 1047B09A
+data swordIdleState 1049A3A8
+str 10101E28 "sword currency format" renamed
+ext 02759D3C void minigameFormatCurrency(MinigameText*, const char*, u32, u32)
+*/

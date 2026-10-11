@@ -1,19 +1,32 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_boat_race_result {
-void wait(u32 self) {
- WWHD_FUNC(0x02627714,void,self);
- u32 n=load<u32>(self+0x5C)-1; store<u32>(self+0x5C,n);
- if(!n) call<void>(0x020063C0,self+0x18,0x1048F210u);
+/* HD boat-race result timing. */
+#include "d/hd_minigame_hud.h"
+static MinigameState resultRollState;
+
+/* 02627714 */
+void hdScreenBoatRaceResult_c::wait() {
+    // HD: retain unsigned countdown wrap when the timer starts at zero.
+    u32 n = u32(mWaitTimer) - 1;
+    mWaitTimer = n;
+    if (n == 0) minigameChangeState(&mStateMachine, &resultRollState);
 }
-VERIFY(0x02627714,wait);
-void roll(u32 self) {
- WWHD_FUNC(0x02627A80,void,self);
- call_ptr<void>(load<u32>(load<u32>(self+4)+0x8C),self);
- u32 n=load<u32>(self+0x60);
- if(n==0) { call<void>(0x025E1988,0x849u); n=load<u32>(self+0x60); }
- else if(n==20 && load<u32>(self+0x58)==2) { call<void>(0x025E1988,0x860u); n=load<u32>(self+0x60); }
- store<u32>(self+0x60,n+1);
+
+/* 02627A80 */
+void hdScreenBoatRaceResult_c::roll() {
+    gfn* vtable = mVtable;
+    gabi::call_ptr<void>(vtable[Minigame_ScreenRollSlot].get(), this);
+    u32 n = mRollFrame;
+    if (n == 0) {
+        minigamePlaySound(Minigame_ResultStartSound);
+        n = mRollFrame;
+    } else if (n == 20 && mResult == Minigame_ResultSecondPrize) {
+        minigamePlaySound(Minigame_ResultPrizeSound);
+        n = mRollFrame;
+    }
+    // HD: reload the frame after sound callbacks before incrementing.
+    mRollFrame = n + 1;
 }
-VERIFY(0x02627A80,roll);
-}
+
+/* WWHD glue
+data resultRollState 1048F210
+ext 025E1988 void minigamePlaySound(u32)
+*/

@@ -1,62 +1,70 @@
-#include "wwhd.h"
-#include "gabi.h"
-namespace {
-template<class T> T get(u32 p,u32 o=0) { return *gabi::at<be<T>>(p+o); }
-template<class T> void put(u32 p,u32 o,T v) { *gabi::at<be<T>>(p+o)=v; }
+/* Camera process dispatch; tww flow with verified HD pause and creation semantics. Local only. */
+#include "f_op/f_op_camera.h"
+
+/* 025DA3C4 */
+BOOL fopCam_Draw(camera_class* camera) {
+    BOOL cam_proc = TRUE;
+    if (!dMenu_flag())
+        cam_proc = fpcLf_DrawMethod(camera->mpMtd, &camera->view);
+    return cam_proc;
 }
-s32 fopCam_Draw(u32 p) {
-    WWHD_FUNC(0x025DA3C4,s32,p);
-    if(gabi::call<s32>(0x025986BC)!=0) return 1;
-    return gabi::call<s32>(0x025DF2C0,get<u32>(p,0x228),p);
+
+/* 025DA418 */
+BOOL fopCam_Execute(camera_class* camera) {
+    // HD returns TRUE on either pause path; the GC source leaves ret uninitialized there.
+    if (dMenu_flag() || dScnPly_ply_c::isPause())
+        return TRUE;
+    return fpcMtd_Execute(&camera->mpMtd->base, camera);
 }
-VERIFY(0x025DA3C4,fopCam_Draw);
-s32 fopCam_Execute(u32 p) {
-    WWHD_FUNC(0x025DA418,s32,p);
-    if(gabi::call<s32>(0x025986BC)!=0) return 1;
-    if(gabi::call<s32>(0x025AF2A4)!=0) return 1;
-    return gabi::call<s32>(0x025DFCC4,get<u32>(p,0x228),p);
+
+/* 025DA478 */
+BOOL fopCam_IsDelete(camera_class* camera) {
+    BOOL ret = fpcMtd_IsDelete(&camera->mpMtd->base, camera);
+    if (ret == TRUE)
+        fopDwTg_DrawQTo(&camera->draw_tag);
+    return ret;
 }
-VERIFY(0x025DA418,fopCam_Execute);
-s32 fopCam_IsDelete(u32 p) {
-    WWHD_FUNC(0x025DA478,s32,p);
-    s32 result=gabi::call<s32>(0x025DFCCC,get<u32>(p,0x228),p);
-    if(result==1) gabi::call<void>(0x025DA884,p+0x214);
-    return result;
+
+/* 025DA4CC */
+BOOL fopCam_Delete(camera_class* camera) {
+    BOOL ret = fpcMtd_Delete(&camera->mpMtd->base, camera);
+    if (ret == TRUE)
+        fopDwTg_DrawQTo(&camera->draw_tag);
+    return ret;
 }
-VERIFY(0x025DA478,fopCam_IsDelete);
-s32 fopCam_Delete(u32 p) {
-    WWHD_FUNC(0x025DA4CC,s32,p);
-    s32 result=gabi::call<s32>(0x025DFCD4,get<u32>(p,0x228),p);
-    if(result==1) gabi::call<void>(0x025DA884,p+0x214);
-    return result;
-}
-VERIFY(0x025DA4CC,fopCam_Delete);
-s32 fopCam_Create(u32 p) {
-    WWHD_FUNC(0x025DA520,s32,p);
-    if(get<u8>(p,0xC)==0) {
-        u32 profile=get<u32>(p,0x10);
-        put<u32>(p,0x228,get<u32>(profile,0x3C));
-        gabi::call<void>(0x025DA888,p+0x214,p);
-        u32 append=get<u32>(p,0xAC);
-        if(append) put<u32>(p,0xB0,get<u32>(append));
+
+/* 025DA520 */
+cPhs_State fopCam_Create(void* pProc) {
+    camera_class* camera = static_cast<camera_class*>(pProc);
+    if (camera->view.mInitState == 0) {
+        auto* profile =
+            reinterpret_cast<camera_process_profile_definition*>(camera->view.mpProf.get());
+        camera->mpMtd = profile->sub_method;
+        fopDwTg_InitHD(&camera->draw_tag, camera);
+        auto* append = static_cast<fopCamM_prm_class*>(camera->view.mpUserData.get());
+        if (append)
+            camera->view.mParameters = append->base.parameters;
     }
-    s32 result=gabi::call<s32>(0x025DFCDC,get<u32>(p,0x228),p);
-    if(result==4) {
-        s32 priority=gabi::call<s32>(0x025DF2B8,p);
-        gabi::call<void>(0x025DA874,p+0x214,priority);
+    cPhs_State ret = fpcMtd_Create(&camera->mpMtd->base, camera);
+    if (ret == cPhs_COMPLEATE_e) {
+        s32 priority = fpcM_DrawPriority(&camera->view);
+        fopDwTg_ToDrawQHD(&camera->draw_tag, priority);
     }
-    return result;
+    return ret;
 }
-VERIFY(0x025DA520,fopCam_Create);
-void fopCam_Initializer() {
-    WWHD_FUNC(0x025DA5B8,void);
-    put<u32>(0x10487538,8,0); put<u32>(0x10487538,0,0); put<u32>(0x10487538,12,0); put<u32>(0x10487538,4,0);
-    gabi::call<void>(0x028F026C,u32(0x101F3334));
-    f32 a=get<f32>(0x10057950); f32 b=get<f32>(0x10057954);
-    put<f32>(0x1048752C,0,a); put<f32>(0x10487530,0,b);
-    gabi::call<void>(0x028ED6F8,u32(0x10487534));
-    gabi::call<void>(0x028F026C,u32(0x101F3340));
-    gabi::call<void>(0x028EAB2C,u32(0x10487535));
-    gabi::call<void>(0x028F026C,u32(0x101F334C));
+
+// HD: compiler-generated common-header initialization for this TU.
+/* 025DA5B8 */
+static void __sinit_f_op_camera_cpp() {
+    sinit_header_statics_rodata(0x1048752C, 0x101F3334, 0x10487538, 0x10057950);
 }
-VERIFY(0x025DA5B8,fopCam_Initializer);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ext 025986BC s32 dMenu_flag()
+ext 025AF2A4 s32 dScnPly_isPauseHD()
+ext 025DF2C0 s32 fpcLf_DrawMethod(leafdraw_method_class*, view_class*)
+ext 025DA884 void fopDwTg_DrawQTo(create_tag_class*)
+ext 025DA888 void fopDwTg_InitHD(create_tag_class*, void*)
+ext 025DF2B8 s32 fpcM_DrawPriority(leafdraw_class*)
+ext 025DA874 void fopDwTg_ToDrawQHD(create_tag_class*, s32)
+*/

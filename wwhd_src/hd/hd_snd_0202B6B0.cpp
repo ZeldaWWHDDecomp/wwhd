@@ -1,259 +1,253 @@
-/* hd_snd_0202B6B0: two HD sound TUs after JAIZel (no GameCube source).
- *
- * 0202B6B0..0202B9FF: the sound archive / bank-table accessor (0x10, vtable 10004008, table +0xC):
- *                     load of the "sound data" resource through the resource manager (0275DB94) with a
- *                     sead RTTI check, sound id decoding (bank from the top bits / bits 12..19), entry
- *                     lookup in the table (+0x250, 32-byte entries), stream test; __sinit 0202B924 sets
- *                     a static SafeString (+ companions)
- * 0202BA00..0202BD3B: the HD sound system container (0x18): six sub-systems created on a heap (0x1D0
- *                     020305A0, 0x20C 0202F048, 0x40 02030364, 0x4 020317C0, 0x6C 020312CC, 0x10 this
- *                     archive accessor), their destructor, and accessors; __sinit 0202BCA8
- */
-#include "hd_blk.h"
-using namespace hdblk;
+/** HD bank-table accessor and six-subsystem sound container. No GameCube counterpart.
+ * Private decomp source; subsystem names remain descriptive where original names are unknown. */
+#include "bindings.h"
+#include "hd/hd_snd_0202B6B0.h"
+static void* sSoundResourceManager;
+static u32 sArchiveTypeInitialized;
+static hdTaskRuntimeTypeInfo sArchiveType;
+static hdSoundArchiveSafeString sArchiveName;
 
-namespace hd_snd_0202B6B0 {
-
-static u32 Archive_ct(u32 self) {
-    WWHD_FUNC(0x0202B6B0, u32, self);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x10);
-        if (t == 0) return 0;
+/* 0202B6B0 */
+static hdSoundArchiveAccessor* constructSoundArchive(hdSoundArchiveAccessor* i_this) {
+    if (i_this == NULL) {
+        i_this = (hdSoundArchiveAccessor*)operator_new(sizeof(hdSoundArchiveAccessor));
+        if (i_this == NULL) {
+            return NULL;
+        }
     }
-    st(t + 8, 0);
-    st(t + 0, 0x10004008);
-    st(t + 0xC, 0);
-    st(t + 4, 0);
-    return t;
+    i_this->field_0x8 = 0;
+    i_this->mVtable = 0x10004008;
+    i_this->mBankTable = NULL;
+    i_this->field_0x4 = 0;
+    return i_this;
 }
-VERIFY(0x0202B6B0, Archive_ct);
 
-static void Archive_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202B700, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x0202B700, Archive_dt);
-
-static void Archive_setTable(u32 self, u32 tab) {
-    WWHD_FUNC(0x0202B714, void, self, tab);
-    st(self + 0xC, tab);
-}
-VERIFY(0x0202B714, Archive_setTable);
-
-struct load_l { u8 b[0x2C]; }; /* resource-manager load argument (name SafeString first) */
-
-/* 0202B71C: load the table resource SIZE bytes through the resource manager */
-static void Archive_load(u32 self, u32 a, u32 size) {
-    WWHD_FUNC(0x0202B71C, void, self, a, size);
-    (void)a;
-    gabi::Local<load_l> l;
-    st(l.a + 4, 0x10003F98);
-    st(l.a + 0, 0x10000160);
-    st(l.a + 0x28, 0);
-    st(l.a + 0x18, 0);
-    st(l.a + 0x14, 0);
-    st(l.a + 0x10, 0x20);
-    st(l.a + 0x24, 0);
-    st(l.a + 0x20, 0);
-    st(l.a + 0xC, 0);
-    st(l.a + 8, 0);
-    st(l.a + 0x1C, 0);
-    u32 nm = gabi::call<u32>(0x0202EAB0);
-    u32 c = ld(nm + 0);
-    st(l.a + 8, size);
-    st(l.a + 0x10, 0x40);
-    st(l.a + 0x14, 0x40);
-    st(l.a + 0xC, size);
-    st(l.a + 0, c);
-    u32 r = gabi::call<u32>(0x0275DB94, ld(0x101F8B68), l.a);
-    if (ld(0x101FD6E0) == 0) {
-        st(0x101FD6E0, 1);
-        st(0x101FD944, 0x10003FE0);
+/* 0202B700 */
+static void destroySoundArchive(hdSoundArchiveAccessor* i_this, s32 flags) {
+    if (i_this != NULL && (flags & 1)) {
+        operator_delete(i_this);
     }
-    if (r != 0) {
-        if (gabi::call_ptr<u32>(vfn(r, 0x10, 0xC), r, 0x101FD944) == 0) r = 0;
-    }
-    gabi::call(0x0202B714, self, ld(r + 0x14)); /* r may be null: the original reads 0x14 then */
 }
-VERIFY(0x0202B71C, Archive_load);
 
-/* 0202B828: bank of a sound id: 0x10 / 0x11 for the 0x8/0xC top-bit kinds, -1 for 0x4, else bits 12..19 */
-static s32 Archive_bank(u32 self, u32 id) {
-    WWHD_FUNC(0x0202B828, s32, self, id);
-    u32 k = id & 0xC0000000u;
-    if (k == 0) return (s32)((id >> 12) & 0xFF);
-    if (k == 0x80000000u) return 0x10;
-    if (k == 0xC0000000u) return 0x11;
+/* 0202B714 */
+static void setSoundArchiveTable(hdSoundArchiveAccessor* i_this, void* table) {
+    i_this->mBankTable = table;
+}
+
+/* 0202B71C */
+static void loadSoundArchiveTable(hdSoundArchiveAccessor* i_this, u32, u32 size) {
+    hdSoundArchiveLoadArg argument;
+    argument.mName.mVtable = 0x10003F98;
+    argument.mName.mText = STR(0x10000160);
+    argument.field_0x28 = 0;
+    argument.field_0x18 = 0;
+    argument.mBufferAlignment = 0;
+    argument.mAlignment = 0x20;
+    argument.field_0x24 = 0;
+    argument.field_0x20 = 0;
+    argument.mBufferSize = 0;
+    argument.mSize = 0;
+    argument.field_0x1C = 0;
+    hdSoundArchiveSafeString* name = hdSoundArchiveGetTablePath();
+    const char* text = name->mText;
+    argument.mSize = size;
+    argument.mAlignment = 0x40;
+    argument.mBufferAlignment = 0x40;
+    argument.mBufferSize = size;
+    argument.mName.mText = text;
+    hdSoundArchiveResource* resource = hdSoundArchiveLoadResource(sSoundResourceManager, &argument);
+    if (sArchiveTypeInitialized == 0) {
+        sArchiveTypeInitialized = 1;
+        sArchiveType.mTypeNameAddress = 0x10003FE0;
+    }
+    if (resource != NULL && resource->checkType(&sArchiveType) == 0) {
+        resource = NULL;
+    }
+    // HD: the original reads the data field even after a null or failed type check.
+    setSoundArchiveTable(i_this, hdSoundArchiveResource::dataAfterCheck(resource));
+}
+
+/* 0202B828 */
+static s32 getSoundArchiveBank(hdSoundArchiveAccessor*, u32 id) {
+    enum { KIND_MASK = 0xC0000000u, FIRST_SPECIAL = 0x80000000u, SECOND_SPECIAL = 0xC0000000u };
+    u32 kind = id & KIND_MASK;
+    if (kind == 0) {
+        return (id >> 12) & 0xFF;
+    }
+    if (kind == FIRST_SPECIAL) {
+        return 0x10;
+    }
+    if (kind == SECOND_SPECIAL) {
+        return 0x11;
+    }
     return -1;
 }
-VERIFY(0x0202B828, Archive_bank);
 
-static u32 Archive_bankBase(u32 self, s32 bank) {
-    WWHD_FUNC(0x0202B868, u32, self, bank);
-    return lhz(ld(self + 0xC) + (u32)bank * 32 + 0x2E);
+/* 0202B868 */
+static u32 getSoundArchiveBankBase(hdSoundArchiveAccessor* i_this, s32 bank) {
+    return i_this->bankBase(bank);
 }
-VERIFY(0x0202B868, Archive_bankBase);
 
-/* 0202B87C: table entry of a sound id */
-static u32 Archive_entry(u32 self, u32 id) {
-    WWHD_FUNC(0x0202B87C, u32, self, id);
-    u32 tab = ld(self + 0xC);
-    if (tab == 0) return 0;
-    s32 bank = gabi::call<s32>(0x0202B828, self, id);
-    u32 base = gabi::call<u32>(0x0202B868, self, bank);
-    return tab + 0x250 + ((base + (id & 0x3FF)) << 5);
+/* 0202B87C */
+static void* getSoundArchiveEntry(hdSoundArchiveAccessor* i_this, u32 id) {
+    void* table = i_this->mBankTable;
+    if (table == NULL) {
+        return NULL;
+    }
+    s32 bank = getSoundArchiveBank(i_this, id);
+    u32 base = getSoundArchiveBankBase(i_this, bank);
+    // HD: callbacks above may replace the table; entry computation uses the earlier pointer.
+    return gabi::at<void>(gabi::ea(table) + 0x250 + ((base + (id & 0x3FF)) << 5));
 }
-VERIFY(0x0202B87C, Archive_entry);
 
-/* 0202B8EC: sound id of a sequence bank (< 0x10) with bit 11 clear */
-static u32 Archive_isSeq(u32 self, u32 id) {
-    WWHD_FUNC(0x0202B8EC, u32, self, id);
-    s32 bank = gabi::call<s32>(0x0202B828, self, id);
-    if (bank >= 0x10) return 0;
+/* 0202B8EC */
+static u32 isSoundArchiveSequence(hdSoundArchiveAccessor* i_this, u32 id) {
+    s32 bank = getSoundArchiveBank(i_this, id);
+    if (bank >= 0x10) {
+        return 0;
+    }
     return ((id >> 11) & 1) ^ 1;
 }
-VERIFY(0x0202B8EC, Archive_isSeq);
 
-/* 0202B924: __sinit (header statics + a static SafeString) */
-static void sinit_0202B924() {
-    WWHD_FUNC(0x0202B924, void);
-    header_sinit(0x101FFD54, 0x1018EBF8, 0x10003FF0);
-    st(0x101FFD44, 0x10003F98);
-    st(0x101FFD40, 0x10003FF8);
-}
-VERIFY(0x0202B924, sinit_0202B924);
-
-static void Comp_dt1(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202B9D8, void, self, flags);
-    if (self == 0) return;
-    if ((flags & 1) == 0) return;
-    op_delete(self);
-}
-VERIFY(0x0202B9D8, Comp_dt1);
-
-static void Comp_empty1() {
-    WWHD_FUNC(0x0202B9EC, void);
-}
-VERIFY(0x0202B9EC, Comp_empty1);
-
-static void Comp_empty2() {
-    WWHD_FUNC(0x0202B9F0, void);
-}
-VERIFY(0x0202B9F0, Comp_empty2);
-
-static u32 Comp_zero() {
-    WWHD_FUNC(0x0202B9F4, u32);
-    return 0;
-}
-VERIFY(0x0202B9F4, Comp_zero);
-
-static void Comp_empty3() {
-    WWHD_FUNC(0x0202B9FC, void);
-}
-VERIFY(0x0202B9FC, Comp_empty3);
-
-static inline u32 make(u32 size, u32 heap, u32 ctor) {
-    u32 p = gabi::call<u32>(0x0273B050, size, heap, 4);
-    if (p != 0) p = gabi::call<u32>(ctor, p);
-    return p;
+/* 0202B924 */
+static void __sinit_hd_sound_archive_cpp() {
+    sinit_header_statics_rodata(0x101FFD48, 0x1018EBF8, 0x101FFD54, 0x10003FF0);
+    sArchiveName.mVtable = 0x10003F98;
+    sArchiveName.mText = STR(0x10003FF8);
 }
 
-/* 0202BA00: sound system container constructor (heap) */
-static u32 SoundSys_ct(u32 self, u32 heap) {
-    WWHD_FUNC(0x0202BA00, u32, self, heap);
-    u32 t = self;
-    if (t == 0) {
-        t = op_new(0x18);
-        if (t == 0) return 0;
+/* 0202B9D8 */
+static void destroySoundArchiveCompanion(void* i_this, s32 flags) {
+    if (i_this != NULL && (flags & 1)) {
+        operator_delete(i_this);
     }
-    st(t + 0x14, 0);
-    st(t + 0xC, 0);
-    st(t + 8, 0);
-    st(t + 0, 0);
-    st(t + 0x10, 0);
-    st(t + 4, 0);
-    st(t + 0, make(0x1D0, heap, 0x020305A0));
-    st(t + 4, make(0x20C, heap, 0x0202F048));
-    st(t + 8, make(0x40, heap, 0x02030364));
-    u32 p = gabi::call<u32>(0x0273B050, 4, heap, 4);
-    if (p != 0) p = gabi::call<u32>(0x020317C0, p, 0x20, heap);
-    st(t + 0xC, p);
-    st(t + 0x10, make(0x6C, heap, 0x020312CC));
-    st(t + 0x14, make(0x10, heap, 0x0202B6B0));
-    return t;
 }
-VERIFY(0x0202BA00, SoundSys_ct);
 
-/* 0202BB58: destructor: deletes the six sub-systems */
-static void SoundSys_dt(u32 self, s32 flags) {
-    WWHD_FUNC(0x0202BB58, void, self, flags);
-    if (self == 0) return;
-    for (u32 off = 0; off <= 8; off += 4) {
-        u32 x = ld(self + off);
-        if (x != 0) {
-            gabi::call_ptr(vfn(x, 0, 0x1C), x, 3);
-            st(self + off, 0);
+/* 0202B9EC */
+static void firstSoundArchiveEmpty() {}
+
+/* 0202B9F0 */
+static void secondSoundArchiveEmpty() {}
+
+/* 0202B9F4 */
+static u32 soundArchiveCompanionZero() { return 0; }
+
+/* 0202B9FC */
+static void thirdSoundArchiveEmpty() {}
+
+/* inlined into constructSoundSystem */
+static hdSoundContainerSubsystem* makeSoundSubsystem(u32 size, void* heap, hdSoundSubsystemConstructor construct) {
+    auto* subsystem = (hdSoundContainerSubsystem*)hdSoundContainerAllocate(size, heap, 4);
+    if (subsystem != NULL) {
+        subsystem = construct(subsystem);
+    }
+    return subsystem;
+}
+
+/* 0202BA00 */
+static hdSoundSystemContainer* constructSoundSystem(hdSoundSystemContainer* i_this, void* heap) {
+    if (i_this == NULL) {
+        i_this = (hdSoundSystemContainer*)operator_new(sizeof(hdSoundSystemContainer));
+        if (i_this == NULL) {
+            return NULL;
         }
     }
-    u32 x = ld(self + 0xC);
-    if (x != 0) {
-        gabi::call(0x02031838, x, 3);
-        st(self + 0xC, 0);
+    i_this->mSubsystems[5] = NULL;
+    i_this->mSubsystems[3] = NULL;
+    i_this->mSubsystems[2] = NULL;
+    i_this->mSubsystems[0] = NULL;
+    i_this->mSubsystems[4] = NULL;
+    i_this->mSubsystems[1] = NULL;
+    i_this->mSubsystems[0] = makeSoundSubsystem(0x1D0, heap, hdSoundContainerConstructFirst);
+    i_this->mSubsystems[1] = makeSoundSubsystem(0x20C, heap, hdSoundContainerConstructSecond);
+    i_this->mSubsystems[2] = makeSoundSubsystem(0x40, heap, hdSoundContainerConstructThird);
+    auto* fourth = (hdSoundContainerSubsystem*)hdSoundContainerAllocate(4, heap, 4);
+    if (fourth != NULL) {
+        fourth = hdSoundContainerConstructFourth(fourth, 0x20, heap);
     }
-    for (u32 off = 0x10; off <= 0x14; off += 4) {
-        x = ld(self + off);
-        if (x != 0) {
-            gabi::call_ptr(vfn(x, 0, 0x24), x, 3);
-            st(self + off, 0);
+    i_this->mSubsystems[3] = fourth;
+    i_this->mSubsystems[4] = makeSoundSubsystem(0x6C, heap, hdSoundContainerConstructFifth);
+    i_this->mSubsystems[5] = makeSoundSubsystem(0x10, heap, hdSoundContainerConstructSixth);
+    return i_this;
+}
+
+/* 0202BB58 */
+static void destroySoundSystem(hdSoundSystemContainer* i_this, s32 flags) {
+    if (i_this == NULL) {
+        return;
+    }
+    for (int i = 0; i < 3; i++) {
+        hdSoundContainerSubsystem* subsystem = i_this->mSubsystems[i];
+        if (subsystem != NULL) {
+            subsystem->destroyFirst();
+            i_this->mSubsystems[i] = NULL;
         }
     }
-    if (flags & 1) op_delete(self);
+    hdSoundContainerSubsystem* subsystem = i_this->mSubsystems[3];
+    if (subsystem != NULL) {
+        hdSoundContainerDestroyFourth(subsystem, 3);
+        i_this->mSubsystems[3] = NULL;
+    }
+    for (int i = 4; i < 6; i++) {
+        subsystem = i_this->mSubsystems[i];
+        if (subsystem != NULL) {
+            subsystem->destroyLast();
+            i_this->mSubsystems[i] = NULL;
+        }
+    }
+    if (flags & 1) {
+        operator_delete(i_this);
+    }
 }
-VERIFY(0x0202BB58, SoundSys_dt);
 
-static u32 SoundSys_get0(u32 self) {
-    WWHD_FUNC(0x0202BC78, u32, self);
-    return ld(self + 0x0);
+/* 0202BC78 */
+static void* getFirstSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[0];
 }
-VERIFY(0x0202BC78, SoundSys_get0);
 
-static u32 SoundSys_get1(u32 self) {
-    WWHD_FUNC(0x0202BC80, u32, self);
-    return ld(self + 0x4);
+/* 0202BC80 */
+static void* getSecondSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[1];
 }
-VERIFY(0x0202BC80, SoundSys_get1);
 
-static u32 SoundSys_get2(u32 self) {
-    WWHD_FUNC(0x0202BC88, u32, self);
-    return ld(self + 0x8);
+/* 0202BC88 */
+static void* getThirdSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[2];
 }
-VERIFY(0x0202BC88, SoundSys_get2);
 
-static u32 SoundSys_get3(u32 self) {
-    WWHD_FUNC(0x0202BC90, u32, self);
-    return ld(self + 0xC);
+/* 0202BC90 */
+static void* getFourthSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[3];
 }
-VERIFY(0x0202BC90, SoundSys_get3);
 
-static u32 SoundSys_get4(u32 self) {
-    WWHD_FUNC(0x0202BC98, u32, self);
-    return ld(self + 0x10);
+/* 0202BC98 */
+static void* getFifthSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[4];
 }
-VERIFY(0x0202BC98, SoundSys_get4);
 
-static u32 SoundSys_get5(u32 self) {
-    WWHD_FUNC(0x0202BCA0, u32, self);
-    return ld(self + 0x14);
+/* 0202BCA0 */
+static void* getSixthSoundSubsystem(hdSoundSystemContainer* i_this) {
+    return i_this->mSubsystems[5];
 }
-VERIFY(0x0202BCA0, SoundSys_get5);
 
-static void sinit_0202BCA8() {
-    WWHD_FUNC(0x0202BCA8, void);
-    header_sinit(0x101FFD70, 0x1018EC1C, 0x100040A8);
+/* 0202BCA8 */
+static void __sinit_hd_sound_system_cpp() {
+    sinit_header_statics_rodata(0x101FFD64, 0x1018EC1C, 0x101FFD70, 0x100040A8);
 }
-VERIFY(0x0202BCA8, sinit_0202BCA8);
 
-}  // namespace hd_snd_0202B6B0
+/* WWHD glue (tools/verify/autoglue.py): HD sound resource and subsystem APIs
+ data sSoundResourceManager 101F8B68
+ data sArchiveTypeInitialized 101FD6E0
+ data sArchiveType 101FD944
+ data sArchiveName 101FFD40
+ ext 0202EAB0 hdSoundArchiveSafeString* hdSoundArchiveGetTablePath()
+ ext 0275DB94 hdSoundArchiveResource* hdSoundArchiveLoadResource(void*, hdSoundArchiveLoadArg*)
+ ext 0273B050 void* hdSoundContainerAllocate(u32, void*, u32)
+ ext 020305A0 hdSoundContainerSubsystem* hdSoundContainerConstructFirst(hdSoundContainerSubsystem*)
+ ext 0202F048 hdSoundContainerSubsystem* hdSoundContainerConstructSecond(hdSoundContainerSubsystem*)
+ ext 02030364 hdSoundContainerSubsystem* hdSoundContainerConstructThird(hdSoundContainerSubsystem*)
+ ext 020317C0 hdSoundContainerSubsystem* hdSoundContainerConstructFourth(hdSoundContainerSubsystem*, u32, void*)
+ ext 020312CC hdSoundContainerSubsystem* hdSoundContainerConstructFifth(hdSoundContainerSubsystem*)
+ ext 0202B6B0 hdSoundContainerSubsystem* hdSoundContainerConstructSixth(hdSoundContainerSubsystem*)
+ ext 02031838 void hdSoundContainerDestroyFourth(hdSoundContainerSubsystem*, u32)
+*/

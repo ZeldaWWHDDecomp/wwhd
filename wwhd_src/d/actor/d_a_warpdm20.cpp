@@ -1,665 +1,745 @@
 /** Warp Demo 20: HD actor behavior. */
 #include "bindings.h"
 #include "d/actor/d_a_warpdm20.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/f_op/f_op_actor.h"
 
 struct Warpdm20ResourceKey {
-    gptr<const char> text;
+    be<u32> text;
     be<u32> vtable;
 };
 WWHD_SIZE(Warpdm20ResourceKey, 8);
+const gc_tu_data gc_tu = {.safeString = 0x100420DC, .headerStatics = {0x1046EAF4, 0x101D2DC4, 0x1046EB00}};
+static warpdm20::EventTable event_init_tbl;
+static warpdm20::EventTable event_action_tbl;
+static warpdm20::ActionTable action_table;
+static warpdm20::PiPair l_pi;
+static cXyz l_zeroVector;
 
-void daWarpdm20_c::animPlay() {
-    WWHD_FUNC(0x024D5208, void, this);
-    if (mpBtkAnm) {
-        *gabi::at<be<f32>>(gabi::ea(mpBtkAnm.get())) = 1.0f;
-        gabi::call(0x025E742C, mpBtkAnm.get());
-    }
-    if (mpBrkAnm) {
-        *gabi::at<be<f32>>(gabi::ea(mpBrkAnm.get())) = 1.0f;
-        gabi::call(0x025E742C, mpBrkAnm.get());
-    }
-    if (mpBckAnm) {
-        *gabi::at<be<f32>>(gabi::ea(mpBckAnm.get())) = 1.0f;
-        gabi::call(0x025E742C, mpBckAnm.get());
-    }
-}
-VERIFY(0x024D5208, &daWarpdm20_c::animPlay);
-
-static void Warpdm20SetEndAnm(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D4C94, void, actor);
-    if (actor->mpBckAnm) {
-        auto* animation = actor->mpBckAnm.get();
-        *gabi::at<be<f32>>(gabi::ea(animation) + 4) = f32(*gabi::at<be<s16>>(gabi::ea(animation) + 0xA));
-    }
-    if (actor->mpBrkAnm) {
-        auto* animation = actor->mpBrkAnm.get();
-        *gabi::at<be<f32>>(gabi::ea(animation) + 4) = f32(*gabi::at<be<s16>>(gabi::ea(animation) + 0xA));
-    }
-}
-VERIFY(0x024D4C94, Warpdm20SetEndAnm);
-
-static f32 Warpdm20GetSeaY(daWarpdm20_c* actor, cXyz* position) {
-    WWHD_FUNC(0x024D4C40, f32, actor, position);
-    if (gabi::call<s32>(0x0246B6A4, f32(position->x), f32(position->z)))
-        return gabi::call<f32>(0x0246BA0C, f32(position->x), f32(position->z));
-    return gabi::call<f32>(0x024F1478, position);
-}
-VERIFY(0x024D4C40, Warpdm20GetSeaY);
-
-static BOOL Warpdm20DeleteImpl(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5034, BOOL, actor);
-    gabi::call(0x025A9270, &actor->mRippleVtable);
-    gabi::call(0x025204C8, &actor->mPhase, gabi::at<const char>(0x10042220));
+static void Warpdm20CopyTranslation(daWarpdm20_c*);
+static BOOL CheckCreateHeap(daWarpdm20_c*);
+/* 024D5034 */
+BOOL daWarpdm20_c::_delete() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    warpRippleRemove(&mRippleCallback);
+    warpResDelete(&mPhase, "Gdemo20");
     return TRUE;
 }
-VERIFY(0x024D5034, Warpdm20DeleteImpl);
 
-static BOOL Warpdm20HeapCallback(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D4C3C, BOOL, actor);
-    return gabi::call<BOOL>(0x024D4958, actor);
-}
-VERIFY(0x024D4C3C, Warpdm20HeapCallback);
+/* 024D4958 */
+BOOL daWarpdm20_c::CreateHeap() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    gabi::Local<Warpdm20ResourceKey> modelKey, bckKey, btkKey, brkKey;
+    modelKey->text = gabi::guest_addr("Gdemo20");
+    modelKey->vtable = gc_tu.safeString;
+    J3DModelData* modelData = static_cast<J3DModelData*>(
+        warpObjectResource(dComIfG_resControl(), modelKey.get(), dRes_INDEX_GDEMO20_BDL_GDEMO20_1_e));
+    if (!modelData)
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xDB, "modelData != NULL");
+    mpModel = mDoExt_J3DModel__create(modelData, 0x80000, 0x11000222);
+    if (!mpModel)
+        return FALSE;
 
-static s32 Warpdm20Create(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5030, s32, actor);
-    return gabi::call<s32>(0x024D4F58, actor);
-}
-VERIFY(0x024D5030, Warpdm20Create);
-
-static BOOL Warpdm20Delete(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5078, BOOL, actor);
-    return gabi::call<BOOL>(0x024D5034, actor);
-}
-VERIFY(0x024D5078, Warpdm20Delete);
-
-static BOOL Warpdm20Draw(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5138, BOOL, actor);
-    return gabi::call<BOOL>(0x024D507C, actor);
-}
-VERIFY(0x024D5138, Warpdm20Draw);
-
-static BOOL Warpdm20Execute(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5A94, BOOL, actor);
-    return gabi::call<BOOL>(0x024D58FC, actor);
-}
-VERIFY(0x024D5A94, Warpdm20Execute);
-
-static s32 Warpdm20CreateImpl(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D4F58, s32, actor);
-    auto* condition = gabi::at<be<u32>>(gabi::ea(actor) + 0x2E4);
-    if (!(u32(*condition) & 8)) {
-        if (actor) {
-            gabi::call(0x025D4ED0, actor);
-            actor->__vtbl = 0x1004211C;
-            gabi::call(0x025A9084, &actor->mRippleVtable);
-        }
-        *condition = u32(*condition) | 8;
+    bckKey->text = gabi::guest_addr("Gdemo20");
+    bckKey->vtable = gc_tu.safeString;
+    mpBckAnm = nullptr;
+    void* bckResource =
+        warpObjectResource(dComIfG_resControl(), bckKey.get(), dRes_INDEX_GDEMO20_BCK_GDEMO20_1_e);
+    if (!bckResource)
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0xED, "pbck != NULL");
+    warpdm20::BckConstructView* bck = static_cast<warpdm20::BckConstructView*>(operator_new(0x8C));
+    if (bck) {
+        warpFrameConstruct(bck, 0);
+        bck->mAnmVtable = warpdm20::BaseAnmVtable;
+        warpMtxCalcConstruct(&bck->mMtxCalc);
+        bck->m80 = 0;
+        bck->m58 = 0;
+        bck->mMtxCalcVtable = warpdm20::MtxCalcVtable;
+        bck->m84 = 0;
+        bck->mAnmVtable = warpdm20::BckAnmVtable;
+        bck->m7C = 0;
+        bck->m88 = 0;
     }
-    actor->mType = u32(actor->mParameters) & 15;
-    const s32 phase = gabi::call<s32>(0x02520460, &actor->mPhase, gabi::at<const char>(0x10042220));
-    if (phase == 4) {
-        if (!gabi::call<s32>(0x025D63E8, actor, 0x024D4C3C, 0x3000)) return 5;
-        gabi::call(0x024D4D10, actor);
+    mpBckAnm = bck;
+    if (!bck)
+        return FALSE;
+    if (!warpInitBck(bck, modelData, bckResource, 1, 0, 1.0f, 0, -1, 0))
+        return FALSE;
+    mpBckAnm->mFrameCtrl.mRate = 0.0f;
+
+    mpBtkAnm = nullptr;
+    btkKey->text = gabi::guest_addr("Gdemo20");
+    btkKey->vtable = gc_tu.safeString;
+    void* btkResource =
+        warpObjectResource(dComIfG_resControl(), btkKey.get(), dRes_INDEX_GDEMO20_BTK_GDEMO20_1_e);
+    if (!btkResource)
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x117, "pbtk != NULL");
+    mpBtkAnm = warpCreateBtk(0);
+    if (!mpBtkAnm)
+        return FALSE;
+    if (!warpInitBtk(mpBtkAnm.get(), modelData, btkResource, 1, 2, 1.0f, 0, -1, 0, 0))
+        return FALSE;
+    mpBtkAnm->mFrameCtrl.mRate = 0.0f;
+
+    mpBrkAnm = nullptr;
+    brkKey->text = gabi::guest_addr("Gdemo20");
+    brkKey->vtable = gc_tu.safeString;
+    void* brkResource =
+        warpObjectResource(dComIfG_resControl(), brkKey.get(), dRes_INDEX_GDEMO20_BRK_GDEMO20_1_e);
+    if (!brkResource)
+        JUT_ASSERT_fail("d_a_warpdm20.cpp", 0x12B, "pbrk != NULL");
+    mpBrkAnm = warpCreateBrk(0);
+    if (!mpBrkAnm)
+        return FALSE;
+    if (!warpInitBrk(mpBrkAnm.get(), modelData, brkResource, 1, 0, 1.0f, 0, -1, 0, 0))
+        return FALSE;
+    mpBrkAnm->mFrameCtrl.mRate = 0.0f;
+    return TRUE;
+}
+
+/* 024D4D10 */
+void daWarpdm20_c::CreateInit() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    J3DModel* model = mpModel;
+    cullMtx = warpdm20::cullMatrixAddress(model);
+    warpCullBox(this, -300.0f, 0.0f, -300.0f, 300.0f, 500.0f, 300.0f);
+    gabi::Local<cXyz> probe;
+    probe->x = current.pos.x;
+    probe->y = gabi::fadds_ppc(f32(current.pos.y), 2000.0f);
+    probe->z = current.pos.z;
+    cullSizeFar = 1.0f;
+    f32 water = getSeaY(probe.get());
+    const f32 z = scale.z, y = scale.y, x = scale.x;
+    J3DModel* currentModel = mpModel;
+    if (water == -1000000000.0f)
+        water = 0.0f;
+    current.pos.y = water;
+    m2E0.y = water;
+    warpdm20::modelScale(currentModel)->z = z;
+    warpdm20::modelScale(currentModel)->x = x;
+    warpdm20::modelScale(currentModel)->y = y;
+    Warpdm20CopyTranslation(this);
+    m2EC.z = 1.0f;
+    warpdm20::words(&m2E0)->z = warpdm20::words(&current.pos)->z;
+    warpdm20::words(&m2E0)->y = warpdm20::words(&current.pos)->y;
+    m2EC.x = 1.0f;
+    m2C8 = 0;
+    warpdm20::words(&m2E0)->x = warpdm20::words(&current.pos)->x;
+    m2EC.y = 1.0f;
+    dSv_event_c* save = dComIfGs_getEvent();
+    if (warpIsEventBit(save, UNK_2D08)) {
+        m2CC = 1;
+        this->setEndAnm();
+    }
+    dComIfG_inf_c* game = warpdm20::game();
+    mEventIdx = warpEventIdx(&game->play.mEvtManager, "TO_HYRULE_WARP", 255);
+    save = dComIfGs_getEvent();
+    if (warpIsEventBit(save, ZELDA_AWAKENED)) {
+        save = dComIfGs_getEvent();
+        warpOnEventBit(save, UNK_1820);
+        // HD: awakening additionally notifies the game-data system.
+        warpHdAwakened(0xB203);
+    }
+}
+
+/* 024D4F58 */
+s32 daWarpdm20_c::_create() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    auto* condition = &actor_condition;
+    if (!(u32(*condition) & fopAcCnd_INIT_e)) {
+        if (this) {
+            warpActorConstruct(this);
+            __vtbl = warpdm20::ActorVtable;
+            warpRippleConstruct(&mRippleCallback);
+        }
+        *condition = u32(*condition) | fopAcCnd_INIT_e;
+    }
+    m2D6 = u32(mParameters) & 15;
+    const s32 phase = warpResLoad(&mPhase, "Gdemo20");
+    if (phase == cPhs_COMPLEATE_e) {
+        if (!warpEntryHeap(this, gabi::guest_fn((const void*)&CheckCreateHeap), 0x3000))
+            return cPhs_ERROR_e;
+        CreateInit();
     }
     return phase;
 }
-VERIFY(0x024D4F58, Warpdm20CreateImpl);
 
-static void Warpdm20EventOrder(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5708, void, actor);
-    if (s32(actor->mEventOrderState) != 1) return;
-    gabi::call(0x025D7A58, actor, s32(actor->mEventIdx), 255, 65535, 0, 1);
-    auto* condition = gabi::at<be<u16>>(gabi::ea(actor) + 0xFA);
-    *condition = u16(*condition) | 2;
+/* 024D58FC */
+BOOL daWarpdm20_c::_execute() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!u8(demoActorID)) {
+        set_effect(0x83D8);
+        this->checkOrder();
+        this->demo_proc();
+        this->eventOrder();
+    } else
+        this->demo_execute();
+    if (u8(m2CC)) {
+        const s32 reverb = warpReverb(s32(current.roomNo));
+        warpLevelSound(JA_SE_OBJ_HL_WAPR_EFF, &eyePos, 0, reverb);
+    }
+    gabi::Local<cXyz> probe;
+    probe->x = current.pos.x;
+    probe->y = gabi::fadds_ppc(f32(current.pos.y), 2000.0f);
+    probe->z = current.pos.z;
+    f32 water = getSeaY(probe.get());
+    const f32 scaleY = scale.y;
+    if (water == -1000000000.0f)
+        water = 0.0f;
+    m2E0.y = water;
+    const f32 scaleX = scale.x, scaleZ = scale.z;
+    J3DModel* model = mpModel;
+    current.pos.y = water;
+    warpdm20::modelScale(model)->x = scaleX;
+    warpdm20::modelScale(model)->y = scaleY;
+    warpdm20::modelScale(model)->z = scaleZ;
+    Warpdm20CopyTranslation(this);
+    return TRUE;
 }
-VERIFY(0x024D5708, Warpdm20EventOrder);
 
-static BOOL Warpdm20CheckWarp(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5298, BOOL, actor);
-    gabi::call<u32>(0x025200D4);
-    u32 game = gabi::call<u32>(0x025200D4);
-    const u32 ship = *gabi::at<be<u32>>(game + 0x5B3C);
-    game = gabi::call<u32>(0x025200D4);
-    if (!(u32(*gabi::at<be<u32>>(game + 0x5CD8)) & 0x10000) || !ship) return FALSE;
+/* 024D5354 */
+void daWarpdm20_c::normal_execute() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
+    dComIfG_inf_c* game = warpdm20::game();
+    fopAc_ac_c* player = game->play.mPlayerInfo[0].mpPlayer;
     gabi::Local<cXyz> delta, horizontal;
-    gabi::call(0x0201ADE0, gabi::at<cXyz>(ship + 0x314), delta.get(), &actor->current.pos);
+    cXyz_mi(warpdm20::actorPosition(player), delta.get(), &current.pos);
     horizontal->x = delta->x;
     horizontal->y = 0.0f;
     horizontal->z = delta->z;
-    gabi::call<f32>(0x028E8DD0, horizontal.get());
-    const f32 distance = gabi::call<f32>(0x028F4384);
-    return distance < 500.0f;
+    PSVECSquareMag(horizontal.get());
+    // HD: sqrt consumes the preceding square-magnitude result left in f1.
+    const f32 distance = warpSqrt();
+    dSv_event_c* save = dComIfGs_getEvent();
+    if (!warpIsEventBit(save, UNK_2D08))
+        return;
+    m2CC = 1;
+    this->animPlay();
+    if (emitter) {
+        auto* flags = &emitter->mStatus;
+        if (distance < 2000.0f)
+            *flags = u32(*flags) & ~1u;
+        else
+            *flags = u32(*flags) | 1;
+    }
+    if (this->check_warp())
+        m2C8 = 1;
 }
-VERIFY(0x024D5298, Warpdm20CheckWarp);
 
-static BOOL Warpdm20ActDead(daWarpdm20_c* actor, s32 action) {
-    WWHD_FUNC(0x024D5B84, BOOL, actor, action);
+/* 024D57E4 */
+void daWarpdm20_c::demo_execute() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    const u32 demoId = demoActorID;
+    m2CC = 1;
+    if (!demoId || demoId > 32)
+        return;
+    warpdm20::DemoObjects* objects = warpdm20::demoObjects();
+    if (!objects) {
+        JUT_ASSERT_fail("d_demo.h", 0x23A, "m_object != NULL");
+        objects = warpdm20::demoObjects();
+    }
+    dDemo_actor_c* demo = warpDemoActor(objects, demoId);
+    if (!demo)
+        return;
+    const u32 action = demo->mShapeId;
+    m2D8 = action;
+    if (action == 0) {
+        warpOffDraw(warpdm20::drawTag(this));
+    } else if (action == 1) {
+        set_effect(0x82BD);
+        warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
+        if (emitter) {
+            auto* flags = &emitter->mStatus;
+            *flags = u32(*flags) & ~1u;
+        }
+        this->set_wpsenko();
+        const u32 priority = warpDrawPriority(this);
+        warpOnDraw(warpdm20::drawTag(this), priority);
+        this->animPlay();
+    }
+}
+
+// HD: translation entries are copied as words, preserving SNaN bits.
+/* inlined into daWarpdm20_c::_execute, daWarpdm20_c::CreateInit */
+static void Warpdm20CopyTranslation(daWarpdm20_c* actor) {
+    PSMTXTrans(mDoMtx_stack_c::get(), f32(actor->current.pos.x), f32(actor->current.pos.y),
+               f32(actor->current.pos.z));
+    u32 values[12];
+    for (u32 i = 0; i < 12; i++)
+        values[i] = warpdm20::matrixWords(mDoMtx_stack_c::get())[i];
+    J3DModel* model = actor->mpModel;
+    for (u32 i = 0; i < 12; i++)
+        warpdm20::matrixWords(warpdm20::modelMatrix(model))[i] = values[i];
+}
+
+/* 024D5544 */
+void daWarpdm20_c::demo_proc() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    dComIfG_inf_c* game = warpdm20::game();
+    mStaffIdx = warpStaffId(&game->play.mEvtManager, "Gdemo20", 0, 0);
+    game = warpdm20::game();
+    if ((u8)game->play.mEvtCtrl.mMode == 0)
+        return;
+    if ((u16)eventInfo.mCommand == dEvtCmd_INTALK_e)
+        return;
+    s32 staff = mStaffIdx;
+    if (staff == -1)
+        return;
+    game = warpdm20::game();
+    const s32 action = warpActionIdx(&game->play.mEvtManager, staff, &action_table, 6, 0, 0);
+    staff = mStaffIdx;
+    if (action == -1) {
+        game = warpdm20::game();
+        warpCutEnd(&game->play.mEvtManager, staff);
+        return;
+    }
+    game = warpdm20::game();
+    if (warpAdvance(&game->play.mEvtManager, staff))
+        (this->*warpdm20::eventAt(&event_init_tbl, u32(action)))(s32(mStaffIdx));
+    if ((this->*warpdm20::eventAt(&event_action_tbl, u32(action)))(s32(mStaffIdx))) {
+        staff = mStaffIdx;
+        game = warpdm20::game();
+        warpCutEnd(&game->play.mEvtManager, staff);
+    }
+}
+
+/* 024D5A98 */
+void daWarpdm20_c::initWait(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mRippleCallback.mpEmitter) {
+        auto* flags = &mRippleCallback.mpEmitter->mStatus;
+        *flags = u32(*flags) & ~1u;
+    }
+}
+
+/* 024D5AB4 */
+BOOL daWarpdm20_c::actWait(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    animPlay();
+    return TRUE;
+}
+
+/* 024D5E84 */
+void daWarpdm20_c::initWait2(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    dComIfG_inf_c* game = warpdm20::game();
+    warpSetGoal(&game->play.mEvtManager, &current.pos);
+}
+
+/* 024D5EBC */
+BOOL daWarpdm20_c::actWait2(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    animPlay();
+    return TRUE;
+}
+
+/* 024D5AD8 */
+void daWarpdm20_c::initWarp(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    warpSystemSound(JA_SE_LK_HL_WAPR_D_IN);
+    dComIfG_inf_c* game = warpdm20::game();
+    warpSetGoal(&game->play.mEvtManager, &current.pos);
+}
+
+/* 024D5B18 */
+BOOL daWarpdm20_c::actWarp(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    animPlay();
+    return TRUE;
+}
+
+/* 024D5D28 */
+void daWarpdm20_c::initWaitDead(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
+    if (emitter) {
+        auto* flags = &emitter->mStatus;
+        *flags = u32(*flags) & ~1u;
+    }
+    gabi::Local<cXyz> goal;
+    goal->x = current.pos.x;
+    goal->y = current.pos.y;
+    goal->z = f32(current.pos.z) + 1000.0f;
+    dComIfG_inf_c* game = warpdm20::game();
+    warpSetGoal(&game->play.mEvtManager, goal.get());
+    m2CC = 1;
+    init_bck_anm(dRes_INDEX_GDEMO20_BCK_GDEMO20_1A_e);
+    if (mpBrkAnm) {
+        auto* animation = mpBrkAnm.get();
+        animation->mFrameCtrl.mFrame = f32(animation->mFrameCtrl.mEnd);
+    }
+    if (mpBckAnm)
+        mpBckAnm->mFrameCtrl.mRate = 0.0f;
+    warpSystemSound(JA_SE_LK_HL_WAPR_U_OUT);
+}
+
+/* 024D5E08 */
+BOOL daWarpdm20_c::actWaitDead(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mpBtkAnm) {
+        mpBtkAnm->mFrameCtrl.mRate = 1.0f;
+        mpBtkAnm.get()->play();
+    }
+    if (mpBrkAnm) {
+        mpBrkAnm->mFrameCtrl.mRate = 1.0f;
+        mpBrkAnm.get()->play();
+    }
+    return TRUE;
+}
+
+/* 024D5B3C */
+void daWarpdm20_c::initDead(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    const s32 reverb = warpReverb(s32(current.roomNo));
+    warpLevelSound(JA_SE_OBJ_HL_WARP_OFF, &eyePos, 0, reverb);
+}
+
+/* 024D5B84 */
+BOOL daWarpdm20_c::actDead(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     BOOL done = FALSE;
-    if (actor->mpBtkAnm) {
-        actor->mpBtkAnm->mFrameCtrl.mRate = 1.0f;
-        gabi::call(0x025E742C, actor->mpBtkAnm.get());
+    if (mpBtkAnm) {
+        mpBtkAnm->mFrameCtrl.mRate = 1.0f;
+        mpBtkAnm.get()->play();
     }
-    if (actor->mpBrkAnm) {
-        actor->mpBrkAnm->mFrameCtrl.mRate = 1.0f;
-        gabi::call(0x025E742C, actor->mpBrkAnm.get());
+    if (mpBrkAnm) {
+        mpBrkAnm->mFrameCtrl.mRate = 1.0f;
+        mpBrkAnm.get()->play();
     }
-    if (actor->mpBckAnm) {
-        actor->mpBckAnm->mFrameCtrl.mRate = 1.0f;
-        if (gabi::call<s32>(0x025E742C, actor->mpBckAnm.get())) {
-            actor->mVisible = 0;
+    if (mpBckAnm) {
+        mpBckAnm->mFrameCtrl.mRate = 1.0f;
+        if (mpBckAnm.get()->play()) {
+            m2CC = 0;
             done = TRUE;
         }
     }
-    const u32 emitter = gabi::ea(actor->mpRippleEmitter.get());
+    warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
     if (emitter) {
-        gabi::call(0x0200F62C, &actor->mRippleScale, gabi::at<cXyz>(0x101FFBA8), 0.2f);
-        const f32 x = actor->mRippleScale.x, y = actor->mRippleScale.y, z = actor->mRippleScale.z;
-        *gabi::at<be<f32>>(emitter + 0x240) = z;
-        *gabi::at<be<f32>>(emitter + 0x238) = x;
-        *gabi::at<be<f32>>(emitter + 0x224) = y;
-        *gabi::at<be<f32>>(emitter + 0x220) = x;
-        *gabi::at<be<f32>>(emitter + 0x228) = z;
-        *gabi::at<be<f32>>(emitter + 0x23C) = y;
+        warpChasePosition(&m2EC, &l_zeroVector, 0.2f);
+        const f32 x = m2EC.x, y = m2EC.y, z = m2EC.z;
+        emitter->mGlobalParticleScale.z = z;
+        emitter->mGlobalParticleScale.x = x;
+        emitter->mGlobalDynamicsScale.y = y;
+        emitter->mGlobalDynamicsScale.x = x;
+        emitter->mGlobalDynamicsScale.z = z;
+        emitter->mGlobalParticleScale.y = y;
     }
     return done;
 }
-VERIFY(0x024D5B84, Warpdm20ActDead);
 
-static BOOL Warpdm20ActWaitDead(daWarpdm20_c* actor, s32 action) {
-    WWHD_FUNC(0x024D5E08, BOOL, actor, action);
-    if (actor->mpBtkAnm) {
-        actor->mpBtkAnm->mFrameCtrl.mRate = 1.0f;
-        gabi::call(0x025E742C, actor->mpBtkAnm.get());
+/* 024D5EE0 */
+u32 daWarpdm20_c::initReturnWait(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mRippleCallback.mpEmitter) {
+        auto* flags = &mRippleCallback.mpEmitter->mStatus;
+        *flags = u32(*flags) & ~1u;
     }
-    if (actor->mpBrkAnm) {
-        actor->mpBrkAnm->mFrameCtrl.mRate = 1.0f;
-        gabi::call(0x025E742C, actor->mpBrkAnm.get());
-    }
+    return warpSystemSound(JA_SE_LK_HL_WAPR_U_OUT);
+}
+
+/* 024D5F00 */
+BOOL daWarpdm20_c::actReturnWait(s32 action) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    animPlay();
     return TRUE;
 }
-VERIFY(0x024D5E08, Warpdm20ActWaitDead);
 
-static void Warpdm20CheckOrder(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5468, void, actor);
-    if (u16(*gabi::at<be<u16>>(gabi::ea(actor) + 0xF8)) == 2) {
-        s32 event = actor->mEventIdx;
-        u32 game = gabi::call<u32>(0x025200D4);
-        const s32 started = gabi::call<s32>(0x0254407C, gabi::at<void>(game + 0x52C4), event);
-        event = actor->mEventIdx;
-        if (started && s32(actor->mEventOrderState)) actor->mEventOrderState = 0;
-        game = gabi::call<u32>(0x025200D4);
-        if (gabi::call<s32>(0x025440C8, gabi::at<void>(game + 0x52C4), event)) {
-            game = gabi::call<u32>(0x025200D4);
-            auto* flags = gabi::at<be<u16>>(game + 0x52B8);
+/* 024D5708 */
+void daWarpdm20_c::eventOrder() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (s32(m2C8) != 1)
+        return;
+    warpOrderEvent(this, s32(mEventIdx), 255, 65535, 0, 1);
+    auto* condition = &eventInfo.mCondition;
+    *condition = u16(*condition) | dEvtCnd_UNK2_e;
+}
+
+/* 024D5468 */
+void daWarpdm20_c::checkOrder() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if ((u16)eventInfo.mCommand == dEvtCmd_INDEMO_e) {
+        s32 event = mEventIdx;
+        dComIfG_inf_c* game = warpdm20::game();
+        const s32 started = warpEventStart(&game->play.mEvtManager, event);
+        event = mEventIdx;
+        if (started && s32(m2C8))
+            m2C8 = 0;
+        game = warpdm20::game();
+        if (warpEventEnd(&game->play.mEvtManager, event)) {
+            game = warpdm20::game();
+            auto* flags = &game->play.mEvtCtrl.mEventFlag;
             *flags = u16(*flags) | 8;
-            gabi::call(0x025D57E0, actor);
+            warpDeleteActor(this);
         }
-    } else if (s32(actor->mEventOrderState) == 0) {
-        const u32 game = gabi::call<u32>(0x025200D4);
-        if (u8(*gabi::at<be<u8>>(game + 0x5292)) == 0)
-            gabi::call(0x024D5354, actor);
+    } else if (s32(m2C8) == 0) {
+        dComIfG_inf_c* game = warpdm20::game();
+        if ((u8)game->play.mEvtCtrl.mMode == 0)
+            normal_execute();
     }
 }
-VERIFY(0x024D5468, Warpdm20CheckOrder);
 
-static BOOL Warpdm20DrawImpl(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D507C, BOOL, actor);
-    if (!u8(actor->mVisible)) return TRUE;
-    u32 environment = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x025626A4, gabi::at<void>(environment), 0, &actor->current.pos, &actor->tevStr);
-    environment = gabi::call<u32>(0x02555D0C);
-    gabi::call(0x02562F5C, gabi::at<void>(environment), actor->mpModel.get(), &actor->tevStr);
-    if (actor->mpBtkAnm) {
-        auto* animation = actor->mpBtkAnm.get();
-        const u32 data = *gabi::at<be<u32>>(gabi::ea(actor->mpModel.get()) + 0xAC);
-        gabi::call(0x025E7FC4, animation, gabi::at<void>(data), f32(animation->mFrameCtrl.mFrame));
+/* 024D5208 */
+void daWarpdm20_c::animPlay() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mpBtkAnm) {
+        mpBtkAnm.get()->mFrameCtrl.mRate = 1.0f;
+        mpBtkAnm.get()->play();
     }
-    if (actor->mpBrkAnm) {
-        auto* animation = actor->mpBrkAnm.get();
-        const u32 data = *gabi::at<be<u32>>(gabi::ea(actor->mpModel.get()) + 0xAC);
-        gabi::call(0x025E83FC, animation, gabi::at<void>(data), f32(animation->mFrameCtrl.mFrame));
+    if (mpBrkAnm) {
+        mpBrkAnm.get()->mFrameCtrl.mRate = 1.0f;
+        mpBrkAnm.get()->play();
     }
-    if (actor->mpBckAnm) {
-        auto* animation = actor->mpBckAnm.get();
-        const u32 data = *gabi::at<be<u32>>(gabi::ea(actor->mpModel.get()) + 0xAC);
-        gabi::call(0x025E86B8, animation, gabi::at<void>(data), f32(animation->mFrameCtrl.mFrame));
+    if (mpBckAnm) {
+        mpBckAnm.get()->mFrameCtrl.mRate = 1.0f;
+        mpBckAnm.get()->play();
     }
-    gabi::call(0x025E2DE0, actor->mpModel.get(), 0);
-    return TRUE;
 }
-VERIFY(0x024D507C, Warpdm20DrawImpl);
 
-static BOOL Warpdm20SetEffect(daWarpdm20_c* actor, u32 effect) {
-    WWHD_FUNC(0x024D513C, BOOL, actor, effect);
-    if (actor->mpRippleEmitter) return FALSE;
-    const u32 game = gabi::call<u32>(0x025200D4);
-    const u32 particles = *gabi::at<be<u32>>(game + 0x5AB0);
-    gabi::call(0x025A847C, gabi::at<void>(particles), 5, effect, &actor->mEffectPosition,
-        0, &actor->mRippleScale, 255, &actor->mRippleVtable, -1, 0, 0, 0);
-    const u32 emitter = gabi::ea(actor->mpRippleEmitter.get());
-    auto* flags = gabi::at<be<u32>>(gabi::ea(actor) + 0x3D4);
-    *gabi::at<be<f32>>(gabi::ea(actor) + 0x3D8) = 7.0f;
+/* 024D4C94 */
+void daWarpdm20_c::setEndAnm() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mpBckAnm) {
+        auto* animation = mpBckAnm.get();
+        animation->mFrameCtrl.mFrame = f32(animation->mFrameCtrl.mEnd);
+    }
+    if (mpBrkAnm) {
+        auto* animation = mpBrkAnm.get();
+        animation->mFrameCtrl.mFrame = f32(animation->mFrameCtrl.mEnd);
+    }
+}
+
+/* 024D4C40 */
+// HD: the verifier sees a pointer to the caller-owned position slot.
+f32 daWarpdm20_c::getSeaY(cXyz* position) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (warpSeaArea(f32(position->x), f32(position->z)))
+        return warpSeaWave(f32(position->x), f32(position->z));
+    return warpWaterHeight(position);
+}
+
+/* 024D513C */
+// HD: the particle ID remains a full register at this entry.
+BOOL daWarpdm20_c::set_effect(u32 effect) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (mRippleCallback.mpEmitter)
+        return FALSE;
+    dComIfG_inf_c* game = warpdm20::game();
+    dPa_control_c* particles = game->play.mParticle;
+    warpParticle(particles, 5, effect, &m2E0, 0, &m2EC, 255, &mRippleCallback, -1, 0, 0, 0);
+    warpdm20::Emitter* emitter = mRippleCallback.mpEmitter;
+    auto* flags = &mRippleCallback.mStatus;
+    mRippleCallback.mRate = 7.0f;
     *flags = u32(*flags) & ~1u;
     if (emitter) {
-        auto* emitterFlags = gabi::at<be<u32>>(emitter + 0x254);
+        auto* emitterFlags = &emitter->mStatus;
         *emitterFlags = u32(*emitterFlags) | 1;
     }
     return TRUE;
 }
-VERIFY(0x024D513C, Warpdm20SetEffect);
 
-static void Warpdm20SetWarpFlash(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5768, void, actor);
-    if (u8(actor->mWarpFlashSet)) return;
-    const u32 game = gabi::call<u32>(0x025200D4);
-    const u32 particles = *gabi::at<be<u32>>(game + 0x5AB0);
-    gabi::call(0x025A847C, gabi::at<void>(particles), 0, 0x82BC, &actor->current.pos,
-        0, 0, 255, 0, -1, 0, 0, 0);
-    actor->mWarpFlashSet = 1;
+/* 024D5768 */
+void daWarpdm20_c::set_wpsenko() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (u8(m2F8))
+        return;
+    dComIfG_inf_c* game = warpdm20::game();
+    dPa_control_c* particles = game->play.mParticle;
+    warpParticle(particles, 0, 0x82BC, &current.pos, 0, 0, 255, 0, -1, 0, 0, 0);
+    m2F8 = 1;
 }
-VERIFY(0x024D5768, Warpdm20SetWarpFlash);
 
-static void Warpdm20InitBckAnm(daWarpdm20_c* actor, s32 index) {
-    WWHD_FUNC(0x024D5C88, void, actor, index);
+/* 024D5C88 */
+void daWarpdm20_c::init_bck_anm(s32 index) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     gabi::Local<Warpdm20ResourceKey> modelKey, animationKey;
-    modelKey->text = gabi::at<const char>(0x10042220);
-    modelKey->vtable = 0x100420DC;
-    const u32 control = *gabi::at<be<u32>>(0x101F4F28);
-    const u32 model = gabi::call<u32>(0x026066C4, gabi::at<void>(control), modelKey.get(), 10);
-    animationKey->text = gabi::at<const char>(0x10042220);
-    animationKey->vtable = 0x100420DC;
-    const u32 currentControl = *gabi::at<be<u32>>(0x101F4F28);
-    const u32 animation = gabi::call<u32>(0x026066C4, gabi::at<void>(currentControl), animationKey.get(), index);
-    gabi::call(0x025E8508, actor->mpBckAnm.get(), gabi::at<void>(model), gabi::at<void>(animation),
-        1, 0, 1.0f, 0, -1, 1);
+    modelKey->text = gabi::guest_addr("Gdemo20");
+    modelKey->vtable = gc_tu.safeString;
+    dRes_control_c* control = dComIfG_resControl();
+    J3DModelData* model = static_cast<J3DModelData*>(
+        warpObjectResource(control, modelKey.get(), dRes_INDEX_GDEMO20_BDL_GDEMO20_1_e));
+    animationKey->text = gabi::guest_addr("Gdemo20");
+    animationKey->vtable = gc_tu.safeString;
+    dRes_control_c* currentControl = dComIfG_resControl();
+    void* animation = warpObjectResource(currentControl, animationKey.get(), index);
+    warpInitBck(mpBckAnm.get(), model, animation, 1, 0, 1.0f, 0, -1, 1);
 }
-VERIFY(0x024D5C88, Warpdm20InitBckAnm);
 
-static void Warpdm20StaticInit() {
-    WWHD_FUNC(0x024D5F24, void);
-    *gabi::at<be<u32>>(0x1046EB08) = 0;
-    *gabi::at<be<u32>>(0x1046EB00) = 0;
-    *gabi::at<be<u32>>(0x1046EB0C) = 0;
-    *gabi::at<be<u32>>(0x1046EB04) = 0;
-    gabi::call(0x028F026C, gabi::at<void>(0x101D2DC4));
-    *gabi::at<be<f32>>(0x1046EAF4) = *gabi::at<be<f32>>(0x10042218);
-    *gabi::at<be<f32>>(0x1046EAF8) = *gabi::at<be<f32>>(0x1004221C);
-    gabi::call(0x028ED6F8, gabi::at<void>(0x1046EAFC));
-    gabi::call(0x028F026C, gabi::at<void>(0x101D2DD0));
-    gabi::call(0x028EAB2C, gabi::at<void>(0x1046EAFD));
-    gabi::call(0x028F026C, gabi::at<void>(0x101D2DDC));
-}
-VERIFY(0x024D5F24, Warpdm20StaticInit);
-
-static void Warpdm20InitWaitDead(daWarpdm20_c* actor, s32 action) {
-    WWHD_FUNC(0x024D5D28, void, actor, action);
-    const u32 emitter = gabi::ea(actor->mpRippleEmitter.get());
-    if (emitter) {
-        auto* flags = gabi::at<be<u32>>(emitter + 0x254);
-        *flags = u32(*flags) & ~1u;
-    }
-    gabi::Local<cXyz> goal;
-    goal->x = actor->current.pos.x;
-    goal->y = actor->current.pos.y;
-    goal->z = f32(actor->current.pos.z) + 1000.0f;
-    const u32 game = gabi::call<u32>(0x025200D4);
-    gabi::call(0x02543714, gabi::at<void>(game + 0x52C4), goal.get());
-    actor->mVisible = 1;
-    gabi::call(0x024D5C88, actor, 7);
-    if (actor->mpBrkAnm) {
-        auto* animation = actor->mpBrkAnm.get();
-        animation->mFrameCtrl.mFrame = f32(animation->mFrameCtrl.mEnd);
-    }
-    if (actor->mpBckAnm) actor->mpBckAnm->mFrameCtrl.mRate = 0.0f;
-    gabi::call(0x025E1988, 0x2890);
-}
-VERIFY(0x024D5D28, Warpdm20InitWaitDead);
-
-static void Warpdm20NormalExecute(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5354, void, actor);
-    const u32 emitter = gabi::ea(actor->mpRippleEmitter.get());
-    const u32 game = gabi::call<u32>(0x025200D4);
-    const u32 player = *gabi::at<be<u32>>(game + 0x5B2C);
+/* 024D5298 */
+BOOL daWarpdm20_c::check_warp() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    warpdm20::game(); // HD: retain the extra play-object getter call.
+    dComIfG_inf_c* game = warpdm20::game();
+    fopAc_ac_c* ship = game->play.mpPlayerPtr[2];
+    game = warpdm20::game();
+    if (!((u32)game->play.mPlayerStatus[0][0] & 0x10000) || !ship)
+        return FALSE;
     gabi::Local<cXyz> delta, horizontal;
-    gabi::call(0x0201ADE0, gabi::at<cXyz>(player + 0x314), delta.get(), &actor->current.pos);
+    cXyz_mi(warpdm20::actorPosition(ship), delta.get(), &current.pos);
     horizontal->x = delta->x;
     horizontal->y = 0.0f;
     horizontal->z = delta->z;
-    gabi::call<f32>(0x028E8DD0, horizontal.get());
-    const f32 distance = gabi::call<f32>(0x028F4384);
-    const u32 save = *gabi::at<be<u32>>(0x101F84DC);
-    if (!gabi::call<s32>(0x025B8B94, gabi::at<void>(save + 0x644), 0x2D08)) return;
-    actor->mVisible = 1;
-    gabi::call(0x024D5208, actor);
-    if (emitter) {
-        auto* flags = gabi::at<be<u32>>(emitter + 0x254);
-        if (distance < 2000.0f) *flags = u32(*flags) & ~1u;
-        else *flags = u32(*flags) | 1;
-    }
-    if (gabi::call<s32>(0x024D5298, actor)) actor->mEventOrderState = 1;
-}
-VERIFY(0x024D5354, Warpdm20NormalExecute);
-
-static void Warpdm20DemoExecute(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D57E4, void, actor);
-    const u32 demoId = actor->demoActorID;
-    actor->mVisible = 1;
-    if (!demoId || demoId > 32) return;
-    u32 objects = *gabi::at<be<u32>>(0x101D5FFC);
-    if (!objects) {
-        gabi::call(0x0273AA24, gabi::at<const char>(0x1004213C), 0x23A, gabi::at<const char>(0x1004212C));
-        objects = *gabi::at<be<u32>>(0x101D5FFC);
-    }
-    const u32 demo = gabi::call<u32>(0x02526E70, gabi::at<void>(objects), demoId);
-    if (!demo) return;
-    const u32 action = *gabi::at<be<u32>>(demo + 0x28);
-    actor->mAction = action;
-    if (action == 0) {
-        gabi::call(0x025DA884, gabi::at<void>(gabi::ea(actor) + 0xDC));
-    } else if (action == 1) {
-        gabi::call(0x024D513C, actor, 0x82BD);
-        const u32 emitter = gabi::ea(actor->mpRippleEmitter.get());
-        if (emitter) {
-            auto* flags = gabi::at<be<u32>>(emitter + 0x254);
-            *flags = u32(*flags) & ~1u;
-        }
-        gabi::call(0x024D5768, actor);
-        const u32 priority = gabi::call<u32>(0x025DF2B8, actor);
-        gabi::call(0x025DA874, gabi::at<void>(gabi::ea(actor) + 0xDC), priority);
-        gabi::call(0x024D5208, actor);
-    }
-}
-VERIFY(0x024D57E4, Warpdm20DemoExecute);
-
-// HD uses a fixed translation matrix and copies its twelve single-precision entries.
-static void Warpdm20CopyTranslation(daWarpdm20_c* actor) {
-    gabi::call(0x028E93CC, gabi::at<void>(0x1048D0CC),
-        f32(actor->current.pos.x), f32(actor->current.pos.y), f32(actor->current.pos.z));
-    u32 values[12];
-    for (u32 i = 0; i < 12; ++i) values[i] = *gabi::at<be<u32>>(0x1048D0CC + i * 4);
-    const u32 model = gabi::ea(actor->mpModel.get());
-    for (u32 i = 0; i < 12; ++i) *gabi::at<be<u32>>(model + 0xC8 + i * 4) = values[i];
+    PSVECSquareMag(horizontal.get());
+    // HD: sqrt consumes the preceding square-magnitude result left in f1.
+    const f32 distance = warpSqrt();
+    return distance < 500.0f;
 }
 
-static BOOL Warpdm20ExecuteImpl(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D58FC, BOOL, actor);
-    if (!u8(actor->demoActorID)) {
-        gabi::call(0x024D513C, actor, 0x83D8);
-        gabi::call(0x024D5468, actor);
-        gabi::call(0x024D5544, actor);
-        gabi::call(0x024D5708, actor);
-    } else gabi::call(0x024D57E4, actor);
-    if (u8(actor->mVisible)) {
-        const s32 reverb = gabi::call<s32>(0x02520540, s32(actor->current.roomNo));
-        gabi::call(0x025E1A40, 0x1088, gabi::at<void>(gabi::ea(actor) + 0x37C), 0, reverb);
+/* 024D507C */
+BOOL daWarpdm20_c::_draw() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (!u8(m2CC))
+        return TRUE;
+    dScnKy_env_light_c* environment = dKy_getEnvlight();
+    settingTevStruct(environment, 0, &current.pos, &tevStr);
+    environment = dKy_getEnvlight();
+    setLightTevColorType(environment, mpModel.get(), &tevStr);
+    if (mpBtkAnm) {
+        auto* animation = mpBtkAnm.get();
+        J3DModelData* data = warpdm20::modelData(mpModel.get());
+        warpEntryBtk(animation, data, f32(animation->mFrameCtrl.mFrame));
     }
-    gabi::Local<cXyz> probe;
-    probe->x = actor->current.pos.x;
-    probe->y = gabi::fadds_ppc(f32(actor->current.pos.y), 2000.0f);
-    probe->z = actor->current.pos.z;
-    f32 water = gabi::call<f32>(0x024D4C40, actor, probe.get());
-    const f32 scaleY = actor->scale.y;
-    if (water == -1000000000.0f) water = 0.0f;
-    actor->mEffectPosition.y = water;
-    const f32 scaleX = actor->scale.x, scaleZ = actor->scale.z;
-    const u32 model = gabi::ea(actor->mpModel.get());
-    actor->current.pos.y = water;
-    *gabi::at<be<f32>>(model + 0xBC) = scaleX;
-    *gabi::at<be<f32>>(model + 0xC0) = scaleY;
-    *gabi::at<be<f32>>(model + 0xC4) = scaleZ;
-    Warpdm20CopyTranslation(actor);
+    if (mpBrkAnm) {
+        auto* animation = mpBrkAnm.get();
+        J3DModelData* data = warpdm20::modelData(mpModel.get());
+        warpEntryBrk(animation, data, f32(animation->mFrameCtrl.mFrame));
+    }
+    if (mpBckAnm) {
+        auto* animation = mpBckAnm.get();
+        J3DModelData* data = warpdm20::modelData(mpModel.get());
+        warpEntryBck(animation, data, f32(animation->mFrameCtrl.mFrame));
+    }
+    mDoExt_modelUpdateDL(mpModel.get(), 0);
     return TRUE;
 }
-VERIFY(0x024D58FC, Warpdm20ExecuteImpl);
 
-static void Warpdm20CreateInit(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D4D10, void, actor);
-    const u32 model = gabi::ea(actor->mpModel.get());
-    actor->cullMtx = model ? model + 0xC8 : 0;
-    gabi::call(0x025D674C, actor, -300.0f, 0.0f, -300.0f, 300.0f, 500.0f, 300.0f);
-    gabi::Local<cXyz> probe;
-    probe->x = actor->current.pos.x;
-    probe->y = gabi::fadds_ppc(f32(actor->current.pos.y), 2000.0f);
-    probe->z = actor->current.pos.z;
-    *gabi::at<be<f32>>(gabi::ea(actor) + 0x364) = 1.0f;
-    f32 water = gabi::call<f32>(0x024D4C40, actor, probe.get());
-    const f32 z = actor->scale.z, y = actor->scale.y, x = actor->scale.x;
-    const u32 currentModel = gabi::ea(actor->mpModel.get());
-    if (water == -1000000000.0f) water = 0.0f;
-    actor->current.pos.y = water;
-    actor->mEffectPosition.y = water;
-    *gabi::at<be<f32>>(currentModel + 0xC4) = z;
-    *gabi::at<be<f32>>(currentModel + 0xBC) = x;
-    *gabi::at<be<f32>>(currentModel + 0xC0) = y;
-    Warpdm20CopyTranslation(actor);
-    actor->mRippleScale.z = 1.0f;
-    *gabi::at<be<u32>>(gabi::ea(actor) + 0x404) = *gabi::at<be<u32>>(gabi::ea(actor) + 0x31C);
-    *gabi::at<be<u32>>(gabi::ea(actor) + 0x400) = *gabi::at<be<u32>>(gabi::ea(actor) + 0x318);
-    actor->mRippleScale.x = 1.0f;
-    actor->mEventOrderState = 0;
-    *gabi::at<be<u32>>(gabi::ea(actor) + 0x3FC) = *gabi::at<be<u32>>(gabi::ea(actor) + 0x314);
-    actor->mRippleScale.y = 1.0f;
-    u32 save = *gabi::at<be<u32>>(0x101F84DC);
-    if (gabi::call<s32>(0x025B8B94, gabi::at<void>(save + 0x644), 0x2D08)) {
-        actor->mVisible = 1;
-        gabi::call(0x024D4C94, actor);
-    }
-    const u32 game = gabi::call<u32>(0x025200D4);
-    actor->mEventIdx = gabi::call<s32>(0x02543F10, gabi::at<void>(game + 0x52C4), gabi::at<const char>(0x100421BC), 255);
-    save = *gabi::at<be<u32>>(0x101F84DC);
-    if (gabi::call<s32>(0x025B8B94, gabi::at<void>(save + 0x644), 0x2D02)) {
-        save = *gabi::at<be<u32>>(0x101F84DC);
-        gabi::call(0x025B8B68, gabi::at<void>(save + 0x644), 0x1820);
-        gabi::call(0x02586E94, 0xB203);
-    }
-}
-VERIFY(0x024D4D10, Warpdm20CreateInit);
-
-struct Warpdm20EventMethod {
-    be<s16> adjustment;
-    be<s16> virtualIndex;
-    be<u32> target;
-};
-WWHD_SIZE(Warpdm20EventMethod, 8);
-
-static s32 Warpdm20DispatchEventMethod(u32 table, u32 index, daWarpdm20_c* actor, s32 staff) {
-    const u32 descriptor = table + index * 8;
-    const s32 adjustment = *gabi::at<be<s16>>(descriptor);
-    const s32 virtualIndex = *gabi::at<be<s16>>(descriptor + 2);
-    const u32 object = gabi::ea(actor) + u32(adjustment);
-    u32 target;
-    if (virtualIndex < 0) target = *gabi::at<be<u32>>(descriptor + 4);
-    else {
-        const s32 vtableOffset = *gabi::at<be<s16>>(descriptor + 6);
-        const u32 vtable = *gabi::at<be<u32>>(object + u32(vtableOffset));
-        target = *gabi::at<be<u32>>(vtable + u32(virtualIndex) * 8 + 4);
-    }
-    return gabi::call_ptr<s32>(target, gabi::at<void>(object), staff);
+// HD: compiler-generated and template code of this translation unit.
+/* 024D4C3C */
+static BOOL CheckCreateHeap(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return actor->CreateHeap();
 }
 
-static void Warpdm20DemoProc(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5544, void, actor);
-    u32 game = gabi::call<u32>(0x025200D4);
-    actor->mStaffIdx = gabi::call<s32>(0x02542D88, gabi::at<void>(game + 0x52C4), gabi::at<const char>(0x100421D0), 0, 0);
-    game = gabi::call<u32>(0x025200D4);
-    if (u8(*gabi::at<be<u8>>(game + 0x5292)) == 0) return;
-    if (u16(*gabi::at<be<u16>>(gabi::ea(actor) + 0xF8)) == 1) return;
-    s32 staff = actor->mStaffIdx;
-    if (staff == -1) return;
-    game = gabi::call<u32>(0x025200D4);
-    const s32 action = gabi::call<s32>(0x02542EDC, gabi::at<void>(game + 0x52C4), staff,
-        gabi::at<void>(0x101D2DAC), 6, 0, 0);
-    staff = actor->mStaffIdx;
-    if (action == -1) {
-        game = gabi::call<u32>(0x025200D4);
-        gabi::call(0x02543280, gabi::at<void>(game + 0x52C4), staff);
-        return;
-    }
-    game = gabi::call<u32>(0x025200D4);
-    if (gabi::call<s32>(0x025447C8, gabi::at<void>(game + 0x52C4), staff))
-        Warpdm20DispatchEventMethod(0x101D2D2C, u32(action), actor, s32(actor->mStaffIdx));
-    if (Warpdm20DispatchEventMethod(0x101D2D5C, u32(action), actor, s32(actor->mStaffIdx))) {
-        staff = actor->mStaffIdx;
-        game = gabi::call<u32>(0x025200D4);
-        gabi::call(0x02543280, gabi::at<void>(game + 0x52C4), staff);
-    }
+/* 024D5030 */
+static s32 daWarpdm20_Create(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return actor->_create();
 }
-VERIFY(0x024D5544, Warpdm20DemoProc);
 
-static BOOL Warpdm20CreateHeap(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D4958, BOOL, actor);
-    gabi::Local<Warpdm20ResourceKey> modelKey, bckKey, btkKey, brkKey;
-    modelKey->text = gabi::at<const char>(0x10042220);
-    modelKey->vtable = 0x100420DC;
-    const u32 modelData = gabi::call<u32>(0x026066C4,
-        gabi::at<void>(u32(*gabi::at<be<u32>>(0x101F4F28))), modelKey.get(), 10);
-    if (!modelData) gabi::call(0x0273AA24, gabi::at<const char>(0x10042174), 0xDB, gabi::at<const char>(0x10042188));
-    actor->mpModel = gabi::call<J3DModel*>(0x025E38E0, gabi::at<void>(modelData), 0x80000, 0x11000222);
-    if (!actor->mpModel) return FALSE;
-
-    bckKey->text = gabi::at<const char>(0x10042220);
-    bckKey->vtable = 0x100420DC;
-    actor->mpBckAnm = nullptr;
-    const u32 bckResource = gabi::call<u32>(0x026066C4,
-        gabi::at<void>(u32(*gabi::at<be<u32>>(0x101F4F28))), bckKey.get(), 6);
-    if (!bckResource) gabi::call(0x0273AA24, gabi::at<const char>(0x10042174), 0xED, gabi::at<const char>(0x10042150));
-    const u32 bck = gabi::call<u32>(0x0273AD10, 0x8C);
-    if (bck) {
-        gabi::call(0x027F2BC0, gabi::at<void>(bck), 0);
-        *gabi::at<be<u32>>(bck + 0x10) = 0x1016E54C;
-        gabi::call(0x027DA984, gabi::at<void>(bck + 0x14));
-        *gabi::at<be<u32>>(bck + 0x80) = 0;
-        *gabi::at<be<u32>>(bck + 0x58) = 0;
-        *gabi::at<be<u32>>(bck + 0x48) = 0x1016D820;
-        *gabi::at<be<u32>>(bck + 0x84) = 0;
-        *gabi::at<be<u32>>(bck + 0x10) = 0x100420F4;
-        *gabi::at<be<u32>>(bck + 0x7C) = 0;
-        *gabi::at<be<u32>>(bck + 0x88) = 0;
-    }
-    actor->mpBckAnm = gabi::at<mDoExt_baseAnm>(bck);
-    if (!bck) return FALSE;
-    if (!gabi::call<s32>(0x025E8508, gabi::at<void>(bck), gabi::at<void>(modelData), gabi::at<void>(bckResource),
-        1, 0, 1.0f, 0, -1, 0)) return FALSE;
-    actor->mpBckAnm->mFrameCtrl.mRate = 0.0f;
-
-    actor->mpBtkAnm = nullptr;
-    btkKey->text = gabi::at<const char>(0x10042220);
-    btkKey->vtable = 0x100420DC;
-    const u32 btkResource = gabi::call<u32>(0x026066C4,
-        gabi::at<void>(u32(*gabi::at<be<u32>>(0x101F4F28))), btkKey.get(), 18);
-    if (!btkResource) gabi::call(0x0273AA24, gabi::at<const char>(0x10042174), 0x117, gabi::at<const char>(0x1004215C));
-    actor->mpBtkAnm = gabi::call<mDoExt_baseAnm*>(0x025E7C6C, 0);
-    if (!actor->mpBtkAnm) return FALSE;
-    if (!gabi::call<s32>(0x025E7CE0, actor->mpBtkAnm.get(), gabi::at<void>(modelData), gabi::at<void>(btkResource),
-        1, 2, 1.0f, 0, -1, 0, 0)) return FALSE;
-    actor->mpBtkAnm->mFrameCtrl.mRate = 0.0f;
-
-    actor->mpBrkAnm = nullptr;
-    brkKey->text = gabi::at<const char>(0x10042220);
-    brkKey->vtable = 0x100420DC;
-    const u32 brkResource = gabi::call<u32>(0x026066C4,
-        gabi::at<void>(u32(*gabi::at<be<u32>>(0x101F4F28))), brkKey.get(), 14);
-    if (!brkResource) gabi::call(0x0273AA24, gabi::at<const char>(0x10042174), 0x12B, gabi::at<const char>(0x10042168));
-    actor->mpBrkAnm = gabi::call<mDoExt_baseAnm*>(0x025E80D0, 0);
-    if (!actor->mpBrkAnm) return FALSE;
-    if (!gabi::call<s32>(0x025E8154, actor->mpBrkAnm.get(), gabi::at<void>(modelData), gabi::at<void>(brkResource),
-        1, 0, 1.0f, 0, -1, 0, 0)) return FALSE;
-    actor->mpBrkAnm->mFrameCtrl.mRate = 0.0f;
-    return TRUE;
+/* 024D5078 */
+static BOOL daWarpdm20_Delete(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return actor->_delete();
 }
-VERIFY(0x024D4958, Warpdm20CreateHeap);
 
-void daWarpdm20_c::initWait(s32 action) {
-    WWHD_FUNC(0x024D5A98, void, this, action);
-    if (mpRippleEmitter) {
-        auto* flags = gabi::at<be<u32>>(gabi::ea(mpRippleEmitter.get()) + 0x254);
-        *flags = u32(*flags) & ~1u;
-    }
+/* 024D5138 */
+static BOOL daWarpdm20_Draw(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return actor->_draw();
 }
-VERIFY(0x024D5A98, &daWarpdm20_c::initWait);
 
-BOOL daWarpdm20_c::actWait(s32 action) {
-    WWHD_FUNC(0x024D5AB4, BOOL, this, action);
-    gabi::call(0x024D5208, this);
-    return TRUE;
+/* 024D5A94 */
+static BOOL daWarpdm20_Execute(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    return actor->_execute();
 }
-VERIFY(0x024D5AB4, &daWarpdm20_c::actWait);
 
-void daWarpdm20_c::initWarp(s32 action) {
-    WWHD_FUNC(0x024D5AD8, void, this, action);
-    gabi::call(0x025E1988, 0x288D);
-    const u32 game = gabi::call<u32>(0x025200D4);
-    gabi::call(0x02543714, gabi::at<void>(game + 0x52C4), &current.pos);
+/* 024D5F24 */
+static void Warpdm20StaticInit() {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    sinit_header_statics_rodata(gc_tu.headerStatics[0], gc_tu.headerStatics[1], gc_tu.headerStatics[2],
+                                gabi::ea(&l_pi));
 }
-VERIFY(0x024D5AD8, &daWarpdm20_c::initWarp);
 
-BOOL daWarpdm20_c::actWarp(s32 action) {
-    WWHD_FUNC(0x024D5B18, BOOL, this, action);
-    gabi::call(0x024D5208, this);
-    return TRUE;
-}
-VERIFY(0x024D5B18, &daWarpdm20_c::actWarp);
-
-void daWarpdm20_c::initDead(s32 action) {
-    WWHD_FUNC(0x024D5B3C, void, this, action);
-    const s32 reverb = gabi::call<s32>(0x02520540, s32(current.roomNo));
-    gabi::call(0x025E1A40, 0x6A56, gabi::at<void>(gabi::ea(this) + 0x37C), 0, reverb);
-}
-VERIFY(0x024D5B3C, &daWarpdm20_c::initDead);
-
-void daWarpdm20_c::initWait2(s32 action) {
-    WWHD_FUNC(0x024D5E84, void, this, action);
-    const u32 game = gabi::call<u32>(0x025200D4);
-    gabi::call(0x02543714, gabi::at<void>(game + 0x52C4), &current.pos);
-}
-VERIFY(0x024D5E84, &daWarpdm20_c::initWait2);
-
-BOOL daWarpdm20_c::actWait2(s32 action) {
-    WWHD_FUNC(0x024D5EBC, BOOL, this, action);
-    gabi::call(0x024D5208, this);
-    return TRUE;
-}
-VERIFY(0x024D5EBC, &daWarpdm20_c::actWait2);
-
-u32 daWarpdm20_c::initReturnWait(s32 action) {
-    WWHD_FUNC(0x024D5EE0, u32, this, action);
-    if (mpRippleEmitter) {
-        auto* flags = gabi::at<be<u32>>(gabi::ea(mpRippleEmitter.get()) + 0x254);
-        *flags = u32(*flags) & ~1u;
-    }
-    return gabi::call<u32>(0x025E1988, 0x2890);
-}
-VERIFY(0x024D5EE0, &daWarpdm20_c::initReturnWait);
-
-BOOL daWarpdm20_c::actReturnWait(s32 action) {
-    WWHD_FUNC(0x024D5F00, BOOL, this, action);
-    gabi::call(0x024D5208, this);
-    return TRUE;
-}
-VERIFY(0x024D5F00, &daWarpdm20_c::actReturnWait);
-
+/* 024D5FB8 */
 static void Warpdm20SafeStringDtor(void* key, u32 flags) {
-    WWHD_FUNC(0x024D5FB8, void, key, flags);
-    if (key && (flags & 1)) gabi::call(0x0273AF40, key);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
+    if (key && (flags & 1))
+        operator_delete(key);
 }
-VERIFY(0x024D5FB8, Warpdm20SafeStringDtor);
 
-static BOOL Warpdm20IsDelete(daWarpdm20_c* actor) {
-    WWHD_FUNC(0x024D5FCC, BOOL, actor);
+/* 024D5FCC */
+static BOOL daWarpdm20_IsDelete(daWarpdm20_c* actor) {
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     return TRUE;
 }
-VERIFY(0x024D5FCC, Warpdm20IsDelete);
 
+/* 024D5FD4 */
 static void Warpdm20Dtor(daWarpdm20_c* actor, u32 flags) {
-    WWHD_FUNC(0x024D5FD4, void, actor, flags);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
     if (actor) {
-        gabi::call(0x025D50BC, actor, 0);
-        if (flags & 1) gabi::call(0x0273AF40, actor);
+        warpActorDestroy(actor, 0);
+        if (flags & 1)
+            operator_delete(actor);
     }
 }
-VERIFY(0x024D5FD4, Warpdm20Dtor);
 
+/* 024D6028 */
 static void Warpdm20SafeStringEmpty(void* key, void* context) {
-    WWHD_FUNC(0x024D6028, void, key, context);
+    auto originalFrame = gabi::AutoFrame(gabi::current_function());
 }
-VERIFY(0x024D6028, Warpdm20SafeStringEmpty);
+
+// clang-format off
+/* WWHD glue (tools/verify/autoglue.py)
+data event_init_tbl 101D2D2C
+data event_action_tbl 101D2D5C
+data action_table 101D2DAC
+data l_pi 10042218
+data l_zeroVector 101FFBA8
+str 10042220 "Gdemo20"
+str 100421BC "TO_HYRULE_WARP"
+str 100421D0 "Gdemo20" in 024D5544
+str 1004213C "d_demo.h"
+str 1004212C "m_object != NULL"
+str 10042174 "d_a_warpdm20.cpp"
+str 10042188 "modelData != NULL"
+str 10042150 "pbck != NULL"
+str 1004215C "pbtk != NULL"
+str 10042168 "pbrk != NULL"
+ext 0246B6A4 s32 warpSeaArea(f32, f32)
+ext 0246BA0C f32 warpSeaWave(f32, f32)
+ext 024F1478 f32 warpWaterHeight(const cXyz*)
+ext 025A9270 void warpRippleRemove(warpdm20::RippleCallback*)
+ext 025204C8 void warpResDelete(request_of_phase_process_class*, const char*)
+ext 02520460 s32 warpResLoad(request_of_phase_process_class*, const char*)
+ext 025D4ED0 void warpActorConstruct(fopAc_ac_c*)
+ext 025A9084 void warpRippleConstruct(warpdm20::RippleCallback*)
+ext 025D63E8 s32 warpEntryHeap(fopAc_ac_c*, u32, u32)
+ext 025D7A58 void warpOrderEvent(fopAc_ac_c*, s32, u32, u32, u32, u32)
+ext 028F4384 f32 warpSqrt()
+ext 0254407C s32 warpEventStart(dEvent_manager_c*, s32)
+ext 025440C8 s32 warpEventEnd(dEvent_manager_c*, s32)
+ext 025D57E0 void warpDeleteActor(fopAc_ac_c*)
+ext 025A847C void warpParticle(dPa_control_c*, u32, u32, const cXyz*, const csXyz*, const cXyz*, u32, warpdm20::RippleCallback*, s32, const GXColor*, const GXColor*, const cXyz*)
+ext 026066C4 void* warpObjectResource(dRes_control_c*, Warpdm20ResourceKey*, s32)
+ext 025E8508 s32 warpInitBck(mDoExt_baseAnm*, J3DModelData*, void*, u32, s32, f32, s32, s32, u32)
+ext 02543714 void warpSetGoal(dEvent_manager_c*, const cXyz*)
+ext 025E1988 u32 warpSystemSound(u32)
+ext 025B8B94 s32 warpIsEventBit(dSv_event_c*, u32)
+ext 025B8B68 void warpOnEventBit(dSv_event_c*, u32)
+ext 02586E94 void warpHdAwakened(u32)
+ext 02526E70 dDemo_actor_c* warpDemoActor(warpdm20::DemoObjects*, u32)
+ext 025DA884 void warpOffDraw(void*)
+ext 025DF2B8 u32 warpDrawPriority(fopAc_ac_c*)
+ext 025DA874 void warpOnDraw(void*, u32)
+ext 02520540 s32 warpReverb(s32)
+ext 025E1A40 void warpLevelSound(u32, const cXyz*, u32, s32)
+ext 025D674C void warpCullBox(fopAc_ac_c*, f32, f32, f32, f32, f32, f32)
+ext 02543F10 s32 warpEventIdx(dEvent_manager_c*, const char*, u32)
+ext 02542D88 s32 warpStaffId(dEvent_manager_c*, const char*, u32, u32)
+ext 02542EDC s32 warpActionIdx(dEvent_manager_c*, s32, warpdm20::ActionTable*, s32, u32, u32)
+ext 02543280 void warpCutEnd(dEvent_manager_c*, s32)
+ext 025447C8 s32 warpAdvance(dEvent_manager_c*, s32)
+ext 025E7C6C mDoExt_baseAnm* warpCreateBtk(void*)
+ext 025E80D0 mDoExt_baseAnm* warpCreateBrk(void*)
+ext 025E7CE0 s32 warpInitBtk(mDoExt_baseAnm*, J3DModelData*, void*, u32, s32, f32, s32, s32, u32, s32)
+ext 025E8154 s32 warpInitBrk(mDoExt_baseAnm*, J3DModelData*, void*, u32, s32, f32, s32, s32, u32, s32)
+ext 027F2BC0 void warpFrameConstruct(mDoExt_baseAnm*, u32)
+ext 027DA984 void warpMtxCalcConstruct(warpdm20::MtxCalc*)
+ext 025D50BC void warpActorDestroy(fopAc_ac_c*, u32)
+ext 025E7FC4 void warpEntryBtk(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 025E83FC void warpEntryBrk(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 025E86B8 void warpEntryBck(mDoExt_baseAnm*, J3DModelData*, f32)
+ext 0200F62C void warpChasePosition(cXyz*, const cXyz*, f32)
+*/
+// clang-format on

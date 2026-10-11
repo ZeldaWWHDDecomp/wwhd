@@ -1,65 +1,56 @@
-#include "gabi.h"
+/** Layer-local iteration and process lookup, in tww style.
+ * Verified WWHD unit f_pc_layer_iter. */
+#include "f_pc/f_pc_layer_iter.h"
 
-struct LayerFilter { gabi::be<u32> callback; gabi::be<u32> data; };
-
-BOOL fpcLyIt_OnlyHere(u32 layer, u32 callback, u32 data) {
-    WWHD_FUNC(0x025DED70, BOOL, layer, callback, data);
-    gabi::Local<LayerFilter> filter;
-    filter->callback = callback;
-    filter->data = data;
-    return gabi::call<BOOL>(0x0201ABF0, layer + 0x10, 0x0201A9F4u, filter.get());
+/* 025DED70 */
+BOOL fpcLyIt_OnlyHere(layer_class* i_layer, u32 i_func, void* i_data) {
+    gabi::Local<method_filter> filter;
+    filter->mpMethodFunc.v = i_func;
+    filter->mpUserData = i_data;
+    return cTrIt_Method(&i_layer->mNodeListTree, cTgIt_MethodCall, filter.get());
 }
-VERIFY(0x025DED70, fpcLyIt_OnlyHere);
 
-BOOL fpcLyIt_OnlyHereLY(u32 layer, u32 callback, u32 data) {
-    WWHD_FUNC(0x025DEDA8, BOOL, layer, callback, data);
-    u32 previous = gabi::call<u32>(0x025DED64);
-    gabi::call<void>(0x025DEAB4, layer);
-    BOOL result = gabi::call<BOOL>(0x025DED70, layer, callback, data);
-    gabi::call<void>(0x025DEAB4, previous);
+/* 025DEDA8 */
+BOOL fpcLyIt_OnlyHereLY(layer_class* i_layer, u32 i_func, void* i_data) {
+    layer_class* currentLayer = fpcLy_CurrentLayer();
+    fpcLy_SetCurrentLayer(i_layer);
+    BOOL result = fpcLyIt_OnlyHere(i_layer, i_func, i_data);
+    fpcLy_SetCurrentLayer(currentLayer);
     return result;
 }
-VERIFY(0x025DEDA8, fpcLyIt_OnlyHereLY);
 
-u32 fpcLyIt_Judge(u32 layer, u32 callback, u32 data) {
-    WWHD_FUNC(0x025DEE20, u32, layer, callback, data);
-    gabi::Local<LayerFilter> filter;
-    filter->callback = callback;
-    filter->data = data;
-    return gabi::call<u32>(0x0201AC60, layer + 0x10, 0x0201AA08u, filter.get());
+/* 025DEE20 */
+void* fpcLyIt_Judge(layer_class* i_layer, u32 i_func, void* i_data) {
+    gabi::Local<judge_filter> filter;
+    filter->mpJudgeFunc.v = i_func;
+    filter->mpUserData = i_data;
+    return cTrIt_Judge(&i_layer->mNodeListTree, cTgIt_JudgeFilter, filter.get());
 }
-VERIFY(0x025DEE20, fpcLyIt_Judge);
 
-u32 fpcLyIt_AllJudge(u32 callback, u32 data) {
-    WWHD_FUNC(0x025DEE58, u32, callback, data);
-    gabi::Local<LayerFilter> filter;
-    filter->callback = callback;
-    filter->data = data;
-    u32 current = gabi::call<u32>(0x025DEAA8);
-    while (current != 0) {
-        u32 result = gabi::call<u32>(0x0201AC60, current + 0x10, 0x0201AA08u, filter.get());
-        if (result != 0) return result;
-        current = gmem_ld32(current + 8);
+/* 025DEE58 */
+void* fpcLyIt_AllJudge(u32 i_func, void* i_data) {
+    gabi::Local<judge_filter> filter;
+    filter->mpJudgeFunc.v = i_func;
+    filter->mpUserData = i_data;
+    layer_class* current = fpcLy_RootLayer();
+    while (current != NULL) {
+        void* result = cTrIt_Judge(&current->mNodeListTree, cTgIt_JudgeFilter, filter.get());
+        if (result != NULL) return result;
+        current = reinterpret_cast<layer_class*>(current->mNode.mpNextNode.get());
     }
-    return 0;
+    return NULL;
 }
-VERIFY(0x025DEE58, fpcLyIt_AllJudge);
 
-// Adjacent header-generated initializer; exact generating header is qualified.
-void fpcLyIt_StaticInit() {
-    WWHD_FUNC(0x025DEED4, void);
-    gmem_st32(0x1048A820, 0);
-    gmem_st32(0x1048A818, 0);
-    gmem_st32(0x1048A824, 0);
-    gmem_st32(0x1048A81C, 0);
-    gabi::call<void>(0x028F026C, 0x101F3B50u);
-    u32 lower = gmem_ld32(0x10058308);
-    u32 upper = gmem_ld32(0x1005830C);
-    gmem_stf32(0x1048A80C, lower);
-    gmem_stf32(0x1048A810, upper);
-    gabi::call<void>(0x028ED6F8, 0x1048A814u);
-    gabi::call<void>(0x028F026C, 0x101F3B5Cu);
-    gabi::call<void>(0x028EAB2C, 0x1048A815u);
-    gabi::call<void>(0x028F026C, 0x101F3B68u);
+/* ---------------- HD: compiler-generated code of this translation unit ---------------- */
+/* 025DEED4 */
+static void __sinit_f_pc_layer_iter_cpp() {
+    sinit_header_statics_rodata(0x1048A80C, 0x101F3B50, 0x1048A818, 0x10058308);
 }
-VERIFY(0x025DEED4, fpcLyIt_StaticInit);
+
+/* WWHD glue (tools/verify/autoglue.py): external iteration and current-layer accessors
+ext 0201ABF0 s32 cTrIt_Method(node_lists_tree_class*, u32, method_filter*)
+ext 0201AC60 void* cTrIt_Judge(node_lists_tree_class*, u32, judge_filter*)
+ext 025DEAA8 layer_class* fpcLy_RootLayer()
+ext 025DED64 layer_class* fpcLy_CurrentLayer()
+ext 025DEAB4 void fpcLy_SetCurrentLayer(layer_class*)
+*/

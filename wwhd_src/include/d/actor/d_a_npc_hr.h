@@ -7,19 +7,69 @@
  * daNpc_Wind_Eff (0x38) and daNpc_Wind_Clothes (0x134) are unchanged. Size 0x940 (GameCube
  * 0x7C8). */
 #pragma once
+#include "SSystem/SComponent/c_angle.h"
 #include "bindings.h"
+#include "d/d_item.h"
+#include "gc_api/d/d_com_inf_game.h"
+#include "gc_api/f_op/f_op_actor.h"
+#include "gc_api/f_op/f_op_msg.h"
 
 /* GHS pointer to member function {s16 this delta, s16 vtable index (<0: not virtual), u32
  * function (or s16 vtable offset at +6)} */
+enum dRes_INDEX_HR {
+    /* BCKS */
+    dRes_INDEX_HR_BCK_DAMAGE_e = 0x6,
+    dRes_INDEX_HR_BCK_H_ANT_e = 0x7,
+    dRes_INDEX_HR_BCK_H_WAIT01_e = 0x8,
+    dRes_INDEX_HR_BCK_LOOK_e = 0x9,
+    dRes_INDEX_HR_BCK_R_ANT_e = 0xA,
+    dRes_INDEX_HR_BCK_R_WAIT01_e = 0xB,
+    dRes_INDEX_HR_BCK_R_WAIT02_e = 0xC,
+    dRes_INDEX_HR_BCK_TALK01_e = 0xD,
+    dRes_INDEX_HR_BCK_TALK02_e = 0xE,
+    dRes_INDEX_HR_BCK_TALK03_e = 0xF,
+    /* BDLM */
+    dRes_INDEX_HR_BDL_H_ANT_e = 0x12,
+    dRes_INDEX_HR_BDL_H_BROW_e = 0x13,
+    dRes_INDEX_HR_BDL_HR_e = 0x14,
+    dRes_INDEX_HR_BDL_R_ANT_e = 0x15,
+    dRes_INDEX_HR_BDL_R_BROW_e = 0x16,
+    /* BMT  */
+    dRes_INDEX_HR_BMT_R_BODY_e = 0x19,
+    /* BTP  */
+    dRes_INDEX_HR_BTP_MABA_H_e = 0x1C,
+    dRes_INDEX_HR_BTP_MABA_R01_e = 0x1D,
+    dRes_INDEX_HR_BTP_MABA_R02_e = 0x1E,
+};
+
 struct ProcFunc_hr {
     /* 0x0 */ be<s16> d;
     /* 0x2 */ be<s16> i;
-    /* 0x4 */ be<u32> f;
+    union {
+        /* 0x4 */ be<u32> f;
+        struct {
+            be<s16> mVirtualReserved, mVirtualOffset;
+        } mVirtual;
+    };
 };
 WWHD_SIZE(ProcFunc_hr, 8);
 
+namespace dPa_name {
+enum {
+    ID_AK_JN_WINDLINE00 = 0x31,
+    ID_AK_JN_OK = 0xD,
+    ID_IT_SN_KINTOUN_FT00 = 0x821F,
+    ID_IT_SN_KINTOUN_RT00 = 0x8220,
+};
+}
+
 struct daNpc_Wind_Eff {
-    enum { WIND_EFF_INACTIVE = 0, WIND_EFF_FADE_IN = 1, WIND_EFF_ACTIVE = 2, WIND_EFF_FADE_OUT = 3 };
+    enum {
+        WIND_EFF_INACTIVE = 0,
+        WIND_EFF_FADE_IN = 1,
+        WIND_EFF_ACTIVE = 2,
+        WIND_EFF_FADE_OUT = 3
+    };
     void init();
     void remove();
     BOOL create(cXyz*);
@@ -59,6 +109,57 @@ WWHD_OFFSET(daNpc_Wind_Clothes, mProcId, 0x11C);
 WWHD_SIZE(daNpc_Wind_Clothes, 0x134);
 
 struct daNpc_Hr_c : fopAc_ac_c {
+    enum SoundEvents {
+        JA_SE_CV_RC_DAMAGE = 0x48EA,
+        JA_SE_CV_RC_MODAE_1 = 0x48EB,
+        JA_SE_CV_RC_MODAE_2 = 0x48EC,
+        JA_SE_TAKT_WIND_DEMO = 0x876,
+        JA_SE_CM_HU_RC_FLY_AWAY = 0x5926,
+        JA_SE_CV_RC_FLY_AWAY = 0x48ED,
+        JA_SE_CV_HU_FLY_AWAY = 0x48E9,
+        JA_SE_CV_RC_ENTER = 0x48EE,
+        JA_BGM_DIOCTA_BATTLE = 0x8000002B,
+        JA_SE_CM_HU_RC_MOVE_RAPID = 0x69FD,
+        JA_SE_CM_HU_RC_FLYING = 0x5125,
+        JA_SE_PRE_TAKT = 0x8A7,
+    };
+    enum MessageStatus {
+        fopMsgStts_MSG_DISPLAYED_e = 0xE,
+        fopMsgStts_MSG_DESTROYED_e = 0x13,
+        fopMsgStts_INPUT_e = 0x15,
+        HR_MSG_NO_MESSAGE = 0xFE,
+        HR_MSG_WAITING = 0xFF,
+    };
+    enum { DSNAP_TYPE_NPC_HR = 0x9A, dItemNo_WINDS_REQUIEM_e = 0x6D };
+    struct dSv_event_flag_c {
+        enum { UNK_2708 = 0x2708, UNK_2710 = 0x2710, UNK_3D01 = 0x3D01 };
+    };
+    struct dSv_event_tmp_flag_c {
+        enum { UNK_0404 = 0x0404 };
+    };
+    enum DemoActions {
+        HR_DEMO_WAIT = 0,
+        HR_DEMO_SPEAK = 1,
+        HR_DEMO_PATTEN = 2,
+        HR_DEMO_TACT0 = 3,
+        HR_DEMO_TACT1 = 4,
+        HR_DEMO_TACT2 = 5,
+        HR_DEMO_TACT3 = 6,
+        HR_DEMO_WIND0 = 7,
+        HR_DEMO_WIND1 = 8,
+        HR_DEMO_HIDE_LINK = 9,
+        HR_DEMO_DISP_LINK = 10,
+        HR_DEMO_DISP_MY = 11,
+        HR_DEMO_MOVE = 12,
+        HR_DEMO_TURN_LINK = 13,
+        HR_DEMO_LOOK = 14,
+        HR_DEMO_SMALL = 15,
+        HR_DEMO_INTRO = 16,
+        HR_DEMO_CHANGE = 17,
+        HR_DEMO_DEBUG = 18
+    };
+    enum ActionStatus { ACTION_STARTING = 0, ACTION_ONGOING = 1, ACTION_ENDING = -1 };
+    enum TalkStates { TALK_INIT = 0, TALK_MSG_CREATE = 1, TALK_ACTIVE = 2, TALK_FINISHED = -1 };
     enum HrFlags {
         HR_FLAG_00000001 = 0x0001,
         HR_FLAG_00000002 = 0x0002,
@@ -94,16 +195,36 @@ struct daNpc_Hr_c : fopAc_ac_c {
         HR_STATE_RT_WIN = 12,
     };
 
-    bool chkFlag(u16 flag) { return (mFlags & flag) == flag; }
-    void clrFlag(u16 flag) { mFlags = (u16)(mFlags & ~flag); }
-    void setFlag(u16 flag) { mFlags = (u16)(mFlags | flag); }
-    bool chkEvFlag(u8 f) { return (mEvFlags & f) == f; }
-    void setEvFlag(u8 f) { mEvFlags = (u8)(mEvFlags | f); }
-    void clrEvFlag(u8 f) { mEvFlags = (u8)(mEvFlags & ~f); }
-    u32 ChkOrder(u8 f) { return mOrderFlags & f; }
-    void SetOrder(u8 f) { mOrderFlags = (u8)(mOrderFlags | f); }
-    void ClrOrder() { mOrderFlags = 0; }
-    bool isMorf(); /* mDoExt_McaMorf::isMorf: HD mCurMorf (+0xB0) < 1.0 */
+    bool chkFlag(u16 flag) {
+        return (mFlags & flag) == flag;
+    }
+    void clrFlag(u16 flag) {
+        mFlags = (u16)(mFlags & ~flag);
+    }
+    void setFlag(u16 flag) {
+        mFlags = (u16)(mFlags | flag);
+    }
+    bool chkEvFlag(u8 f) {
+        return (mEvFlags & f) == f;
+    }
+    void setEvFlag(u8 f) {
+        mEvFlags = (u8)(mEvFlags | f);
+    }
+    void clrEvFlag(u8 f) {
+        mEvFlags = (u8)(mEvFlags & ~f);
+    }
+    u32 ChkOrder(u8 f) {
+        return mOrderFlags & f;
+    }
+    void SetOrder(u8 f) {
+        mOrderFlags = (u8)(mOrderFlags | f);
+    }
+    void ClrOrder() {
+        mOrderFlags = 0;
+    }
+    bool isMorf() {
+        return mpHrMorf->mCurMorf < 1.0f;
+    }
 
     int getShapeType();
     int getSwbit();
@@ -191,7 +312,7 @@ struct daNpc_Hr_c : fopAc_ac_c {
     /* 0x3D0 */ gptr<J3DModel> mpBrowModel;
     /* 0x3D4 */ gptr<mDoExt_McaMorf> mpAntennaMorf;
     /* 0x3D8 */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0x3DC */ u8 mBtpAnm[0x74]; /* mDoExt_btpAnm (HD 0x74) */
+    /* 0x3DC */ mDoExt_btpAnm mBtpAnm; /* mDoExt_btpAnm (HD 0x74) */
     /* 0x450 */ be<u8> mBlinkFrame;
     /* 0x451 */ u8 _451;
     /* 0x452 */ be<s16> mBlinkTimer;
@@ -253,159 +374,232 @@ WWHD_OFFSET(daNpc_Hr_c, mEvFlags, 0x7DA);
 WWHD_OFFSET(daNpc_Hr_c, mClothes, 0x80C);
 WWHD_SIZE(daNpc_Hr_c, 0x940);
 
-/* ---- local bindings (SHARED-CANDIDATE) ---- */
+// HD: private projections of the emitter, ship and renderer fields used by this actor.
+struct HrEmitterHD {
+    u8 padding[0x220];
+    cXyz mGlobalScale;
+    u8 padding22C[0x238 - 0x22C];
+    cXyz mGlobalParticleScale;
+    be<u8> mPrmR, mPrmG, mPrmB, mGlobalAlpha;
+    be<u8> mEnvR, mEnvG, mEnvB;
+};
+WWHD_OFFSET(HrEmitterHD, mGlobalScale, 0x220);
+WWHD_OFFSET(HrEmitterHD, mGlobalParticleScale, 0x238);
+WWHD_OFFSET(HrEmitterHD, mPrmR, 0x244);
+WWHD_OFFSET(HrEmitterHD, mGlobalAlpha, 0x247);
+WWHD_OFFSET(HrEmitterHD, mEnvR, 0x248);
+struct HrShipHD : fopAc_ac_c {
+    u8 padding3AC[0x635 - 0x3AC];
+    be<u8> mMode;
+    u8 padding636[0x700 - 0x636];
+    be<s32> mTornadoId;
+};
+WWHD_OFFSET(HrShipHD, mMode, 0x635);
+WWHD_OFFSET(HrShipHD, mTornadoId, 0x700);
+struct HrPlayerHD : fopAc_ac_c {
+    u8 padding3AC[0x3B8 - 0x3AC];
+    be<u32> mNoResetFlg0;
+};
+WWHD_OFFSET(HrPlayerHD, mNoResetFlg0, 0x3B8);
+struct HrTornadoHD : fopAc_ac_c {
+    u8 padding3AC[8];
+    gptr<J3DModel> mpModel;
+};
+WWHD_OFFSET(HrTornadoHD, mpModel, 0x3B4);
+struct HrEnvLightHD {
+    u8 padding[0x9FC];
+    cXyz mWindVec;
+};
+WWHD_OFFSET(HrEnvLightHD, mWindVec, 0x9FC);
+struct HrModelDataHD {
+    u8 padding[0x38];
+    gptr<J3DAnmTexPattern> mpTexPattern;
+};
+WWHD_OFFSET(HrModelDataHD, mpTexPattern, 0x38);
+struct HrJointNodeHD {
+    J3DJoint mJoint;
+    u8 padding[0x10];
+};
+WWHD_SIZE(HrJointNodeHD, 0x1C);
+struct HrJointHD {
+    u8 padding[4];
+    be<u16> mJntNo;
+};
+WWHD_OFFSET(HrJointHD, mJntNo, 4);
+struct HrMessageManagerHD {
+    u8 padding[0x921];
+    be<u8> mSendOn;
+};
+WWHD_OFFSET(HrMessageManagerHD, mSendOn, 0x921);
+struct HrJ3DSysHD {
+    gptr<J3DModel> mpModel;
+};
+struct HrMessageStaticsHD {
+    be<u32> mMsgId;
+};
+struct HrMessageManagerPtrHD {
+    gptr<HrMessageManagerHD> mpManager;
+};
+extern HrJ3DSysHD& l_hrJ3DSys;
+extern Mtx34& l_hrCurrentMtx;
+extern HrMessageStaticsHD& l_hrMessage;
+extern HrMessageManagerPtrHD& l_hrMessageManager;
+extern cSAngle& l_hrRightAngle;
+
+// HD: virtual table slots retain the GHS two-word shape and exact full-register results.
+struct HrVirtualSlotHD {
+    be<s32> mThisDelta;
+    be<u32> mFunction;
+};
+WWHD_SIZE(HrVirtualSlotHD, 8);
+struct HrVirtualObjectHD {
+    gptr<HrVirtualSlotHD> mpVtable;
+};
+struct HrPlayerVtableHD {
+    u8 padding[0x34];
+    be<u32> mGetTactTimerCancel;
+    u8 padding38[0x114 - 0x38];
+    be<u32> mSetPlayerPosAndAngle;
+};
+WWHD_OFFSET(HrPlayerVtableHD, mGetTactTimerCancel, 0x34);
+WWHD_OFFSET(HrPlayerVtableHD, mSetPlayerPosAndAngle, 0x114);
+struct HrTexturePatternVtableHD {
+    u8 padding[0x14];
+    be<u32> mGetFrameMax;
+};
+struct HrTexturePatternHD {
+    u8 padding[4];
+    gptr<HrTexturePatternVtableHD> mpVtable;
+};
+WWHD_OFFSET(HrTexturePatternHD, mpVtable, 4);
+
+/* Unit-local HD bindings. */
 #define HR_SAFESTRING_VTBL 0x1001A76C /* this TU's sead::SafeString vtable */
 #define HR_VTBL 0x1001A794            /* daNpc_Hr_c vtable (HD virtual destructor) */
 #define HR_AAB_VTBL 0x1001A784        /* this TU's cM3dGAab vtable */
 
-/* save info: dSv_event_c blocks at *(0x101F84DC) + 0x644 (event) and + 0x1178 (tmp event) */
-static inline dSv_event_c* hr_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
-static inline dSv_event_c* hr_tmpEvent() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x1178); }
-static inline BOOL dComIfGs_isEventBit(u16 f) { return dSv_event_isEventBit(hr_event(), f); }
-static inline void dComIfGs_onEventBit(u16 f) { dSv_event_onEventBit(hr_event(), f); }
-/* 025B8B7C dSv_event_c::offEventBit */
-static inline void dComIfGs_offTmpBit(u16 f) { gabi::call(0x025B8B7C, hr_tmpEvent(), f); }
-static inline void dComIfGs_onTmpBit(u16 f) { dSv_event_onEventBit(hr_tmpEvent(), f); }
-static inline BOOL dComIfGp_event_chkTalkXY() { return (u32)(gabi::load<u8>(dComIfGp_ea() + 0x52B0) - 1) <= 3; }
-static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfGp_ea() + PLAY_BGS + 0x4925); }
-/* dComIfGp_setMelodyNum: play + 0x5BDA (u8) */
-static inline void dComIfGp_setMelodyNum(u8 n) { gabi::store<u8>(dComIfGp_ea() + 0x5BDA, n); }
-/* dComIfGp_checkMesgCancelButton: play + 0x5BD3 (u8) */
-static inline u8 dComIfGp_checkMesgCancelButton() { return gabi::load<u8>(dComIfGp_ea() + 0x5BD3); }
-/* dComIfGp_getSelectItem(btn): play + 0x5BBB + btn (u8) */
-static inline u8 dComIfGp_getSelectItem(int btn) { return gabi::load<u8>(dComIfGp_ea() + btn + 0x5BBB); }
-/* dComIfGp_event_onHindFlag(-1): play + 0x52A6 (u16) = 0xFFFF */
-static inline void dComIfGp_event_onHindFlagAll() { gabi::store<u16>(dComIfGp_ea() + 0x52A6, 0xFFFF); }
-static inline fopAc_ac_c* dComIfGp_getShipActor() { return gabi::at<fopAc_ac_c>(gabi::load<u32>(dComIfGp_ea() + 0x5B3C)); }
-/* daShip_c::checkTornadoUp (HD: byte +0x635 == 12), checkTornadoFlg (HD: tornado id +0x700 != -1) */
-static inline bool daShip_checkTornadoUp(fopAc_ac_c* s) { return gabi::load<u8>(gabi::ea(s) + 0x635) == 0xC; }
-static inline bool daShip_checkTornadoFlg(fopAc_ac_c* s) { return gabi::load<s32>(gabi::ea(s) + 0x700) != -1; }
-/* daPy_py_c::onPlayerNoDraw / offPlayerNoDraw: status word +0x3B8, bit 0x08000000 */
-static inline void daPy_onPlayerNoDraw(fopAc_ac_c* p) { u32 a = gabi::ea(p) + 0x3B8; gabi::store<u32>(a, gabi::load<u32>(a) | 0x08000000); }
-static inline void daPy_offPlayerNoDraw(fopAc_ac_c* p) { u32 a = gabi::ea(p) + 0x3B8; gabi::store<u32>(a, gabi::load<u32>(a) & ~0x08000000u); }
-/* the player's virtuals in its HD vtable (+0xB4): +0x114 setPlayerPosAndAngle(cXyz*, s16), +0x34 getTactTimerCancel() */
-static inline void daPy_setPlayerPosAndAngle(fopAc_ac_c* pl, cXyz* pos, s16 angle) {
-    gabi::call_ptr(gabi::load<u32>(pl->__vtbl + 0x114), pl, pos, angle);
+/* daShip_c::checkTornadoUp (HD: byte +0x635 == 12), checkTornadoFlg (HD: tornado id +0x700 != -1)
+ */
+static inline bool daShip_checkTornadoUp(fopAc_ac_c* ship) {
+    return ((HrShipHD*)ship)->mMode == 12;
 }
-static inline s32 daPy_getTactTimerCancel(fopAc_ac_c* pl) { return gabi::call_ptr<s32>(gabi::load<u32>(pl->__vtbl + 0x34), pl); }
+static inline bool daShip_checkTornadoFlg(fopAc_ac_c* ship) {
+    return ((HrShipHD*)ship)->mTornadoId != -1;
+}
+/* daPy_py_c::onPlayerNoDraw / offPlayerNoDraw: status word +0x3B8, bit 0x08000000 */
+static inline void daPy_onPlayerNoDraw(fopAc_ac_c* player) {
+    ((HrPlayerHD*)player)->mNoResetFlg0 |= 0x08000000;
+}
+static inline void daPy_offPlayerNoDraw(fopAc_ac_c* player) {
+    ((HrPlayerHD*)player)->mNoResetFlg0 &= ~0x08000000u;
+}
+/* the player's virtuals in its HD vtable (+0xB4): +0x114 setPlayerPosAndAngle(cXyz*, s16), +0x34
+ * getTactTimerCancel() */
+static inline void daPy_setPlayerPosAndAngle(fopAc_ac_c* pl, cXyz* pos, s16 angle) {
+    gabi::call_ptr(gabi::at<HrPlayerVtableHD>(pl->__vtbl)->mSetPlayerPosAndAngle, pl, pos, angle);
+}
+static inline s32 daPy_getTactTimerCancel(fopAc_ac_c* pl) {
+    return gabi::call_ptr<s32>(gabi::at<HrPlayerVtableHD>(pl->__vtbl)->mGetTactTimerCancel, pl);
+}
 
 /* events */
-static inline s32 dComIfGp_evmng_getMyActIdx(s32 staffId, u32 names, s32 n, s32 force, s32 p) {
-    return gabi::call<s32>(0x02542EDC, dComIfGp_getPEvtManager(), staffId, names, n, force, p);
-}
-static inline be<s32>* dComIfGp_evmng_getMyIntegerP(s32 staffId, const char* name) {
-    return (be<s32>*)dComIfGp_evmng_getMySubstanceP(staffId, name, 3);
-}
-static inline cXyz* dComIfGp_evmng_getMyXyzP(s32 staffId, const char* name) {
-    return (cXyz*)dComIfGp_evmng_getMySubstanceP(staffId, name, 1);
-}
-static inline be<f32>* dComIfGp_evmng_getMyFloatP(s32 staffId, const char* name) {
-    return (be<f32>*)dComIfGp_evmng_getMySubstanceP(staffId, name, 0);
-}
-static inline s32 dComIfGp_evmng_getMySubstanceNum(s32 staffId, const char* name) {
-    return gabi::call<s32>(0x025448CC, dComIfGp_getPEvtManager(), staffId, name);
-}
 /* 025D7970 fopAcM_orderChangeEventId(actor, partner, s16 idx, u16 flag, u16 hind) */
-static inline BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind) {
-    return gabi::call<BOOL>(0x025D7970, a, b, ev, flag, hind);
-}
+BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind);
 /* dEvt_info_c (eventInfo at +0xF8): setEventName 0253E9B0; XyCheckCB +0x104, XyEventCB +0x100 */
-static inline void eventInfo_setEventName(fopAc_ac_c* a, const char* name) { gabi::call(0x0253E9B0, gabi::ea(a) + 0xF8, name); }
+void hrEventInfoSetEventName(dEvt_info_c* info, const char* name);
+static inline void eventInfo_setEventName(fopAc_ac_c* actor, const char* name) {
+    hrEventInfoSetEventName(&actor->eventInfo, name);
+}
 
 /* audio (HD: no position) */
-static inline void mDoAud_seStart_noPos(u32 id) { gabi::call(0x025E1988, id); }
-static inline void mDoAud_subBgmStop() { gabi::call(0x025E1928); }
-static inline void mDoAud_subBgmStart(u32 id) { gabi::call(0x025E1918, id); }
-static inline void mDoAud_bgmAllMute(s32 t) { gabi::call(0x025E1960, t); }
-static inline void mDoAud_tact_reset() { gabi::call(0x025E1E94); }
-static inline void mDoAud_tact_melodyPlay(s32 i) { gabi::call(0x025E1F58, i); }
-static inline void mDoAud_tact_ambientPlay() { gabi::call(0x025E1F14); }
+void mDoAud_seStart_noPos(u32 id);
+void mDoAud_subBgmStop();
+void mDoAud_subBgmStart(u32 id);
+void mDoAud_bgmAllMute(s32 t);
+void mDoAud_tact_reset();
+void mDoAud_tact_melodyPlay(s32 i);
+void mDoAud_tact_ambientPlay();
 
 /* environment / wind */
-static inline void dKyw_tact_wind_set(s16 a, s16 b) { gabi::call(0x0257E490, a, b); }
-static inline void dKyw_tact_wind_set_go() { gabi::call(0x0257E52C); }
-static inline cXyz* dKyw_get_wind_vec() { return gabi::call<cXyz*>(0x0257DAA8); }
-static inline void dKyw_custom_windpower(f32 p) { gabi::call(0x0257E594, p); }
-static inline void dKy_actor_addcol_set(s16 r, s16 g, s16 b, f32 ratio) { gabi::call(0x025553B8, r, g, b, ratio); }
-static inline void dKy_vrbox_addcol_set(s16 r, s16 g, s16 b, f32 ratio) { gabi::call(0x02556B38, r, g, b, ratio); }
+void dKyw_tact_wind_set(s16 a, s16 b);
+void dKyw_tact_wind_set_go();
+cXyz* dKyw_get_wind_vec();
+void dKyw_custom_windpower(f32 p);
+void dKy_actor_addcol_set(s16 r, s16 g, s16 b, f32 ratio);
+void dKy_vrbox_addcol_set(s16 r, s16 g, s16 b, f32 ratio);
 /* g_env_light.mWind.mWindVec: envlight + 0x9FC */
 static inline void envlight_setWindVec(f32 x, f32 y, f32 z) {
-    u32 e = gabi::ea(dKy_getEnvlight());
-    gabi::store<f32>(e + 0x9FC, x);
-    gabi::store<f32>(e + 0xA04, z);
-    gabi::store<f32>(e + 0xA00, y);
+    HrEnvLightHD* light = (HrEnvLightHD*)dKy_getEnvlight();
+    light->mWindVec.x = x;
+    light->mWindVec.z = z;
+    light->mWindVec.y = y;
 }
 /* cSGlobe / cSAngle */
-static inline void cSGlobe_ct(void* g, const cXyz* v) { gabi::call(0x02007324, g, v); }
-static inline void cSAngle_ct_copy(be<s16>* a, const be<s16>* b) { gabi::call(0x02006644, a, b); }
-static inline void cSAngle_addeq(be<s16>* a, const be<s16>* b) { gabi::call(0x020068CC, a, b); }
-static inline f32 cSAngle_Cos(const be<s16>* a) { return gabi::call<f32>(0x02006838, a); }
-static inline f32 cSAngle_Sin(const be<s16>* a) { return gabi::call<f32>(0x02006814, a); }
+void cSGlobe_ct(void* g, const cXyz* v);
+void cSAngle_ct_copy(be<s16>* a, const be<s16>* b);
+void cSAngle_addeq(be<s16>* a, const be<s16>* b);
+f32 cSAngle_Cos(const be<s16>* a);
+f32 cSAngle_Sin(const be<s16>* a);
 
 /* misc */
-static inline void fpoAcM_absolutePos(fopAc_ac_c* a, cXyz* rel, cXyz* out) { gabi::call(0x025DA124, a, rel, out); }
-static inline fopAc_ac_c* fopAcM_searchFromName(const char* name, u32 mask, u32 prm) { return gabi::call<fopAc_ac_c*>(0x025D9F38, name, mask, prm); }
-static inline s32 fopAcM_seenActorAngleY(fopAc_ac_c* a, fopAc_ac_c* b) { return gabi::call<s32>(0x025D68A0, a, b); }
-static inline void execItemGet(u8 item) { gabi::call(0x0254DA38, item); }
-static inline bool cXyz_isZero_l(cXyz* v) { return gabi::call<bool>(0x0201B4E0, v); }
-static inline void cXyz_normalize_l(cXyz* v, cXyz* res) { gabi::call(0x0201B31C, v, res); }
-static inline s16 cM3d_CalcVecZAngle(const cXyz* v, csXyz* out) { return gabi::call<s16>(0x02017300, v, out); }
-static inline s16 cLib_calcTimer(be<s16>* t) { return gabi::call<s16>(0x02055B64, t); }
-static inline s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, J3DAnmTexPattern* p, s32 play, s32 attr, f32 rate,
-                                     s32 start, s32 end, u32 modify, s32 entry) {
-    return gabi::call<s32>(0x025E789C, anm, d, p, play, attr, rate, start, end, modify, entry);
-}
-static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* p) {
-    u32 vt = gabi::load<u32>(gabi::ea(p) + 4);
-    return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x14), p);
+void fpoAcM_absolutePos(fopAc_ac_c* a, cXyz* rel, cXyz* out);
+fopAc_ac_c* fopAcM_searchFromName(const char* name, u32 mask, u32 prm);
+s32 fopAcM_seenActorAngleY(fopAc_ac_c* a, fopAc_ac_c* b);
+void execItemGet(u8 item);
+bool hrVectorIsZero(cXyz* v);
+void hrVectorNormalize(cXyz* v, cXyz* res);
+s16 cM3d_CalcVecZAngle(const cXyz* v, csXyz* out);
+s16 cLib_calcTimer(be<s16>* t);
+s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, J3DAnmTexPattern* p, s32 play, s32 attr,
+                       f32 rate, s32 start, s32 end, u32 modify, s32 entry);
+static inline s32 J3DAnm_getFrameMax(J3DAnmTexPattern* pattern) {
+    HrTexturePatternVtableHD* vtable = ((HrTexturePatternHD*)pattern)->mpVtable;
+    return gabi::call_ptr<s32>(vtable->mGetFrameMax, pattern);
 }
 /* 0259D454 dNpc_setAnm(morf, loopMode, morf, speed, anmIdx, soundIdx, arc) */
-static inline BOOL dNpc_setAnm(mDoExt_McaMorf* morf, s32 loopMode, f32 morfF, f32 speed, s32 anmIdx, s32 soundIdx, const char* arc) {
-    return gabi::call<BOOL>(0x0259D454, morf, loopMode, morfF, speed, anmIdx, soundIdx, arc);
+BOOL dNpc_setAnm(mDoExt_McaMorf* morf, s32 loopMode, f32 morfF, f32 speed, s32 anmIdx, s32 soundIdx,
+                 const char* arc);
+void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot,
+                               s16 vel, u8 headOnly);
+static inline u32 J3DModelData_getJointName(J3DModelData* data) {
+    return gabi::ea(data->getJointName());
 }
-static inline void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot, s16 vel, u8 headOnly) {
-    gabi::call(0x0259DED0, j, outY, target, eye, yrot, vel, headOnly);
+s8 JUTNameTab_getIndex(u32 tab, const char* name);
+static inline u16 J3DModelData_getJointNum(J3DModelData* data) {
+    return data->getJointNum();
 }
-static inline u32 J3DModelData_getJointName(J3DModelData* d) {
-    u32 h = gabi::call<u32>(0x027F68FC, d);
-    u32 off = gabi::load<u32>(h + 0x10);
-    return off != 0 ? h + 0x10 + off : 0;
-}
-static inline s8 JUTNameTab_getIndex(u32 tab, const char* name) { return gabi::call<s8>(0x027DF9B0, tab, name); }
-static inline u16 J3DModelData_getJointNum(J3DModelData* d) { return gabi::load<u16>(gabi::call<u32>(0x027F3F94, d) + 8); }
 /* joint node callback: J3DModelData joint table (+4 count, +8 nodes of 0x1C), callback at +8 */
 static inline void J3DModelData_setJointCallBack(J3DModelData* md, u32 i, u32 cb) {
-    u32 n = gabi::load<u32>(gabi::ea(md) + 4);
-    u32 joint = gabi::load<u32>(gabi::ea(md) + 8);
+    u32 n = md->mJointNum;
+    u32 joint = md->mJointNodes;
     if (i < n)
-        joint += i * 0x1C;
-    gabi::store<u32>(joint + 8, cb);
+        joint += i * sizeof(HrJointNodeHD);
+    gabi::at<J3DJoint>(joint)->mCallBack = cb;
 }
 /* HD J3D joint matrices */
-struct J3DMtxBlock_hr {
-    /* 0x00 */ u8 _00[4];
-    /* 0x04 */ be<u16> mFlags;
-    /* 0x06 */ u8 _06[0x10 - 6];
-    /* 0x10 */ gptr<Mtx34> mpMtx;
-};
 static inline Mtx34* getAnmMtx(J3DModel* model, s32 jntNo) {
-    J3DMtxBlock_hr* blk = gabi::at<J3DMtxBlock_hr>(gabi::load<u32>(gabi::ea(model) + 0x2C));
-    blk->mFlags |= 0x10;
-    return gabi::at<Mtx34>(gabi::ea(blk->mpMtx.get()) + jntNo * 0x30);
+    return model->getAnmMtx(jntNo);
 }
-static inline u32 jntNo_of(J3DNode* node) { return gabi::load<u16>(gabi::ea(J3DNode_toJoint(node)) + 4); }
-static inline Mtx34* j3dSys_mCurrentMtx() { return gabi::at<Mtx34>(0x104B4868); }
-static inline J3DModel* j3dSys_getModel() { return gabi::at<J3DModel>(gabi::load<u32>(0x104B462C)); }
+static inline u32 jntNo_of(J3DNode* node) {
+    return ((HrJointHD*)J3DNode_toJoint(node))->mJntNo;
+}
+static inline Mtx34* j3dSys_mCurrentMtx() {
+    return &l_hrCurrentMtx;
+}
+static inline J3DModel* j3dSys_getModel() {
+    return l_hrJ3DSys.mpModel;
+}
 
-/* HD JPABaseEmitter: global prm colour +0x244, env colour +0x248, alpha +0x247, scale +0x220/+0x238 */
-static inline void JPABaseEmitter_setGlobalScale(JPABaseEmitter* e, f32 x, f32 y, f32 z) {
-    u32 b = gabi::ea(e);
-    gabi::store<f32>(b + 0x240, z);
-    gabi::store<f32>(b + 0x23C, y);
-    gabi::store<f32>(b + 0x238, x);
-    gabi::store<f32>(b + 0x224, y);
-    gabi::store<f32>(b + 0x228, z);
-    gabi::store<f32>(b + 0x220, x);
+/* HD JPABaseEmitter: global prm colour +0x244, env colour +0x248, alpha +0x247, scale +0x220/+0x238
+ */
+static inline void JPABaseEmitter_setGlobalScale(JPABaseEmitter* emitter, f32 x, f32 y, f32 z) {
+    HrEmitterHD* e = (HrEmitterHD*)emitter;
+    e->mGlobalParticleScale.z = z;
+    e->mGlobalParticleScale.y = y;
+    e->mGlobalParticleScale.x = x;
+    e->mGlobalScale.y = y;
+    e->mGlobalScale.z = z;
+    e->mGlobalScale.x = x;
 }
 
 /* GHS pointer to member function call */
@@ -415,19 +609,70 @@ static inline void pmf_call_hr(void* self, ProcFunc_hr* pmf, void* arg) {
     if (i < 0) {
         gabi::call_ptr<BOOL>(pmf->f, thisp, arg);
     } else {
-        s16 voff = gabi::load<s16>(gabi::ea(pmf) + 6);
-        u32 vt = gabi::load<u32>(thisp + voff);
-        gabi::call_ptr<BOOL>(gabi::load<u32>(vt + i * 8 + 4), thisp, arg);
+        s16 voff = pmf->mVirtual.mVirtualOffset;
+        HrVirtualSlotHD* vtable = gabi::at<HrVirtualObjectHD>(thisp + voff)->mpVtable;
+        gabi::call_ptr<BOOL>(vtable[i].mFunction, thisp, arg);
     }
 }
 
 /* file statics: l_msgId (HD: l_msg is gone, the message is the message manager) */
-static inline be<u32>& l_msgId() { return *gabi::at<be<u32>>(0x104671CC); }
+static inline be<u32>& l_msgId() {
+    return l_hrMessage.mMsgId;
+}
 /* HD message manager (*(0x101F4B5C)) */
-static inline u32 msgMgr() { return gabi::load<u32>(0x101F4B5C); }
-static inline u32 msgMgr_getStatus(u32 m) { return gabi::call<u32>(0x025F795C, m); }
-static inline void msgMgr_setStatus(u32 m, u32 st) { gabi::call(0x025F74D0, m, st); }
-static inline u32 msgMgr_messageSet(u32 m, u32 msgNo, cXyz* pos) { return gabi::call<u32>(0x025F7DB0, m, msgNo, pos); }
+static inline u32 msgMgr() {
+    return gabi::ea(l_hrMessageManager.mpManager.get());
+}
+u32 msgMgr_getStatus(u32 m);
+void msgMgr_setStatus(u32 m, u32 st);
+u32 msgMgr_messageSet(u32 m, u32 msgNo, cXyz* pos);
 
 /* functions of this translation unit called by address */
 f32 hr_colorGamma(u32 c); /* 02241C8C */
+
+// HD: native wide-return and compiler-array bindings retain the verified register ABI.
+f32 hrPowf(f32 value, f32 exponent);
+void hrActorConstruct(fopAc_ac_c* actor);
+void hrJointControllerConstruct(dNpc_JntCtrl_c* controller);
+void hrConstructArray(void* array, u32 count, u32 size, u32 callback);
+void hrDestroyArray(void* array, u32 count, u32 size, u32 callback, u32 p4, u32 p5);
+void hrActorDestroy(fopAc_ac_c* actor, s32 flags);
+f64 hrAddCalcWide(be<f32>* value, f32 target, f32 scale, f32 maximum, f32 minimum);
+f64 hrVectorSquareMagWide(const cXyz* vector);
+f64 hrSqrtWide(f64 value);
+u32 hrDispatch_demoProcWind(daNpc_Hr_c* actor, int mode);
+u32 hrDispatch_demoProcMove(daNpc_Hr_c* actor);
+u32 hrDispatch_wait01(daNpc_Hr_c* actor);
+u32 hrDispatch_talk01(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_search(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_hide(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_intro(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_angry(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_win(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_hit0(daNpc_Hr_c* actor);
+u32 hrDispatch_rt_hit1(daNpc_Hr_c* actor);
+u32 hrDispatch_ht_hide(daNpc_Hr_c* actor);
+s16 daNpc_hr_XyCheckCB(void* actor, int button);
+s16 daNpc_hr_XyEventCB(void* actor, int button);
+daNpc_Wind_Eff* daNpc_Wind_Eff_ct(daNpc_Wind_Eff* effect);
+void daNpc_Wind_Eff_dt(daNpc_Wind_Eff* effect, s32 flags);
+
+BOOL hrWaitAction(daNpc_Hr_c* actor, void* arg);
+
+WWHD_SIZE(HrEmitterHD, 0x24B);
+WWHD_SIZE(HrShipHD, 0x704);
+WWHD_SIZE(HrPlayerHD, 0x3BC);
+WWHD_SIZE(HrTornadoHD, 0x3B8);
+WWHD_SIZE(HrEnvLightHD, 0xA08);
+WWHD_SIZE(HrJointHD, 0x6);
+WWHD_SIZE(HrMessageManagerHD, 0x922);
+WWHD_SIZE(HrJ3DSysHD, 0x4);
+WWHD_SIZE(HrMessageStaticsHD, 0x4);
+WWHD_SIZE(HrMessageManagerPtrHD, 0x4);
+WWHD_SIZE(HrPlayerVtableHD, 0x118);
+WWHD_SIZE(HrTexturePatternVtableHD, 0x18);
+WWHD_SIZE(HrTexturePatternHD, 0x8);
+WWHD_SIZE(HrModelDataHD, 0x3C);
+WWHD_OFFSET(ProcFunc_hr, d, 0);
+WWHD_OFFSET(ProcFunc_hr, i, 2);
+WWHD_OFFSET(ProcFunc_hr, f, 4);

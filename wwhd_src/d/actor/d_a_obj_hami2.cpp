@@ -1,371 +1,406 @@
 /* Hami2 hinged gate. Derived from WWHD disassembly;
  */
-#include "gabi.h"
-namespace hami2 {
-using gabi::call;
-using gabi::load;
-using gabi::store;
-static u32 play() { return call<u32>(0x025200D4); }
-static void copyMatrix(u32 src, u32 dst) {
+#include "d/actor/d_a_obj_hami2.h"
+using daObjHami2::Act_c;
+enum Mode { MODE_CLOSED, MODE_WAIT_OPEN, MODE_OPENING, MODE_OPEN, MODE_WAIT_CLOSE, MODE_CLOSING };
+// HD: retain float loads before stores for overlapping matrix buffers.
+static Mtx34 sMatrixStack;
+static Mtx34 sBgMatrix;
+static Mtx34 sCurrentMtx;
+static Mtx34* sMatrixStackPtr;
+static J3DModel* sCurrentModel;
+static Hami2DrawBuffers sDrawBuffers;
+static void* sResourceManager;
+static Hami2SaveData* sSaveData;
+static Hami2HeaderStatics sHeaderStatics;
+static Hami2DestructorRecords sDestructorRecords;
+static void copyMatrix(const Mtx34* src, Mtx34* dst) {
   f32 v[12];
   for (int i = 0; i < 12; ++i)
-    v[i] = load<f32>(src + 4 * i);
+    v[i] = src->m[i/4][i%4];
   for (int i = 0; i < 12; ++i)
-    store<f32>(dst + 4 * i, v[i]);
+    dst->m[i/4][i%4]=v[i];
 }
-u32 PrmAbstract(u32 a, s32 width, s32 shift) {
-  WWHD_FUNC(0x0234EC5C, u32, a, width, shift);
+/* 0234EC5C */
+u32 daObjHami2::Act_c::prm_get(s32 width, s32 shift) {
   u32 w = (u32)width & 63, s = (u32)shift & 63;
-  return (s < 32 ? load<u32>(a + 0xB0) >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
+  return (s < 32 ? this->mParameters >> s : 0) & ((w < 32 ? 1u << w : 0) - 1);
 }
-VERIFY(0x0234EC5C, PrmAbstract);
-s32 Mthd_Create(u32 a) {
-  WWHD_FUNC(0x0234E09C, s32, a);
-  u32 flags = load<u32>(a + 0x2E4);
+/* 0234E09C */
+s32 daObjHami2::Act_c::Mthd_Create() {
+  u32 flags = this->actor_condition;
   if (!(flags & 8)) {
-    if (a) {
-      call<void>(0x024F1D40, a);
-      flags = load<u32>(a + 0x2E4);
-      store<u32>(a + 0xB4, 0x10029C80);
+    if (this) {
+      hami2ConstructMoveBg(this);
+      flags = this->actor_condition;
+      this->__vtbl=0x10029C80;
     }
-    store<u32>(a + 0x2E4, flags | 8);
+    this->actor_condition=flags | 8;
   }
-  s32 phase = call<s32>(0x02520460, a + 0x3E4, 0x10029C78u);
+  s32 phase = hami2LoadResource(&this->mPhase, "Hami2");
   if (phase == 4) {
-    phase = call<s32>(0x024F1D9C, a, 0x10029C78u, 8, 0x024EE708u, 0x34E0);
-    u32 p = play();
-    u32 bg = load<u32>(a + 0x3F0);
-    call<void>(0x024EEA6C, p + 0x12A0, bg, a);
+    phase = hami2CreateMoveBg(this, "Hami2", 8, 0x024EE708u, 0x34E0);
+    Hami2GameInfo* p = hami2GetGameInfo();
+    dBgW* bg = this->mpMovingBg;
+    hami2RegisterBackground(&p->mBgS, bg, this);
     if (phase != 4 && phase != 5)
-      call<void>(0x0273AA24, 0x10029BBCu, 0xD0, 0x10029BD0u);
+      hami2Assert("d_a_obj_hami2.cpp", 0xD0, "(phase_state == cPhs_COMPLEATE_e) || (phase_state == cPhs_ERROR_e)");
   }
   return phase;
 }
-VERIFY(0x0234E09C, Mthd_Create);
-s32 Mthd_Delete(u32 a) {
-  WWHD_FUNC(0x0234E184, s32, a);
-  if (load<u32>(a + 0xF4)) {
-    u32 bg = load<u32>(a + 0x3F0);
-    if (bg && load<u32>(bg) < 256) {
-      u32 p = play();
-      call<void>(0x020087EC, p + 0x12A0, load<u32>(a + 0x3F0));
+/* 0234E184 */
+s32 daObjHami2::Act_c::Mthd_Delete() {
+  if (this->heap) {
+    dBgW* bg = this->mpMovingBg;
+    if (bg && bg->m_id < 256) {
+      Hami2GameInfo* p = hami2GetGameInfo();
+      hami2ReleaseBackground(&p->mBgS, this->mpMovingBg);
     }
   }
-  s32 r = call<s32>(0x024F1F64, a);
-  call<void>(0x025204C8, a + 0x3E4, 0x10029C78u);
+  s32 r = hami2DeleteMoveBg(this);
+  hami2DeleteResource(&this->mPhase, "Hami2");
   return r;
 }
-VERIFY(0x0234E184, Mthd_Delete);
-s32 CreateHeap(u32 a) {
-  WWHD_FUNC(0x0234E208, s32, a);
-  gabi::Local<u32[2]> name;
-  store<u32>(name.a, 0x10029C78);
-  store<u32>(name.a + 4, 0x10029B9C);
-  u32 data = call<u32>(0x026066C4, load<u32>(0x101F4F28), name.a, 4);
+/* 0234E208 */
+s32 daObjHami2::Act_c::CreateHeap() {
+  gabi::Local<SafeString> name;
+  name->mStringTop=gabi::guest_addr("Hami2");
+  name->__vtbl=0x10029B9C;
+  void* data = hami2GetResource(sResourceManager.get(), name.get(), 4);
   if (!data)
-    call<void>(0x0273AA24, 0x10029C1Cu, 0x68, 0x10029C30u);
-  u32 model = call<u32>(0x025E38E0, data, 0, 0x11020203u);
-  store<u32>(a + 0x3EC, model);
+    hami2Assert("d_a_obj_hami2.cpp", 0x68, "modelData != (0)");
+  J3DModel* model = hami2CreateModel(data, 0, 0x11020203u);
+  this->mpModel=model;
   if (!model)
     return 0;
-  u32 table = call<u32>(0x027F68FC, load<u32>(model + 0xAC));
-  u32 off = load<u32>(table + 0x10);
-  s32 idx = call<s32>(0x027DF9B0, off ? table + 0x10 + off : 0, 0x10029C14u);
-  if (idx >= 0) {
-    u32 m = load<u32>(a + 0x3EC), joints = load<u32>(m + 0xAC),
-        count = load<u32>(joints + 4), ptr = load<u32>(joints + 8);
-    u32 i = (u16)idx;
-    if (i < count)
-      ptr += i * 0x1C;
-    store<u32>(ptr + 8, 0x0234DF78);
+  s32 idx=model->getModelData()->getJointName()->getIndex("mono1");
+  if (idx>=0) {
+    J3DModel* currentModel=mpModel;
+    currentModel->getModelData()->getJointNodePointer((u16)idx)->setCallBack(nodeCallBack);
   }
-  store<u32>(load<u32>(a + 0x3EC) + 0xB8, a);
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318),
-      z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  call<void>(0x025F1C28, 0x1048D0CCu, load<s16>(a + 0x32A));
-  x = load<f32>(a + 0x330);
-  y = load<f32>(a + 0x334);
-  z = load<f32>(a + 0x338);
-  call<void>(0x025F2518, x, y, z);
-  call<void>(0x028E90D4, 0x1048D0CCu, a + 0x3F4);
-  u32 bg = call<u32>(0x024F23F4, 0);
-  store<u32>(a + 0x3F0, bg);
+  mpModel->mUserArea=gabi::ea(this);
+  f32 x = this->current.pos.x, y = this->current.pos.y,
+      z = this->current.pos.z;
+  hami2TranslateMatrix(&sMatrixStack, x, y, z);
+  hami2RotateY(&sMatrixStack, this->shape_angle.y);
+  x = this->scale.x;
+  y = this->scale.y;
+  z = this->scale.z;
+  hami2ScaleMatrix(x, y, z);
+  hami2CopyMatrix(&sMatrixStack, &this->mInitialBgMtx);
+  dBgW* bg = hami2ConstructBgW(0);
+  this->mpMovingBg=bg;
   if (!bg)
     return 0;
-  gabi::Local<u32[2]> name2;
-  store<u32>(name2.a, 0x10029C78);
-  store<u32>(name2.a + 4, 0x10029B9C);
-  data = call<u32>(0x026066C4, load<u32>(0x101F4F28), name2.a, 7);
-  s32 r = call<s32>(0x0200A030, load<u32>(a + 0x3F0), data, 1, a + 0x3F4);
+  gabi::Local<SafeString> name2;
+  name2->mStringTop=gabi::guest_addr("Hami2");
+  name2->__vtbl=0x10029B9C;
+  data = hami2GetResource(sResourceManager.get(), name2.get(), 7);
+  s32 r = hami2SetBackground(this->mpMovingBg, data, 1, &this->mInitialBgMtx);
   return r == 0;
 }
-VERIFY(0x0234E208, CreateHeap);
-void set_mtx(u32 a) {
-  WWHD_FUNC(0x0234E3B0, void, a);
-  f32 x = load<f32>(a + 0x314), y = load<f32>(a + 0x318),
-      z = load<f32>(a + 0x31C);
-  call<void>(0x028E93CC, 0x1048D0CCu, x, y, z);
-  s16 rx = load<s16>(a + 0x328), ry = load<s16>(a + 0x32A),
-      rz = load<s16>(a + 0x32C);
-  call<void>(0x025F1B48, 0x1048D0CCu, rx, ry, rz);
-  copyMatrix(0x1048D0CC, load<u32>(a + 0x3EC) + 0xC8);
-  call<void>(0x025F1C28, 0x1048D0CCu, load<s16>(a + 0x3E0));
-  call<void>(0x028E90D4, 0x1048D0CCu, 0x10469D1Cu);
+/* 0234E3B0 */
+void daObjHami2::Act_c::set_mtx() {
+  f32 x = this->current.pos.x, y = this->current.pos.y,
+      z = this->current.pos.z;
+  hami2TranslateMatrix(&sMatrixStack, x, y, z);
+  s16 rx = this->shape_angle.x, ry = this->shape_angle.y,
+      rz = this->shape_angle.z;
+  hami2RotateZXY(&sMatrixStack, rx, ry, rz);
+  copyMatrix(&sMatrixStack, &mpModel->mBaseTransformMtx);
+  hami2RotateY(&sMatrixStack, this->mRotation);
+  hami2CopyMatrix(&sMatrixStack, &sBgMatrix);
 }
-VERIFY(0x0234E3B0, set_mtx);
-void init_mtx(u32 a) {
-  WWHD_FUNC(0x0234E490, void, a);
-  u32 model = load<u32>(a + 0x3EC);
-  f32 x = load<f32>(a + 0x330), y = load<f32>(a + 0x334),
-      z = load<f32>(a + 0x338);
-  store<f32>(model + 0xBC, x);
-  store<f32>(model + 0xC0, y);
-  store<f32>(model + 0xC4, z);
-  set_mtx(a);
+/* 0234E490 */
+void daObjHami2::Act_c::init_mtx() {
+  J3DModel* model = this->mpModel;
+  f32 x = this->scale.x, y = this->scale.y,
+      z = this->scale.z;
+  model->mBaseScale.x=x;
+  model->mBaseScale.y=y;
+  model->mBaseScale.z=z;
+  this->set_mtx();
 }
-VERIFY(0x0234E490, init_mtx);
-static s32 switchState(u32 a) {
-  u32 sw = PrmAbstract(a, 8, 0);
-  u32 save = load<u32>(0x101F84DC);
-  return call<s32>(0x025BA0C0, save + 0x20, sw, (s8)load<u8>(a + 0x2FE));
+static s32 switchState(Act_c* a) {
+  u32 sw = a->prm_get(8, 0);
+  Hami2SaveData* save=sSaveData;
+  return hami2CheckSwitch(&save->mSwitch, sw, (s8)a->home.roomNo);
 }
-s32 Create(u32 a) {
-  WWHD_FUNC(0x0234E4B0, s32, a);
-  u32 m = load<u32>(a + 0x3EC);
-  store<u32>(a + 0x348, m ? m + 0xC8 : 0);
-  bool open = switchState(a) != 0;
-  store<u32>(a + 0x424, open ? 3 : 0);
-  store<s16>(a + 0x3E0, open ? 0x4000 : 0);
-  init_mtx(a);
-  call<void>(0x025D674C, a, -1200.0f, -40000.0f, -1200.0f, 1200.0f, 40000.0f,
+/* 0234E4B0 */
+s32 daObjHami2::Act_c::Create() {
+  J3DModel* m = this->mpModel;
+  cullMtx=m ? gabi::ea(&m->mBaseTransformMtx) : 0;
+  bool open = switchState(this) != 0;
+  this->mMode=open ? MODE_OPEN : MODE_CLOSED;
+  this->mRotation=open ? 0x4000 : 0;
+  this->init_mtx();
+  hami2SetCullBox(this, -1200.0f, -40000.0f, -1200.0f, 1200.0f, 40000.0f,
              1200.0f);
-  u32 p = play();
-  s32 e = call<s32>(0x02543F10, p + 0x52C4, 0x10029C54u, 255);
-  store<s16>(a + 0x428, e);
-  p = play();
-  e = call<s32>(0x02543F10, p + 0x52C4, 0x10029C60u, 255);
-  store<s16>(a + 0x42A, e);
+  Hami2GameInfo* p = hami2GetGameInfo();
+  s32 e = hami2GetEventIndex(&p->mEvtManager, "AMI2_OPEN", 255);
+  this->mOpenEventIdx=e;
+  p = hami2GetGameInfo();
+  e = hami2GetEventIndex(&p->mEvtManager, "AMI2_CLOSE", 255);
+  this->mCloseEventIdx=e;
   return 1;
 }
-VERIFY(0x0234E4B0, Create);
-static void order(u32 a, u32 off) {
-  call<void>(0x025D7A58, a, load<s16>(a + off), 255, 65535, 0, 1);
+static void order(Act_c* a, s16 event) {
+  hami2OrderEvent(a, event, 255, 65535, 0, 1);
 }
-void close_stop(u32 a) {
-  WWHD_FUNC(0x0234E628, void, a);
-  if (switchState(a)) {
-    order(a, 0x428);
-    store<u32>(a + 0x424, 1);
+/* 0234E628 */
+void daObjHami2::Act_c::daObjHami2_close_stop() {
+  if (switchState(this)) {
+    order(this, mOpenEventIdx);
+    this->mMode=MODE_WAIT_OPEN;
   }
 }
-VERIFY(0x0234E628, close_stop);
-void open_stop(u32 a) {
-  WWHD_FUNC(0x0234E7D8, void, a);
-  if (!switchState(a)) {
-    order(a, 0x42A);
-    store<u32>(a + 0x424, 4);
+/* 0234E7D8 */
+void daObjHami2::Act_c::daObjHami2_open_stop() {
+  if (!switchState(this)) {
+    order(this, mCloseEventIdx);
+    this->mMode=MODE_WAIT_CLOSE;
   }
 }
-VERIFY(0x0234E7D8, open_stop);
-void open_demo_wait(u32 a) {
-  WWHD_FUNC(0x0234E6A8, void, a);
-  if (load<u16>(a + 0xF8) == 2) {
-    s32 room = (s8)load<u8>(a + 0x326);
-    store<u32>(a + 0x424, 2);
-    s32 reverb = call<s32>(0x02520540, room);
-    call<void>(0x025E1A40, 0x69C4, a + 0x314, 0, reverb);
-    call<void>(0x025E1988, 0x806);
+/* 0234E6A8 */
+void daObjHami2::Act_c::daObjHami2_open_demo_wait() {
+  if (this->eventInfo.mCommand == 2) {
+    s32 room = (s8)this->current.roomNo;
+    this->mMode=MODE_OPENING;
+    s32 reverb = hami2GetReverb(room);
+    hami2StartSound(0x69C4, &this->current.pos, 0, reverb);
+    hami2StartSystemSound(0x806);
   } else
-    order(a, 0x428);
+    order(this, mOpenEventIdx);
 }
-VERIFY(0x0234E6A8, open_demo_wait);
-void close_demo_wait(u32 a) {
-  WWHD_FUNC(0x0234E858, void, a);
-  if (load<u16>(a + 0xF8) == 2)
-    store<u32>(a + 0x424, 5);
+/* 0234E858 */
+void daObjHami2::Act_c::daObjHami2_close_demo_wait() {
+  if (this->eventInfo.mCommand == 2)
+    this->mMode=MODE_CLOSING;
   else
-    order(a, 0x42A);
+    order(this, mCloseEventIdx);
 }
-VERIFY(0x0234E858, close_demo_wait);
 static void shock() {
-  u32 p = play();
-  gabi::Local<f32[3]> direction;
-  store<f32>(direction.a, 0);
-  store<f32>(direction.a + 4, 1);
-  store<f32>(direction.a + 8, 0);
-  call<void>(0x025CB374, p + 0x599C, 4, -33, direction.a);
-  p = play();
-  store<u16>(p + 0x52B8, load<u16>(p + 0x52B8) | 8);
+  Hami2GameInfo* p = hami2GetGameInfo();
+  gabi::Local<cXyz> direction;
+  direction->x=0;
+  direction->y=1;
+  direction->z=0;
+  hami2StartShock(&p->mVibration, 4, -33, direction.get());
+  p = hami2GetGameInfo();
+  p->mEventFlag=(u16)p->mEventFlag | 8;
 }
-void open_demo(u32 a) {
-  WWHD_FUNC(0x0234E740, void, a);
-  s16 rot = (s16)(load<s16>(a + 0x3E0) + 0x100);
+/* 0234E740 */
+void daObjHami2::Act_c::daObjHami2_open_demo() {
+  s16 rot = (s16)(this->mRotation + 0x100);
   if (rot < 0x4000)
-    store<s16>(a + 0x3E0, rot);
+    this->mRotation=rot;
   else {
-    store<s16>(a + 0x3E0, 0x4000);
-    store<u32>(a + 0x424, 3);
+    this->mRotation=0x4000;
+    this->mMode=MODE_OPEN;
     shock();
   }
 }
-VERIFY(0x0234E740, open_demo);
-void close_demo(u32 a) {
-  WWHD_FUNC(0x0234E88C, void, a);
-  s16 rot = (s16)(load<s16>(a + 0x3E0) - 0x100);
+/* 0234E88C */
+void daObjHami2::Act_c::daObjHami2_close_demo() {
+  s16 rot = (s16)(this->mRotation - 0x100);
   if (rot > 0)
-    store<s16>(a + 0x3E0, rot);
+    this->mRotation=rot;
   else {
-    store<s16>(a + 0x3E0, 0);
+    this->mRotation=0;
     shock();
-    store<u32>(a + 0x424, 0);
+    this->mMode=MODE_CLOSED;
   }
 }
-VERIFY(0x0234E88C, close_demo);
-s32 Execute(u32 a, u32 out) {
-  WWHD_FUNC(0x0234E938, s32, a, out);
-  switch (load<u32>(a + 0x424)) {
-  case 0:
-    close_stop(a);
+/* 0234E938 */
+s32 daObjHami2::Act_c::Execute(be<u32>* out) {
+  switch (this->mMode) {
+  case MODE_CLOSED:
+    this->daObjHami2_close_stop();
     break;
-  case 1:
-    open_demo_wait(a);
+  case MODE_WAIT_OPEN:
+    this->daObjHami2_open_demo_wait();
     break;
-  case 2:
-    open_demo(a);
+  case MODE_OPENING:
+    this->daObjHami2_open_demo();
     break;
-  case 3:
-    open_stop(a);
+  case MODE_OPEN:
+    this->daObjHami2_open_stop();
     break;
-  case 4:
-    close_demo_wait(a);
+  case MODE_WAIT_CLOSE:
+    this->daObjHami2_close_demo_wait();
     break;
-  case 5:
-    close_demo(a);
+  case MODE_CLOSING:
+    this->daObjHami2_close_demo();
     break;
   }
-  set_mtx(a);
-  store<u32>(out, 0x10469D1C);
+  this->set_mtx();
+  *out=gabi::ea(&sBgMatrix);
   return 1;
 }
-VERIFY(0x0234E938, Execute);
-s32 Draw(u32 a) {
-  WWHD_FUNC(0x0234EA88, s32, a);
-  u32 env = call<u32>(0x02555D0C);
-  call<void>(0x025626A4, env, 1, a + 0x314, a + 0x110);
-  env = call<u32>(0x02555D0C);
-  call<void>(0x02562F5C, env, load<u32>(a + 0x3EC), a + 0x110);
-  u32 p = play();
-  store<u32>(0x104B4634, load<u32>(p + 0x5D70));
-  p = play();
-  store<u32>(0x104B4638, load<u32>(p + 0x5D74));
-  call<void>(0x025E2DE0, load<u32>(a + 0x3EC), 0);
-  p = play();
-  store<u32>(0x104B4634, load<u32>(p + 0x5D78));
-  p = play();
-  store<u32>(0x104B4638, load<u32>(p + 0x5D7C));
+/* 0234EA88 */
+s32 daObjHami2::Act_c::Draw() {
+  void* env = hami2GetEnvironment();
+  hami2SetLight(env, 1, &this->current.pos, &this->tevStr);
+  env = hami2GetEnvironment();
+  hami2ApplyLight(env, this->mpModel, &this->tevStr);
+  Hami2GameInfo* p = hami2GetGameInfo();
+  sDrawBuffers.mOpaque=p->mOpaqueCurrent;
+  p = hami2GetGameInfo();
+  sDrawBuffers.mTranslucent=p->mTranslucentCurrent;
+  hami2UpdateModel(this->mpModel, 0);
+  p = hami2GetGameInfo();
+  sDrawBuffers.mOpaque=p->mOpaqueNormal;
+  p = hami2GetGameInfo();
+  sDrawBuffers.mTranslucent=p->mTranslucentNormal;
   return 1;
 }
-VERIFY(0x0234EA88, Draw);
-s32 Delete(u32 a) {
-  WWHD_FUNC(0x0234EC00, s32, a);
+/* 0234EC00 */
+s32 daObjHami2::Act_c::Delete() {
   return 1;
 }
-VERIFY(0x0234EC00, Delete);
-s32 nodeCallback(u32 joint, s32 phase) {
-  WWHD_FUNC(0x0234DF78, s32, joint, phase);
-  if (phase == 0) {
-    u32 j = call<u32>(0x027F7878, joint), model = load<u32>(0x104B462C),
-        actor = load<u32>(model + 0xB8);
-    u32 idx = load<u16>(j + 4);
-    if (actor) {
-      u32 block = load<u32>(model + 0x2C);
-      u32 flags = load<u16>(block + 4), matrices = load<u32>(block + 0x10);
-      store<u16>(block + 4, flags | 16);
-      u32 stack = load<u32>(0x1018C7B0);
-      call<void>(0x028E90D4, matrices + idx * 48, stack);
-      stack = load<u32>(0x1018C7B0);
-      call<void>(0x025F1C28, stack, load<s16>(actor + 0x3E0));
-      block = load<u32>(model + 0x2C);
-      flags = load<u16>(block + 4);
-      stack = load<u32>(0x1018C7B0);
-      matrices = load<u32>(block + 0x10);
-      store<u16>(block + 4, flags | 16);
-      copyMatrix(stack, matrices + idx * 48);
-      call<void>(0x028E90D4, load<u32>(0x1018C7B0), 0x104B4868u);
+/* 0234DF78 */
+s32 nodeCallBack(J3DNode* joint, s32 phase) {
+  if (phase==0) {
+    Hami2JointData* data=hami2GetJointData(joint);
+    J3DModel* model=sCurrentModel;
+    Act_c* actor=gabi::at<Act_c>(model->mUserArea);
+    u32 idx=data->mJointNo;
+    if(actor) {
+      Hami2MtxBuffer* block=reinterpret_cast<Hami2MtxBuffer*>(model->mpMtxBuffer.get());
+      u32 flags=block->mFlags;
+      Mtx34* matrices=block->mpAnmMtx;
+      block->mFlags=flags|16;
+      Mtx34* stack=sMatrixStackPtr;
+      hami2CopyMatrix(&matrices[idx],stack);
+      stack=sMatrixStackPtr;
+      hami2RotateY(stack,actor->mRotation);
+      block=reinterpret_cast<Hami2MtxBuffer*>(model->mpMtxBuffer.get());
+      flags=block->mFlags;
+      stack=sMatrixStackPtr;
+      matrices=block->mpAnmMtx;
+      block->mFlags=flags|16;
+      copyMatrix(stack,&matrices[idx]);
+      hami2CopyMatrix(sMatrixStackPtr,&sCurrentMtx);
     }
   }
   return 1;
 }
-VERIFY(0x0234DF78, nodeCallback);
-s32 wrapperCreate(u32 a) {
-  WWHD_FUNC(0x0234EB20, s32, a);
-  return Mthd_Create(a);
+/* 0234EB20 */
+s32 wrapperCreate(Act_c* a) {
+  return a->Mthd_Create();
 }
-VERIFY(0x0234EB20, wrapperCreate);
-s32 wrapperDelete(u32 a) {
-  WWHD_FUNC(0x0234EB24, s32, a);
-  return Mthd_Delete(a);
+/* 0234EB24 */
+s32 wrapperDelete(Act_c* a) {
+  return a->Mthd_Delete();
 }
-VERIFY(0x0234EB24, wrapperDelete);
-s32 wrapperExecute(u32 a) {
-  WWHD_FUNC(0x0234EB28, s32, a);
-  return call<s32>(0x024F1E9C, a);
+/* 0234EB28 */
+s32 wrapperExecute(Act_c* a) {
+  return hami2ExecuteMoveBg(a);
 }
-VERIFY(0x0234EB28, wrapperExecute);
-s32 wrapperIsDelete(u32 a) {
-  WWHD_FUNC(0x0234EB2C, s32, a);
-  return call<s32>(load<u32>(load<u32>(a + 0xB4) + 0x2C), a);
+/* 0234EB2C */
+s32 daObjHami2_Draw(Act_c* a) {
+  return a->Draw_v();
 }
-VERIFY(0x0234EB2C, wrapperIsDelete);
-s32 wrapperDraw(u32 a) {
-  WWHD_FUNC(0x0234EB3C, s32, a);
-  return call<s32>(load<u32>(load<u32>(a + 0xB4) + 0x3C), a);
+/* 0234EB3C */
+s32 daObjHami2_IsDelete(Act_c* a) {
+  return a->IsDelete_v();
 }
-VERIFY(0x0234EB3C, wrapperDraw);
+/* 0234EB4C */
 void staticInit() {
-  WWHD_FUNC(0x0234EB4C, void);
-  store<u32>(0x10469D14, 0);
-  store<u32>(0x10469D0C, 0);
-  store<u32>(0x10469D18, 0);
-  store<u32>(0x10469D10, 0);
-  call<void>(0x028F026C, 0x101C9B54u);
-  store<f32>(0x10469D00, -3.1415927410125732f);
-  store<f32>(0x10469D04, 3.1415927410125732f);
-  call<void>(0x028ED6F8, 0x10469D08u);
-  call<void>(0x028F026C, 0x101C9B60u);
-  call<void>(0x028EAB2C, 0x10469D09u);
-  call<void>(0x028F026C, 0x101C9B6Cu);
+  sHeaderStatics.mZero[2]=0;
+  sHeaderStatics.mZero[0]=0;
+  sHeaderStatics.mZero[3]=0;
+  sHeaderStatics.mZero[1]=0;
+  hami2RegisterGlobal(&sDestructorRecords.mRecords[0]);
+  sHeaderStatics.mMinAngle=-3.1415927410125732f;
+  sHeaderStatics.mMaxAngle=3.1415927410125732f;
+  hami2InitializeHeaderByte(&sHeaderStatics.mHeaderByte);
+  hami2RegisterGlobal(&sDestructorRecords.mRecords[1]);
+  hami2InitializeHeaderFlag(&sHeaderStatics.mHeaderFlag);
+  hami2RegisterGlobal(&sDestructorRecords.mRecords[2]);
 }
-VERIFY(0x0234EB4C, staticInit);
-void staticDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x0234EBE0, void, a, flags);
+/* 0234EBE0 */
+void staticDtor(void* a, s32 flags) {
   if (a && (flags & 1))
-    call<void>(0x0273AF40, a);
+    hami2DeleteObject(a);
 }
-VERIFY(0x0234EBE0, staticDtor);
-void actorDtor(u32 a, s32 flags) {
-  WWHD_FUNC(0x0234EC08, void, a, flags);
+/* 0234EC08 */
+void actorDtor(Act_c* a, s32 flags) {
   if (a) {
-    call<void>(0x025D50BC, a, 0);
+    hami2DestroyActor(a, 0);
     if (flags & 1)
-      call<void>(0x0273AF40, a);
+      hami2DeleteObject(a);
   }
 }
-VERIFY(0x0234EC08, actorDtor);
-} // namespace hami2
+
 
 /* ---- leftover functions of the translation unit ---- */
 
 /* 0234EBF4 dBgS_MoveBgActor::IsDelete (out-of-line copy; daObjHami2::Act_c vtable slot 10029CBC) */
+/* 0234EBF4 */
 static BOOL hami2_MoveBgActor_IsDelete(void* p) {
-    WWHD_FUNC(0x0234EBF4, BOOL, p);
     return TRUE;
 }
-VERIFY(0x0234EBF4, hami2_MoveBgActor_IsDelete);
 
 /* 0234EBFC sead::SafeStringBase<char>::assureTerminationImpl_ (empty); vtable slot 10029BB0, after the destructor 0234EBE0 */
+/* 0234EBFC */
 static void hami2_SafeString_assureTermination(void* p) {
-    WWHD_FUNC(0x0234EBFC, void, p);
 }
-VERIFY(0x0234EBFC, hami2_SafeString_assureTermination);
+
+/* WWHD glue
+data sMatrixStack 1048D0CC
+data sBgMatrix 10469D1C
+data sCurrentMtx 104B4868
+data sMatrixStackPtr 1018C7B0
+data sCurrentModel 104B462C
+data sDrawBuffers 104B4634
+data sResourceManager 101F4F28
+data sSaveData 101F84DC
+data sHeaderStatics 10469D00
+data sDestructorRecords 101C9B54
+ext 024F1D40 void hami2ConstructMoveBg(Act_c*)
+ext 02520460 s32 hami2LoadResource(request_of_phase_process_class*, const char*)
+ext 024F1D9C s32 hami2CreateMoveBg(Act_c*, const char*, s32, u32, u32)
+ext 024EEA6C void hami2RegisterBackground(void*, dBgW*, Act_c*)
+ext 020087EC void hami2ReleaseBackground(void*, dBgW*)
+ext 024F1F64 s32 hami2DeleteMoveBg(Act_c*)
+ext 025204C8 void hami2DeleteResource(request_of_phase_process_class*, const char*)
+ext 0273AA24 void hami2Assert(const char*, s32, const char*)
+ext 026066C4 void* hami2GetResource(void*, SafeString*, s32)
+ext 025E38E0 J3DModel* hami2CreateModel(void*, u32, u32)
+ext 028E93CC void hami2TranslateMatrix(Mtx34*, f32, f32, f32)
+ext 025F1C28 void hami2RotateY(Mtx34*, s16)
+ext 025F2518 void hami2ScaleMatrix(f32, f32, f32)
+ext 028E90D4 void hami2CopyMatrix(const Mtx34*, Mtx34*)
+ext 024F23F4 dBgW* hami2ConstructBgW(u32)
+ext 0200A030 s32 hami2SetBackground(dBgW*, void*, u32, Mtx34*)
+ext 025F1B48 void hami2RotateZXY(Mtx34*, s16, s16, s16)
+ext 025BA0C0 s32 hami2CheckSwitch(void*, u32, s8)
+ext 025D674C void hami2SetCullBox(Act_c*, f32, f32, f32, f32, f32, f32)
+ext 02543F10 s32 hami2GetEventIndex(void*, const char*, u32)
+ext 025D7A58 void hami2OrderEvent(Act_c*, s16, u32, u32, u32, u32)
+ext 02520540 s32 hami2GetReverb(s32)
+ext 025E1A40 void hami2StartSound(u32, cXyz*, u32, s32)
+ext 025E1988 void hami2StartSystemSound(u32)
+ext 025CB374 void hami2StartShock(void*, u32, s32, cXyz*)
+ext 02555D0C void* hami2GetEnvironment()
+ext 025626A4 void hami2SetLight(void*, s32, cXyz*, dKy_tevstr_c*)
+ext 02562F5C void hami2ApplyLight(void*, J3DModel*, dKy_tevstr_c*)
+ext 025E2DE0 void hami2UpdateModel(J3DModel*, u32)
+ext 024F1E9C s32 hami2ExecuteMoveBg(Act_c*)
+ext 028F026C void hami2RegisterGlobal(void*)
+ext 028ED6F8 void hami2InitializeHeaderByte(void*)
+ext 028EAB2C void hami2InitializeHeaderFlag(void*)
+ext 0273AF40 void hami2DeleteObject(void*)
+ext 025D50BC void hami2DestroyActor(Act_c*, s32)
+ext 025200D4 Hami2GameInfo* hami2GetGameInfo()
+ext 027F7878 Hami2JointData* hami2GetJointData(J3DNode*)
+str 10029C78
+str 10029BBC in 0234E09C
+str 10029BD0
+str 10029C1C in 0234E208
+str 10029C30
+str 10029C14
+str 10029C54
+str 10029C60
+*/

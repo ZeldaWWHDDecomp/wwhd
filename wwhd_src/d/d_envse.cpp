@@ -1,146 +1,226 @@
-/* Retained HD environmental sound TU0252FCB4..025303B3.
- * Raw layouts follow HD; external calls mocked. */
-#include "bindings.h"
-namespace d_envse_cpp {
-static u32 ld(u32 a){return gabi::load<u32>(a);}
-static u8 lb(u32 a){return gabi::load<u8>(a);}
-static u16 lh(u32 a){return gabi::load<u16>(a);}
-static void st(u32 a,u32 v){gabi::store<u32>(a,v);}
-static void copy(u32 d,u32 s){u32 x=ld(s),y=ld(s+4),z=ld(s+8);st(d,x);st(d+8,z);st(d+4,y);}
-struct Vec {be<u32> w[3];};
-struct Line {be<u32> w[7];};
-static BOOL Draw(){
-    WWHD_FUNC(0x0252FCB4,BOOL,(u32)0);
+/* Environmental sounds along room paths, GameCube names with HD semantics.
+ * Verified against WWHD. */
+#include "d/d_envse.h"
+
+// HD: the room-control byte is in BSS, beyond the loaded image data.
+static be<s8>& l_stayRoom = *gabi::at<be<s8>>(0x1047E6C8);
+static const f32 l_maxDistance = 3.4028234663852886e+38;
+
+/* inlined into dEnvSe_getNearPathPos and dEnvSe_c::execute */
+static void copyPosition(cXyz* destination, const cXyz* source) {
+    dEnvSe_words* dst = (dEnvSe_words*)destination;
+    const dEnvSe_words* src = (const dEnvSe_words*)source;
+    // HD: all three words are loaded before the x/z/y stores.
+    u32 x = src->x, y = src->y, z = src->z;
+    dst->x = x;
+    dst->z = z;
+    dst->y = y;
+}
+
+/* 0252FCB4 */
+static BOOL dEnvSe_Draw() {
     return TRUE;
 }
-VERIFY(0x0252FCB4,Draw);
-static void nearPath(u32 out,u32 pos,u32 path){
-    WWHD_FUNC(0x0252FCBC,void,out,pos,path);
+
+/* 0252FCBC */
+void dEnvSe_getNearPathPos(cXyz* out, cXyz* pos, path_layout::dPath* path) {
     gabi::Local<be<f32>> distance;
-    gabi::Local<Vec> first,second;
-    gabi::Local<Line> line;
-    u32 lin=gabi::ea(line.get()),a=gabi::ea(first.get()),b=gabi::ea(second.get());
-    st(lin+24,0x1004CC7C);
-    f64 best=gabi::load<f32>(0x1004CC70);
-    u32 nearest=0,point=ld(path+8),count=lh(path);
-    for(u32 i=0;i<count;++i){
-        f64 d=gabi::call<f64>(0x028E8DE8,pos,point+4);
-        *distance=(f32)d;
-        if(best>d){best=d;nearest=i;}
-        count=lh(path);
-        point+=16;
+    gabi::Local<cXyz> first, second;
+    gabi::Local<cM3dGLin> line;
+    line->__vtbl = 0x1004CC7C;
+    // HD: retain the unrounded distance result for every nearest-point comparison.
+    f64 best = l_maxDistance;
+    u32 nearest = 0;
+    path_layout::dPnt* point = path->m_points;
+    u32 count = path->m_num;
+    for (u32 i = 0; i < count; ++i) {
+        f64 d = dEnvSe_squareDistance(pos, &point->m_position);
+        *distance = (f32)d;
+        if (best > d) {
+            best = d;
+            nearest = i;
+        }
+        count = path->m_num;
+        ++point;
     }
-    point=ld(path+8)+nearest*16;
-    u32 hasFirst=0,hasSecond=0;
-    if(nearest!=0){
-        gabi::call(0x0201883C,lin,point-12,point+4);
-        hasFirst=gabi::call<u32>(0x02010AE4,lin,pos,a,gabi::ea(distance.get()));
-        count=lh(path);
+    point = &path->m_points[nearest];
+    u32 hasFirst = 0, hasSecond = 0;
+    if (nearest != 0) {
+        dEnvSe_setLine(line.get(), &point[-1].m_position, &point->m_position);
+        hasFirst = dEnvSe_projectLine(line.get(), pos, first.get(), distance.get());
+        count = path->m_num;
     }
-    if(nearest!=count-1){
-        gabi::call(0x0201883C,lin,point+4,point+20);
-        hasSecond=gabi::call<u32>(0x02010AE4,lin,pos,b,gabi::ea(distance.get()));
+    if (nearest != count - 1) {
+        dEnvSe_setLine(line.get(), &point->m_position, &point[1].m_position);
+        hasSecond = dEnvSe_projectLine(line.get(), pos, second.get(), distance.get());
     }
-    if(hasFirst){
-        if(!hasSecond || gabi::call<f64>(0x028E8DE8,b,pos)>(f64)(f32)*distance) copy(out,a);
-        else copy(out,b);
-    }else if(hasSecond) copy(out,b);
-    else {
-        gabi::store<f32>(out,gabi::load<f32>(point+4));
-        gabi::store<f32>(out+4,gabi::load<f32>(point+8));
-        gabi::store<f32>(out+8,gabi::load<f32>(point+12));
+    if (hasFirst) {
+        if (!hasSecond || dEnvSe_squareDistance(second.get(), pos) > (f64)(f32)*distance) {
+            copyPosition(out, first.get());
+        } else {
+            copyPosition(out, second.get());
+        }
+    } else if (hasSecond) {
+        copyPosition(out, second.get());
+    } else {
+        out->x = point->m_position.x;
+        out->y = point->m_position.y;
+        out->z = point->m_position.z;
     }
 }
-VERIFY(0x0252FCBC,nearPath);
-static BOOL execute(u32 self){
-    WWHD_FUNC(0x0252FEB8,BOOL,self);
-    gabi::Local<Vec> eye,temp1,temp2;
-    u32 e=gabi::ea(eye.get()),a=gabi::ea(temp1.get()),b=gabi::ea(temp2.get());
-    s32 room=(s8)lb(0x1047E6C8);
-    u32 play=gabi::call<u32>(0x025200D4);
-    u32 roomdata=gabi::call<u32>(0x025C11DC,play+0x51CC,room);
-    if(!roomdata)return TRUE;
-    u32 sound=gabi::call_ptr<u32>(ld(ld(roomdata)+0x1BC),roomdata);
-    if(!sound)return TRUE;
-    u32 count=ld(sound),entry=ld(sound+4);
-    play=gabi::call<u32>(0x025200D4);
-    s32 camera=(s8)lb(play+0x5B30);
-    play=gabi::call<u32>(0x025200D4);
-    u32 cam=ld(play+(u32)camera*52+0x5AF8);
-    gabi::call(0x0201AD78,cam+0x264,e,cam+0x7C0);
-    f64 maximum=gabi::load<f32>(0x1004CC70);
-    for(;count!=0;--count,entry+=28){
-        u32 type=lb(entry+23),path;
-        if(type==0 || type==2 || type==4){
-            gabi::call(type==0?0x025E1B70:type==2?0x025E1BF8:0x025E1C20);
-            path=gabi::call<u32>(0x025AAF88,(u32)lb(entry+24),room);
-            while(path){
-                gabi::call(0x0252FCBC,self+0xE0,e,path);
-                gabi::call(type==0?0x025E1B7C:type==2?0x025E1BD0:0x025E1C2C,self+0xE0);
-                path=gabi::call<u32>(0x025AB070,path,room);
+
+/* 0252FEB8 */
+BOOL dEnvSe_c::execute() {
+    gabi::Local<cXyz> eye, temp1, temp2;
+    s32 roomNo = l_stayRoom;
+    dEnvSe_gameInfo* play = (dEnvSe_gameInfo*)dComIfGp_get();
+    dEnvSe_roomDt* fili_p = dEnvSe_getStatusRoomDt(play->mRoomCtrl, roomNo);
+    if (!fili_p)
+        return TRUE;
+    dEnvSe_soundInfo* soundInf = fili_p->getSoundInf();
+    if (!soundInf)
+        return TRUE;
+    u32 count = soundInf->num;
+    dEnvSe_soundEntry* sound_data = soundInf->m_entries;
+    play = (dEnvSe_gameInfo*)dComIfGp_get();
+    s32 cameraID = play->mPlayerCameraID;
+    play = (dEnvSe_gameInfo*)dComIfGp_get();
+    dEnvSe_camera* camera = play->mCameraInfo[cameraID].mpCamera;
+    // HD: Eye includes the offset vector, via the original hidden-result call.
+    dEnvSe_addEye(&camera->mEye, eye.get(), &camera->mEyeOffset);
+    f64 maximum = l_maxDistance;
+    for (; count != 0; --count, ++sound_data) {
+        u32 type = sound_data->field_0x17;
+        path_layout::dPath* path;
+        if (type == dEnvSe_SEA_e || type == dEnvSe_RIVER_e || type == dEnvSe_WINDOW_e) {
+            switch (type) {
+            case dEnvSe_SEA_e:
+                mDoAud_initSeaEnvPos();
+                break;
+            case dEnvSe_RIVER_e:
+                mDoAud_initRiverPos();
+                break;
+            default:
+                mDoAud_initWindowPos();
+                break;
             }
-            if(type==0)gabi::call(0x025E1B8C,(u32)lb(entry+20));
-            else if(type==2){u32 reverb=gabi::call<u32>(0x02520540,room);gabi::call(0x025E1BE0,(u32)lb(entry+20),reverb);}
-        }else if(type==1 || type==3){
-            copy(self+0xE0,e);
-            f64 nearest=maximum;u32 arg=0;
-            path=gabi::call<u32>(0x025AAF88,(u32)lb(entry+24),room);
-            u32 tmp=type==1?a:b;
-            while(path){
-                gabi::call(0x0252FCBC,tmp,e,path);
-                f64 d=gabi::call<f64>(0x028E8DE8,tmp,e);
-                if(d<nearest){
-                    if(type==1)arg=lb(path+4);
-                    copy(self+0xE0,tmp);nearest=d;
+            path = dEnvSe_getRoomPath((u32)sound_data->field_0x18, roomNo);
+            while (path) {
+                dEnvSe_getNearPathPos(&mPos, eye.get(), path);
+                switch (type) {
+                case dEnvSe_SEA_e:
+                    mDoAud_registSeaEnvPos(&mPos);
+                    break;
+                case dEnvSe_RIVER_e:
+                    mDoAud_registRiverPos(&mPos);
+                    break;
+                default:
+                    mDoAud_registWindowPos(&mPos);
+                    break;
                 }
-                path=gabi::call<u32>(0x025AB070,path,room);
+                path = dPath_GetNextRoomPath(path, roomNo);
             }
-            if(type==1){
-                if(ld(self+0xFC)==0 && nearest!=maximum){
-                    gabi::call(0x025E1BA0,self+0xE0,arg);st(self+0x100,arg);
-                }else gabi::call(0x025E1BB8,self+0xE0,ld(self+0x100));
-                u16 frame=lh(self+0xFE);
-                play=gabi::call<u32>(0x025200D4);
-                gabi::store<u16>(play+0x5D00,frame);
-                u32 ticks=ld(self+0xFC);
-                st(self+0xFC,ticks==99?0:ticks+1);
-            }else{u32 reverb=gabi::call<u32>(0x02520540,room);gabi::call(0x025E1C04,(u32)lb(entry+20),self+0xE0,reverb);}
+            if (type == dEnvSe_SEA_e) {
+                mDoAud_seaEnvSePlay((u32)sound_data->field_0x14);
+            } else if (type == dEnvSe_RIVER_e) {
+                u32 reverb = dEnvSe_getReverb(roomNo);
+                mDoAud_riverSePlay((u32)sound_data->field_0x14, reverb);
+            }
+        } else if (type == dEnvSe_SHORE_e || type == dEnvSe_WATERFALL_e) {
+            copyPosition(&mPos, eye.get());
+            f64 nearest = maximum;
+            u32 arg = 0;
+            path = dEnvSe_getRoomPath((u32)sound_data->field_0x18, roomNo);
+            cXyz* tmp = type == dEnvSe_SHORE_e ? temp1.get() : temp2.get();
+            while (path) {
+                dEnvSe_getNearPathPos(tmp, eye.get(), path);
+                f64 d = dEnvSe_squareDistance(tmp, eye.get());
+                if (d < nearest) {
+                    if (type == dEnvSe_SHORE_e)
+                        arg = path->mArg0;
+                    copyPosition(&mPos, tmp);
+                    nearest = d;
+                }
+                path = dPath_GetNextRoomPath(path, roomNo);
+            }
+            if (type == dEnvSe_SHORE_e) {
+                // HD: do not start a shore sound when no finite nearest path was selected.
+                if (field_0xf8 == 0 && nearest != maximum) {
+                    mDoAud_startSeaShoreSE(&mPos, arg);
+                    field_0xfc = arg;
+                } else {
+                    mDoAud_continueSeaShoreSE(&mPos, field_0xfc);
+                }
+                // HD: the wave-frame store uses the low halfword, before reloading the counter.
+                u16 frame = mWaveWords.mLow;
+                play = (dEnvSe_gameInfo*)dComIfGp_get();
+                play->mWaveFrame = frame;
+                u32 ticks = field_0xf8;
+                field_0xf8 = ticks == 99 ? 0 : ticks + 1;
+            } else {
+                u32 reverb = dEnvSe_getReverb(roomNo);
+                mDoAud_waterfallSePlay((u32)sound_data->field_0x14, &mPos, reverb);
+            }
         }
     }
     return TRUE;
 }
-VERIFY(0x0252FEB8,execute);
-static BOOL Execute(u32 self){
-    WWHD_FUNC(0x02530288,BOOL,self);
-    return gabi::call<BOOL>(0x0252FEB8,self);
+
+/* 02530288 */
+static BOOL dEnvSe_Execute(dEnvSe_c* i_this) {
+    return i_this->execute();
 }
-VERIFY(0x02530288,Execute);
-static BOOL IsDelete(){
-    WWHD_FUNC(0x0253028C,BOOL,(u32)0);
+
+/* 0253028C */
+static BOOL dEnvSe_IsDelete() {
     return TRUE;
 }
-VERIFY(0x0253028C,IsDelete);
-static BOOL Delete(u32 self){
-    WWHD_FUNC(0x02530294,BOOL,self);
-    gabi::call(0x025E1B34,self+0xE0);
-    if(self)gabi::call(0x025DD630,self,0);
+
+/* 02530294 */
+static BOOL dEnvSe_Delete(dEnvSe_c* i_this) {
+    mDoAud_seDeleteObject(&i_this->mPos);
+    // HD: invoke the process base destructor after deleting the sound object.
+    if (i_this)
+        dEnvSe_processDelete(i_this, 0);
     return TRUE;
 }
-VERIFY(0x02530294,Delete);
-static s32 Create(u32 self){
-    WWHD_FUNC(0x025302DC,s32,self);
-    if(self){gabi::call(0x025DD5F0,self);st(self+0xB4,0x1004CC8C);}
-    return 4;
+
+/* 025302DC */
+static s32 dEnvSe_Create(dEnvSe_c* i_this) {
+    // HD: the environment process has a C++ base constructor and vtable.
+    if (i_this) {
+        dEnvSe_processConstruct(i_this);
+        i_this->__vtbl = 0x1004CC8C;
+    }
+    return cPhs_COMPLEATE_e;
 }
-VERIFY(0x025302DC,Create);
-static void sinit(){
-    WWHD_FUNC(0x02530320,void,(u32)0);
-    st(0x10475848,0);st(0x10475840,0);st(0x1047584C,0);st(0x10475844,0);
-    gabi::call(0x028F026C,0x101D61A8);
-    f32 a=gabi::load<f32>(0x1004CCA4),b=gabi::load<f32>(0x1004CCA8);
-    gabi::store<f32>(0x10475834,a);gabi::store<f32>(0x10475838,b);
-    gabi::call(0x028ED6F8,0x1047583C);gabi::call(0x028F026C,0x101D61B4);
-    gabi::call(0x028EAB2C,0x1047583D);gabi::call(0x028F026C,0x101D61C0);
+
+/* ---- HD: compiler-generated header statics ---- */
+/* 02530320 */
+static void __sinit_d_envse_cpp() {
+    sinit_header_statics_rodata(0x10475834, 0x101D61A8, 0x10475840, 0x1004CCA4);
 }
-VERIFY(0x02530320,sinit);
-}
+/* WWHD glue
+data l_maxDistance 1004CC70
+ext 028E8DE8 f64 dEnvSe_squareDistance(const cXyz* a, const cXyz* b)
+ext 0201883C void dEnvSe_setLine(cM3dGLin* line, const cXyz* start, const cXyz* end)
+ext 02010AE4 u32 dEnvSe_projectLine(cM3dGLin* line, const cXyz* point, cXyz* out, be<f32>* distance)
+ext 0201AD78 void dEnvSe_addEye(const cXyz* a, cXyz* out, const cXyz* b)
+ext 025C11DC dEnvSe_roomDt* dEnvSe_getStatusRoomDt(void* control, s32 room)
+ext 025AAF88 path_layout::dPath* dEnvSe_getRoomPath(u32 index, s32 room)
+ext 025AB070 path_layout::dPath* dPath_GetNextRoomPath(path_layout::dPath* path, s32 room)
+ext 02520540 u32 dEnvSe_getReverb(s32 room)
+ext 025E1B70 void mDoAud_initSeaEnvPos()
+ext 025E1B7C void mDoAud_registSeaEnvPos(cXyz* pos)
+ext 025E1B8C void mDoAud_seaEnvSePlay(u32 value)
+ext 025E1BA0 void mDoAud_startSeaShoreSE(cXyz* pos, u32 value)
+ext 025E1BB8 void mDoAud_continueSeaShoreSE(cXyz* pos, u32 value)
+ext 025E1BD0 void mDoAud_registRiverPos(cXyz* pos)
+ext 025E1BE0 void mDoAud_riverSePlay(u32 value, u32 reverb)
+ext 025E1BF8 void mDoAud_initRiverPos()
+ext 025E1C04 void mDoAud_waterfallSePlay(u32 value, cXyz* pos, u32 reverb)
+ext 025E1C20 void mDoAud_initWindowPos()
+ext 025E1C2C void mDoAud_registWindowPos(cXyz* pos)
+ext 025DD630 void dEnvSe_processDelete(base_process_class* object, u32 flags)
+ext 025DD5F0 void dEnvSe_processConstruct(base_process_class* object)
+*/

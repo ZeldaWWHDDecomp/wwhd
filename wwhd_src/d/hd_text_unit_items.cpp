@@ -1,621 +1,736 @@
-/* hd_text_unit_items: HD message text builder, part 3: inserted numbers, units, timers and messages
- * (025FD05C..0260001B), WWHD. HD-only code (no GameCube
- * source): written from the WWHD code. See hd_text_unit.cpp. Unit/ruby labels are function-local
- * static SafeStrings ("Unit_*", "Ruby_*" message labels of the "unitString" set). */
-#include "hd_text_unit.h"
+// HD: Message insertions for names, counters, timers, item units, and ruby labels.
+#include "d/hd_text_unit.h"
 
-namespace hd_text_unit {
+using namespace hd_text_unit;
 
-/* 025FD05C: number of the event counter (event reg 0xBEFF) with its unit */
-s32 putEventCount(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FD05C, s32, self, w, pos);
-    const s32 n = putNumberAscii(self, w, pos, s32(eventReg(0xBEFF)), 0, 1);
-    staticStr(0x1048DBFC, 0x1048D890, 0x100E1320, kSafeVt, 0x101F4C28);
-    return n + putUnitString(self, w, pos + n, 0x1048D890);
+static const u16 minuteSeparator[2] = {0x20, 0x0};
+static const u16 spanishMinuteSeparator[4] = {0x20, 0x79, 0x20, 0x0};
+
+static const u16 fallbackMessage[8] = {0x6e, 0x6f, 0x20, 0x6e, 0x61, 0x6d, 0x65, 0x0};
+
+/* number of the event counter (event reg 0xBEFF) with its unit */
+/* 025FD05C */
+s32 hdTextUnit_c::putEventCount(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 n = putAsciiNumberNative(self, w, pos, s32(eventReg(0xBEFF)), 0, 1);
+    staticStr(gabi::ea(&textUnitStatics().eventCountUnitGuard), gabi::ea(&textUnitStatics().eventCountUnit), gabi::guest_addr("Unit_Hatu_00"), kSafeVt, staticRecordAddress(RECORD_eventCountUnit));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().eventCountUnit));
 }
-VERIFY(0x025FD05C, putEventCount);
 
-/* 025FD124: number + unit (singular for 1) */
-s32 putBombCount(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FD124, s32, self, w, pos);
-    const s32 v = s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0));
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    staticPair(0x1048DC00, 0x1048D974, 0x100E1330, 0x100E1340, 0x101F4C34);
-    return n + putUnitString(self, w, pos + n, 0x1048D974 + (v == 1 ? 0u : 8u));
+/* number + unit (singular for 1) */
+/* 025FD124 */
+s32 hdTextUnit_c::putRupeeCount(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 v = s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter));
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    staticPair(gabi::ea(&textUnitStatics().rupeeUnitsGuard), gabi::ea(&textUnitStatics().rupeeUnits), gabi::guest_addr("Unit_Rupee_00"), gabi::guest_addr("Unit_Rupee_01"), staticRecordAddress(RECORD_rupeeUnits));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().rupeeUnits) + (v == 1 ? 0u : 8u));
 }
-VERIFY(0x025FD124, putBombCount);
 
-/* 025FD22C: a tag inside an inserted message: handled by the tag processor, else copied as is;
+/* a tag inside an inserted message: handled by the tag processor, else copied as is;
  * returns the text after it (0 when the box is full) */
-u32 putTag(u32 self, u32 w, u32 posp, u32 tag, u32 ctx) {
-    WWHD_FUNC(0x025FD22C, u32, self, w, posp, tag, ctx);
-    const u32 c = load<u16>(tag);
+/* 025FD22C */
+u32 hdTextUnit_c::putTag(hdUnitBufferedString_c* i_string, be<u32>* i_position, u32 tag, u32 ctx) {
+    be<u32>& position = *i_position;
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const u32 c = u16(tagAt(tag).mCode);
     u32 next, hdr;
-    if (c == 0xE) {
-        next = tag + load<u16>(tag + 6) + 8;
+    if (c == hdUnitTag_c::BEGIN_TAG) {
+        next = tag + u16(tagAt(tag).mParamSize) + 8;
         hdr = tag;
-    } else if (c == 0xF) {
+    } else if (c == hdUnitTag_c::END_TAG) {
         hdr = tag;
         next = tag + 6;
     } else {
         hdr = 0;
         next = tag;
     }
-    s32 r = s32(call<u32>(0x026005F8, self, w, load<u32>(posp), hdr, tag, ctx));
+    s32 r = s32(textUnitNative_tagDispatch_6(self, w, u32(position), hdr, tag, ctx));
     if (r < 0) {
-        Local<u32[2]> T;
-        store<u32>(T.a, tag);
-        store<u32>(T.a + 4, kWSafeVt);
+        Local<hdUnitSafeString_c> T;
+        stringAt(T.a).mBuffer = tag;
+        stringAt(T.a).mVtable = kWSafeVt;
         r = s32(next - tag) >> 1;
-        wcopyAt(w, s32(load<u32>(posp)), T.a, r);
+        wcopyAt(w, s32(u32(position)), T.a, r);
     }
-    const u32 p = load<u32>(posp) + u32(r);
-    store<u32>(posp, p);
-    if (call<u32>(0x025FBE54, self, w, p - 1, next)) return 0;
+    const u32 p = u32(position) + u32(r);
+    position = p;
+    if (textUnitNative_boxFull_4(self, w, p - 1, next)) return 0;
     return next;
 }
-VERIFY(0x025FD22C, putTag);
 
-/* 025FD46C: puts a message text (characters and tags); returns the number of characters */
-s32 putText(u32 self, u32 w, s32 pos, u32 text, u32 ctx) {
-    WWHD_FUNC(0x025FD46C, s32, self, w, pos, text, ctx);
-    Local<u32> P;
-    store<u32>(P.a, u32(pos));
+/* puts a message text (characters and tags); returns the number of characters */
+/* 025FD46C */
+s32 hdTextUnit_c::putText(hdUnitBufferedString_c* i_string, s32 pos, u32 text, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    Local<be<u32>> P;
+    *P.get() = u32(pos);
     if (!text) return 0;
     const s32 start = pos;
     u32 c = load<u16>(text);
     while (c) {
-        if (c == 0xE || c == 0xF) {
-            text = putTag(self, w, P.a, text, ctx);
+        if (c == hdUnitTag_c::BEGIN_TAG || c == hdUnitTag_c::END_TAG) {
+            text = putTag(gabi::at<hdUnitBufferedString_c>(w), P.get(), text, ctx);
             if (!text) break;
             c = load<u16>(text);
         } else {
-            const s32 r = s32(call<u32>(0x025FC1F4, self, w, load<u32>(P.a), text));
+            const s32 r = s32(textUnitNative_putChar_4(self, w, u32(*P.get()), text));
             if (r < 0) break;
-            store<u32>(P.a, load<u32>(P.a) + u32(r));
+            *P.get() = u32(*P.get()) + u32(r);
             text += 2;
             c = load<u16>(text);
         }
     }
-    return s32(load<u32>(P.a)) - start;
+    return s32(u32(*P.get())) - start;
 }
-VERIFY(0x025FD46C, putText);
 
-/* 025FD550: puts the message with that number (id 0: the fallback text) */
-s32 putMessageByIdF(u32 self, u32 w, s32 pos, u32 id, u32 ctx) {
-    WWHD_FUNC(0x025FD550, s32, self, w, pos, id, ctx);
+/* puts the message with that number (id 0: the fallback text) */
+/* 025FD550 */
+s32 hdTextUnit_c::putMessage(hdUnitBufferedString_c* i_string, s32 pos, u32 id, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
     s32 r = 0;
     if (!id) {
-        staticStr(0x1048DC04, 0x1048D958, 0x100E135C, kWSafeVt, 0x101F4C40);
-        vAssure(0x1048D958);
-        const s32 n = wcsLength(load<u32>(0x1048D958));
-        vAssure(0x1048D958);
-        if (s32(call<u32>(0x025FC3D0, self, w, u32(pos), load<u32>(0x1048D958), u32(n))) == n) r = n;
+        staticStr(gabi::ea(&textUnitStatics().fallbackTextGuard), gabi::ea(&textUnitStatics().fallbackText), gabi::ea(fallbackMessage), kWSafeVt, staticRecordAddress(RECORD_fallbackText));
+        vAssure(gabi::ea(&textUnitStatics().fallbackText));
+        const s32 n = wcsLength(u32(textUnitStatics().fallbackText.mBuffer));
+        vAssure(gabi::ea(&textUnitStatics().fallbackText));
+        if (s32(textUnitNative_putCharacters_5(self, w, u32(pos), u32(textUnitStatics().fallbackText.mBuffer), u32(n))) == n) r = n;
         return r;
     }
-    const u32 Q = 0x1048DA94;
-    Local<u8[0x924]> M;
-    if (!load<u32>(0x1048DC08)) {
+    const u32 Q = gabi::ea(&textUnitStatics().setName);
+    Local<HdMsgText> M;
+    if (!u32(textUnitStatics().setNameGuard)) {
         /* the static FixedSafeString<1> set name "" */
-        const u32 buf = Q + 0xC;
-        store<u8>(buf, 0);
-        store<u32>(Q + 4, 0x100E1080);
-        store<u32>(Q, buf);
-        store<u32>(Q + 8, 1);
-        Local<u32[2]> T;
-        store<u32>(T.a + 4, kSafeVt);
-        store<u32>(0x1048DC08, 1);
-        store<u32>(T.a, 0x100E1350);
-        call<void>(kNoAssure, T.a);
-        s32 n = cstrLength(load<u32>(T.a));
-        if (n >= s32(load<u32>(Q + 8))) n = s32(load<u32>(Q + 8)) - 1;
+        const u32 buf = gabi::ea(textUnitStatics().setName.mBuffer);
+        textUnitStatics().setName.mBuffer[0] = 0;
+        stringAt(Q).mVtable = kBufferedString1Vt;
+        stringAt(Q).mBuffer = buf;
+        bufferAt(Q).mCapacity = 1;
+        Local<hdUnitSafeString_c> T;
+        stringAt(T.a).mVtable = kSafeVt;
+        textUnitStatics().setNameGuard = 1;
+        stringAt(T.a).mBuffer = gabi::guest_addr("");
+        textUnitNative_assureString_1(T.a);
+        s32 n = cstrLength(u32(stringAt(T.a).mBuffer));
+        if (n >= s32(u32(bufferAt(Q).mCapacity))) n = s32(u32(bufferAt(Q).mCapacity)) - 1;
         vAssure(T.a);
-        call<void>(kMove, buf, load<u32>(T.a), u32(n), 0u);
+        textUnitNative_moveBytes_4(buf, u32(stringAt(T.a).mBuffer), u32(n), 0u);
         store<u8>(buf + n, 0);
-        store<u32>(Q + 4, 0x100E1098);
-        call<void>(0x028F026C, 0x101F4C4Cu);
+        stringAt(Q).mVtable = kFixedString1Vt;
+        textUnitNative_registerGlobalObject_1(staticRecordAddress(RECORD_setName));
     }
-    call<void>(0x025F65F4, M.a);
-    Local<u8[0x110]> F;
-    const u32 S = F.a, Sbuf = F.a + 0xC;
-    store<u8>(Sbuf + 0xFF, 0);
-    store<u8>(Sbuf, 0);
-    store<u32>(S, Sbuf);
-    store<u32>(S + 8, 0x100);
-    store<u32>(S + 4, 0x100E0FF0);
-    call<void>(0x02759C28, S, 0x100E1354u, id & 0xFFFF);
-    call<void>(0x025F50E8, load<u32>(0x101F4AE8), M.a, Q, S);
-    const u32 set = load<u32>(M.a + 8);
+    textUnitNative_constructMessage_1(M.a);
+    Local<hdUnitFormatFrame_c> F;
+    const u32 S = gabi::ea(&F.get()->mHeader), Sbuf = gabi::ea(F.get()->mBuffer);
+    F.get()->mBuffer[255] = 0;
+    F.get()->mBuffer[0] = 0;
+    stringAt(S).mBuffer = Sbuf;
+    bufferAt(S).mCapacity = 0x100;
+    stringAt(S).mVtable = kBufferedString256Vt;
+    textUnitNative_formatString_3(S, gabi::guest_addr("%05d"), id & 0xFFFF);
+    textUnitNative_loadMessage_4(resourceManagerAddress(), M.a, Q, S);
+    const u32 set = gabi::ea(M.get()->mpMessageSet.get());
     if (!set) return 0;
-    const u32 li = load<u32>(M.a + 0x118);
-    if (li >= load<u32>(set + 4)) return 0;
-    const u32 txt = call<u32>(0x0273A2E8, load<u32>(set), li);
+    const u32 li = u32(M.get()->mLabelIndex);
+    if (li >= u32(gabi::at<HdMsgSet>(set)->mEntryCount)) return 0;
+    const u32 txt = textUnitNative_getLabelText_2(gabi::ea(gabi::at<HdMsgSet>(set)->mpData.get()), li);
     if (!txt) return 0;
-    return putText(self, w, pos, txt, ctx);
+    return putText(gabi::at<hdUnitBufferedString_c>(w), pos, txt, ctx);
 }
-VERIFY(0x025FD550, putMessageByIdF);
 
-/* 025FD800 / 025FD86C: messages whose numbers are kept in the play info */
-s32 putPlayMessage1(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FD800, s32, self, w, pos, ctx);
-    const u32 id = load<u32>(call<u32>(0x025200D4) + 0x5B54);
-    return putMessageByIdF(self, w, pos, id, ctx);
-}
-VERIFY(0x025FD800, putPlayMessage1);
-s32 putPlayMessage2(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FD86C, s32, self, w, pos, ctx);
-    const u32 id = load<u32>(call<u32>(0x025200D4) + 0x5B58);
-    return putMessageByIdF(self, w, pos, id, ctx);
-}
-VERIFY(0x025FD86C, putPlayMessage2);
+/* messages whose numbers are kept in the play info */
+/* 025FD800 */
+s32 hdTextUnit_c::putPlayMessage1(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
 
-/* 025FD8D8: sword-game digits (full-width, the highlighted digit marked for the layout) */
-s32 putSwordGameDigits(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FD8D8, s32, self, w, pos);
-    staticStr(0x1048DC0C, 0x1048D898, 0x100E136C, kSafeVt, 0x101F4C58);
-    store<u32>(msg(self) + 0x6B8, 3);
-    store<u32>(msg(self), 0x15);
-    const u32 LABEL = 0x1048D898;
-    Local<u8[0x28]> F; /* +0 WFixedSafeString<4> (buffer +0xC), +0x14 digit chars[4], +0x1C WSafeString */
-    const u32 W = F.a, Wbuf = F.a + 0xC, DG = F.a + 0x14, T = F.a + 0x1C;
+    const u32 id = u32(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mMessage1);
+    return putMessage(gabi::at<hdUnitBufferedString_c>(w), pos, id, ctx);
+}
+/* 025FD86C */
+s32 hdTextUnit_c::putPlayMessage2(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+
+    const u32 id = u32(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mMessage2);
+    return putMessage(gabi::at<hdUnitBufferedString_c>(w), pos, id, ctx);
+}
+
+/* sword-game digits (full-width, the highlighted digit marked for the layout) */
+/* 025FD8D8 */
+s32 hdTextUnit_c::putSwordGameDigits(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().swordGameUnitGuard), gabi::ea(&textUnitStatics().swordGameUnit), gabi::guest_addr("Unit_Rupee_02"), kSafeVt, staticRecordAddress(RECORD_swordGameUnit));
+    messageAt(msg(self)).mCurrentRuby = INSERTION_DIGITS;
+    messageAt(msg(self)).mState = STATE_DIGITS;
+    const u32 LABEL = gabi::ea(&textUnitStatics().swordGameUnit);
+    Local<hdUnitDigitFrame_c> F; /* +0 WFixedSafeString<4> (buffer +0xC), +0x14 digit chars[4], +0x1C WSafeString */
+    const u32 W = gabi::ea(&F.get()->mHeader), Wbuf = gabi::ea(F.get()->mBuffer);
+    const u32 T = gabi::ea(&F.get()->mString);
     s32 total = 0;
-    const u32 set = call<u32>(0x025F4CFC, load<u32>(0x101F4AE8));
+    const u32 set = textUnitNative_getUnitSet_1(resourceManagerAddress());
     if (!set) return 0;
     vAssure(LABEL);
-    const u32 li = call<u32>(0x0273A1CC, load<u32>(set), load<u32>(LABEL));
+    const u32 li = textUnitNative_findLabel_2(gabi::ea(gabi::at<HdMsgSet>(set)->mpData.get()), u32(stringAt(LABEL).mBuffer));
     u32 txt = 0;
-    if (li < load<u32>(set + 4)) txt = call<u32>(0x0273A2E8, load<u32>(set), li);
-    store<u32>(T, txt);
-    store<u32>(T + 4, kWSafeVt);
-    s32 digits = s32(call<u32>(0x025FCDE0, self, T));
-    store<u16>(Wbuf + 6, 0);
-    store<u32>(W, Wbuf);
-    store<u32>(W + 8, 4);
-    store<u16>(Wbuf, 0);
-    store<u32>(W + 4, 0x100E1068);
-    s32 v = s32(load<s16>(call<u32>(0x025200D4) + 0x5BA2));
+    if (li < u32(gabi::at<HdMsgSet>(set)->mEntryCount)) txt = textUnitNative_getLabelText_2(gabi::ea(gabi::at<HdMsgSet>(set)->mpData.get()), li);
+    stringAt(T).mBuffer = txt;
+    stringAt(T).mVtable = kWSafeVt;
+    s32 digits = s32(textUnitNative_leadingZeros_2(self, T));
+    F.get()->mBuffer[3] = 0;
+    stringAt(W).mBuffer = Wbuf;
+    bufferAt(W).mCapacity = 4;
+    F.get()->mBuffer[0] = 0;
+    stringAt(W).mVtable = kWideFixedString4Vt;
+    s32 v = s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mDigitCounter));
     for (s32 k = 0; k < digits; k++) {
         const s32 d = v % 10;
-        store<u16>(u32(k) < 4 ? DG + u32(k) * 2 : DG, u16(0xFF10 + d));
+        F.get()->mDigitChars[u32(k) < 4 ? u32(k) : 0] = u16(0xFF10 + d);
         v = v / 10;
     }
-    const s32 sel = digits - s32(load<u32>(load<u32>(0x101F4B5C) + 0x948)) - 1;
+    const s32 sel = digits - s32(selectedDigit()) - 1;
     s32 pending = 0;
     s32 idx = digits - 1;
     for (s32 i = 0; digits > 0; digits--, i++, idx--) {
         if (u32(i) == u32(sel)) {
             if (pending > 0) {
                 vAssure(W);
-                putChars(self, w, pos, load<u32>(W), pending);
+                putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
                 pos += pending;
                 total += pending;
                 pending = 0;
-                store<u16>(load<u32>(W), 0);
+                store<u16>(u32(stringAt(W).mBuffer), 0);
             }
             u32 m = msg(self);
-            store<f32>(m + 0x8F0, load<f32>(m + 0x8EC));
+            messageAt(m).mPreviousLineWidth = f32(messageAt(m).mCurrentLineWidth);
             m = msg(self);
-            store<u32>(m + 0x8F4, load<u32>(m + 0x644));
+            messageAt(m).mCurrentLine = u32(messageAt(m).mLineCount);
         }
-        const u16 ch = load<u16>(u32(idx) < 4 ? DG + u32(idx) * 2 : DG);
+        const u16 ch = u16(F.get()->mDigitChars[u32(idx) < 4 ? u32(idx) : 0]);
         vAssure(W);
-        const u32 top = load<u32>(W);
+        const u32 top = u32(stringAt(W).mBuffer);
         const s32 len = wcsLength(top);
-        if (len < s32(load<u32>(W + 8)) - 1) {
+        if (len < s32(u32(bufferAt(W).mCapacity)) - 1) {
             store<u16>(top + u32(len) * 2, ch);
             store<u16>(top + u32(len) * 2 + 2, 0);
         }
         pending++;
         if (u32(i) == u32(sel)) {
             vAssure(W);
-            putChars(self, w, pos, load<u32>(W), pending);
+            putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
             pos += pending;
             total += pending;
-            store<u16>(load<u32>(W), 0);
+            store<u16>(u32(stringAt(W).mBuffer), 0);
             pending = 0;
         }
     }
     if (pending > 0) {
         vAssure(W);
-        putChars(self, w, pos, load<u32>(W), pending);
+        putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
         total += pending;
         pos += pending;
     }
-    return total + putUnitString(self, w, pos, LABEL);
+    return total + putLocalizedUnitNative(self, w, pos, LABEL);
 }
-VERIFY(0x025FD8D8, putSwordGameDigits);
 
-/* 025FDD08: number + unit (singular for 1); the ruby label is not used */
-s32 putNumberUnitF(u32 self, u32 w, s32 pos, s32 v, u32 ruby, u32 units) {
-    WWHD_FUNC(0x025FDD08, s32, self, w, pos, v, ruby, units);
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    return n + putUnitString(self, w, pos + n, units + (v == 1 ? 0u : 8u));
+/* number + unit (singular for 1); the ruby label is not used */
+/* 025FDD08 */
+s32 hdTextUnit_c::putNumberWithUnit(hdUnitBufferedString_c* i_string, s32 pos, s32 v, u32 ruby, u32 units) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    return n + putLocalizedUnitNative(self, w, pos + n, units + (v == 1 ? 0u : 8u));
 }
-VERIFY(0x025FDD08, putNumberUnitF);
 
-/* 025FDD80: number + unit with ruby */
-s32 putBlows(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FDD80, s32, self, w, pos);
-    staticStr(0x1048DC10, 0x1048D8A0, 0x100E137C, kSafeVt, 0x101F4C64);
-    staticPair(0x1048DC14, 0x1048D984, 0x100E1394, 0x100E13A4, 0x101F4C70);
-    return putNumberUnit(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0)), 0x1048D8A0, 0x1048D984);
+/* number + unit with ruby */
+/* 025FDD80 */
+s32 hdTextUnit_c::putBlows(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().blowsRubyGuard), gabi::ea(&textUnitStatics().blowsRuby), gabi::guest_addr("Ruby_SwordGameBlows_00"), kSafeVt, staticRecordAddress(RECORD_blowsRuby));
+    staticPair(gabi::ea(&textUnitStatics().blowUnitsGuard), gabi::ea(&textUnitStatics().blowUnits), gabi::guest_addr("Unit_Blow_00"), gabi::guest_addr("Unit_Blow_01"), staticRecordAddress(RECORD_blowUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter)), gabi::ea(&textUnitStatics().blowsRuby), gabi::ea(&textUnitStatics().blowUnits));
 }
-VERIFY(0x025FDD80, putBlows);
 
-/* 025FDEAC: message selected by event reg 0xBA0F (+0x1B37) */
-s32 putEventMessage(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FDEAC, s32, self, w, pos, ctx);
-    return putMessageByIdF(self, w, pos, eventReg(0xBA0F) + 0x1B37, ctx);
+/* message selected by event reg 0xBA0F (+0x1B37) */
+/* 025FDEAC */
+s32 hdTextUnit_c::putEventMessage(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+
+    return putMessage(gabi::at<hdUnitBufferedString_c>(w), pos, eventReg(0xBA0F) + 0x1B37, ctx);
 }
-VERIFY(0x025FDEAC, putEventMessage);
 
 /* 025FDF28 / 025FDF8C / 025FE000: plain numbers */
-s32 putPlayCount2(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FDF28, s32, self, w, pos);
-    return putNumberAscii(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5CEC)), 0, 1);
+/* 025FDF28 */
+s32 hdTextUnit_c::putPlayCount2(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    return putAsciiNumberNative(self, w, pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter2)), 0, 1);
 }
-VERIFY(0x025FDF28, putPlayCount2);
-s32 putEvent8AFF(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FDF8C, s32, self, w, pos);
-    return putNumberAscii(self, w, pos, s32(eventReg(0x8AFF)), 0, 1);
+/* 025FDF8C */
+s32 hdTextUnit_c::putEvent8AFF(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    return putAsciiNumberNative(self, w, pos, s32(eventReg(0x8AFF)), 0, 1);
 }
-VERIFY(0x025FDF8C, putEvent8AFF);
-s32 putPlayCount(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE000, s32, self, w, pos);
-    return putNumberAscii(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0)), 0, 1);
+/* 025FE000 */
+s32 hdTextUnit_c::putPlayCount(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    return putAsciiNumberNative(self, w, pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter)), 0, 1);
 }
-VERIFY(0x025FE000, putPlayCount);
 
-/* 025FE064: ten times the play counter with its unit */
-s32 putPlayCountX10(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE064, s32, self, w, pos);
-    staticPair(0x1048DC18, 0x1048D994, 0x100E13B4, 0x100E13C4, 0x101F4C7C);
-    return putNumberUnit(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0)) * 10, 0, 0x1048D994);
+/* ten times the play counter with its unit */
+/* 025FE064 */
+s32 hdTextUnit_c::putPlayCountX10(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticPair(gabi::ea(&textUnitStatics().countX10UnitsGuard), gabi::ea(&textUnitStatics().countX10Units), gabi::guest_addr("Unit_Rupee_00"), gabi::guest_addr("Unit_Rupee_01"), staticRecordAddress(RECORD_countX10Units));
+    return putNumberWithUnitNative(self, w, pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter)) * 10, 0, gabi::ea(&textUnitStatics().countX10Units));
 }
-VERIFY(0x025FE064, putPlayCountX10);
 
-/* 025FE158: number + unit with ruby */
-s32 putLetters(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE158, s32, self, w, pos);
-    staticStr(0x1048DC1C, 0x1048D8A8, 0x100E13D4, kSafeVt, 0x101F4C88);
-    staticPair(0x1048DC20, 0x1048D9A4, 0x100E13E4, 0x100E13F4, 0x101F4C94);
-    return putNumberUnit(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0)), 0x1048D8A8, 0x1048D9A4);
+/* number + unit with ruby */
+/* 025FE158 */
+s32 hdTextUnit_c::putLetters(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().lettersRubyGuard), gabi::ea(&textUnitStatics().lettersRuby), gabi::guest_addr("Ruby_Letter_00"), kSafeVt, staticRecordAddress(RECORD_lettersRuby));
+    staticPair(gabi::ea(&textUnitStatics().letterUnitsGuard), gabi::ea(&textUnitStatics().letterUnits), gabi::guest_addr("Unit_Letter_00"), gabi::guest_addr("Unit_Letter_01"), staticRecordAddress(RECORD_letterUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter)), gabi::ea(&textUnitStatics().lettersRuby), gabi::ea(&textUnitStatics().letterUnits));
 }
-VERIFY(0x025FE158, putLetters);
 
-/* 025FE284: number + unit (singular for 1) */
-s32 putArrowCount(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE284, s32, self, w, pos);
-    const s32 v = s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0));
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    staticPair(0x1048DC24, 0x1048D9B4, 0x100E1404, 0x100E1414, 0x101F4CA0);
-    return n + putUnitString(self, w, pos + n, 0x1048D9B4 + (v == 1 ? 0u : 8u));
+/* number + unit (singular for 1) */
+/* 025FE284 */
+s32 hdTextUnit_c::putKorokCount(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 v = s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter));
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    staticPair(gabi::ea(&textUnitStatics().korokUnitsGuard), gabi::ea(&textUnitStatics().korokUnits), gabi::guest_addr("Unit_Korg_00"), gabi::guest_addr("Unit_Korg_01"), staticRecordAddress(RECORD_korokUnits));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().korokUnits) + (v == 1 ? 0u : 8u));
 }
-VERIFY(0x025FE284, putArrowCount);
 
-/* 025FE38C: a time (frames at 30 per second) as minutes and seconds, per language */
-s32 putTimeF(u32 self, u32 w, s32 pos, s32 frames) {
-    WWHD_FUNC(0x025FE38C, s32, self, w, pos, frames);
+/* a time (frames at 30 per second) as minutes and seconds, per language */
+/* 025FE38C */
+s32 hdTextUnit_c::putTimer(hdUnitBufferedString_c* i_string, s32 pos, s32 frames) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
     const s32 minutes = frames / 1800;
     const s32 rem = frames - minutes * 1800;
     s32 secs = s32(u32(rem) * 0x4445) / 0x80000;
     if (!(minutes | secs)) secs = 1;
     s32 total = 0;
-    const u32 cfg = 0x101F4BAC;
-    u32 lang = load<u32>(load<u32>(cfg) + 0x14);
+    u32 lang = messageLanguage();
     if (lang == 1 || lang == 3) {
-        total = putNumberAscii(self, w, pos, minutes, 0, 1);
+        total = putAsciiNumberNative(self, w, pos, minutes, 0, 1);
         pos += total;
     } else if (minutes > 0) {
-        const s32 n = putNumberAscii(self, w, pos, minutes, 0, 1);
+        const s32 n = putAsciiNumberNative(self, w, pos, minutes, 0, 1);
         pos += n;
         total = n;
     }
-    staticPair(0x1048DC28, 0x1048DAA4, 0x100E1430, 0x100E1440, 0x101F4CAC);
-    lang = load<u32>(load<u32>(cfg) + 0x14);
+    staticPair(gabi::ea(&textUnitStatics().minuteUnitsGuard), gabi::ea(&textUnitStatics().minuteUnits), gabi::guest_addr("Unit_Minute_00"), gabi::guest_addr("Unit_Minute_01"), staticRecordAddress(RECORD_minuteUnits));
+    lang = messageLanguage();
     if (lang == 1 || lang == 3) {
-        const s32 r = putUnitString(self, w, pos, 0x1048DAA4);
+        const s32 r = putLocalizedUnitNative(self, w, pos, gabi::ea(&textUnitStatics().minuteUnits));
         pos += r;
         total += r;
-        lang = load<u32>(load<u32>(cfg) + 0x14);
+        lang = messageLanguage();
     } else if (minutes > 0) {
-        const s32 r = putUnitString(self, w, pos, 0x1048DAA4 + (minutes > 1 ? 8u : 0u));
+        const s32 r = putLocalizedUnitNative(self, w, pos, gabi::ea(&textUnitStatics().minuteUnits) + (minutes > 1 ? 8u : 0u));
         pos += r;
-        lang = load<u32>(load<u32>(cfg) + 0x14);
+        lang = messageLanguage();
         total += r;
     }
     if (lang == 1 || lang == 3) {
-        const s32 n = putNumberAscii(self, w, pos, secs, 2, 0);
+        const s32 n = putAsciiNumberNative(self, w, pos, secs, 2, 0);
         total += n;
         pos += n;
     } else if (!minutes) {
-        const s32 n = putNumberAscii(self, w, pos, secs, 2, 0);
+        const s32 n = putAsciiNumberNative(self, w, pos, secs, 2, 0);
         total += n;
         pos += n;
     } else if (secs) {
-        if (!load<u32>(0x1048DC2C)) {
-            const u32 lits[2] = {0x100E142C, 0x100E1424};
-            staticArr(0x1048DC2C, 0x1048DAB4, lits, 2, kWSafeVt, 0x101F4CB8);
-            lang = load<u32>(load<u32>(cfg) + 0x14);
+        if (!u32(textUnitStatics().separatorsGuard)) {
+            const u32 lits[2] = {gabi::ea(minuteSeparator), gabi::ea(spanishMinuteSeparator)};
+            staticArr(gabi::ea(&textUnitStatics().separatorsGuard), gabi::ea(&textUnitStatics().separators), lits, 2, kWSafeVt, staticRecordAddress(RECORD_separators));
+            lang = messageLanguage();
         }
-        const u32 sep = 0x1048DAB4 + (lang == 5 ? 8u : 0u);
+        const u32 sep = gabi::ea(&textUnitStatics().separators) + (lang == 5 ? 8u : 0u);
         vAssure(sep);
-        const s32 len = wcsLength(load<u32>(sep));
+        const s32 len = wcsLength(u32(stringAt(sep).mBuffer));
         vAssure(sep);
-        if (putChars(self, w, pos, load<u32>(sep), len) != len) return total;
+        if (putCharactersNative(self, w, pos, u32(stringAt(sep).mBuffer), len) != len) return total;
         total += len;
         pos += len;
-        const s32 n = putNumberAscii(self, w, pos, secs, 2, 0);
+        const s32 n = putAsciiNumberNative(self, w, pos, secs, 2, 0);
         total += n;
         pos += n;
     }
-    staticPair(0x1048DC30, 0x1048DAC4, 0x100E1450, 0x100E1460, 0x101F4CC4);
-    lang = load<u32>(load<u32>(cfg) + 0x14);
+    staticPair(gabi::ea(&textUnitStatics().secondUnitsGuard), gabi::ea(&textUnitStatics().secondUnits), gabi::guest_addr("Unit_Second_00"), gabi::guest_addr("Unit_Second_01"), staticRecordAddress(RECORD_secondUnits));
+    lang = messageLanguage();
     if (lang == 1) return total;
-    if (lang == 3) return total + putUnitString(self, w, pos, 0x1048DAC4);
-    if (secs > 0) total += putUnitString(self, w, pos, 0x1048DAC4 + (secs > 1 ? 8u : 0u));
+    if (lang == 3) return total + putLocalizedUnitNative(self, w, pos, gabi::ea(&textUnitStatics().secondUnits));
+    if (secs > 0) total += putLocalizedUnitNative(self, w, pos, gabi::ea(&textUnitStatics().secondUnits) + (secs > 1 ? 8u : 0u));
     return total;
 }
-VERIFY(0x025FE38C, putTimeF);
 
-/* 025FE7F4 / 025FECF4: timers */
-s32 putSaveTimer(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE7F4, s32, self, w, pos);
-    return putTimeF(self, w, pos, s32(call<u32>(0x025B61C8, saveInfo() + 0x86)));
-}
-VERIFY(0x025FE7F4, putSaveTimer);
-s32 putPlayTimer(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FECF4, s32, self, w, pos);
-    return putTimeF(self, w, pos, s32(load<s16>(call<u32>(0x025200D4) + 0x5BAA)));
-}
-VERIFY(0x025FECF4, putPlayTimer);
+/* timers */
+/* 025FE7F4 */
+s32 hdTextUnit_c::putSaveTimer(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
 
-/* 025FE858: number + unit (singular for 1) */
-s32 putCountE858(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE858, s32, self, w, pos);
-    const s32 v = s32(load<s16>(call<u32>(0x025200D4) + 0x5BA0));
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    staticPair(0x1048DC34, 0x1048D9C4, 0x100E1470, 0x100E1480, 0x101F4CD0);
-    return n + putUnitString(self, w, pos + n, 0x1048D9C4 + (v == 1 ? 0u : 8u));
+    return putTimer(gabi::at<hdUnitBufferedString_c>(w), pos, s32(textUnitNative_getTimer_1(gabi::ea(&gabi::at<hdUnitSaveInfo_c>(saveInfo())->mTimer))));
 }
-VERIFY(0x025FE858, putCountE858);
+/* 025FECF4 */
+s32 hdTextUnit_c::putPlayTimer(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
 
-/* 025FE960: number + unit (singular for 1) */
-s32 putEvent86FF(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FE960, s32, self, w, pos);
+    return putTimer(gabi::at<hdUnitBufferedString_c>(w), pos, s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mTimer)));
+}
+
+/* number + unit (singular for 1) */
+/* 025FE858 */
+s32 hdTextUnit_c::putMeters(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 v = s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mCounter));
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    staticPair(gabi::ea(&textUnitStatics().meterUnitsGuard), gabi::ea(&textUnitStatics().meterUnits), gabi::guest_addr("Unit_Meter_00"), gabi::guest_addr("Unit_Meter_01"), staticRecordAddress(RECORD_meterUnits));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().meterUnits) + (v == 1 ? 0u : 8u));
+}
+
+/* number + unit (singular for 1) */
+/* 025FE960 */
+s32 hdTextUnit_c::putEvent86FF(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
     const s32 v = s32(eventReg(0x86FF));
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    staticPair(0x1048DC38, 0x1048D9D4, 0x100E1490, 0x100E14A0, 0x101F4CDC);
-    return n + putUnitString(self, w, pos + n, 0x1048D9D4 + (v == 1 ? 0u : 8u));
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    staticPair(gabi::ea(&textUnitStatics().event86FFUnitsGuard), gabi::ea(&textUnitStatics().event86FFUnits), gabi::guest_addr("Unit_Point_00"), gabi::guest_addr("Unit_Point_01"), staticRecordAddress(RECORD_event86FFUnits));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().event86FFUnits) + (v == 1 ? 0u : 8u));
 }
-VERIFY(0x025FE960, putEvent86FF);
 
-/* 025FEA7C: number + unit with ruby */
-s32 putPendantsC3(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FEA7C, s32, self, w, pos);
-    staticStr(0x1048DC3C, 0x1048D8B0, 0x100E14B0, kSafeVt, 0x101F4CE8);
-    staticPair(0x1048DC40, 0x1048D9E4, 0x100E14C0, 0x100E14D0, 0x101F4CF4);
-    return putNumberUnit(self, w, pos, s32(load<u8>(saveInfo() + 0xC3)), 0x1048D8B0, 0x1048D9E4);
+/* number + unit with ruby */
+/* 025FEA7C */
+s32 hdTextUnit_c::putSavedPendants(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().savedPendantsRubyGuard), gabi::ea(&textUnitStatics().savedPendantsRuby), gabi::guest_addr("Ruby_Pendant_00"), kSafeVt, staticRecordAddress(RECORD_savedPendantsRuby));
+    staticPair(gabi::ea(&textUnitStatics().savedPendantsUnitsGuard), gabi::ea(&textUnitStatics().savedPendantsUnits), gabi::guest_addr("Unit_Pendant_00"), gabi::guest_addr("Unit_Pendant_01"), staticRecordAddress(RECORD_savedPendantsUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(gabi::at<hdUnitSaveInfo_c>(saveInfo())->mPendantCount)), gabi::ea(&textUnitStatics().savedPendantsRuby), gabi::ea(&textUnitStatics().savedPendantsUnits));
 }
-VERIFY(0x025FEA7C, putPendantsC3);
 
-/* 025FEBA8: number + unit with ruby */
-s32 putPendantsEvent(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FEBA8, s32, self, w, pos);
-    staticStr(0x1048DC44, 0x1048D8B8, 0x100E14E0, kSafeVt, 0x101F4D00);
-    staticPair(0x1048DC48, 0x1048D9F4, 0x100E14F0, 0x100E1500, 0x101F4D0C);
-    return putNumberUnit(self, w, pos, s32(eventReg(0xC0FF)), 0x1048D8B8, 0x1048D9F4);
+/* number + unit with ruby */
+/* 025FEBA8 */
+s32 hdTextUnit_c::putPendantsEvent(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().pendantsEventRubyGuard), gabi::ea(&textUnitStatics().pendantsEventRuby), gabi::guest_addr("Ruby_Pendant_00"), kSafeVt, staticRecordAddress(RECORD_pendantsEventRuby));
+    staticPair(gabi::ea(&textUnitStatics().pendantsEventUnitsGuard), gabi::ea(&textUnitStatics().pendantsEventUnits), gabi::guest_addr("Unit_Pendant_00"), gabi::guest_addr("Unit_Pendant_01"), staticRecordAddress(RECORD_pendantsEventUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(eventReg(0xC0FF)), gabi::ea(&textUnitStatics().pendantsEventRuby), gabi::ea(&textUnitStatics().pendantsEventUnits));
 }
-VERIFY(0x025FEBA8, putPendantsEvent);
 
-/* 025FED50: number + unit with ruby */
-s32 putBombs90(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FED50, s32, self, w, pos);
-    staticStr(0x1048DC4C, 0x1048D8C0, 0x100E1510, kSafeVt, 0x101F4D18);
-    staticPair(0x1048DC50, 0x1048DA04, 0x100E1520, 0x100E1530, 0x101F4D24);
-    return putNumberUnit(self, w, pos, s32(load<u8>(saveInfo() + 0x90)), 0x1048D8C0, 0x1048DA04);
+/* number + unit with ruby */
+/* 025FED50 */
+s32 hdTextUnit_c::putSavedBombs(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().savedBombsRubyGuard), gabi::ea(&textUnitStatics().savedBombsRuby), gabi::guest_addr("Ruby_Bomb_00"), kSafeVt, staticRecordAddress(RECORD_savedBombsRuby));
+    staticPair(gabi::ea(&textUnitStatics().savedBombsUnitsGuard), gabi::ea(&textUnitStatics().savedBombsUnits), gabi::guest_addr("Unit_Bomb_00"), gabi::guest_addr("Unit_Bomb_01"), staticRecordAddress(RECORD_savedBombsUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(gabi::at<hdUnitSaveInfo_c>(saveInfo())->mBombCount)), gabi::ea(&textUnitStatics().savedBombsRuby), gabi::ea(&textUnitStatics().savedBombsUnits));
 }
-VERIFY(0x025FED50, putBombs90);
 
-/* 025FEE7C: number + unit (singular for 1) */
-s32 putSave8F(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FEE7C, s32, self, w, pos);
-    const s32 v = s32(load<u8>(saveInfo() + 0x8F));
-    const s32 n = putNumberAscii(self, w, pos, v, 0, 1);
-    staticPair(0x1048DC54, 0x1048DA14, 0x100E1540, 0x100E1550, 0x101F4D30);
-    return n + putUnitString(self, w, pos + n, 0x1048DA14 + (v == 1 ? 0u : 8u));
+/* number + unit (singular for 1) */
+/* 025FEE7C */
+s32 hdTextUnit_c::putSavedArrows(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    const s32 v = s32(u8(gabi::at<hdUnitSaveInfo_c>(saveInfo())->mArrowCount));
+    const s32 n = putAsciiNumberNative(self, w, pos, v, 0, 1);
+    staticPair(gabi::ea(&textUnitStatics().savedArrowUnitsGuard), gabi::ea(&textUnitStatics().savedArrowUnits), gabi::guest_addr("Unit_Arrow_00"), gabi::guest_addr("Unit_Arrow_01"), staticRecordAddress(RECORD_savedArrowUnits));
+    return n + putLocalizedUnitNative(self, w, pos + n, gabi::ea(&textUnitStatics().savedArrowUnits) + (v == 1 ? 0u : 8u));
 }
-VERIFY(0x025FEE7C, putSave8F);
 
-/* 025FEF7C: number + unit with ruby */
-s32 putSeeds(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FEF7C, s32, self, w, pos);
-    staticStr(0x1048DC58, 0x1048D8C8, 0x100E1560, kSafeVt, 0x101F4D3C);
-    staticPair(0x1048DC5C, 0x1048DA24, 0x100E1570, 0x100E1580, 0x101F4D48);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8C8, 0x1048DA24);
+/* number + unit with ruby */
+/* 025FEF7C */
+s32 hdTextUnit_c::putSeeds(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().seedsRubyGuard), gabi::ea(&textUnitStatics().seedsRuby), gabi::guest_addr("Ruby_Seed_00"), kSafeVt, staticRecordAddress(RECORD_seedsRuby));
+    staticPair(gabi::ea(&textUnitStatics().seedsUnitsGuard), gabi::ea(&textUnitStatics().seedsUnits), gabi::guest_addr("Unit_Seed_00"), gabi::guest_addr("Unit_Seed_01"), staticRecordAddress(RECORD_seedsUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().seedsRuby), gabi::ea(&textUnitStatics().seedsUnits));
 }
-VERIFY(0x025FEF7C, putSeeds);
 
-/* 025FF0A0: number + unit with ruby */
-s32 putNecklaces(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF0A0, s32, self, w, pos);
-    staticStr(0x1048DC60, 0x1048D8D0, 0x100E1590, kSafeVt, 0x101F4D54);
-    staticPair(0x1048DC64, 0x1048DA34, 0x100E15A4, 0x100E15B8, 0x101F4D60);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8D0, 0x1048DA34);
+/* number + unit with ruby */
+/* 025FF0A0 */
+s32 hdTextUnit_c::putNecklaces(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().necklacesRubyGuard), gabi::ea(&textUnitStatics().necklacesRuby), gabi::guest_addr("Ruby_Necklace_00"), kSafeVt, staticRecordAddress(RECORD_necklacesRuby));
+    staticPair(gabi::ea(&textUnitStatics().necklacesUnitsGuard), gabi::ea(&textUnitStatics().necklacesUnits), gabi::guest_addr("Unit_Necklace_00"), gabi::guest_addr("Unit_Necklace_01"), staticRecordAddress(RECORD_necklacesUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().necklacesRuby), gabi::ea(&textUnitStatics().necklacesUnits));
 }
-VERIFY(0x025FF0A0, putNecklaces);
 
-/* 025FF1C4: number + unit with ruby */
-s32 putChuchus(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF1C4, s32, self, w, pos);
-    staticStr(0x1048DC68, 0x1048D8D8, 0x100E15CC, kSafeVt, 0x101F4D6C);
-    staticPair(0x1048DC6C, 0x1048DA44, 0x100E15DC, 0x100E15EC, 0x101F4D78);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8D8, 0x1048DA44);
+/* number + unit with ruby */
+/* 025FF1C4 */
+s32 hdTextUnit_c::putChuchus(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().chuchusRubyGuard), gabi::ea(&textUnitStatics().chuchusRuby), gabi::guest_addr("Ruby_Chuchu_00"), kSafeVt, staticRecordAddress(RECORD_chuchusRuby));
+    staticPair(gabi::ea(&textUnitStatics().chuchusUnitsGuard), gabi::ea(&textUnitStatics().chuchusUnits), gabi::guest_addr("Unit_Chuchu_00"), gabi::guest_addr("Unit_Chuchu_01"), staticRecordAddress(RECORD_chuchusUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().chuchusRuby), gabi::ea(&textUnitStatics().chuchusUnits));
 }
-VERIFY(0x025FF1C4, putChuchus);
 
-/* 025FF2E8: number + unit with ruby */
-s32 putPendants(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF2E8, s32, self, w, pos);
-    staticStr(0x1048DC70, 0x1048D8E0, 0x100E15FC, kSafeVt, 0x101F4D84);
-    staticPair(0x1048DC74, 0x1048DA54, 0x100E160C, 0x100E161C, 0x101F4D90);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8E0, 0x1048DA54);
+/* number + unit with ruby */
+/* 025FF2E8 */
+s32 hdTextUnit_c::putPendants(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().pendantsRubyGuard), gabi::ea(&textUnitStatics().pendantsRuby), gabi::guest_addr("Ruby_Pendant_00"), kSafeVt, staticRecordAddress(RECORD_pendantsRuby));
+    staticPair(gabi::ea(&textUnitStatics().pendantsUnitsGuard), gabi::ea(&textUnitStatics().pendantsUnits), gabi::guest_addr("Unit_Pendant_00"), gabi::guest_addr("Unit_Pendant_01"), staticRecordAddress(RECORD_pendantsUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().pendantsRuby), gabi::ea(&textUnitStatics().pendantsUnits));
 }
-VERIFY(0x025FF2E8, putPendants);
 
-/* 025FF40C: number + unit with ruby */
-s32 putFeathers(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF40C, s32, self, w, pos);
-    staticStr(0x1048DC78, 0x1048D8E8, 0x100E162C, kSafeVt, 0x101F4D9C);
-    staticPair(0x1048DC7C, 0x1048DA64, 0x100E163C, 0x100E164C, 0x101F4DA8);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8E8, 0x1048DA64);
+/* number + unit with ruby */
+/* 025FF40C */
+s32 hdTextUnit_c::putFeathers(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().feathersRubyGuard), gabi::ea(&textUnitStatics().feathersRuby), gabi::guest_addr("Ruby_Feather_00"), kSafeVt, staticRecordAddress(RECORD_feathersRuby));
+    staticPair(gabi::ea(&textUnitStatics().feathersUnitsGuard), gabi::ea(&textUnitStatics().feathersUnits), gabi::guest_addr("Unit_Feather_00"), gabi::guest_addr("Unit_Feather_01"), staticRecordAddress(RECORD_feathersUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().feathersRuby), gabi::ea(&textUnitStatics().feathersUnits));
 }
-VERIFY(0x025FF40C, putFeathers);
 
-/* 025FF530: number + unit with ruby */
-s32 putCrests(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF530, s32, self, w, pos);
-    staticStr(0x1048DC80, 0x1048D8F0, 0x100E165C, kSafeVt, 0x101F4DB4);
-    staticPair(0x1048DC84, 0x1048DA74, 0x100E166C, 0x100E167C, 0x101F4DC0);
-    return putNumberUnit(self, w, pos, s32(load<u8>(0x101D5F48)), 0x1048D8F0, 0x1048DA74);
+/* number + unit with ruby */
+/* 025FF530 */
+s32 hdTextUnit_c::putCrests(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().crestsRubyGuard), gabi::ea(&textUnitStatics().crestsRuby), gabi::guest_addr("Ruby_Crest_00"), kSafeVt, staticRecordAddress(RECORD_crestsRuby));
+    staticPair(gabi::ea(&textUnitStatics().crestsUnitsGuard), gabi::ea(&textUnitStatics().crestsUnits), gabi::guest_addr("Unit_Crest_00"), gabi::guest_addr("Unit_Crest_01"), staticRecordAddress(RECORD_crestsUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(u8(itemCounters().mItemCount)), gabi::ea(&textUnitStatics().crestsRuby), gabi::ea(&textUnitStatics().crestsUnits));
 }
-VERIFY(0x025FF530, putCrests);
 
-/* 025FF654: number + unit for the counter at 101D5F3A (no ruby) */
-s32 putCounter5F3A(u32 self, u32 w, s32 pos) {
-    WWHD_FUNC(0x025FF654, s32, self, w, pos);
-    staticPair(0x1048DC88, 0x1048DA84, 0x100E168C, 0x100E169C, 0x101F4DCC);
-    return putNumberUnit(self, w, pos, s32(load<s16>(0x101D5F3A)), 0, 0x1048DA84);
+/* Stored rupees with the localized unit, without ruby. */
+/* 025FF654 */
+s32 hdTextUnit_c::putStoredRupees(hdUnitBufferedString_c* i_string, s32 pos) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticPair(gabi::ea(&textUnitStatics().storedRupeeUnitsGuard), gabi::ea(&textUnitStatics().storedRupeeUnits), gabi::guest_addr("Unit_Rupee_00"), gabi::guest_addr("Unit_Rupee_01"), staticRecordAddress(RECORD_storedRupeeUnits));
+    return putNumberWithUnitNative(self, w, pos, s32(s16(itemCounters().mStoredRupees)), 0, gabi::ea(&textUnitStatics().storedRupeeUnits));
 }
-VERIFY(0x025FF654, putCounter5F3A);
 
-/* 025FF738: digits of the play counter with the unit label's text (as 025FD8D8, other labels) */
-s32 putDigitsLabel(u32 self, u32 w, s32 pos, u32 ruby, u32 unit, u32 ctx) {
-    WWHD_FUNC(0x025FF738, s32, self, w, pos, ruby, unit, ctx);
-    store<u32>(msg(self) + 0x6B8, 3);
-    store<u32>(msg(self), 0x15);
+/* Digits of the play counter with the selected localized unit label. */
+/* 025FF738 */
+s32 hdTextUnit_c::putDigitsLabel(hdUnitBufferedString_c* i_string, s32 pos, u32 ruby, u32 unit, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    messageAt(msg(self)).mCurrentRuby = INSERTION_DIGITS;
+    messageAt(msg(self)).mState = STATE_DIGITS;
     const u32 LABEL = unit;
-    Local<u8[0x28]> F; /* +0 WFixedSafeString<4> (buffer +0xC), +0x14 digit chars[4], +0x1C WSafeString */
-    const u32 W = F.a, Wbuf = F.a + 0xC, DG = F.a + 0x14, T = F.a + 0x1C;
+    Local<hdUnitDigitFrame_c> F; /* +0 WFixedSafeString<4> (buffer +0xC), +0x14 digit chars[4], +0x1C WSafeString */
+    const u32 W = gabi::ea(&F.get()->mHeader), Wbuf = gabi::ea(F.get()->mBuffer);
+    const u32 T = gabi::ea(&F.get()->mString);
     s32 total = 0;
-    const u32 set = call<u32>(0x025F4CFC, load<u32>(0x101F4AE8));
+    const u32 set = textUnitNative_getUnitSet_1(resourceManagerAddress());
     if (!set) return 0;
     vAssure(LABEL);
-    const u32 li = call<u32>(0x0273A1CC, load<u32>(set), load<u32>(LABEL));
+    const u32 li = textUnitNative_findLabel_2(gabi::ea(gabi::at<HdMsgSet>(set)->mpData.get()), u32(stringAt(LABEL).mBuffer));
     u32 txt = 0;
-    if (li < load<u32>(set + 4)) txt = call<u32>(0x0273A2E8, load<u32>(set), li);
-    store<u32>(T, txt);
-    store<u32>(T + 4, kWSafeVt);
-    s32 digits = s32(call<u32>(0x025FCDE0, self, T));
-    store<u16>(Wbuf + 6, 0);
-    store<u32>(W, Wbuf);
-    store<u32>(W + 8, 4);
-    store<u16>(Wbuf, 0);
-    store<u32>(W + 4, 0x100E1068);
-    s32 v = s32(load<s16>(call<u32>(0x025200D4) + 0x5BA2));
+    if (li < u32(gabi::at<HdMsgSet>(set)->mEntryCount)) txt = textUnitNative_getLabelText_2(gabi::ea(gabi::at<HdMsgSet>(set)->mpData.get()), li);
+    stringAt(T).mBuffer = txt;
+    stringAt(T).mVtable = kWSafeVt;
+    s32 digits = s32(textUnitNative_leadingZeros_2(self, T));
+    F.get()->mBuffer[3] = 0;
+    stringAt(W).mBuffer = Wbuf;
+    bufferAt(W).mCapacity = 4;
+    F.get()->mBuffer[0] = 0;
+    stringAt(W).mVtable = kWideFixedString4Vt;
+    s32 v = s32(s16(gabi::at<hdUnitPlayInfo_c>(textUnitNative_getPlayInfo_0())->mDigitCounter));
     for (s32 k = 0; k < digits; k++) {
         const s32 d = v % 10;
-        store<u16>(u32(k) < 4 ? DG + u32(k) * 2 : DG, u16(0xFF10 + d));
+        F.get()->mDigitChars[u32(k) < 4 ? u32(k) : 0] = u16(0xFF10 + d);
         v = v / 10;
     }
-    const s32 sel = digits - s32(load<u32>(load<u32>(0x101F4B5C) + 0x948)) - 1;
+    const s32 sel = digits - s32(selectedDigit()) - 1;
     s32 pending = 0;
     s32 idx = digits - 1;
     for (s32 i = 0; digits > 0; digits--, i++, idx--) {
         if (u32(i) == u32(sel)) {
             if (pending > 0) {
                 vAssure(W);
-                putChars(self, w, pos, load<u32>(W), pending);
+                putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
                 pos += pending;
                 total += pending;
                 pending = 0;
-                store<u16>(load<u32>(W), 0);
+                store<u16>(u32(stringAt(W).mBuffer), 0);
             }
             u32 m = msg(self);
-            store<f32>(m + 0x8F0, load<f32>(m + 0x8EC));
+            messageAt(m).mPreviousLineWidth = f32(messageAt(m).mCurrentLineWidth);
             m = msg(self);
-            store<u32>(m + 0x8F4, load<u32>(m + 0x644));
+            messageAt(m).mCurrentLine = u32(messageAt(m).mLineCount);
         }
-        const u16 ch = load<u16>(u32(idx) < 4 ? DG + u32(idx) * 2 : DG);
+        const u16 ch = u16(F.get()->mDigitChars[u32(idx) < 4 ? u32(idx) : 0]);
         vAssure(W);
-        const u32 top = load<u32>(W);
+        const u32 top = u32(stringAt(W).mBuffer);
         const s32 len = wcsLength(top);
-        if (len < s32(load<u32>(W + 8)) - 1) {
+        if (len < s32(u32(bufferAt(W).mCapacity)) - 1) {
             store<u16>(top + u32(len) * 2, ch);
             store<u16>(top + u32(len) * 2 + 2, 0);
         }
         pending++;
         if (u32(i) == u32(sel)) {
             vAssure(W);
-            putChars(self, w, pos, load<u32>(W), pending);
+            putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
             pos += pending;
             total += pending;
-            store<u16>(load<u32>(W), 0);
+            store<u16>(u32(stringAt(W).mBuffer), 0);
             pending = 0;
         }
     }
     if (pending > 0) {
         vAssure(W);
-        putChars(self, w, pos, load<u32>(W), pending);
+        putCharactersNative(self, w, pos, u32(stringAt(W).mBuffer), pending);
         total += pending;
         pos += pending;
     }
-    return total + putUnitString(self, w, pos, LABEL);
+    return total + putLocalizedUnitNative(self, w, pos, LABEL);
 }
-VERIFY(0x025FF738, putDigitsLabel);
 
-/* 025FFB24: digit display with ruby and unit labels */
-s32 putSeedDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFB24, s32, self, w, pos, ctx);
-    staticStr(0x1048DC8C, 0x1048D8F8, 0x100E16AC, kSafeVt, 0x101F4DD8);
-    staticStr(0x1048DC90, 0x1048D900, 0x100E16BC, kSafeVt, 0x101F4DE4);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D8F8u, 0x1048D900u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFB24 */
+s32 hdTextUnit_c::putSeedDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().seedDigitsRubyGuard), gabi::ea(&textUnitStatics().seedDigitsRuby), gabi::guest_addr("Ruby_Seed_00"), kSafeVt, staticRecordAddress(RECORD_seedDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().seedDigitsUnitGuard), gabi::ea(&textUnitStatics().seedDigitsUnit), gabi::guest_addr("Unit_Seed_02"), kSafeVt, staticRecordAddress(RECORD_seedDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().seedDigitsRuby), gabi::ea(&textUnitStatics().seedDigitsUnit), ctx));
 }
-VERIFY(0x025FFB24, putSeedDigits);
 
-/* 025FFBF8: digit display with ruby and unit labels */
-s32 putNecklaceDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFBF8, s32, self, w, pos, ctx);
-    staticStr(0x1048DC94, 0x1048D908, 0x100E16CC, kSafeVt, 0x101F4DF0);
-    staticStr(0x1048DC98, 0x1048D910, 0x100E16E0, kSafeVt, 0x101F4DFC);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D908u, 0x1048D910u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFBF8 */
+s32 hdTextUnit_c::putNecklaceDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().necklaceDigitsRubyGuard), gabi::ea(&textUnitStatics().necklaceDigitsRuby), gabi::guest_addr("Ruby_Necklace_00"), kSafeVt, staticRecordAddress(RECORD_necklaceDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().necklaceDigitsUnitGuard), gabi::ea(&textUnitStatics().necklaceDigitsUnit), gabi::guest_addr("Unit_Necklace_02"), kSafeVt, staticRecordAddress(RECORD_necklaceDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().necklaceDigitsRuby), gabi::ea(&textUnitStatics().necklaceDigitsUnit), ctx));
 }
-VERIFY(0x025FFBF8, putNecklaceDigits);
 
-/* 025FFCCC: digit display with ruby and unit labels */
-s32 putChuchuDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFCCC, s32, self, w, pos, ctx);
-    staticStr(0x1048DC9C, 0x1048D918, 0x100E16F4, kSafeVt, 0x101F4E08);
-    staticStr(0x1048DCA0, 0x1048D920, 0x100E1704, kSafeVt, 0x101F4E14);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D918u, 0x1048D920u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFCCC */
+s32 hdTextUnit_c::putChuchuDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().chuchuDigitsRubyGuard), gabi::ea(&textUnitStatics().chuchuDigitsRuby), gabi::guest_addr("Ruby_Chuchu_00"), kSafeVt, staticRecordAddress(RECORD_chuchuDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().chuchuDigitsUnitGuard), gabi::ea(&textUnitStatics().chuchuDigitsUnit), gabi::guest_addr("Unit_Chuchu_02"), kSafeVt, staticRecordAddress(RECORD_chuchuDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().chuchuDigitsRuby), gabi::ea(&textUnitStatics().chuchuDigitsUnit), ctx));
 }
-VERIFY(0x025FFCCC, putChuchuDigits);
 
-/* 025FFDA0: digit display with ruby and unit labels */
-s32 putPendantDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFDA0, s32, self, w, pos, ctx);
-    staticStr(0x1048DCA4, 0x1048D928, 0x100E1714, kSafeVt, 0x101F4E20);
-    staticStr(0x1048DCA8, 0x1048D930, 0x100E1724, kSafeVt, 0x101F4E2C);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D928u, 0x1048D930u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFDA0 */
+s32 hdTextUnit_c::putPendantDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().pendantDigitsRubyGuard), gabi::ea(&textUnitStatics().pendantDigitsRuby), gabi::guest_addr("Ruby_Pendant_00"), kSafeVt, staticRecordAddress(RECORD_pendantDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().pendantDigitsUnitGuard), gabi::ea(&textUnitStatics().pendantDigitsUnit), gabi::guest_addr("Unit_Pendant_02"), kSafeVt, staticRecordAddress(RECORD_pendantDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().pendantDigitsRuby), gabi::ea(&textUnitStatics().pendantDigitsUnit), ctx));
 }
-VERIFY(0x025FFDA0, putPendantDigits);
 
-/* 025FFE74: digit display with ruby and unit labels */
-s32 putFeatherDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFE74, s32, self, w, pos, ctx);
-    staticStr(0x1048DCAC, 0x1048D938, 0x100E1734, kSafeVt, 0x101F4E38);
-    staticStr(0x1048DCB0, 0x1048D940, 0x100E1744, kSafeVt, 0x101F4E44);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D938u, 0x1048D940u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFE74 */
+s32 hdTextUnit_c::putFeatherDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().featherDigitsRubyGuard), gabi::ea(&textUnitStatics().featherDigitsRuby), gabi::guest_addr("Ruby_Feather_00"), kSafeVt, staticRecordAddress(RECORD_featherDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().featherDigitsUnitGuard), gabi::ea(&textUnitStatics().featherDigitsUnit), gabi::guest_addr("Unit_Feather_02"), kSafeVt, staticRecordAddress(RECORD_featherDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().featherDigitsRuby), gabi::ea(&textUnitStatics().featherDigitsUnit), ctx));
 }
-VERIFY(0x025FFE74, putFeatherDigits);
 
-/* 025FFF48: digit display with ruby and unit labels */
-s32 putCrestDigits(u32 self, u32 w, s32 pos, u32 ctx) {
-    WWHD_FUNC(0x025FFF48, s32, self, w, pos, ctx);
-    staticStr(0x1048DCB4, 0x1048D948, 0x100E1754, kSafeVt, 0x101F4E50);
-    staticStr(0x1048DCB8, 0x1048D950, 0x100E1764, kSafeVt, 0x101F4E5C);
-    return s32(call<u32>(0x025FF738, self, w, u32(pos), 0x1048D948u, 0x1048D950u, ctx));
+/* digit display with ruby and unit labels */
+/* 025FFF48 */
+s32 hdTextUnit_c::putCrestDigits(hdUnitBufferedString_c* i_string, s32 pos, u32 ctx) {
+    const u32 w = gabi::ea(i_string);
+    const u32 self = gabi::ea(this);
+    staticStr(gabi::ea(&textUnitStatics().crestDigitsRubyGuard), gabi::ea(&textUnitStatics().crestDigitsRuby), gabi::guest_addr("Ruby_Crest_00"), kSafeVt, staticRecordAddress(RECORD_crestDigitsRuby));
+    staticStr(gabi::ea(&textUnitStatics().crestDigitsUnitGuard), gabi::ea(&textUnitStatics().crestDigitsUnit), gabi::guest_addr("Unit_Crest_02"), kSafeVt, staticRecordAddress(RECORD_crestDigitsUnit));
+    return s32(textUnitNative_putDigitsLabel_6(self, w, u32(pos), gabi::ea(&textUnitStatics().crestDigitsRuby), gabi::ea(&textUnitStatics().crestDigitsUnit), ctx));
 }
-VERIFY(0x025FFF48, putCrestDigits);
 
-} // namespace hd_text_unit
+/* WWHD glue
+data minuteSeparator 100E142C
+data spanishMinuteSeparator 100E1424
+data fallbackMessage 100E135C
+str 100E1320 "Unit_Hatu_00"
+str 100E1330 "Unit_Rupee_00" in 025FD124
+str 100E1340 "Unit_Rupee_01" in 025FD124
+str 100E1350 ""
+str 100E1354 "%05d"
+str 100E136C "Unit_Rupee_02"
+str 100E137C "Ruby_SwordGameBlows_00"
+str 100E1394 "Unit_Blow_00"
+str 100E13A4 "Unit_Blow_01"
+str 100E13B4 "Unit_Rupee_00" in 025FE064
+str 100E13C4 "Unit_Rupee_01" in 025FE064
+str 100E13D4 "Ruby_Letter_00"
+str 100E13E4 "Unit_Letter_00"
+str 100E13F4 "Unit_Letter_01"
+str 100E1404 "Unit_Korg_00"
+str 100E1414 "Unit_Korg_01"
+str 100E1430 "Unit_Minute_00"
+str 100E1440 "Unit_Minute_01"
+str 100E1450 "Unit_Second_00"
+str 100E1460 "Unit_Second_01"
+str 100E1470 "Unit_Meter_00"
+str 100E1480 "Unit_Meter_01"
+str 100E1490 "Unit_Point_00"
+str 100E14A0 "Unit_Point_01"
+str 100E14B0 "Ruby_Pendant_00" in 025FEA7C
+str 100E14C0 "Unit_Pendant_00" in 025FEA7C
+str 100E14D0 "Unit_Pendant_01" in 025FEA7C
+str 100E14E0 "Ruby_Pendant_00" in 025FEBA8
+str 100E14F0 "Unit_Pendant_00" in 025FEBA8
+str 100E1500 "Unit_Pendant_01" in 025FEBA8
+str 100E1510 "Ruby_Bomb_00"
+str 100E1520 "Unit_Bomb_00"
+str 100E1530 "Unit_Bomb_01"
+str 100E1540 "Unit_Arrow_00"
+str 100E1550 "Unit_Arrow_01"
+str 100E1560 "Ruby_Seed_00" in 025FEF7C
+str 100E1570 "Unit_Seed_00"
+str 100E1580 "Unit_Seed_01"
+str 100E1590 "Ruby_Necklace_00" in 025FF0A0
+str 100E15A4 "Unit_Necklace_00"
+str 100E15B8 "Unit_Necklace_01"
+str 100E15CC "Ruby_Chuchu_00" in 025FF1C4
+str 100E15DC "Unit_Chuchu_00"
+str 100E15EC "Unit_Chuchu_01"
+str 100E15FC "Ruby_Pendant_00" in 025FF2E8
+str 100E160C "Unit_Pendant_00" in 025FF2E8
+str 100E161C "Unit_Pendant_01" in 025FF2E8
+str 100E162C "Ruby_Feather_00" in 025FF40C
+str 100E163C "Unit_Feather_00"
+str 100E164C "Unit_Feather_01"
+str 100E165C "Ruby_Crest_00" in 025FF530
+str 100E166C "Unit_Crest_00"
+str 100E167C "Unit_Crest_01"
+str 100E168C "Unit_Rupee_00" in 025FF654
+str 100E169C "Unit_Rupee_01" in 025FF654
+str 100E16AC "Ruby_Seed_00" in 025FFB24
+str 100E16BC "Unit_Seed_02"
+str 100E16CC "Ruby_Necklace_00" in 025FFBF8
+str 100E16E0 "Unit_Necklace_02"
+str 100E16F4 "Ruby_Chuchu_00" in 025FFCCC
+str 100E1704 "Unit_Chuchu_02"
+str 100E1714 "Ruby_Pendant_00" in 025FFDA0
+str 100E1724 "Unit_Pendant_02"
+str 100E1734 "Ruby_Feather_00" in 025FFE74
+str 100E1744 "Unit_Feather_02"
+str 100E1754 "Ruby_Crest_00" in 025FFF48
+str 100E1764 "Unit_Crest_02"
+*/

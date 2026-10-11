@@ -1,108 +1,291 @@
-/* Retained HD 28-byte DSPChannel cluster028157D8..02815DA4.
- * GC-only channel APIs and neighboring DSPInterface excluded. */
-#include "gabi.h"
+/* DSP channel allocation and playback scheduling. Verified against the retained
+ * HD unit. */
+#include "JSystem/JAudio/JASDSPChannel.h"
+
+using namespace JASystem;
 using namespace gabi;
-namespace dsp_channel_cpp {
-void* construct(void* self) {
-  WWHD_FUNC(0x028157D8, void*, self);
-u32 p=ea(self);if(!p) p=call<u32>(0x0273AD10,28u);
-if(p) {store<u32>(p,1);store<u16>(p+4,65535);store<u32>(p+0x18,0);store<u32>(p+8,0);store<u32>(p+0x14,0);store<u32>(p+0xC,0);store<u32>(p+0x10,0);}return at<void>(p);
+using ChannelTableHD = gptr<TDSPChannel>;
+using AllocationPaddingHD = be<u32>;
+using AudioHeapHD = gptr<void>;
+using StaticWordHD = be<u32>;
+static ChannelTableHD DSPCH;
+static AllocationPaddingHD sArrayPadding;
+static AudioHeapHD sAudioHeap;
+static StaticWordHD sStaticWord0;
+static StaticWordHD sStaticWord1;
+static StaticWordHD sStaticWord2;
+static StaticWordHD sStaticWord3;
+static GlobalRegistrationHD sGlobalRegistration;
+
+void DSPChannel_allocInit(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_playStart(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_stop(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_forceStop(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_acknowledge(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_markWaveReady(DSPInterface::DSPBuffer *buffer);
+u32 DSPChannel_isFinished(DSPInterface::DSPBuffer *buffer);
+void DSPChannel_flushChannel(DSPInterface::DSPBuffer *buffer);
+DSPInterface::DSPBuffer *DSPChannel_getDSPHandle(u32 index);
+void DSPChannel_releaseHalt(u32 flag);
+
+void *JASHeap_alloc(u32 size, void *heap, u32 alignment);
+TDSPChannel *constructArrayHD(void *allocation, u32 count, u32 stride,
+                              ChannelConstructorHD constructor, u32 destructor);
+void registerGlobalObjectHD(GlobalRegistrationHD *registration);
+TDSPChannel *TDSPChannel_getLower(s32 maximum);
+TDSPChannel *TDSPChannel_getLowerActive();
+
+// HD: construction initializes the expanded fields and allocates when passed
+// NULL.
+/* 028157D8 */
+TDSPChannel *TDSPChannel_construct(TDSPChannel *channel) {
+  if (!channel)
+    channel = static_cast<TDSPChannel *>(operator_new(sizeof(TDSPChannel)));
+  if (channel) {
+    channel->mStatus = TDSPChannel::STATUS_FREE_e;
+    channel->mPriority = TDSPChannel::FREE_PRIORITY;
+    channel->mpDSPBuffer = nullptr;
+    channel->mFlags = 0;
+    channel->mCallbackArg = 0;
+    channel->mPriorityTime = 0;
+    channel->mCallback = 0;
+  }
+  return channel;
 }
-VERIFY(0x028157D8, construct);
-void* getLower(s32 maximum) {
-  WWHD_FUNC(0x02815834, void*, maximum);
-u32 base=load<u32>(0x101F9F64),time=0; s32 chosen=-1,priority=255;
-for(u32 i=0;i<64;++i) {u32 p=base+i*28;s32 pr=load<s16>(p+4);
- if(pr<0) return at<void>(p);
- if(pr<=maximum && pr<=priority) {u32 age=load<u32>(p+0xC);if(pr<priority || age>time) {time=age;chosen=i;priority=pr;}}
-}return chosen<0?nullptr:at<void>(base+u32(chosen)*28);
+
+// HD: a caller-supplied signed priority limit replaces the GameCube global
+// break limit.
+/* 02815834 */
+TDSPChannel *TDSPChannel_getLower(s32 maximum) {
+  TDSPChannel *channels = DSPCH;
+  u32 time = 0;
+  s32 chosen = -1, priority = 255;
+  for (u32 i = 0; i < TDSPChannel::CHANNEL_COUNT; ++i) {
+    TDSPChannel *channel = channels + i;
+    s32 pr = channel->mPriority;
+    if (pr < 0)
+      return channel;
+    if (pr <= maximum && pr <= priority) {
+      u32 age = channel->mPriorityTime;
+      if (pr < priority || age > time) {
+        time = age;
+        chosen = i;
+        priority = pr;
+      }
+    }
+  }
+  return chosen < 0 ? nullptr : channels + chosen;
 }
-VERIFY(0x02815834, getLower);
-void forceStop(void* self) {
-  WWHD_FUNC(0x028158C8, void, self);
-u32 p=ea(self),cb=load<u32>(p+0x10);
-if(cb) call_ptr<s32>(cb,3u,0u,load<u32>(p+0x14));
-u32 flags=load<u32>(p+8)&~1u,status=load<u32>(p);
-store<u16>(p+4,65535);store<u32>(p+0x10,0);store<u32>(p+0x14,0);store<u32>(p+8,flags);
-if(status==0) {store<u32>(p+8,flags|2);store<u32>(p,2);}
+
+// HD: force-stop notifies the data callback and queues DSP stop for an active
+// channel.
+/* 028158C8 */
+void TDSPChannel::forceStop() {
+  u32 callback = mCallback;
+  if (callback)
+    call_ptr<s32>(callback, CALLBACK_FORCE_STOP_e, 0u, mCallbackArg.get());
+  u32 flags = mFlags & ~FLAG_PLAY_e;
+  u32 status = mStatus;
+  mPriority = FREE_PRIORITY;
+  mCallback = 0;
+  mCallbackArg = 0;
+  mFlags = flags;
+  if (status == STATUS_ACTIVE_e) {
+    mFlags = flags | FLAG_STOP_e;
+    mStatus = STATUS_STOPPING_e;
+  }
 }
-VERIFY(0x028158C8, forceStop);
-void* allocate(s32 priority, u32 callback, u32 data) {
-  WWHD_FUNC(0x0281594C, void*, priority, callback, data);
-void *out=call<void*>(0x02815834,priority);u32 p=ea(out);
-if(p) {call<void>(0x028158C8,out);store<u32>(p+0x10,callback);store<u32>(p+0xC,0);store<u32>(p+0x14,data);store<u16>(p+4,priority);}return out;
+
+// HD: allocation installs a three-argument callback and its separate data word.
+/* 0281594C */
+TDSPChannel *TDSPChannel_alloc(s32 priority, u32 callback, u32 data) {
+  TDSPChannel *channel = TDSPChannel_getLower(priority);
+  if (channel) {
+    channel->forceStop();
+    channel->mCallback = callback;
+    channel->mPriorityTime = 0;
+    channel->mCallbackArg = data;
+    channel->mPriority = priority;
+  }
+  return channel;
 }
-VERIFY(0x0281594C, allocate);
-void detachCallback(void* self) {
-  WWHD_FUNC(0x028159C0, void, self);
-store<u32>(ea(self)+0x10,0);store<u32>(ea(self)+0x14,0);
+
+/* 028159C0 */
+void TDSPChannel::detachCallback() {
+  mCallback = 0;
+  mCallbackArg = 0;
 }
-VERIFY(0x028159C0, detachCallback);
-void setPriority(void* self, u32 value) {
-  WWHD_FUNC(0x028159D0, void, self, value);
-store<u16>(ea(self)+4,value);
+
+/* 028159D0 */
+void TDSPChannel::setPriority(u32 priority) { mPriority = priority; }
+
+/* 028159D8 */
+void TDSPChannel::play() { mFlags = mFlags | FLAG_PLAY_e; }
+
+// HD: wave readiness is forwarded to the assigned DSP buffer when present.
+/* 028159E8 */
+void TDSPChannel::markWaveReady() {
+  DSPInterface::DSPBuffer *buffer = mpDSPBuffer;
+  if (buffer)
+    DSPChannel_markWaveReady(buffer);
 }
-VERIFY(0x028159D0, setPriority);
-void play(void* self) {
-  WWHD_FUNC(0x028159D8, void, self);
-u32 p=ea(self);store<u32>(p+8,load<u32>(p+8)|1);
+
+// HD: channels are constructed as 0x1C-byte elements on the audio heap, aligned
+// to 32 bytes.
+/* 028159F8 */
+void TDSPChannel_initAll() {
+  u32 padding = sArrayPadding;
+  void *allocation =
+      JASHeap_alloc(padding + sizeof(TDSPChannel) * TDSPChannel::CHANNEL_COUNT,
+                    sAudioHeap, 32);
+  TDSPChannel *channels =
+      allocation ? constructArrayHD(
+                       static_cast<u8 *>(allocation) + sArrayPadding.get(),
+                       TDSPChannel::CHANNEL_COUNT, sizeof(TDSPChannel),
+                       TDSPChannel_construct, 0)
+                 : nullptr;
+  DSPCH = channels;
+  for (u32 i = 0; i < TDSPChannel::CHANNEL_COUNT; ++i) {
+    TDSPChannel *channel = DSPCH.get() + i;
+    DSPInterface::DSPBuffer *buffer = DSPChannel_getDSPHandle(i);
+    channel->mpDSPBuffer = buffer;
+  }
 }
-VERIFY(0x028159D8, play);
-void markWaveReady(void* self) {
-  WWHD_FUNC(0x028159E8, void, self);
-u32 buffer=load<u32>(ea(self)+0x18);if(buffer)call<void>(0x028161B8,at<void>(buffer));
+
+/* 02815AB0 */
+TDSPChannel *TDSPChannel_getLowerActive() {
+  TDSPChannel *channels = DSPCH;
+  u32 time = 0;
+  s32 chosen = -1, priority = 255;
+  for (u32 i = 0; i < TDSPChannel::CHANNEL_COUNT; ++i) {
+    TDSPChannel *channel = channels + i;
+    if (channel->mStatus != TDSPChannel::STATUS_ACTIVE_e)
+      continue;
+    s32 pr = channel->mPriority;
+    if (pr < TDSPChannel::UNSTEALABLE_PRIORITY && pr <= priority) {
+      u32 age = channel->mPriorityTime;
+      if (pr < priority || age > time) {
+        time = age;
+        chosen = i;
+        priority = pr;
+      }
+    }
+  }
+  return chosen < 0 ? nullptr : channels + chosen;
 }
-VERIFY(0x028159E8, markWaveReady);
-void initAll() {
-  WWHD_FUNC(0x028159F8, void);
-u32 padding=load<u32>(0x101FCD08);
-u32 allocation=call<u32>(0x0273B0D4,padding+1792,at<void>(load<u32>(0x101F9DA8)),32u);
-u32 base=allocation?call<u32>(0x028EFF8C,at<void>(allocation+load<u32>(0x101FCD08)),64u,28u,0x028157D8u,0u):0;
-store<u32>(0x101F9F64,base);
-for(u32 i=0;i<64;++i) {u32 p=load<u32>(0x101F9F64)+i*28;u32 buffer=call<u32>(0x02816240,i);store<u32>(p+0x18,buffer);}
+
+// HD: the retained entry point has no priority argument and returns a full
+// register flag.
+/* 02815B40 */
+u32 TDSPChannel_breakLowerActive() {
+  TDSPChannel *channel = TDSPChannel_getLowerActive();
+  if (!channel)
+    return 0;
+  channel->forceStop();
+  return 1;
 }
-VERIFY(0x028159F8, initAll);
-void* getLowerActive() {
-  WWHD_FUNC(0x02815AB0, void*);
-u32 base=load<u32>(0x101F9F64),time=0;s32 chosen=-1,priority=255;
-for(u32 i=0;i<64;++i){u32 p=base+i*28;if(load<u32>(p)!=0)continue;s32 pr=load<s16>(p+4);
- if(pr<127 && pr<=priority){u32 age=load<u32>(p+0xC);if(pr<priority || age>time){time=age;chosen=i;priority=pr;}}
-}return chosen<0?nullptr:at<void>(base+u32(chosen)*28);
+
+// HD: pending play/stop bits and callback results drive this expanded state
+// machine.
+/* 02815B84 */
+void TDSPChannel::update() {
+  u32 finished = DSPChannel_isFinished(mpDSPBuffer);
+  u32 flags = mFlags;
+  if (finished) {
+    u32 status = mStatus;
+    mFlags = flags & ~FLAG_STOP_e;
+    if (status == STATUS_ACTIVE_e) {
+      u32 callback = mCallback;
+      if (!callback || call_ptr<s32>(callback, CALLBACK_FINISH_e, 0u,
+                                     mCallbackArg.get()) < 0)
+        mPriority = FREE_PRIORITY;
+    }
+    DSPInterface::DSPBuffer *buffer = mpDSPBuffer;
+    mStatus = STATUS_FREE_e;
+    DSPChannel_acknowledge(buffer);
+    DSPChannel_flushChannel(mpDSPBuffer);
+    return;
+  }
+  if (flags & FLAG_STOP_e) {
+    DSPInterface::DSPBuffer *buffer = mpDSPBuffer;
+    mFlags = flags & ~FLAG_STOP_e;
+    DSPChannel_forceStop(buffer);
+    DSPChannel_flushChannel(mpDSPBuffer);
+    return;
+  }
+  u32 status = mStatus;
+  if (status == STATUS_STOPPING_e)
+    return;
+  if (status == STATUS_FREE_e) {
+    if (!(flags & FLAG_PLAY_e))
+      return;
+    DSPInterface::DSPBuffer *buffer = mpDSPBuffer;
+    mStatus = STATUS_ACTIVE_e;
+    mFlags = flags & ~FLAG_PLAY_e;
+    DSPChannel_allocInit(buffer);
+    u32 callback = mCallback;
+    if (callback)
+      call_ptr<s32>(callback, CALLBACK_PLAY_e, mpDSPBuffer.get(),
+                    mCallbackArg.get());
+    DSPChannel_playStart(mpDSPBuffer);
+    DSPChannel_flushChannel(mpDSPBuffer);
+    return;
+  }
+  u32 callback = mCallback;
+  bool haveCallback = callback != 0;
+  if (callback && call_ptr<s32>(callback, CALLBACK_UPDATE_e, mpDSPBuffer.get(),
+                                mCallbackArg.get()) < 0) {
+    callback = mCallback;
+    mStatus = STATUS_FREE_e;
+    if (!callback ||
+        call_ptr<s32>(callback, CALLBACK_FINISH_e, 0u, mCallbackArg.get()) < 0)
+      mPriority = FREE_PRIORITY;
+    DSPChannel_stop(mpDSPBuffer);
+    DSPChannel_flushChannel(mpDSPBuffer);
+    return;
+  }
+  mPriorityTime = mPriorityTime + 1;
+  if (haveCallback)
+    DSPChannel_flushChannel(mpDSPBuffer);
 }
-VERIFY(0x02815AB0, getLowerActive);
-u32 breakLowerActive() {
-  WWHD_FUNC(0x02815B40, u32);
-void *p=call<void*>(0x02815AB0);if(!p)return 0;call<void>(0x028158C8,p);return 1;
+
+/* 02815D44 */
+void TDSPChannel_updateAll() {
+  for (u32 i = 0; i < TDSPChannel::CHANNEL_COUNT; ++i)
+    (DSPCH.get() + i)->update();
+  DSPChannel_releaseHalt(3);
 }
-VERIFY(0x02815B40, breakLowerActive);
-void update(void* self) {
-  WWHD_FUNC(0x02815B84, void, self);
-u32 p=ea(self);u32 finished=call<u32>(0x02815EDC,at<void>(load<u32>(p+0x18)));
-u32 flags=load<u32>(p+8);
-if(finished){u32 status=load<u32>(p);store<u32>(p+8,flags&~2u);
- if(status==0){u32 cb=load<u32>(p+0x10);if(!cb || call_ptr<s32>(cb,2u,0u,load<u32>(p+0x14))<0)store<u16>(p+4,65535);}
- u32 buffer=load<u32>(p+0x18);store<u32>(p,1);call<void>(0x02815ECC,at<void>(buffer));call<void>(0x02816444,at<void>(load<u32>(p+0x18)));return;
+
+// HD: compiler-generated and template code of this translation unit.
+/* 02815DA4 */
+void __sinit_JASDSPChannel_cpp() {
+  sStaticWord2 = 0;
+  sStaticWord0 = 0;
+  sStaticWord3 = 0;
+  sStaticWord1 = 0;
+  registerGlobalObjectHD(&sGlobalRegistration);
 }
-if(flags&2){u32 buffer=load<u32>(p+0x18);store<u32>(p+8,flags&~2u);call<void>(0x02815EC0,at<void>(buffer));call<void>(0x02816444,at<void>(load<u32>(p+0x18)));return;}
-u32 status=load<u32>(p);if(status==2)return;
-if(status==1){if(!(flags&1))return;u32 buffer=load<u32>(p+0x18);store<u32>(p,0);store<u32>(p+8,flags&~1u);call<void>(0x02815E18,at<void>(buffer));
- u32 cb=load<u32>(p+0x10);if(cb)call_ptr<s32>(cb,1u,load<u32>(p+0x18),load<u32>(p+0x14));
- call<void>(0x02815E3C,at<void>(load<u32>(p+0x18)));call<void>(0x02816444,at<void>(load<u32>(p+0x18)));return;}
-u32 cb=load<u32>(p+0x10);bool have=cb!=0;
-if(cb && call_ptr<s32>(cb,0u,load<u32>(p+0x18),load<u32>(p+0x14))<0){cb=load<u32>(p+0x10);store<u32>(p,1);
- if(!cb || call_ptr<s32>(cb,2u,0u,load<u32>(p+0x14))<0)store<u16>(p+4,65535);
- call<void>(0x02815EB4,at<void>(load<u32>(p+0x18)));call<void>(0x02816444,at<void>(load<u32>(p+0x18)));return;}
-store<u32>(p+0xC,load<u32>(p+0xC)+1);if(have)call<void>(0x02816444,at<void>(load<u32>(p+0x18)));
-}
-VERIFY(0x02815B84, update);
-void updateAll() {
-  WWHD_FUNC(0x02815D44, void);
-for(u32 i=0;i<64;++i)call<void>(0x02815B84,at<void>(load<u32>(0x101F9F64)+i*28));call<void>(0x02816210,3u);
-}
-VERIFY(0x02815D44, updateAll);
-void staticInit() {
-  WWHD_FUNC(0x02815DA4, void);
-store<u32>(0x104B5644,0);store<u32>(0x104B563C,0);store<u32>(0x104B5648,0);store<u32>(0x104B5640,0);call<void>(0x028F026C,at<void>(0x101F9F58));
-}
-VERIFY(0x02815DA4, staticInit);
-}
+
+/* WWHD glue
+data DSPCH 101F9F64
+data sArrayPadding 101FCD08
+data sAudioHeap 101F9DA8
+data sStaticWord0 104B563C
+data sStaticWord1 104B5640
+data sStaticWord2 104B5644
+data sStaticWord3 104B5648
+data sGlobalRegistration 101F9F58
+ext 0273B0D4 void* JASHeap_alloc(u32, void*, u32)
+ext 028EFF8C TDSPChannel* constructArrayHD(void*, u32, u32, ChannelConstructorHD, u32)
+ext 028F026C void registerGlobalObjectHD(GlobalRegistrationHD*)
+ext 02816240 JASystem::DSPInterface::DSPBuffer* DSPChannel_getDSPHandle(u32)
+ext 02816210 void DSPChannel_releaseHalt(u32)
+ext 02815E18 void DSPChannel_allocInit(DSPInterface::DSPBuffer*)
+ext 02815E3C void DSPChannel_playStart(DSPInterface::DSPBuffer*)
+ext 02815EB4 void DSPChannel_stop(DSPInterface::DSPBuffer*)
+ext 02815EC0 void DSPChannel_forceStop(DSPInterface::DSPBuffer*)
+ext 02815ECC void DSPChannel_acknowledge(DSPInterface::DSPBuffer*)
+ext 028161B8 void DSPChannel_markWaveReady(DSPInterface::DSPBuffer*)
+ext 02815EDC u32 DSPChannel_isFinished(DSPInterface::DSPBuffer*)
+ext 02816444 void DSPChannel_flushChannel(DSPInterface::DSPBuffer*)
+*/

@@ -1,28 +1,431 @@
-#include "d_particle_local.h"
+/* Particle control and callbacks; verified HD behavior, GameCube naming. */
+#include "d/particle/d_particle_local.h"
 using namespace pa;
-static void releaseRoom(u32 a){gabi::call<void>(0x025E3868,p(w(a+0x134)));gabi::call<void>(0x027EC0B0,p(w(a+0x138)));u8 keep=b(a+0x147),count=b(a+0x146);W(a+0x134,0);W(a+0x13C,0);if(keep<count){u32 item=a+0x148+u32(keep)*0x290;s32 i=keep;do{W(item+4,0);++i;item+=0x290;}while(i<b(a+0x146));keep=b(a+0x147);}B(a+0x146,keep);}
-s32 dPa_removeRoomScene(void* control,s32 force,s32 room){WWHD_FUNC(0x025A7EAC,s32,control,force,room);u32 a=gabi::ea(control);if(!w(a+0x134))return 0;if(!force&&s32(w(a+0x140))>=0){s32 timer=s32(w(a+0x140)-1);W(a+0x140,u32(timer));if(timer>0)return 0;releaseRoom(a);return 1;}u8 refs=b(a+0x145);if(!refs)return 0;refs=u8(refs-1);B(a+0x145,refs);if(refs)return 0;if(!force&&s32(w(a+0x140))<=0){gabi::call<void>(0x025260E8,s32(s8(room)));if(s32(w(a+0x140))>0)return 0;W(a+0x140,2);gabi::call<void>(0x028221EC,p(w(0x1047B2D4)),u32(1));return 0;}if(force)gabi::call<void>(0x028221EC,p(w(0x1047B2D4)),u32(1));releaseRoom(a);gabi::call<void>(0x025260E8,s32(s8(room)));return 1;}
-VERIFY(0x025A7EAC,dPa_removeRoomScene);
-void dPa_removeScene(void* control){WWHD_FUNC(0x025A809C,void,control);u32 a=gabi::ea(control);gabi::call<s32>(0x025A7EAC,control,u32(1),u32(0));u32 heap=w(a+0x134);u8 count=b(a+0x147);B(a+0x146,count);if(heap)gabi::call<void>(0x025E3868,p(heap));if(w(a+0x13C)){gabi::call<void>(0x027EC0B0,p(w(a+0x138)));W(a+0x13C,0);}u32 i=0,item=a+0x148;while(i<b(a+0x147)){W(item+4,0);i++;item+=0x290;}gabi::call<void>(0x0282228C,p(w(0x1047B2D4)));gabi::call<void>(0x025A4920,p(w(a+0x130)));}
-VERIFY(0x025A809C,dPa_removeScene);
-void dPa_createRoomScene(void* control,void* data){WWHD_FUNC(0x025A7C30,void,control,data);u32 a=gabi::ea(control);void* heap=gabi::call<void*>(0x025E3528,u32(0),nullptr);W(a+0x134,gabi::ea(heap));if(!heap){gabi::call<void>(0x0273AA24,p(0x10051E90),u32(0x785),p(0x10051E60));heap=p(w(a+0x134));}W(gabi::ea(heap)+16,0x10051E74);heap=p(w(a+0x134));W(a+0x138,gabi::ea(data));void* rm=gabi::call<void*>(0x0273B050,u32(12),heap,u32(4));if(rm){u32 input=w(a+0x138),bank=w(a+0x415C),currentHeap=w(a+0x134);rm=gabi::call<void*>(0x02827000,rm,p(input),p(currentHeap),p(bank));}W(a+0x13C,gabi::ea(rm));if(!rm){gabi::call<void>(0x0273AA24,p(0x10051E90),u32(0x78C),p(0x10051E4C));rm=p(w(a+0x13C));}W(w(0x1047B2D4)+0x34,gabi::ea(rm));gabi::call<void>(0x025E3678,p(w(a+0x134)));for(u32 i=0;i<34;i++){u32 r=w(a+0x13C);u16 id=h(0x101EA51C+i*2);if(gabi::call<void*>(0x02826FC4,p(w(r+4)),u32(id))){u32 group=id&0x4000?4:id&0x2000?2:0;gabi::call<s32>(0x025A7674,control,u32(id),group);}}W(a+0x140,~u32(0));}
-VERIFY(0x025A7C30,dPa_createRoomScene);
-void dPa_applyDefaultParameters(void* control){WWHD_FUNC(0x025A7724,void,control);u32 a=gabi::ea(control);f32 one=f(0x10051C24),a03=f(0x10051D2C),a08=f(0x10051D28),a125=f(0x10051D30),a02=f(0x10051D34),a12=f(0x10051D38),half=f(0x10051CA8);
- F(a+8,one);F(a+16,one);W(a,0x10051D48);F(a+0x44,a03);F(a+0x54,one);F(a+0x5C,one);W(a+24,0x10051D54);F(a+0x58,a125);B(a+0xF7,255);F(a+20,one);F(a+0x70,one);W(a+0x48,0x10051D44);W(a+0x30,0x10051D3C);B(a+0xF3,255);B(a+0xF5,0);F(a+0x68,a02);F(a+0x50,one);W(a+0x114,0);B(a+0xF1,230);W(a+0x60,0x10051D60);F(a+0x2C,a08);B(a+0xF4,8);F(a+0xF8,half);W(a+0x11C,0);B(a+0xF6,20);B(a+0xF0,200);F(a+12,one);B(a+0xF2,230);F(a+0x6C,a08);F(a+0x74,a12);W(a+0x118,0);u32 setting=w(0x104A0264);W(a+0x120,0);W(a+0x10C,setting);B(a+0x124,0);W(a+0x108,setting);F(a+0x110,half);}
-VERIFY(0x025A7724,dPa_applyDefaultParameters);
-void dPa_globalInit(){WWHD_FUNC(0x025AA790,void);u32 a=0x1047B168;W(a+12,0);W(a+8,0);W(a+4,0);W(a,0);gabi::call<void>(0x028F026C,p(0x101EA450));f32 lo=f(0x10051F70),hi=f(0x10051F74);F(0x1047B15C,lo);F(0x1047B160,hi);gabi::call<void>(0x028ED6F8,p(0x1047B164));gabi::call<void>(0x028F026C,p(0x101EA45C));gabi::call<void>(0x028EAB2C,p(0x1047B165));gabi::call<void>(0x028F026C,p(0x101EA468));
- a=0x1047B24C;B(a+4,0);W(a+16,0x100520A8);B(a+12,1);B(a+20,2);W(a,0x100520A8);W(a+24,0x100520A8);W(a+8,0x100520A8);B(a+28,3);gabi::call<void>(0x028F026C,p(0x101EA474));
- a=0x1047B26C;W(a,0x10051B94);copy(0x101EA420,a+4,4);W(a+8,0x10051B94);copy(0x101EA424,a+12,4);W(a+16,0x10051B94);copy(0x101EA428,a+20,4);gabi::call<void>(0x028F026C,p(0x101EA480));
- W(0x1047B2D8,0x10052320);gabi::call<void>(0x028F026C,p(0x101EA48C));W(0x1047B2DC,0x10052360);gabi::call<void>(0x028F026C,p(0x101EA498));gabi::call<void*>(0x025A5C04,p(0x1047B284),u32(0),u32(1),u32(1),u32(1));gabi::call<void>(0x028F026C,p(0x101EA4A4));W(0x1047B2E0,0x100522C0);gabi::call<void>(0x028F026C,p(0x101EA4B0));W(0x1047B2E4,0x10052128);gabi::call<void>(0x028F026C,p(0x101EA4BC));W(0x1047B2E8,0x10052398);gabi::call<void>(0x028F026C,p(0x101EA4C8));W(0x1047B2EC,0x100520E8);gabi::call<void>(0x028F026C,p(0x101EA4D4));
- a=0x1047B1E4;W(a+20,0x10051A34);W(a+56,0x10051F88);W(a+40,0x10051FF4);W(a,0x10051F78);W(a+44,0x10051A34);W(a+48,0x10052008);W(a+32,0x10051FA8);W(a+52,0x10051A34);W(a+12,0x10051A34);W(a+68,0x10051A34);W(a+4,0x10051A34);W(a+16,0x10051FE4);W(a+84,0x10051A34);W(a+72,0x10052040);W(a+8,0x10052018);W(a+80,0x10052058);W(a+24,0x1005202C);W(a+28,0x10051A34);W(a+88,0x10051FBC);W(a+36,0x10051A34);W(a+76,0x10051A34);W(a+64,0x10051F98);W(a+60,0x10051A34);W(a+92,0x10051A34);W(a+96,0x10051FD0);W(a+100,0x10051A34);}
-VERIFY(0x025AA790,dPa_globalInit);
-static void initBoundCallback(u32 place,u32 owner,u32 function){void* obj=allocate(p(place),32);if(!obj)return;u32 a=gabi::ea(obj);void* base=allocate(obj,8);if(base){W(gabi::ea(base)+4,0x10051A34);W(gabi::ea(base),0x10051A19);}B(a+8,0);W(a+12,0x10051BFC);u32 functor=a+16;if(functor){W(functor+4,owner);W(functor+8,0x0000FFFF);W(functor,0x10051C0C);W(functor+12,function);}}
-void* dPa_controlCtor(void* obj){WWHD_FUNC(0x025A7398,void*,obj);obj=allocate(obj,0x41A4);if(!obj)return obj;u32 a=gabi::ea(obj);gabi::call<void>(0x028EFFD0,obj,u32(10),u32(24),p(0x025AACDC));B(a+0xF1,0);B(a+0xF3,255);B(a+0xF7,255);B(a+0xF0,0);f32 zero=f(0x10051C28);F(a+0xF8,zero);B(a+0xF2,0);B(a+0xF4,0);B(a+0xF5,0);B(a+0xF6,0);gabi::call<void>(0x028EFFD0,p(a+0xFC),u32(3),u32(4),p(0x025AAD64));B(a+0x147,0);W(a+0x120,0);W(a+0x13C,0);W(a+0x114,0);B(a+0x10F,255);B(a+0x10A,0);B(a+0x10D,0);F(a+0x110,zero);B(a+0x144,0);W(a+0x128,0);B(a+0x146,0);W(a+0x134,0);B(a+0x109,0);W(a+0x140,0);B(a+0x10E,0);B(a+0x145,0);B(a+0x10B,255);B(a+0x124,0);W(a+0x138,0);W(a+0x12C,0);B(a+0x108,0);W(a+0x118,0);W(a+0x11C,0);B(a+0x10C,0);W(a+0x130,0);gabi::call<void>(0x028EFFD0,p(a+0x148),u32(25),u32(0x290),p(0x025A4A60));W(a+0x4158,0);W(a+0x415C,0);W(a+0x4160,0x10051BD4);initBoundCallback(a+0x4164,a,0x025A8D8C);initBoundCallback(a+0x4184,a,0x025A8F08);void* system=gabi::call<void*>(0x0203E8F4);gabi::Local<u32[2]> name;W(gabi::ea(name.get())+4,0x10051A34);W(gabi::ea(name.get()),0x10051CCC);void* heap=gabi::call<void*>(0x02753004,u32(0x02E00000),name.get(),system,u32(1),u32(0));W(a+0x128,gabi::ea(heap));if(!heap)gabi::call<void>(0x0273AA24,p(0x10051CE0),u32(0x6B9),p(0x10051CF0));B(a+0x145,0);B(a+0x144,255);W(0x1047B2D4,0);W(a+0x140,~u32(0));W(a+0x12C,0);B(a+0x146,0);W(a+0x13C,0);return obj;}
-VERIFY(0x025A7398,dPa_controlCtor);
-static void makeSafeName(u32 a,u32 text){W(a,text);W(a+4,0x10051A34);}
-static void heapReport(u32 owner,u32 format){u32 heap=w(owner+0x128);u32 size=gabi::call<u32>(0x027EC1FC,p(heap));gabi::call<void>(0xC0009EE8,p(format),size);}
-void dPa_createCommon(void* control,void* data){WWHD_FUNC(0x025A7838,void,control,data);u32 a=gabi::ea(control),oldMode=1,heap=w(a+0x128);if(heap)oldMode=gabi::call<u32>(0x02756170,p(w(0x101F8B4C)),p(heap));gabi::Local<u32[2]> firstName,secondName,resNameA,resNameB;u32 n1=gabi::ea(firstName.get()),n2=gabi::ea(secondName.get());makeSafeName(n1,0x10051D78);makeSafeName(n2,0x10051D84);gabi::call<void*>(0x026124B0,p(w(0x101F4F7C)),firstName.get(),secondName.get(),u32(0));void* bank=gabi::call<void*>(0x027E2DC0);W(a+0x415C,gabi::ea(bank));heapReport(a,0x10051D94);heap=w(a+0x128);void* rm=gabi::call<void*>(0x0273B050,u32(12),p(heap),u32(4));if(rm){bank=p(w(a+0x415C));heap=w(a+0x128);rm=gabi::call<void*>(0x02827000,rm,data,p(heap),bank);}W(a+0x12C,gabi::ea(rm));if(!rm)gabi::call<void>(0x0273AA24,p(0x10051DA4),u32(0x711),p(0x10051DB4));heapReport(a,0x10051DCC);
- heap=w(a+0x128);void* renderControl=gabi::call<void*>(0x0273B050,u32(16),p(heap),u32(4));if(renderControl){u32 r=gabi::ea(renderControl);W(r,0);W(r+4,0);void* list=allocate(p(r+8),8);if(list){W(gabi::ea(list)+4,0);W(gabi::ea(list),0);}}W(a+0x4158,gabi::ea(renderControl));u32 sys=w(0x101F8A94),count=w(sys+16);u32 texture=0;if(count>1)texture=w(sys+20)+0x5C;heap=w(a+0x128);gabi::call<void>(0x028010F8,renderControl,p(texture),p(heap));heap=w(a+0x128);void* manager=gabi::call<void*>(0x0273B050,u32(0x580BB8),p(heap),u32(4));if(manager){rm=p(w(a+0x12C));u32 ctrl=w(a+0x4158);heap=w(a+0x128);manager=gabi::call<void*>(0x02820DE4,manager,rm,u32(3000),u32(150),u32(200),p(heap),p(ctrl));}W(0x1047B2D4,gabi::ea(manager));if(!manager)gabi::call<void>(0x0273AA24,p(0x10051DA4),u32(0x726),p(0x10051DDC));heapReport(a,0x10051DF0);
- makeSafeName(n2,0x10051D84);makeSafeName(n1,0x10051D78);if(gabi::call<void*>(0x026124B0,p(w(0x101F4F7C)),firstName.get(),secondName.get(),u32(0))){u32 res=gabi::ea(gabi::call<void*>(0x027E2DC0)),off=w(res+0x4C);u32 tableBase=off?res+0x4C+off:0;u32 table=gabi::ea(gabi::call<void*>(0x027DFA24,p(tableBase),p(0x10051E00)));if(table){u32 relative=w(table),size=w(table+4),cursor=relative?table+relative:0,n=size>>3;while(n--){u32 id=w(cursor),tex=w(cursor+4);cursor+=8;if(tex)gabi::call<void>(0x02822304,p(w(0x1047B2D4)),p(tex),u16(id));}}}
- heap=w(a+0x128);void* modelControl=gabi::call<void*>(0x0273B050,u32(16),p(heap),u32(4));if(modelControl){makeSafeName(gabi::ea(resNameA.get()),0x10051D70);u32 resctl=w(0x101F4F28);void* first=gabi::call<void*>(0x026066C4,p(resctl),resNameA.get(),u32(0x31));makeSafeName(gabi::ea(resNameB.get()),0x10051D70);resctl=w(0x101F4F28);void* second=gabi::call<void*>(0x026066C4,p(resctl),resNameB.get(),u32(0x30));heap=w(a+0x128);modelControl=gabi::call<void*>(0x025A47E0,modelControl,first,second,p(heap));}W(a+0x130,gabi::ea(modelControl));if(!modelControl)gabi::call<void>(0x0273AA24,p(0x10051DA4),u32(0x74F),p(0x10051E14));heapReport(a,0x10051E2C);for(u32 i=0;i<8;i++){u32 r=w(a+0x12C);u16 id=h(0x101EA50C+i*2);if(gabi::call<void*>(0x02826FC4,p(w(r+4)),u32(id)))gabi::call<s32>(0x025A7674,control,u32(id),u32(id&0x4000?4:0));}heapReport(a,0x10051E3C);B(a+0x147,b(a+0x146));gabi::call<void>(0x025A7724,control);if(oldMode!=1)gabi::call<void>(0x02756170,p(w(0x101F8B4C)),oldMode);}
-VERIFY(0x025A7838,dPa_createCommon);
+static void releaseRoom(u32 a) {
+    pa_mDoExt_destroySolidHeap(p((u32)gabi::at<pa::dPa_control_c>(a)->mSceneHeap));
+    pa_heapFree(p((u32)gabi::at<pa::dPa_control_c>(a)->mpData));
+    u8 keep = (u8)gabi::at<pa::dPa_control_c>(a)->mNumSimpleCommon,
+       count = (u8)gabi::at<pa::dPa_control_c>(a)->mNumSimple;
+    gabi::at<pa::dPa_control_c>(a)->mSceneHeap = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneResMng = 0;
+    if (keep < count) {
+        u32 item = a + 0x148 + u32(keep) * 0x290;
+        s32 i = keep;
+        do {
+            W(item + 4, 0);
+            ++i;
+            item += 0x290;
+        } while (i < (u8)gabi::at<pa::dPa_control_c>(a)->mNumSimple);
+        keep = (u8)gabi::at<pa::dPa_control_c>(a)->mNumSimpleCommon;
+    }
+    gabi::at<pa::dPa_control_c>(a)->mNumSimple = keep;
+}
+/* 025A7EAC */
+s32 pa::dPa_control_c::removeRoomScene(s32 force, s32 room) {
+    u32 a = gabi::ea(this);
+    if (!(u32)this->mSceneHeap)
+        return 0;
+    if (!force && s32((u32)this->mSceneReleaseTimer) >= 0) {
+        s32 timer = s32((u32)this->mSceneReleaseTimer - 1);
+        this->mSceneReleaseTimer = u32(timer);
+        if (timer > 0)
+            return 0;
+        releaseRoom(a);
+        return 1;
+    }
+    u8 refs = (u8)this->mCount;
+    if (!refs)
+        return 0;
+    refs = u8(refs - 1);
+    this->mCount = refs;
+    if (refs)
+        return 0;
+    if (!force && s32((u32)this->mSceneReleaseTimer) <= 0) {
+        pa_notifyParticleRoomRelease(s32(s8(room)));
+        if (s32((u32)this->mSceneReleaseTimer) > 0)
+            return 0;
+        this->mSceneReleaseTimer = 2;
+        pa_clearResourceManager(p((u32)l_particleEmitterManager), u32(1));
+        return 0;
+    }
+    if (force)
+        pa_clearResourceManager(p((u32)l_particleEmitterManager), u32(1));
+    releaseRoom(a);
+    pa_notifyParticleRoomRelease(s32(s8(room)));
+    return 1;
+}
+/* 025A809C */
+void pa::dPa_control_c::removeScene() {
+    u32 a = gabi::ea(this);
+    pa_removeRoomScene(this, u32(1), u32(0));
+    u32 heap = (u32)this->mSceneHeap;
+    u8 count = (u8)this->mNumSimpleCommon;
+    this->mNumSimple = count;
+    if (heap)
+        pa_mDoExt_destroySolidHeap(p(heap));
+    if ((u32)this->mSceneResMng) {
+        pa_heapFree(p((u32)this->mpData));
+        this->mSceneResMng = 0;
+    }
+    u32 i = 0, item = a + 0x148;
+    while (i < (u8)this->mNumSimpleCommon) {
+        W(item + 4, 0);
+        i++;
+        item += 0x290;
+    }
+    pa_forceDeleteAllEmitter(p((u32)l_particleEmitterManager));
+    pa_modelControlDtor(p((u32)this->mModelControl));
+}
+/* 025A7C30 */
+void pa::dPa_control_c::createRoomScene(void* data) {
+
+    void* heap = pa_mDoExt_createSolidHeapFromGame(u32(0), nullptr);
+    this->mSceneHeap = gabi::ea(heap);
+    if (!heap) {
+        pa_JUTAssertion_showAssert(p(0x10051E90), u32(0x785), p(0x10051E60));
+        heap = p((u32)this->mSceneHeap);
+    }
+    W(gabi::ea(heap) + 16, 0x10051E74);
+    heap = p((u32)this->mSceneHeap);
+    this->mpData = gabi::ea(data);
+    void* rm = pa_operatorNewHeap(u32(12), heap, u32(4));
+    if (rm) {
+        u32 input = (u32)this->mpData, bank = (u32)this->mTextureBank,
+            currentHeap = (u32)this->mSceneHeap;
+        rm = pa_JPAResourceManager_ctor(rm, p(input), p(currentHeap), p(bank));
+    }
+    this->mSceneResMng = gabi::ea(rm);
+    if (!rm) {
+        pa_JUTAssertion_showAssert(p(0x10051E90), u32(0x78C), p(0x10051E4C));
+        rm = p((u32)this->mSceneResMng);
+    }
+    W((u32)l_particleEmitterManager + 0x34, gabi::ea(rm));
+    pa_mDoExt_adjustSolidHeap(p((u32)this->mSceneHeap));
+    for (u32 i = 0; i < 34; i++) {
+        u32 r = (u32)this->mSceneResMng;
+        u16 id = h(0x101EA51C + i * 2);
+        if (pa_JPAResourceManager_getResource(p(w(r + 4)), u32(id))) {
+            u32 group = id & 0x4000   ? dPtclGroup_Projection_e
+                        : id & 0x2000 ? dPtclGroup_Toon_e
+                                      : dPtclGroup_Normal_e;
+            pa_newSimple(this, u32(id), group);
+        }
+    }
+    this->mSceneReleaseTimer = ~u32(0);
+}
+/* 025A7724 */
+void pa::dPa_control_c::applyDefaultParameters() {
+    u32 a = gabi::ea(this);
+    f32 one = (f32)l_particleOne, a03 = f(0x10051D2C), a08 = f(0x10051D28), a125 = f(0x10051D30),
+        a02 = f(0x10051D34), a12 = f(0x10051D38), half = (f32)l_particleHalf;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[0].mScale[0] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[0].mScale[2] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[0].mName = 0x10051D48;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[2].mScale[3] = a03;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[3].mScale[1] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[3].mScale[3] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[1].mName = 0x10051D54;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[3].mScale[2] = a125;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[0].mScale[3] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[4].mScale[2] = one;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[3].mName = 0x10051D44;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[2].mName = 0x10051D3C;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.g = 0;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[4].mScale[0] = a02;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[3].mScale[0] = one;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[0] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.g = 230;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[4].mName = 0x10051D60;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[1].mScale[3] = a08;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.r = 8;
+    gabi::at<pa::dPa_control_c>(a)->mColorBlend = half;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[2] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.b = 20;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.r = 200;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[0].mScale[1] = one;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.b = 230;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[4].mScale[1] = a08;
+    gabi::at<pa::dPa_control_c>(a)->mParameters[4].mScale[3] = a12;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[1] = 0;
+    u32 setting = w(0x104A0264);
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[3] = 0;
+    W(a + 0x10C, setting);
+    gabi::at<pa::dPa_control_c>(a)->mMenuDrawEnabled = 0;
+    W(a + 0x108, setting);
+    gabi::at<pa::dPa_control_c>(a)->mDrawColorBlend = half;
+}
+/* 025AA790 */
+void dPa_globalInit() {
+    u32 a = 0x1047B168;
+    W(a + 12, 0);
+    W(a + 8, 0);
+    W(a + 4, 0);
+    W(a, 0);
+    pa_registerGlobalObject(p(0x101EA450));
+    f32 lo = f(0x10051F70), hi = f(0x10051F74);
+    F(0x1047B15C, lo);
+    F(0x1047B160, hi);
+    pa_initializeMathHeaderPrimary(p(0x1047B164));
+    pa_registerGlobalObject(p(0x101EA45C));
+    pa_initializeMathHeaderSecondary(p(0x1047B165));
+    pa_registerGlobalObject(p(0x101EA468));
+    a = 0x1047B24C;
+    B(a + 4, 0);
+    W(a + 16, 0x100520A8);
+    B(a + 12, 1);
+    B(a + 20, 2);
+    W(a, 0x100520A8);
+    W(a + 24, 0x100520A8);
+    W(a + 8, 0x100520A8);
+    B(a + 28, 3);
+    pa_registerGlobalObject(p(0x101EA474));
+    a = 0x1047B26C;
+    W(a, 0x10051B94);
+    copy(0x101EA420, a + 4, 4);
+    W(a + 8, 0x10051B94);
+    copy(0x101EA424, a + 12, 4);
+    W(a + 16, 0x10051B94);
+    copy(0x101EA428, a + 20, 4);
+    pa_registerGlobalObject(p(0x101EA480));
+    W(0x1047B2D8, 0x10052320);
+    pa_registerGlobalObject(p(0x101EA48C));
+    W(0x1047B2DC, 0x10052360);
+    pa_registerGlobalObject(p(0x101EA498));
+    pa_smokeCtorFlags(p(0x1047B284), u32(0), u32(1), u32(1), u32(1));
+    pa_registerGlobalObject(p(0x101EA4A4));
+    W(0x1047B2E0, 0x100522C0);
+    pa_registerGlobalObject(p(0x101EA4B0));
+    W(0x1047B2E4, 0x10052128);
+    pa_registerGlobalObject(p(0x101EA4BC));
+    W(0x1047B2E8, 0x10052398);
+    pa_registerGlobalObject(p(0x101EA4C8));
+    W(0x1047B2EC, 0x100520E8);
+    pa_registerGlobalObject(p(0x101EA4D4));
+    a = 0x1047B1E4;
+    W(a + 20, 0x10051A34);
+    W(a + 56, 0x10051F88);
+    W(a + 40, 0x10051FF4);
+    W(a, 0x10051F78);
+    W(a + 44, 0x10051A34);
+    W(a + 48, 0x10052008);
+    W(a + 32, 0x10051FA8);
+    W(a + 52, 0x10051A34);
+    W(a + 12, 0x10051A34);
+    W(a + 68, 0x10051A34);
+    W(a + 4, 0x10051A34);
+    W(a + 16, 0x10051FE4);
+    W(a + 84, 0x10051A34);
+    W(a + 72, 0x10052040);
+    W(a + 8, 0x10052018);
+    W(a + 80, 0x10052058);
+    W(a + 24, 0x1005202C);
+    W(a + 28, 0x10051A34);
+    W(a + 88, 0x10051FBC);
+    W(a + 36, 0x10051A34);
+    W(a + 76, 0x10051A34);
+    W(a + 64, 0x10051F98);
+    W(a + 60, 0x10051A34);
+    W(a + 92, 0x10051A34);
+    W(a + 96, 0x10051FD0);
+    W(a + 100, 0x10051A34);
+}
+static void initBoundCallback(u32 place, u32 owner, u32 function) {
+    void* obj = allocate(p(place), 32);
+    if (!obj)
+        return;
+    u32 a = gabi::ea(obj);
+    void* base = allocate(obj, 8);
+    if (base) {
+        W(gabi::ea(base) + 4, 0x10051A34);
+        W(gabi::ea(base), 0x10051A19);
+    }
+    B(a + 8, 0);
+    W(a + 12, 0x10051BFC);
+    u32 functor = a + 16;
+    if (functor) {
+        W(functor + 4, owner);
+        W(functor + 8, 0x0000FFFF);
+        W(functor, 0x10051C0C);
+        W(functor + 12, function);
+    }
+}
+/* 025A7398 */
+void* dPa_controlCtor(void* obj) {
+    obj = allocate(obj, 0x41A4);
+    if (!obj)
+        return obj;
+    u32 a = gabi::ea(obj);
+    pa_constructArray(obj, u32(10), u32(24), p(0x025AACDC));
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.g = 0;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.r = 0;
+    f32 zero = (f32)l_particleZero;
+    gabi::at<pa::dPa_control_c>(a)->mColorBlend = zero;
+    gabi::at<pa::dPa_control_c>(a)->mPrimaryColor.b = 0;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.r = 0;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.g = 0;
+    gabi::at<pa::dPa_control_c>(a)->mEnvironmentColor.b = 0;
+    pa_constructArray(p(a + 0xFC), u32(3), u32(4), p(0x025AAD64));
+    gabi::at<pa::dPa_control_c>(a)->mNumSimpleCommon = 0;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[3] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneResMng = 0;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[0] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawEnvironmentColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mDrawPrimaryColor.b = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawEnvironmentColor.g = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawColorBlend = zero;
+    gabi::at<pa::dPa_control_c>(a)->mSceneNo = 0;
+    gabi::at<pa::dPa_control_c>(a)->mHeap = 0;
+    gabi::at<pa::dPa_control_c>(a)->mNumSimple = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneHeap = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawPrimaryColor.g = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneReleaseTimer = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawEnvironmentColor.b = 0;
+    gabi::at<pa::dPa_control_c>(a)->mCount = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawPrimaryColor.a = 255;
+    gabi::at<pa::dPa_control_c>(a)->mMenuDrawEnabled = 0;
+    gabi::at<pa::dPa_control_c>(a)->mpData = 0;
+    gabi::at<pa::dPa_control_c>(a)->mCommonResMng = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawPrimaryColor.r = 0;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[1] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mRenderState[2] = 0;
+    gabi::at<pa::dPa_control_c>(a)->mDrawEnvironmentColor.r = 0;
+    gabi::at<pa::dPa_control_c>(a)->mModelControl = 0;
+    pa_constructArray(p(a + 0x148), u32(25), u32(0x290), p(0x025A4A60));
+    gabi::at<pa::dPa_control_c>(a)->mRenderControl = 0;
+    gabi::at<pa::dPa_control_c>(a)->mTextureBank = 0;
+    W(a + 0x4160, 0x10051BD4);
+    initBoundCallback(a + 0x4164, a, 0x025A8D8C);
+    initBoundCallback(a + 0x4184, a, 0x025A8F08);
+    void* system = pa_getParticleSystemHeap();
+    gabi::Local<u32[2]> name;
+    W(gabi::ea(name.get()) + 4, 0x10051A34);
+    W(gabi::ea(name.get()), 0x10051CCC);
+    void* heap = pa_createParticleHeap(u32(0x02E00000), name.get(), system, u32(1), u32(0));
+    gabi::at<pa::dPa_control_c>(a)->mHeap = gabi::ea(heap);
+    if (!heap)
+        pa_JUTAssertion_showAssert(p(0x10051CE0), u32(0x6B9), p(0x10051CF0));
+    gabi::at<pa::dPa_control_c>(a)->mCount = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneNo = 255;
+    l_particleEmitterManager = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneReleaseTimer = ~u32(0);
+    gabi::at<pa::dPa_control_c>(a)->mCommonResMng = 0;
+    gabi::at<pa::dPa_control_c>(a)->mNumSimple = 0;
+    gabi::at<pa::dPa_control_c>(a)->mSceneResMng = 0;
+    return obj;
+}
+static void makeSafeName(u32 a, u32 text) {
+    W(a, text);
+    W(a + 4, 0x10051A34);
+}
+static void heapReport(u32 owner, u32 format) {
+    u32 heap = w(owner + 0x128);
+    u32 size = pa_getParticleHeapSize(p(heap));
+    pa_OSReport(p(format), size);
+}
+/* 025A7838 */
+void pa::dPa_control_c::createCommon(void* data) {
+    u32 a = gabi::ea(this), oldMode = 1, heap = (u32)this->mHeap;
+    if (heap)
+        oldMode = pa_exchangeParticleContext(p(w(0x101F8B4C)), p(heap));
+    gabi::Local<u32[2]> firstName, secondName, resNameA, resNameB;
+    u32 n1 = gabi::ea(firstName.get()), n2 = gabi::ea(secondName.get());
+    makeSafeName(n1, 0x10051D78);
+    makeSafeName(n2, 0x10051D84);
+    pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0));
+    void* bank = pa_getParticleTextureBank();
+    this->mTextureBank = gabi::ea(bank);
+    heapReport(a, 0x10051D94);
+    heap = (u32)this->mHeap;
+    void* rm = pa_operatorNewHeap(u32(12), p(heap), u32(4));
+    if (rm) {
+        bank = p((u32)this->mTextureBank);
+        heap = (u32)this->mHeap;
+        rm = pa_JPAResourceManager_ctor(rm, data, p(heap), bank);
+    }
+    this->mCommonResMng = gabi::ea(rm);
+    if (!rm)
+        pa_JUTAssertion_showAssert(p(0x10051DA4), u32(0x711), p(0x10051DB4));
+    heapReport(a, 0x10051DCC);
+    heap = (u32)this->mHeap;
+    void* renderControl = pa_operatorNewHeap(u32(16), p(heap), u32(4));
+    if (renderControl) {
+        u32 r = gabi::ea(renderControl);
+        W(r, 0);
+        W(r + 4, 0);
+        void* list = allocate(p(r + 8), 8);
+        if (list) {
+            W(gabi::ea(list) + 4, 0);
+            W(gabi::ea(list), 0);
+        }
+    }
+    this->mRenderControl = gabi::ea(renderControl);
+    u32 sys = w(0x101F8A94), count = w(sys + 16);
+    u32 texture = 0;
+    if (count > 1)
+        texture = w(sys + 20) + 0x5C;
+    heap = (u32)this->mHeap;
+    pa_initializeParticleRenderControl(renderControl, p(texture), p(heap));
+    heap = (u32)this->mHeap;
+    void* manager = pa_operatorNewHeap(u32(0x580BB8), p(heap), u32(4));
+    if (manager) {
+        rm = p((u32)this->mCommonResMng);
+        u32 ctrl = (u32)this->mRenderControl;
+        heap = (u32)this->mHeap;
+        manager =
+            pa_JPAEmitterManager_ctor(manager, rm, u32(3000), u32(150), u32(200), p(heap), p(ctrl));
+    }
+    l_particleEmitterManager = gabi::ea(manager);
+    if (!manager)
+        pa_JUTAssertion_showAssert(p(0x10051DA4), u32(0x726), p(0x10051DDC));
+    heapReport(a, 0x10051DF0);
+    makeSafeName(n2, 0x10051D84);
+    makeSafeName(n1, 0x10051D78);
+    if (pa_loadParticleTextureBank(p(w(0x101F4F7C)), firstName.get(), secondName.get(), u32(0))) {
+        u32 res = gabi::ea(pa_getParticleTextureBank()), off = w(res + 0x4C);
+        u32 tableBase = off ? res + 0x4C + off : 0;
+        u32 table = gabi::ea(pa_findParticleTexture(p(tableBase), p(0x10051E00)));
+        if (table) {
+            u32 relative = w(table), size = w(table + 4), cursor = relative ? table + relative : 0,
+                n = size >> 3;
+            while (n--) {
+                u32 id = w(cursor), tex = w(cursor + 4);
+                cursor += 8;
+                if (tex)
+                    pa_registerParticleTexture(p((u32)l_particleEmitterManager), p(tex), u16(id));
+            }
+        }
+    }
+    heap = (u32)this->mHeap;
+    void* modelControl = pa_operatorNewHeap(u32(16), p(heap), u32(4));
+    if (modelControl) {
+        makeSafeName(gabi::ea(resNameA.get()), 0x10051D70);
+        u32 resctl = w(0x101F4F28);
+        void* first = pa_dRes_control_getRes(p(resctl), resNameA.get(), u32(0x31));
+        makeSafeName(gabi::ea(resNameB.get()), 0x10051D70);
+        resctl = w(0x101F4F28);
+        void* second = pa_dRes_control_getRes(p(resctl), resNameB.get(), u32(0x30));
+        heap = (u32)this->mHeap;
+        modelControl = pa_modelControlCtor(modelControl, first, second, p(heap));
+    }
+    this->mModelControl = gabi::ea(modelControl);
+    if (!modelControl)
+        pa_JUTAssertion_showAssert(p(0x10051DA4), u32(0x74F), p(0x10051E14));
+    heapReport(a, 0x10051E2C);
+    for (u32 i = 0; i < 8; i++) {
+        u32 r = (u32)this->mCommonResMng;
+        u16 id = h(0x101EA50C + i * 2);
+        if (pa_JPAResourceManager_getResource(p(w(r + 4)), u32(id)))
+            pa_newSimple(this, u32(id), u32(id & 0x4000 ? 4 : 0));
+    }
+    heapReport(a, 0x10051E3C);
+    this->mNumSimpleCommon = (u8)this->mNumSimple;
+    pa_applyDefaultParameters(this);
+    if (oldMode != 1)
+        pa_restoreParticleContext(p(w(0x101F8B4C)), oldMode);
+}
+/* WWHD glue
+*/

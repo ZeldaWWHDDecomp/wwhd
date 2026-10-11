@@ -1,14 +1,17 @@
-#include "gabi.h"
-using namespace gabi;
-namespace hd_screen_cannon_game {
-void reveal(u32 self,u32 target) {
- WWHD_FUNC(0x0264679C,void,self,target);
- u32 n=load<u32>(self+0x5C);
- if(n>=target) return;
- u32 index=n+10, slots=load<u32>(self+0x4C);
- if(index<load<u32>(self+0x48)) slots+=index*4;
- store<u8>(load<u32>(slots)+0x50,1);
- store<u32>(self+0x5C,load<u32>(self+0x5C)+1);
+/* HD cannon-game target reveal. */
+#include "d/hd_minigame_hud.h"
+
+/* 0264679C */
+void hdScreenCannonGame_c::reveal(u32 target) {
+    u32 n = mRevealedTargets;
+    if (n >= target) return;
+    u32 index = n + Minigame_CannonTargetPane;
+    gptr<MinigamePane>* slots = mPanes;
+    // HD: an out-of-range pane index falls back to the first slot.
+    if (index < mPaneCount) slots += index;
+    slots->get()->mVisible = 1;
+    mRevealedTargets = u32(mRevealedTargets) + 1;
 }
-VERIFY(0x0264679C,reveal);
-}
+
+/* WWHD glue
+*/

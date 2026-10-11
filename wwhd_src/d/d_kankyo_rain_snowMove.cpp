@@ -1,97 +1,207 @@
-#include "d_kankyo_rain_private.h"
-namespace d_kankyo_rain_cpp {
-static void snowMove() {
-    WWHD_FUNC(0x02568BD4,void);
-    u32 packet=ld(environment()+0xA50),camera=ld(gameInfo()+0x5AF8);
-    gameInfo();
-    gabi::Local<Vec_l> wind,center,heading,position,wrapDirection;
-    gabi::Local<DoublePos_l> delta;
-    gabi::call(0x0257DB28,wind.get());
-    u32 wanted=ld(environment()+0xA4C);
-    s32 count=gabi::load<s16>(packet+0x3760);
-    if(count>(s32)wanted) {if(!count)return;}
-    else {count=gabi::load<s16>(environment()+0xA4E);gabi::store<u16>(packet+0x3760,(u16)count);if(!count)return;}
-    f32 depth=lf(0x1004F7CC);
-    gabi::call(0x0256401C,camera,center.get(),depth,depth);
-    f32 squared=gabi::call<f32>(0x028E8DE8,packet+0x374C,camera+0xDC);
-    if(gabi::call<f64>(0x028F4384,(f64)squared)>lf(0x1004F7D0))gabi::store<u16>(packet+0x3760,0);
-    for(u32 axis=0;axis<3;axis++)gabi::store<u32>(packet+0x374C+axis*4,ld(camera+0xDC+axis*4));
-    u32 windDirection=gabi::call<u32>(0x0257DAA8);
-    f32 power=gabi::call<f32>(0x02578348);
-    delta->x=(f64)gabi::fsubs_ppc(lf(camera+0xE8),lf(camera+0xDC));delta->y=ldbl(0x1004F530);delta->z=(f64)gabi::fsubs_ppc(lf(camera+0xF0),lf(camera+0xE4));
-    gabi::call(0x02563E48,delta.get(),heading.get());
-    f32 zero=lf(0x1004F528);
-    f32 turn=gabi::call<f32>(0x02010CFC,zero,zero,-lf(windDirection),-lf(windDirection+8),(f32)heading->x,(f32)heading->z);
-    sf(packet+0x375C,turn);
-    f32 projection=gabi::fmadds(lf(windDirection),(f32)heading->x,gabi::fmuls_ppc(lf(windDirection+8),(f32)heading->z));
-    f32 one=lf(0x1004F550);
-    f32 strength=gabi::fmuls_ppc(gabi::fmuls_ppc(gabi::fmuls_ppc(gabi::fsubs_ppc(one,std::fabs(projection)),power),gabi::fsubs_ppc(one,std::fabs(lf(windDirection+4)))),std::fabs(turn));
-    count=gabi::load<s16>(packet+0x3760);sf(packet+0x3758,strength);if(count-1<0)return;
-    f32 approach=lf(0x1004F554),phaseStep=lf(0x1004F734),phaseRange=lf(0x1004F6D8),randomStep=lf(0x1004F588),half=lf(0x1004F57C),wrapJitter=lf(0x1004F7DC),fallRange=lf(0x1004F7D4),sizeBase=lf(0x1004F730),small=lf(0x1004F580),range=lf(0x1004F5FC),unit=lf(0x1004F5D0),fadeOffset=lf(0x1004F7D8),jitterScale=lf(0x1004F744);
-    for(s32 i=count-1;i>=0;i--) {
-        u32 particle=packet+0x9C+(u32)i*56;
-        f32 fall=-gabi::fadds_ppc(gabi::call<f32>(0x020198D8,fallRange),jitterScale);
-        f32 size=gabi::fadds_ppc((f32)(i&15),sizeBase);
-        u8 state=gabi::load<u8>(particle);
-        if(!state) {
-            sf(particle+0x28,size);sf(particle+0x24,fall);gabi::store<u16>(particle+0x34,0);
-            sf(particle+0x10,(f32)center->x);sf(particle+0x14,(f32)center->y);sf(particle+0x18,(f32)center->z);
-            sf(particle+4,gabi::call<f32>(0x02019918,range));sf(particle+8,range);sf(particle+12,gabi::call<f32>(0x02019918,range));
-            sf(particle+0x2C,zero);sf(particle+0x1C,gabi::call<f32>(0x020198D8,phaseRange));
-            f32 phase=gabi::call<f32>(0x020198D8,phaseRange);
-            gabi::store<u8>(particle,gabi::load<u8>(particle)+1);sf(particle+0x20,phase);
-        } else if(state<=3) {
-            f32 noise=gabi::call<f32>(0x02019918,randomStep);
-            gabi::call(0x0200ECD4,particle+0x28,gabi::fsubs_ppc(lf(particle+0x28),noise),half,randomStep,small);
-            if(gabi::load<u8>(particle)!=3||lf(particle+0x2C)<small) {
-                f32 sizeNow=lf(particle+0x28);
-                sf(particle+4,gabi::fmadds((f32)wind->x,sizeNow,lf(particle+4)));
-                sf(particle+12,gabi::fmadds((f32)wind->z,sizeNow,lf(particle+12)));
-                sf(particle+8,gabi::fadds_ppc(lf(particle+8),gabi::fmadds((f32)wind->y,sizeNow,lf(particle+0x24))));
-                u32 angle=gabi::call<u32>(0x02019510,lf(particle+0x1C));
-                sf(particle+4,gabi::fmadds(lf(0x104A44F8+((angle&0xFFFF)>>3)*8),jitterScale,lf(particle+4)));
-                angle=gabi::call<u32>(0x02019510,lf(particle+0x20));
-                f32 phase=gabi::fadds_ppc(lf(particle+0x1C),phaseStep),phaseZ=gabi::fadds_ppc(lf(particle+0x20),phaseStep);
-                sf(particle+12,gabi::fmadds(lf(0x104A44F8+((angle&0xFFFF)>>3)*8),jitterScale,lf(particle+12)));
-                sf(particle+0x1C,phase);sf(particle+0x20,phaseZ);
-            }
-            position->x=gabi::fadds_ppc(lf(particle+0x10),lf(particle+4));position->y=gabi::fadds_ppc(lf(particle+0x14),lf(particle+8));position->z=gabi::fadds_ppc(lf(particle+0x18),lf(particle+12));
-            squared=gabi::call<f32>(0x028E8DE8,position.get(),center.get());
-            f64 distance=gabi::call<f64>(0x028F4384,(f64)squared);
-            s16 delay=gabi::load<s16>(particle+0x34);
-            if(!delay&&distance>range) {
-                sf(particle+0x28,size);sf(particle+0x24,fall);gabi::store<u16>(particle+0x34,10);
-                sf(particle+0x10,(f32)center->x);sf(particle+0x14,(f32)center->y);sf(particle+0x18,(f32)center->z);
-                squared=gabi::call<f32>(0x028E8DE8,position.get(),center.get());distance=gabi::call<f64>(0x028F4384,(f64)squared);
-                if(distance>unit) {
-                    sf(particle+4,gabi::call<f32>(0x02019918,range));sf(particle+8,gabi::call<f32>(0x02019918,range));
-                    f32 z=gabi::call<f32>(0x02019918,range);gabi::store<u8>(particle,1);sf(particle+12,z);
-                } else {
-                    f32 noise=gabi::call<f32>(0x02019918,wrapJitter);
-                    gabi::call(0x02563F0C,position.get(),center.get(),wrapDirection.get());
-                    f32 radius=gabi::fadds_ppc(noise,range);
-                    sf(particle+4,gabi::fmuls_ppc((f32)wrapDirection->x,radius));sf(particle+8,gabi::fmuls_ppc((f32)wrapDirection->y,radius));
-                    f32 z=gabi::fmuls_ppc((f32)wrapDirection->z,radius);gabi::store<u8>(particle,1);sf(particle+12,z);
-                }
-            } else if(delay)gabi::store<u16>(particle+0x34,(u16)(delay-1));
-        }
-        position->x=gabi::fadds_ppc(lf(particle+0x10),lf(particle+4));position->y=gabi::fadds_ppc(lf(particle+0x14),lf(particle+8));position->z=gabi::fadds_ppc(lf(particle+0x18),lf(particle+12));
-        f32 alpha;
-        bool fadeOut;
-        if(gabi::load<u8>(particle)==3) {
-            alpha=zero;fadeOut=i>(s32)(ld(environment()+0xA4C)-1);
+/* Snow weather simulation. GameCube particle names on the HD packet layout.
+ * Verification preserves fused arithmetic, native call order and word copies. */
+#include "d/d_kankyo_rain_weather.h"
+using namespace weather_move;
+namespace weather_move {
+static WeatherTrigHD snowWeatherTrig;
+static f32 weatherSin(u32 angle) {
+  return snowWeatherTrig.entries[(u16)angle >> 3].sin;
+}
+static f32 weatherCos(u32 angle) {
+  return snowWeatherTrig.entries[(u16)angle >> 3].cos;
+}
+} // namespace weather_move
+// HD: requested snow count is read separately from the 16-bit active count.
+// HD: native distance square roots remain double precision at boundary
+// compares.
+/* 02568BD4 */
+void dKyr_snow_move() {
+  SnowPacketHD *snow_packet = weatherEnvironment()->mpSnowPacket;
+  WeatherCameraHD *camera = weatherPlay()->mpCamera;
+  weatherPlay();
+  WeatherVectorHD wind;
+  WeatherVectorHD center;
+  WeatherVectorHD heading;
+  WeatherVectorHD position;
+  WeatherVectorHD wrapDirection;
+  WeatherDoublePosHD delta;
+  dKyw_get_wind_vecpowHD(&wind);
+  u32 wanted = weatherEnvironment()->mSnowRequestHD;
+  s32 count = (s16)snow_packet->mEffCount;
+  if (count > (s32)wanted) {
+    if (!count)
+      return;
+  } else {
+    count = (s16)weatherEnvironment()->mSnowCount;
+    snow_packet->mEffCount = (u16)count;
+    if (!count)
+      return;
+  }
+  f32 depth = 5e+02f;
+  dKy_set_eyevect_calc2HD(camera, &center, depth, depth);
+  f32 squared = weatherDistanceSquared(&snow_packet->mOldEyePos, &camera->mEye);
+  if (weatherSqrtDouble((f64)squared) > 1.5e+03f)
+    snow_packet->mEffCount = 0;
+  for (u32 axis = 0; axis < 3; axis++)
+    snow_packet->mOldEyePos.words[axis] = camera->mEye.words[axis].get();
+  WeatherVectorHD *windDirection = dKyw_get_wind_vecHD();
+  f32 power = dKyw_get_wind_powHD();
+  delta.x = (f64)gabi::fsubs_ppc((f32)camera->mCenter.x, (f32)camera->mEye.x);
+  delta.y = 0.0;
+  delta.z = (f64)gabi::fsubs_ppc((f32)camera->mCenter.z, (f32)camera->mEye.z);
+  vectle_calcHD(&delta, &heading);
+  f32 zero = 0.0f;
+  f32 turn = cM3d_VectorProduct2dHD(zero, zero, -(f32)windDirection->x,
+                                    -(f32)windDirection->z, (f32)heading.x,
+                                    (f32)heading.z);
+  snow_packet->mWindTurn = turn;
+  f32 projection =
+      gabi::fmadds((f32)windDirection->x, (f32)heading.x,
+                   gabi::fmuls_ppc((f32)windDirection->z, (f32)heading.z));
+  f32 one = 1.0f;
+  f32 strength = gabi::fmuls_ppc(
+      gabi::fmuls_ppc(
+          gabi::fmuls_ppc(gabi::fsubs_ppc(one, std::fabs(projection)), power),
+          gabi::fsubs_ppc(one, std::fabs((f32)windDirection->y))),
+      std::fabs(turn));
+  count = (s16)snow_packet->mEffCount;
+  snow_packet->mWindStrength = strength;
+  if (count - 1 < 0)
+    return;
+  f32 approach = 0.2f, phaseStep = 0.02f, phaseRange = 3.6e+02f,
+      randomStep = 0.1f, half = 0.5f, wrapJitter = 27.5f, fallRange = 8.5f,
+      sizeBase = 5.0f, small = 0.01f, range = 5.5e+02f, unit = 6e+02f,
+      fadeOffset = 62.5f, jitterScale = 1.5f;
+  for (s32 i = count - 1; i >= 0; i--) {
+    SnowEffHD *particle = &snow_packet->mEff[i];
+    f32 fall = -gabi::fadds_ppc(cM_rndF(fallRange), jitterScale);
+    f32 size = gabi::fadds_ppc((f32)(i & 15), sizeBase);
+    u8 state = (u8)particle->mStatus;
+    if (!state) {
+      particle->mWindSpeed = size;
+      particle->mGravity = fall;
+      particle->mTimer = 0;
+      particle->mBasePos.x = (f32)center.x;
+      particle->mBasePos.y = (f32)center.y;
+      particle->mBasePos.z = (f32)center.z;
+      particle->mPos.x = cM_rndFX(range);
+      particle->mPos.y = range;
+      particle->mPos.z = cM_rndFX(range);
+      particle->mScale = zero;
+      particle->mPosWaveX = cM_rndF(phaseRange);
+      f32 phase = cM_rndF(phaseRange);
+      particle->mStatus = (u8)particle->mStatus + 1;
+      particle->mPosWaveZ = phase;
+    } else if (state <= 3) {
+      f32 noise = cM_rndFX(randomStep);
+      weatherAddCalc(&particle->mWindSpeed,
+                     gabi::fsubs_ppc((f32)particle->mWindSpeed, noise), half,
+                     randomStep, small);
+      if ((u8)particle->mStatus != 3 || (f32)particle->mScale < small) {
+        f32 sizeNow = (f32)particle->mWindSpeed;
+        particle->mPos.x =
+            gabi::fmadds((f32)wind.x, sizeNow, (f32)particle->mPos.x);
+        particle->mPos.z =
+            gabi::fmadds((f32)wind.z, sizeNow, (f32)particle->mPos.z);
+        particle->mPos.y = gabi::fadds_ppc(
+            (f32)particle->mPos.y,
+            gabi::fmadds((f32)wind.y, sizeNow, (f32)particle->mGravity));
+        u32 angle = weatherFloatAngle((f32)particle->mPosWaveX);
+        particle->mPos.x =
+            gabi::fmadds(weatherSin(angle), jitterScale, (f32)particle->mPos.x);
+        angle = weatherFloatAngle((f32)particle->mPosWaveZ);
+        f32 phase = gabi::fadds_ppc((f32)particle->mPosWaveX, phaseStep),
+            phaseZ = gabi::fadds_ppc((f32)particle->mPosWaveZ, phaseStep);
+        particle->mPos.z =
+            gabi::fmadds(weatherSin(angle), jitterScale, (f32)particle->mPos.z);
+        particle->mPosWaveX = phase;
+        particle->mPosWaveZ = phaseZ;
+      }
+      position.x =
+          gabi::fadds_ppc((f32)particle->mBasePos.x, (f32)particle->mPos.x);
+      position.y =
+          gabi::fadds_ppc((f32)particle->mBasePos.y, (f32)particle->mPos.y);
+      position.z =
+          gabi::fadds_ppc((f32)particle->mBasePos.z, (f32)particle->mPos.z);
+      squared = weatherDistanceSquared(&position, &center);
+      f64 distance = weatherSqrtDouble((f64)squared);
+      s16 delay = (s16)particle->mTimer;
+      if (!delay && distance > range) {
+        particle->mWindSpeed = size;
+        particle->mGravity = fall;
+        particle->mTimer = 10;
+        particle->mBasePos.x = (f32)center.x;
+        particle->mBasePos.y = (f32)center.y;
+        particle->mBasePos.z = (f32)center.z;
+        squared = weatherDistanceSquared(&position, &center);
+        distance = weatherSqrtDouble((f64)squared);
+        if (distance > unit) {
+          particle->mPos.x = cM_rndFX(range);
+          particle->mPos.y = cM_rndFX(range);
+          f32 z = cM_rndFX(range);
+          particle->mStatus = 1;
+          particle->mPos.z = z;
         } else {
-            squared=gabi::call<f32>(0x028E8DE8,position.get(),camera+0xDC);
-            f32 value=(f32)(gabi::call<f64>(0x028F4384,(f64)squared)+(f64)fadeOffset);
-            value=value>=0.0f?value:zero;
-            alpha=gabi::fsubs_ppc(one,value/lf(0x1004F7E0));
-            if(alpha>one) {alpha=one;fadeOut=i>(s32)(ld(environment()+0xA4C)-1);}
-            else {if(alpha<zero)alpha=zero;fadeOut=i>(s32)(ld(environment()+0xA4C)-1);}
+          f32 noise = cM_rndFX(wrapJitter);
+          get_vectle_calcHD(&position, &center, &wrapDirection);
+          f32 radius = gabi::fadds_ppc(noise, range);
+          particle->mPos.x = gabi::fmuls_ppc((f32)wrapDirection.x, radius);
+          particle->mPos.y = gabi::fmuls_ppc((f32)wrapDirection.y, radius);
+          f32 z = gabi::fmuls_ppc((f32)wrapDirection.z, radius);
+          particle->mStatus = 1;
+          particle->mPos.z = z;
         }
-        if(fadeOut)gabi::call(0x0200ECD4,particle+0x2C,zero,approach,randomStep,small);
-        else sf(particle+0x2C,alpha);
-        if(i>(s32)(ld(environment()+0xA4C)-1)&&lf(particle+0x2C)<small&&(u32)i==(u32)(gabi::load<s16>(packet+0x3760)-1))gabi::store<u16>(packet+0x3760,(u16)(gabi::load<s16>(packet+0x3760)-1));
+      } else if (delay)
+        particle->mTimer = (u16)(delay - 1);
     }
+    position.x =
+        gabi::fadds_ppc((f32)particle->mBasePos.x, (f32)particle->mPos.x);
+    position.y =
+        gabi::fadds_ppc((f32)particle->mBasePos.y, (f32)particle->mPos.y);
+    position.z =
+        gabi::fadds_ppc((f32)particle->mBasePos.z, (f32)particle->mPos.z);
+    f32 alpha;
+    bool fadeOut;
+    if ((u8)particle->mStatus == 3) {
+      alpha = zero;
+      fadeOut = i > (s32)((u32)weatherEnvironment()->mSnowRequestHD - 1);
+    } else {
+      squared = weatherDistanceSquared(&position, &camera->mEye);
+      f32 value = (f32)(weatherSqrtDouble((f64)squared) + (f64)fadeOffset);
+      value = value >= 0.0f ? value : zero;
+      alpha = gabi::fsubs_ppc(one, value / 1125.0f);
+      if (alpha > one) {
+        alpha = one;
+        fadeOut = i > (s32)((u32)weatherEnvironment()->mSnowRequestHD - 1);
+      } else {
+        if (alpha < zero)
+          alpha = zero;
+        fadeOut = i > (s32)((u32)weatherEnvironment()->mSnowRequestHD - 1);
+      }
+    }
+    if (fadeOut)
+      weatherAddCalc(&particle->mScale, zero, approach, randomStep, small);
+    else
+      particle->mScale = alpha;
+    if (i > (s32)((u32)weatherEnvironment()->mSnowRequestHD - 1) &&
+        (f32)particle->mScale < small &&
+        (u32)i == (u32)((s16)snow_packet->mEffCount - 1))
+      snow_packet->mEffCount = (u16)((s16)snow_packet->mEffCount - 1);
+  }
 }
-VERIFY(0x02568BD4,snowMove);
-}
+/* WWHD glue (tools/verify/autoglue.py)
+ext 02555D0C WeatherEnvironmentHD *weatherEnvironment()
+ext 025200D4 WeatherPlayHD *weatherPlay()
+ext 0257DB28 void dKyw_get_wind_vecpowHD(WeatherVectorHD *)
+ext 0257DAA8 WeatherVectorHD *dKyw_get_wind_vecHD()
+ext 02578348 f32 dKyw_get_wind_powHD()
+ext 0256401C void dKy_set_eyevect_calc2HD(WeatherCameraHD *, WeatherVectorHD *, f32, f32)
+ext 028E8DE8 f32 weatherDistanceSquared(WeatherVectorHD *, WeatherVectorHD *)
+ext 028F4384 f64 weatherSqrtDouble(f64)
+ext 02563E48 void vectle_calcHD(WeatherDoublePosHD *, WeatherVectorHD *)
+ext 02010CFC f32 cM3d_VectorProduct2dHD(f32, f32, f32, f32, f32, f32)
+ext 0200ECD4 void weatherAddCalc(be<f32> *, f32, f32, f32, f32)
+ext 02019510 u32 weatherFloatAngle(f32)
+ext 02563F0C void get_vectle_calcHD(WeatherVectorHD *, WeatherVectorHD *, WeatherVectorHD *)
+data snowWeatherTrig 104A44F8
+*/

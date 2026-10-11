@@ -1,37 +1,242 @@
-#include "gabi.h"
+/* WWHD: SDK animation-buffer joint calculation; GameCube morph flow.
+ * HD: callback order, guest scratch aliasing, word copies and PPC arithmetic are retained. */
+#include "m_Do/m_Do_ext_morf2_calc.h"
+using namespace mDoExtCalc;
 using namespace gabi;
-void ext_5C2C(void* self,void* model){WWHD_FUNC(0x025E5C2C,void,self,model);u32 reference=load<u32>(ea(model)+0x2C);call(0x027E0834,at<void>(ea(self)+0x78),at<void>(reference));}
-VERIFY(0x025E5C2C,ext_5C2C);
-void ext_5C38(void* self,void* model){WWHD_FUNC(0x025E5C38,void,self,model);u32 reference=load<u32>(ea(model)+0x2C);store<u32>(reference+0x30,ea(self));reference=load<u32>(ea(model)+0x2C);store<u16>(reference+0x2E,0);call(0x025E564C,self,model);call(0x025E5C2C,self,model);}
-VERIFY(0x025E5C38,ext_5C38);
-void ext_morf2Error(void* self){WWHD_FUNC(0x025E5C90,void,self);u32 o=ea(self),audio=load<u32>(o+0xC4);if(audio){call(0x02801D3C,at<void>(audio));store<u32>(o+0xC4,0);}u32 transforms=load<u32>(o+0x9C),quats=load<u32>(o+0xA0);if(transforms)store<u32>(o+0x9C,0);u32 model=load<u32>(o+0x90);if(quats)store<u32>(o+0xA0,0);if(model){call_ptr(load<u32>(load<u32>(model+0xC)+0xC),at<void>(model),2);store<u32>(o+0x90,0);}}
-VERIFY(0x025E5C90,ext_morf2Error);
-void ext_morf2SetMorf(void* self,f32 duration){WWHD_FUNC(0x025E5D1C,void,self,duration);u32 o=ea(self);f32 zero=load<f32>(0x100586DC),one=load<f32>(0x100586D4);if(!(duration>zero)){store<f32>(o+0xB4,one);store<f32>(o+0xB8,one);return;}f32 delta=one/duration;store<f32>(o+0xB4,zero);store<f32>(o+0xB8,zero);store<f32>(o+0xBC,delta);}
-VERIFY(0x025E5D1C,ext_morf2SetMorf);
-
-void ext_morfCalc(void* self,void* model){
- WWHD_FUNC(0x025E564C,void,self,model);
- u32 o=ea(self),reference=load<u32>(ea(model)+0x2C),joints=load<u32>(reference);call(0x027E0710,at<void>(o+0x78));f32 one=load<f32>(0x100586D4);
- if(load<u32>(o+0x90)&&load<u32>(o+0x94)){store<u32>(0x104B4628,o);u32 animation=load<u32>(o+0x94);call(0x027F363C,self,at<void>(animation));u32 control=load<u32>(o+4);animation=load<u32>(o+0x94);u32 target=load<u32>(control+0x10),receiver=load<u32>(control+0x14);f32 second=load<f32>(control+4),third=load<f32>(control+8),first=load<f32>(animation);f32 result=call_ptr<f32>(target,at<void>(receiver),first,second,third);store<f32>(control,result);call(0x027E0738,at<void>(o+0x78),at<void>(o+4),one);}
- store<u32>(o+0x80,load<u32>(o+0x80)|8);u32 count=load<u16>(joints+8),record=load<u32>(o+0x78);f32 zero=load<f32>(0x100586DC);
- Local<u8[96]> workspace;u32 frame=ea(workspace.get())-8;
- for(u32 i=0;i<count;i++,record+=0x38){u32 transforms=load<u32>(o+0xA8),quats=load<u32>(o+0xAC),info=transforms?transforms+i*32:frame+0x48,quat=quats?quats+i*16:frame+0x38;
- u32 before=0,after=0,scale=0,translation=0;
- if(!load<u32>(o+0x94)){u32 currentModel=load<u32>(o+0x90),data=load<u32>(currentModel+0xAC),num=load<u32>(data+4),joint=load<u32>(data+8),index=i&0xFFFF;if(index<num)joint+=index*0x1C;u32 source=call<u32>(0x027F3CD0,at<void>(joint));
- for(u32 j=0;j<3;j++)store<f32>(info+j*4,load<f32>(source+j*4));for(u32 j=0;j<3;j++)store<s16>(info+0xC+j*2,load<s16>(source+0xC+j*2));for(u32 j=0;j<3;j++)store<f32>(info+0x14+j*4,load<f32>(source+0x14+j*4));
- scale=record+4;translation=record+0x10;before=load<u32>(o+0xC0);if(before)call_ptr(load<u32>(load<u32>(before)+0xC),at<void>(before),index,at<void>(info));call(0x027ED2D0,(s32)load<s16>(info+0xC),(s32)load<s16>(info+0xE),(s32)load<s16>(info+0x10),at<void>(quat));after=load<u32>(o+0xC4);
- }else{f32 progress=load<f32>(o+0xB0);bool blend=progress<one&&transforms&&quats;u32 flags=load<u32>(o+0x54),matrix=load<u32>(o+0x30)+i*0x30;store<u32>(o+0x54,flags|8);u32 temp=blend?frame+8:info;
- for(u32 j=0;j<3;j++){s32 angle=call<s32>(0x02019510,load<f32>(matrix+0x20+j*4));store<s16>(temp+0xC+j*2,(s16)angle);}
- for(u32 j=0;j<3;j++)store<u32>(temp+j*4,load<u32>(record+4+j*4));for(u32 j=0;j<3;j++)store<u32>(temp+0x14+j*4,load<u32>(record+0x10+j*4));
- scale=record+4;translation=record+0x10;before=load<u32>(o+0xC0);if(before)call_ptr(load<u32>(load<u32>(before)+0xC),at<void>(before),i&0xFFFF,at<void>(temp));
- if(blend){f32 previous=load<f32>(o+0xB4),current=load<f32>(o+0xB0),ratio=fsubs_ppc(current,previous)/fsubs_ppc(one,previous),oldRatio=fsubs_ppc(one,ratio);call(0x027ED2D0,(s32)load<s16>(temp+0xC),(s32)load<s16>(temp+0xE),(s32)load<s16>(temp+0x10),at<void>(frame+0x28));call(0x027ED3AC,at<void>(quat),at<void>(frame+0x28),at<void>(quat),ratio);
- for(u32 j=0;j<3;j++){f32 fresh=load<f32>(temp+0x14+j*4),old=load<f32>(info+0x14+j*4);store<f32>(info+0x14+j*4,fmadds(old,oldRatio,fmuls_ppc(fresh,ratio)));}for(u32 j=0;j<3;j++){f32 fresh=load<f32>(temp+j*4),old=load<f32>(info+j*4);store<f32>(info+j*4,fmadds(old,oldRatio,fmuls_ppc(fresh,ratio)));}
- }else call(0x027ED2D0,(s32)load<s16>(info+0xC),(s32)load<s16>(info+0xE),(s32)load<s16>(info+0x10),at<void>(quat));after=load<u32>(o+0xC4);}
- if(after)call_ptr(load<u32>(load<u32>(after)+0xC),at<void>(after),i&0xFFFF);
- f32 w=load<f32>(quat+0xC),x=load<f32>(quat),y=load<f32>(quat+4),z=load<f32>(quat+8),dw=fadds_ppc(w,w),dx=fadds_ppc(x,x),dy=fadds_ppc(y,y),dz=fadds_ppc(z,z);f32 yy=fnmsubs(dy,y,one),xy=fmuls_ppc(dx,y),yz=fmuls_ppc(dy,z),wy=fmuls_ppc(dw,y),xx=fnmsubs(dx,x,one),zz=fmuls_ppc(dz,z),wz=fmuls_ppc(dw,z);
- store<f32>(record+0x28,fmadds(dx,z,wy));store<f32>(record+0x24,fsubs_ppc(xy,wz));store<f32>(record+0x20,fsubs_ppc(yy,zz));store<f32>(record+0x2C,fadds_ppc(xy,wz));store<f32>(record+0x30,fsubs_ppc(xx,zz));store<f32>(record+0x34,fnmsubs(dw,x,yz));
- f32 sc[3]={load<f32>(info),load<f32>(info+4),load<f32>(info+8)};store<f32>(scale,sc[0]);store<f32>(scale+8,sc[2]);store<f32>(scale+4,sc[1]);f32 tr[3]={load<f32>(info+0x14),load<f32>(info+0x18),load<f32>(info+0x1C)};store<f32>(translation,tr[0]);store<f32>(translation+4,tr[1]);store<f32>(translation+8,tr[2]);
- if(load<f32>(quat)!=zero||load<f32>(quat+4)!=zero||load<f32>(quat+8)!=zero||load<f32>(quat+0xC)!=one)store<u32>(record,load<u32>(record)|0x04000000);if(load<f32>(info)!=one||load<f32>(info+4)!=one||load<f32>(info+8)!=one)store<u32>(record,load<u32>(record)|0x03000000);if(load<f32>(info+0x14)!=zero||load<f32>(info+0x18)!=zero||load<f32>(info+0x1C)!=zero)store<u32>(record,load<u32>(record)|0x08000000);count=load<u16>(joints+8);
- }
+/* 025E5C2C */
+void mDoExt_McaMorf_entryJoints(void *self, void *model) {
+  u32 reference = static_cast<u32>(view<ModelContext>(ea(model))->mpReference);
+  entryBuffer(view<void>(ea(self) + 0x78), view<void>(reference));
 }
-VERIFY(0x025E564C,ext_morfCalc);
+/* 025E5C38 */
+void mDoExt_McaMorf_calcContext(void *self, void *model) {
+  u32 reference = static_cast<u32>(view<ModelContext>(ea(model))->mpReference);
+  (view<Reference>(reference)->mpMtxCalc = ea(self));
+  reference = static_cast<u32>(view<ModelContext>(ea(model))->mpReference);
+  (view<Reference>(reference)->mIndex = 0);
+  calcMorfJoints(self, model);
+  entryMorfJoints(self, model);
+}
+/* 025E5C90 */
+void mDoExt_McaMorf2_ERROR_EXIT(void *self) {
+  u32 o = ea(self), audio = static_cast<u32>(view<Morf2>(o)->mpSound);
+  if (audio) {
+    stopZelAnime(view<void>(audio));
+    (view<Morf2>(o)->mpSound = 0);
+  }
+  u32 transforms = static_cast<u32>(view<Morf2>(o)->mpTransformInfo),
+      quats = static_cast<u32>(view<Morf2>(o)->mpQuat);
+  if (transforms)
+    (view<Morf2>(o)->mpTransformInfo = 0);
+  u32 model = static_cast<u32>(view<Morf2>(o)->mpModel);
+  if (quats)
+    (view<Morf2>(o)->mpQuat = 0);
+  if (model) {
+    call_ptr(static_cast<u32>(
+                 view<Vtable>(static_cast<u32>(view<Model>(model)->mpVtable))
+                     ->mExecute),
+             view<void>(model), 2);
+    (view<Morf2>(o)->mpModel = 0);
+  }
+}
+/* 025E5D1C */
+void mDoExt_McaMorf2_setMorf(void *self, f32 duration) {
+  u32 o = ea(self);
+  f32 zero = static_cast<f32>(constants()->mZero),
+      one = static_cast<f32>(constants()->mOne);
+  if (!(duration > zero)) {
+    (view<Morf2>(o)->mCurMorf = one);
+    (view<Morf2>(o)->mPrevMorf = one);
+    return;
+  }
+  f32 delta = one / duration;
+  (view<Morf2>(o)->mCurMorf = zero);
+  (view<Morf2>(o)->mPrevMorf = zero);
+  (view<Morf2>(o)->mMorfStep = delta);
+}
+/* 025E564C */
+void mDoExt_McaMorf_calcJoints(void *self, void *model) {
+  u32 o = ea(self),
+      reference = static_cast<u32>(view<ModelContext>(ea(model))->mpReference),
+      joints = static_cast<u32>(view<Reference>(reference)->mpJoints);
+  clearBuffer(view<void>(o + 0x78));
+  f32 one = static_cast<f32>(constants()->mOne);
+  if (static_cast<u32>(view<Morf>(o)->mpModel) &&
+      static_cast<u32>(view<Morf>(o)->mpAnm)) {
+    (currentMtxCalc() = o);
+    u32 animation = static_cast<u32>(view<Morf>(o)->mpAnm);
+    bindAnimation(self, view<void>(animation));
+    u32 control = static_cast<u32>(view<Morf>(o)->mpControl);
+    animation = static_cast<u32>(view<Morf>(o)->mpAnm);
+    u32 target = static_cast<u32>(view<Control>(control)->mCallback),
+        receiver = static_cast<u32>(view<Control>(control)->mReceiver);
+    f32 second = static_cast<f32>(view<Control>(control)->mSecond),
+        third = static_cast<f32>(view<Control>(control)->mThird),
+        first = static_cast<f32>(view<Animation>(animation)->mFrame);
+    f32 result =
+        call_ptr<f32>(target, view<void>(receiver), first, second, third);
+    (view<Control>(control)->mValue = result);
+    blendBuffer(view<void>(o + 0x78), view<void>(o + 4), one);
+  }
+  (view<Morf>(o)->mBuffer.mFlags =
+       static_cast<u32>(view<Morf>(o)->mBuffer.mFlags) | BUFFER_DIRTY);
+  u32 count = static_cast<u16>(view<Joints>(joints)->mNum),
+      record = static_cast<u32>(view<Morf>(o)->mBuffer.mpRecords);
+  f32 zero = static_cast<f32>(constants()->mZero);
+  Local<u8[96]> workspace;
+  // HD: GHS scratch offsets include the caller linkage area.
+  u32 frame = ea(workspace.get()) - 8;
+  for (u32 i = 0; i < count; i++, record += 0x38) {
+    u32 transforms = static_cast<u32>(view<Morf>(o)->mpTransformInfo),
+        quats = static_cast<u32>(view<Morf>(o)->mpQuat),
+        info = transforms ? transforms + i * 32 : frame + 0x48,
+        quat = quats ? quats + i * 16 : frame + 0x38;
+    u32 before = 0, after = 0, scale = 0, translation = 0;
+    if (!static_cast<u32>(view<Morf>(o)->mpAnm)) {
+      u32 currentModel = static_cast<u32>(view<Morf>(o)->mpModel),
+          data = static_cast<u32>(view<Model>(currentModel)->mpData),
+          num = static_cast<u32>(view<ModelData>(data)->mNum),
+          joint = static_cast<u32>(view<ModelData>(data)->mpJoints),
+          index = i & 0xFFFF;
+      if (index < num)
+        joint += index * 0x1C;
+      u32 source = getTransformInfo(view<void>(joint));
+      for (u32 j = 0; j < 3; j++)
+        (view<Transform>(info)->mScale.value[j] =
+             static_cast<f32>(view<Transform>(source)->mScale.value[j]));
+      for (u32 j = 0; j < 3; j++)
+        (view<Transform>(info)->mRotation[j] =
+             static_cast<s16>(view<Transform>(source)->mRotation[j]));
+      for (u32 j = 0; j < 3; j++)
+        (view<Transform>(info)->mTranslate.value[j] =
+             static_cast<f32>(view<Transform>(source)->mTranslate.value[j]));
+      scale = record + 4;
+      translation = record + 0x10;
+      before = static_cast<u32>(view<Morf>(o)->mpCallback1);
+      if (before)
+        call_ptr(
+            static_cast<u32>(
+                view<Vtable>(static_cast<u32>(view<Callback>(before)->mpVtable))
+                    ->mExecute),
+            view<void>(before), index, view<void>(info));
+      JMAEulerToQuat(
+          (s32) static_cast<s16>(view<Transform>(info)->mRotation[0]),
+          (s32) static_cast<s16>(view<Transform>(info)->mRotation[1]),
+          (s32) static_cast<s16>(view<Transform>(info)->mRotation[2]),
+          view<void>(quat));
+      after = static_cast<u32>(view<Morf>(o)->mpCallback2);
+    } else {
+      f32 progress = static_cast<f32>(view<Morf>(o)->mCurMorf);
+      bool blend = progress < one && transforms && quats;
+      u32 flags = static_cast<u32>(view<Morf>(o)->mFlags),
+          matrix = static_cast<u32>(view<Morf>(o)->mpMatrices) + i * 0x30;
+      (view<Morf>(o)->mFlags = flags | BUFFER_DIRTY);
+      u32 temp = blend ? frame + 8 : info;
+      for (u32 j = 0; j < 3; j++) {
+        s32 angle =
+            radianToAngle(static_cast<f32>(view<Matrix>(matrix)->mRotation[j]));
+        (view<Transform>(temp)->mRotation[j] = (s16)angle);
+      }
+      for (u32 j = 0; j < 3; j++)
+        (view<Transform>(temp)->mScale.words[j] =
+             static_cast<u32>(view<Record>(record)->mScale.words[j]));
+      for (u32 j = 0; j < 3; j++)
+        (view<Transform>(temp)->mTranslate.words[j] =
+             static_cast<u32>(view<Record>(record)->mTranslate.words[j]));
+      scale = record + 4;
+      translation = record + 0x10;
+      before = static_cast<u32>(view<Morf>(o)->mpCallback1);
+      if (before)
+        call_ptr(
+            static_cast<u32>(
+                view<Vtable>(static_cast<u32>(view<Callback>(before)->mpVtable))
+                    ->mExecute),
+            view<void>(before), i & 0xFFFF, view<void>(temp));
+      if (blend) {
+        f32 previous = static_cast<f32>(view<Morf>(o)->mPrevMorf),
+            current = static_cast<f32>(view<Morf>(o)->mCurMorf),
+            ratio = fsubs_ppc(current, previous) / fsubs_ppc(one, previous),
+            oldRatio = fsubs_ppc(one, ratio);
+        JMAEulerToQuat(
+            (s32) static_cast<s16>(view<Transform>(temp)->mRotation[0]),
+            (s32) static_cast<s16>(view<Transform>(temp)->mRotation[1]),
+            (s32) static_cast<s16>(view<Transform>(temp)->mRotation[2]),
+            view<void>(frame + 0x28));
+        JMAQuatLerp(view<void>(quat), view<void>(frame + 0x28),
+                    view<void>(quat), ratio);
+        for (u32 j = 0; j < 3; j++) {
+          f32 fresh =
+                  static_cast<f32>(view<Transform>(temp)->mTranslate.value[j]),
+              old =
+                  static_cast<f32>(view<Transform>(info)->mTranslate.value[j]);
+          (view<Transform>(info)->mTranslate.value[j] =
+               fmadds(old, oldRatio, fmuls_ppc(fresh, ratio)));
+        }
+        for (u32 j = 0; j < 3; j++) {
+          f32 fresh = static_cast<f32>(view<Transform>(temp)->mScale.value[j]),
+              old = static_cast<f32>(view<Transform>(info)->mScale.value[j]);
+          (view<Transform>(info)->mScale.value[j] =
+               fmadds(old, oldRatio, fmuls_ppc(fresh, ratio)));
+        }
+      } else
+        JMAEulerToQuat(
+            (s32) static_cast<s16>(view<Transform>(info)->mRotation[0]),
+            (s32) static_cast<s16>(view<Transform>(info)->mRotation[1]),
+            (s32) static_cast<s16>(view<Transform>(info)->mRotation[2]),
+            view<void>(quat));
+      after = static_cast<u32>(view<Morf>(o)->mpCallback2);
+    }
+    if (after)
+      call_ptr(
+          static_cast<u32>(
+              view<Vtable>(static_cast<u32>(view<Callback>(after)->mpVtable))
+                  ->mExecute),
+          view<void>(after), i & 0xFFFF);
+    f32 w = static_cast<f32>(view<QuatView>(quat)->value[3]),
+        x = static_cast<f32>(view<QuatView>(quat)->value[0]),
+        y = static_cast<f32>(view<QuatView>(quat)->value[1]),
+        z = static_cast<f32>(view<QuatView>(quat)->value[2]),
+        dw = fadds_ppc(w, w), dx = fadds_ppc(x, x), dy = fadds_ppc(y, y),
+        dz = fadds_ppc(z, z);
+    f32 yy = fnmsubs(dy, y, one), xy = fmuls_ppc(dx, y), yz = fmuls_ppc(dy, z),
+        wy = fmuls_ppc(dw, y), xx = fnmsubs(dx, x, one), zz = fmuls_ppc(dz, z),
+        wz = fmuls_ppc(dw, z);
+    (view<Record>(record)->mBasisX.value[2] = fmadds(dx, z, wy));
+    (view<Record>(record)->mBasisX.value[1] = fsubs_ppc(xy, wz));
+    (view<Record>(record)->mBasisX.value[0] = fsubs_ppc(yy, zz));
+    (view<Record>(record)->mBasisY.value[0] = fadds_ppc(xy, wz));
+    (view<Record>(record)->mBasisY.value[1] = fsubs_ppc(xx, zz));
+    (view<Record>(record)->mBasisY.value[2] = fnmsubs(dw, x, yz));
+    f32 sc[3] = {static_cast<f32>(view<Transform>(info)->mScale.value[0]),
+                 static_cast<f32>(view<Transform>(info)->mScale.value[1]),
+                 static_cast<f32>(view<Transform>(info)->mScale.value[2])};
+    (view<Vector>(scale)->value[0] = sc[0]);
+    (view<Vector>(scale)->value[2] = sc[2]);
+    (view<Vector>(scale)->value[1] = sc[1]);
+    f32 tr[3] = {static_cast<f32>(view<Transform>(info)->mTranslate.value[0]),
+                 static_cast<f32>(view<Transform>(info)->mTranslate.value[1]),
+                 static_cast<f32>(view<Transform>(info)->mTranslate.value[2])};
+    (view<Vector>(translation)->value[0] = tr[0]);
+    (view<Vector>(translation)->value[1] = tr[1]);
+    (view<Vector>(translation)->value[2] = tr[2]);
+    if (static_cast<f32>(view<QuatView>(quat)->value[0]) != zero ||
+        static_cast<f32>(view<QuatView>(quat)->value[1]) != zero ||
+        static_cast<f32>(view<QuatView>(quat)->value[2]) != zero ||
+        static_cast<f32>(view<QuatView>(quat)->value[3]) != one)
+      (view<Record>(record)->mFlags =
+           static_cast<u32>(view<Record>(record)->mFlags) | ROTATION_DIRTY);
+    if (static_cast<f32>(view<Transform>(info)->mScale.value[0]) != one ||
+        static_cast<f32>(view<Transform>(info)->mScale.value[1]) != one ||
+        static_cast<f32>(view<Transform>(info)->mScale.value[2]) != one)
+      (view<Record>(record)->mFlags =
+           static_cast<u32>(view<Record>(record)->mFlags) | SCALE_DIRTY);
+    if (static_cast<f32>(view<Transform>(info)->mTranslate.value[0]) != zero ||
+        static_cast<f32>(view<Transform>(info)->mTranslate.value[1]) != zero ||
+        static_cast<f32>(view<Transform>(info)->mTranslate.value[2]) != zero)
+      (view<Record>(record)->mFlags =
+           static_cast<u32>(view<Record>(record)->mFlags) | TRANSLATION_DIRTY);
+    count = static_cast<u16>(view<Joints>(joints)->mNum);
+  }
+}
+
+/* WWHD glue (tools/verify/autoglue.py): no TU-wide static objects. */

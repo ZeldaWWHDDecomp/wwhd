@@ -5,9 +5,9 @@
  * mDoExt_btpAnm grew from 0x14 to 0x74 and mShadowId (GameCube 0x750) is gone (HD shadows), so
  * everything from mPathRun (GameCube 0x754) on is +0x174. Size 0x93C (GameCube 0x7C8). */
 #pragma once
-#include "bindings.h"
+#include "gc_api/gc_api.h"
 
-#define MN_SAFESTRING_VTBL 0x1001E640 /* this TU's sead::SafeString vtable */
+#define MN_SAFESTRING_VTBL gc_tu.safeString /* this TU's sead::SafeString vtable */
 #define MN_VTBL 0x1001E914            /* daNpcMn_c vtable (constructor) */
 
 struct sMnAnmDat {
@@ -17,7 +17,7 @@ struct sMnAnmDat {
 };
 WWHD_SIZE(sMnAnmDat, 3);
 
-struct MnNpcDat {
+struct NpcDatStruct {
     /* 0x00 */ be<s16> mMax_head_x;
     /* 0x02 */ be<s16> mMax_head_y;
     /* 0x04 */ be<s16> mMax_backbone_x;
@@ -50,19 +50,10 @@ struct MnNpcDat {
     /* 0x4A */ be<s8> mbAllowBodyTurn;
     /* 0x4B */ be<s8> mbLookOnly;
 };
-WWHD_SIZE(MnNpcDat, 0x4C);
-
-/* dNpc_PathRun_c (8 bytes, unchanged) */
-struct MnPathRun_l {
-    /* 0x00 */ gptr<dPath> mPath;
-    /* 0x04 */ be<u8> field_0x04;
-    /* 0x05 */ be<u8> mIdx;
-    /* 0x06 */ be<u8> mbDir;
-    /* 0x07 */ be<u8> field_0x07;
-};
-WWHD_SIZE(MnPathRun_l, 8);
+WWHD_SIZE(NpcDatStruct, 0x4C);
 
 struct daNpcMn_c : fopNpc_npc_c {
+    enum Prm_e { PRM_SWITCH_W = 8, PRM_SWITCH_S = 8, PRM_SWITCH2_W = 8, PRM_SWITCH2_S = 0x10, PRM_RAIL_W = 8, PRM_RAIL_S = 0x18 };
     enum MoveProcIdx { MOVE_PROC_WAIT = 0, MOVE_PROC_TALK = 1, MOVE_PROC_WALK = 2, MOVE_PROC_TURN = 3, MOVE_PROC_TALK3 = 4 };
     enum LookMode { LOOK_MODE_NONE = 0, LOOK_MODE_ATTN = 1, LOOK_MODE_TURN = 2 };
     enum Talk3State { TALK3_INIT = 0, TALK3_ORDER = 1, TALK3_TALK = 2 };
@@ -146,8 +137,8 @@ struct daNpcMn_c : fopNpc_npc_c {
     /* 0x844 */ request_of_phase_process_class mPhsMethod;
     /* 0x84C */ gptr<J3DModel> mpModel;
     /* 0x850 */ gptr<J3DAnmTexPattern> m_head_tex_pattern;
-    /* 0x854 */ u8 mBtpAnm[0x74];                  /* mDoExt_btpAnm (HD 0x74, constructor 025E7820) */
-    /* 0x8C8 */ MnPathRun_l mPathRun;              /* HD: no mShadowId before it */
+    /* 0x854 */ mDoExt_btpAnm mBtpAnm;                  /* mDoExt_btpAnm (HD 0x74, constructor 025E7820) */
+    /* 0x8C8 */ dNpc_PathRun_c mPathRun;              /* HD: no mShadowId before it */
     /* 0x8D0 */ cXyz field_0x75C;
     /* 0x8DC */ cXyz mLookAtPos;
     /* 0x8E8 */ gptr<sMnAnmDat> mpAnmDat;
@@ -206,89 +197,83 @@ WWHD_OFFSET(daNpcMn_c, mFigureMsgIdx, 0x939);
 WWHD_SIZE(daNpcMn_c, 0x93C);
 
 /* ---- translation-unit statics (.data / .rodata addresses) ---- */
-enum : u32 {
-    MN_l_arcname_tbl = 0x101C2040,  /* const char*[1] ("Mn") */
-    MN_l_npc_staff_id = 0x101C203C, /* char*[1] */
-    MN_l_npc_dat = 0x101C2178,      /* MnNpcDat[2] */
-    MN_l_bck_ix_tbl = 0x1001E678,   /* int[8] */
-    MN_l_room_name = 0x101C20BC,    /* char*[10] */
-    MN_l_figure_comp = 0x101C2154,  /* u16[17] */
-    MN_l_method = 0x101C2210,       /* _create's phase handler table */
-    MN_l_npc_anm_wait = 0x101C2054,
-};
-static inline const char* mn_arcname() { return gabi::at<const char>(gabi::load<u32>(MN_l_arcname_tbl)); }
-static inline MnNpcDat* mn_npc_dat(u32 npcNo) { return gabi::at<MnNpcDat>(MN_l_npc_dat + npcNo * 0x4C); }
+extern be<s32> (&l_bmd_ix_tbl)[1];
+extern be<s32> (&l_etc_bmd_ix_tbl)[1];
+extern be<s32> (&l_btp_ix_tbl)[1];
+extern be<s32> (&l_bck_ix_tbl)[8];
+extern gptr<char> (&l_arcname_tbl)[1];
+extern gptr<char> (&l_npc_staff_id)[1];
+extern gptr<char> (&l_room_name)[10];
+extern gptr<char> (&cut_name_tbl)[10];
+extern be<u16> (&l_figure_comp)[17];
+extern be<u32> (&l_msg_mn_1st_talk)[4];
+extern be<u32> (&l_msg_mn_2nd_talk)[4];
+extern be<u32> (&l_msg_mn_1st_talk_in)[2];
+extern be<u32> (&l_msg_mn_2nd_talk_in)[2];
+extern be<u32> (&l_msg_mn_3rd_talk_in)[2];
+extern be<u32> (&l_msg_mn_comp_1st)[4];
+extern be<u32> (&l_msg_mn_comp_2nd)[2];
+extern be<u32> (&l_msg_mn_figure)[10];
+extern sMnAnmDat (&l_npc_anm_wait)[1];
+extern sMnAnmDat (&l_npc_anm_wait2)[1];
+extern sMnAnmDat (&l_npc_anm_talk)[1];
+extern sMnAnmDat (&l_npc_anm_talk2)[1];
+extern sMnAnmDat (&l_npc_anm_walk)[1];
+extern sMnAnmDat (&l_npc_anm_bikkuri)[2];
+extern sMnAnmDat (&l_npc_anm_jump1)[2];
+extern NpcDatStruct (&l_npc_dat)[2];
+static inline const char* mn_arcname() { return l_arcname_tbl[0]; }
+static inline NpcDatStruct* mn_npc_dat(u32 npcNo) { return &l_npc_dat[npcNo]; }
 
 /* ---- local bindings (SHARED-CANDIDATE; the same as in d_a_npc_people.h unless noted) ---- */
-static inline u32 dComIfGs_save() { return gabi::load<u32>(0x101F84DC); }
-static inline dSv_event_c* dComIfGs_event() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x644); }
-static inline BOOL dComIfGs_isEventBit(u16 f) { return dSv_event_isEventBit(dComIfGs_event(), f); }
-static inline u8 dComIfGs_getEventReg(u16 reg) { return dSv_event_getEventReg(dComIfGs_event(), reg); }
-static inline void dComIfGs_setEventReg(u16 reg, u8 v) { dSv_event_setEventReg(dComIfGs_event(), reg, v); }
-static inline dSv_event_c* dComIfGs_tmpEvent() { return gabi::at<dSv_event_c>(gabi::load<u32>(0x101F84DC) + 0x1178); }
-static inline BOOL dComIfGs_isTmpBit(u16 f) { return dSv_event_isEventBit(dComIfGs_tmpEvent(), f); }
-static inline void* dComIfG_getObjectIDRes(const char* arc, s32 id) {
+
+// HD: preserve the additional live argument registers at getIDRes.
+void* mn_getResourceWithRegisters(void* control, SafeString* key, s32 id, u32 r6, u32 r7);
+static inline void* mn_getObjectIDResWithRegisters(const char* arc, s32 id, u32 r6, u32 r7) {
     gabi::Local<SafeString> key;
     key->mStringTop = gabi::ea(arc);
     key->__vtbl = MN_SAFESTRING_VTBL;
-    return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id);
-}
-/* the same, with the values GHS leaves in r6/r7 (the harness compares r3..r7 at getIDRes) */
-static inline void* dComIfG_getObjectIDRes_r67(const char* arc, s32 id, u32 r6, u32 r7) {
-    gabi::Local<SafeString> key;
-    key->mStringTop = gabi::ea(arc);
-    key->__vtbl = MN_SAFESTRING_VTBL;
-    return gabi::call<void*>(0x026067F4, dComIfG_resControl(), key.get(), id, r6, r7);
+    return mn_getResourceWithRegisters(dComIfG_resControl(), key.get(), id, r6, r7);
 }
 static inline void mn_set_r(int n, u32 v) { gabi::cpu->r[n] = v; }
-static inline s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, void* p, s32 play, s32 attr, f32 rate, s32 start,
-                                     s32 end, u32 modify, s32 entry) {
-    return gabi::call<s32>(0x025E789C, anm, d, p, play, attr, rate, start, end, modify, entry);
-}
-static inline J3DModelData* J3DModel_getModelData_l(J3DModel* m) { return gabi::at<J3DModelData>(gabi::load<u32>(gabi::ea(m) + 0xAC)); }
-static inline u32 J3DModelData_getJointName(J3DModelData* d) {
-    u32 h = gabi::call<u32>(0x027F68FC, d);
-    u32 off = gabi::load<u32>(h + 0x10);
-    return off != 0 ? h + 0x10 + off : 0;
-}
-static inline s8 JUTNameTab_getIndex(u32 tab, const char* name) { return gabi::call<s8>(0x027DF9B0, tab, name); }
-static inline u16 J3DModelData_getJointNum_l(J3DModelData* d) { return gabi::load<u16>(gabi::call<u32>(0x027F3F94, d) + 8); }
-static inline void J3DModelData_setJointCallBack_l(J3DModelData* d, u32 i, u32 cb) {
-    u32 n = gabi::load<u32>(gabi::ea(d) + 4);
-    u32 p = gabi::load<u32>(gabi::ea(d) + 8);
-    if (i < n) {
-        p += i * 0x1C;
-    }
-    gabi::store<u32>(p + 8, cb);
-}
+s32 mDoExt_btpAnm_init(void* anm, J3DModelData* d, void* p, s32 play, s32 attr, f32 rate, s32 start, s32 end, u32 modify, s32 entry);
+
+s8 JUTNameTab_getIndex(u32 tab, const char* name);
+
 /* HD J3D joint matrices: J3DModel +0x2C is the matrix block (flags u16 at +4, matrices at +0x10) */
-struct J3DMtxBlock_l {
-    /* 0x00 */ u8 _00[4];
-    /* 0x04 */ be<u16> mFlags;
-    /* 0x06 */ u8 _06[0x10 - 6];
-    /* 0x10 */ gptr<Mtx34> mpMtx;
-};
-static inline Mtx34* j3dSys_mCurrentMtx() { return gabi::at<Mtx34>(0x104B4868); }
-static inline Mtx34* mn_getAnmMtx(J3DModel* model, s32 jnt) {
-    J3DMtxBlock_l* blk = gabi::at<J3DMtxBlock_l>(gabi::load<u32>(gabi::ea(model) + 0x2C));
-    blk->mFlags |= 0x10;
-    return gabi::at<Mtx34>(gabi::ea(blk->mpMtx.get()) + jnt * 0x30);
-}
+
 /* sead::SafeString equality (HD form of strcmp(a, b) == 0): the left string is terminated
  * through its vtable twice, the right one once, then compared by pointer, then byte by byte (at
  * most 0x40001 bytes) */
+struct MnVirtualSlot {
+    u8 _00[0x14];
+    be<u32> mFunction;
+};
+struct MnActorVirtualTable {
+    u8 _00[0x14];
+    be<u32> next_msgStatus;
+    u8 _18[4];
+    be<u32> getMsg;
+    u8 _20[4];
+    be<u32> anmAtr;
+};
+struct MnAnimationView {
+    u8 _00[4];
+    gptr<MnVirtualSlot> mVtable;
+};
+
 static inline bool mn_SafeString_eq(SafeString* a, SafeString* b) {
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    gabi::call_ptr(gabi::load<u32>(a->__vtbl + 0x14), a);
-    gabi::call_ptr(gabi::load<u32>(b->__vtbl + 0x14), b);
+    gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)a->__vtbl)->mFunction, a);
+    gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)a->__vtbl)->mFunction, a);
+    gabi::call_ptr(reinterpret_cast<MnVirtualSlot*>((uintptr_t)(u32)b->__vtbl)->mFunction, b);
     u32 pa = a->mStringTop;
     u32 pb = b->mStringTop;
     if (pa == pb) {
         return true;
     }
     for (u32 n = 0; n < 0x40001; n++) {
-        u8 ca = gabi::load<u8>(pa + n);
-        if (ca != gabi::load<u8>(pb + n)) {
+        u8 ca = reinterpret_cast<be<u8>*>((uintptr_t)pa)[n];
+        if (ca != reinterpret_cast<be<u8>*>((uintptr_t)pb)[n]) {
             return false;
         }
         if (ca == 0) {
@@ -298,88 +283,101 @@ static inline bool mn_SafeString_eq(SafeString* a, SafeString* b) {
     return false;
 }
 /* strcmp(dComIfGp_getNextStageName(), name) == 0 (play + 0x5140) */
-static inline bool mn_isNextStage(u32 name) {
+static inline bool mn_isNextStage(const char* name) {
     gabi::Local<SafeString> a;
-    a->mStringTop = name;
+    a->mStringTop = gabi::guest_addr(name);
     a->__vtbl = MN_SAFESTRING_VTBL;
-    u32 play = dComIfGp_ea();
+    dComIfG_inf_c* game = reinterpret_cast<dComIfG_inf_c*>(dComIfGp_get());
     gabi::Local<SafeString> b;
-    b->mStringTop = play + 0x5140;
+    b->mStringTop = gabi::ea(game->play.mNextStage.mName);
     b->__vtbl = MN_SAFESTRING_VTBL;
     return mn_SafeString_eq(a.get(), b.get());
 }
-static inline cPhs_State dComLbG_PhaseHandler(request_of_phase_process_class* p, u32 tbl, void* self) {
-    return gabi::call<cPhs_State>(0x02525FE4, p, tbl, self);
-}
-static inline void fopNpc_npc_c_ct(void* p) { gabi::call(0x025A1458, p); }
-static inline void mDoExt_btpAnm_ct(void* p) { gabi::call(0x025E7820, p); }
-static inline void dNpc_PathRun_getPoint(MnPathRun_l* r, cXyz* out, u8 idx) { gabi::call(0x0259E778, r, out, idx); }
-static inline BOOL dNpc_PathRun_incIdxLoop(MnPathRun_l* r) { return gabi::call<BOOL>(0x0259EB60, r); }
-static inline bool dNpc_PathRun_setInf(MnPathRun_l* r, u8 idx, s8 room, u8 fwd) { return gabi::call<bool>(0x0259E6D0, r, idx, room, fwd); }
-static inline u8 dNpc_PathRun_maxPoint(MnPathRun_l* r) { return gabi::call<u8>(0x0259EDB8, r); }
+cPhs_State dComLbG_PhaseHandler(request_of_phase_process_class* p, u32 tbl, void* self);
+void fopNpc_npc_c_ct(void* p);
+void mDoExt_btpAnm_ct(void* p);
 /* 025BD64C dSnap_GetFigRoomId(int) */
-static inline s32 dSnap_GetFigRoomId(s32 fig) { return gabi::call<s32>(0x025BD64C, fig); }
-static inline void dComIfGs_onEventBit(u16 f) { dSv_event_onEventBit(dComIfGs_event(), f); }
+s32 dSnap_GetFigRoomId(s32 fig);
+
 /* dComIfGp_event_onEventFlag(f): the event control's flag word (play + 0x52B8) |= f */
-static inline void dComIfGp_event_onEventFlag(u16 f) {
-    u32 play = dComIfGp_ea();
-    gabi::store<u16>(play + 0x52B8, gabi::load<u16>(play + 0x52B8) | f);
-}
-static inline u8 dComIfGp_getMesgAnimeAttrInfo() { return gabi::load<u8>(dComIfGp_ea() + 0x5BC5); }
-static inline void dComIfGp_setMesgAnimeAttrInfo(u8 v) { gabi::store<u8>(dComIfGp_ea() + 0x5BC5, v); }
-static inline void* dComIfGp_evmng_getMyIntegerP(s32 staffId, const char* name) { return dComIfGp_evmng_getMySubstanceP(staffId, name, 3); }
-static inline void* dComIfGp_evmng_getMyFloatP(s32 staffId, const char* name) { return dComIfGp_evmng_getMySubstanceP(staffId, name, 0); }
-static inline s8 dComIfGp_evmng_getMyActIdx(s32 staffId, u32 tbl, s32 n, BOOL force, s32 nameType) {
-    return gabi::call<s8>(0x02542EDC, dComIfGp_getPEvtManager(), staffId, tbl, n, force, nameType);
+
+static inline s8 mn_getMyActIdx(s32 staffId, gptr<char>* tbl, s32 n, BOOL force, s32 nameType) {
+    return static_cast<s8>(dComIfGp_evmng_getMyActIdx(staffId, tbl, n, force, nameType));
 }
 /* 0259D624 dNpc_calc_DisXZ_AngY(cXyz a, cXyz b (pointers to copies), f32* dist, s16* angY) */
-static inline void dNpc_calc_DisXZ_AngY(cXyz* a, cXyz* b, be<f32>* dist, be<s16>* ang) { gabi::call(0x0259D624, a, b, dist, ang); }
-static inline BOOL dNpc_PathRun_chkPointPass(MnPathRun_l* p, cXyz* pos, u32 dir) { return gabi::call<BOOL>(0x0259E838, p, pos, dir); }
-static inline BOOL dNpc_PathRun_nextIdxAuto(MnPathRun_l* p) { return gabi::call<BOOL>(0x0259ED58, p); }
-static inline u8 dNpc_PathRun_pointArg(MnPathRun_l* p, u8 idx) { return gabi::call<u8>(0x0259EE4C, p, idx); }
-static inline void dNpc_playerEyePos_l(cXyz* out, f32 offs) { gabi::call(0x0259D54C, out, offs); }
-static inline void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot, s16 vel, u8 headOnly) {
-    gabi::call(0x0259DED0, j, outY, target, eye, yrot, vel, headOnly);
-}
-static inline fopAc_ac_c* fopAcM_searchFromName(const char* name, u32 mask, u32 prm) { return gabi::call<fopAc_ac_c*>(0x025D9F38, name, mask, prm); }
-static inline BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind) {
-    return gabi::call<BOOL>(0x025D7970, a, b, ev, flag, hind);
-}
-static inline BOOL fopAcM_orderPotentialEvent(fopAc_ac_c* a, u16 type, u16 flag, u16 p) { return gabi::call<BOOL>(0x025D7B24, a, type, flag, p); }
-static inline u32 fopAcM_createItemForPresentDemo(cXyz* pos, s32 itemNo, u8 flag, s32 bitNo, s32 roomNo, csXyz* angle, cXyz* scale) {
-    return gabi::call<u32>(0x025D7DEC, pos, itemNo, flag, bitNo, roomNo, angle, scale);
-}
-static inline s16 cLib_calcTimer(be<s16>* t) { return gabi::call<s16>(0x02055B64, t); }
+void dNpc_calc_DisXZ_AngY(cXyz* a, cXyz* b, be<f32>* dist, be<s16>* ang);
+void mn_playerEyePos(cXyz* out, f32 offs);
+void dNpc_JntCtrl_lookAtTarget(dNpc_JntCtrl_c* j, be<s16>* outY, cXyz* target, cXyz* eye, s16 yrot, s16 vel, u8 headOnly);
+fopAc_ac_c* fopAcM_searchFromName(const char* name, u32 mask, u32 prm);
+BOOL fopAcM_orderChangeEventId(fopAc_ac_c* a, fopAc_ac_c* b, s16 ev, u16 flag, u16 hind);
+BOOL fopAcM_orderPotentialEvent(fopAc_ac_c* a, u16 type, u16 flag, u16 p);
+u32 fopAcM_createItemForPresentDemo(cXyz* pos, s32 itemNo, u8 flag, s32 bitNo, s32 roomNo, csXyz* angle, cXyz* scale);
+s16 cLib_calcTimer(be<s16>* t);
 static inline s32 J3DAnm_getFrameMax(void* p) {
-    u32 vt = gabi::load<u32>(gabi::ea(p) + 4);
-    return gabi::call_ptr<s32>(gabi::load<u32>(vt + 0x14), p);
+    MnVirtualSlot* vt = reinterpret_cast<MnAnimationView*>(p)->mVtable;
+    return gabi::call_ptr<s32>(vt->mFunction, p);
 }
 /* GHS pointer-to-member call without arguments, returning r3 */
-static inline s32 mn_pmf_call0(void* self, u32 pmf) {
-    s16 i = gabi::load<s16>(pmf + 2);
-    u32 thisp = gabi::ea(self) + (s32)gabi::load<s16>(pmf);
-    if (i < 0) {
-        return gabi::call_ptr<s32>(gabi::load<u32>(pmf + 4), thisp);
-    }
-    s16 voff = gabi::load<s16>(pmf + 6);
-    u32 vt = gabi::load<u32>(thisp + voff);
-    return gabi::call_ptr<s32>(gabi::load<u32>(vt + i * 8 + 4), thisp);
-}
+
 /* HD: the message functions are virtual (vtable at +0xB4): slot 0x14 next_msgStatus, 0x1C
  * getMsg, 0x24 anmAtr(u16) */
-static inline u32 mn_vfn(void* self, u32 slot) { return gabi::load<u32>(gabi::load<u32>(gabi::ea(self) + 0xB4) + slot); }
-static inline u32 mn_v_next_msgStatus(daNpcMn_c* self, be<u32>* msgNo) { return gabi::call_ptr<u32>(mn_vfn(self, 0x14), self, msgNo); }
-static inline u32 mn_v_getMsg(daNpcMn_c* self) { return gabi::call_ptr<u32>(mn_vfn(self, 0x1C), self); }
-static inline void mn_v_anmAtr(daNpcMn_c* self, u16 status) { gabi::call_ptr(mn_vfn(self, 0x24), self, status); }
+static inline u32 mn_v_next_msgStatus(daNpcMn_c* self, be<u32>* msgNo) { return gabi::call_ptr<u32>(reinterpret_cast<MnActorVirtualTable*>((uintptr_t)(u32)self->__vtbl)->next_msgStatus, self, msgNo); }
+static inline u32 mn_v_getMsg(daNpcMn_c* self) { return gabi::call_ptr<u32>(reinterpret_cast<MnActorVirtualTable*>((uintptr_t)(u32)self->__vtbl)->getMsg, self); }
+static inline void mn_v_anmAtr(daNpcMn_c* self, u16 status) { gabi::call_ptr(reinterpret_cast<MnActorVirtualTable*>((uintptr_t)(u32)self->__vtbl)->anmAtr, self, status); }
 /* HD message manager (*(0x101F4B5C)): 025F795C status, 025F74D0 setStatus, 025F7DB0
  * messageSet(msgNo, cXyz* pos), 025F7E68 scopeMessageSet(msgNo) */
-static inline u32 mn_msgManager() { return gabi::load<u32>(0x101F4B5C); }
-static inline u32 msgMng_getStatus(u32 mgr) { return gabi::call<u32>(0x025F795C, mgr); }
-static inline void msgMng_setStatus(u32 mgr, u32 st) { gabi::call(0x025F74D0, mgr, st); }
-static inline u32 msgMng_messageSet(u32 mgr, u32 msgNo, cXyz* pos) { return gabi::call<u32>(0x025F7DB0, mgr, msgNo, pos); }
-static inline u32 msgMng_scopeMessageSet(u32 mgr, u32 msgNo) { return gabi::call<u32>(0x025F7E68, mgr, msgNo); }
+extern be<u32>& l_messageManager;
+static inline u32 mn_msgManager() { return l_messageManager; }
+u32 msgMng_getStatus(u32 mgr);
+void msgMng_setStatus(u32 mgr, u32 st);
+u32 msgMng_messageSet(u32 mgr, u32 msgNo, cXyz* pos);
+u32 msgMng_scopeMessageSet(u32 mgr, u32 msgNo);
 /* play + 0x5BB3: scope message status */
-static inline u8 dComIfGp_getScopeMesgStatus() { return gabi::load<u8>(dComIfGp_ea() + 0x5BB3); }
-static inline void dComIfGp_setScopeMesgStatus(u8 v) { gabi::store<u8>(dComIfGp_ea() + 0x5BB3, v); }
+
 /* dComIfGp_checkPlayerStatus0(0, daPyStts0_TELESCOPE_LOOK_e): play + 0x5CD8 & 0x200000 */
-static inline BOOL mn_checkTelescopeLook() { return (gabi::load<u32>(dComIfGp_ea() + 0x5CD8) & 0x200000) != 0; }
+static inline BOOL mn_checkTelescopeLook() { return dComIfGp_checkPlayerStatus0(0, 0x200000) != 0; }
+
+using MnExecuteInitSignature = s32(daNpcMn_c::*)();
+struct MnExecuteInit {
+    gabi::ptmf<MnExecuteInitSignature> action;
+};
+using MnMoveProcSignature = void(daNpcMn_c::*)();
+struct MnMoveProc {
+    gabi::ptmf<MnMoveProcSignature> action;
+};
+
+struct MnFigureView : fopAc_ac_c {
+    u8 _3AC[0xA32 - 0x3AC];
+    be<u8> mbDisplay;
+};
+struct MnModelDataView {
+    u8 _00[0x38];
+    be<u32> mpTexPattern;
+};
+using MnAnimationPointer = gptr<sMnAnmDat>;
+extern MnAnimationPointer (&l_msgAnm)[4];
+u32 mn_setAnmTblResult(daNpcMn_c* self, sMnAnmDat* anm);
+
+enum {
+    dRes_ID_MN_BDL_MN_e = 2, dRes_ID_MN_BDL_MN_BAG_e = 1,
+    dRes_ID_MN_BTP_MN_MABA_e = 3,
+    dRes_ID_MN_BCK_MN_WAIT01_e = 6, dRes_ID_MN_BCK_MN_WAIT02_e = 10,
+    dRes_ID_MN_BCK_MN_TALK01_e = 4, dRes_ID_MN_BCK_MN_TALK02_e = 5,
+    dRes_ID_MN_BCK_MN_WALK_e = 11, dRes_ID_MN_BCK_MN_BIKKURI_e = 7,
+    dRes_ID_MN_BCK_MN_JUMP01_e = 8, dRes_ID_MN_BCK_MN_JUMP02_e = 9,
+};
+enum { DSNAP_TYPE_NPC_MN = 0xA8 };
+enum MnEventFlag {
+    MN_EVENT_FIRST_TALK = 0x2F08, MN_EVENT_FIRST_ROOM_TALK = 0x2F04,
+    MN_EVENT_COMPLETE = 0x3D08, MN_EVENT_COMPLETE_TALK = 0x3120,
+    MN_EVENT_ALLOW_ROOM_CHANGE = 0x3A01, MN_EVENT_ROOM = 0x870F,
+};
+WWHD_OFFSET(MnFigureView, mbDisplay, 0xA32);
+WWHD_SIZE(MnFigureView, 0xA33);
+WWHD_OFFSET(MnModelDataView, mpTexPattern, 0x38);
+WWHD_SIZE(MnModelDataView, 0x3C);
+WWHD_SIZE(MnVirtualSlot, 0x18);
+WWHD_SIZE(MnActorVirtualTable, 0x28);
+WWHD_SIZE(MnAnimationView, 8);
+WWHD_SIZE(MnExecuteInit, 8);
+WWHD_SIZE(MnMoveProc, 8);

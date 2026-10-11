@@ -1,34 +1,38 @@
-#include "gabi.h"
-using gabi::load; using gabi::store;
-s32 fpcLnIt_MethodCall(void* tag,void* filter) {
- WWHD_FUNC(0x025DF548,s32,tag,filter);
- u32 process=load<u32>(gabi::ea(tag)+0xC);
- void* layer=gabi::at<void>(load<u32>(process+0x2C));
- void* previous=gabi::call<void*>(0x025DED64);
- gabi::call<void>(0x025DEAB4,layer);
- s32 result=gabi::call<s32>(0x0201A9F4,tag,filter);
- gabi::call<void>(0x025DEAB4,previous);
- return result;
+/** Process-line iteration with current-layer preservation. Private decomp source. */
+#include "bindings.h"
+#include "f_pc/f_pc_line_iter.h"
+#include "gc_api/f_pc/f_pc.h"
+
+static node_lists_tree_class g_fpcLn_Queue;
+
+/* 025DF548 */
+static s32 fpcLnIt_MethodCall(create_tag_class* i_createTag, method_filter* i_filter) {
+    // HD glue: the shared tag layout retains mpTagData as a 32-bit guest address.
+    base_process_class* process = gabi::at<base_process_class>(i_createTag->mpTagData);
+    layer_class* pLayer = process->mLyTg.mpLayer;
+    layer_class* pCurLayer = fpcLy_CurrentLayer();
+    fpcLy_SetCurrentLayer(pLayer);
+    s32 ret = cTgIt_MethodCall(i_createTag, i_filter);
+    fpcLy_SetCurrentLayer(pCurLayer);
+    return ret;
 }
-VERIFY(0x025DF548,fpcLnIt_MethodCall);
-void fpcLnIt_Queue(u32 callback) {
- WWHD_FUNC(0x025DF5C0,void,callback);
- gabi::Local<u32[2]> filter;
- store<u32>(gabi::ea(filter.get()),callback);
- store<u32>(gabi::ea(filter.get())+4,0);
- gabi::call<void>(0x0201ABF0,gabi::at<void>(0x101F3C14),u32(0x025DF548),filter.get());
+
+/* 025DF5C0 */
+void fpcLnIt_Queue(u32 i_queueFunc) {
+    method_filter filter;
+    // HD: the public callback is already a guest code address.
+    filter.mpMethodFunc.v = i_queueFunc;
+    filter.mpUserData = NULL;
+    cTrIt_Method(&g_fpcLn_Queue, fpcLnIt_MethodCall, &filter);
 }
-VERIFY(0x025DF5C0,fpcLnIt_Queue);
-void fpcLnIt_StaticInit() {
- WWHD_FUNC(0x025DF600,void);
- store<u32>(0x1048A950,0);store<u32>(0x1048A948,0);
- store<u32>(0x1048A954,0);store<u32>(0x1048A94C,0);
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3C1C));
- f32 first=load<f32>(0x10058354),second=load<f32>(0x10058358);
- store<f32>(0x1048A93C,first);store<f32>(0x1048A940,second);
- gabi::call<void>(0x028ED6F8,gabi::at<void>(0x1048A944));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3C28));
- gabi::call<void>(0x028EAB2C,gabi::at<void>(0x1048A945));
- gabi::call<void>(0x028F026C,gabi::at<void>(0x101F3C34));
+
+/* 025DF600 */
+static void __sinit_f_pc_line_iter_cpp() {
+    sinit_header_statics_rodata(0x1048A93C, 0x101F3C1C, 0x1048A948, 0x10058354);
 }
-VERIFY(0x025DF600,fpcLnIt_StaticInit);
+
+/* WWHD glue (tools/verify/autoglue.py)
+ data g_fpcLn_Queue 101F3C14
+ ext 0201A9F4 s32 cTgIt_MethodCall(create_tag_class*, method_filter*)
+ ext 0201ABF0 s32 cTrIt_Method(node_lists_tree_class*, fpcLnIt_MethodFunc, method_filter*)
+*/

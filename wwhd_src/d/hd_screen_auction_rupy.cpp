@@ -1,498 +1,676 @@
-/* hd_screen_auction_rupy: HD auction rupee screen (rupee meter G_Meter_00 and a three-digit
- * counter G_AuctionRupy_00 that counts towards the current bid), WWHD. HD-only code (no GameCube source): written from the WWHD code.
- * Range 0261BC98..0261D087; static initialiser 0261CB94. Not verified here (sead library template
- * instances): 0261CF68/0261CF7C (SafeString), 0261CF88 (StateID getter), 0261CF9C/0261CFDC/0261D01C
- * (state delegate invokers), 0261D05C (StateID).
- *
- * Screen (0x6C): base 026F89E8 (cking screen with child screens: +0x18 state machine, +0x20
- * current state, +0x44 layout with its animation at +0xD4, +0x48/+0x4C child array), +4 vtable
- * 100E3050, +0x2C/+0x30 vtables, +0x50 meter scale (layout frame count), +0x54 rupees shown on the
- * meter, +0x58 counter delay, +0x5C s16 counter value, +0x5E[3] s16 digits, +0x64 u8 open,
- * +0x65..+0x69 counter animation flags, +0x6A/+0x6B meter flags. The rupee amounts come from
- * the game info (+0x5BA6 bid, +0x5BA8 meter value). Child screens are hd_screen_auction_number
- * (created by 0261D088).
- */
-#include "gabi.h"
+/* HD auction rupee meter/counter. */
+#include "d/hd_screen_auction_rupy.h"
 using namespace gabi;
-
-namespace hd_screen_auction_rupy {
-
-static const u32 kState = 0x1049DD60;
-
-static u32 anim(u32 self) { return load<u32>(load<u32>(self + 0x44) + 0xD4); }
-static void vcall(u32 self, u32 off) { call_ptr<void>(load<u32>(load<u32>(self + 4) + off), self); }
-static u32 child(u32 self, u32 i) {
-    u32 p = load<u32>(self + 0x4C);
-    if (i < load<u32>(self + 0x48)) p += 4 * i;
-    return load<u32>(p);
+static RupyState l_rupyIdle;
+static u32 l_rupyDelegateVTableA;
+static u32 l_rupyDelegateVTableB;
+static u32 l_rupyScreenVTable;
+static u32 l_rupyStringVTable;
+static u32 l_rupyDigitFactory;
+static u32 l_rupyStateVTable;
+static u32 l_rupyStateOwner;
+static RupyUIPointer l_rupyUI;
+static RupyHeapPointer l_rupyHeap;
+static f32 l_rupyOne;
+static f32 l_rupyMeterMaximum;
+static f32 l_rupyIdleFrame;
+static f32 l_rupyZero;
+static RupyWords l_rupyWords;
+static RupyRange l_rupyRange;
+static f32 l_rupyLow;
+static f32 l_rupyHigh;
+static f32 l_rupyBig;
+static f32 l_rupySmall;
+static RupyScales l_rupyScales;
+static RupyRegistration l_rupyRegistrationA;
+static RupyRegistration l_rupyRegistrationB;
+static RupyRegistration l_rupyRegistrationC;
+static u8 l_rupyObjectA;
+static u8 l_rupyObjectB;
+static RupySharedStrings l_rupyGroupNames;
+static RupyAnimationNames l_rupyAnimationNames;
+static RupySharedStrings l_rupyDigitNames;
+static RupySharedStrings l_rupyUnusedNames;
+static RupyLayoutNames l_rupyLayoutNames;
+static RupyString l_rupyPartName;
+static RupyString l_rupyDigitType;
+static RupyState l_rupyStateWait;
+static RupyState l_rupyStateExit;
+static u32 l_rupyStateGuard;
+static u32 l_rupyNextStateId;
+static RupyAnimationMap l_rupyAnimationGroups;
+extern void rupyBaseDestroy(RupyScreen *, u32);
+extern void rupyDelete(void *);
+extern void *rupyAllocate(u32);
+extern void rupyBaseConstruct(RupyScreen *);
+extern RupyPlay *rupyGetPlay();
+extern void rupyAnimationStop(RupyAnimation *, u32, u32);
+extern void rupyAnimationPlay(RupyAnimation *, u32, u32, f32);
+extern void rupyAnimationFrame(RupyAnimation *, u32, u32, f32);
+extern void rupyAnimationReset(RupyAnimation *, u32, u32);
+extern void rupyAnimationLimit(RupyAnimation *, u32, u32, f32);
+extern void rupyAuctionOpen(void *);
+extern void rupyAuctionClose(void *);
+extern void rupyInputOpen();
+extern void rupyInputClose();
+extern void rupyDigitSet(void *, u32);
+extern void rupyDigitRoll(void *, u32, u32, u32);
+extern void rupyPlaySound(u32);
+extern void rupyChangeState(gptr<RupyStateMachine> *, RupyState *);
+extern void rupySetLayoutNames(RupyScreen *, RupyLayoutNames *, u32);
+extern u32 rupyFrameCount(void *);
+extern void rupyBaseRemove(RupyScreen *);
+extern RupyState *rupyGetCurrentState(gptr<RupyStateMachine> *);
+extern void rupyExecuteState(gptr<RupyStateMachine> *);
+extern u32 rupyBaseCreateChild(RupyScreen *, u32, RupyPart *);
+extern void *rupyAllocateAligned(u32, void *, u32);
+extern RupyLayout *rupyLayoutConstruct(RupyLayout *);
+extern void rupyBindAnimation(RupyAnimation *, u32, RupyString *, RupyString *);
+extern void rupyRegister(RupyRegistration *);
+extern void rupyConstructFirst(be<u8> *);
+extern void rupyConstructSecond(be<u8> *);
+static RupyAnimation *animation(RupyScreen *screen) {
+    return screen->mpLayout.get()->mpAnimation.get();
 }
-
+static void invoke(RupyScreen *screen, u32 offset) {
+    gabi::call_ptr<void>(screen->mpVTable[offset / 4].get(), screen);
+}
+static void *child(RupyScreen *screen, u32 index) {
+    u32 slot = gabi::ea(screen->mpChildren.get());
+    if (index < screen->mChildCount)
+        slot += 4 * index;
+    return gabi::at<gptr<void>>(slot)->get();
+}
 /* 0261BC98: deleting destructor */
-void dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x0261BC98, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0x2C, 0x100E3148);
-    store<u32>(p + 0x30, 0x100E3158);
-    call<void>(0x026F88F0, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+/* 0261BC98 */
+void rupy_dtor(RupyScreen *p, u32 flags) {
+    if (!p)
+        return;
+    p->mpDelegateVTableA = &l_rupyDelegateVTableA;
+    p->mpDelegateVTableB = &l_rupyDelegateVTableB;
+    rupyBaseDestroy(p, 0u);
+    if (flags & 1)
+        rupyDelete(p);
 }
-VERIFY(0x0261BC98, dtor);
 
 /* 0261BD04: resets the meter to the current value */
-void resetMeter(u32 self) {
-    WWHD_FUNC(0x0261BD04, void, self);
-    call<void>(0x02005674, anim(self), 3u, 2u);
-    call<void>(0x02005674, anim(self), 4u, 1u);
-    const u32 g = call<u32>(0x025200D4);
-    const s16 v = s16(load<u16>(g + 0x5BA8));
-    store<u8>(self + 0x6A, 0);
-    store<u8>(self + 0x6B, 0);
-    store<f32>(self + 0x54, f32(f64(s32(v))));
+/* 0261BD04 */
+void rupy_resetMeter(RupyScreen *self) {
+    rupyAnimationStop(animation(self), RUPY_METER_APPEAR, 2u);
+    rupyAnimationStop(animation(self), RUPY_METER_FILL, 1u);
+    RupyPlay *g = rupyGetPlay();
+    const s16 v = s16(g->mMeter);
+    self->mMeterEnabled = 0;
+    self->mMeterShown = 0;
+    self->mShownRupees = f32(f64(s32(v)));
 }
-VERIFY(0x0261BD04, resetMeter);
 
 /* 0261BD90: resets the counter */
-void resetCounter(u32 self) {
-    WWHD_FUNC(0x0261BD90, void, self);
-    call<void>(0x02005674, anim(self), 0u, 0u);
-    store<u8>(self + 0x67, 0);
-    store<u8>(self + 0x69, 1);
-    store<u8>(self + 0x65, 0);
-    store<u32>(self + 0x58, 0);
-    store<u8>(self + 0x68, 0);
-    store<u8>(self + 0x66, 0);
-    store<u16>(self + 0x5C, 0);
+/* 0261BD90 */
+void rupy_resetCounter(RupyScreen *self) {
+    rupyAnimationStop(animation(self), RUPY_COUNTER_APPEAR, 0u);
+    self->mCounterEnabled = 0;
+    self->mCounterIdle = 1;
+    self->mCounting = 0;
+    self->mCounterDelay = 0;
+    self->mCounterShown = 0;
+    self->mCounterStarted = 0;
+    self->mCounterValue = 0;
 }
-VERIFY(0x0261BD90, resetCounter);
 
 /* 0261BDF0: opens the screen */
-void open(u32 self) {
-    WWHD_FUNC(0x0261BDF0, void, self);
-    call<void>(0x02676900, load<u32>(load<u32>(0x101F8344) + 0x178));
-    call<void>(0x0261BD04, self);
-    call<void>(0x0261BD90, self);
-    vcall(self, 0x8C);
-    call<void>(0x025916EC);
-    store<u8>(self + 0x64, 1);
+/* 0261BDF0 */
+void rupy_open(RupyScreen *self) {
+    rupyAuctionOpen(l_rupyUI.get()->mpAuction.get());
+    rupy_resetMeter(self);
+    rupy_resetCounter(self);
+    invoke(self, 0x8C);
+    rupyInputOpen();
+    self->mOpen = 1;
 }
-VERIFY(0x0261BDF0, open);
 
 /* 0261BE58: meter: shows/hides it and follows the value (at most 100) */
-void meterMove(u32 self) {
-    WWHD_FUNC(0x0261BE58, void, self);
-    const f32 one = load<f32>(0x100E2F30);
-    const u32 on = load<u8>(self + 0x6A), shown = load<u8>(self + 0x6B);
+/* 0261BE58 */
+void rupy_meterMove(RupyScreen *self) {
+    const f32 one = l_rupyOne;
+    const u32 on = self->mMeterEnabled, shown = self->mMeterShown;
     if (!on) {
-        if (!shown) return;
-        store<u8>(self + 0x6B, 0);
-        call<void>(0x020053E4, anim(self), 5u, 2u, one);
+        if (!shown)
+            return;
+        self->mMeterShown = 0;
+        rupyAnimationPlay(animation(self), RUPY_METER_HIDE, 2u, one);
         return;
     }
     if (!shown) {
-        store<u8>(self + 0x6B, 1);
-        call<void>(0x020053E4, anim(self), 3u, 2u, one);
+        self->mMeterShown = 1;
+        rupyAnimationPlay(animation(self), RUPY_METER_APPEAR, 2u, one);
     }
-    const u32 g = call<u32>(0x025200D4);
-    f32 v = f32(f64(s32(s16(load<u16>(g + 0x5BA8)))));
-    const f32 mx = load<f32>(0x100E2F40);
-    const f32 cur = load<f32>(self + 0x54);
-    if (!(v <= mx)) v = mx;
-    if (cur == v) return;
+    RupyPlay *g = rupyGetPlay();
+    f32 v = f32(f64(s32(s16(g->mMeter))));
+    const f32 mx = l_rupyMeterMaximum;
+    const f32 cur = self->mShownRupees;
+    if (!(v <= mx))
+        v = mx;
+    if (cur == v)
+        return;
     const f32 r = v / mx;
-    store<f32>(self + 0x54, v);
-    call<void>(0x0200552C, anim(self), 4u, 1u, fmuls_ppc(r, load<f32>(self + 0x50)));
+    self->mShownRupees = v;
+    rupyAnimationFrame(animation(self), RUPY_METER_FILL, 1u, fmuls_ppc(r, self->mMeterFrames));
 }
-VERIFY(0x0261BE58, meterMove);
 
 /* 0261BF64: sets the three digits from the counter value */
-void setDigits(u32 self) {
-    WWHD_FUNC(0x0261BF64, void, self);
+/* 0261BF64 */
+void rupy_setDigits(RupyScreen *self) {
     s16 div = 10, mul = 1;
     for (u32 i = 0; i < 3; i++) {
-        const s32 v = s16(load<u16>(self + 0x5C));
+        const s32 v = s16(self->mCounterValue);
         const s16 d = s16((v - (v / div) * div) / mul);
         div = s16(div * 10);
         mul = s16(mul * 10);
-        call<void>(0x0261D454, child(self, i), u32(s32(d)));
-        store<u16>(self + 0x5E + 2 * i, u16(d));
+        rupyDigitSet(child(self, i), u32(s32(d)));
+        self->mDigits[i] = u16(d);
     }
 }
-VERIFY(0x0261BF64, setDigits);
 
 /* 0261BFFC: counts one step towards the bid (1, 10 or 100 by distance) and rolls the digits */
-void countStep(u32 self, u32 up) {
-    WWHD_FUNC(0x0261BFFC, void, self, up);
-    const u32 g = call<u32>(0x025200D4);
-    const s32 cur = s16(load<u16>(self + 0x5C));
-    const s32 tgt = s16(load<u16>(g + 0x5BA6));
+/* 0261BFFC */
+void rupy_countStep(RupyScreen *self, u32 up) {
+    RupyPlay *g = rupyGetPlay();
+    const s32 cur = s16(self->mCounterValue);
+    const s32 tgt = s16(g->mBid);
     const s32 dist = up ? s16(tgt - cur) : s16(cur - tgt);
     s32 step;
-    if (dist < 200) step = dist < 50 ? 1 : 10;
-    else step = 100;
+    if (dist < 200)
+        step = dist < 50 ? 1 : 10;
+    else
+        step = 100;
     s32 v = up ? s16(cur + step) : s16(cur - step);
-    store<u16>(self + 0x5C, u16(v));
+    self->mCounterValue = u16(v);
     s16 div = 10, mul = 1;
     for (u32 i = 0; i < 3; i++) {
-        if (i) v = s16(load<u16>(self + 0x5C));
+        if (i)
+            v = s16(self->mCounterValue);
         const s16 d = s16((v - (v / div) * div) / mul);
         div = s16(div * 10);
         mul = s16(mul * 10);
-        const u32 c = child(self, i);
-        const s32 old = s16(load<u16>(self + 0x5E + 2 * i));
-        call<void>(0x0261D4A8, c, u32(old), u32(s32(d)), up);
-        store<u16>(self + 0x5E + 2 * i, u16(d));
+        void *c = child(self, i);
+        const s32 old = s16(self->mDigits[i]);
+        rupyDigitRoll(c, u32(old), u32(s32(d)), up);
+        self->mDigits[i] = u16(d);
     }
 }
-VERIFY(0x0261BFFC, countStep);
 
 /* 0261C134: counter: shows it, counts towards the bid with a delay and plays the sounds */
-void counterMove(u32 self) {
-    WWHD_FUNC(0x0261C134, void, self);
-    const f32 one = load<f32>(0x100E2F30);
-    const u32 on = load<u8>(self + 0x67), shown = load<u8>(self + 0x68);
+/* 0261C134 */
+void rupy_counterMove(RupyScreen *self) {
+    const f32 one = l_rupyOne;
+    const u32 on = self->mCounterEnabled, shown = self->mCounterShown;
     if (!on) {
-        if (!shown) return;
-        store<u8>(self + 0x68, 0);
-        call<void>(0x020053E4, anim(self), 2u, 0u, one);
+        if (!shown)
+            return;
+        self->mCounterShown = 0;
+        rupyAnimationPlay(animation(self), RUPY_COUNTER_HIDE, 0u, one);
         return;
     }
     if (!shown) {
-        store<u8>(self + 0x68, 1);
-        call<void>(0x020053E4, anim(self), 0u, 0u, one);
-        if (!load<u8>(self + 0x66)) {
-            store<u8>(self + 0x69, 1);
-            store<u8>(self + 0x66, 1);
-            store<u8>(self + 0x65, 1);
-            call<void>(0x02005674, anim(self), 1u, 0u);
+        self->mCounterShown = 1;
+        rupyAnimationPlay(animation(self), RUPY_COUNTER_APPEAR, 0u, one);
+        if (!self->mCounterStarted) {
+            self->mCounterIdle = 1;
+            self->mCounterStarted = 1;
+            self->mCounting = 1;
+            rupyAnimationStop(animation(self), RUPY_COUNTER_COUNT, 0u);
         }
     }
-    u32 g = call<u32>(0x025200D4);
-    const s32 cur = s16(load<u16>(self + 0x5C));
-    if (cur < s32(s16(load<u16>(g + 0x5BA6)))) {
+    RupyPlay *g = rupyGetPlay();
+    const s32 cur = s16(self->mCounterValue);
+    if (cur < s32(s16(g->mBid))) {
         if (cur == 0) {
-            g = call<u32>(0x025200D4);
-            store<u16>(self + 0x5C, load<u16>(g + 0x5BA6));
-            call<void>(0x0261BF64, self);
-        } else if (const u32 w = load<u32>(self + 0x58)) {
-            store<u32>(self + 0x58, w - 1);
+            g = rupyGetPlay();
+            self->mCounterValue = g->mBid;
+            rupy_setDigits(self);
+        } else if (const u32 w = self->mCounterDelay) {
+            self->mCounterDelay = w - 1;
         } else {
-            call<void>(0x0261BFFC, self, 1u);
-            g = call<u32>(0x025200D4);
-            if (s16(load<u16>(self + 0x5C)) == s16(load<u16>(g + 0x5BA6))) call<void>(0x025E1988, 0x8E0u);
+            rupy_countStep(self, 1u);
+            g = rupyGetPlay();
+            if (s16(self->mCounterValue) == s16(g->mBid))
+                rupyPlaySound(RUPY_SOUND_FINISHED);
             else {
-                call<void>(0x025E1988, 0x8DFu);
-                store<u32>(self + 0x58, 3);
+                rupyPlaySound(RUPY_SOUND_COUNT);
+                self->mCounterDelay = 3;
             }
         }
     } else {
-        g = call<u32>(0x025200D4);
-        if (s16(load<u16>(self + 0x5C)) > s16(load<u16>(g + 0x5BA6))) {
-            if (const u32 w = load<u32>(self + 0x58)) store<u32>(self + 0x58, w - 1);
+        g = rupyGetPlay();
+        if (s16(self->mCounterValue) > s16(g->mBid)) {
+            if (const u32 w = self->mCounterDelay)
+                self->mCounterDelay = w - 1;
             else {
-                call<void>(0x0261BFFC, self, 0u);
-                g = call<u32>(0x025200D4);
-                if (s16(load<u16>(self + 0x5C)) != s16(load<u16>(g + 0x5BA6))) store<u32>(self + 0x58, 3);
+                rupy_countStep(self, 0u);
+                g = rupyGetPlay();
+                if (s16(self->mCounterValue) != s16(g->mBid))
+                    self->mCounterDelay = 3;
             }
         }
     }
-    const u32 counting = load<u8>(self + 0x65), idle = load<u8>(self + 0x69);
+    const u32 counting = self->mCounting, idle = self->mCounterIdle;
     if (counting) {
-        if (idle) return;
-        store<u8>(self + 0x69, 1);
-        call<void>(0x02005708, anim(self), 1u, 0u);
-        call<void>(0x02005488, anim(self), 1u, 0u, load<f32>(0x100E2F44));
+        if (idle)
+            return;
+        self->mCounterIdle = 1;
+        rupyAnimationReset(animation(self), RUPY_COUNTER_COUNT, 0u);
+        rupyAnimationLimit(animation(self), RUPY_COUNTER_COUNT, 0u, l_rupyIdleFrame);
     } else {
-        if (!idle) return;
-        store<u8>(self + 0x69, 0);
-        call<void>(0x020053E4, anim(self), 1u, 0u, one);
+        if (!idle)
+            return;
+        self->mCounterIdle = 0;
+        rupyAnimationPlay(animation(self), RUPY_COUNTER_COUNT, 0u, one);
     }
 }
-VERIFY(0x0261C134, counterMove);
 
 /* 0261C3DC: state Move: meter and counter, then the screen update */
-void move(u32 self) {
-    WWHD_FUNC(0x0261C3DC, void, self);
-    call<void>(0x0261BE58, self);
-    call<void>(0x0261C134, self);
-    vcall(self, 0xB4);
-    vcall(self, 0x8C);
+/* 0261C3DC */
+void rupy_move(RupyScreen *self) {
+    rupy_meterMove(self);
+    rupy_counterMove(self);
+    invoke(self, 0xB4);
+    invoke(self, 0x8C);
 }
-VERIFY(0x0261C3DC, move);
 
 /* 0261C438: closes the screen */
-void close(u32 self) {
-    WWHD_FUNC(0x0261C438, void, self);
-    call<void>(0x026768E4, load<u32>(load<u32>(0x101F8344) + 0x178));
-    call<void>(0x025916FC);
-    store<u8>(self + 0x64, 0);
+/* 0261C438 */
+void rupy_close(RupyScreen *self) {
+    rupyAuctionClose(l_rupyUI.get()->mpAuction.get());
+    rupyInputClose();
+    self->mOpen = 0;
 }
-VERIFY(0x0261C438, close);
 
-void toMove(u32 self) { WWHD_FUNC(0x0261C47C, void, self); call<void>(0x020063C0, self + 0x18, kState); }
-VERIFY(0x0261C47C, toMove);
+/* 0261C47C */
+void rupy_toMove(RupyScreen *self) { rupyChangeState(&self->mpStateMachine, &l_rupyIdle); }
 
 /* 0261C48C: constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x0261C48C, u32, p);
+/* 0261C48C */
+u32 rupy_ctor(RupyScreen *p) {
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x6Cu);
-        if (!p) return 0;
+        p = static_cast<RupyScreen *>(rupyAllocate(sizeof(RupyScreen)));
+        if (!p)
+            return 0;
     }
-    call<void>(0x026F89E8, p);
-    const f32 z = load<f32>(0x100E2F48);
-    store<u8>(p + 0x66, 0);
-    store<u8>(p + 0x6A, 0);
-    store<u8>(p + 0x65, 0);
-    store<u8>(p + 0x6B, 0);
-    store<f32>(p + 0x50, z);
-    store<f32>(p + 0x54, z);
-    store<u32>(p + 4, 0x100E3050);
-    store<u16>(p + 0x5C, 0);
-    store<u8>(p + 0x68, 0);
-    store<u8>(p + 0x64, 0);
-    store<u32>(p + 0x30, 0x100E3158);
-    store<u32>(p + 0x2C, 0x100E3148);
-    store<u8>(p + 0x67, 0);
-    store<u32>(p + 0x58, 0);
-    store<u8>(p + 0x69, 0);
-    for (u32 i = 0; i < 3; i++) store<u16>(p + 0x5E + 2 * i, 0);
-    return p;
+    rupyBaseConstruct(p);
+    const f32 z = l_rupyZero;
+    p->mCounterStarted = 0;
+    p->mMeterEnabled = 0;
+    p->mCounting = 0;
+    p->mMeterShown = 0;
+    p->mMeterFrames = z;
+    p->mShownRupees = z;
+    p->mpVTable = reinterpret_cast<gfn *>(&l_rupyScreenVTable);
+    p->mCounterValue = 0;
+    p->mCounterShown = 0;
+    p->mOpen = 0;
+    p->mpDelegateVTableB = &l_rupyDelegateVTableB;
+    p->mpDelegateVTableA = &l_rupyDelegateVTableA;
+    p->mCounterEnabled = 0;
+    p->mCounterDelay = 0;
+    p->mCounterIdle = 0;
+    for (u32 i = 0; i < 3; i++)
+        p->mDigits[i] = 0;
+    return gabi::ea(p);
 }
-VERIFY(0x0261C48C, ctor);
 
 /* 0261C54C: screen setup (layout, child screens, meter scale, first state) */
-u32 setup(u32 self, u32 a, u32 b, u32 c) {
-    WWHD_FUNC(0x0261C54C, u32, self, a, b, c);
-    call<void>(0x026F90D8, self, 0x1048E09Cu, 2u);
-    if (!call_ptr<u32>(load<u32>(load<u32>(self + 4) + 0x7C), self, 0x1048E10Cu, load<u32>(self + 0x34), a, b, c))
+/* 0261C54C */
+u32 rupy_setup(RupyScreen *self, u32 a, u32 b, u32 c) {
+    rupySetLayoutNames(self, &l_rupyLayoutNames, 2u);
+    if (!call_ptr<u32>(self->mpVTable[31].get(), self, &l_rupyPartName, self->mpArchive.get(), a, b,
+                       c))
         return 0;
-    if (!call_ptr<u32>(load<u32>(load<u32>(self + 4) + 0xA4), self)) return 0;
-    call<void>(0x02005674, anim(self), 0u, 0u);
-    call<void>(0x02005674, anim(self), 3u, 2u);
-    const u32 an = anim(self);
-    u32 fr = load<u32>(an + 8);
-    if (load<u32>(an + 4) > 4) fr += 0x10;
-    const u32 n = call<u32>(0x028713B8, load<u32>(load<u32>(fr) + 0x34));
-    store<f32>(self + 0x50, f32(f64(n)));
-    const u32 st = load<u32>(self + 0x18);
-    const u32 action = call_ptr<u32>(load<u32>(load<u32>(st) + 0x14), st, kState);
-    store<u32>(self + 0x20, action);
-    call_ptr<void>(load<u32>(load<u32>(action) + 0x1C), action);
-    vcall(self, 0xB4);
-    vcall(self, 0x8C);
+    if (!call_ptr<u32>(self->mpVTable[41].get(), self))
+        return 0;
+    rupyAnimationStop(animation(self), RUPY_COUNTER_APPEAR, 0u);
+    rupyAnimationStop(animation(self), RUPY_METER_APPEAR, 2u);
+    RupyAnimation *an = animation(self);
+    u32 frameSlot = gabi::ea(an->mpFrames.get());
+    if (an->mCount > 4)
+        frameSlot += 0x10;
+    RupyFrame *frame = gabi::at<RupyFrame>(gabi::ea(gabi::at<gptr<void>>(frameSlot)->get()));
+    const u32 frameCount = rupyFrameCount(frame->mpResource.get());
+    self->mMeterFrames = f32(f64(frameCount));
+    RupyStateMachine *machine = self->mpStateMachine.get();
+    RupyStateAction *action =
+        gabi::call_ptr<RupyStateAction *>(machine->mpVTable[5].get(), machine, &l_rupyIdle);
+    self->mpCurrentAction = action;
+    gabi::call_ptr<void>(action->mpVTable[7].get(), action);
+    invoke(self, 0xB4);
+    invoke(self, 0x8C);
     return 1;
 }
-VERIFY(0x0261C54C, setup);
 
 /* 0261C6EC: screen removal */
-void remove(u32 self) {
-    WWHD_FUNC(0x0261C6EC, void, self);
-    vcall(self, 0xAC);
-    vcall(self, 0x84);
-    call<void>(0x026F91F8, self);
+/* 0261C6EC */
+void rupy_remove(RupyScreen *self) {
+    invoke(self, 0xAC);
+    invoke(self, 0x84);
+    rupyBaseRemove(self);
 }
-VERIFY(0x0261C6EC, remove);
 
 /* 0261C740: runs the state machine unless the Move state is current */
-void execute(u32 self) {
-    WWHD_FUNC(0x0261C740, void, self);
-    const u32 st = call<u32>(0x02006478, self + 0x18);
-    const u32 fn = load<u32>(load<u32>(st + 8) + 0x14);
-    const u32 vt = load<u32>(kState + 8);
-    const u32 cur = call_ptr<u32>(fn, st);
-    if (cur == call_ptr<u32>(load<u32>(vt + 0x14), kState)) return;
-    call<void>(0x02006364, self + 0x18);
+/* 0261C740 */
+void rupy_execute(RupyScreen *self) {
+    RupyState *state = rupyGetCurrentState(&self->mpStateMachine);
+    const u32 getId = state->mpVTable[5].get();
+    gfn *idleVTable = l_rupyIdle.mpVTable.get();
+    const u32 current = gabi::call_ptr<u32>(getId, state);
+    if (current == gabi::call_ptr<u32>(idleVTable[5].get(), &l_rupyIdle))
+        return;
+    rupyExecuteState(&self->mpStateMachine);
 }
-VERIFY(0x0261C740, execute);
 
 /* 0261C7C0: draw when open */
-void draw(u32 self, u32 a) {
-    WWHD_FUNC(0x0261C7C0, void, self, a);
-    if (!load<u8>(self + 0x64)) return;
-    call_ptr<void>(load<u32>(load<u32>(self + 4) + 0x9C), self, a);
-    call_ptr<void>(load<u32>(load<u32>(self + 4) + 0xC4), self, a);
+/* 0261C7C0 */
+void rupy_draw(RupyScreen *self, u32 a) {
+    if (!self->mOpen)
+        return;
+    call_ptr<void>(self->mpVTable[39].get(), self, a);
+    call_ptr<void>(self->mpVTable[49].get(), self, a);
 }
-VERIFY(0x0261C7C0, draw);
 
-/* string equality as inlined (pointer check on the earlier loads, then at most 0x40001
- * characters compared through the string fields read again) */
-static bool strEq(u32 a0, u32 b0, u32 pa, u32 pb) {
-    if (a0 == b0) return true;
-    const u32 a = load<u32>(pa), b = load<u32>(pb);
-    for (u32 k = 0; k < 0x40001; k++) {
-        const u8 x = load<u8>(a + k), y = load<u8>(b + k);
-        if (x != y) return false;
-        if (!x) return true;
+// HD: preserve the earlier pointer comparison and repeated source field reads.
+static bool equalStrings(be<u8> *earlierA, be<u8> *earlierB, RupyString *left, RupyString *right) {
+    if (earlierA == earlierB)
+        return true;
+    const u32 a = gabi::ea(left->mpBuffer.get()), b = gabi::ea(right->mpBuffer.get());
+    for (u32 index = 0; index < 0x40001; ++index) {
+        const u8 x = *gabi::at<be<u8>>(a + index), y = *gabi::at<be<u8>>(b + index);
+        if (x != y)
+            return false;
+        if (!x)
+            return true;
     }
     return false;
 }
-static u32 cstr(u32 s) {
-    call_ptr<void>(load<u32>(load<u32>(s + 4) + 0x14), s);
-    return load<u32>(s);
+static void terminate(RupyString *string) {
+    gabi::call_ptr<void>(string->mpVTable[5].get(), string);
 }
-
-/* 0261C830: creates the child screen for a layout part: digit panes become number screens */
-u32 createChild(u32 self, u32 info) {
-    WWHD_FUNC(0x0261C830, u32, self, info);
-    const u32 S = 0x1048E170;
-    const u32 factory = 0x0261D088;
-    const u32 type = info + 8, name = info + 0x14;
-    const u32 s = cstr(S);
-    for (u32 i = 0; i < 3; i++) {
-        call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-        call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-        const u32 n = load<u32>(name);
-        const u32 ref = cstr(0x1048E06C + 8 * i);
-        if (!strEq(n, ref, name, 0x1048E06C + 8 * i)) continue;
-        Local<u32[2]> tmp;
-        store<u32>(tmp.a, s);
-        store<u32>(tmp.a + 4, 0x100E2E6C);
-        call_ptr<void>(load<u32>(load<u32>(type + 4) + 0x14), type);
-        call_ptr<void>(load<u32>(load<u32>(type + 4) + 0x14), type);
-        const u32 t = load<u32>(type);
-        call_ptr<void>(load<u32>(load<u32>(tmp.a + 4) + 0x14), tmp.a);
-        if (!strEq(t, load<u32>(tmp.a), type, tmp.a)) return call<u32>(0x026F92C0, self, i, info);
-        u32 slot = load<u32>(self + 0x4C);
-        if (i < load<u32>(self + 0x48)) slot += 4 * i;
-        store<u32>(slot, call_ptr<u32>(factory, 0u, 0u, info));
-        return child(self, i) ? 1 : 0;
+static be<u8> *stringBuffer(RupyString *string) {
+    terminate(string);
+    return string->mpBuffer.get();
+}
+/* 0261C830 */
+u32 rupy_createChild(RupyScreen *self, RupyPart *info) {
+    RupyString *type = gabi::at<RupyString>(gabi::ea(info) + 8);
+    RupyString *name = gabi::at<RupyString>(gabi::ea(info) + 0x14);
+    be<u8> *requiredType = stringBuffer(&l_rupyDigitType);
+    for (u32 index = 0; index < 3; ++index) {
+        terminate(name);
+        terminate(name);
+        be<u8> *actualName = name->mpBuffer.get();
+        RupyString *reference = &l_rupyDigitNames.mNames[index];
+        be<u8> *expectedName = stringBuffer(reference);
+        if (!equalStrings(actualName, expectedName, name, reference))
+            continue;
+        // HD: the temporary safe-string is an observed two-word guest stack allocation.
+        gabi::Local<RupyString> storage;
+        RupyString *temporary = gabi::at<RupyString>(storage.a);
+        temporary->mpBuffer = requiredType;
+        temporary->mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+        terminate(type);
+        terminate(type);
+        be<u8> *actualType = type->mpBuffer.get();
+        terminate(temporary);
+        if (!equalStrings(actualType, temporary->mpBuffer.get(), type, temporary))
+            return rupyBaseCreateChild(self, index, info);
+        u32 slot = gabi::ea(self->mpChildren.get());
+        if (index < self->mChildCount)
+            slot += 4 * index;
+        *gabi::at<gptr<void>>(slot) =
+            gabi::call_ptr<void *>(gabi::ea(&l_rupyDigitFactory), 0u, 0u, info);
+        return child(self, index) ? 1 : 0;
     }
     return 1;
 }
-VERIFY(0x0261C830, createChild);
 
 /* 0261CA68: loads the layout and binds its six animations */
-u32 loadScreen(u32 self, u32 a, u32 b, u32 c, u32 d, u32 e) {
-    WWHD_FUNC(0x0261CA68, u32, self, a, b, c, d, e);
-    u32 scr = call<u32>(0x0273B050, 0x110u, load<u32>(load<u32>(0x1018C404) + 0x10), 4u);
-    if (scr) scr = call<u32>(0x026FADB0, scr);
-    store<u32>(self + 0x44, scr);
-    if (!scr) return 0;
-    if (!call_ptr<u32>(load<u32>(load<u32>(scr + 0xE0) + 0x14), scr, a, b, c, d, 6u, 3u, e)) return 0;
-    for (u32 i = 0; i < 6; i++)
-        call<void>(0x02004E04, anim(self), i, 0x1048E03C + 8 * i, 0x1048E024 + 8 * load<u32>(0x100E2E84 + 4 * i));
-    vcall(self, 0x8C);
+/* 0261CA68 */
+u32 rupy_loadScreen(RupyScreen *self, u32 a, u32 b, u32 c, u32 d, u32 e) {
+    RupyLayout *layout =
+        static_cast<RupyLayout *>(rupyAllocateAligned(0x110, l_rupyHeap.get()->mpHeap.get(), 4));
+    if (layout)
+        layout = rupyLayoutConstruct(layout);
+    self->mpLayout = layout;
+    if (!layout)
+        return 0;
+    if (!gabi::call_ptr<u32>(layout->mpVTable[5].get(), layout, a, b, c, d, 6u, 3u, e))
+        return 0;
+    for (u32 index = 0; index < 6; ++index)
+        rupyBindAnimation(animation(self), index, &l_rupyAnimationNames.mNames[index],
+                          gabi::at<RupyString>(gabi::ea(&l_rupyGroupNames) +
+                                               8 * u32(l_rupyAnimationGroups.mGroups[index])));
+    invoke(self, 0x8C);
     return 1;
 }
-VERIFY(0x0261CA68, loadScreen);
 
 /* 0261CB94: static initialiser: shared objects, layout/animation/pane names and two states */
-void staticInit() {
-    WWHD_FUNC(0x0261CB94, void);
-    const u32 b = 0x1048E014;
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 8, 0);
-    store<u32>(b + 4, 0);
-    store<u32>(b, 0);
-    call<void>(0x028F026C, 0x101F514Cu);
-    const f32 lo = load<f32>(0x100E2F58), hi = load<f32>(0x100E2F5C);
-    store<f32>(0x1048DFF8, lo);
-    store<f32>(0x1048DFFC, hi);
-    call<void>(0x028ED6F8, 0x1048E010u);
-    call<void>(0x028F026C, 0x101F5158u);
-    call<void>(0x028EAB2C, 0x1048E011u);
-    call<void>(0x028F026C, 0x101F5164u);
-    const f32 big = load<f32>(0x100E2F60), small = load<f32>(0x100E2F64);
-    const u32 vt = 0x100E2E6C;
-    const u32 A = 0x1048E024, B = 0x1048E03C, C = 0x1048E084, D = 0x1048E06C, L = 0x1048E09C, P = 0x1048E10C;
-    store<f32>(0x1048E000, big);
-    store<f32>(0x1048E008, small);
-    store<u32>(A + 4, vt);
-    store<u32>(A, 0x100E2FE0);
-    store<u32>(A + 0xC, vt);
-    store<u32>(A + 8, 0x100E2FF4);
-    store<u32>(B + 4, vt);
-    store<u32>(B, 0x100E2FC0);
-    store<u32>(B + 0xC, vt);
-    store<u32>(B + 8, 0x100E2F88);
-    store<u32>(B + 0x14, vt);
-    store<f32>(0x1048E004, big);
-    store<u32>(B + 0x10, 0x100E3000);
-    store<u32>(B + 0x1C, vt);
-    store<u32>(B + 0x18, 0x100E2F68);
-    store<u32>(B + 0x24, vt);
-    store<u32>(B + 0x20, 0x100E2F70);
-    store<u32>(B + 0x2C, vt);
-    store<u32>(B + 0x28, 0x100E3010);
-    store<u32>(C + 0x14, vt);
-    store<u32>(D + 4, vt);
-    store<u32>(D, 0x100E2F9C);
-    store<u32>(D + 0xC, vt);
-    store<u32>(D + 8, 0x100E2FA8);
-    store<u32>(D + 0x14, vt);
-    store<u32>(D + 0x10, 0x100E2FB4);
-    store<f32>(0x1048E00C, small);
-    store<u32>(A + 0x14, vt);
-    store<u32>(C + 0xC, vt);
-    store<u32>(A + 0x10, 0x100E2F78);
-    store<u32>(L + 4, vt);
-    store<u32>(P + 4, vt);
-    const u32 guard = load<u32>(0x101FD8E4);
-    store<u32>(C + 4, vt);
-    store<u32>(C, 0x100E301C);
-    store<u32>(C + 0x10, 0x100E301C);
-    store<u32>(C + 8, 0x100E301C);
-    store<u32>(L, 0x100E3030);
-    store<u32>(L + 0xC, vt);
-    store<u32>(P, 0x100E3030);
-    store<u32>(L + 8, 0x100E301C);
+/* 0261CB94 */
+void rupy_staticInit() {
+    l_rupyWords.mValues[3] = 0;
+    l_rupyWords.mValues[2] = 0;
+    l_rupyWords.mValues[1] = 0;
+    l_rupyWords.mValues[0] = 0;
+    rupyRegister(&l_rupyRegistrationA);
+    const f32 lo = l_rupyLow, hi = l_rupyHigh;
+    l_rupyRange.mLow = lo;
+    l_rupyRange.mHigh = hi;
+    rupyConstructFirst(&l_rupyObjectA);
+    rupyRegister(&l_rupyRegistrationB);
+    rupyConstructSecond(&l_rupyObjectB);
+    rupyRegister(&l_rupyRegistrationC);
+    const f32 big = l_rupyBig, small = l_rupySmall;
+    l_rupyScales.mValues[0] = big;
+    l_rupyScales.mValues[2] = small;
+    l_rupyGroupNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyGroupNames.mNames[0].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FE0"));
+    l_rupyGroupNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyGroupNames.mNames[1].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FF4"));
+    l_rupyAnimationNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyAnimationNames.mNames[0].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FC0"));
+    l_rupyAnimationNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyAnimationNames.mNames[1].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F88"));
+    l_rupyAnimationNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyScales.mValues[1] = big;
+    l_rupyAnimationNames.mNames[2].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3000"));
+    l_rupyAnimationNames.mNames[3].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyAnimationNames.mNames[3].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F68"));
+    l_rupyAnimationNames.mNames[4].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyAnimationNames.mNames[4].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F70"));
+    l_rupyAnimationNames.mNames[5].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyAnimationNames.mNames[5].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3010"));
+    l_rupyUnusedNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyDigitNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyDigitNames.mNames[0].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F9C"));
+    l_rupyDigitNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyDigitNames.mNames[1].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FA8"));
+    l_rupyDigitNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyDigitNames.mNames[2].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FB4"));
+    l_rupyScales.mValues[3] = small;
+    l_rupyGroupNames.mNames[2].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyUnusedNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyGroupNames.mNames[2].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2F78"));
+    l_rupyLayoutNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyPartName.mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    const u32 guard = l_rupyStateGuard;
+    l_rupyUnusedNames.mNames[0].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyUnusedNames.mNames[0].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+    l_rupyUnusedNames.mNames[2].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+    l_rupyUnusedNames.mNames[1].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
+    l_rupyLayoutNames.mNames[0].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3030"));
+    l_rupyLayoutNames.mNames[1].mpVTable = reinterpret_cast<gfn *>(&l_rupyStringVTable);
+    l_rupyPartName.mpBuffer = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E3030"));
+    l_rupyLayoutNames.mNames[1].mpBuffer =
+        gabi::at<be<u8>>(gabi::guest_addr("auction text 100E301C"));
     u32 id;
-    if (guard) id = load<u32>(0x101FDD50);
+    if (guard)
+        id = l_rupyNextStateId;
     else {
         id = 0;
-        store<u32>(0x101FD8E4, 1);
+        l_rupyStateGuard = 1;
     }
-    const u32 W = 0x1048E0AC, E = 0x1048E0DC;
-    store<u16>(W + 0x24, 0);
-    store<u32>(W + 0x28, 0);
-    store<u16>(W + 0x1E, 0x1B);
-    store<u16>(W + 0xE, 0x19);
-    store<u16>(W + 0xC, 0);
-    store<u32>(W + 8, 0x100E2EE4);
-    store<u32>(W, id + 1);
-    store<u32>(W + 0x10, 4);
-    store<u16>(W + 0x1C, 0);
-    store<u32>(W + 4, 0x100E303C);
-    store<u16>(E + 0xC, 0);
-    store<u32>(W + 0x2C, 0x101FF32C);
-    store<u16>(E + 0xE, 0x1C);
-    store<u32>(E + 4, 0x100E2FD0);
-    store<u16>(W + 0x16, 0x1A);
-    store<u16>(W + 0x26, 0);
-    store<u32>(E + 0x2C, 0x101FF32C);
-    store<u32>(E + 0x28, 0);
-    store<u32>(E + 8, 0x100E2EE4);
-    store<u32>(E + 0x20, 4);
-    store<u32>(E + 0x18, 4);
-    store<u32>(E + 0x10, 4);
-    store<u32>(W + 0x20, 4);
-    store<u16>(W + 0x14, 0);
-    store<u32>(W + 0x18, 4);
-    store<u32>(E, id + 2);
-    store<u16>(E + 0x16, 0x1D);
-    store<u16>(E + 0x14, 0);
-    store<u16>(E + 0x26, 0);
-    store<u16>(E + 0x1E, 0x1E);
-    store<u16>(E + 0x24, 0);
-    store<u32>(0x101FDD50, id + 2);
-    store<u16>(E + 0x1C, 0);
+    l_rupyStateWait.mThisFinal = 0;
+    l_rupyStateWait.mFinalKind = 0;
+    l_rupyStateWait.mExitIndex = 0x1B;
+    l_rupyStateWait.mInitIndex = 0x19;
+    l_rupyStateWait.mThisInit = 0;
+    l_rupyStateWait.mpVTable = reinterpret_cast<gfn *>(&l_rupyStateVTable);
+    l_rupyStateWait.mId = id + 1;
+    l_rupyStateWait.mInitKind = 4;
+    l_rupyStateWait.mThisExit = 0;
+    l_rupyStateWait.mpName = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E303C"));
+    l_rupyStateExit.mThisInit = 0;
+    l_rupyStateWait.mpOwner = &l_rupyStateOwner;
+    l_rupyStateExit.mInitIndex = 0x1C;
+    l_rupyStateExit.mpName = gabi::at<be<u8>>(gabi::guest_addr("auction text 100E2FD0"));
+    l_rupyStateWait.mMoveIndex = 0x1A;
+    l_rupyStateWait.mFinalIndex = 0;
+    l_rupyStateExit.mpOwner = &l_rupyStateOwner;
+    l_rupyStateExit.mFinalKind = 0;
+    l_rupyStateExit.mpVTable = reinterpret_cast<gfn *>(&l_rupyStateVTable);
+    l_rupyStateExit.mExitKind = 4;
+    l_rupyStateExit.mMoveKind = 4;
+    l_rupyStateExit.mInitKind = 4;
+    l_rupyStateWait.mExitKind = 4;
+    l_rupyStateWait.mThisMove = 0;
+    l_rupyStateWait.mMoveKind = 4;
+    l_rupyStateExit.mId = id + 2;
+    l_rupyStateExit.mMoveIndex = 0x1D;
+    l_rupyStateExit.mThisMove = 0;
+    l_rupyStateExit.mFinalIndex = 0;
+    l_rupyStateExit.mExitIndex = 0x1E;
+    l_rupyStateExit.mThisFinal = 0;
+    l_rupyNextStateId = id + 2;
+    l_rupyStateExit.mThisExit = 0;
 }
-VERIFY(0x0261CB94, staticInit);
 
 /* empty virtual functions / state enter-exit functions */
-void nop1() { WWHD_FUNC(0x0261CF60, void); }
-VERIFY(0x0261CF60, nop1);
-void nop2() { WWHD_FUNC(0x0261CF64, void); }
-VERIFY(0x0261CF64, nop2);
-void nop3() { WWHD_FUNC(0x0261CF80, void); }
-VERIFY(0x0261CF80, nop3);
-void nop4() { WWHD_FUNC(0x0261CF84, void); }
-VERIFY(0x0261CF84, nop4);
-void nop5() { WWHD_FUNC(0x0261CF90, void); }
-VERIFY(0x0261CF90, nop5);
-void nop6() { WWHD_FUNC(0x0261CF94, void); }
-VERIFY(0x0261CF94, nop6);
-void nop7() { WWHD_FUNC(0x0261CF98, void); }
-VERIFY(0x0261CF98, nop7);
+/* 0261CF60 */
+void rupy_nop1() {}
 
-} // namespace hd_screen_auction_rupy
+/* 0261CF64 */
+void rupy_nop2() {}
+
+/* 0261CF80 */
+void rupy_nop3() {}
+
+/* 0261CF84 */
+void rupy_nop4() {}
+
+/* 0261CF90 */
+void rupy_nop5() {}
+
+/* 0261CF94 */
+void rupy_nop6() {}
+
+/* 0261CF98 */
+void rupy_nop7() {}
+/* WWHD glue (tools/verify/autoglue.py)
+data l_rupyIdle 1049DD60
+data l_rupyDelegateVTableA 100E3148
+data l_rupyDelegateVTableB 100E3158
+data l_rupyScreenVTable 100E3050
+data l_rupyStringVTable 100E2E6C
+data l_rupyDigitFactory 0261D088
+data l_rupyStateVTable 100E2EE4
+data l_rupyStateOwner 101FF32C
+data l_rupyUI 101F8344
+data l_rupyHeap 1018C404
+data l_rupyOne 100E2F30
+data l_rupyMeterMaximum 100E2F40
+data l_rupyIdleFrame 100E2F44
+data l_rupyZero 100E2F48
+data l_rupyWords 1048E014
+data l_rupyRange 1048DFF8
+data l_rupyLow 100E2F58
+data l_rupyHigh 100E2F5C
+data l_rupyBig 100E2F60
+data l_rupySmall 100E2F64
+data l_rupyScales 1048E000
+data l_rupyRegistrationA 101F514C
+data l_rupyRegistrationB 101F5158
+data l_rupyRegistrationC 101F5164
+data l_rupyObjectA 1048E010
+data l_rupyObjectB 1048E011
+data l_rupyGroupNames 1048E024
+data l_rupyAnimationNames 1048E03C
+data l_rupyDigitNames 1048E06C
+data l_rupyUnusedNames 1048E084
+data l_rupyLayoutNames 1048E09C
+data l_rupyPartName 1048E10C
+data l_rupyDigitType 1048E170
+data l_rupyStateWait 1048E0AC
+data l_rupyStateExit 1048E0DC
+data l_rupyStateGuard 101FD8E4
+data l_rupyNextStateId 101FDD50
+data l_rupyAnimationGroups 100E2E84
+str 100E2FE0 "auction text 100E2FE0" renamed
+str 100E2FC0 "auction text 100E2FC0" renamed
+str 100E3000 "auction text 100E3000" renamed
+str 100E2F68 "auction text 100E2F68" renamed
+str 100E2F70 "auction text 100E2F70" renamed
+str 100E3010 "auction text 100E3010" renamed
+str 100E2F9C "auction text 100E2F9C" renamed
+str 100E2FB4 "auction text 100E2FB4" renamed
+str 100E2F78 "auction text 100E2F78" renamed
+str 100E301C "auction text 100E301C" renamed
+str 100E3030 "auction text 100E3030" renamed
+str 100E2FF4 "auction text 100E2FF4" renamed
+str 100E2F88 "auction text 100E2F88" renamed
+str 100E2FA8 "auction text 100E2FA8" renamed
+str 100E303C "auction text 100E303C" renamed
+str 100E2FD0 "auction text 100E2FD0" renamed
+ext 026F88F0 void rupyBaseDestroy(RupyScreen*,u32)
+ext 0273AF40 void rupyDelete(void*)
+ext 0273AD10 void* rupyAllocate(u32)
+ext 026F89E8 void rupyBaseConstruct(RupyScreen*)
+ext 025200D4 RupyPlay* rupyGetPlay()
+ext 02005674 void rupyAnimationStop(RupyAnimation*,u32,u32)
+ext 020053E4 void rupyAnimationPlay(RupyAnimation*,u32,u32,f32)
+ext 0200552C void rupyAnimationFrame(RupyAnimation*,u32,u32,f32)
+ext 02005708 void rupyAnimationReset(RupyAnimation*,u32,u32)
+ext 02005488 void rupyAnimationLimit(RupyAnimation*,u32,u32,f32)
+ext 02676900 void rupyAuctionOpen(void*)
+ext 026768E4 void rupyAuctionClose(void*)
+ext 025916EC void rupyInputOpen()
+ext 025916FC void rupyInputClose()
+ext 0261D454 void rupyDigitSet(void*,u32)
+ext 0261D4A8 void rupyDigitRoll(void*,u32,u32,u32)
+ext 025E1988 void rupyPlaySound(u32)
+ext 020063C0 void rupyChangeState(gptr<RupyStateMachine>*,RupyState*)
+ext 026F90D8 void rupySetLayoutNames(RupyScreen*,RupyLayoutNames*,u32)
+ext 028713B8 u32 rupyFrameCount(void*)
+ext 026F91F8 void rupyBaseRemove(RupyScreen*)
+ext 02006478 RupyState* rupyGetCurrentState(gptr<RupyStateMachine>*)
+ext 02006364 void rupyExecuteState(gptr<RupyStateMachine>*)
+ext 026F92C0 u32 rupyBaseCreateChild(RupyScreen*,u32,RupyPart*)
+ext 0273B050 void* rupyAllocateAligned(u32,void*,u32)
+ext 026FADB0 RupyLayout* rupyLayoutConstruct(RupyLayout*)
+ext 02004E04 void rupyBindAnimation(RupyAnimation*,u32,RupyString*,RupyString*)
+ext 028F026C void rupyRegister(RupyRegistration*)
+ext 028ED6F8 void rupyConstructFirst(be<u8>*)
+ext 028EAB2C void rupyConstructSecond(be<u8>*)
+*/

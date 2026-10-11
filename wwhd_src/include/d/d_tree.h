@@ -1,0 +1,836 @@
+/* Tree layouts. HD replaces room links with bounded lists and adds native render resources. */
+#pragma once
+#include "gabi.h"
+#include "SSystem/SComponent/c_xyz.h"
+using namespace gabi;
+struct TreeActorView;
+struct TreeAttackView;
+struct TreeMassHitInfo;
+struct TreeMtx {
+    be<f32> a[12];
+};
+struct dTree_data_c {
+    void WorkCo(TreeActorView* actor, u32 unused, u32 room);
+    void WorkAt_NoCutAnim(TreeActorView* actor, u32 unused, u32 room, u32 inf, TreeAttackView* hit);
+    void WorkAt(TreeActorView* actor, u32 flags, u32 room, TreeMassHitInfo* info);
+    s32 hitCheck(u32 unused, u32 room);
+    void animation(u32 room);
+    /* 0x000 */ be<u8> mState, field_0x001, mAnimIdx, field_0x003;
+    /* 0x004 */ cXyz mPos;
+    /* 0x010 */ TreeMtx field_0x010, field_0x040, field_0x070;
+    /* 0x0A0 */ be<u32> mNativeFlags;
+    /* 0x0A4 */ be<f32> mViewDepth;
+};
+struct dTree_anm_c {
+    /* 0x000 */ be<u8> mState, padding;
+    /* 0x002 */ be<s16> field_0x02, field_0x04, field_0x06, field_0x08, field_0x0a;
+    /* 0x00C */ be<f32> mAnimTimer, field_0x10, field_0x14, field_0x18, field_0x1c, field_0x20;
+    /* 0x024 */ TreeMtx field_0x24, field_0x54;
+};
+struct dTree_room_c {
+    void newData(dTree_data_c* p);
+    void deleteData();
+    // HD: fixed-capacity array replaces the GameCube linked list.
+    /* 0x000 */ be<u32> mCount, mCapacity;
+    /* 0x008 */ gptr<gptr<dTree_data_c>> mpData;
+    /* 0x00C */ gptr<dTree_data_c> mStorage[64];
+};
+WWHD_SIZE(dTree_data_c, 0xA8);
+WWHD_OFFSET(dTree_data_c, mViewDepth, 0xA4);
+WWHD_SIZE(dTree_anm_c, 0x84);
+WWHD_OFFSET(dTree_anm_c, field_0x24, 0x24);
+WWHD_SIZE(dTree_room_c, 0x10C);
+
+// HD: private complete native views; shared caller declarations remain opaque.
+struct TreeDrawVtable {
+    u8 padding0[0x2C];
+    /* 0x02C */ be<u32> applyMaterial;
+};
+WWHD_SIZE(TreeDrawVtable, 0x30);
+WWHD_OFFSET(TreeDrawVtable, applyMaterial, 0x2C);
+struct TreeDrawBase {
+    u8 padding0[0xC];
+    /* 0x00C */ gptr<TreeDrawVtable> __vtbl;
+    u8 padding10[0x64];
+};
+WWHD_SIZE(TreeDrawBase, 0x74);
+WWHD_OFFSET(TreeDrawBase, __vtbl, 0xC);
+struct TreeSmallDraw {
+    /* 0x000 */ TreeDrawBase mBase;
+    /* 0x074 */ TreeMtx mMatrix;
+    u8 paddingA4[0x4];
+};
+WWHD_SIZE(TreeSmallDraw, 0xA8);
+WWHD_OFFSET(TreeSmallDraw, mBase, 0x0);
+WWHD_OFFSET(TreeSmallDraw, mMatrix, 0x74);
+struct TreeVec4 {
+    /* 0x000 */ be<f32> a[4];
+};
+WWHD_SIZE(TreeVec4, 0x10);
+WWHD_OFFSET(TreeVec4, a, 0x0);
+struct TreeLargeDraw {
+    /* 0x000 */ TreeDrawBase mBase;
+    /* 0x074 */ be<f32> mTransformDefaults[8];
+    /* 0x094 */ be<f32> mAmbientColor[4];
+    /* 0x0A4 */ be<f32> mDiffuseDefaults[4];
+    /* 0x0B4 */ be<f32> mColorC0[4];
+    /* 0x0C4 */ be<f32> mColorK0[4];
+    /* 0x0D4 */ be<f32> mMaterialDefaults[3];
+    /* 0x0E0 */ be<f32> mAlpha;
+    /* 0x0E4 */ be<f32> mLightingDefaults[16];
+    /* 0x124 */ TreeVec4 mColorPairs[3][2];
+    /* 0x184 */ TreeMtx mMatrices[8];
+    /* 0x304 */ TreeVec4 mVectors[6];
+};
+WWHD_SIZE(TreeLargeDraw, 0x364);
+WWHD_OFFSET(TreeLargeDraw, mBase, 0x0);
+WWHD_OFFSET(TreeLargeDraw, mTransformDefaults, 0x74);
+WWHD_OFFSET(TreeLargeDraw, mAmbientColor, 0x94);
+WWHD_OFFSET(TreeLargeDraw, mDiffuseDefaults, 0xA4);
+WWHD_OFFSET(TreeLargeDraw, mColorC0, 0xB4);
+WWHD_OFFSET(TreeLargeDraw, mColorK0, 0xC4);
+WWHD_OFFSET(TreeLargeDraw, mMaterialDefaults, 0xD4);
+WWHD_OFFSET(TreeLargeDraw, mAlpha, 0xE0);
+WWHD_OFFSET(TreeLargeDraw, mLightingDefaults, 0xE4);
+WWHD_OFFSET(TreeLargeDraw, mColorPairs, 0x124);
+WWHD_OFFSET(TreeLargeDraw, mMatrices, 0x184);
+WWHD_OFFSET(TreeLargeDraw, mVectors, 0x304);
+struct TreeShapeVtable {
+    u8 padding0[0xC];
+    /* 0x00C */ be<u32> destroy;
+};
+WWHD_SIZE(TreeShapeVtable, 0x10);
+WWHD_OFFSET(TreeShapeVtable, destroy, 0xC);
+struct TreeNativeShape {
+    u8 padding0[0xF0];
+    /* 0x0F0 */ gptr<TreeShapeVtable> __vtbl;
+};
+WWHD_SIZE(TreeNativeShape, 0xF4);
+WWHD_OFFSET(TreeNativeShape, __vtbl, 0xF0);
+struct TreeShapeArray {
+    /* 0x000 */ be<u32> mCount;
+    /* 0x004 */ gptr<TreeNativeShape> mpShapes;
+};
+WWHD_SIZE(TreeShapeArray, 0x8);
+WWHD_OFFSET(TreeShapeArray, mCount, 0x0);
+WWHD_OFFSET(TreeShapeArray, mpShapes, 0x4);
+struct TreeMaterialRecord {
+    /* 0x000 */ gptr<void> mpMaterial;
+    /* 0x004 */ TreeShapeArray mShapes[2];
+};
+WWHD_SIZE(TreeMaterialRecord, 0x14);
+WWHD_OFFSET(TreeMaterialRecord, mpMaterial, 0x0);
+WWHD_OFFSET(TreeMaterialRecord, mShapes, 0x4);
+struct TreeMaterialList {
+    /* 0x000 */ be<u32> mCount;
+    /* 0x004 */ be<u32> mCapacity;
+    /* 0x008 */ gptr<TreeMaterialRecord> mpRecords;
+};
+WWHD_SIZE(TreeMaterialList, 0xC);
+WWHD_OFFSET(TreeMaterialList, mCount, 0x0);
+WWHD_OFFSET(TreeMaterialList, mCapacity, 0x4);
+WWHD_OFFSET(TreeMaterialList, mpRecords, 0x8);
+struct TreeVertexBuffer {
+    u8 padding0[0x14C];
+    /* 0x14C */ be<u32> mSize;
+    u8 padding150[0x4];
+};
+WWHD_SIZE(TreeVertexBuffer, 0x154);
+WWHD_OFFSET(TreeVertexBuffer, mSize, 0x14C);
+struct TreeCollisionBuffer {
+    /* 0x000 */ gptr<void> mpVertices;
+    /* 0x004 */ TreeVertexBuffer mVertexBuffer;
+    /* 0x158 */ TreeNativeShape mShape;
+    /* 0x24C */ be<u32> mCapacity;
+    /* 0x250 */ gptr<void> mpAllocation;
+};
+WWHD_SIZE(TreeCollisionBuffer, 0x254);
+WWHD_OFFSET(TreeCollisionBuffer, mpVertices, 0x0);
+WWHD_OFFSET(TreeCollisionBuffer, mVertexBuffer, 0x4);
+WWHD_OFFSET(TreeCollisionBuffer, mShape, 0x158);
+WWHD_OFFSET(TreeCollisionBuffer, mCapacity, 0x24C);
+WWHD_OFFSET(TreeCollisionBuffer, mpAllocation, 0x250);
+struct TreeCollisionManager {
+    /* 0x000 */ TreeCollisionBuffer mBuffers[5][2];
+    /* 0x1748 */ be<u32> mActiveBuffer;
+    /* 0x174C */ be<u32> mVertexFormat;
+    /* 0x1750 */ be<u32> mVertexStride;
+    /* 0x1754 */ gptr<void> mpAttributes;
+    /* 0x1758 */ be<u32> mCount;
+    /* 0x175C */ be<u8> mDirty;
+    u8 padding175D[0x3];
+};
+WWHD_SIZE(TreeCollisionManager, 0x1760);
+WWHD_OFFSET(TreeCollisionManager, mBuffers, 0x0);
+WWHD_OFFSET(TreeCollisionManager, mActiveBuffer, 0x1748);
+WWHD_OFFSET(TreeCollisionManager, mVertexFormat, 0x174C);
+WWHD_OFFSET(TreeCollisionManager, mVertexStride, 0x1750);
+WWHD_OFFSET(TreeCollisionManager, mpAttributes, 0x1754);
+WWHD_OFFSET(TreeCollisionManager, mCount, 0x1758);
+WWHD_OFFSET(TreeCollisionManager, mDirty, 0x175C);
+struct TreeIndexBuffer {
+    /* 0x000 */ be<u32> mPrimitive;
+    /* 0x004 */ be<u32> mIndexType;
+    /* 0x008 */ gptr<void> mpIndices;
+    /* 0x00C */ be<u32> mCount;
+    u8 padding10[0x8];
+};
+WWHD_SIZE(TreeIndexBuffer, 0x18);
+WWHD_OFFSET(TreeIndexBuffer, mPrimitive, 0x0);
+WWHD_OFFSET(TreeIndexBuffer, mIndexType, 0x4);
+WWHD_OFFSET(TreeIndexBuffer, mpIndices, 0x8);
+WWHD_OFFSET(TreeIndexBuffer, mCount, 0xC);
+struct TreeUniformContainer {
+    /* 0x000 */ be<u32> mCount;
+    /* 0x004 */ gptr<void> mpUniform;
+    u8 padding8[0x4];
+};
+WWHD_SIZE(TreeUniformContainer, 0xC);
+WWHD_OFFSET(TreeUniformContainer, mCount, 0x0);
+WWHD_OFFSET(TreeUniformContainer, mpUniform, 0x4);
+struct TreeShadowPacket {
+    u8 padding0[0xC];
+    /* 0x00C */ be<u32> __vtbl;
+    u8 padding10[0x88];
+    /* 0x098 */ gptr<void> mpTree;
+};
+WWHD_SIZE(TreeShadowPacket, 0x9C);
+WWHD_OFFSET(TreeShadowPacket, __vtbl, 0xC);
+WWHD_OFFSET(TreeShadowPacket, mpTree, 0x98);
+struct TreeTextureState {
+    u8 padding0[0x4];
+    /* 0x004 */ be<u32> mComparisonHeader[6];
+    /* 0x01C */ be<u32> mFormat;
+    u8 padding20[0x8];
+    /* 0x028 */ be<u32> mMipData;
+    u8 padding2C[0x4];
+    /* 0x030 */ be<u32> mImageData;
+    /* 0x034 */ be<u32> mDimension;
+    /* 0x038 */ be<u32> mHeight;
+    u8 padding3C[0x98];
+    /* 0x0D4 */ be<u32> mCachedMipData;
+    u8 paddingD8[0x4];
+    /* 0x0DC */ be<u32> mCachedImageData;
+    u8 paddingE0[0x7C];
+    /* 0x15C */ be<u32> mFilter[3];
+    u8 padding168[0x28];
+    /* 0x190 */ be<u8> mFlags;
+    u8 padding191[0x7];
+};
+WWHD_SIZE(TreeTextureState, 0x198);
+WWHD_OFFSET(TreeTextureState, mComparisonHeader, 0x4);
+WWHD_OFFSET(TreeTextureState, mFormat, 0x1C);
+WWHD_OFFSET(TreeTextureState, mMipData, 0x28);
+WWHD_OFFSET(TreeTextureState, mImageData, 0x30);
+WWHD_OFFSET(TreeTextureState, mDimension, 0x34);
+WWHD_OFFSET(TreeTextureState, mHeight, 0x38);
+WWHD_OFFSET(TreeTextureState, mCachedMipData, 0xD4);
+WWHD_OFFSET(TreeTextureState, mCachedImageData, 0xDC);
+WWHD_OFFSET(TreeTextureState, mFilter, 0x15C);
+WWHD_OFFSET(TreeTextureState, mFlags, 0x190);
+struct TreeTexture {
+    u8 padding0[0x4];
+    /* 0x004 */ be<u32> mComparisonHeader[6];
+    /* 0x01C */ be<u32> mFormat;
+    u8 padding20[0x8];
+    /* 0x028 */ be<u32> mMipData;
+    u8 padding2C[0x4];
+    /* 0x030 */ be<u32> mImageData;
+    /* 0x034 */ be<u32> mDimension;
+    /* 0x038 */ be<u32> mHeight;
+    u8 padding3C[0x54];
+};
+WWHD_SIZE(TreeTexture, 0x90);
+WWHD_OFFSET(TreeTexture, mComparisonHeader, 0x4);
+WWHD_OFFSET(TreeTexture, mFormat, 0x1C);
+WWHD_OFFSET(TreeTexture, mMipData, 0x28);
+WWHD_OFFSET(TreeTexture, mImageData, 0x30);
+WWHD_OFFSET(TreeTexture, mDimension, 0x34);
+WWHD_OFFSET(TreeTexture, mHeight, 0x38);
+struct TreeRenderer {
+    /* 0x000 */ TreeIndexBuffer mIndexBuffers[4];
+    /* 0x060 */ TreeTextureState mTextureState;
+    /* 0x1F8 */ TreeTexture mTexture;
+    /* 0x288 */ TreeShadowPacket mShadowPacket;
+    /* 0x324 */ dTree_room_c mShadowRoom;
+    /* 0x430 */ TreeMaterialList mMaterials;
+    /* 0x43C */ TreeUniformContainer mUniformContainer;
+    /* 0x448 */ TreeSmallDraw mSmallDraw[64];
+    /* 0x2E48 */ TreeLargeDraw mLargeDraw[64];
+};
+WWHD_SIZE(TreeRenderer, 0x10748);
+WWHD_OFFSET(TreeRenderer, mIndexBuffers, 0x0);
+WWHD_OFFSET(TreeRenderer, mTextureState, 0x60);
+WWHD_OFFSET(TreeRenderer, mTexture, 0x1F8);
+WWHD_OFFSET(TreeRenderer, mShadowPacket, 0x288);
+WWHD_OFFSET(TreeRenderer, mShadowRoom, 0x324);
+WWHD_OFFSET(TreeRenderer, mMaterials, 0x430);
+WWHD_OFFSET(TreeRenderer, mUniformContainer, 0x43C);
+WWHD_OFFSET(TreeRenderer, mSmallDraw, 0x448);
+WWHD_OFFSET(TreeRenderer, mLargeDraw, 0x2E48);
+struct TreePacketState {
+    s32 newAnm(u32 angle);
+    void setAnm(u32 i, u32 angle);
+    void setData(dTree_data_c* data, u32 next, cXyz* pos, u32 state, u32 room);
+    u32 newData(cXyz* pos, u32 state, u32 room);
+    void update();
+    void calc();
+    void draw(u32 draw);
+    void drawShadow(u32 draw);
+    void prepareRender();
+    u8 padding0[0xC];
+    /* 0x00C */ be<u32> __vtbl;
+    u8 padding10[0x88];
+    /* 0x098 */ be<u16> mNextIdx;
+    u8 padding9A[0x2];
+    /* 0x09C */ dTree_data_c mData[64];
+    /* 0x2A9C */ dTree_anm_c mAnm[72];
+    /* 0x4FBC */ dTree_room_c mRoom[64];
+    /* 0x92BC */ be<u8> mPlayerCutFlg;
+    u8 padding92BD[0x1];
+    /* 0x92BE */ be<s16> mPlayerSwordAngY;
+    /* 0x92C0 */ be<s16> mPlayerSwordMoveAngY;
+    u8 padding92C2[0x2];
+    /* 0x92C4 */ cXyz mPlayerSwordTop;
+    /* 0x92D0 */ TreeMaterialList mMaterials;
+    /* 0x92DC */ TreeCollisionManager mCollision;
+    /* 0xAA3C */ TreeUniformContainer mUniformContainer;
+    /* 0xAA48 */ TreeSmallDraw mSmallDraw[128];
+    /* 0xFE48 */ TreeLargeDraw mLargeDraw[64];
+    /* 0x1D748 */ TreeRenderer mRenderer;
+};
+WWHD_SIZE(TreePacketState, 0x2DE90);
+WWHD_OFFSET(TreePacketState, __vtbl, 0xC);
+WWHD_OFFSET(TreePacketState, mNextIdx, 0x98);
+WWHD_OFFSET(TreePacketState, mData, 0x9C);
+WWHD_OFFSET(TreePacketState, mAnm, 0x2A9C);
+WWHD_OFFSET(TreePacketState, mRoom, 0x4FBC);
+WWHD_OFFSET(TreePacketState, mPlayerCutFlg, 0x92BC);
+WWHD_OFFSET(TreePacketState, mPlayerSwordAngY, 0x92BE);
+WWHD_OFFSET(TreePacketState, mPlayerSwordMoveAngY, 0x92C0);
+WWHD_OFFSET(TreePacketState, mPlayerSwordTop, 0x92C4);
+WWHD_OFFSET(TreePacketState, mMaterials, 0x92D0);
+WWHD_OFFSET(TreePacketState, mCollision, 0x92DC);
+WWHD_OFFSET(TreePacketState, mUniformContainer, 0xAA3C);
+WWHD_OFFSET(TreePacketState, mSmallDraw, 0xAA48);
+WWHD_OFFSET(TreePacketState, mLargeDraw, 0xFE48);
+WWHD_OFFSET(TreePacketState, mRenderer, 0x1D748);
+struct TreeActorVtable {
+    u8 padding0[0xF4];
+    /* 0x0F4 */ be<u32> setCollisionMode;
+};
+WWHD_SIZE(TreeActorVtable, 0xF8);
+WWHD_OFFSET(TreeActorVtable, setCollisionMode, 0xF4);
+struct TreeActorView {
+    u8 padding0[0x8];
+    /* 0x008 */ be<s16> mName;
+    u8 paddingA[0xAA];
+    /* 0x0B4 */ gptr<TreeActorVtable> __vtbl;
+    u8 paddingB8[0x25C];
+    /* 0x314 */ cXyz mPosition;
+    u8 padding320[0x2];
+    /* 0x322 */ be<s16> mAngleY;
+    u8 padding324[0x4C];
+    /* 0x370 */ be<f32> mSpeedF;
+    u8 padding374[0x44];
+    /* 0x3B8 */ be<u32> mNoResetFlg0;
+    u8 padding3BC[0x28];
+    /* 0x3E4 */ cXyz mSwordTopPos;
+    u8 padding3F0[0x28];
+};
+WWHD_SIZE(TreeActorView, 0x418);
+WWHD_OFFSET(TreeActorView, mName, 0x8);
+WWHD_OFFSET(TreeActorView, __vtbl, 0xB4);
+WWHD_OFFSET(TreeActorView, mPosition, 0x314);
+WWHD_OFFSET(TreeActorView, mAngleY, 0x322);
+WWHD_OFFSET(TreeActorView, mSpeedF, 0x370);
+WWHD_OFFSET(TreeActorView, mNoResetFlg0, 0x3B8);
+WWHD_OFFSET(TreeActorView, mSwordTopPos, 0x3E4);
+struct TreeGameView {
+    u8 padding0[0x12A0];
+    /* 0x12A0 */ u8 mBackground[0x1404];
+    /* 0x26A4 */ u8 mCollision[0x2854];
+    /* 0x4EF8 */ u8 mMassSystem[0x110];
+    /* 0x5008 */ u8 mMassCylinder[0x18];
+    /* 0x5020 */ be<u8> mMassType, mMassPriority;
+    u8 padding5022[0x97A];
+    /* 0x599C */ u8 mVibration[0x114];
+    /* 0x5AB0 */ gptr<void> mpParticle;
+    u8 padding5AB4[0x8];
+    /* 0x5ABC */ gptr<TreePacketState> mpTree;
+    u8 padding5AC0[0x6C];
+    /* 0x5B2C */ gptr<TreeActorView> mpPlayer;
+    u8 paddingToDrawLists[0x244];
+    gptr<void> mpXluListBG;
+    u8 paddingDrawLists[4];
+    gptr<void> mpXluList;
+};
+WWHD_SIZE(TreeGameView, 0x5D80);
+WWHD_OFFSET(TreeGameView, mpParticle, 0x5AB0);
+WWHD_OFFSET(TreeGameView, mpTree, 0x5ABC);
+WWHD_OFFSET(TreeGameView, mpPlayer, 0x5B2C);
+struct TreeMassHitInfo {
+    u8 padding0[0x4];
+    /* 0x004 */ gptr<void> mpHitObject;
+    u8 padding8[0xC];
+};
+WWHD_SIZE(TreeMassHitInfo, 0x14);
+WWHD_OFFSET(TreeMassHitInfo, mpHitObject, 0x4);
+struct TreeAttackView {
+    u8 padding0[0x10];
+    /* 0x010 */ be<u32> mAttackType;
+    u8 padding14[0x68];
+    /* 0x07C */ cXyz mAttackVector;
+};
+WWHD_SIZE(TreeAttackView, 0x88);
+WWHD_OFFSET(TreeAttackView, mAttackType, 0x10);
+WWHD_OFFSET(TreeAttackView, mAttackVector, 0x7C);
+
+struct TreeGround {
+    /* 0x000 */ gptr<void> mpPolyPass;
+    /* 0x004 */ gptr<void> mpGroupPass;
+    u8 padding8[0x8];
+    /* 0x010 */ be<u32> mGroundVtable;
+    /* 0x014 */ be<u16> mBackgroundIndex;
+    /* 0x016 */ be<u16> mPolygonIndex;
+    u8 padding18[0x8];
+    /* 0x020 */ be<u32> mVtable;
+    /* 0x024 */ cXyz mPosition;
+    u8 padding30[0x10];
+    /* 0x040 */ be<u32> mPolyPassVtable;
+    /* 0x044 */ be<u8> mPolyFlags[4];
+    /* 0x048 */ be<u8> mFlags[3];
+    u8 padding4B[0x1];
+    /* 0x04C */ be<u32> mGroupPassVtable;
+    /* 0x050 */ be<u32> mGroup;
+};
+WWHD_SIZE(TreeGround, 0x54);
+WWHD_OFFSET(TreeGround, mpPolyPass, 0x0);
+WWHD_OFFSET(TreeGround, mpGroupPass, 0x4);
+WWHD_OFFSET(TreeGround, mGroundVtable, 0x10);
+WWHD_OFFSET(TreeGround, mBackgroundIndex, 0x14);
+WWHD_OFFSET(TreeGround, mPolygonIndex, 0x16);
+WWHD_OFFSET(TreeGround, mVtable, 0x20);
+WWHD_OFFSET(TreeGround, mPosition, 0x24);
+WWHD_OFFSET(TreeGround, mPolyPassVtable, 0x40);
+WWHD_OFFSET(TreeGround, mPolyFlags, 0x44);
+WWHD_OFFSET(TreeGround, mFlags, 0x48);
+WWHD_OFFSET(TreeGround, mGroupPassVtable, 0x4C);
+WWHD_OFFSET(TreeGround, mGroup, 0x50);
+struct TreeParticleState {
+    /* 0x000 */ be<u32> mName;
+    /* 0x004 */ be<u32> mAllocator;
+    /* 0x008 */ be<f32> mParameters[4];
+    /* 0x018 */ be<u8> mFlags[4];
+};
+WWHD_SIZE(TreeParticleState, 0x1C);
+WWHD_OFFSET(TreeParticleState, mName, 0x0);
+WWHD_OFFSET(TreeParticleState, mAllocator, 0x4);
+WWHD_OFFSET(TreeParticleState, mParameters, 0x8);
+WWHD_OFFSET(TreeParticleState, mFlags, 0x18);
+struct TreeEmitter {
+    u8 padding0[0x34];
+    /* 0x034 */ be<f32> mRate;
+    u8 padding38[0x20];
+    /* 0x058 */ be<f32> mSpread;
+    /* 0x05C */ be<u32> mMaxFrame;
+    /* 0x060 */ be<u16> mLifeTime;
+    u8 padding62[0xE];
+    /* 0x070 */ be<f32> mDirectionalSpeed;
+};
+WWHD_SIZE(TreeEmitter, 0x74);
+WWHD_OFFSET(TreeEmitter, mRate, 0x34);
+WWHD_OFFSET(TreeEmitter, mSpread, 0x58);
+WWHD_OFFSET(TreeEmitter, mMaxFrame, 0x5C);
+WWHD_OFFSET(TreeEmitter, mLifeTime, 0x60);
+WWHD_OFFSET(TreeEmitter, mDirectionalSpeed, 0x70);
+struct TreeParticleSlot {
+    u8 padding0[0x4];
+    /* 0x004 */ gptr<TreeEmitter> mpEmitter;
+    u8 padding8[0x4];
+};
+WWHD_SIZE(TreeParticleSlot, 0xC);
+WWHD_OFFSET(TreeParticleSlot, mpEmitter, 0x4);
+struct TreeRenderState {
+    /* 0x000 */ be<u8> mDepthEnable;
+    /* 0x001 */ be<u8> mDepthWrite;
+    u8 padding2[0xA];
+    /* 0x00C */ be<u32> mMode;
+    u8 padding10[0xD0];
+    /* 0x0E0 */ be<u8> mBlendEnable;
+    u8 paddingE1[0x3];
+    /* 0x0E4 */ be<u32> mBlendOperation;
+    /* 0x0E8 */ be<f32> mAlphaReference;
+    /* 0x0EC */ be<u32> mBlendFactors;
+    u8 paddingF0[0x2C];
+};
+WWHD_SIZE(TreeRenderState, 0x11C);
+WWHD_OFFSET(TreeRenderState, mDepthEnable, 0x0);
+WWHD_OFFSET(TreeRenderState, mDepthWrite, 0x1);
+WWHD_OFFSET(TreeRenderState, mMode, 0xC);
+WWHD_OFFSET(TreeRenderState, mBlendEnable, 0xE0);
+WWHD_OFFSET(TreeRenderState, mBlendOperation, 0xE4);
+WWHD_OFFSET(TreeRenderState, mAlphaReference, 0xE8);
+WWHD_OFFSET(TreeRenderState, mBlendFactors, 0xEC);
+struct TreeDrawArguments {
+    u8 padding0[0x4];
+    /* 0x004 */ be<u32> mResourceIndex;
+    u8 padding8[0x4];
+    /* 0x00C */ be<u32> mMaterialType;
+    u8 padding10[0x4];
+    /* 0x014 */ gptr<void> mpCatalog;
+    u8 padding18[0x18];
+    /* 0x030 */ gptr<TreeDrawBase> mpDrawUniform;
+};
+WWHD_SIZE(TreeDrawArguments, 0x34);
+WWHD_OFFSET(TreeDrawArguments, mResourceIndex, 0x4);
+WWHD_OFFSET(TreeDrawArguments, mMaterialType, 0xC);
+WWHD_OFFSET(TreeDrawArguments, mpCatalog, 0x14);
+WWHD_OFFSET(TreeDrawArguments, mpDrawUniform, 0x30);
+struct TreeMaterialCache {
+    /* 0x000 */ gptr<void> mpTexture;
+    /* 0x004 */ gptr<void> mpShader;
+};
+WWHD_SIZE(TreeMaterialCache, 0x8);
+WWHD_OFFSET(TreeMaterialCache, mpTexture, 0x0);
+WWHD_OFFSET(TreeMaterialCache, mpShader, 0x4);
+struct TreeShader {
+    /* 0x000 */ be<u8> mFlags;
+    u8 padding1[0x3];
+    /* 0x004 */ gptr<void> mpDisplayList;
+    u8 padding8[0x4];
+    /* 0x00C */ be<u32> mDisplayListSize;
+    u8 padding10[0x6C];
+    /* 0x07C */ gptr<void> mpTextureBindings;
+};
+WWHD_SIZE(TreeShader, 0x80);
+WWHD_OFFSET(TreeShader, mFlags, 0x0);
+WWHD_OFFSET(TreeShader, mpDisplayList, 0x4);
+WWHD_OFFSET(TreeShader, mDisplayListSize, 0xC);
+WWHD_OFFSET(TreeShader, mpTextureBindings, 0x7C);
+struct TreeMaterial {
+    /* 0x000 */ gptr<TreeShader> mpShader;
+    u8 padding4[0x8];
+    /* 0x00C */ be<u32> mMetadataCount;
+    /* 0x010 */ gptr<void> mpMetadata;
+    /* 0x014 */ be<u32> mTextureCount;
+    /* 0x018 */ gptr<void> mpTexture;
+    u8 padding1C[0x4];
+    /* 0x020 */ be<u8> mLoaded;
+    u8 padding21[0x3];
+};
+WWHD_SIZE(TreeMaterial, 0x24);
+WWHD_OFFSET(TreeMaterial, mpShader, 0x0);
+WWHD_OFFSET(TreeMaterial, mMetadataCount, 0xC);
+WWHD_OFFSET(TreeMaterial, mpMetadata, 0x10);
+WWHD_OFFSET(TreeMaterial, mTextureCount, 0x14);
+WWHD_OFFSET(TreeMaterial, mpTexture, 0x18);
+WWHD_OFFSET(TreeMaterial, mLoaded, 0x20);
+struct TreeUniformMetadata {
+    u8 padding0[0xC];
+    /* 0x00C */ be<s16> mVertexRegister;
+    /* 0x00E */ be<s16> mPixelRegister;
+    /* 0x010 */ be<s16> mGeometryRegister;
+};
+WWHD_SIZE(TreeUniformMetadata, 0x12);
+WWHD_OFFSET(TreeUniformMetadata, mVertexRegister, 0xC);
+WWHD_OFFSET(TreeUniformMetadata, mPixelRegister, 0xE);
+WWHD_OFFSET(TreeUniformMetadata, mGeometryRegister, 0x10);
+struct TreeUniformData {
+    u8 padding0[0x4];
+    /* 0x004 */ gptr<void> mpData;
+    u8 padding8[0x4];
+    /* 0x00C */ be<u32> mSize;
+    u8 padding10[0xC];
+};
+WWHD_SIZE(TreeUniformData, 0x1C);
+WWHD_OFFSET(TreeUniformData, mpData, 0x4);
+WWHD_OFFSET(TreeUniformData, mSize, 0xC);
+struct TreeUniformResource {
+    u8 padding0[0x4C];
+    /* 0x04C */ be<u32> mUniformIndex;
+    u8 padding50[0x1EC];
+};
+WWHD_SIZE(TreeUniformResource, 0x23C);
+WWHD_OFFSET(TreeUniformResource, mUniformIndex, 0x4C);
+struct TreeResourceList {
+    /* 0x000 */ be<u32> mCount;
+    /* 0x004 */ gptr<TreeUniformResource> mpResources;
+};
+WWHD_SIZE(TreeResourceList, 0x8);
+WWHD_OFFSET(TreeResourceList, mCount, 0x0);
+WWHD_OFFSET(TreeResourceList, mpResources, 0x4);
+struct TreeMaterialCatalog {
+    u8 padding0[0x4];
+    /* 0x004 */ gptr<void> mpResource;
+    /* 0x008 */ be<u32> mCount;
+    /* 0x00C */ gptr<TreeMaterial> mpMaterials;
+};
+WWHD_SIZE(TreeMaterialCatalog, 0x10);
+WWHD_OFFSET(TreeMaterialCatalog, mpResource, 0x4);
+WWHD_OFFSET(TreeMaterialCatalog, mCount, 0x8);
+WWHD_OFFSET(TreeMaterialCatalog, mpMaterials, 0xC);
+struct TreeMaterialResource {
+    u8 padding0[0x1C];
+    /* 0x01C */ be<u32> mCount;
+    /* 0x020 */ gptr<void> mpMaterials;
+};
+WWHD_SIZE(TreeMaterialResource, 0x24);
+WWHD_OFFSET(TreeMaterialResource, mCount, 0x1C);
+WWHD_OFFSET(TreeMaterialResource, mpMaterials, 0x20);
+struct TreeHeapVtable {
+    u8 padding0[0x34];
+    /* 0x034 */ be<u32> allocate;
+    u8 padding38[0x4];
+    /* 0x03C */ be<u32> free;
+};
+WWHD_SIZE(TreeHeapVtable, 0x40);
+WWHD_OFFSET(TreeHeapVtable, allocate, 0x34);
+WWHD_OFFSET(TreeHeapVtable, free, 0x3C);
+struct TreeHeap {
+    u8 padding0[0xC];
+    /* 0x00C */ gptr<TreeHeapVtable> __vtbl;
+};
+WWHD_SIZE(TreeHeap, 0x10);
+WWHD_OFFSET(TreeHeap, __vtbl, 0xC);
+struct TreeName {
+    /* 0x000 */ be<u32> text;
+    /* 0x004 */ be<u32> allocator;
+};
+WWHD_SIZE(TreeName, 0x8);
+WWHD_OFFSET(TreeName, text, 0x0);
+WWHD_OFFSET(TreeName, allocator, 0x4);
+struct TreeTev {
+    u8 padding0[0x24];
+    /* 0x024 */ be<f32> mColorK0Scale;
+    /* 0x028 */ be<f32> mColorC0Scale;
+    u8 padding2C[0x64];
+    /* 0x090 */ be<s16> mColorC0[4];
+    /* 0x098 */ be<u8> mColorK0[4];
+    u8 padding9C[0xC4];
+    /* 0x160 */ be<s16> mColorC1[4];
+    u8 padding168[0x4];
+    /* 0x16C */ be<f32> mColorC1Scale;
+    u8 padding170[0x58];
+};
+WWHD_SIZE(TreeTev, 0x1C8);
+WWHD_OFFSET(TreeTev, mColorK0Scale, 0x24);
+WWHD_OFFSET(TreeTev, mColorC0Scale, 0x28);
+WWHD_OFFSET(TreeTev, mColorC0, 0x90);
+WWHD_OFFSET(TreeTev, mColorK0, 0x98);
+WWHD_OFFSET(TreeTev, mColorC1, 0x160);
+WWHD_OFFSET(TreeTev, mColorC1Scale, 0x16C);
+
+// HD: unit-local declarations for opaque native renderer operations.
+void getGroundTriangle(void*, u32, u32);
+f64 groundCross(void*, void*);
+void destroyGroundCheck(void*, u32);
+void constructGroundCheck(void*);
+void chaseAlpha(void*, u32, u32);
+void chaseFloat(void*, f32, f32);
+u32 chaseAngle(void*, u32, u32);
+void setMassHeight(void*, f32);
+void setMassRadius(void*, f32);
+s32 cM_atan2s(f32, f32);
+f64 cM_rndF(f32);
+void subtractVector(void*, void*, void*);
+u32 dCcD_GetGObjInf(void*);
+void constructMassHitInfo(void*);
+u32 checkMass(void*, void*, void*, void*);
+u32 getGameInfo();
+u32 getReverb(u32);
+u32 getEnvironmentLight();
+void updateTevColors(void*);
+void initializeTev(void*, u32, u32);
+void settingTevStruct(void*, u32, u32, void*);
+void constructSmokeCallback(void*, u32, u32, u32, u32);
+u32 createParticle(void*, u32, u32, void*, u32, void*, u32, void*, u32, void*, void*, u32);
+u32 getSimpleParticleSlot(void*, u32);
+void setSimpleParticle(void*, u32, void*, u32, void*, void*, u32);
+f64 checkGroundYCall(void*, void*);
+s32 newAnimation(void*, u32);
+void workCollision(void*, void*, u32, u32);
+void workAttackNoCut(void*, void*, u32, u32, void*, void*);
+void workAttack(void*, void*, u32, u32, void*);
+void hitCheckCall(void*, void*, u32);
+void animateTree(void*, u32);
+void addRoomData(void*, void*);
+void drawTreeShadow(void*, void*);
+void setAnimation(void*, u32, u32);
+void copyMatrixWords(void*, void*);
+void convertColor(void*, void*);
+void prepareTreeRender(void*);
+void setTreeData(void*, void*, u32, void*, u32, u32);
+void startShock(void*, u32, u32, void*);
+u32 fopOvlpM_IsPeek();
+void startObjectSound(u32, void*, u32, u32);
+void deleteObjectSound(void*);
+void rotateY(void*, u32);
+void concatenateXRotation(void*, u32);
+void concatenateYRotation(void*, u32);
+u32 getTextureResource(void*, void*, void*, u32);
+void assertion(void*, u32, void*);
+u32 allocateObject(u32);
+void deleteObject(void*);
+void initializeRoomList(void*, u32, void*);
+void sortRoomList(void*, void*);
+void scaleColor(void*, f32);
+void scaleColorCopy(void*, void*, f32);
+void lockTextureCache(void*);
+void unlockTextureCache(void*);
+void initializeRenderState(void*);
+void applyRenderState(void*);
+u32 findAllocationHeap(void*, void*);
+u32 getCurrentHeap(void*);
+void createTexture(void*, void*, void*);
+void constructIndexBuffer(void*);
+void destroyIndexBuffer(void*, u32);
+void createIndexBuffer(void*, void*, u32, u32);
+void constructVertexBuffer(void*);
+void destroyVertexBuffer(void*, u32);
+void invalidateVertexBuffer(void*, u32, u32);
+s32 findMaterialIndex(void*, void*);
+void bindShaderTexture(void*);
+void bindShader(void*);
+void updateShader(void*, u32);
+void copyTextureState(void*, void*);
+void constructTextureState(void*);
+void destroyTextureState(void*, u32);
+void bindTextureSampler(void*, void*, u32, u32);
+void constructTexture(void*);
+void constructShape(void*);
+void releaseShape(void*);
+void destroyShape(void*, u32);
+void bindShape(void*);
+void entryImmediate(void*, void*, u32);
+void constructPacketBase(void*);
+void destroyPacketBase(void*, u32);
+u32 getMaterialCache(void*);
+void constructDrawUniform(void*);
+void destroyDrawUniform(void*, u32);
+void setUniformSlot(void*, u32);
+void updateDrawUniform(void*);
+void constructUniformContainer(void*);
+void destroyUniformContainer(void*, u32);
+void setUniformContainerSlots(void*, u32, u32);
+void setViewUniform(void*, u32, void*, void*, void*);
+void updateColorUniform(void*);
+void createTreeVertexBuffer(void*, void*, u32, void*);
+void createTreeShape(void*, void*, void*, void*, u32);
+u32 getMaterialCatalog();
+void applyDrawMaterial(void*, void*);
+void setMaterialRenderState(u32, void*);
+void createMaterialList(void*, void*, u32);
+void createMaterial(void*, void*, u32);
+void setParticleState(void*, void*);
+void calculateClipFrustum(void*);
+u32 clipTreeSphere(void*, void*, void*, f32);
+f32 PSVECSquareMag(void*);
+void PSVECScale(void*, void*, f32);
+void PSVECNormalize(void*, void*);
+void PSMTXMultVec(void*, void*, void*);
+void PSMTXCopy(void*, void*);
+void PSMTXConcat(void*, void*, void*);
+void initializeHeaderFlag(void*);
+void initializeHeaderByte(void*);
+void constructArray(void*, u32, u32, u32);
+void destroyArray(void*, u32, u32, u32, u32, u32);
+void registerGlobalObject(void*);
+f64 squareRoot(f32);
+void zeroMemory(void*, u32);
+void GX2CallDisplayList(void*, u32);
+void GX2DrawIndexed(u32, u32, u32, void*, u32, u32);
+void GX2SetGeometryUniformReg(u32, u32, void*);
+void GX2SetPixelUniformReg(u32, u32, void*);
+void GX2SetVertexUniformReg(u32, u32, void*);
+
+struct TreeHeaderStatics {
+    be<f32> mPiMin, mPiMax;
+    be<u8> mByte, mFlag;
+    u8 padding[2];
+    be<u32> mZero[4];
+};
+struct TreeTrig {
+    be<f32> mSin, mCos;
+};
+struct TreeCounter {
+    be<u32> unused[2], mTimer;
+};
+struct TreeRenderGlobals {
+    u8 padding[0x74];
+    gptr<void> mpOpaqueBuffer, mpXluBuffer;
+    u8 paddingBuffers[0xCC];
+    gptr<void> mpView;
+};
+struct TreeClipper {
+    u8 padding[0x54];
+    be<f32> mFar;
+};
+struct TreeVertexCounts {
+    be<u32> mVertexCount, mIndexCount;
+};
+struct TreeUniformColors {
+    u8 padding[0x1C4];
+    be<u32> mColors[2][4];
+};
+struct TreeShort4 {
+    be<s16> a[4];
+};
+WWHD_SIZE(TreeHeaderStatics, 0x1C);
+WWHD_SIZE(TreeTrig, 8);
+WWHD_OFFSET(TreeRenderGlobals, mpView, 0x148);
+WWHD_OFFSET(TreeClipper, mFar, 0x54);
+WWHD_OFFSET(TreeUniformColors, mColors, 0x1C4);
+
+struct TreeTextureBindings {
+    u8 padding[40];
+    gptr<void> mpTexture;
+};
+struct TreeModelStatus {
+    be<u8> mTrunk, mLeaves, mStump;
+};
+WWHD_OFFSET(TreeTextureBindings, mpTexture, 40);
+WWHD_SIZE(TreeModelStatus, 3);
+
+enum TreeState : u8 {
+    TreeState_Active = 2,
+    TreeState_Clipped = 4,
+    TreeState_Fallen = 8,
+    TreeState_NeedsGround = 16
+};
+enum TreeProcessName : s16 {
+    TreeProcess_Player = 168,
+    TreeProcess_Bomb = 294,
+    TreeProcess_Bomb2 = 295
+};
+
+void Tree_drawThunk(u32 a, u32 draw);
+void Tree_anmDelete(u32 p, u32 flags);
+void Tree_dataDelete(u32 p, u32 flags);
+void* Tree_anmCtor(void* p);
+void* Tree_roomCtor(void* p);
+void Tree_roomDtor(u32 a, u32 flags);
+void* Tree_collisionCtor(void* p);
+void* Tree_dataCtor(void* p);
+void Tree_staticInit();
+void Tree_empty298();
+void Tree_empty29C();
+f64 Tree_checkGroundY(u32 ignored, cXyz* pos);
+void Tree_copyMtx(TreeMtx* dst, TreeMtx* src);
+void Tree_short4ToFloat4(TreeVec4* dst, TreeShort4* src);
+s32 Tree_sortCompare(dTree_data_c* a, dTree_data_c* b);
+void* Tree_drawSmallCtor(void* ptr);
+void* Tree_vec4Ctor(void* ptr);
+void* Tree_drawLargeCtor(void* ptr);
+void Tree_drawSmallDtor(u32 a, u32 flags);
+void Tree_drawLargeDtor(u32 a, u32 flags);
+void Tree_collisionDtor(u32 a, u32 flags);
+void Tree_packetDtor(u32 a, u32 flags);
+void* Tree_packetCtor(void* ptr);
+WWHD_SIZE(TreeMtx, 0x30);
+
+WWHD_OFFSET(TreeGameView, mBackground, 0x12A0);
+WWHD_OFFSET(TreeGameView, mMassSystem, 0x4EF8);
+WWHD_OFFSET(TreeGameView, mMassCylinder, 0x5008);
+WWHD_OFFSET(TreeGameView, mMassType, 0x5020);
+WWHD_OFFSET(TreeGameView, mVibration, 0x599C);

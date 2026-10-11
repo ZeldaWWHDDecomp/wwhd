@@ -36,7 +36,7 @@ struct bwd_class : fopEn_enemy_c {
     /* 0x0440 */ gptr<J3DModel> m0324[20];
     /* 0x0490 */ gptr<mDoExt_brkAnm> mpBodyMorf[20];
     /* 0x04E0 */ be<f32> m03C4[20];
-    /* 0x0530 */ be<f32> m03C4b[20];   /* HD */
+    /* 0x0530 */ be<f32> m03C4b[20]; /* HD */
     /* 0x0580 */ be<s32> m0414;
     /* 0x0584 */ cXyz m0418[20];
     /* 0x0674 */ cXyz m0508[256];
@@ -85,7 +85,7 @@ struct bwd_class : fopEn_enemy_c {
     /* 0x1B60 */ be<f32> m18DC;
     /* 0x1B64 */ be<u32> m18E0;
     /* 0x1B68 */ cXyz m18E4;
-    /* 0x1B74 */ be<s16> m18FC;   /* HD: no m18F0 */
+    /* 0x1B74 */ be<s16> m18FC; /* HD: no m18F0 */
     /* 0x1B76 */ be<s16> m18FE;
     /* 0x1B78 */ be<s16> m1900;
     /* 0x1B7A */ be<s16> m1902;
@@ -217,25 +217,30 @@ static inline cXyz* suna_gr_pos() { return gabi::at<cXyz>(0x10462AF4); }
 static inline csXyz* suna_gr_ang() { return gabi::at<csXyz>(0x10462AB8); }
 #define center_pos (gabi::at<cXyz>(0x10462ADC))
 
-#define BWD_VTBL 0x1000BE6C      /* bwd_class vtable (HD virtual destructor) */
-#define BWD_HIO_VTBL 0x1000BE5C  /* daBwd_HIO_c vtable */
+#define BWD_VTBL 0x1000BE6C     /* bwd_class vtable (HD virtual destructor) */
+#define BWD_HIO_VTBL 0x1000BE5C /* daBwd_HIO_c vtable */
 #define SAFESTRING_VTBL 0x1000BDA4
 
 /* ---- local bindings (SHARED-CANDIDATE) ---- */
 #define REG0_F(i) REG_F(0, i)
 #define REG0_S(i) REG_S(0, i)
 /* virtual remove() (vtable +0x44) of a particle callback */
-static inline void bd_vremove(void* cb) { gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(cb)) + 0x44), cb); }
+static inline void bd_vremove(void* cb) {
+    gabi::call_ptr(gabi::load<u32>(gabi::load<u32>(gabi::ea(cb)) + 0x44), cb);
+}
 /* attention_info.flags (+0x39C) */
 static inline be<u32>& attn_flags(fopAc_ac_c* a) { return *gabi::at<be<u32>>(gabi::ea(a) + 0x39C); }
-/* J3DModel::getAnmMtx (HD: marks the joint matrices dirty; block at +0x2C, flags +4, matrices +0x10) */
+/* J3DModel::getAnmMtx (HD: marks the joint matrices dirty; block at +0x2C, flags +4, matrices
+ * +0x10) */
 static inline Mtx34* bd_getAnmMtx(J3DModel* m, s32 jnt) {
     u32 blk = gabi::load<u32>(gabi::ea(m) + 0x2C);
     gabi::store<u16>(blk + 4, gabi::load<u16>(blk + 4) | 0x10);
     return gabi::at<Mtx34>(gabi::load<u32>(blk + 0x10) + jnt * 0x30);
 }
 /* 02518CC8 def_se_set(fopAc_ac_c*, cCcD_Obj*, u32) */
-static inline void def_se_set(fopAc_ac_c* a, void* obj, u32 mtrl) { gabi::call(0x02518CC8, a, obj, mtrl); }
+static inline void def_se_set(fopAc_ac_c* a, void* obj, u32 mtrl) {
+    gabi::call(0x02518CC8, a, obj, mtrl);
+}
 struct CcAtInfo_bd {
     /* 0x00 */ be<u32> mpObj;
     /* 0x04 */ be<u32> mpActor;
@@ -244,30 +249,40 @@ struct CcAtInfo_bd {
     /* 0x18 */ be<s32> mHitSoundId;
 };
 WWHD_SIZE(CcAtInfo_bd, 0x1C);
-static inline void cc_at_check(fopAc_ac_c* a, CcAtInfo_bd* info) { gabi::call(0x025192A8, a, info); }
+static inline void cc_at_check(fopAc_ac_c* a, CcAtInfo_bd* info) {
+    gabi::call(0x025192A8, a, info);
+}
 /* dComIfGp_particle_setToon (HD): dPa_control_c::set with group 2, setupInfo = roomNo */
-static inline JPABaseEmitter* dComIfGp_particle_setToon(u16 id, const cXyz* pos, const csXyz* angle, const cXyz* scale, u8 alpha,
-                                                        void* cb, s8 roomNo) {
+static inline JPABaseEmitter* dComIfGp_particle_setToon(u16 id, const cXyz* pos, const csXyz* angle,
+                                                        const cXyz* scale, u8 alpha, void* cb,
+                                                        s8 roomNo) {
     dPa_control_c* pa = dComIfGp_getParticle();
-    return dPa_control_set(pa, 2, id, pos, angle, scale, alpha, (dPa_levelEcallBack*)cb, roomNo, nullptr, nullptr, nullptr);
+    return dPa_control_set(pa, 2, id, pos, angle, scale, alpha, (dPa_levelEcallBack*)cb, roomNo,
+                           nullptr, nullptr, nullptr);
 }
 /* dPa_smokeEcallBack::setColor (inline): 4-byte copy */
 static inline void smoke_setColor(dPa_smokeEcallBack_bd* cb, u32 col) {
     u8 c[4];
-    for (int k = 0; k < 4; k++) c[k] = gabi::load<u8>(col + k);
-    for (int k = 0; k < 4; k++) cb->mColor[k] = c[k];
+    for (int k = 0; k < 4; k++)
+        c[k] = gabi::load<u8>(col + k);
+    for (int k = 0; k < 4; k++)
+        cb->mColor[k] = c[k];
 }
 /* mDoExt_brkAnm (HD 0x78): constructor 025E80D0 (the matcher calls it init), init 025E8154 */
 static inline void* mDoExt_brkAnm_ct(void* p) { return gabi::call<void*>(0x025E80D0, p); }
-static inline BOOL mDoExt_brkAnm_init(void* a, J3DModelData* d, void* brk, s32 anmPlay, s32 mode, f32 rate, s16 start, s16 end,
-                                      bool modify, s32 entry) {
+static inline BOOL mDoExt_brkAnm_init(void* a, J3DModelData* d, void* brk, s32 anmPlay, s32 mode,
+                                      f32 rate, s16 start, s16 end, bool modify, s32 entry) {
     return gabi::call<BOOL>(0x025E8154, a, d, brk, anmPlay, mode, rate, start, end, modify, entry);
 }
 /* mDoExt_btkAnm (HD 0x74): constructor 025E7C6C (the matcher calls it init) */
 static inline void* mDoExt_btkAnm_ct(void* p) { return gabi::call<void*>(0x025E7C6C, p); }
 /* GHS array helpers */
-static inline void __construct_array(void* p, u32 n, u32 size, u32 ctor) { gabi::call(0x028EFFD0, p, n, size, ctor); }
-static inline void __destroy_arr(void* p, u32 n, u32 size, u32 dtor, u32 f7, u32 f8) { gabi::call(0x028F0164, p, n, size, dtor, f7, f8); }
+static inline void __construct_array(void* p, u32 n, u32 size, u32 ctor) {
+    gabi::call(0x028EFFD0, p, n, size, ctor);
+}
+static inline void __destroy_arr(void* p, u32 n, u32 size, u32 dtor, u32 f7, u32 f8) {
+    gabi::call(0x028F0164, p, n, size, dtor, f7, f8);
+}
 /* 02515AE8 dCcD_Sph::~dCcD_Sph, 025166F0 dCcD_Sph::dCcD_Sph */
 static inline void dCcD_Sph_dt(void* s, s32 flags) { gabi::call(0x02515AE8, s, flags); }
 static inline void dCcD_Sph_ct(void* s) { gabi::call(0x025166F0, s); }
@@ -289,7 +304,8 @@ struct dBgS_LinChk_bd {
 WWHD_SIZE(dBgS_LinChk_bd, 0x6C);
 static inline void bd_LinChk_ct(dBgS_LinChk_bd* c) {
     cBgS_LinChk_ct(c);
-    for (int i = 0; i < 7; i++) c->mPass[i] = 0;
+    for (int i = 0; i < 7; i++)
+        c->mPass[i] = 0;
     c->mGrp = 1;
     c->mpGrpPassChk = gabi::ea(c) + 0x64;
     c->mpPolyPassChk = gabi::ea(c) + 0x58;
@@ -306,10 +322,13 @@ static inline void bd_LinChk_dt(dBgS_LinChk_bd* c) {
 }
 
 /* calls between this unit's source files (by address) */
-static inline void bwd_anm_init(bwd_class* i_this, int bck, f32 morf, u8 loopMode, f32 speed, int snd) {
+static inline void bwd_anm_init(bwd_class* i_this, int bck, f32 morf, u8 loopMode, f32 speed,
+                                int snd) {
     gabi::call(0x020F9AF4, i_this, bck, morf, loopMode, speed, snd);
 }
-static inline void bwd_fly_pos_move(bwd_class* i_this, s16 p2, s16 p3) { gabi::call(0x020F9F80, i_this, p2, p3); }
+static inline void bwd_fly_pos_move(bwd_class* i_this, s16 p2, s16 p3) {
+    gabi::call(0x020F9F80, i_this, p2, p3);
+}
 static inline void bwd_g_eff_on(bwd_class* i_this) { gabi::call(0x020F99F8, i_this); }
 static inline void bwd_g_eff_off(bwd_class* i_this) { gabi::call(0x020F9A10, i_this); }
 #define REG10_F(i) REG_F(10, i)
@@ -331,7 +350,8 @@ static inline u8 dComIfGp_getStartStageName0() { return gabi::load<u8>(dComIfGp_
 /* JAIZelBasic (HD): bgmStreamPrepare 025E1934, bgmStreamPlay 025E1944, bgmStart 025E18EC */
 static inline void mDoAud_bgmStreamPrepare(u32 id) { gabi::call(0x025E1934, id); }
 static inline void mDoAud_bgmStreamPlay() { gabi::call(0x025E1944); }
-/* JPABaseEmitter (HD inline): becomeInvalidEmitter (+0x5C = -1, flags +0x254 |= 1); setGlobalRTMatrix */
+/* JPABaseEmitter (HD inline): becomeInvalidEmitter (+0x5C = -1, flags +0x254 |= 1);
+ * setGlobalRTMatrix */
 static inline void JPA_becomeInvalidEmitter(JPABaseEmitter* e) {
     u32 b = gabi::ea(e);
     u32 f = gabi::load<u32>(b + 0x254);
@@ -342,3 +362,105 @@ static inline void JPA_setGlobalRTMatrix(JPABaseEmitter* e, Mtx34* m) {
     gabi::call(0x028249B0, m, gabi::ea(e) + 0x1F0, gabi::ea(e) + 0x22C); /* JPASetRMtxTVecfromMtx */
 }
 #define REG10_S(i) REG_S(10, i)
+
+// HD: private views for the exact GHS light-copy operations in this translation unit.
+namespace bwd_detail {
+struct LightBlock {
+    be<f32> mPosition[3];
+    be<f32> mDirection[3];
+    be<u8> mColor[4];
+    be<s16> mParameters[4];
+    be<f32> mFactors[8];
+};
+WWHD_OFFSET(LightBlock, mColor, 0x18);
+WWHD_OFFSET(LightBlock, mParameters, 0x1C);
+WWHD_OFFSET(LightBlock, mFactors, 0x24);
+WWHD_SIZE(LightBlock, 0x44);
+struct TevCopyView {
+    LightBlock mLight;
+    u8 mLightPadding[0x84 - 0x44];
+    be<u32> mLightPositionWords[3];
+    be<u16> mColorC0[4];
+    be<u8> mColorsK[8];
+    be<u16> mFogColor[4];
+    be<f32> mFogAndBlend[3];
+    be<u8> mEnvironment[9];
+    u8 mPadding[3];
+    LightBlock mHdLight;
+    u8 mHdLightPadding[0x144 - 0x104];
+    LightBlock mHdLight2;
+    u8 mTail[0x1C8 - 0x188];
+};
+WWHD_OFFSET(TevCopyView, mLightPositionWords, 0x84);
+WWHD_OFFSET(TevCopyView, mColorC0, 0x90);
+WWHD_OFFSET(TevCopyView, mColorsK, 0x98);
+WWHD_OFFSET(TevCopyView, mFogColor, 0xA0);
+WWHD_OFFSET(TevCopyView, mFogAndBlend, 0xA8);
+WWHD_OFFSET(TevCopyView, mEnvironment, 0xB4);
+WWHD_OFFSET(TevCopyView, mHdLight, 0xC0);
+WWHD_OFFSET(TevCopyView, mHdLight2, 0x144);
+WWHD_SIZE(TevCopyView, 0x1C8);
+} // namespace bwd_detail
+
+namespace bwd_detail {
+struct SphereSource {
+    u8 mData[0x40];
+};
+WWHD_SIZE(SphereSource, 0x40);
+struct Larva {
+    u8 mUnaccessed[0x60C];
+    be<s8> m04F4;
+};
+WWHD_OFFSET(Larva, m04F4, 0x60C);
+WWHD_SIZE(Larva, 0x60D);
+} // namespace bwd_detail
+
+namespace bwd_detail {
+struct BlurState {
+    be<u8> mEnabled;
+    be<u8> mRate;
+};
+WWHD_OFFSET(BlurState, mRate, 1);
+WWHD_SIZE(BlurState, 2);
+struct ModelFlags {
+    u8 mUnaccessed[0x74];
+    be<u32> mFlags;
+};
+WWHD_OFFSET(ModelFlags, mFlags, 0x74);
+WWHD_SIZE(ModelFlags, 0x78);
+struct ModelDataAnimation {
+    u8 mUnaccessed[0x44];
+    be<u32> mTextureMatrixAnimation;
+};
+WWHD_OFFSET(ModelDataAnimation, mTextureMatrixAnimation, 0x44);
+WWHD_SIZE(ModelDataAnimation, 0x48);
+struct Background {
+    u8 mUnaccessed[0xA8];
+    be<u32> mCorrectionCallback;
+};
+WWHD_OFFSET(Background, mCorrectionCallback, 0xA8);
+WWHD_SIZE(Background, 0xAC);
+} // namespace bwd_detail
+
+namespace bwd_detail {
+enum {
+    fpcNm_BWDS_e = 0xDA,
+    DSNAP_TYPE_BWD = 0xCC,
+    ID_IT_ST_BWO_DIVE_SMOKE00 = 0xA25A,
+    ID_IT_SN_BWO_DIVE_SUNA00 = 0x8259,
+    JA_SE_CM_BWD_IN_SAND_1 = 0x5912,
+    ID_IT_ST_BWO_OUT_SMOKE00 = 0xA258,
+    ID_IT_SN_BWO_OUT_SUNA00 = 0x8257,
+    JA_SE_CM_BWD_OUT_SAND_1 = 0x590F,
+    fpcNm_ATT_e = 0x1C0,
+    JA_BGM_PAST_RANE = 0x8000004C,
+    JA_BGM_RANE_BATTLE = 0x80000029,
+};
+}
+
+namespace bwd_detail {
+// HD: callbacks implemented outside this translation unit retain their guest ABI addresses.
+constexpr u32 bwdConstructSphereCallback = 0x025166F0;
+constexpr u32 bwdDestroySphereCallback = 0x02515AE8;
+constexpr u32 bwdTypicalCorrectionCallback = 0x024EE658;
+} // namespace bwd_detail

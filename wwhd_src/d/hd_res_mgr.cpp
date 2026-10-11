@@ -15,652 +15,807 @@
  * +0x1124C request name (FixedSafeString<48>) and +0x11288 path (FixedSafeString<64>),
  * +0x112D4 heap, +0x112D8 u8 "from pack", +0x112DC critical section, +0x11318 load alignment.
  */
-#include "gabi.h"
+#include "d/hd_res_mgr.h"
 using namespace gabi;
-
-namespace hd_res_mgr {
-
-static const u32 kSafeStringVt = 0x100E20A4;
-static const u32 kResMgr = 0x101F4F7C;
+using namespace ResourceManagerHD;
+void resNative_copyBytes(u32, u32, u32, u32);
+u32 resNative_hashCRC(u32, u32);
+u32 resNative_allocate(u32);
+void resNative_clearRequestBuffer(u32, u32);
+void resNative_criticalSectionConstruct(u32);
+u32 resNative_allocateWithHeapAligned(u32, u32, u32);
+void resNative_singletonDisposerConstruct(u32, u32, u32);
+void resNative_formatObjectPath(u32, u32, u32);
+void resNative_disposerConstruct(u32);
+u32 resNative_currentHeap(u32);
+u32 resNative_findArchiveNode(u32, u32, u32);
+u32 resNative_insertArchiveNode(u32, u32, u32);
+u32 resNative_archiveResourceSize(u32);
+void resNative_archiveResourceRead(u32, u32, u32);
+u32 resNative_allocateWithHeap(u32, u32, u32);
+u32 resNative_archiveResourceConstruct(u32);
+void resNative_archiveResourceSetBuffer(u32, u32, u32, u32, u32, u32);
+void resNative_invalidateArchiveCache(u32, u32);
+u32 resNative_findPackNode(u32, u32, u32);
+void resNative_formatStageName(u32, u32, u32, u32);
+u32 resNative_loadCompressedArchive(u32, u32, u32, u32, u32);
+u32 resNative_loadArchiveFile(u32, u32, u32, u32);
+u32 resNative_eraseArchiveNode(u32, u32, u32);
+u32 resNative_erasePackNode(u32, u32, u32);
+void resNative_criticalSectionEnter(u32);
+void resNative_criticalSectionLeave(u32);
+void resNative_scanStagePack(u32, u32, u32, u32, u32);
+void resNative_scanPermanentPack(u32, u32, u32);
+void resNative_criticalSectionDestroy(u32, u32);
+void resNative_disposerDestroy(u32, u32);
+void resNative_deallocate(u32);
+void resNative_registerStaticObject(u32);
+void resNative_initializeStaticObjectFlag(u32);
+void resNative_initializeStaticObjectByte(u32);
 
 /* sead strlen bound */
 static s32 cstrLength(u32 p) {
     s32 n = 0;
-    if (!load<u8>(p)) return 0;
+    if (!byteAt(p).get())
+        return 0;
     for (;;) {
         n++;
-        if (n > 0x40000) return 0;
+        if (n > 0x40000)
+            return 0;
         p++;
-        if (!load<u8>(p)) return n;
+        if (!byteAt(p).get())
+            return n;
     }
 }
 
 /* copies the string object src into the buffer dst (capacity read from cap) */
 static void copyInto(u32 dst, u32 capAddr, u32 src) {
-    call_ptr<void>(load<u32>(load<u32>(src + 4) + 0x14), src);
-    s32 n = cstrLength(load<u32>(src));
-    const s32 size = s32(load<u32>(capAddr));
-    const u32 fn = load<u32>(load<u32>(src + 4) + 0x14);
-    if (n >= size) n = size - 1;
+    call_ptr<void>(stringVtable(src)->assureTermination.get(), src);
+    s32 n = cstrLength(readField<u32>(at<FixedString<1>>(src)->mString.mTop));
+    const s32 size = s32(wordAt(capAddr).get());
+    const u32 fn = stringVtable(src)->assureTermination.get();
+    if (n >= size)
+        n = size - 1;
     call_ptr<void>(fn, src);
-    call<void>(0xC0009988, dst, load<u32>(src), u32(n), 0u);
-    store<u8>(dst + n, 0);
+    resNative_copyBytes(dst, readField<u32>(at<FixedString<1>>(src)->mString.mTop), u32(n), 0u);
+    byteAt(dst + n) = 0;
 }
 
 /* hash of a SafeString's text: sead::HashCRC32::calcHash (0273B264, r3/r4 only; matcher name
  * dRes_control_c::getResInfoLoaded corrected in matcher_errors.tsv) */
 static u32 hashString(u32 s) {
-    call_ptr<void>(load<u32>(load<u32>(s + 4) + 0x14), s);
-    const u32 fn = load<u32>(load<u32>(s + 4) + 0x14);
-    const u32 top = load<u32>(s);
+    call_ptr<void>(stringVtable(s)->assureTermination.get(), s);
+    const u32 fn = stringVtable(s)->assureTermination.get();
+    const u32 top = readField<u32>(at<FixedString<1>>(s)->mString.mTop);
     call_ptr<void>(fn, s);
-    const s32 len = cstrLength(load<u32>(s));
-    return call<u32>(0x0273B264, top, len);
+    const s32 len = cstrLength(readField<u32>(at<FixedString<1>>(s)->mString.mTop));
+    return resNative_hashCRC(top, len);
 }
 
 /* FixedSafeString<N> constructor, inlined (placement-new null checks as GHS emits them) */
 static void fixedCtor(u32 s, u32 n, u32 vt1, u32 vt2, u32 vt3, u32 allocSize) {
     u32 q = s;
-    if (!q) q = call<u32>(0x0273AD10, allocSize);
-    if (!q) return;
+    if (!q)
+        q = resNative_allocate(allocSize);
+    if (!q)
+        return;
     u32 r = q;
-    if (!r) r = call<u32>(0x0273AD10, 0xCu);
+    if (!r)
+        r = resNative_allocate(0xCu);
     if (r) {
-        store<u32>(r, q + 0xC);
-        store<u32>(r + 4, vt1);
-        store<u32>(r + 8, n);
-        store<u8>(q + 0xC + n - 1, 0);
+        wordAt(r) = q + 0xC;
+        wordAt(r + 4) = vt1;
+        writeField<u32>(at<FixedString<1>>(r)->mCapacity, n);
+        byteAt(q + 0xC + n - 1) = 0;
     }
-    const u32 top = load<u32>(q);
-    store<u32>(q + 4, vt2);
-    store<u8>(top, 0);
-    store<u32>(q + 4, vt3);
+    const u32 top = readField<u32>(at<FixedString<1>>(q)->mString.mTop);
+    writeField<u32>(at<FixedString<1>>(q)->mString.mVtable, vt2);
+    byteAt(top) = 0;
+    writeField<u32>(at<FixedString<1>>(q)->mString.mVtable, vt3);
 }
 
-/* 0260F9E4: ResMgr constructor */
-u32 ctor(u32 p) {
-    WWHD_FUNC(0x0260F9E4, u32, p);
+/* 0260F9E4 */
+// HD: ResMgr constructor
+u32 ResMgr_ctor(u32 p) {
+
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x1131Cu);
-        if (!p) return 0;
+        p = resNative_allocate(0x1131Cu);
+        if (!p)
+            return 0;
     }
-    store<u32>(p, 0x100E222C);
+    writeField<u32>(at<Manager>(p)->mVtable, kManagerVtable);
     u32 t = p + 0x14;
-    if (!t) t = call<u32>(0x0273AD10, 0xD214u);
+    if (!t)
+        t = resNative_allocate(0xD214u);
     if (t) {
         const u32 nodes = t + 0x14;
-        store<u32>(t, 0);
-        store<u32>(t + 0xC, 0);
-        store<u32>(t + 0x10, 0x280);
-        store<u32>(t + 4, nodes);
-        for (u32 i = 0; i < 0x27F; i++) store<u32>(nodes + 0x54 * i, nodes + 0x54 * (i + 1));
-        store<u32>(nodes + 0xD1AC, 0);
-        store<u32>(t + 8, nodes);
+        writeField<u32>(at<TreeHeader>(t)->mRoot, 0);
+        writeField<u32>(at<TreeHeader>(t)->mCount, 0);
+        writeField<u32>(at<TreeHeader>(t)->mCapacity, 0x280);
+        writeField<u32>(at<TreeHeader>(t)->mFreeHead, nodes);
+        for (u32 i = 0; i < 0x27F; i++)
+            at<ArchiveNode>(nodes)[i].mLeft = nodes + sizeof(ArchiveNode) * (i + 1);
+        at<ArchiveNode>(nodes)[0x27F].mLeft = 0;
+        writeField<u32>(at<TreeHeader>(t)->mNodes, nodes);
     }
     const u32 m = p + 0xD228;
     u32 q = m;
-    if (!q) q = call<u32>(0x0273AD10, 0x4014u);
+    if (!q)
+        q = resNative_allocate(0x4014u);
     if (q) {
         const u32 nodes = q + 0x14;
-        store<u32>(q, 0);
-        store<u32>(q + 0xC, 0);
-        store<u32>(q + 4, nodes);
-        store<u32>(q + 0x10, 0x200);
-        for (u32 i = 0; i < 0x1FF; i++) store<u32>(nodes + 0x20 * i, nodes + 0x20 * (i + 1));
-        store<u32>(nodes + 0x3FE0, 0);
-        store<u32>(q + 8, nodes);
+        writeField<u32>(at<TreeHeader>(q)->mRoot, 0);
+        writeField<u32>(at<TreeHeader>(q)->mCount, 0);
+        writeField<u32>(at<TreeHeader>(q)->mFreeHead, nodes);
+        writeField<u32>(at<TreeHeader>(q)->mCapacity, 0x200);
+        for (u32 i = 0; i < 0x1FF; i++)
+            at<PackNode>(nodes)[i].mLeft = nodes + sizeof(PackNode) * (i + 1);
+        at<PackNode>(nodes)[0x1FF].mLeft = 0;
+        writeField<u32>(at<TreeHeader>(q)->mNodes, nodes);
     }
-    store<u32>(m + 0x4014, 0);
-    store<u32>(m + 0x4020, 0);
-    store<u32>(m + 0x401C, 0);
-    store<u32>(m + 0x4018, 0);
-    call<void>(0x028F521C, m + 0x4024, 0x90u);
-    fixedCtor(m + 0x4024, 0x30, 0x100E20BC, 0x100E223C, 0x100E2254, 0x3C);
-    fixedCtor(m + 0x4060, 0x40, 0x100E20BC, 0x100E2104, 0x100E211C, 0x4C);
-    call<void>(0x02760084, m + 0x40B4);
-    store<u32>(m + 0x40F0, 0x40000);
+    writeField<u32>(managerFromPackTree(m)->mArena, 0);
+    writeField<u32>(managerFromPackTree(m)->mRequestState, 0);
+    writeField<u32>(managerFromPackTree(m)->mPackThread, 0);
+    writeField<u32>(managerFromPackTree(m)->mLoaderThread, 0);
+    resNative_clearRequestBuffer(m + 0x4024, 0x90u);
+    fixedCtor(m + 0x4024, 0x30, kFixedStringBaseVtable, kFixedString48BaseVtable,
+              kFixedString48Vtable, 0x3C);
+    fixedCtor(m + 0x4060, 0x40, kFixedStringBaseVtable, kFixedString64BaseVtable,
+              kFixedString64Vtable, 0x4C);
+    resNative_criticalSectionConstruct(m + 0x40B4);
+    writeField<u32>(managerFromPackTree(m)->mLoadAlignment, 0x40000);
     return p;
 }
-VERIFY(0x0260F9E4, ctor);
 
-/* 0260FBF4: creates the singleton with its disposer */
-void createInstance(u32 heap) {
-    WWHD_FUNC(0x0260FBF4, void, heap);
-    if (load<u32>(kResMgr)) return;
-    const u32 p = call<u32>(0x0273B0D4, 0x1131Cu, heap, 4u);
+/* 0260FBF4 */
+// HD: creates the singleton with its disposer
+void ResMgr_createInstance(u32 heap) {
+
+    if (readField<u32>(singletonSlot()))
+        return;
+    const u32 p = resNative_allocateWithHeapAligned(0x1131Cu, heap, 4u);
     const u32 d = p + 4;
     if (d) {
-        call<void>(0x02752B0C, d, heap, 3u);
-        store<u32>(d + 0xC, 0x100E25C0);
+        resNative_singletonDisposerConstruct(d, heap, 3u);
+        writeField<u32>(at<Disposer>(d)->mVtable, kSingletonDisposerVtable);
     }
-    store<u32>(0x101F4F80, d);
-    store<u32>(kResMgr, p ? ctor(p) : 0u);
+    disposerSlot() = d;
+    writeField<u32>(singletonSlot(), p ? ResMgr_ctor(p) : 0u);
 }
-VERIFY(0x0260FBF4, createInstance);
 
-/* 02610070: "Object/<name>.szs" */
-void objectPath(u32 self, u32 out, u32 name) {
-    WWHD_FUNC(0x02610070, void, self, out, name);
-    call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-    call<void>(0x02759C28, out, 0x100E237Cu, load<u32>(name));
+/* 02610070 */
+// HD: "Object/<name>.szs"
+void ResMgr_objectPath(u32 self, u32 out, u32 name) {
+
+    call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+    resNative_formatObjectPath(out, kObjectPathFormat,
+                               readField<u32>(at<FixedString<1>>(name)->mString.mTop));
 }
-VERIFY(0x02610070, objectPath);
 
-/* 026100D0: archive holder constructor (name, archive resource, heap; default heap: current) */
-u32 holderCtor(u32 p, u32 name, u32 res, u32 heap) {
-    WWHD_FUNC(0x026100D0, u32, p, name, res, heap);
+/* 026100D0 */
+// HD: archive holder constructor (name, archive resource, heap; default heap: current)
+u32 ResMgr_holderCtor(u32 p, u32 name, u32 res, u32 heap) {
+
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x54u);
-        if (!p) return 0;
+        p = resNative_allocate(0x54u);
+        if (!p)
+            return 0;
     }
-    call<void>(0x02752A84, p);
-    store<u32>(p + 0xC, 0x100E25D0);
-    fixedCtor(p + 0x10, 0x30, 0x100E20BC, 0x100E223C, 0x100E2254, 0x3C);
-    store<u32>(p + 0x4C, res);
-    const u32 dst = load<u32>(p + 0x10);
+    resNative_disposerConstruct(p);
+    writeField<u32>(at<Holder>(p)->mVtable, kArchiveHolderVtable);
+    fixedCtor(p + 0x10, 0x30, kFixedStringBaseVtable, kFixedString48BaseVtable,
+              kFixedString48Vtable, 0x3C);
+    writeField<u32>(at<Holder>(p)->mResource, res);
+    const u32 dst = readField<u32>(at<Holder>(p)->mName.mString.mTop);
     copyInto(dst, p + 0x18, name);
-    store<u32>(p + 0x50, heap ? heap : call<u32>(0x02756140, load<u32>(0x101F8B4C)));
+    writeField<u32>(at<Holder>(p)->mHeap,
+                    heap ? heap : resNative_currentHeap(heapManagerSlot().get()));
     return p;
 }
-VERIFY(0x026100D0, holderCtor);
 
 /* inserts holder under name into the archive map (map full: replaces an existing entry) */
 static void insertNamed(u32 self, u32 name, u32 holder) {
     const u32 tree = self + 0x14;
-    if (s32(load<u32>(tree + 0xC)) >= s32(load<u32>(tree + 0x10))) {
-        const u32 n = call<u32>(0x02613F20, tree, load<u32>(tree), name);
-        if (n && n + 0x18) store<u32>(n + 0x18, holder);
+    if (s32(readField<u32>(at<TreeHeader>(tree)->mCount)) >=
+        s32(readField<u32>(at<TreeHeader>(tree)->mCapacity))) {
+        const u32 n =
+            resNative_findArchiveNode(tree, readField<u32>(at<TreeHeader>(tree)->mRoot), name);
+        if (n && n + 0x18)
+            writeField<u32>(at<ArchiveNode>(n)->mHolder, holder);
         return;
     }
-    const u32 node = load<u32>(tree + 4);
-    if (node) store<u32>(tree + 4, load<u32>(node));
+    const u32 node = readField<u32>(at<TreeHeader>(tree)->mFreeHead);
+    if (node)
+        writeField<u32>(at<TreeHeader>(tree)->mFreeHead,
+                        readField<u32>(at<ArchiveNode>(node)->mLeft));
     if (node) {
-        store<u32>(node + 0x18, holder);
-        store<u32>(node, 0);
-        store<u32>(node + 0x1C, tree);
-        store<u32>(node + 0x14, 0x100E231C);
-        store<u8>(node + 0x50, 0);
-        store<u32>(node + 0xC, 0x10000160);
-        store<u8>(node + 8, 1);
-        store<u32>(node + 0x10, kSafeStringVt);
-        store<u32>(node + 4, 0);
+        writeField<u32>(at<ArchiveNode>(node)->mHolder, holder);
+        writeField<u32>(at<ArchiveNode>(node)->mLeft, 0);
+        writeField<u32>(at<ArchiveNode>(node)->mTree, tree);
+        writeField<u32>(at<ArchiveNode>(node)->mValueVtable, kArchiveMapValueVtable);
+        writeField<u8>(at<ArchiveNode>(node)->mBufferFlag, 0);
+        writeField<u32>(at<ArchiveNode>(node)->mKey.mTop, kEmptyText);
+        writeField<u8>(at<ArchiveNode>(node)->mColor, 1);
+        writeField<u32>(at<ArchiveNode>(node)->mKey.mVtable, kSafeStringVt);
+        writeField<u32>(at<ArchiveNode>(node)->mRight, 0);
         const u32 buf = node + 0x20;
-        call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-        const u32 text = load<u32>(name);
+        call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+        const u32 text = readField<u32>(at<FixedString<1>>(name)->mString.mTop);
         s32 n = 0;
         bool over = false;
-        if (load<u8>(text)) {
+        if (byteAt(text).get()) {
             for (;;) {
                 n++;
-                if (n > 0x40000) { over = true; break; }
-                if (!load<u8>(text + n)) break;
+                if (n > 0x40000) {
+                    over = true;
+                    break;
+                }
+                if (!byteAt(text + n).get())
+                    break;
             }
         }
         if (over) {
-            call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-            call<void>(0xC0009988, buf, load<u32>(name), 0u, 0u);
-            store<u8>(buf, 0);
+            call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+            resNative_copyBytes(buf, readField<u32>(at<FixedString<1>>(name)->mString.mTop), 0u,
+                                0u);
+            byteAt(buf) = 0;
         } else {
-            if (n >= 0x31) n = 0x30;
-            call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-            call<void>(0xC0009988, buf, load<u32>(name), u32(n), 0u);
-            store<u8>(buf + n, 0);
+            if (n >= 0x31)
+                n = 0x30;
+            call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+            resNative_copyBytes(buf, readField<u32>(at<FixedString<1>>(name)->mString.mTop), u32(n),
+                                0u);
+            byteAt(buf + n) = 0;
         }
-        store<u32>(node + 0xC, buf);
+        writeField<u32>(at<ArchiveNode>(node)->mKey.mTop, buf);
     }
-    const u32 cnt = load<u32>(tree + 0xC) + 1;
-    const u32 root = load<u32>(tree);
-    store<u32>(tree + 0xC, cnt);
-    const u32 r = call<u32>(0x0261401C, tree, root, node);
-    store<u32>(tree, r);
-    store<u8>(r + 8, 0);
+    const u32 cnt = readField<u32>(at<TreeHeader>(tree)->mCount) + 1;
+    const u32 root = readField<u32>(at<TreeHeader>(tree)->mRoot);
+    writeField<u32>(at<TreeHeader>(tree)->mCount, cnt);
+    const u32 r = resNative_insertArchiveNode(tree, root, node);
+    writeField<u32>(at<TreeHeader>(tree)->mRoot, r);
+    writeField<u8>(at<ArchiveNode>(r)->mColor, 0);
 }
 
 /* reads a pack entry into a new SharcArchiveRes */
 static u32 readPackEntry(u32 entry, u32 heap) {
-    const u32 size = call<u32>(0x0275F800, load<u32>(load<u32>(entry) + 0x4C));
+    const u32 size =
+        resNative_archiveResourceSize(at<Holder>(wordAt(entry).get())->mResource.get());
     const u32 aligned = (size + 0x1F) & ~0x1Fu;
-    const u32 buf = call<u32>(0x0273B0D4, aligned, heap, 0x2000u);
-    call<void>(0x0275F808, load<u32>(load<u32>(entry) + 0x4C), buf, aligned);
-    u32 arc = call<u32>(0x0273B050, 0x44u, heap, 0x2000u);
-    if (arc) arc = call<u32>(0x0275E11C, arc);
-    call<void>(0x0275D21C, arc, buf, size, aligned, 0u, heap);
-    call<void>(0xC00088A0, load<u32>(arc + 0x14), load<u32>(arc + 0x18));
+    const u32 buf = resNative_allocateWithHeapAligned(aligned, heap, 0x2000u);
+    resNative_archiveResourceRead(at<Holder>(wordAt(entry).get())->mResource.get(), buf, aligned);
+    u32 arc = resNative_allocateWithHeap(0x44u, heap, 0x2000u);
+    if (arc)
+        arc = resNative_archiveResourceConstruct(arc);
+    resNative_archiveResourceSetBuffer(arc, buf, size, aligned, 0u, heap);
+    resNative_invalidateArchiveCache(readField<u32>(at<ArchiveResource>(arc)->mBuffer),
+                                     readField<u32>(at<ArchiveResource>(arc)->mSize));
     return arc;
 }
 
-/* 02610258: makes an archive from the loaded packs available under its name */
-u32 loadFromPack(u32 self, u32 name, u32 path, u32 heap) {
-    WWHD_FUNC(0x02610258, u32, self, name, path, heap);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
-    if (n && n + 0x18) return 1;
-    Local<u32> key;
-    store<u32>(key.a, hashString(name));
-    const u32 e = call<u32>(0x0260ACC8, self + 0xD228, load<u32>(self + 0xD228), key.a);
-    if (!e || !(e + 0x18)) return 0;
+/* 02610258 */
+// HD: makes an archive from the loaded packs available under its name
+u32 ResMgr_loadFromPack(u32 self, u32 name, u32 path, u32 heap) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    if (n && n + 0x18)
+        return 1;
+    Local<be<u32>> key;
+    *key = hashString(name);
+    const u32 e = resNative_findPackNode(
+        self + 0xD228, readField<u32>(at<Manager>(self)->mPacks.mHeader.mRoot), key.a);
+    if (!e || !(e + 0x18))
+        return 0;
     const u32 arc = readPackEntry(e + 0x18, heap);
-    if (!arc) return 0;
-    u32 holder = call<u32>(0x0273B050, 0x54u, heap, 4u);
-    if (holder) holder = holderCtor(holder, name, arc, heap);
+    if (!arc)
+        return 0;
+    u32 holder = resNative_allocateWithHeap(0x54u, heap, 4u);
+    if (holder)
+        holder = ResMgr_holderCtor(holder, name, arc, heap);
     insertNamed(self, name, holder);
     return 1;
 }
-VERIFY(0x02610258, loadFromPack);
 
-/* 026105C4: request by name: stores the name and its "Object/<name>.szs" path, then loads it */
-u32 requestObject(u32 self, u32 name, u32 heap) {
-    WWHD_FUNC(0x026105C4, u32, self, name, heap);
+/* 026105C4 */
+// HD: request by name: stores the name and its "Object/<name>.szs" path, then loads it
+u32 ResMgr_requestObject(u32 self, u32 name, u32 heap) {
+
     const u32 r = self + 0x1124C;
-    const u32 dst = load<u32>(r);
-    call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-    s32 n = cstrLength(load<u32>(name));
-    const s32 size = s32(load<u32>(r + 8));
-    const u32 fn = load<u32>(load<u32>(name + 4) + 0x14);
-    if (n >= size) n = size - 1;
+    const u32 dst = readField<u32>(at<Request>(r)->mName.mString.mTop);
+    call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+    s32 n = cstrLength(readField<u32>(at<FixedString<1>>(name)->mString.mTop));
+    const s32 size = s32(readField<u32>(at<Request>(r)->mName.mCapacity));
+    const u32 fn = stringVtable(name)->assureTermination.get();
+    if (n >= size)
+        n = size - 1;
     call_ptr<void>(fn, name);
-    call<void>(0xC0009988, dst, load<u32>(name), u32(n), 0u);
-    store<u8>(dst + n, 0);
-    objectPath(self, r + 0x3C, name);
-    store<u32>(r + 0x88, heap);
-    return loadFromPack(self, r, r + 0x3C, heap);
+    resNative_copyBytes(dst, readField<u32>(at<FixedString<1>>(name)->mString.mTop), u32(n), 0u);
+    byteAt(dst + n) = 0;
+    ResMgr_objectPath(self, r + 0x3C, name);
+    writeField<u32>(at<Request>(r)->mHeap, heap);
+    return ResMgr_loadFromPack(self, r, r + 0x3C, heap);
 }
-VERIFY(0x026105C4, requestObject);
 
-/* 026106B4: second holder type constructor (pack-scanned archives) */
-u32 holder2Ctor(u32 p, u32 name, u32 res, u32 heap) {
-    WWHD_FUNC(0x026106B4, u32, p, name, res, heap);
+/* 026106B4 */
+// HD: second holder type constructor (pack-scanned archives)
+u32 ResMgr_holder2Ctor(u32 p, u32 name, u32 res, u32 heap) {
+
     if (!p) {
-        p = call<u32>(0x0273AD10, 0x54u);
-        if (!p) return 0;
+        p = resNative_allocate(0x54u);
+        if (!p)
+            return 0;
     }
-    call<void>(0x02752A84, p);
-    store<u32>(p + 0xC, 0x100E25E0);
-    fixedCtor(p + 0x10, 0x30, 0x100E20BC, 0x100E223C, 0x100E2254, 0x3C);
-    store<u32>(p + 0x50, heap);
-    store<u32>(p + 0x4C, res);
-    const u32 dst = load<u32>(p + 0x10);
+    resNative_disposerConstruct(p);
+    writeField<u32>(at<Holder>(p)->mVtable, kPackHolderVtable);
+    fixedCtor(p + 0x10, 0x30, kFixedStringBaseVtable, kFixedString48BaseVtable,
+              kFixedString48Vtable, 0x3C);
+    writeField<u32>(at<Holder>(p)->mHeap, heap);
+    writeField<u32>(at<Holder>(p)->mResource, res);
+    const u32 dst = readField<u32>(at<Holder>(p)->mName.mString.mTop);
     copyInto(dst, p + 0x18, name);
     return p;
 }
-VERIFY(0x026106B4, holder2Ctor);
 
-/* 02612374: "Stage/<arc>_<name>.szs" */
-void stagePath(u32 self, u32 out, u32 arc, u32 name) {
-    WWHD_FUNC(0x02612374, void, self, out, arc, name);
-    call_ptr<void>(load<u32>(load<u32>(arc + 4) + 0x14), arc);
-    const u32 fn = load<u32>(load<u32>(name + 4) + 0x14);
-    const u32 arcTop = load<u32>(arc);
+/* 02612374 */
+// HD: "Stage/<arc>_<name>.szs"
+void ResMgr_stagePath(u32 self, u32 out, u32 arc, u32 name) {
+
+    call_ptr<void>(stringVtable(arc)->assureTermination.get(), arc);
+    const u32 fn = stringVtable(name)->assureTermination.get();
+    const u32 arcTop = readField<u32>(at<FixedString<1>>(arc)->mString.mTop);
     call_ptr<void>(fn, name);
-    call<void>(0x02759C28, out, 0x100E23ECu, arcTop, load<u32>(name));
+    resNative_formatStageName(out, kStagePathFormat, arcTop,
+                              readField<u32>(at<FixedString<1>>(name)->mString.mTop));
 }
-VERIFY(0x02612374, stagePath);
 
-/* 026123FC: the archive resource of a loaded name (0 when not loaded) */
-u32 getArchive(u32 self, u32 name) {
-    WWHD_FUNC(0x026123FC, u32, self, name);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
-    if (!n || !(n + 0x18)) return 0;
-    return load<u32>(load<u32>(n + 0x18) + 0x4C);
+/* 026123FC */
+// HD: the archive resource of a loaded name (0 when not loaded)
+u32 ResMgr_getArchive(u32 self, u32 name) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    if (!n || !(n + 0x18))
+        return 0;
+    return at<Holder>(readField<u32>(at<ArchiveNode>(n)->mHolder))->mResource.get();
 }
-VERIFY(0x026123FC, getArchive);
 
-/* 02612450: file of an archive resource (size through outSize) */
-u32 getFile(u32 res, u32 file, u32 outSize) {
-    WWHD_FUNC(0x02612450, u32, res, file, outSize);
-    Local<u32[2]> info;
-    store<u32>(info.a, 0);
-    store<u32>(info.a + 4, 0);
-    const u32 r = call_ptr<u32>(load<u32>(load<u32>(res + 0x10) + 0x3C), res, file, info.a);
-    if (r && outSize) store<u32>(outSize, load<u32>(info.a + 4));
+/* 02612450 */
+// HD: file of an archive resource (size through outSize)
+u32 ResMgr_getFile(u32 res, u32 file, u32 outSize) {
+
+    Local<FileInfo> info;
+    info->mStart = 0;
+    info->mSize = 0;
+    const u32 r = call_ptr<u32>(resourceVtable(res)->getFile.get(), res, file, info.a);
+    if (r && outSize)
+        wordAt(outSize) = info->mSize.get();
     return r;
 }
-VERIFY(0x02612450, getFile);
 
-/* 026124B0: file of a named archive */
-u32 getArchiveFile(u32 self, u32 name, u32 file, u32 outSize) {
-    WWHD_FUNC(0x026124B0, u32, self, name, file, outSize);
-    return getFile(getArchive(self, name), file, outSize);
+/* 026124B0 */
+// HD: file of a named archive
+u32 ResMgr_getArchiveFile(u32 self, u32 name, u32 file, u32 outSize) {
+
+    return ResMgr_getFile(ResMgr_getArchive(self, name), file, outSize);
 }
-VERIFY(0x026124B0, getArchiveFile);
 
-/* 026124F4: getFile with a leading unused argument */
-u32 getFile2(u32 unused, u32 res, u32 file, u32 outSize) {
-    WWHD_FUNC(0x026124F4, u32, unused, res, file, outSize);
-    return getFile(res, file, outSize);
+/* 026124F4 */
+// HD: ResMgr_getFile with a leading unused argument
+u32 ResMgr_getFile2(u32 unused, u32 res, u32 file, u32 outSize) {
+
+    return ResMgr_getFile(res, file, outSize);
 }
-VERIFY(0x026124F4, getFile2);
 
-/* 02612504: is the archive loaded? */
-u32 isLoaded(u32 self, u32 name) {
-    WWHD_FUNC(0x02612504, u32, self, name);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
+/* 02612504 */
+// HD: is the archive loaded?
+u32 ResMgr_isLoaded(u32 self, u32 name) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
     return (n ? n + 0x18 : 0) != 0;
 }
-VERIFY(0x02612504, isLoaded);
 
-/* 02612540: is the archive in a loaded pack? */
-u32 isInPack(u32 self, u32 name) {
-    WWHD_FUNC(0x02612540, u32, self, name);
-    Local<u32> key;
-    store<u32>(key.a, hashString(name));
-    const u32 n = call<u32>(0x0260ACC8, self + 0xD228, load<u32>(self + 0xD228), key.a);
+/* 02612540 */
+// HD: is the archive in a loaded pack?
+u32 ResMgr_isInPack(u32 self, u32 name) {
+
+    Local<be<u32>> key;
+    *key = hashString(name);
+    const u32 n = resNative_findPackNode(
+        self + 0xD228, readField<u32>(at<Manager>(self)->mPacks.mHeader.mRoot), key.a);
     return (n ? n + 0x18 : 0) != 0;
 }
-VERIFY(0x02612540, isInPack);
 
-/* 0261261C: deletes a loaded archive's resource and holder */
-u32 unloadArchive(u32 self, u32 name) {
-    WWHD_FUNC(0x0261261C, u32, self, name);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
-    if (!n || !(n + 0x18)) return 0;
+/* 0261261C */
+// HD: deletes a loaded archive's resource and holder
+u32 ResMgr_unloadArchive(u32 self, u32 name) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    if (!n || !(n + 0x18))
+        return 0;
     const u32 v = n + 0x18;
-    u32 holder = load<u32>(v);
-    const u32 res = load<u32>(holder + 0x4C);
+    u32 holder = wordAt(v).get();
+    const u32 res = readField<u32>(at<Holder>(holder)->mResource);
     if (res) {
-        call_ptr<void>(load<u32>(load<u32>(res + 0x10) + 0x1C), res, 3u);
-        holder = load<u32>(v);
+        call_ptr<void>(resourceVtable(res)->destroy.get(), res, 3u);
+        holder = wordAt(v).get();
     }
-    if (holder) call_ptr<void>(load<u32>(load<u32>(holder + 0xC) + 0xC), holder, 3u);
+    if (holder)
+        call_ptr<void>(holderVtable(holder)->destroy.get(), holder, 3u);
     return 1;
 }
-VERIFY(0x0261261C, unloadArchive);
 
-/* 026126C0: destroys the heap of a pack entry */
-u32 freePackEntry(u32 self, u32 name) {
-    WWHD_FUNC(0x026126C0, u32, self, name);
-    Local<u32> key;
-    store<u32>(key.a, hashString(name));
-    const u32 n = call<u32>(0x0260ACC8, self + 0xD228, load<u32>(self + 0xD228), key.a);
-    if (!n || !(n + 0x18)) return 0;
-    const u32 heap = load<u32>(load<u32>(n + 0x18) + 0x50);
-    call_ptr<void>(load<u32>(load<u32>(heap + 0xC) + 0x24), heap);
+/* 026126C0 */
+// HD: destroys the heap of a pack entry
+u32 ResMgr_freePackEntry(u32 self, u32 name) {
+
+    Local<be<u32>> key;
+    *key = hashString(name);
+    const u32 n = resNative_findPackNode(
+        self + 0xD228, readField<u32>(at<Manager>(self)->mPacks.mHeader.mRoot), key.a);
+    if (!n || !(n + 0x18))
+        return 0;
+    const u32 heap = at<Holder>(readField<u32>(at<PackNode>(n)->mHolder))->mHeap.get();
+    call_ptr<void>(heapVtable(heap)->destroy.get(), heap);
     return 1;
 }
-VERIFY(0x026126C0, freePackEntry);
 
-/* 026127D4: asynchronous object request (loader thread message 1) */
-u32 requestObjectAsync(u32 self, u32 name, u32 heap) {
-    WWHD_FUNC(0x026127D4, u32, self, name, heap);
-    const u32 busy = load<u32>(self + 0x11248);
+/* 026127D4 */
+// HD: asynchronous object request (loader thread message 1)
+u32 ResMgr_requestObjectAsync(u32 self, u32 name, u32 heap) {
+
+    const u32 busy = readField<u32>(at<Manager>(self)->mRequestState);
     u32 fromPack = 0;
-    if (busy) fromPack = 1;
-    else store<u32>(self + 0x11248, 1);
+    if (busy)
+        fromPack = 1;
+    else
+        writeField<u32>(at<Manager>(self)->mRequestState, 1);
     const u32 r = self + 0x1124C;
-    const u32 dst = load<u32>(r);
-    call_ptr<void>(load<u32>(load<u32>(name + 4) + 0x14), name);
-    s32 n = cstrLength(load<u32>(name));
-    const s32 size = s32(load<u32>(r + 8));
-    const u32 fn = load<u32>(load<u32>(name + 4) + 0x14);
-    if (n >= size) n = size - 1;
+    const u32 dst = readField<u32>(at<Request>(r)->mName.mString.mTop);
+    call_ptr<void>(stringVtable(name)->assureTermination.get(), name);
+    s32 n = cstrLength(readField<u32>(at<FixedString<1>>(name)->mString.mTop));
+    const s32 size = s32(readField<u32>(at<Request>(r)->mName.mCapacity));
+    const u32 fn = stringVtable(name)->assureTermination.get();
+    if (n >= size)
+        n = size - 1;
     call_ptr<void>(fn, name);
-    call<void>(0xC0009988, dst, load<u32>(name), u32(n), 0u);
-    store<u8>(dst + n, 0);
-    objectPath(self, r + 0x3C, name);
-    store<u8>(r + 0x8C, u8(fromPack));
-    store<u32>(r + 0x88, heap);
-    const u32 t = load<u32>(self + 0x11240);
-    call_ptr<void>(load<u32>(load<u32>(t + 0xC) + 0x1C), t, 1u, 0u);
+    resNative_copyBytes(dst, readField<u32>(at<FixedString<1>>(name)->mString.mTop), u32(n), 0u);
+    byteAt(dst + n) = 0;
+    ResMgr_objectPath(self, r + 0x3C, name);
+    writeField<u8>(at<Request>(r)->mFromPack, u8(fromPack));
+    writeField<u32>(at<Request>(r)->mHeap, heap);
+    const u32 t = readField<u32>(at<Manager>(self)->mLoaderThread);
+    call_ptr<void>(threadVtable(t)->sendMessage.get(), t, 1u, 0u);
     return 1;
 }
-VERIFY(0x026127D4, requestObjectAsync);
 
-/* 02612908: asynchronous stage request "<arc>_<name>" (loader thread message 1) */
-u32 requestStageAsync(u32 self, u32 arc, u32 name, u32 heap) {
-    WWHD_FUNC(0x02612908, u32, self, arc, name, heap);
-    const u32 busy = load<u32>(self + 0x11248);
+/* 02612908 */
+// HD: asynchronous stage request "<arc>_<name>" (loader thread message 1)
+u32 ResMgr_requestStageAsync(u32 self, u32 arc, u32 name, u32 heap) {
+
+    const u32 busy = readField<u32>(at<Manager>(self)->mRequestState);
     u32 fromPack = 0;
-    if (busy) fromPack = 1;
-    else store<u32>(self + 0x11248, 1);
-    call_ptr<void>(load<u32>(load<u32>(arc + 4) + 0x14), arc);
-    const u32 fn = load<u32>(load<u32>(name + 4) + 0x14);
-    const u32 arcTop = load<u32>(arc);
+    if (busy)
+        fromPack = 1;
+    else
+        writeField<u32>(at<Manager>(self)->mRequestState, 1);
+    call_ptr<void>(stringVtable(arc)->assureTermination.get(), arc);
+    const u32 fn = stringVtable(name)->assureTermination.get();
+    const u32 arcTop = readField<u32>(at<FixedString<1>>(arc)->mString.mTop);
     call_ptr<void>(fn, name);
     const u32 r = self + 0x1124C;
-    call<void>(0x02759C28, r, 0x100E23FCu, arcTop, load<u32>(name));
-    stagePath(self, r + 0x3C, arc, name);
-    store<u8>(r + 0x8C, u8(fromPack));
-    store<u32>(r + 0x88, heap);
-    const u32 t = load<u32>(self + 0x11240);
-    call_ptr<void>(load<u32>(load<u32>(t + 0xC) + 0x1C), t, 1u, 0u);
+    resNative_formatStageName(r, kStageRequestFormat, arcTop,
+                              readField<u32>(at<FixedString<1>>(name)->mString.mTop));
+    ResMgr_stagePath(self, r + 0x3C, arc, name);
+    writeField<u8>(at<Request>(r)->mFromPack, u8(fromPack));
+    writeField<u32>(at<Request>(r)->mHeap, heap);
+    const u32 t = readField<u32>(at<Manager>(self)->mLoaderThread);
+    call_ptr<void>(threadVtable(t)->sendMessage.get(), t, 1u, 0u);
     return 1;
 }
-VERIFY(0x02612908, requestStageAsync);
 
-/* 02612A80: starts the permanent pack thread (message 2) when idle */
-u32 startPackLoad(u32 self) {
-    WWHD_FUNC(0x02612A80, u32, self);
-    if (load<u32>(self + 0x11248)) return 0;
-    const u32 t = load<u32>(self + 0x11244);
-    store<u32>(self + 0x11248, 2);
-    call_ptr<void>(load<u32>(load<u32>(t + 0xC) + 0x1C), t, 2u, 0u);
+/* 02612A80 */
+// HD: starts the permanent pack thread (message 2) when idle
+u32 ResMgr_startPackLoad(u32 self) {
+
+    if (readField<u32>(at<Manager>(self)->mRequestState))
+        return 0;
+    const u32 t = readField<u32>(at<Manager>(self)->mPackThread);
+    writeField<u32>(at<Manager>(self)->mRequestState, 2);
+    call_ptr<void>(threadVtable(t)->sendMessage.get(), t, 2u, 0u);
     return 1;
 }
-VERIFY(0x02612A80, startPackLoad);
 
-/* 02612AE8: asynchronous stage pack scan (loader thread message 3) when idle */
-u32 requestStagePackAsync(u32 self, u32 arc, u32 name, u32 heap) {
-    WWHD_FUNC(0x02612AE8, u32, self, arc, name, heap);
-    if (load<u32>(self + 0x11248)) return 0;
-    store<u32>(self + 0x11248, 1);
-    call_ptr<void>(load<u32>(load<u32>(arc + 4) + 0x14), arc);
-    const u32 fn = load<u32>(load<u32>(name + 4) + 0x14);
-    const u32 arcTop = load<u32>(arc);
+/* 02612AE8 */
+// HD: asynchronous stage pack scan (loader thread message 3) when idle
+u32 ResMgr_requestStagePackAsync(u32 self, u32 arc, u32 name, u32 heap) {
+
+    if (readField<u32>(at<Manager>(self)->mRequestState))
+        return 0;
+    writeField<u32>(at<Manager>(self)->mRequestState, 1);
+    call_ptr<void>(stringVtable(arc)->assureTermination.get(), arc);
+    const u32 fn = stringVtable(name)->assureTermination.get();
+    const u32 arcTop = readField<u32>(at<FixedString<1>>(arc)->mString.mTop);
     call_ptr<void>(fn, name);
     const u32 r = self + 0x1124C;
-    call<void>(0x02759C28, r, 0x100E2404u, arcTop, load<u32>(name));
-    stagePath(self, r + 0x3C, arc, name);
-    store<u32>(r + 0x88, heap);
-    store<u8>(r + 0x8C, 0);
-    const u32 t = load<u32>(self + 0x11240);
-    call_ptr<void>(load<u32>(load<u32>(t + 0xC) + 0x1C), t, 3u, 0u);
+    resNative_formatStageName(r, kStagePackRequestFormat, arcTop,
+                              readField<u32>(at<FixedString<1>>(name)->mString.mTop));
+    ResMgr_stagePath(self, r + 0x3C, arc, name);
+    writeField<u32>(at<Request>(r)->mHeap, heap);
+    writeField<u8>(at<Request>(r)->mFromPack, 0);
+    const u32 t = readField<u32>(at<Manager>(self)->mLoaderThread);
+    call_ptr<void>(threadVtable(t)->sendMessage.get(), t, 3u, 0u);
     return 1;
 }
-VERIFY(0x02612AE8, requestStagePackAsync);
 
-/* 02612BE0: the 2D permanent pack name of the console language */
-u32 languagePack() {
-    WWHD_FUNC(0x02612BE0, u32);
-    const u32 cfg = load<u32>(0x101F4BAC);
-    const u32 region = load<u32>(cfg + 0x10);
-    if (region == 1) return 0x1048DD4C;
+/* 02612BE0 */
+// HD: the 2D permanent pack name of the console language
+u32 ResMgr_languagePack() {
+
+    const u32 cfg = configurationSlot().get();
+    const u32 region = readField<u32>(at<Config>(cfg)->mRegion);
+    if (region == 1)
+        return ea(&languagePackObjects()[0]);
     if (region == 2) {
-        const u32 lang = load<u32>(cfg + 0x14);
-        if (lang == 2) return 0x1048DD5C;
-        if (lang == 5) return 0x1048DD64;
-        return 0x1048DD54;
+        const u32 lang = readField<u32>(at<Config>(cfg)->mLanguage);
+        if (lang == 2)
+            return ea(&languagePackObjects()[2]);
+        if (lang == 5)
+            return ea(&languagePackObjects()[3]);
+        return ea(&languagePackObjects()[1]);
     }
     if (region == 4) {
-        const u32 lang = load<u32>(cfg + 0x14);
-        if (lang >= 1 && lang <= 5) return load<u32>(0x100E2408 + 4 * lang);
+        const u32 lang = readField<u32>(at<Config>(cfg)->mLanguage);
+        if (lang >= 1 && lang <= 5)
+            return languagePackTable()[lang].get();
     }
-    return 0x1048DD54;
+    return ea(&languagePackObjects()[1]);
 }
-VERIFY(0x02612BE0, languagePack);
 
-/* 02612E64: loads an archive (from a loaded pack, else from the file system) under its name */
-u32 loadArchive(u32 self, u32 name, u32 path, u32 heap, u32 compressed, u32 align, u32 bufAlign) {
-    WWHD_FUNC(0x02612E64, u32, self, name, path, heap, compressed, align, bufAlign);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
-    if (n && n + 0x18) return 1;
-    Local<u32> key;
-    store<u32>(key.a, hashString(name));
+/* 02612E64 */
+// HD: loads an archive (from a loaded pack, else from the file system) under its name
+u32 ResMgr_loadArchive(u32 self, u32 name, u32 path, u32 heap, u32 compressed, u32 align,
+                       u32 bufAlign) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    if (n && n + 0x18)
+        return 1;
+    Local<be<u32>> key;
+    *key = hashString(name);
     const u32 m = self + 0xD228;
-    const u32 e = call<u32>(0x0260ACC8, m, load<u32>(m), key.a);
+    const u32 e = resNative_findPackNode(m, readField<u32>(at<TreeHeader>(m)->mRoot), key.a);
     u32 arc;
     if (e && e + 0x18) {
         arc = readPackEntry(e + 0x18, heap);
     } else if (compressed) {
-        arc = call<u32>(0x02612C88, path, heap, load<u32>(m + 0x4014), align, bufAlign);
+        arc = resNative_loadCompressedArchive(
+            path, heap, readField<u32>(managerFromPackTree(m)->mArena), align, bufAlign);
     } else {
-        arc = call<u32>(0x02610B40, path, heap, align, bufAlign);
+        arc = resNative_loadArchiveFile(path, heap, align, bufAlign);
     }
-    if (!arc) return 0;
-    u32 holder = call<u32>(0x0273B050, 0x54u, heap, 4u);
-    if (holder) holder = holderCtor(holder, name, arc, heap);
+    if (!arc)
+        return 0;
+    u32 holder = resNative_allocateWithHeap(0x54u, heap, 4u);
+    if (holder)
+        holder = ResMgr_holderCtor(holder, name, arc, heap);
     insertNamed(self, name, holder);
     return 1;
 }
-VERIFY(0x02612E64, loadArchive);
 
-/* 0261321C: removes a name from the archive map */
-void eraseArchive(u32 self, u32 name) {
-    WWHD_FUNC(0x0261321C, void, self, name);
-    const u32 n = call<u32>(0x02613F20, self + 0x14, load<u32>(self + 0x14), name);
-    if (!n || !(n + 0x18)) return;
-    const u32 r = call<u32>(0x026142C4, self + 0x14, load<u32>(self + 0x14), name);
-    store<u32>(self + 0x14, r);
-    if (r) store<u8>(r + 8, 0);
+/* 0261321C */
+// HD: removes a name from the archive map
+void ResMgr_eraseArchive(u32 self, u32 name) {
+
+    const u32 n = resNative_findArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    if (!n || !(n + 0x18))
+        return;
+    const u32 r = resNative_eraseArchiveNode(
+        self + 0x14, readField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot), name);
+    writeField<u32>(at<Manager>(self)->mArchives.mHeader.mRoot, r);
+    if (r)
+        writeField<u8>(at<ArchiveNode>(r)->mColor, 0);
 }
-VERIFY(0x0261321C, eraseArchive);
 
-/* 02613294: removes a name from the pack entry map */
-void erasePackEntry(u32 self, u32 name) {
-    WWHD_FUNC(0x02613294, void, self, name);
+/* 02613294 */
+// HD: removes a name from the pack entry map
+void ResMgr_erasePackEntry(u32 self, u32 name) {
+
     const u32 h = hashString(name);
-    Local<u32[2]> keys;
-    store<u32>(keys.a, h);
+    Local<HashKeys> keys;
+    keys->mFirst = h;
     const u32 m = self + 0xD228;
-    const u32 root = load<u32>(m);
-    store<u32>(keys.a + 4, h);
-    const u32 n = call<u32>(0x0260ACC8, m, root, keys.a + 4);
-    if (!n || !(n + 0x18)) return;
-    const u32 r = call<u32>(0x0260AEFC, m, root, keys.a);
-    store<u32>(m, r);
-    if (r) store<u8>(r + 8, 0);
+    const u32 root = readField<u32>(at<TreeHeader>(m)->mRoot);
+    keys->mSecond = h;
+    const u32 n = resNative_findPackNode(m, root, keys.a + 4);
+    if (!n || !(n + 0x18))
+        return;
+    const u32 r = resNative_erasePackNode(m, root, keys.a);
+    writeField<u32>(at<TreeHeader>(m)->mRoot, r);
+    if (r)
+        writeField<u8>(at<ArchiveNode>(r)->mColor, 0);
 }
-VERIFY(0x02613294, erasePackEntry);
 
-/* 02613394: ResMgrThread message handler (1: archive request, 3: stage pack scan) */
-void threadMain(u32 self, u32 thread, u32 msg) {
-    WWHD_FUNC(0x02613394, void, self, thread, msg);
+/* 02613394 */
+// HD: ResMgrThread message handler (1: archive request, 3: stage pack scan)
+void ResMgr_threadMain(u32 self, u32 thread, u32 msg) {
+
     const u32 st = self + 0x11248, r = self + 0x1124C, cs = self + 0x112DC;
     if (msg == 1) {
-        if (load<u8>(self + 0x112D8)) {
-            loadFromPack(self, r, r + 0x3C, load<u32>(r + 0x88));
+        if (readField<u8>(at<Manager>(self)->mFromPack)) {
+            ResMgr_loadFromPack(self, r, r + 0x3C, readField<u32>(at<Request>(r)->mHeap));
             return;
         }
-        call<void>(0x027601BC, cs);
-        loadArchive(self, r, r + 0x3C, load<u32>(r + 0x88), 1u, load<u32>(self + 0x11318), 0x2000u);
-        store<u32>(st, 0);
-        call<void>(0x027601F0, cs);
+        resNative_criticalSectionEnter(cs);
+        ResMgr_loadArchive(self, r, r + 0x3C, readField<u32>(at<Request>(r)->mHeap), 1u,
+                           readField<u32>(at<Manager>(self)->mLoadAlignment), 0x2000u);
+        wordAt(st) = 0;
+        resNative_criticalSectionLeave(cs);
     } else if (msg == 3) {
-        call<void>(0x027601BC, cs);
-        call<void>(0x02610820, self, r, self + 0x11288, load<u32>(self + 0x112D4), load<u32>(self + 0x11318));
-        store<u32>(st, 0);
-        call<void>(0x027601F0, cs);
+        resNative_criticalSectionEnter(cs);
+        resNative_scanStagePack(self, r, self + 0x11288,
+                                readField<u32>(at<Manager>(self)->mRequestHeap),
+                                readField<u32>(at<Manager>(self)->mLoadAlignment));
+        wordAt(st) = 0;
+        resNative_criticalSectionLeave(cs);
     }
 }
-VERIFY(0x02613394, threadMain);
 
-/* 026134B4: ResMgrPackLoadThread message handler (2: the three SZS permanent packs) */
-void packThreadMain(u32 self, u32 thread, u32 msg) {
-    WWHD_FUNC(0x026134B4, void, self, thread, msg);
-    if (msg != 2) return;
+/* 026134B4 */
+// HD: ResMgrPackLoadThread message handler (2: the three SZS permanent packs)
+void ResMgr_packThreadMain(u32 self, u32 thread, u32 msg) {
+
+    if (msg != 2)
+        return;
     const u32 st = self + 0x11248, cs = st + 0x94;
-    call<void>(0x027601BC, cs);
-    Local<u32[2]> name;
-    const u32 packs[3] = {0x100E2428, 0x100E2444, 0x100E2460};
+    resNative_criticalSectionEnter(cs);
+    Local<SafeString> name;
+    const u32 packs[3] = {kFirstPermanentPackPath, kSecondPermanentPackPath,
+                          kThirdPermanentPackPath};
     for (u32 i = 0; i < 3; i++) {
-        store<u32>(name.a, packs[i]);
-        store<u32>(name.a + 4, kSafeStringVt);
-        call<void>(0x02611864, self, name.a, load<u32>(load<u32>(0x101F4F28) + 0x2128));
+        name->mTop = packs[i];
+        name->mVtable = kSafeStringVt;
+        resNative_scanPermanentPack(self, name.a, gameHeaps()->mPermanentPackHeap.get());
     }
-    store<u32>(st, 0);
-    call<void>(0x027601F0, cs);
+    wordAt(st) = 0;
+    resNative_criticalSectionLeave(cs);
 }
-VERIFY(0x026134B4, packThreadMain);
 
-/* 02613580: SingletonDisposer deleting destructor (destroys the instance) */
-void disposerDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x02613580, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0xC, 0x100E25C0);
-    if (p == load<u32>(0x101F4F80)) {
-        const u32 inst = load<u32>(kResMgr);
-        store<u32>(0x101F4F80, 0);
-        store<u32>(inst, 0x100E222C);
-        call<void>(0x02760168, inst + 0x112DC, 2u);
-        store<u32>(kResMgr, 0);
+/* 02613580 */
+// HD: SingletonDisposer deleting destructor (destroys the instance)
+void ResMgr_disposerDtor(u32 p, u32 flags) {
+
+    if (!p)
+        return;
+    writeField<u32>(at<Disposer>(p)->mVtable, kSingletonDisposerVtable);
+    if (p == disposerSlot().get()) {
+        const u32 inst = readField<u32>(singletonSlot());
+        disposerSlot() = 0;
+        writeField<u32>(at<Manager>(inst)->mVtable, kManagerVtable);
+        resNative_criticalSectionDestroy(inst + 0x112DC, 2u);
+        writeField<u32>(singletonSlot(), 0);
     }
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    resNative_disposerDestroy(p, 0u);
+    if (flags & 1)
+        resNative_deallocate(p);
 }
-VERIFY(0x02613580, disposerDtor);
 
-/* 02613630: archive holder destructor (removes its map entry) */
-void holderDtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x02613630, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0xC, 0x100E25D0);
-    eraseArchive(load<u32>(kResMgr), p + 0x10);
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
-}
-VERIFY(0x02613630, holderDtor);
+/* 02613630 */
+// HD: archive holder destructor (removes its map entry)
+void ResMgr_holderDtor(u32 p, u32 flags) {
 
-/* 026136A0: pack holder destructor (removes its pack map entry) */
-void holder2Dtor(u32 p, u32 flags) {
-    WWHD_FUNC(0x026136A0, void, p, flags);
-    if (!p) return;
-    store<u32>(p + 0xC, 0x100E25E0);
-    erasePackEntry(load<u32>(kResMgr), p + 0x10);
-    call<void>(0x02752BEC, p, 0u);
-    if (flags & 1) call<void>(0x0273AF40, p);
+    if (!p)
+        return;
+    writeField<u32>(at<Holder>(p)->mVtable, kArchiveHolderVtable);
+    ResMgr_eraseArchive(readField<u32>(singletonSlot()), p + 0x10);
+    resNative_disposerDestroy(p, 0u);
+    if (flags & 1)
+        resNative_deallocate(p);
 }
-VERIFY(0x026136A0, holder2Dtor);
+
+/* 026136A0 */
+// HD: pack holder destructor (removes its pack map entry)
+void ResMgr_holder2Dtor(u32 p, u32 flags) {
+
+    if (!p)
+        return;
+    writeField<u32>(at<Holder>(p)->mVtable, kPackHolderVtable);
+    ResMgr_erasePackEntry(readField<u32>(singletonSlot()), p + 0x10);
+    resNative_disposerDestroy(p, 0u);
+    if (flags & 1)
+        resNative_deallocate(p);
+}
 
 /* the standard initialiser of these TUs: the shared static objects */
 static void stdInit(u32 b, u32 r1, u32 lo, u32 hi, u32 f, u32 r2, u32 r3) {
-    store<u32>(b + 8, 0);
-    store<u32>(b, 0);
-    store<u32>(b + 0xC, 0);
-    store<u32>(b + 4, 0);
-    call<void>(0x028F026C, r1);
-    const f32 a = load<f32>(lo), c = load<f32>(hi);
-    store<f32>(f, a);
-    store<f32>(f + 4, c);
-    call<void>(0x028ED6F8, f + 8);
-    call<void>(0x028F026C, r2);
-    call<void>(0x028EAB2C, f + 9);
-    call<void>(0x028F026C, r3);
+    writeField<u32>(at<InitLists>(b)->mThird, 0);
+    writeField<u32>(at<InitLists>(b)->mFirst, 0);
+    writeField<u32>(at<InitLists>(b)->mFourth, 0);
+    writeField<u32>(at<InitLists>(b)->mSecond, 0);
+    resNative_registerStaticObject(r1);
+    const f32 a = floatAt(lo).get(), c = floatAt(hi).get();
+    writeField<f32>(at<InitAngles>(f)->mMinimum, a);
+    writeField<f32>(at<InitAngles>(f)->mMaximum, c);
+    resNative_initializeStaticObjectFlag(f + 8);
+    resNative_registerStaticObject(r2);
+    resNative_initializeStaticObjectByte(f + 9);
+    resNative_registerStaticObject(r3);
 }
 
-/* 02613710: static initialiser (shared objects, the language pack names) */
-void staticInit() {
-    WWHD_FUNC(0x02613710, void);
+/* 02613710 */
+// HD: static initialiser (shared objects, the language pack names)
+void ResMgr_staticInit() {
+
     stdInit(0x1048DDA0, 0x101F4F58, 0x100E247C, 0x100E2480, 0x1048DD94, 0x101F4F64, 0x101F4F70);
     const u32 vt = kSafeStringVt;
-    store<u32>(0x1048DD50, vt);
-    store<u32>(0x1048DD4C, 0x100E24E4);
-    store<u32>(0x1048DD58, vt);
-    store<u32>(0x1048DD54, 0x100E2508);
-    store<u32>(0x1048DD60, vt);
-    store<u32>(0x1048DD68, vt);
-    store<u32>(0x1048DD70, vt);
-    store<u32>(0x1048DD78, vt);
-    store<u32>(0x1048DD80, vt);
-    store<u32>(0x1048DD7C, 0x100E24C4);
-    store<u32>(0x1048DD64, 0x100E252C);
-    store<u32>(0x1048DD74, 0x100E24A4);
-    store<u32>(0x1048DD88, vt);
-    store<u32>(0x1048DD84, 0x100E2574);
-    store<u32>(0x1048DD6C, 0x100E2550);
-    store<u32>(0x1048DD90, vt);
-    store<u32>(0x1048DD5C, 0x100E2484);
-    store<u32>(0x1048DD8C, 0x100E2598);
+    languagePackObjects()[0].mVtable = vt;
+    languagePackObjects()[0].mTop = 0x100E24E4;
+    languagePackObjects()[1].mVtable = vt;
+    languagePackObjects()[1].mTop = 0x100E2508;
+    languagePackObjects()[2].mVtable = vt;
+    languagePackObjects()[3].mVtable = vt;
+    languagePackObjects()[4].mVtable = vt;
+    languagePackObjects()[5].mVtable = vt;
+    languagePackObjects()[6].mVtable = vt;
+    languagePackObjects()[6].mTop = 0x100E24C4;
+    languagePackObjects()[3].mTop = 0x100E252C;
+    languagePackObjects()[5].mTop = 0x100E24A4;
+    languagePackObjects()[7].mVtable = vt;
+    languagePackObjects()[7].mTop = 0x100E2574;
+    languagePackObjects()[4].mTop = 0x100E2550;
+    languagePackObjects()[8].mVtable = vt;
+    languagePackObjects()[2].mTop = 0x100E2484;
+    languagePackObjects()[8].mTop = 0x100E2598;
 }
-VERIFY(0x02613710, staticInit);
 
-/* 02614AB8 / 02614B4C: initialisers of two TUs without code of their own */
-void staticInit2() {
-    WWHD_FUNC(0x02614AB8, void);
+/* 02614AB8 */
+// HD: / 02614B4C: initialisers of two TUs without code of their own
+void ResMgr_staticInit2() {
+
     stdInit(0x1048DDBC, 0x101F4F84, 0x100E25F0, 0x100E25F4, 0x1048DDB0, 0x101F4F90, 0x101F4F9C);
 }
-VERIFY(0x02614AB8, staticInit2);
-void staticInit3() {
-    WWHD_FUNC(0x02614B4C, void);
+/* 02614B4C */
+void ResMgr_staticInit3() {
+
     stdInit(0x1048DDD8, 0x101F4FA8, 0x100E25F8, 0x100E25FC, 0x1048DDCC, 0x101F4FB4, 0x101F4FC0);
 }
-VERIFY(0x02614B4C, staticInit3);
 
-} // namespace hd_res_mgr
+/* WWHD glue (tools/verify/autoglue.py)
+ext C0009988 void resNative_copyBytes(u32, u32, u32, u32)
+ext 0273B264 u32 resNative_hashCRC(u32, u32)
+ext 0273AD10 u32 resNative_allocate(u32)
+ext 028F521C void resNative_clearRequestBuffer(u32, u32)
+ext 02760084 void resNative_criticalSectionConstruct(u32)
+ext 0273B0D4 u32 resNative_allocateWithHeapAligned(u32, u32, u32)
+ext 02752B0C void resNative_singletonDisposerConstruct(u32, u32, u32)
+ext 02759C28 void resNative_formatObjectPath(u32, u32, u32)
+ext 02752A84 void resNative_disposerConstruct(u32)
+ext 02756140 u32 resNative_currentHeap(u32)
+ext 02613F20 u32 resNative_findArchiveNode(u32, u32, u32)
+ext 0261401C u32 resNative_insertArchiveNode(u32, u32, u32)
+ext 0275F800 u32 resNative_archiveResourceSize(u32)
+ext 0275F808 void resNative_archiveResourceRead(u32, u32, u32)
+ext 0273B050 u32 resNative_allocateWithHeap(u32, u32, u32)
+ext 0275E11C u32 resNative_archiveResourceConstruct(u32)
+ext 0275D21C void resNative_archiveResourceSetBuffer(u32, u32, u32, u32, u32, u32)
+ext C00088A0 void resNative_invalidateArchiveCache(u32, u32)
+ext 0260ACC8 u32 resNative_findPackNode(u32, u32, u32)
+ext 02759C28 void resNative_formatStageName(u32, u32, u32, u32)
+ext 02612C88 u32 resNative_loadCompressedArchive(u32, u32, u32, u32, u32)
+ext 02610B40 u32 resNative_loadArchiveFile(u32, u32, u32, u32)
+ext 026142C4 u32 resNative_eraseArchiveNode(u32, u32, u32)
+ext 0260AEFC u32 resNative_erasePackNode(u32, u32, u32)
+ext 027601BC void resNative_criticalSectionEnter(u32)
+ext 027601F0 void resNative_criticalSectionLeave(u32)
+ext 02610820 void resNative_scanStagePack(u32, u32, u32, u32, u32)
+ext 02611864 void resNative_scanPermanentPack(u32, u32, u32)
+ext 02760168 void resNative_criticalSectionDestroy(u32, u32)
+ext 02752BEC void resNative_disposerDestroy(u32, u32)
+ext 0273AF40 void resNative_deallocate(u32)
+ext 028F026C void resNative_registerStaticObject(u32)
+ext 028ED6F8 void resNative_initializeStaticObjectFlag(u32)
+ext 028EAB2C void resNative_initializeStaticObjectByte(u32)
+*/
