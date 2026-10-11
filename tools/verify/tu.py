@@ -20,6 +20,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
 from funcdb import GenIndex, load_names  # noqa: E402
+import autoglue  # noqa: E402
 
 
 def verified_addrs():
@@ -28,8 +29,11 @@ def verified_addrs():
         for f in fs:
             if f.endswith(".cpp"):
                 p = os.path.join(dp, f)
-                for m in re.finditer(r"^\s*VERIFY\(\s*0x([0-9A-Fa-f]{8})", open(p).read(), re.M):
+                text = open(p).read()
+                for m in re.finditer(r"^\s*VERIFY\(\s*0x([0-9A-Fa-f]{8})", text, re.M):
                     out[int(m.group(1), 16)] = os.path.relpath(p, ROOT)
+                for a, _, _ in autoglue.bodies(text) or []:  # GameCube-style source (/* ADDR */ markers)
+                    out[a] = os.path.relpath(p, ROOT)
     return out
 
 

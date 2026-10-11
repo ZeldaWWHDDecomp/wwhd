@@ -10,11 +10,19 @@ A unit file line `rec DIR` (path relative to the repository root, e.g. tools/ver
 those recordings to every run of the unit; an explicit -rec on the command line takes precedence.
 """
 import os
+import re
 import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+
+# One result row of the table verify prints (harness.cpp and the sharded merge below print the same
+# layout: "%08X  %-40.40s %10s %10s %8s  %s"). The function column is fixed width: 40 characters, padded
+# or cut. Displayed names can contain spaces (an overload cast such as "(void (X::*)(int, int)) &X::f"),
+# so the name is the whole 40-character field, not one token. Callers strip the padding.
+# Groups: addr, name field, gen pass/n, rec pass/n, coverage hit/branches, first difference.
+RESULT_LINE = re.compile(r"^([0-9A-F]{8})  (.{40})\s+(\d+)/(\d+)\s+(\d+)/(\d+)(?:\s*\(-?\d+\))?\s+(\d+)/(\d+)\s+(.*)$")
 FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing"]
 
 
@@ -31,6 +39,13 @@ def prepare_shared():
     image = os.path.join(ROOT, "build", "verify", "image.bin")
     if not os.path.exists(image):
         sh([sys.executable, os.path.join(HERE, "mkimage.py"), "game/code/cking.rpx", image])
+    import assets  # model data headers generated from the game (build/verify/include/assets, never committed)
+    try:
+        man = assets.manifest()
+        for h in man:
+            assets.generate(h, man)
+    except assets.AssetError as e:
+        sys.exit("assets: %s" % e)
     livein = os.path.join(ROOT, "build", "verify", "livein.tsv")  # indirect-call live-in table (livein_all.py)
     if not os.path.exists(livein) or os.path.getmtime(livein) < os.path.getmtime(os.path.join(ROOT, "build", "gen")):
         sh([sys.executable, os.path.join(HERE, "livein_all.py"), livein])
@@ -50,7 +65,7 @@ def build(unit):
         f = line.split("#")[0].split()
         if f and f[0] == "src":
             srcs += f[1:]
-    inc = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include"]
+    inc = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include", "-Ibuild/verify/include"]
     objs = []
     for src, lang in [(os.path.join(out, "unit.c"), "c"), ("runtime/src/espresso_fp.c", "c"), ("tools/verify/src/harness.cpp", "c++")] + \
             [(s, "c++") for s in srcs]:
@@ -58,6 +73,7 @@ def build(unit):
         objs.append(obj)
         if os.path.exists(obj) and os.path.getmtime(obj) > max(os.path.getmtime(os.path.join(ROOT, src)), newest_header()):
             continue
+        src = glue(src, out)
         if lang == "c":
             cmd = ["clang", "-std=c11", "-O2", "-w"] + FP + inc + ["-c", src, "-o", obj]
         else:
@@ -82,9 +98,25 @@ def unit_rec(unit):
     return None
 
 
+def glue(src, out):
+    """GameCube-style sources (a `/* WWHD glue` block) are compiled through autoglue.py"""
+    text = open(os.path.join(ROOT, src)).read()
+    if "/* WWHD glue" not in text:
+        return src
+    import autoglue
+    try:
+        res = autoglue.transform(text, src)
+    except autoglue.GlueError as e:
+        sys.exit("autoglue: %s" % e)
+    path = os.path.join(out, "glue", os.path.basename(src))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "w").write(res)
+    return path
+
+
 def newest_header():
-    t = 0
-    for d in ("tools/verify/include", "tools/verify/src", "wwhd_src/include", "runtime/include"):
+    t = os.path.getmtime(os.path.join(HERE, "autoglue.py"))
+    for d in ("tools/verify/include", "tools/verify/src", "wwhd_src/include", "runtime/include", "build/verify/include"):
         for dp, _, fs in os.walk(os.path.join(ROOT, d)):
             for f in fs:
                 t = max(t, os.path.getmtime(os.path.join(dp, f)))

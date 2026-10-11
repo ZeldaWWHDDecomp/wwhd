@@ -24,11 +24,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
 import verify  # noqa: E402
+import autoglue  # noqa: E402
 
 
 def bodies(text):
     """(addr, start, end): the code of each verified function, including the helpers defined
     between the previous VERIFY line and its own (inlined GameCube functions)"""
+    glued = autoglue.bodies(text)  # GameCube-style source: functions marked /* ADDR */
+    if glued is not None:
+        return glued
     out = []
     prev = 0
     for m in re.finditer(r"WWHD_FUNC\(\s*0x([0-9A-Fa-f]{8})[^;]*;", text):
@@ -128,7 +132,13 @@ def main():
         text = open(os.path.join(ROOT, src)).read()
         mt = text[:s] + new + text[e:]
         mpath = os.path.join(out, "mutant%d.cpp" % i)
-        open(mpath, "w").write("#line 1 \"%s\"\n" % src + mt)
+        if "/* WWHD glue" in mt:
+            try:
+                open(mpath, "w").write(autoglue.transform(mt, src))
+            except autoglue.GlueError:
+                return "broken", addr, desc
+        else:
+            open(mpath, "w").write("#line 1 \"%s\"\n" % src + mt)
         mobj = os.path.join(out, "mutant%d.o" % i)
         r = subprocess.run(["clang++", "-std=c++20", "-O1", "-w"] + verify.FP + inc + ["-I" + os.path.dirname(os.path.join(ROOT, src)),
                            "-c", mpath, "-o", mobj], cwd=ROOT, capture_output=True)

@@ -21,6 +21,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import autoglue  # noqa: E402
 from funcdb import (GenIndex, load_names, signature, arg_regs, stack_words, Dataflow, RetWidth, CALL_RE, INT_ARGS, FLT_ARGS)
 from extent_lint import extent  # noqa: E402
 
@@ -112,8 +113,11 @@ def main():
     unit = read_unit(os.path.join(root, "tools", "verify", "units", a.unit + ".txt"))
     tested = []
     for s in unit["src"]:
-        for m in re.finditer(r"^\s*VERIFY\(\s*0x([0-9A-Fa-f]{8})\s*,", open(os.path.join(root, s)).read(), re.M):
+        text = open(os.path.join(root, s)).read()
+        for m in re.finditer(r"^\s*VERIFY\(\s*0x([0-9A-Fa-f]{8})\s*,", text, re.M):
             tested.append(int(m.group(1), 16))
+        glued = autoglue.bodies(text)  # GameCube-style source: functions marked /* ADDR */
+        tested += [a for a, _, _ in glued or []]
     tested = sorted(set(tested))
     gen = GenIndex(os.path.join(build, "gen"))
     names, gc = load_names(build)

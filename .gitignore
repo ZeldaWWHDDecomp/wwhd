@@ -16,3 +16,6 @@ tools/recomp/hooks_tap.txt
 __pycache__/
 *.pyc
 .DS_Store
+
+# generated locally by tools/verify/readable_names.py --all from build/names.tsv
+wwhd_src/include/fn_names.h

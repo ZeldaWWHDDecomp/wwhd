@@ -1,0 +1,37 @@
+# Model data extracted from your own copy of the game at build time (tools/verify/assets.py), like the
+# `extract:` entries of zeldaret/tww's config/GZLE01/config.yml. The headers are written to
+# build/verify/include/assets/ and are never committed. A source includes one with
+# `#include "assets/HEADER"`; its `data` glue line names the same address.
+#
+# Rule (as in tww): embedded model/render data -- vertex positions, normals, colours, texture
+# coordinates, vertex/index lists (the HD counterpart of GX display lists), textures -- is extracted.
+# Code-like tables (animation, parameter, mode, collision, HIO defaults, strings, math tables, vertex
+# formats and counts) stay in the sources.
+#
+# HEADER                                  ADDRESS   DECLARATION
+
+# d_a_sail: ship sail mesh (tww: l_pos, l_texCoord, l_sail_DL)
+l_pos__d_a_sail.h                         101CF71C  static f32 l_pos[252]
+l_texCoord__d_a_sail.h                    101CFB0C  static f32 l_texCoord[168]
+l_sail_idx__d_a_sail.h                    10039450  static u16 l_sail_idx[154]
+
+# d_a_grid: grid sail mesh (tww: l_pos, l_texCoord, l_DL; the vertex index triples replace the DL)
+grid_l_pos__d_a_grid.h                    101B5E58  static f32 grid_l_pos[255]
+grid_l_texCoord__d_a_grid.h               101B6254  static f32 grid_l_texCoord[170]
+grid_vertexIndices__d_a_grid.h            101B64FC  static u8 grid_vertexIndices[516]
+grid_indices__d_a_grid.h                  101B6700  static u8 grid_indices[828]
+
+# d_a_goal_flag: finish-line flag mesh (tww: l_pos, l_texCoord, l_goal_flag_DL)
+l_pos__d_a_goal_flag.h                    101B5974  static const cXyz l_pos[45]
+l_texCoord__d_a_goal_flag.h               101B5B90  static const f32 l_texCoord[45][2]
+l_flagIndices__d_a_goal_flag.h            10010394  static const u16 l_flagIndices[72]
+
+# d_a_obj_buoyflag: HD flag and pole meshes
+buoyflag_positions__d_a_obj_buoyflag.h    101C83C0  static f32 buoyflag_positions[35][3]
+buoyflag_texCoords__d_a_obj_buoyflag.h    101C8564  static f32 buoyflag_texCoords[35][2]
+buoyflag_strip__d_a_obj_buoyflag.h        101C867C  static u8 buoyflag_strip[62][3]
+buoyflag_indices__d_a_obj_buoyflag.h      101C8738  static u16 buoyflag_indices[144]
+buoyflag_polePositions__d_a_obj_buoyflag.h  101C8274  static f32 buoyflag_polePositions[11][3]
+buoyflag_poleTexCoords__d_a_obj_buoyflag.h  101C821C  static f32 buoyflag_poleTexCoords[7][2]
+buoyflag_poleStrip__d_a_obj_buoyflag.h    101C82F8  static u8 buoyflag_poleStrip[35][3]
+buoyflag_poleIndices__d_a_obj_buoyflag.h  101C8364  static u16 buoyflag_poleIndices[45]

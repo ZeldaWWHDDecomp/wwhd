@@ -1,0 +1,5 @@
+# Descriptive renames of address-named sources (readability pass).
+# One rename per line: <old path as in the reference><TAB><new path>. readable_check.py accepts a spec
+# whose src lines differ from the reference only by these renames (function set and addresses are still
+# compared with the old file); objcmp.py compares the new file with the old one. Spec names stay.
+# Add the entry in the same commit as the git mv and the src-line change; never chains or duplicates.

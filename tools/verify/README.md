@@ -265,6 +265,86 @@ the empty slots of cking.sav through `initdata_to_card`, under a ~20-deep main-t
   whole frame, sizes from the table) on the verify command line survey a unit; the unit directive
   `footprint FUNC SIZE` makes it a gate for one function.
 
+## GameCube-style source (opt-in: `autoglue.py`, `wwhd_src/include/gc_api`)
+
+A unit can be written like the GameCube decompilation (zeldaret/tww): class methods, GameCube API
+names with real types, string literals, enums and PTMF tables, and only a `/* ADDR */` comment
+above each function. Example: `wwhd_src/d/actor/d_a_npc_nz.cpp` (readability proof of concept).
+Units written with `WWHD_FUNC`/`VERIFY` are unaffected.
+
+```cpp
+/* 022A400C */
+void daNpc_Nz_c::checkOrder() {
+    if (eventInfo.checkCommandTalk() && (mTalkMode == 1 || mTalkMode == 2)) {
+        if (mTalkMode == 2) modeProcInit(1);
+        mTalkMode = 0;
+    }
+}
+```
+
+**Opt-in:** the file ends with a glue comment block `/* WWHD glue ... */` listing the
+translation unit's data:
+
+| Glue line | Meaning |
+|---|---|
+| `str ADDR ["source text"] [in FUNC]` | a string literal's guest copy (content read from the RPX image; `"source text"` when the source spells it differently, e.g. `JUT_ASSERT` prints NULL as `(0)`; `in FUNC` for duplicates). Texts are read as C++ literals (escapes, UTF-8); a Japanese literal may be written in UTF-8 (`"振動効果"`) or as the Shift-JIS bytes (`"\x90U..."`): both match the image. Without source text the registration takes the bytes of the source's own literal for that text. The registration is byte-exact (control and non-ASCII bytes as octal escapes) |
+| `data NAME ADDR [guard GADDR] [nocheck]` | a `static` table / object / file-scope static at that address; `guard`: function-local static with a GHS guard word. Initialisers are compared with the image at build time (PTMFs `&C::m` against the marked methods, strings by content, numbers by the element layout parsed from the headers; a number may be an enum constant of the source or its headers, `leaves_particle::ID_AK_SN_FALLENLEAFFAN00`, or a constant expression of them) |
+| `ext ADDR SIGNATURE [callback]` | a function of another unit called from this one (e.g. `ext 021842B8 void daItemBase_c::hide()`): bound by address. A member declared `static` in its class takes no `this`; reference parameters are passed as addresses. `callback`: the source also passes the function by name (e.g. a heap callback `fopAcM_entrySolidHeap(this, useHeapInit, size)`), so the binding is registered for `gabi::guest_fn` |
+
+**What `autoglue.py` does** (called by `verify.py`, `mutate.py`; `mkunit.py`/`tu.py` read the
+markers; output in `build/verify/<unit>/glue/`, line numbers kept):
+- inserts `WWHD_GLUE_FUNC(addr, R, [this,] args)` after the `{` of each marked function (same
+  as `WWHD_FUNC`, and records the function under test) and `VERIFY` at the end; a marked
+  constructor `X::X()` gets a guest wrapper `X__ct(X* self)` (GHS: allocates when `self` is NULL);
+  a member function declared `static` in its class gets no `this`; a reference parameter
+  (`const cXy& p`) is passed on as its address (the guest ABI); const member functions register
+  as they are (`f32 GetLen(const cXy&) const`); an overloaded method (declared more than once in its
+  class, defined here or in another source) is registered by a typed cast and shown as
+  `&C::f(types)` (`VERIFY_NAMED`);
+- turns class-typed locals (`cXyz pos(a);`, `cXyz d = a - b;`, `dBgS_GndChk chk;`) into guest stack
+  slots (`gabi::LocalOf`/`gabi::Stack`; construction/destruction hooks `gabi_construct` /
+  `gabi_destroy`, found by ADL);
+- turns `static` tables and statics with a `data` line into views of their guest copies;
+- replaces `#include "assets/X.h"` by the header that `assets.py` generated from your game (see below);
+- registers the strings.
+
+**Model data (`assets.py`, `assets.txt`):** as in zeldaret/tww, model data that the game embeds in
+its code image (vertex positions, texture coordinates, vertex/index lists; textures) is not written
+into the sources. `assets.txt` lists each header with the declaration it holds and the image address;
+`assets.py` writes the headers from `build/verify/image.bin` (your `game/code/cking.rpx`) into
+`build/verify/include/assets/` (verify.py does this before every build; they are git-ignored and never
+committed). A source includes one (`#include "assets/l_pos__d_a_sail.h"`) and keeps its `data` line;
+autoglue expands the include on one line and checks the table like any other. Code-like tables
+(animation, parameter, mode, collision, HIO defaults, strings, math tables, vertex formats and counts)
+stay literal in the source.
+
+**gabi additions (opt-in, backward compatible):** a host string literal passed to a guest call
+becomes its guest address (`gabi::guest_str`, by content); a decompiled function passed by name
+becomes its address (`gabi::guest_fn`, VERIFY registry); `gabi::ptmf<F>` + `operator->*` (GHS
+pointer-to-member dispatch from guest tables); `gabi::Into<T>` (values returned through a hidden
+result pointer: `cXyz d = a - b;`); `gabi::Stack`, `gabi::LocalOf`, `gabi::local_static`,
+`gabi::object_at`.
+
+**`gc_api/`:** one header per GameCube header with the GameCube names mapped to WWHD (HD
+differences marked `HD:`), `gc_api/tu.h` for the per-TU vtables (`gc_tu`, defined once by the
+unit). Shared layouts gained GameCube-named members: `fopAc_ac_c::eventInfo`/`attention_info`,
+`dNpc_JntCtrl_c`, `mDoMtx_stack_c`, `cXyz` (`operator-`/`+`, `*=`, `absXZ`, `Zero`),
+`JSystem/J3DGraph.h` (J3DModel/ModelData/Joint/Shape/Material, `j3dSys`), `dPa_smokeEcallBack`,
+`daTsubo::Act_c::pos_init`, `msg_class` (HD message manager).
+
+Semantics that stay visible in source: fused float ops (`fmadds`, `fnmsubs`), float->int
+(`ftoi`), and HD differences (`// HD: ...`).
+
+**Readability pass:** style guide and acceptance bar in
+[docs/readability-style.md](../../docs/readability-style.md); tools `readable_check.sh` (function set,
+spec files, 10k seeds 1/7, coverage vs the reference commit, `--ref`), `readable_lint.py`, `objcmp.py` (object
+identity for header changes), `readable_names.py` (named-call pass, `wwhd_src/include/fn_names.h`).
+Descriptive renames of address-named sources go into `readable_renames.tsv` (`old<TAB>new`, same commit
+as the `git mv` and the spec `src` change): `readable_check` then accepts the spec (function set still
+compared with the old file), `objcmp` compares the new file with the old one; self-test
+`readable_renames_test.py` (an unmapped rename must fail). `readable_check --static-only` runs only the
+function-set and spec checks.
+
 ## Workflow for one actor (scales to many in parallel)
 
 1. **Pick the unit.** One GameCube translation unit. List the WWHD functions of its range:

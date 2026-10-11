@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <new>
 #include <tuple>
 #include <type_traits>
 
@@ -197,6 +198,60 @@ struct gfn {
     u32 get() const { return v.get(); }
 };
 
+/* ---- host objects that stand for guest ones (GameCube-style source, tools/verify/autoglue.py) ----
+ * A string literal or a decompiled function's name written in source is a host object. When it is
+ * passed to a guest call it is replaced by its guest address: string literals by content (the
+ * translation unit's strings, registered by autoglue from the RPX image), functions through the
+ * VERIFY registry. Older units pass guest addresses (STR(addr), u32 callbacks): unchanged. */
+/* A guest address on the host, as ea() sees it: the guest window (plus 1 MB: a member array of a guest
+ * object near the top of the 32-bit space lies just past 4 GB) and member addresses of a NULL guest
+ * object (host addresses below 4 GB: __PAGEZERO on macOS arm64, never host data). ea() wraps both
+ * (d_a_npc_pf1 _delete with this == NULL reads mArcName at 0x7E6).
+ * Host string literals live in the host image, above both. */
+inline bool is_guest(const void* p) {
+    return (uintptr_t)p < 0x100000000ull || (uintptr_t)p - (uintptr_t)PPC_MEM_BASE < 0x100100000ull;
+}
+struct GuestStr {
+    u32 addr;
+    const char* text; /* content as written in source (host) */
+    u32 func;         /* 0: any function of the unit; else only while this function is tested */
+    GuestStr* next;
+    static inline GuestStr* head = nullptr;
+    GuestStr(u32 a, const char* t, u32 f = 0) : addr(a), text(t), func(f), next(head) { head = this; }
+};
+struct HostFn {
+    const void* fn;
+    u32 addr;
+    HostFn* next;
+    static inline HostFn* head = nullptr;
+    HostFn(const void* f, u32 a) : fn(f), addr(a), next(head) { head = this; }
+};
+[[noreturn]] inline void glue_fatal(const char* what, const char* detail) {
+    /* no <cstdio>: it would declare ::remove etc., names some units use */
+    __builtin_printf("gabi: %s: %s (tools/verify/autoglue.py registry)\n", what, detail);
+    __builtin_trap();
+}
+inline u32 current_function(); /* address of the function under test (Activation) */
+inline u32 guest_str(const char* s) {
+    const GuestStr* any = nullptr;
+    for (const GuestStr* g = GuestStr::head; g; g = g->next)
+        if (!strcmp(g->text, s)) {
+            if (g->func == current_function()) return g->addr;
+            if (!g->func) {
+                if (any && any->addr != g->addr) glue_fatal("ambiguous string (add `in FUNC` to its glue line)", s);
+                any = g;
+            }
+        }
+    if (!any) glue_fatal("string literal without a guest copy", s);
+    return any->addr;
+}
+inline u32 guest_addr(const char* s) { return is_guest(s) ? ea(s) : guest_str(s); }
+inline u32 guest_fn(const void* f) {
+    for (const HostFn* h = HostFn::head; h; h = h->next)
+        if (h->fn == f) return h->addr;
+    glue_fatal("function passed by name has no WWHD address", "add its /* ADDR */ marker");
+}
+
 /* ---- guest calls ---- */
 struct ArgPack {
     Cpu* c;
@@ -212,6 +267,10 @@ struct ArgPack {
         if constexpr (std::is_floating_point_v<A>) {
             c->f[fi].ps0 = c->f[fi].ps1 = (double)a;
             fi++;
+        } else if constexpr (std::is_pointer_v<A> && std::is_function_v<std::remove_pointer_t<A>>) {
+            put_int(guest_fn((const void*)a)); /* a decompiled callback passed by name (autoglue registry) */
+        } else if constexpr (std::is_pointer_v<A> && std::is_same_v<std::remove_cv_t<std::remove_pointer_t<A>>, char>) {
+            put_int(is_guest(a) ? ea(a) : guest_str(a)); /* a host string literal: its guest copy (autoglue registry) */
         } else if constexpr (std::is_pointer_v<A>) {
             put_int(ea(a));
         } else if constexpr (std::is_same_v<A, std::nullptr_t>) {
@@ -552,6 +611,11 @@ template <class T> struct ArgFrom {
     }
 };
 
+/* a reference parameter (`const cXy& p`): the guest passes the object's address */
+template <class T> struct ArgFrom<T&> {
+    static T& get(Cpu* c, int& gi, int&) { return *at<T>(c->r[gi++]); }
+};
+
 template <class R> constexpr RetKind ret_kind() {
     if constexpr (std::is_same_v<R, Pair32>) return RET_PAIR32;
     else if constexpr (std::is_void_v<R>) return RET_VOID;
@@ -567,10 +631,13 @@ template <class R> constexpr RetKind ret_kind() {
  * build can route the call wherever that address is implemented. */
 struct Activation {
     static inline thread_local int depth = 0;
+    static inline thread_local u32 current = 0; /* the function under test (WWHD_GLUE_FUNC) */
     Activation() { depth++; }
+    explicit Activation(u32 addr) { depth++; current = addr; }
     ~Activation() { depth--; }
     static bool nested() { return depth > 0; }
 };
+inline u32 current_function() { return Activation::current; }
 
 /* WWHD_FUNC's automatic native frame (see FrameCtx) */
 struct AutoFrame {
@@ -699,10 +766,29 @@ template <class C, class R, class... A> struct MEntry {
         }
     }
 };
+/* a const member function (tww `f32 cM2dGBox::GetLen(const cXy&) const`): `this` is a const
+ * object; otherwise the same entry as MEntry */
+template <class C, class R, class... A> struct CMEntry {
+    template <R (C::*F)(A...) const> static void run(Cpu* c) {
+        EntryScope scope(c);
+        int gi = 4, fi = 1;
+        const C* self = at<const C>(c->r[3]);
+        std::tuple<A...> args{ArgFrom<A>::get(c, gi, fi)...};
+        auto inv = [self](A... a) { return (self->*F)(a...); };
+        if constexpr (std::is_void_v<R>) {
+            std::apply(inv, args);
+        } else {
+            R r = std::apply(inv, args);
+            store_ret<R>(c, r);
+        }
+    }
+};
 template <class R, class... A> constexpr auto entry_of(R (*)(A...)) { return Entry<R, A...>{}; }
 template <class C, class R, class... A> constexpr auto entry_of(R (C::*)(A...)) { return MEntry<C, R, A...>{}; }
+template <class C, class R, class... A> constexpr auto entry_of(R (C::*)(A...) const) { return CMEntry<C, R, A...>{}; }
 template <class R, class... A> constexpr RetKind ret_of(R (*)(A...)) { return ret_kind<R>(); }
 template <class C, class R, class... A> constexpr RetKind ret_of(R (C::*)(A...)) { return ret_kind<R>(); }
+template <class C, class R, class... A> constexpr RetKind ret_of(R (C::*)(A...) const) { return ret_kind<R>(); }
 
 }  // namespace gabi
 
@@ -721,3 +807,102 @@ template <class C, class R, class... A> constexpr RetKind ret_of(R (C::*)(A...))
 #define VERIFY(addr, fn)                                                                        \
     static gabi::Candidate GABI_CAT(wwhd_verify_, __LINE__)(addr, #fn,                         \
         &decltype(gabi::entry_of(fn))::template run<fn>, gabi::ret_of(fn))
+
+/* VERIFY with the name the harness shows: autoglue names an overloaded method by a typed cast,
+ * VERIFY_NAMED(0x..., static_cast<void (C::*)(cXyz*)>(&C::set_mtx), "&C::set_mtx(cXyz*)") */
+#define VERIFY_NAMED(addr, fn, name)                                                            \
+    static gabi::Candidate GABI_CAT(wwhd_verify_, __LINE__)(addr, name,                        \
+        &decltype(gabi::entry_of(fn))::template run<fn>, gabi::ret_of(fn))
+
+/* =====================================================================================
+ * GameCube-style source (opt-in; tools/verify/autoglue.py). The visible source has only a
+ * `/ * ADDR * /` comment above each function; autoglue inserts WWHD_GLUE_FUNC and VERIFY, turns
+ * class-typed locals into gabi::Stack, and static tables / function-local statics into views of
+ * their guest copies. Units written with WWHD_FUNC directly are not affected.
+ * ===================================================================================== */
+#define WWHD_GLUE_FUNC(addr, R, ...)                                                       \
+    if (gabi::Activation::nested()) return gabi::call<R>(addr __VA_OPT__(, ) __VA_ARGS__); \
+    gabi::Activation wwhd_activation_(addr)
+
+namespace gabi {
+
+/* Construction hooks for guest objects (found by ADL): a class-typed local `T x(args);` becomes
+ * a guest stack slot initialised by gabi_construct(x, args...) and finalised by gabi_destroy(x)
+ * at the end of its scope (GHS: the inline constructor/destructor). Defaults: no arguments =
+ * uninitialised storage (the scratch stack's bytes), one argument of the same type = copy. */
+template <class T> inline void gabi_construct(T&) {}
+template <class T> inline void gabi_destroy(T&) {}
+/* a guarded function-local static of scalar type, `static f32 s(0.7f);` (autoglue local_static) */
+template <class T, class V, class = std::enable_if_t<std::is_arithmetic_v<V>>> inline void gabi_construct(be<T>& o, V v) { o = (T)v; }
+template <class T, class... A> inline void construct_dispatch(T& o, A&&... a) { gabi_construct(o, static_cast<A&&>(a)...); }
+template <class T> inline void destroy_dispatch(T& o) { gabi_destroy(o); }
+
+/* A value returned through a hidden result pointer (GHS: `T f(...)` is `void f(T* result, ...)`):
+ * `T x = f(...)` / `x = f(...)` construct straight into x, as GHS passes x's address. */
+template <class T, class F> struct Into {
+    F f;
+};
+template <class T, class F> inline Into<T, F> into(F f) { return Into<T, F>{f}; }
+template <class T, class F> inline void gabi_construct(T& o, const Into<T, F>& p) { p.f(&o); }
+
+template <class T> struct Stack : Local<T> {
+    template <class... A> explicit Stack(A&&... a) { construct_dispatch(*this->get(), static_cast<A&&>(a)...); }
+    ~Stack() { destroy_dispatch(*this->get()); }
+};
+
+/* A local of a GameCube-style declaration: class types live on the guest stack, other types
+ * (enums) on the host. */
+template <class T, bool = std::is_class_v<T>> struct LocalOf : Stack<T> {
+    using Stack<T>::Stack;
+    T& ref() { return *this->get(); }
+};
+template <class T> struct LocalOf<T, false> {
+    T v;
+    LocalOf() = default;
+    template <class A> explicit LocalOf(A&& a) : v(static_cast<A&&>(a)) {}
+    T& ref() { return v; }
+};
+
+/* A guest object at a fixed address seen as a C++ reference (statics, tables). */
+template <class T> inline T& object_at(u32 addr) { return *at<T>(addr); }
+
+/* Function-local static with a GHS guard word: initialised on first use. */
+template <class T, class F> inline T& local_static(u32 addr, u32 guard, F init) {
+    if (!load<u32>(guard)) {
+        init(*at<T>(addr));
+        store<u32>(guard, 1);
+    }
+    return *at<T>(addr);
+}
+
+/* GHS pointer to member function in guest memory (8 bytes): this adjustment, virtual index
+ * (< 0: not virtual), then the function's address, or (virtual) the vtable pointer's offset in
+ * the low half. `(obj->*tbl[i].fn)(args...)` dispatches like the GHS runtime. */
+template <class F> struct ptmf {
+    /* 0x0 */ be<s16> d;
+    /* 0x2 */ be<s16> i;
+    /* 0x4 */ be<u32> f;
+};
+template <class C, class R, class... A> struct BoundPtmf {
+    C* self;
+    const ptmf<R (C::*)(A...)>* m;
+    R operator()(A... a) const {
+        u32 e = ea(m);
+        u32 adjusted = ea(self) + (s32)load<s16>(e);
+        s16 index = load<s16>(e + 2);
+        u32 target;
+        if (index < 0) {
+            target = load<u32>(e + 4);
+        } else {
+            u32 vt = load<u32>(adjusted + (s32)load<s16>(e + 6));
+            target = load<u32>(vt + (s32)index * 8 + 4);
+        }
+        return call_ptr<R>(target, at<C>(adjusted), a...);
+    }
+};
+template <class C, class D, class R, class... A>
+inline BoundPtmf<C, R, A...> operator->*(D* self, const ptmf<R (C::*)(A...)>& m) {
+    return {static_cast<C*>(self), &m};
+}
+
+}  // namespace gabi

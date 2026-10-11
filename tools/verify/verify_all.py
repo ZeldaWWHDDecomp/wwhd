@@ -23,7 +23,7 @@ import verify  # noqa: E402  (same directory)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-LINE = re.compile(r"^([0-9A-F]{8})\s+(\S+)\s+(\d+)/(\d+)\s+(\d+)/(\d+)(?:\s*\(-?\d+\))?\s+(\d+)/(\d+)\s+(.*)$")
+LINE = verify.RESULT_LINE  # one definition; names may contain spaces
 
 
 # units whose verify binary needs ~30-40 GB of RAM (HD GPU packet buffers): never run two at once
@@ -67,7 +67,7 @@ def run1(unit, n, rec):
     for line in out.splitlines():
         m = LINE.match(line)
         if m:
-            funcs.append((m.group(1), m.group(2), int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6)),
+            funcs.append((m.group(1), m.group(2).strip(), int(m.group(3)), int(m.group(4)), int(m.group(5)), int(m.group(6)),
                           m.group(9).strip()))
     return unit, r.returncode, funcs, time.time() - t0, out
 
