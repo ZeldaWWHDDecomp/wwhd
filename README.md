@@ -27,8 +27,8 @@ and constants, structured control flow and descriptive names (see
 
 | Path | Contents |
 |---|---|
-| `wwhd_src/` | the decompiled source: 22,846 verified functions in 1,076 source files, plus 1,021 headers with the WWHD classes, structure layouts and bindings |
-| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`), the readability checks (`readable_check.py`, `readable_lint.py`), the model-data extraction (`assets.py`, `assets.txt`) and the 1,100 unit specifications (`units/`: which source files form a unit, input steering) |
+| `wwhd_src/` | the decompiled source: 28,244 verified functions in 1,365 source files, plus 1,254 headers with the WWHD classes, structure layouts and bindings |
+| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`), the readability checks (`readable_check.py`, `readable_lint.py`), the model-data extraction (`assets.py`, `assets.txt`) and the 1,380 unit specifications (`units/`: which source files form a unit, input steering) |
 | `tools/decomp/` | the function-name matcher against zeldaret/tww (the same as in the port) |
 | `tools/true60/` | name-based surveys used by the port's 60 fps work (the same as in the port) |
 | `docs/` | HD vs. GameCube differences, unit notes, review notes, matcher findings |
@@ -40,23 +40,22 @@ verified, only together with the recompiled game that the port builds from your 
 
 ### Status
 
-The game has 39,713 functions (`cking.rpx`, USA). **22,846 of them are decompiled and verified**:
+The game has 39,713 functions (`cking.rpx`, USA). **28,244 of them are decompiled and verified**:
 
 | Area | Verified functions |
 |---|---:|
 | Actors (enemies, NPCs, objects, bosses) | 14,581 |
 | Link (player actor) | 1,046 |
 | Engine and systems (camera, collision, stages, events, environment, weather, save data, menus, effects, …) | 4,954 |
-| HD-only code (resource and pack loading, input, software keyboard, text layout, parts of the HD UI) | 1,434 |
+| HD-only code (resource and pack loading, input, software keyboard, text layout, and the HD UI: sea chart and dungeon map, pause menus, HUD, GamePad screens, Picto Box, Miiverse, title and ending, minigames) | 6,832 |
 | Zelda's own sound control | 180 |
 | Library units verified along the way (JSystem including JParticle and JStudio, nw::lyt, sead, SDK adapters) | 651 |
 
 - **The game code that comes from the GameCube version is complete:** 22,068 of its 22,215
   functions (99.3%). The rest are small per-unit copies of library helpers.
-- **The HD-only game code is in progress.** Most of the new HD code (the sea chart and dungeon map,
-  pause menus, HUD, GamePad screens, Picto Box, Miiverse, title and ending, minigames) is about
-  5,400 further functions. They are being decompiled now, in the same readable style and with the
-  same verification.
+- **The HD UI is decompiled:** the sea chart and dungeon map, pause menus, HUD, GamePad screens,
+  Picto Box, Miiverse, title and ending, the minigames and the UI parts framework they share (about
+  5,400 functions) are verified like the rest.
 - **Not planned for now:** the generic libraries (sead, agl, NW4F, most of JSystem, the Cafe SDK and
   the C runtime, about 11,400 functions). They run as recompiled code in the port and contain
   nothing specific to Wind Waker.
@@ -66,6 +65,9 @@ machine code into the tww style. Every rewritten unit was checked against the ve
 (same results on 10,000 inputs on two seeds, coverage not lower), and at the end the complete tree
 was verified once more: all 1,100 unit specifications, 29,929 function runs per seed on seeds 1 and
 7, all passing, with coverage identical to the version before the rewrite.
+The HD UI units were written in that style from the start and then had a second readability pass
+(named bindings for raw addresses, members for offset arithmetic, typed locals for stack slots); every
+changed unit was checked the same way, with identical per-function results.
 
 ## Disclaimer
 
