@@ -1,0 +1,52 @@
+/** BasicButton animation states and event sequencing. */
+#pragma once
+#include "d/hd_parts_button.h"
+struct hdBasicButton_c {
+    hdButtonPart_c mButton;
+    be<u32> mSelectPhase, mRequestedState, mAnimation;
+    hdUiSafeString mSound;
+    be<u32> mSoundId;
+    static void destroy(hdBasicButton_c*, u32);
+    void endMove();
+    void offMove();
+    void onTouchMove();
+    void onCursorMove();
+    void selectTouchEnter();
+    void selectTouchMove();
+    void selectCursorMove();
+    void decideMove();
+    void invalidMove();
+    void forceDecide();
+    BOOL load(void*, void*, void*, void*);
+    void cursorEnter();
+    void cursorMove();
+    void decideEnter();
+    void decideEnd();
+    void returnToTouch();
+    void animationEnter();
+    void animationMove();
+    void disableEnter();
+    void disableMove();
+    void enableEnter();
+    void enableMove();
+    void unload();
+    void resetAnimation();
+    void setEnabled(u32);
+    void resetAndDisable();
+    void hide();
+    void show();
+    BOOL isEnabled();
+    BOOL isHidden();
+    void setSound(hdUiSafeString*, u32);
+    void playSound();
+    void touchEnter();
+    void update();
+    void registerReceiver();
+    void updatePaneFlags();
+    void updateTouchScale();
+    void cancelCursor();
+    BOOL loadLayout(void*, void*, void*, void*, u32);
+};
+WWHD_SIZE(hdBasicButton_c, 0x8C);
+WWHD_OFFSET(hdBasicButton_c, mAnimation, 0x7C);
+WWHD_OFFSET(hdBasicButton_c, mSound, 0x80);

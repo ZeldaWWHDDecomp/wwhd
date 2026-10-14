@@ -1,0 +1,16 @@
+src wwhd_src/d/hd_screen_opening.cpp
+src wwhd_src/d/hd_screen_opening_text.cpp
+src wwhd_src/d/hd_screen_opening_pictures.cpp
+src wwhd_src/d/hd_screen_pic_msg.cpp
+# Constructor includes null allocation and embedded-member address wraparound.
+arg 026BED70 r3 0,0xFFFFFFA8,0xFFFFFFA0,0xFFFFFF9C,0x22000000
+ret 0273AD10 0,0xFFFFFFA8,0xFFFFFFA0,0xFFFFFF9C,0x23000000
+# Exercise initialized and first-use static descriptor paths.
+field 026BEE28 10499034 u32 0,1
+field 026BEF88 10499038 u32 0,1
+field 026BF054 1049903C u32 0,1
+field 026BF590 101FD8E4 u32 0,1
+field 026BF590 101FDD50 u32 0,1,0xFFFFFFFE,0xFFFFFFFF
+# State progression boundaries include the final picture and completed sequence.
+field 026BE620 r3+0x50 s32 0,1,20,21,22,23,24
+field 026BE6C4 r3+0x50 s32 0,1,20,21,22,23,24

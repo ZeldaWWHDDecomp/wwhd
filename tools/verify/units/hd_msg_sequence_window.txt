@@ -1,0 +1,88 @@
+# New sequence-window functions only; merged UI_msg_scroll_seq remains untouched.
+src wwhd_src/d/hd_screen_sequence_window_sequence.cpp
+src wwhd_src/d/hd_screen_sequence_window_tu2.cpp
+
+# Retain generated escape inputs while exercising fixed-array wrap checks.
+arg 026DAE94 r3 0,0x54000000,0xFFFFFFB0,0xFFFFFF9C,0xFFFFFF90,0xFFFFFF7C
+ret 0273AD10 0,0x54000000
+# Static name constructors and normal cached-name discovery both remain reachable.
+field 026DB0A0 1049B418 u32 0,1
+field 026DB284 1049B41C u32 0,1
+field 026D9FE4 r3+0x98 u32 0,1,2,18
+field 026D9C48 r3+0x98 u32 0,1,2,18
+field 026D9C48 r3+0xA8 u32 0,1,2,3,0xFFFFFFFF
+field 026D9974 r3+0xA4 u32 0,1,2,3,4
+
+# Input-execute slot from the actual sequence-button vtable 100EA810+CC.
+# Unrestricted random targets can select unrelated functions with different ABIs;
+# triage13 preserves the resulting incidental-r6 false-positive witness.
+arg! 026DA62C r3 0x54000000
+field 026DA62C r3+0x48 u32 0,1,2,3,5,0xFFFFFFFF
+field 026DA62C r3+0x4C ptr 0x55000000
+field 026DA62C 55000000 ptr 0,0x56000000,0x56000100
+field 026DA62C 55000004 ptr 0,0x56000000,0x56000100
+field 026DA62C 55000008 ptr 0,0x56000000,0x56000100
+field 026DA62C 5500000C ptr 0,0x56000000,0x56000100
+field 026DA62C 55000010 ptr 0,0x56000000,0x56000100
+field 026DA62C 56000004 ptr 0x57000000
+field 026DA62C 56000104 ptr 0x57000000
+field 026DA62C 570000CC u32 0x026F1FD8
+stable 57000000 0xD0
+mockfield 026F1FD8 r3+0x4 u32 0x57000000 0x57000000
+# Copy the real current event so touch-up and other named input events reach both sides.
+real 020013C0
+real 02001320
+real 020012BC
+field 026DA0B0 101F4FF0 u32 0x59000000 0x59000000
+field 026DA0B0 59000030 u32 0,2,3,4,13,67,68,69,70,71,72,98,99,100,101,0xFFFFFFFF
+field 026DA0B0 1047B07C u8 0,1,2,3,255
+field 026DA0B0 r3+0xCF u8 0,1,255
+# Mode2 label8 expands the dynamic message number; preserve ordinary text records too.
+field 026D9C48 r3+0x8C u32 0x58000000 0x58000000
+field 026D9C48 5800000C u32 0,1,7,8,9,50,51,0xFFFFFFFF
+
+# Finite and bit-distinct point payloads expose each word load/store and pointer-valid bit.
+arg 026DA234 r4 0x5A000000,0x5A000004,0xFFFFFFF8
+field 026DA234 5A000000 u32 0x3F800000,0x80000000,0x7FC01234
+field 026DA234 5A000004 u32 0x40000000,0,0x7FA05678
+field 026DA234 5A000008 u32 0x40400000,0x80000000,0x7FC0ABCD
+ret 0287F05C 0,1
+field 026DA0B0 101F5088 u32 0x5B000000 0x5B000000
+field 026DA270 101F5088 u32 0x5B000000 0x5B000000
+field 026DA270 1047B07C u8 0,1,2,3,255
+field 026DA270 r3+0xCE u8 0,1
+field 026DA270 r3+0xD8 u8 0,1
+field * 5B000018 u32 0,1,0x8000,0x8001
+field * 5B00001C u32 0,1,0x8000,0x8001
+field * 5B000024 u32 0,1,2,3
+field * 5B000124 u32 0,1,0x8000,0x8001
+field * 5B0001B4 u32 0x3F800000,0x80000000,0x7FC01234
+field * 5B0001B8 u32 0x40000000,0,0x7FA05678
+field * 5B0001BC u32 0x40400000,0x80000000,0x7FC0ABCD
+field * 1049FFA0 u32 0x40800000,0,0x7FC0EF01
+field * 1049FFA4 u32 0x40A00000,0x80000000,0x7FA0CD02
+field * 1049FFA8 u32 0x40C00000,0,0x7FC0AB03
+ret 026DA234 0,1
+ret 026F6340 0,1
+field 026D9C48 r3+0xCF u8 0,1
+arg 026D9844 r5 0,1,30,31,32,33,0xFFFFFFFF
+# Stable callback input record address, with values spanning exact label bounds.
+arg! 026D9974 r3 0x54000000
+field 026D9974 r3+0x8C u32 0x58000000 0x58000000
+field 026D9974 58000000 u32 0,1,2,3
+field 026D9974 58000004 u32 0,1,2,3,4
+field 026D9974 58000010 u32 0,1,49,50,51,52,0xFFFFFFFF
+field 026D9974 58000014 u32 0,1,49,50,51,52,0xFFFFFFFF
+field 026D9974 58000018 u32 0,1,49,50,51,52,0xFFFFFFFF
+mockfield 026D989C r3+0x8C u32 0x58000000 0x58000000
+observe 026D989C 540000D4 1
+# Union Vec2 and SafeString extents are known, but inferred capture sizes remained zero;
+# compare their complete input payloads rather than the fallback first word only.
+callee 026DA234 r4=8
+callee 0287F05C r4=8
+callee 027045B0 r4=8 r5=8
+# Keep independent external records and an overlapping guest record view in the domain.
+field 026D9974 r3+0x8C u32 0x58000000,0x540000A4
+mockfield 026D989C r3+0x8C u32 0x58000000,0x540000A4
+arg! 026DAE7C r3 0x54000000
+field 026DAE7C 101F4974 u32 0x57000000,0x540000D0

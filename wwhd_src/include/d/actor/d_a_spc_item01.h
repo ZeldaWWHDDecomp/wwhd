@@ -47,7 +47,7 @@ namespace daSpcItem01_prm {
 inline u8 getItemNo(daSpcItem01_c* p) { return fopAcM_GetParam(p) & 0xFF; }
 inline u16 getFlag(daSpcItem01_c* p) { return fopAcM_GetParam(p) >> 8 & 0xFFFF; }
 }
-namespace dItem_data {
+namespace dItemDataView {
 struct FieldResource_view { gptr<const char> mArcName; u8 rest[0x18]; };
 struct ItemResource_view { u8 rest[0x20]; be<u16> mHeapSize; u8 pad[2]; };
 inline const char* getFieldArc(u32 no) { return gabi::at<FieldResource_view>(field_item_res(no))->mArcName; }

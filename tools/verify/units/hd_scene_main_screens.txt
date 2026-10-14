@@ -1,0 +1,13 @@
+src wwhd_src/d/hd_scene_main_screens.cpp
+callee 026FB694 r4=8
+callee 0271B1AC r3=255
+# Exercise singleton identity and allocation wraparound, alongside unsteered inputs.
+arg 0271B068 r3 0,0x23000000
+field 0271B068 101F837C u32 0,0x23000000
+ret 0273B0D4 0,0xFFFFFFFC,0x24000000
+# Pure library key lifetime preserves the constructor's returned alias and writes.
+real 0271B1AC
+real 0271B198
+# The flag-2 manager destructor only restores its vtable; retain alias effects.
+real 0271B048
+field 0271B068 101F8378 u32 0,0x25000000,0x101F837C

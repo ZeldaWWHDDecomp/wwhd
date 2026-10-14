@@ -3,6 +3,7 @@
 #pragma once
 #include "wwhd.h"
 #include "d/d_com_inf_game.h"
+#include "d/hd_parts.h"
 struct hdHudScreenVtable {
     u8 _padding00[0x8C];
     gfn mUpdate;
@@ -14,7 +15,8 @@ struct hdHudScreenVtable {
 WWHD_OFFSET(hdHudScreenVtable, mCommandUpdate, 0xB4);
 WWHD_OFFSET(hdHudScreenVtable, mCanShow, 0x14C);
 struct hdHudStateMachine { u8 mStorage[4]; };
-struct hdHudStateDescriptor { u8 mStorage[4]; };
+/* a HUD state record is a parts state id (0x30: number, name, vtable, enter/execute/exit PTMFs, null-state pointer) */
+typedef hdPartsStateId_c hdHudStateDescriptor;
 struct hdHudScreenCore {
     u8 _padding00[4];
     gptr<hdHudScreenVtable> mVtable;
@@ -131,3 +133,23 @@ u32 hdHudAnimationFinished(void*, u32);
 u32 hdHudGetHeartValue(hdHudHeart*, u32);
 void hdHudSetHeartValue(hdHudHeartChild*, u32);
 void hdHudSetHeartVisible(hdHudHeartChild*, u32);
+
+/* TU-wide statics of hd_screen_dungeon_key.cpp (defined there through `data` glue lines; companion sources of
+ * that TU use these declarations). The image holds a fourth animation id right after the
+ * three (100EFDD0): a companion that reads it uses its own `data` view of that word. */
+extern hdHudKeyAnimationIds& sKeyAnimationIds;  /* 100EFDC4 */
+extern be<f32>& sKeyAnimationRate;              /* 100EFE68 */
+
+/* TU-wide state records of hd_screen_command_a.cpp and hd_screen_command_guide.cpp (defined there through
+ * `data` glue lines; companion sources of those TUs use these declarations). Each record is a 0x30 parts state id (hdHudStateDescriptor = hdPartsStateId_c). */
+extern hdHudStateDescriptor& sCommandActiveState;  /* 1049118C */
+extern hdHudStateDescriptor& sCommandWaitState;    /* 104911EC */
+extern hdHudStateDescriptor& sGuideActiveState;    /* 10491670 */
+extern be<u8>& sCommandGuideFlag;                  /* 1047B07A */
+/* kept for callers: the record already is the parts state id */
+inline hdPartsStateId_c* hdHudStateId(hdHudStateDescriptor* state) { return state; }
+
+/* hd_screen_heart.cpp statics, shared with the HUD-heart companions (append-only) */
+extern gptr<hdHudSaveInfo>& sSaveInfo;      /* 101F84DC */
+extern be<u8>& sHeartVisible;              /* 1047B08F */
+extern hdHudStateDescriptor& sHeartHiddenState; /* 104947F4 */

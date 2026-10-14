@@ -27,7 +27,8 @@ Before compilation (verify.py, mutate.py) this tool rewrites the file:
     X::X() gets a wrapper `X* X__ct(X* self)` (GHS: allocates when self is NULL);
   - class-typed locals `T x(args);` / `T x = e;` -> gabi::Stack<T> (guest stack slot);
   - `static T name[] = {...};` / `static T name;` with a `data` line -> a view of the guest object at
-    that address; the initialiser is compared with the RPX image at build time;
+    that address (still `static` at file scope unless some source or header declares the name `extern`:
+    then it is shared with other translation units); the initialiser is compared with the RPX image at build time;
   - `static T name(init);` with `data ... guard ...` -> gabi::local_static;
   - the strings of `str` lines are registered (host literal -> guest address, gabi::guest_str);
   - `#include "assets/X.h"` (model data, tools/verify/assets.py) is replaced by the header generated
@@ -659,6 +660,56 @@ def guest_view(elem):
     return elem
 
 
+_EXTERN_PAT = re.compile(r"^\s*extern\s+(?!\"C\")([^;(){}]*?)(?:\(\s*[&*]\s*(\w+)\s*\)|\b(\w+))\s*(?:\[[^\]]*\])*\s*;", re.M)
+_SPEC_SRCS = None
+_EXPORTED_CACHE = {}
+
+
+def _spec_siblings(srcpath):
+    """the other sources that share a verify unit with srcpath (tools/verify/units/**.txt `src` lines)"""
+    global _SPEC_SRCS
+    if _SPEC_SRCS is None:
+        _SPEC_SRCS = []
+        for dp, _, fs in os.walk(os.path.join(HERE, "units")):
+            for f in fs:
+                if f.endswith(".txt"):
+                    srcs = set()
+                    for line in open(os.path.join(dp, f), errors="replace"):
+                        w = line.split("#")[0].split()
+                        if w and w[0] == "src":
+                            srcs |= {x if x.startswith("wwhd_src/") else "wwhd_src/" + x for x in w[1:]}
+                    _SPEC_SRCS.append(srcs)
+    rel = os.path.relpath(os.path.join(ROOT, srcpath), ROOT) if not srcpath.startswith("wwhd_src/") else srcpath
+    out = set()
+    for srcs in _SPEC_SRCS:
+        if rel in srcs:
+            out |= srcs - {rel}
+    return out
+
+
+def exported_names(srctext, srcpath):
+    """TU-wide `data` views that other translation units use: names declared `extern` in a header this source
+    includes (a merged source's statics exposed to companions) or in a source that shares a verify unit with it
+    (or a header that one includes). Only these keep external linkage; every other TU-wide view stays `static`,
+    as written (2026-10-12: before, all views lost `static`, and linking several units together, as the port's
+    decomp build does, gave duplicate symbols such as l_hio in ji1)."""
+    key = (srcpath, hash(srctext))
+    if key in _EXPORTED_CACHE:
+        return _EXPORTED_CACHE[key]
+    names = set()
+    texts = [t for _, t in include_closure(srctext, srcpath)]
+    for sib in _spec_siblings(srcpath):
+        p = os.path.join(ROOT, sib)
+        if os.path.exists(p):
+            st = open(p, errors="replace").read()
+            texts.append(st)
+            texts += [t for _, t in include_closure(st, sib)]
+    for t in texts:
+        names |= {m.group(2) or m.group(3) for m in _EXTERN_PAT.finditer(t)}
+    _EXPORTED_CACHE[key] = names
+    return names
+
+
 def transform(text, path="<src>"):
     if "/* WWHD glue" in text:
         import assets  # model data generated from the game (tools/verify/assets.py), included in place
@@ -844,6 +895,8 @@ def transform(text, path="<src>"):
                     if not nocheck:
                         check_table(name, addr, elem, [1], init, text, methods, where, path, enclosing_scope(code, start))
                 new = "%s%s%s& %s = gabi::object_at<%s%s>(0x%08X);" % (indent, const, gv, name, const, gv, addr)
+            if guard is None and indent == "" and not in_body(start) and name not in exported_names(text, path):
+                new = new[:len(indent)] + "static " + new[len(indent):]  # file scope: keep the source's internal linkage
             set_line(first, new)
             for x in range(first + 1, last + 1):
                 set_line(x, "")

@@ -1,0 +1,339 @@
+# MENU-menu_btns: all 91 functions, four binary translation units.
+src wwhd_src/d/hd_menu_pane_control.cpp
+src wwhd_src/d/hd_menu_map_pane.cpp
+src wwhd_src/d/hd_menu_button_mapping.cpp
+src wwhd_src/d/hd_screen_menu_btns.cpp
+stackfill periodic
+
+# Allocation success/failure and child/layout construction outcomes.
+ret 0273AD10 0,0x55003000
+ret 0273B050 0,0x55004000
+ret 0269C6BC 0x55004000 0x55004000
+ret 0265B2D8 0x55004000 0x55004000
+ret 0263BF68 0x55004000 0x55004000
+ret 026FADB0 0x55004000 0x55004000
+ret 0269D098 0 1
+ret 0265C2A8 0 1
+ret 0263C25C 0 1
+ret 026F92C0 0 1
+ret 02634088 0 1
+
+# Map mode and availability predicates.
+ret 02689304 0 1
+ret 026892E0 0 1
+ret 0268705C 0 1
+ret 0268714C 0 1
+ret 02689D28 0 1
+ret 02689E7C 0 1
+ret 02689F30 0 1
+ret 02689FE4 0 1
+ret 025B7A2C 0 1
+ret 02005840 0 1
+ret 026F61DC 0 1
+ret 026F6288 0 1
+ret 0263C69C 0 1
+ret 02615398 0,1,2,3
+ret 02615140 0,1,2,3
+ret 026F5B74 0,1,2,3
+
+# Bounded collection counts, including fallback beyond the ten groups.
+field 0268C3CC r3+0xC s32 -1,0,1,2,3,10,11
+field 0268C3CC r3+0x18 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x58 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x98 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0xD8 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x118 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x158 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x198 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x1D8 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x218 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x258 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x298 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x2D8 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x318 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x358 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x398 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x3D8 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x418 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x458 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x498 s32 -1,0,1,2,3,14,15
+field 0268C3CC r3+0x4D8 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0xC s32 -1,0,1,2,3,10,11
+field 0268C9C4 r3+0x18 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x58 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x98 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0xD8 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x118 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x158 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x198 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x1D8 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x218 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x258 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x298 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x2D8 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x318 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x358 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x398 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x3D8 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x418 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x458 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x498 s32 -1,0,1,2,3,14,15
+field 0268C9C4 r3+0x4D8 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0xC s32 -1,0,1,2,3,10,11
+field 0268CB98 r3+0x18 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x58 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x98 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0xD8 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x118 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x158 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x198 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x1D8 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x218 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x258 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x298 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x2D8 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x318 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x358 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x398 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x3D8 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x418 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x458 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x498 s32 -1,0,1,2,3,14,15
+field 0268CB98 r3+0x4D8 s32 -1,0,1,2,3,14,15
+
+# Collection loaders reload the group count after availability callbacks.
+field 0268C660 r3+0xC s32 0,1,2
+field 0268C660 100F9D8C s32 0,1,5,14,15
+field 0268C660 100F9DB0 s32 0,1,5,14,15
+field 0268C7F4 r3+0xC s32 2,3,4,5
+
+# Pane lists and child buffers are bounded, with empty and negative-count cases.
+field * r3+0x48 s32 -1,0,1,2,3,4
+field * r3+0x50 s32 -1,0,1,2,3,4
+field * r3+0x58 u32 0,1,2,3
+field * r3+0x5C u8 0,1
+field * r3+0x60 u32 0,1,2,3
+field * r3+0x51C u8 0,1,2,10
+field * r3+0x51D s8 -1,0,1,2,3
+field * r3+0x51E u8 0,1,2,10
+field * r3+0x51F s8 -1,0,1,2,3
+
+# Wrapped embedded member addresses and null allocation input.
+arg 0268B26C r3 0,0x55000000,0xFFFFFFF8,0xFFFFFFF0,0xFFFFFFE8,0xFFFFFFE0
+arg 0268BF64 r3 0,0x55000000,0xFFFFFFFD,0xFFFFFFFA,0xFFFFFFEC,0xFFFFFD6C
+arg 0268CE70 r3 0,0x55000000,0xFFFFFFF8
+arg 0268D8E4 r3 0,0x55000000,0xFFFFFFB0,0xFFFFFFA8
+
+# The approach helper receives normal values, infinities and unordered values.
+field 0268B070 r3+0 f32 0,1,-1,0.5,3.1415927,nan,inf,-inf
+arg 0268B070 f1 0,1,-1,nan,inf,-inf
+arg 0268B070 f2 0,0.5,1,-1,nan,inf,-inf
+
+# Descriptor SafeStrings have immutable class identities; text pointers and buffers remain clobbered.
+arg! 0268DEEC r4 0x55006000
+field 0268DEEC 5500600C u32 0x100F9DF4
+field 0268DEEC 55006018 u32 0x100F9DF4
+field 0268DEEC 55006008 u32 0,0x100F9F84,0x100F9EEC
+field 0268DEEC 55006014 u32 0,0x100F9F54,0x100F9F64,0x100F9F74,0x100F9F90
+stable 5500600C 4
+stable 55006018 4
+
+# Stable mock heap identities permit both allocating and freeing the pane pointer array.
+ret! 02756140 0x55008000 0x55008000
+ret 02755FEC 0x55008000 0x55008000
+field * 5500800C u32 0x55008100
+field * 55008134 u32 0x0273B050
+field * 5500813C u32 0x0273AF40
+stable 5500800C 4
+stable 55008134 4
+stable 5500813C 4
+
+# Opaque callbacks may change counts. Model bounded post-call output states,
+# including growth and shrinkage, while retaining all other memory clobbering.
+arg! 0268C660 r3 0x55000000
+arg! 0268CB98 r3 0x55000000
+mockglobal 02689D28 5500000C u32 0,1,2
+mockglobal 02689D28 100F9DB0 u32 0,1,5,14,15
+mockfield 0268C3CC r3+0xC u32 0,1,2,3,10,11
+mockfield 0268C3CC r3+0x18 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000018 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x58 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000058 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x98 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000098 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0xD8 u32 0,1,2,3,14,15
+mockglobal 02689D28 550000D8 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x118 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000118 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x158 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000158 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x198 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000198 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x1D8 u32 0,1,2,3,14,15
+mockglobal 02689D28 550001D8 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x218 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000218 u32 0,1,2,3,14,15
+mockfield 0268C3CC r3+0x258 u32 0,1,2,3,14,15
+mockglobal 02689D28 55000258 u32 0,1,2,3,14,15
+
+# The default-heap query returns a coherent mock heap identity. The manager
+# can select that heap directly or request the default; allocation may fail.
+arg! 0268D9A4 r3 0x55000000
+field 0268D9A4 1018C404 u32 0x55009000
+field 0268D9A4 55009010 u32 0,0x55008000
+mockglobal 02756140 55000050 u32 0,1,2,4
+mockglobal 0273B050 55000050 u32 0,1,2,4
+
+# Synthetic valid BtnMenu child objects: vtable identity follows constructor0263BF68.
+# Buffers may be replaced by opaque callbacks, and slot values may select any child.
+arg! 0268D4B4 r3 0x55000000
+field 0268D4B4 r3+0x4C u32 0x5500B000,0x5500B100
+mockfield 0268D108 r3+0x4C u32 0x5500B000,0x5500B100
+mockglobal 0263C524 5500004C u32 0x5500B000,0x5500B100
+field 0268D4B4 5500B000 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B000 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B000 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500B004 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B004 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B004 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500B008 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B008 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B008 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500B100 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B100 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B100 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500B104 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B104 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B104 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500B108 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0268D108 5500B108 u32 0x5500C000,0x5500C100,0x5500C200
+mockglobal 0263C524 5500B108 u32 0x5500C000,0x5500C100,0x5500C200
+field 0268D4B4 5500C004 u32 0x100EA468
+stable 5500C004 4
+field 0268D4B4 5500C104 u32 0x100EA468
+stable 5500C104 4
+field 0268D4B4 5500C204 u32 0x100EA468
+stable 5500C204 4
+
+# Cover present input singleton as well as the no-input fast path.
+field 0268D150 101F4FF0 u32 0,0x5500A000
+
+# Supplemental domains; prior defaults intentionally overridden below.
+# Directed domain menu-probe-pane-alias-304-draft.txt
+
+# Untested synthetic alias survivor304: pane alpha overlaps control mpPane high byte.
+arg! 0268B434 r3 0x55000000 0x55000000
+field 0268B434 r3+0x0 u32 0x54FFFFBB
+field 0268B434 r3+0x4 u32 0
+field 0268B434 r3+0x3B u8 1
+field 0268B434 r3+0x3C u8 0
+field 0268B434 r3+0x3E u8 0
+fret! 02689AB4 0 0
+# Directed domain menu-canonical-extra212-revision2-draft.txt
+
+# Uncredited directed survivor draft; baseline first.
+arg! 0268D150 r3 0x55000000 0x55000000
+field 0268D150 101F4FF0 u32 0x5500A000
+field 0268D150 101F8344 u32 0x5500D000
+field 0268D150 5500D224 u32 1
+field 0268D150 r3+0x58 u32 1
+ret! 026F61DC 0 0
+ret! 026F6288 0 0
+ret! 0263C69C 1 1
+field 0268D150 100F9E1C u32 0
+field 0268D150 r3+0x4C u32 0x5500B000
+field 0268D150 5500B000 u32 0x5500C000
+field 0268D150 5500B004 u32 0x5500C100
+field 0268D150 5500C050 u32 7
+field 0268D150 5500C150 u32 9
+mockglobal 0263C654 55000058 u32 1
+mockglobal 0263C654 5500004C u32 0x5500B000
+mockglobal 02615154 55000060 u32 0xAABBCCDD
+field 0268D150 r3+0x48 u32 3
+field 0268D150 100F9E20 u32 1
+mockglobal 0263C654 55000048 u32 3
+mockglobal 0263C654 100F9E20 u32 1
+
+# Passing first predicate must still evaluate input rejection.
+
+# Steer actual direct C++ canAcceptInput fields and prior callback coherence.
+ret! 02615398 0 0
+field 0268D150 5500005C u8 0
+mockglobal 020013C0 101F4FF0 u32 0x5500A000
+mockglobal 020013C0 101F8344 u32 0x5500D000
+mockglobal 020013C0 5500D224 u32 1
+mockglobal 020013C0 5500005C u8 0
+mockglobal 020013C0 55000058 u32 1
+mockglobal 020013C0 55000048 u32 3
+mockglobal 020013C0 5500004C u32 0x5500B000
+mockglobal 020013C0 100F9E1C u32 0
+mockglobal 020013C0 100F9E20 u32 1
+mockglobal 020013C0 5500B000 u32 0x5500C000
+mockglobal 020013C0 5500B004 u32 0x5500C100
+mockglobal 026F61DC 101F4FF0 u32 0x5500A000
+mockglobal 026F61DC 101F8344 u32 0x5500D000
+mockglobal 026F61DC 5500D224 u32 1
+mockglobal 026F61DC 5500005C u8 0
+mockglobal 026F61DC 55000058 u32 1
+mockglobal 026F61DC 55000048 u32 3
+mockglobal 026F61DC 5500004C u32 0x5500B000
+mockglobal 026F61DC 100F9E1C u32 0
+mockglobal 026F61DC 100F9E20 u32 1
+mockglobal 026F61DC 5500B000 u32 0x5500C000
+mockglobal 026F61DC 5500B004 u32 0x5500C100
+mockglobal 026F6288 101F4FF0 u32 0x5500A000
+mockglobal 026F6288 101F8344 u32 0x5500D000
+mockglobal 026F6288 5500D224 u32 1
+mockglobal 026F6288 5500005C u8 0
+mockglobal 026F6288 55000058 u32 1
+mockglobal 026F6288 55000048 u32 3
+mockglobal 026F6288 5500004C u32 0x5500B000
+mockglobal 026F6288 100F9E1C u32 0
+mockglobal 026F6288 100F9E20 u32 1
+mockglobal 026F6288 5500B000 u32 0x5500C000
+mockglobal 026F6288 5500B004 u32 0x5500C100
+mockglobal 0263C69C 101F4FF0 u32 0x5500A000
+mockglobal 0263C69C 101F8344 u32 0x5500D000
+mockglobal 0263C69C 5500D224 u32 1
+mockglobal 0263C69C 5500005C u8 0
+mockglobal 0263C69C 55000058 u32 1
+mockglobal 0263C69C 55000048 u32 3
+mockglobal 0263C69C 5500004C u32 0x5500B000
+mockglobal 0263C69C 100F9E1C u32 0
+mockglobal 0263C69C 100F9E20 u32 1
+mockglobal 0263C69C 5500B000 u32 0x5500C000
+mockglobal 0263C69C 5500B004 u32 0x5500C100
+
+# Directed domain menu-probe-stage-offset-arithmetic-draft.txt
+
+# Untested directed stage2 nonzero-offset witness for183. Synthetic immutable dispatch identity only.
+arg! 0268BA4C r3 0x55000000 0x55000000
+arg! 0268BA4C r4 0x55002000 0x55002000
+arg! 0268BA4C r5 0x55002100 0x55002100
+ret! 025200D4 0x56000000 0x56000000
+ret! 02689D28 0x56007000 0x56007000
+field 0268BA4C 56005150 u32 0x56006000
+field 0268BA4C 5600615C u32 0x02689D28
+stable 56005150 4
+stable 5600615C 4
+mockglobal 025200D4 5600700C u32 0x60000
+mockglobal 025200D4 550000A0 u8 0
+mockglobal 025200D4 101F8344 u32 0x55003000
+mockglobal 025200D4 55003218 u32 0x55004000
+mockglobal 025200D4 55004050 u32 2
+mockglobal 025200D4 104965E0 f32 13
+mockglobal 025200D4 55002004 f32 7
+mockglobal 02689D28 5600700C u32 0x60000
+mockglobal 02689D28 550000A0 u8 0
+mockglobal 02689D28 101F8344 u32 0x55003000
+mockglobal 02689D28 55003218 u32 0x55004000
+mockglobal 02689D28 55004050 u32 2
+mockglobal 02689D28 104965E0 f32 13
+mockglobal 02689D28 55002004 f32 7
+field 0268BA4C 5600700C u32 0x60000
+field 0268BA4C 550000A0 u8 0
+field 0268BA4C 101F8344 u32 0x55003000
+field 0268BA4C 55003218 u32 0x55004000
+field 0268BA4C 55004050 u32 2
+field 0268BA4C 104965E0 f32 13
+field 0268BA4C 55002004 f32 7

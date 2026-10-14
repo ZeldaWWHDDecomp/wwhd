@@ -4,6 +4,8 @@
 #pragma once
 #include "gc_api/gc_api.h"
 
+struct hdUiEvent; /* hd/hd_ui_02001084.h */
+
 namespace cking::ui::input {
 struct Receiver;
 struct ReceiverList;
@@ -131,7 +133,9 @@ struct EventMgr : ReceiverList {
     u32 holdBit12(u32 ev);
 
     u8 gapQueue[4];
-    u8 mEventQueue[0x44];
+    u8 mEventQueue[0x44]; /* the queue (0x1C), then the current event (+0x30, an hdUiEvent of 0x28) */
+    /* +0x30: the event being dispatched */
+    ::hdUiEvent* currentEvent() { return reinterpret_cast<::hdUiEvent*>(mEventQueue + 0x1C); }
     gptr<EventMgrVtable> mpVtable;
     be<u32> mSecondaryVtable;
     Disposer mDisposer;

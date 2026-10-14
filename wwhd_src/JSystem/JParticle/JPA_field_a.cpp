@@ -69,6 +69,7 @@ void jpa_field_a::JPABaseField::init(JPAFieldData* data, JPABaseParticle* partic
 
 /* 02822CBC */
 void jpa_field_a::JPAGravityField::preCalc(JPAFieldData* data) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     JPABaseField::preCalc(data);
     if (data->mSttFlag & JPA_FIELD_GLOBAL) {
         f32 y = data->mDir.mFloat.y, mag = data->mMag, x = data->mDir.mFloat.x;

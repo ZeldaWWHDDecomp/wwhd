@@ -1,0 +1,50 @@
+# Synthetic malformed UTF-16 names at the defensive scan cap; no game data.
+# Supplemental targeted replay, eight cases per name-copy function.
+src wwhd_src/d/d_menu_save_compiler_picture.cpp
+src wwhd_src/d/hd_jpeg.cpp
+src wwhd_src/d/hd_play_log.cpp
+src wwhd_src/d/hd_player_name.cpp
+src wwhd_src/d/hd_picture_accessor.cpp
+arg! 027266CC r3 0x5A000000
+arg! 027266CC r4 0x5D000000
+field 027266CC r3+0x0 u32 0x5F000000
+field 027266CC r3+0x4 u32 0x5C000000
+field 027266CC r3+0x8 u32 0x9
+field 027266CC r3+0x20 u32 0x5F100000
+field 027266CC r3+0x24 u32 0x5C000000
+field 027266CC r3+0x28 u32 0x12
+arg! 027267FC r3 0x5A000000
+arg! 027267FC r4 0x5D000000
+field 027267FC r3+0x0 u32 0x5F000000
+field 027267FC r3+0x4 u32 0x5C000000
+field 027267FC r3+0x8 u32 0x9
+field 027267FC r3+0x20 u32 0x5F100000
+field 027267FC r3+0x24 u32 0x5C000000
+field 027267FC r3+0x28 u32 0x12
+arg! 02726FC4 r3 0x5A000000
+ret! 02720154 0x5D000000 0x5D000000
+field 02726FC4 r3+0x28 u32 0x5F000000
+field 02726FC4 r3+0x2C u32 0x5C000000
+field 02726FC4 r3+0x30 u32 0x9
+field 02726FC4 r3+0x70 u32 0x5F000000
+field 02726FC4 r3+0x74 u32 0x5C000000
+field 02726FC4 r3+0x78 u32 0x9
+field 02726FC4 r3+0xB8 u32 0x5F000000
+field 02726FC4 r3+0xBC u32 0x5C000000
+field 02726FC4 r3+0xC0 u32 0x9
+field * 5D000000 u32 0x5B000000
+field * 5D000004 u32 0x5C000000
+field * 5D000008 u32 0x9
+field * 5D000020 u32 0x5E000000
+field * 5D000024 u32 0x5C000000
+field * 5D000028 u32 0x12
+field * 5C000014 u32 0x028ED6F8
+field * 5E000000 u8 0
+stable 5A000000 0xE0
+stable 5C000000 0x20
+stable 5D000000 0x40
+stable 5E000000 0x20
+stable 5B000000 0x80004
+fill * 5B000000 0x80000 0xFF
+field * 5B080000 u16 0,1
+field * 5B080002 u16 0

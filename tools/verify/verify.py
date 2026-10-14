@@ -23,7 +23,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 # so the name is the whole 40-character field, not one token. Callers strip the padding.
 # Groups: addr, name field, gen pass/n, rec pass/n, coverage hit/branches, first difference.
 RESULT_LINE = re.compile(r"^([0-9A-F]{8})  (.{40})\s+(\d+)/(\d+)\s+(\d+)/(\d+)(?:\s*\(-?\d+\))?\s+(\d+)/(\d+)\s+(.*)$")
-FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing"]
+FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing", "-fwrapv"]
 
 
 def sh(cmd):

@@ -1,0 +1,108 @@
+# Supplemental retained-descriptor fixture for 02666EA4 (run with -only 02666EA4): assureTermination
+# may keep the descriptor it gets and rewrite it on its next call, so the byte loop must read the pane
+# name again after the expected name is terminated. Kept out of the
+# primary spec because the rewrite replaces the pane name on every input.
+# Dungeon-map statue, treasure and floor panel (35 listed functions).
+src wwhd_src/d/hd_screen_dungeon_map_statue.cpp
+src wwhd_src/d/hd_screen_dungeon_map_treasure.cpp
+src wwhd_src/d/hd_screen_dungeon_map_up.cpp
+# Merged sources that define the adopted externs (l_hdDungeonUi, sTransitionBlankState).
+src wwhd_src/d/hd_screen_dungeon_map.cpp
+src wwhd_src/d/hd_sea_chart_state_handlers.cpp
+
+# Bounded map/owner domains: retain random fields and mock clobber elsewhere.
+arg! * r3 0x50000000
+arg! 02665D64 r3 0,0x50000000
+arg! 02666428 r3 0,0x50000000
+arg! 02666878 r3 0,0x50000000,0xFFFFFF60
+arg! 02665CCC r3 0,0x50000000
+arg! 026663BC r3 0,0x50000000
+arg! 0266680C r3 0,0x50000000
+field * 0x101F8344 u32 0x53000000
+field * 0x53000218 u32 0x53001000
+field * 0x53001050 u32 0,1,2,3,4,5,0xFFFFFFFF
+field * 0x50000089 u8 0,1,2,3,4,5,0x80,0x81,0x85,0xFF
+field * 0x500000A0 u32 0,0x54000000
+field * 0x500000A4 u32 0,0x54100000
+field * 0x500000A8 u32 0,0x54200000
+field * 0x500000AC u8 0,1
+field * 0x54200045 u8 0,1,0xFF
+# Names that differ from an expected one only in the first byte check where the comparison starts.
+fieldstr 02666EA4 0x54100080 32 "N_1FUp_01","N_1FUp_00","N_2FUp_00","N_B1Up_00","different","N_1FUp_0","X_1FUp_01","X_2FUp_00"
+# Position conversion includes missing owner, missing scale and missing output.
+arg! 02666620 r4 0x55000000
+arg! 02666620 r5 0,0x55100000,0x55000000,0x55000004
+field 02666620 0x50000090 u32 0,0x55200000
+field 02666620 0x552004B4 u32 0,0x55300000
+field 02666620 0x55300000 f32 -2 2
+ret 0268714C 0,1
+ret 025B8B94 0,1
+ret 025BA0C0 0,1
+# Null/present destination exercises text-resource forwarding.
+arg! 02666D54 r4 0,0x54000000
+arg! 02666D54 r5 0x55400000
+# Allocation success/failure and source-inline singleton counters.
+ret 0273AD10 0,0x56000000
+ret 0273B050 0,0x56100000
+field * 0x101FD8E4 u32 0,1
+field * 0x101FDD50 u32 0,1,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+
+# Preserve PPC NaN operand priority, signed zero, infinities and tiny products.
+# Input/output alias choices above also check load-after-store ordering.
+field 02666620 0x55000000 u32 0,0x80000000,0x3F800000,0xBF800000,0x7F800000,0xFF800000,0x7FC12345,0x7FA23456,1
+field 02666620 0x55000004 u32 0,0x80000000,0x40000000,0xC0000000,0x7F800000,0xFF800000,0x7FC34567,0x7FA45678,1
+field 02666620 0x55300000 u32 0,0x80000000,0x3F800000,0xBF800000,0x40000000,0x7FC56789,0x7FA6789A,1
+
+# Synthetic finite caption descriptors expose successful and failed name comparisons.
+# Only immutable fixture descriptors/text are stable; pane flags remain observable.
+field 02666EA4 0x10493C68 u32 0x100F3AD0
+field 02666EA4 0x10493C6C u32 0x55800100
+field 02666EA4 0x10493C70 u32 0x100F3AD0
+field 02666EA4 0x10493C74 u32 0x55800200
+field 02666EA4 0x10493C78 u32 0x100F3AD0
+field 02666EA4 0x10493C7C u32 0x55800300
+field 02666EA4 0x10493C80 u32 0x100F3AD0
+field 02666EA4 0x100F3AE4 u32 0x01000300
+fieldstr 02666EA4 0x55800000 32 "N_1FUp_01"
+fieldstr 02666EA4 0x55800100 32 "N_1FUp_00"
+fieldstr 02666EA4 0x55800200 32 "N_2FUp_00"
+fieldstr 02666EA4 0x55800300 32 "N_B1Up_00"
+mockfield 026673D8 r3+0 u32 0x54100080
+mockfield 026673D8 r3+4 u32 0x100F3AD0
+callee 026673D8 r3=inout8
+callee 01000300 r3=8
+stable 0x10493C64 32
+stable 0x100F3AE4 4
+stable 0x54100080 32
+stable 0x55800000 32
+stable 0x55800100 32
+stable 0x55800200 32
+stable 0x55800300 32
+
+# The first entrance descriptor may share the pane name's text (pointer-identity shortcut).
+field 02666EA4 0x10493C64 u32 0x55800000,0x54100080
+# Statue animation group index (read-only data) selects one of the group-name records.
+field 02665ED4 0x100F366C u32 0,1,3
+# Floor-caption table (read-only data): five records with distinct labels and floors.
+field 02666DA0 0x100F3AF4 u32 0x55900000
+field 02666DA0 0x100F3AF8 u32 0
+field 02666DA0 0x100F3AFC u32 0x55900100
+field 02666DA0 0x100F3B00 u32 1
+field 02666DA0 0x100F3B04 u32 0x55900200
+field 02666DA0 0x100F3B08 u32 2
+field 02666DA0 0x100F3B0C u32 0x55900300
+field 02666DA0 0x100F3B10 u32 3
+field 02666DA0 0x100F3B14 u32 0x55900400
+field 02666DA0 0x100F3B18 u32 0xFF
+field 02666DA0 0x50000089 u8 0,1,2,3,4,0x80,0x81,0x85,0xFF
+# The SafeString passed to the pane binders and resetMessage is compared at the call.
+callee 0268562C r4=8
+callee 02685784 r4=8
+callee 027045B0 r4=8
+# Entrance search: a present source pane, a dungeon with an expected name and a cleared result
+# byte in most inputs, so a 300-input mutation run reaches every name comparison.
+field 02666EA4 0x500000A4 u32 0,0x54100000,0x54100000,0x54100000
+field 02666EA4 0x500000AC u8 0,0,0,1
+field 02666EA4 0x53001050 u32 0,1,2,3,4,5
+
+mockretain 01000300 r3 8

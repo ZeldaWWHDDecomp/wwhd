@@ -32,7 +32,7 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing"]
+FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing", "-fwrapv"]
 INC = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include"]
 
 

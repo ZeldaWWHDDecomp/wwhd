@@ -1,0 +1,51 @@
+src wwhd_src/d/d_menu_save_compiler_picture.cpp
+src wwhd_src/d/hd_jpeg.cpp
+# JPEG resource index is an seven-entry game enum.
+arg! 02725A2C r4 0 6
+arg 02725578 r5 0,49,50,51,4294967295
+arg 027255A4 r5 0,49,50,51,4294967295
+arg 027255C4 r4 0,49,50,51,4294967295
+arg 027255E4 r4 0,49,50,51,4294967295
+src wwhd_src/d/hd_play_log.cpp
+arg! 02726CE0 r4 0 20
+src wwhd_src/d/hd_player_name.cpp
+src wwhd_src/d/hd_picture_accessor.cpp
+arg 02726470 r3 0,0xFFFFFFE0,0x20000000
+# Address-taken FixedSafeString storage includes its capacity and embedded buffer.
+stackfill periodic
+callee 02759C28 r3=32
+callee 02759D3C r3=32
+# Aliased word copies retain their original load/store order.
+arg 02726BC8 r3 0x5A000100
+arg 02726BC8 r4 0x5A000100,0x5A0000FC,0x5A000104
+arg 02726C74 r3 0x5A000100
+arg 02726C74 r4 0x5A000100,0x5A0000FC,0x5A000104,0x5A0000F0,0x5A000110,0x5A0000F4,0x5A00010C
+# Keep a nonzero singleton base among the values seen across callbacks.
+field 02726FC4 101F84DC u32 0,0x60000000,0x60001000
+
+# Synthetic save-output overlap with the singleton word for load ordering.
+arg! 02726FC4 r3 0x101F84B6
+mockmove C0009988 r3 r4 r5
+ret! 02720154 0x5D000000 0x5D000000
+field * 5D000000 u32 0x5B000000
+field * 5D000004 u32 0x5C000000
+field * 5C000014 u32 0x028ED6F8
+field * 5B000000 u16 0
+stable 5D000000 0x40
+stable 5C000000 0x20
+stable 5B000000 0x20
+field 02726FC4 r3+0x28 u32 0x5F000000
+field 02726FC4 r3+0x30 u32 9
+field 02726FC4 r3+0x70 u32 0x5F000000
+field 02726FC4 r3+0x78 u32 9
+field 02726FC4 r3+0xB8 u32 0x5F000000
+field 02726FC4 r3+0xC0 u32 9
+
+real 02726FA0
+field * 101F852C u32 0x5C100000
+field * 5C100064 u32 0x5E100000
+field * 5E10019B u8 0x61
+field * 5E100C2F u8 0x62
+field * 5E1016C3 u8 0x63
+stable 5C100000 0x80
+stable 5E100000 0x2000

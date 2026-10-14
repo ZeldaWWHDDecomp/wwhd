@@ -1,0 +1,51 @@
+/** Telescope HUD transition screen; canonical parts base with its own pane and zoom state. */
+#pragma once
+#include "d/hd_parts.h"
+struct hdTelescopePane_l { u8 mPrefix[0x44]; be<u8> mFlags; };
+WWHD_OFFSET(hdTelescopePane_l, mFlags, 0x44);
+struct hdTelescopeHud_c : hdParts_c {
+    gptr<hdTelescopePane_l> mpAllPane, mpZoomPane;
+    gptr<void> mpScalePane;
+    be<u32> mFrame;
+    be<u8> mZoomOut;
+    u8 mPadding[3];
+    be<f32> mScale;
+    static hdTelescopeHud_c* construct(hdTelescopeHud_c*);
+    static void destroy(hdTelescopeHud_c*,u32);
+    static u32 stateKey(hdPartsStateId_c*);
+    static void destroyPaneNames();
+    static void destroyScaleName();
+    void waitEnter();
+    void waitExecute();
+    void inEnter();
+    void inExecute();
+    void demoInEnter();
+    void demoInExecute();
+    void normalDemoEnter();
+    void normalDemoExecute();
+    void resetScale();
+    void updateScaleText(f32);
+    void displayExecute();
+    void endZoom();
+    void outEnter();
+    void outExecute();
+    void zoomInEnter();
+    void coverOutEnter();
+    void coverOutExecute();
+    void demoWaitExecute();
+    void zoomExecute();
+    void zoomEnter();
+    void zoomEndEnter();
+    void normalExecute();
+    void zoomOutEnter();
+    void resetAnimations();
+    void resetState();
+    void findPanes();
+};
+WWHD_OFFSET(hdTelescopeHud_c, mpAllPane, 0x50);
+WWHD_OFFSET(hdTelescopeHud_c, mpZoomPane, 0x54);
+WWHD_OFFSET(hdTelescopeHud_c, mpScalePane, 0x58);
+WWHD_OFFSET(hdTelescopeHud_c, mFrame, 0x5C);
+WWHD_OFFSET(hdTelescopeHud_c, mZoomOut, 0x60);
+WWHD_OFFSET(hdTelescopeHud_c, mScale, 0x64);
+WWHD_SIZE(hdTelescopeHud_c, 0x68);

@@ -1,0 +1,280 @@
+src wwhd_src/hd/hd_render_resources.cpp
+src wwhd_src/hd/hd_color_fader.cpp
+src wwhd_src/hd/hd_fader_mgr.cpp
+src wwhd_src/hd/hd_layer_2d_drc.cpp
+src wwhd_src/hd/hd_layer_2d_fore.cpp
+src wwhd_src/hd/hd_render_layers.cpp
+src wwhd_src/hd/hd_layer_2d.cpp
+src wwhd_src/hd/hd_render_misc.cpp
+src wwhd_src/hd/hd_layer_2d_drc_fore.cpp
+
+src wwhd_src/hd/hd_graphics_task.cpp
+
+# Render-state ancestry is a finite parent chain. Pin a coherent depth-two fixture,
+# varying the current/parent state and an absent parent; random graphs can cycle.
+arg! 0272A8C4 r3 0x54000000 0x54000000
+field 0272A8C4 54000070 u32 0x54010000
+field 0272A8C4 540100A4 u32 0x0272A00C
+ret! 0272A00C 0x55000000 0x55000000
+field 0272A8C4 55000000 u32 0x55010000
+field 0272A8C4 55000044 u32 0,1
+field 0272A8C4 55010010 u32 0,0x55020000
+field 0272A8C4 55020000 u32 0,0x55030000
+field 0272A8C4 55020044 u32 0,2
+stable 54000070 4
+stable 540100A4 4
+stable 55000000 4
+stable 55000044 4
+stable 55010010 4
+stable 55020000 4
+stable 55020044 4
+
+# Constructor allocation paths and nullable disposer entry points.
+arg 027275E0 r3 0,0x54000000,0xFFFFFFF4,0xFFFFFFD8
+arg 02727728 r3 0,0x54000000,0xFFFFFFE0,0xFFFFFFD0
+arg 02728030 r3 0,0x54000000,0xFFFFFFF0,0xFFFFFFE0,0xFFFFFFB0,0xFFFFFFA0
+arg 0272854C r3 0,0x54000000,0xFFFFFFE0,0xFFFFFFD0,0xFFFFFFA0,0xFFFFFF90,0xFFFFFF60,0xFFFFFF50,0xFFFFFF20,0xFFFFFF10
+arg 027294A8 r3 0,0x54000000,0xFFFFFE88,0xFFFFFE70,0xFFFFE984,0xFFFFE95C
+arg 0272B944 r3 0,0x54000000,0xFFFFFFE8,0xFFFFFED0,0xFFFFFEC0,0xFFFFFEB0,0xFFFFFEA0,0xFFFFFE90,0xFFFFFE80,0xFFFFFE70,0xFFFFFE60,0xFFFFFE50,0xFFFFFE40,0xFFFFFE30,0xFFFFFE20,0xFFFFFE10,0xFFFFFE00
+arg 0272D978 r3 0,0x54000000,0xFFFFF7AC,0xFFFFF7A0,0xFFFFF794
+arg 02727E34 r3 0,0x54000000
+arg 02728F10 r3 0,0x54000000
+arg 0272D2E4 r3 0,0x54000000
+
+# Exercise initialized and uninitialized shader model state.
+field 0272D16C r3+0x438 u8 0,1
+
+# Adaptive resolution branches use boolean fields, not arbitrary nonzero bytes.
+field 0272A1C4 r3+0x1670 u8 0,1
+field 0272A1C4 r3+0x1671 u8 0,1
+field 02728CE8 101F4827 u8 0,1
+field 02728CE8 101F4814 f32 -1,0,1
+field 02728CE8 101D616C u8 0,1
+field 02728CE8 101D6160 f32 -1,0,1
+field 02728CE8 r3+0x215 u8 0,1
+
+ret 0273AD10 0,0x57000000,0xFFFFFFF0
+
+# Runtime service globals start null in the image; exercise active services too.
+field 0272A5F0 101F8DC8 u32 0,0x58000000
+field 0272A5F0 58000018 u8 0,1
+field 0272A5F0 58000019 u8 0,1
+field 0272AD80 101F86E0 u32 0,0x58010000
+field 0272A1C4 101F8DC8 u32 0,0x58000000
+field 0272A1C4 58000018 u8 0,1
+field 0272A1C4 58000019 u8 0,1
+field 0272A1C4 58000024 f32 0.5,1
+field 0272A1C4 101F5088 u32 0x58020000
+field 0272A1C4 580201D0 u32 0,1,2
+field 0272A1C4 101F8D74 u32 0,0x58030000
+field 0272A1C4 58030028 f32 50,150,250
+field 0272A1C4 58030030 u32 0x58040000
+field 0272A1C4 58030034 u32 2
+field 0272A1C4 58030038 u32 0,1
+field 0272A1C4 5803003C u32 0,1
+field 0272A1C4 58040014 f32 50,150,250
+field 0272A1C4 5804002C f32 50,150,250
+field 0272A1C4 r3+0x188 f32 640,1280
+field 0272A1C4 r3+0x167C f32 640
+field 0272A1C4 r3+0x1674 f32 200
+field 0272A1C4 r3+0x1678 f32 125
+field 0272A1C4 r3+0x169C u32 0,1,4
+field 0272A1C4 1049FB6C f32 1280
+
+# Model vertex initialization sets seven comparable descriptor words. Vary
+# matching index descriptors and the first mismatch without unrelated mock writes.
+arg! 0272D16C r3 0x59000000 0x59000000
+mockfield 02773870 r3+0x4 u32 0
+field 0272D16C 590002A4 u32 0,0,0,0,1
+mockfield 02773870 r3+0x8 u32 0
+field 0272D16C 590002A8 u32 0,0,0,0,1
+mockfield 02773870 r3+0xC u32 0
+field 0272D16C 590002AC u32 0,0,0,0,1
+mockfield 02773870 r3+0x10 u32 0
+field 0272D16C 590002B0 u32 0,0,0,0,1
+mockfield 02773870 r3+0x14 u32 0
+field 0272D16C 590002B4 u32 0,0,0,0,1
+mockfield 02773870 r3+0x18 u32 0
+field 0272D16C 590002B8 u32 0,0,0,0,1
+mockfield 02773870 r3+0x1C u32 0
+field 0272D16C 590002BC u32 0,0,0,0,1
+stable 590002A4 28
+
+# Relative environment descriptors can be empty or refer to a following resource.
+ret! 027DFA24 0x5A000000 0x5A000000
+field 02727874 5A000000 u32 0,16
+stable 5A000000 4
+field 02727874 1049F8F8 u32 0,1
+field 02727874 1049F8FC u32 0,1
+
+# Ready static names retain the SafeString vtable installed by this function.
+# Keep text pointers unconstrained; assureTermination is the real no-op02727F78.
+field 02727874 1049F894 u32 0x10140E5C
+stable 1049F894 4
+field 02727874 1049F89C u32 0x10140E5C
+stable 1049F89C 4
+field 02727874 1049F8A4 u32 0x10140E5C
+stable 1049F8A4 4
+field 02727874 1049F8AC u32 0x10140E5C
+stable 1049F8AC 4
+field 02727874 1049F8B4 u32 0x10140E5C
+stable 1049F8B4 4
+field 02727874 1049F8BC u32 0x10140E5C
+stable 1049F8BC 4
+field 02727874 1049F8C4 u32 0x10140E5C
+stable 1049F8C4 4
+field 02727874 1049F8CC u32 0x10140E5C
+stable 1049F8CC 4
+field 02727874 1049F8D4 u32 0x10140E5C
+stable 1049F8D4 4
+field 02727874 1049F8DC u32 0x10140E5C
+stable 1049F8DC 4
+field 02727874 1049F8E4 u32 0x10140E5C
+stable 1049F8E4 4
+field 0272A6B4 101F8DC8 u32 0,0x58000000
+field 0272A808 101F8DC8 u32 0,0x58000000
+field 0272A8C4 101F86E0 u32 0,0x58010000
+field 0272A8C4 55030010 u32 0
+stable 55030010 4
+field 027297C0 101F86E0 u32 0,0x58010000
+# Exercise the model material-name prefixes and both replacement tables.
+ret! 027ED1F0 0x5B000000 0x5B000000
+fieldstr 0272D384 5B000000 8 "ZA","ZB","ZC","XA","XB","other"
+# UI particles may be absent independently of the renderer's suppression flag.
+ret! 025200D4 0x5C000000 0x5C000000
+field 0272E2AC 5C005AB0 u32 0,0x5C010000
+stable 5C005AB0 4
+stable 59000214 28
+field 0272AD80 101F997C u32 0,0x5D000000
+field 0272A8C4 101F997C u32 0,0x5D000000
+# The descriptor also compares the two later layout words before its final word.
+mockfield 02773870 r3+0x34 u32 0
+mockfield 02773870 r3+0x38 u32 0
+field 0272D16C 590002D4 u32 0,0,0,0,1
+field 0272D16C 590002D8 u32 0,0,0,0,1
+stable 59000244 8
+stable 590002D4 8
+
+# Render pass is fixed by the callback caller, across library mode setup.
+arg! 0272E2AC r4 0x5E000000 0x5E000000
+field 0272E2AC 5E000000 u32 0,1,2,6,7
+stable 5E000000 4
+field 0272E2AC 5C005D98 u32 0,0x5E010000
+stable 5C005D98 4
+ret 027F1210 0,1
+
+# Disposers clear the singleton only for its registered instance.
+arg 02727E34 r3 0,0x5F000000
+field 02727E34 101F8668 u32 0,0x5F000000
+field 02727E34 101F8664 u32 0,0x5F010000
+stable 101F8668 4
+arg 02728F10 r3 0,0x5F000000
+field 02728F10 101F86B8 u32 0,0x5F000000
+field 02728F10 101F86B4 u32 0,0x5F010000,0x101F869C
+stable 101F86B8 4
+arg 0272D2E4 r3 0,0x5F000000
+field 0272D2E4 101F8714 u32 0,0x5F000000
+field 0272D2E4 101F8710 u32 0,0x5F010000
+stable 101F8714 4
+
+# Mutation-observed argument contents, proven by original callees and typed extents.
+# JPAEmitterManager::draw copies projection0x40 and reads flags+0x4C.
+callee 025A83AC r4=80
+# UI draw dispatch forwards the0x34-byte draw-parameter object.
+callee 027F1088 r4=52
+# setGraphicsCreateSize reads both width/height words from each size input.
+callee 027C22D0 r5=8 r6=8
+# Uniform uploads read at least one four-word vector (all call counts>=4).
+callee C0006A40 r5=16
+callee C0006908 r5=16
+# Preserve unwritten padding equally while exposing omitted zero initialization.
+stackfill periodic
+# Projection rectangle getter reads all four float bounds (0274E4A4..E4B0).
+callee 0274E4A4 r4=16
+# Shader-state application reads its initialized0x70-byte state, including color mask.
+callee 0274FEB0 r3=112
+# Particle preparation forwards the same0x50-byte camera/projection/flags record.
+callee 025A8250 r4=80
+# Equality is material at the adaptive-resolution low threshold.
+field 0272A1C4 r3+0x1678 f32 50,150,250
+# Boundary3 distinguishes the active graphics-mode dispatch guard.
+field 0272A8C4 101F86E8 u32 0x58070000
+field 0272A8C4 58071684 u32 0,1,2,3,4
+stable 58071684 4
+# Material descriptor reload remains relevant when relative records overlap its header.
+ret! 027F7B50 0x5F200000 0x5F200000
+field 0272D384 5F200030 u32 0,0x5F210000
+field 0272D384 5F200034 u32 0,0x5F220000
+field 0272D384 5F210000 u16 0,1,65,128
+field 0272D384 5F210004 u32 0x5F20FFF8,0x5F230000
+field 0272D384 10475800 u32 0x5F240000
+field 0272D384 10475804 u32 0x5F240000
+field 0272D384 5F240008 u32 0x00010000
+field 0272D384 5F24000C u32 0x5F20FFF8
+stable 5F200030 8
+stable 5F240008 8
+stable 5F210000 8
+stable 10475800 8
+# The viewport is a constructed RenderBuffer:0274B944 installs10145660 at+18,
+# whose+2C slot is02750E24 and reads all16 RGBA bytes throughr5.
+field 0272E2AC 5E000008 u32 0x5E010000
+field 0272E2AC 5E010018 u32 0x10145660
+stable 5E000008 4
+stable 5E010018 4
+callee 02750E24 r5=16
+# Rebuild forwards the state to a virtual callback (027BBB74), preserving flag bits.
+callee 027BB9E0 r3=1
+# A camera may alias the coefficient view in generated guest memory; model the
+# real perspective setter stores so moving coefficient reads across it is observable.
+arg 0272DB10 r3 0x54000000,0x10145884
+mockfield 0274E04C r3+0x94 f32 1
+mockfield 0274E04C r3+0x98 f32 10000
+mockfield 0274E04C r3+0xAC f32 1.7777777910232544
+mockfield 0274E04C r3+0x0 u8 1
+# Place display1.flags over task.displayMode in an alias input as well as ordinary storage.
+arg! 0272A1C4 r3 0x54100000 0x54100000
+field 0272A1C4 101F95D0 u32 0x540FF1D4,0x58080000
+stable 101F95D0 4
+# renderDisplay reaches layer interface slot 0x84 through 027D72B8;
+# that opaque callback may clear or replace the graphics service singleton.
+mockglobal 027C1848 101F86E0 u32 0,0x58010000
+# A scene-listener vtable store can alias the registered manager pointer slot.
+# 027C0830 installs this exact vtable before listener unregister/disposal.
+mockfield 027C0804 r3+0xC u32 0x10169E3C
+# dispose calls mocked manager.destroy directly; its scene listener installs the
+# same vtable at manager+0x1C through 02728830 ->027C0804 ->027C0830.
+mockfield 02728830 r3+0x1C u32 0x10169E3C
+
+# Constructor02758724 installs capture vtable101474E8; slot24=02758B80.
+# That getter reads count+64. The aliased capture base makes this exactly the
+# draw-state active word at104B4658; compare only its actual four-byte read.
+ret! 027C1E48 0x104B45F4 0x104B45F4
+field 0272A8C4 101F86E0 u32 0x58010000
+field 0272AD80 101F86E0 u32 0
+field * 104B45F4 u32 0x101474E8
+stable 104B45F4 4
+stable 1014750C 4
+real 02758B80
+observe 02758B80 104B4658 4
+
+# Exercise program rebuild flag bit1 explicitly through a coherent Depth program.
+arg! 0272C4E0 r3 0x5A000000 0x5A000000
+field 0272C4E0 5A000020 u32 0x5A010000
+field 0272C4E0 5A010000 u32 0x5A020000
+field 0272C4E0 5A010014 u32 0,1
+field 0272C4E0 5A010018 u32 0x5A060000
+field 0272C4E0 5A020000 u8 0,1,2,3
+field 0272C4E0 5A02000C u32 0,0x5A050000
+field 0272C4E0 5A02007C u32 0x5A030000
+field 0272C4E0 5A030028 u32 0x5A040000
+stable 5A000020 4
+stable 5A010000 4
+stable 5A010014 8
+stable 5A02007C 4
+stable 5A030028 4
+# Rebuild reads guest state flags at+0; Local extent snapshots alone do not
+# retain this transient guest byte across the call. Observe its actual read.
+observe 027BB9E0 5A020000 1
+
+# Actual archive resource consumer0275E2E0 reads both file SafeString words.
+callee 026124B0 r5=8

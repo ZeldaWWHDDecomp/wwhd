@@ -1,0 +1,15 @@
+# HD message main: all owned functions will be added in their original translation-unit order.
+src wwhd_src/d/hd_msg_choice_window.cpp
+src wwhd_src/d/hd_msg_choice_states.cpp
+src wwhd_src/d/hd_msg_choice_text_panes.cpp
+src wwhd_src/d/hd_msg_choice_control.cpp
+src wwhd_src/d/hd_msg_only_statics.cpp
+
+src wwhd_src/d/hd_msg_only_window.cpp
+
+src wwhd_src/d/hd_msg_only_text_panes.cpp
+src wwhd_src/d/hd_msg_only_choice_panes.cpp
+src wwhd_src/d/hd_msg_only_selection_panes.cpp
+
+src wwhd_src/d/hd_msg_only_control.cpp
+src wwhd_src/d/hd_msg_main_window.cpp

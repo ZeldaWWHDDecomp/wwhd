@@ -1,0 +1,58 @@
+# Supplemental lazy initialization and overlapping cursor input edges.
+src wwhd_src/d/hd_keyboard_key_icon.cpp
+src wwhd_src/d/hd_keyboard_shared_statics.cpp
+src wwhd_src/d/hd_keyboard_text_panes.cpp
+src wwhd_src/d/hd_keyboard_text_area.cpp
+src wwhd_src/d/hd_keyboard_cursor.cpp
+
+# Text resource context is an eight-byte SafeString passed by address.
+callee 027045B0 r4=8
+# Valid Pane/TextBox RTTI objects: actual image vtables have findPane at+5C
+# (100002C8->02876554) and type getters at+14 (020023CC/02704C24).
+arg! 02672E20 r3 0x5A000000
+field 02672E20 r3+0x44 u32 0x5A001000
+field 02672E20 5A001004 u32 0x5A002000
+field 02672E20 5A00200C u32 0x5A003000
+field 02672E20 5A003008 u32 0x100002C8
+ret! 02876554 0x5A004000 0x5A004000
+field 02672E20 5A004008 u32 0x100002C8,0x1010BE80
+ret! 020023CC 0x101FD8F4 0x101FD8F4
+ret! 02704C24 0x101FDD3C 0x101FDD3C
+field 02672E20 101FD8F4 u32 0
+field 02672E20 101FD8F8 u32 0
+field 02672E20 101FD8FC u32 0
+field 02672E20 101FDD3C u32 0
+field 02672E20 101FDD40 u32 0
+field 02672E20 101FD8F0 u32 0
+field 02672E20 101FD89C u32 0
+field 02672E20 101FD888 u32 0
+stable 5A000000 0x60
+stable 5A001000 0x110
+stable 5A002000 0x248
+stable 5A003000 0x48
+stable 5A004000 0x48
+
+# Both lazy-initialization paths begin with valid literal SafeStrings.
+field 02672E20 10494EF0 u32 0
+field 02672E20 10494E98 u32 0
+field 02672E20 10494E9C u32 0
+field 02672E20 10494EA0 u32 0
+field 02672E20 10494EA4 u32 0
+field 02672E20 10494EA8 u32 0
+field 02672E20 10494EAC u32 0
+stable 10494E98 0x18
+# Type-return mocks must preserve immutable RTTI parent links.
+stable 101FD8F4 0xC
+stable 101FDD3C 4
+# Fixed UTF-16 SafeString includes header and all256 code units.
+stackfill periodic
+callee 02759D3C r3=524
+callee 027046D4 r4=524
+arg 02672D98 r3 0,0xFFFFFFAC,0x5A000000
+
+# The input position may overlap the destination pane's position or flag byte.
+arg! 02673C98 r3 0x5A000000
+arg! 02673C98 r4 0x5A003018,0x5A00303C,0x5A004000
+field 02673C98 r3+0x44 u32 0x5A001000
+field 02673C98 5A001004 u32 0x5A002000
+field 02673C98 5A00200C u32 0x5A003000

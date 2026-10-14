@@ -1,0 +1,24 @@
+# Synthetic malformed-name boundary fixture; no game data.
+# The ordinary unit exercises random names; this fixture reaches the defensive scan cap.
+src wwhd_src/d/hd_save_chase.cpp
+src wwhd_src/d/hd_save_inventory.cpp
+src wwhd_src/d/hd_save_pair.cpp
+src wwhd_src/d/hd_save_slot_flags.cpp
+src wwhd_src/d/hd_save_play_log.cpp
+src wwhd_src/d/hd_save_holders.cpp
+src wwhd_src/d/hd_save_info_holder.cpp
+arg! 027201E4 r3 0x5A000000
+field 027201E4 r3+0xa0 u32 0x5B000000
+field 027201E4 r3+0xa4 u32 0x5C000000
+field 027201E4 r3+0xe0 u32 0x5B000000
+field 027201E4 r3+0xe4 u32 0x5C000000
+field 027201E4 r3+0x120 u32 0x5B000000
+field 027201E4 r3+0x124 u32 0x5C000000
+field 027201E4 5C000014 u32 0x028ED6F8
+stable 5A0000A0 0xC0
+stable 5C000000 0x20
+stable 5B000000 0x80004
+# 512 KB all-0xFF name table (was 65,536 `field ... u64 -1` lines; same inputs, see fill_test.py)
+fill 027201E4 5B000000 0x80000 0xFF
+field 027201E4 5B080000 u16 0,1
+field 027201E4 5B080002 u16 0

@@ -14,25 +14,20 @@ void hdScreenBattleship_c::updateDisplay() {
     text->__vtbl = gabi::ea(&battleshipTextVtable);
     text->mCapacity = 3;
     minigameFormatCount(text, "battleship count format", mRevealedHits);
-    minigameSetText(mTextPane, text, 0);
+    minigameSetText(mpTextPanes[0].get(), text, 0);
 }
 
 /* 02624134 */
 void hdScreenBattleship_c::reveal(u32 first, u32 second) {
     u32 n = mRevealedMisses;
     if (n < second) {
-        u32 index = n + Minigame_BattleshipMissPane;
-        gptr<MinigamePane>* slots = mPanes;
-        // HD: an out-of-range pane index falls back to the first slot.
-        if (index < mPaneCount) slots += index;
-        slots->get()->mVisible = 1;
+        // HD: an out-of-range child index falls back to the first child.
+        static_cast<OneTimePart_l*>(mChildren.safeSlot(n + Minigame_BattleshipMissPane)->get())->mTriggered = 1;
         mRevealedMisses = u32(mRevealedMisses) + 1;
     }
     n = mRevealedHits;
     if (n >= first) return;
-    gptr<MinigamePane>* slots = mPanes;
-    if (n < mPaneCount) slots += n;
-    slots->get()->mVisible = 1;
+    static_cast<OneTimePart_l*>(mChildren.safeSlot(n)->get())->mTriggered = 1;
     mRevealedHits = first;
     updateDisplay();
 }

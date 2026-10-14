@@ -1,4 +1,5 @@
-/** Actor and background environment lighting, with the verified HD material path. */
+/** Actor and background environment lighting, with the verified HD material path.
+ * */
 #include "d/d_kankyo_6.h"
 
 namespace d_kankyo_cpp {
@@ -860,6 +861,7 @@ void GXColor_to_f32(u32 dst, u32 src);
 // HD: set the expanded light objects and matching float material parameters.
 /* 02562F5C */
 void lighting6::dScnKy_env_light_c::setLightTevColorType(void *i_model, dKy_tevstr_c *i_tevstr) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     u32 t = gabi::ea(this);
     u32 model = gabi::ea(i_model);
     u32 tev = gabi::ea(i_tevstr);

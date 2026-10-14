@@ -74,13 +74,14 @@ enum {
     daItemBase_VT_CLOTHCREATE = 0x3C,
 };
 
-/* ---- dItem_data (d_item_data.cpp): static tables in .data ----
+/* ---- dItemDataView: address views of the dItem_data tables (d_item_data.cpp, static tables in .data; the
+ * class dItem_data itself is in d/d_item_data.h) ----
  * item_resource[0x100] at 0x101E4674 (0x24 bytes): +0 arcname, +8 bmd, +0xA srt, +0xC srt2,
  *   +0xE tev, +0x10 tev2, +0x12 bck, +0x14 s8 tevFrm;
  * field_item_res[0x100] at 0x101E6A74 (0x1C bytes): +0 arcname, +4 bmd, +6 srt, +8 srt2,
  *   +0xA tev, +0xC tev2, +0xE bck, +0x18 u16 heapSize;
  * item_info[0x100] at 0x101E8674 (4 bytes): +0 shadow size, +1 height, +2 radius, +3 flags. */
-namespace dItem_data {
+namespace dItemDataView {
 inline u32 item_resource(u32 no) { return 0x101E4674 + no * 0x24; }
 inline u32 field_item_res(u32 no) { return 0x101E6A74 + no * 0x1C; }
 inline u32 item_info(u32 no) { return 0x101E8674 + no * 4; }
@@ -88,7 +89,7 @@ inline s8 getTevFrm(u32 no) { return gabi::load<s8>(item_resource(no) + 0x14); }
 inline u8 getH(u32 no) { return gabi::load<u8>(item_info(no) + 1); }
 inline u8 getR(u32 no) { return gabi::load<u8>(item_info(no) + 2); }
 inline u8 getFlag(u32 no) { return gabi::load<u8>(item_info(no) + 3); }
-}  // namespace dItem_data
+}  // namespace dItemDataView
 
 /* HARNESS WORKAROUND (SHARED-CANDIDATE): the original's own stack frame, for functions whose
  * result depends on stack addresses or on stack slots they never initialise (CreateItemHeap

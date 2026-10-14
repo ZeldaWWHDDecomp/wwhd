@@ -103,10 +103,10 @@ static inline void dDlst_texSpecmapST(cXyz *eye, dKy_tevstr_c *tev, J3DModel *mo
 static inline f32 mDoLib_clipper_getFar() { return gabi::object_at<be<f32>>(0x1048D04C); }
 /* d_item_data: the solid heap sizes (item_resource +0x20, field_item_res +0x18) */
 static inline u16 dItem_data_getHeapSize(u32 no) {
-    return gabi::at<ShopItemResource>(dItem_data::item_resource(no))->mHeapSize;
+    return gabi::at<ShopItemResource>(dItemDataView::item_resource(no))->mHeapSize;
 }
 static inline u16 dItem_data_getFieldHeapSize(u32 no) {
-    return gabi::at<ShopFieldResource>(dItem_data::field_item_res(no))->mHeapSize;
+    return gabi::at<ShopFieldResource>(dItemDataView::field_item_res(no))->mHeapSize;
 }
 
 /* HD: preserve the original's whole stack frame. set_mtx and

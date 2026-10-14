@@ -1,0 +1,42 @@
+# Verification unit: MSG-msg_window_main2: the second main message window MsgWindowMain_00 and
+# the second message-only screen MsgOnly_00
+stackfill periodic
+src wwhd_src/d/hd_msg_window_main2_statics.cpp
+src wwhd_src/d/hd_screen_msg_window_main2.cpp
+src wwhd_src/d/hd_screen_msg_only2.cpp
+# The pane finders call SafeString::assureTermination(this) through each static name's vtable. Their names
+# carry the TU's real SafeString vtable (as after the guarded setup), so the call resolves to the real
+# assureTermination instead of a random function; stable keeps mocked calls from clobbering the words.
+field 026B5E40 0x104986DC u32 0x100FE654
+field 026B5E40 0x104986E4 u32 0x100FE654
+field 026B5E40 0x104986EC u32 0x100FE654
+field 026B5E40 0x104986F4 u32 0x100FE654
+field 026B5E40 0x104986FC u32 0x100FE654
+field 026B6040 0x10498704 u32 0x100FE654
+field 026B6040 0x1049870C u32 0x100FE654
+field 026B6040 0x10498714 u32 0x100FE654
+field 026B8948 0x104987E0 u32 0x100FED24
+field 026B8A0C 0x104987FC u32 0x100FED24
+field 026B8A0C 0x10498804 u32 0x100FED24
+field 026B8A0C 0x1049880C u32 0x100FED24
+field 026B8A0C 0x10498814 u32 0x100FED24
+stable 0x104986D8 0x28
+stable 0x10498700 0x18
+stable 0x104987DC 0x8
+stable 0x104987F8 0x20
+# outNowExecute: the message's status (7 stop, 10 close wait, 14 answer) and its two close flags
+field 026B7CAC r3+0xB0 u32 0x54000000
+field 026B7CAC 0x54000000 u32 7,10,10,14,3
+field 026B7CAC 0x54000697 u8 0,1
+field 026B7CAC 0x54000698 u8 0,1
+stable 0x54000000 0x700
+# closeExecute: the play's message state (17: closing) and the answer (13)
+# (the play object pinned at 0x55000000 for 7 inputs in 8; every function's play stores are still compared)
+ret 025200D4 0x55000000 0x55000000
+field 026B8784 0x55005BB3 u8 17,17,13,0
+field 026B8784 0x55005BB2 u8 13,13,11
+stable 0x55005BB0 0x10
+# executeState: the input manager and its pad
+field 026B8DBC 0x101F5088 u32 0,0x54000800,0x54000800
+field 026B8DBC 0x54000800 u32 0,0x54000900,0x54000900
+stable 0x54000800 0x200

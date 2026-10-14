@@ -1,0 +1,80 @@
+src wwhd_src/d/hd_parts_layout.cpp
+src wwhd_src/d/hd_layout_res_mgr.cpp
+src wwhd_src/d/hd_layout_loop.cpp
+src wwhd_src/d/hd_layout_wait_screen.cpp
+# 026FC120 is a library pool-node recycler.
+
+# Immutable RTTI tables use finite parent chains. Both matching and nonmatching
+# chains are exercised; mocked calls still clobber the layout's other fields.
+arg! 026FAE6C r3 0x4E000000
+field 026FAE6C 4E000004 u32 0x4E100000
+stable 4E000004 4
+field 026FAE6C 4E100030 u32 0x4E110000
+stable 4E100030 4
+field 026FAE6C 4E11000C u32 0x026FACD8
+stable 4E110000 0x78
+ret! 026FACD8 0,0x101FDDA8,0x4E120000,0x4E120010
+field 026FAE6C 4E120000 u32 0,0x101FDDA8,0x4E120010
+field 026FAE6C 4E120010 u32 0
+stable 4E120000 0x20
+field * 101FDD9C u32 0,1
+field * 101FD8C4 u32 0,1
+field * 101FD894 u32 0,1
+
+# Discrete callback groups and deferred animation commands have sparse domains.
+arg 026FBC98 r5 0,1,2,3,4,5,6,7
+field 026FC2BC r3+0x50 u32 0,1,2,3,4,5,6
+field 026FC7F0 1049DE68 u32 0,1
+# Explicit initialized and lazy-initialization guard combinations.
+field 026FACD8 101FDD9C u32 0,1
+field 026FACD8 101FD8C4 u32 0,1
+field 026FACD8 101FD894 u32 0,1
+
+# Guest address arithmetic wraps at 32 bits: these embedded subobjects can
+# become address zero even when the containing allocation is nonzero.
+arg 026FB26C r3 0,0x4F000000,0xFFFFFFDC
+ret 02613F20 0,0x4F100000,0xFFFFFFE8
+ret 0273B050 0,0x4F200000,0xFFFFFFFC
+# Exercise both pool-capacity comparisons, including signed edge cases.
+field 026FB694 r3+0x30 s32 -1,0,1,1023,1024,1025
+field 026FB694 r3+0x34 s32 0,1,1024
+
+# Identity comparison of the registered disposer against its singleton owner.
+arg 026FBEF8 r3 0,0x4F300000
+field 026FBEF8 101F7278 u32 0,0x4F300000
+# This TU-private once guard is not exposed to any setup/sound callee.
+stable 1049DE68 4
+
+# Immutable SafeString input object and vtable, with short and over-capacity
+# synthetic archive names. The pool/resource/heap objects remain clobberable.
+arg! 026FB694 r4 0x4F400000
+field 026FB694 4F400000 u32 0x4F410000
+field 026FB694 4F400004 u32 0x4F420000
+field 026FB694 4F420014 u32 0x02700818
+stable 4F400000 8
+stable 4F420000 0x18
+# Pinned plain SafeString assureTermination is02700818 (blr); its synthetic
+# text is immutable, including the exact65-character truncation boundary.
+stable 4F410000 80
+fieldstr 026FB694 4F410000 80 "A","AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH"
+
+# Name constructors retain only the text pointer (02755900 / 02760820).
+# The thread's ninth argument is read at entry-SP+8 (0275FC08).
+callee 02753004 r4=4
+callee 0275FBD8 r4=4 stack=1
+# Cache dispatches through name+4 before reading its text (026FB814..824).
+callee 026FB694 r4=8
+# Archive lookup reaches name+4 in its tree search (02613F44..68).
+callee 026123FC r4=8
+# Archive loading dispatches through name+4 (02612EB4..EDC).
+# Path reaches file-manager parser: 02742428 reads its vtable, 0274244C text.
+callee 02612E64 r4=8 r5=8
+# Formatter reads the text pointer and capacity (02759C18 / 02759C20).
+# The contiguous span also includes the intervening vtable; review that byte
+# range separately when interpreting vtable-only mutations.
+callee 02759C28 r3=12
+# Library disposer/delete operations cannot access this TU-private singleton.
+# Preserve its final NULL assignment across mocked library calls.
+field 026FBEF8 101F7274 u32 0,0x4F600000
+stable 101F7274 4
+final 026FBEF8 101F7274 4

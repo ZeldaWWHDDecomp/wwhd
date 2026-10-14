@@ -1,0 +1,50 @@
+/** HD Miiverse settings menu and sequence/control helpers. Private binary-derived source. */
+#pragma once
+#include "d/hd_screen_menu_miiverse_new_comment.h"
+struct hdMenuMiiverseSetting_c : hdParts_c {
+    be<u8> mEnabled;
+    be<u8> mPressed;
+    u8 mPresentationPadding[2];
+    be<f32> mPositionY;
+    be<f32> mSlideStep;
+    be<f32> mSavedY;
+    be<f32> mPresentationOffset;
+    gptr<hdPartsPaneSRT_c> mpSequencePane;
+    static hdMenuMiiverseSetting_c* construct(hdMenuMiiverseSetting_c*);
+    static void destroy(hdMenuMiiverseSetting_c*, u32);
+    void finalizeParts();
+    void findSequencePane();
+    u32 initializeParts(u32, u32, void*);
+    void translateLayoutY(f32);
+    void setSequencePresentation(u32, f32);
+    void clearPressed();
+    u32 processInput();
+    void executeWait();
+    void enterIn();
+    void executeIn();
+    void enterOut();
+    void executeOut();
+    void enterSlideDown();
+    void executeSlideDown();
+    void finishOut();
+    void setLayoutPositionY(f32);
+    void restoreLayoutPositionY();
+    f32 layoutPositionY() const;
+    void updateState();
+    void clearContentNavigation();
+    void beginIn();
+    void beginOut();
+    u32 createSequencePart(hdMiiversePartRequest_l*);
+    f32 lowerBound() const;
+    f32 sequenceHeight() const;
+    void connectUpperControl(hdButtonPart_c*);
+    void connectContentAbove(hdButtonPart_c*);
+};
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mEnabled, 0x50);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mPressed, 0x51);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mPositionY, 0x54);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mSlideStep, 0x58);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mSavedY, 0x5C);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mPresentationOffset, 0x60);
+WWHD_OFFSET(hdMenuMiiverseSetting_c, mpSequencePane, 0x64);
+WWHD_SIZE(hdMenuMiiverseSetting_c, 0x68);

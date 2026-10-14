@@ -4,6 +4,7 @@ static MinigameState failedIdleState;
 
 /* 02626CD8 */
 void hdScreenBoatRaceFailedChar_c::wait() {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     u32 n = mWaitTimer;
     if (n != 0) {
         mWaitTimer = n - 1;

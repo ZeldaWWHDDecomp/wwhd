@@ -1,0 +1,633 @@
+src wwhd_src/d/hd_scene_title.cpp
+src wwhd_src/d/hd_scene_save_end.cpp
+src wwhd_src/d/hd_scene_staff_roll.cpp
+# Bubble draw list counts are bounded; keep their domains coherent across mocked draws.
+arg! 0271BE50 r3 0x58000000
+field 0271BE50 r3+0x190 s32 0 3
+stable 0x58000000 0x1000
+arg! 0271C6C8 r3 0x58002000
+field 0271C6C8 r3+0x78 s32 0 3
+stable 0x58002000 0x1000
+# Resource lookup returns a bounded synthetic file payload, including missing-file cases.
+ret! 027DFA24 0,0x5800B000
+field * 0x5800B000 s32 0,0x20
+field * 0x5800B004 u32 0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,0,20,40,60,80,6000,6020,4294967295
+stable 0x5800B000 0x2000
+
+# Exercise null allocation and the original inline constructors at guest wrapping boundaries.
+arg 0271CB64 r3 0,0x58004000,0xFFFFFFF0,0xFFFFFFE4,0xFFFFFFD8,0xFFFFFFC8,0xFFFFFFBC,0xFFFFFFB0,0xFFFFFFA0,0xFFFFFF94,0xFFFFFF88,0xFFFFFF78,0xFFFFFF6C,0xFFFFFF60
+arg 0271F1FC r3 0,0x58005000,0xFFFFFFE0,0xFFFFFFD0
+arg 0271E324 r3 0,0x58006000,0xFFFFFFF0,0xFFFFFFB8,0xFFFFFFA8,0xFFFFFF78,0xFFFFFF68,0xFFFFFF38,0xFFFFFF28,0xFFFFFEF8,0xFFFFFD68,0xFFFFFBCC,0xFFFFFB54,0xFFFFFAC8
+
+# Live and empty singleton states, plus disposer identity, are both meaningful branches.
+field 0271B458 0x101F83A8 u32 0,0x58020000
+field 0271B458 0x101F83A4 u32 0,0x58021000
+field 0271E6B8 0x101F83D4 u32 0,0x58022000
+field 0271E6B8 0x101F83D0 u32 0,0x58023000
+field 0271F3D8 0x101F8400 u32 0,0x58024000
+arg 0271B5C4 r3 0,0x58025000
+field 0271B5C4 0x101F83A8 u32 0,0x58025000
+arg 0271E7E8 r3 0,0x58026000
+field 0271E7E8 0x101F83D4 u32 0,0x58026000
+arg 0271F444 r3 0,0x58027000
+field 0271F444 0x101F8400 u32 0,0x58027000
+# The post-credit music state advances only after its status and timing threshold agree.
+field 0271DFC8 0x101D6010 u32 0,1,2
+field 0271DFC8 0x101D600C u32 0,2799,2800,2801
+# The save-menu mode distinguishes the special slot -2 from ordinary slots.
+field 0271B2C8 0x101F852C u32 0x58028000
+field 0271B2C8 0x58028020 s32 -2,-1,0,2
+stable 0x101F852C 4
+stable 0x58028000 0x24
+# Model keyframes include coincident/reversed times as well as their normal ordering.
+field 0271D104 r3+0x34 u32 0,7000,9300,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+field 0271D104 r3+0x5C u32 0,7000,9300,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+field 0271D104 r3+0x84 u32 0,9300,9700,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+arg 0271D104 r4 0,1,6999,7000,8000,9300,9700,10000,0x7FFFFFFF,0x80000000,0xFFFFFFFF
+# State-ID comparison callbacks can agree or disagree. Returned objects have a
+# valid state-ID get-key interface (actual SaveEnd slot14 -> 0271B938, r3 only).
+ret! 02006478 0x58010000,0x58012000
+field * 0x58010008 u32 0x58011000
+field * 0x58011014 u32 0x0271B938
+field * 0x1049C374 u32 0x58011000
+ret! 0271B938 0,1
+field * 0x58012008 u32 0x58011000
+stable 0x58010008 4
+stable 0x58012008 4
+stable 0x58011014 4
+stable 0x1049C374 4
+
+# A coherent material tree includes sky-name equality, a different material, and empty names.
+# Optional returned model/table pointers retain the generator's unsteered escape cases.
+ret 025E38E0 0x58030000,0x58030000
+ret 027F3F8C 0x58031000,0x58031000
+field * 0x580300AC u32 0x58032000
+field * 0x58031024 u16 0,1
+field * 0x5803200C u32 0,1
+field * 0x58032010 u32 0,0x58033000
+field * 0x58033000 u32 0x58034000
+field * 0x58033008 u32 0x58035000
+field * 0x58034004 s32 0,0x20,0xB810C548
+fieldstr 0271CE34 0x58034024 32 "sky_0_v_x","Xky_0_v_x","sky_0_v_y","sky","",@keep
+stable 0x580300AC 4
+stable 0x58031024 2
+stable 0x5803200C 8
+stable 0x58033000 0xC
+stable 0x58034004 4
+
+# Ambient bubble update uses the actual StaffRollBubbleS_00 vtable installed by026E46F4.
+# Slot5C=026E3D4C and slotCC=026E4D14 consume only this (livein.tsv mask8).
+# A coherent nonnull array avoids unrelated random function signatures reading incidental r4.
+arg! 0271BD0C r3 0x58060000
+field * 0x58060000 u32 0x58061000
+field * 0x58061004 u32 0x101068B8
+stable 0x58061004 4
+field * 0x58060004 u32 0x58061100
+field * 0x58061104 u32 0x101068B8
+stable 0x58061104 4
+field * 0x58060008 u32 0x58061200
+field * 0x58061204 u32 0x101068B8
+stable 0x58061204 4
+field * 0x5806000C u32 0x58061300
+field * 0x58061304 u32 0x101068B8
+stable 0x58061304 4
+field * 0x58060010 u32 0x58061400
+field * 0x58061404 u32 0x101068B8
+stable 0x58061404 4
+field * 0x58060014 u32 0x58061500
+field * 0x58061504 u32 0x101068B8
+stable 0x58061504 4
+field * 0x58060018 u32 0x58061600
+field * 0x58061604 u32 0x101068B8
+stable 0x58061604 4
+field * 0x5806001C u32 0x58061700
+field * 0x58061704 u32 0x101068B8
+stable 0x58061704 4
+field * 0x58060020 u32 0x58061800
+field * 0x58061804 u32 0x101068B8
+stable 0x58061804 4
+field * 0x58060024 u32 0x58061900
+field * 0x58061904 u32 0x101068B8
+stable 0x58061904 4
+field * 0x58060028 u32 0x58061A00
+field * 0x58061A04 u32 0x101068B8
+stable 0x58061A04 4
+field * 0x5806002C u32 0x58061B00
+field * 0x58061B04 u32 0x101068B8
+stable 0x58061B04 4
+field * 0x58060030 u32 0x58061C00
+field * 0x58061C04 u32 0x101068B8
+stable 0x58061C04 4
+field * 0x58060034 u32 0x58061D00
+field * 0x58061D04 u32 0x101068B8
+stable 0x58061D04 4
+field * 0x58060038 u32 0x58061E00
+field * 0x58061E04 u32 0x101068B8
+stable 0x58061E04 4
+field * 0x5806003C u32 0x58061F00
+field * 0x58061F04 u32 0x101068B8
+stable 0x58061F04 4
+field * 0x58060040 u32 0x58062000
+field * 0x58062004 u32 0x101068B8
+stable 0x58062004 4
+field * 0x58060044 u32 0x58062100
+field * 0x58062104 u32 0x101068B8
+stable 0x58062104 4
+field * 0x58060048 u32 0x58062200
+field * 0x58062204 u32 0x101068B8
+stable 0x58062204 4
+field * 0x5806004C u32 0x58062300
+field * 0x58062304 u32 0x101068B8
+stable 0x58062304 4
+field * 0x58060050 u32 0x58062400
+field * 0x58062404 u32 0x101068B8
+stable 0x58062404 4
+field * 0x58060054 u32 0x58062500
+field * 0x58062504 u32 0x101068B8
+stable 0x58062504 4
+field * 0x58060058 u32 0x58062600
+field * 0x58062604 u32 0x101068B8
+stable 0x58062604 4
+field * 0x5806005C u32 0x58062700
+field * 0x58062704 u32 0x101068B8
+stable 0x58062704 4
+field * 0x58060060 u32 0x58062800
+field * 0x58062804 u32 0x101068B8
+stable 0x58062804 4
+field * 0x58060064 u32 0x58062900
+field * 0x58062904 u32 0x101068B8
+stable 0x58062904 4
+field * 0x58060068 u32 0x58062A00
+field * 0x58062A04 u32 0x101068B8
+stable 0x58062A04 4
+field * 0x5806006C u32 0x58062B00
+field * 0x58062B04 u32 0x101068B8
+stable 0x58062B04 4
+field * 0x58060070 u32 0x58062C00
+field * 0x58062C04 u32 0x101068B8
+stable 0x58062C04 4
+field * 0x58060074 u32 0x58062D00
+field * 0x58062D04 u32 0x101068B8
+stable 0x58062D04 4
+field * 0x58060078 u32 0x58062E00
+field * 0x58062E04 u32 0x101068B8
+stable 0x58062E04 4
+field * 0x5806007C u32 0x58062F00
+field * 0x58062F04 u32 0x101068B8
+stable 0x58062F04 4
+field * 0x58060080 u32 0x58063000
+field * 0x58063004 u32 0x101068B8
+stable 0x58063004 4
+field * 0x58060084 u32 0x58063100
+field * 0x58063104 u32 0x101068B8
+stable 0x58063104 4
+field * 0x58060088 u32 0x58063200
+field * 0x58063204 u32 0x101068B8
+stable 0x58063204 4
+field * 0x5806008C u32 0x58063300
+field * 0x58063304 u32 0x101068B8
+stable 0x58063304 4
+field * 0x58060090 u32 0x58063400
+field * 0x58063404 u32 0x101068B8
+stable 0x58063404 4
+field * 0x58060094 u32 0x58063500
+field * 0x58063504 u32 0x101068B8
+stable 0x58063504 4
+field * 0x58060098 u32 0x58063600
+field * 0x58063604 u32 0x101068B8
+stable 0x58063604 4
+field * 0x5806009C u32 0x58063700
+field * 0x58063704 u32 0x101068B8
+stable 0x58063704 4
+field * 0x580600A0 u32 0x58063800
+field * 0x58063804 u32 0x101068B8
+stable 0x58063804 4
+field * 0x580600A4 u32 0x58063900
+field * 0x58063904 u32 0x101068B8
+stable 0x58063904 4
+field * 0x580600A8 u32 0x58063A00
+field * 0x58063A04 u32 0x101068B8
+stable 0x58063A04 4
+field * 0x580600AC u32 0x58063B00
+field * 0x58063B04 u32 0x101068B8
+stable 0x58063B04 4
+field * 0x580600B0 u32 0x58063C00
+field * 0x58063C04 u32 0x101068B8
+stable 0x58063C04 4
+field * 0x580600B4 u32 0x58063D00
+field * 0x58063D04 u32 0x101068B8
+stable 0x58063D04 4
+field * 0x580600B8 u32 0x58063E00
+field * 0x58063E04 u32 0x101068B8
+stable 0x58063E04 4
+field * 0x580600BC u32 0x58063F00
+field * 0x58063F04 u32 0x101068B8
+stable 0x58063F04 4
+field * 0x580600C0 u32 0x58064000
+field * 0x58064004 u32 0x101068B8
+stable 0x58064004 4
+field * 0x580600C4 u32 0x58064100
+field * 0x58064104 u32 0x101068B8
+stable 0x58064104 4
+field * 0x580600C8 u32 0x58064200
+field * 0x58064204 u32 0x101068B8
+stable 0x58064204 4
+field * 0x580600CC u32 0x58064300
+field * 0x58064304 u32 0x101068B8
+stable 0x58064304 4
+field * 0x580600D0 u32 0x58064400
+field * 0x58064404 u32 0x101068B8
+stable 0x58064404 4
+field * 0x580600D4 u32 0x58064500
+field * 0x58064504 u32 0x101068B8
+stable 0x58064504 4
+field * 0x580600D8 u32 0x58064600
+field * 0x58064604 u32 0x101068B8
+stable 0x58064604 4
+field * 0x580600DC u32 0x58064700
+field * 0x58064704 u32 0x101068B8
+stable 0x58064704 4
+field * 0x580600E0 u32 0x58064800
+field * 0x58064804 u32 0x101068B8
+stable 0x58064804 4
+field * 0x580600E4 u32 0x58064900
+field * 0x58064904 u32 0x101068B8
+stable 0x58064904 4
+field * 0x580600E8 u32 0x58064A00
+field * 0x58064A04 u32 0x101068B8
+stable 0x58064A04 4
+field * 0x580600EC u32 0x58064B00
+field * 0x58064B04 u32 0x101068B8
+stable 0x58064B04 4
+field * 0x580600F0 u32 0x58064C00
+field * 0x58064C04 u32 0x101068B8
+stable 0x58064C04 4
+field * 0x580600F4 u32 0x58064D00
+field * 0x58064D04 u32 0x101068B8
+stable 0x58064D04 4
+field * 0x580600F8 u32 0x58064E00
+field * 0x58064E04 u32 0x101068B8
+stable 0x58064E04 4
+field * 0x580600FC u32 0x58064F00
+field * 0x58064F04 u32 0x101068B8
+stable 0x58064F04 4
+field * 0x58060100 u32 0x58065000
+field * 0x58065004 u32 0x101068B8
+stable 0x58065004 4
+field * 0x58060104 u32 0x58065100
+field * 0x58065104 u32 0x101068B8
+stable 0x58065104 4
+field * 0x58060108 u32 0x58065200
+field * 0x58065204 u32 0x101068B8
+stable 0x58065204 4
+field * 0x5806010C u32 0x58065300
+field * 0x58065304 u32 0x101068B8
+stable 0x58065304 4
+field * 0x58060110 u32 0x58065400
+field * 0x58065404 u32 0x101068B8
+stable 0x58065404 4
+field * 0x58060114 u32 0x58065500
+field * 0x58065504 u32 0x101068B8
+stable 0x58065504 4
+field * 0x58060118 u32 0x58065600
+field * 0x58065604 u32 0x101068B8
+stable 0x58065604 4
+field * 0x5806011C u32 0x58065700
+field * 0x58065704 u32 0x101068B8
+stable 0x58065704 4
+field * 0x58060120 u32 0x58065800
+field * 0x58065804 u32 0x101068B8
+stable 0x58065804 4
+field * 0x58060124 u32 0x58065900
+field * 0x58065904 u32 0x101068B8
+stable 0x58065904 4
+field * 0x58060128 u32 0x58065A00
+field * 0x58065A04 u32 0x101068B8
+stable 0x58065A04 4
+field * 0x5806012C u32 0x58065B00
+field * 0x58065B04 u32 0x101068B8
+stable 0x58065B04 4
+field * 0x58060130 u32 0x58065C00
+field * 0x58065C04 u32 0x101068B8
+stable 0x58065C04 4
+field * 0x58060134 u32 0x58065D00
+field * 0x58065D04 u32 0x101068B8
+stable 0x58065D04 4
+field * 0x58060138 u32 0x58065E00
+field * 0x58065E04 u32 0x101068B8
+stable 0x58065E04 4
+field * 0x5806013C u32 0x58065F00
+field * 0x58065F04 u32 0x101068B8
+stable 0x58065F04 4
+field * 0x58060140 u32 0x58066000
+field * 0x58066004 u32 0x101068B8
+stable 0x58066004 4
+field * 0x58060144 u32 0x58066100
+field * 0x58066104 u32 0x101068B8
+stable 0x58066104 4
+field * 0x58060148 u32 0x58066200
+field * 0x58066204 u32 0x101068B8
+stable 0x58066204 4
+field * 0x5806014C u32 0x58066300
+field * 0x58066304 u32 0x101068B8
+stable 0x58066304 4
+field * 0x58060150 u32 0x58066400
+field * 0x58066404 u32 0x101068B8
+stable 0x58066404 4
+field * 0x58060154 u32 0x58066500
+field * 0x58066504 u32 0x101068B8
+stable 0x58066504 4
+field * 0x58060158 u32 0x58066600
+field * 0x58066604 u32 0x101068B8
+stable 0x58066604 4
+field * 0x5806015C u32 0x58066700
+field * 0x58066704 u32 0x101068B8
+stable 0x58066704 4
+field * 0x58060160 u32 0x58066800
+field * 0x58066804 u32 0x101068B8
+stable 0x58066804 4
+field * 0x58060164 u32 0x58066900
+field * 0x58066904 u32 0x101068B8
+stable 0x58066904 4
+field * 0x58060168 u32 0x58066A00
+field * 0x58066A04 u32 0x101068B8
+stable 0x58066A04 4
+field * 0x5806016C u32 0x58066B00
+field * 0x58066B04 u32 0x101068B8
+stable 0x58066B04 4
+field * 0x58060170 u32 0x58066C00
+field * 0x58066C04 u32 0x101068B8
+stable 0x58066C04 4
+field * 0x58060174 u32 0x58066D00
+field * 0x58066D04 u32 0x101068B8
+stable 0x58066D04 4
+field * 0x58060178 u32 0x58066E00
+field * 0x58066E04 u32 0x101068B8
+stable 0x58066E04 4
+field * 0x5806017C u32 0x58066F00
+field * 0x58066F04 u32 0x101068B8
+stable 0x58066F04 4
+field * 0x58060180 u32 0x58067000
+field * 0x58067004 u32 0x101068B8
+stable 0x58067004 4
+field * 0x58060184 u32 0x58067100
+field * 0x58067104 u32 0x101068B8
+stable 0x58067104 4
+field * 0x58060188 u32 0x58067200
+field * 0x58067204 u32 0x101068B8
+stable 0x58067204 4
+field * 0x5806018C u32 0x58067300
+field * 0x58067304 u32 0x101068B8
+stable 0x58067304 4
+stable 0x58060000 0x190
+
+# Character-bubble constructor026E2B70 stores vtable101064B0 at+4;
+# its +5C slot is the same void(this) state-update thunk 026E3D4C.
+# Distinct real-class screens prevent unrelated random vtable functions from
+# treating incidental argument registers as part of this callback signature.
+arg! 0271C3C8 r3 0x58070000
+field * 0x58070000 u32 0x58071000,0x58071000
+field * 0x58071004 u32 0x101064B0,0x101064B0
+stable 0x58071004 4
+field * 0x58070004 u32 0x58071100,0x58071100
+field * 0x58071104 u32 0x101064B0,0x101064B0
+stable 0x58071104 4
+field * 0x58070008 u32 0x58071200,0x58071200
+field * 0x58071204 u32 0x101064B0,0x101064B0
+stable 0x58071204 4
+field * 0x5807000C u32 0x58071300,0x58071300
+field * 0x58071304 u32 0x101064B0,0x101064B0
+stable 0x58071304 4
+field * 0x58070010 u32 0x58071400,0x58071400
+field * 0x58071404 u32 0x101064B0,0x101064B0
+stable 0x58071404 4
+field * 0x58070014 u32 0x58071500,0x58071500
+field * 0x58071504 u32 0x101064B0,0x101064B0
+stable 0x58071504 4
+field * 0x58070018 u32 0x58071600,0x58071600
+field * 0x58071604 u32 0x101064B0,0x101064B0
+stable 0x58071604 4
+field * 0x5807001C u32 0x58071700,0x58071700
+field * 0x58071704 u32 0x101064B0,0x101064B0
+stable 0x58071704 4
+field * 0x58070020 u32 0x58071800,0x58071800
+field * 0x58071804 u32 0x101064B0,0x101064B0
+stable 0x58071804 4
+field * 0x58070024 u32 0x58071900,0x58071900
+field * 0x58071904 u32 0x101064B0,0x101064B0
+stable 0x58071904 4
+field * 0x58070028 u32 0x58071A00,0x58071A00
+field * 0x58071A04 u32 0x101064B0,0x101064B0
+stable 0x58071A04 4
+field * 0x5807002C u32 0x58071B00,0x58071B00
+field * 0x58071B04 u32 0x101064B0,0x101064B0
+stable 0x58071B04 4
+field * 0x58070030 u32 0x58071C00,0x58071C00
+field * 0x58071C04 u32 0x101064B0,0x101064B0
+stable 0x58071C04 4
+field * 0x58070034 u32 0x58071D00,0x58071D00
+field * 0x58071D04 u32 0x101064B0,0x101064B0
+stable 0x58071D04 4
+field * 0x58070038 u32 0x58071E00,0x58071E00
+field * 0x58071E04 u32 0x101064B0,0x101064B0
+stable 0x58071E04 4
+field * 0x5807003C u32 0x58071F00,0x58071F00
+field * 0x58071F04 u32 0x101064B0,0x101064B0
+stable 0x58071F04 4
+field * 0x58070040 u32 0x58072000,0x58072000
+field * 0x58072004 u32 0x101064B0,0x101064B0
+stable 0x58072004 4
+field * 0x58070044 u32 0x58072100,0x58072100
+field * 0x58072104 u32 0x101064B0,0x101064B0
+stable 0x58072104 4
+field * 0x58070048 u32 0x58072200,0x58072200
+field * 0x58072204 u32 0x101064B0,0x101064B0
+stable 0x58072204 4
+field * 0x5807004C u32 0x58072300,0x58072300
+field * 0x58072304 u32 0x101064B0,0x101064B0
+stable 0x58072304 4
+field * 0x58070050 u32 0x58072400,0x58072400
+field * 0x58072404 u32 0x101064B0,0x101064B0
+stable 0x58072404 4
+field * 0x58070054 u32 0x58072500,0x58072500
+field * 0x58072504 u32 0x101064B0,0x101064B0
+stable 0x58072504 4
+field * 0x58070058 u32 0x58072600,0x58072600
+field * 0x58072604 u32 0x101064B0,0x101064B0
+stable 0x58072604 4
+field * 0x5807005C u32 0x58072700,0x58072700
+field * 0x58072704 u32 0x101064B0,0x101064B0
+stable 0x58072704 4
+field * 0x58070060 u32 0x58072800,0x58072800
+field * 0x58072804 u32 0x101064B0,0x101064B0
+stable 0x58072804 4
+field * 0x58070064 u32 0x58072900,0x58072900
+field * 0x58072904 u32 0x101064B0,0x101064B0
+stable 0x58072904 4
+field * 0x58070068 u32 0x58072A00,0x58072A00
+field * 0x58072A04 u32 0x101064B0,0x101064B0
+stable 0x58072A04 4
+field * 0x5807006C u32 0x58072B00,0x58072B00
+field * 0x58072B04 u32 0x101064B0,0x101064B0
+stable 0x58072B04 4
+field * 0x58070070 u32 0x58072C00,0x58072C00
+field * 0x58072C04 u32 0x101064B0,0x101064B0
+stable 0x58072C04 4
+field * 0x58070074 u32 0x58072D00,0x58072D00
+field * 0x58072D04 u32 0x101064B0,0x101064B0
+stable 0x58072D04 4
+stable 0x58070000 0x78
+
+# All uses of the concrete bubble classes share these object pools. The constructor-
+# proven vtables retain the real +54 release, +5C update, +6C draw and +CC start
+# signatures; only the object identities and vtable words are fixed.
+arg! 0271BC28 r3 0x58060000
+arg! 0271BEE4 r3 0x58060000
+arg! 0271C75C r3 0x58070000
+field 0271BE50 0x58000198 u32 0x58060000,0x58060000
+field 0271C6C8 0x58002080 u32 0x58070000,0x58070000
+
+# The remaining screen callbacks use their constructor-proven concrete classes.
+# 026EAF38 -> Title vtable 10108320; 026E071C -> Staff vtable 101060E0;
+# 026E2404 -> Background vtable 10106350; 02669D08 -> Fade vtable 100F49A0.
+# Every +54/+5C callback reads only this; the +6C draw callbacks read this/context.
+field * 0x58080004 u32 0x10108320,0x10108320
+field * 0x58081004 u32 0x101060E0,0x101060E0
+field * 0x58082004 u32 0x10106350,0x10106350
+field * 0x58083004 u32 0x100F49A0,0x100F49A0
+stable 0x58080004 4
+stable 0x58081004 4
+stable 0x58082004 4
+stable 0x58083004 4
+
+# These operations own the stated screen classes; enter obtains them through
+# its mocked createScreens call. Only the three ownership pointer fields are stable;
+# the scene's state, tasks and animation
+# fields, and all screen data apart from each vtable word, remain randomized.
+field * 0x580900FC u32 0x58081000,0x58081000
+field * 0x58090100 u32 0x58082000,0x58082000
+field * 0x58090104 u32 0x58083000,0x58083000
+stable 0x580900FC 12
+arg! 0271DC54 r3 0x58090000
+arg! 0271DD04 r3 0x58090000
+arg! 0271E0A0 r3 0x58090000
+arg! 0271E20C r3 0x58090000
+arg! 0271D9FC r3 0x58090000
+
+# Title calc/draw retain the Title_00 screen owned by their embedded render task.
+field * 0x58092050 u32 0x58080000,0x58080000
+stable 0x58092050 4
+arg! 0271F064 r3 0x58092000
+arg! 0271F07C r3 0x58092000
+
+# Present singleton objects use the vtables installed by this unit's constructors;
+# absent singleton and disposer-identity cases above remain independently varied.
+field * 0x5802000C u32 0x10140320,0x10140320
+field * 0x58021024 u32 0x101402F0,0x101402F0
+field * 0x5802200C u32 0x10140678,0x10140678
+field * 0x58023024 u32 0x10140668,0x10140668
+field * 0x5802400C u32 0x10140708,0x10140708
+stable 0x5802000C 4
+stable 0x58021024 4
+stable 0x5802200C 4
+stable 0x58023024 4
+stable 0x5802400C 4
+field 0271B5C4 0x101F83A4 u32 0x58021000,0x58021000
+field 0271E7E8 0x101F83D0 u32 0x58023000,0x58023000
+
+# Mutation boundary cases: cursor300 must use record0, not the count/tail area.
+# Character bubbles retain their actual class pool; frame/count/record data remain varied.
+arg! 0271C0F8 r3 0x58070000
+field 0271C0F8 r3+0xFC u32 0,1,299,300,301
+field 0271C0F8 r3+0x100 u32 0,1,100
+field 0271C0F8 r3+0x1874 u32 0,1,2,300
+field 0271C0F8 r3+0x108 s32 -1,0,1,100
+field 0271C3C8 r3+0xFC u32 0,1,299,300,301
+field 0271C3C8 r3+0x100 u32 0,1,100
+field 0271C3C8 r3+0x1874 u32 0,1,2,300,301,302
+field 0271C3C8 r3+0x108 s32 -1,0,1,100
+# Sorting should stop strictly before recordCount, including one-record files.
+field 0271C7D8 r3+0x108 u32 0,1,0x7FFFFFFF,0xFFFFFFFF
+field 0271C7D8 r3+0x11C u32 0,1,0x7FFFFFFF,0xFFFFFFFF
+# Background draw must use its fallback layer when index equals count.
+arg! 0271DE9C r3 0x58090000
+arg! 0271DE9C r4 0x58094000
+field 0271DE9C 0x5809400C u32 0,1,2,3
+field 0271DE9C 0x101F95D0 u32 0x58095000
+field 0271DE9C 0x58096020 u32 0,1,2,3
+field 0271DE9C 0x58096024 u32 0x58096000
+field 0271DE9C 0x58096000 u32 0x58097000
+field 0271DE9C 0x58096004 u32 0x58098000
+field 0271DE9C 0x58096008 u32 0x58099000
+field 0271DE9C 0x5809600C u32 0x5809A000
+field 0271DE9C 0x58096010 u32 0x5809B000
+stable 0x101F95D0 4
+stable 0x58096020 8
+stable 0x58096000 20
+
+# Alias observation: real hideHeader clears pane bit0 before enterSaveInit reads
+# the save slot. The pane flag aliases the slot low byte (+23), alongside a
+# separate ordinary pane. The nested pointer is deliberately allowed to be unaligned;
+# odd -1 becomes special -2, exposing cached reads moved before the call.
+real 026E5580
+arg! 0271B2C8 r3 0x580A3000
+field 0271B2C8 r3+0x12C u32 0x580A0000
+field 0271B2C8 0x580A0044 u32 0x580A1000
+field 0271B2C8 0x580A1004 u32 0x580A2000
+field 0271B2C8 0x580A200C u32 0x58027FDF,0x5802A000
+stable 0x580A0044 4
+stable 0x580A1004 4
+stable 0x580A200C 4
+# Alias observation: renderer params.mFlags and scene.mpBackground overlap.
+# Preserve this possible guest alias so a store/load swap cannot be hidden by
+# the usual separate layer/scene ownership graph.
+arg! 0271D7D4 r3 0x58090000
+field 0271D7D4 0x101F95D0 u32 0x58095000
+field 0271D7D4 0x58096020 u32 0,4
+field 0271D7D4 0x58096024 u32 0x58096000
+field 0271D7D4 0x58096000 u32 0x580900B0
+field 0271D7D4 0x5809600C u32 0x580900B0
+field 0271D7D4 0x58090100 u32 0,0x40,0x80,0xC0,0x1000
+# Instance creation must preserve writes across the actual scene constructors.
+# Include null/ordinary allocations and destinations whose embedded member writes
+# overlap the registered disposer singleton; observe actual behavior, not a mock
+# that invents a global side effect. Both present/absent singleton branches remain.
+real 0271F1FC
+real 0271E324
+ret! 0273B0D4 0,0x580B0000,0x101F83E0,0x101F83CC
+field 0271F2F0 0x101F83FC u32 0,0x580B0000
+field 0271E618 0x101F83D0 u32 0,0x580B0000
+# Explicit callback replacement domain for state-ID table observation timing.
+# Both tables target signature-compatible word0 state-key getters; their mocked
+# return domains are distinct (0/1 versus2/3). Ordinary table is retained.
+# This detects sensitivity across opaque callbacks, rather than asserting that
+# an actual callback necessarily mutates the global table.
+field * 0x58013014 u32 0x026FA184
+stable 0x58013014 4
+ret! 026FA184 2,3
+mockglobal 02006478 0x1049C374 u32 0x58011000,0x58013000
+mockglobal 026E3D4C 0x1049C374 u32 0x58011000,0x58013000
+
+# Wrapped-null state constructor: scene+10 wraps to0, owner vtable is at14.
+# Actual state constructor retains its wrapped-null allocation path. Nested
+# allocator calls do not capture observe directives; no unused-owner-field
+# observation is imposed on this constructor.
+real 020062E8
+
+# Grouped companion candidate; full103 verification required.
+
+# Actual scene.mpFade+104 overlaps params.mFlags+50 for params=scene+B4.
+# Ordinary disjoint params remain alongside the guest alias case.
+field 0271D7D4 0x58096000 u32 0x580900B4,0x580D0000
+field 0271D7D4 0x5809600C u32 0x580900B4,0x580D0000
+field 0271D7D4 0x58090104 u32 0x1000
+field 0271D7D4 0x58090218 u32 0x580E8000
+field 0271D7D4 0x580D0048 u32 0x580E9000
+field 0271D7D4 0x580D004C u32 0x580EA000
+field 0271D7D4 0x580D0050 u32 0,0x1000
+field 0271D7D4 0x580D0164 u32 0x580EB000
+ret! 02669D08 0x580E0000
+stable 0x58090104 4
+stable 0x58090218 4
+stable 0x580D0048 12
+stable 0x580D0164 4

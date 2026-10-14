@@ -1,0 +1,146 @@
+# HD dungeon map components.
+src wwhd_src/d/hd_screen_dungeon_map_link.cpp
+src wwhd_src/d/hd_screen_dungeon_map_makore.cpp
+src wwhd_src/d/hd_screen_dungeon_map_medley.cpp
+src wwhd_src/d/hd_screen_dungeon_map_ship.cpp
+src wwhd_src/d/hd_screen_dungeon_map_boss_factories.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_first.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_second.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_third.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_fourth.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_fifth.cpp
+src wwhd_src/d/hd_screen_dungeon_map_door.cpp
+src wwhd_src/d/hd_screen_dungeon_map_floor_main.cpp
+src wwhd_src/d/hd_screen_dungeon_map_down.cpp
+src wwhd_src/d/hd_screen_dungeon_map_boss.cpp
+src wwhd_src/d/hd_sea_chart_state_handlers.cpp
+
+# Animation ranges pass three of their final arguments on the PPC stack. Observe
+# them so changes to mEnterStart/mLeaveStart are detected even though the helper
+# itself is mocked by this unit.
+callee 0267E460 stack=3
+
+# The chart owns ten floor cells; keep generated traversal counts in that domain,
+# including negative and zero counts that skip traversal.
+field 02661CD8 r3+0x4B8 u32 0x55000000
+field 02661CD8 5500000C s32 -1,0,1,2,5,9,10
+field 02661CD8 55000523 u8 0,1,9,10,0x7F,0x80,0x81,0x85,0xFE,0xFF
+
+# Coverage: null allocation, complete nonwrapping construction and UI floor decisions.
+# Ordinary complete-object ownership excludes wrapped owner 0xFFFFFF60.
+# Embedded-null construction arms are qualified statically, not executed coverage.
+arg! 02660358 r3 0,0x40000000
+ret 0268714C 0,1
+field 026606B4 101F8344 u32 0x56000000
+field 026606B4 56000218 u32 0x56001000
+field 026606B4 56001050 u32 0,1,2,3,4,5,0xFFFFFFFF
+field 02660880 101F8344 u32 0x56000000
+field 02660880 56000218 u32 0x56001000
+field 02660880 56001050 u32 0,1,2,3,4,5,0xFFFFFFFF
+field 02660984 101F8344 u32 0x56000000
+field 02660984 56000218 u32 0x56001000
+field 02660984 56001050 u32 0,1,2,3,4,5,0xFFFFFFFF
+field 02660880 r3+0x89 u8 0,0x7F,0x80,0x81,0x82,0x83,0x84,0x85
+field 02660880 r3+0xA0 u32 0,0x56002000
+field 02660880 100F0E18 u32 0x7F
+field 02660880 100F0E20 u32 0x80
+field 02660880 100F0E28 u32 0x81
+field 02660880 100F0E30 u32 0x82
+field 02660880 100F0E38 u32 0x83
+
+# The SafeString assurance leaves are actual one-instruction blr bodies.
+real 02660EB0
+field 02660984 r3+0xA4 u32 0,0x53000000
+field 02660984 100F0E04 u32 0x02660EB0
+fieldstr 02660984 53000080 32 "N_2FDown_01","N_1FDown_00","N_3FDown_00","N_2FDown_00","N_1FDown_01",@keep
+field 02660984 10492760 u32 0x53001000
+field 02660984 10492764 u32 0x100F0DF0
+fieldstr 02660984 53001000 32 "N_2FDown_01"
+field 02660984 10492768 u32 0x53001040
+field 02660984 1049276C u32 0x100F0DF0
+fieldstr 02660984 53001040 32 "N_1FDown_00"
+field 02660984 10492770 u32 0x53001080
+field 02660984 10492774 u32 0x100F0DF0
+fieldstr 02660984 53001080 32 "N_3FDown_00"
+field 02660984 10492778 u32 0x530010C0
+field 02660984 1049277C u32 0x100F0DF0
+fieldstr 02660984 530010C0 32 "N_1FDown_00"
+arg! 026611C4 r4 0x53002000
+field 026611C4 53002014 u32 0x53003000
+field 026611C4 53002018 u32 0x100F106C,0x100F0DF0
+field 026611C4 100F0E04 u32 0x02660EB0
+fieldstr 026611C4 53003000 32 "L_Searchlight_00","L_Searchlight_01","L_Searchlight_02","L_Searchlight_03","L_Searchlight_0"
+field 026611C4 10492858 u32 0x53004000
+field 026611C4 1049285C u32 0x100F106C,0x100F0DF0
+fieldstr 026611C4 53004000 32 "L_Searchlight_00"
+field 026611C4 10492860 u32 0x53004040
+field 026611C4 10492864 u32 0x100F106C,0x100F0DF0
+fieldstr 026611C4 53004040 32 "L_Searchlight_01"
+field 026611C4 10492868 u32 0x53004080
+field 026611C4 1049286C u32 0x100F106C,0x100F0DF0
+fieldstr 026611C4 53004080 32 "L_Searchlight_02"
+ret 0267D698 0,1,9,10,0x80,0x81,0x85
+ret 02661734 0,1,9,10,0x80,0x81,0x85
+ret 0266169C 0,0x57000000
+ret 02661C4C 0,0x57001000
+ret 0267EB68 0,0x57002000
+field 02661734 r3+0x4B8 u32 0x55000000
+field 02661734 5500000C u32 0,1,2,8,9,10,11,0xFFFFFFFF
+field 02661910 r3+0x4B8 u32 0x55000000
+field 02661910 5500000C u32 0,1,2,8,9,10,11,0xFFFFFFFF
+field 02661ACC r3+0x4B8 u32 0x55000000
+field 02661ACC 5500000C u32 0,1,2,8,9,10,11,0xFFFFFFFF
+field 02661C4C r3+0x4B8 u32 0,0x55000000
+field 02661C4C 5500000C u32 0,1,2,8,9,10,11,0xFFFFFFFF
+field 02661734 r3+4 u32 0x58000000
+field 02661734 580001C4 u32 0x0266169C
+field 02661734 580001CC u32 0x02661734
+field 02661734 58000224 u32 0x02661C4C
+field 02661734 r3+0x4E0 f32 -1,0,1
+field 02661734 5700002C f32 -1,0,1
+field 02661910 r3+4 u32 0x58000000
+field 02661910 580001C4 u32 0x0266169C
+field 02661910 580001CC u32 0x02661734
+field 02661910 58000224 u32 0x02661C4C
+field 02661910 r3+0x4E0 f32 -1,0,1
+field 02661910 5700002C f32 -1,0,1
+field 02661CD8 r3+4 u32 0x58000000
+field 02661CD8 580001C4 u32 0x0266169C
+field 02661CD8 580001CC u32 0x02661734
+field 02661CD8 58000224 u32 0x02661C4C
+field 02661CD8 r3+0x4E0 f32 -1,0,1
+field 02661CD8 5700002C f32 -1,0,1
+arg 02661C4C r4 0,0x80,0x81,0x85
+field 02661C4C r3+0x520 u32 0,1,2,3,7
+field 02661C4C 5500000C u32 0,1,2
+field 02661C4C 100F1084 u32 1
+field 02661C4C 100F1088 u32 0x80
+field 02661C4C 100F108C u32 2
+field 02661C4C 100F1090 u32 0x81
+field 02661C4C 100F1094 u32 3
+field 02661C4C 100F1098 u32 0x85
+field 026611C4 100F1080 u32 0x02662574
+
+# Boundary fallback: index ten wraps to the first chart cell, not the adjacent
+# reference cell. Keep both cells readable and distinguish their room numbers.
+ret 0267D614 0
+arg! 0266169C r4 42
+field 0266169C r3+0x4B8 u32 0x55000000
+field 0266169C 5500000C u32 0,9,10,11,0xFFFFFFFF
+field 0266169C r3+0xA8 u8 42
+field 0266169C r3+0x490 u8 43
+field 026618B0 r3+0x4B8 u32 0x55000000
+field 026618B0 5500000C u32 0,9,10,11,0xFFFFFFFF
+
+# rotatePoint reads both input and offset words, and writes only its output point.
+callee 026893C8 r3=out8 r4=8 r5=8
+
+# Boss and chart are separately owned complete objects.
+# Keep the source coordinates distinct and readable without synthetic overlap.
+arg 0265FCB8 r3 0x61001000
+field 0265FCB8 61001090 u32 0x61003000
+field 0265FCB8 61001094 u32 0x61002000
+field 0265FCB8 610034B8 u32 1
+field 0265FCB8 6100202C f32 1.0
+field 0265FCB8 610034E0 f32 1.0
+field 0265FCB8 610034E4 f32 2.0

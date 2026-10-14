@@ -1,0 +1,104 @@
+src wwhd_src/d/hd_screen_collection.cpp
+src wwhd_src/d/hd_screen_btn_triforce.cpp
+src wwhd_src/d/hd_screen_blur_bg.cpp
+src wwhd_src/d/hd_screen_btn_pearl.cpp
+# Finite one-pane owning array: stable metadata permits own constructor/load/free writes.
+arg! 02641B14 r3 0x54000000
+arg! 02641CAC r3 0x54000000
+field 02641B14 r3+0x78 u32 0,1
+field 02641CAC r3+0x78 u32 0,1
+stable 54000078 8
+
+# Triforce owns one light pane and ten fragment/completion panes.
+# Helpers may write array entries; immutable allocation metadata survives mock epochs.
+arg! 026449E8 r3 0x54000000
+arg! 02644C1C r3 0x54000000
+field 026449E8 r3+0x78 u32 0,1
+field 026449E8 r3+0x80 u32 0,1,8,9,10
+field 02644C1C r3+0x78 u32 0,1
+field 02644C1C r3+0x80 u32 0,1,8,9,10
+stable 54000080 8
+# GX format helper writes one output word, without reading its old contents.
+# For this caller r4=0x1A: the binary selects format9 and stores output+0 only.
+callee 0287F1EC r3=out4
+
+# Targeted finite menu state and child-array domains.
+field 02625568 101F8351 u8 0,1
+field 02625588 r3+0xF8 u32 19,7,8
+field 02625C44 101FD8E4 u32 0,1
+field 026452B4 101FD8E4 u32 0,1
+stable 101FD8E4 4
+field 02644D44 r3+0x88 u32 0,1,255,256,511
+arg! 02644D44 r4 0,1,7,8,9,31,32
+field 02644F0C r3+0x88 u32 0,1,255,256,511
+field 026472BC r3+0x48 u32 0,1,2,3,4
+arg! 026258A4 r3 0,0x54020000
+arg! 02641A74 r3 0,0x54020000,0xFFFFFF88
+arg! 02644914 r3 0,0x54020000,0xFFFFFF88,0xFFFFFF80,0xFFFFFF78
+arg! 02647250 r3 0,0x54020000
+ret! 0273AD10 0,0x54030000
+# Capture source selection follows the five controller modes and optional missing capture.
+arg! 02625588 r3 0x54070000
+field 02625588 101F5088 u32 0x54071000
+field 02625588 540711D0 u32 0,1,2,3,4
+stable 101F5088 4
+stable 540711D0 4
+ret! 027F81A4 0,0x54072000
+
+# Coherent immutable descriptor strings, four allocated child slots and bounded active count.
+# Null/success allocation remains varied; a constructed nonnull child returns its same pointer.
+arg! 0264773C r3 0x54040000
+arg! 0264773C r4 0x54050000
+field 0264773C 54040048 u32 0,1,2,3,4
+field 0264773C 5404004C u32 0x54041000
+stable 54040048 8
+field 0264773C 54050008 u32 0x100EBB3C,0x100ECBEC,0x100ED680,0x54052000
+field 0264773C 5405000C u32 0x100ED63C
+field 0264773C 54050014 u32 0x54051000,0x100ED690,0x100ED69C,0x100ED6A8,0x100ED670,0x100ED680
+field 0264773C 54050018 u32 0x100ED63C
+stable 54050008 8
+stable 54050014 8
+field 0264773C 10490A30 u32 0x100EBB3C
+field 0264773C 10490A34 u32 0x100EBAFC
+field 0264773C 10490E40 u32 0x100ECBEC
+field 0264773C 10490E44 u32 0x100ECA24
+stable 10490A30 8
+stable 10490E40 8
+ret! 0273B050 0,0x54060000
+ret! 02641A74 0x54060000
+ret! 02644914 0x54060000
+field 0264773C 104910B0 u32 0x100ED690
+field 0264773C 104910B4 u32 0x100ED63C
+field 0264773C 54041000 u32 0x54042000
+field 0264773C 104910B8 u32 0x100ED69C
+field 0264773C 104910BC u32 0x100ED63C
+field 0264773C 54041004 u32 0x54043000
+field 0264773C 104910C0 u32 0x100ED6A8
+field 0264773C 104910C4 u32 0x100ED63C
+field 0264773C 54041008 u32 0x54044000
+field 0264773C 104910C8 u32 0x100ED670
+field 0264773C 104910CC u32 0x100ED63C
+field 0264773C 5404100C u32 0x54045000
+stable 104910B0 32
+stable 54041000 16
+fieldstr 0264773C 54051000 32 "L_Pearl_00","L_Pearl_01","L_Pearl_02","L_Triforce_00","L_Unmatched_00"
+
+# Literal SafeString assurance vtable targets are single-instruction returns.
+# Execute those exact existing helpers; none can mutate descriptor or owner metadata.
+real 02647C04
+real 02641F58
+real 02645610
+# The owning UI system supplies a distinct stable heap identity for child allocation.
+field 0264773C 1018C404 u32 0x54080000
+field 0264773C 54080010 u32 0x54081000
+stable 1018C404 4
+stable 54080010 4
+
+# Supplemental 32-bit wrapped embedded-subobject allocation paths.
+# These synthetic addresses do not establish valid allocated-object behavior.
+
+# Distinct immutable type text exercises byte comparison as well as literal pointer equality.
+fieldstr 0264773C 54052000 32 "BtnPearl_00","BtnTriforce_00","Collection_00"
+
+# setReceiverButtons has eight explicit arguments after this; ninth scalar is stack word0.
+callee 026F5C08 stack=1

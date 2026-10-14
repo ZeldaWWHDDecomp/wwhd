@@ -15,10 +15,10 @@ static ShopText clothArcname;
 const char *daShopItem_c::getShopArcname() {
     u8 type = (fopAcM_GetParam(this) >> 8) & 0xF;
     if (type == 1 || (type == 0 && daShopItem_data::mModelType(m_itemNo) == 0x01)) {
-        return gabi::at<ShopFieldResource>(dItem_data::field_item_res(m_itemNo))
+        return gabi::at<ShopFieldResource>(dItemDataView::field_item_res(m_itemNo))
             ->mArcname; /* getFieldArc */
     } else {
-        return gabi::at<ShopItemResource>(dItem_data::item_resource(m_itemNo))
+        return gabi::at<ShopItemResource>(dItemDataView::item_resource(m_itemNo))
             ->mArcname; /* getArcname */
     }
 }
@@ -27,10 +27,10 @@ const char *daShopItem_c::getShopArcname() {
 s16 daShopItem_c::getShopBmdIdx() {
     u8 type = (fopAcM_GetParam(this) >> 8) & 0xF;
     if (type == 1 || (type == 0 && daShopItem_data::mModelType(m_itemNo) == 0x01)) {
-        return gabi::at<ShopFieldResource>(dItem_data::field_item_res(m_itemNo))
+        return gabi::at<ShopFieldResource>(dItemDataView::field_item_res(m_itemNo))
             ->mBmdIdx; /* getFieldBmdIdx */
     } else {
-        return gabi::at<ShopItemResource>(dItem_data::item_resource(m_itemNo))
+        return gabi::at<ShopItemResource>(dItemDataView::item_resource(m_itemNo))
             ->mBmdIdx; /* getBmdIdx */
     }
 }

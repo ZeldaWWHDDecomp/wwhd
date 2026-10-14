@@ -97,6 +97,7 @@ u32 JPAVortexField::isItinRange(JPAFieldData *data, f32 distance) {
 }
 /* 028237D4 */
 void JPAConvectionField::preCalc(JPAFieldData *data) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     FrameLocal<cXyz> axis(8);
     basePre(this, data);
     auto direction = readVec(&data->mDir), position = readVec(&data->mPos);
@@ -187,6 +188,7 @@ void JPADragField::calc(JPAFieldData *data, JPABaseParticle *particle) {
 }
 /* 02823EF0 */
 void JPASpinField::preCalc(JPAFieldData *data) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     FrameLocal<JPAFieldMatrix> matrix(8);
     basePre(this, data);
     transform(&data->mDir, &data->mPos);
@@ -203,6 +205,7 @@ void JPASpinField::preCalc(JPAFieldData *data) {
 }
 /* 02823FF0 */
 void JPASpinField::calc(JPAFieldData *data, JPABaseParticle *particle) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     FrameLocal<JPAFieldMatrix> matrix(8);
     FrameLocal<cXyz> position(0x38);
     for (u32 column = 0; column < 3; ++column)

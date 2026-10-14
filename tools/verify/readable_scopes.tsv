@@ -1,0 +1,32 @@
+# readable_scopes.tsv: the published -only scope of scoped companion specs (readable_check.py runs them with it).
+# Format: spec<TAB>ADDR[,ADDR...]   # where the scope comes from (the gate that verified/merged the unit).
+# A companion that only steers some functions passes those under -only; outside its scope its fixture is not a
+# valid input domain (e.g. HUD text_vtable: 026E6F48/026E7CD0 differ on stack data unscoped, in the merged
+# reference too). Specs whose header says "run with -only ADDR" are scoped by that comment and need no line.
+hd_hud_place_name_rupy_4more/allocation_outcomes	026C9648,026CA9F4,026E6E04,026E8490	# final-24c4ae91 / merge d7dd9704 (14 scoped pairs)
+hd_hud_place_name_rupy_4more/events_and_guards	026E7DD4,026E8174,026E8214,026E8534	# final-24c4ae91 / merge d7dd9704
+hd_hud_place_name_rupy_4more/finite_rtti	026E8694	# final-24c4ae91 / merge d7dd9704
+hd_hud_place_name_rupy_4more/sound_and_swim	026E6560,026E7DD4	# final-24c4ae91 / merge d7dd9704
+hd_hud_place_name_rupy_4more/text_capacity	026E7CD0	# final-24c4ae91 / merge d7dd9704
+hd_hud_place_name_rupy_4more/text_vtable	026CA534,026E9BC4	# final-24c4ae91 / merge d7dd9704
+hd_hud_boss_hp_compass_clock_4more/boss_class_cap	026299D0	# verified-408e2cc0 / merge 3dafaa60 (4 scoped cap pairs)
+hd_hud_boss_hp_compass_clock_4more/boss_resource_cap	026299D0	# verified-408e2cc0 / merge 3dafaa60
+hd_hud_boss_hp_compass_clock_4more/crawl_class_cap	0264FF10	# verified-408e2cc0 / merge 3dafaa60
+hd_hud_boss_hp_compass_clock_4more/crawl_resource_cap	0264FF10	# verified-408e2cc0 / merge 3dafaa60
+hd_map_secret_entrance_squid_4more/name_fixtures	026D3D48,026DF8B0,026E5EDC,026E95D4,026EA7A8,026EDBF4	# final-fc07c1a9 / merge a3a95c70 (6 scoped pairs)
+hd_menu_blur_bg_btn_pearl_2more_child_descriptor	0264773C	# checkpoint-a2b892b9 final-gate1 (scoped child 1)
+hd_menu_blur_bg_btn_pearl_2more_constructor_wrap	02641A74,02644914	# checkpoint-a2b892b9 final-gate1 (scoped wrap 2)
+hd_menu_blur_bg_btn_pearl_2more_neighbor_receivers	026472BC	# checkpoint-a2b892b9 final-gate1 (scoped neighbors 1)
+hd_menu_blur_bg_btn_pearl_2more_pearl_clear_guard	02641B14	# checkpoint-a2b892b9 final-gate1 (scoped clear 1)
+hd_drc_item_screen/point_alias	026302B8	# DRC-item_screen merge row (run -only)
+hd_drc_item_screen/cold_descriptors	0263420C,02634420	# DRC-item_screen merge row
+hd_drc_item_screen/pane_release	02634C0C	# DRC-item_screen merge row
+hd_drc_item_screen/stale_capacity	02634F00	# DRC-item_screen merge row
+hd_drc_icon_slide_area/callback_writes	0266FB7C,0266FCA8,0266F874,02671404,02670D9C	# DRC-icon_slide_area merge row
+hd_map_btn_floor_enemy_tower_4more/name_cap	0266E978,026AC40C,0266CAF0	# MAP-btn_floor+enemy_tower+4more merge row
+hd_map_tre_map/pane_callback	026EC830	# MAP-tre_map merge row
+hd_map_tre_map/name_budget	026ECB2C	# MAP-tre_map merge row
+hd_map_menu_map/chart_details	0269B414	# MAP-menu_map merge row
+hd_map_menu_map/screens_count	0269C8E4	# MAP-menu_map merge row
+hd_scene_file_select/name_cap	0270AEC8	# SCENE-file_select merge row
+hd_picto_pictograph_alias_order	026FD054	# PICTO-pictograph merge (alias_order scoped 026FD054)

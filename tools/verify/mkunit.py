@@ -87,6 +87,23 @@ def instrument(text, new_name, cov):
     return "\n".join(out), nb
 
 
+_CTOR_SIZES = None
+
+
+def ctor_sizes():
+    """tools/verify/ctor_sizes.tsv: constructor address -> sizeof (bytes)"""
+    global _CTOR_SIZES
+    if _CTOR_SIZES is None:
+        _CTOR_SIZES = {}
+        p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ctor_sizes.tsv")
+        if os.path.exists(p):
+            for line in open(p):
+                f = line.split()
+                if len(f) >= 2 and not line.startswith("#"):
+                    _CTOR_SIZES[int(f[0], 16)] = int(f[1], 16)
+    return _CTOR_SIZES
+
+
 def pointee_size(t):
     if t is None or t.kind not in ("ptr", "ref") or t.inner is None:
         return 0
@@ -300,6 +317,19 @@ def main():
             if fa == x:
                 fill |= 1 << reg
                 outp[reg] = 1
+        # a constructor listed in ctor_sizes.tsv (sizes.py: GHS constructors allocate sizeof when this == NULL)
+        # constructs its r3 object: the storage before the call is not an input, and a generated mock fills its
+        # sizeof bytes with zeros before the mocked call (harness), so later calls that receive the object see the
+        # same bytes on both sides and no layout-dependent stale bytes are left in reused frames (2026-10-11: INF-render#2#2, stale stack bytes under stackfill). Explicit unit/global r3
+        # facts win.
+        cs = ctor_sizes().get(x)
+        if cs and (x, "r3") not in overrides and (x, "r3") not in unit.get("pointee", {}) and not is_imp:
+            if cs <= 0xFFFD:
+                ptrsz[3] = cs
+                outonly |= 1 << 3  # no random fill: the harness zeroes a listed constructor's storage before the mocked call
+                outp[3] = 1
+            else:
+                ptrsz[3] = 255
         # static extent (extent_lint.py): how far the callee's code reaches through each argument register;
         # the harness's undersized-Local check uses it like a size fact (game test 2026-10-05)
         ext = [0] * 11

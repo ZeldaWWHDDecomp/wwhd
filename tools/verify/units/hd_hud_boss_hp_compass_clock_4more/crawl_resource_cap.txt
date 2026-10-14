@@ -1,0 +1,58 @@
+# Synthetic equal strings reach the final byte and the 0x40001 scan limit.
+# No game assets or data tables are copied.
+src wwhd_src/d/hd_screen_crawling_direction_arrow.cpp
+src wwhd_src/d/hd_screen_boss_hp.cpp
+src wwhd_src/d/hd_screen_enemy_hp.cpp
+src wwhd_src/d/hd_screen_fade_wipe.cpp
+src wwhd_src/d/hd_screen_fade_wipe_iris.cpp
+src wwhd_src/d/hd_screen_crawling_direction.cpp
+src wwhd_src/d/hd_screen_dungeon_key_states.cpp
+src wwhd_src/d/hd_screen_dungeon_key.cpp
+src wwhd_src/d/hd_screen_compass_clock.cpp
+arg! 0264FF10 r3 0x50002000 0x50002000
+arg! 0264FF10 r4 0x51000200 0x51000200
+field 0264FF10 51000214 u32 0x100ef24c 0x100ef24c
+field 0264FF10 51000218 u32 0x100ef164 0x100ef164
+field 0264FF10 51000208 u32 0x55000000 0x55000000
+field 0264FF10 5100020C u32 0x100ef164 0x100ef164
+field 0264FF10 10491C54 u32 0x100ef24c 0x100ef24c
+field 0264FF10 10491C58 u32 0x100ef164 0x100ef164
+field 0264FF10 10491D68 u32 0x56000000 0x56000000
+field 0264FF10 10491D6C u32 0x100ef3ec 0x100ef3ec
+field 0264FF10 50002048 u32 0x4 0x4
+field 0264FF10 5000204C u32 0x54000000 0x54000000
+field 0264FF10 10491C5C u32 0x100ef258 0x100ef258
+field 0264FF10 10491C60 u32 0x100ef164 0x100ef164
+field 0264FF10 10491C64 u32 0x100ef264 0x100ef264
+field 0264FF10 10491C68 u32 0x100ef164 0x100ef164
+field 0264FF10 10491C6C u32 0x100ef270 0x100ef270
+field 0264FF10 10491C70 u32 0x100ef164 0x100ef164
+fill 0264FF10 55000000 0x40002 0x41
+stable 55000000 0x40002
+fill 0264FF10 56000000 0x40002 0x41
+stable 56000000 0x40002
+field 0264FF10 55040000 u8 0,0x41
+field 0264FF10 56040000 u8 0,0x41
+stable 51000200 0x20
+stable 10491C54 0x20
+stable 10491D68 0x8
+stable 50002048 0x8
+stable 100EF164 0x18
+stable 100EF3EC 0x18
+
+field 0264FF10 100EF178 u32 0x02650428 0x02650428
+field 0264FF10 100EF400 u32 0x02650718 0x02650718
+
+# First byte beyond the allowed scan is NUL: detects an increased bound.
+field 0264FF10 55040001 u8 0 0
+field 0264FF10 56040001 u8 0 0
+
+# Preserve merged DungeonKey support-function input domains from UI_hud_a.
+field 02653C18 r3+0x5C u32 0,1,2,0xFFFFFFFF
+field 02653C18 r3+0x50 u32 0,1
+field 02653C18 r3+0x54 u32 0,1
+field 02653C18 r3+0x60 u32 0,1,30,100,0xFFFFFFFF
+field 02653C18 r3+0x64 u32 0,1,100,0xFFFFFFFF
+ret 02005840 0,1
+real 020198D8
+fret! 02019788 0 0.99999994

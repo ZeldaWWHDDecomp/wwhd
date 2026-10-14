@@ -1,0 +1,143 @@
+src wwhd_src/d/hd_screen_btn_collect_icon.cpp
+src wwhd_src/d/hd_screen_btn_collect_icon_mask.cpp
+
+# Preserve broad generated arguments alongside constructor wrap boundaries.
+arg 0262A088 r3 0,0x54000000,0xFFFFFF88
+arg 0262BA50 r3 0,0x54000000,0xFFFFFF88
+ret 0273AD10 0,0x54000000
+field 0262A130 r3+0x78 s32 -1,0,1,2
+field 0262A130 r3+0x7C u32 0x55000000
+field 0262BB30 r3+0x78 s32 -1,0,1,2
+field 0262BB30 r3+0x7C u32 0x55000000
+field 0262A350 r3+0x78 s32 -1,0,1,2
+field 0262A350 r3+0x7C u32 0,0x55000000
+field 0262BDFC r3+0x78 s32 -1,0,1,2
+field 0262BDFC r3+0x7C u32 0,0x55000000
+field 0262A784 r3+0x88 u8 0,1,2,255
+arg 0262A784 r4 0,1,2,255,256,0xFFFFFFFF
+field 0262BAF8 r3+0x80 u8 0,1,2,255
+arg 0262BAF8 r4 0,1,2,255,256,0xFFFFFFFF
+field 0262A918 r3+0x80 u32 0,1,6,16,17,18,0xFFFFFFFF
+field 0262A938 r3+0x80 u32 0,1,6,16,17,18,0xFFFFFFFF
+field 0262A7BC r3+0x84 u32 0,1,2,3,4,5,6,7,0xFFFFFFFF
+field 0262A130 1018C404 u32 0x56000000
+field 0262A130 56000010 u32 0,0x57000000
+field 0262BB30 1018C404 u32 0x56000000
+field 0262BB30 56000010 u32 0,0x57000000
+field 0262A95C 1018C404 u32 0x56000000
+field 0262A95C 56000010 u32 0,0x57000000
+field 0262BF84 1018C404 u32 0x56000000
+field 0262BF84 56000010 u32 0,0x57000000
+ret 0270178C 0,1
+ret 0273B050 0,0x58000000
+ret 025B7A2C 0,1,2,0xFFFFFFFF
+
+# The base init mock must retain a bounded child-array descriptor on allocation failure.
+# This constrains callback output only, so it cannot randomly fabricate a huge count.
+mockfield 0270178C r3+0x78 s32 -1 2
+mockfield 0270178C r3+0x7C u32 0x55000000 0x55000000
+
+# Constructed init receivers have an independent, owned layout. Opaque allocator,
+# literal termination, pane search and type queries cannot resize this child list.
+# Only its count and immutable ownership links are stable; explicit guest writes
+# and the base-init mock output still take effect. Other button fields can clobber.
+arg! 0262A130 r3 0x54000000
+arg! 0262BB30 r3 0x54000000
+stable 54000078 4
+field 0262A130 54000044 u32 0x5B000000
+field 0262BB30 54000044 u32 0x5B000000
+field * 5B000004 u32 0x5B010000
+field * 5B01000C u32 0x5B020000
+field * 5B020008 u32 0x5B030000
+stable 54000044 4
+stable 5B000004 4
+stable 5B01000C 4
+stable 5B020008 4
+# Exact Pane FindPane slot reused from the merged FW-buttons fixture:
+# original vtable 101805D4+5C -> 02876554. Return NULL or a constructed pane.
+field * 5B03005C u32 0x02876554
+stable 5B03005C 4
+ret! 02876554 0,0x5B040000
+# A named game RTTI getter has the same virtual getter ABI as the canonical
+# FW-buttons fixture. Its output is a finite matching/nonmatching parent chain.
+field * 5B040008 u32 0x5B050000
+field * 5B050014 u32 0x026FA258
+stable 5B040008 4
+stable 5B050014 4
+ret! 026FA258 0,0x101FD90C,0x5B060000,0x5B060010
+field * 5B060000 u32 0,0x101FD90C,0x5B060010
+field * 5B060010 u32 0,0x101FD90C
+stable 5B060000 4
+stable 5B060010 4
+# Runtime type parent links are immutable after lazy initialization. All lazy
+# guard combinations and empty/final parent links remain exercised; explicit
+# cold/warm correlated snapshots also test initialization without prefilled links.
+field * 101FD908 u32 0,1
+field * 101FD898 u32 0,1
+field * 101FD888 u32 0,1
+field * 101FD90C u32 0,0x101FD910
+field * 101FD910 u32 0,0x101FD8FC
+field * 101FD8FC u32 0
+stable 101FD90C 4
+stable 101FD910 4
+stable 101FD8FC 4
+# Static literal descriptors are immutable after the TU initializer.
+field * 1048F484 u32 0x100E63C4
+field * 1048F488 u32 0x100E6250
+field * 1048F4E8 u32 0x100E67C0
+field * 1048F4EC u32 0x100E662C
+stable 1048F484 8
+stable 1048F4E8 8
+
+# Event state handlers retain NULL manager cases and valid live manager storage.
+field * 101F4FF0 u32 0,0x58000000
+# The copy callback supplies valid event routing IDs alongside arbitrary payload.
+field * r3+0x58 u8 0,1,2,255
+field * r3+0x50 u32 0,0x59000000
+field * r3+0x74 u32 0,1,2,0xFFFFFFFF
+# updateIcon calls these separately verified helpers through call-boundary mocks.
+ret 0262A490 0,1,2,3,17
+ret 0262A554 11,12,13,14,17
+ret 0262A734 9,17
+
+# Actual event copy and pure getters preserve receiver/owner input fields.
+real 020013C0
+real 02001320
+real 026F5B74
+real 026F67A4
+real 02615140
+mockmove C0009988 r3 r4 r5
+field * 58000030 s32 0,1,4,13,14
+field * 58000034 s32 -1,0,1,2
+field * 00000030 s32 0,1,4,13,14
+field * 00000034 s32 -1,0,1,2
+field * 59000010 u32 0,1
+field * 00000010 u32 0,1
+field * 101F8378 u32 0,0x61000000
+field * 61000014 u8 0,1,2,255
+field * 00000014 u8 0,1,2,255
+field * 58000070 u32 0,1,0x59000000,0xFFFFFFFF
+# Save item boundaries retain NULL global and a valid separately allocated root.
+field * 101F84DC u32 0,0x60000000
+field * 0000005D u8 0,0x77,0x78,255
+field * 6000005D u8 0,0x77,0x78,255
+field * 0000005E u8 0,0x22,255
+field * 6000005E u8 0,0x22,255
+
+# Original mask vtable provides the genuine event-predicate ABI targets.
+field 0262ADD4 r3+4 u32 0,0x100E6820
+field 0262AFBC r3+4 u32 0,0x100E6820
+field 0262B14C r3+4 u32 0,0x100E6820
+field 0262B318 r3+4 u32 0,0x100E6820
+field 0262B5A8 r3+4 u32 0,0x100E6820
+field 0262B7BC r3+4 u32 0,0x100E6820
+ret! 026F621C 0,1,2,0xFFFFFFFF
+ret! 026F67E4 0,1
+callee 026F67E4 r4=40
+
+# Exercise the id-zero phase transition frequently while retaining every prior class.
+field 0262B318 r3+0x74 u32 0,0,0,0,1,2,0xFFFFFFFF
+field 0262B318 58000034 s32 0,0,0,0,-1,1,2
+field 0262B318 00000034 s32 0,0,0,0,-1,1,2
+field 0262B318 59000010 u32 1,1,1,0
+field 0262B318 00000010 u32 1,1,1,0

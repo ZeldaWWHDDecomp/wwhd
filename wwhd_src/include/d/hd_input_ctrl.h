@@ -138,3 +138,7 @@ WWHD_OFFSET(hdInputState,mPlatformType,0xB5); WWHD_OFFSET(hdInputState,mRepeat,0
 WWHD_OFFSET(hdDrcController,mChannels,0x1118); WWHD_SIZE(hdDrcController,0x4D38);
 WWHD_OFFSET(hdInputOrientation,mCurrent,0x24); WWHD_OFFSET(hdInputOrientation,mSource,0x48); WWHD_OFFSET(hdInputOrientation,mCalibration,0x4C); WWHD_OFFSET(hdInputOrientation,mInverse,0x70);
 WWHD_SIZE(hdInputCursor,8); WWHD_SIZE(hdInputManagerTable,0x10); WWHD_SIZE(hdInputDisposer,0x10); WWHD_SIZE(hdInputStaticBlock,0x10); WWHD_SIZE(hdInputStaticRange,0xC); WWHD_SIZE(hdInputControllerTypeMap,0x400); WWHD_SIZE(hdInputGame,0x12C1);
+
+/* the input manager singleton (guest pointer slot 101F5088; merged sources bind the same slot privately as
+ * sInputManager / l_inputManager / sButtonMenu). Canonical accessor for new code: one load of the slot. */
+inline hdInputManager* hdInputGetManager() { return gabi::at<gptr<hdInputManager>>(0x101F5088)->get(); }

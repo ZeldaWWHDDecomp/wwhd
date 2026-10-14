@@ -1,0 +1,138 @@
+src wwhd_src/d/hd_screen_crawling_direction_arrow.cpp
+src wwhd_src/d/hd_screen_boss_hp.cpp
+src wwhd_src/d/hd_screen_enemy_hp.cpp
+src wwhd_src/d/hd_screen_fade_wipe.cpp
+src wwhd_src/d/hd_screen_fade_wipe_iris.cpp
+src wwhd_src/d/hd_screen_crawling_direction.cpp
+src wwhd_src/d/hd_screen_dungeon_key_states.cpp
+src wwhd_src/d/hd_screen_dungeon_key.cpp
+src wwhd_src/d/hd_screen_compass_clock.cpp
+
+# Allocation and repeated-initialisation paths.
+arg 026297A8 r3 0,0x50000000
+arg 0264CC50 r3 0,0x50000000
+arg 0264FD3C r3 0,0x50000000
+arg 026505A4 r3 0,0x50000000
+arg 02653FB8 r3 0,0x50000000
+arg 0266855C r3 0,0x50000000
+arg 026693BC r3 0,0x50000000
+arg 02669D08 r3 0,0x50000000
+ret 0273AD10 0,0x51000000
+field 02629BD8 101FD8E4 u32 0,1
+field 02629BD8 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 0264CF5C 101FD8E4 u32 0,1
+field 0264CF5C 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 02650168 101FD8E4 u32 0,1
+field 02650168 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 026542D0 101FD8E4 u32 0,1
+field 026542D0 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 026687BC 101FD8E4 u32 0,1
+field 026687BC 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 026697AC 101FD8E4 u32 0,1
+field 026697AC 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+field 0266A2A4 101FD8E4 u32 0,1
+field 0266A2A4 101FDD50 u32 0,1,0x7FFFFFFF,0xFFFFFFFE
+stable 101FD8E4 4
+stable 101FDD50 4
+
+# Boss-icon descriptor class/resource comparisons and allocation.
+arg! 026299D0 r3 0x50000000 0x50000000
+arg! 026299D0 r4 0x51000000 0x51000000
+field 026299D0 51000014 u32 0x52000000,0x100E6094
+field 026299D0 51000018 u32 0x100E5FAC 0x100E5FAC
+field 026299D0 51000008 u32 0x52000100,0x52000300
+field 026299D0 5100000C u32 0x100E5FAC 0x100E5FAC
+field 026299D0 1048F360 u32 0x100E6094 0x100E6094
+field 026299D0 1048F364 u32 0x100E5FAC 0x100E5FAC
+field 026299D0 104950A4 u32 0x52000300 0x52000300
+field 026299D0 104950A8 u32 0x100E5FAC 0x100E5FAC
+fieldstr 026299D0 52000000 40 "L_LoopBossIcon_00","L_LoopBossIcon_01","M_LoopBossIcon_00","Other"
+fieldstr 026299D0 52000100 32 "LoopBossIcon_00","Other"
+fieldstr 026299D0 52000300 32 "LoopBossIcon_00"
+field 026299D0 50000048 u32 0,1,2
+field 026299D0 5000004C u32 0x50001000 0x50001000
+stable 51000000 0x20
+stable 50000048 8
+stable 1048F360 8
+stable 104950A4 8
+
+# Four arrow-class comparisons, the arrow resource match and fallback child slot.
+arg! 0264FF10 r3 0x50002000 0x50002000
+arg! 0264FF10 r4 0x51000200 0x51000200
+field 0264FF10 51000214 u32 0x52000400,0x100EF24C,0x100EF258,0x100EF264,0x100EF270
+field 0264FF10 51000218 u32 0x100EF164 0x100EF164
+field 0264FF10 51000208 u32 0x52000500,0x100EF420
+field 0264FF10 5100020C u32 0x100EF164 0x100EF164
+fieldstr 0264FF10 52000400 32 "L_Arrow_00","L_Arrow_01","L_Arrow_02","L_Arrow_03","M_Arrow_00","Other"
+fieldstr 0264FF10 52000500 40 "CrawlingDirectionArrow_00","Other"
+field 0264FF10 10491C54 u32 0x100EF24C 0x100EF24C
+field 0264FF10 10491C5C u32 0x100EF258 0x100EF258
+field 0264FF10 10491C64 u32 0x100EF264 0x100EF264
+field 0264FF10 10491C6C u32 0x100EF270 0x100EF270
+field 0264FF10 10491C58 u32 0x100EF164 0x100EF164
+field 0264FF10 10491C60 u32 0x100EF164 0x100EF164
+field 0264FF10 10491C68 u32 0x100EF164 0x100EF164
+field 0264FF10 10491C70 u32 0x100EF164 0x100EF164
+field 0264FF10 10491D68 u32 0x100EF420 0x100EF420
+field 0264FF10 10491D6C u32 0x100EF3EC 0x100EF3EC
+field 0264FF10 50002048 u32 0,1,2,3,4
+field 0264FF10 5000204C u32 0x50003000 0x50003000
+stable 51000200 0x20
+stable 10491C54 0x20
+stable 10491D68 8
+stable 50002048 8
+
+# Mode boundaries and SafeArray fallback (the child loop has exactly four iterations).
+field 0264C70C r3+0x5C u32 0,1,2
+field 0264C790 r3+0x5C u32 0,1,2,3
+field 0264C790 101EBFD8 u8 0,1
+field 0264C790 101F84DC u32 0x53000000 0x53000000
+field 0264C790 53000044 f32 0,89.999,90,179.999,180,269.999,270,359.999,360
+field 0264FC70 r3+0x48 u32 0,1,2,3,4,5
+field 0264FC70 r3+0x4C u32 0x53001000 0x53001000
+field 0264FC70 53001000 u32 0x53002000 0x53002000
+field 0264FC70 53001004 u32 0x53002100 0x53002100
+field 0264FC70 53001008 u32 0x53002200 0x53002200
+field 0264FC70 5300100C u32 0x53002300 0x53002300
+field 0264FC70 53002053 u8 0,1
+field 0264FC70 53002153 u8 0,1
+field 0264FC70 53002253 u8 0,1
+field 0264FC70 53002353 u8 0,1
+
+# SafeString vtables are immutable; their assureTermination entries are blr.
+# Protect them from synthetic callee clobbers between repeated dispatches.
+stable 100E5FAC 0x18
+stable 100EF164 0x18
+stable 100EF3EC 0x18
+
+# Bind immutable termination entries as well as preventing later mock writes.
+field 026299D0 100E5FC0 u32 0x02629EDC 0x02629EDC
+field 0264FF10 100EF178 u32 0x02650428 0x02650428
+field 0264FF10 100EF400 u32 0x02650718 0x02650718
+
+# Start runtime initialization words nonzero so each explicit clear is observable.
+fill 02629BD8 1048F374 0x10 0xA5
+fill 0264CF5C 10491810 0x10 0xA5
+fill 02650168 10491C44 0x10 0xA5
+fill 02650628 10491D48 0x10 0xA5
+fill 026542D0 10492114 0x10 0xA5
+fill 026687BC 10493F80 0x10 0xA5
+fill 026697AC 104940E0 0x10 0xA5
+fill 0266A2A4 10494184 0x10 0xA5
+
+# Preserve merged DungeonKey support-function input domains from UI_hud_a.
+field 02653C18 r3+0x5C u32 0,1,2,0xFFFFFFFF
+field 02653C18 r3+0x50 u32 0,1
+field 02653C18 r3+0x54 u32 0,1
+field 02653C18 r3+0x60 u32 0,1,30,100,0xFFFFFFFF
+field 02653C18 r3+0x64 u32 0,1,100,0xFFFFFFFF
+ret 02005840 0,1
+real 020198D8
+fret! 02019788 0 0.99999994
+
+# Actual formatter descriptor reads: +0 buffer and +8 capacity (02759D24).
+# The intervening vtable bytes are not evidence of an actual vtable read.
+callee 02759D3C r3=12
+# Give an accidental fifth closed-arrow iteration a distinct observable result.
+field 0264FC70 53001010 u32 0x53002400 0x53002400
+field 0264FC70 53002453 u8 0 0

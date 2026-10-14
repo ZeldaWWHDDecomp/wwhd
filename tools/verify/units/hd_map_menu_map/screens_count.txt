@@ -1,0 +1,96 @@
+# Chart-view creation (0269C8E4) with the screen manager at a fixed address and its screen count around the index-7 bound
+# (7, 8, 9). Run with -only 0269C8E4. Base: the unit spec, then this fixture's lines.
+src wwhd_src/d/hd_screen_menu_map_states.cpp
+src wwhd_src/d/hd_screen_menu_map.cpp
+# Bound chart-selection scan while retaining every chart and both directions.
+arg 02698998 r4 -1,0,1,2,3,35,36,43,44,48,49,60,61
+arg 02698998 r5 -1,0,1,2
+arg 02699094 r4 0 61
+# Execute the 0x28-byte event copy; nested helper copies its 0x20-byte payload.
+real 020013C0 02001320 020012BC
+mockmove 028FDC00 r3 r4 r5
+# Pin the input queue so meaningful event kinds and receiver matches are reachable.
+field 0269AEE8 101F4FF0 u32 0,0x51000000
+field 0269B238 101F4FF0 u32 0x51000000
+field 0269AEE8 51000030 u32 0,1,0x5D,0x5E,0x5F,0x6D,0xFFFFFFFF
+field 0269B238 51000030 u32 0,1,0x5D,0x5E,0x5F,0x6D,0xFFFFFFFF
+field 0269AEE8 51000034 u32 0,1,7,0xFFFFFFFF
+field 0269B238 r3+0x94 s32 -1,0,1,61
+field 0269B238 r3+0xAC s32 -1,0,1,35,36,43,44,48,49,60,61
+ret 026F5B74 0,1,7,0xFFFFFFFF
+# Reach both animation directions, interruption, and all transition phases.
+field 0269BBA4 r3+0xB8 s32 -1,0,1
+field 0269BBA4 r3+0xBD u8 0,1
+field 0269BC90 r3+0xB8 s32 -1,0,1
+field 0269BC90 r3+0xBD u8 0,1
+field 0269BD2C r3+0xB8 s32 -1,0,1
+field 0269BD2C r3+0xBD u8 0,1
+field 0269BDE0 r3+0x90 u32 0,1,2,3,4
+field 0269BDE0 r3+0xAC s32 0,1,60
+field 0269BDE0 r3+0xB4 s32 0,1,60
+# Chart-category branches and all three icon slots, plus rejected boundaries.
+ret 02698A94 0,1,2,3,4,5
+arg 02698B44 r4 0,1,2,3,0xFFFFFFFF
+arg 02698B44 r5 0,1,35,36,43,44,48,49,60,61,0xFFFFFFFF
+arg 02698D74 r4 0,1,2,3,0xFFFFFFFF
+arg 02698D74 r5 0,1,35,36,43,44,48,49,60,61,0xFFFFFFFF
+arg 0269B414 r4 0,1,2,3,0xFFFFFFFF
+arg 0269B414 r5 0,1,35,36,43,44,48,49,60,61,0xFFFFFFFF
+# Mutation closure: valid chart-view selections and exact cell/message boundaries.
+field 0269C360 r3+0xAC u32 48,49,50,51,52,53,54,55,56,57,58,59,60,61,0xFFFFFFFF
+field 0269A4A0 r4+0 u32 0,10,31,32,33,43,0x7FFFCE59,0x7FFFCE5A,0xFFFFFFFF
+ret 02680DE0 0x55000000
+field 0269A51C 55000000 u32 0,10,32,43,44,0xFFFFFFFF
+# Island-message event boundary (cell32), with ordinary and signed-wrap limits.
+field 026991FC 55000000 u32 0,31,32,33,43,0x7FFFCE59,0x7FFFCE5A,0xFFFFFFFF
+# All draw-map animation windows and their sound frame boundaries.
+field 0269A6E4 r3+0x124 u32 0,36,37,38,43,44,45,50,51,120,121,122,127,128,129,134,135,0xFFFFFFFF
+field 0269A6E4 r3+0xC4 u32 0,29,30,31,43,44,45,80,81,82,120,121,122,127,128,129,0xFFFFFFFF
+# GHS embedded-array wrapped-null allocation guards and normal constructor cases.
+arg 0269C6BC r3 0,0x56000000,0xFFFFFF7C,0xFFFFFF38,0xFFFFFF30,0xFFFFFF08,0xFFFFFED8
+# A missing-chart scan reaches exhaustion; unsteered mock returns still exercise ownership.
+ret 0268A570 0
+# Chart kind lookup: pin only the returned descriptor's signed kind byte.
+ret 02687A64 0,0x57000000
+field 02698A94 57000003 s8 -128,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,127
+# Reach the active-input receiver matching path without suppressing inactive/null modes.
+field 0269AEE8 101F8378 u32 0x54000000
+field 0269AEE8 54000014 u8 0,1
+ret 02615140 0,0x54000100
+field 0269AEE8 54000110 u32 0,1,7,0xFFFFFFFF
+# State-key equality and inequality, through the binary's actual getKey vtable slot.
+ret 02006478 0x53000100
+field 0269B414 53000108 u32 0x100FB2F0
+field 0269B414 100FB304 u32 0x0269F078
+ret 0269F078 0
+stable 53000108 4
+stable 100FB304 4
+field 0269B414 1049D14C u32 0x100FB2F0
+stable 1049D14C 4
+field 0269B414 1049D1DC u32 0x100FB2F0
+stable 1049D1DC 4
+field 0269B414 1049D20C u32 0x100FB2F0
+stable 1049D20C 4
+field 0269B414 1049D26C u32 0x100FB2F0
+stable 1049D26C 4
+# Connect both icon-mode and cell-mode receivers; keep null owner boundaries.
+field 026994AC r3+0x11C u32 0,0x52001000
+field 026994AC 5200114C u32 0,0x52002000
+field 026994AC 52001150 u32 0,0x52003000
+field 026994AC 52003144 u32 0,1,2,3,4
+field 0269DD94 r3+0x11C u32 0,0x52001000
+field 0269DD94 5200114C u32 0,0x52002000
+field 0269DD94 52001150 u32 0,0x52003000
+field 0269DD94 52003144 u32 0,1,2,3,4
+field 0269DE50 r3+0x11C u32 0,0x52001000
+field 0269DE50 5200114C u32 0,0x52002000
+field 0269DE50 52001150 u32 0,0x52003000
+field 0269DE50 52003144 u32 0,1,2,3,4
+field 0269DFB4 r3+0x11C u32 0,0x52001000
+field 0269DFB4 5200114C u32 0,0x52002000
+field 0269DFB4 52001150 u32 0,0x52003000
+field 0269DFB4 52003144 u32 0,1,2,3,4
+
+field 0269C8E4 101F95D0 u32 0x5D000000
+field 0269C8E4 5D001020 u32 7,8,9
+field 0269C8E4 5D001024 u32 0x5D002000

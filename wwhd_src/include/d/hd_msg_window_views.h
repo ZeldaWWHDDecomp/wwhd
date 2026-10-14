@@ -38,3 +38,13 @@ WWHD_OFFSET(HdMsgSequence,mTimer,0xB4);
 WWHD_OFFSET(HdMsgSequence,mWaitComplete,0xD7);
 WWHD_SIZE(HdMsgPosition,12);
 void hdMsgChangeState(HdMsgController*,HdMsgState*);
+
+/* TU-wide state descriptors of hd_screen_msg_window_scroll.cpp (defined there through `data` glue lines;
+ * companion sources of that TU use these declarations). Each is a 0x30 parts state id:
+ * a companion that includes d/hd_parts.h views it with hdMsgStateId(). */
+extern HdMsgState& l_scrollEmptyState;   /* 10498CD8 */
+extern HdMsgState& l_scrollTextState;    /* 10498BE8 */
+extern HdMsgState& l_scrollWaitState;    /* 10498CA8 */
+extern HdMsgState& l_scrollClosedState;  /* 10498D68 */
+struct hdPartsStateId_c;
+inline hdPartsStateId_c* hdMsgStateId(HdMsgState* state) { return reinterpret_cast<hdPartsStateId_c*>(state); }

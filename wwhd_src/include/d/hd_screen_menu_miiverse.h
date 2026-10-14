@@ -1,0 +1,303 @@
+/* HD Miiverse menu and its chart-screen factories. Private binary-derived source. */
+#pragma once
+#include "d/hd_parts.h"
+#include "hd/hd_ui_020021FC.h"
+struct hdTextPane_c;
+struct hdMiiverseChartFactory_c {
+    u32 createTincleTower(gptr<hdParts_c>*, void*, u32);
+    void destroyTincleTower(hdParts_c*);
+    u32 createFairy(gptr<hdParts_c>*, void*, u32);
+    void destroyFairy(hdParts_c*);
+    u32 createHeartIsland(gptr<hdParts_c>*, void*, u32);
+    void destroyHeartIsland(hdParts_c*);
+    u32 createSquid(gptr<hdParts_c>*, void*, u32);
+    void destroySquid(hdParts_c*);
+    u32 createTriforce(gptr<hdParts_c>*, void*, u32);
+    void destroyTriforce(hdParts_c*);
+    u32 createTerry(gptr<hdParts_c>*, void*, u32);
+    void destroyTerry(hdParts_c*);
+    u32 createSecretEntrance(gptr<hdParts_c>*, void*, u32);
+    void destroySecretEntrance(hdParts_c*);
+    u32 createSubmarine(gptr<hdParts_c>*, void*, u32);
+    void destroySubmarine(hdParts_c*);
+    u32 createEnemyTower(gptr<hdParts_c>*, void*, u32);
+    void destroyEnemyTower(hdParts_c*);
+    u32 createMoon(gptr<hdParts_c>*, void*, u32);
+    void destroyMoon(hdParts_c*);
+    u32 createHeartSea(gptr<hdParts_c>*, void*, u32);
+    void destroyHeartSea(hdParts_c*);
+    u32 createGhostShip(gptr<hdParts_c>*, void*, u32);
+    void destroyGhostShip(hdParts_c*);
+};
+/* Other game units are called by address until their headers merge. */
+hdParts_c* miiverseConstructTincleTower(hdParts_c*);
+u32 miiverseInitializeTincleTower(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructFairy(hdParts_c*);
+u32 miiverseInitializeFairy(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructHeartIsland(hdParts_c*);
+u32 miiverseInitializeHeartIsland(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructSquid(hdParts_c*);
+u32 miiverseInitializeSquid(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructTriforce(hdParts_c*);
+u32 miiverseInitializeTriforce(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructTerry(hdParts_c*);
+u32 miiverseInitializeTerry(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructSecretEntrance(hdParts_c*);
+u32 miiverseInitializeSecretEntrance(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructSubmarine(hdParts_c*);
+u32 miiverseInitializeSubmarine(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructEnemyTower(hdParts_c*);
+u32 miiverseInitializeEnemyTower(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructMoon(hdParts_c*);
+u32 miiverseInitializeMoon(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructHeartSea(hdParts_c*);
+u32 miiverseInitializeHeartSea(hdParts_c*, void*, u32, u32);
+hdParts_c* miiverseConstructGhostShip(hdParts_c*);
+u32 miiverseInitializeGhostShip(hdParts_c*, void*, u32, u32);
+
+/* Chart buttons expose these two flags to their owning menu. */
+struct hdMiiverseChartButton_l : hdParts_c {
+    be<u8> mEnabled;
+    u8 mPresentationStorage[0x13];
+    be<u32> mArchiveIndex;
+    u8 mChartStorage[0x20];
+    be<u8> mFilled;
+    u8 mInteractionStorage[0x1B];
+    be<f32> mTargetY;
+    u8 mTargetPadding[4];
+    be<u8> mSelectionPending;
+    be<u8> mOpenPending;
+    u8 mInputStorage[0x12];
+    be<u8> mInputEnabled;
+};
+WWHD_OFFSET(hdMiiverseChartButton_l, mFilled, 0x88);
+WWHD_OFFSET(hdMiiverseChartButton_l, mInputEnabled, 0xC0);
+
+struct hdMiiversePager_l : hdParts_c {
+    be<u8> mEnabled;
+    be<u8> mSelectionPending;
+    be<u8> mFilled;
+    u8 mPositionPadding;
+    be<f32> mPositionY;
+};
+WWHD_OFFSET(hdMiiversePager_l, mSelectionPending, 0x51);
+struct hdMiiverseLayoutPane_l : hdPartsPane_c {
+    be<f32> mTranslationX, mTranslationY, mTranslationZ;
+    u8 mPresentationStorage[0x14];
+    be<f32> mScaleX, mScaleY;
+    be<u8> mTransformFlags;
+    be<u8> mAlpha;
+};
+WWHD_OFFSET(hdMiiverseLayoutPane_l, mTranslationY, 0x20);
+WWHD_OFFSET(hdMiiverseLayoutPane_l, mAlpha, 0x45);
+struct hdMiiverseControl_l : hdParts_c { be<u32> mControlId; };
+WWHD_OFFSET(hdMiiverseControl_l, mControlId, 0x50);
+
+struct hdMenuMiiverse_c : hdParts_c {
+    be<u8> mInputEnabled;
+    u8 mMenuStorage[3];
+    gptr<hdMiiverseChartButton_l> mpPrimaryButton;
+    gptr<hdMiiverseChartButton_l> mpChartButtons[10];
+    gptr<hdParts_c> mpPreviousButton;
+    gptr<hdParts_c> mpNextButton;
+    gptr<hdParts_c> mpMessageScreen;
+    gptr<void> mpContentResource;
+    be<u32> mConfirmationStep;
+    be<u8> mClosingRequested, mHasPreviousPage;
+    u8 mContentPadding[2];
+    be<u32> mSelectionStart;
+    be<u8> mButtonsEnabled;
+    u8 mButtonPadding[3];
+    hdScreenPaneArray mPicturePanes;
+    be<f32> mScrollFraction;
+    be<u8> mSkipScrollAnimation;
+    u8 mScrollPadding[3];
+    be<u32> mMessageId;
+    be<u16> mMessageOption, mMessageCategory;
+    be<u8> mTextureFormat;
+    u8 mMessageStorage[0x27];
+    be<u32> mTransferHandle;
+    u8 mTransferStorage[0x74];
+    be<u32> mSessionValue, mMessageValue;
+    be<u8> mInitialized, mContentReady;
+    u8 mSessionPadding[2];
+    be<u32> mLastInputId;
+    be<u8> mSavedButtonMode, mSavedInputMode;
+    u8 mModePadding[2];
+    be<u32> mInputMode;
+    be<f32> mTouchPosition;
+    be<u8> mTouchActive;
+    u8 mTouchStorage[3];
+    be<f32> mLastTouchX, mLastTouchY;
+    be<f32> mScrollLowerBound, mScrollUpperBound;
+    be<u8> mDragActive;
+    u8 mDragPadding[3];
+    be<u32> mDragMode;
+    be<f32> mVelocityX, mVelocityY;
+    u8 mSoundStorage[0x18];
+    be<u8> mDialogCancelled;
+    u8 mDialogPadding[3];
+    be<f32> mWindowWidth;
+    be<f32> mWindowScale, mWindowTargetScale, mWindowScaleStep;
+    be<f32> mTouchMinX, mTouchMinY, mTouchMaxX, mTouchMaxY;
+    gptr<void> mpRootPanes[2];
+    gptr<hdTextPane_c> mpTextPane;
+    gptr<void> mpBackgroundPattern;
+    gptr<void> mpWindowPanes[3];
+    gptr<void> mpPicturePane;
+    be<u32> mSelectedChart, mMessageKind, mMessageResult, mAnimationFrame;
+    static hdMenuMiiverse_c* construct(hdMenuMiiverse_c*);
+    void translateWindowPanes(f32 distance);
+    void scrollBy(f32 distance);
+    u32 easeScrollToLowerBound();
+    void scrollToLowerBound();
+    void dampDragVelocity();
+    void updateTouchDrag();
+    void beginDrag();
+    u32 checkTouchDrag();
+    u32 beginTouchDrag();
+    u32 isChartOrPagerInputMode();
+    void prepareWindowScale();
+    u32 updateWindowScale(u32 snap);
+    void setButtonsEnabled(u32 enabled);
+    u32 filledChartCount() const;
+    void displayChartButtons();
+    f32 setScrollFrameAlpha(s32 frame);
+    void clearSelectionFlags();
+    void resetConfirmation();
+    u32 selectPendingControl();
+    void resetButtonsForClose();
+    void finishButtonClose();
+    void finishDrag();
+    f32 setScrollFrame(s32 frame);
+    void drawMessage(void* info);
+    void updateScrollSound(f32 speed);
+    void finishFadeAnimation();
+    void updateFadeAnimation();
+    void updateScrollAnimation();
+    void finishScrollAnimation();
+    void prepareFadeAnimation();
+    f32 setFadeFrameAlpha(s32 frame);
+    f32 setFadeFramePosition(s32 frame);
+    static void destroy(hdMenuMiiverse_c*, u32);
+    u32 chartControlId(u32 chart, u32 child);
+    u32 previousControlId();
+    u32 nextControlId();
+    f32 messageUpperBound() const;
+    f32 messageLowerBound() const;
+    void findRootPanes();
+    void updateMessageText();
+    void findTextPane();
+    void findPicturePane();
+    void findBackgroundPattern();
+    void findWindowPanes();
+    u32 lastFilledChart() const;
+    void resetChartButtons();
+    void enableChartInput();
+    void disableChartInput();
+    u32 acceptsInput() const;
+    void restoreInputMode();
+    void restoreSavedControls();
+    void setChartConfirmationStates();
+    u32 findSelectedChart();
+    void executeActiveParts();
+    void updateInputIdentity();
+    void refreshDuplicatePictureFlags();
+    void prependPrimaryChart();
+    void restorePageButtons();
+    void layoutChartButtons(u32 deferPosition);
+    void openPendingPicture();
+    void updateWaitingInput();
+    void updateControllerState();
+    void restoreInputPresentation();
+    void initializeDragState();
+    u32 createPictureReceivers();
+    void executeMenu();
+    void saveSelectedPicture();
+    void initializePictureConfirmation();
+    void openSelectedPicture();
+    u32 handleControlActions();
+    u32 initializeMenu(u32 resource, u32 options, u32 flags);
+    void updatePictureConfirmation();
+    void updateFirstNavigationLinks(u32 up, u32 down, u32 photo);
+    void updateChartNavigationLinks();
+    void updateLastNavigationLinks(u32 up, u32 down, u32 photo);
+    u32 updateSaveModeMessage();
+    void refreshDraggingLayouts();
+    u32 scrollForNavigation();
+    void destroyPictureReceivers();
+    void finalizeMenu();
+    void drawVisibleParts(void* drawInfo);
+    void focusFirstVisibleControl(u32 requireEnabled);
+    u32 loadLayout(void* name, u32 resource, u32 options, u32 heapOptions, void* descriptor);
+};
+WWHD_OFFSET(hdMenuMiiverse_c, mInputEnabled, 0x50);
+WWHD_OFFSET(hdMenuMiiverse_c, mpChartButtons, 0x58);
+WWHD_OFFSET(hdMenuMiiverse_c, mpPreviousButton, 0x80);
+WWHD_OFFSET(hdMenuMiiverse_c, mpNextButton, 0x84);
+WWHD_OFFSET(hdMenuMiiverse_c, mInputMode, 0x16C);
+WWHD_SIZE(hdMenuMiiverse_c, 0x204);
+void miiverseResetChartButton(hdMiiverseChartButton_l*);
+void miiverseResetPreviousButton(hdParts_c*);
+void miiverseResetNextButton(hdParts_c*);
+
+WWHD_OFFSET(hdMenuMiiverse_c, mpRootPanes, 0x1D4);
+WWHD_OFFSET(hdMenuMiiverse_c, mpTextPane, 0x1DC);
+WWHD_OFFSET(hdMenuMiiverse_c, mpBackgroundPattern, 0x1E0);
+WWHD_OFFSET(hdMenuMiiverse_c, mpWindowPanes, 0x1E4);
+void miiverseRegisterStringNames(void*);
+void miiverseDestroyStringNames(void*, u32, u32, u32, u32, u32);
+inline void* miiverseFindNamedPane(hdPartsPane_c* root, hdUiSafeString* name) {
+    hdScreenResourceTable* table = hdPartsView<hdScreenResourceTable>(root->mVtable.v);
+    gabi::call_ptr<void>(name->mVtable->mAssureTermination.get(), name);
+    return gabi::call_ptr<void*>(table->mFindPane.get(), root, name->mText.get(), 1);
+}
+
+WWHD_OFFSET(hdMiiverseChartButton_l, mSelectionPending, 0xAC);
+WWHD_OFFSET(hdMenuMiiverse_c, mpPrimaryButton, 0x54);
+WWHD_OFFSET(hdMenuMiiverse_c, mTouchActive, 0x174);
+WWHD_OFFSET(hdMenuMiiverse_c, mDragActive, 0x188);
+
+WWHD_OFFSET(hdMiiverseChartButton_l, mEnabled, 0x50);
+WWHD_OFFSET(hdMiiversePager_l, mEnabled, 0x50);
+WWHD_OFFSET(hdMenuMiiverse_c, mButtonsEnabled, 0x9C);
+
+WWHD_OFFSET(hdMiiverseLayoutPane_l, mScaleX, 0x3C);
+WWHD_OFFSET(hdMiiverseLayoutPane_l, mScaleY, 0x40);
+WWHD_OFFSET(hdMiiverseLayoutPane_l, mTransformFlags, 0x44);
+WWHD_OFFSET(hdMenuMiiverse_c, mScrollLowerBound, 0x180);
+WWHD_OFFSET(hdMenuMiiverse_c, mScrollUpperBound, 0x184);
+WWHD_OFFSET(hdMenuMiiverse_c, mDragMode, 0x18C);
+WWHD_OFFSET(hdMenuMiiverse_c, mVelocityY, 0x194);
+WWHD_OFFSET(hdMenuMiiverse_c, mWindowScale, 0x1B8);
+WWHD_OFFSET(hdMenuMiiverse_c, mTouchMaxY, 0x1D0);
+
+void miiverseScrollChartButton(hdMiiverseChartButton_l*, f32);
+void miiverseScrollPreviousButton(hdParts_c*, f32);
+void miiverseScrollNextButton(hdParts_c*, f32);
+
+WWHD_OFFSET(hdMenuMiiverse_c, mpMessageScreen, 0x88);
+WWHD_OFFSET(hdMenuMiiverse_c, mConfirmationStep, 0x90);
+WWHD_OFFSET(hdMenuMiiverse_c, mPicturePanes, 0xA0);
+WWHD_OFFSET(hdMenuMiiverse_c, mTransferHandle, 0xE0);
+WWHD_OFFSET(hdMenuMiiverse_c, mSessionValue, 0x158);
+WWHD_OFFSET(hdMenuMiiverse_c, mLastInputId, 0x164);
+WWHD_OFFSET(hdMenuMiiverse_c, mDialogCancelled, 0x1B0);
+WWHD_OFFSET(hdMenuMiiverse_c, mWindowWidth, 0x1B4);
+WWHD_OFFSET(hdMenuMiiverse_c, mpPicturePane, 0x1F0);
+WWHD_OFFSET(hdMenuMiiverse_c, mAnimationFrame, 0x200);
+
+WWHD_OFFSET(hdMiiverseChartButton_l, mArchiveIndex, 0x64);
+
+WWHD_OFFSET(hdMiiversePager_l, mFilled, 0x52);
+
+WWHD_OFFSET(hdMiiverseChartButton_l, mOpenPending, 0xAD);
+
+WWHD_OFFSET(hdMiiversePager_l, mPositionY, 0x54);
+
+WWHD_OFFSET(hdMiiverseChartButton_l, mTargetY, 0xA4);
+
+WWHD_OFFSET(hdMenuMiiverse_c, mTextureFormat, 0xB8);
+
+WWHD_OFFSET(hdMenuMiiverse_c, mLastTouchX, 0x178);
+WWHD_OFFSET(hdMenuMiiverse_c, mTouchMinX, 0x1C4);

@@ -1,0 +1,20 @@
+src wwhd_src/d/hd_screen_rupy.cpp
+src wwhd_src/d/hd_screen_time.cpp
+src wwhd_src/d/hd_screen_unread_miiverse.cpp
+src wwhd_src/d/hd_screen_swim_time_hud.cpp
+src wwhd_src/d/hd_screen_telescope_hud.cpp
+src wwhd_src/d/d_menu_window_hd.cpp
+src wwhd_src/d/hd_screen_telescope_scale.cpp
+src wwhd_src/d/hd_screen_telescope_cover.cpp
+
+# Source provenance: readable draft f372683f; binary constructors 026CA9F4,
+# 026E6E04 and026E8490. Ordinary aligned complete-object domains only.
+# Supplied receiver, NULL+allocation success, NULL+allocation failure.
+# Member fallback allocation returns are not used to repair invalid receivers.
+arg! 026CA9F4 r3 0,0x58000000
+arg! 026E6E04 r3 0,0x58001000
+arg! 026E8490 r3 0,0x58002000
+ret! 0273AD10 0,0x58010000
+
+# Required game constructor 026C9648.
+arg! 026C9648 r3 0,0x58003000

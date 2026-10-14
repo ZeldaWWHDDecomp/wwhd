@@ -9,7 +9,6 @@ static HdPadBossPositions l_bossPositions;
 void hdBossUpdate(HdPadBoss *self) {
     // HD: retain original frame offsets and uninitialized callback storage.
     gabi::AutoFrame automatic{gabi::Activation::current};
-    gabi::NativeFrame<0x20> frame;
     HdPadMap *map = self->mMap;
     HdPadPane *pane;
     if (map && (pane = self->mPane) && map->mBossVisible) {
@@ -23,18 +22,21 @@ void hdBossUpdate(HdPadBoss *self) {
             y = boss->y;
         }
         f32 scale = pane->mScale;
-        HdPadPoint *point = gabi::at<HdPadPoint>(frame + 8);
-        HdPadPoint *origin = gabi::at<HdPadPoint>(frame + 0x10);
+        gabi::FrameLocal<HdPadPoint> point(8);
+        gabi::FrameLocal<HdPadPoint> origin(0x10);
         point->x = fmuls_ppc(x, scale);
         point->y = fmuls_ppc(y, scale);
         origin->x = zero;
         origin->y = zero;
         hdPadRotatePoint(point, point, origin, map->mAngle);
-        self->mPosition.x = point->x;
-        self->mPosition.y = point->y;
+        // HD: the recompiled original keeps a
+        // signalling NaN's bits through `lfs f13; lfs f0; stfs f13; stfs f0`, so the position and the origin are
+        // copied as raw words here (a typed float copy quietens it).
+        gabi::store<u32>(gabi::ea(&self->mPosition.x), gabi::load<u32>(gabi::ea(&point->x)));
+        gabi::store<u32>(gabi::ea(&self->mPosition.y), gabi::load<u32>(gabi::ea(&point->y)));
         map = self->mMap;
-        self->mOrigin.x = map->mOrigin.x;
-        self->mOrigin.y = map->mOrigin.y;
+        gabi::store<u32>(gabi::ea(&self->mOrigin.x), gabi::load<u32>(gabi::ea(&map->mOrigin.x)));
+        gabi::store<u32>(gabi::ea(&self->mOrigin.y), gabi::load<u32>(gabi::ea(&map->mOrigin.y)));
     }
     hdPadStateExecute(&self->mState);
 }

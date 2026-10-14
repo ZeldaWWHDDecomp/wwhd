@@ -1,0 +1,74 @@
+mockmove C0009988 r3 r4 r5
+src wwhd_src/d/hd_screen_battery.cpp
+src wwhd_src/d/hd_screen_btn_control_wind.cpp
+src wwhd_src/d/hd_screen_information_drc.cpp
+src wwhd_src/d/hd_screen_no_operate_drc.cpp
+src wwhd_src/d/hd_screen_pause.cpp
+src wwhd_src/d/hd_screen_slide_assist_tv.cpp
+src wwhd_src/d/hd_screen_control_wind_ok_states.cpp
+
+# Coherent resource SafeStrings for both child factories. Literal descriptor vtables are immutable.
+arg! 026DECB8 r3 0x5D040000
+arg! 026DECB8 r4 0x5D050000
+field 026DECB8 r3+0x48 u32 0,1,2,3
+field 026DECB8 r3+0x4C u32 0x5D040100
+field 026DECB8 r4+0x8 u32 0x5D060000
+field 026DECB8 r4+0xC u32 0x10104D04
+field 026DECB8 r4+0x14 u32 0x5D060100
+field 026DECB8 r4+0x18 u32 0x10104D04
+fieldstr 026DECB8 5D060000 32 "IconSlideArea_00","BtnItemIcon_00","BtnControlWind_00","Other"
+fieldstr 026DECB8 5D060100 32 "L_IconSlideArea_00","L_BtnItemIcon_00","L_Btn_00","Other"
+field 026DECB8 10494CEC u32 0x5D060200
+field 026DECB8 10494CF0 u32 0x10104D04
+fieldstr 026DECB8 5D060200 32 "IconSlideArea_00"
+field 026DECB8 10490140 u32 0x5D060300
+field 026DECB8 10490144 u32 0x10104D04
+fieldstr 026DECB8 5D060300 32 "BtnItemIcon_00"
+field 026DECB8 1048F790 u32 0x5D060400
+field 026DECB8 1048F794 u32 0x10104D04
+fieldstr 026DECB8 5D060400 32 "BtnControlWind_00"
+field 026DECB8 10491B3C u32 0x5D060500
+field 026DECB8 10491B40 u32 0x10104D04
+fieldstr 026DECB8 5D060500 32 "L_Btn_00"
+field 026DECB8 1049B910 u32 0x5D060600
+field 026DECB8 1049B914 u32 0x10104D04
+fieldstr 026DECB8 5D060600 32 "L_IconSlideArea_00"
+field 026DECB8 1049B918 u32 0x5D060700
+field 026DECB8 1049B91C u32 0x10104D04
+fieldstr 026DECB8 5D060700 32 "L_BtnItemIcon_00"
+arg! 0264F400 r3 0x5D040000
+arg! 0264F400 r4 0x5D050000
+field 0264F400 r3+0x48 u32 0,1,2,3
+field 0264F400 r3+0x4C u32 0x5D040100
+field 0264F400 r4+0x8 u32 0x5D060000
+field 0264F400 r4+0xC u32 0x10104D04
+field 0264F400 r4+0x14 u32 0x5D060100
+field 0264F400 r4+0x18 u32 0x10104D04
+fieldstr 0264F400 5D060000 32 "IconSlideArea_00","BtnItemIcon_00","BtnControlWind_00","Other"
+fieldstr 0264F400 5D060100 32 "L_IconSlideArea_00","L_BtnItemIcon_00","L_Btn_00","Other"
+field 0264F400 10494CEC u32 0x5D060200
+field 0264F400 10494CF0 u32 0x10104D04
+fieldstr 0264F400 5D060200 32 "IconSlideArea_00"
+field 0264F400 10490140 u32 0x5D060300
+field 0264F400 10490144 u32 0x10104D04
+fieldstr 0264F400 5D060300 32 "BtnItemIcon_00"
+field 0264F400 1048F790 u32 0x5D060400
+field 0264F400 1048F794 u32 0x10104D04
+fieldstr 0264F400 5D060400 32 "BtnControlWind_00"
+field 0264F400 10491B3C u32 0x5D060500
+field 0264F400 10491B40 u32 0x10104D04
+fieldstr 0264F400 5D060500 32 "L_Btn_00"
+field 0264F400 1049B910 u32 0x5D060600
+field 0264F400 1049B914 u32 0x10104D04
+fieldstr 0264F400 5D060600 32 "L_IconSlideArea_00"
+field 0264F400 1049B918 u32 0x5D060700
+field 0264F400 1049B91C u32 0x10104D04
+fieldstr 0264F400 5D060700 32 "L_BtnItemIcon_00"
+stable 5D05000C 4
+stable 5D050018 4
+stable 10494CF0 4
+stable 10490144 4
+stable 1048F794 4
+stable 10491B40 4
+stable 1049B914 4
+stable 1049B91C 4

@@ -353,3 +353,34 @@ enum HdPadMenuFrame {
     HD_PAD_MENU_FINISH_BEGIN = 0x80,
     HD_PAD_MENU_TRANSITION_FRAMES = 7
 };
+
+/* TU-wide statics and functions of hd_screen_map.cpp (defined there; the statics through `data` glue
+ * lines). Companion sources of that TU use these declarations ;
+ * a companion views the two states as parts state ids (hdPartsStateId_c, d/hd_parts.h). */
+extern HdPadUiPointer& l_hdMapUi;      /* 101F8344 */
+extern be<f32>& l_hdMapOne;            /* 100F8D18 */
+extern be<f32>& l_hdMapChaseRate;      /* 100F8D30 */
+extern be<f32>& l_hdMapChaseMax;       /* 100F8D34 */
+extern HdPadState& l_mapWaitState;     /* 10496060 ::StateID_ZoomIn */
+extern HdPadState& l_mapActiveState;   /* 104960F0 ::StateID_ZoomInCenteringPlayer */
+void hdMapZoom(HdPadMap* self);                                          /* 0267C34C */
+void hdMapSetPosition(HdPadMap* self, HdPadPoint* position, u32 index);  /* 0267C6C4 */
+
+/* TU-wide statics of hd_screen_menu_map.cpp (defined there through `data` glue lines; companion sources
+ * use these declarations). l_hdMenuMapUi is the same guest slot as
+ * l_hdMapUi (101F8344), bound per TU. */
+extern HdPadUiPointer& l_hdMenuMapUi;       /* 101F8344 */
+extern HdPadState& l_menuMapWaitState;      /* 1049751C */
+extern be<u32>& l_hdMenuMapOpenSound;       /* 100FB444 */
+extern be<u32>& l_hdMenuMapCloseSound;      /* 100FB430 */
+/* hd_screen_dungeon_map.cpp TU constant (data glue there) */
+extern be<f32>& l_hdDungeonZero;            /* 100F0250 */
+/* hd_screen_dungeon_map_boss.cpp TU statics (data glue there) */
+extern HdPadBossPositions& l_bossPositions;  /* 104926EC */
+extern be<f32>& l_hdBossZero;                /* 100F0A88 */
+/* more hd_screen_dungeon_map.cpp TU statics (data glue there) */
+extern HdPadEventPointer& l_hdDungeonInput;   /* 101F4FF0 */
+extern HdPadUiPointer& l_hdDungeonUi;         /* 101F8344 */
+extern be<f32>& l_hdDungeonHalf;              /* 100F0254 */
+extern be<f32>& l_hdDungeonThree;             /* 100F0258 */
+extern HdPadActivePointer& l_hdDungeonActive; /* 101F8378 */

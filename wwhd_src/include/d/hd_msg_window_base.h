@@ -257,3 +257,31 @@ enum WindowSoundId : u32 {
     WINDOW_SOUND_CANCEL = 0x880,
     WINDOW_SOUND_NUMBER = 0x8E1
 };
+
+/* TU-wide statics of hd_msg_window_base.cpp (defined there through `data` glue lines; companion sources of
+ * that TU use these declarations). Each WindowState is a 0x30 parts state id: a companion
+ * that includes d/hd_parts.h views it with windowStateId(). */
+extern WindowCorePointer& l_windowCore;   /* 101F4B5C */
+extern be<u8>& l_windowInputMode;         /* 1047B09E */
+extern WindowState& l_windowState0_E01C;  /* 1049E01C */
+extern WindowState& l_windowState0_E07C;  /* 1049E07C */
+extern WindowState& l_windowState0_DF8C;  /* 1049DF8C */
+extern WindowState& l_windowState0_DFBC;  /* 1049DFBC */
+extern WindowState& l_windowState0_DF2C;  /* 1049DF2C */
+extern WindowState& l_windowState0_E22C;  /* 1049E22C */
+extern WindowState& l_windowState0_E25C;  /* 1049E25C */
+extern WindowState& l_windowState0_E2BC;  /* 1049E2BC */
+extern WindowState& l_windowState0_E19C;  /* 1049E19C */
+extern WindowState& l_windowState0_E3AC;  /* 1049E3AC */
+extern WindowState& l_windowState0_E40C;  /* 1049E40C */
+extern WindowState& l_windowState0_DFEC;  /* 1049DFEC */
+extern WindowState& l_windowState0_E10C;  /* 1049E10C */
+extern WindowState& l_windowState0_E49C;  /* 1049E49C */
+extern WindowState& l_windowState0_E34C;  /* 1049E34C */
+extern WindowState& l_windowState0_E28C;  /* 1049E28C */
+extern WindowState& l_windowState0_E43C;  /* 1049E43C */
+extern WindowState& l_windowState0_E3DC;  /* 1049E3DC */
+extern WindowState& l_windowState0_DE9C;  /* 1049DE9C */
+extern WindowState& l_windowState0_DEFC;  /* 1049DEFC */
+struct hdPartsStateId_c;
+inline hdPartsStateId_c* windowStateId(WindowState* state) { return reinterpret_cast<hdPartsStateId_c*>(state); }

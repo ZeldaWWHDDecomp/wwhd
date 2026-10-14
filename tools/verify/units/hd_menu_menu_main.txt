@@ -1,0 +1,84 @@
+# MENU-menu_main: all 134 listed game functions; four library copies excluded.
+src wwhd_src/d/hd_screen_menu_main.cpp
+
+# Window table loops require a valid three-entry mode; mode3 is the no-window sentinel.
+# Original02692528 directly indexes100FA2C0; no candidate loop cap is introduced.
+field 026924EC r3+0x54 u32 0,1,2,3
+field 026925EC r3+0x54 u32 0,1,2
+field 02693BC8 r3+0x54 u32 0,1,2,3
+
+# Existing owned arrays have capacities6 panes/5 tabs/46 windowpanes/3 receivers.
+# Preserve null-allocation cleanup and negative signed-count branches without billion-slot snapshots.
+field 02692C80 r3+0x64 u32 0,1,6,4294967295
+field 02692C80 r3+0x6C u32 0,1,5,4294967295
+field 02692C80 r3+0x74 u32 0,1,46,4294967295
+field 026938F4 r3+0x64 u32 0,1,6,4294967295
+field 026938F4 r3+0x6C u32 0,1,5,4294967295
+field 026938F4 r3+0x74 u32 0,1,46,4294967295
+field 02692F10 r3+0x7C u32 0,1,3,4294967295
+field 026937C8 r3+0x7C u32 0,1,3,4294967295
+
+# Valid owned-container metadata cannot be randomly corrupted into millions of slots by unrelated mocks.
+# Only stochastic clobbering is excluded; own stores and explicit mockfield/mockglobal writes still apply.
+# Exact failing original trace seed1000023 changed windowcount to004754F9 aftercall15.
+arg! 026924EC r3 0x54000000
+arg! 026925EC r3 0x54000000
+arg! 02693BC8 r3 0x54000000
+arg! 02692C80 r3 0x54000000
+arg! 02692F10 r3 0x54000000
+arg! 026937C8 r3 0x54000000
+arg! 026938F4 r3 0x54000000
+stable 54000054 4
+stable 54000064 4
+stable 5400006C 4
+stable 54000074 4
+stable 5400007C 4
+
+# createReceivers: coherent layout/accessor/pane and finite runtime-type hierarchies.
+# Real PartsPane vtable1010BBC0: findPane+5C=02876554, runtimeType+14=02702A20.
+# Match, derived-match, unrelated, and null results remain distinct; no source loop cap.
+field 02692F10 r3+0x44 u32 0x55000000
+field 02692F10 55000004 u32 0x55000100
+field 02692F10 5500010C u32 0x55000200
+field 02692F10 55000208 u32 0x1010BBC0
+field 02692F10 55000308 u32 0x1010BBC0
+field 02692F10 55000400 u32 0x101FD93C
+field 02692F10 55000500 u32 0
+field 02692F10 101FD938 u32 0,1
+field 02692F10 101FD88C u32 0,1
+field 02692F10 101FD888 u32 0,1
+field 02692F10 101FD93C u32 0x101FD940
+field 02692F10 101FD940 u32 0x101FD8FC
+field 02692F10 101FD8FC u32 0
+ret! 02876554 0,0x55000300
+ret! 02702A20 0,0x101FD93C,0x101FD940,0x101FD8FC,0x55000400,0x55000500
+stable 54000044 4
+stable 55000004 4
+stable 5500010C 4
+stable 55000208 4
+stable 55000308 4
+stable 55000400 4
+stable 55000500 4
+stable 1010BBD4 4
+stable 1010BC1C 4
+stable 101FD938 8
+stable 101FD940 4
+stable 101FD88C 4
+stable 101FD888 4
+stable 101FD8FC 4
+
+# Valid heap identity and disjoint allocation backing for the coherent pane fixture.
+# Seed1000345's random heap slot selected findPane02876554, returned pane55000300,
+# then clearing the three array slots overwrote pane+8 and entered a random cyclic RTTI chain.
+# Use the same opaque allocator mock target as the merged menu-buttons fixtures.
+field 02692F10 1018C404 u32 0x55000600
+field 02692F10 55000610 u32 0,0x55000700
+field 02692F10 5500070C u32 0x55000800
+field 02692F10 55000834 u32 0x0273B050
+field 02692F10 r3+0x80 u32 0x55002000
+ret! 02756140 0x55000700
+ret! 0273B050 0,0x55001000
+stable 1018C404 4
+stable 55000610 4
+stable 5500070C 4
+stable 55000834 4

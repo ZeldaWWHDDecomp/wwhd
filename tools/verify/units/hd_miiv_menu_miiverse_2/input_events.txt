@@ -1,0 +1,229 @@
+# MIIV-menu_miiverse#2: add the remaining registered bodies as each TU is reconstructed.
+src wwhd_src/d/hd_screen_menu_miiverse_comment.cpp
+src wwhd_src/d/hd_screen_miiverse_new_comment_sequence.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_new_comment.cpp
+src wwhd_src/d/hd_screen_miiverse_setting_sequence.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_setting.cpp
+arg! * r3 0x5A000000
+arg! * r4 0,0x5A001000
+field * 5A000048 u32 0,1
+field * 5A00004C u32 0x5A002000
+field * 5A002000 u32 0x5A003000
+field * 5A003050 u32 0x5A004000
+field * 5A001050 u32 0x5A005000
+field * 5A000058 u32 0x5A006000
+field * 5A000064 u32 0x5A006000
+callee 026F5C00 r3=0x54
+callee 02006364 r3=0x14
+field * 5A000004 u32 0x100FC2B0
+field * 5A000044 u32 0x5A007000
+field * 5A007004 u32 0x5A008000
+field * 5A00800C u32 0x5A009000
+field * 5A000048 u32 0,1,2,3,4
+field * 5A002008 u32 0x5A003000
+field * 101F4FF0 u32 0x5A00A000
+arg! 026A6918 r3 0,0x5A000000
+arg! 026A6918 r4 0,1,2,3,0xFFFFFFFF
+callee 0273AF40 r3=0xD8
+callee 026418A4 r3=0x9C
+callee 026418B0 r3=0x9C
+
+arg! 026A9DBC r3 0,0x5A000000
+arg! 026A9DBC r4 0,1,2,3,0xFFFFFFFF
+arg! 026AB0B4 r3 0,0x5A000000
+arg! 026AB0B4 r4 0,1,2,3,0xFFFFFFFF
+
+arg! 026AA2B4 r3 0,0x5A000000,0xFFFFFFA8
+arg! 026AB770 r3 0,0x5A000000,0xFFFFFF9C
+ret! 0273AD10 0,0x5B000000
+callee 0273AD10 r3=0
+
+arg! 026A7700 r3 0,0x5A000000,0xFFFFFF38
+callee 02760DE8 r3=0x8
+
+field * 5A0000C8 u32 0x5A010000
+field * 5A0000CC u32 0x5A011000
+field * 5A0000D0 u32 0x5A012000
+field * 5A0000D4 u32 0x5A013000
+
+field * 1018F4AC u32 0x5A020000
+callee 0203A910 r3=0x4
+
+callee 0200F5C8 r3=inout4
+
+arg! 026A8DD0 r4 0x5A030000
+callee 02704D2C r3=out12 r4=0x78
+
+arg! 026ABC48 r4 0x5A040000
+field * 5A040014 u32 0x5A041000,0x5A042000
+field * 5A040018 u32 0x100FC614
+field * 10497AB4 u32 0x5A042000
+field * 10497AB8 u32 0x100FC614
+field * 5A041000 u8 0,65,66
+field * 5A041001 u8 0
+field * 5A042000 u8 0,65,66
+field * 5A042001 u8 0
+callee 026F92C0 r3=0x50 r5=0x28
+
+arg! 026AAA38 r4 0x5A040000
+field * 1018C404 u32 0x5A050000
+field * 5A050010 u32 0x5A051000
+field * 5A040024 u32 0x5A043000,0x5A044000
+field * 104979B4 u32 0x5A042000
+field * 104979B8 u32 0x100FC3A8
+field * 1049DA40 u32 0x5A044000
+field * 1049DA44 u32 0x100FC3A8
+field * 5A043000 u8 0,65,66
+field * 5A043001 u8 0
+field * 5A044000 u8 0,65,66
+field * 5A044001 u8 0
+ret! 0273B050 0,0x5B010000
+ret! 026411F0 0x5B010000 0x5B010000
+callee 026411F0 r3=0x8C
+callee 0264125C r3=0x8C r6=0x28
+
+field * 5A000024 u32 0x5A060000
+field * 5A060008 u32 0x100FC674
+field * 10497BB4 u32 0x100FC674
+ret! 026AC0F0 0,1
+
+field * 5A0070D4 u32 0x5A070000
+callee 020053E4 r3=0x18
+callee 02005840 r3=0x18
+ret! 02005840 0,1,2,0xFFFFFFFF
+
+field 026A6C50 5A000064 u32 0,1,9,10,0xFFFFFFFF
+field * 101F84DC u32 0x5A080000
+ret! 027200F4 0x5A08130C 0x5A08130C
+field * 5A08130D u8 0,1,2,255
+field * 5A0203F9 u8 0,1,2,255
+field * 5A0207E5 u8 0,1,2,255
+field * 5A020BD1 u8 0,1,2,255
+field * 5A020FBD u8 0,1,2,255
+field * 5A0213A9 u8 0,1,2,255
+field * 5A021795 u8 0,1,2,255
+field * 5A021B81 u8 0,1,2,255
+field * 5A021F6D u8 0,1,2,255
+field * 5A022359 u8 0,1,2,255
+field * 5A022745 u8 0,1,2,255
+
+field * 5A000088 u8 0,1,2,255
+arg! 026A7EA0 r4 0x5A001000
+callee 02641274 r3=0x8C
+callee 0263F3F4 r3=0x78
+
+arg! 026A8A00 r5 0,0x5A001000
+
+ret! 026FADB0 0,0x5B010000
+callee 026FADB0 r3=0x110
+field * 5B0100E0 u32 0x1010A788
+field * 5B0100D4 u32 0x5A070000
+field 026AA54C 100FC39C u32 0
+
+callee 0203A958 r3=0x4
+ret! 02006478 0x5A060000 0x5A060000
+
+field * 101F8378 u32 0x5A090000
+field * 5A090014 u8 0,1,2,255
+callee 020013C0 r3=out40 r4=0x28
+callee 02001338 r3=out40
+callee 02001490 r3=0x28
+callee 026F6288 r3=0x28
+
+arg! 026A8D40 r4 0,1,2,0xFFFFFFFF
+
+# Content pane getters return valid three-word positions (actual pane + 0x1C).
+ret! 026409EC 0x5A0B0000 0x5A0B0000
+ret! 026409F8 0x5A0B1000 0x5A0B1000
+callee 026409EC r3=0x98
+callee 026409F8 r3=0x9C
+arg! 026A868C r4 0x5A001000
+
+# All selected children are live objects with actual content/photo virtual tables.
+field * 5A002004 u32 0x5A0C0000
+field * 5A002008 u32 0x5A003000,0x5A0C1000
+field * 5A00200C u32 0x5A0C2000
+field * 5A003004 u32 0x100EB254
+field * 5A0C0004 u32 0x100EB254
+field * 5A0C1004 u32 0x100EB880
+field * 5A0C2004 u32 0x100EB254
+field * 5A0C0050 u32 0x5A0D0000
+field * 5A0C1050 u32 0x5A0D1000
+field * 5A0C2050 u32 0x5A0D2000
+
+# Game-state reads use a valid play object and optional live player.
+ret! 025200D4 0x5A100000 0x5A100000
+field * 5A105292 u8 0,1,2,255
+field * 5A105B2C u32 0,0x5A110000
+field * 5A1103BC u32 0,0x200,0xFFFFFFFF
+field * 5A105BAC u16 0,1,65535
+field * 5A105CD8 u32 0,0x10,0xFFFFFFFF
+field * 1018F504 u32 0x5A120000
+field * 1018F510 u8 0,1,2,255
+
+# Comment factories take a live resource descriptor with SafeStrings at +8 and +0x14.
+arg! 026A91B4 r4 0x5A040000
+field * 5A040008 u32 0x5A153000
+field * 5A04000C u32 0x100FC054
+field * 5A040018 u32 0x100FC054
+field * 5A153000 u8 0,65,66,67
+field * 5A153001 u8 0
+field * 104977F8 u32 0x5A042000
+field * 104977FC u32 0x100FC054
+field * 10497800 u32 0x5A150000
+field * 10497804 u32 0x100FC054
+field * 10497808 u32 0x5A151000
+field * 1049780C u32 0x100FC054
+field * 10497810 u32 0x5A152000
+field * 10497814 u32 0x100FC054
+field * 10490978 u32 0x5A150000
+field * 1049097C u32 0x100FC054
+field * 104909FC u32 0x5A151000
+field * 10490A00 u32 0x100FC054
+field * 10495030 u32 0x5A152000
+field * 10495034 u32 0x100FC054
+field * 5A150000 u8 65
+field * 5A150001 u8 0
+field * 5A151000 u8 66
+field * 5A151001 u8 0
+field * 5A152000 u8 67
+field * 5A152001 u8 0
+ret! 0263E430 0,0x5B010000
+ret! 02641540 0,0x5B010000
+ret! 02674320 0,0x5B010000
+callee 0263E430 r3=0x154
+callee 02641540 r3=0x9C
+callee 02674320 r3=0x5C
+callee 0263EFB0 r3=0x154 r6=0x28
+callee 026415CC r3=0x9C r6=0x28
+callee 0267438C r3=0x5C r6=0x28
+
+# Preserve prior part-name choices and add a fourth-name match.
+field * 5A041000 u8 0,65,66,67
+
+# Companion: coherent event-copy outputs exercise input routing and posted requests.
+# The broad primary retains unconstrained event-output bytes and receiver IDs.
+mockfield 020013C0 r3+0 u32 0,2,3,4,13,14,17,102,103,104,0xFFFFFFFF
+mockfield 020013C0 r3+4 u32 0,1,2,3
+mockfield 020013C0 r3+8 u8 0,1,2,9,10,11,255
+ret! 026F5B74 0 3
+ret! 02615140 0,0x5A004000,0x5A0D0000,0x5A0D1000,0x5A0D2000
+ret! 020399DC 0,1
+ret! 0203A438 0,1
+field 026A716C 5A000064 u32 0,1,2,9,10,0xFFFFFFFF
+field 026A6CEC 5A000064 u32 0,1,2,9,10,0xFFFFFFFF
+field 026A6CEC 5A000050 u8 0,1,255
+field 026A6CEC 5A0000AC u8 0,1,255
+
+# Draw alone accepts absent child entries; other methods retain their valid child domain.
+field 026A7F10 5A002000 u32 0,0x5A003000
+field 026A7F10 5A002004 u32 0,0x5A0C0000
+field 026A7F10 5A002008 u32 0,0x5A003000,0x5A0C1000
+field 026A7F10 5A00200C u32 0,0x5A0C2000
+
+# Comment archive-index reads cover valid entries and the original out-of-range fallback.
+field 026A8BE8 5A000064 u32 0,1,2,9,10,0x5A006000,0xFFFFFFFF
+field 026A7F10 5A000064 u32 0,1,2,9,10,0x5A006000,0xFFFFFFFF
+field 026A80F4 5A000064 u32 0,1,2,9,10,0x5A006000,0xFFFFFFFF
+field 026A83CC 5A000064 u32 0,1,2,9,10,0x5A006000,0xFFFFFFFF
+field 026A7CD8 5A000064 u32 0,1,2,9,10,0x5A006000,0xFFFFFFFF

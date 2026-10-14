@@ -1,0 +1,8 @@
+mockmove C0009988 r3 r4 r5
+src wwhd_src/d/hd_screen_battery.cpp
+src wwhd_src/d/hd_screen_btn_control_wind.cpp
+src wwhd_src/d/hd_screen_information_drc.cpp
+src wwhd_src/d/hd_screen_no_operate_drc.cpp
+src wwhd_src/d/hd_screen_pause.cpp
+src wwhd_src/d/hd_screen_slide_assist_tv.cpp
+src wwhd_src/d/hd_screen_control_wind_ok_states.cpp

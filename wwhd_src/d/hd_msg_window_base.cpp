@@ -340,7 +340,7 @@ u32 hdMsgWindow_approachNumber(WindowBase *s, be<s16> *number, const be<u32> *in
 
     u32 mode = s->mSelection;
     s32 value = *number;
-    s32 target = *gabi::at<be<s16>>(gabi::ea(&l_windowLimits) + i * 2);
+    s32 target = l_windowLimits.mValues[i]; // i < 4 checked above
     if (value > target) {
         *number = u16(target);
         return 0;
@@ -373,6 +373,7 @@ u32 hdMsgWindow_decreaseNumber(WindowBase *s, be<s16> *number) {
 
 /* 026FE414 */
 void hdMsgWindow_updateNumberSelect(WindowBase *s) {
+    gabi::AutoFrame automatic{gabi::Activation::current};
     if (hdMsgWindow_hasInput(s)) {
         windowPlaySound0(WINDOW_SOUND_ACCEPT);
         windowNumberAccept();

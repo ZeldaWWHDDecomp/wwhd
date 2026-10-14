@@ -1,0 +1,93 @@
+/* HD common render layer: fixed name, projection and draw dispatch. Private decomp source. */
+#pragma once
+#include "bindings.h"
+struct hdLayerMatrix_c { be<u32> mWords[12]; };
+struct hdLayerProjectionMatrix_c { be<u32> mWords[16]; };
+struct hdLayerProjection_c { u8 mOpaque; };
+struct hdLayerViewport_c { u8 mData[0x40]; };
+struct hdLayerDrawContext_c { u8 mData[0x1C]; };
+struct hdLayerString_c {
+    gptr<be<u8>> mpString;
+    be<u32> mVtable;
+    be<s32> mCapacity;
+    be<u8> mBuffer[32];
+};
+WWHD_OFFSET(hdLayerString_c, mVtable, 4);
+WWHD_OFFSET(hdLayerString_c, mCapacity, 8);
+WWHD_OFFSET(hdLayerString_c, mBuffer, 0xC);
+WWHD_SIZE(hdLayerString_c, 0x2C);
+struct hdLayerVtable_c {
+    u8 _00[0x74];
+    be<u32> mSetName;
+    u8 _78[0x8C-0x78];
+    be<u32> mInitialize;
+    be<u32> mReserved;
+    be<u32> mCalculate;
+    be<u32> mReservedCalc;
+    be<u32> mDraw;
+    be<u32> mReservedDraw;
+    be<u32> mFinishDraw;
+};
+WWHD_OFFSET(hdLayerVtable_c, mSetName, 0x74);
+WWHD_OFFSET(hdLayerVtable_c, mInitialize, 0x8C);
+WWHD_OFFSET(hdLayerVtable_c, mCalculate, 0x94);
+WWHD_OFFSET(hdLayerVtable_c, mDraw, 0x9C);
+WWHD_OFFSET(hdLayerVtable_c, mFinishDraw, 0xA4);
+struct hdLayerBase_c {
+    u8 _00[0xC];
+    gptr<hdLayerVtable_c> mpVtable;
+    be<u32> mDrawVtable;
+    u8 _14[0x48-0x14];
+    gptr<hdLayerMatrix_c> mpViewMatrix;
+    gptr<hdLayerProjection_c> mpProjection;
+    be<u32> mFlags;
+    u8 _54[0x84-0x54];
+    hdLayerMatrix_c mViewMatrix;
+    u8 _B4[0x164-0xB4];
+    gptr<hdLayerProjection_c> mpInternalProjection;
+    u8 _168[0x51C-0x168];
+    hdLayerString_c mName;
+    hdLayerViewport_c mViewport;
+    hdLayerMatrix_c mDrawViewMatrix;
+    u8 _5B8[0x5F0-0x5B8];
+    be<u32> mDrawContext;
+    u8 _5F4[0x610-0x5F4];
+    void initialize();
+    void calculate();
+    void draw(struct hdLayerRenderInfo_c* info);
+    void finishDraw();
+    void prepareDraw();
+    void setNameIndirect(gptr<void>* name);
+    void setResourceIndirect(gptr<void>* resource);
+};
+WWHD_OFFSET(hdLayerBase_c, mpVtable, 0xC);
+WWHD_OFFSET(hdLayerBase_c, mDrawVtable, 0x10);
+WWHD_OFFSET(hdLayerBase_c, mpViewMatrix, 0x48);
+WWHD_OFFSET(hdLayerBase_c, mpProjection, 0x4C);
+WWHD_OFFSET(hdLayerBase_c, mFlags, 0x50);
+WWHD_OFFSET(hdLayerBase_c, mViewMatrix, 0x84);
+WWHD_OFFSET(hdLayerBase_c, mpInternalProjection, 0x164);
+WWHD_OFFSET(hdLayerBase_c, mName, 0x51C);
+WWHD_OFFSET(hdLayerBase_c, mViewport, 0x548);
+WWHD_OFFSET(hdLayerBase_c, mDrawViewMatrix, 0x588);
+WWHD_OFFSET(hdLayerBase_c, mDrawContext, 0x5F0);
+WWHD_SIZE(hdLayerBase_c, 0x610);
+struct hdLayerRenderInfo_c {
+    u8 _00[0xC];
+    be<u32> mTarget;
+    u8 _10[4];
+    gptr<hdLayerMatrix_c> mpViewMatrix;
+    gptr<hdLayerProjection_c> mpProjection;
+    gptr<void> mpViewport;
+};
+WWHD_OFFSET(hdLayerRenderInfo_c, mpViewMatrix, 0x14);
+WWHD_OFFSET(hdLayerRenderInfo_c, mpProjection, 0x18);
+struct hdLayerSafeStringVtable_l { u8 _00[0x14]; be<u32> mEnsureTerminated; };
+struct hdLayerSafeString_l { gptr<be<u8>> mpString; gptr<hdLayerSafeStringVtable_l> mpVtable; };
+struct hdLayerDebugRenderer_l { be<u32> mTarget; be<u32> mFlags; };
+struct hdLayerDrawManager_l { u8 _00[0x14]; be<u32> mContext; };
+
+struct hdLayerBaseHeaderZero_c { be<u32> mWords[4]; };
+WWHD_SIZE(hdLayerBaseHeaderZero_c,16);
+struct hdLayerBaseHeaderDescriptor_c { u8 mData[12]; };
+WWHD_SIZE(hdLayerBaseHeaderDescriptor_c,12);

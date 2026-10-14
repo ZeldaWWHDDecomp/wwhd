@@ -1,0 +1,568 @@
+src wwhd_src/d/hd_parts_valid.cpp
+src wwhd_src/d/hd_pane_util.cpp
+# Finite pane ancestry, including the null and multi-parent paths.
+arg! 02704DE4 r4 0,0x52000000
+arg! 02704EA8 r3 0,0x52000000
+field * 0x5200000C u32 0,0x52000100
+field * 0x5200010C u32 0,0x52000200
+field * 0x5200020C u32 0
+src wwhd_src/d/hd_text_locale.cpp
+arg 0270521C r4 0,1,2,3,0xFFFFFFFF
+arg 0270521C r5 0,1,2,3,4,5,6,7,8,9,0xFFFFFFFF
+ret 0270517C 0,1,2,3
+ret 027051B0 0,1,2,3,4,5,6,7,8,9
+# System configuration domains, including unrecognised values.
+field * 0x101F4BAC u32 0x53000000
+field * 0x53000010 u32 0,1,2,3,4,5,0xFFFFFFFF
+field * 0x53000014 u32 0,1,2,3,4,5,6,7,8,9,10,11,0xFFFFFFFF
+# setValid must store the flag before reading the animation pointer, even when they overlap.
+arg! 02707640 r3 0x55000084
+field 02707640 r3+0x44 u32 0x55000000,0x55000100
+src wwhd_src/d/hd_layout_locale.cpp
+# Bounded entry scans with absent, matching and mismatching names/types.
+arg! 02705F7C r3 0,0x54000000
+arg! 02705F7C r4 0,0x54000100
+arg! 02705F7C r5 -1,0,1,2,3
+arg 02705F7C r6 0,1,2,255
+field * 0x54000100 u32 0,0x100
+field * 0x5400010C u32 0,0x100
+field * 0x54000118 u32 0,0x100
+field * 0x54000108 u16 0,1
+field * 0x54000114 u16 0,1
+field * 0x54000120 u16 0,1
+field * 0x5400010A u8 0,1,2,255
+field * 0x54000116 u8 0,1,2,255
+field * 0x54000122 u8 0,1,2,255
+fieldstr 02705F7C 0x54000000 16 "entry","other",""
+fieldstr 02705F7C 0x54000200 16 "entry","other",""
+fieldstr 02705F7C 0x5400020C 16 "entry","other",""
+fieldstr 02705F7C 0x54000218 16 "entry","other",""
+# Compare complete SafeString stack objects, including the per-TU vtable word.
+callee 02705648 r3=8
+callee 027058CC r3=8
+callee 02705EEC r3=8
+callee 02705B94 r3=8 r5=8
+# Alias text with each entry, and include shared prefixes with distinct endings.
+arg! 02705F7C r3 0,0x54000000,0x54000200,0x5400020C,0x54000218,0x54000224
+field * 0x54000124 u32 0,0x100
+field * 0x5400012C u16 0,1
+field * 0x5400012E u8 0,1,2,255
+field 02705F7C 0 u8 0
+fieldstr 02705F7C 0x54000000 12 "entry","enter","entries","other",""
+fieldstr 02705F7C 0x54000200 12 "entry","enter","entries","other",""
+fieldstr 02705F7C 0x5400020C 12 "entry","enter","entries","other",""
+fieldstr 02705F7C 0x54000218 12 "entry","enter","entries","other",""
+fieldstr 02705F7C 0x54000224 12 "entry","enter","entries","other",""
+# Make null-name/null-entry guards observable to mutations with otherwise valid entries.
+field 02705F7C 0 u32 0x100
+field 02705F7C 8 u16 1
+field 02705F7C 10 u8 0
+field 02705F7C 12 u32 0x100
+field 02705F7C 20 u16 1
+field 02705F7C 22 u8 0
+fieldstr 02705F7C 0x100 12 "","entry","enter"
+fieldstr 02705F7C 0x10C 12 "","entry","enter"
+
+# wwhd_src/d/hd_parts_text_pane.cpp fixtures scoped to their functions.
+src wwhd_src/d/hd_parts_text_pane.cpp
+arg! 02704820 r4 0,0x56000000
+arg! 02704A10 r4 0x56000000
+arg! 02704A10 r5 -1,0,1,4
+field 02703C04 0x56000000 u16 0,65,10,14,15
+field 02703C74 0x56000000 u16 0,65,10,14,15
+field 02703D4C 0x56000000 u16 0,65,10,14,15
+field 02703DF4 0x56000000 u16 0,65,10,14,15
+field 02704100 0x56000000 u16 0,65,10,14,15
+field 027042D0 0x56000000 u16 0,65,10,14,15
+field 02704384 0x56000000 u16 0,65,10,14,15
+field 02704404 0x56000000 u16 0,65,10,14,15
+field 02704484 0x56000000 u16 0,65,10,14,15
+field 02704504 0x56000000 u16 0,65,10,14,15
+field 027045B0 0x56000000 u16 0,65,10,14,15
+field 027045F0 0x56000000 u16 0,65,10,14,15
+field 02704634 0x56000000 u16 0,65,10,14,15
+field 027046D4 0x56000000 u16 0,65,10,14,15
+field 0270477C 0x56000000 u16 0,65,10,14,15
+field 02704820 0x56000000 u16 0,65,10,14,15
+field 02704A08 0x56000000 u16 0,65,10,14,15
+field 02704A10 0x56000000 u16 0,65,10,14,15
+field 02704AF0 0x56000000 u16 0,65,10,14,15
+field 02704AFC 0x56000000 u16 0,65,10,14,15
+field 02704B04 0x56000000 u16 0,65,10,14,15
+field 02703C04 0x56000002 u16 0,66,10
+field 02703C74 0x56000002 u16 0,66,10
+field 02703D4C 0x56000002 u16 0,66,10
+field 02703DF4 0x56000002 u16 0,66,10
+field 02704100 0x56000002 u16 0,66,10
+field 027042D0 0x56000002 u16 0,66,10
+field 02704384 0x56000002 u16 0,66,10
+field 02704404 0x56000002 u16 0,66,10
+field 02704484 0x56000002 u16 0,66,10
+field 02704504 0x56000002 u16 0,66,10
+field 027045B0 0x56000002 u16 0,66,10
+field 027045F0 0x56000002 u16 0,66,10
+field 02704634 0x56000002 u16 0,66,10
+field 027046D4 0x56000002 u16 0,66,10
+field 0270477C 0x56000002 u16 0,66,10
+field 02704820 0x56000002 u16 0,66,10
+field 02704A08 0x56000002 u16 0,66,10
+field 02704A10 0x56000002 u16 0,66,10
+field 02704AF0 0x56000002 u16 0,66,10
+field 02704AFC 0x56000002 u16 0,66,10
+field 02704B04 0x56000002 u16 0,66,10
+field 02703C04 0x56000004 u16 0
+field 02703C74 0x56000004 u16 0
+field 02703D4C 0x56000004 u16 0
+field 02703DF4 0x56000004 u16 0
+field 02704100 0x56000004 u16 0
+field 027042D0 0x56000004 u16 0
+field 02704384 0x56000004 u16 0
+field 02704404 0x56000004 u16 0
+field 02704484 0x56000004 u16 0
+field 02704504 0x56000004 u16 0
+field 027045B0 0x56000004 u16 0
+field 027045F0 0x56000004 u16 0
+field 02704634 0x56000004 u16 0
+field 027046D4 0x56000004 u16 0
+field 0270477C 0x56000004 u16 0
+field 02704820 0x56000004 u16 0
+field 02704A08 0x56000004 u16 0
+field 02704A10 0x56000004 u16 0
+field 02704AF0 0x56000004 u16 0
+field 02704AFC 0x56000004 u16 0
+field 02704B04 0x56000004 u16 0
+field 02703C04 0x56000006 u16 0
+field 02703C74 0x56000006 u16 0
+field 02703D4C 0x56000006 u16 0
+field 02703DF4 0x56000006 u16 0
+field 02704100 0x56000006 u16 0
+field 027042D0 0x56000006 u16 0
+field 02704384 0x56000006 u16 0
+field 02704404 0x56000006 u16 0
+field 02704484 0x56000006 u16 0
+field 02704504 0x56000006 u16 0
+field 027045B0 0x56000006 u16 0
+field 027045F0 0x56000006 u16 0
+field 02704634 0x56000006 u16 0
+field 027046D4 0x56000006 u16 0
+field 0270477C 0x56000006 u16 0
+field 02704820 0x56000006 u16 0
+field 02704A08 0x56000006 u16 0
+field 02704A10 0x56000006 u16 0
+field 02704AF0 0x56000006 u16 0
+field 02704AFC 0x56000006 u16 0
+field 02704B04 0x56000006 u16 0
+field 02703C04 0x56000008 u16 0
+field 02703C74 0x56000008 u16 0
+field 02703D4C 0x56000008 u16 0
+field 02703DF4 0x56000008 u16 0
+field 02704100 0x56000008 u16 0
+field 027042D0 0x56000008 u16 0
+field 02704384 0x56000008 u16 0
+field 02704404 0x56000008 u16 0
+field 02704484 0x56000008 u16 0
+field 02704504 0x56000008 u16 0
+field 027045B0 0x56000008 u16 0
+field 027045F0 0x56000008 u16 0
+field 02704634 0x56000008 u16 0
+field 027046D4 0x56000008 u16 0
+field 0270477C 0x56000008 u16 0
+field 02704820 0x56000008 u16 0
+field 02704A08 0x56000008 u16 0
+field 02704A10 0x56000008 u16 0
+field 02704AF0 0x56000008 u16 0
+field 02704AFC 0x56000008 u16 0
+field 02704B04 0x56000008 u16 0
+field 02703C04 0x5600000C u16 0
+field 02703C74 0x5600000C u16 0
+field 02703D4C 0x5600000C u16 0
+field 02703DF4 0x5600000C u16 0
+field 02704100 0x5600000C u16 0
+field 027042D0 0x5600000C u16 0
+field 02704384 0x5600000C u16 0
+field 02704404 0x5600000C u16 0
+field 02704484 0x5600000C u16 0
+field 02704504 0x5600000C u16 0
+field 027045B0 0x5600000C u16 0
+field 027045F0 0x5600000C u16 0
+field 02704634 0x5600000C u16 0
+field 027046D4 0x5600000C u16 0
+field 0270477C 0x5600000C u16 0
+field 02704820 0x5600000C u16 0
+field 02704A08 0x5600000C u16 0
+field 02704A10 0x5600000C u16 0
+field 02704AF0 0x5600000C u16 0
+field 02704AFC 0x5600000C u16 0
+field 02704B04 0x5600000C u16 0
+field 02703C04 r3+0xA4 u32 0,0x56000000
+field 02703C74 r3+0xA4 u32 0,0x56000000
+field 02703D4C r3+0xA4 u32 0,0x56000000
+field 02703DF4 r3+0xA4 u32 0,0x56000000
+field 02704100 r3+0xA4 u32 0,0x56000000
+field 027042D0 r3+0xA4 u32 0,0x56000000
+field 02704384 r3+0xA4 u32 0,0x56000000
+field 02704404 r3+0xA4 u32 0,0x56000000
+field 02704484 r3+0xA4 u32 0,0x56000000
+field 02704504 r3+0xA4 u32 0,0x56000000
+field 027045B0 r3+0xA4 u32 0,0x56000000
+field 027045F0 r3+0xA4 u32 0,0x56000000
+field 02704634 r3+0xA4 u32 0,0x56000000
+field 027046D4 r3+0xA4 u32 0,0x56000000
+field 0270477C r3+0xA4 u32 0,0x56000000
+field 02704820 r3+0xA4 u32 0,0x56000000
+field 02704A08 r3+0xA4 u32 0,0x56000000
+field 02704A10 r3+0xA4 u32 0,0x56000000
+field 02704AF0 r3+0xA4 u32 0,0x56000000
+field 02704AFC r3+0xA4 u32 0,0x56000000
+field 02704B04 r3+0xA4 u32 0,0x56000000
+field 02703C04 0x101FDD54 u32 1
+field 02703C74 0x101FDD54 u32 1
+field 02703D4C 0x101FDD54 u32 1
+field 02703DF4 0x101FDD54 u32 1
+field 02704100 0x101FDD54 u32 1
+field 027042D0 0x101FDD54 u32 1
+field 02704384 0x101FDD54 u32 1
+field 02704404 0x101FDD54 u32 1
+field 02704484 0x101FDD54 u32 1
+field 02704504 0x101FDD54 u32 1
+field 027045B0 0x101FDD54 u32 1
+field 027045F0 0x101FDD54 u32 1
+field 02704634 0x101FDD54 u32 1
+field 027046D4 0x101FDD54 u32 1
+field 0270477C 0x101FDD54 u32 1
+field 02704820 0x101FDD54 u32 1
+field 02704A08 0x101FDD54 u32 1
+field 02704A10 0x101FDD54 u32 1
+field 02704AF0 0x101FDD54 u32 1
+field 02704AFC 0x101FDD54 u32 1
+field 02704B04 0x101FDD54 u32 1
+field 02703C04 0x101FDD58 u32 0
+field 02703C74 0x101FDD58 u32 0
+field 02703D4C 0x101FDD58 u32 0
+field 02703DF4 0x101FDD58 u32 0
+field 02704100 0x101FDD58 u32 0
+field 027042D0 0x101FDD58 u32 0
+field 02704384 0x101FDD58 u32 0
+field 02704404 0x101FDD58 u32 0
+field 02704484 0x101FDD58 u32 0
+field 02704504 0x101FDD58 u32 0
+field 027045B0 0x101FDD58 u32 0
+field 027045F0 0x101FDD58 u32 0
+field 02704634 0x101FDD58 u32 0
+field 027046D4 0x101FDD58 u32 0
+field 0270477C 0x101FDD58 u32 0
+field 02704820 0x101FDD58 u32 0
+field 02704A08 0x101FDD58 u32 0
+field 02704A10 0x101FDD58 u32 0
+field 02704AF0 0x101FDD58 u32 0
+field 02704AFC 0x101FDD58 u32 0
+field 02704B04 0x101FDD58 u32 0
+field 02703C04 0x101FDD60 u32 0
+field 02703C74 0x101FDD60 u32 0
+field 02703D4C 0x101FDD60 u32 0
+field 02703DF4 0x101FDD60 u32 0
+field 02704100 0x101FDD60 u32 0
+field 027042D0 0x101FDD60 u32 0
+field 02704384 0x101FDD60 u32 0
+field 02704404 0x101FDD60 u32 0
+field 02704484 0x101FDD60 u32 0
+field 02704504 0x101FDD60 u32 0
+field 027045B0 0x101FDD60 u32 0
+field 027045F0 0x101FDD60 u32 0
+field 02704634 0x101FDD60 u32 0
+field 027046D4 0x101FDD60 u32 0
+field 0270477C 0x101FDD60 u32 0
+field 02704820 0x101FDD60 u32 0
+field 02704A08 0x101FDD60 u32 0
+field 02704A10 0x101FDD60 u32 0
+field 02704AF0 0x101FDD60 u32 0
+field 02704AFC 0x101FDD60 u32 0
+field 02704B04 0x101FDD60 u32 0
+callee 028782A8 r4=out16
+callee 025F70CC r5=8
+callee 02704BDC r3=8
+
+# wwhd_src/d/hd_text_break.cpp fixtures scoped to their functions.
+src wwhd_src/d/hd_text_break.cpp
+src wwhd_src/d/hd_unicode_class.cpp
+arg! 027070D0 r4 0x1010C128
+arg! 027070D0 r5 0
+arg! 027070D0 r6 0,1,25733
+arg 027070D0 r3 0,10,32,65,65535,65536
+arg 0270715C r3 0,10,32,65,65535
+arg! 02707170 r3 0,1,5,14,28
+field 02707170 r4+0 u32 0,1,5,14,28
+ret 0270715C 0,5,14,29,30,31,32,33,34,35,36,37,38
+arg! 02706130 r4 0x56000000
+arg! 02706130 r5 0x56000010
+arg! 02706130 r6 0x56000020
+field 02706130 0x56000000 u32 0x56000100
+field 02706130 0x56000004 u32 0
+field 02706130 0x56000010 u32 0x56000100
+field 02706130 0x56000014 u32 0,1,2,3
+field 02706130 0x56000020 u32 0x56000200
+field 027060C0 0x56000100 u32 0x56000300
+field 02706130 0x56000100 u32 0x56000300
+field 02706A68 0x56000100 u32 0x56000300
+field 02707038 0x56000100 u32 0x56000300
+field 027070D0 0x56000100 u32 0x56000300
+field 0270715C 0x56000100 u32 0x56000300
+field 02707170 0x56000100 u32 0x56000300
+field 02707190 0x56000100 u32 0x56000300
+field 027060C0 0x56000104 u32 0x56000220
+field 02706130 0x56000104 u32 0x56000220
+field 02706A68 0x56000104 u32 0x56000220
+field 02707038 0x56000104 u32 0x56000220
+field 027070D0 0x56000104 u32 0x56000220
+field 0270715C 0x56000104 u32 0x56000220
+field 02707170 0x56000104 u32 0x56000220
+field 02707190 0x56000104 u32 0x56000220
+field 027060C0 0x5600020C u32 0x01000000
+field 02706130 0x5600020C u32 0x01000000
+field 02706A68 0x5600020C u32 0x01000000
+field 02707038 0x5600020C u32 0x01000000
+field 027070D0 0x5600020C u32 0x01000000
+field 0270715C 0x5600020C u32 0x01000000
+field 02707170 0x5600020C u32 0x01000000
+field 02707190 0x5600020C u32 0x01000000
+field 027060C0 0x56000234 u32 0x027055A4
+field 02706130 0x56000234 u32 0x027055A4
+field 02706A68 0x56000234 u32 0x027055A4
+field 02707038 0x56000234 u32 0x027055A4
+field 027070D0 0x56000234 u32 0x027055A4
+field 0270715C 0x56000234 u32 0x027055A4
+field 02707170 0x56000234 u32 0x027055A4
+field 02707190 0x56000234 u32 0x027055A4
+field 027060C0 0x56000300 u16 0,10,32,65
+field 02706130 0x56000300 u16 0,10,32,65
+field 02706A68 0x56000300 u16 0,10,32,65
+field 02707038 0x56000300 u16 0,10,32,65
+field 027070D0 0x56000300 u16 0,10,32,65
+field 0270715C 0x56000300 u16 0,10,32,65
+field 02707170 0x56000300 u16 0,10,32,65
+field 02707190 0x56000300 u16 0,10,32,65
+field 027060C0 0x56000302 u16 0,10,32,66
+field 02706130 0x56000302 u16 0,10,32,66
+field 02706A68 0x56000302 u16 0,10,32,66
+field 02707038 0x56000302 u16 0,10,32,66
+field 027070D0 0x56000302 u16 0,10,32,66
+field 0270715C 0x56000302 u16 0,10,32,66
+field 02707170 0x56000302 u16 0,10,32,66
+field 02707190 0x56000302 u16 0,10,32,66
+field 027060C0 0x56000304 u16 0
+field 02706130 0x56000304 u16 0
+field 02706A68 0x56000304 u16 0
+field 02707038 0x56000304 u16 0
+field 027070D0 0x56000304 u16 0
+field 0270715C 0x56000304 u16 0
+field 02707170 0x56000304 u16 0
+field 02707190 0x56000304 u16 0
+callee 01000000 r3=0 r4=8 r5=0
+arg! 02706A68 r3 0x56000400
+arg! 02706A68 r4 0x56000100
+arg! 02706A68 r5 0x56000020
+arg! 02706A68 r6 0x56000420
+field 02706A68 0x56000400 u32 0x56000500
+field 02706A68 0x56000404 u32 0x56000220
+field 02706A68 0x56000408 u32 1,2,4,16
+field 02706A68 0x56000420 u32 0,1,2
+field 02706A68 0x56000424 u8 0,1
+field 02706A68 0x56000500 u16 0
+callee 02706130 r3=12 r4=12 r5=12
+real 02706130
+
+# wwhd_src/d/hd_layout_locale_search.cpp fixtures scoped to their functions.
+src wwhd_src/d/hd_layout_locale_search.cpp
+# Suggested locale-search coverage steering (root owns integration/spec edits).
+# 02705648/027058CC name and all suffix/tail SafeStrings use 8-byte objects.
+# Their virtual refresh lives in vtable+0x14, takes r3=8, and may update mpBuffer.
+# 027060BC LayoutLocale_assureString takes r3=8 and is a mocked call, not reimplemented.
+# 02705554 suffixForIndex accepts s32 index and returns const be<u8>*.
+# Name and suffix fixtures: empty, "abc", "abc_JPja", "abc_USen", "abc_USen_more",
+# repeated suffixes, same-buffer aliases, mismatch at byte0 and later byte.
+# suffix result lengths zero, shorter than name, same size, longer than name.
+# 02705640 count: 0,1,2,13; 02705638 expected suffix length: 0,1,5,6.
+# 02705B94 root: full pane view >=0x81 (name at0x80, vtable0x08, list0x14).
+# Initialize child-list sentinel root+0x14 or bounded chains; null root still reads0x14
+# on fallback, exactly as original (do not assume early null return).
+# Pane RTTI getter at vtable+0x14 returns 0,101FD8F8 (matching Pane), or chain
+# ending at101FD8F8, or a nonmatching chain ending0. Mock return matching RTTI
+# is needed to reach suffix and name comparisons.
+# Guards101FD89C,101FD888 initialized/uninitialized; singleton node101FD8F8,
+# root node101FD8FC; RTTI singleton02704C24 adds101FDD40,101FD8F0 guards and
+# nodes101FDD3C,101FD8F4. All16 guard combinations exercise lazy init paths.
+# Recursive findPane call remains mocked; force null/non-null to test sibling loop.
+
+# Concrete finite fixture proposal:
+real 027060BC
+callee 027060BC r3=8
+arg! 02705648 r3 0x56000000
+arg! 027058CC r3 0x56000000
+arg! 02705B94 r3 0x56000000
+arg! 02705B94 r4 0x56001000
+arg! 02705B94 r5 0x56000010
+field 02705648 0x56000000 u32 0x56000100
+field 027058CC 0x56000000 u32 0x56000100
+field 02705B94 0x56000000 u32 0x56000100
+field 02704C24 0x56000000 u32 0x56000100
+field 02705648 0x56000004 u32 0x1010C0D8
+field 027058CC 0x56000004 u32 0x1010C0D8
+field 02705B94 0x56000004 u32 0x1010C0D8
+field 02704C24 0x56000004 u32 0x1010C0D8
+field 02705648 0x56000010 u32 0x56000200
+field 027058CC 0x56000010 u32 0x56000200
+field 02705B94 0x56000010 u32 0x56000200
+field 02704C24 0x56000010 u32 0x56000200
+field 02705648 0x56000014 u32 0x1010C0D8
+field 027058CC 0x56000014 u32 0x1010C0D8
+field 02705B94 0x56000014 u32 0x1010C0D8
+field 02704C24 0x56000014 u32 0x1010C0D8
+fieldstr 02705648 0x56000100 32 "abc","abc_USen","abc_USen_USen","abc_USen_more",""
+fieldstr 027058CC 0x56000100 32 "abc","abc_USen","abc_USen_USen","abc_USen_more",""
+fieldstr 02705B94 0x56000100 32 "abc","abc_USen","abc_USen_USen","abc_USen_more",""
+fieldstr 02704C24 0x56000100 32 "abc","abc_USen","abc_USen_USen","abc_USen_more",""
+fieldstr 02705648 0x56000200 16 "_USen","_JPja","abc","","abc_USen_extra"
+fieldstr 027058CC 0x56000200 16 "_USen","_JPja","abc","","abc_USen_extra"
+fieldstr 02705B94 0x56000200 16 "_USen","_JPja","abc","","abc_USen_extra"
+fieldstr 02704C24 0x56000200 16 "_USen","_JPja","abc","","abc_USen_extra"
+ret 02705554 0x56000200 0x56000200
+ret 02705568 0x56000200 0x56000200
+# root children: zero or one mocked recursive child; child is linked to parent's sentinel.
+field 02705648 0x56001008 u32 0x56002000
+field 027058CC 0x56001008 u32 0x56002000
+field 02705B94 0x56001008 u32 0x56002000
+field 02704C24 0x56001008 u32 0x56002000
+field 02705648 0x56001014 u32 0x56001014,0x56001100
+field 027058CC 0x56001014 u32 0x56001014,0x56001100
+field 02705B94 0x56001014 u32 0x56001014,0x56001100
+field 02704C24 0x56001014 u32 0x56001014,0x56001100
+field 02705648 0x56001100 u32 0x56001014
+field 027058CC 0x56001100 u32 0x56001014
+field 02705B94 0x56001100 u32 0x56001014
+field 02704C24 0x56001100 u32 0x56001014
+field 02705648 0x56001108 u32 0x56002000
+field 027058CC 0x56001108 u32 0x56002000
+field 02705B94 0x56001108 u32 0x56002000
+field 02704C24 0x56001108 u32 0x56002000
+field 02705648 0x56001114 u32 0x56001114
+field 027058CC 0x56001114 u32 0x56001114
+field 02705B94 0x56001114 u32 0x56001114
+field 02704C24 0x56001114 u32 0x56001114
+fieldstr 02705648 0x56001080 32 "abc_USen","abc_USen_USen","abc_JPja","other_USen","abc",""
+fieldstr 027058CC 0x56001080 32 "abc_USen","abc_USen_USen","abc_JPja","other_USen","abc",""
+fieldstr 02705B94 0x56001080 32 "abc_USen","abc_USen_USen","abc_JPja","other_USen","abc",""
+fieldstr 02704C24 0x56001080 32 "abc_USen","abc_USen_USen","abc_JPja","other_USen","abc",""
+fieldstr 02705648 0x56001180 32 "abc_USen","other_USen",""
+fieldstr 027058CC 0x56001180 32 "abc_USen","other_USen",""
+fieldstr 02705B94 0x56001180 32 "abc_USen","other_USen",""
+fieldstr 02704C24 0x56001180 32 "abc_USen","other_USen",""
+# Use a known RTTI-getter target for mock return steering; do not make02704C24 real
+# if testing its candidate separately with random guard combinations.
+field 02705648 0x56002014 u32 0x02704C24
+field 027058CC 0x56002014 u32 0x02704C24
+field 02705B94 0x56002014 u32 0x02704C24
+field 02704C24 0x56002014 u32 0x02704C24
+ret! 02704C24 0,0x101FD8F8,0x56003000,0x56003010
+field 02705648 0x56003000 u32 0x101FD8F8
+field 027058CC 0x56003000 u32 0x101FD8F8
+field 02705B94 0x56003000 u32 0x101FD8F8
+field 02704C24 0x56003000 u32 0x101FD8F8
+field 02705648 0x56003010 u32 0x56003020
+field 027058CC 0x56003010 u32 0x56003020
+field 02705B94 0x56003010 u32 0x56003020
+field 02704C24 0x56003010 u32 0x56003020
+field 02705648 0x56003020 u32 0
+field 027058CC 0x56003020 u32 0
+field 02705B94 0x56003020 u32 0
+field 02704C24 0x56003020 u32 0
+ret 02705B94 0,0x56001100
+# Both guards branches; all singleton reads/writes compared by harness.
+field 02705648 0x101FD89C u32 0,1
+field 027058CC 0x101FD89C u32 0,1
+field 02705B94 0x101FD89C u32 0,1
+field 02704C24 0x101FD89C u32 0,1
+field 02705648 0x101FD888 u32 0,1
+field 027058CC 0x101FD888 u32 0,1
+field 02705B94 0x101FD888 u32 0,1
+field 02704C24 0x101FD888 u32 0,1
+field 02705648 0x101FDD40 u32 0,1
+field 027058CC 0x101FDD40 u32 0,1
+field 02705B94 0x101FDD40 u32 0,1
+field 02704C24 0x101FDD40 u32 0,1
+field 02705648 0x101FD8F0 u32 0,1
+field 027058CC 0x101FD8F0 u32 0,1
+field 02705B94 0x101FD8F0 u32 0,1
+field 02704C24 0x101FD8F0 u32 0,1
+mockfield 02704BDC r3+0 u32 0x56000000
+
+# Finite locale suffix domain and expected suffix lengths.
+ret! 02705640 0,1,2,13
+ret 02705638 0,1,5,6
+
+# Finite processor ancestry, both lazy type initialization branches, and fit thresholds.
+field 02703DF4 r3+0xC8 u32 0,0x57000000
+field 02703DF4 0x57000000 u32 0x57000100
+field 02703DF4 0x5700010C u32 0x01000100
+ret! 01000100 0,0x101FDD58,0x57000200,0x57000300
+field 02703DF4 0x57000200 u32 0x101FDD58
+field 02703DF4 0x57000300 u32 0
+field 02703DF4 0x101FDD54 u32 0,1
+field 02703DF4 0x101FDD5C u32 0,1
+field 02703DF4 r3+0x3C f32 -1,0,1,4,16,100
+field 02703DF4 r3+0x104 f32 -1,0,1,4,16,100
+field 02703DF4 r3+0x108 f32 1,4,16
+field 02703DF4 r3+0xB60 f32 0,1,4
+
+# Immutable synthetic vtables, ancestry and child links stay finite across mocked RTTI calls.
+stable 0x57000000 4
+stable 0x57000100 0x10
+stable 0x57000200 4
+stable 0x57000300 4
+stable 0x56001000 0x80
+stable 0x56001100 0x80
+stable 0x56002000 0x18
+stable 0x56003000 0x24
+# Exercise line-break categories, pair-rule choices and both measure results.
+ret! 027060C0 0,1,5,12,14,22,28,30,38,38,38
+ret! 02707170 0,1,2,3,3,3
+ret! 01000000 0,1
+
+# Rectangle mocks retain a bounded processor pointer for the later runtime-type walk.
+mockfield 028782A8 r3+0xC8 u32 0,0x57000000
+
+# Rectangles use finite dimensions, including changed widths on the second query.
+mockfield 028782A8 r4+0 f32 0
+mockfield 028782A8 r4+4 f32 0
+mockfield 028782A8 r4+8 f32 0,4,16,100
+mockfield 028782A8 r4+12 f32 0,4,16
+# Iterator constructors allocate for null destinations and otherwise reuse caller storage.
+arg! 02706130 r3 0,0x58000000
+alloc 0273AD10 r3 0x58001000
+# Model the imported block move so subsequent output length checks see the copied characters.
+mockmove C0009988 r3 r4 r5
+
+# Valid text-pane objects let the rectangle mock retain its processor field.
+arg! 02703DF4 r3 0x57010000,0x57020000,0x7EFF8000
+
+# Observe complete pane and caller-owned SafeString workspaces at library calls.
+callee 028782A8 r3=2920 r4=out16
+callee 02759C28 r3=268
+callee 02602720 r4=1036
+# Nonzero scratch bytes expose omitted local buffer initialization.
+stackfill periodic
+# Longer text and iterator ranges exercise successive accepted break positions.
+field 02706130 0x56000014 u32 0,1,2,3,4,5,6
+field 02706130 0x56000304 u16 0,10,32,67
+field 02706130 0x56000306 u16 0,10,32,68
+field 02706130 0x56000308 u16 0,10,32,69
+field 02706130 0x5600030A u16 0,10,32,70
+field 02706130 0x5600030C u16 0
+
+# Synthetic wrap input and output descriptors remain valid across termination callbacks.
+stable 0x56000100 8
+stable 0x56000300 0x10
+stable 0x56000400 12
+stable 0x56000220 0x18
+
+# The setString conversion call receives the complete temporary wide-string buffer.
+callee 027042D0 r4=1036

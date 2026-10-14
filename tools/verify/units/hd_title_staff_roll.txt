@@ -1,0 +1,99 @@
+# Verification unit: TITLE-staff_roll: staff roll, background, bubbles
+stackfill periodic
+src wwhd_src/d/hd_screen_staff_roll.cpp
+src wwhd_src/d/hd_screen_staff_roll_bg.cpp
+src wwhd_src/d/hd_screen_staff_roll_bubble_base.cpp
+
+# ---- setKind: the kind indexes a 13-entry local table (an index beyond reads the original's stack)
+arg! 026E352C r5 0 12
+src wwhd_src/d/hd_screen_staff_roll_bubble.cpp
+src wwhd_src/d/hd_screen_staff_roll_bubble_s.cpp
+
+# ---- init: screen 0x54000000 -> layout 0x54100000 -> layout screen 0x54200000 -> root pane 0x54300000;
+# the panes share the vtable 0x54400000 whose name search (+0x5C) and runtime type (+0x14) are fixed
+# callees (026E2A0C / 026E29FC: empty functions, not called otherwise here) answered from pick lists: the text box type
+# 101FDD3C (cast succeeds), another type, or no pane
+arg! 026E07D0 r3 0x54000000
+field 026E07D0 0x54000044 u32 0x54100000
+field 026E07D0 0x54100004 u32 0x54200000
+field 026E07D0 0x5420000C u32 0x54300000
+field 026E07D0 0x54300008 u32 0x54400000
+field 026E07D0 0x54500008 u32 0x54400000
+field 026E07D0 0x5440005C u32 0x026E2A0C
+field 026E07D0 0x54400014 u32 0x026E29FC
+stable 0x54000044 4
+stable 0x54100004 4
+stable 0x5420000C 4
+stable 0x54300008 4
+stable 0x54500008 4
+stable 0x54400014 4
+stable 0x5440005C 4
+ret! 026E2A0C 0,0x54500000,0x54500000,0x54500000
+ret! 026E29FC 0x101FDD3C,0x101FDD3C,0x101FDD3C,0x54600000,0x54600100
+field * 0x54600000 u32 0
+field * 0x54600100 u32 0x54600000,0x101FDD3C
+stable 0x54600000 4
+stable 0x54600100 4
+# the text colours of a shown line (02876428 answers NULL or a colour pair)
+ret 02876428 0,0x56000000,0x56000000
+
+# ---- constructors: NULL this, and an embedded member whose address wraps to NULL
+arg 026E071C r3 0,0xFFFFFFB0,0x58100000,0x58100000
+arg 026E2B70 r3 0,0xFFFFFF5C,0x58100000,0x58100000
+arg 026E46F4 r3 0,0xFFFFFF5C,0x58100000,0x58100000
+
+# ---- createChild (both bubbles): descriptor 0x59000000 with pane name "A" or "AB" (text 0x59001000) and
+# class name "A" or "AB" (text 0x59003000) against the TU's pane name and "Character", both "AB"
+# (texts 0x59002000 / 0x59004000); every string keeps its TU's SafeString vtable
+arg! 026E2E00 r4 0x59000000
+arg! 026E4B0C r4 0x59000000
+field * 0x59000014 u32 0x59001000
+field * 0x59000018 u32 0x10106454
+field * 0x59000008 u32 0x59003000
+field * 0x5900000C u32 0x10106454
+field * 0x59001000 u8 0x41
+field * 0x59001001 u8 0,0x42
+field * 0x59001002 u8 0
+field * 0x59003000 u8 0x41
+field * 0x59003001 u8 0,0x42,0x42
+field * 0x59003002 u8 0
+field * 0x1049C280 u32 0x59002000
+field * 0x1049C284 u32 0x10106454
+field * 0x1049C3C4 u32 0x59002000
+field * 0x1049C3C8 u32 0x1010684C
+field * 0x10490EF4 u32 0x59004000
+field * 0x10490EF8 u32 0x10106454
+field * 0x59002000 u8 0x41
+field * 0x59002001 u8 0x42
+field * 0x59002002 u8 0
+field * 0x59004000 u8 0x41
+field * 0x59004001 u8 0x42
+field * 0x59004002 u8 0
+stable 0x59000008 8
+stable 0x59000014 8
+stable 0x59001000 3
+stable 0x59002000 3
+stable 0x59003000 3
+stable 0x59004000 3
+stable 0x1049C280 8
+stable 0x1049C3C4 8
+stable 0x10490EF4 8
+
+# ---- refillTop / init: the message SafeString handed to 027045B0 (data pointer and vtable) is compared
+callee 027045B0 r4=8
+# refillTop at the end of the labels: screen 0x54000000, top line 1 (pane 0x54500000) above the recycle
+# height, next label 186..188 (the last name, the copyright switch, beyond)
+arg 026E022C r3 0x54000000,0x54000000,0x54000000
+field 026E022C 0x54000094 u32 0
+field 026E022C 0x54000054 u32 0x54500000
+field 026E022C 0x54500020 f32 1000.0,435.0,0.0
+field 026E022C 0x1049BB54 f32 435.0
+field 026E022C 0x540000A0 u32 186,187,188
+# init: the text box runtime type's guards, each set or still clear
+field 026E07D0 0x101FDD40 u32 0,1
+field 026E07D0 0x101FD8F0 u32 0,1
+field 026E07D0 0x101FD89C u32 0,1
+field 026E07D0 0x101FD888 u32 0,1
+# BubbleS init: the start position and velocity handed to the motion's set (026E344C) are compared
+callee 026E344C r5=12
+callee 026E344C r6=12

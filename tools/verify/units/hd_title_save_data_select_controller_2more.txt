@@ -1,0 +1,214 @@
+# All 77 listed functions drafted. Full unit gates and mutation review remain pending.
+src wwhd_src/d/hd_title_controller_selection.cpp
+src wwhd_src/d/hd_title_start_background.cpp
+src wwhd_src/d/hd_title_logo.cpp
+src wwhd_src/d/hd_title_start_background_states.cpp
+src wwhd_src/d/hd_title_logo_states.cpp
+src wwhd_src/d/hd_title_scroll_key_icon.cpp
+src wwhd_src/d/hd_title_controller_screen.cpp
+src wwhd_src/d/hd_title_file_select_companion.cpp
+
+arg! * r3 0x50000000
+arg! 026D3944 r3 0,0x50000000
+arg! 026D39B0 r3 0,0x50000000
+arg! 026D4B08 r3 0,0x50000000,0xFFFFFFA8,0xFFFFFFA4
+arg! 026D41F4 r3 0,0x50000000
+arg! 026D5130 r4 0x54020000
+field 026D5130 0x54020014 u32 0x54021000,0x54022000,0x54023000
+field 026D5130 0x54020018 u32 0x10102B94
+field 026D5130 0x1049AA0C u32 0x54021000
+field 026D5130 0x1049AA10 u32 0x10102B94
+field 026D5130 0x1049AA14 u32 0x54022000
+field 026D5130 0x1049AA18 u32 0x10102B94
+field 026D5130 0x54021000 u8 0,65
+field 026D5130 0x54022000 u8 0,66
+field 026D5130 0x54023000 u8 0,67
+ret 026F92C0 0,1
+arg! 026E5214 r3 0,0x50000000,0xFFFFFFA8,0xFFFFFFA4
+arg! 026E4E9C r3 0,0x50000000
+arg! 026EAF38 r3 0,0x50000000,0xFFFFFFAC,0xFFFFFF8C,0xFFFFFF6C
+arg! 026EAC78 r3 0,0x50000000
+ret 0273AD10 0,0x57000000
+ret 0273B050 0,0x54010000
+ret 026FADB0 0,0x54010000
+ret 0100031C 0,1
+field * 0x1018C404 u32 0x55004000
+field * 0x55004010 u32 0,0x55005000
+field * 0x540100E0 u32 0x54011000
+field * 0x540100D4 u32 0x54012000
+field * 0x54011014 u32 0x0100031C
+# A finite virtual layout callback and bounded animation-set owner.
+field * 0x50000004 u32 0x53000000
+field * 0x5300008C u32 0x01000300
+field * 0x530000B4 u32 0x01000304
+field * 0x53000084 u32 0x0100030C
+field * 0x5300009C u32 0x01000310
+field * 0x530000AC u32 0x01000314
+field * 0x530000C4 u32 0x01000318
+field * 0x50000044 u32 0x54000000
+field * 0x540000D4 u32 0x54001000
+field * 0x54000004 u32 0x54002000
+field * 0x5400200C u32 0x54003000
+field * 0x54003008 u32 0x54013000
+field * 0x5401305C u32 0x01000320
+field * 0x1049AA3C u32 0,1
+field * 0x1049A9C4 u32 0x10102B94
+field * 0x10102BA8 u32 0x01000324
+field * 0x5400201C u32 0x54004000
+field * 0x50000050 u32 0,1,2
+field * 0x50000054 u32 0,1,2,0xFFFFFFFF
+field * 0x50000058 u32 0x54005000
+field * 0x5000005C u32 0x54006000
+field * 0x50000048 s32 -1,0,1,2,3
+field * 0x5000004C u32 0x54007000
+field * 0x54007000 u32 0x54008000
+field * 0x54007004 u32 0x54009000
+field * 0x54007008 u32 0x54008000
+field * 0x54008004 u32 0x5400A000
+field * 0x54009004 u32 0x5400A000
+field * 0x5400A23C u32 0x01000308
+# Exercise direct input queries and explicit availability overrides.
+field * 0x101F6A70 u32 0,1,0xFFFFFFFF
+field * 0x101F6A74 u32 0,1,0xFFFFFFFF
+field * 0x101F6A78 u32 0,1,0xFFFFFFFF
+field * 0x101F5088 u32 0x55000000
+field * 0x101F8378 u32 0x55001000
+field * 0x55001014 u8 0,1,0xFF
+field * 0x101F4FF0 u32 0x55002000
+ret 025200D4 0x56000000 0x56000000
+ret 02005840 0,1,0xFFFFFFFF
+ret 02709FC4 0,1,0xFFFFFFFF
+ret 02617F14 0,1,0xFFFFFFFF
+ret 02617FCC 0,1,0xFFFFFFFF
+field * 0x101F82EC u32 0x55003000
+
+# Controller button-pane names: initialized and already-registered paths.
+field * 0x1049AA40 u32 0,1
+field * 0x1049A9E0 u32 0x10102B94
+field * 0x1049A9E8 u32 0x10102B94
+
+# Controller creation: success/failure of layout and child construction.
+field 026D4EE0 0x5300007C u32 0x01000328
+field 026D4EE0 0x530000A4 u32 0x0100032C
+ret 01000328 0,1
+ret 0100032C 0,1
+field 026D4EE0 0x5500101C u8 0,1,2,255
+field 026D4EE0 0x50000018 u32 0x54014000
+field 026D4EE0 0x54014000 u32 0x54015000
+field 026D4EE0 0x54015014 u32 0x01000330
+ret 01000330 0x54016000 0x54016000
+field 026D4EE0 0x54016000 u32 0x54017000
+field 026D4EE0 0x5401701C u32 0x01000334
+
+# Logo creation shares the finite layout-load and state-owner fixture.
+field 026EB750 0x5300007C u32 0x01000328
+field 026EB750 0x5000009C u32 0x54018000
+field 026EB750 0x50000018 u32 0x54014000
+field 026EB750 0x54014000 u32 0x54015000
+field 026EB750 0x54015014 u32 0x01000330
+field 026EB750 0x54016000 u32 0x54017000
+field 026EB750 0x5401701C u32 0x01000334
+
+# Background creation includes the guarded window-name and initial-state paths.
+field 026E52AC 0x5300007C u32 0x01000328
+field 026E52AC 0x1049C4DC u32 0,1
+field 026E52AC 0x1049C40C u32 0x101069B0
+field 026E52AC 0x101069C4 u32 0x01000338
+field 026E52AC 0x50000018 u32 0x54014000
+field 026E52AC 0x54014000 u32 0x54015000
+field 026E52AC 0x54015014 u32 0x01000330
+field 026E52AC 0x54016000 u32 0x54017000
+field 026E52AC 0x5401701C u32 0x01000334
+
+# Logo-pane lookup guard and SafeString callback identity.
+field 026EB4E8 0x1049CF70 u32 0,1
+field 026EB4E8 0x10108088 u32 0x0100033C
+field 026EB4E8 0x1049CEE4 u32 0x10108074
+field 026EB4E8 0x1049CEEC u32 0x10108074
+field 026EB4E8 0x1049CEF4 u32 0x10108074
+field 026EB4E8 0x1049CEFC u32 0x10108074
+field 026EB4E8 0x1049CF04 u32 0x10108074
+field 026EB4E8 0x1049CF0C u32 0x10108074
+field 026EB4E8 0x1049CF14 u32 0x10108074
+field 026EB4E8 0x1049CF1C u32 0x10108074
+
+# Logo text-pane lookup guard and SafeString identities.
+field 026EAFE8 0x1049CF68 u32 0,1
+field 026EAFE8 0x10108088 u32 0x0100033C
+field 026EAFE8 0x1049CE8C u32 0x10108074
+field 026EAFE8 0x1049CE94 u32 0x10108074
+field 026EAFE8 0x1049CE9C u32 0x10108074
+field 026EAFE8 0x1049CEA4 u32 0x10108074
+field 026EAFE8 0x1049CEAC u32 0x10108074
+field 026EAFE8 0x1049CEB4 u32 0x10108074
+field 026EAFE8 0x1049CEBC u32 0x10108074
+field 026EAFE8 0x1049CEC4 u32 0x10108074
+
+# Pane lookup returns either no pane or a coherent pane with a type-query slot.
+ret! 01000320 0,0x54019000
+field * 0x54019008 u32 0x5401A000
+field * 0x5401A014 u32 0x01000340
+ret! 01000340 0,0x101FDD3C,0x5401B000
+field * 0x5401B000 u32 0,0x101FDD3C
+field 026EB250 0x1049CF6C u32 0,1
+field 026EB250 0x10108088 u32 0x0100033C
+field 026EB250 0x1049CECC u32 0x10108074
+field 026EB250 0x1049CED4 u32 0x10108074
+field 026EB250 0x1049CEDC u32 0x10108074
+field 026EB250 0x101FDD40 u32 0,1
+field 026EB250 0x101FD8F0 u32 0,1
+field 026EB250 0x101FD89C u32 0,1
+field 026EB250 0x101FD888 u32 0,1
+field 026EB250 0x101FDD3C u32 0x101FD8F4
+field 026EB250 0x101FD8F4 u32 0x101FD8F8
+field 026EB250 0x101FD8F8 u32 0x101FD8FC
+field 026EB250 0x101FD8FC u32 0
+
+# Selection input, prompt-mode matching, and absent-manager paths.
+field 026D440C 0x101F4FF0 u32 0,0x55002000
+field 026D440C 0x50000050 u8 0,1,255
+field 026D440C 0x54008050 u32 0,1
+field 026D440C 0x54009050 u32 0,1
+field 026D440C 0x5400A0CC u32 0x01000344
+ret 026F6340 0,1
+ret 026F620C 0,1
+ret 026F5B74 0,1
+ret 02615140 0,1
+ret 026D43AC 0,1
+ret 026D43DC 0,1
+
+# Static state numbering: both first-use and existing-counter paths.
+field 026EBA20 0x101FD8E4 u32 0,1
+field 026EBA20 0x101FDD50 u32 0,1,0xFFFFFFFE,0xFFFFFFFF
+
+# Controller and background initializer first-use and counter-wrap paths.
+field 026D5364 0x101FD8E4 u32 0,1
+field 026D5364 0x101FDD50 u32 0,1,0xFFFFFFFE,0xFFFFFFFF
+field 026E56F0 0x101FD8E4 u32 0,1
+field 026E56F0 0x101FDD50 u32 0,1,0xFFFFFFFE,0xFFFFFFFF
+
+# Isolated coherent special-pane graph for the main 77-function domain.
+# These synthetic addresses/targets are not used by the other 76 functions.
+# Only graph identities, immutable vtable slots and synthetic RTTI links are
+# protected from generic mock clobber; real guards/type links remain mutable.
+arg! 026EB250 r3 0x5A000000
+field 026EB250 0x5A000044 u32 0x5A010000
+field 026EB250 0x5A010004 u32 0x5A020000
+field 026EB250 0x5A02000C u32 0x5A030000
+field 026EB250 0x5A030008 u32 0x5A040000
+field 026EB250 0x5A04005C u32 0x01000350
+ret! 01000350 0,0x5A050000
+field 026EB250 0x5A050008 u32 0x5A060000
+field 026EB250 0x5A060014 u32 0x01000354
+ret! 01000354 0,0x101FDD3C,0x5A070000
+field 026EB250 0x5A070000 u32 0x5A070004
+field 026EB250 0x5A070004 u32 0,0x101FDD3C
+stable 0x5A000044 4
+stable 0x5A010004 4
+stable 0x5A02000C 4
+stable 0x5A030008 4
+stable 0x5A04005C 4
+stable 0x5A050008 4
+stable 0x5A060014 4
+stable 0x5A070000 4
+stable 0x5A070004 4

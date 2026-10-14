@@ -1,0 +1,287 @@
+src wwhd_src/d/hd_parts_window.cpp
+src wwhd_src/d/hd_parts_basic_button.cpp
+src wwhd_src/d/hd_parts_button.cpp
+src wwhd_src/d/hd_parts_heart.cpp
+# A heart fill count is 0..4 quarter-heart units (the full-heart sentinel is internal).
+arg! 026F7090 r4 0,1,2,3,4
+field 026F6C34 r3+0x58 u32 0,1,2,3
+field * r3+0x5D u8 0,1
+field * r3+0x5E u8 0,1
+field 026F7004 1047B078 u16 0,6,7
+# WindowPart generated fixtures keep runtime-owned counts within small allocated arrays.
+field 026F335C r3+0x70 u32 0,1,2,32
+field 026F344C r3+0x1C u32 0,1,2,3
+field 026F3D90 r3+0x28 u32 0,1,2,3
+arg! 026F3D90 r4 0,1,0xFFFFFFFF
+arg! 026F3D90 r5 0,1,2,3,0xFFFFFFFF
+field 026F39BC r4+0 u32 0,1
+field 026F39BC r4+4 u32 0,1,2
+field 026F39BC r5+0 u32 0,1
+field 026F39BC r5+4 u32 0,1,2
+field 026F444C r5+0 u32 0,1,2,3
+field 026F444C r3+8 u32 1,2,64
+field 026F459C r3+0x6C u32 0,1,31,32
+field 026F459C r3+0x70 u32 32
+field 026F4E48 r3+0xD08 u32 0,1,2,3,8
+field 026F50AC r3+0xD00 u32 0,1,2,3
+field 026F3F60 r3+0x14 u32 0,1,2,3
+field 026F3F60 r3+0x18 u32 0x54014000
+field 026F3F60 54014000 u32 0,1,2
+field 026F3F60 54014004 u32 0,1,2
+field 026F3F60 54014008 u32 0,1,2
+# UTF-16 inputs cover empty text, newline boundaries and short nonempty lines.
+arg! 026F3624 r4 0x54011000
+field 026F3624 54011000 u32 0x54010000
+field 026F3624 54011004 u32 0x101099C4
+field 026F3624 54010000 u16 0,65
+field 026F3624 54010002 u16 0,10,66
+field 026F3624 54010004 u16 0,67
+field 026F3624 54010006 u16 0
+arg! 026F36F4 r5 0x54011000
+field 026F36F4 54011000 u32 0x54010000
+field 026F36F4 54011004 u32 0x101099C4
+field 026F36F4 54010000 u16 0,65
+field 026F36F4 54010002 u16 0,10,66
+field 026F36F4 54010004 u16 0,67
+field 026F36F4 54010006 u16 0
+field 026F36F4 r4+0 u32 0,1,2,3
+# Config animator arrays are supplied by the owning WindowPart.
+field 026F4EA8 r3+0xCF4 u32 0x54015000
+field 026F4EA8 54015060 u32 0,1,2,3
+field 026F4EA8 r4+0x60 u32 0,1,2,3
+field 026F52B4 r3+0xCF4 u32 0,0x54015000
+field 026F52B4 54015060 u32 0,1,2,3
+mockfield 0273B584 r3+0 u32 0
+mockfield 0273B584 r3+4 u32 0,1,2,3
+# Input UTF-16 literals and their SafeString views are immutable during tokenization.
+# Assure-termination virtual calls may touch buffers but cannot replace the input view.
+stable 54010000 8
+stable 54011000 8
+# Metric/RNG callbacks do not rebuild the runtime-owned line/count arrays.
+# Preserve their bounded generated fixtures across mock epochs; explicit game stores remain visible.
+stable 54014000 12
+arg! 026F335C r3 0x5401A000
+field 026F335C 5401A070 u32 0,1,2,32
+stable 5401A070 4
+arg! 026F39BC r4 0x5401B000
+arg! 026F39BC r5 0x5401C000
+field 026F39BC 5401B000 u32 0,1
+field 026F39BC 5401B004 u32 0,1,2
+field 026F39BC 5401C000 u32 0,1
+field 026F39BC 5401C004 u32 0,1,2
+stable 5401B000 8
+stable 5401C000 8
+arg! 026F4EA8 r3 0x54017000
+arg! 026F4EA8 r4 0x54018000
+field 026F4EA8 54017CF4 u32 0x54015000
+field 026F4EA8 54018060 u32 0,1,2,3
+stable 54017CF4 4
+stable 54018060 4
+arg! 026F50AC r3 0x54016000
+field 026F50AC 54016D00 u32 0,1,2,3
+stable 54016D00 4
+# Config loading receives an existing character array; allocation/animator helpers do not resize it.
+arg! 026F444C r5 0x5401D000
+field 026F444C 5401D000 u32 0,1,2,3
+stable 5401D000 4
+# Freeing an independent order table does not resize the owned pane list.
+arg! 026F344C r3 0x54027000
+field 026F344C 5402701C u32 0,1,2,3
+stable 5402701C 4
+# RTTI parents are finite immutable type chains (same getter fixture as canonical parts unit).
+# Pin the receiver pane path so getRuntimeTypeInfo uses a named getter instead of random code.
+arg! 026F1D04 r3 0x54020000
+field 026F1D04 54020044 u32 0x54021000
+field 026F1D04 540210DC u32 0x54023000
+field 026F1D04 54023000 u32 0,0x54024000
+stable 54020044 4
+stable 540210DC 4
+stable 54023000 4
+arg! 026F5CDC r3 0x54026000
+field 026F5CDC 54026044 u32 0x54021000
+field 026F5CDC 54021004 u32 0x54022000
+field 026F5CDC 5402200C u32 0,0x54024000
+stable 54026044 4
+stable 54021004 4
+stable 5402200C 4
+field * 54024008 u32 0x54025000
+field * 54025014 u32 0x026FA258
+stable 54024008 4
+stable 54025014 4
+ret! 026FA258 0,0x101FD93C,0x101FDDA4,0x101FDD3C,0x54028000,0x54028100
+field * 54028000 u32 0
+field * 54028100 u32 0x54028000,0x101FD93C,0x101FDDA4,0x101FDD3C
+stable 54028000 4
+stable 54028100 4
+field * 101FD93C u32 0,0x54028000
+field * 101FD940 u32 0,0x54028000
+field * 101FD8FC u32 0,0x54028000
+field * 101FDDA4 u32 0,0x54028000
+field * 101FD918 u32 0,0x54028000
+field * 101FD91C u32 0,0x54028000
+field * 101FDD3C u32 0,0x54028000
+field * 101FD8F4 u32 0,0x54028000
+field * 101FD8F8 u32 0,0x54028000
+stable 101FD93C 8
+stable 101FD8FC 4
+stable 101FDDA4 4
+stable 101FD918 8
+stable 101FDD3C 4
+stable 101FD8F4 8
+
+# Event manager and copied event outputs cover active state handlers as well as no-manager exits.
+# 020013C0 copies the type/id words at +0/+4; steer those output words coherently.
+field * 101F4FF0 u32 0,0x54030000,0x54030000
+mockfield 020013C0 r3+0 u32 0,2,3,4,13,14,17
+mockfield 020013C0 r3+4 u32 0,1,0xFFFFFFFF
+ret! 02615140 0,0x54031000
+field 026F0BF8 r3+0x50 u32 0,0x54031000
+field 026F0BF8 r3+0x58 u8 0,1
+field 026F0D30 r3+0x50 u32 0,0x54031000
+field 026F0D30 r3+0x58 u8 0,1
+field 026F0EC0 r3+0x50 u32 0,0x54031000
+field 026F0EC0 r3+0x58 u8 0,1
+field 026F1088 r3+0x50 u32 0,0x54031000
+field 026F1088 r3+0x58 u8 0,1
+field 026F128C r3+0x50 u32 0,0x54031000
+field 026F128C r3+0x58 u8 0,1
+field 026F14F0 r3+0x50 u32 0,0x54031000
+field 026F14F0 r3+0x58 u8 0,1
+field 026F183C r3+0x50 u32 0,0x54031000
+field 026F183C r3+0x58 u8 0,1
+field 026F2148 r3+0x50 u32 0,0x54031000
+field 026F2148 r3+0x58 u8 0,1
+field 026F128C r3+0x74 u32 0,1,2,3
+field 026F14F0 r3+0x74 u32 0,1,2,3
+field 026F183C r3+0x74 u32 0,1,2,3
+field 026F1A2C r3+0x50 u32 0,0x54031000
+field 026F1A2C r3+0x58 u8 0,1
+field 026F183C r3+0x78 u32 0,1,2
+field 026F2148 r3+0x78 u32 0,1,2
+
+# Read-only focus/id getters and the three-pointer list unlink run their original bodies.
+# This keeps a finite sentinel list coherent without freezing links which unlink must mutate.
+real 02615398
+real 026F5B74
+real 0273B310
+field * 54031010 u32 0,1
+arg! 026F66F4 r3 0x54033000
+field 026F66F4 54033050 u32 0x54031000
+field 026F66F4 101F4FF0 u32 0x54032000,0x54035000
+field 026F66F4 54032000 u32 0x54034000
+field 026F66F4 54032004 u32 0x54034000
+field 026F66F4 54032008 u32 1
+field 026F66F4 540320CC u32 0,1
+field 026F66F4 540320D0 u32 0,1
+field 026F66F4 54034000 u32 0x54032000
+field 026F66F4 54034004 u32 0x54032000
+field 026F66F4 5403400C u32 0,1
+field 026F66F4 54035000 u32 0x54035000
+field 026F66F4 54035004 u32 0x54035000
+field 026F66F4 54035008 u32 0
+field 026F66F4 540350CC u32 0,1
+field 026F66F4 540350D0 u32 0,1
+
+# Text lookup uses the real Pane vtable FindPane slot: 101805D4+5C -> 02876554.
+# A name search returns NULL or an existing pane; immutable vtables use the finite RTTI getter above.
+ret! 02876554 0,0x54024000
+field * 5402505C u32 0x02876554
+stable 5402505C 4
+arg! 026F5E80 r3 0x54036000
+field 026F5E80 54036044 u32 0x54038000
+field 026F5E80 54038004 u32 0x54039000
+field 026F5E80 5403900C u32 0x54024000
+arg! 026F6048 r3 0x54036000
+field 026F6048 54036044 u32 0x54038000
+field 026F6048 54038004 u32 0x54039000
+field 026F6048 5403900C u32 0x54024000
+# SafeString termination, pane lookup and type getters do not replace the owning part's layout.
+stable 54036044 4
+stable 54038004 4
+stable 5403900C 4
+
+# Deleting destructors accept NULL receivers and the delete-bit flag combinations.
+arg! 026F0B8C r3 0,0x54040000
+arg! 026F0B8C r4 0,1,2,3
+arg! 026F30D4 r3 0,0x54040000
+arg! 026F30D4 r4 0,1,2,3
+arg! 026F3544 r3 0,0x54040000
+arg! 026F3544 r4 0,1,2,3
+arg! 026F59F4 r3 0,0x54040000
+arg! 026F59F4 r4 0,1,2,3
+arg! 026F6BC8 r3 0,0x54040000
+arg! 026F6BC8 r4 0,1,2,3
+
+# Touch predicates need exact event codes and a finite, sometimes-unfocused manager.
+# The real read-only getId helper reads only +CC/+D0; no stability mask is needed.
+arg! 026F621C r3 4,5,11,12,13
+field 026F621C 101F4FF0 u32 0x54030000
+field 026F621C 540300CC u32 0,1
+field 026F621C 540300D0 u32 0,1
+field 026F6288 r3+0 u32 0,12,13,14,15
+field 026F6288 r3+8 u8 0,1,2,32
+field 026F6288 101F4FF0 u32 0x54030000
+field 026F6288 540300CC u32 0,1
+field 026F6288 540300D0 u32 0,1
+field 026F630C r3+0 u32 0,12,13,14,15
+field 026F630C r3+8 u8 0,1,2,32
+field 026F6340 r3+0 u32 0,12,13,14,15
+field 026F6340 r3+8 u8 0,1,2,32
+field 026F6340 101F4FF0 u32 0x54030000
+field 026F6340 540300CC u32 0,1
+field 026F6340 540300D0 u32 0,1
+field 026F67E4 r4+0 u32 0,12,13,14,15
+field 026F67E4 r4+8 u8 0,1,2,32
+field 026F67E4 101F4FF0 u32 0x54030000
+field 026F67E4 540300CC u32 0,1
+field 026F67E4 540300D0 u32 0,1
+field 026F6880 r4+0 u32 0,12,13,14,15
+field 026F6880 r4+8 u8 0,1,2,32
+
+# shuffleOrder owns these descriptors; its sole helper is scalar RNG, which cannot
+# change the owning part, config order, character descriptors, or pane text pointers.
+field 026F50AC 54016CF4 u32 0,0x54040000
+field 026F50AC 54040054 u32 0,4
+field 026F50AC 54016CF8 u32 0x54041000
+field 026F50AC 54016028 u32 3
+field 026F50AC 54016030 u32 0x54042000
+field 026F50AC 54042000 u32 0x54043000
+field 026F50AC 54042004 u32 0x54044000
+field 026F50AC 54042008 u32 0x54045000
+field 026F50AC 540430A4 u32 0x54046000
+field 026F50AC 540440A4 u32 0x54046002
+field 026F50AC 540450A4 u32 0x54046004
+field 026F50AC 54046000 u16 65
+field 026F50AC 54046002 u16 32,66
+field 026F50AC 54046004 u16 32,67
+stable 54016CF4 8
+stable 54040054 4
+stable 54016028 12
+stable 54042000 12
+stable 540430A4 4
+stable 540440A4 4
+stable 540450A4 4
+stable 54046000 6
+
+arg! 026F444C r6 0x54047000
+field 026F444C 54047000 u32 0x54048000
+field 026F444C 54047004 u32 0x10109974
+fill 026F444C 54048000 66 65
+field 026F444C 54048000 u8 0,65
+field 026F444C 54048040 u8 0,65
+field 026F444C 54048041 u8 0
+field 026F444C 5401D000 u32 0
+stable 54047000 8
+stable 54048000 66
+# Config's constructor-owned name prefix is independent of allocator output at +60.
+# allocateArray receives &config.mAnimatorCount, never the name prefix or buffer.
+arg! 026F444C r3 0x54049000
+field 026F444C 54049000 u32 0x5404A000
+field 026F444C 54049008 u32 64
+stable 54049000 12
+
+# Scanner-cap supplement: nonterminated 8-bit literal returns length0 at 0x40001.
+# Keep its storage separate from both the config and destination buffer.
+field 026F444C 54047000 u32 0x55000000
+fill 026F444C 55000000 0x40002 65
+stable 55000000 0x40002

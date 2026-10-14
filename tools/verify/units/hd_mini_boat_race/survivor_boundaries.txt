@@ -1,0 +1,116 @@
+# HD boat-race owner, failure-character, result and countdown screens.
+# Companion sources leave merged function bodies/specs unchanged.
+src wwhd_src/d/hd_screen_boat_race_failed.cpp
+src wwhd_src/d/hd_screen_boat_race_failed_char_states.cpp
+src wwhd_src/d/hd_screen_boat_race_result_parts.cpp
+src wwhd_src/d/hd_screen_boat_race_start.cpp
+
+# Bound the dynamically reloaded character array to a coherent screen-owned allocation.
+arg! 02626420 r3 0x54000000 0x54000000
+arg! 026265A4 r3 0x54000000 0x54000000
+field 02626420 r3+0x54 s32 -1 2
+field 026265A4 r3+0x54 s32 -1 2
+field 02626420 r3+0x58 u32 0x55000000 0x55000000
+field 026265A4 r3+0x58 u32 0x55000000 0x55000000
+stable 54000054 8
+field 02626420 55000000 u32 0,0x56000000
+field 02626420 55000004 u32 0,0x56001000
+field 026265A4 55000000 u32 0,0x56000000
+field 026265A4 55000004 u32 0,0x56001000
+field * 56000004 u32 0x100E57A0 0x100E57A0
+field * 56001004 u32 0x100E57A0 0x100E57A0
+stable 56000004 4
+stable 56001004 4
+
+# Layout resource construction follows a bounded descriptor-list count.
+arg! 02626204 r3 0x54000000 0x54000000
+field 02626204 r3+0x50 u32 0,0x57000000
+field 02626204 57000004 u32 0,0x58000000,0xFFFFFFC4
+field 02626204 5800003C s32 -1 2
+field 02626204 r3+0x54 s32 -1 2
+stable 54000054 8
+field * 1018C404 u32 0x5A000000 0x5A000000
+field * 5A000010 u32 0x5B000000 0x5B000000
+field * 5B00000C u32 0x5C000000 0x5C000000
+
+# Constructors: null caller storage exercises allocation, and Failed's embedded
+# SafeArray address can wrap to null when caller storage is -0x54.
+arg! 02626158 r3 0,0x54000000,0xFFFFFFAC
+arg! 02626E70 r3 0,0x54000000
+arg! 02627B08 r3 0,0x54000000
+arg! 02628578 r3 0,0x54000000
+# Explicit two-value list preserves both allocation failure and success.
+ret! 0273AD10 0,0x5D000000
+
+# Opaque child callbacks may replace the owner's bounded count/data pair.
+# These explicit writes occur even where stable excludes random clobbers.
+mockglobal 02627194 54000054 u32 0,1,2
+mockglobal 02627194 54000058 u32 0x55000000,0x55000100
+mockglobal 02626C58 54000054 u32 0,1,2
+mockglobal 02626C58 54000058 u32 0x55000000,0x55000100
+mockglobal 0262722C 54000054 u32 0,1,2
+mockglobal 0262722C 54000058 u32 0x55000000,0x55000100
+field 02626420 55000100 u32 0,0x56000000
+field 02626420 55000104 u32 0,0x56001000
+field 026265A4 55000100 u32 0,0x56000000
+field 026265A4 55000104 u32 0,0x56001000
+# Keep slot targets coherent across callbacks; owner pointer/count still change.
+stable 55000000 8
+stable 55000100 8
+
+# Result's SafeString termination callback may replace the text pointer.
+# Pane lookup must receive that post-callback value, including null/wrap edges.
+mockfield 026282A4 r3+0 u32 0,0x100E5A24,0x100E5A34,0xFFFFFFFC
+
+# Supplemental boundaries: primary spec stays byte-identical.
+stackfill periodic
+# Named-animation operations consume the two-word SafeString pair.
+callee 026F5258 r4=8
+callee 026F5534 r4=8
+callee 026F55DC r4=8 r5=94
+callee 026F459C r4=8
+callee 026F5344 r4=8
+# Genuine current-heap fallback in createChildren.
+field 02626204 5A000010 u32 0,0x5B000000
+ret! 02756140 0x5B000000
+# Pin play state to cover decimal transitions and signed elapsed-time clamp.
+arg! 02627734 r3 0x5E000000
+field 02627734 r3+0x50 u32 0,0x5F000000
+field 02627734 r3+0x54 u32 0,0x5F001000
+stable 5E000050 8
+ret! 025200D4 0x60000000
+field 02627734 60005CEC u16 0,1,9,10,11,99,100,101,999,1000,1001,65535
+field 02627734 60005CF4 u32 0,1,30,0xFFFFFFFF
+field 02627734 60005CF8 u32 0,1,29,30,31,1800,0xFFFFFFFF
+stable 60005CEC 0x14
+# Countdown frame controller and replacement layout remain coherent.
+arg! 02628490 r3 0x61000000
+field 02628490 r3+0x44 u32 0x62000000
+field 02628490 620000D4 u32 0x63000000
+field 02628490 63000010 u32 0x64000000
+field 02628490 64000000 u32 0x65000000
+field 02628490 65000034 u32 0x66000000
+field 02628490 6600000C f32 0,1,30,31,60,61,90,91,92
+field 02628490 620010D4 u32 0x63001000
+mockglobal 025E1988 61000044 u32 0x62000000,0x62001000
+stable 620000D4 4
+stable 620010D4 4
+
+# Actual descriptor wrapper chain consumes buffer+0 and capacity+8 only.
+# Descendants receive the buffer, not the enclosing descriptor/vtable.
+real 02759D3C
+real 02759D24
+real 02759CB0
+
+# Read-evidence and interpretation limits
+# The primary spec and all four source TUs remain unchanged. This companion lists the same 64 entrypoints and requires full gates; no single-function-only run substitutes for those gates.
+#
+# Named operations 026F5258/026F5534/026F55DC/026F5344 forward the name pair to02613F20. That lookup reads vtable+4 at02613F44/58 and text+0 at02613F78/94; 026F459C additionally reads those words directly at026F4698/46B0. Eight-byte observers therefore cover genuine inputs.
+#
+# 026F55DC reads configuration words+4C/+50/+54/+58 and bytes+5C/+5D, ending at+5E. The contiguous94-byte observer includes an initialized but unread prefix: any detected mutant touching only that prefix must still receive actual-read proof or a real-callee replay. Fields+60/+64/+68 are outside the observer because this target does not consume them.
+#
+# The formatter real wrappers02759D3C/02759D24/02759CB0 preserve actual descriptor loads+0/+8 and capacity-dependent termination. The formatting core remains mocked; this does not establish formatted nested-buffer semantics or justify killing initial-buffer-store mutations. Descriptor extent remains12, never a blanket30 across the smaller rupee object. Mutant269 has a separate inaccessible-vtable equivalence proof.
+#
+# Other steering exercises genuine UI-heap-null fallback, bounded rupee decimal transitions, wrapped/signed elapsed frames, frame91 countdown sound, and callback layout replacement. ROM group-index data remains untouched; an artificial change to a constant group map would not prove a genuine input discrepancy.
+#
+# Alias cases for mutants244/356 will use separate companions because they require independently pinned overlapping objects. The primary400 manifest and sources retain their original identity.

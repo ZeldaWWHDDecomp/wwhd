@@ -22,11 +22,10 @@ static f32 clamp(f32 x, f32 lo, f32 hi) {
 void hdDungeonBounds(HdPadDungeon *self, HdPadRect *output) {
     // HD: retain original frame offsets and uninitialized callback storage.
     gabi::AutoFrame automatic{gabi::Activation::current};
-    gabi::NativeFrame<0x88> frame;
     HdPadPane *pane = self->mPane;
     if (!pane)
         return;
-    HdPadPoint3 *origin = gabi::at<HdPadPoint3>(frame + 0x40);
+    gabi::FrameLocal<HdPadPoint3> origin(0x40);
     hdPadPaneOrigin(origin, pane);
     f32 x = origin->x, y = origin->y;
     HdPadLayout *layout = self->mAnimation->mLayout;
@@ -72,17 +71,16 @@ void hdDungeonUpdateMarkers(HdPadDungeon *self) {
 void hdDungeonDrag(HdPadDungeon *self) {
     // HD: retain original frame offsets and uninitialized callback storage.
     gabi::AutoFrame automatic{gabi::Activation::current};
-    gabi::NativeFrame<0x58> frame;
     if (!self->mMap) {
         hdPadChangeState(&self->mState, &l_dungeonWaitState);
         return;
     }
-    HdPadEvent *event = gabi::at<HdPadEvent>(frame + 0x20);
+    gabi::FrameLocal<HdPadEvent> event(0x20);
     HdPadEventSource *input = l_hdDungeonInput.mInput;
     HdPadPoint *stick = &l_hdDungeonStick.mStick->mPosition;
     hdPadCopyEvent(event, &input->mEvent);
     if (event->mKind == HD_PAD_EVENT_DRAG && event->mId == self->mInputMode->mId) {
-        HdPadPoint *position = gabi::at<HdPadPoint>(frame + 0x10);
+        gabi::FrameLocal<HdPadPoint> position(0x10);
         Pair32 coordinates{hdPadInputPosition(l_hdDungeonInput.mInput)};
         HdPadFloatBits xBits{coordinates.r3};
         HdPadFloatBits yBits{coordinates.r4};

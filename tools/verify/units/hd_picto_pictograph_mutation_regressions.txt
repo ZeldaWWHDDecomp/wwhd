@@ -1,0 +1,340 @@
+# HD Picto Box screen components.
+src wwhd_src/d/hd_screen_pictograph.cpp
+src wwhd_src/d/hd_screen_pictograph_background.cpp
+src wwhd_src/d/hd_screen_pictograph_picture_panes.cpp
+src wwhd_src/d/hd_screen_pictograph_message_pane.cpp
+src wwhd_src/d/hd_screen_pictograph_box.cpp
+
+src wwhd_src/d/hd_screen_pictograph_box_resources.cpp
+src wwhd_src/d/hd_screen_pictograph_camera.cpp
+src wwhd_src/d/hd_msg_window_base.cpp
+
+# Canonical UI_msg_base_b.txt finite typing fixture, origin b85cd83c.
+# This original subtract-one loop does not terminate for infinite/huge accumulators.
+arg! 026FCB00 r3 536870912 536870912
+field 026FCB00 r3+0x118 u32 536879104 536879104
+field 026FCB00 r3+0x50 u32 0,1,2,3
+field 026FCB00 r3+0x54 u32 0,1,2,3
+field 026FCB00 r3+0x94 f32 0,0.25,0.75,1,1.5,4,16
+field 026FCB00 2000222C u32 0,536887296
+field 026FCB00 20004002 u8 0,1
+field 026FCB00 200026AC s32 -1,0,1,2,30
+field 026FCB00 101F4B5C u32 536895488 536895488
+field 026FCB00 20006980 f32 0,0.25,1,4,16
+
+src wwhd_src/d/hd_screen_pictograph_camera_resources.cpp
+# Canonical owner of shared best-shot resource name1048EEE8.
+src wwhd_src/d/hd_screen_best_shot_mark_init.cpp
+
+src wwhd_src/d/hd_screen_pictograph_list.cpp
+
+src wwhd_src/d/hd_screen_pictograph_list_resources.cpp
+
+# Initialized pane metadata and finite RTTI trees, following canonical fixtures
+# hd_miiv_menu_miiverse_1.txt:98 and hd_fw_parts_text_valid.txt:388 (b85cd83c).
+# Lookup may return NULL or a live pane. RTTI may match directly, through a
+# parent, or end in an unrelated type. Class metadata survives the callbacks;
+# pane payload, names, guards and all stores remain observable.
+ret! 01000400 0,0x58004000
+ret! 01000404 0,0x101FD8F8,0x101FDD3C,0x58005000,0x58005010
+arg! 026C2A50 r3 0x58010000
+arg! 026C49B8 r3 0x58010000
+field 026C2A50 r3+0x44 u32 0x58000000
+field 026C49B8 r3+0x44 u32 0x58000000
+field 026C2A50 58000004 u32 0x58001000
+field 026C49B8 58000004 u32 0x58001000
+field 026C2A50 5800100C u32 0x58002000
+field 026C49B8 5800100C u32 0x58002000
+field 026C2A50 58002008 u32 0x58003000
+field 026C49B8 58002008 u32 0x58003000
+field 026C2A50 5800305C u32 0x01000400
+field 026C49B8 5800305C u32 0x01000400
+field 026C2A50 58004008 u32 0x58003080
+field 026C49B8 58004008 u32 0x58003080
+field 026C2A50 58003094 u32 0x01000404
+field 026C49B8 58003094 u32 0x01000404
+field 026C2A50 58005000 u32 0x101FD8F8
+field 026C49B8 58005000 u32 0x101FDD3C
+field 026C2A50 58005010 u32 0x58005020
+field 026C49B8 58005010 u32 0x58005020
+field 026C2A50 58005020 u32 0
+field 026C49B8 58005020 u32 0
+field 026C2A50 101FD8F8 u32 0x101FD8FC
+field 026C49B8 101FD8F8 u32 0x101FD8FC
+field 026C2A50 101FD8FC u32 0
+field 026C49B8 101FD8FC u32 0
+field 026C2A50 101FD8F4 u32 0x101FD8F8
+field 026C49B8 101FD8F4 u32 0x101FD8F8
+field 026C2A50 101FDD3C u32 0x101FD8F4
+field 026C49B8 101FDD3C u32 0x101FD8F4
+field 026C2A50 101FD89C u32 0,1
+field 026C49B8 101FD89C u32 0,1
+field 026C2A50 101FD888 u32 0,1
+field 026C49B8 101FD888 u32 0,1
+field 026C49B8 101FD8F0 u32 0,1
+field 026C49B8 101FDD40 u32 0,1
+stable 58010044 4
+stable 58000004 4
+stable 5800100C 4
+stable 58002008 4
+stable 5800305C 4
+stable 58004008 4
+stable 58003094 4
+stable 58005000 4
+stable 58005010 4
+stable 58005020 4
+stable 101FD8F8 4
+stable 101FD8FC 4
+stable 101FD8F4 4
+stable 101FDD3C 4
+
+# Valid animation container length during destruction; deleting an element
+# does not resize its owner. Its element pointers and object payload can vary.
+arg! 026C8418 r3 0x58030000,0x58030100
+field 026C8418 58030058 s32 0,1,2,3
+field 026C8418 5803005C u32 0x58031000
+field 026C8418 58031000 u32 0,0x58032000
+field 026C8418 58031004 u32 0,0x58033000
+field 026C8418 58031008 u32 0,0x58034000
+stable 58030058 8
+# Texture-index callers address one of the twelve initialized textures.
+arg! 026C86F4 r4 0 11
+# Picture-binding arguments name one of the five child panes and one of the
+# twelve texture records; -1 is the explicit empty-picture outcome.
+arg! 026C5BB0 r4 0 4
+arg! 026C5BB0 r5 -1 11
+arg! 026C5D84 r4 0 4
+arg! 026C5D84 r5 -1 11
+
+# The list number panes use the same live-pane RTTI fixture.
+arg! 026C7D80 r3 0x58010000
+field 026C7D80 r3+0x44 u32 0x58000000
+field 026C7D80 58000004 u32 0x58001000
+field 026C7D80 5800100C u32 0x58002000
+field 026C7D80 58002008 u32 0x58003000
+field 026C7D80 5800305C u32 0x01000400
+field 026C7D80 58004008 u32 0x58003080
+field 026C7D80 58003094 u32 0x01000404
+field 026C7D80 58005000 u32 0x101FD8F8
+field 026C7D80 58005010 u32 0x58005020
+field 026C7D80 58005020 u32 0
+field 026C7D80 101FD8F8 u32 0x101FD8FC
+field 026C7D80 101FD8FC u32 0
+field 026C7D80 101FD8F4 u32 0x101FD8F8
+field 026C7D80 101FDD3C u32 0x101FD8F4
+field 026C7D80 101FD89C u32 0,1
+field 026C7D80 101FD888 u32 0,1
+# Captured index is empty or one of the twelve live texture slots.
+field 026C6B64 r3+0x88C s8 -1 11
+
+# Initialized one-entry texture receiver container. A failed allocation leaves
+# the constructor's empty or existing one-entry container intact. Lookup and
+# RTTI retain the same finite metadata contract as the number-pane fixtures.
+arg! 026C7FA0 r3 0x58060000
+field 026C7FA0 r3+0x58 s32 0,1
+field 026C7FA0 r3+0x5C u32 0x58061000
+stable 58060058 8
+
+field 026C7FA0 r3+0x44 u32 0x58000000
+field 026C7FA0 58000004 u32 0x58001000
+field 026C7FA0 5800100C u32 0x58002000
+field 026C7FA0 58002008 u32 0x58003000
+field 026C7FA0 5800305C u32 0x01000400
+field 026C7FA0 58004008 u32 0x58003080
+field 026C7FA0 58003094 u32 0x01000404
+field 026C7FA0 58005000 u32 0x101FD93C
+field 026C7FA0 58005010 u32 0x58005020
+field 026C7FA0 58005020 u32 0
+field 026C7FA0 101FD8F8 u32 0x101FD8FC
+field 026C7FA0 101FD8FC u32 0
+field 026C7FA0 101FD8F4 u32 0x101FD8F8
+field 026C7FA0 101FDD3C u32 0x101FD8F4
+field 026C7FA0 101FD89C u32 0,1
+field 026C7FA0 101FD888 u32 0,1
+field 026C7FA0 101FD93C u32 0x101FD940
+field 026C7FA0 101FD940 u32 0x101FD8FC
+field 026C7FA0 101FD938 u32 0,1
+field 026C7FA0 101FD88C u32 0,1
+stable 58060044 4
+stable 101FD93C 4
+stable 101FD940 4
+
+# The initialized slide-pane SafeString has its one-argument termination method.
+# Historical seed1002782 selected unrelated NPC method023064C0 through random
+# class metadata and compared its incidental r4. Keep the string payload live.
+field 026C7FA0 10499BD4 u32 0x10101330
+field 026C7FA0 10499BD8 u32 0x58062000
+field 026C7FA0 58062014 u32 0x01000408
+stable 10499BD4 8
+stable 58062014 4
+
+# Message-state, picture-slot and photograph enum boundaries. Ordinary random
+# returns remain present through the non-forcing ret directives.
+ret 025F795C 0,1,0x11,0x12,0x13
+ret 02726218 0,1,11,12,255
+ret 022A1F1C 0,0x48,0x49,0xCE,0xCF,255
+ret 025BE8E8 0,0x49,255
+ret 025BE8F8 0,1
+ret 02520C0C 0,1
+ret 02726120 0,1
+ret 02725A00 0,1
+ret 027261AC -1,0,1,11
+
+# List page-count and selection boundaries, including the explicit empty list.
+field 026C5F98 r3+0x880 u8 0,1,2,3,12,255
+field 026C5F98 r3+0x881 u8 0,1,2,3,12,255
+field 026C6B98 r3+0x880 u8 0,1,2,3,12,255
+field 026C6B98 r3+0x881 u8 0,1,2,3,12,255
+field 026C769C r3+0x880 u8 0,1,2,3,12,255
+field 026C769C r3+0x881 u8 0,1,2,3,12,255
+field 026C77E8 r3+0x880 u8 0,1,2,3,12,255
+field 026C77E8 r3+0x881 u8 0,1,2,3,12,255
+field 026C7BA0 1018F511 u8 0,1,255
+field 026C7BA0 1018F510 u8 0,1,255
+
+# Copy the actual current input event, as in canonical hd_msg_sequence_window
+# and UI_gamepad_map. Queue kinds and receiver IDs are live event data.
+real 020013C0
+real 02001320
+real 020012BC
+arg! 026C68D0 r3 0x58080000
+field 026C68D0 r3+0x5C u32 0x58081000
+field 026C68D0 58081000 u32 0x58082000
+field 026C68D0 58082010 u32 37
+field 026C68D0 101F4FF0 u32 0x58083000
+field 026C68D0 58083030 u32 0,2,0x43,0x44,0x45
+field 026C68D0 58083034 u32 37,38
+field 026C68D0 101F5088 u32 0x58084000
+field 026C68D0 58084124 u32 0,0x8000
+field 026C68D0 58084018 u32 0,1,8,0x40000,0x80000,0x400000,0x800000
+field 026C68D0 58084020 u32 0,1,8,0x40000,0x80000,0x400000,0x800000
+field 026C68D0 58084130 f32 0,-0.5,0.5
+field 026C68D0 58084134 f32 0,-0.5,0.5
+field 026C68D0 r3+0x880 u8 0,1,2,3,12,255
+field 026C68D0 r3+0x881 u8 0,1,2,3,12,255
+field 026C68D0 r3+0x870 f32 -1400,-800,-700,-300,0,300,700,800,1400
+arg! 026C6BF8 r3 0x58080000
+field 026C6BF8 r3+0x5C u32 0x58081000
+field 026C6BF8 58081000 u32 0x58082000
+field 026C6BF8 58082010 u32 37
+field 026C6BF8 101F4FF0 u32 0x58083000
+field 026C6BF8 58083030 u32 0,2,0x43,0x44,0x45
+field 026C6BF8 58083034 u32 37,38
+field 026C6BF8 101F5088 u32 0x58084000
+field 026C6BF8 58084124 u32 0,0x8000
+field 026C6BF8 58084018 u32 0,1,8,0x40000,0x80000,0x400000,0x800000
+field 026C6BF8 58084020 u32 0,1,8,0x40000,0x80000,0x400000,0x800000
+field 026C6BF8 58084130 f32 0,-0.5,0.5
+field 026C6BF8 58084134 f32 0,-0.5,0.5
+field 026C6BF8 r3+0x880 u8 0,1,2,3,12,255
+field 026C6BF8 r3+0x881 u8 0,1,2,3,12,255
+field 026C6BF8 r3+0x870 f32 -1400,-800,-700,-300,0,300,700,800,1400
+# These fields are receiver class/owner metadata; event and object payload
+# remains clobberable and all writes remain compared.
+stable 5808005C 4
+stable 58081000 4
+stable 58082010 4
+
+# The game getters return live global play/archive objects. Keep unsteered
+# returns too; named fields drive exact full-count and zoom-limit boundaries.
+ret 025200D4 0x54000000
+ret 02720144 0x59000000
+field 026C166C 593C030C u8 0,11,12
+field 026C166C 54005B66 s16 0,1,12
+field 026C1858 593C030C u8 0,11,12
+field 026C1858 54005B66 s16 0,1,12
+field 026C1F8C 593C030C u8 0,11,12
+field 026C1F8C 54005B66 s16 0,1,12
+field 026C1974 54005B04 f32 0,1,2,3,4,9
+field 026C232C 54005B04 f32 0,1,2,3,4,9
+
+# Valid child-descriptor SafeString classes. Seed7 historically selected input
+# method02000A04 through random string metadata. Keep the actual immutable
+# SafeString vtables, and vary live pane/resource name strings and payload.
+arg! 026C4EE0 r4 0x580A0000
+field 026C4EE0 r4+0x8 u32 0x580A2100
+field 026C4EE0 r4+0xC u32 0x10100C1C
+field 026C4EE0 r4+0x14 u32 0x580A2000
+field 026C4EE0 r4+0x18 u32 0x10100C1C
+fieldstr 026C4EE0 580A2000 32 "L_Pictograph_00","L_BtnSeqenceL_00","L_BtnSeqenceR_00","other"
+fieldstr 026C4EE0 580A2100 32 "Pictograph_00","other"
+field 026C4EE0 10499A08 u32 0x10100C1C
+field 026C4EE0 10499A10 u32 0x10100C1C
+field 026C4EE0 10499A18 u32 0x10100C1C
+field 026C4EE0 1049960C u32 0x10100C1C
+arg! 026C8708 r4 0x580A0000
+field 026C8708 r4+0x8 u32 0x580A2100
+field 026C8708 r4+0xC u32 0x10101004
+field 026C8708 r4+0x14 u32 0x580A2000
+field 026C8708 r4+0x18 u32 0x10101004
+fieldstr 026C8708 580A2000 32 "L_BtnPictograph_00","L_BtnPictograph_01","L_BtnPictograph_02","L_BtnPictograph_03","L_BtnPictograph_04","other"
+fieldstr 026C8708 580A2100 32 "BtnPictograph_00","other"
+field 026C8708 10499C44 u32 0x10101004
+field 026C8708 10499C4C u32 0x10101004
+field 026C8708 10499C54 u32 0x10101004
+field 026C8708 10499C5C u32 0x10101004
+field 026C8708 10499C64 u32 0x10101004
+field 026C8708 10490A70 u32 0x10101004
+stable 580A000C 4
+stable 580A0018 4
+stable 10499A08 4
+stable 10499A10 4
+stable 10499A18 4
+stable 1049960C 4
+stable 10499C44 4
+stable 10499C4C 4
+stable 10499C54 4
+stable 10499C5C 4
+stable 10499C64 4
+stable 10490A70 4
+
+# The second this choice is the constructor-empty container: both count and
+# data are zero together. The first choice retains the populated cases above.
+field 026C8418 58030158 s32 0
+field 026C8418 5803015C u32 0
+stable 58030158 8
+
+# Supplemental exact boundary fixtures; primary random contract is preserved.
+# resolvePictureIndex must wrap index equal to the live count.
+arg! 026C5B34 r4 1
+field 026C5B34 r3+0x881 u8 1
+# 32767 * 65538 rounds exactly to the 2^31 conversion threshold.
+field 026C232C 54005B04 f32 65539
+field 026C232C r3+0x5C f32 0
+# Live animation slots: real finished-query reads playing metadata and leaves
+# the controller frame live. Capture frame11 is a valid game timeline frame.
+real 02005840
+real 0200368C
+arg! 026C1D68 r3 0x580B0000
+field 026C1D68 r3+0x44 u32 0x580B1000
+field 026C1D68 580B10D4 u32 0x580B2000
+field 026C1D68 580B2004 u32 3
+field 026C1D68 580B2008 u32 0x580B3000
+field 026C1D68 580B200C u32 3
+field 026C1D68 580B2010 u32 0x580B3000
+field 026C1D68 580B3008 u32 0x580B4000
+field 026C1D68 580B4034 u32 0x580B5000
+field 026C1D68 580B5008 u32 0x580B6000
+field 026C1D68 580B600A u8 1
+field 026C1D68 580B500C f32 11
+# Formatter02759D24 reads buffer pointer+0 and capacity+8 from the
+# twelve-byte PaneString descriptor passed through02759D3C.
+callee 02759D3C r3=12
+# Pixel-copy callee reads incoming words+8..+24 (loads at newSP+120..130
+# after allocating118). Include all five observed stack arguments.
+callee 027B6A24 stack=5
+# Canonical stop-array boundary: next index10 must select slot0. The
+# adjacent reserved storage is valid owner memory with a distinct sign.
+field 026FCEE0 r3+0x54 u32 1,2
+field 026FCEE0 r3+0xE8 u32 9
+field 026FCEE0 r3+0x98 s32 0
+field 026FCEE0 r3+0xC0 s32 -1
+# Open-message state10 must publish its status before choosing a wait state.
+field 026FCC10 r3+0x118 u32 0x580D0000
+field 026FCC10 580D0000 u32 10
+field 026FCC10 580D0658 u8 0
+field 026FCC10 580D06B8 u32 0
+# A lazy RTTI node with ready0 starts without its parent link. The original
+# installs that link before querying any pane; metadata remains finite.
+field 026C7D80 101FD89C u32 0
+field 026C7D80 101FD8F8 u32 0

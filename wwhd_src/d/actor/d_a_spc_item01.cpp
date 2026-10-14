@@ -30,7 +30,7 @@ void daSpcItem01_c::set_mtx() {
 
 /* 0248A288 */
 BOOL daSpcItem01_c::_delete() {
-    return DeleteBase(dItem_data::getFieldArc(m_itemNo));
+    return DeleteBase(dItemDataView::getFieldArc(m_itemNo));
 }
 
 /* 0248A448 */
@@ -43,10 +43,10 @@ cPhs_State daSpcItem01_c::_create() {
         return cPhs_ERROR_e;
     }
 
-    cPhs_State phase_state = dComIfG_resLoad(&mPhs, dItem_data::getFieldArc(m_itemNo));
+    cPhs_State phase_state = dComIfG_resLoad(&mPhs, dItemDataView::getFieldArc(m_itemNo));
     if (phase_state == cPhs_COMPLEATE_e) {
         if (!fopAcM_entrySolidHeap(this, CheckFieldItemCreateHeap,
-                                   dItem_data::getHeapSize(m_itemNo)))
+                                   dItemDataView::getHeapSize(m_itemNo)))
         {
             return cPhs_ERROR_e;
         }
@@ -108,8 +108,8 @@ BOOL daSpcItem01_c::_execute() {
 
 /* 02489E3C */
 void daSpcItem01_c::set_effect() {
-    if ((field_0x644 & 0x01) && dItem_data::checkAppearEffect(m_itemNo) && !field_0x642 && m_itemNo != dItemNo_KNIGHTS_CREST_e) {
-        dComIfGp_particle_setSimple(dItem_data::getAppearEffect(m_itemNo), &current.pos);
+    if ((field_0x644 & 0x01) && dItemDataView::checkAppearEffect(m_itemNo) && !field_0x642 && m_itemNo != dItemNo_KNIGHTS_CREST_e) {
+        dComIfGp_particle_setSimple(dItemDataView::getAppearEffect(m_itemNo), &current.pos);
     }
 }
 

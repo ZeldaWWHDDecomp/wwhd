@@ -1,0 +1,969 @@
+# Fixed-treasure loop (026580E0): the treasure-found query may raise the map's treasure count (re-read each iteration)
+# past the 32-entry marker array. Run with -only 026580E0. Base: the unit spec, then this fixture's lines.
+src wwhd_src/d/hd_screen_dungeon_map_part1.cpp
+
+# Bounded loaded lists include empty, negative and one-past-cap fallback cases.
+field * r3+0x2EC s32 -1 65
+field * r3+0x2F0 s32 -1 33
+# The merged map TU owns the public singleton/state definitions.
+src wwhd_src/d/hd_screen_map.cpp
+src wwhd_src/d/hd_screen_dungeon_map.cpp
+field * r3+0x2F4 s32 -1 17
+field * r3+0x2F8 s32 -1 17
+
+# Pure validation keeps the caller's count in r4; a random mock destroys that invariant.
+real 026577FC
+field 02657848 r3+0x408 u32 0 6
+
+# These original leaf getters return the fixed stage-list addresses. Real execution
+# preserves that invariant instead of substituting arbitrary list pointers.
+real 025C4734
+real 025C4740
+field * 1047D9B0 u32 0 32
+field * 1047DDB4 s32 0 64
+
+# Initialized map resource: absent map and valid lists including empty/full lists.
+field 026588C0 r3+0x920 u32 0,0x54000000
+field 026588C0 54000530 s32 -1 17
+field 026588C0 54000534 s32 -1 17
+fieldstr * 1047DDB8 8 "","door20","door12","other"
+fieldstr * 1047DDDC 8 "","door20","door12","other"
+fieldstr * 1047DE00 8 "","door20","door12","other"
+fieldstr * 1047DE24 8 "","door20","door12","other"
+fieldstr * 1047DE48 8 "","door20","door12","other"
+fieldstr * 1047DE6C 8 "","door20","door12","other"
+fieldstr * 1047DE90 8 "","door20","door12","other"
+fieldstr * 1047DEB4 8 "","door20","door12","other"
+fieldstr * 1047DED8 8 "","door20","door12","other"
+fieldstr * 1047DEFC 8 "","door20","door12","other"
+fieldstr * 1047DF20 8 "","door20","door12","other"
+fieldstr * 1047DF44 8 "","door20","door12","other"
+fieldstr * 1047DF68 8 "","door20","door12","other"
+fieldstr * 1047DF8C 8 "","door20","door12","other"
+fieldstr * 1047DFB0 8 "","door20","door12","other"
+fieldstr * 1047DFD4 8 "","door20","door12","other"
+fieldstr * 1047DFF8 8 "","door20","door12","other"
+fieldstr * 1047E01C 8 "","door20","door12","other"
+fieldstr * 1047E040 8 "","door20","door12","other"
+fieldstr * 1047E064 8 "","door20","door12","other"
+fieldstr * 1047E088 8 "","door20","door12","other"
+fieldstr * 1047E0AC 8 "","door20","door12","other"
+fieldstr * 1047E0D0 8 "","door20","door12","other"
+fieldstr * 1047E0F4 8 "","door20","door12","other"
+fieldstr * 1047E118 8 "","door20","door12","other"
+fieldstr * 1047E13C 8 "","door20","door12","other"
+fieldstr * 1047E160 8 "","door20","door12","other"
+fieldstr * 1047E184 8 "","door20","door12","other"
+fieldstr * 1047E1A8 8 "","door20","door12","other"
+fieldstr * 1047E1CC 8 "","door20","door12","other"
+fieldstr * 1047E1F0 8 "","door20","door12","other"
+fieldstr * 1047E214 8 "","door20","door12","other"
+fieldstr * 1047E238 8 "","door20","door12","other"
+fieldstr * 1047E25C 8 "","door20","door12","other"
+fieldstr * 1047E280 8 "","door20","door12","other"
+fieldstr * 1047E2A4 8 "","door20","door12","other"
+fieldstr * 1047E2C8 8 "","door20","door12","other"
+fieldstr * 1047E2EC 8 "","door20","door12","other"
+fieldstr * 1047E310 8 "","door20","door12","other"
+fieldstr * 1047E334 8 "","door20","door12","other"
+fieldstr * 1047E358 8 "","door20","door12","other"
+fieldstr * 1047E37C 8 "","door20","door12","other"
+fieldstr * 1047E3A0 8 "","door20","door12","other"
+fieldstr * 1047E3C4 8 "","door20","door12","other"
+fieldstr * 1047E3E8 8 "","door20","door12","other"
+fieldstr * 1047E40C 8 "","door20","door12","other"
+fieldstr * 1047E430 8 "","door20","door12","other"
+fieldstr * 1047E454 8 "","door20","door12","other"
+fieldstr * 1047E478 8 "","door20","door12","other"
+fieldstr * 1047E49C 8 "","door20","door12","other"
+fieldstr * 1047E4C0 8 "","door20","door12","other"
+fieldstr * 1047E4E4 8 "","door20","door12","other"
+fieldstr * 1047E508 8 "","door20","door12","other"
+fieldstr * 1047E52C 8 "","door20","door12","other"
+fieldstr * 1047E550 8 "","door20","door12","other"
+fieldstr * 1047E574 8 "","door20","door12","other"
+fieldstr * 1047E598 8 "","door20","door12","other"
+fieldstr * 1047E5BC 8 "","door20","door12","other"
+fieldstr * 1047E5E0 8 "","door20","door12","other"
+fieldstr * 1047E604 8 "","door20","door12","other"
+fieldstr * 1047E628 8 "","door20","door12","other"
+fieldstr * 1047E64C 8 "","door20","door12","other"
+fieldstr * 1047E670 8 "","door20","door12","other"
+fieldstr * 1047E694 8 "","door20","door12","other"
+field 026588C0 54000538 u32 0x54100000
+fieldstr 026588C0 54100080 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000578 u32 0x54110000
+fieldstr 026588C0 54110080 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400053C u32 0x54100100
+fieldstr 026588C0 54100180 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400057C u32 0x54110100
+fieldstr 026588C0 54110180 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000540 u32 0x54100200
+fieldstr 026588C0 54100280 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000580 u32 0x54110200
+fieldstr 026588C0 54110280 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000544 u32 0x54100300
+fieldstr 026588C0 54100380 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000584 u32 0x54110300
+fieldstr 026588C0 54110380 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000548 u32 0x54100400
+fieldstr 026588C0 54100480 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000588 u32 0x54110400
+fieldstr 026588C0 54110480 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400054C u32 0x54100500
+fieldstr 026588C0 54100580 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400058C u32 0x54110500
+fieldstr 026588C0 54110580 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000550 u32 0x54100600
+fieldstr 026588C0 54100680 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000590 u32 0x54110600
+fieldstr 026588C0 54110680 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000554 u32 0x54100700
+fieldstr 026588C0 54100780 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000594 u32 0x54110700
+fieldstr 026588C0 54110780 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000558 u32 0x54100800
+fieldstr 026588C0 54100880 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000598 u32 0x54110800
+fieldstr 026588C0 54110880 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400055C u32 0x54100900
+fieldstr 026588C0 54100980 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400059C u32 0x54110900
+fieldstr 026588C0 54110980 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000560 u32 0x54100A00
+fieldstr 026588C0 54100A80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005A0 u32 0x54110A00
+fieldstr 026588C0 54110A80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000564 u32 0x54100B00
+fieldstr 026588C0 54100B80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005A4 u32 0x54110B00
+fieldstr 026588C0 54110B80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000568 u32 0x54100C00
+fieldstr 026588C0 54100C80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005A8 u32 0x54110C00
+fieldstr 026588C0 54110C80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 5400056C u32 0x54100D00
+fieldstr 026588C0 54100D80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005AC u32 0x54110D00
+fieldstr 026588C0 54110D80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000570 u32 0x54100E00
+fieldstr 026588C0 54100E80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005B0 u32 0x54110E00
+fieldstr 026588C0 54110E80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 54000574 u32 0x54100F00
+fieldstr 026588C0 54100F80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+field 026588C0 540005B4 u32 0x54110F00
+fieldstr 026588C0 54110F80 32 "","B2","B1","1F","2F","3F","4F","Outdoor","icon_2F_end","unmatched"
+
+# Stage configuration headers are immutable during GUI callbacks; protect only counts.
+stable 1047D9B0 4
+stable 1047DDB4 4
+# SafeString::assureTermination for these read-only strings is an empty leaf.
+real 0265EC0C
+real 0265EC10
+
+# Resource counts describe loaded marker lists; marker callbacks mutate marker state,
+# not this container metadata. Protect exactly the two adjacent count words.
+stable 54000530 8
+# The initialized fixture records reserve finite string storage. Keep random/wrong
+# names in fieldstr's unsteered cases, with a terminator at the end of that storage.
+field * 1047DDBF u8 0
+field * 1047DDE3 u8 0
+field * 1047DE07 u8 0
+field * 1047DE2B u8 0
+field * 1047DE4F u8 0
+field * 1047DE73 u8 0
+field * 1047DE97 u8 0
+field * 1047DEBB u8 0
+field * 1047DEDF u8 0
+field * 1047DF03 u8 0
+field * 1047DF27 u8 0
+field * 1047DF4B u8 0
+field * 1047DF6F u8 0
+field * 1047DF93 u8 0
+field * 1047DFB7 u8 0
+field * 1047DFDB u8 0
+field * 1047DFFF u8 0
+field * 1047E023 u8 0
+field * 1047E047 u8 0
+field * 1047E06B u8 0
+field * 1047E08F u8 0
+field * 1047E0B3 u8 0
+field * 1047E0D7 u8 0
+field * 1047E0FB u8 0
+field * 1047E11F u8 0
+field * 1047E143 u8 0
+field * 1047E167 u8 0
+field * 1047E18B u8 0
+field * 1047E1AF u8 0
+field * 1047E1D3 u8 0
+field * 1047E1F7 u8 0
+field * 1047E21B u8 0
+field * 1047E23F u8 0
+field * 1047E263 u8 0
+field * 1047E287 u8 0
+field * 1047E2AB u8 0
+field * 1047E2CF u8 0
+field * 1047E2F3 u8 0
+field * 1047E317 u8 0
+field * 1047E33B u8 0
+field * 1047E35F u8 0
+field * 1047E383 u8 0
+field * 1047E3A7 u8 0
+field * 1047E3CB u8 0
+field * 1047E3EF u8 0
+field * 1047E413 u8 0
+field * 1047E437 u8 0
+field * 1047E45B u8 0
+field * 1047E47F u8 0
+field * 1047E4A3 u8 0
+field * 1047E4C7 u8 0
+field * 1047E4EB u8 0
+field * 1047E50F u8 0
+field * 1047E533 u8 0
+field * 1047E557 u8 0
+field * 1047E57B u8 0
+field * 1047E59F u8 0
+field * 1047E5C3 u8 0
+field * 1047E5E7 u8 0
+field * 1047E60B u8 0
+field * 1047E62F u8 0
+field * 1047E653 u8 0
+field * 1047E677 u8 0
+field * 1047E69B u8 0
+field 026588C0 5410009F u8 0
+field 026588C0 5411009F u8 0
+field 026588C0 5410019F u8 0
+field 026588C0 5411019F u8 0
+field 026588C0 5410029F u8 0
+field 026588C0 5411029F u8 0
+field 026588C0 5410039F u8 0
+field 026588C0 5411039F u8 0
+field 026588C0 5410049F u8 0
+field 026588C0 5411049F u8 0
+field 026588C0 5410059F u8 0
+field 026588C0 5411059F u8 0
+field 026588C0 5410069F u8 0
+field 026588C0 5411069F u8 0
+field 026588C0 5410079F u8 0
+field 026588C0 5411079F u8 0
+field 026588C0 5410089F u8 0
+field 026588C0 5411089F u8 0
+field 026588C0 5410099F u8 0
+field 026588C0 5411099F u8 0
+field 026588C0 54100A9F u8 0
+field 026588C0 54110A9F u8 0
+field 026588C0 54100B9F u8 0
+field 026588C0 54110B9F u8 0
+field 026588C0 54100C9F u8 0
+field 026588C0 54110C9F u8 0
+field 026588C0 54100D9F u8 0
+field 026588C0 54110D9F u8 0
+field 026588C0 54100E9F u8 0
+field 026588C0 54110E9F u8 0
+field 026588C0 54100F9F u8 0
+field 026588C0 54110F9F u8 0
+
+# Marker callbacks receive marker objects, not the containing screen or loaded map.
+# Pin this fixture so only its immutable loop metadata can be protected from mocks.
+arg! 026588C0 r3 0x55000000 0x55000000
+stable 550002F4 8
+stable 55000920 4
+# Loaded resource pointer tables are immutable; marker fields stay clobberable.
+stable 54000538 128
+
+# A marker callback updates marker state while these loaded screen list lengths
+# remain fixed. Keep all marker pointers/payloads clobberable, only protect counts.
+arg! 026570EC r3 0x55000000 0x55000000
+arg! 02657440 r3 0x55000000 0x55000000
+arg! 02657C10 r3 0x55000000 0x55000000
+arg! 02659038 r3 0x55000000 0x55000000
+stable 550002EC 16
+
+arg! 02657270 r3 0x55000000 0x55000000
+
+# Valid hdParts instances use game vtables, preventing random function-table bytes
+# from aliasing unrelated concrete functions with different argument registers.
+# RPX vtables: Boss100F0AB8, Door100F0C78, Treasure100F3958,
+# enemy resource marker100F3BE0, special resource marker100F0EF8, Link100F2FA8.
+stable 550000B8 544
+field 02657440 r3+0xB8 u32 0,0x56000000
+field 02657440 56000004 u32 0x100F2FA8
+stable 56000004 4
+field 02657440 r3+0xBC u32 0,0x56001000
+field 02657440 56001004 u32 0x100F2FA8
+stable 56001004 4
+field 02657440 r3+0xC0 u32 0,0x56002000
+field 02657440 56002004 u32 0x100F0AB8
+stable 56002004 4
+field 02657440 r3+0xC4 u32 0,0x56003000
+field 02657440 56003004 u32 0x100F2FA8
+stable 56003004 4
+field 02657440 r3+0xC8 u32 0,0x56004000
+field 02657440 56004004 u32 0x100F2FA8
+stable 56004004 4
+field 02657440 r3+0xCC u32 0,0x56005000
+field 02657440 56005004 u32 0x100F2FA8
+stable 56005004 4
+field 02657440 r3+0xD0 u32 0,0x56006000
+field 02657440 56006004 u32 0x100F2FA8
+stable 56006004 4
+field 02657440 r3+0xD4 u32 0,0x56007000
+field 02657440 56007004 u32 0x100F2FA8
+stable 56007004 4
+field 02657440 r3+0xD8 u32 0,0x56008000
+field 02657440 56008004 u32 0x100F0C78
+stable 56008004 4
+field 02657440 r3+0xDC u32 0,0x56009000
+field 02657440 56009004 u32 0x100F0C78
+stable 56009004 4
+field 02657440 r3+0xE0 u32 0,0x5600A000
+field 02657440 5600A004 u32 0x100F0C78
+stable 5600A004 4
+field 02657440 r3+0xE4 u32 0,0x5600B000
+field 02657440 5600B004 u32 0x100F0C78
+stable 5600B004 4
+field 02657440 r3+0xE8 u32 0,0x5600C000
+field 02657440 5600C004 u32 0x100F0C78
+stable 5600C004 4
+field 02657440 r3+0xEC u32 0,0x5600D000
+field 02657440 5600D004 u32 0x100F0C78
+stable 5600D004 4
+field 02657440 r3+0xF0 u32 0,0x5600E000
+field 02657440 5600E004 u32 0x100F0C78
+stable 5600E004 4
+field 02657440 r3+0xF4 u32 0,0x5600F000
+field 02657440 5600F004 u32 0x100F0C78
+stable 5600F004 4
+field 02657440 r3+0xF8 u32 0,0x56010000
+field 02657440 56010004 u32 0x100F0C78
+stable 56010004 4
+field 02657440 r3+0xFC u32 0,0x56011000
+field 02657440 56011004 u32 0x100F0C78
+stable 56011004 4
+field 02657440 r3+0x100 u32 0,0x56012000
+field 02657440 56012004 u32 0x100F0C78
+stable 56012004 4
+field 02657440 r3+0x104 u32 0,0x56013000
+field 02657440 56013004 u32 0x100F0C78
+stable 56013004 4
+field 02657440 r3+0x108 u32 0,0x56014000
+field 02657440 56014004 u32 0x100F0C78
+stable 56014004 4
+field 02657440 r3+0x10C u32 0,0x56015000
+field 02657440 56015004 u32 0x100F0C78
+stable 56015004 4
+field 02657440 r3+0x110 u32 0,0x56016000
+field 02657440 56016004 u32 0x100F0C78
+stable 56016004 4
+field 02657440 r3+0x114 u32 0,0x56017000
+field 02657440 56017004 u32 0x100F0C78
+stable 56017004 4
+field 02657440 r3+0x118 u32 0,0x56018000
+field 02657440 56018004 u32 0x100F0C78
+stable 56018004 4
+field 02657440 r3+0x11C u32 0,0x56019000
+field 02657440 56019004 u32 0x100F0C78
+stable 56019004 4
+field 02657440 r3+0x120 u32 0,0x5601A000
+field 02657440 5601A004 u32 0x100F0C78
+stable 5601A004 4
+field 02657440 r3+0x124 u32 0,0x5601B000
+field 02657440 5601B004 u32 0x100F0C78
+stable 5601B004 4
+field 02657440 r3+0x128 u32 0,0x5601C000
+field 02657440 5601C004 u32 0x100F0C78
+stable 5601C004 4
+field 02657440 r3+0x12C u32 0,0x5601D000
+field 02657440 5601D004 u32 0x100F0C78
+stable 5601D004 4
+field 02657440 r3+0x130 u32 0,0x5601E000
+field 02657440 5601E004 u32 0x100F0C78
+stable 5601E004 4
+field 02657440 r3+0x134 u32 0,0x5601F000
+field 02657440 5601F004 u32 0x100F0C78
+stable 5601F004 4
+field 02657440 r3+0x138 u32 0,0x56020000
+field 02657440 56020004 u32 0x100F0C78
+stable 56020004 4
+field 02657440 r3+0x13C u32 0,0x56021000
+field 02657440 56021004 u32 0x100F0C78
+stable 56021004 4
+field 02657440 r3+0x140 u32 0,0x56022000
+field 02657440 56022004 u32 0x100F0C78
+stable 56022004 4
+field 02657440 r3+0x144 u32 0,0x56023000
+field 02657440 56023004 u32 0x100F0C78
+stable 56023004 4
+field 02657440 r3+0x148 u32 0,0x56024000
+field 02657440 56024004 u32 0x100F0C78
+stable 56024004 4
+field 02657440 r3+0x14C u32 0,0x56025000
+field 02657440 56025004 u32 0x100F0C78
+stable 56025004 4
+field 02657440 r3+0x150 u32 0,0x56026000
+field 02657440 56026004 u32 0x100F0C78
+stable 56026004 4
+field 02657440 r3+0x154 u32 0,0x56027000
+field 02657440 56027004 u32 0x100F0C78
+stable 56027004 4
+field 02657440 r3+0x158 u32 0,0x56028000
+field 02657440 56028004 u32 0x100F0C78
+stable 56028004 4
+field 02657440 r3+0x15C u32 0,0x56029000
+field 02657440 56029004 u32 0x100F0C78
+stable 56029004 4
+field 02657440 r3+0x160 u32 0,0x5602A000
+field 02657440 5602A004 u32 0x100F0C78
+stable 5602A004 4
+field 02657440 r3+0x164 u32 0,0x5602B000
+field 02657440 5602B004 u32 0x100F0C78
+stable 5602B004 4
+field 02657440 r3+0x168 u32 0,0x5602C000
+field 02657440 5602C004 u32 0x100F0C78
+stable 5602C004 4
+field 02657440 r3+0x16C u32 0,0x5602D000
+field 02657440 5602D004 u32 0x100F0C78
+stable 5602D004 4
+field 02657440 r3+0x170 u32 0,0x5602E000
+field 02657440 5602E004 u32 0x100F0C78
+stable 5602E004 4
+field 02657440 r3+0x174 u32 0,0x5602F000
+field 02657440 5602F004 u32 0x100F0C78
+stable 5602F004 4
+field 02657440 r3+0x178 u32 0,0x56030000
+field 02657440 56030004 u32 0x100F0C78
+stable 56030004 4
+field 02657440 r3+0x17C u32 0,0x56031000
+field 02657440 56031004 u32 0x100F0C78
+stable 56031004 4
+field 02657440 r3+0x180 u32 0,0x56032000
+field 02657440 56032004 u32 0x100F0C78
+stable 56032004 4
+field 02657440 r3+0x184 u32 0,0x56033000
+field 02657440 56033004 u32 0x100F0C78
+stable 56033004 4
+field 02657440 r3+0x188 u32 0,0x56034000
+field 02657440 56034004 u32 0x100F0C78
+stable 56034004 4
+field 02657440 r3+0x18C u32 0,0x56035000
+field 02657440 56035004 u32 0x100F0C78
+stable 56035004 4
+field 02657440 r3+0x190 u32 0,0x56036000
+field 02657440 56036004 u32 0x100F0C78
+stable 56036004 4
+field 02657440 r3+0x194 u32 0,0x56037000
+field 02657440 56037004 u32 0x100F0C78
+stable 56037004 4
+field 02657440 r3+0x198 u32 0,0x56038000
+field 02657440 56038004 u32 0x100F0C78
+stable 56038004 4
+field 02657440 r3+0x19C u32 0,0x56039000
+field 02657440 56039004 u32 0x100F0C78
+stable 56039004 4
+field 02657440 r3+0x1A0 u32 0,0x5603A000
+field 02657440 5603A004 u32 0x100F0C78
+stable 5603A004 4
+field 02657440 r3+0x1A4 u32 0,0x5603B000
+field 02657440 5603B004 u32 0x100F0C78
+stable 5603B004 4
+field 02657440 r3+0x1A8 u32 0,0x5603C000
+field 02657440 5603C004 u32 0x100F0C78
+stable 5603C004 4
+field 02657440 r3+0x1AC u32 0,0x5603D000
+field 02657440 5603D004 u32 0x100F0C78
+stable 5603D004 4
+field 02657440 r3+0x1B0 u32 0,0x5603E000
+field 02657440 5603E004 u32 0x100F0C78
+stable 5603E004 4
+field 02657440 r3+0x1B4 u32 0,0x5603F000
+field 02657440 5603F004 u32 0x100F0C78
+stable 5603F004 4
+field 02657440 r3+0x1B8 u32 0,0x56040000
+field 02657440 56040004 u32 0x100F0C78
+stable 56040004 4
+field 02657440 r3+0x1BC u32 0,0x56041000
+field 02657440 56041004 u32 0x100F0C78
+stable 56041004 4
+field 02657440 r3+0x1C0 u32 0,0x56042000
+field 02657440 56042004 u32 0x100F0C78
+stable 56042004 4
+field 02657440 r3+0x1C4 u32 0,0x56043000
+field 02657440 56043004 u32 0x100F0C78
+stable 56043004 4
+field 02657440 r3+0x1C8 u32 0,0x56044000
+field 02657440 56044004 u32 0x100F0C78
+stable 56044004 4
+field 02657440 r3+0x1CC u32 0,0x56045000
+field 02657440 56045004 u32 0x100F0C78
+stable 56045004 4
+field 02657440 r3+0x1D0 u32 0,0x56046000
+field 02657440 56046004 u32 0x100F0C78
+stable 56046004 4
+field 02657440 r3+0x1D4 u32 0,0x56047000
+field 02657440 56047004 u32 0x100F0C78
+stable 56047004 4
+field 02657440 r3+0x1D8 u32 0,0x56048000
+field 02657440 56048004 u32 0x100F3958
+stable 56048004 4
+field 02657440 r3+0x1DC u32 0,0x56049000
+field 02657440 56049004 u32 0x100F3958
+stable 56049004 4
+field 02657440 r3+0x1E0 u32 0,0x5604A000
+field 02657440 5604A004 u32 0x100F3958
+stable 5604A004 4
+field 02657440 r3+0x1E4 u32 0,0x5604B000
+field 02657440 5604B004 u32 0x100F3958
+stable 5604B004 4
+field 02657440 r3+0x1E8 u32 0,0x5604C000
+field 02657440 5604C004 u32 0x100F3958
+stable 5604C004 4
+field 02657440 r3+0x1EC u32 0,0x5604D000
+field 02657440 5604D004 u32 0x100F3958
+stable 5604D004 4
+field 02657440 r3+0x1F0 u32 0,0x5604E000
+field 02657440 5604E004 u32 0x100F3958
+stable 5604E004 4
+field 02657440 r3+0x1F4 u32 0,0x5604F000
+field 02657440 5604F004 u32 0x100F3958
+stable 5604F004 4
+field 02657440 r3+0x1F8 u32 0,0x56050000
+field 02657440 56050004 u32 0x100F3958
+stable 56050004 4
+field 02657440 r3+0x1FC u32 0,0x56051000
+field 02657440 56051004 u32 0x100F3958
+stable 56051004 4
+field 02657440 r3+0x200 u32 0,0x56052000
+field 02657440 56052004 u32 0x100F3958
+stable 56052004 4
+field 02657440 r3+0x204 u32 0,0x56053000
+field 02657440 56053004 u32 0x100F3958
+stable 56053004 4
+field 02657440 r3+0x208 u32 0,0x56054000
+field 02657440 56054004 u32 0x100F3958
+stable 56054004 4
+field 02657440 r3+0x20C u32 0,0x56055000
+field 02657440 56055004 u32 0x100F3958
+stable 56055004 4
+field 02657440 r3+0x210 u32 0,0x56056000
+field 02657440 56056004 u32 0x100F3958
+stable 56056004 4
+field 02657440 r3+0x214 u32 0,0x56057000
+field 02657440 56057004 u32 0x100F3958
+stable 56057004 4
+field 02657440 r3+0x218 u32 0,0x56058000
+field 02657440 56058004 u32 0x100F3958
+stable 56058004 4
+field 02657440 r3+0x21C u32 0,0x56059000
+field 02657440 56059004 u32 0x100F3958
+stable 56059004 4
+field 02657440 r3+0x220 u32 0,0x5605A000
+field 02657440 5605A004 u32 0x100F3958
+stable 5605A004 4
+field 02657440 r3+0x224 u32 0,0x5605B000
+field 02657440 5605B004 u32 0x100F3958
+stable 5605B004 4
+field 02657440 r3+0x228 u32 0,0x5605C000
+field 02657440 5605C004 u32 0x100F3958
+stable 5605C004 4
+field 02657440 r3+0x22C u32 0,0x5605D000
+field 02657440 5605D004 u32 0x100F3958
+stable 5605D004 4
+field 02657440 r3+0x230 u32 0,0x5605E000
+field 02657440 5605E004 u32 0x100F3958
+stable 5605E004 4
+field 02657440 r3+0x234 u32 0,0x5605F000
+field 02657440 5605F004 u32 0x100F3958
+stable 5605F004 4
+field 02657440 r3+0x238 u32 0,0x56060000
+field 02657440 56060004 u32 0x100F3958
+stable 56060004 4
+field 02657440 r3+0x23C u32 0,0x56061000
+field 02657440 56061004 u32 0x100F3958
+stable 56061004 4
+field 02657440 r3+0x240 u32 0,0x56062000
+field 02657440 56062004 u32 0x100F3958
+stable 56062004 4
+field 02657440 r3+0x244 u32 0,0x56063000
+field 02657440 56063004 u32 0x100F3958
+stable 56063004 4
+field 02657440 r3+0x248 u32 0,0x56064000
+field 02657440 56064004 u32 0x100F3958
+stable 56064004 4
+field 02657440 r3+0x24C u32 0,0x56065000
+field 02657440 56065004 u32 0x100F3958
+stable 56065004 4
+field 02657440 r3+0x250 u32 0,0x56066000
+field 02657440 56066004 u32 0x100F3958
+stable 56066004 4
+field 02657440 r3+0x254 u32 0,0x56067000
+field 02657440 56067004 u32 0x100F3958
+stable 56067004 4
+field 02657440 r3+0x258 u32 0,0x56068000
+field 02657440 56068004 u32 0x100F3BE0
+stable 56068004 4
+field 02657440 r3+0x25C u32 0,0x56069000
+field 02657440 56069004 u32 0x100F3BE0
+stable 56069004 4
+field 02657440 r3+0x260 u32 0,0x5606A000
+field 02657440 5606A004 u32 0x100F3BE0
+stable 5606A004 4
+field 02657440 r3+0x264 u32 0,0x5606B000
+field 02657440 5606B004 u32 0x100F3BE0
+stable 5606B004 4
+field 02657440 r3+0x268 u32 0,0x5606C000
+field 02657440 5606C004 u32 0x100F3BE0
+stable 5606C004 4
+field 02657440 r3+0x26C u32 0,0x5606D000
+field 02657440 5606D004 u32 0x100F3BE0
+stable 5606D004 4
+field 02657440 r3+0x270 u32 0,0x5606E000
+field 02657440 5606E004 u32 0x100F3BE0
+stable 5606E004 4
+field 02657440 r3+0x274 u32 0,0x5606F000
+field 02657440 5606F004 u32 0x100F3BE0
+stable 5606F004 4
+field 02657440 r3+0x278 u32 0,0x56070000
+field 02657440 56070004 u32 0x100F3BE0
+stable 56070004 4
+field 02657440 r3+0x27C u32 0,0x56071000
+field 02657440 56071004 u32 0x100F3BE0
+stable 56071004 4
+field 02657440 r3+0x280 u32 0,0x56072000
+field 02657440 56072004 u32 0x100F3BE0
+stable 56072004 4
+field 02657440 r3+0x284 u32 0,0x56073000
+field 02657440 56073004 u32 0x100F3BE0
+stable 56073004 4
+field 02657440 r3+0x288 u32 0,0x56074000
+field 02657440 56074004 u32 0x100F3BE0
+stable 56074004 4
+field 02657440 r3+0x28C u32 0,0x56075000
+field 02657440 56075004 u32 0x100F3BE0
+stable 56075004 4
+field 02657440 r3+0x290 u32 0,0x56076000
+field 02657440 56076004 u32 0x100F3BE0
+stable 56076004 4
+field 02657440 r3+0x294 u32 0,0x56077000
+field 02657440 56077004 u32 0x100F3BE0
+stable 56077004 4
+field 02657440 r3+0x298 u32 0,0x56078000
+field 02657440 56078004 u32 0x100F0EF8
+stable 56078004 4
+field 02657440 r3+0x29C u32 0,0x56079000
+field 02657440 56079004 u32 0x100F0EF8
+stable 56079004 4
+field 02657440 r3+0x2A0 u32 0,0x5607A000
+field 02657440 5607A004 u32 0x100F0EF8
+stable 5607A004 4
+field 02657440 r3+0x2A4 u32 0,0x5607B000
+field 02657440 5607B004 u32 0x100F0EF8
+stable 5607B004 4
+field 02657440 r3+0x2A8 u32 0,0x5607C000
+field 02657440 5607C004 u32 0x100F0EF8
+stable 5607C004 4
+field 02657440 r3+0x2AC u32 0,0x5607D000
+field 02657440 5607D004 u32 0x100F0EF8
+stable 5607D004 4
+field 02657440 r3+0x2B0 u32 0,0x5607E000
+field 02657440 5607E004 u32 0x100F0EF8
+stable 5607E004 4
+field 02657440 r3+0x2B4 u32 0,0x5607F000
+field 02657440 5607F004 u32 0x100F0EF8
+stable 5607F004 4
+field 02657440 r3+0x2B8 u32 0,0x56080000
+field 02657440 56080004 u32 0x100F0EF8
+stable 56080004 4
+field 02657440 r3+0x2BC u32 0,0x56081000
+field 02657440 56081004 u32 0x100F0EF8
+stable 56081004 4
+field 02657440 r3+0x2C0 u32 0,0x56082000
+field 02657440 56082004 u32 0x100F0EF8
+stable 56082004 4
+field 02657440 r3+0x2C4 u32 0,0x56083000
+field 02657440 56083004 u32 0x100F0EF8
+stable 56083004 4
+field 02657440 r3+0x2C8 u32 0,0x56084000
+field 02657440 56084004 u32 0x100F0EF8
+stable 56084004 4
+field 02657440 r3+0x2CC u32 0,0x56085000
+field 02657440 56085004 u32 0x100F0EF8
+stable 56085004 4
+field 02657440 r3+0x2D0 u32 0,0x56086000
+field 02657440 56086004 u32 0x100F0EF8
+stable 56086004 4
+field 02657440 r3+0x2D4 u32 0,0x56087000
+field 02657440 56087004 u32 0x100F0EF8
+stable 56087004 4
+
+# The boss update visits floor children through the loaded hdParts child list.
+arg! 02657848 r3 0x55000000 0x55000000
+field 02657848 r3+0x48 u32 0 8
+field 02657848 r3+0x4C u32 0x57000000
+stable 55000048 8
+stable 57000000 32
+field 02657848 57000000 u32 0,0x57100000
+field 02657848 57100004 u32 0x100F12F8
+stable 57100004 4
+field 02657848 57000004 u32 0,0x57101000
+field 02657848 57101004 u32 0x100F0AB8
+stable 57101004 4
+field 02657848 57000008 u32 0,0x57102000
+field 02657848 57102004 u32 0x100F12F8
+stable 57102004 4
+field 02657848 5700000C u32 0,0x57103000
+field 02657848 57103004 u32 0x100F12F8
+stable 57103004 4
+field 02657848 57000010 u32 0,0x57104000
+field 02657848 57104004 u32 0x100F12F8
+stable 57104004 4
+field 02657848 57000014 u32 0,0x57105000
+field 02657848 57105004 u32 0x100F12F8
+stable 57105004 4
+field 02657848 57000018 u32 0,0x57106000
+field 02657848 57106004 u32 0x100F12F8
+stable 57106004 4
+field 02657848 5700001C u32 0,0x57107000
+field 02657848 57107004 u32 0x100F12F8
+stable 57107004 4
+
+# A loaded input source supplies finite event kind/id values. Copy the real event
+# header before its payload copy, so steering reaches the handler branch itself.
+real 020013C0
+real 02001320
+mockmove 028FDC00 r3 r4 r5
+field * 101F4FF0 u32 0,0x58000000
+field * 58000030 u32 0,1,2,2,2,2,3,3,4,4,4,4,5,6,7,8,9,10,11,12,0x43,0x44,0x49,0x4A,0x4B,0x4C,0x4D,0x65
+field * 58000034 u32 0,1,1,1,1,2,3
+field * 101F5088 u32 0x58200000
+field * 101F8378 u32 0x58300000
+field * 58300014 u8 0 1
+field * 58100010 u32 0,1,1,1,1,2,3
+field 02654884 r3+0x9C u32 0x58100000
+field 02654B6C r3+0x9C u32 0x58100000
+field 02657914 r3+0x9C u32 0,0x58100000
+# The fixed door list belongs to distinct marker objects, never aliases its screen.
+arg! 0265833C r3 0x55000000 0x55000000
+field 0265833C r3+0xD8 u32 0x59000000
+field 0265833C r3+0xDC u32 0x59001000
+field 0265833C r3+0xE0 u32 0x59002000
+field 0265833C r3+0xE4 u32 0x59003000
+field 0265833C r3+0xE8 u32 0x59004000
+field 0265833C r3+0xEC u32 0x59005000
+field 0265833C r3+0xF0 u32 0x59006000
+field 0265833C r3+0xF4 u32 0x59007000
+field 0265833C r3+0xF8 u32 0x59008000
+field 0265833C r3+0xFC u32 0x59009000
+field 0265833C r3+0x100 u32 0x5900A000
+field 0265833C r3+0x104 u32 0x5900B000
+field 0265833C r3+0x108 u32 0x5900C000
+field 0265833C r3+0x10C u32 0x5900D000
+field 0265833C r3+0x110 u32 0x5900E000
+field 0265833C r3+0x114 u32 0x5900F000
+field 0265833C r3+0x118 u32 0x59010000
+field 0265833C r3+0x11C u32 0x59011000
+field 0265833C r3+0x120 u32 0x59012000
+field 0265833C r3+0x124 u32 0x59013000
+field 0265833C r3+0x128 u32 0x59014000
+field 0265833C r3+0x12C u32 0x59015000
+field 0265833C r3+0x130 u32 0x59016000
+field 0265833C r3+0x134 u32 0x59017000
+field 0265833C r3+0x138 u32 0x59018000
+field 0265833C r3+0x13C u32 0x59019000
+field 0265833C r3+0x140 u32 0x5901A000
+field 0265833C r3+0x144 u32 0x5901B000
+field 0265833C r3+0x148 u32 0x5901C000
+field 0265833C r3+0x14C u32 0x5901D000
+field 0265833C r3+0x150 u32 0x5901E000
+field 0265833C r3+0x154 u32 0x5901F000
+field 0265833C r3+0x158 u32 0x59020000
+field 0265833C r3+0x15C u32 0x59021000
+field 0265833C r3+0x160 u32 0x59022000
+field 0265833C r3+0x164 u32 0x59023000
+field 0265833C r3+0x168 u32 0x59024000
+field 0265833C r3+0x16C u32 0x59025000
+field 0265833C r3+0x170 u32 0x59026000
+field 0265833C r3+0x174 u32 0x59027000
+field 0265833C r3+0x178 u32 0x59028000
+field 0265833C r3+0x17C u32 0x59029000
+field 0265833C r3+0x180 u32 0x5902A000
+field 0265833C r3+0x184 u32 0x5902B000
+field 0265833C r3+0x188 u32 0x5902C000
+field 0265833C r3+0x18C u32 0x5902D000
+field 0265833C r3+0x190 u32 0x5902E000
+field 0265833C r3+0x194 u32 0x5902F000
+field 0265833C r3+0x198 u32 0x59030000
+field 0265833C r3+0x19C u32 0x59031000
+field 0265833C r3+0x1A0 u32 0x59032000
+field 0265833C r3+0x1A4 u32 0x59033000
+field 0265833C r3+0x1A8 u32 0x59034000
+field 0265833C r3+0x1AC u32 0x59035000
+field 0265833C r3+0x1B0 u32 0x59036000
+field 0265833C r3+0x1B4 u32 0x59037000
+field 0265833C r3+0x1B8 u32 0x59038000
+field 0265833C r3+0x1BC u32 0x59039000
+field 0265833C r3+0x1C0 u32 0x5903A000
+field 0265833C r3+0x1C4 u32 0x5903B000
+field 0265833C r3+0x1C8 u32 0x5903C000
+field 0265833C r3+0x1CC u32 0x5903D000
+field 0265833C r3+0x1D0 u32 0x5903E000
+field 0265833C r3+0x1D4 u32 0x5903F000
+
+# Loaded UI enums and direct floor/name arguments target the compound branches;
+# UI objects and pointer fields remain clobberable across callbacks.
+field * 101F8344 u32 0x58400000
+field * 58400218 u32 0x58410000
+field * 58410050 u32 0,1,2,3,3,3,4,5,6,7,8
+field * 58410054 u32 0 9
+field * 58410059 u8 0 1
+field * 101CEF74 u32 0,0x58500000
+field * r3+0x338 u8 0,10,0x7E,0x85
+field * r3+0x339 s8 -1,0,1
+arg 02656394 r4 0,10,0x7E,0x7F,0x80,0x81,0x82,0x83,0x85,0xFF
+arg 026563FC r4 0,10,0x7E,0x7F,0x80,0x81,0x82,0x83,0x85,0xFF
+arg! 026585AC r4 0x1047DDB8
+field * 1047DDD4 u16 0,0x900,0xC00,0xD00
+
+# RPX 02615140: 80630070 (lwz r3,0x70(r3)), 4E800020 (blr).
+# Keep this pure getter real so its loaded receiver and preserved live registers
+# reach cursor/zoom comparisons. Receiver pointers cover null, the screen mode,
+# and a distinct mode; IDs and all payload words remain callback-clobberable.
+real 02615140
+field * 58000070 u32 0,0x58100000,0x58110000
+field * 58110010 u32 0 3
+# Target both zoom directions and the touch-manager flag without stability rules.
+field 02654B6C r3+0x3E8 u32 0,1,1,2
+field * 58200024 u32 0,1,2,3
+
+# Copy output may overlap the screen's player-position words. Cover forward and
+# backward overlap as well as exact and separate destinations; retain raw cases.
+arg! 026552E0 r3 0x55000000
+arg 026552E0 r4 0x55010000,0x55000320,0x55000324,0x5500031C
+# The index==3 boundary selects different item slots when the fallback changes.
+arg 026553A0 r4 0,1,2,3,4
+arg 02655450 r4 0,1,2,3,4
+field 02655450 r3+0x3A6 u8 0,1
+field 02655450 r3+0x3A7 u8 0,1
+field 02655450 r3+0x3A8 u8 0,1
+field 02655450 r3+0x3A3 s8 -1,0,7
+field 02655450 r3+0x3A4 s8 -1,0,7
+field 02655450 r3+0x3A5 s8 -1,0,7
+# Valid item actors share the loaded player actor view. The first RPX room record
+# at100F0290 is (7558,-8945); target that match and distinct/zero coordinates.
+# Return steering retains the unsteered escape and all payload callback effects.
+ret 0268A920 0,0x58500000,0x58500000,0x58500000
+field * 58500314 f32 0,7558,7559
+field * 5850031C f32 0,-8945,-8944
+field * 585002E0 u32 0,0x2000,0x2001
+field * 5850420C u32 0,1,0x800,0x801
+field * 101BDC2A u16 0,1,2,3
+
+# RPX026552E0..026552F8 is three ordered lfs/stfs pairs copying this+320/324/328
+# to out+0/4/8, then blr. Keep the verified helper real in nested position paths.
+real 026552E0
+# Loaded marker queries can return null or a valid marker/info/actor view.
+# Leave memory mutable so subsequent callback reloads remain exercised.
+ret 02656068 0,0x58600000
+ret 02655BDC 0,0x58600050
+ret 02656970 0,0x58500000
+field 026553A0 r3+0xCC u32 0,0x58600000
+field 026553A0 r3+0xD8 u32 0,0x58601000
+# The merged drag handler uses the same event receiver identity.
+field 0265ADB4 r3+0x9C u32 0x58100000
+# Exercise the unfinished-item loop instead of almost always taking the raw
+# nonzero all-found early return. Preserve both completed and incomplete states.
+field 02656B38 r3+0x3A9 u8 0,0,0,1
+field 02656B38 r3+0x3A6 u8 0,1,1,1
+field 02656B38 r3+0x3A7 u8 0,1,1,1
+field 02656B38 r3+0x3A8 u8 0,1,1,1
+field * 585008F4 u32 0,1,2,3
+
+# Loaded-game singleton guard bypasses initialization in025200D4; the real
+# getter returns1046F0B0 and preserves its live-register behavior. The ordinary
+# guard field retains unsteered initialization cases; actor pointers are nullable.
+real 025200D4
+field * 104753A8 u32 1
+field * 10474BE4 u32 0,0x58500000
+field * 10474BEC u32 0,0x58510000
+field * 10474BDC u32 0,0x58500000
+# This pure loaded-mode/marker/partner query need not synthesize a callback write
+# before the all-items-found check. Legitimate item-map callbacks remain mutable.
+real 02655134
+
+# Weight loaded touch coordinates and item-query results while preserving every
+# prior enum/null case, raw escape, and callback clobber path.
+field * 582001B4 f32 0,1,-1,512
+field * 582001B8 f32 0,2,-2,256
+real 026553A0
+real 02656AFC
+# Loaded stage count is immutable metadata, already bounded0..64 at1047DDB4.
+# Pin the screen into the existing exact stable count/pointer-table contract;
+# StageFloor receives the stage view and height, never a screen-count output.
+arg! 026583E8 r3 0x55000000
+field 026583E8 r3+0xD8 u32 0x59000000
+field 026583E8 r3+0xDC u32 0x59001000
+field 026583E8 r3+0xE0 u32 0x59002000
+field 026583E8 r3+0xE4 u32 0x59003000
+field 026583E8 r3+0xE8 u32 0x59004000
+field 026583E8 r3+0xEC u32 0x59005000
+field 026583E8 r3+0xF0 u32 0x59006000
+field 026583E8 r3+0xF4 u32 0x59007000
+field 026583E8 r3+0xF8 u32 0x59008000
+field 026583E8 r3+0xFC u32 0x59009000
+field 026583E8 r3+0x100 u32 0x5900A000
+field 026583E8 r3+0x104 u32 0x5900B000
+field 026583E8 r3+0x108 u32 0x5900C000
+field 026583E8 r3+0x10C u32 0x5900D000
+field 026583E8 r3+0x110 u32 0x5900E000
+field 026583E8 r3+0x114 u32 0x5900F000
+field 026583E8 r3+0x118 u32 0x59010000
+field 026583E8 r3+0x11C u32 0x59011000
+field 026583E8 r3+0x120 u32 0x59012000
+field 026583E8 r3+0x124 u32 0x59013000
+field 026583E8 r3+0x128 u32 0x59014000
+field 026583E8 r3+0x12C u32 0x59015000
+field 026583E8 r3+0x130 u32 0x59016000
+field 026583E8 r3+0x134 u32 0x59017000
+field 026583E8 r3+0x138 u32 0x59018000
+field 026583E8 r3+0x13C u32 0x59019000
+field 026583E8 r3+0x140 u32 0x5901A000
+field 026583E8 r3+0x144 u32 0x5901B000
+field 026583E8 r3+0x148 u32 0x5901C000
+field 026583E8 r3+0x14C u32 0x5901D000
+field 026583E8 r3+0x150 u32 0x5901E000
+field 026583E8 r3+0x154 u32 0x5901F000
+field 026583E8 r3+0x158 u32 0x59020000
+field 026583E8 r3+0x15C u32 0x59021000
+field 026583E8 r3+0x160 u32 0x59022000
+field 026583E8 r3+0x164 u32 0x59023000
+field 026583E8 r3+0x168 u32 0x59024000
+field 026583E8 r3+0x16C u32 0x59025000
+field 026583E8 r3+0x170 u32 0x59026000
+field 026583E8 r3+0x174 u32 0x59027000
+field 026583E8 r3+0x178 u32 0x59028000
+field 026583E8 r3+0x17C u32 0x59029000
+field 026583E8 r3+0x180 u32 0x5902A000
+field 026583E8 r3+0x184 u32 0x5902B000
+field 026583E8 r3+0x188 u32 0x5902C000
+field 026583E8 r3+0x18C u32 0x5902D000
+field 026583E8 r3+0x190 u32 0x5902E000
+field 026583E8 r3+0x194 u32 0x5902F000
+field 026583E8 r3+0x198 u32 0x59030000
+field 026583E8 r3+0x19C u32 0x59031000
+field 026583E8 r3+0x1A0 u32 0x59032000
+field 026583E8 r3+0x1A4 u32 0x59033000
+field 026583E8 r3+0x1A8 u32 0x59034000
+field 026583E8 r3+0x1AC u32 0x59035000
+field 026583E8 r3+0x1B0 u32 0x59036000
+field 026583E8 r3+0x1B4 u32 0x59037000
+field 026583E8 r3+0x1B8 u32 0x59038000
+field 026583E8 r3+0x1BC u32 0x59039000
+field 026583E8 r3+0x1C0 u32 0x5903A000
+field 026583E8 r3+0x1C4 u32 0x5903B000
+field 026583E8 r3+0x1C8 u32 0x5903C000
+field 026583E8 r3+0x1CC u32 0x5903D000
+field 026583E8 r3+0x1D0 u32 0x5903E000
+field 026583E8 r3+0x1D4 u32 0x5903F000
+
+arg! 026580E0 r3 0x55000000 0x55000000
+mockglobal 02689DDC 550002F0 u32 40

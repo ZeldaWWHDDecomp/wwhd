@@ -23,6 +23,10 @@ counted. Columns:
   scaffold  harness scaffolding written by hand: WWHD_FUNC(...) and VERIFY(...) lines (a glue source
             has none: autoglue inserts them)
   local_l   local copies of shared declarations (identifiers ending in _l)
+  framenoauto  gabi::FrameLocal slots in a function (from its `/* ADDR */` marker to the next one)
+            without gabi::AutoFrame / WWHD_FUNC: without the automatic native frame FrameLocal falls
+            back to a Local below r1 instead of the original's sp offset. Add the AutoFrame (or use
+            NativeFrame + gabi::at); this column should be 0
   lines     non-empty code lines
 
 --all lints every unit source (all `src` files of tools/verify/units); --tsv prints tab-separated.
@@ -46,7 +50,21 @@ PATTERNS = [
     ("scaffold", re.compile(r"\bWWHD_FUNC\s*\(|^\s*VERIFY\s*\(", re.M)),
     ("local_l", re.compile(r"\b[A-Za-z]\w*_l\b")),
 ]
-COLS = [n for n, _ in PATTERNS] + ["lines"]
+COLS = [n for n, _ in PATTERNS] + ["framenoauto", "lines"]
+FRAMELOCAL = re.compile(r"\bFrameLocal\s*<")
+AUTOFRAME = re.compile(r"\bAutoFrame\b|\bWWHD_FUNC\s*\(")
+MARKER = re.compile(r"(?=^/\* [0-9A-Fa-f]{8} \*/)", re.M)
+
+
+def framenoauto(text):
+    """FrameLocal uses in marker-delimited functions that construct no automatic frame"""
+    n = 0
+    for seg in MARKER.split(text):
+        code = strip(seg)
+        uses = len(FRAMELOCAL.findall(code))
+        if uses and not AUTOFRAME.search(code):
+            n += uses
+    return n
 
 
 def strip(text):
@@ -77,6 +95,7 @@ def strip(text):
 def lint(path):
     code = strip(open(path, errors="replace").read())
     row = {name: len(p.findall(code)) for name, p in PATTERNS}
+    row["framenoauto"] = framenoauto(open(path, errors="replace").read())
     row["lines"] = sum(1 for l in code.splitlines() if l.strip())
     return row
 

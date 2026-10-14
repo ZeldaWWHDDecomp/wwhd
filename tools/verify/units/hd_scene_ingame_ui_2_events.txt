@@ -1,0 +1,15 @@
+src wwhd_src/d/hd_scene_ingame_ui.cpp
+# Exact SCENE-ingame_ui#2 scope: all 83 game functions.
+
+# Directed item-assignment event guard domain; primary remains unrestricted.
+field 02714FDC 101F4FF0 u32 0,0x58001000
+mockfield 020013C0 r3+0 s32 0xD,0x45,0
+mockfield 020013C0 r3+4 s32 0,1,2
+mockfield 020013C0 r3+8 u8 3,4,0xE,0
+ret 02615140 0,0x58002000
+ret 026151A0 0,0x58003000
+ret 02615398 0,1
+ret 0268F420 0xFF,4,0xB,0x12,0,1,5
+ret 02694500 0,1,2,3
+callee 020013C0 r3=out40 r4=40
+pointee 020013C0 r3=40

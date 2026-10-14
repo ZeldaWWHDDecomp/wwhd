@@ -3,6 +3,7 @@
 
 GHS constructors allocate their object when called with this == NULL:
     or. r31, r3, r3 ; bne 1f ; li r3, SIZE ; bl operator_new ; ...
+or, in small frames, exactly  cmpwi r3, 0 ; bne 1f ; li r3, SIZE ; bl operator_new
 so every out-of-line constructor states sizeof(class). The vtable pointers it stores
 (lis/addi + stw OFF(this)) are listed too: their offsets show where the HD C++ vtable pointers sit.
 
@@ -62,6 +63,19 @@ def main():
                             size = x & 0xFFFF
                 if size is not None:
                     break
+        if size is None:
+            # second prologue form (small frames, e.g. 0274FDBC; missed before 2026-10-11): the exact sequence
+            # cmpwi/cmplwi r3,0 ; bne ; li r3,SIZE ; bl operator_new  within the first 12 instructions
+            for i in range(min(n - 3, 12)):
+                x, b, l, c = ins[i:i + 4]
+                if ((x >> 26) in (10, 11) and (x >> 21) & 31 == 0 and (x >> 16) & 31 == 3 and x & 0xFFFF == 0
+                        and (b >> 26) == 16 and (l >> 16) == (14 << 10 | 3 << 5 | 0) and (c >> 26) == 18 and (c & 1)):
+                    off = c & 0x03FFFFFC
+                    if off & 0x02000000:
+                        off -= 0x04000000
+                    if ((a + 4 * (i + 3) + off) & 0xFFFFFFFF) in OPERATOR_NEW:
+                        size, this = l & 0xFFFF, 3
+                        break
         if size is None:
             continue
         # vtable stores: lis rX,HI ; addi/addic rX,rX,LO ; stw rX, OFF(this or a copy)

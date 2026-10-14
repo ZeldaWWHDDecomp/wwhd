@@ -12,7 +12,7 @@ static RaceItemActorVtable l_itemBaseVtable;
 static RaceItemActorVtable l_raceItemVtable;
 static RaceItemActorVtable l_aabVtable;
 static dCcD_SrcCyl l_cyl_src;
-// HD: external callback registrations pending autoglue support.
+// HD: external callback registrations pending the shared T-07 autoglue follow-up.
 static gabi::HostFn l_heapBinding(reinterpret_cast<const void*>(CheckFieldItemCreateHeap), 0x0218422C);
 static gabi::HostFn l_searchBinding(reinterpret_cast<const void*>(fpcSch_JudgeForPName), 0x025E121C);
 
@@ -115,7 +115,7 @@ BOOL daRaceItem_c::execute() {
     eyePos.y = y;
     eyePos.z = z;
     eyePos.x = x;
-    f32 h = f32(dItem_data::getH(item));
+    f32 h = f32(dItemDataView::getH(item));
     u32 state = field_0x640;
     eyePos.y = gabi::fmadds(h * f32(scale.x), 0.5f, y);
     switch (state) {
@@ -212,7 +212,7 @@ BOOL daRaceItem_c::execute() {
             if (type & AT_TYPE_BOOMERANG)
                 field_0x645 = u8(field_0x645) | RaceItem_BoomerangCarry;
             else if (type & AT_TYPE_HOOKSHOT) {
-                f32 height = f32(dItem_data::getH(u32(m_itemNo)));
+                f32 height = f32(dItemDataView::getH(u32(m_itemNo)));
                 gabi::Local<cXyz> offset;
                 offset->z = 0.0f;
                 offset->x = 0.0f;

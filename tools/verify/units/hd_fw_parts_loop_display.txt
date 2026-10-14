@@ -1,0 +1,158 @@
+# Verification unit: FW-parts_loop_display: UI parts base, InOutLoop, KeyIcon, parts layout
+src wwhd_src/d/hd_parts.cpp
+src wwhd_src/d/hd_parts_in_out_loop.cpp
+src wwhd_src/d/hd_parts_key_icon.cpp
+src wwhd_src/d/hd_parts_lyt.cpp
+
+# ---- child loops (hdParts_c at 0x50000000: mChildren count +0x48, data +0x4C; mArcLinks +0x38/+0x3C/+0x40)
+arg! 026F8E24 r3 0x50000000
+arg! 026F8F78 r3 0x50000000
+arg! 026F9020 r3 0x50000000
+arg! 026F91F8 r3 0x50000000
+arg! 026F90D8 r3 0x50000000
+arg! 026F8D24 r3 0x50000000
+field * 0x50000048 s32 -1 4
+field * 0x5000004C u32 0,0x50001000,0x50001000,0x50001000
+field * 0x50000038 s32 -1 4
+field * 0x5000003C s32 -1 4
+field * 0x50000040 u32 0,0x50002000,0x50002000,0x50002000
+stable 0x50000038 0x18
+arg! 026F90D8 r5 0 4
+# createChildren: mpLayout -> screen 0x50100000, its layout (+4) 0x50200000, descriptor count at +0x3C
+field 026F8D24 0x50000044 u32 0x50100000
+field 026F8D24 0x50100004 u32 0xFFFFFFC4,0x50200000,0x50200000,0x50200000
+field 026F8D24 0x5020003C s32 -1 4
+stable 0x50100004 4
+stable 0x5020003C 4
+
+# ---- list walks (hdPartsLyt_c / panes at 0x52000000): short, terminated lists
+arg! 026FA7BC r4 0,0x52000000,0x52000000,0x52000000
+field 026FA7BC 0x52000014 u32 0x52000014,0x52000100,0x52000100
+field 026FA7BC 0x52000100 u32 0x52000014,0x52000200
+field 026FA7BC 0x52000200 u32 0x52000014
+stable 0x52000014 4
+stable 0x52000100 4
+stable 0x52000200 4
+# a NULL pane reads its child list at guest 0x14: keep it empty
+field 026FA7BC 0x00000014 u32 0x14
+stable 0x00000014 4
+arg! 026FA934 r3 0x52000000
+arg! 026FAABC r3 0x52000000
+field 026FA934 0x52000004 u32 0x52000004,0x52000300,0x52000300
+field 026FAABC 0x52000004 u32 0x52000004,0x52000300,0x52000300
+field 026FA934 0x52000300 u32 0x52000004,0x52000400
+field 026FAABC 0x52000300 u32 0x52000004,0x52000400
+field 026FA934 0x52000400 u32 0x52000004
+field 026FAABC 0x52000400 u32 0x52000004
+field 026FA934 0x52000028 u32 0x52000028,0x520010A4,0x520010A4
+field 026FAABC 0x52000028 u32 0x52000028,0x520010A4,0x520010A4
+field 026FA934 0x520010A4 u32 0x52000028,0x520020A4
+field 026FAABC 0x520010A4 u32 0x52000028,0x520020A4
+field 026FA934 0x520020A4 u32 0x52000028
+field 026FAABC 0x520020A4 u32 0x52000028
+stable 0x52000004 4
+stable 0x52000028 4
+stable 0x52000300 4
+stable 0x52000400 4
+stable 0x520010A4 4
+stable 0x520020A4 4
+
+# ---- runtime-type queries: panes / layouts get a vtable whose type slot is 026FA258 (an otherwise
+# unused callee here), answered from a pick list: NULL, the searched types, a short chain that misses
+# and one that hits
+field 026FA7BC 0x52000008 u32 0x52005000
+field 026FA934 0x52001008 u32 0x52005000
+field 026FAABC 0x52001008 u32 0x52005000
+field 026FA934 0x52002008 u32 0x52005000
+field 026FAABC 0x52002008 u32 0x52005000
+field * 0x52005014 u32 0x026FA258
+field * 0x5200500C u32 0x026FA258
+stable 0x52000008 4
+stable 0x52001008 4
+stable 0x52002008 4
+stable 0x52005000 0x18
+ret! 026FA258 0,0x101FDD3C,0x101FDDA4,0x101FDDA8,0x52006000,0x52006100
+field * 0x52006000 u32 0
+field * 0x52006100 u32 0x52006000,0x101FDD3C,0x101FDDA4,0x101FDDA8
+stable 0x52006000 4
+stable 0x52006100 4
+arg! 026FA624 r3 0x52000000
+field 026FA624 0x52000038 u32 0,0x52003000,0x52003000
+field 026FA624 0x52003030 u32 0x52005000
+stable 0x52003030 4
+# the type statics' parent words (when already initialised) end the walk too
+field * 0x101FDD3C u32 0,0x52006000
+field * 0x101FDDA4 u32 0,0x52006000
+field * 0x101FDDA8 u32 0,0x52006000
+stable 0x101FDD3C 4
+stable 0x101FDDA4 8
+
+# ---- constructors: embedded members whose address wraps to NULL (this = -8 / -0x38 / -0x48), allocation failures
+arg 026F89E8 r3 0,0xFFFFFFF8,0xFFFFFFC8,0xFFFFFFB8,0x50000000,0x50000000
+ret 0273AD10 0,0x50400000,0x50400000
+# ---- buildPaneObj: the pane kinds and the text-box helpers' answers
+arg 026FA3EC r4 0x70727431,0x74787431,0x74787431,0x70696331
+ret 02705B34 0 1
+ret 02705F44 0,0,0x50500000
+ret 0287F3DC 0,0x50600000,0x50600000
+
+# ---- the parts factory: descriptor at 0x53000000, its class name a real parts class name (or a near miss);
+# the class-name statics point at their own copies of the names (equal by content, not by address)
+arg 026F92C0 r5 0x53000000
+field 026F92C0 0x53000024 u32 0x53000100,0x53000100,0x53000100,0x53000100,0,0x53001000,0x53001020,0x53001040,0x53001060,0x53001080,0x530010A0,0x530010C0,0x530010E0,0x53001100,0x53001120
+stable 0x53000024 4
+fieldstr 026F92C0 0x53000100 16 "BasicButton","Heart","InOutLoop","KeyIcon","Loop","NoControl","NoDecideButton","OneTime","ProgressBar","Valid","Basic","KeyIconX","Hear","Valid"
+field 026F92C0 0x1049DA40 u32 0x53001000,0x53001000,0x53000100
+stable 0x1049DA40 4
+fieldstr 026F92C0 0x53001000 16 "BasicButton"
+field 026F92C0 0x1049DB44 u32 0x53001020,0x53001020,0x53000100
+stable 0x1049DB44 4
+fieldstr 026F92C0 0x53001020 16 "Heart"
+field 026F92C0 0x1049DC28 u32 0x53001040,0x53001040,0x53000100
+stable 0x1049DC28 4
+fieldstr 026F92C0 0x53001040 16 "InOutLoop"
+field 026F92C0 0x1049DD3C u32 0x53001060,0x53001060,0x53000100
+stable 0x1049DD3C 4
+fieldstr 026F92C0 0x53001060 16 "KeyIcon"
+field 026F92C0 0x1049DE30 u32 0x53001080,0x53001080,0x53000100
+stable 0x1049DE30 4
+fieldstr 026F92C0 0x53001080 16 "Loop"
+field 026F92C0 0x1049E518 u32 0x530010A0,0x530010A0,0x53000100
+stable 0x1049E518 4
+fieldstr 026F92C0 0x530010A0 16 "NoControl"
+field 026F92C0 0x1049E6EC u32 0x530010C0,0x530010C0,0x53000100
+stable 0x1049E6EC 4
+fieldstr 026F92C0 0x530010C0 16 "NoDecideButton"
+field 026F92C0 0x1049E710 u32 0x530010E0,0x530010E0,0x53000100
+stable 0x1049E710 4
+fieldstr 026F92C0 0x530010E0 16 "OneTime"
+field 026F92C0 0x1049E750 u32 0x53001100,0x53001100,0x53000100
+stable 0x1049E750 4
+fieldstr 026F92C0 0x53001100 16 "ProgressBar"
+field 026F92C0 0x1049E8EC u32 0x53001120,0x53001120,0x53000100
+stable 0x1049E8EC 4
+fieldstr 026F92C0 0x53001120 16 "Valid"
+stable 0x52000038 4
+
+# ---- mutation follow-ups
+# KeyIcon requests: the request word and the decide-to-wait flag take their real values
+field 026F7F14 r3+0x50 s32 0,3,4,1
+field 026F7FB0 r3+0x50 s32 0,3,4,1
+field 026F7FB0 r3+0x54 u8 0,1
+# destructor: this = -8 puts the state holder at NULL
+arg 026F88F0 r3 0,0xFFFFFFF8,0x50000000,0x50000000
+# a parts-pane list node at 0xA4 is a NULL parts pane
+field 026FA934 0x520010A4 u32 0x52000028,0x520020A4,0x000000A4
+field 026FAABC 0x520010A4 u32 0x52000028,0x520020A4,0x000000A4
+field 026FA934 0x000000A4 u32 0x52000028
+field 026FAABC 0x000000A4 u32 0x52000028
+stable 0x000000A4 4
+# buildPartsLayout reads the resource accessor after the parts-resource call: that call replaces it
+mockglobal 02880AE0 0x52000038 u32 0,0x52003000
+# deleteChildren frees the buffer through a fixed heap whose free (0273AF40 here) rewrites the count
+ret! 02755FEC 0x50700000 0x50700000
+field 026F8E24 0x5070000C u32 0x50701000
+field 026F8E24 0x5070103C u32 0x0273AF40
+stable 0x5070000C 4
+stable 0x5070103C 4
+mockglobal 0273AF40 0x50000048 u32 7

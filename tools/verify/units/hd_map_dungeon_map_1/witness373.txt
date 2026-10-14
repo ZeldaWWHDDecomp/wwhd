@@ -1,0 +1,13 @@
+# Witness companion; run with -only 02655198.
+# MAP-dungeon_map#1 focused witness for mutation 373 (boss floor sentinel).
+src wwhd_src/d/hd_screen_map.cpp
+src wwhd_src/d/hd_screen_dungeon_map.cpp
+src wwhd_src/d/hd_screen_dungeon_map_part1.cpp
+arg! 02655198 r3 0x20000000
+field * 101F8344 u32 0x25000000
+field * 25000218 u32 0x25100000
+field * 25100050 s32 4
+field * 101CEF74 u32 0
+field 02655198 r3+0xC0 u32 0x27000000
+field 02655198 r3+0x338 u8 10
+field 02655198 r3+0x339 s8 -1

@@ -16,7 +16,7 @@ void hdScreenRupySwordCounter_c::updateDisplay() {
     text->__vtbl = gabi::ea(&swordTextVtable);
     text->mCapacity = 5;
     minigameFormatCurrency(text, "sword currency format", Minigame_SwordCurrencyGlyph, u32(mShownCount));
-    minigameSetText(mTextPane, text, 0);
+    minigameSetText(mpNumText.get(), text, 0);
 }
 
 /* 026CB4A0 */
@@ -34,7 +34,7 @@ void hdScreenRupySwordCounter_c::roll() {
         mShownCount = u16(shown - 1);
         updateDisplay();
     }
-    if (!swordCounterActive) minigameChangeState(&mStateMachine, &swordIdleState);
+    if (!swordCounterActive) minigameChangeState(&mStateHolder.mMachine, &swordIdleState);
 }
 
 /* WWHD glue

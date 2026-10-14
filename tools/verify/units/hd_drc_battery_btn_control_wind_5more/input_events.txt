@@ -1,0 +1,64 @@
+mockmove C0009988 r3 r4 r5
+src wwhd_src/d/hd_screen_battery.cpp
+src wwhd_src/d/hd_screen_btn_control_wind.cpp
+src wwhd_src/d/hd_screen_information_drc.cpp
+src wwhd_src/d/hd_screen_no_operate_drc.cpp
+src wwhd_src/d/hd_screen_pause.cpp
+src wwhd_src/d/hd_screen_slide_assist_tv.cpp
+src wwhd_src/d/hd_screen_control_wind_ok_states.cpp
+
+# Valid button events and actual wind-button virtual table; broad primary remains separate.
+arg! 0262C6C8 r3 0x5D000000
+field 0262C6C8 r3+0x4 u32 0x100E6BB0
+field 0262C6C8 r3+0x50 u32 0x5D001000
+field 0262C6C8 r3+0x58 u8 0,1
+field 0262C6C8 r3+0x74 u32 0,2,3,4
+field 0262C6C8 101F4FF0 u32 0,0x5D002000
+field 0262C6C8 5D002030 u32 0,1,2,4,6,17
+field 0262C6C8 5D002034 u32 0,0x1100,0x2200,0xFFFFFFFF
+arg! 0262C7F8 r3 0x5D000000
+field 0262C7F8 r3+0x4 u32 0x100E6BB0
+field 0262C7F8 r3+0x50 u32 0x5D001000
+field 0262C7F8 r3+0x58 u8 0,1
+field 0262C7F8 r3+0x74 u32 0,2,3,4
+field 0262C7F8 101F4FF0 u32 0,0x5D002000
+field 0262C7F8 5D002030 u32 0,1,2,4,6,17
+field 0262C7F8 5D002034 u32 0,0x1100,0x2200,0xFFFFFFFF
+arg! 0262C9C0 r3 0x5D000000
+field 0262C9C0 r3+0x4 u32 0x100E6BB0
+field 0262C9C0 r3+0x50 u32 0x5D001000
+field 0262C9C0 r3+0x58 u8 0,1
+field 0262C9C0 r3+0x74 u32 0,2,3,4
+field 0262C9C0 101F4FF0 u32 0,0x5D002000
+field 0262C9C0 5D002030 u32 0,1,2,4,6,17
+field 0262C9C0 5D002034 u32 0,0x1100,0x2200,0xFFFFFFFF
+ret! 026F5B74 0x1100 0x1100
+ret! 02615140 0x5D001000 0x5D001000
+ret! 026F6614 0 1
+ret! 026F67B4 0 1
+ret! 026F67BC 0 1
+ret! 026F67E4 0 1
+ret! 026F67A4 0 1
+ret! 026F621C 0 1
+arg! 0264EDB4 r3 0x5D003000
+field 0264EDB4 r3+0x51 u8 0,1
+field 0264EDB4 101F4FF0 u32 0x5D002000
+field 0264EDB4 5D002030 u32 0,1,2,4,6,17
+arg! 0264EE58 r3 0x5D003000
+field 0264EE58 r3+0x51 u8 0,1
+field 0264EE58 101F4FF0 u32 0x5D002000
+field 0264EE58 5D002030 u32 0,1,2,4,6,17
+
+# Supported pause modes and valid picture entry storage.
+field 026C0518 101F8348 u32 0,2,4
+field 026C0518 r3+0xF8 u8 0,1
+field 026C0518 r3+0xF9 u8 0,1
+field 026C031C 101F8348 u32 0,2,4
+ret! 027F81A4 0,0x5D010000
+field 026C031C 5D010008 s32 0,1,255,1024
+field 026C031C 5D01000C s32 0,1,255,768
+field 026C031C 5D010078 u8 0,1,255
+field 026C031C 5D010079 u8 0,1,255
+
+# Run the existing library event copy so the steered event values reach the caller.
+real 020013C0

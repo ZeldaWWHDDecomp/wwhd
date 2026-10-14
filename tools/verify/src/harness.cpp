@@ -134,6 +134,7 @@ struct CallEv {
     double f[9];
     int nint, nflt;                 /* candidate: declared arguments */
     uint32_t sp = 0;                /* r1 the callee starts with (compared under `footprint`) */
+    uint32_t lr = 0;                /* the return address the call passes (the original's bl; LR fix 2026-10-12) */
     uint32_t notarg = 0;            /* original: registers that cannot be arguments of an unlisted target (target/table register, stale after a mock) */
     /* the rarely needed parts live in a separately allocated block, only when present (2026-10-06: a call
      * record was ~1.2 KB of mostly empty vectors; pathological inputs record millions of calls) */
@@ -210,6 +211,7 @@ static struct VM {
     uint32_t call_top = 0;
     std::unordered_set<uint32_t> orig_stack; /* guarded-range bytes the original wrote for this input */
     std::vector<std::pair<uint32_t, int>> orig_seq; /* the original's top-level calls for this input (target, kind) */
+    std::vector<uint32_t> orig_lr;  /* ... and the return address each of them passed */
 } V;
 /* constructor sizes (tools/verify/ctor_sizes.tsv, from sizes.py): a candidate gabi::Local passed as
  * `this` to a constructor must hold the whole object, or the constructor writes past it into the
@@ -683,6 +685,13 @@ struct MoveSpec { unsigned dst, src, size; };
 struct Utf16Spec { unsigned out, maxchars; };
 static std::unordered_map<uint32_t, MoveSpec> g_move_specs;
 static std::unordered_map<uint32_t, Utf16Spec> g_utf16_specs;
+/* mockretain TARGET rN SIZE: the callee keeps the pointer rN of a call and, on its next generated call, writes
+ * SIZE deterministic bytes through the pointer kept from the previous one (a callback/descriptor retained
+ * across calls). Both sides write through their own retained pointer, so stack objects at different addresses
+ * are normalised. Per input run; nested calls are not affected. */
+struct RetainSpec { unsigned reg, size; };
+static std::unordered_map<uint32_t, RetainSpec> g_retain_specs;
+static std::unordered_map<uint32_t, uint32_t> g_retained; /* target -> pointer kept from its previous call */
 static uint64_t g_move_calls, g_move_bytes, g_utf16_fail, g_utf16_length[4097];
 
 
@@ -842,6 +851,7 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         }
     }
     ev.sp = c->r[1];
+    ev.lr = c->lr;
     if (g_framexact_funcs.count(g_cur_func)) {
         CallEv::Extra& E = ev.ex();
         E.fx = true;
@@ -856,6 +866,12 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         for (uint32_t ea = V.entry_sp - fs; ea != V.entry_sp + 8; ea++) E.frame.push_back(peek8(ea));
     }
     V.calls.push_back(std::move(ev));
+
+    /* the candidate's k-th top-level call to the same target as the original's k-th call passes the original's
+     * return address: a real callee that saves LR into the caller's frame then
+     * stores the same word on both sides (otherwise event bytes shifted into the LR save word differ). After the call record, so `framexact` still compares the candidate's own LR. */
+    if (V.is_candidate && V.depth == 0 && k < V.orig_seq.size() && V.orig_seq[k].first == target && k < V.orig_lr.size())
+        c->lr = V.orig_lr[k];
 
     if (ci && ci->real) {
         V.depth++;
@@ -929,6 +945,18 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         }
         V.depth--;
     }
+    /* a listed constructor (ctor_sizes.tsv) whose storage mkunit marked output-only without a random fill:
+     * the storage of a mocked constructor is not an input; its output is modelled as
+     * zeros, written BEFORE the mocked call on both sides (nothing is written after it). Zeros, not a non-zero
+     * byte: the original packs and reuses frame slots while candidate Locals have their own layout, so a non-zero
+     * fill would leave layout-dependent stale bytes (d_snap draw, d_a_ep). `stackfill` still covers the bytes
+     * outside sizeof; explicit `rN=outSIZE` facts keep their random fill; `real` constructors are never filled. */
+    if (ci && V.depth == 0 && (ci->outonly >> 3 & 1) && !(ci->fill >> 3 & 1) && ci->ptrsz[3] && ci->ptrsz[3] < 0xFFFE &&
+        in_stack(c->r[3]) && g_ctor_size.count(target)) {
+        V.depth++;
+        for (uint32_t j = 0; j < ci->ptrsz[3]; j++) patch8(c->r[3] + j, 0);
+        V.depth--;
+    }
     /* generated mock: answer in the registers the real callee may write; memory it may have
      * changed is modelled by the new epoch */
     V.epoch++;
@@ -970,6 +998,14 @@ static void do_call(Cpu* c, uint32_t target, int kind, int nint, int nflt) {
         V.depth--;
         c->r[3] = move_dst; // OSBlockMove / memmove return the destination.
         if (!V.is_candidate) { g_move_calls++; g_move_bytes += move_bytes.size(); }
+    }
+    if (auto rt = g_retain_specs.find(target); rt != g_retain_specs.end()) {
+        if (auto kept = g_retained.find(target); kept != g_retained.end()) {
+            V.depth++;
+            for (uint32_t j = 0; j < rt->second.size; j++) patch8(kept->second + j, (uint8_t)(hash3(h, j, 0x4E7A) >> 17));
+            V.depth--;
+        }
+        g_retained[target] = argr[rt->second.reg];
     }
     if (auto u = g_utf16_specs.find(target); u != g_utf16_specs.end()) {
         // Lookup may fail without writing any byte. On success it writes only
@@ -1058,6 +1094,17 @@ struct StrSpec {
     std::vector<std::string> pick;
 };
 static std::vector<StrSpec> g_str_specs;
+/* fill FUNC|* ADDR|rN+OFF SIZE BYTE: SIZE bytes from ADDR all set to BYTE in every generated input (both sides),
+ * before the `field` steering (fields of the same bytes override it); a background for large regions that per-word
+ * `field` lines would need thousands of lines for (e.g. a 512 KB all-0xFF table that reaches a scan cap) */
+struct FillSpec {
+    uint32_t func;
+    int base_reg;
+    uint32_t off;
+    uint32_t size;
+    uint8_t byte;
+};
+static std::vector<FillSpec> g_fill_specs;
 static std::vector<std::string> g_stage_names; /* tools/verify/stage_names.txt, loaded on first @stages */
 static std::string g_spec_dir = ".";
 
@@ -1116,6 +1163,16 @@ static void load_specs(const char* path) {
                 fprintf(stderr, "invalid mockmove directive: %s", line); exit(2);
             }
             g_move_specs[target] = {dst, src, size};
+            continue;
+        }
+        if (!strcmp(kw, "mockretain")) { // mockretain TARGET rN SIZE
+            unsigned target, reg, size;
+            char extra[8];
+            if (sscanf(line, "%*s %x r%u %i %7s", &target, &reg, (int*)&size, extra) != 3 || reg < 3 || reg > 10 ||
+                size == 0 || size > 4096) {
+                fprintf(stderr, "invalid mockretain directive (TARGET rN SIZE, SIZE 1..4096): %s", line); exit(2);
+            }
+            g_retain_specs[target] = {reg, size};
             continue;
         }
         if (!strcmp(kw, "mockutf16")) { // mockutf16 TARGET rOUT MAX_NONZERO_CHARS
@@ -1232,6 +1289,27 @@ static void load_specs(const char* path) {
             g_str_specs.push_back(ss);
             continue;
         }
+        if (!strcmp(kw, "fill")) { /* fill FUNC|* ADDR|rN+OFF SIZE BYTE */
+            FillSpec fs{};
+            char fb[32], wb[64], sb[64], bb[64], extra[8];
+            if (sscanf(line, "%*s %31s %63s %63s %63s %7s", fb, wb, sb, bb, extra) != 4) { fprintf(stderr, "invalid fill directive: %s", line); exit(2); }
+            fs.func = strcmp(fb, "*") ? (uint32_t)strtoul(fb, nullptr, 16) : 0;
+            if (wb[0] == 'r') {
+                char* plus;
+                fs.base_reg = (int)strtol(wb + 1, &plus, 10);
+                fs.off = *plus == '+' ? (uint32_t)strtoul(plus + 1, nullptr, 0) : 0;
+                if (fs.base_reg < 0 || fs.base_reg > 31) { fprintf(stderr, "invalid fill register: %s", line); exit(2); }
+            } else {
+                fs.base_reg = -1;
+                fs.off = (uint32_t)strtoul(wb, nullptr, 16);
+            }
+            unsigned long sz = strtoul(sb, nullptr, 0), by = strtoul(bb, nullptr, 0);
+            if (sz == 0 || sz > 0x1000000ul || by > 0xFF) { fprintf(stderr, "invalid fill size/byte (1..0x1000000, 0..0xFF): %s", line); exit(2); }
+            fs.size = (uint32_t)sz;
+            fs.byte = (uint8_t)by;
+            g_fill_specs.push_back(fs);
+            continue;
+        }
         if (!strcmp(kw, "stable")) { /* stable ADDR SIZE */
             char sa[64], sb[64];
             if (sscanf(line, "%*s %63s %63s", sa, sb) == 2)
@@ -1301,10 +1379,13 @@ static void load_specs(const char* path) {
             int m = sscanf(line, "%*s %31s %16383s %63s", fn, sa, sb);
             uint32_t fa = (uint32_t)strtoul(fn, nullptr, 16);
             if (kw[3] == '!') g_ret_strict.insert(fa);
-            if (m >= 2 && strchr(sa, ',')) { /* ret ADDR v1,v2,...: one of these values */
+            if (m < 2) { fprintf(stderr, "invalid %s directive (ADDR LO [HI] or ADDR v1,v2,...): %s", kw, line); exit(2); }
+            if (strchr(sa, ',')) { /* ret ADDR v1,v2,...: one of these values */
+                if (m == 3) { fprintf(stderr, "invalid %s directive (a pick list takes no HI): %s", kw, line); exit(2); }
                 for (char* t = strtok(sa, ","); t; t = strtok(nullptr, ",")) g_ret_picks[fa].push_back(strtoll(t, nullptr, 0));
-            } else if (m == 3) {
-                g_ret_specs[fa] = {strtoll(sa, nullptr, 0), strtoll(sb, nullptr, 0)};
+            } else {
+                /* ret ADDR V (one value, = V V; ignored before 2026-10-11) or ret ADDR LO HI */
+                g_ret_specs[fa] = {strtoll(sa, nullptr, 0), strtoll(m == 3 ? sb : sa, nullptr, 0)};
             }
             continue;
         }
@@ -1451,6 +1532,11 @@ static void make_generated(const OrigFunc* of, uint64_t seed, Input* in) {
             else c->r[s.reg] = (uint32_t)(int64_t)v;
         }
     }
+    for (const FillSpec& s : g_fill_specs) {
+        if (s.func && s.func != of->addr) continue;
+        uint32_t a = (s.base_reg >= 0 ? c->r[s.base_reg] : 0) + s.off;
+        for (uint32_t k = 0; k < s.size; k++) snap_set(a + k, s.byte);
+    }
     for (const FieldSpec& s : g_specs) {
         if (s.func && s.func != of->addr) continue;
         uint32_t a = (s.base_reg >= 0 ? c->r[s.base_reg] : 0) + s.off;
@@ -1560,6 +1646,7 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
     V.calls.clear();
     V.per_target.clear();
     g_alloc_cursor.clear();
+    g_retained.clear();
     V.fwords.clear();
     V.dwords.clear();
     V.nfcopy = 0;
@@ -1598,7 +1685,8 @@ static void run(void (*fn)(Cpu*), const Input& in, bool candidate, Result* out, 
     V.calls.clear();
     if (!candidate) {
         V.orig_seq.clear();
-        for (auto& e : out->calls) V.orig_seq.push_back({e.target, e.kind});
+        V.orig_lr.clear();
+        for (auto& e : out->calls) { V.orig_seq.push_back({e.target, e.kind}); V.orig_lr.push_back(e.lr); }
     }
     out->net = net_writes();
     out->fwords = V.fwords;

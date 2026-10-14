@@ -1,0 +1,20 @@
+src wwhd_src/d/hd_scene_ingame_ui.cpp
+# Exact SCENE-ingame_ui#2 scope: all 83 game functions.
+
+# Mutation gaps.
+# Screen initialisation: the input-suspend byte starts set; createScreens (02712904) and the state
+# owner's createState may change the static flags that the original clears/sets around those calls.
+arg 02713368 r3 0x5E400000
+field 02713368 5E400010 u32 0x5E500000
+field 02713368 5E500000 u32 0x5E600000
+field 02713368 5E600014 u32 0x02FF3100
+ret 02FF3100 0x5E700000 0x5E700000
+mockglobal 02FF3100 101F8348 u32 0,1,4
+field 02713368 101F8351 u8 0,1
+mockglobal 02712904 101F8351 u8 0,1
+# Instance destruction: a live disposer whose destroy callback may install a new disposer, and a live scene.
+field 02717B70 101F834C u32 0,0x5E800000
+field 02717B70 5E80000C u32 0x5E900000
+field 02717B70 5E90000C u32 0x02FF3200
+mockglobal 02FF3200 101F834C u32 0x5EA00000
+field 02717B70 101F8344 u32 0,0x5EB00000

@@ -1,0 +1,13 @@
+src wwhd_src/hd/hd_fader.cpp
+arg 0273512C r4 ptr
+field 0273512C r4+0xC u32 0,6,7
+field 0273512C 101F86E8 u32 0x4E000000
+field 0273512C 4E001684 u32 0,2,3
+arg 027351A4 r4 ptr
+field 027351A4 r4+0 u32 0,2,3
+
+# Exercise GHS placement-new wrap at the embedded type/delegate members.
+ret 0273AD10 0,0x4E100000,0xFFFFFFF0,0xFFFFFFE0
+
+# Base layer constructor reads SafeString text at+0 and vtable at+4.
+callee 027340D8 r4=8

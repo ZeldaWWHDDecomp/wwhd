@@ -1,0 +1,53 @@
+# Name entry (0270AEC8) with a keyboard text of exactly 0x40000 non-NUL characters: the binary's inlined length scan
+# gives up only above 0x40000, so this length is still measured. Run with -only 0270AEC8.
+# Base: the unit spec without its short-name fixtures for 0x55000000, then this fixture's lines.
+# HD SaveData/Opening scene managers.
+src wwhd_src/d/hd_scene_opening.cpp
+
+src wwhd_src/d/hd_scene_save_data.cpp
+
+# Name entry uses bounded read-only UTF16 input; include capacity-1/at/over-capacity cases.
+ret! 02619EDC 0x55000000 0x55000000
+field 0270AEC8 r3+0x148 u32 0,1,2
+mockmove C0009988 r3 r4 r5
+ret 02619ED4 0,1
+ret 02619ECC 0,1
+ret 0261A008 0,1
+# Keep singleton ownership coherent for destructor equality/null paths.
+arg! 0270CF00 r3 0,0x56000000
+field 0270CF00 101F831C u32 0,0x56000000
+field 0270CF00 101F8318 u32 0,0x57000000
+field 0270CE94 101F831C u32 0,0x56000000
+field 0270CE94 101F8318 u32 0,0x57000000
+arg! 0270BFA4 r3 0,0x56000000
+field 0270BFA4 101F82F0 u32 0,0x56000000
+field 0270BFA4 101F82EC u32 0x57000000
+field 0270BF24 101F82F0 u32 0,0x56000000
+field 0270BF24 101F82EC u32 0,0x57000000
+field 0270AB10 r3+0x148 u32 0,1,2
+
+# GHS inlined constructors retain null checks for embedded subobjects.
+# Wraparound addresses deliberately exercise those defensive branches.
+arg! 0270B780 r3 0,0x40000000,0xFFFFFFC4,0xFFFFFFB4,0xFFFFFF84,0xFFFFFF74,0xFFFFFF44,0xFFFFFF34,0xFFFFFF04,0xFFFFFEF4
+arg! 0270CC40 r3 0,0x40000000,0xFFFFFFDC,0xFFFFFFCC,0xFFFFFF9C,0xFFFFFF8C
+ret 0273AD10 0,0x58000000
+# Parsed localized defaults can select a present or absent text-array entry.
+mockfield 025F50E8 r4+0x8 u32 0x59000000 0x59000000
+mockfield 025F50E8 r4+0x118 u32 0,1,2
+stable 0x59000000 8
+field 0270AEC8 59000000 u32 0x5A000000
+field 0270AEC8 59000004 u32 0,1,2
+
+# Mutation boundary: the inclusive last controller-cursor entry is reachable.
+field 0270AD7C r3+0x134 u32 0x5B000000 0x5B000000
+stable 0x5B000000 0x284
+field 0270AD7C 0x5B00027C u32 0,11,12,13
+# Exercise clearing a previously active name-entry flag.
+field 0270B5B4 0x101F8351 u8 0,1
+
+# Name assignment reads both text and its virtual termination interface (02726704).
+callee 027266CC r4=8
+
+fill 0270AEC8 0x55000000 0x80000 0x41
+field 0270AEC8 0x55080000 u16 0
+stable 0x55000000 0x80002

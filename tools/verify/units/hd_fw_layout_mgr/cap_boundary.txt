@@ -1,0 +1,27 @@
+# Synthetic malformed-name boundary fixture; no game data.
+# Run separately with -spec and -only 026FB694 / 026FC7F0, a small input count.
+# Ordinary final seeds retain varied random names; this fixture reaches the scan cap.
+src wwhd_src/d/hd_parts_layout.cpp
+src wwhd_src/d/hd_layout_res_mgr.cpp
+src wwhd_src/d/hd_layout_loop.cpp
+src wwhd_src/d/hd_layout_wait_screen.cpp
+arg! 026FB694 r3 0x4F000000
+arg! 026FB694 r4 0x4F400000
+field 026FB694 4F400000 u32 0x5B000000
+field 026FB694 4F400004 u32 0x4F420000
+field 026FB694 4F420014 u32 0x02700818
+stable 4F400000 8
+stable 4F420000 0x18
+field 026FB694 4F000028 u32 0x4F500000
+field 026FB694 4F000030 s32 0
+field 026FB694 4F000034 s32 1024
+stable 4F000024 0x14
+ret! 02613F20 0 0
+ret! 0273B050 0x4F200000 0x4F200000
+field 026FC7F0 1049DE68 u32 0
+stable 1049DE68 4
+mockfield 02700818 r3+0 u32 0x5B000000
+stable 5B000000 0x40002
+fill * 5B000000 0x40000 255
+field * 5B040000 u8 0,255
+field * 5B040001 u8 0

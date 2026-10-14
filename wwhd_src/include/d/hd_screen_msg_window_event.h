@@ -1,5 +1,6 @@
 /* HD: event message windows and musical-beat input; no GameCube counterpart.
- * Unit-local partial views retain verified HD-only fields absent from shared layouts. */
+ * Unit-local partial views retain verified HD-only fields absent from shared layouts.
+ * */
 #pragma once
 #include "bindings.h"
 struct hdMsgEvent_state_c { u8 _opaque; };
@@ -154,3 +155,16 @@ u32 hdMsgEvent_waitAnimation(hdMsgEvent_window_c* window, u32 animation);
 void hdMsgEvent_setAnimation(hdMsgEvent_window_c* window, u32 animation, u32 flags);
 WWHD_SIZE(hdMsgEvent_state_c, 1);
 WWHD_SIZE(hdMsgEvent_stateMachine_c, 1);
+
+/* TU-wide statics of hd_screen_msg_window_event.cpp (defined there through `data` glue lines; companion
+ * sources use these declarations) */
+extern hdMsgEvent_state_c& sBeatDisplayDone;          /* 1049845C */
+extern hdMsgEvent_state_c& sShortWaitDone;            /* 1049848C */
+extern hdMsgEvent_state_c& sSequenceDone;             /* 104984BC */
+extern hdMsgEvent_state_c& sAdvance;                  /* 1049854C */
+extern hdMsgEvent_state_c& sClosed;                   /* 1049857C */
+extern be<u32> (&sSongLengths)[8];                    /* 100FD9BC */
+extern hdMsgEvent_corePointer_c& sCore;               /* 101F4B5C */
+extern hdMsgEvent_managerPointer_c& sManager;         /* 101D5FE8 */
+extern be<u8>& sInputBusy;                            /* 1047B097 */
+extern be<u8>& sInputIndicator;                       /* 1047B09E */

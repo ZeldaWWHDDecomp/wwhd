@@ -1,0 +1,291 @@
+src wwhd_src/d/hd_screen_menu_miiverse.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_texture.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_pattern.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_window.cpp
+src wwhd_src/d/hd_screen_menu_miiverse_text.cpp
+# Runtime-owned chart slots point to initialized chart-button objects.
+field 026A5A58 r3+0x58 u32 0x54010000
+field 026A5A58 54010088 u8 0,1
+field 026A5A58 r3+0x5C u32 0x54011000
+field 026A5A58 54011088 u8 0,1
+field 026A5A58 r3+0x60 u32 0x54012000
+field 026A5A58 54012088 u8 0,1
+field 026A5A58 r3+0x64 u32 0x54013000
+field 026A5A58 54013088 u8 0,1
+field 026A5A58 r3+0x68 u32 0x54014000
+field 026A5A58 54014088 u8 0,1
+field 026A5A58 r3+0x6C u32 0x54015000
+field 026A5A58 54015088 u8 0,1
+field 026A5A58 r3+0x70 u32 0x54016000
+field 026A5A58 54016088 u8 0,1
+field 026A5A58 r3+0x74 u32 0x54017000
+field 026A5A58 54017088 u8 0,1
+field 026A5A58 r3+0x78 u32 0x54018000
+field 026A5A58 54018088 u8 0,1
+field 026A5A58 r3+0x7C u32 0x54019000
+field 026A5A58 54019088 u8 0,1
+field 026A6188 r3+0x58 u32 0x54010000
+field 026A6188 r3+0x5C u32 0x54011000
+field 026A6188 r3+0x60 u32 0x54012000
+field 026A6188 r3+0x64 u32 0x54013000
+field 026A6188 r3+0x68 u32 0x54014000
+field 026A6188 r3+0x6C u32 0x54015000
+field 026A6188 r3+0x70 u32 0x54016000
+field 026A6188 r3+0x74 u32 0x54017000
+field 026A6188 r3+0x78 u32 0x54018000
+field 026A6188 r3+0x7C u32 0x54019000
+field 026A620C r3+0x58 u32 0x54010000
+field 026A620C r3+0x5C u32 0x54011000
+field 026A620C r3+0x60 u32 0x54012000
+field 026A620C r3+0x64 u32 0x54013000
+field 026A620C r3+0x68 u32 0x54014000
+field 026A620C r3+0x6C u32 0x54015000
+field 026A620C r3+0x70 u32 0x54016000
+field 026A620C r3+0x74 u32 0x54017000
+field 026A620C r3+0x78 u32 0x54018000
+field 026A620C r3+0x7C u32 0x54019000
+field 026A625C r3+0x58 u32 0x54010000
+field 026A625C r3+0x5C u32 0x54011000
+field 026A625C r3+0x60 u32 0x54012000
+field 026A625C r3+0x64 u32 0x54013000
+field 026A625C r3+0x68 u32 0x54014000
+field 026A625C r3+0x6C u32 0x54015000
+field 026A625C r3+0x70 u32 0x54016000
+field 026A625C r3+0x74 u32 0x54017000
+field 026A625C r3+0x78 u32 0x54018000
+field 026A625C r3+0x7C u32 0x54019000
+arg! 026A5A58 r3 0x54000000
+arg! 026A6188 r3 0x54000000
+arg! 026A620C r3 0x54000000
+arg! 026A625C r3 0x54000000
+
+# These pure game leaves preserve the caller's live r3/r6/r8 registers in the binary.
+# Execute their original bodies instead of mocks with arbitrary register clobbers.
+real 0269FB60
+real 0269FF34
+real 0269FF70
+real 0269FF8C
+
+# Owned receiver arrays have finite initialized slots; retain empty and NULL cases.
+arg! 026A4BFC r3 0x54000000
+field 026A4BFC r3+0xA0 u32 0,1,2,4
+field 026A4BFC r3+0xA4 u32 0,0x54020000
+
+# Finite page counts exercise empty, full, and out-of-range fallback slots.
+
+# This game leaf preserves this in r3 for the immediately following executeActiveParts call.
+real 026A5098
+
+# Allocation failure preserves the existing finite receiver array.
+field 026A4354 r3+0xA0 u32 0,1,2
+# Existing receiver-array storage remains finite if allocation fails.
+field 026A4354 r3+0xA4 u32 0x54020000 0x54020000
+fill 026A4354 54020000 8 0xA5
+
+# Confirmation update includes all steps and unsupported-state no-op.
+field 026A36AC r3+0x90 u32 0,1,2,3,4,5,6,4294967295
+field 026A36AC r3+0x1F8 u32 0,1,2,3
+
+# Make static initializer clears observable on nonzero runtime storage.
+fill 026A63EC 10497678 0x10 0xA5
+field 026A63EC 101FD8E4 u32 0,1
+
+# Button enable leaf retains this in r3 for immediately following filledChartCount.
+real 026A01AC
+
+# Pane lookups return initialized objects with finite runtime-type ancestry.
+# createPictureReceivers reads the initialized immutable B_Slide_00 SafeString.
+# Its actual assurance entry is a single blr, not an arbitrary function with extra live-ins.
+field 026A4354 1049762C u32 0x100FBEE8 0x100FBEE8
+field 026A4354 10497630 u32 0x100FBB3C 0x100FBB3C
+field 026A4354 100FBB50 u32 0x026A67FC 0x026A67FC
+real 026A67FC
+# Preserve NULL, exact-type, parent-type and unrelated terminal-type outcomes.
+ret! 01000400 0,0x56004000
+ret! 01000404 0,0x101FDD3C,0x56005000
+ret! 01000408 0,0x101FD93C,0x56005000
+arg! 026A3DE8 r3 0x54000000
+field 026A3DE8 r3+0x44 u32 0x56000000
+field 026A3DE8 56000004 u32 0x56001000
+field 026A3DE8 5600100C u32 0x56002000
+field 026A3DE8 56002008 u32 0x56003000
+field 026A3DE8 5600305C u32 0x01000400
+field 026A3DE8 56004008 u32 0x56003080
+field 026A3DE8 56003094 u32 0x01000404
+field 026A3DE8 56005000 u32 0x56006000 0x56006000
+arg! 026A421C r3 0x54000000
+field 026A421C r3+0x44 u32 0x56000000
+field 026A421C 56000004 u32 0x56001000
+field 026A421C 5600100C u32 0x56002000
+field 026A421C 56002008 u32 0x56003000
+field 026A421C 5600305C u32 0x01000400
+field 026A421C 56004008 u32 0x56003080
+field 026A421C 56003094 u32 0x01000408
+field 026A421C 56005000 u32 0x56006000 0x56006000
+arg! 026A4354 r3 0x54000000
+field 026A4354 r3+0x44 u32 0x56000000
+field 026A4354 56000004 u32 0x56001000
+field 026A4354 5600100C u32 0x56002000
+field 026A4354 56002008 u32 0x56003000
+field 026A4354 5600305C u32 0x01000400
+field 026A4354 56004008 u32 0x56003080
+field 026A4354 56003094 u32 0x01000408
+field 026A4354 56005000 u32 0x56006000 0x56006000
+# Keep the receiver layout pointer immutable across lookup/allocation mocks.
+stable 54000044 4
+# Allocator/receiver mocks do not replace this object-owned array metadata.
+stable 540000A0 8
+stable 56000004 4
+stable 5600100C 4
+stable 56002008 4
+stable 56003000 0xA0
+stable 56004008 4
+stable 56005000 4
+
+# Targeted finite chart-array empty and pager branches.
+arg! 0269FE94 r3 0x54000000
+field 0269FE94 r3+0x58 u32 0x54010000 0x54010000
+field 0269FE94 540100AC u8 0 0
+field 0269FE94 540100AD u8 0 0
+field 0269FE94 r3+0x5C u32 0x54011000 0x54011000
+field 0269FE94 540110AC u8 0 0
+field 0269FE94 540110AD u8 0 0
+field 0269FE94 r3+0x60 u32 0x54012000 0x54012000
+field 0269FE94 540120AC u8 0 0
+field 0269FE94 540120AD u8 0 0
+field 0269FE94 r3+0x64 u32 0x54013000 0x54013000
+field 0269FE94 540130AC u8 0 0
+field 0269FE94 540130AD u8 0 0
+field 0269FE94 r3+0x68 u32 0x54014000 0x54014000
+field 0269FE94 540140AC u8 0 0
+field 0269FE94 540140AD u8 0 0
+field 0269FE94 r3+0x6C u32 0x54015000 0x54015000
+field 0269FE94 540150AC u8 0 0
+field 0269FE94 540150AD u8 0 0
+field 0269FE94 r3+0x70 u32 0x54016000 0x54016000
+field 0269FE94 540160AC u8 0 0
+field 0269FE94 540160AD u8 0 0
+field 0269FE94 r3+0x74 u32 0x54017000 0x54017000
+field 0269FE94 540170AC u8 0 0
+field 0269FE94 540170AD u8 0 0
+field 0269FE94 r3+0x78 u32 0x54018000 0x54018000
+field 0269FE94 540180AC u8 0 0
+field 0269FE94 540180AD u8 0 0
+field 0269FE94 r3+0x7C u32 0x54019000 0x54019000
+field 0269FE94 540190AC u8 0 0
+field 0269FE94 540190AD u8 0 0
+field 0269FE94 r3+0x80 u32 0x54020000 0x54020000
+field 0269FE94 r3+0x84 u32 0x54021000 0x54021000
+arg! 0269FFA8 r3 0x54000000
+field 0269FFA8 r3+0x58 u32 0x54010000 0x54010000
+field 0269FFA8 540100AC u8 0 0
+field 0269FFA8 540100AD u8 0 0
+field 0269FFA8 r3+0x5C u32 0x54011000 0x54011000
+field 0269FFA8 540110AC u8 0 0
+field 0269FFA8 540110AD u8 0 0
+field 0269FFA8 r3+0x60 u32 0x54012000 0x54012000
+field 0269FFA8 540120AC u8 0 0
+field 0269FFA8 540120AD u8 0 0
+field 0269FFA8 r3+0x64 u32 0x54013000 0x54013000
+field 0269FFA8 540130AC u8 0 0
+field 0269FFA8 540130AD u8 0 0
+field 0269FFA8 r3+0x68 u32 0x54014000 0x54014000
+field 0269FFA8 540140AC u8 0 0
+field 0269FFA8 540140AD u8 0 0
+field 0269FFA8 r3+0x6C u32 0x54015000 0x54015000
+field 0269FFA8 540150AC u8 0 0
+field 0269FFA8 540150AD u8 0 0
+field 0269FFA8 r3+0x70 u32 0x54016000 0x54016000
+field 0269FFA8 540160AC u8 0 0
+field 0269FFA8 540160AD u8 0 0
+field 0269FFA8 r3+0x74 u32 0x54017000 0x54017000
+field 0269FFA8 540170AC u8 0 0
+field 0269FFA8 540170AD u8 0 0
+field 0269FFA8 r3+0x78 u32 0x54018000 0x54018000
+field 0269FFA8 540180AC u8 0 0
+field 0269FFA8 540180AD u8 0 0
+field 0269FFA8 r3+0x7C u32 0x54019000 0x54019000
+field 0269FFA8 540190AC u8 0 0
+field 0269FFA8 540190AD u8 0 0
+field 0269FFA8 r3+0x80 u32 0x54020000 0x54020000
+field 0269FFA8 r3+0x84 u32 0x54021000 0x54021000
+ret! 020399DC 0 0
+field 0269FFA8 54020051 u8 0,1
+field 0269FFA8 54021051 u8 0,1
+
+field 026A3DE8 56006000 u32 0,0x101FDD3C
+field 026A421C 56006000 u32 0,0x101FD93C
+field 026A4354 56006000 u32 0,0x101FD93C
+stable 56006000 4
+# Explicit confirmation choices with no held cancel button.
+arg! 026A36AC r3 0x54000000
+field 026A36AC 101F4FF0 u32 0x56010000 0x56010000
+field 026A36AC 101F5088 u32 0x56011000 0x56011000
+field 026A36AC 56010030 u32 0,0x6B,0x6C
+field 026A36AC 56011018 u32 0 0
+field 026A36AC 56011020 u32 0 0
+field 026A36AC r3+0x1F4 u32 0,1,9,10
+stable 101F4FF0 4
+stable 101F5088 4
+field 026A36AC r3+0x58 u32 0x54010000 0x54010000
+field 026A36AC r3+0x5C u32 0x54011000 0x54011000
+field 026A36AC r3+0x60 u32 0x54012000 0x54012000
+field 026A36AC r3+0x64 u32 0x54013000 0x54013000
+field 026A36AC r3+0x68 u32 0x54014000 0x54014000
+field 026A36AC r3+0x6C u32 0x54015000 0x54015000
+field 026A36AC r3+0x70 u32 0x54016000 0x54016000
+field 026A36AC r3+0x74 u32 0x54017000 0x54017000
+field 026A36AC r3+0x78 u32 0x54018000 0x54018000
+field 026A36AC r3+0x7C u32 0x54019000 0x54019000
+
+# Runtime type initialization: explicit runtime type initialization paths; stable excludes mock clobber but permits own writes.
+field 026A421C 101FD938 u32 0 0
+field 026A421C 101FD88C u32 0 0
+field 026A421C 101FD888 u32 0 0
+field 026A421C 101FD8FC u32 0x56006000 0x56006000
+field 026A4354 101FD938 u32 0 0
+field 026A4354 101FD88C u32 0 0
+field 026A4354 101FD888 u32 0 0
+field 026A4354 101FD8FC u32 0x56006000 0x56006000
+stable 101FD938 12
+stable 101FD888 8
+stable 101FD8FC 4
+# Compare actual input surface/texture stack objects, without adding callee effects.
+callee C00060D0 r3=116
+callee C0006120 r3=116 r6=116
+callee C0006498 r3=156
+callee 02753004 r4=8
+# IMPORTANT: stackfill is a UNIT directive, not CLI; nonperiodic bytes expose index343 removed NULL store.
+stackfill
+# index378 initializer is erased by guest data nocheck glue, so guard steering cannot detect it.
+
+# Selected-chart sentinel and tenth-only archive boundary cases.
+field 026A3158 r3+0x1F4 u32 10 10
+field 026A3158 r3+0x58 u32 0x54010000 0x54010000
+field 026A3158 r3+0x80 u32 0x54020000 0x54020000
+field 026A0D0C r3+0x90 u32 0 0
+field 026A0D0C r3+0x1FC u32 0 0
+field 026A0D0C 1018F4AC u32 0x5B000000 0x5B000000
+ret! 02039838 1 1
+ret! 02039A08 9 9
+ret! 025986BC 1 1
+field 026A0D0C 5B00026E u8 0 0
+field 026A0D0C 5B00026F u8 0 0
+field 026A0D0C 5B00065A u8 0 0
+field 026A0D0C 5B00065B u8 0 0
+field 026A0D0C 5B000A46 u8 0 0
+field 026A0D0C 5B000A47 u8 0 0
+field 026A0D0C 5B000E32 u8 0 0
+field 026A0D0C 5B000E33 u8 0 0
+field 026A0D0C 5B00121E u8 0 0
+field 026A0D0C 5B00121F u8 0 0
+field 026A0D0C 5B00160A u8 0 0
+field 026A0D0C 5B00160B u8 0 0
+field 026A0D0C 5B0019F6 u8 0 0
+field 026A0D0C 5B0019F7 u8 0 0
+field 026A0D0C 5B001DE2 u8 0 0
+field 026A0D0C 5B001DE3 u8 0 0
+field 026A0D0C 5B0021CE u8 0 0
+field 026A0D0C 5B0021CF u8 0 0
+field 026A0D0C 5B0025BA u8 0 0
+field 026A0D0C 5B0025BB u8 1 1

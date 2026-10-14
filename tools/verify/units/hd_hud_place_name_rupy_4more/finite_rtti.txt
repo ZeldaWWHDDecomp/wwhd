@@ -1,0 +1,46 @@
+src wwhd_src/d/hd_screen_rupy.cpp
+src wwhd_src/d/hd_screen_time.cpp
+src wwhd_src/d/hd_screen_unread_miiverse.cpp
+src wwhd_src/d/hd_screen_swim_time_hud.cpp
+src wwhd_src/d/hd_screen_telescope_hud.cpp
+src wwhd_src/d/d_menu_window_hd.cpp
+src wwhd_src/d/hd_screen_telescope_scale.cpp
+src wwhd_src/d/hd_screen_telescope_cover.cpp
+
+# Provenance f372683f; 026E8694 binary026E86B4..026E87FC.
+# Distinct aligned screen/layout/root/pane/type records; finite parent graph.
+# No synthetic wrapped receivers. Callback targets are existing find/type
+# methods, mocked by address. Only immutable dispatch/type metadata is stable;
+# receiver output +58 and type lazy-initialization globals remain observable.
+arg! 026E8694 r3 0x59000000
+field 026E8694 59000044 u32 0x59001000
+field 026E8694 59001004 u32 0x59002000
+field 026E8694 5900200C u32 0x59003000
+field 026E8694 59003008 u32 0x59004000
+field 026E8694 5900405C u32 0x02876554
+ret! 02876554 0,0x59005000
+field 026E8694 59005008 u32 0x59006000
+field 026E8694 59006014 u32 0x02704C24
+ret! 02704C24 0,0x101FD8F8,0x59007000,0x59007010,0x59007020
+# direct parent hit, two-parent hit (loop backedge), terminated miss.
+field 026E8694 59007000 u32 0x101FD8F8
+field 026E8694 59007010 u32 0x59007000
+field 026E8694 59007020 u32 0x59007030
+field 026E8694 59007030 u32 0
+field 026E8694 1049C944 u32 0,1
+field 026E8694 101FD89C u32 0,1
+field 026E8694 101FD888 u32 0,1
+# Coherent metadata even when initialized guards bypass their stores.
+field 026E8694 101FD8F8 u32 0x101FD8FC
+field 026E8694 101FD8FC u32 0
+# Immutable layout identity links, vtable slots and custom RTTI records.
+# Registration touches its own global record, assurance only its SafeString,
+# find reads the tree, and runtime-type queries read pane/type metadata.
+stable 59000044 4
+stable 59001004 4
+stable 5900200C 4
+stable 59003008 4
+stable 5900405C 4
+stable 59005008 4
+stable 59006014 4
+stable 59007000 0x34

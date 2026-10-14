@@ -1,0 +1,82 @@
+// HD photograph header and JPEG payload. Private decomp-derived source.
+#pragma once
+#include "bindings.h"
+struct hdJpeg_c {
+    /* 0x00 */ be<u32> mChecksum;
+    /* 0x04 */ be<u8> mValid, mLabel, mSaved, mState;
+    /* 0x08 */ be<u32> mSubject, mDataSize;
+    /* 0x10 */ u8 mReserved[0x30];
+    /* 0x40 */ u8 mJpegData[0x50000];
+    void initializeHeader();
+    void initialize();
+    void clearHeader();
+    void clear();
+    u32 calculateChecksum();
+    void updateChecksum();
+    void erase();
+    void reset();
+    void copy(hdJpeg_c* other);
+    u32 valid();
+    void enable();
+    void disable();
+    u32 subject();
+    void setSubject(u32 value);
+    u32 label();
+    void setLabel(u32 value);
+    u32 saved();
+    void markSaved();
+    u32 dataSize();
+    void setDataSize(u32 value);
+    u32 emptyState();
+    void setState(u32 value);
+    u8* data();
+    u8* constData();
+    void loadResource(u32 index);
+    u32 checksum();
+    void setChecksum(u32 value);
+};
+WWHD_OFFSET(hdJpeg_c, mChecksum, 0);
+WWHD_OFFSET(hdJpeg_c, mValid, 4);
+WWHD_OFFSET(hdJpeg_c, mLabel, 5);
+WWHD_OFFSET(hdJpeg_c, mSaved, 6);
+WWHD_OFFSET(hdJpeg_c, mState, 7);
+WWHD_OFFSET(hdJpeg_c, mSubject, 8);
+WWHD_OFFSET(hdJpeg_c, mDataSize, 12);
+WWHD_OFFSET(hdJpeg_c, mJpegData, 0x40);
+WWHD_SIZE(hdJpeg_c, 0x50040);
+struct hdJpegHeader_c {
+    be<u32> mChecksum;
+    be<u8> mValid, mLabel, mSaved, mState;
+    be<u32> mSubject, mDataSize;
+};
+WWHD_OFFSET(hdJpegHeader_c, mDataSize, 12);
+WWHD_SIZE(hdJpegHeader_c, 16);
+struct hdJpegResource_c {
+    be<s32> mDataOffset;
+    be<u32> mDataSize;
+};
+WWHD_OFFSET(hdJpegResource_c, mDataOffset, 0);
+WWHD_OFFSET(hdJpegResource_c, mDataSize, 4);
+WWHD_SIZE(hdJpegResource_c, 8);
+struct hdJpegArchive_c {
+    u8 mReserved[0x4C];
+    be<s32> mDictionaryOffset;
+};
+WWHD_OFFSET(hdJpegArchive_c, mDictionaryOffset, 0x4C);
+struct hdJpegSafeString_c { be<u32> mpText; be<u32> mVtable; };
+WWHD_OFFSET(hdJpegSafeString_c, mpText, 0);
+WWHD_OFFSET(hdJpegSafeString_c, mVtable, 4);
+WWHD_SIZE(hdJpegSafeString_c, 8);
+void* jpegAllocate(u32);
+void jpegFill(void*, u32, u32);
+void jpegCopy(void*, const void*, u32, u32);
+u32 jpegGetHeap();
+struct hdJpegChecksumBuffer_c { be<u32> mDataSize; u8 mData[0x50000]; };
+WWHD_OFFSET(hdJpegChecksumBuffer_c, mData, 4);
+WWHD_SIZE(hdJpegChecksumBuffer_c, 0x50004);
+hdJpegChecksumBuffer_c* jpegAllocateAligned(u32, u32, u32);
+u32 jpegChecksum(void*, u32);
+void jpegFree(void*);
+u32 jpegGetResource(u32, hdJpegSafeString_c*, hdJpegSafeString_c*, u32);
+hdJpegArchive_c* jpegArchive(u32);
+hdJpegResource_c* jpegFindResource(u32, u32);

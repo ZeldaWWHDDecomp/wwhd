@@ -1,0 +1,68 @@
+# Supplemental fixture for 026BB768 (run with -only 026BB768): an unaligned window whose pane pointers alias its index words.
+# Primary spec plus the lines at the end; synthetic values, no game data.
+src wwhd_src/d/hd_screen_msg_window_scroll.cpp
+src wwhd_src/d/hd_msg_window_scroll_extra.cpp
+src wwhd_src/d/hd_msg_window_scroll_text.cpp
+src wwhd_src/d/hd_msg_window_scroll_material.cpp
+src wwhd_src/d/hd_msg_window_scroll_icons.cpp
+src wwhd_src/d/hd_msg_window_scroll_layout.cpp
+stackfill periodic
+field * r3+0x78 u32 0,1,2,3,0xFFFFFFFF
+field * r3+0x7C u32 0,1,2,3,0xFFFFFFFF
+field * r3+0x80 u32 0,1,2,3,0xFFFFFFFF
+field * r3+0x118 u32 0,1,2,18,19,20,0xFFFFFFFF
+field * r3+0x11C u32 0,1,2,3
+field * r3+0x5C u32 0,1,2,3
+field * r3+0x54 u32 0,1,2,3,0x110000,0x220000,0x220003,0x330003
+arg! 026B9D9C r4 0 1
+arg! 026BB278 r4 0 1
+# The control manager's closing mode takes the forced-close branch.
+ret 025F795C 0,2,19
+# Exercise missing input receivers, missing input data, and available input.
+field 026BC148 101F5088 u32 0,0x53000000
+field 026BC148 53000000 u32 0,0x53001000
+# Both TV and GamePad scissor scales.
+field 026BBD34 101F5088 u32 0x53000000
+field 026BBD34 530001D0 u32 0,1,2
+# The message-specific event substitution and ordinary IDs.
+arg 026BCBF0 r6 0,0x33A,0x33B
+ret 025B8B94 0 1
+# Match each named button pane and both icon layout resources from guest strings.
+field 026BCDC4 r4+0x14 u32 0,0x100FF3E4,0x100FF3F8,0x100FF408,0x100FF43C
+field 026BCDC4 r4+0x8 u32 0,0x100FF338,0x100FF344
+# Embedded-array constructors allocate only when the enclosing address wraps an array to NULL.
+arg 026BB3FC r3 0,0x53002000,0xFFFFFF9C,0xFFFFFF94,0xFFFFFF88,0xFFFFFF7C,0xFFFFFF70,0xFFFFFF5C,0xFFFFFF4C,0xFFFFFF38
+# Icon creation success/failure and allocation failure keep their checked branches reachable.
+ret 026741D0 0 1
+ret 026D3A1C 0 1
+ret 026F92C0 0 1
+ret 0273B050 0,0x53003000
+# Valid resource SafeStrings: assureTermination does not change either object's class identity.
+# Preserve only these two vtable pointers across mocks; text pointers and all text bytes remain clobbered.
+arg! 026BCDC4 r4 0x53004000
+field 026BCDC4 0x5300400C u32 0x100FF1E0
+field 026BCDC4 0x53004018 u32 0x100FF1E0
+stable 0x5300400C 4
+stable 0x53004018 4
+
+# Pane0 flags alias index2 low byte, changing2to3. Pane1 flags change
+# pane0 pointer from59000040to59000041; its new flags alias material0.
+arg! 026BB768 r3 0x59000001
+ret! 02685534 0x59004000 0x59004000
+mockglobal 02704AFC 5900006D u32 0x59000040
+mockglobal 02704AFC 59000071 u32 0x5900002C
+mockglobal 02704AFC 59000075 u32 0x59002000
+mockglobal 02704AFC 59001044 u8 0
+mockglobal 02704AFC 59002044 u8 0
+field 026BB768 r3+0x44 u32 0x59005000
+field 026BB768 0x59005004 u32 0x59006000
+field 026BB768 0x5900600C u32 0x59007000
+field 026BB768 0x59007008 u32 0x59008000
+field 026BB768 0x5900805C u32 0x02685534
+stable 0x59005004 4
+stable 0x5900600C 4
+stable 0x59007008 4
+stable 0x5900805C 4
+
+
+mockglobal 02704AFC 59000085 u32 0

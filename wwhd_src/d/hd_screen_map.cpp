@@ -29,14 +29,13 @@ void hdMapZoom(HdPadMap *self) {
 void hdMapSetPosition(HdPadMap *self, HdPadPoint *position, u32 index) {
     // HD: retain original frame offsets and uninitialized callback storage.
     gabi::AutoFrame automatic{gabi::Activation::current};
-    gabi::NativeFrame<0x28> frame;
     HdPadMoveCell *cell = call_ptr<HdPadMoveCell *>(self->mVTable[HD_PAD_CELL].get(), self, index);
     if (!cell)
         return;
     cell->mPosition.x = position->x;
     cell->mPosition.y = position->y;
-    HdPadPoint *target = gabi::at<HdPadPoint>(frame + 8);
-    HdPadPoint *current = gabi::at<HdPadPoint>(frame + 0x10);
+    gabi::FrameLocal<HdPadPoint> target(8);
+    gabi::FrameLocal<HdPadPoint> current(0x10);
     f32 scale = self->mScale;
     target->x = -fmuls_ppc(position->x, scale);
     target->y = -fmuls_ppc(position->y, scale);

@@ -1,0 +1,23 @@
+# Chart-detail icon fixture for hdMenuMapUpdateChartDetails (0269B414) only; run with -only 0269B414.
+# The unit spec pins the owned-chart query to 0 (the missing-chart scan needs it) and the state-key getter
+# to 0, so the owned/uncollected/state-mismatch branches with the wrapped icon index 3 are rare there.
+# Here every query has a two-value domain, the icon index favours the wrapped value, and the target
+# state descriptors' vtable words are pinned but not stable, so a key getter may rewrite them.
+src wwhd_src/d/hd_screen_menu_map_states.cpp
+src wwhd_src/d/hd_screen_menu_map.cpp
+arg 0269B414 r4 0,1,2,3,3,3,0xFFFFFFFF
+arg 0269B414 r5 0,1,35,36,43,44,48,49,60,61,0xFFFFFFFF
+ret 02698A94 0,1,2,3,4,5
+ret 0268A570 0,1
+ret 0268A5DC 0,1
+ret 0268A6B4 0,1
+ret 02006478 0x53000100
+field 0269B414 53000108 u32 0x100FB2F0
+field 0269B414 100FB304 u32 0x0269F078
+ret 0269F078 0,1
+stable 53000108 4
+stable 100FB304 4
+field 0269B414 1049D14C u32 0x100FB2F0
+field 0269B414 1049D1DC u32 0x100FB2F0
+field 0269B414 1049D20C u32 0x100FB2F0
+field 0269B414 1049D26C u32 0x100FB2F0

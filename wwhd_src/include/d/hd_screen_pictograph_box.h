@@ -1,0 +1,64 @@
+/* HD PictographBox motion and pane bindings. */
+#pragma once
+#include "d/hd_screen_pictograph.h"
+#include "SSystem/SComponent/c_xyz.h"
+struct hdPictographBox : hdParts_c {
+    u32 checkIn();
+    u32 checkOut();
+    u32 checkDisplayExit();
+    u32 checkOutFinished();
+    u32 checkWait();
+    u32 checkSave();
+    cXyz mAnchorPosition, mLocalPosition;
+    be<f32> mInitialScale, mTargetScale;
+    be<f32> mPictureWidth, mPictureHeight, mPictureScale;
+    be<f32> mMotionProgress;
+    cXyz mTargetPosition, mMotionStep, mCurrentPosition;
+    be<f32> mTransitionAlpha;
+    cXyz mCurrentTranslation;
+    be<u8> mMessageShown;
+    be<u8> mClosing;
+    u8 mReservedB6[2];
+    gptr<hdPartsPaneSRT_c> mpAllRoot;
+    gptr<hdPartsPaneSRT_c> mpMessageRoot, mpBackground;
+    gptr<hdPartsPaneSRT_c> mPicturePanes[3];
+    gptr<hdPartsPane_c> mpMessageText;
+    static hdPictographBox* construct(hdPictographBox*);
+    static void destroy(hdPictographBox*,u32);
+    void inAllInitialize();
+    void inAllMove();
+    void outAllInitialize();
+    void outAllMove();
+    void initializeInMotion();
+    void initializeOutMotion();
+    u32 chasePosition();
+    u32 chaseScale();
+    void updateInMotion();
+    void updateOutMotion();
+    void showRoot();
+    void displayMove();
+    void hideRoot();
+    void enterWait();
+    void finishOut();
+    void setRightInputMode();
+    void clearInputMode();
+    u32 dispatchInput();
+    void updateWait();
+    u32 initialize(u32,u32,void*);
+    u32 createNamedChild(hdPartsDesc_c*);
+    u32 loadLayout(hdUiSafeString*,u32,u32,u32,void*);
+    void finalizeResources();
+    void executeState();
+    void setPictureTexture(void*);
+    void bindRootPanes();
+    void bindBackground();
+    void bindPicturePanes();
+    void bindMessageText();
+};
+WWHD_OFFSET(hdPictographBox,mAnchorPosition,0x50);
+WWHD_OFFSET(hdPictographBox,mPictureWidth,0x70);
+WWHD_OFFSET(hdPictographBox,mTargetPosition,0x80);
+WWHD_OFFSET(hdPictographBox,mpMessageRoot,0xBC);
+WWHD_OFFSET(hdPictographBox,mPicturePanes,0xC4);
+WWHD_OFFSET(hdPictographBox,mpMessageText,0xD0);
+WWHD_SIZE(hdPictographBox,0xD4);

@@ -1,6 +1,10 @@
 /* HD event-window state updates and musical-beat input.
- * GameCube-style source verified as UI_msg_event; no GameCube counterpart. */
+ * GameCube-style source verified by hd_msg_msg_window_event (legacy UI_msg_event spec retired); no GameCube counterpart.
+ * */
 #include "d/hd_screen_msg_window_event.h"
+#include "d/hd_msg_window_event_handlers.h"
+#include "d/hd_msg_window_states.h"
+#include "d/hd_screen_baton_sign_for_window.h"
 
 static u32 sSongLengths[8] = {};
 static u32 sPaneIndices[3][6] = {};
@@ -55,7 +59,7 @@ u32 hdMsgEvent_window_c::paneIndex(s32 row, s32 column) {
 
 /* 026B1C60 */
 void hdMsgEvent_window_c::resetPane(u32 index) {
-    hdMsgEvent_resetPane(pane(index));
+    reinterpret_cast<hdBatonSignForWindow_c*>(pane(index))->resetSignFrame();
 }
 
 /* 026B21B8 */
@@ -68,7 +72,7 @@ void hdMsgEvent_window_c::enterWait() {
         message = mpMessage;
         message->mWaitTimer = 30;
         hdMsgEvent_setStatus(controller, EVENT_STATUS_WAIT);
-        hdMsgEvent_changeState(&mStateMachine, &sWait);
+        hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sWait));
     }
 }
 
@@ -97,7 +101,7 @@ void hdMsgEvent_window_c::initializeBeats() {
 
 /* 026B23A4 */
 void hdMsgEvent_window_c::showPane(u32 index) {
-    hdMsgEvent_showPane(pane(index));
+    reinterpret_cast<hdBatonSignForWindow_c*>(pane(index))->requestIn();
 }
 
 /* 026B23C4 */
@@ -130,14 +134,14 @@ void hdMsgEvent_window_c::updateBeatDisplay() {
             count = mBeatCount;
         }
     }
-    if (s32(beatAge(count - 1)) > 35) hdMsgEvent_changeState(&mStateMachine, &sBeatDisplayDone);
+    if (s32(beatAge(count - 1)) > 35) hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sBeatDisplayDone));
 }
 
 /* 026B25B4 */
 void hdMsgEvent_window_c::updateShortWait() {
     u32 count = u32(mFrame) + 1;
     mFrame = count;
-    if (s32(count) >= 5) hdMsgEvent_changeState(&mStateMachine, &sShortWaitDone);
+    if (s32(count) >= 5) hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sShortWaitDone));
 }
 
 /* 026B2698 */
@@ -157,7 +161,7 @@ u32 hdMsgEvent_window_c::inputReady() {
 
 /* 026B2754 */
 void hdMsgEvent_window_c::hidePane(u32 index) {
-    hdMsgEvent_hidePane(pane(index));
+    reinterpret_cast<hdBatonSignForWindow_c*>(pane(index))->requestOut();
 }
 
 /* 026B2774 */
@@ -244,7 +248,7 @@ void hdMsgEvent_window_c::updateSequence() {
                 playEventSound(0);
                 hdMsgEvent_flush();
                 hdMsgEvent_advance(this);
-                hdMsgEvent_changeState(&mStateMachine, &sAdvance);
+                hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sAdvance));
                 return;
             }
         }
@@ -257,7 +261,7 @@ void hdMsgEvent_window_c::updateSequence() {
         if (age <= 5) *ageValue = u32(age) + 1;
         else if (index == expected - 1) {
             hdMsgEvent_setStatus(sCore.mpCore, EVENT_STATUS_ADVANCE);
-            hdMsgEvent_changeState(&mStateMachine, &sSequenceDone);
+            hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sSequenceDone));
         }
     }
 }
@@ -275,30 +279,30 @@ void hdMsgEvent_window_c::updateTyping() {
         be<u32>* limit = &stopPoint(index);
         if (count > s32(*limit)) mShownCharacters = u32(*limit);
     }
-    hdMsgEvent_refreshText(this);
+    reinterpret_cast<hdMsgEventHandlers_c*>(this)->refreshText();
     hdMsgEvent_message_c* message = mpMessage;
     if (message->mUpdating) return;
     switch (u32(message->mStatus)) {
     case EVENT_STATUS_NEXT:
-        hdMsgEvent_changeState(&mStateMachine, &sNext);
+        hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sNext));
         break;
     case EVENT_STATUS_WAIT:
-        if (message->mWait) hdMsgEvent_changeState(&mStateMachine, &sWait);
-        else if (message->mWaitInput) hdMsgEvent_changeState(&mStateMachine, &sWaitInput);
+        if (message->mWait) hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sWait));
+        else if (message->mWaitInput) hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sWaitInput));
         break;
     case EVENT_STATUS_SPECIAL:
         message->mStatus = EVENT_STATUS_WAIT;
         hdMsgEvent_setStatus(controller, EVENT_STATUS_WAIT);
-        hdMsgEvent_changeState(&mStateMachine, &sSpecialWait);
+        hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sSpecialWait));
         break;
     case EVENT_STATUS_ADVANCE:
         if (mWindowType == 2) {
             message->mStatus = EVENT_STATUS_WAIT;
             hdMsgEvent_setStatus(controller, EVENT_STATUS_WAIT);
-            hdMsgEvent_changeState(&mStateMachine, &sSpecialWait);
+            hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sSpecialWait));
         } else {
             hdMsgEvent_setStatus(controller, message->mStatus);
-            hdMsgEvent_changeState(&mStateMachine, &sEnd);
+            hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sEnd));
         }
         break;
     }
@@ -306,12 +310,12 @@ void hdMsgEvent_window_c::updateTyping() {
 
 /* 026B30FC */
 void hdMsgEvent_window_c::updateCloseWait() {
-    if (hdMsgEvent_waitAnimation(this, 4)) {
+    if (reinterpret_cast<hdMsgWindowStates_c*>(this)->animationFinished(4)) {
         if (mWindowType == 2) {
             hdMsgEvent_manager_c* manager = sManager.mpManager;
             manager->mOpenCount = u32(manager->mOpenCount) - 1;
         }
-        hdMsgEvent_changeState(&mStateMachine, &sClosed);
+        hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sClosed));
     }
 }
 
@@ -324,8 +328,8 @@ void hdMsgEvent_window_c::advanceStopPoint() {
     hdMsgEvent_pane_c* pane = mpTextPane;
     pane->mColorTop = color;
     pane->mColorBottom = color;
-    hdMsgEvent_refreshText(this);
-    hdMsgEvent_setAnimation(this, 2, 1);
+    reinterpret_cast<hdMsgEventHandlers_c*>(this)->refreshText();
+    reinterpret_cast<hdMsgWindowStates_c*>(this)->startAnimation(2, 1);
 }
 
 /* 026B3324 */
@@ -334,7 +338,7 @@ void hdMsgEvent_window_c::updateInput() {
     if (!advanceInput && mMessageId == 0x5AC) advanceInput = hdMsgEvent_game()->play.mMesgCancelButton != 0;
     if (advanceInput && !hdMsgEvent_inputBlocked()) {
         mpMessage->mAdvanceRequested = 0;
-        hdMsgEvent_changeState(&mStateMachine, &sAdvance);
+        hdParts_changeState(reinterpret_cast<hdStateMachine*>(&mStateMachine), reinterpret_cast<hdPartsStateId_c*>(&sAdvance));
         sInputIndicator = 0;
         hdMsgEvent_advance(this);
         return;
@@ -359,20 +363,24 @@ data sNext 1049DF2C nocheck
 data sWaitInput 1049E28C nocheck
 data sSpecialWait 1049E1CC nocheck
 data sEnd 1049E2BC nocheck
-ext 020063C0 void hdMsgEvent_changeState(hdMsgEvent_stateMachine_c* machine, hdMsgEvent_state_c* state)
+
 ext 025F74D0 void hdMsgEvent_setStatus(void* core, u32 status)
 ext 025E1988 void hdMsgEvent_sound(u32 sound)
 ext 025E1C64 void hdMsgEvent_flush()
 ext 025E1F58 void hdMsgEvent_prepareSong(u32 song)
 ext 025E1F68 f32 hdMsgEvent_noteLength(u32 song, u32 index, be<u32>* note)
-ext 02621388 void hdMsgEvent_resetPane(hdMsgEvent_pane_c* pane)
-ext 02621394 void hdMsgEvent_showPane(hdMsgEvent_pane_c* pane)
-ext 026213A4 void hdMsgEvent_hidePane(hdMsgEvent_pane_c* pane)
+
+
+
 ext 027161BC u32 hdMsgEvent_inputBusy()
 ext 025E1EFC u32 hdMsgEvent_songLength()
 ext 0244311C u32 hdMsgEvent_playerAction(hdMsgEvent_player_c* player)
 ext 026FCB00 s32 hdMsgEvent_typingDelta(hdMsgEvent_window_c* window)
-ext 026B2CBC void hdMsgEvent_refreshText(hdMsgEvent_window_c* window)
-ext 026FF668 u32 hdMsgEvent_waitAnimation(hdMsgEvent_window_c* window, u32 animation)
-ext 026FF5EC void hdMsgEvent_setAnimation(hdMsgEvent_window_c* window, u32 animation, u32 flags)
+
+
+
+ ext 02621388 void hdBatonSignForWindow_c::resetSignFrame()
+ ext 02621394 void hdBatonSignForWindow_c::requestIn()
+ ext 026213A4 void hdBatonSignForWindow_c::requestOut()
+ ext 026FF668 u32 hdMsgWindowStates_c::animationFinished(u32)
 */

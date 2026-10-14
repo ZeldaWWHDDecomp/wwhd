@@ -132,7 +132,7 @@ static void removeItemCallback(void *callback) {
     ItemCallback *cb = static_cast<ItemCallback *>(callback);
     gabi::call_ptr(cb->mVtable->mRemove, cb);
 }
-static f32 item_getH(u8 itemNo) { return (f32)dItem_data::getH(itemNo); }
+static f32 item_getH(u8 itemNo) { return (f32)dItemDataView::getH(itemNo); }
 
 // GHS float-to-unsigned conversion preserves the upper half of the register range.
 static inline u32 f2u(f32 v) {
@@ -308,14 +308,14 @@ void daItem_c::set_mtx_base(J3DModel *pModel, cXyz *pos, csXyz *rot) {
     mDoMtx_stack_c::transS(x, pos->y + yOffset, pos->z);
 
     if (isRupee(m_itemNo)) {
-        u8 height = dItem_data::getH(m_itemNo);
+        u8 height = dItemDataView::getH(m_itemNo);
         mDoMtx_stack_c::transM(0.0f, (f32)height * 0.5f, 0.0f);
     }
 
     mDoMtx_ZXYrotM(mDoMtx_stack_c::get(), rot->x, rot->y + mHDRotY, rot->z + mExtraZRot);
 
     if (isRupee(m_itemNo)) {
-        u8 height = dItem_data::getH(m_itemNo);
+        u8 height = dItemDataView::getH(m_itemNo);
         mDoMtx_stack_c::transM(0.0f, (f32)(-(s32)height) * 0.5f, 0.0f);
     }
 
@@ -358,7 +358,7 @@ void daItem_c::CreateInit() {
     mCyl.mGObjCo.mHitCallback = 0x0217E50C; /* SetCoHitCallback(itemGetCallBack) */
 
     f32 height = item_getH(m_itemNo);
-    f32 radius = (f32)dItem_data::getR(m_itemNo);
+    f32 radius = (f32)dItemDataView::getR(m_itemNo);
 
     if (scale.x > 1.0f) {
         radius *= scale.x;
@@ -766,7 +766,7 @@ void daItem_c::execWaitMain() {
         }
     }
 
-    if (!(dItem_data::getFlag(m_itemNo) & 2)) {
+    if (!(dItemDataView::getFlag(m_itemNo) & 2)) {
         if (mCollideSwitchNo == 0xFF || fopAcM_isSwitch(this, mCollideSwitchNo)) {
             mCyl.SetC(&current.pos);
             dComIfG_Ccsp_Set(&mCyl);
@@ -1043,7 +1043,7 @@ BOOL daItem_c::checkItemDisappear() {
     if (checkFlag(FLAG_UNK10)) {
         disappearing = FALSE;
     }
-    if (dItem_data::getFlag(m_itemNo) & 0x01) {
+    if (dItemDataView::getFlag(m_itemNo) & 0x01) {
         disappearing = FALSE;
     }
     if (!(actor_status & fopAcStts_UNK4000_e)) {
@@ -1697,7 +1697,7 @@ void daItem_c::mode_water_init() {
         PSVECScale(&mScaleTarget, &mScaleTarget, 1.2f);
         f32 k = scale.x * 1.2f;
         f32 height = item_getH(m_itemNo) * k;
-        f32 radius = (f32)dItem_data::getR(m_itemNo) * k;
+        f32 radius = (f32)dItemDataView::getR(m_itemNo) * k;
         mCyl.SetR(radius);
         mCyl.SetH(height);
     }

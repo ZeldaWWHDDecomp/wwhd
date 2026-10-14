@@ -602,18 +602,30 @@ struct Candidate {
     Candidate(u32 a, const char* n, EntryFn f, RetKind r);
 };
 
+/* the next integer-class argument at entry: r3..r10, then the words of the caller's parameter area at
+ * entry SP+8, SP+12, ... (EABI; the same order ArgPack::put_int uses for outgoing calls). Before
+ * 2026-10-11 a 9th integer argument was read from r11 (FW-parts_buttons report, 026F5C08). */
+inline u32 int_arg(Cpu* c, int& gi) {
+    int i = gi++;
+    if (i <= 10) return c->r[i];
+    return (u32)*at<be<u32>>(c->r[1] + 8 + 4 * (u32)(i - 11));
+}
+inline f64 float_arg(Cpu* c, int& fi) {
+    if (fi > 8) glue_fatal("more than 8 floating-point arguments", "stack-passed floats are not modelled");
+    return c->f[fi++].ps0;
+}
 template <class T> struct ArgFrom {
     static T get(Cpu* c, int& gi, int& fi) {
-        if constexpr (std::is_floating_point_v<T>) return (T)c->f[fi++].ps0;
-        else if constexpr (std::is_pointer_v<T>) return at<std::remove_pointer_t<T>>(c->r[gi++]);
-        else if constexpr (std::is_same_v<T, bool>) return (c->r[gi++] & 0xFF) != 0;
-        else return (T)c->r[gi++];
+        if constexpr (std::is_floating_point_v<T>) return (T)float_arg(c, fi);
+        else if constexpr (std::is_pointer_v<T>) return at<std::remove_pointer_t<T>>(int_arg(c, gi));
+        else if constexpr (std::is_same_v<T, bool>) return (int_arg(c, gi) & 0xFF) != 0;
+        else return (T)int_arg(c, gi);
     }
 };
 
 /* a reference parameter (`const cXy& p`): the guest passes the object's address */
 template <class T> struct ArgFrom<T&> {
-    static T& get(Cpu* c, int& gi, int&) { return *at<T>(c->r[gi++]); }
+    static T& get(Cpu* c, int& gi, int&) { return *at<T>(int_arg(c, gi)); }
 };
 
 template <class R> constexpr RetKind ret_kind() {

@@ -1,0 +1,175 @@
+# Owner-count callbacks: the hit-widget destroy and allocate-on-heap callbacks may rewrite the owner's hit count
+# (0..3; the binary reloads it after each call). The owner fields stay stable against random clobbering, so only these
+# explicit writes change them: the pane lookups 02876554 (hit count) and 02704FC0 (mirror pane count), the allocate-on-heap callback
+# 0273B050 (hit count, child count) and the heap free slot (item count).
+# Run with -only 0266FB7C,0266FCA8,0266F874,02671404,02670D9C. Base: the unit spec, then these lines.
+# HD equipped-item slide area and animation mirror; 49 required game bodies.
+src wwhd_src/d/hd_screen_icon_slide_area.cpp
+src wwhd_src/d/hd_screen_icon_slide_area_mirror.cpp
+
+# Bounded screen-owned arrays, including empty and three-slot screens.
+arg! 0266F4F4 r3 0x54000000 0x54000000
+arg! 0266F584 r3 0x54000000 0x54000000
+arg! 0266F594 r3 0x54000000 0x54000000
+arg! 0266F624 r3 0x54000000 0x54000000
+arg! 0266F634 r3 0x54000000 0x54000000
+arg! 0266F6C4 r3 0x54000000 0x54000000
+arg! 0266F488 r3 0x54000000 0x54000000
+arg! 02670570 r3 0x54000000 0x54000000
+arg! 0266FD84 r3 0x54000000 0x54000000
+arg! 026707D8 r3 0x54000000 0x54000000
+arg! 0266FF54 r3 0x54000000 0x54000000
+arg! 0266FFF8 r3 0x54000000 0x54000000
+arg! 0267007C r3 0x54000000 0x54000000
+arg! 026700F8 r3 0x54000000 0x54000000
+arg! 02670130 r3 0x54000000 0x54000000
+arg! 026701C0 r3 0x54000000 0x54000000
+arg! 02670338 r3 0x54000000 0x54000000
+arg! 026703D8 r3 0x54000000 0x54000000
+arg! 0266FAF8 r3 0x54000000 0x54000000
+arg! 0266FD48 r3 0x54000000 0x54000000
+arg! 026702B4 r3 0x54000000 0x54000000
+arg! 0267021C r3 0x54000000 0x54000000
+arg! 02670478 r3 0x54000000 0x54000000
+arg! 0266FDC8 r3 0x54000000 0x54000000
+arg! 0266FE68 r3 0x54000000 0x54000000
+arg! 0266FB7C r3 0x54000000 0x54000000
+arg! 0266FCA8 r3 0x54000000 0x54000000
+arg! 0266F7C4 r3 0x54000000 0x54000000
+arg! 02670580 r3 0x54000000 0x54000000
+arg! 0266F874 r3 0x54000000 0x54000000
+arg! 0267101C r3 0x54000000 0x54000000
+arg! 026710AC r3 0x54000000 0x54000000
+arg! 026710BC r3 0x54000000 0x54000000
+arg! 0267114C r3 0x54000000 0x54000000
+arg! 0267115C r3 0x54000000 0x54000000
+arg! 026711EC r3 0x54000000 0x54000000
+arg! 02670FB0 r3 0x54000000 0x54000000
+arg! 026713F8 r3 0x54000000 0x54000000
+arg! 02671288 r3 0x54000000 0x54000000
+arg! 026713B8 r3 0x54000000 0x54000000
+arg! 0267165C r3 0x54000000 0x54000000
+arg! 02671270 r3 0x54000000 0x54000000
+arg! 02671404 r3 0x54000000 0x54000000
+field * 54000048 u32 0,1,2,3
+field * 54000050 s32 -1,0,1,2,3
+field * 54000058 s32 -1,0,1,2,3
+stable 54000048 0x18
+arg! 02670D9C r4 0x57000000 0x57000000
+field 02670D9C r4+0 s32 -1,0,1,2,3
+stable 57000000 4
+arg! 0266F6D4 r3 0,0x54000000,0xFFFFFFB0,0xFFFFFFA8,0xFFFFFFA0,0xFFFFFF9C
+arg! 026711FC r3 0,0x54000000
+ret! 0273AD10 0,0x5D000000
+ret! 0273B050 0,0x5E000000
+field * 1018C404 u32 0x5A000000 0x5A000000
+field * 5A000010 u32 0,0x5B000000
+stable 5A000010 4
+# Valid heap fixture: the current-heap getter and the UI-system heap 5B000000 share one table whose allocate slot (+0x34)
+# is the steered allocator 0273AD10 (0 or fresh 5D000000), so an allocation never returns static data (e.g. RTTI records).
+ret! 02756140 0x5B000000 0x5B000000
+field * 5B00000C u32 0x5C000000
+field * 5C000034 u32 0x0273AD10
+stable 5B00000C 4
+stable 5C000034 4
+callee 02704D2C r3=out12
+callee 0287F05C r4=8
+
+# Constructor-backed pane classes; nonexhaustive representative subtype sampling.
+# Constructors020037D0/020048D0/027028A8 install these exact vtables at+8.
+# Tiny actual type getters retain genuine lazy-initialization writes.
+field 0266F874 54000044 u32 0x56000000
+field 0266F874 56000004 u32 0x56001000
+field 0266F874 5600100C u32 0x56002000
+field 0266F874 56002008 u32 0x10000610,0x100008B8,0x1010BBC0
+ret! 02876554 0,0x56004000
+ret! 02704FC0 0,0x56004000
+field * 56004008 u32 0x10000610,0x100008B8,0x1010BBC0
+real 0200393C
+real 02004A3C
+real 02702A20
+# Coherent already-initialized shared class records; first-use companion overrides tozero.
+field * 101FD938 u32 1
+field * 101FD88C u32 1
+field * 101FD888 u32 1
+field * 101FD914 u32 1
+field * 101FD890 u32 1
+field * 101FDDA0 u32 1
+field * 101FD93C u32 0x101FD940
+field * 101FD940 u32 0x101FD8FC
+field * 101FD918 u32 0x101FD91C
+field * 101FD91C u32 0x101FD8FC
+field * 101FDDA4 u32 0x101FD918
+field * 101FD8FC u32 0
+stable 54000044 4
+stable 56000004 4
+stable 5600100C 4
+stable 56002008 4
+stable 56004008 4
+stable 101FD938 8
+stable 101FD940 4
+stable 101FD88C 8
+stable 101FD888 4
+stable 101FD914 12
+stable 101FDDA0 8
+stable 101FD8FC 4
+
+# Valid one-receiver virtual callback ABI at child vtable+CC (0266FEC8).
+# Original child ctor02635FD4 installs Decide; menu/Decide/touch are actual ABI samples.
+# Nonexhaustive subtype sampling; unrelated JntHit multiargument targets are invalid here.
+# Counts0..3 remain above; slots independently NULL/distinct/aliased, including fallback slot0.
+field 0266FE68 5400004C u32 0x57200000
+field 0266FE68 57200000 u32 0,0x57201000,0x57202000
+field 0266FE68 57200004 u32 0,0x57201000,0x57202000
+field 0266FE68 57200008 u32 0,0x57201000,0x57202000
+field 0266FE68 57201004 u32 0x100E82BC,0x100E8D28,0x100E8930
+field 0266FE68 57202004 u32 0x100E82BC,0x100E8D28,0x100E8930
+
+# SafeString termination virtual ABI: self-only, actual literal tables (nonexhaustive subtype samples).
+# Text/descriptor addresses remain unconstrained; no incidental second argument forwarding.
+field 02670580 r4+0xC u32 0x100F5DBC,0x100F611C
+field 02670580 r4+0x18 u32 0x100F5DBC,0x100F611C
+field 02670580 10494A74 u32 0x100F5DBC,0x100F611C
+field 02670580 10494A7C u32 0x100F5DBC,0x100F611C
+field 02670580 10494A84 u32 0x100F5DBC,0x100F611C
+field 02670580 1048FEE0 u32 0x100F5DBC,0x100F611C
+field 02671404 r4+0xC u32 0x100F5DBC,0x100F611C
+field 02671404 r4+0x18 u32 0x100F5DBC,0x100F611C
+field 02671404 10494BE8 u32 0x100F5DBC,0x100F611C
+field 02671404 10494BF0 u32 0x100F5DBC,0x100F611C
+field 02671404 10494BF8 u32 0x100F5DBC,0x100F611C
+field 02671404 10490144 u32 0x100F5DBC,0x100F611C
+
+# These sampled literal termination overrides are exact single-blr no-ops.
+# Run actual helpers so synthetic mock epochs cannot corrupt their string/vtable storage.
+real 02670C8C
+real 02671AE4
+
+# Global hit names are literal SafeStrings initialized by026708F0.
+# Pin only the immutable callback binding; text/pointer reload domain stays varied.
+field 0266F874 10494AA4 u32 0x100F5DBC
+stable 10494AA4 4
+field 0266F874 10494AAC u32 0x100F5DBC
+stable 10494AAC 4
+field 0266F874 10494AB4 u32 0x100F5DBC
+stable 10494AB4 4
+
+mockglobal 0273B050 54000058 u32 0,1,2,3
+field 0266FB7C 5400005C u32 0x58000000
+field 0266FB7C 58000000 u32 0x59000000
+field 0266FB7C 58000004 u32 0x59000000
+field 0266FB7C 58000008 u32 0x59000000
+field 0266FB7C 59000014 u32 0x59100000
+field 0266FB7C 5910000C u32 0x0273B050
+stable 58000000 12
+stable 59000014 4
+stable 5910000C 4
+final 0266FCA8 54000050 8
+mockglobal 0273B050 54000048 u32 0,1,2,3
+mockglobal 02876554 54000058 u32 0,1,2,3
+mockglobal 02876554 57000000 u32 0,1,2,3
+ret! 02755FEC 0x5B000000 0x5B000000
+field * 5C00003C u32 0x0273AD10
+stable 5C00003C 4
+mockglobal 0273AD10 54000050 u32 0,1,2,3
+mockglobal 02704FC0 57000000 u32 0,1,2,3

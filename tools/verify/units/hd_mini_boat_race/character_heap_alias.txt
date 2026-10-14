@@ -1,0 +1,71 @@
+# HD boat-race owner, failure-character, result and countdown screens.
+# Companion sources leave merged function bodies/specs unchanged.
+src wwhd_src/d/hd_screen_boat_race_failed.cpp
+src wwhd_src/d/hd_screen_boat_race_failed_char_states.cpp
+src wwhd_src/d/hd_screen_boat_race_result_parts.cpp
+src wwhd_src/d/hd_screen_boat_race_start.cpp
+
+# Bound the dynamically reloaded character array to a coherent screen-owned allocation.
+arg! 02626420 r3 0x54000000 0x54000000
+arg! 026265A4 r3 0x54000000 0x54000000
+field 02626420 r3+0x54 s32 -1 2
+field 026265A4 r3+0x54 s32 -1 2
+field 02626420 r3+0x58 u32 0x55000000 0x55000000
+field 026265A4 r3+0x58 u32 0x55000000 0x55000000
+stable 54000054 8
+field 02626420 55000000 u32 0,0x56000000
+field 02626420 55000004 u32 0,0x56001000
+field 026265A4 55000000 u32 0,0x56000000
+field 026265A4 55000004 u32 0,0x56001000
+field * 56000004 u32 0x100E57A0 0x100E57A0
+field * 56001004 u32 0x100E57A0 0x100E57A0
+stable 56000004 4
+stable 56001004 4
+
+# Layout resource construction follows a bounded descriptor-list count.
+arg! 02626204 r3 0x54000000 0x54000000
+field 02626204 r3+0x50 u32 0,0x57000000
+field 02626204 57000004 u32 0,0x58000000,0xFFFFFFC4
+field 02626204 5800003C s32 -1 2
+field 02626204 r3+0x54 s32 -1 2
+stable 54000054 8
+field * 1018C404 u32 0x5A000000 0x5A000000
+field * 5A000010 u32 0x5B000000 0x5B000000
+field * 5B00000C u32 0x5C000000 0x5C000000
+
+# Constructors: null caller storage exercises allocation, and Failed's embedded
+# SafeArray address can wrap to null when caller storage is -0x54.
+arg! 02626158 r3 0,0x54000000,0xFFFFFFAC
+arg! 02626E70 r3 0,0x54000000
+arg! 02627B08 r3 0,0x54000000
+arg! 02628578 r3 0,0x54000000
+# Explicit two-value list preserves both allocation failure and success.
+ret! 0273AD10 0,0x5D000000
+
+# Opaque child callbacks may replace the owner's bounded count/data pair.
+# These explicit writes occur even where stable excludes random clobbers.
+mockglobal 02627194 54000054 u32 0,1,2
+mockglobal 02627194 54000058 u32 0x55000000,0x55000100
+mockglobal 02626C58 54000054 u32 0,1,2
+mockglobal 02626C58 54000058 u32 0x55000000,0x55000100
+mockglobal 0262722C 54000054 u32 0,1,2
+mockglobal 0262722C 54000058 u32 0x55000000,0x55000100
+field 02626420 55000100 u32 0,0x56000000
+field 02626420 55000104 u32 0,0x56001000
+field 026265A4 55000100 u32 0,0x56000000
+field 026265A4 55000104 u32 0,0x56001000
+# Keep slot targets coherent across callbacks; owner pointer/count still change.
+stable 55000000 8
+stable 55000100 8
+
+# Result's SafeString termination callback may replace the text pointer.
+# Pane lookup must receive that post-callback value, including null/wrap edges.
+mockfield 026282A4 r3+0 u32 0,0x100E5A24,0x100E5A34,0xFFFFFFFC
+
+# Exact survivor244: resource-accessor destination aliases UI heap field.
+# self59FFFFDC+34 = UI5A000000+10. Both heap values are valid addresses.
+# Original loads the stored archive as heap; swapped code loads old heap.
+# The first allocator call0273B050 therefore receives different r4 values.
+arg! 02627020 r3 0x59FFFFDC
+arg! 02627020 r4 0x5B001000
+field 02627020 5A000010 u32 0x5B000000

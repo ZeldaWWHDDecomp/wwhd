@@ -1,0 +1,73 @@
+# Verification unit: HUD-shortcut: the GamePad item shortcut and the system (save/continue/warp) window
+stackfill periodic
+src wwhd_src/d/hd_screen_item_shortcut.cpp
+src wwhd_src/d/hd_screen_system_window.cpp
+
+# ---- state queries: the current state and hdParts_c's Blank share a vtable whose key slot is a fixed callee
+ret 02006478 0x59000000,0x59000000,0x59000000
+field * 0x59000008 u32 0x59100000
+field * 0x1049DD68 u32 0x59100000
+field * 0x59100014 u32 0x026FA1D8
+stable 0x59000008 4
+stable 0x1049DD68 4
+stable 0x59100014 4
+ret! 026FA1D8 1,1,1,2
+
+# ---- open(): the dialog modes, the play flag, the menu flag
+arg 026DBA08 r4 0,1,2,3,5,8,11,12,0x11
+arg 026DBA08 r5 0,1,0x100
+ret 025986BC 0 1
+# ---- executeState(): the watched object
+field 026DB850 0x101F5088 u32 0,0x59200000,0x59200000
+field 026DB850 0x59200000 u32 0,0x59300000,0x59300000
+# ---- getMessageId(): the warp line and its event bit
+arg 026DBD10 r4 0x20,0x20,0,1,0x30
+ret 025B8B94 0 1
+# ---- linkButtons(): small child counts
+arg 026DB4F8 r3 0x5D000000
+field 026DB4F8 0x5D000048 s32 0,1,2,3,5
+
+# ---- updateKind(): the play object's ship-ride status and the item slots
+ret 025200D4 0x5C000000,0x5C000000,0x5C000000
+field 026DD56C 0x5C005CD8 u32 0,0x10000,0x10000
+field 026DD56C 0x101F84DC u32 0x5B000000
+field 026DD56C 0x5B00005E u8 0x22,0x22,0xFF
+field 026DD56C 0x5B00005F u8 0x25,0x25,0xFF
+field 026DD56C 0x5B000069 u8 0x31,0x31,0xFF
+
+# ---- visit(): descriptor names equal (by address or by content) to the screens' static names
+arg 026DBFB4 r4 0x5A000000
+field 026DBFB4 0x5A000014 u32 0x5A100000,0x5A100020,0x5A100040,0x5A100060,0x5A100080,0x5A200000
+fieldstr 026DBFB4 0x5A200000 24 "L_BtnSeqenceL_00","L_KeyIcon_00","L_BtnSeqenceC_00","L_Nothing"
+field 026DBFB4 0x1049B080 u32 0x5A100000,0x5A100000,0x5A200000
+fieldstr 026DBFB4 0x5A100000 24 "L_BtnSeqenceL_00"
+field 026DBFB4 0x1049B088 u32 0x5A100020,0x5A100020,0x5A200000
+fieldstr 026DBFB4 0x5A100020 24 "L_BtnSeqenceR_00"
+field 026DBFB4 0x1049B090 u32 0x5A100040,0x5A100040,0x5A200000
+fieldstr 026DBFB4 0x5A100040 24 "L_BtnSeqenceC_00"
+field 026DBFB4 0x1049B098 u32 0x5A100060,0x5A100060,0x5A200000
+fieldstr 026DBFB4 0x5A100060 24 "L_LoadingIcon_00"
+field 026DBFB4 0x1049B0A0 u32 0x5A100080,0x5A100080,0x5A200000
+fieldstr 026DBFB4 0x5A100080 24 "L_KeyIcon_00"
+arg 026DDD10 r4 0x5A000000
+field 026DDD10 0x5A000014 u32 0x5A300000,0x5A300000,0x5A400000
+field 026DDD10 0x5A000008 u32 0x5A500000,0x5A500000,0x5A600000
+field 026DDD10 0x1049B728 u32 0x5A300000,0x5A700000
+field 026DDD10 0x1049D51C u32 0x5A500000,0x5A800000
+fieldstr 026DDD10 0x5A300000 24 "L_UnreadMiiverse_00"
+fieldstr 026DDD10 0x5A400000 24 "L_UnreadMiiverse_00","L_Unread"
+fieldstr 026DDD10 0x5A700000 24 "L_UnreadMiiverse_00"
+fieldstr 026DDD10 0x5A500000 24 "UnreadMiiverse_00"
+fieldstr 026DDD10 0x5A600000 24 "UnreadMiiverse_00","Other_00"
+fieldstr 026DDD10 0x5A800000 24 "UnreadMiiverse_00"
+
+# ---- mutation follow-ups
+# the button link takes a ninth (stack) argument; stack strings handed to the message and text callees
+callee 026F5C08 stack=1
+callee 025F6D70 r4=8
+callee 02759D3C r3=20
+callee 027046D4 r4=20
+# message index boundary; the kinds around the salvage / cannon thresholds
+arg 026DBD64 r4 0,5,0x30,0x31,0x32
+field 026DD894 r3+0x54 u32 0,1,2,3,4
+field 026DD894 r3+0x58 u32 0,1,2,3,4

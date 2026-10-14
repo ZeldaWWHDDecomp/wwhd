@@ -1,5 +1,6 @@
 /* HD-only auction digit roll screen, animation binding and state initialization. */
 #include "d/hd_screen_auction_number.h"
+#include "d/hd_parts.h"
 
 static HdAuctionHeapPointer l_heap;
 static u32 l_screenVtable;
@@ -190,6 +191,12 @@ static void hdAuction_emptyRollInit() {}
 static void hdAuction_emptyRollMove() {}
 /* 0261D7E0 */
 static void hdAuction_emptyRollExit() {}
+
+/* 0261CF88 */
+// GHS places this state number template copy after the TU's code
+static s32 hdScreenAuctionNumber_getStateNumber(hdPartsStateId_c* stateId) {
+    return stateId->mNumber;
+}
 
 /* WWHD glue (tools/verify/autoglue.py): HD screen, states and animation names.
 data l_heap 1018C404

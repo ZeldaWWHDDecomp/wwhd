@@ -1,0 +1,35 @@
+# MAP-warp_map: all 44 functions.
+src wwhd_src/d/hd_screen_warp_area.cpp
+src wwhd_src/d/hd_screen_warp_map.cpp
+
+# Child descriptor SafeString tables remain valid throughout their lifetime.
+# Only vtable words are stable; text pointers/contents and game state still clobber.
+arg! 026F002C r4 0x5A000000
+field 026F002C r4+0x0C u32 0x10109118
+field 026F002C r4+0x18 u32 0x10109118
+stable 5A00000C 4
+stable 5A000018 4
+field 026F002C 1049D638 u32 0x10109118
+stable 1049D638 4
+field 026F002C 1049D640 u32 0x10109118
+stable 1049D640 4
+field 026F002C 1049D648 u32 0x10109118
+stable 1049D648 4
+field 026F002C 1049D650 u32 0x10109118
+stable 1049D650 4
+field 026F002C 1049D658 u32 0x10109118
+stable 1049D658 4
+field 026F002C 1049D660 u32 0x10109118
+stable 1049D660 4
+field 026F002C 1049D668 u32 0x10109118
+stable 1049D668 4
+field 026F002C 1049D670 u32 0x10109118
+stable 1049D670 4
+field 026F002C 1049D678 u32 0x10109118
+stable 1049D678 4
+field 026F002C 1049D680 u32 0x10109118
+stable 1049D680 4
+field 026F002C 10495F10 u32 0x10109118
+stable 10495F10 4
+field 026F002C 1049D594 u32 0x10109118
+stable 1049D594 4

@@ -1,0 +1,292 @@
+# MAP-dungeon_map#2: 96 owned bodies plus four immutable shared registrations.
+src wwhd_src/d/hd_screen_dungeon_map_part2.cpp
+src wwhd_src/d/hd_screen_dungeon_map.cpp
+
+# Marker-array count domains retain empty and one-past slot-zero fallback cases.
+field 0265A0B0 r3+0x2EC s32 -1,0,1,63,64,65
+field 0265A0B0 r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265A0B0 r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265A0B0 r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265A7E8 r3+0x2EC s32 -1,0,1,63,64,65
+field 0265A7E8 r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265A7E8 r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265A7E8 r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265D1CC r3+0x2EC s32 -1,0,1,63,64,65
+field 0265D1CC r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265D1CC r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265D1CC r3+0x2F8 s32 -1,0,1,15,16,17
+field 02659488 r3+0x2EC s32 -1,0,1,63,64,65
+field 02659488 r3+0x2F0 s32 -1,0,1,31,32,33
+field 02659488 r3+0x2F4 s32 -1,0,1,15,16,17
+field 02659488 r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265C790 r3+0x2EC s32 -1,0,1,63,64,65
+field 0265C790 r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265C790 r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265C790 r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265CAFC r3+0x2EC s32 -1,0,1,63,64,65
+field 0265CAFC r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265CAFC r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265CAFC r3+0x2F8 s32 -1,0,1,15,16,17
+field 02659FA0 r3+0x2EC s32 -1,0,1,63,64,65
+field 02659FA0 r3+0x2F0 s32 -1,0,1,31,32,33
+field 02659FA0 r3+0x2F4 s32 -1,0,1,15,16,17
+field 02659FA0 r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265D5CC r3+0x2EC s32 -1,0,1,63,64,65
+field 0265D5CC r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265D5CC r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265D5CC r3+0x2F8 s32 -1,0,1,15,16,17
+field 0265D7C4 r3+0x2EC s32 -1,0,1,63,64,65
+field 0265D7C4 r3+0x2F0 s32 -1,0,1,31,32,33
+field 0265D7C4 r3+0x2F4 s32 -1,0,1,15,16,17
+field 0265D7C4 r3+0x2F8 s32 -1,0,1,15,16,17
+# Only dungeon-object routines which traverse floor/child records are steered.
+field 02659C24 r3+0x48 s32 0,1,7,8,9
+field 02659C24 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659E64 r3+0x48 s32 0,1,7,8,9
+field 02659E64 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265DB1C r3+0x48 s32 0,1,7,8,9
+field 0265DB1C r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265DA1C r3+0x48 s32 0,1,7,8,9
+field 0265DA1C r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265DC08 r3+0x48 s32 0,1,7,8,9
+field 0265DC08 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659CC4 r3+0x48 s32 0,1,7,8,9
+field 02659CC4 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659D64 r3+0x48 s32 0,1,7,8,9
+field 02659D64 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659E94 r3+0x48 s32 0,1,7,8,9
+field 02659E94 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659F5C r3+0x48 s32 0,1,7,8,9
+field 02659F5C r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265DA80 r3+0x48 s32 0,1,7,8,9
+field 0265DA80 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265DB48 r3+0x48 s32 0,1,7,8,9
+field 0265DB48 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659754 r3+0x48 s32 0,1,7,8,9
+field 02659754 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 026598CC r3+0x48 s32 0,1,7,8,9
+field 026598CC r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659B08 r3+0x48 s32 0,1,7,8,9
+field 02659B08 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 02659FA0 r3+0x48 s32 0,1,7,8,9
+field 02659FA0 r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265D5CC r3+0x48 s32 0,1,7,8,9
+field 0265D5CC r3+0x408 s32 -1,0,1,2,3,4,5,6
+field 0265D7C4 r3+0x48 s32 0,1,7,8,9
+field 0265D7C4 r3+0x408 s32 -1,0,1,2,3,4,5,6
+
+# Pinned valid dungeon receiver for bounded traversal domains. Stable applies only
+# to these loop counters, not object data. Explicit callback patches below still
+# write the counters (patch8 does not consult clobberable/stable), exercising reloads.
+# Arbitrary epoch invalidation of counters is excluded because it leaves the
+# valid bounded array-count contract; other object bytes remain clobberable.
+arg! 02659488 r3 0x30F02000
+arg! 02659754 r3 0x30F02000
+arg! 026598CC r3 0x30F02000
+arg! 02659B08 r3 0x30F02000
+arg! 02659C24 r3 0x30F02000
+arg! 02659CC4 r3 0x30F02000
+arg! 02659D64 r3 0x30F02000
+arg! 02659E64 r3 0x30F02000
+arg! 02659E94 r3 0x30F02000
+arg! 02659F5C r3 0x30F02000
+arg! 02659FA0 r3 0x30F02000
+arg! 0265A0B0 r3 0x30F02000
+arg! 0265A7E8 r3 0x30F02000
+arg! 0265C790 r3 0x30F02000
+arg! 0265CAFC r3 0x30F02000
+arg! 0265D1CC r3 0x30F02000
+arg! 0265D5CC r3 0x30F02000
+arg! 0265D7C4 r3 0x30F02000
+arg! 0265DA1C r3 0x30F02000
+arg! 0265DA80 r3 0x30F02000
+arg! 0265DB1C r3 0x30F02000
+arg! 0265DB48 r3 0x30F02000
+arg! 0265DC08 r3 0x30F02000
+stable 30F022EC 16
+stable 30F02408 4
+stable 30F02048 4
+mockglobal 026855D0 30F022EC u32 -1,0,1,63,64,65
+mockglobal 026855D0 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 026855D0 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 026855D0 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 026855D0 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 026855D0 30F02048 u32 0,1,7,8,9
+mockglobal 026851C4 30F022EC u32 -1,0,1,63,64,65
+mockglobal 026851C4 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 026851C4 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 026851C4 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 026851C4 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 026851C4 30F02048 u32 0,1,7,8,9
+mockglobal 026851D4 30F022EC u32 -1,0,1,63,64,65
+mockglobal 026851D4 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 026851D4 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 026851D4 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 026851D4 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 026851D4 30F02048 u32 0,1,7,8,9
+mockglobal 026851E4 30F022EC u32 -1,0,1,63,64,65
+mockglobal 026851E4 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 026851E4 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 026851E4 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 026851E4 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 026851E4 30F02048 u32 0,1,7,8,9
+mockglobal 0200552C 30F022EC u32 -1,0,1,63,64,65
+mockglobal 0200552C 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 0200552C 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 0200552C 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 0200552C 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 0200552C 30F02048 u32 0,1,7,8,9
+mockglobal 02657A8C 30F022EC u32 -1,0,1,63,64,65
+mockglobal 02657A8C 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 02657A8C 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 02657A8C 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 02657A8C 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 02657A8C 30F02048 u32 0,1,7,8,9
+mockglobal 026F5C00 30F022EC u32 -1,0,1,63,64,65
+mockglobal 026F5C00 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 026F5C00 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 026F5C00 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 026F5C00 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 026F5C00 30F02048 u32 0,1,7,8,9
+mockglobal 02001BE4 30F022EC u32 -1,0,1,63,64,65
+mockglobal 02001BE4 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 02001BE4 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 02001BE4 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 02001BE4 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 02001BE4 30F02048 u32 0,1,7,8,9
+mockglobal 02656750 30F022EC u32 -1,0,1,63,64,65
+mockglobal 02656750 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 02656750 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 02656750 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 02656750 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 02656750 30F02048 u32 0,1,7,8,9
+mockglobal 0274F5F0 30F022EC u32 -1,0,1,63,64,65
+mockglobal 0274F5F0 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 0274F5F0 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 0274F5F0 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 0274F5F0 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 0274F5F0 30F02048 u32 0,1,7,8,9
+mockglobal 0274FA70 30F022EC u32 -1,0,1,63,64,65
+mockglobal 0274FA70 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 0274FA70 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 0274FA70 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 0274FA70 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 0274FA70 30F02048 u32 0,1,7,8,9
+mockglobal 02655B9C 30F022EC u32 -1,0,1,63,64,65
+mockglobal 02655B9C 30F022F0 u32 -1,0,1,31,32,33
+mockglobal 02655B9C 30F022F4 u32 -1,0,1,15,16,17
+mockglobal 02655B9C 30F022F8 u32 -1,0,1,15,16,17
+mockglobal 02655B9C 30F02408 u32 0,1,2,3,4,5,6
+mockglobal 02655B9C 30F02048 u32 0,1,7,8,9
+
+# Directed actor-position/heading cases supplement the generic 1-in-8 unsteered
+# argument domain. Include null outputs/actor, exact source alias, shifted overlap,
+# angle aliasing the output and actor heading, and native f32 exceptional payloads.
+arg 0265DC64 r4 0,0x30F05000
+arg 0265DC64 r5 0,0x30F07000,0x30F05314,0x30F05318,0x30F05310
+arg 0265DC64 r6 0,0x30F0700C,0x30F07000,0x30F05314,0x30F0532A
+field 0265DC64 r4+0x314 u32 0,0x80000000,0x3F800000,0x7F800000,0xFF800000,0x7FC12345,0x7F812345,0xFF812345,1,0x007FFFFF
+field 0265DC64 r4+0x318 u32 0,0x80000000,0x3F800000,0x7F800000,0xFF800000,0x7FC12345,0x7F812345,0xFF812345,1,0x007FFFFF
+field 0265DC64 r4+0x31C u32 0,0x80000000,0x3F800000,0x7F800000,0xFF800000,0x7FC12345,0x7F812345,0xFF812345,1,0x007FFFFF
+field 0265DC64 r4+0x32A s16 -32768,-1,0,1,32767
+
+# C790 indirect calls are virtual Draw(this, renderer) only. At seed1000982
+# a random draw slot resolves to unrelated0200C140, whose extra r5 live-in is
+# a stale child scratch register, not a draw argument. Keep target, call order,
+# declared this/renderer arguments and effects compared; skip only inferred
+# extra live-ins from random resolved callees (verify README indirect-call check).
+nolivein 0265C790
+
+# CBB0's twelve indirect sites are SafeString::assureTermination(this), vtable14.
+# Seed7008547 resolves one generated termination slot to unrelated02000A04;
+# its inferred r4 live-in is the previous byte-comparison cursor (zero), not
+# a termination argument. Declared this/targets/order/effects remain compared.
+nolivein 0265CBB0
+
+# Directed mutation gaps; the primary spec retains its broader branch domains.
+
+# Exact two-child guard boundary.
+field 02659CC4 r3+0x48 s32 2
+
+# Successful zoom completion after the can-zoom callback.
+arg! 0265D978 r3 0x30F02000
+field 0265D978 r3+0x920 u32 0x30F09000
+ret! 0267D2E0 1
+mockglobal 0267D2E0 30F023E8 u32 1
+
+# Callback writes the animation-rate image address; no immutability assumption.
+mockglobal 02656478 100F0220 f32 2.0
+
+# Enabled byte aliases the high byte of the stored receiver pointer.
+arg! 0265C148 r3 0x30F02000
+field 0265C148 r3+0x60 u32 0x30F09000
+ret! 0273B050 0x30F05000
+ret! 02616ED4 0x30F02044
+
+# Capacity+one fallback with changing non-count object data.
+mockglobal 026855D0 30F022EC u32 65
+mockglobal 026855D0 30F022F0 u32 33
+mockglobal 026855D0 30F022F4 u32 17
+mockglobal 026855D0 30F022F8 u32 17
+mockglobal 026851C4 30F022EC u32 65
+mockglobal 026851C4 30F022F0 u32 33
+mockglobal 026851C4 30F022F4 u32 17
+mockglobal 026851C4 30F022F8 u32 17
+mockglobal 026851D4 30F022EC u32 65
+mockglobal 026851D4 30F022F0 u32 33
+mockglobal 026851D4 30F022F4 u32 17
+mockglobal 026851D4 30F022F8 u32 17
+mockglobal 026851E4 30F022EC u32 65
+mockglobal 026851E4 30F022F0 u32 33
+mockglobal 026851E4 30F022F4 u32 17
+mockglobal 026851E4 30F022F8 u32 17
+
+# Open-pending byte aliases high byte of global UI owner pointer.
+arg! 0265D5CC r3 0x101F7A1F
+mockglobal 02657B48 101F8344 u32 0x30F08000
+mockglobal 02657B48 30F08218 u32 0x30F08400
+mockglobal 02657B48 00F08218 u32 0x30F08800
+ret! 0268936C 1
+
+# Nonzero incoming scratch beneath the entry stack pointer.
+field 0265B2D8 r1+0xFFFFFFBC u32 0x3F800000
+# The same for the map-position template word (frame+0x18) that the item map-position loop reloads.
+field 0265B2D8 r1+0xFFFFFFC8 u32 0x3F800000
+
+# Two link-write overlaps exercise the successive map-pointer reloads.
+arg! 026593DC r3 0x30F02000
+field 026593DC r3+0x920 u32 0x30F02470,0x30F0246C
+field 026593DC r3+0x54 u32 0x30F09000
+
+# Saved-position overlap and global-pointer overwrite share a controlled UI path.
+# Primary retains actor-present, freeze and partner/item modes.
+arg! 0265DCFC r3 0x30F02000,0x101F81B4
+field 0265DCFC 101F8344 u32 0x30F08000
+field 0265DCFC 30F08218 u32 0x30F08400
+field 0265DCFC 30F08450 u32 0
+field 0265DCFC 30F08459 u8 0
+ret! 02656970 0
+mockglobal 02656970 101F84DC u32 0x30F011CC,0x30F04000
+mockglobal 02656970 30F013A7 u8 2
+mockglobal 02656970 30F041DB u8 2
+mockglobal 02656970 30F0231A u16 1
+mockglobal 02656970 30F0514E u16 1
+mockglobal 02656970 30F0714E u16 2
+mockglobal 02656970 30F0231C u32 0x3F800000
+mockglobal 02656970 30F02320 u32 0x40000000
+mockglobal 02656970 30F02324 u32 0x30F06000
+mockglobal 02656970 30F05150 u32 0x3F800000
+mockglobal 02656970 30F05154 u32 0x40000000
+mockglobal 02656970 30F05158 u32 0x30F06000
+
+
+# Emulator-domain companion: original explicit embedded-zero allocation arms under guest32 wrap.
+# This preserves explicit original guest32 allocation arms and does not assert that wrapped storage is a valid real-game heap object.
+arg! 0265B2D8 r3 0,0x30F02000,0xFFFFFCE0,0xFFFFFCD4,0xFFFFFCB8,0xFFFFFC28,0xFFFFFCC4,0xFFFFFE28,0xFFFFFFA0,0xFFFFFD68,0xFFFFFFB0,0xFFFFFC6C
+ret! 0273AD10 0,0x30F05000,0x30F06000
+
+# Allocator callback updates low guest coordinates that overlap the other point.
+# This makes store/callback ordering observable, including null-allocation returns.
+mockglobal 0273AD10 00000008 u32 0x40000000
+mockglobal 0273AD10 0000000C u32 0x40000000
+mockglobal 0273AD10 00000010 u32 0x40000000

@@ -1,5 +1,6 @@
 /* HD auction rupee meter/counter. */
 #include "d/hd_screen_auction_rupy.h"
+#include "d/hd_parts.h"
 using namespace gabi;
 static RupyState l_rupyIdle;
 static u32 l_rupyDelegateVTableA;
@@ -588,6 +589,12 @@ void rupy_nop6() {}
 
 /* 0261CF98 */
 void rupy_nop7() {}
+/* 0261BB08 */
+// GHS places this state number template copy after the TU's code
+static s32 hdScreenAuctionRupy_getStateNumber(hdPartsStateId_c* stateId) {
+    return stateId->mNumber;
+}
+
 /* WWHD glue (tools/verify/autoglue.py)
 data l_rupyIdle 1049DD60
 data l_rupyDelegateVTableA 100E3148

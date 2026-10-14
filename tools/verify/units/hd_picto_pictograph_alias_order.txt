@@ -1,0 +1,12 @@
+# Modeled overlapping-pointer domain for the canonical message wait state.
+# WindowBase.r3=580D0000 and mpMessage=580CFA51 intentionally overlap:
+# WindowMessage.mTimedWait (message+0x697) aliases WindowBase.mStopIndex
+# (base+0xE8). The original byte store must precede the stop-index load.
+src wwhd_src/d/hd_msg_window_base.cpp
+arg! 026FD054 r3 0x580D0000
+field 026FD054 r3+0x118 u32 0x580CFA51
+field 026FD054 580D0105 u32 0
+field 026FD054 r3+0xE8 u32 16777216
+field 026FD054 r3+0x98 s32 -1
+field 026FD054 r3+0x9C s32 0
+field 026FD054 101F4B5C u32 0x580E0000

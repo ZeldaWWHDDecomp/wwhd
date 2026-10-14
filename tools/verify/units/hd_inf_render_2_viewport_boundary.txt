@@ -1,0 +1,271 @@
+# Targeted width-one viewport boundary; primary fixture preserved.
+# INF-render#2#2: remaining render TUs excluding Fader.
+src wwhd_src/hd/hd_render_resolution.cpp
+
+src wwhd_src/hd/hd_render_projection.cpp
+
+src wwhd_src/hd/hd_shader_archive.cpp
+
+src wwhd_src/hd/hd_layer_drc_mode.cpp
+
+src wwhd_src/hd/hd_error_viewer.cpp
+
+src wwhd_src/hd/hd_layer_base.cpp
+
+src wwhd_src/hd/hd_layer_mask.cpp
+
+src wwhd_src/hd/hd_multi_filter.cpp
+
+src wwhd_src/hd/hd_resource_tool_paths.cpp
+
+src wwhd_src/hd/hd_render_commands.cpp
+
+src wwhd_src/hd/hd_wipe_fader.cpp
+
+src wwhd_src/hd/hd_layer_shadow.cpp
+
+src wwhd_src/hd/hd_layer_3d.cpp
+
+# Exercise draw gates and render-target routing, including image-default disabled flags.
+field 02732D3C 101F4825 u8 0,1
+field 02732D3C 101F4826 u8 0,1,127,255
+field 02733190 r4+0 u32 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16
+field 02739E28 101D616C u8 0,1
+field 02739A94 101D6160 f32 0,1,-1,0.5,2
+field 027356FC r4+0xC u32 0,4,8
+field 027356FC 101F8348 u32 0,2,4
+field 027356FC 101F8351 u8 0,1
+field 027358B8 r4+0xC u32 0,4,8
+# Demo-specific cascade ranges: names must form complete strings.
+fieldstr 0273687C 1047E6B8 8 "Demo02","Demo06","Demo25","sea","@keep"
+field 0273687C 101D600C u32 0,1,0x5A,0x5B,0x39C,0x39D,0x3FF,0x400,0x468,0x469,0x4EA,0x4EB,0x595,0x596,0x622,0x623,0xB3F,0xB40,0xBB7,0xBB8,0x4EB
+field 02736C10 r4+0 u32 0,2,3,4
+# The command scene manager is normally zero in the image; include an active manager.
+field 02738438 101F95D0 u32 0,0x54000000
+field 02738438 0x54001020 u32 0,1,2
+# Shadow surfaces contain at most three cascades; keep loops in that runtime domain.
+field 02736C10 r3+0x864 u32 0,1,2,3
+field 02736C10 r3+0x8CC u32 0,1,2,3
+# Coherent texture identity: exercise each descriptor comparison and the equal-descriptor path.
+mockfield 02773870 r3+0x4 u32 0
+field 02739904 r3+0x88 u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x8 u32 0
+field 02739904 r3+0x8C u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0xC u32 0
+field 02739904 r3+0x90 u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x10 u32 0
+field 02739904 r3+0x94 u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x14 u32 0
+field 02739904 r3+0x98 u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x18 u32 0
+field 02739904 r3+0x9C u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x38 u32 0
+field 02739904 r3+0xBC u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x34 u32 0
+field 02739904 r3+0xB8 u32 0,0,0,0,0,0,0,1
+mockfield 02773870 r3+0x1C u32 0
+field 02739904 r3+0xA0 u32 0,0,0,0,0,0,0,1
+# Debug context setup and equal/different display widths.
+field 027342E0 101F8DCC u32 0,1
+field 02730EB8 101F86E8 u32 0x54050000
+field 02730EB8 0x54050188 f32 0,1
+field 02730EB8 0x5405167C f32 0,1
+field 027329C8 101F86E8 u32 0x54050000
+field 027329C8 0x54050188 f32 0,1
+field 027329C8 0x5405167C f32 0,1
+field 027329C8 0x54051689 u8 0,1
+field 027329C8 101F8D74 u32 0,0x54060000
+field 027329C8 0x54060028 f32 -1,0,1,180
+# Keep the loop bound valid across opaque calls; surface callbacks may still update it coherently.
+arg! 02736C10 r3 0x54070000
+stable 54070864 4
+mockfield 02798978 r3+0x254 u32 0,1,2,3
+mockfield 027989F0 r3+0x254 u32 0,1,2,3
+# Constructor subobject null checks also see 32-bit guest-address wrapping.
+arg 0272FB18 r3 0x0,0x54080000,0xFFFF9508,0xFFFF94EC,0xFFFF94CC,0xFFFF9418,0xFFFF942C,0xFFFF9428
+arg 027340D8 r3 0x0,0x54080000,0xFFFFFAE4
+arg 02735F0C r3 0x0,0x54080000,0xFFFFEA94,0xFFFFEA84,0xFFFFE45C,0xFFFFE44C,0xFFFFE43C,0xFFFFE424
+arg 02739734 r3 0x0,0x54080000,0xFFFFFFF0,0xFFFFFFE0,0xFFFFFFB0,0xFFFFFFA0
+arg 02738308 r3 0x0,0x54080000,0xFFFFFFF0
+# Particle/list suppression bits control independent render branches.
+field * 101F4829 u8 0,1
+field * 101EA4E4 u8 0,1
+# The play getter normally returns one canonical object; keep random-return escape cases too.
+ret 025200D4 0x54090000,0x54090000
+# Camera modes and tuning flags select the shadow range algorithms.
+field 02736C10 0x54095AF8 u32 0,0x540A0000,0x540A0000,0x540A0000
+field 02736C10 0x54095B30 s8 0
+field 02736C10 0x54095CDC u32 0,0,0,0,0x100000
+stable 54095AF8 4
+stable 54095B30 1
+stable 54095CDC 4
+field 02736C10 0x540A0384 u32 0,4,10,11,14
+field 02736C10 0x540A0280 f32 -100,0,100,10000
+field 02736C10 0x540A07CC f32 0,100
+stable 540A0384 4
+stable 540A0280 4
+stable 540A07CC 4
+field 02736C10 101F89DD u8 0,1
+field 02736C10 101F89DE u8 0,1
+field 02736C10 101F89DF u8 0,1
+field 02736C10 101F89E0 u8 0,1
+ret 0273687C 0,0,0,1
+ret 025B8B94 0,0,0,1
+ret 02008860 0,1
+ret 0255BE0C 0,1
+fret 028F4384 0 1600
+# Demo range callbacks write these globals, including Demo06's false-return setup path.
+mockglobal 0273687C 101F89F0 f32 30
+mockglobal 0273687C 101F89F4 f32 200,300
+mockglobal 0273687C 101F89F8 f32 700,1000
+mockglobal 0273687C 101F8990 f32 2000,4000
+# Step allocations cover both wrapped SafeString and delegate subobjects.
+ret 0273AD10 0,0xFFFFFFF0,0xFFFFFFE0,0x54140000
+# Viewport copies preserve raw IEEE bits, even for unaligned/overlapping views.
+stable 54120000 24
+field 027313BC r4+0x8 u32 0x54120000
+field 027313BC r3+0x6B08 u32 0x54120000,0x54120001,0x54120004,0x54120005,0x54130000
+field 027313BC 0x54120000 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027313BC 0x54120004 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027313BC 0x54120008 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027313BC 0x5412000C u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027313BC 0x54120010 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027313BC 0x54120014 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 r4+0x8 u32 0x54120000
+field 027314B4 r3+0x6B08 u32 0x54120000,0x54120001,0x54120004,0x54120005,0x54130000
+field 027314B4 0x54120000 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 0x54120004 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 0x54120008 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 0x5412000C u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 0x54120010 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 027314B4 0x54120014 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C r4+0x8 u32 0x54120000
+field 02732D3C r3+0x6B0C u32 0x54120000,0x54120001,0x54120004,0x54120005,0x54130000
+field 02732D3C 0x54120000 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C 0x54120004 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C 0x54120008 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C 0x5412000C u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C 0x54120010 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 02732D3C 0x54120014 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C r4+0x8 u32 0x54120000
+field 0273172C r3+0x6B10 u32 0x54120000,0x54120001,0x54120004,0x54120005,0x54130000
+field 0273172C 0x54120000 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C 0x54120004 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C 0x54120008 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C 0x5412000C u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C 0x54120010 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+field 0273172C 0x54120014 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF
+
+# Manager capacity subobject may wrap to guest NULL after allocation.
+ret 0273B0D4 0,0xFFFFFFF0,0x54150000
+
+# Foreground X is an immediate transfer; Y remains live across a constant load.
+field 02730174 r4+0x8 u32 0x54120000
+field 02730174 r3+0x6AF8 u32 0x54120000,0x54120001,0x54120004,0x54120005,0x54130000
+field 02730174 0x54120000 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+field 02730174 0x54120004 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+field 02730174 0x54120008 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+field 02730174 0x5412000C u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+field 02730174 0x54120010 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+field 02730174 0x54120014 u32 0,0x80000000,0x7F800001,0xFFB1FFFF,0x7FC00001,0xFFFFFFFF,0x3F800000,0xBF800000
+
+# Destruction also sees empty arrays and the registered singleton.
+field 0272FCC8 r3+0x6AF8 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6AFC u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B00 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B04 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B08 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B0C u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B10 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B14 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B18 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B1C u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B20 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B24 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B28 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B2C u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B30 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B34 u32 0,0,0,0x54180000
+field 0272FCC8 r3+0x6B38 u32 0,0,0,0x54180000
+arg 02738768 r3 0,0x540B0000
+field 02738768 101F8A24 u32 0,0x540B0000
+field 02738768 101F8A20 u32 0x540B0100
+
+# Internal projection selection includes the explicit null early return.
+field 0273172C r3+0x50 u32 0,0x40,0xC0,0xC0,0x1000,0x1040,0x10C0
+field 0273172C r3+0x164 u32 0,0x54190000
+field 02731E50 r3+0x50 u32 0,0x40,0xC0,0xC0,0x1000,0x1040,0x10C0
+field 02731E50 r3+0x164 u32 0,0x54190000
+
+# Added destructor fixture object is a real viewport (ctor027B95B4 installs this vtable).
+field 0272FCC8 0x54180018 u32 0x10169BD8
+stable 54180018 4
+
+# Guest embedded view wraps at this+84; retain ordinary and random inputs.
+arg 0273172C r3 0xFFFFFF7C,0,0x541A0000
+arg 02731E50 r3 0xFFFFFF7C,0,0x541A0000
+# Canonical play world rendering enables camera-mode branches.
+field 02736C10 0x54095AC9 u8 0,1
+stable 54095AC9 1
+
+field 0273172C r3+0x4C u32 0,0x54190000
+field 02731E50 r3+0x4C u32 0,0x54190000
+
+# Introduced projection object uses the vtable installed by027389F8 (+90).
+field 0273172C 54190090 u32 0x10142D30
+field 02731E50 54190090 u32 0x10142D30
+stable 54190090 4
+
+# Canonical play stage data:025C4548 installs10055DE0; slot15C is getStagInfo025C5040.
+field 02736C10 54095150 u32 0x10055DE0
+stable 54095150 4
+ret 025C5040 0,0x541B0000
+
+#0274FEB0 consumes draw-state bytes through6E;0274FDBC initializes Blend and AlphaEnabled to1.
+callee 0274FEB0 r3=0x6F
+mockfield 0274FDBC r3+0x1 u8 1
+mockfield 0274FDBC r3+0xC u8 1
+# Shader family loaders read manager count18/capacity10 (02738FB8/02738FC0).
+callee 02738D9C r3=0x1C
+callee 02738EEC r3=0x1C
+callee 0273903C r3=0x1C
+
+# Real draw-list callback025EA1A8 (vt10058DC0+2C) reads context+30 at025EA430.
+callee 027F1088 r4=0x34
+
+# Long source name distinguishes the40000 scan boundary; fifteen short picks retain cheap ordinary cases.
+fill 027340D8 541C0000 0x40002 0x41
+field 027340D8 54200000 u8 0,0x41
+field 027340D8 54200001 u8 0
+field 027340D8 541B1000 u8 0
+field 027340D8 r4+4 u32 0x10142828
+field 027340D8 r4+0 u32 0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541B1000,0x541C0000
+stable 541C0000 0x40002
+stable 541B1000 1
+
+# List mode is read directly at027F1088; overlay color forwarded as four words to GX2 uniform imports.
+callee 027F1088 r3=12
+callee 0272CC50 r6=16
+
+# Canonical manager exposes each family loader's actual count18 input at call entry.
+# Non-strict argument steering retains original random-address cases.
+arg 0273918C r3 0x54230000,0x54230000
+observe 02738D9C 54230018 4
+observe 02738EEC 54230018 4
+observe 0273903C 54230018 4
+# Background draw lists consume their mode at+8 before the caller restores zero.
+field 027302F4 54095D54 u32 0x54240000
+field 027302F4 54095D64 u32 0x54240100
+observe 027F1088 54240008 4
+observe 027F1088 54240108 4
+
+# LineCross -> LineCheckGrpRp -> dBgW vtable10044018+3C ->024F48A4 reads embedded group mask68..6B.
+callee 02008860 r4=0x6C
+
+# Texture descriptor dimensions: width8 and blockWidth78. Width1 distinguishes threshold0/1.
+# Canonical return retains ordinary generated return escape cases.
+ret 027F81A4 0x54280000,0x54280000
+field 0273172C 54280008 u32 1
+field 0273172C 54280078 u8 1
+stable 54280008 4
+stable 54280078 1

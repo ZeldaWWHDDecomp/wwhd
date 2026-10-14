@@ -2,7 +2,7 @@
 """Acceptance check for a readability rewrite.
 
 usage: readable_check.py TARGET... --ref REF [-n 10000] [--seeds 1,7] [--no-baseline]
-                         [--allow-spec-change] [--keep] [--static-only]
+                         [--allow-spec-change] [--keep] [--static-only] [--shards K] [--unscoped]
 
 TARGET: a unit name (tools/verify/units/<unit>.txt), or a source file (wwhd_src/...cpp). Every unit
 spec that compiles one of the targets' sources is checked, companion specs (units/<unit>/*.txt)
@@ -26,6 +26,16 @@ is that its `src` lines name the new paths of mapped renames counts as unchanged
 set (check 1) still compares the addresses of the renamed source with REF's old file. Every entry must
 be a real rename: old exists in REF and not in HEAD, new exists in HEAD and not in REF. A renamed file
 without a table entry fails check 2 (the spec's src line differs from REF).
+
+Sharding and load: every verify.py run (candidate and REF baseline) is sharded: --shards K, else
+WWHD_SHARDS, else 4 at a 1-minute load <= 30 and 2 above; each run starts only at a load <=
+READABLE_LOAD_MAX (default 55). A sharded run equals an unsharded one (inputs are seeded by index).
+
+Scoped companions: a companion spec that steers only some functions was gated (and merged) with
+-only; readable_check runs it with the same -only set, from tools/verify/readable_scopes.tsv
+(`spec<TAB>ADDR[,ADDR...]`) or a `# ... run with -only ADDR[,ADDR]` / `# readable-scope: ...` comment in
+the spec. Checks 3/4 then cover exactly that set (a run returning other functions fails). --unscoped
+runs every function of every spec (diagnostics only).
 
 The summary line at the end is the result of the check. Build output of each spec is removed
 afterwards (logs kept in build/readable/logs/) unless --keep.
@@ -138,8 +148,63 @@ def parse(out):
     return res
 
 
-def run_verify(root, spec, n, seed, logdir, keep):
-    cmd = [sys.executable, os.path.join(root, "tools", "verify", "verify.py"), spec, "-n", str(n), "-seed", str(seed)]
+LOAD_MAX = float(os.environ.get("READABLE_LOAD_MAX", "55"))
+
+
+def wait_for_load():
+    """the machine rule: start a heavy run only at a 1-minute load <= READABLE_LOAD_MAX (default 55)"""
+    import time
+    while os.getloadavg()[0] > LOAD_MAX:
+        time.sleep(60)
+
+
+def shards_for(requested):
+    """-shards for one verify run: --shards / WWHD_SHARDS when given, else 4 at load <= 30 and 2 above
+    (a sharded run equals an unsharded one: inputs are seeded by their index alone)"""
+    if requested:
+        return requested
+    if os.environ.get("WWHD_SHARDS"):
+        return int(os.environ["WWHD_SHARDS"])
+    return 4 if os.getloadavg()[0] <= 30 else 2
+
+
+SCOPES = os.path.join(HERE, "readable_scopes.tsv")
+SCOPE_COMMENT = re.compile(r"^#.*?(?:run with -only|readable-scope:)\s*([0-9A-Fa-f]{8}(?:\s*,\s*[0-9A-Fa-f]{8})*)", re.M)
+
+
+def load_scopes(path=SCOPES):
+    """{spec: [ADDR, ...]} from readable_scopes.tsv (`spec<TAB>ADDR,ADDR  # source`): the published -only set of a
+    scoped companion spec, i.e. the functions its gate covered when the unit was verified and merged"""
+    table = {}
+    if os.path.exists(path):
+        for n, line in enumerate(open(path), 1):
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            w = line.split()
+            if len(w) != 2 or not all(re.fullmatch(r"[0-9A-Fa-f]{8}", x) for x in w[1].split(",")):
+                sys.exit("readable_check: %s:%d: expected `spec<TAB>ADDR[,ADDR...]`, got %r" % (os.path.basename(path), n, line))
+            table[w[0]] = [x.upper() for x in w[1].split(",")]
+    return table
+
+
+def spec_scope(spec, text, table):
+    """the -only list for a spec (readable_scopes.tsv first, else a `# ... run with -only ADDR[,ADDR]` /
+    `# readable-scope: ADDR[,ADDR]` comment in the spec), or None for an unscoped spec"""
+    if spec in table:
+        return table[spec], "readable_scopes.tsv"
+    m = SCOPE_COMMENT.search(text)
+    if m:
+        return [x.strip().upper() for x in m.group(1).split(",")], "spec comment"
+    return None, None
+
+
+def run_verify(root, spec, n, seed, logdir, keep, shards=None, only=None):
+    wait_for_load()
+    cmd = [sys.executable, os.path.join(root, "tools", "verify", "verify.py"), spec, "-n", str(n), "-seed", str(seed),
+           "-shards", str(shards_for(shards))]
+    if only:
+        cmd += ["-only", ",".join(only)]
     r = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
     out = r.stdout + r.stderr
     os.makedirs(logdir, exist_ok=True)
@@ -191,6 +256,10 @@ def main():
     ap.add_argument("--allow-spec-change", action="store_true")
     ap.add_argument("--keep", action="store_true", help="keep the build directories")
     ap.add_argument("--static-only", action="store_true", help="checks 1 and 2 only (no verification; never a merge PASS)")
+    ap.add_argument("--shards", type=int, default=0,
+                    help="verify.py -shards per run (default: WWHD_SHARDS, else 4 at load <= 30, 2 above)")
+    ap.add_argument("--unscoped", action="store_true", help="ignore readable_scopes.tsv / scope comments (run every "
+                    "function of every companion spec)")
     a = ap.parse_args()
     seeds = [int(s) for s in a.seeds.split(",")]
     ref_sha = git("rev-parse", a.ref).strip()
@@ -229,6 +298,13 @@ def main():
     print("readable_check: HEAD %s%s vs %s %s; sources: %s" % (head, " (+uncommitted changes)" if dirty else "", a.ref,
                                                               ref_sha[:8], " ".join(sorted(srcs))))
     print("specs (%d): %s" % (len(chosen), " ".join(chosen)))
+    scopes = {} if a.unscoped else load_scopes()
+    scope_of = {}
+    for s in chosen:
+        only, origin = (None, None) if a.unscoped else spec_scope(s, texts[s], scopes)
+        if only:
+            scope_of[s] = only
+            print("scoped: %-40s -only %s (%s)" % (s, ",".join(only), origin))
     problems = list(rproblems)
     if renames:
         print("renames (%d, readable_renames.tsv): %s" % (len(renames), " ".join(
@@ -278,14 +354,16 @@ def main():
     totals = dict(funcs=0, ok=0, cov=0, nb=0, refcov=0)
     for seed in seeds:
         for s in chosen:
-            rc, out = run_verify(ROOT, s, a.n, seed, logdir, a.keep)
+            only = scope_of.get(s)
+            rc, out = run_verify(ROOT, s, a.n, seed, logdir, a.keep, a.shards, only)
             res = parse(out)
             base = None
             if refroot:
                 cache = os.path.join(ROOT, "build", "readable", "baseline", ref_sha[:12],
-                                     "%s.n%d.s%d.log" % (s.replace("/", "__"), a.n, seed))
+                                     "%s.n%d.s%d%s.log" % (s.replace("/", "__"), a.n, seed,
+                                                           ".only-" + "-".join(only) if only else ""))
                 if not os.path.exists(cache):
-                    _, bout = run_verify(refroot, s, a.n, seed, os.path.join(refroot, "build", "logs"), False)
+                    _, bout = run_verify(refroot, s, a.n, seed, os.path.join(refroot, "build", "logs"), False, a.shards, only)
                     os.makedirs(os.path.dirname(cache), exist_ok=True)
                     open(cache, "w").write(bout)
                 base = parse(open(cache).read())
@@ -310,10 +388,14 @@ def main():
             if base:
                 totals["refcov"] += sum(base[ad]["cov"] for ad in res if ad in base)
             state = "ok" if not bad and rc == 0 else "FAIL"
-            print("seed %d %-40s %3d/%3d ok  cov %d/%d%s  %s" % (
+            if only and set(res) != set(only):
+                problems.append("%s seed %d: scoped run returned %s, expected -only %s" % (
+                    s, seed, ",".join(sorted(res)) or "nothing", ",".join(only)))
+            print("seed %d %-40s %3d/%3d ok  cov %d/%d%s  %s%s" % (
                 seed, s, len(res) - len(bad), len(res), sum(r["cov"] for r in res.values()),
                 sum(r["nb"] for r in res.values()),
-                (" (ref %d)" % sum(base[ad]["cov"] for ad in res if ad in base)) if base else "", state))
+                (" (ref %d)" % sum(base[ad]["cov"] for ad in res if ad in base)) if base else "", state,
+                "  [scoped %d]" % len(only) if only else ""))
             for ad, r in bad:
                 problems.append("%s seed %d: %s %s %d/%d gen %d/%d rec: %s" % (s, seed, ad, r["name"], r["gp"], r["gn"],
                                                                               r["rp"], r["rn"], r["first"]))
