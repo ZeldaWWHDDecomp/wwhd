@@ -211,13 +211,35 @@ struct gfn {
 inline bool is_guest(const void* p) {
     return (uintptr_t)p < 0x100000000ull || (uintptr_t)p - (uintptr_t)PPC_MEM_BASE < 0x100100000ull;
 }
+/* The functions of one glued source file (autoglue registers one per file with `str` lines): it lets
+ * guest_str prefer the strings of the file whose function is running. Several sources can form one
+ * unit of the port's decomp build (WWHD_DECOMP), and their unpinned strings then share one registry. */
+struct GuestFile {
+    const u32* funcs; /* sorted ascending */
+    u32 n;
+    bool has(u32 f) const {
+        u32 lo = 0, hi = n;
+        while (lo < hi) {
+            u32 mid = (lo + hi) / 2;
+            if (funcs[mid] < f) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo < n && funcs[lo] == f;
+    }
+};
 struct GuestStr {
     u32 addr;
-    const char* text; /* content as written in source (host) */
-    u32 func;         /* 0: any function of the unit; else only while this function is tested */
+    const char* text;      /* content as written in source (host) */
+    u32 func;              /* 0: any function of the unit; else only while this function is tested */
+    const GuestFile* file; /* the registering source file (nullptr: unknown) */
     GuestStr* next;
     static inline GuestStr* head = nullptr;
-    GuestStr(u32 a, const char* t, u32 f = 0) : addr(a), text(t), func(f), next(head) { head = this; }
+    static inline u32 generation = 0; /* bumped by every registration: invalidates guest_str's cache */
+    GuestStr(u32 a, const char* t, u32 f = 0, const GuestFile* fl = nullptr)
+        : addr(a), text(t), func(f), file(fl), next(head) {
+        head = this;
+        generation++;
+    }
 };
 struct HostFn {
     const void* fn;
@@ -232,18 +254,52 @@ struct HostFn {
     __builtin_trap();
 }
 inline u32 current_function(); /* address of the function under test (Activation) */
-inline u32 guest_str(const char* s) {
-    const GuestStr* any = nullptr;
-    for (const GuestStr* g = GuestStr::head; g; g = g->next)
-        if (!strcmp(g->text, s)) {
-            if (g->func == current_function()) return g->addr;
-            if (!g->func) {
-                if (any && any->addr != g->addr) glue_fatal("ambiguous string (add `in FUNC` to its glue line)", s);
-                any = g;
-            }
+/* The guest copy of a host string literal. In order: (a) the registration pinned to the running function
+ * (`in FUNC`), wherever it is in the list; (b) else the unpinned registrations of the running function's
+ * own source file; (c) else every unpinned registration. A choice between different addresses within
+ * (b), or within (c) when (b) is empty, is a real ambiguity: fatal, add `in FUNC` to the glue line. */
+inline const GuestStr* guest_str_scan(const char* s, u32 cur) {
+    const GuestStr *pinned = nullptr, *same = nullptr, *any = nullptr;
+    bool same_amb = false, any_amb = false;
+    for (const GuestStr* g = GuestStr::head; g; g = g->next) {
+        if (strcmp(g->text, s)) continue;
+        if (g->func) {
+            if (g->func == cur && !pinned) pinned = g; /* the first, as before */
+            continue;
         }
+        if (cur && g->file && g->file->has(cur)) {
+            if (same && same->addr != g->addr) same_amb = true;
+            same = g;
+        }
+        if (any && any->addr != g->addr) any_amb = true;
+        any = g;
+    }
+    if (pinned) return pinned;
+    if (same) {
+        if (same_amb) glue_fatal("ambiguous string in one source file (add `in FUNC` to its glue line)", s);
+        return same;
+    }
     if (!any) glue_fatal("string literal without a guest copy", s);
-    return any->addr;
+    if (any_amb) glue_fatal("ambiguous string (add `in FUNC` to its glue line)", s);
+    return any;
+}
+/* The scan reads the whole list, so results are cached per (literal, running function): a small
+ * direct-mapped table per thread, checked against the found registration's text (the pointer alone could
+ * be a reused host buffer) and the registry generation. */
+struct GuestStrCacheEntry {
+    const char* s;
+    const char* text;
+    u32 cur, gen, addr;
+};
+[[gnu::noinline]] inline u32 guest_str(const char* s) { /* one call per use, not a copy per call site */
+    static thread_local GuestStrCacheEntry cache[256];
+    u32 cur = current_function();
+    uintptr_t h = ((uintptr_t)s >> 3) ^ ((uintptr_t)s >> 11) ^ (cur * 0x9E3779B1u);
+    GuestStrCacheEntry& e = cache[(h ^ (h >> 8)) & 255];
+    if (e.s == s && e.cur == cur && e.gen == GuestStr::generation && e.text && !strcmp(e.text, s)) return e.addr;
+    const GuestStr* g = guest_str_scan(s, cur);
+    e = GuestStrCacheEntry{s, g->text, cur, GuestStr::generation, g->addr};
+    return g->addr;
 }
 inline u32 guest_addr(const char* s) { return is_guest(s) ? ea(s) : guest_str(s); }
 inline u32 guest_fn(const void* f) {
@@ -737,14 +793,17 @@ struct EntryScope {
     Cpu* saved_cpu;
     int saved_depth;
     u32 saved_lr;
+    u32 saved_current; /* the caller's function under test: its string pins (guest_str) apply again */
     Cpu* c;
-    explicit EntryScope(Cpu* c_) : saved_cpu(cpu), saved_depth(Activation::depth), saved_lr(c_->lr), c(c_) {
+    explicit EntryScope(Cpu* c_)
+        : saved_cpu(cpu), saved_depth(Activation::depth), saved_lr(c_->lr), saved_current(Activation::current), c(c_) {
         cpu = c_;
         Activation::depth = 0;
     }
     ~EntryScope() {
         c->lr = saved_lr;
         Activation::depth = saved_depth;
+        Activation::current = saved_current;
         cpu = saved_cpu;
     }
 };

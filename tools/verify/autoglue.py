@@ -30,7 +30,8 @@ Before compilation (verify.py, mutate.py) this tool rewrites the file:
     that address (still `static` at file scope unless some source or header declares the name `extern`:
     then it is shared with other translation units); the initialiser is compared with the RPX image at build time;
   - `static T name(init);` with `data ... guard ...` -> gabi::local_static;
-  - the strings of `str` lines are registered (host literal -> guest address, gabi::guest_str);
+  - the strings of `str` lines are registered (host literal -> guest address, gabi::guest_str), with the
+    file's function addresses (gabi::GuestFile: unpinned strings of the running function's file are preferred);
   - `#include "assets/X.h"` (model data, tools/verify/assets.py) is replaced by the header generated
     from the game, on one line; its table is then handled like any other.
 Line numbers are kept (one output line per input line), so compiler errors point at the source.
@@ -953,8 +954,14 @@ def transform(text, path="<src>"):
 
     # ---- registrations
     reg = ["", "/* ---- autoglue: registrations ---- */"]
+    if strs:
+        # the file's functions: gabi::guest_str prefers this file's unpinned strings while one of them runs
+        # (the port's decomp build links several sources into one registry)
+        faddrs = sorted({f[0] for f in funcs})
+        reg.append("static const u32 wwhd_file_funcs_[] = {%s};" % (", ".join("0x%08X" % a for a in faddrs) or "0"))
+        reg.append("static const gabi::GuestFile wwhd_file_{wwhd_file_funcs_, %d};" % len(faddrs))
     for n, (addr, host, func) in enumerate(strs):
-        reg.append("static gabi::GuestStr wwhd_str_%d(0x%08X, %s, 0x%08X);" % (n, addr, cstr_lit(host), func))
+        reg.append("static gabi::GuestStr wwhd_str_%d(0x%08X, %s, 0x%08X, &wwhd_file_);" % (n, addr, cstr_lit(host), func))
     declared = None
 
     def ext_hostfn(qname, ret, params, addr):
