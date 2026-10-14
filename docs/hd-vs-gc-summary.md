@@ -1,7 +1,7 @@
 # Wind Waker HD vs. GameCube — summary of the differences
 
 Found while verifying the decompilation: every unit was compared with the GameCube decompilation
-(zeldaret/tww). This is a summary in our own words of all 774 compared units (snapshot 2026-10-07).
+(zeldaret/tww). This is a summary in our own words of all 838 compared units (snapshot 2026-10-13).
 Statements marked "probably" are interpretations; everything else is what the code shows. The full
 list, one entry per unit, is in [hd-differences.md](hd-differences.md).
 
@@ -10,7 +10,7 @@ list, one entry per unit, is in [hd-differences.md](hd-differences.md).
 | Structure (layout, compiler output, code split differently) | 694 |
 | Gameplay | 271 |
 | Graphics | 264 |
-| HD-only (code with no GameCube counterpart) | 160 |
+| HD-only (code with no GameCube counterpart) | 224 |
 | Fixes (GameCube bugs fixed in HD) | 65 |
 | Removed | 46 |
 
@@ -36,6 +36,11 @@ list, one entry per unit, is in [hd-differences.md](hd-differences.md).
   out than on the GameCube.
 - **New screens:** the auction shows a rupee meter and a rolling three-digit bid counter; the arrow
   icon shows the arrow type with an element particle.
+- **The HD UI:** the sea chart, dungeon map, menu and warp maps, the pause menus, the HUD, the
+  GamePad item and auxiliary screens, the Picto Box, the Miiverse screens, title, staff roll and
+  ending, the message windows and the minigame screens are new code built on a shared UI parts
+  framework (layout manager, parts with state machines, buttons, message base). They have no
+  GameCube counterpart; one entry per unit in [hd-differences.md](hd-differences.md).
 - **Text:** per-language message files with inline tags replace the GameCube message archives;
   counters get singular/plural labels, and button symbols probably follow the controller in use.
 - **Engine:** an additional HD camera object, a crash report when room files are loaded, HD

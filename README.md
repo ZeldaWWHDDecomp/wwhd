@@ -175,8 +175,8 @@ in place of the originals; that build setup is not part of this release.
 
 ## HD vs. GameCube
 
-While verifying, every unit is compared with the GameCube version. 774 units have been compared;
-the differences of all 774 are summarised in [docs/hd-vs-gc-summary.md](docs/hd-vs-gc-summary.md) — new HD
+While verifying, every unit is compared with the GameCube version. 838 units have been compared;
+the differences of all 838 are summarised in [docs/hd-vs-gc-summary.md](docs/hd-vs-gc-summary.md) — new HD
 features (Tingle Bottle, Swift Sail, Picto Box selfies, Hero Mode), gameplay changes, 64 GameCube
 bugs fixed in HD, and what was removed (Tingle Tuner, blob shadows, debug code). The full list, one
 entry per unit, is in [docs/hd-differences.md](docs/hd-differences.md); a few longer unit write-ups

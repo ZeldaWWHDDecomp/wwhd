@@ -12,7 +12,7 @@ Categories: **Gameplay** (behaviour players can notice), **Graphics** (rendering
 **Fix** (GameCube bug or crash fixed in HD), **Structure** (layout, signatures, code moved/removed),
 **Removed** (features absent in HD), **HD-only** (code with no GameCube counterpart).
 
-**Snapshot:** 2026-10-07, 774 units compared.
+**Snapshot:** 2026-10-13, 838 units compared.
 
 ## Entry format
 
@@ -3916,3 +3916,195 @@ The message base uses signed 16-bit numeric selection steps of one, ten or one h
 ### UI_msg_event (event-window melody and typing states) — 2026-10-07
 
 HD-only / Structure: these sixteen functions have no GameCube implementation template. Two helpers clamp melody and pane-table indices; three wrappers dispatch through the pane array with its slot-zero fallback. EventFrame initialization builds cumulative beat lengths, and its updates age shown beats and compare player notes with melody data. Completion compares the last completed beat index, rather than its animation age, against the expected sequence length. Input debounce, sounds, message status and typing progress retain the original call ordering. The short wait uses signed threshold five; the close-wait decrement belongs to an external object, and stop-point advancement copies the packed message color into its pane. These binary findings refine the preliminary scanner descriptions. No60Hz conversion is included; six coverage edges are unreachable.
+
+### hd_inf_render_1 (render glue) — verified, 2026-10-13
+- HD-only: Display-layer contexts, viewports, faders, particle submission, graphics tasks and renderer resource setup.
+
+### hd_inf_render_2 (render layers) — verified, 2026-10-13
+- HD-only: Resolution and projection setup, GamePad modes, mask bars, filters, wipe effects, shadow cascades and scene passes.
+
+### hd_inf_render_fader (Fader layer) — verified, 2026-10-13
+- HD-only: The `Fader` layer (subscription `LayerFader`) draws on layer 6 only when the output mode is 2, using draw pass 14.
+
+### hd_hud_boss_hp_compass_clock_4more (health meters, compass clock, keys and wipes) — verified, 2026-10-13
+- HD-only: The boss and enemy health meters, compass/clock, crawl-direction arrows, dungeon-key count with sparkles, and the fade and iris wipes. All are no-control parts that only animate in and out.
+
+### hd_hud_command (action prompt and button guide) — verified, 2026-10-13
+- HD-only: The A-button prompt and the X/Y/R item icons, whose frames are set from the equipped items. The map-screen guide reports commands only while a menu is open (`dMenu_flag`).
+
+### hd_hud_heart_information_4more (hearts, information, loading and magic) — verified, 2026-10-13
+- HD-only: The heart display (`HeartAll`), information text, loading and boss icons, the magic meter (a progress bar) and the placement of the main HUD's child screens.
+
+### hd_hud_place_name_rupy_4more (rupees, timers, swim gauge, telescope) — verified, 2026-10-13
+- HD-only: The rupee counter with its wallet-size animation, the elapsed-time display, the swim gauge, the telescope zoom indicator and shutter, and the unread-Miiverse badge.
+
+### hd_hud_shortcut (GamePad item shortcut and system window) — verified, 2026-10-13
+- HD-only: `Shortcut_00` shows the Wind Waker on land; on the boat it shows the cannon (with a two-digit bomb count) or the salvage arm. `SequenceWindow_00` hosts the save, continue, warp, Miiverse, second-screen and Hero Mode dialogs as 0x28-byte command scripts. One warp line changes once event 0x2D80 is set.
+
+### hd_drc_icon_slide_area (item-slot drop area) — verified, 2026-10-13
+- HD-only: A drop area for the X/Y/R item buttons (`B_X_00`, `B_Y_00`, `B_R_00`) with drop, slide and float animations. A mirror screen copies its frames, probably for the TV.
+
+### hd_drc_item_screen (GamePad item menu) — verified, 2026-10-13
+- HD-only: Item selection, dragging and touch slide/decide gestures, inventory counts and arrow variants.
+
+### hd_menu_blur_bg_btn_pearl_2more (blurred background, Pearl and Triforce buttons) — verified, 2026-10-13
+- HD-only: The pause-menu background is a captured frame that fades in and out. The collection page shows the three Pearls from save flags and the eight Triforce shards, with a completion animation and sound.
+
+### hd_menu_btn_collect_icon (collection buttons) — verified, 2026-10-13
+- HD-only: The collection-page buttons and their mask.
+
+### hd_menu_btn_menu (pause menu buttons) — verified, 2026-10-13
+- HD-only: The tab buttons (`BtnMenu_00`) have decide and cancel animations; the Miiverse tab shows an unread-comment count. The page arrows (`BtnMenuArrow_00`) repeat with delay 30 and rate 1 while held. `BtnMenuHeart_00` shows max life mod 4 (pieces towards the next heart).
+
+### hd_menu_cursor (menu cursors) — verified, 2026-10-13
+- HD-only: `Cursor_00` follows the focused element and is sized to it plus a 20-unit margin. `Cursor_02` is placed from outside. `Cursor_01` frames the widest message choice line.
+
+### hd_menu_menu_btns (menu button management) — verified, 2026-10-13
+- HD-only: Positions menu panes, maps buttons, handles focus and availability, and manages the button resources.
+
+### hd_menu_menu_main (main pause menu) — verified, 2026-10-13
+- HD-only: A controller for the menu tabs, option window and save screen, including input blocking and transitions.
+
+### hd_menu_sequence_option (options menu) — verified, 2026-10-13
+- HD-only: Page selection, touch and focus, button labels, scrolling and transitions of the options screen.
+
+### hd_map_btn_floor_enemy_tower_4more (dungeon-map buttons and chart details) — verified, 2026-10-13
+- HD-only: The dungeon-item icon (`BtnDungeonItemIcon_00`) and floor button, plus six chart detail screens (enemy tower, fairy, heart island, heart sea, moon, ghost ship). The ghost-ship screen follows the time of day and the moon phase.
+
+### hd_map_btn_map_icon (map buttons) — verified, 2026-10-13
+- HD-only: Icon positions on the primary and secondary maps, the chart button (selection and fish details), the pattern button and the collected-map count.
+
+### hd_map_dungeon_map_1 (dungeon map screen) — verified, 2026-10-13
+- HD-only: Up to 64 door and 32 treasure markers, plus player, boss, partner and three special-item markers (fallback tables: 4 treasures, 17 doors). Floor selection, zoom and drag are handled here. The boss marker appears after a boss event bit (boss 5 uses event 0x4004).
+
+### hd_map_dungeon_map_2 (dungeon map, second part) — verified, 2026-10-13
+- HD-only: `DungeonMap_00` setup and upkeep: it builds the screen, finds the frame, floor and label panes, and creates the map layers and markers (Link, boss, partner, items, doors, treasure, enemies). It keeps the floor and item buttons, the floor labels and the caption in sync with the current dungeon. It switches the zoom mode, handles touch drag, and draws the map layers clipped to the map area.
+
+### hd_map_dungeon_map_3 (dungeon markers and floors) — verified, 2026-10-13
+- HD-only: Link, companion, ship and door markers, floor selection, room-cell positioning and floor captions.
+
+### hd_map_dungeon_map_4 (statue, treasure and floor-up markers) — verified, 2026-10-13
+- HD-only: `DungeonMapStatue_00`, `DungeonMapTreasure_00` and `DungeonMapUp_00`. Special floors 0x81, 0x80 and 0x85 are captioned outdoor, 2F and 1F. The entrance markers of dungeons 1–4 appear only after event bits 0x2A10 / 0x1B01 or switches 0x1C (room 5) / 0x10 (room 3).
+
+### hd_map_menu_map (pause-menu sea chart page) — verified, 2026-10-13
+- HD-only: `MenuMap_00` has 18 states and 12 chart detail views. The wind arrow eases towards the wind direction (24° max step, 0.5° min). It plays sounds `SE_SO_DRAW_MAP`, `SE_MENU_CHART_SWITCH` and `SE_MENU_CHART_OPEN_CLOSE_S`.
+
+### hd_map_sea_chart_1 (sea chart menu and map) — verified, 2026-10-13
+- HD-only: `Map_00` has 49 treasure markers (`P_TreasureGet_00`–`48`) and creates its HUD parts by class name. The map eases drag, zoom and rotation and keeps ten tiles plus the selected one. Sounds: `SE_MENU_DECIDE`, `SE_MENU_CHART_CLOSE`.
+
+### hd_map_sea_chart_2 (chart transforms and input) — verified, 2026-10-13
+- HD-only: Converts pane transforms to chart coordinates, tracks cells on the 7x7 grid, and translates button and touch events.
+
+### hd_map_sea_chart_3 (map coordinator) — verified, 2026-10-13
+- HD-only: Links the menu states to the sea chart and dungeon map, sets the map mode from the stage, and updates the player and ship markers and the acquired-chart order.
+
+### hd_map_secret_entrance_squid_4more (chart marker overlays) — verified, 2026-10-13
+- HD-only: Overlays for secret caves, Big Octo, submarines, Beedle's ship, Tingle Tower and the Triforce chart, which caches eight shard states.
+
+### hd_map_tre_map (treasure-chart panel) — verified, 2026-10-13
+- HD-only: `TreMap_00` shows one of four patterns (`G_MapPattern_00`–`03`) and the hint, Triforce and treasure chart animations. The `LinkPos_00` marker follows the player.
+
+### hd_map_warp_map (Ballad of Gales warp map) — verified, 2026-10-13
+- HD-only: `WarpMap_00` uses the sea-chart menu to pick a warp area by cell. Cancel sets the destination to 0xFFFFFFFF and closes the map. The display mode is saved on entry and restored on exit.
+
+### hd_fw_parts_msg_base (message-window base) — verified, 2026-10-13
+- HD-only: The shared base of the message windows: choice positions from pane and font metrics, number input in steps of 1/10/100, wait timers, stop points, and a UI-part scheduler (sequential, reversed, centre-out or random delays). Message 0x5AC reads the hand-input flag; 0x1CFA takes a different number-select path.
+
+### hd_msg_keyboard_text_area_key_icon_1more (keyboard text area and key icon) — verified, 2026-10-13
+- HD-only: The keyboard text area and its cursor, with GamePad-dependent text and a bounded UTF-16 answer buffer.
+
+### hd_msg_msg_window_event (event and song window) — verified, 2026-10-13
+- HD-only: `MsgWindowEvent_00` (frame `MsgWindowEventFrame_00`) shows event text and the baton song prompts. For songs 0–7 it shows up to six beat marks and compares the played notes with the melody. Input has a 3-frame delay, and text has up to ten stop points.
+
+### hd_msg_msg_window_main (talk, choice and message-only windows) — verified, 2026-10-13
+- HD-only: `MsgWindowMain_00` is built from three screens. The choice window works on the TV (opens with sound 0x80C) or the GamePad (`SE_TALK_*_DRC` sounds) and shows two or three choices; by default the first choice plays 0x880 and the second 0x80D. The message-only window `MsgOnly_00` has up to ten stops. Message 0x1072 stops sound 0x3C; messages 0x1076–0x1078 use the other text kind. The unused pane `L_KayIcon_00` is hidden.
+
+### hd_msg_msg_window_main2 (second talk window and frameless message) — verified, 2026-10-13
+- HD-only: The second `MsgWindowMain_00` adds choices, number selection (`P_SelNumber_00`) and a tail that points up or down at the speaker. `MsgOnly_00` fades in with sound 0x823, advances with 0x880 (kind 39) or 0x80B, closes with 0x80D, and returns 13 for yes/no answers (otherwise 7).
+
+### hd_msg_msg_window_scroll (scrolling message window) — verified, 2026-10-13
+- HD-only: Shows up to three lines in panes and scrolls ten units per update. Key icons use pane-based scissor bounds.
+
+### hd_msg_sequence_window (save/load prompt window) — verified, 2026-10-13
+- HD-only: Prompt text with button choices and touch input. It starts save/load operations, waits while the save manager is busy, then advances or closes.
+
+### hd_scene_boot_ending (boot, ending and second-quest save) — verified, 2026-10-13
+- HD-only: Archive lifetime, camera and screen setup, and the `Explain`/`Select`/`End` save-scene states.
+
+### hd_scene_file_select (file selection) — verified, 2026-10-13
+- HD-only: Controller choice, file select, confirmation and name entry, with separate TV and GamePad drawing. A name made only of spaces becomes the localised default name.
+
+### hd_scene_ingame_ui_1 (in-game scene UI manager) — verified, 2026-10-13
+- HD-only: TV/GamePad focus, pause/menu/save transitions, song guidance, the Picto Box, Miiverse social states, password entry and Fishman hints. In Ganon's Tower it clears selected dungeon items.
+
+### hd_scene_ingame_ui_2 (in-game scene UI, part two) — verified, 2026-10-13
+- HD-only: The in-game UI scene manager. It builds and loads every HUD and menu screen, then draws them on the TV and GamePad layers. It runs the pause, menu, save, option, pictograph and Miiverse transitions, and the TV/GamePad mode switch. It also handles the password keyboard and assigns items to the three item buttons. It has 54 states.
+
+### hd_scene_main_screens (main scene screen registry) — verified, 2026-10-13
+- HD-only: Registers 148 layout resources (HUD, maps, messages, Miiverse, baton, Picto Box, minigames) on one heap.
+
+### hd_scene_title_staffroll (Title, SaveEnd, StaffRoll scenes) — verified, 2026-10-13
+- HD-only: `Title_00` disables screen dimming while active. `SaveEnd` offers the post-credits save. The staff roll runs 100 ambient bubbles plus 30 character bubbles taken from up to 300 records.
+
+### hd_title_boot_btn_difficulty_3more (boot, difficulty, E3, ending, game over) — verified, 2026-10-13
+- HD-only: The boot screen, the normal/Hero Mode button, the E3 demo course-select and thank-you screens, the ending "End" screen, and the game-over per-character text effect.
+
+### hd_title_opening (opening screen) — verified, 2026-10-13
+- HD-only: 22 picture/message states, then `OutAll`, with `InSkip`/`OutSkip` animations for skipping. The layout has 25 animations.
+
+### hd_title_save_data_select_controller_2more (controller select, title logo, save data) — verified, 2026-10-13
+- HD-only: Controller selection, start-up background captions, title-logo panes and save-data captions.
+
+### hd_title_staff_roll (credits screen) — verified, 2026-10-13
+- HD-only: `StaffRoll_00` scrolls 14 lines through 187 labels (`T_StaffRoll_00`–`186`) and then `T_AllRights_00`, timed to take 9750 frames. Lines fade between y ±100 and ±330. Bubbles rise faster and fainter the smaller they are; `StaffRollBubble_00` has 13 motion kinds.
+
+### hd_mini_auction_battleship_3more (minigame screens) — verified, 2026-10-13
+- HD-only: - `BattleshipGame_00` (Squid Hunt) has 24 cannonball and 3 squid icons; the best score comes from event register 0xBEFF. - `CannonGame_00` has 10 shot and 5 ship icons, and shows the angle 15.5 + 35 × (elevation − 22.5) / 22.5. - `RupySwordCounter_00` counts the hits.
+
+### hd_mini_boat_race (boat race screens) — verified, 2026-10-13
+- HD-only: Failure and result screens (time and rupees). The countdown sound plays at frame 91.
+
+### hd_miiv_btn_miiverse (comment and picture buttons) — verified, 2026-10-13
+- HD-only: Shows post text, response counts and pictures; text overflowing the third line is cut with an ellipsis.
+
+### hd_miiv_menu_miiverse_1 (Miiverse menu) — verified, 2026-10-13
+- HD-only: Miiverse menu states, chart and confirmation navigation, and message and texture updates.
+
+### hd_miiv_menu_miiverse_2 (Miiverse comments and settings) — verified, 2026-10-13
+- HD-only: The comment, new-comment, settings and sequence screens of the Miiverse menu.
+
+### hd_fw_layout_mgr (layout resource manager) — verified, 2026-10-13
+- HD-only: A 1024-node archive cache, a resident heap and a preload thread. Preload groups cover the title, opening, controller select, save select, staff roll and ending.
+
+### hd_fw_parts_buttons (button and window parts) — verified, 2026-10-13
+- HD-only: Button selection, touch and state handling, animated heart buttons, and window parts that measure, wrap and lay out text.
+
+### hd_fw_parts_loop_display (UI parts base) — verified, 2026-10-13
+- HD-only: The shared base of HD menus and the HUD: a layout, a `Blank`/`Display` state machine and child parts built from the layout's descriptors. There are ten parts classes: `BasicButton`, `Heart`, `InOutLoop`, `KeyIcon`, `Loop`, `NoControl`, `NoDecideButton`, `OneTime`, `ProgressBar` and `Valid`. `InOutLoop` plays In, then loops, then Out; `KeyIcon` plays In, waits, then Decide or Out.
+
+### hd_fw_parts_text_valid (Valid part and text pane) — verified, 2026-10-13
+- HD-only: The `Valid` part animates between valid and invalid states. Layout suffixes select Japanese, American or European variants, with a fallback. The text pane fits and wraps wide text using Unicode line-break rules.
+
+### hd_drc_battery_btn_control_wind_5more (GamePad auxiliary screens) — verified, 2026-10-13
+- HD-only: The GamePad battery, wind-selection button and confirmation, information, inactive-controller and pause-transition screens, plus the TV slide-assist screen.
+
+### hd_txt_text_builder_input (orientation and cursor helpers) — verified, 2026-10-13
+- HD-only: 3x3 controller-orientation matrix helpers (a zero determinant gives the identity matrix) and a cursor chase that snaps to the target once within one step.
+
+### hd_inf_picture_save (photograph records) — verified, 2026-10-13
+- HD-only: Saves pictures with JPEG records and checksums, player and Miiverse names, play-log statistics and three-slot summaries.
+
+### hd_inf_save_holders (save-info holders) — verified, 2026-10-13
+- HD-only: Manages inventory records, slot flags, play logs and the save-info singleton, including a checksum over the save fields and UTF-16 names.
+
+### hd_baton_baton_input (baton timing panes) — verified, 2026-10-13
+- HD-only: The Wind Waker timing, completion and beat panes and their angle limits.
+
+### hd_baton_baton_sign (baton sign screens) — verified, 2026-10-13
+- HD-only: The baton completion points, the sign and sign-window screens, and the sign list.
+
+### hd_picto_best_shot_mark_btn_pictograph (Picto Box marks and posting) — verified, 2026-10-13
+- HD-only: Best-shot marks, the posting panel, and place labels taken from stage names.
+
+### hd_picto_pictograph (Pictograph screen) — verified, 2026-10-13
+- HD-only: The Picto Box camera, picture list, picture boxes and posting panes.
