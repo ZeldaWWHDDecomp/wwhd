@@ -3,3 +3,4 @@
 # whose src lines differ from the reference only by these renames (function set and addresses are still
 # compared with the old file); objcmp.py compares the new file with the old one. Spec names stay.
 # Add the entry in the same commit as the git mv and the src-line change; never chains or duplicates.
+wwhd_src/d/hd_state_task.cpp	wwhd_src/d/hd_scalable_font_mgr.cpp

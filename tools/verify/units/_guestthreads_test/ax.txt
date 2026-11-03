@@ -1,0 +1,11 @@
+# ax_test.py carrier: sead::AudioSystem::initializeDevice 02762FB4 (wwhd_src/sead/AudioSystemRuntime.cpp) under
+# `osmem hle threads ax`: AXInit starts the AX frame thread, the device settings follow.
+# verify: -strictnan
+src wwhd_src/sead/HeapRegistryStatics.cpp wwhd_src/sead/FileDeviceStatics.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/AudioSystemRuntime.cpp
+src wwhd_src/sead/AudioPlayer.cpp wwhd_src/sead/AudioArchive.cpp wwhd_src/sead/AudioSoundHeap.cpp wwhd_src/sead/AudioLaunchConfiguration.cpp
+osmem hle threads ax
+stackfill
+fill * 0x5D700000 0x200 0
+stable 0x5D700000 0x200
+arg! 02762FB4 r3 0x5D700000
+real 02762F94 02762F9C 02762FAC

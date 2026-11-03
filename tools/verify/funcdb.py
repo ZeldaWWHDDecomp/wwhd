@@ -49,13 +49,19 @@ class GenIndex:
         self.addrs = sorted(self.loc)
         self._text = {}
 
-    def text(self, addr):
-        if addr not in self._text:
+    def text(self, addr, keep=True):
+        """the function's generated C text; keep=False reads it without adding it to the cache (2026-11-02:
+        Dataflow reads the text of every function it reaches only to build its Cfg, which once kept ~177 MB of text
+        alive for the whole run)"""
+        t = self._text.get(addr)
+        if t is None:
             fn, a, b, _ = self.loc[addr]
             with open(os.path.join(self.gen_dir, fn)) as f:
                 f.seek(a)
-                self._text[addr] = f.read(b - a)
-        return self._text[addr]
+                t = f.read(b - a)
+            if keep:
+                self._text[addr] = t
+        return t
 
     def size(self, addr):
         import bisect
@@ -182,7 +188,13 @@ class Demangler:
 
 
 # GameCube namespaces whose free functions mangle like methods (Name__<len>nsF...)
-NAMESPACES = {"daObj::@unnamed@d_a_obj_cpp@", "daObj", "dLib", "JGeometry", "daBomb2", "dComIfG", "daSwItem_prm", "dItem_data", "cLib"}
+NAMESPACES = {"daObj::@unnamed@d_a_obj_cpp@", "daObj", "dLib", "JGeometry", "daBomb2", "dComIfG", "daSwItem_prm", "dItem_data", "cLib",
+              # JAudio (tww headers declare these as namespaces, not classes: no `this`; 2026-10-21, JS-JAudio#1
+              # storeSeBuffer 02807300 takes r3..r8). JUTAssertion and JStudio::math are namespaces too, but adding
+              # them changes several hundred merged specs: a separate, re-verified pass.
+              "JAIGlobalParameter", "JAInter", "JAInter::BankWave", "JAInter::DummyObjectMgr", "JAInter::HeapMgr",
+              "JAInter::InitData", "JAInter::SeMgr", "JAInter::SequenceMgr", "JAInter::SoundTable",
+              "JAInter::SystemInterface", "JASystem::Calc", "JASystem::Driver", "JASystem::Player"}
 
 
 def signature(sym):
@@ -278,9 +290,19 @@ ARGS = {("r", i) for i in INT_ARGS} | {("f", i) for i in FLT_ARGS}
 VOLATILE = {("r", i) for i in [0] + list(range(3, 13))} | {("f", i) for i in range(0, 14)}
 
 
+# Interned per-instruction facts (2026-11-02: mkunit needed >= 5 GB RSS for the J3D start-up profile, whose
+# Dataflow reaches most of the game's ~2.5M generated instructions): use/def sets become shared frozensets, successor
+# and call lists shared tuples. The values are the same, only stored once; nothing mutates them after Cfg.__init__.
+_INTERN = {}
+
+
+def _intern(x):
+    return _INTERN.setdefault(x, x)
+
+
 class Cfg:
     """Instructions of one generated function: own register uses/defs, calls, successors,
-    reachability from the entry."""
+    reachability from the entry. use/defs entries are (shared) frozensets, succ/calls entries (shared) tuples."""
 
     def __init__(self, text):
         insns, labels = [], {}
@@ -337,6 +359,10 @@ class Cfg:
         if self.varargs:
             for k, reg in spilled.items():
                 self.use[k].discard(reg)
+        self.use = [_intern(frozenset(u)) for u in self.use]
+        self.defs = [_intern(frozenset(d)) for d in self.defs]
+        self.succ = [_intern(tuple(x)) for x in self.succ]
+        self.calls = [_intern(tuple(x)) for x in self.calls]
         self.reach = set()
         st = [0] if n else []
         while st:
@@ -358,18 +384,20 @@ class Dataflow:
     across a call to a callee known not to touch it, so a mocked callee must only write
     registers the real callee may write."""
 
-    def __init__(self, gen, unknown_reads_args=True):
+    def __init__(self, gen, unknown_reads_args=True, cfgs=None):
+        """cfgs: a Cfg cache to share with another Dataflow on the same GenIndex (a Cfg does not depend on
+        unknown_reads_args; mkunit's two Dataflows used to build every Cfg twice)"""
         import sys
         sys.setrecursionlimit(100000)
         self.gen = gen
         self.unknown_reads_args = unknown_reads_args
-        self.cfgs = {}
+        self.cfgs = {} if cfgs is None else cfgs
         self.li, self.md = {}, {}
         self.busy_li, self.busy_md = set(), set()
 
     def cfg(self, addr):
         if addr not in self.cfgs:
-            self.cfgs[addr] = Cfg(self.gen.text(addr))
+            self.cfgs[addr] = Cfg(self.gen.text(addr, keep=False))
         return self.cfgs[addr]
 
     def maydef(self, addr):

@@ -1,0 +1,20 @@
+# dynload_test.py carrier (`osmem heaps dynload swkbd`): hdSwkbd_mgr_c (wwhd_src/d/hd_swkbd_mgr.cpp) with the original
+# loader run for real: prepare 026195C4 -> Swkbd create 0286CD7C (SetAllocator, Acquire("swkbd.rpl"), 35 FindExports through
+# the wrappers 0286D410..0286D5D8 into the slots 104B67A0..104B6828, SwkbdCreate through slot 104B67B8); isHidden 0261A008
+# reads the state through the trampoline 0286D270 (SwkbdGetStateKeyboard, not modelled: a model rejection at the call).
+# verify: -strictnan
+src wwhd_src/d/hd_swkbd_mgr.cpp
+osmem heaps dynload swkbd
+fill * 0x5A000000 0x3000 0
+stable 0x5A000000 0x3000
+field * 101F8B08 u32 0x5B000000
+field * 101F4BAC u32 0x5E100000
+field * 5E100010 u32 1
+field * 5E100014 u32 1
+arg! 026195C4 r3 0x5A000000
+arg! 0261A008 r3 0x5A000000
+real 0286CD7C 0286CD54 0286D410 0286D428 0286D440 0286D458 0286D470 0286D488 0286D4A0 0286D4B8 0286D4D0 0286D4E8 0286D500 0286D518 0286D530 0286D548 0286D560 0286D578 0286D590 0286D5A8 0286D5C0 0286D5D8
+real 026195C4 0286D270
+ret! 02753004 0x5E000000 0x5E000000
+ret! 0273B0D4 0x5C000000 0x5C000000
+setup 0261A008 026195C4 r3=0x5A000000

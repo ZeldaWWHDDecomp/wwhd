@@ -84,7 +84,35 @@ __attribute__((weak)) void gmem_frame_fallback(uint32_t func, uint32_t size, uin
 #else
 void gmem_frame_fallback(uint32_t func, uint32_t size, uint32_t used, uint32_t space, uint32_t frame);
 #endif
+/* a trap instruction (tw/twi) the original takes, e.g. the debugger break in nw::ut halt (0286DB70): the harness
+ * counts it like the original's trap and compares the counts; the weak game-build default hands it to the
+ * runtime's ppc_trap (the port owns what a native debugger break does) */
+#ifdef GABI_HARNESS
+void gmem_trap(Cpu* c, uint32_t addr);
+#else
+__attribute__((weak)) void gmem_trap(Cpu* c, uint32_t addr) { ppc_trap(c, addr); }
+#endif
+/* lwarx / stwcx. (a reservation pair) and sync for spin locks and atomic updates in guest memory: the game build
+ * uses the runtime's native atomics (ppc.h ppc_lwarx/ppc_stwcx, a full fence); the harness routes them through
+ * its observed memory (same reservation rule as the reference's vm_lwarx/vm_stwcx) */
+#ifdef GABI_HARNESS
+uint32_t gmem_lwarx(Cpu* c, uint32_t ea);
+int gmem_stwcx(Cpu* c, uint32_t ea, uint32_t v);
+void gmem_sync(void);
+#else
+__attribute__((weak)) uint32_t gmem_lwarx(Cpu* c, uint32_t ea) { return ppc_lwarx(c, ea); }
+__attribute__((weak)) int gmem_stwcx(Cpu* c, uint32_t ea, uint32_t v) { ppc_stwcx(c, ea, v); return c->cr[2]; }
+__attribute__((weak)) void gmem_sync(void) { __atomic_thread_fence(__ATOMIC_SEQ_CST); }
+#endif
 void gmem_call_top(uint32_t top);
+/* GABI_GUEST_GUARD builds (the harness): a be<>/gptr<> whose `this` is outside guest_ref's ranges (gabi.h,
+ * be<>::addr): a host object (host stack, heap block or image data) prints the diagnostic and ends the run (exit
+ * status 86; its return address is the offending access); NULL-based guest address arithmetic returns. */
+[[gnu::cold, gnu::noinline]] void gmem_host_object(const void* self, unsigned size);
+/* GABI_GUEST_GUARD=2 builds (verify.py -guardstrict, a diagnostic): a be<>/gptr<> whose `this` is neither in the guest
+ * window [PPC_MEM_BASE, +4 GB) nor a NULL-based address below 4 GB, i.e. host address arithmetic that only reaches its
+ * guest address through ea()'s 32-bit wrap (fast: inside guest_ref's ranges) */
+[[gnu::cold, gnu::noinline]] void gmem_host_wrap(const void* self, unsigned size, int fast);
 /* kind: 0 direct, 1 through a function pointer; nint/nflt: argument registers set */
 void gmem_call(Cpu* c, uint32_t target, int kind, int nint, int nflt);
 }
@@ -93,17 +121,44 @@ namespace gabi {
 
 extern thread_local Cpu* cpu;
 
+/* the original's trap instruction at guest address ADDR (tw/twi taken): compared as a trap event */
+inline void trap(u32 addr) { gmem_trap(cpu, addr); }
+/* lwarx: load the word at A and reserve it; stwcx.: store V at A only if the reservation still holds, returns
+ * whether it stored (cr0.eq, also set in cpu->cr like the instruction); sync: a full memory barrier. Write the
+ * original's loops with them, e.g. `while (gabi::load_reserved(a) != 0) {} ... while (!gabi::store_conditional(a, 1))`.
+ * dcbst/dcbf/icbi have no effect the comparison sees and need no call. */
+inline u32 load_reserved(u32 a) { return gmem_lwarx(cpu, a); }
+inline bool store_conditional(u32 a, u32 v) { return gmem_stwcx(cpu, a, v) != 0; }
+inline void sync() { gmem_sync(); }
+
 /* ---- addresses ---- */
 inline u32 ea(const void* p) { return p ? (u32)((const uint8_t*)p - PPC_MEM_BASE) : 0u; }
 template <class T> inline T* at(u32 a) { return a ? (T*)(PPC_MEM_BASE + a) : nullptr; }
 
-/* A float loaded into an FPR (lfs) is converted to double; on the host that conversion quiets a
- * signalling NaN, which the recompiled code then stores back. Model it for every f32 load. */
+/* f32 values move like lfs / stfs on the console: bit for bit, a signalling NaN stays signalling
+ * (ppc.h ppc_lfs_value / ppc_stfs_bits, PowerPC Book I 4.6.2 / 4.6.3). The recompiled reference
+ * (vm_gen.h) does the same, so a typed f32 copy compares equal to the original's lfs/stfs pair. */
 inline f32 f32_from_bits(u32 v) {
-    if ((v & 0x7F800000u) == 0x7F800000u && (v & 0x007FFFFFu) && !(v & 0x00400000u)) v |= 0x00400000u;
     f32 r;
     memcpy(&r, &v, 4);
     return r;
+}
+inline u32 f32_bits(f32 f) {
+    u32 v;
+    memcpy(&v, &f, 4);
+    return v;
+}
+/* f32 <-> FPR (argument and result registers): an f32 in an FPR is the lfs image of its bits; an
+ * FPR read as f32 keeps a NaN's bits as stfs would, other values round like frsp (unchanged). */
+inline f64 fpr_from_f32(f32 f) { return ppc_lfs_value(f32_bits(f)); }
+inline f32 f32_from_fpr(f64 d) { return d != d ? f32_from_bits(ppc_stfs_bits(d)) : (f32)d; }
+template <class T> inline f64 fpr_from(T a) {
+    if constexpr (std::is_same_v<T, f32>) return fpr_from_f32(a);
+    else return (f64)a;
+}
+template <class T> inline T from_fpr(f64 d) {
+    if constexpr (std::is_same_v<T, f32>) return f32_from_fpr(d);
+    else return (T)d;
 }
 
 template <class T> inline T load(u32 a) {
@@ -156,16 +211,73 @@ inline bool native_locals() {
     return on;
 }
 
+/* ---- guest-memory guard (2026-10-27, AGL#2) ----
+ * A be<T> (and so a gptr<T>, gfn, ptmf) is a view of guest memory: its accesses go to ea(this). A be<>/gptr<>
+ * built as a HOST object (a local `gptr<T> x; x.v = a;`, a host static, a host heap object) has no guest
+ * address: ea() maps the host address to an arbitrary guest location (host stack - PPC_MEM_BASE, wrapped to
+ * 32 bits), so its "local" store lands somewhere in guest memory and is caught only when that location happens to
+ * be compared (AGL#2: candidate-only writes at 6B3308xx that moved per build). Verification builds compile with
+ * GABI_GUEST_GUARD=1 (tools/verify/verify.py FP, also mutate.py; objcmp.py leaves it out): every be<>::addr() checks
+ * that `this` is a guest reference: fast path guest_ref (within 1 TB of PPC_MEM_BASE, which covers the guest window and
+ * every address a candidate derives from a guest pointer by 32-bit arithmetic that ea() wraps like the console, e.g.
+ * table[i] with a huge or negative index; or a NULL guest object's member, host addresses in [-64 GB, 4 GB)). Anything
+ * else goes to the harness's gmem_host_object (cold): inside this thread's host stack, a malloc block or the verify
+ * executable's segments (a host local / heap object / static) it ends the run with the `gabi: host-local be<>/gptr<>` diagnostic
+ * (inside a candidate run the input ends as a candidate-only abort, a FAIL row; elsewhere exit status 86); otherwise it is NULL-based arithmetic with a large index (at<T>(0)[i] = host address i*sizeof(T),
+ * which ea() wraps like the console) and the access proceeds. Legitimate be<> objects are all guest references: views
+ * through at<T>(), object_at, local_static, gabi::Local/Stack/FrameLocal/NativeFrame slots (guest stack), autoglue's
+ * table views and guest statics. Other builds (GABI_GUEST_GUARD undefined or 0) compile exactly as before.
+ * Fix for a tripping candidate: keep host temporaries as plain values (u32 a; at<T>(a)), or put an object whose
+ * address the original takes on the guest stack (gabi::Local / FrameLocal / a GameCube-style class local). */
+#ifndef GABI_GUEST_GUARD
+#define GABI_GUEST_GUARD 0
+#endif
+#ifndef GABI_HOST_BE_PROBE
+#define GABI_HOST_BE_PROBE 0
+#endif
+/* a host address ea() may legitimately see as a be<>'s `this` (see above): two unsigned compares */
+inline bool guest_ref(const void* p) {
+    const uintptr_t a = (uintptr_t)p;
+    return a - ((uintptr_t)PPC_MEM_BASE - (1ull << 40)) < (2ull << 40) || a + (1ull << 36) < (1ull << 36) + (1ull << 32);
+}
+/* the guest window or a NULL-based address below 4 GB: ea() reaches the guest address without wrapping (-guardstrict) */
+inline bool guest_window(const void* p) {
+    const uintptr_t a = (uintptr_t)p;
+    return a - (uintptr_t)PPC_MEM_BASE < (1ull << 32) || a < (1ull << 32);
+}
+#if GABI_GUEST_GUARD >= 2
+/* -guardstrict: also report every access whose host address wraps (a
+ * u32 index on a >= 2-byte element such as keys[count - 1] with count 0, or a NULL-based index past 4 GB); behaviour
+ * is otherwise that of GABI_GUEST_GUARD=1 (same guard decision, same results) */
+#define GABI_GUEST_CHECK(self, size) \
+    (__builtin_expect(!::gabi::guest_window(self), 0) \
+         ? (gmem_host_wrap(self, size, ::gabi::guest_ref(self)), \
+            ::gabi::guest_ref(self) ? (void)0 : gmem_host_object(self, size)) \
+         : (void)0)
+#elif GABI_GUEST_GUARD
+#define GABI_GUEST_CHECK(self, size) \
+    (__builtin_expect(!::gabi::guest_ref(self), 0) ? gmem_host_object(self, size) : (void)0)
+#else
+#define GABI_GUEST_CHECK(self, size) ((void)0)
+#endif
+
 /* ---- big-endian guest field ---- */
 template <class T> struct be {
     uint8_t _raw[sizeof(T)];
-    u32 addr() const { return ea(this); }
+    u32 addr() const { GABI_GUEST_CHECK(this, sizeof(T)); return ea(this); }
     T get() const { return load<T>(addr()); }
     void set(T v) { store<T>(addr(), v); }
     operator T() const { return get(); }
     be& operator=(T v) { set(v); return *this; }
     be& operator=(const be& o) { set(o.get()); return *this; }
+#if GABI_HOST_BE_PROBE
+    /* static probe (-DGABI_HOST_BE_PROBE=1 -fsyntax-only, 2026-10-27): no be<> (nor a gptr<> or a struct with be<>
+     * fields) is ever constructed on the host; views of guest memory are never constructed, so every error is a host
+     * object (or a construction in guest memory such as placement new, to be judged by hand) */
+    be() = delete;
+#else
     be() = default;
+#endif
     be(const be&) = delete; /* guest fields live in guest memory: never copied on the host */
     template <class U> be& operator+=(const U& v) { set((T)(get() + v)); return *this; }
     template <class U> be& operator-=(const U& v) { set((T)(get() - v)); return *this; }
@@ -321,7 +433,7 @@ struct ArgPack {
     }
     template <class A> void put(A a) {
         if constexpr (std::is_floating_point_v<A>) {
-            c->f[fi].ps0 = c->f[fi].ps1 = (double)a;
+            c->f[fi].ps0 = c->f[fi].ps1 = fpr_from(a);
             fi++;
         } else if constexpr (std::is_pointer_v<A> && std::is_function_v<std::remove_pointer_t<A>>) {
             put_int(guest_fn((const void*)a)); /* a decompiled callback passed by name (autoglue registry) */
@@ -349,7 +461,7 @@ template <class R> inline R result(Cpu* c) {
     if constexpr (std::is_same_v<R, Pair32>) return {c->r[3], c->r[4]};
     else if constexpr (std::is_void_v<R>) return;
     else if constexpr (std::is_same_v<R, bool>) return c->r[3] != 0; /* GHS tests bool results with cmpwi */
-    else if constexpr (std::is_floating_point_v<R>) return (R)c->f[1].ps0;
+    else if constexpr (std::is_floating_point_v<R>) return from_fpr<R>(c->f[1].ps0);
     else if constexpr (std::is_pointer_v<R>) return at<std::remove_pointer_t<R>>(c->r[3]);
     else return (R)c->r[3];
 }
@@ -625,21 +737,45 @@ template <u32 SIZE> struct NativeFrame {
 };
 
 /* ---- floating point as the console computes it (recompiler semantics, ppc2c.py) ---- */
-/* PowerPC NaN propagation for single-precision add/sub/mul: when an
- * operand is a NaN the result is the first NaN operand in the order frA, frB (fadds/fsubs) or frA, frC
- * (fmuls), quieted — host compilers may swap commutative operands, so write the operands in the
- * original's frA/frB order and use these where NaN payloads reach memory */
+/* PowerPC NaN propagation, the rule of the reference gen (recomp.py --ppc-nan-propagation, build/gen/ppc_nan.h;
+ * the verification build only): with a NaN operand the result is the first NaN in the order frA, frB, frC
+ * (fadds/fsubs: A, B; fmuls: A, C; the fmadd family FRT = FRA*FRC +/- FRB: A, B, C, not the formula's order),
+ * quieted, with its sign kept (also by the negating and subtracting forms); an invalid operation without NaN
+ * operands gives the default QNaN 7FC00000 (single) / 7FF8000000000000 (double). Host compilers may swap
+ * commutative operands, so write the operands in the original's register order and use these helpers where
+ * NaN payloads reach memory. */
 inline f32 ppc_qnan(f32 x) { u32 b; memcpy(&b, &x, 4); b |= 0x00400000u; memcpy(&x, &b, 4); return x; }
-inline f32 fadds_ppc(f32 a, f32 b) { if (a != a) return ppc_qnan(a); if (b != b) return ppc_qnan(b); return (f32)((f64)a + (f64)b); }
-inline f32 fsubs_ppc(f32 a, f32 b) { if (a != a) return ppc_qnan(a); if (b != b) return ppc_qnan(b); return (f32)((f64)a - (f64)b); }
-inline f32 fmuls_ppc(f32 a, f32 c) { if (a != a) return ppc_qnan(a); if (c != c) return ppc_qnan(c); return (f32)((f64)a * (f64)c); }
-inline f32 fmadds(f32 a, f32 c, f32 b) { return (f32)((f64)a * (f64)c + (f64)b); }   /* a*c+b */
-inline f32 fmsubs(f32 a, f32 c, f32 b) { return (f32)((f64)a * (f64)c - (f64)b); }   /* a*c-b */
-inline f32 fnmadds(f32 a, f32 c, f32 b) { return (f32)(-((f64)a * (f64)c + (f64)b)); }
-inline f32 fnmsubs(f32 a, f32 c, f32 b) { return (f32)(-((f64)a * (f64)c - (f64)b)); } /* b-a*c */
-inline f64 fmadd(f64 a, f64 c, f64 b) { return std::fma(a, c, b); }
-inline f64 fmsub(f64 a, f64 c, f64 b) { return std::fma(a, c, -b); }
-inline f64 fnmsub(f64 a, f64 c, f64 b) { return -std::fma(a, c, -b); }
+inline f64 ppc_qnan(f64 x) { u64 b; memcpy(&b, &x, 8); b |= 0x0008000000000000ull; memcpy(&x, &b, 8); return x; }
+inline f32 ppc_dnan32() { u32 b = 0x7FC00000u; f32 x; memcpy(&x, &b, 4); return x; }
+inline f64 ppc_dnan64() { u64 b = 0x7FF8000000000000ull; f64 x; memcpy(&x, &b, 8); return x; }
+template <class T> inline T ppc_nan2(T x, T y, T r, T dflt) {
+    if (x != x) return ppc_qnan(x); if (y != y) return ppc_qnan(y); return r != r ? dflt : r; }
+template <class T> inline T ppc_nan3(T a, T b, T c, T r, T dflt) {
+    if (a != a) return ppc_qnan(a); if (b != b) return ppc_qnan(b); if (c != c) return ppc_qnan(c); return r != r ? dflt : r; }
+inline f32 fadds_ppc(f32 a, f32 b) { return ppc_nan2(a, b, (f32)((f64)a + (f64)b), ppc_dnan32()); }
+inline f32 fsubs_ppc(f32 a, f32 b) { return ppc_nan2(a, b, (f32)((f64)a - (f64)b), ppc_dnan32()); }
+inline f32 fmuls_ppc(f32 a, f32 c) { return ppc_nan2(a, c, (f32)((f64)a * (f64)c), ppc_dnan32()); }
+inline f32 fdivs_ppc(f32 a, f32 b) { return ppc_nan2(a, b, (f32)((f64)a / (f64)b), ppc_dnan32()); }
+/* single-precision arithmetic on FPR (double) operands, as the original computes it when an operand is not a single
+ * (e.g. an incoming f1 kept as a double): the reference's to_single(ppc_nan2(a, b, a OP b)), the multiply rounding
+ * frC to 25 bits first (round25). Separate names (f*_fpr), so a call with single operands never changes meaning: use them with operands declared f64. */
+inline f32 fadds_fpr(f64 a, f64 b) { return (f32)ppc_nan2(a, b, a + b, ppc_dnan64()); }
+inline f32 fsubs_fpr(f64 a, f64 b) { return (f32)ppc_nan2(a, b, a - b, ppc_dnan64()); }
+inline f32 fmuls_fpr(f64 a, f64 c) { return (f32)ppc_nan2(a, c, a * round25(c), ppc_dnan64()); }
+inline f32 fdivs_fpr(f64 a, f64 b) { return (f32)ppc_nan2(a, b, a / b, ppc_dnan64()); }
+inline f64 fadd_ppc(f64 a, f64 b) { return ppc_nan2(a, b, a + b, ppc_dnan64()); }
+inline f64 fsub_ppc(f64 a, f64 b) { return ppc_nan2(a, b, a - b, ppc_dnan64()); }
+inline f64 fmul_ppc(f64 a, f64 c) { return ppc_nan2(a, c, a * c, ppc_dnan64()); }
+inline f64 fdiv_ppc(f64 a, f64 b) { return ppc_nan2(a, b, a / b, ppc_dnan64()); }
+/* paired singles: each slot follows the same rule (ps_add/ps_sub/ps_mul/ps_div/ps_madd...: apply the helper per slot,
+ * operands in the original's frA/frB/frC order) */
+inline f32 fmadds(f32 a, f32 c, f32 b) { return ppc_nan3(a, b, c, (f32)((f64)a * (f64)c + (f64)b), ppc_dnan32()); }     /* a*c+b */
+inline f32 fmsubs(f32 a, f32 c, f32 b) { return ppc_nan3(a, b, c, (f32)((f64)a * (f64)c - (f64)b), ppc_dnan32()); }     /* a*c-b */
+inline f32 fnmadds(f32 a, f32 c, f32 b) { return ppc_nan3(a, b, c, (f32)(-((f64)a * (f64)c + (f64)b)), ppc_dnan32()); }
+inline f32 fnmsubs(f32 a, f32 c, f32 b) { return ppc_nan3(a, b, c, (f32)(-((f64)a * (f64)c - (f64)b)), ppc_dnan32()); } /* b-a*c */
+inline f64 fmadd(f64 a, f64 c, f64 b) { return ppc_nan3(a, b, c, std::fma(a, c, b), ppc_dnan64()); }
+inline f64 fmsub(f64 a, f64 c, f64 b) { return ppc_nan3(a, b, c, std::fma(a, c, -b), ppc_dnan64()); }
+inline f64 fnmsub(f64 a, f64 c, f64 b) { return ppc_nan3(a, b, c, -std::fma(a, c, -b), ppc_dnan64()); }
 /* float -> s32 conversion (fctiwz: truncating, saturating, NaN -> INT_MIN) */
 inline s32 ftoi(f64 d) { return (s32)(u32)ppc_fctiwz(d); }
 /* paired-single and sqrt estimates */
@@ -672,7 +808,7 @@ inline f64 float_arg(Cpu* c, int& fi) {
 }
 template <class T> struct ArgFrom {
     static T get(Cpu* c, int& gi, int& fi) {
-        if constexpr (std::is_floating_point_v<T>) return (T)float_arg(c, fi);
+        if constexpr (std::is_floating_point_v<T>) return from_fpr<T>(float_arg(c, fi));
         else if constexpr (std::is_pointer_v<T>) return at<std::remove_pointer_t<T>>(int_arg(c, gi));
         else if constexpr (std::is_same_v<T, bool>) return (int_arg(c, gi) & 0xFF) != 0;
         else return (T)int_arg(c, gi);
@@ -733,11 +869,10 @@ struct AutoFrame {
             case GABI_FI_LR: store<u32>(ea, c->lr); break;
             case GABI_FI_GPR: store<u32>(ea, c->r[it.reg]); break;
             case GABI_FI_STFD: { u64 v; memcpy(&v, &c->f[it.reg].ps0, 8); gmem_st64(ea, v); break; }
-            case GABI_FI_STFS0: { f32 x = (f32)c->f[it.reg].ps0; u32 v; memcpy(&v, &x, 4); gmem_st32(ea, v); break; }
-            case GABI_FI_STFS1: { f32 x = (f32)c->f[it.reg].ps1; u32 v; memcpy(&v, &x, 4); gmem_st32(ea, v); break; }
+            case GABI_FI_STFS0: gmem_st32(ea, ppc_stfs_bits(c->f[it.reg].ps0)); break; /* stfs: bit-exact */
+            case GABI_FI_STFS1: gmem_st32(ea, ppc_stfs_bits(c->f[it.reg].ps1)); break;
             case GABI_FI_PSQ: {
-                f32 x = (f32)c->f[it.reg].ps0, y = (f32)c->f[it.reg].ps1; u32 v, w;
-                memcpy(&v, &x, 4); memcpy(&w, &y, 4); gmem_st32(ea, v); gmem_st32(ea + 4, w); break;
+                gmem_st32(ea, ppc_stfs_bits(c->f[it.reg].ps0)); gmem_st32(ea + 4, ppc_stfs_bits(c->f[it.reg].ps1)); break;
             }
             }
             if (it.off >= 8 && it.off < low) low = it.off;
@@ -762,8 +897,8 @@ struct AutoFrame {
             for (u32 i = 0; i < fi->n; i++) { /* singles first: lfs sets ps0 and ps1 */
                 const GabiFrameItem& it = fi->items[i];
                 u32 ea = ctx.sp + it.off;
-                if (it.kind == GABI_FI_STFS0 || it.kind == GABI_FI_STFS1) c->f[it.reg].ps0 = c->f[it.reg].ps1 = (f64)f32_from_bits(gmem_ld32(ea));
-                else if (it.kind == GABI_FI_PSQ) { c->f[it.reg].ps0 = (f64)f32_from_bits(gmem_ld32(ea)); c->f[it.reg].ps1 = (f64)f32_from_bits(gmem_ld32(ea + 4)); }
+                if (it.kind == GABI_FI_STFS0 || it.kind == GABI_FI_STFS1) c->f[it.reg].ps0 = c->f[it.reg].ps1 = ppc_lfs_value(gmem_ld32(ea));
+                else if (it.kind == GABI_FI_PSQ) { c->f[it.reg].ps0 = ppc_lfs_value(gmem_ld32(ea)); c->f[it.reg].ps1 = ppc_lfs_value(gmem_ld32(ea + 4)); }
             }
             for (u32 i = 0; i < fi->n; i++) {
                 const GabiFrameItem& it = fi->items[i];
@@ -779,7 +914,7 @@ struct AutoFrame {
 
 template <class R> inline void store_ret(Cpu* c, R r) {
     if constexpr (std::is_same_v<R, Pair32>) { c->r[3] = r.r3; c->r[4] = r.r4; }
-    else if constexpr (std::is_floating_point_v<R>) c->f[1].ps0 = c->f[1].ps1 = (f64)r;
+    else if constexpr (std::is_floating_point_v<R>) c->f[1].ps0 = c->f[1].ps1 = fpr_from(r);
     else if constexpr (std::is_pointer_v<R>) c->r[3] = ea(r);
     else if constexpr (std::is_same_v<R, bool>) c->r[3] = r ? 1 : 0;
     else if constexpr (std::is_signed_v<R>) c->r[3] = (u32)(s32)r;

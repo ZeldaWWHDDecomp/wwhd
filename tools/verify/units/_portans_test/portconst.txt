@@ -1,0 +1,18 @@
+# portans_test.py carrier (`osmem portconst`): original code that calls the batch 1 imports: OpMgr_initNetwork 0203CA70 (nn::ac
+# Initialize, Connect), setScreenDimEnabled 02032AD8 (r4 0: IMDisableDim), setHomeMenuEnabled 02035ED4 (OSEnableHomeButtonMenu),
+# 027BF730 (tail call GX2DrawDone), 025F99BC (OSGetSharedData). Port's Connect fails, so the rest of 0203CA70 is not reached.
+# verify: -strictnan
+src wwhd_src/hd/hd_olv_0203B620.cpp
+src wwhd_src/hd/hd_sys_02032A34.cpp
+src wwhd_src/hd/hd_sys_02035B88.cpp
+src wwhd_src/agl/RenderRecording.cpp
+src wwhd_src/d/hd_scalable_font_mgr.cpp
+osmem portconst
+fill * 0x5A000000 0x3000 0
+stable 0x5A000000 0x3000
+arg! 0203CA70 r3 0x5A000000
+field 0203CA70 5A000038 u32 2
+arg! 02032AD8 r3 0x5A000000
+arg! 02032AD8 r4 0
+arg! 02035ED4 r3 0x5A000000
+arg! 025F99BC r3 0x5A000000

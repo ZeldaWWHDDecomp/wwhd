@@ -2,14 +2,18 @@
  * Redirects every guest memory access of ppc.h to the harness memory model (vm.h). */
 #pragma once
 #include "vm.h"
+/* PowerPC NaN propagation helpers of a gen made with recomp.py --ppc-nan-propagation (in build/gen) */
+#if __has_include("ppc_nan.h")
+#include "ppc_nan.h"
+#endif
 
 #undef PPC_ENTER
 #define PPC_ENTER(a) ((void)0)
 
-static inline double vm_ldf32(uint32_t ea) { return (double)u32_as_f32(vm_ld32(ea)); }
+static inline double vm_ldf32(uint32_t ea) { return ppc_lfs_value(vm_ld32(ea)); /* lfs: bit-exact, ppc.h */ }
 static inline double vm_ldf64(uint32_t ea) { return u64_as_f64(vm_ld64(ea)); }
 void vm_stf32w(uint32_t ea, uint32_t v); /* a float store (stfs): NaN payload tolerance applies to this word */
-static inline void vm_stf32(uint32_t ea, double d) { vm_stf32w(ea, f32_as_u32((float)d)); }
+static inline void vm_stf32(uint32_t ea, double d) { vm_stf32w(ea, ppc_stfs_bits(d)); /* stfs: bit-exact, ppc.h */ }
 void vm_stf64w(uint32_t ea, uint64_t v); /* explicit stfd provenance */
 static inline void vm_stf64(uint32_t ea, double d) { vm_stf64w(ea, f64_as_u64(d)); }
 
@@ -27,10 +31,10 @@ static inline void vm_psq_load(Cpu* c, int fd, uint32_t ea, int w, int i) {
 static inline void vm_psq_store(Cpu* c, int fs, uint32_t ea, int w, int i) {
     uint32_t g = c->gqr[i], type = g & 7, scale = (g >> 8) & 0x3F;
     int sz = (type == 4 || type == 6) ? 1 : (type == 5 || type == 7) ? 2 : 4;
-    uint32_t d0 = psq_quant((float)c->f[fs].ps0, type, scale);
+    uint32_t d0 = psq_quant(c->f[fs].ps0, type, scale);
     if (sz == 1) vm_st8(ea, d0); else if (sz == 2) vm_st16(ea, d0); else vm_st32(ea, d0);
     if (!w) {
-        uint32_t d1 = psq_quant((float)c->f[fs].ps1, type, scale);
+        uint32_t d1 = psq_quant(c->f[fs].ps1, type, scale);
         if (sz == 1) vm_st8(ea + 1, d1); else if (sz == 2) vm_st16(ea + 2, d1); else vm_st32(ea + 4, d1);
     }
 }

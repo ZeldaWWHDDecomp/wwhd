@@ -25,3 +25,8 @@ C0006178 r3=0 r4=0 r5=0 r7=0 r8=0   # GX2DrawIndexedEx import (mode, count, inde
 0255FFF4 r3=out456   # dKy_tevstr_init clears 0x72 words = 0x1C8 bytes and sets them (game-test d_grass ShaderBuild bug); out: generated mocks fill the light state (tev-output facts 2026-10-05: a zero-filled state hid wrong-offset reads)
 025626A4 r6=inout456   # settingTevStruct: dKy_tevstr_c (0x1C8), read and updated; inout: compared at the call, then filled by generated mocks (tev-output facts 2026-10-05)
 0255FAF0 r3=456   # dKy_GfFog_tevstr_set: reads the fog fields of dKy_tevstr_c (+0xA0..+0xAF), writes nothing through r3
+028F6C2C r3=0 r4=0 r5=0   # nw::ut::MessageQueue::initialize(messages, count): forwards this, the array pointer and the count to an OS import thunk, so live-in analysis saw none of them (NW-SND#2 mutation)
+028F6C30 r3=0 r4=0 r5=0   # nw::ut::MessageQueue::send(message, flags): this, the message word and the blocking flag (NW-SND#2)
+028F6C94 r3=0 r5=0        # nw::ut::MessageQueue::receive(out, flags): this and the blocking flag; r4 is the output word, mocked by the caller (NW-SND#2)
+0288949C r3=0             # nw::snd aux-device bus query: bare blr returning r3 unchanged, so no argument was compared (NW-SND#2)
+028A3A44 r3=0 r4=0   # WaveChannel::notify: r3 the channel receiver, r4 passed through untouched to its callback (NW-SND#10 merge 2026-10-24)

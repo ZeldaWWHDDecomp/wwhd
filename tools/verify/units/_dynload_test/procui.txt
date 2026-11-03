@@ -1,0 +1,10 @@
+# dynload_test.py carrier (`osmem procui`): HDGameFramework::procUI 020350C4 (wwhd_src/hd/hd_sys_02034B14.cpp:219-224): with the port's
+# answer ProcUIProcessMessages C0007880 -> 0 the exit block (setExitRequested .. Exit(-1), the route to SwkbdDestroy) never runs;
+# without it the generated answer takes that block on some inputs. The object lives at 0x5A000000, foreground, no re-enable.
+# verify: -strictnan
+src wwhd_src/hd/hd_sys_02034B14.cpp
+osmem procui
+fill * 0x5A000000 0x1000 0
+stable 0x5A000000 0x1000
+arg! 020350C4 r3 0x5A000000
+ret 028FAB80 0,1

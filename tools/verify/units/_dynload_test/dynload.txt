@@ -1,0 +1,23 @@
+# dynload_test.py carrier (`osmem heaps act dynload`): cking::system::ErrorViewerTask (wwhd_src/hd/hd_sys_02032D0C.cpp) with
+# the original erreula glue run for real: errorCreate 0286C5F8 (OSDynLoad_SetAllocator, OSDynLoad_Acquire("erreula.rpl"),
+# 20 OSDynLoad_FindExport calls through the wrappers 0286CBCC..0286CCD4 into the slots 104B6748..104B6794, then
+# ErrEulaCreate through slot 104B675C) and the trampolines that call through the slots (0286CA30 GetStateErrorViewer,
+# 0286CA40 IsAppearHomeNixSign, 0286CA50 Calc, 0286CB2C AppearError, 0286CB3C DisappearError, 0286CB5C GetResultType,
+# 0286CB6C GetResultCode, 0286CB7C AppearHomeNixSign). The task object lives at 0x5A000000; `heaps` answers errorCreate's
+# MEMCreateExpHeapEx / MEMGetAllocatableSizeForExpHeapEx / MEMAllocFromExpHeapEx (the setups stay input-independent).
+# verify: -strictnan
+src wwhd_src/hd/hd_sys_02032D0C.cpp
+osmem heaps act dynload
+fill * 0x5A000000 0x3000 0
+stable 0x5A000000 0x3000
+arg! 020331A8 r3 0x5A000000
+arg! 02033AAC r3 0x5A000000
+arg! 02033578 r3 0x5A000000
+arg! 02033AEC r3 0x5A000000
+arg 02033AEC r4 0x14
+real 0286C5F8 0286CBCC 0286CBE4 0286CBFC 0286CC14 0286CC2C 0286CC44 0286CC5C 0286CC74 0286CC8C 0286CCA4 0286CCBC 0286CCD4
+ret! 0273B0D4 0x5C000000 0x5C000000
+ret! 02753004 0x5E000000 0x5E000000
+real 020331A8 02033578 0286CA30 0286CA40 0286CA50 0286CB2C 0286CB3C 0286CB5C 0286CB6C 0286CB7C
+setup 02033AAC 020331A8 r3=0x5A000000
+setup 02033AAC 02033578 r3=0x5A000000 r4=0x1234

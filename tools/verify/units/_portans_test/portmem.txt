@@ -1,0 +1,7 @@
+# portans_test.py carrier (`osmem threads portmem`): 02032B48 (IMIsDimEnabled). portans_test.py also runs lib2_sead_13's and
+# GraphicsRuntime's existing units with the word; the imports not reached there rest on portans_equiv.py and the conflict check.
+# verify: -strictnan
+src wwhd_src/hd/hd_sys_02032A34.cpp
+osmem threads portmem
+fill * 0x5A000000 0x3000 0
+stable 0x5A000000 0x3000

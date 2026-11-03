@@ -26,6 +26,9 @@ typedef struct CalleeInfo {
     uint32_t outonly;   /* bit n: rN points to output-only storage (contents before the call not compared; mocks fill ptrsz bytes) */
     uint16_t ext[11];   /* per GPR: static extent of the callee's accesses through rN (extent_lint.py; 0 unknown): the undersized-Local check uses it like ptrsz */
     uint32_t fill;      /* bit n: generated mocks fill ptrsz bytes at rN after the call (rN=outSIZE and rN=inoutSIZE) */
+    uint32_t heapref;   /* bit n: rN=heapSIZE: also compare the ptrsz pointee bytes when rN is not a stack pointer */
+    uint8_t dynsrc[11]; /* rN=dynK*rM: per call the pointee size is dynmul[N]*r[dynsrc[N]] (ptrsz[N] is the cap) */
+    uint8_t dynmul[11];
 } CalleeInfo;
 
 typedef struct OrigFunc {
@@ -43,6 +46,8 @@ typedef struct OrigFunc {
 
 extern const CalleeInfo unit_callees[];
 extern const unsigned unit_ncallees;
+extern const uint32_t unit_import_slots[]; /* sorted function import slots (imports.json kind "f") */
+extern const unsigned unit_nimport_slots;
 extern const OrigFunc unit_funcs[];
 extern const unsigned unit_nfuncs;
 extern const char unit_name[];

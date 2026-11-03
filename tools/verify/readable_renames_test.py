@@ -60,7 +60,7 @@ def main():
                 # a raw source's last VERIFY line, or a GameCube-style source's last /* ADDR */ marker
                 m = list(re.finditer(r"^VERIFY\(.*\n", t, re.M)) or list(re.finditer(r"^/\* [0-9A-Fa-f]{8} \*/[ \t]*\n", t, re.M))
                 open(p, "w").write(t[:m[-1].start()] + t[m[-1].end():])
-            r = sh(wt, sys.executable, "tools/verify/readable_check.py", target or unit, "--static-only")
+            r = sh(wt, sys.executable, "tools/verify/readable_check.py", target or unit, "--static-only", "--ref", "HEAD")
             out = r.stdout + r.stderr
             ok = (r.returncode == 0) == expect_ok and expect_text in out
             print("%-12s %s (exit %d, expected %s, %r %s)" % (name, "as expected" if ok else "WRONG", r.returncode,

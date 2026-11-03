@@ -1,0 +1,19 @@
+# DEMO wrapper: the start-up fragment with threads, tested function a trivial sead getter
+# Result 2026-11-02: the original start-up runs through hdAppMain and
+# TaskMgr::createTaskSync into HdRootTask::prepare, and the whole audio prepare 02761640 returns, with NO audio skips:
+#  - AudioSystem::launch 02762690 waits at OSWaitRendezvous (per core) for the audio launch thread (027625E8, core 0): nw::snd
+#    init with AXInit (the AX frame thread starts), SoundThread/TaskThread (028F6AF0), the nw::snd periodic alarm;
+#  - 02889F18 returns, 027651B8 -> 02896A40 returns 1, 027651B8 returns 1 (c_king.bfsar read through osmem fs);
+#  - 020314C4 -> JAIZelBasic::init 02026044 -> 02803494 creates the three JAudio threads (02810D20), whose audio thread is
+#    woken by its AX device final-mix callbacks (0281A738 / 0281A81C) on the AX frames: 101F9F10 is set and 02803494, 02026044,
+#    020314C4 and 02761640 return; JAudio loads JaiInit.aaf and its wave banks (osmemfile lines above).
+# Stop: after 02761640 the root prepare goes on into the graphics side and touches page 0 in 0277A634 (agl, load 0x7C) inside the
+# setup 02749ECC: outside the audio system.
+# Earlier result (2026-11-01, `threads` without `ax`): 02803494's poll on 101F9F10 waited for the AX final-mix callback.
+# verify: -only 02762468 -nulltrap -strictnan
+stackfill periodic
+callbudget 100000000
+pagebudget 200000
+accessbudget 1000000000
+src wwhd_src/sead/Thread.cpp wwhd_src/sead/AudioServices.cpp wwhd_src/sead/AudioSystem.cpp wwhd_src/sead/AudioStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+include _guestthreads_demo/appstartup_threads.txt

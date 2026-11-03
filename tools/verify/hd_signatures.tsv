@@ -17,8 +17,10 @@ wwhd	name	hd_signature	note
 025E38E0	mDoExt_J3DModel__create	(modelData, u32 flags)	r3/r4 only; incoming r5 unused
 02491458	daSt ke_control	(this)	GC signature r4/r5 are overwritten before use in HD; compare only what the code reads (live-in)
 025269A8	daObjPirateship::getShipOffsetY	(static) (s16* angle, s16* speed, f32 scale)	no this: compare r3, r4, f1 only
-025CB4A8	vibration makebits	(static u32, s32, s32)	Actual HD helper reads incoming r3/r4/r5 only; matcher GC long expansion erroneously includes r6. Live-in analysis agrees: r3-r5.
-025CB77C	vibration randombit	(static s32, s32)	HD reads incoming r3/r4 only; GC long expansion incorrectly includes r5. Live-in analysis agrees: r3-r4.
+025CB4A8	vibration makebits	(static u32, s32, s32)	Actual HD helper reads incoming r3/r4/r5 only; matcher GC long expansion erroneously includes r6. Adopted 2026-10-05 (live-in analysis agrees: r3-r5).
+025CB77C	vibration randombit	(static s32, s32)	HD reads incoming r3/r4 only; GC long expansion incorrectly includes r5. Adopted 2026-10-05 (live-in analysis agrees: r3-r4).
 0258FD94	dMap_c::point2GridAndLocal	(static f32 x, f32 y, s8* gx, s8* gy, s16* lx, s16* ly)	HD reads integer inputs r3-r6 and f1/f2 only; r7 is defined before its conversion scratch use, no fifth output pointer.
 0258F978	dMap_c::setCollectPoint	(static eight integer inputs r3-r10, coordinates f1-f3)	HD saves r3-r10 and f1-f3; no caller-stack argument load. GC method signature adds a phantom ninth integer stack word.
 02839C28	JStudio::math::getTransformation_SRxyzT	(Mtx out, const Vec* scale, const Vec* rot, const Vec* trans)	namespace function, no this: the GC matcher treats JStudio::math as a class and adds a phantom r7; reads r3-r6 only (livein 0x78)
+02816064	JASystem::DSPInterface::DSPBuffer::setAutoMixer	(this, u32 volume, u32 mixerHigh, u32 mixerLow, u32 delay)	HD: 4 arguments, reads r3-r7 only (livein F8); GC signature has 5
+02817A34	JASystem::TTrack::setSeqData	(this, void* seqData)	HD: reads r3/r4 only (livein 18), sets r5=0 itself before TSeqCtrl::start; GC signature passes more

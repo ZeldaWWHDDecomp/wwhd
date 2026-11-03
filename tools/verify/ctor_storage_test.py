@@ -13,11 +13,13 @@ Writes units/_ctor_test*.txt and wwhd_src/d/actor/_ctor_neg_ep.cpp and removes t
 import os, re, shutil, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+sys.path.insert(0, HERE)
+import verify  # noqa: E402  (unit_dir / unit_dirs_all: unit build directories as verify.py resolves them, scratch-aware)
 
 
 def row(unit, target):
     subprocess.run([sys.executable, os.path.join(HERE, "verify.py"), unit, "-list"], cwd=ROOT, capture_output=True)
-    for l in open(os.path.join(ROOT, "build", "verify", unit, "unit.c")):
+    for l in open(os.path.join(verify.unit_dir(unit), "unit.c")):
         if l.strip().startswith("{0x%su" % target):
             return re.sub(r'"[^"]*"', '""', l.strip())
     return None
@@ -48,7 +50,8 @@ def main():
             fails.append("default constructor row: want size 24, output-only, no random fill; got %s" % got)
     finally:
         os.remove(tmp)
-        shutil.rmtree(os.path.join(ROOT, "build", "verify", "_ctor_test"), ignore_errors=True)
+        for d in verify.unit_dirs_all("_ctor_test"):
+            shutil.rmtree(d, ignore_errors=True)
     # negative test: a skipped store just past the constructor's sizeof is still caught under stackfill
     ep = open(os.path.join(ROOT, "wwhd_src", "d", "actor", "d_a_ep.cpp")).read()
     call = "dBgS_GndChk_ct(gndChk.get(), EP_GNDCHK_VT, true);"
@@ -82,8 +85,9 @@ def main():
         for p in (neg_src, os.path.join(HERE, "units", "_ctor_test_pos.txt"), os.path.join(HERE, "units", "_ctor_test_neg.txt")):
             if os.path.exists(p):
                 os.remove(p)
-        for d in ("_ctor_test_pos", "_ctor_test_neg"):
-            shutil.rmtree(os.path.join(ROOT, "build", "verify", d), ignore_errors=True)
+        for u in ("_ctor_test_pos", "_ctor_test_neg"):
+            for d in verify.unit_dirs_all(u):
+                shutil.rmtree(d, ignore_errors=True)
     sz = subprocess.run([sys.executable, os.path.join(HERE, "sizes.py")], cwd=ROOT, capture_output=True, text=True).stdout
     if not re.search(r"^0274FDBC\s+74\b", sz, re.M):
         fails.append("sizes.py misses the cmpwi-form constructor 0274FDBC (0x74)")

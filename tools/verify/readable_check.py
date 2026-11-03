@@ -26,6 +26,15 @@ is that its `src` lines name the new paths of mapped renames counts as unchanged
 set (check 1) still compares the addresses of the renamed source with REF's old file. Every entry must
 be a real rename: old exists in REF and not in HEAD, new exists in HEAD and not in REF. A renamed file
 without a table entry fails check 2 (the spec's src line differs from REF).
+An entry REF already contains (old gone and new present in both REF and HEAD, i.e. REF is newer than the rename)
+is skipped with a NOTE. `--new-spec SPEC` (repeatable) excludes a spec the submitting unit adds (not in REF; gated by the
+unit's own gates) from these checks with a NOTE; any other spec missing in REF still fails.
+Moved functions (2026-11-02): tools/verify/readable_moves.tsv lists functions that moved between unit specs
+(`ADDR<TAB>old spec<TAB>new spec`, `#` comments). Check 1 then compares a spec's function set with REF's after taking the
+listed functions out of their old spec and into their new one; a target that names a spec removed in HEAD passes when every
+function REF's spec tests is listed as moved out. Each entry must be real: the old spec tests ADDR in REF, the new spec tests
+it in HEAD (and not in REF); no address twice. The moved function runs (checks 3/4) with its new spec; its coverage is
+compared with REF's old spec.
 
 Sharding and load: every verify.py run (candidate and REF baseline) is sharded: --shards K, else
 WWHD_SHARDS, else 4 at a 1-minute load <= 30 and 2 above; each run starts only at a load <=
@@ -41,6 +50,8 @@ The summary line at the end is the result of the check. Build output of each spe
 afterwards (logs kept in build/readable/logs/) unless --keep.
 """
 import argparse
+import collections
+import hashlib
 import os
 import re
 import shutil
@@ -51,7 +62,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 UNITS = os.path.join(HERE, "units")
 sys.path.insert(0, HERE)
-from verify import RESULT_LINE as LINE  # noqa: E402  (same directory; names may contain spaces)
+from verify import RESULT_LINE as LINE  # noqa: E402  (same directory; names may contain spaces, T-13)
+from verify import unit_dirs_all  # noqa: E402  (build/verify/<spec> and its WWHD_VERIFY_SCRATCH copy)
+import progress  # noqa: E402  (progress lines, 2026-10-27; the logs stay exactly as before)
+import specfile  # noqa: E402
 
 
 def git(*args, check=True):
@@ -62,12 +76,7 @@ def git(*args, check=True):
 
 
 def all_specs():
-    out = []
-    for dp, _, fs in os.walk(UNITS):
-        for f in fs:
-            if f.endswith(".txt"):
-                out.append(os.path.relpath(os.path.join(dp, f), UNITS)[:-4])
-    return sorted(out)
+    return specfile.gated_specs(UNITS)
 
 
 def spec_srcs(text):
@@ -116,6 +125,57 @@ def load_renames(path=RENAMES):
             table[old] = new
             news.add(new)
     return table, problems
+
+
+MOVES = os.path.join(HERE, "readable_moves.tsv")
+
+
+def load_moves(path=MOVES):
+    """{ADDR: (old spec, new spec)} from readable_moves.tsv, and a list of format problems"""
+    table, problems = {}, []
+    if not os.path.exists(path):
+        return table, problems
+    for n, line in enumerate(open(path), 1):
+        line = line.split("#")[0].rstrip("\n")
+        if not line.strip():
+            continue
+        w = [x.strip() for x in (line.split("\t") if "\t" in line else line.split()) if x.strip()]
+        where = "%s:%d" % (os.path.basename(path), n)
+        if len(w) != 3 or not re.fullmatch(r"[0-9A-Fa-f]{8}", w[0]):
+            problems.append("%s: expected `ADDR<TAB>old spec<TAB>new spec`, got %r" % (where, line))
+            continue
+        addr, old, new = int(w[0], 16), w[1], w[2]
+        if old == new:
+            problems.append("%s: %08X: old and new spec are the same (%s)" % (where, addr, old))
+        elif addr in table:
+            problems.append("%s: %08X listed twice (no chains, no duplicates)" % (where, addr))
+        else:
+            table[addr] = (old, new)
+    return table, problems
+
+
+def moved_lines_ok(head_text, ref_text, s, moves, ref_sha):
+    """True when HEAD's spec equals REF's after removing lines taken from the old spec of a move into S (each the same
+    line, its function field unchanged or narrowed from `*` to the moved address)"""
+    olds = {}
+    for addr, (old, new) in moves.items():
+        if new == s:
+            olds.setdefault(old, set()).add(addr)
+    if not olds:
+        return False
+    allowed = set()
+    for old, addrs in olds.items():
+        otext = ref_file(ref_sha, "tools/verify/units/%s.txt" % old)
+        for line in (otext or "").splitlines():
+            w = line.split()
+            if not w or w[0].startswith("#") or w[0] == "src":
+                continue
+            allowed.add(line.rstrip())
+            if len(w) > 1 and w[1] == "*":
+                for addr in addrs:
+                    allowed.add(" ".join([w[0], "%08X" % addr] + w[2:]))
+    kept = [l for l in head_text.splitlines() if l.rstrip() not in allowed or l.rstrip() in ref_text.splitlines()]
+    return "\n".join(kept).rstrip("\n") == ref_text.rstrip("\n")
 
 
 def map_spec(text, table):
@@ -205,12 +265,13 @@ def run_verify(root, spec, n, seed, logdir, keep, shards=None, only=None):
            "-shards", str(shards_for(shards))]
     if only:
         cmd += ["-only", ",".join(only)]
-    r = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
+    # merge gates are final gates: never from verify.py's result cache (WWHD_VERIFY_ARCHIVE, vcache.py)
+    r = progress.run_captured(cmd, "readable_check %s seed %d%s" % (spec, seed, "" if root == ROOT else " (REF baseline)"), cwd=root,
+                              env=dict(os.environ, WWHD_VERIFY_ARCHIVE="1"))
     out = r.stdout + r.stderr
     os.makedirs(logdir, exist_ok=True)
     open(os.path.join(logdir, spec.replace("/", "__") + ".s%d.log" % seed), "w").write(out)
-    if not keep:
-        d = os.path.join(root, "build", "verify", spec)
+    for d in ([] if keep else unit_dirs_all(spec, root)):
         if os.path.isdir(d):
             for e in os.listdir(d):
                 p = os.path.join(d, e)
@@ -222,18 +283,26 @@ def run_verify(root, spec, n, seed, logdir, keep, shards=None, only=None):
 
 
 def ref_export(sha):
-    """a cached export of REF for baseline runs: sources from git, generated inputs shared with this tree"""
-    d = os.path.join(ROOT, "build", "readable", "ref-" + sha[:12])
+    """a cached export of REF for baseline runs: REF's sources and unit specs from git, everything that decides how
+    they are judged from this tree: the verification tools and runtime headers at HEAD and this tree's generated
+    reference (build/gen, the NaN-exact gen). Keyed by REF, the tools/runtime trees and the gen, so a tool or
+    reference change gives a fresh baseline (2026-10-23: the old export kept the pre-NaN-exact gen and REF's tools,
+    so a baseline could pass where the merge gates fail)."""
+    gen = os.path.realpath(os.path.join(ROOT, "build", "gen"))
+    tools_tree = subprocess.run(["git", "rev-parse", "HEAD:tools", "HEAD:runtime"], cwd=ROOT,
+                                capture_output=True, text=True, check=True).stdout.split()
+    key = hashlib.sha1(("\n".join(tools_tree) + "\n" + gen).encode()).hexdigest()[:8]
+    d = os.path.join(ROOT, "build", "readable", "ref-" + sha[:12] + "-" + key)
     if not os.path.exists(os.path.join(d, ".complete")):
         shutil.rmtree(d, ignore_errors=True)
         os.makedirs(d)
-        a = subprocess.Popen(["git", "archive", sha, "wwhd_src", "tools", "runtime/include", "runtime/src"],
-                             cwd=ROOT, stdout=subprocess.PIPE)
-        subprocess.run(["tar", "-x", "-C", d], stdin=a.stdout, check=True)
-        a.wait()
+        for tree, paths in (("HEAD", ["tools", "runtime/include", "runtime/src", "runtime/third_party"]), (sha, ["wwhd_src", "tools/verify/units"])):
+            a = subprocess.Popen(["git", "archive", tree] + paths, cwd=ROOT, stdout=subprocess.PIPE)
+            subprocess.run(["tar", "-x", "-C", d], stdin=a.stdout, check=True)
+            a.wait()
         os.makedirs(os.path.join(d, "build", "verify"))
         os.symlink(os.path.realpath(os.path.join(ROOT, "game")), os.path.join(d, "game"))
-        os.symlink(os.path.realpath(os.path.join(ROOT, "build", "gen")), os.path.join(d, "build", "gen"))
+        os.symlink(gen, os.path.join(d, "build", "gen"))
         for f in os.listdir(os.path.join(ROOT, "build")):
             if f.endswith(".tsv"):
                 os.symlink(os.path.join(ROOT, "build", f), os.path.join(d, "build", f))
@@ -246,6 +315,8 @@ def ref_export(sha):
 
 
 def main():
+    import verify as _scratch_verify  # noqa: E402  (same directory)
+    _scratch_verify.check_scratch_env('readable_check.py')  # a set scratch variable naming a missing/unwritable folder stops here, nothing written
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("targets", nargs="+")
     ap.add_argument("--ref", default=os.environ.get("READABLE_REF"), required="READABLE_REF" not in os.environ,
@@ -258,6 +329,9 @@ def main():
     ap.add_argument("--static-only", action="store_true", help="checks 1 and 2 only (no verification; never a merge PASS)")
     ap.add_argument("--shards", type=int, default=0,
                     help="verify.py -shards per run (default: WWHD_SHARDS, else 4 at load <= 30, 2 above)")
+    ap.add_argument("--new-spec", action="append", default=[], metavar="SPEC",
+                    help="a spec that is not in REF because the submitting unit adds it (it is gated by the unit's own gates): "
+                         "excluded from all checks here, with a note; repeatable. Any other spec missing in REF still fails")
     ap.add_argument("--unscoped", action="store_true", help="ignore readable_scopes.tsv / scope comments (run every "
                     "function of every companion spec)")
     a = ap.parse_args()
@@ -268,6 +342,13 @@ def main():
 
     renames, rproblems = load_renames()
     for old, new in sorted(renames.items()):
+        # an entry the REF already contains (REF newer than the rename: old gone, new present in both REF and HEAD) is
+        # not a rename relative to this REF: skip it with a note instead of failing (2026-10-29, AGL#3 BloomValues)
+        if ref_file(ref_sha, old) is None and ref_file(ref_sha, new) is not None and \
+                not os.path.exists(os.path.join(ROOT, old)) and os.path.exists(os.path.join(ROOT, new)):
+            print("NOTE readable_renames.tsv: %s -> %s already applied in %s (skipped)" % (old, new, a.ref))
+            del renames[old]
+            continue
         if ref_file(ref_sha, old) is None:
             rproblems.append("readable_renames.tsv: %s -> %s: %s is not in %s" % (old, new, old, a.ref))
         if ref_file(ref_sha, new) is not None:
@@ -277,10 +358,28 @@ def main():
         if not os.path.exists(os.path.join(ROOT, new)):
             rproblems.append("readable_renames.tsv: %s -> %s: %s does not exist in HEAD" % (old, new, new))
 
+    moves, mproblems = load_moves()
+    rproblems += mproblems
+    # an entry the REF already contains (REF newer than the move: its new spec tests ADDR there and its old spec does not)
+    # is not a move relative to this REF: skip it with a note, as for renames (2026-11-03)
+    def _ref_tests(spec, addr):
+        rt = ref_file(ref_sha, "tools/verify/units/%s.txt" % spec)
+        return bool(rt) and addr in tested(t for t in (ref_file(ref_sha, f) for f in spec_srcs(rt)) if t is not None)
+    for addr, (old, new) in sorted(moves.items()):
+        if _ref_tests(new, addr) and not _ref_tests(old, addr):
+            print("NOTE readable_moves.tsv: %08X %s -> %s already applied in %s (skipped)" % (addr, old, new, a.ref))
+            del moves[addr]
+    moved_out = collections.defaultdict(set)
+    moved_in = collections.defaultdict(set)
+    for addr, (old, new) in moves.items():
+        moved_out[old].add(addr)
+        moved_in[new].add(addr)
+
     # resolve targets -> sources -> every spec that compiles one of them
     specs = all_specs()
     texts = {s: open(os.path.join(UNITS, s + ".txt")).read() for s in specs}
     srcs = set()
+    removed_specs = []
     for t in a.targets:
         if t.endswith(".txt"):
             t = os.path.relpath(os.path.abspath(t), UNITS)[:-4]
@@ -288,11 +387,24 @@ def main():
             srcs |= set(spec_srcs(texts[t]))
         elif os.path.exists(os.path.join(ROOT, t)):
             srcs.add(os.path.relpath(os.path.join(ROOT, t), ROOT))
+        elif t in moved_out and t not in texts:  # a spec removed in HEAD whose functions moved (readable_moves.tsv)
+            removed_specs.append(t)
+            for addr in moved_out[t]:
+                if moves[addr][1] in texts:
+                    srcs |= set(spec_srcs(texts[moves[addr][1]]))
         elif os.path.relpath(os.path.join(ROOT, t), ROOT) in renames:  # old name of a renamed source
             srcs.add(renames[os.path.relpath(os.path.join(ROOT, t), ROOT)])
         else:
             sys.exit("readable_check: %s is neither a unit spec nor a source file" % t)
     chosen = [s for s in specs if set(spec_srcs(texts[s])) & srcs]
+    for s in a.new_spec:
+        s = s[:-4] if s.endswith(".txt") else s
+        if s not in chosen:
+            sys.exit("readable_check: --new-spec %s is not among the specs that compile these sources" % s)
+        if ref_file(ref_sha, "tools/verify/units/%s.txt" % s) is not None:
+            sys.exit("readable_check: --new-spec %s exists in %s (not a new spec)" % (s, a.ref))
+        print("NOTE %s: new spec of the submitting unit (not in %s): excluded here, gated by the unit's own gates" % (s, a.ref))
+        chosen.remove(s)
     if not chosen:
         sys.exit("readable_check: no unit spec compiles %s" % " ".join(sorted(srcs)))
     print("readable_check: HEAD %s%s vs %s %s; sources: %s" % (head, " (+uncommitted changes)" if dirty else "", a.ref,
@@ -319,6 +431,8 @@ def main():
             continue
         if rtext != texts[s] and renames and map_spec(rtext, renames) == texts[s]:
             print("spec ok (src renamed per readable_renames.tsv): %s" % s)
+        elif rtext != texts[s] and moved_lines_ok(texts[s], rtext, s, moves, ref_sha):
+            print("spec ok (lines moved per readable_moves.tsv): %s" % s)
         elif rtext != texts[s]:
             msg = "%s: spec file differs from %s" % (s, a.ref)
             if a.allow_spec_change:
@@ -333,6 +447,10 @@ def main():
         mine = tested(open(os.path.join(ROOT, f)).read() for f in spec_srcs(texts[s]))
         theirs_txt = [ref_file(ref_sha, f) for f in spec_srcs(rtext)]
         theirs = tested(t for t in theirs_txt if t is not None)
+        theirs = (theirs - moved_out.get(s, set())) | moved_in.get(s, set())
+        if moved_out.get(s) or moved_in.get(s):
+            print("moves (readable_moves.tsv): %s: out %s; in %s" % (s, " ".join("%08X" % x for x in sorted(moved_out.get(s, ()))) or "-",
+                                                                     " ".join("%08X" % x for x in sorted(moved_in.get(s, ()))) or "-"))
         if mine != theirs:
             gone = sorted(theirs - mine)
             new = sorted(mine - theirs)
@@ -340,6 +458,28 @@ def main():
                 s, " ".join("%08X" % x for x in gone) or "-", " ".join("%08X" % x for x in new) or "-"))
         else:
             print("function set ok: %-40s %d functions" % (s, len(mine)))
+    for addr, (old, new) in sorted(moves.items()):
+        rold = ref_file(ref_sha, "tools/verify/units/%s.txt" % old)
+        rold_funcs = tested(t for t in (ref_file(ref_sha, f) for f in spec_srcs(rold)) if t is not None) if rold else set()
+        if addr not in rold_funcs:
+            problems.append("readable_moves.tsv: %08X: old spec %s does not test it in %s" % (addr, old, a.ref))
+        if new not in texts or addr not in tested(open(os.path.join(ROOT, f)).read() for f in spec_srcs(texts[new])
+                                                 if os.path.exists(os.path.join(ROOT, f))):
+            problems.append("readable_moves.tsv: %08X: new spec %s does not test it in HEAD" % (addr, new))
+        rnew = ref_file(ref_sha, "tools/verify/units/%s.txt" % new)
+        if rnew and addr in tested(t for t in (ref_file(ref_sha, f) for f in spec_srcs(rnew)) if t is not None):
+            problems.append("readable_moves.tsv: %08X: new spec %s already tests it in %s (not a move)" % (addr, new, a.ref))
+    for t in removed_specs:
+        rtext = ref_file(ref_sha, "tools/verify/units/%s.txt" % t)
+        if rtext is None:
+            problems.append("%s: not a spec in HEAD or %s" % (t, a.ref))
+            continue
+        rf = tested(x for x in (ref_file(ref_sha, f) for f in spec_srcs(rtext)) if x is not None)
+        left = sorted(rf - moved_out[t])
+        if left:
+            problems.append("%s: removed in HEAD, but %s not listed as moved in readable_moves.tsv" % (t, " ".join("%08X" % x for x in left)))
+        else:
+            print("removed spec ok: %-40s all %d functions moved (readable_moves.tsv)" % (t, len(rf)))
     if problems:
         print("\n".join("FAIL " + p for p in problems))
         print("readable_check: FAIL (static checks; nothing was run)")
@@ -352,21 +492,35 @@ def main():
     logdir = os.path.join(ROOT, "build", "readable", "logs", head)
     refroot = None if a.no_baseline else ref_export(ref_sha)
     totals = dict(funcs=0, ok=0, cov=0, nb=0, refcov=0)
+    prog, k_run = progress.Settings(), 0
     for seed in seeds:
         for s in chosen:
             only = scope_of.get(s)
+            k_run += 1
+            prog.say("readable_check: run %d/%d: %s seed %d" % (k_run, len(seeds) * len(chosen), s, seed))
             rc, out = run_verify(ROOT, s, a.n, seed, logdir, a.keep, a.shards, only)
             res = parse(out)
             base = None
             if refroot:
-                cache = os.path.join(ROOT, "build", "readable", "baseline", ref_sha[:12],
+                cache = os.path.join(ROOT, "build", "readable", "baseline", os.path.basename(refroot)[len("ref-"):],
                                      "%s.n%d.s%d%s.log" % (s.replace("/", "__"), a.n, seed,
-                                                           ".only-" + "-".join(only) if only else ""))
+                                                           (".only-" + "-".join(only) if len(only) <= 8 else
+                                                            ".only%d-%s" % (len(only), hashlib.sha256("-".join(only).encode()).hexdigest()[:16]))
+                                                           if only else ""))
                 if not os.path.exists(cache):
                     _, bout = run_verify(refroot, s, a.n, seed, os.path.join(refroot, "build", "logs"), False, a.shards, only)
                     os.makedirs(os.path.dirname(cache), exist_ok=True)
                     open(cache, "w").write(bout)
                 base = parse(open(cache).read())
+                for addr in sorted(moved_in.get(s, ())):  # a moved function: REF's coverage comes from its old spec
+                    old = moves[addr][0]
+                    ocache = os.path.join(os.path.dirname(cache), "%s.n%d.s%d.log" % (old.replace("/", "__"), a.n, seed))
+                    if not os.path.exists(ocache):
+                        _, oout = run_verify(refroot, old, a.n, seed, os.path.join(refroot, "build", "logs"), False, a.shards, None)
+                        open(ocache, "w").write(oout)
+                    obase = parse(open(ocache).read())
+                    if base is not None and obase and "%08X" % addr in obase:
+                        base["%08X" % addr] = obase["%08X" % addr]
                 if not base:
                     os.remove(cache)
                     problems.append("%s seed %d: the %s baseline run produced no results (see %s); rerun, or --no-baseline"

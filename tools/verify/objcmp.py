@@ -32,14 +32,19 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
-FP = ["-ffp-contract=off", "-fno-fast-math", "-fno-strict-aliasing", "-fwrapv"]
+from verify import FP  # exactly verify.py's flags (one list)
+# without the verification-only guest-memory guard (gabi.h GABI_GUEST_GUARD): a check, not behaviour, so object identity
+# against a reference tree from before the guard still holds
+FP = [f for f in FP if not f.startswith("-DGABI_GUEST_GUARD")]
 INC = ["-Iruntime/include", "-Itools/verify/include", "-Itools/verify/src", "-Iwwhd_src/include"]
 
 
 def unit_sources():
     srcs, users = [], {}
     ud = os.path.join(HERE, "units")
-    for dp, _, fs in os.walk(ud):
+    for dp, ds, fs in os.walk(ud):
+        if dp == ud and "_diag" in ds:  # diagnosis only: never in the list of units to re-verify
+            ds.remove("_diag")
         for f in fs:
             if not f.endswith(".txt"):
                 continue

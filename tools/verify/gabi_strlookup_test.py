@@ -27,9 +27,11 @@ SRC = r"""
 #include "wwhd.h"
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 namespace gabi { thread_local Cpu* cpu; } /* defined by the harness (harness.cpp) */
+extern "C" void ppc_trap(Cpu*, uint32_t) { std::abort(); } /* defined by the harness; gabi::trap references it and no test path traps */
 using gabi::GuestFile;
 using gabi::GuestStr;
 

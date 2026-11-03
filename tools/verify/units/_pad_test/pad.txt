@@ -1,0 +1,34 @@
+# pad_test.py carrier (`osmem pad`): sead::TabletDevice::read 0273E3FC (VPADRead(0, this+0x14, 16, this+0xAD8), the count
+# stored at +0xAD4) and sead::RemoteDevice::read 0273D8EC (KPADReadEx(chan, this+0x1118+chan*0xF08, 16, +0xF04) for
+# chan 0..3, the counts at +0xF00), wwhd_src/sead/DeviceBuffers.cpp. The GamePad read runs twice as a setup first (reads
+# #0 and #1), so the tested call is read #2.
+# verify: -strictnan
+src wwhd_src/sead/Foundation.cpp
+src wwhd_src/sead/Checksum.cpp
+src wwhd_src/sead/MemberDispatch.cpp
+src wwhd_src/sead/RuntimeType.cpp
+src wwhd_src/sead/InputState.cpp
+src wwhd_src/sead/Allocation.cpp
+src wwhd_src/sead/Controller.cpp
+src wwhd_src/sead/ControllerConstruction.cpp
+src wwhd_src/sead/FoundationObjects.cpp
+src wwhd_src/sead/DeviceBuffers.cpp
+src wwhd_src/sead/ReportListeners.cpp
+src wwhd_src/sead/ControllerManager.cpp
+src wwhd_src/sead/Reports.cpp
+src wwhd_src/sead/ControllerMapping.cpp
+src wwhd_src/sead/DeviceConstruction.cpp
+src wwhd_src/sead/TabletMotor.cpp
+src wwhd_src/sead/RemoteInput.cpp
+src wwhd_src/sead/TabletInput.cpp
+src wwhd_src/sead/RuntimeStatics.cpp
+osmem pad
+fill * 0x5A000000 0x5000 0
+stable 0x5A000000 0x5000
+arg! 0273E3FC r3 0x5A000000
+arg! 0273D8EC r3 0x5A000000
+real 0273E3FC
+setup 0273E3FC 0273E3FC r3=0x5A000000
+setup 0273E3FC 0273E3FC r3=0x5A000000
+padsched 0 A
+padsched 2-3 A+PLUS 0.7 0 0 -0.6 touch=0.25,0.75

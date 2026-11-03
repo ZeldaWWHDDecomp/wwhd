@@ -50,7 +50,9 @@ SCALARS = {"u8", "s8", "u16", "s16", "u32", "s32", "u64", "s64", "f32", "f64", "
            "float", "double", "short", "long", "unsigned", "signed", "cPhs_State", "fpc_ProcID", "auto", "size_t",
            "uintptr_t", "uint8_t", "uint16_t", "uint32_t", "int8_t", "int16_t", "int32_t"}
 SCALAR_SIZE = {"u8": 1, "s8": 1, "char": 1, "bool": 1, "u16": 2, "s16": 2, "u32": 4, "s32": 4, "int": 4, "BOOL": 4,
-               "f32": 4, "float": 4, "cPhs_State": 4, "fpc_ProcID": 4}
+               "f32": 4, "float": 4, "cPhs_State": 4, "fpc_ProcID": 4,
+               "f64": 8, "double": 8, "u64": 8, "s64": 8}  # 8-byte: big-endian IEEE-754 double / 64-bit int
+FLOAT_SCALARS = ("f32", "float", "f64", "double")
 KEYWORDS = {"return", "delete", "goto", "case", "else", "throw", "typedef", "using", "new", "do", "if", "while",
             "for", "switch", "break", "continue", "default", "co_return", "static_assert", "sizeof", "struct",
             "class", "enum", "union", "const", "static", "extern", "volatile", "inline", "template", "typename"}
@@ -79,10 +81,28 @@ def image():
     return _image
 
 
+_bss = None
+
+
+def bss_ranges():
+    """(start, size) of the RPX's NOBITS sections (.bss): image.bin holds file-backed bytes only, and the loader
+    zero-fills these, so an initialised view there is checked against zeros (NW-LYT#4 request, 2026-10-23)."""
+    global _bss
+    if _bss is None:
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        from rpx import Rpx, SHT_NOBITS
+        _bss = [(s.addr, s.file_size) for s in Rpx(os.path.join(ROOT, "game", "code", "cking.rpx")).sections
+                if s.type == SHT_NOBITS and s.addr]
+    return _bss
+
+
 def img_read(a, n):
     for b, data in image():
         if b <= a and a + n <= b + len(data):
             return data[a - b:a - b + n]
+    for b, size in bss_ranges():
+        if b <= a and a + n <= b + size:
+            return bytes(n)
     return None
 
 
@@ -185,8 +205,26 @@ def source_spelling(text, glue_pos, content):
 
 
 # ------------------------------------------------------------------ lexing helpers
+_MASK_CACHE = {}  # text -> mask(text): headers are masked again and again for every transform (mutate.py: per mutant)
+_NS_CACHE = {}  # header text -> the namespaces it opens (namespace_names), same reason
+
+
+def _cached(cache, key, fn):
+    """fn(key), memoised: both caches hold results of pure functions of the text, so a hit is the same result"""
+    r = cache.get(key)
+    if r is None:
+        if len(cache) >= 4096:
+            cache.clear()
+        r = cache[key] = fn(key)
+    return r
+
+
 def mask(text):
     """same length as text: comments -> spaces, string/char literal contents -> 'x' (quotes kept)"""
+    return _cached(_MASK_CACHE, text, _mask)
+
+
+def _mask(text):
     out = list(text)
     i, n = 0, len(text)
     while i < n:
@@ -306,8 +344,69 @@ def struct_defs(text):
     return out
 
 
+def namespace_names(srctext, srcpath="<src>"):
+    """qualified names of the namespaces the source and its included headers open (`namespace A { namespace B {` -> A, A::B),
+    so a definition `R A::B::f(...)` is known to be a free function, not a method (2026-10-21, JASystem::Calc::bcopy)"""
+    out = set()
+    for _, t in [(srcpath, srctext)] + include_closure(srctext, srcpath):
+        out |= _cached(_NS_CACHE, t, _text_namespaces)
+    return out
+
+
+def _text_namespaces(t):
+    """the namespaces one text opens (namespace_names, per file)"""
+    out = set()
+    code = mask(t)
+    stack = []
+    for m in re.finditer(r"\b(struct|class|namespace)\s+(\w+)\s*(?::[^{;()]*)?\{", code):
+        while stack and stack[-1][1] < m.start():
+            stack.pop()
+        close = match_close(code, m.end() - 1, "{", "}")
+        if m.group(1) == "namespace" and all(k == "namespace" for _, _, k in stack):
+            out.add("::".join([n for n, _, _ in stack] + [m.group(2)]))
+        stack.append((m.group(2), close, m.group(1)))
+    return frozenset(out)
+
+
+def namespace_at(code, pos):
+    """the named namespaces (outermost first) whose block encloses offset pos of masked source code"""
+    out = []
+    for m in re.finditer(r"\bnamespace\s+(\w+)\s*\{", code[:pos]):
+        close = match_close(code, m.end() - 1, "{", "}")
+        if close > pos:
+            out.append(m.group(1))
+    return out
+
+
+_INC_CACHE = {}  # (the source's include lines, its directory) -> [(path, stamp, text)] (include_closure)
+
+
+def _stamp(p):
+    try:
+        st = os.stat(p)
+        return st.st_mtime_ns, st.st_size
+    except OSError:
+        return None
+
+
 def include_closure(srctext, srcpath):
-    """the headers a source includes ("..." includes, transitively, breadth first) as [(path, text)]"""
+    """the headers a source includes ("..." includes, transitively, breadth first) as [(path, text)]
+
+    Memoised per (include lines of the source, source directory): transform asks ~40 times per call, and mutate.py
+    transforms every mutant. A hit is used only while every header's (mtime, size) is unchanged."""
+    key = (tuple(re.findall(r'^\s*#\s*include\s*"([^"]+)"', srctext, re.M)),
+           os.path.dirname(srcpath) if srcpath and srcpath != "<src>" else None)
+    hit = _INC_CACHE.get(key)
+    if hit is not None and all(_stamp(p) == st for p, st, _ in hit):
+        return [(p, t) for p, _, t in hit]
+    res = _include_closure(srctext, srcpath)
+    if len(_INC_CACHE) >= 256:
+        _INC_CACHE.clear()
+    _INC_CACHE[key] = [(p, _stamp(p), t) for p, t in res]
+    return res
+
+
+def _include_closure(srctext, srcpath):
     dirs = [os.path.join(ROOT, "wwhd_src", "include"), os.path.join(ROOT, "tools", "verify", "include")]
     if srcpath and srcpath != "<src>":
         dirs.insert(0, os.path.dirname(os.path.join(ROOT, srcpath)))
@@ -468,7 +567,7 @@ def find_struct(name, srctext, srcpath="<src>", scope=""):
                 t0 = fm.group(1)
                 if t0.startswith("be<"):
                     st = fm.group(2)
-                    kind = "float" if st in ("f32", "float") else "int"
+                    kind = "float" if st in FLOAT_SCALARS else "int"
                     out.append((kind, SCALAR_SIZE[st], cnt, st))
                 elif t0.startswith("gptr<"):
                     out.append(("ptr", 4, cnt, None))
@@ -582,7 +681,7 @@ def encode_leaf(leaf, kind, size, st, methods, func_ctx, resolve=None):
         return ("str", c_str_bytes(leaf[1:-1]))
     v = leaf.rstrip("fF") if re.match(r"^-?[\d.]+(?:[eE][-+]?\d+)?[fF]$", leaf) else leaf
     if kind == "float":
-        return struct.pack(">f", float(eval(v, {}, {})))
+        return struct.pack(">d" if size == 8 else ">f", float(eval(v, {}, {})))
     val = int(eval(v.replace("/*", "#"), {}, {})) if re.match(r"^[-+0-9xXa-fA-F() ]+$", v) else None
     if val is None and resolve is not None and re.search(r"[A-Za-z_]", v):
         try:  # named constants (enums of the source and its headers)
@@ -591,7 +690,7 @@ def encode_leaf(leaf, kind, size, st, methods, func_ctx, resolve=None):
             raise GlueError("table entry `%s`: cannot evaluate (%s)" % (leaf, e))
     if val is None:
         raise GlueError("table entry `%s`: cannot evaluate" % leaf)
-    fmt = {1: ">B", 2: ">H", 4: ">I"}[size]
+    fmt = {1: ">B", 2: ">H", 4: ">I", 8: ">Q"}[size]
     return struct.pack(fmt, val & ((1 << (8 * size)) - 1))
 
 
@@ -610,7 +709,7 @@ def check_table(name, addr, elem, dims, init, srctext, methods, where, srcpath="
     if elem.endswith("*"):
         fields = [("ptr", 4, 1, None)]
     elif elem in SCALAR_SIZE:
-        fields = [("float" if elem in ("f32", "float") else "int", SCALAR_SIZE[elem], 1, elem)]
+        fields = [("float" if elem in FLOAT_SCALARS else "int", SCALAR_SIZE[elem], 1, elem)]
     else:
         fields = find_struct(elem, srctext, srcpath, scope)
     flat = []
@@ -634,6 +733,8 @@ def check_table(name, addr, elem, dims, init, srctext, methods, where, srcpath="
             enc = encode_leaf(lv[li], kind, size, st, methods, None, resolve)
             li += 1
             got = img_read(off, size)
+            if got is None:
+                raise GlueError("%s[%d]: %08X..%08X is outside the image and .bss" % (where, e, off, off + size))
             if isinstance(enc, tuple):  # pointer to a string
                 p = struct.unpack(">I", got)[0]
                 s = img_cstr(p)
@@ -671,7 +772,10 @@ def _spec_siblings(srcpath):
     global _SPEC_SRCS
     if _SPEC_SRCS is None:
         _SPEC_SRCS = []
-        for dp, _, fs in os.walk(os.path.join(HERE, "units")):
+        ud = os.path.join(HERE, "units")
+        for dp, ds, fs in os.walk(ud):
+            if dp == ud and "_diag" in ds:  # diagnosis-only specs must not change the linkage of a credited spec's glue
+                ds.remove("_diag")
             for f in fs:
                 if f.endswith(".txt"):
                     srcs = set()
@@ -727,6 +831,7 @@ def transform(text, path="<src>"):
     edits = {}      # line index -> new line text
     after = []      # text appended at the end
     funcs = []      # (addr, kind, qname, ret, (param types, const) or None, cls)
+    ns_qual = {}    # addr -> qualified name of a free function defined inside a namespace block
     methods = {}    # "Class::name" -> addr (for tables)
     bodies = []     # (start, end) offsets of marked function bodies
     used_data = set()
@@ -757,6 +862,8 @@ def transform(text, path="<src>"):
         parts = qname.split("::")
         cls = "::".join(parts[:-1]) if len(parts) > 1 else None
         kind = "ctor" if cls and parts[-1] == parts[-2] else ("method" if cls else "free")
+        if kind == "method" and cls in namespace_names(text, path):
+            kind = "free"  # `R ns::f(...)`: a namespace's free function, no `this`
         if kind == "method" and parts[-1] in static_members(cls, text, path):
             kind = "static"  # a static member function: no `this`; registered like a free function
         # parameter names (unnamed ones get one)
@@ -805,6 +912,10 @@ def transform(text, path="<src>"):
             glue = " WWHD_GLUE_FUNC(0x%08X, %s%s);" % (addr, ret, "".join(", " + a for a in args))
             edits.setdefault(("head", bl, brace - (text.rfind("\n", 0, brace) + 1)), []).append(glue)
             funcs.append((addr, kind, qname, ret, (ptypes, bool(hm.group(5))), cls))
+            if kind == "free" and not cls:
+                ns = namespace_at(code, m.start())
+                if ns:  # a free function defined inside `namespace X {`: registered by its qualified name (a bare name at
+                    ns_qual[addr] = "::".join(ns + [qname])  # file scope may be another function, e.g. libc bcopy)
             if kind == "method":
                 methods[qname] = addr
         bodies.append((brace, end))
@@ -1003,7 +1114,11 @@ def transform(text, path="<src>"):
             else:
                 names.append(("&" if is_lvalue_ref(p) else "") + "wwhd_p%d" % i)
                 ps.append(p + " wwhd_p%d" % i)
-        member = "::" in qname and qname.split("::")[-1] not in static_members(qname.rsplit("::", 1)[0], text, path)
+        owner = qname.rsplit("::", 1)[0] if "::" in qname else None
+        # `ext ADDR R ns::f(...)` where the qualifier is a namespace (declared in the source or an included header) is a
+        # free function: no `this` (2026-10-25, LMS -> sead::chunk_resource::hashName etc.)
+        member = owner is not None and qname.split("::")[-1] not in static_members(owner, text, path) \
+            and owner not in namespace_names(text, path)
         args = (["this"] if member else []) + names
         reg.append("%s %s(%s)%s { return gabi::call<%s>(0x%08X%s); } /* other unit (ext) */" % (
             ret, qname, ", ".join(ps), " const" if hm.group(4) else "", ret, addr, "".join(", " + a for a in args)))
@@ -1032,6 +1147,9 @@ def transform(text, path="<src>"):
                 reg.append("static gabi::HostFn wwhd_fn_%08X((const void*)%s, 0x%08X);" % (addr, fn, addr))
         elif kind == "method":
             reg.append("VERIFY(0x%08X, &%s);" % (addr, qname))
+        elif addr in ns_qual:  # qualified reference, unchanged shown name (objects of existing sources stay identical)
+            reg.append("VERIFY_NAMED(0x%08X, %s, %s);" % (addr, ns_qual[addr], cstr_lit(qname)))
+            reg.append("static gabi::HostFn wwhd_fn_%08X((const void*)&%s, 0x%08X);" % (addr, ns_qual[addr], addr))
         else:
             reg.append("VERIFY(0x%08X, %s);" % (addr, qname))
             reg.append("static gabi::HostFn wwhd_fn_%08X((const void*)&%s, 0x%08X);" % (addr, qname, addr))

@@ -1,0 +1,7 @@
+# Functions that moved from one unit spec to another.
+# One move per line: <ADDR><TAB><old spec as in REF><TAB><new spec>. readable_check.py takes the function out of the old
+# spec's function set and into the new one for check 1, runs it with the new spec and compares its coverage with REF's
+# old spec; a spec removed in HEAD passes when every function it tested in REF is listed here. Add the entry in the same
+# commit as the move; never an address twice.
+025ABF00	d_s_title	d_s_logo
+025ABFCC	d_s_title	d_s_logo
