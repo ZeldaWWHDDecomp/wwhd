@@ -27,8 +27,8 @@ and constants, structured control flow and descriptive names (see
 
 | Path | Contents |
 |---|---|
-| `wwhd_src/` | the decompiled source: 28,244 verified functions in 1,365 source files, plus 1,254 headers with the WWHD classes, structure layouts and bindings |
-| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`), the readability checks (`readable_check.py`, `readable_lint.py`), the model-data extraction (`assets.py`, `assets.txt`) and the 1,380 unit specifications (`units/`: which source files form a unit, input steering) |
+| `wwhd_src/` | the decompiled source: 38,828 verified functions in 2,252 source files, plus 1,925 headers with the WWHD classes, structure layouts and bindings |
+| `tools/verify/` | the differential test harness (`verify.py`, `verify_all.py`, `mutate.py`, `src/`, `include/`), the readability checks (`readable_check.py`, `readable_lint.py`), the model-data extraction (`assets.py`, `assets.txt`), the mutation-testing tools (`mutate.py`, `cascade.py`, `triage.py`, `receipt_audit.py`, `nulltrap_compare.py`, caches), their self-tests (`*_test.py`, `*_equiv.py`) and the 3,486 unit specifications (`units/`: which source files form a unit, input steering, companion specs) |
 | `tools/decomp/` | the function-name matcher against zeldaret/tww (the same as in the port) |
 | `tools/true60/` | name-based surveys used by the port's 60 fps work (the same as in the port) |
 | `docs/` | HD vs. GameCube differences, unit notes, review notes, matcher findings |
@@ -40,25 +40,28 @@ verified, only together with the recompiled game that the port builds from your 
 
 ### Status
 
-The game has 39,713 functions (`cking.rpx`, USA). **28,244 of them are decompiled and verified**:
+The game has 39,713 functions (`cking.rpx`, USA). **38,828 of them are decompiled and verified**
+(counted as the distinct function addresses marked in `wwhd_src/`, grouped by source directory):
 
 | Area | Verified functions |
 |---|---:|
-| Actors (enemies, NPCs, objects, bosses) | 14,581 |
+| Actors (enemies, NPCs, objects, bosses) | 14,575 |
 | Link (player actor) | 1,046 |
-| Engine and systems (camera, collision, stages, events, environment, weather, save data, menus, effects, …) | 4,954 |
-| HD-only code (resource and pack loading, input, software keyboard, text layout, and the HD UI: sea chart and dungeon map, pause menus, HUD, GamePad screens, Picto Box, Miiverse, title and ending, minigames) | 6,832 |
+| Engine and systems (camera, collision, stages, events, environment, weather, save data, menus, effects, …) | 5,274 |
+| HD-only code (resource and pack loading, input, software keyboard, text layout, and the HD UI: sea chart and dungeon map, pause menus, HUD, GamePad screens, Picto Box, Miiverse, title and ending, minigames) | 6,843 |
 | Zelda's own sound control | 180 |
-| Library units verified along the way (JSystem including JParticle and JStudio, nw::lyt, sead, SDK adapters) | 651 |
+| Libraries (JSystem, sead, agl, NintendoWare for Cafe sound, layout and utilities, libjpeg, the message library, SDK math and GFD, compiler-generated helpers) | 10,910 |
 
-- **The game code that comes from the GameCube version is complete:** 22,068 of its 22,215
-  functions (99.3%). The rest are small per-unit copies of library helpers.
+- **The game code is complete** apart from 6 functions: the code that comes from the GameCube
+  version and the HD-only code alike.
 - **The HD UI is decompiled:** the sea chart and dungeon map, pause menus, HUD, GamePad screens,
   Picto Box, Miiverse, title and ending, the minigames and the UI parts framework they share (about
   5,400 functions) are verified like the rest.
-- **Not planned for now:** the generic libraries (sead, agl, NW4F, most of JSystem, the Cafe SDK and
-  the C runtime, about 11,400 functions). They run as recompiled code in the port and contain
-  nothing specific to Wind Waker.
+- **The libraries are decompiled too** (see "Library work" below).
+- **Not decompiled:** 885 functions: the NintendoWare font engine `nw::font` (481), the Green Hills C
+  and C++ runtime (317) and the static wrappers of the system applets and services (error viewer,
+  software keyboard, SCI, account; 81), which the port replaces with host code, and 6 functions in
+  the game code. They run as recompiled code.
 
 **Readability pass (October 2026).** The whole decompilation was rewritten from a form close to the
 machine code into the tww style. Every rewritten unit was checked against the version before it
@@ -68,6 +71,24 @@ was verified once more: all 1,100 unit specifications, 29,929 function runs per 
 The HD UI units were written in that style from the start and then had a second readability pass
 (named bindings for raw addresses, members for offset arithmetic, typed locals for stack slots); every
 changed unit was checked the same way, with identical per-function results.
+
+**Library work (October–November 2026).** The libraries linked into the game were decompiled and
+verified with the same harness, in two stages:
+
+- Stage 1: JSystem (J2D, J3D, JAudio, JKernel, JMath, JMessage, JParticle, JStage, JStudio, JSupport,
+  JUtility, JGadget, JFramework), the game's libjpeg build (IJG libjpeg 8c; see [License](#license)),
+  the SDK matrix library and the GFD shader-file reader, and compiler-generated destructors and helpers.
+- Stage 2: sead (heaps, containers, strings, files, resources, threads, tasks and the framework), agl
+  (render targets, shaders, post effects, lighting and shadows, the GX2 utilities), NintendoWare for
+  Cafe sound (`nw::snd`), layout (`nw::lyt`) and utilities (`nw::ut`), the message library (LMS), the
+  HD model pipeline that replaces the GameCube J3D renderer, and the bridge between the GameCube
+  JAudio sound requests and the HD sound system.
+- The text engine `nw::font` is not decompiled: the port replaces it.
+
+The library units use the same checks as the game units (10,000 inputs on two seeds, coverage,
+mutation testing). Their unit specifications add start-up profiles (an original start-up of the
+library objects, then the tested function), directives for the original's OS and graphics calls, and
+mutation receipts with an audit tool; `tools/verify/README.md` describes each directive.
 
 ## Disclaimer
 
@@ -92,7 +113,7 @@ No commercial use: there are no donations, sponsorships or paid builds of any ki
 
 The harness runs inside a checkout of the port, which provides the recompiler, the runtime headers
 and the game-extraction tool. This release was verified against **ZeldaWWHDRecomp commit
-`df2cf51bd6d02e0b310d46a5da062693bac7314f`** (v0.2.3). The port's own `tools/verify/` at that commit is
+`264f53ee0eca9d52d39f6ccf1a890eecec018e6e`** (v0.5.0). The port's own `tools/verify/` at that commit is
 an older copy of the harness; this repository's version replaces it.
 
 Requirements: Python 3, clang/clang++ with C++20, and what the port's README lists for extracting the
@@ -101,7 +122,7 @@ game (its "Requirements" section). Building the port itself is only needed for r
 ```sh
 # 1. the port at the tested commit
 git clone https://github.com/ZeldaWWHDRecomp/ZeldaWWHDRecomp port
-git -C port checkout df2cf51bd6d02e0b310d46a5da062693bac7314f
+git -C port checkout 264f53ee0eca9d52d39f6ccf1a890eecec018e6e
 
 # 2. this repository, copied over the port (replaces the port's older tools/verify)
 git clone https://github.com/ZeldaWWHDDecomp/wwhd decomp
@@ -114,10 +135,18 @@ cd port
 # 3. extract your own game into game/ (see the port's README: disc image, disc key, common key)
 python3 tools/wudextract.py game.wux extract game        # -> game/code/cking.rpx, ...
 
-# 4. recompile the original game code to C (build/gen, a few seconds)
-python3 tools/recomp/recomp.py game/code/cking.rpx build/gen
+# 4. recompile the original game code to C (build/gen, under a minute) the way the harness compares
+#    against it: the plain form (WWHD_RECOMP_PLAIN=1), the PowerPC NaN rules, and without the port's
+#    own game patches (its hook lists), from a copy of the recompiler
+cp -R tools/recomp tools/recomp_verify && rm tools/recomp_verify/hooks*.txt && touch tools/recomp_verify/hooks.txt
+WWHD_RECOMP_PLAIN=1 python3 tools/recomp_verify/recomp.py game/code/cking.rpx build/gen --ppc-nan-propagation
 
-# 5. verify one unit, or all of them
+# 5. function names and GameCube signatures (build/names.tsv, build/wwhd_to_gc.tsv; needed by the
+#    harness), from the GameCube decompilation built from your own GameCube disc (see the tww README)
+git clone https://github.com/zeldaret/tww tww
+python3 tools/decomp/match.py game/code/cking.rpx tww build/names.tsv
+
+# 6. verify one unit, or all of them
 python3 tools/verify/verify.py d_a_kamome -n 10000 -seed 1
 python3 tools/verify/verify.py d_a_kamome -n 10000 -seed 7
 python3 tools/verify/verify_all.py -n 10000                    # every unit, in parallel (-j JOBS)
@@ -137,15 +166,10 @@ addr      function                         generated   recorded coverage  first 
 `verify_all.py` over all units is a long, memory-hungry run (a few units need tens of GB; they take a
 machine-wide lock, `WWHD_HEAVY_SLOTS`, see `tools/verify/README.md`).
 
-**Function names and GameCube signatures (recommended).** The harness compares the argument
-registers each callee reads. It derives them from the code, and adds those of the GameCube signature
-when the function has been matched to zeldaret/tww. To get the same checks as the published results,
-create the name tables as described in the port's README ("Optional: decompilation tools"):
-
-```sh
-git clone https://github.com/zeldaret/tww tww     # built from your own GameCube disc (see the tww README)
-python3 tools/decomp/match.py game/code/cking.rpx tww build/names.tsv   # also writes build/wwhd_to_gc.tsv
-```
+**Function names and GameCube signatures (step 5).** The harness compares the argument registers each
+callee reads. It derives them from the code, and adds those of the GameCube signature when the
+function has been matched to zeldaret/tww; it also reads function names from `build/names.tsv` and
+stops with a note when the file is missing.
 
 `tools/verify/README.md` describes the method in detail: what "verified" means, the memory model, the
 unit-file directives, and the rules the source follows.
@@ -192,7 +216,20 @@ decompilation).
 The decompiled source code, the verification tools and the documentation in this repository are
 released under [CC0 1.0 Universal](LICENSE) (public domain dedication), like the GameCube
 decompilation of The Wind Waker ([zeldaret/tww](https://github.com/zeldaret/tww)) and other zeldaret
-projects.
+projects, with one exception: the libjpeg files (below).
+
+zeldaret/tww is the reference for names and structure throughout; the JSystem units also used the
+Twilight Princess decompilation ([zeldaret/tp](https://github.com/zeldaret/tp)). Both are CC0.
+
+**libjpeg (Independent JPEG Group).** This software is based in part on the work of the Independent
+JPEG Group. The files in `wwhd_src/libjpeg/` and `wwhd_src/include/libjpeg/` (except `SdkJpeg.cpp` and
+`SdkJpeg.h`, the game's own wrapper) are a decompilation of the IJG libjpeg 8c build linked into the
+game. They are not CC0: they remain under the IJG license, keep the IJG copyright notices of their
+files, and come with the IJG README, included unaltered as
+[`wwhd_src/libjpeg/README.ijg`](wwhd_src/libjpeg/README.ijg), which states the copyright, the
+no-warranty notice and the conditions of use. Changes to the original IJG files: every file was
+rewritten in C++ from the game binary; the WWHD build differs from IJG 8c where the binary does
+(marked `// HD:`); data is stored big-endian in guest memory, and memory comes from the Cafe allocator.
 
 CC0 covers only the contents of this repository. It does not cover the game itself or any Nintendo
 data, which are not included here: you need your own legally obtained copy of the game. The port
