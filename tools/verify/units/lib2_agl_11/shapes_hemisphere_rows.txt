@@ -1,0 +1,5 @@
+# AGL#11 primitive shapes, hemisphere indices: stack counts of two rows and more only (every mode and level of
+# detail), so a changed row count shows in the indices rather than in a loop over a wrapped count.
+# verify: -only 027A6724 -strictnan -calleesp
+include lib2_agl_11.txt
+arg! 027A6724 r6 4,5,8,9

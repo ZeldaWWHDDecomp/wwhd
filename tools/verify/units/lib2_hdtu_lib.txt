@@ -1,0 +1,130 @@
+# HDTU-LIB: sead/agl template and inline instances emitted inside HD game translation units
+# (string-keyed tree map, pooled tree-map nodes, delegate tree walks, formatted fixed strings,
+# resource factories, render-step name tables); binary only.
+src wwhd_src/d/hd_res_model_lib.cpp
+src wwhd_src/d/hd_res_load_task_lib.cpp
+src wwhd_src/d/hd_res_mgr_lib.cpp
+src wwhd_src/d/hd_btn_map_icon_number_lib.cpp
+src wwhd_src/d/hd_screen_menu_map_states_lib.cpp
+src wwhd_src/d/hd_parts_window_lib.cpp
+src wwhd_src/d/hd_layout_res_mgr_lib.cpp
+src wwhd_src/hd/hd_layer_2d_drc_lib.cpp
+src wwhd_src/hd/hd_layer_2d_drc_fore_lib.cpp
+src wwhd_src/hd/hd_layer_2d_fore_lib.cpp
+src wwhd_src/hd/hd_layer_3d_lib.cpp
+src wwhd_src/hd/hd_layer_mask_lib.cpp
+src wwhd_src/hd/hd_layer_base_lib.cpp
+src wwhd_src/hd/hd_error_viewer_lib.cpp
+src wwhd_src/hd/hd_fader_lib.cpp
+src wwhd_src/hd/hd_multi_filter_lib.cpp
+src wwhd_src/hd/hd_layer_shadow_lib.cpp
+src wwhd_src/hd/hd_render_commands_lib.cpp
+nulltrap
+stackfill
+# Variadic constructors: both CR bit 6 states (floats saved or not); the formatter sees the va_list
+# (register indices, overflow and save-area pointers) and the whole register save area.
+cr 026032F0 6 0,1
+cr 0263B3C4 6 0,1
+cr 0269EE74 6 0,1
+callee 02759C10 r5=12
+observeptr 02759C10 r5+8 96
+callee 02759D24 r5=12
+observeptr 02759D24 r5+8 96
+# Allocations: NULL or a fresh block (the mock's generated pointers otherwise hit page 0).
+ret 0273AD10 0,0x5D000000,0x5D100000
+ret 0273B050 0,0x5D200000,0x5D300000
+# String-keyed tree fixture: eight 0x20-byte nodes at 5F000000; children only point to later nodes
+# (acyclic), colour bytes 0/1/2 (2 is red too; flips toggle bit 0), keys from four string slots
+# whose contents repeat (equal text at different addresses; byte 1 meets the compare bounds) and two 256 KB runs of the same
+# character (the compare loops' length limit); a NULL text pointer occasionally. Recursive calls return fixture nodes or NULL.
+field * 5F000000 u32 0,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000004 u32 0,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000008 u8 0,1,2
+field * 5F00000C u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F000010 u32 0x5F001000
+field * 5F000014 u32 0x5F001100
+field * 5F000020 u32 0,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000024 u32 0,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000028 u8 0,1,2
+field * 5F00002C u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F000030 u32 0x5F001000
+field * 5F000034 u32 0x5F001100
+field * 5F000040 u32 0,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000044 u32 0,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000048 u8 0,1,2
+field * 5F00004C u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F000050 u32 0x5F001000
+field * 5F000054 u32 0x5F001100
+field * 5F000060 u32 0,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000064 u32 0,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000068 u8 0,1,2
+field * 5F00006C u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F000070 u32 0x5F001000
+field * 5F000074 u32 0x5F001100
+field * 5F000080 u32 0,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000084 u32 0,0x5F0000A0,0x5F0000C0,0x5F0000E0
+field * 5F000088 u8 0,1,2
+field * 5F00008C u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F000090 u32 0x5F001000
+field * 5F000094 u32 0x5F001100
+field * 5F0000A0 u32 0,0x5F0000C0,0x5F0000E0
+field * 5F0000A4 u32 0,0x5F0000C0,0x5F0000E0
+field * 5F0000A8 u8 0,1,2
+field * 5F0000AC u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F0000B0 u32 0x5F001000
+field * 5F0000B4 u32 0x5F001100
+field * 5F0000C0 u32 0,0x5F0000E0
+field * 5F0000C4 u32 0,0x5F0000E0
+field * 5F0000C8 u8 0,1,2
+field * 5F0000CC u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F0000D0 u32 0x5F001000
+field * 5F0000D4 u32 0x5F001100
+field * 5F0000E0 u32 0
+field * 5F0000E4 u32 0
+field * 5F0000E8 u8 0,1,2
+field * 5F0000EC u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F0000F0 u32 0x5F001000
+field * 5F0000F4 u32 0x5F001100
+# SafeString vtable: assureTermination is the res_mgr buffered string's; node vtable: the archive node's erase_.
+field * 5F001014 u32 0x02613970
+field * 5F001114 u32 0x02613EE0
+fieldstr * 5F002000 8 "a","b","ab","ba","a","\x01","\x01a","\x01b"
+fieldstr * 5F002010 8 "a","b","ab","ba","a","\x01","\x01a","\x01b"
+fieldstr * 5F002020 8 "a","b","ab","ba","a","\x01","\x01a","\x01b"
+fieldstr * 5F002030 8 "a","b","ab","ba","a","\x01","\x01a","\x01b"
+# the searched key (find, erase)
+field * 5F003000 u32 0,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000,0x5F002000,0x5F002010,0x5F002020,0x5F002030,0x5E000000,0x5E100000
+field * 5F003004 u32 0x5F001000
+fill 02613F20 5E000000 0x40000 0x41
+fill 02613F20 5E100000 0x40000 0x41
+fill 0261401C 5E000000 0x40000 0x41
+fill 0261401C 5E100000 0x40000 0x41
+fill 026142C4 5E000000 0x40000 0x41
+fill 026142C4 5E100000 0x40000 0x41
+stable 5E000000 0x40000
+stable 5E100000 0x40000
+arg! 02613F20 r4 0,0x5F000000,0x5F000020,0x5F000040
+arg! 02613F20 r5 0x5F003000
+arg! 0261401C r4 0,0x5F000000,0x5F000020,0x5F000040
+arg! 0261401C r5 0x5F000000,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+arg! 026142C4 r4 0x5F000000,0x5F000020,0x5F000040
+arg! 026142C4 r5 0x5F003000
+arg! 0261399C r3 0x5F000000,0x5F000020,0x5F000040
+ret 0261401C 0,0x5F000000,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+ret 026142C4 0,0x5F000000,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+ret 0261399C 0,0x5F000000,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+ret 02613F20 0x5F000000,0x5F000020,0x5F000040,0x5F000060,0x5F000080,0x5F0000A0,0x5F0000C0,0x5F0000E0
+# Tree walks: an acyclic node chain; the delegate's object, this-adjustment, index and virtual-table
+# offset take the direct, virtual and empty forms.
+arg! 026F57BC r3 0x5F000000,0x5F000020,0x5F000040
+arg! 026F57BC r4 0x5F005000
+arg! 026F586C r3 0x5F000000,0x5F000020,0x5F000040
+arg! 026F586C r4 0x5F005000
+field * 5F005004 u32 0,0x5F006000
+field * 5F005008 s16 0,4,-4
+field * 5F00500A s16 0,-1,1,2
+field * 5F00500E s16 0,4
+field * 5F006000 u32 0x5F007000
+field * 5F006004 u32 0x5F007000
+field * 5F006008 u32 0x5F007000
+field * 5F005FFC u32 0x5F007000

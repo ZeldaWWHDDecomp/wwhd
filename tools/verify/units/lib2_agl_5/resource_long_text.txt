@@ -1,0 +1,37 @@
+# verify: -only 02785A64,02785D54
+# AGL#5 companion: texts longer than sead's scan limit (0x40000 characters) for the RootNode constructor and name setup.
+src wwhd_src/agl/PrivateResource.cpp
+src wwhd_src/agl/RootNode.cpp
+src wwhd_src/agl/TextureDataUtil.cpp
+callcr 027861E0 6
+callee 02753004 r4=8
+callee 02785CB4 r4=8
+callee 02759C10 r3=heap12 r5=12
+observeptr 02759C10 r5+8 96
+# 0x5B000000 and 0x5B400000: 0x40010 non-NUL characters each; 0x5B100000 "AA"; 0x5B200000 "BB"
+fill * 0x5B000000 0x40010 0x41
+fill * 0x5B400000 0x40010 0x41
+stable 0x5B400000 0x40010
+fill * 0x5B100000 0x10 0
+fill * 0x5B100000 2 0x41
+fill * 0x5B200000 0x10 0
+fill * 0x5B200000 2 0x42
+stable 0x5B000000 0x40010
+# 0x5B800000 and 0x5BC00000: exactly 0x40000 characters (the longest text sead still measures), then NUL
+fill * 0x5B800000 0x40000 0x41
+fill * 0x5B840000 0x10 0
+fill * 0x5BC00000 0x40000 0x41
+fill * 0x5BC40000 0x10 0
+stable 0x5B800000 0x40010
+stable 0x5BC00000 0x40010
+stable 0x5B100000 0x10
+stable 0x5B200000 0x10
+# the constructor copies sead's empty text: a long one is cut to nothing
+field 02785A64 0x104A0CD8 u32 0x5B000000,0x5B100000,0x5B800000
+# initialize: the node (mName at +0x14), the name text and sead's empty text
+arg! 02785D54 r3 0x5C000000
+arg! 02785D54 r5 0x5C100000
+field 02785D54 0x5C000014 u32 0x5B000000,0x5B200000
+field 02785D54 0x5C00001C s32 0,1,0x100
+field 02785D54 0x5C100000 u32 0x5B000000,0x5B100000,0x5B800000
+field 02785D54 0x104A0CD8 u32 0x5B000000,0x5B200000,0x5B400000,0x5BC00000

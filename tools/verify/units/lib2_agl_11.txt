@@ -1,0 +1,172 @@
+# AGL#11 primitive shapes (second half of the TU of agl/PrimitiveShapes.cpp): set-up routines, index builders,
+# torus counts/curve/vertices, the singleton disposer and the storage constructors.
+# verify: -strictnan -calleesp
+src wwhd_src/agl/PrimitiveShapeBuilders.cpp wwhd_src/agl/PrimitiveShapesStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+nulltrap
+# Object and array allocators hand out distinct blocks (identical on both sides); allocations may fail.
+alloc 0273AD10 r3 0x58B00000 4
+allocfail 0273AD10 0,1
+stable 58B00000 0x20000
+# A heap at 0x58900000 whose method table allocates (F0010000) as a fixture; the current heap is that heap.
+# The fixture answers one of a few blocks or NULL (size and alignment are compared as arguments).
+callee F0010000 fixture r3=0 r4=0 r5=0
+ret! F0010000 0,0x58920000,0x58940000,0x58960000,0x58980000
+field * 5890000C u32 0x58910000
+field * 58910034 u32 0xF0010000
+stable 58900000 0x94
+stable 58910000 0x90
+ret! 02756140 0x58900000
+stable 58920000 0x40000
+# Disposers are compared as registered.
+callee 02752BEC r3=heap16
+# The shapes singleton at 0x58800000; storages either empty or holding an old block (used when an allocation fails).
+arg! 027A4050 r3 0x58800000
+arg! 027A4420 r3 0x58800000
+arg! 027A47BC r3 0x58800000
+arg! 027A4DF8 r3 0x58800000
+arg! 027A5000 r3 0x58800000
+arg! 027A5220 r3 0x58800000
+arg! 027A5440 r3 0x58800000
+arg! 027A575C r3 0x58800000
+arg! 027A5A78 r3 0x58800000
+arg! 027A5DF0 r3 0x58800000
+arg! 027A4050 r4 0,0x58900000
+arg! 027A4420 r4 0,0x58900000
+arg! 027A47BC r4 0,0x58900000
+arg! 027A4DF8 r5 0,0x58900000
+arg! 027A5000 r6 0,0x58900000
+arg! 027A5220 r6 0,0x58900000
+arg! 027A5440 r6 0,0x58900000
+arg! 027A575C r6 0,0x58900000
+arg! 027A5A78 r6 0,0x58900000
+arg! 027A5DF0 r4 0,0x58900000
+field * 58800014 u32 0,4
+field * 58800018 u32 0x59000000
+field * 5880001C u32 0,6
+field * 58800020 u32 0x59001000
+field * 58800024 u32 0,4
+field * 58800028 u32 0x59002000
+field * 588001B0 u32 0,3
+field * 588001B4 u32 0x59003000
+field * 588001B8 u32 0,3
+field * 588001BC u32 0x59004000
+field * 588001C0 u32 0,3
+field * 588001C4 u32 0x59005000
+field * 5880034C u32 0,24
+field * 58800350 u32 0x59006000
+field * 58800354 u32 0,36
+field * 58800358 u32 0x59007000
+field * 5880035C u32 0,48
+field * 58800360 u32 0x59008000
+stable 59000000 0x9000
+# Shape sizes: small and the shipped ones.
+arg! 027A4DF8 r4 0,1,2,3,7,32
+arg! 027A5000 r4 0,1,2,3,7,32
+arg! 027A5000 r5 0,1,2,3,16
+arg! 027A5220 r4 0,1,2,3,7,32
+arg! 027A5220 r5 0,1,2,3,16
+arg! 027A5440 r4 0,1,2,3,7,32
+arg! 027A5440 r5 0,1,2,3,16
+arg! 027A575C r4 0,1,2,3,7,32
+arg! 027A575C r5 0,1,2,3,80
+arg! 027A5A78 r4 0,1,2,3,7,32
+arg! 027A5A78 r5 0,1,2,3,32
+arg! 027A5A78 r7 0,1,2,-1
+arg! 027A5A78 r8 0,1,3,-2
+# The singleton disposer: the registered one (destroys the shapes) or another one.
+arg! 027A5ECC r3 0,0x58800004,0x58C00004
+arg! 027A5ECC r4 0,1,2,3
+field 027A5ECC 101F8DE8 u32 0,0x58800004
+field 027A5ECC 101F8DE4 u32 0,0x58800000
+# Storage constructors: in place or freshly allocated.
+arg! 027A5F68 r3 0,0x5C000000
+arg! 027A5FA8 r3 0,0x5C000000
+arg! 027A6000 r3 0,0x5C000000
+arg! 027A6058 r3 0,0x5C000000
+arg! 027A6058 r4 0,1,2,3
+# Matrix axes.
+arg! 027A60C0 r3 0x5C010000
+arg! 027A60C0 r4 0x5C020000
+arg! 027A60C0 r5 0x5C020010
+arg! 027A60C0 r6 0x5C020020
+# Counts: small sizes, the three index modes plus an unknown one, levels of detail incl. shifts of 32..65.
+arg! 027A35AC r3 0,1,2,32,0xFFFFFFFF
+arg! 027A35AC r4 0,1,2,32,0xFFFFFFFF
+arg! 027A35B8 r3 0,1,2,7,32,33
+arg! 027A35B8 r4 0,1,2,7,32,33
+arg! 027A35B8 r5 0,1,2,3
+arg! 027A35B8 r6 0,1,2,3,31,32,63,64,65
+# Index builders: a layout object, an index array large enough, sizes, modes 0..3, levels of detail 0..3 and 64/65
+# (a step of 1 << (lod & 31) while (lod & 63) < 32; lod 32..63 gives step 0, a loop the original never leaves).
+arg! 027A612C r3 0x5C080000
+arg! 027A612C r4 0x5C090000
+arg! 027A612C r5 0,1,2,3,7,32
+arg! 027A612C r6 0,1,2,3
+arg! 027A612C r7 0,1,2,3,64,65
+arg! 027A62B0 r3 0x5C080000
+arg! 027A62B0 r4 0x5C090000
+arg! 027A62B0 r5 0,1,2,3,7,16
+arg! 027A62B0 r6 1,2,3,4,8,9
+arg! 027A62B0 r7 0,1,2,3
+arg! 027A62B0 r8 0,1,2,3,64,65
+arg! 027A6724 r3 0x5C080000
+arg! 027A6724 r4 0x5C090000
+arg! 027A6724 r5 0,1,2,3,7,16
+arg! 027A6724 r6 0,1,2,3,4,8,9
+arg! 027A6724 r7 0,1,2,3
+arg! 027A6724 r8 0,1,2,3,64,65
+arg! 027A6B00 r3 0x5C080000
+arg! 027A6B00 r4 0x5C090000
+arg! 027A6B00 r5 0,1,2,3,7,16
+arg! 027A6B00 r6 0,1,2,3,8
+arg! 027A6B00 r7 0,1,2,3
+arg! 027A6B00 r8 0,1,2,3,64,65
+arg! 027A6E28 r3 0x5C080000
+arg! 027A6E28 r4 0x5C090000
+arg! 027A6E28 r5 0,1,2,3,7,16
+arg! 027A6E28 r6 0,1,2,3,4,8,9
+arg! 027A6E28 r7 0,1,2,3
+arg! 027A6E28 r8 0,1,2,3,64,65
+arg! 027A7144 r3 0x5C080000
+arg! 027A7144 r4 0x5C090000
+arg! 027A7144 r5 0,1,2,3,7,16
+arg! 027A7144 r6 0,1,2,3,8
+arg! 027A7144 r7 0,1,2,3
+arg! 027A7144 r8 0,1,2,3,64,65
+# The vertex counts the index builders read come from the merged first half.
+real 027A2B08
+real 027A308C
+# Torus curve point and vertices: output vector / layout and a vertex array for up to 8 x 9 vertices.
+arg! 027A35DC r3 0x5C0A0000
+arg! 027A35DC r4 0,1,2,3,-1
+arg! 027A35DC r5 0,1,2,3,-1
+arg! 027A37A8 r3 0x5C080000
+arg! 027A37A8 r4 0x5C090000
+arg! 027A37A8 r5 0,1,2,3,8
+arg! 027A37A8 r6 0,1,2,3,8
+arg! 027A37A8 r7 0,1,2,-1
+arg! 027A37A8 r8 0,1,3,-2
+# Calls on stack vectors and the matrix: inputs compared, outputs filled by the mocks.
+callee 027A35DC r3=out12
+callee 025155D8 r3=inout12
+callee 028E8D4C r3=12 r4=12 r5=out12
+callee 028E8F64 r3=48 r4=12 r5=out12
+callee 028E9044 r3=48 r4=12 r5=out12
+callee 027A60C0 r3=inout48 r4=12 r5=12 r6=12
+callee 02750D00 r3=inout48 r4=12
+callee 02750CDC r3=inout48 r5=12
+# Vertex and index counts the set-up routines allocate: small, empty or negative (no allocation).
+ret! 027A1E68 0,1,2,33,0xFFFFFFFF
+ret! 027A1E70 0,1,3,96,0xFFFFFFFF
+ret! 027A20B8 0,1,2,514,0xFFFFFFFF
+ret! 027A20C4 0,1,3,96,0xFFFFFFFF
+ret! 027A25F8 0,1,2,289,0xFFFFFFFF
+ret! 027A260C 0,1,3,96,0xFFFFFFFF
+ret! 027A2B18 0,1,3,96,0xFFFFFFFF
+ret! 027A309C 0,1,3,96,0xFFFFFFFF
+ret! 027A35AC 0,1,2,1056,0xFFFFFFFF
+ret! 027A35B8 0,1,3,96,0xFFFFFFFF
+# The torus curve's bounding box: a zero extent and curve points of either zero sign (fsel's >= at a zero difference).
+field 027A37A8 104A0958 f32 -0.0,0.0,1.0
+field 027A37A8 104A095C f32 -0.0,0.0,1.0
+field 027A37A8 104A0960 f32 -0.0,0.0,1.0

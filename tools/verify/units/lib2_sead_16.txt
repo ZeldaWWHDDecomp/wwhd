@@ -1,0 +1,493 @@
+# SEAD#16: sead formatter string fields, stack check, random, resources, resource manager, SARC archives,
+# SZS decompressor and the assert buffers (binary only).
+src wwhd_src/sead/RuntimeIntegerFormat_2.cpp
+src wwhd_src/sead/MemoryStack.cpp
+src wwhd_src/sead/GlobalRandom.cpp
+src wwhd_src/sead/Random.cpp
+src wwhd_src/sead/ArchiveRes.cpp
+src wwhd_src/sead/Resource.cpp
+src wwhd_src/sead/ResourceMgr.cpp
+src wwhd_src/sead/SharcArchiveRes.cpp
+src wwhd_src/sead/SZSDecompressor.cpp
+src wwhd_src/sead/CompressedResource.cpp
+src wwhd_src/sead/TextDelimiters.cpp
+src wwhd_src/sead/AssertText.cpp
+# shared statics: the file device manager and the heap registry manager
+src wwhd_src/sead/FileDeviceStatics.cpp wwhd_src/sead/HeapRegistryStatics.cpp
+# Stack objects start with deterministic random bytes, so a store the original makes into one is never hidden by a zero.
+stackfill
+# String fields: small capacities and widths reach overflow and padding edges.
+field 0275C724 r3+0xC u32 0,1,4,5
+field 0275C724 r3+0x10 u32 0,1,2,4,16,32
+field 0275C724 r3+0x14 u32 0,1,2,4,16
+field 0275C724 r3+0x18 u8 0,1
+field 0275C724 r4+4 s32 0,1,4,16,32
+field 0275C724 r4+8 s32 0,1,2,4,16,32
+fieldstr 0275C724 r5+0 64 "","a","abc","padding test","@keep"
+field 0275C998 r3+0xC u32 0,1,4,5
+field 0275C998 r3+0x10 u32 0,1,2,4,16,32
+field 0275C998 r3+0x14 u32 0,1,2,4,16
+field 0275C998 r3+0x18 u8 0,1
+field 0275C998 r4+4 s32 0,1,4,16,32
+field 0275C998 r4+8 s32 0,1,2,4,16,32
+field 0275C998 r5+0 u16 0,0x41,0xFF,0xD800
+field 0275C998 r5+2 u16 0,0x42,0x1FFF,0xFFFF
+field 0275C998 r5+4 u16 0,0x43,0xDE00
+field 0275C998 r5+6 u16 0,0x44,0x20
+field 0275C998 r5+8 u16 0
+field 0275C724 r4+0 u32 0x5A010000
+field 0275C998 r4+0 u32 0x5A010000
+
+# Common fixtures: steered objects get vtables whose slots lead to fixture targets, one per argument count
+# (r3 / r3-r4 / r3-r5 / r3-r6 / r3-r8 compared), so every argument the original passes is checked.
+#   text 5A200000 (assureTermination r3), factory 5A201000, resource 5A202000, decompressor 5A203000.
+fill * 5A200000 0x80 0x0F
+field * 5A200014 u32 0x0F000001
+field * 5A201004 u32 0x0F000002
+field * 5A20101C u32 0x0F000002
+field * 5A20102C u32 0x0F000002
+field * 5A201034 u32 0x0F000003
+field * 5A20103C u32 0x0F000003
+field * 5A20200C u32 0x0F000002
+field * 5A20201C u32 0x0F000002
+field * 5A202024 u32 0x0F000001
+field * 5A20202C u32 0x0F000001
+field * 5A202034 u32 0x0F000004
+field * 5A20203C u32 0x0F000003
+field * 5A202044 u32 0x0F000003
+field * 5A20204C u32 0x0F000002
+field * 5A202074 u32 0x0F000002
+field * 5A20300C u32 0x0F000002
+field * 5A203014 u32 0x0F000006
+stable 5A200000 0x80
+stable 5A201000 0x80
+stable 5A202000 0x80
+stable 5A203000 0x80
+callee 0F0F0F0F fixture r3=0
+callee 0F000001 fixture r3=0
+callee 0F000002 fixture r3=0 r4=0
+callee 0F000003 fixture r3=0 r4=0 r5=0
+callee 0F000004 fixture r3=0 r4=0 r5=0 r6=0
+callee 0F000006 fixture r3=0 r4=0 r5=0 r6=0 r7=0 r8=0
+ret 0F000001 0,4,0x20,0x80
+ret 0F000002 0,1,0x5A300000
+ret 0F000003 0,0x5A300000
+ret 0F000006 0,0x5A310000
+# tryCreateWithDecomp's decompressor (5A204000): slot 0x14 compares the three result words the function zeroes
+# on its stack and fills them afterwards.
+fill * 5A204000 0x80 0x0F
+field * 5A204014 u32 0x0F000007
+stable 5A204000 0x80
+callee 0F000007 fixture r3=0 r4=0 r5=0 r6=inout4 r7=inout4 r8=inout1
+ret 0F000007 0,0x5A310000
+field * 5A300010 u32 0x5A202000
+stable 5A300000 0x40
+# Allocators: NULL or distinct steered blocks.
+ret 0273AD10 0,0x5A400000
+ret 0273B050 0,0x5A410000,0xFFFFFFE0
+ret 0273B0D4 0,0x5A420000
+# The byte-order converters are pure helpers.
+real 02759B38
+real 02759A48
+field * 104A0CD4 u32 0,1
+stable 104A0CD4 4
+
+# Stack check: a thread manager with a main thread and one listed thread whose stack is [5B270000, 5B280000).
+field 0275CC9C 101F8B94 u32 0,0x5B000000
+field 0275CC9C 5B000020 u32 0,0x5B100000
+field 0275CC9C 5B000018 u32 0x5B000014,0x5B300000
+field 0275CC9C 5B300004 u32 0x5B000014
+field 0275CC9C 5B300008 u32 0x5B100000,0x5B110000
+field 0275CC9C 5B100088 u32 0x5B200000
+field 0275CC9C 5B110088 u32 0x5B210000
+field 0275CC9C 5B200394 u32 0x5B280000
+field 0275CC9C 5B200398 u32 0x5B270000
+field 0275CC9C 5B210394 u32 0x5B380000
+field 0275CC9C 5B210398 u32 0x5B370000
+stable 5B000000 0x30
+stable 5B100088 4
+stable 5B110088 4
+stable 5B200394 8
+stable 5B210394 8
+stable 5B300000 0x10
+arg 0275CC9C r3 0x5B26FFFF,0x5B270000,0x5B27FFFF,0x5B280000,0x5B36FFFF,0x5B370000,0x5B37FFFF,0x5B380000
+
+# Random: the tick constructor returns its object; the singletons may exist.
+retarg 02760DE8 r3
+field 0275CD20 101F8B60 u32 0,0x5A500000
+field 0275CDC8 101F8B64 u32 0,0x5A510000
+field 0275CDC8 101F8B60 u32 0,0x5A500000
+arg 0275CDC8 r3 0,0x5A510000
+
+# Resources: steered objects keep the fixture vtables.
+field * 101F8B68 u32 0,0x5A600000
+field 0275CFD0 r3+0x4C u32 0x5A201000
+arg 0275D12C r3 0,0xFFFFFFE0
+field 0275D0DC r3+0x10 u32 0x5A202000
+field 0275D274 r3+0x4C u32 0x5A201000
+field 0275D274 r5+0x4C u32 0x5A204000
+field 0275D360 r3+0x4C u32 0x5A201000
+field 0275D360 r4+0x24 u32 0,0x5A700000
+ret 02740AE8 0,0x5A710000
+ret 02741DAC 0,0x5A710000
+# The load argument tryCreate builds on its stack (0x28 bytes) is compared at the device call and filled by it.
+callee 02740AE8 r4=inout40
+# Texts with steered vtables sit at fixed addresses that callees cannot clobber.
+arg! 0275D6CC r5 0x5A780000
+stable 5A780000 8
+field 0275D6CC r5+4 u32 0x5A200000
+fieldstr 0275D6CC 5A720000 48 "","szs","sarc","bfres","@keep"
+field 0275D6CC r4+0x20 u32 0x5A730000
+field 0275D6CC r4+0x28 s32 1,2,4,32
+field 0275D6CC r4+0xC u32 0,0x5A740000
+arg 0275D7D0 r3 0,0xFFFFFFF0,0xFFFFFFE4,0xFFFFFFD8
+field 0275D7D0 101F8B4C u32 0,0x5A750000
+field 0275D9A0 101F8B68 u32 0,0x5A600000
+
+# Manager lists: a manager at 5A800000 with two factories, two decompressors and a resource to post-create.
+arg! 0275DAA4 r3 0x5A800000
+arg! 0275DC4C r3 0x5A800000
+arg 0275DB94 r3 0x5A800000
+arg 0275DD38 r3 0x5A800000
+arg! 0275DEEC r3 0x5A800000
+field * 5A800014 u32 0x5A800010,0x5A810000
+field * 5A810004 u32 0x5A800010,0x5A820000
+field * 5A820004 u32 0x5A800010
+field * 5A810008 u32 0x5A830000
+field * 5A820008 u32 0x5A840000
+field * 5A800020 u32 0x5A80001C,0x5A300000
+field * 5A80002C u32 0x5A800028,0x5A860000
+field * 5A860004 u32 0x5A800028,0x5A870000
+field * 5A870004 u32 0x5A800028
+field * 5A860008 u32 0x5A830000
+field * 5A870008 u32 0x5A840000
+field * 5A800034 u32 0,0x5A830000
+field * 5A830024 u32 0x5A200000
+field * 5A840024 u32 0x5A200000
+field * 5A83004C u32 0x5A201000
+field * 5A84004C u32 0x5A201000
+field * 5A840020 u32 0x5A890000
+fieldstr * 5A880000 16 "szs","sarc","a"
+fieldstr * 5A890000 16 "sarc","bfres","ab"
+stable 5A800000 0x40
+stable 5A810000 0x10
+stable 5A820000 0x10
+stable 5A860000 0x10
+stable 5A870000 0x10
+stable 5A830000 0x50
+stable 5A840000 0x50
+arg! 0275DAA4 r4 0x5A790000
+arg! 0275DC4C r4 0x5A790000
+stable 5A790000 8
+field 0275DAA4 r4+4 u32 0x5A200000
+field 0275DC4C r4+4 u32 0x5A200000
+fieldstr 0275DAA4 5A8A0000 16 "szs","sarc","bfres","a","abc",""
+fieldstr 0275DC4C 5A8A0000 16 "szs","sarc","bfres","a","abc",""
+field 0275DB94 r4+0x20 u32 0,0x5A830000
+field 0275DD38 r4+0x20 u32 0,0x5A830000
+field 0275DD38 r5+0 u32 0x5A8B0000
+ret 027426B0 0,1
+ret 0275DAA4 0x5A830000
+ret 0275DC4C 0,0x5A860000
+# The extension texts the loaders build on their stack: compared at the path call (which fills them) and at the lookups.
+callee 027426B0 r3=inout44
+callee 0275DAA4 r4=8
+callee 0275DC4C r4=44
+# The manager constructor's empty extension text is compared where it registers the default factory.
+callee 0275D6CC r5=8
+arg 0275DD38 r6 0,0x5A860000
+field 0275DF84 101F8B6C u32 0,0x5A900000
+arg 0275DF84 r3 0,0x5A900000
+field 0275E034 r3+0x4C u32 0x5A201000
+# Post-creation runs the original finishCreate, which takes the resource out of the list.
+real 0275D0DC
+real 0275DF34
+real 0273B310
+field 0275DEEC 101F8B68 u32 0x5A800000
+field * 5A800024 s32 1
+field 0275DEEC 5A300000 u32 0x5A80001C
+field 0275DEEC 5A300004 u32 0x5A80001C
+field 0275DEEC 5A300008 u32 0x5A300000
+field 0275DEEC 5A30000C u32 0x5A80001C
+field 0275DEEC 5A80001C u32 0x5A300000
+# Runtime types: the type objects themselves.
+arg 0275D53C r4 0x101FD94C,0x101FD944
+arg 0275D57C r4 0x101FD94C,0x101FD944
+arg 0275E8A4 r4 0x101FD94C,0x101FD944,0x101FD9D0,0x101FDFB0
+field * 101FD6DC u32 0,1
+field * 101FD6E0 u32 0,1
+field * 101FD6F4 u32 0,1
+field * 101FD77C u32 0,1
+# Texts longer than the length scan's limit (0x40000 characters), and two equal ones.
+fill 0275D6CC 5AC00000 0x40010 0x41
+fill 0275DAA4 5AC00000 0x40010 0x41
+fill 0275DC4C 5AC00000 0x40010 0x41
+fill 0275E3A0 5AC00000 0x40010 0x41
+fill 0275E538 5AC00000 0x40010 0x41
+fill 0275E2E0 5AC00000 0x40010 0x41
+fill 0275D6CC 5AD00000 0x40010 0x41
+fill 0275DAA4 5AD00000 0x40010 0x41
+fill 0275DC4C 5AD00000 0x40010 0x41
+fill 0275E3A0 5AD00000 0x40010 0x41
+fill 0275E538 5AD00000 0x40010 0x41
+fill 0275E2E0 5AD00000 0x40010 0x41
+# Two texts of exactly 0x40000 characters (the scan limit itself; hash 0x46BC0000 with key 0x65).
+fill 0275D6CC 5AE00000 0x40000 0x41
+fill 0275D6CC 5AF00000 0x40000 0x41
+fill 0275DAA4 5AE00000 0x40000 0x41
+fill 0275DAA4 5AF00000 0x40000 0x41
+fill 0275DC4C 5AE00000 0x40000 0x41
+fill 0275DC4C 5AF00000 0x40000 0x41
+fill 0275E3A0 5AE00000 0x40000 0x41
+fill 0275E3A0 5AF00000 0x40000 0x41
+fill 0275E538 5AE00000 0x40000 0x41
+fill 0275E538 5AF00000 0x40000 0x41
+fill 0275E2E0 5AE00000 0x40000 0x41
+fill 0275E2E0 5AF00000 0x40000 0x41
+field * 5AE40000 u8 0
+field * 5AF40000 u8 0
+stable 5AE00000 0x40001
+stable 5AF00000 0x40001
+stable 5AC00000 0x40010
+stable 5AD00000 0x40010
+# terminated: hash 0x89DC8CF0 with key 0x65
+field * 5AC40010 u8 0
+field * 5AD40010 u8 0
+stable 5AC40010 1
+stable 5AD40010 1
+field 0275D6CC r5+0 u32 0x5A720000,0x5AC00000,0x5AE00000
+field * 5A830020 u32 0x5A880000,0x5AC00000,0x5AD00000,0x5AE00000
+field 0275DAA4 r4+0 u32 0x5A8A0000,0x5A880000,0x5AD00000,0x5AF00000
+field 0275DC4C r4+0 u32 0x5A8A0000,0x5A890000,0x5AD00000,0x5AF00000
+
+# SARC: a synthetic five-file archive image at 5E000000 (header, SFAT with two names of equal hash, SFNT,
+# names "a" "b" "Af" "B\x01" "dd", data from 0x90), with variants of every checked header field.
+field * 5E000000 u32 0x53415243,0x53415243,0x53415243,0x53415243,0x53415244
+field * 5E000004 u16 0x14,0x14,0x14,0x14,0x15,0x114
+field * 5E000006 u16 0xFEFF,0xFEFF,0xFEFF,0xFEFF,0xFFFE,0xFEFE
+field * 5E000008 u32 0x100
+field * 5E00000C u32 0x90,0x90,0x90,0x10,0x78
+field * 5E000010 u16 0x100,0x100,0x100,0x100,0x101
+field * 5E000012 u16 0
+field * 5E000014 u32 0x53464154,0x53464154,0x53464154,0x53464154,0x53464155
+field * 5E000018 u16 0xC,0xC,0xC,0xC,0xD
+field * 5E00001A u16 5,5,5,5,5,5,0,1,0x3FFF,0x4000
+field * 5E00001C u32 0x65
+field * 5E000020 u32 0x61,0x61,0x89DC8CF0,0x46BC0000
+field * 5E000024 u32 0x01000000
+field * 5E000028 u32 0
+field * 5E00002C u32 0x10
+field * 5E000030 u32 0x62
+field * 5E000034 u32 0x01000001,0
+field * 5E000038 u32 0x10
+field * 5E00003C u32 0x20
+field * 5E000040 u32 0x1A0B
+field * 5E000044 u32 0x01000002
+field * 5E000048 u32 0x20
+field * 5E00004C u32 0x30
+field * 5E000050 u32 0x1A0B
+field * 5E000054 u32 0x02000003
+field * 5E000058 u32 0x30
+field * 5E00005C u32 0x40,0x20
+field * 5E000060 u32 0x2790
+field * 5E000064 u32 0x01000004,0x01FFFFF0
+field * 5E000068 u32 0x40
+field * 5E00006C u32 0x50,0x50,0x40
+field * 5E000070 u32 0x53464E54,0x53464E54,0x53464E54,0x53464E54,0x53464E55
+field * 5E000074 u16 8,8,8,8,9
+field * 5E000076 u16 0
+field * 5E000078 u32 0x61000000,0x61000000,0x63000000
+field * 5E00007C u32 0x62000000
+field * 5E000080 u32 0x41660000
+field * 5E000084 u32 0x42010000
+field * 5E000088 u32 0x64640000
+stable 5E000000 0x90
+arg 0275E6B8 r3 0x5D500000
+arg 0275E6B8 r4 0,0x5E000000
+# An archive object over that image (entry count, name table and data block varied).
+arg 0275E208 r3 0x5D000000
+arg 0275E288 r3 0x5D000000
+arg! 0275E3A0 r3 0x5D000000,0x5D020000
+# A second, fixed archive object for the path lookup (5D020000, table at 5E100000): four entries, the middle two
+# with the same hash 0x1A0B ("Af" first, "B\x01" second), so the binary search lands on the second one of the pair.
+field 0275E3A0 5D02002C u32 0x5E100000
+field 0275E3A0 5D020030 u32 0x5E100080
+field 0275E3A0 5D020034 s32 4
+field 0275E3A0 5D020038 u32 0x5E100010
+field 0275E3A0 5D02003C u32 0x5E100100
+stable 5D020000 0x44
+field 0275E3A0 5E100008 u32 0x65
+field 0275E3A0 5E100010 u32 0x61
+field 0275E3A0 5E100014 u32 0x01000000
+field 0275E3A0 5E100020 u32 0x1A0B
+field 0275E3A0 5E100024 u32 0x01000001
+field 0275E3A0 5E100030 u32 0x1A0B
+field 0275E3A0 5E100034 u32 0x02000002
+field 0275E3A0 5E100040 u32 0x2790
+field 0275E3A0 5E100044 u32 0x01000003
+field 0275E3A0 5E100080 u32 0x61000000
+field 0275E3A0 5E100084 u32 0x41660000
+field 0275E3A0 5E100088 u32 0x42010000
+field 0275E3A0 5E10008C u32 0x64640000
+stable 5E100000 0x90
+arg! 0275E538 r3 0x5D000000
+field * 5D000010 u32 0x5A202000
+field * 5D000028 u32 0x5E000000
+field * 5D00002C u32 0x5E000014
+field * 5D000030 u32 0x5E000078,0x5E000078,0x5AC00000,0x5AD00000,0x5AF00000
+field * 5D000034 s32 5,3,0,1
+field * 5D000038 u32 0x5E000020
+field * 5D00003C u32 0x5E000090,0x5E000079
+stable 5D000000 0x44
+arg 0275E288 r4 -1,0,1,3,4,5,6
+arg 0275E288 r5 0,0x5D200000
+arg 0275E3A0 r4 0x5D100000
+arg 0275E208 r4 0x5D100000
+arg 0275E2E0 r3 0x5D100000
+arg 0275E2E0 r4 0x65,1
+# The lookup runs the original hash and search; search ranges stay inside the table (a reversed range never ends).
+real 0275E2E0
+real 0275E354
+field * 5D100000 u32 0x5D110000,0x5D110000,0x5D110000,0x5AC00000,0x5AE00000
+field * 5D100004 u32 0x5A200000
+stable 5D100000 8
+fieldstr * 5D110000 16 "a","b","Af","B\x01","dd","c","","Ag"
+arg 0275E354 r3 0x61,0x62,0x1A0B,0x2790,0,0xFFFFFFFF,0x63
+arg! 0275E354 r4 0x5E000020
+arg! 0275E354 r5 0,1
+arg! 0275E354 r6 1,2,4,5
+arg! 0275E538 r4 0x5D300000
+field 0275E538 5D300000 u32 0,2,4,5,6
+arg 0275E538 r5 0x5D400000
+stable 5D400000 0x550
+arg! 0275E538 r6 0,1,2,5,8
+field 0275E538 5D400000 u32 0x5D40000C
+field 0275E538 5D400004 u32 0x5A200000
+field 0275E538 5D400008 s32 256,2,1
+field 0275E538 5D400110 u32 0x5D40011C
+field 0275E538 5D400114 u32 0x5A200000
+field 0275E538 5D400118 s32 256,2,1
+field 0275E538 5D400220 u32 0x5D40022C
+field 0275E538 5D400224 u32 0x5A200000
+field 0275E538 5D400228 s32 256,2,1
+field 0275E538 5D400330 u32 0x5D40033C
+field 0275E538 5D400334 u32 0x5A200000
+field 0275E538 5D400338 s32 256,2,1
+field 0275E538 5D400440 u32 0x5D40044C
+field 0275E538 5D400444 u32 0x5A200000
+field 0275E538 5D400448 s32 256,2,1
+arg 0275E11C r3 0,0xFFFFFFCC,0x5DA00000
+
+# SZS: the compressed image of a small game file (read at run time, never committed), a decoder context and
+# a decompressor object.
+blob * 5B800000 content/Common/Object/Demo49.szs 0 1570
+stable 5B800000 0x700
+arg 0275EB8C r3 0x5B800000
+arg 0275F164 r3 0x5B800000
+arg 0275EBC0 r3 0x5C000000
+# The destination starts with nonzero bytes, so cache-block zeroing outside the decoded bytes is visible.
+fill 0275EBC0 5C000000 0x3400 0xA5
+fill 0275ED14 5C000000 0x3400 0xA5
+fill 0275EEB8 5C000000 0x3400 0xA5
+arg! 0275EBC0 r4 0x5B800000,0x5BA00000,0x5BA00040,0x5BA00080
+# A synthetic stream at 5BA00000: literal 'X', a maximal match (0x111) that the fast loop copies with its cache-block
+# zeroing reaching past the end of a 0x134-byte output, a 0x21-byte match, literal 'Y'; with size 0x133 the output
+# ends exactly after the second match.
+field 0275EBC0 5BA00000 u32 0x59617A30
+field 0275EBC0 5BA00004 u32 0x134,0x133
+field 0275EBC0 5BA00008 u32 0
+field 0275EBC0 5BA0000C u32 0
+field 0275EBC0 5BA00010 u32 0x90580000
+field 0275EBC0 5BA00014 u32 0xFF00000F
+field 0275EBC0 5BA00018 u32 0x59000000
+stable 5BA00000 0x1C
+# A second one at 5BA00040 (0x150 bytes): 17 literals, then a maximal match whose last byte is the one the fast loop
+# zeroes ahead of (block 0x140-0x15F, past the end), then a 0x2E-byte match in the tail.
+field 0275EBC0 5BA00040 u32 0x59617A30
+field 0275EBC0 5BA00044 u32 0x150
+field 0275EBC0 5BA00048 u32 0
+field 0275EBC0 5BA0004C u32 0
+field 0275EBC0 5BA00050 u32 0xFF585858
+field 0275EBC0 5BA00054 u32 0x58585858
+field 0275EBC0 5BA00058 u32 0x58FF5858
+field 0275EBC0 5BA0005C u32 0x58585858
+field 0275EBC0 5BA00060 u32 0x58588058
+field 0275EBC0 5BA00064 u32 0x0000FF00
+field 0275EBC0 5BA00068 u32 0x001C0000
+stable 5BA00040 0x2C
+# A third one at 5BA00080 (0x244 bytes): literal 'X', a maximal match that leaves the fast loop with exactly 0x132
+# bytes to go, then only 0xFF literals (0xFF flag bytes and 0xFF data), all decoded by the tail loop.
+field 0275EBC0 5BA00080 u32 0x59617A30
+field 0275EBC0 5BA00084 u32 0x244
+field 0275EBC0 5BA00088 u32 0
+field 0275EBC0 5BA0008C u32 0
+field 0275EBC0 5BA00090 u32 0xBF580000
+fill 0275EBC0 5BA00094 0x200 0xFF
+stable 5BA00080 0x214
+field 0275EBC0 5B800004 u32 0x3300,0x200,0x133,0x132,0x10,1
+arg 0275ED14 r3 0x5C000000
+arg 0275ED14 r4 0,0x32FF,0x3300,0x4000
+arg 0275ED14 r5 0x5B800000
+field 0275ED14 5B800000 u32 0x59617A30,0x59617A31
+arg 0275EDC8 r3 0x5C800000
+arg 0275EDC8 r4 0x5B800000,0x5B900000
+arg 0275EDC8 r5 1,2,4,16,20
+fieldstr 0275EDC8 5B900000 8 "Yaz1","Yb","Xaz0","Yaq0","Yaz0"
+arg! 0275EEB8 r3 0x5C800000
+# The stream decoder reads the header with the original reader.
+real 0275EDC8
+arg! 0275EEB8 r4 0x5B800000,0x5B800010,0x5B800011,0x5BA00020
+# A long-match count byte (0x6E + 0x12 = 0x80) that exactly fills a 0x80-byte remainder.
+field 0275EEB8 5BA00020 u32 0x6E000000
+stable 5BA00020 4
+arg! 0275EEB8 r5 1,5,0x10,0x20,0x100,0x612
+field * 5C800000 u32 0x5C000000
+field * 5C800004 s32 0,0x10,0x3300,0x80,1,0x11
+field * 5C800008 s32 0,1,0x100,0x3300
+field * 5C80000C u8 0,0x80,1
+field * 5C80000D u8 0,0xFF,0x80
+field * 5C80000E u8 0,0x10,0xF0
+field * 5C800010 s32 0,1,2
+field * 5C800014 u16 1,2,0x10
+field * 5C800016 u8 0,0x10,0xC,1
+arg 0275F188 r3 0x5C800000
+arg 0275F1B8 r3 0,0x5C800000
+arg 0275E9D0 r3 0,0xFFFFFFE0,0x5D800000
+arg 0275E9D0 r4 0,1,0x40,0x41
+arg 0275E9D0 r5 0,0x5C000000
+arg 0275F974 r3 0,0xFFFFFFFC,0x5D900000
+# Loading through the decompressor: a steered load argument, device and work buffer.
+arg 0275F200 r3 0x5D600000
+field 0275F200 5D600050 u32 0x40,0x700,0x1000
+field 0275F200 5D600054 u32 0,0x5B800000
+arg 0275F200 r4 0x5D700000
+field 0275F200 5D70000C u32 0,0x5A750000
+field 0275F200 5D700010 s32 -32,0,32,4
+field 0275F200 5D700014 s32 0,16,64
+field 0275F200 5D700018 u32 0,0x5C000000
+field 0275F200 5D70001C u32 0,0x100,0x4000
+field 0275F200 5D700024 u32 0,0x5A700000
+arg 0275F200 r5 0,0x5A300000
+ret 02740B24 0,0x5A700000
+ret 02741CFC 0,0x5A700000
+callee 02740B24 r4=inout60 r6=0 r7=0
+callee 02741CFC r4=inout60 r6=0 r7=0
+# The handle and the decoder context live on tryDecompFromDevice's stack: compared at every call that takes them;
+# the context is built by the original constructor.
+callee 0274146C r3=60
+callee 02740BE0 r4=60
+callee 02752BEC r3=16
+callee 0275EEB8 r3=24
+real 0275F1B8
+real 0275F188
+ret 0274146C 0,0xF,0x10,0x622,0x700,0x1000
+ret 0275EB8C 0,0x10,0x3300,0x10000
+ret 0275F164 0,0x20,0x80,0x1000
+ret 0275ED14 -2,-1,0,0x3300
+ret 0275EEB8 -1,0,1,0x100
+arg 0275F800 r3 0x5A300000
+arg 0275F808 r3 0x5A300000
+field * 5A300014 u32 0x5B800000
+field * 5A300018 u32 0x622
+arg 0275F808 r5 0x32FF,0x3300
+ret 0275F800 0x3300,0x4000

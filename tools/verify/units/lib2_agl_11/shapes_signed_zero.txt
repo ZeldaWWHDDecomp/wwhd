@@ -1,0 +1,7 @@
+# AGL#11 primitive shapes, torus vertices: curve points of either zero sign, so the bounding-box selection
+# (fsel at a zero difference) and the centre's sign reach the stored vertices.
+# verify: -only 027A37A8 -strictnan -calleesp
+include lib2_agl_11.txt
+mockfield 027A35DC r3+0 f32 -0.0,0.0,1.0
+mockfield 027A35DC r3+4 f32 -0.0,0.0,1.0
+mockfield 027A35DC r3+8 f32 -0.0,0.0,1.0

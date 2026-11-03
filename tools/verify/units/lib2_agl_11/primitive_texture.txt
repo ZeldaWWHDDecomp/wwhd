@@ -1,0 +1,39 @@
+# AGL#11 agl::utl::PrimitiveTexture: singleton creation, construction, the sixteen built-in textures, teardown
+# and the registered disposer. Callees stay mocks; texture descriptor sizes come from the configure mock.
+src wwhd_src/agl/PrimitiveTexture.cpp
+nulltrap
+# instance (027A76C8)
+field 027A76C8 101F8DEC u32 0,0,0,0x56010000
+arg 027A76C8 r3 0x56020000
+alloc 0273B0D4 r3 0x56100000
+allocfail 0273B0D4 0,0,0,0,0,0,0,0,1,2
+# create (027A7640): member-address tests reach the allocation only for storage just below 0
+arg 027A7640 r3 0,0x56200000,0x56200000,0x56200000,0xFFFFFFEC,0xFFFFFFAC
+alloc 0273AD10 r3 0x56300000
+allocfail 0273AD10 0,0,1,2
+# destroy (027A7768)
+arg 027A7768 r3 0,0x56400000
+arg 027A7768 r4 0,1,2,3
+# mip-level texture (027A77F8) and initialize (027A78F8)
+arg! 027A77F8 r3 0x56500000
+arg 027A77F8 r4 0x56020000
+arg! 027A78F8 r3 0x56600000
+arg 027A78F8 r4 0x56020000
+mockfield 027BE930 r3+0x24 u32 0,4,0x40,0x100,0x200,0x204
+mockfield 027BE930 r3+0x3C u32 4,0x100,0x800
+alloc 0273B050 r3 0x57000000
+allocfail 0273B050 0,0,0,0,0,0,0,0,0,0,1,4,13,15,16
+retarg 027BE114 r3
+# disposer (027A7DAC)
+arg 027A7DAC r3 0,0x56800000
+arg 027A7DAC r4 0,1,2,3
+field 027A7DAC 101F8DF0 u32 0x56800000,0x56800000,0x56810000,0
+field 027A7DAC 101F8DEC u32 0x56900000
+field 027A7DAC 56900000 u32 0x56A00000
+# interface deleting destructor (027A7E54)
+arg 027A7E54 r3 0,0x56B00000
+arg 027A7E54 r4 0,1,2,3
+# configure takes its eighth argument (antiAlias) on the stack; the sampler is created from the whole
+# stack texture descriptor (TextureData, 0x90 bytes)
+callee 027BE930 stack=1
+callee 027BE114 r4=0x90

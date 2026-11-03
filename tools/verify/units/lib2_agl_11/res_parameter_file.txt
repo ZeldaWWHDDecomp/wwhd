@@ -1,0 +1,22 @@
+# AGL#11 parameter archives on the game's own environment archive (content/Common/env.baglenv, 1164 bytes,
+# little-endian): the archive constructor and the list conversion run with the original byte-order routine
+# (027BF0CC and its word operations), so the whole in-place conversion is compared.
+# verify: -only 027A7558,027A747C
+src wwhd_src/agl/ResParameterArchive.cpp
+nulltrap
+real 027BF0CC
+real 02759A48
+real 02759B38
+real 027A747C
+real 027A732C
+field * 104A0CD4 u32 0
+stable 104A0CD4 4
+fill * 5E000000 0x1000 0
+blob * 5E000000 content/Common/env.baglenv 0 0x48C
+stable 5E000000 0x1000
+arg! 027A7558 r3 0x5E001000
+arg! 027A7558 r4 0x5E000000
+# the root list of the unconverted file (header 0x18 + type name "aglenv" 7 bytes): converted with the swapping order
+arg! 027A747C r3 0x5E001010
+field 027A747C 5E001010 u32 0x5E00001F
+arg! 027A747C r4 1
